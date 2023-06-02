@@ -129,6 +129,30 @@ TEST(InjectorIRStrategyTest, LargeInsertion) {
   mutateAndVerifyModule(Source, Mutator, 100);
 }
 
+TEST(InjectorIRStrategyTest, InsertWMustTailCall) {
+  StringRef Source = "\n\
+        define i1 @recursive() {    \n\
+        Entry:     \n\
+            %Ret = musttail call i1 @recursive() \n\
+            ret i1 %Ret \n\
+        }";
+  auto Mutator = createInjectorMutator();
+  ASSERT_TRUE(Mutator);
+  mutateAndVerifyModule(Source, Mutator, 100);
+}
+
+TEST(InjectorIRStrategyTest, InsertWTailCall) {
+  StringRef Source = "\n\
+        define i1 @recursive() {    \n\
+        Entry:     \n\
+            %Ret = tail call i1 @recursive() \n\
+            ret i1 %Ret \n\
+        }";
+  auto Mutator = createInjectorMutator();
+  ASSERT_TRUE(Mutator);
+  mutateAndVerifyModule(Source, Mutator, 100);
+}
+
 TEST(InstDeleterIRStrategyTest, EmptyFunction) {
   // Test that we don't crash even if we can't remove from one of the functions.
 
@@ -572,6 +596,19 @@ TEST(SinkInstructionStrategy, Operand) {
           br i1 %C, label %BB0, label %Exit  \n\
         Exit:  \n\
           ret i32 %I  \n\
+      }";
+  mutateAndVerifyModule<SinkInstructionStrategy>(Source);
+}
+
+TEST(SinkInstructionStrategy, DoNotSinkTokenType) {
+  StringRef Source = "\n\
+      declare ptr @fake_personality_function() \n\
+      declare token @llvm.experimental.gc.statepoint.p0(i64 immarg %0, i32 immarg %1, ptr %2, i32 immarg %3, i32 immarg %4, ...) \n\
+      define void @test() gc \"statepoint-example\" personality ptr @fake_personality_function { \n\
+      Entry: \n\
+        %token1 = call token (i64, i32, ptr, i32, i32, ...) \
+          @llvm.experimental.gc.statepoint.p0(i64 0, i32 0, ptr elementtype(ptr addrspace(1) ()) undef, i32 0, i32 0, i32 0, i32 0) \n\
+        ret void \n\
       }";
   mutateAndVerifyModule<SinkInstructionStrategy>(Source);
 }
