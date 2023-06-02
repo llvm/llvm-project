@@ -1147,6 +1147,9 @@ unsigned getVGPREncodingGranule(const MCSubtargetInfo *STI,
   if (STI->getFeatureBits().test(FeatureGFX90AInsts))
     return 8;
 
+  if (STI->getFeatureBits().test(Feature512AddressableVGPRs))
+    return 16;
+
   bool IsWave32 = EnableWavefrontSize32 ?
       *EnableWavefrontSize32 :
       STI->getFeatureBits().test(FeatureWavefrontSize32);
