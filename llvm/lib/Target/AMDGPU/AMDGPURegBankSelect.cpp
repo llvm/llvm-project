@@ -63,8 +63,9 @@ bool AMDGPURegBankSelect::runOnMachineFunction(MachineFunction &MF) {
       getAnalysis<MachineCycleInfoWrapperPass>().getCycleInfo();
   MachineDominatorTree &DomTree = getAnalysis<MachineDominatorTree>();
 
+  // TODO: Check for single lane execution.
   MachineUniformityInfo Uniformity =
-      computeMachineUniformityInfo(MF, CycleInfo, DomTree.getBase());
+      computeMachineUniformityInfo(MF, CycleInfo, DomTree.getBase(), true);
   (void)Uniformity; // TODO: Use this
 
   assignRegisterBanks(MF);

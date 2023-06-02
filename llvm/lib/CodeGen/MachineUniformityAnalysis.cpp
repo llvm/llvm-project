@@ -153,12 +153,14 @@ template class llvm::GenericUniformityInfo<MachineSSAContext>;
 template struct llvm::GenericUniformityAnalysisImplDeleter<
     llvm::GenericUniformityAnalysisImpl<MachineSSAContext>>;
 
-MachineUniformityInfo
-llvm::computeMachineUniformityInfo(MachineFunction &F,
-                                   const MachineCycleInfo &cycleInfo,
-                                   const MachineDomTree &domTree) {
+MachineUniformityInfo llvm::computeMachineUniformityInfo(
+    MachineFunction &F, const MachineCycleInfo &cycleInfo,
+    const MachineDomTree &domTree, bool HasBranchDivergence) {
   assert(F.getRegInfo().isSSA() && "Expected to be run on SSA form!");
-  return MachineUniformityInfo(F, domTree, cycleInfo);
+  MachineUniformityInfo UI(F, domTree, cycleInfo);
+  if (HasBranchDivergence)
+    UI.compute();
+  return UI;
 }
 
 namespace {
@@ -218,7 +220,9 @@ void MachineUniformityAnalysisPass::getAnalysisUsage(AnalysisUsage &AU) const {
 bool MachineUniformityAnalysisPass::runOnMachineFunction(MachineFunction &MF) {
   auto &DomTree = getAnalysis<MachineDominatorTree>().getBase();
   auto &CI = getAnalysis<MachineCycleInfoWrapperPass>().getCycleInfo();
-  UI = computeMachineUniformityInfo(MF, CI, DomTree);
+  // FIXME: Query TTI::hasBranchDivergence. -run-pass seems to end up with a
+  // default NoTTI
+  UI = computeMachineUniformityInfo(MF, CI, DomTree, true);
   return false;
 }
 
