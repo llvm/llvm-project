@@ -1346,13 +1346,7 @@ def SymbolicateCrashLog(crash_log, options):
             print(error)
 
 
-def load_crashlog_in_scripted_process(debugger, crash_log_file, options, result):
-    crashlog_path = os.path.expanduser(crash_log_file)
-    if not os.path.exists(crashlog_path):
-        raise InteractiveCrashLogException(
-            "crashlog file %s does not exist" % crashlog_path
-        )
-
+def load_crashlog_in_scripted_process(debugger, crashlog_path, options, result):
     crashlog = CrashLogParser.create(debugger, crashlog_path, False).parse()
 
     target = lldb.SBTarget()
@@ -1641,17 +1635,22 @@ def SymbolicateCrashLogs(debugger, command_args, result):
     ci = debugger.GetCommandInterpreter()
 
     if args:
-        for crash_log_file in args:
+        for crashlog_file in args:
+            crashlog_path = os.path.expanduser(crashlog_file)
+            if not os.path.exists(crashlog_path):
+                raise FileNotFoundError(
+                    "crashlog file %s does not exist" % crashlog_path
+                )
             if should_run_in_interactive_mode(options, ci):
                 try:
                     load_crashlog_in_scripted_process(
-                        debugger, crash_log_file, options, result
+                        debugger, crashlog_path, options, result
                     )
                 except InteractiveCrashLogException as e:
                     result.SetError(str(e))
             else:
                 crash_log = CrashLogParser.create(
-                    debugger, crash_log_file, options.verbose
+                    debugger, crashlog_path, options.verbose
                 ).parse()
                 SymbolicateCrashLog(crash_log, options)
 
