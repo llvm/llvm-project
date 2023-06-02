@@ -33,11 +33,7 @@ ErrnoConsumer __llvmlibc_errno;
 LIBC_THREAD_LOCAL int __llvmlibc_errno;
 #endif // LIBC_TARGET_ARCH_IS_GPU
 #else
-#ifdef LIBC_TARGET_ARCH_IS_GPU
-ErrnoConsumer __llvmlibc_internal_errno;
-#else
 LIBC_THREAD_LOCAL int __llvmlibc_internal_errno;
-#endif // LIBC_TARGET_ARCH_IS_GPU
 #endif
 } // extern "C"
 
