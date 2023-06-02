@@ -117,6 +117,35 @@ X86LegalizerInfo::X86LegalizerInfo(const X86Subtarget &STI,
       .clampScalar(0, s8, sMaxScalar)
       .scalarize(0);
 
+  // bswap
+  getActionDefinitionsBuilder(G_BSWAP)
+      .legalIf([=](const LegalityQuery &Query) {
+        return Query.Types[0] == s32 ||
+               (Subtarget.is64Bit() && Query.Types[0] == s64);
+      })
+      .widenScalarToNextPow2(0, /*Min=*/32)
+      .clampScalar(0, s32, sMaxScalar);
+
+  // popcount
+  getActionDefinitionsBuilder(G_CTPOP)
+      .legalIf([=](const LegalityQuery &Query) -> bool {
+        return Subtarget.hasPOPCNT() &&
+               (typePairInSet(0, 1, {{s16, s16}, {s32, s32}})(Query) ||
+                (Is64Bit && typePairInSet(0, 1, {{s64, s64}})(Query)));
+      })
+      .widenScalarToNextPow2(1, /*Min=*/16)
+      .clampScalar(1, s16, sMaxScalar);
+
+  // count leading zeros (LZCNT)
+  getActionDefinitionsBuilder(G_CTLZ)
+      .legalIf([=](const LegalityQuery &Query) -> bool {
+        return Subtarget.hasLZCNT() &&
+               (typePairInSet(0, 1, {{s16, s16}, {s32, s32}})(Query) ||
+                (Is64Bit && typePairInSet(0, 1, {{s64, s64}})(Query)));
+      })
+      .widenScalarToNextPow2(1, /*Min=*/16)
+      .clampScalar(1, s16, sMaxScalar);
+
   setLegalizerInfo32bit();
   setLegalizerInfo64bit();
   setLegalizerInfoSSE1();
@@ -149,48 +178,6 @@ X86LegalizerInfo::X86LegalizerInfo(const X86Subtarget &STI,
       LegacyLegalizerInfo::widenToLargerTypesAndNarrowToLargest);
 
   getActionDefinitionsBuilder({G_MEMCPY, G_MEMMOVE, G_MEMSET}).libcall();
-
-  getActionDefinitionsBuilder(G_BSWAP)
-    .legalIf([=](const LegalityQuery &Query) {
-        return Query.Types[0] == s32 ||
-          (Subtarget.is64Bit() && Query.Types[0] == s64);
-      })
-    .widenScalarToNextPow2(0, /*Min=*/32)
-    .clampScalar(0, s32, sMaxScalar);
-
-  if (Subtarget.is64Bit()) {
-    if (Subtarget.hasPOPCNT()) {
-      // popcount
-      getActionDefinitionsBuilder(G_CTPOP)
-        .legalFor({{s16, s16}, {s32, s32}, {s64, s64}})
-        .widenScalarToNextPow2(1, /*Min=*/16)
-        .clampScalar(1, s16, s64);
-    }
-
-    if (Subtarget.hasLZCNT()) {
-      // count leading zeros (LZCNT)
-      getActionDefinitionsBuilder(G_CTLZ)
-        .legalFor({{s16, s16}, {s32, s32}, {s64, s64}})
-        .widenScalarToNextPow2(1, /*Min=*/16)
-        .clampScalar(1, s16, s64);
-    }
-  } else { // 32-bit
-    if (Subtarget.hasPOPCNT()) {
-      // popcount
-      getActionDefinitionsBuilder(G_CTPOP)
-        .legalFor({{s16, s16}, {s32, s32}})
-        .widenScalarToNextPow2(1, /*Min=*/16)
-        .clampScalar(1, s16, s32);
-    }
-
-    if (Subtarget.hasLZCNT()) {
-      // count leading zeros (LZCNT)
-      getActionDefinitionsBuilder(G_CTLZ)
-        .legalFor({{s16, s16}, {s32, s32}})
-        .widenScalarToNextPow2(1, /*Min=*/16)
-        .clampScalar(1, s16, s32);
-    }
-  }
 
   LegacyInfo.computeTables();
   verify(*STI.getInstrInfo());
