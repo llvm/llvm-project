@@ -50,8 +50,7 @@ define <8 x i1> @isnan_v8f32(<8 x float> %x) {
 ; CHECK-NEXT:    vsetivli zero, 8, e32, m2, ta, ma
 ; CHECK-NEXT:    vfclass.v v8, v8
 ; CHECK-NEXT:    li a0, 512
-; CHECK-NEXT:    vand.vx v8, v8, a0
-; CHECK-NEXT:    vmsne.vi v0, v8, 0
+; CHECK-NEXT:    vmseq.vx v0, v8, a0
 ; CHECK-NEXT:    ret
   %1 = call <8 x i1> @llvm.is.fpclass.v8f32(<8 x float> %x, i32 2)
   ret <8 x i1> %1
@@ -63,8 +62,7 @@ define <16 x i1> @isnan_v16f32(<16 x float> %x) {
 ; CHECK-NEXT:    vsetivli zero, 16, e32, m4, ta, ma
 ; CHECK-NEXT:    vfclass.v v8, v8
 ; CHECK-NEXT:    li a0, 256
-; CHECK-NEXT:    vand.vx v8, v8, a0
-; CHECK-NEXT:    vmsne.vi v0, v8, 0
+; CHECK-NEXT:    vmseq.vx v0, v8, a0
 ; CHECK-NEXT:    ret
   %1 = call <16 x i1> @llvm.is.fpclass.v16f32(<16 x float> %x, i32 1)
   ret <16 x i1> %1
@@ -89,8 +87,7 @@ define <4 x i1> @isposinf_v4f64(<4 x double> %x) {
 ; CHECK-NEXT:    vsetivli zero, 4, e64, m2, ta, ma
 ; CHECK-NEXT:    vfclass.v v8, v8
 ; CHECK-NEXT:    li a0, 128
-; CHECK-NEXT:    vand.vx v8, v8, a0
-; CHECK-NEXT:    vmsne.vi v0, v8, 0
+; CHECK-NEXT:    vmseq.vx v0, v8, a0
 ; CHECK-NEXT:    ret
   %1 = call <4 x i1> @llvm.is.fpclass.v4f64(<4 x double> %x, i32 512) ; 0x200 = "+inf"
   ret <4 x i1> %1
@@ -101,8 +98,7 @@ define <8 x i1> @isneginf_v8f64(<8 x double> %x) {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 8, e64, m4, ta, ma
 ; CHECK-NEXT:    vfclass.v v8, v8
-; CHECK-NEXT:    vand.vi v8, v8, 1
-; CHECK-NEXT:    vmsne.vi v0, v8, 0
+; CHECK-NEXT:    vmseq.vi v0, v8, 1
 ; CHECK-NEXT:    ret
   %1 = call <8 x i1> @llvm.is.fpclass.v8f64(<8 x double> %x, i32 4) ; "-inf"
   ret <8 x i1> %1
