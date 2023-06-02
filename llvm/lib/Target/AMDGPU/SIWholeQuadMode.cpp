@@ -158,10 +158,11 @@ private:
   MachinePostDominatorTree *PDT;
 
   unsigned AndOpc;
+  unsigned AndTermOpc;
   unsigned AndN2Opc;
   unsigned XorOpc;
   unsigned AndSaveExecOpc;
-  unsigned OrSaveExecOpc;
+  unsigned AndSaveExecTermOpc;
   unsigned WQMOpc;
   Register Exec;
   Register LiveMaskReg;
@@ -1206,13 +1207,25 @@ MachineBasicBlock::iterator SIWholeQuadMode::prepareInsertion(
 void SIWholeQuadMode::toExact(MachineBasicBlock &MBB,
                               MachineBasicBlock::iterator Before,
                               Register SaveWQM) {
+  bool IsTerminator = Before == MBB.end();
+  if (!IsTerminator) {
+    auto FirstTerm = MBB.getFirstTerminator();
+    if (FirstTerm != MBB.end()) {
+      SlotIndex FirstTermIdx = LIS->getInstructionIndex(*FirstTerm);
+      SlotIndex BeforeIdx = LIS->getInstructionIndex(*Before);
+      IsTerminator = BeforeIdx > FirstTermIdx;
+    }
+  }
+
   MachineInstr *MI;
 
   if (SaveWQM) {
-    MI = BuildMI(MBB, Before, DebugLoc(), TII->get(AndSaveExecOpc), SaveWQM)
+    unsigned Opcode = IsTerminator ? AndSaveExecTermOpc : AndSaveExecOpc;
+    MI = BuildMI(MBB, Before, DebugLoc(), TII->get(Opcode), SaveWQM)
              .addReg(LiveMaskReg);
   } else {
-    MI = BuildMI(MBB, Before, DebugLoc(), TII->get(AndOpc), Exec)
+    unsigned Opcode = IsTerminator ? AndTermOpc : AndOpc;
+    MI = BuildMI(MBB, Before, DebugLoc(), TII->get(Opcode), Exec)
              .addReg(Exec)
              .addReg(LiveMaskReg);
   }
@@ -1364,9 +1377,6 @@ void SIWholeQuadMode::processBlock(MachineBasicBlock &MBB, bool IsEntry) {
         // safely leave Strict mode enabled.
         Needs = StateExact | StateWQM | StateStrict;
       }
-
-      if (MI.isTerminator() && OutNeeds == StateExact)
-        Needs = StateExact;
 
       ++Next;
     } else {
@@ -1591,18 +1601,20 @@ bool SIWholeQuadMode::runOnMachineFunction(MachineFunction &MF) {
 
   if (ST->isWave32()) {
     AndOpc = AMDGPU::S_AND_B32;
+    AndTermOpc = AMDGPU::S_AND_B32_term;
     AndN2Opc = AMDGPU::S_ANDN2_B32;
     XorOpc = AMDGPU::S_XOR_B32;
     AndSaveExecOpc = AMDGPU::S_AND_SAVEEXEC_B32;
-    OrSaveExecOpc = AMDGPU::S_OR_SAVEEXEC_B32;
+    AndSaveExecTermOpc = AMDGPU::S_AND_SAVEEXEC_B32_term;
     WQMOpc = AMDGPU::S_WQM_B32;
     Exec = AMDGPU::EXEC_LO;
   } else {
     AndOpc = AMDGPU::S_AND_B64;
+    AndTermOpc = AMDGPU::S_AND_B64_term;
     AndN2Opc = AMDGPU::S_ANDN2_B64;
     XorOpc = AMDGPU::S_XOR_B64;
     AndSaveExecOpc = AMDGPU::S_AND_SAVEEXEC_B64;
-    OrSaveExecOpc = AMDGPU::S_OR_SAVEEXEC_B64;
+    AndSaveExecTermOpc = AMDGPU::S_AND_SAVEEXEC_B64_term;
     WQMOpc = AMDGPU::S_WQM_B64;
     Exec = AMDGPU::EXEC;
   }
