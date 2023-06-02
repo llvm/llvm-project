@@ -161,10 +161,19 @@ public:
 
   /// A function that populates a `RewritePatternSet`.
   using PopulatePatternsFn = std::function<void(RewritePatternSet &)>;
+  /// A function that populates a `RewritePatternSet` with a specified benefit.
+  using PopulatePatternsWithBenefitFn =
+      std::function<void(RewritePatternSet &, PatternBenefit)>;
 
   /// Registers patterns with the specified identifier. The identifier should
   /// be prefixed with the dialect to which the patterns belong.
   void registerPatterns(StringRef identifier, PopulatePatternsFn &&fn);
+
+  /// Registers patterns with the specified identifier. The identifier should
+  /// be prefixed with the dialect to which the patterns belong. The pattern
+  /// benefit is currently ignored.
+  void registerPatterns(StringRef identifier,
+                        PopulatePatternsWithBenefitFn &&fn);
 
 protected:
   friend class ApplyPatternsOp;
