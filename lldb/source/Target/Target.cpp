@@ -4656,6 +4656,16 @@ EnableSwiftCxxInterop TargetProperties::GetEnableSwiftCxxInterop() const {
   return enable_interop;
 }
 
+Args TargetProperties::GetSwiftPluginServerForPath() const {
+  const uint32_t idx = ePropertySwiftPluginServerForPath;
+
+  llvm::StringMap<std::string> result;
+  Args property_plugin_server_path;
+  m_experimental_properties_up->GetValueProperties()->GetPropertyAtIndexAsArgs(
+      nullptr, idx, property_plugin_server_path);
+  return property_plugin_server_path;
+}
+
 bool TargetProperties::GetSwiftAutoImportFrameworks() const {
   const uint32_t idx = ePropertySwiftAutoImportFrameworks;
   return m_collection_sp->GetPropertyAtIndexAsBoolean(
