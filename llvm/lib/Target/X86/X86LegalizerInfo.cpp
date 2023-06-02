@@ -22,6 +22,7 @@
 using namespace llvm;
 using namespace TargetOpcode;
 using namespace LegalizeActions;
+using namespace LegalityPredicates;
 
 /// FIXME: The following static functions are SizeChangeStrategy functions
 /// that are meant to temporarily mimic the behaviour of the old legalization
@@ -60,6 +61,62 @@ X86LegalizerInfo::X86LegalizerInfo(const X86Subtarget &STI,
                                    const X86TargetMachine &TM)
     : Subtarget(STI), TM(TM) {
 
+  bool Is64Bit = Subtarget.is64Bit();
+  bool HasSSE2 = Subtarget.hasSSE2();
+  bool HasAVX2 = Subtarget.hasAVX2();
+  bool HasAVX512 = Subtarget.hasAVX512();
+  bool HasBWI = Subtarget.hasAVX512() && Subtarget.hasBWI();
+
+  const LLT s8 = LLT::scalar(8);
+  const LLT s16 = LLT::scalar(16);
+  const LLT s32 = LLT::scalar(32);
+  const LLT s64 = LLT::scalar(64);
+  const LLT sMaxScalar = Subtarget.is64Bit() ? s64 : s32;
+
+  const LLT v16s8 = LLT::fixed_vector(16, 8);
+  const LLT v8s16 = LLT::fixed_vector(8, 16);
+  const LLT v4s32 = LLT::fixed_vector(4, 32);
+  const LLT v2s64 = LLT::fixed_vector(2, 64);
+
+  const LLT v32s8 = LLT::fixed_vector(32, 8);
+  const LLT v16s16 = LLT::fixed_vector(16, 16);
+  const LLT v8s32 = LLT::fixed_vector(8, 32);
+  const LLT v4s64 = LLT::fixed_vector(4, 64);
+
+  const LLT v64s8 = LLT::fixed_vector(64, 8);
+  const LLT v32s16 = LLT::fixed_vector(32, 16);
+  const LLT v16s32 = LLT::fixed_vector(16, 32);
+  const LLT v8s64 = LLT::fixed_vector(8, 64);
+
+  // integer addition/subtraction
+  getActionDefinitionsBuilder({G_ADD, G_SUB})
+      .legalIf([=](const LegalityQuery &Query) -> bool {
+        if (typeInSet(0, {s8, s16, s32})(Query))
+          return true;
+        if (Is64Bit && typeInSet(0, {s64})(Query))
+          return true;
+        if (HasSSE2 && typeInSet(0, {v16s8, v8s16, v4s32, v2s64})(Query))
+          return true;
+        if (HasAVX2 && typeInSet(0, {v32s8, v16s16, v8s32, v4s64})(Query))
+          return true;
+        if (HasAVX512 && typeInSet(0, {v16s32, v8s64})(Query))
+          return true;
+        if (HasBWI && typeInSet(0, {v64s8, v32s16})(Query))
+          return true;
+        return false;
+      })
+      .clampMinNumElements(0, s8, 16)
+      .clampMinNumElements(0, s16, 8)
+      .clampMinNumElements(0, s32, 4)
+      .clampMinNumElements(0, s64, 2)
+      .clampMaxNumElements(0, s8, HasBWI ? 64 : (HasAVX2 ? 32 : 16))
+      .clampMaxNumElements(0, s16, HasBWI ? 32 : (HasAVX2 ? 16 : 8))
+      .clampMaxNumElements(0, s32, HasAVX512 ? 16 : (HasAVX2 ? 8 : 4))
+      .clampMaxNumElements(0, s64, HasAVX512 ? 8 : (HasAVX2 ? 4 : 2))
+      .widenScalarToNextPow2(0, /*Min=*/32)
+      .clampScalar(0, s8, sMaxScalar)
+      .scalarize(0);
+
   setLegalizerInfo32bit();
   setLegalizerInfo64bit();
   setLegalizerInfoSSE1();
@@ -72,11 +129,6 @@ X86LegalizerInfo::X86LegalizerInfo(const X86Subtarget &STI,
   setLegalizerInfoAVX512DQ();
   setLegalizerInfoAVX512BW();
 
-  const LLT s16 = LLT::scalar(16);
-  const LLT s32 = LLT::scalar(32);
-  const LLT s64 = LLT::scalar(64);
-  const LLT maxScalar = Subtarget.is64Bit() ? s64 : s32;
-
   getActionDefinitionsBuilder(G_INTRINSIC_ROUNDEVEN)
     .scalarize(0)
     .minScalar(0, LLT::scalar(32))
@@ -84,7 +136,7 @@ X86LegalizerInfo::X86LegalizerInfo(const X86Subtarget &STI,
 
   auto &LegacyInfo = getLegacyLegalizerInfo();
   LegacyInfo.setLegalizeScalarToDifferentSizeStrategy(G_PHI, 0, widen_1);
-  for (unsigned BinOp : {G_SUB, G_MUL, G_AND, G_OR, G_XOR})
+  for (unsigned BinOp : {G_MUL, G_AND, G_OR, G_XOR})
     LegacyInfo.setLegalizeScalarToDifferentSizeStrategy(BinOp, 0, widen_1);
   for (unsigned MemOp : {G_LOAD, G_STORE})
     LegacyInfo.setLegalizeScalarToDifferentSizeStrategy(
@@ -104,7 +156,7 @@ X86LegalizerInfo::X86LegalizerInfo(const X86Subtarget &STI,
           (Subtarget.is64Bit() && Query.Types[0] == s64);
       })
     .widenScalarToNextPow2(0, /*Min=*/32)
-    .clampScalar(0, s32, maxScalar);
+    .clampScalar(0, s32, sMaxScalar);
 
   if (Subtarget.is64Bit()) {
     if (Subtarget.hasPOPCNT()) {
@@ -167,7 +219,7 @@ void X86LegalizerInfo::setLegalizerInfo32bit() {
   for (auto Ty : {s8, s16, s32, p0})
     LegacyInfo.setAction({G_PHI, Ty}, LegacyLegalizeActions::Legal);
 
-  for (unsigned BinOp : {G_ADD, G_SUB, G_MUL, G_AND, G_OR, G_XOR})
+  for (unsigned BinOp : {G_MUL, G_AND, G_OR, G_XOR})
     for (auto Ty : {s8, s16, s32})
       LegacyInfo.setAction({BinOp, Ty}, LegacyLegalizeActions::Legal);
 
@@ -267,7 +319,7 @@ void X86LegalizerInfo::setLegalizerInfo64bit() {
 
   LegacyInfo.setAction({G_PHI, s64}, LegacyLegalizeActions::Legal);
 
-  for (unsigned BinOp : {G_ADD, G_SUB, G_MUL, G_AND, G_OR, G_XOR})
+  for (unsigned BinOp : {G_MUL, G_AND, G_OR, G_XOR})
     LegacyInfo.setAction({BinOp, s64}, LegacyLegalizeActions::Legal);
 
   for (unsigned MemOp : {G_LOAD, G_STORE})
@@ -392,10 +444,6 @@ void X86LegalizerInfo::setLegalizerInfoSSE2() {
     for (auto Ty : {s64, v2s64})
       LegacyInfo.setAction({BinOp, Ty}, LegacyLegalizeActions::Legal);
 
-  for (unsigned BinOp : {G_ADD, G_SUB})
-    for (auto Ty : {v16s8, v8s16, v4s32, v2s64})
-      LegacyInfo.setAction({BinOp, Ty}, LegacyLegalizeActions::Legal);
-
   LegacyInfo.setAction({G_MUL, v8s16}, LegacyLegalizeActions::Legal);
 
   LegacyInfo.setAction({G_FPEXT, s64}, LegacyLegalizeActions::Legal);
@@ -502,10 +550,6 @@ void X86LegalizerInfo::setLegalizerInfoAVX2() {
 
   auto &LegacyInfo = getLegacyLegalizerInfo();
 
-  for (unsigned BinOp : {G_ADD, G_SUB})
-    for (auto Ty : {v32s8, v16s16, v8s32, v4s64})
-      LegacyInfo.setAction({BinOp, Ty}, LegacyLegalizeActions::Legal);
-
   for (auto Ty : {v16s16, v8s32})
     LegacyInfo.setAction({G_MUL, Ty}, LegacyLegalizeActions::Legal);
 
@@ -546,9 +590,6 @@ void X86LegalizerInfo::setLegalizerInfoAVX512() {
 
   auto &LegacyInfo = getLegacyLegalizerInfo();
 
-  for (unsigned BinOp : {G_ADD, G_SUB})
-    for (auto Ty : {v16s32, v8s64})
-      LegacyInfo.setAction({BinOp, Ty}, LegacyLegalizeActions::Legal);
 
   LegacyInfo.setAction({G_MUL, v16s32}, LegacyLegalizeActions::Legal);
 
@@ -598,14 +639,9 @@ void X86LegalizerInfo::setLegalizerInfoAVX512BW() {
   if (!(Subtarget.hasAVX512() && Subtarget.hasBWI()))
     return;
 
-  const LLT v64s8 = LLT::fixed_vector(64, 8);
   const LLT v32s16 = LLT::fixed_vector(32, 16);
 
   auto &LegacyInfo = getLegacyLegalizerInfo();
-
-  for (unsigned BinOp : {G_ADD, G_SUB})
-    for (auto Ty : {v64s8, v32s16})
-      LegacyInfo.setAction({BinOp, Ty}, LegacyLegalizeActions::Legal);
 
   LegacyInfo.setAction({G_MUL, v32s16}, LegacyLegalizeActions::Legal);
 
