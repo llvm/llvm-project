@@ -5378,9 +5378,14 @@ static bool EvaluateUnaryTypeTrait(Sema &Self, TypeTrait UTT,
 static bool EvaluateBinaryTypeTrait(Sema &Self, TypeTrait BTT, QualType LhsT,
                                     QualType RhsT, SourceLocation KeyLoc);
 
-static bool evaluateTypeTrait(Sema &S, TypeTrait Kind, SourceLocation KWLoc,
-                              ArrayRef<TypeSourceInfo *> Args,
-                              SourceLocation RParenLoc) {
+static bool EvaluateBooleanTypeTrait(Sema &S, TypeTrait Kind,
+                                     SourceLocation KWLoc,
+                                     ArrayRef<TypeSourceInfo *> Args,
+                                     SourceLocation RParenLoc,
+                                     bool IsDependent) {
+  if (IsDependent)
+    return false;
+
   if (Kind <= UTT_Last)
     return EvaluateUnaryTypeTrait(S, Kind, KWLoc, Args[0]->getType());
 
@@ -5548,12 +5553,19 @@ bool Sema::CheckTypeTraitArity(unsigned Arity, SourceLocation Loc, size_t N) {
   return true;
 }
 
+enum class TypeTraitReturnType {
+  Bool,
+};
+
+static TypeTraitReturnType GetReturnType(TypeTrait Kind) {
+  return TypeTraitReturnType::Bool;
+}
+
 ExprResult Sema::BuildTypeTrait(TypeTrait Kind, SourceLocation KWLoc,
                                 ArrayRef<TypeSourceInfo *> Args,
                                 SourceLocation RParenLoc) {
   if (!CheckTypeTraitArity(getTypeTraitArity(Kind), KWLoc, Args.size()))
     return ExprError();
-  QualType ResultType = Context.getLogicalOperationType();
 
   if (Kind <= UTT_Last && !CheckUnaryTypeTraitTypeCompleteness(
                                *this, Kind, KWLoc, Args[0]->getType()))
@@ -5569,12 +5581,17 @@ ExprResult Sema::BuildTypeTrait(TypeTrait Kind, SourceLocation KWLoc,
     }
   }
 
-  bool Result = false;
-  if (!Dependent)
-    Result = evaluateTypeTrait(*this, Kind, KWLoc, Args, RParenLoc);
-
-  return TypeTraitExpr::Create(Context, ResultType, KWLoc, Kind, Args,
-                               RParenLoc, Result);
+  switch (GetReturnType(Kind)) {
+  case TypeTraitReturnType::Bool: {
+    bool Result = EvaluateBooleanTypeTrait(*this, Kind, KWLoc, Args, RParenLoc,
+                                           Dependent);
+    return TypeTraitExpr::Create(Context, Context.getLogicalOperationType(),
+                                 KWLoc, Kind, Args, RParenLoc, Result);
+  }
+  default:
+    llvm_unreachable("reached the end of BuildTypeTrait because the type "
+                     "trait's type is unaccounted for");
+  }
 }
 
 ExprResult Sema::ActOnTypeTrait(TypeTrait Kind, SourceLocation KWLoc,
