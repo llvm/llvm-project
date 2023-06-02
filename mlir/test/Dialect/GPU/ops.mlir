@@ -335,19 +335,19 @@ module attributes {gpu.container_module} {
     // CHECK: gpu.create_dn_vec async
     %dnvec, %token6 = gpu.create_dn_vec async [%token5] %mem2, %arg0 : memref<?xf64>
     // CHECK: gpu.spmv_buffer_size async
-    %bufferSz, %token7 = gpu.spmv_buffer_size async [%token6] %env, %spmat, %dnvec, %dnvec
+    %bufferSz, %token7 = gpu.spmv_buffer_size async [%token6] %env, %spmat, %dnvec, %dnvec  into f64
     // CHECK: gpu.spmv async
-    %token8 = gpu.spmv async [%token7] %env, %spmat, %dnvec, %dnvec, %mem2 : memref<?xf64>
+    %token8 = gpu.spmv async [%token7] %env, %spmat, %dnvec, %dnvec, %mem2 : memref<?xf64>  into f64
     // CHECK: gpu.create_dn_mat async
     %dnmat, %token9 = gpu.create_dn_mat async [%token8] %arg0, %arg0, %mem2 : memref<?xf64>
     // CHECK: gpu.spmm_buffer_size async
-    %bufferSz2, %token10 = gpu.spmm_buffer_size async [%token9] %env, %spmat, %dnmat, %dnmat
+    %bufferSz2, %token10 = gpu.spmm_buffer_size async [%token9] %env, %spmat, %dnmat, %dnmat  into f64
     // CHECK: gpu.spmm async
-    %token11 = gpu.spmm async [%token10] %env, %spmat, %dnmat, %dnmat, %mem2 : memref<?xf64>
+    %token11 = gpu.spmm async [%token10] %env, %spmat, %dnmat, %dnmat, %mem2 : memref<?xf64>  into f64
     // CHECK: gpu.sddmm_buffer_size async
-    %bufferSz3, %token12 = gpu.sddmm_buffer_size async [%token11] %env, %dnmat, %dnmat, %spmat
+    %bufferSz3, %token12 = gpu.sddmm_buffer_size async [%token11] %env, %dnmat, %dnmat, %spmat  into f64
     // CHECK: gpu.sddmm async
-    %token13 = gpu.sddmm async [%token12] %env, %dnmat, %dnmat, %spmat, %mem2 : memref<?xf64>
+    %token13 = gpu.sddmm async [%token12] %env, %dnmat, %dnmat, %spmat, %mem2 : memref<?xf64>  into f64
     // CHECK: gpu.destroy_dn_mat async
     %token14 = gpu.destroy_dn_mat async [%token13] %dnmat
     // CHECK: gpu.destroy_sp_mat async
