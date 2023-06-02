@@ -1049,50 +1049,52 @@ static Value genTensorLoad(CodegenEnv &env, OpBuilder &builder, ExprId exp) {
 /// Generates a store on a dense or sparse tensor.
 static void genTensorStore(CodegenEnv &env, OpBuilder &builder, ExprId exp,
                            Value rhs) {
-  linalg::GenericOp op = env.op();
-  Location loc = op.getLoc();
+  // Only unary and binary are allowed to return uninitialized rhs
+  // to indicate missing output.
+  if (!rhs) {
+    assert(env.exp(exp).kind == TensorExp::Kind::kUnary ||
+           env.exp(exp).kind == TensorExp::Kind::kBinary);
+    return;
+  }
   // Test if this is a scalarized reduction.
   if (env.isReduc()) {
     env.updateReduc(rhs);
     return;
   }
-  // Store during insertion.
+  // Regular store.
+  linalg::GenericOp op = env.op();
+  Location loc = op.getLoc();
   OpOperand *t = op.getDpsInitOperand(0);
-  if (env.isSparseOutput(t)) {
-    if (!rhs) {
-      // Only unary and binary are allowed to return uninitialized rhs
-      // to indicate missing output.
-      assert(env.exp(exp).kind == TensorExp::Kind::kUnary ||
-             env.exp(exp).kind == TensorExp::Kind::kBinary);
-    } else if (env.exp(exp).kind == TensorExp::Kind::kSelect) {
-      // Select operation insertion.
-      Value chain = env.getInsertionChain();
-      scf::IfOp ifOp =
-          builder.create<scf::IfOp>(loc, chain.getType(), rhs, /*else=*/true);
-      builder.setInsertionPointToStart(&ifOp.getThenRegion().front());
-      // Existing value was preserved to be used here.
-      assert(env.exp(exp).val);
-      Value v0 = env.exp(exp).val;
-      genInsertionStore(env, builder, t, v0);
-      env.merger().clearExprValue(exp);
-      // Yield modified insertion chain along true branch.
-      Value mchain = env.getInsertionChain();
-      builder.create<scf::YieldOp>(op.getLoc(), mchain);
-      // Yield original insertion chain along false branch.
-      builder.setInsertionPointToStart(&ifOp.getElseRegion().front());
-      builder.create<scf::YieldOp>(loc, chain);
-      // Done with if statement.
-      env.updateInsertionChain(ifOp->getResult(0));
-      builder.setInsertionPointAfter(ifOp);
-    } else {
-      genInsertionStore(env, builder, t, rhs);
-    }
+  if (!env.isSparseOutput(t)) {
+    SmallVector<Value> args;
+    Value ptr = genSubscript(env, builder, t, args);
+    builder.create<memref::StoreOp>(loc, rhs, ptr, args);
     return;
   }
-  // Actual store.
-  SmallVector<Value> args;
-  Value ptr = genSubscript(env, builder, t, args);
-  builder.create<memref::StoreOp>(loc, rhs, ptr, args);
+  // Store during sparse insertion.
+  if (env.exp(exp).kind != TensorExp::Kind::kSelect) {
+    genInsertionStore(env, builder, t, rhs);
+    return;
+  }
+  // Select operation insertion.
+  Value chain = env.getInsertionChain();
+  scf::IfOp ifOp =
+      builder.create<scf::IfOp>(loc, chain.getType(), rhs, /*else=*/true);
+  builder.setInsertionPointToStart(&ifOp.getThenRegion().front());
+  // Existing value was preserved to be used here.
+  assert(env.exp(exp).val);
+  Value v0 = env.exp(exp).val;
+  genInsertionStore(env, builder, t, v0);
+  env.merger().clearExprValue(exp);
+  // Yield modified insertion chain along true branch.
+  Value mchain = env.getInsertionChain();
+  builder.create<scf::YieldOp>(op.getLoc(), mchain);
+  // Yield original insertion chain along false branch.
+  builder.setInsertionPointToStart(&ifOp.getElseRegion().front());
+  builder.create<scf::YieldOp>(loc, chain);
+  // Done with if statement.
+  env.updateInsertionChain(ifOp->getResult(0));
+  builder.setInsertionPointAfter(ifOp);
 }
 
 /// Generates an invariant value.
