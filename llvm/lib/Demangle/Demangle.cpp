@@ -53,7 +53,7 @@ bool llvm::nonMicrosoftDemangle(std::string_view MangledName,
   else if (isRustEncoding(MangledName.data()))
     Demangled = rustDemangle(MangledName);
   else if (isDLangEncoding(MangledName.data()))
-    Demangled = dlangDemangle(MangledName.data());
+    Demangled = dlangDemangle(MangledName);
 
   if (!Demangled)
     return false;
