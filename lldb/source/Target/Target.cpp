@@ -69,6 +69,7 @@
 #include <memory>
 #include <mutex>
 #include <optional>
+#include <sstream>
 
 using namespace lldb;
 using namespace lldb_private;
@@ -2534,6 +2535,27 @@ void Target::SetDefaultArchitecture(const ArchSpec &arch) {
            "setting target's default architecture to  {0} ({1})",
            arch.GetArchitectureName(), arch.GetTriple().getTriple());
   Target::GetGlobalProperties().SetDefaultArchitecture(arch);
+}
+
+llvm::Error Target::SetLabel(llvm::StringRef label) {
+  size_t n = LLDB_INVALID_INDEX32;
+  if (llvm::to_integer(label, n))
+    return llvm::make_error<llvm::StringError>(
+        "Cannot use integer as target label.", llvm::inconvertibleErrorCode());
+  TargetList &targets = GetDebugger().GetTargetList();
+  for (size_t i = 0; i < targets.GetNumTargets(); i++) {
+    TargetSP target_sp = targets.GetTargetAtIndex(i);
+    if (target_sp && target_sp->GetLabel() == label) {
+        return llvm::make_error<llvm::StringError>(
+            llvm::formatv(
+                "Cannot use label '{0}' since it's set in target #{1}.", label,
+                i),
+            llvm::inconvertibleErrorCode());
+    }
+  }
+
+  m_label = label.str();
+  return llvm::Error::success();
 }
 
 Target *Target::GetTargetFromContexts(const ExecutionContext *exe_ctx_ptr,
