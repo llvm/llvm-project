@@ -38,6 +38,7 @@ struct KnownBits;
 class Loop;
 class LoopInfo;
 class MDNode;
+class SimplifyQuery;
 class StringRef;
 class TargetLibraryInfo;
 class Value;
@@ -92,6 +93,10 @@ KnownBits computeKnownBits(const Value *V, const APInt &DemandedElts,
 /// \p KnownZero the set of bits that are known to be zero
 /// \p KnownOne the set of bits that are known to be one
 void computeKnownBitsFromRangeMetadata(const MDNode &Ranges, KnownBits &Known);
+
+/// Merge bits known from assumes into Known.
+void computeKnownBitsFromAssume(const Value *V, KnownBits &Known,
+                                unsigned Depth, const SimplifyQuery &Q);
 
 /// Using KnownBits LHS/RHS produce the known bits for logic op (and/xor/or).
 KnownBits analyzeKnownBitsFromAndXorOr(
