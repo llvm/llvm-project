@@ -42,13 +42,14 @@ namespace scudo {
 
 template <typename Config> class SizeClassAllocator32 {
 public:
-  typedef typename Config::PrimaryCompactPtrT CompactPtrT;
-  typedef typename Config::SizeClassMap SizeClassMap;
-  static const uptr GroupSizeLog = Config::PrimaryGroupSizeLog;
+  typedef typename Config::Primary::CompactPtrT CompactPtrT;
+  typedef typename Config::Primary::SizeClassMap SizeClassMap;
+  static const uptr GroupSizeLog = Config::Primary::GroupSizeLog;
   // The bytemap can only track UINT8_MAX - 1 classes.
   static_assert(SizeClassMap::LargestClassId <= (UINT8_MAX - 1), "");
   // Regions should be large enough to hold the largest Block.
-  static_assert((1UL << Config::PrimaryRegionSizeLog) >= SizeClassMap::MaxSize,
+  static_assert((1UL << Config::Primary::RegionSizeLog) >=
+                    SizeClassMap::MaxSize,
                 "");
   typedef SizeClassAllocator32<Config> ThisT;
   typedef SizeClassAllocatorLocalCache<ThisT> CacheT;
@@ -281,9 +282,9 @@ public:
 
   bool setOption(Option O, sptr Value) {
     if (O == Option::ReleaseInterval) {
-      const s32 Interval = Max(
-          Min(static_cast<s32>(Value), Config::PrimaryMaxReleaseToOsIntervalMs),
-          Config::PrimaryMinReleaseToOsIntervalMs);
+      const s32 Interval = Max(Min(static_cast<s32>(Value),
+                                   Config::Primary::MaxReleaseToOsIntervalMs),
+                               Config::Primary::MinReleaseToOsIntervalMs);
       atomic_store_relaxed(&ReleaseToOsIntervalMs, Interval);
       return true;
     }
@@ -315,9 +316,9 @@ public:
 
 private:
   static const uptr NumClasses = SizeClassMap::NumClasses;
-  static const uptr RegionSize = 1UL << Config::PrimaryRegionSizeLog;
+  static const uptr RegionSize = 1UL << Config::Primary::RegionSizeLog;
   static const uptr NumRegions =
-      SCUDO_MMAP_RANGE_SIZE >> Config::PrimaryRegionSizeLog;
+      SCUDO_MMAP_RANGE_SIZE >> Config::Primary::RegionSizeLog;
   static const u32 MaxNumBatches = SCUDO_ANDROID ? 4U : 8U;
   typedef FlatByteMap<NumRegions> ByteMap;
 
@@ -350,7 +351,7 @@ private:
   static_assert(sizeof(SizeClassInfo) % SCUDO_CACHE_LINE_SIZE == 0, "");
 
   uptr computeRegionId(uptr Mem) {
-    const uptr Id = Mem >> Config::PrimaryRegionSizeLog;
+    const uptr Id = Mem >> Config::Primary::RegionSizeLog;
     CHECK_LT(Id, NumRegions);
     return Id;
   }
@@ -379,7 +380,7 @@ private:
       unmap(reinterpret_cast<void *>(End), MapEnd - End);
 
     DCHECK_EQ(Region % RegionSize, 0U);
-    static_assert(Config::PrimaryRegionSizeLog == GroupSizeLog,
+    static_assert(Config::Primary::RegionSizeLog == GroupSizeLog,
                   "Memory group should be the same size as Region");
 
     return Region;
