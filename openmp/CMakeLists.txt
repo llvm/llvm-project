@@ -90,8 +90,8 @@ option(OPENMP_ENABLE_LIBOMP_PROFILING "Enable time profiling for libomp." OFF)
 if(${OPENMP_STANDALONE_BUILD})
   set(LIBOMP_HEADERS_INSTALL_PATH "${CMAKE_INSTALL_INCLUDEDIR}")
 else()
-  include(GetClangResourceDir)
-  get_clang_resource_dir(LIBOMP_HEADERS_INSTALL_PATH SUBDIR include)
+  string(REGEX MATCH "[0-9]+" CLANG_VERSION ${PACKAGE_VERSION})
+  set(LIBOMP_HEADERS_INSTALL_PATH "${OPENMP_INSTALL_LIBDIR}/clang/${CLANG_VERSION}/include")
 endif()
 
 # Build host runtime library, after LIBOMPTARGET variables are set since they are needed

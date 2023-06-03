@@ -298,8 +298,7 @@ set(openmp_wrapper_files
   openmp_wrappers/new
 )
 
-include(GetClangResourceDir)
-get_clang_resource_dir(output_dir PREFIX ${LLVM_LIBRARY_OUTPUT_INTDIR}/.. SUBDIR include)
+set(output_dir ${LLVM_LIBRARY_OUTPUT_INTDIR}/clang/${CLANG_VERSION_MAJOR}/include)
 set(out_files)
 set(generated_files)
 
@@ -457,7 +456,7 @@ add_header_target("openmp-resource-headers" ${openmp_wrapper_files})
 add_header_target("windows-resource-headers" ${windows_only_files})
 add_header_target("utility-resource-headers" ${utility_files})
 
-get_clang_resource_dir(header_install_dir SUBDIR include)
+set(header_install_dir lib${LLVM_LIBDIR_SUFFIX}/clang/${CLANG_VERSION_MAJOR}/include)
 
 #############################################################
 # Install rules for the catch-all clang-resource-headers target
