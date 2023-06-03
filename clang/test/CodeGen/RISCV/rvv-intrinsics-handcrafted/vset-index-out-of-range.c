@@ -340,7 +340,7 @@ vfloat16m8_t test_vset_v_f16m4_f16m8(vfloat16m8_t dest, vfloat16m4_t val) {
   return __riscv_vset_v_f16m4_f16m8(dest, 2, val);
 }
 
-vint32m1x2_t test_vset_v_i32m1x2_i32m1(vint32m1x2_t dest, vint32m1_t val) {
+vint32m1x2_t test_vset_v_i32m1_i32m1x2(vint32m1x2_t dest, vint32m1_t val) {
   // expected-error@+1 {{argument value 2 is outside the valid range [0, 1]}}
-  return __riscv_vset_v_i32m1x2_i32m1(dest, 2, val);
+  return __riscv_vset_v_i32m1_i32m1x2(dest, 2, val);
 }
