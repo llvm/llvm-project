@@ -67,4 +67,5 @@ endforeach()
 
 foreach(gpu gfx600 gfx700 gfx803)
   add_isa_test(fract ${gpu})
+  add_isa_test(native_rcp ${gpu})
 endforeach()

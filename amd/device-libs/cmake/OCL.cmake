@@ -100,8 +100,12 @@ macro(opencl_bc_lib)
     get_filename_component(fext "${file}" EXT)
     if (fext STREQUAL ".cl")
       set(output "${CMAKE_CURRENT_BINARY_DIR}/${fname_we}${BC_EXT}")
+
+      get_property(file_specific_flags SOURCE "${file}" PROPERTY COMPILE_FLAGS)
+
       add_custom_command(OUTPUT "${output}"
         COMMAND $<TARGET_FILE:clang> ${inc_options} ${CLANG_OCL_FLAGS}
+          ${file_specific_flags}
           -emit-llvm -Xclang -mlink-builtin-bitcode -Xclang "${irif_lib_output}"
           -c "${file}" -o "${output}"
         DEPENDS "${file}" "${irif_lib_output}" "$<TARGET_FILE:clang>"
