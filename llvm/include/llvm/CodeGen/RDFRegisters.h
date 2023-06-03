@@ -31,6 +31,21 @@ struct RegisterAggr;
 
 using RegisterId = uint32_t;
 
+template <typename T>
+bool disjoint(const std::set<T> &A, const std::set<T> &B) {
+  auto ItA = A.begin(), EndA = A.end();
+  auto ItB = B.begin(), EndB = B.end();
+  while (ItA != EndA && ItB != EndB) {
+    if (*ItA < *ItB)
+      ++ItA;
+    else if (*ItB < *ItA)
+      ++ItB;
+    else
+      return false;
+  }
+  return true;
+}
+
 // Template class for a map translating uint32_t into arbitrary types.
 // The map will act like an indexed set: upon insertion of a new object,
 // it will automatically assign a new index to it. Index of 0 is treated
@@ -135,14 +150,9 @@ struct PhysicalRegisterInfo {
     return RegMasks.get(Register::stackSlot2Index(R));
   }
 
-  bool alias(RegisterRef RA, RegisterRef RB) const {
-    if (!RA.isMask())
-      return !RB.isMask() ? aliasRR(RA, RB) : aliasRM(RA, RB);
-    return !RB.isMask() ? aliasRM(RB, RA) : aliasMM(RA, RB);
-  }
+  bool alias(RegisterRef RA, RegisterRef RB) const;
 
-  // Returns the set of aliased physical registers or register masks.
-  // The returned set only contains physical registers (not masks or units).
+  // Returns the set of aliased physical registers.
   std::set<RegisterId> getAliasSet(RegisterId Reg) const;
 
   RegisterRef getRefForUnit(uint32_t U) const {
@@ -152,6 +162,8 @@ struct PhysicalRegisterInfo {
   const BitVector &getMaskUnits(RegisterId MaskId) const {
     return MaskInfos[Register::stackSlot2Index(MaskId)].Units;
   }
+
+  std::set<RegisterId> getUnits(RegisterRef RR) const;
 
   const BitVector &getUnitAliases(uint32_t U) const {
     return AliasInfos[U].Regs;
@@ -187,10 +199,6 @@ private:
   std::vector<UnitInfo> UnitInfos;
   std::vector<MaskInfo> MaskInfos;
   std::vector<AliasInfo> AliasInfos;
-
-  bool aliasRR(RegisterRef RA, RegisterRef RB) const;
-  bool aliasRM(RegisterRef RR, RegisterRef RM) const;
-  bool aliasMM(RegisterRef RM, RegisterRef RN) const;
 };
 
 struct RegisterAggr {
