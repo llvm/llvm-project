@@ -2629,11 +2629,10 @@ let HasMasked = false, HasVL = false, IRName = "" in {
       def : RVVBuiltin<"v" # dst_lmul # "v", dst_lmul # "vvKz", "csilxfd", dst_lmul # "v">;
       def : RVVBuiltin<"Uv" # dst_lmul # "Uv", dst_lmul # "UvUvKz", "csil", dst_lmul # "Uv">;
     }
-    foreach nf = [2] in {
-      let Log2LMUL = [0] in {
-        defvar T = "(Tuple:" # nf # ")";
-        def : RVVBuiltin<T # "vv", "v" # T # "vKz", "i", "v">;
-      }
+    foreach nf = NFList in {
+      defvar T = "(Tuple:" # nf # ")";
+      def : RVVBuiltin<T # "vv", "v" # T # "vKz", "csilxfd", "v">;
+      def : RVVBuiltin<T # "UvUv", "Uv" # T # "UvKz", "csil", "Uv">;
     }
   }
 
