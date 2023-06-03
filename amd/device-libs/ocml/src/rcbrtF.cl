@@ -30,7 +30,9 @@ MATH_MANGLE(rcbrt)(float x)
     }
 
     float xi = MATH_FAST_RCP(x);
-    z = BUILTIN_CLASS_F32(x, CLASS_SNAN|CLASS_QNAN|CLASS_PZER|CLASS_NZER|CLASS_PINF|CLASS_NINF) ? xi : z;
+
+    // Is normal or subnormal
+    z = ((x != 0.0f) & BUILTIN_ISFINITE_F32(x)) ? z : xi;
 
     return BUILTIN_COPYSIGN_F32(z, x);
 }

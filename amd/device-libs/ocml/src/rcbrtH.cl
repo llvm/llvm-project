@@ -15,8 +15,10 @@ MATH_MANGLE(rcbrt)(half x)
     half ret = (half)BUILTIN_AMDGPU_EXP2_F32(-0x1.555556p-2f * BUILTIN_AMDGPU_LOG2_F32((float)BUILTIN_ABS_F16(x)));
 
     half xi = MATH_FAST_RCP(x);
-    ret = BUILTIN_CLASS_F16(x, CLASS_SNAN|CLASS_QNAN|CLASS_PZER|CLASS_NZER|CLASS_PINF|CLASS_NINF) ? xi : ret;
 
-    return ret = BUILTIN_COPYSIGN_F16(ret, x);
+    // Is normal or subnormal
+    ret = ((x != 0.0h) & BUILTIN_ISFINITE_F16(x)) ? ret : xi;
+
+    return BUILTIN_COPYSIGN_F16(ret, x);
 }
 
