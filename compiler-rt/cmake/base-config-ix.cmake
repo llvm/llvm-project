@@ -7,6 +7,7 @@ include(BuiltinTests)
 include(CheckIncludeFile)
 include(CheckCXXSourceCompiles)
 include(GNUInstallDirs)
+include(GetClangResourceDir)
 include(ExtendPath)
 include(CompilerRTDarwinUtils)
 
@@ -38,15 +39,10 @@ if (LLVM_LIBRARY_OUTPUT_INTDIR AND LLVM_RUNTIME_OUTPUT_INTDIR AND PACKAGE_VERSIO
 endif()
 
 if (LLVM_TREE_AVAILABLE)
-  # Compute the Clang version from the LLVM version.
-  # FIXME: We should be able to reuse CLANG_VERSION_MAJOR variable calculated
-  #        in Clang cmake files, instead of copying the rules here.
-  string(REGEX MATCH "^[0-9]+" CLANG_VERSION_MAJOR
-         ${PACKAGE_VERSION})
   # Setup the paths where compiler-rt runtimes and headers should be stored.
-  set(COMPILER_RT_OUTPUT_DIR ${LLVM_LIBRARY_OUTPUT_INTDIR}/clang/${CLANG_VERSION_MAJOR})
+  get_clang_resource_dir(COMPILER_RT_OUTPUT_DIR PREFIX ${LLVM_LIBRARY_OUTPUT_INTDIR}/..)
   set(COMPILER_RT_EXEC_OUTPUT_DIR ${LLVM_RUNTIME_OUTPUT_INTDIR})
-  set(COMPILER_RT_INSTALL_PATH lib${LLVM_LIBDIR_SUFFIX}/clang/${CLANG_VERSION_MAJOR})
+  get_clang_resource_dir(COMPILER_RT_INSTALL_PATH)
   option(COMPILER_RT_INCLUDE_TESTS "Generate and build compiler-rt unit tests."
          ${LLVM_INCLUDE_TESTS})
   option(COMPILER_RT_ENABLE_WERROR "Fail and stop if warning is triggered"
