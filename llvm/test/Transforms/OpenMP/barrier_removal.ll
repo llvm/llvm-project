@@ -26,8 +26,9 @@ declare void @llvm.assume(i1)
 ; CHECK: @[[G1:[a-zA-Z0-9_$"\\.-]+]] = global i32 42
 ; CHECK: @[[G2:[a-zA-Z0-9_$"\\.-]+]] = addrspace(1) global i32 0
 ;.
-define void @pos_empty_1() {
-; CHECK-LABEL: define {{[^@]+}}@pos_empty_1() {
+define void @pos_empty_1() "kernel" {
+; CHECK-LABEL: define {{[^@]+}}@pos_empty_1
+; CHECK-SAME: () #[[ATTR4:[0-9]+]] {
 ; CHECK-NEXT:    ret void
 ;
   call void @llvm.assume(i1 true)
@@ -35,43 +36,49 @@ define void @pos_empty_1() {
   call void @llvm.assume(i1 true)
   ret void
 }
-define void @pos_empty_2() {
-; CHECK-LABEL: define {{[^@]+}}@pos_empty_2() {
+define void @pos_empty_2() "kernel" {
+; CHECK-LABEL: define {{[^@]+}}@pos_empty_2
+; CHECK-SAME: () #[[ATTR4]] {
 ; CHECK-NEXT:    ret void
 ;
   call void @aligned_barrier()
   ret void
 }
-define void @pos_empty_3() {
-; CHECK-LABEL: define {{[^@]+}}@pos_empty_3() {
+define void @pos_empty_3() "kernel" {
+; CHECK-LABEL: define {{[^@]+}}@pos_empty_3
+; CHECK-SAME: () #[[ATTR4]] {
 ; CHECK-NEXT:    ret void
 ;
   call void @llvm.nvvm.barrier0()
   ret void
 }
-define void @pos_empty_4() {
-; CHECK-LABEL: define {{[^@]+}}@pos_empty_4() {
+define void @pos_empty_4() "kernel" {
+; CHECK-LABEL: define {{[^@]+}}@pos_empty_4
+; CHECK-SAME: () #[[ATTR4]] {
 ; CHECK-NEXT:    ret void
 ;
   call i32 @llvm.nvvm.barrier0.and(i32 0)
   ret void
 }
-define void @pos_empty_5() {
-; CHECK-LABEL: define {{[^@]+}}@pos_empty_5() {
+define void @pos_empty_5() "kernel" {
+; CHECK-LABEL: define {{[^@]+}}@pos_empty_5
+; CHECK-SAME: () #[[ATTR4]] {
 ; CHECK-NEXT:    ret void
 ;
   call i32 @llvm.nvvm.barrier0.or(i32 0)
   ret void
 }
-define void @pos_empty_6() {
-; CHECK-LABEL: define {{[^@]+}}@pos_empty_6() {
+define void @pos_empty_6() "kernel" {
+; CHECK-LABEL: define {{[^@]+}}@pos_empty_6
+; CHECK-SAME: () #[[ATTR4]] {
 ; CHECK-NEXT:    ret void
 ;
   call i32 @llvm.nvvm.barrier0.popc(i32 0)
   ret void
 }
-define void @pos_empty_7a() {
-; CHECK-LABEL: define {{[^@]+}}@pos_empty_7a() {
+define void @pos_empty_7a() "kernel" {
+; CHECK-LABEL: define {{[^@]+}}@pos_empty_7a
+; CHECK-SAME: () #[[ATTR4]] {
 ; CHECK-NEXT:    call void @unknown()
 ; CHECK-NEXT:    ret void
 ;
@@ -80,9 +87,10 @@ define void @pos_empty_7a() {
   ret void
 }
 ; FIXME: We should remove the barrier.
-define void @pos_empty_7b() {
-; CHECK-LABEL: define {{[^@]+}}@pos_empty_7b() {
-; CHECK-NEXT:    call void @unknown() #[[ATTR4:[0-9]+]]
+define void @pos_empty_7b() "kernel" {
+; CHECK-LABEL: define {{[^@]+}}@pos_empty_7b
+; CHECK-SAME: () #[[ATTR4]] {
+; CHECK-NEXT:    call void @unknown() #[[ATTR5:[0-9]+]]
 ; CHECK-NEXT:    call void @llvm.amdgcn.s.barrier()
 ; CHECK-NEXT:    call void @unknown()
 ; CHECK-NEXT:    ret void
@@ -92,9 +100,9 @@ define void @pos_empty_7b() {
   call void @unknown()
   ret void
 }
-define void @pos_empty_8(i1 %c) {
+define void @pos_empty_8(i1 %c) "kernel" {
 ; CHECK-LABEL: define {{[^@]+}}@pos_empty_8
-; CHECK-SAME: (i1 [[C:%.*]]) {
+; CHECK-SAME: (i1 [[C:%.*]]) #[[ATTR4]] {
 ; CHECK-NEXT:    br i1 [[C]], label [[T:%.*]], label [[F:%.*]]
 ; CHECK:       t:
 ; CHECK-NEXT:    br label [[F]]
@@ -108,8 +116,9 @@ t:
 f:
   ret void
 }
-define void @neg_empty_8() {
-; CHECK-LABEL: define {{[^@]+}}@neg_empty_8() {
+define void @neg_empty_8() "kernel" {
+; CHECK-LABEL: define {{[^@]+}}@neg_empty_8
+; CHECK-SAME: () #[[ATTR4]] {
 ; CHECK-NEXT:    call void @unknown()
 ; CHECK-NEXT:    call void @llvm.amdgcn.s.barrier()
 ; CHECK-NEXT:    ret void
@@ -118,9 +127,9 @@ define void @neg_empty_8() {
   call void @llvm.amdgcn.s.barrier()
   ret void
 }
-define void @neg_empty_9(i1 %c) {
+define void @neg_empty_9(i1 %c) "kernel" {
 ; CHECK-LABEL: define {{[^@]+}}@neg_empty_9
-; CHECK-SAME: (i1 [[C:%.*]]) {
+; CHECK-SAME: (i1 [[C:%.*]]) #[[ATTR4]] {
 ; CHECK-NEXT:    br i1 [[C]], label [[T:%.*]], label [[F:%.*]]
 ; CHECK:       t:
 ; CHECK-NEXT:    call void @llvm.amdgcn.s.barrier()
@@ -144,8 +153,9 @@ m:
   ret void
 }
 ; FIXME: We should remove the barrier
-define void @pos_empty_10() {
-; CHECK-LABEL: define {{[^@]+}}@pos_empty_10() {
+define void @pos_empty_10() "kernel" {
+; CHECK-LABEL: define {{[^@]+}}@pos_empty_10
+; CHECK-SAME: () #[[ATTR4]] {
 ; CHECK-NEXT:    br label [[M:%.*]]
 ; CHECK:       m:
 ; CHECK-NEXT:    call void @llvm.amdgcn.s.barrier()
@@ -156,8 +166,9 @@ m:
   call void @llvm.amdgcn.s.barrier()
   ret void
 }
-define void @pos_empty_11() {
-; CHECK-LABEL: define {{[^@]+}}@pos_empty_11() {
+define void @pos_empty_11() "kernel" {
+; CHECK-LABEL: define {{[^@]+}}@pos_empty_11
+; CHECK-SAME: () #[[ATTR4]] {
 ; CHECK-NEXT:    br label [[M:%.*]]
 ; CHECK:       m:
 ; CHECK-NEXT:    ret void
@@ -175,9 +186,9 @@ define void @empty() {
   ret void
 }
 ; FIXME: We should remove the barrier in the end but not the first one.
-define void @neg_empty_12(i1 %c) {
+define void @neg_empty_12(i1 %c) "kernel" {
 ; MODULE-LABEL: define {{[^@]+}}@neg_empty_12
-; MODULE-SAME: (i1 [[C:%.*]]) {
+; MODULE-SAME: (i1 [[C:%.*]]) #[[ATTR4]] {
 ; MODULE-NEXT:    br i1 [[C]], label [[T:%.*]], label [[F:%.*]]
 ; MODULE:       t:
 ; MODULE-NEXT:    call void @llvm.amdgcn.s.barrier()
@@ -189,7 +200,7 @@ define void @neg_empty_12(i1 %c) {
 ; MODULE-NEXT:    ret void
 ;
 ; CGSCC-LABEL: define {{[^@]+}}@neg_empty_12
-; CGSCC-SAME: (i1 [[C:%.*]]) {
+; CGSCC-SAME: (i1 [[C:%.*]]) #[[ATTR4]] {
 ; CGSCC-NEXT:    br i1 [[C]], label [[T:%.*]], label [[F:%.*]]
 ; CGSCC:       t:
 ; CGSCC-NEXT:    call void @empty()
@@ -214,17 +225,18 @@ m:
   call void @llvm.amdgcn.s.barrier()
   ret void
 }
-define void @neg_empty_1() {
-; CHECK-LABEL: define {{[^@]+}}@neg_empty_1() {
+define void @neg_empty_1() "kernel" {
+; CHECK-LABEL: define {{[^@]+}}@neg_empty_1
+; CHECK-SAME: () #[[ATTR4]] {
 ; CHECK-NEXT:    call void @unknown()
 ; CHECK-NEXT:    ret void
 ;
   call void @unknown()
   ret void
 }
-define void @neg_empty_2() {
-; CHECK-LABEL: define {{[^@]+}}@neg_empty_2() {
-; CHECK-NEXT:    call void @aligned_barrier()
+define void @neg_empty_2() "kernel" {
+; CHECK-LABEL: define {{[^@]+}}@neg_empty_2
+; CHECK-SAME: () #[[ATTR4]] {
 ; CHECK-NEXT:    ret void
 ;
   call void @aligned_barrier()
@@ -234,8 +246,9 @@ define void @neg_empty_2() {
 @GC1 = constant i32 42
 @GC2 = addrspace(4) global i32 0
 @GPtr4 = addrspace(4) global ptr addrspace(4) null
-define void @pos_constant_loads() {
-; CHECK-LABEL: define {{[^@]+}}@pos_constant_loads() {
+define void @pos_constant_loads() "kernel" {
+; CHECK-LABEL: define {{[^@]+}}@pos_constant_loads
+; CHECK-SAME: () #[[ATTR4]] {
 ; CHECK-NEXT:    [[ARG:%.*]] = load ptr addrspace(4), ptr addrspacecast (ptr addrspace(4) @GPtr4 to ptr), align 8
 ; CHECK-NEXT:    [[B:%.*]] = load i32, ptr addrspacecast (ptr addrspace(4) @GC2 to ptr), align 4
 ; CHECK-NEXT:    [[ARGC:%.*]] = addrspacecast ptr addrspace(4) [[ARG]] to ptr
@@ -264,8 +277,9 @@ define void @pos_constant_loads() {
 @GS = addrspace(3) global i32 0
 @GPtr = global ptr null
 ; TODO: We could remove some of the barriers due to the lack of write effects.
-define void @neg_loads() {
-; CHECK-LABEL: define {{[^@]+}}@neg_loads() {
+define void @neg_loads() "kernel" {
+; CHECK-LABEL: define {{[^@]+}}@neg_loads
+; CHECK-SAME: () #[[ATTR4]] {
 ; CHECK-NEXT:    [[ARG:%.*]] = load ptr, ptr @GPtr, align 8
 ; CHECK-NEXT:    [[A:%.*]] = load i32, ptr @G, align 4
 ; CHECK-NEXT:    call void @aligned_barrier()
@@ -294,8 +308,9 @@ define void @neg_loads() {
 @PG1 = thread_local global i32 42
 @PG2 = addrspace(5) global i32 0
 @GPtr5 = global ptr addrspace(5) null
-define void @pos_priv_mem() {
-; CHECK-LABEL: define {{[^@]+}}@pos_priv_mem() {
+define void @pos_priv_mem() "kernel" {
+; CHECK-LABEL: define {{[^@]+}}@pos_priv_mem
+; CHECK-SAME: () #[[ATTR4]] {
 ; CHECK-NEXT:    [[ARG:%.*]] = load ptr addrspace(5), ptr @GPtr5, align 8
 ; CHECK-NEXT:    [[LOC:%.*]] = alloca i32, align 4
 ; CHECK-NEXT:    [[A:%.*]] = load i32, ptr @PG1, align 4
@@ -325,8 +340,9 @@ define void @pos_priv_mem() {
 }
 @G1 = global i32 42
 @G2 = addrspace(1) global i32 0
-define void @neg_mem() {
-; CHECK-LABEL: define {{[^@]+}}@neg_mem() {
+define void @neg_mem() "kernel" {
+; CHECK-LABEL: define {{[^@]+}}@neg_mem
+; CHECK-SAME: () #[[ATTR4]] {
 ; CHECK-NEXT:    [[ARG:%.*]] = load ptr, ptr @GPtr, align 8
 ; CHECK-NEXT:    [[A:%.*]] = load i32, ptr @G1, align 4
 ; CHECK-NEXT:    call void @aligned_barrier()
@@ -348,8 +364,9 @@ define void @neg_mem() {
   ret void
 }
 
-define void @pos_multiple() {
-; CHECK-LABEL: define {{[^@]+}}@pos_multiple() {
+define void @pos_multiple() "kernel" {
+; CHECK-LABEL: define {{[^@]+}}@pos_multiple
+; CHECK-SAME: () #[[ATTR4]] {
 ; CHECK-NEXT:    ret void
 ;
   call void @llvm.nvvm.barrier0()
@@ -363,9 +380,9 @@ define void @pos_multiple() {
   ret void
 }
 
-define void @multiple_blocks_kernel_1(i1 %c0, i1 %c1) {
+define void @multiple_blocks_kernel_1(i1 %c0, i1 %c1) "kernel" {
 ; CHECK-LABEL: define {{[^@]+}}@multiple_blocks_kernel_1
-; CHECK-SAME: (i1 [[C0:%.*]], i1 [[C1:%.*]]) {
+; CHECK-SAME: (i1 [[C0:%.*]], i1 [[C1:%.*]]) #[[ATTR4]] {
 ; CHECK-NEXT:    br i1 [[C0]], label [[T0:%.*]], label [[F0:%.*]]
 ; CHECK:       t0:
 ; CHECK-NEXT:    br label [[T0B:%.*]]
@@ -404,9 +421,9 @@ m:
   ret void
 }
 
-define void @multiple_blocks_kernel_2(i1 %c0, i1 %c1, i32* %p) {
+define void @multiple_blocks_kernel_2(i1 %c0, i1 %c1, i32* %p) "kernel" {
 ; CHECK-LABEL: define {{[^@]+}}@multiple_blocks_kernel_2
-; CHECK-SAME: (i1 [[C0:%.*]], i1 [[C1:%.*]], ptr [[P:%.*]]) {
+; CHECK-SAME: (i1 [[C0:%.*]], i1 [[C1:%.*]], ptr [[P:%.*]]) #[[ATTR4]] {
 ; CHECK-NEXT:    store i32 4, ptr [[P]], align 4
 ; CHECK-NEXT:    call void @aligned_barrier()
 ; CHECK-NEXT:    br i1 [[C0]], label [[T0:%.*]], label [[F0:%.*]]
@@ -453,10 +470,9 @@ m:
   ret void
 }
 
-define void @multiple_blocks_non_kernel_1(i1 %c0, i1 %c1) {
+define void @multiple_blocks_non_kernel_1(i1 %c0, i1 %c1) "kernel" {
 ; CHECK-LABEL: define {{[^@]+}}@multiple_blocks_non_kernel_1
-; CHECK-SAME: (i1 [[C0:%.*]], i1 [[C1:%.*]]) {
-; CHECK-NEXT:    call void @llvm.nvvm.barrier0()
+; CHECK-SAME: (i1 [[C0:%.*]], i1 [[C1:%.*]]) #[[ATTR4]] {
 ; CHECK-NEXT:    br i1 [[C0]], label [[T0:%.*]], label [[F0:%.*]]
 ; CHECK:       t0:
 ; CHECK-NEXT:    br label [[T0B:%.*]]
@@ -495,17 +511,15 @@ m:
   ret void
 }
 
-define void @multiple_blocks_non_kernel_2(i1 %c0, i1 %c1) {
+define void @multiple_blocks_non_kernel_2(i1 %c0, i1 %c1) "kernel" {
 ; CHECK-LABEL: define {{[^@]+}}@multiple_blocks_non_kernel_2
-; CHECK-SAME: (i1 [[C0:%.*]], i1 [[C1:%.*]]) {
+; CHECK-SAME: (i1 [[C0:%.*]], i1 [[C1:%.*]]) #[[ATTR4]] {
 ; CHECK-NEXT:    br i1 [[C0]], label [[T0:%.*]], label [[F0:%.*]]
 ; CHECK:       t0:
-; CHECK-NEXT:    call void @aligned_barrier()
 ; CHECK-NEXT:    br label [[T0B:%.*]]
 ; CHECK:       t0b:
 ; CHECK-NEXT:    br label [[M:%.*]]
 ; CHECK:       f0:
-; CHECK-NEXT:    call void @aligned_barrier()
 ; CHECK-NEXT:    br i1 [[C1]], label [[T1:%.*]], label [[F1:%.*]]
 ; CHECK:       t1:
 ; CHECK-NEXT:    br label [[M]]
@@ -536,23 +550,21 @@ m:
   ret void
 }
 
-define void @multiple_blocks_non_kernel_3(i1 %c0, i1 %c1) {
+define void @multiple_blocks_non_kernel_3(i1 %c0, i1 %c1) "kernel" {
 ; CHECK-LABEL: define {{[^@]+}}@multiple_blocks_non_kernel_3
-; CHECK-SAME: (i1 [[C0:%.*]], i1 [[C1:%.*]]) {
+; CHECK-SAME: (i1 [[C0:%.*]], i1 [[C1:%.*]]) #[[ATTR4]] {
 ; CHECK-NEXT:    br i1 [[C0]], label [[T0:%.*]], label [[F0:%.*]]
 ; CHECK:       t0:
 ; CHECK-NEXT:    br label [[T0B:%.*]]
 ; CHECK:       t0b:
 ; CHECK-NEXT:    br label [[M:%.*]]
 ; CHECK:       f0:
-; CHECK-NEXT:    call void @aligned_barrier()
 ; CHECK-NEXT:    br i1 [[C1]], label [[T1:%.*]], label [[F1:%.*]]
 ; CHECK:       t1:
 ; CHECK-NEXT:    br label [[M]]
 ; CHECK:       f1:
 ; CHECK-NEXT:    br label [[M]]
 ; CHECK:       m:
-; CHECK-NEXT:    call void @aligned_barrier()
 ; CHECK-NEXT:    ret void
 ;
   br i1 %c0, label %t0, label %f0
@@ -575,10 +587,9 @@ m:
   ret void
 }
 
-define void @multiple_blocks_non_kernel_effects_1(i1 %c0, i1 %c1, i32* %p) {
+define void @multiple_blocks_non_kernel_effects_1(i1 %c0, i1 %c1, i32* %p) "kernel" {
 ; CHECK-LABEL: define {{[^@]+}}@multiple_blocks_non_kernel_effects_1
-; CHECK-SAME: (i1 [[C0:%.*]], i1 [[C1:%.*]], ptr [[P:%.*]]) {
-; CHECK-NEXT:    call void @aligned_barrier()
+; CHECK-SAME: (i1 [[C0:%.*]], i1 [[C1:%.*]], ptr [[P:%.*]]) #[[ATTR4]] {
 ; CHECK-NEXT:    store i32 0, ptr [[P]], align 4
 ; CHECK-NEXT:    call void @aligned_barrier()
 ; CHECK-NEXT:    br i1 [[C0]], label [[T0:%.*]], label [[F0:%.*]]
@@ -599,7 +610,6 @@ define void @multiple_blocks_non_kernel_effects_1(i1 %c0, i1 %c1, i32* %p) {
 ; CHECK-NEXT:    br label [[M]]
 ; CHECK:       m:
 ; CHECK-NEXT:    store i32 3, ptr [[P]], align 4
-; CHECK-NEXT:    call void @aligned_barrier()
 ; CHECK-NEXT:    ret void
 ;
   call void @aligned_barrier()
@@ -677,9 +687,9 @@ define internal void @barrier_then_write_then_barrier0(i32* %p) {
   call void @aligned_barrier()
   ret void
 }
-define void @multiple_blocks_functions_kernel_effects_0(i1 %c0, i1 %c1, i32* %p) {
+define void @multiple_blocks_functions_kernel_effects_0(i1 %c0, i1 %c1, i32* %p) "kernel" {
 ; MODULE-LABEL: define {{[^@]+}}@multiple_blocks_functions_kernel_effects_0
-; MODULE-SAME: (i1 [[C0:%.*]], i1 [[C1:%.*]], ptr [[P:%.*]]) {
+; MODULE-SAME: (i1 [[C0:%.*]], i1 [[C1:%.*]], ptr [[P:%.*]]) #[[ATTR4]] {
 ; MODULE-NEXT:    call void @barrier_then_write_then_barrier0(ptr [[P]])
 ; MODULE-NEXT:    br i1 [[C0]], label [[T03:%.*]], label [[F03:%.*]]
 ; MODULE:       t03:
@@ -699,7 +709,7 @@ define void @multiple_blocks_functions_kernel_effects_0(i1 %c0, i1 %c1, i32* %p)
 ; MODULE-NEXT:    ret void
 ;
 ; CGSCC-LABEL: define {{[^@]+}}@multiple_blocks_functions_kernel_effects_0
-; CGSCC-SAME: (i1 [[C0:%.*]], i1 [[C1:%.*]], ptr [[P:%.*]]) {
+; CGSCC-SAME: (i1 [[C0:%.*]], i1 [[C1:%.*]], ptr [[P:%.*]]) #[[ATTR4]] {
 ; CGSCC-NEXT:    call void @barrier_then_write_then_barrier0(ptr [[P]])
 ; CGSCC-NEXT:    call void @aligned_barrier()
 ; CGSCC-NEXT:    br i1 [[C0]], label [[T03:%.*]], label [[F03:%.*]]
@@ -882,21 +892,27 @@ define internal void @barrier_then_write2(i32* %p) {
   ret void
 }
 define internal void @barrier_then_write_then_barrier2(i32* %p) {
-; CHECK-LABEL: define {{[^@]+}}@barrier_then_write_then_barrier2
-; CHECK-SAME: (ptr [[P:%.*]]) {
-; CHECK-NEXT:    call void @aligned_barrier()
-; CHECK-NEXT:    store i32 0, ptr [[P]], align 4
-; CHECK-NEXT:    call void @aligned_barrier()
-; CHECK-NEXT:    ret void
+; MODULE-LABEL: define {{[^@]+}}@barrier_then_write_then_barrier2
+; MODULE-SAME: (ptr [[P:%.*]]) {
+; MODULE-NEXT:    store i32 0, ptr [[P]], align 4
+; MODULE-NEXT:    call void @aligned_barrier()
+; MODULE-NEXT:    ret void
+;
+; CGSCC-LABEL: define {{[^@]+}}@barrier_then_write_then_barrier2
+; CGSCC-SAME: (ptr [[P:%.*]]) {
+; CGSCC-NEXT:    call void @aligned_barrier()
+; CGSCC-NEXT:    store i32 0, ptr [[P]], align 4
+; CGSCC-NEXT:    call void @aligned_barrier()
+; CGSCC-NEXT:    ret void
 ;
   call void @aligned_barrier()
   store i32 0, i32* %p
   call void @aligned_barrier()
   ret void
 }
-define void @multiple_blocks_functions_non_kernel_effects_2(i1 %c0, i1 %c1, i32* %p) {
+define void @multiple_blocks_functions_non_kernel_effects_2(i1 %c0, i1 %c1, i32* %p) "kernel" {
 ; MODULE-LABEL: define {{[^@]+}}@multiple_blocks_functions_non_kernel_effects_2
-; MODULE-SAME: (i1 [[C0:%.*]], i1 [[C1:%.*]], ptr [[P:%.*]]) {
+; MODULE-SAME: (i1 [[C0:%.*]], i1 [[C1:%.*]], ptr [[P:%.*]]) #[[ATTR4]] {
 ; MODULE-NEXT:    call void @barrier_then_write_then_barrier2(ptr [[P]])
 ; MODULE-NEXT:    store i32 0, ptr [[P]], align 4
 ; MODULE-NEXT:    br i1 [[C0]], label [[T03:%.*]], label [[F03:%.*]]
@@ -922,7 +938,7 @@ define void @multiple_blocks_functions_non_kernel_effects_2(i1 %c0, i1 %c1, i32*
 ; MODULE-NEXT:    ret void
 ;
 ; CGSCC-LABEL: define {{[^@]+}}@multiple_blocks_functions_non_kernel_effects_2
-; CGSCC-SAME: (i1 [[C0:%.*]], i1 [[C1:%.*]], ptr [[P:%.*]]) {
+; CGSCC-SAME: (i1 [[C0:%.*]], i1 [[C1:%.*]], ptr [[P:%.*]]) #[[ATTR4]] {
 ; CGSCC-NEXT:    call void @barrier_then_write_then_barrier2(ptr [[P]])
 ; CGSCC-NEXT:    call void @aligned_barrier()
 ; CGSCC-NEXT:    store i32 0, ptr [[P]], align 4
@@ -984,8 +1000,9 @@ define internal void @callee_barrier() {
   call void @aligned_barrier()
   ret void
 }
-define void @caller_barrier1() {
-; CHECK-LABEL: define {{[^@]+}}@caller_barrier1() {
+define void @caller_barrier1() "kernel" {
+; CHECK-LABEL: define {{[^@]+}}@caller_barrier1
+; CHECK-SAME: () #[[ATTR4]] {
 ; CHECK-NEXT:    call void @callee_barrier()
 ; CHECK-NEXT:    ret void
 ;
@@ -994,8 +1011,9 @@ define void @caller_barrier1() {
   call void @aligned_barrier()
   ret void
 }
-define void @caller_barrier2() {
-; CHECK-LABEL: define {{[^@]+}}@caller_barrier2() {
+define void @caller_barrier2() "kernel" {
+; CHECK-LABEL: define {{[^@]+}}@caller_barrier2
+; CHECK-SAME: () #[[ATTR4]] {
 ; CHECK-NEXT:    call void @unknown()
 ; CHECK-NEXT:    call void @callee_barrier()
 ; CHECK-NEXT:    call void @unknown()
@@ -1041,7 +1059,8 @@ define void @caller_barrier2() {
 ; CHECK: attributes #[[ATTR1:[0-9]+]] = { convergent nocallback nounwind }
 ; CHECK: attributes #[[ATTR2:[0-9]+]] = { convergent nocallback nofree nounwind willreturn }
 ; CHECK: attributes #[[ATTR3:[0-9]+]] = { nocallback nofree nosync nounwind willreturn memory(inaccessiblemem: readwrite) }
-; CHECK: attributes #[[ATTR4]] = { nosync memory(none) }
+; CHECK: attributes #[[ATTR4]] = { "kernel" }
+; CHECK: attributes #[[ATTR5]] = { nosync memory(none) }
 ;.
 ; CHECK: [[META0:![0-9]+]] = !{i32 7, !"openmp-device", i32 50}
 ; CHECK: [[META1:![0-9]+]] = !{i32 7, !"openmp", i32 50}
