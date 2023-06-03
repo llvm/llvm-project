@@ -54,6 +54,7 @@ Error AppleAcceleratorTable::extract() {
   Hdr.BucketCount = AccelSection.getU32(&Offset);
   Hdr.HashCount = AccelSection.getU32(&Offset);
   Hdr.HeaderDataLength = AccelSection.getU32(&Offset);
+  FormParams = {Hdr.Version, 0, dwarf::DwarfFormat::DWARF32};
 
   // Check that we can read all the hashes and offsets from the
   // section (see SourceLevelDebugging.rst for the structure of the index).
@@ -113,7 +114,6 @@ std::pair<uint64_t, dwarf::Tag>
 AppleAcceleratorTable::readAtoms(uint64_t *HashDataOffset) {
   uint64_t DieOffset = dwarf::DW_INVALID_OFFSET;
   dwarf::Tag DieTag = dwarf::DW_TAG_null;
-  dwarf::FormParams FormParams = {Hdr.Version, 0, dwarf::DwarfFormat::DWARF32};
 
   for (auto Atom : getAtomsDesc()) {
     DWARFFormValue FormValue(Atom.second);
@@ -162,7 +162,6 @@ std::optional<uint64_t> AppleAcceleratorTable::HeaderData::extractOffset(
 bool AppleAcceleratorTable::dumpName(ScopedPrinter &W,
                                      SmallVectorImpl<DWARFFormValue> &AtomForms,
                                      uint64_t *DataOffset) const {
-  dwarf::FormParams FormParams = {Hdr.Version, 0, dwarf::DwarfFormat::DWARF32};
   uint64_t NameOffset = *DataOffset;
   if (!AccelSection.isValidOffsetForDataOfSize(*DataOffset, 4)) {
     W.printString("Incorrectly terminated list.");
@@ -264,11 +263,8 @@ AppleAcceleratorTable::Entry::Entry(
 
 void AppleAcceleratorTable::Entry::extract(
     const AppleAcceleratorTable &AccelTable, uint64_t *Offset) {
-
-  dwarf::FormParams FormParams = {AccelTable.Hdr.Version, 0,
-                                  dwarf::DwarfFormat::DWARF32};
   for (auto &Atom : Values)
-    Atom.extractValue(AccelTable.AccelSection, Offset, FormParams);
+    Atom.extractValue(AccelTable.AccelSection, Offset, AccelTable.FormParams);
 }
 
 std::optional<DWARFFormValue>
