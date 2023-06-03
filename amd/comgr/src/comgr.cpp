@@ -237,9 +237,9 @@ StringRef getActionKindName(amd_comgr_action_kind_t ActionKind) {
     return "AMD_COMGR_ACTION_COMPILE_SOURCE_TO_FATBIN";
   case AMD_COMGR_ACTION_COMPILE_SOURCE_WITH_DEVICE_LIBS_TO_BC:
     return "AMD_COMGR_ACTION_COMPILE_SOURCE_WITH_DEVICE_LIBS_TO_BC";
-  default:
-    return "UNKNOWN_ACTION_KIND";
   }
+
+  llvm_unreachable("invalid action");
 }
 
 static StringRef getLanguageName(amd_comgr_language_t Language) {
