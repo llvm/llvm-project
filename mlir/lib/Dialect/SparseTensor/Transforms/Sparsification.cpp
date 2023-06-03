@@ -1049,50 +1049,52 @@ static Value genTensorLoad(CodegenEnv &env, OpBuilder &builder, ExprId exp) {
 /// Generates a store on a dense or sparse tensor.
 static void genTensorStore(CodegenEnv &env, OpBuilder &builder, ExprId exp,
                            Value rhs) {
-  linalg::GenericOp op = env.op();
-  Location loc = op.getLoc();
+  // Only unary and binary are allowed to return uninitialized rhs
+  // to indicate missing output.
+  if (!rhs) {
+    assert(env.exp(exp).kind == TensorExp::Kind::kUnary ||
+           env.exp(exp).kind == TensorExp::Kind::kBinary);
+    return;
+  }
   // Test if this is a scalarized reduction.
   if (env.isReduc()) {
     env.updateReduc(rhs);
     return;
   }
-  // Store during insertion.
+  // Regular store.
+  linalg::GenericOp op = env.op();
+  Location loc = op.getLoc();
   OpOperand *t = op.getDpsInitOperand(0);
-  if (env.isSparseOutput(t)) {
-    if (!rhs) {
-      // Only unary and binary are allowed to return uninitialized rhs
-      // to indicate missing output.
-      assert(env.exp(exp).kind == TensorExp::Kind::kUnary ||
-             env.exp(exp).kind == TensorExp::Kind::kBinary);
-    } else if (env.exp(exp).kind == TensorExp::Kind::kSelect) {
-      // Select operation insertion.
-      Value chain = env.getInsertionChain();
-      scf::IfOp ifOp =
-          builder.create<scf::IfOp>(loc, chain.getType(), rhs, /*else=*/true);
-      builder.setInsertionPointToStart(&ifOp.getThenRegion().front());
-      // Existing value was preserved to be used here.
-      assert(env.exp(exp).val);
-      Value v0 = env.exp(exp).val;
-      genInsertionStore(env, builder, t, v0);
-      env.merger().clearExprValue(exp);
-      // Yield modified insertion chain along true branch.
-      Value mchain = env.getInsertionChain();
-      builder.create<scf::YieldOp>(op.getLoc(), mchain);
-      // Yield original insertion chain along false branch.
-      builder.setInsertionPointToStart(&ifOp.getElseRegion().front());
-      builder.create<scf::YieldOp>(loc, chain);
-      // Done with if statement.
-      env.updateInsertionChain(ifOp->getResult(0));
-      builder.setInsertionPointAfter(ifOp);
-    } else {
-      genInsertionStore(env, builder, t, rhs);
-    }
+  if (!env.isSparseOutput(t)) {
+    SmallVector<Value> args;
+    Value ptr = genSubscript(env, builder, t, args);
+    builder.create<memref::StoreOp>(loc, rhs, ptr, args);
     return;
   }
-  // Actual store.
-  SmallVector<Value> args;
-  Value ptr = genSubscript(env, builder, t, args);
-  builder.create<memref::StoreOp>(loc, rhs, ptr, args);
+  // Store during sparse insertion.
+  if (env.exp(exp).kind != TensorExp::Kind::kSelect) {
+    genInsertionStore(env, builder, t, rhs);
+    return;
+  }
+  // Select operation insertion.
+  Value chain = env.getInsertionChain();
+  scf::IfOp ifOp =
+      builder.create<scf::IfOp>(loc, chain.getType(), rhs, /*else=*/true);
+  builder.setInsertionPointToStart(&ifOp.getThenRegion().front());
+  // Existing value was preserved to be used here.
+  assert(env.exp(exp).val);
+  Value v0 = env.exp(exp).val;
+  genInsertionStore(env, builder, t, v0);
+  env.merger().clearExprValue(exp);
+  // Yield modified insertion chain along true branch.
+  Value mchain = env.getInsertionChain();
+  builder.create<scf::YieldOp>(op.getLoc(), mchain);
+  // Yield original insertion chain along false branch.
+  builder.setInsertionPointToStart(&ifOp.getElseRegion().front());
+  builder.create<scf::YieldOp>(loc, chain);
+  // Done with if statement.
+  env.updateInsertionChain(ifOp->getResult(0));
+  builder.setInsertionPointAfter(ifOp);
 }
 
 /// Generates an invariant value.
@@ -1488,8 +1490,15 @@ static bool startLoopSeq(CodegenEnv &env, OpBuilder &builder, ExprId exp,
                                            std::optional<Level> lvl,
                                            DimLevelType dlt, bool isIdxReduc) {
     assert(env.merger().loop(b) == idx);
-    if (isDenseDLT(dlt) || isUndefDLT(dlt))
+    if (isDenseDLT(dlt) || isUndefDLT(dlt)) {
+      if (tid == env.merger().getSynTensorID()) {
+        // Needs loop emitter to set up loop bounds for synthetic tensor too if
+        // there is a loop condition imposed on the synthetic tensor.
+        tidLvls.push_back(
+            env.makeTensorLevel(tid, env.emitter().getCurrentDepth()));
+      }
       needsUniv = true;
+    }
     if (isCompressedDLT(dlt) || isSingletonDLT(dlt) ||
         isCompressedWithHiDLT(dlt) || isIdxReduc) {
       // Only when this is a index reduction loop, can the dlt be undefined.
@@ -1573,13 +1582,24 @@ static bool translateBitsToTidLvlPairs(
             // iterate based on the level of output tensor.  E.g., this
             // could be a synthetic tensor (for invariants and sparse
             // output tensor).
-            // out[i][j] = invariant; or a broadcast
-            // out[i][j] = in[i] (j is undef for input)
-            tid = outTid;
-            lvl = outLvl;
-            // Skips invalid lvl (e.g., when this is a zero ranked tensor).
-            if (!lvl)
-              return;
+            if (env.isReduc() && env.merger().getSynTensorID() == tid) {
+              // Coiterating with an invariant, and this is a reduction loop
+              // e.g., out = prod(in[i][j] op invariant);
+              // In this case, we can not infer the loop bound from output
+              // (whose level is reduced). Instead we use the synthetic tensor
+              // to infer the bound.
+              // The level of the synthetic tensor is the current loop depth;
+              // the rank of the synthetic tensor equals to number of loops.
+              lvl = env.emitter().getCurrentDepth();
+            } else {
+              // or a broadcast
+              // out[i][j] = in[i] (j is undef for input)
+              tid = outTid;
+              lvl = outLvl;
+              // Skips invalid lvl (e.g., when this is a zero ranked tensor).
+              if (!lvl)
+                return;
+            }
           }
           hasNonUnique = !isUniqueDLT(dlt) || hasNonUnique;
           tidLvls.push_back(env.makeTensorLevel(tid, *lvl));
@@ -1669,7 +1689,8 @@ static std::pair<Operation *, bool> startLoop(CodegenEnv &env,
   auto allTidLvls =
       llvm::concat<TensorLevel>(tidLvls, llvm::make_first_range(affineTidLvls));
   for (auto [tid, lvl] : env.unpackTensorLevelRange(allTidLvls)) {
-    if (tid != env.merger().getOutTensorID())
+    if (tid != env.merger().getOutTensorID() &&
+        tid != env.merger().getSynTensorID())
       genConstantDenseAddressFromLevel(env, builder, tid, lvl + 1);
   }
 
@@ -1796,7 +1817,7 @@ static void genResult(CodegenEnv &env, RewriterBase &rewriter) {
   } else {
     // To rematerialize an non-annotated tensor, simply load it
     // from the bufferized value.
-    Value val = env.emitter().getValBuffer().back(); // value array
+    Value val = env.emitter().getValBuffer()[env.merger().getOutTensorID()];
     rewriter.replaceOpWithNewOp<bufferization::ToTensorOp>(op, resType, val);
   }
 }
