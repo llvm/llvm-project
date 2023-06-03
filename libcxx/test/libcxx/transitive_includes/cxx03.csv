@@ -777,6 +777,7 @@ stack cstddef
 stack deque
 stack functional
 stack initializer_list
+stack limits
 stack type_traits
 stack version
 stdexcept cstdlib
