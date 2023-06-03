@@ -22,6 +22,7 @@ set(rcp_f16_flags -freciprocal-math -fapprox-func)
 
 set_source_files_properties(
   ${CMAKE_CURRENT_SOURCE_DIR}/src/native_rcpH.cl
+  ${CMAKE_CURRENT_SOURCE_DIR}/src/native_rsqrtH.cl
   PROPERTIES COMPILE_FLAGS "${rcp_f16_flags}")
 
 opencl_bc_lib(NAME ocml SOURCES ${sources})

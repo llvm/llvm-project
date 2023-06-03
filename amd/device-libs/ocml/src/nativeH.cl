@@ -13,12 +13,6 @@ MATH_MANGLE(native_sqrt)(half x)
     return __builtin_sqrtf16(x);
 }
 
-REQUIRES_16BIT_INSTS CONSTATTR half
-MATH_MANGLE(native_rsqrt)(half x)
-{
-    return __builtin_amdgcn_rsqh(x);
-}
-
 CONSTATTR half
 MATH_MANGLE(native_sin)(half x)
 {
