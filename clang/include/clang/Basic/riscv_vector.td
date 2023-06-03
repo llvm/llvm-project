@@ -1752,9 +1752,15 @@ multiclass RVVStridedSegLoadTuple<string op> {
 }
 
 multiclass RVVStridedSegStoreTuple<string op> {
-  foreach type = ["i"] in {
-    defvar eew = !cond(!eq(type, "i") : "32");
-      foreach nf = [2] in {
+  foreach type = TypeList in {
+    defvar eew = !cond(!eq(type, "c") : "8",
+                       !eq(type, "s") : "16",
+                       !eq(type, "i") : "32",
+                       !eq(type, "l") : "64",
+                       !eq(type, "x") : "16",
+                       !eq(type, "f") : "32",
+                       !eq(type, "d") : "64");
+      foreach nf = NFList in {
         let Name = op # nf # "e" # eew # "_v_tuple",
             OverloadedName = op # nf # "e" # eew # "_tuple",
             IRName = op # nf,
@@ -1789,8 +1795,11 @@ multiclass RVVStridedSegStoreTuple<string op> {
       return Builder.CreateCall(F, Operands, "");
     }
             }] in {
-          defvar T = "(Tuple:" # nf # ")";
-          def : RVVBuiltin<"v", "0Pet" # T # "v", type>;
+        defvar T = "(Tuple:" # nf # ")";
+        def : RVVBuiltin<T # "v", "0Pet" # T # "v", type>;
+        if !not(IsFloat<type>.val) then {
+          def : RVVBuiltin<T # "Uv", "0PUet" # T # "Uv", type>;
+        }
       }
     }
   }
