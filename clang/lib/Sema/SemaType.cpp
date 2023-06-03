@@ -950,7 +950,7 @@ static QualType applyObjCTypeArgs(Sema &S, SourceLocation loc, QualType type,
 
       // Retrieve the bound.
       QualType bound = typeParam->getUnderlyingType();
-      const auto *boundObjC = bound->getAs<ObjCObjectPointerType>();
+      const auto *boundObjC = bound->castAs<ObjCObjectPointerType>();
 
       // Determine whether the type argument is substitutable for the bound.
       if (typeArgObjC->isObjCIdType()) {

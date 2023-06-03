@@ -11,6 +11,7 @@
 
 #include <cstddef>
 #include <string>
+#include <string_view>
 
 namespace llvm {
 /// This is a llvm local version of __cxa_demangle. Other than the name and
@@ -31,7 +32,7 @@ enum : int {
 /// Returns a non-NULL pointer to a NUL-terminated C style string
 /// that should be explicitly freed, if successful. Otherwise, may return
 /// nullptr if mangled_name is not a valid mangling or is nullptr.
-char *itaniumDemangle(const char *mangled_name);
+char *itaniumDemangle(std::string_view mangled_name);
 
 enum MSDemangleFlags {
   MSDF_None = 0,
@@ -54,10 +55,10 @@ char *microsoftDemangle(const char *mangled_name, size_t *n_read, int *status,
                         MSDemangleFlags Flags = MSDF_None);
 
 // Demangles a Rust v0 mangled symbol.
-char *rustDemangle(const char *MangledName);
+char *rustDemangle(std::string_view MangledName);
 
 // Demangles a D mangled symbol.
-char *dlangDemangle(const char *MangledName);
+char *dlangDemangle(std::string_view MangledName);
 
 /// Attempt to demangle a string using different demangling schemes.
 /// The function uses heuristics to determine which demangling scheme to use.
@@ -66,7 +67,7 @@ char *dlangDemangle(const char *MangledName);
 /// demangling occurred.
 std::string demangle(const std::string &MangledName);
 
-bool nonMicrosoftDemangle(const char *MangledName, std::string &Result);
+bool nonMicrosoftDemangle(std::string_view MangledName, std::string &Result);
 
 /// "Partial" demangler. This supports demangling a string into an AST
 /// (typically an intermediate stage in itaniumDemangle) and querying certain
