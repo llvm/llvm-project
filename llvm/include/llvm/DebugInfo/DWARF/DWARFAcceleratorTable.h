@@ -105,6 +105,7 @@ class AppleAcceleratorTable : public DWARFAcceleratorTable {
 
   Header Hdr;
   HeaderData HdrData;
+  dwarf::FormParams FormParams;
   bool IsValid = false;
 
   /// Returns true if we should continue scanning for entries or false if we've
