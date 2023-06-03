@@ -67,3 +67,18 @@ func f9<each T>(s9: S<repeat each T>) {
 }
 
 f9(s9: s)
+
+func f10<each T>(args: repeat each T) {
+  print("break here")
+}
+
+func f10_maker<each T>(args: repeat each T) -> () -> () {
+  return { f10(args: repeat each args) }
+}
+
+func f10_caller() {
+  let f10 = f10_maker(args: a, b)
+  f10()
+}
+
+f10_caller()
