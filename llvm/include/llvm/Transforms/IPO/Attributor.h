@@ -1918,6 +1918,7 @@ struct Attributor {
   /// Remove all \p AttrKinds attached to \p IRP.
   ChangeStatus removeAttrs(const IRPosition &IRP,
                            const ArrayRef<Attribute::AttrKind> &AttrKinds);
+  ChangeStatus removeAttrs(const IRPosition &IRP, ArrayRef<StringRef> Attrs);
 
   /// Attach \p DeducedAttrs to \p IRP, if \p ForceReplace is set we do this
   /// even if the same attribute kind was already present.
@@ -5101,6 +5102,98 @@ private:
   bool UndefIsContained;
 };
 
+struct DenormalFPMathState : public AbstractState {
+  struct DenormalState {
+    DenormalMode Mode = DenormalMode::getInvalid();
+    DenormalMode ModeF32 = DenormalMode::getInvalid();
+
+    bool operator==(const DenormalState Other) const {
+      return Mode == Other.Mode && ModeF32 == Other.ModeF32;
+    }
+
+    bool operator!=(const DenormalState Other) const {
+      return Mode != Other.Mode || ModeF32 != Other.ModeF32;
+    }
+
+    bool isValid() const {
+      return Mode.isValid() && ModeF32.isValid();
+    }
+
+    static DenormalMode::DenormalModeKind
+    unionDenormalKind(DenormalMode::DenormalModeKind Callee,
+                      DenormalMode::DenormalModeKind Caller) {
+      if (Caller == Callee)
+        return Caller;
+      if (Callee == DenormalMode::Dynamic)
+        return Caller;
+      if (Caller == DenormalMode::Dynamic)
+        return Callee;
+      return DenormalMode::Invalid;
+    }
+
+    static DenormalMode unionAssumed(DenormalMode Callee, DenormalMode Caller) {
+      return DenormalMode{unionDenormalKind(Callee.Output, Caller.Output),
+                          unionDenormalKind(Callee.Input, Caller.Input)};
+    }
+
+    DenormalState unionWith(DenormalState Caller) const {
+      DenormalState Callee(*this);
+      Callee.Mode = unionAssumed(Callee.Mode, Caller.Mode);
+      Callee.ModeF32 = unionAssumed(Callee.ModeF32, Caller.ModeF32);
+      return Callee;
+    }
+  };
+
+  DenormalState Known;
+
+  /// Explicitly track whether we've hit a fixed point.
+  bool IsAtFixedpoint = false;
+
+  DenormalFPMathState() = default;
+
+  DenormalState getKnown() const { return Known; }
+
+  // There's only really known or unknown, there's no speculatively assumable
+  // state.
+  DenormalState getAssumed() const { return Known; }
+
+  bool isValidState() const override {
+    return Known.isValid();
+  }
+
+  /// Return true if there are no dynamic components to the denormal mode worth
+  /// specializing.
+  bool isModeFixed() const {
+    return Known.Mode.Input != DenormalMode::Dynamic &&
+           Known.Mode.Output != DenormalMode::Dynamic &&
+           Known.ModeF32.Input != DenormalMode::Dynamic &&
+           Known.ModeF32.Output != DenormalMode::Dynamic;
+  }
+
+  bool isAtFixpoint() const override {
+    return IsAtFixedpoint;
+  }
+
+  ChangeStatus indicateFixpoint() {
+    bool Changed = !IsAtFixedpoint;
+    IsAtFixedpoint = true;
+    return Changed ? ChangeStatus::CHANGED : ChangeStatus::UNCHANGED;
+  }
+
+  ChangeStatus indicateOptimisticFixpoint() override {
+    return indicateFixpoint();
+  }
+
+  ChangeStatus indicatePessimisticFixpoint() override {
+    return indicateFixpoint();
+  }
+
+  DenormalFPMathState operator^=(const DenormalFPMathState &Caller) {
+    Known = Known.unionWith(Caller.getKnown());
+    return *this;
+  }
+};
+
 using PotentialConstantIntValuesState = PotentialValuesState<APInt>;
 using PotentialLLVMValuesState =
     PotentialValuesState<std::pair<AA::ValueAndContext, AA::ValueScope>>;
@@ -6029,6 +6122,8 @@ struct AAPointerInfo : public AbstractAttribute {
   static const char ID;
 };
 
+raw_ostream &operator<<(raw_ostream &, const AAPointerInfo::Access &);
+
 /// An abstract attribute for getting assumption information.
 struct AAAssumptionInfo
     : public StateWrapper<SetState<StringRef>, AbstractAttribute,
@@ -6221,6 +6316,36 @@ struct AAIndirectCallInfo
 
   /// This function should return true if the type of the \p AA is
   /// AAIndirectCallInfo
+  /// This function should return true if the type of the \p AA is
+  /// AADenormalFPMath.
+  static bool classof(const AbstractAttribute *AA) {
+    return (AA->getIdAddr() == &ID);
+  }
+
+  /// Unique ID (due to the unique address)
+  static const char ID;
+};
+
+/// An abstract Attribute for specializing "dynamic" components of
+/// "denormal-fp-math" and "denormal-fp-math-f32" to a known denormal mode.
+struct AADenormalFPMath
+    : public StateWrapper<DenormalFPMathState, AbstractAttribute> {
+  using Base = StateWrapper<DenormalFPMathState, AbstractAttribute>;
+
+  AADenormalFPMath(const IRPosition &IRP, Attributor &A) : Base(IRP) {}
+
+  /// Create an abstract attribute view for the position \p IRP.
+  static AADenormalFPMath &createForPosition(const IRPosition &IRP,
+                                             Attributor &A);
+
+  /// See AbstractAttribute::getName()
+  const std::string getName() const override { return "AADenormalFPMath"; }
+
+  /// See AbstractAttribute::getIdAddr()
+  const char *getIdAddr() const override { return &ID; }
+
+  /// This function should return true if the type of the \p AA is
+  /// AADenormalFPMath.
   static bool classof(const AbstractAttribute *AA) {
     return (AA->getIdAddr() == &ID);
   }
