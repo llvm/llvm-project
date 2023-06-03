@@ -232,7 +232,10 @@ void LoopEmitter::initialize(ValueRange ts, StringAttr loopTag, bool hasOutput,
   this->hasOutput = hasOutput;
   this->isSparseOut = isSparseOut;
 
-  const unsigned numTensors = ts.size();
+  const unsigned numManifestTensors = ts.size();
+  const unsigned synTensorId = numManifestTensors;
+  const unsigned numTensors = numManifestTensors + 1;
+
   this->tensors.assign(ts.begin(), ts.end());
   this->lvlTypes.assign(numTensors, std::vector<DimLevelType>());
   this->lvlSizes.assign(numTensors, std::vector<Value>());
@@ -265,33 +268,43 @@ void LoopEmitter::initialize(ValueRange ts, StringAttr loopTag, bool hasOutput,
 
   // Initialize nested types of `TensorId`-indexed fields.
   for (TensorId tid = 0; tid < numTensors; tid++) {
-    const Value t = tensors[tid];
-    // a scalar or 0-dimension tensors
-    if (isZeroRankedTensorOrScalar(t.getType()))
-      continue;
-
-    auto rtp = getRankedTensorType(t);
-    if (auto reshape = t.getDefiningOp<tensor::CollapseShapeOp>();
-        isUniqueCOOType(rtp) && reshape) {
-      // TODO: Supports more kinds of sparse tensors.
-      // FIXME: We should instead lower reshape operations on sparse tensors to
-      // view change.
-      collapseReassoc[tid] = reshape.getReassociation();
-      rtp = reshape.getSrcType();
-      // Overwrites the tensor to the source tensor of reshape operations.
-      tensors[tid] = reshape.getSrc();
-    }
-    const SparseTensorType stt(rtp);
-    const Level lvlRank = stt.getLvlRank();
-    // We always treat sparse output tensor as dense so that we always iterate
-    // it based on lvl size.
-    if (stt.hasEncoding() && !(isOutputTensor(tid) && isSparseOut)) {
-      const auto enc = stt.getEncoding();
-      isSparseSlices[tid] = enc.isSlice();
-      for (auto lvlTp : enc.getLvlTypes())
-        lvlTypes[tid].push_back(lvlTp);
-    } else {
+    Level lvlRank;
+    if (tid == synTensorId) {
+      // Synthetic tensor (conceptually) is an all-dense tensor with rank equal
+      // to the total number of loops (each level can potentially be mapped to
+      // one of the loop being generated).
+      lvlRank = numLoops;
       lvlTypes[tid].assign(lvlRank, DimLevelType::Dense);
+    } else {
+      const Value t = tensors[tid];
+      // a scalar or 0-dimension tensors
+      if (isZeroRankedTensorOrScalar(t.getType()))
+        continue;
+
+      auto rtp = getRankedTensorType(t);
+      if (auto reshape = t.getDefiningOp<tensor::CollapseShapeOp>();
+          isUniqueCOOType(rtp) && reshape) {
+        // TODO: Supports more kinds of sparse tensors.
+        // FIXME: We should instead lower reshape operations on sparse tensors
+        // to view change.
+        collapseReassoc[tid] = reshape.getReassociation();
+        rtp = reshape.getSrcType();
+        // Overwrites the tensor to the source tensor of reshape operations.
+        tensors[tid] = reshape.getSrc();
+      }
+      const SparseTensorType stt(rtp);
+      lvlRank = stt.getLvlRank();
+
+      // We always treat sparse output tensor as dense so that we always iterate
+      // it based on lvl size.
+      if (stt.hasEncoding() && !(isOutputTensor(tid) && isSparseOut)) {
+        const auto enc = stt.getEncoding();
+        isSparseSlices[tid] = enc.isSlice();
+        for (auto lvlTp : enc.getLvlTypes())
+          lvlTypes[tid].push_back(lvlTp);
+      } else {
+        lvlTypes[tid].assign(lvlRank, DimLevelType::Dense);
+      }
     }
 
     // Initialize using empty value.
@@ -314,7 +327,7 @@ void LoopEmitter::initialize(ValueRange ts, StringAttr loopTag, bool hasOutput,
     sliceStack[tid].emplace_back(/*minCrd=*/Value(),
                                  /*offset=*/Value(), /*isNonEmpty*/ Value(),
                                  std::nullopt, 0);
-    if (dimGetter) {
+    if (dimGetter && !isSynTensor(tid)) {
       auto reassoc = collapseReassoc[tid];
       Level dstRank = reassoc ? reassoc.size() : lvlRank;
       for (Level l = 0; l < dstRank; l++) {
@@ -461,15 +474,28 @@ void LoopEmitter::enterNewLoopSeq(OpBuilder &builder, Location loc,
   assert(loopSeqStack.size() == loopStack.size());
   // Prepares for all the tensors used in the current loop sequence.
   std::vector<std::tuple<TensorId, Level, bool>> slicedTids;
+
+  bool hasSynTensor = false;
+  std::optional<std::pair<TensorId, Level>> loopBoundDefLevel = std::nullopt;
   for (auto [tid, lvl] : unpackTensorLevelRange(tidLvls)) {
     if (!dependentLvlMap[tid][lvl].empty()) {
       bool fullyRed = genSliceBegin(builder, loc, tid, lvl);
       slicedTids.emplace_back(tid, lvl, fullyRed);
     } else {
-      prepareLoopOverTensorAtLvl(builder, loc, tid, lvl);
+      if (isSynTensor(tid)) {
+        hasSynTensor = true;
+      } else {
+        loopBoundDefLevel = std::make_pair(tid, lvl);
+        prepareLoopOverTensorAtLvl(builder, loc, tid, lvl);
+      }
     }
   }
 
+  if (hasSynTensor && loopBoundDefLevel.has_value()) {
+    // TODO: compute the loopBound for index reduction by d - sum(unres_lvls).
+    highs[getSynTensorId()][getCurrentDepth()] =
+        lvlSizes[loopBoundDefLevel->first][loopBoundDefLevel->second];
+  }
   // Universal Index starts from 0.
   loopSeqStack.emplace_back(C_IDX(0), std::move(slicedTids));
 }
@@ -1137,6 +1163,9 @@ void LoopEmitter::emitExtraLocalsForTensorsAtDenseLvls(
   // output tensor unconditionally, since they may not appear in the lattice,
   // but may be needed for linearized codegen.
   for (auto [tid, lvl] : unpackTensorLevelRange(tidLvls)) {
+    if (isSynTensor(tid))
+      continue;
+
     if (isDenseDLT(lvlTypes[tid][lvl])) {
       // Slice-driven dense level should have be handled already.
       if (!dependentLvlMap[tid][lvl].empty())
