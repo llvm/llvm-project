@@ -862,7 +862,13 @@ def reassoc_ptradd : GICombineRule<
     [{ return Helper.matchReassocPtrAdd(*${root}, ${matchinfo}); }]),
   (apply [{ Helper.applyBuildFnNoErase(*${root}, ${matchinfo}); }])>;
 
-def reassocs : GICombineGroup<[reassoc_ptradd]>;
+def reassoc_comm_binops : GICombineRule<
+  (defs root:$root, build_fn_matchinfo:$matchinfo),
+  (match (G_ADD $root, $src1, $src2):$root,
+    [{ return Helper.matchReassocCommBinOp(*${root}, ${matchinfo}); }]),
+  (apply [{ Helper.applyBuildFn(*${root}, ${matchinfo}); }])>;
+
+def reassocs : GICombineGroup<[reassoc_ptradd, reassoc_comm_binops]>;
 
 // Constant fold operations.
 def constant_fold : GICombineRule<
