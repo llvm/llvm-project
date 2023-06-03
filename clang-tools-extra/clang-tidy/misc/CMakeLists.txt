@@ -56,10 +56,13 @@ clang_target_link_libraries(clangTidyMiscModule
   clangASTMatchers
   clangBasic
   clangFormat
-  clangIncludeCleaner
   clangLex
   clangSerialization
   clangTooling
   clangToolingInclusions
   clangToolingInclusionsStdlib
+  )
+target_link_libraries(clangTidyMiscModule
+  PRIVATE
+  clangIncludeCleaner
   )
