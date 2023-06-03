@@ -16,6 +16,7 @@
 
 #include "sanitizer_common/sanitizer_allocator.h"
 #include "sanitizer_common/sanitizer_common.h"
+#include "sanitizer_common/sanitizer_common_range.h"
 #include "sanitizer_common/sanitizer_internal_defs.h"
 #include "sanitizer_common/sanitizer_platform.h"
 #include "sanitizer_common/sanitizer_stackdepot.h"
@@ -77,11 +78,6 @@ enum IgnoreObjectResult {
   kIgnoreObjectSuccess,
   kIgnoreObjectAlreadyIgnored,
   kIgnoreObjectInvalid
-};
-
-struct Range {
-  uptr begin;
-  uptr end;
 };
 
 //// --------------------------------------------------------------------------
@@ -239,11 +235,6 @@ void InitializePlatformSpecificModules();
 void ProcessGlobalRegions(Frontier *frontier);
 void ProcessPlatformSpecificAllocations(Frontier *frontier);
 
-struct Region {
-  uptr begin;
-  uptr end;
-};
-
 // LockStuffAndStopTheWorld can start to use Scan* calls to collect into
 // this Frontier vector before the StopTheWorldCallback actually runs.
 // This is used when the OS has a unified callback API for suspending
@@ -255,6 +246,8 @@ struct CheckForLeaksParam {
   uptr caller_sp;
   bool success = false;
 };
+
+using Region = Range;
 
 bool HasRootRegions();
 void ScanRootRegions(Frontier *frontier,

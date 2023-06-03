@@ -1274,25 +1274,6 @@ LogicalResult ConvertSetDefaultDeviceOpToGpuRuntimeCallPattern::matchAndRewrite(
   return success();
 }
 
-// Returns the element type of the defining spmat op.
-// TODO: safer and more flexible to store data type in actual op instead?
-static Type getSpMatElemType(Value spMat) {
-  if (auto op = spMat.getDefiningOp<gpu::CreateCooOp>())
-    return llvm::cast<MemRefType>(op.getValues().getType()).getElementType();
-  if (auto op = spMat.getDefiningOp<gpu::CreateCsrOp>())
-    return llvm::cast<MemRefType>(op.getValues().getType()).getElementType();
-  llvm_unreachable("cannot find spmat def");
-}
-
-// Returns the element type of the defining dnmat or dnvec op.
-static Type getDnElemType(Value dn) {
-  if (auto op = dn.getDefiningOp<gpu::CreateDnMatOp>())
-    return op.getMemref().getType().getElementType();
-  if (auto op = dn.getDefiningOp<gpu::CreateDnVecOp>())
-    return op.getMemref().getType().getElementType();
-  llvm_unreachable("cannot find dn def");
-}
-
 template <typename T>
 static Value genConstInt32From(OpBuilder &builder, Location loc, T TValue) {
   Type llvmInt32Type = builder.getIntegerType(32);
@@ -1300,14 +1281,11 @@ static Value genConstInt32From(OpBuilder &builder, Location loc, T TValue) {
                                           static_cast<int32_t>(TValue));
 }
 
-static Value
-genConstInt32FromOptionalComputeMode(OpBuilder &builder, Location loc,
-                                     std::optional<Type> computeTypeOptional,
-                                     Type defaultType) {
-  auto computeTypeInt =
-      getCuSparseDataTypeFrom(computeTypeOptional.value_or(defaultType));
-  auto computeType = genConstInt32From(builder, loc, computeTypeInt);
-  return computeType;
+static Value genConstInt32FromComputeMode(OpBuilder &builder, Location loc,
+                                          Type computeType) {
+  auto computeTypeInt = getCuSparseDataTypeFrom(computeType);
+  auto computeTypeConst = genConstInt32From(builder, loc, computeTypeInt);
+  return computeTypeConst;
 }
 
 LogicalResult ConvertCreateSparseEnvOpToGpuRuntimeCallPattern::matchAndRewrite(
@@ -1502,9 +1480,8 @@ LogicalResult ConvertSpMVBufferSizeOpToGpuRuntimeCallPattern::matchAndRewrite(
     return failure();
   Location loc = op.getLoc();
   auto modeA = genConstInt32From(rewriter, loc, op.getModeA());
-  // retrieve the compute type, notice that it may be optional
-  auto computeType = genConstInt32FromOptionalComputeMode(
-      rewriter, loc, adaptor.getComputeType(), getDnElemType(op.getDnY()));
+  auto computeType =
+      genConstInt32FromComputeMode(rewriter, loc, adaptor.getComputeType());
   auto stream = adaptor.getAsyncDependencies().front();
   auto bufferSize =
       spMVBufferSizeCallBuilder
@@ -1524,9 +1501,8 @@ LogicalResult ConvertSpMVOpToGpuRuntimeCallPattern::matchAndRewrite(
     return failure();
   Location loc = op.getLoc();
   auto modeA = genConstInt32From(rewriter, loc, adaptor.getModeA());
-  // retrieve the compute type, notice that it may be optional
-  auto computeType = genConstInt32FromOptionalComputeMode(
-      rewriter, loc, adaptor.getComputeType(), getDnElemType(op.getDnY()));
+  auto computeType =
+      genConstInt32FromComputeMode(rewriter, loc, adaptor.getComputeType());
   auto stream = adaptor.getAsyncDependencies().front();
   Value pBuf =
       MemRefDescriptor(adaptor.getBuffer()).allocatedPtr(rewriter, loc);
@@ -1550,9 +1526,8 @@ LogicalResult ConvertSpMMBufferSizeOpToGpuRuntimeCallPattern::matchAndRewrite(
   auto modeA = genConstInt32From(rewriter, loc, adaptor.getModeA());
   auto modeB = genConstInt32From(rewriter, loc, adaptor.getModeB());
   auto stream = adaptor.getAsyncDependencies().front();
-  // retrieve the compute type, notice that it may be optional
-  auto computeType = genConstInt32FromOptionalComputeMode(
-      rewriter, loc, adaptor.getComputeType(), getDnElemType(op.getDnmatC()));
+  auto computeType =
+      genConstInt32FromComputeMode(rewriter, loc, adaptor.getComputeType());
 
   auto bufferSize = spMMBufferSizeCallBuilder
                         .create(loc, rewriter,
@@ -1573,9 +1548,8 @@ LogicalResult ConvertSDDMMBufferSizeOpToGpuRuntimeCallPattern::matchAndRewrite(
   Location loc = op.getLoc();
   auto modeA = genConstInt32From(rewriter, loc, adaptor.getModeA());
   auto modeB = genConstInt32From(rewriter, loc, adaptor.getModeB());
-  auto computeType = genConstInt32FromOptionalComputeMode(
-      rewriter, loc, adaptor.getComputeType(),
-      getSpMatElemType(op.getSpmatC()));
+  auto computeType =
+      genConstInt32FromComputeMode(rewriter, loc, adaptor.getComputeType());
   auto stream = adaptor.getAsyncDependencies().front();
   auto bufferSize = SDDMMBufferSizeCallBuilder
                         .create(loc, rewriter,
@@ -1596,9 +1570,8 @@ LogicalResult ConvertSpMMOpToGpuRuntimeCallPattern::matchAndRewrite(
   Location loc = op.getLoc();
   auto modeA = genConstInt32From(rewriter, loc, adaptor.getModeA());
   auto modeB = genConstInt32From(rewriter, loc, adaptor.getModeB());
-  // retrieve the compute type, notice that it may be optional
-  auto computeType = genConstInt32FromOptionalComputeMode(
-      rewriter, loc, adaptor.getComputeType(), getDnElemType(op.getDnmatC()));
+  auto computeType =
+      genConstInt32FromComputeMode(rewriter, loc, adaptor.getComputeType());
 
   auto stream = adaptor.getAsyncDependencies().front();
   Value pBuf =
@@ -1628,9 +1601,8 @@ LogicalResult ConvertSDDMMOpToGpuRuntimeCallPattern::matchAndRewrite(
       failed(isAsyncWithOneDependency(rewriter, op)))
     return failure();
   Location loc = op.getLoc();
-  auto computeType = genConstInt32FromOptionalComputeMode(
-      rewriter, loc, adaptor.getComputeType(),
-      getSpMatElemType(op.getSpmatC()));
+  auto computeType =
+      genConstInt32FromComputeMode(rewriter, loc, adaptor.getComputeType());
   auto modeA = genConstInt32From(rewriter, loc, adaptor.getModeA());
   auto modeB = genConstInt32From(rewriter, loc, adaptor.getModeB());
   auto stream = adaptor.getAsyncDependencies().front();
