@@ -281,15 +281,6 @@ GlobalModuleIndex::readIndex(StringRef Path) {
                         llvm::Error::success());
 }
 
-void
-GlobalModuleIndex::getKnownModules(SmallVectorImpl<ModuleFile *> &ModuleFiles) {
-  ModuleFiles.clear();
-  for (unsigned I = 0, N = Modules.size(); I != N; ++I) {
-    if (ModuleFile *MF = Modules[I].File)
-      ModuleFiles.push_back(MF);
-  }
-}
-
 void GlobalModuleIndex::getModuleDependencies(
        ModuleFile *File,
        SmallVectorImpl<ModuleFile *> &Dependencies) {
