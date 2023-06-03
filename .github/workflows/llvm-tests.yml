@@ -109,7 +109,8 @@ jobs:
         uses: llvm/actions/install-ninja@main
       - name: Install abi-compliance-checker
         run: |
-          sudo apt-get install abi-dumper autoconf pkg-config
+          sudo apt update
+          sudo apt install abi-dumper autoconf pkg-config
       - name: Install universal-ctags
         run: |
           git clone https://github.com/universal-ctags/ctags.git
@@ -178,7 +179,9 @@ jobs:
           name: symbol-list
 
       - name: Install abi-compliance-checker
-        run: sudo apt-get install abi-compliance-checker
+        run: |
+          sudo apt update
+          sudo apt install abi-compliance-checker
       - name: Compare ABI
         run: |
           if [ -s symbol-list/llvm.symbols ]; then

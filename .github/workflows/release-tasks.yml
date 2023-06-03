@@ -26,8 +26,8 @@ jobs:
 
       - name: Install Dependencies
         run: |
-          sudo apt-get update
-          sudo apt-get install -y \
+          sudo apt update
+          sudo apt install -y \
               doxygen \
               graphviz \
               python3-github \
@@ -84,7 +84,9 @@ jobs:
         uses: actions/checkout@v3
 
       - name: Install dependencies
-        run: apt-get install -y python3-setuptools
+        run: |
+          sudo apt update
+          sudo apt install -y python3-setuptools
 
       - name: Test lit
         run: |
