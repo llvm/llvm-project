@@ -13,7 +13,7 @@ MATH_MANGLE(pred)(double x)
     long ix = AS_LONG(x);
     long mx = SIGNBIT_DP64 - ix;
     mx = ix < 0 ? mx : ix;
-    long t = mx - BUILTIN_CLASS_F64(x, CLASS_NNOR|CLASS_NSUB|CLASS_NZER|CLASS_PZER|CLASS_PSUB|CLASS_PNOR|CLASS_PINF);
+    long t = mx - (x != NINF_F64 && !BUILTIN_ISNAN_F64(x));
     long r = SIGNBIT_DP64 - t;
     r = t < 0 ? r : t;
     return AS_DOUBLE(r);
