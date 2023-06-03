@@ -15,7 +15,7 @@ MATH_MANGLE(scalb)(double x, double y)
 
     if (!FINITE_ONLY_OPT()) {
         ret = BUILTIN_ISUNORDERED_F64(x, y) ? QNAN_F64 : ret;
-        ret = (BUILTIN_ISZERO_F64(x) & (y == PINF_F64)) ? QNAN_F64 : ret;
+        ret = ((x == 0.0) & (y == PINF_F64)) ? QNAN_F64 : ret;
         ret = (BUILTIN_ISINF_F64(x) & (y == NINF_F64)) ? QNAN_F64 : ret;
     }
 
