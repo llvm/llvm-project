@@ -12,13 +12,13 @@ samesign(half x, half y)
 }
 
 #if defined(COMPILING_FMOD)
-REQUIRES_16BIT_INSTS CONSTATTR half
+CONSTATTR half
 MATH_MANGLE(fmod)(half x, half y)
 #elif defined(COMPILING_REMQUO)
-REQUIRES_16BIT_INSTS __ocml_remquo_f16_result
+__ocml_remquo_f16_result
 MATH_MANGLE(remquo2)(half x, half y)
 #else
-REQUIRES_16BIT_INSTS CONSTATTR half
+CONSTATTR half
 MATH_MANGLE(remainder)(half x, half y)
 #endif
 {

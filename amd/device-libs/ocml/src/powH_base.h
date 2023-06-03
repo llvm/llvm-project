@@ -11,7 +11,7 @@ samesign(half x, half y)
     return ((AS_USHORT(x) ^ AS_USHORT(y)) & (ushort)0x8000) == (ushort)0;
 }
 
-REQUIRES_16BIT_INSTS CONSTATTR half
+CONSTATTR half
 #if defined(COMPILING_POWR)
 MATH_MANGLE(powr)(half x, half y)
 #elif defined(COMPILING_POWN)

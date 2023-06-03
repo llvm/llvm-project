@@ -10,7 +10,7 @@
 
 UGEN(cos)
 
-REQUIRES_16BIT_INSTS half
+half
 MATH_MANGLE(cos)(half x)
 {
     half ax = BUILTIN_ABS_F16(x);

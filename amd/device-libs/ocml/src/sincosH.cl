@@ -8,7 +8,7 @@
 #include "mathH.h"
 #include "trigredH.h"
 
-REQUIRES_16BIT_INSTS half2
+half2
 MATH_MANGLE2(sincos)(half2 x, __private half2 *cp)
 {
     half2 s;
@@ -19,7 +19,7 @@ MATH_MANGLE2(sincos)(half2 x, __private half2 *cp)
     return s;
 }
 
-REQUIRES_16BIT_INSTS CONSTATTR half
+CONSTATTR half
 MATH_MANGLE(sincos)(half x, __private half *cp)
 {
     half ax = BUILTIN_ABS_F16(x);

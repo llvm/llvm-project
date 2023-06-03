@@ -7,7 +7,7 @@
 
 #include "mathH.h"
 
-REQUIRES_16BIT_INSTS half2
+half2
 MATH_MANGLE2(frexp)(half2 x, __private int2 *ep)
 {
     int elo, ehi;
@@ -18,7 +18,7 @@ MATH_MANGLE2(frexp)(half2 x, __private int2 *ep)
     return r;
 }
 
-REQUIRES_16BIT_INSTS half
+half
 MATH_MANGLE(frexp)(half x, __private int *ep)
 {
     return BUILTIN_FREXP_F16(x, ep);

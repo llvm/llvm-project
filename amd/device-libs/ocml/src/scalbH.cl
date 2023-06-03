@@ -9,7 +9,7 @@
 
 CONSTATTR BGEN(scalb)
 
-REQUIRES_16BIT_INSTS CONSTATTR half
+CONSTATTR half
 MATH_MANGLE(scalb)(half x, half y)
 {
     half t = BUILTIN_MIN_F16(BUILTIN_MAX_F16(y, -0x1.0p+6h), 0x1.0p+6h);

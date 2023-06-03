@@ -12,7 +12,7 @@ extern CONSTATTR half MATH_PRIVATE(atanred)(half);
 
 CONSTATTR BGEN(atan2)
 
-REQUIRES_16BIT_INSTS CONSTATTR half
+CONSTATTR half
 MATH_MANGLE(atan2)(half y, half x)
 {
     const half pi = 0x1.921fb6p+1h;

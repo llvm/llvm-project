@@ -7,13 +7,13 @@
 
 #include "mathH.h"
 
-REQUIRES_16BIT_INSTS CONSTATTR int2
+CONSTATTR int2
 MATH_MANGLE2(ilogb)(half2 x)
 {
     return (int2)(MATH_MANGLE(ilogb)(x.lo), MATH_MANGLE(ilogb)(x.hi));
 }
 
-REQUIRES_16BIT_INSTS CONSTATTR int
+CONSTATTR int
 MATH_MANGLE(ilogb)(half x)
 {
     int r = (int)BUILTIN_FREXP_EXP_F16(x) - 1;

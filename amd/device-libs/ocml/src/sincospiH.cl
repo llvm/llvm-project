@@ -8,7 +8,7 @@
 #include "mathH.h"
 #include "trigpiredH.h"
 
-REQUIRES_16BIT_INSTS half2
+half2
 MATH_MANGLE2(sincospi)(half2 x, __private half2 *cp)
 {
     half2 s;
@@ -20,7 +20,7 @@ MATH_MANGLE2(sincospi)(half2 x, __private half2 *cp)
     return s;
 }
 
-REQUIRES_16BIT_INSTS half
+half
 MATH_MANGLE(sincospi)(half x, __private half *cp)
 {
     struct redret r = MATH_PRIVATE(trigpired)(BUILTIN_ABS_F16(x));

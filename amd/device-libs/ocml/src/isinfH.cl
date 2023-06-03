@@ -7,7 +7,7 @@
 
 #include "mathH.h"
 
-REQUIRES_16BIT_INSTS CONSTATTR short2
+CONSTATTR short2
 MATH_MANGLE2(isinf)(half2 x)
 {
     return (short2)
@@ -15,7 +15,7 @@ MATH_MANGLE2(isinf)(half2 x)
          BUILTIN_ISINF_F16(x.hi) ? (short)-1 : (short)0);
 }
 
-REQUIRES_16BIT_INSTS CONSTATTR int
+CONSTATTR int
 MATH_MANGLE(isinf)(half x)
 {
     return BUILTIN_ISINF_F16(x);

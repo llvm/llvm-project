@@ -7,7 +7,7 @@
 
 #include "mathH.h"
 
-REQUIRES_16BIT_INSTS half2
+half2
 MATH_MANGLE2(modf)(half2 x, __private half2 *iptr)
 {
     half2 tx = BUILTIN_TRUNC_2F16(x);
@@ -18,7 +18,7 @@ MATH_MANGLE2(modf)(half2 x, __private half2 *iptr)
     return BUILTIN_COPYSIGN_2F16(ret, x);
 }
 
-REQUIRES_16BIT_INSTS half
+half
 MATH_MANGLE(modf)(half x, __private half *iptr)
 {
     half tx = BUILTIN_TRUNC_F16(x);

@@ -9,7 +9,7 @@
 
 CONSTATTR UGEN(rsqrt)
 
-REQUIRES_16BIT_INSTS CONSTATTR half
+CONSTATTR half
 MATH_MANGLE(rsqrt)(half x)
 {
     return BUILTIN_RSQRT_F16(x);

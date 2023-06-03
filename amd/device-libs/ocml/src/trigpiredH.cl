@@ -8,7 +8,7 @@
 #include "mathH.h"
 #include "trigpiredH.h"
 
-REQUIRES_16BIT_INSTS CONSTATTR struct redret
+CONSTATTR struct redret
 MATH_PRIVATE(trigpired)(half x)
 {
     half t = 2.0h * BUILTIN_FRACTION_F16(0.5h * x);
