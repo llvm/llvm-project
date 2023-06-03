@@ -266,18 +266,24 @@ struct RangeTy {
   }
 
   RangeTy &operator&=(const RangeTy &R) {
-    if (Offset == Unassigned)
-      Offset = R.Offset;
-    else if (R.Offset != Unassigned && R.Offset != Offset)
+    if (R.isUnassigned())
+      return *this;
+    if (isUnassigned())
+      return *this = R;
+    if (Offset == Unknown || R.Offset == Unknown)
       Offset = Unknown;
-
-    if (Size == Unassigned)
-      Size = R.Size;
-    else if (Size == Unknown || R.Size == Unknown)
+    if (Size == Unknown || R.Size == Unknown)
       Size = Unknown;
-    else if (R.Size != Unassigned)
+    if (offsetAndSizeAreUnknown())
+      return *this;
+    if (Offset == Unknown) {
       Size = std::max(Size, R.Size);
-
+    } else if (Size == Unknown) {
+      Offset = std::min(Offset, R.Offset);
+    } else {
+      Offset = std::min(Offset, R.Offset);
+      Size = std::max(Offset + Size, R.Offset + R.Size) - Offset;
+    }
     return *this;
   }
 
