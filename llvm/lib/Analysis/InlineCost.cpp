@@ -855,6 +855,9 @@ class InlineCostCallAnalyzer final : public CallAnalyzer {
                   SimplifiedValues.lookup(BI->getCondition()))) {
             CurrentSavings += InstrCost;
           }
+        } else if (SwitchInst *SI = dyn_cast<SwitchInst>(&I)) {
+          if (isa_and_present<ConstantInt>(SimplifiedValues.lookup(SI->getCondition())))
+            CurrentSavings += InstrCost;
         } else if (Value *V = dyn_cast<Value>(&I)) {
           // Count an instruction as savings if we can fold it.
           if (SimplifiedValues.count(V)) {
