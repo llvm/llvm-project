@@ -351,7 +351,7 @@ void COMGR::ensureLLVMInitialized() {
   // TODO: remove mutex once LLVM multi-threading issues are resolved
   static std::mutex llvm_init_mutex;
   {
-    std::scoped_lock llvm_init_lock(llvm_init_mutex);
+    std::scoped_lock<std::mutex> llvm_init_lock(llvm_init_mutex);
 
     static bool LLVMInitialized = false;
     if (LLVMInitialized) {
@@ -1271,7 +1271,7 @@ amd_comgr_status_t AMD_COMGR_API
   // TODO: Remove the scoped lock once updates to LLVM enable thread saftey
   static std::mutex comgr_mutex;
   {
-    std::scoped_lock comgr_lock(comgr_mutex);
+    std::scoped_lock<std::mutex> comgr_lock(comgr_mutex);
 
     ensureLLVMInitialized();
 
