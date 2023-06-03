@@ -8994,11 +8994,7 @@ Expected<Attr *> ASTImporter::Import(const Attr *FromAttr) {
 }
 
 Decl *ASTImporter::GetAlreadyImportedOrNull(const Decl *FromD) const {
-  auto Pos = ImportedDecls.find(FromD);
-  if (Pos != ImportedDecls.end())
-    return Pos->second;
-  else
-    return nullptr;
+  return ImportedDecls.lookup(FromD);
 }
 
 TranslationUnitDecl *ASTImporter::GetFromTU(Decl *ToD) {
