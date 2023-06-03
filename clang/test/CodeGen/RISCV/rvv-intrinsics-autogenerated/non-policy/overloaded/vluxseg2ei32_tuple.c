@@ -14,7 +14,7 @@
 // CHECK-RV64-NEXT:    ret { <vscale x 1 x half>, <vscale x 1 x half> } [[TMP0]]
 //
 vfloat16mf4x2_t test_vluxseg2ei32_v_f16mf4x2(const _Float16 *base, vuint32mf2_t bindex, size_t vl) {
-  return __riscv_vluxseg2ei32_v_tuple_f16mf4x2(base, bindex, vl);
+  return __riscv_vluxseg2ei32_tuple(base, bindex, vl);
 }
 
 // CHECK-RV64-LABEL: define dso_local { <vscale x 2 x half>, <vscale x 2 x half> } @test_vluxseg2ei32_v_f16mf2x2
@@ -24,7 +24,7 @@ vfloat16mf4x2_t test_vluxseg2ei32_v_f16mf4x2(const _Float16 *base, vuint32mf2_t 
 // CHECK-RV64-NEXT:    ret { <vscale x 2 x half>, <vscale x 2 x half> } [[TMP0]]
 //
 vfloat16mf2x2_t test_vluxseg2ei32_v_f16mf2x2(const _Float16 *base, vuint32m1_t bindex, size_t vl) {
-  return __riscv_vluxseg2ei32_v_tuple_f16mf2x2(base, bindex, vl);
+  return __riscv_vluxseg2ei32_tuple(base, bindex, vl);
 }
 
 // CHECK-RV64-LABEL: define dso_local { <vscale x 4 x half>, <vscale x 4 x half> } @test_vluxseg2ei32_v_f16m1x2
@@ -34,7 +34,7 @@ vfloat16mf2x2_t test_vluxseg2ei32_v_f16mf2x2(const _Float16 *base, vuint32m1_t b
 // CHECK-RV64-NEXT:    ret { <vscale x 4 x half>, <vscale x 4 x half> } [[TMP0]]
 //
 vfloat16m1x2_t test_vluxseg2ei32_v_f16m1x2(const _Float16 *base, vuint32m2_t bindex, size_t vl) {
-  return __riscv_vluxseg2ei32_v_tuple_f16m1x2(base, bindex, vl);
+  return __riscv_vluxseg2ei32_tuple(base, bindex, vl);
 }
 
 // CHECK-RV64-LABEL: define dso_local { <vscale x 8 x half>, <vscale x 8 x half> } @test_vluxseg2ei32_v_f16m2x2
@@ -44,7 +44,7 @@ vfloat16m1x2_t test_vluxseg2ei32_v_f16m1x2(const _Float16 *base, vuint32m2_t bin
 // CHECK-RV64-NEXT:    ret { <vscale x 8 x half>, <vscale x 8 x half> } [[TMP0]]
 //
 vfloat16m2x2_t test_vluxseg2ei32_v_f16m2x2(const _Float16 *base, vuint32m4_t bindex, size_t vl) {
-  return __riscv_vluxseg2ei32_v_tuple_f16m2x2(base, bindex, vl);
+  return __riscv_vluxseg2ei32_tuple(base, bindex, vl);
 }
 
 // CHECK-RV64-LABEL: define dso_local { <vscale x 16 x half>, <vscale x 16 x half> } @test_vluxseg2ei32_v_f16m4x2
@@ -54,7 +54,7 @@ vfloat16m2x2_t test_vluxseg2ei32_v_f16m2x2(const _Float16 *base, vuint32m4_t bin
 // CHECK-RV64-NEXT:    ret { <vscale x 16 x half>, <vscale x 16 x half> } [[TMP0]]
 //
 vfloat16m4x2_t test_vluxseg2ei32_v_f16m4x2(const _Float16 *base, vuint32m8_t bindex, size_t vl) {
-  return __riscv_vluxseg2ei32_v_tuple_f16m4x2(base, bindex, vl);
+  return __riscv_vluxseg2ei32_tuple(base, bindex, vl);
 }
 
 // CHECK-RV64-LABEL: define dso_local { <vscale x 1 x float>, <vscale x 1 x float> } @test_vluxseg2ei32_v_f32mf2x2
@@ -64,7 +64,7 @@ vfloat16m4x2_t test_vluxseg2ei32_v_f16m4x2(const _Float16 *base, vuint32m8_t bin
 // CHECK-RV64-NEXT:    ret { <vscale x 1 x float>, <vscale x 1 x float> } [[TMP0]]
 //
 vfloat32mf2x2_t test_vluxseg2ei32_v_f32mf2x2(const float *base, vuint32mf2_t bindex, size_t vl) {
-  return __riscv_vluxseg2ei32_v_tuple_f32mf2x2(base, bindex, vl);
+  return __riscv_vluxseg2ei32_tuple(base, bindex, vl);
 }
 
 // CHECK-RV64-LABEL: define dso_local { <vscale x 2 x float>, <vscale x 2 x float> } @test_vluxseg2ei32_v_f32m1x2
@@ -74,7 +74,7 @@ vfloat32mf2x2_t test_vluxseg2ei32_v_f32mf2x2(const float *base, vuint32mf2_t bin
 // CHECK-RV64-NEXT:    ret { <vscale x 2 x float>, <vscale x 2 x float> } [[TMP0]]
 //
 vfloat32m1x2_t test_vluxseg2ei32_v_f32m1x2(const float *base, vuint32m1_t bindex, size_t vl) {
-  return __riscv_vluxseg2ei32_v_tuple_f32m1x2(base, bindex, vl);
+  return __riscv_vluxseg2ei32_tuple(base, bindex, vl);
 }
 
 // CHECK-RV64-LABEL: define dso_local { <vscale x 4 x float>, <vscale x 4 x float> } @test_vluxseg2ei32_v_f32m2x2
@@ -84,7 +84,7 @@ vfloat32m1x2_t test_vluxseg2ei32_v_f32m1x2(const float *base, vuint32m1_t bindex
 // CHECK-RV64-NEXT:    ret { <vscale x 4 x float>, <vscale x 4 x float> } [[TMP0]]
 //
 vfloat32m2x2_t test_vluxseg2ei32_v_f32m2x2(const float *base, vuint32m2_t bindex, size_t vl) {
-  return __riscv_vluxseg2ei32_v_tuple_f32m2x2(base, bindex, vl);
+  return __riscv_vluxseg2ei32_tuple(base, bindex, vl);
 }
 
 // CHECK-RV64-LABEL: define dso_local { <vscale x 8 x float>, <vscale x 8 x float> } @test_vluxseg2ei32_v_f32m4x2
@@ -94,7 +94,7 @@ vfloat32m2x2_t test_vluxseg2ei32_v_f32m2x2(const float *base, vuint32m2_t bindex
 // CHECK-RV64-NEXT:    ret { <vscale x 8 x float>, <vscale x 8 x float> } [[TMP0]]
 //
 vfloat32m4x2_t test_vluxseg2ei32_v_f32m4x2(const float *base, vuint32m4_t bindex, size_t vl) {
-  return __riscv_vluxseg2ei32_v_tuple_f32m4x2(base, bindex, vl);
+  return __riscv_vluxseg2ei32_tuple(base, bindex, vl);
 }
 
 // CHECK-RV64-LABEL: define dso_local { <vscale x 1 x double>, <vscale x 1 x double> } @test_vluxseg2ei32_v_f64m1x2
@@ -104,7 +104,7 @@ vfloat32m4x2_t test_vluxseg2ei32_v_f32m4x2(const float *base, vuint32m4_t bindex
 // CHECK-RV64-NEXT:    ret { <vscale x 1 x double>, <vscale x 1 x double> } [[TMP0]]
 //
 vfloat64m1x2_t test_vluxseg2ei32_v_f64m1x2(const double *base, vuint32mf2_t bindex, size_t vl) {
-  return __riscv_vluxseg2ei32_v_tuple_f64m1x2(base, bindex, vl);
+  return __riscv_vluxseg2ei32_tuple(base, bindex, vl);
 }
 
 // CHECK-RV64-LABEL: define dso_local { <vscale x 2 x double>, <vscale x 2 x double> } @test_vluxseg2ei32_v_f64m2x2
@@ -114,7 +114,7 @@ vfloat64m1x2_t test_vluxseg2ei32_v_f64m1x2(const double *base, vuint32mf2_t bind
 // CHECK-RV64-NEXT:    ret { <vscale x 2 x double>, <vscale x 2 x double> } [[TMP0]]
 //
 vfloat64m2x2_t test_vluxseg2ei32_v_f64m2x2(const double *base, vuint32m1_t bindex, size_t vl) {
-  return __riscv_vluxseg2ei32_v_tuple_f64m2x2(base, bindex, vl);
+  return __riscv_vluxseg2ei32_tuple(base, bindex, vl);
 }
 
 // CHECK-RV64-LABEL: define dso_local { <vscale x 4 x double>, <vscale x 4 x double> } @test_vluxseg2ei32_v_f64m4x2
@@ -124,7 +124,7 @@ vfloat64m2x2_t test_vluxseg2ei32_v_f64m2x2(const double *base, vuint32m1_t binde
 // CHECK-RV64-NEXT:    ret { <vscale x 4 x double>, <vscale x 4 x double> } [[TMP0]]
 //
 vfloat64m4x2_t test_vluxseg2ei32_v_f64m4x2(const double *base, vuint32m2_t bindex, size_t vl) {
-  return __riscv_vluxseg2ei32_v_tuple_f64m4x2(base, bindex, vl);
+  return __riscv_vluxseg2ei32_tuple(base, bindex, vl);
 }
 
 // CHECK-RV64-LABEL: define dso_local { <vscale x 1 x i8>, <vscale x 1 x i8> } @test_vluxseg2ei32_v_i8mf8x2
@@ -134,7 +134,7 @@ vfloat64m4x2_t test_vluxseg2ei32_v_f64m4x2(const double *base, vuint32m2_t binde
 // CHECK-RV64-NEXT:    ret { <vscale x 1 x i8>, <vscale x 1 x i8> } [[TMP0]]
 //
 vint8mf8x2_t test_vluxseg2ei32_v_i8mf8x2(const int8_t *base, vuint32mf2_t bindex, size_t vl) {
-  return __riscv_vluxseg2ei32_v_tuple_i8mf8x2(base, bindex, vl);
+  return __riscv_vluxseg2ei32_tuple(base, bindex, vl);
 }
 
 // CHECK-RV64-LABEL: define dso_local { <vscale x 2 x i8>, <vscale x 2 x i8> } @test_vluxseg2ei32_v_i8mf4x2
@@ -144,7 +144,7 @@ vint8mf8x2_t test_vluxseg2ei32_v_i8mf8x2(const int8_t *base, vuint32mf2_t bindex
 // CHECK-RV64-NEXT:    ret { <vscale x 2 x i8>, <vscale x 2 x i8> } [[TMP0]]
 //
 vint8mf4x2_t test_vluxseg2ei32_v_i8mf4x2(const int8_t *base, vuint32m1_t bindex, size_t vl) {
-  return __riscv_vluxseg2ei32_v_tuple_i8mf4x2(base, bindex, vl);
+  return __riscv_vluxseg2ei32_tuple(base, bindex, vl);
 }
 
 // CHECK-RV64-LABEL: define dso_local { <vscale x 4 x i8>, <vscale x 4 x i8> } @test_vluxseg2ei32_v_i8mf2x2
@@ -154,7 +154,7 @@ vint8mf4x2_t test_vluxseg2ei32_v_i8mf4x2(const int8_t *base, vuint32m1_t bindex,
 // CHECK-RV64-NEXT:    ret { <vscale x 4 x i8>, <vscale x 4 x i8> } [[TMP0]]
 //
 vint8mf2x2_t test_vluxseg2ei32_v_i8mf2x2(const int8_t *base, vuint32m2_t bindex, size_t vl) {
-  return __riscv_vluxseg2ei32_v_tuple_i8mf2x2(base, bindex, vl);
+  return __riscv_vluxseg2ei32_tuple(base, bindex, vl);
 }
 
 // CHECK-RV64-LABEL: define dso_local { <vscale x 8 x i8>, <vscale x 8 x i8> } @test_vluxseg2ei32_v_i8m1x2
@@ -164,7 +164,7 @@ vint8mf2x2_t test_vluxseg2ei32_v_i8mf2x2(const int8_t *base, vuint32m2_t bindex,
 // CHECK-RV64-NEXT:    ret { <vscale x 8 x i8>, <vscale x 8 x i8> } [[TMP0]]
 //
 vint8m1x2_t test_vluxseg2ei32_v_i8m1x2(const int8_t *base, vuint32m4_t bindex, size_t vl) {
-  return __riscv_vluxseg2ei32_v_tuple_i8m1x2(base, bindex, vl);
+  return __riscv_vluxseg2ei32_tuple(base, bindex, vl);
 }
 
 // CHECK-RV64-LABEL: define dso_local { <vscale x 16 x i8>, <vscale x 16 x i8> } @test_vluxseg2ei32_v_i8m2x2
@@ -174,7 +174,7 @@ vint8m1x2_t test_vluxseg2ei32_v_i8m1x2(const int8_t *base, vuint32m4_t bindex, s
 // CHECK-RV64-NEXT:    ret { <vscale x 16 x i8>, <vscale x 16 x i8> } [[TMP0]]
 //
 vint8m2x2_t test_vluxseg2ei32_v_i8m2x2(const int8_t *base, vuint32m8_t bindex, size_t vl) {
-  return __riscv_vluxseg2ei32_v_tuple_i8m2x2(base, bindex, vl);
+  return __riscv_vluxseg2ei32_tuple(base, bindex, vl);
 }
 
 // CHECK-RV64-LABEL: define dso_local { <vscale x 1 x i16>, <vscale x 1 x i16> } @test_vluxseg2ei32_v_i16mf4x2
@@ -184,7 +184,7 @@ vint8m2x2_t test_vluxseg2ei32_v_i8m2x2(const int8_t *base, vuint32m8_t bindex, s
 // CHECK-RV64-NEXT:    ret { <vscale x 1 x i16>, <vscale x 1 x i16> } [[TMP0]]
 //
 vint16mf4x2_t test_vluxseg2ei32_v_i16mf4x2(const int16_t *base, vuint32mf2_t bindex, size_t vl) {
-  return __riscv_vluxseg2ei32_v_tuple_i16mf4x2(base, bindex, vl);
+  return __riscv_vluxseg2ei32_tuple(base, bindex, vl);
 }
 
 // CHECK-RV64-LABEL: define dso_local { <vscale x 2 x i16>, <vscale x 2 x i16> } @test_vluxseg2ei32_v_i16mf2x2
@@ -194,7 +194,7 @@ vint16mf4x2_t test_vluxseg2ei32_v_i16mf4x2(const int16_t *base, vuint32mf2_t bin
 // CHECK-RV64-NEXT:    ret { <vscale x 2 x i16>, <vscale x 2 x i16> } [[TMP0]]
 //
 vint16mf2x2_t test_vluxseg2ei32_v_i16mf2x2(const int16_t *base, vuint32m1_t bindex, size_t vl) {
-  return __riscv_vluxseg2ei32_v_tuple_i16mf2x2(base, bindex, vl);
+  return __riscv_vluxseg2ei32_tuple(base, bindex, vl);
 }
 
 // CHECK-RV64-LABEL: define dso_local { <vscale x 4 x i16>, <vscale x 4 x i16> } @test_vluxseg2ei32_v_i16m1x2
@@ -204,7 +204,7 @@ vint16mf2x2_t test_vluxseg2ei32_v_i16mf2x2(const int16_t *base, vuint32m1_t bind
 // CHECK-RV64-NEXT:    ret { <vscale x 4 x i16>, <vscale x 4 x i16> } [[TMP0]]
 //
 vint16m1x2_t test_vluxseg2ei32_v_i16m1x2(const int16_t *base, vuint32m2_t bindex, size_t vl) {
-  return __riscv_vluxseg2ei32_v_tuple_i16m1x2(base, bindex, vl);
+  return __riscv_vluxseg2ei32_tuple(base, bindex, vl);
 }
 
 // CHECK-RV64-LABEL: define dso_local { <vscale x 8 x i16>, <vscale x 8 x i16> } @test_vluxseg2ei32_v_i16m2x2
@@ -214,7 +214,7 @@ vint16m1x2_t test_vluxseg2ei32_v_i16m1x2(const int16_t *base, vuint32m2_t bindex
 // CHECK-RV64-NEXT:    ret { <vscale x 8 x i16>, <vscale x 8 x i16> } [[TMP0]]
 //
 vint16m2x2_t test_vluxseg2ei32_v_i16m2x2(const int16_t *base, vuint32m4_t bindex, size_t vl) {
-  return __riscv_vluxseg2ei32_v_tuple_i16m2x2(base, bindex, vl);
+  return __riscv_vluxseg2ei32_tuple(base, bindex, vl);
 }
 
 // CHECK-RV64-LABEL: define dso_local { <vscale x 16 x i16>, <vscale x 16 x i16> } @test_vluxseg2ei32_v_i16m4x2
@@ -224,7 +224,7 @@ vint16m2x2_t test_vluxseg2ei32_v_i16m2x2(const int16_t *base, vuint32m4_t bindex
 // CHECK-RV64-NEXT:    ret { <vscale x 16 x i16>, <vscale x 16 x i16> } [[TMP0]]
 //
 vint16m4x2_t test_vluxseg2ei32_v_i16m4x2(const int16_t *base, vuint32m8_t bindex, size_t vl) {
-  return __riscv_vluxseg2ei32_v_tuple_i16m4x2(base, bindex, vl);
+  return __riscv_vluxseg2ei32_tuple(base, bindex, vl);
 }
 
 // CHECK-RV64-LABEL: define dso_local { <vscale x 1 x i32>, <vscale x 1 x i32> } @test_vluxseg2ei32_v_i32mf2x2
@@ -234,7 +234,7 @@ vint16m4x2_t test_vluxseg2ei32_v_i16m4x2(const int16_t *base, vuint32m8_t bindex
 // CHECK-RV64-NEXT:    ret { <vscale x 1 x i32>, <vscale x 1 x i32> } [[TMP0]]
 //
 vint32mf2x2_t test_vluxseg2ei32_v_i32mf2x2(const int32_t *base, vuint32mf2_t bindex, size_t vl) {
-  return __riscv_vluxseg2ei32_v_tuple_i32mf2x2(base, bindex, vl);
+  return __riscv_vluxseg2ei32_tuple(base, bindex, vl);
 }
 
 // CHECK-RV64-LABEL: define dso_local { <vscale x 2 x i32>, <vscale x 2 x i32> } @test_vluxseg2ei32_v_i32m1x2
@@ -244,7 +244,7 @@ vint32mf2x2_t test_vluxseg2ei32_v_i32mf2x2(const int32_t *base, vuint32mf2_t bin
 // CHECK-RV64-NEXT:    ret { <vscale x 2 x i32>, <vscale x 2 x i32> } [[TMP0]]
 //
 vint32m1x2_t test_vluxseg2ei32_v_i32m1x2(const int32_t *base, vuint32m1_t bindex, size_t vl) {
-  return __riscv_vluxseg2ei32_v_tuple_i32m1x2(base, bindex, vl);
+  return __riscv_vluxseg2ei32_tuple(base, bindex, vl);
 }
 
 // CHECK-RV64-LABEL: define dso_local { <vscale x 4 x i32>, <vscale x 4 x i32> } @test_vluxseg2ei32_v_i32m2x2
@@ -254,7 +254,7 @@ vint32m1x2_t test_vluxseg2ei32_v_i32m1x2(const int32_t *base, vuint32m1_t bindex
 // CHECK-RV64-NEXT:    ret { <vscale x 4 x i32>, <vscale x 4 x i32> } [[TMP0]]
 //
 vint32m2x2_t test_vluxseg2ei32_v_i32m2x2(const int32_t *base, vuint32m2_t bindex, size_t vl) {
-  return __riscv_vluxseg2ei32_v_tuple_i32m2x2(base, bindex, vl);
+  return __riscv_vluxseg2ei32_tuple(base, bindex, vl);
 }
 
 // CHECK-RV64-LABEL: define dso_local { <vscale x 8 x i32>, <vscale x 8 x i32> } @test_vluxseg2ei32_v_i32m4x2
@@ -264,7 +264,7 @@ vint32m2x2_t test_vluxseg2ei32_v_i32m2x2(const int32_t *base, vuint32m2_t bindex
 // CHECK-RV64-NEXT:    ret { <vscale x 8 x i32>, <vscale x 8 x i32> } [[TMP0]]
 //
 vint32m4x2_t test_vluxseg2ei32_v_i32m4x2(const int32_t *base, vuint32m4_t bindex, size_t vl) {
-  return __riscv_vluxseg2ei32_v_tuple_i32m4x2(base, bindex, vl);
+  return __riscv_vluxseg2ei32_tuple(base, bindex, vl);
 }
 
 // CHECK-RV64-LABEL: define dso_local { <vscale x 1 x i64>, <vscale x 1 x i64> } @test_vluxseg2ei32_v_i64m1x2
@@ -274,7 +274,7 @@ vint32m4x2_t test_vluxseg2ei32_v_i32m4x2(const int32_t *base, vuint32m4_t bindex
 // CHECK-RV64-NEXT:    ret { <vscale x 1 x i64>, <vscale x 1 x i64> } [[TMP0]]
 //
 vint64m1x2_t test_vluxseg2ei32_v_i64m1x2(const int64_t *base, vuint32mf2_t bindex, size_t vl) {
-  return __riscv_vluxseg2ei32_v_tuple_i64m1x2(base, bindex, vl);
+  return __riscv_vluxseg2ei32_tuple(base, bindex, vl);
 }
 
 // CHECK-RV64-LABEL: define dso_local { <vscale x 2 x i64>, <vscale x 2 x i64> } @test_vluxseg2ei32_v_i64m2x2
@@ -284,7 +284,7 @@ vint64m1x2_t test_vluxseg2ei32_v_i64m1x2(const int64_t *base, vuint32mf2_t binde
 // CHECK-RV64-NEXT:    ret { <vscale x 2 x i64>, <vscale x 2 x i64> } [[TMP0]]
 //
 vint64m2x2_t test_vluxseg2ei32_v_i64m2x2(const int64_t *base, vuint32m1_t bindex, size_t vl) {
-  return __riscv_vluxseg2ei32_v_tuple_i64m2x2(base, bindex, vl);
+  return __riscv_vluxseg2ei32_tuple(base, bindex, vl);
 }
 
 // CHECK-RV64-LABEL: define dso_local { <vscale x 4 x i64>, <vscale x 4 x i64> } @test_vluxseg2ei32_v_i64m4x2
@@ -294,7 +294,7 @@ vint64m2x2_t test_vluxseg2ei32_v_i64m2x2(const int64_t *base, vuint32m1_t bindex
 // CHECK-RV64-NEXT:    ret { <vscale x 4 x i64>, <vscale x 4 x i64> } [[TMP0]]
 //
 vint64m4x2_t test_vluxseg2ei32_v_i64m4x2(const int64_t *base, vuint32m2_t bindex, size_t vl) {
-  return __riscv_vluxseg2ei32_v_tuple_i64m4x2(base, bindex, vl);
+  return __riscv_vluxseg2ei32_tuple(base, bindex, vl);
 }
 
 // CHECK-RV64-LABEL: define dso_local { <vscale x 1 x i8>, <vscale x 1 x i8> } @test_vluxseg2ei32_v_u8mf8x2
@@ -304,7 +304,7 @@ vint64m4x2_t test_vluxseg2ei32_v_i64m4x2(const int64_t *base, vuint32m2_t bindex
 // CHECK-RV64-NEXT:    ret { <vscale x 1 x i8>, <vscale x 1 x i8> } [[TMP0]]
 //
 vuint8mf8x2_t test_vluxseg2ei32_v_u8mf8x2(const uint8_t *base, vuint32mf2_t bindex, size_t vl) {
-  return __riscv_vluxseg2ei32_v_tuple_u8mf8x2(base, bindex, vl);
+  return __riscv_vluxseg2ei32_tuple(base, bindex, vl);
 }
 
 // CHECK-RV64-LABEL: define dso_local { <vscale x 2 x i8>, <vscale x 2 x i8> } @test_vluxseg2ei32_v_u8mf4x2
@@ -314,7 +314,7 @@ vuint8mf8x2_t test_vluxseg2ei32_v_u8mf8x2(const uint8_t *base, vuint32mf2_t bind
 // CHECK-RV64-NEXT:    ret { <vscale x 2 x i8>, <vscale x 2 x i8> } [[TMP0]]
 //
 vuint8mf4x2_t test_vluxseg2ei32_v_u8mf4x2(const uint8_t *base, vuint32m1_t bindex, size_t vl) {
-  return __riscv_vluxseg2ei32_v_tuple_u8mf4x2(base, bindex, vl);
+  return __riscv_vluxseg2ei32_tuple(base, bindex, vl);
 }
 
 // CHECK-RV64-LABEL: define dso_local { <vscale x 4 x i8>, <vscale x 4 x i8> } @test_vluxseg2ei32_v_u8mf2x2
@@ -324,7 +324,7 @@ vuint8mf4x2_t test_vluxseg2ei32_v_u8mf4x2(const uint8_t *base, vuint32m1_t binde
 // CHECK-RV64-NEXT:    ret { <vscale x 4 x i8>, <vscale x 4 x i8> } [[TMP0]]
 //
 vuint8mf2x2_t test_vluxseg2ei32_v_u8mf2x2(const uint8_t *base, vuint32m2_t bindex, size_t vl) {
-  return __riscv_vluxseg2ei32_v_tuple_u8mf2x2(base, bindex, vl);
+  return __riscv_vluxseg2ei32_tuple(base, bindex, vl);
 }
 
 // CHECK-RV64-LABEL: define dso_local { <vscale x 8 x i8>, <vscale x 8 x i8> } @test_vluxseg2ei32_v_u8m1x2
@@ -334,7 +334,7 @@ vuint8mf2x2_t test_vluxseg2ei32_v_u8mf2x2(const uint8_t *base, vuint32m2_t binde
 // CHECK-RV64-NEXT:    ret { <vscale x 8 x i8>, <vscale x 8 x i8> } [[TMP0]]
 //
 vuint8m1x2_t test_vluxseg2ei32_v_u8m1x2(const uint8_t *base, vuint32m4_t bindex, size_t vl) {
-  return __riscv_vluxseg2ei32_v_tuple_u8m1x2(base, bindex, vl);
+  return __riscv_vluxseg2ei32_tuple(base, bindex, vl);
 }
 
 // CHECK-RV64-LABEL: define dso_local { <vscale x 16 x i8>, <vscale x 16 x i8> } @test_vluxseg2ei32_v_u8m2x2
@@ -344,7 +344,7 @@ vuint8m1x2_t test_vluxseg2ei32_v_u8m1x2(const uint8_t *base, vuint32m4_t bindex,
 // CHECK-RV64-NEXT:    ret { <vscale x 16 x i8>, <vscale x 16 x i8> } [[TMP0]]
 //
 vuint8m2x2_t test_vluxseg2ei32_v_u8m2x2(const uint8_t *base, vuint32m8_t bindex, size_t vl) {
-  return __riscv_vluxseg2ei32_v_tuple_u8m2x2(base, bindex, vl);
+  return __riscv_vluxseg2ei32_tuple(base, bindex, vl);
 }
 
 // CHECK-RV64-LABEL: define dso_local { <vscale x 1 x i16>, <vscale x 1 x i16> } @test_vluxseg2ei32_v_u16mf4x2
@@ -354,7 +354,7 @@ vuint8m2x2_t test_vluxseg2ei32_v_u8m2x2(const uint8_t *base, vuint32m8_t bindex,
 // CHECK-RV64-NEXT:    ret { <vscale x 1 x i16>, <vscale x 1 x i16> } [[TMP0]]
 //
 vuint16mf4x2_t test_vluxseg2ei32_v_u16mf4x2(const uint16_t *base, vuint32mf2_t bindex, size_t vl) {
-  return __riscv_vluxseg2ei32_v_tuple_u16mf4x2(base, bindex, vl);
+  return __riscv_vluxseg2ei32_tuple(base, bindex, vl);
 }
 
 // CHECK-RV64-LABEL: define dso_local { <vscale x 2 x i16>, <vscale x 2 x i16> } @test_vluxseg2ei32_v_u16mf2x2
@@ -364,7 +364,7 @@ vuint16mf4x2_t test_vluxseg2ei32_v_u16mf4x2(const uint16_t *base, vuint32mf2_t b
 // CHECK-RV64-NEXT:    ret { <vscale x 2 x i16>, <vscale x 2 x i16> } [[TMP0]]
 //
 vuint16mf2x2_t test_vluxseg2ei32_v_u16mf2x2(const uint16_t *base, vuint32m1_t bindex, size_t vl) {
-  return __riscv_vluxseg2ei32_v_tuple_u16mf2x2(base, bindex, vl);
+  return __riscv_vluxseg2ei32_tuple(base, bindex, vl);
 }
 
 // CHECK-RV64-LABEL: define dso_local { <vscale x 4 x i16>, <vscale x 4 x i16> } @test_vluxseg2ei32_v_u16m1x2
@@ -374,7 +374,7 @@ vuint16mf2x2_t test_vluxseg2ei32_v_u16mf2x2(const uint16_t *base, vuint32m1_t bi
 // CHECK-RV64-NEXT:    ret { <vscale x 4 x i16>, <vscale x 4 x i16> } [[TMP0]]
 //
 vuint16m1x2_t test_vluxseg2ei32_v_u16m1x2(const uint16_t *base, vuint32m2_t bindex, size_t vl) {
-  return __riscv_vluxseg2ei32_v_tuple_u16m1x2(base, bindex, vl);
+  return __riscv_vluxseg2ei32_tuple(base, bindex, vl);
 }
 
 // CHECK-RV64-LABEL: define dso_local { <vscale x 8 x i16>, <vscale x 8 x i16> } @test_vluxseg2ei32_v_u16m2x2
@@ -384,7 +384,7 @@ vuint16m1x2_t test_vluxseg2ei32_v_u16m1x2(const uint16_t *base, vuint32m2_t bind
 // CHECK-RV64-NEXT:    ret { <vscale x 8 x i16>, <vscale x 8 x i16> } [[TMP0]]
 //
 vuint16m2x2_t test_vluxseg2ei32_v_u16m2x2(const uint16_t *base, vuint32m4_t bindex, size_t vl) {
-  return __riscv_vluxseg2ei32_v_tuple_u16m2x2(base, bindex, vl);
+  return __riscv_vluxseg2ei32_tuple(base, bindex, vl);
 }
 
 // CHECK-RV64-LABEL: define dso_local { <vscale x 16 x i16>, <vscale x 16 x i16> } @test_vluxseg2ei32_v_u16m4x2
@@ -394,7 +394,7 @@ vuint16m2x2_t test_vluxseg2ei32_v_u16m2x2(const uint16_t *base, vuint32m4_t bind
 // CHECK-RV64-NEXT:    ret { <vscale x 16 x i16>, <vscale x 16 x i16> } [[TMP0]]
 //
 vuint16m4x2_t test_vluxseg2ei32_v_u16m4x2(const uint16_t *base, vuint32m8_t bindex, size_t vl) {
-  return __riscv_vluxseg2ei32_v_tuple_u16m4x2(base, bindex, vl);
+  return __riscv_vluxseg2ei32_tuple(base, bindex, vl);
 }
 
 // CHECK-RV64-LABEL: define dso_local { <vscale x 1 x i32>, <vscale x 1 x i32> } @test_vluxseg2ei32_v_u32mf2x2
@@ -404,7 +404,7 @@ vuint16m4x2_t test_vluxseg2ei32_v_u16m4x2(const uint16_t *base, vuint32m8_t bind
 // CHECK-RV64-NEXT:    ret { <vscale x 1 x i32>, <vscale x 1 x i32> } [[TMP0]]
 //
 vuint32mf2x2_t test_vluxseg2ei32_v_u32mf2x2(const uint32_t *base, vuint32mf2_t bindex, size_t vl) {
-  return __riscv_vluxseg2ei32_v_tuple_u32mf2x2(base, bindex, vl);
+  return __riscv_vluxseg2ei32_tuple(base, bindex, vl);
 }
 
 // CHECK-RV64-LABEL: define dso_local { <vscale x 2 x i32>, <vscale x 2 x i32> } @test_vluxseg2ei32_v_u32m1x2
@@ -414,7 +414,7 @@ vuint32mf2x2_t test_vluxseg2ei32_v_u32mf2x2(const uint32_t *base, vuint32mf2_t b
 // CHECK-RV64-NEXT:    ret { <vscale x 2 x i32>, <vscale x 2 x i32> } [[TMP0]]
 //
 vuint32m1x2_t test_vluxseg2ei32_v_u32m1x2(const uint32_t *base, vuint32m1_t bindex, size_t vl) {
-  return __riscv_vluxseg2ei32_v_tuple_u32m1x2(base, bindex, vl);
+  return __riscv_vluxseg2ei32_tuple(base, bindex, vl);
 }
 
 // CHECK-RV64-LABEL: define dso_local { <vscale x 4 x i32>, <vscale x 4 x i32> } @test_vluxseg2ei32_v_u32m2x2
@@ -424,7 +424,7 @@ vuint32m1x2_t test_vluxseg2ei32_v_u32m1x2(const uint32_t *base, vuint32m1_t bind
 // CHECK-RV64-NEXT:    ret { <vscale x 4 x i32>, <vscale x 4 x i32> } [[TMP0]]
 //
 vuint32m2x2_t test_vluxseg2ei32_v_u32m2x2(const uint32_t *base, vuint32m2_t bindex, size_t vl) {
-  return __riscv_vluxseg2ei32_v_tuple_u32m2x2(base, bindex, vl);
+  return __riscv_vluxseg2ei32_tuple(base, bindex, vl);
 }
 
 // CHECK-RV64-LABEL: define dso_local { <vscale x 8 x i32>, <vscale x 8 x i32> } @test_vluxseg2ei32_v_u32m4x2
@@ -434,7 +434,7 @@ vuint32m2x2_t test_vluxseg2ei32_v_u32m2x2(const uint32_t *base, vuint32m2_t bind
 // CHECK-RV64-NEXT:    ret { <vscale x 8 x i32>, <vscale x 8 x i32> } [[TMP0]]
 //
 vuint32m4x2_t test_vluxseg2ei32_v_u32m4x2(const uint32_t *base, vuint32m4_t bindex, size_t vl) {
-  return __riscv_vluxseg2ei32_v_tuple_u32m4x2(base, bindex, vl);
+  return __riscv_vluxseg2ei32_tuple(base, bindex, vl);
 }
 
 // CHECK-RV64-LABEL: define dso_local { <vscale x 1 x i64>, <vscale x 1 x i64> } @test_vluxseg2ei32_v_u64m1x2
@@ -444,7 +444,7 @@ vuint32m4x2_t test_vluxseg2ei32_v_u32m4x2(const uint32_t *base, vuint32m4_t bind
 // CHECK-RV64-NEXT:    ret { <vscale x 1 x i64>, <vscale x 1 x i64> } [[TMP0]]
 //
 vuint64m1x2_t test_vluxseg2ei32_v_u64m1x2(const uint64_t *base, vuint32mf2_t bindex, size_t vl) {
-  return __riscv_vluxseg2ei32_v_tuple_u64m1x2(base, bindex, vl);
+  return __riscv_vluxseg2ei32_tuple(base, bindex, vl);
 }
 
 // CHECK-RV64-LABEL: define dso_local { <vscale x 2 x i64>, <vscale x 2 x i64> } @test_vluxseg2ei32_v_u64m2x2
@@ -454,7 +454,7 @@ vuint64m1x2_t test_vluxseg2ei32_v_u64m1x2(const uint64_t *base, vuint32mf2_t bin
 // CHECK-RV64-NEXT:    ret { <vscale x 2 x i64>, <vscale x 2 x i64> } [[TMP0]]
 //
 vuint64m2x2_t test_vluxseg2ei32_v_u64m2x2(const uint64_t *base, vuint32m1_t bindex, size_t vl) {
-  return __riscv_vluxseg2ei32_v_tuple_u64m2x2(base, bindex, vl);
+  return __riscv_vluxseg2ei32_tuple(base, bindex, vl);
 }
 
 // CHECK-RV64-LABEL: define dso_local { <vscale x 4 x i64>, <vscale x 4 x i64> } @test_vluxseg2ei32_v_u64m4x2
@@ -464,7 +464,7 @@ vuint64m2x2_t test_vluxseg2ei32_v_u64m2x2(const uint64_t *base, vuint32m1_t bind
 // CHECK-RV64-NEXT:    ret { <vscale x 4 x i64>, <vscale x 4 x i64> } [[TMP0]]
 //
 vuint64m4x2_t test_vluxseg2ei32_v_u64m4x2(const uint64_t *base, vuint32m2_t bindex, size_t vl) {
-  return __riscv_vluxseg2ei32_v_tuple_u64m4x2(base, bindex, vl);
+  return __riscv_vluxseg2ei32_tuple(base, bindex, vl);
 }
 
 // CHECK-RV64-LABEL: define dso_local { <vscale x 1 x half>, <vscale x 1 x half> } @test_vluxseg2ei32_v_f16mf4x2_m
@@ -474,7 +474,7 @@ vuint64m4x2_t test_vluxseg2ei32_v_u64m4x2(const uint64_t *base, vuint32m2_t bind
 // CHECK-RV64-NEXT:    ret { <vscale x 1 x half>, <vscale x 1 x half> } [[TMP0]]
 //
 vfloat16mf4x2_t test_vluxseg2ei32_v_f16mf4x2_m(vbool64_t mask, const _Float16 *base, vuint32mf2_t bindex, size_t vl) {
-  return __riscv_vluxseg2ei32_v_tuple_f16mf4x2_m(mask, base, bindex, vl);
+  return __riscv_vluxseg2ei32_tuple(mask, base, bindex, vl);
 }
 
 // CHECK-RV64-LABEL: define dso_local { <vscale x 2 x half>, <vscale x 2 x half> } @test_vluxseg2ei32_v_f16mf2x2_m
@@ -484,7 +484,7 @@ vfloat16mf4x2_t test_vluxseg2ei32_v_f16mf4x2_m(vbool64_t mask, const _Float16 *b
 // CHECK-RV64-NEXT:    ret { <vscale x 2 x half>, <vscale x 2 x half> } [[TMP0]]
 //
 vfloat16mf2x2_t test_vluxseg2ei32_v_f16mf2x2_m(vbool32_t mask, const _Float16 *base, vuint32m1_t bindex, size_t vl) {
-  return __riscv_vluxseg2ei32_v_tuple_f16mf2x2_m(mask, base, bindex, vl);
+  return __riscv_vluxseg2ei32_tuple(mask, base, bindex, vl);
 }
 
 // CHECK-RV64-LABEL: define dso_local { <vscale x 4 x half>, <vscale x 4 x half> } @test_vluxseg2ei32_v_f16m1x2_m
@@ -494,7 +494,7 @@ vfloat16mf2x2_t test_vluxseg2ei32_v_f16mf2x2_m(vbool32_t mask, const _Float16 *b
 // CHECK-RV64-NEXT:    ret { <vscale x 4 x half>, <vscale x 4 x half> } [[TMP0]]
 //
 vfloat16m1x2_t test_vluxseg2ei32_v_f16m1x2_m(vbool16_t mask, const _Float16 *base, vuint32m2_t bindex, size_t vl) {
-  return __riscv_vluxseg2ei32_v_tuple_f16m1x2_m(mask, base, bindex, vl);
+  return __riscv_vluxseg2ei32_tuple(mask, base, bindex, vl);
 }
 
 // CHECK-RV64-LABEL: define dso_local { <vscale x 8 x half>, <vscale x 8 x half> } @test_vluxseg2ei32_v_f16m2x2_m
@@ -504,7 +504,7 @@ vfloat16m1x2_t test_vluxseg2ei32_v_f16m1x2_m(vbool16_t mask, const _Float16 *bas
 // CHECK-RV64-NEXT:    ret { <vscale x 8 x half>, <vscale x 8 x half> } [[TMP0]]
 //
 vfloat16m2x2_t test_vluxseg2ei32_v_f16m2x2_m(vbool8_t mask, const _Float16 *base, vuint32m4_t bindex, size_t vl) {
-  return __riscv_vluxseg2ei32_v_tuple_f16m2x2_m(mask, base, bindex, vl);
+  return __riscv_vluxseg2ei32_tuple(mask, base, bindex, vl);
 }
 
 // CHECK-RV64-LABEL: define dso_local { <vscale x 16 x half>, <vscale x 16 x half> } @test_vluxseg2ei32_v_f16m4x2_m
@@ -514,7 +514,7 @@ vfloat16m2x2_t test_vluxseg2ei32_v_f16m2x2_m(vbool8_t mask, const _Float16 *base
 // CHECK-RV64-NEXT:    ret { <vscale x 16 x half>, <vscale x 16 x half> } [[TMP0]]
 //
 vfloat16m4x2_t test_vluxseg2ei32_v_f16m4x2_m(vbool4_t mask, const _Float16 *base, vuint32m8_t bindex, size_t vl) {
-  return __riscv_vluxseg2ei32_v_tuple_f16m4x2_m(mask, base, bindex, vl);
+  return __riscv_vluxseg2ei32_tuple(mask, base, bindex, vl);
 }
 
 // CHECK-RV64-LABEL: define dso_local { <vscale x 1 x float>, <vscale x 1 x float> } @test_vluxseg2ei32_v_f32mf2x2_m
@@ -524,7 +524,7 @@ vfloat16m4x2_t test_vluxseg2ei32_v_f16m4x2_m(vbool4_t mask, const _Float16 *base
 // CHECK-RV64-NEXT:    ret { <vscale x 1 x float>, <vscale x 1 x float> } [[TMP0]]
 //
 vfloat32mf2x2_t test_vluxseg2ei32_v_f32mf2x2_m(vbool64_t mask, const float *base, vuint32mf2_t bindex, size_t vl) {
-  return __riscv_vluxseg2ei32_v_tuple_f32mf2x2_m(mask, base, bindex, vl);
+  return __riscv_vluxseg2ei32_tuple(mask, base, bindex, vl);
 }
 
 // CHECK-RV64-LABEL: define dso_local { <vscale x 2 x float>, <vscale x 2 x float> } @test_vluxseg2ei32_v_f32m1x2_m
@@ -534,7 +534,7 @@ vfloat32mf2x2_t test_vluxseg2ei32_v_f32mf2x2_m(vbool64_t mask, const float *base
 // CHECK-RV64-NEXT:    ret { <vscale x 2 x float>, <vscale x 2 x float> } [[TMP0]]
 //
 vfloat32m1x2_t test_vluxseg2ei32_v_f32m1x2_m(vbool32_t mask, const float *base, vuint32m1_t bindex, size_t vl) {
-  return __riscv_vluxseg2ei32_v_tuple_f32m1x2_m(mask, base, bindex, vl);
+  return __riscv_vluxseg2ei32_tuple(mask, base, bindex, vl);
 }
 
 // CHECK-RV64-LABEL: define dso_local { <vscale x 4 x float>, <vscale x 4 x float> } @test_vluxseg2ei32_v_f32m2x2_m
@@ -544,7 +544,7 @@ vfloat32m1x2_t test_vluxseg2ei32_v_f32m1x2_m(vbool32_t mask, const float *base, 
 // CHECK-RV64-NEXT:    ret { <vscale x 4 x float>, <vscale x 4 x float> } [[TMP0]]
 //
 vfloat32m2x2_t test_vluxseg2ei32_v_f32m2x2_m(vbool16_t mask, const float *base, vuint32m2_t bindex, size_t vl) {
-  return __riscv_vluxseg2ei32_v_tuple_f32m2x2_m(mask, base, bindex, vl);
+  return __riscv_vluxseg2ei32_tuple(mask, base, bindex, vl);
 }
 
 // CHECK-RV64-LABEL: define dso_local { <vscale x 8 x float>, <vscale x 8 x float> } @test_vluxseg2ei32_v_f32m4x2_m
@@ -554,7 +554,7 @@ vfloat32m2x2_t test_vluxseg2ei32_v_f32m2x2_m(vbool16_t mask, const float *base, 
 // CHECK-RV64-NEXT:    ret { <vscale x 8 x float>, <vscale x 8 x float> } [[TMP0]]
 //
 vfloat32m4x2_t test_vluxseg2ei32_v_f32m4x2_m(vbool8_t mask, const float *base, vuint32m4_t bindex, size_t vl) {
-  return __riscv_vluxseg2ei32_v_tuple_f32m4x2_m(mask, base, bindex, vl);
+  return __riscv_vluxseg2ei32_tuple(mask, base, bindex, vl);
 }
 
 // CHECK-RV64-LABEL: define dso_local { <vscale x 1 x double>, <vscale x 1 x double> } @test_vluxseg2ei32_v_f64m1x2_m
@@ -564,7 +564,7 @@ vfloat32m4x2_t test_vluxseg2ei32_v_f32m4x2_m(vbool8_t mask, const float *base, v
 // CHECK-RV64-NEXT:    ret { <vscale x 1 x double>, <vscale x 1 x double> } [[TMP0]]
 //
 vfloat64m1x2_t test_vluxseg2ei32_v_f64m1x2_m(vbool64_t mask, const double *base, vuint32mf2_t bindex, size_t vl) {
-  return __riscv_vluxseg2ei32_v_tuple_f64m1x2_m(mask, base, bindex, vl);
+  return __riscv_vluxseg2ei32_tuple(mask, base, bindex, vl);
 }
 
 // CHECK-RV64-LABEL: define dso_local { <vscale x 2 x double>, <vscale x 2 x double> } @test_vluxseg2ei32_v_f64m2x2_m
@@ -574,7 +574,7 @@ vfloat64m1x2_t test_vluxseg2ei32_v_f64m1x2_m(vbool64_t mask, const double *base,
 // CHECK-RV64-NEXT:    ret { <vscale x 2 x double>, <vscale x 2 x double> } [[TMP0]]
 //
 vfloat64m2x2_t test_vluxseg2ei32_v_f64m2x2_m(vbool32_t mask, const double *base, vuint32m1_t bindex, size_t vl) {
-  return __riscv_vluxseg2ei32_v_tuple_f64m2x2_m(mask, base, bindex, vl);
+  return __riscv_vluxseg2ei32_tuple(mask, base, bindex, vl);
 }
 
 // CHECK-RV64-LABEL: define dso_local { <vscale x 4 x double>, <vscale x 4 x double> } @test_vluxseg2ei32_v_f64m4x2_m
@@ -584,7 +584,7 @@ vfloat64m2x2_t test_vluxseg2ei32_v_f64m2x2_m(vbool32_t mask, const double *base,
 // CHECK-RV64-NEXT:    ret { <vscale x 4 x double>, <vscale x 4 x double> } [[TMP0]]
 //
 vfloat64m4x2_t test_vluxseg2ei32_v_f64m4x2_m(vbool16_t mask, const double *base, vuint32m2_t bindex, size_t vl) {
-  return __riscv_vluxseg2ei32_v_tuple_f64m4x2_m(mask, base, bindex, vl);
+  return __riscv_vluxseg2ei32_tuple(mask, base, bindex, vl);
 }
 
 // CHECK-RV64-LABEL: define dso_local { <vscale x 1 x i8>, <vscale x 1 x i8> } @test_vluxseg2ei32_v_i8mf8x2_m
@@ -594,7 +594,7 @@ vfloat64m4x2_t test_vluxseg2ei32_v_f64m4x2_m(vbool16_t mask, const double *base,
 // CHECK-RV64-NEXT:    ret { <vscale x 1 x i8>, <vscale x 1 x i8> } [[TMP0]]
 //
 vint8mf8x2_t test_vluxseg2ei32_v_i8mf8x2_m(vbool64_t mask, const int8_t *base, vuint32mf2_t bindex, size_t vl) {
-  return __riscv_vluxseg2ei32_v_tuple_i8mf8x2_m(mask, base, bindex, vl);
+  return __riscv_vluxseg2ei32_tuple(mask, base, bindex, vl);
 }
 
 // CHECK-RV64-LABEL: define dso_local { <vscale x 2 x i8>, <vscale x 2 x i8> } @test_vluxseg2ei32_v_i8mf4x2_m
@@ -604,7 +604,7 @@ vint8mf8x2_t test_vluxseg2ei32_v_i8mf8x2_m(vbool64_t mask, const int8_t *base, v
 // CHECK-RV64-NEXT:    ret { <vscale x 2 x i8>, <vscale x 2 x i8> } [[TMP0]]
 //
 vint8mf4x2_t test_vluxseg2ei32_v_i8mf4x2_m(vbool32_t mask, const int8_t *base, vuint32m1_t bindex, size_t vl) {
-  return __riscv_vluxseg2ei32_v_tuple_i8mf4x2_m(mask, base, bindex, vl);
+  return __riscv_vluxseg2ei32_tuple(mask, base, bindex, vl);
 }
 
 // CHECK-RV64-LABEL: define dso_local { <vscale x 4 x i8>, <vscale x 4 x i8> } @test_vluxseg2ei32_v_i8mf2x2_m
@@ -614,7 +614,7 @@ vint8mf4x2_t test_vluxseg2ei32_v_i8mf4x2_m(vbool32_t mask, const int8_t *base, v
 // CHECK-RV64-NEXT:    ret { <vscale x 4 x i8>, <vscale x 4 x i8> } [[TMP0]]
 //
 vint8mf2x2_t test_vluxseg2ei32_v_i8mf2x2_m(vbool16_t mask, const int8_t *base, vuint32m2_t bindex, size_t vl) {
-  return __riscv_vluxseg2ei32_v_tuple_i8mf2x2_m(mask, base, bindex, vl);
+  return __riscv_vluxseg2ei32_tuple(mask, base, bindex, vl);
 }
 
 // CHECK-RV64-LABEL: define dso_local { <vscale x 8 x i8>, <vscale x 8 x i8> } @test_vluxseg2ei32_v_i8m1x2_m
@@ -624,7 +624,7 @@ vint8mf2x2_t test_vluxseg2ei32_v_i8mf2x2_m(vbool16_t mask, const int8_t *base, v
 // CHECK-RV64-NEXT:    ret { <vscale x 8 x i8>, <vscale x 8 x i8> } [[TMP0]]
 //
 vint8m1x2_t test_vluxseg2ei32_v_i8m1x2_m(vbool8_t mask, const int8_t *base, vuint32m4_t bindex, size_t vl) {
-  return __riscv_vluxseg2ei32_v_tuple_i8m1x2_m(mask, base, bindex, vl);
+  return __riscv_vluxseg2ei32_tuple(mask, base, bindex, vl);
 }
 
 // CHECK-RV64-LABEL: define dso_local { <vscale x 16 x i8>, <vscale x 16 x i8> } @test_vluxseg2ei32_v_i8m2x2_m
@@ -634,7 +634,7 @@ vint8m1x2_t test_vluxseg2ei32_v_i8m1x2_m(vbool8_t mask, const int8_t *base, vuin
 // CHECK-RV64-NEXT:    ret { <vscale x 16 x i8>, <vscale x 16 x i8> } [[TMP0]]
 //
 vint8m2x2_t test_vluxseg2ei32_v_i8m2x2_m(vbool4_t mask, const int8_t *base, vuint32m8_t bindex, size_t vl) {
-  return __riscv_vluxseg2ei32_v_tuple_i8m2x2_m(mask, base, bindex, vl);
+  return __riscv_vluxseg2ei32_tuple(mask, base, bindex, vl);
 }
 
 // CHECK-RV64-LABEL: define dso_local { <vscale x 1 x i16>, <vscale x 1 x i16> } @test_vluxseg2ei32_v_i16mf4x2_m
@@ -644,7 +644,7 @@ vint8m2x2_t test_vluxseg2ei32_v_i8m2x2_m(vbool4_t mask, const int8_t *base, vuin
 // CHECK-RV64-NEXT:    ret { <vscale x 1 x i16>, <vscale x 1 x i16> } [[TMP0]]
 //
 vint16mf4x2_t test_vluxseg2ei32_v_i16mf4x2_m(vbool64_t mask, const int16_t *base, vuint32mf2_t bindex, size_t vl) {
-  return __riscv_vluxseg2ei32_v_tuple_i16mf4x2_m(mask, base, bindex, vl);
+  return __riscv_vluxseg2ei32_tuple(mask, base, bindex, vl);
 }
 
 // CHECK-RV64-LABEL: define dso_local { <vscale x 2 x i16>, <vscale x 2 x i16> } @test_vluxseg2ei32_v_i16mf2x2_m
@@ -654,7 +654,7 @@ vint16mf4x2_t test_vluxseg2ei32_v_i16mf4x2_m(vbool64_t mask, const int16_t *base
 // CHECK-RV64-NEXT:    ret { <vscale x 2 x i16>, <vscale x 2 x i16> } [[TMP0]]
 //
 vint16mf2x2_t test_vluxseg2ei32_v_i16mf2x2_m(vbool32_t mask, const int16_t *base, vuint32m1_t bindex, size_t vl) {
-  return __riscv_vluxseg2ei32_v_tuple_i16mf2x2_m(mask, base, bindex, vl);
+  return __riscv_vluxseg2ei32_tuple(mask, base, bindex, vl);
 }
 
 // CHECK-RV64-LABEL: define dso_local { <vscale x 4 x i16>, <vscale x 4 x i16> } @test_vluxseg2ei32_v_i16m1x2_m
@@ -664,7 +664,7 @@ vint16mf2x2_t test_vluxseg2ei32_v_i16mf2x2_m(vbool32_t mask, const int16_t *base
 // CHECK-RV64-NEXT:    ret { <vscale x 4 x i16>, <vscale x 4 x i16> } [[TMP0]]
 //
 vint16m1x2_t test_vluxseg2ei32_v_i16m1x2_m(vbool16_t mask, const int16_t *base, vuint32m2_t bindex, size_t vl) {
-  return __riscv_vluxseg2ei32_v_tuple_i16m1x2_m(mask, base, bindex, vl);
+  return __riscv_vluxseg2ei32_tuple(mask, base, bindex, vl);
 }
 
 // CHECK-RV64-LABEL: define dso_local { <vscale x 8 x i16>, <vscale x 8 x i16> } @test_vluxseg2ei32_v_i16m2x2_m
@@ -674,7 +674,7 @@ vint16m1x2_t test_vluxseg2ei32_v_i16m1x2_m(vbool16_t mask, const int16_t *base, 
 // CHECK-RV64-NEXT:    ret { <vscale x 8 x i16>, <vscale x 8 x i16> } [[TMP0]]
 //
 vint16m2x2_t test_vluxseg2ei32_v_i16m2x2_m(vbool8_t mask, const int16_t *base, vuint32m4_t bindex, size_t vl) {
-  return __riscv_vluxseg2ei32_v_tuple_i16m2x2_m(mask, base, bindex, vl);
+  return __riscv_vluxseg2ei32_tuple(mask, base, bindex, vl);
 }
 
 // CHECK-RV64-LABEL: define dso_local { <vscale x 16 x i16>, <vscale x 16 x i16> } @test_vluxseg2ei32_v_i16m4x2_m
@@ -684,7 +684,7 @@ vint16m2x2_t test_vluxseg2ei32_v_i16m2x2_m(vbool8_t mask, const int16_t *base, v
 // CHECK-RV64-NEXT:    ret { <vscale x 16 x i16>, <vscale x 16 x i16> } [[TMP0]]
 //
 vint16m4x2_t test_vluxseg2ei32_v_i16m4x2_m(vbool4_t mask, const int16_t *base, vuint32m8_t bindex, size_t vl) {
-  return __riscv_vluxseg2ei32_v_tuple_i16m4x2_m(mask, base, bindex, vl);
+  return __riscv_vluxseg2ei32_tuple(mask, base, bindex, vl);
 }
 
 // CHECK-RV64-LABEL: define dso_local { <vscale x 1 x i32>, <vscale x 1 x i32> } @test_vluxseg2ei32_v_i32mf2x2_m
@@ -694,7 +694,7 @@ vint16m4x2_t test_vluxseg2ei32_v_i16m4x2_m(vbool4_t mask, const int16_t *base, v
 // CHECK-RV64-NEXT:    ret { <vscale x 1 x i32>, <vscale x 1 x i32> } [[TMP0]]
 //
 vint32mf2x2_t test_vluxseg2ei32_v_i32mf2x2_m(vbool64_t mask, const int32_t *base, vuint32mf2_t bindex, size_t vl) {
-  return __riscv_vluxseg2ei32_v_tuple_i32mf2x2_m(mask, base, bindex, vl);
+  return __riscv_vluxseg2ei32_tuple(mask, base, bindex, vl);
 }
 
 // CHECK-RV64-LABEL: define dso_local { <vscale x 2 x i32>, <vscale x 2 x i32> } @test_vluxseg2ei32_v_i32m1x2_m
@@ -704,7 +704,7 @@ vint32mf2x2_t test_vluxseg2ei32_v_i32mf2x2_m(vbool64_t mask, const int32_t *base
 // CHECK-RV64-NEXT:    ret { <vscale x 2 x i32>, <vscale x 2 x i32> } [[TMP0]]
 //
 vint32m1x2_t test_vluxseg2ei32_v_i32m1x2_m(vbool32_t mask, const int32_t *base, vuint32m1_t bindex, size_t vl) {
-  return __riscv_vluxseg2ei32_v_tuple_i32m1x2_m(mask, base, bindex, vl);
+  return __riscv_vluxseg2ei32_tuple(mask, base, bindex, vl);
 }
 
 // CHECK-RV64-LABEL: define dso_local { <vscale x 4 x i32>, <vscale x 4 x i32> } @test_vluxseg2ei32_v_i32m2x2_m
@@ -714,7 +714,7 @@ vint32m1x2_t test_vluxseg2ei32_v_i32m1x2_m(vbool32_t mask, const int32_t *base, 
 // CHECK-RV64-NEXT:    ret { <vscale x 4 x i32>, <vscale x 4 x i32> } [[TMP0]]
 //
 vint32m2x2_t test_vluxseg2ei32_v_i32m2x2_m(vbool16_t mask, const int32_t *base, vuint32m2_t bindex, size_t vl) {
-  return __riscv_vluxseg2ei32_v_tuple_i32m2x2_m(mask, base, bindex, vl);
+  return __riscv_vluxseg2ei32_tuple(mask, base, bindex, vl);
 }
 
 // CHECK-RV64-LABEL: define dso_local { <vscale x 8 x i32>, <vscale x 8 x i32> } @test_vluxseg2ei32_v_i32m4x2_m
@@ -724,7 +724,7 @@ vint32m2x2_t test_vluxseg2ei32_v_i32m2x2_m(vbool16_t mask, const int32_t *base, 
 // CHECK-RV64-NEXT:    ret { <vscale x 8 x i32>, <vscale x 8 x i32> } [[TMP0]]
 //
 vint32m4x2_t test_vluxseg2ei32_v_i32m4x2_m(vbool8_t mask, const int32_t *base, vuint32m4_t bindex, size_t vl) {
-  return __riscv_vluxseg2ei32_v_tuple_i32m4x2_m(mask, base, bindex, vl);
+  return __riscv_vluxseg2ei32_tuple(mask, base, bindex, vl);
 }
 
 // CHECK-RV64-LABEL: define dso_local { <vscale x 1 x i64>, <vscale x 1 x i64> } @test_vluxseg2ei32_v_i64m1x2_m
@@ -734,7 +734,7 @@ vint32m4x2_t test_vluxseg2ei32_v_i32m4x2_m(vbool8_t mask, const int32_t *base, v
 // CHECK-RV64-NEXT:    ret { <vscale x 1 x i64>, <vscale x 1 x i64> } [[TMP0]]
 //
 vint64m1x2_t test_vluxseg2ei32_v_i64m1x2_m(vbool64_t mask, const int64_t *base, vuint32mf2_t bindex, size_t vl) {
-  return __riscv_vluxseg2ei32_v_tuple_i64m1x2_m(mask, base, bindex, vl);
+  return __riscv_vluxseg2ei32_tuple(mask, base, bindex, vl);
 }
 
 // CHECK-RV64-LABEL: define dso_local { <vscale x 2 x i64>, <vscale x 2 x i64> } @test_vluxseg2ei32_v_i64m2x2_m
@@ -744,7 +744,7 @@ vint64m1x2_t test_vluxseg2ei32_v_i64m1x2_m(vbool64_t mask, const int64_t *base, 
 // CHECK-RV64-NEXT:    ret { <vscale x 2 x i64>, <vscale x 2 x i64> } [[TMP0]]
 //
 vint64m2x2_t test_vluxseg2ei32_v_i64m2x2_m(vbool32_t mask, const int64_t *base, vuint32m1_t bindex, size_t vl) {
-  return __riscv_vluxseg2ei32_v_tuple_i64m2x2_m(mask, base, bindex, vl);
+  return __riscv_vluxseg2ei32_tuple(mask, base, bindex, vl);
 }
 
 // CHECK-RV64-LABEL: define dso_local { <vscale x 4 x i64>, <vscale x 4 x i64> } @test_vluxseg2ei32_v_i64m4x2_m
@@ -754,7 +754,7 @@ vint64m2x2_t test_vluxseg2ei32_v_i64m2x2_m(vbool32_t mask, const int64_t *base, 
 // CHECK-RV64-NEXT:    ret { <vscale x 4 x i64>, <vscale x 4 x i64> } [[TMP0]]
 //
 vint64m4x2_t test_vluxseg2ei32_v_i64m4x2_m(vbool16_t mask, const int64_t *base, vuint32m2_t bindex, size_t vl) {
-  return __riscv_vluxseg2ei32_v_tuple_i64m4x2_m(mask, base, bindex, vl);
+  return __riscv_vluxseg2ei32_tuple(mask, base, bindex, vl);
 }
 
 // CHECK-RV64-LABEL: define dso_local { <vscale x 1 x i8>, <vscale x 1 x i8> } @test_vluxseg2ei32_v_u8mf8x2_m
@@ -764,7 +764,7 @@ vint64m4x2_t test_vluxseg2ei32_v_i64m4x2_m(vbool16_t mask, const int64_t *base, 
 // CHECK-RV64-NEXT:    ret { <vscale x 1 x i8>, <vscale x 1 x i8> } [[TMP0]]
 //
 vuint8mf8x2_t test_vluxseg2ei32_v_u8mf8x2_m(vbool64_t mask, const uint8_t *base, vuint32mf2_t bindex, size_t vl) {
-  return __riscv_vluxseg2ei32_v_tuple_u8mf8x2_m(mask, base, bindex, vl);
+  return __riscv_vluxseg2ei32_tuple(mask, base, bindex, vl);
 }
 
 // CHECK-RV64-LABEL: define dso_local { <vscale x 2 x i8>, <vscale x 2 x i8> } @test_vluxseg2ei32_v_u8mf4x2_m
@@ -774,7 +774,7 @@ vuint8mf8x2_t test_vluxseg2ei32_v_u8mf8x2_m(vbool64_t mask, const uint8_t *base,
 // CHECK-RV64-NEXT:    ret { <vscale x 2 x i8>, <vscale x 2 x i8> } [[TMP0]]
 //
 vuint8mf4x2_t test_vluxseg2ei32_v_u8mf4x2_m(vbool32_t mask, const uint8_t *base, vuint32m1_t bindex, size_t vl) {
-  return __riscv_vluxseg2ei32_v_tuple_u8mf4x2_m(mask, base, bindex, vl);
+  return __riscv_vluxseg2ei32_tuple(mask, base, bindex, vl);
 }
 
 // CHECK-RV64-LABEL: define dso_local { <vscale x 4 x i8>, <vscale x 4 x i8> } @test_vluxseg2ei32_v_u8mf2x2_m
@@ -784,7 +784,7 @@ vuint8mf4x2_t test_vluxseg2ei32_v_u8mf4x2_m(vbool32_t mask, const uint8_t *base,
 // CHECK-RV64-NEXT:    ret { <vscale x 4 x i8>, <vscale x 4 x i8> } [[TMP0]]
 //
 vuint8mf2x2_t test_vluxseg2ei32_v_u8mf2x2_m(vbool16_t mask, const uint8_t *base, vuint32m2_t bindex, size_t vl) {
-  return __riscv_vluxseg2ei32_v_tuple_u8mf2x2_m(mask, base, bindex, vl);
+  return __riscv_vluxseg2ei32_tuple(mask, base, bindex, vl);
 }
 
 // CHECK-RV64-LABEL: define dso_local { <vscale x 8 x i8>, <vscale x 8 x i8> } @test_vluxseg2ei32_v_u8m1x2_m
@@ -794,7 +794,7 @@ vuint8mf2x2_t test_vluxseg2ei32_v_u8mf2x2_m(vbool16_t mask, const uint8_t *base,
 // CHECK-RV64-NEXT:    ret { <vscale x 8 x i8>, <vscale x 8 x i8> } [[TMP0]]
 //
 vuint8m1x2_t test_vluxseg2ei32_v_u8m1x2_m(vbool8_t mask, const uint8_t *base, vuint32m4_t bindex, size_t vl) {
-  return __riscv_vluxseg2ei32_v_tuple_u8m1x2_m(mask, base, bindex, vl);
+  return __riscv_vluxseg2ei32_tuple(mask, base, bindex, vl);
 }
 
 // CHECK-RV64-LABEL: define dso_local { <vscale x 16 x i8>, <vscale x 16 x i8> } @test_vluxseg2ei32_v_u8m2x2_m
@@ -804,7 +804,7 @@ vuint8m1x2_t test_vluxseg2ei32_v_u8m1x2_m(vbool8_t mask, const uint8_t *base, vu
 // CHECK-RV64-NEXT:    ret { <vscale x 16 x i8>, <vscale x 16 x i8> } [[TMP0]]
 //
 vuint8m2x2_t test_vluxseg2ei32_v_u8m2x2_m(vbool4_t mask, const uint8_t *base, vuint32m8_t bindex, size_t vl) {
-  return __riscv_vluxseg2ei32_v_tuple_u8m2x2_m(mask, base, bindex, vl);
+  return __riscv_vluxseg2ei32_tuple(mask, base, bindex, vl);
 }
 
 // CHECK-RV64-LABEL: define dso_local { <vscale x 1 x i16>, <vscale x 1 x i16> } @test_vluxseg2ei32_v_u16mf4x2_m
@@ -814,7 +814,7 @@ vuint8m2x2_t test_vluxseg2ei32_v_u8m2x2_m(vbool4_t mask, const uint8_t *base, vu
 // CHECK-RV64-NEXT:    ret { <vscale x 1 x i16>, <vscale x 1 x i16> } [[TMP0]]
 //
 vuint16mf4x2_t test_vluxseg2ei32_v_u16mf4x2_m(vbool64_t mask, const uint16_t *base, vuint32mf2_t bindex, size_t vl) {
-  return __riscv_vluxseg2ei32_v_tuple_u16mf4x2_m(mask, base, bindex, vl);
+  return __riscv_vluxseg2ei32_tuple(mask, base, bindex, vl);
 }
 
 // CHECK-RV64-LABEL: define dso_local { <vscale x 2 x i16>, <vscale x 2 x i16> } @test_vluxseg2ei32_v_u16mf2x2_m
@@ -824,7 +824,7 @@ vuint16mf4x2_t test_vluxseg2ei32_v_u16mf4x2_m(vbool64_t mask, const uint16_t *ba
 // CHECK-RV64-NEXT:    ret { <vscale x 2 x i16>, <vscale x 2 x i16> } [[TMP0]]
 //
 vuint16mf2x2_t test_vluxseg2ei32_v_u16mf2x2_m(vbool32_t mask, const uint16_t *base, vuint32m1_t bindex, size_t vl) {
-  return __riscv_vluxseg2ei32_v_tuple_u16mf2x2_m(mask, base, bindex, vl);
+  return __riscv_vluxseg2ei32_tuple(mask, base, bindex, vl);
 }
 
 // CHECK-RV64-LABEL: define dso_local { <vscale x 4 x i16>, <vscale x 4 x i16> } @test_vluxseg2ei32_v_u16m1x2_m
@@ -834,7 +834,7 @@ vuint16mf2x2_t test_vluxseg2ei32_v_u16mf2x2_m(vbool32_t mask, const uint16_t *ba
 // CHECK-RV64-NEXT:    ret { <vscale x 4 x i16>, <vscale x 4 x i16> } [[TMP0]]
 //
 vuint16m1x2_t test_vluxseg2ei32_v_u16m1x2_m(vbool16_t mask, const uint16_t *base, vuint32m2_t bindex, size_t vl) {
-  return __riscv_vluxseg2ei32_v_tuple_u16m1x2_m(mask, base, bindex, vl);
+  return __riscv_vluxseg2ei32_tuple(mask, base, bindex, vl);
 }
 
 // CHECK-RV64-LABEL: define dso_local { <vscale x 8 x i16>, <vscale x 8 x i16> } @test_vluxseg2ei32_v_u16m2x2_m
@@ -844,7 +844,7 @@ vuint16m1x2_t test_vluxseg2ei32_v_u16m1x2_m(vbool16_t mask, const uint16_t *base
 // CHECK-RV64-NEXT:    ret { <vscale x 8 x i16>, <vscale x 8 x i16> } [[TMP0]]
 //
 vuint16m2x2_t test_vluxseg2ei32_v_u16m2x2_m(vbool8_t mask, const uint16_t *base, vuint32m4_t bindex, size_t vl) {
-  return __riscv_vluxseg2ei32_v_tuple_u16m2x2_m(mask, base, bindex, vl);
+  return __riscv_vluxseg2ei32_tuple(mask, base, bindex, vl);
 }
 
 // CHECK-RV64-LABEL: define dso_local { <vscale x 16 x i16>, <vscale x 16 x i16> } @test_vluxseg2ei32_v_u16m4x2_m
@@ -854,7 +854,7 @@ vuint16m2x2_t test_vluxseg2ei32_v_u16m2x2_m(vbool8_t mask, const uint16_t *base,
 // CHECK-RV64-NEXT:    ret { <vscale x 16 x i16>, <vscale x 16 x i16> } [[TMP0]]
 //
 vuint16m4x2_t test_vluxseg2ei32_v_u16m4x2_m(vbool4_t mask, const uint16_t *base, vuint32m8_t bindex, size_t vl) {
-  return __riscv_vluxseg2ei32_v_tuple_u16m4x2_m(mask, base, bindex, vl);
+  return __riscv_vluxseg2ei32_tuple(mask, base, bindex, vl);
 }
 
 // CHECK-RV64-LABEL: define dso_local { <vscale x 1 x i32>, <vscale x 1 x i32> } @test_vluxseg2ei32_v_u32mf2x2_m
@@ -864,7 +864,7 @@ vuint16m4x2_t test_vluxseg2ei32_v_u16m4x2_m(vbool4_t mask, const uint16_t *base,
 // CHECK-RV64-NEXT:    ret { <vscale x 1 x i32>, <vscale x 1 x i32> } [[TMP0]]
 //
 vuint32mf2x2_t test_vluxseg2ei32_v_u32mf2x2_m(vbool64_t mask, const uint32_t *base, vuint32mf2_t bindex, size_t vl) {
-  return __riscv_vluxseg2ei32_v_tuple_u32mf2x2_m(mask, base, bindex, vl);
+  return __riscv_vluxseg2ei32_tuple(mask, base, bindex, vl);
 }
 
 // CHECK-RV64-LABEL: define dso_local { <vscale x 2 x i32>, <vscale x 2 x i32> } @test_vluxseg2ei32_v_u32m1x2_m
@@ -874,7 +874,7 @@ vuint32mf2x2_t test_vluxseg2ei32_v_u32mf2x2_m(vbool64_t mask, const uint32_t *ba
 // CHECK-RV64-NEXT:    ret { <vscale x 2 x i32>, <vscale x 2 x i32> } [[TMP0]]
 //
 vuint32m1x2_t test_vluxseg2ei32_v_u32m1x2_m(vbool32_t mask, const uint32_t *base, vuint32m1_t bindex, size_t vl) {
-  return __riscv_vluxseg2ei32_v_tuple_u32m1x2_m(mask, base, bindex, vl);
+  return __riscv_vluxseg2ei32_tuple(mask, base, bindex, vl);
 }
 
 // CHECK-RV64-LABEL: define dso_local { <vscale x 4 x i32>, <vscale x 4 x i32> } @test_vluxseg2ei32_v_u32m2x2_m
@@ -884,7 +884,7 @@ vuint32m1x2_t test_vluxseg2ei32_v_u32m1x2_m(vbool32_t mask, const uint32_t *base
 // CHECK-RV64-NEXT:    ret { <vscale x 4 x i32>, <vscale x 4 x i32> } [[TMP0]]
 //
 vuint32m2x2_t test_vluxseg2ei32_v_u32m2x2_m(vbool16_t mask, const uint32_t *base, vuint32m2_t bindex, size_t vl) {
-  return __riscv_vluxseg2ei32_v_tuple_u32m2x2_m(mask, base, bindex, vl);
+  return __riscv_vluxseg2ei32_tuple(mask, base, bindex, vl);
 }
 
 // CHECK-RV64-LABEL: define dso_local { <vscale x 8 x i32>, <vscale x 8 x i32> } @test_vluxseg2ei32_v_u32m4x2_m
@@ -894,7 +894,7 @@ vuint32m2x2_t test_vluxseg2ei32_v_u32m2x2_m(vbool16_t mask, const uint32_t *base
 // CHECK-RV64-NEXT:    ret { <vscale x 8 x i32>, <vscale x 8 x i32> } [[TMP0]]
 //
 vuint32m4x2_t test_vluxseg2ei32_v_u32m4x2_m(vbool8_t mask, const uint32_t *base, vuint32m4_t bindex, size_t vl) {
-  return __riscv_vluxseg2ei32_v_tuple_u32m4x2_m(mask, base, bindex, vl);
+  return __riscv_vluxseg2ei32_tuple(mask, base, bindex, vl);
 }
 
 // CHECK-RV64-LABEL: define dso_local { <vscale x 1 x i64>, <vscale x 1 x i64> } @test_vluxseg2ei32_v_u64m1x2_m
@@ -904,7 +904,7 @@ vuint32m4x2_t test_vluxseg2ei32_v_u32m4x2_m(vbool8_t mask, const uint32_t *base,
 // CHECK-RV64-NEXT:    ret { <vscale x 1 x i64>, <vscale x 1 x i64> } [[TMP0]]
 //
 vuint64m1x2_t test_vluxseg2ei32_v_u64m1x2_m(vbool64_t mask, const uint64_t *base, vuint32mf2_t bindex, size_t vl) {
-  return __riscv_vluxseg2ei32_v_tuple_u64m1x2_m(mask, base, bindex, vl);
+  return __riscv_vluxseg2ei32_tuple(mask, base, bindex, vl);
 }
 
 // CHECK-RV64-LABEL: define dso_local { <vscale x 2 x i64>, <vscale x 2 x i64> } @test_vluxseg2ei32_v_u64m2x2_m
@@ -914,7 +914,7 @@ vuint64m1x2_t test_vluxseg2ei32_v_u64m1x2_m(vbool64_t mask, const uint64_t *base
 // CHECK-RV64-NEXT:    ret { <vscale x 2 x i64>, <vscale x 2 x i64> } [[TMP0]]
 //
 vuint64m2x2_t test_vluxseg2ei32_v_u64m2x2_m(vbool32_t mask, const uint64_t *base, vuint32m1_t bindex, size_t vl) {
-  return __riscv_vluxseg2ei32_v_tuple_u64m2x2_m(mask, base, bindex, vl);
+  return __riscv_vluxseg2ei32_tuple(mask, base, bindex, vl);
 }
 
 // CHECK-RV64-LABEL: define dso_local { <vscale x 4 x i64>, <vscale x 4 x i64> } @test_vluxseg2ei32_v_u64m4x2_m
@@ -924,6 +924,6 @@ vuint64m2x2_t test_vluxseg2ei32_v_u64m2x2_m(vbool32_t mask, const uint64_t *base
 // CHECK-RV64-NEXT:    ret { <vscale x 4 x i64>, <vscale x 4 x i64> } [[TMP0]]
 //
 vuint64m4x2_t test_vluxseg2ei32_v_u64m4x2_m(vbool16_t mask, const uint64_t *base, vuint32m2_t bindex, size_t vl) {
-  return __riscv_vluxseg2ei32_v_tuple_u64m4x2_m(mask, base, bindex, vl);
+  return __riscv_vluxseg2ei32_tuple(mask, base, bindex, vl);
 }
 
