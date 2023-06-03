@@ -908,6 +908,14 @@ void SimplifyIndvar::simplifyUsers(PHINode *CurrIV, IVVisitor *V) {
     if (replaceIVUserWithLoopInvariant(UseInst))
       continue;
 
+    // Go further for the bitcast ''prtoint ptr to i64'
+    if (isa<PtrToIntInst>(UseInst))
+      for (Use &U : UseInst->uses()) {
+        Instruction *User = cast<Instruction>(U.getUser());
+        if (replaceIVUserWithLoopInvariant(User))
+          break; // done replacing
+      }
+
     Instruction *IVOperand = UseOper.second;
     for (unsigned N = 0; IVOperand; ++N) {
       assert(N <= Simplified.size() && "runaway iteration");
