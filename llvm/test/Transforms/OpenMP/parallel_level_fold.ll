@@ -20,8 +20,9 @@ target triple = "nvptx64"
 ; CHECK: @[[SPMD_NESTED_PARALLELISM:[a-zA-Z0-9_$"\\.-]+]] = weak constant i8 0
 ; CHECK: @[[PARALLEL_NESTED_PARALLELISM:[a-zA-Z0-9_$"\\.-]+]] = weak constant i8 0
 ;.
-define weak void @none_spmd() {
-; CHECK-LABEL: define {{[^@]+}}@none_spmd() {
+define weak void @none_spmd() "kernel" {
+; CHECK-LABEL: define {{[^@]+}}@none_spmd
+; CHECK-SAME: () #[[ATTR0:[0-9]+]] {
 ; CHECK-NEXT:    [[I:%.*]] = call i32 @__kmpc_target_init(ptr null, i8 1, i1 false)
 ; CHECK-NEXT:    call void @none_spmd_helper()
 ; CHECK-NEXT:    call void @mixed_helper()
@@ -35,8 +36,9 @@ define weak void @none_spmd() {
   ret void
 }
 
-define weak void @spmd() {
-; CHECK-LABEL: define {{[^@]+}}@spmd() {
+define weak void @spmd() "kernel" {
+; CHECK-LABEL: define {{[^@]+}}@spmd
+; CHECK-SAME: () #[[ATTR0]] {
 ; CHECK-NEXT:    [[I:%.*]] = call i32 @__kmpc_target_init(ptr null, i8 2, i1 false)
 ; CHECK-NEXT:    call void @spmd_helper()
 ; CHECK-NEXT:    call void @mixed_helper()
@@ -50,8 +52,9 @@ define weak void @spmd() {
   ret void
 }
 
-define weak void @parallel() {
-; CHECK-LABEL: define {{[^@]+}}@parallel() {
+define weak void @parallel() "kernel" {
+; CHECK-LABEL: define {{[^@]+}}@parallel
+; CHECK-SAME: () #[[ATTR0]] {
 ; CHECK-NEXT:    [[I:%.*]] = call i32 @__kmpc_target_init(ptr null, i8 2, i1 false)
 ; CHECK-NEXT:    call void @spmd_helper()
 ; CHECK-NEXT:    call void @__kmpc_parallel_51(ptr null, i32 0, i32 0, i32 0, i32 0, ptr null, ptr null, ptr null, i64 0)
@@ -111,7 +114,7 @@ define internal void @spmd_helper() {
 
 define internal void @__kmpc_parallel_51(ptr, i32, i32, i32, i32, ptr, ptr, ptr, i64) {
 ; CHECK-LABEL: define {{[^@]+}}@__kmpc_parallel_51
-; CHECK-SAME: (ptr [[TMP0:%.*]], i32 [[TMP1:%.*]], i32 [[TMP2:%.*]], i32 [[TMP3:%.*]], i32 [[TMP4:%.*]], ptr [[TMP5:%.*]], ptr [[TMP6:%.*]], ptr [[TMP7:%.*]], i64 [[TMP8:%.*]]) #[[ATTR0:[0-9]+]] {
+; CHECK-SAME: (ptr [[TMP0:%.*]], i32 [[TMP1:%.*]], i32 [[TMP2:%.*]], i32 [[TMP3:%.*]], i32 [[TMP4:%.*]], ptr [[TMP5:%.*]], ptr [[TMP6:%.*]], ptr [[TMP7:%.*]], i64 [[TMP8:%.*]]) #[[ATTR1:[0-9]+]] {
 ; CHECK-NEXT:    call void @parallel_helper()
 ; CHECK-NEXT:    ret void
 ;
@@ -145,7 +148,8 @@ declare void @__kmpc_target_deinit(ptr nocapture readnone, i8 zeroext) #1
 !3 = !{ptr @spmd, !"kernel", i32 1}
 !4 = !{ptr @parallel, !"kernel", i32 1}
 ;.
-; CHECK: attributes #[[ATTR0]] = { alwaysinline }
+; CHECK: attributes #[[ATTR0]] = { "kernel" }
+; CHECK: attributes #[[ATTR1]] = { alwaysinline }
 ;.
 ; CHECK: [[META0:![0-9]+]] = !{i32 7, !"openmp", i32 50}
 ; CHECK: [[META1:![0-9]+]] = !{i32 7, !"openmp-device", i32 50}

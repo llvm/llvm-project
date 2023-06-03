@@ -50,7 +50,7 @@ declare i32 @__kmpc_global_thread_num(ptr) #1
 
 declare void @__kmpc_target_deinit(ptr, i8)
 
-attributes #0 = { convergent noinline norecurse nounwind "frame-pointer"="none" "min-legal-vector-width"="0" "no-trapping-math"="true" "stack-protector-buffer-size"="8" "target-features"="+ptx32,+sm_20" }
+attributes #0 = { convergent noinline norecurse nounwind "kernel" "frame-pointer"="none" "min-legal-vector-width"="0" "no-trapping-math"="true" "stack-protector-buffer-size"="8" "target-features"="+ptx32,+sm_20" }
 attributes #1 = { nounwind }
 
 !omp_offload.info = !{!0}

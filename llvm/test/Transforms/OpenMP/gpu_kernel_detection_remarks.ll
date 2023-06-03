@@ -3,11 +3,11 @@
 ; CHECK-DAG: remark: <unknown>:0:0: OpenMP GPU kernel kernel1
 ; CHECK-DAG: remark: <unknown>:0:0: OpenMP GPU kernel kernel2
 
-define void @kernel1() {
+define void @kernel1() "kernel" {
   ret void
 }
 
-define void @kernel2() {
+define void @kernel2() "kernel" {
   ret void
 }
 

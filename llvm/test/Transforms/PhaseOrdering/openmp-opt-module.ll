@@ -9,7 +9,7 @@ target datalayout = "e-i64:64-i128:128-v16:16-v32:32-n16:32:64"
 
 ; MODULE: remark: openmp_opt_module.c:5:7: Found thread data sharing on the GPU. Expect degraded performance due to data globalization.
 
-define void @foo() {
+define void @foo() "kernel" {
 entry:
   %i = call i32 @__kmpc_target_init(ptr null, i1 false, i1 true, i1 true)
   %x = call ptr @__kmpc_alloc_shared(i64 4), !dbg !10
