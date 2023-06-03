@@ -96,9 +96,11 @@ struct DenormalMode {
   DenormalModeKind Input = DenormalModeKind::Invalid;
 
   constexpr DenormalMode() = default;
+  constexpr DenormalMode(const DenormalMode &) = default;
   constexpr DenormalMode(DenormalModeKind Out, DenormalModeKind In) :
     Output(Out), Input(In) {}
 
+  DenormalMode &operator=(const DenormalMode &) = default;
 
   static constexpr DenormalMode getInvalid() {
     return DenormalMode(DenormalModeKind::Invalid, DenormalModeKind::Invalid);

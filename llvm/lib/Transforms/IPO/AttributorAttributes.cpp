@@ -194,6 +194,7 @@ PIPE_OPERATOR(AAUnderlyingObjects)
 PIPE_OPERATOR(AAAddressSpace)
 PIPE_OPERATOR(AAIndirectCallInfo)
 PIPE_OPERATOR(AAGlobalValueInfo)
+PIPE_OPERATOR(AADenormalFPMath)
 
 #undef PIPE_OPERATOR
 
@@ -8951,6 +8952,108 @@ struct AAMemoryLocationCallSite final : AAMemoryLocationImpl {
 };
 } // namespace
 
+/// ------------------ denormal-fp-math Attribute -------------------------
+
+namespace {
+struct AADenormalFPMathImpl : public AADenormalFPMath {
+  AADenormalFPMathImpl(const IRPosition &IRP, Attributor &A)
+      : AADenormalFPMath(IRP, A) {}
+
+  const std::string getAsStr(Attributor *A) const override {
+    std::string Str("AADenormalFPMath[");
+    raw_string_ostream OS(Str);
+
+    DenormalState Known = getKnown();
+    if (Known.Mode.isValid())
+      OS << "denormal-fp-math=" << Known.Mode;
+    else
+      OS << "invalid";
+
+    if (Known.ModeF32.isValid())
+      OS << " denormal-fp-math-f32=" << Known.ModeF32;
+    OS << ']';
+    return OS.str();
+  }
+};
+
+struct AADenormalFPMathFunction final : AADenormalFPMathImpl {
+  AADenormalFPMathFunction(const IRPosition &IRP, Attributor &A)
+      : AADenormalFPMathImpl(IRP, A) {}
+
+  void initialize(Attributor &A) override {
+    const Function *F = getAnchorScope();
+    DenormalMode Mode = F->getDenormalModeRaw();
+    DenormalMode ModeF32 = F->getDenormalModeF32Raw();
+
+    // TODO: Handling this here prevents handling the case where a callee has a
+    // fixed denormal-fp-math with dynamic denormal-fp-math-f32, but called from
+    // a function with a fully fixed mode.
+    if (ModeF32 == DenormalMode::getInvalid())
+      ModeF32 = Mode;
+    Known = DenormalState{Mode, ModeF32};
+    if (isModeFixed())
+      indicateFixpoint();
+  }
+
+  ChangeStatus updateImpl(Attributor &A) override {
+    ChangeStatus Change = ChangeStatus::UNCHANGED;
+
+    auto CheckCallSite = [=, &Change, &A](AbstractCallSite CS) {
+      Function *Caller = CS.getInstruction()->getFunction();
+      LLVM_DEBUG(dbgs() << "[AADenormalFPMath] Call " << Caller->getName()
+                        << "->" << getAssociatedFunction()->getName() << '\n');
+
+      const auto *CallerInfo = A.getAAFor<AADenormalFPMath>(
+          *this, IRPosition::function(*Caller), DepClassTy::REQUIRED);
+      if (!CallerInfo)
+        return false;
+
+      Change = Change | clampStateAndIndicateChange(this->getState(),
+                                                    CallerInfo->getState());
+      return true;
+    };
+
+    bool AllCallSitesKnown = true;
+    if (!A.checkForAllCallSites(CheckCallSite, *this, true, AllCallSitesKnown))
+      return indicatePessimisticFixpoint();
+
+    if (Change == ChangeStatus::CHANGED && isModeFixed())
+      indicateFixpoint();
+    return Change;
+  }
+
+  ChangeStatus manifest(Attributor &A) override {
+    LLVMContext &Ctx = getAssociatedFunction()->getContext();
+
+    SmallVector<Attribute, 2> AttrToAdd;
+    SmallVector<StringRef, 2> AttrToRemove;
+    if (Known.Mode == DenormalMode::getDefault()) {
+      AttrToRemove.push_back("denormal-fp-math");
+    } else {
+      AttrToAdd.push_back(
+          Attribute::get(Ctx, "denormal-fp-math", Known.Mode.str()));
+    }
+
+    if (Known.ModeF32 != Known.Mode) {
+      AttrToAdd.push_back(
+          Attribute::get(Ctx, "denormal-fp-math-f32", Known.ModeF32.str()));
+    } else {
+      AttrToRemove.push_back("denormal-fp-math-f32");
+    }
+
+    auto &IRP = getIRPosition();
+
+    // TODO: There should be a combined add and remove API.
+    return A.removeAttrs(IRP, AttrToRemove) |
+           A.manifestAttrs(IRP, AttrToAdd, /*ForceReplace=*/true);
+  }
+
+  void trackStatistics() const override {
+    STATS_DECLTRACK_FN_ATTR(denormal_fp_math)
+  }
+};
+} // namespace
+
 /// ------------------ Value Constant Range Attribute -------------------------
 
 namespace {
@@ -12705,6 +12808,7 @@ const char AAUnderlyingObjects::ID = 0;
 const char AAAddressSpace::ID = 0;
 const char AAIndirectCallInfo::ID = 0;
 const char AAGlobalValueInfo::ID = 0;
+const char AADenormalFPMath::ID = 0;
 
 // Macro magic to create the static generator function for attributes that
 // follow the naming scheme.
@@ -12851,6 +12955,7 @@ CREATE_FUNCTION_ONLY_ABSTRACT_ATTRIBUTE_FOR_POSITION(AAUndefinedBehavior)
 CREATE_FUNCTION_ONLY_ABSTRACT_ATTRIBUTE_FOR_POSITION(AANonConvergent)
 CREATE_FUNCTION_ONLY_ABSTRACT_ATTRIBUTE_FOR_POSITION(AAIntraFnReachability)
 CREATE_FUNCTION_ONLY_ABSTRACT_ATTRIBUTE_FOR_POSITION(AAInterFnReachability)
+CREATE_FUNCTION_ONLY_ABSTRACT_ATTRIBUTE_FOR_POSITION(AADenormalFPMath)
 
 CREATE_NON_RET_ABSTRACT_ATTRIBUTE_FOR_POSITION(AAMemoryBehavior)
 
