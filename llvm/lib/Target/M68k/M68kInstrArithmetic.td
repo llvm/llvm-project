@@ -312,6 +312,12 @@ defm ADD : MxBiArOp_AF<"adda", MxAdd, 0xD>;
 defm SUB : MxBiArOp_DF<"sub",  MxSub, 0, 0x9, 0x4>;
 defm SUB : MxBiArOp_AF<"suba", MxSub, 0x9>;
 
+// This pattern is used to enable the instruction selector to select ADD32ab
+// for global values that are allocated in thread-local storage, i.e.:
+//   t8: i32 = ISD::ADD GLOBAL_OFFSET_TABLE, TargetGlobalTLSAddress:i32<ptr @myvar>
+//     ====>
+//   t8: i32,i8 = ADD32ab GLOBAL_OFFSET_TABLE, TargetGlobalTLSAddress:i32<ptr @myvar>
+def : Pat<(add MxARD32:$src, tglobaltlsaddr:$opd), (ADD32ab MxARD32:$src, MxAL32:$opd)>;
 
 let Uses = [CCR], Defs = [CCR] in {
 let Constraints = "$src = $dst" in {
