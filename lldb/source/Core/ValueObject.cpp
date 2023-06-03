@@ -544,10 +544,10 @@ lldb::ValueObjectSP ValueObject::GetChildAtNamePath(
   return root;
 }
 
-size_t ValueObject::GetIndexOfChildWithName(ConstString name) {
+size_t ValueObject::GetIndexOfChildWithName(llvm::StringRef name) {
   bool omit_empty_base_classes = true;
   ExecutionContext exe_ctx(GetExecutionContextRef());
-  return GetCompilerType().GetIndexOfChildWithName(name.GetCString(), &exe_ctx,
+  return GetCompilerType().GetIndexOfChildWithName(name, &exe_ctx,
                                                    omit_empty_base_classes);
 }
 

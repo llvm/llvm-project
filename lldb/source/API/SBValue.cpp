@@ -687,7 +687,7 @@ uint32_t SBValue::GetIndexOfChildWithName(const char *name) {
   ValueLocker locker;
   lldb::ValueObjectSP value_sp(GetSP(locker));
   if (value_sp) {
-    idx = value_sp->GetIndexOfChildWithName(ConstString(name));
+    idx = value_sp->GetIndexOfChildWithName(name);
   }
   return idx;
 }

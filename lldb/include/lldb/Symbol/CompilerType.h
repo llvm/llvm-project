@@ -393,7 +393,8 @@ public:
 
   /// Lookup a child given a name. This function will match base class names and
   /// member member names in "clang_type" only, not descendants.
-  uint32_t GetIndexOfChildWithName(const char *name, ExecutionContext *exe_ctx,
+  uint32_t GetIndexOfChildWithName(llvm::StringRef name,
+                                   ExecutionContext *exe_ctx,
                                    bool omit_empty_base_classes) const;
 
   /// Lookup a child member given a name. This function will match member names

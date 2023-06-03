@@ -142,11 +142,9 @@ ValueObjectRegisterSet::GetChildMemberWithName(llvm::StringRef name,
     return ValueObjectSP();
 }
 
-size_t
-ValueObjectRegisterSet::GetIndexOfChildWithName(ConstString name) {
+size_t ValueObjectRegisterSet::GetIndexOfChildWithName(llvm::StringRef name) {
   if (m_reg_ctx_sp && m_reg_set) {
-    const RegisterInfo *reg_info =
-        m_reg_ctx_sp->GetRegisterInfoByName(name.GetStringRef());
+    const RegisterInfo *reg_info = m_reg_ctx_sp->GetRegisterInfoByName(name);
     if (reg_info != nullptr)
       return reg_info->kinds[eRegisterKindLLDB];
   }
