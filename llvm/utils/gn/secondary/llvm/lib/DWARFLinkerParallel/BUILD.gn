@@ -10,10 +10,7 @@ static_library("DWARFLinkerParallel") {
     "//llvm/lib/Support",
   ]
   sources = [
-    "DWARFEmitterImpl.cpp",
     "DWARFLinker.cpp",
-    "DWARFLinkerImpl.cpp",
-    "OutputSections.cpp",
     "StringPool.cpp",
   ]
 }
