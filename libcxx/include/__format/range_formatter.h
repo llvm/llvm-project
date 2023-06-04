@@ -64,18 +64,8 @@ struct _LIBCPP_TEMPLATE_VIS range_formatter {
 
     // The n field overrides a possible m type, therefore delay applying the
     // effect of n until the type has been procesed.
-    bool __clear_brackets = (*__begin == _CharT('n'));
-    if (__clear_brackets) {
-      ++__begin;
-      if (__begin == __end) [[unlikely]] {
-        // Since there is no more data, clear the brackets before returning.
-        set_brackets({}, {});
-        return __parse_empty_range_underlying_spec(__ctx, __begin);
-      }
-    }
-
     __parse_type(__begin, __end);
-    if (__clear_brackets)
+    if (__parser_.__clear_brackets_)
       set_brackets({}, {});
     if (__begin == __end) [[unlikely]]
       return __parse_empty_range_underlying_spec(__ctx, __begin);
@@ -110,7 +100,7 @@ struct _LIBCPP_TEMPLATE_VIS range_formatter {
       // [format.range.formatter]/6
       //   If the range-type is s or ?s, then there shall be no n option and no
       //   range-underlying-spec.
-      if (__clear_brackets) {
+      if (__parser_.__clear_brackets_) {
         if (__parser_.__type_ == __format_spec::__type::__string)
           std::__throw_format_error("The n option and type s can't be used together");
         std::__throw_format_error("The n option and type ?s can't be used together");
