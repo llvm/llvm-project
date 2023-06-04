@@ -24,22 +24,21 @@ class DWARFFile;
 /// instance of the object file or its brand new cloned and generated DIE tree.
 class CompileUnit : public DwarfUnit {
 public:
-  CompileUnit(LinkContext &Context, unsigned ID, StringRef ClangModuleName,
+  CompileUnit(LinkContext &, unsigned ID, StringRef ClangModuleName,
               DWARFFile &File,
-              DWARFLinker::SwiftInterfacesMapTy *SwiftInterfaces,
+              DWARFLinker::SwiftInterfacesMapTy *,
               UnitMessageHandlerTy WarningHandler)
-      : DwarfUnit(ID, ClangModuleName, WarningHandler), Context(Context),
-        ContaingFile(File), ParseableSwiftInterfaces(SwiftInterfaces) {
+      : DwarfUnit(ID, ClangModuleName, WarningHandler), ContaingFile(File) {
     FormParams.Version = 4;
     FormParams.Format = dwarf::DWARF32;
     FormParams.AddrSize = 4;
     UnitName = ContaingFile.FileName;
   }
 
-  CompileUnit(LinkContext &Context, DWARFUnit &OrigUnit, unsigned ID,
+  CompileUnit(LinkContext &, DWARFUnit &OrigUnit, unsigned ID,
               StringRef ClangModuleName, DWARFFile &File,
               UnitMessageHandlerTy WarningHandler)
-      : DwarfUnit(ID, ClangModuleName, WarningHandler), Context(Context),
+      : DwarfUnit(ID, ClangModuleName, WarningHandler),
         ContaingFile(File), OrigUnit(&OrigUnit) {
     DWARFDie CUDie = OrigUnit.getUnitDIE();
     if (!CUDie)
@@ -144,17 +143,11 @@ public:
   /// @}
 
 private:
-  /// Context containing this compilation unit.
-  LinkContext &Context;
-
   /// DWARFFile containing this compile unit.
   DWARFFile &ContaingFile;
 
   /// Pointer to the paired compile unit from the input DWARF.
   DWARFUnit *OrigUnit = nullptr;
-
-  /// Map for swift interfaces.
-  DWARFLinker::SwiftInterfacesMapTy *ParseableSwiftInterfaces = nullptr;
 };
 
 } // end of namespace dwarflinker_parallel
