@@ -6062,6 +6062,7 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
   Args.AddLastArg(CmdArgs, options::OPT_fmacro_backtrace_limit_EQ);
   Args.AddLastArg(CmdArgs, options::OPT_ftemplate_backtrace_limit_EQ);
   Args.AddLastArg(CmdArgs, options::OPT_fspell_checking_limit_EQ);
+  Args.AddLastArg(CmdArgs, options::OPT_fcaret_diagnostics_max_lines_EQ);
 
   // Pass -fmessage-length=.
   unsigned MessageLength = 0;

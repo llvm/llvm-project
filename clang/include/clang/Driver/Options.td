@@ -2312,6 +2312,11 @@ def fmacro_backtrace_limit_EQ : Joined<["-"], "fmacro-backtrace-limit=">,
   Group<f_Group>, Flags<[NoXarchOption, CC1Option, CoreOption]>,
   HelpText<"Set the maximum number of entries to print in a macro expansion backtrace (0 = no limit)">,
   MarshallingInfoInt<DiagnosticOpts<"MacroBacktraceLimit">, "DiagnosticOptions::DefaultMacroBacktraceLimit">;
+def fcaret_diagnostics_max_lines_EQ :
+  Joined<["-"], "fcaret-diagnostics-max-lines=">,
+  Group<f_Group>, Flags<[CC1Option, CoreOption]>,
+  HelpText<"Set the maximum number of source lines to show in a caret diagnostic (0 = no limit).">,
+  MarshallingInfoInt<DiagnosticOpts<"SnippetLineLimit">, "DiagnosticOptions::DefaultSnippetLineLimit">;
 defm merge_all_constants : BoolFOption<"merge-all-constants",
   CodeGenOpts<"MergeAllConstants">, DefaultFalse,
   PosFlag<SetTrue, [CC1Option, CoreOption], "Allow">, NegFlag<SetFalse, [], "Disallow">,
@@ -6003,10 +6008,6 @@ def ftabstop : Separate<["-"], "ftabstop">, MetaVarName<"<N>">,
 def ferror_limit : Separate<["-"], "ferror-limit">, MetaVarName<"<N>">,
   HelpText<"Set the maximum number of errors to emit before stopping (0 = no limit).">,
   MarshallingInfoInt<DiagnosticOpts<"ErrorLimit">>;
-def fcaret_diagnostics_max_lines :
-  Separate<["-"], "fcaret-diagnostics-max-lines">, MetaVarName<"<N>">,
-  HelpText<"Set the maximum number of source lines to show in a caret diagnostic">,
-  MarshallingInfoInt<DiagnosticOpts<"SnippetLineLimit">, "DiagnosticOptions::DefaultSnippetLineLimit">;
 def verify_EQ : CommaJoined<["-"], "verify=">,
   MetaVarName<"<prefixes>">,
   HelpText<"Verify diagnostic output using comment directives that start with"

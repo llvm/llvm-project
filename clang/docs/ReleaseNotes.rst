@@ -230,9 +230,11 @@ New Compiler Flags
 ------------------
 - The flag ``-std=c++23`` has been added. This behaves the same as the existing
   flag ``-std=c++2b``.
-
 - ``-dumpdir`` has been implemented to specify auxiliary and dump output
   filenames for features like ``-gsplit-dwarf``.
+- ``-fcaret-diagnostics-max-lines=`` has been added as a driver options, which
+  lets users control the maximum number of source lines printed for a
+  caret diagnostic.
 
 Deprecated Compiler Flags
 -------------------------
