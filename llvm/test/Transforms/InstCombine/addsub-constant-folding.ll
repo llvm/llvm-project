@@ -134,7 +134,7 @@ define i32 @add_const_const_sub(i32 %arg) {
 
 define i8 @add_nsw_const_const_sub_nsw(i8 %arg) {
 ; CHECK-LABEL: @add_nsw_const_const_sub_nsw(
-; CHECK-NEXT:    [[T1:%.*]] = sub i8 -128, [[ARG:%.*]]
+; CHECK-NEXT:    [[T1:%.*]] = sub nsw i8 -128, [[ARG:%.*]]
 ; CHECK-NEXT:    ret i8 [[T1]]
 ;
   %t0 = add nsw i8 %arg, 1
@@ -193,14 +193,13 @@ define i8 @add_const_const_sub_nuw(i8 %arg) {
   ret i8 %t1
 }
 
-
 define <2 x i8> @non_splat_vec_add_nsw_const_const_sub_nsw_not_ov1(<2 x i8> %arg) {
 ; CHECK-LABEL: @non_splat_vec_add_nsw_const_const_sub_nsw_not_ov1(
-; CHECK-NEXT:    [[T1:%.*]] = sub <2 x i8> <i8 -2, i8 -126>, [[ARG:%.*]]
+; CHECK-NEXT:    [[T1:%.*]] = sub nsw <2 x i8> <i8 -127, i8 -126>, [[ARG:%.*]]
 ; CHECK-NEXT:    ret <2 x i8> [[T1]]
 ;
-  %t0 = add nsw <2 x i8> %arg, <i8 1, i8 0>
-  %t1 = sub nsw <2 x i8> <i8 -1, i8 -126>, %t0
+  %t0 = add nsw <2 x i8> %arg, <i8 2, i8 0>
+  %t1 = sub nsw <2 x i8> <i8 -125, i8 -126>, %t0
   ret <2 x i8> %t1
 }
 
