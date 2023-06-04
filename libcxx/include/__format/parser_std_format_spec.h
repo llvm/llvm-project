@@ -70,12 +70,12 @@ __parse_arg_id(_Iterator __begin, _Iterator __end, _ParseContext& __ctx) {
   // This function is a wrapper to call the real parser. But it does the
   // validation for the pre-conditions and post-conditions.
   if (__begin == __end)
-    std::__throw_format_error("End of input while parsing format-spec arg-id");
+    std::__throw_format_error("End of input while parsing an argument index");
 
   __format::__parse_number_result __r = __format::__parse_arg_id(__begin, __end, __ctx);
 
   if (__r.__last == __end || *__r.__last != _CharT('}'))
-    std::__throw_format_error("Invalid arg-id");
+    std::__throw_format_error("The argument index is invalid");
 
   ++__r.__last;
   return __r;
@@ -96,7 +96,7 @@ __substitute_arg_id(basic_format_arg<_Context> __format_arg) {
       [](auto __arg) -> uint32_t {
         using _Type = decltype(__arg);
         if constexpr (same_as<_Type, monostate>)
-          std::__throw_format_error("Argument index out of bounds");
+          std::__throw_format_error("The argument index value is too large for the number of arguments supplied");
 
         // [format.string.std]/8
         // If { arg-idopt } is used in a width or precision, the value of the
@@ -112,12 +112,12 @@ __substitute_arg_id(basic_format_arg<_Context> __format_arg) {
                       same_as<_Type, long long> || same_as<_Type, unsigned long long>) {
           if constexpr (signed_integral<_Type>) {
             if (__arg < 0)
-              std::__throw_format_error("A format-spec arg-id replacement shouldn't have a negative value");
+              std::__throw_format_error("An argument index may not have a negative value");
           }
 
           using _CT = common_type_t<_Type, decltype(__format::__number_max)>;
           if (static_cast<_CT>(__arg) > static_cast<_CT>(__format::__number_max))
-            std::__throw_format_error("A format-spec arg-id replacement exceeds the maximum supported value");
+            std::__throw_format_error("The value of the argument index exceeds its maximum value");
 
           return __arg;
         } else
@@ -580,9 +580,9 @@ private:
     // The forbidden fill characters all code points formed from a single code unit, thus the
     // check can be omitted when more code units are used.
     if (__use_range_fill && (__fill == _CharT('{') || __fill == _CharT('}') || __fill == _CharT(':')))
-      std::__throw_format_error("The format-spec range-fill field contains an invalid character");
+      std::__throw_format_error("The fill option contains an invalid value");
     else if (__fill == _CharT('{') || __fill == _CharT('}'))
-      std::__throw_format_error("The format-spec fill field contains an invalid character");
+      std::__throw_format_error("The fill option contains an invalid value");
   }
 
 #  ifndef _LIBCPP_HAS_NO_UNICODE
@@ -599,7 +599,7 @@ private:
     __unicode::__code_point_view<_CharT> __view{__begin, __end};
     __unicode::__consume_result __consumed = __view.__consume();
     if (__consumed.__status != __unicode::__consume_result::__ok)
-      std::__throw_format_error("The format-spec contains malformed Unicode characters");
+      std::__throw_format_error("The format specifier contains malformed Unicode characters");
 
     if (__view.__position() < __end && __parse_alignment(*__view.__position())) {
       ptrdiff_t __code_units = __view.__position() - __begin;
@@ -630,7 +630,7 @@ private:
                                  "undefined behavior by evaluating data not in the input");
     if (__begin + 1 != __end && __parse_alignment(*(__begin + 1))) {
       if (!__unicode::__is_scalar_value(*__begin))
-        std::__throw_format_error("The fill character contains an invalid value");
+        std::__throw_format_error("The fill option contains an invalid value");
 
       __validate_fill_character(*__begin, __use_range_fill);
 
@@ -717,7 +717,7 @@ private:
   template <contiguous_iterator _Iterator>
   _LIBCPP_HIDE_FROM_ABI constexpr bool __parse_width(_Iterator& __begin, _Iterator __end, auto& __ctx) {
     if (*__begin == _CharT('0'))
-      std::__throw_format_error("A format-spec width field shouldn't have a leading zero");
+      std::__throw_format_error("The width option should not have a leading zero");
 
     if (*__begin == _CharT('{')) {
       __format::__parse_number_result __r = __format_spec::__parse_arg_id(++__begin, __end, __ctx);
@@ -745,7 +745,7 @@ private:
 
     ++__begin;
     if (__begin == __end)
-      std::__throw_format_error("End of input while parsing format-spec precision");
+      std::__throw_format_error("End of input while parsing format specifier precision");
 
     if (*__begin == _CharT('{')) {
       __format::__parse_number_result __arg_id = __format_spec::__parse_arg_id(++__begin, __end, __ctx);
@@ -756,7 +756,7 @@ private:
     }
 
     if (*__begin < _CharT('0') || *__begin > _CharT('9'))
-      std::__throw_format_error("The format-spec precision field doesn't contain a value or arg-id");
+      std::__throw_format_error("The precision option does not contain a value or an argument index");
 
     __format::__parse_number_result __r = __format::__parse_number(__begin, __end);
     __precision_ = __r.__value;
@@ -889,7 +889,7 @@ _LIBCPP_HIDE_FROM_ABI constexpr void __process_display_type_string(__format_spec
     break;
 
   default:
-    std::__throw_format_error("The format-spec type has a type not supported for a string argument");
+    std::__throw_format_error("The type option contains an invalid value for a string formatting argument");
   }
 }
 

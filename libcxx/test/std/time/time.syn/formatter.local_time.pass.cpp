@@ -886,15 +886,14 @@ static void test() {
       },
       std::chrono::local_seconds(0s));
 
-  check_exception("Expected '%' or '}' in the chrono format-string", SV("{:A"), std::chrono::local_seconds(0s));
-  check_exception("The chrono-specs contains a '{'", SV("{:%%{"), std::chrono::local_seconds(0s));
-  check_exception(
-      "End of input while parsing the modifier chrono conversion-spec", SV("{:%"), std::chrono::local_seconds(0s));
+  check_exception("The format specifier expects a '%' or a '}'", SV("{:A"), std::chrono::local_seconds(0s));
+  check_exception("The chrono specifiers contain a '{'", SV("{:%%{"), std::chrono::local_seconds(0s));
+  check_exception("End of input while parsing a conversion specifier", SV("{:%"), std::chrono::local_seconds(0s));
   check_exception("End of input while parsing the modifier E", SV("{:%E"), std::chrono::local_seconds(0s));
   check_exception("End of input while parsing the modifier O", SV("{:%O"), std::chrono::local_seconds(0s));
 
   // Precision not allowed
-  check_exception("Expected '%' or '}' in the chrono format-string", SV("{:.3}"), std::chrono::local_seconds(0s));
+  check_exception("The format specifier expects a '%' or a '}'", SV("{:.3}"), std::chrono::local_seconds(0s));
 }
 
 int main(int, char**) {

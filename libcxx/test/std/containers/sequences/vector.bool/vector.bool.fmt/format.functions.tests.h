@@ -30,37 +30,37 @@ void format_test_vector_bool(TestFunction check, ExceptionTest check_exception, 
   check(SV("__[true, true, false]___"), SV("{:_^{}}"), input, 24);
   check(SV("#####[true, true, false]"), SV("{:#>{}}"), input, 24);
 
-  check_exception("The format-spec range-fill field contains an invalid character", SV("{:}<}"), input);
-  check_exception("The format-spec range-fill field contains an invalid character", SV("{:{<}"), input);
-  check_exception("The format-spec range-fill field contains an invalid character", SV("{::<}"), input);
+  check_exception("The fill option contains an invalid value", SV("{:}<}"), input);
+  check_exception("The fill option contains an invalid value", SV("{:{<}"), input);
+  check_exception("The fill option contains an invalid value", SV("{::<}"), input);
 
   // *** sign ***
-  check_exception("The format-spec should consume the input or end with a '}'", SV("{:-}"), input);
-  check_exception("The format-spec should consume the input or end with a '}'", SV("{:+}"), input);
-  check_exception("The format-spec should consume the input or end with a '}'", SV("{: }"), input);
+  check_exception("The format specifier should consume the input or end with a '}'", SV("{:-}"), input);
+  check_exception("The format specifier should consume the input or end with a '}'", SV("{:+}"), input);
+  check_exception("The format specifier should consume the input or end with a '}'", SV("{: }"), input);
 
   // *** alternate form ***
-  check_exception("The format-spec should consume the input or end with a '}'", SV("{:#}"), input);
+  check_exception("The format specifier should consume the input or end with a '}'", SV("{:#}"), input);
 
   // *** zero-padding ***
-  check_exception("A format-spec width field shouldn't have a leading zero", SV("{:0}"), input);
+  check_exception("The width option should not have a leading zero", SV("{:0}"), input);
 
   // *** precision ***
-  check_exception("The format-spec should consume the input or end with a '}'", SV("{:.}"), input);
+  check_exception("The format specifier should consume the input or end with a '}'", SV("{:.}"), input);
 
   // *** locale-specific form ***
-  check_exception("The format-spec should consume the input or end with a '}'", SV("{:L}"), input);
+  check_exception("The format specifier should consume the input or end with a '}'", SV("{:L}"), input);
 
   // *** n
   check(SV("__true, true, false___"), SV("{:_^22n}"), input);
 
   // *** type ***
-  check_exception("The range-format-spec type m requires two elements for a pair or tuple", SV("{:m}"), input);
-  check_exception("The range-format-spec type s requires formatting a character type", SV("{:s}"), input);
-  check_exception("The range-format-spec type ?s requires formatting a character type", SV("{:?s}"), input);
+  check_exception("Type m requires a pair or a tuple with two elements", SV("{:m}"), input);
+  check_exception("Type s requires character type as formatting argument", SV("{:s}"), input);
+  check_exception("Type ?s requires character type as formatting argument", SV("{:?s}"), input);
 
   for (std::basic_string_view<CharT> fmt : fmt_invalid_types<CharT>("s"))
-    check_exception("The format-spec should consume the input or end with a '}'", fmt, input);
+    check_exception("The format specifier should consume the input or end with a '}'", fmt, input);
 
   // ***** Only underlying has a format-spec
   check(SV("[true   , true   , false  ]"), SV("{::7}"), input);
@@ -73,8 +73,8 @@ void format_test_vector_bool(TestFunction check, ExceptionTest check_exception, 
   check(SV("[_true__, _true__, _false_]"), SV("{::_^{}}"), input, 7);
   check(SV("[:::true, :::true, ::false]"), SV("{:::>{}}"), input, 7);
 
-  check_exception("The format-spec fill field contains an invalid character", SV("{::}<}"), input);
-  check_exception("The format-spec fill field contains an invalid character", SV("{::{<}"), input);
+  check_exception("The fill option contains an invalid value", SV("{::}<}"), input);
+  check_exception("The fill option contains an invalid value", SV("{::{<}"), input);
 
   // *** sign ***
   check_exception("The format specifier for a bool does not allow the sign option", SV("{::-}"), input);
@@ -107,8 +107,10 @@ void format_test_vector_bool(TestFunction check, ExceptionTest check_exception, 
   check(SV("^^[:::true, :::true, ::false]^^^"), SV("{:^^{}::>7}"), input, 32);
   check(SV("^^[:::true, :::true, ::false]^^^"), SV("{:^^{}::>{}}"), input, 32, 7);
 
-  check_exception("Argument index out of bounds", SV("{:^^{}::>5}"), input);
-  check_exception("Argument index out of bounds", SV("{:^^{}::>{}}"), input, 32);
+  check_exception(
+      "The argument index value is too large for the number of arguments supplied", SV("{:^^{}::>5}"), input);
+  check_exception(
+      "The argument index value is too large for the number of arguments supplied", SV("{:^^{}::>{}}"), input, 32);
 }
 
 template <class CharT, class TestFunction, class ExceptionTest>

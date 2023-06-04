@@ -936,15 +936,14 @@ static void test() {
        SV("OI"), SV("Om"), SV("OM"), SV("OS"), SV("Ou"), SV("OU"), SV("OV"), SV("Ow"), SV("OW"), SV("Oy"), SV("Oz")},
       std::chrono::sys_seconds(0s));
 
-  check_exception("Expected '%' or '}' in the chrono format-string", SV("{:A"), std::chrono::sys_seconds(0s));
-  check_exception("The chrono-specs contains a '{'", SV("{:%%{"), std::chrono::sys_seconds(0s));
-  check_exception(
-      "End of input while parsing the modifier chrono conversion-spec", SV("{:%"), std::chrono::sys_seconds(0s));
+  check_exception("The format specifier expects a '%' or a '}'", SV("{:A"), std::chrono::sys_seconds(0s));
+  check_exception("The chrono specifiers contain a '{'", SV("{:%%{"), std::chrono::sys_seconds(0s));
+  check_exception("End of input while parsing a conversion specifier", SV("{:%"), std::chrono::sys_seconds(0s));
   check_exception("End of input while parsing the modifier E", SV("{:%E"), std::chrono::sys_seconds(0s));
   check_exception("End of input while parsing the modifier O", SV("{:%O"), std::chrono::sys_seconds(0s));
 
   // Precision not allowed
-  check_exception("Expected '%' or '}' in the chrono format-string", SV("{:.3}"), std::chrono::sys_seconds(0s));
+  check_exception("The format specifier expects a '%' or a '}'", SV("{:.3}"), std::chrono::sys_seconds(0s));
 }
 
 int main(int, char**) {

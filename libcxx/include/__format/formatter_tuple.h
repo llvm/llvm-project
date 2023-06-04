@@ -60,11 +60,11 @@ struct _LIBCPP_TEMPLATE_VIS __formatter_tuple {
         set_brackets({}, {});
         ++__begin;
       } else
-        std::__throw_format_error("The format specifier m requires a pair or a two-element tuple");
+        std::__throw_format_error("Type m requires a pair or a tuple with two elements");
     }
 
     if (__begin != __end && *__begin != _CharT('}'))
-      std::__throw_format_error("The format-spec should consume the input or end with a '}'");
+      std::__throw_format_error("The format specifier should consume the input or end with a '}'");
 
     __ctx.advance_to(__begin);
 
