@@ -117,7 +117,7 @@ void test() {
     check_exception("The fill character contains an invalid value", std::wstring_view{L"{:\xddff^}"}, 42);
 
     check_exception(
-        "The format-spec should consume the input or end with a '}'", std::wstring_view{L"{:\xdc00\xd800^}"}, 42);
+        "The format specifier should consume the input or end with a '}'", std::wstring_view{L"{:\xdc00\xd800^}"}, 42);
 
     check_exception("The fill character contains an invalid value", std::wstring_view{L"{:\x00110000^}"}, 42);
     check_exception("The fill character contains an invalid value", std::wstring_view{L"{:\x0011ffff^}"}, 42);

@@ -522,10 +522,10 @@ void format_test_string(const W& world, const U& universe, TestFunction check, E
   check(SV("hello uni#####"), SV("hello {:#<8.3s}"), universe);
 
   // *** sign ***
-  check_exception("The format-spec should consume the input or end with a '}'", SV("hello {:-}"), world);
+  check_exception("The format specifier should consume the input or end with a '}'", SV("hello {:-}"), world);
 
   // *** alternate form ***
-  check_exception("The format-spec should consume the input or end with a '}'", SV("hello {:#}"), world);
+  check_exception("The format specifier should consume the input or end with a '}'", SV("hello {:#}"), world);
 
   // *** zero-padding ***
   check_exception("A format-spec width field shouldn't have a leading zero", SV("hello {:0}"), world);
@@ -580,7 +580,7 @@ void format_test_string(const W& world, const U& universe, TestFunction check, E
   check_exception("Invalid arg-id", SV("hello {0:.{01}}"), world, 1);
 
   // *** locale-specific form ***
-  check_exception("The format-spec should consume the input or end with a '}'", SV("hello {:L}"), world);
+  check_exception("The format specifier should consume the input or end with a '}'", SV("hello {:L}"), world);
 
   // *** type ***
 #if TEST_STD_VER > 20
@@ -733,37 +733,37 @@ void format_test_bool(TestFunction check, ExceptionTest check_exception) {
   check(SV("answer is '-false--'"), SV("answer is '{:-^8s}'"), false);
 
   // *** Sign ***
-  check_exception("A sign field isn't allowed in this format-spec", SV("{:-}"), true);
-  check_exception("A sign field isn't allowed in this format-spec", SV("{:+}"), true);
-  check_exception("A sign field isn't allowed in this format-spec", SV("{: }"), true);
+  check_exception("The format specifier for a bool does not allow the sign option", SV("{:-}"), true);
+  check_exception("The format specifier for a bool does not allow the sign option", SV("{:+}"), true);
+  check_exception("The format specifier for a bool does not allow the sign option", SV("{: }"), true);
 
-  check_exception("A sign field isn't allowed in this format-spec", SV("{:-s}"), true);
-  check_exception("A sign field isn't allowed in this format-spec", SV("{:+s}"), true);
-  check_exception("A sign field isn't allowed in this format-spec", SV("{: s}"), true);
+  check_exception("The format specifier for a bool does not allow the sign option", SV("{:-s}"), true);
+  check_exception("The format specifier for a bool does not allow the sign option", SV("{:+s}"), true);
+  check_exception("The format specifier for a bool does not allow the sign option", SV("{: s}"), true);
 
   // *** alternate form ***
-  check_exception("An alternate form field isn't allowed in this format-spec", SV("{:#}"), true);
-  check_exception("An alternate form field isn't allowed in this format-spec", SV("{:#s}"), true);
+  check_exception("The format specifier for a bool does not allow the alternate form option", SV("{:#}"), true);
+  check_exception("The format specifier for a bool does not allow the alternate form option", SV("{:#s}"), true);
 
   // *** zero-padding ***
-  check_exception("A zero-padding field isn't allowed in this format-spec", SV("{:0}"), true);
-  check_exception("A zero-padding field isn't allowed in this format-spec", SV("{:0s}"), true);
+  check_exception("The format specifier for a bool does not allow the zero-padding option", SV("{:0}"), true);
+  check_exception("The format specifier for a bool does not allow the zero-padding option", SV("{:0s}"), true);
 
   // *** precision ***
-  check_exception("The format-spec should consume the input or end with a '}'", SV("{:.}"), true);
-  check_exception("The format-spec should consume the input or end with a '}'", SV("{:.0}"), true);
-  check_exception("The format-spec should consume the input or end with a '}'", SV("{:.42}"), true);
+  check_exception("The format specifier should consume the input or end with a '}'", SV("{:.}"), true);
+  check_exception("The format specifier should consume the input or end with a '}'", SV("{:.0}"), true);
+  check_exception("The format specifier should consume the input or end with a '}'", SV("{:.42}"), true);
 
-  check_exception("The format-spec should consume the input or end with a '}'", SV("{:.s}"), true);
-  check_exception("The format-spec should consume the input or end with a '}'", SV("{:.0s}"), true);
-  check_exception("The format-spec should consume the input or end with a '}'", SV("{:.42s}"), true);
+  check_exception("The format specifier should consume the input or end with a '}'", SV("{:.s}"), true);
+  check_exception("The format specifier should consume the input or end with a '}'", SV("{:.0s}"), true);
+  check_exception("The format specifier should consume the input or end with a '}'", SV("{:.42s}"), true);
 
   // *** locale-specific form ***
   // See locale-specific_form.pass.cpp
 
   // *** type ***
   for (const auto& fmt : invalid_types<CharT>("bBdosxX"))
-    check_exception("The format-spec type has a type not supported for a bool argument", fmt, true);
+    check_exception("The type option contains an invalid value for a bool formatting argument", fmt, true);
 }
 
 template <class CharT, class TestFunction, class ExceptionTest>
@@ -841,16 +841,16 @@ void format_test_bool_as_integer(TestFunction check, ExceptionTest check_excepti
   check(SV("answer is 0X0000000000"), SV("answer is {:#012X}"), false);
 
   // *** precision ***
-  check_exception("The format-spec should consume the input or end with a '}'", SV("{:.}"), true);
-  check_exception("The format-spec should consume the input or end with a '}'", SV("{:.0}"), true);
-  check_exception("The format-spec should consume the input or end with a '}'", SV("{:.42}"), true);
+  check_exception("The format specifier should consume the input or end with a '}'", SV("{:.}"), true);
+  check_exception("The format specifier should consume the input or end with a '}'", SV("{:.0}"), true);
+  check_exception("The format specifier should consume the input or end with a '}'", SV("{:.42}"), true);
 
   // *** locale-specific form ***
   // See locale-specific_form.pass.cpp
 
   // *** type ***
   for (const auto& fmt : invalid_types<CharT>("bBcdosxX"))
-    check_exception("The format-spec type has a type not supported for a bool argument", fmt, true);
+    check_exception("The type option contains an invalid value for a bool formatting argument", fmt, true);
 }
 
 template <class I, class CharT, class TestFunction, class ExceptionTest>
@@ -974,16 +974,16 @@ void format_test_integer_as_integer(TestFunction check, ExceptionTest check_exce
   check(SV("answer is +0X00000002A"), SV("answer is {:+#012X}"), I(42));
 
   // *** precision ***
-  check_exception("The format-spec should consume the input or end with a '}'", SV("{:.}"), I(0));
-  check_exception("The format-spec should consume the input or end with a '}'", SV("{:.0}"), I(0));
-  check_exception("The format-spec should consume the input or end with a '}'", SV("{:.42}"), I(0));
+  check_exception("The format specifier should consume the input or end with a '}'", SV("{:.}"), I(0));
+  check_exception("The format specifier should consume the input or end with a '}'", SV("{:.0}"), I(0));
+  check_exception("The format specifier should consume the input or end with a '}'", SV("{:.42}"), I(0));
 
   // *** locale-specific form ***
   // See locale-specific_form.pass.cpp
 
   // *** type ***
   for (const auto& fmt : invalid_types<CharT>("bBcdoxX"))
-    check_exception("The format-spec type has a type not supported for an integer argument", fmt, 42);
+    check_exception("The type option contains an invalid value for an integer formatting argument", fmt, 42);
 }
 
 template <class I, class CharT, class TestFunction, class ExceptionTest>
@@ -1001,20 +1001,22 @@ void format_test_integer_as_char(TestFunction check, ExceptionTest check_excepti
 
   // *** Sign ***
   check(SV("answer is *"), SV("answer is {:c}"), I(42));
-  check_exception("A sign field isn't allowed in this format-spec", SV("answer is {:-c}"), I(42));
-  check_exception("A sign field isn't allowed in this format-spec", SV("answer is {:+c}"), I(42));
-  check_exception("A sign field isn't allowed in this format-spec", SV("answer is {: c}"), I(42));
+  check_exception("The format specifier for an integer does not allow the sign option", SV("answer is {:-c}"), I(42));
+  check_exception("The format specifier for an integer does not allow the sign option", SV("answer is {:+c}"), I(42));
+  check_exception("The format specifier for an integer does not allow the sign option", SV("answer is {: c}"), I(42));
 
   // *** alternate form ***
-  check_exception("An alternate form field isn't allowed in this format-spec", SV("answer is {:#c}"), I(42));
+  check_exception(
+      "The format specifier for an integer does not allow the alternate form option", SV("answer is {:#c}"), I(42));
 
   // *** zero-padding & width ***
-  check_exception("A zero-padding field isn't allowed in this format-spec", SV("answer is {:01c}"), I(42));
+  check_exception(
+      "The format specifier for an integer does not allow the zero-padding option", SV("answer is {:01c}"), I(42));
 
   // *** precision ***
-  check_exception("The format-spec should consume the input or end with a '}'", SV("{:.c}"), I(0));
-  check_exception("The format-spec should consume the input or end with a '}'", SV("{:.0c}"), I(0));
-  check_exception("The format-spec should consume the input or end with a '}'", SV("{:.42c}"), I(0));
+  check_exception("The format specifier should consume the input or end with a '}'", SV("{:.c}"), I(0));
+  check_exception("The format specifier should consume the input or end with a '}'", SV("{:.0c}"), I(0));
+  check_exception("The format specifier should consume the input or end with a '}'", SV("{:.42c}"), I(0));
 
   // *** locale-specific form ***
   // Note it has no effect but it's allowed.
@@ -1022,7 +1024,7 @@ void format_test_integer_as_char(TestFunction check, ExceptionTest check_excepti
 
   // *** type ***
   for (const auto& fmt : invalid_types<CharT>("bBcdoxX"))
-    check_exception("The format-spec type has a type not supported for an integer argument", fmt, I(42));
+    check_exception("The type option contains an invalid value for an integer formatting argument", fmt, I(42));
 
   // *** Validate range ***
   // The code has some duplications to keep the if statement readable.
@@ -1189,30 +1191,34 @@ void format_test_char(TestFunction check, ExceptionTest check_exception) {
   check(SV("answer is '--*---'"), SV("answer is '{:-^6c}'"), CharT('*'));
 
   // *** Sign ***
-  check_exception("A sign field isn't allowed in this format-spec", SV("{:-}"), CharT('*'));
-  check_exception("A sign field isn't allowed in this format-spec", SV("{:+}"), CharT('*'));
-  check_exception("A sign field isn't allowed in this format-spec", SV("{: }"), CharT('*'));
+  check_exception("The format specifier for a character does not allow the sign option", SV("{:-}"), CharT('*'));
+  check_exception("The format specifier for a character does not allow the sign option", SV("{:+}"), CharT('*'));
+  check_exception("The format specifier for a character does not allow the sign option", SV("{: }"), CharT('*'));
 
-  check_exception("A sign field isn't allowed in this format-spec", SV("{:-c}"), CharT('*'));
-  check_exception("A sign field isn't allowed in this format-spec", SV("{:+c}"), CharT('*'));
-  check_exception("A sign field isn't allowed in this format-spec", SV("{: c}"), CharT('*'));
+  check_exception("The format specifier for a character does not allow the sign option", SV("{:-c}"), CharT('*'));
+  check_exception("The format specifier for a character does not allow the sign option", SV("{:+c}"), CharT('*'));
+  check_exception("The format specifier for a character does not allow the sign option", SV("{: c}"), CharT('*'));
 
   // *** alternate form ***
-  check_exception("An alternate form field isn't allowed in this format-spec", SV("{:#}"), CharT('*'));
-  check_exception("An alternate form field isn't allowed in this format-spec", SV("{:#c}"), CharT('*'));
+  check_exception(
+      "The format specifier for a character does not allow the alternate form option", SV("{:#}"), CharT('*'));
+  check_exception(
+      "The format specifier for a character does not allow the alternate form option", SV("{:#c}"), CharT('*'));
 
   // *** zero-padding ***
-  check_exception("A zero-padding field isn't allowed in this format-spec", SV("{:0}"), CharT('*'));
-  check_exception("A zero-padding field isn't allowed in this format-spec", SV("{:0c}"), CharT('*'));
+  check_exception(
+      "The format specifier for a character does not allow the zero-padding option", SV("{:0}"), CharT('*'));
+  check_exception(
+      "The format specifier for a character does not allow the zero-padding option", SV("{:0c}"), CharT('*'));
 
   // *** precision ***
-  check_exception("The format-spec should consume the input or end with a '}'", SV("{:.}"), CharT('*'));
-  check_exception("The format-spec should consume the input or end with a '}'", SV("{:.0}"), CharT('*'));
-  check_exception("The format-spec should consume the input or end with a '}'", SV("{:.42}"), CharT('*'));
+  check_exception("The format specifier should consume the input or end with a '}'", SV("{:.}"), CharT('*'));
+  check_exception("The format specifier should consume the input or end with a '}'", SV("{:.0}"), CharT('*'));
+  check_exception("The format specifier should consume the input or end with a '}'", SV("{:.42}"), CharT('*'));
 
-  check_exception("The format-spec should consume the input or end with a '}'", SV("{:.c}"), CharT('*'));
-  check_exception("The format-spec should consume the input or end with a '}'", SV("{:.0c}"), CharT('*'));
-  check_exception("The format-spec should consume the input or end with a '}'", SV("{:.42c}"), CharT('*'));
+  check_exception("The format specifier should consume the input or end with a '}'", SV("{:.c}"), CharT('*'));
+  check_exception("The format specifier should consume the input or end with a '}'", SV("{:.0c}"), CharT('*'));
+  check_exception("The format specifier should consume the input or end with a '}'", SV("{:.42c}"), CharT('*'));
 
   // *** locale-specific form ***
   // Note it has no effect but it's allowed.
@@ -1226,7 +1232,7 @@ void format_test_char(TestFunction check, ExceptionTest check_exception) {
   const char* valid_types = "bBcdoxX";
 #endif
   for (const auto& fmt : invalid_types<CharT>(valid_types))
-    check_exception("The format-spec type has a type not supported for a char argument", fmt, CharT('*'));
+    check_exception("The type option contains an invalid value for a character formatting argument", fmt, CharT('*'));
 }
 
 template <class CharT, class TestFunction, class ExceptionTest>
@@ -1284,9 +1290,9 @@ void format_test_char_as_integer(TestFunction check, ExceptionTest check_excepti
   check(SV("answer is +0X00000002A"), SV("answer is {:+#012X}"), CharT('*'));
 
   // *** precision ***
-  check_exception("The format-spec should consume the input or end with a '}'", SV("{:.d}"), CharT('*'));
-  check_exception("The format-spec should consume the input or end with a '}'", SV("{:.0d}"), CharT('*'));
-  check_exception("The format-spec should consume the input or end with a '}'", SV("{:.42d}"), CharT('*'));
+  check_exception("The format specifier should consume the input or end with a '}'", SV("{:.d}"), CharT('*'));
+  check_exception("The format specifier should consume the input or end with a '}'", SV("{:.0d}"), CharT('*'));
+  check_exception("The format specifier should consume the input or end with a '}'", SV("{:.42d}"), CharT('*'));
 
   // *** locale-specific form ***
   // See locale-specific_form.pass.cpp
@@ -1298,7 +1304,7 @@ void format_test_char_as_integer(TestFunction check, ExceptionTest check_excepti
   const char* valid_types = "bBcdoxX";
 #endif
   for (const auto& fmt : invalid_types<CharT>(valid_types))
-    check_exception("The format-spec type has a type not supported for a char argument", fmt, '*');
+    check_exception("The type option contains an invalid value for a character formatting argument", fmt, '*');
 }
 
 template <class F, class CharT, class TestFunction>
@@ -2916,7 +2922,7 @@ void format_test_floating_point(TestFunction check, ExceptionTest check_exceptio
 
   // *** type ***
   for (const auto& fmt : invalid_types<CharT>("aAeEfFgG"))
-    check_exception("The format-spec type has a type not supported for a floating-point argument", fmt, F(1));
+    check_exception("The type option contains an invalid value for a floating-point formatting argument", fmt, F(1));
 }
 
 template <class CharT, class TestFunction, class ExceptionTest>
@@ -2945,12 +2951,12 @@ void format_test_pointer(TestFunction check, ExceptionTest check_exception) {
   check(SV("answer is ':0x0::'"), SV("answer is '{::^06}'"), P(nullptr));
 
   // *** Sign ***
-  check_exception("The format-spec should consume the input or end with a '}'", SV("{:-}"), P(nullptr));
-  check_exception("The format-spec should consume the input or end with a '}'", SV("{:+}"), P(nullptr));
-  check_exception("The format-spec should consume the input or end with a '}'", SV("{: }"), P(nullptr));
+  check_exception("The format specifier should consume the input or end with a '}'", SV("{:-}"), P(nullptr));
+  check_exception("The format specifier should consume the input or end with a '}'", SV("{:+}"), P(nullptr));
+  check_exception("The format specifier should consume the input or end with a '}'", SV("{: }"), P(nullptr));
 
   // *** alternate form ***
-  check_exception("The format-spec should consume the input or end with a '}'", SV("{:#}"), P(nullptr));
+  check_exception("The format specifier should consume the input or end with a '}'", SV("{:#}"), P(nullptr));
 
   // *** zero-padding ***
   check(SV("answer is '0x0000'"), SV("answer is '{:06}'"), P(nullptr));
@@ -2958,14 +2964,14 @@ void format_test_pointer(TestFunction check, ExceptionTest check_exception) {
   check(SV("answer is '0X0000'"), SV("answer is '{:06P}'"), P(nullptr));
 
   // *** precision ***
-  check_exception("The format-spec should consume the input or end with a '}'", SV("{:.}"), P(nullptr));
+  check_exception("The format specifier should consume the input or end with a '}'", SV("{:.}"), P(nullptr));
 
   // *** locale-specific form ***
-  check_exception("The format-spec should consume the input or end with a '}'", SV("{:L}"), P(nullptr));
+  check_exception("The format specifier should consume the input or end with a '}'", SV("{:L}"), P(nullptr));
 
   // *** type ***
   for (const auto& fmt : invalid_types<CharT>("pP"))
-    check_exception("The format-spec type has a type not supported for a pointer argument", fmt, P(nullptr));
+    check_exception("The type option contains an invalid value for a pointer formatting argument", fmt, P(nullptr));
 }
 
 template <class CharT, class TestFunction, class ExceptionTest>
