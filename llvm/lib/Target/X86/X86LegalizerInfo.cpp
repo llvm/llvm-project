@@ -231,13 +231,9 @@ X86LegalizerInfo::X86LegalizerInfo(const X86Subtarget &STI,
   setLegalizerInfo64bit();
   setLegalizerInfoSSE1();
   setLegalizerInfoSSE2();
-  setLegalizerInfoSSE41();
-  setLegalizerInfoSSE42();
   setLegalizerInfoAVX();
   setLegalizerInfoAVX2();
   setLegalizerInfoAVX512();
-  setLegalizerInfoAVX512DQ();
-  setLegalizerInfoAVX512BW();
 
   getActionDefinitionsBuilder(G_INTRINSIC_ROUNDEVEN)
     .scalarize(0)
@@ -502,16 +498,6 @@ void X86LegalizerInfo::setLegalizerInfoSSE2() {
   }
 }
 
-void X86LegalizerInfo::setLegalizerInfoSSE41() {
-  if (!Subtarget.hasSSE41())
-    return;
-}
-
-void X86LegalizerInfo::setLegalizerInfoSSE42() {
-  if (!Subtarget.hasSSE42())
-    return;
-}
-
 void X86LegalizerInfo::setLegalizerInfoAVX() {
   if (!Subtarget.hasAVX())
     return;
@@ -621,14 +607,4 @@ void X86LegalizerInfo::setLegalizerInfoAVX512() {
     LegacyInfo.setAction({G_INSERT, 1, Ty}, LegacyLegalizeActions::Legal);
     LegacyInfo.setAction({G_EXTRACT, Ty}, LegacyLegalizeActions::Legal);
   }
-}
-
-void X86LegalizerInfo::setLegalizerInfoAVX512DQ() {
-  if (!(Subtarget.hasAVX512() && Subtarget.hasDQI()))
-    return;
-}
-
-void X86LegalizerInfo::setLegalizerInfoAVX512BW() {
-  if (!(Subtarget.hasAVX512() && Subtarget.hasBWI()))
-    return;
 }
