@@ -81,7 +81,7 @@ struct _LIBCPP_TEMPLATE_VIS range_formatter {
       // processed by the underlying. For example {:-} for a range in invalid,
       // the sign field is not present. Without this check the underlying_ will
       // get -} as input which my be valid.
-      std::__throw_format_error("The format-spec should consume the input or end with a '}'");
+      std::__throw_format_error("The format specifier should consume the input or end with a '}'");
 
     __ctx.advance_to(__begin);
     __begin = __underlying_.parse(__ctx);
@@ -94,7 +94,7 @@ struct _LIBCPP_TEMPLATE_VIS range_formatter {
     //   ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^
     // could consume more than it should.
     if (__begin != __end && *__begin != _CharT('}'))
-      std::__throw_format_error("The format-spec should consume the input or end with a '}'");
+      std::__throw_format_error("The format specifier should consume the input or end with a '}'");
 
     if (__parser_.__type_ != __format_spec::__type::__default) {
       // [format.range.formatter]/6
@@ -223,7 +223,7 @@ private:
         set_separator(_LIBCPP_STATICALLY_WIDEN(_CharT, ", "));
         ++__begin;
       } else
-        std::__throw_format_error("The range-format-spec type m requires two elements for a pair or tuple");
+        std::__throw_format_error("Type m requires a pair or a tuple with two elements");
       break;
 
     case _CharT('s'):
@@ -231,18 +231,18 @@ private:
         __parser_.__type_ = __format_spec::__type::__string;
         ++__begin;
       } else
-        std::__throw_format_error("The range-format-spec type s requires formatting a character type");
+        std::__throw_format_error("Type s requires character type as formatting argument");
       break;
 
     case _CharT('?'):
       ++__begin;
       if (__begin == __end || *__begin != _CharT('s'))
-        std::__throw_format_error("The format-spec should consume the input or end with a '}'");
+        std::__throw_format_error("The format specifier should consume the input or end with a '}'");
       if constexpr (same_as<_Tp, _CharT>) {
         __parser_.__type_ = __format_spec::__type::__debug;
         ++__begin;
       } else
-        std::__throw_format_error("The range-format-spec type ?s requires formatting a character type");
+        std::__throw_format_error("Type ?s requires character type as formatting argument");
     }
   }
 
