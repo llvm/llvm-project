@@ -8107,9 +8107,14 @@ SDValue TargetLowering::expandIS_FPCLASS(EVT ResultVT, SDValue Op,
   // Some checks can be implemented using float comparisons, if floating point
   // exceptions are ignored.
   if (Flags.hasNoFPExcept() &&
-      // TODO: Should check isCondCodeLegal
       isOperationLegalOrCustom(ISD::SETCC, OperandVT.getScalarType())) {
-    if (isFCmpEqualZero(Test, Semantics, DAG.getMachineFunction())) {
+    // Even if the condition isn't legal, we're probably better off expanding it
+    // if it's the combined 0 || denormal compare.
+
+    if (isFCmpEqualZero(Test, Semantics, DAG.getMachineFunction()) &&
+        (Test != fcZero ||
+         isCondCodeLegalOrCustom(IsInverted ? ISD::SETUNE : ISD::SETOEQ,
+                                 OperandVT.getScalarType().getSimpleVT()))) {
       // If denormals could be implicitly treated as 0, this is not equivalent
       // to a compare with 0 since it will also be true for denormals.
       return DAG.getSetCC(DL, ResultVT, Op,
@@ -8117,9 +8122,12 @@ SDValue TargetLowering::expandIS_FPCLASS(EVT ResultVT, SDValue Op,
                           IsInverted ? ISD::SETUNE : ISD::SETOEQ);
     }
 
-    if (Test == fcNan)
+    if (Test == fcNan &&
+        isCondCodeLegalOrCustom(IsInverted ? ISD::SETO : ISD::SETUO,
+                                OperandVT.getScalarType().getSimpleVT())) {
       return DAG.getSetCC(DL, ResultVT, Op, Op,
                           IsInverted ? ISD::SETO : ISD::SETUO);
+    }
   }
 
   // In the general case use integer operations.
