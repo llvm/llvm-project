@@ -134,7 +134,7 @@ void Generator::emitParse(StringRef kind, Record &x) {
       llvm::to_vector(map_range(members->getArgNames(), [](StringInit *init) {
         return init->getAsUnquotedString();
       }));
-  StringRef builder = x.getValueAsString("cBuilder");
+  StringRef builder = x.getValueAsString("cBuilder").trim();
   emitParseHelper(kind, returnType, builder, members->getArgs(), argNames,
                   returnType + "()", os);
   os << "\n\n";
@@ -368,10 +368,11 @@ void Generator::emitPrintHelper(Record *memberRec, StringRef kind,
       }
     }
     std::string returnType = getCType(def);
+    std::string nestedName = kind.str();
     ios << "writer.writeList(" << getter << ", [&](" << returnType << " "
-        << kind << ") ";
+        << nestedName << ") ";
     auto lambdaScope = ios.scope("{\n", "});\n");
-    return emitPrintHelper(def, kind, kind, kind, ios);
+    return emitPrintHelper(def, kind, nestedName, nestedName, ios);
   }
   if (memberRec->isSubClassOf("CompositeBytecode")) {
     auto *members = memberRec->getValueAsDag("members");
