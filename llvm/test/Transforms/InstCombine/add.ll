@@ -357,6 +357,39 @@ define i8 @test18(i8 %A) {
   ret i8 %C
 }
 
+; ~X + -127 and (-128) - X with nsw are equally poisonous
+define i8 @test18_nsw(i8 %A) {
+; CHECK-LABEL: @test18_nsw(
+; CHECK-NEXT:    [[C:%.*]] = sub i8 -128, [[A:%.*]]
+; CHECK-NEXT:    ret i8 [[C]]
+;
+  %B = xor i8 %A, -1
+  %C = add nsw i8 %B, -127
+  ret i8 %C
+}
+
+; nuw couldn't propagate as nsw is.
+define i8 @test18_nuw(i8 %A) {
+; CHECK-LABEL: @test18_nuw(
+; CHECK-NEXT:    [[C:%.*]] = sub i8 -128, [[A:%.*]]
+; CHECK-NEXT:    ret i8 [[C]]
+;
+  %B = xor i8 %A, -1
+  %C = add nuw i8 %B, -127
+  ret i8 %C
+}
+
+; 127 - X with nsw will be more poisonous than ~X + -128 with nsw. (see X = -1)
+define i8 @test18_nsw_overflow(i8 %A) {
+; CHECK-LABEL: @test18_nsw_overflow(
+; CHECK-NEXT:    [[C:%.*]] = sub i8 127, [[A:%.*]]
+; CHECK-NEXT:    ret i8 [[C]]
+;
+  %B = xor i8 %A, -1
+  %C = add nsw i8 %B, -128
+  ret i8 %C
+}
+
 define <2 x i64> @test18vec(<2 x i64> %A) {
 ; CHECK-LABEL: @test18vec(
 ; CHECK-NEXT:    [[ADD:%.*]] = sub <2 x i64> <i64 1, i64 2>, [[A:%.*]]
@@ -365,6 +398,49 @@ define <2 x i64> @test18vec(<2 x i64> %A) {
   %xor = xor <2 x i64> %A, <i64 -1, i64 -1>
   %add = add <2 x i64> %xor, <i64 2, i64 3>
   ret <2 x i64> %add
+}
+
+define <2 x i8> @test18vec_nsw(<2 x i8> %A) {
+; CHECK-LABEL: @test18vec_nsw(
+; CHECK-NEXT:    [[C:%.*]] = sub <2 x i8> <i8 -124, i8 -125>, [[A:%.*]]
+; CHECK-NEXT:    ret <2 x i8> [[C]]
+;
+  %B = xor <2 x i8> %A, <i8 -1, i8 -1>
+  %C = add nsw <2 x i8> %B, <i8 -123, i8 -124>
+  ret <2 x i8> %C
+}
+
+; TODO: fix ValueTracking overflow check for non-splat vector, could be attached nsw
+; this shouldn't overflow.
+define <2 x i8> @test18vec_nsw_false(<2 x i8> %A) {
+; CHECK-LABEL: @test18vec_nsw_false(
+; CHECK-NEXT:    [[C:%.*]] = sub <2 x i8> <i8 -125, i8 -126>, [[A:%.*]]
+; CHECK-NEXT:    ret <2 x i8> [[C]]
+;
+  %B = xor <2 x i8> %A, <i8 -1, i8 -1>
+  %C = add nsw <2 x i8> %B, <i8 -124, i8 -125>
+  ret <2 x i8> %C
+}
+
+
+define <2 x i8> @test18vec_nuw(<2 x i8> %A) {
+; CHECK-LABEL: @test18vec_nuw(
+; CHECK-NEXT:    [[C:%.*]] = sub <2 x i8> <i8 -128, i8 -127>, [[A:%.*]]
+; CHECK-NEXT:    ret <2 x i8> [[C]]
+;
+  %B = xor <2 x i8> %A, <i8 -1, i8 -1>
+  %C = add nuw <2 x i8> %B, <i8 -127, i8 -126>
+  ret <2 x i8> %C
+}
+
+define <2 x i8> @test18vec_nsw_overflow(<2 x i8> %A) {
+; CHECK-LABEL: @test18vec_nsw_overflow(
+; CHECK-NEXT:    [[C:%.*]] = sub <2 x i8> <i8 -128, i8 127>, [[A:%.*]]
+; CHECK-NEXT:    ret <2 x i8> [[C]]
+;
+  %B = xor <2 x i8> %A, <i8 -1, i8 -1>
+  %C = add nsw <2 x i8> %B, <i8 -127, i8 -128>
+  ret <2 x i8> %C
 }
 
 define i32 @test19(i1 %C) {
