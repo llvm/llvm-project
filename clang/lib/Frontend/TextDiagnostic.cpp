@@ -161,15 +161,15 @@ printableTextForNextCharacter(StringRef SourceLine, size_t *i,
 }
 
 static void expandTabs(std::string &SourceLine, unsigned TabStop) {
-  size_t i = SourceLine.size();
-  while (i>0) {
-    i--;
-    if (SourceLine[i]!='\t')
+  size_t I = SourceLine.size();
+  while (I > 0) {
+    I--;
+    if (SourceLine[I] != '\t')
       continue;
-    size_t tmp_i = i;
-    std::pair<SmallString<16>,bool> res
-      = printableTextForNextCharacter(SourceLine, &tmp_i, TabStop);
-    SourceLine.replace(i, 1, res.first.c_str());
+    size_t TmpI = I;
+    auto [Str, Printable] =
+        printableTextForNextCharacter(SourceLine, &TmpI, TabStop);
+    SourceLine.replace(I, 1, Str.c_str());
   }
 }
 
