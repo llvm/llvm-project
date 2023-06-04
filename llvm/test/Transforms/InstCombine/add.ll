@@ -360,7 +360,7 @@ define i8 @test18(i8 %A) {
 ; ~X + -127 and (-128) - X with nsw are equally poisonous
 define i8 @test18_nsw(i8 %A) {
 ; CHECK-LABEL: @test18_nsw(
-; CHECK-NEXT:    [[C:%.*]] = sub i8 -128, [[A:%.*]]
+; CHECK-NEXT:    [[C:%.*]] = sub nsw i8 -128, [[A:%.*]]
 ; CHECK-NEXT:    ret i8 [[C]]
 ;
   %B = xor i8 %A, -1
@@ -402,7 +402,7 @@ define <2 x i64> @test18vec(<2 x i64> %A) {
 
 define <2 x i8> @test18vec_nsw(<2 x i8> %A) {
 ; CHECK-LABEL: @test18vec_nsw(
-; CHECK-NEXT:    [[C:%.*]] = sub <2 x i8> <i8 -124, i8 -125>, [[A:%.*]]
+; CHECK-NEXT:    [[C:%.*]] = sub nsw <2 x i8> <i8 -124, i8 -125>, [[A:%.*]]
 ; CHECK-NEXT:    ret <2 x i8> [[C]]
 ;
   %B = xor <2 x i8> %A, <i8 -1, i8 -1>
