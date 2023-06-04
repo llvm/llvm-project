@@ -77,30 +77,30 @@ void format_test_vector_bool(TestFunction check, ExceptionTest check_exception, 
   check_exception("The format-spec fill field contains an invalid character", SV("{::{<}"), input);
 
   // *** sign ***
-  check_exception("A sign field isn't allowed in this format-spec", SV("{::-}"), input);
-  check_exception("A sign field isn't allowed in this format-spec", SV("{::+}"), input);
-  check_exception("A sign field isn't allowed in this format-spec", SV("{:: }"), input);
+  check_exception("The format specifier for a bool does not allow the sign option", SV("{::-}"), input);
+  check_exception("The format specifier for a bool does not allow the sign option", SV("{::+}"), input);
+  check_exception("The format specifier for a bool does not allow the sign option", SV("{:: }"), input);
 
   check(SV("[1, 1, 0]"), SV("{::-d}"), input);
   check(SV("[+1, +1, +0]"), SV("{::+d}"), input);
   check(SV("[ 1,  1,  0]"), SV("{:: d}"), input);
 
   // *** alternate form ***
-  check_exception("An alternate form field isn't allowed in this format-spec", SV("{::#}"), input);
+  check_exception("The format specifier for a bool does not allow the alternate form option", SV("{::#}"), input);
 
   check(SV("[0x1, 0x1, 0x0]"), SV("{::#x}"), input);
 
   // *** zero-padding ***
-  check_exception("A zero-padding field isn't allowed in this format-spec", SV("{::05}"), input);
+  check_exception("The format specifier for a bool does not allow the zero-padding option", SV("{::05}"), input);
 
   check(SV("[00001, 00001, 00000]"), SV("{::05o}"), input);
 
   // *** precision ***
-  check_exception("The format-spec should consume the input or end with a '}'", SV("{::.}"), input);
+  check_exception("The format specifier should consume the input or end with a '}'", SV("{::.}"), input);
 
   // *** type ***
   for (std::basic_string_view<CharT> fmt : fmt_invalid_nested_types<CharT>("bBdosxX"))
-    check_exception("The format-spec type has a type not supported for a bool argument", fmt, input);
+    check_exception("The type option contains an invalid value for a bool formatting argument", fmt, input);
 
   // ***** Both have a format-spec
   check(SV("^^[:::true, :::true, ::false]^^^"), SV("{:^^32::>7}"), input);
