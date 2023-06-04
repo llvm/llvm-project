@@ -552,3 +552,26 @@ Unpoisoning may not be an option, if (for example) you are not maintaining the a
 
 * You are using allocator, which does not call destructor during deallocation.
 * You are aware that memory allocated with an allocator may be accessed, even when unused by container.
+
+Platform specific behavior
+==========================
+
+Windows
+-------
+
+The ``stdout``, ``stderr``, and ``stdin`` file streams can be placed in
+Unicode mode by a suitable call to ``_setmode()``. When in this mode,
+the sequence of bytes read from, or written to, these streams is interpreted
+as a sequence of little-endian ``wchar_t`` elements. Thus, use of
+``std::cout``, ``std::cerr``, or ``std::cin`` with streams in Unicode mode
+will not behave as they usually do since bytes read or written won't be
+interpreted as individual ``char`` elements. However, ``std::wcout``,
+``std::wcerr``, and ``std::wcin`` will behave as expected.
+
+Wide character stream such as ``std::wcin`` or ``std::wcout`` imbued with a
+locale behave differently than they otherwise do. By default, wide character
+streams don't convert wide characters but input/output them as is. If a
+specific locale is imbued, the IO with the underlying stream happens with
+regular ``char`` elements, which are converted to/from wide characters
+according to the locale. Note that this doesn't behave as expected if the
+stream has been set in Unicode mode.

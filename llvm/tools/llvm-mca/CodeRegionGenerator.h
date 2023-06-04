@@ -32,10 +32,10 @@ namespace mca {
 
 class MCACommentConsumer : public AsmCommentConsumer {
 protected:
-  bool FoundError;
+  bool FoundError = false;
 
 public:
-  MCACommentConsumer() : FoundError(false) {}
+  MCACommentConsumer() = default;
 
   bool hadErr() const { return FoundError; }
 };
