@@ -189,12 +189,10 @@ class AppleAcceleratorTable : public DWARFAcceleratorTable {
 public:
   /// Apple-specific implementation of an Accelerator Entry.
   class Entry final : public DWARFAcceleratorTable::Entry {
-    const HeaderData *HdrData = nullptr;
+    const AppleAcceleratorTable &Table;
 
-    Entry(const HeaderData &Data);
-    Entry() = default;
-
-    void extract(const AppleAcceleratorTable &AccelTable, uint64_t *Offset);
+    Entry(const AppleAcceleratorTable &Table);
+    void extract(uint64_t *Offset);
 
   public:
     std::optional<uint64_t> getCUOffset() const override;
@@ -215,37 +213,25 @@ public:
     friend class ValueIterator;
   };
 
+  /// An iterator for Entries all having the same string as key.
   class ValueIterator {
-    const AppleAcceleratorTable *AccelTable = nullptr;
-    Entry Current;           ///< The current entry.
-    uint64_t DataOffset = 0; ///< Offset into the section.
-    unsigned Data = 0; ///< Current data entry.
-    unsigned NumData = 0; ///< Number of data entries.
+    Entry Current;
+    uint64_t Offset = 0;
 
-    /// Advance the iterator.
-    void Next();
+    void Next() { Offset += Current.Table.getHashDataEntryLength(); }
 
   public:
-    using iterator_category = std::input_iterator_tag;
-    using value_type = Entry;
-    using difference_type = std::ptrdiff_t;
-    using pointer = value_type *;
-    using reference = value_type &;
-
     /// Construct a new iterator for the entries at \p DataOffset.
     ValueIterator(const AppleAcceleratorTable &AccelTable, uint64_t DataOffset);
-    /// End marker.
-    ValueIterator() = default;
 
-    const Entry &operator*() const { return Current; }
-    ValueIterator &operator++() { Next(); return *this; }
-    ValueIterator operator++(int) {
-      ValueIterator I = *this;
-      Next();
-      return I;
+    const Entry &operator*() {
+      uint64_t OffsetCopy = Offset;
+      Current.extract(&OffsetCopy);
+      return Current;
     }
+    ValueIterator &operator++() { Next(); return *this; }
     friend bool operator==(const ValueIterator &A, const ValueIterator &B) {
-      return A.NumData == B.NumData && A.DataOffset == B.DataOffset;
+      return A.Offset == B.Offset;
     }
     friend bool operator!=(const ValueIterator &A, const ValueIterator &B) {
       return !(A == B);
