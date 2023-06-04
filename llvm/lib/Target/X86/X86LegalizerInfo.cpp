@@ -200,6 +200,14 @@ X86LegalizerInfo::X86LegalizerInfo(const X86Subtarget &STI,
       .clampScalar(0, s8, sMaxScalar)
       .scalarize(0);
 
+  // integer comparison
+  const std::initializer_list<LLT> IntTypes32 = {s8, s16, s32, p0};
+  const std::initializer_list<LLT> IntTypes64 = {s8, s16, s32, s64, p0};
+
+  getActionDefinitionsBuilder(G_ICMP)
+      .legalForCartesianProduct({s8}, Is64Bit ? IntTypes64 : IntTypes32)
+      .clampScalar(0, s8, s8);
+
   // bswap
   getActionDefinitionsBuilder(G_BSWAP)
       .legalIf([=](const LegalityQuery &Query) {
@@ -314,13 +322,6 @@ void X86LegalizerInfo::setLegalizerInfo32bit() {
   LegacyInfo.setAction({G_PTR_ADD, p0}, LegacyLegalizeActions::Legal);
   LegacyInfo.setAction({G_PTR_ADD, 1, s32}, LegacyLegalizeActions::Legal);
 
-  if (!Subtarget.is64Bit()) {
-    // Comparison
-    getActionDefinitionsBuilder(G_ICMP)
-        .legalForCartesianProduct({s8}, {s8, s16, s32, p0})
-        .clampScalar(0, s8, s8);
-  }
-
   // Control-flow
   LegacyInfo.setAction({G_BRCOND, s1}, LegacyLegalizeActions::Legal);
 
@@ -355,9 +356,7 @@ void X86LegalizerInfo::setLegalizerInfo64bit() {
   if (!Subtarget.is64Bit())
     return;
 
-  const LLT p0 = LLT::pointer(0, TM.getPointerSizeInBits(0));
   const LLT s8 = LLT::scalar(8);
-  const LLT s16 = LLT::scalar(16);
   const LLT s32 = LLT::scalar(32);
   const LLT s64 = LLT::scalar(64);
   const LLT s128 = LLT::scalar(128);
@@ -400,11 +399,6 @@ void X86LegalizerInfo::setLegalizerInfo64bit() {
       .clampScalar(0, s32, s64)
       .widenScalarToNextPow2(1);
 
-  // Comparison
-  getActionDefinitionsBuilder(G_ICMP)
-      .legalForCartesianProduct({s8}, {s8, s16, s32, s64, p0})
-      .clampScalar(0, s8, s8);
-
   getActionDefinitionsBuilder(G_FCMP)
       .legalForCartesianProduct({s8}, {s32, s64})
       .clampScalar(0, s8, s8)
@@ -417,7 +411,6 @@ void X86LegalizerInfo::setLegalizerInfo64bit() {
                        LegacyLegalizeActions::Legal);
   LegacyInfo.setAction({G_MERGE_VALUES, 1, s128}, LegacyLegalizeActions::Legal);
   LegacyInfo.setAction({G_UNMERGE_VALUES, s128}, LegacyLegalizeActions::Legal);
-
 }
 
 void X86LegalizerInfo::setLegalizerInfoSSE1() {
