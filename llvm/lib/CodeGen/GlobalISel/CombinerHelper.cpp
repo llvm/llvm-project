@@ -1113,6 +1113,7 @@ void CombinerHelper::applyCombineIndexedLoadStore(
 
 bool CombinerHelper::matchCombineDivRem(MachineInstr &MI,
                                         MachineInstr *&OtherMI) {
+  OtherMI = nullptr;
   unsigned Opcode = MI.getOpcode();
   bool IsDiv, IsSigned;
 
@@ -1167,11 +1168,44 @@ bool CombinerHelper::matchCombineDivRem(MachineInstr &MI,
         matchEqualDefs(MI.getOperand(2), UseMI.getOperand(2)) &&
         matchEqualDefs(MI.getOperand(1), UseMI.getOperand(1))) {
       OtherMI = &UseMI;
-      return true;
+      break;
     }
   }
+  if (!OtherMI)
+    return false;
 
-  return false;
+  // We may have a situation like this:
+  //   %4:_(s32) = G_SEXT %2:_(s1)
+  //   %5:_(s32) = G_SEXT %2:_(s1)
+  //   %6:_(s32) = G_UDIV %4:_, %5:_
+  //   %8:_(s32) = G_SEXT %2:_(s1)
+  //   %9:_(s32) = G_UREM %5:_, %8:_
+  // and choosing the insertion point as the G_UDIV will cause it to use %8
+  // before the def. We check here if any of the operands of the later
+  // instruction (i.e. one of DIV/REM that is the second in the block) are
+  // dominated by the first instruction. In this case we check if %8 is
+  // dominated by the G_UDIV and bail out if so.
+
+  SmallSet<Register, 2> RegsToCheck;
+  MachineInstr *First, *Second;
+  if (dominates(MI, *OtherMI)) {
+    First = &MI;
+    Second = OtherMI;
+  } else {
+    First = OtherMI;
+    Second = &MI;
+  }
+  RegsToCheck.insert(Second->getOperand(1).getReg());
+  RegsToCheck.insert(Second->getOperand(2).getReg());
+  for (MachineBasicBlock::iterator II = std::next(First->getIterator());
+       II != Second->getIterator(); ++II) {
+    for (auto &MO : II->operands()) {
+      if (MO.isReg() && MO.isDef() && RegsToCheck.count(MO.getReg()) &&
+          dominates(*First, *II))
+        return false;
+    }
+  }
+  return true;
 }
 
 void CombinerHelper::applyCombineDivRem(MachineInstr &MI,

@@ -563,13 +563,6 @@ private:
                         OffsetsStringPool &DebugLineStrPool,
                         unsigned Indent = 0);
 
-  /// Mark the passed DIE as well as all the ones it depends on as kept.
-  void keepDIEAndDependencies(AddressesMap &RelocMgr, RangesTy &Ranges,
-                              const UnitListTy &Units, const DWARFDie &DIE,
-                              CompileUnit::DIEInfo &MyInfo,
-                              const DWARFFile &File, CompileUnit &CU,
-                              bool UseODR);
-
   unsigned shouldKeepDIE(AddressesMap &RelocMgr, RangesTy &Ranges,
                          const DWARFDie &DIE, const DWARFFile &File,
                          CompileUnit &Unit, CompileUnit::DIEInfo &MyInfo,
