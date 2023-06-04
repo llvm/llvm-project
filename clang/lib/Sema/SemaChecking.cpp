@@ -15994,10 +15994,16 @@ bool Sema::CheckParmsForFunctionDef(ArrayRef<ParmVarDecl *> Parameters,
     // function declarator that is part of a function definition of
     // that function shall not have incomplete type.
     //
-    // This is also C++ [dcl.fct]p6.
+    // C++23 [dcl.fct.def.general]/p2
+    // The type of a parameter [...] for a function definition
+    // shall not be a (possibly cv-qualified) class type that is incomplete
+    // or abstract within the function body unless the function is deleted.
     if (!Param->isInvalidDecl() &&
-        RequireCompleteType(Param->getLocation(), Param->getType(),
-                            diag::err_typecheck_decl_incomplete_type)) {
+        (RequireCompleteType(Param->getLocation(), Param->getType(),
+                             diag::err_typecheck_decl_incomplete_type) ||
+         RequireNonAbstractType(Param->getBeginLoc(), Param->getOriginalType(),
+                                diag::err_abstract_type_in_decl,
+                                AbstractParamType))) {
       Param->setInvalidDecl();
       HasInvalidParm = true;
     }
