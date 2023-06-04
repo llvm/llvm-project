@@ -244,7 +244,7 @@ DwarfLinkerForBinary::loadObject(const DebugMapObject &Obj,
             }))
       return errorToErrorCode(std::move(NewE));
 
-    return Res;
+    return std::move(Res);
   }
 
   return ErrorOrObj.getError();
