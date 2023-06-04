@@ -8,16 +8,12 @@ set(LLVM_OPTIONAL_SOURCES
 if (MLIR_ENABLE_VULKAN_RUNNER)
   message(STATUS "Building the Vulkan runner")
 
-  # At first try "FindVulkan" from:
-  # https://cmake.org/cmake/help/v3.7/module/FindVulkan.html
-  if (NOT CMAKE_VERSION VERSION_LESS 3.7.0)
-    find_package(Vulkan)
-  endif()
+  find_package(Vulkan)
 
   # If Vulkan is not found try a path specified by VULKAN_SDK.
   if (NOT Vulkan_FOUND)
     if ("$ENV{VULKAN_SDK}" STREQUAL "")
-      message(FATAL_ERROR "Please use at least CMAKE 3.7.0 or provide "
+      message(FATAL_ERROR "Vulkan not found through CMake; please provide "
                           "VULKAN_SDK path as an environment variable")
     endif()
 
