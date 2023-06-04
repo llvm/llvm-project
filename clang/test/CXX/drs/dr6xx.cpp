@@ -691,7 +691,7 @@ namespace dr656 { // dr656: yes
 }
 
 namespace dr657 { // dr657: partial
-  struct Abs { virtual void x() = 0; };
+  struct Abs { virtual void x() = 0; }; // expected-note {{unimplemented pure virtual method 'x' in 'Abs'}}
   struct Der : public Abs { virtual void x(); };
 
   struct Cnvt { template<typename F> Cnvt(F); };
@@ -707,10 +707,8 @@ namespace dr657 { // dr657: partial
   // FIXME: The following examples demonstrate that we might be accepting the
   // above cases for the wrong reason.
 
-  // FIXME: We should reject this.
-  struct C { C(Abs) {} };
-  // FIXME: We should reject this.
-  struct Q { operator Abs() { __builtin_unreachable(); } } q;
+  struct C { C(Abs) {} }; // expected-error {{parameter type 'Abs' is an abstract class}}
+  struct Q { operator Abs() { __builtin_unreachable(); } } q; // expected-error {{return type 'Abs' is an abstract class}}
 #if __cplusplus >= 201703L
   // FIXME: We should *definitely* reject this.
   C c = Q().operator Abs();

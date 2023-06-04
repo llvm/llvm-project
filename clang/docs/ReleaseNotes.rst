@@ -549,6 +549,9 @@ Bug Fixes to C++ Support
 - Fix access of a friend class declared in a local class. Clang previously
   emitted an error when a friend of a local class tried to access it's
   private data members.
+- Allow abstract parameter and return types in functions that are
+  either deleted or not defined.
+  (`#63012 <https://github.com/llvm/llvm-project/issues/63012>`_)
 
 Bug Fixes to AST Handling
 ^^^^^^^^^^^^^^^^^^^^^^^^^
