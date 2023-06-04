@@ -32,6 +32,7 @@
 #include <__iterator/iterator_traits.h> // iter_value_t
 #include <__memory/addressof.h>
 #include <__type_traits/common_type.h>
+#include <__type_traits/is_constant_evaluated.h>
 #include <__type_traits/is_trivially_copyable.h>
 #include <__variant/monostate.h>
 #include <cstdint>
@@ -307,6 +308,19 @@ static_assert(is_trivially_copyable_v<__parsed_specifications<wchar_t>>);
 template <class _CharT>
 class _LIBCPP_TEMPLATE_VIS __parser {
 public:
+  // Parses the format specification.
+  //
+  // Depending on whether the parsing is done compile-time or run-time
+  // the method slightly differs.
+  // - Only parses a field when it is in the __fields. Accepting all
+  //   fields and then validating the valid ones has a performance impact.
+  //   This is faster but gives slighly worse error messages.
+  // - At compile-time when a field is not accepted the parser will still
+  //   parse it and give an error when it's present. This gives a more
+  //   accurate error.
+  // The idea is that most times the format instead of the vformat
+  // functions are used. In that case the error will be detected during
+  // compilation and there is no need to pay for the run-time overhead.
   template <class _ParseContext>
   _LIBCPP_HIDE_FROM_ABI constexpr typename _ParseContext::iterator __parse(_ParseContext& __ctx, __fields __fields) {
     auto __begin = __ctx.begin();
@@ -317,26 +331,50 @@ public:
     if (__parse_fill_align(__begin, __end, __fields.__use_range_fill_) && __begin == __end)
       return __begin;
 
-    if (__fields.__sign_ && __parse_sign(__begin) && __begin == __end)
-      return __begin;
+    if (__fields.__sign_) {
+      if (__parse_sign(__begin) && __begin == __end)
+        return __begin;
+    } else if (std::is_constant_evaluated() && __parse_sign(__begin)) {
+      std::__throw_format_error("The format specification does not allow the sign option");
+    }
 
-    if (__fields.__alternate_form_ && __parse_alternate_form(__begin) && __begin == __end)
-      return __begin;
+    if (__fields.__alternate_form_) {
+      if (__parse_alternate_form(__begin) && __begin == __end)
+        return __begin;
+    } else if (std::is_constant_evaluated() && __parse_alternate_form(__begin)) {
+      std::__throw_format_error("The format specifier does not allow the alternate form option");
+    }
 
-    if (__fields.__zero_padding_ && __parse_zero_padding(__begin) && __begin == __end)
-      return __begin;
+    if (__fields.__zero_padding_) {
+      if (__parse_zero_padding(__begin) && __begin == __end)
+        return __begin;
+    } else if (std::is_constant_evaluated() && __parse_zero_padding(__begin)) {
+      std::__throw_format_error("The format specifier does not allow the zero-padding option");
+    }
 
     if (__parse_width(__begin, __end, __ctx) && __begin == __end)
       return __begin;
 
-    if (__fields.__precision_ && __parse_precision(__begin, __end, __ctx) && __begin == __end)
-      return __begin;
+    if (__fields.__precision_) {
+      if (__parse_precision(__begin, __end, __ctx) && __begin == __end)
+        return __begin;
+    } else if (std::is_constant_evaluated() && __parse_precision(__begin, __end, __ctx)) {
+      std::__throw_format_error("The format specifier does not allow the precision option");
+    }
 
-    if (__fields.__locale_specific_form_ && __parse_locale_specific_form(__begin) && __begin == __end)
-      return __begin;
+    if (__fields.__locale_specific_form_) {
+      if (__parse_locale_specific_form(__begin) && __begin == __end)
+        return __begin;
+    } else if (std::is_constant_evaluated() && __parse_locale_specific_form(__begin)) {
+      std::__throw_format_error("The format specifier does not allow the locale-specific form option");
+    }
 
-    if (__fields.__clear_brackets_ && __parse_clear_brackets(__begin) && __begin == __end)
-      return __begin;
+    if (__fields.__clear_brackets_) {
+      if (__parse_clear_brackets(__begin) && __begin == __end)
+        return __begin;
+    } else if (std::is_constant_evaluated() && __parse_clear_brackets(__begin)) {
+      std::__throw_format_error("The format specifier does not allow the n option");
+    }
 
     if (__fields.__type_)
       __parse_type(__begin);
