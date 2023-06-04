@@ -8,7 +8,6 @@ set(LLVM_LINK_COMPONENTS
   AllTargetsInfos
   CodeGenTypes
   DWARFLinker
-  DWARFLinkerParallel
   DebugInfoDWARF
   MC
   ObjCopy

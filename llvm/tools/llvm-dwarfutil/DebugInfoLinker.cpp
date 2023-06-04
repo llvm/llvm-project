@@ -11,7 +11,6 @@
 #include "llvm/ADT/StringSwitch.h"
 #include "llvm/DWARFLinker/DWARFLinker.h"
 #include "llvm/DWARFLinker/DWARFStreamer.h"
-#include "llvm/DWARFLinkerParallel/DWARFLinker.h"
 #include "llvm/DebugInfo/DWARF/DWARFContext.h"
 #include "llvm/DebugInfo/DWARF/DWARFExpression.h"
 #include "llvm/Object/ObjectFile.h"
@@ -38,8 +37,7 @@ namespace dwarfutil {
 // exec: [LowPC, HighPC] is not inside address ranges of .text sections
 //
 // universal: maxpc and bfd
-template <typename AddressMapBase>
-class ObjFileAddressMap : public AddressMapBase {
+class ObjFileAddressMap : public AddressesMap {
 public:
   ObjFileAddressMap(DWARFContext &Context, const Options &Options,
                     object::ObjectFile &ObjFile)
@@ -226,13 +224,12 @@ static bool knownByDWARFUtil(StringRef SecName) {
       .Default(false);
 }
 
-template <typename AccelTableKind>
-static std::optional<AccelTableKind>
+static std::optional<DwarfLinkerAccelTableKind>
 getAcceleratorTableKind(StringRef SecName) {
-  return llvm::StringSwitch<std::optional<AccelTableKind>>(SecName)
-      .Case(".debug_pubnames", AccelTableKind::Pub)
-      .Case(".debug_pubtypes", AccelTableKind::Pub)
-      .Case(".debug_names", AccelTableKind::DebugNames)
+  return llvm::StringSwitch<std::optional<DwarfLinkerAccelTableKind>>(SecName)
+      .Case(".debug_pubnames", DwarfLinkerAccelTableKind::Pub)
+      .Case(".debug_pubtypes", DwarfLinkerAccelTableKind::Pub)
+      .Case(".debug_names", DwarfLinkerAccelTableKind::DebugNames)
       .Default(std::nullopt);
 }
 
@@ -278,9 +275,9 @@ static std::string getMessageForDeletedAcceleratorTables(
   return Message;
 }
 
-template <typename Linker, typename OutDwarfFile, typename AddressMapBase>
-Error linkDebugInfoImpl(object::ObjectFile &File, const Options &Options,
-                        raw_pwrite_stream &OutStream) {
+Error linkDebugInfo(object::ObjectFile &File, const Options &Options,
+                    raw_pwrite_stream &OutStream) {
+
   auto ReportWarn = [&](const Twine &Message, StringRef Context,
                         const DWARFDie *Die) {
     warning(Message, Context);
@@ -300,33 +297,39 @@ Error linkDebugInfoImpl(object::ObjectFile &File, const Options &Options,
     WithColor::error(errs(), Context) << Message << '\n';
   };
 
-  // Create DWARF linker.
-  std::unique_ptr<Linker> DebugInfoLinker =
-      Linker::createLinker(ReportErr, ReportWarn);
-
+  // Create output streamer.
+  DwarfStreamer OutStreamer(OutputFileType::Object, OutStream, nullptr,
+                            ReportWarn, ReportWarn);
   Triple TargetTriple = File.makeTriple();
-  if (Error Err = DebugInfoLinker->createEmitter(
-          TargetTriple, Linker::OutputFileType::Object, OutStream))
-    return Err;
+  if (!OutStreamer.init(TargetTriple, formatv("cannot create a stream for {0}",
+                                              TargetTriple.getTriple())
+                                          .str()))
+    return createStringError(std::errc::invalid_argument, "");
 
-  DebugInfoLinker->setEstimatedObjfilesAmount(1);
-  DebugInfoLinker->setNumThreads(Options.NumThreads);
-  DebugInfoLinker->setNoODR(!Options.DoODRDeduplication);
-  DebugInfoLinker->setVerbosity(Options.Verbose);
-  DebugInfoLinker->setUpdateIndexTablesOnly(!Options.DoGarbageCollection);
+  std::unique_ptr<DWARFContext> Context = DWARFContext::create(File);
 
-  std::vector<std::unique_ptr<OutDwarfFile>> ObjectsForLinking(1);
+  // Create DWARF linker.
+  DWARFLinker DebugInfoLinker(&OutStreamer, DwarfLinkerClient::LLD);
+
+  DebugInfoLinker.setEstimatedObjfilesAmount(1);
+  DebugInfoLinker.setErrorHandler(ReportErr);
+  DebugInfoLinker.setWarningHandler(ReportWarn);
+  DebugInfoLinker.setNumThreads(Options.NumThreads);
+  DebugInfoLinker.setNoODR(!Options.DoODRDeduplication);
+  DebugInfoLinker.setVerbosity(Options.Verbose);
+  DebugInfoLinker.setUpdate(!Options.DoGarbageCollection);
+
+  std::vector<std::unique_ptr<DWARFFile>> ObjectsForLinking(1);
+  std::vector<std::unique_ptr<AddressesMap>> AddresssMapForLinking(1);
   std::vector<std::string> EmptyWarnings;
 
   // Add object files to the DWARFLinker.
-  std::unique_ptr<DWARFContext> Context = DWARFContext::create(File);
-  std::unique_ptr<ObjFileAddressMap<AddressMapBase>> AddressesMap(
-      std::make_unique<ObjFileAddressMap<AddressMapBase>>(*Context, Options,
-                                                          File));
+  AddresssMapForLinking[0] =
+      std::make_unique<ObjFileAddressMap>(*Context, Options, File);
 
-  ObjectsForLinking[0] =
-      std::make_unique<OutDwarfFile>(File.getFileName(), std::move(Context),
-                                     std::move(AddressesMap), EmptyWarnings);
+  ObjectsForLinking[0] = std::make_unique<DWARFFile>(
+      File.getFileName(), &*Context, AddresssMapForLinking[0].get(),
+      EmptyWarnings);
 
   uint16_t MaxDWARFVersion = 0;
   std::function<void(const DWARFUnit &Unit)> OnCUDieLoaded =
@@ -335,17 +338,17 @@ Error linkDebugInfoImpl(object::ObjectFile &File, const Options &Options,
       };
 
   for (size_t I = 0; I < ObjectsForLinking.size(); I++)
-    DebugInfoLinker->addObjectFile(*ObjectsForLinking[I], nullptr,
-                                   OnCUDieLoaded);
+    DebugInfoLinker.addObjectFile(*ObjectsForLinking[I], nullptr,
+                                  OnCUDieLoaded);
 
   // If we haven't seen any CUs, pick an arbitrary valid Dwarf version anyway.
   if (MaxDWARFVersion == 0)
     MaxDWARFVersion = 3;
 
-  if (Error Err = DebugInfoLinker->setTargetDWARFVersion(MaxDWARFVersion))
+  if (Error Err = DebugInfoLinker.setTargetDWARFVersion(MaxDWARFVersion))
     return Err;
 
-  SmallVector<typename Linker::AccelTableKind> AccelTables;
+  SmallVector<DwarfLinkerAccelTableKind> AccelTables;
 
   switch (Options.AccelTableKind) {
   case DwarfUtilAccelKind::None:
@@ -353,74 +356,59 @@ Error linkDebugInfoImpl(object::ObjectFile &File, const Options &Options,
     break;
   case DwarfUtilAccelKind::DWARF:
     // use .debug_names for all DWARF versions.
-    AccelTables.push_back(Linker::AccelTableKind::DebugNames);
+    AccelTables.push_back(DwarfLinkerAccelTableKind::DebugNames);
     break;
   }
 
   // Add accelerator tables to DWARFLinker.
-  for (typename Linker::AccelTableKind Table : AccelTables)
-    DebugInfoLinker->addAccelTableKind(Table);
+  for (DwarfLinkerAccelTableKind Table : AccelTables)
+    DebugInfoLinker.addAccelTableKind(Table);
 
-  for (std::unique_ptr<OutDwarfFile> &CurFile : ObjectsForLinking) {
-    SmallVector<StringRef> AccelTableNamesToReplace;
-    SmallVector<StringRef> AccelTableNamesToDelete;
+  SmallVector<StringRef> AccelTableNamesToReplace;
+  SmallVector<StringRef> AccelTableNamesToDelete;
 
-    // Unknown debug sections or non-requested accelerator sections would be
-    // removed. Display warning for such sections.
-    for (SectionName Sec : CurFile->Dwarf->getDWARFObj().getSectionNames()) {
-      if (isDebugSection(Sec.Name)) {
-        std::optional<typename Linker::AccelTableKind> SrcAccelTableKind =
-            getAcceleratorTableKind<typename Linker::AccelTableKind>(Sec.Name);
+  // Unknown debug sections or non-requested accelerator sections would be
+  // removed. Display warning for such sections.
+  for (SectionName Sec : Context->getDWARFObj().getSectionNames()) {
+    if (isDebugSection(Sec.Name)) {
+      std::optional<DwarfLinkerAccelTableKind> SrcAccelTableKind =
+          getAcceleratorTableKind(Sec.Name);
 
-        if (SrcAccelTableKind) {
-          assert(knownByDWARFUtil(Sec.Name));
+      if (SrcAccelTableKind) {
+        assert(knownByDWARFUtil(Sec.Name));
 
-          if (Options.AccelTableKind == DwarfUtilAccelKind::None)
-            AccelTableNamesToDelete.push_back(Sec.Name);
-          else if (std::find(AccelTables.begin(), AccelTables.end(),
-                             *SrcAccelTableKind) == AccelTables.end())
-            AccelTableNamesToReplace.push_back(Sec.Name);
-        } else if (!knownByDWARFUtil(Sec.Name)) {
-          assert(!SrcAccelTableKind);
-          warning(
-              formatv(
-                  "'{0}' is not currently supported: section will be skipped",
-                  Sec.Name),
-              Options.InputFileName);
-        }
+        if (Options.AccelTableKind == DwarfUtilAccelKind::None)
+          AccelTableNamesToDelete.push_back(Sec.Name);
+        else if (std::find(AccelTables.begin(), AccelTables.end(),
+                           *SrcAccelTableKind) == AccelTables.end())
+          AccelTableNamesToReplace.push_back(Sec.Name);
+      } else if (!knownByDWARFUtil(Sec.Name)) {
+        assert(!SrcAccelTableKind);
+        warning(
+            formatv("'{0}' is not currently supported: section will be skipped",
+                    Sec.Name),
+            Options.InputFileName);
       }
     }
-
-    // Display message for the replaced accelerator tables.
-    if (!AccelTableNamesToReplace.empty())
-      warning(getMessageForReplacedAcceleratorTables(AccelTableNamesToReplace,
-                                                     Options.AccelTableKind),
-              Options.InputFileName);
-
-    // Display message for the removed accelerator tables.
-    if (!AccelTableNamesToDelete.empty())
-      warning(getMessageForDeletedAcceleratorTables(AccelTableNamesToDelete),
-              Options.InputFileName);
   }
 
+  // Display message for the replaced accelerator tables.
+  if (!AccelTableNamesToReplace.empty())
+    warning(getMessageForReplacedAcceleratorTables(AccelTableNamesToReplace,
+                                                   Options.AccelTableKind),
+            Options.InputFileName);
+
+  // Display message for the removed accelerator tables.
+  if (!AccelTableNamesToDelete.empty())
+    warning(getMessageForDeletedAcceleratorTables(AccelTableNamesToDelete),
+            Options.InputFileName);
+
   // Link debug info.
-  if (Error Err = DebugInfoLinker->link())
+  if (Error Err = DebugInfoLinker.link())
     return Err;
 
-  DebugInfoLinker->getEmitter()->finish();
+  OutStreamer.finish();
   return Error::success();
-}
-
-Error linkDebugInfo(object::ObjectFile &File, const Options &Options,
-                    raw_pwrite_stream &OutStream) {
-  if (Options.UseLLVMDWARFLinker)
-    return linkDebugInfoImpl<dwarflinker_parallel::DWARFLinker,
-                             dwarflinker_parallel::DWARFFile,
-                             dwarflinker_parallel::AddressesMap>(File, Options,
-                                                                 OutStream);
-  else
-    return linkDebugInfoImpl<DWARFLinker, DWARFFile, AddressesMap>(
-        File, Options, OutStream);
 }
 
 } // end of namespace dwarfutil

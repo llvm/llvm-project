@@ -12,7 +12,6 @@
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/CodeGen/NonRelocatableStringpool.h"
 #include "llvm/DWARFLinker/DWARFLinkerDeclContext.h"
-#include "llvm/DWARFLinker/DWARFStreamer.h"
 #include "llvm/DebugInfo/DWARF/DWARFAbbreviationDeclaration.h"
 #include "llvm/DebugInfo/DWARF/DWARFContext.h"
 #include "llvm/DebugInfo/DWARF/DWARFDataExtractor.h"
@@ -2057,7 +2056,7 @@ void DWARFLinker::DIECloner::rememberUnitForMacroOffset(CompileUnit &Unit) {
 }
 
 void DWARFLinker::DIECloner::generateLineTableForUnit(CompileUnit &Unit) {
-  if (LLVM_UNLIKELY(Emitter == nullptr))
+  if (LLVM_UNLIKELY(Linker.Options.NoOutput))
     return;
 
   // Check whether DW_AT_stmt_list attribute is presented.
@@ -2178,9 +2177,9 @@ void DWARFLinker::DIECloner::generateLineTableForUnit(CompileUnit &Unit) {
 }
 
 void DWARFLinker::emitAcceleratorEntriesForUnit(CompileUnit &Unit) {
-  for (AccelTableKind AccelTableKind : Options.AccelTables) {
+  for (DwarfLinkerAccelTableKind AccelTableKind : Options.AccelTables) {
     switch (AccelTableKind) {
-    case AccelTableKind::Apple: {
+    case DwarfLinkerAccelTableKind::Apple: {
       // Add namespaces.
       for (const auto &Namespace : Unit.getNamespaces())
         AppleNamespaces.addName(Namespace.Name, Namespace.Die->getOffset() +
@@ -2202,11 +2201,11 @@ void DWARFLinker::emitAcceleratorEntriesForUnit(CompileUnit &Unit) {
         AppleObjc.addName(ObjC.Name,
                           ObjC.Die->getOffset() + Unit.getStartOffset());
     } break;
-    case AccelTableKind::Pub: {
+    case DwarfLinkerAccelTableKind::Pub: {
       TheDwarfEmitter->emitPubNamesForUnit(Unit);
       TheDwarfEmitter->emitPubTypesForUnit(Unit);
     } break;
-    case AccelTableKind::DebugNames: {
+    case DwarfLinkerAccelTableKind::DebugNames: {
       for (const auto &Namespace : Unit.getNamespaces())
         DebugNames.addName(Namespace.Name, Namespace.Die->getOffset(),
                            Namespace.Die->getTag(), Unit.getUniqueID());
@@ -2525,7 +2524,7 @@ Error DWARFLinker::loadClangModule(objFileLoader Loader, const DWARFDie &CUDie,
 uint64_t DWARFLinker::DIECloner::cloneAllCompileUnits(
     DWARFContext &DwarfContext, const DWARFFile &File, bool IsLittleEndian) {
   uint64_t OutputDebugInfoSize =
-      (Emitter == nullptr) ? 0 : Emitter->getDebugInfoSectionSize();
+      Linker.Options.NoOutput ? 0 : Emitter->getDebugInfoSectionSize();
   const uint64_t StartOutputDebugInfoSize = OutputDebugInfoSize;
 
   for (auto &CurrentUnit : CompileUnits) {
@@ -2548,7 +2547,8 @@ uint64_t DWARFLinker::DIECloner::cloneAllCompileUnits(
 
     OutputDebugInfoSize = CurrentUnit->computeNextUnitOffset(DwarfVersion);
 
-    if (Emitter != nullptr) {
+    if (!Linker.Options.NoOutput) {
+      assert(Emitter);
 
       generateLineTableForUnit(*CurrentUnit);
 
@@ -2575,10 +2575,10 @@ uint64_t DWARFLinker::DIECloner::cloneAllCompileUnits(
     }
   }
 
-  if (Emitter != nullptr) {
+  if (!Linker.Options.NoOutput) {
     assert(Emitter);
     // Emit macro tables.
-    Emitter->emitMacroTables(File.Dwarf.get(), UnitMacroMap, DebugStrPool);
+    Emitter->emitMacroTables(File.Dwarf, UnitMacroMap, DebugStrPool);
 
     // Emit all the compile unit's debug information.
     for (auto &CurrentUnit : CompileUnits) {
@@ -2703,6 +2703,7 @@ void DWARFLinker::addObjectFile(DWARFFile &File, objFileLoader Loader,
 }
 
 Error DWARFLinker::link() {
+  assert(Options.NoOutput || TheDwarfEmitter);
   assert((Options.TargetDWARFVersion != 0) &&
          "TargetDWARFVersion should be set");
 
@@ -2792,8 +2793,7 @@ Error DWARFLinker::link() {
   // later. This prevents undeterminism when analyze and clone execute
   // concurrently, as clone set the canonical DIE offset and analyze reads it.
   const uint64_t ModulesEndOffset =
-      (TheDwarfEmitter == nullptr) ? 0
-                                   : TheDwarfEmitter->getDebugInfoSectionSize();
+      Options.NoOutput ? 0 : TheDwarfEmitter->getDebugInfoSectionSize();
 
   // These variables manage the list of processed object files.
   // The mutex and condition variable are to ensure that this is thread safe.
@@ -2878,13 +2878,13 @@ Error DWARFLinker::link() {
       SizeByObject[OptContext.File.FileName].Input =
           getDebugInfoSize(*OptContext.File.Dwarf);
       SizeByObject[OptContext.File.FileName].Output =
-          DIECloner(*this, TheDwarfEmitter.get(), OptContext.File, DIEAlloc,
+          DIECloner(*this, TheDwarfEmitter, OptContext.File, DIEAlloc,
                     OptContext.CompileUnits, Options.Update, DebugStrPool,
                     DebugLineStrPool)
               .cloneAllCompileUnits(*OptContext.File.Dwarf, OptContext.File,
                                     OptContext.File.Dwarf->isLittleEndian());
     }
-    if ((TheDwarfEmitter != nullptr) && !OptContext.CompileUnits.empty() &&
+    if (!Options.NoOutput && !OptContext.CompileUnits.empty() &&
         LLVM_LIKELY(!Options.Update))
       patchFrameInfoForObject(
           OptContext.File, OptContext.File.Addresses->getValidAddressRanges(),
@@ -2897,23 +2897,23 @@ Error DWARFLinker::link() {
 
   auto EmitLambda = [&]() {
     // Emit everything that's global.
-    if (TheDwarfEmitter != nullptr) {
+    if (!Options.NoOutput) {
       TheDwarfEmitter->emitAbbrevs(Abbreviations, Options.TargetDWARFVersion);
       TheDwarfEmitter->emitStrings(DebugStrPool);
       TheDwarfEmitter->emitLineStrings(DebugLineStrPool);
-      for (AccelTableKind TableKind : Options.AccelTables) {
+      for (DwarfLinkerAccelTableKind TableKind : Options.AccelTables) {
         switch (TableKind) {
-        case AccelTableKind::Apple:
+        case DwarfLinkerAccelTableKind::Apple:
           TheDwarfEmitter->emitAppleNamespaces(AppleNamespaces);
           TheDwarfEmitter->emitAppleNames(AppleNames);
           TheDwarfEmitter->emitAppleTypes(AppleTypes);
           TheDwarfEmitter->emitAppleObjc(AppleObjc);
           break;
-        case AccelTableKind::Pub:
+        case DwarfLinkerAccelTableKind::Pub:
           // Already emitted by emitAcceleratorEntriesForUnit.
           // Already emitted by emitAcceleratorEntriesForUnit.
           break;
-        case AccelTableKind::DebugNames:
+        case DwarfLinkerAccelTableKind::DebugNames:
           TheDwarfEmitter->emitDebugNames(DebugNames);
           break;
         }
@@ -3041,7 +3041,7 @@ Error DWARFLinker::cloneModuleUnit(LinkContext &Context, RefModuleUnit &Unit,
   UnitListTy CompileUnits;
   CompileUnits.emplace_back(std::move(Unit.Unit));
   assert(TheDwarfEmitter);
-  DIECloner(*this, TheDwarfEmitter.get(), Unit.File, DIEAlloc, CompileUnits,
+  DIECloner(*this, TheDwarfEmitter, Unit.File, DIEAlloc, CompileUnits,
             Options.Update, DebugStrPool, DebugLineStrPool)
       .cloneAllCompileUnits(*Unit.File.Dwarf, Unit.File,
                             Unit.File.Dwarf->isLittleEndian());
@@ -3058,17 +3058,5 @@ void DWARFLinker::verifyInput(const DWARFFile &File) {
       Options.InputVerificationHandler(File);
   }
 }
-
-Error DWARFLinker::createEmitter(const Triple &TheTriple,
-                                 OutputFileType FileType,
-                                 raw_pwrite_stream &OutFile) {
-
-  TheDwarfEmitter = std::make_unique<DwarfStreamer>(
-      FileType, OutFile, StringsTranslator, WarningHandler);
-
-  return TheDwarfEmitter->init(TheTriple, "__DWARF");
-}
-
-DwarfEmitter *DWARFLinker::getEmitter() { return TheDwarfEmitter.get(); }
 
 } // namespace llvm
