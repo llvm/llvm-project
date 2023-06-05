@@ -121,3 +121,23 @@ transform.sequence failures(propagate) {
   transform.apply_patterns ["transform.test"] to %0 : !transform.any_op
   transform.test_print_remark_at_operand %1, "op was deleted" : !transform.any_op
 }
+
+// -----
+
+// CHECK-LABEL: func @canonicalization(
+//       CHECK:   %[[c5:.*]] = arith.constant 5 : index
+//       CHECK:   return %[[c5]]
+func.func @canonicalization(%t: tensor<5xf32>) -> index {
+  %c0 = arith.constant 0 : index
+  // expected-remark @below {{op was replaced}}
+  %dim = tensor.dim %t, %c0 : tensor<5xf32>
+  return %dim : index
+}
+
+transform.sequence failures(propagate) {
+^bb1(%arg1: !transform.any_op):
+  %0 = transform.structured.match ops{["tensor.dim"]} in %arg1 : (!transform.any_op) -> !transform.any_op
+  %1 = transform.structured.match ops{["func.func"]} in %arg1 : (!transform.any_op) -> !transform.any_op
+  transform.apply_patterns ["canonicalization"] to %1 : !transform.any_op
+  transform.test_print_remark_at_operand %0, "op was replaced" : !transform.any_op
+}
