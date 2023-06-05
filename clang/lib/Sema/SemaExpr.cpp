@@ -12098,14 +12098,14 @@ static QualType checkSizelessVectorShift(Sema &S, ExprResult &LHS,
     return QualType();
 
   QualType LHSType = LHS.get()->getType();
-  const BuiltinType *LHSBuiltinTy = LHSType->getAs<BuiltinType>();
+  const BuiltinType *LHSBuiltinTy = LHSType->castAs<BuiltinType>();
   QualType LHSEleType = LHSType->isVLSTBuiltinType()
                             ? LHSBuiltinTy->getSveEltType(S.getASTContext())
                             : LHSType;
 
   // Note that RHS might not be a vector
   QualType RHSType = RHS.get()->getType();
-  const BuiltinType *RHSBuiltinTy = RHSType->getAs<BuiltinType>();
+  const BuiltinType *RHSBuiltinTy = RHSType->castAs<BuiltinType>();
   QualType RHSEleType = RHSType->isVLSTBuiltinType()
                             ? RHSBuiltinTy->getSveEltType(S.getASTContext())
                             : RHSType;
