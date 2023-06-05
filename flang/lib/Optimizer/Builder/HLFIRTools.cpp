@@ -859,7 +859,7 @@ translateVariableToExtendedValue(mlir::Location loc, fir::FirOpBuilder &builder,
   llvm::SmallVector<mlir::Value> nonDefaultLbounds;
   if (variable.getType().isa<fir::BaseBoxType>() &&
       !variable.getIfVariableInterface()) {
-    // This special case avoids generating two generating to sets of identical
+    // This special case avoids generating two sets of identical
     // fir.box_dim to get both the lower bounds and extents.
     genLboundsAndExtentsFromBox(loc, builder, variable, nonDefaultLbounds,
                                 &extents);
@@ -928,7 +928,33 @@ hlfir::convertToValue(mlir::Location loc, fir::FirOpBuilder &builder,
       [&](const fir::CharArrayBoxValue &box) -> fir::ExtendedValue {
         return box;
       },
+      [&](const fir::MutableBoxValue &box) -> fir::ExtendedValue {
+        if (box.rank() != 0)
+          TODO(loc, "lower array descriptor designator to HLFIR value");
+        if (entity.isProcedure())
+          TODO(loc, "lower proc descriptor designator to HLFIR value");
+
+        hlfir::Entity derefedEntity =
+            hlfir::derefPointersAndAllocatables(loc, builder, entity);
+        mlir::Type eleTy = derefedEntity.getFortranElementType();
+
+        // Trivial values are unboxed.
+        if (derefedEntity.isScalar() && fir::isa_trivial(eleTy))
+          return builder.create<fir::LoadOp>(loc, derefedEntity);
+
+        if (mlir::isa<fir::CharacterType>(eleTy)) {
+          if (mlir::isa<fir::BoxCharType>(derefedEntity.getFirBase().getType()))
+            return genUnboxChar(loc, builder, derefedEntity.getFirBase());
+          // Extract length from the original entity.
+          mlir::Value len = genCharacterVariableLength(loc, builder, entity);
+          return fir::CharBoxValue{derefedEntity, len};
+        }
+
+        // Keep derived type value boxed.
+        return fir::factory::genMutableBoxRead(builder, loc, box);
+      },
       [&](const auto &) -> fir::ExtendedValue {
+        // Can we end up here?
         TODO(loc, "lower descriptor designator to HLFIR value");
       });
   return {exv, cleanup};
