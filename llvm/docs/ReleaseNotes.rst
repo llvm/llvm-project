@@ -334,6 +334,11 @@ Changes to LLDB
   example ``register read cpsr``. They are not shown when reading a register set,
   ``register read -s 0``.
 
+* A new command ``register info`` was added. This command will tell you everything that
+  LLDB knows about a register. Based on what LLDB already knows and what the debug
+  server tells it. Including but not limited to, the size, where it is read from and
+  the fields that the register contains.
+
 Changes to Sanitizers
 ---------------------
 * For Darwin users that override weak symbols, note that the dynamic linker will
