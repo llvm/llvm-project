@@ -118,6 +118,15 @@ td_library(
     ],
 )
 
+td_library(
+    name = "BuiltinDialectBytecodeTdFiles",
+    srcs = ["include/mlir/IR/BuiltinDialectBytecode.td"],
+    includes = ["include"],
+    deps = [
+        ":BytecodeTdFiles",
+    ],
+)
+
 gentbl_cc_library(
     name = "BuiltinDialectIncGen",
     strip_include_prefix = "include",
@@ -4380,8 +4389,8 @@ cc_library(
         ":GPUDialect",
         ":GPUPassIncGen",
         ":GPUToLLVMIRTranslation",
-        ":IndexDialect",
         ":IR",
+        ":IndexDialect",
         ":LLVMToLLVMIRTranslation",
         ":MemRefDialect",
         ":Pass",
