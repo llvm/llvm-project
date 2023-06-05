@@ -58,19 +58,6 @@ void handle_server(Alloc allocator, Dealloc deallocator) {
       }
       break;
     }
-    case rpc::Opcode::PRINT_TO_STDERR: {
-      uint64_t sizes[rpc::MAX_LANE_SIZE] = {0};
-      void *strs[rpc::MAX_LANE_SIZE] = {nullptr};
-      port->recv_n(strs, sizes, [&](uint64_t size) { return new char[size]; });
-      port->send([](rpc::Buffer *) { /* void */ });
-      for (uint64_t i = 0; i < rpc::MAX_LANE_SIZE; ++i) {
-        if (strs[i]) {
-          fwrite(strs[i], sizes[i], 1, stderr);
-          delete[] reinterpret_cast<uint8_t *>(strs[i]);
-        }
-      }
-      break;
-    }
     case rpc::Opcode::EXIT: {
       port->recv([](rpc::Buffer *buffer) {
         exit(reinterpret_cast<uint32_t *>(buffer->data)[0]);
