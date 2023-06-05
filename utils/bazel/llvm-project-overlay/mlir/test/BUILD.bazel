@@ -962,6 +962,7 @@ cc_library(
     deps = [
         ":TestDialect",
         ":TestPDLLPatternsIncGen",
+        "//mlir:CastInterfaces",
         "//mlir:IR",
         "//mlir:PDLDialect",
         "//mlir:PDLInterpDialect",
