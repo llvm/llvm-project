@@ -587,7 +587,8 @@ class RegisterCommandsTestCase(TestBase):
     def test_info_register(self):
         # The behaviour of this command is generic but the specific registers
         # are not, so this is written for AArch64 only.
-        # Text alignment and ordering are checked in the DumpRegisterInfo unit tests.
+        # Text alignment and ordering are checked in the DumpRegisterInfo and
+        # RegisterFlags unit tests.
         self.build()
         self.common_setup()
 
