@@ -293,6 +293,8 @@ multiclass MxBiArOp_AF<string MN, SDNode NODE, bits<4> CMD> {
                                   CMD, MxEncAddrMode_p<"opd">>;
   def NAME#"32aj" : MxBiArOp_R_RM<MN, NODE, MxType32a, MxType32.JOp, MxType32.JPat,
                                   CMD, MxEncAddrMode_j<"opd">>;
+  def NAME#"32ab" : MxBiArOp_R_RM<MN, NODE, MxType32a, MxType32.BOp, MxType32.BPat,
+                                  CMD, MxEncAddrMode_abs<"opd", true>>;
   def NAME#"32ai" : MxBiArOp_R_RI_xEA<MN, NODE, MxType32a, CMD>;
 
   def NAME#"32ar" : MxBiArOp_R_RR_xEA<MN, NODE, MxType32a, MxType32r, CMD>;
