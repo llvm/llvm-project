@@ -119,9 +119,7 @@ static bool isValidClauseInst(const MachineInstr &MI, bool IsVMEMClause) {
   // If this is a load instruction where the result has been coalesced with an operand, then we cannot clause it.
   for (const MachineOperand &ResMO : MI.defs()) {
     Register ResReg = ResMO.getReg();
-    for (const MachineOperand &MO : MI.uses()) {
-      if (!MO.isReg() || MO.isDef())
-        continue;
+    for (const MachineOperand &MO : MI.all_uses()) {
       if (MO.getReg() == ResReg)
         return false;
     }

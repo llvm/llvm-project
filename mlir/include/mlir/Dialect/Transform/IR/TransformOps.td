@@ -137,7 +137,9 @@ def ApplyPatternsOp : TransformDialectOp<"apply_patterns",
 
     Only patterns that were registered in the transform dialect's
     `PatternRegistry` are available. Additional patterns can be registered as
-    part of transform dialect extensions.
+    part of transform dialect extensions. "canonicalization" is a special set
+    of patterns that refers to all canonicalization patterns of all loaded
+    dialects.
 
     This transform only reads the target handle and modifies the payload. If a
     pattern erases or replaces a tracked op, the mapping is updated accordingly.

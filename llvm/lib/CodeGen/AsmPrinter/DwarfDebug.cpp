@@ -397,17 +397,14 @@ DwarfDebug::DwarfDebug(AsmPrinter *A)
   // 1: For ELF when requested.
   // 2: For XCOFF64: the AIX assembler will fill in debug section lengths
   //    according to the DWARF64 format for 64-bit assembly, so we must use
-  //    DWARF64 in the compiler for 64-bit mode on non-integrated-as mode.
-  bool IsXcoff = TT.isOSBinFormatXCOFF();
-  bool UseIntegratedAs = Asm->OutStreamer->isIntegratedAssemblerRequired();
+  //    DWARF64 in the compiler too for 64-bit mode.
   Dwarf64 &=
-      ((TT.isOSBinFormatELF() || (IsXcoff && UseIntegratedAs)) &&
-       (Asm->TM.Options.MCOptions.Dwarf64 || MMI->getModule()->isDwarf64())) ||
-      (IsXcoff && !UseIntegratedAs);
+      ((Asm->TM.Options.MCOptions.Dwarf64 || MMI->getModule()->isDwarf64()) &&
+       TT.isOSBinFormatELF()) ||
+      TT.isOSBinFormatXCOFF();
 
-  if (!Dwarf64 && TT.isArch64Bit() && IsXcoff && !UseIntegratedAs)
-    report_fatal_error(
-        "XCOFF requires DWARF64 for 64-bit mode on non-integrated-as mode!");
+  if (!Dwarf64 && TT.isArch64Bit() && TT.isOSBinFormatXCOFF())
+    report_fatal_error("XCOFF requires DWARF64 for 64-bit mode!");
 
   UseRangesSection = !NoDwarfRangesSection && !TT.isNVPTX();
 

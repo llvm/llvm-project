@@ -49,7 +49,8 @@ public:
   MLIR_DEFINE_EXPLICIT_INTERNAL_INLINE_TYPE_ID(SerializeToCubinPass)
 
   SerializeToCubinPass(StringRef triple = "nvptx64-nvidia-cuda",
-                       StringRef chip = "sm_35", StringRef features = "+ptx60");
+                       StringRef chip = "sm_35", StringRef features = "+ptx60",
+                       int optLevel = 2);
 
   StringRef getArgument() const override { return "gpu-to-cubin"; }
   StringRef getDescription() const override {
@@ -72,10 +73,12 @@ static void maybeSetOption(Pass::Option<std::string> &option, StringRef value) {
 }
 
 SerializeToCubinPass::SerializeToCubinPass(StringRef triple, StringRef chip,
-                                           StringRef features) {
+                                           StringRef features, int optLevel) {
   maybeSetOption(this->triple, triple);
   maybeSetOption(this->chip, chip);
   maybeSetOption(this->features, features);
+  if (this->optLevel.getNumOccurrences() == 0)
+    this->optLevel.setValue(optLevel);
 }
 
 void SerializeToCubinPass::getDependentDialects(
@@ -147,8 +150,10 @@ void mlir::registerGpuSerializeToCubinPass() {
 
 std::unique_ptr<Pass> mlir::createGpuSerializeToCubinPass(StringRef triple,
                                                           StringRef arch,
-                                                          StringRef features) {
-  return std::make_unique<SerializeToCubinPass>(triple, arch, features);
+                                                          StringRef features,
+                                                          int optLevel) {
+  return std::make_unique<SerializeToCubinPass>(triple, arch, features,
+                                                optLevel);
 }
 
 #else  // MLIR_GPU_TO_CUBIN_PASS_ENABLE

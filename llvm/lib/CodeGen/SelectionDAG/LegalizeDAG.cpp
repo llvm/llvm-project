@@ -999,6 +999,10 @@ void SelectionDAGLegalize::LegalizeOp(SDNode *Node) {
     if (Action != TargetLowering::Promote)
       Action = TLI.getOperationAction(Node->getOpcode(), MVT::Other);
     break;
+  case ISD::SET_FPENV:
+    Action = TLI.getOperationAction(Node->getOpcode(),
+                                    Node->getOperand(1).getValueType());
+    break;
   case ISD::FP_TO_FP16:
   case ISD::FP_TO_BF16:
   case ISD::SINT_TO_FP:
@@ -4460,6 +4464,29 @@ void SelectionDAGLegalize::ConvertNodeToLibcall(SDNode *Node) {
       break;
     }
     break;
+  case ISD::RESET_FPENV: {
+    // It is legalized to call 'fesetenv(FE_DFL_ENV)'. On most targets
+    // FE_DFL_ENV is defined as '((const fenv_t *) -1)' in glibc.
+    SDValue Ptr = DAG.getIntPtrConstant(-1LL, dl);
+    SDValue Chain = Node->getOperand(0);
+    Results.push_back(
+        DAG.makeStateFunctionCall(RTLIB::FESETENV, Ptr, Chain, dl));
+    break;
+  }
+  case ISD::GET_FPENV_MEM: {
+    SDValue Chain = Node->getOperand(0);
+    SDValue EnvPtr = Node->getOperand(1);
+    Results.push_back(
+        DAG.makeStateFunctionCall(RTLIB::FEGETENV, EnvPtr, Chain, dl));
+    break;
+  }
+  case ISD::SET_FPENV_MEM: {
+    SDValue Chain = Node->getOperand(0);
+    SDValue EnvPtr = Node->getOperand(1);
+    Results.push_back(
+        DAG.makeStateFunctionCall(RTLIB::FESETENV, EnvPtr, Chain, dl));
+    break;
+  }
   }
 
   // Replace the original node with the legalized result.

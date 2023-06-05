@@ -850,10 +850,7 @@ bool AMDGPURegisterBankInfo::executeInWaterfallLoop(
   assert(std::distance(NewBegin, NewEnd) == OrigRangeSize);
 
   for (MachineInstr &MI : make_range(NewBegin, NewEnd)) {
-    for (MachineOperand &Op : MI.uses()) {
-      if (!Op.isReg() || Op.isDef())
-        continue;
-
+    for (MachineOperand &Op : MI.all_uses()) {
       Register OldReg = Op.getReg();
       if (!SGPROperandRegs.count(OldReg))
         continue;

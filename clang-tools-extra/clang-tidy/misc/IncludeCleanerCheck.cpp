@@ -12,6 +12,7 @@
 #include "../ClangTidyOptions.h"
 #include "../utils/OptionsUtils.h"
 #include "clang-include-cleaner/Analysis.h"
+#include "clang-include-cleaner/IncludeSpeller.h"
 #include "clang-include-cleaner/Record.h"
 #include "clang-include-cleaner/Types.h"
 #include "clang/AST/ASTContext.h"
@@ -180,7 +181,7 @@ void IncludeCleanerCheck::check(const MatchFinder::MatchResult &Result) {
                                          FileStyle->IncludeStyle);
   for (const auto &Inc : Missing) {
     std::string Spelling =
-        include_cleaner::spellHeader(Inc.Missing, *HS, MainFile);
+        include_cleaner::spellHeader({Inc.Missing, *HS, MainFile});
     bool Angled = llvm::StringRef{Spelling}.starts_with("<");
     // We might suggest insertion of an existing include in edge cases, e.g.,
     // include is present in a PP-disabled region, or spelling of the header
