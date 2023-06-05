@@ -180,7 +180,6 @@ libcxx/include/ext/__hash
 libcxx/include/ext/hash_map
 libcxx/include/ext/hash_set
 libcxx/include/fenv.h
-libcxx/include/filesystem
 libcxx/include/__filesystem/copy_options.h
 libcxx/include/__filesystem/directory_entry.h
 libcxx/include/__filesystem/directory_iterator.h

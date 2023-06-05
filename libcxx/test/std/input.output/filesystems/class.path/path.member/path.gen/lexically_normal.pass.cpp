@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 // UNSUPPORTED: c++03
+// UNSUPPORTED: availability-filesystem-missing
 
 // <filesystem>
 
@@ -18,9 +19,9 @@
 #include <cstdio>
 #include <string>
 
-#include "test_macros.h"
+#include "../../path_helper.h"
 #include "count_new.h"
-#include "filesystem_test_helper.h"
+#include "test_macros.h"
 
 
 int main(int, char**) {
