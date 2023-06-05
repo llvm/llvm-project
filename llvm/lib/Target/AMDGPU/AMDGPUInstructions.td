@@ -123,20 +123,35 @@ def FMA : Predicate<"Subtarget->hasFMA()">;
 
 def InstFlag : OperandWithDefaultOps <i32, (ops (i32 0))>;
 
-class ImmOperandClass<string name, bit optional> : AsmOperandClass {
+class CustomOperandClass<string name, bit optional> : AsmOperandClass {
   let Name = name;
   let PredicateMethod = "is"#name;
-  let ParserMethod = "";
+  let ParserMethod = "parse"#name;
   let RenderMethod = "addImmOperands";
   let IsOptional = optional;
   let DefaultMethod = "default"#name;
 }
 
+class CustomOperandProps<bit optional = 0, string name = NAME,
+    AsmOperandClass opClass = CustomOperandClass<name, optional>> {
+  string PrintMethod = "print"#name;
+  AsmOperandClass ParserMatchClass = opClass;
+  string OperandType = "OPERAND_IMMEDIATE";
+}
+
+class CustomOperand<ValueType type, bit optional = 0, string name = NAME,
+    AsmOperandClass opClass = CustomOperandClass<name, optional>>
+  : Operand<type>, CustomOperandProps<optional, name, opClass>;
+
+class ImmOperandClass<string name, bit optional>
+    : CustomOperandClass<name, optional> {
+  let ParserMethod = "";
+}
+
 class ImmOperand<ValueType type, string name, bit optional = 0,
-                 string printer = "print"#name> : Operand<type> {
-  let ParserMatchClass = ImmOperandClass<name, optional>;
+                 string printer = "print"#name>
+    : CustomOperand<type, optional, name, ImmOperandClass<name, optional>> {
   let PrintMethod = printer;
-  let OperandType = "OPERAND_IMMEDIATE";
 }
 
 def s16imm : ImmOperand<i16, "S16Imm", 0, "printU16ImmOperand">;
