@@ -212,6 +212,12 @@ class is_canonicalized<SDPatternOperator op> : PatFrag<
   }];
 }
 
+class FoldTernaryOpPat<SDPatternOperator op1, SDPatternOperator op2> : PatFrag<
+  (ops node:$src0, node:$src1, node:$src2),
+  (op2 (op1 node:$src0, node:$src1), node:$src2)
+>;
+
+def imad : FoldTernaryOpPat<mul, add>;
 
 let Properties = [SDNPCommutative, SDNPAssociative] in {
 def smax_oneuse : HasOneUseBinOp<smax>;

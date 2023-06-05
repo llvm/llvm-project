@@ -136,15 +136,13 @@ define i32 @v_mad_u16_zext(i16 %arg0, i16 %arg1, i16 %arg2) {
 ; GFX8-LABEL: v_mad_u16_zext:
 ; GFX8:       ; %bb.0:
 ; GFX8-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX8-NEXT:    v_mul_lo_u16_e32 v0, v0, v1
-; GFX8-NEXT:    v_add_u16_e32 v0, v0, v2
+; GFX8-NEXT:    v_mad_u16 v0, v0, v1, v2
 ; GFX8-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX9-LABEL: v_mad_u16_zext:
 ; GFX9:       ; %bb.0:
 ; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX9-NEXT:    v_mul_lo_u16_e32 v0, v0, v1
-; GFX9-NEXT:    v_add_u16_e32 v0, v0, v2
+; GFX9-NEXT:    v_mad_legacy_u16 v0, v0, v1, v2
 ; GFX9-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX10-LABEL: v_mad_u16_zext:
@@ -173,16 +171,14 @@ define i64 @v_mad_u16_zext64(i16 %arg0, i16 %arg1, i16 %arg2) {
 ; GFX8-LABEL: v_mad_u16_zext64:
 ; GFX8:       ; %bb.0:
 ; GFX8-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX8-NEXT:    v_mul_lo_u16_e32 v0, v0, v1
-; GFX8-NEXT:    v_add_u16_e32 v0, v0, v2
+; GFX8-NEXT:    v_mad_u16 v0, v0, v1, v2
 ; GFX8-NEXT:    v_mov_b32_e32 v1, 0
 ; GFX8-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX9-LABEL: v_mad_u16_zext64:
 ; GFX9:       ; %bb.0:
 ; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX9-NEXT:    v_mul_lo_u16_e32 v0, v0, v1
-; GFX9-NEXT:    v_add_u16_e32 v0, v0, v2
+; GFX9-NEXT:    v_mad_legacy_u16 v0, v0, v1, v2
 ; GFX9-NEXT:    v_mov_b32_e32 v1, 0
 ; GFX9-NEXT:    s_setpc_b64 s[30:31]
 ;
