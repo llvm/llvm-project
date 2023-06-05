@@ -59,11 +59,7 @@ constexpr int OffsetLabelIntervalBits = 20;
 
 using name = SmallString<COFF::NameSize>;
 
-enum AuxiliaryType {
-  ATWeakExternal,
-  ATFile,
-  ATSectionDefinition
-};
+enum AuxiliaryType { ATWeakExternal, ATFile, ATSectionDefinition };
 
 struct AuxSymbol {
   AuxiliaryType AuxType;
@@ -434,8 +430,8 @@ void WinCOFFObjectWriter::DefineSymbol(const MCSymbol &MCSym,
 
     // If no storage class was specified in the streamer, define it here.
     if (Local->Data.StorageClass == COFF::IMAGE_SYM_CLASS_NULL) {
-      bool IsExternal = MCSym.isExternal() ||
-                        (!MCSym.getFragment() && !MCSym.isVariable());
+      bool IsExternal =
+          MCSym.isExternal() || (!MCSym.getFragment() && !MCSym.isVariable());
 
       Local->Data.StorageClass = IsExternal ? COFF::IMAGE_SYM_CLASS_EXTERNAL
                                             : COFF::IMAGE_SYM_CLASS_STATIC;
@@ -523,7 +519,7 @@ void WinCOFFObjectWriter::WriteAuxiliarySymbols(
       break;
     case ATFile:
       W.OS.write(reinterpret_cast<const char *>(&i.Aux),
-                        UseBigObj ? COFF::Symbol32Size : COFF::Symbol16Size);
+                 UseBigObj ? COFF::Symbol32Size : COFF::Symbol16Size);
       break;
     case ATSectionDefinition:
       W.write<uint32_t>(i.Aux.SectionDefinition.Length);
@@ -533,7 +529,8 @@ void WinCOFFObjectWriter::WriteAuxiliarySymbols(
       W.write<uint16_t>(static_cast<int16_t>(i.Aux.SectionDefinition.Number));
       W.OS << char(i.Aux.SectionDefinition.Selection);
       W.OS.write_zeros(sizeof(i.Aux.SectionDefinition.unused));
-      W.write<uint16_t>(static_cast<int16_t>(i.Aux.SectionDefinition.Number >> 16));
+      W.write<uint16_t>(
+          static_cast<int16_t>(i.Aux.SectionDefinition.Number >> 16));
       if (UseBigObj)
         W.OS.write_zeros(COFF::Symbol32Size - COFF::Symbol16Size);
       break;
@@ -699,15 +696,15 @@ void WinCOFFObjectWriter::recordRelocation(MCAssembler &Asm,
 
   const MCSymbol &A = Target.getSymA()->getSymbol();
   if (!A.isRegistered()) {
-    Asm.getContext().reportError(Fixup.getLoc(),
-                                      Twine("symbol '") + A.getName() +
-                                          "' can not be undefined");
+    Asm.getContext().reportError(Fixup.getLoc(), Twine("symbol '") +
+                                                     A.getName() +
+                                                     "' can not be undefined");
     return;
   }
   if (A.isTemporary() && A.isUndefined()) {
-    Asm.getContext().reportError(Fixup.getLoc(),
-                                      Twine("assembler label '") + A.getName() +
-                                          "' can not be undefined");
+    Asm.getContext().reportError(Fixup.getLoc(), Twine("assembler label '") +
+                                                     A.getName() +
+                                                     "' can not be undefined");
     return;
   }
 
