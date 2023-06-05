@@ -381,8 +381,8 @@ void SIWholeQuadMode::markDefs(const MachineInstr &UseMI, LiveRange &LR,
       if (Reg.isVirtual()) {
         // Iterate over all operands to find relevant definitions
         bool HasDef = false;
-        for (const MachineOperand &Op : MI->operands()) {
-          if (!(Op.isReg() && Op.isDef() && Op.getReg() == Reg))
+        for (const MachineOperand &Op : MI->all_defs()) {
+          if (Op.getReg() != Reg)
             continue;
 
           // Compute lanes defined and overlap with use
@@ -472,11 +472,8 @@ void SIWholeQuadMode::markInstructionUses(const MachineInstr &MI, char Flag,
   LLVM_DEBUG(dbgs() << "markInstructionUses " << PrintState(Flag) << ": "
                     << MI);
 
-  for (const MachineOperand &Use : MI.uses()) {
-    if (!Use.isReg() || !Use.isUse())
-      continue;
+  for (const MachineOperand &Use : MI.all_uses())
     markOperand(MI, Use, Flag, Worklist);
-  }
 }
 
 // Scan instructions to determine which ones require an Exact execmask and
@@ -1186,11 +1183,9 @@ MachineBasicBlock::iterator SIWholeQuadMode::prepareInsertion(
   // does not need to be preserved.
   while (MBBI != Last) {
     bool IsExecDef = false;
-    for (const MachineOperand &MO : MBBI->operands()) {
-      if (MO.isReg() && MO.isDef()) {
-        IsExecDef |=
-            MO.getReg() == AMDGPU::EXEC_LO || MO.getReg() == AMDGPU::EXEC;
-      }
+    for (const MachineOperand &MO : MBBI->all_defs()) {
+      IsExecDef |=
+          MO.getReg() == AMDGPU::EXEC_LO || MO.getReg() == AMDGPU::EXEC;
     }
     if (!IsExecDef)
       break;

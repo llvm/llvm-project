@@ -5793,11 +5793,8 @@ loadMBUFScalarOperandsFromVGPR(const SIInstrInfo &TII, MachineInstr &MI,
   MachineBasicBlock::iterator AfterMI = MI;
   ++AfterMI;
   for (auto I = Begin; I != AfterMI; I++) {
-    for (auto &MO : I->uses()) {
-      if (MO.isReg() && MO.isUse()) {
-        MRI.clearKillFlags(MO.getReg());
-      }
-    }
+    for (auto &MO : I->all_uses())
+      MRI.clearKillFlags(MO.getReg());
   }
 
   // To insert the loop we need to split the block. Move everything after this
