@@ -5,20 +5,22 @@
 
 ; Ensure canonicalizeShuffleWithBinOps doesn't merge binops with different types
 
-; FIXME: Don't merge PCMPGT nodes of different types
+; Don't merge PCMPGT nodes of different types
 define <4 x i32> @dont_merge_pcmpgt(<16 x i8> %0, <4 x i32> %1) {
 ; SSE-LABEL: dont_merge_pcmpgt:
 ; SSE:       # %bb.0:
 ; SSE-NEXT:    pxor %xmm2, %xmm2
-; SSE-NEXT:    pblendw {{.*#+}} xmm0 = xmm0[0,1,2,3,4,5],xmm1[6,7]
 ; SSE-NEXT:    pcmpgtb %xmm2, %xmm0
+; SSE-NEXT:    pcmpgtd %xmm2, %xmm1
+; SSE-NEXT:    pblendw {{.*#+}} xmm0 = xmm0[0,1,2,3,4,5],xmm1[6,7]
 ; SSE-NEXT:    retq
 ;
 ; AVX-LABEL: dont_merge_pcmpgt:
 ; AVX:       # %bb.0:
 ; AVX-NEXT:    vpxor %xmm2, %xmm2, %xmm2
-; AVX-NEXT:    vpblendd {{.*#+}} xmm0 = xmm0[0,1,2],xmm1[3]
 ; AVX-NEXT:    vpcmpgtb %xmm2, %xmm0, %xmm0
+; AVX-NEXT:    vpcmpgtd %xmm2, %xmm1, %xmm1
+; AVX-NEXT:    vpblendd {{.*#+}} xmm0 = xmm0[0,1,2],xmm1[3]
 ; AVX-NEXT:    retq
   %3 = icmp sgt <16 x i8> %0, zeroinitializer
   %4 = sext <16 x i1> %3 to <16 x i8>
