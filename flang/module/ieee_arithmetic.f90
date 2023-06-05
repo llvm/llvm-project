@@ -15,6 +15,7 @@ module ieee_arithmetic
   use __Fortran_ieee_exceptions
 
   use __Fortran_builtins, only: &
+    ieee_fma => __builtin_fma, &
     ieee_is_nan => __builtin_ieee_is_nan, &
     ieee_is_negative => __builtin_ieee_is_negative, &
     ieee_is_normal => __builtin_ieee_is_normal, &
@@ -219,16 +220,6 @@ module ieee_arithmetic
   end interface ieee_copy_sign
   PRIVATE_RR(IEEE_COPY_SIGN)
 #undef IEEE_COPY_SIGN_RR
-
-#define IEEE_FMA_R(AKIND) \
-  elemental real(AKIND) function ieee_fma_a##AKIND(a, b, c); \
-    real(AKIND), intent(in) :: a, b, c; \
-  end function ieee_fma_a##AKIND;
-  interface ieee_fma
-    SPECIFICS_R(IEEE_FMA_R)
-  end interface ieee_fma
-  PRIVATE_R(IEEE_FMA)
-#undef IEEE_FMA_R
 
 #define IEEE_GET_ROUNDING_MODE_I(RKIND) \
   subroutine ieee_get_rounding_mode_i##RKIND(round_value, radix); \
