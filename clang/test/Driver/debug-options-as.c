@@ -1,4 +1,4 @@
-; XFAIL: target={{.*}}-aix{{.*}}
+// XFAIL: target={{.*}}-aix{{.*}}
 
 // Check to make sure clang is somewhat picky about -g options.
 // (Delived from debug-options.c)
