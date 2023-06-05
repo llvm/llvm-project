@@ -13,27 +13,27 @@
 #include "llvm/Demangle/Demangle.h"
 #include "llvm/Demangle/StringViewExtras.h"
 #include <cstdlib>
-#include <cstring>
+#include <string_view>
 
 using llvm::itanium_demangle::starts_with;
 
-std::string llvm::demangle(const std::string &MangledName) {
+std::string llvm::demangle(std::string_view MangledName) {
   std::string Result;
-  const char *S = MangledName.c_str();
 
   if (nonMicrosoftDemangle(MangledName, Result))
     return Result;
 
-  if (S[0] == '_' && nonMicrosoftDemangle(MangledName.substr(1), Result))
+  if (starts_with(MangledName, '_') &&
+      nonMicrosoftDemangle(MangledName.substr(1), Result))
     return Result;
 
-  if (char *Demangled = microsoftDemangle(S, nullptr, nullptr)) {
+  if (char *Demangled = microsoftDemangle(MangledName, nullptr, nullptr)) {
     Result = Demangled;
     std::free(Demangled);
-    return Result;
+  } else {
+    Result = MangledName;
   }
-
-  return MangledName;
+  return Result;
 }
 
 static bool isItaniumEncoding(std::string_view S) {
