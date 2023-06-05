@@ -864,8 +864,8 @@ static void computeKnownBitsFromCmp(const Value *V, const ICmpInst *Cmp,
   }
 }
 
-static void computeKnownBitsFromAssume(const Value *V, KnownBits &Known,
-                                       unsigned Depth, const SimplifyQuery &Q) {
+void llvm::computeKnownBitsFromAssume(const Value *V, KnownBits &Known,
+                                      unsigned Depth, const SimplifyQuery &Q) {
   // Use of assumptions is context-sensitive. If we don't have a context, we
   // cannot use them!
   if (!Q.AC || !Q.CxtI)
