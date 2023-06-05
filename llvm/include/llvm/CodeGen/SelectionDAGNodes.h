@@ -1438,6 +1438,8 @@ public:
     case ISD::VP_SCATTER:
     case ISD::EXPERIMENTAL_VP_STRIDED_LOAD:
     case ISD::EXPERIMENTAL_VP_STRIDED_STORE:
+    case ISD::GET_FPENV_MEM:
+    case ISD::SET_FPENV_MEM:
       return true;
     default:
       return N->isMemIntrinsic() || N->isTargetMemoryOpcode();
@@ -2897,6 +2899,23 @@ public:
 
   static bool classof(const SDNode *N) {
     return N->getOpcode() == ISD::MSCATTER;
+  }
+};
+
+class FPStateAccessSDNode : public MemSDNode {
+public:
+  friend class SelectionDAG;
+
+  FPStateAccessSDNode(unsigned NodeTy, unsigned Order, const DebugLoc &dl,
+                      SDVTList VTs, EVT MemVT, MachineMemOperand *MMO)
+      : MemSDNode(NodeTy, Order, dl, VTs, MemVT, MMO) {
+    assert((NodeTy == ISD::GET_FPENV_MEM || NodeTy == ISD::SET_FPENV_MEM) &&
+           "Expected FP state access node");
+  }
+
+  static bool classof(const SDNode *N) {
+    return N->getOpcode() == ISD::GET_FPENV_MEM ||
+           N->getOpcode() == ISD::SET_FPENV_MEM;
   }
 };
 

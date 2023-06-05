@@ -1582,6 +1582,11 @@ public:
                            ISD::MemIndexType IndexType,
                            bool IsTruncating = false);
 
+  SDValue getGetFPEnv(SDValue Chain, const SDLoc &dl, SDValue Ptr, EVT MemVT,
+                      MachineMemOperand *MMO);
+  SDValue getSetFPEnv(SDValue Chain, const SDLoc &dl, SDValue Ptr, EVT MemVT,
+                      MachineMemOperand *MMO);
+
   /// Construct a node to track a Value* through the backend.
   SDValue getSrcValue(const Value *v);
 
@@ -2343,6 +2348,9 @@ public:
       return true;
     }
   }
+
+  SDValue makeStateFunctionCall(unsigned LibFunc, SDValue Ptr, SDValue InChain,
+                                const SDLoc &DLoc);
 
 private:
   void InsertNode(SDNode *N);
