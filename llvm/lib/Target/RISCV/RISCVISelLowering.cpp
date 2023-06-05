@@ -1175,6 +1175,33 @@ MVT RISCVTargetLowering::getVPExplicitVectorLengthTy() const {
   return Subtarget.getXLenVT();
 }
 
+// Return false if we can lower get_vector_length to a vsetvli intrinsic.
+bool RISCVTargetLowering::shouldExpandGetVectorLength(EVT TripCountVT,
+                                                      unsigned VF,
+                                                      bool IsScalable) const {
+  if (!Subtarget.hasVInstructions())
+    return true;
+
+  if (!IsScalable)
+    return true;
+
+  if (TripCountVT != MVT::i32 && TripCountVT != Subtarget.getXLenVT())
+    return true;
+
+  // Don't allow VF=1 if those types are't legal.
+  if (VF < RISCV::RVVBitsPerBlock / Subtarget.getELEN())
+    return true;
+
+  // VLEN=32 support is incomplete.
+  if (Subtarget.getRealMinVLen() < RISCV::RVVBitsPerBlock)
+    return true;
+
+  // The maximum VF is for the smallest element width with LMUL=8.
+  // VF must be a power of 2.
+  unsigned MaxVF = (RISCV::RVVBitsPerBlock / 8) * 8;
+  return VF > MaxVF || !isPowerOf2_32(VF);
+}
+
 bool RISCVTargetLowering::getTgtMemIntrinsic(IntrinsicInfo &Info,
                                              const CallInst &I,
                                              MachineFunction &MF,
@@ -6623,6 +6650,48 @@ static SDValue lowerVectorIntrinsicScalars(SDValue Op, SelectionDAG &DAG,
   return DAG.getNode(Op->getOpcode(), DL, Op->getVTList(), Operands);
 }
 
+// Lower the llvm.get.vector.length intrinsic to vsetvli. We only support
+// scalable vector llvm.get.vector.length for now.
+//
+// We need to convert from a scalable VF to a vsetvli with VLMax equal to
+// (vscale * VF). The vscale and VF are independent of element width. We use
+// SEW=8 for the vsetvli because it is the only element width that supports all
+// fractional LMULs. The LMUL is choosen so that with SEW=8 the VLMax is
+// (vscale * VF). Where vscale is defined as VLEN/RVVBitsPerBlock. The
+// InsertVSETVLI pass can fix up the vtype of the vsetvli if a different
+// SEW and LMUL are better for the surrounding vector instructions.
+static SDValue lowerGetVectorLength(SDNode *N, SelectionDAG &DAG,
+                                    const RISCVSubtarget &Subtarget) {
+  MVT XLenVT = Subtarget.getXLenVT();
+
+  // The smallest LMUL is only valid for the smallest element width.
+  const unsigned ElementWidth = 8;
+
+  // Determine the VF that corresponds to LMUL 1 for ElementWidth.
+  unsigned LMul1VF = RISCV::RVVBitsPerBlock / ElementWidth;
+  // We don't support VF==1 with ELEN==32.
+  unsigned MinVF = RISCV::RVVBitsPerBlock / Subtarget.getELEN();
+
+  unsigned VF = N->getConstantOperandVal(2);
+  assert(VF >= MinVF && VF <= (LMul1VF * 8) && isPowerOf2_32(VF) &&
+         "Unexpected VF");
+
+  bool Fractional = VF < LMul1VF;
+  unsigned LMulVal = Fractional ? LMul1VF / VF : VF / LMul1VF;
+  unsigned VLMUL = (unsigned)RISCVVType::encodeLMUL(LMulVal, Fractional);
+  unsigned VSEW = RISCVVType::encodeSEW(ElementWidth);
+
+  SDLoc DL(N);
+
+  SDValue LMul = DAG.getTargetConstant(VLMUL, DL, XLenVT);
+  SDValue Sew = DAG.getTargetConstant(VSEW, DL, XLenVT);
+
+  SDValue AVL = DAG.getNode(ISD::ZERO_EXTEND, DL, XLenVT, N->getOperand(1));
+
+  SDValue ID = DAG.getTargetConstant(Intrinsic::riscv_vsetvli, DL, XLenVT);
+  return DAG.getNode(ISD::INTRINSIC_WO_CHAIN, DL, XLenVT, ID, AVL, Sew, LMul);
+}
+
 SDValue RISCVTargetLowering::LowerINTRINSIC_WO_CHAIN(SDValue Op,
                                                      SelectionDAG &DAG) const {
   unsigned IntNo = Op.getConstantOperandVal(0);
@@ -6648,6 +6717,8 @@ SDValue RISCVTargetLowering::LowerINTRINSIC_WO_CHAIN(SDValue Op,
         IntNo == Intrinsic::riscv_zip ? RISCVISD::ZIP : RISCVISD::UNZIP;
     return DAG.getNode(Opc, DL, XLenVT, Op.getOperand(1));
   }
+  case Intrinsic::experimental_get_vector_length:
+    return lowerGetVectorLength(Op.getNode(), DAG, Subtarget);
   case Intrinsic::riscv_vmv_x_s:
     assert(Op.getValueType() == XLenVT && "Unexpected VT!");
     return DAG.getNode(RISCVISD::VMV_X_S, DL, Op.getValueType(),
@@ -9471,6 +9542,11 @@ void RISCVTargetLowering::ReplaceNodeResults(SDNode *N,
     default:
       llvm_unreachable(
           "Don't know how to custom type legalize this intrinsic!");
+    case Intrinsic::experimental_get_vector_length: {
+      SDValue Res = lowerGetVectorLength(N, DAG, Subtarget);
+      Results.push_back(DAG.getNode(ISD::TRUNCATE, DL, MVT::i32, Res));
+      return;
+    }
     case Intrinsic::riscv_orc_b: {
       SDValue NewOp =
           DAG.getNode(ISD::ANY_EXTEND, DL, MVT::i64, N->getOperand(1));
