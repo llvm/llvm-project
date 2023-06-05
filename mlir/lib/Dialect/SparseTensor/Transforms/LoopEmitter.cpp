@@ -1162,15 +1162,6 @@ void LoopEmitter::emitExtraLocalsForTensorsAtDenseLvls(
 void LoopEmitter::exitForLoop(RewriterBase &rewriter, Location loc,
                               MutableArrayRef<Value> reduc) {
   const LoopInfo &loopInfo = loopStack.back();
-  rewriter.setInsertionPointToEnd(loopInfo.userCodeBlock);
-  if (!loopInfo.userCodeBlock->empty() &&
-      llvm::isa<scf::ForOp>(loopInfo.loop) &&
-      llvm::isa<scf::YieldOp>(&loopInfo.userCodeBlock->back())) {
-    // scf::For inserts an implicit yield op when there is no loop iter args. In
-    // this case, we need to insert the code before the yield.
-    assert(reduc.empty());
-    rewriter.setInsertionPoint(&loopInfo.userCodeBlock->back());
-  }
   for (auto [tid, lvl, reduced] : loopInfo.sliceDrivenInfo) {
     SliceInfo &info = sliceStack[tid].back();
     assert(isDenseDLT(lvlTypes[tid][lvl]));
@@ -1262,7 +1253,6 @@ void LoopEmitter::exitWhileLoop(OpBuilder &builder, Location loc,
                                 MutableArrayRef<Value> reduc) {
   const LoopInfo &loopInfo = loopStack.back();
   auto whileOp = llvm::cast<scf::WhileOp>(loopInfo.loop);
-  builder.setInsertionPointToEnd(loopInfo.userCodeBlock);
   Value iv = loopInfo.iv;
 
   // Finalize the induction. Note that the induction could be performed
@@ -1361,7 +1351,9 @@ void LoopEmitter::exitWhileLoop(OpBuilder &builder, Location loc,
   }
 
   assert(o == operands.size() + delta);
-  YIELD(operands);
+  if (!operands.empty())
+    YIELD(operands);
+
   builder.setInsertionPointAfter(whileOp);
 }
 
@@ -1370,7 +1362,17 @@ void LoopEmitter::exitCurrentLoop(RewriterBase &rewriter, Location loc,
   // Clean up the values, it would help use to discover potential bug at a
   // earlier stage (instead of silently using a wrong value).
   const LoopInfo &loopInfo = loopStack.back();
-  SmallVector<Value> red;
+
+  // Sets the insertion point to the right position.
+  rewriter.setInsertionPointToEnd(loopInfo.userCodeBlock);
+  if (!loopInfo.userCodeBlock->empty() &&
+      llvm::isa<scf::YieldOp>(&loopInfo.userCodeBlock->back())) {
+    // scf::While/For inserts an implicit yield op when there is no loop
+    // iter args. In this case, we need to insert the code before the yield.
+    assert(loopInfo.userCodeBlock->back().getNumResults() == 0);
+    rewriter.setInsertionPoint(&loopInfo.userCodeBlock->back());
+  }
+
   if (llvm::isa<scf::WhileOp>(loopInfo.loop)) {
     exitWhileLoop(rewriter, loc, reduc);
   } else {
@@ -1449,7 +1451,8 @@ std::pair<Operation *, ValueRange> LoopEmitter::genSliceLvlTraverseLoop(
         Value cont = CMPI(ult, coord, sliceHi);
         TypeRange types = args.drop_front(2).getTypes();
 
-        auto ifOp = builder.create<scf::IfOp>(loc, types, cont, true);
+        auto ifOp = builder.create<scf::IfOp>(loc, types, cont,
+                                              /*withElseBlock=*/!types.empty());
         {
           // 2 reduction variable maintained by us.
           SmallVector<Value> ifRet = args.drop_front(2);
@@ -1457,8 +1460,10 @@ std::pair<Operation *, ValueRange> LoopEmitter::genSliceLvlTraverseLoop(
 
           OpBuilder::InsertionGuard guard(builder);
           // If coord >= sliceHi.
-          builder.setInsertionPointToStart(&ifOp.getElseRegion().front());
-          YIELD(ifRet);
+          if (!ifRet.empty()) {
+            builder.setInsertionPointToStart(&ifOp.getElseRegion().front());
+            YIELD(ifRet);
+          }
 
           // If coord < sliceHi.
           builder.setInsertionPointToStart(&ifOp.getThenRegion().front());
