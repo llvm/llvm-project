@@ -76,7 +76,7 @@ static bool isExitBlock(BasicBlock *BB,
 /// rewrite the uses.
 bool llvm::formLCSSAForInstructions(SmallVectorImpl<Instruction *> &Worklist,
                                     const DominatorTree &DT, const LoopInfo &LI,
-                                    ScalarEvolution *Se,
+                                    ScalarEvolution *SE,
                                     SmallVectorImpl<PHINode *> *PHIsToRemove,
                                     SmallVectorImpl<PHINode *> *InsertedPHIs) {
   SmallVector<Use *, 16> UsesToRewrite;
@@ -147,6 +147,11 @@ bool llvm::formLCSSAForInstructions(SmallVectorImpl<Instruction *> &Worklist,
     SmallVector<PHINode *, 4> LocalInsertedPHIs;
     SSAUpdater SSAUpdate(&LocalInsertedPHIs);
     SSAUpdate.Initialize(I->getType(), I->getName());
+
+    // Force re-computation of I, as some users now need to use the new PHI
+    // node.
+    if (SE)
+      SE->forgetValue(I);
 
     // Insert the LCSSA phi's into all of the exit blocks dominated by the
     // value, and add them to the Phi's map.
