@@ -241,8 +241,6 @@ static LeakSuppressionContext *GetSuppressionContext() {
   return suppression_ctx;
 }
 
-static InternalMmapVectorNoCtor<Region> root_regions;
-
 void InitCommonLsan() {
   if (common_flags()->detect_leaks) {
     // Initialization which can fail or print warnings should only be done if
@@ -523,15 +521,33 @@ static void ProcessThreads(SuspendedThreadsList const &suspended_threads,
 
 #  endif  // SANITIZER_FUCHSIA
 
-bool HasRootRegions() { return !root_regions.empty(); }
+// A map that contains [region_begin, region_end) pairs.
+using RootRegions = DenseMap<detail::DenseMapPair<uptr, uptr>, uptr>;
+
+static RootRegions &GetRootRegionsLocked() {
+  global_mutex.CheckLocked();
+  static RootRegions *regions = nullptr;
+  alignas(RootRegions) static char placeholder[sizeof(RootRegions)];
+  if (!regions)
+    regions = new (placeholder) RootRegions();
+  return *regions;
+}
+
+bool HasRootRegions() { return !GetRootRegionsLocked().empty(); }
 
 void ScanRootRegions(Frontier *frontier,
                      const InternalMmapVectorNoCtor<Region> &mapped_regions) {
   if (!flags()->use_root_regions)
     return;
 
+  InternalMmapVector<Region> regions;
+  GetRootRegionsLocked().forEach([&](const auto &kv) {
+    regions.push_back({kv.first.first, kv.first.second});
+    return true;
+  });
+
   InternalMmapVector<Region> intersection;
-  Intersect(mapped_regions, root_regions, intersection);
+  Intersect(mapped_regions, regions, intersection);
 
   for (const Region &r : intersection) {
     LOG_POINTERS("Root region intersects with mapped region at %p-%p\n",
@@ -1011,7 +1027,7 @@ void __lsan_register_root_region(const void *begin, uptr size) {
   CHECK_LT(b, e);
 
   Lock l(&global_mutex);
-  root_regions.push_back({b, e});
+  ++GetRootRegionsLocked()[{b, e}];
 #endif  // CAN_SANITIZE_LEAKS
 }
 
@@ -1021,18 +1037,14 @@ void __lsan_unregister_root_region(const void *begin, uptr size) {
   uptr b = reinterpret_cast<uptr>(begin);
   uptr e = b + size;
   CHECK_LT(b, e);
+  VReport(1, "Unregistered root region at %p of size %zu\n", begin, size);
 
   {
     Lock l(&global_mutex);
-    for (uptr i = 0; i < root_regions.size(); i++) {
-      Region region = root_regions[i];
-      if (region.begin == b && region.end == e) {
-        uptr last_index = root_regions.size() - 1;
-        root_regions[i] = root_regions[last_index];
-        root_regions.pop_back();
-        VReport(1, "Unregistered root region at %p of size %zu\n", begin, size);
-        return;
-      }
+    if (auto *f = GetRootRegionsLocked().find({b, e})) {
+      if (--(f->second) == 0)
+        GetRootRegionsLocked().erase(f);
+      return;
     }
   }
   Report(
