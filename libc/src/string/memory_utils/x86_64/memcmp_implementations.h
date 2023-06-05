@@ -18,76 +18,79 @@ namespace __llvm_libc {
 
 [[maybe_unused]] LIBC_INLINE MemcmpReturnType
 inline_memcmp_generic_gt16(CPtr p1, CPtr p2, size_t count) {
-  return generic::Memcmp<uint64_t>::loop_and_tail_align_above(384, p1, p2,
-                                                              count);
+  if (LIBC_UNLIKELY(count >= 384)) {
+    if (auto value = generic::Memcmp<16>::block(p1, p2))
+      return value;
+    align_to_next_boundary<16, Arg::P1>(p1, p2, count);
+  }
+  return generic::Memcmp<16>::loop_and_tail(p1, p2, count);
 }
 
-#if defined(__SSE4_1__)
 [[maybe_unused]] LIBC_INLINE MemcmpReturnType
-inline_memcmp_x86_sse41_gt16(CPtr p1, CPtr p2, size_t count) {
-  return generic::Memcmp<__m128i>::loop_and_tail_align_above(384, p1, p2,
-                                                             count);
+inline_memcmp_x86_sse2_gt16(CPtr p1, CPtr p2, size_t count) {
+  if (LIBC_UNLIKELY(count >= 384)) {
+    if (auto value = x86::sse2::Memcmp<16>::block(p1, p2))
+      return value;
+    align_to_next_boundary<16, Arg::P1>(p1, p2, count);
+  }
+  return x86::sse2::Memcmp<16>::loop_and_tail(p1, p2, count);
 }
-#endif // __SSE4_1__
 
-#if defined(__AVX2__)
 [[maybe_unused]] LIBC_INLINE MemcmpReturnType
 inline_memcmp_x86_avx2_gt16(CPtr p1, CPtr p2, size_t count) {
   if (count <= 32)
-    return generic::Memcmp<__m128i>::head_tail(p1, p2, count);
+    return x86::sse2::Memcmp<16>::head_tail(p1, p2, count);
   if (count <= 64)
-    return generic::Memcmp<__m256i>::head_tail(p1, p2, count);
-  return generic::Memcmp<__m256i>::loop_and_tail_align_above(384, p1, p2,
-                                                             count);
+    return x86::avx2::Memcmp<32>::head_tail(p1, p2, count);
+  if (count <= 128)
+    return x86::avx2::Memcmp<64>::head_tail(p1, p2, count);
+  if (LIBC_UNLIKELY(count >= 384)) {
+    if (auto value = x86::avx2::Memcmp<32>::block(p1, p2))
+      return value;
+    align_to_next_boundary<32, Arg::P1>(p1, p2, count);
+  }
+  return x86::avx2::Memcmp<32>::loop_and_tail(p1, p2, count);
 }
-#endif // __AVX2__
 
-#if defined(__AVX512BW__)
 [[maybe_unused]] LIBC_INLINE MemcmpReturnType
 inline_memcmp_x86_avx512bw_gt16(CPtr p1, CPtr p2, size_t count) {
   if (count <= 32)
-    return generic::Memcmp<__m128i>::head_tail(p1, p2, count);
+    return x86::sse2::Memcmp<16>::head_tail(p1, p2, count);
   if (count <= 64)
-    return generic::Memcmp<__m256i>::head_tail(p1, p2, count);
+    return x86::avx2::Memcmp<32>::head_tail(p1, p2, count);
   if (count <= 128)
-    return generic::Memcmp<__m512i>::head_tail(p1, p2, count);
-  return generic::Memcmp<__m512i>::loop_and_tail_align_above(384, p1, p2,
-                                                             count);
+    return x86::avx512bw::Memcmp<64>::head_tail(p1, p2, count);
+  if (LIBC_UNLIKELY(count >= 384)) {
+    if (auto value = x86::avx512bw::Memcmp<64>::block(p1, p2))
+      return value;
+    align_to_next_boundary<64, Arg::P1>(p1, p2, count);
+  }
+  return x86::avx512bw::Memcmp<64>::loop_and_tail(p1, p2, count);
 }
-#endif // __AVX512BW__
 
 LIBC_INLINE MemcmpReturnType inline_memcmp_x86(CPtr p1, CPtr p2, size_t count) {
+
   if (count == 0)
     return MemcmpReturnType::ZERO();
   if (count == 1)
-    return generic::Memcmp<uint8_t>::block(p1, p2);
+    return generic::Memcmp<1>::block(p1, p2);
   if (count == 2)
-    return generic::Memcmp<uint16_t>::block(p1, p2);
+    return generic::Memcmp<2>::block(p1, p2);
   if (count == 3)
-    return generic::MemcmpSequence<uint16_t, uint8_t>::block(p1, p2);
-  if (count == 4)
-    return generic::Memcmp<uint32_t>::block(p1, p2);
-  if (count == 5)
-    return generic::MemcmpSequence<uint32_t, uint8_t>::block(p1, p2);
-  if (count == 6)
-    return generic::MemcmpSequence<uint32_t, uint16_t>::block(p1, p2);
-  if (count == 7)
-    return generic::Memcmp<uint32_t>::head_tail(p1, p2, 7);
-  if (count == 8)
-    return generic::Memcmp<uint64_t>::block(p1, p2);
+    return generic::Memcmp<3>::block(p1, p2);
+  if (count <= 8)
+    return generic::Memcmp<4>::head_tail(p1, p2, count);
   if (count <= 16)
-    return generic::Memcmp<uint64_t>::head_tail(p1, p2, count);
-#if defined(__AVX512BW__)
-  return inline_memcmp_x86_avx512bw_gt16(p1, p2, count);
-#elif defined(__AVX2__)
-  return inline_memcmp_x86_avx2_gt16(p1, p2, count);
-#elif defined(__SSE4_1__)
-  return inline_memcmp_x86_sse41_gt16(p1, p2, count);
-#else
-  return inline_memcmp_generic_gt16(p1, p2, count);
-#endif
+    return generic::Memcmp<8>::head_tail(p1, p2, count);
+  if constexpr (x86::kAvx512BW)
+    return inline_memcmp_x86_avx512bw_gt16(p1, p2, count);
+  else if constexpr (x86::kAvx2)
+    return inline_memcmp_x86_avx2_gt16(p1, p2, count);
+  else if constexpr (x86::kSse2)
+    return inline_memcmp_x86_sse2_gt16(p1, p2, count);
+  else
+    return inline_memcmp_generic_gt16(p1, p2, count);
 }
-
 } // namespace __llvm_libc
 
 #endif // LIBC_SRC_STRING_MEMORY_UTILS_X86_64_MEMCMP_IMPLEMENTATIONS_H

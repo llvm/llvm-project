@@ -450,12 +450,6 @@ function(add_implementation name impl_name)
     endforeach()
   endif()
 
-  if("${CMAKE_CXX_COMPILER_ID}" MATCHES "GNU")
-    # Prevent warning when passing x86 SIMD types as template arguments.
-    # e.g. "warning: ignoring attributes on template argument ‘__m128i’ [-Wignored-attributes]"
-    list(APPEND ADD_IMPL_COMPILE_OPTIONS "-Wno-ignored-attributes")
-  endif()
-
   add_entrypoint_object(${impl_name}
     NAME ${name}
     SRCS ${ADD_IMPL_SRCS}
@@ -570,7 +564,7 @@ endfunction()
 if(${LIBC_TARGET_ARCHITECTURE_IS_X86})
   add_memcpy(memcpy_x86_64_opt_sse2   COMPILE_OPTIONS -march=k8             REQUIRE SSE2)
   add_memcpy(memcpy_x86_64_opt_sse4   COMPILE_OPTIONS -march=nehalem        REQUIRE SSE4_2)
-  add_memcpy(memcpy_x86_64_opt_avx    COMPILE_OPTIONS -march=haswell        REQUIRE AVX)
+  add_memcpy(memcpy_x86_64_opt_avx2   COMPILE_OPTIONS -march=haswell        REQUIRE AVX2)
   add_memcpy(memcpy_x86_64_opt_avx512 COMPILE_OPTIONS -march=skylake-avx512 REQUIRE AVX512F)
   add_memcpy(memcpy_opt_host          COMPILE_OPTIONS ${LIBC_COMPILE_OPTIONS_NATIVE})
   add_memcpy(memcpy)
