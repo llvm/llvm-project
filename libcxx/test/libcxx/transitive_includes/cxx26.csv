@@ -397,6 +397,7 @@ new cstddef
 new cstdlib
 new version
 numbers version
+numeric climits
 numeric cmath
 numeric cstddef
 numeric cstdint
