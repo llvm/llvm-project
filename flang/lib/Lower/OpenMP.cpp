@@ -2494,6 +2494,129 @@ void Fortran::lower::genThreadprivateOp(
   converter.bindSymbol(sym, symThreadprivateExv);
 }
 
+void handleDeclareTarget(Fortran::lower::AbstractConverter &converter,
+                         Fortran::lower::pft::Evaluation &eval,
+                         const Fortran::parser::OpenMPDeclareTargetConstruct
+                             &declareTargetConstruct) {
+  llvm::SmallVector<std::pair<mlir::omp::DeclareTargetCaptureClause,
+                              Fortran::semantics::Symbol>,
+                    0>
+      symbolAndClause;
+  mlir::ModuleOp mod = converter.getFirOpBuilder().getModule();
+
+  auto findFuncAndVarSyms = [&](const Fortran::parser::OmpObjectList &objList,
+                                mlir::omp::DeclareTargetCaptureClause clause) {
+    for (const Fortran::parser::OmpObject &ompObject : objList.v) {
+      Fortran::common::visit(
+          Fortran::common::visitors{
+              [&](const Fortran::parser::Designator &designator) {
+                if (const Fortran::parser::Name *name =
+                        getDesignatorNameIfDataRef(designator)) {
+                  symbolAndClause.push_back(
+                      std::make_pair(clause, *name->symbol));
+                }
+              },
+              [&](const Fortran::parser::Name &name) {
+                symbolAndClause.push_back(std::make_pair(clause, *name.symbol));
+              }},
+          ompObject.u);
+    }
+  };
+
+  // The default capture type
+  Fortran::parser::OmpDeviceTypeClause::Type deviceType =
+      Fortran::parser::OmpDeviceTypeClause::Type::Any;
+  const auto &spec = std::get<Fortran::parser::OmpDeclareTargetSpecifier>(
+      declareTargetConstruct.t);
+  if (const auto *objectList{
+          Fortran::parser::Unwrap<Fortran::parser::OmpObjectList>(spec.u)}) {
+    // Case: declare target(func, var1, var2)
+    findFuncAndVarSyms(*objectList, mlir::omp::DeclareTargetCaptureClause::to);
+  } else if (const auto *clauseList{
+                 Fortran::parser::Unwrap<Fortran::parser::OmpClauseList>(
+                     spec.u)}) {
+    if (clauseList->v.empty()) {
+      // Case: declare target, implicit capture of function
+      symbolAndClause.push_back(
+          std::make_pair(mlir::omp::DeclareTargetCaptureClause::to,
+                         eval.getOwningProcedure()->getSubprogramSymbol()));
+    }
+
+    for (const Fortran::parser::OmpClause &clause : clauseList->v) {
+      if (const auto *toClause =
+              std::get_if<Fortran::parser::OmpClause::To>(&clause.u)) {
+        // Case: declare target to(func, var1, var2)...
+        findFuncAndVarSyms(toClause->v,
+                           mlir::omp::DeclareTargetCaptureClause::to);
+      } else if (const auto *linkClause =
+                     std::get_if<Fortran::parser::OmpClause::Link>(&clause.u)) {
+        // Case: declare target link(var1, var2)...
+        findFuncAndVarSyms(linkClause->v,
+                           mlir::omp::DeclareTargetCaptureClause::link);
+      } else if (const auto *deviceClause =
+                     std::get_if<Fortran::parser::OmpClause::DeviceType>(
+                         &clause.u)) {
+        // Case: declare target ... device_type(any | host | nohost)
+        deviceType = deviceClause->v.v;
+      }
+    }
+  }
+
+  for (std::pair<mlir::omp::DeclareTargetCaptureClause,
+                 Fortran::semantics::Symbol>
+           symClause : symbolAndClause) {
+    mlir::Operation *op =
+        mod.lookupSymbol(converter.mangleName(std::get<1>(symClause)));
+    // There's several cases this can currently be triggered and it could be
+    // one of the following:
+    // 1) Invalid argument passed to a declare target that currently isn't
+    // captured by a frontend semantic check
+    // 2) The symbol of a valid argument is not correctly updated by one of
+    // the prior passes, resulting in missing symbol information
+    // 3) It's a variable internal to a module or program, that is legal by
+    // Fortran OpenMP standards, but is currently unhandled as they do not
+    // appear in the symbol table as they are represented as allocas
+    if (!op)
+      TODO(converter.getCurrentLocation(),
+           "Missing symbol, possible case of currently unsupported use of "
+           "a program local variable in declare target or erroneous symbol "
+           "information ");
+
+    auto declareTargetOp = dyn_cast<mlir::omp::DeclareTargetInterface>(op);
+    if (!declareTargetOp)
+      fir::emitFatalError(
+          converter.getCurrentLocation(),
+          "Attempt to apply declare target on unsupported operation");
+
+    mlir::omp::DeclareTargetDeviceType newDeviceType;
+    switch (deviceType) {
+    case Fortran::parser::OmpDeviceTypeClause::Type::Nohost:
+      newDeviceType = mlir::omp::DeclareTargetDeviceType::nohost;
+      break;
+    case Fortran::parser::OmpDeviceTypeClause::Type::Host:
+      newDeviceType = mlir::omp::DeclareTargetDeviceType::host;
+      break;
+    case Fortran::parser::OmpDeviceTypeClause::Type::Any:
+      newDeviceType = mlir::omp::DeclareTargetDeviceType::any;
+      break;
+    }
+
+    // The function or global already has a declare target applied to it,
+    // very likely through implicit capture (usage in another declare
+    // target function/subroutine). It should be marked as any if it has
+    // been assigned both host and nohost, else we skip, as there is no
+    // change
+    if (declareTargetOp.isDeclareTarget()) {
+      if (declareTargetOp.getDeclareTargetDeviceType() != newDeviceType)
+        declareTargetOp.setDeclareTarget(
+            mlir::omp::DeclareTargetDeviceType::any, std::get<0>(symClause));
+      continue;
+    }
+
+    declareTargetOp.setDeclareTarget(newDeviceType, std::get<0>(symClause));
+  }
+}
+
 void Fortran::lower::genOpenMPDeclarativeConstruct(
     Fortran::lower::AbstractConverter &converter,
     Fortran::lower::pft::Evaluation &eval,
@@ -2516,8 +2639,7 @@ void Fortran::lower::genOpenMPDeclarativeConstruct(
           },
           [&](const Fortran::parser::OpenMPDeclareTargetConstruct
                   &declareTargetConstruct) {
-            TODO(converter.getCurrentLocation(),
-                 "OpenMPDeclareTargetConstruct");
+            handleDeclareTarget(converter, eval, declareTargetConstruct);
           },
           [&](const Fortran::parser::OpenMPRequiresConstruct
                   &requiresConstruct) {
