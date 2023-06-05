@@ -442,14 +442,14 @@ multiclass VIndexLoadStore<list<int> EEWList> {
   }
 }
 
-multiclass VALU_IV_V_X_I<string opcodestr, bits<6> funct6, Operand optype = simm5> {
+multiclass VALU_IV_V_X_I<string opcodestr, bits<6> funct6> {
   def V  : VALUVV<funct6, OPIVV, opcodestr # ".vv">,
            Sched<[WriteVIALUV_WorstCase, ReadVIALUV_WorstCase,
                   ReadVIALUV_WorstCase, ReadVMask]>;
   def X  : VALUVX<funct6, OPIVX, opcodestr # ".vx">,
            Sched<[WriteVIALUX_WorstCase, ReadVIALUV_WorstCase,
                   ReadVIALUX_WorstCase, ReadVMask]>;
-  def I  : VALUVI<funct6, opcodestr # ".vi", optype>,
+  def I  : VALUVI<funct6, opcodestr # ".vi", simm5>,
            Sched<[WriteVIALUI_WorstCase, ReadVIALUV_WorstCase,
                   ReadVMask]>;
 }

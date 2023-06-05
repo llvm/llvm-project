@@ -139,7 +139,7 @@ let Predicates = [HasStdExtZvbb] in {
   defm VROL_V   : VALU_IV_V_X<"vrol", 0b010101>;
   defm VROR_V   : VROR_IV_V_X_I<"vror", 0b010100>;
   let Constraints = "@earlyclobber $vd", RVVConstraint = WidenV in
-  defm VWSLL_V  : VALU_IV_V_X_I<"vwsll", 0b110101, uimm5>;
+  defm VWSLL_V  : VSHT_IV_V_X_I<"vwsll", 0b110101>;
 } // Predicates = [HasStdExtZvbb]
 
 let Predicates = [HasStdExtZvbc] in {
