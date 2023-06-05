@@ -89,8 +89,8 @@ TEST(Hover, Structured) {
          HI.Definition = "char bar";
          HI.Type = "char";
          HI.Offset = 0;
-         HI.Size = 1;
-         HI.Padding = 7;
+         HI.Size = 8;
+         HI.Padding = 56;
          HI.AccessSpecifier = "private";
        }},
       // Union field
@@ -107,8 +107,8 @@ TEST(Hover, Structured) {
          HI.Kind = index::SymbolKind::Field;
          HI.Definition = "char bar";
          HI.Type = "char";
-         HI.Size = 1;
-         HI.Padding = 15;
+         HI.Size = 8;
+         HI.Padding = 120;
          HI.AccessSpecifier = "public";
        }},
       // Bitfield
@@ -125,6 +125,8 @@ TEST(Hover, Structured) {
          HI.Kind = index::SymbolKind::Field;
          HI.Definition = "int x : 1";
          HI.Type = "int";
+         HI.Offset = 0;
+         HI.Size = 1;
          HI.AccessSpecifier = "public";
        }},
       // Local to class method.
@@ -188,7 +190,7 @@ TEST(Hover, Structured) {
          HI.Definition = "char bar";
          HI.Type = "char";
          HI.Offset = 0;
-         HI.Size = 1;
+         HI.Size = 8;
          HI.AccessSpecifier = "public";
        }},
       // Struct definition shows size.
@@ -200,7 +202,7 @@ TEST(Hover, Structured) {
          HI.Name = "X";
          HI.Kind = index::SymbolKind::Struct;
          HI.Definition = "struct X {}";
-         HI.Size = 1;
+         HI.Size = 8;
        }},
       // Variable with template type
       {R"cpp(
@@ -1285,6 +1287,26 @@ class Foo final {})cpp";
          HI.Kind = index::SymbolKind::Field;
          HI.Definition = "m_int arr[Size]";
          HI.Type = {"m_int[Size]", "int[Size]"};
+       }},
+      {// Bitfield offset, size and padding
+       R"cpp(
+            struct Foo {
+              char x;
+              char [[^y]] : 1;
+              int z;
+            };
+          )cpp",
+       [](HoverInfo &HI) {
+         HI.NamespaceScope = "";
+         HI.LocalScope = "Foo::";
+         HI.Name = "y";
+         HI.Kind = index::SymbolKind::Field;
+         HI.Definition = "char y : 1";
+         HI.Type = "char";
+         HI.Offset = 8;
+         HI.Size = 1;
+         HI.Padding = 23;
+         HI.AccessSpecifier = "public";
        }}};
   for (const auto &Case : Cases) {
     SCOPED_TRACE(Case.Code);
@@ -1508,7 +1530,7 @@ TEST(Hover, All) {
       {"auto s = ^[[\"Hello, world!\"]]; // string literal",
        [](HoverInfo &HI) {
          HI.Name = "string-literal";
-         HI.Size = 14;
+         HI.Size = 112;
          HI.Type = "const char[14]";
        }},
       {
@@ -3218,7 +3240,7 @@ TEST(Hover, Present) {
       {
           [](HoverInfo &HI) {
             HI.Kind = index::SymbolKind::Class;
-            HI.Size = 10;
+            HI.Size = 80;
             HI.TemplateParameters = {
                 {{"typename"}, std::string("T"), std::nullopt},
                 {{"typename"}, std::string("C"), std::string("bool")},
@@ -3274,16 +3296,38 @@ template <typename T, typename C = bool> class Foo {})",
             HI.Name = "foo";
             HI.Type = {"type", "can_type"};
             HI.Definition = "def";
-            HI.Size = 4;
-            HI.Offset = 12;
-            HI.Padding = 4;
+            HI.Size = 32;
+            HI.Offset = 96;
+            HI.Padding = 32;
           },
           R"(field foo
 
 Type: type (aka can_type)
 Value = value
 Offset: 12 bytes
-Size: 4 bytes (+4 padding)
+Size: 4 bytes (+4 bytes padding)
+
+// In test::Bar
+def)",
+      },
+      {
+          [](HoverInfo &HI) {
+            HI.Kind = index::SymbolKind::Field;
+            HI.LocalScope = "test::Bar::";
+            HI.Value = "value";
+            HI.Name = "foo";
+            HI.Type = {"type", "can_type"};
+            HI.Definition = "def";
+            HI.Size = 25;
+            HI.Offset = 35;
+            HI.Padding = 4;
+          },
+          R"(field foo
+
+Type: type (aka can_type)
+Value = value
+Offset: 4 bytes and 3 bits
+Size: 25 bits (+4 bits padding)
 
 // In test::Bar
 def)",
