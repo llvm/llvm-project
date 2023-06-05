@@ -509,16 +509,20 @@ bool getMAIIsGFX940XDL(unsigned Opc) {
 
 CanBeVOPD getCanBeVOPD(unsigned Opc, unsigned EncodingFamily) {
   const VOPDComponentInfo *Info = getVOPDComponentHelper(Opc);
-  if (Info)
+  if (Info) {
     // Check that Opc can be used as VOPDY for this encoding. V_MOV_B32 as a
     // VOPDX is just a placeholder here, it is supported on all encodings.
     // TODO: This can be optimized by creating tables of supported VOPDY
     // opcodes per encoding.
-    return {Info->CanBeVOPDX,
-            getVOPDFull(AMDGPU::getVOPDOpcode(AMDGPU::V_MOV_B32_e32),
-                        AMDGPU::getVOPDOpcode(Opc), EncodingFamily) != -1};
-  else
-    return {false, false};
+    unsigned VOPDMov = AMDGPU::getVOPDOpcode(AMDGPU::V_MOV_B32_e32);
+    bool CanBeVOPDY = getVOPDFull(VOPDMov, AMDGPU::getVOPDOpcode(Opc),
+                                  EncodingFamily, false) != -1 ||
+                      getVOPDFull(VOPDMov, AMDGPU::getVOPDOpcode(Opc),
+                                  EncodingFamily, true) != -1;
+    return {Info->CanBeVOPDX, CanBeVOPDY};
+  }
+
+  return {false, false};
 }
 
 unsigned getVOPDOpcode(unsigned Opc) {

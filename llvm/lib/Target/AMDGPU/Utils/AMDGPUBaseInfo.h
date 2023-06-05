@@ -536,7 +536,7 @@ unsigned getVOPDOpcode(unsigned Opc);
 
 LLVM_READONLY
 int getVOPDFull(unsigned OpX, unsigned OpY, unsigned EncodingFamily,
-                bool VOPD3 = false);
+                bool VOPD3);
 
 LLVM_READONLY
 bool isVOPD(unsigned Opc);
@@ -763,12 +763,15 @@ public:
   // checked.
   // If \p AllowSameVGPR is set then same VGPRs are allowed for X and Y sources
   // even though it violates requirement to be from different banks.
+  // If \p CheckDst is set to false both dst registers allowed to be either odd
+  // or even.
   bool hasInvalidOperand(std::function<unsigned(unsigned, unsigned)> GetRegIdx,
                          const MCRegisterInfo &MRI,
                          bool SkipSrc = false,
-                         bool AllowSameVGPR = false) const {
-    return getInvalidCompOperandIndex(GetRegIdx, MRI, SkipSrc, AllowSameVGPR)
-               .has_value();
+                         bool AllowSameVGPR = false,
+                         bool CheckDst = true) const {
+    return getInvalidCompOperandIndex(GetRegIdx, MRI, SkipSrc, AllowSameVGPR,
+                                      CheckDst).has_value();
   }
 
   // Check VOPD operands constraints.

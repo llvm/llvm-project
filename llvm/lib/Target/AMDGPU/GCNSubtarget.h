@@ -1249,6 +1249,8 @@ public:
 
   bool hasGFX12_10Insts() const { return GFX12_10Insts; }
 
+  bool hasVOPD3() const { return GFX12_10Insts; }
+
   /// \returns SGPR allocation granularity supported by the subtarget.
   unsigned getSGPRAllocGranule() const {
     return AMDGPU::IsaInfo::getSGPRAllocGranule(this);

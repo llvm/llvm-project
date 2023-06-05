@@ -36,11 +36,16 @@ using namespace llvm;
 
 bool llvm::checkVOPDRegConstraints(const SIInstrInfo &TII,
                                    const MachineInstr &FirstMI,
-                                   const MachineInstr &SecondMI) {
+                                   const MachineInstr &SecondMI,
+                                   bool IsVOPD3) {
   namespace VOPD = AMDGPU::VOPD;
 
   const MachineFunction *MF = FirstMI.getMF();
   const GCNSubtarget &ST = MF->getSubtarget<GCNSubtarget>();
+
+  if (IsVOPD3 && !ST.hasVOPD3())
+    return false;
+
   const SIRegisterInfo *TRI = dyn_cast<SIRegisterInfo>(ST.getRegisterInfo());
   const MachineRegisterInfo &MRI = MF->getRegInfo();
   // Literals also count against scalar bus limit
@@ -86,12 +91,16 @@ bool llvm::checkVOPDRegConstraints(const SIInstrInfo &TII,
         if (!is_contained(UniqueScalarRegs, Src0.getReg()))
           UniqueScalarRegs.push_back(Src0.getReg());
       }
-    } else {
-      if (!TII.isInlineConstant(MI, VOPD::Component::SRC0))
-        addLiteral(Src0);
+    } else if (!TII.isInlineConstant(MI, VOPD::Component::SRC0)) {
+      if (IsVOPD3)
+        return false;
+      addLiteral(Src0);
     }
 
     if (InstInfo[CompIdx].hasMandatoryLiteral()) {
+      if (IsVOPD3)
+        return false;
+
       auto CompOprIdx = InstInfo[CompIdx].getMandatoryLiteralCompOperandIndex();
       addLiteral(MI.getOperand(CompOprIdx));
     }
@@ -109,8 +118,10 @@ bool llvm::checkVOPDRegConstraints(const SIInstrInfo &TII,
                  FirstMI.getOpcode() == AMDGPU::V_MOV_B32_e32 &&
                  SecondMI.getOpcode() == AMDGPU::V_MOV_B32_e32;
   bool AllowSameVGPR = ST.hasGFX12_10Insts();
+  bool CheckDST = !IsVOPD3;
 
-  if (InstInfo.hasInvalidOperand(getVRegIdx, *TRI, SkipSrc, AllowSameVGPR))
+  if (InstInfo.hasInvalidOperand(getVRegIdx, *TRI, SkipSrc, AllowSameVGPR,
+                                 CheckDST))
     return false;
 
   LLVM_DEBUG(dbgs() << "VOPD Reg Constraints Passed\n\tX: " << FirstMI
@@ -142,7 +153,8 @@ static bool shouldScheduleVOPDAdjacent(const TargetInstrInfo &TII,
         (FirstCanBeVOPD.Y && SecondCanBeVOPD.X)))
     return false;
 
-  return checkVOPDRegConstraints(STII, *FirstMI, SecondMI);
+  return checkVOPDRegConstraints(STII, *FirstMI, SecondMI, false) ||
+         checkVOPDRegConstraints(STII, *FirstMI, SecondMI, true);
 }
 
 namespace {
