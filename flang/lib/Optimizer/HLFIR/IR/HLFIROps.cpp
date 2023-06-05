@@ -670,6 +670,53 @@ mlir::LogicalResult hlfir::SumOp::verify() {
 }
 
 //===----------------------------------------------------------------------===//
+// DotProductOp
+//===----------------------------------------------------------------------===//
+
+mlir::LogicalResult hlfir::DotProductOp::verify() {
+  mlir::Value lhs = getLhs();
+  mlir::Value rhs = getRhs();
+  fir::SequenceType lhsTy =
+      hlfir::getFortranElementOrSequenceType(lhs.getType())
+          .cast<fir::SequenceType>();
+  fir::SequenceType rhsTy =
+      hlfir::getFortranElementOrSequenceType(rhs.getType())
+          .cast<fir::SequenceType>();
+  llvm::ArrayRef<int64_t> lhsShape = lhsTy.getShape();
+  llvm::ArrayRef<int64_t> rhsShape = rhsTy.getShape();
+  std::size_t lhsRank = lhsShape.size();
+  std::size_t rhsRank = rhsShape.size();
+  mlir::Type lhsEleTy = lhsTy.getEleTy();
+  mlir::Type rhsEleTy = rhsTy.getEleTy();
+  mlir::Type resultTy = getResult().getType();
+
+  if ((lhsRank != 1) || (rhsRank != 1))
+    return emitOpError("both arrays must have rank 1");
+
+  int64_t lhsSize = lhsShape[0];
+  int64_t rhsSize = rhsShape[0];
+
+  if (lhsSize != rhsSize)
+    return emitOpError("both arrays must have the same size");
+
+  if (mlir::isa<fir::LogicalType>(lhsEleTy) !=
+      mlir::isa<fir::LogicalType>(rhsEleTy))
+    return emitOpError("if one array is logical, so should the other be");
+
+  if (mlir::isa<fir::LogicalType>(lhsEleTy) !=
+      mlir::isa<fir::LogicalType>(resultTy))
+    return emitOpError("the result type should be a logical only if the "
+                       "argument types are logical");
+
+  if (!hlfir::isFortranScalarNumericalType(resultTy) &&
+      !mlir::isa<fir::LogicalType>(resultTy))
+    return emitOpError(
+        "the result must be of scalar numerical or logical type");
+
+  return mlir::success();
+}
+
+//===----------------------------------------------------------------------===//
 // MatmulOp
 //===----------------------------------------------------------------------===//
 
