@@ -30,10 +30,10 @@ std::string llvm::demangle(const std::string &MangledName) {
   std::string Result;
   const char *S = MangledName.c_str();
 
-  if (nonMicrosoftDemangle(S, Result))
+  if (nonMicrosoftDemangle(MangledName, Result))
     return Result;
 
-  if (S[0] == '_' && nonMicrosoftDemangle(S + 1, Result))
+  if (S[0] == '_' && nonMicrosoftDemangle(MangledName.substr(1), Result))
     return Result;
 
   if (char *Demangled = microsoftDemangle(S, nullptr, nullptr)) {
@@ -45,14 +45,15 @@ std::string llvm::demangle(const std::string &MangledName) {
   return MangledName;
 }
 
-bool llvm::nonMicrosoftDemangle(const char *MangledName, std::string &Result) {
+bool llvm::nonMicrosoftDemangle(std::string_view MangledName,
+                                std::string &Result) {
   char *Demangled = nullptr;
-  if (isItaniumEncoding(MangledName))
+  if (isItaniumEncoding(MangledName.data()))
     Demangled = itaniumDemangle(MangledName);
-  else if (isRustEncoding(MangledName))
-    Demangled = rustDemangle(MangledName);
-  else if (isDLangEncoding(MangledName))
-    Demangled = dlangDemangle(MangledName);
+  else if (isRustEncoding(MangledName.data()))
+    Demangled = rustDemangle(MangledName.data());
+  else if (isDLangEncoding(MangledName.data()))
+    Demangled = dlangDemangle(MangledName.data());
 
   if (!Demangled)
     return false;
