@@ -39,10 +39,9 @@ enum Opcode : uint16_t {
   WRITE_TO_STREAM = 4,
   MALLOC = 5,
   FREE = 6,
-  PRINT_TO_STDERR = 7,
-  TEST_INCREMENT = 8,
-  TEST_INTERFACE = 9,
-  TEST_STREAM = 10,
+  TEST_INCREMENT = 7,
+  TEST_INTERFACE = 8,
+  TEST_STREAM = 9,
 };
 
 /// A fixed size channel used to communicate between the RPC client and server.
