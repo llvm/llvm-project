@@ -191,21 +191,33 @@ public:
     return n < getCurrentDepth() ? loopStack[n].iv : Value();
   }
 
+  /// Gets the total number of manifest tensors (excluding the synthetic
+  /// tensor).
+  unsigned getNumManifestTensors() const { return tensors.size(); }
+
   /// Gets the total number of tensors that loopEmitter is operating on.
-  unsigned getNumTensors() const { return tensors.size(); }
+  unsigned getNumTensors() const {
+    // Manifest tensors with one synthetic tensor at the end.
+    return getNumManifestTensors() + 1;
+  }
 
   /// Gets the TensorId for synthetic tensor.
   TensorId getSynTensorId() const { return tensors.size(); }
 
+  /// Gets the TensorId for output tensor.
+  TensorId getOutTensorId() const {
+    assert(hasOutput);
+    return getNumManifestTensors() - 1;
+  }
+
   /// Compresses a TensorId and Level into a TensorLevel.
   TensorLevel makeTensorLevel(TensorId t, Level l) const {
-    // TODO: getNumTensor() should include synthetic tensor.
-    return l * (getNumTensors() + 1) + t;
+    return l * getNumTensors() + t;
   }
 
   /// De-compresses a TensorLevel back to a pair of TensorId and Level.
   std::pair<TensorId, Level> unpackTensorLevel(TensorLevel tidLvl) const {
-    unsigned nt = getNumTensors() + 1;
+    unsigned nt = getNumTensors();
     return std::make_pair(tidLvl % nt, tidLvl / nt);
   }
 
@@ -323,10 +335,10 @@ private:
                                                  Location loc, Value crd,
                                                  TensorId tid, Level lvl);
 
-  bool isSynTensor(TensorId tid) const { return tid == getNumTensors(); }
+  bool isSynTensor(TensorId tid) const { return tid == getSynTensorId(); }
 
   bool isOutputTensor(TensorId tid) const {
-    return hasOutput && tid == getNumTensors() - 1;
+    return hasOutput && tid == getOutTensorId();
   }
 
   bool isSparseOutput(TensorId tid) const {
@@ -414,8 +426,8 @@ private:
   /// TODO: why not do this computation when we first store the reassoc,
   /// instead of doing it every time we look it up?
   SmallVector<Level, 2> getCollapseReassociation(TensorId tid, Level dstLvl) {
-    assert(tid < getNumTensors() + 1 && "Invalid TensorId");
-    assert(collapseReassoc.size() == getNumTensors() + 1);
+    assert(tid < getNumTensors() && "Invalid TensorId");
+    assert(collapseReassoc.size() == getNumTensors());
     if (const auto reassoc = collapseReassoc[tid]) {
       assert(!isSynTensor(tid) && !isOutputTensor(tid) &&
              "Output/Synthetic tensor should not have reassociation");

@@ -11,20 +11,11 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/Demangle/Demangle.h"
+#include "llvm/Demangle/StringViewExtras.h"
 #include <cstdlib>
 #include <cstring>
 
-static bool isItaniumEncoding(const char *S) {
-  // Itanium encoding requires 1 or 3 leading underscores, followed by 'Z'.
-  return std::strncmp(S, "_Z", 2) == 0 || std::strncmp(S, "___Z", 4) == 0;
-}
-
-static bool isRustEncoding(const char *S) { return S[0] == '_' && S[1] == 'R'; }
-
-static bool isDLangEncoding(const std::string &MangledName) {
-  return MangledName.size() >= 2 && MangledName[0] == '_' &&
-         MangledName[1] == 'D';
-}
+using llvm::itanium_demangle::starts_with;
 
 std::string llvm::demangle(const std::string &MangledName) {
   std::string Result;
@@ -45,14 +36,23 @@ std::string llvm::demangle(const std::string &MangledName) {
   return MangledName;
 }
 
+static bool isItaniumEncoding(std::string_view S) {
+  // Itanium encoding requires 1 or 3 leading underscores, followed by 'Z'.
+  return starts_with(S, "_Z") || starts_with(S, "___Z");
+}
+
+static bool isRustEncoding(std::string_view S) { return starts_with(S, "_R"); }
+
+static bool isDLangEncoding(std::string_view S) { return starts_with(S, "_D"); }
+
 bool llvm::nonMicrosoftDemangle(std::string_view MangledName,
                                 std::string &Result) {
   char *Demangled = nullptr;
-  if (isItaniumEncoding(MangledName.data()))
+  if (isItaniumEncoding(MangledName))
     Demangled = itaniumDemangle(MangledName);
-  else if (isRustEncoding(MangledName.data()))
+  else if (isRustEncoding(MangledName))
     Demangled = rustDemangle(MangledName);
-  else if (isDLangEncoding(MangledName.data()))
+  else if (isDLangEncoding(MangledName))
     Demangled = dlangDemangle(MangledName);
 
   if (!Demangled)

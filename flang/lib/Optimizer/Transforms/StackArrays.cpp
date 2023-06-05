@@ -476,7 +476,8 @@ static mlir::Value convertAllocationType(mlir::PatternRewriter &rewriter,
     return stack;
 
   fir::HeapType firHeapTy = mlir::cast<fir::HeapType>(heapTy);
-  fir::ReferenceType firRefTy = mlir::cast<fir::ReferenceType>(stackTy);
+  LLVM_ATTRIBUTE_UNUSED fir::ReferenceType firRefTy =
+      mlir::cast<fir::ReferenceType>(stackTy);
   assert(firHeapTy.getElementType() == firRefTy.getElementType() &&
          "Allocations must have the same type");
 

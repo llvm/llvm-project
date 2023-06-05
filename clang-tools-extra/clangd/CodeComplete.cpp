@@ -2219,11 +2219,15 @@ bool isIndexedForCodeCompletion(const NamedDecl &ND, ASTContext &ASTCtx) {
 CompletionItem CodeCompletion::render(const CodeCompleteOptions &Opts) const {
   CompletionItem LSP;
   const auto *InsertInclude = Includes.empty() ? nullptr : &Includes[0];
+  // We could move our indicators from label into labelDetails->description.
+  // In VSCode there are rendering issues that prevent these being aligned.
   LSP.label = ((InsertInclude && InsertInclude->Insertion)
                    ? Opts.IncludeIndicator.Insert
                    : Opts.IncludeIndicator.NoInsert) +
               (Opts.ShowOrigins ? "[" + llvm::to_string(Origin) + "]" : "") +
-              RequiredQualifier + Name + Signature;
+              RequiredQualifier + Name;
+  LSP.labelDetails.emplace();
+  LSP.labelDetails->detail = Signature;
 
   LSP.kind = Kind;
   LSP.detail = BundleSize > 1

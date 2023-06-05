@@ -138,6 +138,9 @@ AMDGPUTargetLowering::AMDGPUTargetLowering(const TargetMachine &TM,
   setOperationAction(ISD::LOAD, MVT::v16f64, Promote);
   AddPromotedToType(ISD::LOAD, MVT::v16f64, MVT::v32i32);
 
+  setOperationAction(ISD::LOAD, MVT::i128, Promote);
+  AddPromotedToType(ISD::LOAD, MVT::i128, MVT::v4i32);
+
   // There are no 64-bit extloads. These should be done as a 32-bit extload and
   // an extension to 64-bit.
   for (MVT VT : MVT::integer_valuetypes())
@@ -263,6 +266,9 @@ AMDGPUTargetLowering::AMDGPUTargetLowering(const TargetMachine &TM,
 
   setOperationAction(ISD::STORE, MVT::v16f64, Promote);
   AddPromotedToType(ISD::STORE, MVT::v16f64, MVT::v32i32);
+
+  setOperationAction(ISD::STORE, MVT::i128, Promote);
+  AddPromotedToType(ISD::STORE, MVT::i128, MVT::v4i32);
 
   setTruncStoreAction(MVT::i64, MVT::i1, Expand);
   setTruncStoreAction(MVT::i64, MVT::i8, Expand);

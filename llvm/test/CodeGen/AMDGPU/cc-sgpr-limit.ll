@@ -111,7 +111,7 @@ define amdgpu_gs { i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i
 ; CHECK: s_xor_b64 s[0:1], s[0:1], s[30:31]
 ; CHECK: s_xor_b64 s[0:1], s[0:1], s[32:33]
 ; CHECK: s_xor_b64 s[0:1], s[0:1], s[34:35]
-define amdgpu_gs void @_amdgpu_gs_sgpr_limit_i64(i64 inreg, i64 inreg, i64 inreg, i64 inreg, i64 inreg, i64 inreg, i64 inreg, i64 inreg, i64 inreg, i64 inreg, i64 inreg, i64 inreg, i64 inreg, i64 inreg, i64 inreg, i64 inreg, i64 inreg, i64 inreg, i64 inreg, <4 x i32> inreg %addr) {
+define amdgpu_gs void @_amdgpu_gs_sgpr_limit_i64(i64 inreg, i64 inreg, i64 inreg, i64 inreg, i64 inreg, i64 inreg, i64 inreg, i64 inreg, i64 inreg, i64 inreg, i64 inreg, i64 inreg, i64 inreg, i64 inreg, i64 inreg, i64 inreg, i64 inreg, i64 inreg, i64 inreg, ptr addrspace(8) inreg %addr) {
 .entry:
   %19 = xor i64 %0, %1
   %20 =  xor i64 %19, %2
@@ -131,8 +131,8 @@ define amdgpu_gs void @_amdgpu_gs_sgpr_limit_i64(i64 inreg, i64 inreg, i64 inreg
   %34 =  xor i64 %33, %16
   %35 =  xor i64 %34, %17
   %36 = bitcast i64 %35 to <2 x i32>
-  call void @llvm.amdgcn.raw.buffer.store.v2i32(<2 x i32> %36, <4 x i32> %addr, i32 4, i32 0, i32 0)
+  call void @llvm.amdgcn.raw.ptr.buffer.store.v2i32(<2 x i32> %36, ptr addrspace(8) %addr, i32 4, i32 0, i32 0)
   ret void
 }
 
-declare void @llvm.amdgcn.raw.buffer.store.v2i32(<2 x i32>, <4 x i32>, i32, i32, i32)
+declare void @llvm.amdgcn.raw.ptr.buffer.store.v2i32(<2 x i32>, ptr addrspace(8), i32, i32, i32)

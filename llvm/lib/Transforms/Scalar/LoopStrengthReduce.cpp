@@ -5659,7 +5659,7 @@ void LSRInstance::RewriteForPHI(
       }
     }
 
-  formLCSSAForInstructions(InsertedNonLCSSAInsts, DT, LI);
+  formLCSSAForInstructions(InsertedNonLCSSAInsts, DT, LI, &SE);
 }
 
 /// Emit instructions for the leading candidate expression for this LSRUse (this

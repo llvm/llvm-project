@@ -103,6 +103,26 @@ Changes to the AMDGPU Backend
   synchronization strategies around barriers. Refer to `AMDGPU memory model
   <AMDGPUUsage.html#memory-model>`__.
 
+* Address space 7, used for *buffer fat pointers* has been added.
+  It is non-integral and has 160-bit pointers (a 128-bit raw buffer resource and a
+  32-bit offset) and 32-bit indices. This is part of ongoing work to improve
+  the usability of buffer operations. Refer to `AMDGPU address spaces
+  <AMDGPUUsage.html#address-spaces>`__.
+
+* Address space 8, used for *buffer resources* has been added.
+  It is non-integral and has 128-bit pointers, which correspond to buffer
+  resources in the underlying hardware. These pointers should not be used with
+  `getelementptr` or other LLVM memory instructions, and can be created with
+  the `llvm.amdgcn.make.buffer.rsrc` intrinsic. Refer to `AMDGPU address spaces
+  <AMDGPUUsage.html#address_spaces>`__.
+
+* New versions of the intrinsics for working with buffer resources have been added.
+  These `llvm.amdgcn.*.ptr.[t]buffer.*` intrinsics have the same semantics as
+  the old `llvm.amdgcn.*.[t]buffer.*` intrinsics, except that their `rsrc`
+  arguments are represented by a `ptr addrspace(8)` instead of a `<4 x i32>`. This
+  improves the interaction between AMDGPU buffer operations and the LLVM memory
+  model, and so the non `.ptr` intrinsics are deprecated.
+
 Changes to the ARM Backend
 --------------------------
 
@@ -178,7 +198,7 @@ Changes to the RISC-V Backend
 * Changed the ShadowCallStack register from ``x18`` (``s2``) to ``x3``
   (``gp``). Note this breaks the existing non-standard ABI for ShadowCallStack
   on RISC-V, but conforms with the new "platform register" defined in the
-  RISC-V psABI (for more details see the 
+  RISC-V psABI (for more details see the
   `psABI discussion <https://github.com/riscv-non-isa/riscv-elf-psabi-doc/issues/370>`_).
 * Added support for Zfa extension version 0.2.
 * Updated support experimental vector crypto extensions to version 0.5.1 of

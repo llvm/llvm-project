@@ -1995,8 +1995,17 @@ Instruction *InstCombinerImpl::visitSub(BinaryOperator &I) {
     Constant *C2;
 
     // C-(X+C2) --> (C-C2)-X
-    if (match(Op1, m_Add(m_Value(X), m_ImmConstant(C2))))
-      return BinaryOperator::CreateSub(ConstantExpr::getSub(C, C2), X);
+    if (match(Op1, m_Add(m_Value(X), m_ImmConstant(C2)))) {
+      // C-C2 never overflow, and C-(X+C2), (X+C2) has NSW
+      // => (C-C2)-X can have NSW
+      bool WillNotSOV = willNotOverflowSignedSub(C, C2, I);
+      BinaryOperator *Res =
+          BinaryOperator::CreateSub(ConstantExpr::getSub(C, C2), X);
+      auto *OBO1 = cast<OverflowingBinaryOperator>(Op1);
+      Res->setHasNoSignedWrap(I.hasNoSignedWrap() && OBO1->hasNoSignedWrap() &&
+                              WillNotSOV);
+      return Res;
+    }
   }
 
   auto TryToNarrowDeduceFlags = [this, &I, &Op0, &Op1]() -> Instruction * {

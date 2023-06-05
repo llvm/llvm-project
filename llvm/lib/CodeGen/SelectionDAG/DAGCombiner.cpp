@@ -2320,6 +2320,39 @@ static ConstantSDNode *getAsNonOpaqueConstant(SDValue N) {
   return Const != nullptr && !Const->isOpaque() ? Const : nullptr;
 }
 
+// isTruncateOf - If N is a truncate of some other value, return true, record
+// the value being truncated in Op and which of Op's bits are zero/one in Known.
+// This function computes KnownBits to avoid a duplicated call to
+// computeKnownBits in the caller.
+static bool isTruncateOf(SelectionDAG &DAG, SDValue N, SDValue &Op,
+                         KnownBits &Known) {
+  if (N->getOpcode() == ISD::TRUNCATE) {
+    Op = N->getOperand(0);
+    Known = DAG.computeKnownBits(Op);
+    return true;
+  }
+
+  if (N.getOpcode() != ISD::SETCC ||
+      N.getValueType().getScalarType() != MVT::i1 ||
+      cast<CondCodeSDNode>(N.getOperand(2))->get() != ISD::SETNE)
+    return false;
+
+  SDValue Op0 = N->getOperand(0);
+  SDValue Op1 = N->getOperand(1);
+  assert(Op0.getValueType() == Op1.getValueType());
+
+  if (isNullOrNullSplat(Op0))
+    Op = Op1;
+  else if (isNullOrNullSplat(Op1))
+    Op = Op0;
+  else
+    return false;
+
+  Known = DAG.computeKnownBits(Op);
+
+  return (Known.Zero | 1).isAllOnes();
+}
+
 /// Return true if 'Use' is a load or a store that uses N as its base pointer
 /// and that N may be folded in the load / store addressing mode.
 static bool canFoldInAddressingMode(SDNode *N, SDNode *Use, SelectionDAG &DAG,
@@ -13221,39 +13254,6 @@ SDValue DAGCombiner::visitSIGN_EXTEND(SDNode *N) {
     return Res;
 
   return SDValue();
-}
-
-// isTruncateOf - If N is a truncate of some other value, return true, record
-// the value being truncated in Op and which of Op's bits are zero/one in Known.
-// This function computes KnownBits to avoid a duplicated call to
-// computeKnownBits in the caller.
-static bool isTruncateOf(SelectionDAG &DAG, SDValue N, SDValue &Op,
-                         KnownBits &Known) {
-  if (N->getOpcode() == ISD::TRUNCATE) {
-    Op = N->getOperand(0);
-    Known = DAG.computeKnownBits(Op);
-    return true;
-  }
-
-  if (N.getOpcode() != ISD::SETCC ||
-      N.getValueType().getScalarType() != MVT::i1 ||
-      cast<CondCodeSDNode>(N.getOperand(2))->get() != ISD::SETNE)
-    return false;
-
-  SDValue Op0 = N->getOperand(0);
-  SDValue Op1 = N->getOperand(1);
-  assert(Op0.getValueType() == Op1.getValueType());
-
-  if (isNullOrNullSplat(Op0))
-    Op = Op1;
-  else if (isNullOrNullSplat(Op1))
-    Op = Op0;
-  else
-    return false;
-
-  Known = DAG.computeKnownBits(Op);
-
-  return (Known.Zero | 1).isAllOnes();
 }
 
 /// Given an extending node with a pop-count operand, if the target does not

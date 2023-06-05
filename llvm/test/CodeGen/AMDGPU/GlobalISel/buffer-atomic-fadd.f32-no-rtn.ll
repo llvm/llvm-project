@@ -138,5 +138,142 @@ define amdgpu_ps void @buffer_atomic_fadd_f32_bothen_no_rtn(float %val, <4 x i32
   ret void
 }
 
+define amdgpu_ps void @buffer_ptr_atomic_fadd_f32_offset_no_rtn(float %val, ptr addrspace(8) inreg %rsrc, i32 inreg %soffset) {
+  ; GFX908_GFX11-LABEL: name: buffer_ptr_atomic_fadd_f32_offset_no_rtn
+  ; GFX908_GFX11: bb.1 (%ir-block.0):
+  ; GFX908_GFX11-NEXT:   liveins: $sgpr0, $sgpr1, $sgpr2, $sgpr3, $sgpr4, $vgpr0
+  ; GFX908_GFX11-NEXT: {{  $}}
+  ; GFX908_GFX11-NEXT:   [[PRED_COPY:%[0-9]+]]:vgpr_32 = PRED_COPY $vgpr0
+  ; GFX908_GFX11-NEXT:   [[PRED_COPY1:%[0-9]+]]:sreg_32 = PRED_COPY $sgpr0
+  ; GFX908_GFX11-NEXT:   [[PRED_COPY2:%[0-9]+]]:sreg_32 = PRED_COPY $sgpr1
+  ; GFX908_GFX11-NEXT:   [[PRED_COPY3:%[0-9]+]]:sreg_32 = PRED_COPY $sgpr2
+  ; GFX908_GFX11-NEXT:   [[PRED_COPY4:%[0-9]+]]:sreg_32 = PRED_COPY $sgpr3
+  ; GFX908_GFX11-NEXT:   [[PRED_COPY5:%[0-9]+]]:sreg_32 = PRED_COPY $sgpr4
+  ; GFX908_GFX11-NEXT:   [[REG_SEQUENCE:%[0-9]+]]:sgpr_128 = REG_SEQUENCE [[PRED_COPY1]], %subreg.sub0, [[PRED_COPY2]], %subreg.sub1, [[PRED_COPY3]], %subreg.sub2, [[PRED_COPY4]], %subreg.sub3
+  ; GFX908_GFX11-NEXT:   BUFFER_ATOMIC_ADD_F32_OFFSET [[PRED_COPY]], [[REG_SEQUENCE]], [[PRED_COPY5]], 0, 0, implicit $exec :: (volatile dereferenceable load store (s32) on %ir.rsrc, align 1, addrspace 8)
+  ; GFX908_GFX11-NEXT:   S_ENDPGM 0
+  ; GFX90A_GFX940-LABEL: name: buffer_ptr_atomic_fadd_f32_offset_no_rtn
+  ; GFX90A_GFX940: bb.1 (%ir-block.0):
+  ; GFX90A_GFX940-NEXT:   liveins: $sgpr0, $sgpr1, $sgpr2, $sgpr3, $sgpr4, $vgpr0
+  ; GFX90A_GFX940-NEXT: {{  $}}
+  ; GFX90A_GFX940-NEXT:   [[PRED_COPY:%[0-9]+]]:vgpr_32 = PRED_COPY $vgpr0
+  ; GFX90A_GFX940-NEXT:   [[PRED_COPY1:%[0-9]+]]:sreg_32 = PRED_COPY $sgpr0
+  ; GFX90A_GFX940-NEXT:   [[PRED_COPY2:%[0-9]+]]:sreg_32 = PRED_COPY $sgpr1
+  ; GFX90A_GFX940-NEXT:   [[PRED_COPY3:%[0-9]+]]:sreg_32 = PRED_COPY $sgpr2
+  ; GFX90A_GFX940-NEXT:   [[PRED_COPY4:%[0-9]+]]:sreg_32 = PRED_COPY $sgpr3
+  ; GFX90A_GFX940-NEXT:   [[PRED_COPY5:%[0-9]+]]:sreg_32 = PRED_COPY $sgpr4
+  ; GFX90A_GFX940-NEXT:   [[REG_SEQUENCE:%[0-9]+]]:sgpr_128 = REG_SEQUENCE [[PRED_COPY1]], %subreg.sub0, [[PRED_COPY2]], %subreg.sub1, [[PRED_COPY3]], %subreg.sub2, [[PRED_COPY4]], %subreg.sub3
+  ; GFX90A_GFX940-NEXT:   BUFFER_ATOMIC_ADD_F32_OFFSET [[PRED_COPY]], [[REG_SEQUENCE]], [[PRED_COPY5]], 0, 0, implicit $exec :: (volatile dereferenceable load store (s32) on %ir.rsrc, align 1, addrspace 8)
+  ; GFX90A_GFX940-NEXT:   S_ENDPGM 0
+  %ret = call float @llvm.amdgcn.raw.ptr.buffer.atomic.fadd.f32(float %val, ptr addrspace(8) %rsrc, i32 0, i32 %soffset, i32 0)
+  ret void
+}
+
+define amdgpu_ps void @buffer_ptr_atomic_fadd_f32_offen_no_rtn(float %val, ptr addrspace(8) inreg %rsrc, i32 %voffset, i32 inreg %soffset) {
+  ; GFX908_GFX11-LABEL: name: buffer_ptr_atomic_fadd_f32_offen_no_rtn
+  ; GFX908_GFX11: bb.1 (%ir-block.0):
+  ; GFX908_GFX11-NEXT:   liveins: $sgpr0, $sgpr1, $sgpr2, $sgpr3, $sgpr4, $vgpr0, $vgpr1
+  ; GFX908_GFX11-NEXT: {{  $}}
+  ; GFX908_GFX11-NEXT:   [[PRED_COPY:%[0-9]+]]:vgpr_32 = PRED_COPY $vgpr0
+  ; GFX908_GFX11-NEXT:   [[PRED_COPY1:%[0-9]+]]:sreg_32 = PRED_COPY $sgpr0
+  ; GFX908_GFX11-NEXT:   [[PRED_COPY2:%[0-9]+]]:sreg_32 = PRED_COPY $sgpr1
+  ; GFX908_GFX11-NEXT:   [[PRED_COPY3:%[0-9]+]]:sreg_32 = PRED_COPY $sgpr2
+  ; GFX908_GFX11-NEXT:   [[PRED_COPY4:%[0-9]+]]:sreg_32 = PRED_COPY $sgpr3
+  ; GFX908_GFX11-NEXT:   [[PRED_COPY5:%[0-9]+]]:vgpr_32 = PRED_COPY $vgpr1
+  ; GFX908_GFX11-NEXT:   [[PRED_COPY6:%[0-9]+]]:sreg_32 = PRED_COPY $sgpr4
+  ; GFX908_GFX11-NEXT:   [[REG_SEQUENCE:%[0-9]+]]:sgpr_128 = REG_SEQUENCE [[PRED_COPY1]], %subreg.sub0, [[PRED_COPY2]], %subreg.sub1, [[PRED_COPY3]], %subreg.sub2, [[PRED_COPY4]], %subreg.sub3
+  ; GFX908_GFX11-NEXT:   BUFFER_ATOMIC_ADD_F32_OFFEN [[PRED_COPY]], [[PRED_COPY5]], [[REG_SEQUENCE]], [[PRED_COPY6]], 0, 0, implicit $exec :: (volatile dereferenceable load store (s32) on %ir.rsrc, align 1, addrspace 8)
+  ; GFX908_GFX11-NEXT:   S_ENDPGM 0
+  ; GFX90A_GFX940-LABEL: name: buffer_ptr_atomic_fadd_f32_offen_no_rtn
+  ; GFX90A_GFX940: bb.1 (%ir-block.0):
+  ; GFX90A_GFX940-NEXT:   liveins: $sgpr0, $sgpr1, $sgpr2, $sgpr3, $sgpr4, $vgpr0, $vgpr1
+  ; GFX90A_GFX940-NEXT: {{  $}}
+  ; GFX90A_GFX940-NEXT:   [[PRED_COPY:%[0-9]+]]:vgpr_32 = PRED_COPY $vgpr0
+  ; GFX90A_GFX940-NEXT:   [[PRED_COPY1:%[0-9]+]]:sreg_32 = PRED_COPY $sgpr0
+  ; GFX90A_GFX940-NEXT:   [[PRED_COPY2:%[0-9]+]]:sreg_32 = PRED_COPY $sgpr1
+  ; GFX90A_GFX940-NEXT:   [[PRED_COPY3:%[0-9]+]]:sreg_32 = PRED_COPY $sgpr2
+  ; GFX90A_GFX940-NEXT:   [[PRED_COPY4:%[0-9]+]]:sreg_32 = PRED_COPY $sgpr3
+  ; GFX90A_GFX940-NEXT:   [[PRED_COPY5:%[0-9]+]]:vgpr_32 = PRED_COPY $vgpr1
+  ; GFX90A_GFX940-NEXT:   [[PRED_COPY6:%[0-9]+]]:sreg_32 = PRED_COPY $sgpr4
+  ; GFX90A_GFX940-NEXT:   [[REG_SEQUENCE:%[0-9]+]]:sgpr_128 = REG_SEQUENCE [[PRED_COPY1]], %subreg.sub0, [[PRED_COPY2]], %subreg.sub1, [[PRED_COPY3]], %subreg.sub2, [[PRED_COPY4]], %subreg.sub3
+  ; GFX90A_GFX940-NEXT:   BUFFER_ATOMIC_ADD_F32_OFFEN [[PRED_COPY]], [[PRED_COPY5]], [[REG_SEQUENCE]], [[PRED_COPY6]], 0, 0, implicit $exec :: (volatile dereferenceable load store (s32) on %ir.rsrc, align 1, addrspace 8)
+  ; GFX90A_GFX940-NEXT:   S_ENDPGM 0
+  %ret = call float @llvm.amdgcn.raw.ptr.buffer.atomic.fadd.f32(float %val, ptr addrspace(8) %rsrc, i32 %voffset, i32 %soffset, i32 0)
+  ret void
+}
+
+define amdgpu_ps void @buffer_ptr_atomic_fadd_f32_idxen_no_rtn(float %val, ptr addrspace(8) inreg %rsrc, i32 %vindex, i32 inreg %soffset) {
+  ; GFX908_GFX11-LABEL: name: buffer_ptr_atomic_fadd_f32_idxen_no_rtn
+  ; GFX908_GFX11: bb.1 (%ir-block.0):
+  ; GFX908_GFX11-NEXT:   liveins: $sgpr0, $sgpr1, $sgpr2, $sgpr3, $sgpr4, $vgpr0, $vgpr1
+  ; GFX908_GFX11-NEXT: {{  $}}
+  ; GFX908_GFX11-NEXT:   [[PRED_COPY:%[0-9]+]]:vgpr_32 = PRED_COPY $vgpr0
+  ; GFX908_GFX11-NEXT:   [[PRED_COPY1:%[0-9]+]]:sreg_32 = PRED_COPY $sgpr0
+  ; GFX908_GFX11-NEXT:   [[PRED_COPY2:%[0-9]+]]:sreg_32 = PRED_COPY $sgpr1
+  ; GFX908_GFX11-NEXT:   [[PRED_COPY3:%[0-9]+]]:sreg_32 = PRED_COPY $sgpr2
+  ; GFX908_GFX11-NEXT:   [[PRED_COPY4:%[0-9]+]]:sreg_32 = PRED_COPY $sgpr3
+  ; GFX908_GFX11-NEXT:   [[PRED_COPY5:%[0-9]+]]:vgpr_32 = PRED_COPY $vgpr1
+  ; GFX908_GFX11-NEXT:   [[PRED_COPY6:%[0-9]+]]:sreg_32 = PRED_COPY $sgpr4
+  ; GFX908_GFX11-NEXT:   [[REG_SEQUENCE:%[0-9]+]]:sgpr_128 = REG_SEQUENCE [[PRED_COPY1]], %subreg.sub0, [[PRED_COPY2]], %subreg.sub1, [[PRED_COPY3]], %subreg.sub2, [[PRED_COPY4]], %subreg.sub3
+  ; GFX908_GFX11-NEXT:   BUFFER_ATOMIC_ADD_F32_IDXEN [[PRED_COPY]], [[PRED_COPY5]], [[REG_SEQUENCE]], [[PRED_COPY6]], 0, 0, implicit $exec :: (volatile dereferenceable load store (s32) on %ir.rsrc, align 1, addrspace 8)
+  ; GFX908_GFX11-NEXT:   S_ENDPGM 0
+  ; GFX90A_GFX940-LABEL: name: buffer_ptr_atomic_fadd_f32_idxen_no_rtn
+  ; GFX90A_GFX940: bb.1 (%ir-block.0):
+  ; GFX90A_GFX940-NEXT:   liveins: $sgpr0, $sgpr1, $sgpr2, $sgpr3, $sgpr4, $vgpr0, $vgpr1
+  ; GFX90A_GFX940-NEXT: {{  $}}
+  ; GFX90A_GFX940-NEXT:   [[PRED_COPY:%[0-9]+]]:vgpr_32 = PRED_COPY $vgpr0
+  ; GFX90A_GFX940-NEXT:   [[PRED_COPY1:%[0-9]+]]:sreg_32 = PRED_COPY $sgpr0
+  ; GFX90A_GFX940-NEXT:   [[PRED_COPY2:%[0-9]+]]:sreg_32 = PRED_COPY $sgpr1
+  ; GFX90A_GFX940-NEXT:   [[PRED_COPY3:%[0-9]+]]:sreg_32 = PRED_COPY $sgpr2
+  ; GFX90A_GFX940-NEXT:   [[PRED_COPY4:%[0-9]+]]:sreg_32 = PRED_COPY $sgpr3
+  ; GFX90A_GFX940-NEXT:   [[PRED_COPY5:%[0-9]+]]:vgpr_32 = PRED_COPY $vgpr1
+  ; GFX90A_GFX940-NEXT:   [[PRED_COPY6:%[0-9]+]]:sreg_32 = PRED_COPY $sgpr4
+  ; GFX90A_GFX940-NEXT:   [[REG_SEQUENCE:%[0-9]+]]:sgpr_128 = REG_SEQUENCE [[PRED_COPY1]], %subreg.sub0, [[PRED_COPY2]], %subreg.sub1, [[PRED_COPY3]], %subreg.sub2, [[PRED_COPY4]], %subreg.sub3
+  ; GFX90A_GFX940-NEXT:   BUFFER_ATOMIC_ADD_F32_IDXEN [[PRED_COPY]], [[PRED_COPY5]], [[REG_SEQUENCE]], [[PRED_COPY6]], 0, 0, implicit $exec :: (volatile dereferenceable load store (s32) on %ir.rsrc, align 1, addrspace 8)
+  ; GFX90A_GFX940-NEXT:   S_ENDPGM 0
+  %ret = call float @llvm.amdgcn.struct.ptr.buffer.atomic.fadd.f32(float %val, ptr addrspace(8) %rsrc, i32 %vindex, i32 0, i32 %soffset, i32 0)
+  ret void
+}
+
+define amdgpu_ps void @buffer_ptr_atomic_fadd_f32_bothen_no_rtn(float %val, ptr addrspace(8) inreg %rsrc, i32 %vindex, i32 %voffset, i32 inreg %soffset) {
+  ; GFX908_GFX11-LABEL: name: buffer_ptr_atomic_fadd_f32_bothen_no_rtn
+  ; GFX908_GFX11: bb.1 (%ir-block.0):
+  ; GFX908_GFX11-NEXT:   liveins: $sgpr0, $sgpr1, $sgpr2, $sgpr3, $sgpr4, $vgpr0, $vgpr1, $vgpr2
+  ; GFX908_GFX11-NEXT: {{  $}}
+  ; GFX908_GFX11-NEXT:   [[PRED_COPY:%[0-9]+]]:vgpr_32 = PRED_COPY $vgpr0
+  ; GFX908_GFX11-NEXT:   [[PRED_COPY1:%[0-9]+]]:sreg_32 = PRED_COPY $sgpr0
+  ; GFX908_GFX11-NEXT:   [[PRED_COPY2:%[0-9]+]]:sreg_32 = PRED_COPY $sgpr1
+  ; GFX908_GFX11-NEXT:   [[PRED_COPY3:%[0-9]+]]:sreg_32 = PRED_COPY $sgpr2
+  ; GFX908_GFX11-NEXT:   [[PRED_COPY4:%[0-9]+]]:sreg_32 = PRED_COPY $sgpr3
+  ; GFX908_GFX11-NEXT:   [[PRED_COPY5:%[0-9]+]]:vgpr_32 = PRED_COPY $vgpr1
+  ; GFX908_GFX11-NEXT:   [[PRED_COPY6:%[0-9]+]]:vgpr_32 = PRED_COPY $vgpr2
+  ; GFX908_GFX11-NEXT:   [[PRED_COPY7:%[0-9]+]]:sreg_32 = PRED_COPY $sgpr4
+  ; GFX908_GFX11-NEXT:   [[REG_SEQUENCE:%[0-9]+]]:sgpr_128 = REG_SEQUENCE [[PRED_COPY1]], %subreg.sub0, [[PRED_COPY2]], %subreg.sub1, [[PRED_COPY3]], %subreg.sub2, [[PRED_COPY4]], %subreg.sub3
+  ; GFX908_GFX11-NEXT:   [[REG_SEQUENCE1:%[0-9]+]]:vreg_64 = REG_SEQUENCE [[PRED_COPY5]], %subreg.sub0, [[PRED_COPY6]], %subreg.sub1
+  ; GFX908_GFX11-NEXT:   BUFFER_ATOMIC_ADD_F32_BOTHEN [[PRED_COPY]], [[REG_SEQUENCE1]], [[REG_SEQUENCE]], [[PRED_COPY7]], 0, 2, implicit $exec :: (volatile dereferenceable load store (s32) on %ir.rsrc, align 1, addrspace 8)
+  ; GFX908_GFX11-NEXT:   S_ENDPGM 0
+  ; GFX90A_GFX940-LABEL: name: buffer_ptr_atomic_fadd_f32_bothen_no_rtn
+  ; GFX90A_GFX940: bb.1 (%ir-block.0):
+  ; GFX90A_GFX940-NEXT:   liveins: $sgpr0, $sgpr1, $sgpr2, $sgpr3, $sgpr4, $vgpr0, $vgpr1, $vgpr2
+  ; GFX90A_GFX940-NEXT: {{  $}}
+  ; GFX90A_GFX940-NEXT:   [[PRED_COPY:%[0-9]+]]:vgpr_32 = PRED_COPY $vgpr0
+  ; GFX90A_GFX940-NEXT:   [[PRED_COPY1:%[0-9]+]]:sreg_32 = PRED_COPY $sgpr0
+  ; GFX90A_GFX940-NEXT:   [[PRED_COPY2:%[0-9]+]]:sreg_32 = PRED_COPY $sgpr1
+  ; GFX90A_GFX940-NEXT:   [[PRED_COPY3:%[0-9]+]]:sreg_32 = PRED_COPY $sgpr2
+  ; GFX90A_GFX940-NEXT:   [[PRED_COPY4:%[0-9]+]]:sreg_32 = PRED_COPY $sgpr3
+  ; GFX90A_GFX940-NEXT:   [[PRED_COPY5:%[0-9]+]]:vgpr_32 = PRED_COPY $vgpr1
+  ; GFX90A_GFX940-NEXT:   [[PRED_COPY6:%[0-9]+]]:vgpr_32 = PRED_COPY $vgpr2
+  ; GFX90A_GFX940-NEXT:   [[PRED_COPY7:%[0-9]+]]:sreg_32 = PRED_COPY $sgpr4
+  ; GFX90A_GFX940-NEXT:   [[REG_SEQUENCE:%[0-9]+]]:sgpr_128 = REG_SEQUENCE [[PRED_COPY1]], %subreg.sub0, [[PRED_COPY2]], %subreg.sub1, [[PRED_COPY3]], %subreg.sub2, [[PRED_COPY4]], %subreg.sub3
+  ; GFX90A_GFX940-NEXT:   [[REG_SEQUENCE1:%[0-9]+]]:vreg_64_align2 = REG_SEQUENCE [[PRED_COPY5]], %subreg.sub0, [[PRED_COPY6]], %subreg.sub1
+  ; GFX90A_GFX940-NEXT:   BUFFER_ATOMIC_ADD_F32_BOTHEN [[PRED_COPY]], [[REG_SEQUENCE1]], [[REG_SEQUENCE]], [[PRED_COPY7]], 0, 2, implicit $exec :: (volatile dereferenceable load store (s32) on %ir.rsrc, align 1, addrspace 8)
+  ; GFX90A_GFX940-NEXT:   S_ENDPGM 0
+  %ret = call float @llvm.amdgcn.struct.ptr.buffer.atomic.fadd.f32(float %val, ptr addrspace(8) %rsrc, i32 %vindex, i32 %voffset, i32 %soffset, i32 2)
+  ret void
+}
+
 declare float @llvm.amdgcn.raw.buffer.atomic.fadd.f32(float, <4 x i32>, i32, i32, i32 immarg)
 declare float @llvm.amdgcn.struct.buffer.atomic.fadd.f32(float, <4 x i32>, i32, i32, i32, i32 immarg)
+
+declare float @llvm.amdgcn.raw.ptr.buffer.atomic.fadd.f32(float, ptr addrspace(8), i32, i32, i32 immarg)
+declare float @llvm.amdgcn.struct.ptr.buffer.atomic.fadd.f32(float, ptr addrspace(8), i32, i32, i32, i32 immarg)

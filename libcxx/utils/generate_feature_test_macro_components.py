@@ -1060,6 +1060,7 @@ lit_markup = {
     "semaphore": ["UNSUPPORTED: no-threads"],
     "shared_mutex": ["UNSUPPORTED: no-threads"],
     "stdatomic.h": ["UNSUPPORTED: no-threads"],
+    "stop_token": ["UNSUPPORTED: no-threads"],
     "thread": ["UNSUPPORTED: no-threads"],
 }
 

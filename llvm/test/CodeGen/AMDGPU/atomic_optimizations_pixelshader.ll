@@ -8,12 +8,12 @@
 ; RUN: llc -mtriple=amdgcn-- -mcpu=gfx1100 -mattr=+wavefrontsize32,-wavefrontsize64 -mattr=-flat-for-global -amdgpu-atomic-optimizations=true -verify-machineinstrs -simplifycfg-require-and-preserve-domtree=1 < %s | FileCheck -enable-var-scope -check-prefixes=GFX1132 %s
 
 declare i1 @llvm.amdgcn.wqm.vote(i1)
-declare i32 @llvm.amdgcn.raw.buffer.atomic.add(i32, <4 x i32>, i32, i32, i32 immarg)
-declare void @llvm.amdgcn.raw.buffer.store.f32(float, <4 x i32>, i32, i32, i32 immarg)
+declare i32 @llvm.amdgcn.raw.ptr.buffer.atomic.add(i32, ptr addrspace(8), i32, i32, i32 immarg)
+declare void @llvm.amdgcn.raw.ptr.buffer.store.f32(float, ptr addrspace(8), i32, i32, i32 immarg)
 
 ; Show what the atomic optimization pass will do for raw buffers.
 
-define amdgpu_ps void @add_i32_constant(<4 x i32> inreg %out, <4 x i32> inreg %inout) {
+define amdgpu_ps void @add_i32_constant(ptr addrspace(8) inreg %out, ptr addrspace(8) inreg %inout) {
 ; GFX7-LABEL: add_i32_constant:
 ; GFX7:       ; %bb.0: ; %entry
 ; GFX7-NEXT:    s_mov_b64 s[10:11], exec
@@ -231,19 +231,19 @@ define amdgpu_ps void @add_i32_constant(<4 x i32> inreg %out, <4 x i32> inreg %i
 ; GFX1132-NEXT:    s_endpgm
 entry:
   %cond1 = call i1 @llvm.amdgcn.wqm.vote(i1 true)
-  %old = call i32 @llvm.amdgcn.raw.buffer.atomic.add(i32 5, <4 x i32> %inout, i32 0, i32 0, i32 0)
+  %old = call i32 @llvm.amdgcn.raw.ptr.buffer.atomic.add(i32 5, ptr addrspace(8) %inout, i32 0, i32 0, i32 0)
   %cond2 = call i1 @llvm.amdgcn.wqm.vote(i1 true)
   %cond = and i1 %cond1, %cond2
   br i1 %cond, label %if, label %else
 if:
   %bitcast = bitcast i32 %old to float
-  call void @llvm.amdgcn.raw.buffer.store.f32(float %bitcast, <4 x i32> %out, i32 0, i32 0, i32 0)
+  call void @llvm.amdgcn.raw.ptr.buffer.store.f32(float %bitcast, ptr addrspace(8) %out, i32 0, i32 0, i32 0)
   ret void
 else:
   ret void
 }
 
-define amdgpu_ps void @add_i32_varying(<4 x i32> inreg %out, <4 x i32> inreg %inout, i32 %val) {
+define amdgpu_ps void @add_i32_varying(ptr addrspace(8) inreg %out, ptr addrspace(8) inreg %inout, i32 %val) {
 ; GFX7-LABEL: add_i32_varying:
 ; GFX7:       ; %bb.0: ; %entry
 ; GFX7-NEXT:    s_wqm_b64 s[8:9], -1
@@ -623,13 +623,13 @@ define amdgpu_ps void @add_i32_varying(<4 x i32> inreg %out, <4 x i32> inreg %in
 ; GFX1132-NEXT:    s_endpgm
 entry:
   %cond1 = call i1 @llvm.amdgcn.wqm.vote(i1 true)
-  %old = call i32 @llvm.amdgcn.raw.buffer.atomic.add(i32 %val, <4 x i32> %inout, i32 0, i32 0, i32 0)
+  %old = call i32 @llvm.amdgcn.raw.ptr.buffer.atomic.add(i32 %val, ptr addrspace(8) %inout, i32 0, i32 0, i32 0)
   %cond2 = call i1 @llvm.amdgcn.wqm.vote(i1 true)
   %cond = and i1 %cond1, %cond2
   br i1 %cond, label %if, label %else
 if:
   %bitcast = bitcast i32 %old to float
-  call void @llvm.amdgcn.raw.buffer.store.f32(float %bitcast, <4 x i32> %out, i32 0, i32 0, i32 0)
+  call void @llvm.amdgcn.raw.ptr.buffer.store.f32(float %bitcast, ptr addrspace(8) %out, i32 0, i32 0, i32 0)
   ret void
 else:
   ret void

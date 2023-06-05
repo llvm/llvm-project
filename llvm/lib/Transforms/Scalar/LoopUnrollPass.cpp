@@ -1602,7 +1602,7 @@ PreservedAnalyses LoopUnrollPass::run(Function &F,
   for (const auto &L : LI) {
     Changed |=
         simplifyLoop(L, &DT, &LI, &SE, &AC, nullptr, false /* PreserveLCSSA */);
-    Changed |= formLCSSARecursively(*L, DT, &LI);
+    Changed |= formLCSSARecursively(*L, DT, &LI, &SE);
   }
 
   // Add the loop nests in the reverse order of LoopInfo. See method

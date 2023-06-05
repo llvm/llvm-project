@@ -26,14 +26,6 @@ set(LIBUNWIND_ASM_SOURCES
     UnwindRegistersSave.S
     )
 
-# See add_asm_sources() in compiler-rt for explanation of this workaround.
-# CMake doesn't work correctly with assembly on AIX. Workaround by compiling
-# as C files as well.
-if((APPLE AND CMAKE_VERSION VERSION_LESS 3.19) OR
-   (MINGW AND CMAKE_VERSION VERSION_LESS 3.17))
-  set_source_files_properties(${LIBUNWIND_ASM_SOURCES} PROPERTIES LANGUAGE C)
-endif()
-
 set(LIBUNWIND_HEADERS
     AddressSpace.hpp
     assembly.h

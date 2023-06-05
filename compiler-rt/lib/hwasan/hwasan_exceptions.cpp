@@ -62,8 +62,7 @@ __hwasan_personality_wrapper(int version, _Unwind_Action actions,
 #error Unsupported architecture
 #endif
     uptr sp = get_cfa(context);
-    TagMemory(UntagAddr(sp), UntagAddr(fp) - UntagAddr(sp),
-              GetTagFromPointer(sp));
+    TagMemory(sp, fp - sp, 0);
   }
 
   return rc;

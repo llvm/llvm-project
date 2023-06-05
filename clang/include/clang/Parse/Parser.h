@@ -2525,6 +2525,7 @@ private:
     TypeIdUnambiguous,
     TypeIdAsTemplateArgument,
     TypeIdInTrailingReturnType,
+    TypeIdAsGenericSelectionArgument,
   };
 
   /// isTypeIdInParens - Assumes that a '(' was parsed and now we want to know
@@ -2541,13 +2542,29 @@ private:
     return isTypeIdInParens(isAmbiguous);
   }
 
+  /// Checks whether the current tokens form a type-id or an expression for the
+  /// purposes of use as the initial operand to a generic selection expression.
+  /// This requires special handling in C++ because it accepts either a type or
+  /// an expression, and we need to disambiguate which is which. However, we
+  /// cannot use the same logic as we've used for sizeof expressions, because
+  /// that logic relies on the operator only accepting a single argument,
+  /// whereas _Generic accepts a list of arguments.
+  bool isTypeIdForGenericSelection() {
+    if (getLangOpts().CPlusPlus) {
+      bool isAmbiguous;
+      return isCXXTypeId(TypeIdAsGenericSelectionArgument, isAmbiguous);
+    }
+    return isTypeSpecifierQualifier();
+  }
+
   /// Checks if the current tokens form type-id or expression.
   /// It is similar to isTypeIdInParens but does not suppose that type-id
   /// is in parenthesis.
   bool isTypeIdUnambiguously() {
-    bool IsAmbiguous;
-    if (getLangOpts().CPlusPlus)
-      return isCXXTypeId(TypeIdUnambiguous, IsAmbiguous);
+    if (getLangOpts().CPlusPlus) {
+      bool isAmbiguous;
+      return isCXXTypeId(TypeIdUnambiguous, isAmbiguous);
+    }
     return isTypeSpecifierQualifier();
   }
 

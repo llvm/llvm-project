@@ -6559,7 +6559,7 @@ def ArmStreamingDocs : Documentation {
 
 The ``__arm_streaming`` keyword is only available on AArch64 targets.
 It applies to function types and specifies that the function has a
-“streaming interface”.  This means that:
+"streaming interface".  This means that:
 
 * the function requires the Scalable Matrix Extension (SME)
 
@@ -6578,7 +6578,7 @@ function calls an ``__arm_streaming`` function, Clang generates code
 that switches into streaming mode before calling the function and
 switches back to non-streaming mode on return.
 
-``__arm_streaming`` can appear anywhere that a standard ``[[…]]`` type
+``__arm_streaming`` can appear anywhere that a standard ``[[...]]`` type
 attribute can appear.
 
 See `Arm C Language Extensions <https://github.com/ARM-software/acle>`_

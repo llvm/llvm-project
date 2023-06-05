@@ -10549,7 +10549,7 @@ LoopVectorizeResult LoopVectorizePass::runImpl(
 
     // For the inner loops we actually process, form LCSSA to simplify the
     // transform.
-    Changed |= formLCSSARecursively(*L, *DT, LI);
+    Changed |= formLCSSARecursively(*L, *DT, LI, SE);
 
     Changed |= CFGChanged |= processLoop(L);
 
