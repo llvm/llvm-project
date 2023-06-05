@@ -531,7 +531,7 @@ struct LoopInterchange {
     LLVM_DEBUG(dbgs() << "Loops interchanged.\n");
     LoopsInterchanged++;
 
-    llvm::formLCSSARecursively(*OuterLoop, *DT, LI);
+    llvm::formLCSSARecursively(*OuterLoop, *DT, LI, SE);
     return true;
   }
 };
@@ -1689,7 +1689,7 @@ bool LoopInterchangeTransform::adjustLoopBranches() {
   for (Instruction &I :
        make_range(OuterLoopHeader->begin(), std::prev(OuterLoopHeader->end())))
     MayNeedLCSSAPhis.push_back(&I);
-  formLCSSAForInstructions(MayNeedLCSSAPhis, *DT, *LI);
+  formLCSSAForInstructions(MayNeedLCSSAPhis, *DT, *LI, SE);
 
   return true;
 }
