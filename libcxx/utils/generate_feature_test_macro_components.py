@@ -416,8 +416,8 @@ feature_test_macros = [
             "name": "__cpp_lib_filesystem",
             "values": {"c++17": 201703},
             "headers": ["filesystem"],
-            "test_suite_guard": "!defined(_LIBCPP_AVAILABILITY_HAS_NO_FILESYSTEM)",
-            "libcxx_guard": "!defined(_LIBCPP_AVAILABILITY_HAS_NO_FILESYSTEM)",
+            "test_suite_guard": "!defined(_LIBCPP_AVAILABILITY_HAS_NO_FILESYSTEM_LIBRARY)",
+            "libcxx_guard": "!defined(_LIBCPP_AVAILABILITY_HAS_NO_FILESYSTEM_LIBRARY)",
         },
         {
             "name": "__cpp_lib_format",

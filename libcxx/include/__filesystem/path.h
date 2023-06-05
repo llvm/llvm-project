@@ -39,7 +39,7 @@
 
 _LIBCPP_BEGIN_NAMESPACE_FILESYSTEM
 
-_LIBCPP_AVAILABILITY_FILESYSTEM_PUSH
+_LIBCPP_AVAILABILITY_FILESYSTEM_LIBRARY_PUSH
 
 template <class _Tp>
 struct __can_convert_char {
@@ -1087,14 +1087,14 @@ inline _LIBCPP_HIDE_FROM_ABI void swap(path& __lhs, path& __rhs) noexcept {
 _LIBCPP_FUNC_VIS
 size_t hash_value(const path& __p) noexcept;
 
-_LIBCPP_AVAILABILITY_FILESYSTEM_POP
+_LIBCPP_AVAILABILITY_FILESYSTEM_LIBRARY_POP
 
 _LIBCPP_END_NAMESPACE_FILESYSTEM
 
 _LIBCPP_BEGIN_NAMESPACE_STD
 
 template <>
-struct _LIBCPP_AVAILABILITY_FILESYSTEM hash<_VSTD_FS::path> : __unary_function<_VSTD_FS::path, size_t> {
+struct _LIBCPP_AVAILABILITY_FILESYSTEM_LIBRARY hash<_VSTD_FS::path> : __unary_function<_VSTD_FS::path, size_t> {
   _LIBCPP_HIDE_FROM_ABI size_t operator()(_VSTD_FS::path const& __p) const noexcept {
     return _VSTD_FS::hash_value(__p);
   }
