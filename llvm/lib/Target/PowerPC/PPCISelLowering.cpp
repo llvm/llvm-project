@@ -1642,10 +1642,6 @@ const char *PPCTargetLowering::getTargetNodeName(unsigned Opcode) const {
   case PPCISD::FCTIWZ:          return "PPCISD::FCTIWZ";
   case PPCISD::FCTIDUZ:         return "PPCISD::FCTIDUZ";
   case PPCISD::FCTIWUZ:         return "PPCISD::FCTIWUZ";
-  case PPCISD::FP_TO_UINT_IN_VSR:
-                                return "PPCISD::FP_TO_UINT_IN_VSR,";
-  case PPCISD::FP_TO_SINT_IN_VSR:
-                                return "PPCISD::FP_TO_SINT_IN_VSR";
   case PPCISD::FRE:             return "PPCISD::FRE";
   case PPCISD::FRSQRTE:         return "PPCISD::FRSQRTE";
   case PPCISD::FTSQRT:
@@ -8117,7 +8113,11 @@ static SDValue convertFPToInt(SDValue Op, SelectionDAG &DAG,
   // For strict nodes, source is the second operand.
   SDValue Src = Op.getOperand(IsStrict ? 1 : 0);
   SDValue Chain = IsStrict ? Op.getOperand(0) : SDValue();
-  assert(Src.getValueType().isFloatingPoint());
+  MVT DestTy = Op.getSimpleValueType();
+  assert(Src.getValueType().isFloatingPoint() &&
+         (DestTy == MVT::i8 || DestTy == MVT::i16 || DestTy == MVT::i32 ||
+          DestTy == MVT::i64) &&
+         "Invalid FP_TO_INT types");
   if (Src.getValueType() == MVT::f32) {
     if (IsStrict) {
       Src =
@@ -8127,9 +8127,10 @@ static SDValue convertFPToInt(SDValue Op, SelectionDAG &DAG,
     } else
       Src = DAG.getNode(ISD::FP_EXTEND, dl, MVT::f64, Src);
   }
-  SDValue Conv;
+  if ((DestTy == MVT::i8 || DestTy == MVT::i16) && Subtarget.hasP9Vector())
+    DestTy = Subtarget.isPPC64() ? MVT::i64 : MVT::i32;
   unsigned Opc = ISD::DELETED_NODE;
-  switch (Op.getSimpleValueType().SimpleTy) {
+  switch (DestTy.SimpleTy) {
   default: llvm_unreachable("Unhandled FP_TO_INT type in custom expander!");
   case MVT::i32:
     Opc = IsSigned ? PPCISD::FCTIWZ
@@ -8140,12 +8141,14 @@ static SDValue convertFPToInt(SDValue Op, SelectionDAG &DAG,
            "i64 FP_TO_UINT is supported only with FPCVT");
     Opc = IsSigned ? PPCISD::FCTIDZ : PPCISD::FCTIDUZ;
   }
+  EVT ConvTy = Src.getValueType() == MVT::f128 ? MVT::f128 : MVT::f64;
+  SDValue Conv;
   if (IsStrict) {
     Opc = getPPCStrictOpcode(Opc);
-    Conv = DAG.getNode(Opc, dl, DAG.getVTList(MVT::f64, MVT::Other),
-                       {Chain, Src}, Flags);
+    Conv = DAG.getNode(Opc, dl, DAG.getVTList(ConvTy, MVT::Other), {Chain, Src},
+                       Flags);
   } else {
-    Conv = DAG.getNode(Opc, dl, MVT::f64, Src);
+    Conv = DAG.getNode(Opc, dl, ConvTy, Src);
   }
   return Conv;
 }
@@ -15055,30 +15058,18 @@ SDValue PPCTargetLowering::combineStoreFPToInt(SDNode *N,
 
   // Only perform combine for conversion to i64/i32 or power9 i16/i8.
   bool ValidTypeForStoreFltAsInt =
-        (Op1VT == MVT::i32 || Op1VT == MVT::i64 ||
+        (Op1VT == MVT::i32 || (Op1VT == MVT::i64 && Subtarget.isPPC64()) ||
          (Subtarget.hasP9Vector() && (Op1VT == MVT::i16 || Op1VT == MVT::i8)));
 
-  if (ResVT == MVT::f128 && !Subtarget.hasP9Vector())
+  // TODO: Lower conversion from f128 on all VSX targets
+  if (ResVT == MVT::ppcf128 || (ResVT == MVT::f128 && !Subtarget.hasP9Vector()))
     return SDValue();
 
-  if (ResVT == MVT::ppcf128 || !Subtarget.hasP8Vector() ||
+  if ((Op1VT != MVT::i64 && !Subtarget.hasP8Vector()) ||
       cast<StoreSDNode>(N)->isTruncatingStore() || !ValidTypeForStoreFltAsInt)
     return SDValue();
 
-  // Extend f32 values to f64
-  if (ResVT.getScalarSizeInBits() == 32) {
-    Val = DAG.getNode(ISD::FP_EXTEND, dl, MVT::f64, Val);
-    DCI.AddToWorklist(Val.getNode());
-  }
-
-  // Set signed or unsigned conversion opcode.
-  unsigned ConvOpcode = (Opcode == ISD::FP_TO_SINT) ?
-                          PPCISD::FP_TO_SINT_IN_VSR :
-                          PPCISD::FP_TO_UINT_IN_VSR;
-
-  Val = DAG.getNode(ConvOpcode,
-                    dl, ResVT == MVT::f128 ? MVT::f128 : MVT::f64, Val);
-  DCI.AddToWorklist(Val.getNode());
+  Val = convertFPToInt(N->getOperand(1), DAG, Subtarget);
 
   // Set number of bytes being converted.
   unsigned ByteSize = Op1VT.getScalarSizeInBits() / 8;
@@ -15091,7 +15082,6 @@ SDValue PPCTargetLowering::combineStoreFPToInt(SDNode *N,
           cast<StoreSDNode>(N)->getMemoryVT(),
           cast<StoreSDNode>(N)->getMemOperand());
 
-  DCI.AddToWorklist(Val.getNode());
   return Val;
 }
 

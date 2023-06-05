@@ -1486,10 +1486,14 @@ let Predicates = [HasVSX, HasP9Vector] in {
 
   // Truncate & Convert QP -> (Un)Signed (D)Word (dword[1] is set to zero)
   let mayRaiseFPException = 1 in {
-    def XSCVQPSDZ : X_VT5_XO5_VB5<63, 25, 836, "xscvqpsdz", []>;
-    def XSCVQPSWZ : X_VT5_XO5_VB5<63,  9, 836, "xscvqpswz", []>;
-    def XSCVQPUDZ : X_VT5_XO5_VB5<63, 17, 836, "xscvqpudz", []>;
-    def XSCVQPUWZ : X_VT5_XO5_VB5<63,  1, 836, "xscvqpuwz", []>;
+    def XSCVQPSDZ : X_VT5_XO5_VB5<63, 25, 836, "xscvqpsdz",
+        [(set f128:$RST, (PPCany_fctidz f128:$RB))]>;
+    def XSCVQPSWZ : X_VT5_XO5_VB5<63,  9, 836, "xscvqpswz",
+        [(set f128:$RST, (PPCany_fctiwz f128:$RB))]>;
+    def XSCVQPUDZ : X_VT5_XO5_VB5<63, 17, 836, "xscvqpudz",
+        [(set f128:$RST, (PPCany_fctiduz f128:$RB))]>;
+    def XSCVQPUWZ : X_VT5_XO5_VB5<63,  1, 836, "xscvqpuwz",
+        [(set f128:$RST, (PPCany_fctiwuz f128:$RB))]>;
   }
 
   // Convert (Un)Signed DWord -> QP.
@@ -2909,6 +2913,10 @@ def:Pat<(vmrglw_swapped_shuffle v16i8:$vA, v16i8:$vB),
 def:Pat<(vmrghw_swapped_shuffle v16i8:$vA, v16i8:$vB),
         (COPY_TO_REGCLASS (XXMRGHW (COPY_TO_REGCLASS $vB, VSRC),
                                    (COPY_TO_REGCLASS $vA, VSRC)), VRRC)>;
+def : Pat<(PPCstore_scal_int_from_vsr f64:$src, XForm:$dst, 8),
+          (STXSDX $src, XForm:$dst)>;
+def : Pat<(PPCstore_scal_int_from_vsr f128:$src, XForm:$dst, 8),
+          (STXSDX (COPY_TO_REGCLASS $src, VSFRC), XForm:$dst)>;
 } // HasVSX
 
 // Any big endian VSX subtarget.
@@ -3151,12 +3159,10 @@ def : Pat<(v2f64 (insertelt v2f64:$A, f64:$B, 1)),
 
 // Any pre-Power9 VSX subtarget.
 let Predicates = [HasVSX, NoP9Vector] in {
-def : Pat<(PPCstore_scal_int_from_vsr
-            (f64 (PPCcv_fp_to_sint_in_vsr f64:$src)), ForceXForm:$dst, 8),
-          (STXSDX (XSCVDPSXDS f64:$src), ForceXForm:$dst)>;
-def : Pat<(PPCstore_scal_int_from_vsr
-            (f64 (PPCcv_fp_to_uint_in_vsr f64:$src)), ForceXForm:$dst, 8),
-          (STXSDX (XSCVDPUXDS f64:$src), ForceXForm:$dst)>;
+def : Pat<(PPCstore_scal_int_from_vsr f64:$src, ForceXForm:$dst, 8),
+          (STXSDX $src, ForceXForm:$dst)>;
+def : Pat<(PPCstore_scal_int_from_vsr f128:$src, ForceXForm:$dst, 8),
+          (STXSDX (COPY_TO_REGCLASS $src, VSFRC), ForceXForm:$dst)>;
 
 // Load-and-splat with fp-to-int conversion (using X-Form VSX/FP loads).
 defm : ScalToVecWPermute<
@@ -3303,12 +3309,15 @@ def : Pat<(f32 (fneg f32:$S)),
                (COPY_TO_REGCLASS $S, VSFRC)), VSSRC))>;
 
 // Instructions for converting float to i32 feeding a store.
-def : Pat<(PPCstore_scal_int_from_vsr
-            (f64 (PPCcv_fp_to_sint_in_vsr f64:$src)), ForceXForm:$dst, 4),
-          (STIWX (XSCVDPSXWS f64:$src), ForceXForm:$dst)>;
-def : Pat<(PPCstore_scal_int_from_vsr
-            (f64 (PPCcv_fp_to_uint_in_vsr f64:$src)), ForceXForm:$dst, 4),
-          (STIWX (XSCVDPUXWS f64:$src), ForceXForm:$dst)>;
+def : Pat<(PPCstore_scal_int_from_vsr f64:$src, ForceXForm:$dst, 4),
+          (STIWX $src, ForceXForm:$dst)>;
+def : Pat<(PPCstore_scal_int_from_vsr f128:$src, ForceXForm:$dst, 4),
+          (STIWX (COPY_TO_REGCLASS $src, VSFRC), ForceXForm:$dst)>;
+
+def : Pat<(PPCstore_scal_int_from_vsr f64:$src, ForceXForm:$dst, 4),
+          (STXSIWX $src, ForceXForm:$dst)>;
+def : Pat<(PPCstore_scal_int_from_vsr f128:$src, ForceXForm:$dst, 4),
+          (STXSIWX (COPY_TO_REGCLASS $src, VSFRC), ForceXForm:$dst)>;
 
 def : Pat<(v2i64 (smax v2i64:$src1, v2i64:$src2)),
           (v2i64 (VMAXSD (COPY_TO_REGCLASS $src1, VRRC),
@@ -4042,67 +4051,19 @@ def : Pat<(i32 (any_fp_to_uint f128:$src)),
           (i32 (MFVSRWZ (COPY_TO_REGCLASS (XSCVQPUWZ $src), VFRC)))>;
 
 // Instructions for store(fptosi).
-// The 8-byte version is repeated here due to availability of D-Form STXSD.
-def : Pat<(PPCstore_scal_int_from_vsr
-            (f64 (PPCcv_fp_to_sint_in_vsr f128:$src)), XForm:$dst, 8),
-          (STXSDX (COPY_TO_REGCLASS (XSCVQPSDZ f128:$src), VFRC),
-                  XForm:$dst)>;
-def : Pat<(PPCstore_scal_int_from_vsr
-            (f64 (PPCcv_fp_to_sint_in_vsr f128:$src)), DSForm:$dst, 8),
-          (STXSD (COPY_TO_REGCLASS (XSCVQPSDZ f128:$src), VFRC),
-                 DSForm:$dst)>;
-def : Pat<(PPCstore_scal_int_from_vsr
-            (f64 (PPCcv_fp_to_sint_in_vsr f128:$src)), ForceXForm:$dst, 4),
-          (STXSIWX (COPY_TO_REGCLASS (XSCVQPSWZ $src), VFRC), ForceXForm:$dst)>;
-def : Pat<(PPCstore_scal_int_from_vsr
-            (f64 (PPCcv_fp_to_sint_in_vsr f128:$src)), ForceXForm:$dst, 2),
-          (STXSIHX (COPY_TO_REGCLASS (XSCVQPSWZ $src), VFRC), ForceXForm:$dst)>;
-def : Pat<(PPCstore_scal_int_from_vsr
-            (f64 (PPCcv_fp_to_sint_in_vsr f128:$src)), ForceXForm:$dst, 1),
-          (STXSIBX (COPY_TO_REGCLASS (XSCVQPSWZ $src), VFRC), ForceXForm:$dst)>;
-def : Pat<(PPCstore_scal_int_from_vsr
-            (f64 (PPCcv_fp_to_sint_in_vsr f64:$src)), XForm:$dst, 8),
-          (STXSDX (XSCVDPSXDS f64:$src), XForm:$dst)>;
-def : Pat<(PPCstore_scal_int_from_vsr
-            (f64 (PPCcv_fp_to_sint_in_vsr f64:$src)), DSForm:$dst, 8),
-          (STXSD (XSCVDPSXDS f64:$src), DSForm:$dst)>;
-def : Pat<(PPCstore_scal_int_from_vsr
-            (f64 (PPCcv_fp_to_sint_in_vsr f64:$src)), ForceXForm:$dst, 2),
-          (STXSIHX (XSCVDPSXWS f64:$src), ForceXForm:$dst)>;
-def : Pat<(PPCstore_scal_int_from_vsr
-            (f64 (PPCcv_fp_to_sint_in_vsr f64:$src)), ForceXForm:$dst, 1),
-          (STXSIBX (XSCVDPSXWS f64:$src), ForceXForm:$dst)>;
+def : Pat<(PPCstore_scal_int_from_vsr f64:$src, DSForm:$dst, 8),
+          (STXSD $src, DSForm:$dst)>;
+def : Pat<(PPCstore_scal_int_from_vsr f64:$src, ForceXForm:$dst, 2),
+          (STXSIHX $src, ForceXForm:$dst)>;
+def : Pat<(PPCstore_scal_int_from_vsr f64:$src, ForceXForm:$dst, 1),
+          (STXSIBX $src, ForceXForm:$dst)>;
 
-// Instructions for store(fptoui).
-def : Pat<(PPCstore_scal_int_from_vsr
-            (f64 (PPCcv_fp_to_uint_in_vsr f128:$src)), XForm:$dst, 8),
-          (STXSDX (COPY_TO_REGCLASS (XSCVQPUDZ f128:$src), VFRC),
-                  XForm:$dst)>;
-def : Pat<(PPCstore_scal_int_from_vsr
-            (f64 (PPCcv_fp_to_uint_in_vsr f128:$src)), DSForm:$dst, 8),
-          (STXSD (COPY_TO_REGCLASS (XSCVQPUDZ f128:$src), VFRC),
-                 DSForm:$dst)>;
-def : Pat<(PPCstore_scal_int_from_vsr
-            (f64 (PPCcv_fp_to_uint_in_vsr f128:$src)), ForceXForm:$dst, 4),
-          (STXSIWX (COPY_TO_REGCLASS (XSCVQPUWZ $src), VFRC), ForceXForm:$dst)>;
-def : Pat<(PPCstore_scal_int_from_vsr
-            (f64 (PPCcv_fp_to_uint_in_vsr f128:$src)), ForceXForm:$dst, 2),
-          (STXSIHX (COPY_TO_REGCLASS (XSCVQPUWZ $src), VFRC), ForceXForm:$dst)>;
-def : Pat<(PPCstore_scal_int_from_vsr
-            (f64 (PPCcv_fp_to_uint_in_vsr f128:$src)), ForceXForm:$dst, 1),
-          (STXSIBX (COPY_TO_REGCLASS (XSCVQPUWZ $src), VFRC), ForceXForm:$dst)>;
-def : Pat<(PPCstore_scal_int_from_vsr
-            (f64 (PPCcv_fp_to_uint_in_vsr f64:$src)), XForm:$dst, 8),
-          (STXSDX (XSCVDPUXDS f64:$src), XForm:$dst)>;
-def : Pat<(PPCstore_scal_int_from_vsr
-            (f64 (PPCcv_fp_to_uint_in_vsr f64:$src)), DSForm:$dst, 8),
-          (STXSD (XSCVDPUXDS f64:$src), DSForm:$dst)>;
-def : Pat<(PPCstore_scal_int_from_vsr
-            (f64 (PPCcv_fp_to_uint_in_vsr f64:$src)), ForceXForm:$dst, 2),
-          (STXSIHX (XSCVDPUXWS f64:$src), ForceXForm:$dst)>;
-def : Pat<(PPCstore_scal_int_from_vsr
-            (f64 (PPCcv_fp_to_uint_in_vsr f64:$src)), ForceXForm:$dst, 1),
-          (STXSIBX (XSCVDPUXWS f64:$src), ForceXForm:$dst)>;
+def : Pat<(PPCstore_scal_int_from_vsr f128:$src, DSForm:$dst, 8),
+          (STXSD (COPY_TO_REGCLASS $src, VFRC), DSForm:$dst)>;
+def : Pat<(PPCstore_scal_int_from_vsr f128:$src, ForceXForm:$dst, 2),
+          (STXSIHX (COPY_TO_REGCLASS $src, VSFRC), ForceXForm:$dst)>;
+def : Pat<(PPCstore_scal_int_from_vsr f128:$src, ForceXForm:$dst, 1),
+          (STXSIBX (COPY_TO_REGCLASS $src, VSFRC), ForceXForm:$dst)>;
 
 // Round & Convert QP -> DP/SP
 def : Pat<(f64 (any_fpround f128:$src)), (f64 (XSCVQPDP $src))>;
