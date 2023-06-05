@@ -2553,7 +2553,11 @@ bool RecursiveASTVisitor<Derived>::TraverseInitListExpr(
 // are interleaved.  We also need to watch out for null types (default
 // generic associations).
 DEF_TRAVERSE_STMT(GenericSelectionExpr, {
-  TRY_TO(TraverseStmt(S->getControllingExpr()));
+  if (S->isExprPredicate())
+    TRY_TO(TraverseStmt(S->getControllingExpr()));
+  else
+    TRY_TO(TraverseTypeLoc(S->getControllingType()->getTypeLoc()));
+
   for (const GenericSelectionExpr::Association Assoc : S->associations()) {
     if (TypeSourceInfo *TSI = Assoc.getTypeSourceInfo())
       TRY_TO(TraverseTypeLoc(TSI->getTypeLoc()));

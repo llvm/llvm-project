@@ -102,6 +102,8 @@ AST_MATCHER(CXXTypeidExpr, isPotentiallyEvaluated) {
 
 AST_MATCHER_P(GenericSelectionExpr, hasControllingExpr,
               ast_matchers::internal::Matcher<Expr>, InnerMatcher) {
+  if (Node.isTypePredicate())
+    return false;
   return InnerMatcher.matches(*Node.getControllingExpr(), Finder, Builder);
 }
 
