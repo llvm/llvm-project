@@ -381,6 +381,8 @@ static void DiskFilesOrDirectories(const llvm::Twine &partial_name,
       Storage.append(RemainderDir);
     }
     SearchDir = Storage;
+  } else if (CompletionBuffer == path::root_directory(CompletionBuffer)) {
+    SearchDir = CompletionBuffer;
   } else {
     SearchDir = path::parent_path(CompletionBuffer);
   }
@@ -390,9 +392,11 @@ static void DiskFilesOrDirectories(const llvm::Twine &partial_name,
   PartialItem = path::filename(CompletionBuffer);
 
   // path::filename() will return "." when the passed path ends with a
-  // directory separator. We have to filter those out, but only when the
-  // "." doesn't come from the completion request itself.
-  if (PartialItem == "." && path::is_separator(CompletionBuffer.back()))
+  // directory separator or the separator when passed the disk root directory.
+  // We have to filter those out, but only when the "." doesn't come from the
+  // completion request itself.
+  if ((PartialItem == "." || PartialItem == path::get_separator()) &&
+      path::is_separator(CompletionBuffer.back()))
     PartialItem = llvm::StringRef();
 
   if (SearchDir.empty()) {
