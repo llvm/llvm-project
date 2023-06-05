@@ -513,7 +513,7 @@ bool LoopInvariantCodeMotion::runOnLoop(Loop *L, AAResults *AA, LoopInfo *LI,
       // SSAUpdater strategy during promotion that was LCSSA aware and reformed
       // it as it went.
       if (Promoted)
-        formLCSSARecursively(*L, *DT, LI);
+        formLCSSARecursively(*L, *DT, LI, SE);
 
       Changed |= Promoted;
     }

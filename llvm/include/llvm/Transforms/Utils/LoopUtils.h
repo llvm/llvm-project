@@ -81,7 +81,8 @@ bool formDedicatedExitBlocks(Loop *L, DominatorTree *DT, LoopInfo *LI,
 /// vector.
 bool formLCSSAForInstructions(
     SmallVectorImpl<Instruction *> &Worklist, const DominatorTree &DT,
-    const LoopInfo &LI, SmallVectorImpl<PHINode *> *PHIsToRemove = nullptr,
+    const LoopInfo &LI, ScalarEvolution *SE,
+    SmallVectorImpl<PHINode *> *PHIsToRemove = nullptr,
     SmallVectorImpl<PHINode *> *InsertedPHIs = nullptr);
 
 /// Put loop into LCSSA form.
@@ -91,21 +92,25 @@ bool formLCSSAForInstructions(
 /// the loop are rewritten to use this node. Sub-loops must be in LCSSA form
 /// already.
 ///
-/// LoopInfo and DominatorTree are required and preserved. ScalarEvolution is
-/// preserved.
+/// LoopInfo and DominatorTree are required and preserved.
+///
+/// If ScalarEvolution is passed in, it will be preserved.
 ///
 /// Returns true if any modifications are made to the loop.
-bool formLCSSA(Loop &L, const DominatorTree &DT, const LoopInfo *LI);
+bool formLCSSA(Loop &L, const DominatorTree &DT, const LoopInfo *LI,
+               ScalarEvolution *SE);
 
 /// Put a loop nest into LCSSA form.
 ///
 /// This recursively forms LCSSA for a loop nest.
 ///
-/// LoopInfo and DominatorTree are required and preserved. ScalarEvolution is
-/// preserved.
+/// LoopInfo and DominatorTree are required and preserved.
+///
+/// If ScalarEvolution is passed in, it will be preserved.
 ///
 /// Returns true if any modifications are made to the loop.
-bool formLCSSARecursively(Loop &L, const DominatorTree &DT, const LoopInfo *LI);
+bool formLCSSARecursively(Loop &L, const DominatorTree &DT, const LoopInfo *LI,
+                          ScalarEvolution *SE);
 
 /// Flags controlling how much is checked when sinking or hoisting
 /// instructions.  The number of memory access in the loop (and whether there
