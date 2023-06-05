@@ -945,43 +945,87 @@ maybeAddRange(std::pair<unsigned, unsigned> A, std::pair<unsigned, unsigned> B,
   return A;
 }
 
-struct LineRange {
-  unsigned LineNo;
-  unsigned StartCol;
-  unsigned EndCol;
-};
+/// Highlight a SourceRange (with ~'s) for any characters on LineNo.
+static void highlightRange(const CharSourceRange &R,
+                           unsigned LineNo, FileID FID,
+                           const SourceColumnMap &map,
+                           std::string &CaretLine,
+                           const SourceManager &SM,
+                           const LangOptions &LangOpts) {
+  if (!R.isValid()) return;
 
-/// Highlight \p R (with ~'s) on the current source line.
-static void highlightRange(const LineRange &R, const SourceColumnMap &Map,
-                           std::string &CaretLine) {
-  // Pick the first non-whitespace column.
-  unsigned StartColNo = R.StartCol;
-  while (StartColNo < Map.getSourceLine().size() &&
-         (Map.getSourceLine()[StartColNo] == ' ' ||
-          Map.getSourceLine()[StartColNo] == '\t'))
-    StartColNo = Map.startOfNextColumn(StartColNo);
+  SourceLocation Begin = R.getBegin();
+  SourceLocation End = R.getEnd();
 
-  // Pick the last non-whitespace column.
-  unsigned EndColNo =
-      std::min(static_cast<size_t>(R.EndCol), Map.getSourceLine().size());
-  while (EndColNo && (Map.getSourceLine()[EndColNo - 1] == ' ' ||
-                      Map.getSourceLine()[EndColNo - 1] == '\t'))
-    EndColNo = Map.startOfPreviousColumn(EndColNo);
+  unsigned StartLineNo = SM.getExpansionLineNumber(Begin);
+  if (StartLineNo > LineNo || SM.getFileID(Begin) != FID)
+    return;  // No intersection.
 
-  // If the start/end passed each other, then we are trying to highlight a
-  // range that just exists in whitespace. That most likely means we have
-  // a multi-line highlighting range that covers a blank line.
-  if (StartColNo > EndColNo)
-    return;
+  unsigned EndLineNo = SM.getExpansionLineNumber(End);
+  if (EndLineNo < LineNo || SM.getFileID(End) != FID)
+    return;  // No intersection.
+
+  // Compute the column number of the start.
+  unsigned StartColNo = 0;
+  if (StartLineNo == LineNo) {
+    StartColNo = SM.getExpansionColumnNumber(Begin);
+    if (StartColNo) --StartColNo;  // Zero base the col #.
+  }
+
+  // Compute the column number of the end.
+  unsigned EndColNo = map.getSourceLine().size();
+  if (EndLineNo == LineNo) {
+    EndColNo = SM.getExpansionColumnNumber(End);
+    if (EndColNo) {
+      --EndColNo;  // Zero base the col #.
+
+      // Add in the length of the token, so that we cover multi-char tokens if
+      // this is a token range.
+      if (R.isTokenRange())
+        EndColNo += Lexer::MeasureTokenLength(End, SM, LangOpts);
+    } else {
+      EndColNo = CaretLine.size();
+    }
+  }
+
+  assert(StartColNo <= EndColNo && "Invalid range!");
+
+  // Check that a token range does not highlight only whitespace.
+  if (R.isTokenRange()) {
+    // Pick the first non-whitespace column.
+    while (StartColNo < map.getSourceLine().size() &&
+           (map.getSourceLine()[StartColNo] == ' ' ||
+            map.getSourceLine()[StartColNo] == '\t'))
+      StartColNo = map.startOfNextColumn(StartColNo);
+
+    // Pick the last non-whitespace column.
+    if (EndColNo > map.getSourceLine().size())
+      EndColNo = map.getSourceLine().size();
+    while (EndColNo &&
+           (map.getSourceLine()[EndColNo-1] == ' ' ||
+            map.getSourceLine()[EndColNo-1] == '\t'))
+      EndColNo = map.startOfPreviousColumn(EndColNo);
+
+    // If the start/end passed each other, then we are trying to highlight a
+    // range that just exists in whitespace. That most likely means we have
+    // a multi-line highlighting range that covers a blank line.
+    if (StartColNo > EndColNo) {
+      assert(StartLineNo != EndLineNo && "trying to highlight whitespace");
+      StartColNo = EndColNo;
+    }
+  }
+
+  assert(StartColNo <= map.getSourceLine().size() && "Invalid range!");
+  assert(EndColNo <= map.getSourceLine().size() && "Invalid range!");
 
   // Fill the range with ~'s.
-  StartColNo = Map.byteToContainingColumn(StartColNo);
-  EndColNo = Map.byteToContainingColumn(EndColNo);
+  StartColNo = map.byteToContainingColumn(StartColNo);
+  EndColNo = map.byteToContainingColumn(EndColNo);
 
   assert(StartColNo <= EndColNo && "Invalid range!");
   if (CaretLine.size() < EndColNo)
-    CaretLine.resize(EndColNo, ' ');
-  std::fill(CaretLine.begin() + StartColNo, CaretLine.begin() + EndColNo, '~');
+    CaretLine.resize(EndColNo,' ');
+  std::fill(CaretLine.begin()+StartColNo,CaretLine.begin()+EndColNo,'~');
 }
 
 static std::string buildFixItInsertionLine(FileID FID,
@@ -1056,57 +1100,6 @@ static unsigned getNumDisplayWidth(unsigned N) {
   return L;
 }
 
-/// Filter out invalid ranges, ranges that don't fit into the window of
-/// source lines we will print, and ranges from other files.
-///
-/// For the remaining ranges, convert them to simple LineRange structs,
-/// which only cover one line at a time.
-static SmallVector<LineRange>
-prepareAndFilterRanges(const SmallVectorImpl<CharSourceRange> &Ranges,
-                       const SourceManager &SM,
-                       const std::pair<unsigned, unsigned> &Lines, FileID FID,
-                       const LangOptions &LangOpts) {
-  SmallVector<LineRange> LineRanges;
-
-  for (const CharSourceRange &R : Ranges) {
-    if (R.isInvalid())
-      continue;
-    SourceLocation Begin = R.getBegin();
-    SourceLocation End = R.getEnd();
-
-    unsigned StartLineNo = SM.getExpansionLineNumber(Begin);
-    if (StartLineNo > Lines.second || SM.getFileID(Begin) != FID)
-      continue;
-
-    unsigned EndLineNo = SM.getExpansionLineNumber(End);
-    if (EndLineNo < Lines.first || SM.getFileID(End) != FID)
-      continue;
-
-    unsigned StartColumn = SM.getExpansionColumnNumber(Begin);
-    unsigned EndColumn = SM.getExpansionColumnNumber(End);
-    if (R.isTokenRange())
-      EndColumn += Lexer::MeasureTokenLength(End, SM, LangOpts);
-
-    // Only a single line.
-    if (StartLineNo == EndLineNo) {
-      LineRanges.push_back({StartLineNo, StartColumn - 1, EndColumn - 1});
-      continue;
-    }
-
-    // Start line.
-    LineRanges.push_back({StartLineNo, StartColumn - 1, ~0u});
-
-    // Middle lines.
-    for (unsigned S = StartLineNo + 1; S != EndLineNo; ++S)
-      LineRanges.push_back({S, 0, ~0u});
-
-    // End line.
-    LineRanges.push_back({EndLineNo, 0, EndColumn - 1});
-  }
-
-  return LineRanges;
-}
-
 /// Emit a code snippet and caret line.
 ///
 /// This routine emits a single line's code snippet and caret line..
@@ -1173,9 +1166,6 @@ void TextDiagnostic::emitSnippetAndCaret(
       OS.indent(MaxLineNoDisplayWidth + 2) << "| ";
   };
 
-  SmallVector<LineRange> LineRanges =
-      prepareAndFilterRanges(Ranges, SM, Lines, FID, LangOpts);
-
   for (unsigned LineNo = Lines.first; LineNo != Lines.second + 1;
        ++LineNo, ++DisplayLineNo) {
     // Rewind from the current position to the start of the line.
@@ -1207,10 +1197,8 @@ void TextDiagnostic::emitSnippetAndCaret(
 
     std::string CaretLine;
     // Highlight all of the characters covered by Ranges with ~ characters.
-    for (const auto &LR : LineRanges) {
-      if (LR.LineNo == LineNo)
-        highlightRange(LR, sourceColMap, CaretLine);
-    }
+    for (const auto &I : Ranges)
+      highlightRange(I, LineNo, FID, sourceColMap, CaretLine, SM, LangOpts);
 
     // Next, insert the caret itself.
     if (CaretLineNo == LineNo) {
