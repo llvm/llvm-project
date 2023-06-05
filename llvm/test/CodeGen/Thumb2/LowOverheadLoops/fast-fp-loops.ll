@@ -199,9 +199,12 @@ for.body:                                         ; preds = %for.body, %for.body
 define arm_aapcs_vfpcc float @fast_float_mac(ptr nocapture readonly %b, ptr nocapture readonly %c, i32 %N) {
 ; CHECK-LABEL: fast_float_mac:
 ; CHECK:       @ %bb.0: @ %entry
+; CHECK-NEXT:    cmp r2, #0
+; CHECK-NEXT:    itt eq
+; CHECK-NEXT:    vldreq s0, .LCPI1_0
+; CHECK-NEXT:    bxeq lr
+; CHECK-NEXT:  .LBB1_1: @ %vector.ph
 ; CHECK-NEXT:    push {r7, lr}
-; CHECK-NEXT:    cbz r2, .LBB1_4
-; CHECK-NEXT:  @ %bb.1: @ %vector.ph
 ; CHECK-NEXT:    adds r3, r2, #3
 ; CHECK-NEXT:    mov.w r12, #1
 ; CHECK-NEXT:    bic r3, r3, #3
@@ -227,11 +230,8 @@ define arm_aapcs_vfpcc float @fast_float_mac(ptr nocapture readonly %b, ptr noca
 ; CHECK-NEXT:    vmov r0, s1
 ; CHECK-NEXT:    vadd.f32 q0, q0, r0
 ; CHECK-NEXT:    pop {r7, pc}
-; CHECK-NEXT:  .LBB1_4:
-; CHECK-NEXT:    vldr s0, .LCPI1_0
-; CHECK-NEXT:    pop {r7, pc}
 ; CHECK-NEXT:    .p2align 2
-; CHECK-NEXT:  @ %bb.5:
+; CHECK-NEXT:  @ %bb.4:
 ; CHECK-NEXT:  .LCPI1_0:
 ; CHECK-NEXT:    .long 0x00000000 @ float 0
 entry:
@@ -274,12 +274,14 @@ for.cond.cleanup:                                 ; preds = %middle.block, %entr
 define arm_aapcs_vfpcc float @fast_float_half_mac(ptr nocapture readonly %b, ptr nocapture readonly %c, i32 %N) {
 ; CHECK-LABEL: fast_float_half_mac:
 ; CHECK:       @ %bb.0: @ %entry
+; CHECK-NEXT:    cmp r2, #0
+; CHECK-NEXT:    itt eq
+; CHECK-NEXT:    vldreq s0, .LCPI2_0
+; CHECK-NEXT:    bxeq lr
+; CHECK-NEXT:  .LBB2_1: @ %vector.ph
 ; CHECK-NEXT:    push {r4, r5, r7, lr}
 ; CHECK-NEXT:    vpush {d8, d9, d10, d11, d12, d13}
 ; CHECK-NEXT:    sub sp, #8
-; CHECK-NEXT:    cmp r2, #0
-; CHECK-NEXT:    beq.w .LBB2_20
-; CHECK-NEXT:  @ %bb.1: @ %vector.ph
 ; CHECK-NEXT:    adds r3, r2, #3
 ; CHECK-NEXT:    vmov.i32 q5, #0x0
 ; CHECK-NEXT:    bic r3, r3, #3
@@ -430,15 +432,11 @@ define arm_aapcs_vfpcc float @fast_float_half_mac(ptr nocapture readonly %b, ptr
 ; CHECK-NEXT:    vadd.f32 q0, q0, q1
 ; CHECK-NEXT:    vmov r0, s1
 ; CHECK-NEXT:    vadd.f32 q0, q0, r0
-; CHECK-NEXT:    b .LBB2_21
-; CHECK-NEXT:  .LBB2_20:
-; CHECK-NEXT:    vldr s0, .LCPI2_0
-; CHECK-NEXT:  .LBB2_21: @ %for.cond.cleanup
 ; CHECK-NEXT:    add sp, #8
 ; CHECK-NEXT:    vpop {d8, d9, d10, d11, d12, d13}
 ; CHECK-NEXT:    pop {r4, r5, r7, pc}
 ; CHECK-NEXT:    .p2align 4
-; CHECK-NEXT:  @ %bb.22:
+; CHECK-NEXT:  @ %bb.20:
 ; CHECK-NEXT:  .LCPI2_1:
 ; CHECK-NEXT:    .long 0 @ 0x0
 ; CHECK-NEXT:    .long 1 @ 0x1

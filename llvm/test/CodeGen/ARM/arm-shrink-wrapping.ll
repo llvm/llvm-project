@@ -1960,23 +1960,24 @@ define float @debug_info(float %gamma, float %slopeLimit, i1 %or.cond, double %t
 ; ARM-ENABLE-LABEL: debug_info:
 ; ARM-ENABLE:       Lfunc_begin12:
 ; ARM-ENABLE-NEXT:  @ %bb.0: @ %bb
+; ARM-ENABLE-NEXT:    tst r2, #1
+; ARM-ENABLE-NEXT:    beq LBB12_2
+; ARM-ENABLE-NEXT:  @ %bb.1: @ %bb3
 ; ARM-ENABLE-NEXT:    push {r4, r7, lr}
 ; ARM-ENABLE-NEXT:    add r7, sp, #4
 ; ARM-ENABLE-NEXT:    sub r4, sp, #16
 ; ARM-ENABLE-NEXT:    bfc r4, #0, #4
 ; ARM-ENABLE-NEXT:    mov sp, r4
-; ARM-ENABLE-NEXT:    tst r2, #1
-; ARM-ENABLE-NEXT:    vst1.64 {d8, d9}, [r4:128]
-; ARM-ENABLE-NEXT:    beq LBB12_2
-; ARM-ENABLE-NEXT:  @ %bb.1: @ %bb3
 ; ARM-ENABLE-NEXT:    ldr r1, [r7, #8]
+; ARM-ENABLE-NEXT:    mov r2, r3
+; ARM-ENABLE-NEXT:    vst1.64 {d8, d9}, [r4:128]
 ; ARM-ENABLE-NEXT:    vmov s16, r0
 ; ARM-ENABLE-NEXT:    mov r0, r3
-; ARM-ENABLE-NEXT:    mov r2, r3
 ; ARM-ENABLE-NEXT:    vmov d9, r3, r1
 ; ARM-ENABLE-NEXT:    mov r3, r1
 ; ARM-ENABLE-NEXT:    bl _pow
 ; ARM-ENABLE-NEXT:    vmov.f32 s0, #1.000000e+00
+; ARM-ENABLE-NEXT:    mov r4, sp
 ; ARM-ENABLE-NEXT:    vmov.f64 d16, #1.000000e+00
 ; ARM-ENABLE-NEXT:    vadd.f64 d16, d9, d16
 ; ARM-ENABLE-NEXT:    vcmp.f32 s16, s0
@@ -1989,17 +1990,17 @@ define float @debug_info(float %gamma, float %slopeLimit, i1 %or.cond, double %t
 ; ARM-ENABLE-NEXT:    vmrs APSR_nzcv, fpscr
 ; ARM-ENABLE-NEXT:    vmovne.f64 d9, d17
 ; ARM-ENABLE-NEXT:    vcvt.f32.f64 s0, d9
-; ARM-ENABLE-NEXT:    b LBB12_3
+; ARM-ENABLE-NEXT:    vld1.64 {d8, d9}, [r4:128]
+; ARM-ENABLE-NEXT:    sub sp, r7, #4
+; ARM-ENABLE-NEXT:    pop {r4, r7, lr}
+; ARM-ENABLE-NEXT:    vmov r0, s0
+; ARM-ENABLE-NEXT:    bx lr
 ; ARM-ENABLE-NEXT:  LBB12_2:
 ; ARM-ENABLE-NEXT:    vldr s0, LCPI12_0
-; ARM-ENABLE-NEXT:  LBB12_3: @ %bb13
-; ARM-ENABLE-NEXT:    mov r4, sp
-; ARM-ENABLE-NEXT:    vld1.64 {d8, d9}, [r4:128]
 ; ARM-ENABLE-NEXT:    vmov r0, s0
-; ARM-ENABLE-NEXT:    sub sp, r7, #4
-; ARM-ENABLE-NEXT:    pop {r4, r7, pc}
+; ARM-ENABLE-NEXT:    bx lr
 ; ARM-ENABLE-NEXT:    .p2align 2
-; ARM-ENABLE-NEXT:  @ %bb.4:
+; ARM-ENABLE-NEXT:  @ %bb.3:
 ; ARM-ENABLE-NEXT:    .data_region
 ; ARM-ENABLE-NEXT:  LCPI12_0:
 ; ARM-ENABLE-NEXT:    .long 0x00000000 @ float 0
@@ -2058,23 +2059,24 @@ define float @debug_info(float %gamma, float %slopeLimit, i1 %or.cond, double %t
 ; THUMB-ENABLE-LABEL: debug_info:
 ; THUMB-ENABLE:       Lfunc_begin12:
 ; THUMB-ENABLE-NEXT:  @ %bb.0: @ %bb
+; THUMB-ENABLE-NEXT:    lsls r1, r2, #31
+; THUMB-ENABLE-NEXT:    beq LBB12_2
+; THUMB-ENABLE-NEXT:  @ %bb.1: @ %bb3
 ; THUMB-ENABLE-NEXT:    push {r4, r7, lr}
 ; THUMB-ENABLE-NEXT:    add r7, sp, #4
 ; THUMB-ENABLE-NEXT:    sub.w r4, sp, #16
 ; THUMB-ENABLE-NEXT:    bfc r4, #0, #4
 ; THUMB-ENABLE-NEXT:    mov sp, r4
-; THUMB-ENABLE-NEXT:    lsls r1, r2, #31
-; THUMB-ENABLE-NEXT:    vst1.64 {d8, d9}, [r4:128]
-; THUMB-ENABLE-NEXT:    beq LBB12_2
-; THUMB-ENABLE-NEXT:  @ %bb.1: @ %bb3
 ; THUMB-ENABLE-NEXT:    ldr r1, [r7, #8]
+; THUMB-ENABLE-NEXT:    mov r2, r3
+; THUMB-ENABLE-NEXT:    vst1.64 {d8, d9}, [r4:128]
 ; THUMB-ENABLE-NEXT:    vmov s16, r0
 ; THUMB-ENABLE-NEXT:    mov r0, r3
-; THUMB-ENABLE-NEXT:    mov r2, r3
 ; THUMB-ENABLE-NEXT:    vmov d9, r3, r1
 ; THUMB-ENABLE-NEXT:    mov r3, r1
 ; THUMB-ENABLE-NEXT:    bl _pow
 ; THUMB-ENABLE-NEXT:    vmov.f32 s0, #1.000000e+00
+; THUMB-ENABLE-NEXT:    mov r4, sp
 ; THUMB-ENABLE-NEXT:    vmov.f64 d16, #1.000000e+00
 ; THUMB-ENABLE-NEXT:    vmov.f64 d18, d9
 ; THUMB-ENABLE-NEXT:    vcmp.f32 s16, s0
@@ -2089,18 +2091,18 @@ define float @debug_info(float %gamma, float %slopeLimit, i1 %or.cond, double %t
 ; THUMB-ENABLE-NEXT:    it ne
 ; THUMB-ENABLE-NEXT:    vmovne.f64 d9, d17
 ; THUMB-ENABLE-NEXT:    vcvt.f32.f64 s0, d9
-; THUMB-ENABLE-NEXT:    b LBB12_3
-; THUMB-ENABLE-NEXT:  LBB12_2:
-; THUMB-ENABLE-NEXT:    vldr s0, LCPI12_0
-; THUMB-ENABLE-NEXT:  LBB12_3: @ %bb13
-; THUMB-ENABLE-NEXT:    mov r4, sp
 ; THUMB-ENABLE-NEXT:    vld1.64 {d8, d9}, [r4:128]
 ; THUMB-ENABLE-NEXT:    subs r4, r7, #4
-; THUMB-ENABLE-NEXT:    vmov r0, s0
 ; THUMB-ENABLE-NEXT:    mov sp, r4
-; THUMB-ENABLE-NEXT:    pop {r4, r7, pc}
+; THUMB-ENABLE-NEXT:    pop.w {r4, r7, lr}
+; THUMB-ENABLE-NEXT:    vmov r0, s0
+; THUMB-ENABLE-NEXT:    bx lr
+; THUMB-ENABLE-NEXT:  LBB12_2:
+; THUMB-ENABLE-NEXT:    vldr s0, LCPI12_0
+; THUMB-ENABLE-NEXT:    vmov r0, s0
+; THUMB-ENABLE-NEXT:    bx lr
 ; THUMB-ENABLE-NEXT:    .p2align 2
-; THUMB-ENABLE-NEXT:  @ %bb.4:
+; THUMB-ENABLE-NEXT:  @ %bb.3:
 ; THUMB-ENABLE-NEXT:    .data_region
 ; THUMB-ENABLE-NEXT:  LCPI12_0:
 ; THUMB-ENABLE-NEXT:    .long 0x00000000 @ float 0

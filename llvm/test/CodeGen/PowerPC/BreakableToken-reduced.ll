@@ -201,20 +201,9 @@ target triple = "powerpc64le-unknown-linux-gnu"
 define void @_ZN5clang6format22BreakableStringLiteral11insertBreakEjjSt4pairImjERNS0_17WhitespaceManagerE(ptr nocapture readonly %this, i32 zeroext %LineIndex, i32 zeroext %TailOffset, [2 x i64] %Split.coerce, ptr dereferenceable(1504) %Whitespaces) unnamed_addr #1 align 2 {
 ; CHECK-LABEL: _ZN5clang6format22BreakableStringLiteral11insertBreakEjjSt4pairImjERNS0_17WhitespaceManagerE:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    mflr 0
-; CHECK-NEXT:    .cfi_def_cfa_offset 160
-; CHECK-NEXT:    .cfi_offset lr, 16
-; CHECK-NEXT:    .cfi_offset r28, -32
-; CHECK-NEXT:    .cfi_offset r29, -24
-; CHECK-NEXT:    .cfi_offset r30, -16
-; CHECK-NEXT:    std 28, -32(1) # 8-byte Folded Spill
-; CHECK-NEXT:    std 29, -24(1) # 8-byte Folded Spill
-; CHECK-NEXT:    std 30, -16(1) # 8-byte Folded Spill
-; CHECK-NEXT:    stdu 1, -160(1)
-; CHECK-NEXT:    std 0, 176(1)
-; CHECK-NEXT:    mr 12, 8
 ; CHECK-NEXT:    ld 10, 56(3)
 ; CHECK-NEXT:    lwz 0, 40(3)
+; CHECK-NEXT:    mr 12, 8
 ; CHECK-NEXT:    cmpldi 10, 0
 ; CHECK-NEXT:    beq 0, .LBB0_2
 ; CHECK-NEXT:  # %bb.1: # %if.end.i.i
@@ -226,16 +215,27 @@ define void @_ZN5clang6format22BreakableStringLiteral11insertBreakEjjSt4pairImjE
 ; CHECK-NEXT:    ld 9, 48(3)
 ; CHECK-NEXT:    crxor 2, 2, 2
 ; CHECK-NEXT:  .LBB0_3: # %_ZNK4llvm9StringRef10startswithES0_.exit
+; CHECK-NEXT:    mflr 4
+; CHECK-NEXT:    .cfi_def_cfa_offset 160
+; CHECK-NEXT:    .cfi_offset lr, 16
+; CHECK-NEXT:    .cfi_offset r28, -32
+; CHECK-NEXT:    .cfi_offset r29, -24
+; CHECK-NEXT:    .cfi_offset r30, -16
+; CHECK-NEXT:    std 28, -32(1) # 8-byte Folded Spill
+; CHECK-NEXT:    std 29, -24(1) # 8-byte Folded Spill
+; CHECK-NEXT:    std 30, -16(1) # 8-byte Folded Spill
+; CHECK-NEXT:    stdu 1, -160(1)
+; CHECK-NEXT:    std 4, 176(1)
 ; CHECK-NEXT:    li 8, 0
 ; CHECK-NEXT:    li 11, 1
 ; CHECK-NEXT:    add 5, 6, 5
-; CHECK-NEXT:    lbz 29, 20(3)
-; CHECK-NEXT:    lwz 28, 16(3)
-; CHECK-NEXT:    ld 4, 8(3)
 ; CHECK-NEXT:    iseleq 30, 11, 8
 ; CHECK-NEXT:    ld 11, 64(3)
-; CHECK-NEXT:    ld 8, 72(3)
+; CHECK-NEXT:    lbz 29, 20(3)
+; CHECK-NEXT:    lwz 28, 16(3)
 ; CHECK-NEXT:    add 5, 5, 10
+; CHECK-NEXT:    ld 4, 8(3)
+; CHECK-NEXT:    ld 8, 72(3)
 ; CHECK-NEXT:    sub 3, 0, 30
 ; CHECK-NEXT:    clrldi 5, 5, 32
 ; CHECK-NEXT:    li 0, 1
@@ -243,8 +243,8 @@ define void @_ZN5clang6format22BreakableStringLiteral11insertBreakEjjSt4pairImjE
 ; CHECK-NEXT:    extsw 30, 3
 ; CHECK-NEXT:    mr 3, 12
 ; CHECK-NEXT:    mr 7, 11
-; CHECK-NEXT:    std 28, 112(1)
 ; CHECK-NEXT:    std 0, 104(1)
+; CHECK-NEXT:    std 28, 112(1)
 ; CHECK-NEXT:    std 29, 96(1)
 ; CHECK-NEXT:    std 30, 120(1)
 ; CHECK-NEXT:    bl _ZN5clang6format17WhitespaceManager24replaceWhitespaceInTokenERKNS0_11FormatTokenEjjN4llvm9StringRefES6_bjji
