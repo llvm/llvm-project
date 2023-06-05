@@ -697,6 +697,7 @@ libc_support_library(
         ":__support_fputil_fenv_impl",
         ":__support_fputil_float_properties",
         ":__support_fputil_fp_bits",
+        ":__support_macros_attributes",
         ":__support_macros_optimization",
         ":__support_macros_properties_cpu_features",
         ":__support_uint128",
