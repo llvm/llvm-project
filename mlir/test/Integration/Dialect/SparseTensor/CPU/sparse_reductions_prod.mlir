@@ -30,6 +30,7 @@
 // An example of vector reductions.
 module {
 
+  // Custom prod reduction: stored i32 elements only.
   func.func @prod_dreduction_i32(%arga: tensor<32xi32, #DV>,
                                  %argx: tensor<i32>) -> tensor<i32> {
     %c = tensor.extract %argx[] : tensor<i32>
@@ -47,6 +48,7 @@ module {
     return %0 : tensor<i32>
   }
 
+  // Custom prod reduction: stored f32 elements only.
   func.func @prod_dreduction_f32(%arga: tensor<32xf32, #DV>,
                                  %argx: tensor<f32>) -> tensor<f32> {
     %c = tensor.extract %argx[] : tensor<f32>
@@ -64,6 +66,7 @@ module {
     return %0 : tensor<f32>
   }
 
+  // Custom prod reduction: stored i32 elements only.
   func.func @prod_sreduction_i32(%arga: tensor<32xi32, #SV>,
                                  %argx: tensor<i32>) -> tensor<i32> {
     %c = tensor.extract %argx[] : tensor<i32>
@@ -81,6 +84,7 @@ module {
     return %0 : tensor<i32>
   }
 
+  // Custom prod reduction: stored f32 elements only.
   func.func @prod_sreduction_f32(%arga: tensor<32xf32, #SV>,
                                  %argx: tensor<f32>) -> tensor<f32> {
     %c = tensor.extract %argx[] : tensor<f32>
@@ -97,6 +101,42 @@ module {
     } -> tensor<f32>
     return %0 : tensor<f32>
   }
+
+  // Custom prod reduction: stored i32 elements and implicit zeros.
+  //
+  // NOTE: this is a somewhat strange operation, since for most sparse
+  //       situations the outcome would always be zero; it is added
+  //       to test full functionality and illustrate the subtle differences
+  //       between the various custom operations; it would make a bit more
+  //       sense for e.g. a min/max reductions, although it still would
+  //       "densify" the iteration space.
+  //
+  func.func @prod_xreduction_i32(%arga: tensor<32xi32, #SV>,
+                                 %argx: tensor<i32>) -> tensor<i32> {
+    %c = tensor.extract %argx[] : tensor<i32>
+    %0 = linalg.generic #trait_reduction
+      ins(%arga: tensor<32xi32, #SV>)
+      outs(%argx: tensor<i32>) {
+        ^bb(%a: i32, %b: i32):
+           %u = sparse_tensor.unary %a : i32 to i32
+           present={
+             ^bb0(%x: i32):
+             sparse_tensor.yield %x : i32
+           } absent={
+             ^bb0:
+             %c0 = arith.constant 0 : i32
+             sparse_tensor.yield %c0 : i32
+          }
+          %1 = sparse_tensor.reduce %u, %b, %c : i32 {
+            ^bb0(%x: i32, %y: i32):
+              %2 = arith.muli %x, %y : i32
+              sparse_tensor.yield %2 : i32
+          }
+          linalg.yield %1 : i32
+    } -> tensor<i32>
+    return %0 : tensor<i32>
+  }
+
 
   func.func @dump_i32(%arg0 : tensor<i32>) {
     %v = tensor.extract %arg0[] : tensor<i32>
@@ -174,6 +214,8 @@ module {
     %6 = call @prod_sreduction_i32(%s1_i32, %ri) : (tensor<32xi32, #SV>, tensor<i32>) -> tensor<i32>
     %7 = call @prod_sreduction_f32(%s1_f32, %rf) : (tensor<32xf32, #SV>, tensor<f32>) -> tensor<f32>
     %8 = call @prod_sreduction_i32(%s0,     %ri) : (tensor<32xi32, #SV>, tensor<i32>) -> tensor<i32>
+    %9 = call @prod_xreduction_i32(%s0_i32, %ri) : (tensor<32xi32, #SV>, tensor<i32>) -> tensor<i32>
+    %10 = call @prod_xreduction_i32(%s1_i32, %ri) : (tensor<32xi32, #SV>, tensor<i32>) -> tensor<i32>
 
     // Verify results. Note that the custom reduction gave permission
     // to treat an explicit vs implicit zero differently to compute the
@@ -190,6 +232,8 @@ module {
     // CHECK: 3087
     // CHECK: 168
     // CHECK: 0
+    // CHECK: 0
+    // CHECK: 3087
     //
     call @dump_i32(%0) : (tensor<i32>) -> ()
     call @dump_f32(%1) : (tensor<f32>) -> ()
@@ -200,6 +244,8 @@ module {
     call @dump_i32(%6) : (tensor<i32>) -> ()
     call @dump_f32(%7) : (tensor<f32>) -> ()
     call @dump_i32(%8) : (tensor<i32>) -> ()
+    call @dump_i32(%9) : (tensor<i32>) -> ()
+    call @dump_i32(%10) : (tensor<i32>) -> ()
 
     // Release the resources.
     bufferization.dealloc_tensor %d0_i32 : tensor<32xi32, #DV>
