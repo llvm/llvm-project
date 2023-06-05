@@ -7190,11 +7190,11 @@ Instruction *InstCombinerImpl::visitFCmpInst(FCmpInst &I) {
   // then canonicalize the operand to 0.0.
   if (Pred == CmpInst::FCMP_ORD || Pred == CmpInst::FCMP_UNO) {
     if (!match(Op0, m_PosZeroFP()) && isKnownNeverNaN(Op0, DL, &TLI, 0,
-                                                      &AC, &I, &DT, &ORE))
+                                                      &AC, &I, &DT))
       return replaceOperand(I, 0, ConstantFP::getZero(OpType));
 
     if (!match(Op1, m_PosZeroFP()) &&
-        isKnownNeverNaN(Op1, DL, &TLI, 0, &AC, &I, &DT, &ORE))
+        isKnownNeverNaN(Op1, DL, &TLI, 0, &AC, &I, &DT))
       return replaceOperand(I, 1, ConstantFP::getZero(OpType));
   }
 
