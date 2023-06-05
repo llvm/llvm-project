@@ -125,6 +125,15 @@ X86LegalizerInfo::X86LegalizerInfo(const X86Subtarget &STI,
       })
       .clampScalar(0, s8, sMaxScalar);
 
+  // integer shifts
+  getActionDefinitionsBuilder({G_SHL, G_LSHR, G_ASHR})
+      .legalIf([=](const LegalityQuery &Query) -> bool {
+        return typePairInSet(0, 1, {{s8, s8}, {s16, s8}, {s32, s8}})(Query) ||
+               (Is64Bit && typePairInSet(0, 1, {{s64, s8}})(Query));
+      })
+      .clampScalar(0, s8, sMaxScalar)
+      .clampScalar(1, s8, s8);
+
   // bswap
   getActionDefinitionsBuilder(G_BSWAP)
       .legalIf([=](const LegalityQuery &Query) {
@@ -245,13 +254,6 @@ void X86LegalizerInfo::setLegalizerInfo32bit() {
         .widenScalarToNextPow2(0, /*Min*/ 8);
     getActionDefinitionsBuilder(G_INTTOPTR).legalFor({{p0, s32}});
 
-    // Shifts
-    getActionDefinitionsBuilder(
-        {G_SHL, G_LSHR, G_ASHR})
-      .legalFor({{s8, s8}, {s16, s8}, {s32, s8}})
-      .clampScalar(0, s8, s32)
-      .clampScalar(1, s8, s8);
-
     // Comparison
     getActionDefinitionsBuilder(G_ICMP)
         .legalForCartesianProduct({s8}, {s8, s16, s32, p0})
@@ -356,13 +358,6 @@ void X86LegalizerInfo::setLegalizerInfo64bit() {
       .clampScalar(0, s8, s8)
       .clampScalar(1, s32, s64)
       .widenScalarToNextPow2(1);
-
-  // Shifts
-  getActionDefinitionsBuilder(
-    {G_SHL, G_LSHR, G_ASHR})
-    .legalFor({{s8, s8}, {s16, s8}, {s32, s8}, {s64, s8}})
-    .clampScalar(0, s8, s64)
-    .clampScalar(1, s8, s8);
 
   // Merge/Unmerge
   LegacyInfo.setAction({G_MERGE_VALUES, s128}, LegacyLegalizeActions::Legal);
