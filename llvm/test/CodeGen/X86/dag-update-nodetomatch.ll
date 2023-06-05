@@ -96,6 +96,17 @@ entry:
 define void @_Z2x6v() local_unnamed_addr {
 ; CHECK-LABEL: _Z2x6v:
 ; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    movq x1@GOTPCREL(%rip), %rax
+; CHECK-NEXT:    movl (%rax), %esi
+; CHECK-NEXT:    andl $511, %esi # imm = 0x1FF
+; CHECK-NEXT:    leaq 1(%rsi), %rax
+; CHECK-NEXT:    movq x4@GOTPCREL(%rip), %rcx
+; CHECK-NEXT:    movl %eax, (%rcx)
+; CHECK-NEXT:    movq x3@GOTPCREL(%rip), %rcx
+; CHECK-NEXT:    movl (%rcx), %edx
+; CHECK-NEXT:    testl %edx, %edx
+; CHECK-NEXT:    je .LBB1_18
+; CHECK-NEXT:  # %bb.1: # %for.cond1thread-pre-split.lr.ph
 ; CHECK-NEXT:    pushq %rbp
 ; CHECK-NEXT:    .cfi_def_cfa_offset 16
 ; CHECK-NEXT:    pushq %r15
@@ -114,17 +125,6 @@ define void @_Z2x6v() local_unnamed_addr {
 ; CHECK-NEXT:    .cfi_offset %r14, -32
 ; CHECK-NEXT:    .cfi_offset %r15, -24
 ; CHECK-NEXT:    .cfi_offset %rbp, -16
-; CHECK-NEXT:    movq x1@GOTPCREL(%rip), %rax
-; CHECK-NEXT:    movl (%rax), %esi
-; CHECK-NEXT:    andl $511, %esi # imm = 0x1FF
-; CHECK-NEXT:    leaq 1(%rsi), %rax
-; CHECK-NEXT:    movq x4@GOTPCREL(%rip), %rcx
-; CHECK-NEXT:    movl %eax, (%rcx)
-; CHECK-NEXT:    movq x3@GOTPCREL(%rip), %rcx
-; CHECK-NEXT:    movl (%rcx), %edx
-; CHECK-NEXT:    testl %edx, %edx
-; CHECK-NEXT:    je .LBB1_18
-; CHECK-NEXT:  # %bb.1: # %for.cond1thread-pre-split.lr.ph
 ; CHECK-NEXT:    movq x5@GOTPCREL(%rip), %rcx
 ; CHECK-NEXT:    movq (%rcx), %rdi
 ; CHECK-NEXT:    movl %edx, %ecx
@@ -255,7 +255,6 @@ define void @_Z2x6v() local_unnamed_addr {
 ; CHECK-NEXT:    movq %rcx, (%rax)
 ; CHECK-NEXT:    movq x3@GOTPCREL(%rip), %rax
 ; CHECK-NEXT:    movl $0, (%rax)
-; CHECK-NEXT:  .LBB1_18: # %for.end5
 ; CHECK-NEXT:    popq %rbx
 ; CHECK-NEXT:    .cfi_def_cfa_offset 48
 ; CHECK-NEXT:    popq %r12
@@ -268,6 +267,13 @@ define void @_Z2x6v() local_unnamed_addr {
 ; CHECK-NEXT:    .cfi_def_cfa_offset 16
 ; CHECK-NEXT:    popq %rbp
 ; CHECK-NEXT:    .cfi_def_cfa_offset 8
+; CHECK-NEXT:    .cfi_restore %rbx
+; CHECK-NEXT:    .cfi_restore %r12
+; CHECK-NEXT:    .cfi_restore %r13
+; CHECK-NEXT:    .cfi_restore %r14
+; CHECK-NEXT:    .cfi_restore %r15
+; CHECK-NEXT:    .cfi_restore %rbp
+; CHECK-NEXT:  .LBB1_18: # %for.end5
 ; CHECK-NEXT:    retq
 entry:
   %0 = load i32, ptr @x1, align 4

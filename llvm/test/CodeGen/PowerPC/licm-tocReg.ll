@@ -67,12 +67,6 @@
 define signext i32 @test(ptr nocapture %FP) local_unnamed_addr #0 {
 ; CHECKLX-LABEL: test:
 ; CHECKLX:       # %bb.0: # %entry
-; CHECKLX-NEXT:    mflr 0
-; CHECKLX-NEXT:    stdu 1, -32(1)
-; CHECKLX-NEXT:    std 2, 24(1)
-; CHECKLX-NEXT:    std 0, 48(1)
-; CHECKLX-NEXT:    .cfi_def_cfa_offset 32
-; CHECKLX-NEXT:    .cfi_offset lr, 16
 ; CHECKLX-NEXT:    addis 4, 2, .LC0@toc@ha
 ; CHECKLX-NEXT:    addis 5, 2, .LC1@toc@ha
 ; CHECKLX-NEXT:    mr 12, 3
@@ -94,6 +88,12 @@ define signext i32 @test(ptr nocapture %FP) local_unnamed_addr #0 {
 ; CHECKLX-NEXT:    lwz 6, 0(4)
 ; CHECKLX-NEXT:    ble 0, .LBB0_1
 ; CHECKLX-NEXT:  .LBB0_2: # %if.then
+; CHECKLX-NEXT:    mflr 0
+; CHECKLX-NEXT:    stdu 1, -32(1)
+; CHECKLX-NEXT:    std 2, 24(1)
+; CHECKLX-NEXT:    std 0, 48(1)
+; CHECKLX-NEXT:    .cfi_def_cfa_offset 32
+; CHECKLX-NEXT:    .cfi_offset lr, 16
 ; CHECKLX-NEXT:    extsw 3, 6
 ; CHECKLX-NEXT:    mtctr 12
 ; CHECKLX-NEXT:    bctrl
@@ -105,9 +105,6 @@ define signext i32 @test(ptr nocapture %FP) local_unnamed_addr #0 {
 ;
 ; CHECKAIX-LABEL: test:
 ; CHECKAIX:       # %bb.0: # %entry
-; CHECKAIX-NEXT:    mflr 0
-; CHECKAIX-NEXT:    stdu 1, -112(1)
-; CHECKAIX-NEXT:    std 0, 128(1)
 ; CHECKAIX-NEXT:    ld 5, L..C0(2) # @ga
 ; CHECKAIX-NEXT:    ld 6, L..C1(2) # @gb
 ; CHECKAIX-NEXT:  L..BB0_1: # %if.end
@@ -123,7 +120,10 @@ define signext i32 @test(ptr nocapture %FP) local_unnamed_addr #0 {
 ; CHECKAIX-NEXT:    stw 4, 0(5)
 ; CHECKAIX-NEXT:    b L..BB0_1
 ; CHECKAIX-NEXT:  L..BB0_3: # %if.then
+; CHECKAIX-NEXT:    mflr 0
+; CHECKAIX-NEXT:    stdu 1, -112(1)
 ; CHECKAIX-NEXT:    ld 5, 0(3)
+; CHECKAIX-NEXT:    std 0, 128(1)
 ; CHECKAIX-NEXT:    ld 11, 16(3)
 ; CHECKAIX-NEXT:    std 2, 40(1)
 ; CHECKAIX-NEXT:    ld 2, 8(3)
@@ -138,9 +138,6 @@ define signext i32 @test(ptr nocapture %FP) local_unnamed_addr #0 {
 ;
 ; CHECKAIX32-LABEL: test:
 ; CHECKAIX32:       # %bb.0: # %entry
-; CHECKAIX32-NEXT:    mflr 0
-; CHECKAIX32-NEXT:    stwu 1, -64(1)
-; CHECKAIX32-NEXT:    stw 0, 72(1)
 ; CHECKAIX32-NEXT:    lwz 5, L..C0(2) # @ga
 ; CHECKAIX32-NEXT:    lwz 6, L..C1(2) # @gb
 ; CHECKAIX32-NEXT:  L..BB0_1: # %if.end
@@ -156,10 +153,13 @@ define signext i32 @test(ptr nocapture %FP) local_unnamed_addr #0 {
 ; CHECKAIX32-NEXT:    stw 4, 0(5)
 ; CHECKAIX32-NEXT:    b L..BB0_1
 ; CHECKAIX32-NEXT:  L..BB0_3: # %if.then
+; CHECKAIX32-NEXT:    mflr 0
+; CHECKAIX32-NEXT:    stwu 1, -64(1)
 ; CHECKAIX32-NEXT:    lwz 5, 0(3)
+; CHECKAIX32-NEXT:    stw 0, 72(1)
 ; CHECKAIX32-NEXT:    stw 2, 20(1)
-; CHECKAIX32-NEXT:    lwz 11, 8(3)
 ; CHECKAIX32-NEXT:    mtctr 5
+; CHECKAIX32-NEXT:    lwz 11, 8(3)
 ; CHECKAIX32-NEXT:    lwz 2, 4(3)
 ; CHECKAIX32-NEXT:    mr 3, 4
 ; CHECKAIX32-NEXT:    bctrl

@@ -4,8 +4,6 @@
 define i32 @test1(i32 %x) {
 ; CHECK-LABEL: test1:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    pushq %rax
-; CHECK-NEXT:    .cfi_def_cfa_offset 16
 ; CHECK-NEXT:    #APP
 ; CHECK-NEXT:    .quad .Ltmp0
 ; CHECK-NEXT:    .quad .LBB0_1
@@ -13,12 +11,14 @@ define i32 @test1(i32 %x) {
 ; CHECK-NEXT:  .LBB0_1: # Block address taken
 ; CHECK-NEXT:    # %bar
 ; CHECK-NEXT:    # Label of block must be emitted
+; CHECK-NEXT:    pushq %rax
+; CHECK-NEXT:    .cfi_def_cfa_offset 16
 ; CHECK-NEXT:    callq foo@PLT
+; CHECK-NEXT:    addq $8, %rsp
+; CHECK-NEXT:    .cfi_def_cfa_offset 8
 ; CHECK-NEXT:  .Ltmp0: # Block address taken
 ; CHECK-NEXT:  # %bb.2: # %baz
 ; CHECK-NEXT:    movl %eax, %edi
-; CHECK-NEXT:    popq %rax
-; CHECK-NEXT:    .cfi_def_cfa_offset 8
 ; CHECK-NEXT:    jmp mux@PLT # TAILCALL
 entry:
   callbr void asm sideeffect ".quad ${0:l}\0A\09.quad ${1:l}", "i,!i,~{dirflag},~{fpsr},~{flags}"(ptr blockaddress(@test1, %baz))
