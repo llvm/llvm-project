@@ -214,7 +214,7 @@ std::string elf::createResponseFile(const opt::InputArgList &args) {
 static std::optional<std::string> findFile(StringRef path1,
                                            const Twine &path2) {
   SmallString<128> s;
-  if (path1.startswith("="))
+  if (path1.starts_with("="))
     path::append(s, config->sysroot, path1.substr(1), path2);
   else
     path::append(s, path1, path2);
@@ -247,7 +247,7 @@ std::optional<std::string> elf::searchLibraryBaseName(StringRef name) {
 // This is for -l<namespec>.
 std::optional<std::string> elf::searchLibrary(StringRef name) {
   llvm::TimeTraceScope timeScope("Locate library", name);
-  if (name.startswith(":"))
+  if (name.starts_with(":"))
     return findFromSearchPaths(name.substr(1));
   return searchLibraryBaseName(name);
 }

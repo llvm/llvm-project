@@ -331,7 +331,7 @@ template <class ELFT> void OutputSection::maybeCompress() {
 
   // Compress only DWARF debug sections.
   if (config->compressDebugSections == DebugCompressionType::None ||
-      (flags & SHF_ALLOC) || !name.startswith(".debug_") || size == 0)
+      (flags & SHF_ALLOC) || !name.starts_with(".debug_") || size == 0)
     return;
 
   llvm::TimeTraceScope timeScope("Compress debug sections");
@@ -669,7 +669,7 @@ int elf::getPriority(StringRef s) {
     return 65536;
   int v = 65536;
   if (to_integer(s.substr(pos + 1), v, 10) &&
-      (pos == 6 && (s.startswith(".ctors") || s.startswith(".dtors"))))
+      (pos == 6 && (s.starts_with(".ctors") || s.starts_with(".dtors"))))
     v = 65535 - v;
   return v;
 }

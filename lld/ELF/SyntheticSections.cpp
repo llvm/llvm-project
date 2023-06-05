@@ -3154,7 +3154,7 @@ template <class ELFT> void VersionNeedSection<ELFT>::finalizeContents() {
     verneeds.emplace_back();
     Verneed &vn = verneeds.back();
     vn.nameStrTab = getPartition().dynStrTab->addString(f->soName);
-    bool isLibc = config->relrGlibc && f->soName.startswith("libc.so.");
+    bool isLibc = config->relrGlibc && f->soName.starts_with("libc.so.");
     bool isGlibc2 = false;
     for (unsigned i = 0; i != f->vernauxs.size(); ++i) {
       if (f->vernauxs[i] == 0)
@@ -3162,7 +3162,7 @@ template <class ELFT> void VersionNeedSection<ELFT>::finalizeContents() {
       auto *verdef =
           reinterpret_cast<const typename ELFT::Verdef *>(f->verdefs[i]);
       StringRef ver(f->getStringTable().data() + verdef->getAux()->vda_name);
-      if (isLibc && ver.startswith("GLIBC_2."))
+      if (isLibc && ver.starts_with("GLIBC_2."))
         isGlibc2 = true;
       vn.vernauxs.push_back({verdef->vd_hash, f->vernauxs[i],
                              getPartition().dynStrTab->addString(ver)});
