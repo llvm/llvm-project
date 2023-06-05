@@ -176,6 +176,12 @@ extern "C" void mgpuMemset32(void *dst, unsigned int value, size_t count,
                                         value, count, stream));
 }
 
+extern "C" void mgpuMemset16(void *dst, unsigned short value, size_t count,
+                             CUstream stream) {
+  CUDA_REPORT_IF_ERROR(cuMemsetD16Async(reinterpret_cast<CUdeviceptr>(dst),
+                                        value, count, stream));
+}
+
 ///
 /// Helper functions for writing mlir example code
 ///
