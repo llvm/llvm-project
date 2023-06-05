@@ -262,6 +262,9 @@ void LinkerDriver::enqueuePath(StringRef path, bool wholeArchive, bool lazy) {
         ec = retryMb.getError();
         if (!ec)
           mb = std::move(*retryMb);
+      } else {
+        // We've already handled this file.
+        return;
       }
     }
     if (ec) {
