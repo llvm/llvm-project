@@ -285,6 +285,10 @@ enum NodeType : unsigned {
   VWSUBU_W_VL,
 
   VFWMUL_VL,
+  VFWADD_VL,
+  VFWSUB_VL,
+  VFWADD_W_VL,
+  VFWSUB_W_VL,
 
   // Narrowing logical shift right.
   // Operands are (source, shift, passthru, mask, vl)
