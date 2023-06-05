@@ -1121,8 +1121,9 @@ def SDWAVopcDst : BoolRC {
   let PrintMethod = "printVOPDst";
 }
 
-class NamedIntOperandClass<string Prefix, string Name, string ConvertMethod>
-    : CustomOperandClass<Name, 1> {
+class NamedIntOperand<ValueType Type, string Prefix, string Name = NAME,
+                      string ConvertMethod = "nullptr">
+    : CustomOperand<Type, 1, Name> {
   string ImmTy = "AMDGPUOperand::ImmTy"#Name;
   let ParserMethod =
     "[this](OperandVector &Operands) -> OperandMatchResultTy { "#
@@ -1130,47 +1131,36 @@ class NamedIntOperandClass<string Prefix, string Name, string ConvertMethod>
     ConvertMethod#"); }";
 }
 
-class NamedIntOperand<ValueType Type, string Prefix, string Name = NAME,
-                      string ConvertMethod = "nullptr">
-  : CustomOperand<Type, 1, Name, NamedIntOperandClass<Prefix, Name, ConvertMethod>>;
-
-class BitOperandClass<string Id, string Name>
-    : CustomOperandClass<Name, 1> {
+class NamedBitOperand<string Id, string Name = NAME>
+    : CustomOperand<i1, 1, Name> {
   string ImmTy = "AMDGPUOperand::ImmTy"#Name;
   let ParserMethod =
     "[this](OperandVector &Operands) -> OperandMatchResultTy { "#
     "return parseNamedBit(\""#Id#"\", Operands, "#ImmTy#"); }";
 }
 
-class NamedBitOperand<string Id, string Name = NAME>
-  : CustomOperand<i1, 1, Name, BitOperandClass<Id, Name>>;
-
 class DefaultOperand<CustomOperand Op, int Value>
   : OperandWithDefaultOps<Op.Type, (ops (Op.Type Value))>,
-    CustomOperandProps<1, Op.ParserMatchClass.Name, Op.ParserMatchClass>;
+    CustomOperandProps<1, Op.ParserMatchClass.Name> {
+  let ParserMethod = Op.ParserMatchClass.ParserMethod;
+}
 
-class SDWAOperandClass<string Id, string Name>
-    : CustomOperandClass<Name, 1> {
+class SDWAOperand<string Id, string Name = NAME>
+    : CustomOperand<i32, 1, Name> {
   string ImmTy = "AMDGPUOperand::ImmTy"#Name;
   let ParserMethod =
     "[this](OperandVector &Operands) -> OperandMatchResultTy { "#
     "return parseSDWASel(Operands, \""#Id#"\", "#ImmTy#"); }";
 }
 
-class SDWAOperand<string Id, string Name = NAME>
-  : CustomOperand<i32, 1, Name, SDWAOperandClass<Id, Name>>;
-
-class ArrayOperandClass<string Id, string Name>
-    : CustomOperandClass<Name, 1> {
+class ArrayOperand0<string Id, string Name = NAME>
+  : OperandWithDefaultOps<i32, (ops (i32 0))>,
+    CustomOperandProps<1, Name> {
   string ImmTy = "AMDGPUOperand::ImmTy"#Name;
   let ParserMethod =
     "[this](OperandVector &Operands) -> OperandMatchResultTy { "#
     "return parseOperandArrayWithPrefix(\""#Id#"\", Operands, "#ImmTy#"); }";
 }
-
-class ArrayOperand0<string Id, string Name = NAME>
-  : OperandWithDefaultOps<i32, (ops (i32 0))>,
-    CustomOperandProps<1, Name, ArrayOperandClass<Id, Name>>;
 
 def flat_offset : CustomOperand<i32, 1, "FlatOffset">;
 def offset : NamedIntOperand<i32, "offset", "Offset">;
