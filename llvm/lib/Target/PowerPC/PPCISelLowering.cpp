@@ -15040,20 +15040,21 @@ SDValue PPCTargetLowering::expandVSXStoreForLE(SDNode *N,
 // Handle DAG combine for STORE (FP_TO_INT F).
 SDValue PPCTargetLowering::combineStoreFPToInt(SDNode *N,
                                                DAGCombinerInfo &DCI) const {
-
   SelectionDAG &DAG = DCI.DAG;
   SDLoc dl(N);
   unsigned Opcode = N->getOperand(1).getOpcode();
   (void)Opcode;
+  bool Strict = N->getOperand(1)->isStrictFPOpcode();
 
-  assert((Opcode == ISD::FP_TO_SINT || Opcode == ISD::FP_TO_UINT)
+  assert((Opcode == ISD::FP_TO_SINT || Opcode == ISD::FP_TO_UINT ||
+          Opcode == ISD::STRICT_FP_TO_SINT || Opcode == ISD::STRICT_FP_TO_UINT)
          && "Not a FP_TO_INT Instruction!");
 
-  SDValue Val = N->getOperand(1).getOperand(0);
+  SDValue Val = N->getOperand(1).getOperand(Strict ? 1 : 0);
   EVT Op1VT = N->getOperand(1).getValueType();
   EVT ResVT = Val.getValueType();
 
-  if (!isTypeLegal(ResVT))
+  if (!Subtarget.hasVSX() || !Subtarget.hasFPCVT() || !isTypeLegal(ResVT))
     return SDValue();
 
   // Only perform combine for conversion to i64/i32 or power9 i16/i8.
@@ -15073,9 +15074,9 @@ SDValue PPCTargetLowering::combineStoreFPToInt(SDNode *N,
 
   // Set number of bytes being converted.
   unsigned ByteSize = Op1VT.getScalarSizeInBits() / 8;
-  SDValue Ops[] = { N->getOperand(0), Val, N->getOperand(2),
-                    DAG.getIntPtrConstant(ByteSize, dl, false),
-                    DAG.getValueType(Op1VT) };
+  SDValue Ops[] = {N->getOperand(0), Val, N->getOperand(2),
+                   DAG.getIntPtrConstant(ByteSize, dl, false),
+                   DAG.getValueType(Op1VT)};
 
   Val = DAG.getMemIntrinsicNode(PPCISD::ST_VSR_SCAL_INT, dl,
           DAG.getVTList(MVT::Other), Ops,
@@ -15516,9 +15517,9 @@ SDValue PPCTargetLowering::PerformDAGCombine(SDNode *N,
     EVT Op1VT = N->getOperand(1).getValueType();
     unsigned Opcode = N->getOperand(1).getOpcode();
 
-    if ((Opcode == ISD::FP_TO_SINT || Opcode == ISD::FP_TO_UINT) &&
-        Subtarget.hasFPCVT()) {
-      SDValue Val= combineStoreFPToInt(N, DCI);
+    if (Opcode == ISD::FP_TO_SINT || Opcode == ISD::FP_TO_UINT ||
+        Opcode == ISD::STRICT_FP_TO_SINT || Opcode == ISD::STRICT_FP_TO_UINT) {
+      SDValue Val = combineStoreFPToInt(N, DCI);
       if (Val)
         return Val;
     }
