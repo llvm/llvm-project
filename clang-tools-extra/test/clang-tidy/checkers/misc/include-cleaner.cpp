@@ -1,4 +1,4 @@
-// RUN: %check_clang_tidy %s misc-include-cleaner %t -- -- -I%S/Inputs -isystem%S/system
+// RUN: %check_clang_tidy %s misc-include-cleaner %t -- -- -I%S/Inputs -isystem%S/Inputs/system
 #include "bar.h"
 // CHECK-FIXES: {{^}}#include "baz.h"{{$}}
 #include "foo.h"
