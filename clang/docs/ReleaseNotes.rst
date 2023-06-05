@@ -330,6 +330,8 @@ Improvements to Clang's diagnostics
   ``-fno-diagnostics-show-line-numbers``. At the same time, the maximum
   number of code lines it prints has been increased from 1 to 16. This
   can be controlled using ``-fcaret-diagnostics-max-lines=``.
+- Clang no longer emits ``-Wunused-variable`` warnings for variables declared
+  with ``__attribute__((cleanup(...)))`` to match GCC's behavior.
 
 Bug Fixes in This Version
 -------------------------
