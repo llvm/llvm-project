@@ -75,6 +75,7 @@ X86LegalizerInfo::X86LegalizerInfo(const X86Subtarget &STI,
   const LLT s16 = LLT::scalar(16);
   const LLT s32 = LLT::scalar(32);
   const LLT s64 = LLT::scalar(64);
+  const LLT maxScalar = Subtarget.is64Bit() ? s64 : s32;
 
   getActionDefinitionsBuilder(G_INTRINSIC_ROUNDEVEN)
     .scalarize(0)
@@ -97,6 +98,13 @@ X86LegalizerInfo::X86LegalizerInfo(const X86Subtarget &STI,
 
   getActionDefinitionsBuilder({G_MEMCPY, G_MEMMOVE, G_MEMSET}).libcall();
 
+  getActionDefinitionsBuilder(G_BSWAP)
+    .legalIf([=](const LegalityQuery &Query) {
+        return Query.Types[0] == s32 ||
+          (Subtarget.is64Bit() && Query.Types[0] == s64);
+      })
+    .widenScalarToNextPow2(0, /*Min=*/32)
+    .clampScalar(0, s32, maxScalar);
 
   if (Subtarget.is64Bit()) {
     if (Subtarget.hasPOPCNT()) {
