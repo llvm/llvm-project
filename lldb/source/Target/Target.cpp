@@ -4679,7 +4679,7 @@ Args TargetProperties::GetSwiftPluginServerForPath() const {
   llvm::StringMap<std::string> result;
   Args property_plugin_server_path;
   m_experimental_properties_up->GetValueProperties()->GetPropertyAtIndexAsArgs(
-      nullptr, idx, property_plugin_server_path);
+      idx, property_plugin_server_path);
   return property_plugin_server_path;
 }
 
