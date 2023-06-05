@@ -27,19 +27,61 @@ start:
   ret i8 %0
 }
 
+define i8 @rotl8_5(i8 %x) {
+; CHECK-LABEL: rotl8_5:
+; CHECK:       ; %bb.0: ; %start
+; CHECK-NEXT:    lsl r24
+; CHECK-NEXT:    adc r24, r1
+; CHECK-NEXT:    lsl r24
+; CHECK-NEXT:    adc r24, r1
+; CHECK-NEXT:    lsl r24
+; CHECK-NEXT:    adc r24, r1
+; CHECK-NEXT:    lsl r24
+; CHECK-NEXT:    adc r24, r1
+; CHECK-NEXT:    lsl r24
+; CHECK-NEXT:    adc r24, r1
+; CHECK-NEXT:    ret
+start:
+  %0 = call i8 @llvm.fshl.i8(i8 %x, i8 %x, i8 5)
+  ret i8 %0
+}
+
+define i8 @rotl8_7(i8 %x) {
+; CHECK-LABEL: rotl8_7:
+; CHECK:       ; %bb.0: ; %start
+; CHECK-NEXT:    lsl r24
+; CHECK-NEXT:    adc r24, r1
+; CHECK-NEXT:    lsl r24
+; CHECK-NEXT:    adc r24, r1
+; CHECK-NEXT:    lsl r24
+; CHECK-NEXT:    adc r24, r1
+; CHECK-NEXT:    lsl r24
+; CHECK-NEXT:    adc r24, r1
+; CHECK-NEXT:    lsl r24
+; CHECK-NEXT:    adc r24, r1
+; CHECK-NEXT:    lsl r24
+; CHECK-NEXT:    adc r24, r1
+; CHECK-NEXT:    lsl r24
+; CHECK-NEXT:    adc r24, r1
+; CHECK-NEXT:    ret
+start:
+  %0 = call i8 @llvm.fshl.i8(i8 %x, i8 %x, i8 7)
+  ret i8 %0
+}
+
 define i8 @rotl8_dyn(i8 %x, i8 %y) {
 ; CHECK-LABEL: rotl8_dyn:
 ; CHECK:       ; %bb.0: ; %start
 ; CHECK-NEXT:    andi r22, 7
 ; CHECK-NEXT:    dec r22
-; CHECK-NEXT:    brmi .LBB2_2
-; CHECK-NEXT:  .LBB2_1: ; %start
+; CHECK-NEXT:    brmi .LBB4_2
+; CHECK-NEXT:  .LBB4_1: ; %start
 ; CHECK-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    lsl r24
 ; CHECK-NEXT:    adc r24, r1
 ; CHECK-NEXT:    dec r22
-; CHECK-NEXT:    brpl .LBB2_1
-; CHECK-NEXT:  .LBB2_2: ; %start
+; CHECK-NEXT:    brpl .LBB4_1
+; CHECK-NEXT:  .LBB4_2: ; %start
 ; CHECK-NEXT:    ret
 start:
   %0 = call i8 @llvm.fshl.i8(i8 %x, i8 %x, i8 %y)
@@ -76,20 +118,74 @@ start:
   ret i8 %0
 }
 
+define i8 @rotr8_5(i8 %x) {
+; CHECK-LABEL: rotr8_5:
+; CHECK:       ; %bb.0: ; %start
+; CHECK-NEXT:    bst r24, 0
+; CHECK-NEXT:    ror r24
+; CHECK-NEXT:    bld r24, 7
+; CHECK-NEXT:    bst r24, 0
+; CHECK-NEXT:    ror r24
+; CHECK-NEXT:    bld r24, 7
+; CHECK-NEXT:    bst r24, 0
+; CHECK-NEXT:    ror r24
+; CHECK-NEXT:    bld r24, 7
+; CHECK-NEXT:    bst r24, 0
+; CHECK-NEXT:    ror r24
+; CHECK-NEXT:    bld r24, 7
+; CHECK-NEXT:    bst r24, 0
+; CHECK-NEXT:    ror r24
+; CHECK-NEXT:    bld r24, 7
+; CHECK-NEXT:    ret
+start:
+  %0 = call i8 @llvm.fshr.i8(i8 %x, i8 %x, i8 5)
+  ret i8 %0
+}
+
+define i8 @rotr8_7(i8 %x) {
+; CHECK-LABEL: rotr8_7:
+; CHECK:       ; %bb.0: ; %start
+; CHECK-NEXT:    bst r24, 0
+; CHECK-NEXT:    ror r24
+; CHECK-NEXT:    bld r24, 7
+; CHECK-NEXT:    bst r24, 0
+; CHECK-NEXT:    ror r24
+; CHECK-NEXT:    bld r24, 7
+; CHECK-NEXT:    bst r24, 0
+; CHECK-NEXT:    ror r24
+; CHECK-NEXT:    bld r24, 7
+; CHECK-NEXT:    bst r24, 0
+; CHECK-NEXT:    ror r24
+; CHECK-NEXT:    bld r24, 7
+; CHECK-NEXT:    bst r24, 0
+; CHECK-NEXT:    ror r24
+; CHECK-NEXT:    bld r24, 7
+; CHECK-NEXT:    bst r24, 0
+; CHECK-NEXT:    ror r24
+; CHECK-NEXT:    bld r24, 7
+; CHECK-NEXT:    bst r24, 0
+; CHECK-NEXT:    ror r24
+; CHECK-NEXT:    bld r24, 7
+; CHECK-NEXT:    ret
+start:
+  %0 = call i8 @llvm.fshr.i8(i8 %x, i8 %x, i8 7)
+  ret i8 %0
+}
+
 define i8 @rotr8_dyn(i8 %x, i8 %y) {
 ; CHECK-LABEL: rotr8_dyn:
 ; CHECK:       ; %bb.0: ; %start
 ; CHECK-NEXT:    andi r22, 7
 ; CHECK-NEXT:    dec r22
-; CHECK-NEXT:    brmi .LBB5_2
-; CHECK-NEXT:  .LBB5_1: ; %start
+; CHECK-NEXT:    brmi .LBB9_2
+; CHECK-NEXT:  .LBB9_1: ; %start
 ; CHECK-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    bst r24, 0
 ; CHECK-NEXT:    ror r24
 ; CHECK-NEXT:    bld r24, 7
 ; CHECK-NEXT:    dec r22
-; CHECK-NEXT:    brpl .LBB5_1
-; CHECK-NEXT:  .LBB5_2: ; %start
+; CHECK-NEXT:    brpl .LBB9_1
+; CHECK-NEXT:  .LBB9_2: ; %start
 ; CHECK-NEXT:    ret
 start:
   %0 = call i8 @llvm.fshr.i8(i8 %x, i8 %x, i8 %y)
