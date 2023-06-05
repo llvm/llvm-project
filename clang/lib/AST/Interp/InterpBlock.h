@@ -156,6 +156,7 @@ public:
 
   /// Returns a pointer to the stored data.
   std::byte *data() { return B.data(); }
+  std::byte *rawData() { return B.rawData(); }
 
 private:
   friend class Block;
