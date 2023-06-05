@@ -123,34 +123,31 @@ def FMA : Predicate<"Subtarget->hasFMA()">;
 
 def InstFlag : OperandWithDefaultOps <i32, (ops (i32 0))>;
 
-class CustomOperandClass<string name, bit optional> : AsmOperandClass {
+class CustomOperandClass<string name, bit optional, string parserMethod>
+    : AsmOperandClass {
   let Name = name;
   let PredicateMethod = "is"#name;
-  let ParserMethod = "parse"#name;
+  let ParserMethod = parserMethod;
   let RenderMethod = "addImmOperands";
   let IsOptional = optional;
   let DefaultMethod = "default"#name;
 }
 
-class CustomOperandProps<bit optional = 0, string name = NAME,
-    AsmOperandClass opClass = CustomOperandClass<name, optional>> {
+class CustomOperandProps<bit optional = 0, string name = NAME> {
+  string ParserMethod = "parse"#name;
   string PrintMethod = "print"#name;
-  AsmOperandClass ParserMatchClass = opClass;
+  AsmOperandClass ParserMatchClass =
+    CustomOperandClass<name, optional, ParserMethod>;
   string OperandType = "OPERAND_IMMEDIATE";
 }
 
-class CustomOperand<ValueType type, bit optional = 0, string name = NAME,
-    AsmOperandClass opClass = CustomOperandClass<name, optional>>
-  : Operand<type>, CustomOperandProps<optional, name, opClass>;
-
-class ImmOperandClass<string name, bit optional>
-    : CustomOperandClass<name, optional> {
-  let ParserMethod = "";
-}
+class CustomOperand<ValueType type, bit optional = 0, string name = NAME>
+  : Operand<type>, CustomOperandProps<optional, name>;
 
 class ImmOperand<ValueType type, string name, bit optional = 0,
                  string printer = "print"#name>
-    : CustomOperand<type, optional, name, ImmOperandClass<name, optional>> {
+    : CustomOperand<type, optional, name> {
+  let ParserMethod = "";
   let PrintMethod = printer;
 }
 
