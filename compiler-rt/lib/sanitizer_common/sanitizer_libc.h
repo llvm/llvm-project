@@ -27,9 +27,13 @@ namespace __sanitizer {
 extern "C" {
 // These are used as builtin replacements; see sanitizer_redefine_builtins.h.
 // In normal runtime code, use the __sanitizer::internal_X() aliases instead.
-void *__sanitizer_internal_memcpy(void *dest, const void *src, uptr n);
-void *__sanitizer_internal_memmove(void *dest, const void *src, uptr n);
-void *__sanitizer_internal_memset(void *s, int c, uptr n);
+SANITIZER_INTERFACE_ATTRIBUTE void *__sanitizer_internal_memcpy(void *dest,
+                                                                const void *src,
+                                                                uptr n);
+SANITIZER_INTERFACE_ATTRIBUTE void *__sanitizer_internal_memmove(
+    void *dest, const void *src, uptr n);
+SANITIZER_INTERFACE_ATTRIBUTE void *__sanitizer_internal_memset(void *s, int c,
+                                                                uptr n);
 }  // extern "C"
 
 // String functions
