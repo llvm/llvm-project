@@ -28,14 +28,20 @@ module std [system] {
       header "fenv.h"
       export *
     }
-    // <float.h> provided by compiler or C library.
+    module float_t {
+      header "float.h"
+      export *
+    }
     module inttypes_h {
       header "inttypes.h"
       export stdint_h
       export *
     }
     // <iso646.h> provided by compiler.
-    // <limits.h> provided by compiler or C library.
+    module limits_h {
+      header "limits.h"
+      export *
+    }
     module locale_h {
       @requires_LIBCXX_ENABLE_LOCALIZATION@
       header "locale.h"
@@ -263,7 +269,10 @@ module std [system] {
       module equal_range                     { private header "__algorithm/equal_range.h" }
       module fill                            { private header "__algorithm/fill.h" }
       module fill_n                          { private header "__algorithm/fill_n.h" }
-      module find                            { private header "__algorithm/find.h" }
+      module find                            {
+        private header "__algorithm/find.h"
+        export algorithm.__algorithm.unwrap_iter
+      }
       module find_end                        { private header "__algorithm/find_end.h" }
       module find_first_of                   { private header "__algorithm/find_first_of.h" }
       module find_if                         { private header "__algorithm/find_if.h" }
@@ -324,6 +333,11 @@ module std [system] {
       module partition_point                 { private header "__algorithm/partition_point.h" }
       module pop_heap                        { private header "__algorithm/pop_heap.h" }
       module prev_permutation                { private header "__algorithm/prev_permutation.h" }
+      module pstl_any_all_none_of            { private header "__algorithm/pstl_any_all_none_of.h" }
+      module pstl_backend                    {
+        private header "__algorithm/pstl_backend.h"
+        export *
+      }
       module pstl_backends_cpu_backend       {
         private header "__algorithm/pstl_backends/cpu_backend.h"
         export *
@@ -346,13 +360,13 @@ module std [system] {
         private header "__algorithm/pstl_backends/cpu_backends/merge.h"
       }
       module pstl_backends_cpu_backends_serial {
-        private header "__algorithm/pstl_backends/cpu_backends/serial.h"
+        private textual header "__algorithm/pstl_backends/cpu_backends/serial.h"
       }
       module pstl_backends_cpu_backends_stable_sort {
         private header "__algorithm/pstl_backends/cpu_backends/stable_sort.h"
       }
       module pstl_backends_cpu_backends_thread {
-        private header "__algorithm/pstl_backends/cpu_backends/thread.h"
+        private textual header "__algorithm/pstl_backends/cpu_backends/thread.h"
       }
       module pstl_backends_cpu_backends_transform {
         private header "__algorithm/pstl_backends/cpu_backends/transform.h"
@@ -360,6 +374,31 @@ module std [system] {
       module pstl_backends_cpu_backends_transform_reduce {
         private header "__algorithm/pstl_backends/cpu_backends/transform_reduce.h"
       }
+      module pstl_copy                       { private header "__algorithm/pstl_copy.h" }
+      module pstl_count                      { private header "__algorithm/pstl_count.h" }
+      module pstl_fill                       { private header "__algorithm/pstl_fill.h" }
+      module pstl_find                       {
+        private header "__algorithm/pstl_find.h"
+        export *
+      }
+      module pstl_for_each                   {
+        private header "__algorithm/pstl_for_each.h"
+        export algorithm.__algorithm.pstl_backend
+        export iterator.__iterator.iterator_traits
+      }
+      module pstl_frontend_dispatch          {
+        private header "__algorithm/pstl_frontend_dispatch.h"
+        export utility.__utility.forward
+      }
+      module pstl_generate                   { private header "__algorithm/pstl_generate.h" }
+      module pstl_is_partitioned             { private header "__algorithm/pstl_is_partitioned.h" }
+      module pstl_merge                      { private header "__algorithm/pstl_merge.h" }
+      module pstl_replace                    { private header "__algorithm/pstl_replace.h" }
+      module pstl_stable_sort                {
+        private header "__algorithm/pstl_stable_sort.h"
+        export functional.__functional.operations
+      }
+      module pstl_transform                  { private header "__algorithm/pstl_transform.h" }
       module push_heap                       { private header "__algorithm/push_heap.h" }
       module ranges_adjacent_find            { private header "__algorithm/ranges_adjacent_find.h" }
       module ranges_all_of                   { private header "__algorithm/ranges_all_of.h" }
@@ -1205,6 +1244,12 @@ module std [system] {
     @requires_LIBCXX_ENABLE_LOCALIZATION@
     header "locale"
     export *
+
+    module __locale {
+      module locale_base_api_bsd_locale_defaults  { private textual header "__locale_dir/locale_base_api/bsd_locale_defaults.h" }
+      module locale_base_api_bsd_locale_fallbacks { private textual header "__locale_dir/locale_base_api/bsd_locale_fallbacks.h" }
+      module locale_base_api_locale_guard         { private header "__locale_dir/locale_base_api/locale_guard.h" }
+    }
   }
   module map {
     header "map"
@@ -1327,6 +1372,11 @@ module std [system] {
       module iota                     { private header "__numeric/iota.h" }
       module midpoint                 { private header "__numeric/midpoint.h" }
       module partial_sum              { private header "__numeric/partial_sum.h" }
+      module pstl_reduce              { private header "__numeric/pstl_reduce.h" }
+      module pstl_transform_reduce    {
+        private header "__numeric/pstl_transform_reduce.h"
+        export *
+      }
       module reduce                   { private header "__numeric/reduce.h" }
       module transform_exclusive_scan { private header "__numeric/transform_exclusive_scan.h" }
       module transform_inclusive_scan { private header "__numeric/transform_inclusive_scan.h" }
@@ -1722,7 +1772,10 @@ module std [system] {
       private header "__type_traits/is_equality_comparable.h"
       export integral_constant
     }
-    module is_execution_policy                       { private header "__type_traits/is_execution_policy.h" }
+    module is_execution_policy                       {
+      private header "__type_traits/is_execution_policy.h"
+      export type_traits.remove_cvref
+    }
     module is_final                                  { private header "__type_traits/is_final.h" }
     module is_floating_point                         { private header "__type_traits/is_floating_point.h" }
     module is_function                               { private header "__type_traits/is_function.h" }
@@ -1957,7 +2010,7 @@ module std [system] {
   module __std_mbstate_t     { private header "__std_mbstate_t.h"   export * }
   module __threading_support {         header "__threading_support" export * }
   module __tree              {         header "__tree"              export * }
-  module __undef_macros      {         header "__undef_macros"      export * }
+  module __undef_macros      { textual header "__undef_macros"      export * }
   module __verbose_abort     {         header "__verbose_abort"     export * }
 
   // This one needs to appear after __tree to work around issues with modules in Objective-C++ mode.
@@ -2040,6 +2093,10 @@ module std [system] {
     }
     module vector {
       header "experimental/vector"
+      export *
+    }
+    module __config {
+      private textual header "experimental/__config"
       export *
     }
     // FIXME these should be private
