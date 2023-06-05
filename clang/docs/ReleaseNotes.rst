@@ -539,6 +539,9 @@ Bug Fixes to C++ Support
 - Allow omitting ``typename`` in the parameter declaration of a friend
   constructor declaration.
   (`#63119 <https://github.com/llvm/llvm-project/issues/63119>`_)
+- Fix access of a friend class declared in a local class. Clang previously
+  emitted an error when a friend of a local class tried to access it's
+  private data members.
 
 Bug Fixes to AST Handling
 ^^^^^^^^^^^^^^^^^^^^^^^^^
