@@ -788,7 +788,7 @@ supported for the ``amdgcn`` target.
   GFX9-GFX11.
 
   Code that manipulates the stack values in other lanes of a wavefront,
-  such as by `addrspacecast`ing stack pointers to generic ones and taking offsets
+  such as by ``addrspacecast``-ing stack pointers to generic ones and taking offsets
   that reach other lanes or by explicitly constructing the scratch buffer descriptor,
   triggers undefined behavior when it modifies the scratch values of other lanes.
   The compiler may assume that such modifications do not occur.
