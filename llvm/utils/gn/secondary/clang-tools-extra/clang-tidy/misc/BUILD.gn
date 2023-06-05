@@ -21,6 +21,7 @@ static_library("misc") {
     ":Confusables.inc",
     "//clang-tools-extra/clang-tidy",
     "//clang-tools-extra/clang-tidy/utils",
+    "//clang-tools-extra/include-cleaner/lib",
     "//clang/lib/AST",
     "//clang/lib/ASTMatchers",
     "//clang/lib/Analysis",
