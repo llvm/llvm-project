@@ -3516,6 +3516,16 @@ static SDValue getMul24(SelectionDAG &DAG, const SDLoc &SL,
   return DAG.getNode(ISD::BUILD_PAIR, SL, MVT::i64, MulLo, MulHi);
 }
 
+/// If \p V is an add of a constant 1, returns the other operand. Otherwise
+/// return SDValue().
+static SDValue getAddOneOp(const SDNode *V) {
+  if (V->getOpcode() != ISD::ADD)
+    return SDValue();
+
+  auto *C = dyn_cast<ConstantSDNode>(V->getOperand(1));
+  return C && C->isOne() ? V->getOperand(0) : SDValue();
+}
+
 SDValue AMDGPUTargetLowering::performMulCombine(SDNode *N,
                                                 DAGCombinerInfo &DCI) const {
   EVT VT = N->getValueType(0);
@@ -3531,15 +3541,48 @@ SDValue AMDGPUTargetLowering::performMulCombine(SDNode *N,
   if (VT.isVector() || Size > 64)
     return SDValue();
 
-  // There are i16 integer mul/mad.
-  if (Subtarget->has16BitInsts() && VT.getScalarType().bitsLE(MVT::i16))
-    return SDValue();
-
   SelectionDAG &DAG = DCI.DAG;
   SDLoc DL(N);
 
   SDValue N0 = N->getOperand(0);
   SDValue N1 = N->getOperand(1);
+
+  // Undo InstCombine canonicalize X * (Y + 1) -> X * Y + X to enable mad
+  // matching.
+
+  // mul x, (add y, 1) -> add (mul x, y), x
+  auto IsFoldableAdd = [](SDValue V) -> SDValue {
+    SDValue AddOp = getAddOneOp(V.getNode());
+    if (!AddOp)
+      return SDValue();
+
+    if (V.hasOneUse() || all_of(V->uses(), [](const SDNode *U) -> bool {
+          return U->getOpcode() == ISD::MUL;
+        }))
+      return AddOp;
+
+    return SDValue();
+  };
+
+  // FIXME: The selection pattern is not properly checking for commuted
+  // operands, so we have to place the mul in the LHS
+  if (SDValue MulOper = IsFoldableAdd(N0)) {
+    SDValue MulVal = DAG.getNode(N->getOpcode(), DL, VT, N1, MulOper);
+    return DAG.getNode(ISD::ADD, DL, VT, MulVal, N1);
+  }
+
+  if (SDValue MulOper = IsFoldableAdd(N1)) {
+    SDValue MulVal = DAG.getNode(N->getOpcode(), DL, VT, N0, MulOper);
+    return DAG.getNode(ISD::ADD, DL, VT, MulVal, N0);
+  }
+
+  // Skip if already mul24.
+  if (N->getOpcode() != ISD::MUL)
+    return SDValue();
+
+  // There are i16 integer mul/mad.
+  if (Subtarget->has16BitInsts() && VT.getScalarType().bitsLE(MVT::i16))
+    return SDValue();
 
   // SimplifyDemandedBits has the annoying habit of turning useful zero_extends
   // in the source into any_extends if the result of the mul is truncated. Since
@@ -4348,6 +4391,15 @@ SDValue AMDGPUTargetLowering::PerformDAGCombine(SDNode *N,
     return performTruncateCombine(N, DCI);
   case ISD::MUL:
     return performMulCombine(N, DCI);
+  case AMDGPUISD::MUL_U24:
+  case AMDGPUISD::MUL_I24: {
+    if (SDValue Simplified = simplifyMul24(N, DCI))
+      return Simplified;
+    return performMulCombine(N, DCI);
+  }
+  case AMDGPUISD::MULHI_I24:
+  case AMDGPUISD::MULHI_U24:
+    return simplifyMul24(N, DCI);
   case ISD::SMUL_LOHI:
   case ISD::UMUL_LOHI:
     return performMulLoHiCombine(N, DCI);
@@ -4355,11 +4407,6 @@ SDValue AMDGPUTargetLowering::PerformDAGCombine(SDNode *N,
     return performMulhsCombine(N, DCI);
   case ISD::MULHU:
     return performMulhuCombine(N, DCI);
-  case AMDGPUISD::MUL_I24:
-  case AMDGPUISD::MUL_U24:
-  case AMDGPUISD::MULHI_I24:
-  case AMDGPUISD::MULHI_U24:
-    return simplifyMul24(N, DCI);
   case ISD::SELECT:
     return performSelectCombine(N, DCI);
   case ISD::FNEG:
