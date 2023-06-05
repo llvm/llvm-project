@@ -101,6 +101,253 @@ entry:
   ret void
 }
 
+define i16 @v_mad_u16(i16 %arg0, i16 %arg1, i16 %arg2) {
+; GFX8-LABEL: v_mad_u16:
+; GFX8:       ; %bb.0:
+; GFX8-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX8-NEXT:    v_mad_u16 v0, v0, v1, v2
+; GFX8-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX9-LABEL: v_mad_u16:
+; GFX9:       ; %bb.0:
+; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX9-NEXT:    v_mad_legacy_u16 v0, v0, v1, v2
+; GFX9-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX10-LABEL: v_mad_u16:
+; GFX10:       ; %bb.0:
+; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX10-NEXT:    s_waitcnt_vscnt null, 0x0
+; GFX10-NEXT:    v_mad_u16 v0, v0, v1, v2
+; GFX10-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX11-LABEL: v_mad_u16:
+; GFX11:       ; %bb.0:
+; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
+; GFX11-NEXT:    v_mad_u16 v0, v0, v1, v2
+; GFX11-NEXT:    s_setpc_b64 s[30:31]
+  %mul = mul i16 %arg0, %arg1
+  %add = add i16 %mul, %arg2
+  ret i16 %add
+}
+
+define i32 @v_mad_u16_zext(i16 %arg0, i16 %arg1, i16 %arg2) {
+; GFX8-LABEL: v_mad_u16_zext:
+; GFX8:       ; %bb.0:
+; GFX8-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX8-NEXT:    v_mul_lo_u16_e32 v0, v0, v1
+; GFX8-NEXT:    v_add_u16_e32 v0, v0, v2
+; GFX8-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX9-LABEL: v_mad_u16_zext:
+; GFX9:       ; %bb.0:
+; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX9-NEXT:    v_mul_lo_u16_e32 v0, v0, v1
+; GFX9-NEXT:    v_add_u16_e32 v0, v0, v2
+; GFX9-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX10-LABEL: v_mad_u16_zext:
+; GFX10:       ; %bb.0:
+; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX10-NEXT:    s_waitcnt_vscnt null, 0x0
+; GFX10-NEXT:    v_mad_u16 v0, v0, v1, v2
+; GFX10-NEXT:    v_and_b32_e32 v0, 0xffff, v0
+; GFX10-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX11-LABEL: v_mad_u16_zext:
+; GFX11:       ; %bb.0:
+; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
+; GFX11-NEXT:    v_mad_u16 v0, v0, v1, v2
+; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX11-NEXT:    v_and_b32_e32 v0, 0xffff, v0
+; GFX11-NEXT:    s_setpc_b64 s[30:31]
+  %mul = mul i16 %arg0, %arg1
+  %add = add i16 %mul, %arg2
+  %zext = zext i16 %add to i32
+  ret i32 %zext
+}
+
+define i64 @v_mad_u16_zext64(i16 %arg0, i16 %arg1, i16 %arg2) {
+; GFX8-LABEL: v_mad_u16_zext64:
+; GFX8:       ; %bb.0:
+; GFX8-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX8-NEXT:    v_mul_lo_u16_e32 v0, v0, v1
+; GFX8-NEXT:    v_add_u16_e32 v0, v0, v2
+; GFX8-NEXT:    v_mov_b32_e32 v1, 0
+; GFX8-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX9-LABEL: v_mad_u16_zext64:
+; GFX9:       ; %bb.0:
+; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX9-NEXT:    v_mul_lo_u16_e32 v0, v0, v1
+; GFX9-NEXT:    v_add_u16_e32 v0, v0, v2
+; GFX9-NEXT:    v_mov_b32_e32 v1, 0
+; GFX9-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX10-LABEL: v_mad_u16_zext64:
+; GFX10:       ; %bb.0:
+; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX10-NEXT:    s_waitcnt_vscnt null, 0x0
+; GFX10-NEXT:    v_mad_u16 v0, v0, v1, v2
+; GFX10-NEXT:    v_mov_b32_e32 v1, 0
+; GFX10-NEXT:    v_and_b32_e32 v0, 0xffff, v0
+; GFX10-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX11-LABEL: v_mad_u16_zext64:
+; GFX11:       ; %bb.0:
+; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
+; GFX11-NEXT:    v_mad_u16 v0, v0, v1, v2
+; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX11-NEXT:    v_dual_mov_b32 v1, 0 :: v_dual_and_b32 v0, 0xffff, v0
+; GFX11-NEXT:    s_setpc_b64 s[30:31]
+  %mul = mul i16 %arg0, %arg1
+  %add = add i16 %mul, %arg2
+  %zext = zext i16 %add to i64
+  ret i64 %zext
+}
+
+define amdgpu_ps i16 @s_mad_u16(i16 inreg %arg0, i16 inreg %arg1, i16 inreg %arg2) {
+; GFX8-LABEL: s_mad_u16:
+; GFX8:       ; %bb.0:
+; GFX8-NEXT:    s_mul_i32 s0, s0, s1
+; GFX8-NEXT:    s_add_i32 s0, s0, s2
+; GFX8-NEXT:    ; return to shader part epilog
+;
+; GFX9-LABEL: s_mad_u16:
+; GFX9:       ; %bb.0:
+; GFX9-NEXT:    s_mul_i32 s0, s0, s1
+; GFX9-NEXT:    s_add_i32 s0, s0, s2
+; GFX9-NEXT:    ; return to shader part epilog
+;
+; GFX10-LABEL: s_mad_u16:
+; GFX10:       ; %bb.0:
+; GFX10-NEXT:    s_mul_i32 s0, s0, s1
+; GFX10-NEXT:    s_add_i32 s0, s0, s2
+; GFX10-NEXT:    ; return to shader part epilog
+;
+; GFX11-LABEL: s_mad_u16:
+; GFX11:       ; %bb.0:
+; GFX11-NEXT:    s_mul_i32 s0, s0, s1
+; GFX11-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
+; GFX11-NEXT:    s_add_i32 s0, s0, s2
+; GFX11-NEXT:    ; return to shader part epilog
+  %mul = mul i16 %arg0, %arg1
+  %add = add i16 %mul, %arg2
+  ret i16 %add
+}
+
+define amdgpu_ps i32 @s_mad_u16_zext(i16 inreg %arg0, i16 inreg %arg1, i16 inreg %arg2) {
+; GFX8-LABEL: s_mad_u16_zext:
+; GFX8:       ; %bb.0:
+; GFX8-NEXT:    s_mul_i32 s0, s0, s1
+; GFX8-NEXT:    s_add_i32 s0, s0, s2
+; GFX8-NEXT:    s_and_b32 s0, s0, 0xffff
+; GFX8-NEXT:    ; return to shader part epilog
+;
+; GFX9-LABEL: s_mad_u16_zext:
+; GFX9:       ; %bb.0:
+; GFX9-NEXT:    s_mul_i32 s0, s0, s1
+; GFX9-NEXT:    s_add_i32 s0, s0, s2
+; GFX9-NEXT:    s_and_b32 s0, s0, 0xffff
+; GFX9-NEXT:    ; return to shader part epilog
+;
+; GFX10-LABEL: s_mad_u16_zext:
+; GFX10:       ; %bb.0:
+; GFX10-NEXT:    s_mul_i32 s0, s0, s1
+; GFX10-NEXT:    s_add_i32 s0, s0, s2
+; GFX10-NEXT:    s_and_b32 s0, s0, 0xffff
+; GFX10-NEXT:    ; return to shader part epilog
+;
+; GFX11-LABEL: s_mad_u16_zext:
+; GFX11:       ; %bb.0:
+; GFX11-NEXT:    s_mul_i32 s0, s0, s1
+; GFX11-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(SALU_CYCLE_1)
+; GFX11-NEXT:    s_add_i32 s0, s0, s2
+; GFX11-NEXT:    s_and_b32 s0, s0, 0xffff
+; GFX11-NEXT:    ; return to shader part epilog
+  %mul = mul i16 %arg0, %arg1
+  %add = add i16 %mul, %arg2
+  %zext = zext i16 %add to i32
+  ret i32 %zext
+}
+
+define amdgpu_ps i64 @s_mad_u16_zext64(i16 inreg %arg0, i16 inreg %arg1, i16 inreg %arg2) {
+; GFX8-LABEL: s_mad_u16_zext64:
+; GFX8:       ; %bb.0:
+; GFX8-NEXT:    s_mul_i32 s0, s0, s1
+; GFX8-NEXT:    s_add_i32 s0, s0, s2
+; GFX8-NEXT:    s_and_b32 s0, s0, 0xffff
+; GFX8-NEXT:    s_mov_b32 s1, 0
+; GFX8-NEXT:    ; return to shader part epilog
+;
+; GFX9-LABEL: s_mad_u16_zext64:
+; GFX9:       ; %bb.0:
+; GFX9-NEXT:    s_mul_i32 s0, s0, s1
+; GFX9-NEXT:    s_add_i32 s0, s0, s2
+; GFX9-NEXT:    s_and_b32 s0, s0, 0xffff
+; GFX9-NEXT:    s_mov_b32 s1, 0
+; GFX9-NEXT:    ; return to shader part epilog
+;
+; GFX10-LABEL: s_mad_u16_zext64:
+; GFX10:       ; %bb.0:
+; GFX10-NEXT:    s_mul_i32 s0, s0, s1
+; GFX10-NEXT:    s_mov_b32 s1, 0
+; GFX10-NEXT:    s_add_i32 s0, s0, s2
+; GFX10-NEXT:    s_and_b32 s0, s0, 0xffff
+; GFX10-NEXT:    ; return to shader part epilog
+;
+; GFX11-LABEL: s_mad_u16_zext64:
+; GFX11:       ; %bb.0:
+; GFX11-NEXT:    s_mul_i32 s0, s0, s1
+; GFX11-NEXT:    s_mov_b32 s1, 0
+; GFX11-NEXT:    s_add_i32 s0, s0, s2
+; GFX11-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
+; GFX11-NEXT:    s_and_b32 s0, s0, 0xffff
+; GFX11-NEXT:    ; return to shader part epilog
+  %mul = mul i16 %arg0, %arg1
+  %add = add i16 %mul, %arg2
+  %zext = zext i16 %add to i64
+  ret i64 %zext
+}
+
+define amdgpu_ps i32 @s_mad_u16_sext(i16 inreg %arg0, i16 inreg %arg1, i16 inreg %arg2) {
+; GFX8-LABEL: s_mad_u16_sext:
+; GFX8:       ; %bb.0:
+; GFX8-NEXT:    s_mul_i32 s0, s0, s1
+; GFX8-NEXT:    s_add_i32 s0, s0, s2
+; GFX8-NEXT:    s_sext_i32_i16 s0, s0
+; GFX8-NEXT:    ; return to shader part epilog
+;
+; GFX9-LABEL: s_mad_u16_sext:
+; GFX9:       ; %bb.0:
+; GFX9-NEXT:    s_mul_i32 s0, s0, s1
+; GFX9-NEXT:    s_add_i32 s0, s0, s2
+; GFX9-NEXT:    s_sext_i32_i16 s0, s0
+; GFX9-NEXT:    ; return to shader part epilog
+;
+; GFX10-LABEL: s_mad_u16_sext:
+; GFX10:       ; %bb.0:
+; GFX10-NEXT:    s_mul_i32 s0, s0, s1
+; GFX10-NEXT:    s_add_i32 s0, s0, s2
+; GFX10-NEXT:    s_sext_i32_i16 s0, s0
+; GFX10-NEXT:    ; return to shader part epilog
+;
+; GFX11-LABEL: s_mad_u16_sext:
+; GFX11:       ; %bb.0:
+; GFX11-NEXT:    s_mul_i32 s0, s0, s1
+; GFX11-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(SALU_CYCLE_1)
+; GFX11-NEXT:    s_add_i32 s0, s0, s2
+; GFX11-NEXT:    s_sext_i32_i16 s0, s0
+; GFX11-NEXT:    ; return to shader part epilog
+  %mul = mul i16 %arg0, %arg1
+  %add = add i16 %mul, %arg2
+  %sext = sext i16 %add to i32
+  ret i32 %sext
+}
+
 declare i32 @llvm.amdgcn.workitem.id.x()
 ;; NOTE: These prefixes are unused and the list is autogenerated. Do not add tests below this line:
 ; GCN: {{.*}}
