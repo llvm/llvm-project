@@ -195,7 +195,7 @@ static char *GetRustV0DemangledStr(std::string_view M) {
   return demangled_cstr;
 }
 
-static char *GetDLangDemangledStr(const char *M) {
+static char *GetDLangDemangledStr(std::string_view M) {
   char *demangled_cstr = llvm::dlangDemangle(M);
 
   if (Log *log = GetLog(LLDBLog::Demangle)) {
@@ -300,7 +300,7 @@ ConstString Mangled::GetDemangledName(// BEGIN SWIFT
         demangled_name = GetRustV0DemangledStr(m_mangled);
         break;
       case eManglingSchemeD:
-        demangled_name = GetDLangDemangledStr(mangled_name);
+        demangled_name = GetDLangDemangledStr(m_mangled);
         break;
 #ifdef LLDB_ENABLE_SWIFT
       case eManglingSchemeSwift: {
