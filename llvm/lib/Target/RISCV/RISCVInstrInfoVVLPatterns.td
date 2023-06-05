@@ -412,19 +412,19 @@ def SDT_RISCVVNIntBinOp_VL : SDTypeProfile<1, 5, [SDTCisVec<0>, SDTCisInt<0>,
                                                   SDTCisVT<5, XLenVT>]>;
 def riscv_vnsrl_vl : SDNode<"RISCVISD::VNSRL_VL", SDT_RISCVVNIntBinOp_VL>;
 
-def SDT_RISCVVWBinOpW_VL : SDTypeProfile<1, 5, [SDTCisVec<0>, SDTCisInt<0>,
-                                                SDTCisSameAs<0, 1>,
-                                                SDTCisInt<2>,
-                                                SDTCisSameNumEltsAs<1, 2>,
-                                                SDTCisOpSmallerThanOp<2, 1>,
-                                                SDTCisSameAs<0, 3>,
-                                                SDTCisSameNumEltsAs<1, 4>,
-                                                SDTCVecEltisVT<4, i1>,
-                                                SDTCisVT<5, XLenVT>]>;
-def riscv_vwadd_w_vl :  SDNode<"RISCVISD::VWADD_W_VL",  SDT_RISCVVWBinOpW_VL>;
-def riscv_vwaddu_w_vl : SDNode<"RISCVISD::VWADDU_W_VL", SDT_RISCVVWBinOpW_VL>;
-def riscv_vwsub_w_vl :  SDNode<"RISCVISD::VWSUB_W_VL",  SDT_RISCVVWBinOpW_VL>;
-def riscv_vwsubu_w_vl : SDNode<"RISCVISD::VWSUBU_W_VL", SDT_RISCVVWBinOpW_VL>;
+def SDT_RISCVVWIntBinOpW_VL : SDTypeProfile<1, 5, [SDTCisVec<0>, SDTCisInt<0>,
+                                                   SDTCisSameAs<0, 1>,
+                                                   SDTCisInt<2>,
+                                                   SDTCisSameNumEltsAs<1, 2>,
+                                                   SDTCisOpSmallerThanOp<2, 1>,
+                                                   SDTCisSameAs<0, 3>,
+                                                   SDTCisSameNumEltsAs<1, 4>,
+                                                   SDTCVecEltisVT<4, i1>,
+                                                   SDTCisVT<5, XLenVT>]>;
+def riscv_vwadd_w_vl :  SDNode<"RISCVISD::VWADD_W_VL",  SDT_RISCVVWIntBinOpW_VL>;
+def riscv_vwaddu_w_vl : SDNode<"RISCVISD::VWADDU_W_VL", SDT_RISCVVWIntBinOpW_VL>;
+def riscv_vwsub_w_vl :  SDNode<"RISCVISD::VWSUB_W_VL",  SDT_RISCVVWIntBinOpW_VL>;
+def riscv_vwsubu_w_vl : SDNode<"RISCVISD::VWSUBU_W_VL", SDT_RISCVVWIntBinOpW_VL>;
 
 def SDTRVVVecReduce : SDTypeProfile<1, 6, [
   SDTCisVec<0>, SDTCisVec<1>, SDTCisVec<2>, SDTCisSameAs<0, 3>,
