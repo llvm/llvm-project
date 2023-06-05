@@ -34,9 +34,6 @@ FailureOr<TilingResult> replaceExtractSliceWithTiledProducer(
 // Populate functions.
 //===----------------------------------------------------------------------===//
 
-/// Collects a set of patterns to rewrite ops within the tensor dialect.
-void populateExpandOpsPatterns(RewritePatternSet &patterns);
-
 /// Appends patterns for folding tensor aliasing ops into consumer load/store
 /// ops into `patterns`.
 void populateFoldTensorSubsetOpPatterns(RewritePatternSet &patterns);
