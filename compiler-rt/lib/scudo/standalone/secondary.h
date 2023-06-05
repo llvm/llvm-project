@@ -64,7 +64,7 @@ template <typename Config> static Header *getHeader(const void *Ptr) {
 
 } // namespace LargeBlock
 
-static void unmap(LargeBlock::Header *H) {
+static inline void unmap(LargeBlock::Header *H) {
   // Note that the `H->MapMap` is stored on the pages managed by itself. Take
   // over the ownership before unmap() so that any operation along with unmap()
   // won't touch inaccessible pages.
