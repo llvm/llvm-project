@@ -12,10 +12,10 @@ define <4 x double> @fneg_fdiv_splat(double %a0, <4 x double> %a1) {
 ; CHECK-NEXT:    lxvd2x 2, 0, 3
 ; CHECK-NEXT:    xvredp 1, 0
 ; CHECK-NEXT:    xxlor 3, 2, 2
-; CHECK-NEXT:    xvmaddadp 3, 0, 1
-; CHECK-NEXT:    xvnmsubadp 1, 1, 3
-; CHECK-NEXT:    xvmaddadp 2, 0, 1
-; CHECK-NEXT:    xvmsubadp 1, 1, 2
+; CHECK-NEXT:    xvnmsubadp 3, 0, 1
+; CHECK-NEXT:    xvmaddadp 1, 1, 3
+; CHECK-NEXT:    xvnmsubadp 2, 0, 1
+; CHECK-NEXT:    xvnmaddadp 1, 1, 2
 ; CHECK-NEXT:    xvmuldp 34, 34, 1
 ; CHECK-NEXT:    xvmuldp 35, 35, 1
 ; CHECK-NEXT:    blr

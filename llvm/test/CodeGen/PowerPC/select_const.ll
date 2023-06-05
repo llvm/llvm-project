@@ -610,13 +610,24 @@ define i8 @sel_constants_shl_constant(i1 %cond) {
 }
 
 define i8 @shl_constant_sel_constants(i1 %cond) {
-; ALL-LABEL: shl_constant_sel_constants:
-; ALL:       # %bb.0:
-; ALL-NEXT:    clrlwi 3, 3, 31
-; ALL-NEXT:    li 4, 1
-; ALL-NEXT:    xori 3, 3, 3
-; ALL-NEXT:    slw 3, 4, 3
-; ALL-NEXT:    blr
+; ISEL-LABEL: shl_constant_sel_constants:
+; ISEL:       # %bb.0:
+; ISEL-NEXT:    andi. 3, 3, 1
+; ISEL-NEXT:    li 4, 4
+; ISEL-NEXT:    li 3, 8
+; ISEL-NEXT:    iselgt 3, 4, 3
+; ISEL-NEXT:    blr
+;
+; NO_ISEL-LABEL: shl_constant_sel_constants:
+; NO_ISEL:       # %bb.0:
+; NO_ISEL-NEXT:    andi. 3, 3, 1
+; NO_ISEL-NEXT:    li 4, 4
+; NO_ISEL-NEXT:    li 3, 8
+; NO_ISEL-NEXT:    bc 12, 1, .LBB37_1
+; NO_ISEL-NEXT:    blr
+; NO_ISEL-NEXT:  .LBB37_1:
+; NO_ISEL-NEXT:    addi 3, 4, 0
+; NO_ISEL-NEXT:    blr
   %sel = select i1 %cond, i8 2, i8 3
   %bo = shl i8 1, %sel
   ret i8 %bo
@@ -647,13 +658,24 @@ define i8 @sel_constants_lshr_constant(i1 %cond) {
 }
 
 define i8 @lshr_constant_sel_constants(i1 %cond) {
-; ALL-LABEL: lshr_constant_sel_constants:
-; ALL:       # %bb.0:
-; ALL-NEXT:    clrlwi 3, 3, 31
-; ALL-NEXT:    li 4, 64
-; ALL-NEXT:    xori 3, 3, 3
-; ALL-NEXT:    srw 3, 4, 3
-; ALL-NEXT:    blr
+; ISEL-LABEL: lshr_constant_sel_constants:
+; ISEL:       # %bb.0:
+; ISEL-NEXT:    andi. 3, 3, 1
+; ISEL-NEXT:    li 4, 16
+; ISEL-NEXT:    li 3, 8
+; ISEL-NEXT:    iselgt 3, 4, 3
+; ISEL-NEXT:    blr
+;
+; NO_ISEL-LABEL: lshr_constant_sel_constants:
+; NO_ISEL:       # %bb.0:
+; NO_ISEL-NEXT:    andi. 3, 3, 1
+; NO_ISEL-NEXT:    li 4, 16
+; NO_ISEL-NEXT:    li 3, 8
+; NO_ISEL-NEXT:    bc 12, 1, .LBB39_1
+; NO_ISEL-NEXT:    blr
+; NO_ISEL-NEXT:  .LBB39_1:
+; NO_ISEL-NEXT:    addi 3, 4, 0
+; NO_ISEL-NEXT:    blr
   %sel = select i1 %cond, i8 2, i8 3
   %bo = lshr i8 64, %sel
   ret i8 %bo
@@ -663,7 +685,7 @@ define i8 @lshr_constant_sel_constants(i1 %cond) {
 define i8 @sel_constants_ashr_constant(i1 %cond) {
 ; ALL-LABEL: sel_constants_ashr_constant:
 ; ALL:       # %bb.0:
-; ALL-NEXT:    clrlwi 3, 3, 31
+; ALL-NEXT:    clrldi 3, 3, 63
 ; ALL-NEXT:    neg 3, 3
 ; ALL-NEXT:    blr
   %sel = select i1 %cond, i8 -4, i8 23
@@ -672,13 +694,24 @@ define i8 @sel_constants_ashr_constant(i1 %cond) {
 }
 
 define i8 @ashr_constant_sel_constants(i1 %cond) {
-; ALL-LABEL: ashr_constant_sel_constants:
-; ALL:       # %bb.0:
-; ALL-NEXT:    clrlwi 3, 3, 31
-; ALL-NEXT:    li 4, -128
-; ALL-NEXT:    xori 3, 3, 3
-; ALL-NEXT:    sraw 3, 4, 3
-; ALL-NEXT:    blr
+; ISEL-LABEL: ashr_constant_sel_constants:
+; ISEL:       # %bb.0:
+; ISEL-NEXT:    andi. 3, 3, 1
+; ISEL-NEXT:    li 4, -32
+; ISEL-NEXT:    li 3, -16
+; ISEL-NEXT:    iselgt 3, 4, 3
+; ISEL-NEXT:    blr
+;
+; NO_ISEL-LABEL: ashr_constant_sel_constants:
+; NO_ISEL:       # %bb.0:
+; NO_ISEL-NEXT:    andi. 3, 3, 1
+; NO_ISEL-NEXT:    li 4, -32
+; NO_ISEL-NEXT:    li 3, -16
+; NO_ISEL-NEXT:    bc 12, 1, .LBB41_1
+; NO_ISEL-NEXT:    blr
+; NO_ISEL-NEXT:  .LBB41_1:
+; NO_ISEL-NEXT:    addi 3, 4, 0
+; NO_ISEL-NEXT:    blr
   %sel = select i1 %cond, i8 2, i8 3
   %bo = ashr i8 128, %sel
   ret i8 %bo

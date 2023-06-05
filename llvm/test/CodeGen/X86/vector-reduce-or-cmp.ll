@@ -884,7 +884,7 @@ define i1 @mask_v8i32(<8 x i32> %a0) {
 ;
 ; AVX2-LABEL: mask_v8i32:
 ; AVX2:       # %bb.0:
-; AVX2-NEXT:    vpbroadcastq {{.*#+}} ymm1 = [9223372039002259456,9223372039002259456,9223372039002259456,9223372039002259456]
+; AVX2-NEXT:    vpbroadcastd {{.*#+}} ymm1 = [2147483648,2147483648,2147483648,2147483648,2147483648,2147483648,2147483648,2147483648]
 ; AVX2-NEXT:    vptest %ymm1, %ymm0
 ; AVX2-NEXT:    sete %al
 ; AVX2-NEXT:    vzeroupper
@@ -892,7 +892,7 @@ define i1 @mask_v8i32(<8 x i32> %a0) {
 ;
 ; AVX512-LABEL: mask_v8i32:
 ; AVX512:       # %bb.0:
-; AVX512-NEXT:    vpbroadcastq {{.*#+}} ymm1 = [9223372039002259456,9223372039002259456,9223372039002259456,9223372039002259456]
+; AVX512-NEXT:    vpbroadcastd {{.*#+}} ymm1 = [2147483648,2147483648,2147483648,2147483648,2147483648,2147483648,2147483648,2147483648]
 ; AVX512-NEXT:    vptest %ymm1, %ymm0
 ; AVX512-NEXT:    sete %al
 ; AVX512-NEXT:    vzeroupper
@@ -1018,34 +1018,28 @@ define zeroext i1 @PR44781(ptr %0) {
 ; SSE41-NEXT:    sete %al
 ; SSE41-NEXT:    retq
 ;
-; AVX1OR2-LABEL: PR44781:
-; AVX1OR2:       # %bb.0:
-; AVX1OR2-NEXT:    vmovdqu (%rdi), %xmm0
-; AVX1OR2-NEXT:    vptest {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
-; AVX1OR2-NEXT:    sete %al
-; AVX1OR2-NEXT:    retq
+; AVX1-LABEL: PR44781:
+; AVX1:       # %bb.0:
+; AVX1-NEXT:    vmovdqu (%rdi), %xmm0
+; AVX1-NEXT:    vptest {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
+; AVX1-NEXT:    sete %al
+; AVX1-NEXT:    retq
 ;
-; AVX512F-LABEL: PR44781:
-; AVX512F:       # %bb.0:
-; AVX512F-NEXT:    vmovdqu (%rdi), %xmm0
-; AVX512F-NEXT:    vptest {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
-; AVX512F-NEXT:    sete %al
-; AVX512F-NEXT:    retq
+; AVX2-LABEL: PR44781:
+; AVX2:       # %bb.0:
+; AVX2-NEXT:    vmovdqu (%rdi), %xmm0
+; AVX2-NEXT:    vpbroadcastd {{.*#+}} xmm1 = [15,15,15,15]
+; AVX2-NEXT:    vptest %xmm1, %xmm0
+; AVX2-NEXT:    sete %al
+; AVX2-NEXT:    retq
 ;
-; AVX512BW-LABEL: PR44781:
-; AVX512BW:       # %bb.0:
-; AVX512BW-NEXT:    vmovdqu (%rdi), %xmm0
-; AVX512BW-NEXT:    vptest {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
-; AVX512BW-NEXT:    sete %al
-; AVX512BW-NEXT:    retq
-;
-; AVX512BWVL-LABEL: PR44781:
-; AVX512BWVL:       # %bb.0:
-; AVX512BWVL-NEXT:    vmovdqu (%rdi), %xmm0
-; AVX512BWVL-NEXT:    vpbroadcastq {{.*#+}} xmm1 = [64424509455,64424509455]
-; AVX512BWVL-NEXT:    vptest %xmm1, %xmm0
-; AVX512BWVL-NEXT:    sete %al
-; AVX512BWVL-NEXT:    retq
+; AVX512-LABEL: PR44781:
+; AVX512:       # %bb.0:
+; AVX512-NEXT:    vmovdqu (%rdi), %xmm0
+; AVX512-NEXT:    vpbroadcastd {{.*#+}} xmm1 = [15,15,15,15]
+; AVX512-NEXT:    vptest %xmm1, %xmm0
+; AVX512-NEXT:    sete %al
+; AVX512-NEXT:    retq
   %2 = load <4 x i32>, ptr %0, align 4
   %3 = call i32 @llvm.vector.reduce.or.v4i32(<4 x i32> %2)
   %4 = and i32 %3, 15
