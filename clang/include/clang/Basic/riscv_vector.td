@@ -766,50 +766,6 @@ class VString<int nf, bit signed> {
                    !eq(nf, 8): !if(signed, "vvvvvvvv", "UvUvUvUvUvUvUvUv"));
 }
 
-multiclass RVVStridedSegStore<string op> {
-  foreach type = TypeList in {
-    defvar eew = !cond(!eq(type, "c") : "8",
-                       !eq(type, "s") : "16",
-                       !eq(type, "i") : "32",
-                       !eq(type, "l") : "64",
-                       !eq(type, "x") : "16",
-                       !eq(type, "f") : "32",
-                       !eq(type, "d") : "64");
-      foreach nf = NFList in {
-        let Name = op # nf # "e" # eew # "_v",
-            IRName = op # nf,
-            MaskedIRName = op # nf # "_mask",
-            NF = nf,
-            HasMaskedOffOperand = false,
-            MaskedPolicyScheme = NonePolicy,
-            ManualCodegen = [{
-    {
-      if (IsMasked) {
-        // Builtin: (mask, ptr, stride, val0, val1, ..., vl).
-        // Intrinsic: (val0, val1, ..., ptr, stride, mask, vl)
-        std::rotate(Ops.begin(), Ops.begin() + 3, Ops.end() - 1);
-        std::rotate(Ops.begin() + NF, Ops.begin() + NF + 1, Ops.begin() + NF + 3);
-        assert(Ops.size() == NF + 4);
-      } else {
-        // Builtin: (ptr, stride, val0, val1, ..., vl).
-        // Intrinsic: (val0, val1, ..., ptr, stride, vl)
-        std::rotate(Ops.begin(), Ops.begin() + 2, Ops.end() - 1);
-        assert(Ops.size() == NF + 3);
-      }
-      IntrinsicTypes = {Ops[0]->getType(), Ops[NF + 1]->getType()};
-    }
-            }] in {
-          defvar V = VString<nf, /*signed=*/true>.S;
-          defvar UV = VString<nf, /*signed=*/false>.S;
-          def : RVVBuiltin<"v", "0Pet" # V, type>;
-          if !not(IsFloat<type>.val) then {
-            def : RVVBuiltin<"Uv", "0PUet" # UV, type>;
-        }
-      }
-    }
-  }
-}
-
 multiclass RVVIndexedSegStore<string op> {
   foreach type = TypeList in {
     foreach eew_info = EEWList in {
@@ -1510,8 +1466,7 @@ multiclass RVVStridedSegStoreTuple<string op> {
                        !eq(type, "f") : "32",
                        !eq(type, "d") : "64");
       foreach nf = NFList in {
-        let Name = op # nf # "e" # eew # "_v_tuple",
-            OverloadedName = op # nf # "e" # eew # "_tuple",
+        let Name = op # nf # "e" # eew # "_v",
             IRName = op # nf,
             MaskedIRName = op # nf # "_mask",
             NF = nf,
@@ -1687,7 +1642,6 @@ defm : RVVIndexedSegStoreTuple<"vsoxseg">;
 
 let UnMaskedPolicyScheme = NonePolicy,
     MaskedPolicyScheme = NonePolicy in {
-defm : RVVStridedSegStore<"vssseg">;
 defm : RVVIndexedSegStore<"vsuxseg">;
 defm : RVVIndexedSegStore<"vsoxseg">;
 }
