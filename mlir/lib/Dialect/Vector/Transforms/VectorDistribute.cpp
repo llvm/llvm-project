@@ -896,10 +896,19 @@ struct WarpOpBroadcast : public OpRewritePattern<WarpExecuteOnLane0Op> {
     Location loc = broadcastOp.getLoc();
     auto destVecType =
         cast<VectorType>(warpOp->getResultTypes()[operandNumber]);
+    Value broadcastSrc = broadcastOp.getSource();
+    Type broadcastSrcType = broadcastSrc.getType();
+
+    // Check that the broadcast actually spans a set of values uniformly across
+    // all threads. In other words, check that each thread can reconstruct
+    // their own broadcast.
+    // For that we simply check that the broadcast we want to build makes sense.
+    if (vector::isBroadcastableTo(broadcastSrcType, destVecType) !=
+        vector::BroadcastableToResult::Success)
+      return failure();
     SmallVector<size_t> newRetIndices;
     WarpExecuteOnLane0Op newWarpOp = moveRegionToNewWarpOpAndAppendReturns(
-        rewriter, warpOp, {broadcastOp.getSource()},
-        {broadcastOp.getSource().getType()}, newRetIndices);
+        rewriter, warpOp, {broadcastSrc}, {broadcastSrcType}, newRetIndices);
     rewriter.setInsertionPointAfter(newWarpOp);
     Value broadcasted = rewriter.create<vector::BroadcastOp>(
         loc, destVecType, newWarpOp->getResult(newRetIndices[0]));
