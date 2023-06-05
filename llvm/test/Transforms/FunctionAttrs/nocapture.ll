@@ -900,20 +900,20 @@ define void @readnone_indirec(ptr %f, ptr %p) {
   ret void
 }
 
-; FNATTR: define i1 @identity_icmp(ptr readnone %p)
+; FNATTR: define i1 @identity_icmp(ptr nocapture readnone %p)
 define i1 @identity_icmp(ptr %p) {
   %r = icmp eq ptr %p, %p
   ret i1 %r
 }
 
-; FNATTR: define i1 @compare_against_offset(ptr readnone %p)
+; FNATTR: define i1 @compare_against_offset(ptr nocapture readnone %p)
 define i1 @compare_against_offset(ptr %p) {
   %offset = getelementptr inbounds i32, ptr %p, i64 1
   %r = icmp eq ptr %p, %offset
   ret i1 %r
 }
 
-; FNATTR: define i1 @compare_offsets(ptr readnone %p)
+; FNATTR: define i1 @compare_offsets(ptr nocapture readnone %p)
 define i1 @compare_offsets(ptr %p) {
   %offset1 = getelementptr inbounds i32, ptr %p, i64 1
   %offset2 = getelementptr inbounds i32, ptr %p, i64 2
@@ -921,7 +921,7 @@ define i1 @compare_offsets(ptr %p) {
   ret i1 %r
 }
 
-; FNATTR: define void @phi_induction(ptr writeonly %p, i64 %n, i32 %x)
+; FNATTR: define void @phi_induction(ptr nocapture writeonly %p, i64 %n, i32 %x)
 define void @phi_induction(ptr %p, i64 %n, i32 %x) {
 start:
   %end = getelementptr inbounds i32, ptr %p, i64 %n

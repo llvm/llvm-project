@@ -387,7 +387,11 @@ UseCaptureKind llvm::DetermineUseCaptureKind(
         if (IsDereferenceableOrNull && IsDereferenceableOrNull(O, DL))
           return UseCaptureKind::NO_CAPTURE;
       }
-    }
+    } else if (cast<ICmpInst>(I)->isEquality() &&
+               getUnderlyingObjectLookThrough(I->getOperand(Idx)) ==
+                   getUnderlyingObjectLookThrough(I->getOperand(OtherIdx)))
+      // Equality comparisons against the same pointer do not capture.
+      return UseCaptureKind::NO_CAPTURE;
 
     // Otherwise, be conservative. There are crazy ways to capture pointers
     // using comparisons.

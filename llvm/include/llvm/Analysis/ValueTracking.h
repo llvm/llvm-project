@@ -693,6 +693,13 @@ inline Value *getArgumentAliasingToReturnedPointer(CallBase *Call,
 bool isIntrinsicReturningPointerAliasingArgumentWithoutCapturing(
     const CallBase *Call, bool MustPreserveNullness);
 
+/// This method is a wrapper around getUnderlyingObject to look through PHI
+/// nodes. This method will attempt to build a new underlying object based on
+/// the incoming values. This method can have high compile time implications and
+/// cannot be used as a direct replacement for getUnderlyingObject.
+const Value *getUnderlyingObjectLookThrough(const Value *V,
+                                            unsigned MaxLookup = 6);
+
 /// This method strips off any GEP address adjustments and pointer casts from
 /// the specified value, returning the original object being addressed. Note
 /// that the returned value has pointer type if the specified value does. If

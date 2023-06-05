@@ -5968,6 +5968,31 @@ static bool isSameUnderlyingObjectInLoop(const PHINode *PN,
   return true;
 }
 
+const Value *llvm::getUnderlyingObjectLookThrough(const Value *V, unsigned MaxLookup) {
+  V = getUnderlyingObject(V, MaxLookup);
+
+  const PHINode *PN = dyn_cast<PHINode>(V);
+  if (!PN)
+    return V;
+
+  // We can look through PHIs if each underlying value has the same underlying
+  // object, or is the phi itself.
+  const Value *NewUnderlying = PN;
+  for (const Value *Incoming : PN->incoming_values()) {
+    const Value *IncomingUnderlying = getUnderlyingObject(Incoming, MaxLookup);
+    if (IncomingUnderlying == PN || IncomingUnderlying == NewUnderlying)
+      continue;
+    if (NewUnderlying == PN)
+      // Found a new possible underlying object.
+      NewUnderlying = IncomingUnderlying;
+    else
+      // There are >= 2 possible underlying objects. We cannot determine a new
+      // underlying object.
+      return V;
+  }
+  return NewUnderlying;
+}
+
 const Value *llvm::getUnderlyingObject(const Value *V, unsigned MaxLookup) {
   if (!V->getType()->isPointerTy())
     return V;
