@@ -25,7 +25,10 @@ unittest("ClangTidyTests") {
     "//llvm/lib/Testing/Annotations",
     "//llvm/lib/Testing/Support",
   ]
-  include_dirs = [ "//clang-tools-extra/clang-tidy" ]
+  include_dirs = [
+    "//clang-tools-extra/clang-tidy",
+    "//clang-tools-extra/include-cleaner/include",
+  ]
   sources = [
     "AddConstTest.cpp",
     "ClangTidyDiagnosticConsumerTest.cpp",
@@ -33,6 +36,7 @@ unittest("ClangTidyTests") {
     "DeclRefExprUtilsTest.cpp",
     "GlobListTest.cpp",
     "GoogleModuleTest.cpp",
+    "IncludeCleanerTest.cpp",
     "IncludeInserterTest.cpp",
     "LLVMModuleTest.cpp",
     "ModernizeModuleTest.cpp",
