@@ -105,7 +105,7 @@ Tweak::Effect::fileEdit(const SourceManager &SM, FileID FID,
                         tooling::Replacements Replacements) {
   Edit Ed(SM.getBufferData(FID), std::move(Replacements));
   if (const auto FE = SM.getFileEntryRefForID(FID))
-    if (auto FilePath = getCanonicalPath(*FE, SM))
+    if (auto FilePath = getCanonicalPath(*FE, SM.getFileManager()))
       return std::make_pair(*FilePath, std::move(Ed));
   return error("Failed to get absolute path for edited file: {0}",
                SM.getFileEntryRefForID(FID)->getName());
