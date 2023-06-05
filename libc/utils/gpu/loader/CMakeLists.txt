@@ -15,10 +15,10 @@ find_package(CUDAToolkit QUIET)
 # The CUDA loader requires LLVM to traverse the ELF image for symbols.
 find_package(LLVM QUIET)
 if(CUDAToolkit_FOUND AND LLVM_FOUND AND
-   ${CUDAToolkit_VERSION} VERSION_GREATER_EQUAL "11.2")
+   "${CUDAToolkit_VERSION}" VERSION_GREATER_EQUAL "11.2")
   add_subdirectory(nvptx)
 else()
-  if(${CUDAToolkit_VERSION} VERSION_LESS "11.2")
+  if("${CUDAToolkit_VERSION}" VERSION_LESS "11.2")
     message(WARNING 
       "Skipping CUDA loader for gpu target, CUDA must be version 11.2 or later.
        Found CUDA Version ${CUDAToolkit_VERSION}")
