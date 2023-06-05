@@ -235,8 +235,9 @@ void LoopEmitter::initialize(ValueRange ts, StringAttr loopTag, bool hasOutput,
   const unsigned numManifestTensors = ts.size();
   const unsigned synTensorId = numManifestTensors;
   const unsigned numTensors = numManifestTensors + 1;
-
+  // tensors array (len == numManifestTensor).
   this->tensors.assign(ts.begin(), ts.end());
+  // Arrays with len == numTensor.
   this->lvlTypes.assign(numTensors, std::vector<DimLevelType>());
   this->lvlSizes.assign(numTensors, std::vector<Value>());
   this->highs.assign(numTensors, std::vector<Value>());
@@ -355,13 +356,14 @@ void LoopEmitter::initialize(ValueRange ts, StringAttr loopTag, bool hasOutput,
 
 void LoopEmitter::initializeLoopEmit(OpBuilder &builder, Location loc,
                                      LoopEmitter::OutputUpdater updater) {
-  // For every tensor:
+  // For every manifest tensor:
   // * get the values buffer.
   // * For every level:
   //   * get the positions and coordinates buffers
   //   * get/compute the level-size, which is also used as the upper-bound
   //     on positions.
-  for (TensorId t = 0, numTensors = getNumTensors(); t < numTensors; t++) {
+  for (TensorId t = 0, numTensors = getNumManifestTensors(); t < numTensors;
+       t++) {
     const Value tensor = tensors[t];
     const auto rtp = dyn_cast<RankedTensorType>(tensor.getType());
     if (!rtp)
