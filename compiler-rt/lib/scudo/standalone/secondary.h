@@ -72,7 +72,7 @@ static void unmap(LargeBlock::Header *H) {
   MemMap.unmap(MemMap.getBase(), MemMap.getCapacity());
 }
 
-class MapAllocatorNoCache {
+template <typename Config> class MapAllocatorNoCache {
 public:
   void init(UNUSED s32 ReleaseToOsInterval) {}
   bool retrieve(UNUSED Options Options, UNUSED uptr Size, UNUSED uptr Alignment,
@@ -130,17 +130,18 @@ public:
 
 template <typename Config> class MapAllocatorCache {
 public:
+  using CacheConfig = typename Config::Secondary::Cache;
   // Ensure the default maximum specified fits the array.
-  static_assert(Config::SecondaryCacheDefaultMaxEntriesCount <=
-                    Config::SecondaryCacheEntriesArraySize,
+  static_assert(CacheConfig::DefaultMaxEntriesCount <=
+                    CacheConfig::EntriesArraySize,
                 "");
 
   void init(s32 ReleaseToOsInterval) NO_THREAD_SAFETY_ANALYSIS {
     DCHECK_EQ(EntriesCount, 0U);
     setOption(Option::MaxCacheEntriesCount,
-              static_cast<sptr>(Config::SecondaryCacheDefaultMaxEntriesCount));
+              static_cast<sptr>(CacheConfig::DefaultMaxEntriesCount));
     setOption(Option::MaxCacheEntrySize,
-              static_cast<sptr>(Config::SecondaryCacheDefaultMaxEntrySize));
+              static_cast<sptr>(CacheConfig::DefaultMaxEntrySize));
     setOption(Option::ReleaseInterval, static_cast<sptr>(ReleaseToOsInterval));
   }
 
@@ -185,10 +186,9 @@ public:
         // just unmap it.
         break;
       }
-      if (Config::SecondaryCacheQuarantineSize &&
-          useMemoryTagging<Config>(Options)) {
+      if (CacheConfig::QuarantineSize && useMemoryTagging<Config>(Options)) {
         QuarantinePos =
-            (QuarantinePos + 1) % Max(Config::SecondaryCacheQuarantineSize, 1u);
+            (QuarantinePos + 1) % Max(CacheConfig::QuarantineSize, 1u);
         if (!Quarantine[QuarantinePos].CommitBase) {
           Quarantine[QuarantinePos] = Entry;
           return;
@@ -291,16 +291,15 @@ public:
 
   bool setOption(Option O, sptr Value) {
     if (O == Option::ReleaseInterval) {
-      const s32 Interval =
-          Max(Min(static_cast<s32>(Value),
-                  Config::SecondaryCacheMaxReleaseToOsIntervalMs),
-              Config::SecondaryCacheMinReleaseToOsIntervalMs);
+      const s32 Interval = Max(
+          Min(static_cast<s32>(Value), CacheConfig::MaxReleaseToOsIntervalMs),
+          CacheConfig::MinReleaseToOsIntervalMs);
       atomic_store_relaxed(&ReleaseToOsIntervalMs, Interval);
       return true;
     }
     if (O == Option::MaxCacheEntriesCount) {
       const u32 MaxCount = static_cast<u32>(Value);
-      if (MaxCount > Config::SecondaryCacheEntriesArraySize)
+      if (MaxCount > CacheConfig::EntriesArraySize)
         return false;
       atomic_store_relaxed(&MaxEntriesCount, MaxCount);
       return true;
@@ -317,7 +316,7 @@ public:
 
   void disableMemoryTagging() EXCLUDES(Mutex) {
     ScopedLock L(Mutex);
-    for (u32 I = 0; I != Config::SecondaryCacheQuarantineSize; ++I) {
+    for (u32 I = 0; I != CacheConfig::QuarantineSize; ++I) {
       if (Quarantine[I].CommitBase) {
         MemMapT &MemMap = Quarantine[I].MemMap;
         MemMap.unmap(MemMap.getBase(), MemMap.getCapacity());
@@ -342,11 +341,11 @@ public:
 
 private:
   void empty() {
-    MemMapT MapInfo[Config::SecondaryCacheEntriesArraySize];
+    MemMapT MapInfo[CacheConfig::EntriesArraySize];
     uptr N = 0;
     {
       ScopedLock L(Mutex);
-      for (uptr I = 0; I < Config::SecondaryCacheEntriesArraySize; I++) {
+      for (uptr I = 0; I < CacheConfig::EntriesArraySize; I++) {
         if (!Entries[I].CommitBase)
           continue;
         MapInfo[N] = Entries[I].MemMap;
@@ -387,9 +386,9 @@ private:
     if (!EntriesCount || OldestTime == 0 || OldestTime > Time)
       return;
     OldestTime = 0;
-    for (uptr I = 0; I < Config::SecondaryCacheQuarantineSize; I++)
+    for (uptr I = 0; I < CacheConfig::QuarantineSize; I++)
       releaseIfOlderThan(Quarantine[I], Time);
-    for (uptr I = 0; I < Config::SecondaryCacheEntriesArraySize; I++)
+    for (uptr I = 0; I < CacheConfig::EntriesArraySize; I++)
       releaseIfOlderThan(Entries[I], Time);
   }
 
@@ -402,9 +401,8 @@ private:
   u32 IsFullEvents GUARDED_BY(Mutex) = 0;
   atomic_s32 ReleaseToOsIntervalMs = {};
 
-  CachedBlock
-      Entries[Config::SecondaryCacheEntriesArraySize] GUARDED_BY(Mutex) = {};
-  NonZeroLengthArray<CachedBlock, Config::SecondaryCacheQuarantineSize>
+  CachedBlock Entries[CacheConfig::EntriesArraySize] GUARDED_BY(Mutex) = {};
+  NonZeroLengthArray<CachedBlock, CacheConfig::QuarantineSize>
       Quarantine GUARDED_BY(Mutex) = {};
 };
 
@@ -469,7 +467,7 @@ public:
   void unmapTestOnly() { Cache.unmapTestOnly(); }
 
 private:
-  typename Config::SecondaryCache Cache;
+  typename Config::Secondary::template CacheT<Config> Cache;
 
   mutable HybridMutex Mutex;
   DoublyLinkedList<LargeBlock::Header> InUseBlocks GUARDED_BY(Mutex);
