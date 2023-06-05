@@ -7,213 +7,153 @@
 
 #include <riscv_vector.h>
 
-// CHECK-RV64-LABEL: define dso_local void @test_vlseg2e16_v_f16mf4_m
-// CHECK-RV64-SAME: (ptr noundef [[V0:%.*]], ptr noundef [[V1:%.*]], <vscale x 1 x i1> [[MASK:%.*]], ptr noundef [[BASE:%.*]], i64 noundef [[VL:%.*]]) #[[ATTR0:[0-9]+]] {
+// CHECK-RV64-LABEL: define dso_local { <vscale x 1 x half>, <vscale x 1 x half> } @test_vlseg2e16_v_f16mf4x2_m
+// CHECK-RV64-SAME: (<vscale x 1 x i1> [[MASK:%.*]], ptr noundef [[BASE:%.*]], i64 noundef [[VL:%.*]]) #[[ATTR0:[0-9]+]] {
 // CHECK-RV64-NEXT:  entry:
 // CHECK-RV64-NEXT:    [[TMP0:%.*]] = call { <vscale x 1 x half>, <vscale x 1 x half> } @llvm.riscv.vlseg2.mask.nxv1f16.i64(<vscale x 1 x half> poison, <vscale x 1 x half> poison, ptr [[BASE]], <vscale x 1 x i1> [[MASK]], i64 [[VL]], i64 3)
-// CHECK-RV64-NEXT:    [[TMP1:%.*]] = extractvalue { <vscale x 1 x half>, <vscale x 1 x half> } [[TMP0]], 0
-// CHECK-RV64-NEXT:    store <vscale x 1 x half> [[TMP1]], ptr [[V0]], align 2
-// CHECK-RV64-NEXT:    [[TMP2:%.*]] = extractvalue { <vscale x 1 x half>, <vscale x 1 x half> } [[TMP0]], 1
-// CHECK-RV64-NEXT:    store <vscale x 1 x half> [[TMP2]], ptr [[V1]], align 2
-// CHECK-RV64-NEXT:    ret void
+// CHECK-RV64-NEXT:    ret { <vscale x 1 x half>, <vscale x 1 x half> } [[TMP0]]
 //
-void test_vlseg2e16_v_f16mf4_m(vfloat16mf4_t *v0, vfloat16mf4_t *v1, vbool64_t mask, const _Float16 *base, size_t vl) {
-  return __riscv_vlseg2e16(v0, v1, mask, base, vl);
+vfloat16mf4x2_t test_vlseg2e16_v_f16mf4x2_m(vbool64_t mask, const _Float16 *base, size_t vl) {
+  return __riscv_vlseg2e16(mask, base, vl);
 }
 
-// CHECK-RV64-LABEL: define dso_local void @test_vlseg2e16_v_f16mf2_m
-// CHECK-RV64-SAME: (ptr noundef [[V0:%.*]], ptr noundef [[V1:%.*]], <vscale x 2 x i1> [[MASK:%.*]], ptr noundef [[BASE:%.*]], i64 noundef [[VL:%.*]]) #[[ATTR0]] {
+// CHECK-RV64-LABEL: define dso_local { <vscale x 2 x half>, <vscale x 2 x half> } @test_vlseg2e16_v_f16mf2x2_m
+// CHECK-RV64-SAME: (<vscale x 2 x i1> [[MASK:%.*]], ptr noundef [[BASE:%.*]], i64 noundef [[VL:%.*]]) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
 // CHECK-RV64-NEXT:    [[TMP0:%.*]] = call { <vscale x 2 x half>, <vscale x 2 x half> } @llvm.riscv.vlseg2.mask.nxv2f16.i64(<vscale x 2 x half> poison, <vscale x 2 x half> poison, ptr [[BASE]], <vscale x 2 x i1> [[MASK]], i64 [[VL]], i64 3)
-// CHECK-RV64-NEXT:    [[TMP1:%.*]] = extractvalue { <vscale x 2 x half>, <vscale x 2 x half> } [[TMP0]], 0
-// CHECK-RV64-NEXT:    store <vscale x 2 x half> [[TMP1]], ptr [[V0]], align 2
-// CHECK-RV64-NEXT:    [[TMP2:%.*]] = extractvalue { <vscale x 2 x half>, <vscale x 2 x half> } [[TMP0]], 1
-// CHECK-RV64-NEXT:    store <vscale x 2 x half> [[TMP2]], ptr [[V1]], align 2
-// CHECK-RV64-NEXT:    ret void
+// CHECK-RV64-NEXT:    ret { <vscale x 2 x half>, <vscale x 2 x half> } [[TMP0]]
 //
-void test_vlseg2e16_v_f16mf2_m(vfloat16mf2_t *v0, vfloat16mf2_t *v1, vbool32_t mask, const _Float16 *base, size_t vl) {
-  return __riscv_vlseg2e16(v0, v1, mask, base, vl);
+vfloat16mf2x2_t test_vlseg2e16_v_f16mf2x2_m(vbool32_t mask, const _Float16 *base, size_t vl) {
+  return __riscv_vlseg2e16(mask, base, vl);
 }
 
-// CHECK-RV64-LABEL: define dso_local void @test_vlseg2e16_v_f16m1_m
-// CHECK-RV64-SAME: (ptr noundef [[V0:%.*]], ptr noundef [[V1:%.*]], <vscale x 4 x i1> [[MASK:%.*]], ptr noundef [[BASE:%.*]], i64 noundef [[VL:%.*]]) #[[ATTR0]] {
+// CHECK-RV64-LABEL: define dso_local { <vscale x 4 x half>, <vscale x 4 x half> } @test_vlseg2e16_v_f16m1x2_m
+// CHECK-RV64-SAME: (<vscale x 4 x i1> [[MASK:%.*]], ptr noundef [[BASE:%.*]], i64 noundef [[VL:%.*]]) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
 // CHECK-RV64-NEXT:    [[TMP0:%.*]] = call { <vscale x 4 x half>, <vscale x 4 x half> } @llvm.riscv.vlseg2.mask.nxv4f16.i64(<vscale x 4 x half> poison, <vscale x 4 x half> poison, ptr [[BASE]], <vscale x 4 x i1> [[MASK]], i64 [[VL]], i64 3)
-// CHECK-RV64-NEXT:    [[TMP1:%.*]] = extractvalue { <vscale x 4 x half>, <vscale x 4 x half> } [[TMP0]], 0
-// CHECK-RV64-NEXT:    store <vscale x 4 x half> [[TMP1]], ptr [[V0]], align 2
-// CHECK-RV64-NEXT:    [[TMP2:%.*]] = extractvalue { <vscale x 4 x half>, <vscale x 4 x half> } [[TMP0]], 1
-// CHECK-RV64-NEXT:    store <vscale x 4 x half> [[TMP2]], ptr [[V1]], align 2
-// CHECK-RV64-NEXT:    ret void
+// CHECK-RV64-NEXT:    ret { <vscale x 4 x half>, <vscale x 4 x half> } [[TMP0]]
 //
-void test_vlseg2e16_v_f16m1_m(vfloat16m1_t *v0, vfloat16m1_t *v1, vbool16_t mask, const _Float16 *base, size_t vl) {
-  return __riscv_vlseg2e16(v0, v1, mask, base, vl);
+vfloat16m1x2_t test_vlseg2e16_v_f16m1x2_m(vbool16_t mask, const _Float16 *base, size_t vl) {
+  return __riscv_vlseg2e16(mask, base, vl);
 }
 
-// CHECK-RV64-LABEL: define dso_local void @test_vlseg2e16_v_f16m2_m
-// CHECK-RV64-SAME: (ptr noundef [[V0:%.*]], ptr noundef [[V1:%.*]], <vscale x 8 x i1> [[MASK:%.*]], ptr noundef [[BASE:%.*]], i64 noundef [[VL:%.*]]) #[[ATTR0]] {
+// CHECK-RV64-LABEL: define dso_local { <vscale x 8 x half>, <vscale x 8 x half> } @test_vlseg2e16_v_f16m2x2_m
+// CHECK-RV64-SAME: (<vscale x 8 x i1> [[MASK:%.*]], ptr noundef [[BASE:%.*]], i64 noundef [[VL:%.*]]) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
 // CHECK-RV64-NEXT:    [[TMP0:%.*]] = call { <vscale x 8 x half>, <vscale x 8 x half> } @llvm.riscv.vlseg2.mask.nxv8f16.i64(<vscale x 8 x half> poison, <vscale x 8 x half> poison, ptr [[BASE]], <vscale x 8 x i1> [[MASK]], i64 [[VL]], i64 3)
-// CHECK-RV64-NEXT:    [[TMP1:%.*]] = extractvalue { <vscale x 8 x half>, <vscale x 8 x half> } [[TMP0]], 0
-// CHECK-RV64-NEXT:    store <vscale x 8 x half> [[TMP1]], ptr [[V0]], align 2
-// CHECK-RV64-NEXT:    [[TMP2:%.*]] = extractvalue { <vscale x 8 x half>, <vscale x 8 x half> } [[TMP0]], 1
-// CHECK-RV64-NEXT:    store <vscale x 8 x half> [[TMP2]], ptr [[V1]], align 2
-// CHECK-RV64-NEXT:    ret void
+// CHECK-RV64-NEXT:    ret { <vscale x 8 x half>, <vscale x 8 x half> } [[TMP0]]
 //
-void test_vlseg2e16_v_f16m2_m(vfloat16m2_t *v0, vfloat16m2_t *v1, vbool8_t mask, const _Float16 *base, size_t vl) {
-  return __riscv_vlseg2e16(v0, v1, mask, base, vl);
+vfloat16m2x2_t test_vlseg2e16_v_f16m2x2_m(vbool8_t mask, const _Float16 *base, size_t vl) {
+  return __riscv_vlseg2e16(mask, base, vl);
 }
 
-// CHECK-RV64-LABEL: define dso_local void @test_vlseg2e16_v_f16m4_m
-// CHECK-RV64-SAME: (ptr noundef [[V0:%.*]], ptr noundef [[V1:%.*]], <vscale x 16 x i1> [[MASK:%.*]], ptr noundef [[BASE:%.*]], i64 noundef [[VL:%.*]]) #[[ATTR0]] {
+// CHECK-RV64-LABEL: define dso_local { <vscale x 16 x half>, <vscale x 16 x half> } @test_vlseg2e16_v_f16m4x2_m
+// CHECK-RV64-SAME: (<vscale x 16 x i1> [[MASK:%.*]], ptr noundef [[BASE:%.*]], i64 noundef [[VL:%.*]]) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
 // CHECK-RV64-NEXT:    [[TMP0:%.*]] = call { <vscale x 16 x half>, <vscale x 16 x half> } @llvm.riscv.vlseg2.mask.nxv16f16.i64(<vscale x 16 x half> poison, <vscale x 16 x half> poison, ptr [[BASE]], <vscale x 16 x i1> [[MASK]], i64 [[VL]], i64 3)
-// CHECK-RV64-NEXT:    [[TMP1:%.*]] = extractvalue { <vscale x 16 x half>, <vscale x 16 x half> } [[TMP0]], 0
-// CHECK-RV64-NEXT:    store <vscale x 16 x half> [[TMP1]], ptr [[V0]], align 2
-// CHECK-RV64-NEXT:    [[TMP2:%.*]] = extractvalue { <vscale x 16 x half>, <vscale x 16 x half> } [[TMP0]], 1
-// CHECK-RV64-NEXT:    store <vscale x 16 x half> [[TMP2]], ptr [[V1]], align 2
-// CHECK-RV64-NEXT:    ret void
+// CHECK-RV64-NEXT:    ret { <vscale x 16 x half>, <vscale x 16 x half> } [[TMP0]]
 //
-void test_vlseg2e16_v_f16m4_m(vfloat16m4_t *v0, vfloat16m4_t *v1, vbool4_t mask, const _Float16 *base, size_t vl) {
-  return __riscv_vlseg2e16(v0, v1, mask, base, vl);
+vfloat16m4x2_t test_vlseg2e16_v_f16m4x2_m(vbool4_t mask, const _Float16 *base, size_t vl) {
+  return __riscv_vlseg2e16(mask, base, vl);
 }
 
-// CHECK-RV64-LABEL: define dso_local void @test_vlseg2e16_v_i16mf4_m
-// CHECK-RV64-SAME: (ptr noundef [[V0:%.*]], ptr noundef [[V1:%.*]], <vscale x 1 x i1> [[MASK:%.*]], ptr noundef [[BASE:%.*]], i64 noundef [[VL:%.*]]) #[[ATTR0]] {
+// CHECK-RV64-LABEL: define dso_local { <vscale x 1 x i16>, <vscale x 1 x i16> } @test_vlseg2e16_v_i16mf4x2_m
+// CHECK-RV64-SAME: (<vscale x 1 x i1> [[MASK:%.*]], ptr noundef [[BASE:%.*]], i64 noundef [[VL:%.*]]) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
 // CHECK-RV64-NEXT:    [[TMP0:%.*]] = call { <vscale x 1 x i16>, <vscale x 1 x i16> } @llvm.riscv.vlseg2.mask.nxv1i16.i64(<vscale x 1 x i16> poison, <vscale x 1 x i16> poison, ptr [[BASE]], <vscale x 1 x i1> [[MASK]], i64 [[VL]], i64 3)
-// CHECK-RV64-NEXT:    [[TMP1:%.*]] = extractvalue { <vscale x 1 x i16>, <vscale x 1 x i16> } [[TMP0]], 0
-// CHECK-RV64-NEXT:    store <vscale x 1 x i16> [[TMP1]], ptr [[V0]], align 2
-// CHECK-RV64-NEXT:    [[TMP2:%.*]] = extractvalue { <vscale x 1 x i16>, <vscale x 1 x i16> } [[TMP0]], 1
-// CHECK-RV64-NEXT:    store <vscale x 1 x i16> [[TMP2]], ptr [[V1]], align 2
-// CHECK-RV64-NEXT:    ret void
+// CHECK-RV64-NEXT:    ret { <vscale x 1 x i16>, <vscale x 1 x i16> } [[TMP0]]
 //
-void test_vlseg2e16_v_i16mf4_m(vint16mf4_t *v0, vint16mf4_t *v1, vbool64_t mask, const int16_t *base, size_t vl) {
-  return __riscv_vlseg2e16(v0, v1, mask, base, vl);
+vint16mf4x2_t test_vlseg2e16_v_i16mf4x2_m(vbool64_t mask, const int16_t *base, size_t vl) {
+  return __riscv_vlseg2e16(mask, base, vl);
 }
 
-// CHECK-RV64-LABEL: define dso_local void @test_vlseg2e16_v_i16mf2_m
-// CHECK-RV64-SAME: (ptr noundef [[V0:%.*]], ptr noundef [[V1:%.*]], <vscale x 2 x i1> [[MASK:%.*]], ptr noundef [[BASE:%.*]], i64 noundef [[VL:%.*]]) #[[ATTR0]] {
+// CHECK-RV64-LABEL: define dso_local { <vscale x 2 x i16>, <vscale x 2 x i16> } @test_vlseg2e16_v_i16mf2x2_m
+// CHECK-RV64-SAME: (<vscale x 2 x i1> [[MASK:%.*]], ptr noundef [[BASE:%.*]], i64 noundef [[VL:%.*]]) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
 // CHECK-RV64-NEXT:    [[TMP0:%.*]] = call { <vscale x 2 x i16>, <vscale x 2 x i16> } @llvm.riscv.vlseg2.mask.nxv2i16.i64(<vscale x 2 x i16> poison, <vscale x 2 x i16> poison, ptr [[BASE]], <vscale x 2 x i1> [[MASK]], i64 [[VL]], i64 3)
-// CHECK-RV64-NEXT:    [[TMP1:%.*]] = extractvalue { <vscale x 2 x i16>, <vscale x 2 x i16> } [[TMP0]], 0
-// CHECK-RV64-NEXT:    store <vscale x 2 x i16> [[TMP1]], ptr [[V0]], align 2
-// CHECK-RV64-NEXT:    [[TMP2:%.*]] = extractvalue { <vscale x 2 x i16>, <vscale x 2 x i16> } [[TMP0]], 1
-// CHECK-RV64-NEXT:    store <vscale x 2 x i16> [[TMP2]], ptr [[V1]], align 2
-// CHECK-RV64-NEXT:    ret void
+// CHECK-RV64-NEXT:    ret { <vscale x 2 x i16>, <vscale x 2 x i16> } [[TMP0]]
 //
-void test_vlseg2e16_v_i16mf2_m(vint16mf2_t *v0, vint16mf2_t *v1, vbool32_t mask, const int16_t *base, size_t vl) {
-  return __riscv_vlseg2e16(v0, v1, mask, base, vl);
+vint16mf2x2_t test_vlseg2e16_v_i16mf2x2_m(vbool32_t mask, const int16_t *base, size_t vl) {
+  return __riscv_vlseg2e16(mask, base, vl);
 }
 
-// CHECK-RV64-LABEL: define dso_local void @test_vlseg2e16_v_i16m1_m
-// CHECK-RV64-SAME: (ptr noundef [[V0:%.*]], ptr noundef [[V1:%.*]], <vscale x 4 x i1> [[MASK:%.*]], ptr noundef [[BASE:%.*]], i64 noundef [[VL:%.*]]) #[[ATTR0]] {
+// CHECK-RV64-LABEL: define dso_local { <vscale x 4 x i16>, <vscale x 4 x i16> } @test_vlseg2e16_v_i16m1x2_m
+// CHECK-RV64-SAME: (<vscale x 4 x i1> [[MASK:%.*]], ptr noundef [[BASE:%.*]], i64 noundef [[VL:%.*]]) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
 // CHECK-RV64-NEXT:    [[TMP0:%.*]] = call { <vscale x 4 x i16>, <vscale x 4 x i16> } @llvm.riscv.vlseg2.mask.nxv4i16.i64(<vscale x 4 x i16> poison, <vscale x 4 x i16> poison, ptr [[BASE]], <vscale x 4 x i1> [[MASK]], i64 [[VL]], i64 3)
-// CHECK-RV64-NEXT:    [[TMP1:%.*]] = extractvalue { <vscale x 4 x i16>, <vscale x 4 x i16> } [[TMP0]], 0
-// CHECK-RV64-NEXT:    store <vscale x 4 x i16> [[TMP1]], ptr [[V0]], align 2
-// CHECK-RV64-NEXT:    [[TMP2:%.*]] = extractvalue { <vscale x 4 x i16>, <vscale x 4 x i16> } [[TMP0]], 1
-// CHECK-RV64-NEXT:    store <vscale x 4 x i16> [[TMP2]], ptr [[V1]], align 2
-// CHECK-RV64-NEXT:    ret void
+// CHECK-RV64-NEXT:    ret { <vscale x 4 x i16>, <vscale x 4 x i16> } [[TMP0]]
 //
-void test_vlseg2e16_v_i16m1_m(vint16m1_t *v0, vint16m1_t *v1, vbool16_t mask, const int16_t *base, size_t vl) {
-  return __riscv_vlseg2e16(v0, v1, mask, base, vl);
+vint16m1x2_t test_vlseg2e16_v_i16m1x2_m(vbool16_t mask, const int16_t *base, size_t vl) {
+  return __riscv_vlseg2e16(mask, base, vl);
 }
 
-// CHECK-RV64-LABEL: define dso_local void @test_vlseg2e16_v_i16m2_m
-// CHECK-RV64-SAME: (ptr noundef [[V0:%.*]], ptr noundef [[V1:%.*]], <vscale x 8 x i1> [[MASK:%.*]], ptr noundef [[BASE:%.*]], i64 noundef [[VL:%.*]]) #[[ATTR0]] {
+// CHECK-RV64-LABEL: define dso_local { <vscale x 8 x i16>, <vscale x 8 x i16> } @test_vlseg2e16_v_i16m2x2_m
+// CHECK-RV64-SAME: (<vscale x 8 x i1> [[MASK:%.*]], ptr noundef [[BASE:%.*]], i64 noundef [[VL:%.*]]) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
 // CHECK-RV64-NEXT:    [[TMP0:%.*]] = call { <vscale x 8 x i16>, <vscale x 8 x i16> } @llvm.riscv.vlseg2.mask.nxv8i16.i64(<vscale x 8 x i16> poison, <vscale x 8 x i16> poison, ptr [[BASE]], <vscale x 8 x i1> [[MASK]], i64 [[VL]], i64 3)
-// CHECK-RV64-NEXT:    [[TMP1:%.*]] = extractvalue { <vscale x 8 x i16>, <vscale x 8 x i16> } [[TMP0]], 0
-// CHECK-RV64-NEXT:    store <vscale x 8 x i16> [[TMP1]], ptr [[V0]], align 2
-// CHECK-RV64-NEXT:    [[TMP2:%.*]] = extractvalue { <vscale x 8 x i16>, <vscale x 8 x i16> } [[TMP0]], 1
-// CHECK-RV64-NEXT:    store <vscale x 8 x i16> [[TMP2]], ptr [[V1]], align 2
-// CHECK-RV64-NEXT:    ret void
+// CHECK-RV64-NEXT:    ret { <vscale x 8 x i16>, <vscale x 8 x i16> } [[TMP0]]
 //
-void test_vlseg2e16_v_i16m2_m(vint16m2_t *v0, vint16m2_t *v1, vbool8_t mask, const int16_t *base, size_t vl) {
-  return __riscv_vlseg2e16(v0, v1, mask, base, vl);
+vint16m2x2_t test_vlseg2e16_v_i16m2x2_m(vbool8_t mask, const int16_t *base, size_t vl) {
+  return __riscv_vlseg2e16(mask, base, vl);
 }
 
-// CHECK-RV64-LABEL: define dso_local void @test_vlseg2e16_v_i16m4_m
-// CHECK-RV64-SAME: (ptr noundef [[V0:%.*]], ptr noundef [[V1:%.*]], <vscale x 16 x i1> [[MASK:%.*]], ptr noundef [[BASE:%.*]], i64 noundef [[VL:%.*]]) #[[ATTR0]] {
+// CHECK-RV64-LABEL: define dso_local { <vscale x 16 x i16>, <vscale x 16 x i16> } @test_vlseg2e16_v_i16m4x2_m
+// CHECK-RV64-SAME: (<vscale x 16 x i1> [[MASK:%.*]], ptr noundef [[BASE:%.*]], i64 noundef [[VL:%.*]]) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
 // CHECK-RV64-NEXT:    [[TMP0:%.*]] = call { <vscale x 16 x i16>, <vscale x 16 x i16> } @llvm.riscv.vlseg2.mask.nxv16i16.i64(<vscale x 16 x i16> poison, <vscale x 16 x i16> poison, ptr [[BASE]], <vscale x 16 x i1> [[MASK]], i64 [[VL]], i64 3)
-// CHECK-RV64-NEXT:    [[TMP1:%.*]] = extractvalue { <vscale x 16 x i16>, <vscale x 16 x i16> } [[TMP0]], 0
-// CHECK-RV64-NEXT:    store <vscale x 16 x i16> [[TMP1]], ptr [[V0]], align 2
-// CHECK-RV64-NEXT:    [[TMP2:%.*]] = extractvalue { <vscale x 16 x i16>, <vscale x 16 x i16> } [[TMP0]], 1
-// CHECK-RV64-NEXT:    store <vscale x 16 x i16> [[TMP2]], ptr [[V1]], align 2
-// CHECK-RV64-NEXT:    ret void
+// CHECK-RV64-NEXT:    ret { <vscale x 16 x i16>, <vscale x 16 x i16> } [[TMP0]]
 //
-void test_vlseg2e16_v_i16m4_m(vint16m4_t *v0, vint16m4_t *v1, vbool4_t mask, const int16_t *base, size_t vl) {
-  return __riscv_vlseg2e16(v0, v1, mask, base, vl);
+vint16m4x2_t test_vlseg2e16_v_i16m4x2_m(vbool4_t mask, const int16_t *base, size_t vl) {
+  return __riscv_vlseg2e16(mask, base, vl);
 }
 
-// CHECK-RV64-LABEL: define dso_local void @test_vlseg2e16_v_u16mf4_m
-// CHECK-RV64-SAME: (ptr noundef [[V0:%.*]], ptr noundef [[V1:%.*]], <vscale x 1 x i1> [[MASK:%.*]], ptr noundef [[BASE:%.*]], i64 noundef [[VL:%.*]]) #[[ATTR0]] {
+// CHECK-RV64-LABEL: define dso_local { <vscale x 1 x i16>, <vscale x 1 x i16> } @test_vlseg2e16_v_u16mf4x2_m
+// CHECK-RV64-SAME: (<vscale x 1 x i1> [[MASK:%.*]], ptr noundef [[BASE:%.*]], i64 noundef [[VL:%.*]]) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
 // CHECK-RV64-NEXT:    [[TMP0:%.*]] = call { <vscale x 1 x i16>, <vscale x 1 x i16> } @llvm.riscv.vlseg2.mask.nxv1i16.i64(<vscale x 1 x i16> poison, <vscale x 1 x i16> poison, ptr [[BASE]], <vscale x 1 x i1> [[MASK]], i64 [[VL]], i64 3)
-// CHECK-RV64-NEXT:    [[TMP1:%.*]] = extractvalue { <vscale x 1 x i16>, <vscale x 1 x i16> } [[TMP0]], 0
-// CHECK-RV64-NEXT:    store <vscale x 1 x i16> [[TMP1]], ptr [[V0]], align 2
-// CHECK-RV64-NEXT:    [[TMP2:%.*]] = extractvalue { <vscale x 1 x i16>, <vscale x 1 x i16> } [[TMP0]], 1
-// CHECK-RV64-NEXT:    store <vscale x 1 x i16> [[TMP2]], ptr [[V1]], align 2
-// CHECK-RV64-NEXT:    ret void
+// CHECK-RV64-NEXT:    ret { <vscale x 1 x i16>, <vscale x 1 x i16> } [[TMP0]]
 //
-void test_vlseg2e16_v_u16mf4_m(vuint16mf4_t *v0, vuint16mf4_t *v1, vbool64_t mask, const uint16_t *base, size_t vl) {
-  return __riscv_vlseg2e16(v0, v1, mask, base, vl);
+vuint16mf4x2_t test_vlseg2e16_v_u16mf4x2_m(vbool64_t mask, const uint16_t *base, size_t vl) {
+  return __riscv_vlseg2e16(mask, base, vl);
 }
 
-// CHECK-RV64-LABEL: define dso_local void @test_vlseg2e16_v_u16mf2_m
-// CHECK-RV64-SAME: (ptr noundef [[V0:%.*]], ptr noundef [[V1:%.*]], <vscale x 2 x i1> [[MASK:%.*]], ptr noundef [[BASE:%.*]], i64 noundef [[VL:%.*]]) #[[ATTR0]] {
+// CHECK-RV64-LABEL: define dso_local { <vscale x 2 x i16>, <vscale x 2 x i16> } @test_vlseg2e16_v_u16mf2x2_m
+// CHECK-RV64-SAME: (<vscale x 2 x i1> [[MASK:%.*]], ptr noundef [[BASE:%.*]], i64 noundef [[VL:%.*]]) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
 // CHECK-RV64-NEXT:    [[TMP0:%.*]] = call { <vscale x 2 x i16>, <vscale x 2 x i16> } @llvm.riscv.vlseg2.mask.nxv2i16.i64(<vscale x 2 x i16> poison, <vscale x 2 x i16> poison, ptr [[BASE]], <vscale x 2 x i1> [[MASK]], i64 [[VL]], i64 3)
-// CHECK-RV64-NEXT:    [[TMP1:%.*]] = extractvalue { <vscale x 2 x i16>, <vscale x 2 x i16> } [[TMP0]], 0
-// CHECK-RV64-NEXT:    store <vscale x 2 x i16> [[TMP1]], ptr [[V0]], align 2
-// CHECK-RV64-NEXT:    [[TMP2:%.*]] = extractvalue { <vscale x 2 x i16>, <vscale x 2 x i16> } [[TMP0]], 1
-// CHECK-RV64-NEXT:    store <vscale x 2 x i16> [[TMP2]], ptr [[V1]], align 2
-// CHECK-RV64-NEXT:    ret void
+// CHECK-RV64-NEXT:    ret { <vscale x 2 x i16>, <vscale x 2 x i16> } [[TMP0]]
 //
-void test_vlseg2e16_v_u16mf2_m(vuint16mf2_t *v0, vuint16mf2_t *v1, vbool32_t mask, const uint16_t *base, size_t vl) {
-  return __riscv_vlseg2e16(v0, v1, mask, base, vl);
+vuint16mf2x2_t test_vlseg2e16_v_u16mf2x2_m(vbool32_t mask, const uint16_t *base, size_t vl) {
+  return __riscv_vlseg2e16(mask, base, vl);
 }
 
-// CHECK-RV64-LABEL: define dso_local void @test_vlseg2e16_v_u16m1_m
-// CHECK-RV64-SAME: (ptr noundef [[V0:%.*]], ptr noundef [[V1:%.*]], <vscale x 4 x i1> [[MASK:%.*]], ptr noundef [[BASE:%.*]], i64 noundef [[VL:%.*]]) #[[ATTR0]] {
+// CHECK-RV64-LABEL: define dso_local { <vscale x 4 x i16>, <vscale x 4 x i16> } @test_vlseg2e16_v_u16m1x2_m
+// CHECK-RV64-SAME: (<vscale x 4 x i1> [[MASK:%.*]], ptr noundef [[BASE:%.*]], i64 noundef [[VL:%.*]]) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
 // CHECK-RV64-NEXT:    [[TMP0:%.*]] = call { <vscale x 4 x i16>, <vscale x 4 x i16> } @llvm.riscv.vlseg2.mask.nxv4i16.i64(<vscale x 4 x i16> poison, <vscale x 4 x i16> poison, ptr [[BASE]], <vscale x 4 x i1> [[MASK]], i64 [[VL]], i64 3)
-// CHECK-RV64-NEXT:    [[TMP1:%.*]] = extractvalue { <vscale x 4 x i16>, <vscale x 4 x i16> } [[TMP0]], 0
-// CHECK-RV64-NEXT:    store <vscale x 4 x i16> [[TMP1]], ptr [[V0]], align 2
-// CHECK-RV64-NEXT:    [[TMP2:%.*]] = extractvalue { <vscale x 4 x i16>, <vscale x 4 x i16> } [[TMP0]], 1
-// CHECK-RV64-NEXT:    store <vscale x 4 x i16> [[TMP2]], ptr [[V1]], align 2
-// CHECK-RV64-NEXT:    ret void
+// CHECK-RV64-NEXT:    ret { <vscale x 4 x i16>, <vscale x 4 x i16> } [[TMP0]]
 //
-void test_vlseg2e16_v_u16m1_m(vuint16m1_t *v0, vuint16m1_t *v1, vbool16_t mask, const uint16_t *base, size_t vl) {
-  return __riscv_vlseg2e16(v0, v1, mask, base, vl);
+vuint16m1x2_t test_vlseg2e16_v_u16m1x2_m(vbool16_t mask, const uint16_t *base, size_t vl) {
+  return __riscv_vlseg2e16(mask, base, vl);
 }
 
-// CHECK-RV64-LABEL: define dso_local void @test_vlseg2e16_v_u16m2_m
-// CHECK-RV64-SAME: (ptr noundef [[V0:%.*]], ptr noundef [[V1:%.*]], <vscale x 8 x i1> [[MASK:%.*]], ptr noundef [[BASE:%.*]], i64 noundef [[VL:%.*]]) #[[ATTR0]] {
+// CHECK-RV64-LABEL: define dso_local { <vscale x 8 x i16>, <vscale x 8 x i16> } @test_vlseg2e16_v_u16m2x2_m
+// CHECK-RV64-SAME: (<vscale x 8 x i1> [[MASK:%.*]], ptr noundef [[BASE:%.*]], i64 noundef [[VL:%.*]]) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
 // CHECK-RV64-NEXT:    [[TMP0:%.*]] = call { <vscale x 8 x i16>, <vscale x 8 x i16> } @llvm.riscv.vlseg2.mask.nxv8i16.i64(<vscale x 8 x i16> poison, <vscale x 8 x i16> poison, ptr [[BASE]], <vscale x 8 x i1> [[MASK]], i64 [[VL]], i64 3)
-// CHECK-RV64-NEXT:    [[TMP1:%.*]] = extractvalue { <vscale x 8 x i16>, <vscale x 8 x i16> } [[TMP0]], 0
-// CHECK-RV64-NEXT:    store <vscale x 8 x i16> [[TMP1]], ptr [[V0]], align 2
-// CHECK-RV64-NEXT:    [[TMP2:%.*]] = extractvalue { <vscale x 8 x i16>, <vscale x 8 x i16> } [[TMP0]], 1
-// CHECK-RV64-NEXT:    store <vscale x 8 x i16> [[TMP2]], ptr [[V1]], align 2
-// CHECK-RV64-NEXT:    ret void
+// CHECK-RV64-NEXT:    ret { <vscale x 8 x i16>, <vscale x 8 x i16> } [[TMP0]]
 //
-void test_vlseg2e16_v_u16m2_m(vuint16m2_t *v0, vuint16m2_t *v1, vbool8_t mask, const uint16_t *base, size_t vl) {
-  return __riscv_vlseg2e16(v0, v1, mask, base, vl);
+vuint16m2x2_t test_vlseg2e16_v_u16m2x2_m(vbool8_t mask, const uint16_t *base, size_t vl) {
+  return __riscv_vlseg2e16(mask, base, vl);
 }
 
-// CHECK-RV64-LABEL: define dso_local void @test_vlseg2e16_v_u16m4_m
-// CHECK-RV64-SAME: (ptr noundef [[V0:%.*]], ptr noundef [[V1:%.*]], <vscale x 16 x i1> [[MASK:%.*]], ptr noundef [[BASE:%.*]], i64 noundef [[VL:%.*]]) #[[ATTR0]] {
+// CHECK-RV64-LABEL: define dso_local { <vscale x 16 x i16>, <vscale x 16 x i16> } @test_vlseg2e16_v_u16m4x2_m
+// CHECK-RV64-SAME: (<vscale x 16 x i1> [[MASK:%.*]], ptr noundef [[BASE:%.*]], i64 noundef [[VL:%.*]]) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
 // CHECK-RV64-NEXT:    [[TMP0:%.*]] = call { <vscale x 16 x i16>, <vscale x 16 x i16> } @llvm.riscv.vlseg2.mask.nxv16i16.i64(<vscale x 16 x i16> poison, <vscale x 16 x i16> poison, ptr [[BASE]], <vscale x 16 x i1> [[MASK]], i64 [[VL]], i64 3)
-// CHECK-RV64-NEXT:    [[TMP1:%.*]] = extractvalue { <vscale x 16 x i16>, <vscale x 16 x i16> } [[TMP0]], 0
-// CHECK-RV64-NEXT:    store <vscale x 16 x i16> [[TMP1]], ptr [[V0]], align 2
-// CHECK-RV64-NEXT:    [[TMP2:%.*]] = extractvalue { <vscale x 16 x i16>, <vscale x 16 x i16> } [[TMP0]], 1
-// CHECK-RV64-NEXT:    store <vscale x 16 x i16> [[TMP2]], ptr [[V1]], align 2
-// CHECK-RV64-NEXT:    ret void
+// CHECK-RV64-NEXT:    ret { <vscale x 16 x i16>, <vscale x 16 x i16> } [[TMP0]]
 //
-void test_vlseg2e16_v_u16m4_m(vuint16m4_t *v0, vuint16m4_t *v1, vbool4_t mask, const uint16_t *base, size_t vl) {
-  return __riscv_vlseg2e16(v0, v1, mask, base, vl);
+vuint16m4x2_t test_vlseg2e16_v_u16m4x2_m(vbool4_t mask, const uint16_t *base, size_t vl) {
+  return __riscv_vlseg2e16(mask, base, vl);
 }
 
