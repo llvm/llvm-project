@@ -903,8 +903,6 @@ void DWARFLinker::lookForDIEsToKeep(AddressesMap &AddressesMap,
     if ((Current.Flags & TF_DependencyWalk) && AlreadyKept)
       continue;
 
-    // We must not call shouldKeepDIE while called from keepDIEAndDependencies,
-    // because it would screw up the relocation finding logic.
     if (!(Current.Flags & TF_DependencyWalk))
       Current.Flags = shouldKeepDIE(AddressesMap, Ranges, Current.Die, File,
                                     Current.CU, MyInfo, Current.Flags);
