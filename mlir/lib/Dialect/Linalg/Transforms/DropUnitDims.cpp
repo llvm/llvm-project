@@ -675,7 +675,7 @@ void mlir::linalg::populateFoldUnitExtentDimsViaReshapesPatterns(
   tensor::EmptyOp::getCanonicalizationPatterns(patterns, context);
   tensor::ExpandShapeOp::getCanonicalizationPatterns(patterns, context);
   tensor::populateFoldTensorEmptyPatterns(patterns);
-  memref::populateResolveRankedShapeTypeResultDimsPatterns(patterns);
+  memref::populateResolveRankedShapedTypeResultDimsPatterns(patterns);
   memref::populateResolveShapedTypeResultDimsPatterns(patterns);
 }
 
@@ -689,7 +689,7 @@ void mlir::linalg::populateFoldUnitExtentDimsViaSlicesPatterns(
   linalg::FillOp::getCanonicalizationPatterns(patterns, context);
   tensor::EmptyOp::getCanonicalizationPatterns(patterns, context);
   tensor::populateFoldTensorEmptyPatterns(patterns);
-  memref::populateResolveRankedShapeTypeResultDimsPatterns(patterns);
+  memref::populateResolveRankedShapedTypeResultDimsPatterns(patterns);
   memref::populateResolveShapedTypeResultDimsPatterns(patterns);
 }
 
