@@ -11,6 +11,7 @@
 
 #include <cstddef>
 #include <string>
+#include <string_view>
 
 namespace llvm {
 /// This is a llvm local version of __cxa_demangle. Other than the name and
@@ -54,7 +55,7 @@ char *microsoftDemangle(const char *mangled_name, size_t *n_read, int *status,
                         MSDemangleFlags Flags = MSDF_None);
 
 // Demangles a Rust v0 mangled symbol.
-char *rustDemangle(const char *MangledName);
+char *rustDemangle(std::string_view MangledName);
 
 // Demangles a D mangled symbol.
 char *dlangDemangle(const char *MangledName);
