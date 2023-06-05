@@ -525,30 +525,19 @@ static void ProcessThreads(SuspendedThreadsList const &suspended_threads,
 
 bool HasRootRegions() { return !root_regions.empty(); }
 
-static void ScanRootRegion(Frontier *frontier, const Region &root_region,
-                           uptr region_begin, uptr region_end,
-                           bool is_readable) {
-  uptr intersection_begin = Max(root_region.begin, region_begin);
-  uptr intersection_end = Min(region_end, root_region.end);
-  if (intersection_begin >= intersection_end)
-    return;
-  LOG_POINTERS("Root region %p-%p intersects with mapped region %p-%p (%s)\n",
-               (void *)root_region.begin, (void *)root_region.end,
-               (void *)region_begin, (void *)region_end,
-               is_readable ? "readable" : "unreadable");
-  if (is_readable)
-    ScanRangeForPointers(intersection_begin, intersection_end, frontier, "ROOT",
-                         kReachable);
-}
-
 void ScanRootRegions(Frontier *frontier,
                      const InternalMmapVectorNoCtor<Region> &mapped_regions) {
-  if (!flags()->use_root_regions || mapped_regions.empty())
+  if (!flags()->use_root_regions)
     return;
 
-  for (const auto &m : mapped_regions)
-    for (const auto &r : root_regions)
-      ScanRootRegion(frontier, r, m.begin, m.end, true);
+  InternalMmapVector<Region> intersection;
+  Intersect(mapped_regions, root_regions, intersection);
+
+  for (const Region &r : intersection) {
+    LOG_POINTERS("Root region intersects with mapped region at %p-%p\n",
+                 (void *)r.begin, (void *)r.end);
+    ScanRangeForPointers(r.begin, r.end, frontier, "ROOT", kReachable);
+  }
 }
 
 // Scans root regions for heap pointers.
