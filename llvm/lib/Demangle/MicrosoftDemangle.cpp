@@ -2397,14 +2397,14 @@ void Demangler::dumpBackReferences() {
     std::printf("\n");
 }
 
-char *llvm::microsoftDemangle(const char *MangledName, size_t *NMangled,
+char *llvm::microsoftDemangle(std::string_view MangledName, size_t *NMangled,
                               int *Status, MSDemangleFlags Flags) {
   Demangler D;
 
   std::string_view Name{MangledName};
   SymbolNode *AST = D.parse(Name);
   if (!D.Error && NMangled)
-    *NMangled = Name.empty() ? 0 : &*Name.begin() - MangledName;
+    *NMangled = Name.empty() ? 0 : &*Name.begin() - &*MangledName.begin();
 
   if (Flags & MSDF_DumpBackrefs)
     D.dumpBackReferences();
