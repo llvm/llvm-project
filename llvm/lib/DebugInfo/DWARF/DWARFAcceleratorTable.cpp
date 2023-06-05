@@ -277,18 +277,18 @@ AppleAcceleratorTable::Entry::Entry(
 
 void AppleAcceleratorTable::Entry::extract(
     const AppleAcceleratorTable &AccelTable, uint64_t *Offset) {
-  for (auto &Atom : Values)
-    Atom.extractValue(AccelTable.AccelSection, Offset, AccelTable.FormParams);
+  for (auto &FormValue : Values)
+    FormValue.extractValue(AccelTable.AccelSection, Offset,
+                           AccelTable.FormParams);
 }
 
 std::optional<DWARFFormValue>
-AppleAcceleratorTable::Entry::lookup(HeaderData::AtomType Atom) const {
+AppleAcceleratorTable::Entry::lookup(HeaderData::AtomType AtomToFind) const {
   assert(HdrData && "Dereferencing end iterator?");
   assert(HdrData->Atoms.size() == Values.size());
-  for (auto Tuple : zip_first(HdrData->Atoms, Values)) {
-    if (std::get<0>(Tuple).first == Atom)
-      return std::get<1>(Tuple);
-  }
+  for (auto [Atom, FormValue] : zip_equal(HdrData->Atoms, Values))
+    if (Atom.first == AtomToFind)
+      return FormValue;
   return std::nullopt;
 }
 
