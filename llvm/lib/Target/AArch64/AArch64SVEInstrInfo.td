@@ -408,7 +408,9 @@ def AArch64sub_m1 : PatFrags<(ops node:$pred, node:$op1, node:$op2),
 def AArch64mla_m1 : PatFrags<(ops node:$pred, node:$op1, node:$op2, node:$op3),
                              [(int_aarch64_sve_mla node:$pred, node:$op1, node:$op2, node:$op3),
                               // add(a, select(mask, mul(b, c), splat(0))) -> mla(a, mask, b, c)
-                              (add node:$op1, (vselect node:$pred, (AArch64mul_p_oneuse (SVEAllActive), node:$op2, node:$op3), (SVEDup0)))]>;
+                              (add node:$op1, (vselect node:$pred, (AArch64mul_p_oneuse (SVEAllActive), node:$op2, node:$op3), (SVEDup0))),
+                              // select(mask, add(a, mul(b, c)), a) -> mla(a, mask, b, c)
+                              (vselect node:$pred, (add node:$op1, (AArch64mul_p_oneuse (SVEAllActive), node:$op2, node:$op3)), node:$op1)]>;
 // pattern for generating pseudo for MLA_ZPmZZ/MAD_ZPmZZ
 def AArch64mla_p : PatFrags<(ops node:$pred, node:$op1, node:$op2, node:$op3),
                             [(int_aarch64_sve_mla_u node:$pred, node:$op1, node:$op2, node:$op3),
@@ -416,7 +418,9 @@ def AArch64mla_p : PatFrags<(ops node:$pred, node:$op1, node:$op2, node:$op3),
 def AArch64mls_m1 : PatFrags<(ops node:$pred, node:$op1, node:$op2, node:$op3),
                              [(int_aarch64_sve_mls node:$pred, node:$op1, node:$op2, node:$op3),
                               // sub(a, select(mask, mul(b, c), splat(0))) -> mls(a, mask, b, c)
-                              (sub node:$op1, (vselect node:$pred, (AArch64mul_p_oneuse (SVEAllActive), node:$op2, node:$op3), (SVEDup0)))]>;
+                              (sub node:$op1, (vselect node:$pred, (AArch64mul_p_oneuse (SVEAllActive), node:$op2, node:$op3), (SVEDup0))),
+                              // select(mask, sub(a, mul(b, c)), a) -> mls(a, mask, b, c)
+                              (vselect node:$pred, (sub node:$op1, (AArch64mul_p_oneuse (SVEAllActive), node:$op2, node:$op3)), node:$op1)]>;
 def AArch64mls_p : PatFrags<(ops node:$pred, node:$op1, node:$op2, node:$op3),
                              [(int_aarch64_sve_mls_u node:$pred, node:$op1, node:$op2, node:$op3),
                               (sub node:$op1, (AArch64mul_p_oneuse node:$pred, node:$op2, node:$op3))]>;
