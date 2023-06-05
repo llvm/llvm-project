@@ -153,10 +153,10 @@ bool lldb_private::formatters::LibcxxSmartPointerSummaryProvider(
   if (!valobj_sp)
     return false;
   ValueObjectSP ptr_sp(valobj_sp->GetChildMemberWithName("__ptr_", true));
-  ValueObjectSP count_sp(valobj_sp->GetChildAtNamePath(
-      {ConstString("__cntrl_"), ConstString("__shared_owners_")}));
-  ValueObjectSP weakcount_sp(valobj_sp->GetChildAtNamePath(
-      {ConstString("__cntrl_"), ConstString("__shared_weak_owners_")}));
+  ValueObjectSP count_sp(
+      valobj_sp->GetChildAtNamePath({"__cntrl_", "__shared_owners_"}));
+  ValueObjectSP weakcount_sp(
+      valobj_sp->GetChildAtNamePath({"__cntrl_", "__shared_weak_owners_"}));
 
   if (!ptr_sp)
     return false;
@@ -810,8 +810,7 @@ ExtractLibcxxStringInfo(ValueObject &valobj) {
     return {};
 
   ValueObjectSP is_long = short_sp->GetChildMemberWithName("__is_long_", true);
-  ValueObjectSP size_sp =
-      short_sp->GetChildAtNamePath({ConstString("__size_")});
+  ValueObjectSP size_sp = short_sp->GetChildMemberWithName("__size_", true);
   if (!size_sp)
     return {};
 
