@@ -93,6 +93,13 @@ public:
   unsigned GetSize() const { return m_size; }
   void log(Log *log) const;
 
+  /// Produce a text table showing the layout of all the fields. Unamed/padding
+  /// fields will be included, with only their positions shown.
+  /// max_width will be the width in characters of the terminal you are
+  /// going to print the table to. If the table would exceed this width, it will
+  /// be split into many tables as needed.
+  std::string AsTable(uint32_t max_width) const;
+
 private:
   const std::string m_id;
   /// Size in bytes
