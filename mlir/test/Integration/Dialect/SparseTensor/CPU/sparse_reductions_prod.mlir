@@ -140,7 +140,9 @@ module {
       1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 4.0
     ]> : tensor<32xf32>
 
-    // Convert constants to annotated tensors.
+    // Convert constants to annotated tensors. Note that this
+    // particular conversion only stores nonzero elements,
+    // so we will have no explicit zeros, only implicit zeros.
     %d0_i32 = sparse_tensor.convert %c_0_i32
       : tensor<32xi32> to tensor<32xi32, #DV>
     %d0_f32 = sparse_tensor.convert %c_0_f32
@@ -158,6 +160,10 @@ module {
     %s1_f32 = sparse_tensor.convert %c_1_f32
       : tensor<32xf32> to tensor<32xf32, #SV>
 
+    // Special case, construct a sparse vector with an explicit zero.
+    %v0 = arith.constant sparse< [ [1] ], [ 0 ] > : tensor<32xi32>
+    %s0 = sparse_tensor.convert %v0: tensor<32xi32> to tensor<32xi32, #SV>
+
     // Call the kernels.
     %0 = call @prod_dreduction_i32(%d0_i32, %ri) : (tensor<32xi32, #DV>, tensor<i32>) -> tensor<i32>
     %1 = call @prod_dreduction_f32(%d0_f32, %rf) : (tensor<32xf32, #DV>, tensor<f32>) -> tensor<f32>
@@ -167,12 +173,15 @@ module {
     %5 = call @prod_dreduction_f32(%d1_f32, %rf) : (tensor<32xf32, #DV>, tensor<f32>) -> tensor<f32>
     %6 = call @prod_sreduction_i32(%s1_i32, %ri) : (tensor<32xi32, #SV>, tensor<i32>) -> tensor<i32>
     %7 = call @prod_sreduction_f32(%s1_f32, %rf) : (tensor<32xf32, #SV>, tensor<f32>) -> tensor<f32>
+    %8 = call @prod_sreduction_i32(%s0,     %ri) : (tensor<32xi32, #SV>, tensor<i32>) -> tensor<i32>
 
     // Verify results. Note that the custom reduction gave permission
     // to treat an explicit vs implicit zero differently to compute the
-    // full product reduction. A "standard" product reduction would
-    // have to return 0 for any implicit zero occurrence too.
+    // full product reduction over stored elements. A "standard" product
+    // reduction would have to return 0 for any implicit zero occurrence
+    // too. An explicit zero nullifies the product, though, as requested.
     //
+    // CHECK: 0
     // CHECK: 0
     // CHECK: 3087
     // CHECK: 14
@@ -180,6 +189,7 @@ module {
     // CHECK: 168
     // CHECK: 3087
     // CHECK: 168
+    // CHECK: 0
     //
     call @dump_i32(%0) : (tensor<i32>) -> ()
     call @dump_f32(%1) : (tensor<f32>) -> ()
@@ -189,6 +199,7 @@ module {
     call @dump_f32(%5) : (tensor<f32>) -> ()
     call @dump_i32(%6) : (tensor<i32>) -> ()
     call @dump_f32(%7) : (tensor<f32>) -> ()
+    call @dump_i32(%8) : (tensor<i32>) -> ()
 
     // Release the resources.
     bufferization.dealloc_tensor %d0_i32 : tensor<32xi32, #DV>
@@ -199,6 +210,7 @@ module {
     bufferization.dealloc_tensor %d1_f32 : tensor<32xf32, #DV>
     bufferization.dealloc_tensor %s1_i32 : tensor<32xi32, #SV>
     bufferization.dealloc_tensor %s1_f32 : tensor<32xf32, #SV>
+    bufferization.dealloc_tensor %s0     : tensor<32xi32, #SV>
 
     return
   }
