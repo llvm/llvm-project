@@ -7236,7 +7236,7 @@ CGObjCNonFragileABIMac::EmitIvarOffset(CodeGen::CodeGenFunction &CGF,
                                       CGF.getSizeAlign(), "ivar");
     if (IsIvarOffsetKnownIdempotent(CGF, Ivar))
       cast<llvm::LoadInst>(IvarOffsetValue)
-          ->setMetadata(CGM.getModule().getMDKindID("invariant.load"),
+          ->setMetadata(llvm::LLVMContext::MD_invariant_load,
                         llvm::MDNode::get(VMContext, std::nullopt));
   }
 
@@ -7643,7 +7643,7 @@ llvm::Value *CGObjCNonFragileABIMac::EmitSelector(CodeGenFunction &CGF,
   Address Addr = EmitSelectorAddr(Sel);
 
   llvm::LoadInst* LI = CGF.Builder.CreateLoad(Addr);
-  LI->setMetadata(CGM.getModule().getMDKindID("invariant.load"),
+  LI->setMetadata(llvm::LLVMContext::MD_invariant_load,
                   llvm::MDNode::get(VMContext, std::nullopt));
   return LI;
 }
