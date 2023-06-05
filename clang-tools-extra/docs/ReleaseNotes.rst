@@ -165,6 +165,11 @@ New checks
   Checks that all implicit and explicit inline functions in header files are
   tagged with the ``LIBC_INLINE`` macro.
 
+- New :doc:`misc-include-cleaner
+  <clang-tidy/checks/misc/include-cleaner>` check.
+
+  Checks for unused and missing includes.
+
 - New :doc:`modernize-type-traits
   <clang-tidy/checks/modernize/type-traits>` check.
 
