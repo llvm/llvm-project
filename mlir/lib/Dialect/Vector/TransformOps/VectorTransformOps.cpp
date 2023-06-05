@@ -11,6 +11,7 @@
 #include "mlir/Dialect/LLVMIR/LLVMDialect.h"
 #include "mlir/Dialect/Transform/IR/TransformDialect.h"
 #include "mlir/Dialect/Transform/IR/TransformInterfaces.h"
+#include "mlir/Dialect/Transform/IR/TransformOps.h"
 #include "mlir/Dialect/Vector/IR/VectorOps.h"
 #include "mlir/Dialect/Vector/Transforms/LoweringPatterns.h"
 #include "mlir/Dialect/Vector/Transforms/VectorRewritePatterns.h"
@@ -188,6 +189,34 @@ public:
 #define GET_OP_LIST
 #include "mlir/Dialect/Vector/TransformOps/VectorTransformOps.cpp.inc"
         >();
+
+    addDialectDataInitializer<transform::PatternRegistry>(
+        [&](transform::PatternRegistry &registry) {
+          registry.registerPatterns("vector.outer_product_lowering",
+                                    populateVectorOuterProductLoweringPatterns);
+          registry.registerPatterns("vector.broadcast_lowering",
+                                    populateVectorBroadcastLoweringPatterns);
+          registry.registerPatterns("vector.mask_op_lowering",
+                                    populateVectorMaskOpLoweringPatterns);
+          registry.registerPatterns("vector.shape_cast_lowering",
+                                    populateVectorShapeCastLoweringPatterns);
+          registry.registerPatterns(
+              "vector.transfer_lowering",
+              [&](RewritePatternSet &set, PatternBenefit benefit) {
+                return populateVectorTransferLoweringPatterns(
+                    set, /*maxTransferRank=*/std::nullopt, benefit);
+              });
+          registry.registerPatterns(
+              "vector.transfer_permutation_map_lowering",
+              populateVectorTransferPermutationMapLoweringPatterns);
+          registry.registerPatterns("vector.scan_lowering",
+                                    populateVectorScanLoweringPatterns);
+          registry.registerPatterns("vector.vector_gather_lowering",
+                                    populateVectorGatherLoweringPatterns);
+          registry.registerPatterns(
+              "vector.mask_lowering_for_side_effecting_ops",
+              populateVectorMaskLoweringPatternsForSideEffectingOps);
+        });
   }
 };
 } // namespace
