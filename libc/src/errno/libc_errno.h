@@ -39,13 +39,10 @@ extern "C" __llvm_libc::ErrnoConsumer __llvmlibc_errno;
 #else
 namespace __llvm_libc {
 
-#ifdef LIBC_TARGET_ARCH_IS_GPU
-extern "C" ErrnoConsumer __llvmlibc_internal_errno;
-#else // LIBC_TARGET_ARCH_IS_GPU
-extern "C" {
-extern LIBC_THREAD_LOCAL int __llvmlibc_internal_errno;
-} // extern "C"
-#endif
+// TODO: On the GPU build this will be mapped to a single global value. We need
+// to ensure that tests are not run with multiple threads that depend on errno
+// until we have true 'thread_local' support on the GPU.
+extern "C" LIBC_THREAD_LOCAL int __llvmlibc_internal_errno;
 
 // TODO: After all of libc/src and libc/test are switched over to use
 // libc_errno, this header file will be "shipped" via an add_entrypoint_object
