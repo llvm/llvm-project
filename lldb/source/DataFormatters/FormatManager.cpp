@@ -103,7 +103,7 @@ static bool GetFormatFromFormatName(llvm::StringRef format_name,
   if (partial_match_ok) {
     for (i = 0; i < g_num_format_infos; ++i) {
       if (llvm::StringRef(g_format_infos[i].format_name)
-              .startswith_insensitive(format_name)) {
+              .starts_with_insensitive(format_name)) {
         format = g_format_infos[i].format;
         return true;
       }
