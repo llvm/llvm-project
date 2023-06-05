@@ -89,6 +89,11 @@ transform::TrackingListener::findReplacementOp(Operation *op,
     if (op->getName() == defOp->getName())
       return defOp;
 
+    // Replacing an op with a constant-like equivalent is a common
+    // canonicalization.
+    if (defOp->hasTrait<OpTrait::ConstantLike>())
+      return defOp;
+
     values.clear();
 
     // Skip through ops that implement FindPayloadReplacementOpInterface.
