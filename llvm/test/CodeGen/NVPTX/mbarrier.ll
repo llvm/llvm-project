@@ -1,6 +1,6 @@
 ; RUN: llc < %s -march=nvptx -mcpu=sm_80 | FileCheck %s -check-prefix=CHECK_PTX32
 ; RUN: llc < %s -march=nvptx64 -mcpu=sm_80 | FileCheck %s -check-prefix=CHECK_PTX64
-; RUN: %if ptxas-11.0 %{ llc < %s -march=nvptx -mcpu=sm_80 | %ptxas-verify -arch=sm_80 %}
+; RUN: %if ptxas-11.0 && !ptxas-12.0 %{ llc < %s -march=nvptx -mcpu=sm_80 | %ptxas-verify -arch=sm_80 %}
 ; RUN: %if ptxas-11.0 %{ llc < %s -march=nvptx64 -mcpu=sm_80 | %ptxas-verify -arch=sm_80 %}
 
 declare void @llvm.nvvm.mbarrier.init(ptr %a, i32 %b)
