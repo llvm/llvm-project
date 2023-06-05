@@ -74,17 +74,35 @@ transform::TrackingListener::findReplacementOp(Operation *op,
                                                ValueRange newValues) const {
   assert(op->getNumResults() == newValues.size() &&
          "invalid number of replacement values");
+  SmallVector<Value> values(newValues.begin(), newValues.end());
 
-  // If the replacement values belong to different ops, drop the mapping.
-  Operation *defOp = getCommonDefiningOp(newValues);
-  if (!defOp)
-    return nullptr;
+  do {
+    // If the replacement values belong to different ops, drop the mapping.
+    Operation *defOp = getCommonDefiningOp(values);
+    if (!defOp)
+      return nullptr;
 
-  // If the replacement op has a different type, drop the mapping.
-  if (op->getName() != defOp->getName())
-    return nullptr;
+    // If the defining op has the same type, we take it as a replacement.
+    if (op->getName() == defOp->getName())
+      return defOp;
 
-  return defOp;
+    values.clear();
+
+    // Skip through ops that implement FindPayloadReplacementOpInterface.
+    if (auto findReplacementOpInterface =
+            dyn_cast<FindPayloadReplacementOpInterface>(defOp)) {
+      values.assign(findReplacementOpInterface.getNextOperands());
+      continue;
+    }
+
+    // Skip through ops that implement CastOpInterface.
+    if (isa<CastOpInterface>(defOp)) {
+      values.assign(defOp->getOperands().begin(), defOp->getOperands().end());
+      continue;
+    }
+  } while (!values.empty());
+
+  return nullptr;
 }
 
 LogicalResult transform::TrackingListener::notifyMatchFailure(
