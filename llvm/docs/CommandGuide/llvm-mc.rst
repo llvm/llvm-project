@@ -138,8 +138,6 @@ End-user Options
 .. option:: --print-imm-hex      
 
  Prefer hex format for immediate values.
- For example, on x86 targets --output-asm-variant=0 prints in AT&T syntax, and --output-asm-variant=1 prints in 
- Intel/MASM syntax.
 
 .. option::  --preserve-comments 
 
@@ -147,8 +145,9 @@ End-user Options
 
 .. option:: --output-asm-variant=<uint>
 
- Syntax variant to use for output printing.
-
+ Syntax variant to use for output printing. For example, on x86 targets
+ --output-asm-variant=0 prints in AT&T syntax, and --output-asm-variant=1 prints
+ in Intel/MASM syntax.
 
 .. option:: --compress-debug-sections=[none|zlib|zstd]
 

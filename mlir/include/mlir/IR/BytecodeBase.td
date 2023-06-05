@@ -155,5 +155,10 @@ class DialectTypes<string d> {
 def attr;
 def type;
 
+// Marker to indicate a skipped attribute or type in the enum. Could either be
+// reserved for a future value or for marking a previously used value as dead.
+def none;
+def ReservedOrDead : DialectAttrOrType<(none)>;
+
 #endif // BYTECODE_BASE
 
