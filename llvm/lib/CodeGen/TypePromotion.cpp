@@ -235,8 +235,6 @@ bool TypePromotionImpl::isSource(Value *V) {
     return true;
   else if (isa<LoadInst>(V))
     return true;
-  else if (isa<BitCastInst>(V))
-    return true;
   else if (auto *Call = dyn_cast<CallInst>(V))
     return Call->hasRetAttr(Attribute::AttrKind::ZExt);
   else if (auto *Trunc = dyn_cast<TruncInst>(V))
