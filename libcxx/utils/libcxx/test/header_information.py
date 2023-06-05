@@ -70,6 +70,19 @@ private_headers_still_public_in_modules = [
     "__verbose_abort",
 ]
 
+# Headers that can't be included on their own. Most of these are conceptually
+# part of another header that were split out just for organization, but aren't
+# meant to be included by anything else.
+non_standalone_headers = frozenset((
+    # Alternate implementations for __algorithm/pstl_backends/cpu_backends/backend.h
+    "__algorithm/pstl_backends/cpu_backends/serial.h",
+    "__algorithm/pstl_backends/cpu_backends/thread.h",
+
+    # Alternate implementations for locale.
+    "__locale_dir/locale_base_api/bsd_locale_defaults.h",
+    "__locale_dir/locale_base_api/bsd_locale_fallbacks.h",
+))
+
 # This table was produced manually, by grepping the TeX source of the Standard's
 # library clauses for the string "#include". Each header's synopsis contains
 # explicit "#include" directives for its mandatory inclusions.
@@ -139,4 +152,5 @@ private_headers = sorted(
     p.relative_to(include).as_posix() for p in include.rglob("*") if is_header(p)
                                                                      and str(p.relative_to(include)).startswith("__")
                                                                      and not p.name.startswith("pstl")
+                                                                     and str(p.relative_to(include)) not in non_standalone_headers
 )
