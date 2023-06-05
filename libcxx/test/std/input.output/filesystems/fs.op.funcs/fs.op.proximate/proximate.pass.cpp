@@ -7,6 +7,8 @@
 //===----------------------------------------------------------------------===//
 
 // UNSUPPORTED: c++03
+// UNSUPPORTED: no-filesystem
+// UNSUPPORTED: availability-filesystem-missing
 
 // <filesystem>
 
@@ -21,7 +23,7 @@
 #include "test_macros.h"
 #include "count_new.h"
 #include "filesystem_test_helper.h"
-
+#include "../../class.path/path_helper.h"
 
 static int count_path_elems(const fs::path& p) {
   int count = 0;
