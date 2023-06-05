@@ -126,6 +126,10 @@ public:
         reinterpret_cast<Packet *>(advance(buffer, buffer_offset(port_count)));
   }
 
+  /// Returns the beginning of the unified buffer. Intended for initializing the
+  /// client after the server has been started.
+  LIBC_INLINE void *get_buffer_start() const { return Invert ? outbox : inbox; }
+
   /// Allocate a memory buffer sufficient to store the following equivalent
   /// representation in memory.
   ///
