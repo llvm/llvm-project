@@ -2226,7 +2226,8 @@ void CodeGenModule::SetCommonAttributes(GlobalDecl GD, llvm::GlobalValue *GV) {
 }
 
 bool CodeGenModule::GetCPUAndFeaturesAttributes(GlobalDecl GD,
-                                                llvm::AttrBuilder &Attrs) {
+                                                llvm::AttrBuilder &Attrs,
+                                                bool SetTargetFeatures) {
   // Add target-cpu and target-features attributes to functions. If
   // we have a decl for the function and it has a target attribute then
   // parse that and add it to the feature set.
@@ -2286,7 +2287,7 @@ bool CodeGenModule::GetCPUAndFeaturesAttributes(GlobalDecl GD,
     Attrs.addAttribute("tune-cpu", TuneCPU);
     AddedAttr = true;
   }
-  if (!Features.empty()) {
+  if (!Features.empty() && SetTargetFeatures) {
     llvm::sort(Features);
     Attrs.addAttribute("target-features", llvm::join(Features, ","));
     AddedAttr = true;
