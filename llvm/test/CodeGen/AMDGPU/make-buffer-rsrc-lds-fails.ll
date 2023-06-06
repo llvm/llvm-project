@@ -1,4 +1,4 @@
-# REQUIRES: asserts
+; REQUIRES: asserts
 ; RUN: not --crash llc -march=amdgcn -mcpu=gfx900 < %s
 ; RUN: not --crash llc -global-isel -march=amdgcn -mcpu=gfx900 < %s
 
