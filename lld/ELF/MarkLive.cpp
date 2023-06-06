@@ -174,8 +174,8 @@ static bool isReserved(InputSectionBase *sec) {
     // .init_array.N (https://github.com/rust-lang/rust/issues/92181) for a
     // while.
     StringRef s = sec->name;
-    return s == ".init" || s == ".fini" || s.startswith(".init_array") ||
-           s == ".jcr" || s.startswith(".ctors") || s.startswith(".dtors");
+    return s == ".init" || s == ".fini" || s.starts_with(".init_array") ||
+           s == ".jcr" || s.starts_with(".ctors") || s.starts_with(".dtors");
   }
 }
 
@@ -285,7 +285,7 @@ template <class ELFT> void MarkLive<ELFT>::run() {
     // script KEEP command.
     if (isReserved(sec) || script->shouldKeep(sec)) {
       enqueue(sec, 0);
-    } else if ((!config->zStartStopGC || sec->name.startswith("__libc_")) &&
+    } else if ((!config->zStartStopGC || sec->name.starts_with("__libc_")) &&
                isValidCIdentifier(sec->name)) {
       // As a workaround for glibc libc.a before 2.34
       // (https://sourceware.org/PR27492), retain __libc_atexit and similar

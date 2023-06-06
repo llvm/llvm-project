@@ -12,7 +12,7 @@
 %fun_t = type ptr
 
 define void @foo() {
-; CHECK: Function Attrs: nofree norecurse nosync nounwind willreturn memory(none)
+; CHECK: Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn memory(none)
 ; CHECK-LABEL: define {{[^@]+}}@foo
 ; CHECK-SAME: () #[[ATTR0:[0-9]+]] {
 ; CHECK-NEXT:    [[TMP:%.*]] = alloca ptr, align 8
@@ -24,7 +24,7 @@ define void @foo() {
 }
 
 define internal void @bar(%p_t %p)  {
-; CGSCC: Function Attrs: nofree norecurse nosync nounwind willreturn memory(none)
+; CGSCC: Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn memory(none)
 ; CGSCC-LABEL: define {{[^@]+}}@bar
 ; CGSCC-SAME: (ptr nocapture nofree readnone [[P:%.*]]) #[[ATTR0]] {
 ; CGSCC-NEXT:    call void @llvm.dbg.value(metadata ptr [[P]], metadata [[META3:![0-9]+]], metadata !DIExpression()) #[[ATTR2:[0-9]+]], !dbg [[DBG5:![0-9]+]]
@@ -47,10 +47,10 @@ declare void @llvm.dbg.value(metadata, metadata, metadata)
 !5 = !DIExpression()
 !6 = !DILocation(line: 1, column: 1, scope: !3)
 ;.
-; TUNIT: attributes #[[ATTR0]] = { nofree norecurse nosync nounwind willreturn memory(none) }
+; TUNIT: attributes #[[ATTR0]] = { mustprogress nofree norecurse nosync nounwind willreturn memory(none) }
 ; TUNIT: attributes #[[ATTR1:[0-9]+]] = { nocallback nofree nosync nounwind speculatable willreturn memory(none) }
 ;.
-; CGSCC: attributes #[[ATTR0]] = { nofree norecurse nosync nounwind willreturn memory(none) }
+; CGSCC: attributes #[[ATTR0]] = { mustprogress nofree norecurse nosync nounwind willreturn memory(none) }
 ; CGSCC: attributes #[[ATTR1:[0-9]+]] = { nocallback nofree nosync nounwind speculatable willreturn memory(none) }
 ; CGSCC: attributes #[[ATTR2]] = { willreturn }
 ;.

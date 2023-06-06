@@ -31,8 +31,7 @@
 target datalayout = "e-m:o-i64:64-i128:128-n32:64-S128"
 
 ; CHECK-LABEL: test_ret_const(
-; CHECK:     mov.u32         [[T:%r[0-9+]]], 1073757184;
-; CHECK:     mov.b32         [[R:%hh[0-9+]]], [[T]];
+; CHECK:     mov.b32         [[R:%r[0-9+]]], 1073757184;
 ; CHECK:     st.param.b32    [func_retval0+0], [[R]];
 ; CHECK-NEXT: ret;
 define <2 x half> @test_ret_const() #0 {
@@ -40,8 +39,8 @@ define <2 x half> @test_ret_const() #0 {
 }
 
 ; CHECK-LABEL: test_extract_0(
-; CHECK:      ld.param.b32    [[A:%hh[0-9]+]], [test_extract_0_param_0];
-; CHECK:      mov.b32         {[[R:%h[0-9]+]], %tmp_hi}, [[A]];
+; CHECK:      ld.param.b32    [[A:%r[0-9]+]], [test_extract_0_param_0];
+; CHECK:      mov.b32         {[[R:%rs[0-9]+]], %tmp_hi}, [[A]];
 ; CHECK:      st.param.b16    [func_retval0+0], [[R]];
 ; CHECK:      ret;
 define half @test_extract_0(<2 x half> %a) #0 {
@@ -50,8 +49,8 @@ define half @test_extract_0(<2 x half> %a) #0 {
 }
 
 ; CHECK-LABEL: test_extract_1(
-; CHECK:      ld.param.b32    [[A:%hh[0-9]+]], [test_extract_1_param_0];
-; CHECK:      mov.b32         {%tmp_lo, [[R:%h[0-9]+]]}, [[A]];
+; CHECK:      ld.param.b32    [[A:%r[0-9]+]], [test_extract_1_param_0];
+; CHECK:      mov.b32         {%tmp_lo, [[R:%rs[0-9]+]]}, [[A]];
 ; CHECK:      st.param.b16    [func_retval0+0], [[R]];
 ; CHECK:      ret;
 define half @test_extract_1(<2 x half> %a) #0 {
@@ -60,11 +59,11 @@ define half @test_extract_1(<2 x half> %a) #0 {
 }
 
 ; CHECK-LABEL: test_extract_i(
-; CHECK-DAG:  ld.param.b32    [[A:%hh[0-9]+]], [test_extract_i_param_0];
+; CHECK-DAG:  ld.param.b32    [[A:%r[0-9]+]], [test_extract_i_param_0];
 ; CHECK-DAG:  ld.param.u64    [[IDX:%rd[0-9]+]], [test_extract_i_param_1];
 ; CHECK-DAG:  setp.eq.s64     [[PRED:%p[0-9]+]], [[IDX]], 0;
-; CHECK-DAG:  mov.b32         {[[E0:%h[0-9]+]], [[E1:%h[0-9]+]]}, [[A]];
-; CHECK:      selp.b16        [[R:%h[0-9]+]], [[E0]], [[E1]], [[PRED]];
+; CHECK-DAG:  mov.b32         {[[E0:%rs[0-9]+]], [[E1:%rs[0-9]+]]}, [[A]];
+; CHECK:      selp.b16        [[R:%rs[0-9]+]], [[E0]], [[E1]], [[PRED]];
 ; CHECK:      st.param.b16    [func_retval0+0], [[R]];
 ; CHECK:      ret;
 define half @test_extract_i(<2 x half> %a, i64 %idx) #0 {
@@ -73,22 +72,22 @@ define half @test_extract_i(<2 x half> %a, i64 %idx) #0 {
 }
 
 ; CHECK-LABEL: test_fadd(
-; CHECK-DAG:  ld.param.b32    [[A:%hh[0-9]+]], [test_fadd_param_0];
-; CHECK-DAG:  ld.param.b32    [[B:%hh[0-9]+]], [test_fadd_param_1];
+; CHECK-DAG:  ld.param.b32    [[A:%r[0-9]+]], [test_fadd_param_0];
+; CHECK-DAG:  ld.param.b32    [[B:%r[0-9]+]], [test_fadd_param_1];
 ;
-; CHECK-F16-NEXT:   add.rn.f16x2   [[R:%hh[0-9]+]], [[A]], [[B]];
+; CHECK-F16-NEXT:   add.rn.f16x2   [[R:%r[0-9]+]], [[A]], [[B]];
 ;
-; CHECK-NOF16-DAG:  mov.b32        {[[A0:%h[0-9]+]], [[A1:%h[0-9]+]]}, [[A]]
-; CHECK-NOF16-DAG:  mov.b32        {[[B0:%h[0-9]+]], [[B1:%h[0-9]+]]}, [[B]]
+; CHECK-NOF16-DAG:  mov.b32        {[[A0:%rs[0-9]+]], [[A1:%rs[0-9]+]]}, [[A]]
+; CHECK-NOF16-DAG:  mov.b32        {[[B0:%rs[0-9]+]], [[B1:%rs[0-9]+]]}, [[B]]
 ; CHECK-NOF16-DAG:  cvt.f32.f16    [[FA0:%f[0-9]+]], [[A0]]
 ; CHECK-NOF16-DAG:  cvt.f32.f16    [[FB0:%f[0-9]+]], [[B0]]
 ; CHECK-NOF16-DAG:  cvt.f32.f16    [[FA1:%f[0-9]+]], [[A1]]
 ; CHECK-NOF16-DAG:  cvt.f32.f16    [[FB1:%f[0-9]+]], [[B1]]
 ; CHECK-NOF16-DAG:  add.rn.f32     [[FR0:%f[0-9]+]], [[FA0]], [[FB0]];
 ; CHECK-NOF16-DAG:  add.rn.f32     [[FR1:%f[0-9]+]], [[FA1]], [[FB1]];
-; CHECK-NOF16-DAG:  cvt.rn.f16.f32 [[R0:%h[0-9]+]], [[FR0]]
-; CHECK-NOF16-DAG:  cvt.rn.f16.f32 [[R1:%h[0-9]+]], [[FR1]]
-; CHECK-NOF16:      mov.b32         [[R:%hh[0-9]+]], {[[R0]], [[R1]]}
+; CHECK-NOF16-DAG:  cvt.rn.f16.f32 [[R0:%rs[0-9]+]], [[FR0]]
+; CHECK-NOF16-DAG:  cvt.rn.f16.f32 [[R1:%rs[0-9]+]], [[FR1]]
+; CHECK-NOF16:      mov.b32         [[R:%r[0-9]+]], {[[R0]], [[R1]]}
 ;
 ; CHECK-NEXT: st.param.b32    [func_retval0+0], [[R]];
 ; CHECK-NEXT: ret;
@@ -99,20 +98,19 @@ define <2 x half> @test_fadd(<2 x half> %a, <2 x half> %b) #0 {
 
 ; Check that we can lower fadd with immediate arguments.
 ; CHECK-LABEL: test_fadd_imm_0(
-; CHECK-DAG:  ld.param.b32    [[A:%hh[0-9]+]], [test_fadd_imm_0_param_0];
+; CHECK-DAG:  ld.param.b32    [[A:%r[0-9]+]], [test_fadd_imm_0_param_0];
 ;
-; CHECK-F16:        mov.u32        [[I:%r[0-9+]]], 1073757184;
-; CHECK-F16:        mov.b32        [[IHH:%hh[0-9+]]], [[I]];
-; CHECK-F16:        add.rn.f16x2   [[R:%hh[0-9]+]], [[A]], [[IHH]];
+; CHECK-F16:        mov.b32        [[I:%r[0-9+]]], 1073757184;
+; CHECK-F16:        add.rn.f16x2   [[R:%r[0-9]+]], [[A]], [[I]];
 ;
-; CHECK-NOF16-DAG:  mov.b32        {[[A0:%h[0-9]+]], [[A1:%h[0-9]+]]}, [[A]]
+; CHECK-NOF16-DAG:  mov.b32        {[[A0:%rs[0-9]+]], [[A1:%rs[0-9]+]]}, [[A]]
 ; CHECK-NOF16-DAG:  cvt.f32.f16    [[FA0:%f[0-9]+]], [[A0]]
 ; CHECK-NOF16-DAG:  cvt.f32.f16    [[FA1:%f[0-9]+]], [[A1]]
 ; CHECK-NOF16-DAG:  add.rn.f32     [[FR0:%f[0-9]+]], [[FA0]], 0f3F800000;
 ; CHECK-NOF16-DAG:  add.rn.f32     [[FR1:%f[0-9]+]], [[FA1]], 0f40000000;
-; CHECK-NOF16-DAG:  cvt.rn.f16.f32 [[R0:%h[0-9]+]], [[FR0]]
-; CHECK-NOF16-DAG:  cvt.rn.f16.f32 [[R1:%h[0-9]+]], [[FR1]]
-; CHECK-NOF16:      mov.b32        [[R:%hh[0-9]+]], {[[R0]], [[R1]]}
+; CHECK-NOF16-DAG:  cvt.rn.f16.f32 [[R0:%rs[0-9]+]], [[FR0]]
+; CHECK-NOF16-DAG:  cvt.rn.f16.f32 [[R1:%rs[0-9]+]], [[FR1]]
+; CHECK-NOF16:      mov.b32        [[R:%r[0-9]+]], {[[R0]], [[R1]]}
 ;
 ; CHECK-NEXT: st.param.b32    [func_retval0+0], [[R]];
 ; CHECK-NEXT: ret;
@@ -122,20 +120,19 @@ define <2 x half> @test_fadd_imm_0(<2 x half> %a) #0 {
 }
 
 ; CHECK-LABEL: test_fadd_imm_1(
-; CHECK-DAG:  ld.param.b32    [[B:%hh[0-9]+]], [test_fadd_imm_1_param_0];
+; CHECK-DAG:  ld.param.b32    [[B:%r[0-9]+]], [test_fadd_imm_1_param_0];
 ;
-; CHECK-F16:        mov.u32        [[I:%r[0-9+]]], 1073757184;
-; CHECK-F16:        mov.b32        [[IHH:%hh[0-9+]]], [[I]];
-; CHECK-F16:        add.rn.f16x2   [[R:%hh[0-9]+]], [[B]], [[IHH]];
+; CHECK-F16:        mov.b32        [[I:%r[0-9+]]], 1073757184;
+; CHECK-F16:        add.rn.f16x2   [[R:%r[0-9]+]], [[B]], [[I]];
 ;
-; CHECK-NOF16-DAG:  mov.b32        {[[A0:%h[0-9]+]], [[A1:%h[0-9]+]]}, [[A]]
+; CHECK-NOF16-DAG:  mov.b32        {[[A0:%rs[0-9]+]], [[A1:%rs[0-9]+]]}, [[A]]
 ; CHECK-NOF16-DAG:  cvt.f32.f16    [[FA0:%f[0-9]+]], [[A0]]
 ; CHECK-NOF16-DAG:  cvt.f32.f16    [[FA1:%f[0-9]+]], [[A1]]
 ; CHECK-NOF16-DAG:  add.rn.f32     [[FR0:%f[0-9]+]], [[FA0]], 0f3F800000;
 ; CHECK-NOF16-DAG:  add.rn.f32     [[FR1:%f[0-9]+]], [[FA1]], 0f40000000;
-; CHECK-NOF16-DAG:  cvt.rn.f16.f32 [[R0:%h[0-9]+]], [[FR0]]
-; CHECK-NOF16-DAG:  cvt.rn.f16.f32 [[R1:%h[0-9]+]], [[FR1]]
-; CHECK-NOF16:      mov.b32        [[R:%hh[0-9]+]], {[[R0]], [[R1]]}
+; CHECK-NOF16-DAG:  cvt.rn.f16.f32 [[R0:%rs[0-9]+]], [[FR0]]
+; CHECK-NOF16-DAG:  cvt.rn.f16.f32 [[R1:%rs[0-9]+]], [[FR1]]
+; CHECK-NOF16:      mov.b32        [[R:%r[0-9]+]], {[[R0]], [[R1]]}
 ;
 ; CHECK-NEXT: st.param.b32    [func_retval0+0], [[R]];
 ; CHECK-NEXT: ret;
@@ -145,22 +142,22 @@ define <2 x half> @test_fadd_imm_1(<2 x half> %a) #0 {
 }
 
 ; CHECK-LABEL: test_fsub(
-; CHECK-DAG:  ld.param.b32    [[A:%hh[0-9]+]], [test_fsub_param_0];
+; CHECK-DAG:  ld.param.b32    [[A:%r[0-9]+]], [test_fsub_param_0];
 ;
-; CHECK-DAG:  ld.param.b32    [[B:%hh[0-9]+]], [test_fsub_param_1];
-; CHECK-F16-NEXT:   sub.rn.f16x2   [[R:%hh[0-9]+]], [[A]], [[B]];
+; CHECK-DAG:  ld.param.b32    [[B:%r[0-9]+]], [test_fsub_param_1];
+; CHECK-F16-NEXT:   sub.rn.f16x2   [[R:%r[0-9]+]], [[A]], [[B]];
 ;
-; CHECK-NOF16-DAG:  mov.b32        {[[A0:%h[0-9]+]], [[A1:%h[0-9]+]]}, [[A]]
-; CHECK-NOF16-DAG:  mov.b32        {[[B0:%h[0-9]+]], [[B1:%h[0-9]+]]}, [[B]]
+; CHECK-NOF16-DAG:  mov.b32        {[[A0:%rs[0-9]+]], [[A1:%rs[0-9]+]]}, [[A]]
+; CHECK-NOF16-DAG:  mov.b32        {[[B0:%rs[0-9]+]], [[B1:%rs[0-9]+]]}, [[B]]
 ; CHECK-NOF16-DAG:  cvt.f32.f16    [[FA0:%f[0-9]+]], [[A0]]
 ; CHECK-NOF16-DAG:  cvt.f32.f16    [[FB0:%f[0-9]+]], [[B0]]
 ; CHECK-NOF16-DAG:  cvt.f32.f16    [[FA1:%f[0-9]+]], [[A1]]
 ; CHECK-NOF16-DAG:  cvt.f32.f16    [[FB1:%f[0-9]+]], [[B1]]
 ; CHECK-NOF16-DAG:  sub.rn.f32     [[FR0:%f[0-9]+]], [[FA0]], [[FB0]];
 ; CHECK-NOF16-DAG:  sub.rn.f32     [[FR1:%f[0-9]+]], [[FA1]], [[FB1]];
-; CHECK-NOF16-DAG:  cvt.rn.f16.f32 [[R0:%h[0-9]+]], [[FR0]]
-; CHECK-NOF16-DAG:  cvt.rn.f16.f32 [[R1:%h[0-9]+]], [[FR1]]
-; CHECK-NOF16:      mov.b32        [[R:%hh[0-9]+]], {[[R0]], [[R1]]}
+; CHECK-NOF16-DAG:  cvt.rn.f16.f32 [[R0:%rs[0-9]+]], [[FR0]]
+; CHECK-NOF16-DAG:  cvt.rn.f16.f32 [[R1:%rs[0-9]+]], [[FR1]]
+; CHECK-NOF16:      mov.b32        [[R:%r[0-9]+]], {[[R0]], [[R1]]}
 ;
 ; CHECK-NEXT: st.param.b32    [func_retval0+0], [[R]];
 ; CHECK-NEXT: ret;
@@ -170,21 +167,20 @@ define <2 x half> @test_fsub(<2 x half> %a, <2 x half> %b) #0 {
 }
 
 ; CHECK-LABEL: test_fneg(
-; CHECK-DAG:  ld.param.b32    [[A:%hh[0-9]+]], [test_fneg_param_0];
+; CHECK-DAG:  ld.param.b32    [[A:%r[0-9]+]], [test_fneg_param_0];
 ;
-; CHECK-F16:        mov.u32        [[I0:%r[0-9+]]], 0;
-; CHECK-F16:        mov.b32        [[IHH0:%hh[0-9+]]], [[I0]];
-; CHECK-F16-NEXT:   sub.rn.f16x2   [[R:%hh[0-9]+]], [[IHH0]], [[A]];
+; CHECK-F16:        mov.b32        [[I:%r[0-9+]]], 0;
+; CHECK-F16-NEXT:   sub.rn.f16x2   [[R:%r[0-9]+]], [[I]], [[A]];
 ;
-; CHECK-NOF16-DAG:  mov.b32        {[[A0:%h[0-9]+]], [[A1:%h[0-9]+]]}, [[A]]
+; CHECK-NOF16-DAG:  mov.b32        {[[A0:%rs[0-9]+]], [[A1:%rs[0-9]+]]}, [[A]]
 ; CHECK-NOF16-DAG:  cvt.f32.f16    [[FA0:%f[0-9]+]], [[A0]]
 ; CHECK-NOF16-DAG:  cvt.f32.f16    [[FA1:%f[0-9]+]], [[A1]]
 ; CHECK-NOF16-DAG:  mov.f32        [[Z:%f[0-9]+]], 0f00000000;
 ; CHECK-NOF16-DAG:  sub.rn.f32     [[FR0:%f[0-9]+]], [[Z]], [[FA0]];
 ; CHECK-NOF16-DAG:  sub.rn.f32     [[FR1:%f[0-9]+]], [[Z]], [[FA1]];
-; CHECK-NOF16-DAG:  cvt.rn.f16.f32 [[R0:%h[0-9]+]], [[FR0]]
-; CHECK-NOF16-DAG:  cvt.rn.f16.f32 [[R1:%h[0-9]+]], [[FR1]]
-; CHECK-NOF16:      mov.b32        [[R:%hh[0-9]+]], {[[R0]], [[R1]]}
+; CHECK-NOF16-DAG:  cvt.rn.f16.f32 [[R0:%rs[0-9]+]], [[FR0]]
+; CHECK-NOF16-DAG:  cvt.rn.f16.f32 [[R1:%rs[0-9]+]], [[FR1]]
+; CHECK-NOF16:      mov.b32        [[R:%r[0-9]+]], {[[R0]], [[R1]]}
 ;
 ; CHECK-NEXT: st.param.b32    [func_retval0+0], [[R]];
 ; CHECK-NEXT: ret;
@@ -194,21 +190,21 @@ define <2 x half> @test_fneg(<2 x half> %a) #0 {
 }
 
 ; CHECK-LABEL: test_fmul(
-; CHECK-DAG:  ld.param.b32    [[A:%hh[0-9]+]], [test_fmul_param_0];
-; CHECK-DAG:  ld.param.b32    [[B:%hh[0-9]+]], [test_fmul_param_1];
-; CHECK-F16-NEXT: mul.rn.f16x2     [[R:%hh[0-9]+]], [[A]], [[B]];
+; CHECK-DAG:  ld.param.b32    [[A:%r[0-9]+]], [test_fmul_param_0];
+; CHECK-DAG:  ld.param.b32    [[B:%r[0-9]+]], [test_fmul_param_1];
+; CHECK-F16-NEXT: mul.rn.f16x2     [[R:%r[0-9]+]], [[A]], [[B]];
 ;
-; CHECK-NOF16-DAG:  mov.b32        {[[A0:%h[0-9]+]], [[A1:%h[0-9]+]]}, [[A]]
-; CHECK-NOF16-DAG:  mov.b32        {[[B0:%h[0-9]+]], [[B1:%h[0-9]+]]}, [[B]]
+; CHECK-NOF16-DAG:  mov.b32        {[[A0:%rs[0-9]+]], [[A1:%rs[0-9]+]]}, [[A]]
+; CHECK-NOF16-DAG:  mov.b32        {[[B0:%rs[0-9]+]], [[B1:%rs[0-9]+]]}, [[B]]
 ; CHECK-NOF16-DAG:  cvt.f32.f16    [[FA0:%f[0-9]+]], [[A0]]
 ; CHECK-NOF16-DAG:  cvt.f32.f16    [[FB0:%f[0-9]+]], [[B0]]
 ; CHECK-NOF16-DAG:  cvt.f32.f16    [[FA1:%f[0-9]+]], [[A1]]
 ; CHECK-NOF16-DAG:  cvt.f32.f16    [[FB1:%f[0-9]+]], [[B1]]
 ; CHECK-NOF16-DAG:  mul.rn.f32     [[FR0:%f[0-9]+]], [[FA0]], [[FB0]];
 ; CHECK-NOF16-DAG:  mul.rn.f32     [[FR1:%f[0-9]+]], [[FA1]], [[FB1]];
-; CHECK-NOF16-DAG:  cvt.rn.f16.f32 [[R0:%h[0-9]+]], [[FR0]]
-; CHECK-NOF16-DAG:  cvt.rn.f16.f32 [[R1:%h[0-9]+]], [[FR1]]
-; CHECK-NOF16:      mov.b32         [[R:%hh[0-9]+]], {[[R0]], [[R1]]}
+; CHECK-NOF16-DAG:  cvt.rn.f16.f32 [[R0:%rs[0-9]+]], [[FR0]]
+; CHECK-NOF16-DAG:  cvt.rn.f16.f32 [[R1:%rs[0-9]+]], [[FR1]]
+; CHECK-NOF16:      mov.b32         [[R:%r[0-9]+]], {[[R0]], [[R1]]}
 ;
 ; CHECK-NEXT: st.param.b32    [func_retval0+0], [[R]];
 ; CHECK-NEXT: ret;
@@ -218,19 +214,19 @@ define <2 x half> @test_fmul(<2 x half> %a, <2 x half> %b) #0 {
 }
 
 ; CHECK-LABEL: test_fdiv(
-; CHECK-DAG:  ld.param.b32    [[A:%hh[0-9]+]], [test_fdiv_param_0];
-; CHECK-DAG:  ld.param.b32    [[B:%hh[0-9]+]], [test_fdiv_param_1];
-; CHECK-DAG:  mov.b32         {[[A0:%h[0-9]+]], [[A1:%h[0-9]+]]}, [[A]]
-; CHECK-DAG:  mov.b32         {[[B0:%h[0-9]+]], [[B1:%h[0-9]+]]}, [[B]]
+; CHECK-DAG:  ld.param.b32    [[A:%r[0-9]+]], [test_fdiv_param_0];
+; CHECK-DAG:  ld.param.b32    [[B:%r[0-9]+]], [test_fdiv_param_1];
+; CHECK-DAG:  mov.b32         {[[A0:%rs[0-9]+]], [[A1:%rs[0-9]+]]}, [[A]]
+; CHECK-DAG:  mov.b32         {[[B0:%rs[0-9]+]], [[B1:%rs[0-9]+]]}, [[B]]
 ; CHECK-DAG:  cvt.f32.f16     [[FA0:%f[0-9]+]], [[A0]];
 ; CHECK-DAG:  cvt.f32.f16     [[FA1:%f[0-9]+]], [[A1]];
 ; CHECK-DAG:  cvt.f32.f16     [[FB0:%f[0-9]+]], [[B0]];
 ; CHECK-DAG:  cvt.f32.f16     [[FB1:%f[0-9]+]], [[B1]];
 ; CHECK-DAG:  div.rn.f32      [[FR0:%f[0-9]+]], [[FA0]], [[FB0]];
 ; CHECK-DAG:  div.rn.f32      [[FR1:%f[0-9]+]], [[FA1]], [[FB1]];
-; CHECK-DAG:  cvt.rn.f16.f32  [[R0:%h[0-9]+]], [[FR0]];
-; CHECK-DAG:  cvt.rn.f16.f32  [[R1:%h[0-9]+]], [[FR1]];
-; CHECK-NEXT: mov.b32         [[R:%hh[0-9]+]], {[[R0]], [[R1]]}
+; CHECK-DAG:  cvt.rn.f16.f32  [[R0:%rs[0-9]+]], [[FR0]];
+; CHECK-DAG:  cvt.rn.f16.f32  [[R1:%rs[0-9]+]], [[FR1]];
+; CHECK-NEXT: mov.b32         [[R:%r[0-9]+]], {[[R0]], [[R1]]}
 ; CHECK-NEXT: st.param.b32    [func_retval0+0], [[R]];
 ; CHECK-NEXT: ret;
 define <2 x half> @test_fdiv(<2 x half> %a, <2 x half> %b) #0 {
@@ -240,11 +236,11 @@ define <2 x half> @test_fdiv(<2 x half> %a, <2 x half> %b) #0 {
 
 ; CHECK-LABEL: test_frem(
 ; -- Load two 16x2 inputs and split them into f16 elements
-; CHECK-DAG:  ld.param.b32       [[A:%hh[0-9]+]], [test_frem_param_0];
-; CHECK-DAG:  ld.param.b32       [[B:%hh[0-9]+]], [test_frem_param_1];
+; CHECK-DAG:  ld.param.b32       [[A:%r[0-9]+]], [test_frem_param_0];
+; CHECK-DAG:  ld.param.b32       [[B:%r[0-9]+]], [test_frem_param_1];
 ; -- Split into elements
-; CHECK-DAG:  mov.b32            {[[A0:%h[0-9]+]], [[A1:%h[0-9]+]]}, [[A]]
-; CHECK-DAG:  mov.b32            {[[B0:%h[0-9]+]], [[B1:%h[0-9]+]]}, [[B]]
+; CHECK-DAG:  mov.b32            {[[A0:%rs[0-9]+]], [[A1:%rs[0-9]+]]}, [[A]]
+; CHECK-DAG:  mov.b32            {[[B0:%rs[0-9]+]], [[B1:%rs[0-9]+]]}, [[B]]
 ; -- promote to f32.
 ; CHECK-DAG:  cvt.f32.f16        [[FA0:%f[0-9]+]], [[A0]];
 ; CHECK-DAG:  cvt.f32.f16        [[FB0:%f[0-9]+]], [[B0]];
@@ -265,10 +261,10 @@ define <2 x half> @test_fdiv(<2 x half> %a, <2 x half> %b) #0 {
 ; CHECK-DAG:  testp.infinite.f32 [[ISB1INF:%p[0-9]+]], [[FB1]];
 ; CHECK-DAG:  selp.f32           [[RF1:%f[0-9]+]], [[FA1]], [[RFNINF1]], [[ISB1INF]];
 ; -- convert back to f16.
-; CHECK-DAG:  cvt.rn.f16.f32  [[R0:%h[0-9]+]], [[RF0]];
-; CHECK-DAG:  cvt.rn.f16.f32  [[R1:%h[0-9]+]], [[RF1]];
+; CHECK-DAG:  cvt.rn.f16.f32  [[R0:%rs[0-9]+]], [[RF0]];
+; CHECK-DAG:  cvt.rn.f16.f32  [[R1:%rs[0-9]+]], [[RF1]];
 ; -- merge into f16x2 and return it.
-; CHECK:      mov.b32         [[R:%hh[0-9]+]], {[[R0]], [[R1]]}
+; CHECK:      mov.b32         [[R:%r[0-9]+]], {[[R0]], [[R1]]}
 ; CHECK-NEXT: st.param.b32    [func_retval0+0], [[R]];
 ; CHECK-NEXT: ret;
 define <2 x half> @test_frem(<2 x half> %a, <2 x half> %b) #0 {
@@ -279,8 +275,8 @@ define <2 x half> @test_frem(<2 x half> %a, <2 x half> %b) #0 {
 ; CHECK-LABEL: .func test_ldst_v2f16(
 ; CHECK-DAG:    ld.param.u64    %[[A:rd[0-9]+]], [test_ldst_v2f16_param_0];
 ; CHECK-DAG:    ld.param.u64    %[[B:rd[0-9]+]], [test_ldst_v2f16_param_1];
-; CHECK-DAG:    ld.b32          [[E:%hh[0-9]+]], [%[[A]]]
-; CHECK:        mov.b32         {[[E0:%h[0-9]+]], [[E1:%h[0-9]+]]}, [[E]];
+; CHECK-DAG:    ld.b32          [[E:%r[0-9]+]], [%[[A]]]
+; CHECK:        mov.b32         {[[E0:%rs[0-9]+]], [[E1:%rs[0-9]+]]}, [[E]];
 ; CHECK-DAG:    st.v2.b16       [%[[B]]], {[[E0]], [[E1]]};
 ; CHECK:        ret;
 define void @test_ldst_v2f16(ptr %a, ptr %b) {
@@ -309,7 +305,7 @@ define void @test_ldst_v3f16(ptr %a, ptr %b) {
 ; CHECK-LABEL: .func test_ldst_v4f16(
 ; CHECK-DAG:    ld.param.u64    %[[A:rd[0-9]+]], [test_ldst_v4f16_param_0];
 ; CHECK-DAG:    ld.param.u64    %[[B:rd[0-9]+]], [test_ldst_v4f16_param_1];
-; CHECK-DAG:    ld.v4.b16       {[[E0:%h[0-9]+]], [[E1:%h[0-9]+]], [[E2:%h[0-9]+]], [[E3:%h[0-9]+]]}, [%[[A]]];
+; CHECK-DAG:    ld.v4.b16       {[[E0:%rs[0-9]+]], [[E1:%rs[0-9]+]], [[E2:%rs[0-9]+]], [[E3:%rs[0-9]+]]}, [%[[A]]];
 ; CHECK-DAG:    st.v4.b16       [%[[B]]], {[[E0]], [[E1]], [[E2]], [[E3]]};
 ; CHECK:        ret;
 define void @test_ldst_v4f16(ptr %a, ptr %b) {
@@ -333,8 +329,8 @@ define void @test_ldst_v8f16(ptr %a, ptr %b) {
 declare <2 x half> @test_callee(<2 x half> %a, <2 x half> %b) #0
 
 ; CHECK-LABEL: test_call(
-; CHECK-DAG:  ld.param.b32    [[A:%hh[0-9]+]], [test_call_param_0];
-; CHECK-DAG:  ld.param.b32    [[B:%hh[0-9]+]], [test_call_param_1];
+; CHECK-DAG:  ld.param.b32    [[A:%r[0-9]+]], [test_call_param_0];
+; CHECK-DAG:  ld.param.b32    [[B:%r[0-9]+]], [test_call_param_1];
 ; CHECK:      {
 ; CHECK-DAG:  .param .align 4 .b8 param0[4];
 ; CHECK-DAG:  .param .align 4 .b8 param1[4];
@@ -344,7 +340,7 @@ declare <2 x half> @test_callee(<2 x half> %a, <2 x half> %b) #0
 ; CHECK:      call.uni (retval0),
 ; CHECK-NEXT:        test_callee,
 ; CHECK:      );
-; CHECK-NEXT: ld.param.b32    [[R:%hh[0-9]+]], [retval0+0];
+; CHECK-NEXT: ld.param.b32    [[R:%r[0-9]+]], [retval0+0];
 ; CHECK-NEXT: }
 ; CHECK-NEXT: st.param.b32    [func_retval0+0], [[R]];
 ; CHECK-NEXT: ret;
@@ -354,8 +350,8 @@ define <2 x half> @test_call(<2 x half> %a, <2 x half> %b) #0 {
 }
 
 ; CHECK-LABEL: test_call_flipped(
-; CHECK-DAG:  ld.param.b32    [[A:%hh[0-9]+]], [test_call_flipped_param_0];
-; CHECK-DAG:  ld.param.b32    [[B:%hh[0-9]+]], [test_call_flipped_param_1];
+; CHECK-DAG:  ld.param.b32    [[A:%r[0-9]+]], [test_call_flipped_param_0];
+; CHECK-DAG:  ld.param.b32    [[B:%r[0-9]+]], [test_call_flipped_param_1];
 ; CHECK:      {
 ; CHECK-DAG:  .param .align 4 .b8 param0[4];
 ; CHECK-DAG:  .param .align 4 .b8 param1[4];
@@ -365,7 +361,7 @@ define <2 x half> @test_call(<2 x half> %a, <2 x half> %b) #0 {
 ; CHECK:      call.uni (retval0),
 ; CHECK-NEXT:        test_callee,
 ; CHECK:      );
-; CHECK-NEXT: ld.param.b32    [[R:%hh[0-9]+]], [retval0+0];
+; CHECK-NEXT: ld.param.b32    [[R:%r[0-9]+]], [retval0+0];
 ; CHECK-NEXT: }
 ; CHECK-NEXT: st.param.b32    [func_retval0+0], [[R]];
 ; CHECK-NEXT: ret;
@@ -375,8 +371,8 @@ define <2 x half> @test_call_flipped(<2 x half> %a, <2 x half> %b) #0 {
 }
 
 ; CHECK-LABEL: test_tailcall_flipped(
-; CHECK-DAG:  ld.param.b32    [[A:%hh[0-9]+]], [test_tailcall_flipped_param_0];
-; CHECK-DAG:  ld.param.b32    [[B:%hh[0-9]+]], [test_tailcall_flipped_param_1];
+; CHECK-DAG:  ld.param.b32    [[A:%r[0-9]+]], [test_tailcall_flipped_param_0];
+; CHECK-DAG:  ld.param.b32    [[B:%r[0-9]+]], [test_tailcall_flipped_param_1];
 ; CHECK:      {
 ; CHECK-DAG:  .param .align 4 .b8 param0[4];
 ; CHECK-DAG:  .param .align 4 .b8 param1[4];
@@ -386,7 +382,7 @@ define <2 x half> @test_call_flipped(<2 x half> %a, <2 x half> %b) #0 {
 ; CHECK:      call.uni (retval0),
 ; CHECK-NEXT:        test_callee,
 ; CHECK:      );
-; CHECK-NEXT: ld.param.b32    [[R:%hh[0-9]+]], [retval0+0];
+; CHECK-NEXT: ld.param.b32    [[R:%r[0-9]+]], [retval0+0];
 ; CHECK-NEXT: }
 ; CHECK-NEXT: st.param.b32    [func_retval0+0], [[R]];
 ; CHECK-NEXT: ret;
@@ -396,11 +392,11 @@ define <2 x half> @test_tailcall_flipped(<2 x half> %a, <2 x half> %b) #0 {
 }
 
 ; CHECK-LABEL: test_select(
-; CHECK-DAG:  ld.param.b32    [[A:%hh[0-9]+]], [test_select_param_0];
-; CHECK-DAG:  ld.param.b32    [[B:%hh[0-9]+]], [test_select_param_1];
+; CHECK-DAG:  ld.param.b32    [[A:%r[0-9]+]], [test_select_param_0];
+; CHECK-DAG:  ld.param.b32    [[B:%r[0-9]+]], [test_select_param_1];
 ; CHECK-DAG:  ld.param.u8     [[C:%rs[0-9]+]], [test_select_param_2]
 ; CHECK-DAG:  setp.eq.b16     [[PRED:%p[0-9]+]], %rs{{.*}}, 1;
-; CHECK-NEXT: selp.b32        [[R:%hh[0-9]+]], [[A]], [[B]], [[PRED]];
+; CHECK-NEXT: selp.b32        [[R:%r[0-9]+]], [[A]], [[B]], [[PRED]];
 ; CHECK-NEXT: st.param.b32    [func_retval0+0], [[R]];
 ; CHECK-NEXT: ret;
 define <2 x half> @test_select(<2 x half> %a, <2 x half> %b, i1 zeroext %c) #0 {
@@ -409,15 +405,15 @@ define <2 x half> @test_select(<2 x half> %a, <2 x half> %b, i1 zeroext %c) #0 {
 }
 
 ; CHECK-LABEL: test_select_cc(
-; CHECK-DAG:  ld.param.b32    [[A:%hh[0-9]+]], [test_select_cc_param_0];
-; CHECK-DAG:  ld.param.b32    [[B:%hh[0-9]+]], [test_select_cc_param_1];
-; CHECK-DAG:  ld.param.b32    [[C:%hh[0-9]+]], [test_select_cc_param_2];
-; CHECK-DAG:  ld.param.b32    [[D:%hh[0-9]+]], [test_select_cc_param_3];
+; CHECK-DAG:  ld.param.b32    [[A:%r[0-9]+]], [test_select_cc_param_0];
+; CHECK-DAG:  ld.param.b32    [[B:%r[0-9]+]], [test_select_cc_param_1];
+; CHECK-DAG:  ld.param.b32    [[C:%r[0-9]+]], [test_select_cc_param_2];
+; CHECK-DAG:  ld.param.b32    [[D:%r[0-9]+]], [test_select_cc_param_3];
 ;
 ; CHECK-F16:  setp.neu.f16x2  [[P0:%p[0-9]+]]|[[P1:%p[0-9]+]], [[C]], [[D]]
 ;
-; CHECK-NOF16-DAG: mov.b32        {[[C0:%h[0-9]+]], [[C1:%h[0-9]+]]}, [[C]]
-; CHECK-NOF16-DAG: mov.b32        {[[D0:%h[0-9]+]], [[D1:%h[0-9]+]]}, [[D]]
+; CHECK-NOF16-DAG: mov.b32        {[[C0:%rs[0-9]+]], [[C1:%rs[0-9]+]]}, [[C]]
+; CHECK-NOF16-DAG: mov.b32        {[[D0:%rs[0-9]+]], [[D1:%rs[0-9]+]]}, [[D]]
 ; CHECK-NOF16-DAG: cvt.f32.f16 [[DF0:%f[0-9]+]], [[D0]];
 ; CHECK-NOF16-DAG: cvt.f32.f16 [[CF0:%f[0-9]+]], [[C0]];
 ; CHECK-NOF16-DAG: cvt.f32.f16 [[DF1:%f[0-9]+]], [[D1]];
@@ -425,11 +421,11 @@ define <2 x half> @test_select(<2 x half> %a, <2 x half> %b, i1 zeroext %c) #0 {
 ; CHECK-NOF16-DAG: setp.neu.f32    [[P0:%p[0-9]+]], [[CF0]], [[DF0]]
 ; CHECK-NOF16-DAG: setp.neu.f32    [[P1:%p[0-9]+]], [[CF1]], [[DF1]]
 ;
-; CHECK-DAG:  mov.b32         {[[A0:%h[0-9]+]], [[A1:%h[0-9]+]]}, [[A]]
-; CHECK-DAG:  mov.b32         {[[B0:%h[0-9]+]], [[B1:%h[0-9]+]]}, [[B]]
-; CHECK-DAG:  selp.b16        [[R0:%h[0-9]+]], [[A0]], [[B0]], [[P0]];
-; CHECK-DAG:  selp.b16        [[R1:%h[0-9]+]], [[A1]], [[B1]], [[P1]];
-; CHECK:      mov.b32         [[R:%hh[0-9]+]], {[[R0]], [[R1]]}
+; CHECK-DAG:  mov.b32         {[[A0:%rs[0-9]+]], [[A1:%rs[0-9]+]]}, [[A]]
+; CHECK-DAG:  mov.b32         {[[B0:%rs[0-9]+]], [[B1:%rs[0-9]+]]}, [[B]]
+; CHECK-DAG:  selp.b16        [[R0:%rs[0-9]+]], [[A0]], [[B0]], [[P0]];
+; CHECK-DAG:  selp.b16        [[R1:%rs[0-9]+]], [[A1]], [[B1]], [[P1]];
+; CHECK:      mov.b32         [[R:%r[0-9]+]], {[[R0]], [[R1]]}
 ; CHECK-NEXT: st.param.b32    [func_retval0+0], [[R]];
 ; CHECK-NEXT: ret;
 define <2 x half> @test_select_cc(<2 x half> %a, <2 x half> %b, <2 x half> %c, <2 x half> %d) #0 {
@@ -441,12 +437,12 @@ define <2 x half> @test_select_cc(<2 x half> %a, <2 x half> %b, <2 x half> %c, <
 ; CHECK-LABEL: test_select_cc_f32_f16(
 ; CHECK-DAG:  ld.param.v2.f32    {[[A0:%f[0-9]+]], [[A1:%f[0-9]+]]}, [test_select_cc_f32_f16_param_0];
 ; CHECK-DAG:  ld.param.v2.f32    {[[B0:%f[0-9]+]], [[B1:%f[0-9]+]]}, [test_select_cc_f32_f16_param_1];
-; CHECK-DAG:  ld.param.b32    [[C:%hh[0-9]+]], [test_select_cc_f32_f16_param_2];
-; CHECK-DAG:  ld.param.b32    [[D:%hh[0-9]+]], [test_select_cc_f32_f16_param_3];
+; CHECK-DAG:  ld.param.b32    [[C:%r[0-9]+]], [test_select_cc_f32_f16_param_2];
+; CHECK-DAG:  ld.param.b32    [[D:%r[0-9]+]], [test_select_cc_f32_f16_param_3];
 ;
 ; CHECK-F16:  setp.neu.f16x2  [[P0:%p[0-9]+]]|[[P1:%p[0-9]+]], [[C]], [[D]]
-; CHECK-NOF16-DAG: mov.b32         {[[C0:%h[0-9]+]], [[C1:%h[0-9]+]]}, [[C]]
-; CHECK-NOF16-DAG: mov.b32         {[[D0:%h[0-9]+]], [[D1:%h[0-9]+]]}, [[D]]
+; CHECK-NOF16-DAG: mov.b32         {[[C0:%rs[0-9]+]], [[C1:%rs[0-9]+]]}, [[C]]
+; CHECK-NOF16-DAG: mov.b32         {[[D0:%rs[0-9]+]], [[D1:%rs[0-9]+]]}, [[D]]
 ; CHECK-NOF16-DAG: cvt.f32.f16 [[DF0:%f[0-9]+]], [[D0]];
 ; CHECK-NOF16-DAG: cvt.f32.f16 [[CF0:%f[0-9]+]], [[C0]];
 ; CHECK-NOF16-DAG: cvt.f32.f16 [[DF1:%f[0-9]+]], [[D1]];
@@ -466,17 +462,17 @@ define <2 x float> @test_select_cc_f32_f16(<2 x float> %a, <2 x float> %b,
 }
 
 ; CHECK-LABEL: test_select_cc_f16_f32(
-; CHECK-DAG:  ld.param.b32    [[A:%hh[0-9]+]], [test_select_cc_f16_f32_param_0];
-; CHECK-DAG:  ld.param.b32    [[B:%hh[0-9]+]], [test_select_cc_f16_f32_param_1];
+; CHECK-DAG:  ld.param.b32    [[A:%r[0-9]+]], [test_select_cc_f16_f32_param_0];
+; CHECK-DAG:  ld.param.b32    [[B:%r[0-9]+]], [test_select_cc_f16_f32_param_1];
 ; CHECK-DAG:  ld.param.v2.f32 {[[C0:%f[0-9]+]], [[C1:%f[0-9]+]]}, [test_select_cc_f16_f32_param_2];
 ; CHECK-DAG:  ld.param.v2.f32 {[[D0:%f[0-9]+]], [[D1:%f[0-9]+]]}, [test_select_cc_f16_f32_param_3];
 ; CHECK-DAG:  setp.neu.f32    [[P0:%p[0-9]+]], [[C0]], [[D0]]
 ; CHECK-DAG:  setp.neu.f32    [[P1:%p[0-9]+]], [[C1]], [[D1]]
-; CHECK-DAG:  mov.b32         {[[A0:%h[0-9]+]], [[A1:%h[0-9]+]]}, [[A]]
-; CHECK-DAG:  mov.b32         {[[B0:%h[0-9]+]], [[B1:%h[0-9]+]]}, [[B]]
-; CHECK-DAG:  selp.b16        [[R0:%h[0-9]+]], [[A0]], [[B0]], [[P0]];
-; CHECK-DAG:  selp.b16        [[R1:%h[0-9]+]], [[A1]], [[B1]], [[P1]];
-; CHECK:      mov.b32         [[R:%hh[0-9]+]], {[[R0]], [[R1]]}
+; CHECK-DAG:  mov.b32         {[[A0:%rs[0-9]+]], [[A1:%rs[0-9]+]]}, [[A]]
+; CHECK-DAG:  mov.b32         {[[B0:%rs[0-9]+]], [[B1:%rs[0-9]+]]}, [[B]]
+; CHECK-DAG:  selp.b16        [[R0:%rs[0-9]+]], [[A0]], [[B0]], [[P0]];
+; CHECK-DAG:  selp.b16        [[R1:%rs[0-9]+]], [[A1]], [[B1]], [[P1]];
+; CHECK:      mov.b32         [[R:%r[0-9]+]], {[[R0]], [[R1]]}
 ; CHECK-NEXT: st.param.b32    [func_retval0+0], [[R]];
 ; CHECK-NEXT: ret;
 define <2 x half> @test_select_cc_f16_f32(<2 x half> %a, <2 x half> %b,
@@ -487,11 +483,11 @@ define <2 x half> @test_select_cc_f16_f32(<2 x half> %a, <2 x half> %b,
 }
 
 ; CHECK-LABEL: test_fcmp_une(
-; CHECK-DAG:  ld.param.b32    [[A:%hh[0-9]+]], [test_fcmp_une_param_0];
-; CHECK-DAG:  ld.param.b32    [[B:%hh[0-9]+]], [test_fcmp_une_param_1];
+; CHECK-DAG:  ld.param.b32    [[A:%r[0-9]+]], [test_fcmp_une_param_0];
+; CHECK-DAG:  ld.param.b32    [[B:%r[0-9]+]], [test_fcmp_une_param_1];
 ; CHECK-F16:  setp.neu.f16x2  [[P0:%p[0-9]+]]|[[P1:%p[0-9]+]], [[A]], [[B]]
-; CHECK-NOF16-DAG:  mov.b32        {[[A0:%h[0-9]+]], [[A1:%h[0-9]+]]}, [[A]]
-; CHECK-NOF16-DAG:  mov.b32        {[[B0:%h[0-9]+]], [[B1:%h[0-9]+]]}, [[B]]
+; CHECK-NOF16-DAG:  mov.b32        {[[A0:%rs[0-9]+]], [[A1:%rs[0-9]+]]}, [[A]]
+; CHECK-NOF16-DAG:  mov.b32        {[[B0:%rs[0-9]+]], [[B1:%rs[0-9]+]]}, [[B]]
 ; CHECK-NOF16-DAG:  cvt.f32.f16    [[FA0:%f[0-9]+]], [[A0]]
 ; CHECK-NOF16-DAG:  cvt.f32.f16    [[FB0:%f[0-9]+]], [[B0]]
 ; CHECK-NOF16-DAG:  cvt.f32.f16    [[FA1:%f[0-9]+]], [[A1]]
@@ -509,11 +505,11 @@ define <2 x i1> @test_fcmp_une(<2 x half> %a, <2 x half> %b) #0 {
 }
 
 ; CHECK-LABEL: test_fcmp_ueq(
-; CHECK-DAG:  ld.param.b32    [[A:%hh[0-9]+]], [test_fcmp_ueq_param_0];
-; CHECK-DAG:  ld.param.b32    [[B:%hh[0-9]+]], [test_fcmp_ueq_param_1];
+; CHECK-DAG:  ld.param.b32    [[A:%r[0-9]+]], [test_fcmp_ueq_param_0];
+; CHECK-DAG:  ld.param.b32    [[B:%r[0-9]+]], [test_fcmp_ueq_param_1];
 ; CHECK-F16:  setp.equ.f16x2  [[P0:%p[0-9]+]]|[[P1:%p[0-9]+]], [[A]], [[B]]
-; CHECK-NOF16-DAG:  mov.b32        {[[A0:%h[0-9]+]], [[A1:%h[0-9]+]]}, [[A]]
-; CHECK-NOF16-DAG:  mov.b32        {[[B0:%h[0-9]+]], [[B1:%h[0-9]+]]}, [[B]]
+; CHECK-NOF16-DAG:  mov.b32        {[[A0:%rs[0-9]+]], [[A1:%rs[0-9]+]]}, [[A]]
+; CHECK-NOF16-DAG:  mov.b32        {[[B0:%rs[0-9]+]], [[B1:%rs[0-9]+]]}, [[B]]
 ; CHECK-NOF16-DAG:  cvt.f32.f16    [[FA0:%f[0-9]+]], [[A0]]
 ; CHECK-NOF16-DAG:  cvt.f32.f16    [[FB0:%f[0-9]+]], [[B0]]
 ; CHECK-NOF16-DAG:  cvt.f32.f16    [[FA1:%f[0-9]+]], [[A1]]
@@ -531,11 +527,11 @@ define <2 x i1> @test_fcmp_ueq(<2 x half> %a, <2 x half> %b) #0 {
 }
 
 ; CHECK-LABEL: test_fcmp_ugt(
-; CHECK-DAG:  ld.param.b32    [[A:%hh[0-9]+]], [test_fcmp_ugt_param_0];
-; CHECK-DAG:  ld.param.b32    [[B:%hh[0-9]+]], [test_fcmp_ugt_param_1];
+; CHECK-DAG:  ld.param.b32    [[A:%r[0-9]+]], [test_fcmp_ugt_param_0];
+; CHECK-DAG:  ld.param.b32    [[B:%r[0-9]+]], [test_fcmp_ugt_param_1];
 ; CHECK-F16:  setp.gtu.f16x2  [[P0:%p[0-9]+]]|[[P1:%p[0-9]+]], [[A]], [[B]]
-; CHECK-NOF16-DAG:  mov.b32        {[[A0:%h[0-9]+]], [[A1:%h[0-9]+]]}, [[A]]
-; CHECK-NOF16-DAG:  mov.b32        {[[B0:%h[0-9]+]], [[B1:%h[0-9]+]]}, [[B]]
+; CHECK-NOF16-DAG:  mov.b32        {[[A0:%rs[0-9]+]], [[A1:%rs[0-9]+]]}, [[A]]
+; CHECK-NOF16-DAG:  mov.b32        {[[B0:%rs[0-9]+]], [[B1:%rs[0-9]+]]}, [[B]]
 ; CHECK-NOF16-DAG:  cvt.f32.f16    [[FA0:%f[0-9]+]], [[A0]]
 ; CHECK-NOF16-DAG:  cvt.f32.f16    [[FB0:%f[0-9]+]], [[B0]]
 ; CHECK-NOF16-DAG:  cvt.f32.f16    [[FA1:%f[0-9]+]], [[A1]]
@@ -553,11 +549,11 @@ define <2 x i1> @test_fcmp_ugt(<2 x half> %a, <2 x half> %b) #0 {
 }
 
 ; CHECK-LABEL: test_fcmp_uge(
-; CHECK-DAG:  ld.param.b32    [[A:%hh[0-9]+]], [test_fcmp_uge_param_0];
-; CHECK-DAG:  ld.param.b32    [[B:%hh[0-9]+]], [test_fcmp_uge_param_1];
+; CHECK-DAG:  ld.param.b32    [[A:%r[0-9]+]], [test_fcmp_uge_param_0];
+; CHECK-DAG:  ld.param.b32    [[B:%r[0-9]+]], [test_fcmp_uge_param_1];
 ; CHECK-F16:  setp.geu.f16x2  [[P0:%p[0-9]+]]|[[P1:%p[0-9]+]], [[A]], [[B]]
-; CHECK-NOF16-DAG:  mov.b32        {[[A0:%h[0-9]+]], [[A1:%h[0-9]+]]}, [[A]]
-; CHECK-NOF16-DAG:  mov.b32        {[[B0:%h[0-9]+]], [[B1:%h[0-9]+]]}, [[B]]
+; CHECK-NOF16-DAG:  mov.b32        {[[A0:%rs[0-9]+]], [[A1:%rs[0-9]+]]}, [[A]]
+; CHECK-NOF16-DAG:  mov.b32        {[[B0:%rs[0-9]+]], [[B1:%rs[0-9]+]]}, [[B]]
 ; CHECK-NOF16-DAG:  cvt.f32.f16    [[FA0:%f[0-9]+]], [[A0]]
 ; CHECK-NOF16-DAG:  cvt.f32.f16    [[FB0:%f[0-9]+]], [[B0]]
 ; CHECK-NOF16-DAG:  cvt.f32.f16    [[FA1:%f[0-9]+]], [[A1]]
@@ -575,11 +571,11 @@ define <2 x i1> @test_fcmp_uge(<2 x half> %a, <2 x half> %b) #0 {
 }
 
 ; CHECK-LABEL: test_fcmp_ult(
-; CHECK-DAG:  ld.param.b32    [[A:%hh[0-9]+]], [test_fcmp_ult_param_0];
-; CHECK-DAG:  ld.param.b32    [[B:%hh[0-9]+]], [test_fcmp_ult_param_1];
+; CHECK-DAG:  ld.param.b32    [[A:%r[0-9]+]], [test_fcmp_ult_param_0];
+; CHECK-DAG:  ld.param.b32    [[B:%r[0-9]+]], [test_fcmp_ult_param_1];
 ; CHECK-F16:  setp.ltu.f16x2  [[P0:%p[0-9]+]]|[[P1:%p[0-9]+]], [[A]], [[B]]
-; CHECK-NOF16-DAG:  mov.b32        {[[A0:%h[0-9]+]], [[A1:%h[0-9]+]]}, [[A]]
-; CHECK-NOF16-DAG:  mov.b32        {[[B0:%h[0-9]+]], [[B1:%h[0-9]+]]}, [[B]]
+; CHECK-NOF16-DAG:  mov.b32        {[[A0:%rs[0-9]+]], [[A1:%rs[0-9]+]]}, [[A]]
+; CHECK-NOF16-DAG:  mov.b32        {[[B0:%rs[0-9]+]], [[B1:%rs[0-9]+]]}, [[B]]
 ; CHECK-NOF16-DAG:  cvt.f32.f16    [[FA0:%f[0-9]+]], [[A0]]
 ; CHECK-NOF16-DAG:  cvt.f32.f16    [[FB0:%f[0-9]+]], [[B0]]
 ; CHECK-NOF16-DAG:  cvt.f32.f16    [[FA1:%f[0-9]+]], [[A1]]
@@ -597,11 +593,11 @@ define <2 x i1> @test_fcmp_ult(<2 x half> %a, <2 x half> %b) #0 {
 }
 
 ; CHECK-LABEL: test_fcmp_ule(
-; CHECK-DAG:  ld.param.b32    [[A:%hh[0-9]+]], [test_fcmp_ule_param_0];
-; CHECK-DAG:  ld.param.b32    [[B:%hh[0-9]+]], [test_fcmp_ule_param_1];
+; CHECK-DAG:  ld.param.b32    [[A:%r[0-9]+]], [test_fcmp_ule_param_0];
+; CHECK-DAG:  ld.param.b32    [[B:%r[0-9]+]], [test_fcmp_ule_param_1];
 ; CHECK-F16:  setp.leu.f16x2  [[P0:%p[0-9]+]]|[[P1:%p[0-9]+]], [[A]], [[B]]
-; CHECK-NOF16-DAG:  mov.b32        {[[A0:%h[0-9]+]], [[A1:%h[0-9]+]]}, [[A]]
-; CHECK-NOF16-DAG:  mov.b32        {[[B0:%h[0-9]+]], [[B1:%h[0-9]+]]}, [[B]]
+; CHECK-NOF16-DAG:  mov.b32        {[[A0:%rs[0-9]+]], [[A1:%rs[0-9]+]]}, [[A]]
+; CHECK-NOF16-DAG:  mov.b32        {[[B0:%rs[0-9]+]], [[B1:%rs[0-9]+]]}, [[B]]
 ; CHECK-NOF16-DAG:  cvt.f32.f16    [[FA0:%f[0-9]+]], [[A0]]
 ; CHECK-NOF16-DAG:  cvt.f32.f16    [[FB0:%f[0-9]+]], [[B0]]
 ; CHECK-NOF16-DAG:  cvt.f32.f16    [[FA1:%f[0-9]+]], [[A1]]
@@ -620,11 +616,11 @@ define <2 x i1> @test_fcmp_ule(<2 x half> %a, <2 x half> %b) #0 {
 
 
 ; CHECK-LABEL: test_fcmp_uno(
-; CHECK-DAG:  ld.param.b32    [[A:%hh[0-9]+]], [test_fcmp_uno_param_0];
-; CHECK-DAG:  ld.param.b32    [[B:%hh[0-9]+]], [test_fcmp_uno_param_1];
+; CHECK-DAG:  ld.param.b32    [[A:%r[0-9]+]], [test_fcmp_uno_param_0];
+; CHECK-DAG:  ld.param.b32    [[B:%r[0-9]+]], [test_fcmp_uno_param_1];
 ; CHECK-F16:  setp.nan.f16x2  [[P0:%p[0-9]+]]|[[P1:%p[0-9]+]], [[A]], [[B]]
-; CHECK-NOF16-DAG:  mov.b32        {[[A0:%h[0-9]+]], [[A1:%h[0-9]+]]}, [[A]]
-; CHECK-NOF16-DAG:  mov.b32        {[[B0:%h[0-9]+]], [[B1:%h[0-9]+]]}, [[B]]
+; CHECK-NOF16-DAG:  mov.b32        {[[A0:%rs[0-9]+]], [[A1:%rs[0-9]+]]}, [[A]]
+; CHECK-NOF16-DAG:  mov.b32        {[[B0:%rs[0-9]+]], [[B1:%rs[0-9]+]]}, [[B]]
 ; CHECK-NOF16-DAG:  cvt.f32.f16    [[FA0:%f[0-9]+]], [[A0]]
 ; CHECK-NOF16-DAG:  cvt.f32.f16    [[FB0:%f[0-9]+]], [[B0]]
 ; CHECK-NOF16-DAG:  cvt.f32.f16    [[FA1:%f[0-9]+]], [[A1]]
@@ -642,11 +638,11 @@ define <2 x i1> @test_fcmp_uno(<2 x half> %a, <2 x half> %b) #0 {
 }
 
 ; CHECK-LABEL: test_fcmp_one(
-; CHECK-DAG:  ld.param.b32    [[A:%hh[0-9]+]], [test_fcmp_one_param_0];
-; CHECK-DAG:  ld.param.b32    [[B:%hh[0-9]+]], [test_fcmp_one_param_1];
+; CHECK-DAG:  ld.param.b32    [[A:%r[0-9]+]], [test_fcmp_one_param_0];
+; CHECK-DAG:  ld.param.b32    [[B:%r[0-9]+]], [test_fcmp_one_param_1];
 ; CHECK-F16:  setp.ne.f16x2  [[P0:%p[0-9]+]]|[[P1:%p[0-9]+]], [[A]], [[B]]
-; CHECK-NOF16-DAG:  mov.b32        {[[A0:%h[0-9]+]], [[A1:%h[0-9]+]]}, [[A]]
-; CHECK-NOF16-DAG:  mov.b32        {[[B0:%h[0-9]+]], [[B1:%h[0-9]+]]}, [[B]]
+; CHECK-NOF16-DAG:  mov.b32        {[[A0:%rs[0-9]+]], [[A1:%rs[0-9]+]]}, [[A]]
+; CHECK-NOF16-DAG:  mov.b32        {[[B0:%rs[0-9]+]], [[B1:%rs[0-9]+]]}, [[B]]
 ; CHECK-NOF16-DAG:  cvt.f32.f16    [[FA0:%f[0-9]+]], [[A0]]
 ; CHECK-NOF16-DAG:  cvt.f32.f16    [[FB0:%f[0-9]+]], [[B0]]
 ; CHECK-NOF16-DAG:  cvt.f32.f16    [[FA1:%f[0-9]+]], [[A1]]
@@ -664,11 +660,11 @@ define <2 x i1> @test_fcmp_one(<2 x half> %a, <2 x half> %b) #0 {
 }
 
 ; CHECK-LABEL: test_fcmp_oeq(
-; CHECK-DAG:  ld.param.b32    [[A:%hh[0-9]+]], [test_fcmp_oeq_param_0];
-; CHECK-DAG:  ld.param.b32    [[B:%hh[0-9]+]], [test_fcmp_oeq_param_1];
+; CHECK-DAG:  ld.param.b32    [[A:%r[0-9]+]], [test_fcmp_oeq_param_0];
+; CHECK-DAG:  ld.param.b32    [[B:%r[0-9]+]], [test_fcmp_oeq_param_1];
 ; CHECK-F16:  setp.eq.f16x2  [[P0:%p[0-9]+]]|[[P1:%p[0-9]+]], [[A]], [[B]]
-; CHECK-NOF16-DAG:  mov.b32        {[[A0:%h[0-9]+]], [[A1:%h[0-9]+]]}, [[A]]
-; CHECK-NOF16-DAG:  mov.b32        {[[B0:%h[0-9]+]], [[B1:%h[0-9]+]]}, [[B]]
+; CHECK-NOF16-DAG:  mov.b32        {[[A0:%rs[0-9]+]], [[A1:%rs[0-9]+]]}, [[A]]
+; CHECK-NOF16-DAG:  mov.b32        {[[B0:%rs[0-9]+]], [[B1:%rs[0-9]+]]}, [[B]]
 ; CHECK-NOF16-DAG:  cvt.f32.f16    [[FA0:%f[0-9]+]], [[A0]]
 ; CHECK-NOF16-DAG:  cvt.f32.f16    [[FB0:%f[0-9]+]], [[B0]]
 ; CHECK-NOF16-DAG:  cvt.f32.f16    [[FA1:%f[0-9]+]], [[A1]]
@@ -686,11 +682,11 @@ define <2 x i1> @test_fcmp_oeq(<2 x half> %a, <2 x half> %b) #0 {
 }
 
 ; CHECK-LABEL: test_fcmp_ogt(
-; CHECK-DAG:  ld.param.b32    [[A:%hh[0-9]+]], [test_fcmp_ogt_param_0];
-; CHECK-DAG:  ld.param.b32    [[B:%hh[0-9]+]], [test_fcmp_ogt_param_1];
+; CHECK-DAG:  ld.param.b32    [[A:%r[0-9]+]], [test_fcmp_ogt_param_0];
+; CHECK-DAG:  ld.param.b32    [[B:%r[0-9]+]], [test_fcmp_ogt_param_1];
 ; CHECK-F16:  setp.gt.f16x2  [[P0:%p[0-9]+]]|[[P1:%p[0-9]+]], [[A]], [[B]]
-; CHECK-NOF16-DAG:  mov.b32        {[[A0:%h[0-9]+]], [[A1:%h[0-9]+]]}, [[A]]
-; CHECK-NOF16-DAG:  mov.b32        {[[B0:%h[0-9]+]], [[B1:%h[0-9]+]]}, [[B]]
+; CHECK-NOF16-DAG:  mov.b32        {[[A0:%rs[0-9]+]], [[A1:%rs[0-9]+]]}, [[A]]
+; CHECK-NOF16-DAG:  mov.b32        {[[B0:%rs[0-9]+]], [[B1:%rs[0-9]+]]}, [[B]]
 ; CHECK-NOF16-DAG:  cvt.f32.f16    [[FA0:%f[0-9]+]], [[A0]]
 ; CHECK-NOF16-DAG:  cvt.f32.f16    [[FB0:%f[0-9]+]], [[B0]]
 ; CHECK-NOF16-DAG:  cvt.f32.f16    [[FA1:%f[0-9]+]], [[A1]]
@@ -708,11 +704,11 @@ define <2 x i1> @test_fcmp_ogt(<2 x half> %a, <2 x half> %b) #0 {
 }
 
 ; CHECK-LABEL: test_fcmp_oge(
-; CHECK-DAG:  ld.param.b32    [[A:%hh[0-9]+]], [test_fcmp_oge_param_0];
-; CHECK-DAG:  ld.param.b32    [[B:%hh[0-9]+]], [test_fcmp_oge_param_1];
+; CHECK-DAG:  ld.param.b32    [[A:%r[0-9]+]], [test_fcmp_oge_param_0];
+; CHECK-DAG:  ld.param.b32    [[B:%r[0-9]+]], [test_fcmp_oge_param_1];
 ; CHECK-F16:  setp.ge.f16x2  [[P0:%p[0-9]+]]|[[P1:%p[0-9]+]], [[A]], [[B]]
-; CHECK-NOF16-DAG:  mov.b32        {[[A0:%h[0-9]+]], [[A1:%h[0-9]+]]}, [[A]]
-; CHECK-NOF16-DAG:  mov.b32        {[[B0:%h[0-9]+]], [[B1:%h[0-9]+]]}, [[B]]
+; CHECK-NOF16-DAG:  mov.b32        {[[A0:%rs[0-9]+]], [[A1:%rs[0-9]+]]}, [[A]]
+; CHECK-NOF16-DAG:  mov.b32        {[[B0:%rs[0-9]+]], [[B1:%rs[0-9]+]]}, [[B]]
 ; CHECK-NOF16-DAG:  cvt.f32.f16    [[FA0:%f[0-9]+]], [[A0]]
 ; CHECK-NOF16-DAG:  cvt.f32.f16    [[FB0:%f[0-9]+]], [[B0]]
 ; CHECK-NOF16-DAG:  cvt.f32.f16    [[FA1:%f[0-9]+]], [[A1]]
@@ -730,11 +726,11 @@ define <2 x i1> @test_fcmp_oge(<2 x half> %a, <2 x half> %b) #0 {
 }
 
 ; CHECK-LABEL: test_fcmp_olt(
-; CHECK-DAG:  ld.param.b32    [[A:%hh[0-9]+]], [test_fcmp_olt_param_0];
-; CHECK-DAG:  ld.param.b32    [[B:%hh[0-9]+]], [test_fcmp_olt_param_1];
+; CHECK-DAG:  ld.param.b32    [[A:%r[0-9]+]], [test_fcmp_olt_param_0];
+; CHECK-DAG:  ld.param.b32    [[B:%r[0-9]+]], [test_fcmp_olt_param_1];
 ; CHECK-F16:  setp.lt.f16x2  [[P0:%p[0-9]+]]|[[P1:%p[0-9]+]], [[A]], [[B]]
-; CHECK-NOF16-DAG:  mov.b32        {[[A0:%h[0-9]+]], [[A1:%h[0-9]+]]}, [[A]]
-; CHECK-NOF16-DAG:  mov.b32        {[[B0:%h[0-9]+]], [[B1:%h[0-9]+]]}, [[B]]
+; CHECK-NOF16-DAG:  mov.b32        {[[A0:%rs[0-9]+]], [[A1:%rs[0-9]+]]}, [[A]]
+; CHECK-NOF16-DAG:  mov.b32        {[[B0:%rs[0-9]+]], [[B1:%rs[0-9]+]]}, [[B]]
 ; CHECK-NOF16-DAG:  cvt.f32.f16    [[FA0:%f[0-9]+]], [[A0]]
 ; CHECK-NOF16-DAG:  cvt.f32.f16    [[FB0:%f[0-9]+]], [[B0]]
 ; CHECK-NOF16-DAG:  cvt.f32.f16    [[FA1:%f[0-9]+]], [[A1]]
@@ -752,11 +748,11 @@ define <2 x i1> @test_fcmp_olt(<2 x half> %a, <2 x half> %b) #0 {
 }
 
 ; XCHECK-LABEL: test_fcmp_ole(
-; CHECK-DAG:  ld.param.b32    [[A:%hh[0-9]+]], [test_fcmp_ole_param_0];
-; CHECK-DAG:  ld.param.b32    [[B:%hh[0-9]+]], [test_fcmp_ole_param_1];
+; CHECK-DAG:  ld.param.b32    [[A:%r[0-9]+]], [test_fcmp_ole_param_0];
+; CHECK-DAG:  ld.param.b32    [[B:%r[0-9]+]], [test_fcmp_ole_param_1];
 ; CHECK-F16:  setp.le.f16x2  [[P0:%p[0-9]+]]|[[P1:%p[0-9]+]], [[A]], [[B]]
-; CHECK-NOF16-DAG:  mov.b32        {[[A0:%h[0-9]+]], [[A1:%h[0-9]+]]}, [[A]]
-; CHECK-NOF16-DAG:  mov.b32        {[[B0:%h[0-9]+]], [[B1:%h[0-9]+]]}, [[B]]
+; CHECK-NOF16-DAG:  mov.b32        {[[A0:%rs[0-9]+]], [[A1:%rs[0-9]+]]}, [[A]]
+; CHECK-NOF16-DAG:  mov.b32        {[[B0:%rs[0-9]+]], [[B1:%rs[0-9]+]]}, [[B]]
 ; CHECK-NOF16-DAG:  cvt.f32.f16    [[FA0:%f[0-9]+]], [[A0]]
 ; CHECK-NOF16-DAG:  cvt.f32.f16    [[FB0:%f[0-9]+]], [[B0]]
 ; CHECK-NOF16-DAG:  cvt.f32.f16    [[FA1:%f[0-9]+]], [[A1]]
@@ -774,11 +770,11 @@ define <2 x i1> @test_fcmp_ole(<2 x half> %a, <2 x half> %b) #0 {
 }
 
 ; CHECK-LABEL: test_fcmp_ord(
-; CHECK-DAG:  ld.param.b32    [[A:%hh[0-9]+]], [test_fcmp_ord_param_0];
-; CHECK-DAG:  ld.param.b32    [[B:%hh[0-9]+]], [test_fcmp_ord_param_1];
+; CHECK-DAG:  ld.param.b32    [[A:%r[0-9]+]], [test_fcmp_ord_param_0];
+; CHECK-DAG:  ld.param.b32    [[B:%r[0-9]+]], [test_fcmp_ord_param_1];
 ; CHECK-F16:  setp.num.f16x2  [[P0:%p[0-9]+]]|[[P1:%p[0-9]+]], [[A]], [[B]]
-; CHECK-NOF16-DAG:  mov.b32        {[[A0:%h[0-9]+]], [[A1:%h[0-9]+]]}, [[A]]
-; CHECK-NOF16-DAG:  mov.b32        {[[B0:%h[0-9]+]], [[B1:%h[0-9]+]]}, [[B]]
+; CHECK-NOF16-DAG:  mov.b32        {[[A0:%rs[0-9]+]], [[A1:%rs[0-9]+]]}, [[A]]
+; CHECK-NOF16-DAG:  mov.b32        {[[B0:%rs[0-9]+]], [[B1:%rs[0-9]+]]}, [[B]]
 ; CHECK-NOF16-DAG:  cvt.f32.f16    [[FA0:%f[0-9]+]], [[A0]]
 ; CHECK-NOF16-DAG:  cvt.f32.f16    [[FB0:%f[0-9]+]], [[B0]]
 ; CHECK-NOF16-DAG:  cvt.f32.f16    [[FA1:%f[0-9]+]], [[A1]]
@@ -796,8 +792,8 @@ define <2 x i1> @test_fcmp_ord(<2 x half> %a, <2 x half> %b) #0 {
 }
 
 ; CHECK-LABEL: test_fptosi_i32(
-; CHECK:      ld.param.b32    [[A:%hh[0-9]+]], [test_fptosi_i32_param_0];
-; CHECK:      mov.b32         {[[A0:%h[0-9]+]], [[A1:%h[0-9]+]]}, [[A]]
+; CHECK:      ld.param.b32    [[A:%r[0-9]+]], [test_fptosi_i32_param_0];
+; CHECK:      mov.b32         {[[A0:%rs[0-9]+]], [[A1:%rs[0-9]+]]}, [[A]]
 ; CHECK-DAG:  cvt.rzi.s32.f16 [[R0:%r[0-9]+]], [[A0]];
 ; CHECK-DAG:  cvt.rzi.s32.f16 [[R1:%r[0-9]+]], [[A1]];
 ; CHECK:      st.param.v2.b32 [func_retval0+0], {[[R0]], [[R1]]}
@@ -808,8 +804,8 @@ define <2 x i32> @test_fptosi_i32(<2 x half> %a) #0 {
 }
 
 ; CHECK-LABEL: test_fptosi_i64(
-; CHECK:      ld.param.b32    [[A:%hh[0-9]+]], [test_fptosi_i64_param_0];
-; CHECK:      mov.b32         {[[A0:%h[0-9]+]], [[A1:%h[0-9]+]]}, [[A]]
+; CHECK:      ld.param.b32    [[A:%r[0-9]+]], [test_fptosi_i64_param_0];
+; CHECK:      mov.b32         {[[A0:%rs[0-9]+]], [[A1:%rs[0-9]+]]}, [[A]]
 ; CHECK-DAG:  cvt.rzi.s64.f16 [[R0:%rd[0-9]+]], [[A0]];
 ; CHECK-DAG:  cvt.rzi.s64.f16 [[R1:%rd[0-9]+]], [[A1]];
 ; CHECK:      st.param.v2.b64 [func_retval0+0], {[[R0]], [[R1]]}
@@ -820,8 +816,8 @@ define <2 x i64> @test_fptosi_i64(<2 x half> %a) #0 {
 }
 
 ; CHECK-LABEL: test_fptoui_2xi32(
-; CHECK:      ld.param.b32    [[A:%hh[0-9]+]], [test_fptoui_2xi32_param_0];
-; CHECK:      mov.b32         {[[A0:%h[0-9]+]], [[A1:%h[0-9]+]]}, [[A]]
+; CHECK:      ld.param.b32    [[A:%r[0-9]+]], [test_fptoui_2xi32_param_0];
+; CHECK:      mov.b32         {[[A0:%rs[0-9]+]], [[A1:%rs[0-9]+]]}, [[A]]
 ; CHECK-DAG:  cvt.rzi.u32.f16 [[R0:%r[0-9]+]], [[A0]];
 ; CHECK-DAG:  cvt.rzi.u32.f16 [[R1:%r[0-9]+]], [[A1]];
 ; CHECK:      st.param.v2.b32 [func_retval0+0], {[[R0]], [[R1]]}
@@ -832,8 +828,8 @@ define <2 x i32> @test_fptoui_2xi32(<2 x half> %a) #0 {
 }
 
 ; CHECK-LABEL: test_fptoui_2xi64(
-; CHECK:      ld.param.b32    [[A:%hh[0-9]+]], [test_fptoui_2xi64_param_0];
-; CHECK:      mov.b32         {[[A0:%h[0-9]+]], [[A1:%h[0-9]+]]}, [[A]]
+; CHECK:      ld.param.b32    [[A:%r[0-9]+]], [test_fptoui_2xi64_param_0];
+; CHECK:      mov.b32         {[[A0:%rs[0-9]+]], [[A1:%rs[0-9]+]]}, [[A]]
 ; CHECK-DAG:  cvt.rzi.u64.f16 [[R0:%rd[0-9]+]], [[A0]];
 ; CHECK-DAG:  cvt.rzi.u64.f16 [[R1:%rd[0-9]+]], [[A1]];
 ; CHECK:      st.param.v2.b64 [func_retval0+0], {[[R0]], [[R1]]}
@@ -845,9 +841,9 @@ define <2 x i64> @test_fptoui_2xi64(<2 x half> %a) #0 {
 
 ; CHECK-LABEL: test_uitofp_2xi32(
 ; CHECK:      ld.param.v2.u32 {[[A0:%r[0-9]+]], [[A1:%r[0-9]+]]}, [test_uitofp_2xi32_param_0];
-; CHECK-DAG:  cvt.rn.f16.u32  [[R0:%h[0-9]+]], [[A0]];
-; CHECK-DAG:  cvt.rn.f16.u32  [[R1:%h[0-9]+]], [[A1]];
-; CHECK:      mov.b32         [[R:%hh[0-9]+]], {[[R0]], [[R1]]}
+; CHECK-DAG:  cvt.rn.f16.u32  [[R0:%rs[0-9]+]], [[A0]];
+; CHECK-DAG:  cvt.rn.f16.u32  [[R1:%rs[0-9]+]], [[A1]];
+; CHECK:      mov.b32         [[R:%r[0-9]+]], {[[R0]], [[R1]]}
 ; CHECK:      st.param.b32    [func_retval0+0], [[R]];
 ; CHECK:      ret;
 define <2 x half> @test_uitofp_2xi32(<2 x i32> %a) #0 {
@@ -857,9 +853,9 @@ define <2 x half> @test_uitofp_2xi32(<2 x i32> %a) #0 {
 
 ; CHECK-LABEL: test_uitofp_2xi64(
 ; CHECK:      ld.param.v2.u64 {[[A0:%rd[0-9]+]], [[A1:%rd[0-9]+]]}, [test_uitofp_2xi64_param_0];
-; CHECK-DAG:  cvt.rn.f16.u64  [[R0:%h[0-9]+]], [[A0]];
-; CHECK-DAG:  cvt.rn.f16.u64  [[R1:%h[0-9]+]], [[A1]];
-; CHECK:      mov.b32         [[R:%hh[0-9]+]], {[[R0]], [[R1]]}
+; CHECK-DAG:  cvt.rn.f16.u64  [[R0:%rs[0-9]+]], [[A0]];
+; CHECK-DAG:  cvt.rn.f16.u64  [[R1:%rs[0-9]+]], [[A1]];
+; CHECK:      mov.b32         [[R:%r[0-9]+]], {[[R0]], [[R1]]}
 ; CHECK:      st.param.b32    [func_retval0+0], [[R]];
 ; CHECK:      ret;
 define <2 x half> @test_uitofp_2xi64(<2 x i64> %a) #0 {
@@ -869,9 +865,9 @@ define <2 x half> @test_uitofp_2xi64(<2 x i64> %a) #0 {
 
 ; CHECK-LABEL: test_sitofp_2xi32(
 ; CHECK:      ld.param.v2.u32 {[[A0:%r[0-9]+]], [[A1:%r[0-9]+]]}, [test_sitofp_2xi32_param_0];
-; CHECK-DAG:  cvt.rn.f16.s32  [[R0:%h[0-9]+]], [[A0]];
-; CHECK-DAG:  cvt.rn.f16.s32  [[R1:%h[0-9]+]], [[A1]];
-; CHECK:      mov.b32         [[R:%hh[0-9]+]], {[[R0]], [[R1]]}
+; CHECK-DAG:  cvt.rn.f16.s32  [[R0:%rs[0-9]+]], [[A0]];
+; CHECK-DAG:  cvt.rn.f16.s32  [[R1:%rs[0-9]+]], [[A1]];
+; CHECK:      mov.b32         [[R:%r[0-9]+]], {[[R0]], [[R1]]}
 ; CHECK:      st.param.b32    [func_retval0+0], [[R]];
 ; CHECK:      ret;
 define <2 x half> @test_sitofp_2xi32(<2 x i32> %a) #0 {
@@ -881,9 +877,9 @@ define <2 x half> @test_sitofp_2xi32(<2 x i32> %a) #0 {
 
 ; CHECK-LABEL: test_sitofp_2xi64(
 ; CHECK:      ld.param.v2.u64 {[[A0:%rd[0-9]+]], [[A1:%rd[0-9]+]]}, [test_sitofp_2xi64_param_0];
-; CHECK-DAG:  cvt.rn.f16.s64  [[R0:%h[0-9]+]], [[A0]];
-; CHECK-DAG:  cvt.rn.f16.s64  [[R1:%h[0-9]+]], [[A1]];
-; CHECK:      mov.b32         [[R:%hh[0-9]+]], {[[R0]], [[R1]]}
+; CHECK-DAG:  cvt.rn.f16.s64  [[R0:%rs[0-9]+]], [[A0]];
+; CHECK-DAG:  cvt.rn.f16.s64  [[R1:%rs[0-9]+]], [[A1]];
+; CHECK:      mov.b32         [[R:%r[0-9]+]], {[[R0]], [[R1]]}
 ; CHECK:      st.param.b32    [func_retval0+0], [[R]];
 ; CHECK:      ret;
 define <2 x half> @test_sitofp_2xi64(<2 x i64> %a) #0 {
@@ -893,23 +889,23 @@ define <2 x half> @test_sitofp_2xi64(<2 x i64> %a) #0 {
 
 ; CHECK-LABEL: test_uitofp_2xi32_fadd(
 ; CHECK-DAG:  ld.param.v2.u32 {[[A0:%r[0-9]+]], [[A1:%r[0-9]+]]}, [test_uitofp_2xi32_fadd_param_0];
-; CHECK-DAG:  ld.param.b32    [[B:%hh[0-9]+]], [test_uitofp_2xi32_fadd_param_1];
-; CHECK-DAG:  cvt.rn.f16.u32  [[C0:%h[0-9]+]], [[A0]];
-; CHECK-DAG:  cvt.rn.f16.u32  [[C1:%h[0-9]+]], [[A1]];
+; CHECK-DAG:  ld.param.b32    [[B:%r[0-9]+]], [test_uitofp_2xi32_fadd_param_1];
+; CHECK-DAG:  cvt.rn.f16.u32  [[C0:%rs[0-9]+]], [[A0]];
+; CHECK-DAG:  cvt.rn.f16.u32  [[C1:%rs[0-9]+]], [[A1]];
 
-; CHECK-F16-DAG:  mov.b32         [[C:%hh[0-9]+]], {[[C0]], [[C1]]}
-; CHECK-F16-DAG:  add.rn.f16x2    [[R:%hh[0-9]+]], [[B]], [[C]];
+; CHECK-F16-DAG:  mov.b32         [[C:%r[0-9]+]], {[[C0]], [[C1]]}
+; CHECK-F16-DAG:  add.rn.f16x2    [[R:%r[0-9]+]], [[B]], [[C]];
 ;
-; CHECK-NOF16-DAG:  mov.b32        {[[B0:%h[0-9]+]], [[B1:%h[0-9]+]]}, [[B]]
+; CHECK-NOF16-DAG:  mov.b32        {[[B0:%rs[0-9]+]], [[B1:%rs[0-9]+]]}, [[B]]
 ; CHECK-NOF16-DAG:  cvt.f32.f16    [[FB0:%f[0-9]+]], [[B0]]
 ; CHECK-NOF16-DAG:  cvt.f32.f16    [[FB1:%f[0-9]+]], [[B1]]
 ; CHECK-NOF16-DAG:  cvt.f32.f16    [[FC0:%f[0-9]+]], [[C0]]
 ; CHECK-NOF16-DAG:  cvt.f32.f16    [[FC1:%f[0-9]+]], [[C1]]
 ; CHECK-NOF16-DAG:  add.rn.f32     [[FR0:%f[0-9]+]], [[FB0]], [[FC0]];
 ; CHECK-NOF16-DAG:  add.rn.f32     [[FR1:%f[0-9]+]], [[FB1]], [[FC1]];
-; CHECK-NOF16-DAG:  cvt.rn.f16.f32 [[R0:%h[0-9]+]], [[FR0]]
-; CHECK-NOF16-DAG:  cvt.rn.f16.f32 [[R1:%h[0-9]+]], [[FR1]]
-; CHECK-NOF16:      mov.b32        [[R:%hh[0-9]+]], {[[R0]], [[R1]]}
+; CHECK-NOF16-DAG:  cvt.rn.f16.f32 [[R0:%rs[0-9]+]], [[FR0]]
+; CHECK-NOF16-DAG:  cvt.rn.f16.f32 [[R1:%rs[0-9]+]], [[FR1]]
+; CHECK-NOF16:      mov.b32        [[R:%r[0-9]+]], {[[R0]], [[R1]]}
 ;
 ; CHECK:      st.param.b32    [func_retval0+0], [[R]];
 ; CHECK:      ret;
@@ -921,23 +917,23 @@ define <2 x half> @test_uitofp_2xi32_fadd(<2 x i32> %a, <2 x half> %b) #0 {
 
 ; CHECK-LABEL: test_sitofp_2xi32_fadd(
 ; CHECK-DAG:  ld.param.v2.u32 {[[A0:%r[0-9]+]], [[A1:%r[0-9]+]]}, [test_sitofp_2xi32_fadd_param_0];
-; CHECK-DAG:  ld.param.b32    [[B:%hh[0-9]+]], [test_sitofp_2xi32_fadd_param_1];
-; CHECK-DAG:  cvt.rn.f16.s32  [[C0:%h[0-9]+]], [[A0]];
-; CHECK-DAG:  cvt.rn.f16.s32  [[C1:%h[0-9]+]], [[A1]];
+; CHECK-DAG:  ld.param.b32    [[B:%r[0-9]+]], [test_sitofp_2xi32_fadd_param_1];
+; CHECK-DAG:  cvt.rn.f16.s32  [[C0:%rs[0-9]+]], [[A0]];
+; CHECK-DAG:  cvt.rn.f16.s32  [[C1:%rs[0-9]+]], [[A1]];
 ;
-; CHECK-F16-DAG:  mov.b32         [[C:%hh[0-9]+]], {[[C0]], [[C1]]}
-; CHECK-F16-DAG:  add.rn.f16x2    [[R:%hh[0-9]+]], [[B]], [[C]];
+; CHECK-F16-DAG:  mov.b32         [[C:%r[0-9]+]], {[[C0]], [[C1]]}
+; CHECK-F16-DAG:  add.rn.f16x2    [[R:%r[0-9]+]], [[B]], [[C]];
 ;
-; CHECK-NOF16-DAG:  mov.b32        {[[B0:%h[0-9]+]], [[B1:%h[0-9]+]]}, [[B]]
+; CHECK-NOF16-DAG:  mov.b32        {[[B0:%rs[0-9]+]], [[B1:%rs[0-9]+]]}, [[B]]
 ; CHECK-NOF16-DAG:  cvt.f32.f16    [[FB0:%f[0-9]+]], [[B0]]
 ; CHECK-NOF16-DAG:  cvt.f32.f16    [[FB1:%f[0-9]+]], [[B1]]
 ; CHECK-NOF16-DAG:  cvt.f32.f16    [[FC0:%f[0-9]+]], [[C0]]
 ; CHECK-NOF16-DAG:  cvt.f32.f16    [[FC1:%f[0-9]+]], [[C1]]
 ; CHECK-NOF16-DAG:  add.rn.f32     [[FR0:%f[0-9]+]], [[FB0]], [[FC0]];
 ; CHECK-NOF16-DAG:  add.rn.f32     [[FR1:%f[0-9]+]], [[FB1]], [[FC1]];
-; CHECK-NOF16-DAG:  cvt.rn.f16.f32 [[R0:%h[0-9]+]], [[FR0]]
-; CHECK-NOF16-DAG:  cvt.rn.f16.f32 [[R1:%h[0-9]+]], [[FR1]]
-; CHECK-NOF16:      mov.b32        [[R:%hh[0-9]+]], {[[R0]], [[R1]]}
+; CHECK-NOF16-DAG:  cvt.rn.f16.f32 [[R0:%rs[0-9]+]], [[FR0]]
+; CHECK-NOF16-DAG:  cvt.rn.f16.f32 [[R1:%rs[0-9]+]], [[FR1]]
+; CHECK-NOF16:      mov.b32        [[R:%r[0-9]+]], {[[R0]], [[R1]]}
 ;
 ; CHECK:      st.param.b32    [func_retval0+0], [[R]];
 ; CHECK:      ret;
@@ -949,9 +945,9 @@ define <2 x half> @test_sitofp_2xi32_fadd(<2 x i32> %a, <2 x half> %b) #0 {
 
 ; CHECK-LABEL: test_fptrunc_2xfloat(
 ; CHECK:      ld.param.v2.f32 {[[A0:%f[0-9]+]], [[A1:%f[0-9]+]]}, [test_fptrunc_2xfloat_param_0];
-; CHECK-DAG:  cvt.rn.f16.f32  [[R0:%h[0-9]+]], [[A0]];
-; CHECK-DAG:  cvt.rn.f16.f32  [[R1:%h[0-9]+]], [[A1]];
-; CHECK:      mov.b32         [[R:%hh[0-9]+]], {[[R0]], [[R1]]}
+; CHECK-DAG:  cvt.rn.f16.f32  [[R0:%rs[0-9]+]], [[A0]];
+; CHECK-DAG:  cvt.rn.f16.f32  [[R1:%rs[0-9]+]], [[A1]];
+; CHECK:      mov.b32         [[R:%r[0-9]+]], {[[R0]], [[R1]]}
 ; CHECK:      st.param.b32    [func_retval0+0], [[R]];
 ; CHECK:      ret;
 define <2 x half> @test_fptrunc_2xfloat(<2 x float> %a) #0 {
@@ -961,9 +957,9 @@ define <2 x half> @test_fptrunc_2xfloat(<2 x float> %a) #0 {
 
 ; CHECK-LABEL: test_fptrunc_2xdouble(
 ; CHECK:      ld.param.v2.f64 {[[A0:%fd[0-9]+]], [[A1:%fd[0-9]+]]}, [test_fptrunc_2xdouble_param_0];
-; CHECK-DAG:  cvt.rn.f16.f64  [[R0:%h[0-9]+]], [[A0]];
-; CHECK-DAG:  cvt.rn.f16.f64  [[R1:%h[0-9]+]], [[A1]];
-; CHECK:      mov.b32         [[R:%hh[0-9]+]], {[[R0]], [[R1]]}
+; CHECK-DAG:  cvt.rn.f16.f64  [[R0:%rs[0-9]+]], [[A0]];
+; CHECK-DAG:  cvt.rn.f16.f64  [[R1:%rs[0-9]+]], [[A1]];
+; CHECK:      mov.b32         [[R:%r[0-9]+]], {[[R0]], [[R1]]}
 ; CHECK:      st.param.b32    [func_retval0+0], [[R]];
 ; CHECK:      ret;
 define <2 x half> @test_fptrunc_2xdouble(<2 x double> %a) #0 {
@@ -972,8 +968,8 @@ define <2 x half> @test_fptrunc_2xdouble(<2 x double> %a) #0 {
 }
 
 ; CHECK-LABEL: test_fpext_2xfloat(
-; CHECK:      ld.param.b32    [[A:%hh[0-9]+]], [test_fpext_2xfloat_param_0];
-; CHECK:      mov.b32         {[[A0:%h[0-9]+]], [[A1:%h[0-9]+]]}, [[A]]
+; CHECK:      ld.param.b32    [[A:%r[0-9]+]], [test_fpext_2xfloat_param_0];
+; CHECK:      mov.b32         {[[A0:%rs[0-9]+]], [[A1:%rs[0-9]+]]}, [[A]]
 ; CHECK-DAG:  cvt.f32.f16     [[R0:%f[0-9]+]], [[A0]];
 ; CHECK-DAG:  cvt.f32.f16     [[R1:%f[0-9]+]], [[A1]];
 ; CHECK-NEXT: st.param.v2.f32 [func_retval0+0], {[[R0]], [[R1]]};
@@ -984,8 +980,8 @@ define <2 x float> @test_fpext_2xfloat(<2 x half> %a) #0 {
 }
 
 ; CHECK-LABEL: test_fpext_2xdouble(
-; CHECK:      ld.param.b32    [[A:%hh[0-9]+]], [test_fpext_2xdouble_param_0];
-; CHECK:      mov.b32         {[[A0:%h[0-9]+]], [[A1:%h[0-9]+]]}, [[A]]
+; CHECK:      ld.param.b32    [[A:%r[0-9]+]], [test_fpext_2xdouble_param_0];
+; CHECK:      mov.b32         {[[A0:%rs[0-9]+]], [[A1:%rs[0-9]+]]}, [[A]]
 ; CHECK-DAG:  cvt.f64.f16     [[R0:%fd[0-9]+]], [[A0]];
 ; CHECK-DAG:  cvt.f64.f16     [[R1:%fd[0-9]+]], [[A1]];
 ; CHECK-NEXT: st.param.v2.f64 [func_retval0+0], {[[R0]], [[R1]]};
@@ -1012,8 +1008,7 @@ define <2 x i16> @test_bitcast_2xhalf_to_2xi16(<2 x half> %a) #0 {
 ; CHECK-DAG:  cvt.u32.u16     [[R0:%r[0-9]+]], [[RS0]];
 ; CHECK-DAG:  cvt.u32.u16     [[R1:%r[0-9]+]], [[RS1]];
 ; CHECK-DAG:  shl.b32         [[R1H:%r[0-9]+]], [[R1]], 16;
-; CHECK-DAG:  or.b32          [[R1H0L:%r[0-9]+]], [[R0]], [[R1H]];
-; CHECK:      mov.b32         [[R:%hh[0-9]+]], [[R1H0L]];
+; CHECK-DAG:  or.b32          [[R:%r[0-9]+]], [[R0]], [[R1H]];
 ; CHECK:      st.param.b32    [func_retval0+0], [[R]];
 ; CHECK:      ret;
 define <2 x half> @test_bitcast_2xi16_to_2xhalf(<2 x i16> %a) #0 {
@@ -1023,7 +1018,7 @@ define <2 x half> @test_bitcast_2xi16_to_2xhalf(<2 x i16> %a) #0 {
 
 ; CHECK-LABEL: test_bitcast_float_to_2xhalf(
 ; CHECK: ld.param.f32 	[[AF1:%f[0-9]+]], [test_bitcast_float_to_2xhalf_param_0];
-; CHECK: mov.b32 	[[R:%hh[0-9]+]], [[AF1]];
+; CHECK: mov.b32 	[[R:%r[0-9]+]], [[AF1]];
 ; CHECK: st.param.b32 	[func_retval0+0], [[R]];
 ; CHECK: ret;
 define <2 x half> @test_bitcast_float_to_2xhalf(float %a) #0 {
@@ -1066,15 +1061,15 @@ declare <2 x half> @llvm.roundeven.f16(<2 x half> %a) #0
 declare <2 x half> @llvm.fmuladd.f16(<2 x half> %a, <2 x half> %b, <2 x half> %c) #0
 
 ; CHECK-LABEL: test_sqrt(
-; CHECK:      ld.param.b32    [[A:%hh[0-9]+]], [test_sqrt_param_0];
-; CHECK:      mov.b32         {[[A0:%h[0-9]+]], [[A1:%h[0-9]+]]}, [[A]]
+; CHECK:      ld.param.b32    [[A:%r[0-9]+]], [test_sqrt_param_0];
+; CHECK:      mov.b32         {[[A0:%rs[0-9]+]], [[A1:%rs[0-9]+]]}, [[A]]
 ; CHECK-DAG:  cvt.f32.f16     [[AF0:%f[0-9]+]], [[A0]];
 ; CHECK-DAG:  cvt.f32.f16     [[AF1:%f[0-9]+]], [[A1]];
 ; CHECK-DAG:  sqrt.rn.f32     [[RF0:%f[0-9]+]], [[AF0]];
 ; CHECK-DAG:  sqrt.rn.f32     [[RF1:%f[0-9]+]], [[AF1]];
-; CHECK-DAG:  cvt.rn.f16.f32  [[R0:%h[0-9]+]], [[RF0]];
-; CHECK-DAG:  cvt.rn.f16.f32  [[R1:%h[0-9]+]], [[RF1]];
-; CHECK:      mov.b32         [[R:%hh[0-9]+]], {[[R0]], [[R1]]}
+; CHECK-DAG:  cvt.rn.f16.f32  [[R0:%rs[0-9]+]], [[RF0]];
+; CHECK-DAG:  cvt.rn.f16.f32  [[R1:%rs[0-9]+]], [[RF1]];
+; CHECK:      mov.b32         [[R:%r[0-9]+]], {[[R0]], [[R1]]}
 ; CHECK:      st.param.b32    [func_retval0+0], [[R]];
 ; CHECK:      ret;
 define <2 x half> @test_sqrt(<2 x half> %a) #0 {
@@ -1090,15 +1085,15 @@ define <2 x half> @test_sqrt(<2 x half> %a) #0 {
 ;}
 
 ; CHECK-LABEL: test_sin(
-; CHECK:      ld.param.b32    [[A:%hh[0-9]+]], [test_sin_param_0];
-; CHECK:      mov.b32         {[[A0:%h[0-9]+]], [[A1:%h[0-9]+]]}, [[A]]
+; CHECK:      ld.param.b32    [[A:%r[0-9]+]], [test_sin_param_0];
+; CHECK:      mov.b32         {[[A0:%rs[0-9]+]], [[A1:%rs[0-9]+]]}, [[A]]
 ; CHECK-DAG:  cvt.f32.f16     [[AF0:%f[0-9]+]], [[A0]];
 ; CHECK-DAG:  cvt.f32.f16     [[AF1:%f[0-9]+]], [[A1]];
 ; CHECK-DAG:  sin.approx.f32  [[RF0:%f[0-9]+]], [[AF0]];
 ; CHECK-DAG:  sin.approx.f32  [[RF1:%f[0-9]+]], [[AF1]];
-; CHECK-DAG:  cvt.rn.f16.f32  [[R0:%h[0-9]+]], [[RF0]];
-; CHECK-DAG:  cvt.rn.f16.f32  [[R1:%h[0-9]+]], [[RF1]];
-; CHECK:      mov.b32         [[R:%hh[0-9]+]], {[[R0]], [[R1]]}
+; CHECK-DAG:  cvt.rn.f16.f32  [[R0:%rs[0-9]+]], [[RF0]];
+; CHECK-DAG:  cvt.rn.f16.f32  [[R1:%rs[0-9]+]], [[RF1]];
+; CHECK:      mov.b32         [[R:%r[0-9]+]], {[[R0]], [[R1]]}
 ; CHECK:      st.param.b32    [func_retval0+0], [[R]];
 ; CHECK:      ret;
 define <2 x half> @test_sin(<2 x half> %a) #0 #1 {
@@ -1107,15 +1102,15 @@ define <2 x half> @test_sin(<2 x half> %a) #0 #1 {
 }
 
 ; CHECK-LABEL: test_cos(
-; CHECK:      ld.param.b32    [[A:%hh[0-9]+]], [test_cos_param_0];
-; CHECK:      mov.b32         {[[A0:%h[0-9]+]], [[A1:%h[0-9]+]]}, [[A]]
+; CHECK:      ld.param.b32    [[A:%r[0-9]+]], [test_cos_param_0];
+; CHECK:      mov.b32         {[[A0:%rs[0-9]+]], [[A1:%rs[0-9]+]]}, [[A]]
 ; CHECK-DAG:  cvt.f32.f16     [[AF0:%f[0-9]+]], [[A0]];
 ; CHECK-DAG:  cvt.f32.f16     [[AF1:%f[0-9]+]], [[A1]];
 ; CHECK-DAG:  cos.approx.f32  [[RF0:%f[0-9]+]], [[AF0]];
 ; CHECK-DAG:  cos.approx.f32  [[RF1:%f[0-9]+]], [[AF1]];
-; CHECK-DAG:  cvt.rn.f16.f32  [[R0:%h[0-9]+]], [[RF0]];
-; CHECK-DAG:  cvt.rn.f16.f32  [[R1:%h[0-9]+]], [[RF1]];
-; CHECK:      mov.b32         [[R:%hh[0-9]+]], {[[R0]], [[R1]]}
+; CHECK-DAG:  cvt.rn.f16.f32  [[R0:%rs[0-9]+]], [[RF0]];
+; CHECK-DAG:  cvt.rn.f16.f32  [[R1:%rs[0-9]+]], [[RF1]];
+; CHECK:      mov.b32         [[R:%r[0-9]+]], {[[R0]], [[R1]]}
 ; CHECK:      st.param.b32    [func_retval0+0], [[R]];
 ; CHECK:      ret;
 define <2 x half> @test_cos(<2 x half> %a) #0 #1 {
@@ -1166,15 +1161,15 @@ define <2 x half> @test_cos(<2 x half> %a) #0 #1 {
 ;}
 
 ; CHECK-LABEL: test_fma(
-; CHECK-DAG:  ld.param.b32    [[A:%hh[0-9]+]], [test_fma_param_0];
-; CHECK-DAG:  ld.param.b32    [[B:%hh[0-9]+]], [test_fma_param_1];
-; CHECK-DAG:  ld.param.b32    [[C:%hh[0-9]+]], [test_fma_param_2];
+; CHECK-DAG:  ld.param.b32    [[A:%r[0-9]+]], [test_fma_param_0];
+; CHECK-DAG:  ld.param.b32    [[B:%r[0-9]+]], [test_fma_param_1];
+; CHECK-DAG:  ld.param.b32    [[C:%r[0-9]+]], [test_fma_param_2];
 ;
-; CHECK-F16:        fma.rn.f16x2   [[R:%hh[0-9]+]], [[A]], [[B]], [[C]];
+; CHECK-F16:        fma.rn.f16x2   [[R:%r[0-9]+]], [[A]], [[B]], [[C]];
 ;
-; CHECK-NOF16-DAG:  mov.b32        {[[A0:%h[0-9]+]], [[A1:%h[0-9]+]]}, [[A]]
-; CHECK-NOF16-DAG:  mov.b32        {[[B0:%h[0-9]+]], [[B1:%h[0-9]+]]}, [[B]]
-; CHECK-NOF16-DAG:  mov.b32        {[[C0:%h[0-9]+]], [[C1:%h[0-9]+]]}, [[C]]
+; CHECK-NOF16-DAG:  mov.b32        {[[A0:%rs[0-9]+]], [[A1:%rs[0-9]+]]}, [[A]]
+; CHECK-NOF16-DAG:  mov.b32        {[[B0:%rs[0-9]+]], [[B1:%rs[0-9]+]]}, [[B]]
+; CHECK-NOF16-DAG:  mov.b32        {[[C0:%rs[0-9]+]], [[C1:%rs[0-9]+]]}, [[C]]
 ; CHECK-NOF16-DAG:  cvt.f32.f16    [[FA0:%f[0-9]+]], [[A0]]
 ; CHECK-NOF16-DAG:  cvt.f32.f16    [[FB0:%f[0-9]+]], [[B0]]
 ; CHECK-NOF16-DAG:  cvt.f32.f16    [[FC0:%f[0-9]+]], [[C0]]
@@ -1183,9 +1178,9 @@ define <2 x half> @test_cos(<2 x half> %a) #0 #1 {
 ; CHECK-NOF16-DAG:  cvt.f32.f16    [[FC0:%f[0-9]+]], [[C0]]
 ; CHECK-NOF16-DAG:  fma.rn.f32     [[FR0:%f[0-9]+]], [[FA0]], [[FB0]], [[FC0]];
 ; CHECK-NOF16-DAG:  fma.rn.f32     [[FR1:%f[0-9]+]], [[FA1]], [[FB1]], [[FC1]];
-; CHECK-NOF16-DAG:  cvt.rn.f16.f32 [[R0:%h[0-9]+]], [[FR0]]
-; CHECK-NOF16-DAG:  cvt.rn.f16.f32 [[R1:%h[0-9]+]], [[FR1]]
-; CHECK-NOF16:      mov.b32        [[R:%hh[0-9]+]], {[[R0]], [[R1]]}
+; CHECK-NOF16-DAG:  cvt.rn.f16.f32 [[R0:%rs[0-9]+]], [[FR0]]
+; CHECK-NOF16-DAG:  cvt.rn.f16.f32 [[R1:%rs[0-9]+]], [[FR1]]
+; CHECK-NOF16:      mov.b32        [[R:%r[0-9]+]], {[[R0]], [[R1]]}
 
 ; CHECK:      st.param.b32    [func_retval0+0], [[R]];
 ; CHECK:      ret
@@ -1195,15 +1190,15 @@ define <2 x half> @test_fma(<2 x half> %a, <2 x half> %b, <2 x half> %c) #0 {
 }
 
 ; CHECK-LABEL: test_fabs(
-; CHECK:      ld.param.b32    [[A:%hh[0-9]+]], [test_fabs_param_0];
-; CHECK:      mov.b32         {[[A0:%h[0-9]+]], [[A1:%h[0-9]+]]}, [[A]]
+; CHECK:      ld.param.b32    [[A:%r[0-9]+]], [test_fabs_param_0];
+; CHECK:      mov.b32         {[[A0:%rs[0-9]+]], [[A1:%rs[0-9]+]]}, [[A]]
 ; CHECK-DAG:  cvt.f32.f16     [[AF0:%f[0-9]+]], [[A0]];
 ; CHECK-DAG:  cvt.f32.f16     [[AF1:%f[0-9]+]], [[A1]];
 ; CHECK-DAG:  abs.f32         [[RF0:%f[0-9]+]], [[AF0]];
 ; CHECK-DAG:  abs.f32         [[RF1:%f[0-9]+]], [[AF1]];
-; CHECK-DAG:  cvt.rn.f16.f32  [[R0:%h[0-9]+]], [[RF0]];
-; CHECK-DAG:  cvt.rn.f16.f32  [[R1:%h[0-9]+]], [[RF1]];
-; CHECK:      mov.b32         [[R:%hh[0-9]+]], {[[R0]], [[R1]]}
+; CHECK-DAG:  cvt.rn.f16.f32  [[R0:%rs[0-9]+]], [[RF0]];
+; CHECK-DAG:  cvt.rn.f16.f32  [[R1:%rs[0-9]+]], [[RF1]];
+; CHECK:      mov.b32         [[R:%r[0-9]+]], {[[R0]], [[R1]]}
 ; CHECK:      st.param.b32    [func_retval0+0], [[R]];
 ; CHECK:      ret;
 define <2 x half> @test_fabs(<2 x half> %a) #0 {
@@ -1212,19 +1207,19 @@ define <2 x half> @test_fabs(<2 x half> %a) #0 {
 }
 
 ; CHECK-LABEL: test_minnum(
-; CHECK-DAG:  ld.param.b32    [[A:%hh[0-9]+]], [test_minnum_param_0];
-; CHECK-DAG:  ld.param.b32    [[B:%hh[0-9]+]], [test_minnum_param_1];
-; CHECK-DAG:  mov.b32         {[[A0:%h[0-9]+]], [[A1:%h[0-9]+]]}, [[A]]
-; CHECK-DAG:  mov.b32         {[[B0:%h[0-9]+]], [[B1:%h[0-9]+]]}, [[B]]
+; CHECK-DAG:  ld.param.b32    [[A:%r[0-9]+]], [test_minnum_param_0];
+; CHECK-DAG:  ld.param.b32    [[B:%r[0-9]+]], [test_minnum_param_1];
+; CHECK-DAG:  mov.b32         {[[A0:%rs[0-9]+]], [[A1:%rs[0-9]+]]}, [[A]]
+; CHECK-DAG:  mov.b32         {[[B0:%rs[0-9]+]], [[B1:%rs[0-9]+]]}, [[B]]
 ; CHECK-DAG:  cvt.f32.f16     [[AF0:%f[0-9]+]], [[A0]];
 ; CHECK-DAG:  cvt.f32.f16     [[AF1:%f[0-9]+]], [[A1]];
 ; CHECK-DAG:  cvt.f32.f16     [[BF0:%f[0-9]+]], [[B0]];
 ; CHECK-DAG:  cvt.f32.f16     [[BF1:%f[0-9]+]], [[B1]];
 ; CHECK-DAG:  min.f32         [[RF0:%f[0-9]+]], [[AF0]], [[BF0]];
 ; CHECK-DAG:  min.f32         [[RF1:%f[0-9]+]], [[AF1]], [[BF1]];
-; CHECK-DAG:  cvt.rn.f16.f32  [[R0:%h[0-9]+]], [[RF0]];
-; CHECK-DAG:  cvt.rn.f16.f32  [[R1:%h[0-9]+]], [[RF1]];
-; CHECK:      mov.b32         [[R:%hh[0-9]+]], {[[R0]], [[R1]]}
+; CHECK-DAG:  cvt.rn.f16.f32  [[R0:%rs[0-9]+]], [[RF0]];
+; CHECK-DAG:  cvt.rn.f16.f32  [[R1:%rs[0-9]+]], [[RF1]];
+; CHECK:      mov.b32         [[R:%r[0-9]+]], {[[R0]], [[R1]]}
 ; CHECK:      st.param.b32    [func_retval0+0], [[R]];
 ; CHECK:      ret;
 define <2 x half> @test_minnum(<2 x half> %a, <2 x half> %b) #0 {
@@ -1233,19 +1228,19 @@ define <2 x half> @test_minnum(<2 x half> %a, <2 x half> %b) #0 {
 }
 
 ; CHECK-LABEL: test_maxnum(
-; CHECK-DAG:  ld.param.b32    [[A:%hh[0-9]+]], [test_maxnum_param_0];
-; CHECK-DAG:  ld.param.b32    [[B:%hh[0-9]+]], [test_maxnum_param_1];
-; CHECK-DAG:  mov.b32         {[[A0:%h[0-9]+]], [[A1:%h[0-9]+]]}, [[A]]
-; CHECK-DAG:  mov.b32         {[[B0:%h[0-9]+]], [[B1:%h[0-9]+]]}, [[B]]
+; CHECK-DAG:  ld.param.b32    [[A:%r[0-9]+]], [test_maxnum_param_0];
+; CHECK-DAG:  ld.param.b32    [[B:%r[0-9]+]], [test_maxnum_param_1];
+; CHECK-DAG:  mov.b32         {[[A0:%rs[0-9]+]], [[A1:%rs[0-9]+]]}, [[A]]
+; CHECK-DAG:  mov.b32         {[[B0:%rs[0-9]+]], [[B1:%rs[0-9]+]]}, [[B]]
 ; CHECK-DAG:  cvt.f32.f16     [[AF0:%f[0-9]+]], [[A0]];
 ; CHECK-DAG:  cvt.f32.f16     [[AF1:%f[0-9]+]], [[A1]];
 ; CHECK-DAG:  cvt.f32.f16     [[BF0:%f[0-9]+]], [[B0]];
 ; CHECK-DAG:  cvt.f32.f16     [[BF1:%f[0-9]+]], [[B1]];
 ; CHECK-DAG:  max.f32         [[RF0:%f[0-9]+]], [[AF0]], [[BF0]];
 ; CHECK-DAG:  max.f32         [[RF1:%f[0-9]+]], [[AF1]], [[BF1]];
-; CHECK-DAG:  cvt.rn.f16.f32  [[R0:%h[0-9]+]], [[RF0]];
-; CHECK-DAG:  cvt.rn.f16.f32  [[R1:%h[0-9]+]], [[RF1]];
-; CHECK:      mov.b32         [[R:%hh[0-9]+]], {[[R0]], [[R1]]}
+; CHECK-DAG:  cvt.rn.f16.f32  [[R0:%rs[0-9]+]], [[RF0]];
+; CHECK-DAG:  cvt.rn.f16.f32  [[R1:%rs[0-9]+]], [[RF1]];
+; CHECK:      mov.b32         [[R:%r[0-9]+]], {[[R0]], [[R1]]}
 ; CHECK:      st.param.b32    [func_retval0+0], [[R]];
 ; CHECK:      ret;
 define <2 x half> @test_maxnum(<2 x half> %a, <2 x half> %b) #0 {
@@ -1254,23 +1249,17 @@ define <2 x half> @test_maxnum(<2 x half> %a, <2 x half> %b) #0 {
 }
 
 ; CHECK-LABEL: test_copysign(
-; CHECK-DAG:  ld.param.b32    [[A:%hh[0-9]+]], [test_copysign_param_0];
-; CHECK-DAG:  ld.param.b32    [[B:%hh[0-9]+]], [test_copysign_param_1];
-; CHECK-DAG:  mov.b32         {[[A0:%h[0-9]+]], [[A1:%h[0-9]+]]}, [[A]]
-; CHECK-DAG:  mov.b32         {[[B0:%h[0-9]+]], [[B1:%h[0-9]+]]}, [[B]]
-; CHECK-DAG:  mov.b16         [[AS0:%rs[0-9]+]], [[A0]];
-; CHECK-DAG:  mov.b16         [[AS1:%rs[0-9]+]], [[A1]];
-; CHECK-DAG:  mov.b16         [[BS0:%rs[0-9]+]], [[B0]];
-; CHECK-DAG:  mov.b16         [[BS1:%rs[0-9]+]], [[B1]];
-; CHECK-DAG:  and.b16         [[AX0:%rs[0-9]+]], [[AS0]], 32767;
-; CHECK-DAG:  and.b16         [[AX1:%rs[0-9]+]], [[AS1]], 32767;
-; CHECK-DAG:  and.b16         [[BX0:%rs[0-9]+]], [[BS0]], -32768;
-; CHECK-DAG:  and.b16         [[BX1:%rs[0-9]+]], [[BS1]], -32768;
-; CHECK-DAG:  or.b16          [[RS0:%rs[0-9]+]], [[AX0]], [[BX0]];
-; CHECK-DAG:  or.b16          [[RS1:%rs[0-9]+]], [[AX1]], [[BX1]];
-; CHECK-DAG:  mov.b16         [[R0:%h[0-9]+]], [[RS0]];
-; CHECK-DAG:  mov.b16         [[R1:%h[0-9]+]], [[RS1]];
-; CHECK-DAG:  mov.b32         [[R:%hh[0-9]+]], {[[R0]], [[R1]]}
+; CHECK-DAG:  ld.param.b32    [[A:%r[0-9]+]], [test_copysign_param_0];
+; CHECK-DAG:  ld.param.b32    [[B:%r[0-9]+]], [test_copysign_param_1];
+; CHECK-DAG:  mov.b32         {[[A0:%rs[0-9]+]], [[A1:%rs[0-9]+]]}, [[A]]
+; CHECK-DAG:  mov.b32         {[[B0:%rs[0-9]+]], [[B1:%rs[0-9]+]]}, [[B]]
+; CHECK-DAG:  and.b16         [[AX0:%rs[0-9]+]], [[A0]], 32767;
+; CHECK-DAG:  and.b16         [[AX1:%rs[0-9]+]], [[A1]], 32767;
+; CHECK-DAG:  and.b16         [[BX0:%rs[0-9]+]], [[B0]], -32768;
+; CHECK-DAG:  and.b16         [[BX1:%rs[0-9]+]], [[B1]], -32768;
+; CHECK-DAG:  or.b16          [[R0:%rs[0-9]+]], [[AX0]], [[BX0]];
+; CHECK-DAG:  or.b16          [[R1:%rs[0-9]+]], [[AX1]], [[BX1]];
+; CHECK-DAG:  mov.b32         [[R:%r[0-9]+]], {[[R0]], [[R1]]}
 ; CHECK:      st.param.b32    [func_retval0+0], [[R]];
 ; CHECK:      ret;
 define <2 x half> @test_copysign(<2 x half> %a, <2 x half> %b) #0 {
@@ -1279,24 +1268,20 @@ define <2 x half> @test_copysign(<2 x half> %a, <2 x half> %b) #0 {
 }
 
 ; CHECK-LABEL: test_copysign_f32(
-; CHECK-DAG:  ld.param.b32    [[A:%hh[0-9]+]], [test_copysign_f32_param_0];
+; CHECK-DAG:  ld.param.b32    [[A:%r[0-9]+]], [test_copysign_f32_param_0];
 ; CHECK-DAG:  ld.param.v2.f32 {[[B0:%f[0-9]+]], [[B1:%f[0-9]+]]}, [test_copysign_f32_param_1];
-; CHECK-DAG:  mov.b32         {[[A0:%h[0-9]+]], [[A1:%h[0-9]+]]}, [[A]]
-; CHECK-DAG:  mov.b16         [[AS0:%rs[0-9]+]], [[A0]];
-; CHECK-DAG:  mov.b16         [[AS1:%rs[0-9]+]], [[A1]];
+; CHECK-DAG:  mov.b32         {[[A0:%rs[0-9]+]], [[A1:%rs[0-9]+]]}, [[A]]
 ; CHECK-DAG:  mov.b32         [[BI0:%r[0-9]+]], [[B0]];
 ; CHECK-DAG:  mov.b32         [[BI1:%r[0-9]+]], [[B1]];
-; CHECK-DAG:  and.b16         [[AI0:%rs[0-9]+]], [[AS0]], 32767;
-; CHECK-DAG:  and.b16         [[AI1:%rs[0-9]+]], [[AS1]], 32767;
+; CHECK-DAG:  and.b16         [[AI0:%rs[0-9]+]], [[A0]], 32767;
+; CHECK-DAG:  and.b16         [[AI1:%rs[0-9]+]], [[A1]], 32767;
 ; CHECK-DAG:  and.b32         [[BX0:%r[0-9]+]], [[BI0]], -2147483648;
 ; CHECK-DAG:  and.b32         [[BX1:%r[0-9]+]], [[BI1]], -2147483648;
 ; CHECK-DAG:  mov.b32         {tmp, [[BZ0:%rs[0-9]+]]}, [[BX0]]; }
 ; CHECK-DAG:  mov.b32         {tmp, [[BZ1:%rs[0-9]+]]}, [[BX1]]; }
-; CHECK-DAG:  or.b16          [[RS0:%rs[0-9]+]], [[AI0]], [[BZ0]];
-; CHECK-DAG:  or.b16          [[RS1:%rs[0-9]+]], [[AI1]], [[BZ1]];
-; CHECK-DAG:  mov.b16         [[R0:%h[0-9]+]], [[RS0]];
-; CHECK-DAG:  mov.b16         [[R1:%h[0-9]+]], [[RS1]];
-; CHECK-DAG:  mov.b32         [[R:%hh[0-9]+]], {[[R0]], [[R1]]}
+; CHECK-DAG:  or.b16          [[R0:%rs[0-9]+]], [[AI0]], [[BZ0]];
+; CHECK-DAG:  or.b16          [[R1:%rs[0-9]+]], [[AI1]], [[BZ1]];
+; CHECK-DAG:  mov.b32         [[R:%r[0-9]+]], {[[R0]], [[R1]]}
 ; CHECK:      st.param.b32    [func_retval0+0], [[R]];
 ; CHECK:      ret;
 define <2 x half> @test_copysign_f32(<2 x half> %a, <2 x float> %b) #0 {
@@ -1306,26 +1291,22 @@ define <2 x half> @test_copysign_f32(<2 x half> %a, <2 x float> %b) #0 {
 }
 
 ; CHECK-LABEL: test_copysign_f64(
-; CHECK-DAG:  ld.param.b32    [[A:%hh[0-9]+]], [test_copysign_f64_param_0];
+; CHECK-DAG:  ld.param.b32    [[A:%r[0-9]+]], [test_copysign_f64_param_0];
 ; CHECK-DAG:  ld.param.v2.f64 {[[B0:%fd[0-9]+]], [[B1:%fd[0-9]+]]}, [test_copysign_f64_param_1];
-; CHECK-DAG:  mov.b32         {[[A0:%h[0-9]+]], [[A1:%h[0-9]+]]}, [[A]]
-; CHECK-DAG:  mov.b16         [[AS0:%rs[0-9]+]], [[A0]];
-; CHECK-DAG:  mov.b16         [[AS1:%rs[0-9]+]], [[A1]];
+; CHECK-DAG:  mov.b32         {[[A0:%rs[0-9]+]], [[A1:%rs[0-9]+]]}, [[A]]
 ; CHECK-DAG:  mov.b64         [[BI0:%rd[0-9]+]], [[B0]];
 ; CHECK-DAG:  mov.b64         [[BI1:%rd[0-9]+]], [[B1]];
-; CHECK-DAG:  and.b16         [[AI0:%rs[0-9]+]], [[AS0]], 32767;
-; CHECK-DAG:  and.b16         [[AI1:%rs[0-9]+]], [[AS1]], 32767;
+; CHECK-DAG:  and.b16         [[AI0:%rs[0-9]+]], [[A0]], 32767;
+; CHECK-DAG:  and.b16         [[AI1:%rs[0-9]+]], [[A1]], 32767;
 ; CHECK-DAG:  and.b64         [[BX0:%rd[0-9]+]], [[BI0]], -9223372036854775808;
 ; CHECK-DAG:  and.b64         [[BX1:%rd[0-9]+]], [[BI1]], -9223372036854775808;
 ; CHECK-DAG:  shr.u64         [[BY0:%rd[0-9]+]], [[BX0]], 48;
 ; CHECK-DAG:  shr.u64         [[BY1:%rd[0-9]+]], [[BX1]], 48;
 ; CHECK-DAG:  cvt.u16.u64     [[BZ0:%rs[0-9]+]], [[BY0]];
 ; CHECK-DAG:  cvt.u16.u64     [[BZ1:%rs[0-9]+]], [[BY1]];
-; CHECK-DAG:  or.b16          [[RS0:%rs[0-9]+]], [[AI0]], [[BZ0]];
-; CHECK-DAG:  or.b16          [[RS1:%rs[0-9]+]], [[AI1]], [[BZ1]];
-; CHECK-DAG:  mov.b16         [[R0:%h[0-9]+]], [[RS0]];
-; CHECK-DAG:  mov.b16         [[R1:%h[0-9]+]], [[RS1]];
-; CHECK-DAG:  mov.b32         [[R:%hh[0-9]+]], {[[R0]], [[R1]]}
+; CHECK-DAG:  or.b16          [[R0:%rs[0-9]+]], [[AI0]], [[BZ0]];
+; CHECK-DAG:  or.b16          [[R1:%rs[0-9]+]], [[AI1]], [[BZ1]];
+; CHECK-DAG:  mov.b32         [[R:%r[0-9]+]], {[[R0]], [[R1]]}
 ; CHECK:      st.param.b32    [func_retval0+0], [[R]];
 ; CHECK:      ret;
 define <2 x half> @test_copysign_f64(<2 x half> %a, <2 x double> %b) #0 {
@@ -1335,24 +1316,18 @@ define <2 x half> @test_copysign_f64(<2 x half> %a, <2 x double> %b) #0 {
 }
 
 ; CHECK-LABEL: test_copysign_extended(
-; CHECK-DAG:  ld.param.b32    [[A:%hh[0-9]+]], [test_copysign_extended_param_0];
-; CHECK-DAG:  ld.param.b32    [[B:%hh[0-9]+]], [test_copysign_extended_param_1];
-; CHECK-DAG:  mov.b32         {[[A0:%h[0-9]+]], [[A1:%h[0-9]+]]}, [[A]]
-; CHECK-DAG:  mov.b32         {[[B0:%h[0-9]+]], [[B1:%h[0-9]+]]}, [[B]]
-; CHECK-DAG:  mov.b16         [[AS0:%rs[0-9]+]], [[A0]];
-; CHECK-DAG:  mov.b16         [[AS1:%rs[0-9]+]], [[A1]];
-; CHECK-DAG:  mov.b16         [[BS0:%rs[0-9]+]], [[B0]];
-; CHECK-DAG:  mov.b16         [[BS1:%rs[0-9]+]], [[B1]];
-; CHECK-DAG:  and.b16         [[AX0:%rs[0-9]+]], [[AS0]], 32767;
-; CHECK-DAG:  and.b16         [[AX1:%rs[0-9]+]], [[AS1]], 32767;
-; CHECK-DAG:  and.b16         [[BX0:%rs[0-9]+]], [[BS0]], -32768;
-; CHECK-DAG:  and.b16         [[BX1:%rs[0-9]+]], [[BS1]], -32768;
-; CHECK-DAG:  or.b16          [[RS0:%rs[0-9]+]], [[AX0]], [[BX0]];
-; CHECK-DAG:  or.b16          [[RS1:%rs[0-9]+]], [[AX1]], [[BX1]];
-; CHECK-DAG:  mov.b16         [[R0:%h[0-9]+]], [[RS0]];
-; CHECK-DAG:  mov.b16         [[R1:%h[0-9]+]], [[RS1]];
-; CHECK-DAG:  mov.b32         [[R:%hh[0-9]+]], {[[R0]], [[R1]]}
-; CHECK:      mov.b32         {[[RX0:%h[0-9]+]], [[RX1:%h[0-9]+]]}, [[R]]
+; CHECK-DAG:  ld.param.b32    [[A:%r[0-9]+]], [test_copysign_extended_param_0];
+; CHECK-DAG:  ld.param.b32    [[B:%r[0-9]+]], [test_copysign_extended_param_1];
+; CHECK-DAG:  mov.b32         {[[A0:%rs[0-9]+]], [[A1:%rs[0-9]+]]}, [[A]]
+; CHECK-DAG:  mov.b32         {[[B0:%rs[0-9]+]], [[B1:%rs[0-9]+]]}, [[B]]
+; CHECK-DAG:  and.b16         [[AX0:%rs[0-9]+]], [[A0]], 32767;
+; CHECK-DAG:  and.b16         [[AX1:%rs[0-9]+]], [[A1]], 32767;
+; CHECK-DAG:  and.b16         [[BX0:%rs[0-9]+]], [[B0]], -32768;
+; CHECK-DAG:  and.b16         [[BX1:%rs[0-9]+]], [[B1]], -32768;
+; CHECK-DAG:  or.b16          [[R0:%rs[0-9]+]], [[AX0]], [[BX0]];
+; CHECK-DAG:  or.b16          [[R1:%rs[0-9]+]], [[AX1]], [[BX1]];
+; CHECK-DAG:  mov.b32         [[R:%r[0-9]+]], {[[R0]], [[R1]]}
+; CHECK:      mov.b32         {[[RX0:%rs[0-9]+]], [[RX1:%rs[0-9]+]]}, [[R]]
 ; CHECK-DAG:  cvt.f32.f16     [[XR0:%f[0-9]+]], [[RX0]];
 ; CHECK-DAG:  cvt.f32.f16     [[XR1:%f[0-9]+]], [[RX1]];
 ; CHECK:      st.param.v2.f32 [func_retval0+0], {[[XR0]], [[XR1]]};
@@ -1364,11 +1339,11 @@ define <2 x float> @test_copysign_extended(<2 x half> %a, <2 x half> %b) #0 {
 }
 
 ; CHECK-LABEL: test_floor(
-; CHECK:      ld.param.b32    [[A:%hh[0-9]+]], [test_floor_param_0];
-; CHECK-DAG:  mov.b32         {[[A0:%h[0-9]+]], [[A1:%h[0-9]+]]}, [[A]];
-; CHECK-DAG:  cvt.rmi.f16.f16 [[R1:%h[0-9]+]], [[A1]];
-; CHECK-DAG:  cvt.rmi.f16.f16 [[R0:%h[0-9]+]], [[A0]];
-; CHECK:      mov.b32         [[R:%hh[0-9]+]], {[[R0]], [[R1]]}
+; CHECK:      ld.param.b32    [[A:%r[0-9]+]], [test_floor_param_0];
+; CHECK-DAG:  mov.b32         {[[A0:%rs[0-9]+]], [[A1:%rs[0-9]+]]}, [[A]];
+; CHECK-DAG:  cvt.rmi.f16.f16 [[R1:%rs[0-9]+]], [[A1]];
+; CHECK-DAG:  cvt.rmi.f16.f16 [[R0:%rs[0-9]+]], [[A0]];
+; CHECK:      mov.b32         [[R:%r[0-9]+]], {[[R0]], [[R1]]}
 ; CHECK:      st.param.b32    [func_retval0+0], [[R]];
 ; CHECK:      ret;
 define <2 x half> @test_floor(<2 x half> %a) #0 {
@@ -1377,11 +1352,11 @@ define <2 x half> @test_floor(<2 x half> %a) #0 {
 }
 
 ; CHECK-LABEL: test_ceil(
-; CHECK:      ld.param.b32    [[A:%hh[0-9]+]], [test_ceil_param_0];
-; CHECK-DAG:  mov.b32         {[[A0:%h[0-9]+]], [[A1:%h[0-9]+]]}, [[A]];
-; CHECK-DAG:  cvt.rpi.f16.f16 [[R1:%h[0-9]+]], [[A1]];
-; CHECK-DAG:  cvt.rpi.f16.f16 [[R0:%h[0-9]+]], [[A0]];
-; CHECK:      mov.b32         [[R:%hh[0-9]+]], {[[R0]], [[R1]]}
+; CHECK:      ld.param.b32    [[A:%r[0-9]+]], [test_ceil_param_0];
+; CHECK-DAG:  mov.b32         {[[A0:%rs[0-9]+]], [[A1:%rs[0-9]+]]}, [[A]];
+; CHECK-DAG:  cvt.rpi.f16.f16 [[R1:%rs[0-9]+]], [[A1]];
+; CHECK-DAG:  cvt.rpi.f16.f16 [[R0:%rs[0-9]+]], [[A0]];
+; CHECK:      mov.b32         [[R:%r[0-9]+]], {[[R0]], [[R1]]}
 ; CHECK:      st.param.b32    [func_retval0+0], [[R]];
 ; CHECK:      ret;
 define <2 x half> @test_ceil(<2 x half> %a) #0 {
@@ -1390,11 +1365,11 @@ define <2 x half> @test_ceil(<2 x half> %a) #0 {
 }
 
 ; CHECK-LABEL: test_trunc(
-; CHECK:      ld.param.b32    [[A:%hh[0-9]+]], [test_trunc_param_0];
-; CHECK-DAG:  mov.b32         {[[A0:%h[0-9]+]], [[A1:%h[0-9]+]]}, [[A]];
-; CHECK-DAG:  cvt.rzi.f16.f16 [[R1:%h[0-9]+]], [[A1]];
-; CHECK-DAG:  cvt.rzi.f16.f16 [[R0:%h[0-9]+]], [[A0]];
-; CHECK:      mov.b32         [[R:%hh[0-9]+]], {[[R0]], [[R1]]}
+; CHECK:      ld.param.b32    [[A:%r[0-9]+]], [test_trunc_param_0];
+; CHECK-DAG:  mov.b32         {[[A0:%rs[0-9]+]], [[A1:%rs[0-9]+]]}, [[A]];
+; CHECK-DAG:  cvt.rzi.f16.f16 [[R1:%rs[0-9]+]], [[A1]];
+; CHECK-DAG:  cvt.rzi.f16.f16 [[R0:%rs[0-9]+]], [[A0]];
+; CHECK:      mov.b32         [[R:%r[0-9]+]], {[[R0]], [[R1]]}
 ; CHECK:      st.param.b32    [func_retval0+0], [[R]];
 ; CHECK:      ret;
 define <2 x half> @test_trunc(<2 x half> %a) #0 {
@@ -1403,11 +1378,11 @@ define <2 x half> @test_trunc(<2 x half> %a) #0 {
 }
 
 ; CHECK-LABEL: test_rint(
-; CHECK:      ld.param.b32    [[A:%hh[0-9]+]], [test_rint_param_0];
-; CHECK-DAG:  mov.b32         {[[A0:%h[0-9]+]], [[A1:%h[0-9]+]]}, [[A]];
-; CHECK-DAG:  cvt.rni.f16.f16 [[R1:%h[0-9]+]], [[A1]];
-; CHECK-DAG:  cvt.rni.f16.f16 [[R0:%h[0-9]+]], [[A0]];
-; CHECK:      mov.b32         [[R:%hh[0-9]+]], {[[R0]], [[R1]]}
+; CHECK:      ld.param.b32    [[A:%r[0-9]+]], [test_rint_param_0];
+; CHECK-DAG:  mov.b32         {[[A0:%rs[0-9]+]], [[A1:%rs[0-9]+]]}, [[A]];
+; CHECK-DAG:  cvt.rni.f16.f16 [[R1:%rs[0-9]+]], [[A1]];
+; CHECK-DAG:  cvt.rni.f16.f16 [[R0:%rs[0-9]+]], [[A0]];
+; CHECK:      mov.b32         [[R:%r[0-9]+]], {[[R0]], [[R1]]}
 ; CHECK:      st.param.b32    [func_retval0+0], [[R]];
 ; CHECK:      ret;
 define <2 x half> @test_rint(<2 x half> %a) #0 {
@@ -1416,11 +1391,11 @@ define <2 x half> @test_rint(<2 x half> %a) #0 {
 }
 
 ; CHECK-LABEL: test_nearbyint(
-; CHECK:      ld.param.b32    [[A:%hh[0-9]+]], [test_nearbyint_param_0];
-; CHECK-DAG:  mov.b32         {[[A0:%h[0-9]+]], [[A1:%h[0-9]+]]}, [[A]];
-; CHECK-DAG:  cvt.rni.f16.f16 [[R1:%h[0-9]+]], [[A1]];
-; CHECK-DAG:  cvt.rni.f16.f16 [[R0:%h[0-9]+]], [[A0]];
-; CHECK:      mov.b32         [[R:%hh[0-9]+]], {[[R0]], [[R1]]}
+; CHECK:      ld.param.b32    [[A:%r[0-9]+]], [test_nearbyint_param_0];
+; CHECK-DAG:  mov.b32         {[[A0:%rs[0-9]+]], [[A1:%rs[0-9]+]]}, [[A]];
+; CHECK-DAG:  cvt.rni.f16.f16 [[R1:%rs[0-9]+]], [[A1]];
+; CHECK-DAG:  cvt.rni.f16.f16 [[R0:%rs[0-9]+]], [[A0]];
+; CHECK:      mov.b32         [[R:%r[0-9]+]], {[[R0]], [[R1]]}
 ; CHECK:      st.param.b32    [func_retval0+0], [[R]];
 ; CHECK:      ret;
 define <2 x half> @test_nearbyint(<2 x half> %a) #0 {
@@ -1429,11 +1404,11 @@ define <2 x half> @test_nearbyint(<2 x half> %a) #0 {
 }
 
 ; CHECK-LABEL: test_roundeven(
-; CHECK:      ld.param.b32    [[A:%hh[0-9]+]], [test_roundeven_param_0];
-; CHECK-DAG:  mov.b32         {[[A0:%h[0-9]+]], [[A1:%h[0-9]+]]}, [[A]];
-; CHECK-DAG:  cvt.rni.f16.f16 [[R1:%h[0-9]+]], [[A1]];
-; CHECK-DAG:  cvt.rni.f16.f16 [[R0:%h[0-9]+]], [[A0]];
-; CHECK:      mov.b32         [[R:%hh[0-9]+]], {[[R0]], [[R1]]}
+; CHECK:      ld.param.b32    [[A:%r[0-9]+]], [test_roundeven_param_0];
+; CHECK-DAG:  mov.b32         {[[A0:%rs[0-9]+]], [[A1:%rs[0-9]+]]}, [[A]];
+; CHECK-DAG:  cvt.rni.f16.f16 [[R1:%rs[0-9]+]], [[A1]];
+; CHECK-DAG:  cvt.rni.f16.f16 [[R0:%rs[0-9]+]], [[A0]];
+; CHECK:      mov.b32         [[R:%r[0-9]+]], {[[R0]], [[R1]]}
 ; CHECK:      st.param.b32    [func_retval0+0], [[R]];
 ; CHECK:      ret;
 define <2 x half> @test_roundeven(<2 x half> %a) #0 {
@@ -1456,15 +1431,15 @@ define <2 x half> @test_round(<2 x half> %a) #0 {
 }
 
 ; CHECK-LABEL: test_fmuladd(
-; CHECK-DAG:  ld.param.b32    [[A:%hh[0-9]+]], [test_fmuladd_param_0];
-; CHECK-DAG:  ld.param.b32    [[B:%hh[0-9]+]], [test_fmuladd_param_1];
-; CHECK-DAG:  ld.param.b32    [[C:%hh[0-9]+]], [test_fmuladd_param_2];
+; CHECK-DAG:  ld.param.b32    [[A:%r[0-9]+]], [test_fmuladd_param_0];
+; CHECK-DAG:  ld.param.b32    [[B:%r[0-9]+]], [test_fmuladd_param_1];
+; CHECK-DAG:  ld.param.b32    [[C:%r[0-9]+]], [test_fmuladd_param_2];
 ;
-; CHECK-F16:        fma.rn.f16x2   [[R:%hh[0-9]+]], [[A]], [[B]], [[C]];
+; CHECK-F16:        fma.rn.f16x2   [[R:%r[0-9]+]], [[A]], [[B]], [[C]];
 ;
-; CHECK-NOF16-DAG:  mov.b32        {[[A0:%h[0-9]+]], [[A1:%h[0-9]+]]}, [[A]]
-; CHECK-NOF16-DAG:  mov.b32        {[[B0:%h[0-9]+]], [[B1:%h[0-9]+]]}, [[B]]
-; CHECK-NOF16-DAG:  mov.b32        {[[C0:%h[0-9]+]], [[C1:%h[0-9]+]]}, [[C]]
+; CHECK-NOF16-DAG:  mov.b32        {[[A0:%rs[0-9]+]], [[A1:%rs[0-9]+]]}, [[A]]
+; CHECK-NOF16-DAG:  mov.b32        {[[B0:%rs[0-9]+]], [[B1:%rs[0-9]+]]}, [[B]]
+; CHECK-NOF16-DAG:  mov.b32        {[[C0:%rs[0-9]+]], [[C1:%rs[0-9]+]]}, [[C]]
 ; CHECK-NOF16-DAG:  cvt.f32.f16    [[FA0:%f[0-9]+]], [[A0]]
 ; CHECK-NOF16-DAG:  cvt.f32.f16    [[FB0:%f[0-9]+]], [[B0]]
 ; CHECK-NOF16-DAG:  cvt.f32.f16    [[FC0:%f[0-9]+]], [[C0]]
@@ -1473,9 +1448,9 @@ define <2 x half> @test_round(<2 x half> %a) #0 {
 ; CHECK-NOF16-DAG:  cvt.f32.f16    [[FC0:%f[0-9]+]], [[C0]]
 ; CHECK-NOF16-DAG:  fma.rn.f32     [[FR0:%f[0-9]+]], [[FA0]], [[FB0]], [[FC0]];
 ; CHECK-NOF16-DAG:  fma.rn.f32     [[FR1:%f[0-9]+]], [[FA1]], [[FB1]], [[FC1]];
-; CHECK-NOF16-DAG:  cvt.rn.f16.f32 [[R0:%h[0-9]+]], [[FR0]]
-; CHECK-NOF16-DAG:  cvt.rn.f16.f32 [[R1:%h[0-9]+]], [[FR1]]
-; CHECK-NOF16:      mov.b32        [[R:%hh[0-9]+]], {[[R0]], [[R1]]}
+; CHECK-NOF16-DAG:  cvt.rn.f16.f32 [[R0:%rs[0-9]+]], [[FR0]]
+; CHECK-NOF16-DAG:  cvt.rn.f16.f32 [[R1:%rs[0-9]+]], [[FR1]]
+; CHECK-NOF16:      mov.b32        [[R:%r[0-9]+]], {[[R0]], [[R1]]}
 ;
 ; CHECK:      st.param.b32    [func_retval0+0], [[R]];
 ; CHECK:      ret;
@@ -1485,16 +1460,16 @@ define <2 x half> @test_fmuladd(<2 x half> %a, <2 x half> %b, <2 x half> %c) #0 
 }
 
 ; CHECK-LABEL: test_shufflevector(
-; CHECK: mov.b32 {%h1, %h2}, %hh1;
-; CHECK: mov.b32 %hh2, {%h2, %h1};
+; CHECK: mov.b32 {%rs1, %rs2}, %r1;
+; CHECK: mov.b32 %r2, {%rs2, %rs1};
 define <2 x half> @test_shufflevector(<2 x half> %a) #0 {
   %s = shufflevector <2 x half> %a, <2 x half> undef, <2 x i32> <i32 1, i32 0>
   ret <2 x half> %s
 }
 
 ; CHECK-LABEL: test_insertelement(
-; CHECK: mov.b32 {%h2, %tmp_hi}, %hh1;
-; CHECK: mov.b32 %hh2, {%h2, %h1};
+; CHECK: mov.b32 {%rs2, %tmp_hi}, %r1;
+; CHECK: mov.b32 %r2, {%rs2, %rs1};
 define <2 x half> @test_insertelement(<2 x half> %a, half %x) #0 {
   %i = insertelement <2 x half> %a, half %x, i64 1
   ret <2 x half> %i

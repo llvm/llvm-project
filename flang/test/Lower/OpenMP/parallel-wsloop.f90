@@ -216,11 +216,11 @@ end subroutine parallel_do_private
 ! CHECK-SAME:                                      %[[VAL_1:.*]]: !fir.ref<i32> {fir.bindc_name = "nt"}) {
 ! CHECK:           %[[I_ADDR:.*]] = fir.alloca i32 {bindc_name = "i", uniq_name = "_QFparallel_do_privateEi"}
 ! CHECK:           omp.parallel   {
+! CHECK:             %[[I_PRIV_ADDR:.*]] = fir.alloca i32 {adapt.valuebyref, pinned}
 ! CHECK:             %[[COND_ADDR:.*]] = fir.alloca !fir.logical<4> {bindc_name = "cond", pinned, uniq_name = "_QFparallel_do_privateEcond"}
 ! CHECK:             %[[NT_ADDR:.*]] = fir.alloca i32 {bindc_name = "nt", pinned, uniq_name = "_QFparallel_do_privateEnt"}
 ! CHECK:             %[[NT:.*]] = fir.load %[[VAL_1]] : !fir.ref<i32>
 ! CHECK:             fir.store %[[NT]] to %[[NT_ADDR]] : !fir.ref<i32>
-! CHECK:             %[[I_PRIV_ADDR:.*]] = fir.alloca i32 {adapt.valuebyref, pinned}
 ! CHECK:             %[[VAL_7:.*]] = arith.constant 1 : i32
 ! CHECK:             %[[VAL_8:.*]] = arith.constant 9 : i32
 ! CHECK:             %[[VAL_9:.*]] = arith.constant 1 : i32
@@ -256,13 +256,13 @@ end subroutine omp_parallel_do_multiple_firstprivate
 ! CHECK-SAME:                                                        %[[B_ADDR:.*]]: !fir.ref<i32> {fir.bindc_name = "b"}) {
 ! CHECK:           %[[I_ADDR:.*]] = fir.alloca i32 {bindc_name = "i", uniq_name = "_QFomp_parallel_do_multiple_firstprivateEi"}
 ! CHECK:           omp.parallel   {
+! CHECK:             %[[I_PRIV_ADDR:.*]] = fir.alloca i32 {adapt.valuebyref, pinned}
 ! CHECK:             %[[A_PRIV_ADDR:.*]] = fir.alloca i32 {bindc_name = "a", pinned, uniq_name = "_QFomp_parallel_do_multiple_firstprivateEa"}
 ! CHECK:             %[[A:.*]] = fir.load %[[A_ADDR]] : !fir.ref<i32>
 ! CHECK:             fir.store %[[A]] to %[[A_PRIV_ADDR]] : !fir.ref<i32>
 ! CHECK:             %[[B_PRIV_ADDR:.*]] = fir.alloca i32 {bindc_name = "b", pinned, uniq_name = "_QFomp_parallel_do_multiple_firstprivateEb"}
 ! CHECK:             %[[B:.*]] = fir.load %[[B_ADDR]] : !fir.ref<i32>
 ! CHECK:             fir.store %[[B]] to %[[B_PRIV_ADDR]] : !fir.ref<i32>
-! CHECK:             %[[I_PRIV_ADDR:.*]] = fir.alloca i32 {adapt.valuebyref, pinned}
 ! CHECK:             %[[VAL_8:.*]] = arith.constant 1 : i32
 ! CHECK:             %[[VAL_9:.*]] = arith.constant 10 : i32
 ! CHECK:             %[[VAL_10:.*]] = arith.constant 1 : i32

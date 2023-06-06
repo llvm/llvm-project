@@ -1035,7 +1035,7 @@ bool ObjCLanguage::IsNilReference(ValueObject &valobj) {
 bool ObjCLanguage::IsSourceFile(llvm::StringRef file_path) const {
   const auto suffixes = {".h", ".m", ".M"};
   for (auto suffix : suffixes) {
-    if (file_path.endswith_insensitive(suffix))
+    if (file_path.ends_with_insensitive(suffix))
       return true;
   }
   return false;

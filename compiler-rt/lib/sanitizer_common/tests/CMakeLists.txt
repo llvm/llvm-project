@@ -16,6 +16,7 @@ set(SANITIZER_UNITTESTS
   sanitizer_bitvector_test.cpp
   sanitizer_bvgraph_test.cpp
   sanitizer_chained_origin_depot_test.cpp
+  sanitizer_common_range_test.cpp
   sanitizer_common_test.cpp
   sanitizer_deadlock_detector_test.cpp
   sanitizer_dense_map_test.cpp

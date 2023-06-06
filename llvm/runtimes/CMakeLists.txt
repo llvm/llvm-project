@@ -226,6 +226,10 @@ function(runtime_default_target)
 
   set_enable_per_target_runtime_dir()
 
+  if ("lld" IN_LIST LLVM_ENABLE_PROJECTS)
+    list(APPEND extra_args -DCOMPILER_RT_HAS_TRUNK_LLD=TRUE)
+  endif()
+
   llvm_ExternalProject_Add(runtimes
                            ${CMAKE_CURRENT_SOURCE_DIR}/../../runtimes
                            DEPENDS ${ARG_DEPENDS}
@@ -242,6 +246,7 @@ function(runtime_default_target)
                                       ${COMMON_CMAKE_ARGS}
                                       ${RUNTIMES_CMAKE_ARGS}
                                       ${ARG_CMAKE_ARGS}
+                                      ${extra_args}
                            PASSTHROUGH_PREFIXES LLVM_ENABLE_RUNTIMES
                                                 LLVM_USE_LINKER
                                                 ${ARG_PREFIXES}
@@ -333,6 +338,10 @@ function(runtime_register_target name)
   endforeach()
 
   set_enable_per_target_runtime_dir()
+
+  if ("lld" IN_LIST LLVM_ENABLE_PROJECTS)
+    list(APPEND ${name}_extra_args -DCOMPILER_RT_HAS_TRUNK_LLD=TRUE)
+  endif()
 
   llvm_ExternalProject_Add(runtimes-${name}
                            ${CMAKE_CURRENT_SOURCE_DIR}/../../runtimes

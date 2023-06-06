@@ -324,11 +324,21 @@ private:
   }
 
   void exitConstructOrDirective() {
+    auto isOpenMPLoopConstruct = [](Fortran::lower::pft::Evaluation *eval) {
+      if (const auto *ompConstruct = eval->getIf<parser::OpenMPConstruct>())
+        if (std::holds_alternative<parser::OpenMPLoopConstruct>(
+                ompConstruct->u))
+          return true;
+      return false;
+    };
+
     rewriteIfGotos();
     auto *eval = constructAndDirectiveStack.back();
-    if (eval->isExecutableDirective()) {
+    if (eval->isExecutableDirective() && !isOpenMPLoopConstruct(eval)) {
       // A construct at the end of an (unstructured) OpenACC or OpenMP
       // construct region must have an exit target inside the region.
+      // This is not applicable to the OpenMP loop construct since the
+      // end of the loop is an available target inside the region.
       Fortran::lower::pft::EvaluationList &evaluationList =
           *eval->evaluationList;
       if (!evaluationList.empty() && evaluationList.back().isConstruct()) {

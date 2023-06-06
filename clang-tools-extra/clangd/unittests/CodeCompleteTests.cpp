@@ -2093,7 +2093,8 @@ TEST(CompletionTest, Render) {
   Opts.EnableSnippets = false;
 
   auto R = C.render(Opts);
-  EXPECT_EQ(R.label, "Foo::x(bool) const");
+  EXPECT_EQ(R.label, "Foo::x");
+  EXPECT_EQ(R.labelDetails->detail, "(bool) const");
   EXPECT_EQ(R.insertText, "Foo::x");
   EXPECT_EQ(R.insertTextFormat, InsertTextFormat::PlainText);
   EXPECT_EQ(R.filterText, "x");
@@ -2121,12 +2122,14 @@ TEST(CompletionTest, Render) {
 
   Include.Insertion.emplace();
   R = C.render(Opts);
-  EXPECT_EQ(R.label, "^Foo::x(bool) const");
+  EXPECT_EQ(R.label, "^Foo::x");
+  EXPECT_EQ(R.labelDetails->detail, "(bool) const");
   EXPECT_THAT(R.additionalTextEdits, Not(IsEmpty()));
 
   Opts.ShowOrigins = true;
   R = C.render(Opts);
-  EXPECT_EQ(R.label, "^[AS]Foo::x(bool) const");
+  EXPECT_EQ(R.label, "^[AS]Foo::x");
+  EXPECT_EQ(R.labelDetails->detail, "(bool) const");
 
   C.BundleSize = 2;
   R = C.render(Opts);

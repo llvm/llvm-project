@@ -813,7 +813,7 @@ ObjCStubsSection::ObjCStubsSection()
 }
 
 void ObjCStubsSection::addEntry(Symbol *sym) {
-  assert(sym->getName().startswith(symbolPrefix) && "not an objc stub");
+  assert(sym->getName().starts_with(symbolPrefix) && "not an objc stub");
   StringRef methname = sym->getName().drop_front(symbolPrefix.size());
   offsets.push_back(
       in.objcMethnameSection->getStringOffset(methname).outSecOff);

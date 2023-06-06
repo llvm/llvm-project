@@ -242,6 +242,7 @@ EXTENSION(c_alignas, true)
 EXTENSION(c_alignof, true)
 EXTENSION(c_atomic, true)
 EXTENSION(c_generic_selections, true)
+EXTENSION(c_generic_selection_with_controlling_type, true)
 EXTENSION(c_static_assert, true)
 EXTENSION(c_thread_local, PP.getTargetInfo().isTLSSupported())
 // C++11 features supported by other languages as extensions.

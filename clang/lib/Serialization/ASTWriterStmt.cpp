@@ -1229,6 +1229,7 @@ void ASTStmtWriter::VisitGenericSelectionExpr(GenericSelectionExpr *E) {
   VisitExpr(E);
 
   Record.push_back(E->getNumAssocs());
+  Record.push_back(E->isExprPredicate());
   Record.push_back(E->ResultIndex);
   Record.AddSourceLocation(E->getGenericLoc());
   Record.AddSourceLocation(E->getDefaultLoc());

@@ -15,6 +15,18 @@ include "mlir/Dialect/Transform/IR/TransformTypes.td"
 include "mlir/Interfaces/SideEffectInterfaces.td"
 include "mlir/IR/OpBase.td"
 
+def ApplyForLoopCanonicalizationPatternsOp : Op<Transform_Dialect,
+    "apply_patterns.scf.for_loop_canonicalization",
+    [DeclareOpInterfaceMethods<PatternDescriptorOpInterface>]> {
+  let description = [{
+    Collects patterns for canonicalizing operations inside SCF loop bodies.
+    At the moment, only affine.min/max computations with iteration variables,
+    loop bounds and loop steps are canonicalized.
+  }];
+
+  let assemblyFormat = "attr-dict";
+}
+
 def Transform_ScfForOp : Transform_ConcreteOpType<"scf.for">;
 
 def GetParentForOp : Op<Transform_Dialect, "loop.get_parent_for",

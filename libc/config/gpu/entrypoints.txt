@@ -72,6 +72,13 @@ set(TARGET_LIBC_ENTRYPOINTS
 
     # errno.h entrypoints
     libc.src.errno.errno
+
+    # stdio.h entrypoints
+    libc.src.stdio.puts
+    libc.src.stdio.fputs
+    libc.src.stdio.stdin
+    libc.src.stdio.stdout
+    libc.src.stdio.stderr
 )
 
 set(TARGET_LLVMLIBC_ENTRYPOINTS

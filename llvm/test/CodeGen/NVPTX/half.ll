@@ -7,7 +7,7 @@
 
 define void @test_load_store(ptr addrspace(1) %in, ptr addrspace(1) %out) {
 ; CHECK-LABEL: @test_load_store
-; CHECK: ld.global.b16 [[TMP:%h[0-9]+]], [{{%r[0-9]+}}]
+; CHECK: ld.global.b16 [[TMP:%rs[0-9]+]], [{{%r[0-9]+}}]
 ; CHECK: st.global.b16 [{{%r[0-9]+}}], [[TMP]]
   %val = load half, ptr addrspace(1) %in
   store half %val, ptr addrspace(1) %out
@@ -16,7 +16,7 @@ define void @test_load_store(ptr addrspace(1) %in, ptr addrspace(1) %out) {
 
 define void @test_bitcast_from_half(ptr addrspace(1) %in, ptr addrspace(1) %out) {
 ; CHECK-LABEL: @test_bitcast_from_half
-; CHECK: ld.global.b16 [[TMP:%h[0-9]+]], [{{%r[0-9]+}}]
+; CHECK: ld.global.b16 [[TMP:%rs[0-9]+]], [{{%r[0-9]+}}]
 ; CHECK: st.global.b16 [{{%r[0-9]+}}], [[TMP]]
   %val = load half, ptr addrspace(1) %in
   %val_int = bitcast half %val to i16

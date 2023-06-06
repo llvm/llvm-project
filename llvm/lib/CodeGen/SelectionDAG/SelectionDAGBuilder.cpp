@@ -6571,6 +6571,64 @@ void SelectionDAGBuilder::visitIntrinsicCall(const CallInst &I,
     setValue(&I, V);
     return;
   }
+  case Intrinsic::get_fpenv: {
+    const DataLayout DLayout = DAG.getDataLayout();
+    EVT EnvVT = TLI.getValueType(DLayout, I.getType());
+    Align TempAlign = DAG.getEVTAlign(EnvVT);
+    SDValue Chain = DAG.getRoot();
+    // Use GET_FPENV if it is legal or custom. Otherwise use memory-based node
+    // and temporary storage in stack.
+    if (TLI.isOperationLegalOrCustom(ISD::SET_FPENV, EnvVT)) {
+      Res = DAG.getNode(
+          ISD::GET_FPENV, sdl,
+          DAG.getVTList(TLI.getValueType(DAG.getDataLayout(), I.getType()),
+                        MVT::Other),
+          Chain);
+    } else {
+      SDValue Temp = DAG.CreateStackTemporary(EnvVT, TempAlign.value());
+      int SPFI = cast<FrameIndexSDNode>(Temp.getNode())->getIndex();
+      auto MPI =
+          MachinePointerInfo::getFixedStack(DAG.getMachineFunction(), SPFI);
+      MachineMemOperand *MMO = DAG.getMachineFunction().getMachineMemOperand(
+          MPI, MachineMemOperand::MOStore, MemoryLocation::UnknownSize,
+          TempAlign);
+      Chain = DAG.getGetFPEnv(Chain, sdl, Temp, EnvVT, MMO);
+      Res = DAG.getLoad(EnvVT, sdl, Chain, Temp, MPI);
+    }
+    setValue(&I, Res);
+    DAG.setRoot(Res.getValue(1));
+    return;
+  }
+  case Intrinsic::set_fpenv: {
+    const DataLayout DLayout = DAG.getDataLayout();
+    SDValue Env = getValue(I.getArgOperand(0));
+    EVT EnvVT = Env.getValueType();
+    Align TempAlign = DAG.getEVTAlign(EnvVT);
+    SDValue Chain = getRoot();
+    // If SET_FPENV is custom or legal, use it. Otherwise use loading
+    // environment from memory.
+    if (TLI.isOperationLegalOrCustom(ISD::SET_FPENV, EnvVT)) {
+      Chain = DAG.getNode(ISD::SET_FPENV, sdl, MVT::Other, Chain, Env);
+    } else {
+      // Allocate space in stack, copy environment bits into it and use this
+      // memory in SET_FPENV_MEM.
+      SDValue Temp = DAG.CreateStackTemporary(EnvVT, TempAlign.value());
+      int SPFI = cast<FrameIndexSDNode>(Temp.getNode())->getIndex();
+      auto MPI =
+          MachinePointerInfo::getFixedStack(DAG.getMachineFunction(), SPFI);
+      Chain = DAG.getStore(Chain, sdl, Env, Temp, MPI, TempAlign,
+                           MachineMemOperand::MOStore);
+      MachineMemOperand *MMO = DAG.getMachineFunction().getMachineMemOperand(
+          MPI, MachineMemOperand::MOLoad, MemoryLocation::UnknownSize,
+          TempAlign);
+      Chain = DAG.getSetFPEnv(Chain, sdl, Temp, EnvVT, MMO);
+    }
+    DAG.setRoot(Chain);
+    return;
+  }
+  case Intrinsic::reset_fpenv:
+    DAG.setRoot(DAG.getNode(ISD::RESET_FPENV, sdl, MVT::Other, getRoot()));
+    return;
   case Intrinsic::pcmarker: {
     SDValue Tmp = getValue(I.getArgOperand(0));
     DAG.setRoot(DAG.getNode(ISD::PCMARKER, sdl, MVT::Other, getRoot(), Tmp));

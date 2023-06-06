@@ -3193,6 +3193,9 @@ void Attributor::identifyDefaultAbstractAttributes(Function &F) {
   // Every function might be "will-return".
   getOrCreateAAFor<AAWillReturn>(FPos);
 
+  // Every function might be "must-progress".
+  getOrCreateAAFor<AAMustProgress>(FPos);
+
   // Every function might contain instructions that cause "undefined behavior".
   getOrCreateAAFor<AAUndefinedBehavior>(FPos);
 

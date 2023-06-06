@@ -1023,6 +1023,10 @@ static constexpr MathOperation mathOperations[] = {
     // math::FloorOp returns a real, while Fortran FLOOR returns integer.
     {"floor", "floorf", genF32F32FuncType, genMathOp<mlir::math::FloorOp>},
     {"floor", "floor", genF64F64FuncType, genMathOp<mlir::math::FloorOp>},
+    {"fma", "llvm.fma.f32", genF32F32F32F32FuncType,
+     genMathOp<mlir::math::FmaOp>},
+    {"fma", "llvm.fma.f64", genF64F64F64F64FuncType,
+     genMathOp<mlir::math::FmaOp>},
     {"gamma", "tgammaf", genF32F32FuncType, genLibCall},
     {"gamma", "tgamma", genF64F64FuncType, genLibCall},
     {"hypot", "hypotf", genF32F32F32FuncType, genLibCall},

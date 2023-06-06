@@ -1213,8 +1213,8 @@ void PDBLinker::addPublicsToPDB() {
         // Drop the '_' prefix for x86.
         if (ctx.config.machine == I386)
           name = name.drop_front(1);
-        if (name.startswith("__profd_") || name.startswith("__profc_") ||
-            name.startswith("__covrec_")) {
+        if (name.starts_with("__profd_") || name.starts_with("__profc_") ||
+            name.starts_with("__covrec_")) {
           return;
         }
       }
@@ -1469,7 +1469,7 @@ static void addLinkerModuleCoffGroup(PartialSection *sec,
   // Somehow .idata sections & sections groups in the debug symbol stream have
   // the "write" flag set. However the section header for the corresponding
   // .idata section doesn't have it.
-  if (cgs.Name.startswith(".idata"))
+  if (cgs.Name.starts_with(".idata"))
     cgs.Characteristics |= llvm::COFF::IMAGE_SCN_MEM_WRITE;
 
   mod.addSymbol(codeview::SymbolSerializer::writeOneSymbol(

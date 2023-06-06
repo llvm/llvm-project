@@ -776,6 +776,8 @@ bool DWARFContext::verify(raw_ostream &OS, DIDumpOptions DumpOpts) {
     Success &= verifier.handleDebugInfo();
   if (DumpOpts.DumpType & DIDT_DebugLine)
     Success &= verifier.handleDebugLine();
+  if (DumpOpts.DumpType & DIDT_DebugStrOffsets)
+    Success &= verifier.handleDebugStrOffsets();
   Success &= verifier.handleAccelTables();
   return Success;
 }

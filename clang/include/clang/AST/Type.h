@@ -3953,7 +3953,7 @@ public:
     /// The number of types in the exception specification.
     /// A whole unsigned is not needed here and according to
     /// [implimits] 8 bits would be enough here.
-    unsigned NumExceptionType = 0;
+    uint16_t NumExceptionType = 0;
   };
 
 protected:

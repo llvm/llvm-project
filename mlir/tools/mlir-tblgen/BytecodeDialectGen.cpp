@@ -106,6 +106,9 @@ void Generator::emitParseDispatch(StringRef kind, ArrayRef<Record *> vec) {
   {
     auto switchScope = os.scope("{\n", "}\n");
     for (const auto &it : llvm::enumerate(vec)) {
+      if (it.value()->getName() == "ReservedOrDead")
+        continue;
+
       os << formatv("case {1}:\n  return read{0}(context, reader);\n",
                     it.value()->getName(), it.index());
     }
@@ -118,6 +121,9 @@ void Generator::emitParseDispatch(StringRef kind, ArrayRef<Record *> vec) {
 }
 
 void Generator::emitParse(StringRef kind, Record &x) {
+  if (x.getNameInitAsString() == "ReservedOrDead")
+    return;
+
   char const *head =
       R"(static {0} read{1}(MLIRContext* context, DialectBytecodeReader &reader) )";
   mlir::raw_indented_ostream os(output);
@@ -128,7 +134,7 @@ void Generator::emitParse(StringRef kind, Record &x) {
       llvm::to_vector(map_range(members->getArgNames(), [](StringInit *init) {
         return init->getAsUnquotedString();
       }));
-  StringRef builder = x.getValueAsString("cBuilder");
+  StringRef builder = x.getValueAsString("cBuilder").trim();
   emitParseHelper(kind, returnType, builder, members->getArgs(), argNames,
                   returnType + "()", os);
   os << "\n\n";
@@ -282,6 +288,9 @@ void Generator::emitParseHelper(StringRef kind, StringRef returnType,
 
 void Generator::emitPrint(StringRef kind, StringRef type,
                           ArrayRef<std::pair<int64_t, Record *>> vec) {
+  if (type == "ReservedOrDead")
+    return;
+
   char const *head =
       R"(static void write({0} {1}, DialectBytecodeWriter &writer) )";
   mlir::raw_indented_ostream os(output);
@@ -359,10 +368,11 @@ void Generator::emitPrintHelper(Record *memberRec, StringRef kind,
       }
     }
     std::string returnType = getCType(def);
+    std::string nestedName = kind.str();
     ios << "writer.writeList(" << getter << ", [&](" << returnType << " "
-        << kind << ") ";
+        << nestedName << ") ";
     auto lambdaScope = ios.scope("{\n", "});\n");
-    return emitPrintHelper(def, kind, kind, kind, ios);
+    return emitPrintHelper(def, kind, nestedName, nestedName, ios);
   }
   if (memberRec->isSubClassOf("CompositeBytecode")) {
     auto *members = memberRec->getValueAsDag("members");
@@ -394,6 +404,9 @@ void Generator::emitPrintDispatch(StringRef kind, ArrayRef<std::string> vec) {
      << ")";
   auto switchScope = os.scope("", "");
   for (StringRef type : vec) {
+    if (type == "ReservedOrDead")
+      continue;
+
     os << "\n.Case([&](" << type << " t)";
     auto caseScope = os.scope(" {\n", "})");
     os << "return write(t, writer), success();\n";

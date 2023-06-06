@@ -462,9 +462,12 @@ static LogicalResult rewriteSpMV(PatternRewriter &rewriter,
   Value dnY = dvecY.getResult(0);
   token = dvecY.getAsyncToken();
 
+  auto dnYType = llvm::cast<ShapedType>(y.getType()).getElementType();
+
   // Precompute buffersize for SpMV.
   auto bufferComp = rewriter.create<gpu::SpMVBufferSizeOp>(
-      loc, indexTp, tokenTp, token, handle, spMatA, dnX, dnY);
+      loc, indexTp, tokenTp, token, handle, spMatA, dnX, dnY,
+      /*computeType=*/dnYType);
   Value bufferSz = bufferComp.getResult(0);
   token = bufferComp.getAsyncToken();
   auto buf = genAllocBuffer(rewriter, loc, bufferSz, token);
@@ -472,8 +475,9 @@ static LogicalResult rewriteSpMV(PatternRewriter &rewriter,
   token = buf.getAsyncToken();
 
   // Perform the SpMV.
-  auto spmvComp = rewriter.create<gpu::SpMVOp>(loc, tokenTp, token, handle,
-                                               spMatA, dnX, dnY, buffer);
+  auto spmvComp =
+      rewriter.create<gpu::SpMVOp>(loc, tokenTp, token, handle, spMatA, dnX,
+                                   dnY, /*computeType=*/dnYType, buffer);
   token = spmvComp.getAsyncToken();
 
   // Copy data back to host and free all the resoures.
@@ -565,18 +569,24 @@ static LogicalResult rewriteSpMM(PatternRewriter &rewriter,
   Value dnC = dmatC.getResult(0);
   token = dmatC.getAsyncToken();
 
+  auto dmatCType = llvm::cast<ShapedType>(c.getType()).getElementType();
+
   // Precompute buffersize for SpMM.
   auto bufferComp = rewriter.create<gpu::SpMMBufferSizeOp>(
-      loc, indexTp, tokenTp, token, handle, spMatA, dnB, dnC);
+      loc, indexTp, tokenTp, token, handle, spMatA, dnB, dnC,
+      /*computeType=*/dmatCType);
   Value bufferSz = bufferComp.getResult(0);
   token = bufferComp.getAsyncToken();
   auto buf = genAllocBuffer(rewriter, loc, bufferSz, token);
   Value buffer = buf.getResult(0);
   token = buf.getAsyncToken();
 
+  auto dnCType = llvm::cast<ShapedType>(c.getType()).getElementType();
+
   // Perform the SpMM.
-  auto spmmComp = rewriter.create<gpu::SpMMOp>(loc, tokenTp, token, handle,
-                                               spMatA, dnB, dnC, buffer);
+  auto spmmComp =
+      rewriter.create<gpu::SpMMOp>(loc, tokenTp, token, handle, spMatA, dnB,
+                                   dnC, /*computeType=*/dnCType, buffer);
   token = spmmComp.getAsyncToken();
 
   // Copy data back to host and free all the resoures.

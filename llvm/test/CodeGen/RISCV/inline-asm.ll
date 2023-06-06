@@ -101,6 +101,59 @@ define i32 @constraint_m_with_offset(ptr %a) nounwind {
   ret i32 %2
 }
 
+define void @constraint_o(ptr %a) nounwind {
+; RV32I-LABEL: constraint_o:
+; RV32I:       # %bb.0:
+; RV32I-NEXT:    #APP
+; RV32I-NEXT:    #NO_APP
+; RV32I-NEXT:    ret
+;
+; RV64I-LABEL: constraint_o:
+; RV64I:       # %bb.0:
+; RV64I-NEXT:    #APP
+; RV64I-NEXT:    #NO_APP
+; RV64I-NEXT:    ret
+  call void asm sideeffect "", "=*o"(ptr elementtype(i32) %a)
+  ret void
+}
+
+define i32 @constraint_o2(ptr %a) nounwind {
+; RV32I-LABEL: constraint_o2:
+; RV32I:       # %bb.0:
+; RV32I-NEXT:    #APP
+; RV32I-NEXT:    lw a0, 0(a0)
+; RV32I-NEXT:    #NO_APP
+; RV32I-NEXT:    ret
+;
+; RV64I-LABEL: constraint_o2:
+; RV64I:       # %bb.0:
+; RV64I-NEXT:    #APP
+; RV64I-NEXT:    lw a0, 0(a0)
+; RV64I-NEXT:    #NO_APP
+; RV64I-NEXT:    ret
+  %1 = tail call i32 asm "lw $0, $1", "=r,*o"(ptr elementtype(i32) %a)
+  ret i32 %1
+}
+
+define i32 @constraint_o_with_offset(ptr %a) nounwind {
+; RV32I-LABEL: constraint_o_with_offset:
+; RV32I:       # %bb.0:
+; RV32I-NEXT:    #APP
+; RV32I-NEXT:    lw a0, 4(a0)
+; RV32I-NEXT:    #NO_APP
+; RV32I-NEXT:    ret
+;
+; RV64I-LABEL: constraint_o_with_offset:
+; RV64I:       # %bb.0:
+; RV64I-NEXT:    #APP
+; RV64I-NEXT:    lw a0, 4(a0)
+; RV64I-NEXT:    #NO_APP
+; RV64I-NEXT:    ret
+  %1 = getelementptr i32, ptr %a, i32 1
+  %2 = tail call i32 asm "lw $0, $1", "=r,*o"(ptr elementtype(i32) %1)
+  ret i32 %2
+}
+
 define void @constraint_I() nounwind {
 ; RV32I-LABEL: constraint_I:
 ; RV32I:       # %bb.0:

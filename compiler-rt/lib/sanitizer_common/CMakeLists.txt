@@ -3,6 +3,7 @@
 
 set(SANITIZER_SOURCES_NOTERMINATION
   sanitizer_allocator.cpp
+  sanitizer_common_range.cpp
   sanitizer_common.cpp
   sanitizer_deadlock_detector1.cpp
   sanitizer_deadlock_detector2.cpp

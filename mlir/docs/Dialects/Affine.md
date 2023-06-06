@@ -142,7 +142,7 @@ Syntax:
 
 ```
 affine-map-inline
-   ::= dim-and-symbol-id-lists `->` multi-dim-affine-expr
+   ::= dim-and-symbol-value-lists `->` multi-dim-affine-expr
 ```
 
 The identifiers in the dimensions and symbols lists must be unique. These are
@@ -227,7 +227,7 @@ Syntax of semi-affine maps:
 
 ```
 semi-affine-map-inline
-   ::= dim-and-symbol-id-lists `->` multi-dim-semi-affine-expr
+   ::= dim-and-symbol-value-lists `->` multi-dim-semi-affine-expr
 ```
 
 Semi-affine maps may be defined inline at the point of use, or may be hoisted to
@@ -271,7 +271,7 @@ name.
 integer-set-id ::= `#` suffix-id
 
 integer-set-inline
-   ::= dim-and-symbol-id-lists `:` '(' affine-constraint-conjunction? ')'
+   ::= dim-and-symbol-value-lists `:` '(' affine-constraint-conjunction? ')'
 
 // Declarations of integer sets are at the top of the file.
 integer-set-decl ::= integer-set-id `=` integer-set-inline

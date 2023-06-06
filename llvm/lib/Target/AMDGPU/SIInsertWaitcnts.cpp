@@ -398,6 +398,7 @@ public:
   bool shouldFlushVmCnt(MachineLoop *ML, WaitcntBrackets &Brackets);
   bool isPreheaderToFlush(MachineBasicBlock &MBB,
                           WaitcntBrackets &ScoreBrackets);
+  bool isVMEMOrFlatVMEM(const MachineInstr &MI) const;
   bool runOnMachineFunction(MachineFunction &MF) override;
 
   StringRef getPassName() const override {
@@ -1703,6 +1704,11 @@ bool SIInsertWaitcnts::isPreheaderToFlush(MachineBasicBlock &MBB,
   return UpdateCache(false);
 }
 
+bool SIInsertWaitcnts::isVMEMOrFlatVMEM(const MachineInstr &MI) const {
+  return SIInstrInfo::isVMEM(MI) ||
+         (SIInstrInfo::isFLAT(MI) && mayAccessVMEMThroughFlat(MI));
+}
+
 // Return true if it is better to flush the vmcnt counter in the preheader of
 // the given loop. We currently decide to flush in two situations:
 // 1. The loop contains vmem store(s), no vmem load and at least one use of a
@@ -1721,8 +1727,7 @@ bool SIInsertWaitcnts::shouldFlushVmCnt(MachineLoop *ML,
 
   for (MachineBasicBlock *MBB : ML->blocks()) {
     for (MachineInstr &MI : *MBB) {
-      if (SIInstrInfo::isVMEM(MI) ||
-          (SIInstrInfo::isFLAT(MI) && mayAccessVMEMThroughFlat(MI))) {
+      if (isVMEMOrFlatVMEM(MI)) {
         if (MI.mayLoad())
           HasVMemLoad = true;
         if (MI.mayStore())
@@ -1750,7 +1755,7 @@ bool SIInsertWaitcnts::shouldFlushVmCnt(MachineLoop *ML,
           }
         }
         // VMem load vgpr def
-        else if (SIInstrInfo::isVMEM(MI) && MI.mayLoad() && Op.isDef())
+        else if (isVMEMOrFlatVMEM(MI) && MI.mayLoad() && Op.isDef())
           for (int RegNo = Interval.first; RegNo < Interval.second; ++RegNo) {
             // If we find a register that is loaded inside the loop, 1. and 2.
             // are invalidated and we can exit.

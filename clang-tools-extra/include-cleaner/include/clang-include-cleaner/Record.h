@@ -18,6 +18,7 @@
 #define CLANG_INCLUDE_CLEANER_RECORD_H
 
 #include "clang-include-cleaner/Types.h"
+#include "clang/Basic/SourceLocation.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/SmallVector.h"
@@ -51,6 +52,10 @@ public:
   /// Installs an analysing PPCallback and CommentHandler and populates results
   /// to the structure.
   void record(const CompilerInstance &CI);
+
+  /// Installs an analysing PPCallback and CommentHandler and populates results
+  /// to the structure.
+  void record(Preprocessor &P);
 
   /// Returns true if the given #include of the main-file should never be
   /// removed.

@@ -16,6 +16,7 @@ header_restrictions = {
     "semaphore": "!defined(_LIBCPP_HAS_NO_THREADS)",
     "shared_mutex": "!defined(_LIBCPP_HAS_NO_THREADS)",
     "stdatomic.h": "__cplusplus > 202002L && !defined(_LIBCPP_HAS_NO_THREADS)",
+    "stop_token": "!defined(_LIBCPP_HAS_NO_THREADS)",
     "thread": "!defined(_LIBCPP_HAS_NO_THREADS)",
     "filesystem": "!defined(_LIBCPP_HAS_NO_FILESYSTEM_LIBRARY)",
     # TODO(LLVM-17): simplify this to __cplusplus >= 202002L
@@ -61,6 +62,7 @@ header_restrictions = {
 
 lit_header_restrictions = {
     "barrier": "// UNSUPPORTED: no-threads, c++03, c++11, c++14, c++17",
+    "stop_token": "// UNSUPPORTED: no-threads, c++03, c++11, c++14, c++17",
     "clocale": "// UNSUPPORTED: no-localization",
     "codecvt": "// UNSUPPORTED: no-localization",
     "coroutine": "// UNSUPPORTED: c++03, c++11, c++14, c++17",
@@ -191,11 +193,3 @@ private_headers = sorted(
                                                                      and str(p.relative_to(include)).startswith("__")
                                                                      and not p.name.startswith("pstl")
 )
-variables = {
-    "toplevel_headers": toplevel_headers,
-    "experimental_headers": experimental_headers,
-    "public_headers": public_headers,
-    "private_headers": private_headers,
-    "header_restrictions": header_restrictions,
-    "private_headers_still_public_in_modules": private_headers_still_public_in_modules,
-}

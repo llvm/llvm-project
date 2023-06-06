@@ -15,9 +15,7 @@ define void @pr46638(i1 %c, i32 %x) {
 ; CHECK:       common.ret:
 ; CHECK-NEXT:    ret void
 ; CHECK:       true2.critedge:
-; CHECK-NEXT:    [[CMP2_C:%.*]] = icmp sgt i32 [[X]], 0
-; CHECK-NEXT:    [[EXT_C:%.*]] = zext i1 [[CMP2_C]] to i32
-; CHECK-NEXT:    call void @dummy(i32 [[EXT_C]])
+; CHECK-NEXT:    call void @dummy(i32 0)
 ; CHECK-NEXT:    call void @dummy(i32 2)
 ; CHECK-NEXT:    br label [[COMMON_RET]]
 ;

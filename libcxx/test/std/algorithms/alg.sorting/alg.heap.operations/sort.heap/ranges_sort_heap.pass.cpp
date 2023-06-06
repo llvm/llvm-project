@@ -207,7 +207,7 @@ constexpr bool test() {
 
   { // `std::ranges::dangling` is returned.
     [[maybe_unused]] std::same_as<std::ranges::dangling> decltype(auto) result =
-        std::ranges::sort_heap(std::array{2, 1, 3});
+        std::ranges::sort_heap(std::array{3, 1, 2});
   }
 
   return true;
@@ -252,6 +252,9 @@ void test_complexity() {
     const int n = (1 << logn);
     auto first  = v.begin();
     auto last   = v.begin() + n;
+    const int debug_elements = std::min(100, n);
+    // Multiplier 2 because of comp(a,b) comp(b, a) checks.
+    const int debug_comparisons = 2 * (debug_elements + 1) * debug_elements;
     std::shuffle(first, last, g);
     std::make_heap(first, last, &MyInt::Comp);
     // The exact stats of our current implementation are recorded here.
@@ -263,7 +266,7 @@ void test_complexity() {
     LIBCPP_ASSERT(stats.compared <= n * logn);
 #endif
     LIBCPP_ASSERT(std::is_sorted(first, last, &MyInt::Comp));
-    LIBCPP_ASSERT(stats.compared <= 2 * n * logn);
+    LIBCPP_ASSERT(stats.compared <= 2 * n * logn + debug_comparisons);
   }
 }
 
