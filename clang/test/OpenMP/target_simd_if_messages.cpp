@@ -1,8 +1,8 @@
 // RUN: %clang_cc1 -verify=expected,omp45 -fopenmp -fopenmp-version=45 %s -Wuninitialized
-// RUN: %clang_cc1 -verify=expected,omp50 -fopenmp -fopenmp-version=50 %s -Wuninitialized
+// RUN: %clang_cc1 -verify=expected,omp51 -fopenmp %s -Wuninitialized
 
 // RUN: %clang_cc1 -verify=expected,omp45 -fopenmp-simd -fopenmp-version=45 %s -Wuninitialized
-// RUN: %clang_cc1 -verify=expected,omp50 -fopenmp-simd -fopenmp-version=50 %s -Wuninitialized
+// RUN: %clang_cc1 -verify=expected,omp51 -fopenmp-simd %s -Wuninitialized
 
 void foo() {
 }
@@ -56,7 +56,7 @@ int tmain(T argc, S **argv) {
   for (i = 0; i < argc; ++i) foo();
   #pragma omp target simd if(target : argc) if (target :argc) // expected-error {{directive '#pragma omp target simd' cannot contain more than one 'if' clause with 'target' name modifier}}
   for (i = 0; i < argc; ++i) foo();
-  #pragma omp target simd if(target : argc) if (argc) // expected-note {{previous clause with directive name modifier specified here}} omp45-error {{no more 'if' clause is allowed}} omp50-error {{expected 'simd' directive name modifier}}
+  #pragma omp target simd if(target : argc) if (argc) // expected-note {{previous clause with directive name modifier specified here}} omp45-error {{no more 'if' clause is allowed}} omp51-error {{expected 'simd' directive name modifier}}
   for (i = 0; i < argc; ++i) foo();
 
   return 0;
@@ -96,7 +96,7 @@ int main(int argc, char **argv) {
   for (i = 0; i < argc; ++i) foo();
   #pragma omp target simd if(target : argc) if (target :argc) // expected-error {{directive '#pragma omp target simd' cannot contain more than one 'if' clause with 'target' name modifier}}
   for (i = 0; i < argc; ++i) foo();
-  #pragma omp target simd if(target : argc) if (argc) // expected-note {{previous clause with directive name modifier specified here}} omp45-error {{no more 'if' clause is allowed}} omp50-error {{expected 'simd' directive name modifier}}
+  #pragma omp target simd if(target : argc) if (argc) // expected-note {{previous clause with directive name modifier specified here}} omp45-error {{no more 'if' clause is allowed}} omp51-error {{expected 'simd' directive name modifier}}
   for (i = 0; i < argc; ++i) foo();
 
   return tmain(argc, argv);

@@ -1,13 +1,13 @@
 // RUN: %clang_cc1 -verify=expected,omp50 -fopenmp -fopenmp-version=50 \
 // RUN: -ferror-limit 100 %s -Wuninitialized
-// RUN: %clang_cc1 -verify=expected,omp51 -fopenmp -fopenmp-version=51 \
+// RUN: %clang_cc1 -verify=expected,omp51 -fopenmp \
 // RUN: -ferror-limit 100 %s -Wuninitialized
 // RUN: %clang_cc1 -verify=expected,omp52 -fopenmp -fopenmp-version=52 \
 // RUN: -ferror-limit 100 %s -Wuninitialized
 
 // RUN: %clang_cc1 -verify=expected,omp50 -fopenmp-simd -fopenmp-version=50 \
 // RUN: -ferror-limit 100 %s -Wuninitialized
-// RUN: %clang_cc1 -verify=expected,omp51 -fopenmp-simd -fopenmp-version=51 \
+// RUN: %clang_cc1 -verify=expected,omp51 -fopenmp-simd \
 // RUN: -ferror-limit 100 %s -Wuninitialized
 // RUN: %clang_cc1 -verify=expected,omp52 -fopenmp-simd -fopenmp-version=52 \
 // RUN: -ferror-limit 100 %s -Wuninitialized
