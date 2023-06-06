@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -no-opaque-pointers -triple x86_64-apple-darwin10 -emit-llvm -fblocks -fobjc-arc -o - %s | FileCheck %s
+// RUN: %clang_cc1 -triple x86_64-apple-darwin10 -emit-llvm -fblocks -fobjc-arc -o - %s | FileCheck %s
 
 @interface Test0
 - (id) self;
@@ -7,22 +7,16 @@ void test0(Test0 *val) {
   Test0 *x = [val self];
 
 // CHECK-LABEL:    define{{.*}} void @test0(
-// CHECK:      [[VAL:%.*]] = alloca [[TEST0:%.*]]*
-// CHECK-NEXT: [[X:%.*]] = alloca [[TEST0]]*
-// CHECK-NEXT: store [[TEST0]]* null
-// CHECK-NEXT: bitcast
-// CHECK-NEXT: bitcast
+// CHECK:      [[VAL:%.*]] = alloca ptr
+// CHECK-NEXT: [[X:%.*]] = alloca ptr
+// CHECK-NEXT: store ptr null
 // CHECK-NEXT: call void @llvm.objc.storeStrong(
-// CHECK-NEXT: load [[TEST0]]*, [[TEST0]]** [[VAL]],
-// CHECK-NEXT: bitcast
+// CHECK-NEXT: load ptr, ptr [[VAL]],
 // CHECK-NEXT: load
-// CHECK-NEXT: [[T0:%.*]] = call i8* bitcast (
-// CHECK-NEXT: [[T1:%.*]] = notail call i8* @llvm.objc.retainAutoreleasedReturnValue(i8* [[T0]])
-// CHECK-NEXT: [[T2:%.*]] = bitcast i8* [[T1]] to [[TEST0]]*
-// CHECK-NEXT: store [[TEST0]]* [[T2]], [[TEST0]]** [[X]]
-// CHECK-NEXT: [[T0:%.*]] = bitcast [[TEST0]]** [[X]] to i8**
-// CHECK-NEXT: call void @llvm.objc.storeStrong(i8** [[T0]], i8* null)
-// CHECK-NEXT: [[T0:%.*]] = bitcast [[TEST0]]** [[VAL]] to i8**
-// CHECK-NEXT: call void @llvm.objc.storeStrong(i8** [[T0]], i8* null)
+// CHECK-NEXT: [[T0:%.*]] = call ptr
+// CHECK-NEXT: [[T1:%.*]] = notail call ptr @llvm.objc.retainAutoreleasedReturnValue(ptr [[T0]])
+// CHECK-NEXT: store ptr [[T1]], ptr [[X]]
+// CHECK-NEXT: call void @llvm.objc.storeStrong(ptr [[X]], ptr null)
+// CHECK-NEXT: call void @llvm.objc.storeStrong(ptr [[VAL]], ptr null)
 // CHECK-NEXT: ret void
 }
