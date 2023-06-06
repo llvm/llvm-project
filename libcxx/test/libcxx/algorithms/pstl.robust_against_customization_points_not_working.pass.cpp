@@ -42,6 +42,26 @@ bool __pstl_all_of(TestBackend, ForwardIterator, ForwardIterator, Pred) {
   return true;
 }
 
+bool pstl_count_called = false;
+
+template <class, class ForwardIterator, class T>
+typename std::iterator_traits<ForwardIterator>::difference_type
+__pstl_count(TestBackend, ForwardIterator, ForwardIterator, const T&) {
+  assert(!pstl_count_called);
+  pstl_count_called = true;
+  return 0;
+}
+
+bool pstl_count_if_called = false;
+
+template <class, class ForwardIterator, class Pred>
+typename std::iterator_traits<ForwardIterator>::difference_type
+__pstl_count_if(TestBackend, ForwardIterator, ForwardIterator, Pred) {
+  assert(!pstl_count_if_called);
+  pstl_count_if_called = true;
+  return 0;
+}
+
 bool pstl_none_of_called = false;
 
 template <class, class ForwardIterator, class Pred>
@@ -197,6 +217,10 @@ int main(int, char**) {
   assert(std::pstl_all_of_called);
   (void)std::none_of(TestPolicy{}, std::begin(a), std::end(a), pred);
   assert(std::pstl_none_of_called);
+  (void)std::count(TestPolicy{}, std::begin(a), std::end(a), 0);
+  assert(std::pstl_count_called);
+  (void)std::count_if(TestPolicy{}, std::begin(a), std::end(a), pred);
+  assert(std::pstl_count_if_called);
   (void)std::fill(TestPolicy{}, std::begin(a), std::end(a), 0);
   assert(std::pstl_fill_called);
   (void)std::fill_n(TestPolicy{}, std::begin(a), std::size(a), 0);
