@@ -237,8 +237,6 @@ public:
     MCPhysReg Val = 0;
 
   protected:
-    mc_difflist_iterator(MCRegisterInfo::DiffListIterator Iter) : Iter(Iter) {}
-
     /// Point the iterator to InitVal, decoding subsequent values from DiffList.
     void init(unsigned InitVal, const int16_t *DiffList) {
       Iter.init(InitVal, DiffList);
@@ -275,8 +273,6 @@ public:
   /// TODO: Replace remaining uses of MCSubRegIterator.
   class mc_subreg_iterator : public mc_difflist_iterator<mc_subreg_iterator> {
   public:
-    mc_subreg_iterator(MCRegisterInfo::DiffListIterator Iter)
-        : mc_difflist_iterator(Iter) {}
     mc_subreg_iterator() = default;
 
     mc_subreg_iterator(MCRegister Reg, const MCRegisterInfo *MCRI) {
@@ -290,8 +286,6 @@ public:
   class mc_superreg_iterator
       : public mc_difflist_iterator<mc_superreg_iterator> {
   public:
-    mc_superreg_iterator(MCRegisterInfo::DiffListIterator Iter)
-        : mc_difflist_iterator(Iter) {}
     mc_superreg_iterator() = default;
 
     mc_superreg_iterator(MCRegister Reg, const MCRegisterInfo *MCRI) {
