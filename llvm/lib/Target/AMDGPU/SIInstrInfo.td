@@ -1121,26 +1121,6 @@ def SDWAVopcDst : BoolRC {
   let PrintMethod = "printVOPDst";
 }
 
-class CustomOperandClass<string CName, bit Optional> : AsmOperandClass {
-  let Name = CName;
-  let PredicateMethod = "is"#CName;
-  let ParserMethod = "parse"#CName;
-  let RenderMethod = "addImmOperands";
-  let IsOptional = Optional;
-  let DefaultMethod = "default"#CName;
-}
-
-class CustomOperandProps<bit Optional = 0, string Name = NAME,
-    AsmOperandClass Class = CustomOperandClass<Name, Optional>> {
-  string PrintMethod = "print"#Name;
-  AsmOperandClass ParserMatchClass = Class;
-  string OperandType = "OPERAND_IMMEDIATE";
-}
-
-class CustomOperand<ValueType Type, bit Optional = 0, string Name = NAME,
-    AsmOperandClass Class = CustomOperandClass<Name, Optional>>
-  : Operand<Type>, CustomOperandProps<Optional, Name, Class>;
-
 class NamedIntOperandClass<string Prefix, string Name, string ConvertMethod>
     : CustomOperandClass<Name, 1> {
   string ImmTy = "AMDGPUOperand::ImmTy"#Name;
