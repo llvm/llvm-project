@@ -21,7 +21,7 @@ declare noalias ptr @calloc(i64, i64) allockind("alloc,zeroed") allocsize(0, 1) 
 ; CHECK: @[[GINT5:[a-zA-Z0-9_$"\\.-]+]] = internal global i32 undef, align 4
 ;.
 define internal void @write1ToGInt1() {
-; CHECK: Function Attrs: nofree norecurse nosync nounwind willreturn memory(write)
+; CHECK: Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn memory(write)
 ; CHECK-LABEL: define {{[^@]+}}@write1ToGInt1
 ; CHECK-SAME: () #[[ATTR4:[0-9]+]] {
 ; CHECK-NEXT:    store i32 1, ptr @GInt1, align 4
@@ -32,7 +32,7 @@ define internal void @write1ToGInt1() {
 }
 
 define internal void @write1ToGInt2() {
-; CHECK: Function Attrs: nofree norecurse nosync nounwind willreturn memory(write)
+; CHECK: Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn memory(write)
 ; CHECK-LABEL: define {{[^@]+}}@write1ToGInt2
 ; CHECK-SAME: () #[[ATTR4]] {
 ; CHECK-NEXT:    store i32 1, ptr @GInt2, align 4
@@ -795,7 +795,7 @@ define i32 @exclusion_set3(i1 %c) {
 ; TUNIT: attributes #[[ATTR1:[0-9]+]] = { nocallback nosync }
 ; TUNIT: attributes #[[ATTR2:[0-9]+]] = { allockind("free") "alloc-family"="malloc" }
 ; TUNIT: attributes #[[ATTR3:[0-9]+]] = { allockind("alloc,zeroed") allocsize(0,1) "alloc-family"="malloc" }
-; TUNIT: attributes #[[ATTR4]] = { nofree norecurse nosync nounwind willreturn memory(write) }
+; TUNIT: attributes #[[ATTR4]] = { mustprogress nofree norecurse nosync nounwind willreturn memory(write) }
 ; TUNIT: attributes #[[ATTR5]] = { norecurse nosync }
 ; TUNIT: attributes #[[ATTR6]] = { nocallback }
 ; TUNIT: attributes #[[ATTR7]] = { norecurse }
@@ -807,7 +807,7 @@ define i32 @exclusion_set3(i1 %c) {
 ; CGSCC: attributes #[[ATTR1:[0-9]+]] = { nocallback nosync }
 ; CGSCC: attributes #[[ATTR2:[0-9]+]] = { allockind("free") "alloc-family"="malloc" }
 ; CGSCC: attributes #[[ATTR3:[0-9]+]] = { allockind("alloc,zeroed") allocsize(0,1) "alloc-family"="malloc" }
-; CGSCC: attributes #[[ATTR4]] = { nofree norecurse nosync nounwind willreturn memory(write) }
+; CGSCC: attributes #[[ATTR4]] = { mustprogress nofree norecurse nosync nounwind willreturn memory(write) }
 ; CGSCC: attributes #[[ATTR5]] = { nosync }
 ; CGSCC: attributes #[[ATTR6]] = { norecurse nosync }
 ; CGSCC: attributes #[[ATTR7]] = { nocallback }

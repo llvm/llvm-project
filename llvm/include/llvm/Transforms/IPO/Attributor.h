@@ -3405,6 +3405,38 @@ struct AANoSync
 };
 
 /// An abstract interface for all nonnull attributes.
+struct AAMustProgress
+    : public IRAttribute<Attribute::MustProgress,
+                         StateWrapper<BooleanState, AbstractAttribute>> {
+  AAMustProgress(const IRPosition &IRP, Attributor &A) : IRAttribute(IRP) {}
+
+  /// Return true if we assume that the underlying value is nonnull.
+  bool isAssumedMustProgress() const { return getAssumed(); }
+
+  /// Return true if we know that underlying value is nonnull.
+  bool isKnownMustProgress() const { return getKnown(); }
+
+  /// Create an abstract attribute view for the position \p IRP.
+  static AAMustProgress &createForPosition(const IRPosition &IRP,
+                                           Attributor &A);
+
+  /// See AbstractAttribute::getName()
+  const std::string getName() const override { return "AAMustProgress"; }
+
+  /// See AbstractAttribute::getIdAddr()
+  const char *getIdAddr() const override { return &ID; }
+
+  /// This function should return true if the type of the \p AA is
+  /// AAMustProgress
+  static bool classof(const AbstractAttribute *AA) {
+    return (AA->getIdAddr() == &ID);
+  }
+
+  /// Unique ID (due to the unique address)
+  static const char ID;
+};
+
+/// An abstract interface for all nonnull attributes.
 struct AANonNull
     : public IRAttribute<Attribute::NonNull,
                          StateWrapper<BooleanState, AbstractAttribute>> {
