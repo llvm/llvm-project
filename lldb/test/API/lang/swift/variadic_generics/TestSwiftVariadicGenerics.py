@@ -115,3 +115,16 @@ class TestSwiftVariadicGenerics(TestBase):
         # f9(s: S<repeat each T>)
         process.Continue()
         self.expect("frame variable", substrs=["t", "0 = 23", "1 = 2.71"])
+
+        # f10<each T>(args: repeat each T)
+        process.Continue()
+        self.expect(
+            "frame variable", substrs=[
+                "Pack{(a.A, a.B)}",
+                "args",
+                "i = 23",
+                "d ="
+                # FIXME: The wrong value for d is currently shown.
+                #"d = 2.71"
+            ]
+        )
