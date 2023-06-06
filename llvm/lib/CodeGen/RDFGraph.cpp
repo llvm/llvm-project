@@ -48,6 +48,8 @@ raw_ostream &operator<<(raw_ostream &OS, const Print<RegisterRef> &P) {
 }
 
 raw_ostream &operator<<(raw_ostream &OS, const Print<NodeId> &P) {
+  if (P.Obj == 0)
+    return OS << "null";
   auto NA = P.G.addr<NodeBase *>(P.Obj);
   uint16_t Attrs = NA.Addr->getAttrs();
   uint16_t Kind = NodeAttrs::kind(Attrs);
