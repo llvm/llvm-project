@@ -476,6 +476,8 @@ Bug Fixes in This Version
 - Fix crash when passing a braced initializer list to a parentehsized aggregate
   initialization expression.
   (`#63008 <https://github.com/llvm/llvm-project/issues/63008>`_).
+- Reject increment of bool value in unevaluated contexts after C++17.
+  (`#47517 <https://github.com/llvm/llvm-project/issues/47517>`_).
 
 Bug Fixes to Compiler Builtins
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
