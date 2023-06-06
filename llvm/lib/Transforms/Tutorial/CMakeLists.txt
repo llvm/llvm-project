@@ -1,0 +1,1 @@
+add_llvm_library(Tutorial MODULE P1.cpp P2.cpp P3.cpp PLUGIN_TOOL opt)
