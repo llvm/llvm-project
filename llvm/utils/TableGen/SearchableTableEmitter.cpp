@@ -174,7 +174,7 @@ private:
                                      "' lookup method '" + Index.Name +
                                      "', key field '" + Field.Name +
                                      "' of type bits is too large");
-    } else if (BitRecTy *BI = dyn_cast<BitRecTy>(Field.RecType)) {
+    } else if (isa<BitRecTy>(Field.RecType)) {
       return "bool";
     } else if (Field.Enum || Field.IsIntrinsic || Field.IsInstruction)
       return "unsigned";
