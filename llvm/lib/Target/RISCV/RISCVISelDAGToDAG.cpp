@@ -2128,6 +2128,7 @@ bool RISCVDAGToDAGISel::SelectInlineAsmMemoryOperand(
   // Always produce a register and immediate operand, as expected by
   // RISCVAsmPrinter::PrintAsmMemoryOperand.
   switch (ConstraintID) {
+  case InlineAsm::Constraint_o:
   case InlineAsm::Constraint_m: {
     SDValue Op0, Op1;
     bool Found = SelectAddrRegImm(Op, Op0, Op1);
@@ -2143,7 +2144,8 @@ bool RISCVDAGToDAGISel::SelectInlineAsmMemoryOperand(
         CurDAG->getTargetConstant(0, SDLoc(Op), Subtarget->getXLenVT()));
     return false;
   default:
-    break;
+    report_fatal_error("Unexpected asm memory constraint " +
+                       InlineAsm::getMemConstraintName(ConstraintID));
   }
 
   return true;
