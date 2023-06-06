@@ -101,23 +101,23 @@ rpc_status_t rpc_handle_server(uint32_t device_id) {
       return RPC_STATUS_SUCCESS;
 
     switch (port->get_opcode()) {
-    case rpc::Opcode::WRITE_TO_STREAM:
-    case rpc::Opcode::WRITE_TO_STDERR:
-    case rpc::Opcode::WRITE_TO_STDOUT: {
+    case RPC_WRITE_TO_STREAM:
+    case RPC_WRITE_TO_STDERR:
+    case RPC_WRITE_TO_STDOUT: {
       uint64_t sizes[rpc::MAX_LANE_SIZE] = {0};
       void *strs[rpc::MAX_LANE_SIZE] = {nullptr};
       FILE *files[rpc::MAX_LANE_SIZE] = {nullptr};
-      if (port->get_opcode() == rpc::Opcode::WRITE_TO_STREAM)
+      if (port->get_opcode() == RPC_WRITE_TO_STREAM)
         port->recv([&](rpc::Buffer *buffer, uint32_t id) {
           files[id] = reinterpret_cast<FILE *>(buffer->data[0]);
         });
       port->recv_n(strs, sizes, [&](uint64_t size) { return new char[size]; });
       port->send([&](rpc::Buffer *buffer, uint32_t id) {
-        FILE *file = port->get_opcode() == rpc::Opcode::WRITE_TO_STDOUT
-                         ? stdout
-                         : (port->get_opcode() == rpc::Opcode::WRITE_TO_STDERR
-                                ? stderr
-                                : files[id]);
+        FILE *file =
+            port->get_opcode() == RPC_WRITE_TO_STDOUT
+                ? stdout
+                : (port->get_opcode() == RPC_WRITE_TO_STDERR ? stderr
+                                                             : files[id]);
         int ret = fwrite(strs[id], sizes[id], 1, file);
         reinterpret_cast<int *>(buffer->data)[0] = ret >= 0 ? sizes[id] : ret;
       });
@@ -127,20 +127,20 @@ rpc_status_t rpc_handle_server(uint32_t device_id) {
       }
       break;
     }
-    case rpc::Opcode::EXIT: {
+    case RPC_EXIT: {
       port->recv([](rpc::Buffer *buffer) {
         exit(reinterpret_cast<uint32_t *>(buffer->data)[0]);
       });
       break;
     }
     // TODO: Move handling of these  test cases to the loader implementation.
-    case rpc::Opcode::TEST_INCREMENT: {
+    case RPC_TEST_INCREMENT: {
       port->recv_and_send([](rpc::Buffer *buffer) {
         reinterpret_cast<uint64_t *>(buffer->data)[0] += 1;
       });
       break;
     }
-    case rpc::Opcode::TEST_INTERFACE: {
+    case RPC_TEST_INTERFACE: {
       uint64_t cnt = 0;
       bool end_with_recv;
       port->recv([&](rpc::Buffer *buffer) { end_with_recv = buffer->data[0]; });
@@ -159,7 +159,7 @@ rpc_status_t rpc_handle_server(uint32_t device_id) {
             [&](rpc::Buffer *buffer) { buffer->data[0] = cnt = cnt + 1; });
       break;
     }
-    case rpc::Opcode::TEST_STREAM: {
+    case RPC_TEST_STREAM: {
       uint64_t sizes[rpc::MAX_LANE_SIZE] = {0};
       void *dst[rpc::MAX_LANE_SIZE] = {nullptr};
       port->recv_n(dst, sizes, [](uint64_t size) { return new char[size]; });
@@ -170,7 +170,7 @@ rpc_status_t rpc_handle_server(uint32_t device_id) {
       }
       break;
     }
-    case rpc::Opcode::NOOP: {
+    case RPC_NOOP: {
       port->recv([](rpc::Buffer *buffer) {});
       break;
     }

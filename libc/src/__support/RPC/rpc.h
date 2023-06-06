@@ -30,20 +30,6 @@
 namespace __llvm_libc {
 namespace rpc {
 
-/// A list of opcodes that we use to invoke certain actions on the server.
-enum Opcode : uint16_t {
-  NOOP = 0,
-  EXIT = 1,
-  WRITE_TO_STDOUT = 2,
-  WRITE_TO_STDERR = 3,
-  WRITE_TO_STREAM = 4,
-  MALLOC = 5,
-  FREE = 6,
-  TEST_INCREMENT = 7,
-  TEST_INTERFACE = 8,
-  TEST_STREAM = 9,
-};
-
 /// A fixed size channel used to communicate between the RPC client and server.
 struct Buffer {
   uint64_t data[8];
