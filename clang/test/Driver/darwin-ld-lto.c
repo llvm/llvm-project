@@ -1,5 +1,3 @@
-// REQUIRES: system-darwin
-
 // Check that ld gets "-lto_library".
 
 // RUN: mkdir -p %t/bin

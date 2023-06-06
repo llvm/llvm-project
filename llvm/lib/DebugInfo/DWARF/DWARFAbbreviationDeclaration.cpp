@@ -38,18 +38,28 @@ llvm::Expected<DWARFAbbreviationDeclaration::ExtractState>
 DWARFAbbreviationDeclaration::extract(DataExtractor Data, uint64_t *OffsetPtr) {
   clear();
   const uint64_t Offset = *OffsetPtr;
-  Code = Data.getULEB128(OffsetPtr);
+  Error Err = Error::success();
+  Code = Data.getULEB128(OffsetPtr, &Err);
+  if (Err)
+    return std::move(Err);
+
   if (Code == 0)
     return ExtractState::Complete;
 
   CodeByteSize = *OffsetPtr - Offset;
-  Tag = static_cast<llvm::dwarf::Tag>(Data.getULEB128(OffsetPtr));
+  Tag = static_cast<llvm::dwarf::Tag>(Data.getULEB128(OffsetPtr, &Err));
+  if (Err)
+    return std::move(Err);
+
   if (Tag == DW_TAG_null) {
     clear();
     return make_error<llvm::object::GenericBinaryError>(
         "abbreviation declaration requires a non-null tag");
   }
-  uint8_t ChildrenByte = Data.getU8(OffsetPtr);
+  uint8_t ChildrenByte = Data.getU8(OffsetPtr, &Err);
+  if (Err)
+    return std::move(Err);
+
   HasChildren = (ChildrenByte == DW_CHILDREN_yes);
   // Assign a value to our optional FixedAttributeSize member variable. If
   // this member variable still has a value after the while loop below, then
@@ -58,8 +68,13 @@ DWARFAbbreviationDeclaration::extract(DataExtractor Data, uint64_t *OffsetPtr) {
 
   // Read all of the abbreviation attributes and forms.
   while (Data.isValidOffset(*OffsetPtr)) {
-    auto A = static_cast<Attribute>(Data.getULEB128(OffsetPtr));
-    auto F = static_cast<Form>(Data.getULEB128(OffsetPtr));
+    auto A = static_cast<Attribute>(Data.getULEB128(OffsetPtr, &Err));
+    if (Err)
+      return std::move(Err);
+
+    auto F = static_cast<Form>(Data.getULEB128(OffsetPtr, &Err));
+    if (Err)
+      return std::move(Err);
 
     // We successfully reached the end of this abbreviation declaration
     // since both attribute and form are zero. There may be more abbreviation

@@ -8515,6 +8515,25 @@ gentbl_cc_library(
     deps = [":QuantizationOpsTdFiles"],
 )
 
+gentbl_cc_library(
+    name = "QuantDialectBytecodeGen",
+    strip_include_prefix = "include",
+    tbl_outs = [
+        (
+            [
+                "-gen-bytecode",
+                "-bytecode-dialect=Quant",
+            ],
+            "include/mlir/Dialect/Quant/QuantDialectBytecode.cpp.inc",
+        ),
+    ],
+    tblgen = ":mlir-tblgen",
+    td_file = "include/mlir/Dialect/Quant/QuantDialectBytecode.td",
+    deps = [
+        ":BytecodeTdFiles",
+    ],
+)
+
 cc_library(
     name = "QuantOps",
     srcs = [
@@ -8540,6 +8559,7 @@ cc_library(
         ":IR",
         ":InferTypeOpInterface",
         ":Pass",
+        ":QuantDialectBytecodeGen",
         ":QuantOpsIncGen",
         ":SideEffectInterfaces",
         ":Support",

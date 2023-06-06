@@ -1,5 +1,3 @@
-// REQUIRES: system-darwin
-
 // RUN: touch %t.o
 //
 // Check that we're not passing -lto-pass-remarks-output if not requested
