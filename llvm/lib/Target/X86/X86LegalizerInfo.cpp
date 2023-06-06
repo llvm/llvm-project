@@ -95,6 +95,24 @@ X86LegalizerInfo::X86LegalizerInfo(const X86Subtarget &STI,
   const LLT v16s32 = LLT::fixed_vector(16, 32);
   const LLT v8s64 = LLT::fixed_vector(8, 64);
 
+  // implicit/constants
+  getActionDefinitionsBuilder(G_IMPLICIT_DEF)
+      .legalIf([=](const LegalityQuery &Query) -> bool {
+        // 32/64-bits needs support for s64/s128 to handle cases:
+        // s64 = EXTEND (G_IMPLICIT_DEF s32) -> s64 = G_IMPLICIT_DEF
+        // s128 = EXTEND (G_IMPLICIT_DEF s32/s64) -> s128 = G_IMPLICIT_DEF
+        return typeInSet(0, {p0, s1, s8, s16, s32, s64})(Query) ||
+               (Is64Bit && typeInSet(0, {s128})(Query));
+      });
+
+  getActionDefinitionsBuilder(G_CONSTANT)
+      .legalIf([=](const LegalityQuery &Query) -> bool {
+        return typeInSet(0, {p0, s8, s16, s32})(Query) ||
+               (Is64Bit && typeInSet(0, {s64})(Query));
+      })
+      .widenScalarToNextPow2(0, /*Min=*/8)
+      .clampScalar(0, s8, sMaxScalar);
+
   // integer addition/subtraction
   getActionDefinitionsBuilder({G_ADD, G_SUB})
       .legalIf([=](const LegalityQuery &Query) -> bool {
@@ -292,9 +310,6 @@ X86LegalizerInfo::X86LegalizerInfo(const X86Subtarget &STI,
   LegacyInfo.setLegalizeScalarToDifferentSizeStrategy(
       G_PTR_ADD, 1,
       LegacyLegalizerInfo::widenToLargerTypesUnsupportedOtherwise);
-  LegacyInfo.setLegalizeScalarToDifferentSizeStrategy(
-      G_CONSTANT, 0,
-      LegacyLegalizerInfo::widenToLargerTypesAndNarrowToLargest);
 
   getActionDefinitionsBuilder({G_MEMCPY, G_MEMMOVE, G_MEMSET}).libcall();
 
@@ -317,9 +332,6 @@ void X86LegalizerInfo::setLegalizerInfo32bit() {
   const LLT s64 = LLT::scalar(64);
 
   auto &LegacyInfo = getLegacyLegalizerInfo();
-
-  for (auto Ty : {p0, s1, s8, s16, s32})
-    LegacyInfo.setAction({G_IMPLICIT_DEF, Ty}, LegacyLegalizeActions::Legal);
 
   for (auto Ty : {s8, s16, s32, p0})
     LegacyInfo.setAction({G_PHI, Ty}, LegacyLegalizeActions::Legal);
@@ -347,11 +359,6 @@ void X86LegalizerInfo::setLegalizerInfo32bit() {
   // Control-flow
   LegacyInfo.setAction({G_BRCOND, s1}, LegacyLegalizeActions::Legal);
 
-  // Constants
-  for (auto Ty : {s8, s16, s32, p0})
-    LegacyInfo.setAction({TargetOpcode::G_CONSTANT, Ty},
-                         LegacyLegalizeActions::Legal);
-
   getActionDefinitionsBuilder(G_SEXT_INREG).lower();
 
   // Merge/Unmerge
@@ -378,11 +385,6 @@ void X86LegalizerInfo::setLegalizerInfo64bit() {
 
   auto &LegacyInfo = getLegacyLegalizerInfo();
 
-  LegacyInfo.setAction({G_IMPLICIT_DEF, s64}, LegacyLegalizeActions::Legal);
-  // Need to have that, as tryFoldImplicitDef will create this pattern:
-  // s128 = EXTEND (G_IMPLICIT_DEF s32/s64) -> s128 = G_IMPLICIT_DEF
-  LegacyInfo.setAction({G_IMPLICIT_DEF, s128}, LegacyLegalizeActions::Legal);
-
   LegacyInfo.setAction({G_PHI, s64}, LegacyLegalizeActions::Legal);
 
   for (unsigned MemOp : {G_LOAD, G_STORE})
@@ -390,10 +392,6 @@ void X86LegalizerInfo::setLegalizerInfo64bit() {
 
   // Pointer-handling
   LegacyInfo.setAction({G_PTR_ADD, 1, s64}, LegacyLegalizeActions::Legal);
-
-  // Constants
-  LegacyInfo.setAction({TargetOpcode::G_CONSTANT, s64},
-                       LegacyLegalizeActions::Legal);
 
   getActionDefinitionsBuilder(G_SITOFP)
     .legalForCartesianProduct({s32, s64})
