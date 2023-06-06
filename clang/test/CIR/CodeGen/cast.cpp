@@ -17,7 +17,7 @@ unsigned char cxxstaticcast_0(unsigned int x) {
 // CHECK:  }
 
 
-int cStyleCasts_0(unsigned x1, int x2, float x3) {
+int cStyleCasts_0(unsigned x1, int x2, float x3, short x4) {
 // CHECK: cir.func @_{{.*}}cStyleCasts_0{{.*}}
 
   char a = (char)x1; // truncate
@@ -41,6 +41,11 @@ int cStyleCasts_0(unsigned x1, int x2, float x3) {
 
   double g = (double)x3; // FP extension
   // %{{[0-9]+}} = cir.cast(floating, %{{[0-9]+}} : f32), f64
+
+  long l = (long)(void*)x4; // Must sign extend before casting to pointer
+  // CHECK: %[[TMP:[0-9]+]] = cir.cast(integral, %{{[0-9]+}} : !s16i), !u64i
+  // CHECK: %[[TMP2:[0-9]+]] = cir.cast(int_to_ptr, %[[TMP]] : !u64i), !cir.ptr<!u8i>
+  // CHECK: %{{[0-9]+}} = cir.cast(ptr_to_int, %[[TMP2]] : !cir.ptr<!u8i>), !s64i
 
   return 0;
 }

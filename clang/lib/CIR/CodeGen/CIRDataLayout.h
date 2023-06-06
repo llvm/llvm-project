@@ -14,6 +14,7 @@
 
 #include "mlir/Dialect/DLTI/DLTI.h"
 #include "mlir/IR/BuiltinOps.h"
+#include "clang/CIR/Dialect/IR/CIRTypes.h"
 
 namespace cir {
 
@@ -59,6 +60,19 @@ public:
   unsigned getTypeAllocSize(mlir::Type Ty) const {
     // Round up to the next alignment boundary.
     return llvm::alignTo(getTypeStoreSize(Ty), layout.getTypeABIAlignment(Ty));
+  }
+
+  unsigned getPointerTypeSizeInBits(mlir::Type Ty) const {
+    assert(Ty.isa<mlir::cir::PointerType>() &&
+           "This should only be called with a pointer type");
+    return layout.getTypeSizeInBits(Ty);
+  }
+
+  mlir::Type getIntPtrType(mlir::Type Ty) const {
+    assert(Ty.isa<mlir::cir::PointerType>() && "Expected pointer type");
+    auto IntTy = mlir::cir::IntType::get(Ty.getContext(),
+                                         getPointerTypeSizeInBits(Ty), false);
+    return IntTy;
   }
 };
 

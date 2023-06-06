@@ -6,6 +6,7 @@
 !s8i = !cir.int<s, 8>
 !u32i = !cir.int<u, 32>
 !u8i = !cir.int<u, 8>
+!u64i = !cir.int<u, 64>
 
 module {
   cir.func @foo(%arg0: !s32i) -> !s32i {
@@ -31,6 +32,7 @@ module {
     // MLIR: llvm.func @cStyleCasts(%arg0: i32, %arg1: i32) -> i32 {
     %0 = cir.alloca !u32i, cir.ptr <!u32i>, ["x1", init] {alignment = 4 : i64}
     %1 = cir.alloca !s32i, cir.ptr <!s32i>, ["x2", init] {alignment = 4 : i64}
+    %20 = cir.alloca !s16i, cir.ptr <!s16i>, ["x4", init] {alignment = 2 : i64}
     %2 = cir.alloca !s32i, cir.ptr <!s32i>, ["__retval"] {alignment = 4 : i64}
     %3 = cir.alloca !s8i, cir.ptr <!s8i>, ["a", init] {alignment = 1 : i64}
     %4 = cir.alloca !s16i, cir.ptr <!s16i>, ["b", init] {alignment = 2 : i64}
@@ -59,6 +61,13 @@ module {
     %17 = cir.cast(array_to_ptrdecay, %7 : !cir.ptr<!cir.array<!s32i x 3>>), !cir.ptr<!s32i>
     // MLIR: %{{[0-9]+}} = llvm.getelementptr %{{[0-9]+}}[0] : (!llvm.ptr) -> !llvm.ptr
     cir.store %17, %8 : !cir.ptr<!s32i>, cir.ptr <!cir.ptr<!s32i>>
+    %21 = cir.load %20 : cir.ptr <!s16i>, !s16i
+    %22 = cir.cast(integral, %21 : !s16i), !u64i
+    // MLIR: %[[TMP:[0-9]+]] = llvm.sext %{{[0-9]+}} : i16 to i64
+    %23 = cir.cast(int_to_ptr, %22 : !u64i), !cir.ptr<!u8i>
+    // MLIR: %[[TMP2:[0-9]+]] = llvm.inttoptr %[[TMP]] : i64 to !llvm.ptr
+    %24 = cir.cast(ptr_to_int, %23 : !cir.ptr<!u8i>), !s32i
+    // MLIR: %{{[0-9]+}} = llvm.ptrtoint %[[TMP2]] : !llvm.ptr to i32
     %18 = cir.const(#cir.int<0> : !s32i) : !s32i
     cir.store %18, %2 : !s32i, cir.ptr <!s32i>
     %19 = cir.load %2 : cir.ptr <!s32i>, !s32i

@@ -31,6 +31,9 @@ struct UnimplementedFeature {
   static bool addressSpaceInGlobalVar() { return false; }
   static bool getASTAllocaAddressSpace() { return false; }
 
+  // Clang codegen options
+  static bool strictVTablePointers() { return false; }
+
   // Unhandled global/linkage information.
   static bool unnamedAddr() { return false; }
   static bool setComdat() { return false; }
