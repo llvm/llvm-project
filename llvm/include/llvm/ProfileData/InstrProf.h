@@ -23,6 +23,7 @@
 #include "llvm/IR/GlobalValue.h"
 #include "llvm/IR/ProfileSummary.h"
 #include "llvm/ProfileData/InstrProfData.inc"
+#include "llvm/Support/BalancedPartitioning.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/Endian.h"
@@ -337,8 +338,17 @@ enum class instrprof_error {
 /// An ordered list of functions identified by their NameRef found in
 /// INSTR_PROF_DATA
 struct TemporalProfTraceTy {
-  uint64_t Weight = 1;
   std::vector<uint64_t> FunctionNameRefs;
+  uint64_t Weight;
+  TemporalProfTraceTy(std::initializer_list<uint64_t> Trace = {},
+                      uint64_t Weight = 1)
+      : FunctionNameRefs(Trace), Weight(Weight) {}
+
+  /// Use a set of temporal profile traces to create a list of balanced
+  /// partitioning function nodes used by BalancedPartitioning to generate a
+  /// function order that reduces page faults during startup
+  static std::vector<BPFunctionNode>
+  createBPFunctionNodes(ArrayRef<TemporalProfTraceTy> Traces);
 };
 
 inline std::error_code make_error_code(instrprof_error E) {
