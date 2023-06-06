@@ -39,7 +39,7 @@ module {
 // MLIR-NEXT:   ^bb1:  // 2 preds: ^bb0, ^bb5
 // MLIR-NEXT:     %3 = llvm.load %1 : !llvm.ptr
 // MLIR-NEXT:     %4 = llvm.mlir.constant(10 : i32) : i32
-// MLIR-NEXT:     %5 = llvm.icmp "ult" %3, %4 : i32
+// MLIR-NEXT:     %5 = llvm.icmp "slt" %3, %4 : i32
 // MLIR-NEXT:     %6 = llvm.zext %5 : i1 to i32
 // MLIR-NEXT:     %7 = llvm.mlir.constant(0 : i32) : i32
 // MLIR-NEXT:     %8 = llvm.icmp "ne" %6, %7 : i32
@@ -70,7 +70,7 @@ module {
 // LLVM-EMPTY:
 //  LLVM-NEXT: 2:
 //  LLVM-NEXT:   %3 = load i32, ptr %1, align 4
-//  LLVM-NEXT:   %4 = icmp ult i32 %3, 10
+//  LLVM-NEXT:   %4 = icmp slt i32 %3, 10
 //  LLVM-NEXT:   %5 = zext i1 %4 to i32
 //  LLVM-NEXT:   %6 = icmp ne i32 %5, 0
 //  LLVM-NEXT:   %7 = zext i1 %6 to i8
