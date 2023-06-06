@@ -51,8 +51,8 @@ enum MSDemangleFlags {
 /// bytes of the input string were consumed.
 /// status receives one of the demangle_ enum entries above if it's not nullptr.
 /// Flags controls various details of the demangled representation.
-char *microsoftDemangle(const char *mangled_name, size_t *n_read, int *status,
-                        MSDemangleFlags Flags = MSDF_None);
+char *microsoftDemangle(std::string_view mangled_name, size_t *n_read,
+                        int *status, MSDemangleFlags Flags = MSDF_None);
 
 // Demangles a Rust v0 mangled symbol.
 char *rustDemangle(std::string_view MangledName);
