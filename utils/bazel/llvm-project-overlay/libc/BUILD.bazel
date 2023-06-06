@@ -1857,6 +1857,7 @@ libc_support_library(
         ":__support_cpp_array",
         ":__support_cpp_bit",
         ":__support_cpp_cstddef",
+        ":__support_cpp_limits",
         ":__support_cpp_type_traits",
         ":__support_macros_attributes",
         ":__support_macros_config",

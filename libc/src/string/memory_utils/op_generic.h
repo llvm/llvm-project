@@ -33,6 +33,14 @@
 
 #include <stdint.h>
 
+static_assert((UINTPTR_MAX == 4294967295U) ||
+                  (UINTPTR_MAX == 18446744073709551615UL),
+              "We currently only support 32- or 64-bit platforms");
+
+#if defined(LIBC_TARGET_ARCH_IS_X86_64) || defined(LIBC_TARGET_ARCH_IS_AARCH64)
+#define LLVM_LIBC_HAS_UINT64
+#endif
+
 namespace __llvm_libc {
 // Compiler types using the vector attributes.
 using uint8x1_t = uint8_t __attribute__((__vector_size__(1)));
@@ -45,19 +53,31 @@ using uint8x64_t = uint8_t __attribute__((__vector_size__(64)));
 } // namespace __llvm_libc
 
 namespace __llvm_libc::generic {
+
 // We accept three types of values as elements for generic operations:
-// - scalar : unsigned integral types
-// - vector : compiler types using the vector attributes
+// - scalar : unsigned integral types,
+// - vector : compiler types using the vector attributes or platform builtins,
 // - array  : a cpp::array<T, N> where T is itself either a scalar or a vector.
 // The following traits help discriminate between these cases.
-template <typename T>
-constexpr bool is_scalar_v = cpp::is_integral_v<T> && cpp::is_unsigned_v<T>;
 
-template <typename T>
-constexpr bool is_vector_v =
-    cpp::details::is_unqualified_any_of<T, uint8x1_t, uint8x2_t, uint8x4_t,
-                                        uint8x8_t, uint8x16_t, uint8x32_t,
-                                        uint8x64_t>();
+template <typename T> struct is_scalar : cpp::false_type {};
+template <> struct is_scalar<uint8_t> : cpp::true_type {};
+template <> struct is_scalar<uint16_t> : cpp::true_type {};
+template <> struct is_scalar<uint32_t> : cpp::true_type {};
+#ifdef LLVM_LIBC_HAS_UINT64
+template <> struct is_scalar<uint64_t> : cpp::true_type {};
+#endif // LLVM_LIBC_HAS_UINT64
+template <typename T> constexpr bool is_scalar_v = is_scalar<T>::value;
+
+template <typename T> struct is_vector : cpp::false_type {};
+template <> struct is_vector<uint8x1_t> : cpp::true_type {};
+template <> struct is_vector<uint8x2_t> : cpp::true_type {};
+template <> struct is_vector<uint8x4_t> : cpp::true_type {};
+template <> struct is_vector<uint8x8_t> : cpp::true_type {};
+template <> struct is_vector<uint8x16_t> : cpp::true_type {};
+template <> struct is_vector<uint8x32_t> : cpp::true_type {};
+template <> struct is_vector<uint8x64_t> : cpp::true_type {};
+template <typename T> constexpr bool is_vector_v = is_vector<T>::value;
 
 template <class T> struct is_array : cpp::false_type {};
 template <class T, size_t N> struct is_array<cpp::array<T, N>> {
@@ -69,7 +89,7 @@ template <typename T>
 constexpr bool is_element_type_v =
     is_scalar_v<T> || is_vector_v<T> || is_array_v<T>;
 
-//
+// Helper struct to retrieve the number of elements of an array.
 template <class T> struct array_size {};
 template <class T, size_t N>
 struct array_size<cpp::array<T, N>> : cpp::integral_constant<size_t, N> {};
@@ -114,105 +134,15 @@ template <typename T> T splat(uint8_t value) {
   }
 }
 
-static_assert((UINTPTR_MAX == 4294967295U) ||
-                  (UINTPTR_MAX == 18446744073709551615UL),
-              "We currently only support 32- or 64-bit platforms");
-
-#if defined(LIBC_TARGET_ARCH_IS_X86_64) || defined(LIBC_TARGET_ARCH_IS_AARCH64)
-#define LLVM_LIBC_HAS_UINT64
-#endif
-
-namespace details {
-// Checks that each type is sorted in strictly decreasing order of size.
-// i.e. sizeof(First) > sizeof(Second) > ... > sizeof(Last)
-template <typename First> constexpr bool is_decreasing_size() {
-  return sizeof(First) == 1;
-}
-template <typename First, typename Second, typename... Next>
-constexpr bool is_decreasing_size() {
-  if constexpr (sizeof...(Next) > 0)
-    return sizeof(First) > sizeof(Second) && is_decreasing_size<Next...>();
-  else
-    return sizeof(First) > sizeof(Second) && is_decreasing_size<Second>();
-}
-
-template <size_t Size, typename... Ts> struct Largest;
-template <size_t Size> struct Largest<Size> : cpp::type_identity<uint8_t> {};
-template <size_t Size, typename T, typename... Ts>
-struct Largest<Size, T, Ts...> {
-  using next = Largest<Size, Ts...>;
-  using type = cpp::conditional_t<(Size >= sizeof(T)), T, typename next::type>;
-};
-
-} // namespace details
-
-// 'SupportedTypes' holds a list of natively supported types.
-// The types are instanciations of ScalarType or VectorType.
-// They should be ordered in strictly decreasing order.
-// The 'TypeFor<Size>' type retrieves is the largest supported type that can
-// handle 'Size' bytes. e.g.
-//
-// using ST = SupportedTypes<ScalarType<uint16_t>, ScalarType<uint8_t>>;
-// using Type = ST::TypeFor<10>;
-// static_assert(cpp:is_same_v<Type, ScalarType<uint16_t>>);
-
-template <typename First, typename... Ts> struct SupportedTypes {
-  static_assert(details::is_decreasing_size<First, Ts...>());
-
-  using MaxType = First;
-
-  template <size_t Size>
-  using TypeFor = typename details::Largest<Size, First, Ts...>::type;
-};
-
-// Map from sizes to structures offering static load, store and splat methods.
-// Note: On platforms lacking vector support, we use the ArrayType below and
-// decompose the operation in smaller pieces.
-
-// Lists a generic native types to use for Memset and Memmove operations.
-// TODO: Inject the native types within Memset and Memmove depending on the
-// target architectures and derive MaxSize from it.
-using NativeTypeMap = SupportedTypes<uint8x64_t, //
-                                     uint8x32_t, //
-                                     uint8x16_t,
-#if defined(LLVM_LIBC_HAS_UINT64)
-                                     uint64_t, // Not available on 32bit
-#endif
-                                     uint32_t, //
-                                     uint16_t, //
-                                     uint8_t>;
-
-namespace details {
-
-// Helper to test if a type is void.
-template <typename T> inline constexpr bool is_void_v = cpp::is_same_v<T, void>;
-
-// In case the 'Size' is not supported we can fall back to a sequence of smaller
-// operations using the largest natively supported type.
-template <size_t Size, size_t MaxSize> static constexpr bool useArrayType() {
-  return (Size > MaxSize) && ((Size % MaxSize) == 0) &&
-         !details::is_void_v<NativeTypeMap::TypeFor<MaxSize>>;
-}
-
-// Compute the type to handle an operation of 'Size' bytes knowing that the
-// underlying platform only support native types up to MaxSize bytes.
-template <size_t Size, size_t MaxSize>
-using getTypeFor = cpp::conditional_t<
-    useArrayType<Size, MaxSize>(),
-    cpp::array<NativeTypeMap::TypeFor<MaxSize>, Size / MaxSize>,
-    NativeTypeMap::TypeFor<Size>>;
-
-} // namespace details
-
 ///////////////////////////////////////////////////////////////////////////////
 // Memset
 ///////////////////////////////////////////////////////////////////////////////
 
 template <typename T> struct Memset {
+  static_assert(is_element_type_v<T>);
   static constexpr size_t SIZE = sizeof(T);
 
   LIBC_INLINE static void block(Ptr dst, uint8_t value) {
-    static_assert(is_element_type_v<T>);
     if constexpr (is_scalar_v<T> || is_vector_v<T>) {
       store<T>(dst, splat<T>(value));
     } else if constexpr (is_array_v<T>) {
@@ -247,9 +177,8 @@ template <typename T, typename... TS> struct MemsetSequence {
   static constexpr size_t SIZE = (sizeof(T) + ... + sizeof(TS));
   LIBC_INLINE static void block(Ptr dst, uint8_t value) {
     Memset<T>::block(dst, value);
-    if constexpr (sizeof...(TS) > 0) {
+    if constexpr (sizeof...(TS) > 0)
       return MemsetSequence<TS...>::block(dst + sizeof(T), value);
-    }
   }
 };
 
@@ -258,6 +187,7 @@ template <typename T, typename... TS> struct MemsetSequence {
 ///////////////////////////////////////////////////////////////////////////////
 
 template <typename T> struct Memmove {
+  static_assert(is_element_type_v<T>);
   static constexpr size_t SIZE = sizeof(T);
 
   LIBC_INLINE static void block(Ptr dst, CPtr src) {
@@ -390,136 +320,312 @@ template <typename T> struct Memmove {
 };
 
 ///////////////////////////////////////////////////////////////////////////////
-// Bcmp
+// Low level operations for Bcmp and Memcmp that operate on memory locations.
 ///////////////////////////////////////////////////////////////////////////////
-template <size_t Size> struct Bcmp {
-  static constexpr size_t SIZE = Size;
-  static constexpr size_t MaxSize = LLVM_LIBC_IS_DEFINED(LLVM_LIBC_HAS_UINT64)
-                                        ? sizeof(uint64_t)
-                                        : sizeof(uint32_t);
 
-  template <typename T> LIBC_INLINE static uint32_t load_xor(CPtr p1, CPtr p2) {
-    static_assert(sizeof(T) <= sizeof(uint32_t));
-    return load<T>(p1) ^ load<T>(p2);
-  }
+// Same as load above but with an offset to the pointer.
+// Making the offset explicit hints the compiler to use relevant addressing mode
+// consistently.
+template <typename T> LIBC_INLINE static T load(CPtr ptr, size_t offset) {
+  return ::__llvm_libc::load<T>(ptr + offset);
+}
 
-  template <typename T>
-  LIBC_INLINE static uint32_t load_not_equal(CPtr p1, CPtr p2) {
-    return load<T>(p1) != load<T>(p2);
-  }
+// Same as above but also makes sure the loaded value is in big endian format.
+// This is useful when implementing lexicograhic comparisons as big endian
+// scalar comparison directly maps to lexicographic byte comparisons.
+template <typename T> LIBC_INLINE static T load_be(CPtr ptr, size_t offset) {
+  return Endian::to_big_endian(load<T>(ptr, offset));
+}
 
-  LIBC_INLINE static BcmpReturnType block(CPtr p1, CPtr p2) {
-    if constexpr (Size == 1) {
-      return load_xor<uint8_t>(p1, p2);
-    } else if constexpr (Size == 2) {
-      return load_xor<uint16_t>(p1, p2);
-    } else if constexpr (Size == 4) {
-      return load_xor<uint32_t>(p1, p2);
-    } else if constexpr (Size == 8) {
-      return load_not_equal<uint64_t>(p1, p2);
-    } else if constexpr (details::useArrayType<Size, MaxSize>()) {
-      for (size_t offset = 0; offset < Size; offset += MaxSize)
-        if (auto value = Bcmp<MaxSize>::block(p1 + offset, p2 + offset))
-          return value;
-    } else {
-      deferred_static_assert("Unimplemented Size");
-    }
-    return BcmpReturnType::ZERO();
-  }
+// Equality: returns true iff values at locations (p1 + offset) and (p2 +
+// offset) compare equal.
+template <typename T> static bool eq(CPtr p1, CPtr p2, size_t offset);
 
-  LIBC_INLINE static BcmpReturnType tail(CPtr p1, CPtr p2, size_t count) {
-    return block(p1 + count - SIZE, p2 + count - SIZE);
-  }
+// Not equals: returns non-zero iff values at locations (p1 + offset) and (p2 +
+// offset) differ.
+template <typename T> static uint32_t neq(CPtr p1, CPtr p2, size_t offset);
 
-  LIBC_INLINE static BcmpReturnType head_tail(CPtr p1, CPtr p2, size_t count) {
-    return block(p1, p2) | tail(p1, p2, count);
-  }
+// Lexicographic comparison:
+// - returns 0 iff values at locations (p1 + offset) and (p2 + offset) compare
+//   equal.
+// - returns a negative value if value at location (p1 + offset) is
+//   lexicographically less than value at (p2 + offset).
+// - returns a positive value if value at location (p1 + offset) is
+//   lexicographically greater than value at (p2 + offset).
+template <typename T>
+static MemcmpReturnType cmp(CPtr p1, CPtr p2, size_t offset);
 
-  LIBC_INLINE static BcmpReturnType loop_and_tail(CPtr p1, CPtr p2,
-                                                  size_t count) {
-    static_assert(Size > 1, "a loop of size 1 does not need tail");
-    size_t offset = 0;
-    do {
-      if (auto value = block(p1 + offset, p2 + offset))
-        return value;
-      offset += SIZE;
-    } while (offset < count - SIZE);
-    return tail(p1, p2, count);
-  }
-};
+// Lexicographic comparison of non-equal values:
+// - returns a negative value if value at location (p1 + offset) is
+//   lexicographically less than value at (p2 + offset).
+// - returns a positive value if value at location (p1 + offset) is
+//   lexicographically greater than value at (p2 + offset).
+template <typename T>
+static MemcmpReturnType cmp_neq(CPtr p1, CPtr p2, size_t offset);
 
 ///////////////////////////////////////////////////////////////////////////////
-// Memcmp
+// Memcmp implementation
+//
+// When building memcmp, not all types are considered equals.
+//
+// For instance, the lexicographic comparison of two uint8_t can be implemented
+// as a simple subtraction, but for wider operations the logic can be much more
+// involving, especially on little endian platforms.
+//
+// For such wider types it is a good strategy to test for equality first and
+// only do the expensive lexicographic comparison if necessary.
+//
+// Decomposing the algorithm like this for wider types allows us to have
+// efficient implementation of higher order functions like 'head_tail' or
+// 'loop_and_tail'.
 ///////////////////////////////////////////////////////////////////////////////
-template <size_t Size> struct Memcmp {
-  static constexpr size_t SIZE = Size;
-  static constexpr size_t MaxSize = LLVM_LIBC_IS_DEFINED(LLVM_LIBC_HAS_UINT64)
-                                        ? sizeof(uint64_t)
-                                        : sizeof(uint32_t);
 
-  template <typename T> LIBC_INLINE static T load_be(CPtr ptr) {
-    return Endian::to_big_endian(load<T>(ptr));
-  }
+// Type traits to decide whether we can use 'cmp' directly or if we need to
+// split the computation.
+template <typename T> struct cmp_is_expensive;
+template <> struct cmp_is_expensive<uint8_t> : public cpp::false_type {};
+template <> struct cmp_is_expensive<uint16_t> : public cpp::false_type {};
+template <> struct cmp_is_expensive<uint32_t> : public cpp::false_type {};
+#ifdef LLVM_LIBC_HAS_UINT64
+template <> struct cmp_is_expensive<uint64_t> : public cpp::true_type {};
+#endif // LLVM_LIBC_HAS_UINT64
 
-  template <typename T>
-  LIBC_INLINE static MemcmpReturnType load_be_diff(CPtr p1, CPtr p2) {
-    return load_be<T>(p1) - load_be<T>(p2);
-  }
+template <typename T> struct Memcmp {
+  static_assert(is_element_type_v<T>);
+  static constexpr size_t SIZE = sizeof(T);
 
-  template <typename T>
-  LIBC_INLINE static MemcmpReturnType load_be_cmp(CPtr p1, CPtr p2) {
-    const auto la = load_be<T>(p1);
-    const auto lb = load_be<T>(p2);
-    return la > lb ? 1 : la < lb ? -1 : 0;
-  }
-
-  LIBC_INLINE static MemcmpReturnType block(CPtr p1, CPtr p2) {
-    if constexpr (Size == 1) {
-      return load_be_diff<uint8_t>(p1, p2);
-    } else if constexpr (Size == 2) {
-      return load_be_diff<uint16_t>(p1, p2);
-    } else if constexpr (Size == 4) {
-      return load_be_cmp<uint32_t>(p1, p2);
-    } else if constexpr (Size == 8) {
-      return load_be_cmp<uint64_t>(p1, p2);
-    } else if constexpr (details::useArrayType<Size, MaxSize>()) {
-      for (size_t offset = 0; offset < Size; offset += MaxSize)
-        if (Bcmp<MaxSize>::block(p1 + offset, p2 + offset))
-          return Memcmp<MaxSize>::block(p1 + offset, p2 + offset);
+private:
+  LIBC_INLINE static MemcmpReturnType block_offset(CPtr p1, CPtr p2,
+                                                   size_t offset) {
+    if constexpr (cmp_is_expensive<T>::value) {
+      if (!eq<T>(p1, p2, offset))
+        return cmp_neq<T>(p1, p2, offset);
       return MemcmpReturnType::ZERO();
-    } else if constexpr (Size == 3) {
-      if (auto value = Memcmp<2>::block(p1, p2))
-        return value;
-      return Memcmp<1>::block(p1 + 2, p2 + 2);
     } else {
-      deferred_static_assert("Unimplemented Size");
+      return cmp<T>(p1, p2, offset);
     }
   }
 
-  LIBC_INLINE static MemcmpReturnType tail(CPtr p1, CPtr p2, size_t count) {
-    return block(p1 + count - SIZE, p2 + count - SIZE);
+public:
+  LIBC_INLINE static MemcmpReturnType block(CPtr p1, CPtr p2) {
+    return block_offset(p1, p2, 0);
   }
 
   LIBC_INLINE static MemcmpReturnType head_tail(CPtr p1, CPtr p2,
                                                 size_t count) {
-    if (auto value = block(p1, p2))
-      return value;
-    return tail(p1, p2, count);
+    if constexpr (cmp_is_expensive<T>::value) {
+      if (!eq<T>(p1, p2, 0))
+        return cmp_neq<T>(p1, p2, 0);
+    } else {
+      if (const auto value = cmp<T>(p1, p2, 0))
+        return value;
+    }
+    return block_offset(p1, p2, count - SIZE); // tail
   }
 
   LIBC_INLINE static MemcmpReturnType loop_and_tail(CPtr p1, CPtr p2,
                                                     size_t count) {
-    static_assert(Size > 1, "a loop of size 1 does not need tail");
-    size_t offset = 0;
-    do {
-      if (auto value = block(p1 + offset, p2 + offset))
+    return loop_and_tail_offset(p1, p2, count, 0);
+  }
+
+  LIBC_INLINE static MemcmpReturnType
+  loop_and_tail_offset(CPtr p1, CPtr p2, size_t count, size_t offset) {
+    if constexpr (SIZE > 1) {
+      const size_t limit = count - SIZE;
+      LIBC_LOOP_NOUNROLL
+      for (; offset < limit; offset += SIZE) {
+        if (!eq<T>(p1, p2, offset)) {
+          if constexpr (cmp_is_expensive<T>::value) {
+            return cmp_neq<T>(p1, p2, offset);
+          } else {
+            return cmp<T>(p1, p2, offset);
+          }
+        }
+      }
+      return block_offset(p1, p2, limit); // tail
+    } else {
+      // No need for a tail operation when SIZE == 1.
+      LIBC_LOOP_NOUNROLL
+      for (; offset < count; offset += SIZE)
+        if (auto value = cmp<T>(p1, p2, offset))
+          return value;
+      return MemcmpReturnType::ZERO();
+    }
+  }
+
+  LIBC_INLINE static MemcmpReturnType
+  loop_and_tail_align_above(size_t threshold, CPtr p1, CPtr p2, size_t count) {
+    const AlignHelper<sizeof(T)> helper(p1);
+    if (LIBC_UNLIKELY(count >= threshold) && helper.not_aligned()) {
+      if (auto value = block(p1, p2))
         return value;
-      offset += SIZE;
-    } while (offset < count - SIZE);
-    return tail(p1, p2, count);
+      adjust(helper.offset(), p1, p2, count);
+    }
+    return loop_and_tail(p1, p2, count);
   }
 };
 
+template <typename T, typename... TS> struct MemcmpSequence {
+  static constexpr size_t SIZE = (sizeof(T) + ... + sizeof(TS));
+  LIBC_INLINE static MemcmpReturnType block(CPtr p1, CPtr p2) {
+    // TODO: test suggestion in
+    // https://reviews.llvm.org/D148717?id=515724#inline-1446890
+    // once we have a proper way to check memory operation latency.
+    if constexpr (cmp_is_expensive<T>::value) {
+      if (!eq<T>(p1, p2, 0))
+        return cmp_neq<T>(p1, p2, 0);
+    } else {
+      if (auto value = cmp<T>(p1, p2, 0))
+        return value;
+    }
+    if constexpr (sizeof...(TS) > 0)
+      return MemcmpSequence<TS...>::block(p1 + sizeof(T), p2 + sizeof(T));
+    else
+      return MemcmpReturnType::ZERO();
+  }
+};
+
+///////////////////////////////////////////////////////////////////////////////
+// Bcmp
+///////////////////////////////////////////////////////////////////////////////
+template <typename T> struct Bcmp {
+  static_assert(is_element_type_v<T>);
+  static constexpr size_t SIZE = sizeof(T);
+
+  LIBC_INLINE static BcmpReturnType block(CPtr p1, CPtr p2) {
+    return neq<T>(p1, p2, 0);
+  }
+
+  LIBC_INLINE static BcmpReturnType tail(CPtr p1, CPtr p2, size_t count) {
+    const size_t tail_offset = count - SIZE;
+    return neq<T>(p1, p2, tail_offset);
+  }
+
+  LIBC_INLINE static BcmpReturnType head_tail(CPtr p1, CPtr p2, size_t count) {
+    if (const auto value = neq<T>(p1, p2, 0))
+      return value;
+    return tail(p1, p2, count);
+  }
+
+  LIBC_INLINE static BcmpReturnType loop_and_tail(CPtr p1, CPtr p2,
+                                                  size_t count) {
+    return loop_and_tail_offset(p1, p2, count, 0);
+  }
+
+  LIBC_INLINE static BcmpReturnType
+  loop_and_tail_offset(CPtr p1, CPtr p2, size_t count, size_t offset) {
+    if constexpr (SIZE > 1) {
+      const size_t limit = count - SIZE;
+      LIBC_LOOP_NOUNROLL
+      for (; offset < limit; offset += SIZE)
+        if (const auto value = neq<T>(p1, p2, offset))
+          return value;
+      return tail(p1, p2, count);
+    } else {
+      // No need for a tail operation when SIZE == 1.
+      LIBC_LOOP_NOUNROLL
+      for (; offset < count; offset += SIZE)
+        if (const auto value = neq<T>(p1, p2, offset))
+          return value;
+      return BcmpReturnType::ZERO();
+    }
+  }
+
+  LIBC_INLINE static BcmpReturnType
+  loop_and_tail_align_above(size_t threshold, CPtr p1, CPtr p2, size_t count) {
+    static_assert(SIZE > 1,
+                  "No need to align when processing one byte at a time");
+    const AlignHelper<sizeof(T)> helper(p1);
+    if (LIBC_UNLIKELY(count >= threshold) && helper.not_aligned()) {
+      if (auto value = block(p1, p2))
+        return value;
+      adjust(helper.offset(), p1, p2, count);
+    }
+    return loop_and_tail(p1, p2, count);
+  }
+};
+
+template <typename T, typename... TS> struct BcmpSequence {
+  static constexpr size_t SIZE = (sizeof(T) + ... + sizeof(TS));
+  LIBC_INLINE static BcmpReturnType block(CPtr p1, CPtr p2) {
+    if (auto value = neq<T>(p1, p2, 0))
+      return value;
+    if constexpr (sizeof...(TS) > 0)
+      return BcmpSequence<TS...>::block(p1 + sizeof(T), p2 + sizeof(T));
+    else
+      return BcmpReturnType::ZERO();
+  }
+};
+
+///////////////////////////////////////////////////////////////////////////////
+// Specializations for uint8_t
+template <> LIBC_INLINE bool eq<uint8_t>(CPtr p1, CPtr p2, size_t offset) {
+  return load<uint8_t>(p1, offset) == load<uint8_t>(p2, offset);
+}
+template <> LIBC_INLINE uint32_t neq<uint8_t>(CPtr p1, CPtr p2, size_t offset) {
+  return load<uint8_t>(p1, offset) ^ load<uint8_t>(p2, offset);
+}
+template <>
+LIBC_INLINE MemcmpReturnType cmp<uint8_t>(CPtr p1, CPtr p2, size_t offset) {
+  return static_cast<int32_t>(load<uint8_t>(p1, offset)) -
+         static_cast<int32_t>(load<uint8_t>(p2, offset));
+}
+template <>
+LIBC_INLINE MemcmpReturnType cmp_neq<uint8_t>(CPtr p1, CPtr p2, size_t offset);
+
+///////////////////////////////////////////////////////////////////////////////
+// Specializations for uint16_t
+template <> LIBC_INLINE bool eq<uint16_t>(CPtr p1, CPtr p2, size_t offset) {
+  return load<uint16_t>(p1, offset) == load<uint16_t>(p2, offset);
+}
+template <>
+LIBC_INLINE uint32_t neq<uint16_t>(CPtr p1, CPtr p2, size_t offset) {
+  return load<uint16_t>(p1, offset) ^ load<uint16_t>(p2, offset);
+}
+template <>
+LIBC_INLINE MemcmpReturnType cmp<uint16_t>(CPtr p1, CPtr p2, size_t offset) {
+  return static_cast<int32_t>(load_be<uint16_t>(p1, offset)) -
+         static_cast<int32_t>(load_be<uint16_t>(p2, offset));
+}
+template <>
+LIBC_INLINE MemcmpReturnType cmp_neq<uint16_t>(CPtr p1, CPtr p2, size_t offset);
+
+///////////////////////////////////////////////////////////////////////////////
+// Specializations for uint32_t
+template <> LIBC_INLINE bool eq<uint32_t>(CPtr p1, CPtr p2, size_t offset) {
+  return load<uint32_t>(p1, offset) == load<uint32_t>(p2, offset);
+}
+template <>
+LIBC_INLINE uint32_t neq<uint32_t>(CPtr p1, CPtr p2, size_t offset) {
+  return load<uint32_t>(p1, offset) ^ load<uint32_t>(p2, offset);
+}
+template <>
+LIBC_INLINE MemcmpReturnType cmp<uint32_t>(CPtr p1, CPtr p2, size_t offset) {
+  const auto a = load_be<uint32_t>(p1, offset);
+  const auto b = load_be<uint32_t>(p2, offset);
+  return cmp_uint32_t(a, b);
+}
+template <>
+LIBC_INLINE MemcmpReturnType cmp_neq<uint32_t>(CPtr p1, CPtr p2, size_t offset);
+
+///////////////////////////////////////////////////////////////////////////////
+// Specializations for uint64_t
+template <> LIBC_INLINE bool eq<uint64_t>(CPtr p1, CPtr p2, size_t offset) {
+  return load<uint64_t>(p1, offset) == load<uint64_t>(p2, offset);
+}
+template <>
+LIBC_INLINE uint32_t neq<uint64_t>(CPtr p1, CPtr p2, size_t offset) {
+  return !eq<uint64_t>(p1, p2, offset);
+}
+template <>
+LIBC_INLINE MemcmpReturnType cmp<uint64_t>(CPtr p1, CPtr p2, size_t offset);
+template <>
+LIBC_INLINE MemcmpReturnType cmp_neq<uint64_t>(CPtr p1, CPtr p2,
+                                               size_t offset) {
+  const auto a = load_be<uint64_t>(p1, offset);
+  const auto b = load_be<uint64_t>(p2, offset);
+  return cmp_neq_uint64_t(a, b);
+}
 } // namespace __llvm_libc::generic
 
 #endif // LLVM_LIBC_SRC_STRING_MEMORY_UTILS_OP_GENERIC_H
