@@ -102,6 +102,9 @@ public:
   bool loadInputValue(Register DstReg, MachineIRBuilder &B,
                       AMDGPUFunctionArgInfo::PreloadedValue ArgType) const;
 
+  bool legalizePointerAsRsrcIntrin(MachineInstr &MI, MachineRegisterInfo &MRI,
+                                   MachineIRBuilder &B) const;
+
   bool legalizePreloadedArgIntrin(
     MachineInstr &MI, MachineRegisterInfo &MRI, MachineIRBuilder &B,
     AMDGPUFunctionArgInfo::PreloadedValue ArgType) const;

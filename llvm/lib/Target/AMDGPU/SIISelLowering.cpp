@@ -15,8 +15,10 @@
 #include "AMDGPU.h"
 #include "AMDGPUInstrInfo.h"
 #include "AMDGPUTargetMachine.h"
+#include "MCTargetDesc/AMDGPUMCTargetDesc.h"
 #include "SIMachineFunctionInfo.h"
 #include "SIRegisterInfo.h"
+#include "llvm/ADT/APInt.h"
 #include "llvm/ADT/FloatingPointMode.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/Analysis/OptimizationRemarkEmitter.h"
@@ -5122,6 +5124,9 @@ void SITargetLowering::ReplaceNodeResults(SDNode *N,
   case ISD::INTRINSIC_WO_CHAIN: {
     unsigned IID = cast<ConstantSDNode>(N->getOperand(0))->getZExtValue();
     switch (IID) {
+    case Intrinsic::amdgcn_make_buffer_rsrc:
+      Results.push_back(lowerPointerAsRsrcIntrin(N, DAG));
+      return;
     case Intrinsic::amdgcn_cvt_pkrtz: {
       SDValue Src0 = N->getOperand(1);
       SDValue Src1 = N->getOperand(2);
@@ -8667,7 +8672,7 @@ void SITargetLowering::setBufferOffsets(SDValue CombinedOffset,
                                         Align Alignment) const {
   const SIInstrInfo *TII = getSubtarget()->getInstrInfo();
   SDLoc DL(CombinedOffset);
-  if (auto C = dyn_cast<ConstantSDNode>(CombinedOffset)) {
+  if (auto *C = dyn_cast<ConstantSDNode>(CombinedOffset)) {
     uint32_t Imm = C->getZExtValue();
     uint32_t SOffset, ImmOffset;
     if (TII->splitMUBUFOffset(Imm, SOffset, ImmOffset, Alignment)) {
@@ -8704,6 +8709,44 @@ SDValue SITargetLowering::bufferRsrcPtrToVector(SDValue MaybePointer,
 
   SDValue Rsrc = DAG.getBitcast(MVT::v4i32, MaybePointer);
   return Rsrc;
+}
+
+// Wrap a global or flat pointer into a buffer intrinsic using the flags
+// specified in the intrinsic.
+SDValue SITargetLowering::lowerPointerAsRsrcIntrin(SDNode *Op,
+                                                   SelectionDAG &DAG) const {
+  SDLoc Loc(Op);
+
+  SDValue Pointer = Op->getOperand(1);
+  SDValue Stride = Op->getOperand(2);
+  SDValue NumRecords = Op->getOperand(3);
+  SDValue Flags = Op->getOperand(4);
+
+  auto [LowHalf, HighHalf] = DAG.SplitScalar(Pointer, Loc, MVT::i32, MVT::i32);
+  SDValue Mask = DAG.getConstant(0x0000ffff, Loc, MVT::i32);
+  SDValue Masked = DAG.getNode(ISD::AND, Loc, MVT::i32, HighHalf, Mask);
+  std::optional<uint32_t> ConstStride = std::nullopt;
+  if (auto *ConstNode = dyn_cast<ConstantSDNode>(Stride))
+    ConstStride = ConstNode->getZExtValue();
+
+  SDValue NewHighHalf = Masked;
+  if (!ConstStride || *ConstStride != 0) {
+    SDValue ShiftedStride;
+    if (ConstStride) {
+      ShiftedStride = DAG.getConstant(*ConstStride << 16, Loc, MVT::i32);
+    } else {
+      SDValue ExtStride = DAG.getAnyExtOrTrunc(Stride, Loc, MVT::i32);
+      ShiftedStride =
+          DAG.getNode(ISD::SHL, Loc, MVT::i32, ExtStride,
+                      DAG.getShiftAmountConstant(16, MVT::i32, Loc));
+    }
+    NewHighHalf = DAG.getNode(ISD::OR, Loc, MVT::i32, Masked, ShiftedStride);
+  }
+
+  SDValue Rsrc = DAG.getNode(ISD::BUILD_VECTOR, Loc, MVT::v4i32, LowHalf,
+                             NewHighHalf, NumRecords, Flags);
+  SDValue RsrcPtr = DAG.getNode(ISD::BITCAST, Loc, MVT::i128, Rsrc);
+  return RsrcPtr;
 }
 
 // Handle 8 bit and 16 bit buffer loads
