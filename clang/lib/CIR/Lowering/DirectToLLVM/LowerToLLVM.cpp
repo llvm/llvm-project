@@ -219,7 +219,7 @@ public:
           mlir::cir::IntAttr::get(castOp.getSrc().getType(), 0));
       rewriter.replaceOpWithNewOp<mlir::cir::CmpOp>(
           castOp, mlir::cir::BoolType::get(getContext()),
-          mlir::cir::CmpOpKind::ne, src, zero);
+          mlir::cir::CmpOpKind::ne, castOp.getSrc(), zero);
       break;
     }
     case mlir::cir::CastKind::integral: {
@@ -902,8 +902,8 @@ class CIRCmpOpLowering : public mlir::OpConversionPattern<mlir::cir::CmpOp> {
 public:
   using OpConversionPattern<mlir::cir::CmpOp>::OpConversionPattern;
 
-  mlir::LLVM::ICmpPredicate
-  convertToICmpPredicate(mlir::cir::CmpOpKind kind) const {
+  mlir::LLVM::ICmpPredicate convertToICmpPredicate(mlir::cir::CmpOpKind kind,
+                                                   bool isSigned) const {
     using CIR = mlir::cir::CmpOpKind;
     using LLVMICmp = mlir::LLVM::ICmpPredicate;
 
@@ -913,13 +913,13 @@ public:
     case CIR::ne:
       return LLVMICmp::ne;
     case CIR::lt:
-      return LLVMICmp::ult;
+      return (isSigned ? LLVMICmp::slt : LLVMICmp::ult);
     case CIR::le:
-      return LLVMICmp::ule;
+      return (isSigned ? LLVMICmp::sle : LLVMICmp::ule);
     case CIR::gt:
-      return LLVMICmp::ugt;
+      return (isSigned ? LLVMICmp::sgt : LLVMICmp::ugt);
     case CIR::ge:
-      return LLVMICmp::uge;
+      return (isSigned ? LLVMICmp::sge : LLVMICmp::uge);
     }
     llvm_unreachable("Unknown CmpOpKind");
   }
@@ -949,12 +949,12 @@ public:
   mlir::LogicalResult
   matchAndRewrite(mlir::cir::CmpOp cmpOp, OpAdaptor adaptor,
                   mlir::ConversionPatternRewriter &rewriter) const override {
-    auto type = adaptor.getLhs().getType();
+    auto type = cmpOp.getLhs().getType();
     mlir::Value llResult;
 
     // Lower to LLVM comparison op.
-    if (auto intTy = type.dyn_cast<mlir::IntegerType>()) {
-      auto kind = convertToICmpPredicate(cmpOp.getKind());
+    if (auto intTy = type.dyn_cast<mlir::cir::IntType>()) {
+      auto kind = convertToICmpPredicate(cmpOp.getKind(), intTy.isSigned());
       llResult = rewriter.create<mlir::LLVM::ICmpOp>(
           cmpOp.getLoc(), kind, adaptor.getLhs(), adaptor.getRhs());
     } else if (type.isa<mlir::FloatType>()) {
