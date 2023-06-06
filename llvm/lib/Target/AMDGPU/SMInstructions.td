@@ -8,8 +8,7 @@
 
 def smrd_offset_8 : ImmOperand<i32, "SMRDOffset8", 1>;
 
-let OperandType = "OPERAND_IMMEDIATE",
-    EncoderMethod = "getSMEMOffsetEncoding",
+let EncoderMethod = "getSMEMOffsetEncoding",
     DecoderMethod = "decodeSMEMOffset" in {
 def smem_offset : ImmOperand<i32, "SMEMOffset", 1>;
 def smem_offset_mod : NamedIntOperand<i32, "offset", "SMEMOffsetMod">;

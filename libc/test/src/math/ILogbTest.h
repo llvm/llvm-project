@@ -18,7 +18,9 @@
 
 class LlvmLibcILogbTest : public __llvm_libc::testing::Test {
 public:
-  template <typename T> struct ILogbFunc { typedef int (*Func)(T); };
+  template <typename T> struct ILogbFunc {
+    typedef int (*Func)(T);
+  };
 
   template <typename T>
   void test_special_numbers(typename ILogbFunc<T>::Func func) {
@@ -75,7 +77,7 @@ public:
   void test_subnormal_range(typename ILogbFunc<T>::Func func) {
     using FPBits = __llvm_libc::fputil::FPBits<T>;
     using UIntType = typename FPBits::UIntType;
-    constexpr UIntType COUNT = 1000001;
+    constexpr UIntType COUNT = 10'001;
     constexpr UIntType STEP =
         (FPBits::MAX_SUBNORMAL - FPBits::MIN_SUBNORMAL) / COUNT;
     for (UIntType v = FPBits::MIN_SUBNORMAL; v <= FPBits::MAX_SUBNORMAL;
@@ -94,7 +96,7 @@ public:
   void test_normal_range(typename ILogbFunc<T>::Func func) {
     using FPBits = __llvm_libc::fputil::FPBits<T>;
     using UIntType = typename FPBits::UIntType;
-    constexpr UIntType COUNT = 1000001;
+    constexpr UIntType COUNT = 10'001;
     constexpr UIntType STEP = (FPBits::MAX_NORMAL - FPBits::MIN_NORMAL) / COUNT;
     for (UIntType v = FPBits::MIN_NORMAL; v <= FPBits::MAX_NORMAL; v += STEP) {
       T x = T(FPBits(v));

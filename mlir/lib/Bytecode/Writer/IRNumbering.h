@@ -18,6 +18,7 @@
 #include "llvm/ADT/MapVector.h"
 #include "llvm/ADT/SetVector.h"
 #include "llvm/ADT/StringMap.h"
+#include <cstdint>
 
 namespace mlir {
 class BytecodeDialectInterface;
@@ -133,7 +134,7 @@ struct DialectNumbering {
 /// emission.
 class IRNumberingState {
 public:
-  IRNumberingState(Operation *op);
+  IRNumberingState(Operation *op, const BytecodeWriterConfig &config);
 
   /// Return the numbered dialects.
   auto getDialects() {
@@ -241,6 +242,9 @@ private:
 
   /// The next value ID to assign when numbering.
   unsigned nextValueID = 0;
+
+  // Configuration: useful to query the required version to emit.
+  const BytecodeWriterConfig &config;
 };
 } // namespace detail
 } // namespace bytecode

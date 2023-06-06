@@ -838,11 +838,9 @@ bool DataAggregator::doTrace(const LBREntry &First, const LBREntry &Second,
 }
 
 bool DataAggregator::recordTrace(
-    BinaryFunction &BF,
-    const LBREntry &FirstLBR,
-    const LBREntry &SecondLBR,
+    BinaryFunction &BF, const LBREntry &FirstLBR, const LBREntry &SecondLBR,
     uint64_t Count,
-    SmallVector<std::pair<uint64_t, uint64_t>, 16> *Branches) const {
+    SmallVector<std::pair<uint64_t, uint64_t>, 16> &Branches) const {
   BinaryContext &BC = BF.getBinaryContext();
 
   if (!BF.isSimple())
@@ -902,22 +900,25 @@ bool DataAggregator::recordTrace(
       return false;
     }
 
-    // Record fall-through jumps
-    BinaryBasicBlock::BinaryBranchInfo &BI = BB->getBranchInfo(*NextBB);
-    BI.Count += Count;
+    const MCInst *Instr = BB->getLastNonPseudoInstr();
+    uint64_t Offset = 0;
+    if (Instr)
+      Offset = BC.MIB->getOffsetWithDefault(*Instr, 0);
+    else
+      Offset = BB->getOffset();
 
-    if (Branches) {
-      const MCInst *Instr = BB->getLastNonPseudoInstr();
-      uint64_t Offset = 0;
-      if (Instr)
-        Offset = BC.MIB->getOffsetWithDefault(*Instr, 0);
-      else
-        Offset = BB->getOffset();
-
-      Branches->emplace_back(Offset, NextBB->getOffset());
-    }
+    Branches.emplace_back(Offset, NextBB->getOffset());
 
     BB = NextBB;
+  }
+
+  // Record fall-through jumps
+  for (const auto &[FromOffset, ToOffset] : Branches) {
+    BinaryBasicBlock *FromBB = BF.getBasicBlockContainingOffset(FromOffset);
+    BinaryBasicBlock *ToBB = BF.getBasicBlockAtOffset(ToOffset);
+    assert(FromBB && ToBB);
+    BinaryBasicBlock::BinaryBranchInfo &BI = FromBB->getBranchInfo(*ToBB);
+    BI.Count += Count;
   }
 
   return true;
@@ -930,7 +931,7 @@ DataAggregator::getFallthroughsInTrace(BinaryFunction &BF,
                                        uint64_t Count) const {
   SmallVector<std::pair<uint64_t, uint64_t>, 16> Res;
 
-  if (!recordTrace(BF, FirstLBR, SecondLBR, Count, &Res))
+  if (!recordTrace(BF, FirstLBR, SecondLBR, Count, Res))
     return std::nullopt;
 
   return Res;

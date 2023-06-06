@@ -3381,6 +3381,9 @@ void SelectionDAGBuilder::visitSelect(const User &I) {
   if (auto *FPOp = dyn_cast<FPMathOperator>(&I))
     Flags.copyFMF(*FPOp);
 
+  Flags.setUnpredictable(
+      cast<SelectInst>(I).getMetadata(LLVMContext::MD_unpredictable));
+
   // Min/max matching is only viable if all output VTs are the same.
   if (all_equal(ValueVTs)) {
     EVT VT = ValueVTs[0];
@@ -7319,6 +7322,40 @@ void SelectionDAGBuilder::visitIntrinsicCall(const CallInst &I,
     setValue(&I, SetCC);
     return;
   }
+  case Intrinsic::experimental_get_vector_length: {
+    assert(cast<ConstantInt>(I.getOperand(1))->getSExtValue() > 0 &&
+           "Expected positive VF");
+    unsigned VF = cast<ConstantInt>(I.getOperand(1))->getZExtValue();
+    bool IsScalable = cast<ConstantInt>(I.getOperand(2))->isOne();
+
+    SDValue Count = getValue(I.getOperand(0));
+    EVT CountVT = Count.getValueType();
+
+    if (!TLI.shouldExpandGetVectorLength(CountVT, VF, IsScalable)) {
+      visitTargetIntrinsic(I, Intrinsic);
+      return;
+    }
+
+    // Expand to a umin between the trip count and the maximum elements the type
+    // can hold.
+    EVT VT = TLI.getValueType(DAG.getDataLayout(), I.getType());
+
+    // Extend the trip count to at least the result VT.
+    if (CountVT.bitsLT(VT)) {
+      Count = DAG.getNode(ISD::ZERO_EXTEND, sdl, VT, Count);
+      CountVT = VT;
+    }
+
+    SDValue MaxEVL = DAG.getElementCount(sdl, CountVT,
+                                         ElementCount::get(VF, IsScalable));
+
+    SDValue UMin = DAG.getNode(ISD::UMIN, sdl, CountVT, Count, MaxEVL);
+    // Clip to the result type if needed.
+    SDValue Trunc = DAG.getNode(ISD::TRUNCATE, sdl, VT, UMin);
+
+    setValue(&I, Trunc);
+    return;
+  }
   case Intrinsic::vector_insert: {
     SDValue Vec = getValue(I.getOperand(0));
     SDValue SubVec = getValue(I.getOperand(1));
@@ -8249,14 +8286,13 @@ bool SelectionDAGBuilder::visitMemPCpyCall(const CallInst &I) {
   // DAG::getMemcpy needs Alignment to be defined.
   Align Alignment = std::min(DstAlign, SrcAlign);
 
-  bool isVol = false;
   SDLoc sdl = getCurSDLoc();
 
   // In the mempcpy context we need to pass in a false value for isTailCall
   // because the return pointer needs to be adjusted by the size of
   // the copied memory.
-  SDValue Root = isVol ? getRoot() : getMemoryRoot();
-  SDValue MC = DAG.getMemcpy(Root, sdl, Dst, Src, Size, Alignment, isVol, false,
+  SDValue Root = getMemoryRoot();
+  SDValue MC = DAG.getMemcpy(Root, sdl, Dst, Src, Size, Alignment, false, false,
                              /*isTailCall=*/false,
                              MachinePointerInfo(I.getArgOperand(0)),
                              MachinePointerInfo(I.getArgOperand(1)),

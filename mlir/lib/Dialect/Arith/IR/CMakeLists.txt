@@ -22,6 +22,7 @@ add_mlir_dialect_library(MLIRArithDialect
   MLIRArithOpsInterfacesIncGen
 
   LINK_LIBS PUBLIC
+  MLIRCastInterfaces
   MLIRDialect
   MLIRInferIntRangeCommon
   MLIRInferIntRangeInterface

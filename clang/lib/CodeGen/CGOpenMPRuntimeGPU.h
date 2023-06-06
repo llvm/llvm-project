@@ -110,37 +110,6 @@ private:
                                   bool IsOffloadEntry,
                                   const RegionCodeGenTy &CodeGen) override;
 
-  /// Emits code for parallel or serial call of the \a OutlinedFn with
-  /// variables captured in a record which address is stored in \a
-  /// CapturedStruct.
-  /// This call is for the Non-SPMD Execution Mode.
-  /// \param OutlinedFn Outlined function to be run in parallel threads. Type of
-  /// this function is void(*)(kmp_int32 *, kmp_int32, struct context_vars*).
-  /// \param CapturedVars A pointer to the record with the references to
-  /// variables used in \a OutlinedFn function.
-  /// \param IfCond Condition in the associated 'if' clause, if it was
-  /// specified, nullptr otherwise.
-  void emitNonSPMDParallelCall(CodeGenFunction &CGF, SourceLocation Loc,
-                               llvm::Value *OutlinedFn,
-                               ArrayRef<llvm::Value *> CapturedVars,
-                               const Expr *IfCond);
-
-  /// Emits code for parallel or serial call of the \a OutlinedFn with
-  /// variables captured in a record which address is stored in \a
-  /// CapturedStruct.
-  /// This call is for a parallel directive within an SPMD target directive.
-  /// \param OutlinedFn Outlined function to be run in parallel threads. Type of
-  /// this function is void(*)(kmp_int32 *, kmp_int32, struct context_vars*).
-  /// \param CapturedVars A pointer to the record with the references to
-  /// variables used in \a OutlinedFn function.
-  /// \param IfCond Condition in the associated 'if' clause, if it was
-  /// specified, nullptr otherwise.
-  ///
-  void emitSPMDParallelCall(CodeGenFunction &CGF, SourceLocation Loc,
-                            llvm::Function *OutlinedFn,
-                            ArrayRef<llvm::Value *> CapturedVars,
-                            const Expr *IfCond);
-
 protected:
   /// Check if the default location must be constant.
   /// Constant for NVPTX for better optimization.

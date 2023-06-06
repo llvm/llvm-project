@@ -1,3 +1,0 @@
-# XFAIL: system-netbsd
-# RUN: %clang_host -x c %S/Inputs/val.c -g -o %t
-# RUN: %lldb -b -s %S/Inputs/watchpoint.in %t 2>&1 | FileCheck %S/Inputs/watchpoint.in

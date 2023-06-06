@@ -168,4 +168,16 @@ TEST(Attr, AnnotateType) {
   }
 }
 
+TEST(Attr, RegularKeywordAttribute) {
+  auto AST = clang::tooling::buildASTFromCode("");
+  auto &Ctx = AST->getASTContext();
+  auto Funcref = clang::WebAssemblyFuncrefAttr::CreateImplicit(Ctx);
+  EXPECT_EQ(Funcref->getSyntax(), clang::AttributeCommonInfo::AS_Keyword);
+  ASSERT_FALSE(Funcref->isRegularKeywordAttribute());
+
+  auto Streaming = clang::ArmStreamingAttr::CreateImplicit(Ctx);
+  EXPECT_EQ(Streaming->getSyntax(), clang::AttributeCommonInfo::AS_Keyword);
+  ASSERT_TRUE(Streaming->isRegularKeywordAttribute());
+}
+
 } // namespace

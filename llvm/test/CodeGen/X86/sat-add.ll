@@ -656,9 +656,10 @@ define <2 x i64> @unsigned_sat_constant_v2i64_using_min(<2 x i64> %x) {
 ;
 ; AVX2-LABEL: unsigned_sat_constant_v2i64_using_min:
 ; AVX2:       # %bb.0:
-; AVX2-NEXT:    vmovapd {{.*#+}} xmm1 = [18446744073709551573,18446744073709551573]
+; AVX2-NEXT:    vmovddup {{.*#+}} xmm1 = [18446744073709551573,18446744073709551573]
+; AVX2-NEXT:    # xmm1 = mem[0,0]
 ; AVX2-NEXT:    vpxor {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm2
-; AVX2-NEXT:    vmovdqa {{.*#+}} xmm3 = [9223372036854775765,9223372036854775765]
+; AVX2-NEXT:    vpbroadcastq {{.*#+}} xmm3 = [9223372036854775765,9223372036854775765]
 ; AVX2-NEXT:    vpcmpgtq %xmm2, %xmm3, %xmm2
 ; AVX2-NEXT:    vblendvpd %xmm2, %xmm0, %xmm1, %xmm0
 ; AVX2-NEXT:    vpaddq {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
@@ -725,7 +726,7 @@ define <2 x i64> @unsigned_sat_constant_v2i64_using_cmp_sum(<2 x i64> %x) {
 ;
 ; AVX2-LABEL: unsigned_sat_constant_v2i64_using_cmp_sum:
 ; AVX2:       # %bb.0:
-; AVX2-NEXT:    vmovdqa {{.*#+}} xmm1 = [9223372036854775808,9223372036854775808]
+; AVX2-NEXT:    vpbroadcastq {{.*#+}} xmm1 = [9223372036854775808,9223372036854775808]
 ; AVX2-NEXT:    vpxor %xmm1, %xmm0, %xmm2
 ; AVX2-NEXT:    vpaddq {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
 ; AVX2-NEXT:    vpxor %xmm1, %xmm0, %xmm1
@@ -784,7 +785,7 @@ define <2 x i64> @unsigned_sat_constant_v2i64_using_cmp_notval(<2 x i64> %x) {
 ;
 ; AVX2-LABEL: unsigned_sat_constant_v2i64_using_cmp_notval:
 ; AVX2:       # %bb.0:
-; AVX2-NEXT:    vmovdqa {{.*#+}} xmm1 = [9223372036854775808,9223372036854775808]
+; AVX2-NEXT:    vpbroadcastq {{.*#+}} xmm1 = [9223372036854775808,9223372036854775808]
 ; AVX2-NEXT:    vpxor %xmm1, %xmm0, %xmm2
 ; AVX2-NEXT:    vpaddq {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
 ; AVX2-NEXT:    vpxor %xmm1, %xmm0, %xmm1
@@ -1266,7 +1267,7 @@ define <2 x i64> @unsigned_sat_variable_v2i64_using_cmp_sum(<2 x i64> %x, <2 x i
 ;
 ; AVX2-LABEL: unsigned_sat_variable_v2i64_using_cmp_sum:
 ; AVX2:       # %bb.0:
-; AVX2-NEXT:    vmovdqa {{.*#+}} xmm2 = [9223372036854775808,9223372036854775808]
+; AVX2-NEXT:    vpbroadcastq {{.*#+}} xmm2 = [9223372036854775808,9223372036854775808]
 ; AVX2-NEXT:    vpxor %xmm2, %xmm0, %xmm3
 ; AVX2-NEXT:    vpaddq %xmm1, %xmm0, %xmm0
 ; AVX2-NEXT:    vpxor %xmm2, %xmm0, %xmm1

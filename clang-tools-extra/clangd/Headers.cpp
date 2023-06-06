@@ -29,7 +29,7 @@ class IncludeStructure::RecordHeaders : public PPCallbacks {
 public:
   RecordHeaders(const CompilerInstance &CI, IncludeStructure *Out)
       : SM(CI.getSourceManager()),
-        HeaderInfo(CI.getPreprocessor().getHeaderSearchInfo()), Out(Out) {}
+        Out(Out) {}
 
   // Record existing #includes - both written and resolved paths. Only #includes
   // in the main file are collected.
@@ -119,7 +119,6 @@ private:
   bool inMainFile() const { return Level == 1; }
 
   const SourceManager &SM;
-  HeaderSearch &HeaderInfo;
   // Set after entering the <built-in> file.
   FileID BuiltinFile;
   // Indicates whether <built-in> file is part of include stack.

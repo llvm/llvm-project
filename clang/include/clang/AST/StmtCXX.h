@@ -443,6 +443,17 @@ public:
                                                    NumParams);
   }
 
+  child_range childrenExclBody() {
+    return child_range(getStoredStmts() + SubStmt::Body + 1,
+                       getStoredStmts() + SubStmt::FirstParamMove + NumParams);
+  }
+
+  const_child_range childrenExclBody() const {
+    return const_child_range(getStoredStmts() + SubStmt::Body + 1,
+                             getStoredStmts() + SubStmt::FirstParamMove +
+                                 NumParams);
+  }
+
   static bool classof(const Stmt *T) {
     return T->getStmtClass() == CoroutineBodyStmtClass;
   }

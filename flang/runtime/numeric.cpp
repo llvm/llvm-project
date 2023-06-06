@@ -83,7 +83,7 @@ template <typename T> inline T Fraction(T x) {
   } else if (std::isinf(x)) {
     return std::numeric_limits<T>::quiet_NaN(); // +/-Inf -> NaN
   } else if (x == 0) {
-    return 0; // 0 -> 0
+    return x; // 0 -> same 0
   } else {
     int ignoredExp;
     return std::frexp(x, &ignoredExp);

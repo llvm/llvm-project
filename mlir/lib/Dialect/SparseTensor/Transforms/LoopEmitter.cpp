@@ -385,7 +385,7 @@ void LoopEmitter::initializeLoopEmit(OpBuilder &builder, Location loc,
 
       // FIXME: `toOrigDim` is deprecated.  For now this relies on the
       // 1:1 mapping between levels and dimensions, since nowhere else
-      // in the code supports HigherOrdering yet either.
+      // in the code supports non-permutations yet either.
       Value lvlSz = mlir::linalg::createOrFoldDimOp(builder, loc, tensor,
                                                     toOrigDim(enc, l));
       // Find upper bound in current dimension.
@@ -1163,6 +1163,14 @@ void LoopEmitter::exitForLoop(RewriterBase &rewriter, Location loc,
                               MutableArrayRef<Value> reduc) {
   const LoopInfo &loopInfo = loopStack.back();
   rewriter.setInsertionPointToEnd(loopInfo.userCodeBlock);
+  if (!loopInfo.userCodeBlock->empty() &&
+      llvm::isa<scf::ForOp>(loopInfo.loop) &&
+      llvm::isa<scf::YieldOp>(&loopInfo.userCodeBlock->back())) {
+    // scf::For inserts an implicit yield op when there is no loop iter args. In
+    // this case, we need to insert the code before the yield.
+    assert(reduc.empty());
+    rewriter.setInsertionPoint(&loopInfo.userCodeBlock->back());
+  }
   for (auto [tid, lvl, reduced] : loopInfo.sliceDrivenInfo) {
     SliceInfo &info = sliceStack[tid].back();
     assert(isDenseDLT(lvlTypes[tid][lvl]));

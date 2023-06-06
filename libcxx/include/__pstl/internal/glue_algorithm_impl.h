@@ -763,37 +763,6 @@ is_sorted(_ExecutionPolicy&& __exec, _ForwardIterator __first, _ForwardIterator 
 }
 
 // [alg.merge]
-template <class _ExecutionPolicy,
-          class _ForwardIterator1,
-          class _ForwardIterator2,
-          class _ForwardIterator,
-          class _Compare>
-__pstl::__internal::__enable_if_execution_policy<_ExecutionPolicy, _ForwardIterator>
-merge(_ExecutionPolicy&& __exec,
-      _ForwardIterator1 __first1,
-      _ForwardIterator1 __last1,
-      _ForwardIterator2 __first2,
-      _ForwardIterator2 __last2,
-      _ForwardIterator __d_first,
-      _Compare __comp) {
-  auto __dispatch_tag = __pstl::__internal::__select_backend(__exec, __first1, __first2, __d_first);
-
-  return __pstl::__internal::__pattern_merge(
-      __dispatch_tag, std::forward<_ExecutionPolicy>(__exec), __first1, __last1, __first2, __last2, __d_first, __comp);
-}
-
-template <class _ExecutionPolicy, class _ForwardIterator1, class _ForwardIterator2, class _ForwardIterator>
-__pstl::__internal::__enable_if_execution_policy<_ExecutionPolicy, _ForwardIterator>
-merge(_ExecutionPolicy&& __exec,
-      _ForwardIterator1 __first1,
-      _ForwardIterator1 __last1,
-      _ForwardIterator2 __first2,
-      _ForwardIterator2 __last2,
-      _ForwardIterator __d_first) {
-  return std::merge(
-      std::forward<_ExecutionPolicy>(__exec), __first1, __last1, __first2, __last2, __d_first, std::less<>());
-}
-
 template <class _ExecutionPolicy, class _BidirectionalIterator, class _Compare>
 __pstl::__internal::__enable_if_execution_policy<_ExecutionPolicy, void>
 inplace_merge(_ExecutionPolicy&& __exec,

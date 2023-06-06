@@ -43,6 +43,15 @@ module __Fortran_builtins
   integer, parameter :: __builtin_atomic_int_kind = selected_int_kind(18)
   integer, parameter :: __builtin_atomic_logical_kind = __builtin_atomic_int_kind
 
+  procedure(type(__builtin_c_ptr)) :: __builtin_c_loc
+
+  type :: __builtin_dim3
+    integer :: x=1, y=1, z=1
+  end type
+  type(__builtin_dim3) :: &
+    __builtin_threadIdx, __builtin_blockDim, __builtin_blockIdx, __builtin_gridDim
+  integer, parameter :: __builtin_warpsize = 32
+
   intrinsic :: __builtin_ieee_is_nan, __builtin_ieee_is_negative, &
     __builtin_ieee_is_normal
   intrinsic :: __builtin_ieee_next_after, __builtin_ieee_next_down, &
@@ -63,5 +72,26 @@ module __Fortran_builtins
     type(__builtin_lock_type) :: lock_type
     type(__builtin_team_type) :: team_type
   end type
+
+  intrinsic :: __builtin_compiler_options, __builtin_compiler_version
+
+  interface operator(==)
+    module procedure __builtin_c_ptr_eq
+  end interface
+  interface operator(/=)
+    module procedure __builtin_c_ptr_eq
+  end interface
+
+contains
+
+  elemental logical function __builtin_c_ptr_eq(x, y)
+    type(__builtin_c_ptr), intent(in) :: x, y
+    __builtin_c_ptr_eq = x%__address == y%__address
+  end function
+
+  elemental logical function __builtin_c_ptr_ne(x, y)
+    type(__builtin_c_ptr), intent(in) :: x, y
+    __builtin_c_ptr_ne = x%__address /= y%__address
+  end function
 
 end module

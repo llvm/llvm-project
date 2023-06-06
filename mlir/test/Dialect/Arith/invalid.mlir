@@ -753,3 +753,19 @@ func.func @func() {
 
   %x = arith.constant 1 : i32
 }
+
+// -----
+
+func.func @disallow_zero_rank_tensor_with_ranked_tensor(%arg0 : tensor<i1>, %arg1 : tensor<2xi64>, %arg2 : tensor<2xi64>) -> tensor<2xi64> {
+  // expected-error @+1 {{'arith.select' op failed to verify that condition is scalar or has matching shape}}
+  %0 = arith.select %arg0, %arg1, %arg2 : tensor<i1>, tensor<2xi64>
+  return %0 : tensor<2xi64>
+}
+
+// -----
+
+func.func @disallow_zero_rank_tensor_with_unranked_tensor(%arg0 : tensor<i1>, %arg1 : tensor<2x?xi64>, %arg2 : tensor<2x?xi64>) -> tensor<2x?xi64> {
+  // expected-error @+1 {{'arith.select' op failed to verify that condition is scalar or has matching shape}}
+  %0 = arith.select %arg0, %arg1, %arg2 : tensor<i1>, tensor<2x?xi64>
+  return %0 : tensor<2x?xi64>
+}

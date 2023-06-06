@@ -130,7 +130,7 @@ define <4 x i16> @var_shift_v4i16(<4 x i16> %a, <4 x i16> %b) nounwind {
 ; AVX1:       # %bb.0:
 ; AVX1-NEXT:    vpunpckhwd {{.*#+}} xmm2 = xmm1[4,4,5,5,6,6,7,7]
 ; AVX1-NEXT:    vpslld $23, %xmm2, %xmm2
-; AVX1-NEXT:    vmovdqa {{.*#+}} xmm3 = [1065353216,1065353216,1065353216,1065353216]
+; AVX1-NEXT:    vbroadcastss {{.*#+}} xmm3 = [1065353216,1065353216,1065353216,1065353216]
 ; AVX1-NEXT:    vpaddd %xmm3, %xmm2, %xmm2
 ; AVX1-NEXT:    vcvttps2dq %xmm2, %xmm2
 ; AVX1-NEXT:    vpmovzxwd {{.*#+}} xmm1 = xmm1[0],zero,xmm1[1],zero,xmm1[2],zero,xmm1[3],zero
@@ -253,7 +253,7 @@ define <2 x i16> @var_shift_v2i16(<2 x i16> %a, <2 x i16> %b) nounwind {
 ; AVX1:       # %bb.0:
 ; AVX1-NEXT:    vpunpckhwd {{.*#+}} xmm2 = xmm1[4,4,5,5,6,6,7,7]
 ; AVX1-NEXT:    vpslld $23, %xmm2, %xmm2
-; AVX1-NEXT:    vmovdqa {{.*#+}} xmm3 = [1065353216,1065353216,1065353216,1065353216]
+; AVX1-NEXT:    vbroadcastss {{.*#+}} xmm3 = [1065353216,1065353216,1065353216,1065353216]
 ; AVX1-NEXT:    vpaddd %xmm3, %xmm2, %xmm2
 ; AVX1-NEXT:    vcvttps2dq %xmm2, %xmm2
 ; AVX1-NEXT:    vpmovzxwd {{.*#+}} xmm1 = xmm1[0],zero,xmm1[1],zero,xmm1[2],zero,xmm1[3],zero
@@ -1339,7 +1339,7 @@ define <4 x i16> @constant_shift_v4i16(<4 x i16> %a) nounwind {
 ; AVX512BW-LABEL: constant_shift_v4i16:
 ; AVX512BW:       # %bb.0:
 ; AVX512BW-NEXT:    # kill: def $xmm0 killed $xmm0 def $zmm0
-; AVX512BW-NEXT:    vmovdqa {{.*#+}} xmm1 = <0,1,2,3,u,u,u,u>
+; AVX512BW-NEXT:    vpbroadcastq {{.*#+}} xmm1 = [0,1,2,3,0,1,2,3]
 ; AVX512BW-NEXT:    vpsllvw %zmm1, %zmm0, %zmm0
 ; AVX512BW-NEXT:    # kill: def $xmm0 killed $xmm0 killed $zmm0
 ; AVX512BW-NEXT:    vzeroupper
@@ -1399,7 +1399,7 @@ define <2 x i16> @constant_shift_v2i16(<2 x i16> %a) nounwind {
 ; AVX512BW-LABEL: constant_shift_v2i16:
 ; AVX512BW:       # %bb.0:
 ; AVX512BW-NEXT:    # kill: def $xmm0 killed $xmm0 def $zmm0
-; AVX512BW-NEXT:    vmovdqa {{.*#+}} xmm1 = <2,3,u,u,u,u,u,u>
+; AVX512BW-NEXT:    vpbroadcastd {{.*#+}} xmm1 = [2,3,2,3,2,3,2,3]
 ; AVX512BW-NEXT:    vpsllvw %zmm1, %zmm0, %zmm0
 ; AVX512BW-NEXT:    # kill: def $xmm0 killed $xmm0 killed $zmm0
 ; AVX512BW-NEXT:    vzeroupper

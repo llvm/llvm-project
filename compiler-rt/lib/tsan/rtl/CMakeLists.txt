@@ -27,6 +27,7 @@ set(TSAN_SOURCES
   tsan_fd.cpp
   tsan_flags.cpp
   tsan_ignoreset.cpp
+  tsan_interceptors_memintrinsics.cpp
   tsan_interceptors_posix.cpp
   tsan_interface.cpp
   tsan_interface_ann.cpp

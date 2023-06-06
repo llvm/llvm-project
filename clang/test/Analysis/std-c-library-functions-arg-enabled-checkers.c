@@ -1,12 +1,11 @@
-// Here we test the order of the Checkers when StdCLibraryFunctionArgs is
+// Here we test the order of the Checkers when StdCLibraryFunctions is
 // enabled.
 
 // RUN: %clang --analyze %s --target=x86_64-pc-linux-gnu \
 // RUN:   -Xclang -analyzer-checker=core \
-// RUN:   -Xclang -analyzer-checker=apiModeling.StdCLibraryFunctions \
+// RUN:   -Xclang -analyzer-checker=alpha.unix.StdCLibraryFunctions \
 // RUN:   -Xclang -analyzer-config \
-// RUN:      -Xclang apiModeling.StdCLibraryFunctions:ModelPOSIX=true \
-// RUN:   -Xclang -analyzer-checker=alpha.unix.StdCLibraryFunctionArgs \
+// RUN:      -Xclang alpha.unix.StdCLibraryFunctions:ModelPOSIX=true \
 // RUN:   -Xclang -analyzer-checker=alpha.unix.Stream \
 // RUN:   -Xclang -analyzer-list-enabled-checkers \
 // RUN:   -Xclang -analyzer-display-progress \
@@ -18,8 +17,7 @@
 // CHECK-NEXT: core.CallAndMessageModeling
 // CHECK-NEXT: core.CallAndMessage
 // CHECK-NEXT: core.NonNullParamChecker
-// CHECK-NEXT: apiModeling.StdCLibraryFunctions
-// CHECK-NEXT: alpha.unix.StdCLibraryFunctionArgs
+// CHECK-NEXT: alpha.unix.StdCLibraryFunctions
 // CHECK-NEXT: alpha.unix.Stream
 // CHECK-NEXT: apiModeling.Errno
 // CHECK-NEXT: apiModeling.TrustNonnull

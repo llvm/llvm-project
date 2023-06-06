@@ -366,18 +366,16 @@ define i32 @d(i64 %e, i32 %f, i64 %g, i32 %h) {
 ; CHECK-NEXT:    str r0, [sp, #12] @ 4-byte Spill
 ; CHECK-NEXT:    movs r1, #4
 ; CHECK-NEXT:    strd r2, r12, [sp, #4] @ 8-byte Folded Spill
-; CHECK-NEXT:    add.w r3, r3, r4, lsr #1
 ; CHECK-NEXT:    add.w r1, r1, r4, lsr #1
-; CHECK-NEXT:    movw r4, #65532
-; CHECK-NEXT:    vdup.32 q6, r3
-; CHECK-NEXT:    movt r4, #32767
-; CHECK-NEXT:    and.w r7, r1, r4
+; CHECK-NEXT:    add.w r3, r3, r4, lsr #1
+; CHECK-NEXT:    bic r7, r1, #3
 ; CHECK-NEXT:    adr r1, .LCPI1_0
-; CHECK-NEXT:    vdup.32 q7, r3
 ; CHECK-NEXT:    vldrw.u32 q0, [r1]
 ; CHECK-NEXT:    adr r1, .LCPI1_1
 ; CHECK-NEXT:    vldrw.u32 q5, [r1]
+; CHECK-NEXT:    vdup.32 q6, r3
 ; CHECK-NEXT:    vadd.i32 q4, q0, lr
+; CHECK-NEXT:    vdup.32 q7, r3
 ; CHECK-NEXT:    b .LBB1_4
 ; CHECK-NEXT:  .LBB1_2: @ %for.body6.preheader
 ; CHECK-NEXT:    @ in Loop: Header=BB1_4 Depth=1

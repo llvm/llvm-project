@@ -18,6 +18,7 @@
 #include "clang/AST/Decl.h"
 #include "clang/AST/DeclBase.h"
 #include "clang/AST/DeclCXX.h"
+#include "clang/AST/DeclFriend.h"
 #include "clang/AST/DeclObjC.h"
 #include "clang/AST/DeclTemplate.h"
 #include "clang/AST/DependenceFlags.h"
@@ -1487,7 +1488,13 @@ struct StripObjCKindOfTypeVisitor
 
 bool QualType::UseExcessPrecision(const ASTContext &Ctx) {
   const BuiltinType *BT = getTypePtr()->getAs<BuiltinType>();
-  if (BT) {
+  if (!BT) {
+    const VectorType *VT = getTypePtr()->getAs<VectorType>();
+    if (VT) {
+      QualType ElementType = VT->getElementType();
+      return ElementType.UseExcessPrecision(Ctx);
+    }
+  } else {
     switch (BT->getKind()) {
     case BuiltinType::Kind::Float16: {
       const TargetInfo &TI = Ctx.getTargetInfo();
@@ -1496,7 +1503,15 @@ bool QualType::UseExcessPrecision(const ASTContext &Ctx) {
               Ctx.getLangOpts().ExcessPrecisionKind::FPP_None)
         return true;
       return false;
-    }
+    } break;
+    case BuiltinType::Kind::BFloat16: {
+      const TargetInfo &TI = Ctx.getTargetInfo();
+      if (TI.hasBFloat16Type() && !TI.hasFullBFloat16Type() &&
+          Ctx.getLangOpts().getBFloat16ExcessPrecision() !=
+              Ctx.getLangOpts().ExcessPrecisionKind::FPP_None)
+        return true;
+      return false;
+    } break;
     default:
       return false;
     }
@@ -2183,8 +2198,7 @@ bool Type::isRealType() const {
 bool Type::isArithmeticType() const {
   if (const auto *BT = dyn_cast<BuiltinType>(CanonicalType))
     return BT->getKind() >= BuiltinType::Bool &&
-           BT->getKind() <= BuiltinType::Ibm128 &&
-           BT->getKind() != BuiltinType::BFloat16;
+           BT->getKind() <= BuiltinType::Ibm128;
   if (const auto *ET = dyn_cast<EnumType>(CanonicalType))
     // GCC allows forward declaration of enum types (forbid by C99 6.7.2.3p2).
     // If a body isn't seen by the time we get here, return false.
@@ -2421,7 +2435,7 @@ bool Type::isVLSTBuiltinType() const {
 QualType Type::getSveEltType(const ASTContext &Ctx) const {
   assert(isVLSTBuiltinType() && "unsupported type!");
 
-  const BuiltinType *BTy = getAs<BuiltinType>();
+  const BuiltinType *BTy = castAs<BuiltinType>();
   if (BTy->getKind() == BuiltinType::SveBool)
     // Represent predicates as i8 rather than i1 to avoid any layout issues.
     // The type is bitcasted to a scalable predicate type when casting between
@@ -2449,7 +2463,7 @@ bool Type::isRVVVLSBuiltinType() const {
 QualType Type::getRVVEltType(const ASTContext &Ctx) const {
   assert(isRVVVLSBuiltinType() && "unsupported type!");
 
-  const BuiltinType *BTy = getAs<BuiltinType>();
+  const BuiltinType *BTy = castAs<BuiltinType>();
   return Ctx.getBuiltinVectorTypeInfo(BTy).ElementType;
 }
 
@@ -2627,11 +2641,21 @@ HasNonDeletedDefaultedEqualityComparison(const CXXRecordDecl *Decl) {
   if (Decl->isUnion())
     return false;
 
-  if (llvm::none_of(Decl->methods(), [](const CXXMethodDecl *MemberFunction) {
-        return MemberFunction->isOverloadedOperator() &&
-               MemberFunction->getOverloadedOperator() ==
-                   OverloadedOperatorKind::OO_EqualEqual &&
-               MemberFunction->isDefaulted();
+  auto IsDefaultedOperatorEqualEqual = [&](const FunctionDecl *Function) {
+    return Function->getOverloadedOperator() ==
+               OverloadedOperatorKind::OO_EqualEqual &&
+           Function->isDefaulted() && Function->getNumParams() > 0 &&
+           (Function->getParamDecl(0)->getType()->isReferenceType() ||
+            Decl->isTriviallyCopyable());
+  };
+
+  if (llvm::none_of(Decl->methods(), IsDefaultedOperatorEqualEqual) &&
+      llvm::none_of(Decl->friends(), [&](const FriendDecl *Friend) {
+        if (NamedDecl *ND = Friend->getFriendDecl()) {
+          return ND->isFunctionOrFunctionTemplate() &&
+                 IsDefaultedOperatorEqualEqual(ND->getAsFunction());
+        }
+        return false;
       }))
     return false;
 

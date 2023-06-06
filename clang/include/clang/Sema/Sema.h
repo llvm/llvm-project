@@ -1624,7 +1624,7 @@ public:
   /// Indicate RISC-V vector builtin functions enabled or not.
   bool DeclareRISCVVBuiltins = false;
 
-  /// Indicate RISC-V Sifive vector builtin functions enabled or not.
+  /// Indicate RISC-V SiFive vector builtin functions enabled or not.
   bool DeclareRISCVVectorBuiltins = false;
 
 private:
@@ -4153,10 +4153,9 @@ public:
   bool resolveAndFixAddressOfSingleOverloadCandidate(
       ExprResult &SrcExpr, bool DoFunctionPointerConversion = false);
 
-  FunctionDecl *
-  ResolveSingleFunctionTemplateSpecialization(OverloadExpr *ovl,
-                                              bool Complain = false,
-                                              DeclAccessPair *Found = nullptr);
+  FunctionDecl *ResolveSingleFunctionTemplateSpecialization(
+      OverloadExpr *ovl, bool Complain = false, DeclAccessPair *Found = nullptr,
+      TemplateSpecCandidateSet *FailedTSC = nullptr);
 
   bool ResolveAndFixSingleFunctionTemplateSpecialization(
       ExprResult &SrcExpr, bool DoFunctionPointerConversion = false,
@@ -7115,14 +7114,6 @@ public:
                                          unsigned LambdaDependencyKind,
                                          LambdaCaptureDefault CaptureDefault);
 
-  /// Start the definition of a lambda expression.
-  CXXMethodDecl *
-  startLambdaDefinition(CXXRecordDecl *Class, SourceRange IntroducerRange,
-                        TypeSourceInfo *MethodType, SourceLocation EndLoc,
-                        ArrayRef<ParmVarDecl *> Params,
-                        ConstexprSpecKind ConstexprKind, StorageClass SC,
-                        Expr *TrailingRequiresClause);
-
   /// Number lambda for linkage purposes if necessary.
   void handleLambdaNumbering(CXXRecordDecl *Class, CXXMethodDecl *Method,
                              std::optional<CXXRecordDecl::LambdaNumbering>
@@ -9148,11 +9139,12 @@ public:
   TypeSourceInfo *ReplaceAutoTypeSourceInfo(TypeSourceInfo *TypeWithAuto,
                                             QualType Replacement);
 
-  TemplateDeductionResult DeduceAutoType(TypeLoc AutoTypeLoc, Expr *Initializer,
-                                         QualType &Result,
-                                         sema::TemplateDeductionInfo &Info,
-                                         bool DependentDeduction = false,
-                                         bool IgnoreConstraints = false);
+  TemplateDeductionResult
+  DeduceAutoType(TypeLoc AutoTypeLoc, Expr *Initializer, QualType &Result,
+                 sema::TemplateDeductionInfo &Info,
+                 bool DependentDeduction = false,
+                 bool IgnoreConstraints = false,
+                 TemplateSpecCandidateSet *FailedTSC = nullptr);
   void DiagnoseAutoDeductionFailure(VarDecl *VDecl, Expr *Init);
   bool DeduceReturnType(FunctionDecl *FD, SourceLocation Loc,
                         bool Diagnose = true);
@@ -11332,6 +11324,11 @@ public:
   void
   checkDeclIsAllowedInOpenMPTarget(Expr *E, Decl *D,
                                    SourceLocation IdLoc = SourceLocation());
+
+  /// Adds OMPDeclareTargetDeclAttr to referenced variables in declare target
+  /// directive.
+  void ActOnOpenMPDeclareTargetInitializer(Decl *D);
+
   /// Finishes analysis of the deferred functions calls that may be declared as
   /// host/nohost during device/host compilation.
   void finalizeOpenMPDelayedAnalysis(const FunctionDecl *Caller,
@@ -12941,13 +12938,6 @@ public:
   /// CheckCXXBooleanCondition - Returns true if conversion to bool is invalid.
   ExprResult CheckCXXBooleanCondition(Expr *CondExpr, bool IsConstexpr = false);
 
-  /// ConvertIntegerToTypeWarnOnOverflow - Convert the specified APInt to have
-  /// the specified width and sign.  If an overflow occurs, detect it and emit
-  /// the specified diagnostic.
-  void ConvertIntegerToTypeWarnOnOverflow(llvm::APSInt &OldVal,
-                                          unsigned NewWidth, bool NewSign,
-                                          SourceLocation Loc, unsigned DiagID);
-
   /// Checks that the Objective-C declaration is declared in the global scope.
   /// Emits an error and marks the declaration as invalid if it's not declared
   /// in the global scope.
@@ -13779,7 +13769,6 @@ private:
   Scope *CurScope;
 
   mutable IdentifierInfo *Ident_super;
-  mutable IdentifierInfo *Ident___float128;
 
   /// Nullability type specifiers.
   IdentifierInfo *Ident__Nonnull = nullptr;
@@ -13828,7 +13817,6 @@ public:
   }
 
   IdentifierInfo *getSuperIdentifier() const;
-  IdentifierInfo *getFloat128Identifier() const;
 
   ObjCContainerDecl *getObjCDeclContext() const;
 

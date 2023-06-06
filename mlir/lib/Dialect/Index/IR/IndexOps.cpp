@@ -263,7 +263,12 @@ OpFoldResult FloorDivSOp::fold(FoldAdaptor adaptor) {
 OpFoldResult RemSOp::fold(FoldAdaptor adaptor) {
   return foldBinaryOpChecked(
       adaptor.getOperands(),
-      [](const APInt &lhs, const APInt &rhs) { return lhs.srem(rhs); });
+      [](const APInt &lhs, const APInt &rhs) -> std::optional<APInt> {
+        // Don't fold division by zero.
+        if (rhs.isZero())
+          return std::nullopt;
+        return lhs.srem(rhs);
+      });
 }
 
 //===----------------------------------------------------------------------===//
@@ -273,7 +278,12 @@ OpFoldResult RemSOp::fold(FoldAdaptor adaptor) {
 OpFoldResult RemUOp::fold(FoldAdaptor adaptor) {
   return foldBinaryOpChecked(
       adaptor.getOperands(),
-      [](const APInt &lhs, const APInt &rhs) { return lhs.urem(rhs); });
+      [](const APInt &lhs, const APInt &rhs) -> std::optional<APInt> {
+        // Don't fold division by zero.
+        if (rhs.isZero())
+          return std::nullopt;
+        return lhs.urem(rhs);
+      });
 }
 
 //===----------------------------------------------------------------------===//

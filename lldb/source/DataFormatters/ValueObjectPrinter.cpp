@@ -516,10 +516,12 @@ bool ValueObjectPrinter::ShouldPrintChildren(
   if (m_options.m_pointer_as_array)
     return true;
 
-  TypeSummaryImpl *entry = GetSummaryFormatter();
-
   if (m_options.m_use_objc)
     return false;
+
+  bool print_children = true;
+  if (TypeSummaryImpl *type_summary = GetSummaryFormatter())
+    print_children = type_summary->DoesPrintChildren(m_valobj);
 
   if (is_failed_description || !HasReachedMaximumDepth()) {
     // We will show children for all concrete types. We won't show pointer
@@ -538,7 +540,7 @@ bool ValueObjectPrinter::ShouldPrintChildren(
 
       const bool is_root_level = m_curr_depth == 0;
 
-      if (is_ref && is_root_level) {
+      if (is_ref && is_root_level && print_children) {
         // If this is the root object (depth is zero) that we are showing and
         // it is a reference, and no pointer depth has been supplied print out
         // what it references. Don't do this at deeper depths otherwise we can
@@ -549,7 +551,7 @@ bool ValueObjectPrinter::ShouldPrintChildren(
       return curr_ptr_depth.CanAllowExpansion();
     }
 
-    return (!entry || entry->DoesPrintChildren(m_valobj) || m_summary.empty());
+    return print_children || m_summary.empty();
   }
   return false;
 }

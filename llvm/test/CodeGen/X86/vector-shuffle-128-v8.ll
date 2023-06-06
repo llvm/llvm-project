@@ -2631,7 +2631,7 @@ define <8 x i16> @shuffle_v8i16_048C048C(<8 x i16> %a, <8 x i16> %b) {
 ;
 ; AVX512VL-LABEL: shuffle_v8i16_048C048C:
 ; AVX512VL:       # %bb.0:
-; AVX512VL-NEXT:    vpbroadcastq {{.*#+}} xmm2 = [3377734080528384,3377734080528384]
+; AVX512VL-NEXT:    vpbroadcastq {{.*#+}} xmm2 = [0,4,8,12,0,4,8,12]
 ; AVX512VL-NEXT:    vpermt2w %xmm1, %xmm2, %xmm0
 ; AVX512VL-NEXT:    retq
 ;

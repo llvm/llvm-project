@@ -14,6 +14,7 @@
 #ifndef MLIR_DIALECT_LLVMIR_NVVMDIALECT_H_
 #define MLIR_DIALECT_LLVMIR_NVVMDIALECT_H_
 
+#include "mlir/Bytecode/BytecodeOpInterface.h"
 #include "mlir/Dialect/LLVMIR/LLVMDialect.h"
 #include "mlir/IR/Dialect.h"
 #include "mlir/IR/OpDefinition.h"

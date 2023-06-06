@@ -59,11 +59,6 @@ void AddStaticDeviceLibsLinking(Compilation &C, const Tool &T,
                                 llvm::opt::ArgStringList &CmdArgs,
                                 StringRef Arch, StringRef Target,
                                 bool isBitCodeSDL, bool postClangLink);
-void AddStaticDeviceLibsPostLinking(const Driver &D,
-                                    const llvm::opt::ArgList &DriverArgs,
-                                    llvm::opt::ArgStringList &CmdArgs,
-                                    StringRef Arch, StringRef Target,
-                                    bool isBitCodeSDL, bool postClangLink);
 void AddStaticDeviceLibs(Compilation *C, const Tool *T, const JobAction *JA,
                          const InputInfoList *Inputs, const Driver &D,
                          const llvm::opt::ArgList &DriverArgs,
@@ -148,6 +143,7 @@ void addHIPRuntimeLibArgs(const ToolChain &TC, const llvm::opt::ArgList &Args,
 
 const char *getAsNeededOption(const ToolChain &TC, bool as_needed);
 
+llvm::opt::Arg *getLastCSProfileGenerateArg(const llvm::opt::ArgList &Args);
 llvm::opt::Arg *getLastProfileUseArg(const llvm::opt::ArgList &Args);
 llvm::opt::Arg *getLastProfileSampleUseArg(const llvm::opt::ArgList &Args);
 

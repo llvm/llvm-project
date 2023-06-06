@@ -2572,6 +2572,68 @@ static bool hoistAdd(ICmpInst::Predicate Pred, Value *VariantLHS,
   return true;
 }
 
+/// Try to reassociate and hoist the following two patterns:
+/// LV - C1 < C2 --> LV < C1 + C2,
+/// C1 - LV < C2 --> LV > C1 - C2.
+static bool hoistSub(ICmpInst::Predicate Pred, Value *VariantLHS,
+                     Value *InvariantRHS, ICmpInst &ICmp, Loop &L,
+                     ICFLoopSafetyInfo &SafetyInfo, MemorySSAUpdater &MSSAU,
+                     AssumptionCache *AC, DominatorTree *DT) {
+  assert(ICmpInst::isSigned(Pred) && "Not supported yet!");
+  assert(!L.isLoopInvariant(VariantLHS) && "Precondition.");
+  assert(L.isLoopInvariant(InvariantRHS) && "Precondition.");
+
+  // Try to represent VariantLHS as sum of invariant and variant operands.
+  using namespace PatternMatch;
+  Value *VariantOp, *InvariantOp;
+  if (!match(VariantLHS, m_NSWSub(m_Value(VariantOp), m_Value(InvariantOp))))
+    return false;
+
+  bool VariantSubtracted = false;
+  // LHS itself is a loop-variant, try to represent it in the form:
+  // "VariantOp + InvariantOp". If it is possible, then we can reassociate. If
+  // the variant operand goes with minus, we use a slightly different scheme.
+  if (L.isLoopInvariant(VariantOp)) {
+    std::swap(VariantOp, InvariantOp);
+    VariantSubtracted = true;
+    Pred = ICmpInst::getSwappedPredicate(Pred);
+  }
+  if (L.isLoopInvariant(VariantOp) || !L.isLoopInvariant(InvariantOp))
+    return false;
+
+  // In order to turn "LV - C1 < C2" into "LV < C2 + C1", we need to be able to
+  // freely move values from left side of inequality to right side (just as in
+  // normal linear arithmetics). Overflows make things much more complicated, so
+  // we want to avoid this. Likewise, for "C1 - LV < C2" we need to prove that
+  // "C1 - C2" does not overflow.
+  auto &DL = L.getHeader()->getModule()->getDataLayout();
+  if (VariantSubtracted) {
+    // C1 - LV < C2 --> LV > C1 - C2
+    if (computeOverflowForSignedSub(InvariantOp, InvariantRHS, DL, AC, &ICmp,
+                                    DT) != llvm::OverflowResult::NeverOverflows)
+      return false;
+  } else {
+    // LV - C1 < C2 --> LV < C1 + C2
+    if (computeOverflowForSignedAdd(InvariantOp, InvariantRHS, DL, AC, &ICmp,
+                                    DT) != llvm::OverflowResult::NeverOverflows)
+      return false;
+  }
+  auto *Preheader = L.getLoopPreheader();
+  assert(Preheader && "Loop is not in simplify form?");
+  IRBuilder<> Builder(Preheader->getTerminator());
+  Value *NewCmpOp =
+      VariantSubtracted
+          ? Builder.CreateSub(InvariantOp, InvariantRHS, "invariant.op",
+                              /*HasNUW*/ false, /*HasNSW*/ true)
+          : Builder.CreateAdd(InvariantOp, InvariantRHS, "invariant.op",
+                              /*HasNUW*/ false, /*HasNSW*/ true);
+  ICmp.setPredicate(Pred);
+  ICmp.setOperand(0, VariantOp);
+  ICmp.setOperand(1, NewCmpOp);
+  eraseInstruction(cast<Instruction>(*VariantLHS), SafetyInfo, MSSAU);
+  return true;
+}
+
 /// Reassociate and hoist add/sub expressions.
 static bool hoistAddSub(Instruction &I, Loop &L, ICFLoopSafetyInfo &SafetyInfo,
                         MemorySSAUpdater &MSSAU, AssumptionCache *AC,
@@ -2601,7 +2663,8 @@ static bool hoistAddSub(Instruction &I, Loop &L, ICFLoopSafetyInfo &SafetyInfo,
   if (hoistAdd(Pred, LHS, RHS, cast<ICmpInst>(I), L, SafetyInfo, MSSAU, AC, DT))
     return true;
 
-  // TODO: Support Sub.
+  if (hoistSub(Pred, LHS, RHS, cast<ICmpInst>(I), L, SafetyInfo, MSSAU, AC, DT))
+    return true;
 
   return false;
 }

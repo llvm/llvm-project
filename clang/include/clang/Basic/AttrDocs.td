@@ -6551,6 +6551,41 @@ Requirements on Development Tools - Engineering Specification Documentation
   }];
 }
 
+def ArmStreamingDocs : Documentation {
+  let Category = DocCatType;
+  let Content = [{
+.. Note:: This attribute has not been implemented yet, but once it is
+   implemented, it will behave as described below.
+
+The ``__arm_streaming`` keyword is only available on AArch64 targets.
+It applies to function types and specifies that the function has a
+“streaming interface”.  This means that:
+
+* the function requires the Scalable Matrix Extension (SME)
+
+* the function must be entered in streaming mode (that is, with PSTATE.SM
+  set to 1)
+
+* the function must return in streaming mode
+
+See `Procedure Call Standard for the Arm® 64-bit Architecture (AArch64)
+<https://github.com/ARM-software/abi-aa>`_ for more details about
+streaming-interface functions.
+
+Clang manages PSTATE.SM automatically; it is not the source code's
+responsibility to do this.  For example, if a normal non-streaming
+function calls an ``__arm_streaming`` function, Clang generates code
+that switches into streaming mode before calling the function and
+switches back to non-streaming mode on return.
+
+``__arm_streaming`` can appear anywhere that a standard ``[[…]]`` type
+attribute can appear.
+
+See `Arm C Language Extensions <https://github.com/ARM-software/acle>`_
+for more details about this extension, and for other related SME features.
+  }];
+}
+
 def AlwaysInlineDocs : Documentation {
   let Category = DocCatFunction;
   let Content = [{
@@ -6987,4 +7022,31 @@ Clang supports the ``__funcref`` attribute for the WebAssembly target.
 This attribute may be attached to a function pointer type, where it modifies 
 its underlying representation to be a WebAssembly ``funcref``.
   }];
+}
+
+def CleanupDocs : Documentation {
+  let Category = DocCatType;
+  let Content = [{
+This attribute allows a function to be run when a local variable goes out of
+scope. The attribute takes the identifier of a function with a parameter type
+that is a pointer to the type with the attribute.
+
+.. code-block:: c
+
+  static void foo (int *) { ... }
+  static void bar (int *) { ... }
+  void baz (void) {
+    int x __attribute__((cleanup(foo)));
+    {
+      int y __attribute__((cleanup(bar)));
+    }
+  }
+
+The above example will result in a call to ``bar`` being passed the address of
+`y`` when ``y`` goes out of scope, then a call to ``foo`` being passed the
+address of ``x`` when ``x`` goes out of scope. If two or more variables share
+the same scope, their ``cleanup`` callbacks are invoked in the reverse order
+the variables were declared in. It is not possible to check the return value
+(if any) of these ``cleanup`` callback functions.
+}];
 }

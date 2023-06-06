@@ -115,10 +115,6 @@ namespace clang {
                                    TemplateArgumentLoc *ArgsLocArray,
                                    unsigned NumTemplateArgs);
 
-    /// Read and initialize a ExplicitTemplateArgumentList structure.
-    void ReadExplicitTemplateArgumentList(ASTTemplateArgumentListInfo &ArgList,
-                                          unsigned NumTemplateArgs);
-
     void VisitStmt(Stmt *S);
 #define STMT(Type, Base) \
     void Visit##Type(Type *);

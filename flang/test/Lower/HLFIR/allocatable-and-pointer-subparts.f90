@@ -3,7 +3,7 @@
 ! be inserted and addressed in a following hlfir.designate to address
 ! the sub-part.
 
-! RUN: bbc -emit-fir -hlfir -o - %s -I nw | FileCheck %s
+! RUN: bbc -emit-hlfir -o - %s -I nw | FileCheck %s
 
 module m
   type t1

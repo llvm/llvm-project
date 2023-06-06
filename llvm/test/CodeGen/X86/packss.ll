@@ -174,7 +174,7 @@ define <8 x i16> @trunc_ashr_v4i64_demandedelts(<4 x i64> %a0) {
 ; X86-AVX1-NEXT:    vextractf128 $1, %ymm0, %xmm0
 ; X86-AVX1-NEXT:    vpsllq $63, %xmm0, %xmm0
 ; X86-AVX1-NEXT:    vpsrlq $63, %xmm0, %xmm0
-; X86-AVX1-NEXT:    vmovddup {{.*#+}} xmm2 = [1,1]
+; X86-AVX1-NEXT:    vmovddup {{.*#+}} xmm2 = [1,0,1,0]
 ; X86-AVX1-NEXT:    # xmm2 = mem[0,0]
 ; X86-AVX1-NEXT:    vpxor %xmm2, %xmm0, %xmm0
 ; X86-AVX1-NEXT:    vpcmpeqd %xmm3, %xmm3, %xmm3

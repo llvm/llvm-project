@@ -105,6 +105,9 @@ Deprecations and Removals
 
 - The ``_LIBCPP_ABI_OLD_LOGNORMAL_DISTRIBUTION`` macro has been removed.
 
+- The classes ``strstreambuf`` , ``istrstream``, ``ostrstream``, and ``strstream`` have been deprecated.
+  They have been deprecated in the Standard since C++98, but were never marked as deprecated in libc++.
+
 Upcoming Deprecations and Removals
 ----------------------------------
 

@@ -10,7 +10,9 @@ from lldbsuite.test import lldbutil
 
 
 class StepAvoidsNoDebugTestCase(TestBase):
-    @add_test_categories(["pyapi"])
+
+    @add_test_categories(['pyapi'])
+    @expectedFailureAll(archs=["aarch64"], oslist=["windows"], bugnumber="llvm.org/pr56292")
     def test_step_out_with_python(self):
         """Test stepping out using avoid-no-debug with dsyms."""
         self.build()
@@ -24,8 +26,8 @@ class StepAvoidsNoDebugTestCase(TestBase):
         compiler_version=[">=", "3.9"],
         archs=["i386"],
         oslist=no_match(["freebsd"]),
-        bugnumber="llvm.org/pr28549",
-    )
+        bugnumber="llvm.org/pr28549")
+    @expectedFailureAll(archs=["aarch64"], oslist=["windows"], bugnumber="llvm.org/pr56292")
     def test_step_over_with_python(self):
         """Test stepping over using avoid-no-debug with dwarf."""
         self.build()
@@ -39,8 +41,8 @@ class StepAvoidsNoDebugTestCase(TestBase):
         compiler_version=[">=", "3.9"],
         archs=["i386"],
         oslist=no_match(["freebsd"]),
-        bugnumber="llvm.org/pr28549",
-    )
+        bugnumber="llvm.org/pr28549")
+    @expectedFailureAll(archs=["aarch64"], oslist=["windows"], bugnumber="llvm.org/pr56292")
     def test_step_in_with_python(self):
         """Test stepping in using avoid-no-debug with dwarf."""
         self.build()

@@ -217,7 +217,7 @@ Register insertAssignInstr(Register Reg, Type *Ty, SPIRVType *SpirvTy,
   GR->assignSPIRVTypeToVReg(SpirvTy, NewReg, MIB.getMF());
   // Copy MIFlags from Def to ASSIGN_TYPE instruction. It's required to keep
   // the flags after instruction selection.
-  const uint16_t Flags = Def->getFlags();
+  const uint32_t Flags = Def->getFlags();
   MIB.buildInstr(SPIRV::ASSIGN_TYPE)
       .addDef(Reg)
       .addUse(NewReg)

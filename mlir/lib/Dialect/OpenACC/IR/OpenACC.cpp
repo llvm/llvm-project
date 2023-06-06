@@ -498,7 +498,7 @@ template <typename Op>
 static LogicalResult
 checkSymOperandList(Operation *op, std::optional<mlir::ArrayAttr> attributes,
                     mlir::OperandRange operands, llvm::StringRef operandName,
-                    llvm::StringRef symbolName) {
+                    llvm::StringRef symbolName, bool checkOperandType = true) {
   if (!operands.empty()) {
     if (!attributes || attributes->size() != operands.size())
       return op->emitOpError()
@@ -527,7 +527,7 @@ checkSymOperandList(Operation *op, std::optional<mlir::ArrayAttr> attributes,
              << "expected symbol reference " << symbolRef << " to point to a "
              << operandName << " declaration";
 
-    if (decl.getType() && decl.getType() != varType)
+    if (checkOperandType && decl.getType() && decl.getType() != varType)
       return op->emitOpError() << "expected " << operandName << " (" << varType
                                << ") to be the same type as " << operandName
                                << " declaration (" << decl.getType() << ")";
@@ -751,7 +751,7 @@ LogicalResult acc::LoopOp::verify() {
 
   if (failed(checkSymOperandList<mlir::acc::ReductionRecipeOp>(
           *this, getReductionRecipes(), getReductionOperands(), "reduction",
-          "reductions")))
+          "reductions", false)))
     return failure();
 
   // Check non-empty body().

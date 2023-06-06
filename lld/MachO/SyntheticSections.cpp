@@ -35,13 +35,6 @@
 #include "llvm/Support/SHA256.h"
 #endif
 
-#ifdef LLVM_HAVE_LIBXAR
-#include <fcntl.h>
-extern "C" {
-#include <xar/xar.h>
-}
-#endif
-
 using namespace llvm;
 using namespace llvm::MachO;
 using namespace llvm::support;
@@ -1551,62 +1544,6 @@ void CodeSignatureSection::writeTo(uint8_t *buf) const {
   auto *id = reinterpret_cast<char *>(&codeDirectory[1]);
   memcpy(id, fileName.begin(), fileName.size());
   memset(id + fileName.size(), 0, fileNamePad);
-}
-
-BitcodeBundleSection::BitcodeBundleSection()
-    : SyntheticSection(segment_names::llvm, section_names::bitcodeBundle) {}
-
-class ErrorCodeWrapper {
-public:
-  explicit ErrorCodeWrapper(std::error_code ec) : errorCode(ec.value()) {}
-  explicit ErrorCodeWrapper(int ec) : errorCode(ec) {}
-  operator int() const { return errorCode; }
-
-private:
-  int errorCode;
-};
-
-#define CHECK_EC(exp)                                                          \
-  do {                                                                         \
-    ErrorCodeWrapper ec(exp);                                                  \
-    if (ec)                                                                    \
-      fatal(Twine("operation failed with error code ") + Twine(ec) + ": " +    \
-            #exp);                                                             \
-  } while (0);
-
-void BitcodeBundleSection::finalize() {
-#ifdef LLVM_HAVE_LIBXAR
-  using namespace llvm::sys::fs;
-  CHECK_EC(createTemporaryFile("bitcode-bundle", "xar", xarPath));
-
-#pragma clang diagnostic push
-#pragma clang diagnostic ignored "-Wdeprecated-declarations"
-  xar_t xar(xar_open(xarPath.data(), O_RDWR));
-#pragma clang diagnostic pop
-  if (!xar)
-    fatal("failed to open XAR temporary file at " + xarPath);
-  CHECK_EC(xar_opt_set(xar, XAR_OPT_COMPRESSION, XAR_OPT_VAL_NONE));
-  // FIXME: add more data to XAR
-  CHECK_EC(xar_close(xar));
-
-  file_size(xarPath, xarSize);
-#endif // defined(LLVM_HAVE_LIBXAR)
-}
-
-void BitcodeBundleSection::writeTo(uint8_t *buf) const {
-  using namespace llvm::sys::fs;
-  file_t handle =
-      CHECK(openNativeFile(xarPath, CD_OpenExisting, FA_Read, OF_None),
-            "failed to open XAR file");
-  std::error_code ec;
-  mapped_file_region xarMap(handle, mapped_file_region::mapmode::readonly,
-                            xarSize, 0, ec);
-  if (ec)
-    fatal("failed to map XAR file");
-  memcpy(buf, xarMap.const_data(), xarSize);
-
-  closeFile(handle);
-  remove(xarPath);
 }
 
 CStringSection::CStringSection(const char *name)

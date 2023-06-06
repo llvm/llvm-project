@@ -127,7 +127,6 @@ struct LLVM_LIBRARY_VISIBILITY Shape {
   };
 
   struct AsyncLoweringStorage {
-    FunctionType *AsyncFuncTy;
     Value *Context;
     CallingConv::ID AsyncCC;
     unsigned ContextArgNo;

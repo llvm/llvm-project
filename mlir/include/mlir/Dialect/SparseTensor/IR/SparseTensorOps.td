@@ -1055,18 +1055,22 @@ def SparseTensor_ReduceOp : SparseTensor_Op<"reduce", [Pure, SameOperandsAndResu
   let summary = "Custom reduction operation utilized within linalg.generic";
   let description = [{
       Defines a computation with a `linalg.generic` operation that takes two
-      operands and an identity value and reduces all values down to a single
-      result based on the computation in the region.
+      operands and an identity value and reduces all stored values down to a
+      single result based on the computation in the region.
 
       The region must contain exactly one block taking two arguments. The block
       must end with a sparse_tensor.yield and the output must match the input
       argument types.
 
-      Note that this operation is only required for custom reductions beyond the
-      standard operations (add, mul, and, or, etc). The `linalg.generic`
-      `iterator_types` defines which indices are being reduced. When the associated
-      operands are used in an operation, a reduction will occur. The use of this
-      explicit `reduce` operation is not required in most cases.
+      Note that this operation is only required for custom reductions beyond
+      the standard reduction operations (add, sub, or, xor) that can be
+      sparsified by merely reducing the stored values. More elaborate reduction
+      operations (mul, and, min, max, etc.) would need to account for implicit
+      zeros as well. They can still be handled using this custom reduction
+      operation. The `linalg.generic` `iterator_types` defines which indices
+      are being reduced. When the associated operands are used in an operation,
+      a reduction will occur. The use of this explicit `reduce` operation
+      is not required in most cases.
 
       Example of Matrix->Vector reduction using max(product(x_i), 100):
 

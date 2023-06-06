@@ -978,8 +978,6 @@ template <class LP> void Writer::createOutputSections() {
     dataInCodeSection = make<DataInCodeSection>();
   if (config->emitFunctionStarts)
     functionStartsSection = make<FunctionStartsSection>();
-  if (config->emitBitcodeBundle)
-    make<BitcodeBundleSection>();
 
   switch (config->outputType) {
   case MH_EXECUTE:

@@ -1915,7 +1915,8 @@ bool at::calculateFragmentIntersect(
 }
 
 /// Collect constant properies (base, size, offset) of \p StoreDest.
-/// Return std::nullopt if any properties are not constants.
+/// Return std::nullopt if any properties are not constants or the
+/// offset from the base pointer is negative.
 static std::optional<AssignmentInfo>
 getAssignmentInfoImpl(const DataLayout &DL, const Value *StoreDest,
                       TypeSize SizeInBits) {
@@ -1924,6 +1925,10 @@ getAssignmentInfoImpl(const DataLayout &DL, const Value *StoreDest,
   APInt GEPOffset(DL.getIndexTypeSizeInBits(StoreDest->getType()), 0);
   const Value *Base = StoreDest->stripAndAccumulateConstantOffsets(
       DL, GEPOffset, /*AllowNonInbounds*/ true);
+
+  if (GEPOffset.isNegative())
+    return std::nullopt;
+
   uint64_t OffsetInBytes = GEPOffset.getLimitedValue();
   // Check for overflow.
   if (OffsetInBytes == UINT64_MAX)

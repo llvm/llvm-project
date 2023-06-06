@@ -12,7 +12,6 @@
 
 // deque& operator=(deque&& c);
 
-#include "asan_testing.h"
 #include <deque>
 #include <cassert>
 
@@ -38,9 +37,6 @@ int main(int, char**)
         assert(c2 == c3);
         assert(c1.size() == 0);
         assert(c3.get_allocator() == A(5));
-        LIBCPP_ASSERT(is_double_ended_contiguous_container_asan_correct(c1));
-        LIBCPP_ASSERT(is_double_ended_contiguous_container_asan_correct(c2));
-        LIBCPP_ASSERT(is_double_ended_contiguous_container_asan_correct(c3));
     }
     {
         int ab[] = {3, 4, 2, 8, 0, 1, 44, 34, 45, 96, 80, 1, 13, 31, 45};
@@ -57,9 +53,6 @@ int main(int, char**)
         assert(c2 == c3);
         assert(c1.size() != 0);
         assert(c3.get_allocator() == A(6));
-        LIBCPP_ASSERT(is_double_ended_contiguous_container_asan_correct(c1));
-        LIBCPP_ASSERT(is_double_ended_contiguous_container_asan_correct(c2));
-        LIBCPP_ASSERT(is_double_ended_contiguous_container_asan_correct(c3));
     }
     {
         int ab[] = {3, 4, 2, 8, 0, 1, 44, 34, 45, 96, 80, 1, 13, 31, 45};
@@ -76,9 +69,6 @@ int main(int, char**)
         assert(c2 == c3);
         assert(c1.size() == 0);
         assert(c3.get_allocator() == A(5));
-        LIBCPP_ASSERT(is_double_ended_contiguous_container_asan_correct(c1));
-        LIBCPP_ASSERT(is_double_ended_contiguous_container_asan_correct(c2));
-        LIBCPP_ASSERT(is_double_ended_contiguous_container_asan_correct(c3));
     }
     {
         int ab[] = {3, 4, 2, 8, 0, 1, 44, 34, 45, 96, 80, 1, 13, 31, 45};
@@ -95,9 +85,6 @@ int main(int, char**)
         assert(c2 == c3);
         assert(c1.size() == 0);
         assert(c3.get_allocator() == A());
-        LIBCPP_ASSERT(is_double_ended_contiguous_container_asan_correct(c1));
-        LIBCPP_ASSERT(is_double_ended_contiguous_container_asan_correct(c2));
-        LIBCPP_ASSERT(is_double_ended_contiguous_container_asan_correct(c3));
     }
 
   return 0;

@@ -11455,6 +11455,17 @@ static QualType DecodeTypeFromStr(const char *&Str, const ASTContext &Context,
     Type = Context.getScalableVectorType(ElementType, NumElements);
     break;
   }
+  case 'Q': {
+    switch (*Str++) {
+    case 'a': {
+      Type = Context.SveCountTy;
+      break;
+    }
+    default:
+      llvm_unreachable("Unexpected target builtin type");
+    }
+    break;
+  }
   case 'V': {
     char *End;
     unsigned NumElements = strtoul(Str, &End, 10);

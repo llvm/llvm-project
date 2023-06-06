@@ -83,13 +83,13 @@ template <class _Cont>
 struct _C_node
     : public __c_node
 {
-    explicit _C_node(void* __c, __c_node* __n)
+    _LIBCPP_HIDE_FROM_ABI explicit _C_node(void* __c, __c_node* __n)
         : __c_node(__c, __n) {}
 
-    bool __dereferenceable(const void*) const override;
-    bool __decrementable(const void*) const override;
-    bool __addable(const void*, ptrdiff_t) const override;
-    bool __subscriptable(const void*, ptrdiff_t) const override;
+    _LIBCPP_HIDE_FROM_ABI_VIRTUAL bool __dereferenceable(const void*) const override;
+    _LIBCPP_HIDE_FROM_ABI_VIRTUAL bool __decrementable(const void*) const override;
+    _LIBCPP_HIDE_FROM_ABI_VIRTUAL bool __addable(const void*, ptrdiff_t) const override;
+    _LIBCPP_HIDE_FROM_ABI_VIRTUAL bool __subscriptable(const void*, ptrdiff_t) const override;
 };
 
 template <class _Cont>

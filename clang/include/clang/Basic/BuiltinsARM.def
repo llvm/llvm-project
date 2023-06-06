@@ -343,4 +343,5 @@ TARGET_HEADER_BUILTIN(_InterlockedDecrement64_rel, "LLiLLiD*", "nh", INTRIN_H, A
 
 #undef BUILTIN
 #undef LANGBUILTIN
+#undef TARGET_BUILTIN
 #undef TARGET_HEADER_BUILTIN

@@ -395,6 +395,10 @@ class CrashLog(symbolication.Symbolicator):
         self.version = -1
         self.target = None
         self.verbose = verbose
+        self.process_id = None
+        self.process_identifier = None
+        self.process_path = None
+        self.process_arch = None
 
     def dump(self):
         print("Crash Log File: %s" % (self.path))
@@ -484,9 +488,9 @@ class CrashLogParser:
     def __init__(self, debugger, path, verbose):
         self.path = os.path.expanduser(path)
         self.verbose = verbose
-        self.crashlog = CrashLog(debugger, self.path, self.verbose)
         # List of DarwinImages sorted by their index.
         self.images = list()
+        self.crashlog = CrashLog(debugger, self.path, self.verbose)
 
     @abc.abstractmethod
     def parse(self):
@@ -547,6 +551,8 @@ class JSONCrashLogParser(CrashLogParser):
     def parse_process_info(self, json_data):
         self.crashlog.process_id = json_data["pid"]
         self.crashlog.process_identifier = json_data["procName"]
+        if "procPath" in json_data:
+            self.crashlog.process_path = json_data["procPath"]
 
     def parse_crash_reason(self, json_exception):
         self.crashlog.exception = json_exception
@@ -574,6 +580,10 @@ class JSONCrashLogParser(CrashLogParser):
             darwin_image = self.crashlog.DarwinImage(
                 low, high, name, version, img_uuid, path, self.verbose
             )
+            if "arch" in json_image:
+                darwin_image.arch = json_image["arch"]
+                if path == self.crashlog.process_path:
+                    self.crashlog.process_arch = darwin_image.arch
             self.images.append(darwin_image)
             self.crashlog.images.append(darwin_image)
 
@@ -598,7 +608,9 @@ class JSONCrashLogParser(CrashLogParser):
 
             if "symbol" in json_frame:
                 symbol = json_frame["symbol"]
-                location = int(json_frame["symbolLocation"])
+                location = 0
+                if "symbolLocation" in json_frame and json_frame["symbolLocation"]:
+                    location = int(json_frame["symbolLocation"])
                 image = self.images[image_id]
                 image.symbols[symbol] = {
                     "name": symbol,
@@ -737,6 +749,13 @@ class JSONCrashLogParser(CrashLogParser):
             if key == "x":
                 gpr_dict = {str(idx): reg for idx, reg in enumerate(state)}
                 registers.update(self.parse_thread_registers(gpr_dict, key))
+                continue
+            if key == "flavor":
+                if not self.crashlog.process_arch:
+                    if state == "ARM_THREAD_STATE64":
+                        self.crashlog.process_arch = "arm64"
+                    elif state == "X86_THREAD_STATE":
+                        self.crashlog.process_arch = "x86_64"
                 continue
             try:
                 value = int(state["value"])
@@ -910,6 +929,8 @@ class TextCrashLogParser(CrashLogParser):
                 line[8:].strip().split(" [")
             )
             self.crashlog.process_id = pid_with_brackets.strip("[]")
+        elif line.startswith("Path:"):
+            self.crashlog.process_path = line[5:].strip()
         elif line.startswith("Identifier:"):
             self.crashlog.process_identifier = line[11:].strip()
         elif line.startswith("Version:"):
@@ -921,6 +942,11 @@ class TextCrashLogParser(CrashLogParser):
             else:
                 self.crashlog.process = version_string
                 self.crashlog.process_compatability_version = version_string
+        elif line.startswith("Code Type:"):
+            if "ARM-64" in line:
+                self.crashlog.process_arch = "arm64"
+            elif "X86-64" in line:
+                self.crashlog.process_arch = "x86_64"
         elif self.parent_process_regex.search(line):
             parent_process_match = self.parent_process_regex.search(line)
             self.crashlog.parent_process_name = parent_process_match.group(1)
@@ -1341,9 +1367,14 @@ def load_crashlog_in_scripted_process(debugger, crash_log_file, options, result)
     # 2. If the user didn't provide a target, try to create a target using the symbolicator
     if not target or not target.IsValid():
         target = crashlog.create_target()
-    # 3. If that didn't work, and a target is already loaded, use it
-    if (target is None or not target.IsValid()) and debugger.GetNumTargets() > 0:
-        target = debugger.GetTargetAtIndex(0)
+    # 3. If that didn't work, create a dummy target
+    if target is None or not target.IsValid():
+        arch = crashlog.process_arch
+        if not arch:
+            raise InteractiveCrashLogException(
+                "couldn't create find the architecture to create the target"
+            )
+        target = debugger.CreateTargetWithFileAndArch(None, arch)
     # 4. Fail
     if target is None or not target.IsValid():
         raise InteractiveCrashLogException("couldn't create target")

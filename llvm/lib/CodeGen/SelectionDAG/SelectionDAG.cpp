@@ -1956,6 +1956,15 @@ SDValue SelectionDAG::getVScale(const SDLoc &DL, EVT VT, APInt MulImm,
   return getNode(ISD::VSCALE, DL, VT, getConstant(MulImm, DL, VT));
 }
 
+SDValue SelectionDAG::getElementCount(const SDLoc &DL, EVT VT, ElementCount EC,
+                                      bool ConstantFold) {
+  if (EC.isScalable())
+    return getVScale(DL, VT,
+                     APInt(VT.getSizeInBits(), EC.getKnownMinValue()));
+
+  return getConstant(EC.getKnownMinValue(), DL, VT);
+}
+
 SDValue SelectionDAG::getStepVector(const SDLoc &DL, EVT ResVT) {
   APInt One(ResVT.getScalarSizeInBits(), 1);
   return getStepVector(DL, ResVT, One);
@@ -2427,6 +2436,16 @@ SDValue SelectionDAG::FoldSetCC(EVT VT, SDValue N1, SDValue N2,
                                 ISD::CondCode Cond, const SDLoc &dl) {
   EVT OpVT = N1.getValueType();
 
+  auto GetUndefBooleanConstant = [&]() {
+    if (VT.getScalarType() == MVT::i1 ||
+        TLI->getBooleanContents(OpVT) ==
+            TargetLowering::UndefinedBooleanContent)
+      return getUNDEF(VT);
+    // ZeroOrOne / ZeroOrNegative require specific values for the high bits,
+    // so we cannot use getUNDEF(). Return zero instead.
+    return getConstant(0, dl, VT);
+  };
+
   // These setcc operations always fold.
   switch (Cond) {
   default: break;
@@ -2456,12 +2475,12 @@ SDValue SelectionDAG::FoldSetCC(EVT VT, SDValue N1, SDValue N2,
     // icmp eq/ne X, undef -> undef.
     if ((N1.isUndef() || N2.isUndef()) &&
         (Cond == ISD::SETEQ || Cond == ISD::SETNE))
-      return getUNDEF(VT);
+      return GetUndefBooleanConstant();
 
     // If both operands are undef, we can return undef for int comparison.
     // icmp undef, undef -> undef.
     if (N1.isUndef() && N2.isUndef())
-      return getUNDEF(VT);
+      return GetUndefBooleanConstant();
 
     // icmp X, X -> true/false
     // icmp X, undef -> true/false because undef could be X.
@@ -2487,34 +2506,34 @@ SDValue SelectionDAG::FoldSetCC(EVT VT, SDValue N1, SDValue N2,
     switch (Cond) {
     default: break;
     case ISD::SETEQ:  if (R==APFloat::cmpUnordered)
-                        return getUNDEF(VT);
+                        return GetUndefBooleanConstant();
                       [[fallthrough]];
     case ISD::SETOEQ: return getBoolConstant(R==APFloat::cmpEqual, dl, VT,
                                              OpVT);
     case ISD::SETNE:  if (R==APFloat::cmpUnordered)
-                        return getUNDEF(VT);
+                        return GetUndefBooleanConstant();
                       [[fallthrough]];
     case ISD::SETONE: return getBoolConstant(R==APFloat::cmpGreaterThan ||
                                              R==APFloat::cmpLessThan, dl, VT,
                                              OpVT);
     case ISD::SETLT:  if (R==APFloat::cmpUnordered)
-                        return getUNDEF(VT);
+                        return GetUndefBooleanConstant();
                       [[fallthrough]];
     case ISD::SETOLT: return getBoolConstant(R==APFloat::cmpLessThan, dl, VT,
                                              OpVT);
     case ISD::SETGT:  if (R==APFloat::cmpUnordered)
-                        return getUNDEF(VT);
+                        return GetUndefBooleanConstant();
                       [[fallthrough]];
     case ISD::SETOGT: return getBoolConstant(R==APFloat::cmpGreaterThan, dl,
                                              VT, OpVT);
     case ISD::SETLE:  if (R==APFloat::cmpUnordered)
-                        return getUNDEF(VT);
+                        return GetUndefBooleanConstant();
                       [[fallthrough]];
     case ISD::SETOLE: return getBoolConstant(R==APFloat::cmpLessThan ||
                                              R==APFloat::cmpEqual, dl, VT,
                                              OpVT);
     case ISD::SETGE:  if (R==APFloat::cmpUnordered)
-                        return getUNDEF(VT);
+                        return GetUndefBooleanConstant();
                       [[fallthrough]];
     case ISD::SETOGE: return getBoolConstant(R==APFloat::cmpGreaterThan ||
                                          R==APFloat::cmpEqual, dl, VT, OpVT);
@@ -2559,7 +2578,7 @@ SDValue SelectionDAG::FoldSetCC(EVT VT, SDValue N1, SDValue N2,
     case 1: // Known true.
       return getBoolConstant(true, dl, VT, OpVT);
     case 2: // Undefined.
-      return getUNDEF(VT);
+      return GetUndefBooleanConstant();
     }
   }
 
@@ -3084,6 +3103,12 @@ KnownBits SelectionDAG::computeKnownBits(SDValue Op, const APInt &DemandedElts,
       Known2 = computeKnownBits(RHS, DemandedRHS, Depth + 1);
       Known = Known.intersectWith(Known2);
     }
+    break;
+  }
+  case ISD::VSCALE: {
+    const Function &F = getMachineFunction().getFunction();
+    const APInt &Multiplier = Op.getConstantOperandAPInt(0);
+    Known = getVScaleRange(&F, BitWidth).multiply(Multiplier).toKnownBits();
     break;
   }
   case ISD::CONCAT_VECTORS: {
@@ -3631,6 +3656,15 @@ KnownBits SelectionDAG::computeKnownBits(SDValue Op, const APInt &DemandedElts,
     // All bits are zero except the low bit.
     Known.Zero.setBitsFrom(1);
     break;
+  case ISD::ADD:
+  case ISD::SUB: {
+    SDNodeFlags Flags = Op.getNode()->getFlags();
+    Known = computeKnownBits(Op.getOperand(0), DemandedElts, Depth + 1);
+    Known2 = computeKnownBits(Op.getOperand(1), DemandedElts, Depth + 1);
+    Known = KnownBits::computeForAddSub(Op.getOpcode() == ISD::ADD,
+                                        Flags.hasNoSignedWrap(), Known, Known2);
+    break;
+  }
   case ISD::USUBO:
   case ISD::SSUBO:
   case ISD::USUBO_CARRY:
@@ -3644,7 +3678,6 @@ KnownBits SelectionDAG::computeKnownBits(SDValue Op, const APInt &DemandedElts,
       break;
     }
     [[fallthrough]];
-  case ISD::SUB:
   case ISD::SUBC: {
     assert(Op.getResNo() == 0 &&
            "We only compute knownbits for the difference here.");
@@ -3672,7 +3705,6 @@ KnownBits SelectionDAG::computeKnownBits(SDValue Op, const APInt &DemandedElts,
       break;
     }
     [[fallthrough]];
-  case ISD::ADD:
   case ISD::ADDC:
   case ISD::ADDE: {
     assert(Op.getResNo() == 0 && "We only compute knownbits for the sum here.");
@@ -11678,7 +11710,7 @@ bool SelectionDAG::areNonVolatileConsecutiveLoads(LoadSDNode *LD,
 
   int64_t Offset = 0;
   if (BaseLocDecomp.equalBaseIndex(LocDecomp, *this, Offset))
-    return (Dist * Bytes == Offset);
+    return (Dist * (int64_t)Bytes == Offset);
   return false;
 }
 

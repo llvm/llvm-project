@@ -32,12 +32,12 @@
 
 #DenseMatrix = #sparse_tensor.encoding<{
   lvlTypes = [ "dense", "dense" ],
-  dimOrdering = affine_map<(i,j) -> (i,j)>
+  dimToLvl = affine_map<(i,j) -> (i,j)>
 }>
 
 #SparseMatrix = #sparse_tensor.encoding<{
   lvlTypes = [ "dense", "compressed" ],
-  dimOrdering = affine_map<(i,j) -> (i,j)>
+  dimToLvl = affine_map<(i,j) -> (i,j)>
 }>
 
 #trait_assign = {

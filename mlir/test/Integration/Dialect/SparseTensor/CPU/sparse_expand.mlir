@@ -27,7 +27,7 @@
 
 #CSC = #sparse_tensor.encoding<{
   lvlTypes = [ "dense", "compressed" ],
-  dimOrdering = affine_map<(i,j) -> (j,i)>
+  dimToLvl = affine_map<(i,j) -> (j,i)>
 }>
 
 module {

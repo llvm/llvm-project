@@ -344,7 +344,8 @@ static AffineIfOp hoistAffineIfOp(AffineIfOp ifOp, Operation *hoistOverOp) {
 
 LogicalResult
 mlir::affine::affineParallelize(AffineForOp forOp,
-                                ArrayRef<LoopReduction> parallelReductions) {
+                                ArrayRef<LoopReduction> parallelReductions,
+                                AffineParallelOp *resOp) {
   // Fail early if there are iter arguments that are not reductions.
   unsigned numReductions = parallelReductions.size();
   if (numReductions != forOp.getNumIterOperands())
@@ -398,6 +399,8 @@ mlir::affine::affineParallelize(AffineForOp forOp,
   newPloop.getBody()->eraseArguments(numIVs, numReductions);
 
   forOp.erase();
+  if (resOp)
+    *resOp = newPloop;
   return success();
 }
 

@@ -1,5 +1,5 @@
 ! Test lowering of associate construct to HLFIR
-! RUN: bbc -emit-fir -hlfir -o - %s | FileCheck %s
+! RUN: bbc -emit-hlfir -o - %s | FileCheck %s
 
 subroutine associate_expr(x)
   integer :: x(:)

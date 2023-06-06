@@ -619,6 +619,9 @@ def warn_drv_darwin_sdk_invalid_settings : Warning<
   "SDK settings were ignored as 'SDKSettings.json' could not be parsed">,
   InGroup<DiagGroup<"darwin-sdk-settings">>;
 
+def err_drv_darwin_sdk_missing_arclite : Error<
+  "SDK does not contain 'libarclite' at the path '%0'; try increasing the minimum deployment target">;
+
 def err_drv_trivial_auto_var_init_stop_after_missing_dependency : Error<
   "'-ftrivial-auto-var-init-stop-after=*' is used without "
   "'-ftrivial-auto-var-init=zero' or '-ftrivial-auto-var-init=pattern'">;

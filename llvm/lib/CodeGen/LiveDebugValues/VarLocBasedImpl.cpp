@@ -1312,7 +1312,7 @@ void VarLocBasedLDV::cleanupEntryValueTransfers(
     return;
 
   auto TransRange = EntryValTransfers.equal_range(TRInst);
-  for (auto TDPair : llvm::make_range(TransRange.first, TransRange.second)) {
+  for (auto &TDPair : llvm::make_range(TransRange.first, TransRange.second)) {
     const VarLoc &EmittedEV = VarLocIDs[TDPair.second];
     if (std::tie(EntryVL.Var, EntryVL.Locs[0].Value.RegNo, EntryVL.Expr) ==
         std::tie(EmittedEV.Var, EmittedEV.Locs[0].Value.RegNo,
@@ -2162,8 +2162,8 @@ bool VarLocBasedLDV::isEntryValueCandidate(
 /// Collect all register defines (including aliases) for the given instruction.
 static void collectRegDefs(const MachineInstr &MI, DefinedRegsSet &Regs,
                            const TargetRegisterInfo *TRI) {
-  for (const MachineOperand &MO : MI.operands()) {
-    if (MO.isReg() && MO.isDef() && MO.getReg() && MO.getReg().isPhysical()) {
+  for (const MachineOperand &MO : MI.all_defs()) {
+    if (MO.getReg() && MO.getReg().isPhysical()) {
       Regs.insert(MO.getReg());
       for (MCRegAliasIterator AI(MO.getReg(), TRI, true); AI.isValid(); ++AI)
         Regs.insert(*AI);
