@@ -11418,6 +11418,7 @@ bool ARMAsmParser::parseDirectiveThumb(SMLoc L) {
     SwitchMode();
 
   getParser().getStreamer().emitAssemblerFlag(MCAF_Code16);
+  getParser().getStreamer().emitCodeAlignment(Align(2), &getSTI(), 0);
   return false;
 }
 
@@ -11430,6 +11431,7 @@ bool ARMAsmParser::parseDirectiveARM(SMLoc L) {
   if (isThumb())
     SwitchMode();
   getParser().getStreamer().emitAssemblerFlag(MCAF_Code32);
+  getParser().getStreamer().emitCodeAlignment(Align(4), &getSTI(), 0);
   return false;
 }
 

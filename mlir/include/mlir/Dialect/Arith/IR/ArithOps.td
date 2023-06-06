@@ -1366,6 +1366,7 @@ def Arith_CmpFOp : Arith_CompareOp<"cmpf"> {
 
 def SelectOp : Arith_Op<"select", [Pure,
     AllTypesMatch<["true_value", "false_value", "result"]>,
+    ScalarConditionOrMatchingShape<["condition", "result"]>,
     DeclareOpInterfaceMethods<InferIntRangeInterface>,
   ] # ElementwiseMappable.traits> {
   let summary = "select operation";

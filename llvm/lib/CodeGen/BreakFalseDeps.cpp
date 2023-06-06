@@ -140,9 +140,8 @@ bool BreakFalseDeps::pickBestRegisterForUndef(MachineInstr *MI, unsigned OpIdx,
 
   // If the instruction has a true dependency, we can hide the false depdency
   // behind it.
-  for (MachineOperand &CurrMO : MI->operands()) {
-    if (!CurrMO.isReg() || CurrMO.isDef() || CurrMO.isUndef() ||
-      !OpRC->contains(CurrMO.getReg()))
+  for (MachineOperand &CurrMO : MI->all_uses()) {
+    if (CurrMO.isUndef() || !OpRC->contains(CurrMO.getReg()))
       continue;
     // We found a true dependency - replace the undef register with the true
     // dependency.

@@ -41,11 +41,14 @@ define void @supported_ops(ptr %arg1, float %arg2, i32 %arg3, i32 %arg4) {
   call void @llvm.memcpy.p0.p0.i32(ptr %arg1, ptr %arg1, i32 4, i1 false), !llvm.access.group !0
   ; CHECK: "llvm.intr.memset"{{.*}}access_groups =
   call void @llvm.memset.p0.i32(ptr %arg1, i8 42, i32 4, i1 false), !llvm.access.group !0
+  ; CHECK: llvm.call{{.*}}access_groups =
+  call void @foo(ptr %arg1), !llvm.access.group !0
   ret void
 }
 
 declare void @llvm.memcpy.p0.p0.i32(ptr noalias nocapture writeonly, ptr noalias nocapture readonly, i32, i1 immarg)
 declare void @llvm.memset.p0.i32(ptr nocapture writeonly, i8, i32, i1 immarg)
+declare void @foo(ptr %arg1)
 
 !0 = !{!1, !2}
 !1 = distinct !{}

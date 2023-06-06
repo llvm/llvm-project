@@ -317,6 +317,27 @@ def hlfir_ConcatOp : hlfir_Op<"concat", []> {
   let hasVerifier = 1;
 }
 
+def hlfir_AllOp : hlfir_Op<"all", []> {
+  let summary = "ALL transformational intrinsic";
+  let description = [{
+    Takes a logical array MASK as argument, optionally along a particular dimension,
+    and returns true if all elements of MASK are true.
+  }];
+
+  let arguments = (ins
+    AnyFortranLogicalArrayObject:$mask,
+    Optional<AnyIntegerType>:$dim
+  );
+
+  let results = (outs AnyFortranValue);
+
+  let assemblyFormat = [{
+    $mask  (`dim` $dim^)?  attr-dict `:` functional-type(operands, results)
+  }];
+
+  let hasVerifier = 1;
+}
+
 def hlfir_AnyOp : hlfir_Op<"any", []> {
   let summary = "ANY transformational intrinsic";
   let description = [{

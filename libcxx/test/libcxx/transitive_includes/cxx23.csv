@@ -399,7 +399,15 @@ new version
 numbers version
 numeric cmath
 numeric cstddef
+numeric cstdint
+numeric cstring
+numeric ctime
+numeric execution
+numeric initializer_list
+numeric iosfwd
 numeric limits
+numeric new
+numeric ratio
 numeric version
 optional compare
 optional cstddef

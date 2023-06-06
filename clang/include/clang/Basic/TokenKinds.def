@@ -748,6 +748,12 @@ KEYWORD(__builtin_bit_cast               , KEYALL)
 KEYWORD(__builtin_available              , KEYALL)
 KEYWORD(__builtin_sycl_unique_stable_name, KEYSYCL)
 
+// Keywords defined by Attr.td.
+#ifndef KEYWORD_ATTRIBUTE
+#define KEYWORD_ATTRIBUTE(X) KEYWORD(X, KEYALL)
+#endif
+#include "clang/Basic/AttrTokenKinds.inc"
+
 // Clang-specific keywords enabled only in testing.
 TESTING_KEYWORD(__unknown_anytype , KEYALL)
 

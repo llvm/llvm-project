@@ -48,14 +48,12 @@
 #include "llvm/Transforms/IPO/FunctionSpecialization.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/Analysis/CodeMetrics.h"
-#include "llvm/Analysis/ConstantFolding.h"
 #include "llvm/Analysis/InlineCost.h"
-#include "llvm/Analysis/InstructionSimplify.h"
+#include "llvm/Analysis/LoopInfo.h"
 #include "llvm/Analysis/TargetTransformInfo.h"
 #include "llvm/Analysis/ValueLattice.h"
 #include "llvm/Analysis/ValueLatticeUtils.h"
 #include "llvm/Analysis/ValueTracking.h"
-#include "llvm/IR/ConstantFold.h"
 #include "llvm/IR/IntrinsicInst.h"
 #include "llvm/Transforms/Scalar/SCCP.h"
 #include "llvm/Transforms/Utils/Cloning.h"
@@ -74,22 +72,6 @@ static cl::opt<bool> ForceSpecialization(
     "Force function specialization for every call site with a constant "
     "argument"));
 
-// Set to 2^3 to model three levels of if-else nest.
-static cl::opt<unsigned> BlockFreqMultiplier(
-    "funcspec-block-freq-multiplier", cl::init(8), cl::Hidden, cl::desc(
-    "Multiplier to scale block frequency of user instructions during "
-    "specialization bonus estimation"));
-
-static cl::opt<unsigned> MinEntryFreq(
-    "funcspec-min-entry-freq", cl::init(450), cl::Hidden, cl::desc(
-    "Do not specialize functions with entry block frequency lower than "
-    "this value"));
-
-static cl::opt<unsigned> MinScore(
-    "funcspec-min-score", cl::init(2), cl::Hidden, cl::desc(
-    "Do not specialize functions with score lower than this value "
-    "(the ratio of specialization bonus over specialization cost)"));
-
 static cl::opt<unsigned> MaxClones(
     "funcspec-max-clones", cl::init(3), cl::Hidden, cl::desc(
     "The maximum number of clones allowed for a single function "
@@ -100,224 +82,22 @@ static cl::opt<unsigned> MinFunctionSize(
     "Don't specialize functions that have less than this number of "
     "instructions"));
 
+static cl::opt<unsigned> AvgLoopIters(
+    "funcspec-avg-loop-iters", cl::init(10), cl::Hidden, cl::desc(
+    "Average loop iteration count"));
+
 static cl::opt<bool> SpecializeOnAddress(
     "funcspec-on-address", cl::init(false), cl::Hidden, cl::desc(
     "Enable function specialization on the address of global values"));
 
+// Disabled by default as it can significantly increase compilation times.
+//
+// https://llvm-compile-time-tracker.com
+// https://github.com/nikic/llvm-compile-time-tracker
 static cl::opt<bool> SpecializeLiteralConstant(
-    "funcspec-for-literal-constant", cl::init(true), cl::Hidden, cl::desc(
+    "funcspec-for-literal-constant", cl::init(false), cl::Hidden, cl::desc(
     "Enable specialization of functions that take a literal constant as an "
     "argument"));
-
-unsigned FunctionSpecializer::getBlockFreqMultiplier() {
-  return BlockFreqMultiplier;
-}
-
-// Estimates the instruction cost of all the basic blocks in \p WorkList.
-// The successors of such blocks are added to the list as long as they are
-// executable and they have a unique predecessor. \p WorkList represents
-// the basic blocks of a specialization which become dead once we replace
-// instructions that are known to be constants. The aim here is to estimate
-// the combination of size and latency savings in comparison to the non
-// specialized version of the function.
-static Cost estimateBasicBlocks(SmallVectorImpl<BasicBlock *> &WorkList,
-                                ConstMap &KnownConstants, SCCPSolver &Solver,
-                                BlockFrequencyInfo &BFI,
-                                TargetTransformInfo &TTI) {
-  Cost Bonus = 0;
-
-  // Accumulate the instruction cost of each basic block weighted by frequency.
-  while (!WorkList.empty()) {
-    BasicBlock *BB = WorkList.pop_back_val();
-
-    uint64_t Weight = BlockFreqMultiplier *
-                      BFI.getBlockFreq(BB).getFrequency() /
-                      BFI.getEntryFreq();
-    if (!Weight)
-      continue;
-
-    for (Instruction &I : *BB) {
-      // Disregard SSA copies.
-      if (auto *II = dyn_cast<IntrinsicInst>(&I))
-        if (II->getIntrinsicID() == Intrinsic::ssa_copy)
-          continue;
-      // If it's a known constant we have already accounted for it.
-      if (KnownConstants.contains(&I))
-        continue;
-
-      Bonus += Weight *
-          TTI.getInstructionCost(&I, TargetTransformInfo::TCK_SizeAndLatency);
-
-      LLVM_DEBUG(dbgs() << "FnSpecialization:     Bonus " << Bonus
-                        << " after user " << I << "\n");
-    }
-
-    // Keep adding dead successors to the list as long as they are
-    // executable and they have a unique predecessor.
-    for (BasicBlock *SuccBB : successors(BB))
-      if (Solver.isBlockExecutable(SuccBB) &&
-          SuccBB->getUniquePredecessor() == BB)
-        WorkList.push_back(SuccBB);
-  }
-  return Bonus;
-}
-
-static Constant *findConstantFor(Value *V, ConstMap &KnownConstants) {
-  if (auto It = KnownConstants.find(V); It != KnownConstants.end())
-    return It->second;
-  return nullptr;
-}
-
-Cost InstCostVisitor::getUserBonus(Instruction *User, Value *Use, Constant *C) {
-  // Cache the iterator before visiting.
-  LastVisited = KnownConstants.insert({Use, C}).first;
-
-  if (auto *I = dyn_cast<SwitchInst>(User))
-    return estimateSwitchInst(*I);
-
-  if (auto *I = dyn_cast<BranchInst>(User))
-    return estimateBranchInst(*I);
-
-  C = visit(*User);
-  if (!C)
-    return 0;
-
-  KnownConstants.insert({User, C});
-
-  uint64_t Weight = BlockFreqMultiplier *
-                    BFI.getBlockFreq(User->getParent()).getFrequency() /
-                    BFI.getEntryFreq();
-  if (!Weight)
-    return 0;
-
-  Cost Bonus = Weight *
-      TTI.getInstructionCost(User, TargetTransformInfo::TCK_SizeAndLatency);
-
-  LLVM_DEBUG(dbgs() << "FnSpecialization:     Bonus " << Bonus
-                    << " for user " << *User << "\n");
-
-  for (auto *U : User->users())
-    if (auto *UI = dyn_cast<Instruction>(U))
-      if (Solver.isBlockExecutable(UI->getParent()))
-        Bonus += getUserBonus(UI, User, C);
-
-  return Bonus;
-}
-
-Cost InstCostVisitor::estimateSwitchInst(SwitchInst &I) {
-  if (I.getCondition() != LastVisited->first)
-    return 0;
-
-  auto *C = cast<ConstantInt>(LastVisited->second);
-  BasicBlock *Succ = I.findCaseValue(C)->getCaseSuccessor();
-  // Initialize the worklist with the dead basic blocks. These are the
-  // destination labels which are different from the one corresponding
-  // to \p C. They should be executable and have a unique predecessor.
-  SmallVector<BasicBlock *> WorkList;
-  for (const auto &Case : I.cases()) {
-    BasicBlock *BB = Case.getCaseSuccessor();
-    if (BB == Succ || !Solver.isBlockExecutable(BB) ||
-        BB->getUniquePredecessor() != I.getParent())
-      continue;
-    WorkList.push_back(BB);
-  }
-
-  return estimateBasicBlocks(WorkList, KnownConstants, Solver, BFI, TTI);
-}
-
-Cost InstCostVisitor::estimateBranchInst(BranchInst &I) {
-  if (I.getCondition() != LastVisited->first)
-    return 0;
-
-  BasicBlock *Succ = I.getSuccessor(LastVisited->second->isOneValue());
-  // Initialize the worklist with the dead successor as long as
-  // it is executable and has a unique predecessor.
-  SmallVector<BasicBlock *> WorkList;
-  if (Solver.isBlockExecutable(Succ) &&
-      Succ->getUniquePredecessor() == I.getParent())
-    WorkList.push_back(Succ);
-
-  return estimateBasicBlocks(WorkList, KnownConstants, Solver, BFI, TTI);
-}
-
-Constant *InstCostVisitor::visitLoadInst(LoadInst &I) {
-  if (isa<ConstantPointerNull>(LastVisited->second))
-    return nullptr;
-  return ConstantFoldLoadFromConstPtr(LastVisited->second, I.getType(), DL);
-}
-
-Constant *InstCostVisitor::visitGetElementPtrInst(GetElementPtrInst &I) {
-  SmallVector<Value *, 8> Operands;
-  Operands.reserve(I.getNumOperands());
-
-  for (unsigned Idx = 0, E = I.getNumOperands(); Idx != E; ++Idx) {
-    Value *V = I.getOperand(Idx);
-    auto *C = dyn_cast<Constant>(V);
-    if (!C)
-      C = findConstantFor(V, KnownConstants);
-    if (!C)
-      return nullptr;
-    Operands.push_back(C);
-  }
-
-  auto *Ptr = cast<Constant>(Operands[0]);
-  auto Ops = ArrayRef(Operands.begin() + 1, Operands.end());
-  return ConstantFoldGetElementPtr(I.getSourceElementType(), Ptr,
-                                   I.isInBounds(), std::nullopt, Ops);
-}
-
-Constant *InstCostVisitor::visitSelectInst(SelectInst &I) {
-  if (I.getCondition() != LastVisited->first)
-    return nullptr;
-
-  Value *V = LastVisited->second->isZeroValue() ? I.getFalseValue()
-                                                : I.getTrueValue();
-  auto *C = dyn_cast<Constant>(V);
-  if (!C)
-    C = findConstantFor(V, KnownConstants);
-  return C;
-}
-
-Constant *InstCostVisitor::visitCastInst(CastInst &I) {
-  return ConstantFoldCastOperand(I.getOpcode(), LastVisited->second,
-                                 I.getType(), DL);
-}
-
-Constant *InstCostVisitor::visitCmpInst(CmpInst &I) {
-  bool Swap = I.getOperand(1) == LastVisited->first;
-  Value *V = Swap ? I.getOperand(0) : I.getOperand(1);
-  auto *Other = dyn_cast<Constant>(V);
-  if (!Other)
-    Other = findConstantFor(V, KnownConstants);
-
-  if (!Other)
-    return nullptr;
-
-  Constant *Const = LastVisited->second;
-  return Swap ?
-        ConstantFoldCompareInstOperands(I.getPredicate(), Other, Const, DL)
-      : ConstantFoldCompareInstOperands(I.getPredicate(), Const, Other, DL);
-}
-
-Constant *InstCostVisitor::visitUnaryOperator(UnaryOperator &I) {
-  return ConstantFoldUnaryOpOperand(I.getOpcode(), LastVisited->second, DL);
-}
-
-Constant *InstCostVisitor::visitBinaryOperator(BinaryOperator &I) {
-  bool Swap = I.getOperand(1) == LastVisited->first;
-  Value *V = Swap ? I.getOperand(0) : I.getOperand(1);
-  auto *Other = dyn_cast<Constant>(V);
-  if (!Other)
-    Other = findConstantFor(V, KnownConstants);
-
-  if (!Other)
-    return nullptr;
-
-  Constant *Const = LastVisited->second;
-  return dyn_cast_or_null<Constant>(Swap ?
-        simplifyBinOp(I.getOpcode(), Other, Const, SimplifyQuery(DL))
-      : simplifyBinOp(I.getOpcode(), Const, Other, SimplifyQuery(DL)));
-}
 
 Constant *FunctionSpecializer::getPromotableAlloca(AllocaInst *Alloca,
                                                    CallInst *Call) {
@@ -637,6 +417,10 @@ CodeMetrics &FunctionSpecializer::analyzeFunction(Function *F) {
     CodeMetrics::collectEphemeralValues(F, &(GetAC)(*F), EphValues);
     for (BasicBlock &BB : *F)
       Metrics.analyzeBasicBlock(&BB, (GetTTI)(*F), EphValues);
+
+    LLVM_DEBUG(dbgs() << "FnSpecialization: Code size of function "
+                      << F->getName() << " is " << Metrics.NumInsts
+                      << " instructions\n");
   }
   return Metrics;
 }
@@ -667,7 +451,6 @@ bool FunctionSpecializer::findSpecializations(Function *F, Cost SpecCost,
   if (Args.empty())
     return false;
 
-  bool HasCheckedEntryFreq = false;
   for (User *U : F->users()) {
     if (!isa<CallInst>(U) && !isa<InvokeInst>(U))
       continue;
@@ -703,21 +486,6 @@ bool FunctionSpecializer::findSpecializations(Function *F, Cost SpecCost,
     if (S.Args.empty())
       continue;
 
-    // Check the function entry frequency only once. We sink this code here to
-    // postpone running the Block Frequency Analysis until we know for sure
-    // there are Specialization candidates, otherwise we are adding unnecessary
-    // overhead.
-    if (!HasCheckedEntryFreq) {
-      // Reject cold functions (for some definition of 'cold').
-      uint64_t EntryFreq = (GetBFI)(*F).getEntryFreq();
-      if (!ForceSpecialization && EntryFreq < MinEntryFreq)
-        return false;
-
-      HasCheckedEntryFreq = true;
-      LLVM_DEBUG(dbgs() << "FnSpecialization: Entry block frequency for "
-                        << F->getName() << " = " << EntryFreq << "\n");
-    }
-
     // Check if we have encountered the same specialisation already.
     if (auto It = UniqueSpecs.find(S); It != UniqueSpecs.end()) {
       // Existing specialisation. Add the call to the list to rewrite, unless
@@ -732,14 +500,13 @@ bool FunctionSpecializer::findSpecializations(Function *F, Cost SpecCost,
       AllSpecs[Index].CallSites.push_back(&CS);
     } else {
       // Calculate the specialisation gain.
-      Cost Score = 0;
-      InstCostVisitor Visitor = getInstCostVisitorFor(F);
+      Cost Score = 0 - SpecCost;
       for (ArgInfo &A : S.Args)
-        Score += getSpecializationBonus(A.Formal, A.Actual, Visitor);
-      Score /= SpecCost;
+        Score +=
+            getSpecializationBonus(A.Formal, A.Actual, Solver.getLoopInfo(*F));
 
       // Discard unprofitable specialisations.
-      if (!ForceSpecialization && Score < MinScore)
+      if (!ForceSpecialization && Score <= 0)
         continue;
 
       // Create a new specialisation entry.
@@ -823,23 +590,48 @@ Cost FunctionSpecializer::getSpecializationCost(Function *F) {
 
   // Otherwise, set the specialization cost to be the cost of all the
   // instructions in the function.
-  return Metrics.NumInsts;
+  return Metrics.NumInsts * InlineConstants::getInstrCost();
+}
+
+static Cost getUserBonus(User *U, TargetTransformInfo &TTI,
+                         const LoopInfo &LI) {
+  auto *I = dyn_cast_or_null<Instruction>(U);
+  // If not an instruction we do not know how to evaluate.
+  // Keep minimum possible cost for now so that it doesnt affect
+  // specialization.
+  if (!I)
+    return std::numeric_limits<unsigned>::min();
+
+  Cost Bonus =
+      TTI.getInstructionCost(U, TargetTransformInfo::TCK_SizeAndLatency);
+
+  // Increase the cost if it is inside the loop.
+  unsigned LoopDepth = LI.getLoopDepth(I->getParent());
+  Bonus *= std::pow((double)AvgLoopIters, LoopDepth);
+
+  // Traverse recursively if there are more uses.
+  // TODO: Any other instructions to be added here?
+  if (I->mayReadFromMemory() || I->isCast())
+    for (auto *User : I->users())
+      Bonus += getUserBonus(User, TTI, LI);
+
+  return Bonus;
 }
 
 /// Compute a bonus for replacing argument \p A with constant \p C.
 Cost FunctionSpecializer::getSpecializationBonus(Argument *A, Constant *C,
-                                                 InstCostVisitor &Visitor) {
+                                                 const LoopInfo &LI) {
+  Function *F = A->getParent();
+  auto &TTI = (GetTTI)(*F);
   LLVM_DEBUG(dbgs() << "FnSpecialization: Analysing bonus for constant: "
                     << C->getNameOrAsOperand() << "\n");
 
   Cost TotalCost = 0;
-  for (auto *U : A->users())
-    if (auto *UI = dyn_cast<Instruction>(U))
-      if (Solver.isBlockExecutable(UI->getParent()))
-        TotalCost += Visitor.getUserBonus(UI, A, C);
-
-  LLVM_DEBUG(dbgs() << "FnSpecialization:   Accumulated user bonus "
-                    << TotalCost << " for argument " << *A << "\n");
+  for (auto *U : A->users()) {
+    TotalCost += getUserBonus(U, TTI, LI);
+    LLVM_DEBUG(dbgs() << "FnSpecialization:   User cost ";
+               TotalCost.print(dbgs()); dbgs() << " for: " << *U << "\n");
+  }
 
   // The below heuristic is only concerned with exposing inlining
   // opportunities via indirect call promotion. If the argument is not a

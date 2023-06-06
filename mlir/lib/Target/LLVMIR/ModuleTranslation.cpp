@@ -342,6 +342,16 @@ llvm::Constant *mlir::LLVM::detail::getLLVMConstant(
       return nullptr;
     return llvm::ConstantStruct::get(structType, {real, imag});
   }
+  if (auto *targetExtType = dyn_cast<::llvm::TargetExtType>(llvmType)) {
+    // TODO: Replace with 'zeroinitializer' once there is a dedicated
+    // zeroinitializer operation in the LLVM dialect.
+    auto intAttr = dyn_cast<IntegerAttr>(attr);
+    if (!intAttr || intAttr.getInt() != 0)
+      emitError(loc,
+                "Only zero-initialization allowed for target extension type");
+
+    return llvm::ConstantTargetNone::get(targetExtType);
+  }
   // For integer types, we allow a mismatch in sizes as the index type in
   // MLIR might have a different size than the index type in the LLVM module.
   if (auto intAttr = dyn_cast<IntegerAttr>(attr))
@@ -1266,11 +1276,15 @@ llvm::OpenMPIRBuilder *ModuleTranslation::getOpenMPBuilder() {
 
     bool isDevice = false;
     llvm::StringRef hostIRFilePath = "";
-    if (auto offloadMod =
-            dyn_cast<mlir::omp::OffloadModuleInterface>(mlirModule)) {
-      isDevice = offloadMod.getIsDevice();
-      hostIRFilePath = offloadMod.getHostIRFilePath();
-    }
+
+    if (Attribute deviceAttr = mlirModule->getAttr("omp.is_device"))
+      if (::llvm::isa<mlir::BoolAttr>(deviceAttr))
+        isDevice = ::llvm::dyn_cast<mlir::BoolAttr>(deviceAttr).getValue();
+
+    if (Attribute filepath = mlirModule->getAttr("omp.host_ir_filepath"))
+      if (::llvm::isa<mlir::StringAttr>(filepath))
+        hostIRFilePath =
+            ::llvm::dyn_cast<mlir::StringAttr>(filepath).getValue();
 
     ompBuilder->initialize(hostIRFilePath);
 

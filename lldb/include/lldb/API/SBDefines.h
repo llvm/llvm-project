@@ -15,6 +15,8 @@
 #include "lldb/lldb-types.h"
 #include "lldb/lldb-versioning.h"
 
+#include <cstdio> // For FILE *
+
 #ifndef LLDB_API
 #if defined(_WIN32)
 #if defined(LLDB_IN_LIBLLDB)

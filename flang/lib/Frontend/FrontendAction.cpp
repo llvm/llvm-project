@@ -86,6 +86,10 @@ bool FrontendAction::beginSourceFile(CompilerInstance &ci,
     invoc.collectMacroDefinitions();
   }
 
+  // Enable CUDA Fortran if source file is *.cuf/*.CUF.
+  invoc.getFortranOpts().features.Enable(Fortran::common::LanguageFeature::CUDA,
+                                         getCurrentInput().getIsCUDAFortran());
+
   // Decide between fixed and free form (if the user didn't express any
   // preference, use the file extension to decide)
   if (invoc.getFrontendOpts().fortranForm == FortranForm::Unknown) {

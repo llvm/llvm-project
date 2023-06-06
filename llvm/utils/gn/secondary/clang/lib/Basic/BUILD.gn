@@ -23,9 +23,11 @@ static_library("Basic") {
     # public_dep because public header Version.h includes generated Version.inc.
     "//clang/include/clang/Basic:AttrList",
     "//clang/include/clang/Basic:AttrSubMatchRulesList",
+    "//clang/include/clang/Basic:AttrTokenKinds",
     "//clang/include/clang/Basic:DiagnosticGroups",
     "//clang/include/clang/Basic:arm_cde_builtins",
     "//clang/include/clang/Basic:arm_mve_builtins",
+    "//clang/include/clang/Basic:arm_sme_builtins",
     "//clang/include/clang/Basic:arm_sve_builtins",
     "//clang/include/clang/Basic:arm_sve_typeflags",
     "//clang/include/clang/Basic:diags_tablegen",

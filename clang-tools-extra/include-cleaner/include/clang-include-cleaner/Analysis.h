@@ -67,7 +67,7 @@ struct AnalysisResults {
 AnalysisResults analyze(llvm::ArrayRef<Decl *> ASTRoots,
                         llvm::ArrayRef<SymbolReference> MacroRefs,
                         const Includes &I, const PragmaIncludes *PI,
-                        const SourceManager &SM, HeaderSearch &HS);
+                        const SourceManager &SM, const HeaderSearch &HS);
 
 /// Removes unused includes and inserts missing ones in the main file.
 /// Returns the modified main-file code.
@@ -75,7 +75,7 @@ AnalysisResults analyze(llvm::ArrayRef<Decl *> ASTRoots,
 std::string fixIncludes(const AnalysisResults &Results, llvm::StringRef Code,
                         const format::FormatStyle &IncludeStyle);
 
-std::string spellHeader(const Header &H, HeaderSearch &HS,
+std::string spellHeader(const Header &H, const HeaderSearch &HS,
                         const FileEntry *Main);
 
 /// Gets all the providers for a symbol by traversing each location.

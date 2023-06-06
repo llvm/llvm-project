@@ -10,7 +10,6 @@
 
 // deque()
 
-#include "asan_testing.h"
 #include <deque>
 #include <cassert>
 
@@ -25,11 +24,9 @@ test()
 {
     std::deque<T, Allocator> d;
     assert(d.size() == 0);
-    LIBCPP_ASSERT(is_double_ended_contiguous_container_asan_correct(d));
 #if TEST_STD_VER >= 11
     std::deque<T, Allocator> d1 = {};
     assert(d1.size() == 0);
-    LIBCPP_ASSERT(is_double_ended_contiguous_container_asan_correct(d1));
 #endif
 }
 

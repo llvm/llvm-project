@@ -614,21 +614,21 @@ static unsigned getEntrySizeForKind(SectionKind Kind) {
 
 /// Return the section prefix name used by options FunctionsSections and
 /// DataSections.
-static StringRef getSectionPrefixForGlobal(SectionKind Kind) {
+static StringRef getSectionPrefixForGlobal(SectionKind Kind, bool IsLarge) {
   if (Kind.isText())
     return ".text";
   if (Kind.isReadOnly())
-    return ".rodata";
+    return IsLarge ? ".lrodata" : ".rodata";
   if (Kind.isBSS())
-    return ".bss";
+    return IsLarge ? ".lbss" : ".bss";
   if (Kind.isThreadData())
     return ".tdata";
   if (Kind.isThreadBSS())
     return ".tbss";
   if (Kind.isData())
-    return ".data";
+    return IsLarge ? ".ldata" : ".data";
   if (Kind.isReadOnlyWithRel())
-    return ".data.rel.ro";
+    return IsLarge ? ".ldata.rel.ro" : ".data.rel.ro";
   llvm_unreachable("Unknown section kind");
 }
 
@@ -650,7 +650,10 @@ getELFSectionNameForGlobal(const GlobalObject *GO, SectionKind Kind,
     Name = ".rodata.cst";
     Name += utostr(EntrySize);
   } else {
-    Name = getSectionPrefixForGlobal(Kind);
+    bool IsLarge = false;
+    if (isa<GlobalVariable>(GO))
+      IsLarge = TM.isLargeData();
+    Name = getSectionPrefixForGlobal(Kind, IsLarge);
   }
 
   bool HasPrefix = false;
@@ -851,6 +854,12 @@ static MCSectionELF *selectELFSectionForGlobal(
     Flags |= ELF::SHF_GROUP;
     Group = C->getName();
     IsComdat = C->getSelectionKind() == Comdat::Any;
+  }
+  if (isa<GlobalVariable>(GO)) {
+    if (TM.isLargeData()) {
+      assert(TM.getTargetTriple().getArch() == Triple::x86_64);
+      Flags |= ELF::SHF_X86_64_LARGE;
+    }
   }
 
   // Get the section entry size based on the kind.
@@ -2165,7 +2174,7 @@ static MCSectionWasm *selectWasmSectionForGlobal(
   }
 
   bool UniqueSectionNames = TM.getUniqueSectionNames();
-  SmallString<128> Name = getSectionPrefixForGlobal(Kind);
+  SmallString<128> Name = getSectionPrefixForGlobal(Kind, /*IsLarge=*/false);
 
   if (const auto *F = dyn_cast<Function>(GO)) {
     const auto &OptionalPrefix = F->getSectionPrefix();

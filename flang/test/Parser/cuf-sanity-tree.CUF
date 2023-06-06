@@ -1,0 +1,207 @@
+! RUN: %flang_fc1 -fdebug-dump-parse-tree %s 2>&1 | FileCheck %s
+include "cuf-sanity-common"
+!CHECK: Program -> ProgramUnit -> SubroutineSubprogram
+!CHECK: | SubroutineStmt
+!CHECK: | | Name = 'atcuf'
+!CHECK: | SpecificationPart
+!CHECK: | | ImplicitPart -> 
+!CHECK: | ExecutionPart -> Block
+!CHECK: | EndSubroutineStmt -> 
+!CHECK: ProgramUnit -> SubroutineSubprogram
+!CHECK: | SubroutineStmt
+!CHECK: | | Name = 'cudadefd'
+!CHECK: | SpecificationPart
+!CHECK: | | ImplicitPart -> 
+!CHECK: | ExecutionPart -> Block
+!CHECK: | EndSubroutineStmt -> 
+!CHECK: ProgramUnit -> Module
+!CHECK: | ModuleStmt -> Name = 'm'
+!CHECK: | SpecificationPart
+!CHECK: | | ImplicitPart -> 
+!CHECK: | | DeclarationConstruct -> SpecificationConstruct -> TypeDeclarationStmt
+!CHECK: | | | DeclarationTypeSpec -> IntrinsicTypeSpec -> Real
+!CHECK: | | | AttrSpec -> Allocatable
+!CHECK: | | | AttrSpec -> CUDADataAttr = Pinned
+!CHECK: | | | EntityDecl
+!CHECK: | | | | Name = 'pa'
+!CHECK: | | | | ArraySpec -> DeferredShapeSpecList -> int
+!CHECK: | ModuleSubprogramPart
+!CHECK: | | ContainsStmt
+!CHECK: | | ModuleSubprogram -> SubroutineSubprogram
+!CHECK: | | | SubroutineStmt
+!CHECK: | | | | PrefixSpec -> Attributes -> CUDASubprogramAttrs = Device
+!CHECK: | | | | Name = 'devicesub'
+!CHECK: | | | SpecificationPart
+!CHECK: | | | | ImplicitPart -> 
+!CHECK: | | | ExecutionPart -> Block
+!CHECK: | | | EndSubroutineStmt -> 
+!CHECK: | | ModuleSubprogram -> FunctionSubprogram
+!CHECK: | | | FunctionStmt
+!CHECK: | | | | PrefixSpec -> Attributes -> CUDASubprogramAttrs = Device
+!CHECK: | | | | PrefixSpec -> DeclarationTypeSpec -> IntrinsicTypeSpec -> Real
+!CHECK: | | | | Name = 'devicefunc'
+!CHECK: | | | SpecificationPart
+!CHECK: | | | | ImplicitPart -> 
+!CHECK: | | | ExecutionPart -> Block
+!CHECK: | | | | ExecutionPartConstruct -> ExecutableConstruct -> ActionStmt -> AssignmentStmt = 'devicefunc=1._4'
+!CHECK: | | | | | Variable = 'devicefunc'
+!CHECK: | | | | | | Designator -> DataRef -> Name = 'devicefunc'
+!CHECK: | | | | | Expr = '1._4'
+!CHECK: | | | | | | LiteralConstant -> RealLiteralConstant
+!CHECK: | | | | | | | Real = '1.'
+!CHECK: | | | EndFunctionStmt -> 
+!CHECK: | | ModuleSubprogram -> SubroutineSubprogram
+!CHECK: | | | SubroutineStmt
+!CHECK: | | | | PrefixSpec -> Attributes -> CUDASubprogramAttrs = Global
+!CHECK: | | | | Name = 'globalsub'
+!CHECK: | | | SpecificationPart
+!CHECK: | | | | ImplicitPart -> 
+!CHECK: | | | ExecutionPart -> Block
+!CHECK: | | | EndSubroutineStmt -> 
+!CHECK: | | ModuleSubprogram -> SubroutineSubprogram
+!CHECK: | | | SubroutineStmt
+!CHECK: | | | | PrefixSpec -> Attributes -> CUDASubprogramAttrs = Grid_Global
+!CHECK: | | | | Name = 'gridglobalsub'
+!CHECK: | | | SpecificationPart
+!CHECK: | | | | ImplicitPart -> 
+!CHECK: | | | ExecutionPart -> Block
+!CHECK: | | | EndSubroutineStmt -> 
+!CHECK: | | ModuleSubprogram -> SubroutineSubprogram
+!CHECK: | | | SubroutineStmt
+!CHECK: | | | | PrefixSpec -> Attributes -> CUDASubprogramAttrs = Host
+!CHECK: | | | | Name = 'hostsub'
+!CHECK: | | | SpecificationPart
+!CHECK: | | | | ImplicitPart -> 
+!CHECK: | | | ExecutionPart -> Block
+!CHECK: | | | EndSubroutineStmt -> 
+!CHECK: | | ModuleSubprogram -> SubroutineSubprogram
+!CHECK: | | | SubroutineStmt
+!CHECK: | | | | PrefixSpec -> Attributes -> CUDASubprogramAttrs = Global
+!CHECK: | | | | PrefixSpec -> Launch_Bounds -> Scalar -> Integer -> Constant -> Expr = '1_4'
+!CHECK: | | | | | LiteralConstant -> IntLiteralConstant = '1'
+!CHECK: | | | | Scalar -> Integer -> Constant -> Expr = '2_4'
+!CHECK: | | | | | LiteralConstant -> IntLiteralConstant = '2'
+!CHECK: | | | | Name = 'lbsub'
+!CHECK: | | | SpecificationPart
+!CHECK: | | | | ImplicitPart -> 
+!CHECK: | | | ExecutionPart -> Block
+!CHECK: | | | EndSubroutineStmt -> 
+!CHECK: | | ModuleSubprogram -> SubroutineSubprogram
+!CHECK: | | | SubroutineStmt
+!CHECK: | | | | PrefixSpec -> Attributes -> CUDASubprogramAttrs = Global
+!CHECK: | | | | PrefixSpec -> Cluster_Dims -> Scalar -> Integer -> Constant -> Expr = '1_4'
+!CHECK: | | | | | LiteralConstant -> IntLiteralConstant = '1'
+!CHECK: | | | | Scalar -> Integer -> Constant -> Expr = '2_4'
+!CHECK: | | | | | LiteralConstant -> IntLiteralConstant = '2'
+!CHECK: | | | | Scalar -> Integer -> Constant -> Expr = '3_4'
+!CHECK: | | | | | LiteralConstant -> IntLiteralConstant = '3'
+!CHECK: | | | | Name = 'cdsub'
+!CHECK: | | | SpecificationPart
+!CHECK: | | | | ImplicitPart -> 
+!CHECK: | | | ExecutionPart -> Block
+!CHECK: | | | EndSubroutineStmt -> 
+!CHECK: | | ModuleSubprogram -> SubroutineSubprogram
+!CHECK: | | | SubroutineStmt
+!CHECK: | | | | PrefixSpec -> Attributes -> CUDASubprogramAttrs = Device
+!CHECK: | | | | Name = 'attrs'
+!CHECK: | | | SpecificationPart
+!CHECK: | | | | ImplicitPart -> 
+!CHECK: | | | | DeclarationConstruct -> SpecificationConstruct -> OtherSpecificationStmt -> CUDAAttributesStmt
+!CHECK: | | | | | CUDADataAttr = Device
+!CHECK: | | | | | Name = 'devx1'
+!CHECK: | | | | DeclarationConstruct -> SpecificationConstruct -> TypeDeclarationStmt
+!CHECK: | | | | | DeclarationTypeSpec -> IntrinsicTypeSpec -> Real
+!CHECK: | | | | | AttrSpec -> CUDADataAttr = Device
+!CHECK: | | | | | EntityDecl
+!CHECK: | | | | | | Name = 'devx2'
+!CHECK: | | | ExecutionPart -> Block
+!CHECK: | | | EndSubroutineStmt -> 
+!CHECK: | | ModuleSubprogram -> SubroutineSubprogram
+!CHECK: | | | SubroutineStmt
+!CHECK: | | | | Name = 'test'
+!CHECK: | | | SpecificationPart
+!CHECK: | | | | ImplicitPart -> 
+!CHECK: | | | | DeclarationConstruct -> SpecificationConstruct -> TypeDeclarationStmt
+!CHECK: | | | | | DeclarationTypeSpec -> IntrinsicTypeSpec -> Logical
+!CHECK: | | | | | EntityDecl
+!CHECK: | | | | | | Name = 'ispinned'
+!CHECK: | | | ExecutionPart -> Block
+!CHECK: | | | | ExecutionPartConstruct -> ExecutableConstruct -> CUFKernelDoConstruct
+!CHECK: | | | | | Directive
+!CHECK: | | | | | | Scalar -> Integer -> Constant -> Expr = '1_4'
+!CHECK: | | | | | | | LiteralConstant -> IntLiteralConstant = '1'
+!CHECK: | | | | | | Scalar -> Integer -> Expr = '1_4'
+!CHECK: | | | | | | | LiteralConstant -> IntLiteralConstant = '1'
+!CHECK: | | | | | DoConstruct
+!CHECK: | | | | | | NonLabelDoStmt
+!CHECK: | | | | | | | LoopControl -> LoopBounds
+!CHECK: | | | | | | | | Scalar -> Name = 'j'
+!CHECK: | | | | | | | | Scalar -> Expr = '1_4'
+!CHECK: | | | | | | | | | LiteralConstant -> IntLiteralConstant = '1'
+!CHECK: | | | | | | | | Scalar -> Expr = '10_4'
+!CHECK: | | | | | | | | | LiteralConstant -> IntLiteralConstant = '10'
+!CHECK: | | | | | | Block
+!CHECK: | | | | | | EndDoStmt -> 
+!CHECK: | | | | ExecutionPartConstruct -> ExecutableConstruct -> CUFKernelDoConstruct
+!CHECK: | | | | | Directive
+!CHECK: | | | | | | Scalar -> Integer -> Expr = '1_4'
+!CHECK: | | | | | | | LiteralConstant -> IntLiteralConstant = '1'
+!CHECK: | | | | | | Scalar -> Integer -> Expr = '2_4'
+!CHECK: | | | | | | | LiteralConstant -> IntLiteralConstant = '2'
+!CHECK: | | | | | | Scalar -> Integer -> Expr = '3_4'
+!CHECK: | | | | | | | LiteralConstant -> IntLiteralConstant = '3'
+!CHECK: | | | | | | Scalar -> Integer -> Expr = '1_4'
+!CHECK: | | | | | | | LiteralConstant -> IntLiteralConstant = '1'
+!CHECK: | | | | | DoConstruct
+!CHECK: | | | | | | NonLabelDoStmt
+!CHECK: | | | | | | | LoopControl -> LoopBounds
+!CHECK: | | | | | | | | Scalar -> Name = 'j'
+!CHECK: | | | | | | | | Scalar -> Expr = '1_4'
+!CHECK: | | | | | | | | | LiteralConstant -> IntLiteralConstant = '1'
+!CHECK: | | | | | | | | Scalar -> Expr = '10_4'
+!CHECK: | | | | | | | | | LiteralConstant -> IntLiteralConstant = '10'
+!CHECK: | | | | | | Block
+!CHECK: | | | | | | EndDoStmt -> 
+!CHECK: | | | | ExecutionPartConstruct -> ExecutableConstruct -> ActionStmt -> CallStmt = 'CALL globalsub<<<1_4,2_4>>>()'
+!CHECK: | | | | | Call
+!CHECK: | | | | | | ProcedureDesignator -> Name = 'globalsub'
+!CHECK: | | | | | Chevrons
+!CHECK: | | | | | | Scalar -> Expr = '1_4'
+!CHECK: | | | | | | | LiteralConstant -> IntLiteralConstant = '1'
+!CHECK: | | | | | | Scalar -> Expr = '2_4'
+!CHECK: | | | | | | | LiteralConstant -> IntLiteralConstant = '2'
+!CHECK: | | | | ExecutionPartConstruct -> ExecutableConstruct -> ActionStmt -> CallStmt = 'CALL globalsub<<<1_4,2_4,3_4>>>()'
+!CHECK: | | | | | Call
+!CHECK: | | | | | | ProcedureDesignator -> Name = 'globalsub'
+!CHECK: | | | | | Chevrons
+!CHECK: | | | | | | Scalar -> Expr = '1_4'
+!CHECK: | | | | | | | LiteralConstant -> IntLiteralConstant = '1'
+!CHECK: | | | | | | Scalar -> Expr = '2_4'
+!CHECK: | | | | | | | LiteralConstant -> IntLiteralConstant = '2'
+!CHECK: | | | | | | Scalar -> Integer -> Expr = '3_4'
+!CHECK: | | | | | | | LiteralConstant -> IntLiteralConstant = '3'
+!CHECK: | | | | ExecutionPartConstruct -> ExecutableConstruct -> ActionStmt -> CallStmt = 'CALL globalsub<<<1_4,2_4,3_4,4_4>>>()'
+!CHECK: | | | | | Call
+!CHECK: | | | | | | ProcedureDesignator -> Name = 'globalsub'
+!CHECK: | | | | | Chevrons
+!CHECK: | | | | | | Scalar -> Expr = '1_4'
+!CHECK: | | | | | | | LiteralConstant -> IntLiteralConstant = '1'
+!CHECK: | | | | | | Scalar -> Expr = '2_4'
+!CHECK: | | | | | | | LiteralConstant -> IntLiteralConstant = '2'
+!CHECK: | | | | | | Scalar -> Integer -> Expr = '3_4'
+!CHECK: | | | | | | | LiteralConstant -> IntLiteralConstant = '3'
+!CHECK: | | | | | | Scalar -> Integer -> Expr = '4_4'
+!CHECK: | | | | | | | LiteralConstant -> IntLiteralConstant = '4'
+!CHECK: | | | | ExecutionPartConstruct -> ExecutableConstruct -> ActionStmt -> AllocateStmt
+!CHECK: | | | | | Allocation
+!CHECK: | | | | | | AllocateObject = 'pa'
+!CHECK: | | | | | | | Name = 'pa'
+!CHECK: | | | | | | AllocateShapeSpec
+!CHECK: | | | | | | | Scalar -> Integer -> Expr = '32_4'
+!CHECK: | | | | | | | | LiteralConstant -> IntLiteralConstant = '32'
+!CHECK: | | | | | AllocOpt -> Stream -> Scalar -> Integer -> Expr = '1_4'
+!CHECK: | | | | | | LiteralConstant -> IntLiteralConstant = '1'
+!CHECK: | | | | | AllocOpt -> Pinned -> Scalar -> Logical -> Variable = 'ispinned'
+!CHECK: | | | | | | Designator -> DataRef -> Name = 'ispinned'
+!CHECK: | | | EndSubroutineStmt -> 
+!CHECK: | EndModuleStmt -> 

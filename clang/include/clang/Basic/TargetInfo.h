@@ -219,6 +219,9 @@ protected:
   bool HasFloat128;
   bool HasFloat16;
   bool HasBFloat16;
+  bool HasFullBFloat16; // True if the backend supports native bfloat16
+                        // arithmetic. Used to determine excess precision
+                        // support in the frontend.
   bool HasIbm128;
   bool HasLongDouble;
   bool HasFPReturn;
@@ -648,7 +651,13 @@ public:
   virtual bool hasFloat16Type() const { return HasFloat16; }
 
   /// Determine whether the _BFloat16 type is supported on this target.
-  virtual bool hasBFloat16Type() const { return HasBFloat16; }
+  virtual bool hasBFloat16Type() const {
+    return HasBFloat16 || HasFullBFloat16;
+  }
+
+  /// Determine whether the BFloat type is fully supported on this target, i.e
+  /// arithemtic operations.
+  virtual bool hasFullBFloat16Type() const { return HasFullBFloat16; }
 
   /// Determine whether the __ibm128 type is supported on this target.
   virtual bool hasIbm128Type() const { return HasIbm128; }
@@ -756,9 +765,7 @@ public:
   }
 
   /// Return the mangled code of bfloat.
-  virtual const char *getBFloat16Mangling() const {
-    llvm_unreachable("bfloat not implemented on this target");
-  }
+  virtual const char *getBFloat16Mangling() const { return "DF16b"; }
 
   /// Return the value for the C99 FLT_EVAL_METHOD macro.
   virtual LangOptions::FPEvalMethodKind getFPEvalMethod() const {

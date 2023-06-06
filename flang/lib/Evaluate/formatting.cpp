@@ -135,6 +135,18 @@ llvm::raw_ostream &ProcedureRef::AsFortran(llvm::raw_ostream &o) const {
     }
   }
   proc_.AsFortran(o);
+  if (!chevrons_.empty()) {
+    bool first{true};
+    for (const auto &expr : chevrons_) {
+      if (first) {
+        expr.AsFortran(o << "<<<");
+        first = false;
+      } else {
+        expr.AsFortran(o << ",");
+      }
+    }
+    o << ">>>";
+  }
   char separator{'('};
   for (const auto &arg : arguments_) {
     if (arg && !arg->isPassedObject()) {

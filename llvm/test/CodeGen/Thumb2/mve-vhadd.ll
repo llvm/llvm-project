@@ -116,8 +116,7 @@ define arm_aapcs_vfpcc <4 x i8> @vhaddu_v4i8(<4 x i8> %s0, <4 x i8> %s1) {
 ; CHECK-NEXT:    vmov.i32 q2, #0xff
 ; CHECK-NEXT:    vand q1, q1, q2
 ; CHECK-NEXT:    vand q0, q0, q2
-; CHECK-NEXT:    vadd.i32 q0, q0, q1
-; CHECK-NEXT:    vshr.u32 q0, q0, #1
+; CHECK-NEXT:    vhadd.u32 q0, q0, q1
 ; CHECK-NEXT:    bx lr
 entry:
   %s0s = zext <4 x i8> %s0 to <4 x i16>
@@ -313,12 +312,9 @@ define arm_aapcs_vfpcc <4 x i8> @vrhaddu_v4i8(<4 x i8> %s0, <4 x i8> %s1) {
 ; CHECK-LABEL: vrhaddu_v4i8:
 ; CHECK:       @ %bb.0: @ %entry
 ; CHECK-NEXT:    vmov.i32 q2, #0xff
-; CHECK-NEXT:    movs r0, #1
 ; CHECK-NEXT:    vand q1, q1, q2
 ; CHECK-NEXT:    vand q0, q0, q2
-; CHECK-NEXT:    vadd.i32 q0, q0, q1
-; CHECK-NEXT:    vadd.i32 q0, q0, r0
-; CHECK-NEXT:    vshr.u32 q0, q0, #1
+; CHECK-NEXT:    vrhadd.u32 q0, q0, q1
 ; CHECK-NEXT:    bx lr
 entry:
   %s0s = zext <4 x i8> %s0 to <4 x i16>

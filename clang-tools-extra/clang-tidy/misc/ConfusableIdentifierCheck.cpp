@@ -45,7 +45,7 @@ ConfusableIdentifierCheck::~ConfusableIdentifierCheck() = default;
 // We're skipping 1. and 3. for the sake of simplicity, but this can lead to
 // false positive.
 
-std::string ConfusableIdentifierCheck::skeleton(StringRef Name) {
+static std::string skeleton(StringRef Name) {
   using namespace llvm;
   std::string SName = Name.str();
   std::string Skeleton;
@@ -89,75 +89,107 @@ std::string ConfusableIdentifierCheck::skeleton(StringRef Name) {
   return Skeleton;
 }
 
+static bool mayShadowImpl(const DeclContext *DC0, const DeclContext *DC1) {
+  return DC0 && DC0 == DC1;
+}
+
 static bool mayShadowImpl(const NamedDecl *ND0, const NamedDecl *ND1) {
-  const DeclContext *DC0 = ND0->getDeclContext()->getPrimaryContext();
-  const DeclContext *DC1 = ND1->getDeclContext()->getPrimaryContext();
-
-  if (isa<TemplateTypeParmDecl>(ND0) || isa<TemplateTypeParmDecl>(ND0))
-    return true;
-
-  while (DC0->isTransparentContext())
-    DC0 = DC0->getParent();
-  while (DC1->isTransparentContext())
-    DC1 = DC1->getParent();
-
-  if (DC0->Equals(DC1))
-    return true;
-
-  return false;
+  return isa<TemplateTypeParmDecl>(ND0) || isa<TemplateTypeParmDecl>(ND1);
 }
 
-static bool isMemberOf(const NamedDecl *ND, const CXXRecordDecl *RD) {
-  const DeclContext *NDParent = ND->getDeclContext();
-  if (!NDParent || !isa<CXXRecordDecl>(NDParent))
+static bool isMemberOf(const ConfusableIdentifierCheck::ContextInfo *DC0,
+                       const ConfusableIdentifierCheck::ContextInfo *DC1) {
+  if (DC0->Bases.empty())
     return false;
-  if (NDParent == RD)
-    return true;
-  return !RD->forallBases(
-      [NDParent](const CXXRecordDecl *Base) { return NDParent != Base; });
+  return llvm::is_contained(DC1->Bases, DC0->PrimaryContext);
 }
 
-static bool mayShadow(const NamedDecl *ND0, const NamedDecl *ND1) {
+static bool enclosesContext(const ConfusableIdentifierCheck::ContextInfo *DC0,
+                            const ConfusableIdentifierCheck::ContextInfo *DC1) {
+  if (DC0->PrimaryContext == DC1->PrimaryContext)
+    return true;
 
-  const DeclContext *DC0 = ND0->getDeclContext()->getPrimaryContext();
-  const DeclContext *DC1 = ND1->getDeclContext()->getPrimaryContext();
+  return llvm::is_contained(DC0->PrimaryContexts, DC1->PrimaryContext) ||
+         llvm::is_contained(DC1->PrimaryContexts, DC0->PrimaryContext);
+}
 
-  if (const CXXRecordDecl *RD0 = dyn_cast<CXXRecordDecl>(DC0)) {
-    RD0 = RD0->getDefinition();
-    if (RD0 && ND1->getAccess() != AS_private && isMemberOf(ND1, RD0))
-      return true;
+static bool mayShadow(const NamedDecl *ND0,
+                      const ConfusableIdentifierCheck::ContextInfo *DC0,
+                      const NamedDecl *ND1,
+                      const ConfusableIdentifierCheck::ContextInfo *DC1) {
+  if (!DC0->Bases.empty() && ND1->getAccess() != AS_private &&
+      isMemberOf(DC1, DC0))
+    return true;
+  if (!DC1->Bases.empty() && ND0->getAccess() != AS_private &&
+      isMemberOf(DC0, DC1))
+    return true;
+
+  return enclosesContext(DC0, DC1) &&
+         (mayShadowImpl(ND0, ND1) || mayShadowImpl(DC0->NonTransparentContext,
+                                                   DC1->NonTransparentContext));
+}
+
+const ConfusableIdentifierCheck::ContextInfo *
+ConfusableIdentifierCheck::getContextInfo(const DeclContext *DC) {
+  const DeclContext *PrimaryContext = DC->getPrimaryContext();
+  auto It = ContextInfos.find(PrimaryContext);
+  if (It != ContextInfos.end())
+    return &It->second;
+
+  ContextInfo &Info = ContextInfos[PrimaryContext];
+  Info.PrimaryContext = PrimaryContext;
+  Info.NonTransparentContext = PrimaryContext;
+
+  while (Info.NonTransparentContext->isTransparentContext()) {
+    Info.NonTransparentContext = Info.NonTransparentContext->getParent();
+    if (!Info.NonTransparentContext)
+      break;
   }
-  if (const CXXRecordDecl *RD1 = dyn_cast<CXXRecordDecl>(DC1)) {
-    RD1 = RD1->getDefinition();
-    if (RD1 && ND0->getAccess() != AS_private && isMemberOf(ND0, RD1))
-      return true;
+
+  if (Info.NonTransparentContext)
+    Info.NonTransparentContext =
+        Info.NonTransparentContext->getPrimaryContext();
+
+  while (DC) {
+    if (!isa<LinkageSpecDecl>(DC) && !isa<ExportDecl>(DC))
+      Info.PrimaryContexts.push_back(DC->getPrimaryContext());
+    DC = DC->getParent();
   }
 
-  if (DC0->Encloses(DC1))
-    return mayShadowImpl(ND0, ND1);
-  if (DC1->Encloses(DC0))
-    return mayShadowImpl(ND1, ND0);
-  return false;
+  if (const CXXRecordDecl *RD = dyn_cast<CXXRecordDecl>(PrimaryContext)) {
+    RD = RD->getDefinition();
+    if (RD) {
+      Info.Bases.push_back(RD);
+      RD->forallBases([&](const CXXRecordDecl *Base) {
+        Info.Bases.push_back(Base);
+        return false;
+      });
+    }
+  }
+
+  return &Info;
 }
 
 void ConfusableIdentifierCheck::check(
     const ast_matchers::MatchFinder::MatchResult &Result) {
   if (const auto *ND = Result.Nodes.getNodeAs<NamedDecl>("nameddecl")) {
     if (IdentifierInfo *NDII = ND->getIdentifier()) {
+      const ContextInfo *Info = getContextInfo(ND->getDeclContext());
       StringRef NDName = NDII->getName();
-      llvm::SmallVector<const NamedDecl *> &Mapped = Mapper[skeleton(NDName)];
-      for (const NamedDecl *OND : Mapped) {
-        const IdentifierInfo *ONDII = OND->getIdentifier();
-        if (mayShadow(ND, OND)) {
+      llvm::SmallVector<Entry> &Mapped = Mapper[skeleton(NDName)];
+      for (const Entry &E : Mapped) {
+        const IdentifierInfo *ONDII = E.Declaration->getIdentifier();
+        if (mayShadow(ND, Info, E.Declaration, E.Info)) {
           StringRef ONDName = ONDII->getName();
           if (ONDName != NDName) {
-            diag(ND->getLocation(), "%0 is confusable with %1") << ND << OND;
-            diag(OND->getLocation(), "other declaration found here",
+            diag(ND->getLocation(), "%0 is confusable with %1")
+                << ND << E.Declaration;
+            diag(E.Declaration->getLocation(), "other declaration found here",
                  DiagnosticIDs::Note);
           }
         }
       }
-      Mapped.push_back(ND);
+      Mapped.push_back({ND, Info});
     }
   }
 }

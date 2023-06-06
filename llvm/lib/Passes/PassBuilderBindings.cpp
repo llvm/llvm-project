@@ -139,6 +139,11 @@ void LLVMPassBuilderOptionsSetMergeFunctions(LLVMPassBuilderOptionsRef Options,
   unwrap(Options)->PTO.MergeFunctions = MergeFunctions;
 }
 
+void LLVMPassBuilderOptionsSetInlinerThreshold(
+    LLVMPassBuilderOptionsRef Options, int Threshold) {
+  unwrap(Options)->PTO.InlinerThreshold = Threshold;
+}
+
 void LLVMDisposePassBuilderOptions(LLVMPassBuilderOptionsRef Options) {
   delete unwrap(Options);
 }

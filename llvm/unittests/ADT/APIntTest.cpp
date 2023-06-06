@@ -3052,6 +3052,7 @@ TEST(APIntTest, ZeroWidth) {
   EXPECT_EQ(0U, APInt::getLowBitsSet(0, 0).getBitWidth());
   EXPECT_EQ(0U, APInt::getSplat(0, ZW).getBitWidth());
   EXPECT_EQ(0U, APInt(4, 10).extractBits(0, 2).getBitWidth());
+  EXPECT_EQ(0U, APInt(4, 10).extractBitsAsZExtValue(0, 2));
 
   // Logical operators.
   ZW |= ZW2;

@@ -77,7 +77,7 @@ will look like:
 
   JIT J;
   J.addModule(buildModule());
-  auto *Main = (int(*)(int, char*[]))J.lookup("main").getAddress();
+  auto *Main = J.lookup("main").getAddress().toPtr<int(*)(int, char *[])>();
   int Result = Main();
 
 The APIs that we build in these tutorials will all be variations on this simple

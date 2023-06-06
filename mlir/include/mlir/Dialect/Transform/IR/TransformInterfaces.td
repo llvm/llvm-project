@@ -193,4 +193,39 @@ def ParamProducerTransformOpTrait : NativeOpTrait<"ParamProducerTransformOpTrait
   let cppNamespace = "::mlir::transform";
 }
 
+def FindPayloadReplacementOpInterface
+    : OpInterface<"FindPayloadReplacementOpInterface"> {
+  let description = [{
+    This interface is queried by the `TrackingListener` and can be implemented
+    by payload ops to indicate that the lookup should be continue with its
+    operands when looking for payload op replacements.
+
+    Example: Consider the case where a tracked "test.foo" payload op is replaced
+    with a new "test.foo" op, but wrapped in a "tensor.reshape" op. In that
+    case, the mapping of the original "test.foo" op should be updated with the
+    new "test.foo" op. A "tensor.reshape" is a metadata-only op that should be
+    skipped when inspecting the replacement values of the original "test.foo"
+    op. More details can be found at `TrackingListener` documentation.
+
+    Note: Ops that implement `CastOpInterface` do not need to implement this
+    interface. Such ops are skipped by default. This interface should be
+    implemented by cast-like/metadata-only ops that cannot implement
+    `CastOpInterface`.
+  }];
+
+  let cppNamespace = "::mlir::transform";
+
+  let methods = [
+    InterfaceMethod<
+      /*desc=*/[{
+        Return the operands at which the lookup for replacement payload ops
+        should continue.
+      }],
+      /*returnType=*/"::llvm::SmallVector<::mlir::Value>",
+      /*name=*/"getNextOperands",
+      /*arguments=*/(ins)
+    >,
+  ];
+}
+
 #endif // MLIR_DIALECT_TRANSFORM_IR_TRANSFORM_INTERFACES_TD

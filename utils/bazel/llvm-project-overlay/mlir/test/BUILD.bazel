@@ -329,6 +329,7 @@ cc_library(
     deps = [
         ":TestTransformDialectExtensionIncGen",
         "//llvm:Support",
+        "//mlir:BytecodeOpInterface",
         "//mlir:IR",
         "//mlir:PDLDialect",
         "//mlir:Pass",
@@ -856,7 +857,6 @@ cc_library(
         "//mlir:Pass",
         "//mlir:SCFDialect",
         "//mlir:TensorDialect",
-        "//mlir:TensorTransformOps",
         "//mlir:TensorTransforms",
         "//mlir:TransformDialect",
         "//mlir:Transforms",
@@ -961,6 +961,7 @@ cc_library(
     deps = [
         ":TestDialect",
         ":TestPDLLPatternsIncGen",
+        "//mlir:CastInterfaces",
         "//mlir:IR",
         "//mlir:PDLDialect",
         "//mlir:PDLInterpDialect",

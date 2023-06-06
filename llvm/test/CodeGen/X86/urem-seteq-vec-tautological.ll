@@ -221,7 +221,8 @@ define <2 x i1> @t3_wide(<2 x i64> %X) nounwind {
 ;
 ; CHECK-AVX1-LABEL: t3_wide:
 ; CHECK-AVX1:       # %bb.0:
-; CHECK-AVX1-NEXT:    vmovdqa {{.*#+}} xmm1 = [12297829382473034411,12297829382473034411]
+; CHECK-AVX1-NEXT:    vmovddup {{.*#+}} xmm1 = [12297829382473034411,12297829382473034411]
+; CHECK-AVX1-NEXT:    # xmm1 = mem[0,0]
 ; CHECK-AVX1-NEXT:    vpmuludq %xmm1, %xmm0, %xmm2
 ; CHECK-AVX1-NEXT:    vpsrlq $32, %xmm0, %xmm3
 ; CHECK-AVX1-NEXT:    vpmuludq %xmm1, %xmm3, %xmm1
@@ -238,7 +239,7 @@ define <2 x i1> @t3_wide(<2 x i64> %X) nounwind {
 ;
 ; CHECK-AVX2-LABEL: t3_wide:
 ; CHECK-AVX2:       # %bb.0:
-; CHECK-AVX2-NEXT:    vmovdqa {{.*#+}} xmm1 = [12297829382473034411,12297829382473034411]
+; CHECK-AVX2-NEXT:    vpbroadcastq {{.*#+}} xmm1 = [12297829382473034411,12297829382473034411]
 ; CHECK-AVX2-NEXT:    vpmuludq %xmm1, %xmm0, %xmm2
 ; CHECK-AVX2-NEXT:    vpsrlq $32, %xmm0, %xmm3
 ; CHECK-AVX2-NEXT:    vpmuludq %xmm1, %xmm3, %xmm1

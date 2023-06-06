@@ -265,7 +265,7 @@ static void *HwasanAllocate(StackTrace *stack, uptr orig_size, uptr alignment,
                                                   : __lsan::kDirectlyLeaked);
 #endif
   meta->SetAllocated(StackDepotPut(*stack), orig_size);
-  RunMallocHooks(user_ptr, size);
+  RunMallocHooks(user_ptr, orig_size);
   return user_ptr;
 }
 

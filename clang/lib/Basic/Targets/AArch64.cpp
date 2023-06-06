@@ -39,6 +39,12 @@ static constexpr Builtin::Info BuiltinInfo[] = {
 
 #define BUILTIN(ID, TYPE, ATTRS)                                               \
   {#ID, TYPE, ATTRS, nullptr, HeaderDesc::NO_HEADER, ALL_LANGUAGES},
+#define TARGET_BUILTIN(ID, TYPE, ATTRS, FEATURE)                               \
+  {#ID, TYPE, ATTRS, FEATURE, HeaderDesc::NO_HEADER, ALL_LANGUAGES},
+#include "clang/Basic/BuiltinsSME.def"
+
+#define BUILTIN(ID, TYPE, ATTRS)                                               \
+  {#ID, TYPE, ATTRS, nullptr, HeaderDesc::NO_HEADER, ALL_LANGUAGES},
 #define LANGBUILTIN(ID, TYPE, ATTRS, LANG)                                     \
   {#ID, TYPE, ATTRS, nullptr, HeaderDesc::NO_HEADER, LANG},
 #define TARGET_BUILTIN(ID, TYPE, ATTRS, FEATURE)                               \
@@ -772,16 +778,19 @@ bool AArch64TargetInfo::handleTargetFeatures(std::vector<std::string> &Features,
     if (Feature == "+sme") {
       HasSME = true;
       HasBFloat16 = true;
+      HasFullFP16 = true;
     }
     if (Feature == "+sme-f64f64") {
       HasSME = true;
       HasSMEF64F64 = true;
       HasBFloat16 = true;
+      HasFullFP16 = true;
     }
     if (Feature == "+sme-i16i64") {
       HasSME = true;
       HasSMEI16I64 = true;
       HasBFloat16 = true;
+      HasFullFP16 = true;
     }
     if (Feature == "+sb")
       HasSB = true;

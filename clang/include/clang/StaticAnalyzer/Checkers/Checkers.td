@@ -359,29 +359,6 @@ def ErrnoModeling : Checker<"Errno">,
   HelpText<"Make the special value 'errno' available to other checkers.">,
   Documentation<NotDocumented>;
 
-def StdCLibraryFunctionsChecker : Checker<"StdCLibraryFunctions">,
-  HelpText<"Improve modeling of the C standard library functions">,
-  // Uninitialized value check is a mandatory dependency. This Checker asserts
-  // that arguments are always initialized.
-  Dependencies<[CallAndMessageModeling]>,
-  CheckerOptions<[
-    CmdLineOption<Boolean,
-                  "DisplayLoadedSummaries",
-                  "If set to true, the checker displays the found summaries "
-                  "for the given translation unit.",
-                  "false",
-                  Released,
-                  Hide>,
-    CmdLineOption<Boolean,
-                  "ModelPOSIX",
-                  "If set to true, the checker models functions from the "
-                  "POSIX standard.",
-                  "false",
-                  InAlpha>
-  ]>,
-  Documentation<NotDocumented>,
-  Hidden;
-
 def TrustNonnullChecker : Checker<"TrustNonnull">,
   HelpText<"Trust that returns from framework methods annotated with _Nonnull "
            "are not null">,
@@ -583,11 +560,24 @@ def BlockInCriticalSectionChecker : Checker<"BlockInCriticalSection">,
   HelpText<"Check for calls to blocking functions inside a critical section">,
   Documentation<HasDocumentation>;
 
-def StdCLibraryFunctionArgsChecker : Checker<"StdCLibraryFunctionArgs">,
-  HelpText<"Check constraints of arguments of C standard library functions, "
-           "such as whether the parameter of isalpha is in the range [0, 255] "
-           "or is EOF.">,
-  Dependencies<[StdCLibraryFunctionsChecker]>,
+def StdCLibraryFunctionsChecker : Checker<"StdCLibraryFunctions">,
+  HelpText<"Check for invalid arguments of C standard library functions, "
+           "and apply relations between arguments and return value">,
+  CheckerOptions<[
+    CmdLineOption<Boolean,
+                  "DisplayLoadedSummaries",
+                  "If set to true, the checker displays the found summaries "
+                  "for the given translation unit.",
+                  "false",
+                  Released,
+                  Hide>,
+    CmdLineOption<Boolean,
+                  "ModelPOSIX",
+                  "If set to true, the checker models additional functions "
+                  "from the POSIX standard.",
+                  "false",
+                  InAlpha>
+  ]>,
   WeakDependencies<[CallAndMessageChecker, NonNullParamChecker]>,
   Documentation<HasDocumentation>;
 
@@ -1618,7 +1608,6 @@ def DebugIteratorModeling : Checker<"DebugIteratorModeling">,
 def StdCLibraryFunctionsTesterChecker : Checker<"StdCLibraryFunctionsTester">,
   HelpText<"Add test functions to the summary map, so testing of individual "
            "summary constituents becomes possible.">,
-  Dependencies<[StdCLibraryFunctionsChecker]>,
   Documentation<NotDocumented>;
 
 } // end "debug"

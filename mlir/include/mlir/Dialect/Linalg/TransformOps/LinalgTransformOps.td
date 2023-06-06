@@ -1528,7 +1528,8 @@ def TileOp : Op<Transform_Dialect, "structured.tile",
   let arguments = (ins TransformHandleTypeInterface:$target,
                    Variadic<TransformParamTypeOrAnyHandle>:$dynamic_sizes,
                    DefaultValuedOptionalAttr<DenseI64ArrayAttr, "{}">:$static_sizes,
-                   DefaultValuedOptionalAttr<DenseI64ArrayAttr, "{}">:$interchange);
+                   DefaultValuedOptionalAttr<DenseI64ArrayAttr, "{}">:$interchange,
+                   DefaultValuedOptionalAttr<BoolAttr, "false">:$last_tile_size_scalable);
   let results = (outs TransformHandleTypeInterface:$tiled_linalg_op,
                       Variadic<TransformHandleTypeInterface>:$loops);
   let builders = [

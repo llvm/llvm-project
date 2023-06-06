@@ -116,6 +116,15 @@ public:
 
   operator Kind() const { return static_cast<Kind>(Alias); }
 
+  bool operator==(const AliasResult &Other) const {
+    return Alias == Other.Alias && HasOffset == Other.HasOffset &&
+           Offset == Other.Offset;
+  }
+  bool operator!=(const AliasResult &Other) const { return !(*this == Other); }
+
+  bool operator==(Kind K) const { return Alias == K; }
+  bool operator!=(Kind K) const { return !(*this == K); }
+
   constexpr bool hasOffset() const { return HasOffset; }
   constexpr int32_t getOffset() const {
     assert(HasOffset && "No offset!");
@@ -975,15 +984,6 @@ FunctionPass *createAAResultsWrapperPass();
 /// setting up a custom pass pipeline to inject a hook into the AA results.
 ImmutablePass *createExternalAAWrapperPass(
     std::function<void(Pass &, Function &, AAResults &)> Callback);
-
-/// A helper for the legacy pass manager to create a \c AAResults
-/// object populated to the best of our ability for a particular function when
-/// inside of a \c ModulePass or a \c CallGraphSCCPass.
-///
-/// If a \c ModulePass or a \c CallGraphSCCPass calls \p
-/// createLegacyPMAAResults, it also needs to call \p addUsedAAAnalyses in \p
-/// getAnalysisUsage.
-AAResults createLegacyPMAAResults(Pass &P, Function &F, BasicAAResult &BAR);
 
 } // end namespace llvm
 

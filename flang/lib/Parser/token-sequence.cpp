@@ -155,7 +155,16 @@ TokenSequence &TokenSequence::ToLowerCase() {
     std::size_t nextStart{atToken + 1 < tokens ? start_[++atToken] : chars};
     char *p{&char_[j]};
     char const *limit{char_.data() + nextStart};
+    const char *lastChar{limit - 1};
     j = nextStart;
+    // Skip leading whitespaces
+    while (p < limit - 1 && *p == ' ') {
+      ++p;
+    }
+    // Find last non-whitespace char
+    while (lastChar > p + 1 && *lastChar == ' ') {
+      --lastChar;
+    }
     if (IsDecimalDigit(*p)) {
       while (p < limit && IsDecimalDigit(*p)) {
         ++p;
@@ -172,17 +181,17 @@ TokenSequence &TokenSequence::ToLowerCase() {
           *p = ToLowerCaseLetter(*p);
         }
       }
-    } else if (limit[-1] == '\'' || limit[-1] == '"') {
-      if (*p == limit[-1]) {
+    } else if (*lastChar == '\'' || *lastChar == '"') {
+      if (*p == *lastChar) {
         // Character literal without prefix
-      } else if (p[1] == limit[-1]) {
+      } else if (p[1] == *lastChar) {
         // BOZX-prefixed constant
         for (; p < limit; ++p) {
           *p = ToLowerCaseLetter(*p);
         }
       } else {
         // Literal with kind-param prefix name (e.g., K_"ABC").
-        for (; *p != limit[-1]; ++p) {
+        for (; *p != *lastChar; ++p) {
           *p = ToLowerCaseLetter(*p);
         }
       }

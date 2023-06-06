@@ -4245,6 +4245,7 @@ public:
   llvm::Value *EmitSVEMaskedStore(const CallExpr *,
                                   SmallVectorImpl<llvm::Value *> &Ops,
                                   unsigned BuiltinID);
+  llvm::Value *EmitTileslice(llvm::Value *Offset, llvm::Value *Base);
   llvm::Value *EmitSVEPrefetchLoad(const SVETypeFlags &TypeFlags,
                                    SmallVectorImpl<llvm::Value *> &Ops,
                                    unsigned BuiltinID);
@@ -4258,6 +4259,11 @@ public:
                                   SmallVectorImpl<llvm::Value *> &Ops,
                                   unsigned IntID);
   llvm::Value *EmitAArch64SVEBuiltinExpr(unsigned BuiltinID, const CallExpr *E);
+
+  llvm::Value *EmitSMELd1St1(SVETypeFlags TypeFlags,
+                             llvm::SmallVectorImpl<llvm::Value *> &Ops,
+                             unsigned IntID);
+  llvm::Value *EmitAArch64SMEBuiltinExpr(unsigned BuiltinID, const CallExpr *E);
 
   llvm::Value *EmitAArch64BuiltinExpr(unsigned BuiltinID, const CallExpr *E,
                                       llvm::Triple::ArchType Arch);

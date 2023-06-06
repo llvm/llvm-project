@@ -7,14 +7,7 @@
 #===------------------------------------------------------------------------===#
 
 if (CMAKE_SOURCE_DIR STREQUAL CMAKE_CURRENT_SOURCE_DIR)
-  cmake_minimum_required(VERSION 3.13.4)
-  if ("${CMAKE_VERSION}" VERSION_LESS "3.20.0")
-    message(WARNING
-      "Your CMake version is ${CMAKE_VERSION}. Starting with LLVM 17.0.0, the "
-      "minimum version of CMake required to build LLVM will become 3.20.0, and "
-      "using an older CMake will become an error. Please upgrade your CMake to "
-      "at least 3.20.0 now to avoid issues in the future!")
-  endif()
+  cmake_minimum_required(VERSION 3.20.0)
 
   project(FlangRuntime C CXX)
 
@@ -57,7 +50,6 @@ endif()
 
 include(CheckCXXSymbolExists)
 include(CheckCXXSourceCompiles)
-check_cxx_symbol_exists(strerror string.h HAVE_STRERROR)
 check_cxx_symbol_exists(strerror_r string.h HAVE_STRERROR_R)
 # Can't use symbol exists here as the function is overloaded in C++
 check_cxx_source_compiles(
@@ -74,10 +66,6 @@ if (FLANG_RUNTIME_HAS_FNO_LTO_FLAG)
   set(NO_LTO_FLAGS "-fno-lto")
 else()
   set(NO_LTO_FLAGS "")
-endif()
-
-if (NOT (HAVE_STRERROR OR HAVE_STRERROR_R OR HAVE_DECL_STRERROR_S))
-  message(FATAL_ERROR "None of strerror, strerror_r, strerror_s found.")
 endif()
 
 configure_file(config.h.cmake config.h)

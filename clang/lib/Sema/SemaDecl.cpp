@@ -5315,10 +5315,14 @@ Decl *Sema::ParsedFreeStandingDeclSpec(Scope *S, AccessSpecifier AS,
         TypeSpecType == DeclSpec::TST_union ||
         TypeSpecType == DeclSpec::TST_enum) {
       for (const ParsedAttr &AL : DS.getAttributes())
-        Diag(AL.getLoc(), diag::warn_declspec_attribute_ignored)
+        Diag(AL.getLoc(), AL.isRegularKeywordAttribute()
+                              ? diag::err_declspec_keyword_has_no_effect
+                              : diag::warn_declspec_attribute_ignored)
             << AL << GetDiagnosticTypeSpecifierID(DS);
       for (const ParsedAttr &AL : DeclAttrs)
-        Diag(AL.getLoc(), diag::warn_declspec_attribute_ignored)
+        Diag(AL.getLoc(), AL.isRegularKeywordAttribute()
+                              ? diag::err_declspec_keyword_has_no_effect
+                              : diag::warn_declspec_attribute_ignored)
             << AL << GetDiagnosticTypeSpecifierID(DS);
     }
   }
@@ -14472,6 +14476,12 @@ Sema::DeclGroupPtrTy Sema::FinalizeDeclaratorGroup(Scope *S, const DeclSpec &DS,
 
   for (unsigned i = 0, e = Group.size(); i != e; ++i) {
     if (Decl *D = Group[i]) {
+      // Check if the Decl has been declared in '#pragma omp declare target'
+      // directive and has static storage duration.
+      if (auto *VD = dyn_cast<VarDecl>(D);
+          LangOpts.OpenMP && VD && VD->hasAttr<OMPDeclareTargetDeclAttr>() &&
+          VD->hasGlobalStorage())
+        ActOnOpenMPDeclareTargetInitializer(D);
       // For declarators, there are some additional syntactic-ish checks we need
       // to perform.
       if (auto *DD = dyn_cast<DeclaratorDecl>(D)) {
