@@ -77,6 +77,7 @@ X86LegalizerInfo::X86LegalizerInfo(const X86Subtarget &STI,
   const LLT s16 = LLT::scalar(16);
   const LLT s32 = LLT::scalar(32);
   const LLT s64 = LLT::scalar(64);
+  const LLT s128 = LLT::scalar(128);
   const LLT sMaxScalar = Subtarget.is64Bit() ? s64 : s32;
 
   const LLT v16s8 = LLT::fixed_vector(16, 8);
@@ -258,6 +259,18 @@ X86LegalizerInfo::X86LegalizerInfo(const X86Subtarget &STI,
 
   getActionDefinitionsBuilder(G_INTTOPTR).legalFor({{p0, sMaxScalar}});
 
+  // sext, zext, and anyext
+  getActionDefinitionsBuilder({G_SEXT, G_ZEXT, G_ANYEXT})
+      .legalIf([=](const LegalityQuery &Query) {
+        return typeInSet(0, {s8, s16, s32})(Query) ||
+          (Query.Opcode == G_ANYEXT && Query.Types[0] == s128) ||
+          (Is64Bit && Query.Types[0] == s64);
+      })
+    .widenScalarToNextPow2(0, /*Min=*/8)
+    .clampScalar(0, s8, sMaxScalar)
+    .widenScalarToNextPow2(1, /*Min=*/8)
+    .clampScalar(1, s8, sMaxScalar);
+
   setLegalizerInfo32bit();
   setLegalizerInfo64bit();
   setLegalizerInfoSSE1();
@@ -302,7 +315,6 @@ void X86LegalizerInfo::setLegalizerInfo32bit() {
   const LLT s16 = LLT::scalar(16);
   const LLT s32 = LLT::scalar(32);
   const LLT s64 = LLT::scalar(64);
-  const LLT s128 = LLT::scalar(128);
 
   auto &LegacyInfo = getLegacyLegalizerInfo();
 
@@ -340,13 +352,6 @@ void X86LegalizerInfo::setLegalizerInfo32bit() {
     LegacyInfo.setAction({TargetOpcode::G_CONSTANT, Ty},
                          LegacyLegalizeActions::Legal);
 
-  // Extensions
-  for (auto Ty : {s8, s16, s32}) {
-    LegacyInfo.setAction({G_ZEXT, Ty}, LegacyLegalizeActions::Legal);
-    LegacyInfo.setAction({G_SEXT, Ty}, LegacyLegalizeActions::Legal);
-    LegacyInfo.setAction({G_ANYEXT, Ty}, LegacyLegalizeActions::Legal);
-  }
-  LegacyInfo.setAction({G_ANYEXT, s128}, LegacyLegalizeActions::Legal);
   getActionDefinitionsBuilder(G_SEXT_INREG).lower();
 
   // Merge/Unmerge
@@ -389,11 +394,6 @@ void X86LegalizerInfo::setLegalizerInfo64bit() {
   // Constants
   LegacyInfo.setAction({TargetOpcode::G_CONSTANT, s64},
                        LegacyLegalizeActions::Legal);
-
-  // Extensions
-  for (unsigned extOp : {G_ZEXT, G_SEXT, G_ANYEXT}) {
-    LegacyInfo.setAction({extOp, s64}, LegacyLegalizeActions::Legal);
-  }
 
   getActionDefinitionsBuilder(G_SITOFP)
     .legalForCartesianProduct({s32, s64})
