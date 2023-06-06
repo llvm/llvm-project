@@ -1,4 +1,4 @@
-; XFAIL: target={{.*}}-aix{{.*}}
+// XFAIL: target={{.*}}-aix{{.*}}
 
 // RUN: %clang -### -fintegrated-as -gz=none -c %s 2>&1 | FileCheck %s --check-prefix=NOWARN
 // NOWARN-NOT: warning: cannot compress debug sections (zlib not enabled)
