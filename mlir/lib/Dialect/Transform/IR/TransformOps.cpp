@@ -445,6 +445,12 @@ transform::ApplyPatternsOp::applyToOne(Operation *target,
                              ->getExtraData<transform::PatternRegistry>();
   for (Attribute attr : getPatterns())
     registry.populatePatterns(attr.cast<StringAttr>(), patterns);
+  if (!getRegion().empty()) {
+    for (Operation &op : getRegion().front()) {
+      cast<transform::PatternDescriptorOpInterface>(&op).populatePatterns(
+          patterns);
+    }
+  }
 
   // Configure the GreedyPatternRewriteDriver.
   ErrorCheckingTrackingListener listener(state, *this);
@@ -491,6 +497,17 @@ LogicalResult transform::ApplyPatternsOp::verify() {
     if (!registry.hasPatterns(strAttr))
       return emitOpError() << "patterns not registered: " << strAttr.strref();
   }
+  if (!getRegion().empty()) {
+    for (Operation &op : getRegion().front()) {
+      if (!isa<transform::PatternDescriptorOpInterface>(&op)) {
+        InFlightDiagnostic diag = emitOpError()
+                                  << "expected children ops to implement "
+                                     "PatternDescriptorOpInterface";
+        diag.attachNote(op.getLoc()) << "op without interface";
+        return diag;
+      }
+    }
+  }
   return success();
 }
 
@@ -498,6 +515,19 @@ void transform::ApplyPatternsOp::getEffects(
     SmallVectorImpl<MemoryEffects::EffectInstance> &effects) {
   transform::onlyReadsHandle(getTarget(), effects);
   transform::modifiesPayload(effects);
+}
+
+//===----------------------------------------------------------------------===//
+// ApplyCanonicalizationPatternsOp
+//===----------------------------------------------------------------------===//
+
+void transform::ApplyCanonicalizationPatternsOp::populatePatterns(
+    RewritePatternSet &patterns) {
+  MLIRContext *ctx = patterns.getContext();
+  for (Dialect *dialect : ctx->getLoadedDialects())
+    dialect->getCanonicalizationPatterns(patterns);
+  for (RegisteredOperationName op : ctx->getRegisteredOperations())
+    op.getCanonicalizationPatterns(patterns, ctx);
 }
 
 //===----------------------------------------------------------------------===//
