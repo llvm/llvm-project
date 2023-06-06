@@ -2029,12 +2029,15 @@ let Constraints = "$src = $rd", Defs = [SREG] in {
   def ASRWLoRd : Pseudo<(outs DREGS:$rd), (ins DREGS:$src), "asrwlo\t$rd",
                         [(set i16:$rd, (AVRasrlo i16:$src)), (implicit SREG)]>;
 
-  let hasSideEffects=0 in
   def ROLBRd : Pseudo<(outs GPR8
                        : $rd),
-                      (ins GPR8:$src, GPR8:$zero),
+                      (ins GPR8
+                       : $src),
                       "rolb\t$rd",
-                      []>;
+                      [(set i8
+                        : $rd, (AVRrol i8
+                                : $src)),
+                       (implicit SREG)]>;
 
   def RORBRd : Pseudo<(outs GPR8
                        : $rd),

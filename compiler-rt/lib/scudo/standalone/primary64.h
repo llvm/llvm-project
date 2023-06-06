@@ -45,11 +45,11 @@ namespace scudo {
 
 template <typename Config> class SizeClassAllocator64 {
 public:
-  typedef typename Config::PrimaryCompactPtrT CompactPtrT;
-  static const uptr CompactPtrScale = Config::PrimaryCompactPtrScale;
-  static const uptr GroupSizeLog = Config::PrimaryGroupSizeLog;
+  typedef typename Config::Primary::CompactPtrT CompactPtrT;
+  typedef typename Config::Primary::SizeClassMap SizeClassMap;
+  static const uptr CompactPtrScale = Config::Primary::CompactPtrScale;
+  static const uptr GroupSizeLog = Config::Primary::GroupSizeLog;
   static const uptr GroupScale = GroupSizeLog - CompactPtrScale;
-  typedef typename Config::SizeClassMap SizeClassMap;
   typedef SizeClassAllocator64<Config> ThisT;
   typedef SizeClassAllocatorLocalCache<ThisT> CacheT;
   typedef typename CacheT::TransferBatch TransferBatch;
@@ -119,10 +119,11 @@ public:
       RegionInfo *Region = getRegionInfo(I);
       // The actual start of a region is offset by a random number of pages
       // when PrimaryEnableRandomOffset is set.
-      Region->RegionBeg = (PrimaryBase + (I << Config::PrimaryRegionSizeLog)) +
-                          (Config::PrimaryEnableRandomOffset
-                               ? ((getRandomModN(&Seed, 16) + 1) * PageSize)
-                               : 0);
+      Region->RegionBeg =
+          (PrimaryBase + (I << Config::Primary::RegionSizeLog)) +
+          (Config::Primary::EnableRandomOffset
+               ? ((getRandomModN(&Seed, 16) + 1) * PageSize)
+               : 0);
       Region->RandState = getRandomU32(&Seed);
       // Releasing small blocks is expensive, set a higher threshold to avoid
       // frequent page releases.
@@ -322,9 +323,9 @@ public:
 
   bool setOption(Option O, sptr Value) {
     if (O == Option::ReleaseInterval) {
-      const s32 Interval = Max(
-          Min(static_cast<s32>(Value), Config::PrimaryMaxReleaseToOsIntervalMs),
-          Config::PrimaryMinReleaseToOsIntervalMs);
+      const s32 Interval = Max(Min(static_cast<s32>(Value),
+                                   Config::Primary::MaxReleaseToOsIntervalMs),
+                               Config::Primary::MinReleaseToOsIntervalMs);
       atomic_store_relaxed(&ReleaseToOsIntervalMs, Interval);
       return true;
     }
@@ -420,11 +421,11 @@ public:
   AtomicOptions Options;
 
 private:
-  static const uptr RegionSize = 1UL << Config::PrimaryRegionSizeLog;
+  static const uptr RegionSize = 1UL << Config::Primary::RegionSizeLog;
   static const uptr NumClasses = SizeClassMap::NumClasses;
   static const uptr PrimarySize = RegionSize * NumClasses;
 
-  static const uptr MapSizeIncrement = Config::PrimaryMapSizeIncrement;
+  static const uptr MapSizeIncrement = Config::Primary::MapSizeIncrement;
   // Fill at most this number of batches from the newly map'd memory.
   static const u32 MaxNumBatches = SCUDO_ANDROID ? 4U : 8U;
 

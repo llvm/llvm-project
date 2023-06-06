@@ -2561,7 +2561,7 @@ void PruneThreadPlans();
   ///     The plugin if one is available for the specified feature;
   ///     otherwise, returns an empty shared pointer.
   lldb::StructuredDataPluginSP
-  GetStructuredDataPlugin(ConstString type_name) const;
+  GetStructuredDataPlugin(llvm::StringRef type_name) const;
 
   virtual void *GetImplementation() { return nullptr; }
 
@@ -2908,9 +2908,6 @@ protected:
     }
   };
 
-  using StructuredDataPluginMap =
-      std::map<ConstString, lldb::StructuredDataPluginSP>;
-
   // Member variables
   std::weak_ptr<Target> m_target_wp; ///< The target that owns this process.
   lldb::pid_t m_pid = LLDB_INVALID_PROCESS_ID;
@@ -3033,7 +3030,7 @@ protected:
                                        // don't support the ability to modify
                                        // the stack.
   std::mutex m_run_thread_plan_lock;
-  StructuredDataPluginMap m_structured_data_plugin_map;
+  llvm::StringMap<lldb::StructuredDataPluginSP> m_structured_data_plugin_map;
 
   enum { eCanJITDontKnow = 0, eCanJITYes, eCanJITNo } m_can_jit;
 

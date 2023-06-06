@@ -1040,7 +1040,7 @@ void InputSectionBase::adjustSplitStackFunctionPrologues(uint8_t *buf,
 
   for (Relocation &rel : relocs()) {
     // Ignore calls into the split-stack api.
-    if (rel.sym->getName().startswith("__morestack")) {
+    if (rel.sym->getName().starts_with("__morestack")) {
       if (rel.sym->getName().equals("__morestack"))
         morestackCalls.push_back(&rel);
       continue;

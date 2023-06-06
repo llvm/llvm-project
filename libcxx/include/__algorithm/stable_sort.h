@@ -15,6 +15,7 @@
 #include <__algorithm/iterator_operations.h>
 #include <__algorithm/sort.h>
 #include <__config>
+#include <__debug_utils/strict_weak_ordering_check.h>
 #include <__iterator/iterator_traits.h>
 #include <__memory/destruct_n.h>
 #include <__memory/temporary_buffer.h>
@@ -259,6 +260,7 @@ _LIBCPP_SUPPRESS_DEPRECATED_POP
   }
 
   std::__stable_sort<_AlgPolicy, __comp_ref_type<_Compare> >(__first, __last, __comp, __len, __buf.first, __buf.second);
+  std::__check_strict_weak_ordering_sorted(__first, __last, __comp);
 }
 
 template <class _RandomAccessIterator, class _Compare>

@@ -317,7 +317,7 @@ void SymbolTable::loadMinGWSymbols() {
     }
 
     if (ctx.config.autoImport) {
-      if (name.startswith("__imp_"))
+      if (name.starts_with("__imp_"))
         continue;
       // If we have an undefined symbol, but we have a lazy symbol we could
       // load, load it.
@@ -333,7 +333,7 @@ void SymbolTable::loadMinGWSymbols() {
 }
 
 Defined *SymbolTable::impSymbol(StringRef name) {
-  if (name.startswith("__imp_"))
+  if (name.starts_with("__imp_"))
     return nullptr;
   return dyn_cast_or_null<Defined>(find(("__imp_" + name).str()));
 }
@@ -456,7 +456,7 @@ void SymbolTable::reportUnresolvable() {
     if (undef->getWeakAlias())
       continue;
     StringRef name = undef->getName();
-    if (name.startswith("__imp_")) {
+    if (name.starts_with("__imp_")) {
       Symbol *imp = find(name.substr(strlen("__imp_")));
       if (imp && isa<Defined>(imp))
         continue;
@@ -504,7 +504,7 @@ void SymbolTable::resolveRemainingUndefines() {
 
     // If we can resolve a symbol by removing __imp_ prefix, do that.
     // This odd rule is for compatibility with MSVC linker.
-    if (name.startswith("__imp_")) {
+    if (name.starts_with("__imp_")) {
       Symbol *imp = find(name.substr(strlen("__imp_")));
       if (imp && isa<Defined>(imp)) {
         auto *d = cast<Defined>(imp);
@@ -816,9 +816,9 @@ std::vector<Symbol *> SymbolTable::getSymsWithPrefix(StringRef prefix) {
   std::vector<Symbol *> syms;
   for (auto pair : symMap) {
     StringRef name = pair.first.val();
-    if (name.startswith(prefix) || name.startswith(prefix.drop_front()) ||
-        name.drop_front().startswith(prefix) ||
-        name.drop_front().startswith(prefix.drop_front())) {
+    if (name.starts_with(prefix) || name.starts_with(prefix.drop_front()) ||
+        name.drop_front().starts_with(prefix) ||
+        name.drop_front().starts_with(prefix.drop_front())) {
       syms.push_back(pair.second);
     }
   }
@@ -846,7 +846,7 @@ Symbol *SymbolTable::findMangle(StringRef name) {
   auto findByPrefix = [&syms](const Twine &t) -> Symbol * {
     std::string prefix = t.str();
     for (auto *s : syms)
-      if (s->getName().startswith(prefix))
+      if (s->getName().starts_with(prefix))
         return s;
     return nullptr;
   };
@@ -855,7 +855,7 @@ Symbol *SymbolTable::findMangle(StringRef name) {
   if (ctx.config.machine != I386)
     return findByPrefix("?" + name + "@@Y");
 
-  if (!name.startswith("_"))
+  if (!name.starts_with("_"))
     return nullptr;
   // Search for x86 stdcall function.
   if (Symbol *s = findByPrefix(name + "@"))

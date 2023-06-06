@@ -45,7 +45,7 @@ loop:
   br i1 %tmp27, label %then, label %endif
 
 then:                                             ; preds = %bb
-  call void @llvm.amdgcn.raw.buffer.store.f32(float undef, <4 x i32> undef, i32 0, i32 undef, i32 0)
+  call void @llvm.amdgcn.raw.ptr.buffer.store.f32(float undef, ptr addrspace(8) undef, i32 0, i32 undef, i32 0)
   br label %endif
 
 endif:                                             ; preds = %bb28, %bb
@@ -84,7 +84,7 @@ loop:
   %tmp23phi = phi i32 [ %tmp23, %loop ], [ 0, %entry ]
   %tmp23 = add nuw i32 %tmp23phi, 1
   %tmp27 = icmp ult i32 %arg, %tmp23
-  call void @llvm.amdgcn.raw.buffer.store.f32(float undef, <4 x i32> undef, i32 0, i32 undef, i32 0)
+  call void @llvm.amdgcn.raw.ptr.buffer.store.f32(float undef, ptr addrspace(8) undef, i32 0, i32 undef, i32 0)
   br i1 %tmp27, label %loop, label %loopexit
 
 loopexit:
@@ -135,7 +135,7 @@ loop:
   br i1 %tmp27, label %then, label %endif
 
 then:                                             ; preds = %bb
-  call void @llvm.amdgcn.raw.buffer.store.f32(float undef, <4 x i32> undef, i32 0, i32 undef, i32 0)
+  call void @llvm.amdgcn.raw.ptr.buffer.store.f32(float undef, ptr addrspace(8) undef, i32 0, i32 undef, i32 0)
   br label %endif
 
 endif:                                             ; preds = %bb28, %bb
@@ -145,6 +145,6 @@ loopexit:
   ret void
 }
 
-declare void @llvm.amdgcn.raw.buffer.store.f32(float, <4 x i32>, i32, i32, i32 immarg) #0
+declare void @llvm.amdgcn.raw.ptr.buffer.store.f32(float, ptr addrspace(8), i32, i32, i32 immarg) #0
 
 attributes #0 = { nounwind writeonly }

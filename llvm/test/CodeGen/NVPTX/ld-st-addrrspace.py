@@ -28,8 +28,8 @@ llvm_type_to_ptx_reg = {
     "i16": "r",
     "i32": "r",
     "i64": "rd",
-    "half": "h",
-    "<2 x half>": "hh",
+    "half": "rs",
+    "<2 x half>": "r",
     "float": "f",
     "double": "fd",
 }

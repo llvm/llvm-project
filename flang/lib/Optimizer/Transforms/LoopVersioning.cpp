@@ -178,7 +178,7 @@ void LoopVersioningPass::runOnOperation() {
     return;
 
   // If we get here, there are loops to process.
-  fir::FirOpBuilder builder{module, kindMap};
+  fir::FirOpBuilder builder{module, std::move(kindMap)};
   mlir::Location loc = builder.getUnknownLoc();
   mlir::IndexType idxTy = builder.getIndexType();
 

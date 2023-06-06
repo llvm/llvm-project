@@ -103,8 +103,8 @@ class AppleAcceleratorTable : public DWARFAcceleratorTable {
     extractOffset(std::optional<DWARFFormValue> Value) const;
   };
 
-  struct Header Hdr;
-  struct HeaderData HdrData;
+  Header Hdr;
+  HeaderData HdrData;
   bool IsValid = false;
 
   /// Returns true if we should continue scanning for entries or false if we've

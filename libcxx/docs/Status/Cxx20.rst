@@ -50,6 +50,7 @@ Paper Status
    .. [#note-P0883.2] P0883: ``ATOMIC_FLAG_INIT`` was marked deprecated in version 14.0, but was undeprecated with the implementation of LWG3659 in version 15.0.
    .. [#note-P2231] P2231: Optional is complete. The changes to variant haven't been implemented yet.
    .. [#note-P0408] P0408: Only `view()` members implemented.
+   .. [#note-P0660] P0660: Section 32.3 Stop Tokens is complete. ``jthread`` hasn't been implemented yet.
 
 .. _issues-status-cxx20:
 

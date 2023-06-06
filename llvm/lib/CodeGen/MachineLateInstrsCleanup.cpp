@@ -44,13 +44,8 @@ class MachineLateInstrsCleanup : public MachineFunctionPass {
 
   // Data structures to map regs to their definitions and kills per MBB.
   struct Reg2MIMap : public SmallDenseMap<Register, MachineInstr *> {
-    MachineInstr *get(Register Reg) {
-      auto I = find(Reg);
-      return I != end() ? I->second : nullptr;
-    }
-
     bool hasIdentical(Register Reg, MachineInstr *ArgMI) {
-      MachineInstr *MI = get(Reg);
+      MachineInstr *MI = lookup(Reg);
       return MI && MI->isIdenticalTo(*ArgMI);
     }
   };
@@ -128,13 +123,13 @@ clearKillsForDef(Register Reg, MachineBasicBlock *MBB,
   VisitedPreds.set(MBB->getNumber());
 
   // Kill flag in MBB
-  if (MachineInstr *KillMI = RegKills[MBB->getNumber()].get(Reg)) {
+  if (MachineInstr *KillMI = RegKills[MBB->getNumber()].lookup(Reg)) {
     KillMI->clearRegisterKills(Reg, TRI);
     return;
   }
 
   // Def in MBB (missing kill flag)
-  if (MachineInstr *DefMI = RegDefs[MBB->getNumber()].get(Reg))
+  if (MachineInstr *DefMI = RegDefs[MBB->getNumber()].lookup(Reg))
     if (DefMI->getParent() == MBB)
       return;
 

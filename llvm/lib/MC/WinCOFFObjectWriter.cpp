@@ -59,11 +59,7 @@ constexpr int OffsetLabelIntervalBits = 20;
 
 using name = SmallString<COFF::NameSize>;
 
-enum AuxiliaryType {
-  ATWeakExternal,
-  ATFile,
-  ATSectionDefinition
-};
+enum AuxiliaryType { ATWeakExternal, ATFile, ATSectionDefinition };
 
 struct AuxSymbol {
   AuxiliaryType AuxType;
@@ -126,7 +122,6 @@ public:
 };
 
 class WinCOFFObjectWriter : public MCObjectWriter {
-public:
   support::endian::Writer W;
 
   using symbols = std::vector<std::unique_ptr<COFFSymbol>>;
@@ -158,9 +153,11 @@ public:
 
   MCSectionCOFF *CGProfileSection = nullptr;
 
+public:
   WinCOFFObjectWriter(std::unique_ptr<MCWinCOFFObjectTargetWriter> MOTW,
                       raw_pwrite_stream &OS);
 
+  // MCObjectWriter interface implementation.
   void reset() override {
     memset(&Header, 0, sizeof(Header));
     Header.Machine = TargetObjectWriter->getMachine();
@@ -173,6 +170,18 @@ public:
     MCObjectWriter::reset();
   }
 
+  void executePostLayoutBinding(MCAssembler &Asm,
+                                const MCAsmLayout &Layout) override;
+  bool isSymbolRefDifferenceFullyResolvedImpl(const MCAssembler &Asm,
+                                              const MCSymbol &SymA,
+                                              const MCFragment &FB, bool InSet,
+                                              bool IsPCRel) const override;
+  void recordRelocation(MCAssembler &Asm, const MCAsmLayout &Layout,
+                        const MCFragment *Fragment, const MCFixup &Fixup,
+                        MCValue Target, uint64_t &FixedValue) override;
+  uint64_t writeObject(MCAssembler &Asm, const MCAsmLayout &Layout) override;
+
+private:
   COFFSymbol *createSymbol(StringRef Name);
   COFFSymbol *GetOrCreateCOFFSymbol(const MCSymbol *Symbol);
   COFFSection *createSection(StringRef Name);
@@ -198,28 +207,12 @@ public:
   uint32_t writeSectionContents(MCAssembler &Asm, const MCAsmLayout &Layout,
                                 const MCSection &MCSec);
   void writeSection(MCAssembler &Asm, const MCAsmLayout &Layout,
-                    const COFFSection &Sec, const MCSection &MCSec);
-
-  // MCObjectWriter interface implementation.
-
-  void executePostLayoutBinding(MCAssembler &Asm,
-                                const MCAsmLayout &Layout) override;
-
-  bool isSymbolRefDifferenceFullyResolvedImpl(const MCAssembler &Asm,
-                                              const MCSymbol &SymA,
-                                              const MCFragment &FB, bool InSet,
-                                              bool IsPCRel) const override;
-
-  void recordRelocation(MCAssembler &Asm, const MCAsmLayout &Layout,
-                        const MCFragment *Fragment, const MCFixup &Fixup,
-                        MCValue Target, uint64_t &FixedValue) override;
+                    const COFFSection &Sec);
 
   void createFileSymbols(MCAssembler &Asm);
   void setWeakDefaultNames();
   void assignSectionNumbers();
   void assignFileOffsets(MCAssembler &Asm, const MCAsmLayout &Layout);
-
-  uint64_t writeObject(MCAssembler &Asm, const MCAsmLayout &Layout) override;
 };
 
 } // end anonymous namespace
@@ -434,8 +427,8 @@ void WinCOFFObjectWriter::DefineSymbol(const MCSymbol &MCSym,
 
     // If no storage class was specified in the streamer, define it here.
     if (Local->Data.StorageClass == COFF::IMAGE_SYM_CLASS_NULL) {
-      bool IsExternal = MCSym.isExternal() ||
-                        (!MCSym.getFragment() && !MCSym.isVariable());
+      bool IsExternal =
+          MCSym.isExternal() || (!MCSym.getFragment() && !MCSym.isVariable());
 
       Local->Data.StorageClass = IsExternal ? COFF::IMAGE_SYM_CLASS_EXTERNAL
                                             : COFF::IMAGE_SYM_CLASS_STATIC;
@@ -523,7 +516,7 @@ void WinCOFFObjectWriter::WriteAuxiliarySymbols(
       break;
     case ATFile:
       W.OS.write(reinterpret_cast<const char *>(&i.Aux),
-                        UseBigObj ? COFF::Symbol32Size : COFF::Symbol16Size);
+                 UseBigObj ? COFF::Symbol32Size : COFF::Symbol16Size);
       break;
     case ATSectionDefinition:
       W.write<uint32_t>(i.Aux.SectionDefinition.Length);
@@ -533,7 +526,8 @@ void WinCOFFObjectWriter::WriteAuxiliarySymbols(
       W.write<uint16_t>(static_cast<int16_t>(i.Aux.SectionDefinition.Number));
       W.OS << char(i.Aux.SectionDefinition.Selection);
       W.OS.write_zeros(sizeof(i.Aux.SectionDefinition.unused));
-      W.write<uint16_t>(static_cast<int16_t>(i.Aux.SectionDefinition.Number >> 16));
+      W.write<uint16_t>(
+          static_cast<int16_t>(i.Aux.SectionDefinition.Number >> 16));
       if (UseBigObj)
         W.OS.write_zeros(COFF::Symbol32Size - COFF::Symbol16Size);
       break;
@@ -603,8 +597,7 @@ uint32_t WinCOFFObjectWriter::writeSectionContents(MCAssembler &Asm,
 
 void WinCOFFObjectWriter::writeSection(MCAssembler &Asm,
                                        const MCAsmLayout &Layout,
-                                       const COFFSection &Sec,
-                                       const MCSection &MCSec) {
+                                       const COFFSection &Sec) {
   if (Sec.Number == -1)
     return;
 
@@ -613,11 +606,10 @@ void WinCOFFObjectWriter::writeSection(MCAssembler &Asm,
     assert(W.OS.tell() == Sec.Header.PointerToRawData &&
            "Section::PointerToRawData is insane!");
 
-    uint32_t CRC = writeSectionContents(Asm, Layout, MCSec);
+    uint32_t CRC = writeSectionContents(Asm, Layout, *Sec.MCSection);
 
     // Update the section definition auxiliary symbol to record the CRC.
-    COFFSection *Sec = SectionMap[&MCSec];
-    COFFSymbol::AuxiliarySymbols &AuxSyms = Sec->Symbol->Aux;
+    COFFSymbol::AuxiliarySymbols &AuxSyms = Sec.Symbol->Aux;
     assert(AuxSyms.size() == 1 && AuxSyms[0].AuxType == ATSectionDefinition);
     AuxSymbol &SecDef = AuxSyms[0];
     SecDef.Aux.SectionDefinition.CheckSum = CRC;
@@ -645,209 +637,6 @@ void WinCOFFObjectWriter::writeSection(MCAssembler &Asm,
 
   for (const auto &Relocation : Sec.Relocations)
     WriteRelocation(Relocation.Data);
-}
-
-////////////////////////////////////////////////////////////////////////////////
-// MCObjectWriter interface implementations
-
-void WinCOFFObjectWriter::executePostLayoutBinding(MCAssembler &Asm,
-                                                   const MCAsmLayout &Layout) {
-  if (EmitAddrsigSection) {
-    AddrsigSection = Asm.getContext().getCOFFSection(
-        ".llvm_addrsig", COFF::IMAGE_SCN_LNK_REMOVE,
-        SectionKind::getMetadata());
-    Asm.registerSection(*AddrsigSection);
-  }
-
-  if (!Asm.CGProfile.empty()) {
-    CGProfileSection = Asm.getContext().getCOFFSection(
-        ".llvm.call-graph-profile", COFF::IMAGE_SCN_LNK_REMOVE,
-        SectionKind::getMetadata());
-    Asm.registerSection(*CGProfileSection);
-  }
-
-  // "Define" each section & symbol. This creates section & symbol
-  // entries in the staging area.
-  for (const auto &Section : Asm)
-    defineSection(static_cast<const MCSectionCOFF &>(Section), Layout);
-
-  for (const MCSymbol &Symbol : Asm.symbols())
-    if (!Symbol.isTemporary())
-      DefineSymbol(Symbol, Asm, Layout);
-}
-
-bool WinCOFFObjectWriter::isSymbolRefDifferenceFullyResolvedImpl(
-    const MCAssembler &Asm, const MCSymbol &SymA, const MCFragment &FB,
-    bool InSet, bool IsPCRel) const {
-  // Don't drop relocations between functions, even if they are in the same text
-  // section. Multiple Visual C++ linker features depend on having the
-  // relocations present. The /INCREMENTAL flag will cause these relocations to
-  // point to thunks, and the /GUARD:CF flag assumes that it can use relocations
-  // to approximate the set of all address taken functions. LLD's implementation
-  // of /GUARD:CF also relies on the existance of these relocations.
-  uint16_t Type = cast<MCSymbolCOFF>(SymA).getType();
-  if ((Type >> COFF::SCT_COMPLEX_TYPE_SHIFT) == COFF::IMAGE_SYM_DTYPE_FUNCTION)
-    return false;
-  return MCObjectWriter::isSymbolRefDifferenceFullyResolvedImpl(Asm, SymA, FB,
-                                                                InSet, IsPCRel);
-}
-
-void WinCOFFObjectWriter::recordRelocation(MCAssembler &Asm,
-                                           const MCAsmLayout &Layout,
-                                           const MCFragment *Fragment,
-                                           const MCFixup &Fixup, MCValue Target,
-                                           uint64_t &FixedValue) {
-  assert(Target.getSymA() && "Relocation must reference a symbol!");
-
-  const MCSymbol &A = Target.getSymA()->getSymbol();
-  if (!A.isRegistered()) {
-    Asm.getContext().reportError(Fixup.getLoc(),
-                                      Twine("symbol '") + A.getName() +
-                                          "' can not be undefined");
-    return;
-  }
-  if (A.isTemporary() && A.isUndefined()) {
-    Asm.getContext().reportError(Fixup.getLoc(),
-                                      Twine("assembler label '") + A.getName() +
-                                          "' can not be undefined");
-    return;
-  }
-
-  MCSection *MCSec = Fragment->getParent();
-
-  // Mark this symbol as requiring an entry in the symbol table.
-  assert(SectionMap.contains(MCSec) &&
-         "Section must already have been defined in executePostLayoutBinding!");
-
-  COFFSection *Sec = SectionMap[MCSec];
-  const MCSymbolRefExpr *SymB = Target.getSymB();
-
-  if (SymB) {
-    const MCSymbol *B = &SymB->getSymbol();
-    if (!B->getFragment()) {
-      Asm.getContext().reportError(
-          Fixup.getLoc(),
-          Twine("symbol '") + B->getName() +
-              "' can not be undefined in a subtraction expression");
-      return;
-    }
-
-    // Offset of the symbol in the section
-    int64_t OffsetOfB = Layout.getSymbolOffset(*B);
-
-    // Offset of the relocation in the section
-    int64_t OffsetOfRelocation =
-        Layout.getFragmentOffset(Fragment) + Fixup.getOffset();
-
-    FixedValue = (OffsetOfRelocation - OffsetOfB) + Target.getConstant();
-  } else {
-    FixedValue = Target.getConstant();
-  }
-
-  COFFRelocation Reloc;
-
-  Reloc.Data.SymbolTableIndex = 0;
-  Reloc.Data.VirtualAddress = Layout.getFragmentOffset(Fragment);
-
-  // Turn relocations for temporary symbols into section relocations.
-  if (A.isTemporary()) {
-    MCSection *TargetSection = &A.getSection();
-    assert(
-        SectionMap.contains(TargetSection) &&
-        "Section must already have been defined in executePostLayoutBinding!");
-    COFFSection *Section = SectionMap[TargetSection];
-    Reloc.Symb = Section->Symbol;
-    FixedValue += Layout.getSymbolOffset(A);
-    // Technically, we should do the final adjustments of FixedValue (below)
-    // before picking an offset symbol, otherwise we might choose one which
-    // is slightly too far away. The relocations where it really matters
-    // (arm64 adrp relocations) don't get any offset though.
-    if (UseOffsetLabels && !Section->OffsetSymbols.empty()) {
-      uint64_t LabelIndex = FixedValue >> OffsetLabelIntervalBits;
-      if (LabelIndex > 0) {
-        if (LabelIndex <= Section->OffsetSymbols.size())
-          Reloc.Symb = Section->OffsetSymbols[LabelIndex - 1];
-        else
-          Reloc.Symb = Section->OffsetSymbols.back();
-        FixedValue -= Reloc.Symb->Data.Value;
-      }
-    }
-  } else {
-    assert(
-        SymbolMap.contains(&A) &&
-        "Symbol must already have been defined in executePostLayoutBinding!");
-    Reloc.Symb = SymbolMap[&A];
-  }
-
-  ++Reloc.Symb->Relocations;
-
-  Reloc.Data.VirtualAddress += Fixup.getOffset();
-  Reloc.Data.Type = TargetObjectWriter->getRelocType(
-      Asm.getContext(), Target, Fixup, SymB, Asm.getBackend());
-
-  // The *_REL32 relocations are relative to the end of the relocation,
-  // not to the start.
-  if ((Header.Machine == COFF::IMAGE_FILE_MACHINE_AMD64 &&
-       Reloc.Data.Type == COFF::IMAGE_REL_AMD64_REL32) ||
-      (Header.Machine == COFF::IMAGE_FILE_MACHINE_I386 &&
-       Reloc.Data.Type == COFF::IMAGE_REL_I386_REL32) ||
-      (Header.Machine == COFF::IMAGE_FILE_MACHINE_ARMNT &&
-       Reloc.Data.Type == COFF::IMAGE_REL_ARM_REL32) ||
-      (Header.Machine == COFF::IMAGE_FILE_MACHINE_ARM64 &&
-       Reloc.Data.Type == COFF::IMAGE_REL_ARM64_REL32))
-    FixedValue += 4;
-
-  if (Header.Machine == COFF::IMAGE_FILE_MACHINE_ARMNT) {
-    switch (Reloc.Data.Type) {
-    case COFF::IMAGE_REL_ARM_ABSOLUTE:
-    case COFF::IMAGE_REL_ARM_ADDR32:
-    case COFF::IMAGE_REL_ARM_ADDR32NB:
-    case COFF::IMAGE_REL_ARM_TOKEN:
-    case COFF::IMAGE_REL_ARM_SECTION:
-    case COFF::IMAGE_REL_ARM_SECREL:
-      break;
-    case COFF::IMAGE_REL_ARM_BRANCH11:
-    case COFF::IMAGE_REL_ARM_BLX11:
-    // IMAGE_REL_ARM_BRANCH11 and IMAGE_REL_ARM_BLX11 are only used for
-    // pre-ARMv7, which implicitly rules it out of ARMNT (it would be valid
-    // for Windows CE).
-    case COFF::IMAGE_REL_ARM_BRANCH24:
-    case COFF::IMAGE_REL_ARM_BLX24:
-    case COFF::IMAGE_REL_ARM_MOV32A:
-      // IMAGE_REL_ARM_BRANCH24, IMAGE_REL_ARM_BLX24, IMAGE_REL_ARM_MOV32A are
-      // only used for ARM mode code, which is documented as being unsupported
-      // by Windows on ARM.  Empirical proof indicates that masm is able to
-      // generate the relocations however the rest of the MSVC toolchain is
-      // unable to handle it.
-      llvm_unreachable("unsupported relocation");
-      break;
-    case COFF::IMAGE_REL_ARM_MOV32T:
-      break;
-    case COFF::IMAGE_REL_ARM_BRANCH20T:
-    case COFF::IMAGE_REL_ARM_BRANCH24T:
-    case COFF::IMAGE_REL_ARM_BLX23T:
-      // IMAGE_REL_BRANCH20T, IMAGE_REL_ARM_BRANCH24T, IMAGE_REL_ARM_BLX23T all
-      // perform a 4 byte adjustment to the relocation.  Relative branches are
-      // offset by 4 on ARM, however, because there is no RELA relocations, all
-      // branches are offset by 4.
-      FixedValue = FixedValue + 4;
-      break;
-    }
-  }
-
-  // The fixed value never makes sense for section indices, ignore it.
-  if (Fixup.getKind() == FK_SecRel_2)
-    FixedValue = 0;
-
-  if (TargetObjectWriter->recordRelocation(Fixup))
-    Sec->Relocations.push_back(Reloc);
-}
-
-static std::time_t getTime() {
-  std::time_t Now = time(nullptr);
-  if (Now < 0 || !isUInt<32>(Now))
-    return UINT32_MAX;
-  return Now;
 }
 
 // Create .file symbols.
@@ -1009,6 +798,209 @@ void WinCOFFObjectWriter::assignFileOffsets(MCAssembler &Asm,
   Header.PointerToSymbolTable = Offset;
 }
 
+////////////////////////////////////////////////////////////////////////////////
+// MCObjectWriter interface implementations
+
+void WinCOFFObjectWriter::executePostLayoutBinding(MCAssembler &Asm,
+                                                   const MCAsmLayout &Layout) {
+  if (EmitAddrsigSection) {
+    AddrsigSection = Asm.getContext().getCOFFSection(
+        ".llvm_addrsig", COFF::IMAGE_SCN_LNK_REMOVE,
+        SectionKind::getMetadata());
+    Asm.registerSection(*AddrsigSection);
+  }
+
+  if (!Asm.CGProfile.empty()) {
+    CGProfileSection = Asm.getContext().getCOFFSection(
+        ".llvm.call-graph-profile", COFF::IMAGE_SCN_LNK_REMOVE,
+        SectionKind::getMetadata());
+    Asm.registerSection(*CGProfileSection);
+  }
+
+  // "Define" each section & symbol. This creates section & symbol
+  // entries in the staging area.
+  for (const auto &Section : Asm)
+    defineSection(static_cast<const MCSectionCOFF &>(Section), Layout);
+
+  for (const MCSymbol &Symbol : Asm.symbols())
+    if (!Symbol.isTemporary())
+      DefineSymbol(Symbol, Asm, Layout);
+}
+
+bool WinCOFFObjectWriter::isSymbolRefDifferenceFullyResolvedImpl(
+    const MCAssembler &Asm, const MCSymbol &SymA, const MCFragment &FB,
+    bool InSet, bool IsPCRel) const {
+  // Don't drop relocations between functions, even if they are in the same text
+  // section. Multiple Visual C++ linker features depend on having the
+  // relocations present. The /INCREMENTAL flag will cause these relocations to
+  // point to thunks, and the /GUARD:CF flag assumes that it can use relocations
+  // to approximate the set of all address taken functions. LLD's implementation
+  // of /GUARD:CF also relies on the existance of these relocations.
+  uint16_t Type = cast<MCSymbolCOFF>(SymA).getType();
+  if ((Type >> COFF::SCT_COMPLEX_TYPE_SHIFT) == COFF::IMAGE_SYM_DTYPE_FUNCTION)
+    return false;
+  return MCObjectWriter::isSymbolRefDifferenceFullyResolvedImpl(Asm, SymA, FB,
+                                                                InSet, IsPCRel);
+}
+
+void WinCOFFObjectWriter::recordRelocation(MCAssembler &Asm,
+                                           const MCAsmLayout &Layout,
+                                           const MCFragment *Fragment,
+                                           const MCFixup &Fixup, MCValue Target,
+                                           uint64_t &FixedValue) {
+  assert(Target.getSymA() && "Relocation must reference a symbol!");
+
+  const MCSymbol &A = Target.getSymA()->getSymbol();
+  if (!A.isRegistered()) {
+    Asm.getContext().reportError(Fixup.getLoc(), Twine("symbol '") +
+                                                     A.getName() +
+                                                     "' can not be undefined");
+    return;
+  }
+  if (A.isTemporary() && A.isUndefined()) {
+    Asm.getContext().reportError(Fixup.getLoc(), Twine("assembler label '") +
+                                                     A.getName() +
+                                                     "' can not be undefined");
+    return;
+  }
+
+  MCSection *MCSec = Fragment->getParent();
+
+  // Mark this symbol as requiring an entry in the symbol table.
+  assert(SectionMap.contains(MCSec) &&
+         "Section must already have been defined in executePostLayoutBinding!");
+
+  COFFSection *Sec = SectionMap[MCSec];
+  const MCSymbolRefExpr *SymB = Target.getSymB();
+
+  if (SymB) {
+    const MCSymbol *B = &SymB->getSymbol();
+    if (!B->getFragment()) {
+      Asm.getContext().reportError(
+          Fixup.getLoc(),
+          Twine("symbol '") + B->getName() +
+              "' can not be undefined in a subtraction expression");
+      return;
+    }
+
+    // Offset of the symbol in the section
+    int64_t OffsetOfB = Layout.getSymbolOffset(*B);
+
+    // Offset of the relocation in the section
+    int64_t OffsetOfRelocation =
+        Layout.getFragmentOffset(Fragment) + Fixup.getOffset();
+
+    FixedValue = (OffsetOfRelocation - OffsetOfB) + Target.getConstant();
+  } else {
+    FixedValue = Target.getConstant();
+  }
+
+  COFFRelocation Reloc;
+
+  Reloc.Data.SymbolTableIndex = 0;
+  Reloc.Data.VirtualAddress = Layout.getFragmentOffset(Fragment);
+
+  // Turn relocations for temporary symbols into section relocations.
+  if (A.isTemporary()) {
+    MCSection *TargetSection = &A.getSection();
+    assert(
+        SectionMap.contains(TargetSection) &&
+        "Section must already have been defined in executePostLayoutBinding!");
+    COFFSection *Section = SectionMap[TargetSection];
+    Reloc.Symb = Section->Symbol;
+    FixedValue += Layout.getSymbolOffset(A);
+    // Technically, we should do the final adjustments of FixedValue (below)
+    // before picking an offset symbol, otherwise we might choose one which
+    // is slightly too far away. The relocations where it really matters
+    // (arm64 adrp relocations) don't get any offset though.
+    if (UseOffsetLabels && !Section->OffsetSymbols.empty()) {
+      uint64_t LabelIndex = FixedValue >> OffsetLabelIntervalBits;
+      if (LabelIndex > 0) {
+        if (LabelIndex <= Section->OffsetSymbols.size())
+          Reloc.Symb = Section->OffsetSymbols[LabelIndex - 1];
+        else
+          Reloc.Symb = Section->OffsetSymbols.back();
+        FixedValue -= Reloc.Symb->Data.Value;
+      }
+    }
+  } else {
+    assert(
+        SymbolMap.contains(&A) &&
+        "Symbol must already have been defined in executePostLayoutBinding!");
+    Reloc.Symb = SymbolMap[&A];
+  }
+
+  ++Reloc.Symb->Relocations;
+
+  Reloc.Data.VirtualAddress += Fixup.getOffset();
+  Reloc.Data.Type = TargetObjectWriter->getRelocType(
+      Asm.getContext(), Target, Fixup, SymB, Asm.getBackend());
+
+  // The *_REL32 relocations are relative to the end of the relocation,
+  // not to the start.
+  if ((Header.Machine == COFF::IMAGE_FILE_MACHINE_AMD64 &&
+       Reloc.Data.Type == COFF::IMAGE_REL_AMD64_REL32) ||
+      (Header.Machine == COFF::IMAGE_FILE_MACHINE_I386 &&
+       Reloc.Data.Type == COFF::IMAGE_REL_I386_REL32) ||
+      (Header.Machine == COFF::IMAGE_FILE_MACHINE_ARMNT &&
+       Reloc.Data.Type == COFF::IMAGE_REL_ARM_REL32) ||
+      (Header.Machine == COFF::IMAGE_FILE_MACHINE_ARM64 &&
+       Reloc.Data.Type == COFF::IMAGE_REL_ARM64_REL32))
+    FixedValue += 4;
+
+  if (Header.Machine == COFF::IMAGE_FILE_MACHINE_ARMNT) {
+    switch (Reloc.Data.Type) {
+    case COFF::IMAGE_REL_ARM_ABSOLUTE:
+    case COFF::IMAGE_REL_ARM_ADDR32:
+    case COFF::IMAGE_REL_ARM_ADDR32NB:
+    case COFF::IMAGE_REL_ARM_TOKEN:
+    case COFF::IMAGE_REL_ARM_SECTION:
+    case COFF::IMAGE_REL_ARM_SECREL:
+      break;
+    case COFF::IMAGE_REL_ARM_BRANCH11:
+    case COFF::IMAGE_REL_ARM_BLX11:
+    // IMAGE_REL_ARM_BRANCH11 and IMAGE_REL_ARM_BLX11 are only used for
+    // pre-ARMv7, which implicitly rules it out of ARMNT (it would be valid
+    // for Windows CE).
+    case COFF::IMAGE_REL_ARM_BRANCH24:
+    case COFF::IMAGE_REL_ARM_BLX24:
+    case COFF::IMAGE_REL_ARM_MOV32A:
+      // IMAGE_REL_ARM_BRANCH24, IMAGE_REL_ARM_BLX24, IMAGE_REL_ARM_MOV32A are
+      // only used for ARM mode code, which is documented as being unsupported
+      // by Windows on ARM.  Empirical proof indicates that masm is able to
+      // generate the relocations however the rest of the MSVC toolchain is
+      // unable to handle it.
+      llvm_unreachable("unsupported relocation");
+      break;
+    case COFF::IMAGE_REL_ARM_MOV32T:
+      break;
+    case COFF::IMAGE_REL_ARM_BRANCH20T:
+    case COFF::IMAGE_REL_ARM_BRANCH24T:
+    case COFF::IMAGE_REL_ARM_BLX23T:
+      // IMAGE_REL_BRANCH20T, IMAGE_REL_ARM_BRANCH24T, IMAGE_REL_ARM_BLX23T all
+      // perform a 4 byte adjustment to the relocation.  Relative branches are
+      // offset by 4 on ARM, however, because there is no RELA relocations, all
+      // branches are offset by 4.
+      FixedValue = FixedValue + 4;
+      break;
+    }
+  }
+
+  // The fixed value never makes sense for section indices, ignore it.
+  if (Fixup.getKind() == FK_SecRel_2)
+    FixedValue = 0;
+
+  if (TargetObjectWriter->recordRelocation(Fixup))
+    Sec->Relocations.push_back(Reloc);
+}
+
+static std::time_t getTime() {
+  std::time_t Now = time(nullptr);
+  if (Now < 0 || !isUInt<32>(Now))
+    return UINT32_MAX;
+  return Now;
+}
+
 uint64_t WinCOFFObjectWriter::writeObject(MCAssembler &Asm,
                                           const MCAsmLayout &Layout) {
   uint64_t StartOffset = W.OS.tell();
@@ -1142,13 +1134,18 @@ uint64_t WinCOFFObjectWriter::writeObject(MCAssembler &Asm,
   WriteFileHeader(Header);
   writeSectionHeaders();
 
-  // Write section contents.
+#ifndef NDEBUG
   sections::iterator I = Sections.begin();
   sections::iterator IE = Sections.end();
   MCAssembler::iterator J = Asm.begin();
   MCAssembler::iterator JE = Asm.end();
   for (; I != IE && J != JE; ++I, ++J)
-    writeSection(Asm, Layout, **I, *J);
+    assert((**I).MCSection == &*J && "Wrong bound MCSection");
+#endif
+
+  // Write section contents.
+  for (std::unique_ptr<COFFSection> &Sec : Sections)
+    writeSection(Asm, Layout, *Sec);
 
   assert(W.OS.tell() == Header.PointerToSymbolTable &&
          "Header::PointerToSymbolTable is insane!");

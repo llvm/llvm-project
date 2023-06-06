@@ -39,6 +39,17 @@ namespace clang {
 namespace clangd {
 namespace {
 
+/// Get the last Position on a given line.
+llvm::Expected<Position> endOfLine(llvm::StringRef Code, int Line) {
+  auto StartOfLine = positionToOffset(Code, Position{Line, 0});
+  if (!StartOfLine)
+    return StartOfLine.takeError();
+  StringRef LineText = Code.drop_front(*StartOfLine).take_until([](char C) {
+    return C == '\n';
+  });
+  return Position{Line, static_cast<int>(lspLength(LineText))};
+}
+
 /// Some names are not written in the source code and cannot be highlighted,
 /// e.g. anonymous classes. This function detects those cases.
 bool canHighlightName(DeclarationName Name) {
@@ -516,38 +527,27 @@ public:
 
     // Merge token stream with "inactive line" markers.
     std::vector<HighlightingToken> WithInactiveLines;
-    auto SortedSkippedRanges = AST.getMacros().SkippedRanges;
-    llvm::sort(SortedSkippedRanges);
+    auto SortedInactiveRegions = getInactiveRegions(AST);
+    llvm::sort(SortedInactiveRegions);
     auto It = NonConflicting.begin();
-    for (const Range &R : SortedSkippedRanges) {
-      // Create one token for each line in the skipped range, so it works
+    for (const Range &R : SortedInactiveRegions) {
+      // Create one token for each line in the inactive range, so it works
       // with line-based diffing.
       assert(R.start.line <= R.end.line);
       for (int Line = R.start.line; Line <= R.end.line; ++Line) {
-        // If the end of the inactive range is at the beginning
-        // of a line, that line is not inactive.
-        if (Line == R.end.line && R.end.character == 0)
-          continue;
         // Copy tokens before the inactive line
         for (; It != NonConflicting.end() && It->R.start.line < Line; ++It)
           WithInactiveLines.push_back(std::move(*It));
         // Add a token for the inactive line itself.
-        auto StartOfLine = positionToOffset(MainCode, Position{Line, 0});
-        if (StartOfLine) {
-          StringRef LineText =
-              MainCode.drop_front(*StartOfLine).take_until([](char C) {
-                return C == '\n';
-              });
+        auto EndOfLine = endOfLine(MainCode, Line);
+        if (EndOfLine) {
           HighlightingToken HT;
           WithInactiveLines.emplace_back();
           WithInactiveLines.back().Kind = HighlightingKind::InactiveCode;
           WithInactiveLines.back().R.start.line = Line;
-          WithInactiveLines.back().R.end.line = Line;
-          WithInactiveLines.back().R.end.character =
-              static_cast<int>(lspLength(LineText));
+          WithInactiveLines.back().R.end = *EndOfLine;
         } else {
-          elog("Failed to convert position to offset: {0}",
-               StartOfLine.takeError());
+          elog("Failed to determine end of line: {0}", EndOfLine.takeError());
         }
 
         // Skip any other tokens on the inactive line. e.g.
@@ -1542,6 +1542,41 @@ diffTokens(llvm::ArrayRef<SemanticToken> Old,
   Edit.deleteTokens = Old.size();
   Edit.tokens = New;
   return {std::move(Edit)};
+}
+
+std::vector<Range> getInactiveRegions(ParsedAST &AST) {
+  std::vector<Range> SkippedRanges(std::move(AST.getMacros().SkippedRanges));
+  const auto &SM = AST.getSourceManager();
+  StringRef MainCode = SM.getBufferOrFake(SM.getMainFileID()).getBuffer();
+  std::vector<Range> InactiveRegions;
+  for (const Range &Skipped : SkippedRanges) {
+    Range Inactive = Skipped;
+    // Sometimes, SkippedRanges contains a range ending at position 0
+    // of a line. Clients that apply whole-line styles will treat that
+    // line as inactive which is not desirable, so adjust the ending
+    // position to be the end of the previous line.
+    if (Inactive.end.character == 0 && Inactive.end.line > 0) {
+      --Inactive.end.line;
+    }
+    // Exclude the directive lines themselves from the range.
+    if (Inactive.end.line >= Inactive.start.line + 2) {
+      ++Inactive.start.line;
+      --Inactive.end.line;
+    } else {
+      // range would be empty, e.g. #endif on next line after #ifdef
+      continue;
+    }
+    // Since we've adjusted the ending line, we need to recompute the
+    // column to reflect the end of that line.
+    if (auto EndOfLine = endOfLine(MainCode, Inactive.end.line)) {
+      Inactive.end = *EndOfLine;
+    } else {
+      elog("Failed to determine end of line: {0}", EndOfLine.takeError());
+      continue;
+    }
+    InactiveRegions.push_back(Inactive);
+  }
+  return InactiveRegions;
 }
 
 } // namespace clangd

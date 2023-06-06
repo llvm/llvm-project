@@ -2602,14 +2602,6 @@ private:
   void reconcileExternalVisibleStorage() const;
   bool LoadLexicalDeclsFromExternalStorage() const;
 
-  /// Makes a declaration visible within this context, but
-  /// suppresses searches for external declarations with the same
-  /// name.
-  ///
-  /// Analogous to makeDeclVisibleInContext, but for the exclusive
-  /// use of addDeclInternal().
-  void makeDeclVisibleInContextInternal(NamedDecl *D);
-
   StoredDeclsMap *CreateStoredDeclsMap(ASTContext &C) const;
 
   void loadLazyLocalLexicalLookups();

@@ -285,6 +285,10 @@ enum NodeType : unsigned {
   VWSUBU_W_VL,
 
   VFWMUL_VL,
+  VFWADD_VL,
+  VFWSUB_VL,
+  VFWADD_W_VL,
+  VFWSUB_W_VL,
 
   // Narrowing logical shift right.
   // Operands are (source, shift, passthru, mask, vl)
@@ -865,6 +869,9 @@ private:
   bool useRVVForFixedLengthVectorVT(MVT VT) const;
 
   MVT getVPExplicitVectorLengthTy() const override;
+
+  bool shouldExpandGetVectorLength(EVT TripCountVT, unsigned VF,
+                                   bool IsScalable) const override;
 
   /// RVV code generation for fixed length vectors does not lower all
   /// BUILD_VECTORs. This makes BUILD_VECTOR legalisation a source of stores to

@@ -49,7 +49,7 @@ define internal void @.omp_outlined.willreturn(ptr noalias %.global_tid., ptr no
 ; CHECK-LABEL: define {{[^@]+}}@.omp_outlined.willreturn
 ; CHECK-SAME: (ptr noalias nocapture nofree readnone [[DOTGLOBAL_TID_:%.*]], ptr noalias nocapture nofree readnone [[DOTBOUND_TID_:%.*]]) #[[ATTR0:[0-9]+]] {
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    call void @unknown() #[[ATTR0]]
+; CHECK-NEXT:    call void @unknown() #[[ATTR14:[0-9]+]]
 ; CHECK-NEXT:    ret void
 ;
 ; CHECK1-LABEL: define {{[^@]+}}@.omp_outlined.willreturn
@@ -93,7 +93,7 @@ define internal void @.omp_outlined.willreturn.1(ptr noalias %.global_tid., ptr 
 ; CHECK-LABEL: define {{[^@]+}}@.omp_outlined.willreturn.1
 ; CHECK-SAME: (ptr noalias nocapture nofree readnone [[DOTGLOBAL_TID_:%.*]], ptr noalias nocapture nofree readnone [[DOTBOUND_TID_:%.*]]) #[[ATTR2:[0-9]+]] {
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    call void @readnone() #[[ATTR0]]
+; CHECK-NEXT:    call void @readnone() #[[ATTR14]]
 ; CHECK-NEXT:    ret void
 ;
 ; CHECK1-LABEL: define {{[^@]+}}@.omp_outlined.willreturn.1
@@ -282,7 +282,7 @@ define void @delete_parallel_2() {
 ; CHECK-LABEL: define {{[^@]+}}@delete_parallel_2() {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[A:%.*]] = alloca i32, align 4
-; CHECK-NEXT:    call void @llvm.lifetime.start.p0(i64 noundef 4, ptr noundef nonnull align 4 dereferenceable(4) [[A]]) #[[ATTR0]]
+; CHECK-NEXT:    call void @llvm.lifetime.start.p0(i64 noundef 4, ptr noundef nonnull align 4 dereferenceable(4) [[A]]) #[[ATTR14]]
 ; CHECK-NEXT:    store i32 0, ptr [[A]], align 4
 ; CHECK-NEXT:    call void (ptr, i32, ptr, ...) @__kmpc_fork_call(ptr noundef nonnull align 8 dereferenceable(24) @[[GLOB0]], i32 noundef 1, ptr noundef @.omp_outlined..3, ptr nocapture nofree noundef nonnull align 4 dereferenceable(4) [[A]])
 ; CHECK-NEXT:    call void (ptr, i32, ptr, ...) @__kmpc_fork_call(ptr noundef nonnull align 8 dereferenceable(24) @[[GLOB0]], i32 noundef 1, ptr noundef @.omp_outlined..4, ptr nocapture nofree noundef nonnull align 4 dereferenceable(4) [[A]])
@@ -531,7 +531,7 @@ define internal void @.omp_outlined..6(ptr noalias %.global_tid., ptr noalias %.
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[A1:%.*]] = alloca i32, align 4
 ; CHECK-NEXT:    [[DOTOMP_REDUCTION_RED_LIST:%.*]] = alloca [1 x ptr], align 8
-; CHECK-NEXT:    call void @llvm.lifetime.start.p0(i64 noundef 4, ptr noundef nonnull align 4 [[A1]]) #[[ATTR14:[0-9]+]]
+; CHECK-NEXT:    call void @llvm.lifetime.start.p0(i64 noundef 4, ptr noundef nonnull align 4 [[A1]]) #[[ATTR15:[0-9]+]]
 ; CHECK-NEXT:    store i32 1, ptr [[A1]], align 4
 ; CHECK-NEXT:    store ptr [[A1]], ptr [[DOTOMP_REDUCTION_RED_LIST]], align 8
 ; CHECK-NEXT:    [[TMP2:%.*]] = load i32, ptr [[DOTGLOBAL_TID_]], align 4

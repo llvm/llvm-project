@@ -462,7 +462,9 @@ LogicalResult transform::detail::interpreterBaseInitializeImpl(
     MLIRContext *context, StringRef transformFileName,
     StringRef transformLibraryFileName,
     std::shared_ptr<OwningOpRef<ModuleOp>> &module,
-    std::shared_ptr<OwningOpRef<ModuleOp>> &libraryModule) {
+    std::shared_ptr<OwningOpRef<ModuleOp>> &libraryModule,
+    function_ref<std::optional<LogicalResult>(OpBuilder &, Location)>
+        moduleBuilder) {
   OwningOpRef<ModuleOp> parsed;
   if (failed(parseTransformModuleFromFile(context, transformFileName, parsed)))
     return failure();
@@ -476,7 +478,23 @@ LogicalResult transform::detail::interpreterBaseInitializeImpl(
   if (parsedLibrary && failed(mlir::verify(*parsedLibrary)))
     return failure();
 
-  module = std::make_shared<OwningOpRef<ModuleOp>>(std::move(parsed));
+  if (parsed) {
+    module = std::make_shared<OwningOpRef<ModuleOp>>(std::move(parsed));
+  } else if (moduleBuilder) {
+    // TODO: better location story.
+    auto location = UnknownLoc::get(context);
+    auto localModule = std::make_shared<OwningOpRef<ModuleOp>>(
+        ModuleOp::create(location, "__transform"));
+
+    OpBuilder b(context);
+    b.setInsertionPointToEnd(localModule->get().getBody());
+    if (std::optional<LogicalResult> result = moduleBuilder(b, location)) {
+      if (failed(*result))
+        return failure();
+      module = std::move(localModule);
+    }
+  }
+
   if (!parsedLibrary || !*parsedLibrary)
     return success();
 

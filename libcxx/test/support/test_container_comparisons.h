@@ -84,6 +84,96 @@ constexpr bool test_sequence_container_spaceship() {
   return true;
 }
 
+// Implementation detail of `test_sequence_container_adaptor_spaceship`
+template <template <typename...> typename ContainerAdaptor,
+          template <typename...>
+          typename Container,
+          typename Elem,
+          typename Order>
+constexpr void test_sequence_container_adaptor_spaceship_with_type() {
+  // Empty containers
+  {
+    Container<Elem> l1;
+    ContainerAdaptor<Elem, Container<Elem>> ca1{l1};
+    Container<Elem> l2;
+    ContainerAdaptor<Elem, Container<Elem>> ca2{l2};
+    assert(testOrder(ca1, ca2, Order::equivalent));
+  }
+  // Identical contents
+  {
+    Container<Elem> l1{1, 1};
+    ContainerAdaptor<Elem, Container<Elem>> ca1{l1};
+    Container<Elem> l2{1, 1};
+    ContainerAdaptor<Elem, Container<Elem>> ca2{l2};
+    assert(testOrder(ca1, ca2, Order::equivalent));
+  }
+  // Less, due to contained values
+  {
+    Container<Elem> l1{1, 1};
+    ContainerAdaptor<Elem, Container<Elem>> ca1{l1};
+    Container<Elem> l2{1, 2};
+    ContainerAdaptor<Elem, Container<Elem>> ca2{l2};
+    assert(testOrder(ca1, ca2, Order::less));
+  }
+  // Greater, due to contained values
+  {
+    Container<Elem> l1{1, 3};
+    ContainerAdaptor<Elem, Container<Elem>> ca1{l1};
+    Container<Elem> l2{1, 2};
+    ContainerAdaptor<Elem, Container<Elem>> ca2{l2};
+    assert(testOrder(ca1, ca2, Order::greater));
+  }
+  // Shorter list
+  {
+    Container<Elem> l1{1};
+    ContainerAdaptor<Elem, Container<Elem>> ca1{l1};
+    Container<Elem> l2{1, 2};
+    ContainerAdaptor<Elem, Container<Elem>> ca2{l2};
+    assert(testOrder(ca1, ca2, Order::less));
+  }
+  // Longer list
+  {
+    Container<Elem> l1{1, 2};
+    ContainerAdaptor<Elem, Container<Elem>> ca1{l1};
+    Container<Elem> l2{1};
+    ContainerAdaptor<Elem, Container<Elem>> ca2{l2};
+    assert(testOrder(ca1, ca2, Order::greater));
+  }
+  // Unordered
+  if constexpr (std::is_same_v<Elem, PartialOrder>) {
+    Container<Elem> l1{1, std::numeric_limits<int>::min()};
+    ContainerAdaptor<Elem, Container<Elem>> ca1{l1};
+    Container<Elem> l2{1, 2};
+    ContainerAdaptor<Elem, Container<Elem>> ca2{l2};
+    assert(testOrder(ca1, ca2, Order::unordered));
+  }
+}
+
+// Tests the `operator<=>` on sequence container adaptors
+template <template <typename...> typename ContainerAdaptor, template <typename...> typename Container>
+constexpr bool test_sequence_container_adaptor_spaceship() {
+  // Thanks to SFINAE, the following is not a compiler error but returns `false`
+  struct NonComparable {};
+  static_assert(!std::three_way_comparable<ContainerAdaptor<NonComparable>>);
+
+  // The container should fulfill `std::three_way_comparable`
+  static_assert(std::three_way_comparable<ContainerAdaptor<int, Container<int>>>);
+
+  // Test different comparison categories
+  test_sequence_container_adaptor_spaceship_with_type<ContainerAdaptor, Container, int, std::strong_ordering>();
+  test_sequence_container_adaptor_spaceship_with_type<ContainerAdaptor, Container, StrongOrder, std::strong_ordering>();
+  test_sequence_container_adaptor_spaceship_with_type<ContainerAdaptor, Container, WeakOrder, std::weak_ordering>();
+  test_sequence_container_adaptor_spaceship_with_type<ContainerAdaptor,
+                                                      Container,
+                                                      PartialOrder,
+                                                      std::partial_ordering>();
+
+  // `LessAndEqComp` does not have `operator<=>`. Ordering is synthesized based on `operator<`
+  test_sequence_container_adaptor_spaceship_with_type<ContainerAdaptor, Container, LessAndEqComp, std::weak_ordering>();
+
+  return true;
+}
+
 // Implementation detail of `test_ordered_map_container_spaceship`
 template <template <typename...> typename Container, typename Key, typename Val, typename Order, typename Compare>
 constexpr void test_ordered_map_container_spaceship_with_type(Compare comp) {

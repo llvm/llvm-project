@@ -392,7 +392,7 @@ StackMaps::parseRegisterLiveOutMask(const uint32_t *Mask) const {
         break;
       }
       I->Size = std::max(I->Size, II->Size);
-      if (TRI->isSuperRegister(I->Reg, II->Reg))
+      if (I->Reg && TRI->isSuperRegister(I->Reg, II->Reg))
         I->Reg = II->Reg;
       II->Reg = 0; // mark for deletion.
     }

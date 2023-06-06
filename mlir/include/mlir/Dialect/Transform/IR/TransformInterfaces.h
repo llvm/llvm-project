@@ -938,30 +938,6 @@ public:
   static LogicalResult verifyTrait(Operation *op);
 };
 
-/// Trait implementing the applyToOne function required by TransformEachOpTrait
-/// by greedily applying a set of patterns to each target payload operation.
-/// This requires the transform operation to implement TransformEachOpTrait and
-/// to provide the following method:
-///   - void populatePatterns(RewritePatternSet &)
-/// that populates the given object with the patterns to apply. This is an
-/// instance method that can depend on the transform operation attributes.
-///
-/// The payload operation is expected to have the IsolatedFromAboveTrait, which
-/// is a requirement of the pattern rewriter. If it does not, or if pattern
-/// application fails, the transform fails definitively as the rewriter will
-/// have likely left the payload IR in some intermediate state that precludes
-/// further transformation.
-template <typename OpTy>
-class TransformWithPatternsOpTrait
-    : public OpTrait::TraitBase<OpTy, TransformWithPatternsOpTrait> {
-public:
-  DiagnosedSilenceableFailure applyToOne(Operation *target,
-                                         ApplyToEachResultList &results,
-                                         TransformState &state);
-
-  static LogicalResult verifyTrait(Operation *op);
-};
-
 /// Side effect resource corresponding to the mapping between Transform IR
 /// values and Payload IR operations. An Allocate effect from this resource
 /// means creating a new mapping entry, it is always accompanied by a Write
@@ -1253,14 +1229,6 @@ applyTransformToEach(TransformOpTy transformOp, Range &&targets,
   return DiagnosedSilenceableFailure::success();
 }
 
-/// Applies patterns configured by `populatePatterns` greedily to the contents
-/// of `target`. Reports (definite) errors at the location of `transformOp`.
-/// Sets up `results` to point to `target` after pattern application on success.
-DiagnosedSilenceableFailure transformWithPatternsApply(
-    Operation *transformOp, Operation *target, ApplyToEachResultList &results,
-    TransformState &state,
-    function_ref<void(RewritePatternSet &)> populatePatterns);
-
 } // namespace detail
 } // namespace transform
 } // namespace mlir
@@ -1319,28 +1287,6 @@ mlir::transform::TransformEachOpTrait<OpTy>::verifyTrait(Operation *op) {
                               "ops that implement TransformOpInterface";
   }
 
-  return success();
-}
-
-template <typename OpTy>
-mlir::DiagnosedSilenceableFailure
-mlir::transform::TransformWithPatternsOpTrait<OpTy>::applyToOne(
-    Operation *target, ApplyToEachResultList &results, TransformState &state) {
-  return detail::transformWithPatternsApply(
-      this->getOperation(), target, results, state,
-      [this](RewritePatternSet &patterns) {
-        cast<OpTy>(this->getOperation()).populatePatterns(patterns);
-      });
-}
-
-template <typename OpTy>
-mlir::LogicalResult
-mlir::transform::TransformWithPatternsOpTrait<OpTy>::verifyTrait(
-    Operation *op) {
-  if (!op->hasTrait<mlir::transform::TransformEachOpTrait>()) {
-    return op->emitOpError()
-           << "TransformWithPatternsOpTrait requires TransformEachOpTrait";
-  }
   return success();
 }
 

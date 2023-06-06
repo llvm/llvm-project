@@ -20,8 +20,8 @@ class Register {
   unsigned Reg;
 
 public:
-  constexpr Register(unsigned Val = 0): Reg(Val) {}
-  constexpr Register(MCRegister Val): Reg(Val) {}
+  constexpr Register(unsigned Val = 0) : Reg(Val) {}
+  constexpr Register(MCRegister Val) : Reg(Val) {}
 
   // Register numbers can represent physical registers, virtual registers, and
   // sometimes stack slots. The unsigned values are divided into these ranges:
@@ -41,12 +41,12 @@ public:
   /// returns true if Reg is in the range used for stack slots.
   ///
   /// FIXME: remove in favor of member.
-  static bool isStackSlot(unsigned Reg) {
+  static constexpr bool isStackSlot(unsigned Reg) {
     return MCRegister::isStackSlot(Reg);
   }
 
   /// Return true if this is a stack slot.
-  bool isStack() const { return MCRegister::isStackSlot(Reg); }
+  constexpr bool isStack() const { return MCRegister::isStackSlot(Reg); }
 
   /// Compute the frame index from a register value representing a stack slot.
   static int stackSlot2Index(Register Reg) {
@@ -62,13 +62,13 @@ public:
 
   /// Return true if the specified register number is in
   /// the physical register namespace.
-  static bool isPhysicalRegister(unsigned Reg) {
+  static constexpr bool isPhysicalRegister(unsigned Reg) {
     return MCRegister::isPhysicalRegister(Reg);
   }
 
   /// Return true if the specified register number is in
   /// the virtual register namespace.
-  static bool isVirtualRegister(unsigned Reg) {
+  static constexpr bool isVirtualRegister(unsigned Reg) {
     return Reg & MCRegister::VirtualRegFlag;
   }
 
@@ -88,31 +88,21 @@ public:
 
   /// Return true if the specified register number is in the virtual register
   /// namespace.
-  bool isVirtual() const {
-    return isVirtualRegister(Reg);
-  }
+  constexpr bool isVirtual() const { return isVirtualRegister(Reg); }
 
   /// Return true if the specified register number is in the physical register
   /// namespace.
-  bool isPhysical() const {
-    return isPhysicalRegister(Reg);
-  }
+  constexpr bool isPhysical() const { return isPhysicalRegister(Reg); }
 
   /// Convert a virtual register number to a 0-based index. The first virtual
   /// register in a function will get the index 0.
-  unsigned virtRegIndex() const {
-    return virtReg2Index(Reg);
-  }
+  unsigned virtRegIndex() const { return virtReg2Index(Reg); }
 
-  constexpr operator unsigned() const {
-    return Reg;
-  }
+  constexpr operator unsigned() const { return Reg; }
 
-  unsigned id() const { return Reg; }
+  constexpr unsigned id() const { return Reg; }
 
-  operator MCRegister() const {
-    return MCRegister(Reg);
-  }
+  constexpr operator MCRegister() const { return MCRegister(Reg); }
 
   /// Utility to check-convert this value to a MCRegister. The caller is
   /// expected to have already validated that this Register is, indeed,
@@ -123,29 +113,41 @@ public:
     return MCRegister(Reg);
   }
 
-  bool isValid() const { return Reg != MCRegister::NoRegister; }
+  constexpr bool isValid() const { return Reg != MCRegister::NoRegister; }
 
   /// Comparisons between register objects
-  bool operator==(const Register &Other) const { return Reg == Other.Reg; }
-  bool operator!=(const Register &Other) const { return Reg != Other.Reg; }
-  bool operator==(const MCRegister &Other) const { return Reg == Other.id(); }
-  bool operator!=(const MCRegister &Other) const { return Reg != Other.id(); }
+  constexpr bool operator==(const Register &Other) const {
+    return Reg == Other.Reg;
+  }
+  constexpr bool operator!=(const Register &Other) const {
+    return Reg != Other.Reg;
+  }
+  constexpr bool operator==(const MCRegister &Other) const {
+    return Reg == Other.id();
+  }
+  constexpr bool operator!=(const MCRegister &Other) const {
+    return Reg != Other.id();
+  }
 
   /// Comparisons against register constants. E.g.
   /// * R == AArch64::WZR
   /// * R == 0
   /// * R == VirtRegMap::NO_PHYS_REG
-  bool operator==(unsigned Other) const { return Reg == Other; }
-  bool operator!=(unsigned Other) const { return Reg != Other; }
-  bool operator==(int Other) const { return Reg == unsigned(Other); }
-  bool operator!=(int Other) const { return Reg != unsigned(Other); }
+  constexpr bool operator==(unsigned Other) const { return Reg == Other; }
+  constexpr bool operator!=(unsigned Other) const { return Reg != Other; }
+  constexpr bool operator==(int Other) const { return Reg == unsigned(Other); }
+  constexpr bool operator!=(int Other) const { return Reg != unsigned(Other); }
   // MSVC requires that we explicitly declare these two as well.
-  bool operator==(MCPhysReg Other) const { return Reg == unsigned(Other); }
-  bool operator!=(MCPhysReg Other) const { return Reg != unsigned(Other); }
+  constexpr bool operator==(MCPhysReg Other) const {
+    return Reg == unsigned(Other);
+  }
+  constexpr bool operator!=(MCPhysReg Other) const {
+    return Reg != unsigned(Other);
+  }
 };
 
 // Provide DenseMapInfo for Register
-template<> struct DenseMapInfo<Register> {
+template <> struct DenseMapInfo<Register> {
   static inline unsigned getEmptyKey() {
     return DenseMapInfo<unsigned>::getEmptyKey();
   }
@@ -160,6 +162,6 @@ template<> struct DenseMapInfo<Register> {
   }
 };
 
-}
+} // namespace llvm
 
 #endif // LLVM_CODEGEN_REGISTER_H

@@ -324,6 +324,7 @@ set(files
   __coroutine/trivial_awaitables.h
   __debug
   __debug_utils/randomize_range.h
+  __debug_utils/strict_weak_ordering_check.h
   __exception/exception.h
   __exception/exception_ptr.h
   __exception/nested_exception.h
@@ -641,6 +642,10 @@ set(files
   __stop_token/atomic_unique_lock.h
   __stop_token/intrusive_list_view.h
   __stop_token/intrusive_shared_ptr.h
+  __stop_token/stop_callback.h
+  __stop_token/stop_source.h
+  __stop_token/stop_state.h
+  __stop_token/stop_token.h
   __string/char_traits.h
   __string/constexpr_c_functions.h
   __string/extern_template_lists.h
@@ -958,6 +963,7 @@ set(files
   stdint.h
   stdio.h
   stdlib.h
+  stop_token
   streambuf
   string
   string.h
