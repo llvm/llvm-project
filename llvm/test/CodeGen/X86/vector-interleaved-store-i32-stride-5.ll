@@ -244,7 +244,7 @@ define void @store_i32_stride5_vf4(ptr %in.vecptr0, ptr %in.vecptr1, ptr %in.vec
 ; AVX2-FAST-NEXT:    vblendps {{.*#+}} ymm4 = ymm5[0,1],ymm4[2,3],ymm5[4,5],ymm4[6,7]
 ; AVX2-FAST-NEXT:    vpermpd {{.*#+}} ymm5 = ymm3[0,1,2,1]
 ; AVX2-FAST-NEXT:    vblendps {{.*#+}} ymm4 = ymm4[0],ymm5[1],ymm4[2,3,4,5],ymm5[6],ymm4[7]
-; AVX2-FAST-NEXT:    vbroadcastsd {{.*#+}} ymm5 = [7,3,7,3,7,3,7,3]
+; AVX2-FAST-NEXT:    vmovaps {{.*#+}} ymm5 = <u,3,7,u,u,u,u,u>
 ; AVX2-FAST-NEXT:    vpermps %ymm2, %ymm5, %ymm2
 ; AVX2-FAST-NEXT:    vshufps {{.*#+}} xmm1 = xmm1[3,3,3,3]
 ; AVX2-FAST-NEXT:    vblendps {{.*#+}} xmm1 = xmm1[0],xmm2[1,2,3]

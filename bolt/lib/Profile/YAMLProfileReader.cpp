@@ -20,6 +20,7 @@ namespace opts {
 
 extern cl::opt<unsigned> Verbosity;
 extern cl::OptionCategory BoltOptCategory;
+extern cl::opt<bool> InferStaleProfile;
 
 static llvm::cl::opt<bool>
     IgnoreHash("profile-ignore-hash",
@@ -238,6 +239,16 @@ bool YAMLProfileReader::parseFunctionProfile(
     errs() << "BOLT-WARNING: " << MismatchedBlocks << " blocks, "
            << MismatchedCalls << " calls, and " << MismatchedEdges
            << " edges in profile did not match function " << BF << '\n';
+
+  if (!ProfileMatched && opts::InferStaleProfile) {
+    if (opts::Verbosity >= 1)
+      outs() << "BOLT-INFO: applying profile inference for "
+             << "\"" << BF.getPrintName() << "\"\n";
+    if (inferStaleProfile(BF, YamlBF)) {
+      ProfileMatched = true;
+      BF.markProfiled(YamlBP.Header.Flags);
+    }
+  }
 
   return ProfileMatched;
 }

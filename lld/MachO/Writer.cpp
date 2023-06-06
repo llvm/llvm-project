@@ -674,11 +674,21 @@ void Writer::scanRelocations() {
 
     for (auto it = isec->relocs.begin(); it != isec->relocs.end(); ++it) {
       lld::macho::Reloc &r = *it;
+
+      // Canonicalize the referent so that later accesses in Writer won't
+      // have to worry about it.
+      if (auto *referentIsec = r.referent.dyn_cast<InputSection *>())
+        r.referent = referentIsec->canonical();
+
       if (target->hasAttr(r.type, RelocAttrBits::SUBTRAHEND)) {
         // Skip over the following UNSIGNED relocation -- it's just there as the
         // minuend, and doesn't have the usual UNSIGNED semantics. We don't want
         // to emit rebase opcodes for it.
-        it++;
+        ++it;
+        // Canonicalize the referent so that later accesses in Writer won't
+        // have to worry about it.
+        if (auto *referentIsec = it->referent.dyn_cast<InputSection *>())
+          it->referent = referentIsec->canonical();
         continue;
       }
       if (auto *sym = r.referent.dyn_cast<Symbol *>()) {
@@ -688,11 +698,6 @@ void Writer::scanRelocations() {
         if (!isa<Undefined>(sym) && validateSymbolRelocation(sym, isec, r))
           prepareSymbolRelocation(sym, isec, r);
       } else {
-        // Canonicalize the referent so that later accesses in Writer won't
-        // have to worry about it. Perhaps we should do this for Defined::isec
-        // too...
-        auto *referentIsec = r.referent.get<InputSection *>();
-        r.referent = referentIsec->canonical();
         if (!r.pcrel) {
           if (config->emitChainedFixups)
             in.chainedFixups->addRebase(isec, r.offset);

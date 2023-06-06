@@ -384,6 +384,10 @@ private:
   /// Indicates the type of profile the function is using.
   uint16_t ProfileFlags{PF_NONE};
 
+  /// True if the function's input profile data has been inaccurate but has
+  /// been adjusted by the profile inference algorithm.
+  bool HasInferredProfile{false};
+
   /// For functions with mismatched profile we store all call profile
   /// information at a function level (as opposed to tying it to
   /// specific call sites).
@@ -1565,6 +1569,12 @@ public:
 
   /// Return flags describing a profile for this function.
   uint16_t getProfileFlags() const { return ProfileFlags; }
+
+  /// Return true if the function's input profile data has been inaccurate but
+  /// has been corrected by the profile inference algorithm.
+  bool hasInferredProfile() const { return HasInferredProfile; }
+
+  void setHasInferredProfile(bool Inferred) { HasInferredProfile = Inferred; }
 
   void addCFIInstruction(uint64_t Offset, MCCFIInstruction &&Inst) {
     assert(!Instructions.empty());

@@ -149,6 +149,7 @@ TEST_F(ModuleCacheTest, CachedModuleNewPathAllowErrors) {
       CompilerInstance::createDiagnostics(new DiagnosticOptions());
   CreateInvocationOptions CIOpts;
   CIOpts.Diags = Diags;
+  CIOpts.VFS = llvm::vfs::createPhysicalFileSystem();
 
   // First run should pass with no errors
   const char *Args[] = {"clang",        "-fmodules",          "-Fframeworks",

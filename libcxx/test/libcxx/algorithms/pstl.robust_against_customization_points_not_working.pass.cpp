@@ -42,6 +42,26 @@ bool __pstl_all_of(TestBackend, ForwardIterator, ForwardIterator, Pred) {
   return true;
 }
 
+bool pstl_count_called = false;
+
+template <class, class ForwardIterator, class T>
+typename std::iterator_traits<ForwardIterator>::difference_type
+__pstl_count(TestBackend, ForwardIterator, ForwardIterator, const T&) {
+  assert(!pstl_count_called);
+  pstl_count_called = true;
+  return 0;
+}
+
+bool pstl_count_if_called = false;
+
+template <class, class ForwardIterator, class Pred>
+typename std::iterator_traits<ForwardIterator>::difference_type
+__pstl_count_if(TestBackend, ForwardIterator, ForwardIterator, Pred) {
+  assert(!pstl_count_if_called);
+  pstl_count_if_called = true;
+  return 0;
+}
+
 bool pstl_none_of_called = false;
 
 template <class, class ForwardIterator, class Pred>
@@ -108,6 +128,38 @@ template <class, class ForwardIterator, class Size, class Func>
 void __pstl_fill_n(TestBackend, ForwardIterator, Size, Func) {
   assert(!pstl_fill_n_called);
   pstl_fill_n_called = true;
+}
+
+bool pstl_replace_called = false;
+
+template <class, class ForwardIterator, class T>
+void __pstl_replace(TestBackend, ForwardIterator, ForwardIterator, const T&, const T&) {
+  assert(!pstl_replace_called);
+  pstl_replace_called = true;
+}
+
+bool pstl_replace_if_called = false;
+
+template <class, class ForwardIterator, class T, class Func>
+void __pstl_replace_if(TestBackend, ForwardIterator, ForwardIterator, Func, const T&) {
+  assert(!pstl_replace_if_called);
+  pstl_replace_if_called = true;
+}
+
+bool pstl_replace_copy_called = false;
+
+template <class, class ForwardIterator, class ForwardOutIterator, class T>
+void __pstl_replace_copy(TestBackend, ForwardIterator, ForwardIterator, ForwardOutIterator, const T&, const T&) {
+  assert(!pstl_replace_copy_called);
+  pstl_replace_copy_called = true;
+}
+
+bool pstl_replace_copy_if_called = false;
+
+template <class, class ForwardIterator, class ForwardOutIterator, class T, class Func>
+void __pstl_replace_copy_if(TestBackend, ForwardIterator, ForwardIterator, ForwardOutIterator, Func, const T&) {
+  assert(!pstl_replace_copy_if_called);
+  pstl_replace_copy_if_called = true;
 }
 
 bool pstl_unary_transform_called = false;
@@ -197,6 +249,10 @@ int main(int, char**) {
   assert(std::pstl_all_of_called);
   (void)std::none_of(TestPolicy{}, std::begin(a), std::end(a), pred);
   assert(std::pstl_none_of_called);
+  (void)std::count(TestPolicy{}, std::begin(a), std::end(a), 0);
+  assert(std::pstl_count_called);
+  (void)std::count_if(TestPolicy{}, std::begin(a), std::end(a), pred);
+  assert(std::pstl_count_if_called);
   (void)std::fill(TestPolicy{}, std::begin(a), std::end(a), 0);
   assert(std::pstl_fill_called);
   (void)std::fill_n(TestPolicy{}, std::begin(a), std::size(a), 0);
@@ -211,6 +267,14 @@ int main(int, char**) {
   assert(std::pstl_for_each_called);
   (void)std::for_each_n(TestPolicy{}, std::begin(a), std::size(a), pred);
   assert(std::pstl_for_each_n_called);
+  (void)std::replace(TestPolicy{}, std::begin(a), std::end(a), 0, 0);
+  assert(std::pstl_replace_called);
+  (void)std::replace_if(TestPolicy{}, std::begin(a), std::end(a), pred, 0);
+  assert(std::pstl_replace_if_called);
+  (void)std::replace_copy(TestPolicy{}, std::begin(a), std::end(a), std::begin(a), 0, 0);
+  assert(std::pstl_replace_copy_called);
+  (void)std::replace_copy_if(TestPolicy{}, std::begin(a), std::end(a), std::begin(a), pred, 0);
+  assert(std::pstl_replace_copy_if_called);
   (void)std::transform(TestPolicy{}, std::begin(a), std::end(a), std::begin(a), pred);
   assert(std::pstl_unary_transform_called);
   (void)std::transform(TestPolicy{}, std::begin(a), std::end(a), std::begin(a), std::begin(a), pred);

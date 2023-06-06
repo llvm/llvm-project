@@ -11,6 +11,8 @@
 // ASan versions of memcpy, memmove, and memset.
 //===---------------------------------------------------------------------===//
 
+#define SANITIZER_COMMON_NO_REDEFINE_BUILTINS
+
 #include "asan_interceptors_memintrinsics.h"
 
 #include "asan_interceptors.h"

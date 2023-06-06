@@ -635,7 +635,9 @@ class EitherVSelectOrPassthruPatFrags<SDPatternOperator intrinsic, SDPatternOper
 : PatFrags<(ops node:$Pg, node:$Op1, node:$Op2), [
     (intrinsic node:$Pg, node:$Op1, node:$Op2),
     (vselect node:$Pg, (sdnode (SVEAllActive), node:$Op1, node:$Op2), node:$Op1),
-  ]>;
+  ], [{
+    return N->getOpcode() != ISD::VSELECT || N->getOperand(1).hasOneUse();
+  }]>;
 
 //
 // Pseudo -> Instruction mappings

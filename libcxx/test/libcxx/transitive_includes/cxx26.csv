@@ -437,6 +437,7 @@ ostream typeinfo
 ostream version
 queue compare
 queue cstddef
+queue cstdint
 queue deque
 queue initializer_list
 queue limits
@@ -529,8 +530,10 @@ sstream string
 sstream version
 stack compare
 stack cstddef
+stack cstdint
 stack deque
 stack initializer_list
+stack limits
 stack version
 stdexcept iosfwd
 stop_token atomic
