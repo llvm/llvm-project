@@ -1,10 +1,10 @@
 // RUN: %clang_cc1 -verify=expected,omp45 -fopenmp -fopenmp-version=45 -ferror-limit 100 %s -Wuninitialized
-// RUN: %clang_cc1 -verify=expected,omp50 -fopenmp -ferror-limit 100 %s -Wuninitialized
-// RUN: %clang_cc1 -DOMP51 -verify=expected,omp50,omp51 -fopenmp -fopenmp-version=51 -ferror-limit 100 %s -Wuninitialized
+// RUN: %clang_cc1 -verify=expected,omp50 -fopenmp -fopenmp-version=50 -ferror-limit 100 %s -Wuninitialized
+// RUN: %clang_cc1 -DOMP51 -verify=expected,omp50,omp51 -fopenmp -ferror-limit 100 %s -Wuninitialized
 
 // RUN: %clang_cc1 -verify=expected,omp45 -fopenmp-simd -fopenmp-version=45 -ferror-limit 100 %s -Wuninitialized
-// RUN: %clang_cc1 -verify=expected,omp50 -fopenmp-simd -ferror-limit 100 %s -Wuninitialized
-// RUN: %clang_cc1 -DOMP51 -verify=expected,omp50,omp51 -fopenmp-simd -fopenmp-version=51 -ferror-limit 100 %s -Wuninitialized
+// RUN: %clang_cc1 -verify=expected,omp50 -fopenmp-simd -fopenmp-version=50 -ferror-limit 100 %s -Wuninitialized
+// RUN: %clang_cc1 -DOMP51 -verify=expected,omp50,omp51 -fopenmp-simd -ferror-limit 100 %s -Wuninitialized
 
 void xxx(int argc) {
   int x; // expected-note {{initialize the variable 'x' to silence this warning}}

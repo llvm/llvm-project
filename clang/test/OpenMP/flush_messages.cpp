@@ -1,8 +1,8 @@
 // RUN: %clang_cc1 -verify=expected,omp45 -fopenmp -fopenmp-version=45 -ferror-limit 100 %s -Wuninitialized
-// RUN: %clang_cc1 -verify=expected,omp50 -fopenmp -ferror-limit 100 %s -Wuninitialized
+// RUN: %clang_cc1 -verify=expected,omp51 -fopenmp -ferror-limit 100 %s -Wuninitialized
 
 // RUN: %clang_cc1 -verify=expected,omp45 -fopenmp-simd -fopenmp-version=45 -ferror-limit 100 %s -Wuninitialized
-// RUN: %clang_cc1 -verify=expected,omp50 -fopenmp-simd -ferror-limit 100 %s -Wuninitialized
+// RUN: %clang_cc1 -verify=expected,omp51 -fopenmp-simd -ferror-limit 100 %s -Wuninitialized
 
 struct S1 { // expected-note 2 {{declared here}}
   int a;
@@ -140,9 +140,9 @@ label1 : {
 #pragma omp flush release // omp45-error {{unexpected OpenMP clause 'release' in directive '#pragma omp flush'}}
 #pragma omp flush relaxed // expected-error {{unexpected OpenMP clause 'relaxed' in directive '#pragma omp flush'}}
 #pragma omp flush seq_cst // expected-error {{unexpected OpenMP clause 'seq_cst' in directive '#pragma omp flush'}}
-#pragma omp flush acq_rel acquire // omp45-error {{unexpected OpenMP clause 'acq_rel' in directive '#pragma omp flush'}} omp45-error {{unexpected OpenMP clause 'acquire' in directive '#pragma omp flush'}} omp50-error {{directive '#pragma omp flush' cannot contain more than one 'acq_rel', 'acquire' or 'release' clause}} omp50-note {{'acq_rel' clause used here}}
-#pragma omp flush release acquire // omp45-error {{unexpected OpenMP clause 'release' in directive '#pragma omp flush'}} omp45-error {{unexpected OpenMP clause 'acquire' in directive '#pragma omp flush'}} omp50-error {{directive '#pragma omp flush' cannot contain more than one 'acq_rel', 'acquire' or 'release' clause}} omp50-note {{'release' clause used here}}
+#pragma omp flush acq_rel acquire // omp45-error {{unexpected OpenMP clause 'acq_rel' in directive '#pragma omp flush'}} omp45-error {{unexpected OpenMP clause 'acquire' in directive '#pragma omp flush'}} omp51-error {{directive '#pragma omp flush' cannot contain more than one 'acq_rel', 'acquire' or 'release' clause}} omp51-note {{'acq_rel' clause used here}}
+#pragma omp flush release acquire // omp45-error {{unexpected OpenMP clause 'release' in directive '#pragma omp flush'}} omp45-error {{unexpected OpenMP clause 'acquire' in directive '#pragma omp flush'}} omp51-error {{directive '#pragma omp flush' cannot contain more than one 'acq_rel', 'acquire' or 'release' clause}} omp51-note {{'release' clause used here}}
 #pragma omp flush acq_rel (argc) // omp45-error {{unexpected OpenMP clause 'acq_rel' in directive '#pragma omp flush'}} expected-warning {{extra tokens at the end of '#pragma omp flush' are ignored}}
-#pragma omp flush(argc) acq_rel // omp45-error {{unexpected OpenMP clause 'acq_rel' in directive '#pragma omp flush'}} omp50-error {{'flush' directive with memory order clause 'acq_rel' cannot have the list}} omp50-note {{memory order clause 'acq_rel' is specified here}}
+#pragma omp flush(argc) acq_rel // omp45-error {{unexpected OpenMP clause 'acq_rel' in directive '#pragma omp flush'}} omp51-error {{'flush' directive with memory order clause 'acq_rel' cannot have the list}} omp51-note {{memory order clause 'acq_rel' is specified here}}
   return tmain(argc);
 }

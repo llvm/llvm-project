@@ -2,17 +2,17 @@
 // RUN: %clang_cc1 -fopenmp -x c++ -std=c++11 -triple x86_64-unknown-unknown -fexceptions -fcxx-exceptions -emit-pch -o %t %s -fopenmp-version=45
 // RUN: %clang_cc1 -fopenmp -x c++ -triple x86_64-unknown-unknown -fexceptions -fcxx-exceptions -debug-info-kind=limited -std=c++11 -include-pch %t -verify %s -emit-llvm -o - -fopenmp-version=45 | FileCheck %s
 // RUN: %clang_cc1 -verify -triple x86_64-apple-darwin10 -fopenmp -fexceptions -fcxx-exceptions -debug-info-kind=line-tables-only -x c++ -emit-llvm %s -o - -fopenmp-version=45 | FileCheck %s --check-prefix=TERM_DEBUG
-// RUN: %clang_cc1 -verify -fopenmp -x c++ -triple x86_64-unknown-unknown -emit-llvm %s -fexceptions -fcxx-exceptions -o - -fopenmp-version=50 -DOMP5 | FileCheck %s --check-prefix=CHECK --check-prefix=OMP50 --check-prefix=OMP50RT
+// RUN: %clang_cc1 -verify -fopenmp -x c++ -triple x86_64-unknown-unknown -emit-llvm %s -fexceptions -fcxx-exceptions -o - -fopenmp-version=50 -DOMP5 | FileCheck %s --check-prefix=CHECK --check-prefix=OMP5 --check-prefix=OMP5RT
 // RUN: %clang_cc1 -fopenmp -x c++ -std=c++11 -triple x86_64-unknown-unknown -fexceptions -fcxx-exceptions -emit-pch -o %t %s -fopenmp-version=50 -DOMP5
-// RUN: %clang_cc1 -fopenmp -x c++ -triple x86_64-unknown-unknown -fexceptions -fcxx-exceptions -debug-info-kind=limited -std=c++11 -include-pch %t -verify %s -emit-llvm -o - -fopenmp-version=50 -DOMP5 | FileCheck %s --check-prefix=CHECK --check-prefix=OMP50 --check-prefix=OMP50RT
+// RUN: %clang_cc1 -fopenmp -x c++ -triple x86_64-unknown-unknown -fexceptions -fcxx-exceptions -debug-info-kind=limited -std=c++11 -include-pch %t -verify %s -emit-llvm -o - -fopenmp-version=50 -DOMP5 | FileCheck %s --check-prefix=CHECK --check-prefix=OMP5 --check-prefix=OMP5RT
 
 // RUN: %clang_cc1 -verify -fopenmp-simd -x c++ -triple x86_64-unknown-unknown -emit-llvm %s -fexceptions -fcxx-exceptions -o - -fopenmp-version=45 | FileCheck %s
 // RUN: %clang_cc1 -fopenmp-simd -x c++ -std=c++11 -triple x86_64-unknown-unknown -fexceptions -fcxx-exceptions -emit-pch -o %t %s -fopenmp-version=45
 // RUN: %clang_cc1 -fopenmp-simd -x c++ -triple x86_64-unknown-unknown -fexceptions -fcxx-exceptions -debug-info-kind=limited -std=c++11 -include-pch %t -verify %s -emit-llvm -o - -fopenmp-version=45 | FileCheck %s
 // RUN: %clang_cc1 -verify -triple x86_64-apple-darwin10 -fopenmp-simd -fexceptions -fcxx-exceptions -debug-info-kind=line-tables-only -x c++ -emit-llvm %s -o - -fopenmp-version=45 | FileCheck --check-prefix=TERM_DEBUG %s
-// RUN: %clang_cc1 -verify -fopenmp-simd -x c++ -triple x86_64-unknown-unknown -emit-llvm %s -fexceptions -fcxx-exceptions -o - -fopenmp-version=50 -DOMP5 | FileCheck %s --check-prefix=CHECK --check-prefix=OMP50
+// RUN: %clang_cc1 -verify -fopenmp-simd -x c++ -triple x86_64-unknown-unknown -emit-llvm %s -fexceptions -fcxx-exceptions -o - -fopenmp-version=50 -DOMP5 | FileCheck %s --check-prefix=CHECK --check-prefix=OMP5
 // RUN: %clang_cc1 -fopenmp-simd -x c++ -std=c++11 -triple x86_64-unknown-unknown -fexceptions -fcxx-exceptions -emit-pch -o %t %s -fopenmp-version=50 -DOMP5
-// RUN: %clang_cc1 -fopenmp-simd -x c++ -triple x86_64-unknown-unknown -fexceptions -fcxx-exceptions -debug-info-kind=limited -std=c++11 -include-pch %t -verify %s -emit-llvm -o - -fopenmp-version=50 -DOMP5 | FileCheck %s --check-prefix=CHECK --check-prefix=OMP50
+// RUN: %clang_cc1 -fopenmp-simd -x c++ -triple x86_64-unknown-unknown -fexceptions -fcxx-exceptions -debug-info-kind=limited -std=c++11 -include-pch %t -verify %s -emit-llvm -o - -fopenmp-version=50 -DOMP5 | FileCheck %s --check-prefix=CHECK --check-prefix=OMP5
 // expected-no-diagnostics
  #ifndef HEADER
  #define HEADER
@@ -23,8 +23,8 @@
 #define CONDITIONAL
 #endif //OMP5
 // CHECK: [[SS_TY:%.+]] = type { i32 }
-// OMP50-DAG: [[LAST_IV:@.+]] = {{.*}}common global i64 0
-// OMP50-DAG: [[LAST_A:@.+]] = {{.*}}common global i32 0
+// OMP5-DAG: [[LAST_IV:@.+]] = {{.*}}common global i64 0
+// OMP5-DAG: [[LAST_A:@.+]] = {{.*}}common global i32 0
 
 long long get_val() { extern void mayThrow(); mayThrow(); return 0; }
 double *g_ptr;
@@ -57,12 +57,12 @@ void simple(float *a, float *b, float *c, float *d) {
 // End of body: store into a[i]:
 // OMP45-NOT: load ptr,{{.*}}!nontemporal
 // CHECK-NOT: load float,{{.*}}!nontemporal
-// OMP50: load ptr,{{.*}}!nontemporal
-// OMP50: load ptr,{{.*}}!nontemporal
-// OMP50: load ptr,{{.*}}!nontemporal
-// OMP50: load i32,{{.*}}!nontemporal
-// OMP50-NOT: load i32,{{.*}}!nontemporal
-// OMP50: load ptr,{{.*}}!nontemporal
+// OMP5: load ptr,{{.*}}!nontemporal
+// OMP5: load ptr,{{.*}}!nontemporal
+// OMP5: load ptr,{{.*}}!nontemporal
+// OMP5: load i32,{{.*}}!nontemporal
+// OMP5-NOT: load i32,{{.*}}!nontemporal
+// OMP5: load ptr,{{.*}}!nontemporal
 // CHECK-NOT: load float,{{.*}}!nontemporal
 // CHECK: store float [[RESULT:%.+]], ptr {{%.+}}{{.*}}!llvm.access.group
     a[i] = b[i] * c[i] * d[i] + s.a + p->a;
@@ -240,18 +240,18 @@ void simple(float *a, float *b, float *c, float *d) {
 // CHECK-NEXT: [[ADD:%.+]] = add nsw i64 [[CAST]], [[LC_VAL]]
 // CHECK-NEXT: [[CONV:%.+]] = trunc i64 [[ADD]] to i32
 // CHECK-NEXT: store i32 [[CONV]], ptr [[A_PRIV]],{{.+}}!llvm.access.group
-// OMP50-NEXT: [[IV:%.+]] = load i64, ptr [[OMP_IV7]],{{.+}}!llvm.access.group
-// OMP50RT:    call void @__kmpc_critical(ptr {{.+}}, i32 [[GTID:%.+]], ptr [[A_REGION:@.+]]),{{.+}}!llvm.access.group
-// OMP50-NEXT: [[LAST_IV_VAL:%.+]] = load i64, ptr [[LAST_IV]],{{.+}}!llvm.access.group
-// OMP50-NEXT: [[CMP:%.+]] = icmp sle i64 [[LAST_IV_VAL]], [[IV]]
-// OMP50-NEXT: br i1 [[CMP]], label %[[LP_THEN:.+]], label %[[LP_DONE:[^,]+]]
-// OMP50:      [[LP_THEN]]:
-// OMP50-NEXT: store i64 [[IV]], ptr [[LAST_IV]],{{.+}}!llvm.access.group
-// OMP50-NEXT: [[A_VAL:%.+]] = load i32, ptr [[A_PRIV]],{{.+}}!llvm.access.group
-// OMP50-NEXT: store i32 [[A_VAL]], ptr [[LAST_A]],{{.+}}!llvm.access.group
-// OMP50-NEXT: br label %[[LP_DONE]]
-// OMP50:      [[LP_DONE]]:
-// OMP50RT-NEXT: call void @__kmpc_end_critical(ptr {{.+}}, i32 [[GTID]], ptr [[A_REGION]]),{{.+}}!llvm.access.group
+// OMP5-NEXT: [[IV:%.+]] = load i64, ptr [[OMP_IV7]],{{.+}}!llvm.access.group
+// OMP5RT:    call void @__kmpc_critical(ptr {{.+}}, i32 [[GTID:%.+]], ptr [[A_REGION:@.+]]),{{.+}}!llvm.access.group
+// OMP5-NEXT: [[LAST_IV_VAL:%.+]] = load i64, ptr [[LAST_IV]],{{.+}}!llvm.access.group
+// OMP5-NEXT: [[CMP:%.+]] = icmp sle i64 [[LAST_IV_VAL]], [[IV]]
+// OMP5-NEXT: br i1 [[CMP]], label %[[LP_THEN:.+]], label %[[LP_DONE:[^,]+]]
+// OMP5:      [[LP_THEN]]:
+// OMP5-NEXT: store i64 [[IV]], ptr [[LAST_IV]],{{.+}}!llvm.access.group
+// OMP5-NEXT: [[A_VAL:%.+]] = load i32, ptr [[A_PRIV]],{{.+}}!llvm.access.group
+// OMP5-NEXT: store i32 [[A_VAL]], ptr [[LAST_A]],{{.+}}!llvm.access.group
+// OMP5-NEXT: br label %[[LP_DONE]]
+// OMP5:      [[LP_DONE]]:
+// OMP5RT-NEXT: call void @__kmpc_end_critical(ptr {{.+}}, i32 [[GTID]], ptr [[A_REGION]]),{{.+}}!llvm.access.group
     A += i;
 // CHECK: [[IV7_2:%.+]] = load i64, ptr [[OMP_IV7]]{{.*}}!llvm.access.group
 // CHECK-NEXT: [[ADD7_2:%.+]] = add nsw i64 [[IV7_2]], 1
@@ -259,8 +259,8 @@ void simple(float *a, float *b, float *c, float *d) {
   }
 // CHECK: [[SIMPLE_LOOP7_END]]:
 // CHECK-NEXT: store i64 11, ptr
-// OMP50-NEXT: [[LAST_A_VAL:%.+]] = load i32, ptr [[LAST_A]],
-// OMP50-NEXT: store i32 [[LAST_A_VAL]], ptr [[A_PRIV]],
+// OMP5-NEXT: [[LAST_A_VAL:%.+]] = load i32, ptr [[LAST_A]],
+// OMP5-NEXT: store i32 [[LAST_A_VAL]], ptr [[A_PRIV]],
 // CHECK-NEXT: [[A_PRIV_VAL:%.+]] = load i32, ptr [[A_PRIV]],
 // CHECK-NEXT: store i32 [[A_PRIV_VAL]], ptr [[A]],
   int R;
@@ -273,10 +273,10 @@ void simple(float *a, float *b, float *c, float *d) {
 #else
   #pragma omp simd reduction(*:R)
 #endif
-// OMP50:      [[A_VAL:%.+]] = load i32, ptr [[A]],
-// OMP50-NEXT: [[COND:%.+]] = icmp ne i32 [[A_VAL]], 0
-// OMP50-NEXT: br i1 [[COND]], label {{%?}}[[THEN:[^,]+]], label {{%?}}[[ELSE:[^,]+]]
-// OMP50:      [[THEN]]:
+// OMP5:      [[A_VAL:%.+]] = load i32, ptr [[A]],
+// OMP5-NEXT: [[COND:%.+]] = icmp ne i32 [[A_VAL]], 0
+// OMP5-NEXT: br i1 [[COND]], label {{%?}}[[THEN:[^,]+]], label {{%?}}[[ELSE:[^,]+]]
+// OMP5:      [[THEN]]:
 
 // CHECK: br label %[[SIMD_LOOP8_COND:[^,]+]]
 // CHECK: [[SIMD_LOOP8_COND]]:
@@ -298,27 +298,27 @@ void simple(float *a, float *b, float *c, float *d) {
 // CHECK-NEXT: store i64 [[ADD8_2]], ptr [[OMP_IV8]]{{.*}}!llvm.access.group
   }
 // CHECK: [[SIMPLE_LOOP8_END]]:
-// OMP50: br label {{%?}}[[EXIT:[^,]+]]
-// OMP50: br label %[[SIMD_LOOP8_COND:[^,]+]]
-// OMP50: [[SIMD_LOOP8_COND]]:
-// OMP50-NEXT: [[IV8:%.+]] = load i64, ptr [[OMP_IV8]],{{[^!]*}}
-// OMP50-NEXT: [[CMP8:%.+]] = icmp slt i64 [[IV8]], 7
-// OMP50-NEXT: br i1 [[CMP8]], label %[[SIMPLE_LOOP8_BODY:.+]], label %[[SIMPLE_LOOP8_END:[^,]+]]
-// OMP50: [[SIMPLE_LOOP8_BODY]]:
+// OMP5: br label {{%?}}[[EXIT:[^,]+]]
+// OMP5: br label %[[SIMD_LOOP8_COND:[^,]+]]
+// OMP5: [[SIMD_LOOP8_COND]]:
+// OMP5-NEXT: [[IV8:%.+]] = load i64, ptr [[OMP_IV8]],{{[^!]*}}
+// OMP5-NEXT: [[CMP8:%.+]] = icmp slt i64 [[IV8]], 7
+// OMP5-NEXT: br i1 [[CMP8]], label %[[SIMPLE_LOOP8_BODY:.+]], label %[[SIMPLE_LOOP8_END:[^,]+]]
+// OMP5: [[SIMPLE_LOOP8_BODY]]:
 // Start of body: calculate i from IV:
-// OMP50: [[IV8_0:%.+]] = load i64, ptr [[OMP_IV8]],{{[^!]*}}
-// OMP50-NEXT: [[LC_IT_1:%.+]] = mul nsw i64 [[IV8_0]], 3
-// OMP50-NEXT: [[LC_IT_2:%.+]] = add nsw i64 -10, [[LC_IT_1]]
-// OMP50-NEXT: store i64 [[LC_IT_2]], ptr [[LC:%[^,]+]],{{[^!]*}}
-// OMP50-NEXT: [[LC_VAL:%.+]] = load i64, ptr [[LC]],{{[^!]*}}
-// OMP50: store i32 %{{.+}}, ptr [[R_PRIV]],{{[^!]*}}
-// OMP50: [[IV8_2:%.+]] = load i64, ptr [[OMP_IV8]],{{[^!]*}}
-// OMP50-NEXT: [[ADD8_2:%.+]] = add nsw i64 [[IV8_2]], 1
-// OMP50-NEXT: store i64 [[ADD8_2]], ptr [[OMP_IV8]],{{[^!]*}}
-// OMP50:      br label {{%?}}[[SIMD_LOOP8_COND]], {{.*}}!llvm.loop ![[DISABLE_VECT:.+]]
-// OMP50: [[SIMPLE_LOOP8_END]]:
-// OMP50: br label {{%?}}[[EXIT]]
-// OMP50: [[EXIT]]:
+// OMP5: [[IV8_0:%.+]] = load i64, ptr [[OMP_IV8]],{{[^!]*}}
+// OMP5-NEXT: [[LC_IT_1:%.+]] = mul nsw i64 [[IV8_0]], 3
+// OMP5-NEXT: [[LC_IT_2:%.+]] = add nsw i64 -10, [[LC_IT_1]]
+// OMP5-NEXT: store i64 [[LC_IT_2]], ptr [[LC:%[^,]+]],{{[^!]*}}
+// OMP5-NEXT: [[LC_VAL:%.+]] = load i64, ptr [[LC]],{{[^!]*}}
+// OMP5: store i32 %{{.+}}, ptr [[R_PRIV]],{{[^!]*}}
+// OMP5: [[IV8_2:%.+]] = load i64, ptr [[OMP_IV8]],{{[^!]*}}
+// OMP5-NEXT: [[ADD8_2:%.+]] = add nsw i64 [[IV8_2]], 1
+// OMP5-NEXT: store i64 [[ADD8_2]], ptr [[OMP_IV8]],{{[^!]*}}
+// OMP5:      br label {{%?}}[[SIMD_LOOP8_COND]], {{.*}}!llvm.loop ![[DISABLE_VECT:.+]]
+// OMP5: [[SIMPLE_LOOP8_END]]:
+// OMP5: br label {{%?}}[[EXIT]]
+// OMP5: [[EXIT]]:
 
 // CHECK-DAG: [[R_VAL:%.+]] = load i32, ptr [[R]],
 // CHECK-DAG: [[R_PRIV_VAL:%.+]] = load i32, ptr [[R_PRIV]],
@@ -753,20 +753,20 @@ void linear(float *a) {
 }
 
 #ifdef OMP5
-// OMP50-LABEL: inner_simd
+// OMP5-LABEL: inner_simd
 void inner_simd() {
   double a, b;
 #pragma omp simd nontemporal(a)
   for (int i = 0; i < 10; ++i) {
 #pragma omp simd nontemporal(b)
     for (int k = 0; k < 10; ++k) {
-      // OMP50: load double,{{.*}}!nontemporal
-      // OMP50: store double{{.*}}!nontemporal
+      // OMP5: load double,{{.*}}!nontemporal
+      // OMP5: store double{{.*}}!nontemporal
       a = b;
     }
-    // OMP50-NOT: load double,{{.*}}!nontemporal
-    // OMP50: load double,
-    // OMP50: store double{{.*}}!nontemporal
+    // OMP5-NOT: load double,{{.*}}!nontemporal
+    // OMP5: load double,
+    // OMP5: store double{{.*}}!nontemporal
     a = b;
   }
 }
@@ -779,9 +779,9 @@ struct T : public Base {
   void foo() {
 #pragma omp simd nontemporal(Base::a)
     for (int i = 0; i < 10; ++i) {
-    // OMP50: store float{{.*}}!nontemporal
-    // OMP50-NOT: nontemporal
-    // OMP50-NEXT: store float
+    // OMP5: store float{{.*}}!nontemporal
+    // OMP5-NOT: nontemporal
+    // OMP5-NEXT: store float
       Base::a = 0;
       t.a = 0;
     }
@@ -861,7 +861,7 @@ S8 s8(0);
 
 // TERM_DEBUG-NOT: line: 0,
 // TERM_DEBUG: distinct !DISubprogram(linkageName: "_GLOBAL__sub_I_simd_codegen.cpp",
-// OMP50-DAG: ![[NOVECT:.+]] = !{!"llvm.loop.vectorize.enable", i1 false}
-// OMP50-DAG: ![[DISABLE_VECT]] = distinct !{{.*}}![[NOVECT]]{{[,}]}}
+// OMP5-DAG: ![[NOVECT:.+]] = !{!"llvm.loop.vectorize.enable", i1 false}
+// OMP5-DAG: ![[DISABLE_VECT]] = distinct !{{.*}}![[NOVECT]]{{[,}]}}
 #endif // HEADER
 
