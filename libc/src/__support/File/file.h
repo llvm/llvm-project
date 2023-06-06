@@ -11,6 +11,7 @@
 
 #include "src/__support/CPP/new.h"
 #include "src/__support/error_or.h"
+#include "src/__support/macros/properties/architectures.h"
 #include "src/__support/threads/mutex.h"
 
 #include <stddef.h>
@@ -36,6 +37,15 @@ struct FileIOResult {
 class File {
 public:
   static constexpr size_t DEFAULT_BUFFER_SIZE = 1024;
+
+// Some platforms like the GPU build cannot support buffering due to extra
+// resource usage or hardware constraints. This function allows us to optimize
+// out the buffering portions of the code in the general implementation.
+#if defined(LIBC_TARGET_ARCH_IS_GPU)
+  static constexpr bool ENABLE_BUFFER = false;
+#else
+  static constexpr bool ENABLE_BUFFER = true;
+#endif
 
   using LockFunc = void(File *);
   using UnlockFunc = void(File *);
@@ -174,10 +184,14 @@ protected:
                    static_cast<ModeFlags>(OpenMode::PLUS));
   }
 
+  // The GPU build should not emit a destructor because we do not support global
+  // destructors in all cases and it is unneccessary without buffering.
+#if !defined(LIBC_TARGET_ARCH_IS_GPU)
   ~File() {
     if (own_buf)
       delete buf;
   }
+#endif
 
 public:
   // We want this constructor to be constexpr so that global file objects
@@ -197,7 +211,8 @@ public:
         bufsize(buffer_size), bufmode(buffer_mode), own_buf(owned),
         mode(modeflags), pos(0), prev_op(FileOp::NONE), read_limit(0),
         eof(false), err(false) {
-    adjust_buf();
+    if constexpr (ENABLE_BUFFER)
+      adjust_buf();
   }
 
   // Close |f| and cleanup resources held by it.
