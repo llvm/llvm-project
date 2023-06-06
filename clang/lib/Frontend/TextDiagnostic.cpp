@@ -868,10 +868,11 @@ void TextDiagnostic::emitDiagnosticLoc(FullSourceLoc Loc, PresumedLoc PLoc,
 }
 
 void TextDiagnostic::emitIncludeLocation(FullSourceLoc Loc, PresumedLoc PLoc) {
-  if (DiagOpts->ShowLocation && PLoc.isValid())
-    OS << "In file included from " << PLoc.getFilename() << ':'
-       << PLoc.getLine() << ":\n";
-  else
+  if (DiagOpts->ShowLocation && PLoc.isValid()) {
+    OS << "In file included from ";
+    emitFilename(PLoc.getFilename(), Loc.getManager());
+    OS << ':' << PLoc.getLine() << ":\n";
+  } else
     OS << "In included file:\n";
 }
 
