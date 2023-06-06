@@ -1641,6 +1641,8 @@ public:
   OperandMatchResultTy parseGlobalSReg64Imm(OperandVector &Operands);
   OperandMatchResultTy tryParseIndexKey(OperandVector &Operands,
                                         AMDGPUOperand::ImmTy ImmTy);
+  OperandMatchResultTy parseIndexKey8bit(OperandVector &Operands);
+  OperandMatchResultTy parseIndexKey16bit(OperandVector &Operands);
 
   OperandMatchResultTy parseDfmtNfmt(int64_t &Format);
   OperandMatchResultTy parseUfmt(int64_t &Format);
@@ -1825,7 +1827,7 @@ public:
   AMDGPUOperand::Ptr defaultSMEMOffsetMod() const;
   AMDGPUOperand::Ptr defaultFlatOffset() const;
 
-  OperandMatchResultTy parseOModOperand(OperandVector &Operands);
+  OperandMatchResultTy parseOModSI(OperandVector &Operands);
 
   void cvtVOP3(MCInst &Inst, const OperandVector &Operands,
                OptionalImmIndexMap &OptionalIdx);
@@ -6609,6 +6611,16 @@ AMDGPUAsmParser::tryParseIndexKey(OperandVector &Operands,
   return MatchOperand_Success;
 }
 
+OperandMatchResultTy
+AMDGPUAsmParser::parseIndexKey8bit(OperandVector &Operands) {
+    return tryParseIndexKey(Operands, AMDGPUOperand::ImmTyIndexKey8bit);
+}
+
+OperandMatchResultTy
+AMDGPUAsmParser::parseIndexKey16bit(OperandVector &Operands) {
+    return tryParseIndexKey(Operands, AMDGPUOperand::ImmTyIndexKey16bit);
+}
+
 // dfmt and nfmt (in a tbuffer instruction) are parsed as one to allow their
 // values to live in a joint format operand in the MCInst encoding.
 OperandMatchResultTy
@@ -8531,7 +8543,7 @@ void AMDGPUAsmParser::onBeginOfFile() {
     getTargetStreamer().EmitDirectiveAMDGCNTarget();
 }
 
-OperandMatchResultTy AMDGPUAsmParser::parseOModOperand(OperandVector &Operands) {
+OperandMatchResultTy AMDGPUAsmParser::parseOModSI(OperandVector &Operands) {
   StringRef Name = getTokenStr();
   if (Name == "mul") {
     return parseIntWithPrefix("mul", Operands,
@@ -9708,28 +9720,8 @@ AMDGPUAsmParser::parseCustomOperand(OperandVector &Operands, unsigned MCK) {
     return parseTokenOp("off", Operands);
   case MCK_row_95_en:
     return parseTokenOp("row_en", Operands);
-  case MCK_ImmCPol:
-    return parseCPol(Operands);
   case MCK_gds:
     return parseNamedBit("gds", Operands, AMDGPUOperand::ImmTyGDS);
-  case MCK_ImmNegHi:
-    return parseOperandArrayWithPrefix("neg_hi", Operands,
-                                       AMDGPUOperand::ImmTyNegHi);
-  case MCK_ImmNegLo:
-    return parseOperandArrayWithPrefix("neg_lo", Operands,
-                                       AMDGPUOperand::ImmTyNegLo);
-  case MCK_ImmIndexKey16bit:
-    return tryParseIndexKey(Operands, AMDGPUOperand::ImmTyIndexKey16bit);
-  case MCK_ImmIndexKey8bit:
-    return tryParseIndexKey(Operands, AMDGPUOperand::ImmTyIndexKey8bit);
-  case MCK_ImmOModSI:
-    return parseOModOperand(Operands);
-  case MCK_ImmOpSel:
-    return parseOperandArrayWithPrefix("op_sel", Operands,
-                                       AMDGPUOperand::ImmTyOpSel);
-  case MCK_ImmOpSelHi:
-    return parseOperandArrayWithPrefix("op_sel_hi", Operands,
-                                       AMDGPUOperand::ImmTyOpSelHi);
   case MCK_tfe:
     return parseNamedBit("tfe", Operands, AMDGPUOperand::ImmTyTFE);
   }

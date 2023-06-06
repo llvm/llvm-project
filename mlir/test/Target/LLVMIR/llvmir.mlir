@@ -2019,6 +2019,8 @@ llvm.func @switch_weights(%arg0: i32) -> i32 {
 
 // -----
 
+llvm.func @foo(%arg0: !llvm.ptr)
+
 // CHECK-LABEL: aliasScope
 llvm.func @aliasScope(%arg1 : !llvm.ptr) {
   %0 = llvm.mlir.constant(0 : i32) : i32
@@ -2038,6 +2040,10 @@ llvm.func @aliasScope(%arg1 : !llvm.ptr) {
   "llvm.intr.memcpy"(%arg1, %arg1, %0, %4) {alias_scopes = [@metadata::@scope3]} : (!llvm.ptr, !llvm.ptr, i32, i1) -> ()
   // CHECK:  llvm.memset{{.*}}, !noalias ![[SCOPES3]]
   "llvm.intr.memset"(%arg1, %5, %0, %4) {noalias_scopes = [@metadata::@scope3]} : (!llvm.ptr, i8, i32, i1) -> ()
+  // CHECK: call void @foo({{.*}} !alias.scope ![[SCOPES3]]
+  llvm.call @foo(%arg1) {alias_scopes = [@metadata::@scope3]} : (!llvm.ptr) -> ()
+  // CHECK: call void @foo({{.*}} !noalias ![[SCOPES3]]
+  llvm.call @foo(%arg1) {noalias_scopes = [@metadata::@scope3]} : (!llvm.ptr) -> ()
   llvm.return
 }
 

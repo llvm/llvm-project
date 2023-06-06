@@ -168,6 +168,30 @@ class HlfirReductionIntrinsicConversion : public HlfirIntrinsicConversion<OP> {
   using HlfirIntrinsicConversion<OP>::HlfirIntrinsicConversion;
   using IntrinsicArgument =
       typename HlfirIntrinsicConversion<OP>::IntrinsicArgument;
+  using HlfirIntrinsicConversion<OP>::lowerArguments;
+  using HlfirIntrinsicConversion<OP>::processReturnValue;
+
+protected:
+  auto buildNumericalArgs(OP operation, mlir::Type i32, mlir::Type logicalType,
+                          mlir::PatternRewriter &rewriter,
+                          std::string opName) const {
+    llvm::SmallVector<IntrinsicArgument, 3> inArgs;
+    inArgs.push_back({operation.getArray(), operation.getArray().getType()});
+    inArgs.push_back({operation.getDim(), i32});
+    inArgs.push_back({operation.getMask(), logicalType});
+    auto *argLowering = fir::getIntrinsicArgumentLowering(opName);
+    return lowerArguments(operation, inArgs, rewriter, argLowering);
+  };
+
+  auto buildLogicalArgs(OP operation, mlir::Type i32, mlir::Type logicalType,
+                        mlir::PatternRewriter &rewriter,
+                        std::string opName) const {
+    llvm::SmallVector<IntrinsicArgument, 2> inArgs;
+    inArgs.push_back({operation.getMask(), logicalType});
+    inArgs.push_back({operation.getDim(), i32});
+    auto *argLowering = fir::getIntrinsicArgumentLowering(opName);
+    return lowerArguments(operation, inArgs, rewriter, argLowering);
+  };
 
 public:
   mlir::LogicalResult
@@ -178,9 +202,14 @@ public:
       opName = "sum";
     } else if constexpr (std::is_same_v<OP, hlfir::ProductOp>) {
       opName = "product";
+    } else if constexpr (std::is_same_v<OP, hlfir::AnyOp>) {
+      opName = "any";
+    } else if constexpr (std::is_same_v<OP, hlfir::AllOp>) {
+      opName = "all";
     } else {
       return mlir::failure();
     }
+
     fir::KindMapping kindMapping{rewriter.getContext()};
     fir::FirOpBuilder builder{rewriter, kindMapping};
     const mlir::Location &loc = operation->getLoc();
@@ -188,14 +217,15 @@ public:
     mlir::Type i32 = builder.getI32Type();
     mlir::Type logicalType = fir::LogicalType::get(
         builder.getContext(), builder.getKindMap().defaultLogicalKind());
-    llvm::SmallVector<IntrinsicArgument, 3> inArgs;
-    inArgs.push_back({operation.getArray(), operation.getArray().getType()});
-    inArgs.push_back({operation.getDim(), i32});
-    inArgs.push_back({operation.getMask(), logicalType});
 
-    auto *argLowering = fir::getIntrinsicArgumentLowering(opName);
-    llvm::SmallVector<fir::ExtendedValue, 3> args =
-        this->lowerArguments(operation, inArgs, rewriter, argLowering);
+    llvm::SmallVector<fir::ExtendedValue, 0> args;
+
+    if constexpr (std::is_same_v<OP, hlfir::SumOp> ||
+                  std::is_same_v<OP, hlfir::ProductOp>) {
+      args = buildNumericalArgs(operation, i32, logicalType, rewriter, opName);
+    } else {
+      args = buildLogicalArgs(operation, i32, logicalType, rewriter, opName);
+    }
 
     mlir::Type scalarResultType =
         hlfir::getFortranElementType(operation.getType());
@@ -203,8 +233,7 @@ public:
     auto [resultExv, mustBeFreed] =
         fir::genIntrinsicCall(builder, loc, opName, scalarResultType, args);
 
-    this->processReturnValue(operation, resultExv, mustBeFreed, builder,
-                             rewriter);
+    processReturnValue(operation, resultExv, mustBeFreed, builder, rewriter);
     return mlir::success();
   }
 };
@@ -213,37 +242,9 @@ using SumOpConversion = HlfirReductionIntrinsicConversion<hlfir::SumOp>;
 
 using ProductOpConversion = HlfirReductionIntrinsicConversion<hlfir::ProductOp>;
 
-struct AnyOpConversion : public HlfirIntrinsicConversion<hlfir::AnyOp> {
-  using HlfirIntrinsicConversion<hlfir::AnyOp>::HlfirIntrinsicConversion;
+using AnyOpConversion = HlfirReductionIntrinsicConversion<hlfir::AnyOp>;
 
-  mlir::LogicalResult
-  matchAndRewrite(hlfir::AnyOp any,
-                  mlir::PatternRewriter &rewriter) const override {
-    fir::KindMapping kindMapping{rewriter.getContext()};
-    fir::FirOpBuilder builder{rewriter, kindMapping};
-    const mlir::Location &loc = any->getLoc();
-
-    mlir::Type i32 = builder.getI32Type();
-    mlir::Type logicalType = fir::LogicalType::get(
-        builder.getContext(), builder.getKindMap().defaultLogicalKind());
-    llvm::SmallVector<IntrinsicArgument, 2> inArgs;
-    inArgs.push_back({any.getMask(), logicalType});
-    inArgs.push_back({any.getDim(), i32});
-
-    auto *argLowering = fir::getIntrinsicArgumentLowering("any");
-    llvm::SmallVector<fir::ExtendedValue, 2> args =
-        this->lowerArguments(any, inArgs, rewriter, argLowering);
-
-    mlir::Type resultType = hlfir::getFortranElementType(any.getType());
-
-    auto [resultExv, mustBeFreed] =
-        fir::genIntrinsicCall(builder, loc, "any", resultType, args);
-
-    this->processReturnValue(any, resultExv, mustBeFreed, builder, rewriter);
-
-    return mlir::success();
-  }
-};
+using AllOpConversion = HlfirReductionIntrinsicConversion<hlfir::AllOp>;
 
 struct MatmulOpConversion : public HlfirIntrinsicConversion<hlfir::MatmulOp> {
   using HlfirIntrinsicConversion<hlfir::MatmulOp>::HlfirIntrinsicConversion;
@@ -354,14 +355,15 @@ public:
     mlir::MLIRContext *context = &getContext();
     mlir::RewritePatternSet patterns(context);
     patterns.insert<MatmulOpConversion, MatmulTransposeOpConversion,
-                    AnyOpConversion, SumOpConversion, ProductOpConversion,
-                    TransposeOpConversion>(context);
+                    AllOpConversion, AnyOpConversion, SumOpConversion,
+                    ProductOpConversion, TransposeOpConversion>(context);
     mlir::ConversionTarget target(*context);
     target.addLegalDialect<mlir::BuiltinDialect, mlir::arith::ArithDialect,
                            mlir::func::FuncDialect, fir::FIROpsDialect,
                            hlfir::hlfirDialect>();
     target.addIllegalOp<hlfir::MatmulOp, hlfir::MatmulTransposeOp, hlfir::SumOp,
-                        hlfir::ProductOp, hlfir::TransposeOp, hlfir::AnyOp>();
+                        hlfir::ProductOp, hlfir::TransposeOp, hlfir::AnyOp,
+                        hlfir::AllOp>();
     target.markUnknownOpDynamicallyLegal(
         [](mlir::Operation *) { return true; });
     if (mlir::failed(

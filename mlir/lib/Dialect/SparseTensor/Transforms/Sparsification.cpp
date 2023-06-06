@@ -515,6 +515,15 @@ static bool topSortOptimal(CodegenEnv &env,
   return env.topSortSize() == numLoops;
 }
 
+static void addIterOrdering(LoopId f, LoopId t,
+                            std::vector<std::vector<bool>> &adjM,
+                            std::vector<unsigned> &inDegree) {
+  if (!adjM[f][t] && f != t) {
+    adjM[f][t] = true;
+    inDegree[t]++;
+  }
+}
+
 /// Helper method to add all constraints from the indices in one affine
 /// expression before all indices in the other affine expression. For
 /// example i0+i1 < i2+i3+1 yields i0<i2, i0<i3, i1<i2, and i1<i3.
@@ -533,10 +542,7 @@ static void addAffineOrderings(std::vector<std::vector<bool>> &adjM,
     // Recursion leaf.
     assert(fidx && tidx);
     const LoopId f = *fidx, t = *tidx;
-    if (!adjM[f][t]) {
-      adjM[f][t] = true;
-      inDegree[t]++;
-    }
+    addIterOrdering(f, t, adjM, inDegree);
     return;
   }
   // Picks an affine expression and expand (recurse into) it.
@@ -693,6 +699,18 @@ static void addSliceBasedConstraints(CodegenEnv &env, OpOperand &t,
     const AffineExpr fa = map.getResult(toOrigDim(enc, lvl - 1));
     const AffineExpr ta = map.getResult(toOrigDim(enc, lvl));
 
+    if (auto fdim = fa.dyn_cast<AffineDimExpr>()) {
+      AffineDimCollector tCollector;
+      tCollector.walkPostOrder(ta);
+
+      const LoopId f = env.makeLoopId(fdim.getPosition());
+      for (auto td : tCollector.dims) {
+        const LoopId t = env.makeLoopId(td.getPosition());
+        addIterOrdering(f, t, adjM, inDegree);
+      }
+      continue;
+    }
+
     // This is a heuristic, we pick an abitrary reduction loop from lhs and
     // rhs and use them as d_x and d_y.
     finder.walkPostOrder(fa);
@@ -704,10 +722,7 @@ static void addSliceBasedConstraints(CodegenEnv &env, OpOperand &t,
     const LoopId tldx = env.makeLoopId(texp.getPosition());
 
     // d_x > d_y
-    if (!adjM[fldx][tldx]) {
-      adjM[fldx][tldx] = true;
-      inDegree[tldx]++;
-    }
+    addIterOrdering(fldx, tldx, adjM, inDegree);
 
     AffineDimCollector fCollector;
     fCollector.walkPostOrder(fa);
@@ -717,21 +732,11 @@ static void addSliceBasedConstraints(CodegenEnv &env, OpOperand &t,
     // make sure dx and dy is the last;
     for (auto fd : fCollector.dims) {
       const LoopId f = env.makeLoopId(fd.getPosition());
-      if (f == fldx)
-        continue;
-      if (!adjM[f][fldx]) {
-        adjM[f][fldx] = true;
-        inDegree[fldx]++;
-      }
+      addIterOrdering(f, fldx, adjM, inDegree);
     }
     for (auto td : tCollector.dims) {
       const LoopId t = env.makeLoopId(td.getPosition());
-      if (t == tldx)
-        continue;
-      if (!adjM[t][tldx]) {
-        adjM[t][tldx] = true;
-        inDegree[tldx]++;
-      }
+      addIterOrdering(t, tldx, adjM, inDegree);
     }
     // Since we only support affine addition, the order between two dim
     // expression does not really matters.
@@ -746,15 +751,11 @@ static void addSliceBasedConstraints(CodegenEnv &env, OpOperand &t,
       const LoopId f = env.makeLoopId(fd.getPosition());
       if (f == fldx) // skip d_x
         continue;
-
       for (auto td : tCollector.dims) {
         const LoopId t = env.makeLoopId(td.getPosition());
         if (t == tldx) // skip d_y
           continue;
-        if (!adjM[f][t]) {
-          adjM[f][t] = true;
-          inDegree[t]++;
-        }
+        addIterOrdering(f, t, adjM, inDegree);
       }
     }
   }
@@ -797,8 +798,7 @@ static bool computeIterationGraph(CodegenEnv &env, SortMask mask,
             isSingletonDLT(dltI)) {
           for (LoopId j = 0; j < numLoops; j++)
             if (isUndefDLT(env.dlt(tid, j))) {
-              adjM[i][j] = true;
-              inDegree[j]++;
+              addIterOrdering(i, j, adjM, inDegree);
             }
         } else {
           assert(isDenseDLT(dltI) || isUndefDLT(dltI));
@@ -1848,6 +1848,24 @@ public:
     if (!findSparseAnnotations(env, idxReducBased))
       return failure();
 
+    // Only standard reduction operations (add, sub, or, xor) that can be
+    // sparsified by merely reducing the stored values are admissible. More
+    // elaborate reduction operations (such as mul, and, min, max) would need
+    // to know whether implicit zeros occur as well. They can still be
+    // implemented with a custom reduction operation, accepted here as well.
+    if (op.getNumReductionLoops() > 0) {
+      Operation *yield = op.getRegion().front().getTerminator();
+      assert(isa<linalg::YieldOp>(yield));
+      Operation *redop = yield->getOperand(0).getDefiningOp();
+      if (!isa<arith::AddFOp>(redop) && !isa<complex::AddOp>(redop) &&
+          !isa<arith::AddIOp>(redop) && !isa<arith::SubFOp>(redop) &&
+          !isa<complex::SubOp>(redop) && !isa<arith::SubIOp>(redop) &&
+          !isa<arith::OrIOp>(redop) && !isa<arith::XOrIOp>(redop) &&
+          !isa<ReduceOp>(redop)) {
+        return failure();
+      }
+    }
+
     // Constructs the tensor expressions tree from `op`, returns failure if the
     // tree can not be built or the tensor expression is inadmissible.
     if (failed(env.initTensorExp()))
@@ -1920,11 +1938,14 @@ private:
       //       especially if it is a direct yield!
       //
       auto srcTp = getRankedTensorType(tval);
-      auto dstEnc = SparseTensorEncodingAttr::get(
-          getContext(), srcEnc.getLvlTypes(),
-          permute(env, env.op().getMatchingIndexingMap(t)), // new order
-          srcEnc.getHigherOrdering(), srcEnc.getPosWidth(),
-          srcEnc.getCrdWidth());
+      // TODO: This assertion is to match the behavior from prior to
+      // merging dimOrdering and higherOrdering into dimToLvl.  However,
+      // since `permute` returns a permutation, we can remove this
+      // restriction by instead composing the result of `permute`
+      // with `srcEnc.getDimToLvl`.
+      assert(srcEnc.isPermutation());
+      auto dstEnc =
+          srcEnc.withDimToLvl(permute(env, env.op().getMatchingIndexingMap(t)));
       auto dstTp = RankedTensorType::get(srcTp.getShape(),
                                          srcTp.getElementType(), dstEnc);
       auto convert = rewriter.create<ConvertOp>(tval.getLoc(), dstTp, tval);

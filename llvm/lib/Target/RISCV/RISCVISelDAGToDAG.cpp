@@ -3249,31 +3249,46 @@ bool RISCVDAGToDAGISel::performCombineVMergeAndVOps(SDNode *N, bool IsTA) {
   uint64_t TrueTSFlags = TII->get(TrueOpc).TSFlags;
   bool HasMergeOp = RISCVII::hasMergeOp(TrueTSFlags);
 
+  bool IsMasked = false;
+  const RISCV::RISCVMaskedPseudoInfo *Info =
+      RISCV::lookupMaskedIntrinsicByUnmaskedTA(TrueOpc);
+  if (!Info && HasMergeOp) {
+    Info = RISCV::getMaskedPseudoInfo(TrueOpc);
+    IsMasked = true;
+  }
+
+  if (!Info)
+    return false;
+
   if (HasMergeOp) {
+    // The vmerge instruction must be TU.
+    // FIXME: This could be relaxed, but we need to handle the policy for the
+    // resulting op correctly.
+    if (IsTA)
+      return false;
+    SDValue MergeOpTrue = True->getOperand(0);
+    // Both the vmerge instruction and the True instruction must have the same
+    // merge operand.
+    if (False != MergeOpTrue)
+      return false;
+  }
+
+  if (IsMasked) {
+    assert(HasMergeOp && "Expected merge op");
     // The vmerge instruction must be TU.
     if (IsTA)
       return false;
-    SDValue MergeOpN = N->getOperand(0);
-    SDValue MergeOpTrue = True->getOperand(0);
-    // Both the vmerge instruction and the True instruction must have the same
-    // merge operand. The vmerge instruction must have an all 1s mask since
-    // we're going to keep the mask from the True instruction.
+    // The vmerge instruction must have an all 1s mask since we're going to keep
+    // the mask from the True instruction.
     // FIXME: Support mask agnostic True instruction which would have an
     // undef merge operand.
-    if (MergeOpN != MergeOpTrue || !usesAllOnesMask(N, /* MaskOpIdx */ 3))
+    if (!usesAllOnesMask(N, /* MaskOpIdx */ 3))
       return false;
   }
 
   // Skip if True has side effect.
   // TODO: Support vleff and vlsegff.
   if (TII->get(TrueOpc).hasUnmodeledSideEffects())
-    return false;
-
-  const RISCV::RISCVMaskedPseudoInfo *Info =
-      HasMergeOp ? RISCV::getMaskedPseudoInfo(TrueOpc)
-                 : RISCV::lookupMaskedIntrinsicByUnmaskedTA(TrueOpc);
-
-  if (!Info)
     return false;
 
   // The last operand of a masked instruction may be glued.
@@ -3324,14 +3339,15 @@ bool RISCVDAGToDAGISel::performCombineVMergeAndVOps(SDNode *N, bool IsTA) {
          "Expected instructions with mask have merge operand.");
 
   SmallVector<SDValue, 8> Ops;
-  if (HasMergeOp) {
+  if (IsMasked) {
     Ops.append(True->op_begin(), True->op_begin() + TrueVLIndex);
     Ops.append({VL, /* SEW */ True.getOperand(TrueVLIndex + 1)});
     Ops.push_back(
         CurDAG->getTargetConstant(Policy, DL, Subtarget->getXLenVT()));
     Ops.append(True->op_begin() + TrueVLIndex + 3, True->op_end());
   } else {
-    Ops.push_back(False);
+    if (!HasMergeOp)
+      Ops.push_back(False);
     Ops.append(True->op_begin(), True->op_begin() + TrueVLIndex);
     Ops.append({Mask, VL, /* SEW */ True.getOperand(TrueVLIndex + 1)});
     Ops.push_back(

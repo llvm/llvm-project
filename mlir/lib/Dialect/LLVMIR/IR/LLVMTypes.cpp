@@ -110,6 +110,59 @@ static void printPointer(AsmPrinter &p, Type elementType,
 }
 
 //===----------------------------------------------------------------------===//
+// custom<ExtTypeParams>
+//===----------------------------------------------------------------------===//
+
+/// Parses the parameter list for a target extension type. The parameter list
+/// contains an optional list of type parameters, followed by an optional list
+/// of integer parameters. Type and integer parameters cannot be interleaved in
+/// the list.
+/// extTypeParams ::= typeList? | intList? | (typeList "," intList)
+/// typeList      ::= type ("," type)*
+/// intList       ::= integer ("," integer)*
+static ParseResult
+parseExtTypeParams(AsmParser &p, SmallVectorImpl<Type> &typeParams,
+                   SmallVectorImpl<unsigned int> &intParams) {
+  bool parseType = true;
+  auto typeOrIntParser = [&]() -> ParseResult {
+    unsigned int i;
+    auto intResult = p.parseOptionalInteger(i);
+    if (intResult.has_value() && !failed(*intResult)) {
+      // Successfully parsed an integer.
+      intParams.push_back(i);
+      // After the first integer was successfully parsed, no
+      // more types can be parsed.
+      parseType = false;
+      return success();
+    }
+    if (parseType) {
+      Type t;
+      if (!parsePrettyLLVMType(p, t)) {
+        // Successfully parsed a type.
+        typeParams.push_back(t);
+        return success();
+      }
+    }
+    return failure();
+  };
+  if (p.parseCommaSeparatedList(typeOrIntParser)) {
+    p.emitError(p.getCurrentLocation(),
+                "failed to parse parameter list for target extension type");
+    return failure();
+  }
+  return success();
+}
+
+static void printExtTypeParams(AsmPrinter &p, ArrayRef<Type> typeParams,
+                               ArrayRef<unsigned int> intParams) {
+  p << typeParams;
+  if (!typeParams.empty() && !intParams.empty())
+    p << ", ";
+
+  p << intParams;
+}
+
+//===----------------------------------------------------------------------===//
 // ODS-Generated Definitions
 //===----------------------------------------------------------------------===//
 
@@ -722,6 +775,35 @@ LLVMScalableVectorType::verify(function_ref<InFlightDiagnostic()> emitError,
 }
 
 //===----------------------------------------------------------------------===//
+// LLVMTargetExtType.
+//===----------------------------------------------------------------------===//
+
+static constexpr llvm::StringRef kSpirvPrefix = "spirv.";
+static constexpr llvm::StringRef kArmSVCount = "aarch64.svcount";
+
+bool LLVM::LLVMTargetExtType::hasProperty(Property prop) const {
+  // See llvm/lib/IR/Type.cpp for reference.
+  uint64_t properties = 0;
+
+  if (getExtTypeName().starts_with(kSpirvPrefix))
+    properties |=
+        (LLVMTargetExtType::HasZeroInit | LLVM::LLVMTargetExtType::CanBeGlobal);
+
+  return (properties & prop) == prop;
+}
+
+bool LLVM::LLVMTargetExtType::supportsMemOps() const {
+  // See llvm/lib/IR/Type.cpp for reference.
+  if (getExtTypeName().starts_with(kSpirvPrefix))
+    return true;
+
+  if (getExtTypeName() == kArmSVCount)
+    return true;
+
+  return false;
+}
+
+//===----------------------------------------------------------------------===//
 // Utility functions.
 //===----------------------------------------------------------------------===//
 
@@ -746,6 +828,7 @@ bool mlir::LLVM::isCompatibleOuterType(Type type) {
       LLVMTokenType,
       LLVMFixedVectorType,
       LLVMScalableVectorType,
+      LLVMTargetExtType,
       LLVMVoidType,
       LLVMX86MMXType
     >(type)) {
@@ -790,6 +873,9 @@ static bool isCompatibleImpl(Type type, DenseSet<Type> &compatibleTypes) {
             if (pointerType.isOpaque())
               return true;
             return isCompatible(pointerType.getElementType());
+          })
+          .Case<LLVMTargetExtType>([&](auto extType) {
+            return llvm::all_of(extType.getTypeParams(), isCompatible);
           })
           // clang-format off
           .Case<
@@ -974,7 +1060,8 @@ llvm::TypeSize mlir::LLVM::getPrimitiveTypeSizeInBits(Type type) {
       .Default([](Type ty) {
         assert((llvm::isa<LLVMVoidType, LLVMLabelType, LLVMMetadataType,
                           LLVMTokenType, LLVMStructType, LLVMArrayType,
-                          LLVMPointerType, LLVMFunctionType>(ty)) &&
+                          LLVMPointerType, LLVMFunctionType, LLVMTargetExtType>(
+                   ty)) &&
                "unexpected missing support for primitive type");
         return llvm::TypeSize::Fixed(0);
       });

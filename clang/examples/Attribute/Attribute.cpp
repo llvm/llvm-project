@@ -43,7 +43,7 @@ struct ExampleAttrInfo : public ParsedAttrInfo {
     // This attribute appertains to functions only.
     if (!isa<FunctionDecl>(D)) {
       S.Diag(Attr.getLoc(), diag::warn_attribute_wrong_decl_type_str)
-          << Attr << "functions";
+          << Attr << Attr.isRegularKeywordAttribute() << "functions";
       return false;
     }
     return true;

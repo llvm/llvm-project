@@ -627,11 +627,11 @@ def PseudoFROUND_S : PseudoFROUND<FPR32>;
 
 /// Loads
 
-defm : LdPat<load, FLW, f32>;
+def : LdPat<load, FLW, f32>;
 
 /// Stores
 
-defm : StPat<store, FSW, FPR32, f32>;
+def : StPat<store, FSW, FPR32, f32>;
 
 } // Predicates = [HasStdExtF]
 

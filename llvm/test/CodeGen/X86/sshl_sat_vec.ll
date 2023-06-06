@@ -48,8 +48,10 @@ define <2 x i64> @vec_v2i64(<2 x i64> %x, <2 x i64> %y) nounwind {
 ;
 ; X64-AVX2-LABEL: vec_v2i64:
 ; X64-AVX2:       # %bb.0:
-; X64-AVX2-NEXT:    vmovapd {{.*#+}} xmm2 = [9223372036854775808,9223372036854775808]
-; X64-AVX2-NEXT:    vmovapd {{.*#+}} xmm3 = [9223372036854775807,9223372036854775807]
+; X64-AVX2-NEXT:    vmovddup {{.*#+}} xmm2 = [9223372036854775808,9223372036854775808]
+; X64-AVX2-NEXT:    # xmm2 = mem[0,0]
+; X64-AVX2-NEXT:    vmovddup {{.*#+}} xmm3 = [9223372036854775807,9223372036854775807]
+; X64-AVX2-NEXT:    # xmm3 = mem[0,0]
 ; X64-AVX2-NEXT:    vblendvpd %xmm0, %xmm2, %xmm3, %xmm3
 ; X64-AVX2-NEXT:    vpsrlvq %xmm1, %xmm2, %xmm2
 ; X64-AVX2-NEXT:    vpsllvq %xmm1, %xmm0, %xmm4
@@ -351,7 +353,7 @@ define <8 x i16> @vec_v8i16(<8 x i16> %x, <8 x i16> %y) nounwind {
 ; X64-AVX2-NEXT:    vpcmpeqw %xmm1, %xmm0, %xmm1
 ; X64-AVX2-NEXT:    vpxor %xmm3, %xmm3, %xmm3
 ; X64-AVX2-NEXT:    vpcmpgtw %xmm0, %xmm3, %xmm0
-; X64-AVX2-NEXT:    vmovdqa {{.*#+}} xmm3 = [32767,32767,32767,32767,32767,32767,32767,32767]
+; X64-AVX2-NEXT:    vpbroadcastw {{.*#+}} xmm3 = [32767,32767,32767,32767,32767,32767,32767,32767]
 ; X64-AVX2-NEXT:    vpblendvb %xmm0, {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm3, %xmm0
 ; X64-AVX2-NEXT:    vpblendvb %xmm1, %xmm2, %xmm0, %xmm0
 ; X64-AVX2-NEXT:    vzeroupper
@@ -620,7 +622,7 @@ define <16 x i8> @vec_v16i8(<16 x i8> %x, <16 x i8> %y) nounwind {
 ; X64-AVX2-NEXT:    vpsrlw $8, %xmm1, %xmm1
 ; X64-AVX2-NEXT:    vpackuswb %xmm3, %xmm1, %xmm1
 ; X64-AVX2-NEXT:    vpcmpeqb %xmm1, %xmm0, %xmm1
-; X64-AVX2-NEXT:    vmovdqa {{.*#+}} xmm3 = [127,127,127,127,127,127,127,127,127,127,127,127,127,127,127,127]
+; X64-AVX2-NEXT:    vpbroadcastb {{.*#+}} xmm3 = [127,127,127,127,127,127,127,127,127,127,127,127,127,127,127,127]
 ; X64-AVX2-NEXT:    vpblendvb %xmm0, {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm3, %xmm0
 ; X64-AVX2-NEXT:    vpblendvb %xmm1, %xmm2, %xmm0, %xmm0
 ; X64-AVX2-NEXT:    retq

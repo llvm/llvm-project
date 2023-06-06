@@ -588,8 +588,8 @@ public:
   static bool blockNeedsPredication(BasicBlock *BB, Loop *TheLoop,
                                     DominatorTree *DT);
 
-  /// Returns true if the value V is uniform within the loop.
-  bool isUniform(Value *V) const;
+  /// Returns true if value \p V is loop invariant.
+  bool isInvariant(Value *V) const;
 
   uint64_t getMaxSafeDepDistBytes() const { return MaxSafeDepDistBytes; }
   unsigned getNumStores() const { return NumStores; }
@@ -700,8 +700,6 @@ private:
   /// the stride symbol.
   DenseMap<Value *, const SCEV *> SymbolicStrides;
 };
-
-Value *stripIntegerCast(Value *V);
 
 /// Return the SCEV corresponding to a pointer with the symbolic stride
 /// replaced with constant one, assuming the SCEV predicate associated with

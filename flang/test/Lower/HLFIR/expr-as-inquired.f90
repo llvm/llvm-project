@@ -1,7 +1,7 @@
 ! Test lowering to HLFIR of the intrinsic lowering framework
 ! "asInquired" option.
 
-! RUN: bbc -emit-fir -hlfir -o - %s | FileCheck %s
+! RUN: bbc -emit-hlfir -o - %s | FileCheck %s
 
 subroutine test_isAllocated(x, l)
   logical :: l

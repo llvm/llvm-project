@@ -14,7 +14,7 @@
 ; INNERMOST-NEXT: Invariant Accesses: {
 ; INNERMOST-NEXT: }
 ; INNERMOST-NEXT: Context:
-; INNERMOST-NEXT: [p_0, p_1, p_2] -> {  : 0 <= p_0 <= 2147483647 and 0 <= p_1 <= 1024 and 0 <= p_2 <= 1024 }
+; INNERMOST-NEXT: [p_0, p_1, p_2] -> {  : 0 <= p_0 <= 1048576 and 0 <= p_1 <= 1024 and 0 <= p_2 <= 1024 }
 ; INNERMOST-NEXT: Assumed Context:
 ; INNERMOST-NEXT: [p_0, p_1, p_2] -> {  :  }
 ; INNERMOST-NEXT: Invalid Context:
@@ -89,9 +89,9 @@
 ; ALL-NEXT:         ReadAccess :=    [Reduction Type: NONE] [Scalar: 0]
 ; ALL-NEXT:             { Stmt_bb15__TO__bb25[i0, i1] -> MemRef_A[i1] };
 ; ALL-NEXT:         ReadAccess :=    [Reduction Type: NONE] [Scalar: 0]
-; ALL-NEXT:             { Stmt_bb15__TO__bb25[i0, i1] -> MemRef_A[o0] : 0 <= o0 <= 2147483647 };
+; ALL-NEXT:             { Stmt_bb15__TO__bb25[i0, i1] -> MemRef_A[o0] : 0 <= o0 <= 1048576 };
 ; ALL-NEXT:         MayWriteAccess :=    [Reduction Type: NONE] [Scalar: 0]
-; ALL-NEXT:             { Stmt_bb15__TO__bb25[i0, i1] -> MemRef_A[o0] : 0 <= o0 <= 2147483647 };
+; ALL-NEXT:             { Stmt_bb15__TO__bb25[i0, i1] -> MemRef_A[o0] : 0 <= o0 <= 1048576 };
 ; ALL-NEXT: }
 ;
 ;    void f(int *A) {

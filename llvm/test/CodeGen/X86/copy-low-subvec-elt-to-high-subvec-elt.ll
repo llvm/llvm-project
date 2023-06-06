@@ -788,7 +788,8 @@ define <32 x i8> @vec256_eltty_i8_source_subvec_0_target_subvec_mask_3_unary(<32
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vpermq {{.*#+}} ymm1 = ymm0[0,1,0,1]
 ; CHECK-NEXT:    vpslldq {{.*#+}} ymm1 = zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,ymm1[0],zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,ymm1[16]
-; CHECK-NEXT:    vmovdqa {{.*#+}} ymm2 = [255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,0,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,0]
+; CHECK-NEXT:    vbroadcasti128 {{.*#+}} ymm2 = [255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,0,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,0]
+; CHECK-NEXT:    # ymm2 = mem[0,1,0,1]
 ; CHECK-NEXT:    vpblendvb %ymm2, %ymm0, %ymm1, %ymm0
 ; CHECK-NEXT:    retq
   %r = shufflevector <32 x i8> %x, <32 x i8> poison, <32 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 0, i32 16, i32 17, i32 18, i32 19, i32 20, i32 21, i32 22, i32 23, i32 24, i32 25, i32 26, i32 27, i32 28, i32 29, i32 30, i32 0>
@@ -800,7 +801,8 @@ define <32 x i8> @vec256_eltty_i8_source_subvec_0_target_subvec_mask_3_binary(<3
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vpermq {{.*#+}} ymm1 = ymm1[0,1,0,1]
 ; CHECK-NEXT:    vpslldq {{.*#+}} ymm1 = zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,ymm1[0],zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,ymm1[16]
-; CHECK-NEXT:    vmovdqa {{.*#+}} ymm2 = [255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,0,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,0]
+; CHECK-NEXT:    vbroadcasti128 {{.*#+}} ymm2 = [255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,0,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,0]
+; CHECK-NEXT:    # ymm2 = mem[0,1,0,1]
 ; CHECK-NEXT:    vpblendvb %ymm2, %ymm0, %ymm1, %ymm0
 ; CHECK-NEXT:    retq
   %r = shufflevector <32 x i8> %x, <32 x i8> %y, <32 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 32, i32 16, i32 17, i32 18, i32 19, i32 20, i32 21, i32 22, i32 23, i32 24, i32 25, i32 26, i32 27, i32 28, i32 29, i32 30, i32 32>
@@ -857,7 +859,8 @@ define <32 x i8> @vec256_eltty_i8_source_subvec_1_target_subvec_mask_3_unary(<32
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vpermq {{.*#+}} ymm1 = ymm0[2,3,2,3]
 ; CHECK-NEXT:    vpslldq {{.*#+}} ymm1 = zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,ymm1[0],zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,ymm1[16]
-; CHECK-NEXT:    vmovdqa {{.*#+}} ymm2 = [255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,0,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,0]
+; CHECK-NEXT:    vbroadcasti128 {{.*#+}} ymm2 = [255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,0,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,0]
+; CHECK-NEXT:    # ymm2 = mem[0,1,0,1]
 ; CHECK-NEXT:    vpblendvb %ymm2, %ymm0, %ymm1, %ymm0
 ; CHECK-NEXT:    retq
   %r = shufflevector <32 x i8> %x, <32 x i8> poison, <32 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 16, i32 16, i32 17, i32 18, i32 19, i32 20, i32 21, i32 22, i32 23, i32 24, i32 25, i32 26, i32 27, i32 28, i32 29, i32 30, i32 16>
@@ -869,7 +872,8 @@ define <32 x i8> @vec256_eltty_i8_source_subvec_1_target_subvec_mask_3_binary(<3
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vpermq {{.*#+}} ymm1 = ymm1[2,3,2,3]
 ; CHECK-NEXT:    vpslldq {{.*#+}} ymm1 = zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,ymm1[0],zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,ymm1[16]
-; CHECK-NEXT:    vmovdqa {{.*#+}} ymm2 = [255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,0,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,0]
+; CHECK-NEXT:    vbroadcasti128 {{.*#+}} ymm2 = [255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,0,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,0]
+; CHECK-NEXT:    # ymm2 = mem[0,1,0,1]
 ; CHECK-NEXT:    vpblendvb %ymm2, %ymm0, %ymm1, %ymm0
 ; CHECK-NEXT:    retq
   %r = shufflevector <32 x i8> %x, <32 x i8> %y, <32 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 48, i32 16, i32 17, i32 18, i32 19, i32 20, i32 21, i32 22, i32 23, i32 24, i32 25, i32 26, i32 27, i32 28, i32 29, i32 30, i32 48>

@@ -21,6 +21,7 @@
 #include "llvm/MC/MCInstrInfo.h"
 #include "llvm/MC/MCRegisterInfo.h"
 #include "llvm/MC/MCSubtargetInfo.h"
+#include "llvm/Support/CodeGen.h"
 #include "llvm/Target/TargetLoweringObjectFile.h"
 using namespace llvm;
 
@@ -37,6 +38,16 @@ TargetMachine::TargetMachine(const Target &T, StringRef DataLayoutString,
       O0WantsFastISel(false), DefaultOptions(Options), Options(Options) {}
 
 TargetMachine::~TargetMachine() = default;
+
+bool TargetMachine::isLargeData() const {
+  if (getTargetTriple().getArch() != Triple::x86_64)
+    return false;
+  // Large data under the large code model still needs to be thought about, so
+  // restrict this to medium.
+  if (getCodeModel() != CodeModel::Medium)
+    return false;
+  return true;
+}
 
 bool TargetMachine::isPositionIndependent() const {
   return getRelocationModel() == Reloc::PIC_;

@@ -64,7 +64,7 @@ public:
   }
 
   void testRange(CeilFunc func) {
-    constexpr UIntType COUNT = 10000000;
+    constexpr UIntType COUNT = 100'000;
     constexpr UIntType STEP = UIntType(-1) / COUNT;
     for (UIntType i = 0, v = 0; i <= COUNT; ++i, v += STEP) {
       T x = T(FPBits(v));

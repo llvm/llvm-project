@@ -8799,7 +8799,8 @@ CXModule clang_getModuleForFile(CXTranslationUnit TU, CXFile File) {
 
   ASTUnit &Unit = *cxtu::getASTUnit(TU);
   HeaderSearch &HS = Unit.getPreprocessor().getHeaderSearchInfo();
-  ModuleMap::KnownHeader Header = HS.findModuleForHeader(FE);
+  // TODO: Make CXFile a FileEntryRef.
+  ModuleMap::KnownHeader Header = HS.findModuleForHeader(FE->getLastRef());
 
   return Header.getModule();
 }

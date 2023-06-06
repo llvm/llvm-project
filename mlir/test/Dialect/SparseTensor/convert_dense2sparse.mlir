@@ -12,12 +12,12 @@
 
 #CSC = #sparse_tensor.encoding<{
   lvlTypes = [ "dense", "compressed" ],
-  dimOrdering = affine_map<(i, j) -> (j, i)>
+  dimToLvl = affine_map<(i, j) -> (j, i)>
 }>
 
 #SparseTensor = #sparse_tensor.encoding<{
   lvlTypes = ["dense", "compressed", "compressed"],
-  dimOrdering = affine_map<(i,j,k) -> (k,i,j)>
+  dimToLvl = affine_map<(i,j,k) -> (k,i,j)>
 }>
 
 // CHECK-LABEL: func @sparse_convert_1d(

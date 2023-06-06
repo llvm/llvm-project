@@ -38,6 +38,10 @@ def _getSuitableClangTidy(cfg):
         ):
             return None
 
+        # TODO MODULES require ToT due module specific fixes.
+        if runScriptExitCode(cfg, ['clang-tidy-17 --version']) == 0:
+          return 'clang-tidy-17'
+
         # TODO This should be the last stable release.
         # LLVM RELEASE bump to latest stable version
         if runScriptExitCode(cfg, ["clang-tidy-16 --version"]) == 0:

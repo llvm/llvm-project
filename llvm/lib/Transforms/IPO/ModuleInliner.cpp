@@ -144,11 +144,6 @@ PreservedAnalyses ModuleInlinerPass::run(Module &M,
   // Populate the initial list of calls in this module.
   for (Function &F : M) {
     auto &ORE = FAM.getResult<OptimizationRemarkEmitterAnalysis>(F);
-    // We want to generally process call sites top-down in order for
-    // simplifications stemming from replacing the call with the returned value
-    // after inlining to be visible to subsequent inlining decisions.
-    // FIXME: Using instructions sequence is a really bad way to do this.
-    // Instead we should do an actual RPO walk of the function body.
     for (Instruction &I : instructions(F))
       if (auto *CB = dyn_cast<CallBase>(&I))
         if (Function *Callee = CB->getCalledFunction()) {

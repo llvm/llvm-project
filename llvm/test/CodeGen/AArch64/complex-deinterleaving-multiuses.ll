@@ -293,3 +293,91 @@ entry:
   ret <4 x float> %interleaved.vec136
 }
 
+; Expected to transform. Shows that composite common subexpression is not generated twice.
+;  u[i] = a[i] * b[i] - (c[i] * d[i] + g[i] * h[i]);
+;  v[i] = e[i] * f[i] + (c[i] * d[i] + g[i] * h[i]);
+define void @mul_add_common_mul_add_mul(<4 x double> %a, <4 x double> %b, <4 x double> %c, <4 x double> %d, <4 x double> %e, <4 x double> %f, <4 x double> %g, <4 x double> %h, ptr %p1, ptr %p2) {
+; CHECK-LABEL: mul_add_common_mul_add_mul:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    ldp q17, q16, [sp, #64]
+; CHECK-NEXT:    movi v20.2d, #0000000000000000
+; CHECK-NEXT:    movi v21.2d, #0000000000000000
+; CHECK-NEXT:    movi v24.2d, #0000000000000000
+; CHECK-NEXT:    movi v25.2d, #0000000000000000
+; CHECK-NEXT:    ldp q19, q18, [sp, #96]
+; CHECK-NEXT:    fcmla v24.2d, v2.2d, v0.2d, #0
+; CHECK-NEXT:    fcmla v25.2d, v3.2d, v1.2d, #0
+; CHECK-NEXT:    fcmla v20.2d, v19.2d, v17.2d, #0
+; CHECK-NEXT:    fcmla v24.2d, v2.2d, v0.2d, #90
+; CHECK-NEXT:    fcmla v21.2d, v18.2d, v16.2d, #0
+; CHECK-NEXT:    ldp q23, q22, [sp, #32]
+; CHECK-NEXT:    fcmla v20.2d, v19.2d, v17.2d, #90
+; CHECK-NEXT:    fcmla v25.2d, v3.2d, v1.2d, #90
+; CHECK-NEXT:    fcmla v21.2d, v18.2d, v16.2d, #90
+; CHECK-NEXT:    fcmla v20.2d, v6.2d, v4.2d, #0
+; CHECK-NEXT:    ldp q1, q0, [sp]
+; CHECK-NEXT:    fcmla v21.2d, v7.2d, v5.2d, #0
+; CHECK-NEXT:    fcmla v20.2d, v6.2d, v4.2d, #90
+; CHECK-NEXT:    fcmla v21.2d, v7.2d, v5.2d, #90
+; CHECK-NEXT:    fsub v2.2d, v24.2d, v20.2d
+; CHECK-NEXT:    fcmla v20.2d, v1.2d, v23.2d, #0
+; CHECK-NEXT:    fsub v3.2d, v25.2d, v21.2d
+; CHECK-NEXT:    fcmla v21.2d, v0.2d, v22.2d, #0
+; CHECK-NEXT:    fcmla v20.2d, v1.2d, v23.2d, #90
+; CHECK-NEXT:    stp q2, q3, [x0]
+; CHECK-NEXT:    fcmla v21.2d, v0.2d, v22.2d, #90
+; CHECK-NEXT:    stp q20, q21, [x1]
+; CHECK-NEXT:    ret
+entry:
+  %strided.vec = shufflevector <4 x double> %a, <4 x double> poison, <2 x i32> <i32 0, i32 2>
+  %strided.vec123 = shufflevector <4 x double> %a, <4 x double> poison, <2 x i32> <i32 1, i32 3>
+  %strided.vec125 = shufflevector <4 x double> %b, <4 x double> poison, <2 x i32> <i32 0, i32 2>
+  %strided.vec126 = shufflevector <4 x double> %b, <4 x double> poison, <2 x i32> <i32 1, i32 3>
+  %0 = fmul fast <2 x double> %strided.vec125, %strided.vec
+  %1 = fmul fast <2 x double> %strided.vec126, %strided.vec
+  %2 = fmul fast <2 x double> %strided.vec125, %strided.vec123
+  %3 = fadd fast <2 x double> %1, %2
+  %strided.vec128 = shufflevector <4 x double> %c, <4 x double> poison, <2 x i32> <i32 0, i32 2>
+  %strided.vec129 = shufflevector <4 x double> %c, <4 x double> poison, <2 x i32> <i32 1, i32 3>
+  %strided.vec131 = shufflevector <4 x double> %d, <4 x double> poison, <2 x i32> <i32 0, i32 2>
+  %strided.vec132 = shufflevector <4 x double> %d, <4 x double> poison, <2 x i32> <i32 1, i32 3>
+  %4 = fmul fast <2 x double> %strided.vec131, %strided.vec128
+  %5 = fmul fast <2 x double> %strided.vec132, %strided.vec129
+  %6 = fmul fast <2 x double> %strided.vec132, %strided.vec128
+  %7 = fmul fast <2 x double> %strided.vec131, %strided.vec129
+  %8 = fsub fast <2 x double> %4, %5
+  %strided.vec134 = shufflevector <4 x double> %g, <4 x double> poison, <2 x i32> <i32 0, i32 2>
+  %strided.vec135 = shufflevector <4 x double> %g, <4 x double> poison, <2 x i32> <i32 1, i32 3>
+  %strided.vec137 = shufflevector <4 x double> %h, <4 x double> poison, <2 x i32> <i32 0, i32 2>
+  %strided.vec138 = shufflevector <4 x double> %h, <4 x double> poison, <2 x i32> <i32 1, i32 3>
+  %9 = fmul fast <2 x double> %strided.vec138, %strided.vec134
+  %10 = fmul fast <2 x double> %strided.vec137, %strided.vec135
+  %11 = fmul fast <2 x double> %strided.vec137, %strided.vec134
+  %12 = fmul fast <2 x double> %strided.vec135, %strided.vec138
+  %13 = fsub fast <2 x double> %11, %12
+  %14 = fadd fast <2 x double> %13, %8
+  %15 = fadd fast <2 x double> %6, %7
+  %16 = fadd fast <2 x double> %15, %9
+  %17 = fadd fast <2 x double> %16, %10
+  %18 = fmul fast <2 x double> %strided.vec126, %strided.vec123
+  %19 = fadd fast <2 x double> %18, %14
+  %20 = fsub fast <2 x double> %0, %19
+  %21 = fsub fast <2 x double> %3, %17
+  %interleaved.vec = shufflevector <2 x double> %20, <2 x double> %21, <4 x i32> <i32 0, i32 2, i32 1, i32 3>
+  store <4 x double> %interleaved.vec, ptr %p1, align 8
+  %strided.vec140 = shufflevector <4 x double> %e, <4 x double> poison, <2 x i32> <i32 0, i32 2>
+  %strided.vec141 = shufflevector <4 x double> %e, <4 x double> poison, <2 x i32> <i32 1, i32 3>
+  %strided.vec143 = shufflevector <4 x double> %f, <4 x double> poison, <2 x i32> <i32 0, i32 2>
+  %strided.vec144 = shufflevector <4 x double> %f, <4 x double> poison, <2 x i32> <i32 1, i32 3>
+  %22 = fmul fast <2 x double> %strided.vec143, %strided.vec140
+  %23 = fmul fast <2 x double> %strided.vec144, %strided.vec140
+  %24 = fmul fast <2 x double> %strided.vec143, %strided.vec141
+  %25 = fadd fast <2 x double> %22, %14
+  %26 = fmul fast <2 x double> %strided.vec144, %strided.vec141
+  %27 = fsub fast <2 x double> %25, %26
+  %28 = fadd fast <2 x double> %24, %17
+  %29 = fadd fast <2 x double> %28, %23
+  %interleaved.vec145 = shufflevector <2 x double> %27, <2 x double> %29, <4 x i32> <i32 0, i32 2, i32 1, i32 3>
+  store <4 x double> %interleaved.vec145, ptr %p2, align 8
+  ret void
+}

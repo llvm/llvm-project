@@ -14,11 +14,13 @@
 // template<class I>
 // concept __iterator_traits_detail::__cpp17_iterator;
 
+#include "test_macros.h"
+
 #include <iterator>
 
 #include <array>
 #include <deque>
-#ifndef _LIBCPP_HAS_NO_FILESYSTEM_LIBRARY
+#ifndef TEST_HAS_NO_FILESYSTEM_LIBRARY
 #include <filesystem>
 #endif
 #include <forward_list>
@@ -59,7 +61,7 @@ static_assert(std::__iterator_traits_detail::__cpp17_iterator<std::deque<int>::r
 static_assert(std::__iterator_traits_detail::__cpp17_iterator<std::deque<int>::const_reverse_iterator>);
 
 // <filesystem>
-#ifndef _LIBCPP_HAS_NO_FILESYSTEM_LIBRARY
+#ifndef TEST_HAS_NO_FILESYSTEM_LIBRARY
 static_assert(std::__iterator_traits_detail::__cpp17_iterator<std::filesystem::directory_iterator>);
 static_assert(std::__iterator_traits_detail::__cpp17_iterator<std::filesystem::recursive_directory_iterator>);
 #endif

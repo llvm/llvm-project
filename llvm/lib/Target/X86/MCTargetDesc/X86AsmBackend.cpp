@@ -231,20 +231,23 @@ static unsigned getRelaxedOpcode(const MCInst &MI, bool Is16BitMode) {
                                    : X86::getOpcodeForLongImmediateForm(Opcode);
 }
 
-static X86::CondCode getCondFromBranch(const MCInst &MI) {
+static X86::CondCode getCondFromBranch(const MCInst &MI,
+                                       const MCInstrInfo &MCII) {
   unsigned Opcode = MI.getOpcode();
   switch (Opcode) {
   default:
     return X86::COND_INVALID;
-  case X86::JCC_1:
+  case X86::JCC_1: {
+    const MCInstrDesc &Desc = MCII.get(Opcode);
     return static_cast<X86::CondCode>(
-        MI.getOperand(MI.getNumOperands() - 1).getImm());
+        MI.getOperand(Desc.getNumOperands() - 1).getImm());
+  }
   }
 }
 
 static X86::SecondMacroFusionInstKind
-classifySecondInstInMacroFusion(const MCInst &MI) {
-  X86::CondCode CC = getCondFromBranch(MI);
+classifySecondInstInMacroFusion(const MCInst &MI, const MCInstrInfo &MCII) {
+  X86::CondCode CC = getCondFromBranch(MI, MCII);
   return classifySecondCondCodeInMacroFusion(CC);
 }
 
@@ -351,7 +354,7 @@ bool X86AsmBackend::isMacroFused(const MCInst &Cmp, const MCInst &Jcc) const {
   const X86::FirstMacroFusionInstKind CmpKind =
       X86::classifyFirstOpcodeInMacroFusion(Cmp.getOpcode());
   const X86::SecondMacroFusionInstKind BranchKind =
-      classifySecondInstInMacroFusion(Jcc);
+      classifySecondInstInMacroFusion(Jcc, *MCII);
   return X86::isMacroFused(CmpKind, BranchKind);
 }
 

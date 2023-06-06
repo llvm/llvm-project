@@ -726,7 +726,7 @@ private:
           [&](const parser::CallStmt &s) {
             // Look for alternate return specifiers.
             const auto &args =
-                std::get<std::list<parser::ActualArgSpec>>(s.v.t);
+                std::get<std::list<parser::ActualArgSpec>>(s.call.t);
             for (const auto &arg : args) {
               const auto &actual = std::get<parser::ActualArg>(arg.t);
               if (const auto *altReturn =

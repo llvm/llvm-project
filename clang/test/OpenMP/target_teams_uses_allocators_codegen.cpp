@@ -78,8 +78,7 @@ void foo() {
 // CHECK: [[TRAITS_ADDR_REF:%.+]] = alloca ptr,
 // CHECK: [[MY_ALLOCATOR_ADDR:%.+]] = alloca i64,
 // CHECK: [[TRAITS_ADDR:%.+]] = load ptr, ptr [[TRAITS_ADDR_REF]],
-// CHECK: [[TRAITS:%.+]] = load ptr, ptr [[TRAITS_ADDR]],
-// CHECK: [[ALLOCATOR:%.+]] = call ptr @__kmpc_init_allocator(i32 %{{.+}}, ptr null, i32 10, ptr [[TRAITS]])
+// CHECK: [[ALLOCATOR:%.+]] = call ptr @__kmpc_init_allocator(i32 %{{.+}}, ptr null, i32 10, ptr [[TRAITS_ADDR]])
 // CHECK: [[CONV:%.+]] = ptrtoint ptr [[ALLOCATOR]] to i64
 // CHECK: store i64 [[CONV]], ptr [[MY_ALLOCATOR_ADDR]],
 

@@ -301,11 +301,6 @@ TYPE_PARSER(first(construct<WaitSpec>(maybe("UNIT ="_tok) >> fileUnitNumber),
     construct<WaitSpec>("IOMSG =" >> msgVariable),
     construct<WaitSpec>("IOSTAT =" >> statVariable)))
 
-template <typename A> common::IfNoLvalue<std::list<A>, A> singletonList(A &&x) {
-  std::list<A> result;
-  result.push_front(std::move(x));
-  return result;
-}
 constexpr auto bareUnitNumberAsList{
     applyFunction(singletonList<PositionOrFlushSpec>,
         construct<PositionOrFlushSpec>(fileUnitNumber))};

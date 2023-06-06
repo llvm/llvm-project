@@ -563,8 +563,6 @@ private:
   llvm::DenseMap<const CXXRecordDecl *, std::unique_ptr<VirtualBaseInfo>>
       VBaseInfo;
 
-  void enumerateVFPtrs(const CXXRecordDecl *ForClass, VPtrInfoVector &Result);
-
   void computeVTableRelatedInformation(const CXXRecordDecl *RD) override;
 
   void dumpMethodLocations(const CXXRecordDecl *RD,

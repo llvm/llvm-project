@@ -88,6 +88,10 @@ bool CheckInit(InterpState &S, CodePtr OpPC, const Pointer &Ptr);
 /// Checks if a method can be called.
 bool CheckCallable(InterpState &S, CodePtr OpPC, const Function *F);
 
+/// Checks if calling the currently active function would exceed
+/// the allowed call depth.
+bool CheckCallDepth(InterpState &S, CodePtr OpPC);
+
 /// Checks the 'this' pointer.
 bool CheckThis(InterpState &S, CodePtr OpPC, const Pointer &This);
 
@@ -158,7 +162,6 @@ enum class ArithOp { Add, Sub };
 template <PrimType Name, bool Builtin = false,
           class T = typename PrimConv<Name>::T>
 bool Ret(InterpState &S, CodePtr &PC, APValue &Result) {
-  S.CallStackDepth--;
   const T &Ret = S.Stk.pop<T>();
 
   assert(S.Current->getFrameOffset() == S.Stk.size() && "Invalid frame");
@@ -181,8 +184,6 @@ bool Ret(InterpState &S, CodePtr &PC, APValue &Result) {
 
 template <bool Builtin = false>
 inline bool RetVoid(InterpState &S, CodePtr &PC, APValue &Result) {
-  S.CallStackDepth--;
-
   assert(S.Current->getFrameOffset() == S.Stk.size() && "Invalid frame");
   if (Builtin || !S.checkingPotentialConstantExpression())
     S.Current->popArgs();
@@ -1596,6 +1597,9 @@ inline bool Call(InterpState &S, CodePtr OpPC, const Function *Func) {
   }
 
   if (!CheckCallable(S, OpPC, Func))
+    return false;
+
+  if (!CheckCallDepth(S, OpPC))
     return false;
 
   auto NewFrame = std::make_unique<InterpFrame>(S, Func, OpPC);

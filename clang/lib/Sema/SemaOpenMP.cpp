@@ -23100,6 +23100,55 @@ void Sema::checkDeclIsAllowedInOpenMPTarget(Expr *E, Decl *D,
   checkDeclInTargetContext(E->getExprLoc(), E->getSourceRange(), *this, D);
 }
 
+/// This class visits every VarDecl that the initializer references and adds
+/// OMPDeclareTargetDeclAttr to each of them.
+class GlobalDeclRefChecker final
+    : public StmtVisitor<GlobalDeclRefChecker> {
+  SmallVector<VarDecl *> DeclVector;
+  Attr *A;
+
+public:
+  /// A StmtVisitor class function that visits all DeclRefExpr and adds
+  /// OMPDeclareTargetDeclAttr to them.
+  void VisitDeclRefExpr(DeclRefExpr *Node) {
+    if (auto *VD = dyn_cast<VarDecl>(Node->getDecl())) {
+      VD->addAttr(A);
+      DeclVector.push_back(VD);
+    }
+  }
+  /// A function that iterates across each of the Expr's children.
+  void VisitExpr(Expr *Ex) {
+    for (auto *Child : Ex->children()) {
+      Visit(Child);
+    }
+  }
+  /// A function that keeps a record of all the Decls that are variables, has
+  /// OMPDeclareTargetDeclAttr, and has global storage in the DeclVector. Pop
+  /// each Decl one at a time and use the inherited 'visit' functions to look
+  /// for DeclRefExpr.
+  void declareTargetInitializer(Decl *TD) {
+    A = TD->getAttr<OMPDeclareTargetDeclAttr>();
+    DeclVector.push_back(cast<VarDecl>(TD));
+    while (!DeclVector.empty()) {
+      VarDecl *TargetVarDecl = DeclVector.pop_back_val();
+      if (TargetVarDecl->hasAttr<OMPDeclareTargetDeclAttr>() &&
+          TargetVarDecl->hasInit() && TargetVarDecl->hasGlobalStorage()) {
+        if (Expr *Ex = TargetVarDecl->getInit())
+          Visit(Ex);
+      }
+    }
+  }
+};
+
+/// Adding OMPDeclareTargetDeclAttr to variables with static storage
+/// duration that are referenced in the initializer expression list of
+/// variables with static storage duration in declare target directive.
+void Sema::ActOnOpenMPDeclareTargetInitializer(Decl *TargetDecl) {
+  GlobalDeclRefChecker Checker;
+  if (auto *TargetVarDecl = dyn_cast_or_null<VarDecl>(TargetDecl))
+    Checker.declareTargetInitializer(TargetDecl);
+}
+
 OMPClause *Sema::ActOnOpenMPToClause(
     ArrayRef<OpenMPMotionModifierKind> MotionModifiers,
     ArrayRef<SourceLocation> MotionModifiersLoc,

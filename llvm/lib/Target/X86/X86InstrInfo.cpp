@@ -9267,7 +9267,7 @@ void X86InstrInfo::setSpecialOperandAttr(MachineInstr &OldMI1,
   // Propagate FP flags from the original instructions.
   // But clear poison-generating flags because those may not be valid now.
   // TODO: There should be a helper function for copying only fast-math-flags.
-  uint16_t IntersectedFlags = OldMI1.getFlags() & OldMI2.getFlags();
+  uint32_t IntersectedFlags = OldMI1.getFlags() & OldMI2.getFlags();
   NewMI1.setFlags(IntersectedFlags);
   NewMI1.clearFlag(MachineInstr::MIFlag::NoSWrap);
   NewMI1.clearFlag(MachineInstr::MIFlag::NoUWrap);

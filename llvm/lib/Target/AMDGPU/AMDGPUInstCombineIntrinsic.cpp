@@ -345,11 +345,11 @@ bool GCNTTIImpl::canSimplifyLegacyMulToMul(const Instruction &I,
 
   auto *TLI = &IC.getTargetLibraryInfo();
   if (isKnownNeverInfOrNaN(Op0, IC.getDataLayout(), TLI, 0,
-                           &IC.getAssumptionCache(), &I, &IC.getDominatorTree(),
-                           &IC.getOptimizationRemarkEmitter()) &&
+                           &IC.getAssumptionCache(), &I,
+                           &IC.getDominatorTree()) &&
       isKnownNeverInfOrNaN(Op1, IC.getDataLayout(), TLI, 0,
-                           &IC.getAssumptionCache(), &I, &IC.getDominatorTree(),
-                           &IC.getOptimizationRemarkEmitter())) {
+                           &IC.getAssumptionCache(), &I,
+                           &IC.getDominatorTree())) {
     // Neither operand is infinity or NaN.
     return true;
   }
@@ -460,14 +460,20 @@ GCNTTIImpl::instCombineIntrinsic(InstCombiner &IC, IntrinsicInst &II) const {
       return &II;
     }
 
-    // FIXME: Should propagate poison.
-    if (isa<UndefValue>(Src0))
-      return IC.replaceInstUsesWith(II, UndefValue::get(II.getType()));
+    // Propagate poison.
+    if (isa<PoisonValue>(Src0) || isa<PoisonValue>(Src1))
+      return IC.replaceInstUsesWith(II, PoisonValue::get(II.getType()));
 
-    if (isa<UndefValue>(Src1)) {
+    // llvm.amdgcn.class(_, undef) -> false
+    if (IC.getSimplifyQuery().isUndefValue(Src1))
       return IC.replaceInstUsesWith(II, ConstantInt::get(II.getType(), false));
-    }
 
+    // llvm.amdgcn.class(undef, mask) -> mask != 0
+    if (IC.getSimplifyQuery().isUndefValue(Src0)) {
+      Value *CmpMask = IC.Builder.CreateICmpNE(
+          Src1, ConstantInt::getNullValue(Src1->getType()));
+      return IC.replaceInstUsesWith(II, CmpMask);
+    }
     break;
   }
   case Intrinsic::amdgcn_cvt_pkrtz: {

@@ -741,9 +741,9 @@ CompilerType CompilerType::GetChildCompilerTypeAtIndex(
 // index 1 is the child index for "m_b" within class A
 
 size_t CompilerType::GetIndexOfChildMemberWithName(
-    const char *name, bool omit_empty_base_classes,
+    llvm::StringRef name, bool omit_empty_base_classes,
     std::vector<uint32_t> &child_indexes) const {
-  if (IsValid() && name && name[0]) {
+  if (IsValid() && !name.empty()) {
     if (auto type_system_sp = GetTypeSystem())
       return type_system_sp->GetIndexOfChildMemberWithName(
         m_type, name, omit_empty_base_classes, child_indexes);
@@ -810,12 +810,12 @@ bool CompilerType::IsMeaninglessWithoutDynamicResolution() const {
 // matches can include base class names.
 
 uint32_t
-CompilerType::GetIndexOfChildWithName(const char *name,
+CompilerType::GetIndexOfChildWithName(llvm::StringRef name,
                                       bool omit_empty_base_classes) const {
-  if (IsValid() && name && name[0]) {
+  if (IsValid() && !name.empty()) {
     if (auto type_system_sp = GetTypeSystem())
       return type_system_sp->GetIndexOfChildWithName(m_type, name,
-                                                  omit_empty_base_classes);
+                                                     omit_empty_base_classes);
   }
   return UINT32_MAX;
 }

@@ -25,6 +25,15 @@ and clicking on ``Libc++ Open Reviews`` in the sidebar to the left. If you see
 that your feature is already being worked on, please consider chiming in instead
 of duplicating work!
 
+RFCs for significant user-affecting changes
+===========================================
+
+Before you start working on a change that can have significant impact on users of the library,
+please consider creating a RFC on `libc++'s Discourse forum <https://discourse.llvm.org/c/runtimes/libcxx>`__.
+This will ensure that you work in a direction that the project endorses and will ease reviewing your
+contribution as directional questions can be raised early. Including a WIP patch is not mandatory, but
+it can be useful to ground the discussion in something concrete.
+
 Pre-commit check list
 =====================
 
@@ -39,8 +48,7 @@ sure you don't forget anything:
 
   - Did you add it to ``include/module.modulemap.in``?
   - Did you add it to ``include/CMakeLists.txt``?
-  - If it's a public header, did you add a test under ``test/libcxx`` that the new header defines ``_LIBCPP_VERSION``? See ``test/libcxx/algorithms/version.pass.cpp`` for an example. NOTE: This should be automated.
-  - If it's a public header, did you update ``utils/generate_header_inclusion_tests.py``?
+  - If it's a public header, did you update ``utils/libcxx/test/header_information.py``?
 
 - Did you add the relevant feature test macro(s) for your feature? Did you update the ``generate_feature_test_macro_components.py`` script with it?
 - Did you run the ``libcxx-generate-files`` target and verify its output?

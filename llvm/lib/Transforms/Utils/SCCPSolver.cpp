@@ -386,7 +386,9 @@ class SCCPInstVisitor : public InstVisitor<SCCPInstVisitor> {
   using Edge = std::pair<BasicBlock *, BasicBlock *>;
   DenseSet<Edge> KnownFeasibleEdges;
 
-  DenseMap<Function *, AnalysisResultsForFn> AnalysisResults;
+  DenseMap<Function *, LoopInfo *> FnLoopInfo;
+  DenseMap<Function *, std::unique_ptr<PredicateInfo>> FnPredicateInfo;
+
   DenseMap<Value *, SmallPtrSet<User *, 2>> AdditionalUsers;
 
   LLVMContext &Ctx;
@@ -649,8 +651,12 @@ private:
   void visitInstruction(Instruction &I);
 
 public:
-  void addAnalysis(Function &F, AnalysisResultsForFn A) {
-    AnalysisResults.insert({&F, std::move(A)});
+  void addLoopInfo(Function &F, LoopInfo &LI) {
+    FnLoopInfo.insert({&F, &LI});
+  }
+
+  void addPredicateInfo(Function &F, DominatorTree &DT, AssumptionCache &AC) {
+    FnPredicateInfo.insert({&F, std::make_unique<PredicateInfo>(F, DT, AC)});
   }
 
   void visitCallInst(CallInst &I) { visitCallBase(I); }
@@ -658,16 +664,17 @@ public:
   bool markBlockExecutable(BasicBlock *BB);
 
   const PredicateBase *getPredicateInfoFor(Instruction *I) {
-    auto A = AnalysisResults.find(I->getParent()->getParent());
-    if (A == AnalysisResults.end())
+    auto It = FnPredicateInfo.find(I->getParent()->getParent());
+    if (It == FnPredicateInfo.end())
       return nullptr;
-    return A->second.PredInfo->getPredicateInfoFor(I);
+    return It->second->getPredicateInfoFor(I);
   }
 
-  DomTreeUpdater getDTU(Function &F) {
-    auto A = AnalysisResults.find(&F);
-    assert(A != AnalysisResults.end() && "Need analysis results for function.");
-    return {A->second.DT, A->second.PDT, DomTreeUpdater::UpdateStrategy::Lazy};
+  const LoopInfo &getLoopInfo(Function &F) {
+    auto It = FnLoopInfo.find(&F);
+    assert(It != FnLoopInfo.end() && It->second &&
+           "Need LoopInfo analysis results for function.");
+    return *It->second;
   }
 
   SCCPInstVisitor(const DataLayout &DL,
@@ -1943,8 +1950,13 @@ SCCPSolver::SCCPSolver(
 
 SCCPSolver::~SCCPSolver() = default;
 
-void SCCPSolver::addAnalysis(Function &F, AnalysisResultsForFn A) {
-  return Visitor->addAnalysis(F, std::move(A));
+void SCCPSolver::addLoopInfo(Function &F, LoopInfo &LI) {
+  Visitor->addLoopInfo(F, LI);
+}
+
+void SCCPSolver::addPredicateInfo(Function &F, DominatorTree &DT,
+                                  AssumptionCache &AC) {
+  Visitor->addPredicateInfo(F, DT, AC);
 }
 
 bool SCCPSolver::markBlockExecutable(BasicBlock *BB) {
@@ -1955,7 +1967,9 @@ const PredicateBase *SCCPSolver::getPredicateInfoFor(Instruction *I) {
   return Visitor->getPredicateInfoFor(I);
 }
 
-DomTreeUpdater SCCPSolver::getDTU(Function &F) { return Visitor->getDTU(F); }
+const LoopInfo &SCCPSolver::getLoopInfo(Function &F) {
+  return Visitor->getLoopInfo(F);
+}
 
 void SCCPSolver::trackValueOfGlobalVariable(GlobalVariable *GV) {
   Visitor->trackValueOfGlobalVariable(GV);

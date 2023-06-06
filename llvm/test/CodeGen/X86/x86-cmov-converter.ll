@@ -356,62 +356,50 @@ for.body:                                         ; preds = %for.body.preheader,
   br i1 %exitcond, label %for.cond.cleanup, label %for.body
 }
 
-; TODO: If cmov instruction is marked as unpredicatable, do not convert it to branch.
+; If cmov instruction is marked as unpredictable, do not convert it to branch.
 define i32 @MaxIndex_unpredictable(i32 %n, ptr nocapture readonly %a) #0 {
 ; CHECK-LABEL: MaxIndex_unpredictable:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    xorl %eax, %eax
 ; CHECK-NEXT:    cmpl $2, %edi
-; CHECK-NEXT:    jl .LBB3_5
+; CHECK-NEXT:    jl .LBB3_3
 ; CHECK-NEXT:  # %bb.1: # %for.body.preheader
 ; CHECK-NEXT:    movl %edi, %ecx
-; CHECK-NEXT:    xorl %edi, %edi
+; CHECK-NEXT:    xorl %eax, %eax
 ; CHECK-NEXT:    movl $1, %edx
 ; CHECK-NEXT:  .LBB3_2: # %for.body
 ; CHECK-NEXT:    # =>This Inner Loop Header: Depth=1
-; CHECK-NEXT:    movl (%rsi,%rdx,4), %r8d
-; CHECK-NEXT:    movslq %edi, %r9
-; CHECK-NEXT:    movl %edx, %eax
-; CHECK-NEXT:    cmpl (%rsi,%r9,4), %r8d
-; CHECK-NEXT:    jg .LBB3_4
-; CHECK-NEXT:  # %bb.3: # %for.body
-; CHECK-NEXT:    # in Loop: Header=BB3_2 Depth=1
-; CHECK-NEXT:    movl %edi, %eax
-; CHECK-NEXT:  .LBB3_4: # %for.body
-; CHECK-NEXT:    # in Loop: Header=BB3_2 Depth=1
+; CHECK-NEXT:    movl (%rsi,%rdx,4), %edi
+; CHECK-NEXT:    cltq
+; CHECK-NEXT:    cmpl (%rsi,%rax,4), %edi
+; CHECK-NEXT:    cmovgl %edx, %eax
 ; CHECK-NEXT:    addq $1, %rdx
-; CHECK-NEXT:    movl %eax, %edi
 ; CHECK-NEXT:    cmpq %rdx, %rcx
 ; CHECK-NEXT:    jne .LBB3_2
-; CHECK-NEXT:  .LBB3_5: # %for.cond.cleanup
+; CHECK-NEXT:  .LBB3_3: # %for.cond.cleanup
+; CHECK-NEXT:    # kill: def $eax killed $eax killed $rax
 ; CHECK-NEXT:    retq
 ;
 ; CHECK-FORCEALL-LABEL: MaxIndex_unpredictable:
 ; CHECK-FORCEALL:       # %bb.0: # %entry
 ; CHECK-FORCEALL-NEXT:    xorl %eax, %eax
 ; CHECK-FORCEALL-NEXT:    cmpl $2, %edi
-; CHECK-FORCEALL-NEXT:    jl .LBB3_5
+; CHECK-FORCEALL-NEXT:    jl .LBB3_3
 ; CHECK-FORCEALL-NEXT:  # %bb.1: # %for.body.preheader
 ; CHECK-FORCEALL-NEXT:    movl %edi, %ecx
-; CHECK-FORCEALL-NEXT:    xorl %edi, %edi
+; CHECK-FORCEALL-NEXT:    xorl %eax, %eax
 ; CHECK-FORCEALL-NEXT:    movl $1, %edx
 ; CHECK-FORCEALL-NEXT:  .LBB3_2: # %for.body
 ; CHECK-FORCEALL-NEXT:    # =>This Inner Loop Header: Depth=1
-; CHECK-FORCEALL-NEXT:    movl (%rsi,%rdx,4), %r8d
-; CHECK-FORCEALL-NEXT:    movslq %edi, %r9
-; CHECK-FORCEALL-NEXT:    movl %edx, %eax
-; CHECK-FORCEALL-NEXT:    cmpl (%rsi,%r9,4), %r8d
-; CHECK-FORCEALL-NEXT:    jg .LBB3_4
-; CHECK-FORCEALL-NEXT:  # %bb.3: # %for.body
-; CHECK-FORCEALL-NEXT:    # in Loop: Header=BB3_2 Depth=1
-; CHECK-FORCEALL-NEXT:    movl %edi, %eax
-; CHECK-FORCEALL-NEXT:  .LBB3_4: # %for.body
-; CHECK-FORCEALL-NEXT:    # in Loop: Header=BB3_2 Depth=1
+; CHECK-FORCEALL-NEXT:    movl (%rsi,%rdx,4), %edi
+; CHECK-FORCEALL-NEXT:    cltq
+; CHECK-FORCEALL-NEXT:    cmpl (%rsi,%rax,4), %edi
+; CHECK-FORCEALL-NEXT:    cmovgl %edx, %eax
 ; CHECK-FORCEALL-NEXT:    addq $1, %rdx
-; CHECK-FORCEALL-NEXT:    movl %eax, %edi
 ; CHECK-FORCEALL-NEXT:    cmpq %rdx, %rcx
 ; CHECK-FORCEALL-NEXT:    jne .LBB3_2
-; CHECK-FORCEALL-NEXT:  .LBB3_5: # %for.cond.cleanup
+; CHECK-FORCEALL-NEXT:  .LBB3_3: # %for.cond.cleanup
+; CHECK-FORCEALL-NEXT:    # kill: def $eax killed $eax killed $rax
 ; CHECK-FORCEALL-NEXT:    retq
 entry:
   %cmp14 = icmp sgt i32 %n, 1
@@ -724,26 +712,20 @@ entry:
   ret i32 %z
 }
 
-; TODO: If cmov instruction is marked as unpredicatable, do not convert it to branch.
+; If cmov instruction is marked as unpredictable, do not convert it to branch.
 define i32 @test_cmov_memoperand_unpredictable(i32 %a, i32 %b, i32 %x, ptr %y) #0 {
 ; CHECK-LABEL: test_cmov_memoperand_unpredictable:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    movl %edx, %eax
 ; CHECK-NEXT:    cmpl %esi, %edi
-; CHECK-NEXT:    ja .LBB8_2
-; CHECK-NEXT:  # %bb.1: # %entry
-; CHECK-NEXT:    movl (%rcx), %eax
-; CHECK-NEXT:  .LBB8_2: # %entry
+; CHECK-NEXT:    cmovbel (%rcx), %eax
 ; CHECK-NEXT:    retq
 ;
 ; CHECK-FORCEALL-LABEL: test_cmov_memoperand_unpredictable:
 ; CHECK-FORCEALL:       # %bb.0: # %entry
 ; CHECK-FORCEALL-NEXT:    movl %edx, %eax
 ; CHECK-FORCEALL-NEXT:    cmpl %esi, %edi
-; CHECK-FORCEALL-NEXT:    ja .LBB8_2
-; CHECK-FORCEALL-NEXT:  # %bb.1: # %entry
-; CHECK-FORCEALL-NEXT:    movl (%rcx), %eax
-; CHECK-FORCEALL-NEXT:  .LBB8_2: # %entry
+; CHECK-FORCEALL-NEXT:    cmovbel (%rcx), %eax
 ; CHECK-FORCEALL-NEXT:    retq
 entry:
   %cond = icmp ugt i32 %a, %b

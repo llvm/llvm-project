@@ -1309,6 +1309,24 @@ bool FastISel::selectIntrinsicCall(const IntrinsicInst *II) {
           .addMetadata(Expr);
       return true;
     }
+    if (const auto *Arg = dyn_cast<Argument>(V);
+        Arg && Expr && Expr->isEntryValue()) {
+      // As per the Verifier, this case is only valid for swift async Args.
+      assert(Arg->hasAttribute(Attribute::AttrKind::SwiftAsync));
+
+      Register Reg = getRegForValue(Arg);
+      for (auto [PhysReg, VirtReg] : FuncInfo.RegInfo->liveins())
+        if (Reg == VirtReg || Reg == PhysReg) {
+          BuildMI(*FuncInfo.MBB, FuncInfo.InsertPt, MIMD.getDL(), II,
+                  false /*IsIndirect*/, PhysReg, Var, Expr);
+          return true;
+        }
+
+      LLVM_DEBUG(dbgs() << "Dropping dbg.value: expression is entry_value but "
+                           "couldn't find a physical register\n"
+                        << *DI << "\n");
+      return true;
+    }
     if (Register Reg = lookUpRegForValue(V)) {
       // FIXME: This does not handle register-indirect values at offset 0.
       if (!FuncInfo.MF->useDebugInstrRef()) {

@@ -251,7 +251,7 @@ define <4 x i32> @out_constant_varx_42_invmask(ptr%px, ptr%py, ptr%pmask) {
 ; CHECK-XOP-LABEL: out_constant_varx_42_invmask:
 ; CHECK-XOP:       # %bb.0:
 ; CHECK-XOP-NEXT:    vmovdqa (%rdx), %xmm0
-; CHECK-XOP-NEXT:    vmovdqa {{.*#+}} xmm1 = [42,42,42,42]
+; CHECK-XOP-NEXT:    vbroadcastss {{.*#+}} xmm1 = [42,42,42,42]
 ; CHECK-XOP-NEXT:    vpcmov %xmm0, (%rdi), %xmm1, %xmm0
 ; CHECK-XOP-NEXT:    retq
   %x = load <4 x i32>, ptr%px, align 16
@@ -289,7 +289,7 @@ define <4 x i32> @in_constant_varx_42_invmask(ptr%px, ptr%py, ptr%pmask) {
 ; CHECK-XOP-LABEL: in_constant_varx_42_invmask:
 ; CHECK-XOP:       # %bb.0:
 ; CHECK-XOP-NEXT:    vmovdqa (%rdx), %xmm0
-; CHECK-XOP-NEXT:    vmovdqa {{.*#+}} xmm1 = [42,42,42,42]
+; CHECK-XOP-NEXT:    vbroadcastss {{.*#+}} xmm1 = [42,42,42,42]
 ; CHECK-XOP-NEXT:    vpcmov %xmm0, (%rdi), %xmm1, %xmm0
 ; CHECK-XOP-NEXT:    retq
   %x = load <4 x i32>, ptr%px, align 16
@@ -459,7 +459,7 @@ define <4 x i32> @out_constant_42_vary(ptr%px, ptr%py, ptr%pmask) {
 ; CHECK-XOP-LABEL: out_constant_42_vary:
 ; CHECK-XOP:       # %bb.0:
 ; CHECK-XOP-NEXT:    vmovdqa (%rdx), %xmm0
-; CHECK-XOP-NEXT:    vmovdqa {{.*#+}} xmm1 = [42,42,42,42]
+; CHECK-XOP-NEXT:    vbroadcastss {{.*#+}} xmm1 = [42,42,42,42]
 ; CHECK-XOP-NEXT:    vpcmov %xmm0, (%rsi), %xmm1, %xmm0
 ; CHECK-XOP-NEXT:    retq
   %x = load <4 x i32>, ptr%px, align 16
@@ -496,7 +496,7 @@ define <4 x i32> @in_constant_42_vary(ptr%px, ptr%py, ptr%pmask) {
 ; CHECK-XOP-LABEL: in_constant_42_vary:
 ; CHECK-XOP:       # %bb.0:
 ; CHECK-XOP-NEXT:    vmovdqa (%rdx), %xmm0
-; CHECK-XOP-NEXT:    vmovdqa {{.*#+}} xmm1 = [42,42,42,42]
+; CHECK-XOP-NEXT:    vbroadcastss {{.*#+}} xmm1 = [42,42,42,42]
 ; CHECK-XOP-NEXT:    vpcmov %xmm0, (%rsi), %xmm1, %xmm0
 ; CHECK-XOP-NEXT:    retq
   %x = load <4 x i32>, ptr%px, align 16

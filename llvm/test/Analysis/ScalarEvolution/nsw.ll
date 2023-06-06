@@ -174,9 +174,9 @@ define i32 @PR12375(ptr readnone %arg) {
 ; CHECK-NEXT:    %tmp2 = phi ptr [ %arg, %bb ], [ %tmp5, %bb1 ]
 ; CHECK-NEXT:    --> {%arg,+,4}<nuw><%bb1> U: full-set S: full-set Exits: (4 + %arg)<nuw> LoopDispositions: { %bb1: Computable }
 ; CHECK-NEXT:    %tmp3 = phi i32 [ 0, %bb ], [ %tmp4, %bb1 ]
-; CHECK-NEXT:    --> {0,+,1}<nuw><nsw><%bb1> U: [0,-2147483648) S: [0,-2147483648) Exits: 1 LoopDispositions: { %bb1: Computable }
+; CHECK-NEXT:    --> {0,+,1}<nuw><nsw><%bb1> U: [0,2) S: [0,2) Exits: 1 LoopDispositions: { %bb1: Computable }
 ; CHECK-NEXT:    %tmp4 = add nsw i32 %tmp3, 1
-; CHECK-NEXT:    --> {1,+,1}<nuw><%bb1> U: [1,0) S: [1,0) Exits: 2 LoopDispositions: { %bb1: Computable }
+; CHECK-NEXT:    --> {1,+,1}<nuw><nsw><%bb1> U: [1,3) S: [1,3) Exits: 2 LoopDispositions: { %bb1: Computable }
 ; CHECK-NEXT:    %tmp5 = getelementptr inbounds i32, ptr %tmp2, i64 1
 ; CHECK-NEXT:    --> {(4 + %arg)<nuw>,+,4}<nuw><%bb1> U: [4,0) S: [4,0) Exits: (8 + %arg)<nuw> LoopDispositions: { %bb1: Computable }
 ; CHECK-NEXT:  Determining loop execution counts for: @PR12375

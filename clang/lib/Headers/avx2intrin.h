@@ -41,78 +41,306 @@ _mm256_abs_epi32(__m256i __a)
     return (__m256i)__builtin_elementwise_abs((__v8si)__a);
 }
 
+/// Converts the elements of two 256-bit vectors of [16 x i16] to 8-bit
+///    integers using signed saturation, and returns the 256-bit result.
+///
+/// \code{.operation}
+/// FOR i := 0 TO 7
+///   j := i*16
+///   k := i*8
+///   result[7+k:k] := SATURATE8(__a[15+j:j])
+///   result[71+k:64+k] := SATURATE8(__b[15+j:j])
+///   result[135+k:128+k] := SATURATE8(__a[143+j:128+j])
+///   result[199+k:192+k] := SATURATE8(__b[143+j:128+j])
+/// ENDFOR
+/// \endcode
+///
+/// \headerfile <immintrin.h>
+///
+/// This intrinsic corresponds to the \c VPACKSSWB instruction.
+///
+/// \param __a
+///    A 256-bit vector of [16 x i16] used to generate result[63:0] and
+///    result[191:128].
+/// \param __b
+///    A 256-bit vector of [16 x i16] used to generate result[127:64] and
+///    result[255:192].
+/// \returns A 256-bit integer vector containing the result.
 static __inline__ __m256i __DEFAULT_FN_ATTRS256
 _mm256_packs_epi16(__m256i __a, __m256i __b)
 {
   return (__m256i)__builtin_ia32_packsswb256((__v16hi)__a, (__v16hi)__b);
 }
 
+/// Converts the elements of two 256-bit vectors of [8 x i32] to 16-bit
+///    integers using signed saturation, and returns the resulting 256-bit
+///    vector of [16 x i16].
+///
+/// \code{.operation}
+/// FOR i := 0 TO 3
+///   j := i*32
+///   k := i*16
+///   result[15+k:k] := SATURATE16(__a[31+j:j])
+///   result[79+k:64+k] := SATURATE16(__b[31+j:j])
+///   result[143+k:128+k] := SATURATE16(__a[159+j:128+j])
+///   result[207+k:192+k] := SATURATE16(__b[159+j:128+j])
+/// ENDFOR
+/// \endcode
+///
+/// \headerfile <immintrin.h>
+///
+/// This intrinsic corresponds to the \c VPACKSSDW instruction.
+///
+/// \param __a
+///    A 256-bit vector of [8 x i32] used to generate result[63:0] and
+///    result[191:128].
+/// \param __b
+///    A 256-bit vector of [8 x i32] used to generate result[127:64] and
+///    result[255:192].
+/// \returns A 256-bit vector of [16 x i16] containing the result.
 static __inline__ __m256i __DEFAULT_FN_ATTRS256
 _mm256_packs_epi32(__m256i __a, __m256i __b)
 {
   return (__m256i)__builtin_ia32_packssdw256((__v8si)__a, (__v8si)__b);
 }
 
+/// Converts elements from two 256-bit vectors of [16 x i16] to 8-bit integers
+///    using unsigned saturation, and returns the 256-bit result.
+///
+/// \code{.operation}
+/// FOR i := 0 TO 7
+///   j := i*16
+///   k := i*8
+///   result[7+k:k] := SATURATE8U(__a[15+j:j])
+///   result[71+k:64+k] := SATURATE8U(__b[15+j:j])
+///   result[135+k:128+k] := SATURATE8U(__a[143+j:128+j])
+///   result[199+k:192+k] := SATURATE8U(__b[143+j:128+j])
+/// ENDFOR
+/// \endcode
+///
+/// \headerfile <immintrin.h>
+///
+/// This intrinsic corresponds to the \c VPACKUSWB instruction.
+///
+/// \param __a
+///    A 256-bit vector of [16 x i16] used to generate result[63:0] and
+///    result[191:128].
+/// \param __b
+///    A 256-bit vector of [16 x i16] used to generate result[127:64] and
+///    result[255:192].
+/// \returns A 256-bit integer vector containing the result.
 static __inline__ __m256i __DEFAULT_FN_ATTRS256
 _mm256_packus_epi16(__m256i __a, __m256i __b)
 {
   return (__m256i)__builtin_ia32_packuswb256((__v16hi)__a, (__v16hi)__b);
 }
 
+/// Converts elements from two 256-bit vectors of [8 x i32] to 16-bit integers
+///    using unsigned saturation, and returns the resulting 256-bit vector of
+///    [16 x i16].
+///
+/// \code{.operation}
+/// FOR i := 0 TO 3
+///   j := i*32
+///   k := i*16
+///   result[15+k:k] := SATURATE16U(__V1[31+j:j])
+///   result[79+k:64+k] := SATURATE16U(__V2[31+j:j])
+///   result[143+k:128+k] := SATURATE16U(__V1[159+j:128+j])
+///   result[207+k:192+k] := SATURATE16U(__V2[159+j:128+j])
+/// ENDFOR
+/// \endcode
+///
+/// \headerfile <immintrin.h>
+///
+/// This intrinsic corresponds to the \c VPACKUSDW instruction.
+///
+/// \param __V1
+///    A 256-bit vector of [8 x i32] used to generate result[63:0] and
+///    result[191:128].
+/// \param __V2
+///    A 256-bit vector of [8 x i32] used to generate result[127:64] and
+///    result[255:192].
+/// \returns A 256-bit vector of [16 x i16] containing the result.
 static __inline__ __m256i __DEFAULT_FN_ATTRS256
 _mm256_packus_epi32(__m256i __V1, __m256i __V2)
 {
   return (__m256i) __builtin_ia32_packusdw256((__v8si)__V1, (__v8si)__V2);
 }
 
+/// Adds 8-bit integers from corresponding bytes of two 256-bit integer
+///    vectors and returns the lower 8 bits of each sum in the corresponding
+///    byte of the 256-bit integer vector result (overflow is ignored).
+///
+/// \headerfile <immintrin.h>
+///
+/// This intrinsic corresponds to the \c VPADDB instruction.
+///
+/// \param __a
+///    A 256-bit integer vector containing one of the source operands.
+/// \param __b
+///    A 256-bit integer vector containing one of the source operands.
+/// \returns A 256-bit integer vector containing the sums.
 static __inline__ __m256i __DEFAULT_FN_ATTRS256
 _mm256_add_epi8(__m256i __a, __m256i __b)
 {
   return (__m256i)((__v32qu)__a + (__v32qu)__b);
 }
 
+/// Adds 16-bit integers from corresponding elements of two 256-bit vectors of
+///    [16 x i16] and returns the lower 16 bits of each sum in the
+///    corresponding element of the [16 x i16] result (overflow is ignored).
+///
+/// \headerfile <immintrin.h>
+///
+/// This intrinsic corresponds to the \c VPADDW instruction.
+///
+/// \param __a
+///    A 256-bit vector of [16 x i16] containing one of the source operands.
+/// \param __b
+///    A 256-bit vector of [16 x i16] containing one of the source operands.
+/// \returns A 256-bit vector of [16 x i16] containing the sums.
 static __inline__ __m256i __DEFAULT_FN_ATTRS256
 _mm256_add_epi16(__m256i __a, __m256i __b)
 {
   return (__m256i)((__v16hu)__a + (__v16hu)__b);
 }
 
+/// Adds 32-bit integers from corresponding elements of two 256-bit vectors of
+///    [8 x i32] and returns the lower 32 bits of each sum in the corresponding
+///    element of the [8 x i32] result (overflow is ignored).
+///
+/// \headerfile <immintrin.h>
+///
+/// This intrinsic corresponds to the \c VPADDD instruction.
+///
+/// \param __a
+///    A 256-bit vector of [8 x i32] containing one of the source operands.
+/// \param __b
+///    A 256-bit vector of [8 x i32] containing one of the source operands.
+/// \returns A 256-bit vector of [8 x i32] containing the sums.
 static __inline__ __m256i __DEFAULT_FN_ATTRS256
 _mm256_add_epi32(__m256i __a, __m256i __b)
 {
   return (__m256i)((__v8su)__a + (__v8su)__b);
 }
 
+/// Adds 64-bit integers from corresponding elements of two 256-bit vectors of
+///    [4 x i64] and returns the lower 64 bits of each sum in the corresponding
+///    element of the [4 x i64] result (overflow is ignored).
+///
+/// \headerfile <immintrin.h>
+///
+/// This intrinsic corresponds to the \c VPADDQ instruction.
+///
+/// \param __a
+///    A 256-bit vector of [4 x i64] containing one of the source operands.
+/// \param __b
+///    A 256-bit vector of [4 x i64] containing one of the source operands.
+/// \returns A 256-bit vector of [4 x i64] containing the sums.
 static __inline__ __m256i __DEFAULT_FN_ATTRS256
 _mm256_add_epi64(__m256i __a, __m256i __b)
 {
   return (__m256i)((__v4du)__a + (__v4du)__b);
 }
 
+/// Adds 8-bit integers from corresponding bytes of two 256-bit integer
+///    vectors using signed saturation, and returns each sum in the
+///    corresponding byte of the 256-bit integer vector result.
+///
+/// \headerfile <immintrin.h>
+///
+/// This intrinsic corresponds to the \c VPADDSB instruction.
+///
+/// \param __a
+///    A 256-bit integer vector containing one of the source operands.
+/// \param __b
+///    A 256-bit integer vector containing one of the source operands.
+/// \returns A 256-bit integer vector containing the sums.
 static __inline__ __m256i __DEFAULT_FN_ATTRS256
 _mm256_adds_epi8(__m256i __a, __m256i __b)
 {
   return (__m256i)__builtin_elementwise_add_sat((__v32qs)__a, (__v32qs)__b);
 }
 
+/// Adds 16-bit integers from corresponding elements of two 256-bit vectors of
+///    [16 x i16] using signed saturation, and returns the [16 x i16] result.
+///
+/// \headerfile <immintrin.h>
+///
+/// This intrinsic corresponds to the \c VPADDSW instruction.
+///
+/// \param __a
+///    A 256-bit vector of [16 x i16] containing one of the source operands.
+/// \param __b
+///    A 256-bit vector of [16 x i16] containing one of the source operands.
+/// \returns A 256-bit vector of [16 x i16] containing the sums.
 static __inline__ __m256i __DEFAULT_FN_ATTRS256
 _mm256_adds_epi16(__m256i __a, __m256i __b)
 {
   return (__m256i)__builtin_elementwise_add_sat((__v16hi)__a, (__v16hi)__b);
 }
 
+/// Adds 8-bit integers from corresponding bytes of two 256-bit integer
+///    vectors using unsigned saturation, and returns each sum in the
+///    corresponding byte of the 256-bit integer vector result.
+///
+/// \headerfile <immintrin.h>
+///
+/// This intrinsic corresponds to the \c VPADDUSB instruction.
+///
+/// \param __a
+///    A 256-bit integer vector containing one of the source operands.
+/// \param __b
+///    A 256-bit integer vector containing one of the source operands.
+/// \returns A 256-bit integer vector containing the sums.
 static __inline__ __m256i __DEFAULT_FN_ATTRS256
 _mm256_adds_epu8(__m256i __a, __m256i __b)
 {
   return (__m256i)__builtin_elementwise_add_sat((__v32qu)__a, (__v32qu)__b);
 }
 
+/// Adds 16-bit integers from corresponding elements of two 256-bit vectors of
+///    [16 x i16] using unsigned saturation, and returns the [16 x i16] result.
+///
+/// \headerfile <immintrin.h>
+///
+/// This intrinsic corresponds to the \c VPADDUSW instruction.
+///
+/// \param __a
+///    A 256-bit vector of [16 x i16] containing one of the source operands.
+/// \param __b
+///    A 256-bit vector of [16 x i16] containing one of the source operands.
+/// \returns A 256-bit vector of [16 x i16] containing the sums.
 static __inline__ __m256i __DEFAULT_FN_ATTRS256
 _mm256_adds_epu16(__m256i __a, __m256i __b)
 {
   return (__m256i)__builtin_elementwise_add_sat((__v16hu)__a, (__v16hu)__b);
 }
 
+/// Uses the lower half of the 256-bit vector \a a as the upper half of a
+///    temporary 256-bit value, and the lower half of the 256-bit vector \a b
+///    as the lower half of the temporary value. Right-shifts the temporary
+///    value by \a n bytes, and uses the lower 16 bytes of the shifted value
+///    as the lower 16 bytes of the result. Uses the upper halves of \a a and
+///    \a b to make another temporary value, right shifts by \a n, and uses
+///    the lower 16 bytes of the shifted value as the upper 16 bytes of the
+///    result.
+///
+/// \headerfile <immintrin.h>
+///
+/// \code
+/// __m256i _mm256_alignr_epi8(__m256i a, __m256i b, const int n);
+/// \endcode
+///
+/// This intrinsic corresponds to the \c VPALIGNR instruction.
+///
+/// \param a
+///    A 256-bit integer vector containing source values.
+/// \param b
+///    A 256-bit integer vector containing source values.
+/// \param n
+///    An immediate value specifying the number of bytes to shift.
+/// \returns A 256-bit integer vector containing the result.
 #define _mm256_alignr_epi8(a, b, n) \
   ((__m256i)__builtin_ia32_palignr256((__v32qi)(__m256i)(a), \
                                       (__v32qi)(__m256i)(b), (n)))
@@ -141,6 +369,35 @@ _mm256_avg_epu16(__m256i __a, __m256i __b)
   return (__m256i)__builtin_ia32_pavgw256((__v16hi)__a, (__v16hi)__b);
 }
 
+/// Merges 8-bit integer values from either of the two 256-bit vectors
+///    \a __V1 or \a __V2, as specified by the 256-bit mask \a __M and returns
+///    the resulting 256-bit integer vector.
+///
+/// \code{.operation}
+/// FOR i := 0 TO 31
+///   j := i*8
+///   IF __M[7+i] == 0
+///     result[7+j:j] := __V1[7+j:j]
+///   ELSE
+///     result[7+j:j] := __V2[7+j:j]
+///   FI
+/// ENDFOR
+/// \endcode
+///
+/// \headerfile <immintrin.h>
+///
+/// This intrinsic corresponds to the \c VPBLENDVB instruction.
+///
+/// \param __V1
+///    A 256-bit integer vector containing source values.
+/// \param __V2
+///    A 256-bit integer vector containing source values.
+/// \param __M
+///    A 256-bit integer vector, with bit [7] of each byte specifying the
+///    source for each corresponding byte of the result. When the mask bit
+///    is 0, the byte is copied from \a __V1; otherwise, it is copied from
+///    \a __V2.
+/// \returns A 256-bit integer vector containing the result.
 static __inline__ __m256i __DEFAULT_FN_ATTRS256
 _mm256_blendv_epi8(__m256i __V1, __m256i __V2, __m256i __M)
 {
@@ -148,6 +405,43 @@ _mm256_blendv_epi8(__m256i __V1, __m256i __V2, __m256i __M)
                                               (__v32qi)__M);
 }
 
+/// Merges 16-bit integer values from either of the two 256-bit vectors
+///    \a V1 or \a V2, as specified by the immediate integer operand \a M,
+///    and returns the resulting 256-bit vector of [16 x i16].
+///
+/// \code{.operation}
+/// FOR i := 0 TO 7
+///   j := i*16
+///   IF M[i] == 0
+///     result[7+j:j] := V1[7+j:j]
+///     result[135+j:128+j] := V1[135+j:128+j]
+///   ELSE
+///     result[7+j:j] := V2[7+j:j]
+///     result[135+j:128+j] := V2[135+j:128+j]
+///   FI
+/// ENDFOR
+/// \endcode
+///
+/// \headerfile <immintrin.h>
+///
+/// \code
+/// __m256i _mm256_blend_epi16(__m256i V1, __m256i V2, const int M);
+/// \endcode
+///
+/// This intrinsic corresponds to the \c VPBLENDW instruction.
+///
+/// \param V1
+///    A 256-bit vector of [16 x i16] containing source values.
+/// \param V2
+///    A 256-bit vector of [16 x i16] containing source values.
+/// \param M
+///    An immediate 8-bit integer operand, with bits [7:0] specifying the
+///    source for each element of the result. The position of the mask bit
+///    corresponds to the index of a copied value. When a mask bit is 0, the
+///    element is copied from \a V1; otherwise, it is copied from \a V2.
+///    \a M[0] determines the source for elements 0 and 8, \a M[1] for
+///    elements 1 and 9, and so forth.
+/// \returns A 256-bit vector of [16 x i16] containing the result.
 #define _mm256_blend_epi16(V1, V2, M) \
   ((__m256i)__builtin_ia32_pblendw256((__v16hi)(__m256i)(V1), \
                                       (__v16hi)(__m256i)(V2), (int)(M)))
@@ -202,48 +496,269 @@ _mm256_cmpgt_epi64(__m256i __a, __m256i __b)
   return (__m256i)((__v4di)__a > (__v4di)__b);
 }
 
+/// Horizontally adds the adjacent pairs of 16-bit integers from two 256-bit
+///    vectors of [16 x i16] and returns the lower 16 bits of each sum in an
+///    element of the [16 x i16] result (overflow is ignored). Sums from
+///    \a __a are returned in the lower 64 bits of each 128-bit half of the
+///    result; sums from \a __b are returned in the upper 64 bits of each
+///    128-bit half of the result.
+///
+/// \code{.operation}
+/// FOR i := 0 TO 1
+///   j := i*128
+///   result[j+15:j] := __a[j+15:j] + __a[j+31:j+16]
+///   result[j+31:j+16] := __a[j+47:j+32] + __a[j+63:j+48]
+///   result[j+47:j+32] := __a[j+79:j+64] + __a[j+95:j+80]
+///   result[j+63:j+48] := __a[j+111:j+96] + __a[j+127:j+112]
+///   result[j+79:j+64] := __b[j+15:j] + __b[j+31:j+16]
+///   result[j+95:j+80] := __b[j+47:j+32] + __b[j+63:j+48]
+///   result[j+111:j+96] := __b[j+79:j+64] + __b[j+95:j+80]
+///   result[j+127:j+112] := __b[j+111:j+96] + __b[j+127:j+112]
+/// ENDFOR
+/// \endcode
+///
+/// \headerfile <immintrin.h>
+///
+/// This intrinsic corresponds to the \c VPHADDW instruction.
+///
+/// \param __a
+///    A 256-bit vector of [16 x i16] containing one of the source operands.
+/// \param __b
+///    A 256-bit vector of [16 x i16] containing one of the source operands.
+/// \returns A 256-bit vector of [16 x i16] containing the sums.
 static __inline__ __m256i __DEFAULT_FN_ATTRS256
 _mm256_hadd_epi16(__m256i __a, __m256i __b)
 {
     return (__m256i)__builtin_ia32_phaddw256((__v16hi)__a, (__v16hi)__b);
 }
 
+/// Horizontally adds the adjacent pairs of 32-bit integers from two 256-bit
+///    vectors of [8 x i32] and returns the lower 32 bits of each sum in an
+///    element of the [8 x i32] result (overflow is ignored). Sums from \a __a
+///    are returned in the lower 64 bits of each 128-bit half of the result;
+///    sums from \a __b are returned in the upper 64 bits of each 128-bit half
+///    of the result.
+///
+/// \code{.operation}
+/// FOR i := 0 TO 1
+///   j := i*128
+///   result[j+31:j] := __a[j+31:j] + __a[j+63:j+32]
+///   result[j+63:j+32] := __a[j+95:j+64] + __a[j+127:j+96]
+///   result[j+95:j+64] := __b[j+31:j] + __b[j+63:j+32]
+///   result[j+127:j+96] := __b[j+95:j+64] + __b[j+127:j+96]
+/// ENDFOR
+/// \endcode
+///
+/// \headerfile <immintrin.h>
+///
+/// This intrinsic corresponds to the \c VPHADDD instruction.
+///
+/// \param __a
+///    A 256-bit vector of [8 x i32] containing one of the source operands.
+/// \param __b
+///    A 256-bit vector of [8 x i32] containing one of the source operands.
+/// \returns A 256-bit vector of [8 x i32] containing the sums.
 static __inline__ __m256i __DEFAULT_FN_ATTRS256
 _mm256_hadd_epi32(__m256i __a, __m256i __b)
 {
     return (__m256i)__builtin_ia32_phaddd256((__v8si)__a, (__v8si)__b);
 }
 
+/// Horizontally adds the adjacent pairs of 16-bit integers from two 256-bit
+///    vectors of [16 x i16] using signed saturation and returns each sum in
+///    an element of the [16 x i16] result. Sums from \a __a are returned in
+///    the lower 64 bits of each 128-bit half of the result; sums from \a __b
+///    are returned in the upper 64 bits of each 128-bit half of the result.
+///
+/// \code{.operation}
+/// FOR i := 0 TO 1
+///   j := i*128
+///   result[j+15:j] := SATURATE16(__a[j+15:j] + __a[j+31:j+16])
+///   result[j+31:j+16] := SATURATE16(__a[j+47:j+32] + __a[j+63:j+48])
+///   result[j+47:j+32] := SATURATE16(__a[j+79:j+64] + __a[j+95:j+80])
+///   result[j+63:j+48] := SATURATE16(__a[j+111:j+96] + __a[j+127:j+112])
+///   result[j+79:j+64] := SATURATE16(__b[j+15:j] + __b[j+31:j+16])
+///   result[j+95:j+80] := SATURATE16(__b[j+47:j+32] + __b[j+63:j+48])
+///   result[j+111:j+96] := SATURATE16(__b[j+79:j+64] + __b[j+95:j+80])
+///   result[j+127:j+112] := SATURATE16(__b[j+111:j+96] + __b[j+127:j+112])
+/// ENDFOR
+/// \endcode
+///
+/// \headerfile <immintrin.h>
+///
+/// This intrinsic corresponds to the \c VPHADDSW instruction.
+///
+/// \param __a
+///    A 256-bit vector of [16 x i16] containing one of the source operands.
+/// \param __b
+///    A 256-bit vector of [16 x i16] containing one of the source operands.
+/// \returns A 256-bit vector of [16 x i16] containing the sums.
 static __inline__ __m256i __DEFAULT_FN_ATTRS256
 _mm256_hadds_epi16(__m256i __a, __m256i __b)
 {
     return (__m256i)__builtin_ia32_phaddsw256((__v16hi)__a, (__v16hi)__b);
 }
 
+/// Horizontally subtracts adjacent pairs of 16-bit integers from two 256-bit
+///    vectors of [16 x i16] and returns the lower 16 bits of each difference
+///    in an element of the [16 x i16] result (overflow is ignored).
+///    Differences from \a __a are returned in the lower 64 bits of each
+///    128-bit half of the result; differences from \a __b are returned in the
+///    upper 64 bits of each 128-bit half of the result.
+///
+/// \code{.operation}
+/// FOR i := 0 TO 1
+///   j := i*128
+///   result[j+15:j] := __a[j+15:j] - __a[j+31:j+16]
+///   result[j+31:j+16] := __a[j+47:j+32] - __a[j+63:j+48]
+///   result[j+47:j+32] := __a[j+79:j+64] - __a[j+95:j+80]
+///   result[j+63:j+48] := __a[j+111:j+96] - __a[j+127:j+112]
+///   result[j+79:j+64] := __b[j+15:j] - __b[j+31:j+16]
+///   result[j+95:j+80] := __b[j+47:j+32] - __b[j+63:j+48]
+///   result[j+111:j+96] := __b[j+79:j+64] - __b[j+95:j+80]
+///   result[j+127:j+112] := __b[j+111:j+96] - __b[j+127:j+112]
+/// ENDFOR
+/// \endcode
+///
+/// \headerfile <immintrin.h>
+///
+/// This intrinsic corresponds to the \c VPHSUBW instruction.
+///
+/// \param __a
+///    A 256-bit vector of [16 x i16] containing one of the source operands.
+/// \param __b
+///    A 256-bit vector of [16 x i16] containing one of the source operands.
+/// \returns A 256-bit vector of [16 x i16] containing the differences.
 static __inline__ __m256i __DEFAULT_FN_ATTRS256
 _mm256_hsub_epi16(__m256i __a, __m256i __b)
 {
     return (__m256i)__builtin_ia32_phsubw256((__v16hi)__a, (__v16hi)__b);
 }
 
+/// Horizontally subtracts adjacent pairs of 32-bit integers from two 256-bit
+///    vectors of [8 x i32] and returns the lower 32 bits of each difference in
+///    an element of the [8 x i32] result (overflow is ignored). Differences
+///    from \a __a are returned in the lower 64 bits of each 128-bit half of
+///    the result; differences from \a __b are returned in the upper 64 bits
+///    of each 128-bit half of the result.
+///
+/// \code{.operation}
+/// FOR i := 0 TO 1
+///   j := i*128
+///   result[j+31:j] := __a[j+31:j] - __a[j+63:j+32]
+///   result[j+63:j+32] := __a[j+95:j+64] - __a[j+127:j+96]
+///   result[j+95:j+64] := __b[j+31:j] - __b[j+63:j+32]
+///   result[j+127:j+96] := __b[j+95:j+64] - __b[j+127:j+96]
+/// ENDFOR
+/// \endcode
+///
+/// \headerfile <immintrin.h>
+///
+/// This intrinsic corresponds to the \c VPHSUBD instruction.
+///
+/// \param __a
+///    A 256-bit vector of [8 x i32] containing one of the source operands.
+/// \param __b
+///    A 256-bit vector of [8 x i32] containing one of the source operands.
+/// \returns A 256-bit vector of [8 x i32] containing the differences.
 static __inline__ __m256i __DEFAULT_FN_ATTRS256
 _mm256_hsub_epi32(__m256i __a, __m256i __b)
 {
     return (__m256i)__builtin_ia32_phsubd256((__v8si)__a, (__v8si)__b);
 }
 
+/// Horizontally subtracts adjacent pairs of 16-bit integers from two 256-bit
+///    vectors of [16 x i16] using signed saturation and returns each sum in
+///    an element of the [16 x i16] result. Differences from \a __a are
+///    returned in the lower 64 bits of each 128-bit half of the result;
+///    differences from \a __b are returned in the upper 64 bits of each
+///    128-bit half of the result.
+///
+/// \code{.operation}
+/// FOR i := 0 TO 1
+///   j := i*128
+///   result[j+15:j] := SATURATE16(__a[j+15:j] - __a[j+31:j+16])
+///   result[j+31:j+16] := SATURATE16(__a[j+47:j+32] - __a[j+63:j+48])
+///   result[j+47:j+32] := SATURATE16(__a[j+79:j+64] - __a[j+95:j+80])
+///   result[j+63:j+48] := SATURATE16(__a[j+111:j+96] - __a[j+127:j+112])
+///   result[j+79:j+64] := SATURATE16(__b[j+15:j] - __b[j+31:j+16])
+///   result[j+95:j+80] := SATURATE16(__b[j+47:j+32] - __b[j+63:j+48])
+///   result[j+111:j+96] := SATURATE16(__b[j+79:j+64] - __b[j+95:j+80])
+///   result[j+127:j+112] := SATURATE16(__b[j+111:j+96] - __b[j+127:j+112])
+/// ENDFOR
+/// \endcode
+///
+/// \headerfile <immintrin.h>
+///
+/// This intrinsic corresponds to the \c VPHSUBSW instruction.
+///
+/// \param __a
+///    A 256-bit vector of [16 x i16] containing one of the source operands.
+/// \param __b
+///    A 256-bit vector of [16 x i16] containing one of the source operands.
+/// \returns A 256-bit vector of [16 x i16] containing the differences.
 static __inline__ __m256i __DEFAULT_FN_ATTRS256
 _mm256_hsubs_epi16(__m256i __a, __m256i __b)
 {
     return (__m256i)__builtin_ia32_phsubsw256((__v16hi)__a, (__v16hi)__b);
 }
 
+/// Multiplies each unsigned byte from the 256-bit integer vector in \a __a
+///    with the corresponding signed byte from the 256-bit integer vector in
+///    \a __b, forming signed 16-bit intermediate products. Adds adjacent
+///    pairs of those products using signed saturation to form 16-bit sums
+///    returned as elements of the [16 x i16] result.
+///
+/// \code{.operation}
+/// FOR i := 0 TO 15
+///   j := i*16
+///   temp1 := __a[j+7:j] * __b[j+7:j]
+///   temp2 := __a[j+15:j+8] * __b[j+15:j+8]
+///   result[j+15:j] := SATURATE16(temp1 + temp2)
+/// ENDFOR
+/// \endcode
+///
+/// \headerfile <immintrin.h>
+///
+/// This intrinsic corresponds to the \c VPMADDUBSW instruction.
+///
+/// \param __a
+///    A 256-bit vector containing one of the source operands.
+/// \param __b
+///    A 256-bit vector containing one of the source operands.
+/// \returns A 256-bit vector of [16 x i16] containing the result.
 static __inline__ __m256i __DEFAULT_FN_ATTRS256
 _mm256_maddubs_epi16(__m256i __a, __m256i __b)
 {
     return (__m256i)__builtin_ia32_pmaddubsw256((__v32qi)__a, (__v32qi)__b);
 }
 
+/// Multiplies corresponding 16-bit elements of two 256-bit vectors of
+///    [16 x i16], forming 32-bit intermediate products, and adds pairs of
+///    those products to form 32-bit sums returned as elements of the
+///    [8 x i32] result.
+///
+///    There is only one wraparound case: when all four of the 16-bit sources
+///    are \c 0x8000, the result will be \c 0x80000000.
+///
+/// \code{.operation}
+/// FOR i := 0 TO 7
+///   j := i*32
+///   temp1 := __a[j+15:j] * __b[j+15:j]
+///   temp2 := __a[j+31:j+16] * __b[j+31:j+16]
+///   result[j+31:j] := temp1 + temp2
+/// ENDFOR
+/// \endcode
+///
+/// \headerfile <immintrin.h>
+///
+/// This intrinsic corresponds to the \c VPMADDWD instruction.
+///
+/// \param __a
+///    A 256-bit vector of [16 x i16] containing one of the source operands.
+/// \param __b
+///    A 256-bit vector of [16 x i16] containing one of the source operands.
+/// \returns A 256-bit vector of [8 x i32] containing the result.
 static __inline__ __m256i __DEFAULT_FN_ATTRS256
 _mm256_madd_epi16(__m256i __a, __m256i __b)
 {
@@ -406,42 +921,155 @@ _mm256_cvtepu32_epi64(__m128i __V)
   return (__m256i)__builtin_convertvector((__v4su)__V, __v4di);
 }
 
+/// Multiplies signed 32-bit integers from even-numbered elements of two
+///    256-bit vectors of [8 x i32] and returns the 64-bit products in the
+///    [4 x i64] result.
+///
+/// \code{.operation}
+/// result[63:0] := __a[31:0] * __b[31:0]
+/// result[127:64] := __a[95:64] * __b[95:64]
+/// result[191:128] := __a[159:128] * __b[159:128]
+/// result[255:192] := __a[223:192] * __b[223:192]
+/// \endcode
+///
+/// \headerfile <immintrin.h>
+///
+/// This intrinsic corresponds to the \c VPMULDQ instruction.
+///
+/// \param __a
+///    A 256-bit vector of [8 x i32] containing one of the source operands.
+/// \param __b
+///    A 256-bit vector of [8 x i32] containing one of the source operands.
+/// \returns A 256-bit vector of [4 x i64] containing the products.
 static __inline__  __m256i __DEFAULT_FN_ATTRS256
 _mm256_mul_epi32(__m256i __a, __m256i __b)
 {
   return (__m256i)__builtin_ia32_pmuldq256((__v8si)__a, (__v8si)__b);
 }
 
+/// Multiplies signed 16-bit integer elements of two 256-bit vectors of
+///    [16 x i16], truncates the 32-bit results to the most significant 18
+///    bits, rounds by adding 1, and returns bits [16:1] of each rounded
+///    product in the [16 x i16] result.
+///
+/// \code{.operation}
+/// FOR i := 0 TO 15
+///   j := i*16
+///   temp := ((__a[j+15:j] * __b[j+15:j]) >> 14) + 1
+///   result[j+15:j] := temp[16:1]
+/// \endcode
+///
+/// \headerfile <immintrin.h>
+///
+/// This intrinsic corresponds to the \c VPMULHRSW instruction.
+///
+/// \param __a
+///    A 256-bit vector of [16 x i16] containing one of the source operands.
+/// \param __b
+///    A 256-bit vector of [16 x i16] containing one of the source operands.
+/// \returns A 256-bit vector of [16 x i16] containing the rounded products.
 static __inline__ __m256i __DEFAULT_FN_ATTRS256
 _mm256_mulhrs_epi16(__m256i __a, __m256i __b)
 {
   return (__m256i)__builtin_ia32_pmulhrsw256((__v16hi)__a, (__v16hi)__b);
 }
 
+/// Multiplies unsigned 16-bit integer elements of two 256-bit vectors of
+///    [16 x i16], and returns the upper 16 bits of each 32-bit product in the
+///    [16 x i16] result.
+///
+/// \headerfile <immintrin.h>
+///
+/// This intrinsic corresponds to the \c VPMULHUW instruction.
+///
+/// \param __a
+///    A 256-bit vector of [16 x i16] containing one of the source operands.
+/// \param __b
+///    A 256-bit vector of [16 x i16] containing one of the source operands.
+/// \returns A 256-bit vector of [16 x i16] containing the products.
 static __inline__ __m256i __DEFAULT_FN_ATTRS256
 _mm256_mulhi_epu16(__m256i __a, __m256i __b)
 {
   return (__m256i)__builtin_ia32_pmulhuw256((__v16hi)__a, (__v16hi)__b);
 }
 
+/// Multiplies signed 16-bit integer elements of two 256-bit vectors of
+///    [16 x i16], and returns the upper 16 bits of each 32-bit product in the
+///    [16 x i16] result.
+///
+/// \headerfile <immintrin.h>
+///
+/// This intrinsic corresponds to the \c VPMULHW instruction.
+///
+/// \param __a
+///    A 256-bit vector of [16 x i16] containing one of the source operands.
+/// \param __b
+///    A 256-bit vector of [16 x i16] containing one of the source operands.
+/// \returns A 256-bit vector of [16 x i16] containing the products.
 static __inline__ __m256i __DEFAULT_FN_ATTRS256
 _mm256_mulhi_epi16(__m256i __a, __m256i __b)
 {
   return (__m256i)__builtin_ia32_pmulhw256((__v16hi)__a, (__v16hi)__b);
 }
 
+/// Multiplies signed 16-bit integer elements of two 256-bit vectors of
+///    [16 x i16], and returns the lower 16 bits of each 32-bit product in the
+///    [16 x i16] result.
+///
+/// \headerfile <immintrin.h>
+///
+/// This intrinsic corresponds to the \c VPMULLW instruction.
+///
+/// \param __a
+///    A 256-bit vector of [16 x i16] containing one of the source operands.
+/// \param __b
+///    A 256-bit vector of [16 x i16] containing one of the source operands.
+/// \returns A 256-bit vector of [16 x i16] containing the products.
 static __inline__ __m256i __DEFAULT_FN_ATTRS256
 _mm256_mullo_epi16(__m256i __a, __m256i __b)
 {
   return (__m256i)((__v16hu)__a * (__v16hu)__b);
 }
 
+/// Multiplies signed 32-bit integer elements of two 256-bit vectors of
+///    [8 x i32], and returns the lower 32 bits of each 64-bit product in the
+///    [8 x i32] result.
+///
+/// \headerfile <immintrin.h>
+///
+/// This intrinsic corresponds to the \c VPMULLD instruction.
+///
+/// \param __a
+///    A 256-bit vector of [8 x i32] containing one of the source operands.
+/// \param __b
+///    A 256-bit vector of [8 x i32] containing one of the source operands.
+/// \returns A 256-bit vector of [8 x i32] containing the products.
 static __inline__  __m256i __DEFAULT_FN_ATTRS256
 _mm256_mullo_epi32 (__m256i __a, __m256i __b)
 {
   return (__m256i)((__v8su)__a * (__v8su)__b);
 }
 
+/// Multiplies unsigned 32-bit integers from even-numered elements of two
+///    256-bit vectors of [8 x i32] and returns the 64-bit products in the
+///    [4 x i64] result.
+///
+/// \code{.operation}
+/// result[63:0] := __a[31:0] * __b[31:0]
+/// result[127:64] := __a[95:64] * __b[95:64]
+/// result[191:128] := __a[159:128] * __b[159:128]
+/// result[255:192] := __a[223:192] * __b[223:192]
+/// \endcode
+///
+/// \headerfile <immintrin.h>
+///
+/// This intrinsic corresponds to the \c VPMULUDQ instruction.
+///
+/// \param __a
+///    A 256-bit vector of [8 x i32] containing one of the source operands.
+/// \param __b
+///    A 256-bit vector of [8 x i32] containing one of the source operands.
+/// \returns A 256-bit vector of [4 x i64] containing the products.
 static __inline__ __m256i __DEFAULT_FN_ATTRS256
 _mm256_mul_epu32(__m256i __a, __m256i __b)
 {
@@ -460,18 +1088,148 @@ _mm256_sad_epu8(__m256i __a, __m256i __b)
   return __builtin_ia32_psadbw256((__v32qi)__a, (__v32qi)__b);
 }
 
+/// Shuffles 8-bit integers in the 256-bit integer vector \a __a according
+///    to control information in the 256-bit integer vector \a __b, and
+///    returns the 256-bit result. In effect there are two separate 128-bit
+///    shuffles in the lower and upper halves.
+///
+/// \code{.operation}
+/// FOR i := 0 TO 31
+///   j := i*8
+///   IF __b[j+7] == 1
+///     result[j+7:j] := 0
+///   ELSE
+///     k := __b[j+3:j] * 8
+///     IF i > 15
+///       k := k + 128
+///     FI
+///     result[j+7:j] := __a[k+7:k]
+///   FI
+/// ENDFOR
+/// \endcode
+///
+/// \headerfile <immintrin.h>
+///
+/// This intrinsic corresponds to the \c VPSHUFB instruction.
+///
+/// \param __a
+///    A 256-bit integer vector containing source values.
+/// \param __b
+///    A 256-bit integer vector containing control information to determine
+///    what goes into the corresponding byte of the result. If bit 7 of the
+///    control byte is 1, the result byte is 0; otherwise, bits 3:0 of the
+///    control byte specify the index (within the same 128-bit half) of \a __a
+///    to copy to the result byte.
+/// \returns A 256-bit integer vector containing the result.
 static __inline__ __m256i __DEFAULT_FN_ATTRS256
 _mm256_shuffle_epi8(__m256i __a, __m256i __b)
 {
   return (__m256i)__builtin_ia32_pshufb256((__v32qi)__a, (__v32qi)__b);
 }
 
+/// Shuffles 32-bit integers from the 256-bit vector of [8 x i32] in \a a
+///    according to control information in the integer literal \a imm, and
+///    returns the 256-bit result. In effect there are two parallel 128-bit
+///    shuffles in the lower and upper halves.
+///
+/// \code{.operation}
+/// FOR i := 0 to 3
+///   j := i*32
+///   k := (imm >> i*2)[1:0] * 32
+///   result[j+31:j] := a[k+31:k]
+///   result[128+j+31:128+j] := a[128+k+31:128+k]
+/// ENDFOR
+/// \endcode
+///
+/// \headerfile <immintrin.h>
+///
+/// \code
+/// __m256i _mm256_shuffle_epi32(__m256i a, const int imm);
+/// \endcode
+///
+/// This intrinsic corresponds to the \c VPSHUFB instruction.
+///
+/// \param a
+///    A 256-bit vector of [8 x i32] containing source values.
+/// \param imm
+///    An immediate 8-bit value specifying which elements to copy from \a a.
+///    \a imm[1:0] specifies the index in \a a for elements 0 and 4 of the
+///    result, \a imm[3:2] specifies the index for elements 1 and 5, and so
+///    forth.
+/// \returns A 256-bit vector of [8 x i32] containing the result.
 #define _mm256_shuffle_epi32(a, imm) \
   ((__m256i)__builtin_ia32_pshufd256((__v8si)(__m256i)(a), (int)(imm)))
 
+/// Shuffles 16-bit integers from the 256-bit vector of [16 x i16] in \a a
+///    according to control information in the integer literal \a imm, and
+///    returns the 256-bit result. The upper 64 bits of each 128-bit half
+///    are shuffled in parallel; the lower 64 bits of each 128-bit half are
+///    copied from \a a unchanged.
+///
+/// \code{.operation}
+/// result[63:0] := a[63:0]
+/// result[191:128] := a[191:128]
+/// FOR i := 0 TO 3
+///   j := i * 16 + 64
+///   k := (imm >> i*2)[1:0] * 16 + 64
+///   result[j+15:j] := a[k+15:k]
+///   result[128+j+15:128+j] := a[128+k+15:128+k]
+/// ENDFOR
+/// \endcode
+///
+/// \headerfile <immintrin.h>
+///
+/// \code
+/// __m256i _mm256_shufflehi_epi16(__m256i a, const int imm);
+/// \endcode
+///
+/// This intrinsic corresponds to the \c VPSHUFHW instruction.
+///
+/// \param a
+///    A 256-bit vector of [16 x i16] containing source values.
+/// \param imm
+///    An immediate 8-bit value specifying which elements to copy from \a a.
+///    \a imm[1:0] specifies the index in \a a for elements 4 and 8 of the
+///    result, \a imm[3:2] specifies the index for elements 5 and 9, and so
+///    forth. Indexes are offset by 4 (so 0 means index 4, and so forth).
+/// \returns A 256-bit vector of [16 x i16] containing the result.
 #define _mm256_shufflehi_epi16(a, imm) \
   ((__m256i)__builtin_ia32_pshufhw256((__v16hi)(__m256i)(a), (int)(imm)))
 
+/// Shuffles 16-bit integers from the 256-bit vector of [16 x i16] \a a
+///    according to control information in the integer literal \a imm, and
+///    returns the 256-bit [16 x i16] result. The lower 64 bits of each
+///    128-bit half are shuffled; the upper 64 bits of each 128-bit half are
+///    copied from \a a unchanged.
+///
+/// \code{.operation}
+/// result[127:64] := a[127:64]
+/// result[255:192] := a[255:192]
+/// FOR i := 0 TO 3
+///   j := i * 16
+///   k := (imm >> i*2)[1:0] * 16
+///   result[j+15:j] := a[k+15:k]
+///   result[128+j+15:128+j] := a[128+k+15:128+k]
+/// ENDFOR
+/// \endcode
+///
+/// \headerfile <immintrin.h>
+///
+/// \code
+/// __m256i _mm256_shufflelo_epi16(__m256i a, const int imm);
+/// \endcode
+///
+/// This intrinsic corresponds to the \c VPSHUFLW instruction.
+///
+/// \param a
+///    A 256-bit vector of [16 x i16] to use as a source of data for the
+///    result.
+/// \param imm
+///    An immediate 8-bit value specifying which elements to copy from \a a.
+///    \a imm[1:0] specifies the index in \a a for elements 0 and 8 of the
+///    result, \a imm[3:2] specifies the index for elements 1 and 9, and so
+///    forth.
+/// \returns A 256-bit vector of [16 x i16] containing the result.
 #define _mm256_shufflelo_epi16(a, imm) \
   ((__m256i)__builtin_ia32_pshuflw256((__v16hi)(__m256i)(a), (int)(imm)))
 
@@ -897,96 +1655,477 @@ _mm256_srl_epi64(__m256i __a, __m128i __count)
   return __builtin_ia32_psrlq256((__v4di)__a, __count);
 }
 
+/// Subtracts 8-bit integers from corresponding bytes of two 256-bit integer
+///    vectors. Returns the lower 8 bits of each difference in the
+///    corresponding byte of the 256-bit integer vector result (overflow is
+///    ignored).
+///
+/// \code{.operation}
+/// FOR i := 0 TO 31
+///   j := i*8
+///   result[j+7:j] := __a[j+7:j] - __b[j+7:j]
+/// ENDFOR
+/// \endcode
+///
+/// \headerfile <immintrin.h>
+///
+/// This intrinsic corresponds to the \c VPSUBB instruction.
+///
+/// \param __a
+///    A 256-bit integer vector containing the minuends.
+/// \param __b
+///    A 256-bit integer vector containing the subtrahends.
+/// \returns A 256-bit integer vector containing the differences.
 static __inline__ __m256i __DEFAULT_FN_ATTRS256
 _mm256_sub_epi8(__m256i __a, __m256i __b)
 {
   return (__m256i)((__v32qu)__a - (__v32qu)__b);
 }
 
+/// Subtracts 16-bit integers from corresponding elements of two 256-bit
+///    vectors of [16 x i16]. Returns the lower 16 bits of each difference in
+///    the corresponding element of the [16 x i16] result (overflow is
+///    ignored).
+///
+/// \code{.operation}
+/// FOR i := 0 TO 15
+///   j := i*16
+///   result[j+15:j] := __a[j+15:j] - __b[j+15:j]
+/// ENDFOR
+/// \endcode
+///
+/// \headerfile <immintrin.h>
+///
+/// This intrinsic corresponds to the \c VPSUBW instruction.
+///
+/// \param __a
+///    A 256-bit vector of [16 x i16] containing the minuends.
+/// \param __b
+///    A 256-bit vector of [16 x i16] containing the subtrahends.
+/// \returns A 256-bit vector of [16 x i16] containing the differences.
 static __inline__ __m256i __DEFAULT_FN_ATTRS256
 _mm256_sub_epi16(__m256i __a, __m256i __b)
 {
   return (__m256i)((__v16hu)__a - (__v16hu)__b);
 }
 
+/// Subtracts 32-bit integers from corresponding elements of two 256-bit
+///    vectors of [8 x i32]. Returns the lower 32 bits of each difference in
+///    the corresponding element of the [8 x i32] result (overflow is ignored).
+///
+/// \code{.operation}
+/// FOR i := 0 TO 7
+///   j := i*32
+///   result[j+31:j] := __a[j+31:j] - __b[j+31:j]
+/// ENDFOR
+/// \endcode
+///
+/// \headerfile <immintrin.h>
+///
+/// This intrinsic corresponds to the \c VPSUBD instruction.
+///
+/// \param __a
+///    A 256-bit vector of [8 x i32] containing the minuends.
+/// \param __b
+///    A 256-bit vector of [8 x i32] containing the subtrahends.
+/// \returns A 256-bit vector of [8 x i32] containing the differences.
 static __inline__ __m256i __DEFAULT_FN_ATTRS256
 _mm256_sub_epi32(__m256i __a, __m256i __b)
 {
   return (__m256i)((__v8su)__a - (__v8su)__b);
 }
 
+/// Subtracts 64-bit integers from corresponding elements of two 256-bit
+///    vectors of [4 x i64]. Returns the lower 64 bits of each difference in
+///    the corresponding element of the [4 x i64] result (overflow is ignored).
+///
+/// \code{.operation}
+/// FOR i := 0 TO 3
+///   j := i*64
+///   result[j+63:j] := __a[j+63:j] - __b[j+63:j]
+/// ENDFOR
+/// \endcode
+///
+/// \headerfile <immintrin.h>
+///
+/// This intrinsic corresponds to the \c VPSUBQ instruction.
+///
+/// \param __a
+///    A 256-bit vector of [4 x i64] containing the minuends.
+/// \param __b
+///    A 256-bit vector of [4 x i64] containing the subtrahends.
+/// \returns A 256-bit vector of [4 x i64] containing the differences.
 static __inline__ __m256i __DEFAULT_FN_ATTRS256
 _mm256_sub_epi64(__m256i __a, __m256i __b)
 {
   return (__m256i)((__v4du)__a - (__v4du)__b);
 }
 
+/// Subtracts 8-bit integers from corresponding bytes of two 256-bit integer
+///    vectors using signed saturation, and returns each differences in the
+///    corresponding byte of the 256-bit integer vector result.
+///
+/// \code{.operation}
+/// FOR i := 0 TO 31
+///   j := i*8
+///   result[j+7:j] := SATURATE8(__a[j+7:j] - __b[j+7:j])
+/// ENDFOR
+/// \endcode
+///
+/// \headerfile <immintrin.h>
+///
+/// This intrinsic corresponds to the \c VPSUBSB instruction.
+///
+/// \param __a
+///    A 256-bit integer vector containing the minuends.
+/// \param __b
+///    A 256-bit integer vector containing the subtrahends.
+/// \returns A 256-bit integer vector containing the differences.
 static __inline__ __m256i __DEFAULT_FN_ATTRS256
 _mm256_subs_epi8(__m256i __a, __m256i __b)
 {
   return (__m256i)__builtin_elementwise_sub_sat((__v32qs)__a, (__v32qs)__b);
 }
 
+/// Subtracts 16-bit integers from corresponding elements of two 256-bit
+///    vectors of [16 x i16] using signed saturation, and returns each
+///    difference in the corresponding element of the [16 x i16] result.
+///
+/// \code{.operation}
+/// FOR i := 0 TO 15
+///   j := i*16
+///   result[j+7:j] := SATURATE16(__a[j+7:j] - __b[j+7:j])
+/// ENDFOR
+/// \endcode
+///
+/// \headerfile <immintrin.h>
+///
+/// This intrinsic corresponds to the \c VPSUBSW instruction.
+///
+/// \param __a
+///    A 256-bit vector of [16 x i16] containing the minuends.
+/// \param __b
+///    A 256-bit vector of [16 x i16] containing the subtrahends.
+/// \returns A 256-bit vector of [16 x i16] containing the differences.
 static __inline__ __m256i __DEFAULT_FN_ATTRS256
 _mm256_subs_epi16(__m256i __a, __m256i __b)
 {
   return (__m256i)__builtin_elementwise_sub_sat((__v16hi)__a, (__v16hi)__b);
 }
 
+/// Subtracts 8-bit integers from corresponding bytes of two 256-bit integer
+///    vectors using unsigned saturation, and returns each difference in the
+///    corresponding byte of the 256-bit integer vector result. For each byte,
+///    computes <c> result = __a - __b </c>.
+///
+/// \code{.operation}
+/// FOR i := 0 TO 31
+///   j := i*8
+///   result[j+7:j] := SATURATE8U(__a[j+7:j] - __b[j+7:j])
+/// ENDFOR
+/// \endcode
+///
+/// \headerfile <immintrin.h>
+///
+/// This intrinsic corresponds to the \c VPSUBUSB instruction.
+///
+/// \param __a
+///    A 256-bit integer vector containing the minuends.
+/// \param __b
+///    A 256-bit integer vector containing the subtrahends.
+/// \returns A 256-bit integer vector containing the differences.
 static __inline__ __m256i __DEFAULT_FN_ATTRS256
 _mm256_subs_epu8(__m256i __a, __m256i __b)
 {
   return (__m256i)__builtin_elementwise_sub_sat((__v32qu)__a, (__v32qu)__b);
 }
 
+/// Subtracts 16-bit integers from corresponding elements of two 256-bit
+///    vectors of [16 x i16] using unsigned saturation, and returns each
+///    difference in the corresponding element of the [16 x i16] result.
+///
+/// \code{.operation}
+/// FOR i := 0 TO 15
+///   j := i*16
+///   result[j+15:j] := SATURATE16U(__a[j+15:j] - __b[j+15:j])
+/// ENDFOR
+/// \endcode
+///
+/// \headerfile <immintrin.h>
+///
+/// This intrinsic corresponds to the \c VPSUBUSW instruction.
+///
+/// \param __a
+///    A 256-bit vector of [16 x i16] containing the minuends.
+/// \param __b
+///    A 256-bit vector of [16 x i16] containing the subtrahends.
+/// \returns A 256-bit vector of [16 x i16] containing the differences.
 static __inline__ __m256i __DEFAULT_FN_ATTRS256
 _mm256_subs_epu16(__m256i __a, __m256i __b)
 {
   return (__m256i)__builtin_elementwise_sub_sat((__v16hu)__a, (__v16hu)__b);
 }
 
+/// Unpacks and interleaves 8-bit integers from parts of the 256-bit integer
+///    vectors in \a __a and \a __b to form the 256-bit result. Specifically,
+///    uses the upper 64 bits of each 128-bit half of \a __a and \a __b as
+///    input; other bits in these parameters are ignored.
+///
+/// \code{.operation}
+/// result[7:0] := __a[71:64]
+/// result[15:8] := __b[71:64]
+/// result[23:16] := __a[79:72]
+/// result[31:24] := __b[79:72]
+/// . . .
+/// result[127:120] := __b[127:120]
+/// result[135:128] := __a[199:192]
+/// . . .
+/// result[255:248] := __b[255:248]
+/// \endcode
+///
+/// \headerfile <immintrin.h>
+///
+/// This intrinsic corresponds to the \c VPUNPCKHBW instruction.
+///
+/// \param __a
+///    A 256-bit integer vector used as the source for the even-numbered bytes
+///    of the result.
+/// \param __b
+///    A 256-bit integer vector used as the source for the odd-numbered bytes
+///    of the result.
+/// \returns A 256-bit integer vector containing the result.
 static __inline__ __m256i __DEFAULT_FN_ATTRS256
 _mm256_unpackhi_epi8(__m256i __a, __m256i __b)
 {
   return (__m256i)__builtin_shufflevector((__v32qi)__a, (__v32qi)__b, 8, 32+8, 9, 32+9, 10, 32+10, 11, 32+11, 12, 32+12, 13, 32+13, 14, 32+14, 15, 32+15, 24, 32+24, 25, 32+25, 26, 32+26, 27, 32+27, 28, 32+28, 29, 32+29, 30, 32+30, 31, 32+31);
 }
 
+/// Unpacks and interleaves 16-bit integers from parts of the 256-bit vectors
+///    of [16 x i16] in \a __a and \a __b to return the resulting 256-bit
+///    vector of [16 x i16]. Specifically, uses the upper 64 bits of each
+///    128-bit half of \a __a and \a __b as input; other bits in these
+///    parameters are ignored.
+///
+/// \code{.operation}
+/// result[15:0] := __a[79:64]
+/// result[31:16] := __b[79:64]
+/// result[47:32] := __a[95:80]
+/// result[63:48] := __b[95:80]
+/// . . .
+/// result[127:112] := __b[127:112]
+/// result[143:128] := __a[211:196]
+/// . . .
+/// result[255:240] := __b[255:240]
+/// \endcode
+///
+/// \headerfile <immintrin.h>
+///
+/// This intrinsic corresponds to the \c VPUNPCKHWD instruction.
+///
+/// \param __a
+///    A 256-bit vector of [16 x i16] used as the source for the even-numbered
+///    elements of the result.
+/// \param __b
+///    A 256-bit vector of [16 x i16] used as the source for the odd-numbered
+///    elements of the result.
+/// \returns A 256-bit vector of [16 x i16] containing the result.
 static __inline__ __m256i __DEFAULT_FN_ATTRS256
 _mm256_unpackhi_epi16(__m256i __a, __m256i __b)
 {
   return (__m256i)__builtin_shufflevector((__v16hi)__a, (__v16hi)__b, 4, 16+4, 5, 16+5, 6, 16+6, 7, 16+7, 12, 16+12, 13, 16+13, 14, 16+14, 15, 16+15);
 }
 
+/// Unpacks and interleaves 32-bit integers from parts of the 256-bit vectors
+///    of [8 x i32] in \a __a and \a __b to return the resulting 256-bit vector
+///    of [8 x i32]. Specifically, uses the upper 64 bits of each 128-bit half
+///    of \a __a and \a __b as input; other bits in these parameters are
+///    ignored.
+///
+/// \code{.operation}
+/// result[31:0] := __a[95:64]
+/// result[63:32] := __b[95:64]
+/// result[95:64] := __a[127:96]
+/// result[127:96] := __b[127:96]
+/// result[159:128] := __a[223:192]
+/// result[191:160] := __b[223:192]
+/// result[223:192] := __a[255:224]
+/// result[255:224] := __b[255:224]
+/// \endcode
+///
+/// \headerfile <immintrin.h>
+///
+/// This intrinsic corresponds to the \c VPUNPCKHDQ instruction.
+///
+/// \param __a
+///    A 256-bit vector of [8 x i32] used as the source for the even-numbered
+///    elements of the result.
+/// \param __b
+///    A 256-bit vector of [8 x i32] used as the source for the odd-numbered
+///    elements of the result.
+/// \returns A 256-bit vector of [8 x i32] containing the result.
 static __inline__ __m256i __DEFAULT_FN_ATTRS256
 _mm256_unpackhi_epi32(__m256i __a, __m256i __b)
 {
   return (__m256i)__builtin_shufflevector((__v8si)__a, (__v8si)__b, 2, 8+2, 3, 8+3, 6, 8+6, 7, 8+7);
 }
 
+/// Unpacks and interleaves 64-bit integers from parts of the 256-bit vectors
+///    of [4 x i64] in \a __a and \a __b to return the resulting 256-bit vector
+///    of [4 x i64]. Specifically, uses the upper 64 bits of each 128-bit half
+///    of \a __a and \a __b as input; other bits in these parameters are
+///    ignored.
+///
+/// \code{.operation}
+/// result[63:0] := __a[127:64]
+/// result[127:64] := __b[127:64]
+/// result[191:128] := __a[255:192]
+/// result[255:192] := __b[255:192]
+/// \endcode
+///
+/// \headerfile <immintrin.h>
+///
+/// This intrinsic corresponds to the \c VPUNPCKHQDQ instruction.
+///
+/// \param __a
+///    A 256-bit vector of [4 x i64] used as the source for the even-numbered
+///    elements of the result.
+/// \param __b
+///    A 256-bit vector of [4 x i64] used as the source for the odd-numbered
+///    elements of the result.
+/// \returns A 256-bit vector of [4 x i64] containing the result.
 static __inline__ __m256i __DEFAULT_FN_ATTRS256
 _mm256_unpackhi_epi64(__m256i __a, __m256i __b)
 {
   return (__m256i)__builtin_shufflevector((__v4di)__a, (__v4di)__b, 1, 4+1, 3, 4+3);
 }
 
+/// Unpacks and interleaves 8-bit integers from parts of the 256-bit integer
+///    vectors in \a __a and \a __b to form the 256-bit result. Specifically,
+///    uses the lower 64 bits of each 128-bit half of \a __a and \a __b as
+///    input; other bits in these parameters are ignored.
+///
+/// \code{.operation}
+/// result[7:0] := __a[7:0]
+/// result[15:8] := __b[7:0]
+/// result[23:16] := __a[15:8]
+/// result[31:24] := __b[15:8]
+/// . . .
+/// result[127:120] := __b[63:56]
+/// result[135:128] := __a[135:128]
+/// . . .
+/// result[255:248] := __b[191:184]
+/// \endcode
+///
+/// \headerfile <immintrin.h>
+///
+/// This intrinsic corresponds to the \c VPUNPCKLBW instruction.
+///
+/// \param __a
+///    A 256-bit integer vector used as the source for the even-numbered bytes
+///    of the result.
+/// \param __b
+///    A 256-bit integer vector used as the source for the odd-numbered bytes
+///    of the result.
+/// \returns A 256-bit integer vector containing the result.
 static __inline__ __m256i __DEFAULT_FN_ATTRS256
 _mm256_unpacklo_epi8(__m256i __a, __m256i __b)
 {
   return (__m256i)__builtin_shufflevector((__v32qi)__a, (__v32qi)__b, 0, 32+0, 1, 32+1, 2, 32+2, 3, 32+3, 4, 32+4, 5, 32+5, 6, 32+6, 7, 32+7, 16, 32+16, 17, 32+17, 18, 32+18, 19, 32+19, 20, 32+20, 21, 32+21, 22, 32+22, 23, 32+23);
 }
 
+/// Unpacks and interleaves 16-bit integers from parts of the 256-bit vectors
+///    of [16 x i16] in \a __a and \a __b to return the resulting 256-bit
+///    vector of [16 x i16]. Specifically, uses the lower 64 bits of each
+///    128-bit half of \a __a and \a __b as input; other bits in these
+///    parameters are ignored.
+///
+/// \code{.operation}
+/// result[15:0] := __a[15:0]
+/// result[31:16] := __b[15:0]
+/// result[47:32] := __a[31:16]
+/// result[63:48] := __b[31:16]
+/// . . .
+/// result[127:112] := __b[63:48]
+/// result[143:128] := __a[143:128]
+/// . . .
+/// result[255:239] := __b[191:176]
+/// \endcode
+///
+/// \headerfile <immintrin.h>
+///
+/// This intrinsic corresponds to the \c VPUNPCKLWD instruction.
+///
+/// \param __a
+///    A 256-bit vector of [16 x i16] used as the source for the even-numbered
+///    elements of the result.
+/// \param __b
+///    A 256-bit vector of [16 x i16] used as the source for the odd-numbered
+///    elements of the result.
+/// \returns A 256-bit vector of [16 x i16] containing the result.
 static __inline__ __m256i __DEFAULT_FN_ATTRS256
 _mm256_unpacklo_epi16(__m256i __a, __m256i __b)
 {
   return (__m256i)__builtin_shufflevector((__v16hi)__a, (__v16hi)__b, 0, 16+0, 1, 16+1, 2, 16+2, 3, 16+3, 8, 16+8, 9, 16+9, 10, 16+10, 11, 16+11);
 }
 
+/// Unpacks and interleaves 32-bit integers from parts of the 256-bit vectors
+///    of [8 x i32] in \a __a and \a __b to return the resulting 256-bit vector
+///    of [8 x i32]. Specifically, uses the lower 64 bits of each 128-bit half
+///    of \a __a and \a __b as input; other bits in these parameters are
+///    ignored.
+///
+/// \code{.operation}
+/// result[31:0] := __a[31:0]
+/// result[63:32] := __b[31:0]
+/// result[95:64] := __a[63:32]
+/// result[127:96] := __b[63:32]
+/// result[159:128] := __a[159:128]
+/// result[191:160] := __b[159:128]
+/// result[223:192] := __a[191:160]
+/// result[255:224] := __b[191:190]
+/// \endcode
+///
+/// \headerfile <immintrin.h>
+///
+/// This intrinsic corresponds to the \c VPUNPCKLDQ instruction.
+///
+/// \param __a
+///    A 256-bit vector of [8 x i32] used as the source for the even-numbered
+///    elements of the result.
+/// \param __b
+///    A 256-bit vector of [8 x i32] used as the source for the odd-numbered
+///    elements of the result.
+/// \returns A 256-bit vector of [8 x i32] containing the result.
 static __inline__ __m256i __DEFAULT_FN_ATTRS256
 _mm256_unpacklo_epi32(__m256i __a, __m256i __b)
 {
   return (__m256i)__builtin_shufflevector((__v8si)__a, (__v8si)__b, 0, 8+0, 1, 8+1, 4, 8+4, 5, 8+5);
 }
 
+/// Unpacks and interleaves 64-bit integers from parts of the 256-bit vectors
+///    of [4 x i64] in \a __a and \a __b to return the resulting 256-bit vector
+///    of [4 x i64]. Specifically, uses the lower 64 bits of each 128-bit half
+///    of \a __a and \a __b as input; other bits in these parameters are
+///    ignored.
+///
+/// \code{.operation}
+/// result[63:0] := __a[63:0]
+/// result[127:64] := __b[63:0]
+/// result[191:128] := __a[191:128]
+/// result[255:192] := __b[191:128]
+/// \endcode
+///
+/// \headerfile <immintrin.h>
+///
+/// This intrinsic corresponds to the \c VPUNPCKLQDQ instruction.
+///
+/// \param __a
+///    A 256-bit vector of [4 x i64] used as the source for the even-numbered
+///    elements of the result.
+/// \param __b
+///    A 256-bit vector of [4 x i64] used as the source for the odd-numbered
+///    elements of the result.
+/// \returns A 256-bit vector of [4 x i64] containing the result.
 static __inline__ __m256i __DEFAULT_FN_ATTRS256
 _mm256_unpacklo_epi64(__m256i __a, __m256i __b)
 {
@@ -1006,30 +2145,84 @@ _mm256_stream_load_si256(__m256i const *__V)
   return (__m256i)__builtin_nontemporal_load((const __v4di_aligned *)__V);
 }
 
+/// Broadcasts the 32-bit floating-point value from the low element of the
+///    128-bit vector of [4 x float] in \a __X to all elements of the result's
+///    128-bit vector of [4 x float].
+///
+/// \headerfile <immintrin.h>
+///
+/// This intrinsic corresponds to the \c VBROADCASTSS instruction.
+///
+/// \param __X
+///    A 128-bit vector of [4 x float] whose low element will be broadcast.
+/// \returns A 128-bit vector of [4 x float] containing the result.
 static __inline__ __m128 __DEFAULT_FN_ATTRS128
 _mm_broadcastss_ps(__m128 __X)
 {
   return (__m128)__builtin_shufflevector((__v4sf)__X, (__v4sf)__X, 0, 0, 0, 0);
 }
 
+/// Broadcasts the 64-bit floating-point value from the low element of the
+///    128-bit vector of [2 x double] in \a __a to both elements of the
+///    result's 128-bit vector of [2 x double].
+///
+/// \headerfile <immintrin.h>
+///
+/// This intrinsic corresponds to the \c MOVDDUP instruction.
+///
+/// \param __a
+///    A 128-bit vector of [2 x double] whose low element will be broadcast.
+/// \returns A 128-bit vector of [2 x double] containing the result.
 static __inline__ __m128d __DEFAULT_FN_ATTRS128
 _mm_broadcastsd_pd(__m128d __a)
 {
   return __builtin_shufflevector((__v2df)__a, (__v2df)__a, 0, 0);
 }
 
+/// Broadcasts the 32-bit floating-point value from the low element of the
+///    128-bit vector of [4 x float] in \a __X to all elements of the
+///    result's 256-bit vector of [8 x float].
+///
+/// \headerfile <immintrin.h>
+///
+/// This intrinsic corresponds to the \c VBROADCASTSS instruction.
+///
+/// \param __X
+///    A 128-bit vector of [4 x float] whose low element will be broadcast.
+/// \returns A 256-bit vector of [8 x float] containing the result.
 static __inline__ __m256 __DEFAULT_FN_ATTRS256
 _mm256_broadcastss_ps(__m128 __X)
 {
   return (__m256)__builtin_shufflevector((__v4sf)__X, (__v4sf)__X, 0, 0, 0, 0, 0, 0, 0, 0);
 }
 
+/// Broadcasts the 64-bit floating-point value from the low element of the
+///    128-bit vector of [2 x double] in \a __X to all elements of the
+///    result's 256-bit vector of [4 x double].
+///
+/// \headerfile <immintrin.h>
+///
+/// This intrinsic corresponds to the \c VBROADCASTSD instruction.
+///
+/// \param __X
+///    A 128-bit vector of [2 x double] whose low element will be broadcast.
+/// \returns A 256-bit vector of [4 x double] containing the result.
 static __inline__ __m256d __DEFAULT_FN_ATTRS256
 _mm256_broadcastsd_pd(__m128d __X)
 {
   return (__m256d)__builtin_shufflevector((__v2df)__X, (__v2df)__X, 0, 0, 0, 0);
 }
 
+/// Broadcasts the 128-bit integer data from \a __X to both the lower and
+///    upper halves of the 256-bit result.
+///
+/// \headerfile <immintrin.h>
+///
+/// This intrinsic corresponds to the \c VBROADCASTI128 instruction.
+///
+/// \param __X
+///    A 128-bit integer vector to be broadcast.
+/// \returns A 256-bit integer vector containing the result.
 static __inline__ __m256i __DEFAULT_FN_ATTRS256
 _mm256_broadcastsi128_si256(__m128i __X)
 {
@@ -1038,87 +2231,410 @@ _mm256_broadcastsi128_si256(__m128i __X)
 
 #define _mm_broadcastsi128_si256(X) _mm256_broadcastsi128_si256(X)
 
+/// Merges 32-bit integer elements from either of the two 128-bit vectors of
+///    [4 x i32] in \a V1 or \a V2 to the result's 128-bit vector of [4 x i32],
+///    as specified by the immediate integer operand \a M.
+///
+/// \code{.operation}
+/// FOR i := 0 TO 3
+///   j := i*32
+///   IF M[i] == 0
+///     result[31+j:j] := V1[31+j:j]
+///   ELSE
+///     result[31+j:j] := V2[32+j:j]
+///   FI
+/// ENDFOR
+/// \endcode
+///
+/// \headerfile <immintrin.h>
+///
+/// \code
+/// __m128i _mm_blend_epi32(__m128i V1, __m128i V2, const int M);
+/// \endcode
+///
+/// This intrinsic corresponds to the \c VPBLENDDD instruction.
+///
+/// \param V1
+///    A 128-bit vector of [4 x i32] containing source values.
+/// \param V2
+///    A 128-bit vector of [4 x i32] containing source values.
+/// \param M
+///    An immediate 8-bit integer operand, with bits [3:0] specifying the
+///    source for each element of the result. The position of the mask bit
+///    corresponds to the index of a copied value. When a mask bit is 0, the
+///    element is copied from \a V1; otherwise, it is copied from \a V2.
+/// \returns A 128-bit vector of [4 x i32] containing the result.
 #define _mm_blend_epi32(V1, V2, M) \
   ((__m128i)__builtin_ia32_pblendd128((__v4si)(__m128i)(V1), \
                                       (__v4si)(__m128i)(V2), (int)(M)))
 
+/// Merges 32-bit integer elements from either of the two 256-bit vectors of
+///    [8 x i32] in \a V1 or \a V2 to return a 256-bit vector of [8 x i32],
+///    as specified by the immediate integer operand \a M.
+///
+/// \code{.operation}
+/// FOR i := 0 TO 7
+///   j := i*32
+///   IF M[i] == 0
+///     result[31+j:j] := V1[31+j:j]
+///   ELSE
+///     result[31+j:j] := V2[32+j:j]
+///   FI
+/// ENDFOR
+/// \endcode
+///
+/// \headerfile <immintrin.h>
+///
+/// \code
+/// __m256i _mm256_blend_epi32(__m256i V1, __m256i V2, const int M);
+/// \endcode
+///
+/// This intrinsic corresponds to the \c VPBLENDDD instruction.
+///
+/// \param V1
+///    A 256-bit vector of [8 x i32] containing source values.
+/// \param V2
+///    A 256-bit vector of [8 x i32] containing source values.
+/// \param M
+///    An immediate 8-bit integer operand, with bits [7:0] specifying the
+///    source for each element of the result. The position of the mask bit
+///    corresponds to the index of a copied value. When a mask bit is 0, the
+///    element is copied from \a V1; otherwise, it is is copied from \a V2.
+/// \returns A 256-bit vector of [8 x i32] containing the result.
 #define _mm256_blend_epi32(V1, V2, M) \
   ((__m256i)__builtin_ia32_pblendd256((__v8si)(__m256i)(V1), \
                                       (__v8si)(__m256i)(V2), (int)(M)))
 
+/// Broadcasts the low byte from the 128-bit integer vector in \a __X to all
+///    bytes of the 256-bit result.
+///
+/// \headerfile <immintrin.h>
+///
+/// This intrinsic corresponds to the \c VPBROADCASTB instruction.
+///
+/// \param __X
+///    A 128-bit integer vector whose low byte will be broadcast.
+/// \returns A 256-bit integer vector containing the result.
 static __inline__ __m256i __DEFAULT_FN_ATTRS256
 _mm256_broadcastb_epi8(__m128i __X)
 {
   return (__m256i)__builtin_shufflevector((__v16qi)__X, (__v16qi)__X, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
 }
 
+/// Broadcasts the low element from the 128-bit vector of [8 x i16] in \a __X
+///    to all elements of the result's 256-bit vector of [16 x i16].
+///
+/// \headerfile <immintrin.h>
+///
+/// This intrinsic corresponds to the \c VPBROADCASTW instruction.
+///
+/// \param __X
+///    A 128-bit vector of [8 x i16] whose low element will be broadcast.
+/// \returns A 256-bit vector of [16 x i16] containing the result.
 static __inline__ __m256i __DEFAULT_FN_ATTRS256
 _mm256_broadcastw_epi16(__m128i __X)
 {
   return (__m256i)__builtin_shufflevector((__v8hi)__X, (__v8hi)__X, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
 }
 
+/// Broadcasts the low element from the 128-bit vector of [4 x i32] in \a __X
+///    to all elements of the result's 256-bit vector of [8 x i32].
+///
+/// \headerfile <immintrin.h>
+///
+/// This intrinsic corresponds to the \c VPBROADCASTD instruction.
+///
+/// \param __X
+///    A 128-bit vector of [4 x i32] whose low element will be broadcast.
+/// \returns A 256-bit vector of [8 x i32] containing the result.
 static __inline__ __m256i __DEFAULT_FN_ATTRS256
 _mm256_broadcastd_epi32(__m128i __X)
 {
   return (__m256i)__builtin_shufflevector((__v4si)__X, (__v4si)__X, 0, 0, 0, 0, 0, 0, 0, 0);
 }
 
+/// Broadcasts the low element from the 128-bit vector of [2 x i64] in \a __X
+///    to all elements of the result's 256-bit vector of [4 x i64].
+///
+/// \headerfile <immintrin.h>
+///
+/// This intrinsic corresponds to the \c VPBROADCASTQ instruction.
+///
+/// \param __X
+///    A 128-bit vector of [2 x i64] whose low element will be broadcast.
+/// \returns A 256-bit vector of [4 x i64] containing the result.
 static __inline__ __m256i __DEFAULT_FN_ATTRS256
 _mm256_broadcastq_epi64(__m128i __X)
 {
   return (__m256i)__builtin_shufflevector((__v2di)__X, (__v2di)__X, 0, 0, 0, 0);
 }
 
+/// Broadcasts the low byte from the 128-bit integer vector in \a __X to all
+///    bytes of the 128-bit result.
+///
+/// \headerfile <immintrin.h>
+///
+/// This intrinsic corresponds to the \c VPBROADCASTB instruction.
+///
+/// \param __X
+///    A 128-bit integer vector whose low byte will be broadcast.
+/// \returns A 128-bit integer vector containing the result.
 static __inline__ __m128i __DEFAULT_FN_ATTRS128
 _mm_broadcastb_epi8(__m128i __X)
 {
   return (__m128i)__builtin_shufflevector((__v16qi)__X, (__v16qi)__X, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
 }
 
+/// Broadcasts the low element from the 128-bit vector of [8 x i16] in
+///    \a __X to all elements of the result's 128-bit vector of [8 x i16].
+///
+/// \headerfile <immintrin.h>
+///
+/// This intrinsic corresponds to the \c VPBROADCASTW instruction.
+///
+/// \param __X
+///    A 128-bit vector of [8 x i16] whose low element will be broadcast.
+/// \returns A 128-bit vector of [8 x i16] containing the result.
 static __inline__ __m128i __DEFAULT_FN_ATTRS128
 _mm_broadcastw_epi16(__m128i __X)
 {
   return (__m128i)__builtin_shufflevector((__v8hi)__X, (__v8hi)__X, 0, 0, 0, 0, 0, 0, 0, 0);
 }
 
-
+/// Broadcasts the low element from the 128-bit vector of [4 x i32] in \a __X
+///    to all elements of the result's vector of [4 x i32].
+///
+/// \headerfile <immintrin.h>
+///
+/// This intrinsic corresponds to the \c VPBROADCASTD instruction.
+///
+/// \param __X
+///    A 128-bit vector of [4 x i32] whose low element will be broadcast.
+/// \returns A 128-bit vector of [4 x i32] containing the result.
 static __inline__ __m128i __DEFAULT_FN_ATTRS128
 _mm_broadcastd_epi32(__m128i __X)
 {
   return (__m128i)__builtin_shufflevector((__v4si)__X, (__v4si)__X, 0, 0, 0, 0);
 }
 
+/// Broadcasts the low element from the 128-bit vector of [2 x i64] in \a __X
+///    to both elements of the result's 128-bit vector of [2 x i64].
+///
+/// \headerfile <immintrin.h>
+///
+/// This intrinsic corresponds to the \c VPBROADCASTQ instruction.
+///
+/// \param __X
+///    A 128-bit vector of [2 x i64] whose low element will be broadcast.
+/// \returns A 128-bit vector of [2 x i64] containing the result.
 static __inline__ __m128i __DEFAULT_FN_ATTRS128
 _mm_broadcastq_epi64(__m128i __X)
 {
   return (__m128i)__builtin_shufflevector((__v2di)__X, (__v2di)__X, 0, 0);
 }
 
+/// Sets the result's 256-bit vector of [8 x i32] to copies of elements of the
+///    256-bit vector of [8 x i32] in \a __a as specified by indexes in the
+///    elements of the 256-bit vector of [8 x i32] in \a __b.
+///
+/// \code{.operation}
+/// FOR i := 0 TO 7
+///   j := i*32
+///   k := __b[j+2:j] * 32
+///   result[j+31:j] := __a[k+31:k]
+/// ENDFOR
+/// \endcode
+///
+/// \headerfile <immintrin.h>
+///
+/// This intrinsic corresponds to the \c VPERMD instruction.
+///
+/// \param __a
+///    A 256-bit vector of [8 x i32] containing the source values.
+/// \param __b
+///    A 256-bit vector of [8 x i32] containing indexes of values to use from
+///    \a __a.
+/// \returns A 256-bit vector of [8 x i32] containing the result.
 static __inline__ __m256i __DEFAULT_FN_ATTRS256
 _mm256_permutevar8x32_epi32(__m256i __a, __m256i __b)
 {
   return (__m256i)__builtin_ia32_permvarsi256((__v8si)__a, (__v8si)__b);
 }
 
+/// Sets the result's 256-bit vector of [4 x double] to copies of elements of
+///    the 256-bit vector of [4 x double] in \a V as specified by the
+///    immediate value \a M.
+///
+/// \code{.operation}
+/// FOR i := 0 TO 3
+///   j := i*64
+///   k := (M >> i*2)[1:0] * 64
+///   result[j+63:j] := V[k+63:k]
+/// ENDFOR
+/// \endcode
+///
+/// \headerfile <immintrin.h>
+///
+/// \code
+/// __m256d _mm256_permute4x64_pd(__m256d V, const int M);
+/// \endcode
+///
+/// This intrinsic corresponds to the \c VPERMPD instruction.
+///
+/// \param V
+///    A 256-bit vector of [4 x double] containing the source values.
+/// \param M
+///    An immediate 8-bit value specifying which elements to copy from \a V.
+///    \a M[1:0] specifies the index in \a a for element 0 of the result,
+///    \a M[3:2] specifies the index for element 1, and so forth.
+/// \returns A 256-bit vector of [4 x double] containing the result.
 #define _mm256_permute4x64_pd(V, M) \
   ((__m256d)__builtin_ia32_permdf256((__v4df)(__m256d)(V), (int)(M)))
 
+/// Sets the result's 256-bit vector of [8 x float] to copies of elements of
+///    the 256-bit vector of [8 x float] in \a __a as specified by indexes in
+///    the elements of the 256-bit vector of [8 x i32] in \a __b.
+///
+/// \code{.operation}
+/// FOR i := 0 TO 7
+///   j := i*32
+///   k := __b[j+2:j] * 32
+///   result[j+31:j] := __a[k+31:k]
+/// ENDFOR
+/// \endcode
+///
+/// \headerfile <immintrin.h>
+///
+/// This intrinsic corresponds to the \c VPERMPS instruction.
+///
+/// \param __a
+///    A 256-bit vector of [8 x float] containing the source values.
+/// \param __b
+///    A 256-bit vector of [8 x i32] containing indexes of values to use from
+///    \a __a.
+/// \returns A 256-bit vector of [8 x float] containing the result.
 static __inline__ __m256 __DEFAULT_FN_ATTRS256
 _mm256_permutevar8x32_ps(__m256 __a, __m256i __b)
 {
   return (__m256)__builtin_ia32_permvarsf256((__v8sf)__a, (__v8si)__b);
 }
 
+/// Sets the result's 256-bit vector of [4 x i64] result to copies of elements
+///    of the 256-bit vector of [4 x i64] in \a V as specified by the
+///    immediate value \a M.
+///
+/// \code{.operation}
+/// FOR i := 0 TO 3
+///   j := i*64
+///   k := (M >> i*2)[1:0] * 64
+///   result[j+63:j] := V[k+63:k]
+/// ENDFOR
+/// \endcode
+///
+/// \headerfile <immintrin.h>
+///
+/// \code
+/// __m256i _mm256_permute4x64_epi64(__m256i V, const int M);
+/// \endcode
+///
+/// This intrinsic corresponds to the \c VPERMQ instruction.
+///
+/// \param V
+///    A 256-bit vector of [4 x i64] containing the source values.
+/// \param M
+///    An immediate 8-bit value specifying which elements to copy from \a V.
+///    \a M[1:0] specifies the index in \a a for element 0 of the result,
+///    \a M[3:2] specifies the index for element 1, and so forth.
+/// \returns A 256-bit vector of [4 x i64] containing the result.
 #define _mm256_permute4x64_epi64(V, M) \
   ((__m256i)__builtin_ia32_permdi256((__v4di)(__m256i)(V), (int)(M)))
 
+/// Sets each half of the 256-bit result either to zero or to one of the
+///    four possible 128-bit halves of the 256-bit vectors \a V1 and \a V2,
+///    as specified by the immediate value \a M.
+///
+/// \code{.operation}
+/// FOR i := 0 TO 1
+///   j := i*128
+///   k := M >> (i*4)
+///   IF k[3] == 0
+///     CASE (k[1:0]) OF
+///     0: result[127+j:j] := V1[127:0]
+///     1: result[127+j:j] := V1[255:128]
+///     2: result[127+j:j] := V2[127:0]
+///     3: result[127+j:j] := V2[255:128]
+///     ESAC
+///   ELSE
+///     result[127+j:j] := 0
+///   FI
+/// ENDFOR
+/// \endcode
+///
+/// \headerfile <immintrin.h>
+///
+/// \code
+/// __m256i _mm256_permute2x128_si256(__m256i V1, __m256i V2, const int M);
+/// \endcode
+///
+/// This intrinsic corresponds to the \c VPERM2I128 instruction.
+///
+/// \param V1
+///    A 256-bit integer vector containing source values.
+/// \param V2
+///    A 256-bit integer vector containing source values.
+/// \param M
+///    An immediate value specifying how to form the result. Bits [3:0]
+///    control the lower half of the result, bits [7:4] control the upper half.
+///    Within each 4-bit control value, if bit 3 is 1, the result is zero,
+///    otherwise bits [1:0] determine the source as follows. \n
+///    0: the lower half of \a V1 \n
+///    1: the upper half of \a V1 \n
+///    2: the lower half of \a V2 \n
+///    3: the upper half of \a V2
+/// \returns A 256-bit integer vector containing the result.
 #define _mm256_permute2x128_si256(V1, V2, M) \
   ((__m256i)__builtin_ia32_permti256((__m256i)(V1), (__m256i)(V2), (int)(M)))
 
+/// Extracts half of the 256-bit vector \a V to the 128-bit result. If bit 0
+///     of the immediate \a M is zero, extracts the lower half of the result;
+///     otherwise, extracts the upper half.
+///
+/// \headerfile <immintrin.h>
+///
+/// \code
+/// __m128i _mm256_extracti128_si256(__m256i V, const int M);
+/// \endcode
+///
+/// This intrinsic corresponds to the \c VEXTRACTI128 instruction.
+///
+/// \param V
+///    A 256-bit integer vector containing the source values.
+/// \param M
+///    An immediate value specifying which half of \a V to extract.
+/// \returns A 128-bit integer vector containing the result.
 #define _mm256_extracti128_si256(V, M) \
   ((__m128i)__builtin_ia32_extract128i256((__v4di)(__m256i)(V), (int)(M)))
 
+/// Copies the 256-bit vector \a V1 to the result, then overwrites half of the
+///     result with the 128-bit vector \a V2. If bit 0 of the immediate \a M
+///     is zero, overwrites the lower half of the result; otherwise,
+///     overwrites the upper half.
+///
+/// \headerfile <immintrin.h>
+///
+/// \code
+/// __m256i _mm256_inserti128_si256(__m256i V1, __m128i V2, const int M);
+/// \endcode
+///
+/// This intrinsic corresponds to the \c VINSERTI128 instruction.
+///
+/// \param V1
+///    A 256-bit integer vector containing a source value.
+/// \param V2
+///    A 128-bit integer vector containing a source value.
+/// \param M
+///    An immediate value specifying where to put \a V2 in the result.
+/// \returns A 256-bit integer vector containing the result.
 #define _mm256_inserti128_si256(V1, V2, M) \
   ((__m256i)__builtin_ia32_insert128i256((__v4di)(__m256i)(V1), \
                                          (__v2di)(__m128i)(V2), (int)(M)))

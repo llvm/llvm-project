@@ -34,6 +34,7 @@ namespace llvm {
 
 class AAResults;
 class AssumptionCache;
+class OptimizationRemarkEmitter;
 class ProfileSummaryInfo;
 class TargetLibraryInfo;
 class TargetTransformInfo;

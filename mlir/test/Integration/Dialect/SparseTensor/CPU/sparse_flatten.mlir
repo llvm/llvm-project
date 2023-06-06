@@ -33,10 +33,10 @@
 #SparseTensor = #sparse_tensor.encoding<{
   lvlTypes = [ "compressed", "compressed", "compressed", "compressed",
                    "compressed", "compressed", "compressed", "compressed" ],
-  // Note that any dimOrdering permutation should give the same results
+  // Note that any dimToLvl permutation should give the same results
   // since, even though it impacts the sparse storage scheme layout,
   // it should not change the semantics.
-  dimOrdering = affine_map<(i,j,k,l,m,n,o,p) -> (p,o,j,k,i,l,m,n)>
+  dimToLvl = affine_map<(i,j,k,l,m,n,o,p) -> (p,o,j,k,i,l,m,n)>
 }>
 
 #trait_flatten = {
