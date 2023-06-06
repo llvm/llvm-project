@@ -119,6 +119,28 @@ implemented, all the algorithms will eventually forward to the basis algorithms 
   template <class _ExecutionPolicy, class _Iterator, class _Predicate>
   __iter_diff_t<_Iterator> __pstl_count_if(_Backend, _Iterator __first, _Iterator __last, _Predicate __pred);
 
+  template <class _ExecutionPolicy, class _Iterator, class _Tp>
+  void __pstl_replace(_Backend, _Iterator __first, _Iterator __last, const _Tp& __old_value, const _Tp& __new_value);
+
+  template <class _ExecutionPolicy, class _Iterator, class _Pred, class _Tp>
+  void __pstl_replace_if(_Backend, _Iterator __first, _Iterator __last, _Pred __pred, const _Tp& __new_value);
+
+  template <class _ExecutionPolicy, class _Iterator, class _OutIterator, class _Tp>
+  void __pstl_replace_copy(_Backend,
+                           _Iterator __first,
+                           _Iterator __last,
+                           _OutIterator __result,
+                           const _Tp& __old_value,
+                           const _Tp& __new_value);
+
+  template <class _ExecutionPolicy, class _Iterator, class _OutIterator, class _Pred, class _Tp>
+  void __pstl_replace_copy_if(_Backend,
+                              _Iterator __first,
+                              _Iterator __last,
+                              _OutIterator __result,
+                              _Pred __pred,
+                              const _Tp& __new_value);
+
 // TODO: Complete this list
 
 */
