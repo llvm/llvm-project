@@ -1649,4 +1649,36 @@ def AwaitOp : CIR_Op<"await",
   let hasVerifier = 1;
 }
 
+//===----------------------------------------------------------------------===//
+// Variadic Operations
+//===----------------------------------------------------------------------===//
+
+def VAStartOp : CIR_Op<"va.start">, Arguments<(ins CIR_PointerType:$arg_list)> {
+  let summary = "Starts a variable argument list";
+  let assemblyFormat = "$arg_list attr-dict `:` type(operands)";
+  let hasVerifier = 0;
+}
+
+def VAEndOp : CIR_Op<"va.end">, Arguments<(ins CIR_PointerType:$arg_list)> {
+  let summary = "Ends a variable argument list";
+  let assemblyFormat = "$arg_list attr-dict `:` type(operands)";
+  let hasVerifier = 0;
+}
+
+def VACopyOp : CIR_Op<"va.copy">,
+               Arguments<(ins CIR_PointerType:$dst_list,
+                              CIR_PointerType:$src_list)> {
+  let summary = "Copies a variable argument list";
+  let assemblyFormat = "$src_list `to` $dst_list attr-dict `:` type(operands)";
+  let hasVerifier = 0;
+}
+
+def VAArgOp : CIR_Op<"va.arg">,
+              Results<(outs AnyType:$result)>,
+              Arguments<(ins CIR_PointerType:$arg_list)> {
+  let summary = "Fetches next variadic element as a given type";
+  let assemblyFormat = "$arg_list attr-dict `:` functional-type(operands, $result)";
+  let hasVerifier = 0;
+}
+
 #endif // LLVM_CLANG_CIR_DIALECT_IR_CIROPS
