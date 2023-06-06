@@ -19,7 +19,7 @@
 define <16 x i8> @f16xi8_i16(<16 x i8> %a) {
 ; AVX-LABEL: f16xi8_i16:
 ; AVX:       # %bb.0:
-; AVX-NEXT:    vbroadcastss {{.*#+}} xmm1 = [0,1,0,1,0,1,0,1,0,1,0,1,0,1,0,1]
+; AVX-NEXT:    vmovdqa {{.*#+}} xmm1 = [0,1,0,1,0,1,0,1,0,1,0,1,0,1,0,1]
 ; AVX-NEXT:    vpaddb %xmm1, %xmm0, %xmm0
 ; AVX-NEXT:    vpand %xmm1, %xmm0, %xmm0
 ; AVX-NEXT:    retl
@@ -33,7 +33,7 @@ define <16 x i8> @f16xi8_i16(<16 x i8> %a) {
 ;
 ; AVX-64-LABEL: f16xi8_i16:
 ; AVX-64:       # %bb.0:
-; AVX-64-NEXT:    vbroadcastss {{.*#+}} xmm1 = [0,1,0,1,0,1,0,1,0,1,0,1,0,1,0,1]
+; AVX-64-NEXT:    vmovdqa {{.*#+}} xmm1 = [0,1,0,1,0,1,0,1,0,1,0,1,0,1,0,1]
 ; AVX-64-NEXT:    vpaddb %xmm1, %xmm0, %xmm0
 ; AVX-64-NEXT:    vpand %xmm1, %xmm0, %xmm0
 ; AVX-64-NEXT:    retq
@@ -124,7 +124,7 @@ define <32 x i8> @f32xi8_i16(<32 x i8> %a) {
 ; AVX-LABEL: f32xi8_i16:
 ; AVX:       # %bb.0:
 ; AVX-NEXT:    vextractf128 $1, %ymm0, %xmm1
-; AVX-NEXT:    vbroadcastss {{.*#+}} xmm2 = [0,1,0,1,0,1,0,1,0,1,0,1,0,1,0,1]
+; AVX-NEXT:    vmovdqa {{.*#+}} xmm2 = [0,1,0,1,0,1,0,1,0,1,0,1,0,1,0,1]
 ; AVX-NEXT:    vpaddb %xmm2, %xmm1, %xmm1
 ; AVX-NEXT:    vpaddb %xmm2, %xmm0, %xmm0
 ; AVX-NEXT:    vinsertf128 $1, %xmm1, %ymm0, %ymm0
@@ -141,7 +141,7 @@ define <32 x i8> @f32xi8_i16(<32 x i8> %a) {
 ; AVX-64-LABEL: f32xi8_i16:
 ; AVX-64:       # %bb.0:
 ; AVX-64-NEXT:    vextractf128 $1, %ymm0, %xmm1
-; AVX-64-NEXT:    vbroadcastss {{.*#+}} xmm2 = [0,1,0,1,0,1,0,1,0,1,0,1,0,1,0,1]
+; AVX-64-NEXT:    vmovdqa {{.*#+}} xmm2 = [0,1,0,1,0,1,0,1,0,1,0,1,0,1,0,1]
 ; AVX-64-NEXT:    vpaddb %xmm2, %xmm1, %xmm1
 ; AVX-64-NEXT:    vpaddb %xmm2, %xmm0, %xmm0
 ; AVX-64-NEXT:    vinsertf128 $1, %xmm1, %ymm0, %ymm0
@@ -288,7 +288,7 @@ define <64 x i8> @f64xi8_i16(<64 x i8> %a) {
 ; AVX-LABEL: f64xi8_i16:
 ; AVX:       # %bb.0:
 ; AVX-NEXT:    vextractf128 $1, %ymm1, %xmm2
-; AVX-NEXT:    vbroadcastss {{.*#+}} xmm3 = [0,1,0,1,0,1,0,1,0,1,0,1,0,1,0,1]
+; AVX-NEXT:    vmovdqa {{.*#+}} xmm3 = [0,1,0,1,0,1,0,1,0,1,0,1,0,1,0,1]
 ; AVX-NEXT:    vpaddb %xmm3, %xmm2, %xmm2
 ; AVX-NEXT:    vpaddb %xmm3, %xmm1, %xmm1
 ; AVX-NEXT:    vinsertf128 $1, %xmm2, %ymm1, %ymm1
@@ -320,7 +320,7 @@ define <64 x i8> @f64xi8_i16(<64 x i8> %a) {
 ; AVX-64-LABEL: f64xi8_i16:
 ; AVX-64:       # %bb.0:
 ; AVX-64-NEXT:    vextractf128 $1, %ymm1, %xmm2
-; AVX-64-NEXT:    vbroadcastss {{.*#+}} xmm3 = [0,1,0,1,0,1,0,1,0,1,0,1,0,1,0,1]
+; AVX-64-NEXT:    vmovdqa {{.*#+}} xmm3 = [0,1,0,1,0,1,0,1,0,1,0,1,0,1,0,1]
 ; AVX-64-NEXT:    vpaddb %xmm3, %xmm2, %xmm2
 ; AVX-64-NEXT:    vpaddb %xmm3, %xmm1, %xmm1
 ; AVX-64-NEXT:    vinsertf128 $1, %xmm2, %ymm1, %ymm1

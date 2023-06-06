@@ -359,7 +359,7 @@ define <4 x i32> @combine_vec_udiv_by_shl_pow2a(<4 x i32> %x, <4 x i32> %y) {
 ;
 ; XOP-LABEL: combine_vec_udiv_by_shl_pow2a:
 ; XOP:       # %bb.0:
-; XOP-NEXT:    vbroadcastss {{.*#+}} xmm2 = [4294967294,4294967294,4294967294,4294967294]
+; XOP-NEXT:    vmovdqa {{.*#+}} xmm2 = [4294967294,4294967294,4294967294,4294967294]
 ; XOP-NEXT:    vpsubd %xmm1, %xmm2, %xmm1
 ; XOP-NEXT:    vpshld %xmm1, %xmm0, %xmm0
 ; XOP-NEXT:    retq

@@ -469,8 +469,7 @@ define void @mask_replication_factor2_vf64(ptr %in.maskvec, ptr %in.vec, ptr %ou
 ; AVX512BW-ONLY-NEXT:    kmovq (%rdi), %k0
 ; AVX512BW-ONLY-NEXT:    vpmovm2b %k0, %zmm0
 ; AVX512BW-ONLY-NEXT:    vshufi64x2 {{.*#+}} zmm1 = zmm0[4,5,4,5,6,7,6,7]
-; AVX512BW-ONLY-NEXT:    vbroadcasti64x4 {{.*#+}} zmm2 = [0,0,1,1,2,2,3,3,4,4,5,5,6,6,7,7,8,8,9,9,10,10,11,11,12,12,13,13,14,14,15,15,0,0,1,1,2,2,3,3,4,4,5,5,6,6,7,7,8,8,9,9,10,10,11,11,12,12,13,13,14,14,15,15]
-; AVX512BW-ONLY-NEXT:    # zmm2 = mem[0,1,2,3,0,1,2,3]
+; AVX512BW-ONLY-NEXT:    vmovdqa64 {{.*#+}} zmm2 = [0,0,1,1,2,2,3,3,4,4,5,5,6,6,7,7,8,8,9,9,10,10,11,11,12,12,13,13,14,14,15,15,0,0,1,1,2,2,3,3,4,4,5,5,6,6,7,7,8,8,9,9,10,10,11,11,12,12,13,13,14,14,15,15]
 ; AVX512BW-ONLY-NEXT:    vpshufb %zmm2, %zmm1, %zmm1
 ; AVX512BW-ONLY-NEXT:    vpmovb2m %zmm1, %k1
 ; AVX512BW-ONLY-NEXT:    vshufi64x2 {{.*#+}} zmm0 = zmm0[0,1,0,1,2,3,2,3]
