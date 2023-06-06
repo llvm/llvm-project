@@ -14,11 +14,12 @@
 #include "clang-include-cleaner/Record.h"
 #include "clang-include-cleaner/Types.h"
 #include "clang/Format/Format.h"
+#include "clang/Lex/HeaderSearch.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/STLFunctionalExtras.h"
 #include "llvm/ADT/SmallVector.h"
-#include "llvm/Support/MemoryBufferRef.h"
-#include <variant>
+#include "llvm/ADT/StringRef.h"
+#include <string>
 
 namespace clang {
 class SourceLocation;
@@ -75,16 +76,12 @@ AnalysisResults analyze(llvm::ArrayRef<Decl *> ASTRoots,
 std::string fixIncludes(const AnalysisResults &Results, llvm::StringRef Code,
                         const format::FormatStyle &IncludeStyle);
 
-std::string spellHeader(const Header &H, const HeaderSearch &HS,
-                        const FileEntry *Main);
-
 /// Gets all the providers for a symbol by traversing each location.
 /// Returned headers are sorted by relevance, first element is the most
 /// likely provider for the symbol.
 llvm::SmallVector<Header> headersForSymbol(const Symbol &S,
                                            const SourceManager &SM,
                                            const PragmaIncludes *PI);
-
 } // namespace include_cleaner
 } // namespace clang
 
