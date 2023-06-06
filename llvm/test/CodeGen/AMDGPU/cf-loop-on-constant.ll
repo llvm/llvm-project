@@ -30,10 +30,10 @@ define amdgpu_kernel void @test_loop(ptr addrspace(3) %ptr, i32 %n) nounwind {
 ;
 ; GCN_DBG-LABEL: test_loop:
 ; GCN_DBG:       ; %bb.0: ; %entry
-; GCN_DBG-NEXT:    s_load_dword s2, s[0:1], 0x9
+; GCN_DBG-NEXT:    s_load_dword s0, s[4:5], 0x9
 ; GCN_DBG-NEXT:    s_waitcnt lgkmcnt(0)
-; GCN_DBG-NEXT:    v_writelane_b32 v0, s2, 0
-; GCN_DBG-NEXT:    s_load_dword s1, s[0:1], 0xa
+; GCN_DBG-NEXT:    v_writelane_b32 v0, s0, 0
+; GCN_DBG-NEXT:    s_load_dword s1, s[4:5], 0xa
 ; GCN_DBG-NEXT:    s_mov_b32 s0, 0
 ; GCN_DBG-NEXT:    s_mov_b32 s2, -1
 ; GCN_DBG-NEXT:    s_waitcnt lgkmcnt(0)
@@ -103,13 +103,13 @@ define amdgpu_kernel void @loop_const_true(ptr addrspace(3) %ptr, i32 %n) nounwi
 ; GCN-NEXT:    ds_write_b32 v0, v1
 ; GCN-NEXT:    s_add_i32 s0, s0, 4
 ; GCN-NEXT:    s_mov_b64 vcc, vcc
-; GCN-NEXT:   s_cbranch_vccnz .LBB1_1
+; GCN-NEXT:    s_cbranch_vccnz .LBB1_1
 ; GCN-NEXT:  ; %bb.2: ; %DummyReturnBlock
 ; GCN-NEXT:    s_endpgm
 ;
 ; GCN_DBG-LABEL: loop_const_true:
 ; GCN_DBG:       ; %bb.0: ; %entry
-; GCN_DBG-NEXT:    s_load_dword s0, s[0:1], 0x9
+; GCN_DBG-NEXT:    s_load_dword s0, s[4:5], 0x9
 ; GCN_DBG-NEXT:    s_waitcnt lgkmcnt(0)
 ; GCN_DBG-NEXT:    v_writelane_b32 v0, s0, 0
 ; GCN_DBG-NEXT:    s_mov_b32 s0, 0
@@ -174,7 +174,7 @@ define amdgpu_kernel void @loop_const_false(ptr addrspace(3) %ptr, i32 %n) nounw
 ;
 ; GCN_DBG-LABEL: loop_const_false:
 ; GCN_DBG:       ; %bb.0: ; %entry
-; GCN_DBG-NEXT:    s_load_dword s0, s[0:1], 0x9
+; GCN_DBG-NEXT:    s_load_dword s0, s[4:5], 0x9
 ; GCN_DBG-NEXT:    s_waitcnt lgkmcnt(0)
 ; GCN_DBG-NEXT:    v_writelane_b32 v0, s0, 0
 ; GCN_DBG-NEXT:    s_mov_b32 s0, 0
@@ -240,7 +240,7 @@ define amdgpu_kernel void @loop_const_undef(ptr addrspace(3) %ptr, i32 %n) nounw
 ;
 ; GCN_DBG-LABEL: loop_const_undef:
 ; GCN_DBG:       ; %bb.0: ; %entry
-; GCN_DBG-NEXT:    s_load_dword s0, s[0:1], 0x9
+; GCN_DBG-NEXT:    s_load_dword s0, s[4:5], 0x9
 ; GCN_DBG-NEXT:    s_waitcnt lgkmcnt(0)
 ; GCN_DBG-NEXT:    v_writelane_b32 v0, s0, 0
 ; GCN_DBG-NEXT:    s_mov_b32 s0, 0
@@ -318,7 +318,7 @@ define amdgpu_kernel void @loop_arg_0(ptr addrspace(3) %ptr, i32 %n) nounwind {
 ;
 ; GCN_DBG-LABEL: loop_arg_0:
 ; GCN_DBG:       ; %bb.0: ; %entry
-; GCN_DBG-NEXT:    s_load_dword s0, s[0:1], 0x9
+; GCN_DBG-NEXT:    s_load_dword s0, s[4:5], 0x9
 ; GCN_DBG-NEXT:    s_waitcnt lgkmcnt(0)
 ; GCN_DBG-NEXT:    v_writelane_b32 v0, s0, 0
 ; GCN_DBG-NEXT:    v_mov_b32_e32 v1, 0
