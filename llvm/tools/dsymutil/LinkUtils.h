@@ -31,6 +31,11 @@ enum class DsymutilAccelTableKind : uint8_t {
   Pub,     ///< .debug_pubnames, .debug_pubtypes
 };
 
+enum class DsymutilDWARFLinkerType : uint8_t {
+  Apple, /// Apple`s implementation of DWARFLinker.
+  LLVM   /// LLVM implementation of DWARFLinker.
+};
+
 struct LinkOptions {
   /// Verbosity
   bool Verbose = false;
@@ -57,6 +62,9 @@ struct LinkOptions {
   /// function.
   bool KeepFunctionForStatic = false;
 
+  /// Type of DWARFLinker to use.
+  DsymutilDWARFLinkerType DWARFLinkerType = DsymutilDWARFLinkerType::Apple;
+
   /// Use a 64-bit header when emitting universal binaries.
   bool Fat64 = false;
 
@@ -64,7 +72,7 @@ struct LinkOptions {
   unsigned Threads = 1;
 
   // Output file type.
-  OutputFileType FileType = OutputFileType::Object;
+  DWARFLinker::OutputFileType FileType = DWARFLinker::OutputFileType::Object;
 
   /// The accelerator table kind
   DsymutilAccelTableKind TheAccelTableKind;

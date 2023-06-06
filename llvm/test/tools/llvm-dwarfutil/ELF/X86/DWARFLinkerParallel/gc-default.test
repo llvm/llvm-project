@@ -2,39 +2,9 @@
 ## default tombstone value) is removed.
 
 # RUN: yaml2obj %s -o %t.o
+# RUN: llvm-dwarfutil --linker llvm %t.o %t1.out 2>&1 | FileCheck %s --allow-empty
 
-# RUN: llvm-dwarfutil %t.o - | llvm-dwarfdump -a - | FileCheck %s --check-prefixes=CHECK,CHECK-GC
-
-# RUN: llvm-dwarfutil --linker apple %t.o - | llvm-dwarfdump -a - | FileCheck %s --check-prefixes=CHECK,CHECK-GC
-
-# RUN: llvm-dwarfutil --garbage-collection %t.o - | llvm-dwarfdump -a - | FileCheck %s --check-prefixes=CHECK,CHECK-GC
-
-# RUN: llvm-dwarfutil --no-garbage-collection --garbage-collection %t.o - | llvm-dwarfdump -a - | FileCheck %s --check-prefixes=CHECK,CHECK-GC
-
-# RUN: llvm-dwarfutil --garbage-collection --no-garbage-collection %t.o - | llvm-dwarfdump -a - | FileCheck %s --check-prefixes=CHECK,CHECK-NOGC
-
-# RUN: llvm-dwarfutil %t.o --tombstone=universal - | llvm-dwarfdump -a - | FileCheck %s --check-prefixes=CHECK,CHECK-GC
-
-# CHECK: DW_TAG_compile_unit
-# CHECK: DW_AT_name{{.*}}"CU1"
-# CHECK: DW_TAG_class_type
-# CHECK: DW_AT_name{{.*}}"class1"
-# CHECK-GC-NOT: DW_TAG_class_type
-# CHECK-GC-NOT: "class2"
-# CHECK-GC-NOT: "class3"
-# CHECK-NOGC: DW_TAG_class_type
-# CHECK-NOGC: "class2"
-# CHECK-NOGC: "class3"
-# CHECK: DW_TAG_subprogram
-# CHECK: DW_AT_name{{.*}}"foo1"
-# CHECK: DW_AT_low_pc{{.*}}0x0000000000001000
-# CHECK: DW_AT_high_pc{{.*}}0x0000000000001010
-# CHECK: DW_AT_type{{.*}}"class1"
-# CHECK-GC-NOT: DW_TAG_subprogram
-# CHECK-GC-NOT: "foo2"
-# CHECK-NOGC: DW_TAG_subprogram
-# CHECK-NOGC: "foo2"
-
+#CHECK: LLVM parallel dwarflinker is not implemented yet.
 
 --- !ELF
 FileHeader:
