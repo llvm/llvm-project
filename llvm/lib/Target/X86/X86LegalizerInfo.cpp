@@ -237,6 +237,16 @@ X86LegalizerInfo::X86LegalizerInfo(const X86Subtarget &STI,
       .widenScalarToNextPow2(1, /*Min=*/16)
       .clampScalar(1, s16, sMaxScalar);
 
+  // count trailing zeros
+  getActionDefinitionsBuilder({G_CTTZ_ZERO_UNDEF, G_CTTZ})
+      .legalIf([=](const LegalityQuery &Query) -> bool {
+        return (Query.Opcode == G_CTTZ_ZERO_UNDEF || Subtarget.hasBMI()) &&
+               (typePairInSet(0, 1, {{s16, s16}, {s32, s32}})(Query) ||
+                (Is64Bit && typePairInSet(0, 1, {{s64, s64}})(Query)));
+      })
+      .widenScalarToNextPow2(1, /*Min=*/16)
+      .clampScalar(1, s16, sMaxScalar);
+
   // pointer handling
   const std::initializer_list<LLT> PtrTypes32 = {s1, s8, s16, s32};
   const std::initializer_list<LLT> PtrTypes64 = {s1, s8, s16, s32, s64};
