@@ -215,9 +215,9 @@ void IOHandlerDelegate::IOHandlerComplete(IOHandler &io_handler,
     io_handler.GetDebugger().GetCommandInterpreter().HandleCompletion(request);
     break;
   case Completion::Expression:
-    CommandCompletions::InvokeCommonCompletionCallbacks(
+    lldb_private::CommandCompletions::InvokeCommonCompletionCallbacks(
         io_handler.GetDebugger().GetCommandInterpreter(),
-        CommandCompletions::eVariablePathCompletion, request, nullptr);
+        lldb::eVariablePathCompletion, request, nullptr);
     break;
   }
 }
