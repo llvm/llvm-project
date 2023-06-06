@@ -67,10 +67,6 @@ public:
       Handler(*Entry);
   }
 
-  std::function<StringRef(StringRef)> getTranslator() {
-    return StringsTranslator;
-  }
-
 protected:
   /// List of strings for emission.
   StringsVector StringEntriesForEmission;

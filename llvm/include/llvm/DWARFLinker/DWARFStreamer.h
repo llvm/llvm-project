@@ -23,6 +23,11 @@
 namespace llvm {
 template <typename DataT> class AccelTable;
 
+enum class OutputFileType {
+  Object,
+  Assembly,
+};
+
 ///   User of DwarfStreamer should call initialization code
 ///   for AsmPrinter:
 ///
@@ -40,19 +45,18 @@ class DWARFDebugMacro;
 /// information binary representation are handled in this class.
 class DwarfStreamer : public DwarfEmitter {
 public:
-  DwarfStreamer(DWARFLinker::OutputFileType OutFileType,
-                raw_pwrite_stream &OutFile,
+  DwarfStreamer(OutputFileType OutFileType, raw_pwrite_stream &OutFile,
                 std::function<StringRef(StringRef Input)> Translator,
-                DWARFLinker::messageHandler Warning)
+                messageHandler Error, messageHandler Warning)
       : OutFile(OutFile), OutFileType(OutFileType), Translator(Translator),
-        WarningHandler(Warning) {}
+        ErrorHandler(Error), WarningHandler(Warning) {}
 
-  Error init(Triple TheTriple, StringRef Swift5ReflectionSegmentName);
+  bool init(Triple TheTriple, StringRef Swift5ReflectionSegmentName);
 
   /// Dump the file to the disk.
-  void finish() override;
+  void finish();
 
-  AsmPrinter &getAsmPrinter() const override { return *Asm; }
+  AsmPrinter &getAsmPrinter() const { return *Asm; }
 
   /// Set the current output section to debug_info and change
   /// the MC Dwarf version to \p DwarfVersion.
@@ -85,12 +89,12 @@ public:
   void emitLineStrings(const NonRelocatableStringpool &Pool) override;
 
   /// Emit the swift_ast section stored in \p Buffer.
-  void emitSwiftAST(StringRef Buffer) override;
+  void emitSwiftAST(StringRef Buffer);
 
   /// Emit the swift reflection section stored in \p Buffer.
   void emitSwiftReflectionSection(
       llvm::binaryformat::Swift5ReflectionSectionKind ReflSectionKind,
-      StringRef Buffer, uint32_t Alignment, uint32_t Size) override;
+      StringRef Buffer, uint32_t Alignment, uint32_t Size);
 
   /// Emit debug ranges(.debug_ranges, .debug_rnglists) header.
   MCSymbol *emitDwarfDebugRangeListHeader(const CompileUnit &Unit) override;
@@ -190,6 +194,11 @@ public:
                        OffsetsStringPool &StringPool) override;
 
 private:
+  inline void error(const Twine &Error, StringRef Context = "") {
+    if (ErrorHandler)
+      ErrorHandler(Error, Context, nullptr);
+  }
+
   inline void warn(const Twine &Warning, StringRef Context = "") {
     if (WarningHandler)
       WarningHandler(Warning, Context, nullptr);
@@ -265,7 +274,7 @@ private:
 
   /// The output file we stream the linked Dwarf to.
   raw_pwrite_stream &OutFile;
-  DWARFLinker::OutputFileType OutFileType = DWARFLinker::OutputFileType::Object;
+  OutputFileType OutFileType = OutputFileType::Object;
   std::function<StringRef(StringRef Input)> Translator;
 
   uint64_t RangesSectionSize = 0;
@@ -291,7 +300,8 @@ private:
                              const CompileUnit &Unit,
                              const std::vector<CompileUnit::AccelInfo> &Names);
 
-  DWARFLinker::messageHandler WarningHandler = nullptr;
+  messageHandler ErrorHandler = nullptr;
+  messageHandler WarningHandler = nullptr;
 };
 
 } // end namespace llvm
