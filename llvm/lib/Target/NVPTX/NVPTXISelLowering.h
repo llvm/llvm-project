@@ -572,6 +572,17 @@ public:
   // instruction, so we say that ctlz is cheap to speculate.
   bool isCheapToSpeculateCtlz(Type *Ty) const override { return true; }
 
+  EVT getOptimalMemOpType(const MemOp &Op,
+                          const AttributeList &FuncAttributes) const override {
+    return (Op.size() >= 16 && Op.isDstAligned(Align(16))) ? MVT::v4i32
+                                                           : MVT::Other;
+  }
+
+  EVT getTypeToTransformTo(LLVMContext &Context, EVT VT) const override {
+    if (VT == MVT::v4i32)
+      return VT;
+    return TargetLoweringBase::getTypeToTransformTo(Context, VT);
+  }
   AtomicExpansionKind shouldCastAtomicLoadInIR(LoadInst *LI) const override {
     return AtomicExpansionKind::None;
   }
