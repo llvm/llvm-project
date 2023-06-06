@@ -64,7 +64,6 @@ define i32 @vec_write_3() {
 ; CHECK-NEXT:    [[G:%.*]] = getelementptr i32, ptr [[A]], i64 1
 ; CHECK-NEXT:    store <2 x i32> <i32 5, i32 5>, ptr [[G]], align 8
 ; CHECK-NEXT:    [[J:%.*]] = getelementptr i32, ptr [[G]], i64 1
-; CHECK-NEXT:    store <2 x i32> <i32 7, i32 7>, ptr [[J]], align 8
 ; CHECK-NEXT:    [[L2B:%.*]] = load i32, ptr [[G]], align 8
 ; CHECK-NEXT:    [[ADD:%.*]] = add i32 3, [[L2B]]
 ; CHECK-NEXT:    ret i32 [[ADD]]
@@ -104,8 +103,6 @@ define i32 @vec_write_5(i32 %arg) {
 ; CHECK-SAME: (i32 [[ARG:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:    [[A:%.*]] = alloca <4 x i32>, align 16
 ; CHECK-NEXT:    store i32 [[ARG]], ptr [[A]], align 16
-; CHECK-NEXT:    [[G:%.*]] = getelementptr i32, ptr [[A]], i64 1
-; CHECK-NEXT:    store <2 x i32> <i32 5, i32 5>, ptr [[G]], align 8
 ; CHECK-NEXT:    [[ADD1:%.*]] = add i32 [[ARG]], 5
 ; CHECK-NEXT:    [[ADD2:%.*]] = add i32 5, [[ADD1]]
 ; CHECK-NEXT:    ret i32 [[ADD2]]
