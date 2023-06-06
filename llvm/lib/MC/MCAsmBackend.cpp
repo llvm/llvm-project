@@ -115,3 +115,14 @@ bool MCAsmBackend::fixupNeedsRelaxationAdvanced(
     return true;
   return fixupNeedsRelaxation(Fixup, Value, DF, Layout);
 }
+
+bool MCAsmBackend::isDarwinCanonicalPersonality(const MCSymbol *Sym) const {
+  if (Sym && Sym->isMachO()) {
+    StringRef name = Sym->getName();
+    // XXX: We intentionally leave out "___gcc_personality_v0" because, despite
+    // being system-defined like these two, it is not very commonly-used.
+    // Reserving an empty slot for it seems silly.
+    return name == "___gxx_personality_v0" || name == "___objc_personality_v0";
+  }
+  return false;
+}
