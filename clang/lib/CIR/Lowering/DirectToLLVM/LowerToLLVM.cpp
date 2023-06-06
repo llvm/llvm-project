@@ -241,6 +241,23 @@ public:
       }
       break;
     }
+    case mlir::cir::CastKind::floating: {
+      auto dstTy = castOp.getResult().getType().cast<mlir::FloatType>();
+      auto srcTy = castOp.getSrc().getType();
+      auto llvmSrcVal = adaptor.getOperands().front();
+
+      if (auto fpSrcTy = srcTy.dyn_cast<mlir::FloatType>()) {
+        if (fpSrcTy.getWidth() > dstTy.getWidth())
+          rewriter.replaceOpWithNewOp<mlir::LLVM::FPTruncOp>(castOp, dstTy,
+                                                             llvmSrcVal);
+        else
+          rewriter.replaceOpWithNewOp<mlir::LLVM::FPExtOp>(castOp, dstTy,
+                                                           llvmSrcVal);
+        return mlir::success();
+      }
+
+      return castOp.emitError() << "NYI cast from " << srcTy << " to " << dstTy;
+    }
     default:
       llvm_unreachable("NYI");
     }
