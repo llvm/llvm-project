@@ -1516,6 +1516,12 @@ MCAsmBackend *llvm::createX86_64AsmBackend(const Target &T,
   if (TheTriple.isOSWindows() && TheTriple.isOSBinFormatCOFF())
     return new WindowsX86AsmBackend(T, true, STI);
 
+  if (TheTriple.isUEFI()) {
+    assert(TheTriple.isOSBinFormatCOFF() &&
+         "Only COFF format is supported in UEFI environment.");
+    return new WindowsX86AsmBackend(T, true, STI);
+  }
+
   uint8_t OSABI = MCELFObjectTargetWriter::getOSABI(TheTriple.getOS());
 
   if (TheTriple.isX32())
