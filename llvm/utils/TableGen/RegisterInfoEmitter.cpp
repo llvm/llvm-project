@@ -635,17 +635,16 @@ static void printSubRegIndex(raw_ostream &OS, const CodeGenSubRegIndex *Idx) {
 // The initial value depends on the specific list. The list is terminated by a
 // 0 differential which means we can't encode repeated elements.
 
-typedef SmallVector<uint16_t, 4> DiffVec;
+typedef SmallVector<int16_t, 4> DiffVec;
 typedef SmallVector<LaneBitmask, 4> MaskVec;
 
-// Differentially encode a sequence of numbers into V. The starting value and
-// terminating 0 are not added to V, so it will have the same size as List.
-static
-DiffVec &diffEncode(DiffVec &V, unsigned InitVal, SparseBitVector<> List) {
+// Fills V with differentials between every two consecutive elements of List.
+static DiffVec &diffEncode(DiffVec &V, SparseBitVector<> List) {
   assert(V.empty() && "Clear DiffVec before diffEncode.");
-  uint16_t Val = uint16_t(InitVal);
-
-  for (uint16_t Cur : List) {
+  SparseBitVector<>::iterator I = List.begin(), E = List.end();
+  unsigned Val = *I;
+  while (++I != E) {
+    unsigned Cur = *I;
     V.push_back(Cur - Val);
     Val = Cur;
   }
@@ -656,18 +655,16 @@ template<typename Iter>
 static
 DiffVec &diffEncode(DiffVec &V, unsigned InitVal, Iter Begin, Iter End) {
   assert(V.empty() && "Clear DiffVec before diffEncode.");
-  uint16_t Val = uint16_t(InitVal);
+  unsigned Val = InitVal;
   for (Iter I = Begin; I != End; ++I) {
-    uint16_t Cur = (*I)->EnumValue;
+    unsigned Cur = (*I)->EnumValue;
     V.push_back(Cur - Val);
     Val = Cur;
   }
   return V;
 }
 
-static void printDiff16(raw_ostream &OS, uint16_t Val) {
-  OS << Val;
-}
+static void printDiff16(raw_ostream &OS, int16_t Val) { OS << Val; }
 
 static void printMask(raw_ostream &OS, LaneBitmask Val) {
   OS << "LaneBitmask(0x" << PrintLaneMask(Val) << ')';
@@ -891,7 +888,6 @@ RegisterInfoEmitter::runMCDesc(raw_ostream &OS, CodeGenTarget &Target,
   SmallVector<DiffVec, 4> SubRegLists(Regs.size());
   SmallVector<DiffVec, 4> SuperRegLists(Regs.size());
   SmallVector<DiffVec, 4> RegUnitLists(Regs.size());
-  SmallVector<unsigned, 4> RegUnitInitScale(Regs.size());
 
   // List of lane masks accompanying register unit sequences.
   SequenceToOffsetTable<MaskVec> LaneMaskSeqs;
@@ -929,31 +925,8 @@ RegisterInfoEmitter::runMCDesc(raw_ostream &OS, CodeGenTarget &Target,
                SuperRegList.end());
     DiffSeqs.add(SuperRegLists[i]);
 
-    // Differentially encode the register unit list, seeded by register number.
-    // First compute a scale factor that allows more diff-lists to be reused:
-    //
-    //   D0 -> (S0, S1)
-    //   D1 -> (S2, S3)
-    //
-    // A scale factor of 2 allows D0 and D1 to share a diff-list. The initial
-    // value for the differential decoder is the register number multiplied by
-    // the scale.
-    //
-    // Check the neighboring registers for arithmetic progressions.
-    unsigned ScaleA = ~0u, ScaleB = ~0u;
-    SparseBitVector<> RUs = Reg.getNativeRegUnits();
-    if (I != Regs.begin() &&
-        std::prev(I)->getNativeRegUnits().count() == RUs.count())
-      ScaleB = *RUs.begin() - *std::prev(I)->getNativeRegUnits().begin();
-    if (std::next(I) != Regs.end() &&
-        std::next(I)->getNativeRegUnits().count() == RUs.count())
-      ScaleA = *std::next(I)->getNativeRegUnits().begin() - *RUs.begin();
-    unsigned Scale = std::min(ScaleB, ScaleA);
-    // Default the scale to 0 if it can't be encoded in 4 bits.
-    if (Scale >= 16)
-      Scale = 0;
-    RegUnitInitScale[i] = Scale;
-    DiffSeqs.add(diffEncode(RegUnitLists[i], Scale * Reg.EnumValue, RUs));
+    const SparseBitVector<> &RUs = Reg.getNativeRegUnits();
+    DiffSeqs.add(diffEncode(RegUnitLists[i], RUs));
 
     const auto &RUMasks = Reg.getRegUnitLaneMasks();
     MaskVec &LaneMaskVec = RegUnitLaneMasks[i];
@@ -978,7 +951,7 @@ RegisterInfoEmitter::runMCDesc(raw_ostream &OS, CodeGenTarget &Target,
   const std::string &TargetName = std::string(Target.getName());
 
   // Emit the shared table of differential lists.
-  OS << "extern const MCPhysReg " << TargetName << "RegDiffLists[] = {\n";
+  OS << "extern const int16_t " << TargetName << "RegDiffLists[] = {\n";
   DiffSeqs.emit(OS, printDiff16);
   OS << "};\n\n";
 
@@ -1014,10 +987,16 @@ RegisterInfoEmitter::runMCDesc(raw_ostream &OS, CodeGenTarget &Target,
   // Emit the register descriptors now.
   i = 0;
   for (const auto &Reg : Regs) {
+    unsigned FirstRU = Reg.getNativeRegUnits().find_first();
+    unsigned Offset = DiffSeqs.get(RegUnitLists[i]);
+    // The value must be kept in sync with MCRegisterInfo.h.
+    constexpr unsigned RegUnitBits = 12;
+    assert(isUInt<RegUnitBits>(FirstRU) && "Too many regunits");
+    assert(isUInt<32 - RegUnitBits>(Offset) && "Offset is too big");
     OS << "  { " << RegStrings.get(std::string(Reg.getName())) << ", "
        << DiffSeqs.get(SubRegLists[i]) << ", " << DiffSeqs.get(SuperRegLists[i])
        << ", " << SubRegIdxSeqs.get(SubRegIdxLists[i]) << ", "
-       << (DiffSeqs.get(RegUnitLists[i]) * 16 + RegUnitInitScale[i]) << ", "
+       << (Offset << RegUnitBits | FirstRU) << ", "
        << LaneMaskSeqs.get(RegUnitLaneMasks[i]) << " },\n";
     ++i;
   }
@@ -1651,7 +1630,7 @@ RegisterInfoEmitter::runTargetDesc(raw_ostream &OS, CodeGenTarget &Target,
 
   // Emit the constructor of the class...
   OS << "extern const MCRegisterDesc " << TargetName << "RegDesc[];\n";
-  OS << "extern const MCPhysReg " << TargetName << "RegDiffLists[];\n";
+  OS << "extern const int16_t " << TargetName << "RegDiffLists[];\n";
   OS << "extern const LaneBitmask " << TargetName << "LaneMaskLists[];\n";
   OS << "extern const char " << TargetName << "RegStrings[];\n";
   OS << "extern const char " << TargetName << "RegClassStrings[];\n";
