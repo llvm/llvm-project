@@ -1,5 +1,5 @@
 // RUN: %clang_cc1 -std=c2x -fsyntax-only -verify -Wno-unused %s
-// RUN: %clang_cc1 -fsyntax-only -verify=expected,cpp -Wno-unused -x c++ %s
+// RUN: %clang_cc1 -fsyntax-only -verify=expected,cpp -Wno-unused -x c++ -std=c++17 %s
 
 // Test various parsing situations for the Clang extension to _Generic which
 // accepts a type name instead of an expression as the first operand.
