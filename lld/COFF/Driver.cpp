@@ -256,7 +256,7 @@ void LinkerDriver::enqueuePath(StringRef path, bool wholeArchive, bool lazy) {
       // This makes it so that if the user passes something in the winsysroot
       // before something we can find with an architecture, we won't find the
       // winsysroot file.
-      if (std::optional<StringRef> retryPath = findFile(pathStr)) {
+      if (std::optional<StringRef> retryPath = findFileIfNew(pathStr)) {
         auto retryMb = MemoryBuffer::getFile(*retryPath, /*IsText=*/false,
                                              /*RequiresNullTerminator=*/false);
         ec = retryMb.getError();
@@ -416,7 +416,7 @@ void LinkerDriver::parseDirectives(InputFile *file) {
       parseAlternateName(arg->getValue());
       break;
     case OPT_defaultlib:
-      if (std::optional<StringRef> path = findLib(arg->getValue()))
+      if (std::optional<StringRef> path = findLibIfNew(arg->getValue()))
         enqueuePath(*path, false, false);
       break;
     case OPT_entry:
@@ -435,7 +435,7 @@ void LinkerDriver::parseDirectives(InputFile *file) {
       parseMerge(arg->getValue());
       break;
     case OPT_nodefaultlib:
-      ctx.config.noDefaultLibs.insert(doFindLib(arg->getValue()).lower());
+      ctx.config.noDefaultLibs.insert(findLib(arg->getValue()).lower());
       break;
     case OPT_release:
       ctx.config.writeCheckSum = true;
@@ -475,7 +475,7 @@ void LinkerDriver::parseDirectives(InputFile *file) {
 
 // Find file from search paths. You can omit ".obj", this function takes
 // care of that. Note that the returned path is not guaranteed to exist.
-StringRef LinkerDriver::doFindFile(StringRef filename) {
+StringRef LinkerDriver::findFile(StringRef filename) {
   auto getFilename = [this](StringRef filename) -> StringRef {
     if (ctx.config.vfs)
       if (auto statOrErr = ctx.config.vfs->status(filename))
@@ -512,8 +512,8 @@ static std::optional<sys::fs::UniqueID> getUniqueID(StringRef path) {
 
 // Resolves a file path. This never returns the same path
 // (in that case, it returns std::nullopt).
-std::optional<StringRef> LinkerDriver::findFile(StringRef filename) {
-  StringRef path = doFindFile(filename);
+std::optional<StringRef> LinkerDriver::findFileIfNew(StringRef filename) {
+  StringRef path = findFile(filename);
 
   if (std::optional<sys::fs::UniqueID> id = getUniqueID(path)) {
     bool seen = !visitedFiles.insert(*id).second;
@@ -528,40 +528,40 @@ std::optional<StringRef> LinkerDriver::findFile(StringRef filename) {
 
 // MinGW specific. If an embedded directive specified to link to
 // foo.lib, but it isn't found, try libfoo.a instead.
-StringRef LinkerDriver::doFindLibMinGW(StringRef filename) {
+StringRef LinkerDriver::findLibMinGW(StringRef filename) {
   if (filename.contains('/') || filename.contains('\\'))
     return filename;
 
   SmallString<128> s = filename;
   sys::path::replace_extension(s, ".a");
   StringRef libName = saver().save("lib" + s.str());
-  return doFindFile(libName);
+  return findFile(libName);
 }
 
 // Find library file from search path.
-StringRef LinkerDriver::doFindLib(StringRef filename) {
+StringRef LinkerDriver::findLib(StringRef filename) {
   // Add ".lib" to Filename if that has no file extension.
   bool hasExt = filename.contains('.');
   if (!hasExt)
     filename = saver().save(filename + ".lib");
-  StringRef ret = doFindFile(filename);
+  StringRef ret = findFile(filename);
   // For MinGW, if the find above didn't turn up anything, try
   // looking for a MinGW formatted library name.
   if (ctx.config.mingw && ret == filename)
-    return doFindLibMinGW(filename);
+    return findLibMinGW(filename);
   return ret;
 }
 
 // Resolves a library path. /nodefaultlib options are taken into
 // consideration. This never returns the same path (in that case,
 // it returns std::nullopt).
-std::optional<StringRef> LinkerDriver::findLib(StringRef filename) {
+std::optional<StringRef> LinkerDriver::findLibIfNew(StringRef filename) {
   if (ctx.config.noDefaultLibAll)
     return std::nullopt;
   if (!visitedLibs.insert(filename.lower()).second)
     return std::nullopt;
 
-  StringRef path = doFindLib(filename);
+  StringRef path = findLib(filename);
   if (ctx.config.noDefaultLibs.count(path.lower()))
     return std::nullopt;
 
@@ -1353,7 +1353,7 @@ void LinkerDriver::maybeExportMinGWSymbols(const opt::InputArgList &args) {
   AutoExporter exporter(ctx, excludedSymbols);
 
   for (auto *arg : args.filtered(OPT_wholearchive_file))
-    if (std::optional<StringRef> path = doFindFile(arg->getValue()))
+    if (std::optional<StringRef> path = findFile(arg->getValue()))
       exporter.addWholeArchive(*path);
 
   for (auto *arg : args.filtered(OPT_exclude_symbols)) {
@@ -1685,7 +1685,7 @@ void LinkerDriver::linkerMain(ArrayRef<const char *> argsArr) {
 
   // Handle /nodefaultlib:<filename>
   for (auto *arg : args.filtered(OPT_nodefaultlib))
-    config->noDefaultLibs.insert(doFindLib(arg->getValue()).lower());
+    config->noDefaultLibs.insert(findLib(arg->getValue()).lower());
 
   // Handle /nodefaultlib
   if (args.hasArg(OPT_nodefaultlib_all))
@@ -1988,7 +1988,7 @@ void LinkerDriver::linkerMain(ArrayRef<const char *> argsArr) {
 
   std::set<sys::fs::UniqueID> wholeArchives;
   for (auto *arg : args.filtered(OPT_wholearchive_file))
-    if (std::optional<StringRef> path = doFindFile(arg->getValue()))
+    if (std::optional<StringRef> path = findFile(arg->getValue()))
       if (std::optional<sys::fs::UniqueID> id = getUniqueID(*path))
         wholeArchives.insert(*id);
 
@@ -2021,11 +2021,11 @@ void LinkerDriver::linkerMain(ArrayRef<const char *> argsArr) {
       inLib = true;
       break;
     case OPT_wholearchive_file:
-      if (std::optional<StringRef> path = findFile(arg->getValue()))
+      if (std::optional<StringRef> path = findFileIfNew(arg->getValue()))
         enqueuePath(*path, true, inLib);
       break;
     case OPT_INPUT:
-      if (std::optional<StringRef> path = findFile(arg->getValue()))
+      if (std::optional<StringRef> path = findFileIfNew(arg->getValue()))
         enqueuePath(*path, isWholeArchive(*path), inLib);
       break;
     default:
@@ -2051,7 +2051,7 @@ void LinkerDriver::linkerMain(ArrayRef<const char *> argsArr) {
   // Process files specified as /defaultlib. These must be processed after
   // addWinSysRootLibSearchPaths(), which is why they are in a separate loop.
   for (auto *arg : args.filtered(OPT_defaultlib))
-    if (std::optional<StringRef> path = findLib(arg->getValue()))
+    if (std::optional<StringRef> path = findLibIfNew(arg->getValue()))
       enqueuePath(*path, false, false);
   run();
   if (errorCount())
