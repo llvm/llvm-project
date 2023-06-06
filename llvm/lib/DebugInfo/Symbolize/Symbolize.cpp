@@ -679,14 +679,14 @@ std::string
 LLVMSymbolizer::DemangleName(const std::string &Name,
                              const SymbolizableModule *DbiModuleDescriptor) {
   std::string Result;
-  if (nonMicrosoftDemangle(Name.c_str(), Result))
+  if (nonMicrosoftDemangle(Name, Result))
     return Result;
 
   if (!Name.empty() && Name.front() == '?') {
     // Only do MSVC C++ demangling on symbols starting with '?'.
     int status = 0;
     char *DemangledName = microsoftDemangle(
-        Name.c_str(), nullptr, &status,
+        Name, nullptr, &status,
         MSDemangleFlags(MSDF_NoAccessSpecifier | MSDF_NoCallingConvention |
                         MSDF_NoMemberType | MSDF_NoReturnType));
     if (status != 0)
@@ -700,7 +700,7 @@ LLVMSymbolizer::DemangleName(const std::string &Name,
     std::string DemangledCName(demanglePE32ExternCFunc(Name));
     // On i386 Windows, the C name mangling for different calling conventions
     // may also be applied on top of the Itanium or Rust name mangling.
-    if (nonMicrosoftDemangle(DemangledCName.c_str(), Result))
+    if (nonMicrosoftDemangle(DemangledCName, Result))
       return Result;
     return DemangledCName;
   }

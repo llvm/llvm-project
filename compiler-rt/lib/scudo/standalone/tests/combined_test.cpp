@@ -541,21 +541,29 @@ struct DeathSizeClassConfig {
 static const scudo::uptr DeathRegionSizeLog = 21U;
 struct DeathConfig {
   static const bool MaySupportMemoryTagging = false;
-
-  // Tiny allocator, its Primary only serves chunks of four sizes.
-  using SizeClassMap = scudo::FixedSizeClassMap<DeathSizeClassConfig>;
-  typedef scudo::SizeClassAllocator64<DeathConfig> Primary;
-  static const scudo::uptr PrimaryRegionSizeLog = DeathRegionSizeLog;
-  static const scudo::s32 PrimaryMinReleaseToOsIntervalMs = INT32_MIN;
-  static const scudo::s32 PrimaryMaxReleaseToOsIntervalMs = INT32_MAX;
-  typedef scudo::uptr PrimaryCompactPtrT;
-  static const scudo::uptr PrimaryCompactPtrScale = 0;
-  static const bool PrimaryEnableRandomOffset = true;
-  static const scudo::uptr PrimaryMapSizeIncrement = 1UL << 18;
-  static const scudo::uptr PrimaryGroupSizeLog = 18;
-
-  typedef scudo::MapAllocatorNoCache SecondaryCache;
   template <class A> using TSDRegistryT = scudo::TSDRegistrySharedT<A, 1U, 1U>;
+
+  struct Primary {
+    // Tiny allocator, its Primary only serves chunks of four sizes.
+    using SizeClassMap = scudo::FixedSizeClassMap<DeathSizeClassConfig>;
+    static const scudo::uptr RegionSizeLog = DeathRegionSizeLog;
+    static const scudo::s32 MinReleaseToOsIntervalMs = INT32_MIN;
+    static const scudo::s32 MaxReleaseToOsIntervalMs = INT32_MAX;
+    typedef scudo::uptr CompactPtrT;
+    static const scudo::uptr CompactPtrScale = 0;
+    static const bool EnableRandomOffset = true;
+    static const scudo::uptr MapSizeIncrement = 1UL << 18;
+    static const scudo::uptr GroupSizeLog = 18;
+  };
+  template <typename Config>
+  using PrimaryT = scudo::SizeClassAllocator64<Config>;
+
+  struct Secondary {
+    template <typename Config>
+    using CacheT = scudo::MapAllocatorNoCache<Config>;
+  };
+
+  template <typename Config> using SecondaryT = scudo::MapAllocator<Config>;
 };
 
 TEST(ScudoCombinedDeathTest, DeathCombined) {
@@ -600,13 +608,14 @@ TEST(ScudoCombinedTest, FullRegion) {
   std::vector<void *> V;
   scudo::uptr FailedAllocationsCount = 0;
   for (scudo::uptr ClassId = 1U;
-       ClassId <= DeathConfig::SizeClassMap::LargestClassId; ClassId++) {
+       ClassId <= DeathConfig::Primary::SizeClassMap::LargestClassId;
+       ClassId++) {
     const scudo::uptr Size =
-        DeathConfig::SizeClassMap::getSizeByClassId(ClassId);
+        DeathConfig::Primary::SizeClassMap::getSizeByClassId(ClassId);
     // Allocate enough to fill all of the regions above this one.
     const scudo::uptr MaxNumberOfChunks =
         ((1U << DeathRegionSizeLog) / Size) *
-        (DeathConfig::SizeClassMap::LargestClassId - ClassId + 1);
+        (DeathConfig::Primary::SizeClassMap::LargestClassId - ClassId + 1);
     void *P;
     for (scudo::uptr I = 0; I <= MaxNumberOfChunks; I++) {
       P = Allocator->allocate(Size - 64U, Origin);

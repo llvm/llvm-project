@@ -1992,7 +1992,8 @@ static bool ShouldDiagnoseUnusedDecl(const NamedDecl *D) {
     return false;
   }
 
-  if (D->hasAttr<UnusedAttr>() || D->hasAttr<ObjCPreciseLifetimeAttr>())
+  if (D->hasAttr<UnusedAttr>() || D->hasAttr<ObjCPreciseLifetimeAttr>() ||
+      D->hasAttr<CleanupAttr>())
     return false;
 
   if (isa<LabelDecl>(D))

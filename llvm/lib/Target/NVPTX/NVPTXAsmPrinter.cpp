@@ -309,10 +309,6 @@ unsigned NVPTXAsmPrinter::encodeVirtualRegister(unsigned Reg) {
       Ret = (5 << 28);
     } else if (RC == &NVPTX::Float64RegsRegClass) {
       Ret = (6 << 28);
-    } else if (RC == &NVPTX::Float16RegsRegClass) {
-      Ret = (7 << 28);
-    } else if (RC == &NVPTX::Float16x2RegsRegClass) {
-      Ret = (8 << 28);
     } else {
       report_fatal_error("Bad register class");
     }

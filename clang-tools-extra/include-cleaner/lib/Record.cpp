@@ -19,6 +19,8 @@
 #include "clang/Lex/Preprocessor.h"
 #include "clang/Tooling/Inclusions/HeaderAnalysis.h"
 #include "clang/Tooling/Inclusions/StandardLibrary.h"
+#include <memory>
+#include <utility>
 
 namespace clang::include_cleaner {
 namespace {
@@ -148,8 +150,9 @@ private:
 class PragmaIncludes::RecordPragma : public PPCallbacks, public CommentHandler {
 public:
   RecordPragma(const CompilerInstance &CI, PragmaIncludes *Out)
-      : SM(CI.getSourceManager()),
-        HeaderInfo(CI.getPreprocessor().getHeaderSearchInfo()), Out(Out),
+      : RecordPragma(CI.getPreprocessor(), Out) {}
+  RecordPragma(const Preprocessor &P, PragmaIncludes *Out)
+      : SM(P.getSourceManager()), HeaderInfo(P.getHeaderSearchInfo()), Out(Out),
         UniqueStrings(Arena) {}
 
   void FileChanged(SourceLocation Loc, FileChangeReason Reason,
@@ -342,6 +345,12 @@ void PragmaIncludes::record(const CompilerInstance &CI) {
   CI.getPreprocessor().addPPCallbacks(std::move(Record));
 }
 
+void PragmaIncludes::record(Preprocessor &P) {
+  auto Record = std::make_unique<RecordPragma>(P, this);
+  P.addCommentHandler(Record.get());
+  P.addPPCallbacks(std::move(Record));
+}
+
 llvm::StringRef PragmaIncludes::getPublic(const FileEntry *F) const {
   auto It = IWYUPublic.find(F->getUniqueID());
   if (It == IWYUPublic.end())
@@ -350,8 +359,8 @@ llvm::StringRef PragmaIncludes::getPublic(const FileEntry *F) const {
 }
 
 static llvm::SmallVector<const FileEntry *>
-toFileEntries(llvm::ArrayRef<StringRef> FileNames, FileManager& FM) {
-    llvm::SmallVector<const FileEntry *> Results;
+toFileEntries(llvm::ArrayRef<StringRef> FileNames, FileManager &FM) {
+  llvm::SmallVector<const FileEntry *> Results;
 
   for (auto FName : FileNames) {
     // FIMXE: log the failing cases?

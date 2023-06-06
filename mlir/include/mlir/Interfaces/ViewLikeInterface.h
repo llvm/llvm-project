@@ -51,10 +51,15 @@ namespace mlir {
 /// indicating their types. This allows idiomatic printing of mixed value and
 /// integer attributes in a list. E.g.
 /// `[%arg0 : index, 7, 42, %arg42 : i32]`.
+///
+/// If  `isTrailingIdxScalable` is true, then wrap the trailing index with
+/// square brackets, e.g. `[42]`, to denote scalability. This would normally be
+/// used for scalable tile or vector sizes.
 void printDynamicIndexList(
     OpAsmPrinter &printer, Operation *op, OperandRange values,
     ArrayRef<int64_t> integers, TypeRange valueTypes = TypeRange(),
-    AsmParser::Delimiter delimiter = AsmParser::Delimiter::Square);
+    AsmParser::Delimiter delimiter = AsmParser::Delimiter::Square,
+    bool isTrailingIdxScalable = false);
 
 /// Parser hook for custom directive in assemblyFormat.
 ///

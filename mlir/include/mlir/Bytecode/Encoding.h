@@ -24,9 +24,26 @@ namespace bytecode {
 // General constants
 //===----------------------------------------------------------------------===//
 
-enum {
+enum BytecodeVersion {
   /// The minimum supported version of the bytecode.
   kMinSupportedVersion = 0,
+
+  /// Dialects versioning was added in version 1.
+  kDialectVersioning = 1,
+
+  /// Support for lazy-loading of isolated region was added in version 2.
+  kLazyLoading = 2,
+
+  /// Use-list ordering started to be encoded in version 3.
+  kUseListOrdering = 3,
+
+  /// Avoid recording unknown locations on block arguments (compression) started
+  /// in version 4.
+  kElideUnknownBlockArgLocation = 4,
+
+  /// Support for encoding properties natively in bytecode instead of merged
+  /// with the discardable attributes.
+  kNativePropertiesEncoding = 5,
 
   /// The current bytecode version.
   kVersion = 5,

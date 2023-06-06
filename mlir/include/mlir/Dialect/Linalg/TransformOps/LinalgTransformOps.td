@@ -27,6 +27,53 @@ def TransformParamTypeOrAnyHandle : Type<
     "transform 'param' type or any handle type">;
 
 //===----------------------------------------------------------------------===//
+// Apply...PatternsOp
+//===----------------------------------------------------------------------===//
+
+def ApplyEraseUnnecessaryInputsPatternsOp : Op<Transform_Dialect,
+    "apply_patterns.linalg.erase_unnecessary_inputs",
+    [DeclareOpInterfaceMethods<PatternDescriptorOpInterface>]> {
+  let description = [{
+    Collects patterns that promote inputs to outputs and remove unused inputs of
+    `linalg.generic` ops.
+  }];
+
+  let assemblyFormat = "attr-dict";
+}
+
+def ApplyFoldUnitExtentDimsViaReshapesPatternsOp : Op<Transform_Dialect,
+    "apply_patterns.linalg.fold_unit_extent_dims_via_reshapes",
+    [DeclareOpInterfaceMethods<PatternDescriptorOpInterface>]> {
+  let description = [{
+    Collects patterns to fold unit-extent dimensions in operands/results of
+    linalg ops on tensors via reassociative reshape ops.
+  }];
+
+  let assemblyFormat = "attr-dict";
+}
+
+def ApplyFoldUnitExtentDimsViaSlicesPatternsOp : Op<Transform_Dialect,
+    "apply_patterns.linalg.fold_unit_extent_dims_via_slices",
+    [DeclareOpInterfaceMethods<PatternDescriptorOpInterface>]> {
+  let description = [{
+    Collects patterns to fold unit-extent dimensions in operands/results of
+    linalg ops on tensors via rank-reducing slices.
+  }];
+
+  let assemblyFormat = "attr-dict";
+}
+
+def ApplyTilingCanonicalizationPatternsOp : Op<Transform_Dialect,
+    "apply_patterns.linalg.tiling_canonicalization",
+    [DeclareOpInterfaceMethods<PatternDescriptorOpInterface>]> {
+  let description = [{
+    Collects canonicalization patterns relevant to apply after tiling patterns.
+  }];
+
+  let assemblyFormat = "attr-dict";
+}
+
+//===----------------------------------------------------------------------===//
 // BufferizeToAllocationOp
 //===----------------------------------------------------------------------===//
 
@@ -150,11 +197,12 @@ def FuseIntoContainingOp :
 
   let description = [{
     Fuses the `producer_op` into the `containing_op`.
-    Returns a handle to the fused ops.
+    Returns a handle to the fused ops and the `new_containing_op`.
 
     The producer is typically a slice of a tileable op (i.e., implements
     TilingInterface). In that case, this transform computes the accessed
-    producer slice inside of the containing op ("tile and fuse"). Otherwise,
+    producer slice inside of the containing op ("tile and fuse") and if required,
+    creates a new containing op with outputs from the fused producer. Otherwise,
     the entire producer is cloned inside the containing op ("clone and fuse").
 
     The containing op handle must be associated with exactly one payload op. The

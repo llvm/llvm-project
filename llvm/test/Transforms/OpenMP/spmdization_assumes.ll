@@ -118,7 +118,7 @@ declare void @__kmpc_target_deinit(ptr, i8) local_unnamed_addr
 ; Function Attrs: convergent
 declare double @__nv_sin(double) local_unnamed_addr #5
 
-attributes #0 = { alwaysinline convergent norecurse nounwind "frame-pointer"="all" "min-legal-vector-width"="0" "no-trapping-math"="true" "stack-protector-buffer-size"="8" }
+attributes #0 = { alwaysinline convergent norecurse nounwind "kernel" "frame-pointer"="all" "min-legal-vector-width"="0" "no-trapping-math"="true" "stack-protector-buffer-size"="8" }
 attributes #1 = { alwaysinline mustprogress nofree norecurse nosync nounwind readnone willreturn "frame-pointer"="all" "min-legal-vector-width"="0" "no-trapping-math"="true" "stack-protector-buffer-size"="8" }
 attributes #2 = { norecurse nounwind "frame-pointer"="all" "min-legal-vector-width"="0" "no-trapping-math"="true" "stack-protector-buffer-size"="8" }
 attributes #3 = { nounwind }
@@ -144,7 +144,7 @@ attributes #6 = { convergent nounwind "llvm.assume"="ompx_spmd_amenable" }
 !10 = !{!"omnipotent char", !11, i64 0}
 !11 = !{!"Simple C/C++ TBAA"}
 ;.
-; CHECK: attributes #[[ATTR0]] = { alwaysinline convergent norecurse nounwind "frame-pointer"="all" "min-legal-vector-width"="0" "no-trapping-math"="true" "stack-protector-buffer-size"="8" }
+; CHECK: attributes #[[ATTR0]] = { alwaysinline convergent norecurse nounwind "frame-pointer"="all" "kernel" "min-legal-vector-width"="0" "no-trapping-math"="true" "stack-protector-buffer-size"="8" }
 ; CHECK: attributes #[[ATTR1]] = { alwaysinline mustprogress nofree norecurse nosync nounwind willreturn memory(none) "frame-pointer"="all" "min-legal-vector-width"="0" "no-trapping-math"="true" "stack-protector-buffer-size"="8" }
 ; CHECK: attributes #[[ATTR2]] = { norecurse nounwind "frame-pointer"="all" "min-legal-vector-width"="0" "no-trapping-math"="true" "stack-protector-buffer-size"="8" }
 ; CHECK: attributes #[[ATTR3]] = { nounwind }

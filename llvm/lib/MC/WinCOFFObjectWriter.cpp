@@ -59,11 +59,7 @@ constexpr int OffsetLabelIntervalBits = 20;
 
 using name = SmallString<COFF::NameSize>;
 
-enum AuxiliaryType {
-  ATWeakExternal,
-  ATFile,
-  ATSectionDefinition
-};
+enum AuxiliaryType { ATWeakExternal, ATFile, ATSectionDefinition };
 
 struct AuxSymbol {
   AuxiliaryType AuxType;
@@ -198,7 +194,7 @@ public:
   uint32_t writeSectionContents(MCAssembler &Asm, const MCAsmLayout &Layout,
                                 const MCSection &MCSec);
   void writeSection(MCAssembler &Asm, const MCAsmLayout &Layout,
-                    const COFFSection &Sec, const MCSection &MCSec);
+                    const COFFSection &Sec);
 
   // MCObjectWriter interface implementation.
 
@@ -434,8 +430,8 @@ void WinCOFFObjectWriter::DefineSymbol(const MCSymbol &MCSym,
 
     // If no storage class was specified in the streamer, define it here.
     if (Local->Data.StorageClass == COFF::IMAGE_SYM_CLASS_NULL) {
-      bool IsExternal = MCSym.isExternal() ||
-                        (!MCSym.getFragment() && !MCSym.isVariable());
+      bool IsExternal =
+          MCSym.isExternal() || (!MCSym.getFragment() && !MCSym.isVariable());
 
       Local->Data.StorageClass = IsExternal ? COFF::IMAGE_SYM_CLASS_EXTERNAL
                                             : COFF::IMAGE_SYM_CLASS_STATIC;
@@ -523,7 +519,7 @@ void WinCOFFObjectWriter::WriteAuxiliarySymbols(
       break;
     case ATFile:
       W.OS.write(reinterpret_cast<const char *>(&i.Aux),
-                        UseBigObj ? COFF::Symbol32Size : COFF::Symbol16Size);
+                 UseBigObj ? COFF::Symbol32Size : COFF::Symbol16Size);
       break;
     case ATSectionDefinition:
       W.write<uint32_t>(i.Aux.SectionDefinition.Length);
@@ -533,7 +529,8 @@ void WinCOFFObjectWriter::WriteAuxiliarySymbols(
       W.write<uint16_t>(static_cast<int16_t>(i.Aux.SectionDefinition.Number));
       W.OS << char(i.Aux.SectionDefinition.Selection);
       W.OS.write_zeros(sizeof(i.Aux.SectionDefinition.unused));
-      W.write<uint16_t>(static_cast<int16_t>(i.Aux.SectionDefinition.Number >> 16));
+      W.write<uint16_t>(
+          static_cast<int16_t>(i.Aux.SectionDefinition.Number >> 16));
       if (UseBigObj)
         W.OS.write_zeros(COFF::Symbol32Size - COFF::Symbol16Size);
       break;
@@ -603,8 +600,7 @@ uint32_t WinCOFFObjectWriter::writeSectionContents(MCAssembler &Asm,
 
 void WinCOFFObjectWriter::writeSection(MCAssembler &Asm,
                                        const MCAsmLayout &Layout,
-                                       const COFFSection &Sec,
-                                       const MCSection &MCSec) {
+                                       const COFFSection &Sec) {
   if (Sec.Number == -1)
     return;
 
@@ -613,11 +609,10 @@ void WinCOFFObjectWriter::writeSection(MCAssembler &Asm,
     assert(W.OS.tell() == Sec.Header.PointerToRawData &&
            "Section::PointerToRawData is insane!");
 
-    uint32_t CRC = writeSectionContents(Asm, Layout, MCSec);
+    uint32_t CRC = writeSectionContents(Asm, Layout, *Sec.MCSection);
 
     // Update the section definition auxiliary symbol to record the CRC.
-    COFFSection *Sec = SectionMap[&MCSec];
-    COFFSymbol::AuxiliarySymbols &AuxSyms = Sec->Symbol->Aux;
+    COFFSymbol::AuxiliarySymbols &AuxSyms = Sec.Symbol->Aux;
     assert(AuxSyms.size() == 1 && AuxSyms[0].AuxType == ATSectionDefinition);
     AuxSymbol &SecDef = AuxSyms[0];
     SecDef.Aux.SectionDefinition.CheckSum = CRC;
@@ -701,15 +696,15 @@ void WinCOFFObjectWriter::recordRelocation(MCAssembler &Asm,
 
   const MCSymbol &A = Target.getSymA()->getSymbol();
   if (!A.isRegistered()) {
-    Asm.getContext().reportError(Fixup.getLoc(),
-                                      Twine("symbol '") + A.getName() +
-                                          "' can not be undefined");
+    Asm.getContext().reportError(Fixup.getLoc(), Twine("symbol '") +
+                                                     A.getName() +
+                                                     "' can not be undefined");
     return;
   }
   if (A.isTemporary() && A.isUndefined()) {
-    Asm.getContext().reportError(Fixup.getLoc(),
-                                      Twine("assembler label '") + A.getName() +
-                                          "' can not be undefined");
+    Asm.getContext().reportError(Fixup.getLoc(), Twine("assembler label '") +
+                                                     A.getName() +
+                                                     "' can not be undefined");
     return;
   }
 
@@ -1142,13 +1137,18 @@ uint64_t WinCOFFObjectWriter::writeObject(MCAssembler &Asm,
   WriteFileHeader(Header);
   writeSectionHeaders();
 
-  // Write section contents.
+#ifndef NDEBUG
   sections::iterator I = Sections.begin();
   sections::iterator IE = Sections.end();
   MCAssembler::iterator J = Asm.begin();
   MCAssembler::iterator JE = Asm.end();
   for (; I != IE && J != JE; ++I, ++J)
-    writeSection(Asm, Layout, **I, *J);
+    assert((**I).MCSection == &*J && "Wrong bound MCSection");
+#endif
+
+  // Write section contents.
+  for (std::unique_ptr<COFFSection> &Sec : Sections)
+    writeSection(Asm, Layout, *Sec);
 
   assert(W.OS.tell() == Header.PointerToSymbolTable &&
          "Header::PointerToSymbolTable is insane!");

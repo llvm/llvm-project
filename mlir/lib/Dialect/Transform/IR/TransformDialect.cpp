@@ -27,12 +27,15 @@ void transform::detail::checkImplementsTransformOpInterface(
   RegisteredOperationName opName =
       *RegisteredOperationName::lookup(name, context);
   assert((opName.hasInterface<TransformOpInterface>() ||
+          opName.hasInterface<PatternDescriptorOpInterface>() ||
           opName.hasTrait<OpTrait::IsTerminator>()) &&
          "non-terminator ops injected into the transform dialect must "
-         "implement TransformOpInterface");
-  assert(opName.hasInterface<MemoryEffectOpInterface>() &&
-         "ops injected into the transform dialect must implement "
-         "MemoryEffectsOpInterface");
+         "implement TransformOpInterface or PatternDescriptorOpInterface");
+  if (!opName.hasInterface<PatternDescriptorOpInterface>()) {
+    assert(opName.hasInterface<MemoryEffectOpInterface>() &&
+           "ops injected into the transform dialect must implement "
+           "MemoryEffectsOpInterface");
+  }
 }
 
 void transform::detail::checkImplementsTransformHandleTypeInterface(

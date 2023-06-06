@@ -9,6 +9,7 @@
 #ifndef LLVM_LIBC_SRC_SUPPORT_FPUTIL_X86_64_FMA_H
 #define LLVM_LIBC_SRC_SUPPORT_FPUTIL_X86_64_FMA_H
 
+#include "src/__support/macros/attributes.h" // LIBC_INLINE
 #include "src/__support/macros/properties/architectures.h"
 #include "src/__support/macros/properties/cpu_features.h" // LIBC_TARGET_CPU_HAS_FMA
 

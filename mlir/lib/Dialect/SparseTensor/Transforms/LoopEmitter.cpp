@@ -232,8 +232,12 @@ void LoopEmitter::initialize(ValueRange ts, StringAttr loopTag, bool hasOutput,
   this->hasOutput = hasOutput;
   this->isSparseOut = isSparseOut;
 
-  const unsigned numTensors = ts.size();
+  const unsigned numManifestTensors = ts.size();
+  const unsigned synTensorId = numManifestTensors;
+  const unsigned numTensors = numManifestTensors + 1;
+  // tensors array (len == numManifestTensor).
   this->tensors.assign(ts.begin(), ts.end());
+  // Arrays with len == numTensor.
   this->lvlTypes.assign(numTensors, std::vector<DimLevelType>());
   this->lvlSizes.assign(numTensors, std::vector<Value>());
   this->highs.assign(numTensors, std::vector<Value>());
@@ -265,33 +269,43 @@ void LoopEmitter::initialize(ValueRange ts, StringAttr loopTag, bool hasOutput,
 
   // Initialize nested types of `TensorId`-indexed fields.
   for (TensorId tid = 0; tid < numTensors; tid++) {
-    const Value t = tensors[tid];
-    // a scalar or 0-dimension tensors
-    if (isZeroRankedTensorOrScalar(t.getType()))
-      continue;
-
-    auto rtp = getRankedTensorType(t);
-    if (auto reshape = t.getDefiningOp<tensor::CollapseShapeOp>();
-        isUniqueCOOType(rtp) && reshape) {
-      // TODO: Supports more kinds of sparse tensors.
-      // FIXME: We should instead lower reshape operations on sparse tensors to
-      // view change.
-      collapseReassoc[tid] = reshape.getReassociation();
-      rtp = reshape.getSrcType();
-      // Overwrites the tensor to the source tensor of reshape operations.
-      tensors[tid] = reshape.getSrc();
-    }
-    const SparseTensorType stt(rtp);
-    const Level lvlRank = stt.getLvlRank();
-    // We always treat sparse output tensor as dense so that we always iterate
-    // it based on lvl size.
-    if (stt.hasEncoding() && !(isOutputTensor(tid) && isSparseOut)) {
-      const auto enc = stt.getEncoding();
-      isSparseSlices[tid] = enc.isSlice();
-      for (auto lvlTp : enc.getLvlTypes())
-        lvlTypes[tid].push_back(lvlTp);
-    } else {
+    Level lvlRank;
+    if (tid == synTensorId) {
+      // Synthetic tensor (conceptually) is an all-dense tensor with rank equal
+      // to the total number of loops (each level can potentially be mapped to
+      // one of the loop being generated).
+      lvlRank = numLoops;
       lvlTypes[tid].assign(lvlRank, DimLevelType::Dense);
+    } else {
+      const Value t = tensors[tid];
+      // a scalar or 0-dimension tensors
+      if (isZeroRankedTensorOrScalar(t.getType()))
+        continue;
+
+      auto rtp = getRankedTensorType(t);
+      if (auto reshape = t.getDefiningOp<tensor::CollapseShapeOp>();
+          isUniqueCOOType(rtp) && reshape) {
+        // TODO: Supports more kinds of sparse tensors.
+        // FIXME: We should instead lower reshape operations on sparse tensors
+        // to view change.
+        collapseReassoc[tid] = reshape.getReassociation();
+        rtp = reshape.getSrcType();
+        // Overwrites the tensor to the source tensor of reshape operations.
+        tensors[tid] = reshape.getSrc();
+      }
+      const SparseTensorType stt(rtp);
+      lvlRank = stt.getLvlRank();
+
+      // We always treat sparse output tensor as dense so that we always iterate
+      // it based on lvl size.
+      if (stt.hasEncoding() && !(isOutputTensor(tid) && isSparseOut)) {
+        const auto enc = stt.getEncoding();
+        isSparseSlices[tid] = enc.isSlice();
+        for (auto lvlTp : enc.getLvlTypes())
+          lvlTypes[tid].push_back(lvlTp);
+      } else {
+        lvlTypes[tid].assign(lvlRank, DimLevelType::Dense);
+      }
     }
 
     // Initialize using empty value.
@@ -314,7 +328,7 @@ void LoopEmitter::initialize(ValueRange ts, StringAttr loopTag, bool hasOutput,
     sliceStack[tid].emplace_back(/*minCrd=*/Value(),
                                  /*offset=*/Value(), /*isNonEmpty*/ Value(),
                                  std::nullopt, 0);
-    if (dimGetter) {
+    if (dimGetter && !isSynTensor(tid)) {
       auto reassoc = collapseReassoc[tid];
       Level dstRank = reassoc ? reassoc.size() : lvlRank;
       for (Level l = 0; l < dstRank; l++) {
@@ -342,13 +356,14 @@ void LoopEmitter::initialize(ValueRange ts, StringAttr loopTag, bool hasOutput,
 
 void LoopEmitter::initializeLoopEmit(OpBuilder &builder, Location loc,
                                      LoopEmitter::OutputUpdater updater) {
-  // For every tensor:
+  // For every manifest tensor:
   // * get the values buffer.
   // * For every level:
   //   * get the positions and coordinates buffers
   //   * get/compute the level-size, which is also used as the upper-bound
   //     on positions.
-  for (TensorId t = 0, numTensors = getNumTensors(); t < numTensors; t++) {
+  for (TensorId t = 0, numTensors = getNumManifestTensors(); t < numTensors;
+       t++) {
     const Value tensor = tensors[t];
     const auto rtp = dyn_cast<RankedTensorType>(tensor.getType());
     if (!rtp)
@@ -461,15 +476,28 @@ void LoopEmitter::enterNewLoopSeq(OpBuilder &builder, Location loc,
   assert(loopSeqStack.size() == loopStack.size());
   // Prepares for all the tensors used in the current loop sequence.
   std::vector<std::tuple<TensorId, Level, bool>> slicedTids;
+
+  bool hasSynTensor = false;
+  std::optional<std::pair<TensorId, Level>> loopBoundDefLevel = std::nullopt;
   for (auto [tid, lvl] : unpackTensorLevelRange(tidLvls)) {
     if (!dependentLvlMap[tid][lvl].empty()) {
       bool fullyRed = genSliceBegin(builder, loc, tid, lvl);
       slicedTids.emplace_back(tid, lvl, fullyRed);
     } else {
-      prepareLoopOverTensorAtLvl(builder, loc, tid, lvl);
+      if (isSynTensor(tid)) {
+        hasSynTensor = true;
+      } else {
+        loopBoundDefLevel = std::make_pair(tid, lvl);
+        prepareLoopOverTensorAtLvl(builder, loc, tid, lvl);
+      }
     }
   }
 
+  if (hasSynTensor && loopBoundDefLevel.has_value()) {
+    // TODO: compute the loopBound for index reduction by d - sum(unres_lvls).
+    highs[getSynTensorId()][getCurrentDepth()] =
+        lvlSizes[loopBoundDefLevel->first][loopBoundDefLevel->second];
+  }
   // Universal Index starts from 0.
   loopSeqStack.emplace_back(C_IDX(0), std::move(slicedTids));
 }
@@ -1137,6 +1165,9 @@ void LoopEmitter::emitExtraLocalsForTensorsAtDenseLvls(
   // output tensor unconditionally, since they may not appear in the lattice,
   // but may be needed for linearized codegen.
   for (auto [tid, lvl] : unpackTensorLevelRange(tidLvls)) {
+    if (isSynTensor(tid))
+      continue;
+
     if (isDenseDLT(lvlTypes[tid][lvl])) {
       // Slice-driven dense level should have be handled already.
       if (!dependentLvlMap[tid][lvl].empty())
@@ -1162,15 +1193,6 @@ void LoopEmitter::emitExtraLocalsForTensorsAtDenseLvls(
 void LoopEmitter::exitForLoop(RewriterBase &rewriter, Location loc,
                               MutableArrayRef<Value> reduc) {
   const LoopInfo &loopInfo = loopStack.back();
-  rewriter.setInsertionPointToEnd(loopInfo.userCodeBlock);
-  if (!loopInfo.userCodeBlock->empty() &&
-      llvm::isa<scf::ForOp>(loopInfo.loop) &&
-      llvm::isa<scf::YieldOp>(&loopInfo.userCodeBlock->back())) {
-    // scf::For inserts an implicit yield op when there is no loop iter args. In
-    // this case, we need to insert the code before the yield.
-    assert(reduc.empty());
-    rewriter.setInsertionPoint(&loopInfo.userCodeBlock->back());
-  }
   for (auto [tid, lvl, reduced] : loopInfo.sliceDrivenInfo) {
     SliceInfo &info = sliceStack[tid].back();
     assert(isDenseDLT(lvlTypes[tid][lvl]));
@@ -1262,7 +1284,6 @@ void LoopEmitter::exitWhileLoop(OpBuilder &builder, Location loc,
                                 MutableArrayRef<Value> reduc) {
   const LoopInfo &loopInfo = loopStack.back();
   auto whileOp = llvm::cast<scf::WhileOp>(loopInfo.loop);
-  builder.setInsertionPointToEnd(loopInfo.userCodeBlock);
   Value iv = loopInfo.iv;
 
   // Finalize the induction. Note that the induction could be performed
@@ -1361,7 +1382,9 @@ void LoopEmitter::exitWhileLoop(OpBuilder &builder, Location loc,
   }
 
   assert(o == operands.size() + delta);
-  YIELD(operands);
+  if (!operands.empty())
+    YIELD(operands);
+
   builder.setInsertionPointAfter(whileOp);
 }
 
@@ -1370,7 +1393,17 @@ void LoopEmitter::exitCurrentLoop(RewriterBase &rewriter, Location loc,
   // Clean up the values, it would help use to discover potential bug at a
   // earlier stage (instead of silently using a wrong value).
   const LoopInfo &loopInfo = loopStack.back();
-  SmallVector<Value> red;
+
+  // Sets the insertion point to the right position.
+  rewriter.setInsertionPointToEnd(loopInfo.userCodeBlock);
+  if (!loopInfo.userCodeBlock->empty() &&
+      llvm::isa<scf::YieldOp>(&loopInfo.userCodeBlock->back())) {
+    // scf::While/For inserts an implicit yield op when there is no loop
+    // iter args. In this case, we need to insert the code before the yield.
+    assert(loopInfo.userCodeBlock->back().getNumResults() == 0);
+    rewriter.setInsertionPoint(&loopInfo.userCodeBlock->back());
+  }
+
   if (llvm::isa<scf::WhileOp>(loopInfo.loop)) {
     exitWhileLoop(rewriter, loc, reduc);
   } else {
@@ -1449,7 +1482,8 @@ std::pair<Operation *, ValueRange> LoopEmitter::genSliceLvlTraverseLoop(
         Value cont = CMPI(ult, coord, sliceHi);
         TypeRange types = args.drop_front(2).getTypes();
 
-        auto ifOp = builder.create<scf::IfOp>(loc, types, cont, true);
+        auto ifOp = builder.create<scf::IfOp>(loc, types, cont,
+                                              /*withElseBlock=*/!types.empty());
         {
           // 2 reduction variable maintained by us.
           SmallVector<Value> ifRet = args.drop_front(2);
@@ -1457,8 +1491,10 @@ std::pair<Operation *, ValueRange> LoopEmitter::genSliceLvlTraverseLoop(
 
           OpBuilder::InsertionGuard guard(builder);
           // If coord >= sliceHi.
-          builder.setInsertionPointToStart(&ifOp.getElseRegion().front());
-          YIELD(ifRet);
+          if (!ifRet.empty()) {
+            builder.setInsertionPointToStart(&ifOp.getElseRegion().front());
+            YIELD(ifRet);
+          }
 
           // If coord < sliceHi.
           builder.setInsertionPointToStart(&ifOp.getThenRegion().front());

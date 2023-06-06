@@ -876,7 +876,7 @@ LoopUnrollResult llvm::UnrollLoop(Loop *L, UnrollLoopOptions ULO, LoopInfo *LI,
         while (FixLCSSALoop->getParentLoop() != LatchLoop)
           FixLCSSALoop = FixLCSSALoop->getParentLoop();
 
-      formLCSSARecursively(*FixLCSSALoop, *DT, LI);
+      formLCSSARecursively(*FixLCSSALoop, *DT, LI, SE);
     } else if (PreserveLCSSA) {
       assert(OuterL->isLCSSAForm(*DT) &&
              "Loops should be in LCSSA form after loop-unroll.");

@@ -879,6 +879,11 @@ void TargetLoweringBase::initActions() {
 #define BEGIN_REGISTER_VP_SDNODE(SDOPC, ...)                                   \
     setOperationAction(ISD::SDOPC, VT, Expand);
 #include "llvm/IR/VPIntrinsics.def"
+
+    // FP environment operations default to expand.
+    setOperationAction(ISD::GET_FPENV, VT, Expand);
+    setOperationAction(ISD::SET_FPENV, VT, Expand);
+    setOperationAction(ISD::RESET_FPENV, VT, Expand);
   }
 
   // Most targets ignore the @llvm.prefetch intrinsic.
@@ -909,6 +914,9 @@ void TargetLoweringBase::initActions() {
   setOperationAction(ISD::DEBUGTRAP, MVT::Other, Expand);
 
   setOperationAction(ISD::UBSANTRAP, MVT::Other, Expand);
+
+  setOperationAction(ISD::GET_FPENV_MEM, MVT::Other, Expand);
+  setOperationAction(ISD::SET_FPENV_MEM, MVT::Other, Expand);
 }
 
 MVT TargetLoweringBase::getScalarShiftAmountTy(const DataLayout &DL,

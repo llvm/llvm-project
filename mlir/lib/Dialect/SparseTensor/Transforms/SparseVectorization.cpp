@@ -505,8 +505,15 @@ static bool vectorizeExpr(PatternRewriter &rewriter, scf::ForOp forOp, VL vl,
 /// that analysis and rewriting code stay in sync.
 static bool vectorizeStmt(PatternRewriter &rewriter, scf::ForOp forOp, VL vl,
                           bool codegen) {
-  Location loc = forOp.getLoc();
   Block &block = forOp.getRegion().front();
+  // For loops with single yield statement (as below) could be generated
+  // when custom reduce is used with unary operation.
+  // for (...)
+  //   yield c_0
+  if (block.getOperations().size() <= 1)
+    return false;
+
+  Location loc = forOp.getLoc();
   scf::YieldOp yield = cast<scf::YieldOp>(block.getTerminator());
   auto &last = *++block.rbegin();
   scf::ForOp forOpNew;

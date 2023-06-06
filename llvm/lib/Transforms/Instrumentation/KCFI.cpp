@@ -100,7 +100,7 @@ PreservedAnalyses KCFIPass::run(Function &F, FunctionAnalysisManager &AM) {
     Instruction *ThenTerm =
         SplitBlockAndInsertIfThen(Test, Call, false, VeryUnlikelyWeights);
     Builder.SetInsertPoint(ThenTerm);
-    Builder.CreateCall(Intrinsic::getDeclaration(&M, Intrinsic::trap));
+    Builder.CreateCall(Intrinsic::getDeclaration(&M, Intrinsic::debugtrap));
     ++NumKCFIChecks;
   }
 

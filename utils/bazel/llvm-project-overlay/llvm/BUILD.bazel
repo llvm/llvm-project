@@ -2751,6 +2751,25 @@ cc_library(
     ],
 )
 
+cc_library(
+    name = "DWARFLinkerParallel",
+    srcs = glob([
+        "lib/DWARFLinkerParallel/*.cpp",
+        "lib/DWARFLinkerParallel/*.h",
+    ]),
+    hdrs = glob(["include/llvm/DWARFLinkerParallel/*.h"]),
+    copts = llvm_copts,
+    deps = [
+        ":BinaryFormat",
+        ":CodeGen",
+        ":DWARFLinker",
+        ":DebugInfoDWARF",
+        ":MC",
+        ":Support",
+        ":TargetParser",
+    ],
+)
+
 gentbl(
     name = "DllOptionsTableGen",
     strip_include_prefix = "lib/ToolDrivers/llvm-dlltool",
@@ -3023,6 +3042,7 @@ cc_binary(
         ":CodeGen",
         ":CodeGenTypes",
         ":DWARFLinker",
+        ":DWARFLinkerParallel",
         ":DebugInfo",
         ":DebugInfoDWARF",
         ":DsymutilTableGen",
@@ -3445,6 +3465,7 @@ cc_binary(
         ":AllTargetsCodeGens",
         ":CodeGenTypes",
         ":DWARFLinker",
+        ":DWARFLinkerParallel",
         ":DebugInfoDWARF",
         ":DwarfutilOptionsTableGen",
         ":MC",

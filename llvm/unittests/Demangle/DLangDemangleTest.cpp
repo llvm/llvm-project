@@ -11,10 +11,11 @@
 #include "gtest/gtest.h"
 
 #include <cstdlib>
+#include <string_view>
 #include <utility>
 
 struct DLangDemangleTestFixture
-    : public testing::TestWithParam<std::pair<const char *, const char *>> {
+    : public testing::TestWithParam<std::pair<std::string_view, const char *>> {
   char *Demangled;
 
   void SetUp() override { Demangled = llvm::dlangDemangle(GetParam().first); }
@@ -29,9 +30,8 @@ TEST_P(DLangDemangleTestFixture, DLangDemangleTest) {
 INSTANTIATE_TEST_SUITE_P(
     DLangDemangleTest, DLangDemangleTestFixture,
     testing::Values(
-        std::make_pair("_Dmain", "D main"), std::make_pair(nullptr, nullptr),
-        std::make_pair("_Z", nullptr), std::make_pair("_DDD", nullptr),
-        std::make_pair("_D88", nullptr),
+        std::make_pair("_Dmain", "D main"), std::make_pair("_Z", nullptr),
+        std::make_pair("_DDD", nullptr), std::make_pair("_D88", nullptr),
         std::make_pair("_D8demangleZ", "demangle"),
         std::make_pair("_D8demangle4testZ", "demangle.test"),
         std::make_pair("_D8demangle4test5test2Z", "demangle.test.test2"),

@@ -686,46 +686,46 @@ class MIN_MAX_TUPLE<string V, Intrinsic I, NVPTXRegClass RC,
 multiclass MIN_MAX<string IntName> {
   foreach P = [
     MIN_MAX_TUPLE<"_f16", !if(!eq(IntName, "min"), int_nvvm_fmin_f16,
-      int_nvvm_fmax_f16), Float16Regs>,
+      int_nvvm_fmax_f16), Int16Regs>,
     MIN_MAX_TUPLE<"_ftz_f16", !if(!eq(IntName, "min"), int_nvvm_fmin_ftz_f16,
-      int_nvvm_fmax_ftz_f16), Float16Regs>,
+      int_nvvm_fmax_ftz_f16), Int16Regs>,
     MIN_MAX_TUPLE<"_NaN_f16", !if(!eq(IntName, "min"), int_nvvm_fmin_nan_f16,
-      int_nvvm_fmax_nan_f16), Float16Regs>,
+      int_nvvm_fmax_nan_f16), Int16Regs>,
     MIN_MAX_TUPLE<"_ftz_NaN_f16", !if(!eq(IntName, "min"),
-      int_nvvm_fmin_ftz_nan_f16, int_nvvm_fmax_ftz_nan_f16), Float16Regs>,
+      int_nvvm_fmin_ftz_nan_f16, int_nvvm_fmax_ftz_nan_f16), Int16Regs>,
     MIN_MAX_TUPLE<"_xorsign_abs_f16", !if(!eq(IntName, "min"),
       int_nvvm_fmin_xorsign_abs_f16, int_nvvm_fmax_xorsign_abs_f16),
-      Float16Regs, [hasPTX<72>, hasSM<86>]>,
+      Int16Regs, [hasPTX<72>, hasSM<86>]>,
     MIN_MAX_TUPLE<"_ftz_xorsign_abs_f16", !if(!eq(IntName, "min"),
       int_nvvm_fmin_ftz_xorsign_abs_f16, int_nvvm_fmax_ftz_xorsign_abs_f16),
-      Float16Regs, [hasPTX<72>, hasSM<86>]>,
+      Int16Regs, [hasPTX<72>, hasSM<86>]>,
     MIN_MAX_TUPLE<"_NaN_xorsign_abs_f16", !if(!eq(IntName, "min"),
       int_nvvm_fmin_nan_xorsign_abs_f16, int_nvvm_fmax_nan_xorsign_abs_f16),
-      Float16Regs, [hasPTX<72>, hasSM<86>]>,
+      Int16Regs, [hasPTX<72>, hasSM<86>]>,
     MIN_MAX_TUPLE<"_ftz_NaN_xorsign_abs_f16", !if(!eq(IntName, "min"),
       int_nvvm_fmin_ftz_nan_xorsign_abs_f16,
-      int_nvvm_fmax_ftz_nan_xorsign_abs_f16), Float16Regs, [hasPTX<72>, hasSM<86>]>,
+      int_nvvm_fmax_ftz_nan_xorsign_abs_f16), Int16Regs, [hasPTX<72>, hasSM<86>]>,
     MIN_MAX_TUPLE<"_f16x2", !if(!eq(IntName, "min"), int_nvvm_fmin_f16x2,
-      int_nvvm_fmax_f16x2), Float16x2Regs>,
+      int_nvvm_fmax_f16x2), Int32Regs>,
     MIN_MAX_TUPLE<"_ftz_f16x2", !if(!eq(IntName, "min"),
-      int_nvvm_fmin_ftz_f16x2, int_nvvm_fmax_ftz_f16x2), Float16x2Regs>,
+      int_nvvm_fmin_ftz_f16x2, int_nvvm_fmax_ftz_f16x2), Int32Regs>,
     MIN_MAX_TUPLE<"_NaN_f16x2", !if(!eq(IntName, "min"),
-      int_nvvm_fmin_nan_f16x2, int_nvvm_fmax_nan_f16x2), Float16x2Regs>,
+      int_nvvm_fmin_nan_f16x2, int_nvvm_fmax_nan_f16x2), Int32Regs>,
     MIN_MAX_TUPLE<"_ftz_NaN_f16x2", !if(!eq(IntName, "min"),
-      int_nvvm_fmin_ftz_nan_f16x2, int_nvvm_fmax_ftz_nan_f16x2), Float16x2Regs>,
+      int_nvvm_fmin_ftz_nan_f16x2, int_nvvm_fmax_ftz_nan_f16x2), Int32Regs>,
     MIN_MAX_TUPLE<"_xorsign_abs_f16x2", !if(!eq(IntName, "min"),
       int_nvvm_fmin_xorsign_abs_f16x2, int_nvvm_fmax_xorsign_abs_f16x2),
-      Float16x2Regs, [hasPTX<72>, hasSM<86>]>,
+      Int32Regs, [hasPTX<72>, hasSM<86>]>,
     MIN_MAX_TUPLE<"_ftz_xorsign_abs_f16x2", !if(!eq(IntName, "min"),
       int_nvvm_fmin_ftz_xorsign_abs_f16x2, int_nvvm_fmax_ftz_xorsign_abs_f16x2),
-      Float16x2Regs, [hasPTX<72>, hasSM<86>]>,
+      Int32Regs, [hasPTX<72>, hasSM<86>]>,
     MIN_MAX_TUPLE<"_NaN_xorsign_abs_f16x2", !if(!eq(IntName, "min"),
       int_nvvm_fmin_nan_xorsign_abs_f16x2, int_nvvm_fmax_nan_xorsign_abs_f16x2),
-      Float16x2Regs, [hasPTX<72>, hasSM<86>]>,
+      Int32Regs, [hasPTX<72>, hasSM<86>]>,
     MIN_MAX_TUPLE<"_ftz_NaN_xorsign_abs_f16x2", !if(!eq(IntName, "min"),
       int_nvvm_fmin_ftz_nan_xorsign_abs_f16x2,
       int_nvvm_fmax_ftz_nan_xorsign_abs_f16x2),
-      Float16x2Regs, [hasPTX<72>, hasSM<86>]>,
+      Int32Regs, [hasPTX<72>, hasSM<86>]>,
     MIN_MAX_TUPLE<"_bf16", !if(!eq(IntName, "min"),
       int_nvvm_fmin_bf16, int_nvvm_fmax_bf16), Int16Regs>,
     MIN_MAX_TUPLE<"_NaN_bf16", !if(!eq(IntName, "min"), int_nvvm_fmin_nan_bf16,
@@ -933,9 +933,9 @@ def INT_NVVM_EX2_APPROX_F : F_MATH_1<"ex2.approx.f32 \t$dst, $src0;",
 def INT_NVVM_EX2_APPROX_D : F_MATH_1<"ex2.approx.f64 \t$dst, $src0;",
   Float64Regs, Float64Regs, int_nvvm_ex2_approx_d>;
 def INT_NVVM_EX2_APPROX_F16 : F_MATH_1<"ex2.approx.f16 \t$dst, $src0;",
-  Float16Regs, Float16Regs, int_nvvm_ex2_approx_f16, [hasPTX<70>, hasSM<75>]>;
+  Int16Regs, Int16Regs, int_nvvm_ex2_approx_f16, [hasPTX<70>, hasSM<75>]>;
 def INT_NVVM_EX2_APPROX_F16X2 : F_MATH_1<"ex2.approx.f16x2 \t$dst, $src0;",
-  Float16x2Regs, Float16x2Regs, int_nvvm_ex2_approx_f16x2, [hasPTX<70>, hasSM<75>]>;
+  Int32Regs, Int32Regs, int_nvvm_ex2_approx_f16x2, [hasPTX<70>, hasSM<75>]>;
 
 def INT_NVVM_LG2_APPROX_FTZ_F : F_MATH_1<"lg2.approx.ftz.f32 \t$dst, $src0;",
   Float32Regs, Float32Regs, int_nvvm_lg2_approx_ftz_f>;
@@ -986,30 +986,30 @@ multiclass FMA_INST {
     FMA_TUPLE<"_rp_f32", int_nvvm_fma_rp_f, Float32Regs>,
     FMA_TUPLE<"_rp_ftz_f32", int_nvvm_fma_rp_ftz_f, Float32Regs>,
 
-    FMA_TUPLE<"_rn_f16", int_nvvm_fma_rn_f16, Float16Regs, [hasPTX<42>, hasSM<53>]>,
-    FMA_TUPLE<"_rn_ftz_f16", int_nvvm_fma_rn_ftz_f16, Float16Regs,
+    FMA_TUPLE<"_rn_f16", int_nvvm_fma_rn_f16, Int16Regs, [hasPTX<42>, hasSM<53>]>,
+    FMA_TUPLE<"_rn_ftz_f16", int_nvvm_fma_rn_ftz_f16, Int16Regs,
       [hasPTX<42>, hasSM<53>]>,
-    FMA_TUPLE<"_rn_sat_f16", int_nvvm_fma_rn_sat_f16, Float16Regs,
+    FMA_TUPLE<"_rn_sat_f16", int_nvvm_fma_rn_sat_f16, Int16Regs,
       [hasPTX<42>, hasSM<53>]>,
-    FMA_TUPLE<"_rn_ftz_sat_f16", int_nvvm_fma_rn_ftz_sat_f16, Float16Regs,
+    FMA_TUPLE<"_rn_ftz_sat_f16", int_nvvm_fma_rn_ftz_sat_f16, Int16Regs,
       [hasPTX<42>, hasSM<53>]>,
-    FMA_TUPLE<"_rn_relu_f16", int_nvvm_fma_rn_relu_f16, Float16Regs,
+    FMA_TUPLE<"_rn_relu_f16", int_nvvm_fma_rn_relu_f16, Int16Regs,
       [hasPTX<70>, hasSM<80>]>,
-    FMA_TUPLE<"_rn_ftz_relu_f16", int_nvvm_fma_rn_ftz_relu_f16, Float16Regs,
+    FMA_TUPLE<"_rn_ftz_relu_f16", int_nvvm_fma_rn_ftz_relu_f16, Int16Regs,
       [hasPTX<70>, hasSM<80>]>,
 
-    FMA_TUPLE<"_rn_f16x2", int_nvvm_fma_rn_f16x2, Float16x2Regs,
+    FMA_TUPLE<"_rn_f16x2", int_nvvm_fma_rn_f16x2, Int32Regs,
       [hasPTX<42>, hasSM<53>]>,
-    FMA_TUPLE<"_rn_ftz_f16x2", int_nvvm_fma_rn_ftz_f16x2, Float16x2Regs,
+    FMA_TUPLE<"_rn_ftz_f16x2", int_nvvm_fma_rn_ftz_f16x2, Int32Regs,
       [hasPTX<42>, hasSM<53>]>,
-    FMA_TUPLE<"_rn_sat_f16x2", int_nvvm_fma_rn_sat_f16x2, Float16x2Regs,
+    FMA_TUPLE<"_rn_sat_f16x2", int_nvvm_fma_rn_sat_f16x2, Int32Regs,
       [hasPTX<42>, hasSM<53>]>,
     FMA_TUPLE<"_rn_ftz_sat_f16x2", int_nvvm_fma_rn_ftz_sat_f16x2,
-      Float16x2Regs, [hasPTX<42>, hasSM<53>]>,
-    FMA_TUPLE<"_rn_relu_f16x2", int_nvvm_fma_rn_relu_f16x2, Float16x2Regs,
+      Int32Regs, [hasPTX<42>, hasSM<53>]>,
+    FMA_TUPLE<"_rn_relu_f16x2", int_nvvm_fma_rn_relu_f16x2, Int32Regs,
       [hasPTX<70>, hasSM<80>]>,
     FMA_TUPLE<"_rn_ftz_relu_f16x2", int_nvvm_fma_rn_ftz_relu_f16x2,
-      Float16x2Regs, [hasPTX<70>, hasSM<80>]>,
+      Int32Regs, [hasPTX<70>, hasSM<80>]>,
 
     FMA_TUPLE<"_rn_bf16", int_nvvm_fma_rn_bf16, Int16Regs, [hasPTX<70>, hasSM<80>]>,
     FMA_TUPLE<"_rn_relu_bf16", int_nvvm_fma_rn_relu_bf16, Int16Regs,
@@ -1397,9 +1397,9 @@ def : Pat<(int_nvvm_ull2d_rp Int64Regs:$a),
 
 
 def : Pat<(int_nvvm_f2h_rn_ftz Float32Regs:$a),
-          (BITCONVERT_16_F2I (CVT_f16_f32 Float32Regs:$a, CvtRN_FTZ))>;
+          (CVT_f16_f32 Float32Regs:$a, CvtRN_FTZ)>;
 def : Pat<(int_nvvm_f2h_rn Float32Regs:$a),
-          (BITCONVERT_16_F2I (CVT_f16_f32 Float32Regs:$a, CvtRN))>;
+          (CVT_f16_f32 Float32Regs:$a, CvtRN)>;
 
 //
 // Bitcast
@@ -2159,12 +2159,8 @@ defm INT_PTX_LDU_GLOBAL_i8  : LDU_G<"u8 \t$result, [$src];", Int16Regs>;
 defm INT_PTX_LDU_GLOBAL_i16 : LDU_G<"u16 \t$result, [$src];", Int16Regs>;
 defm INT_PTX_LDU_GLOBAL_i32 : LDU_G<"u32 \t$result, [$src];", Int32Regs>;
 defm INT_PTX_LDU_GLOBAL_i64 : LDU_G<"u64 \t$result, [$src];", Int64Regs>;
-defm INT_PTX_LDU_GLOBAL_f16 : LDU_G<"b16 \t$result, [$src];", Float16Regs>;
-defm INT_PTX_LDU_GLOBAL_f16x2 : LDU_G<"b32 \t$result, [$src];", Float16x2Regs>;
 defm INT_PTX_LDU_GLOBAL_f32 : LDU_G<"f32 \t$result, [$src];", Float32Regs>;
 defm INT_PTX_LDU_GLOBAL_f64 : LDU_G<"f64 \t$result, [$src];", Float64Regs>;
-defm INT_PTX_LDU_GLOBAL_p32 : LDU_G<"u32 \t$result, [$src];", Int32Regs>;
-defm INT_PTX_LDU_GLOBAL_p64 : LDU_G<"u64 \t$result, [$src];", Int64Regs>;
 
 // vector
 
@@ -2212,9 +2208,9 @@ defm INT_PTX_LDU_G_v2i16_ELE
 defm INT_PTX_LDU_G_v2i32_ELE
   : VLDU_G_ELE_V2<"v2.u32 \t{{$dst1, $dst2}}, [$src];", Int32Regs>;
 defm INT_PTX_LDU_G_v2f16_ELE
-  : VLDU_G_ELE_V2<"v2.b16 \t{{$dst1, $dst2}}, [$src];", Float16Regs>;
+  : VLDU_G_ELE_V2<"v2.b16 \t{{$dst1, $dst2}}, [$src];", Int16Regs>;
 defm INT_PTX_LDU_G_v2f16x2_ELE
-  : VLDU_G_ELE_V2<"v2.b32 \t{{$dst1, $dst2}}, [$src];", Float16x2Regs>;
+  : VLDU_G_ELE_V2<"v2.b32 \t{{$dst1, $dst2}}, [$src];", Int32Regs>;
 defm INT_PTX_LDU_G_v2f32_ELE
   : VLDU_G_ELE_V2<"v2.f32 \t{{$dst1, $dst2}}, [$src];", Float32Regs>;
 defm INT_PTX_LDU_G_v2i64_ELE
@@ -2231,10 +2227,10 @@ defm INT_PTX_LDU_G_v4i32_ELE
     Int32Regs>;
 defm INT_PTX_LDU_G_v4f16_ELE
   : VLDU_G_ELE_V4<"v4.b16 \t{{$dst1, $dst2, $dst3, $dst4}}, [$src];",
-    Float16Regs>;
+    Int16Regs>;
 defm INT_PTX_LDU_G_v4f16x2_ELE
   : VLDU_G_ELE_V4<"v4.b32 \t{{$dst1, $dst2, $dst3, $dst4}}, [$src];",
-    Float16x2Regs>;
+    Int32Regs>;
 defm INT_PTX_LDU_G_v4f32_ELE
   : VLDU_G_ELE_V4<"v4.f32 \t{{$dst1, $dst2, $dst3, $dst4}}, [$src];",
     Float32Regs>;
@@ -2274,18 +2270,10 @@ defm INT_PTX_LDG_GLOBAL_i32
   : LDG_G<"u32 \t$result, [$src];", Int32Regs>;
 defm INT_PTX_LDG_GLOBAL_i64
   : LDG_G<"u64 \t$result, [$src];", Int64Regs>;
-defm INT_PTX_LDG_GLOBAL_f16
-  : LDG_G<"b16 \t$result, [$src];", Float16Regs>;
-defm INT_PTX_LDG_GLOBAL_f16x2
-  : LDG_G<"b32 \t$result, [$src];", Float16x2Regs>;
 defm INT_PTX_LDG_GLOBAL_f32
   : LDG_G<"f32 \t$result, [$src];", Float32Regs>;
 defm INT_PTX_LDG_GLOBAL_f64
   : LDG_G<"f64 \t$result, [$src];", Float64Regs>;
-defm INT_PTX_LDG_GLOBAL_p32
-  : LDG_G<"u32 \t$result, [$src];", Int32Regs>;
-defm INT_PTX_LDG_GLOBAL_p64
-  : LDG_G<"u64 \t$result, [$src];", Int64Regs>;
 
 // vector
 
@@ -2333,10 +2321,6 @@ defm INT_PTX_LDG_G_v2i16_ELE
   : VLDG_G_ELE_V2<"v2.u16 \t{{$dst1, $dst2}}, [$src];", Int16Regs>;
 defm INT_PTX_LDG_G_v2i32_ELE
   : VLDG_G_ELE_V2<"v2.u32 \t{{$dst1, $dst2}}, [$src];", Int32Regs>;
-defm INT_PTX_LDG_G_v2f16_ELE
-  : VLDG_G_ELE_V2<"v2.b16 \t{{$dst1, $dst2}}, [$src];", Float16Regs>;
-defm INT_PTX_LDG_G_v2f16x2_ELE
-  : VLDG_G_ELE_V2<"v2.b32 \t{{$dst1, $dst2}}, [$src];", Float16x2Regs>;
 defm INT_PTX_LDG_G_v2f32_ELE
   : VLDG_G_ELE_V2<"v2.f32 \t{{$dst1, $dst2}}, [$src];", Float32Regs>;
 defm INT_PTX_LDG_G_v2i64_ELE
@@ -2349,10 +2333,6 @@ defm INT_PTX_LDG_G_v4i16_ELE
   : VLDG_G_ELE_V4<"v4.u16 \t{{$dst1, $dst2, $dst3, $dst4}}, [$src];", Int16Regs>;
 defm INT_PTX_LDG_G_v4i32_ELE
   : VLDG_G_ELE_V4<"v4.u32 \t{{$dst1, $dst2, $dst3, $dst4}}, [$src];", Int32Regs>;
-defm INT_PTX_LDG_G_v4f16_ELE
-  : VLDG_G_ELE_V4<"v4.b16 \t{{$dst1, $dst2, $dst3, $dst4}}, [$src];", Float16Regs>;
-defm INT_PTX_LDG_G_v4f16x2_ELE
-  : VLDG_G_ELE_V4<"v4.b32 \t{{$dst1, $dst2, $dst3, $dst4}}, [$src];", Float16x2Regs>;
 defm INT_PTX_LDG_G_v4f32_ELE
   : VLDG_G_ELE_V4<"v4.f32 \t{{$dst1, $dst2, $dst3, $dst4}}, [$src];", Float32Regs>;
 
@@ -6305,7 +6285,7 @@ class WMMA_REGINFO<WMMA_REGS r, string op>
       : WMMA_REGS<r.geom, r.frag, r.ptx_elt_type> {
   // NVPTX register types used to carry fragment data.
   NVPTXRegClass regclass = !cond(
-    !eq(ptx_elt_type, "f16") : Float16x2Regs,
+    !eq(ptx_elt_type, "f16") : Int32Regs,
     !eq(ptx_elt_type, "f32") : Float32Regs,
     !eq(ptx_elt_type, "f64") : Float64Regs,
     !eq(ptx_elt_type, "bf16") : Int32Regs,

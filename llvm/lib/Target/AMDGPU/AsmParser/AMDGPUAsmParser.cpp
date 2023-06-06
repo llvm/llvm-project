@@ -3596,6 +3596,10 @@ bool AMDGPUAsmParser::usesConstantBus(const MCInst &Inst, unsigned OpIdx) {
     return !isInlineConstant(Inst, OpIdx);
   } else if (MO.isReg()) {
     auto Reg = MO.getReg();
+    if (!Reg) {
+      // TODO-GFX12: why is this needed only for a few GFX12 instructions?
+      return false;
+    }
     const MCRegisterInfo *TRI = getContext().getRegisterInfo();
     auto PReg = mc2PseudoReg(Reg);
     return isSGPR(PReg, TRI) && PReg != SGPR_NULL;

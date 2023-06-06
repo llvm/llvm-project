@@ -776,11 +776,14 @@ public:
     return success();
   }
 };
+} // namespace
 
-void populateTestPatterns(RewritePatternSet &patterns) {
+void mlir::test::ApplyTestPatternsOp::populatePatterns(
+    RewritePatternSet &patterns) {
   patterns.insert<ReplaceWithNewOp, EraseOp>(patterns.getContext());
 }
 
+namespace {
 /// Test extension of the Transform dialect. Registers additional ops and
 /// declares PDL as dependent dialect since the additional ops are using PDL
 /// types for operands and results.
@@ -817,11 +820,6 @@ public:
           llvm::StringMap<PDLConstraintFunction> constraints;
           constraints.try_emplace("verbose_constraint", verboseConstraint);
           hooks.mergeInPDLMatchHooks(std::move(constraints));
-        });
-
-    addDialectDataInitializer<transform::PatternRegistry>(
-        [&](transform::PatternRegistry &registry) {
-          registry.registerPatterns("transform.test", populateTestPatterns);
         });
   }
 };

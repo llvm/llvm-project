@@ -657,7 +657,7 @@ LogicalResult BytecodeWriter::write(Operation *rootOp, raw_ostream &os) {
   writeStringSection(emitter);
 
   // Emit the properties section.
-  if (config.bytecodeVersion >= 5)
+  if (config.bytecodeVersion >= bytecode::kNativePropertiesEncoding)
     writePropertiesSection(emitter);
   else if (!propertiesSection.empty())
     return rootOp->emitError(
@@ -708,7 +708,7 @@ void BytecodeWriter::writeDialectSection(EncodingEmitter &emitter) {
     // Write the string section and get the ID.
     size_t nameID = stringSection.insert(dialect.name);
 
-    if (config.bytecodeVersion == 0) {
+    if (config.bytecodeVersion < bytecode::kDialectVersioning) {
       dialectEmitter.emitVarInt(nameID);
       continue;
     }
@@ -732,13 +732,13 @@ void BytecodeWriter::writeDialectSection(EncodingEmitter &emitter) {
                                  std::move(versionEmitter));
   }
 
-  if (config.bytecodeVersion > 3)
+  if (config.bytecodeVersion >= bytecode::kElideUnknownBlockArgLocation)
     dialectEmitter.emitVarInt(size(numberingState.getOpNames()));
 
   // Emit the referenced operation names grouped by dialect.
   auto emitOpName = [&](OpNameNumbering &name) {
     size_t stringId = stringSection.insert(name.name.stripDialect());
-    if (config.bytecodeVersion < 5)
+    if (config.bytecodeVersion < bytecode::kNativePropertiesEncoding)
       dialectEmitter.emitVarInt(stringId);
     else
       dialectEmitter.emitVarIntWithFlag(stringId, name.name.isRegistered());
@@ -826,7 +826,7 @@ LogicalResult BytecodeWriter::writeBlock(EncodingEmitter &emitter,
     emitter.emitVarInt(args.size());
     for (BlockArgument arg : args) {
       Location argLoc = arg.getLoc();
-      if (config.bytecodeVersion > 3) {
+      if (config.bytecodeVersion >= bytecode::kElideUnknownBlockArgLocation) {
         emitter.emitVarIntWithFlag(numberingState.getNumber(arg.getType()),
                                    !isa<UnknownLoc>(argLoc));
         if (!isa<UnknownLoc>(argLoc))
@@ -836,7 +836,7 @@ LogicalResult BytecodeWriter::writeBlock(EncodingEmitter &emitter,
         emitter.emitVarInt(numberingState.getNumber(argLoc));
       }
     }
-    if (config.bytecodeVersion > 2) {
+    if (config.bytecodeVersion >= bytecode::kUseListOrdering) {
       uint64_t maskOffset = emitter.size();
       uint8_t encodingMask = 0;
       emitter.emitByte(0);
@@ -868,9 +868,10 @@ LogicalResult BytecodeWriter::writeOp(EncodingEmitter &emitter, Operation *op) {
 
   // Emit the attributes of this operation.
   DictionaryAttr attrs = op->getDiscardableAttrDictionary();
-  // Allow deployment to version <5 by merging inherent attribute with the
-  // discardable ones. We should fail if there are any conflicts.
-  if (config.bytecodeVersion < 5)
+  // Allow deployment to version <kNativePropertiesEncoding by merging inherent
+  // attribute with the discardable ones. We should fail if there are any
+  // conflicts.
+  if (config.bytecodeVersion < bytecode::kNativePropertiesEncoding)
     attrs = op->getAttrDictionary();
   if (!attrs.empty()) {
     opEncodingMask |= bytecode::OpEncodingMask::kHasAttrs;
@@ -878,8 +879,8 @@ LogicalResult BytecodeWriter::writeOp(EncodingEmitter &emitter, Operation *op) {
   }
 
   // Emit the properties of this operation, for now we still support deployment
-  // to version <5.
-  if (config.bytecodeVersion >= 5) {
+  // to version <kNativePropertiesEncoding.
+  if (config.bytecodeVersion >= bytecode::kNativePropertiesEncoding) {
     std::optional<ssize_t> propertiesId = propertiesSection.emit(op);
     if (propertiesId.has_value()) {
       opEncodingMask |= bytecode::OpEncodingMask::kHasProperties;
@@ -913,7 +914,7 @@ LogicalResult BytecodeWriter::writeOp(EncodingEmitter &emitter, Operation *op) {
 
   // Emit the use-list orders to bytecode, so we can reconstruct the same order
   // at parsing.
-  if (config.bytecodeVersion > 2)
+  if (config.bytecodeVersion >= bytecode::kUseListOrdering)
     writeUseListOrders(emitter, opEncodingMask, ValueRange(op->getResults()));
 
   // Check for regions.
@@ -934,8 +935,9 @@ LogicalResult BytecodeWriter::writeOp(EncodingEmitter &emitter, Operation *op) {
 
     for (Region &region : op->getRegions()) {
       // If the region is not isolated from above, or we are emitting bytecode
-      // targeting version <2, we don't use a section.
-      if (!isIsolatedFromAbove || config.bytecodeVersion < 2) {
+      // targeting version <kLazyLoading, we don't use a section.
+      if (!isIsolatedFromAbove ||
+          config.bytecodeVersion < bytecode::kLazyLoading) {
         if (failed(writeRegion(emitter, &region)))
           return failure();
         continue;

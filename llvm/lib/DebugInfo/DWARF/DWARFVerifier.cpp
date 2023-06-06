@@ -1629,6 +1629,116 @@ bool DWARFVerifier::handleAccelTables() {
   return NumErrors == 0;
 }
 
+bool DWARFVerifier::handleDebugStrOffsets() {
+  OS << "Verifying .debug_str_offsets...\n";
+  const DWARFObject &DObj = DCtx.getDWARFObj();
+  bool Success = true;
+  Success &= verifyDebugStrOffsets(
+      ".debug_str_offsets.dwo", DObj.getStrOffsetsDWOSection(),
+      DObj.getStrDWOSection(), &DWARFObject::forEachInfoDWOSections);
+  Success &= verifyDebugStrOffsets(
+      ".debug_str_offsets", DObj.getStrOffsetsSection(), DObj.getStrSection(),
+      &DWARFObject::forEachInfoSections);
+  return Success;
+}
+
+bool DWARFVerifier::verifyDebugStrOffsets(
+    StringRef SectionName, const DWARFSection &Section, StringRef StrData,
+    void (DWARFObject::*VisitInfoSections)(
+        function_ref<void(const DWARFSection &)>) const) {
+  const DWARFObject &DObj = DCtx.getDWARFObj();
+  uint16_t InfoVersion = 0;
+  DwarfFormat InfoFormat = DwarfFormat::DWARF32;
+  (DObj.*VisitInfoSections)([&](const DWARFSection &S) {
+    if (InfoVersion)
+      return;
+    DWARFDataExtractor DebugInfoData(DObj, S, DCtx.isLittleEndian(), 0);
+    uint64_t Offset = 0;
+    InfoFormat = DebugInfoData.getInitialLength(&Offset).second;
+    InfoVersion = DebugInfoData.getU16(&Offset);
+  });
+
+  DWARFDataExtractor DA(DObj, Section, DCtx.isLittleEndian(), 0);
+
+  DataExtractor::Cursor C(0);
+  uint64_t NextUnit = 0;
+  bool Success = true;
+  while (C.seek(NextUnit), C.tell() < DA.getData().size()) {
+    DwarfFormat Format;
+    uint64_t Length;
+    uint64_t StartOffset = C.tell();
+    if (InfoVersion == 4) {
+      Format = InfoFormat;
+      Length = DA.getData().size();
+      NextUnit = C.tell() + Length;
+    } else {
+      std::tie(Length, Format) = DA.getInitialLength(C);
+      if (!C)
+        break;
+      if (C.tell() + Length > DA.getData().size()) {
+        error() << formatv(
+            "{0}: contribution {1:X}: length exceeds available space "
+            "(contribution "
+            "offset ({1:X}) + length field space ({2:X}) + length ({3:X}) == "
+            "{4:X} > section size {5:X})\n",
+            SectionName, StartOffset, C.tell() - StartOffset, Length,
+            C.tell() + Length, DA.getData().size());
+        Success = false;
+        // Nothing more to do - no other contributions to try.
+        break;
+      }
+      NextUnit = C.tell() + Length;
+      uint8_t Version = DA.getU16(C);
+      if (C && Version != 5) {
+        error() << formatv("{0}: contribution {1:X}: invalid version {2}\n",
+                           SectionName, StartOffset, Version);
+        Success = false;
+        // Can't parse the rest of this contribution, since we don't know the
+        // version, but we can pick up with the next contribution.
+        continue;
+      }
+      (void)DA.getU16(C); // padding
+    }
+    uint64_t OffsetByteSize = getDwarfOffsetByteSize(Format);
+    DA.setAddressSize(OffsetByteSize);
+    uint64_t Remainder = (Length - 4) % OffsetByteSize;
+    if (Remainder != 0) {
+      error() << formatv(
+          "{0}: contribution {1:X}: invalid length ((length ({2:X}) "
+          "- header (0x4)) % offset size {3:X} == {4:X} != 0)\n",
+          SectionName, StartOffset, Length, OffsetByteSize, Remainder);
+      Success = false;
+    }
+    for (uint64_t Index = 0; C && C.tell() + OffsetByteSize <= NextUnit; ++Index) {
+      uint64_t OffOff = C.tell();
+      uint64_t StrOff = DA.getAddress(C);
+      // check StrOff refers to the start of a string
+      if (StrOff == 0)
+        continue;
+      if (StrData.size() <= StrOff) {
+        error() << formatv(
+            "{0}: contribution {1:X}: index {2:X}: invalid string "
+            "offset *{3:X} == {4:X}, is beyond the bounds of the string section of length {5:X}\n",
+            SectionName, StartOffset, Index, OffOff, StrOff, StrData.size());
+        continue;
+      }
+      if (StrData[StrOff - 1] == '\0')
+        continue;
+      error() << formatv("{0}: contribution {1:X}: index {2:X}: invalid string "
+                         "offset *{3:X} == {4:X}, is neither zero nor "
+                         "immediately following a null character\n",
+                         SectionName, StartOffset, Index, OffOff, StrOff);
+      Success = false;
+    }
+  }
+
+  if (Error E = C.takeError()) {
+    error() << SectionName << ": " << toString(std::move(E)) << '\n';
+    return false;
+  }
+  return Success;
+}
+
 raw_ostream &DWARFVerifier::error() const { return WithColor::error(OS); }
 
 raw_ostream &DWARFVerifier::warn() const { return WithColor::warning(OS); }

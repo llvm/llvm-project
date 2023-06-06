@@ -225,7 +225,7 @@ return:                                           ; preds = %if.end, %if.then
 }
 
 define ptr @external_sink_ret2_nrw(ptr %n0, ptr %r0, ptr %w0) {
-; CHECK: Function Attrs: nofree norecurse nosync nounwind willreturn memory(argmem: readwrite)
+; CHECK: Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn memory(argmem: readwrite)
 ; CHECK-LABEL: define {{[^@]+}}@external_sink_ret2_nrw
 ; CHECK-SAME: (ptr nofree [[N0:%.*]], ptr nocapture nofree readonly [[R0:%.*]], ptr nofree returned writeonly "no-capture-maybe-returned" [[W0:%.*]]) #[[ATTR1:[0-9]+]] {
 ; CHECK-NEXT:  entry:
@@ -351,13 +351,13 @@ entry:
 ; for a subset relation.
 ;.
 ; TUNIT: attributes #[[ATTR0]] = { nofree nosync nounwind memory(argmem: readwrite) }
-; TUNIT: attributes #[[ATTR1]] = { nofree norecurse nosync nounwind willreturn memory(argmem: readwrite) }
+; TUNIT: attributes #[[ATTR1]] = { mustprogress nofree norecurse nosync nounwind willreturn memory(argmem: readwrite) }
 ; TUNIT: attributes #[[ATTR2]] = { nofree norecurse nosync nounwind memory(argmem: readwrite) }
 ; TUNIT: attributes #[[ATTR3]] = { nofree nosync nounwind }
 ; TUNIT: attributes #[[ATTR4]] = { nofree nosync nounwind willreturn }
 ;.
 ; CGSCC: attributes #[[ATTR0]] = { nofree nosync nounwind memory(argmem: readwrite) }
-; CGSCC: attributes #[[ATTR1]] = { nofree norecurse nosync nounwind willreturn memory(argmem: readwrite) }
+; CGSCC: attributes #[[ATTR1]] = { mustprogress nofree norecurse nosync nounwind willreturn memory(argmem: readwrite) }
 ; CGSCC: attributes #[[ATTR2]] = { nofree nosync nounwind }
 ; CGSCC: attributes #[[ATTR3]] = { nounwind }
 ; CGSCC: attributes #[[ATTR4]] = { nounwind memory(readwrite) }

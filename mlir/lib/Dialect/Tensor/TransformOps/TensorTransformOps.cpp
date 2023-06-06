@@ -80,6 +80,40 @@ void tensor::registerFindPayloadReplacementOpInterfaceExternalModels(
 }
 
 //===----------------------------------------------------------------------===//
+// Apply...PatternsOp
+//===----------------------------------------------------------------------===//
+
+void transform::ApplyDropRedundantInsertSliceRankExpansionPatternsOp::
+    populatePatterns(RewritePatternSet &patterns) {
+  tensor::populateDropRedundantInsertSliceRankExpansionPatterns(patterns);
+}
+
+void transform::ApplyFoldTensorEmptyPatternsOp::populatePatterns(
+    RewritePatternSet &patterns) {
+  tensor::populateFoldTensorEmptyPatterns(patterns);
+}
+
+void transform::ApplyFoldIntoPackAndUnpackPatternsOp::populatePatterns(
+    RewritePatternSet &patterns) {
+  tensor::populateFoldIntoPackAndUnpackPatterns(patterns);
+}
+
+void transform::ApplyFoldTensorSubsetOpsPatternsOp::populatePatterns(
+    RewritePatternSet &patterns) {
+  tensor::populateFoldTensorSubsetOpPatterns(patterns);
+}
+
+void transform::ApplyMergeConsecutiveInsertExtractSlicePatternsOp::
+    populatePatterns(RewritePatternSet &patterns) {
+  tensor::populateMergeConsecutiveInsertExtractSlicePatterns(patterns);
+}
+
+void transform::ApplyReassociativeReshapeFoldingPatternsOp::populatePatterns(
+    RewritePatternSet &patterns) {
+  tensor::populateReassociativeReshapeFoldingPatterns(patterns);
+}
+
+//===----------------------------------------------------------------------===//
 // MakeLoopIndependentOp
 //===----------------------------------------------------------------------===//
 

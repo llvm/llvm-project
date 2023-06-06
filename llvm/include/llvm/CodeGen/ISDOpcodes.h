@@ -971,6 +971,30 @@ enum NodeType {
   /// FSINCOS - Compute both fsin and fcos as a single operation.
   FSINCOS,
 
+  /// Gets the current floating-point environment. The first operand is a token
+  /// chain. The results are FP environment, represented by an integer value,
+  /// and a token chain.
+  GET_FPENV,
+
+  /// Sets the current floating-point environment. The first operand is a token
+  /// chain, the second is FP environment, represented by an integer value. The
+  /// result is a token chain.
+  SET_FPENV,
+
+  /// Set floating-point environment to default state. The first operand and the
+  /// result are token chains.
+  RESET_FPENV,
+
+  /// Gets the current floating-point environment. The first operand is a token
+  /// chain, the second is a pointer to memory, where FP environment is stored
+  /// to. The result is a token chain.
+  GET_FPENV_MEM,
+
+  /// Sets the current floating point environment. The first operand is a token
+  /// chain, the second is a pointer to memory, where FP environment is loaded
+  /// from. The result is a token chain.
+  SET_FPENV_MEM,
+
   /// LOAD and STORE have token chains as their first operand, then the same
   /// operands as an LLVM load/store instruction, then an offset node that
   /// is added / subtracted from the base pointer to form the address (for

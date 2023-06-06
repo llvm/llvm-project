@@ -142,8 +142,33 @@ static DiagnosedSilenceableFailure unpackSingleIndexResultPayloadOperations(
 }
 
 //===----------------------------------------------------------------------===//
+// Apply...PatternsOp
+//===----------------------------------------------------------------------===//
+
+void transform::ApplyEraseUnnecessaryInputsPatternsOp::populatePatterns(
+    RewritePatternSet &patterns) {
+  linalg::populateEraseUnnecessaryInputsPatterns(patterns);
+}
+
+void transform::ApplyFoldUnitExtentDimsViaReshapesPatternsOp::populatePatterns(
+    RewritePatternSet &patterns) {
+  linalg::populateFoldUnitExtentDimsViaReshapesPatterns(patterns);
+}
+
+void transform::ApplyFoldUnitExtentDimsViaSlicesPatternsOp::populatePatterns(
+    RewritePatternSet &patterns) {
+  linalg::populateFoldUnitExtentDimsViaSlicesPatterns(patterns);
+}
+
+void transform::ApplyTilingCanonicalizationPatternsOp::populatePatterns(
+    RewritePatternSet &patterns) {
+  linalg::populateLinalgTilingCanonicalizationPatterns(patterns);
+}
+
+//===----------------------------------------------------------------------===//
 // BufferizeToAllocationOp
 //===----------------------------------------------------------------------===//
+
 DiagnosedSilenceableFailure
 transform::BufferizeToAllocationOp::apply(transform::TransformResults &results,
                                           transform::TransformState &state) {
@@ -2555,7 +2580,9 @@ ParseResult transform::TileOp::parse(OpAsmParser &parser,
 
 void TileOp::print(OpAsmPrinter &p) {
   p << ' ' << getTarget();
-  printDynamicIndexList(p, getOperation(), getDynamicSizes(), getStaticSizes());
+  printDynamicIndexList(p, getOperation(), getDynamicSizes(), getStaticSizes(),
+                        /*valueTypes=*/{}, OpAsmParser::Delimiter::Square,
+                        getLastTileSizeScalable());
   printOptionalInterchange(p, getInterchange());
   p << " : ";
   p.printFunctionalType(getOperands().getTypes(), getResults().getTypes());

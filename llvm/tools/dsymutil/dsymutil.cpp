@@ -241,6 +241,24 @@ getAccelTableKind(opt::InputArgList &Args) {
   return DsymutilAccelTableKind::Default;
 }
 
+static Expected<DsymutilDWARFLinkerType>
+getDWARFLinkerType(opt::InputArgList &Args) {
+  if (opt::Arg *LinkerType = Args.getLastArg(OPT_linker)) {
+    StringRef S = LinkerType->getValue();
+    if (S == "apple")
+      return DsymutilDWARFLinkerType::Apple;
+    if (S == "llvm")
+      return DsymutilDWARFLinkerType::LLVM;
+    return make_error<StringError>("invalid DWARF linker type specified: '" +
+                                       S +
+                                       "'. Supported values are 'apple', "
+                                       "'llvm'.",
+                                   inconvertibleErrorCode());
+  }
+
+  return DsymutilDWARFLinkerType::Apple;
+}
+
 static Expected<ReproducerMode> getReproducerMode(opt::InputArgList &Args) {
   if (Args.hasArg(OPT_gen_reproducer))
     return ReproducerMode::GenerateOnExit;
@@ -330,6 +348,13 @@ static Expected<DsymutilOptions> getOptions(opt::InputArgList &Args) {
     return AccelKind.takeError();
   }
 
+  if (Expected<DsymutilDWARFLinkerType> DWARFLinkerType =
+          getDWARFLinkerType(Args)) {
+    Options.LinkOpts.DWARFLinkerType = *DWARFLinkerType;
+  } else {
+    return DWARFLinkerType.takeError();
+  }
+
   if (opt::Arg *SymbolMap = Args.getLastArg(OPT_symbolmap))
     Options.SymbolMap = SymbolMap->getValue();
 
@@ -362,7 +387,7 @@ static Expected<DsymutilOptions> getOptions(opt::InputArgList &Args) {
     Options.Toolchain = Toolchain->getValue();
 
   if (Args.hasArg(OPT_assembly))
-    Options.LinkOpts.FileType = OutputFileType::Assembly;
+    Options.LinkOpts.FileType = DWARFLinker::OutputFileType::Assembly;
 
   if (opt::Arg *NumThreads = Args.getLastArg(OPT_threads))
     Options.LinkOpts.Threads = atoi(NumThreads->getValue());

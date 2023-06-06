@@ -171,7 +171,7 @@ public:
   unsigned fixMOVZ(const MCInst &MI, unsigned EncodedValue,
                    const MCSubtargetInfo &STI) const;
 
-  void encodeInstruction(const MCInst &MI, raw_ostream &OS,
+  void encodeInstruction(const MCInst &MI, SmallVectorImpl<char> &CB,
                          SmallVectorImpl<MCFixup> &Fixups,
                          const MCSubtargetInfo &STI) const override;
 
@@ -661,7 +661,9 @@ unsigned AArch64MCCodeEmitter::fixMOVZ(const MCInst &MI, unsigned EncodedValue,
   return EncodedValue;
 }
 
-void AArch64MCCodeEmitter::encodeInstruction(const MCInst &MI, raw_ostream &OS,
+void AArch64MCCodeEmitter::encodeInstruction(const MCInst &MI,
+                                             SmallVectorImpl<char> &CB,
+
                                              SmallVectorImpl<MCFixup> &Fixups,
                                              const MCSubtargetInfo &STI) const {
   if (MI.getOpcode() == AArch64::TLSDESCCALL) {
@@ -683,7 +685,7 @@ void AArch64MCCodeEmitter::encodeInstruction(const MCInst &MI, raw_ostream &OS,
   }
 
   uint64_t Binary = getBinaryCodeForInstr(MI, Fixups, STI);
-  support::endian::write<uint32_t>(OS, Binary, support::little);
+  support::endian::write<uint32_t>(CB, Binary, support::little);
   ++MCNumEmitted; // Keep track of the # of mi's emitted.
 }
 

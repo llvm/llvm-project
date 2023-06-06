@@ -280,6 +280,10 @@ HANDLE_LIBCALL(LLRINT_F80, "llrintl")
 HANDLE_LIBCALL(LLRINT_F128, "llrintl")
 HANDLE_LIBCALL(LLRINT_PPCF128, "llrintl")
 
+// Floating point environment
+HANDLE_LIBCALL(FEGETENV, "fegetenv")
+HANDLE_LIBCALL(FESETENV, "fesetenv")
+
 // Conversion
 HANDLE_LIBCALL(FPEXT_F32_PPCF128, "__gcc_stoq")
 HANDLE_LIBCALL(FPEXT_F64_PPCF128, "__gcc_dtoq")

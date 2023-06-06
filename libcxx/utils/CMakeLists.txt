@@ -1,7 +1,3 @@
-add_custom_target(libcxx-generate-public-header-tests
-    COMMAND "${Python3_EXECUTABLE}" "${LIBCXX_SOURCE_DIR}/utils/generate_header_tests.py"
-    COMMENT "Generate tests for including public headers.")
-
 add_custom_target(libcxx-generate-feature-test-macros
     COMMAND "${Python3_EXECUTABLE}" "${LIBCXX_SOURCE_DIR}/utils/generate_feature_test_macro_components.py"
     COMMENT "Generate the <version> header and tests for feature test macros.")
@@ -41,8 +37,7 @@ add_custom_target(libcxx-generate-iwyu-mapping
     COMMENT "Generate the mapping file for include-what-you-use")
 
 add_custom_target(libcxx-generate-files
-    DEPENDS libcxx-generate-public-header-tests
-            libcxx-generate-feature-test-macros
+    DEPENDS libcxx-generate-feature-test-macros
             libcxx-generate-extended-grapheme-cluster-tables
             libcxx-generate-extended-grapheme-cluster-tests
             libcxx-generate-escaped-output-table

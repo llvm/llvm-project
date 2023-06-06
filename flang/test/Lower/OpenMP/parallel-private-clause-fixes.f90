@@ -8,8 +8,8 @@
 ! CHECK:         %[[VAL_2:.*]] = fir.alloca i32 {bindc_name = "x", uniq_name = "_QFmultiple_private_fixEx"}
 ! CHECK:         omp.parallel {
 ! CHECK:           %[[PRIV_J:.*]] = fir.alloca i32 {bindc_name = "j", pinned
+! CHECK:           %[[PRIV_I:.*]] = fir.alloca i32 {adapt.valuebyref, pinned
 ! CHECK:           %[[PRIV_X:.*]] = fir.alloca i32 {bindc_name = "x", pinned
-! CHECK:           %[[PRIV_I:.*]] = fir.alloca i32 {{{.*}}, pinned
 ! CHECK:           %[[ONE:.*]] = arith.constant 1 : i32
 ! CHECK:           %[[VAL_3:.*]] = fir.load %[[VAL_4:.*]] : !fir.ref<i32>
 ! CHECK:           %[[VAL_5:.*]] = arith.constant 1 : i32

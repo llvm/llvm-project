@@ -13,7 +13,7 @@ declare ptr @geti1Ptr()
 ; CHECK: @[[G3:[a-zA-Z0-9_$"\\.-]+]] = private global i1 undef
 ;.
 define internal i1 @recursive_inst_comparator(ptr %a, ptr %b) {
-; CHECK: Function Attrs: nofree norecurse nosync nounwind willreturn memory(none)
+; CHECK: Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn memory(none)
 ; CHECK-LABEL: define {{[^@]+}}@recursive_inst_comparator
 ; CHECK-SAME: (ptr noalias nofree readnone [[A:%.*]], ptr noalias nofree readnone [[B:%.*]]) #[[ATTR0:[0-9]+]] {
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp eq ptr [[A]], [[B]]
@@ -394,7 +394,7 @@ define i1 @recursive_inst_compare_caller_global3(i1 %c) {
 }
 
 define i32 @non_unique_phi_ops(ptr %ptr) {
-; TUNIT: Function Attrs: nofree norecurse nosync nounwind willreturn memory(argmem: read)
+; TUNIT: Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn memory(argmem: read)
 ; TUNIT-LABEL: define {{[^@]+}}@non_unique_phi_ops
 ; TUNIT-SAME: (ptr nocapture nofree readonly [[PTR:%.*]]) #[[ATTR6:[0-9]+]] {
 ; TUNIT-NEXT:  entry:
@@ -416,7 +416,7 @@ define i32 @non_unique_phi_ops(ptr %ptr) {
 ; TUNIT:       end:
 ; TUNIT-NEXT:    ret i32 [[P]]
 ;
-; CGSCC: Function Attrs: nofree norecurse nosync nounwind willreturn memory(argmem: read)
+; CGSCC: Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn memory(argmem: read)
 ; CGSCC-LABEL: define {{[^@]+}}@non_unique_phi_ops
 ; CGSCC-SAME: (ptr nocapture nofree readonly [[PTR:%.*]]) #[[ATTR4:[0-9]+]] {
 ; CGSCC-NEXT:  entry:
@@ -461,19 +461,19 @@ end:
 }
 
 ;.
-; TUNIT: attributes #[[ATTR0]] = { nofree norecurse nosync nounwind willreturn memory(none) }
+; TUNIT: attributes #[[ATTR0]] = { mustprogress nofree norecurse nosync nounwind willreturn memory(none) }
 ; TUNIT: attributes #[[ATTR1]] = { nofree nosync nounwind memory(none) }
 ; TUNIT: attributes #[[ATTR2]] = { nofree norecurse nosync nounwind memory(none) }
 ; TUNIT: attributes #[[ATTR3]] = { nofree nosync nounwind memory(argmem: readwrite) }
 ; TUNIT: attributes #[[ATTR4]] = { nofree nosync nounwind }
 ; TUNIT: attributes #[[ATTR5]] = { nofree norecurse nosync nounwind }
-; TUNIT: attributes #[[ATTR6]] = { nofree norecurse nosync nounwind willreturn memory(argmem: read) }
+; TUNIT: attributes #[[ATTR6]] = { mustprogress nofree norecurse nosync nounwind willreturn memory(argmem: read) }
 ; TUNIT: attributes #[[ATTR7]] = { nounwind }
 ;.
-; CGSCC: attributes #[[ATTR0]] = { nofree norecurse nosync nounwind willreturn memory(none) }
+; CGSCC: attributes #[[ATTR0]] = { mustprogress nofree norecurse nosync nounwind willreturn memory(none) }
 ; CGSCC: attributes #[[ATTR1]] = { nofree nosync nounwind memory(none) }
 ; CGSCC: attributes #[[ATTR2]] = { nofree nosync nounwind memory(argmem: readwrite) }
 ; CGSCC: attributes #[[ATTR3]] = { nofree nosync nounwind }
-; CGSCC: attributes #[[ATTR4]] = { nofree norecurse nosync nounwind willreturn memory(argmem: read) }
+; CGSCC: attributes #[[ATTR4]] = { mustprogress nofree norecurse nosync nounwind willreturn memory(argmem: read) }
 ; CGSCC: attributes #[[ATTR5]] = { nounwind }
 ;.

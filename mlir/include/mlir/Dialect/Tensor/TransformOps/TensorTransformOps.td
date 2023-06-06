@@ -15,6 +15,75 @@ include "mlir/Dialect/Transform/IR/TransformTypes.td"
 include "mlir/Interfaces/SideEffectInterfaces.td"
 include "mlir/IR/OpBase.td"
 
+def ApplyDropRedundantInsertSliceRankExpansionPatternsOp : Op<Transform_Dialect,
+    "apply_patterns.tensor.drop_redundant_insert_slice_rank_expansion",
+    [DeclareOpInterfaceMethods<PatternDescriptorOpInterface>]> {
+  let description = [{
+    Indicates that redundant tensor.insert_slice rank reductions should be
+    dropped. E.g., cases where a tensor.extract_slice rank reduction immediately
+    follows an inverse tensor.insert_slice rank expansion.
+  }];
+
+  let assemblyFormat = "attr-dict";
+}
+
+def ApplyFoldTensorEmptyPatternsOp : Op<Transform_Dialect,
+    "apply_patterns.tensor.fold_tensor_empty",
+    [DeclareOpInterfaceMethods<PatternDescriptorOpInterface>]> {
+  let description = [{
+    Indicates that reassociative reshapes (tensor.collapse_shape /
+    tensor.expand_shape) should be folded with inverse rank expansions / rank
+    reductions (via tensor.insert_slice / tensor.extract_slice).
+  }];
+
+  let assemblyFormat = "attr-dict";
+}
+def ApplyFoldIntoPackAndUnpackPatternsOp : Op<Transform_Dialect,
+    "apply_patterns.tensor.fold_into_pack_and_unpack",
+    [DeclareOpInterfaceMethods<PatternDescriptorOpInterface>]> {
+  let description = [{
+    Indicates that operations like tensor.pad and tensor.extract_slice should
+    be folded into tensor.pack and tensor.unpack operations, respectively.
+  }];
+
+  let assemblyFormat = "attr-dict";
+}
+
+def ApplyFoldTensorSubsetOpsPatternsOp : Op<Transform_Dialect,
+    "apply_patterns.tensor.fold_tensor_subset_ops",
+    [DeclareOpInterfaceMethods<PatternDescriptorOpInterface>]> {
+  let description = [{
+    Indicates that tensor.empty should be folded with tensor.extract_slice,
+    tensor.expand_shape and tensor.collapse_shape.
+  }];
+
+  let assemblyFormat = "attr-dict";
+}
+
+def ApplyMergeConsecutiveInsertExtractSlicePatternsOp : Op<Transform_Dialect,
+    "apply_patterns.tensor.merge_consecutive_insert_extract_slice",
+    [DeclareOpInterfaceMethods<PatternDescriptorOpInterface>]> {
+  let description = [{
+    Indicates that consecutive tensor.extract_slice/tensor.insert_slice ops
+    should be merged into a single op. These patterns are not canonicalizations
+    because the bufferization is sensitive to IR structure.
+  }];
+
+  let assemblyFormat = "attr-dict";
+}
+
+def ApplyReassociativeReshapeFoldingPatternsOp : Op<Transform_Dialect,
+    "apply_patterns.tensor.reassociative_reshape_folding",
+    [DeclareOpInterfaceMethods<PatternDescriptorOpInterface>]> {
+  let description = [{
+    Indicates that reassociative reshapes (tensor.collapse_shape /
+    tensor.expand_shape) should be folded with inverse rank expansions / rank
+    reductions (via tensor.insert_slice / tensor.extract_slice).
+  }];
+
+  let assemblyFormat = "attr-dict";
+}
+
 def Transform_TensorPadOp : Transform_ConcreteOpType<"tensor.pad">;
 
 def MakeLoopIndependentOp

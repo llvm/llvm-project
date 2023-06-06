@@ -526,30 +526,49 @@ static void CheckExplicitDataArg(const characteristics::DummyDataObject &dummy,
   }
 
   // 15.5.2.5 -- actual & dummy are both POINTER or both ALLOCATABLE
-  if ((actualIsPointer && dummyIsPointer) ||
+  // For INTENT(IN) we relax two checks that are in Fortran to
+  // prevent the callee from changing the type or to avoid having
+  // to use a descriptor.
+  if (!typesCompatible) {
+    // Don't pile on the errors emitted above
+  } else if ((actualIsPointer && dummyIsPointer) ||
       (actualIsAllocatable && dummyIsAllocatable)) {
     bool actualIsUnlimited{actualType.type().IsUnlimitedPolymorphic()};
     bool dummyIsUnlimited{dummy.type.type().IsUnlimitedPolymorphic()};
     if (actualIsUnlimited != dummyIsUnlimited) {
-      if (typesCompatible) {
+      if (dummyIsUnlimited && dummy.intent == common::Intent::In &&
+          context.IsEnabled(common::LanguageFeature::RelaxedIntentInChecking)) {
+        if (context.ShouldWarn(
+                common::LanguageFeature::RelaxedIntentInChecking)) {
+          messages.Say(
+              "If a POINTER or ALLOCATABLE dummy or actual argument is unlimited polymorphic, both should be so"_port_en_US);
+        }
+      } else {
         messages.Say(
             "If a POINTER or ALLOCATABLE dummy or actual argument is unlimited polymorphic, both must be so"_err_en_US);
       }
     } else if (dummyIsPolymorphic != actualIsPolymorphic) {
-      if (dummy.intent == common::Intent::In && typesCompatible) {
-        // extension: allow with warning, rule is only relevant for definables
-        messages.Say(
-            "If a POINTER or ALLOCATABLE dummy or actual argument is polymorphic, both should be so"_port_en_US);
+      if (dummyIsPolymorphic && dummy.intent == common::Intent::In &&
+          context.IsEnabled(common::LanguageFeature::RelaxedIntentInChecking)) {
+        if (context.ShouldWarn(
+                common::LanguageFeature::RelaxedIntentInChecking)) {
+          messages.Say(
+              "If a POINTER or ALLOCATABLE dummy or actual argument is polymorphic, both should be so"_port_en_US);
+        }
       } else {
         messages.Say(
             "If a POINTER or ALLOCATABLE dummy or actual argument is polymorphic, both must be so"_err_en_US);
       }
-    } else if (!actualIsUnlimited && typesCompatible) {
+    } else if (!actualIsUnlimited) {
       if (!actualType.type().IsTkCompatibleWith(dummy.type.type())) {
-        if (dummy.intent == common::Intent::In) {
-          // extension: allow with warning, rule is only relevant for definables
-          messages.Say(
-              "POINTER or ALLOCATABLE dummy and actual arguments should have the same declared type and kind"_port_en_US);
+        if (dummy.intent == common::Intent::In &&
+            context.IsEnabled(
+                common::LanguageFeature::RelaxedIntentInChecking)) {
+          if (context.ShouldWarn(
+                  common::LanguageFeature::RelaxedIntentInChecking)) {
+            messages.Say(
+                "POINTER or ALLOCATABLE dummy and actual arguments should have the same declared type and kind"_port_en_US);
+          }
         } else {
           messages.Say(
               "POINTER or ALLOCATABLE dummy and actual arguments must have the same declared type and kind"_err_en_US);

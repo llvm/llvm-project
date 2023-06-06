@@ -420,7 +420,6 @@ bb:
   ret void
 }
 
-declare <4 x float> @llvm.amdgcn.raw.buffer.load.v4f32(<4 x i32>, i32, i32, i32) #0
 declare void @llvm.memset.p0.i64(ptr nocapture writeonly, i8, i64, i1) nounwind
 declare void @llvm.memset.p0.i32(ptr nocapture writeonly, i8, i32, i1) nounwind
 attributes #0 = { nounwind readonly }
