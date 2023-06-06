@@ -22,7 +22,7 @@ declare <32 x i8> @llvm.fshr.v32i8(<32 x i8>, <32 x i8>, <32 x i8>)
 define <4 x i64> @var_funnnel_v4i64(<4 x i64> %x, <4 x i64> %y, <4 x i64> %amt) nounwind {
 ; AVX1-LABEL: var_funnnel_v4i64:
 ; AVX1:       # %bb.0:
-; AVX1-NEXT:    vbroadcastsd {{.*#+}} ymm3 = [63,63,63,63]
+; AVX1-NEXT:    vmovaps {{.*#+}} ymm3 = [63,63,63,63]
 ; AVX1-NEXT:    vandps %ymm3, %ymm2, %ymm4
 ; AVX1-NEXT:    vextractf128 $1, %ymm4, %xmm5
 ; AVX1-NEXT:    vextractf128 $1, %ymm1, %xmm6
@@ -124,7 +124,7 @@ define <4 x i64> @var_funnnel_v4i64(<4 x i64> %x, <4 x i64> %y, <4 x i64> %amt) 
 ;
 ; XOPAVX1-LABEL: var_funnnel_v4i64:
 ; XOPAVX1:       # %bb.0:
-; XOPAVX1-NEXT:    vbroadcastsd {{.*#+}} ymm3 = [63,63,63,63]
+; XOPAVX1-NEXT:    vmovaps {{.*#+}} ymm3 = [63,63,63,63]
 ; XOPAVX1-NEXT:    vandps %ymm3, %ymm2, %ymm4
 ; XOPAVX1-NEXT:    vextractf128 $1, %ymm4, %xmm5
 ; XOPAVX1-NEXT:    vpxor %xmm6, %xmm6, %xmm6

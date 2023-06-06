@@ -219,15 +219,13 @@ define <2 x double> @elt1_v2f64(double %x) {
 ;
 ; X86-AVX-LABEL: elt1_v2f64:
 ; X86-AVX:       # %bb.0:
-; X86-AVX-NEXT:    vmovddup {{.*#+}} xmm0 = [4.2E+1,4.2E+1]
-; X86-AVX-NEXT:    # xmm0 = mem[0,0]
+; X86-AVX-NEXT:    vmovaps {{.*#+}} xmm0 = <4.2E+1,u>
 ; X86-AVX-NEXT:    vmovhps {{.*#+}} xmm0 = xmm0[0,1],mem[0,1]
 ; X86-AVX-NEXT:    retl
 ;
 ; X64-AVX-LABEL: elt1_v2f64:
 ; X64-AVX:       # %bb.0:
-; X64-AVX-NEXT:    vmovddup {{.*#+}} xmm1 = [4.2E+1,4.2E+1]
-; X64-AVX-NEXT:    # xmm1 = mem[0,0]
+; X64-AVX-NEXT:    vmovaps {{.*#+}} xmm1 = <4.2E+1,u>
 ; X64-AVX-NEXT:    vmovlhps {{.*#+}} xmm0 = xmm1[0],xmm0[0]
 ; X64-AVX-NEXT:    retq
    %ins = insertelement <2 x double> <double 42.0, double 1.0>, double %x, i32 1

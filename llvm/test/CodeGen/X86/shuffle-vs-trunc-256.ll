@@ -315,8 +315,7 @@ define void @trunc_v4i64_to_v4i32(ptr %L, ptr %S) nounwind {
 ;
 ; AVX2-FAST-ALL-LABEL: trunc_v4i64_to_v4i32:
 ; AVX2-FAST-ALL:       # %bb.0:
-; AVX2-FAST-ALL-NEXT:    vbroadcastf128 {{.*#+}} ymm0 = [0,2,4,6,0,2,4,6]
-; AVX2-FAST-ALL-NEXT:    # ymm0 = mem[0,1,0,1]
+; AVX2-FAST-ALL-NEXT:    vmovaps {{.*#+}} ymm0 = <0,2,4,6,u,u,u,u>
 ; AVX2-FAST-ALL-NEXT:    vpermps (%rdi), %ymm0, %ymm0
 ; AVX2-FAST-ALL-NEXT:    vmovaps %xmm0, (%rsi)
 ; AVX2-FAST-ALL-NEXT:    vzeroupper

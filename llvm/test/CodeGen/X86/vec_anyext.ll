@@ -211,8 +211,7 @@ define <4 x i8> @func_8_64(ptr %a, ptr %b) nounwind {
 define <4 x i16> @const_16_32() nounwind {
 ; CHECK-LABEL: const_16_32:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vmovddup {{.*#+}} xmm0 = [0,3,8,7,0,3,8,7]
-; CHECK-NEXT:    # xmm0 = mem[0,0]
+; CHECK-NEXT:    vmovaps {{.*#+}} xmm0 = <0,3,8,7,u,u,u,u>
 ; CHECK-NEXT:    ret{{[l|q]}}
   %G = trunc <4 x i32> <i32 0, i32 3, i32 8, i32 7> to <4 x i16>
   ret <4 x i16> %G
@@ -221,8 +220,7 @@ define <4 x i16> @const_16_32() nounwind {
 define <4 x i16> @const_16_64() nounwind {
 ; CHECK-LABEL: const_16_64:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vmovddup {{.*#+}} xmm0 = [0,3,8,7,0,3,8,7]
-; CHECK-NEXT:    # xmm0 = mem[0,0]
+; CHECK-NEXT:    vmovaps {{.*#+}} xmm0 = <0,3,8,7,u,u,u,u>
 ; CHECK-NEXT:    ret{{[l|q]}}
   %G = trunc <4 x i64> <i64 0, i64 3, i64 8, i64 7> to <4 x i16>
   ret <4 x i16> %G

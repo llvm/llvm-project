@@ -230,7 +230,6 @@ bool X86FixupVectorConstantsPass::processInstruction(MachineFunction &MF,
                                                      MachineInstr &MI) {
   unsigned Opc = MI.getOpcode();
   MachineConstantPool *CP = MI.getParent()->getParent()->getConstantPool();
-  bool HasDQI = ST->hasDQI();
 
   auto ConvertToBroadcast = [&](unsigned OpBcst256, unsigned OpBcst128,
                                 unsigned OpBcst64, unsigned OpBcst32,
@@ -262,50 +261,6 @@ bool X86FixupVectorConstantsPass::processInstruction(MachineFunction &MF,
     }
     return false;
   };
-
-  // Attempt to convert full width vector loads into broadcast loads.
-  switch (Opc) {
-  /* FP Loads */
-  case X86::MOVAPDrm:
-  case X86::MOVAPSrm:
-  case X86::MOVUPDrm:
-  case X86::MOVUPSrm:
-    // TODO: SSE3 MOVDDUP Handling
-    return false;
-  case X86::VMOVAPDrm:
-  case X86::VMOVAPSrm:
-  case X86::VMOVUPDrm:
-  case X86::VMOVUPSrm:
-    return ConvertToBroadcast(0, 0, X86::VMOVDDUPrm, X86::VBROADCASTSSrm, 0, 0,
-                              1);
-  case X86::VMOVAPDYrm:
-  case X86::VMOVAPSYrm:
-  case X86::VMOVUPDYrm:
-  case X86::VMOVUPSYrm:
-    return ConvertToBroadcast(0, X86::VBROADCASTF128, X86::VBROADCASTSDYrm,
-                              X86::VBROADCASTSSYrm, 0, 0, 1);
-  case X86::VMOVAPDZ128rm:
-  case X86::VMOVAPSZ128rm:
-  case X86::VMOVUPDZ128rm:
-  case X86::VMOVUPSZ128rm:
-    return ConvertToBroadcast(0, 0, X86::VMOVDDUPZ128rm,
-                              X86::VBROADCASTSSZ128rm, 0, 0, 1);
-  case X86::VMOVAPDZ256rm:
-  case X86::VMOVAPSZ256rm:
-  case X86::VMOVUPDZ256rm:
-  case X86::VMOVUPSZ256rm:
-    return ConvertToBroadcast(
-        0, HasDQI ? X86::VBROADCASTF64X2Z128rm : X86::VBROADCASTF32X4Z256rm,
-        X86::VBROADCASTSDZ256rm, X86::VBROADCASTSSZ256rm, 0, 0, 1);
-  case X86::VMOVAPDZrm:
-  case X86::VMOVAPSZrm:
-  case X86::VMOVUPDZrm:
-  case X86::VMOVUPSZrm:
-    return ConvertToBroadcast(
-        HasDQI ? X86::VBROADCASTF32X8rm : X86::VBROADCASTF64X4rm,
-        HasDQI ? X86::VBROADCASTF64X2rm : X86::VBROADCASTF32X4rm,
-        X86::VBROADCASTSDZrm, X86::VBROADCASTSSZrm, 0, 0, 1);
-  }
 
   // Attempt to find a AVX512 mapping from a full width memory-fold instruction
   // to a broadcast-fold instruction variant.

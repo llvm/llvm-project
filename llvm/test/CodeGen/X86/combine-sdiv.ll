@@ -147,10 +147,20 @@ define <4 x i32> @combine_vec_sdiv_dupe(<4 x i32> %x) {
 ; SSE-NEXT:    movaps {{.*#+}} xmm0 = [1,1,1,1]
 ; SSE-NEXT:    retq
 ;
-; AVX-LABEL: combine_vec_sdiv_dupe:
-; AVX:       # %bb.0:
-; AVX-NEXT:    vbroadcastss {{.*#+}} xmm0 = [1,1,1,1]
-; AVX-NEXT:    retq
+; AVX1-LABEL: combine_vec_sdiv_dupe:
+; AVX1:       # %bb.0:
+; AVX1-NEXT:    vmovaps {{.*#+}} xmm0 = [1,1,1,1]
+; AVX1-NEXT:    retq
+;
+; AVX2ORLATER-LABEL: combine_vec_sdiv_dupe:
+; AVX2ORLATER:       # %bb.0:
+; AVX2ORLATER-NEXT:    vbroadcastss {{.*#+}} xmm0 = [1,1,1,1]
+; AVX2ORLATER-NEXT:    retq
+;
+; XOP-LABEL: combine_vec_sdiv_dupe:
+; XOP:       # %bb.0:
+; XOP-NEXT:    vmovaps {{.*#+}} xmm0 = [1,1,1,1]
+; XOP-NEXT:    retq
   %1 = sdiv <4 x i32> %x, %x
   ret <4 x i32> %1
 }

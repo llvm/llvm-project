@@ -296,7 +296,7 @@ define <64 x i8> @f64xi8_i16(<64 x i8> %a) {
 ; AVX-NEXT:    vpaddb %xmm3, %xmm2, %xmm2
 ; AVX-NEXT:    vpaddb %xmm3, %xmm0, %xmm0
 ; AVX-NEXT:    vinsertf128 $1, %xmm2, %ymm0, %ymm0
-; AVX-NEXT:    vbroadcastss {{.*#+}} ymm2 = [0,1,0,1,0,1,0,1,0,1,0,1,0,1,0,1,0,1,0,1,0,1,0,1,0,1,0,1,0,1,0,1]
+; AVX-NEXT:    vmovaps {{.*#+}} ymm2 = [0,1,0,1,0,1,0,1,0,1,0,1,0,1,0,1,0,1,0,1,0,1,0,1,0,1,0,1,0,1,0,1]
 ; AVX-NEXT:    vandps %ymm2, %ymm0, %ymm0
 ; AVX-NEXT:    vandps %ymm2, %ymm1, %ymm1
 ; AVX-NEXT:    retl
@@ -328,7 +328,7 @@ define <64 x i8> @f64xi8_i16(<64 x i8> %a) {
 ; AVX-64-NEXT:    vpaddb %xmm3, %xmm2, %xmm2
 ; AVX-64-NEXT:    vpaddb %xmm3, %xmm0, %xmm0
 ; AVX-64-NEXT:    vinsertf128 $1, %xmm2, %ymm0, %ymm0
-; AVX-64-NEXT:    vbroadcastss {{.*#+}} ymm2 = [0,1,0,1,0,1,0,1,0,1,0,1,0,1,0,1,0,1,0,1,0,1,0,1,0,1,0,1,0,1,0,1]
+; AVX-64-NEXT:    vmovaps {{.*#+}} ymm2 = [0,1,0,1,0,1,0,1,0,1,0,1,0,1,0,1,0,1,0,1,0,1,0,1,0,1,0,1,0,1,0,1]
 ; AVX-64-NEXT:    vandps %ymm2, %ymm0, %ymm0
 ; AVX-64-NEXT:    vandps %ymm2, %ymm1, %ymm1
 ; AVX-64-NEXT:    retq
