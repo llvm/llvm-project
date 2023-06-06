@@ -16,6 +16,8 @@
 @GI2 = internal global i32 undef, align 4
 @Gs1 = internal global %struct.S undef, align 4
 @Gs2 = internal global %struct.S zeroinitializer, align 4
+@Vs1 = internal global %struct.S undef, align 4
+@Vs2 = internal global %struct.S undef, align 4
 @GBytes = internal global [1024 x i8] zeroinitializer, align 16
 @Flag0 = global i32 0, align 4
 @Flag1 = internal global i32 undef, align 4
@@ -42,6 +44,8 @@
 ; CHECK: @[[GI2:[a-zA-Z0-9_$"\\.-]+]] = internal global i32 undef, align 4
 ; CHECK: @[[GS1:[a-zA-Z0-9_$"\\.-]+]] = internal global [[STRUCT_S:%.*]] undef, align 4
 ; CHECK: @[[GS2:[a-zA-Z0-9_$"\\.-]+]] = internal global [[STRUCT_S:%.*]] zeroinitializer, align 4
+; CHECK: @[[VS1:[a-zA-Z0-9_$"\\.-]+]] = internal global [[STRUCT_S:%.*]] undef, align 4
+; CHECK: @[[VS2:[a-zA-Z0-9_$"\\.-]+]] = internal global [[STRUCT_S:%.*]] undef, align 4
 ; CHECK: @[[GBYTES:[a-zA-Z0-9_$"\\.-]+]] = internal global [1024 x i8] zeroinitializer, align 16
 ; CHECK: @[[FLAG0:[a-zA-Z0-9_$"\\.-]+]] = global i32 0, align 4
 ; CHECK: @[[FLAG1:[a-zA-Z0-9_$"\\.-]+]] = internal global i32 undef, align 4
@@ -768,6 +772,52 @@ entry:
   ret void
 }
 
+define i32 @test_range_merge1() {
+; TUNIT: Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn memory(write)
+; TUNIT-LABEL: define {{[^@]+}}@test_range_merge1
+; TUNIT-SAME: () #[[ATTR5]] {
+; TUNIT-NEXT:    ret i32 2
+;
+; CGSCC: Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn memory(write)
+; CGSCC-LABEL: define {{[^@]+}}@test_range_merge1
+; CGSCC-SAME: () #[[ATTR6:[0-9]+]] {
+; CGSCC-NEXT:    ret i32 2
+;
+  store <2 x i32> <i32 1, i32 1>, ptr @Vs1
+  store float 2.000000e+00, ptr getelementptr inbounds (%struct.S, ptr @Vs1, i64 0, i32 4)
+  %l0 = load i32, ptr getelementptr inbounds (%struct.S, ptr @Vs1, i64 0, i32 0)
+  %l1 = load i32, ptr getelementptr inbounds (%struct.S, ptr @Vs1, i64 0, i32 1)
+  %add = add i32 %l0, %l1
+  ret i32 %add
+}
+
+define i32 @test_range_merge2() {
+; TUNIT: Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn
+; TUNIT-LABEL: define {{[^@]+}}@test_range_merge2
+; TUNIT-SAME: () #[[ATTR3]] {
+; TUNIT-NEXT:    store <2 x i32> <i32 3, i32 4>, ptr @Vs2, align 8
+; TUNIT-NEXT:    [[L0:%.*]] = load i32, ptr @Vs2, align 4
+; TUNIT-NEXT:    [[L1:%.*]] = load i32, ptr getelementptr inbounds ([[STRUCT_S:%.*]], ptr @Vs2, i64 0, i32 1), align 4
+; TUNIT-NEXT:    [[ADD:%.*]] = add i32 [[L0]], [[L1]]
+; TUNIT-NEXT:    ret i32 [[ADD]]
+;
+; CGSCC: Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn
+; CGSCC-LABEL: define {{[^@]+}}@test_range_merge2
+; CGSCC-SAME: () #[[ATTR5]] {
+; CGSCC-NEXT:    store <2 x i32> <i32 3, i32 4>, ptr @Vs2, align 8
+; CGSCC-NEXT:    [[L0:%.*]] = load i32, ptr @Vs2, align 4
+; CGSCC-NEXT:    [[L1:%.*]] = load i32, ptr getelementptr inbounds ([[STRUCT_S:%.*]], ptr @Vs2, i64 0, i32 1), align 4
+; CGSCC-NEXT:    [[ADD:%.*]] = add i32 [[L0]], [[L1]]
+; CGSCC-NEXT:    ret i32 [[ADD]]
+;
+  store <2 x i32> <i32 3, i32 4>, ptr @Vs2
+  store float 2.000000e+00, ptr getelementptr inbounds (%struct.S, ptr @Vs2, i64 0, i32 4)
+  %l0 = load i32, ptr getelementptr inbounds (%struct.S, ptr @Vs2, i64 0, i32 0)
+  %l1 = load i32, ptr getelementptr inbounds (%struct.S, ptr @Vs2, i64 0, i32 1)
+  %add = add i32 %l0, %l1
+  ret i32 %add
+}
+
 ;    static char GBytes[1024];
 ;    void static_global_simplifiable_2(void) {
 ;      for (int i = 0; i < 100; ++i)
@@ -1035,7 +1085,7 @@ define i32 @static_global_simplifiable_3() {
 ;
 ; CGSCC: Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn memory(write)
 ; CGSCC-LABEL: define {{[^@]+}}@static_global_simplifiable_3
-; CGSCC-SAME: () #[[ATTR6:[0-9]+]] {
+; CGSCC-SAME: () #[[ATTR6]] {
 ; CGSCC-NEXT:    store i32 1, ptr @Flag3, align 4, !tbaa [[TBAA3]]
 ; CGSCC-NEXT:    ret i32 1
 ;
