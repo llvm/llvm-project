@@ -290,6 +290,8 @@ X86LegalizerInfo::X86LegalizerInfo(const X86Subtarget &STI,
     .widenScalarToNextPow2(1, /*Min=*/8)
     .clampScalar(1, s8, sMaxScalar);
 
+  getActionDefinitionsBuilder(G_SEXT_INREG).lower();
+
   // fp constants
   getActionDefinitionsBuilder(G_FCONSTANT)
       .legalIf([=](const LegalityQuery &Query) -> bool {
@@ -375,8 +377,6 @@ void X86LegalizerInfo::setLegalizerInfo32bit() {
 
   // Control-flow
   LegacyInfo.setAction({G_BRCOND, s1}, LegacyLegalizeActions::Legal);
-
-  getActionDefinitionsBuilder(G_SEXT_INREG).lower();
 
   // Merge/Unmerge
   for (const auto &Ty : {s16, s32, s64}) {
