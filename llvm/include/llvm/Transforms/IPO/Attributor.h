@@ -119,6 +119,7 @@
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/InstIterator.h"
 #include "llvm/IR/Instruction.h"
+#include "llvm/IR/Instructions.h"
 #include "llvm/IR/PassManager.h"
 #include "llvm/IR/Value.h"
 #include "llvm/Support/Alignment.h"
@@ -5177,6 +5178,10 @@ struct AAExecutionDomain
   virtual std::pair<ExecutionDomainTy, ExecutionDomainTy>
   getExecutionDomain(const CallBase &CB) const = 0;
   virtual ExecutionDomainTy getFunctionExecutionDomain() const = 0;
+
+  /// Helper function to determine if \p FI is a no-op given the information
+  /// about its execution from \p ExecDomainAA.
+  virtual bool isNoOpFence(const FenceInst &FI) const = 0;
 
   /// This function should return true if the type of the \p AA is
   /// AAExecutionDomain.

@@ -4339,11 +4339,20 @@ struct AAIsDeadFloating : public AAIsDeadValueImpl {
 
     Instruction *I = dyn_cast<Instruction>(&getAssociatedValue());
     if (!isAssumedSideEffectFree(A, I)) {
-      if (!isa_and_nonnull<StoreInst>(I))
+      if (!isa_and_nonnull<StoreInst>(I) && !isa_and_nonnull<FenceInst>(I))
         indicatePessimisticFixpoint();
       else
         removeAssumedBits(HAS_NO_EFFECT);
     }
+  }
+
+  bool isDeadFence(Attributor &A, FenceInst &FI) {
+    const auto *ExecDomainAA = A.lookupAAFor<AAExecutionDomain>(
+        IRPosition::function(*FI.getFunction()), *this, DepClassTy::NONE);
+    if (!ExecDomainAA || !ExecDomainAA->isNoOpFence(FI))
+      return false;
+    A.recordDependence(*ExecDomainAA, *this, DepClassTy::OPTIONAL);
+    return true;
   }
 
   bool isDeadStore(Attributor &A, StoreInst &SI,
@@ -4399,6 +4408,9 @@ struct AAIsDeadFloating : public AAIsDeadValueImpl {
     if (isa_and_nonnull<StoreInst>(I))
       if (isValidState())
         return "assumed-dead-store";
+    if (isa_and_nonnull<FenceInst>(I))
+      if (isValidState())
+        return "assumed-dead-fence";
     return AAIsDeadValueImpl::getAsStr();
   }
 
@@ -4407,6 +4419,9 @@ struct AAIsDeadFloating : public AAIsDeadValueImpl {
     Instruction *I = dyn_cast<Instruction>(&getAssociatedValue());
     if (auto *SI = dyn_cast_or_null<StoreInst>(I)) {
       if (!isDeadStore(A, *SI))
+        return indicatePessimisticFixpoint();
+    } else if (auto *FI = dyn_cast_or_null<FenceInst>(I)) {
+      if (!isDeadFence(A, *FI))
         return indicatePessimisticFixpoint();
     } else {
       if (!isAssumedSideEffectFree(A, I))
@@ -4441,6 +4456,11 @@ struct AAIsDeadFloating : public AAIsDeadValueImpl {
             AssumeOnlyInst.insert(cast<Instruction>(Usr));
           A.deleteAfterManifest(*AOI);
         }
+        return ChangeStatus::CHANGED;
+      }
+      if (auto *FI = dyn_cast<FenceInst>(I)) {
+        assert(isDeadFence(A, *FI));
+        A.deleteAfterManifest(*FI);
         return ChangeStatus::CHANGED;
       }
       if (isAssumedSideEffectFree(A, I) && !isa<InvokeInst>(I)) {
