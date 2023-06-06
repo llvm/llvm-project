@@ -1502,8 +1502,12 @@ defm constant_cfstrings : BoolFOption<"constant-cfstrings",
   NegFlag<SetTrue, [CC1Option], "Disable creation of CodeFoundation-type constant strings">,
   PosFlag<SetFalse>>;
 def fconstant_string_class_EQ : Joined<["-"], "fconstant-string-class=">, Group<f_Group>;
-def fconstexpr_depth_EQ : Joined<["-"], "fconstexpr-depth=">, Group<f_Group>;
-def fconstexpr_steps_EQ : Joined<["-"], "fconstexpr-steps=">, Group<f_Group>;
+def fconstexpr_depth_EQ : Joined<["-"], "fconstexpr-depth=">, Group<f_Group>, Flags<[CC1Option]>,
+  HelpText<"Set the maximum depth of recursive constexpr function calls">,
+  MarshallingInfoInt<LangOpts<"ConstexprCallDepth">, "512">;
+def fconstexpr_steps_EQ : Joined<["-"], "fconstexpr-steps=">, Group<f_Group>, Flags<[CC1Option]>,
+  HelpText<"Set the maximum number of steps in constexpr function evaluation">,
+  MarshallingInfoInt<LangOpts<"ConstexprStepLimit">, "1048576">;
 def fexperimental_new_constant_interpreter : Flag<["-"], "fexperimental-new-constant-interpreter">, Group<f_Group>,
   HelpText<"Enable the experimental new constant interpreter">, Flags<[CC1Option]>,
   MarshallingInfoFlag<LangOpts<"EnableNewConstInterp">>;
@@ -2974,8 +2978,9 @@ def : Joined<["-"], "ftemplate-depth-">, Group<f_Group>, Alias<ftemplate_depth_E
 def ftemplate_backtrace_limit_EQ : Joined<["-"], "ftemplate-backtrace-limit=">, Group<f_Group>, Flags<[CC1Option]>,
   HelpText<"Set the maximum number of entries to print in a template instantiation backtrace (0 = no limit)">,
   MarshallingInfoInt<DiagnosticOpts<"TemplateBacktraceLimit">, "DiagnosticOptions::DefaultTemplateBacktraceLimit">;
-def foperator_arrow_depth_EQ : Joined<["-"], "foperator-arrow-depth=">,
-                               Group<f_Group>;
+def foperator_arrow_depth_EQ : Joined<["-"], "foperator-arrow-depth=">, Group<f_Group>, Flags<[CC1Option]>,
+  HelpText<"Maximum number of 'operator->'s to call for a member access">,
+  MarshallingInfoInt<LangOpts<"ArrowDepth">, "256">;
 
 def fsave_optimization_record : Flag<["-"], "fsave-optimization-record">,
   Group<f_Group>, HelpText<"Generate a YAML optimization record file">;
@@ -6391,15 +6396,6 @@ def ftype_visibility : Joined<["-"], "ftype-visibility=">,
 def fapply_global_visibility_to_externs : Flag<["-"], "fapply-global-visibility-to-externs">,
   HelpText<"Apply global symbol visibility to external declarations without an explicit visibility">,
   MarshallingInfoFlag<LangOpts<"SetVisibilityForExternDecls">>;
-def foperator_arrow_depth : Separate<["-"], "foperator-arrow-depth">,
-  HelpText<"Maximum number of 'operator->'s to call for a member access">,
-  MarshallingInfoInt<LangOpts<"ArrowDepth">, "256">;
-def fconstexpr_depth : Separate<["-"], "fconstexpr-depth">,
-  HelpText<"Maximum depth of recursive constexpr function calls">,
-  MarshallingInfoInt<LangOpts<"ConstexprCallDepth">, "512">;
-def fconstexpr_steps : Separate<["-"], "fconstexpr-steps">,
-  HelpText<"Maximum number of steps in constexpr function evaluation">,
-  MarshallingInfoInt<LangOpts<"ConstexprStepLimit">, "1048576">;
 def fbracket_depth : Separate<["-"], "fbracket-depth">,
   HelpText<"Maximum nesting level for parentheses, brackets, and braces">,
   MarshallingInfoInt<LangOpts<"BracketDepth">, "256">;
