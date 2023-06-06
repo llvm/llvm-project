@@ -1194,17 +1194,6 @@ Ref DataFlowGraph::getNextShadow(Instr IA, Ref RA, bool Create) {
   return NA;
 }
 
-// Get the next shadow node in IA corresponding to RA. Return null-address
-// if such a node does not exist.
-Ref DataFlowGraph::getNextShadow(Instr IA, Ref RA) const {
-  assert(IA.Id != 0 && RA.Id != 0);
-  uint16_t Flags = RA.Addr->getFlags() | NodeAttrs::Shadow;
-  auto IsShadow = [Flags](Ref TA) -> bool {
-    return TA.Addr->getFlags() == Flags;
-  };
-  return locateNextRef(IA, RA, IsShadow).second;
-}
-
 // Create a new statement node in the block node BA that corresponds to
 // the machine instruction MI.
 void DataFlowGraph::buildStmt(Block BA, MachineInstr &In) {

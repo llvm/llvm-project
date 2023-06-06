@@ -776,7 +776,6 @@ struct DataFlowGraph {
 
   Ref getNextRelated(Instr IA, Ref RA) const;
   Ref getNextShadow(Instr IA, Ref RA, bool Create);
-  Ref getNextShadow(Instr IA, Ref RA) const;
 
   NodeList getRelatedRefs(Instr IA, Ref RA) const;
 
