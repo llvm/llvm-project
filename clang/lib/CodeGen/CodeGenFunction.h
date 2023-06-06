@@ -3403,12 +3403,10 @@ public:
                                      SourceLocation Loc);
   void GenerateOpenMPCapturedVars(const CapturedStmt &S,
                                   SmallVectorImpl<llvm::Value *> &CapturedVars,
-                                  const Stmt *XteamRedNestKey,
-                                  bool GenXteamAllocation = false);
+                                  const Stmt *XteamRedNestKey);
   void
-  GenerateXteamRedCapturedVars(SmallVectorImpl<llvm::Value *> &CapturedVars,
-                               QualType RedVarQualType,
-                               bool GenXteamAllocation);
+  InitializeXteamRedCapturedVars(SmallVectorImpl<llvm::Value *> &CapturedVars,
+                                 QualType RedVarQualType);
   void emitOMPSimpleStore(LValue LVal, RValue RVal, QualType RValTy,
                           SourceLocation Loc);
   /// Perform element by element copying of arrays with type \a

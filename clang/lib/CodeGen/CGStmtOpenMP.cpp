@@ -323,98 +323,33 @@ llvm::Value *CodeGenFunction::getTypeSize(QualType Ty) {
   return CGM.getSize(SizeInChars);
 }
 
-void CodeGenFunction::GenerateXteamRedCapturedVars(
-    SmallVectorImpl<llvm::Value *> &CapturedVars, QualType RedVarQualType,
-    bool GenXteamAllocation) {
+void CodeGenFunction::InitializeXteamRedCapturedVars(
+    SmallVectorImpl<llvm::Value *> &CapturedVars, QualType RedVarQualType) {
   llvm::Type *RedVarType = ConvertTypeForMem(RedVarQualType);
   assert((RedVarType->isFloatTy() || RedVarType->isDoubleTy() ||
           RedVarType->isIntegerTy()) &&
          "Unhandled type");
 
   const ASTContext &Context = CGM.getContext();
-  // TODO Should move to CGOpenMPRuntime.cpp new APIs for Xteam.
-  auto &OmpBuilder = CGM.getOpenMPRuntime().getOMPBuilder();
-
   llvm::Type *Int32Ty = llvm::Type::getInt32Ty(CGM.getLLVMContext());
-  llvm::Value *Int32Zero = llvm::ConstantInt::get(Int32Ty, 0);
 
-  llvm::Value *DTeamValsInst = nullptr;
-  llvm::Value *DTeamsDonePtrInst = nullptr;
-  if (GenXteamAllocation) {
-    // TODO Use device id from device clause, if any.
-    llvm::CallInst *DevIdVal =
-        EmitRuntimeCall(OmpBuilder.getOrCreateRuntimeFunction(
-                            CGM.getModule(), OMPRTL_omp_get_default_device),
-                        "default_dev");
+  // Placeholder for d_team_vals initialized to nullptr
+  llvm::Value *DTeamValsInst =
+      Builder.CreateAlloca(RedVarType, nullptr, "d_team_vals");
+  Address DTeamValsAddr(DTeamValsInst, RedVarType,
+                        Context.getTypeAlignInChars(RedVarQualType));
+  llvm::Value *NullPtrDTeamVals =
+      llvm::ConstantPointerNull::get(RedVarType->getPointerTo());
+  Builder.CreateStore(NullPtrDTeamVals, DTeamValsAddr);
 
-    // team_procs = ompx_get_team_procs(devid)
-    llvm::CallInst *TeamProcsInst =
-        EmitRuntimeCall(OmpBuilder.getOrCreateRuntimeFunction(
-                            CGM.getModule(), OMPRTL_ompx_get_team_procs),
-                        DevIdVal, "team_procs");
-
-    // dteam_vals = omp_target_alloc(sizeof(red-type) * team_procs, devid)
-    llvm::Type *Int64Ty = llvm::Type::getInt64Ty(CGM.getLLVMContext());
-    llvm::Value *RedVarTySz = llvm::ConstantInt::get(
-        Int64Ty, CGM.getDataLayout().getTypeSizeInBits(RedVarType) / 8);
-    llvm::Value *DTeamValsSz = Builder.CreateMul(
-        RedVarTySz, Builder.CreateIntCast(TeamProcsInst, Int64Ty, false));
-    llvm::Value *TgtAllocArgs[] = {DTeamValsSz, DevIdVal};
-    DTeamValsInst =
-        EmitRuntimeCall(OmpBuilder.getOrCreateRuntimeFunction(
-                            CGM.getModule(), OMPRTL_omp_target_alloc),
-                        TgtAllocArgs, "d_team_vals");
-
-    // uint32 teams_done = 0
-    llvm::AllocaInst *TeamsDoneInst =
-        Builder.CreateAlloca(Int32Ty, nullptr, "teams_done");
-    Address TeamsDoneAddr(TeamsDoneInst, Int32Ty,
-                          Context.getTypeAlignInChars(Context.IntTy));
-    Builder.CreateStore(Int32Zero, TeamsDoneAddr);
-
-    // d_teams_done_ptr = omp_target_alloc(4, devid)
-    llvm::Value *IntTySz = llvm::ConstantInt::get(Int64Ty, 4);
-    llvm::Value *DTeamsDonePtrArgs[] = {IntTySz, DevIdVal};
-    DTeamsDonePtrInst =
-        EmitRuntimeCall(OmpBuilder.getOrCreateRuntimeFunction(
-                            CGM.getModule(), OMPRTL_omp_target_alloc),
-                        DTeamsDonePtrArgs, "d_teams_done_ptr");
-
-    // initial_devid = omp_get_initial_device()
-    llvm::CallInst *InitialDevInst =
-        EmitRuntimeCall(OmpBuilder.getOrCreateRuntimeFunction(
-                            CGM.getModule(), OMPRTL_omp_get_initial_device),
-                        "initial_devid");
-
-    // omp_target_memcpy(d_teams_done_ptr, &teams_done, 4 /*sizeof(uint32_t) */,
-    //                   0 /* offset */, 0 /* offset */, devid, initial_devid)
-    llvm::Value *DTeamsDoneMemcpyArgs[] = {
-        DTeamsDonePtrInst,
-        TeamsDoneAddr.getPointer(),
-        /*sizeof(uint32_t)=*/llvm::ConstantInt::get(Int64Ty, 4),
-        /*dst_offset=*/llvm::ConstantInt::get(Int64Ty, 0),
-        /*src_offset=*/llvm::ConstantInt::get(Int64Ty, 0),
-        DevIdVal,
-        InitialDevInst};
-    EmitRuntimeCall(OmpBuilder.getOrCreateRuntimeFunction(
-                        CGM.getModule(), OMPRTL_omp_target_memcpy),
-                    DTeamsDoneMemcpyArgs);
-  } else {
-    DTeamValsInst = Builder.CreateAlloca(RedVarType, nullptr, "d_team_vals");
-    Address DTeamValsAddr(DTeamValsInst, RedVarType,
-                          Context.getTypeAlignInChars(RedVarQualType));
-    llvm::Value *NullPtrDTeamVals =
-        llvm::ConstantPointerNull::get(RedVarType->getPointerTo());
-    Builder.CreateStore(NullPtrDTeamVals, DTeamValsAddr);
-
-    DTeamsDonePtrInst =
-        Builder.CreateAlloca(Int32Ty, nullptr, "d_teams_done_ptr");
-    Address DTeamsDoneAddr(DTeamsDonePtrInst, Int32Ty,
-                           Context.getTypeAlignInChars(Context.UnsignedIntTy));
-    llvm::Value *NullPtrDTeamsDone =
-        llvm::ConstantPointerNull::get(Int32Ty->getPointerTo());
-    Builder.CreateStore(NullPtrDTeamsDone, DTeamsDoneAddr);
-  }
+  // Placeholder for d_teams_done_ptr initialized to nullptr
+  llvm::Value *DTeamsDonePtrInst =
+      Builder.CreateAlloca(Int32Ty, nullptr, "d_teams_done_ptr");
+  Address DTeamsDoneAddr(DTeamsDonePtrInst, Int32Ty,
+                         Context.getTypeAlignInChars(Context.UnsignedIntTy));
+  llvm::Value *NullPtrDTeamsDone =
+      llvm::ConstantPointerNull::get(Int32Ty->getPointerTo());
+  Builder.CreateStore(NullPtrDTeamsDone, DTeamsDoneAddr);
 
   assert(DTeamValsInst && "Device team vals pointer cannot be null");
   CapturedVars.push_back(DTeamValsInst);
@@ -425,7 +360,7 @@ void CodeGenFunction::GenerateXteamRedCapturedVars(
 
 void CodeGenFunction::GenerateOpenMPCapturedVars(
     const CapturedStmt &S, SmallVectorImpl<llvm::Value *> &CapturedVars,
-    const Stmt *XteamRedNestKey, bool GenXteamAllocation) {
+    const Stmt *XteamRedNestKey) {
   const RecordDecl *RD = S.getCapturedRecordDecl();
   auto CurField = RD->field_begin();
   auto CurCap = S.captures().begin();
@@ -475,9 +410,8 @@ void CodeGenFunction::GenerateOpenMPCapturedVars(
     assert(!CGM.getLangOpts().OpenMPIsDevice && "Expecting host CG");
     CodeGenModule::XteamRedVarMap &XteamRVM = CGM.getXteamRedVarMap(FStmt);
     for (auto &XteamRVElem : XteamRVM)
-      GenerateXteamRedCapturedVars(CapturedVars,
-                                   XteamRVElem.second.RedVarExpr->getType(),
-                                   GenXteamAllocation);
+      InitializeXteamRedCapturedVars(CapturedVars,
+                                     XteamRVElem.second.RedVarExpr->getType());
   }
 }
 
