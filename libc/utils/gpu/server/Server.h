@@ -11,23 +11,14 @@
 
 #include <stdint.h>
 
+#include "llvm-libc-types/rpc_opcodes_t.h"
+
 #ifdef __cplusplus
 extern "C" {
 #endif
 
 /// The maxium number of ports that can be opened for any server.
 const uint64_t RPC_MAXIMUM_PORT_COUNT = 64;
-
-// TODO: Move these to a header exported by the C library.
-typedef enum : uint16_t {
-  RPC_NOOP = 0,
-  RPC_EXIT = 1,
-  RPC_WRITE_TO_STDOUT = 2,
-  RPC_WRITE_TO_STDERR = 3,
-  RPC_WRITE_TO_STREAM = 4,
-  RPC_MALLOC = 5,
-  RPC_FREE = 6,
-} rpc_opcode_t;
 
 /// status codes.
 typedef enum {

@@ -16,7 +16,7 @@ using namespace __llvm_libc;
 // as long as they are mirrored.
 static void test_interface(bool end_with_send) {
   uint64_t cnt = 0;
-  rpc::Client::Port port = rpc::client.open<rpc::TEST_INTERFACE>();
+  rpc::Client::Port port = rpc::client.open<RPC_TEST_INTERFACE>();
   port.send([&](rpc::Buffer *buffer) { buffer->data[0] = end_with_send; });
   port.send([&](rpc::Buffer *buffer) { buffer->data[0] = cnt = cnt + 1; });
   port.recv([&](rpc::Buffer *buffer) { cnt = buffer->data[0]; });

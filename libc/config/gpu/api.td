@@ -1,6 +1,7 @@
 include "config/public_api.td"
 
 include "spec/stdc.td"
+include "spec/gpu_ext.td"
 
 def StringAPI : PublicAPI<"string.h"> {
   let Types = ["size_t"];

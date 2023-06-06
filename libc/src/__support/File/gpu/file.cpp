@@ -37,7 +37,7 @@ namespace {
 
 int write_to_stdout(const void *data, size_t size) {
   int ret = 0;
-  rpc::Client::Port port = rpc::client.open<rpc::WRITE_TO_STDOUT>();
+  rpc::Client::Port port = rpc::client.open<RPC_WRITE_TO_STDOUT>();
   port.send_n(data, size);
   port.recv([&](rpc::Buffer *buffer) {
     ret = reinterpret_cast<int *>(buffer->data)[0];
@@ -48,7 +48,7 @@ int write_to_stdout(const void *data, size_t size) {
 
 int write_to_stderr(const void *data, size_t size) {
   int ret = 0;
-  rpc::Client::Port port = rpc::client.open<rpc::WRITE_TO_STDERR>();
+  rpc::Client::Port port = rpc::client.open<RPC_WRITE_TO_STDERR>();
   port.send_n(data, size);
   port.recv([&](rpc::Buffer *buffer) {
     ret = reinterpret_cast<int *>(buffer->data)[0];
@@ -59,7 +59,7 @@ int write_to_stderr(const void *data, size_t size) {
 
 int write_to_stream(uintptr_t file, const void *data, size_t size) {
   int ret = 0;
-  rpc::Client::Port port = rpc::client.open<rpc::WRITE_TO_STREAM>();
+  rpc::Client::Port port = rpc::client.open<RPC_WRITE_TO_STREAM>();
   port.send([&](rpc::Buffer *buffer) {
     reinterpret_cast<uintptr_t *>(buffer->data)[0] = file;
   });
