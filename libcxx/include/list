@@ -2101,7 +2101,7 @@ inline
 void
 list<_Tp, _Alloc>::merge(list& __c)
 {
-    merge(__c, __less<value_type>());
+    merge(__c, __less<>());
 }
 
 template <class _Tp, class _Alloc>
@@ -2163,7 +2163,7 @@ inline
 void
 list<_Tp, _Alloc>::sort()
 {
-    sort(__less<value_type>());
+    sort(__less<>());
 }
 
 template <class _Tp, class _Alloc>
