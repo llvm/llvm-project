@@ -357,8 +357,8 @@ void SIOptimizeVGPRLiveRange::collectWaterfallCandidateRegisters(
   for (auto *I : Instructions) {
     auto &MI = *I;
 
-    for (auto &MO : MI.operands()) {
-      if (!MO.isReg() || !MO.getReg() || MO.isDef())
+    for (auto &MO : MI.all_uses()) {
+      if (!MO.getReg())
         continue;
 
       Register MOReg = MO.getReg();
