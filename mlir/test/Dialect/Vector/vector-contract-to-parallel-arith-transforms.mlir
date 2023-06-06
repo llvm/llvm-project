@@ -56,7 +56,7 @@ transform.sequence failures(propagate) {
   %f = transform.structured.match ops{["func.func"]} in %module_op 
     : (!transform.any_op) -> !transform.any_op
 
-  %f2 = transform.vector.lower_contraction %f
-    lowering_strategy = "parallelarith"
-      : (!transform.any_op) -> !transform.any_op
+  transform.apply_patterns [] to %f {
+    transform.apply_patterns.vector.lower_contraction lowering_strategy = "parallelarith"
+  } : !transform.any_op
 }

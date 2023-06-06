@@ -1501,24 +1501,6 @@ transform::detail::verifyParamProducerTransformOpTrait(Operation *op) {
   return success();
 }
 
-DiagnosedSilenceableFailure transform::detail::transformWithPatternsApply(
-    Operation *transformOp, Operation *target, ApplyToEachResultList &results,
-    TransformState &state,
-    function_ref<void(RewritePatternSet &)> populatePatterns) {
-  if (!target->hasTrait<OpTrait::IsIsolatedFromAbove>()) {
-    return emitDefiniteFailure(transformOp)
-           << "applies only to isolated-from-above targets because it needs to "
-              "apply patterns greedily";
-  }
-  RewritePatternSet patterns(transformOp->getContext());
-  populatePatterns(patterns);
-  if (failed(applyPatternsAndFoldGreedily(target, std::move(patterns))))
-    return emitDefiniteFailure(transformOp) << "failed to apply patterns";
-
-  results.push_back(target);
-  return DiagnosedSilenceableFailure::success();
-}
-
 //===----------------------------------------------------------------------===//
 // Memory effects.
 //===----------------------------------------------------------------------===//

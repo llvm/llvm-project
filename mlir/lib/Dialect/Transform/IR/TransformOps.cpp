@@ -457,16 +457,25 @@ transform::ApplyPatternsOp::applyToOne(Operation *target,
   GreedyRewriteConfig config;
   config.listener = &listener;
 
-  // Manually gather list of ops because the other GreedyPatternRewriteDriver
-  // overloads only accepts ops that are isolated from above. This way, patterns
-  // can be applied to ops that are not isolated from above.
-  SmallVector<Operation *> ops;
-  target->walk([&](Operation *nestedOp) {
-    if (target != nestedOp)
-      ops.push_back(nestedOp);
-  });
-  LogicalResult result =
-      applyOpPatternsAndFold(ops, std::move(patterns), config);
+  LogicalResult result = failure();
+  if (target->hasTrait<OpTrait::IsIsolatedFromAbove>()) {
+    // Op is isolated from above. Apply patterns and also perform region
+    // simplification.
+    result = applyPatternsAndFoldGreedily(target, std::move(patterns), config);
+  } else {
+    // Manually gather list of ops because the other GreedyPatternRewriteDriver
+    // overloads only accepts ops that are isolated from above. This way,
+    // patterns can be applied to ops that are not isolated from above. Regions
+    // are not being simplified. Furthermore, only a single greedy rewrite
+    // iteration is performed.
+    SmallVector<Operation *> ops;
+    target->walk([&](Operation *nestedOp) {
+      if (target != nestedOp)
+        ops.push_back(nestedOp);
+    });
+    result = applyOpPatternsAndFold(ops, std::move(patterns), config);
+  }
+
   // A failure typically indicates that the pattern application did not
   // converge.
   if (failed(result)) {

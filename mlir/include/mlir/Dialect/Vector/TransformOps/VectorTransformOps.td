@@ -15,339 +15,257 @@ include "mlir/Dialect/Vector/Transforms/VectorTransformsBase.td"
 include "mlir/Interfaces/SideEffectInterfaces.td"
 include "mlir/IR/OpBase.td"
 
-// TODO: not isolated from above and better targetability of the op.
-// TODO: not a functional-style transform.
-class TransformWithPatternsOp<string opname, list<Trait> traits = []>
-    : Op<Transform_Dialect, opname,
-         !listconcat([TransformOpInterface,
-                      TransformEachOpTrait,
-                      TransformWithPatternsOpTrait,
-                      MemoryEffectsOpInterface,
-                      FunctionalStyleTransformOpTrait], traits)> {
-  let extraClassDeclaration = [{
-    void populatePatterns(RewritePatternSet &patterns);
-  }];
-}
-
-def ApplyRankReducingSubviewPatternsOp : 
-  TransformWithPatternsOp<"vector.apply_rank_reducing_subview_patterns"> {
+def ApplyRankReducingSubviewPatternsOp : Op<Transform_Dialect,
+    "apply_patterns.vector.apply_rank_reducing_subview_patterns",
+    [DeclareOpInterfaceMethods<PatternDescriptorOpInterface>]> {
   let description = [{
     Apply opt-in vector transfer permutation patterns that include:
       - TransferReadDropUnitDimsPattern
       - TransferWriteDropUnitDimsPattern
-    
-    These patterns have the effect of rewriting a vector.transfer with unit 
+
+    These patterns have the effect of rewriting a vector.transfer with unit
     dimensions into a rank-reduced version thanks to subview operations.
     This is complemented by shape_cast folding patterns.
   }];
 
-  let arguments = (ins TransformHandleTypeInterface:$target);
-  let results = (outs TransformHandleTypeInterface:$results);
-
-  let assemblyFormat = [{
-    $target
-    attr-dict
-    `:` functional-type($target, results)
-  }];
+  let assemblyFormat = "attr-dict";
 }
 
-def ApplyTransferPermutationPatternsOp : 
-  TransformWithPatternsOp<"vector.apply_transfer_permutation_patterns"> {
+def ApplyTransferPermutationPatternsOp : Op<Transform_Dialect,
+    "apply_patterns.vector.apply_transfer_permutation_patterns",
+    [DeclareOpInterfaceMethods<PatternDescriptorOpInterface>]> {
   let description = [{
     Apply opt-in vector transfer permutation patterns that include:
       - TransferReadPermutationLowering
       - TransferWritePermutationLowering
       - TransferOpReduceRank
       - TransferWriteNonPermutationLowering
-    
-    These patterns have the effect of rewriting a vector.transfer with an 
-    arbitrary permutation_map to a vector.transfer with a permutation_map that is
-    a minor identity followed by a vector.transpose.
+
+    These patterns have the effect of rewriting a vector.transfer with an
+    arbitrary permutation_map to a vector.transfer with a permutation_map that
+    is a minor identity followed by a vector.transpose.
 
     In other words, this makes the vector.transfer contiguous on the most minor
     dimensions and materializes the permutation_map as a vector.transpose.
   }];
 
-  let arguments = (ins TransformHandleTypeInterface:$target);
-  let results = (outs TransformHandleTypeInterface:$results);
-
-  let assemblyFormat = [{
-    $target
-    attr-dict
-    `:` functional-type($target, results)
-  }];
+  let assemblyFormat = "attr-dict";
 }
 
-def LowerBroadcastOp : TransformWithPatternsOp<"vector.lower_broadcast"> {
+def LowerBroadcastOp : Op<Transform_Dialect,
+    "apply_patterns.vector.lower_broadcast",
+    [DeclareOpInterfaceMethods<PatternDescriptorOpInterface>]> {
   let description = [{
-    Indicates that the vector outerproduct operations nested under the isolated
-    from above op `target` should be lowered to finer-grained vector primitives.
+    Indicates that vector broadcast operations should be lowered to
+    finer-grained vector primitives.
 
     This is usally a late step that is run after bufferization as part of the
     process of lowering to e.g. LLVM or NVVM.
   }];
 
-  let arguments = (ins TransformHandleTypeInterface:$target);
-  let results = (outs TransformHandleTypeInterface:$results);
-
-  let assemblyFormat = [{
-    $target
-    attr-dict
-    `:` functional-type($target, results)
-  }];
+  let assemblyFormat = "attr-dict";
 }
 
 // TODO: evolve lowering_strategy to proper enums.
-def LowerContractionOp : TransformWithPatternsOp<"vector.lower_contraction"> {
+def LowerContractionOp : Op<Transform_Dialect,
+    "apply_patterns.vector.lower_contraction",
+    [DeclareOpInterfaceMethods<PatternDescriptorOpInterface>]> {
   let description = [{
-    Indicates that the vector contraction-like operations nested under the 
-    isolated from above op `target` should be lowered to finer-grained vector
-    primitives.
-
-    This is usually a late step that is run after bufferization as part of the
-    process of lowering to e.g. LLVM or NVVM.
-  }];
-
-  let arguments = (ins TransformHandleTypeInterface:$target,
-     DefaultValuedAttr<VectorContractLoweringAttr,
-       "vector::VectorContractLowering::OuterProduct">:$lowering_strategy
-  );
-  let results = (outs TransformHandleTypeInterface:$results);
-
-  let assemblyFormat = [{
-    $target
-    (`lowering_strategy` `=` $lowering_strategy^)?
-    attr-dict
-    `:` functional-type($target, results)
-  }];
-}
-
-def LowerMasksOp : TransformWithPatternsOp<"vector.lower_masks"> {
-  let description = [{
-    Indicates that the vector.create_mask and vector.constant_mask operations
-    nested under the isolated from above op `target` should be lowered to
+    Indicates that vector contraction-like operations should be lowered to
     finer-grained vector primitives.
 
     This is usually a late step that is run after bufferization as part of the
     process of lowering to e.g. LLVM or NVVM.
   }];
 
-  let arguments = (ins TransformHandleTypeInterface:$target);
-  let results = (outs TransformHandleTypeInterface:$results);
-
+  let arguments = (ins DefaultValuedAttr<VectorContractLoweringAttr,
+      "vector::VectorContractLowering::OuterProduct">:$lowering_strategy
+  );
   let assemblyFormat = [{
-    $target
-    attr-dict
-    `:` functional-type($target, results)
+    (`lowering_strategy` `=` $lowering_strategy^)? attr-dict
   }];
 }
 
-def LowerMaskedTransfersOp : TransformWithPatternsOp<"vector.lower_masked_transfers"> {
+def LowerMasksOp : Op<Transform_Dialect,
+    "apply_patterns.vector.lower_masks",
+    [DeclareOpInterfaceMethods<PatternDescriptorOpInterface>]> {
   let description = [{
-    Indicates that masked vector.transfer and vector.gather operations nested
-    under the isolated from above op `target` should be lowered to finer-grained
+    Indicates that vector.create_mask and vector.constant_mask operations
+    should be lowered to finer-grained vector primitives.
+
+    This is usually a late step that is run after bufferization as part of the
+    process of lowering to e.g. LLVM or NVVM.
+  }];
+
+  let assemblyFormat = "attr-dict";
+}
+
+def LowerMaskedTransfersOp : Op<Transform_Dialect,
+    "apply_patterns.vector.lower_masked_transfers",
+    [DeclareOpInterfaceMethods<PatternDescriptorOpInterface>]> {
+  let description = [{
+    Indicates that masked vector.transfer and vector.gather operations should
+    be lowered to finer-grained vector primitives.
+
+    This is usually a late step that is run after bufferization as part of the
+    process of lowering to e.g. LLVM or NVVM.
+  }];
+
+  let assemblyFormat = "attr-dict";
+}
+
+def MaterializeMasksOp : Op<Transform_Dialect,
+    "apply_patterns.vector.materialize_masks",
+    [DeclareOpInterfaceMethods<PatternDescriptorOpInterface>]> {
+  let description = [{
+    Indicates that mask operations should be lowered to fine-grained arithemtic
+    operations.
+
+    This is usually the last step that is run after bufferization as part of the
+    process of lowering to e.g. LLVM or NVVM.
+  }];
+
+  let assemblyFormat = "attr-dict";
+}
+
+// TODO: evolve lowering_strategy to proper enums.
+def LowerMultiReductionOp : Op<Transform_Dialect,
+    "apply_patterns.vector.lower_multi_reduction",
+    [DeclareOpInterfaceMethods<PatternDescriptorOpInterface>]> {
+  let description = [{
+    Indicates that vector multi_reduction-like operations should be lowered to
+    finer-grained vector primitives.
+
+    This is usually a late step that is run after bufferization as part of the
+    process of lowering to e.g. LLVM or NVVM.
+  }];
+
+  let arguments = (ins DefaultValuedAttr<VectorMultiReductionLoweringAttr,
+      "vector::VectorMultiReductionLowering::InnerParallel">:$lowering_strategy
+  );
+
+  let assemblyFormat = [{
+    (`lowering_strategy` `=` $lowering_strategy^)? attr-dict
+  }];
+}
+
+def LowerOuterProductOp : Op<Transform_Dialect,
+    "apply_patterns.vector.lower_outerproduct",
+    [DeclareOpInterfaceMethods<PatternDescriptorOpInterface>]> {
+  let description = [{
+    Indicates that the vector outerproduct operations should be lowered to
+    finer-grained vector primitives.
+
+    This is usually a late step that is run after bufferization as part of the
+    process of lowering to e.g. LLVM or NVVM.
+  }];
+
+  let assemblyFormat = "attr-dict";
+}
+
+def LowerShapeCastOp : Op<Transform_Dialect,
+    "apply_patterns.vector.lower_shape_cast",
+    [DeclareOpInterfaceMethods<PatternDescriptorOpInterface>]> {
+  let description = [{
+    Indicates that vector shape_cast operations should be lowered to
+    finer-grained vector primitives.
+
+    This is usually a late step that is run after bufferization as part of the
+    process of lowering to e.g. LLVM or NVVM.
+  }];
+
+  let assemblyFormat = "attr-dict";
+}
+
+def LowerTransferOp : Op<Transform_Dialect,
+    "apply_patterns.vector.lower_transfer",
+    [DeclareOpInterfaceMethods<PatternDescriptorOpInterface>]> {
+  let description = [{
+    Indicates that vector transfer operations should be lowered to finer-grained
     vector primitives.
 
     This is usually a late step that is run after bufferization as part of the
     process of lowering to e.g. LLVM or NVVM.
   }];
 
-  let arguments = (ins TransformHandleTypeInterface:$target);
-  let results = (outs TransformHandleTypeInterface:$results);
+  let arguments = (ins DefaultValuedAttr<I64Attr, "1">:$max_transfer_rank);
 
   let assemblyFormat = [{
-    $target
-    attr-dict
-    `:` functional-type($target, results)
-  }];
-}
-
-def MaterializeMasksOp : TransformWithPatternsOp<"vector.materialize_masks"> {
-  let description = [{
-    Indicates that mask operations nested under the isolated from above op 
-    `target` should be lowered to fine-grained arithemtic operations.
-
-    This is usually the last step that is run after bufferization as part of the
-    process of lowering to e.g. LLVM or NVVM.
-  }];
-
-  let arguments = (ins TransformHandleTypeInterface:$target);
-  let results = (outs TransformHandleTypeInterface:$results);
-
-  let assemblyFormat = [{
-    $target
-    attr-dict
-    `:` functional-type($target, results)
+    (`max_transfer_rank` `=` $max_transfer_rank^)? attr-dict
   }];
 }
 
 // TODO: evolve lowering_strategy to proper enums.
-def LowerMultiReductionOp
-    : TransformWithPatternsOp<"vector.lower_multi_reduction"> {
+def LowerTransposeOp : Op<Transform_Dialect,
+    "apply_patterns.vector.lower_transpose",
+    [DeclareOpInterfaceMethods<PatternDescriptorOpInterface>]> {
   let description = [{
-    Indicates that the vector multi_reduction-like operations nested under the 
-    isolated from above op `target` should be lowered to finer-grained vector
-    primitives.
-
-    This is usually a late step that is run after bufferization as part of the
-    process of lowering to e.g. LLVM or NVVM.
-  }];
-
-  let arguments = (ins TransformHandleTypeInterface:$target,
-     DefaultValuedAttr<VectorMultiReductionLoweringAttr,
-       "vector::VectorMultiReductionLowering::InnerParallel">:
-         $lowering_strategy
-  );
-  let results = (outs TransformHandleTypeInterface:$results);
-
-  let assemblyFormat = [{
-    $target
-    (`lowering_strategy` `=` $lowering_strategy^)?
-    attr-dict
-    `:` functional-type($target, results)
-  }];
-}
-
-def LowerOuterProductOp : TransformWithPatternsOp<"vector.lower_outerproduct"> {
-  let description = [{
-    Indicates that the vector outerproduct operations nested under the isolated
-    from above op `target` should be lowered to finer-grained vector primitives.
-
-    This is usually a late step that is run after bufferization as part of the
-    process of lowering to e.g. LLVM or NVVM.
-  }];
-
-  let arguments = (ins TransformHandleTypeInterface:$target);
-  let results = (outs TransformHandleTypeInterface:$results);
-
-  let assemblyFormat = [{
-    $target
-    attr-dict
-    `:` functional-type($target, results)
-  }];
-}
-
-def LowerShapeCastOp : TransformWithPatternsOp<"vector.lower_shape_cast"> {
-  let description = [{
-    Indicates that the vector shape_cast operations nested under the 
-    isolated from above op `target` should be lowered to finer-grained vector
-    primitives.
-
-    This is usually a late step that is run after bufferization as part of the
-    process of lowering to e.g. LLVM or NVVM.
-  }];
-
-  let arguments = (ins TransformHandleTypeInterface:$target);
-  let results = (outs TransformHandleTypeInterface:$results);
-
-  let assemblyFormat = [{
-    $target
-    attr-dict
-    `:` functional-type($target, results)
-  }];
-}
-
-def LowerTransferOp : TransformWithPatternsOp<"vector.lower_transfer"> {
-  let description = [{
-    Indicates that the vector transfer operations nested under the 
-    isolated from above op `target` should be lowered to finer-grained vector
-    primitives.
-
-    This is usually a late step that is run after bufferization as part of the
-    process of lowering to e.g. LLVM or NVVM.
-  }];
-
-  let arguments = (ins TransformHandleTypeInterface:$target,
-     DefaultValuedAttr<I64Attr, "1">:$max_transfer_rank
-  );
-  let results = (outs TransformHandleTypeInterface:$results);
-
-  let assemblyFormat = [{
-    $target
-    (`max_transfer_rank` `=` $max_transfer_rank^)?
-    attr-dict
-    `:` functional-type($target, results)
-  }];
-}
-
-// TODO: evolve lowering_strategy to proper enums.
-def LowerTransposeOp : TransformWithPatternsOp<"vector.lower_transpose"> {
-  let description = [{
-    Indicates that the vector transpose-like operations nested under the 
-    isolated from above op `target` should be lowered to finer-grained vector
-    primitives.
-
-    This is usually a late step that is run after bufferization as part of the
-    process of lowering to e.g. LLVM or NVVM.
-  }];
-
-  let arguments = (ins TransformHandleTypeInterface:$target,
-     DefaultValuedAttr<VectorTransposeLoweringAttr,
-       "vector::VectorTransposeLowering::EltWise">:$lowering_strategy,
-     DefaultValuedAttr<BoolAttr, "false">:$avx2_lowering_strategy
-  );
-  let results = (outs TransformHandleTypeInterface:$results);
-
-  let assemblyFormat = [{
-    $target
-    oilist (
-      `lowering_strategy` `=` $lowering_strategy
-      | `avx2_lowering_strategy` `=` $avx2_lowering_strategy
-    )
-    attr-dict
-    `:` functional-type($target, results)
-  }];
-}
-
-// TODO: evolve split_transfer_strategy to proper enums.
-def SplitTransferFullPartialOp
-    : TransformWithPatternsOp<"vector.split_transfer_full_partial"> {
-  let description = [{
-    Indicates that the vector transfer operations nested under the 
-    isolated from above op `target` should be split to full and partial parts.
-
-    This is usually a late step that is run after bufferization as part of the
-    process of lowering to e.g. LLVM or NVVM.
-  }];
-
-  let arguments = (ins TransformHandleTypeInterface:$target,
-     DefaultValuedAttr<VectorTransferSplitAttr,
-       "vector::VectorTransferSplit::LinalgCopy">:$split_transfer_strategy
-  );
-  let results = (outs TransformHandleTypeInterface:$results);
-
-  let assemblyFormat = [{
-    $target
-    (`split_transfer_strategy` `=` $split_transfer_strategy^)?
-    attr-dict
-    `:` functional-type($target, results)
-  }];
-}
-
-def TransferToScfOp : TransformWithPatternsOp<"vector.transfer_to_scf"> {
-  let description = [{
-    Indicates that the vector transfer operations nested under the 
-    isolated from above op `target` should be rewritten with scf.for loops over
+    Indicates that vector transpose-like operations should be lowered to
     finer-grained vector primitives.
 
     This is usually a late step that is run after bufferization as part of the
     process of lowering to e.g. LLVM or NVVM.
   }];
 
-  let arguments = (ins TransformHandleTypeInterface:$target,
+  let arguments = (ins
+     DefaultValuedAttr<VectorTransposeLoweringAttr,
+       "vector::VectorTransposeLowering::EltWise">:$lowering_strategy,
+     DefaultValuedAttr<BoolAttr, "false">:$avx2_lowering_strategy
+  );
+
+  let assemblyFormat = [{
+    oilist (
+      `lowering_strategy` `=` $lowering_strategy
+      | `avx2_lowering_strategy` `=` $avx2_lowering_strategy
+    )
+    attr-dict
+  }];
+}
+
+// TODO: evolve split_transfer_strategy to proper enums.
+def SplitTransferFullPartialOp : Op<Transform_Dialect,
+    "apply_patterns.vector.split_transfer_full_partial",
+    [DeclareOpInterfaceMethods<PatternDescriptorOpInterface>]> {
+  let description = [{
+    Indicates that vector transfer operations should be split to full and
+    partial parts.
+
+    This is usually a late step that is run after bufferization as part of the
+    process of lowering to e.g. LLVM or NVVM.
+  }];
+
+  let arguments = (ins
+     DefaultValuedAttr<VectorTransferSplitAttr,
+       "vector::VectorTransferSplit::LinalgCopy">:$split_transfer_strategy
+  );
+
+  let assemblyFormat = [{
+    (`split_transfer_strategy` `=` $split_transfer_strategy^)? attr-dict
+  }];
+}
+
+def TransferToScfOp : Op<Transform_Dialect,
+    "apply_patterns.vector.transfer_to_scf",
+    [DeclareOpInterfaceMethods<PatternDescriptorOpInterface>]> {
+  let description = [{
+    Indicates that vector transfer operations should be rewritten with scf.for
+    loops over finer-grained vector primitives.
+
+    This is usually a late step that is run after bufferization as part of the
+    process of lowering to e.g. LLVM or NVVM.
+  }];
+
+  let arguments = (ins
      DefaultValuedAttr<I64Attr, "1">:$max_transfer_rank,
      DefaultValuedAttr<BoolAttr, "false">:$full_unroll
   );
-  let results = (outs TransformHandleTypeInterface:$results);
 
   let assemblyFormat = [{
-    $target
     oilist (
         `max_transfer_rank` `=` $max_transfer_rank
       | `full_unroll` `=` $full_unroll
     )
     attr-dict
-    `:` functional-type($target, results)
   }];
 }
 
