@@ -225,27 +225,33 @@ define i64 @test_pr62954_scalar_epilogue_required(ptr %A, ptr noalias %B, ptr %C
 ; CHECK-NEXT:    [[REC_START:%.*]] = load i64, ptr [[GEP]], align 8
 ; CHECK-NEXT:    br i1 false, label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
 ; CHECK:       vector.ph:
+; CHECK-NEXT:    [[VECTOR_RECUR_INIT:%.*]] = insertelement <16 x i64> poison, i64 [[REC_START]], i32 15
 ; CHECK-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; CHECK:       vector.body:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[VEC_IND:%.*]] = phi <16 x i64> [ <i64 1, i64 3, i64 5, i64 7, i64 9, i64 11, i64 13, i64 15, i64 17, i64 19, i64 21, i64 23, i64 25, i64 27, i64 29, i64 31>, [[VECTOR_PH]] ], [ [[VEC_IND_NEXT:%.*]], [[VECTOR_BODY]] ]
+; CHECK-NEXT:    [[VECTOR_RECUR:%.*]] = phi <16 x i64> [ [[VECTOR_RECUR_INIT]], [[VECTOR_PH]] ], [ [[TMP1:%.*]], [[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[STEP_ADD:%.*]] = add <16 x i64> [[VEC_IND]], <i64 32, i64 32, i64 32, i64 32, i64 32, i64 32, i64 32, i64 32, i64 32, i64 32, i64 32, i64 32, i64 32, i64 32, i64 32, i64 32>
 ; CHECK-NEXT:    [[TMP0:%.*]] = sub nsw <16 x i64> zeroinitializer, [[VEC_IND]]
-; CHECK-NEXT:    [[TMP1:%.*]] = sub nsw <16 x i64> zeroinitializer, [[STEP_ADD]]
-; CHECK-NEXT:    [[TMP2:%.*]] = extractelement <16 x i64> [[TMP1]], i32 15
-; CHECK-NEXT:    store i64 [[TMP2]], ptr [[GEP]], align 8
+; CHECK-NEXT:    [[TMP1]] = sub nsw <16 x i64> zeroinitializer, [[STEP_ADD]]
+; CHECK-NEXT:    [[TMP2:%.*]] = shufflevector <16 x i64> [[VECTOR_RECUR]], <16 x i64> [[TMP0]], <16 x i32> <i32 15, i32 16, i32 17, i32 18, i32 19, i32 20, i32 21, i32 22, i32 23, i32 24, i32 25, i32 26, i32 27, i32 28, i32 29, i32 30>
+; CHECK-NEXT:    [[TMP3:%.*]] = shufflevector <16 x i64> [[TMP0]], <16 x i64> [[TMP1]], <16 x i32> <i32 15, i32 16, i32 17, i32 18, i32 19, i32 20, i32 21, i32 22, i32 23, i32 24, i32 25, i32 26, i32 27, i32 28, i32 29, i32 30>
+; CHECK-NEXT:    [[TMP4:%.*]] = extractelement <16 x i64> [[TMP1]], i32 15
+; CHECK-NEXT:    store i64 [[TMP4]], ptr [[GEP]], align 8
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 32
 ; CHECK-NEXT:    [[VEC_IND_NEXT]] = add <16 x i64> [[STEP_ADD]], <i64 32, i64 32, i64 32, i64 32, i64 32, i64 32, i64 32, i64 32, i64 32, i64 32, i64 32, i64 32, i64 32, i64 32, i64 32, i64 32>
-; CHECK-NEXT:    [[TMP3:%.*]] = icmp eq i64 [[INDEX_NEXT]], 32
-; CHECK-NEXT:    br i1 [[TMP3]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP6:![0-9]+]]
+; CHECK-NEXT:    [[TMP5:%.*]] = icmp eq i64 [[INDEX_NEXT]], 32
+; CHECK-NEXT:    br i1 [[TMP5]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP6:![0-9]+]]
 ; CHECK:       middle.block:
+; CHECK-NEXT:    [[VECTOR_RECUR_EXTRACT:%.*]] = extractelement <16 x i64> [[TMP1]], i32 15
 ; CHECK-NEXT:    br label [[SCALAR_PH]]
 ; CHECK:       scalar.ph:
-; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ 65, [[MIDDLE_BLOCK]] ], [ 1, [[ENTRY:%.*]] ]
+; CHECK-NEXT:    [[SCALAR_RECUR_INIT:%.*]] = phi i64 [ [[REC_START]], [[ENTRY:%.*]] ], [ [[VECTOR_RECUR_EXTRACT]], [[MIDDLE_BLOCK]] ]
+; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ 65, [[MIDDLE_BLOCK]] ], [ 1, [[ENTRY]] ]
 ; CHECK-NEXT:    br label [[LOOP:%.*]]
 ; CHECK:       loop:
 ; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ [[BC_RESUME_VAL]], [[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], [[LOOP]] ]
-; CHECK-NEXT:    [[FOR:%.*]] = phi i64 [ [[REC_START]], [[SCALAR_PH]] ], [ [[NEG_IV:%.*]], [[LOOP]] ]
+; CHECK-NEXT:    [[SCALAR_RECUR:%.*]] = phi i64 [ [[SCALAR_RECUR_INIT]], [[SCALAR_PH]] ], [ [[NEG_IV:%.*]], [[LOOP]] ]
 ; CHECK-NEXT:    [[GEP_B:%.*]] = getelementptr double, ptr [[B:%.*]], i64 [[IV]]
 ; CHECK-NEXT:    [[L_B:%.*]] = load double, ptr [[GEP_B]], align 8
 ; CHECK-NEXT:    [[NEG_IV]] = sub nsw i64 0, [[IV]]
@@ -254,7 +260,7 @@ define i64 @test_pr62954_scalar_epilogue_required(ptr %A, ptr noalias %B, ptr %C
 ; CHECK-NEXT:    [[EC:%.*]] = icmp ugt i64 [[IV]], 74
 ; CHECK-NEXT:    br i1 [[EC]], label [[EXIT:%.*]], label [[LOOP]], !llvm.loop [[LOOP7:![0-9]+]]
 ; CHECK:       exit:
-; CHECK-NEXT:    [[DOTIN_LCSSA:%.*]] = phi i64 [ [[FOR]], [[LOOP]] ]
+; CHECK-NEXT:    [[DOTIN_LCSSA:%.*]] = phi i64 [ [[SCALAR_RECUR]], [[LOOP]] ]
 ; CHECK-NEXT:    [[DOTLCSSA:%.*]] = phi double [ [[L_B]], [[LOOP]] ]
 ; CHECK-NEXT:    store double [[DOTLCSSA]], ptr [[C:%.*]], align 8
 ; CHECK-NEXT:    ret i64 [[DOTIN_LCSSA]]
