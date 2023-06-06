@@ -13,6 +13,7 @@
 #include "clang/Driver/Multilib.h"
 #include "../../lib/Driver/ToolChains/CommonArgs.h"
 #include "clang/Basic/LLVM.h"
+#include "clang/Basic/Version.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/StringSwitch.h"
@@ -186,4 +187,351 @@ TEST(MultilibTest, SelectMultiple) {
   ASSERT_EQ(2u, Selection.size());
   EXPECT_EQ("/a", Selection[0].gccSuffix());
   EXPECT_EQ("/b", Selection[1].gccSuffix());
+}
+
+static void diagnosticCallback(const llvm::SMDiagnostic &D, void *Out) {
+  *reinterpret_cast<std::string *>(Out) = D.getMessage();
+}
+
+static bool parseYaml(MultilibSet &MS, std::string &Diagnostic,
+                      const char *Data) {
+  auto ErrorOrMS = MultilibSet::parseYaml(llvm::MemoryBufferRef(Data, "TEST"),
+                                          diagnosticCallback, &Diagnostic);
+  if (ErrorOrMS.getError())
+    return false;
+  MS = std::move(ErrorOrMS.get());
+  return true;
+}
+
+static bool parseYaml(MultilibSet &MS, const char *Data) {
+  auto ErrorOrMS = MultilibSet::parseYaml(llvm::MemoryBufferRef(Data, "TEST"));
+  if (ErrorOrMS.getError())
+    return false;
+  MS = std::move(ErrorOrMS.get());
+  return true;
+}
+
+// When updating this version also update MultilibVersionCurrent in Multilib.cpp
+#define YAML_PREAMBLE "MultilibVersion: 1.0\n"
+
+TEST(MultilibTest, ParseInvalid) {
+  std::string Diagnostic;
+
+  MultilibSet MS;
+
+  EXPECT_FALSE(parseYaml(MS, Diagnostic, R"(
+Variants: []
+)"));
+  EXPECT_TRUE(
+      StringRef(Diagnostic).contains("missing required key 'MultilibVersion'"))
+      << Diagnostic;
+
+  // Reject files with a different major version
+  EXPECT_FALSE(parseYaml(MS, Diagnostic,
+                         R"(
+MultilibVersion: 2.0
+Variants: []
+)"));
+  EXPECT_TRUE(
+      StringRef(Diagnostic).contains("multilib version 2.0 is unsupported"))
+      << Diagnostic;
+  EXPECT_FALSE(parseYaml(MS, Diagnostic,
+                         R"(
+MultilibVersion: 0.1
+Variants: []
+)"));
+  EXPECT_TRUE(
+      StringRef(Diagnostic).contains("multilib version 0.1 is unsupported"))
+      << Diagnostic;
+
+  // Reject files with a later minor version
+  EXPECT_FALSE(parseYaml(MS, Diagnostic,
+                         R"(
+MultilibVersion: 1.9
+Variants: []
+)"));
+  EXPECT_TRUE(
+      StringRef(Diagnostic).contains("multilib version 1.9 is unsupported"))
+      << Diagnostic;
+
+  // Accept files with the same major version and the same or earlier minor
+  // version
+  EXPECT_TRUE(parseYaml(MS, Diagnostic, R"(
+MultilibVersion: 1.0
+Variants: []
+)")) << Diagnostic;
+
+  EXPECT_FALSE(parseYaml(MS, Diagnostic, YAML_PREAMBLE));
+  EXPECT_TRUE(StringRef(Diagnostic).contains("missing required key 'Variants'"))
+      << Diagnostic;
+
+  EXPECT_FALSE(parseYaml(MS, Diagnostic, YAML_PREAMBLE R"(
+Variants:
+- Dir: /abc
+  Flags: []
+)"));
+  EXPECT_TRUE(StringRef(Diagnostic).contains("paths must be relative"))
+      << Diagnostic;
+
+  EXPECT_FALSE(parseYaml(MS, Diagnostic, YAML_PREAMBLE R"(
+Variants:
+- Flags: []
+)"));
+  EXPECT_TRUE(StringRef(Diagnostic).contains("missing required key 'Dir'"))
+      << Diagnostic;
+
+  EXPECT_FALSE(parseYaml(MS, Diagnostic, YAML_PREAMBLE R"(
+Variants:
+- Dir: .
+)"));
+  EXPECT_TRUE(StringRef(Diagnostic).contains("missing required key 'Flags'"))
+      << Diagnostic;
+
+  EXPECT_FALSE(parseYaml(MS, Diagnostic, YAML_PREAMBLE R"(
+Variants: []
+Mappings:
+- Match: abc
+)"));
+  EXPECT_TRUE(StringRef(Diagnostic).contains("value required for 'Flags'"))
+      << Diagnostic;
+
+  EXPECT_FALSE(parseYaml(MS, Diagnostic, YAML_PREAMBLE R"(
+Variants: []
+Mappings:
+- Dir: .
+  Match: '('
+  Flags: []
+)"));
+  EXPECT_TRUE(StringRef(Diagnostic).contains("parentheses not balanced"))
+      << Diagnostic;
+}
+
+TEST(MultilibTest, Parse) {
+  MultilibSet MS;
+  EXPECT_TRUE(parseYaml(MS, YAML_PREAMBLE R"(
+Variants:
+- Dir: .
+  Flags: []
+)"));
+  EXPECT_EQ(1U, MS.size());
+  EXPECT_EQ("", MS.begin()->gccSuffix());
+
+  EXPECT_TRUE(parseYaml(MS, YAML_PREAMBLE R"(
+Variants:
+- Dir: abc
+  Flags: []
+)"));
+  EXPECT_EQ(1U, MS.size());
+  EXPECT_EQ("/abc", MS.begin()->gccSuffix());
+
+  EXPECT_TRUE(parseYaml(MS, YAML_PREAMBLE R"(
+Variants:
+- Dir: pqr
+  Flags: [-mfloat-abi=soft]
+)"));
+  EXPECT_EQ(1U, MS.size());
+  EXPECT_EQ("/pqr", MS.begin()->gccSuffix());
+  EXPECT_EQ(std::vector<std::string>({"-mfloat-abi=soft"}),
+            MS.begin()->flags());
+
+  EXPECT_TRUE(parseYaml(MS, YAML_PREAMBLE R"(
+Variants:
+- Dir: pqr
+  Flags: [-mfloat-abi=soft, -fno-exceptions]
+)"));
+  EXPECT_EQ(1U, MS.size());
+  EXPECT_EQ(std::vector<std::string>({"-mfloat-abi=soft", "-fno-exceptions"}),
+            MS.begin()->flags());
+
+  EXPECT_TRUE(parseYaml(MS, YAML_PREAMBLE R"(
+Variants:
+- Dir: a
+  Flags: []
+- Dir: b
+  Flags: []
+)"));
+  EXPECT_EQ(2U, MS.size());
+}
+
+TEST(MultilibTest, SelectSoft) {
+  MultilibSet MS;
+  Multilib Selected;
+  ASSERT_TRUE(parseYaml(MS, YAML_PREAMBLE R"(
+Variants:
+- Dir: s
+  Flags: [-mfloat-abi=soft]
+Mappings:
+- Match: -mfloat-abi=softfp
+  Flags: [-mfloat-abi=soft]
+)"));
+  EXPECT_TRUE(MS.select({"-mfloat-abi=soft"}, Selected));
+  EXPECT_TRUE(MS.select({"-mfloat-abi=softfp"}, Selected));
+  EXPECT_FALSE(MS.select({"-mfloat-abi=hard"}, Selected));
+}
+
+TEST(MultilibTest, SelectSoftFP) {
+  MultilibSet MS;
+  Multilib Selected;
+  ASSERT_TRUE(parseYaml(MS, YAML_PREAMBLE R"(
+Variants:
+- Dir: f
+  Flags: [-mfloat-abi=softfp]
+)"));
+  EXPECT_FALSE(MS.select({"-mfloat-abi=soft"}, Selected));
+  EXPECT_TRUE(MS.select({"-mfloat-abi=softfp"}, Selected));
+  EXPECT_FALSE(MS.select({"-mfloat-abi=hard"}, Selected));
+}
+
+TEST(MultilibTest, SelectHard) {
+  // If hard float is all that's available then select that only if compiling
+  // with hard float.
+  MultilibSet MS;
+  Multilib Selected;
+  ASSERT_TRUE(parseYaml(MS, YAML_PREAMBLE R"(
+Variants:
+- Dir: h
+  Flags: [-mfloat-abi=hard]
+)"));
+  EXPECT_FALSE(MS.select({"-mfloat-abi=soft"}, Selected));
+  EXPECT_FALSE(MS.select({"-mfloat-abi=softfp"}, Selected));
+  EXPECT_TRUE(MS.select({"-mfloat-abi=hard"}, Selected));
+}
+
+TEST(MultilibTest, SelectFloatABI) {
+  MultilibSet MS;
+  Multilib Selected;
+  ASSERT_TRUE(parseYaml(MS, YAML_PREAMBLE R"(
+Variants:
+- Dir: s
+  Flags: [-mfloat-abi=soft]
+- Dir: f
+  Flags: [-mfloat-abi=softfp]
+- Dir: h
+  Flags: [-mfloat-abi=hard]
+Mappings:
+- Match: -mfloat-abi=softfp
+  Flags: [-mfloat-abi=soft]
+)"));
+  MS.select({"-mfloat-abi=soft"}, Selected);
+  EXPECT_EQ("/s", Selected.gccSuffix());
+  MS.select({"-mfloat-abi=softfp"}, Selected);
+  EXPECT_EQ("/f", Selected.gccSuffix());
+  MS.select({"-mfloat-abi=hard"}, Selected);
+  EXPECT_EQ("/h", Selected.gccSuffix());
+}
+
+TEST(MultilibTest, SelectFloatABIReversed) {
+  // If soft is specified after softfp then softfp will never be
+  // selected because soft is compatible with softfp and last wins.
+  MultilibSet MS;
+  Multilib Selected;
+  ASSERT_TRUE(parseYaml(MS, YAML_PREAMBLE R"(
+Variants:
+- Dir: h
+  Flags: [-mfloat-abi=hard]
+- Dir: f
+  Flags: [-mfloat-abi=softfp]
+- Dir: s
+  Flags: [-mfloat-abi=soft]
+Mappings:
+- Match: -mfloat-abi=softfp
+  Flags: [-mfloat-abi=soft]
+)"));
+  MS.select({"-mfloat-abi=soft"}, Selected);
+  EXPECT_EQ("/s", Selected.gccSuffix());
+  MS.select({"-mfloat-abi=softfp"}, Selected);
+  EXPECT_EQ("/s", Selected.gccSuffix());
+  MS.select({"-mfloat-abi=hard"}, Selected);
+  EXPECT_EQ("/h", Selected.gccSuffix());
+}
+
+TEST(MultilibTest, SelectMClass) {
+  const char *MultilibSpec = YAML_PREAMBLE R"(
+Variants:
+- Dir: thumb/v6-m/nofp
+  Flags: [--target=thumbv6m-none-unknown-eabi, -mfpu=none]
+
+- Dir: thumb/v7-m/nofp
+  Flags: [--target=thumbv7m-none-unknown-eabi, -mfpu=none]
+
+- Dir: thumb/v7e-m/nofp
+  Flags: [--target=thumbv7em-none-unknown-eabi, -mfpu=none]
+
+- Dir: thumb/v8-m.main/nofp
+  Flags: [--target=thumbv8m.main-none-unknown-eabi, -mfpu=none]
+
+- Dir: thumb/v8.1-m.main/nofp/nomve
+  Flags: [--target=thumbv8.1m.main-none-unknown-eabi, -mfpu=none]
+
+- Dir: thumb/v7e-m/fpv4_sp_d16
+  Flags: [--target=thumbv7em-none-unknown-eabihf, -mfpu=fpv4-sp-d16]
+
+- Dir: thumb/v7e-m/fpv5_d16
+  Flags: [--target=thumbv7em-none-unknown-eabihf, -mfpu=fpv5-d16]
+
+- Dir: thumb/v8-m.main/fp
+  Flags: [--target=thumbv8m.main-none-unknown-eabihf]
+
+- Dir: thumb/v8.1-m.main/fp
+  Flags: [--target=thumbv8.1m.main-none-unknown-eabihf]
+
+- Dir: thumb/v8.1-m.main/nofp/mve
+  Flags: [--target=thumbv8.1m.main-none-unknown-eabihf, -march=thumbv8.1m.main+mve]
+
+Mappings:
+- Match: --target=thumbv8(\.[0-9]+)?m\.base-none-unknown-eabi
+  Flags: [--target=thumbv6m-none-unknown-eabi]
+- Match: -target=thumbv8\.[1-9]m\.main-none-unknown-eabi
+  Flags: [--target=thumbv8.1m.main-none-unknown-eabi]
+- Match: -target=thumbv8\.[1-9]m\.main-none-unknown-eabihf
+  Flags: [--target=thumbv8.1m.main-none-unknown-eabihf]
+- Match: -march=thumbv8\.[1-9]m\.main.*\+mve($|\+).*
+  Flags: [-march=thumbv8.1m.main+mve]
+)";
+
+  MultilibSet MS;
+  Multilib Selected;
+  ASSERT_TRUE(parseYaml(MS, MultilibSpec));
+
+  ASSERT_TRUE(MS.select({"--target=thumbv6m-none-unknown-eabi", "-mfpu=none"},
+                        Selected));
+  EXPECT_EQ("/thumb/v6-m/nofp", Selected.gccSuffix());
+
+  ASSERT_TRUE(MS.select({"--target=thumbv7m-none-unknown-eabi", "-mfpu=none"},
+                        Selected));
+  EXPECT_EQ("/thumb/v7-m/nofp", Selected.gccSuffix());
+
+  ASSERT_TRUE(MS.select({"--target=thumbv7em-none-unknown-eabi", "-mfpu=none"},
+                        Selected));
+  EXPECT_EQ("/thumb/v7e-m/nofp", Selected.gccSuffix());
+
+  ASSERT_TRUE(MS.select(
+      {"--target=thumbv8m.main-none-unknown-eabi", "-mfpu=none"}, Selected));
+  EXPECT_EQ("/thumb/v8-m.main/nofp", Selected.gccSuffix());
+
+  ASSERT_TRUE(MS.select(
+      {"--target=thumbv8.1m.main-none-unknown-eabi", "-mfpu=none"}, Selected));
+  EXPECT_EQ("/thumb/v8.1-m.main/nofp/nomve", Selected.gccSuffix());
+
+  ASSERT_TRUE(
+      MS.select({"--target=thumbv7em-none-unknown-eabihf", "-mfpu=fpv4-sp-d16"},
+                Selected));
+  EXPECT_EQ("/thumb/v7e-m/fpv4_sp_d16", Selected.gccSuffix());
+
+  ASSERT_TRUE(MS.select(
+      {"--target=thumbv7em-none-unknown-eabihf", "-mfpu=fpv5-d16"}, Selected));
+  EXPECT_EQ("/thumb/v7e-m/fpv5_d16", Selected.gccSuffix());
+
+  ASSERT_TRUE(
+      MS.select({"--target=thumbv8m.main-none-unknown-eabihf"}, Selected));
+  EXPECT_EQ("/thumb/v8-m.main/fp", Selected.gccSuffix());
+
+  ASSERT_TRUE(
+      MS.select({"--target=thumbv8.1m.main-none-unknown-eabihf"}, Selected));
+  EXPECT_EQ("/thumb/v8.1-m.main/fp", Selected.gccSuffix());
+
+  ASSERT_TRUE(MS.select({"--target=thumbv8.1m.main-none-unknown-eabihf",
+                         "-mfpu=none", "-march=thumbv8.1m.main+dsp+mve"},
+                        Selected));
+  EXPECT_EQ("/thumb/v8.1-m.main/nofp/mve", Selected.gccSuffix());
 }

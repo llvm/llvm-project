@@ -13,7 +13,9 @@
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/StringRef.h"
+#include "llvm/ADT/StringSet.h"
 #include "llvm/Support/Compiler.h"
+#include "llvm/Support/SourceMgr.h"
 #include <cassert>
 #include <functional>
 #include <string>
@@ -83,14 +85,25 @@ public:
       std::function<std::vector<std::string>(const Multilib &M)>;
   using FilterCallback = llvm::function_ref<bool(const Multilib &)>;
 
+  /// Uses regular expressions to simplify flags used for multilib selection.
+  /// For example, we may wish both -mfloat-abi=soft and -mfloat-abi=softfp to
+  /// be treated as -mfloat-abi=soft.
+  struct FlagMatcher {
+    std::string Match;
+    std::vector<std::string> Flags;
+  };
+
 private:
   multilib_list Multilibs;
+  std::vector<FlagMatcher> FlagMatchers;
   IncludeDirsFunc IncludeCallback;
   IncludeDirsFunc FilePathsCallback;
 
 public:
   MultilibSet() = default;
-  MultilibSet(multilib_list &&Multilibs) : Multilibs(Multilibs) {}
+  MultilibSet(multilib_list &&Multilibs,
+              std::vector<FlagMatcher> &&FlagMatchers = {})
+      : Multilibs(Multilibs), FlagMatchers(FlagMatchers) {}
 
   const multilib_list &getMultilibs() { return Multilibs; }
 
@@ -111,6 +124,11 @@ public:
 
   unsigned size() const { return Multilibs.size(); }
 
+  /// Get the given flags plus flags found by matching them against the
+  /// FlagMatchers and choosing the Flags of each accordingly. The select method
+  /// calls this method so in most cases it's not necessary to call it directly.
+  llvm::StringSet<> expandFlags(const Multilib::flags_list &) const;
+
   LLVM_DUMP_METHOD void dump() const;
   void print(raw_ostream &OS) const;
 
@@ -127,6 +145,10 @@ public:
   }
 
   const IncludeDirsFunc &filePathsCallback() const { return FilePathsCallback; }
+
+  static llvm::ErrorOr<MultilibSet>
+  parseYaml(llvm::MemoryBufferRef, llvm::SourceMgr::DiagHandlerTy = nullptr,
+            void *DiagHandlerCtxt = nullptr);
 };
 
 raw_ostream &operator<<(raw_ostream &OS, const MultilibSet &MS);

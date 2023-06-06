@@ -8,14 +8,18 @@
 
 #include "clang/Driver/Multilib.h"
 #include "clang/Basic/LLVM.h"
+#include "clang/Basic/Version.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/StringMap.h"
 #include "llvm/ADT/StringRef.h"
-#include "llvm/ADT/StringSet.h"
 #include "llvm/Support/Compiler.h"
+#include "llvm/Support/Error.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Support/Regex.h"
+#include "llvm/Support/VersionTuple.h"
+#include "llvm/Support/YAMLParser.h"
+#include "llvm/Support/YAMLTraits.h"
 #include "llvm/Support/raw_ostream.h"
 #include <algorithm>
 #include <cassert>
@@ -91,10 +95,7 @@ void MultilibSet::push_back(const Multilib &M) { Multilibs.push_back(M); }
 
 MultilibSet::multilib_list
 MultilibSet::select(const Multilib::flags_list &Flags) const {
-  llvm::StringSet<> FlagSet;
-  for (const auto &Flag : Flags)
-    FlagSet.insert(Flag);
-
+  llvm::StringSet<> FlagSet(expandFlags(Flags));
   multilib_list Result;
   llvm::copy_if(Multilibs, std::back_inserter(Result),
                 [&FlagSet](const Multilib &M) {
@@ -113,6 +114,121 @@ bool MultilibSet::select(const Multilib::flags_list &Flags,
     return false;
   Selected = Result.back();
   return true;
+}
+
+llvm::StringSet<>
+MultilibSet::expandFlags(const Multilib::flags_list &InFlags) const {
+  llvm::StringSet<> Result;
+  for (const auto &F : InFlags)
+    Result.insert(F);
+  for (const FlagMatcher &M : FlagMatchers) {
+    std::string RegexString(M.Match);
+
+    // Make the regular expression match the whole string.
+    if (!StringRef(M.Match).starts_with("^"))
+      RegexString.insert(RegexString.begin(), '^');
+    if (!StringRef(M.Match).ends_with("$"))
+      RegexString.push_back('$');
+
+    const llvm::Regex Regex(RegexString);
+    assert(Regex.isValid());
+    if (llvm::find_if(InFlags, [&Regex](StringRef F) {
+          return Regex.match(F);
+        }) != InFlags.end()) {
+      Result.insert(M.Flags.begin(), M.Flags.end());
+    }
+  }
+  return Result;
+}
+
+namespace {
+
+// When updating this also update MULTILIB_VERSION in MultilibTest.cpp
+static const VersionTuple MultilibVersionCurrent(1, 0);
+
+struct MultilibSerialization {
+  std::string Dir;
+  std::vector<std::string> Flags;
+};
+
+struct MultilibSetSerialization {
+  llvm::VersionTuple MultilibVersion;
+  std::vector<MultilibSerialization> Multilibs;
+  std::vector<MultilibSet::FlagMatcher> FlagMatchers;
+};
+
+} // end anonymous namespace
+
+template <> struct llvm::yaml::MappingTraits<MultilibSerialization> {
+  static void mapping(llvm::yaml::IO &io, MultilibSerialization &V) {
+    io.mapRequired("Dir", V.Dir);
+    io.mapRequired("Flags", V.Flags);
+  }
+  static std::string validate(IO &io, MultilibSerialization &V) {
+    if (StringRef(V.Dir).starts_with("/"))
+      return "paths must be relative but \"" + V.Dir + "\" starts with \"/\"";
+    return std::string{};
+  }
+};
+
+template <> struct llvm::yaml::MappingTraits<MultilibSet::FlagMatcher> {
+  static void mapping(llvm::yaml::IO &io, MultilibSet::FlagMatcher &M) {
+    io.mapRequired("Match", M.Match);
+    io.mapRequired("Flags", M.Flags);
+  }
+  static std::string validate(IO &io, MultilibSet::FlagMatcher &M) {
+    llvm::Regex Regex(M.Match);
+    std::string RegexError;
+    if (!Regex.isValid(RegexError))
+      return RegexError;
+    if (M.Flags.empty())
+      return "value required for 'Flags'";
+    return std::string{};
+  }
+};
+
+template <> struct llvm::yaml::MappingTraits<MultilibSetSerialization> {
+  static void mapping(llvm::yaml::IO &io, MultilibSetSerialization &M) {
+    io.mapRequired("MultilibVersion", M.MultilibVersion);
+    io.mapRequired("Variants", M.Multilibs);
+    io.mapOptional("Mappings", M.FlagMatchers);
+  }
+  static std::string validate(IO &io, MultilibSetSerialization &M) {
+    if (M.MultilibVersion.empty())
+      return "missing required key 'MultilibVersion'";
+    if (M.MultilibVersion.getMajor() != MultilibVersionCurrent.getMajor())
+      return "multilib version " + M.MultilibVersion.getAsString() +
+             " is unsupported";
+    if (M.MultilibVersion.getMinor() > MultilibVersionCurrent.getMinor())
+      return "multilib version " + M.MultilibVersion.getAsString() +
+             " is unsupported";
+    return std::string{};
+  }
+};
+
+LLVM_YAML_IS_SEQUENCE_VECTOR(MultilibSerialization)
+LLVM_YAML_IS_SEQUENCE_VECTOR(MultilibSet::FlagMatcher)
+
+llvm::ErrorOr<MultilibSet>
+MultilibSet::parseYaml(llvm::MemoryBufferRef Input,
+                       llvm::SourceMgr::DiagHandlerTy DiagHandler,
+                       void *DiagHandlerCtxt) {
+  MultilibSetSerialization MS;
+  llvm::yaml::Input YamlInput(Input, nullptr, DiagHandler, DiagHandlerCtxt);
+  YamlInput >> MS;
+  if (YamlInput.error())
+    return YamlInput.error();
+
+  multilib_list Multilibs;
+  Multilibs.reserve(MS.Multilibs.size());
+  for (const auto &M : MS.Multilibs) {
+    std::string Dir;
+    if (M.Dir != ".")
+      Dir = "/" + M.Dir;
+    Multilibs.emplace_back(Dir, Dir, Dir, M.Flags);
+  }
+
+  return MultilibSet(std::move(Multilibs), std::move(MS.FlagMatchers));
 }
 
 LLVM_DUMP_METHOD void MultilibSet::dump() const {
