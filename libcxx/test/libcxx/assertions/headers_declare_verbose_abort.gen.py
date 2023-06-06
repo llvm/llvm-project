@@ -14,22 +14,20 @@
 
 import sys
 sys.path.append(sys.argv[1])
-from libcxx.test.header_information import header_restrictions, public_headers
+from libcxx.test.header_information import lit_header_restrictions, public_headers
 
 for header in public_headers:
     # Skip C compatibility headers.
     if header.endswith('.h'):
         continue
 
-    test_condition_begin = f'#if {header_restrictions[header]}' if header in header_restrictions else ''
-    test_condition_end = '#endif' if header in header_restrictions else ''
-    XFAIL = 'XFAIL' # Make sure Lit doesn't think we are XFAILing this test
+    BLOCKLIT = '' # block Lit from interpreting a RUN/XFAIL/etc inside the generation script
     print(f"""\
 //--- {header}.compile.pass.cpp
-// {XFAIL}: availability-verbose_abort-missing
-#include <__config>
-{test_condition_begin}
+{lit_header_restrictions.get(header, '')}
+
+// XFAIL{BLOCKLIT}: availability-verbose_abort-missing
+
 #include <{header}>
 using HandlerType = decltype(std::__libcpp_verbose_abort);
-{test_condition_end}
 """)

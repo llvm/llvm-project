@@ -19,9 +19,10 @@ void __sort(RandomAccessIterator first, RandomAccessIterator last, Comp comp) {
   // that the default comparator is in use so that we are sure that there are no
   // branches in the comparator.
   std::__introsort<_ClassicAlgPolicy,
-                   Comp&,
+                   ranges::less,
                    RandomAccessIterator,
-                   __use_branchless_sort<Comp, RandomAccessIterator>::value>(first, last, comp, depth_limit);
+                   __use_branchless_sort<ranges::less, RandomAccessIterator>::value>(
+      first, last, ranges::less{}, depth_limit);
 }
 
 // clang-format off

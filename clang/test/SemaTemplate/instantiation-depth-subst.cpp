@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -std=c++11 -verify %s -ftemplate-depth 2
+// RUN: %clang_cc1 -std=c++11 -verify %s -ftemplate-depth=2
 
 // PR9793
 template<typename T> auto f(T t) -> decltype(f(t)); // \

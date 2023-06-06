@@ -1,5 +1,5 @@
-; RUN: llc < %s -march=nvptx -mcpu=sm_50 -verify-machineinstrs | FileCheck %s
-; RUN: %if ptxas %{ llc < %s -march=nvptx -mcpu=sm_50 -verify-machineinstrs | %ptxas-verify %}
+; RUN: llc < %s -march=nvptx64 -mcpu=sm_50 -verify-machineinstrs | FileCheck %s
+; RUN: %if ptxas %{ llc < %s -march=nvptx64 -mcpu=sm_50 -verify-machineinstrs | %ptxas-verify %}
 
 ; calls with a bitcasted function symbol should be fine, but in combination with
 ; a byval attribute were causing a segfault during isel. This testcase was

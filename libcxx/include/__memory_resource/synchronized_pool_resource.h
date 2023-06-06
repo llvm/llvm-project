@@ -14,9 +14,7 @@
 #include <__memory_resource/pool_options.h>
 #include <__memory_resource/unsynchronized_pool_resource.h>
 #include <cstddef>
-#if !defined(_LIBCPP_HAS_NO_THREADS)
-#  include <mutex>
-#endif
+#include <mutex>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header

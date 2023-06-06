@@ -911,6 +911,13 @@ AMDGPULegalizerInfo::AMDGPULegalizerInfo(const GCNSubtarget &ST_,
       .legalFor({S32, S64, S16})
       .scalarize(0)
       .clampScalar(0, S16, S64);
+
+    getActionDefinitionsBuilder({G_FLDEXP, G_STRICT_FLDEXP})
+      .legalFor({{S32, S32}, {S64, S32}, {S16, S16}})
+      .scalarize(0)
+      .maxScalarIf(typeIs(0, S16), 1, S16)
+      .clampScalar(1, S32, S32)
+      .lower();
   } else {
     getActionDefinitionsBuilder(G_FSQRT)
       .legalFor({S32, S64})
@@ -929,6 +936,13 @@ AMDGPULegalizerInfo::AMDGPULegalizerInfo(const GCNSubtarget &ST_,
         .scalarize(0)
         .clampScalar(0, S32, S64);
     }
+
+    getActionDefinitionsBuilder({G_FLDEXP, G_STRICT_FLDEXP})
+      .legalFor({{S32, S32}, {S64, S32}})
+      .scalarize(0)
+      .clampScalar(0, S32, S64)
+      .clampScalar(1, S32, S32)
+      .lower();
   }
 
   getActionDefinitionsBuilder(G_FPTRUNC)
@@ -2373,9 +2387,7 @@ bool AMDGPULegalizerInfo::legalizeITOFP(
                         : B.buildUITOFP(S64, Unmerge.getReg(1));
 
     auto CvtLo = B.buildUITOFP(S64, Unmerge.getReg(0));
-    auto LdExp = B.buildIntrinsic(Intrinsic::amdgcn_ldexp, {S64}, false)
-                     .addUse(CvtHi.getReg(0))
-                     .addUse(ThirtyTwo.getReg(0));
+    auto LdExp = B.buildFLdexp(S64, CvtHi, ThirtyTwo);
 
     // TODO: Should this propagate fast-math-flags?
     B.buildFAdd(Dst, LdExp, CvtLo);
@@ -2406,10 +2418,7 @@ bool AMDGPULegalizerInfo::legalizeITOFP(
   auto Norm2 = B.buildOr(S32, Unmerge2.getReg(1), Adjust);
   auto FVal = Signed ? B.buildSITOFP(S32, Norm2) : B.buildUITOFP(S32, Norm2);
   auto Scale = B.buildSub(S32, ThirtyTwo, ShAmt);
-  B.buildIntrinsic(Intrinsic::amdgcn_ldexp, ArrayRef<Register>{Dst},
-                   /*HasSideEffects=*/false)
-      .addUse(FVal.getReg(0))
-      .addUse(Scale.getReg(0));
+  B.buildFLdexp(Dst, FVal, Scale);
   MI.eraseFromParent();
   return true;
 }

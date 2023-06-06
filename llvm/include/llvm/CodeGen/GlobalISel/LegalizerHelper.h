@@ -357,6 +357,7 @@ public:
   LegalizeResult narrowScalarCTLZ(MachineInstr &MI, unsigned TypeIdx, LLT Ty);
   LegalizeResult narrowScalarCTTZ(MachineInstr &MI, unsigned TypeIdx, LLT Ty);
   LegalizeResult narrowScalarCTPOP(MachineInstr &MI, unsigned TypeIdx, LLT Ty);
+  LegalizeResult narrowScalarFLDEXP(MachineInstr &MI, unsigned TypeIdx, LLT Ty);
 
   /// Perform Bitcast legalize action on G_EXTRACT_VECTOR_ELT.
   LegalizeResult bitcastExtractVectorElt(MachineInstr &MI, unsigned TypeIdx,
