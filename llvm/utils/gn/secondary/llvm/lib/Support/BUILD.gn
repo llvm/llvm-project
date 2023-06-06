@@ -43,6 +43,7 @@ static_library("Support") {
     "ARMWinEH.cpp",
     "Allocator.cpp",
     "AutoConvert.cpp",
+    "BalancedPartitioning.cpp",
     "Base64.cpp",
     "BinaryStreamError.cpp",
     "BinaryStreamReader.cpp",
