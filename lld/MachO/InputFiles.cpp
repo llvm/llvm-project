@@ -90,7 +90,7 @@ std::string lld::toString(const InputFile *f) {
 
   // Multiple dylibs can be defined in one .tbd file.
   if (const auto *dylibFile = dyn_cast<DylibFile>(f))
-    if (f->getName().endswith(".tbd"))
+    if (f->getName().ends_with(".tbd"))
       return (f->getName() + "(" + dylibFile->installName + ")").str();
 
   if (f->archiveName.empty())
@@ -1541,7 +1541,7 @@ static DylibFile *findDylib(StringRef path, DylibFile *umbrella,
     StringRef stem = path::stem(path);
     SmallString<128> frameworkName;
     path::append(frameworkName, path::Style::posix, stem + ".framework", stem);
-    bool isFramework = path.endswith(frameworkName);
+    bool isFramework = path.ends_with(frameworkName);
     if (isFramework) {
       for (StringRef dir : config->frameworkSearchPaths) {
         SmallString<128> candidate = dir;
@@ -1580,7 +1580,7 @@ static DylibFile *findDylib(StringRef path, DylibFile *umbrella,
     path::remove_filename(newPath);
     path::append(newPath, path);
     path = newPath;
-  } else if (path.startswith("@rpath/")) {
+  } else if (path.starts_with("@rpath/")) {
     for (StringRef rpath : umbrella->rpaths) {
       newPath.clear();
       if (rpath.consume_front("@loader_path/")) {
@@ -1949,7 +1949,7 @@ DylibFile *DylibFile::getSyntheticDylib(StringRef installName,
 // name, compatibility version or hide/add symbols) for specific target
 // versions.
 bool DylibFile::handleLDSymbol(StringRef originalName) {
-  if (!originalName.startswith("$ld$"))
+  if (!originalName.starts_with("$ld$"))
     return false;
 
   StringRef action;
@@ -2059,7 +2059,7 @@ void DylibFile::handleLDInstallNameSymbol(StringRef name,
 void DylibFile::handleLDHideSymbol(StringRef name, StringRef originalName) {
   StringRef symbolName;
   bool shouldHide = true;
-  if (name.startswith("os")) {
+  if (name.starts_with("os")) {
     // If it's hidden based on versions.
     name = name.drop_front(2);
     StringRef minVersion;

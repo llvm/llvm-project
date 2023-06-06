@@ -386,7 +386,7 @@ inline bool needsBinding(const Symbol *sym) {
 // Symbols with `l` or `L` as a prefix are linker-private and never appear in
 // the output.
 inline bool isPrivateLabel(StringRef name) {
-  return name.startswith("l") || name.startswith("L");
+  return name.starts_with("l") || name.starts_with("L");
 }
 } // namespace macho
 

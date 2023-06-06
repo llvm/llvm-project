@@ -197,7 +197,7 @@ void ConcatInputSection::writeTo(uint8_t *buf) {
           !referentSym->isInGot())
         target->relaxGotLoad(loc, r.type);
       // For dtrace symbols, do not handle them as normal undefined symbols
-      if (referentSym->getName().startswith("___dtrace_")) {
+      if (referentSym->getName().starts_with("___dtrace_")) {
         // Change dtrace call site to pre-defined instructions
         target->handleDtraceReloc(referentSym, r, loc);
         continue;
