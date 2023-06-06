@@ -27,11 +27,19 @@
 #include "mlir/Dialect/Func/IR/FuncOps.h"
 #include "mlir/IR/Value.h"
 #include "clang/CIR/Dialect/IR/CIRDialect.h"
+#include "llvm/Support/ErrorHandling.h"
 
 using namespace cir;
 using namespace clang;
 using namespace mlir::cir;
 using namespace llvm;
+
+static RValue buildLibraryCall(CIRGenFunction &CGF, const FunctionDecl *FD,
+                               const CallExpr *E,
+                               mlir::Operation *calleeValue) {
+  auto callee = CIRGenCallee::forDirect(calleeValue, GlobalDecl(FD));
+  return CGF.buildCall(E->getCallee()->getType(), callee, E, ReturnValueSlot());
+}
 
 RValue CIRGenFunction::buildBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
                                         const CallExpr *E,
@@ -334,6 +342,13 @@ RValue CIRGenFunction::buildBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
     llvm_unreachable("NYI");
     break;
 
+  case Builtin::BIprintf:
+    if (getTarget().getTriple().isNVPTX() ||
+        getTarget().getTriple().isAMDGCN()) {
+      llvm_unreachable("NYI");
+    }
+    break;
+
   // C++ std:: builtins.
   case Builtin::BImove:
   case Builtin::BImove_if_noexcept:
@@ -387,7 +402,8 @@ RValue CIRGenFunction::buildBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
   // If this is a predefined lib function (e.g. malloc), emit the call
   // using exactly the normal call path.
   if (getContext().BuiltinInfo.isPredefinedLibFunction(BuiltinID))
-    llvm_unreachable("NYI");
+    return buildLibraryCall(*this, FD, E,
+                            buildScalarExpr(E->getCallee()).getDefiningOp());
 
   // Check that a call to a target specific builtin has the correct target
   // features.

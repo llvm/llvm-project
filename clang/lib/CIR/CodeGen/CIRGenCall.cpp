@@ -19,12 +19,15 @@
 
 #include "clang/AST/DeclCXX.h"
 #include "clang/AST/GlobalDecl.h"
+#include "clang/CIR/Dialect/IR/CIRDialect.h"
 #include "clang/CIR/Dialect/IR/CIRTypes.h"
+#include <cassert>
 
 #include "mlir/Dialect/Func/IR/FuncOps.h"
 #include "mlir/IR/Builders.h"
 #include "mlir/IR/BuiltinOps.h"
 #include "mlir/IR/BuiltinTypes.h"
+#include "mlir/IR/SymbolTable.h"
 #include "mlir/IR/Types.h"
 
 using namespace cir;
@@ -503,6 +506,16 @@ RValue CIRGenFunction::buildCall(const CIRGenFunctionInfo &CallInfo,
   } else if (auto loadOp = dyn_cast<mlir::cir::LoadOp>(CalleePtr)) {
     theCall = builder.create<mlir::cir::CallOp>(callLoc, loadOp->getResult(0),
                                                 CIRFuncTy, CIRCallArgs);
+  } else if (auto getGlobalOp = dyn_cast<mlir::cir::GetGlobalOp>(CalleePtr)) {
+    // FIXME(cir): This peephole optimization to avoids indirect calls for
+    // builtins. This should be fixed in the builting declaration instead by not
+    // emitting an unecessary get_global in the first place.
+    auto *globalOp = mlir::SymbolTable::lookupSymbolIn(CGM.getModule(),
+                                                       getGlobalOp.getName());
+    assert(getGlobalOp && "undefined global function");
+    auto callee = llvm::dyn_cast<mlir::cir::FuncOp>(globalOp);
+    assert(callee && "operation is not a function");
+    theCall = builder.create<mlir::cir::CallOp>(callLoc, callee, CIRCallArgs);
   } else {
     llvm_unreachable("expected call variant to be handled");
   }
