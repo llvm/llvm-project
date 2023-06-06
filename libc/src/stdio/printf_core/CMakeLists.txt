@@ -93,6 +93,7 @@ add_object_library(
     libc.src.__support.CPP.string_view
     libc.src.__support.FPUtil.fp_bits
     libc.src.__support.FPUtil.fenv_impl
+    libc.src.__support.FPUtil.rounding_mode
     libc.src.__support.common
     libc.src.__support.libc_assert
     libc.src.__support.uint
