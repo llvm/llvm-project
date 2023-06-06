@@ -99,3 +99,13 @@ strtoll
 strtoul        
 strtoull       
 =============  =========  ============
+
+stdio.h
+--------
+
+=============  =========  ============
+Function Name  Available  RPC Required
+=============  =========  ============
+puts           |check|    |check|
+fputs          |check|    |check|
+=============  =========  ============

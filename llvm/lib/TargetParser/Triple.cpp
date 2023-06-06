@@ -238,6 +238,7 @@ StringRef Triple::getOSTypeName(OSType Kind) {
   case RTEMS: return "rtems";
   case Solaris: return "solaris";
   case TvOS: return "tvos";
+  case UEFI: return "uefi";
   case WASI: return "wasi";
   case WatchOS: return "watchos";
   case Win32: return "windows";
@@ -588,6 +589,7 @@ static Triple::OSType parseOS(StringRef OSName) {
     .StartsWith("netbsd", Triple::NetBSD)
     .StartsWith("openbsd", Triple::OpenBSD)
     .StartsWith("solaris", Triple::Solaris)
+    .StartsWith("uefi", Triple::UEFI)
     .StartsWith("win32", Triple::Win32)
     .StartsWith("windows", Triple::Win32)
     .StartsWith("zos", Triple::ZOS)

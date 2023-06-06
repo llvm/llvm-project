@@ -20,7 +20,7 @@ ErrorOr<Dir *> Dir::open(const char *path) {
     return __llvm_libc::Error(fd.error());
 
   __llvm_libc::AllocChecker ac;
-  Dir *dir = new (ac) Dir(fd);
+  Dir *dir = new (ac) Dir(fd.value());
   if (!ac)
     return __llvm_libc::Error(ENOMEM);
   return dir;
@@ -32,7 +32,7 @@ ErrorOr<struct ::dirent *> Dir::read() {
     auto readsize = platform_fetch_dirents(fd, buffer);
     if (!readsize)
       return __llvm_libc::Error(readsize.error());
-    fillsize = readsize;
+    fillsize = readsize.value();
     readptr = 0;
   }
   if (fillsize == 0)

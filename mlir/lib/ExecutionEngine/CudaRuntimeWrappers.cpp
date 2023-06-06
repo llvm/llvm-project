@@ -312,6 +312,19 @@ mgpuCreateCoo(intptr_t rows, intptr_t cols, intptr_t nnz, void *rowIdxs,
   return reinterpret_cast<void *>(mat);
 }
 
+#ifdef CUSPARSE_COO_AOS // deprecated in cuSPARSE 11.2
+extern "C" MLIR_CUDA_WRAPPERS_EXPORT void *
+mgpuCreateCooAoS(intptr_t rows, intptr_t cols, intptr_t nnz, void *idxs,
+                 void *values, int32_t itp, int32_t dtp, CUstream /*stream*/) {
+  cusparseSpMatDescr_t mat = nullptr;
+  auto iTp = static_cast<cusparseIndexType_t>(itp);
+  auto dTp = static_cast<cudaDataType_t>(dtp);
+  CUSPARSE_REPORT_IF_ERROR(cusparseCreateCooAoS(
+      &mat, rows, cols, nnz, idxs, values, iTp, CUSPARSE_INDEX_BASE_ZERO, dTp))
+  return reinterpret_cast<void *>(mat);
+}
+#endif // CUSPARSE_COO_AOS
+
 extern "C" MLIR_CUDA_WRAPPERS_EXPORT void *
 mgpuCreateCsr(intptr_t rows, intptr_t cols, intptr_t nnz, void *rowPos,
               void *colIdxs, void *values, int32_t ptp, int32_t itp,

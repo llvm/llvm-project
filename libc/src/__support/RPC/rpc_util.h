@@ -23,7 +23,7 @@ constexpr uint64_t MAX_LANE_SIZE = 64;
 /// Suspend the thread briefly to assist the thread scheduler during busy loops.
 LIBC_INLINE void sleep_briefly() {
 #if defined(LIBC_TARGET_ARCH_IS_NVPTX) && __CUDA_ARCH__ >= 700
-  asm("nanosleep.u32 64;" ::: "memory");
+  LIBC_INLINE_ASM("nanosleep.u32 64;" ::: "memory");
 #elif defined(LIBC_TARGET_ARCH_IS_AMDGPU)
   __builtin_amdgcn_s_sleep(2);
 #else

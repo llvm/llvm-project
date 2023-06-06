@@ -61,6 +61,9 @@ class WithType<string ty="", Bytecode t=Bytecode<>> :
 class WithGetter<string g="", Bytecode t=Bytecode<>> :
   Bytecode<t.cParser, t.cBuilder, t.cPrinter, g, t.cType>;
 
+// Representation of a bytecode element consisting of other bytecode atoms.
+// E.g., it is effectively a struct of bytecode elements. Set the members by
+// define a members dag: `dag members = (attr ...)`.
 class CompositeBytecode<string t = ""> : WithType<t>;
 
 class AttributeKind :

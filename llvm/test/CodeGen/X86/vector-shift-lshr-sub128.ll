@@ -1511,7 +1511,7 @@ define <4 x i16> @constant_shift_v4i16(<4 x i16> %a) nounwind {
 ; AVX512BW-LABEL: constant_shift_v4i16:
 ; AVX512BW:       # %bb.0:
 ; AVX512BW-NEXT:    # kill: def $xmm0 killed $xmm0 def $zmm0
-; AVX512BW-NEXT:    vpbroadcastq {{.*#+}} xmm1 = [0,1,2,3,0,1,2,3]
+; AVX512BW-NEXT:    vmovdqa {{.*#+}} xmm1 = <0,1,2,3,u,u,u,u>
 ; AVX512BW-NEXT:    vpsrlvw %zmm1, %zmm0, %zmm0
 ; AVX512BW-NEXT:    # kill: def $xmm0 killed $xmm0 killed $zmm0
 ; AVX512BW-NEXT:    vzeroupper
@@ -1581,7 +1581,7 @@ define <2 x i16> @constant_shift_v2i16(<2 x i16> %a) nounwind {
 ; AVX512BW-LABEL: constant_shift_v2i16:
 ; AVX512BW:       # %bb.0:
 ; AVX512BW-NEXT:    # kill: def $xmm0 killed $xmm0 def $zmm0
-; AVX512BW-NEXT:    vpbroadcastd {{.*#+}} xmm1 = [2,3,2,3,2,3,2,3]
+; AVX512BW-NEXT:    vmovdqa {{.*#+}} xmm1 = <2,3,u,u,u,u,u,u>
 ; AVX512BW-NEXT:    vpsrlvw %zmm1, %zmm0, %zmm0
 ; AVX512BW-NEXT:    # kill: def $xmm0 killed $xmm0 killed $zmm0
 ; AVX512BW-NEXT:    vzeroupper

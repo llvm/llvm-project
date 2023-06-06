@@ -633,7 +633,7 @@ define i1 @trunc_v16i32_v16i1(<16 x i32>) {
 ;
 ; AVX1-LABEL: trunc_v16i32_v16i1:
 ; AVX1:       # %bb.0:
-; AVX1-NEXT:    vbroadcastss {{.*#+}} ymm2 = [255,255,255,255,255,255,255,255]
+; AVX1-NEXT:    vmovaps {{.*#+}} ymm2 = [255,255,255,255,255,255,255,255]
 ; AVX1-NEXT:    vandps %ymm2, %ymm1, %ymm1
 ; AVX1-NEXT:    vextractf128 $1, %ymm1, %xmm3
 ; AVX1-NEXT:    vpackusdw %xmm3, %xmm1, %xmm1
