@@ -130,6 +130,38 @@ void __pstl_fill_n(TestBackend, ForwardIterator, Size, Func) {
   pstl_fill_n_called = true;
 }
 
+bool pstl_replace_called = false;
+
+template <class, class ForwardIterator, class T>
+void __pstl_replace(TestBackend, ForwardIterator, ForwardIterator, const T&, const T&) {
+  assert(!pstl_replace_called);
+  pstl_replace_called = true;
+}
+
+bool pstl_replace_if_called = false;
+
+template <class, class ForwardIterator, class T, class Func>
+void __pstl_replace_if(TestBackend, ForwardIterator, ForwardIterator, Func, const T&) {
+  assert(!pstl_replace_if_called);
+  pstl_replace_if_called = true;
+}
+
+bool pstl_replace_copy_called = false;
+
+template <class, class ForwardIterator, class ForwardOutIterator, class T>
+void __pstl_replace_copy(TestBackend, ForwardIterator, ForwardIterator, ForwardOutIterator, const T&, const T&) {
+  assert(!pstl_replace_copy_called);
+  pstl_replace_copy_called = true;
+}
+
+bool pstl_replace_copy_if_called = false;
+
+template <class, class ForwardIterator, class ForwardOutIterator, class T, class Func>
+void __pstl_replace_copy_if(TestBackend, ForwardIterator, ForwardIterator, ForwardOutIterator, Func, const T&) {
+  assert(!pstl_replace_copy_if_called);
+  pstl_replace_copy_if_called = true;
+}
+
 bool pstl_unary_transform_called = false;
 
 template <class, class ForwardIterator, class ForwardOutIterator, class UnaryOperation>
@@ -235,6 +267,14 @@ int main(int, char**) {
   assert(std::pstl_for_each_called);
   (void)std::for_each_n(TestPolicy{}, std::begin(a), std::size(a), pred);
   assert(std::pstl_for_each_n_called);
+  (void)std::replace(TestPolicy{}, std::begin(a), std::end(a), 0, 0);
+  assert(std::pstl_replace_called);
+  (void)std::replace_if(TestPolicy{}, std::begin(a), std::end(a), pred, 0);
+  assert(std::pstl_replace_if_called);
+  (void)std::replace_copy(TestPolicy{}, std::begin(a), std::end(a), std::begin(a), 0, 0);
+  assert(std::pstl_replace_copy_called);
+  (void)std::replace_copy_if(TestPolicy{}, std::begin(a), std::end(a), std::begin(a), pred, 0);
+  assert(std::pstl_replace_copy_if_called);
   (void)std::transform(TestPolicy{}, std::begin(a), std::end(a), std::begin(a), pred);
   assert(std::pstl_unary_transform_called);
   (void)std::transform(TestPolicy{}, std::begin(a), std::end(a), std::begin(a), std::begin(a), pred);
