@@ -62,6 +62,7 @@ X86LegalizerInfo::X86LegalizerInfo(const X86Subtarget &STI,
     : Subtarget(STI), TM(TM) {
 
   bool Is64Bit = Subtarget.is64Bit();
+  bool HasSSE1 = Subtarget.hasSSE1();
   bool HasSSE2 = Subtarget.hasSSE2();
   bool HasSSE41 = Subtarget.hasSSE41();
   bool HasAVX = Subtarget.hasAVX();
@@ -289,6 +290,22 @@ X86LegalizerInfo::X86LegalizerInfo(const X86Subtarget &STI,
     .widenScalarToNextPow2(1, /*Min=*/8)
     .clampScalar(1, s8, sMaxScalar);
 
+  // fp constants
+  getActionDefinitionsBuilder(G_FCONSTANT)
+      .legalIf([=](const LegalityQuery &Query) -> bool {
+        return (HasSSE1 && typeInSet(0, {s32})(Query)) ||
+               (HasSSE2 && typeInSet(0, {s64})(Query));
+      });
+
+  // fp arithmetic
+  getActionDefinitionsBuilder({G_FADD, G_FSUB, G_FMUL, G_FDIV})
+      .legalIf([=](const LegalityQuery &Query) {
+        return (HasSSE1 && typeInSet(0, {s32, v4s32})(Query)) ||
+               (HasSSE2 && typeInSet(0, {s64, v2s64})(Query)) ||
+               (HasAVX && typeInSet(0, {v8s32, v4s64})(Query)) ||
+               (HasAVX512 && typeInSet(0, {v16s32, v8s64})(Query));
+      });
+
   setLegalizerInfo32bit();
   setLegalizerInfo64bit();
   setLegalizerInfoSSE1();
@@ -432,17 +449,9 @@ void X86LegalizerInfo::setLegalizerInfoSSE1() {
 
   auto &LegacyInfo = getLegacyLegalizerInfo();
 
-  for (unsigned BinOp : {G_FADD, G_FSUB, G_FMUL, G_FDIV})
-    for (auto Ty : {s32, v4s32})
-      LegacyInfo.setAction({BinOp, Ty}, LegacyLegalizeActions::Legal);
-
   for (unsigned MemOp : {G_LOAD, G_STORE})
     for (auto Ty : {v4s32, v2s64})
       LegacyInfo.setAction({MemOp, Ty}, LegacyLegalizeActions::Legal);
-
-  // Constants
-  LegacyInfo.setAction({TargetOpcode::G_FCONSTANT, s32},
-                       LegacyLegalizeActions::Legal);
 
   // Merge/Unmerge
   for (const auto &Ty : {v4s32, v2s64}) {
@@ -472,19 +481,11 @@ void X86LegalizerInfo::setLegalizerInfoSSE2() {
 
   auto &LegacyInfo = getLegacyLegalizerInfo();
 
-  for (unsigned BinOp : {G_FADD, G_FSUB, G_FMUL, G_FDIV})
-    for (auto Ty : {s64, v2s64})
-      LegacyInfo.setAction({BinOp, Ty}, LegacyLegalizeActions::Legal);
-
   LegacyInfo.setAction({G_FPEXT, s64}, LegacyLegalizeActions::Legal);
   LegacyInfo.setAction({G_FPEXT, 1, s32}, LegacyLegalizeActions::Legal);
 
   LegacyInfo.setAction({G_FPTRUNC, s32}, LegacyLegalizeActions::Legal);
   LegacyInfo.setAction({G_FPTRUNC, 1, s64}, LegacyLegalizeActions::Legal);
-
-  // Constants
-  LegacyInfo.setAction({TargetOpcode::G_FCONSTANT, s64},
-                       LegacyLegalizeActions::Legal);
 
   // Merge/Unmerge
   for (const auto &Ty :
