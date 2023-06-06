@@ -96,8 +96,9 @@ transform.sequence failures(propagate) {
   %f = transform.structured.match ops{["func.func"]} in %module_op 
     : (!transform.any_op) -> !transform.any_op
 
-  transform.vector.lower_masks %f
-      : (!transform.any_op) -> !transform.any_op
+  transform.apply_patterns [] to %f {
+    transform.apply_patterns.vector.lower_masks
+  } : !transform.any_op
 }
 
 // -----
@@ -126,6 +127,7 @@ transform.sequence failures(propagate) {
   %f = transform.structured.match ops{["func.func"]} in %module_op 
     : (!transform.any_op) -> !transform.any_op
 
-  transform.vector.lower_masked_transfers %f
-      : (!transform.any_op) -> !transform.any_op
+  transform.apply_patterns [] to %f {
+    transform.apply_patterns.vector.lower_masked_transfers
+  } : !transform.any_op
 }
