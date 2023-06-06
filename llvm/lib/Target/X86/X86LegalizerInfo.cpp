@@ -442,7 +442,6 @@ void X86LegalizerInfo::setLegalizerInfoSSE1() {
   if (!Subtarget.hasSSE1())
     return;
 
-  const LLT s32 = LLT::scalar(32);
   const LLT s64 = LLT::scalar(64);
   const LLT v4s32 = LLT::fixed_vector(4, 32);
   const LLT v2s64 = LLT::fixed_vector(2, 64);
