@@ -134,7 +134,7 @@ def DenseResourceElementsAttr : DialectAttribute<(attr
 
 let cType = "RankedTensorType" in {
 def RankedTensorType : DialectType<(type
-  Array<SignedVarInt>:$shape,
+  Array<SignedVarIntList>:$shape,
   Type:$elementType
 )> {
   let printerPredicate = "!$_val.getEncoding()";
@@ -142,7 +142,7 @@ def RankedTensorType : DialectType<(type
 
 def RankedTensorTypeWithEncoding : DialectType<(type
   Attribute:$encoding,
-  Array<SignedVarInt>:$shape,
+  Array<SignedVarIntList>:$shape,
   Type:$elementType
 )> {
   let printerPredicate = "$_val.getEncoding()";
@@ -223,7 +223,7 @@ def MemRefLayout: WithType<"MemRefLayoutAttrInterface", Attribute>;
 
 let cType = "MemRefType" in {
 def MemRefType : DialectType<(type
-  Array<SignedVarInt>:$shape,
+  Array<SignedVarIntList>:$shape,
   Type:$elementType,
   MemRefLayout:$layout
 )> {
@@ -232,7 +232,7 @@ def MemRefType : DialectType<(type
 
 def MemRefTypeWithMemSpace : DialectType<(type
   Attribute:$memorySpace,
-  Array<SignedVarInt>:$shape,
+  Array<SignedVarIntList>:$shape,
   Type:$elementType,
   MemRefLayout:$layout
 )> {
@@ -272,7 +272,7 @@ def UnrankedTensorType : DialectType<(type
 
 let cType = "VectorType" in {
 def VectorType : DialectType<(type
-  Array<SignedVarInt>:$shape,
+  Array<SignedVarIntList>:$shape,
   Type:$elementType
 )> {
   let printerPredicate = "!$_val.getNumScalableDims()";
@@ -280,7 +280,7 @@ def VectorType : DialectType<(type
 
 def VectorTypeWithScalableDims : DialectType<(type
   VarInt:$numScalableDims,
-  Array<SignedVarInt>:$shape,
+  Array<SignedVarIntList>:$shape,
   Type:$elementType
 )> {
   let printerPredicate = "$_val.getNumScalableDims()";
