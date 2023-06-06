@@ -23,9 +23,9 @@
 using namespace lldb;
 using namespace lldb_private;
 
-Broadcaster::Broadcaster(BroadcasterManagerSP manager_sp, const char *name)
+Broadcaster::Broadcaster(BroadcasterManagerSP manager_sp, std::string name)
     : m_broadcaster_sp(std::make_shared<BroadcasterImpl>(*this)),
-      m_manager_sp(std::move(manager_sp)), m_broadcaster_name(name) {
+      m_manager_sp(std::move(manager_sp)), m_broadcaster_name(std::move(name)) {
   Log *log = GetLog(LLDBLog::Object);
   LLDB_LOG(log, "{0} Broadcaster::Broadcaster(\"{1}\")",
            static_cast<void *>(this), GetBroadcasterName());
@@ -215,12 +215,12 @@ void Broadcaster::BroadcasterImpl::PrivateBroadcastEvent(EventSP &event_sp,
   if (log) {
     StreamString event_description;
     event_sp->Dump(&event_description);
-    LLDB_LOGF(log,
-              "%p Broadcaster(\"%s\")::BroadcastEvent (event_sp = {%s}, "
-              "unique =%i) hijack = %p",
-              static_cast<void *>(this), GetBroadcasterName(),
-              event_description.GetData(), unique,
-              static_cast<void *>(hijacking_listener_sp.get()));
+    LLDB_LOG(log,
+             "{0:x} Broadcaster(\"{1}\")::BroadcastEvent (event_sp = {2}, "
+             "unique={3}) hijack = {4:x}",
+             static_cast<void *>(this), GetBroadcasterName(),
+             event_description.GetData(), unique,
+             static_cast<void *>(hijacking_listener_sp.get()));
   }
 
   if (hijacking_listener_sp) {
