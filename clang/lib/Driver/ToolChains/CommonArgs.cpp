@@ -1909,9 +1909,9 @@ void tools::addMultilibFlag(bool Enabled, const StringRef Flag,
                             Multilib::flags_list &Flags) {
   assert(Flag.front() == '-');
   if (Enabled) {
-    Flags.push_back(("+" + Flag.substr(1)).str());
-  } else {
     Flags.push_back(Flag.str());
+  } else {
+    Flags.push_back(("!" + Flag.substr(1)).str());
   }
 }
 

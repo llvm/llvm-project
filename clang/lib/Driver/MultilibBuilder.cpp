@@ -76,7 +76,7 @@ bool MultilibBuilder::isValid() const {
     StringRef Flag(Flags[I]);
     llvm::StringMap<int>::iterator SI = FlagSet.find(Flag.substr(1));
 
-    assert(StringRef(Flag).front() == '+' || StringRef(Flag).front() == '-');
+    assert(StringRef(Flag).front() == '-' || StringRef(Flag).front() == '!');
 
     if (SI == FlagSet.end())
       FlagSet[Flag.substr(1)] = I;
@@ -97,10 +97,10 @@ Multilib MultilibBuilder::makeMultilib() const {
 
 MultilibSetBuilder &MultilibSetBuilder::Maybe(const MultilibBuilder &M) {
   MultilibBuilder Opposite;
-  // Negate any '+' flags
+  // Negate positive flags
   for (StringRef Flag : M.flags()) {
-    if (Flag.front() == '+')
-      Opposite.flags().push_back(("-" + Flag.substr(1)).str());
+    if (Flag.front() == '-')
+      Opposite.flags().push_back(("!" + Flag.substr(1)).str());
   }
   return Either(M, Opposite);
 }
