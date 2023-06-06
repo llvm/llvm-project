@@ -900,6 +900,71 @@ define void @readnone_indirec(ptr %f, ptr %p) {
   ret void
 }
 
+; FNATTR: define i1 @identity_icmp(ptr readnone %p)
+define i1 @identity_icmp(ptr %p) {
+  %r = icmp eq ptr %p, %p
+  ret i1 %r
+}
+
+; FNATTR: define i1 @compare_against_offset(ptr readnone %p)
+define i1 @compare_against_offset(ptr %p) {
+  %offset = getelementptr inbounds i32, ptr %p, i64 1
+  %r = icmp eq ptr %p, %offset
+  ret i1 %r
+}
+
+; FNATTR: define i1 @compare_offsets(ptr readnone %p)
+define i1 @compare_offsets(ptr %p) {
+  %offset1 = getelementptr inbounds i32, ptr %p, i64 1
+  %offset2 = getelementptr inbounds i32, ptr %p, i64 2
+  %r = icmp eq ptr %offset1, %offset2
+  ret i1 %r
+}
+
+; FNATTR: define void @phi_induction(ptr writeonly %p, i64 %n, i32 %x)
+define void @phi_induction(ptr %p, i64 %n, i32 %x) {
+start:
+  %end = getelementptr inbounds i32, ptr %p, i64 %n
+  br label %repeat_loop_body
+
+repeat_loop_body:                                 ; preds = %start, %repeat_loop_body
+  %induct = phi ptr [ %p, %start ], [ %induct.next, %repeat_loop_body ]
+  store i32 %x, ptr %induct, align 4
+  %induct.next = getelementptr inbounds i32, ptr %induct, i64 1
+  %.not = icmp eq ptr %induct.next, %end
+  br i1 %.not, label %repeat_loop_next, label %repeat_loop_body
+
+repeat_loop_next:
+  ret void
+}
+
+; FNATTR: define i1 @compare_against_offset_non_equality(ptr readnone %p)
+define i1 @compare_against_offset_non_equality(ptr %p) {
+  ; Cannot capture non-equality comparisons. An overflowed GEP can leak bits.
+  %offset = getelementptr inbounds i32, ptr %p, i64 1
+  %r = icmp ult ptr %p, %offset
+  ret i1 %r
+}
+
+; FNATTR: define i1 @compare_against_capture(ptr %p)
+define i1 @compare_against_capture(ptr %p) {
+  %offset1 = getelementptr inbounds i32, ptr %p, i64 1
+  %offset2 = getelementptr inbounds i32, ptr %p, i64 2
+  store ptr %offset2, ptr @g
+  %r = icmp eq ptr %offset1, %offset2
+  ret i1 %r
+}
+
+declare ptr @llvm.ptrmask.p0.i64(ptr ,i64)
+
+; FNATTR: define i1 @compare_against_ptrmask(ptr readnone %p, i64 %mask)
+define i1 @compare_against_ptrmask(ptr %p, i64 %mask) {
+  %offset1 = getelementptr inbounds i32, ptr %p, i64 1
+  %offset2 = getelementptr inbounds i32, ptr %p, i64 2
+  %masked_ptr = call ptr @llvm.ptrmask.p0.i64(ptr %offset2, i64 %mask)
+  %r = icmp eq ptr %offset1, %masked_ptr
+  ret i1 %r
+}
 
 declare ptr @llvm.launder.invariant.group.p0(ptr)
 declare ptr @llvm.strip.invariant.group.p0(ptr)
