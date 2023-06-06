@@ -76,9 +76,9 @@ func.func @transpose1023_1x1x8x8xf32(%arg0: vector<1x1x8x8xf32>) -> vector<1x1x8
 
 transform.sequence failures(propagate) {
 ^bb1(%module_op: !transform.any_op):
-  transform.vector.lower_transpose %module_op
-    lowering_strategy = "eltwise"
-      : (!transform.any_op) -> !transform.any_op
+  transform.apply_patterns [] to %module_op {
+    transform.apply_patterns.vector.lower_transpose lowering_strategy = "eltwise"
+  } : !transform.any_op
 }
 
 // -----
@@ -99,9 +99,9 @@ func.func @transpose(%arg0: vector<2x4xf32>) -> vector<4x2xf32> {
 
 transform.sequence failures(propagate) {
 ^bb1(%module_op: !transform.any_op):
-  transform.vector.lower_transpose %module_op
-    lowering_strategy = "shuffle_1d"
-      : (!transform.any_op) -> !transform.any_op
+  transform.apply_patterns [] to %module_op {
+    transform.apply_patterns.vector.lower_transpose lowering_strategy = "shuffle_1d"
+  } : !transform.any_op
 }
 
 // -----
@@ -118,9 +118,9 @@ func.func @transpose(%arg0: vector<2x4xf32>) -> vector<4x2xf32> {
 
 transform.sequence failures(propagate) {
 ^bb1(%module_op: !transform.any_op):
-  transform.vector.lower_transpose %module_op
-    lowering_strategy = "flat_transpose"
-      : (!transform.any_op) -> !transform.any_op
+  transform.apply_patterns [] to %module_op {
+    transform.apply_patterns.vector.lower_transpose lowering_strategy = "flat_transpose"
+  } : !transform.any_op
 }
 
 // -----
@@ -605,9 +605,9 @@ func.func @transpose210_1x8x8xf32(%arg0: vector<1x8x8xf32>) -> vector<8x8x1xf32>
 
 transform.sequence failures(propagate) {
 ^bb1(%module_op: !transform.any_op):
-  transform.vector.lower_transpose %module_op
-    avx2_lowering_strategy = true
-      : (!transform.any_op) -> !transform.any_op
+  transform.apply_patterns [] to %module_op {
+    transform.apply_patterns.vector.lower_transpose avx2_lowering_strategy = true
+  } : !transform.any_op
 }
 
 // -----
@@ -683,9 +683,9 @@ func.func @transpose_shuffle16x16xf32(%arg0: vector<16x16xf32>) -> vector<16x16x
 
 transform.sequence failures(propagate) {
 ^bb1(%module_op: !transform.any_op):
-  transform.vector.lower_transpose %module_op
-    lowering_strategy = "shuffle_16x16"
-      : (!transform.any_op) -> !transform.any_op
+  transform.apply_patterns [] to %module_op {
+    transform.apply_patterns.vector.lower_transpose lowering_strategy = "shuffle_16x16"
+  } : !transform.any_op
 }
 
 // -----
@@ -762,7 +762,7 @@ func.func @transpose021_shuffle16x16xf32(%arg0: vector<1x16x16xf32>) -> vector<1
 
 transform.sequence failures(propagate) {
 ^bb1(%module_op: !transform.any_op):
-  transform.vector.lower_transpose %module_op
-    lowering_strategy = "shuffle_16x16"
-      : (!transform.any_op) -> !transform.any_op
+  transform.apply_patterns [] to %module_op {
+    transform.apply_patterns.vector.lower_transpose lowering_strategy = "shuffle_16x16"
+  } : !transform.any_op
 }

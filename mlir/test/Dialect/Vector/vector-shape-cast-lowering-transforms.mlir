@@ -154,6 +154,7 @@ transform.sequence failures(propagate) {
   %f = transform.structured.match ops{["func.func"]} in %module_op
     : (!transform.any_op) -> !transform.any_op
 
-  %f2 = transform.vector.lower_shape_cast %f
-      : (!transform.any_op) -> !transform.any_op
+  transform.apply_patterns [] to %f {
+    transform.apply_patterns.vector.lower_shape_cast
+  } : !transform.any_op
 }
