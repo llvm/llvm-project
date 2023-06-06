@@ -1177,11 +1177,9 @@ define void @store_i32_stride7_vf8(ptr %in.vecptr0, ptr %in.vecptr1, ptr %in.vec
 ; AVX512F-NEXT:    vinserti64x4 $1, (%rsi), %zmm0, %zmm4
 ; AVX512F-NEXT:    vinserti64x4 $1, (%rcx), %zmm1, %zmm5
 ; AVX512F-NEXT:    vinserti64x4 $1, (%r9), %zmm2, %zmm2
-; AVX512F-NEXT:    vbroadcasti128 {{.*#+}} ymm0 = [31,7,15,23,31,7,15,23]
-; AVX512F-NEXT:    # ymm0 = mem[0,1,0,1]
+; AVX512F-NEXT:    vmovdqa {{.*#+}} ymm0 = <u,7,15,23,31,u,u,u>
 ; AVX512F-NEXT:    vpermi2d %zmm5, %zmm4, %zmm0
-; AVX512F-NEXT:    vbroadcasti128 {{.*#+}} ymm1 = [6,23,31,7,6,23,31,7]
-; AVX512F-NEXT:    # ymm1 = mem[0,1,0,1]
+; AVX512F-NEXT:    vmovdqa {{.*#+}} ymm1 = <6,u,u,u,u,23,31,7>
 ; AVX512F-NEXT:    vpermi2d %zmm2, %zmm3, %zmm1
 ; AVX512F-NEXT:    vmovdqa64 {{.*#+}} zmm6 = <u,u,u,u,0,8,16,u,u,u,u,1,9,17,u,u>
 ; AVX512F-NEXT:    vpermi2d %zmm3, %zmm2, %zmm6
@@ -1223,11 +1221,9 @@ define void @store_i32_stride7_vf8(ptr %in.vecptr0, ptr %in.vecptr1, ptr %in.vec
 ; AVX512BW-NEXT:    vinserti64x4 $1, (%rsi), %zmm0, %zmm4
 ; AVX512BW-NEXT:    vinserti64x4 $1, (%rcx), %zmm1, %zmm5
 ; AVX512BW-NEXT:    vinserti64x4 $1, (%r9), %zmm2, %zmm2
-; AVX512BW-NEXT:    vbroadcasti128 {{.*#+}} ymm0 = [31,7,15,23,31,7,15,23]
-; AVX512BW-NEXT:    # ymm0 = mem[0,1,0,1]
+; AVX512BW-NEXT:    vmovdqa {{.*#+}} ymm0 = <u,7,15,23,31,u,u,u>
 ; AVX512BW-NEXT:    vpermi2d %zmm5, %zmm4, %zmm0
-; AVX512BW-NEXT:    vbroadcasti128 {{.*#+}} ymm1 = [6,23,31,7,6,23,31,7]
-; AVX512BW-NEXT:    # ymm1 = mem[0,1,0,1]
+; AVX512BW-NEXT:    vmovdqa {{.*#+}} ymm1 = <6,u,u,u,u,23,31,7>
 ; AVX512BW-NEXT:    vpermi2d %zmm2, %zmm3, %zmm1
 ; AVX512BW-NEXT:    vmovdqa64 {{.*#+}} zmm6 = <u,u,u,u,0,8,16,u,u,u,u,1,9,17,u,u>
 ; AVX512BW-NEXT:    vpermi2d %zmm3, %zmm2, %zmm6

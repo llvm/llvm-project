@@ -372,7 +372,7 @@ define <16 x i16> @and_mulhuw_v16i16(<16 x i32> %a, <16 x i32> %b) {
 ; AVX512F-LABEL: and_mulhuw_v16i16:
 ; AVX512F:       # %bb.0:
 ; AVX512F-NEXT:    vpmovdw %zmm1, %ymm1
-; AVX512F-NEXT:    vpbroadcastw {{.*#+}} ymm2 = [32767,32767,32767,32767,32767,32767,32767,32767,32767,32767,32767,32767,32767,32767,32767,32767]
+; AVX512F-NEXT:    vmovdqa {{.*#+}} ymm2 = [32767,32767,32767,32767,32767,32767,32767,32767,32767,32767,32767,32767,32767,32767,32767,32767]
 ; AVX512F-NEXT:    vpand %ymm2, %ymm1, %ymm1
 ; AVX512F-NEXT:    vpmovdw %zmm0, %ymm0
 ; AVX512F-NEXT:    vpand %ymm2, %ymm0, %ymm0

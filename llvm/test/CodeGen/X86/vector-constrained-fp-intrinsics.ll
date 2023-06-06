@@ -6849,8 +6849,7 @@ define <2 x double> @constrained_vector_uitofp_v2f64_v2i32(<2 x i32> %x) #0 {
 ; AVX1-LABEL: constrained_vector_uitofp_v2f64_v2i32:
 ; AVX1:       # %bb.0: # %entry
 ; AVX1-NEXT:    vpmovzxdq {{.*#+}} xmm0 = xmm0[0],zero,xmm0[1],zero
-; AVX1-NEXT:    vmovddup {{.*#+}} xmm1 = [4.503599627370496E+15,4.503599627370496E+15]
-; AVX1-NEXT:    # xmm1 = mem[0,0]
+; AVX1-NEXT:    vmovdqa {{.*#+}} xmm1 = [4.503599627370496E+15,4.503599627370496E+15]
 ; AVX1-NEXT:    vpor %xmm1, %xmm0, %xmm0
 ; AVX1-NEXT:    vsubpd %xmm1, %xmm0, %xmm0
 ; AVX1-NEXT:    retq
@@ -6884,8 +6883,7 @@ define <2 x float> @constrained_vector_uitofp_v2f32_v2i32(<2 x i32> %x) #0 {
 ; AVX1-LABEL: constrained_vector_uitofp_v2f32_v2i32:
 ; AVX1:       # %bb.0: # %entry
 ; AVX1-NEXT:    vpmovzxdq {{.*#+}} xmm0 = xmm0[0],zero,xmm0[1],zero
-; AVX1-NEXT:    vmovddup {{.*#+}} xmm1 = [4.503599627370496E+15,4.503599627370496E+15]
-; AVX1-NEXT:    # xmm1 = mem[0,0]
+; AVX1-NEXT:    vmovdqa {{.*#+}} xmm1 = [4.503599627370496E+15,4.503599627370496E+15]
 ; AVX1-NEXT:    vpor %xmm1, %xmm0, %xmm0
 ; AVX1-NEXT:    vsubpd %xmm1, %xmm0, %xmm0
 ; AVX1-NEXT:    vcvtpd2ps %xmm0, %xmm0

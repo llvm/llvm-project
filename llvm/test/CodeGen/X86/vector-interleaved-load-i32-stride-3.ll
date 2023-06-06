@@ -78,7 +78,7 @@ define void @load_i32_stride3_vf2(ptr %in.vec, ptr %out.vec0, ptr %out.vec1, ptr
 ; AVX512F-FAST-NEXT:    vmovdqa (%rdi), %xmm0
 ; AVX512F-FAST-NEXT:    vmovdqa 16(%rdi), %xmm1
 ; AVX512F-FAST-NEXT:    vpshufd {{.*#+}} xmm2 = xmm0[0,3,2,3]
-; AVX512F-FAST-NEXT:    vpbroadcastq {{.*#+}} xmm3 = [5,0,5,0]
+; AVX512F-FAST-NEXT:    vmovdqa {{.*#+}} xmm3 = <5,0,u,u>
 ; AVX512F-FAST-NEXT:    vpermi2d %xmm0, %xmm1, %xmm3
 ; AVX512F-FAST-NEXT:    vpbroadcastd 8(%rdi), %xmm0
 ; AVX512F-FAST-NEXT:    vpblendd {{.*#+}} xmm0 = xmm0[0],xmm1[1],xmm0[2,3]
@@ -106,7 +106,7 @@ define void @load_i32_stride3_vf2(ptr %in.vec, ptr %out.vec0, ptr %out.vec1, ptr
 ; AVX512BW-FAST-NEXT:    vmovdqa (%rdi), %xmm0
 ; AVX512BW-FAST-NEXT:    vmovdqa 16(%rdi), %xmm1
 ; AVX512BW-FAST-NEXT:    vpshufd {{.*#+}} xmm2 = xmm0[0,3,2,3]
-; AVX512BW-FAST-NEXT:    vpbroadcastq {{.*#+}} xmm3 = [5,0,5,0]
+; AVX512BW-FAST-NEXT:    vmovdqa {{.*#+}} xmm3 = <5,0,u,u>
 ; AVX512BW-FAST-NEXT:    vpermi2d %xmm0, %xmm1, %xmm3
 ; AVX512BW-FAST-NEXT:    vpbroadcastd 8(%rdi), %xmm0
 ; AVX512BW-FAST-NEXT:    vpblendd {{.*#+}} xmm0 = xmm0[0],xmm1[1],xmm0[2,3]
