@@ -52,9 +52,8 @@ Options *CommandObjectDWIMPrint::GetOptions() { return &m_option_group; }
 
 void CommandObjectDWIMPrint::HandleArgumentCompletion(
     CompletionRequest &request, OptionElementVector &opt_element_vector) {
-  CommandCompletions::InvokeCommonCompletionCallbacks(
-      GetCommandInterpreter(), CommandCompletions::eVariablePathCompletion,
-      request, nullptr);
+  lldb_private::CommandCompletions::InvokeCommonCompletionCallbacks(
+      GetCommandInterpreter(), lldb::eVariablePathCompletion, request, nullptr);
 }
 
 bool CommandObjectDWIMPrint::DoExecute(StringRef command,

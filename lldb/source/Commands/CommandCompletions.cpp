@@ -54,37 +54,41 @@ bool CommandCompletions::InvokeCommonCompletionCallbacks(
   bool handled = false;
 
   const CommonCompletionElement common_completions[] = {
-      {eSourceFileCompletion, CommandCompletions::SourceFiles},
-      {eDiskFileCompletion, CommandCompletions::DiskFiles},
-      {eDiskDirectoryCompletion, CommandCompletions::DiskDirectories},
-      {eSymbolCompletion, CommandCompletions::Symbols},
-      {eModuleCompletion, CommandCompletions::Modules},
-      {eModuleUUIDCompletion, CommandCompletions::ModuleUUIDs},
-      {eSettingsNameCompletion, CommandCompletions::SettingsNames},
-      {ePlatformPluginCompletion, CommandCompletions::PlatformPluginNames},
-      {eArchitectureCompletion, CommandCompletions::ArchitectureNames},
-      {eVariablePathCompletion, CommandCompletions::VariablePath},
-      {eRegisterCompletion, CommandCompletions::Registers},
-      {eBreakpointCompletion, CommandCompletions::Breakpoints},
-      {eProcessPluginCompletion, CommandCompletions::ProcessPluginNames},
-      {eDisassemblyFlavorCompletion, CommandCompletions::DisassemblyFlavors},
-      {eTypeLanguageCompletion, CommandCompletions::TypeLanguages},
-      {eFrameIndexCompletion, CommandCompletions::FrameIndexes},
-      {eStopHookIDCompletion, CommandCompletions::StopHookIDs},
-      {eThreadIndexCompletion, CommandCompletions::ThreadIndexes},
-      {eWatchPointIDCompletion, CommandCompletions::WatchPointIDs},
-      {eBreakpointNameCompletion, CommandCompletions::BreakpointNames},
-      {eProcessIDCompletion, CommandCompletions::ProcessIDs},
-      {eProcessNameCompletion, CommandCompletions::ProcessNames},
-      {eRemoteDiskFileCompletion, CommandCompletions::RemoteDiskFiles},
-      {eRemoteDiskDirectoryCompletion,
+      {lldb::eSourceFileCompletion, CommandCompletions::SourceFiles},
+      {lldb::eDiskFileCompletion, CommandCompletions::DiskFiles},
+      {lldb::eDiskDirectoryCompletion, CommandCompletions::DiskDirectories},
+      {lldb::eSymbolCompletion, CommandCompletions::Symbols},
+      {lldb::eModuleCompletion, CommandCompletions::Modules},
+      {lldb::eModuleUUIDCompletion, CommandCompletions::ModuleUUIDs},
+      {lldb::eSettingsNameCompletion, CommandCompletions::SettingsNames},
+      {lldb::ePlatformPluginCompletion,
+       CommandCompletions::PlatformPluginNames},
+      {lldb::eArchitectureCompletion, CommandCompletions::ArchitectureNames},
+      {lldb::eVariablePathCompletion, CommandCompletions::VariablePath},
+      {lldb::eRegisterCompletion, CommandCompletions::Registers},
+      {lldb::eBreakpointCompletion, CommandCompletions::Breakpoints},
+      {lldb::eProcessPluginCompletion, CommandCompletions::ProcessPluginNames},
+      {lldb::eDisassemblyFlavorCompletion,
+       CommandCompletions::DisassemblyFlavors},
+      {lldb::eTypeLanguageCompletion, CommandCompletions::TypeLanguages},
+      {lldb::eFrameIndexCompletion, CommandCompletions::FrameIndexes},
+      {lldb::eStopHookIDCompletion, CommandCompletions::StopHookIDs},
+      {lldb::eThreadIndexCompletion, CommandCompletions::ThreadIndexes},
+      {lldb::eWatchpointIDCompletion, CommandCompletions::WatchPointIDs},
+      {lldb::eBreakpointNameCompletion, CommandCompletions::BreakpointNames},
+      {lldb::eProcessIDCompletion, CommandCompletions::ProcessIDs},
+      {lldb::eProcessNameCompletion, CommandCompletions::ProcessNames},
+      {lldb::eRemoteDiskFileCompletion, CommandCompletions::RemoteDiskFiles},
+      {lldb::eRemoteDiskDirectoryCompletion,
        CommandCompletions::RemoteDiskDirectories},
-      {eTypeCategoryNameCompletion, CommandCompletions::TypeCategoryNames},
-      {eNoCompletion, nullptr} // This one has to be last in the list.
+      {lldb::eTypeCategoryNameCompletion,
+       CommandCompletions::TypeCategoryNames},
+      {lldb::CompletionType::eNoCompletion,
+       nullptr} // This one has to be last in the list.
   };
 
   for (int i = 0;; i++) {
-    if (common_completions[i].type == eNoCompletion)
+    if (common_completions[i].type == lldb::eNoCompletion)
       break;
     else if ((common_completions[i].type & completion_mask) ==
                  common_completions[i].type &&
