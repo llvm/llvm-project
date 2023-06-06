@@ -86,7 +86,7 @@ struct BalancedPartitioningConfig {
   unsigned IterationsPerSplit = 40;
   /// The probability for a vertex to skip a move from its current bucket to
   /// another bucket; it often helps to escape from a local optima
-  float SkipProbability = 0.1;
+  float SkipProbability = 0.1f;
   /// Recursive subtasks up to the given depth are added to the queue and
   /// distributed among threads by ThreadPool; all subsequent calls are executed
   /// on the same thread
