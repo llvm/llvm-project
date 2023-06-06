@@ -134,9 +134,8 @@ define void @i64_buildvector(ptr %ptr, ptr %vp) nounwind {
 define void @i64_insertelement(ptr %ptr, ptr %vp) nounwind {
 ; CHECK-LABEL: i64_insertelement:
 ; CHECK:       @ %bb.0:
-; CHECK-NEXT:    vld1.64 {d16, d17}, [r1]
-; CHECK-NEXT:    vldr d16, [r0]
-; CHECK-NEXT:    vst1.64 {d16, d17}, [r1]
+; CHECK-NEXT:    ldm r0, {r2, r3}
+; CHECK-NEXT:    strd r2, r3, [r1]
 ; CHECK-NEXT:    bx lr
   %t0 = load i64, ptr %ptr, align 4
   %vec = load <2 x i64>, ptr %vp
