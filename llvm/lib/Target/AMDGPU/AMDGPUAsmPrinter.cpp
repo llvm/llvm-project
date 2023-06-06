@@ -1045,6 +1045,10 @@ void AMDGPUAsmPrinter::EmitPALMetadata(const MachineFunction &MF,
         MD->setRsrc2(CC, S_00B84C_SCRATCH_EN(1));
     }
   } else {
+    // Priority?
+    MD->setHwStage(CC, ".float_mode", CurrentProgramInfo.FloatMode);
+    // Priv?
+    // DX10Clamp?
     MD->setHwStage(CC, ".debug_mode", (bool)CurrentProgramInfo.DebugMode);
     MD->setHwStage(CC, ".ieee_mode", (bool)CurrentProgramInfo.IEEEMode);
     MD->setHwStage(CC, ".wgp_mode", (bool)CurrentProgramInfo.WgpMode);
@@ -1078,12 +1082,7 @@ void AMDGPUAsmPrinter::EmitPALMetadata(const MachineFunction &MF,
       MD->setSpiPsInputAddr(MFI->getPSInputAddr());
     } else {
       // Graphics registers
-      const unsigned ExtraLdsDwGranularity =
-          STM.getGeneration() >= AMDGPUSubtarget::GFX11 ? 256 : 128;
-      MD->setGraphicsRegisters(
-          ".ps_extra_lds_size",
-          (unsigned)(ExtraLDSSize * ExtraLdsDwGranularity * sizeof(uint32_t)));
-
+      MD->setGraphicsRegisters(".ps_extra_lds_size", ExtraLDSSize);
       // Set PsInputEna and PsInputAddr .spi_ps_input_ena and .spi_ps_input_addr
       static StringLiteral const PsInputFields[] = {
           ".persp_sample_ena",    ".persp_center_ena",
