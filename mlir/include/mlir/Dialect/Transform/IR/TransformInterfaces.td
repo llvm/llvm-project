@@ -228,4 +228,25 @@ def FindPayloadReplacementOpInterface
   ];
 }
 
+def PatternDescriptorOpInterface : OpInterface<"PatternDescriptorOpInterface"> {
+  let description = [{
+    This interface should be implemented by ops that select patterns of a
+    `transform.apply_patterns` op. It provides a method to populate a rewrite
+    pattern set with patterns.
+  }];
+
+  let cppNamespace = "::mlir::transform";
+
+  let methods = [
+    InterfaceMethod<
+      /*desc=*/[{
+        Populate patterns into the given pattern set.
+      }],
+      /*returnType=*/"void",
+      /*name=*/"populatePatterns",
+      /*arguments=*/(ins "RewritePatternSet &":$patterns)
+    >,
+  ];
+}
+
 #endif // MLIR_DIALECT_TRANSFORM_IR_TRANSFORM_INTERFACES_TD
