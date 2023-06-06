@@ -614,6 +614,13 @@ public:
   mlir::LogicalResult
   matchAndRewrite(mlir::cir::GetGlobalOp op, OpAdaptor adaptor,
                   mlir::ConversionPatternRewriter &rewriter) const override {
+    // FIXME(cir): Premature DCE to avoid lowering stuff we're not using. CIRGen
+    // should mitigate this and not emit the get_global.
+    if (op->getUses().empty()) {
+      rewriter.eraseOp(op);
+      return mlir::success();
+    }
+
     auto type = getTypeConverter()->convertType(op.getType());
     auto symbol = op.getName();
     rewriter.replaceOpWithNewOp<mlir::LLVM::AddressOfOp>(op, type, symbol);
