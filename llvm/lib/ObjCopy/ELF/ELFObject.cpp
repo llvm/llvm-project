@@ -429,6 +429,13 @@ Error Section::accept(MutableSectionVisitor &Visitor) {
   return Visitor.visit(*this);
 }
 
+void Section::restoreSymTabLink(SymbolTableSection &SymTab) {
+  if (HasSymTabLink) {
+    assert(LinkSection == nullptr);
+    LinkSection = &SymTab;
+  }
+}
+
 Error SectionWriter::visit(const OwnedDataSection &Sec) {
   llvm::copy(Sec.Data, Out.getBufferStart() + Sec.Offset);
   return Error::success();
@@ -680,8 +687,11 @@ bool Symbol::isCommon() const { return getShndx() == SHN_COMMON; }
 
 void SymbolTableSection::assignIndices() {
   uint32_t Index = 0;
-  for (auto &Sym : Symbols)
+  for (auto &Sym : Symbols) {
+    if (Sym->Index != Index)
+      IndicesChanged = true;
     Sym->Index = Index++;
+  }
 }
 
 void SymbolTableSection::addSymbol(Twine Name, uint8_t Bind, uint8_t Type,
@@ -741,7 +751,10 @@ Error SymbolTableSection::removeSymbols(
       std::remove_if(std::begin(Symbols) + 1, std::end(Symbols),
                      [ToRemove](const SymPtr &Sym) { return ToRemove(*Sym); }),
       std::end(Symbols));
+  auto PrevSize = Size;
   Size = Symbols.size() * EntrySize;
+  if (Size < PrevSize)
+    IndicesChanged = true;
   assignIndices();
   return Error::success();
 }
@@ -1106,8 +1119,10 @@ Error Section::initialize(SectionTableRef SecTable) {
 
   LinkSection = *Sec;
 
-  if (LinkSection->Type == ELF::SHT_SYMTAB)
+  if (LinkSection->Type == ELF::SHT_SYMTAB) {
+    HasSymTabLink = true;
     LinkSection = nullptr;
+  }
 
   return Error::success();
 }
@@ -2514,6 +2529,12 @@ template <class ELFT> Error ELFWriter<ELFT>::finalize() {
 
   if (Error E = removeUnneededSections(Obj))
     return E;
+
+  // If the .symtab indices have not been changed, restore the sh_link to
+  // .symtab for sections that were linked to .symtab.
+  if (Obj.SymbolTable && !Obj.SymbolTable->indicesChanged())
+    for (SectionBase &Sec : Obj.sections())
+      Sec.restoreSymTabLink(*Obj.SymbolTable);
 
   // We need to assign indexes before we perform layout because we need to know
   // if we need large indexes or not. We can assign indexes first and check as

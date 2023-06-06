@@ -5820,9 +5820,12 @@ bool Parser::isConstructorDeclarator(bool IsUnqualified, bool DeductionGuide,
   // therefore, we know that this is a constructor.
   // Due to an ambiguity with implicit typename, the above is not enough.
   // Additionally, check to see if we are a friend.
+  // If we parsed a scope specifier as well as friend,
+  // we might be parsing a friend constructor.
   bool IsConstructor = false;
-  if (isDeclarationSpecifier(IsFriend ? ImplicitTypenameContext::No
-                                      : ImplicitTypenameContext::Yes))
+  if (isDeclarationSpecifier(IsFriend && !SS.isSet()
+                                 ? ImplicitTypenameContext::No
+                                 : ImplicitTypenameContext::Yes))
     IsConstructor = true;
   else if (Tok.is(tok::identifier) ||
            (Tok.is(tok::annot_cxxscope) && NextToken().is(tok::identifier))) {
