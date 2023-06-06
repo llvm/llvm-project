@@ -2251,11 +2251,6 @@ Instruction *InstCombinerImpl::foldICmpShlConstant(ICmpInst &Cmp,
       APInt ShiftedC = (C - 1).ashr(*ShiftAmt) + 1;
       return new ICmpInst(Pred, X, ConstantInt::get(ShType, ShiftedC));
     }
-    // If this is a signed comparison to 0 and the shift is sign preserving,
-    // use the shift LHS operand instead; isSignTest may change 'Pred', so only
-    // do that if we're sure to not continue on in this function.
-    if (isSignTest(Pred, C))
-      return new ICmpInst(Pred, X, Constant::getNullValue(ShType));
   }
 
   // NUW guarantees that we are only shifting out zero bits from the high bits,
