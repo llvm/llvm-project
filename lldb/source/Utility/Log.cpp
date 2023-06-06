@@ -155,6 +155,21 @@ void Log::VAPrintf(const char *format, va_list args) {
   PutString(Content);
 }
 
+void Log::Formatf(llvm::StringRef file, llvm::StringRef function,
+                  const char *format, ...) {
+  va_list args;
+  va_start(args, format);
+  VAFormatf(file, function, format, args);
+  va_end(args);
+}
+
+void Log::VAFormatf(llvm::StringRef file, llvm::StringRef function,
+                    const char *format, va_list args) {
+  llvm::SmallString<64> Content;
+  lldb_private::VASprintf(Content, format, args);
+  Format(file, function, llvm::formatv("{0}", Content));
+}
+
 // Printing of errors that are not fatal.
 void Log::Error(const char *format, ...) {
   va_list args;
