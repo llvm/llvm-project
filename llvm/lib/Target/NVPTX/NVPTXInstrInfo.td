@@ -164,10 +164,10 @@ class ValueToRegClass<ValueType T> {
      !eq(name, "i16"): Int16Regs,
      !eq(name, "i32"): Int32Regs,
      !eq(name, "i64"): Int64Regs,
-     !eq(name, "f16"): Float16Regs,
-     !eq(name, "v2f16"): Float16x2Regs,
-     !eq(name, "bf16"): Float16Regs,
-     !eq(name, "v2bf16"): Float16x2Regs,
+     !eq(name, "f16"): Int16Regs,
+     !eq(name, "v2f16"): Int32Regs,
+     !eq(name, "bf16"): Int16Regs,
+     !eq(name, "v2bf16"): Int32Regs,
      !eq(name, "f32"): Float32Regs,
      !eq(name, "f64"): Float64Regs,
      !eq(name, "ai32"): Int32ArgRegs,
@@ -280,29 +280,29 @@ multiclass F3<string OpcStr, SDNode OpNode> {
                [(set Float32Regs:$dst, (OpNode Float32Regs:$a, fpimm:$b))]>;
 
    def f16rr_ftz :
-     NVPTXInst<(outs Float16Regs:$dst),
-               (ins Float16Regs:$a, Float16Regs:$b),
+     NVPTXInst<(outs Int16Regs:$dst),
+               (ins Int16Regs:$a, Int16Regs:$b),
                !strconcat(OpcStr, ".ftz.f16 \t$dst, $a, $b;"),
-               [(set Float16Regs:$dst, (OpNode (f16 Float16Regs:$a), (f16 Float16Regs:$b)))]>,
+               [(set Int16Regs:$dst, (OpNode (f16 Int16Regs:$a), (f16 Int16Regs:$b)))]>,
                Requires<[useFP16Math, doF32FTZ]>;
    def f16rr :
-     NVPTXInst<(outs Float16Regs:$dst),
-               (ins Float16Regs:$a, Float16Regs:$b),
+     NVPTXInst<(outs Int16Regs:$dst),
+               (ins Int16Regs:$a, Int16Regs:$b),
                !strconcat(OpcStr, ".f16 \t$dst, $a, $b;"),
-               [(set Float16Regs:$dst, (OpNode (f16 Float16Regs:$a), (f16 Float16Regs:$b)))]>,
+               [(set Int16Regs:$dst, (OpNode (f16 Int16Regs:$a), (f16 Int16Regs:$b)))]>,
                Requires<[useFP16Math]>;
 
    def f16x2rr_ftz :
-     NVPTXInst<(outs Float16x2Regs:$dst),
-               (ins Float16x2Regs:$a, Float16x2Regs:$b),
+     NVPTXInst<(outs Int32Regs:$dst),
+               (ins Int32Regs:$a, Int32Regs:$b),
                !strconcat(OpcStr, ".ftz.f16x2 \t$dst, $a, $b;"),
-               [(set Float16x2Regs:$dst, (OpNode (v2f16 Float16x2Regs:$a), (v2f16 Float16x2Regs:$b)))]>,
+               [(set Int32Regs:$dst, (OpNode (v2f16 Int32Regs:$a), (v2f16 Int32Regs:$b)))]>,
                Requires<[useFP16Math, doF32FTZ]>;
    def f16x2rr :
-     NVPTXInst<(outs Float16x2Regs:$dst),
-               (ins Float16x2Regs:$a, Float16x2Regs:$b),
+     NVPTXInst<(outs Int32Regs:$dst),
+               (ins Int32Regs:$a, Int32Regs:$b),
                !strconcat(OpcStr, ".f16x2 \t$dst, $a, $b;"),
-               [(set Float16x2Regs:$dst, (OpNode (v2f16 Float16x2Regs:$a), (v2f16 Float16x2Regs:$b)))]>,
+               [(set Int32Regs:$dst, (OpNode (v2f16 Int32Regs:$a), (v2f16 Int32Regs:$b)))]>,
                Requires<[useFP16Math]>;
 }
 
@@ -354,29 +354,29 @@ multiclass F3_fma_component<string OpcStr, SDNode OpNode> {
                Requires<[allowFMA]>;
 
    def f16rr_ftz :
-     NVPTXInst<(outs Float16Regs:$dst),
-               (ins Float16Regs:$a, Float16Regs:$b),
+     NVPTXInst<(outs Int16Regs:$dst),
+               (ins Int16Regs:$a, Int16Regs:$b),
                !strconcat(OpcStr, ".ftz.f16 \t$dst, $a, $b;"),
-               [(set Float16Regs:$dst, (OpNode (f16 Float16Regs:$a), (f16 Float16Regs:$b)))]>,
+               [(set Int16Regs:$dst, (OpNode (f16 Int16Regs:$a), (f16 Int16Regs:$b)))]>,
                Requires<[useFP16Math, allowFMA, doF32FTZ]>;
    def f16rr :
-     NVPTXInst<(outs Float16Regs:$dst),
-               (ins Float16Regs:$a, Float16Regs:$b),
+     NVPTXInst<(outs Int16Regs:$dst),
+               (ins Int16Regs:$a, Int16Regs:$b),
                !strconcat(OpcStr, ".f16 \t$dst, $a, $b;"),
-               [(set Float16Regs:$dst, (OpNode (f16 Float16Regs:$a), (f16 Float16Regs:$b)))]>,
+               [(set Int16Regs:$dst, (OpNode (f16 Int16Regs:$a), (f16 Int16Regs:$b)))]>,
                Requires<[useFP16Math, allowFMA]>;
 
    def f16x2rr_ftz :
-     NVPTXInst<(outs Float16x2Regs:$dst),
-               (ins Float16x2Regs:$a, Float16x2Regs:$b),
+     NVPTXInst<(outs Int32Regs:$dst),
+               (ins Int32Regs:$a, Int32Regs:$b),
                !strconcat(OpcStr, ".ftz.f16x2 \t$dst, $a, $b;"),
-               [(set (v2f16 Float16x2Regs:$dst), (OpNode (v2f16 Float16x2Regs:$a), (v2f16 Float16x2Regs:$b)))]>,
+               [(set (v2f16 Int32Regs:$dst), (OpNode (v2f16 Int32Regs:$a), (v2f16 Int32Regs:$b)))]>,
                Requires<[useFP16Math, allowFMA, doF32FTZ]>;
    def f16x2rr :
-     NVPTXInst<(outs Float16x2Regs:$dst),
-               (ins Float16x2Regs:$a, Float16x2Regs:$b),
+     NVPTXInst<(outs Int32Regs:$dst),
+               (ins Int32Regs:$a, Int32Regs:$b),
                !strconcat(OpcStr, ".f16x2 \t$dst, $a, $b;"),
-               [(set Float16x2Regs:$dst, (OpNode (v2f16 Float16x2Regs:$a), (v2f16 Float16x2Regs:$b)))]>,
+               [(set Int32Regs:$dst, (OpNode (v2f16 Int32Regs:$a), (v2f16 Int32Regs:$b)))]>,
                Requires<[useFP16Math, allowFMA]>;
 
    // These have strange names so we don't perturb existing mir tests.
@@ -417,28 +417,28 @@ multiclass F3_fma_component<string OpcStr, SDNode OpNode> {
                [(set Float32Regs:$dst, (OpNode Float32Regs:$a, fpimm:$b))]>,
                Requires<[noFMA]>;
    def _rnf16rr_ftz :
-     NVPTXInst<(outs Float16Regs:$dst),
-               (ins Float16Regs:$a, Float16Regs:$b),
+     NVPTXInst<(outs Int16Regs:$dst),
+               (ins Int16Regs:$a, Int16Regs:$b),
                !strconcat(OpcStr, ".rn.ftz.f16 \t$dst, $a, $b;"),
-               [(set Float16Regs:$dst, (OpNode (f16 Float16Regs:$a), (f16 Float16Regs:$b)))]>,
+               [(set Int16Regs:$dst, (OpNode (f16 Int16Regs:$a), (f16 Int16Regs:$b)))]>,
                Requires<[useFP16Math, noFMA, doF32FTZ]>;
    def _rnf16rr :
-     NVPTXInst<(outs Float16Regs:$dst),
-               (ins Float16Regs:$a, Float16Regs:$b),
+     NVPTXInst<(outs Int16Regs:$dst),
+               (ins Int16Regs:$a, Int16Regs:$b),
                !strconcat(OpcStr, ".rn.f16 \t$dst, $a, $b;"),
-               [(set Float16Regs:$dst, (OpNode (f16 Float16Regs:$a), (f16 Float16Regs:$b)))]>,
+               [(set Int16Regs:$dst, (OpNode (f16 Int16Regs:$a), (f16 Int16Regs:$b)))]>,
                Requires<[useFP16Math, noFMA]>;
    def _rnf16x2rr_ftz :
-     NVPTXInst<(outs Float16x2Regs:$dst),
-               (ins Float16x2Regs:$a, Float16x2Regs:$b),
+     NVPTXInst<(outs Int32Regs:$dst),
+               (ins Int32Regs:$a, Int32Regs:$b),
                !strconcat(OpcStr, ".rn.ftz.f16x2 \t$dst, $a, $b;"),
-               [(set Float16x2Regs:$dst, (OpNode (v2f16 Float16x2Regs:$a), (v2f16 Float16x2Regs:$b)))]>,
+               [(set Int32Regs:$dst, (OpNode (v2f16 Int32Regs:$a), (v2f16 Int32Regs:$b)))]>,
                Requires<[useFP16Math, noFMA, doF32FTZ]>;
    def _rnf16x2rr :
-     NVPTXInst<(outs Float16x2Regs:$dst),
-               (ins Float16x2Regs:$a, Float16x2Regs:$b),
+     NVPTXInst<(outs Int32Regs:$dst),
+               (ins Int32Regs:$a, Int32Regs:$b),
                !strconcat(OpcStr, ".rn.f16x2 \t$dst, $a, $b;"),
-               [(set Float16x2Regs:$dst, (OpNode (v2f16 Float16x2Regs:$a), (v2f16 Float16x2Regs:$b)))]>,
+               [(set Int32Regs:$dst, (OpNode (v2f16 Int32Regs:$a), (v2f16 Int32Regs:$b)))]>,
                Requires<[useFP16Math, noFMA]>;
 }
 
@@ -513,7 +513,7 @@ let hasSideEffects = false in {
                 FromName, ".u64 \t$dst, $src;"), []>;
     def _f16 :
       NVPTXInst<(outs RC:$dst),
-                (ins Float16Regs:$src, CvtMode:$mode),
+                (ins Int16Regs:$src, CvtMode:$mode),
                 !strconcat("cvt${mode:base}${mode:ftz}${mode:sat}.",
                 FromName, ".f16 \t$dst, $src;"), []>;
     def _f32 :
@@ -537,7 +537,7 @@ let hasSideEffects = false in {
   defm CVT_u32 : CVT_FROM_ALL<"u32", Int32Regs>;
   defm CVT_s64 : CVT_FROM_ALL<"s64", Int64Regs>;
   defm CVT_u64 : CVT_FROM_ALL<"u64", Int64Regs>;
-  defm CVT_f16 : CVT_FROM_ALL<"f16", Float16Regs>;
+  defm CVT_f16 : CVT_FROM_ALL<"f16", Int16Regs>;
   defm CVT_f32 : CVT_FROM_ALL<"f32", Float32Regs>;
   defm CVT_f64 : CVT_FROM_ALL<"f64", Float64Regs>;
 
@@ -576,7 +576,7 @@ multiclass CVT_FROM_FLOAT_SM80<string FromName, RegisterClass RC> {
     Requires<[hasPTX<70>, hasSM<80>]>;
   }
 
-  defm CVT_f16x2 : CVT_FROM_FLOAT_V2_SM80<"f16x2", Float16x2Regs>;
+  defm CVT_f16x2 : CVT_FROM_FLOAT_V2_SM80<"f16x2", Int32Regs>;
   defm CVT_bf16x2 : CVT_FROM_FLOAT_V2_SM80<"bf16x2", Int32Regs>;
 }
 
@@ -640,21 +640,21 @@ defm SELP_u32 : SELP<"u32", Int32Regs, i32imm>;
 defm SELP_b64 : SELP_PATTERN<"b64", i64, Int64Regs, i64imm, imm>;
 defm SELP_s64 : SELP<"s64", Int64Regs, i64imm>;
 defm SELP_u64 : SELP<"u64", Int64Regs, i64imm>;
-defm SELP_f16 : SELP_PATTERN<"b16", f16, Float16Regs, f16imm, fpimm>;
+defm SELP_f16 : SELP_PATTERN<"b16", f16, Int16Regs, f16imm, fpimm>;
 
 defm SELP_f32 : SELP_PATTERN<"f32", f32, Float32Regs, f32imm, fpimm>;
 defm SELP_f64 : SELP_PATTERN<"f64", f64, Float64Regs, f64imm, fpimm>;
 
 // This does not work as tablegen fails to infer the type of 'imm'.
 // def v2f16imm : Operand<v2f16>;
-// defm SELP_f16x2 : SELP_PATTERN<"b32", v2f16, Float16x2Regs, v2f16imm, imm>;
+// defm SELP_f16x2 : SELP_PATTERN<"b32", v2f16, Int32Regs, v2f16imm, imm>;
 
 def SELP_f16x2rr :
-    NVPTXInst<(outs Float16x2Regs:$dst),
-              (ins Float16x2Regs:$a, Float16x2Regs:$b, Int1Regs:$p),
+    NVPTXInst<(outs Int32Regs:$dst),
+              (ins Int32Regs:$a, Int32Regs:$b, Int1Regs:$p),
               "selp.b32 \t$dst, $a, $b, $p;",
-              [(set Float16x2Regs:$dst,
-                    (select Int1Regs:$p, (v2f16 Float16x2Regs:$a), (v2f16 Float16x2Regs:$b)))]>;
+              [(set Int32Regs:$dst,
+                    (select Int1Regs:$p, (v2f16 Int32Regs:$a), (v2f16 Int32Regs:$b)))]>;
 
 //-----------------------------------
 // Test Instructions
@@ -783,26 +783,26 @@ def mul_wide_signed : SDNode<"NVPTXISD::MUL_WIDE_SIGNED", SDTMulWide>;
 def mul_wide_unsigned : SDNode<"NVPTXISD::MUL_WIDE_UNSIGNED", SDTMulWide>;
 
 // Matchers for signed, unsigned mul.wide ISD nodes.
-def : Pat<(i32 (mul_wide_signed Int16Regs:$a, Int16Regs:$b)),
-          (MULWIDES32 Int16Regs:$a, Int16Regs:$b)>,
+def : Pat<(i32 (mul_wide_signed i16:$a, i16:$b)),
+          (MULWIDES32 i16:$a, i16:$b)>,
       Requires<[doMulWide]>;
 def : Pat<(i32 (mul_wide_signed Int16Regs:$a, imm:$b)),
           (MULWIDES32Imm Int16Regs:$a, imm:$b)>,
       Requires<[doMulWide]>;
-def : Pat<(i32 (mul_wide_unsigned Int16Regs:$a, Int16Regs:$b)),
+def : Pat<(i32 (mul_wide_unsigned i16:$a, i16:$b)),
           (MULWIDEU32 Int16Regs:$a, Int16Regs:$b)>,
       Requires<[doMulWide]>;
 def : Pat<(i32 (mul_wide_unsigned Int16Regs:$a, imm:$b)),
           (MULWIDEU32Imm Int16Regs:$a, imm:$b)>,
       Requires<[doMulWide]>;
 
-def : Pat<(i64 (mul_wide_signed Int32Regs:$a, Int32Regs:$b)),
+def : Pat<(i64 (mul_wide_signed i32:$a, i32:$b)),
           (MULWIDES64 Int32Regs:$a, Int32Regs:$b)>,
       Requires<[doMulWide]>;
 def : Pat<(i64 (mul_wide_signed Int32Regs:$a, imm:$b)),
           (MULWIDES64Imm Int32Regs:$a, imm:$b)>,
       Requires<[doMulWide]>;
-def : Pat<(i64 (mul_wide_unsigned Int32Regs:$a, Int32Regs:$b)),
+def : Pat<(i64 (mul_wide_unsigned i32:$a, i32:$b)),
           (MULWIDEU64 Int32Regs:$a, Int32Regs:$b)>,
       Requires<[doMulWide]>;
 def : Pat<(i64 (mul_wide_unsigned Int32Regs:$a, imm:$b)),
@@ -1003,7 +1003,7 @@ def DoubleConst1 : PatLeaf<(fpimm), [{
 // fp16 immediate values in .f16 instructions. Instead we have to load
 // the constant into a register using mov.b16.
 def LOAD_CONST_F16 :
-  NVPTXInst<(outs Float16Regs:$dst), (ins f16imm:$a),
+  NVPTXInst<(outs Int16Regs:$dst), (ins f16imm:$a),
             "mov.b16 \t$dst, $a;", []>;
 
 defm FADD : F3_fma_component<"add", fadd>;
@@ -1028,10 +1028,10 @@ class FNEG_F16_F16X2<string OpcStr, ValueType T, RegisterClass RC, Predicate Pre
                 !strconcat(OpcStr, " \t$dst, $src;"),
                 [(set RC:$dst, (fneg (T RC:$src)))]>,
                 Requires<[useFP16Math, hasPTX<60>, hasSM<53>, Pred]>;
-def FNEG16_ftz   : FNEG_F16_F16X2<"neg.ftz.f16", f16, Float16Regs, doF32FTZ>;
-def FNEG16       : FNEG_F16_F16X2<"neg.f16", f16, Float16Regs, True>;
-def FNEG16x2_ftz : FNEG_F16_F16X2<"neg.ftz.f16x2", v2f16, Float16x2Regs, doF32FTZ>;
-def FNEG16x2     : FNEG_F16_F16X2<"neg.f16x2", v2f16, Float16x2Regs, True>;
+def FNEG16_ftz   : FNEG_F16_F16X2<"neg.ftz.f16", f16, Int16Regs, doF32FTZ>;
+def FNEG16       : FNEG_F16_F16X2<"neg.f16", f16, Int16Regs, True>;
+def FNEG16x2_ftz : FNEG_F16_F16X2<"neg.ftz.f16x2", v2f16, Int32Regs, doF32FTZ>;
+def FNEG16x2     : FNEG_F16_F16X2<"neg.f16x2", v2f16, Int32Regs, True>;
 
 //
 // F64 division
@@ -1211,10 +1211,10 @@ multiclass FMA_F16<string OpcStr, ValueType T, RegisterClass RC, Predicate Pred>
                        Requires<[useFP16Math, Pred]>;
 }
 
-defm FMA16_ftz : FMA_F16<"fma.rn.ftz.f16", f16, Float16Regs, doF32FTZ>;
-defm FMA16     : FMA_F16<"fma.rn.f16", f16, Float16Regs, True>;
-defm FMA16x2_ftz : FMA_F16<"fma.rn.ftz.f16x2", v2f16, Float16x2Regs, doF32FTZ>;
-defm FMA16x2     : FMA_F16<"fma.rn.f16x2", v2f16, Float16x2Regs, True>;
+defm FMA16_ftz : FMA_F16<"fma.rn.ftz.f16", f16, Int16Regs, doF32FTZ>;
+defm FMA16     : FMA_F16<"fma.rn.f16", f16, Int16Regs, True>;
+defm FMA16x2_ftz : FMA_F16<"fma.rn.ftz.f16x2", v2f16, Int32Regs, doF32FTZ>;
+defm FMA16x2     : FMA_F16<"fma.rn.f16x2", v2f16, Int32Regs, True>;
 defm FMA32_ftz : FMA<"fma.rn.ftz.f32", Float32Regs, f32imm, doF32FTZ>;
 defm FMA32     : FMA<"fma.rn.f32", Float32Regs, f32imm, True>;
 defm FMA64     : FMA<"fma.rn.f64", Float64Regs, f64imm, True>;
@@ -1651,13 +1651,13 @@ defm SETP_f32 : SETP<"f32", Float32Regs, f32imm>;
 defm SETP_f64 : SETP<"f64", Float64Regs, f64imm>;
 def SETP_f16rr :
       NVPTXInst<(outs Int1Regs:$dst),
-                (ins Float16Regs:$a, Float16Regs:$b, CmpMode:$cmp),
+                (ins Int16Regs:$a, Int16Regs:$b, CmpMode:$cmp),
                 "setp${cmp:base}${cmp:ftz}.f16 \t$dst, $a, $b;",
                 []>, Requires<[useFP16Math]>;
 
 def SETP_f16x2rr :
       NVPTXInst<(outs Int1Regs:$p, Int1Regs:$q),
-                (ins Float16x2Regs:$a, Float16x2Regs:$b, CmpMode:$cmp),
+                (ins Int32Regs:$a, Int32Regs:$b, CmpMode:$cmp),
                 "setp${cmp:base}${cmp:ftz}.f16x2 \t$p|$q, $a, $b;",
                 []>,
                 Requires<[useFP16Math]>;
@@ -1690,7 +1690,7 @@ defm SET_u32 : SET<"u32", Int32Regs, i32imm>;
 defm SET_b64 : SET<"b64", Int64Regs, i64imm>;
 defm SET_s64 : SET<"s64", Int64Regs, i64imm>;
 defm SET_u64 : SET<"u64", Int64Regs, i64imm>;
-defm SET_f16 : SET<"f16", Float16Regs, f16imm>;
+defm SET_f16 : SET<"f16", Int16Regs, f16imm>;
 defm SET_f32 : SET<"f32", Float32Regs, f32imm>;
 defm SET_f64 : SET<"f64", Float64Regs, f64imm>;
 
@@ -1760,7 +1760,14 @@ let IsSimpleMove=1, hasSideEffects=0 in {
   def IMOV64rr : NVPTXInst<(outs Int64Regs:$dst), (ins Int64Regs:$sss),
                            "mov.u64 \t$dst, $sss;", []>;
 
-  def FMOV16rr : NVPTXInst<(outs Float16Regs:$dst), (ins Float16Regs:$src),
+  def IMOVB16rr : NVPTXInst<(outs Int16Regs:$dst), (ins Int16Regs:$sss),
+                           "mov.b16 \t$dst, $sss;", []>;
+  def IMOVB32rr : NVPTXInst<(outs Int32Regs:$dst), (ins Int32Regs:$sss),
+                           "mov.b32 \t$dst, $sss;", []>;
+  def IMOVB64rr : NVPTXInst<(outs Int64Regs:$dst), (ins Int64Regs:$sss),
+                           "mov.b64 \t$dst, $sss;", []>;
+
+  def FMOV16rr : NVPTXInst<(outs Int16Regs:$dst), (ins Int16Regs:$src),
                            // We have to use .b16 here as there's no mov.f16.
                            "mov.b16 \t$dst, $src;", []>;
   def FMOV32rr : NVPTXInst<(outs Float32Regs:$dst), (ins Float32Regs:$src),
@@ -1781,6 +1788,13 @@ def IMOV32ri : NVPTXInst<(outs Int32Regs:$dst), (ins i32imm:$src),
 def IMOV64ri : NVPTXInst<(outs Int64Regs:$dst), (ins i64imm:$src),
                         "mov.u64 \t$dst, $src;",
                         [(set Int64Regs:$dst, imm:$src)]>;
+
+def IMOVB16ri : NVPTXInst<(outs Int16Regs:$dst), (ins i16imm:$src),
+                         "mov.b16 \t$dst, $src;", []>;
+def IMOVB32ri : NVPTXInst<(outs Int32Regs:$dst), (ins i32imm:$src),
+                         "mov.b32 \t$dst, $src;", []>;
+def IMOVB64ri : NVPTXInst<(outs Int64Regs:$dst), (ins i64imm:$src),
+                        "mov.b64 \t$dst, $src;", []>;
 
 def FMOV32ri : NVPTXInst<(outs Float32Regs:$dst), (ins f32imm:$src),
                          "mov.f32 \t$dst, $src;",
@@ -1824,14 +1838,14 @@ multiclass ISET_FORMAT<PatFrag OpNode, PatLeaf Mode,
                        Instruction set_64ri,
                        Instruction set_64ir> {
   // i16 -> pred
-  def : Pat<(i1 (OpNode Int16Regs:$a, Int16Regs:$b)),
+  def : Pat<(i1 (OpNode i16:$a, i16:$b)),
             (setp_16rr Int16Regs:$a, Int16Regs:$b, Mode)>;
   def : Pat<(i1 (OpNode Int16Regs:$a, imm:$b)),
             (setp_16ri Int16Regs:$a, imm:$b, Mode)>;
   def : Pat<(i1 (OpNode imm:$a, Int16Regs:$b)),
             (setp_16ir imm:$a, Int16Regs:$b, Mode)>;
   // i32 -> pred
-  def : Pat<(i1 (OpNode Int32Regs:$a, Int32Regs:$b)),
+  def : Pat<(i1 (OpNode i32:$a, i32:$b)),
             (setp_32rr Int32Regs:$a, Int32Regs:$b, Mode)>;
   def : Pat<(i1 (OpNode Int32Regs:$a, imm:$b)),
             (setp_32ri Int32Regs:$a, imm:$b, Mode)>;
@@ -1846,14 +1860,14 @@ multiclass ISET_FORMAT<PatFrag OpNode, PatLeaf Mode,
             (setp_64ir imm:$a, Int64Regs:$b, Mode)>;
 
   // i16 -> i32
-  def : Pat<(i32 (OpNode Int16Regs:$a, Int16Regs:$b)),
+  def : Pat<(i32 (OpNode i16:$a, i16:$b)),
             (set_16rr Int16Regs:$a, Int16Regs:$b, Mode)>;
   def : Pat<(i32 (OpNode Int16Regs:$a, imm:$b)),
             (set_16ri Int16Regs:$a, imm:$b, Mode)>;
   def : Pat<(i32 (OpNode imm:$a, Int16Regs:$b)),
             (set_16ir imm:$a, Int16Regs:$b, Mode)>;
   // i32 -> i32
-  def : Pat<(i32 (OpNode Int32Regs:$a, Int32Regs:$b)),
+  def : Pat<(i32 (OpNode i32:$a, i32:$b)),
             (set_32rr Int32Regs:$a, Int32Regs:$b, Mode)>;
   def : Pat<(i32 (OpNode Int32Regs:$a, imm:$b)),
             (set_32ri Int32Regs:$a, imm:$b, Mode)>;
@@ -1926,23 +1940,23 @@ def : Pat<(i32 (setne Int1Regs:$a, Int1Regs:$b)),
 
 multiclass FSET_FORMAT<PatFrag OpNode, PatLeaf Mode, PatLeaf ModeFTZ> {
   // f16 -> pred
-  def : Pat<(i1 (OpNode (f16 Float16Regs:$a), (f16 Float16Regs:$b))),
-            (SETP_f16rr Float16Regs:$a, Float16Regs:$b, ModeFTZ)>,
+  def : Pat<(i1 (OpNode (f16 Int16Regs:$a), (f16 Int16Regs:$b))),
+            (SETP_f16rr Int16Regs:$a, Int16Regs:$b, ModeFTZ)>,
         Requires<[useFP16Math,doF32FTZ]>;
-  def : Pat<(i1 (OpNode (f16 Float16Regs:$a), (f16 Float16Regs:$b))),
-            (SETP_f16rr Float16Regs:$a, Float16Regs:$b, Mode)>,
+  def : Pat<(i1 (OpNode (f16 Int16Regs:$a), (f16 Int16Regs:$b))),
+            (SETP_f16rr Int16Regs:$a, Int16Regs:$b, Mode)>,
         Requires<[useFP16Math]>;
-  def : Pat<(i1 (OpNode (f16 Float16Regs:$a), fpimm:$b)),
-            (SETP_f16rr Float16Regs:$a, (LOAD_CONST_F16 fpimm:$b), ModeFTZ)>,
+  def : Pat<(i1 (OpNode (f16 Int16Regs:$a), fpimm:$b)),
+            (SETP_f16rr Int16Regs:$a, (LOAD_CONST_F16 fpimm:$b), ModeFTZ)>,
         Requires<[useFP16Math,doF32FTZ]>;
-  def : Pat<(i1 (OpNode (f16 Float16Regs:$a), fpimm:$b)),
-            (SETP_f16rr Float16Regs:$a, (LOAD_CONST_F16 fpimm:$b), Mode)>,
+  def : Pat<(i1 (OpNode (f16 Int16Regs:$a), fpimm:$b)),
+            (SETP_f16rr Int16Regs:$a, (LOAD_CONST_F16 fpimm:$b), Mode)>,
         Requires<[useFP16Math]>;
-  def : Pat<(i1 (OpNode fpimm:$a, (f16 Float16Regs:$b))),
-            (SETP_f16rr (LOAD_CONST_F16 fpimm:$a), Float16Regs:$b, ModeFTZ)>,
+  def : Pat<(i1 (OpNode fpimm:$a, (f16 Int16Regs:$b))),
+            (SETP_f16rr (LOAD_CONST_F16 fpimm:$a), Int16Regs:$b, ModeFTZ)>,
         Requires<[useFP16Math,doF32FTZ]>;
-  def : Pat<(i1 (OpNode fpimm:$a, (f16 Float16Regs:$b))),
-            (SETP_f16rr (LOAD_CONST_F16 fpimm:$a), Float16Regs:$b, Mode)>,
+  def : Pat<(i1 (OpNode fpimm:$a, (f16 Int16Regs:$b))),
+            (SETP_f16rr (LOAD_CONST_F16 fpimm:$a), Int16Regs:$b, Mode)>,
         Requires<[useFP16Math]>;
 
   // f32 -> pred
@@ -1971,23 +1985,23 @@ multiclass FSET_FORMAT<PatFrag OpNode, PatLeaf Mode, PatLeaf ModeFTZ> {
             (SETP_f64ir fpimm:$a, Float64Regs:$b, Mode)>;
 
   // f16 -> i32
-  def : Pat<(i32 (OpNode (f16 Float16Regs:$a), (f16 Float16Regs:$b))),
-            (SET_f16rr Float16Regs:$a, Float16Regs:$b, ModeFTZ)>,
+  def : Pat<(i32 (OpNode (f16 Int16Regs:$a), (f16 Int16Regs:$b))),
+            (SET_f16rr Int16Regs:$a, Int16Regs:$b, ModeFTZ)>,
         Requires<[useFP16Math, doF32FTZ]>;
-  def : Pat<(i32 (OpNode (f16 Float16Regs:$a), (f16 Float16Regs:$b))),
-            (SET_f16rr Float16Regs:$a, Float16Regs:$b, Mode)>,
+  def : Pat<(i32 (OpNode (f16 Int16Regs:$a), (f16 Int16Regs:$b))),
+            (SET_f16rr Int16Regs:$a, Int16Regs:$b, Mode)>,
         Requires<[useFP16Math]>;
-  def : Pat<(i32 (OpNode (f16 Float16Regs:$a), fpimm:$b)),
-            (SET_f16rr Float16Regs:$a, (LOAD_CONST_F16 fpimm:$b), ModeFTZ)>,
+  def : Pat<(i32 (OpNode (f16 Int16Regs:$a), fpimm:$b)),
+            (SET_f16rr Int16Regs:$a, (LOAD_CONST_F16 fpimm:$b), ModeFTZ)>,
         Requires<[useFP16Math, doF32FTZ]>;
-  def : Pat<(i32 (OpNode (f16 Float16Regs:$a), fpimm:$b)),
-            (SET_f16rr Float16Regs:$a, (LOAD_CONST_F16 fpimm:$b), Mode)>,
+  def : Pat<(i32 (OpNode (f16 Int16Regs:$a), fpimm:$b)),
+            (SET_f16rr Int16Regs:$a, (LOAD_CONST_F16 fpimm:$b), Mode)>,
         Requires<[useFP16Math]>;
-  def : Pat<(i32 (OpNode fpimm:$a, (f16 Float16Regs:$b))),
-            (SET_f16ir (LOAD_CONST_F16 fpimm:$a), Float16Regs:$b, ModeFTZ)>,
+  def : Pat<(i32 (OpNode fpimm:$a, (f16 Int16Regs:$b))),
+            (SET_f16ir (LOAD_CONST_F16 fpimm:$a), Int16Regs:$b, ModeFTZ)>,
         Requires<[useFP16Math, doF32FTZ]>;
-  def : Pat<(i32 (OpNode fpimm:$a, (f16 Float16Regs:$b))),
-            (SET_f16ir (LOAD_CONST_F16 fpimm:$a), Float16Regs:$b, Mode)>,
+  def : Pat<(i32 (OpNode fpimm:$a, (f16 Int16Regs:$b))),
+            (SET_f16ir (LOAD_CONST_F16 fpimm:$a), Int16Regs:$b, Mode)>,
         Requires<[useFP16Math]>;
 
   // f32 -> i32
@@ -2276,16 +2290,10 @@ def LoadParamMemV2I8   : LoadParamV2MemInst<Int16Regs, ".b8">;
 def LoadParamMemV4I32  : LoadParamV4MemInst<Int32Regs, ".b32">;
 def LoadParamMemV4I16  : LoadParamV4MemInst<Int16Regs, ".b16">;
 def LoadParamMemV4I8   : LoadParamV4MemInst<Int16Regs, ".b8">;
-def LoadParamMemF16    : LoadParamMemInst<Float16Regs, ".b16">;
-def LoadParamMemF16x2  : LoadParamMemInst<Float16x2Regs, ".b32">;
 def LoadParamMemF32    : LoadParamMemInst<Float32Regs, ".f32">;
 def LoadParamMemF64    : LoadParamMemInst<Float64Regs, ".f64">;
-def LoadParamMemV2F16  : LoadParamV2MemInst<Float16Regs, ".b16">;
-def LoadParamMemV2F16x2: LoadParamV2MemInst<Float16x2Regs, ".b32">;
 def LoadParamMemV2F32  : LoadParamV2MemInst<Float32Regs, ".f32">;
 def LoadParamMemV2F64  : LoadParamV2MemInst<Float64Regs, ".f64">;
-def LoadParamMemV4F16  : LoadParamV4MemInst<Float16Regs, ".b16">;
-def LoadParamMemV4F16x2: LoadParamV4MemInst<Float16x2Regs, ".b32">;
 def LoadParamMemV4F32  : LoadParamV4MemInst<Float32Regs, ".f32">;
 
 def StoreParamI64    : StoreParamInst<Int64Regs, ".b64">;
@@ -2302,16 +2310,10 @@ def StoreParamV4I32  : StoreParamV4Inst<Int32Regs, ".b32">;
 def StoreParamV4I16  : StoreParamV4Inst<Int16Regs, ".b16">;
 def StoreParamV4I8   : StoreParamV4Inst<Int16Regs, ".b8">;
 
-def StoreParamF16      : StoreParamInst<Float16Regs, ".b16">;
-def StoreParamF16x2    : StoreParamInst<Float16x2Regs, ".b32">;
 def StoreParamF32      : StoreParamInst<Float32Regs, ".f32">;
 def StoreParamF64      : StoreParamInst<Float64Regs, ".f64">;
-def StoreParamV2F16    : StoreParamV2Inst<Float16Regs, ".b16">;
-def StoreParamV2F16x2  : StoreParamV2Inst<Float16x2Regs, ".b32">;
 def StoreParamV2F32    : StoreParamV2Inst<Float32Regs, ".f32">;
 def StoreParamV2F64    : StoreParamV2Inst<Float64Regs, ".f64">;
-def StoreParamV4F16    : StoreParamV4Inst<Float16Regs, ".b16">;
-def StoreParamV4F16x2  : StoreParamV4Inst<Float16x2Regs, ".b32">;
 def StoreParamV4F32    : StoreParamV4Inst<Float32Regs, ".f32">;
 
 def StoreRetvalI64    : StoreRetvalInst<Int64Regs, ".b64">;
@@ -2328,15 +2330,9 @@ def StoreRetvalV4I8   : StoreRetvalV4Inst<Int16Regs, ".b8">;
 
 def StoreRetvalF64    : StoreRetvalInst<Float64Regs, ".f64">;
 def StoreRetvalF32    : StoreRetvalInst<Float32Regs, ".f32">;
-def StoreRetvalF16    : StoreRetvalInst<Float16Regs, ".b16">;
-def StoreRetvalF16x2  : StoreRetvalInst<Float16x2Regs, ".b32">;
 def StoreRetvalV2F64  : StoreRetvalV2Inst<Float64Regs, ".f64">;
 def StoreRetvalV2F32  : StoreRetvalV2Inst<Float32Regs, ".f32">;
-def StoreRetvalV2F16  : StoreRetvalV2Inst<Float16Regs, ".b16">;
-def StoreRetvalV2F16x2: StoreRetvalV2Inst<Float16x2Regs, ".b32">;
 def StoreRetvalV4F32  : StoreRetvalV4Inst<Float32Regs, ".f32">;
-def StoreRetvalV4F16  : StoreRetvalV4Inst<Float16Regs, ".b16">;
-def StoreRetvalV4F16x2: StoreRetvalV4Inst<Float16x2Regs, ".b32">;
 
 def CallArgBeginInst : NVPTXInst<(outs), (ins), "(", [(CallArgBegin)]>;
 def CallArgEndInst1  : NVPTXInst<(outs), (ins), ");", [(CallArgEnd (i32 1))]>;
@@ -2347,19 +2343,26 @@ class CallArgInst<NVPTXRegClass regclass> :
   NVPTXInst<(outs), (ins regclass:$a), "$a, ",
             [(CallArg (i32 0), regclass:$a)]>;
 
+class CallArgInstVT<NVPTXRegClass regclass, ValueType vt> :
+  NVPTXInst<(outs), (ins regclass:$a), "$a, ",
+            [(CallArg (i32 0), vt:$a)]>;
+
 class LastCallArgInst<NVPTXRegClass regclass> :
   NVPTXInst<(outs), (ins regclass:$a), "$a",
             [(LastCallArg (i32 0), regclass:$a)]>;
+class LastCallArgInstVT<NVPTXRegClass regclass, ValueType vt> :
+  NVPTXInst<(outs), (ins regclass:$a), "$a",
+            [(LastCallArg (i32 0), vt:$a)]>;
 
 def CallArgI64     : CallArgInst<Int64Regs>;
-def CallArgI32     : CallArgInst<Int32Regs>;
-def CallArgI16     : CallArgInst<Int16Regs>;
+def CallArgI32     : CallArgInstVT<Int32Regs, i32>;
+def CallArgI16     : CallArgInstVT<Int16Regs, i16>;
 def CallArgF64     : CallArgInst<Float64Regs>;
 def CallArgF32     : CallArgInst<Float32Regs>;
 
 def LastCallArgI64 : LastCallArgInst<Int64Regs>;
-def LastCallArgI32 : LastCallArgInst<Int32Regs>;
-def LastCallArgI16 : LastCallArgInst<Int16Regs>;
+def LastCallArgI32 : LastCallArgInstVT<Int32Regs, i32>;
+def LastCallArgI16 : LastCallArgInstVT<Int16Regs, i16>;
 def LastCallArgF64 : LastCallArgInst<Float64Regs>;
 def LastCallArgF32 : LastCallArgInst<Float32Regs>;
 
@@ -2376,7 +2379,7 @@ def LastCallArgParam : NVPTXInst<(outs), (ins i32imm:$a), "param$a",
 def CallVoidInst :      NVPTXInst<(outs), (ins imem:$addr), "$addr, ",
                                   [(CallVoid (Wrapper tglobaladdr:$addr))]>;
 def CallVoidInstReg :   NVPTXInst<(outs), (ins Int32Regs:$addr), "$addr, ",
-                                  [(CallVoid Int32Regs:$addr)]>;
+                                  [(CallVoid i32:$addr)]>;
 def CallVoidInstReg64 : NVPTXInst<(outs), (ins Int64Regs:$addr), "$addr, ",
                                   [(CallVoid Int64Regs:$addr)]>;
 def PrototypeInst :     NVPTXInst<(outs), (ins i32imm:$val), ", prototype_$val;",
@@ -2413,53 +2416,54 @@ class MoveParamInst<ValueType T, NVPTXRegClass regclass, string asmstr> :
             !strconcat("mov", asmstr, " \t$dst, $src;"),
             [(set (T regclass:$dst), (MoveParam (T regclass:$src)))]>;
 
-class MoveParamSymbolInst<NVPTXRegClass regclass, Operand srcty,
+class MoveParamSymbolInst<NVPTXRegClass regclass, Operand srcty, ValueType vt,
                           string asmstr> :
   NVPTXInst<(outs regclass:$dst), (ins srcty:$src),
             !strconcat("mov", asmstr, " \t$dst, $src;"),
-            [(set regclass:$dst, (MoveParam texternalsym:$src))]>;
+            [(set vt:$dst, (MoveParam texternalsym:$src))]>;
 
 def MoveParamI64 : MoveParamInst<i64, Int64Regs, ".b64">;
 def MoveParamI32 : MoveParamInst<i32, Int32Regs, ".b32">;
 
-def MoveParamSymbolI64 : MoveParamSymbolInst<Int64Regs, i64imm, ".b64">;
-def MoveParamSymbolI32 : MoveParamSymbolInst<Int32Regs, i32imm, ".b32">;
+def MoveParamSymbolI64 : MoveParamSymbolInst<Int64Regs, i64imm, i64, ".b64">;
+def MoveParamSymbolI32 : MoveParamSymbolInst<Int32Regs, i32imm, i32, ".b32">;
 
 def MoveParamI16 :
   NVPTXInst<(outs Int16Regs:$dst), (ins Int16Regs:$src),
-            "cvt.u16.u32 \t$dst, $src;",
-            [(set Int16Regs:$dst, (MoveParam Int16Regs:$src))]>;
+            "cvt.u16.u32 \t$dst, $src;", // ??? Why cvt.u16.u32 ? 
+            [(set i16:$dst, (MoveParam i16:$src))]>;
 def MoveParamF64 : MoveParamInst<f64, Float64Regs, ".f64">;
 def MoveParamF32 : MoveParamInst<f32, Float32Regs, ".f32">;
-def MoveParamF16 : MoveParamInst<f16, Float16Regs, ".f16">;
 
-class PseudoUseParamInst<NVPTXRegClass regclass> :
+class PseudoUseParamInst<NVPTXRegClass regclass, ValueType vt> :
   NVPTXInst<(outs), (ins regclass:$src),
             "// Pseudo use of $src",
-            [(PseudoUseParam regclass:$src)]>;
+            [(PseudoUseParam vt:$src)]>;
 
-def PseudoUseParamI64 : PseudoUseParamInst<Int64Regs>;
-def PseudoUseParamI32 : PseudoUseParamInst<Int32Regs>;
-def PseudoUseParamI16 : PseudoUseParamInst<Int16Regs>;
-def PseudoUseParamF64 : PseudoUseParamInst<Float64Regs>;
-def PseudoUseParamF32 : PseudoUseParamInst<Float32Regs>;
+def PseudoUseParamI64 : PseudoUseParamInst<Int64Regs, i64>;
+def PseudoUseParamI32 : PseudoUseParamInst<Int32Regs, i32>;
+def PseudoUseParamI16 : PseudoUseParamInst<Int16Regs, i16>;
+def PseudoUseParamF64 : PseudoUseParamInst<Float64Regs, f64>;
+def PseudoUseParamF32 : PseudoUseParamInst<Float32Regs, f32>;
 
 class ProxyRegInst<string SzStr, ValueType T, NVPTXRegClass regclass> :
   NVPTXInst<(outs regclass:$dst), (ins regclass:$src),
             !strconcat("mov.", SzStr, " \t$dst, $src;"),
             [(set (T regclass:$dst), (ProxyReg (T regclass:$src)))]>;
 
-let isCodeGenOnly=1, isPseudo=1 in {
-  def ProxyRegI1    : ProxyRegInst<"pred", i1, Int1Regs>;
-  def ProxyRegI16   : ProxyRegInst<"b16",  i16, Int16Regs>;
-  def ProxyRegI32   : ProxyRegInst<"b32",  i32, Int32Regs>;
-  def ProxyRegI64   : ProxyRegInst<"b64",  i64, Int64Regs>;
-  def ProxyRegF16   : ProxyRegInst<"b16",  f16, Float16Regs>;
-  def ProxyRegBF16  : ProxyRegInst<"b16",  bf16, Float16Regs>;
-  def ProxyRegF32   : ProxyRegInst<"f32",  f32, Float32Regs>;
-  def ProxyRegF64   : ProxyRegInst<"f64",  f64, Float64Regs>;
-  def ProxyRegF16x2 : ProxyRegInst<"b32",  v2f16, Float16x2Regs>;
-  def ProxyRegBF16x2 : ProxyRegInst<"b32",  v2bf16, Float16x2Regs>;
+def ProxyRegI1    : ProxyRegInst<"pred", i1, Int1Regs>;
+def ProxyRegI16   : ProxyRegInst<"b16",  i16, Int16Regs>;
+def ProxyRegI32   : ProxyRegInst<"b32",  i32, Int32Regs>;
+def ProxyRegI64   : ProxyRegInst<"b64",  i64, Int64Regs>;
+def ProxyRegF32   : ProxyRegInst<"f32",  f32, Float32Regs>;
+def ProxyRegF64   : ProxyRegInst<"f64",  f64, Float64Regs>;
+
+foreach vt = [f16, bf16] in {
+  def: Pat<(vt (ProxyReg  vt:$src)), (ProxyRegI16 Int16Regs:$src)>;
+}
+
+foreach vt = [v2f16, v2bf16] in {
+  def: Pat<(vt (ProxyReg  vt:$src)), (ProxyRegI32 Int32Regs:$src)>;
 }
 
 //
@@ -2509,8 +2513,6 @@ let mayLoad=1, hasSideEffects=0 in {
   defm LD_i16 : LD<Int16Regs>;
   defm LD_i32 : LD<Int32Regs>;
   defm LD_i64 : LD<Int64Regs>;
-  defm LD_f16 : LD<Float16Regs>;
-  defm LD_f16x2 : LD<Float16x2Regs>;
   defm LD_f32 : LD<Float32Regs>;
   defm LD_f64 : LD<Float64Regs>;
 }
@@ -2559,8 +2561,6 @@ let mayStore=1, hasSideEffects=0 in {
   defm ST_i16 : ST<Int16Regs>;
   defm ST_i32 : ST<Int32Regs>;
   defm ST_i64 : ST<Int64Regs>;
-  defm ST_f16 : ST<Float16Regs>;
-  defm ST_f16x2 : ST<Float16x2Regs>;
   defm ST_f32 : ST<Float32Regs>;
   defm ST_f64 : ST<Float64Regs>;
 }
@@ -2647,8 +2647,8 @@ let mayLoad=1, hasSideEffects=0 in {
   defm LDV_i16 : LD_VEC<Int16Regs>;
   defm LDV_i32 : LD_VEC<Int32Regs>;
   defm LDV_i64 : LD_VEC<Int64Regs>;
-  defm LDV_f16 : LD_VEC<Float16Regs>;
-  defm LDV_f16x2 : LD_VEC<Float16x2Regs>;
+  defm LDV_f16 : LD_VEC<Int16Regs>;
+  defm LDV_f16x2 : LD_VEC<Int32Regs>;
   defm LDV_f32 : LD_VEC<Float32Regs>;
   defm LDV_f64 : LD_VEC<Float64Regs>;
 }
@@ -2742,8 +2742,8 @@ let mayStore=1, hasSideEffects=0 in {
   defm STV_i16 : ST_VEC<Int16Regs>;
   defm STV_i32 : ST_VEC<Int32Regs>;
   defm STV_i64 : ST_VEC<Int64Regs>;
-  defm STV_f16 : ST_VEC<Float16Regs>;
-  defm STV_f16x2 : ST_VEC<Float16x2Regs>;
+  defm STV_f16 : ST_VEC<Int16Regs>;
+  defm STV_f16x2 : ST_VEC<Int32Regs>;
   defm STV_f32 : ST_VEC<Float32Regs>;
   defm STV_f64 : ST_VEC<Float64Regs>;
 }
@@ -2757,23 +2757,30 @@ class F_BITCONVERT<string SzStr, ValueType TIn, ValueType TOut,
            !strconcat("mov.b", SzStr, " \t$d, $a;"),
      [(set (TOut regclassOut:$d), (bitconvert (TIn regclassIn:$a)))]>;
 
-def BITCONVERT_16_I2F : F_BITCONVERT<"16", i16, f16>;
-def BITCONVERT_16_F2I : F_BITCONVERT<"16", f16, i16>;
-def BITCONVERT_16_I2BF : F_BITCONVERT<"16", i16, bf16>;
-def BITCONVERT_16_BF2I : F_BITCONVERT<"16", bf16, i16>;
 def BITCONVERT_32_I2F : F_BITCONVERT<"32", i32, f32>;
 def BITCONVERT_32_F2I : F_BITCONVERT<"32", f32, i32>;
 def BITCONVERT_64_I2F : F_BITCONVERT<"64", i64, f64>;
 def BITCONVERT_64_F2I : F_BITCONVERT<"64", f64, i64>;
-def BITCONVERT_32_I2F16x2 : F_BITCONVERT<"32", i32, v2f16>;
-def BITCONVERT_32_F16x22I : F_BITCONVERT<"32", v2f16, i32>;
-def BITCONVERT_32_F2F16x2 : F_BITCONVERT<"32", f32, v2f16>;
-def BITCONVERT_32_F16x22F : F_BITCONVERT<"32", v2f16, f32>;
-def BITCONVERT_32_I2BF16x2 : F_BITCONVERT<"32", i32, v2bf16>;
-def BITCONVERT_32_BF16x22I : F_BITCONVERT<"32", v2bf16, i32>;
-def BITCONVERT_32_F2BF16x2 : F_BITCONVERT<"32", f32, v2bf16>;
-def BITCONVERT_32_BF16x22F : F_BITCONVERT<"32", v2bf16, f32>;
 
+foreach vt = [v2f16, v2bf16] in {
+def: Pat<(vt (bitconvert (i32 UInt32Const:$a))),
+         (IMOVB32ri UInt32Const:$a)>;
+def: Pat<(vt (bitconvert (i32 Int32Regs:$a))),
+         (ProxyRegI32 Int32Regs:$a)>;
+def: Pat<(i32 (bitconvert (vt Int32Regs:$a))),
+         (ProxyRegI32 Int32Regs:$a)>;
+def: Pat<(vt (bitconvert (f32 Float32Regs:$a))),
+         (BITCONVERT_32_F2I Float32Regs:$a)>;
+}
+foreach vt = [f16, bf16] in {
+def: Pat<(vt (bitconvert (i16 UInt16Const:$a))),
+         (IMOVB16ri UInt16Const:$a)>;
+def: Pat<(vt (bitconvert (i16 Int16Regs:$a))),
+         (ProxyRegI16 Int16Regs:$a)>;
+def: Pat<(i16 (bitconvert (vt Int16Regs:$a))),
+         (ProxyRegI16 Int16Regs:$a)>;
+}
+        
 // NOTE: pred->fp are currently sub-optimal due to an issue in TableGen where
 // we cannot specify floating-point literals in isel patterns.  Therefore, we
 // use an integer selp to select either 1 or 0 and then cvt to floating-point.
@@ -2840,24 +2847,24 @@ def : Pat<(f64 (uint_to_fp Int64Regs:$a)),
 
 
 // f16 -> sint
-def : Pat<(i1 (fp_to_sint (f16 Float16Regs:$a))),
-          (SETP_b16ri (BITCONVERT_16_F2I Float16Regs:$a), 0, CmpEQ)>;
-def : Pat<(i16 (fp_to_sint (f16 Float16Regs:$a))),
-          (CVT_s16_f16 (f16 Float16Regs:$a), CvtRZI)>;
-def : Pat<(i32 (fp_to_sint (f16 Float16Regs:$a))),
-          (CVT_s32_f16 (f16 Float16Regs:$a), CvtRZI)>;
-def : Pat<(i64 (fp_to_sint (f16 Float16Regs:$a))),
-          (CVT_s64_f16 Float16Regs:$a, CvtRZI)>;
+def : Pat<(i1 (fp_to_sint (f16 Int16Regs:$a))),
+          (SETP_b16ri Int16Regs:$a, 0, CmpEQ)>;
+def : Pat<(i16 (fp_to_sint (f16 Int16Regs:$a))),
+          (CVT_s16_f16 (f16 Int16Regs:$a), CvtRZI)>;
+def : Pat<(i32 (fp_to_sint (f16 Int16Regs:$a))),
+          (CVT_s32_f16 (f16 Int16Regs:$a), CvtRZI)>;
+def : Pat<(i64 (fp_to_sint (f16 Int16Regs:$a))),
+          (CVT_s64_f16 Int16Regs:$a, CvtRZI)>;
 
 // f16 -> uint
-def : Pat<(i1 (fp_to_uint (f16 Float16Regs:$a))),
-          (SETP_b16ri (BITCONVERT_16_F2I Float16Regs:$a), 0, CmpEQ)>;
-def : Pat<(i16 (fp_to_uint (f16 Float16Regs:$a))),
-          (CVT_u16_f16 Float16Regs:$a, CvtRZI)>;
-def : Pat<(i32 (fp_to_uint (f16 Float16Regs:$a))),
-          (CVT_u32_f16 Float16Regs:$a, CvtRZI)>;
-def : Pat<(i64 (fp_to_uint (f16 Float16Regs:$a))),
-          (CVT_u64_f16 Float16Regs:$a, CvtRZI)>;
+def : Pat<(i1 (fp_to_uint (f16 Int16Regs:$a))),
+          (SETP_b16ri Int16Regs:$a, 0, CmpEQ)>;
+def : Pat<(i16 (fp_to_uint (f16 Int16Regs:$a))),
+          (CVT_u16_f16 Int16Regs:$a, CvtRZI)>;
+def : Pat<(i32 (fp_to_uint (f16 Int16Regs:$a))),
+          (CVT_u32_f16 Int16Regs:$a, CvtRZI)>;
+def : Pat<(i64 (fp_to_uint (f16 Int16Regs:$a))),
+          (CVT_u64_f16 Int16Regs:$a, CvtRZI)>;
 
 // f32 -> sint
 def : Pat<(i1 (fp_to_sint Float32Regs:$a)),
@@ -2994,17 +3001,17 @@ def : Pat<(sext_inreg Int64Regs:$a, i32), (CVT_INREG_s64_s32 Int64Regs:$a)>;
 
 
 // Select instructions with 32-bit predicates
-def : Pat<(select Int32Regs:$pred, Int16Regs:$a, Int16Regs:$b),
+def : Pat<(select Int32Regs:$pred, i16:$a, i16:$b),
           (SELP_b16rr Int16Regs:$a, Int16Regs:$b,
           (SETP_b32ri (ANDb32ri Int32Regs:$pred, 1), 1, CmpEQ))>;
-def : Pat<(select Int32Regs:$pred, Int32Regs:$a, Int32Regs:$b),
+def : Pat<(select Int32Regs:$pred, i32:$a, i32:$b),
           (SELP_b32rr Int32Regs:$a, Int32Regs:$b,
           (SETP_b32ri (ANDb32ri Int32Regs:$pred, 1), 1, CmpEQ))>;
 def : Pat<(select Int32Regs:$pred, Int64Regs:$a, Int64Regs:$b),
           (SELP_b64rr Int64Regs:$a, Int64Regs:$b,
           (SETP_b32ri (ANDb32ri Int32Regs:$pred, 1), 1, CmpEQ))>;
-def : Pat<(select Int32Regs:$pred, (f16 Float16Regs:$a), (f16 Float16Regs:$b)),
-          (SELP_f16rr Float16Regs:$a, Float16Regs:$b,
+def : Pat<(select Int32Regs:$pred, (f16 Int16Regs:$a), (f16 Int16Regs:$b)),
+          (SELP_f16rr Int16Regs:$a, Int16Regs:$b,
           (SETP_b32ri (ANDb32ri Int32Regs:$pred, 1), 1, CmpEQ))>;
 def : Pat<(select Int32Regs:$pred, Float32Regs:$a, Float32Regs:$b),
           (SELP_f32rr Float32Regs:$a, Float32Regs:$b,
@@ -3070,39 +3077,39 @@ let hasSideEffects = false in {
   // Extract element of f16x2 register. PTX does not provide any way
   // to access elements of f16x2 vector directly, so we need to
   // extract it using a temporary register.
-  def F16x2toF16_0 : NVPTXInst<(outs Float16Regs:$dst),
-                               (ins Float16x2Regs:$src),
+  def F16x2toF16_0 : NVPTXInst<(outs Int16Regs:$dst),
+                               (ins Int32Regs:$src),
                                "{{ .reg .b16 \t%tmp_hi;\n\t"
                                "  mov.b32 \t{$dst, %tmp_hi}, $src; }}",
-                               [(set Float16Regs:$dst,
-                                 (extractelt (v2f16 Float16x2Regs:$src), 0))]>;
-  def F16x2toF16_1 : NVPTXInst<(outs Float16Regs:$dst),
-                               (ins Float16x2Regs:$src),
+                               [(set Int16Regs:$dst,
+                                 (extractelt (v2f16 Int32Regs:$src), 0))]>;
+  def F16x2toF16_1 : NVPTXInst<(outs Int16Regs:$dst),
+                               (ins Int32Regs:$src),
                                "{{ .reg .b16 \t%tmp_lo;\n\t"
                                "  mov.b32 \t{%tmp_lo, $dst}, $src; }}",
-                               [(set Float16Regs:$dst,
-                                 (extractelt (v2f16 Float16x2Regs:$src), 1))]>;
+                               [(set Int16Regs:$dst,
+                                 (extractelt (v2f16 Int32Regs:$src), 1))]>;
 
   // Coalesce two f16 registers into f16x2
-  def BuildF16x2 : NVPTXInst<(outs Float16x2Regs:$dst),
-                             (ins Float16Regs:$a, Float16Regs:$b),
+  def BuildF16x2 : NVPTXInst<(outs Int32Regs:$dst),
+                             (ins Int16Regs:$a, Int16Regs:$b),
                              "mov.b32 \t$dst, {{$a, $b}};",
-                             [(set (v2f16 Float16x2Regs:$dst),
-                               (build_vector (f16 Float16Regs:$a), (f16 Float16Regs:$b)))]>;
+                             [(set (v2f16 Int32Regs:$dst),
+                               (build_vector (f16 Int16Regs:$a), (f16 Int16Regs:$b)))]>;
 
   // Directly initializing underlying the b32 register is one less SASS
   // instruction than than vector-packing move.
-  def BuildF16x2i : NVPTXInst<(outs Float16x2Regs:$dst), (ins i32imm:$src),
+  def BuildF16x2i : NVPTXInst<(outs Int32Regs:$dst), (ins i32imm:$src),
                               "mov.b32 \t$dst, $src;",
                               []>;
 
   // Split f16x2 into two f16 registers.
-  def SplitF16x2  : NVPTXInst<(outs Float16Regs:$lo, Float16Regs:$hi),
-                              (ins Float16x2Regs:$src),
+  def SplitF16x2  : NVPTXInst<(outs Int16Regs:$lo, Int16Regs:$hi),
+                              (ins Int32Regs:$src),
                               "mov.b32 \t{{$lo, $hi}}, $src;",
                               []>;
   // Split an i32 into two f16
-  def SplitI32toF16x2  : NVPTXInst<(outs Float16Regs:$lo, Float16Regs:$hi),
+  def SplitI32toF16x2  : NVPTXInst<(outs Int16Regs:$lo, Int16Regs:$hi),
                                    (ins Int32Regs:$src),
                                    "mov.b32 \t{{$lo, $hi}}, $src;",
                                    []>;
@@ -3186,14 +3193,14 @@ def : Pat<(f32 (fpround Float64Regs:$a)),
           (CVT_f32_f64 Float64Regs:$a, CvtRN)>;
 
 // fpextend f16 -> f32
-def : Pat<(f32 (fpextend (f16 Float16Regs:$a))),
-          (CVT_f32_f16 Float16Regs:$a, CvtNONE_FTZ)>, Requires<[doF32FTZ]>;
-def : Pat<(f32 (fpextend (f16 Float16Regs:$a))),
-          (CVT_f32_f16 Float16Regs:$a, CvtNONE)>;
+def : Pat<(f32 (fpextend (f16 Int16Regs:$a))),
+          (CVT_f32_f16 Int16Regs:$a, CvtNONE_FTZ)>, Requires<[doF32FTZ]>;
+def : Pat<(f32 (fpextend (f16 Int16Regs:$a))),
+          (CVT_f32_f16 Int16Regs:$a, CvtNONE)>;
 
 // fpextend f16 -> f64
-def : Pat<(f64 (fpextend (f16 Float16Regs:$a))),
-          (CVT_f64_f16 Float16Regs:$a, CvtNONE)>;
+def : Pat<(f64 (fpextend (f16 Int16Regs:$a))),
+          (CVT_f64_f16 Int16Regs:$a, CvtNONE)>;
 
 // fpextend f32 -> f64
 def : Pat<(f64 (fpextend Float32Regs:$a)),
@@ -3207,8 +3214,8 @@ def retglue : SDNode<"NVPTXISD::RET_GLUE", SDTNone,
 // fceil, ffloor, froundeven, ftrunc.
 
 multiclass CVT_ROUND<SDNode OpNode, PatLeaf Mode, PatLeaf ModeFTZ> {
-  def : Pat<(OpNode (f16 Float16Regs:$a)),
-            (CVT_f16_f16 Float16Regs:$a, Mode)>;
+  def : Pat<(OpNode (f16 Int16Regs:$a)),
+            (CVT_f16_f16 Int16Regs:$a, Mode)>;
   def : Pat<(OpNode Float32Regs:$a),
             (CVT_f32_f32 Float32Regs:$a, ModeFTZ)>, Requires<[doF32FTZ]>;
   def : Pat<(OpNode Float32Regs:$a),
