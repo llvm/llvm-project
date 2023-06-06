@@ -48024,7 +48024,8 @@ static SDValue combineSetCCMOVMSK(SDValue EFLAGS, X86::CondCode &CC,
   // MOVMSKPS(V) !=/== -1 -> TESTPS(V,V)
   // MOVMSKPD(V) !=/== -1 -> TESTPD(V,V)
   // iff every element is referenced.
-  if (NumElts <= CmpBits && Subtarget.hasAVX() && IsOneUse &&
+  if (NumElts <= CmpBits && Subtarget.hasAVX() &&
+      !Subtarget.preferMovmskOverVTest() && IsOneUse &&
       (NumEltBits == 32 || NumEltBits == 64)) {
     SDLoc DL(EFLAGS);
     MVT FloatSVT = MVT::getFloatingPointVT(NumEltBits);
