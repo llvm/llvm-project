@@ -321,6 +321,7 @@ set(LLVM_TOOLCHAIN_TOOLS
   llvm-readelf
   llvm-readobj
   llvm-size
+  llvm-strings
   llvm-strip
   llvm-symbolizer
   llvm-undname

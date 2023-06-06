@@ -464,11 +464,11 @@ static LogicalResult rewriteSpMV(PatternRewriter &rewriter,
   Value spMatA = spGenA->getResult(0);
   token = spGenA->getResult(1);
   auto dvecX = rewriter.create<gpu::CreateDnVecOp>(loc, dnVecHandleTp, tokenTp,
-                                                   token, vecX, szX);
+                                                   token, handle, vecX, szX);
   Value dnX = dvecX.getResult(0);
   token = dvecX.getAsyncToken();
   auto dvecY = rewriter.create<gpu::CreateDnVecOp>(loc, dnVecHandleTp, tokenTp,
-                                                   token, vecY, szY);
+                                                   token, handle, vecY, szY);
   Value dnY = dvecY.getResult(0);
   token = dvecY.getAsyncToken();
 
@@ -570,12 +570,12 @@ static LogicalResult rewriteSpMM(PatternRewriter &rewriter,
                rowA, colA, valA, isCOO, enableRT);
   Value spMatA = spGenA->getResult(0);
   token = spGenA->getResult(1);
-  auto dmatB = rewriter.create<gpu::CreateDnMatOp>(loc, dnMatHandleTp, tokenTp,
-                                                   token, szk, szn, matB);
+  auto dmatB = rewriter.create<gpu::CreateDnMatOp>(
+      loc, dnMatHandleTp, tokenTp, token, handle, szk, szn, matB);
   Value dnB = dmatB.getResult(0);
   token = dmatB.getAsyncToken();
-  auto dmatC = rewriter.create<gpu::CreateDnMatOp>(loc, dnMatHandleTp, tokenTp,
-                                                   token, szm, szn, matC);
+  auto dmatC = rewriter.create<gpu::CreateDnMatOp>(
+      loc, dnMatHandleTp, tokenTp, token, handle, szm, szn, matC);
   Value dnC = dmatC.getResult(0);
   token = dmatC.getAsyncToken();
 

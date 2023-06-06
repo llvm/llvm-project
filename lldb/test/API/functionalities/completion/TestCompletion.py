@@ -477,6 +477,7 @@ class CommandLineCompletionTestCase(TestBase):
         self.complete_from_to("my_test_cmd main.cp", ["main.cpp"])
         self.expect("my_test_cmd main.cpp", substrs=["main.cpp"])
 
+    @skipIfWindows
     def test_completion_target_create_from_root_dir(self):
         """Tests source file completion by completing ."""
         root_dir = os.path.abspath(os.sep)
