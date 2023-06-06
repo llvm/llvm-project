@@ -1148,6 +1148,7 @@ static Value *simplifyAMDGCNMemoryIntrinsicDemanded(InstCombiner &IC,
       unsigned OffsetIdx;
       switch (II.getIntrinsicID()) {
       case Intrinsic::amdgcn_raw_buffer_load:
+      case Intrinsic::amdgcn_raw_ptr_buffer_load:
         OffsetIdx = 1;
         break;
       case Intrinsic::amdgcn_s_buffer_load:
@@ -1160,6 +1161,7 @@ static Value *simplifyAMDGCNMemoryIntrinsicDemanded(InstCombiner &IC,
           OffsetIdx = 1;
         break;
       case Intrinsic::amdgcn_struct_buffer_load:
+      case Intrinsic::amdgcn_struct_ptr_buffer_load:
         OffsetIdx = 2;
         break;
       default:
@@ -1274,12 +1276,18 @@ std::optional<Value *> GCNTTIImpl::simplifyDemandedVectorEltsIntrinsic(
   case Intrinsic::amdgcn_buffer_load:
   case Intrinsic::amdgcn_buffer_load_format:
   case Intrinsic::amdgcn_raw_buffer_load:
+  case Intrinsic::amdgcn_raw_ptr_buffer_load:
   case Intrinsic::amdgcn_raw_buffer_load_format:
+  case Intrinsic::amdgcn_raw_ptr_buffer_load_format:
   case Intrinsic::amdgcn_raw_tbuffer_load:
+  case Intrinsic::amdgcn_raw_ptr_tbuffer_load:
   case Intrinsic::amdgcn_s_buffer_load:
   case Intrinsic::amdgcn_struct_buffer_load:
+  case Intrinsic::amdgcn_struct_ptr_buffer_load:
   case Intrinsic::amdgcn_struct_buffer_load_format:
+  case Intrinsic::amdgcn_struct_ptr_buffer_load_format:
   case Intrinsic::amdgcn_struct_tbuffer_load:
+  case Intrinsic::amdgcn_struct_ptr_tbuffer_load:
   case Intrinsic::amdgcn_tbuffer_load:
     return simplifyAMDGCNMemoryIntrinsicDemanded(IC, II, DemandedElts);
   default: {
