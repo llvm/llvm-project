@@ -1006,6 +1006,31 @@ static omp::ClauseProcBindKindAttr genProcBindKindAttr(
   return omp::ClauseProcBindKindAttr::get(firOpBuilder.getContext(), pbKind);
 }
 
+static omp::ClauseTaskDependAttr
+genDependKindAttr(fir::FirOpBuilder &firOpBuilder,
+                  const Fortran::parser::OmpClause::Depend *dependClause) {
+  omp::ClauseTaskDepend pbKind;
+  switch (
+      std::get<Fortran::parser::OmpDependenceType>(
+          std::get<Fortran::parser::OmpDependClause::InOut>(dependClause->v.u)
+              .t)
+          .v) {
+  case Fortran::parser::OmpDependenceType::Type::In:
+    pbKind = omp::ClauseTaskDepend::taskdependin;
+    break;
+  case Fortran::parser::OmpDependenceType::Type::Out:
+    pbKind = omp::ClauseTaskDepend::taskdependout;
+    break;
+  case Fortran::parser::OmpDependenceType::Type::Inout:
+    pbKind = omp::ClauseTaskDepend::taskdependinout;
+    break;
+  default:
+    llvm_unreachable("unknown parser task dependence type");
+    break;
+  }
+  return omp::ClauseTaskDependAttr::get(firOpBuilder.getContext(), pbKind);
+}
+
 /* When parallel is used in a combined construct, then use this function to
  * create the parallel operation. It handles the parallel specific clauses
  * and leaves the rest for handling at the inner operations.
@@ -1072,7 +1097,8 @@ genOMP(Fortran::lower::AbstractConverter &converter,
   mlir::Value ifClauseOperand, numThreadsClauseOperand, finalClauseOperand,
       priorityClauseOperand;
   mlir::omp::ClauseProcBindKindAttr procBindKindAttr;
-  SmallVector<Value> allocateOperands, allocatorOperands;
+  SmallVector<Value> allocateOperands, allocatorOperands, dependOperands;
+  SmallVector<Attribute> dependTypeOperands;
   mlir::UnitAttr nowaitAttr, untiedAttr, mergeableAttr;
 
   const auto &opClauseList =
@@ -1148,6 +1174,42 @@ genOMP(Fortran::lower::AbstractConverter &converter,
            "Reduction in OpenMP " +
                llvm::omp::getOpenMPDirectiveName(blockDirective.v) +
                " construct");
+    } else if (const auto &dependClause =
+                   std::get_if<Fortran::parser::OmpClause::Depend>(&clause.u)) {
+      const std::list<Fortran::parser::Designator> &depVal =
+          std::get<std::list<Fortran::parser::Designator>>(
+              std::get<Fortran::parser::OmpDependClause::InOut>(
+                  dependClause->v.u)
+                  .t);
+      omp::ClauseTaskDependAttr dependTypeOperand =
+          genDependKindAttr(firOpBuilder, dependClause);
+      dependTypeOperands.insert(dependTypeOperands.end(), depVal.size(),
+                                dependTypeOperand);
+      for (const Fortran::parser::Designator &ompObject : depVal) {
+        Fortran::semantics::Symbol *sym = nullptr;
+        std::visit(
+            Fortran::common::visitors{
+                [&](const Fortran::parser::DataRef &designator) {
+                  if (const Fortran::parser::Name *name =
+                          std::get_if<Fortran::parser::Name>(&designator.u)) {
+                    sym = name->symbol;
+                  } else if (const Fortran::common::Indirection<
+                                 Fortran::parser::ArrayElement> *a =
+                                 std::get_if<Fortran::common::Indirection<
+                                     Fortran::parser::ArrayElement>>(
+                                     &designator.u)) {
+                    TODO(converter.getCurrentLocation(),
+                         "array sections not supported for task depend");
+                  }
+                },
+                [&](const Fortran::parser::Substring &designator) {
+                  TODO(converter.getCurrentLocation(),
+                       "substring not supported for task depend");
+                }},
+            (ompObject).u);
+        const mlir::Value variable = converter.getSymbolAddress(*sym);
+        dependOperands.push_back(((variable)));
+      }
     } else {
       TODO(converter.getCurrentLocation(), "OpenMP Block construct clause");
     }
@@ -1185,8 +1247,12 @@ genOMP(Fortran::lower::AbstractConverter &converter,
     auto taskOp = firOpBuilder.create<mlir::omp::TaskOp>(
         currentLocation, ifClauseOperand, finalClauseOperand, untiedAttr,
         mergeableAttr, /*in_reduction_vars=*/ValueRange(),
-        /*in_reductions=*/nullptr, priorityClauseOperand, /*depends=*/nullptr,
-        /*depend_vars=*/ValueRange(), allocateOperands, allocatorOperands);
+        /*in_reductions=*/nullptr, priorityClauseOperand,
+        dependTypeOperands.empty()
+            ? nullptr
+            : mlir::ArrayAttr::get(firOpBuilder.getContext(),
+                                   dependTypeOperands),
+        dependOperands, allocateOperands, allocatorOperands);
     createBodyOfOp(taskOp, converter, currentLocation, eval, &opClauseList);
   } else if (blockDirective.v == llvm::omp::OMPD_taskgroup) {
     // TODO: Add task_reduction support
