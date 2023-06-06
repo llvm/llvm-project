@@ -2711,28 +2711,21 @@ bool RISCVAsmParser::parseDirectiveOption() {
   }
 
   if (Option == "arch") {
-    bool PrefixEmitted = false;
-    bool IsExtensionList = false;
+    SmallVector<RISCVOptionArchArg> Args;
     do {
       if (Parser.parseComma())
         return true;
 
-      bool IsAdd, IsFull;
-      if (parseOptionalToken(AsmToken::Plus)) {
-        IsAdd = true;
-        IsFull = false;
-        IsExtensionList = true;
-      } else if (parseOptionalToken(AsmToken::Minus)) {
-        IsAdd = false;
-        IsFull = false;
-        IsExtensionList = true;
-      } else {
-        if (IsExtensionList)
-          return Error(Parser.getTok().getLoc(),
-                       "unexpected token, expected + or -");
-
-        IsFull = true;
-      }
+      RISCVOptionArchArgType Type;
+      if (parseOptionalToken(AsmToken::Plus))
+        Type = RISCVOptionArchArgType::Plus;
+      else if (parseOptionalToken(AsmToken::Minus))
+        Type = RISCVOptionArchArgType::Minus;
+      else if (!Args.empty())
+        return Error(Parser.getTok().getLoc(),
+                     "unexpected token, expected + or -");
+      else
+        Type = RISCVOptionArchArgType::Full;
 
       if (Parser.getTok().isNot(AsmToken::Identifier))
         return Error(Parser.getTok().getLoc(),
@@ -2742,14 +2735,12 @@ bool RISCVAsmParser::parseDirectiveOption() {
       SMLoc Loc = Parser.getTok().getLoc();
       Parser.Lex();
 
-      if (IsFull) {
+      if (Type == RISCVOptionArchArgType::Full) {
         std::string Result;
         if (resetToArch(Arch, Loc, Result, true))
           return true;
 
-        getTargetStreamer().emitDirectiveOptionArchFullArch(Result,
-                                                            PrefixEmitted);
-
+        Args.emplace_back(Type, Result);
         break;
       }
 
@@ -2764,8 +2755,9 @@ bool RISCVAsmParser::parseDirectiveOption() {
         return Error(Loc, "unknown extension feature");
       }
 
-      bool HasComma = getTok().is(AsmToken::Comma);
-      if (IsAdd) {
+      Args.emplace_back(Type, Ext->Key);
+
+      if (Type == RISCVOptionArchArgType::Plus) {
         setFeatureBits(Ext->Value, Ext->Key);
         auto ParseResult = RISCVFeatures::parseFeatureBits(isRV64(), STI->getFeatureBits());
         if (!ParseResult) {
@@ -2777,9 +2769,8 @@ bool RISCVAsmParser::parseDirectiveOption() {
 
           return Error(Loc, OutputErrMsg.str());
         }
-        getTargetStreamer().emitDirectiveOptionArchPlusOrMinus(
-            Ext->Key, /*Enable*/ true, PrefixEmitted, HasComma);
       } else {
+        assert(Type == RISCVOptionArchArgType::Minus);
         // It is invalid to disable an extension that there are other enabled
         // extensions depend on it.
         // TODO: Make use of RISCVISAInfo to handle this
@@ -2793,14 +2784,13 @@ bool RISCVAsmParser::parseDirectiveOption() {
         }
 
         clearFeatureBits(Ext->Value, Ext->Key);
-        getTargetStreamer().emitDirectiveOptionArchPlusOrMinus(
-            Ext->Key, /*Enable*/ false, PrefixEmitted, HasComma);
       }
     } while (Parser.getTok().isNot(AsmToken::EndOfStatement));
 
     if (Parser.parseEOL())
       return true;
 
+    getTargetStreamer().emitDirectiveOptionArch(Args);
     return false;
   }
 
