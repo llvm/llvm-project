@@ -776,7 +776,14 @@ public:
     return success();
   }
 };
+} // namespace
 
+void mlir::test::ApplyTestPatternsOp::populatePatterns(
+    RewritePatternSet &patterns) {
+  patterns.insert<ReplaceWithNewOp, EraseOp>(patterns.getContext());
+}
+
+namespace {
 void populateTestPatterns(RewritePatternSet &patterns) {
   patterns.insert<ReplaceWithNewOp, EraseOp>(patterns.getContext());
 }

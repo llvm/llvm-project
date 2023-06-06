@@ -678,7 +678,7 @@ module attributes { transform.with_named_sequence } {
 transform.sequence failures(propagate) {
 ^bb0(%arg0: !transform.any_op):
   // expected-error @below {{patterns not registered: transform.invalid_pattern_identifier}}
-  transform.apply_patterns ["transform.invalid_pattern_identifier"] to %arg0 : !transform.any_op
+  transform.apply_patterns ["transform.invalid_pattern_identifier"] to %arg0 {} : !transform.any_op
 }
 
 // -----
@@ -686,5 +686,15 @@ transform.sequence failures(propagate) {
 transform.sequence failures(propagate) {
 ^bb0(%arg0: !transform.any_op):
   // expected-error @below {{expected "patterns" to be an array of strings}}
-  transform.apply_patterns [3, 9] to %arg0 : !transform.any_op
+  transform.apply_patterns [3, 9] to %arg0 {} : !transform.any_op
+}
+
+// -----
+transform.sequence failures(propagate) {
+^bb0(%arg0: !transform.any_op):
+  // expected-error @below {{expected children ops to implement PatternDescriptorOpInterface}}
+  transform.apply_patterns [] to %arg0 {
+    // expected-note @below {{op without interface}}
+    transform.named_sequence @foo()
+  } : !transform.any_op
 }
