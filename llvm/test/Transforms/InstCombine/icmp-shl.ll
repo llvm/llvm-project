@@ -3,8 +3,7 @@
 
 define i1 @shl_nuw_eq_0(i8 %x, i8 %C) {
 ; CHECK-LABEL: @shl_nuw_eq_0(
-; CHECK-NEXT:    [[Y:%.*]] = shl nuw i8 [[X:%.*]], [[C:%.*]]
-; CHECK-NEXT:    [[Z:%.*]] = icmp eq i8 [[Y]], 0
+; CHECK-NEXT:    [[Z:%.*]] = icmp eq i8 [[X:%.*]], 0
 ; CHECK-NEXT:    ret i1 [[Z]]
 ;
   %y = shl nuw i8 %x, %C
@@ -14,8 +13,7 @@ define i1 @shl_nuw_eq_0(i8 %x, i8 %C) {
 
 define <2 x i1> @shl_nsw_ne_0(<2 x i8> %x, <2 x i8> %C) {
 ; CHECK-LABEL: @shl_nsw_ne_0(
-; CHECK-NEXT:    [[Y:%.*]] = shl nsw <2 x i8> [[X:%.*]], [[C:%.*]]
-; CHECK-NEXT:    [[Z:%.*]] = icmp ne <2 x i8> [[Y]], zeroinitializer
+; CHECK-NEXT:    [[Z:%.*]] = icmp ne <2 x i8> [[X:%.*]], zeroinitializer
 ; CHECK-NEXT:    ret <2 x i1> [[Z]]
 ;
   %y = shl nsw <2 x i8> %x, %C
@@ -47,8 +45,7 @@ define i1 @shl_ne_1_fail_nonzero(i8 %x, i8 %C) {
 
 define i1 @shl_nsw_slt_1(i8 %x, i8 %C) {
 ; CHECK-LABEL: @shl_nsw_slt_1(
-; CHECK-NEXT:    [[Y:%.*]] = shl nsw i8 [[X:%.*]], [[C:%.*]]
-; CHECK-NEXT:    [[Z:%.*]] = icmp slt i8 [[Y]], 1
+; CHECK-NEXT:    [[Z:%.*]] = icmp slt i8 [[X:%.*]], 1
 ; CHECK-NEXT:    ret i1 [[Z]]
 ;
   %y = shl nsw i8 %x, %C
@@ -80,8 +77,7 @@ define <2 x i1> @shl_nsw_sle_n1(<2 x i8> %x, <2 x i8> %C) {
 
 define <2 x i1> @shl_nsw_sge_1(<2 x i8> %x, <2 x i8> %C) {
 ; CHECK-LABEL: @shl_nsw_sge_1(
-; CHECK-NEXT:    [[Y:%.*]] = shl nsw <2 x i8> [[X:%.*]], [[C:%.*]]
-; CHECK-NEXT:    [[Z:%.*]] = icmp sgt <2 x i8> [[Y]], zeroinitializer
+; CHECK-NEXT:    [[Z:%.*]] = icmp sgt <2 x i8> [[X:%.*]], zeroinitializer
 ; CHECK-NEXT:    ret <2 x i1> [[Z]]
 ;
   %y = shl nsw <2 x i8> %x, %C
@@ -91,8 +87,7 @@ define <2 x i1> @shl_nsw_sge_1(<2 x i8> %x, <2 x i8> %C) {
 
 define i1 @shl_nsw_sgt_n1(i8 %x, i8 %C) {
 ; CHECK-LABEL: @shl_nsw_sgt_n1(
-; CHECK-NEXT:    [[Y:%.*]] = shl nsw i8 [[X:%.*]], [[C:%.*]]
-; CHECK-NEXT:    [[Z:%.*]] = icmp sgt i8 [[Y]], -1
+; CHECK-NEXT:    [[Z:%.*]] = icmp sgt i8 [[X:%.*]], -1
 ; CHECK-NEXT:    ret i1 [[Z]]
 ;
   %y = shl nsw i8 %x, %C
@@ -113,8 +108,7 @@ define i1 @shl_nuw_sgt_n1_fail_wrong_flag(i8 %x, i8 %C) {
 
 define i1 @shl_nsw_nuw_ult_Csle0(i8 %x, i8 %C) {
 ; CHECK-LABEL: @shl_nsw_nuw_ult_Csle0(
-; CHECK-NEXT:    [[Y:%.*]] = shl nuw nsw i8 [[X:%.*]], [[C:%.*]]
-; CHECK-NEXT:    [[Z:%.*]] = icmp ult i8 [[Y]], -19
+; CHECK-NEXT:    [[Z:%.*]] = icmp ult i8 [[X:%.*]], -19
 ; CHECK-NEXT:    ret i1 [[Z]]
 ;
   %y = shl nuw nsw i8 %x, %C
@@ -135,8 +129,7 @@ define i1 @shl_nsw_ule_Csle0_fail_missing_flag(i8 %x, i8 %C) {
 
 define i1 @shl_nsw_nuw_uge_Csle0(i8 %x, i8 %C) {
 ; CHECK-LABEL: @shl_nsw_nuw_uge_Csle0(
-; CHECK-NEXT:    [[Y:%.*]] = shl nuw nsw i8 [[X:%.*]], [[C:%.*]]
-; CHECK-NEXT:    [[Z:%.*]] = icmp ugt i8 [[Y]], -121
+; CHECK-NEXT:    [[Z:%.*]] = icmp ugt i8 [[X:%.*]], -121
 ; CHECK-NEXT:    ret i1 [[Z]]
 ;
   %y = shl nuw nsw i8 %x, %C
@@ -157,8 +150,7 @@ define i1 @shl_nuw_ugt_Csle0_fail_missing_flag(i8 %x, i8 %C) {
 
 define <2 x i1> @shl_nsw_nuw_sgt_Csle0(<2 x i8> %x, <2 x i8> %C) {
 ; CHECK-LABEL: @shl_nsw_nuw_sgt_Csle0(
-; CHECK-NEXT:    [[Y:%.*]] = shl nuw nsw <2 x i8> [[X:%.*]], [[C:%.*]]
-; CHECK-NEXT:    [[Z:%.*]] = icmp sgt <2 x i8> [[Y]], <i8 -10, i8 -10>
+; CHECK-NEXT:    [[Z:%.*]] = icmp sgt <2 x i8> [[X:%.*]], <i8 -10, i8 -10>
 ; CHECK-NEXT:    ret <2 x i1> [[Z]]
 ;
   %y = shl nsw nuw <2 x i8> %x, %C
@@ -179,8 +171,7 @@ define <2 x i1> @shl_nsw_nuw_sge_Csle0_todo_non_splat(<2 x i8> %x, <2 x i8> %C) 
 
 define <2 x i1> @shl_nsw_nuw_sle_Csle0(<2 x i8> %x, <2 x i8> %C) {
 ; CHECK-LABEL: @shl_nsw_nuw_sle_Csle0(
-; CHECK-NEXT:    [[Y:%.*]] = shl nuw nsw <2 x i8> [[X:%.*]], [[C:%.*]]
-; CHECK-NEXT:    [[Z:%.*]] = icmp slt <2 x i8> [[Y]], <i8 -5, i8 -5>
+; CHECK-NEXT:    [[Z:%.*]] = icmp slt <2 x i8> [[X:%.*]], <i8 -5, i8 -5>
 ; CHECK-NEXT:    ret <2 x i1> [[Z]]
 ;
   %y = shl nsw nuw <2 x i8> %x, %C
