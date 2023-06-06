@@ -873,13 +873,6 @@ void DataFlowGraph::build(unsigned Options) {
   Block EA = TheFunc.Addr->getEntryBlock(*this);
   NodeList Blocks = TheFunc.Addr->members(*this);
 
-  // Collect information about block references.
-  RegisterSet AllRefs(getPRI());
-  for (Block BA : Blocks)
-    for (Instr IA : BA.Addr->members(*this))
-      for (Ref RA : IA.Addr->members(*this))
-        AllRefs.insert(RA.Addr->getRegRef(*this));
-
   // Collect function live-ins and entry block live-ins.
   MachineRegisterInfo &MRI = MF.getRegInfo();
   MachineBasicBlock &EntryB = *EA.Addr->getCode();
@@ -938,7 +931,7 @@ void DataFlowGraph::build(unsigned Options) {
   for (Block BA : Blocks)
     recordDefsForDF(PhiM, BA);
   for (Block BA : Blocks)
-    buildPhis(PhiM, AllRefs, BA);
+    buildPhis(PhiM, BA);
 
   // Link all the refs. This will recursively traverse the dominator tree.
   DefStackMap DM;
@@ -1385,8 +1378,7 @@ void DataFlowGraph::recordDefsForDF(BlockRefsMap &PhiM, Block BA) {
 
 // Given the locations of phi nodes in the map PhiM, create the phi nodes
 // that are located in the block node BA.
-void DataFlowGraph::buildPhis(BlockRefsMap &PhiM, RegisterSet &AllRefs,
-                              Block BA) {
+void DataFlowGraph::buildPhis(BlockRefsMap &PhiM, Block BA) {
   // Check if this blocks has any DF defs, i.e. if there are any defs
   // that this block is in the iterated dominance frontier of.
   auto HasDF = PhiM.find(BA.Id);

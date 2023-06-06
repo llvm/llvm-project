@@ -847,7 +847,7 @@ private:
 
   void buildStmt(Block BA, MachineInstr &In);
   void recordDefsForDF(BlockRefsMap &PhiM, Block BA);
-  void buildPhis(BlockRefsMap &PhiM, RegisterSet &AllRefs, Block BA);
+  void buildPhis(BlockRefsMap &PhiM, Block BA);
   void removeUnusedPhis();
 
   void pushClobbers(Instr IA, DefStackMap &DM);
