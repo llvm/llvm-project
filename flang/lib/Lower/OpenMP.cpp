@@ -69,15 +69,11 @@ class DataSharingProcessor {
   llvm::SetVector<const Fortran::semantics::Symbol *> defaultSymbols;
   llvm::SetVector<const Fortran::semantics::Symbol *> symbolsInNestedRegions;
   llvm::SetVector<const Fortran::semantics::Symbol *> symbolsInParentRegions;
-  mlir::Operation *op;
   Fortran::lower::AbstractConverter &converter;
   fir::FirOpBuilder &firOpBuilder;
   const Fortran::parser::OmpClauseList &opClauseList;
   Fortran::lower::pft::Evaluation &eval;
 
-  void privatizeSymbol(
-      const Fortran::semantics::Symbol *sym,
-      [[maybe_unused]] mlir::OpBuilder::InsertPoint *lastPrivIP = nullptr);
   bool needBarrier();
   void collectSymbols(Fortran::semantics::Symbol::Flag flag);
   void collectOmpObjectListSymbol(
@@ -88,40 +84,57 @@ class DataSharingProcessor {
   void collectDefaultSymbols();
   void privatize();
   void defaultPrivatize();
+  void copyLastPrivatize(mlir::Operation *op);
   void insertLastPrivateCompare(mlir::Operation *op);
+  void cloneSymbol(const Fortran::semantics::Symbol *sym);
+  void copyFirstPrivateSymbol(const Fortran::semantics::Symbol *sym);
+  void copyLastPrivateSymbol(const Fortran::semantics::Symbol *sym,
+                             mlir::OpBuilder::InsertPoint *lastPrivIP);
 
 public:
-  DataSharingProcessor(mlir::Operation *op,
-                       Fortran::lower::AbstractConverter &converter,
+  DataSharingProcessor(Fortran::lower::AbstractConverter &converter,
                        const Fortran::parser::OmpClauseList &opClauseList,
                        Fortran::lower::pft::Evaluation &eval)
-      : hasLastPrivateOp(false), op(op), converter(converter),
+      : hasLastPrivateOp(false), converter(converter),
         firOpBuilder(converter.getFirOpBuilder()), opClauseList(opClauseList),
         eval(eval) {}
-  bool process();
+  // Privatisation is split into two steps.
+  // Step1 performs cloning of all privatisation clauses and copying for
+  // firstprivates. Step1 is performed at the place where process/processStep1
+  // is called. This is usually inside the Operation corresponding to the OpenMP
+  // construct, for looping constructs this is just before the Operation. The
+  // split into two steps was performed basically to be able to call
+  // privatisation for looping constructs before the operation is created since
+  // the bounds of the MLIR OpenMP operation can be privatised. Step2 performs
+  // the copying for lastprivates. Step2 requires knowledge of the MLIR
+  // operation to insert the last private update.
+  bool process(mlir::Operation *op);
+  void processStep1();
+  bool processStep2(mlir::Operation *op);
 };
 
-bool DataSharingProcessor::process() {
-  insPt = firOpBuilder.saveInsertionPoint();
+bool DataSharingProcessor::process(mlir::Operation *op) {
+  processStep1();
+  assert(op && "Current MLIR operation not set");
+  return processStep2(op);
+}
+
+void DataSharingProcessor::processStep1() {
   collectSymbolsForPrivatization();
-  insertLastPrivateCompare(op);
-  if (mlir::isa<mlir::omp::SectionOp>(op)) {
-    if (!eval.lowerAsUnstructured())
-      firOpBuilder.setInsertionPointToStart(&op->getRegion(0).back());
-  } else {
-    firOpBuilder.setInsertionPointToStart(firOpBuilder.getAllocaBlock());
-  }
-  privatize();
   collectDefaultSymbols();
+  privatize();
   defaultPrivatize();
   insertBarrier();
+}
+
+bool DataSharingProcessor::processStep2(mlir::Operation *op) {
+  insPt = firOpBuilder.saveInsertionPoint();
+  copyLastPrivatize(op);
   firOpBuilder.restoreInsertionPoint(insPt);
   return hasLastPrivateOp;
 }
 
-void DataSharingProcessor::privatizeSymbol(
-    const Fortran::semantics::Symbol *sym,
-    [[maybe_unused]] mlir::OpBuilder::InsertPoint *lastPrivIP) {
+void DataSharingProcessor::cloneSymbol(const Fortran::semantics::Symbol *sym) {
   // Privatization for symbols which are pre-determined (like loop index
   // variables) happen separately, for everything else privatize here.
   if (sym->test(Fortran::semantics::Symbol::Flag::OmpPreDetermined))
@@ -129,18 +142,17 @@ void DataSharingProcessor::privatizeSymbol(
   bool success = converter.createHostAssociateVarClone(*sym);
   (void)success;
   assert(success && "Privatization failed due to existing binding");
-  if (sym->test(Fortran::semantics::Symbol::Flag::OmpFirstPrivate)) {
-    fir::FirOpBuilder &firOpBuilder = converter.getFirOpBuilder();
-    mlir::OpBuilder::InsertPoint firstPrivIP, insPt;
-    if (mlir::isa<mlir::omp::SingleOp>(op)) {
-      insPt = firOpBuilder.saveInsertionPoint();
-      firOpBuilder.setInsertionPointToStart(&op->getRegion(0).front());
-      firstPrivIP = firOpBuilder.saveInsertionPoint();
-    }
-    converter.copyHostAssociateVar(*sym, &firstPrivIP);
-    if (mlir::isa<mlir::omp::SingleOp>(op))
-      firOpBuilder.restoreInsertionPoint(insPt);
-  }
+}
+
+void DataSharingProcessor::copyFirstPrivateSymbol(
+    const Fortran::semantics::Symbol *sym) {
+  if (sym->test(Fortran::semantics::Symbol::Flag::OmpFirstPrivate))
+    converter.copyHostAssociateVar(*sym);
+}
+
+void DataSharingProcessor::copyLastPrivateSymbol(
+    const Fortran::semantics::Symbol *sym,
+    [[maybe_unused]] mlir::OpBuilder::InsertPoint *lastPrivIP) {
   if (sym->test(Fortran::semantics::Symbol::Flag::OmpLastPrivate))
     converter.copyHostAssociateVar(*sym, lastPrivIP);
 }
@@ -208,6 +220,7 @@ void DataSharingProcessor ::insertBarrier() {
 void DataSharingProcessor::insertLastPrivateCompare(mlir::Operation *op) {
   mlir::arith::CmpIOp cmpOp;
   bool cmpCreated = false;
+  mlir::OpBuilder::InsertPoint localInsPt = firOpBuilder.saveInsertionPoint();
   for (const Fortran::parser::OmpClause &clause : opClauseList.v) {
     if (std::get_if<Fortran::parser::OmpClause::Lastprivate>(&clause.u)) {
       // TODO: Add lastprivate support for simd construct
@@ -320,6 +333,7 @@ void DataSharingProcessor::insertLastPrivateCompare(mlir::Operation *op) {
       }
     }
   }
+  firOpBuilder.restoreInsertionPoint(localInsPt);
 }
 
 void DataSharingProcessor::collectSymbols(
@@ -354,16 +368,27 @@ void DataSharingProcessor::collectDefaultSymbols() {
 }
 
 void DataSharingProcessor::privatize() {
+  for (auto sym : privatizedSymbols) {
+    cloneSymbol(sym);
+    copyFirstPrivateSymbol(sym);
+  }
+}
+
+void DataSharingProcessor::copyLastPrivatize(mlir::Operation *op) {
+  insertLastPrivateCompare(op);
   for (auto sym : privatizedSymbols)
-    privatizeSymbol(sym, &lastPrivIP);
+    copyLastPrivateSymbol(sym, &lastPrivIP);
 }
 
 void DataSharingProcessor::defaultPrivatize() {
-  for (auto sym : defaultSymbols)
+  for (auto sym : defaultSymbols) {
     if (!symbolsInNestedRegions.contains(sym) &&
         !symbolsInParentRegions.contains(sym) &&
-        !privatizedSymbols.contains(sym))
-      privatizeSymbol(sym);
+        !privatizedSymbols.contains(sym)) {
+      cloneSymbol(sym);
+      copyFirstPrivateSymbol(sym);
+    }
+  }
 }
 
 /// The COMMON block is a global structure. \p commonValue is the base address
@@ -604,7 +629,8 @@ createBodyOfOp(Op &op, Fortran::lower::AbstractConverter &converter,
                mlir::Location &loc, Fortran::lower::pft::Evaluation &eval,
                const Fortran::parser::OmpClauseList *clauses = nullptr,
                const SmallVector<const Fortran::semantics::Symbol *> &args = {},
-               bool outerCombined = false) {
+               bool outerCombined = false,
+               DataSharingProcessor *dsp = nullptr) {
   fir::FirOpBuilder &firOpBuilder = converter.getFirOpBuilder();
   // If an argument for the region is provided then create the block with that
   // argument. Also update the symbol's address with the mlir argument value.
@@ -665,8 +691,14 @@ createBodyOfOp(Op &op, Fortran::lower::AbstractConverter &converter,
 
   // Handle privatization. Do not privatize if this is the outer operation.
   if (clauses && !outerCombined) {
-    DataSharingProcessor dsp(op, converter, *clauses, eval);
-    bool lastPrivateOp = dsp.process();
+    bool lastPrivateOp = false;
+    if (!dsp) {
+      dsp = new DataSharingProcessor(converter, *clauses, eval);
+      lastPrivateOp = dsp->process(op);
+      delete dsp;
+    } else {
+      lastPrivateOp = dsp->processStep2(op);
+    }
     // LastPrivatization, due to introduction of
     // new control flow, changes the insertion point,
     // thus restore it.
@@ -1536,6 +1568,9 @@ static void genOMP(Fortran::lower::AbstractConverter &converter,
     TODO(converter.getCurrentLocation(), "Construct enclosing do loop");
   }
 
+  DataSharingProcessor dsp(converter, loopOpClauseList, eval);
+  dsp.processStep1();
+
   // Collect the loops to collapse.
   auto *doConstructEval = &eval.getFirstNestedEvaluation();
   if (doConstructEval->getIf<Fortran::parser::DoConstruct>()
@@ -1717,7 +1752,8 @@ static void genOMP(Fortran::lower::AbstractConverter &converter,
         simdlenClauseOperand, safelenClauseOperand,
         /*inclusive=*/firOpBuilder.getUnitAttr());
     createBodyOfOp<omp::SimdLoopOp>(simdLoopOp, converter, currentLocation,
-                                    eval, &loopOpClauseList, iv);
+                                    eval, &loopOpClauseList, iv,
+                                    /*outer=*/false, &dsp);
     return;
   }
 
@@ -1808,7 +1844,7 @@ static void genOMP(Fortran::lower::AbstractConverter &converter,
   }
 
   createBodyOfOp<omp::WsLoopOp>(wsLoopOp, converter, currentLocation, eval,
-                                &loopOpClauseList, iv);
+                                &loopOpClauseList, iv, /*outer=*/false, &dsp);
 }
 
 static void
