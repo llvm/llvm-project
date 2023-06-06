@@ -391,8 +391,7 @@ static APInt trimTrailingZerosInVector(InstCombiner &IC, Value *UseV,
                             /*InterestedClasses=*/fcAllFlags,
                             /*Depth=*/0, &IC.getTargetLibraryInfo(),
                             &IC.getAssumptionCache(), I,
-                            &IC.getDominatorTree(),
-                            &IC.getOptimizationRemarkEmitter());
+                            &IC.getDominatorTree());
     if (KnownFPClass.KnownFPClasses != fcPosZero)
       break;
     DemandedElts.clearBit(i);
