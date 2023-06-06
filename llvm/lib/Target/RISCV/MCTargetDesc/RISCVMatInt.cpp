@@ -249,6 +249,21 @@ InstSeq generateInstSeq(int64_t Val, const FeatureBitset &ActiveFeatures) {
     }
   }
 
+  // If the Low and High halves are the same, use pack. The pack instruction
+  // packs the XLEN/2-bit lower halves of rs1 and rs2 into rd, with rs1 in the
+  // lower half and rs2 in the upper half.
+  if (Res.size() > 2 && ActiveFeatures[RISCV::FeatureStdExtZbkb]) {
+    int64_t LoVal = SignExtend64<32>(Val);
+    int64_t HiVal = SignExtend64<32>(Val >> 32);
+    if (LoVal == HiVal) {
+      RISCVMatInt::InstSeq TmpSeq;
+      generateInstSeqImpl(LoVal, ActiveFeatures, TmpSeq);
+      TmpSeq.emplace_back(RISCV::PACK, 0);
+      if (TmpSeq.size() < Res.size())
+        Res = TmpSeq;
+    }
+  }
+
   // Perform optimization with BCLRI/BSETI in the Zbs extension.
   if (Res.size() > 2 && ActiveFeatures[RISCV::FeatureStdExtZbs]) {
     // 1. For values in range 0xffffffff 7fffffff ~ 0xffffffff 00000000,
@@ -402,6 +417,7 @@ OpndKind Inst::getOpndKind() const {
   case RISCV::SH1ADD:
   case RISCV::SH2ADD:
   case RISCV::SH3ADD:
+  case RISCV::PACK:
     return RISCVMatInt::RegReg;
   case RISCV::ADDI:
   case RISCV::ADDIW:
