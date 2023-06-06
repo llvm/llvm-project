@@ -80,7 +80,7 @@ static bool isSectionOptional(bytecode::Section::ID sectionID, int version) {
   case bytecode::Section::kDialectVersions:
     return true;
   case bytecode::Section::kProperties:
-    return version < 5;
+    return version < bytecode::kNativePropertiesEncoding;
   default:
     llvm_unreachable("unknown section ID");
   }
@@ -492,7 +492,7 @@ struct BytecodeOperationName {
   StringRef name;
 
   /// Whether this operation was registered when the bytecode was produced.
-  /// This flag is populated when bytecode version >=5.
+  /// This flag is populated when bytecode version >=kNativePropertiesEncoding.
   std::optional<bool> wasRegistered;
 };
 } // namespace
@@ -1647,7 +1647,7 @@ LogicalResult BytecodeReader::Impl::parseVersion(EncodingReader &reader) {
                             currentVersion);
   }
   // Override any request to lazy-load if the bytecode version is too old.
-  if (version < 2)
+  if (version < bytecode::kLazyLoading)
     lazyLoading = false;
   return success();
 }
@@ -1699,9 +1699,9 @@ BytecodeReader::Impl::parseDialectSection(ArrayRef<uint8_t> sectionData) {
 
   // Parse each of the dialects.
   for (uint64_t i = 0; i < numDialects; ++i) {
-    /// Before version 1, there wasn't any versioning available for dialects,
-    /// and the entryIdx represent the string itself.
-    if (version == 0) {
+    /// Before version kDialectVersioning, there wasn't any versioning available
+    /// for dialects, and the entryIdx represent the string itself.
+    if (version < bytecode::kDialectVersioning) {
       if (failed(stringReader.parseString(sectionReader, dialects[i].name)))
         return failure();
       continue;
@@ -1731,9 +1731,9 @@ BytecodeReader::Impl::parseDialectSection(ArrayRef<uint8_t> sectionData) {
   auto parseOpName = [&](BytecodeDialect *dialect) {
     StringRef opName;
     std::optional<bool> wasRegistered;
-    // Prior to version 5, the information about wheter an op was registered or
-    // not wasn't encoded.
-    if (version < 5) {
+    // Prior to version kNativePropertiesEncoding, the information about wheter
+    // an op was registered or not wasn't encoded.
+    if (version < bytecode::kNativePropertiesEncoding) {
       if (failed(stringReader.parseString(sectionReader, opName)))
         return failure();
     } else {
@@ -1746,9 +1746,9 @@ BytecodeReader::Impl::parseDialectSection(ArrayRef<uint8_t> sectionData) {
     opNames.emplace_back(dialect, opName, wasRegistered);
     return success();
   };
-  // Avoid re-allocation in bytecode version > 3 where the number of ops are
-  // known.
-  if (version > 3) {
+  // Avoid re-allocation in bytecode version >=kElideUnknownBlockArgLocation
+  // where the number of ops are known.
+  if (version >= bytecode::kElideUnknownBlockArgLocation) {
     uint64_t numOps;
     if (failed(sectionReader.parseVarInt(numOps)))
       return failure();
@@ -2078,7 +2078,7 @@ BytecodeReader::Impl::parseRegions(std::vector<RegionReadState> &regionStack,
           RegionReadState childState(*op, &reader, isIsolatedFromAbove);
 
           // Isolated regions are encoded as a section in version 2 and above.
-          if (version >= 2 && isIsolatedFromAbove) {
+          if (version >= bytecode::kLazyLoading && isIsolatedFromAbove) {
             bytecode::Section::ID sectionID;
             ArrayRef<uint8_t> sectionData;
             if (failed(reader.parseSection(sectionID, sectionData)))
@@ -2229,7 +2229,8 @@ BytecodeReader::Impl::parseOpWithoutRegions(EncodingReader &reader,
   /// Parse the use-list orders for the results of the operation. Use-list
   /// orders are available since version 3 of the bytecode.
   std::optional<UseListMapT> resultIdxToUseListMap = std::nullopt;
-  if (version > 2 && (opMask & bytecode::OpEncodingMask::kHasUseListOrders)) {
+  if (version >= bytecode::kUseListOrdering &&
+      (opMask & bytecode::OpEncodingMask::kHasUseListOrders)) {
     size_t numResults = opState.types.size();
     auto parseResult = parseUseListOrderForRange(reader, numResults);
     if (failed(parseResult))
@@ -2316,7 +2317,7 @@ BytecodeReader::Impl::parseBlockHeader(EncodingReader &reader,
     return failure();
 
   // Uselist orders are available since version 3 of the bytecode.
-  if (version < 3)
+  if (version < bytecode::kUseListOrdering)
     return success();
 
   uint8_t hasUseListOrders = 0;
@@ -2357,7 +2358,7 @@ LogicalResult BytecodeReader::Impl::parseBlockArguments(EncodingReader &reader,
   while (numArgs--) {
     Type argType;
     LocationAttr argLoc = unknownLoc;
-    if (version > 3) {
+    if (version >= bytecode::kElideUnknownBlockArgLocation) {
       // Parse the type with hasLoc flag to determine if it has type.
       uint64_t typeIdx;
       bool hasLoc;
