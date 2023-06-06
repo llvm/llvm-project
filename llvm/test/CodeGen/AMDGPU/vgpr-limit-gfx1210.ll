@@ -1,7 +1,7 @@
 ; -enable-misched=false makes the register usage more predictable
 ; -regalloc=fast just makes the test run faster
-; RUN: llc -march=amdgcn -mcpu=gfx1210 -O0 -amdgpu-function-calls=false -enable-misched=false -sgpr-regalloc=fast -vgpr-regalloc=fast < %s | FileCheck %s --check-prefixes=GCN,GFX1210
-; RUN: llc -march=amdgcn -mcpu=gfx1210 -O0 -amdgpu-function-calls=false -enable-misched=false -sgpr-regalloc=fast -vgpr-regalloc=fast -mattr=+wavefrontsize64 < %s | FileCheck %s --check-prefixes=GCN,GFX1210
+; RUN: llc -march=amdgcn -mcpu=gfx1210 -O0 -amdgpu-function-calls=false -enable-misched=false -sgpr-regalloc=fast -vgpr-regalloc=fast < %s | FileCheck %s --check-prefixes=GCN,GFX1210,W32
+; RUN: llc -march=amdgcn -mcpu=gfx1210 -O0 -amdgpu-function-calls=false -enable-misched=false -sgpr-regalloc=fast -vgpr-regalloc=fast -mattr=+wavefrontsize64 < %s | FileCheck %s --check-prefixes=GCN,GFX1210,W64
 
 define internal void @use256vgprs_asm() {
   %v0 = call i32 asm sideeffect "; def $0", "=v"()
@@ -552,7 +552,8 @@ define internal void @use512vgprs_asm() {
 ; GFX1210: NumVgprs: 256
 ; GFX1210-NOT: NumAgprs:
 ; GFX1210-NOT: TotalNumVgprs:
-; GFX1210: VGPRBlocks: 15
+; W32: VGPRBlocks: 15
+; W64: VGPRBlocks: 31
 define amdgpu_kernel void @k256_w1_asm() #2561 {
   call void @use512vgprs_asm()
   ret void
@@ -560,7 +561,8 @@ define amdgpu_kernel void @k256_w1_asm() #2561 {
 
 ; GCN-LABEL: {{^}}use512vgprs_codegen:
 ; GFX1210: NumVgprs: 512
-; GFX1210: VGPRBlocks: 31
+; W32: VGPRBlocks: 31
+; W64: VGPRBlocks: 63
 define amdgpu_kernel void @use512vgprs_codegen(ptr %p) #2561 {
   %r0 = load volatile <512 x float>, ptr %p, align 1
   store volatile <512 x float> %r0, ptr %p
