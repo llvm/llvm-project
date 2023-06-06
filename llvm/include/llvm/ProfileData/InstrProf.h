@@ -1237,10 +1237,6 @@ struct Header {
 
 } // end namespace RawInstrProf
 
-// Parse MemOP Size range option.
-void getMemOPSizeRangeFromOption(StringRef Str, int64_t &RangeStart,
-                                 int64_t &RangeLast);
-
 // Create the variable for the profile file name.
 void createProfileFileNameVar(Module &M, StringRef InstrProfileOutput);
 

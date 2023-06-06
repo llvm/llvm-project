@@ -804,6 +804,9 @@ let Command = "script add" in {
     EnumArg<"ScriptedCommandSynchronicity">,
     Desc<"Set the synchronicity of this command's executions with regard to "
     "LLDB event system.">;
+  def completion_type : Option<"completion-type", "C">,
+  EnumArg<"CompletionType">,
+  Desc<"Specify which completion type the command should use - if none is specified, the command won't use auto-completion.">;
 }
 
 let Command = "container add" in {

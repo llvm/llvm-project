@@ -344,6 +344,11 @@ Changes to Sanitizers
 Other Changes
 -------------
 
+* ``llvm::demangle`` now takes a ``std::string_view`` rather than a
+  ``const std::string&``. Be careful passing temporaries into
+  ``llvm::demangle`` that don't outlive the expression using
+  ``llvm::demangle``.
+
 External Open Source Projects Using LLVM 15
 ===========================================
 

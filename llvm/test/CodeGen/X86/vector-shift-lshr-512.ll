@@ -53,18 +53,18 @@ define <64 x i8> @var_shift_v64i8(<64 x i8> %a, <64 x i8> %b) nounwind {
 ; AVX512DQ:       # %bb.0:
 ; AVX512DQ-NEXT:    vextracti64x4 $1, %zmm0, %ymm2
 ; AVX512DQ-NEXT:    vpsrlw $4, %ymm2, %ymm3
-; AVX512DQ-NEXT:    vpbroadcastb {{.*#+}} ymm4 = [15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15]
+; AVX512DQ-NEXT:    vmovdqa {{.*#+}} ymm4 = [15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15]
 ; AVX512DQ-NEXT:    vpand %ymm4, %ymm3, %ymm3
 ; AVX512DQ-NEXT:    vextracti64x4 $1, %zmm1, %ymm5
 ; AVX512DQ-NEXT:    vpsllw $5, %ymm5, %ymm5
 ; AVX512DQ-NEXT:    vpblendvb %ymm5, %ymm3, %ymm2, %ymm2
 ; AVX512DQ-NEXT:    vpsrlw $2, %ymm2, %ymm3
-; AVX512DQ-NEXT:    vpbroadcastb {{.*#+}} ymm6 = [63,63,63,63,63,63,63,63,63,63,63,63,63,63,63,63,63,63,63,63,63,63,63,63,63,63,63,63,63,63,63,63]
+; AVX512DQ-NEXT:    vmovdqa {{.*#+}} ymm6 = [63,63,63,63,63,63,63,63,63,63,63,63,63,63,63,63,63,63,63,63,63,63,63,63,63,63,63,63,63,63,63,63]
 ; AVX512DQ-NEXT:    vpand %ymm6, %ymm3, %ymm3
 ; AVX512DQ-NEXT:    vpaddb %ymm5, %ymm5, %ymm5
 ; AVX512DQ-NEXT:    vpblendvb %ymm5, %ymm3, %ymm2, %ymm2
 ; AVX512DQ-NEXT:    vpsrlw $1, %ymm2, %ymm3
-; AVX512DQ-NEXT:    vpbroadcastb {{.*#+}} ymm7 = [127,127,127,127,127,127,127,127,127,127,127,127,127,127,127,127,127,127,127,127,127,127,127,127,127,127,127,127,127,127,127,127]
+; AVX512DQ-NEXT:    vmovdqa {{.*#+}} ymm7 = [127,127,127,127,127,127,127,127,127,127,127,127,127,127,127,127,127,127,127,127,127,127,127,127,127,127,127,127,127,127,127,127]
 ; AVX512DQ-NEXT:    vpand %ymm7, %ymm3, %ymm3
 ; AVX512DQ-NEXT:    vpaddb %ymm5, %ymm5, %ymm5
 ; AVX512DQ-NEXT:    vpblendvb %ymm5, %ymm3, %ymm2, %ymm2

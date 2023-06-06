@@ -1393,7 +1393,7 @@ define <16 x i32> @smulo_v16i8(<16 x i8> %a0, <16 x i8> %a1, ptr %p2) nounwind {
 ; AVX1-NEXT:    vpmulhw %xmm1, %xmm0, %xmm0
 ; AVX1-NEXT:    vpsrlw $8, %xmm0, %xmm1
 ; AVX1-NEXT:    vpackuswb %xmm4, %xmm1, %xmm1
-; AVX1-NEXT:    vbroadcastss {{.*#+}} xmm4 = [255,255,255,255,255,255,255,255]
+; AVX1-NEXT:    vmovdqa {{.*#+}} xmm4 = [255,255,255,255,255,255,255,255]
 ; AVX1-NEXT:    vpand %xmm4, %xmm3, %xmm3
 ; AVX1-NEXT:    vpand %xmm4, %xmm0, %xmm0
 ; AVX1-NEXT:    vpackuswb %xmm3, %xmm0, %xmm3
@@ -1759,7 +1759,7 @@ define <32 x i32> @smulo_v32i8(<32 x i8> %a0, <32 x i8> %a1, ptr %p2) nounwind {
 ; AVX1-NEXT:    vpmulhw %xmm3, %xmm5, %xmm3
 ; AVX1-NEXT:    vpsrlw $8, %xmm3, %xmm5
 ; AVX1-NEXT:    vpackuswb %xmm6, %xmm5, %xmm5
-; AVX1-NEXT:    vbroadcastss {{.*#+}} xmm6 = [255,255,255,255,255,255,255,255]
+; AVX1-NEXT:    vmovdqa {{.*#+}} xmm6 = [255,255,255,255,255,255,255,255]
 ; AVX1-NEXT:    vpand %xmm6, %xmm4, %xmm4
 ; AVX1-NEXT:    vpand %xmm6, %xmm3, %xmm3
 ; AVX1-NEXT:    vpackuswb %xmm4, %xmm3, %xmm4
@@ -1816,7 +1816,7 @@ define <32 x i32> @smulo_v32i8(<32 x i8> %a0, <32 x i8> %a1, ptr %p2) nounwind {
 ; AVX2-NEXT:    vpmulhw %ymm1, %ymm0, %ymm0
 ; AVX2-NEXT:    vpsrlw $8, %ymm0, %ymm1
 ; AVX2-NEXT:    vpackuswb %ymm4, %ymm1, %ymm1
-; AVX2-NEXT:    vpbroadcastw {{.*#+}} ymm4 = [255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255]
+; AVX2-NEXT:    vmovdqa {{.*#+}} ymm4 = [255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255]
 ; AVX2-NEXT:    vpand %ymm4, %ymm3, %ymm3
 ; AVX2-NEXT:    vpand %ymm4, %ymm0, %ymm0
 ; AVX2-NEXT:    vpackuswb %ymm3, %ymm0, %ymm4
@@ -2427,7 +2427,7 @@ define <64 x i32> @smulo_v64i8(<64 x i8> %a0, <64 x i8> %a1, ptr %p2) nounwind {
 ; AVX1-NEXT:    vpmulhw %xmm4, %xmm7, %xmm4
 ; AVX1-NEXT:    vpsrlw $8, %xmm4, %xmm7
 ; AVX1-NEXT:    vpackuswb %xmm6, %xmm7, %xmm7
-; AVX1-NEXT:    vbroadcastss {{.*#+}} xmm6 = [255,255,255,255,255,255,255,255]
+; AVX1-NEXT:    vmovdqa {{.*#+}} xmm6 = [255,255,255,255,255,255,255,255]
 ; AVX1-NEXT:    vpand %xmm6, %xmm8, %xmm8
 ; AVX1-NEXT:    vpand %xmm6, %xmm4, %xmm4
 ; AVX1-NEXT:    vpackuswb %xmm8, %xmm4, %xmm4
@@ -2546,7 +2546,7 @@ define <64 x i32> @smulo_v64i8(<64 x i8> %a0, <64 x i8> %a1, ptr %p2) nounwind {
 ; AVX2-NEXT:    vpmulhw %ymm3, %ymm1, %ymm1
 ; AVX2-NEXT:    vpsrlw $8, %ymm1, %ymm3
 ; AVX2-NEXT:    vpackuswb %ymm6, %ymm3, %ymm3
-; AVX2-NEXT:    vpbroadcastw {{.*#+}} ymm6 = [255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255]
+; AVX2-NEXT:    vmovdqa {{.*#+}} ymm6 = [255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255]
 ; AVX2-NEXT:    vpand %ymm6, %ymm5, %ymm5
 ; AVX2-NEXT:    vpand %ymm6, %ymm1, %ymm1
 ; AVX2-NEXT:    vpackuswb %ymm5, %ymm1, %ymm1
@@ -2666,7 +2666,7 @@ define <64 x i32> @smulo_v64i8(<64 x i8> %a0, <64 x i8> %a1, ptr %p2) nounwind {
 ; AVX512BW-NEXT:    vpmulhw %zmm1, %zmm0, %zmm0
 ; AVX512BW-NEXT:    vpsrlw $8, %zmm0, %zmm1
 ; AVX512BW-NEXT:    vpackuswb %zmm4, %zmm1, %zmm1
-; AVX512BW-NEXT:    vpbroadcastw {{.*#+}} zmm2 = [255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255]
+; AVX512BW-NEXT:    vmovdqa64 {{.*#+}} zmm2 = [255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255]
 ; AVX512BW-NEXT:    vpandq %zmm2, %zmm3, %zmm3
 ; AVX512BW-NEXT:    vpandq %zmm2, %zmm0, %zmm0
 ; AVX512BW-NEXT:    vpackuswb %zmm3, %zmm0, %zmm4

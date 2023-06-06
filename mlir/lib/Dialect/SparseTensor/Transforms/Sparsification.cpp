@@ -1049,11 +1049,13 @@ static Value genTensorLoad(CodegenEnv &env, OpBuilder &builder, ExprId exp) {
 /// Generates a store on a dense or sparse tensor.
 static void genTensorStore(CodegenEnv &env, OpBuilder &builder, ExprId exp,
                            Value rhs) {
-  // Only unary and binary are allowed to return uninitialized rhs
-  // to indicate missing output.
+  // Only unary and binary are allowed to return an uninitialized rhs
+  // to indicate missing output. Or otherwise a custom reduction that
+  // received no value to accumulate.
   if (!rhs) {
     assert(env.exp(exp).kind == TensorExp::Kind::kUnary ||
-           env.exp(exp).kind == TensorExp::Kind::kBinary);
+           env.exp(exp).kind == TensorExp::Kind::kBinary ||
+           env.exp(exp).kind == TensorExp::Kind::kReduce);
     return;
   }
   // Test if this is a scalarized reduction.
@@ -1146,12 +1148,17 @@ static Value genExp(CodegenEnv &env, RewriterBase &rewriter, ExprId e,
 
   Value v0 = genExp(env, rewriter, exp.children.e0, ldx);
   Value v1 = genExp(env, rewriter, exp.children.e1, ldx);
-  Value ee = env.merger().buildExp(rewriter, loc, e, v0, v1);
-  if (ee &&
-      (kind == TensorExp::Kind::kUnary || kind == TensorExp::Kind::kBinary ||
-       kind == TensorExp::Kind::kBinaryBranch ||
-       kind == TensorExp::Kind::kReduce || kind == TensorExp::Kind::kSelect))
-    ee = relinkBranch(env, rewriter, ee.getParentBlock(), ee, ldx);
+  Value ee;
+  if (kind == TensorExp::Kind::kReduce && (!v0 || !v1)) {
+    // custom reduce did not receive a value
+  } else {
+    ee = env.merger().buildExp(rewriter, loc, e, v0, v1);
+    if (ee &&
+        (kind == TensorExp::Kind::kUnary || kind == TensorExp::Kind::kBinary ||
+         kind == TensorExp::Kind::kBinaryBranch ||
+         kind == TensorExp::Kind::kReduce || kind == TensorExp::Kind::kSelect))
+      ee = relinkBranch(env, rewriter, ee.getParentBlock(), ee, ldx);
+  }
 
   if (kind == TensorExp::Kind::kReduce)
     env.endCustomReduc(); // exit custom

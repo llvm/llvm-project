@@ -32,7 +32,7 @@ static_assert(sizeof(SymbolUnion) == sizeof(Defined),
 static std::string maybeDemangleSymbol(StringRef symName) {
   if (config->demangle) {
     symName.consume_front("_");
-    return demangle(symName.str());
+    return demangle(symName);
   }
   return symName.str();
 }
