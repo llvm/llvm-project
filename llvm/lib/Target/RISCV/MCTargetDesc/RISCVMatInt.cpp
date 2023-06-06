@@ -197,11 +197,18 @@ InstSeq generateInstSeq(int64_t Val, const FeatureBitset &ActiveFeatures) {
       Res = TmpSeq;
   }
 
+  // If we have a 1 or 2 instruction sequence this is the best we can do. This
+  // will always be true for RV32 and will often be true for RV64.
+  if (Res.size() <= 2)
+    return Res;
+
+  assert(ActiveFeatures[RISCV::Feature64Bit] &&
+         "Expected RV32 to only need 2 instructions");
+
   // If the constant is positive we might be able to generate a shifted constant
   // with no leading zeros and use a final SRLI to restore them.
-  if (Val > 0 && Res.size() > 2) {
-    assert(ActiveFeatures[RISCV::Feature64Bit] &&
-           "Expected RV32 to only need 2 instructions");
+  if (Val > 0) {
+    assert(Res.size() > 2 && "Expected longer sequence");
     unsigned LeadingZeros = llvm::countl_zero((uint64_t)Val);
     uint64_t ShiftedVal = (uint64_t)Val << LeadingZeros;
     // Fill in the bits that will be shifted out with 1s. An example where this
@@ -244,9 +251,6 @@ InstSeq generateInstSeq(int64_t Val, const FeatureBitset &ActiveFeatures) {
 
   // Perform optimization with BCLRI/BSETI in the Zbs extension.
   if (Res.size() > 2 && ActiveFeatures[RISCV::FeatureStdExtZbs]) {
-    assert(ActiveFeatures[RISCV::Feature64Bit] &&
-           "Expected RV32 to only need 2 instructions");
-
     // 1. For values in range 0xffffffff 7fffffff ~ 0xffffffff 00000000,
     //    call generateInstSeqImpl with Val|0x80000000 (which is expected be
     //    an int32), then emit (BCLRI r, 31).
@@ -299,8 +303,6 @@ InstSeq generateInstSeq(int64_t Val, const FeatureBitset &ActiveFeatures) {
 
   // Perform optimization with SH*ADD in the Zba extension.
   if (Res.size() > 2 && ActiveFeatures[RISCV::FeatureStdExtZba]) {
-    assert(ActiveFeatures[RISCV::Feature64Bit] &&
-           "Expected RV32 to only need 2 instructions");
     int64_t Div = 0;
     unsigned Opc = 0;
     RISCVMatInt::InstSeq TmpSeq;
