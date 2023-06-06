@@ -198,7 +198,7 @@ public:
   uint32_t writeSectionContents(MCAssembler &Asm, const MCAsmLayout &Layout,
                                 const MCSection &MCSec);
   void writeSection(MCAssembler &Asm, const MCAsmLayout &Layout,
-                    const COFFSection &Sec, const MCSection &MCSec);
+                    const COFFSection &Sec);
 
   // MCObjectWriter interface implementation.
 
@@ -603,8 +603,7 @@ uint32_t WinCOFFObjectWriter::writeSectionContents(MCAssembler &Asm,
 
 void WinCOFFObjectWriter::writeSection(MCAssembler &Asm,
                                        const MCAsmLayout &Layout,
-                                       const COFFSection &Sec,
-                                       const MCSection &MCSec) {
+                                       const COFFSection &Sec) {
   if (Sec.Number == -1)
     return;
 
@@ -613,11 +612,10 @@ void WinCOFFObjectWriter::writeSection(MCAssembler &Asm,
     assert(W.OS.tell() == Sec.Header.PointerToRawData &&
            "Section::PointerToRawData is insane!");
 
-    uint32_t CRC = writeSectionContents(Asm, Layout, MCSec);
+    uint32_t CRC = writeSectionContents(Asm, Layout, *Sec.MCSection);
 
     // Update the section definition auxiliary symbol to record the CRC.
-    COFFSection *Sec = SectionMap[&MCSec];
-    COFFSymbol::AuxiliarySymbols &AuxSyms = Sec->Symbol->Aux;
+    COFFSymbol::AuxiliarySymbols &AuxSyms = Sec.Symbol->Aux;
     assert(AuxSyms.size() == 1 && AuxSyms[0].AuxType == ATSectionDefinition);
     AuxSymbol &SecDef = AuxSyms[0];
     SecDef.Aux.SectionDefinition.CheckSum = CRC;
@@ -1142,13 +1140,18 @@ uint64_t WinCOFFObjectWriter::writeObject(MCAssembler &Asm,
   WriteFileHeader(Header);
   writeSectionHeaders();
 
-  // Write section contents.
+#ifndef NDEBUG
   sections::iterator I = Sections.begin();
   sections::iterator IE = Sections.end();
   MCAssembler::iterator J = Asm.begin();
   MCAssembler::iterator JE = Asm.end();
   for (; I != IE && J != JE; ++I, ++J)
-    writeSection(Asm, Layout, **I, *J);
+    assert((**I).MCSection == &*J && "Wrong bound MCSection");
+#endif
+
+  // Write section contents.
+  for (std::unique_ptr<COFFSection> &Sec : Sections)
+    writeSection(Asm, Layout, *Sec);
 
   assert(W.OS.tell() == Header.PointerToSymbolTable &&
          "Header::PointerToSymbolTable is insane!");
