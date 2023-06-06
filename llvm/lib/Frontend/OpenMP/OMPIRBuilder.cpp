@@ -22,6 +22,7 @@
 #include "llvm/Analysis/ScalarEvolution.h"
 #include "llvm/Analysis/TargetLibraryInfo.h"
 #include "llvm/Bitcode/BitcodeReader.h"
+#include "llvm/IR/Attributes.h"
 #include "llvm/IR/CFG.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/DebugInfoMetadata.h"
@@ -5025,6 +5026,7 @@ void OpenMPIRBuilder::createOffloadEntry(Constant *ID, Constant *Addr,
   Fn->addFnAttr(Attribute::get(Ctx, "kernel"));
   if (Triple(M.getTargetTriple()).isAMDGCN())
     Fn->addFnAttr("uniform-work-group-size", "true");
+  Fn->addFnAttr(Attribute::MustProgress);
 }
 
 // We only generate metadata for function that contain target regions.
