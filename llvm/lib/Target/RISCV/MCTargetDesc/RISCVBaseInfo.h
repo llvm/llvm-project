@@ -204,6 +204,17 @@ static inline unsigned getVecPolicyOpNum(const MCInstrDesc &Desc) {
   return Desc.getNumOperands() - 1;
 }
 
+// Is the first def operand tied to the first use operand. This is true for
+// vector pseudo instructions that have a merge operand for tail/mask
+// undisturbed. It's also true for vector FMA instructions where one of the
+// operands is also the destination register. This is different than
+// RISCVII::hasMergeOp which only indicates whether the tied operand from the
+// pseudoinstruction also exists on the MC layer instruction.
+static inline bool isFirstDefTiedToFirstUse(const MCInstrDesc &Desc) {
+  return Desc.getNumDefs() < Desc.getNumOperands() &&
+         Desc.getOperandConstraint(Desc.getNumDefs(), MCOI::TIED_TO) == 0;
+}
+
 // RISC-V Specific Machine Operand Flags
 enum {
   MO_None = 0,
