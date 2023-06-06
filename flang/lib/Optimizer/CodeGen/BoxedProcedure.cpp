@@ -228,8 +228,7 @@ public:
           if (embox.getHost()) {
             // Create the thunk.
             auto module = embox->getParentOfType<mlir::ModuleOp>();
-            fir::KindMapping kindMap = getKindMapping(module);
-            FirOpBuilder builder(rewriter, kindMap);
+            FirOpBuilder builder(rewriter, module);
             auto loc = embox.getLoc();
             mlir::Type i8Ty = builder.getI8Type();
             mlir::Type i8Ptr = builder.getRefType(i8Ty);

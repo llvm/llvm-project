@@ -680,8 +680,7 @@ void AllocMemConversion::insertStackSaveRestore(
     fir::AllocMemOp &oldAlloc, mlir::PatternRewriter &rewriter) const {
   auto oldPoint = rewriter.saveInsertionPoint();
   auto mod = oldAlloc->getParentOfType<mlir::ModuleOp>();
-  fir::KindMapping kindMap = fir::getKindMapping(mod);
-  fir::FirOpBuilder builder{rewriter, kindMap};
+  fir::FirOpBuilder builder{rewriter, mod};
 
   mlir::func::FuncOp stackSaveFn = fir::factory::getLlvmStackSave(builder);
   mlir::SymbolRefAttr stackSaveSym =
