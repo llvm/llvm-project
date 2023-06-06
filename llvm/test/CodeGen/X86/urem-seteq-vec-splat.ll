@@ -287,7 +287,7 @@ define <4 x i32> @test_urem_odd_undef1(<4 x i32> %X) nounwind {
 ; CHECK-AVX1-LABEL: test_urem_odd_undef1:
 ; CHECK-AVX1:       # %bb.0:
 ; CHECK-AVX1-NEXT:    vpshufd {{.*#+}} xmm1 = xmm0[1,1,3,3]
-; CHECK-AVX1-NEXT:    vbroadcastss {{.*#+}} xmm2 = [1374389535,1374389535,1374389535,1374389535]
+; CHECK-AVX1-NEXT:    vmovdqa {{.*#+}} xmm2 = [1374389535,1374389535,1374389535,1374389535]
 ; CHECK-AVX1-NEXT:    vpmuludq %xmm2, %xmm1, %xmm1
 ; CHECK-AVX1-NEXT:    vpmuludq %xmm2, %xmm0, %xmm2
 ; CHECK-AVX1-NEXT:    vpshufd {{.*#+}} xmm2 = xmm2[1,1,3,3]
@@ -382,7 +382,7 @@ define <4 x i32> @test_urem_even_undef1(<4 x i32> %X) nounwind {
 ; CHECK-AVX1-LABEL: test_urem_even_undef1:
 ; CHECK-AVX1:       # %bb.0:
 ; CHECK-AVX1-NEXT:    vpshufd {{.*#+}} xmm1 = xmm0[1,1,3,3]
-; CHECK-AVX1-NEXT:    vbroadcastss {{.*#+}} xmm2 = [1374389535,1374389535,1374389535,1374389535]
+; CHECK-AVX1-NEXT:    vmovdqa {{.*#+}} xmm2 = [1374389535,1374389535,1374389535,1374389535]
 ; CHECK-AVX1-NEXT:    vpmuludq %xmm2, %xmm1, %xmm1
 ; CHECK-AVX1-NEXT:    vpmuludq %xmm2, %xmm0, %xmm2
 ; CHECK-AVX1-NEXT:    vpshufd {{.*#+}} xmm2 = xmm2[1,1,3,3]

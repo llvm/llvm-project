@@ -619,12 +619,10 @@ define void @store_i32_stride6_vf8(ptr %in.vecptr0, ptr %in.vecptr1, ptr %in.vec
 ; AVX2-FAST-NEXT:    vpunpckhdq {{.*#+}} ymm9 = ymm3[2],ymm4[2],ymm3[3],ymm4[3],ymm3[6],ymm4[6],ymm3[7],ymm4[7]
 ; AVX2-FAST-NEXT:    vpshufd {{.*#+}} ymm9 = ymm9[2,3,2,3,6,7,6,7]
 ; AVX2-FAST-NEXT:    vperm2i128 {{.*#+}} ymm9 = ymm11[2,3],ymm9[2,3]
-; AVX2-FAST-NEXT:    vbroadcasti128 {{.*#+}} ymm10 = [6,0,7,0,6,0,7,0]
-; AVX2-FAST-NEXT:    # ymm10 = mem[0,1,0,1]
+; AVX2-FAST-NEXT:    vmovdqa {{.*#+}} ymm10 = <6,u,u,u,u,u,7,u>
 ; AVX2-FAST-NEXT:    vpermd %ymm2, %ymm10, %ymm10
 ; AVX2-FAST-NEXT:    vpblendd {{.*#+}} ymm9 = ymm10[0,1],ymm9[2,3,4,5],ymm10[6,7]
-; AVX2-FAST-NEXT:    vbroadcasti128 {{.*#+}} ymm10 = [0,6,0,7,0,6,0,7]
-; AVX2-FAST-NEXT:    # ymm10 = mem[0,1,0,1]
+; AVX2-FAST-NEXT:    vmovdqa {{.*#+}} ymm10 = <u,6,u,u,u,u,u,7>
 ; AVX2-FAST-NEXT:    vpermd %ymm5, %ymm10, %ymm5
 ; AVX2-FAST-NEXT:    vpblendd {{.*#+}} ymm5 = ymm9[0],ymm5[1],ymm9[2,3,4,5,6],ymm5[7]
 ; AVX2-FAST-NEXT:    vpunpckldq {{.*#+}} ymm3 = ymm3[0],ymm4[0],ymm3[1],ymm4[1],ymm3[4],ymm4[4],ymm3[5],ymm4[5]

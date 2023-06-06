@@ -2134,7 +2134,7 @@ define void @PR34947(ptr %p0, ptr %p1) nounwind {
 ; X86-AVX1-NEXT:    imull $8199, {{[-0-9]+}}(%e{{[sb]}}p), %eax # 4-byte Folded Reload
 ; X86-AVX1-NEXT:    # imm = 0x2007
 ; X86-AVX1-NEXT:    movl %eax, (%eax)
-; X86-AVX1-NEXT:    vbroadcastss {{.*#+}} xmm2 = [8199,8199,8199,8199]
+; X86-AVX1-NEXT:    vmovdqa {{.*#+}} xmm2 = [8199,8199,8199,8199]
 ; X86-AVX1-NEXT:    vpmulld %xmm2, %xmm0, %xmm0
 ; X86-AVX1-NEXT:    vpmulld %xmm2, %xmm1, %xmm1
 ; X86-AVX1-NEXT:    vmovdqa %xmm1, (%eax)
@@ -2337,7 +2337,7 @@ define void @PR34947(ptr %p0, ptr %p1) nounwind {
 ; X64-AVX1-NEXT:    vpinsrd $1, %ebp, %xmm0, %xmm0
 ; X64-AVX1-NEXT:    vpinsrd $2, %ebx, %xmm0, %xmm0
 ; X64-AVX1-NEXT:    vpinsrd $3, %r11d, %xmm0, %xmm0
-; X64-AVX1-NEXT:    vbroadcastss {{.*#+}} xmm1 = [8199,8199,8199,8199]
+; X64-AVX1-NEXT:    vmovdqa {{.*#+}} xmm1 = [8199,8199,8199,8199]
 ; X64-AVX1-NEXT:    vpmulld %xmm1, %xmm0, %xmm0
 ; X64-AVX1-NEXT:    vmovd %r10d, %xmm2
 ; X64-AVX1-NEXT:    vpinsrd $1, %r9d, %xmm2, %xmm2
