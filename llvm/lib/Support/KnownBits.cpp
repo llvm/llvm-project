@@ -748,6 +748,42 @@ KnownBits KnownBits::mulhu(const KnownBits &LHS, const KnownBits &RHS) {
   return mul(WideLHS, WideRHS).extractBits(BitWidth, BitWidth);
 }
 
+static KnownBits divComputeLowBit(KnownBits Known, const KnownBits &LHS,
+                                  const KnownBits &RHS, bool Exact) {
+
+  if (!Exact)
+    return Known;
+
+  // If LHS is Odd, the result is Odd no matter what.
+  // Odd / Odd -> Odd
+  // Odd / Even -> Impossible (because its exact division)
+  if (LHS.One[0])
+    Known.One.setBit(0);
+
+  int MinTZ =
+      (int)LHS.countMinTrailingZeros() - (int)RHS.countMaxTrailingZeros();
+  int MaxTZ =
+      (int)LHS.countMaxTrailingZeros() - (int)RHS.countMinTrailingZeros();
+  if (MinTZ >= 0) {
+    // Result has at least MinTZ trailing zeros.
+    Known.Zero.setLowBits(MinTZ);
+    if (MinTZ == MaxTZ) {
+      // Result has exactly MinTZ trailing zeros.
+      Known.One.setBit(MinTZ);
+    }
+  } else if (MaxTZ < 0) {
+    // Poison Result
+    Known.setAllZero();
+  }
+
+  // In the KnownBits exhaustive tests, we have poison inputs for exact values
+  // a LOT. If we have a conflict, just return all zeros.
+  if (Known.hasConflict())
+    Known.setAllZero();
+
+  return Known;
+}
+
 KnownBits KnownBits::sdiv(const KnownBits &LHS, const KnownBits &RHS,
                           bool Exact) {
   // Equivalent of `udiv`. We must have caught this before it was folded.
@@ -801,20 +837,7 @@ KnownBits KnownBits::sdiv(const KnownBits &LHS, const KnownBits &RHS,
     }
   }
 
-  if (Exact) {
-    // Odd / Odd -> Odd
-    if (LHS.One[0] && RHS.One[0]) {
-      Known.Zero.clearBit(0);
-      Known.One.setBit(0);
-    }
-    // Even / Odd -> Even
-    else if (LHS.Zero[0] && RHS.One[0]) {
-      Known.One.clearBit(0);
-      Known.Zero.setBit(0);
-    }
-    // Odd / Even -> impossible
-    // Even / Even -> unknown
-  }
+  Known = divComputeLowBit(Known, LHS, RHS, Exact);
 
   assert(!Known.hasConflict() && "Bad Output");
   return Known;
@@ -843,20 +866,7 @@ KnownBits KnownBits::udiv(const KnownBits &LHS, const KnownBits &RHS,
   unsigned LeadZ = MaxRes.countLeadingZeros();
 
   Known.Zero.setHighBits(LeadZ);
-  if (Exact) {
-    // Odd / Odd -> Odd
-    if (LHS.One[0] && RHS.One[0]) {
-      Known.Zero.clearBit(0);
-      Known.One.setBit(0);
-    }
-    // Even / Odd -> Even
-    else if (LHS.Zero[0] && RHS.One[0]) {
-      Known.One.clearBit(0);
-      Known.Zero.setBit(0);
-    }
-    // Odd / Even -> impossible
-    // Even / Even -> unknown
-  }
+  Known = divComputeLowBit(Known, LHS, RHS, Exact);
 
   assert(!Known.hasConflict() && "Bad Output");
   return Known;
