@@ -550,6 +550,7 @@ def PthreadLockChecker : Checker<"PthreadLock">,
 
 def StreamChecker : Checker<"Stream">,
   HelpText<"Check stream handling functions">,
+  WeakDependencies<[NonNullParamChecker]>,
   Documentation<HasDocumentation>;
 
 def SimpleStreamChecker : Checker<"SimpleStream">,
@@ -578,7 +579,7 @@ def StdCLibraryFunctionsChecker : Checker<"StdCLibraryFunctions">,
                   "false",
                   InAlpha>
   ]>,
-  WeakDependencies<[CallAndMessageChecker, NonNullParamChecker]>,
+  WeakDependencies<[CallAndMessageChecker, NonNullParamChecker, StreamChecker]>,
   Documentation<HasDocumentation>;
 
 } // end "alpha.unix"

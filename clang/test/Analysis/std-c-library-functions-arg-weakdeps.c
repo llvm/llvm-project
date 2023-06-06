@@ -3,6 +3,7 @@
 
 // RUN: %clang_analyze_cc1 %s \
 // RUN:   -analyzer-checker=core \
+// RUN:   -analyzer-checker=alpha.unix.Stream \
 // RUN:   -analyzer-checker=alpha.unix.StdCLibraryFunctions \
 // RUN:   -analyzer-config alpha.unix.StdCLibraryFunctions:ModelPOSIX=true \
 // RUN:   -triple x86_64-unknown-linux-gnu \
@@ -52,4 +53,9 @@ void test_notnull_arg(FILE *F) {
   int *p = 0;
   fread(p, sizeof(int), 5, F); // \
   expected-warning{{Null pointer passed to 1st parameter expecting 'nonnull' [core.NonNullParamChecker]}}
+}
+
+void test_notnull_stream_arg(void) {
+  fileno(0); // \
+  // expected-warning{{Stream pointer might be NULL [alpha.unix.Stream]}}
 }
