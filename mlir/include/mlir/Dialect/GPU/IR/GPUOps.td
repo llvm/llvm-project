@@ -1612,18 +1612,20 @@ def GPU_CreateDnVecOp : GPU_Op<"create_dn_vec", [GPU_AsyncOpInterface]> {
     Example:
 
     ```mlir
-    %dvec, %token = gpu.create_dn_vec async [%dep] %mem, %size : memref<?xf64>
+    %dvec, %token = gpu.create_dn_vec async [%dep] %env, %mem, %size : memref<?xf64>
     ```
   }];
 
   let arguments = (ins Variadic<GPU_AsyncToken>:$asyncDependencies,
-                   AnyMemRef:$memref, Index:$size);
-  let results = (outs Res<GPU_SparseDnVecHandle>:$dvec,
+                       GPU_SparseEnvHandle:$env,
+                       AnyMemRef:$memref, 
+                       Index:$size);
+  let results = (outs Res<GPU_SparseDnVecHandle>:$dvec, 
                       Optional<GPU_AsyncToken>:$asyncToken);
 
   let assemblyFormat = [{
     custom<AsyncDependencies>(type($asyncToken), $asyncDependencies)
-    $memref `,` $size attr-dict `:` type($memref)
+    $env `,` $memref `,` $size attr-dict `:` type($memref)
   }];
 }
 
@@ -1670,11 +1672,12 @@ def GPU_CreateDnMatOp : GPU_Op<"create_dn_mat", [GPU_AsyncOpInterface]> {
     Example:
 
     ```mlir
-    %dmat, %token = gpu.create_dn_mat async [%dep] %mem, %size : memref<?xf64>
+    %dmat, %token = gpu.create_dn_mat async [%dep] %env, %rows, %cols, %mem : memref<?xf64>
     ```
   }];
 
   let arguments = (ins Variadic<GPU_AsyncToken>:$asyncDependencies,
+                       GPU_SparseEnvHandle:$env,
                        Index:$rows,
                        Index:$cols,
                        AnyMemRef:$memref);
@@ -1682,7 +1685,7 @@ def GPU_CreateDnMatOp : GPU_Op<"create_dn_mat", [GPU_AsyncOpInterface]> {
 
   let assemblyFormat = [{
     custom<AsyncDependencies>(type($asyncToken), $asyncDependencies)
-    $rows `,` $cols `,` $memref attr-dict `:` type($memref)
+    $env `,` $rows `,` $cols `,` $memref attr-dict `:` type($memref)
   }];
 }
 
@@ -1826,6 +1829,41 @@ def GPU_CreateCsrOp : GPU_Op<"create_csr", [GPU_AsyncOpInterface]> {
     custom<AsyncDependencies>(type($asyncToken), $asyncDependencies)
     $rows `,` $cols `,` $nnz `,` $rowPos `,` $colIdxs `,` $values attr-dict
     `:` type($rowPos) `,` type($colIdxs) `,` type($values)
+  }];
+}
+
+
+def GPU_Create2To4SpMatOp : GPU_Op<"create_2to4_spmat", [GPU_AsyncOpInterface]> {
+  let summary = "Create sparse matrix with 2:4 sparsity operation";
+  let description = [{
+    The `gpu.create_2to4_spmat` operation initializes a sparse matrix in dense 
+    format with 2:4 sparsity.
+    The buffers must already be copied from the host to the device prior to
+    using this operation. The operation returns a handle to the sparse
+    matrix descriptor.
+
+    If the `async` keyword is present, the op is executed asynchronously (i.e.
+    it does not block until the execution has finished on the device). In
+    that case, it returns a !gpu.async.token in addition to the environment.
+
+    Example:
+
+    ```mlir
+    %spmat, %token = gpu.create_2to4_spmat async [%dep] %env, %rows, %cols, %mem : memref<?xf64>
+    ```
+  }];
+
+  let arguments = (ins Variadic<GPU_AsyncToken>:$asyncDependencies,
+                       GPU_SparseEnvHandle:$env,
+                       Index:$rows,
+                       Index:$cols,
+                       AnyMemRef:$memref);
+  let results = (outs Res<GPU_SparseSpMatHandle>:$spMat, 
+                      Optional<GPU_AsyncToken>:$asyncToken);
+
+  let assemblyFormat = [{
+    custom<AsyncDependencies>(type($asyncToken), $asyncDependencies)
+    $env `,` $rows `,` $cols `,` $memref attr-dict `:` type($memref)
   }];
 }
 
@@ -2005,7 +2043,7 @@ def GPU_SpMMBufferSizeOp : GPU_Op<"spmm_buffer_size", [GPU_AsyncOpInterface]> {
     Example:
 
     ```mlir
-    %buffersz, %token = gpu.spmm_buffer_size async [%dep] %env, %spmatA{TRANSPOSE}, %dnmatB{TRANSPOSE}, %dnmatC into f32
+    %bufferszs, %token = gpu.spmm_buffer_size async [%dep] %env, %spmatA{TRANSPOSE}, %dnmatB{TRANSPOSE}, %dnmatC : i64 into f32
     ```
   }];
 
@@ -2017,11 +2055,12 @@ def GPU_SpMMBufferSizeOp : GPU_Op<"spmm_buffer_size", [GPU_AsyncOpInterface]> {
                        GPU_SparseDnMatHandle:$dnmatB,
                        GPU_SparseDnMatHandle:$dnmatC,
                        TypeAttr:$computeType);
-  let results = (outs Res<Index>:$bufferSz,
+  let results = (outs Res<AnyTypeOf<[Index, TupleOf<[Index, Index, 
+                                                     Index]>]>>:$bufferSzs, 
                       Optional<GPU_AsyncToken>:$asyncToken);
 
   let builders = [OpBuilder<(ins
-      "Type":$bufferSz,
+      "Type":$bufferSzs,
       "Type":$asyncToken,
       "ValueRange":$asyncDependencies,
       "Value":$env,
@@ -2031,17 +2070,17 @@ def GPU_SpMMBufferSizeOp : GPU_Op<"spmm_buffer_size", [GPU_AsyncOpInterface]> {
       "Type":$computeType), [{
     auto modeA = gpu::TransposeMode::NON_TRANSPOSE;
     auto modeB = gpu::TransposeMode::NON_TRANSPOSE;
-    return build($_builder, $_state, bufferSz, asyncToken, asyncDependencies,
+    return build($_builder, $_state, bufferSzs, asyncToken, asyncDependencies,
                  env, modeA, modeB, spmatA, dnmatB, dnmatC, computeType);}]>
   ];
 
   let assemblyFormat = [{
     custom<AsyncDependencies>(type($asyncToken), $asyncDependencies)
-    $env `,` $spmatA (`{` $modeA^ `}`)? `,` $dnmatB (`{` $modeB^ `}`)? `,` $dnmatC attr-dict `into` $computeType
+    $env `,` $spmatA (`{` $modeA^ `}`)? `,` $dnmatB (`{` $modeB^ `}`)? `,` $dnmatC attr-dict `:` type($bufferSzs) `into` $computeType
   }];
 }
 
-def GPU_SpMMOp : GPU_Op<"spmm", [GPU_AsyncOpInterface]> {
+def GPU_SpMMOp : GPU_Op<"spmm", [GPU_AsyncOpInterface, AttrSizedOperandSegments]> {
   let summary = "SpMM operation";
   let description = [{
     The `gpu.spmm` operation performs the SpMM operation on the given sparse and
@@ -2060,7 +2099,7 @@ def GPU_SpMMOp : GPU_Op<"spmm", [GPU_AsyncOpInterface]> {
     Example:
 
     ```mlir
-    %token = gpu.spmm async [%dep] %env, %spmatA{TRANSPOSE}, %dnmatB{TRANSPOSE}, %dnmatC, %buffer into f32
+    %token = gpu.spmm async [%dep] %env, %spmatA{TRANSPOSE}, %dnmatB{TRANSPOSE}, %dnmatC, %buffers : type($buffers) into f32
     ```
   }];
 
@@ -2072,7 +2111,7 @@ def GPU_SpMMOp : GPU_Op<"spmm", [GPU_AsyncOpInterface]> {
                        GPU_SparseDnMatHandle:$dnmatB,
                        GPU_SparseDnMatHandle:$dnmatC,
                        TypeAttr:$computeType,
-                       AnyMemRef:$buffer);
+                       Variadic<AnyMemRef>:$buffers);
   let results = (outs Optional<GPU_AsyncToken>:$asyncToken);
 
   let builders = [OpBuilder<(ins
@@ -2083,16 +2122,16 @@ def GPU_SpMMOp : GPU_Op<"spmm", [GPU_AsyncOpInterface]> {
       "Value":$dnmatB,
       "Value":$dnmatC,
       "Type":$computeType,
-      "Value":$buffer), [{
+      "ValueRange":$buffers), [{
     auto modeA = gpu::TransposeMode::NON_TRANSPOSE;
     auto modeB = gpu::TransposeMode::NON_TRANSPOSE;
     return build($_builder, $_state, asyncToken, asyncDependencies, env, modeA,
-                 modeB, spmatA, dnmatB, dnmatC, computeType, buffer);}]>
+                 modeB, spmatA, dnmatB, dnmatC, computeType, buffers);}]>
   ];
 
   let assemblyFormat = [{
     custom<AsyncDependencies>(type($asyncToken), $asyncDependencies)
-    $env `,` $spmatA (`{` $modeA^ `}`)? `,` $dnmatB (`{` $modeB^ `}`)? `,` $dnmatC `,` $buffer attr-dict `:` type($buffer) `into` $computeType
+    $env `,` $spmatA (`{` $modeA^ `}`)? `,` $dnmatB (`{` $modeB^ `}`)? `,` $dnmatC `,` $buffers attr-dict `:` type($buffers) `into` $computeType
   }];
 }
 

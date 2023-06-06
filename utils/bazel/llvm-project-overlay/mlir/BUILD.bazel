@@ -7880,6 +7880,10 @@ cc_library(
     srcs = ["lib/ExecutionEngine/CudaRuntimeWrappers.cpp"],
     # Prevent needing EnableABIBreakingChecks symbol from LLVMSupport.
     copts = ["-DLLVM_DISABLE_ABI_BREAKING_CHECKS_ENFORCING=1"],
+    # Here:
+    #   MLIR_ENABLE_CUDA_CUSPARSE   : enables cuSPARSE
+    #   MLIR_ENABLE_CUDA_CUSPARSELT : enables cuSPARSElt
+    local_defines = ["MLIR_ENABLE_CUDA_CUSPARSE"],
     tags = [
         "manual",  # External dependency
         "nobuildkite",  # TODO(gcmn): Add support for this target
