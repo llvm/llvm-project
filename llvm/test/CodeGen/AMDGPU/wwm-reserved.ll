@@ -105,22 +105,24 @@ define hidden i32 @called(i32 %a) noinline {
 ; GFX9-LABEL: {{^}}call:
 define amdgpu_kernel void @call(ptr addrspace(8) inreg %tmp14, i32 inreg %arg) {
 ; GFX9-DAG: s_load_dword [[ARG:s[0-9]+]]
-; GFX9-O0-DAG: s_mov_b32 s4, 0{{$}}
-; GFX9-O0-DAG: v_mov_b32_e32 v2, [[ARG]]
+; GFX9-O0-DAG: s_mov_b32 s3, 0{{$}}
+; GFX9-O0-DAG: v_mov_b32_e32 v{{[0-9]+}}, [[ARG]]
 
 ; GFX9-O3: v_mov_b32_e32 v2, [[ARG]]
 
 ; GFX9-NEXT: s_not_b64 exec, exec
-; GFX9-O0-NEXT: v_mov_b32_e32 v2, s4
+; GFX9-O0-NEXT: v_mov_b32_e32 v6, s3
 ; GFX9-O3-NEXT: v_mov_b32_e32 v2, 0
 ; GFX9-NEXT: s_not_b64 exec, exec
   %tmp107 = tail call i32 @llvm.amdgcn.set.inactive.i32(i32 %arg, i32 0)
-; GFX9: v_mov_b32_e32 v0, v2
+; GFX9-O0: v_mov_b32_e32 v0, v6
+; GFX9-O3: v_mov_b32_e32 v0, v2
 ; GFX9: s_swappc_b64
   %tmp134 = call i32 @called(i32 %tmp107)
-; GFX9: v_mov_b32_e32 v1, v0
+; GFX9-O3: v_mov_b32_e32 v1, v0
 ; GFX9-O3: v_add_u32_e32 v1, v1, v2
-; GFX9-O0: v_add_u32_e64 v1, v1, v2
+; GFX9-O0: v_mov_b32_e32 v3, v0
+; GFX9-O0: v_add_u32_e64 v3, v3, v6
   %tmp136 = add i32 %tmp134, %tmp107
   %tmp137 = tail call i32 @llvm.amdgcn.wwm.i32(i32 %tmp136)
 ; GFX9: buffer_store_dword v0
@@ -298,22 +300,24 @@ define hidden i32 @strict_wwm_called(i32 %a) noinline {
 ; GFX9-LABEL: {{^}}strict_wwm_call:
 define amdgpu_kernel void @strict_wwm_call(ptr addrspace(8) inreg %tmp14, i32 inreg %arg) {
 ; GFX9-DAG: s_load_dword [[ARG:s[0-9]+]]
-; GFX9-O0-DAG: s_mov_b32 s4, 0{{$}}
-; GFX9-O0-DAG: v_mov_b32_e32 v2, [[ARG]]
+; GFX9-O0-DAG: s_mov_b32 s3, 0{{$}}
+; GFX9-O0-DAG: v_mov_b32_e32 v6, [[ARG]]
 
 ; GFX9-O3: v_mov_b32_e32 v2, [[ARG]]
 
 ; GFX9-NEXT: s_not_b64 exec, exec
-; GFX9-O0-NEXT: v_mov_b32_e32 v2, s4
+; GFX9-O0-NEXT: v_mov_b32_e32 v6, s3
 ; GFX9-O3-NEXT: v_mov_b32_e32 v2, 0
 ; GFX9-NEXT: s_not_b64 exec, exec
   %tmp107 = tail call i32 @llvm.amdgcn.set.inactive.i32(i32 %arg, i32 0)
-; GFX9: v_mov_b32_e32 v0, v2
+; GFX9-O3: v_mov_b32_e32 v0, v2
+; GFX9-O0: v_mov_b32_e32 v0, v6
 ; GFX9: s_swappc_b64
   %tmp134 = call i32 @strict_wwm_called(i32 %tmp107)
-; GFX9: v_mov_b32_e32 v1, v0
+; GFX9-O3: v_mov_b32_e32 v1, v0
 ; GFX9-O3: v_add_u32_e32 v1, v1, v2
-; GFX9-O0: v_add_u32_e64 v1, v1, v2
+; GFX9-O0: v_mov_b32_e32 v3, v0
+; GFX9-O0: v_add_u32_e64 v3, v3, v6
   %tmp136 = add i32 %tmp134, %tmp107
   %tmp137 = tail call i32 @llvm.amdgcn.strict.wwm.i32(i32 %tmp136)
 ; GFX9: buffer_store_dword v0
