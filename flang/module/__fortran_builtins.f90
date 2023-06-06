@@ -52,6 +52,7 @@ module __Fortran_builtins
     __builtin_threadIdx, __builtin_blockDim, __builtin_blockIdx, __builtin_gridDim
   integer, parameter :: __builtin_warpsize = 32
 
+  intrinsic :: __builtin_fma
   intrinsic :: __builtin_ieee_is_nan, __builtin_ieee_is_negative, &
     __builtin_ieee_is_normal
   intrinsic :: __builtin_ieee_next_after, __builtin_ieee_next_down, &

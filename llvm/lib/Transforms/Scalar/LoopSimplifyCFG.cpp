@@ -417,7 +417,7 @@ private:
         else
           DTU.applyUpdates(DTUpdates);
         DTUpdates.clear();
-        formLCSSARecursively(*FixLCSSALoop, DT, &LI);
+        formLCSSARecursively(*FixLCSSALoop, DT, &LI, &SE);
         SE.forgetBlockAndLoopDispositions();
       }
     }

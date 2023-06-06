@@ -61,5 +61,59 @@ define void @func_06() {
   ret void
 }
 
+define i32 @get_fpenv_01() #0 {
+; CHECK-LABEL: get_fpenv_01:
+; CHECK:       @ %bb.0: @ %entry
+; CHECK-NEXT:    .save {r11, lr}
+; CHECK-NEXT:    push {r11, lr}
+; CHECK-NEXT:    .pad #8
+; CHECK-NEXT:    sub sp, sp, #8
+; CHECK-NEXT:    add r0, sp, #4
+; CHECK-NEXT:    bl fegetenv
+; CHECK-NEXT:    ldr r0, [sp, #4]
+; CHECK-NEXT:    add sp, sp, #8
+; CHECK-NEXT:    pop {r11, lr}
+; CHECK-NEXT:    mov pc, lr
+entry:
+  %fpenv = call i32 @llvm.get.fpenv.i32()
+  ret i32 %fpenv
+}
+
+define void @set_fpenv_01(i32 %fpenv) #0 {
+; CHECK-LABEL: set_fpenv_01:
+; CHECK:       @ %bb.0: @ %entry
+; CHECK-NEXT:    .save {r11, lr}
+; CHECK-NEXT:    push {r11, lr}
+; CHECK-NEXT:    .pad #8
+; CHECK-NEXT:    sub sp, sp, #8
+; CHECK-NEXT:    str r0, [sp, #4]
+; CHECK-NEXT:    add r0, sp, #4
+; CHECK-NEXT:    bl fesetenv
+; CHECK-NEXT:    add sp, sp, #8
+; CHECK-NEXT:    pop {r11, lr}
+; CHECK-NEXT:    mov pc, lr
+entry:
+  call void @llvm.set.fpenv.i32(i32 %fpenv)
+  ret void
+}
+
+define void @reset_fpenv_01() #0 {
+; CHECK-LABEL: reset_fpenv_01:
+; CHECK:       @ %bb.0: @ %entry
+; CHECK-NEXT:    .save {r11, lr}
+; CHECK-NEXT:    push {r11, lr}
+; CHECK-NEXT:    mvn r0, #0
+; CHECK-NEXT:    bl fesetenv
+; CHECK-NEXT:    pop {r11, lr}
+; CHECK-NEXT:    mov pc, lr
+entry:
+  call void @llvm.reset.fpenv()
+  ret void
+}
+
+attributes #0 = { nounwind "use-soft-float"="true" }
 
 declare void @llvm.set.rounding(i32)
+declare i32 @llvm.get.fpenv.i32()
+declare void @llvm.set.fpenv.i32(i32 %fpenv)
+declare void @llvm.reset.fpenv()

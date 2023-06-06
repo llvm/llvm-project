@@ -7,6 +7,7 @@ add_custom_target(ClangIncludeCleanerUnitTests)
 add_unittest(ClangIncludeCleanerUnitTests ClangIncludeCleanerTests
   AnalysisTest.cpp
   FindHeadersTest.cpp
+  IncludeSpellerTest.cpp
   LocateSymbolTest.cpp
   RecordTest.cpp
   TypesTest.cpp

@@ -320,9 +320,6 @@ bool DataInitializationCompiler<DSV>::InitElement(
   bool isPointer{lastSymbol && IsPointer(*lastSymbol)};
   bool isProcPointer{lastSymbol && IsProcedurePointer(*lastSymbol)};
   evaluate::FoldingContext &context{exprAnalyzer_.GetFoldingContext()};
-  auto &messages{context.messages()};
-  auto restorer{
-      messages.SetLocation(values_.LocateSource().value_or(messages.at()))};
 
   const auto DescribeElement{[&]() {
     if (auto badDesignator{
@@ -365,6 +362,9 @@ bool DataInitializationCompiler<DSV>::InitElement(
     return false;
   }
 
+  auto &messages{context.messages()};
+  auto restorer{
+      messages.SetLocation(values_.LocateSource().value_or(messages.at()))};
   const SomeExpr *expr{*values_};
   if (!expr) {
     CHECK(exprAnalyzer_.context().AnyFatalError());

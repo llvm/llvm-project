@@ -720,6 +720,7 @@ variables is defined below.
     * ``LIBOMPTARGET_JIT_REPLACEMENT_MODULE=<in:Filename> (LLVM-IR file)``
     * ``LIBOMPTARGET_JIT_PRE_OPT_IR_MODULE=<out:Filename> (LLVM-IR file)``
     * ``LIBOMPTARGET_JIT_POST_OPT_IR_MODULE=<out:Filename> (LLVM-IR file)``
+    * ``LIBOMPTARGET_MIN_THREADS_FOR_LOW_TRIP_COUNT=<Num> (default: 32)``
 
 LIBOMPTARGET_DEBUG
 """"""""""""""""""
@@ -1108,7 +1109,7 @@ transformed and loaded back into the JIT pipeline via
 
 
 LIBOMPTARGET_JIT_POST_OPT_IR_MODULE
-""""""""""""""""""""""""""""""""""
+"""""""""""""""""""""""""""""""""""
 
 This environment variable can be used to extract the embedded device code after
 the device JIT runs additional IR optimizations on it (see
@@ -1116,6 +1117,18 @@ the device JIT runs additional IR optimizations on it (see
 which the LLVM-IR module is written. The module can be the analyzed, and
 transformed and loaded back into the JIT pipeline via
 :ref:`LIBOMPTARGET_JIT_REPLACEMENT_MODULE`.
+
+
+LIBOMPTARGET_MIN_THREADS_FOR_LOW_TRIP_COUNT
+"""""""""""""""""""""""""""""""""""""""""""
+
+This environment variable defines a lower bound for the number of threads if a
+combined kernel, e.g., `target teams distribute parallel for`, has insufficient
+parallelism. Especially if the trip count of the loops is lower than the number
+of threads possible times the number of teams (aka. blocks) the device preferes
+(see also :ref:`LIBOMPTARGET_AMDGPU_TEAMS_PER_CU), we will reduce the thread
+count to increase outer (team/block) parallelism. The thread count will never
+be reduced below the value passed for this environment variable though.
 
 
 

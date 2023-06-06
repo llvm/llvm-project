@@ -42,6 +42,7 @@ public:
     explicit stack(const container_type& c);
     explicit stack(container_type&& c);
     template <class InputIterator> stack(InputIterator first, InputIterator last); // since C++23
+    template<container-compatible-range<T> R> stack(from_range_t, R&& rg); // since C++23
     template <class Alloc> explicit stack(const Alloc& a);
     template <class Alloc> stack(const container_type& c, const Alloc& a);
     template <class Alloc> stack(container_type&& c, const Alloc& a);
@@ -49,6 +50,8 @@ public:
     template <class Alloc> stack(stack&& c, const Alloc& a);
     template<class InputIterator, class Alloc>
     stack(InputIterator first, InputIterator last, const Alloc&); // since C++23
+    template<container-compatible-range<T> R, class Alloc>
+      stack(from_range_t, R&& rg, const Alloc&); // since C++23
 
     bool empty() const;
     size_type size() const;
@@ -57,6 +60,8 @@ public:
 
     void push(const value_type& x);
     void push(value_type&& x);
+    template<container-compatible-range<T> R>
+      void push_range(R&& rg); // C++23
     template <class... Args> reference emplace(Args&&... args); // reference in C++17
     void pop();
 
@@ -69,6 +74,9 @@ template<class Container>
 template<class InputIterator>
   stack(InputIterator, InputIterator) -> stack<iter-value-type<InputIterator>>; // since C++23
 
+template<ranges::input_range R>
+  stack(from_range_t, R&&) -> stack<ranges::range_value_t<R>>; // since C++23
+
 template<class Container, class Allocator>
   stack(Container, Allocator) -> stack<typename Container::value_type, Container>; // C++17
 
@@ -76,6 +84,10 @@ template<class InputIterator, class Allocator>
   stack(InputIterator, InputIterator, Allocator)
     -> stack<iter-value-type<InputIterator>,
              deque<iter-value-type<InputIterator>, Allocator>>; // since C++23
+
+template<ranges::input_range R, class Allocator>
+  stack(from_range_t, R&&, Allocator)
+    -> stack<ranges::range_value_t<R>, deque<ranges::range_value_t<R>, Allocator>>; // since C++23
 
 template <class T, class Container>
   bool operator==(const stack<T, Container>& x, const stack<T, Container>& y);
@@ -98,10 +110,16 @@ template <class T, class Container>
 
 */
 
+#include <__algorithm/ranges_copy.h>
 #include <__assert> // all public C++ headers provide the assertion handler
 #include <__config>
+#include <__iterator/back_insert_iterator.h>
 #include <__iterator/iterator_traits.h>
 #include <__memory/uses_allocator.h>
+#include <__ranges/access.h>
+#include <__ranges/concepts.h>
+#include <__ranges/container_compatible_range.h>
+#include <__ranges/from_range.h>
 #include <__type_traits/is_same.h>
 #include <__utility/forward.h>
 #include <deque>
@@ -210,12 +228,24 @@ public:
     _LIBCPP_HIDE_FROM_ABI
     stack(_InputIterator __first, _InputIterator __last) : c(__first, __last) {}
 
+    template <_ContainerCompatibleRange<_Tp> _Range>
+    _LIBCPP_HIDE_FROM_ABI
+    stack(from_range_t, _Range&& __range) : c(from_range, std::forward<_Range>(__range)) {}
+
     template <class _InputIterator,
               class _Alloc,
               class = __enable_if_t<__has_input_iterator_category<_InputIterator>::value>,
               class = __enable_if_t<uses_allocator<container_type, _Alloc>::value>>
     _LIBCPP_HIDE_FROM_ABI
     stack(_InputIterator __first, _InputIterator __last, const _Alloc& __alloc) : c(__first, __last, __alloc) {}
+
+    template <_ContainerCompatibleRange<_Tp> _Range,
+              class _Alloc,
+              class = __enable_if_t<uses_allocator<container_type, _Alloc>::value>>
+    _LIBCPP_HIDE_FROM_ABI
+    stack(from_range_t, _Range&& __range, const _Alloc& __alloc)
+        : c(from_range, std::forward<_Range>(__range), __alloc) {}
+
 #endif
 
     _LIBCPP_NODISCARD_AFTER_CXX17 _LIBCPP_INLINE_VISIBILITY
@@ -232,6 +262,20 @@ public:
 #ifndef _LIBCPP_CXX03_LANG
     _LIBCPP_INLINE_VISIBILITY
     void push(value_type&& __v) {c.push_back(_VSTD::move(__v));}
+
+#if _LIBCPP_STD_VER >= 23
+    template <_ContainerCompatibleRange<_Tp> _Range>
+    _LIBCPP_HIDE_FROM_ABI
+    void push_range(_Range&& __range) {
+      if constexpr (requires (container_type& __c) {
+        __c.append_range(std::forward<_Range>(__range));
+      }) {
+        c.append_range(std::forward<_Range>(__range));
+      } else {
+        ranges::copy(std::forward<_Range>(__range), std::back_inserter(c));
+      }
+    }
+#endif
 
     template <class... _Args>
         _LIBCPP_INLINE_VISIBILITY
@@ -290,12 +334,22 @@ template<class _InputIterator,
 stack(_InputIterator, _InputIterator)
     -> stack<__iter_value_type<_InputIterator>>;
 
+template <ranges::input_range _Range>
+stack(from_range_t, _Range&&) -> stack<ranges::range_value_t<_Range>>;
+
 template<class _InputIterator,
          class _Alloc,
          class = __enable_if_t<__has_input_iterator_category<_InputIterator>::value>,
          class = __enable_if_t<__is_allocator<_Alloc>::value>>
 stack(_InputIterator, _InputIterator, _Alloc)
     -> stack<__iter_value_type<_InputIterator>, deque<__iter_value_type<_InputIterator>, _Alloc>>;
+
+template <ranges::input_range _Range,
+          class _Alloc,
+          class = __enable_if_t<__is_allocator<_Alloc>::value>>
+stack(from_range_t, _Range&&, _Alloc)
+  -> stack<ranges::range_value_t<_Range>, deque<ranges::range_value_t<_Range>, _Alloc>>;
+
 #endif
 
 template <class _Tp, class _Container>

@@ -71,7 +71,8 @@ AArch64RegisterBankInfo::AArch64RegisterBankInfo(
     // GR64all + its subclasses.
     assert(RBGPR.covers(*TRI.getRegClass(AArch64::GPR32RegClassID)) &&
            "Subclass not added?");
-    assert(RBGPR.getSize() == 128 && "GPRs should hold up to 128-bit");
+    assert(getMaximumSize(RBGPR.getID()) == 128 &&
+           "GPRs should hold up to 128-bit");
 
     // The FPR register bank is fully defined by all the registers in
     // GR64all + its subclasses.
@@ -79,12 +80,13 @@ AArch64RegisterBankInfo::AArch64RegisterBankInfo(
            "Subclass not added?");
     assert(RBFPR.covers(*TRI.getRegClass(AArch64::FPR64RegClassID)) &&
            "Subclass not added?");
-    assert(RBFPR.getSize() == 512 &&
+    assert(getMaximumSize(RBFPR.getID()) == 512 &&
            "FPRs should hold up to 512-bit via QQQQ sequence");
 
     assert(RBCCR.covers(*TRI.getRegClass(AArch64::CCRRegClassID)) &&
            "Class not added?");
-    assert(RBCCR.getSize() == 32 && "CCR should hold up to 32-bit");
+    assert(getMaximumSize(RBCCR.getID()) == 32 &&
+           "CCR should hold up to 32-bit");
 
     // Check that the TableGen'ed like file is in sync we our expectations.
     // First, the Idx.

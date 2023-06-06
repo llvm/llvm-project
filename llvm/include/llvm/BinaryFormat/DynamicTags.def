@@ -223,6 +223,8 @@ PPC_DYNAMIC_TAG(PPC_OPT, 0x70000001) // Has TLS optimization.
 // PPC64 specific dynamic table entries.
 PPC64_DYNAMIC_TAG(PPC64_GLINK, 0x70000000) // Address of 32 bytes before the
                                            // first glink lazy resolver stub.
+PPC64_DYNAMIC_TAG(PPC64_OPT, 0x70000003) // Flags to control optimizations
+                                         // for TLS and multiple TOCs.
 
 // RISC-V specific dynamic array tags.
 RISCV_DYNAMIC_TAG(RISCV_VARIANT_CC, 0x70000001)

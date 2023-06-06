@@ -4,7 +4,7 @@
 
 ; TEST 1
 define i32 @foo1() {
-; CHECK: Function Attrs: nofree norecurse nosync nounwind willreturn memory(none)
+; CHECK: Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn memory(none)
 ; CHECK-LABEL: define {{[^@]+}}@foo1
 ; CHECK-SAME: () #[[ATTR0:[0-9]+]] {
 ; CHECK-NEXT:    ret i32 1
@@ -14,12 +14,12 @@ define i32 @foo1() {
 
 ; TEST 2
 define i32 @scc1_foo() {
-; TUNIT: Function Attrs: nofree nosync nounwind willreturn memory(none)
+; TUNIT: Function Attrs: mustprogress nofree nosync nounwind willreturn memory(none)
 ; TUNIT-LABEL: define {{[^@]+}}@scc1_foo
 ; TUNIT-SAME: () #[[ATTR1:[0-9]+]] {
 ; TUNIT-NEXT:    ret i32 1
 ;
-; CGSCC: Function Attrs: nofree norecurse nosync nounwind willreturn memory(none)
+; CGSCC: Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn memory(none)
 ; CGSCC-LABEL: define {{[^@]+}}@scc1_foo
 ; CGSCC-SAME: () #[[ATTR0]] {
 ; CGSCC-NEXT:    ret i32 1
@@ -31,12 +31,12 @@ define i32 @scc1_foo() {
 
 ; TEST 3
 define i32 @scc1_bar() {
-; TUNIT: Function Attrs: nofree nosync nounwind willreturn memory(none)
+; TUNIT: Function Attrs: mustprogress nofree nosync nounwind willreturn memory(none)
 ; TUNIT-LABEL: define {{[^@]+}}@scc1_bar
 ; TUNIT-SAME: () #[[ATTR1]] {
 ; TUNIT-NEXT:    ret i32 1
 ;
-; CGSCC: Function Attrs: nofree norecurse nosync nounwind willreturn memory(none)
+; CGSCC: Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn memory(none)
 ; CGSCC-LABEL: define {{[^@]+}}@scc1_bar
 ; CGSCC-SAME: () #[[ATTR0]] {
 ; CGSCC-NEXT:    ret i32 1
@@ -145,8 +145,8 @@ declare ptr @__cxa_begin_catch(ptr)
 
 declare void @__cxa_end_catch()
 ;.
-; TUNIT: attributes #[[ATTR0]] = { nofree norecurse nosync nounwind willreturn memory(none) }
-; TUNIT: attributes #[[ATTR1]] = { nofree nosync nounwind willreturn memory(none) }
+; TUNIT: attributes #[[ATTR0]] = { mustprogress nofree norecurse nosync nounwind willreturn memory(none) }
+; TUNIT: attributes #[[ATTR1]] = { mustprogress nofree nosync nounwind willreturn memory(none) }
 ;.
-; CGSCC: attributes #[[ATTR0]] = { nofree norecurse nosync nounwind willreturn memory(none) }
+; CGSCC: attributes #[[ATTR0]] = { mustprogress nofree norecurse nosync nounwind willreturn memory(none) }
 ;.

@@ -1978,6 +1978,8 @@ std::error_code DataAggregator::parseMMapEvents() {
     std::pair<StringRef, MMapInfo> FileMMapInfo = FileMMapInfoRes.get();
     if (FileMMapInfo.second.PID == -1)
       continue;
+    if (FileMMapInfo.first.equals("(deleted)"))
+      continue;
 
     // Consider only the first mapping of the file for any given PID
     auto Range = GlobalMMapInfo.equal_range(FileMMapInfo.first);

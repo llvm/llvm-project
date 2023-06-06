@@ -662,7 +662,8 @@ Tool *ToolChain::SelectTool(const JobAction &JA) const {
   if (D.IsFlangMode() && getDriver().ShouldUseFlangCompiler(JA)) return getFlang();
   if (getDriver().ShouldUseClangCompiler(JA)) return getClang();
   Action::ActionClass AC = JA.getKind();
-  if (AC == Action::AssembleJobClass && useIntegratedAs())
+  if (AC == Action::AssembleJobClass && useIntegratedAs() &&
+      !getTriple().isOSAIX())
     return getClangAs();
   return getTool(AC);
 }

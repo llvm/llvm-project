@@ -23,6 +23,10 @@
 
 _LIBCPP_BEGIN_NAMESPACE_STD
 
+// Type used to encode that a function takes an integer that represents a number
+// of elements as opposed to a number of bytes.
+enum class __element_count : size_t {};
+
 inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX14 size_t __constexpr_strlen(const char* __str) {
   // GCC currently doesn't support __builtin_strlen for heap-allocated memory during constant evaluation.
   // https://gcc.gnu.org/bugzilla/show_bug.cgi?id=70816
@@ -42,14 +46,16 @@ inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX14 size_t __constexpr_st
 // of invoking it on every object individually.
 template <class _Tp, class _Up>
 _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX14 int
-__constexpr_memcmp(const _Tp* __lhs, const _Up* __rhs, size_t __count) {
+__constexpr_memcmp(const _Tp* __lhs, const _Up* __rhs, __element_count __n) {
   static_assert(__libcpp_is_trivially_lexicographically_comparable<_Tp, _Up>::value,
                 "_Tp and _Up have to be trivially lexicographically comparable");
+
+  auto __count = static_cast<size_t>(__n);
 
   if (__libcpp_is_constant_evaluated()) {
 #ifdef _LIBCPP_COMPILER_CLANG_BASED
     if (sizeof(_Tp) == 1 && !is_same<_Tp, bool>::value)
-      return __builtin_memcmp(__lhs, __rhs, __count);
+      return __builtin_memcmp(__lhs, __rhs, __count * sizeof(_Tp));
 #endif
 
     while (__count != 0) {
@@ -58,13 +64,13 @@ __constexpr_memcmp(const _Tp* __lhs, const _Up* __rhs, size_t __count) {
       if (*__rhs < *__lhs)
         return 1;
 
-      __count -= sizeof(_Tp);
+      --__count;
       ++__lhs;
       ++__rhs;
     }
     return 0;
   } else {
-    return __builtin_memcmp(__lhs, __rhs, __count);
+    return __builtin_memcmp(__lhs, __rhs, __count * sizeof(_Tp));
   }
 }
 
@@ -73,26 +79,28 @@ __constexpr_memcmp(const _Tp* __lhs, const _Up* __rhs, size_t __count) {
 // of invoking it on every object individually.
 template <class _Tp, class _Up>
 _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX14 bool
-__constexpr_memcmp_equal(const _Tp* __lhs, const _Up* __rhs, size_t __count) {
+__constexpr_memcmp_equal(const _Tp* __lhs, const _Up* __rhs, __element_count __n) {
   static_assert(__libcpp_is_trivially_equality_comparable<_Tp, _Up>::value,
                 "_Tp and _Up have to be trivially equality comparable");
+
+  auto __count = static_cast<size_t>(__n);
 
   if (__libcpp_is_constant_evaluated()) {
 #ifdef _LIBCPP_COMPILER_CLANG_BASED
     if (sizeof(_Tp) == 1 && is_integral<_Tp>::value && !is_same<_Tp, bool>::value)
-      return __builtin_memcmp(__lhs, __rhs, __count) == 0;
+      return __builtin_memcmp(__lhs, __rhs, __count * sizeof(_Tp)) == 0;
 #endif
     while (__count != 0) {
       if (*__lhs != *__rhs)
         return false;
 
-      __count -= sizeof(_Tp);
+      --__count;
       ++__lhs;
       ++__rhs;
     }
     return true;
   } else {
-    return __builtin_memcmp(__lhs, __rhs, __count) == 0;
+    return __builtin_memcmp(__lhs, __rhs, __count * sizeof(_Tp)) == 0;
   }
 }
 

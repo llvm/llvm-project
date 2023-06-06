@@ -116,8 +116,8 @@ struct UpdateIndexCallbacks : public ParsingCallbacks {
         ServerCallbacks->onDiagnosticsReady(Path, AST.version(),
                                             std::move(Diagnostics));
         if (CollectInactiveRegions) {
-          ServerCallbacks->onInactiveRegionsReady(
-              Path, std::move(AST.getMacros().SkippedRanges));
+          ServerCallbacks->onInactiveRegionsReady(Path,
+                                                  getInactiveRegions(AST));
         }
       });
   }

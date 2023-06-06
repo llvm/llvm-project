@@ -103,10 +103,13 @@ func.func @dfa3a(%arg0: i1) {
 }
 // CHECK:     func.func @dfa3a(%arg0: i1) {
 // CHECK-NEXT:  %[[MEM:.*]] = fir.alloca !fir.array<1xi8>
+// CHECK-NEXT:  %[[HEAP:.*]] = fir.convert %[[MEM]] : (!fir.ref<!fir.array<1xi8>>) -> !fir.heap<!fir.array<1xi8>>
 // CHECK-NEXT:  fir.if %arg0 {
-// CHECK-NEXT:    func.call @dfa3a_foo(%[[MEM]])
+// CHECK-NEXT:    %[[REF:.*]] = fir.convert %[[HEAP]] : (!fir.heap<!fir.array<1xi8>>) -> !fir.ref<!fir.array<1xi8>>
+// CHECK-NEXT:    func.call @dfa3a_foo(%[[REF]])
 // CHECK-NEXT:  } else {
-// CHECK-NEXT:    func.call @dfa3a_bar(%[[MEM]])
+// CHECK-NEXT:    %[[REF:.*]] = fir.convert %[[HEAP]] : (!fir.heap<!fir.array<1xi8>>) -> !fir.ref<!fir.array<1xi8>>
+// CHECK-NEXT:    func.call @dfa3a_bar(%[[REF]])
 // CHECK-NEXT:  }
 // CHECK-NEXT:  return
 // CHECK-NEXT:  }

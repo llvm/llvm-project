@@ -1377,6 +1377,17 @@ In C, type compatibility is decided according to the rules given in the
 appropriate standard, but in C++, which lacks the type compatibility rules used
 in C, types are considered compatible only if they are equivalent.
 
+Clang also supports an extended form of ``_Generic`` with a controlling type
+rather than a controlling expression. Unlike with a controlling expression, a
+controlling type argument does not undergo any conversions and thus is suitable
+for use when trying to match qualified types, incomplete types, or function
+types. Variable-length array types lack the necessary compile-time information
+to resolve which association they match with and thus are not allowed as a
+controlling type argument.
+
+Use ``__has_extension(c_generic_selection_with_controlling_type)`` to determine
+if support for this extension is enabled.
+
 C11 ``_Static_assert()``
 ^^^^^^^^^^^^^^^^^^^^^^^^
 

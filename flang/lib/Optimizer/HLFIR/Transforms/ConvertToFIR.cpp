@@ -67,7 +67,7 @@ public:
     hlfir::Entity lhs(assignOp.getLhs());
     hlfir::Entity rhs(assignOp.getRhs());
     auto module = assignOp->getParentOfType<mlir::ModuleOp>();
-    fir::FirOpBuilder builder(rewriter, fir::getKindMapping(module));
+    fir::FirOpBuilder builder(rewriter, module);
 
     if (rhs.getType().isa<hlfir::ExprType>()) {
       mlir::emitError(loc, "hlfir must be bufferized with --bufferize-hlfir "

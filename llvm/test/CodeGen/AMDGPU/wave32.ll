@@ -1959,7 +1959,7 @@ main_body:
   br i1 %cc, label %endif, label %if
 
 if:
-  %src = call float @llvm.amdgcn.struct.buffer.load.f32(<4 x i32> undef, i32 %idx, i32 0, i32 0, i32 0)
+  %src = call float @llvm.amdgcn.struct.ptr.buffer.load.f32(ptr addrspace(8) undef, i32 %idx, i32 0, i32 0, i32 0)
   %out = fadd float %src, %src
   %out.0 = call float @llvm.amdgcn.wwm.f32(float %out)
   %out.1 = fadd float %src, %out.0
@@ -2044,7 +2044,7 @@ main_body:
   br i1 %cc, label %endif, label %if
 
 if:
-  %src = call float @llvm.amdgcn.struct.buffer.load.f32(<4 x i32> undef, i32 %idx, i32 0, i32 0, i32 0)
+  %src = call float @llvm.amdgcn.struct.ptr.buffer.load.f32(ptr addrspace(8) undef, i32 %idx, i32 0, i32 0, i32 0)
   %out = fadd float %src, %src
   %out.0 = call float @llvm.amdgcn.strict.wwm.f32(float %out)
   %out.1 = fadd float %src, %out.0
@@ -2126,8 +2126,8 @@ define amdgpu_ps float @test_wqm2(i32 inreg %idx0, i32 inreg %idx1) #0 {
 ; GFX1064-NEXT:    s_and_b64 exec, exec, s[2:3]
 ; GFX1064-NEXT:    ; return to shader part epilog
 main_body:
-  %src0 = call float @llvm.amdgcn.struct.buffer.load.f32(<4 x i32> undef, i32 %idx0, i32 0, i32 0, i32 0)
-  %src1 = call float @llvm.amdgcn.struct.buffer.load.f32(<4 x i32> undef, i32 %idx1, i32 0, i32 0, i32 0)
+  %src0 = call float @llvm.amdgcn.struct.ptr.buffer.load.f32(ptr addrspace(8) undef, i32 %idx0, i32 0, i32 0, i32 0)
+  %src1 = call float @llvm.amdgcn.struct.ptr.buffer.load.f32(ptr addrspace(8) undef, i32 %idx1, i32 0, i32 0, i32 0)
   %out = fadd float %src0, %src1
   %out.0 = bitcast float %out to i32
   %out.1 = call i32 @llvm.amdgcn.wqm.i32(i32 %out.0)
@@ -2945,7 +2945,7 @@ declare float @llvm.amdgcn.wwm.f32(float)
 declare i32 @llvm.amdgcn.wqm.i32(i32)
 declare float @llvm.amdgcn.interp.p1(float, i32, i32, i32)
 declare float @llvm.amdgcn.interp.p2(float, float, i32, i32, i32)
-declare float @llvm.amdgcn.struct.buffer.load.f32(<4 x i32>, i32, i32, i32, i32 immarg)
+declare float @llvm.amdgcn.struct.ptr.buffer.load.f32(ptr addrspace(8), i32, i32, i32, i32 immarg)
 declare i32 @llvm.amdgcn.mbcnt.lo(i32, i32)
 declare i32 @llvm.amdgcn.mbcnt.hi(i32, i32)
 declare i64 @llvm.amdgcn.fcmp.i64.f32(float, float, i32)

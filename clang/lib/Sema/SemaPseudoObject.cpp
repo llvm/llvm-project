@@ -152,8 +152,13 @@ namespace {
           assocTypes.push_back(assoc.getTypeSourceInfo());
         }
 
+        if (gse->isExprPredicate())
+          return GenericSelectionExpr::Create(
+              S.Context, gse->getGenericLoc(), gse->getControllingExpr(),
+              assocTypes, assocExprs, gse->getDefaultLoc(), gse->getRParenLoc(),
+              gse->containsUnexpandedParameterPack(), resultIndex);
         return GenericSelectionExpr::Create(
-            S.Context, gse->getGenericLoc(), gse->getControllingExpr(),
+            S.Context, gse->getGenericLoc(), gse->getControllingType(),
             assocTypes, assocExprs, gse->getDefaultLoc(), gse->getRParenLoc(),
             gse->containsUnexpandedParameterPack(), resultIndex);
       }

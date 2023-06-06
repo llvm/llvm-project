@@ -639,7 +639,7 @@ static void darwinPrintStab(MachOObjectFile *MachO, const NMSymbol &S) {
 
 static std::optional<std::string> demangle(StringRef Name) {
   std::string Demangled;
-  if (nonMicrosoftDemangle(Name.str().c_str(), Demangled))
+  if (nonMicrosoftDemangle(Name, Demangled))
     return Demangled;
   return std::nullopt;
 }

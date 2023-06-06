@@ -4453,12 +4453,16 @@ void llvm::UpgradeCallsToIntrinsic(Function *F) {
 }
 
 MDNode *llvm::UpgradeTBAANode(MDNode &MD) {
+  const unsigned NumOperands = MD.getNumOperands();
+  if (NumOperands == 0)
+    return &MD; // Invalid, punt to a verifier error.
+
   // Check if the tag uses struct-path aware TBAA format.
-  if (isa<MDNode>(MD.getOperand(0)) && MD.getNumOperands() >= 3)
+  if (isa<MDNode>(MD.getOperand(0)) && NumOperands >= 3)
     return &MD;
 
   auto &Context = MD.getContext();
-  if (MD.getNumOperands() == 3) {
+  if (NumOperands == 3) {
     Metadata *Elts[] = {MD.getOperand(0), MD.getOperand(1)};
     MDNode *ScalarType = MDNode::get(Context, Elts);
     // Create a MDNode <ScalarType, ScalarType, offset 0, const>

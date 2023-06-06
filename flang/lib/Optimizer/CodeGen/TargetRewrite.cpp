@@ -93,7 +93,7 @@ public:
 
     // We may need to call stacksave/stackrestore later, so
     // create the FuncOps beforehand.
-    fir::FirOpBuilder builder(rewriter, fir::getKindMapping(mod));
+    fir::FirOpBuilder builder(rewriter, mod);
     builder.setInsertionPointToStart(mod.getBody());
     stackSaveFn = fir::factory::getLlvmStackSave(builder);
     stackRestoreFn = fir::factory::getLlvmStackRestore(builder);
@@ -340,8 +340,7 @@ public:
               }
               mlir::Type funcPointerType = tuple.getType(0);
               mlir::Type lenType = tuple.getType(1);
-              fir::KindMapping kindMap = fir::getKindMapping(module);
-              fir::FirOpBuilder builder(*rewriter, kindMap);
+              fir::FirOpBuilder builder(*rewriter, module);
               auto [funcPointer, len] =
                   fir::factory::extractCharacterProcedureTuple(builder, loc,
                                                                oper);
@@ -848,8 +847,7 @@ public:
               func.front().addArgument(trailingTys[fixup.second], loc);
           auto tupleType = oldArgTys[fixup.index - offset];
           rewriter->setInsertionPointToStart(&func.front());
-          fir::KindMapping kindMap = fir::getKindMapping(getModule());
-          fir::FirOpBuilder builder(*rewriter, kindMap);
+          fir::FirOpBuilder builder(*rewriter, getModule());
           auto tuple = fir::factory::createCharacterProcedureTuple(
               builder, loc, tupleType, newProcPointerArg, newLenArg);
           func.getArgument(fixup.index + 1).replaceAllUsesWith(tuple);

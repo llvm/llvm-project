@@ -9222,6 +9222,60 @@ SDValue SelectionDAG::getMaskedScatter(SDVTList VTs, EVT MemVT, const SDLoc &dl,
   return V;
 }
 
+SDValue SelectionDAG::getGetFPEnv(SDValue Chain, const SDLoc &dl, SDValue Ptr,
+                                  EVT MemVT, MachineMemOperand *MMO) {
+  assert(Chain.getValueType() == MVT::Other && "Invalid chain type");
+  SDVTList VTs = getVTList(MVT::Other);
+  SDValue Ops[] = {Chain, Ptr};
+  FoldingSetNodeID ID;
+  AddNodeIDNode(ID, ISD::GET_FPENV_MEM, VTs, Ops);
+  ID.AddInteger(MemVT.getRawBits());
+  ID.AddInteger(getSyntheticNodeSubclassData<FPStateAccessSDNode>(
+      ISD::GET_FPENV_MEM, dl.getIROrder(), VTs, MemVT, MMO));
+  ID.AddInteger(MMO->getPointerInfo().getAddrSpace());
+  ID.AddInteger(MMO->getFlags());
+  void *IP = nullptr;
+  if (SDNode *E = FindNodeOrInsertPos(ID, dl, IP))
+    return SDValue(E, 0);
+
+  auto *N = newSDNode<FPStateAccessSDNode>(ISD::GET_FPENV_MEM, dl.getIROrder(),
+                                           dl.getDebugLoc(), VTs, MemVT, MMO);
+  createOperands(N, Ops);
+
+  CSEMap.InsertNode(N, IP);
+  InsertNode(N);
+  SDValue V(N, 0);
+  NewSDValueDbgMsg(V, "Creating new node: ", this);
+  return V;
+}
+
+SDValue SelectionDAG::getSetFPEnv(SDValue Chain, const SDLoc &dl, SDValue Ptr,
+                                  EVT MemVT, MachineMemOperand *MMO) {
+  assert(Chain.getValueType() == MVT::Other && "Invalid chain type");
+  SDVTList VTs = getVTList(MVT::Other);
+  SDValue Ops[] = {Chain, Ptr};
+  FoldingSetNodeID ID;
+  AddNodeIDNode(ID, ISD::SET_FPENV_MEM, VTs, Ops);
+  ID.AddInteger(MemVT.getRawBits());
+  ID.AddInteger(getSyntheticNodeSubclassData<FPStateAccessSDNode>(
+      ISD::SET_FPENV_MEM, dl.getIROrder(), VTs, MemVT, MMO));
+  ID.AddInteger(MMO->getPointerInfo().getAddrSpace());
+  ID.AddInteger(MMO->getFlags());
+  void *IP = nullptr;
+  if (SDNode *E = FindNodeOrInsertPos(ID, dl, IP))
+    return SDValue(E, 0);
+
+  auto *N = newSDNode<FPStateAccessSDNode>(ISD::SET_FPENV_MEM, dl.getIROrder(),
+                                           dl.getDebugLoc(), VTs, MemVT, MMO);
+  createOperands(N, Ops);
+
+  CSEMap.InsertNode(N, IP);
+  InsertNode(N);
+  SDValue V(N, 0);
+  NewSDValueDbgMsg(V, "Creating new node: ", this);
+  return V;
+}
+
 SDValue SelectionDAG::simplifySelect(SDValue Cond, SDValue T, SDValue F) {
   // select undef, T, F --> T (if T is a constant), otherwise F
   // select, ?, undef, F --> F
@@ -12340,6 +12394,38 @@ SDValue SelectionDAG::getNeutralElement(unsigned Opcode, const SDLoc &DL,
     return getConstantFP(NeutralAF, DL, VT);
   }
   }
+}
+
+/// Helper used to make a call to a library function that has one argument of
+/// pointer type.
+///
+/// Such functions include 'fegetmode', 'fesetenv' and some others, which are
+/// used to get or set floating-point state. They have one argument of pointer
+/// type, which points to the memory region containing bits of the
+/// floating-point state. The value returned by such function is ignored in the
+/// created call.
+///
+/// \param LibFunc Reference to library function (value of RTLIB::Libcall).
+/// \param Ptr Pointer used to save/load state.
+/// \param InChain Ingoing token chain.
+/// \returns Outgoing chain token.
+SDValue SelectionDAG::makeStateFunctionCall(unsigned LibFunc, SDValue Ptr,
+                                            SDValue InChain,
+                                            const SDLoc &DLoc) {
+  assert(InChain.getValueType() == MVT::Other && "Expected token chain");
+  TargetLowering::ArgListTy Args;
+  TargetLowering::ArgListEntry Entry;
+  Entry.Node = Ptr;
+  Entry.Ty = Ptr.getValueType().getTypeForEVT(*getContext());
+  Args.push_back(Entry);
+  RTLIB::Libcall LC = static_cast<RTLIB::Libcall>(LibFunc);
+  SDValue Callee = getExternalSymbol(TLI->getLibcallName(LC),
+                                     TLI->getPointerTy(getDataLayout()));
+  TargetLowering::CallLoweringInfo CLI(*this);
+  CLI.setDebugLoc(DLoc).setChain(InChain).setLibCallee(
+      TLI->getLibcallCallingConv(LC), Type::getVoidTy(*getContext()), Callee,
+      std::move(Args));
+  return TLI->LowerCallTo(CLI).second;
 }
 
 void SelectionDAG::copyExtraInfo(SDNode *From, SDNode *To) {

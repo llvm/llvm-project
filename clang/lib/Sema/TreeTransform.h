@@ -3014,7 +3014,7 @@ public:
                                    RParenLoc);
   }
 
-  /// Build a new generic selection expression.
+  /// Build a new generic selection expression with an expression predicate.
   ///
   /// By default, performs semantic analysis to build the new expression.
   /// Subclasses may override this routine to provide different behavior.
@@ -3025,7 +3025,23 @@ public:
                                          ArrayRef<TypeSourceInfo *> Types,
                                          ArrayRef<Expr *> Exprs) {
     return getSema().CreateGenericSelectionExpr(KeyLoc, DefaultLoc, RParenLoc,
+                                                /*PredicateIsExpr=*/true,
                                                 ControllingExpr, Types, Exprs);
+  }
+
+  /// Build a new generic selection expression with a type predicate.
+  ///
+  /// By default, performs semantic analysis to build the new expression.
+  /// Subclasses may override this routine to provide different behavior.
+  ExprResult RebuildGenericSelectionExpr(SourceLocation KeyLoc,
+                                         SourceLocation DefaultLoc,
+                                         SourceLocation RParenLoc,
+                                         TypeSourceInfo *ControllingType,
+                                         ArrayRef<TypeSourceInfo *> Types,
+                                         ArrayRef<Expr *> Exprs) {
+    return getSema().CreateGenericSelectionExpr(KeyLoc, DefaultLoc, RParenLoc,
+                                                /*PredicateIsExpr=*/false,
+                                                ControllingType, Types, Exprs);
   }
 
   /// Build a new overloaded operator call expression.
@@ -10853,9 +10869,14 @@ TreeTransform<Derived>::TransformUserDefinedLiteral(UserDefinedLiteral *E) {
 template<typename Derived>
 ExprResult
 TreeTransform<Derived>::TransformGenericSelectionExpr(GenericSelectionExpr *E) {
-  ExprResult ControllingExpr =
-    getDerived().TransformExpr(E->getControllingExpr());
-  if (ControllingExpr.isInvalid())
+  ExprResult ControllingExpr;
+  TypeSourceInfo *ControllingType = nullptr;
+  if (E->isExprPredicate())
+    ControllingExpr = getDerived().TransformExpr(E->getControllingExpr());
+  else
+    ControllingType = getDerived().TransformType(E->getControllingType());
+
+  if (ControllingExpr.isInvalid() && !ControllingType)
     return ExprError();
 
   SmallVector<Expr *, 4> AssocExprs;
@@ -10878,12 +10899,16 @@ TreeTransform<Derived>::TransformGenericSelectionExpr(GenericSelectionExpr *E) {
     AssocExprs.push_back(AssocExpr.get());
   }
 
+  if (!ControllingType)
   return getDerived().RebuildGenericSelectionExpr(E->getGenericLoc(),
                                                   E->getDefaultLoc(),
                                                   E->getRParenLoc(),
                                                   ControllingExpr.get(),
                                                   AssocTypes,
                                                   AssocExprs);
+  return getDerived().RebuildGenericSelectionExpr(
+      E->getGenericLoc(), E->getDefaultLoc(), E->getRParenLoc(),
+      ControllingType, AssocTypes, AssocExprs);
 }
 
 template<typename Derived>

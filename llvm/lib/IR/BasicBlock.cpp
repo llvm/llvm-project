@@ -133,9 +133,8 @@ iplist<BasicBlock>::iterator BasicBlock::eraseFromParent() {
   return getParent()->getBasicBlockList().erase(getIterator());
 }
 
-void BasicBlock::moveBefore(BasicBlock *MovePos) {
-  MovePos->getParent()->splice(MovePos->getIterator(), getParent(),
-                               getIterator());
+void BasicBlock::moveBefore(SymbolTableList<BasicBlock>::iterator MovePos) {
+  getParent()->splice(MovePos, getParent(), getIterator());
 }
 
 void BasicBlock::moveAfter(BasicBlock *MovePos) {

@@ -16,6 +16,7 @@
 #include "mlir/Dialect/SCF/IR/SCF.h"
 #include "mlir/Dialect/Transform/IR/TransformDialect.h"
 #include "mlir/Dialect/Transform/IR/TransformInterfaces.h"
+#include "mlir/Dialect/Transform/IR/TransformOps.h"
 #include "mlir/Dialect/Vector/IR/VectorOps.h"
 #include "mlir/Interfaces/LoopLikeInterface.h"
 #include "mlir/Transforms/GreedyPatternRewriteDriver.h"
@@ -161,6 +162,23 @@ public:
 #define GET_OP_LIST
 #include "mlir/Dialect/MemRef/TransformOps/MemRefTransformOps.cpp.inc"
         >();
+
+    addDialectDataInitializer<transform::PatternRegistry>(
+        [&](transform::PatternRegistry &registry) {
+          registry.registerPatterns("memref.expand_ops",
+                                    memref::populateExpandOpsPatterns);
+          registry.registerPatterns("memref.fold_memref_alias_ops",
+                                    memref::populateFoldMemRefAliasOpPatterns);
+          registry.registerPatterns(
+              "memref.resolve_ranked_shaped_type_result_dims",
+              memref::populateResolveRankedShapedTypeResultDimsPatterns);
+          registry.registerPatterns(
+              "memref.expand_strided_metadata",
+              memref::populateExpandStridedMetadataPatterns);
+          registry.registerPatterns(
+              "memref.extract_address_computations",
+              memref::populateExtractAddressComputationsPatterns);
+        });
   }
 };
 } // namespace
