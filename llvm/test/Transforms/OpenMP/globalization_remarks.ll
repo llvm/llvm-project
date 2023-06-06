@@ -11,7 +11,7 @@ target triple = "nvptx64"
 
 @S = external local_unnamed_addr global ptr
 
-define void @foo() {
+define void @foo() "kernel" {
 entry:
   %c = call i32 @__kmpc_target_init(ptr null, i1 false, i1 true)
   %0 = call ptr @__kmpc_alloc_shared(i64 4), !dbg !10

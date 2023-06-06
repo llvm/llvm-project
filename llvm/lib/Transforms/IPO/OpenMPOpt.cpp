@@ -189,9 +189,9 @@ struct AAICVTracker;
 struct OMPInformationCache : public InformationCache {
   OMPInformationCache(Module &M, AnalysisGetter &AG,
                       BumpPtrAllocator &Allocator, SetVector<Function *> *CGSCC,
-                      KernelSet &Kernels, bool OpenMPPostLink)
+                      bool OpenMPPostLink)
       : InformationCache(M, AG, Allocator, CGSCC), OMPBuilder(M),
-        Kernels(Kernels), OpenMPPostLink(OpenMPPostLink) {
+        OpenMPPostLink(OpenMPPostLink) {
 
     OMPBuilder.initialize();
     initializeRuntimeFunctions(M);
@@ -536,9 +536,6 @@ struct OMPInformationCache : public InformationCache {
 
     // TODO: We should attach the attributes defined in OMPKinds.def.
   }
-
-  /// Collection of known kernels (\see Kernel) in the module.
-  KernelSet &Kernels;
 
   /// Collection of known OpenMP runtime functions..
   DenseSet<const Function *> RTLFunctions;
@@ -904,7 +901,7 @@ struct OpenMPOpt {
   /// Print OpenMP GPU kernels for testing.
   void printKernels() const {
     for (Function *F : SCC) {
-      if (!OMPInfoCache.Kernels.count(F))
+      if (!omp::isKernel(*F))
         continue;
 
       auto Remark = [&](OptimizationRemarkAnalysis ORA) {
@@ -1824,9 +1821,6 @@ private:
   ///
   ///{{
 
-  /// Check if \p F is a kernel, hence entry point for target offloading.
-  bool isKernel(Function &F) { return OMPInfoCache.Kernels.count(&F); }
-
   /// Cache to remember the unique kernel for a function.
   DenseMap<Function *, std::optional<Kernel>> UniqueKernelMap;
 
@@ -2640,9 +2634,8 @@ struct AAExecutionDomainFunction : public AAExecutionDomain {
     for (auto *CB : AlignedBarriers)
       HandleAlignedBarrier(CB);
 
-    auto &OMPInfoCache = static_cast<OMPInformationCache &>(A.getInfoCache());
     // Handle the "kernel end barrier" for kernels too.
-    if (OMPInfoCache.Kernels.count(getAnchorScope()))
+    if (omp::isKernel(*getAnchorScope()))
       HandleAlignedBarrier(nullptr);
 
     return Changed;
@@ -2881,8 +2874,7 @@ bool AAExecutionDomainFunction::handleCallees(Attributor &A,
   } else {
     // We could not find all predecessors, so this is either a kernel or a
     // function with external linkage (or with some other weird uses).
-    auto &OMPInfoCache = static_cast<OMPInformationCache &>(A.getInfoCache());
-    if (OMPInfoCache.Kernels.count(getAnchorScope())) {
+    if (omp::isKernel(*getAnchorScope())) {
       EntryBBED.IsExecutedByInitialThreadOnly = false;
       EntryBBED.IsReachedFromAlignedBarrierOnly = true;
       EntryBBED.EncounteredNonLocalSideEffect = false;
@@ -2936,11 +2928,9 @@ ChangeStatus AAExecutionDomainFunction::updateImpl(Attributor &A) {
   auto &LivenessAA =
       A.getAAFor<AAIsDead>(*this, getIRPosition(), DepClassTy::OPTIONAL);
 
-  auto &OMPInfoCache = static_cast<OMPInformationCache &>(A.getInfoCache());
-
   Function *F = getAnchorScope();
   BasicBlock &EntryBB = F->getEntryBlock();
-  bool IsKernel = OMPInfoCache.Kernels.count(F);
+  bool IsKernel = omp::isKernel(*F);
 
   SmallVector<Instruction *> SyncInstWorklist;
   for (auto &RIt : *RPOT) {
@@ -3086,7 +3076,8 @@ ChangeStatus AAExecutionDomainFunction::updateImpl(Attributor &A) {
           continue;
       }
 
-      if (!I.mayHaveSideEffects() && OMPInfoCache.isOnlyUsedByAssume(I))
+      auto &InfoCache = A.getInfoCache();
+      if (!I.mayHaveSideEffects() && InfoCache.isOnlyUsedByAssume(I))
         continue;
 
       if (auto *LI = dyn_cast<LoadInst>(&I))
@@ -4011,7 +4002,7 @@ struct AAKernelInfoFunction : AAKernelInfo {
       auto *CB = cast<CallBase>(Kernel->user_back());
       Kernel = CB->getCaller();
     }
-    assert(OMPInfoCache.Kernels.count(Kernel) && "Expected kernel function!");
+    assert(omp::isKernel(*Kernel) && "Expected kernel function!");
 
     // Check if the kernel is already in SPMD mode, if so, return success.
     GlobalVariable *ExecMode = Kernel->getParent()->getGlobalVariable(
@@ -5413,8 +5404,7 @@ PreservedAnalyses OpenMPOptPass::run(Module &M, ModuleAnalysisManager &AM) {
 
   bool PostLink = LTOPhase == ThinOrFullLTOPhase::FullLTOPostLink ||
                   LTOPhase == ThinOrFullLTOPhase::ThinLTOPreLink;
-  OMPInformationCache InfoCache(M, AG, Allocator, /*CGSCC*/ nullptr, Kernels,
-                                PostLink);
+  OMPInformationCache InfoCache(M, AG, Allocator, /*CGSCC*/ nullptr, PostLink);
 
   unsigned MaxFixpointIterations =
       (isOpenMPDevice(M)) ? SetFixpointIterations : 32;
@@ -5492,7 +5482,7 @@ PreservedAnalyses OpenMPOptCGSCCPass::run(LazyCallGraph::SCC &C,
                   LTOPhase == ThinOrFullLTOPhase::ThinLTOPreLink;
   SetVector<Function *> Functions(SCC.begin(), SCC.end());
   OMPInformationCache InfoCache(*(Functions.back()->getParent()), AG, Allocator,
-                                /*CGSCC*/ &Functions, Kernels, PostLink);
+                                /*CGSCC*/ &Functions, PostLink);
 
   unsigned MaxFixpointIterations =
       (isOpenMPDevice(M)) ? SetFixpointIterations : 32;
@@ -5520,6 +5510,8 @@ PreservedAnalyses OpenMPOptCGSCCPass::run(LazyCallGraph::SCC &C,
   return PreservedAnalyses::all();
 }
 
+bool llvm::omp::isKernel(Function &Fn) { return Fn.hasFnAttribute("kernel"); }
+
 KernelSet llvm::omp::getDeviceKernels(Module &M) {
   // TODO: Create a more cross-platform way of determining device kernels.
   NamedMDNode *MD = M.getNamedMetadata("nvvm.annotations");
@@ -5540,6 +5532,7 @@ KernelSet llvm::omp::getDeviceKernels(Module &M) {
     if (!KernelFn)
       continue;
 
+    assert(isKernel(*KernelFn) && "Inconsistent kernel function annotation");
     ++NumOpenMPTargetRegionKernels;
 
     Kernels.insert(KernelFn);
