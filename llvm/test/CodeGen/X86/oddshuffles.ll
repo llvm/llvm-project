@@ -546,7 +546,7 @@ define void @v12i32(<8 x i32> %a, <8 x i32> %b, ptr %p) nounwind {
 ; AVX2-FAST-ALL-NEXT:    vpermps %ymm0, %ymm2, %ymm2
 ; AVX2-FAST-ALL-NEXT:    vbroadcastsd %xmm1, %ymm3
 ; AVX2-FAST-ALL-NEXT:    vblendps {{.*#+}} ymm2 = ymm2[0,1],ymm3[2],ymm2[3,4],ymm3[5],ymm2[6,7]
-; AVX2-FAST-ALL-NEXT:    vbroadcastsd {{.*#+}} ymm3 = [7,3,7,3,7,3,7,3]
+; AVX2-FAST-ALL-NEXT:    vmovaps {{.*#+}} ymm3 = <u,3,7,u,u,u,u,u>
 ; AVX2-FAST-ALL-NEXT:    vpermps %ymm0, %ymm3, %ymm0
 ; AVX2-FAST-ALL-NEXT:    vshufps {{.*#+}} xmm1 = xmm1[2,3,2,3]
 ; AVX2-FAST-ALL-NEXT:    vblendps {{.*#+}} xmm0 = xmm1[0],xmm0[1,2],xmm1[3]
@@ -1547,8 +1547,7 @@ define void @interleave_24i32_out(ptr %p, ptr %q1, ptr %q2, ptr %q3) nounwind {
 ; AVX2-FAST-ALL-NEXT:    vmovaps {{.*#+}} ymm6 = <1,4,7,2,5,u,u,u>
 ; AVX2-FAST-ALL-NEXT:    vpermps %ymm5, %ymm6, %ymm5
 ; AVX2-FAST-ALL-NEXT:    vblendps {{.*#+}} ymm4 = ymm5[0,1,2,3,4],ymm4[5,6,7]
-; AVX2-FAST-ALL-NEXT:    vbroadcastf128 {{.*#+}} ymm5 = [0,1,4,7,0,1,4,7]
-; AVX2-FAST-ALL-NEXT:    # ymm5 = mem[0,1,0,1]
+; AVX2-FAST-ALL-NEXT:    vmovaps {{.*#+}} ymm5 = <u,u,u,u,u,1,4,7>
 ; AVX2-FAST-ALL-NEXT:    vpermps %ymm2, %ymm5, %ymm2
 ; AVX2-FAST-ALL-NEXT:    vblendps {{.*#+}} ymm0 = ymm1[0,1],ymm0[2],ymm1[3,4],ymm0[5],ymm1[6,7]
 ; AVX2-FAST-ALL-NEXT:    vmovaps {{.*#+}} ymm1 = <2,5,0,3,6,u,u,u>
@@ -1774,8 +1773,7 @@ define void @interleave_24i32_in(ptr %p, ptr %q1, ptr %q2, ptr %q3) nounwind {
 ; AVX2-FAST-ALL-NEXT:    vmovups (%rsi), %ymm0
 ; AVX2-FAST-ALL-NEXT:    vmovups (%rdx), %ymm1
 ; AVX2-FAST-ALL-NEXT:    vmovups (%rcx), %ymm2
-; AVX2-FAST-ALL-NEXT:    vbroadcastf128 {{.*#+}} ymm3 = [5,0,7,6,5,0,7,6]
-; AVX2-FAST-ALL-NEXT:    # ymm3 = mem[0,1,0,1]
+; AVX2-FAST-ALL-NEXT:    vmovaps {{.*#+}} ymm3 = <5,u,u,6,u,u,7,u>
 ; AVX2-FAST-ALL-NEXT:    vpermps %ymm1, %ymm3, %ymm3
 ; AVX2-FAST-ALL-NEXT:    vbroadcastsd 24(%rsi), %ymm4
 ; AVX2-FAST-ALL-NEXT:    vblendps {{.*#+}} ymm3 = ymm3[0,1],ymm4[2],ymm3[3,4],ymm4[5],ymm3[6,7]

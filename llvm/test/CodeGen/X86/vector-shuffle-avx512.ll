@@ -300,8 +300,7 @@ define <8 x float> @expand15(<4 x float> %a) {
 ; AVX512-FAST-LABEL: expand15:
 ; AVX512-FAST:       # %bb.0:
 ; AVX512-FAST-NEXT:    # kill: def $xmm0 killed $xmm0 def $ymm0
-; AVX512-FAST-NEXT:    vbroadcastf128 {{.*#+}} ymm1 = [1,0,0,0,1,0,0,0]
-; AVX512-FAST-NEXT:    # ymm1 = mem[0,1,0,1]
+; AVX512-FAST-NEXT:    vmovaps {{.*#+}} ymm1 = <u,u,0,u,1,u,u,u>
 ; AVX512-FAST-NEXT:    vpermps %ymm0, %ymm1, %ymm0
 ; AVX512-FAST-NEXT:    vblendps {{.*#+}} ymm0 = mem[0,1],ymm0[2],mem[3],ymm0[4],mem[5,6,7]
 ; AVX512-FAST-NEXT:    ret{{[l|q]}}

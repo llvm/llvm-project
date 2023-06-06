@@ -156,12 +156,12 @@ define <4 x float> @knownbits_mask_shuffle_uitofp(<4 x i32> %a0) nounwind {
 define <4 x float> @knownbits_mask_or_shuffle_uitofp(<4 x i32> %a0) nounwind {
 ; X86-LABEL: knownbits_mask_or_shuffle_uitofp:
 ; X86:       # %bb.0:
-; X86-NEXT:    vbroadcastss {{.*#+}} xmm0 = [6.5535E+4,6.5535E+4,6.5535E+4,6.5535E+4]
+; X86-NEXT:    vmovaps {{.*#+}} xmm0 = [6.5535E+4,6.5535E+4,6.5535E+4,6.5535E+4]
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: knownbits_mask_or_shuffle_uitofp:
 ; X64:       # %bb.0:
-; X64-NEXT:    vbroadcastss {{.*#+}} xmm0 = [6.5535E+4,6.5535E+4,6.5535E+4,6.5535E+4]
+; X64-NEXT:    vmovaps {{.*#+}} xmm0 = [6.5535E+4,6.5535E+4,6.5535E+4,6.5535E+4]
 ; X64-NEXT:    retq
   %1 = and <4 x i32> %a0, <i32 -1, i32 -1, i32 255, i32 4085>
   %2 = or <4 x i32> %1, <i32 65535, i32 65535, i32 65535, i32 65535>
@@ -385,7 +385,7 @@ define <8 x float> @knownbits_mask_concat_uitofp(<4 x i32> %a0, <4 x i32> %a1) n
 ; X86-LABEL: knownbits_mask_concat_uitofp:
 ; X86:       # %bb.0:
 ; X86-NEXT:    vshufps {{.*#+}} xmm1 = xmm1[1,3,1,3]
-; X86-NEXT:    vbroadcastss {{.*#+}} xmm2 = [131071,131071,131071,131071]
+; X86-NEXT:    vmovaps {{.*#+}} xmm2 = [131071,131071,131071,131071]
 ; X86-NEXT:    vandps %xmm2, %xmm1, %xmm1
 ; X86-NEXT:    vshufps {{.*#+}} xmm0 = xmm0[0,2,0,2]
 ; X86-NEXT:    vandps %xmm2, %xmm0, %xmm0
@@ -396,7 +396,7 @@ define <8 x float> @knownbits_mask_concat_uitofp(<4 x i32> %a0, <4 x i32> %a1) n
 ; X64-LABEL: knownbits_mask_concat_uitofp:
 ; X64:       # %bb.0:
 ; X64-NEXT:    vshufps {{.*#+}} xmm1 = xmm1[1,3,1,3]
-; X64-NEXT:    vbroadcastss {{.*#+}} xmm2 = [131071,131071,131071,131071]
+; X64-NEXT:    vmovaps {{.*#+}} xmm2 = [131071,131071,131071,131071]
 ; X64-NEXT:    vandps %xmm2, %xmm1, %xmm1
 ; X64-NEXT:    vshufps {{.*#+}} xmm0 = xmm0[0,2,0,2]
 ; X64-NEXT:    vandps %xmm2, %xmm0, %xmm0
