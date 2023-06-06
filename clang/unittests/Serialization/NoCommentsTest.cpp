@@ -87,6 +87,7 @@ void foo() {}
       CompilerInstance::createDiagnostics(new DiagnosticOptions());
   CreateInvocationOptions CIOpts;
   CIOpts.Diags = Diags;
+  CIOpts.VFS = llvm::vfs::createPhysicalFileSystem();
 
   std::string CacheBMIPath = llvm::Twine(TestDir + "/Comments.pcm").str();
   const char *Args[] = {

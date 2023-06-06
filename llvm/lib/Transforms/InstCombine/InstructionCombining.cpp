@@ -114,6 +114,11 @@ using namespace llvm::PatternMatch;
 
 STATISTIC(NumWorklistIterations,
           "Number of instruction combining iterations performed");
+STATISTIC(NumOneIteration, "Number of functions with one iteration");
+STATISTIC(NumTwoIterations, "Number of functions with two iterations");
+STATISTIC(NumThreeIterations, "Number of functions with three iterations");
+STATISTIC(NumFourOrMoreIterations,
+          "Number of functions with four or more iterations");
 
 STATISTIC(NumCombined , "Number of insts combined");
 STATISTIC(NumConstProp, "Number of constant folds");
@@ -4050,6 +4055,15 @@ static bool combineInstructionsOverFunction(
 
     MadeIRChange = true;
   }
+
+  if (Iteration == 1)
+    ++NumOneIteration;
+  else if (Iteration == 2)
+    ++NumTwoIterations;
+  else if (Iteration == 3)
+    ++NumThreeIterations;
+  else
+    ++NumFourOrMoreIterations;
 
   return MadeIRChange;
 }
