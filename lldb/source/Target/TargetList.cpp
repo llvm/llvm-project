@@ -489,7 +489,7 @@ uint32_t TargetList::SignalIfRunning(lldb::pid_t pid, int signo) {
   return num_signals_sent;
 }
 
-int TargetList::GetNumTargets() const {
+size_t TargetList::GetNumTargets() const {
   std::lock_guard<std::recursive_mutex> guard(m_target_list_mutex);
   return m_target_list.size();
 }
