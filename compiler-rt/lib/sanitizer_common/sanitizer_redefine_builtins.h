@@ -15,7 +15,7 @@
 #define SANITIZER_REDEFINE_BUILTINS_H
 
 // The asm hack only works with GCC and Clang.
-#if !defined(_MSC_VER) || defined(__clang__)
+#if !defined(_MSC_VER)
 
 asm("memcpy = __sanitizer_internal_memcpy");
 asm("memmove = __sanitizer_internal_memmove");
@@ -46,7 +46,7 @@ using unordered_set = Define_SANITIZER_COMMON_NO_REDEFINE_BUILTINS_in_cpp_file;
 using vector = Define_SANITIZER_COMMON_NO_REDEFINE_BUILTINS_in_cpp_file;
 }  // namespace std
 
-#endif  // !_MSC_VER || __clang__
+#endif  // !_MSC_VER
 
 #endif  // SANITIZER_REDEFINE_BUILTINS_H
 #endif  // SANITIZER_COMMON_NO_REDEFINE_BUILTINS
