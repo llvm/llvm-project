@@ -62,7 +62,8 @@ public:
       }
       int error = errno;
       if (abort_on_error) {
-        __kmp_fatal(KMP_MSG(FatalSysError), KMP_ERR(error), __kmp_msg_null);
+        __kmp_fatal(KMP_MSG(FunctionError, "hwloc_get_cpubind()"),
+                    KMP_ERR(error), __kmp_msg_null);
       }
       return error;
     }
@@ -76,7 +77,8 @@ public:
       }
       int error = errno;
       if (abort_on_error) {
-        __kmp_fatal(KMP_MSG(FatalSysError), KMP_ERR(error), __kmp_msg_null);
+        __kmp_fatal(KMP_MSG(FunctionError, "hwloc_set_cpubind()"),
+                    KMP_ERR(error), __kmp_msg_null);
       }
       return error;
     }
@@ -95,7 +97,8 @@ public:
           return 0;
         error = errno;
         if (abort_on_error)
-          __kmp_fatal(KMP_MSG(FatalSysError), KMP_ERR(error), __kmp_msg_null);
+          __kmp_fatal(KMP_MSG(FunctionError, "hwloc_set_cpubind()"),
+                      KMP_ERR(error), __kmp_msg_null);
       }
       return error;
     }
@@ -372,7 +375,8 @@ class KMPNativeAffinity : public KMPAffinity {
       }
       int error = errno;
       if (abort_on_error) {
-        __kmp_fatal(KMP_MSG(FatalSysError), KMP_ERR(error), __kmp_msg_null);
+        __kmp_fatal(KMP_MSG(FunctionError, "pthread_getaffinity_np()"),
+                    KMP_ERR(error), __kmp_msg_null);
       }
       return error;
     }
@@ -392,7 +396,8 @@ class KMPNativeAffinity : public KMPAffinity {
       }
       int error = errno;
       if (abort_on_error) {
-        __kmp_fatal(KMP_MSG(FatalSysError), KMP_ERR(error), __kmp_msg_null);
+        __kmp_fatal(KMP_MSG(FunctionError, "pthread_setaffinity_np()"),
+                    KMP_ERR(error), __kmp_msg_null);
       }
       return error;
     }
