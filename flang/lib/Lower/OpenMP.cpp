@@ -1193,11 +1193,9 @@ genOMP(Fortran::lower::AbstractConverter &converter,
                   if (const Fortran::parser::Name *name =
                           std::get_if<Fortran::parser::Name>(&designator.u)) {
                     sym = name->symbol;
-                  } else if (const Fortran::common::Indirection<
-                                 Fortran::parser::ArrayElement> *a =
-                                 std::get_if<Fortran::common::Indirection<
-                                     Fortran::parser::ArrayElement>>(
-                                     &designator.u)) {
+                  } else if (std::get_if<Fortran::common::Indirection<
+                                 Fortran::parser::ArrayElement>>(
+                                 &designator.u)) {
                     TODO(converter.getCurrentLocation(),
                          "array sections not supported for task depend");
                   }
