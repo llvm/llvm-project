@@ -217,3 +217,48 @@ for.body:                                         ; preds = %for.body.preheader,
   %exitcond.not = icmp eq i64 %indvars.iv.next, %wide.trip.count
   br i1 %exitcond.not, label %for.cond.cleanup, label %for.body
 }
+
+define i64 @test_pr62954_scalar_epilogue_requried(ptr %A, ptr noalias %B, ptr %C)  {
+; CHECK-LABEL: @test_pr62954_scalar_epilogue_requried(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[GEP:%.*]] = getelementptr i8, ptr [[A:%.*]], i64 872
+; CHECK-NEXT:    [[REC_START:%.*]] = load i64, ptr [[GEP]], align 8
+; CHECK-NEXT:    br label [[LOOP:%.*]]
+; CHECK:       loop:
+; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ 1, [[ENTRY:%.*]] ], [ [[IV_NEXT:%.*]], [[LOOP]] ]
+; CHECK-NEXT:    [[FOR:%.*]] = phi i64 [ [[REC_START]], [[ENTRY]] ], [ [[NEG_IV:%.*]], [[LOOP]] ]
+; CHECK-NEXT:    [[GEP_B:%.*]] = getelementptr double, ptr [[B:%.*]], i64 [[IV]]
+; CHECK-NEXT:    [[L_B:%.*]] = load double, ptr [[GEP_B]], align 8
+; CHECK-NEXT:    [[NEG_IV]] = sub nsw i64 0, [[IV]]
+; CHECK-NEXT:    store i64 [[NEG_IV]], ptr [[GEP]], align 8
+; CHECK-NEXT:    [[IV_NEXT]] = add nuw nsw i64 [[IV]], 2
+; CHECK-NEXT:    [[EC:%.*]] = icmp ugt i64 [[IV]], 74
+; CHECK-NEXT:    br i1 [[EC]], label [[EXIT:%.*]], label [[LOOP]]
+; CHECK:       exit:
+; CHECK-NEXT:    [[DOTIN_LCSSA:%.*]] = phi i64 [ [[FOR]], [[LOOP]] ]
+; CHECK-NEXT:    [[DOTLCSSA:%.*]] = phi double [ [[L_B]], [[LOOP]] ]
+; CHECK-NEXT:    store double [[DOTLCSSA]], ptr [[C:%.*]], align 8
+; CHECK-NEXT:    ret i64 [[DOTIN_LCSSA]]
+;
+entry:
+  %gep = getelementptr i8, ptr %A, i64 872
+  %rec.start = load i64, ptr  %gep, align 8
+  br label %loop
+
+loop:
+  %iv = phi i64 [ 1, %entry ], [ %iv.next, %loop ]
+  %for = phi i64 [ %rec.start, %entry ], [ %neg.iv, %loop ]
+  %gep.B = getelementptr double, ptr  %B, i64 %iv
+  %l.B = load double, ptr  %gep.B, align 8
+  %neg.iv = sub nsw i64 0, %iv
+  store i64 %neg.iv, ptr %gep, align 8
+  %iv.next = add nuw nsw i64 %iv, 2
+  %ec = icmp ugt i64 %iv, 74
+  br i1 %ec, label %exit, label %loop
+
+exit:
+  %.in.lcssa = phi i64 [ %for, %loop ]
+  %.lcssa = phi double [ %l.B, %loop ]
+  store double %.lcssa, ptr %C
+  ret i64 %.in.lcssa
+}
