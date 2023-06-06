@@ -49,6 +49,7 @@
 #include "llvm/ADT/Sequence.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/Support/Casting.h"
+#include "llvm/Support/ErrorHandling.h"
 #include <optional>
 
 using namespace cir;
@@ -544,6 +545,66 @@ public:
   }
 };
 
+class CIRVAStartLowering
+    : public mlir::OpConversionPattern<mlir::cir::VAStartOp> {
+public:
+  using OpConversionPattern<mlir::cir::VAStartOp>::OpConversionPattern;
+
+  mlir::LogicalResult
+  matchAndRewrite(mlir::cir::VAStartOp op, OpAdaptor adaptor,
+                  mlir::ConversionPatternRewriter &rewriter) const override {
+    auto i8PtrTy = mlir::LLVM::LLVMPointerType::get(getContext());
+    auto vaList = rewriter.create<mlir::LLVM::BitcastOp>(
+        op.getLoc(), i8PtrTy, adaptor.getOperands().front());
+    rewriter.replaceOpWithNewOp<mlir::LLVM::VaStartOp>(op, vaList);
+    return mlir::success();
+  }
+};
+
+class CIRVAEndLowering : public mlir::OpConversionPattern<mlir::cir::VAEndOp> {
+public:
+  using OpConversionPattern<mlir::cir::VAEndOp>::OpConversionPattern;
+
+  mlir::LogicalResult
+  matchAndRewrite(mlir::cir::VAEndOp op, OpAdaptor adaptor,
+                  mlir::ConversionPatternRewriter &rewriter) const override {
+    auto i8PtrTy = mlir::LLVM::LLVMPointerType::get(getContext());
+    auto vaList = rewriter.create<mlir::LLVM::BitcastOp>(
+        op.getLoc(), i8PtrTy, adaptor.getOperands().front());
+    rewriter.replaceOpWithNewOp<mlir::LLVM::VaEndOp>(op, vaList);
+    return mlir::success();
+  }
+};
+
+class CIRVACopyLowering
+    : public mlir::OpConversionPattern<mlir::cir::VACopyOp> {
+public:
+  using OpConversionPattern<mlir::cir::VACopyOp>::OpConversionPattern;
+
+  mlir::LogicalResult
+  matchAndRewrite(mlir::cir::VACopyOp op, OpAdaptor adaptor,
+                  mlir::ConversionPatternRewriter &rewriter) const override {
+    auto i8PtrTy = mlir::LLVM::LLVMPointerType::get(getContext());
+    auto dstList = rewriter.create<mlir::LLVM::BitcastOp>(
+        op.getLoc(), i8PtrTy, adaptor.getOperands().front());
+    auto srcList = rewriter.create<mlir::LLVM::BitcastOp>(
+        op.getLoc(), i8PtrTy, adaptor.getOperands().back());
+    rewriter.replaceOpWithNewOp<mlir::LLVM::VaCopyOp>(op, dstList, srcList);
+    return mlir::success();
+  }
+};
+
+class CIRVAArgLowering : public mlir::OpConversionPattern<mlir::cir::VAArgOp> {
+public:
+  using OpConversionPattern<mlir::cir::VAArgOp>::OpConversionPattern;
+
+  mlir::LogicalResult
+  matchAndRewrite(mlir::cir::VAArgOp op, OpAdaptor adaptor,
+                  mlir::ConversionPatternRewriter &rewriter) const override {
+    return op.emitError("cir.vaarg lowering is NYI");
+  }
+};
+
 class CIRFuncLowering : public mlir::OpConversionPattern<mlir::cir::FuncOp> {
 public:
   using OpConversionPattern<mlir::cir::FuncOp>::OpConversionPattern;
@@ -997,7 +1058,8 @@ void populateCIRToLLVMConversionPatterns(mlir::RewritePatternSet &patterns,
                CIRBinOpLowering, CIRLoadLowering, CIRConstantLowering,
                CIRStoreLowering, CIRAllocaLowering, CIRFuncLowering,
                CIRScopeOpLowering, CIRCastOpLowering, CIRIfLowering,
-               CIRGlobalOpLowering, CIRGetGlobalOpLowering>(
+               CIRGlobalOpLowering, CIRGetGlobalOpLowering, CIRVAStartLowering,
+               CIRVAEndLowering, CIRVACopyLowering, CIRVAArgLowering>(
       converter, patterns.getContext());
 }
 
@@ -1017,6 +1079,16 @@ void prepareTypeConverter(mlir::LLVMTypeConverter &converter) {
   converter.addConversion([&](mlir::cir::IntType type) -> mlir::Type {
     // LLVM doesn't work with signed types, so we drop the CIR signs here.
     return mlir::IntegerType::get(type.getContext(), type.getWidth());
+  });
+  converter.addConversion([&](mlir::cir::StructType type) -> mlir::Type {
+    llvm::SmallVector<mlir::Type> llvmMembers;
+    for (auto ty : type.getMembers())
+      llvmMembers.push_back(converter.convertType(ty));
+    auto llvmStruct = mlir::LLVM::LLVMStructType::getIdentified(
+        type.getContext(), type.getTypeName());
+    if (llvmStruct.setBody(llvmMembers, /*isPacked=*/type.getPacked()).failed())
+      llvm_unreachable("Failed to set body of struct");
+    return llvmStruct;
   });
 }
 } // namespace
