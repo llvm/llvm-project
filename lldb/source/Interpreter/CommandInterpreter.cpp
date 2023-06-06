@@ -626,9 +626,7 @@ void CommandInterpreter::LoadCommandDictionary() {
           "current file\n"
           "                                    // containing text 'break "
           "here'.\n",
-          CommandCompletions::eSymbolCompletion |
-              CommandCompletions::eSourceFileCompletion,
-          false));
+          lldb::eSymbolCompletion | lldb::eSourceFileCompletion, false));
 
   if (break_regex_cmd_up) {
     bool success = true;
@@ -679,9 +677,7 @@ void CommandInterpreter::LoadCommandDictionary() {
           "current file\n"
           "                                    // containing text 'break "
           "here'.\n",
-          CommandCompletions::eSymbolCompletion |
-              CommandCompletions::eSourceFileCompletion,
-          false));
+          lldb::eSymbolCompletion | lldb::eSourceFileCompletion, false));
 
   if (tbreak_regex_cmd_up) {
     bool success = true;
@@ -859,7 +855,7 @@ void CommandInterpreter::LoadCommandDictionary() {
           "_regexp-list 0x<address>     // List around specified address\n"
           "_regexp-list -[<count>]      // List previous <count> lines\n"
           "_regexp-list                 // List subsequent lines",
-          CommandCompletions::eSourceFileCompletion, false));
+          lldb::eSourceFileCompletion, false));
   if (list_regex_cmd_up) {
     if (list_regex_cmd_up->AddRegexCommand("^([0-9]+)[[:space:]]*$",
                                            "source list --line %1") &&

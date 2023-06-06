@@ -436,6 +436,47 @@ class CommandLineCompletionTestCase(TestBase):
         self.dbg.CreateTarget(self.getBuildArtifact("a.out"))
         self.complete_from_to("target modules dump line-table main.cp", ["main.cpp"])
 
+    def test_custom_command_completion(self):
+        """Tests completion in custom user provided commands."""
+        completion_types = [
+            "none",
+            "source-file",
+            "disk-file",
+            "disk-directory",
+            "symbol",
+            "module",
+            "settings-name",
+            "platform-plugin",
+            "architecture",
+            "variable-path",
+            "register",
+            "breakpoint",
+            "process-plugin",
+            "disassembly-flavor",
+            "type-language",
+            "frame-index",
+            "module-uuid",
+            "stophook-id",
+            "thread-index",
+            "watchpoint-id",
+            "breakpoint-name",
+            "process-id",
+            "process-name",
+            "remote-disk-file",
+            "remote-disk-directory",
+            "type-category-name",
+            "custom",
+        ]
+        self.completions_contain("command script add -C ", completion_types)
+
+        source_path = os.path.join(self.getSourceDir(), "my_test_cmd.py")
+        self.runCmd("command script import '%s'" % (source_path))
+        self.runCmd(
+            "command script add -C disk-file -f my_test_cmd.my_test_cmd my_test_cmd"
+        )
+        self.complete_from_to("my_test_cmd main.cp", ["main.cpp"])
+        self.expect("my_test_cmd main.cpp", substrs=["main.cpp"])
+
     def test_target_modules_load_aout(self):
         """Tests modules completion by completing the target modules load argument."""
         self.build()

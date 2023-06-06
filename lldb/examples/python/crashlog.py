@@ -1666,10 +1666,10 @@ if __name__ == "__main__":
 
 def __lldb_init_module(debugger, internal_dict):
     debugger.HandleCommand(
-        "command script add -o -c lldb.macosx.crashlog.Symbolicate crashlog"
+        "command script add -o -c lldb.macosx.crashlog.Symbolicate -C disk-file crashlog"
     )
     debugger.HandleCommand(
-        "command script add -o -f lldb.macosx.crashlog.save_crashlog save_crashlog"
+        "command script add -o -f lldb.macosx.crashlog.save_crashlog -C disk-file save_crashlog"
     )
     print(
         '"crashlog" and "save_crashlog" commands have been installed, use '
