@@ -39,6 +39,8 @@ int cStyleCasts_0(unsigned x1, int x2, float x3) {
   int f = (int)x3;
   // CHECK: %{{[0-9]+}} = cir.cast(float_to_int, %{{[0-9]+}} : f32), !s32i
 
+  double g = (double)x3; // FP extension
+  // %{{[0-9]+}} = cir.cast(floating, %{{[0-9]+}} : f32), f64
 
   return 0;
 }
