@@ -65,7 +65,7 @@ char *dlangDemangle(std::string_view MangledName);
 /// \param MangledName - reference to string to demangle.
 /// \returns - the demangled string, or a copy of the input string if no
 /// demangling occurred.
-std::string demangle(const std::string &MangledName);
+std::string demangle(std::string_view MangledName);
 
 bool nonMicrosoftDemangle(std::string_view MangledName, std::string &Result);
 

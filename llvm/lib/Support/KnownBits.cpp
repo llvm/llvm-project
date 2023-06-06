@@ -748,9 +748,45 @@ KnownBits KnownBits::mulhu(const KnownBits &LHS, const KnownBits &RHS) {
   return mul(WideLHS, WideRHS).extractBits(BitWidth, BitWidth);
 }
 
+static KnownBits divComputeLowBit(KnownBits Known, const KnownBits &LHS,
+                                  const KnownBits &RHS, bool Exact) {
+
+  if (!Exact)
+    return Known;
+
+  // If LHS is Odd, the result is Odd no matter what.
+  // Odd / Odd -> Odd
+  // Odd / Even -> Impossible (because its exact division)
+  if (LHS.One[0])
+    Known.One.setBit(0);
+
+  int MinTZ =
+      (int)LHS.countMinTrailingZeros() - (int)RHS.countMaxTrailingZeros();
+  int MaxTZ =
+      (int)LHS.countMaxTrailingZeros() - (int)RHS.countMinTrailingZeros();
+  if (MinTZ >= 0) {
+    // Result has at least MinTZ trailing zeros.
+    Known.Zero.setLowBits(MinTZ);
+    if (MinTZ == MaxTZ) {
+      // Result has exactly MinTZ trailing zeros.
+      Known.One.setBit(MinTZ);
+    }
+  } else if (MaxTZ < 0) {
+    // Poison Result
+    Known.setAllZero();
+  }
+
+  // In the KnownBits exhaustive tests, we have poison inputs for exact values
+  // a LOT. If we have a conflict, just return all zeros.
+  if (Known.hasConflict())
+    Known.setAllZero();
+
+  return Known;
+}
+
 KnownBits KnownBits::sdiv(const KnownBits &LHS, const KnownBits &RHS,
                           bool Exact) {
-  // Equivilent of `udiv`. We must have caught this before it was folded.
+  // Equivalent of `udiv`. We must have caught this before it was folded.
   if (LHS.isNonNegative() && RHS.isNonNegative())
     return udiv(LHS, RHS, Exact);
 
@@ -758,59 +794,50 @@ KnownBits KnownBits::sdiv(const KnownBits &LHS, const KnownBits &RHS,
   assert(!LHS.hasConflict() && !RHS.hasConflict() && "Bad inputs");
   KnownBits Known(BitWidth);
 
-  APInt Num, Denum;
-  // Positive -> true
-  // Negative -> false
-  // Unknown -> nullopt
-  std::optional<bool> ResultSign;
+  if (LHS.isZero() || RHS.isZero()) {
+    // Result is either known Zero or UB. Return Zero either way.
+    // Checking this earlier saves us a lot of special cases later on.
+    Known.setAllZero();
+    return Known;
+  }
+
+  std::optional<APInt> Res;
   if (LHS.isNegative() && RHS.isNegative()) {
-    Denum = RHS.getSignedMaxValue();
-    Num = LHS.getSignedMinValue();
-    ResultSign = true;
     // Result non-negative.
-  } else if (LHS.isNegative() && RHS.isStrictlyPositive()) {
-    // Result is non-negative if Exact OR -LHS u>= RHS.
+    APInt Denom = RHS.getSignedMaxValue();
+    APInt Num = LHS.getSignedMinValue();
+    // INT_MIN/-1 would be a poison result (impossible). Estimate the division
+    // as signed max (we will only set sign bit in the result).
+    Res = (Num.isMinSignedValue() && Denom.isAllOnes())
+              ? APInt::getSignedMaxValue(BitWidth)
+              : Num.sdiv(Denom);
+  } else if (LHS.isNegative() && RHS.isNonNegative()) {
+    // Result is negative if Exact OR -LHS u>= RHS.
     if (Exact || (-LHS.getSignedMaxValue()).uge(RHS.getSignedMaxValue())) {
-      Denum = RHS.getSignedMinValue();
-      Num = LHS.getSignedMinValue();
-      ResultSign = false;
+      APInt Denom = RHS.getSignedMinValue();
+      APInt Num = LHS.getSignedMinValue();
+      Res = Denom.isZero() ? Num : Num.sdiv(Denom);
     }
   } else if (LHS.isStrictlyPositive() && RHS.isNegative()) {
-    // Result is non-negative if Exact OR LHS u>= -RHS.
+    // Result is negative if Exact OR LHS u>= -RHS.
     if (Exact || LHS.getSignedMinValue().uge(-RHS.getSignedMinValue())) {
-      Denum = RHS.getSignedMaxValue();
-      Num = LHS.getSignedMaxValue();
-      ResultSign = false;
+      APInt Denom = RHS.getSignedMaxValue();
+      APInt Num = LHS.getSignedMaxValue();
+      Res = Num.sdiv(Denom);
     }
   }
 
-  if (ResultSign) {
-    APInt Res = Num.sdiv(Denum);
-    if (*ResultSign) {
-      unsigned LeadZ = Res.countLeadingZeros();
+  if (Res) {
+    if (Res->isNonNegative()) {
+      unsigned LeadZ = Res->countLeadingZeros();
       Known.Zero.setHighBits(LeadZ);
-      Known.makeNonNegative();
     } else {
-      unsigned LeadO = Res.countLeadingOnes();
+      unsigned LeadO = Res->countLeadingOnes();
       Known.One.setHighBits(LeadO);
-      Known.makeNegative();
     }
   }
 
-  if (Exact) {
-    // Odd / Odd -> Odd
-    if (LHS.One[0] && RHS.One[0]) {
-      Known.Zero.clearBit(0);
-      Known.One.setBit(0);
-    }
-    // Even / Odd -> Even
-    else if (LHS.Zero[0] && RHS.One[0]) {
-      Known.One.clearBit(0);
-      Known.Zero.setBit(0);
-    }
-    // Odd / Even -> impossible
-    // Even / Even -> unknown
-  }
+  Known = divComputeLowBit(Known, LHS, RHS, Exact);
 
   assert(!Known.hasConflict() && "Bad Output");
   return Known;
@@ -822,29 +849,26 @@ KnownBits KnownBits::udiv(const KnownBits &LHS, const KnownBits &RHS,
   assert(!LHS.hasConflict() && !RHS.hasConflict());
   KnownBits Known(BitWidth);
 
+  if (LHS.isZero() || RHS.isZero()) {
+    // Result is either known Zero or UB. Return Zero either way.
+    // Checking this earlier saves us a lot of special cases later on.
+    Known.setAllZero();
+    return Known;
+  }
+
   // We can figure out the minimum number of upper zero bits by doing
   // MaxNumerator / MinDenominator. If the Numerator gets smaller or Denominator
   // gets larger, the number of upper zero bits increases.
-  APInt MinDenum = RHS.getMinValue();
+  APInt MinDenom = RHS.getMinValue();
   APInt MaxNum = LHS.getMaxValue();
-  APInt MaxRes = MinDenum.isZero() ? MaxNum : MaxNum.udiv(MinDenum);
+  APInt MaxRes = MinDenom.isZero() ? MaxNum : MaxNum.udiv(MinDenom);
 
   unsigned LeadZ = MaxRes.countLeadingZeros();
 
   Known.Zero.setHighBits(LeadZ);
-  if (Exact) {
-    // Odd / Odd -> Odd
-    if (LHS.One[0] && RHS.One[0])
-      Known.One.setBit(0);
-    // Even / Odd -> Even
-    else if (LHS.Zero[0] && RHS.One[0])
-      Known.Zero.setBit(0);
-    // Odd / Even -> impossible
-    // Even / Even -> unknown
-    if (Known.hasConflict())
-      Known.setAllZero();
-  }
+  Known = divComputeLowBit(Known, LHS, RHS, Exact);
 
+  assert(!Known.hasConflict() && "Bad Output");
   return Known;
 }
 

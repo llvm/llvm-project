@@ -125,15 +125,12 @@ lldb::addr_t NativeRegisterContext::GetPC(lldb::addr_t fail_value) {
 
   uint32_t reg = ConvertRegisterKindToRegisterNumber(eRegisterKindGeneric,
                                                      LLDB_REGNUM_GENERIC_PC);
-  LLDB_LOGF(log,
-            "NativeRegisterContext::%s using reg index %" PRIu32
-            " (default %" PRIu64 ")",
-            __FUNCTION__, reg, fail_value);
+  LLDB_LOGF(log, "Using reg index %" PRIu32 " (default %" PRIu64 ")", reg,
+            fail_value);
 
   const uint64_t retval = ReadRegisterAsUnsigned(reg, fail_value);
 
-  LLDB_LOGF(log, "NativeRegisterContext::%s " PRIu32 " retval %" PRIu64,
-            __FUNCTION__, retval);
+  LLDB_LOGF(log, PRIu32 " retval %" PRIu64, retval);
 
   return retval;
 }
@@ -203,18 +200,15 @@ NativeRegisterContext::ReadRegisterAsUnsigned(const RegisterInfo *reg_info,
     Status error = ReadRegister(reg_info, value);
     if (error.Success()) {
       LLDB_LOGF(log,
-                "NativeRegisterContext::%s ReadRegister() succeeded, value "
+                "Read register succeeded: value "
                 "%" PRIu64,
-                __FUNCTION__, value.GetAsUInt64());
+                value.GetAsUInt64());
       return value.GetAsUInt64();
     } else {
-      LLDB_LOGF(log,
-                "NativeRegisterContext::%s ReadRegister() failed, error %s",
-                __FUNCTION__, error.AsCString());
+      LLDB_LOGF(log, "Read register failed: error %s", error.AsCString());
     }
   } else {
-    LLDB_LOGF(log, "NativeRegisterContext::%s ReadRegister() null reg_info",
-              __FUNCTION__);
+    LLDB_LOGF(log, "Read register failed: null reg_info");
   }
   return fail_value;
 }
@@ -222,7 +216,7 @@ NativeRegisterContext::ReadRegisterAsUnsigned(const RegisterInfo *reg_info,
 Status NativeRegisterContext::WriteRegisterFromUnsigned(uint32_t reg,
                                                         uint64_t uval) {
   if (reg == LLDB_INVALID_REGNUM)
-    return Status("NativeRegisterContext::%s (): reg is invalid", __FUNCTION__);
+    return Status("Write register failed: reg is invalid");
   return WriteRegisterFromUnsigned(GetRegisterInfoAtIndex(reg), uval);
 }
 

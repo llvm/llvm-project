@@ -23,7 +23,7 @@ LLVM_LIBC_FUNCTION(struct ::dirent *, readdir, (::DIR * dir)) {
     libc_errno = dirent_val.error();
     return nullptr;
   }
-  return dirent_val;
+  return dirent_val.value();
 }
 
 } // namespace __llvm_libc

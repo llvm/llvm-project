@@ -318,7 +318,22 @@ template <typename... Ts> struct DenseMapInfo<std::variant<Ts...>> {
   }
 
   static bool isEqual(const Variant &LHS, const Variant &RHS) {
-    return LHS == RHS;
+    if (LHS.index() != RHS.index())
+      return false;
+    if (LHS.valueless_by_exception())
+      return true;
+    // We want to dispatch to DenseMapInfo<T>::isEqual(LHS.get(I), RHS.get(I))
+    // We know the types are the same, but std::visit(V, LHS, RHS) doesn't.
+    // We erase the type held in LHS to void*, and dispatch over RHS.
+    const void *ErasedLHS =
+        std::visit([](const auto &LHS) -> const void * { return &LHS; }, LHS);
+    return std::visit(
+        [&](const auto &RHS) -> bool {
+          using T = std::remove_cv_t<std::remove_reference_t<decltype(RHS)>>;
+          return DenseMapInfo<T>::isEqual(*static_cast<const T *>(ErasedLHS),
+                                          RHS);
+        },
+        RHS);
   }
 };
 } // end namespace llvm

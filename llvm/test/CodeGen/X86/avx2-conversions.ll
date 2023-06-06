@@ -16,8 +16,7 @@ define <4 x i32> @trunc4(<4 x i64> %A) nounwind {
 ;
 ; X86-FAST-ALL-LABEL: trunc4:
 ; X86-FAST-ALL:       # %bb.0:
-; X86-FAST-ALL-NEXT:    vbroadcastf128 {{.*#+}} ymm1 = [0,2,4,6,0,2,4,6]
-; X86-FAST-ALL-NEXT:    # ymm1 = mem[0,1,0,1]
+; X86-FAST-ALL-NEXT:    vmovaps {{.*#+}} ymm1 = <0,2,4,6,u,u,u,u>
 ; X86-FAST-ALL-NEXT:    vpermps %ymm0, %ymm1, %ymm0
 ; X86-FAST-ALL-NEXT:    # kill: def $xmm0 killed $xmm0 killed $ymm0
 ; X86-FAST-ALL-NEXT:    vzeroupper
@@ -39,8 +38,7 @@ define <4 x i32> @trunc4(<4 x i64> %A) nounwind {
 ;
 ; X64-FAST-ALL-LABEL: trunc4:
 ; X64-FAST-ALL:       # %bb.0:
-; X64-FAST-ALL-NEXT:    vbroadcastf128 {{.*#+}} ymm1 = [0,2,4,6,0,2,4,6]
-; X64-FAST-ALL-NEXT:    # ymm1 = mem[0,1,0,1]
+; X64-FAST-ALL-NEXT:    vmovaps {{.*#+}} ymm1 = <0,2,4,6,u,u,u,u>
 ; X64-FAST-ALL-NEXT:    vpermps %ymm0, %ymm1, %ymm0
 ; X64-FAST-ALL-NEXT:    # kill: def $xmm0 killed $xmm0 killed $ymm0
 ; X64-FAST-ALL-NEXT:    vzeroupper
