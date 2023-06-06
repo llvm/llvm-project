@@ -95,6 +95,12 @@ Changes to the AArch64 Backend
 * Support for preserve_all calling convention is added.
 * Added support for missing arch extensions in the assembly directives
   ``.arch <level>+<ext>`` and ``.arch_extension``.
+* Fixed handling of ``.arch <level>`` in assembly, without using any ``+<ext>``
+  suffix. Previously this had no effect at all if no extensions were supplied.
+  Now ``.arch <level>`` can be used to enable all the extensions that are
+  included in a higher level than what is specified on the command line,
+  or for disabling unwanted extensions if setting it to a lower level.
+  This fixes `PR32873 <https://github.com/llvm/llvm-project/issues/32220>`.
 
 Changes to the AMDGPU Backend
 -----------------------------
