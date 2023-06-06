@@ -24348,7 +24348,7 @@ unspecified sequence of rounding operations.
 
 
 '``llvm.experimental.constrained.ldexp``' Intrinsic
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 Syntax:
 """""""
