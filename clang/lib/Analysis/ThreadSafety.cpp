@@ -402,7 +402,7 @@ public:
     // The map with which Exp should be interpreted.
     Context Ctx;
 
-    bool isReference() { return !Exp; }
+    bool isReference() const { return !Exp; }
 
   private:
     // Create ordinary variable definition
