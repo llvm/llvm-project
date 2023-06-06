@@ -407,7 +407,8 @@ getMachineOpValue(const MCInst &MI, const MCOperand &MO,
   return MO.getImm();
 }
 
-void PPCMCCodeEmitter::encodeInstruction(const MCInst &MI, raw_ostream &OS,
+void PPCMCCodeEmitter::encodeInstruction(const MCInst &MI,
+                                         SmallVectorImpl<char> &CB,
                                          SmallVectorImpl<MCFixup> &Fixups,
                                          const MCSubtargetInfo &STI) const {
   uint64_t Bits = getBinaryCodeForInstr(MI, Fixups, STI);
@@ -419,13 +420,13 @@ void PPCMCCodeEmitter::encodeInstruction(const MCInst &MI, raw_ostream &OS,
   case 0:
     break;
   case 4:
-    support::endian::write<uint32_t>(OS, Bits, E);
+    support::endian::write<uint32_t>(CB, Bits, E);
     break;
   case 8:
     // If we emit a pair of instructions, the first one is
     // always in the top 32 bits, even on little-endian.
-    support::endian::write<uint32_t>(OS, Bits >> 32, E);
-    support::endian::write<uint32_t>(OS, Bits, E);
+    support::endian::write<uint32_t>(CB, Bits >> 32, E);
+    support::endian::write<uint32_t>(CB, Bits, E);
     break;
   default:
     llvm_unreachable("Invalid instruction size");
