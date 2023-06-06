@@ -1464,9 +1464,9 @@ void PEI::replaceFrameIndicesBackward(MachineBasicBlock *BB,
   RS->enterBasicBlockEnd(*BB);
 
   for (MachineInstr &MI : make_early_inc_range(reverse(*BB))) {
+    // Step backwards to get the liveness state at (immedately after) MI.
+    RS->backward(MI);
 
-    // Register scavenger backward step
-    MachineBasicBlock::iterator Step(MI);
     for (unsigned i = 0; i != MI.getNumOperands(); ++i) {
       if (!MI.getOperand(i).isFI())
         continue;
@@ -1474,49 +1474,17 @@ void PEI::replaceFrameIndicesBackward(MachineBasicBlock *BB,
       if (replaceFrameIndexDebugInstr(MF, MI, i, SPAdj))
         continue;
 
-      // If this instruction has a FrameIndex operand, we need to
-      // use that target machine register info object to eliminate
-      // it.
-
-      // TRI.eliminateFrameIndex may lower the frame index to a sequence of
-      // instructions. It also can remove/change instructions passed by the
-      // iterator and invalidate the iterator. We have to take care of this. For
-      // that we support two iterators: *Step* - points to the position up to
-      // which the scavenger should scan by the next iteration to have liveness
-      // information up to date. *Curr* - keeps track of the correct RS->MBBI -
-      // the scan start point. It points to the currently processed instruction
-      // right before the frame lowering.
+      // Eliminate this FrameIndex operand.
       //
-      // ITERATORS WORK AS FOLLOWS:
-      // *Step* is shifted one step back right before the frame lowering and
-      // one step forward right after it. No matter how many instructions were
-      // inserted, *Step* will be right after the position which is going to be
-      // processed in the next iteration, thus, in the correct position for the
-      // scavenger to go up to.
-      // *Curr* is shifted one step forward right before calling
-      // TRI.eliminateFrameIndex and one step backward after. Thus, we make sure
-      // it points right to the position that is the correct starting point for
-      // the scavenger to scan.
-      MachineBasicBlock::iterator Curr = ++RS->getCurrentPosition();
-
-      // Shift back
-      --Step;
-
+      // Save and restore the scavenger's position around the call to
+      // eliminateFrameIndex in case it erases MI and invalidates the iterator.
+      MachineBasicBlock::iterator Save = std::next(RS->getCurrentPosition());
       bool Removed = TRI.eliminateFrameIndex(MI, SPAdj, i, RS);
-      // Restore to unify logic with a shift back that happens in the end of
-      // the outer loop.
-      ++Step;
-      RS->skipTo(--Curr);
+      RS->skipTo(std::prev(Save));
+
       if (Removed)
         break;
     }
-
-    // Shift it to make RS collect reg info up to the current instruction.
-    if (Step != BB->begin())
-      Step--;
-
-    // Update register states.
-    RS->backward(Step);
   }
 }
 
