@@ -23,6 +23,15 @@ using namespace mlir;
 using namespace mlir::affine;
 
 //===----------------------------------------------------------------------===//
+// Apply...PatternsOp
+//===----------------------------------------------------------------------===//
+
+void transform::ApplyForLoopCanonicalizationPatternsOp::populatePatterns(
+    RewritePatternSet &patterns) {
+  scf::populateSCFForLoopCanonicalizationPatterns(patterns);
+}
+
+//===----------------------------------------------------------------------===//
 // GetParentForOp
 //===----------------------------------------------------------------------===//
 DiagnosedSilenceableFailure
@@ -309,13 +318,6 @@ public:
 #define GET_OP_LIST
 #include "mlir/Dialect/SCF/TransformOps/SCFTransformOps.cpp.inc"
         >();
-
-    addDialectDataInitializer<transform::PatternRegistry>(
-        [&](transform::PatternRegistry &registry) {
-          registry.registerPatterns(
-              "scf.for_loop_canonicalization",
-              scf::populateSCFForLoopCanonicalizationPatterns);
-        });
   }
 };
 } // namespace

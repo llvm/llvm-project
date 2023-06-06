@@ -32,8 +32,6 @@
 
 using namespace mlir;
 
-MLIR_DEFINE_EXPLICIT_TYPE_ID(mlir::transform::PatternRegistry)
-
 static ParseResult parseSequenceOpOperands(
     OpAsmParser &parser, std::optional<OpAsmParser::UnresolvedOperand> &root,
     Type &rootType,
@@ -215,37 +213,6 @@ void transform::ErrorCheckingTrackingListener::notifyPayloadReplacementNotFound(
         << "[" << errorCounter << "] replacement value " << index;
 
   ++errorCounter;
-}
-
-//===----------------------------------------------------------------------===//
-// PatternRegistry
-//===----------------------------------------------------------------------===//
-
-void transform::PatternRegistry::registerPatterns(StringRef identifier,
-                                                  PopulatePatternsFn &&fn) {
-  StringAttr attr = builder.getStringAttr(identifier);
-  assert(!patterns.contains(attr) && "patterns identifier is already in use");
-  patterns.try_emplace(attr, std::move(fn));
-}
-
-void transform::PatternRegistry::registerPatterns(
-    StringRef identifier, PopulatePatternsWithBenefitFn &&fn) {
-  StringAttr attr = builder.getStringAttr(identifier);
-  assert(!patterns.contains(attr) && "patterns identifier is already in use");
-  patterns.try_emplace(attr, [f = std::move(fn)](RewritePatternSet &patternSet) {
-    f(patternSet, /*benefit=*/1);
-  });
-}
-
-void transform::PatternRegistry::populatePatterns(
-    StringAttr identifier, RewritePatternSet &patternSet) const {
-  auto it = patterns.find(identifier);
-  assert(it != patterns.end() && "patterns not registered in registry");
-  it->second(patternSet);
-}
-
-bool transform::PatternRegistry::hasPatterns(StringAttr identifier) const {
-  return patterns.contains(identifier);
 }
 
 //===----------------------------------------------------------------------===//
@@ -440,11 +407,6 @@ transform::ApplyPatternsOp::applyToOne(Operation *target,
   // Gather all specified patterns.
   MLIRContext *ctx = target->getContext();
   RewritePatternSet patterns(ctx);
-  const auto &registry = getContext()
-                             ->getLoadedDialect<transform::TransformDialect>()
-                             ->getExtraData<transform::PatternRegistry>();
-  for (Attribute attr : getPatterns())
-    registry.populatePatterns(attr.cast<StringAttr>(), patterns);
   if (!getRegion().empty()) {
     for (Operation &op : getRegion().front()) {
       cast<transform::PatternDescriptorOpInterface>(&op).populatePatterns(
@@ -495,17 +457,6 @@ transform::ApplyPatternsOp::applyToOne(Operation *target,
 }
 
 LogicalResult transform::ApplyPatternsOp::verify() {
-  const auto &registry = getContext()
-                             ->getLoadedDialect<transform::TransformDialect>()
-                             ->getExtraData<transform::PatternRegistry>();
-  for (Attribute attr : getPatterns()) {
-    auto strAttr = attr.dyn_cast<StringAttr>();
-    if (!strAttr)
-      return emitOpError() << "expected " << getPatternsAttrName()
-                           << " to be an array of strings";
-    if (!registry.hasPatterns(strAttr))
-      return emitOpError() << "patterns not registered: " << strAttr.strref();
-  }
   if (!getRegion().empty()) {
     for (Operation &op : getRegion().front()) {
       if (!isa<transform::PatternDescriptorOpInterface>(&op)) {

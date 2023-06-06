@@ -26,7 +26,6 @@
 
 namespace mlir {
 namespace transform {
-class ApplyPatternsOp;
 
 enum class FailurePropagationMode : uint32_t;
 class FailurePropagationModeAttr;
@@ -152,50 +151,8 @@ private:
   int64_t errorCounter = 0;
 };
 
-/// The PatternRegistry stores callbacks to functions that populate a
-/// `RewritePatternSet`. Registered patterns can be applied with the
-/// "transform.apply_patterns" op.
-class PatternRegistry : public TransformDialectData<PatternRegistry> {
-public:
-  PatternRegistry(MLIRContext *ctx) : TransformDialectData(ctx), builder(ctx) {}
-
-  /// A function that populates a `RewritePatternSet`.
-  using PopulatePatternsFn = std::function<void(RewritePatternSet &)>;
-  /// A function that populates a `RewritePatternSet` with a specified benefit.
-  using PopulatePatternsWithBenefitFn =
-      std::function<void(RewritePatternSet &, PatternBenefit)>;
-
-  /// Registers patterns with the specified identifier. The identifier should
-  /// be prefixed with the dialect to which the patterns belong.
-  void registerPatterns(StringRef identifier, PopulatePatternsFn &&fn);
-
-  /// Registers patterns with the specified identifier. The identifier should
-  /// be prefixed with the dialect to which the patterns belong. The pattern
-  /// benefit is currently ignored.
-  void registerPatterns(StringRef identifier,
-                        PopulatePatternsWithBenefitFn &&fn);
-
-protected:
-  friend class ApplyPatternsOp;
-
-  /// Returns "true" if patterns are registered with the specified identifier.
-  bool hasPatterns(StringAttr identifier) const;
-
-  /// Populates the given pattern set with the specified patterns.
-  void populatePatterns(StringAttr identifier,
-                        RewritePatternSet &patternSet) const;
-
-private:
-  /// A builder for creating StringAttrs.
-  Builder builder;
-
-  DenseMap<StringAttr, PopulatePatternsFn> patterns;
-};
-
 } // namespace transform
 } // namespace mlir
-
-MLIR_DECLARE_EXPLICIT_TYPE_ID(mlir::transform::PatternRegistry)
 
 #define GET_OP_CLASSES
 #include "mlir/Dialect/Transform/IR/TransformOps.h.inc"
