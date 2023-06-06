@@ -68,7 +68,6 @@ static std::mutex get_record_type_mutex;
 ompt_device_callbacks_t ompt_device_callbacks;
 
 static double HostToDeviceRate = .0;
-static double HostToDeviceSlope = .0;
 
 typedef ompt_set_result_t (*libomptarget_ompt_set_trace_ompt_t)(
     ompt_device_t *device, unsigned int enable, unsigned int etype);
@@ -390,7 +389,6 @@ static int ompt_device_init(ompt_function_lookup_t lookup,
   DP("Translate time: H1=%f D1=%lu H2=%f D2=%lu\n", host_ref_a, device_ref_a,
      host_ref_b, device_ref_b);
   HostToDeviceRate = host_avg / device_avg;
-  DP("OMPT: Translate time HostToDeviceSlope: %f\n", HostToDeviceSlope);
 
   DP("OMPT: Exit ompt_device_init\n");
 

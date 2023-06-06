@@ -258,7 +258,6 @@ EXTERN void __tgt_target_data_update_mapper(ident_t *Loc, int64_t DeviceId,
                                             map_var_info_t *ArgNames,
                                             void **ArgMappers) {
   TIMESCOPE_WITH_IDENT(Loc);
-  void *CodePtr = nullptr;
 
 #ifdef OMPT_SUPPORT
   OMPTInvokeWrapper IWrapper(OMPT_GET_RETURN_ADDRESS(0),
