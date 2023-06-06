@@ -19,6 +19,7 @@
 
 // TODO(cir): we shouldn't need this but we currently reuse intrinsic IDs for
 // convenience.
+#include "clang/CIR/Dialect/IR/CIRTypes.h"
 #include "llvm/IR/Intrinsics.h"
 
 #include "clang/AST/GlobalDecl.h"
@@ -348,6 +349,26 @@ RValue CIRGenFunction::buildBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
       llvm_unreachable("NYI");
     }
     break;
+
+  // C stdarg builtins.
+  case Builtin::BI__builtin_stdarg_start:
+  case Builtin::BI__builtin_va_start:
+  case Builtin::BI__va_start: {
+    auto vaList = buildScalarExpr(E->getArg(0));
+    builder.create<mlir::cir::VAStartOp>(vaList.getLoc(), vaList);
+    return {};
+  }
+  case Builtin::BI__builtin_va_end: {
+    auto vaList = buildVAListRef(E->getArg(0)).getPointer();
+    builder.create<mlir::cir::VAEndOp>(vaList.getLoc(), vaList);
+    return {};
+  }
+  case Builtin::BI__builtin_va_copy: {
+    auto dstPtr = buildVAListRef(E->getArg(0)).getPointer();
+    auto srcPtr = buildVAListRef(E->getArg(1)).getPointer();
+    builder.create<mlir::cir::VACopyOp>(dstPtr.getLoc(), dstPtr, srcPtr);
+    return {};
+  }
 
   // C++ std:: builtins.
   case Builtin::BImove:
