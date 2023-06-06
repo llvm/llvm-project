@@ -665,6 +665,10 @@ Address CIRGenFunction::buildPointerWithAlignment(const Expr *E,
     case CK_LValueToRValue:
       break;
 
+    // Array-to-pointer decay. TODO(cir): BaseInfo and TBAAInfo.
+    case CK_ArrayToPointerDecay:
+      return buildArrayToPointerDecay(CE->getSubExpr());
+
     case CK_UncheckedDerivedToBase:
     case CK_DerivedToBase: {
       // TODO: Support accesses to members of base classes in TBAA. For now, we

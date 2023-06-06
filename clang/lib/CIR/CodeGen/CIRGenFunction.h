@@ -803,6 +803,28 @@ public:
   RValue convertTempToRValue(Address addr, clang::QualType type,
                              clang::SourceLocation Loc);
 
+  // Build a "reference" to a va_list; this is either the address or the value
+  // of the expression, depending on how va_list is defined.
+  Address buildVAListRef(const Expr *E);
+
+  /// Emits a call to an LLVM variable-argument intrinsic, either
+  /// \c llvm.va_start or \c llvm.va_end.
+  /// \param ArgValue A reference to the \c va_list as emitted by either
+  /// \c EmitVAListRef or \c EmitMSVAListRef.
+  /// \param IsStart If \c true, emits a call to \c llvm.va_start; otherwise,
+  /// calls \c llvm.va_end.
+  mlir::cir::CallOp buildVAStartEnd(mlir::Value ArgValue, bool IsStart);
+
+  /// Generate code to get an argument from the passed in pointer
+  /// and update it accordingly.
+  /// \param VE The \c VAArgExpr for which to generate code.
+  /// \param VAListAddr Receives a reference to the \c va_list as emitted by
+  /// either \c EmitVAListRef or \c EmitMSVAListRef.
+  /// \returns SSA value with the argument.
+  // FIXME: We should be able to get rid of this method and use the va_arg
+  // instruction in LLVM instead once it works well enough.
+  mlir::Value buildVAArg(VAArgExpr *VE, Address &VAListAddr);
+
   /// Given an expression that represents a value lvalue, this method emits the
   /// address of the lvalue, then loads the result as an rvalue, returning the
   /// rvalue.

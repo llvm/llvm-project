@@ -65,6 +65,9 @@ struct UnimplementedFeature {
   // Coroutines
   static bool unhandledException() { return false; }
 
+  // Missing Emissions
+  static bool variablyModifiedTypeEmission() { return false; }
+
   // Clang early struct optimizations
   static bool shouldUseBZeroPlusStoresToInitialize() { return false; }
   static bool shouldUseMemSetToInitialize() { return false; }

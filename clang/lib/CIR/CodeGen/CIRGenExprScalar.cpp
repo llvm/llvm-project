@@ -551,7 +551,7 @@ public:
   mlir::Value
   VisitAbstractConditionalOperator(const AbstractConditionalOperator *E);
   mlir::Value VisitChooseExpr(ChooseExpr *E) { llvm_unreachable("NYI"); }
-  mlir::Value VisitVAArgExpr(VAArgExpr *E) { llvm_unreachable("NYI"); }
+  mlir::Value VisitVAArgExpr(VAArgExpr *VE);
   mlir::Value VisitObjCStringLiteral(const ObjCStringLiteral *E) {
     llvm_unreachable("NYI");
   }
@@ -1959,4 +1959,16 @@ mlir::Value ScalarExprEmitter::VisitBinLOr(const clang::BinaryOperator *E) {
       });
 
   return Builder.createZExtOrBitCast(ResOp.getLoc(), ResOp, ResTy);
+}
+
+mlir::Value ScalarExprEmitter::VisitVAArgExpr(VAArgExpr *VE) {
+  QualType Ty = VE->getType();
+
+  if (Ty->isVariablyModifiedType())
+    assert(!UnimplementedFeature::variablyModifiedTypeEmission() && "NYI");
+
+  Address ArgValue = Address::invalid();
+  mlir::Value Val = CGF.buildVAArg(VE, ArgValue);
+
+  return Val;
 }
