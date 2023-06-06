@@ -15,6 +15,7 @@
 #include "src/__support/FPUtil/PolyEval.h"
 #include "src/__support/FPUtil/multiply_add.h"
 #include "src/__support/FPUtil/nearest_integer.h"
+#include "src/__support/FPUtil/rounding_mode.h"
 #include "src/__support/common.h"
 #include "src/__support/macros/optimization.h"            // LIBC_UNLIKELY
 #include "src/__support/macros/properties/cpu_features.h" // LIBC_TARGET_CPU_HAS_FMA
@@ -32,7 +33,7 @@ LLVM_LIBC_FUNCTION(float, expm1f, (float x)) {
 
   // Exceptional value
   if (LIBC_UNLIKELY(x_u == 0x3e35'bec5U)) { // x = 0x1.6b7d8ap-3f
-    int round_mode = fputil::get_round();
+    int round_mode = fputil::quick_get_round();
     if (round_mode == FE_TONEAREST || round_mode == FE_UPWARD)
       return 0x1.8dbe64p-3f;
     return 0x1.8dbe62p-3f;
@@ -40,7 +41,7 @@ LLVM_LIBC_FUNCTION(float, expm1f, (float x)) {
 
 #if !defined(LIBC_TARGET_CPU_HAS_FMA)
   if (LIBC_UNLIKELY(x_u == 0xbdc1'c6cbU)) { // x = -0x1.838d96p-4f
-    int round_mode = fputil::get_round();
+    int round_mode = fputil::quick_get_round();
     if (round_mode == FE_TONEAREST || round_mode == FE_DOWNWARD)
       return -0x1.71c884p-4f;
     return -0x1.71c882p-4f;
@@ -57,7 +58,7 @@ LLVM_LIBC_FUNCTION(float, expm1f, (float x)) {
       // exp(nan) = nan
       if (xbits.is_nan())
         return x;
-      int round_mode = fputil::get_round();
+      int round_mode = fputil::quick_get_round();
       if (round_mode == FE_UPWARD || round_mode == FE_TOWARDZERO)
         return -0x1.ffff'fep-1f; // -1.0f + 0x1.0p-24f
       return -1.0f;
@@ -65,7 +66,7 @@ LLVM_LIBC_FUNCTION(float, expm1f, (float x)) {
       // x >= 89 or nan
       if (xbits.uintval() >= 0x42b2'0000) {
         if (xbits.uintval() < 0x7f80'0000U) {
-          int rounding = fputil::get_round();
+          int rounding = fputil::quick_get_round();
           if (rounding == FE_DOWNWARD || rounding == FE_TOWARDZERO)
             return static_cast<float>(FPBits(FPBits::MAX_NORMAL));
 

@@ -13,6 +13,7 @@
 #include "src/__support/FPUtil/FEnvImpl.h"
 #include "src/__support/FPUtil/FPBits.h"
 #include "src/__support/FPUtil/FloatProperties.h"
+#include "src/__support/FPUtil/rounding_mode.h"
 #include "src/__support/UInt128.h"
 #include "src/__support/builtin_wrappers.h"
 #include "src/__support/macros/attributes.h"   // LIBC_INLINE
@@ -254,7 +255,7 @@ template <> LIBC_INLINE double fma<double>(double x, double y, double z) {
   }
 
   // Finalize the result.
-  int round_mode = fputil::get_round();
+  int round_mode = fputil::quick_get_round();
   if (LIBC_UNLIKELY(r_exp >= FPBits::MAX_EXPONENT)) {
     if ((round_mode == FE_TOWARDZERO) ||
         (round_mode == FE_UPWARD && prod_sign) ||
