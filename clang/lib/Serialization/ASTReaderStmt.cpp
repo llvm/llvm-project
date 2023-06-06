@@ -1356,6 +1356,7 @@ void ASTStmtReader::VisitGenericSelectionExpr(GenericSelectionExpr *E) {
 
   unsigned NumAssocs = Record.readInt();
   assert(NumAssocs == E->getNumAssocs() && "Wrong NumAssocs!");
+  E->IsExprPredicate = Record.readInt();
   E->ResultIndex = Record.readInt();
   E->GenericSelectionExprBits.GenericLoc = readSourceLocation();
   E->DefaultLoc = readSourceLocation();

@@ -4547,6 +4547,7 @@ Expr *Sema::stripARCUnbridgedCast(Expr *e) {
                                  CurFPFeatureOverrides());
   } else if (GenericSelectionExpr *gse = dyn_cast<GenericSelectionExpr>(e)) {
     assert(!gse->isResultDependent());
+    assert(!gse->isTypePredicate());
 
     unsigned n = gse->getNumAssocs();
     SmallVector<Expr *, 4> subExprs;

@@ -143,6 +143,17 @@ C Language Changes
   from a null pointer constant.
 - Fixed a bug that prevented casting to an ``_Atomic``-qualified type.
   (`#39596 <https://github.com/llvm/llvm-project/issues/39596>`_)
+- Added an extension to ``_Generic`` which allows the first operand to be a
+  type rather than an expression. The type does not undergo any conversions,
+  which makes this feature suitable for matching qualified types, incomplete
+  types, and function or array types.
+
+  .. code-block:: c
+
+    const int i = 12;
+    _Generic(i, int : 0, const int : 1); // Warns about unreachable code, the
+                                         // result is 0, not 1.
+    _Generic(typeof(i), int : 0, const int : 1); // Result is 1, not 0.
 
 C2x Feature Support
 ^^^^^^^^^^^^^^^^^^^
