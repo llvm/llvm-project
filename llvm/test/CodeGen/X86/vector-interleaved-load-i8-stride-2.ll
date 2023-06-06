@@ -365,14 +365,14 @@ define void @load_i8_stride2_vf32(ptr %in.vec, ptr %out.vec0, ptr %out.vec1) nou
 define void @load_i8_stride2_vf64(ptr %in.vec, ptr %out.vec0, ptr %out.vec1) nounwind {
 ; SSE-LABEL: load_i8_stride2_vf64:
 ; SSE:       # %bb.0:
-; SSE-NEXT:    movdqa 64(%rdi), %xmm0
-; SSE-NEXT:    movdqa 80(%rdi), %xmm4
+; SSE-NEXT:    movdqa (%rdi), %xmm0
+; SSE-NEXT:    movdqa 16(%rdi), %xmm7
+; SSE-NEXT:    movdqa 32(%rdi), %xmm2
+; SSE-NEXT:    movdqa 48(%rdi), %xmm4
 ; SSE-NEXT:    movdqa 96(%rdi), %xmm1
-; SSE-NEXT:    movdqa 112(%rdi), %xmm7
-; SSE-NEXT:    movdqa (%rdi), %xmm2
-; SSE-NEXT:    movdqa 16(%rdi), %xmm9
-; SSE-NEXT:    movdqa 32(%rdi), %xmm3
-; SSE-NEXT:    movdqa 48(%rdi), %xmm11
+; SSE-NEXT:    movdqa 112(%rdi), %xmm9
+; SSE-NEXT:    movdqa 64(%rdi), %xmm3
+; SSE-NEXT:    movdqa 80(%rdi), %xmm11
 ; SSE-NEXT:    movdqa {{.*#+}} xmm6 = [255,255,255,255,255,255,255,255]
 ; SSE-NEXT:    movdqa %xmm11, %xmm8
 ; SSE-NEXT:    pand %xmm6, %xmm8
@@ -381,38 +381,38 @@ define void @load_i8_stride2_vf64(ptr %in.vec, ptr %out.vec0, ptr %out.vec1) nou
 ; SSE-NEXT:    packuswb %xmm8, %xmm5
 ; SSE-NEXT:    movdqa %xmm9, %xmm10
 ; SSE-NEXT:    pand %xmm6, %xmm10
-; SSE-NEXT:    movdqa %xmm2, %xmm8
+; SSE-NEXT:    movdqa %xmm1, %xmm8
 ; SSE-NEXT:    pand %xmm6, %xmm8
 ; SSE-NEXT:    packuswb %xmm10, %xmm8
 ; SSE-NEXT:    movdqa %xmm7, %xmm12
 ; SSE-NEXT:    pand %xmm6, %xmm12
-; SSE-NEXT:    movdqa %xmm1, %xmm10
+; SSE-NEXT:    movdqa %xmm0, %xmm10
 ; SSE-NEXT:    pand %xmm6, %xmm10
 ; SSE-NEXT:    packuswb %xmm12, %xmm10
 ; SSE-NEXT:    movdqa %xmm4, %xmm12
 ; SSE-NEXT:    pand %xmm6, %xmm12
-; SSE-NEXT:    pand %xmm0, %xmm6
+; SSE-NEXT:    pand %xmm2, %xmm6
 ; SSE-NEXT:    packuswb %xmm12, %xmm6
 ; SSE-NEXT:    psrlw $8, %xmm11
 ; SSE-NEXT:    psrlw $8, %xmm3
 ; SSE-NEXT:    packuswb %xmm11, %xmm3
 ; SSE-NEXT:    psrlw $8, %xmm9
-; SSE-NEXT:    psrlw $8, %xmm2
-; SSE-NEXT:    packuswb %xmm9, %xmm2
-; SSE-NEXT:    psrlw $8, %xmm7
 ; SSE-NEXT:    psrlw $8, %xmm1
-; SSE-NEXT:    packuswb %xmm7, %xmm1
-; SSE-NEXT:    psrlw $8, %xmm4
+; SSE-NEXT:    packuswb %xmm9, %xmm1
+; SSE-NEXT:    psrlw $8, %xmm7
 ; SSE-NEXT:    psrlw $8, %xmm0
-; SSE-NEXT:    packuswb %xmm4, %xmm0
-; SSE-NEXT:    movdqa %xmm6, 32(%rsi)
-; SSE-NEXT:    movdqa %xmm10, 48(%rsi)
-; SSE-NEXT:    movdqa %xmm8, (%rsi)
-; SSE-NEXT:    movdqa %xmm5, 16(%rsi)
-; SSE-NEXT:    movdqa %xmm0, 32(%rdx)
+; SSE-NEXT:    packuswb %xmm7, %xmm0
+; SSE-NEXT:    psrlw $8, %xmm4
+; SSE-NEXT:    psrlw $8, %xmm2
+; SSE-NEXT:    packuswb %xmm4, %xmm2
+; SSE-NEXT:    movdqa %xmm6, 16(%rsi)
+; SSE-NEXT:    movdqa %xmm10, (%rsi)
+; SSE-NEXT:    movdqa %xmm8, 48(%rsi)
+; SSE-NEXT:    movdqa %xmm5, 32(%rsi)
+; SSE-NEXT:    movdqa %xmm2, 16(%rdx)
+; SSE-NEXT:    movdqa %xmm0, (%rdx)
 ; SSE-NEXT:    movdqa %xmm1, 48(%rdx)
-; SSE-NEXT:    movdqa %xmm2, (%rdx)
-; SSE-NEXT:    movdqa %xmm3, 16(%rdx)
+; SSE-NEXT:    movdqa %xmm3, 32(%rdx)
 ; SSE-NEXT:    retq
 ;
 ; AVX1-ONLY-LABEL: load_i8_stride2_vf64:

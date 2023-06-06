@@ -580,7 +580,7 @@ define <32 x i16> @splatvar_funnnel_v32i16(<32 x i16> %x, <32 x i16> %y, <32 x i
 ;
 ; AVX512BW-LABEL: splatvar_funnnel_v32i16:
 ; AVX512BW:       # %bb.0:
-; AVX512BW-NEXT:    vpbroadcastq {{.*#+}} xmm3 = [15,0,0,0,15,0,0,0]
+; AVX512BW-NEXT:    vmovdqa {{.*#+}} xmm3 = [15,0,0,0]
 ; AVX512BW-NEXT:    vpandn %xmm3, %xmm2, %xmm4
 ; AVX512BW-NEXT:    vpsrlw $1, %zmm1, %zmm1
 ; AVX512BW-NEXT:    vpsrlw %xmm4, %zmm1, %zmm1
@@ -597,7 +597,7 @@ define <32 x i16> @splatvar_funnnel_v32i16(<32 x i16> %x, <32 x i16> %y, <32 x i
 ;
 ; AVX512VLBW-LABEL: splatvar_funnnel_v32i16:
 ; AVX512VLBW:       # %bb.0:
-; AVX512VLBW-NEXT:    vpbroadcastq {{.*#+}} xmm3 = [15,0,0,0,15,0,0,0]
+; AVX512VLBW-NEXT:    vmovdqa {{.*#+}} xmm3 = [15,0,0,0]
 ; AVX512VLBW-NEXT:    vpandn %xmm3, %xmm2, %xmm4
 ; AVX512VLBW-NEXT:    vpsrlw $1, %zmm1, %zmm1
 ; AVX512VLBW-NEXT:    vpsrlw %xmm4, %zmm1, %zmm1

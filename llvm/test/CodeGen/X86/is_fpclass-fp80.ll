@@ -319,10 +319,10 @@ define i1 @is_neginf_f80(x86_fp80 %x) {
 ; CHECK-64-LABEL: is_neginf_f80:
 ; CHECK-64:       # %bb.0: # %entry
 ; CHECK-64-NEXT:    movzwl {{[0-9]+}}(%rsp), %eax
-; CHECK-64-NEXT:    xorq $65535, %rax # imm = 0xFFFF
+; CHECK-64-NEXT:    xorl $65535, %eax # imm = 0xFFFF
 ; CHECK-64-NEXT:    movabsq $-9223372036854775808, %rcx # imm = 0x8000000000000000
 ; CHECK-64-NEXT:    xorq {{[0-9]+}}(%rsp), %rcx
-; CHECK-64-NEXT:    orq %rax, %rcx
+; CHECK-64-NEXT:    orq %rcx, %rax
 ; CHECK-64-NEXT:    sete %al
 ; CHECK-64-NEXT:    retq
 entry:

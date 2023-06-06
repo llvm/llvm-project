@@ -262,39 +262,39 @@ define void @load_i16_stride2_vf16(ptr %in.vec, ptr %out.vec0, ptr %out.vec1) no
 define void @load_i16_stride2_vf32(ptr %in.vec, ptr %out.vec0, ptr %out.vec1) nounwind {
 ; SSE-LABEL: load_i16_stride2_vf32:
 ; SSE:       # %bb.0:
-; SSE-NEXT:    movdqa 64(%rdi), %xmm0
-; SSE-NEXT:    movdqa 80(%rdi), %xmm4
+; SSE-NEXT:    movdqa (%rdi), %xmm0
+; SSE-NEXT:    movdqa 16(%rdi), %xmm5
+; SSE-NEXT:    movdqa 32(%rdi), %xmm2
+; SSE-NEXT:    movdqa 48(%rdi), %xmm4
 ; SSE-NEXT:    movdqa 96(%rdi), %xmm1
-; SSE-NEXT:    movdqa 112(%rdi), %xmm6
-; SSE-NEXT:    movdqa (%rdi), %xmm2
-; SSE-NEXT:    movdqa 16(%rdi), %xmm7
-; SSE-NEXT:    movdqa 32(%rdi), %xmm3
-; SSE-NEXT:    movdqa 48(%rdi), %xmm9
-; SSE-NEXT:    pshuflw {{.*#+}} xmm5 = xmm9[0,2,2,3,4,5,6,7]
-; SSE-NEXT:    pshufhw {{.*#+}} xmm5 = xmm5[0,1,2,3,4,6,6,7]
-; SSE-NEXT:    pshufd {{.*#+}} xmm8 = xmm5[0,2,2,3]
-; SSE-NEXT:    pshuflw {{.*#+}} xmm5 = xmm3[0,2,2,3,4,5,6,7]
-; SSE-NEXT:    pshufhw {{.*#+}} xmm5 = xmm5[0,1,2,3,4,6,6,7]
-; SSE-NEXT:    pshufd {{.*#+}} xmm5 = xmm5[0,2,2,3]
-; SSE-NEXT:    punpcklqdq {{.*#+}} xmm5 = xmm5[0],xmm8[0]
+; SSE-NEXT:    movdqa 112(%rdi), %xmm7
+; SSE-NEXT:    movdqa 64(%rdi), %xmm3
+; SSE-NEXT:    movdqa 80(%rdi), %xmm9
+; SSE-NEXT:    pshuflw {{.*#+}} xmm6 = xmm9[0,2,2,3,4,5,6,7]
+; SSE-NEXT:    pshufhw {{.*#+}} xmm6 = xmm6[0,1,2,3,4,6,6,7]
+; SSE-NEXT:    pshufd {{.*#+}} xmm8 = xmm6[0,2,2,3]
+; SSE-NEXT:    pshuflw {{.*#+}} xmm6 = xmm3[0,2,2,3,4,5,6,7]
+; SSE-NEXT:    pshufhw {{.*#+}} xmm6 = xmm6[0,1,2,3,4,6,6,7]
+; SSE-NEXT:    pshufd {{.*#+}} xmm6 = xmm6[0,2,2,3]
+; SSE-NEXT:    punpcklqdq {{.*#+}} xmm6 = xmm6[0],xmm8[0]
 ; SSE-NEXT:    pshuflw {{.*#+}} xmm8 = xmm7[0,2,2,3,4,5,6,7]
 ; SSE-NEXT:    pshufhw {{.*#+}} xmm8 = xmm8[0,1,2,3,4,6,6,7]
 ; SSE-NEXT:    pshufd {{.*#+}} xmm10 = xmm8[0,2,2,3]
-; SSE-NEXT:    pshuflw {{.*#+}} xmm8 = xmm2[0,2,2,3,4,5,6,7]
+; SSE-NEXT:    pshuflw {{.*#+}} xmm8 = xmm1[0,2,2,3,4,5,6,7]
 ; SSE-NEXT:    pshufhw {{.*#+}} xmm8 = xmm8[0,1,2,3,4,6,6,7]
 ; SSE-NEXT:    pshufd {{.*#+}} xmm8 = xmm8[0,2,2,3]
 ; SSE-NEXT:    punpcklqdq {{.*#+}} xmm8 = xmm8[0],xmm10[0]
-; SSE-NEXT:    pshuflw {{.*#+}} xmm10 = xmm6[0,2,2,3,4,5,6,7]
+; SSE-NEXT:    pshuflw {{.*#+}} xmm10 = xmm5[0,2,2,3,4,5,6,7]
 ; SSE-NEXT:    pshufhw {{.*#+}} xmm10 = xmm10[0,1,2,3,4,6,6,7]
 ; SSE-NEXT:    pshufd {{.*#+}} xmm11 = xmm10[0,2,2,3]
-; SSE-NEXT:    pshuflw {{.*#+}} xmm10 = xmm1[0,2,2,3,4,5,6,7]
+; SSE-NEXT:    pshuflw {{.*#+}} xmm10 = xmm0[0,2,2,3,4,5,6,7]
 ; SSE-NEXT:    pshufhw {{.*#+}} xmm10 = xmm10[0,1,2,3,4,6,6,7]
 ; SSE-NEXT:    pshufd {{.*#+}} xmm10 = xmm10[0,2,2,3]
 ; SSE-NEXT:    punpcklqdq {{.*#+}} xmm10 = xmm10[0],xmm11[0]
 ; SSE-NEXT:    pshuflw {{.*#+}} xmm11 = xmm4[0,2,2,3,4,5,6,7]
 ; SSE-NEXT:    pshufhw {{.*#+}} xmm11 = xmm11[0,1,2,3,4,6,6,7]
 ; SSE-NEXT:    pshufd {{.*#+}} xmm11 = xmm11[0,2,2,3]
-; SSE-NEXT:    pshuflw {{.*#+}} xmm12 = xmm0[0,2,2,3,4,5,6,7]
+; SSE-NEXT:    pshuflw {{.*#+}} xmm12 = xmm2[0,2,2,3,4,5,6,7]
 ; SSE-NEXT:    pshufhw {{.*#+}} xmm12 = xmm12[0,1,2,3,4,6,6,7]
 ; SSE-NEXT:    pshufd {{.*#+}} xmm12 = xmm12[0,2,2,3]
 ; SSE-NEXT:    punpcklqdq {{.*#+}} xmm12 = xmm12[0],xmm11[0]
@@ -302,22 +302,22 @@ define void @load_i16_stride2_vf32(ptr %in.vec, ptr %out.vec0, ptr %out.vec1) no
 ; SSE-NEXT:    psrad $16, %xmm3
 ; SSE-NEXT:    packssdw %xmm9, %xmm3
 ; SSE-NEXT:    psrad $16, %xmm7
-; SSE-NEXT:    psrad $16, %xmm2
-; SSE-NEXT:    packssdw %xmm7, %xmm2
-; SSE-NEXT:    psrad $16, %xmm6
 ; SSE-NEXT:    psrad $16, %xmm1
-; SSE-NEXT:    packssdw %xmm6, %xmm1
-; SSE-NEXT:    psrad $16, %xmm4
+; SSE-NEXT:    packssdw %xmm7, %xmm1
+; SSE-NEXT:    psrad $16, %xmm5
 ; SSE-NEXT:    psrad $16, %xmm0
-; SSE-NEXT:    packssdw %xmm4, %xmm0
-; SSE-NEXT:    movdqa %xmm12, 32(%rsi)
-; SSE-NEXT:    movdqa %xmm10, 48(%rsi)
-; SSE-NEXT:    movdqa %xmm8, (%rsi)
-; SSE-NEXT:    movdqa %xmm5, 16(%rsi)
-; SSE-NEXT:    movdqa %xmm0, 32(%rdx)
+; SSE-NEXT:    packssdw %xmm5, %xmm0
+; SSE-NEXT:    psrad $16, %xmm4
+; SSE-NEXT:    psrad $16, %xmm2
+; SSE-NEXT:    packssdw %xmm4, %xmm2
+; SSE-NEXT:    movdqa %xmm12, 16(%rsi)
+; SSE-NEXT:    movdqa %xmm10, (%rsi)
+; SSE-NEXT:    movdqa %xmm8, 48(%rsi)
+; SSE-NEXT:    movdqa %xmm6, 32(%rsi)
+; SSE-NEXT:    movdqa %xmm2, 16(%rdx)
+; SSE-NEXT:    movdqa %xmm0, (%rdx)
 ; SSE-NEXT:    movdqa %xmm1, 48(%rdx)
-; SSE-NEXT:    movdqa %xmm2, (%rdx)
-; SSE-NEXT:    movdqa %xmm3, 16(%rdx)
+; SSE-NEXT:    movdqa %xmm3, 32(%rdx)
 ; SSE-NEXT:    retq
 ;
 ; AVX1-ONLY-LABEL: load_i16_stride2_vf32:
