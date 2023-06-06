@@ -3371,7 +3371,10 @@ FunctionProtoType::FunctionProtoType(QualType result, ArrayRef<QualType> params,
   // Fill in the exception type array if present.
   if (getExceptionSpecType() == EST_Dynamic) {
     auto &ExtraBits = *getTrailingObjects<FunctionTypeExtraBitfields>();
-    ExtraBits.NumExceptionType = epi.ExceptionSpec.Exceptions.size();
+    size_t NumExceptions = epi.ExceptionSpec.Exceptions.size();
+    assert(NumExceptions <= UINT16_MAX &&
+           "Not enough bits to encode exceptions");
+    ExtraBits.NumExceptionType = NumExceptions;
 
     assert(hasExtraBitfields() && "missing trailing extra bitfields!");
     auto *exnSlot =

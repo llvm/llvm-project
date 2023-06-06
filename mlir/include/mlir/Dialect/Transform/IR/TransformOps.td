@@ -138,12 +138,9 @@ def ApplyPatternsOp : TransformDialectOp<"apply_patterns",
     targeted op itself.
 
     The patterns that should be applied are specified in the graph region of
-    this op. They must implement the `PatternDescriptorOpInterface`.
-
-    (Deprecated) In addition, patterns that were registered in the transform
-    dialect's `PatternRegistry` are available. "canonicalization" is a special
-    set of patterns that refers to all canonicalization patterns of all loaded
-    dialects.
+    this op. They must implement the `PatternDescriptorOpInterface`. The order
+    in which patterns are applied is unspecified; i.e., the ordering of ops in
+    the region of this op is irrelevant.
 
     This transform only reads the target handle and modifies the payload. If a
     pattern erases or replaces a tracked op, the mapping is updated accordingly.
@@ -161,12 +158,12 @@ def ApplyPatternsOp : TransformDialectOp<"apply_patterns",
   }];
 
   let arguments = (ins
-    TransformHandleTypeInterface:$target, ArrayAttr:$patterns,
+    TransformHandleTypeInterface:$target,
     DefaultValuedAttr<BoolAttr, "true">:$fail_on_payload_replacement_not_found);
   let results = (outs);
   let regions = (region MaxSizedRegion<1>:$region);
 
-  let assemblyFormat = "$patterns `to` $target $region attr-dict `:` type($target)";
+  let assemblyFormat = "`to` $target $region attr-dict `:` type($target)";
   let hasVerifier = 1;
 
   let extraClassDeclaration = [{
