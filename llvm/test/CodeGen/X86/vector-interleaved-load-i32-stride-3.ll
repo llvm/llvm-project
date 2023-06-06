@@ -328,8 +328,7 @@ define void @load_i32_stride3_vf8(ptr %in.vec, ptr %out.vec0, ptr %out.vec1, ptr
 ; AVX2-FAST-NEXT:    vmovaps {{.*#+}} ymm6 = <1,4,7,2,5,u,u,u>
 ; AVX2-FAST-NEXT:    vpermps %ymm5, %ymm6, %ymm5
 ; AVX2-FAST-NEXT:    vblendps {{.*#+}} ymm4 = ymm5[0,1,2,3,4],ymm4[5,6,7]
-; AVX2-FAST-NEXT:    vbroadcastf128 {{.*#+}} ymm5 = [0,1,4,7,0,1,4,7]
-; AVX2-FAST-NEXT:    # ymm5 = mem[0,1,0,1]
+; AVX2-FAST-NEXT:    vmovaps {{.*#+}} ymm5 = <u,u,u,u,u,1,4,7>
 ; AVX2-FAST-NEXT:    vpermps %ymm2, %ymm5, %ymm2
 ; AVX2-FAST-NEXT:    vblendps {{.*#+}} ymm0 = ymm1[0,1],ymm0[2],ymm1[3,4],ymm0[5],ymm1[6,7]
 ; AVX2-FAST-NEXT:    vmovaps {{.*#+}} ymm1 = <2,5,0,3,6,u,u,u>

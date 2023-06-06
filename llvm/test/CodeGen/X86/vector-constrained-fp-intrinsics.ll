@@ -431,8 +431,7 @@ define <2 x double> @constrained_vector_fmul_v2f64() #0 {
 ;
 ; AVX-LABEL: constrained_vector_fmul_v2f64:
 ; AVX:       # %bb.0: # %entry
-; AVX-NEXT:    vmovddup {{.*#+}} xmm0 = [1.7976931348623157E+308,1.7976931348623157E+308]
-; AVX-NEXT:    # xmm0 = mem[0,0]
+; AVX-NEXT:    vmovapd {{.*#+}} xmm0 = [1.7976931348623157E+308,1.7976931348623157E+308]
 ; AVX-NEXT:    vmulpd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
 ; AVX-NEXT:    retq
 entry:
@@ -494,8 +493,7 @@ define <3 x double> @constrained_vector_fmul_v3f64() #0 {
 ; AVX:       # %bb.0: # %entry
 ; AVX-NEXT:    vmovsd {{.*#+}} xmm0 = mem[0],zero
 ; AVX-NEXT:    vmulsd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
-; AVX-NEXT:    vmovddup {{.*#+}} xmm1 = [1.7976931348623157E+308,1.7976931348623157E+308]
-; AVX-NEXT:    # xmm1 = mem[0,0]
+; AVX-NEXT:    vmovapd {{.*#+}} xmm1 = [1.7976931348623157E+308,1.7976931348623157E+308]
 ; AVX-NEXT:    vmulpd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1, %xmm1
 ; AVX-NEXT:    vinsertf128 $1, %xmm0, %ymm1, %ymm0
 ; AVX-NEXT:    retq
@@ -518,11 +516,17 @@ define <4 x double> @constrained_vector_fmul_v4f64() #0 {
 ; CHECK-NEXT:    mulpd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
 ; CHECK-NEXT:    retq
 ;
-; AVX-LABEL: constrained_vector_fmul_v4f64:
-; AVX:       # %bb.0: # %entry
-; AVX-NEXT:    vbroadcastsd {{.*#+}} ymm0 = [1.7976931348623157E+308,1.7976931348623157E+308,1.7976931348623157E+308,1.7976931348623157E+308]
-; AVX-NEXT:    vmulpd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %ymm0, %ymm0
-; AVX-NEXT:    retq
+; AVX1-LABEL: constrained_vector_fmul_v4f64:
+; AVX1:       # %bb.0: # %entry
+; AVX1-NEXT:    vmovapd {{.*#+}} ymm0 = [1.7976931348623157E+308,1.7976931348623157E+308,1.7976931348623157E+308,1.7976931348623157E+308]
+; AVX1-NEXT:    vmulpd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %ymm0, %ymm0
+; AVX1-NEXT:    retq
+;
+; AVX512-LABEL: constrained_vector_fmul_v4f64:
+; AVX512:       # %bb.0: # %entry
+; AVX512-NEXT:    vbroadcastsd {{.*#+}} ymm0 = [1.7976931348623157E+308,1.7976931348623157E+308,1.7976931348623157E+308,1.7976931348623157E+308]
+; AVX512-NEXT:    vmulpd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %ymm0, %ymm0
+; AVX512-NEXT:    retq
 entry:
   %mul = call <4 x double> @llvm.experimental.constrained.fmul.v4f64(
            <4 x double> <double 0x7FEFFFFFFFFFFFFF, double 0x7FEFFFFFFFFFFFFF,
@@ -564,8 +568,7 @@ define <2 x double> @constrained_vector_fadd_v2f64() #0 {
 ;
 ; AVX-LABEL: constrained_vector_fadd_v2f64:
 ; AVX:       # %bb.0: # %entry
-; AVX-NEXT:    vmovddup {{.*#+}} xmm0 = [1.7976931348623157E+308,1.7976931348623157E+308]
-; AVX-NEXT:    # xmm0 = mem[0,0]
+; AVX-NEXT:    vmovapd {{.*#+}} xmm0 = [1.7976931348623157E+308,1.7976931348623157E+308]
 ; AVX-NEXT:    vaddpd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
 ; AVX-NEXT:    retq
 entry:
@@ -628,8 +631,7 @@ define <3 x double> @constrained_vector_fadd_v3f64() #0 {
 ; AVX:       # %bb.0: # %entry
 ; AVX-NEXT:    vxorpd %xmm0, %xmm0, %xmm0
 ; AVX-NEXT:    vaddsd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
-; AVX-NEXT:    vmovddup {{.*#+}} xmm1 = [1.7976931348623157E+308,1.7976931348623157E+308]
-; AVX-NEXT:    # xmm1 = mem[0,0]
+; AVX-NEXT:    vmovapd {{.*#+}} xmm1 = [1.7976931348623157E+308,1.7976931348623157E+308]
 ; AVX-NEXT:    vaddpd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1, %xmm1
 ; AVX-NEXT:    vinsertf128 $1, %xmm0, %ymm1, %ymm0
 ; AVX-NEXT:    retq
@@ -652,11 +654,17 @@ define <4 x double> @constrained_vector_fadd_v4f64() #0 {
 ; CHECK-NEXT:    addpd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
 ; CHECK-NEXT:    retq
 ;
-; AVX-LABEL: constrained_vector_fadd_v4f64:
-; AVX:       # %bb.0: # %entry
-; AVX-NEXT:    vbroadcastsd {{.*#+}} ymm0 = [1.7976931348623157E+308,1.7976931348623157E+308,1.7976931348623157E+308,1.7976931348623157E+308]
-; AVX-NEXT:    vaddpd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %ymm0, %ymm0
-; AVX-NEXT:    retq
+; AVX1-LABEL: constrained_vector_fadd_v4f64:
+; AVX1:       # %bb.0: # %entry
+; AVX1-NEXT:    vmovapd {{.*#+}} ymm0 = [1.7976931348623157E+308,1.7976931348623157E+308,1.7976931348623157E+308,1.7976931348623157E+308]
+; AVX1-NEXT:    vaddpd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %ymm0, %ymm0
+; AVX1-NEXT:    retq
+;
+; AVX512-LABEL: constrained_vector_fadd_v4f64:
+; AVX512:       # %bb.0: # %entry
+; AVX512-NEXT:    vbroadcastsd {{.*#+}} ymm0 = [1.7976931348623157E+308,1.7976931348623157E+308,1.7976931348623157E+308,1.7976931348623157E+308]
+; AVX512-NEXT:    vaddpd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %ymm0, %ymm0
+; AVX512-NEXT:    retq
 entry:
   %add = call <4 x double> @llvm.experimental.constrained.fadd.v4f64(
            <4 x double> <double 0x7FEFFFFFFFFFFFFF, double 0x7FEFFFFFFFFFFFFF,
@@ -698,8 +706,7 @@ define <2 x double> @constrained_vector_fsub_v2f64() #0 {
 ;
 ; AVX-LABEL: constrained_vector_fsub_v2f64:
 ; AVX:       # %bb.0: # %entry
-; AVX-NEXT:    vmovddup {{.*#+}} xmm0 = [-1.7976931348623157E+308,-1.7976931348623157E+308]
-; AVX-NEXT:    # xmm0 = mem[0,0]
+; AVX-NEXT:    vmovapd {{.*#+}} xmm0 = [-1.7976931348623157E+308,-1.7976931348623157E+308]
 ; AVX-NEXT:    vsubpd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
 ; AVX-NEXT:    retq
 entry:
@@ -765,8 +772,7 @@ define <3 x double> @constrained_vector_fsub_v3f64() #0 {
 ; AVX-NEXT:    vxorpd %xmm0, %xmm0, %xmm0
 ; AVX-NEXT:    vmovsd {{.*#+}} xmm1 = mem[0],zero
 ; AVX-NEXT:    vsubsd %xmm0, %xmm1, %xmm0
-; AVX-NEXT:    vmovddup {{.*#+}} xmm1 = [-1.7976931348623157E+308,-1.7976931348623157E+308]
-; AVX-NEXT:    # xmm1 = mem[0,0]
+; AVX-NEXT:    vmovapd {{.*#+}} xmm1 = [-1.7976931348623157E+308,-1.7976931348623157E+308]
 ; AVX-NEXT:    vsubpd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1, %xmm1
 ; AVX-NEXT:    vinsertf128 $1, %xmm0, %ymm1, %ymm0
 ; AVX-NEXT:    retq
@@ -789,11 +795,17 @@ define <4 x double> @constrained_vector_fsub_v4f64() #0 {
 ; CHECK-NEXT:    subpd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
 ; CHECK-NEXT:    retq
 ;
-; AVX-LABEL: constrained_vector_fsub_v4f64:
-; AVX:       # %bb.0: # %entry
-; AVX-NEXT:    vbroadcastsd {{.*#+}} ymm0 = [-1.7976931348623157E+308,-1.7976931348623157E+308,-1.7976931348623157E+308,-1.7976931348623157E+308]
-; AVX-NEXT:    vsubpd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %ymm0, %ymm0
-; AVX-NEXT:    retq
+; AVX1-LABEL: constrained_vector_fsub_v4f64:
+; AVX1:       # %bb.0: # %entry
+; AVX1-NEXT:    vmovapd {{.*#+}} ymm0 = [-1.7976931348623157E+308,-1.7976931348623157E+308,-1.7976931348623157E+308,-1.7976931348623157E+308]
+; AVX1-NEXT:    vsubpd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %ymm0, %ymm0
+; AVX1-NEXT:    retq
+;
+; AVX512-LABEL: constrained_vector_fsub_v4f64:
+; AVX512:       # %bb.0: # %entry
+; AVX512-NEXT:    vbroadcastsd {{.*#+}} ymm0 = [-1.7976931348623157E+308,-1.7976931348623157E+308,-1.7976931348623157E+308,-1.7976931348623157E+308]
+; AVX512-NEXT:    vsubpd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %ymm0, %ymm0
+; AVX512-NEXT:    retq
 entry:
   %sub = call <4 x double> @llvm.experimental.constrained.fsub.v4f64(
            <4 x double> <double 0xFFEFFFFFFFFFFFFF, double 0xFFEFFFFFFFFFFFFF,
@@ -4448,11 +4460,11 @@ define <4 x i32> @constrained_vector_fptoui_v4i32_v4f32() #0 {
 ;
 ; AVX1-LABEL: constrained_vector_fptoui_v4i32_v4f32:
 ; AVX1:       # %bb.0: # %entry
-; AVX1-NEXT:    vbroadcastss {{.*#+}} xmm0 = [2.14748365E+9,2.14748365E+9,2.14748365E+9,2.14748365E+9]
+; AVX1-NEXT:    vmovaps {{.*#+}} xmm0 = [2.14748365E+9,2.14748365E+9,2.14748365E+9,2.14748365E+9]
 ; AVX1-NEXT:    vmovaps {{.*#+}} xmm1 = [4.2E+1,4.3E+1,4.4E+1,4.5E+1]
 ; AVX1-NEXT:    vcmpltps %xmm0, %xmm1, %xmm2
 ; AVX1-NEXT:    vxorps %xmm3, %xmm3, %xmm3
-; AVX1-NEXT:    vbroadcastss {{.*#+}} xmm4 = [2147483648,2147483648,2147483648,2147483648]
+; AVX1-NEXT:    vmovaps {{.*#+}} xmm4 = [2147483648,2147483648,2147483648,2147483648]
 ; AVX1-NEXT:    vblendvps %xmm2, %xmm3, %xmm4, %xmm4
 ; AVX1-NEXT:    vblendvps %xmm2, %xmm3, %xmm0, %xmm0
 ; AVX1-NEXT:    vsubps %xmm0, %xmm1, %xmm0
@@ -4998,13 +5010,13 @@ define <4 x i32> @constrained_vector_fptoui_v4i32_v4f64() #0 {
 ;
 ; AVX1-LABEL: constrained_vector_fptoui_v4i32_v4f64:
 ; AVX1:       # %bb.0: # %entry
-; AVX1-NEXT:    vbroadcastsd {{.*#+}} ymm0 = [2.147483648E+9,2.147483648E+9,2.147483648E+9,2.147483648E+9]
+; AVX1-NEXT:    vmovapd {{.*#+}} ymm0 = [2.147483648E+9,2.147483648E+9,2.147483648E+9,2.147483648E+9]
 ; AVX1-NEXT:    vmovapd {{.*#+}} ymm1 = [4.2100000000000001E+1,4.2200000000000003E+1,4.2299999999999997E+1,4.2399999999999999E+1]
 ; AVX1-NEXT:    vcmpltpd %ymm0, %ymm1, %ymm2
 ; AVX1-NEXT:    vextractf128 $1, %ymm2, %xmm3
 ; AVX1-NEXT:    vshufps {{.*#+}} xmm3 = xmm2[0,2],xmm3[0,2]
 ; AVX1-NEXT:    vxorps %xmm4, %xmm4, %xmm4
-; AVX1-NEXT:    vbroadcastss {{.*#+}} xmm5 = [2147483648,2147483648,2147483648,2147483648]
+; AVX1-NEXT:    vmovaps {{.*#+}} xmm5 = [2147483648,2147483648,2147483648,2147483648]
 ; AVX1-NEXT:    vblendvps %xmm3, %xmm4, %xmm5, %xmm3
 ; AVX1-NEXT:    vxorps %xmm4, %xmm4, %xmm4
 ; AVX1-NEXT:    vblendvpd %ymm2, %ymm4, %ymm0, %ymm0

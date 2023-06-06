@@ -656,8 +656,7 @@ define <2 x i64> @unsigned_sat_constant_v2i64_using_min(<2 x i64> %x) {
 ;
 ; AVX2-LABEL: unsigned_sat_constant_v2i64_using_min:
 ; AVX2:       # %bb.0:
-; AVX2-NEXT:    vmovddup {{.*#+}} xmm1 = [18446744073709551573,18446744073709551573]
-; AVX2-NEXT:    # xmm1 = mem[0,0]
+; AVX2-NEXT:    vmovapd {{.*#+}} xmm1 = [18446744073709551573,18446744073709551573]
 ; AVX2-NEXT:    vpxor {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm2
 ; AVX2-NEXT:    vmovdqa {{.*#+}} xmm3 = [9223372036854775765,9223372036854775765]
 ; AVX2-NEXT:    vpcmpgtq %xmm2, %xmm3, %xmm2

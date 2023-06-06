@@ -2842,8 +2842,7 @@ define <4 x float> @PR30264(<4 x float> %x) {
 ;
 ; AVX-LABEL: PR30264:
 ; AVX:       # %bb.0:
-; AVX-NEXT:    vmovddup {{.*#+}} xmm1 = [4.0E+0,1.0E+0,4.0E+0,1.0E+0]
-; AVX-NEXT:    # xmm1 = mem[0,0]
+; AVX-NEXT:    vmovaps {{.*#+}} xmm1 = <u,u,4.0E+0,1.0E+0>
 ; AVX-NEXT:    vinsertps {{.*#+}} xmm0 = xmm0[0],zero,xmm1[2,3]
 ; AVX-NEXT:    retq
   %shuf1 = shufflevector <4 x float> %x, <4 x float> <float undef, float 0.0, float undef, float undef>, <4 x i32> <i32 0, i32 5, i32 undef, i32 undef>
@@ -3472,21 +3471,37 @@ define void @SpinningCube() {
 ; SSE41-NEXT:    movaps %xmm2, (%rax)
 ; SSE41-NEXT:    retq
 ;
-; AVX-LABEL: SpinningCube:
-; AVX:       # %bb.0: # %entry
-; AVX-NEXT:    movl $1065353216, (%rax) # imm = 0x3F800000
-; AVX-NEXT:    vbroadcastss {{.*#+}} xmm0 = [1.0E+0,1.0E+0,1.0E+0,1.0E+0]
-; AVX-NEXT:    vmovaps {{.*#+}} xmm1 = <0.0E+0,0.0E+0,-2.0E+0,u>
-; AVX-NEXT:    vmovss {{.*#+}} xmm2 = mem[0],zero,zero,zero
-; AVX-NEXT:    vinsertps {{.*#+}} xmm3 = xmm1[0,1,2],xmm2[0]
-; AVX-NEXT:    vinsertps {{.*#+}} xmm2 = xmm0[0],xmm2[0],xmm0[2,3]
-; AVX-NEXT:    vaddps %xmm2, %xmm3, %xmm2
-; AVX-NEXT:    vmovaps %xmm2, (%rax)
-; AVX-NEXT:    vbroadcastss (%rax), %xmm2
-; AVX-NEXT:    vmulps %xmm1, %xmm2, %xmm1
-; AVX-NEXT:    vaddps %xmm0, %xmm1, %xmm0
-; AVX-NEXT:    vmovaps %xmm0, (%rax)
-; AVX-NEXT:    retq
+; AVX1-LABEL: SpinningCube:
+; AVX1:       # %bb.0: # %entry
+; AVX1-NEXT:    movl $1065353216, (%rax) # imm = 0x3F800000
+; AVX1-NEXT:    vmovaps {{.*#+}} xmm0 = <u,u,u,1.0E+0>
+; AVX1-NEXT:    vmovaps {{.*#+}} xmm1 = <0.0E+0,0.0E+0,-2.0E+0,u>
+; AVX1-NEXT:    vmovss {{.*#+}} xmm2 = mem[0],zero,zero,zero
+; AVX1-NEXT:    vinsertps {{.*#+}} xmm3 = xmm1[0,1,2],xmm2[0]
+; AVX1-NEXT:    vinsertps {{.*#+}} xmm2 = xmm0[0],xmm2[0],xmm0[2,3]
+; AVX1-NEXT:    vaddps %xmm2, %xmm3, %xmm2
+; AVX1-NEXT:    vmovaps %xmm2, (%rax)
+; AVX1-NEXT:    vbroadcastss (%rax), %xmm2
+; AVX1-NEXT:    vmulps %xmm1, %xmm2, %xmm1
+; AVX1-NEXT:    vaddps %xmm0, %xmm1, %xmm0
+; AVX1-NEXT:    vmovaps %xmm0, (%rax)
+; AVX1-NEXT:    retq
+;
+; AVX2-LABEL: SpinningCube:
+; AVX2:       # %bb.0: # %entry
+; AVX2-NEXT:    movl $1065353216, (%rax) # imm = 0x3F800000
+; AVX2-NEXT:    vbroadcastss {{.*#+}} xmm0 = [1.0E+0,1.0E+0,1.0E+0,1.0E+0]
+; AVX2-NEXT:    vmovaps {{.*#+}} xmm1 = <0.0E+0,0.0E+0,-2.0E+0,u>
+; AVX2-NEXT:    vmovss {{.*#+}} xmm2 = mem[0],zero,zero,zero
+; AVX2-NEXT:    vinsertps {{.*#+}} xmm3 = xmm1[0,1,2],xmm2[0]
+; AVX2-NEXT:    vinsertps {{.*#+}} xmm2 = xmm0[0],xmm2[0],xmm0[2,3]
+; AVX2-NEXT:    vaddps %xmm2, %xmm3, %xmm2
+; AVX2-NEXT:    vmovaps %xmm2, (%rax)
+; AVX2-NEXT:    vbroadcastss (%rax), %xmm2
+; AVX2-NEXT:    vmulps %xmm1, %xmm2, %xmm1
+; AVX2-NEXT:    vaddps %xmm0, %xmm1, %xmm0
+; AVX2-NEXT:    vmovaps %xmm0, (%rax)
+; AVX2-NEXT:    retq
 entry:
   store float 1.000000e+00, ptr undef, align 4
   %0 = load float, ptr undef, align 4
