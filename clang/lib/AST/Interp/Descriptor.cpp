@@ -28,8 +28,8 @@ static void dtorTy(Block *, char *Ptr, const Descriptor *) {
 }
 
 template <typename T>
-static void moveTy(Block *, char *Src, char *Dst, const Descriptor *) {
-  auto *SrcPtr = reinterpret_cast<T *>(Src);
+static void moveTy(Block *, const char *Src, char *Dst, const Descriptor *) {
+  const auto *SrcPtr = reinterpret_cast<const T *>(Src);
   auto *DstPtr = reinterpret_cast<T *>(Dst);
   new (DstPtr) T(std::move(*SrcPtr));
 }
@@ -55,9 +55,10 @@ static void dtorArrayTy(Block *, char *Ptr, const Descriptor *D) {
 }
 
 template <typename T>
-static void moveArrayTy(Block *, char *Src, char *Dst, const Descriptor *D) {
+static void moveArrayTy(Block *, const char *Src, char *Dst,
+                        const Descriptor *D) {
   for (unsigned I = 0, NE = D->getNumElems(); I < NE; ++I) {
-    auto *SrcPtr = &reinterpret_cast<T *>(Src)[I];
+    const auto *SrcPtr = &reinterpret_cast<const T *>(Src)[I];
     auto *DstPtr = &reinterpret_cast<T *>(Dst)[I];
     new (DstPtr) T(std::move(*SrcPtr));
   }
@@ -104,18 +105,19 @@ static void dtorArrayDesc(Block *B, char *Ptr, const Descriptor *D) {
   }
 }
 
-static void moveArrayDesc(Block *B, char *Src, char *Dst, const Descriptor *D) {
+static void moveArrayDesc(Block *B, const char *Src, char *Dst,
+                          const Descriptor *D) {
   const unsigned NumElems = D->getNumElems();
   const unsigned ElemSize =
       D->ElemDesc->getAllocSize() + sizeof(InlineDescriptor);
 
   unsigned ElemOffset = 0;
   for (unsigned I = 0; I < NumElems; ++I, ElemOffset += ElemSize) {
-    auto *SrcPtr = Src + ElemOffset;
+    const auto *SrcPtr = Src + ElemOffset;
     auto *DstPtr = Dst + ElemOffset;
 
-    auto *SrcDesc = reinterpret_cast<InlineDescriptor *>(SrcPtr);
-    auto *SrcElemLoc = reinterpret_cast<char *>(SrcDesc + 1);
+    const auto *SrcDesc = reinterpret_cast<const InlineDescriptor *>(SrcPtr);
+    const auto *SrcElemLoc = reinterpret_cast<const char *>(SrcDesc + 1);
     auto *DstDesc = reinterpret_cast<InlineDescriptor *>(DstPtr);
     auto *DstElemLoc = reinterpret_cast<char *>(DstDesc + 1);
 
@@ -162,7 +164,8 @@ static void dtorRecord(Block *B, char *Ptr, const Descriptor *D) {
     DtorSub(F.Offset, F.Desc);
 }
 
-static void moveRecord(Block *B, char *Src, char *Dst, const Descriptor *D) {
+static void moveRecord(Block *B, const char *Src, char *Dst,
+                       const Descriptor *D) {
   for (const auto &F : D->ElemRecord->fields()) {
     auto FieldOff = F.Offset;
     auto FieldDesc = F.Desc;
