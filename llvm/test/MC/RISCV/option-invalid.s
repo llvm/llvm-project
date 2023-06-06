@@ -16,7 +16,7 @@
 # CHECK: :[[#@LINE+1]]:23: error: unexpected token, expected + or -
 .option arch, +f, +d, rv32ifd, -d
 
-# CHECK: :[[#@LINE+1]]:22: error: unexpected token, expected end of statement
+# CHECK: :[[#@LINE+1]]:22: error: expected newline
 .option arch, rv32ifd, +f, +d
 
 # CHECK: :[[#@LINE+1]]:16: error: unexpected token, expected identifier
@@ -31,7 +31,7 @@
 # CHECK: :[[#@LINE+1]]:16: error: unexpected token, expected identifier
 .option arch, +
 
-# CHECK: :[[#@LINE+1]]:18: error: unexpected token, expected end of statement
+# CHECK: :[[#@LINE+1]]:18: error: expected comma
 .option arch, +c foo
 
 # CHECK: :[[#@LINE+1]]:16: error: Extension version number parsing not currently implemented

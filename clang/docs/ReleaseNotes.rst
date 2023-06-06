@@ -534,6 +534,9 @@ Bug Fixes to C++ Support
   (`#62494 <https://github.com/llvm/llvm-project/issues/62494>`_)
 - Fix handling of generic lambda used as template arguments.
   (`#62611 <https://github.com/llvm/llvm-project/issues/62611>`_)
+- Allow omitting ``typename`` in the parameter declaration of a friend
+  constructor declaration.
+  (`#63119 <https://github.com/llvm/llvm-project/issues/63119>`_)
 
 Bug Fixes to AST Handling
 ^^^^^^^^^^^^^^^^^^^^^^^^^

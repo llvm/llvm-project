@@ -2711,69 +2711,53 @@ bool RISCVAsmParser::parseDirectiveOption() {
   }
 
   if (Option == "arch") {
+    SmallVector<RISCVOptionArchArg> Args;
+    do {
+      if (Parser.parseComma())
+        return true;
 
-    Parser.parseComma();
-
-    bool PrefixEmitted = false;
-    bool IsExtensionList = false;
-    while (true) {
-      bool IsAdd;
-      if (Parser.getTok().is(AsmToken::Plus)) {
-        IsAdd = true;
-        IsExtensionList = true;
-      } else if (Parser.getTok().is(AsmToken::Minus)) {
-        IsAdd = false;
-        IsExtensionList = true;
-      } else {
-        SMLoc ArchLoc = Parser.getTok().getLoc();
-
-        if (IsExtensionList)
-          return Error(ArchLoc, "unexpected token, expected + or -");
-
-        StringRef Arch;
-        if (Parser.getTok().is(AsmToken::Identifier))
-          Arch = Parser.getTok().getString();
-        else
-          return Error(ArchLoc,
-                       "unexpected token, expected identifier");
-
-        std::string Result;
-        if (resetToArch(Arch, ArchLoc, Result, true))
-          return true;
-
-        getTargetStreamer().emitDirectiveOptionArchFullArch(Result,
-                                                            PrefixEmitted);
-
-        Parser.Lex();
-
-        return Parser.parseToken(AsmToken::EndOfStatement,
-                                 "unexpected token, expected end of statement");
-      }
-
-      Parser.Lex();
+      RISCVOptionArchArgType Type;
+      if (parseOptionalToken(AsmToken::Plus))
+        Type = RISCVOptionArchArgType::Plus;
+      else if (parseOptionalToken(AsmToken::Minus))
+        Type = RISCVOptionArchArgType::Minus;
+      else if (!Args.empty())
+        return Error(Parser.getTok().getLoc(),
+                     "unexpected token, expected + or -");
+      else
+        Type = RISCVOptionArchArgType::Full;
 
       if (Parser.getTok().isNot(AsmToken::Identifier))
         return Error(Parser.getTok().getLoc(),
                      "unexpected token, expected identifier");
 
-      StringRef ExtStr = Parser.getTok().getString();
+      StringRef Arch = Parser.getTok().getString();
+      SMLoc Loc = Parser.getTok().getLoc();
+      Parser.Lex();
 
-      ArrayRef<SubtargetFeatureKV> KVArray(RISCVFeatureKV);
-      auto Ext = llvm::lower_bound(KVArray, ExtStr);
-      if (Ext == KVArray.end() || StringRef(Ext->Key) != ExtStr ||
-          !RISCVISAInfo::isSupportedExtension(ExtStr)) {
-        if (isDigit(ExtStr.back()))
-          return Error(
-              Parser.getTok().getLoc(),
-              "Extension version number parsing not currently implemented");
-        return Error(Parser.getTok().getLoc(), "unknown extension feature");
+      if (Type == RISCVOptionArchArgType::Full) {
+        std::string Result;
+        if (resetToArch(Arch, Loc, Result, true))
+          return true;
+
+        Args.emplace_back(Type, Result);
+        break;
       }
 
-      SMLoc Loc = Parser.getTok().getLoc();
+      ArrayRef<SubtargetFeatureKV> KVArray(RISCVFeatureKV);
+      auto Ext = llvm::lower_bound(KVArray, Arch);
+      if (Ext == KVArray.end() || StringRef(Ext->Key) != Arch ||
+          !RISCVISAInfo::isSupportedExtension(Arch)) {
+        if (isDigit(Arch.back()))
+          return Error(
+              Loc,
+              "Extension version number parsing not currently implemented");
+        return Error(Loc, "unknown extension feature");
+      }
 
-      Parser.Lex(); // Eat arch string
-      bool HasComma = getTok().is(AsmToken::Comma);
-      if (IsAdd) {
+      Args.emplace_back(Type, Ext->Key);
+
+      if (Type == RISCVOptionArchArgType::Plus) {
         setFeatureBits(Ext->Value, Ext->Key);
         auto ParseResult = RISCVFeatures::parseFeatureBits(isRV64(), STI->getFeatureBits());
         if (!ParseResult) {
@@ -2785,9 +2769,8 @@ bool RISCVAsmParser::parseDirectiveOption() {
 
           return Error(Loc, OutputErrMsg.str());
         }
-        getTargetStreamer().emitDirectiveOptionArchPlusOrMinus(
-            Ext->Key, /*Enable*/ true, PrefixEmitted, HasComma);
       } else {
+        assert(Type == RISCVOptionArchArgType::Minus);
         // It is invalid to disable an extension that there are other enabled
         // extensions depend on it.
         // TODO: Make use of RISCVISAInfo to handle this
@@ -2801,16 +2784,14 @@ bool RISCVAsmParser::parseDirectiveOption() {
         }
 
         clearFeatureBits(Ext->Value, Ext->Key);
-        getTargetStreamer().emitDirectiveOptionArchPlusOrMinus(
-            Ext->Key, /*Enable*/ false, PrefixEmitted, HasComma);
       }
+    } while (Parser.getTok().isNot(AsmToken::EndOfStatement));
 
-      if (!HasComma)
-        return Parser.parseToken(AsmToken::EndOfStatement,
-                                 "unexpected token, expected end of statement");
-      // Eat comma
-      Parser.Lex();
-    }
+    if (Parser.parseEOL())
+      return true;
+
+    getTargetStreamer().emitDirectiveOptionArch(Args);
+    return false;
   }
 
   if (Option == "rvc") {
