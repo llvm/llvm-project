@@ -1141,7 +1141,8 @@ module std [system] {
   }
 
   module __debug_utils {
-    module randomize_range { private header "__debug_utils/randomize_range.h" }
+    module randomize_range            { private header "__debug_utils/randomize_range.h" }
+    module strict_weak_ordering_check { private header "__debug_utils/strict_weak_ordering_check.h" }
   }
 
   module limits {

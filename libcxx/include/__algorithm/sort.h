@@ -23,6 +23,7 @@
 #include <__config>
 #include <__debug>
 #include <__debug_utils/randomize_range.h>
+#include <__debug_utils/strict_weak_ordering_check.h>
 #include <__functional/operations.h>
 #include <__functional/ranges_operations.h>
 #include <__iterator/iterator_traits.h>
@@ -921,6 +922,7 @@ void __sort_impl(_RandomAccessIterator __first, _RandomAccessIterator __last, _C
   } else {
     std::__sort_dispatch<_AlgPolicy>(std::__unwrap_iter(__first), std::__unwrap_iter(__last), __comp);
   }
+  std::__check_strict_weak_ordering_sorted(std::__unwrap_iter(__first), std::__unwrap_iter(__last), __comp);
 }
 
 template <class _RandomAccessIterator, class _Comp>
