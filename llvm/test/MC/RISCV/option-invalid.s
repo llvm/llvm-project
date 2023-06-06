@@ -1,5 +1,5 @@
 # RUN: not llvm-mc -triple riscv32 < %s 2>&1 \
-# RUN:   | FileCheck -check-prefixes=CHECK %s
+# RUN:   | FileCheck --implicit-check-not=error: %s
 
 # CHECK: :[[#@LINE+1]]:8: error: expected identifier
 .option
@@ -46,6 +46,9 @@
 
 # CHECK: :[[#@LINE+1]]:20: error: 'f' and 'zfinx' extensions are incompatible
 .option arch, +f, +zfinx
+
+## Make sure the above error isn't sticky
+.option arch, +f
 
 # CHECK: :[[#@LINE+1]]:13: error: expected newline
 .option rvc foo
