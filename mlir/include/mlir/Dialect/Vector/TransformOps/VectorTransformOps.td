@@ -52,7 +52,7 @@ def ApplyTransferPermutationPatternsOp : Op<Transform_Dialect,
   let assemblyFormat = "attr-dict";
 }
 
-def LowerBroadcastOp : Op<Transform_Dialect,
+def ApplyLowerBroadcastPatternsOp : Op<Transform_Dialect,
     "apply_patterns.vector.lower_broadcast",
     [DeclareOpInterfaceMethods<PatternDescriptorOpInterface>]> {
   let description = [{
@@ -67,7 +67,7 @@ def LowerBroadcastOp : Op<Transform_Dialect,
 }
 
 // TODO: evolve lowering_strategy to proper enums.
-def LowerContractionOp : Op<Transform_Dialect,
+def ApplyLowerContractionPatternsOp : Op<Transform_Dialect,
     "apply_patterns.vector.lower_contraction",
     [DeclareOpInterfaceMethods<PatternDescriptorOpInterface>]> {
   let description = [{
@@ -86,7 +86,7 @@ def LowerContractionOp : Op<Transform_Dialect,
   }];
 }
 
-def LowerMasksOp : Op<Transform_Dialect,
+def ApplyLowerMasksPatternsOp : Op<Transform_Dialect,
     "apply_patterns.vector.lower_masks",
     [DeclareOpInterfaceMethods<PatternDescriptorOpInterface>]> {
   let description = [{
@@ -100,7 +100,7 @@ def LowerMasksOp : Op<Transform_Dialect,
   let assemblyFormat = "attr-dict";
 }
 
-def LowerMaskedTransfersOp : Op<Transform_Dialect,
+def ApplyLowerMaskedTransfersPatternsOp : Op<Transform_Dialect,
     "apply_patterns.vector.lower_masked_transfers",
     [DeclareOpInterfaceMethods<PatternDescriptorOpInterface>]> {
   let description = [{
@@ -114,7 +114,7 @@ def LowerMaskedTransfersOp : Op<Transform_Dialect,
   let assemblyFormat = "attr-dict";
 }
 
-def MaterializeMasksOp : Op<Transform_Dialect,
+def ApplyMaterializeMasksPatternsOp : Op<Transform_Dialect,
     "apply_patterns.vector.materialize_masks",
     [DeclareOpInterfaceMethods<PatternDescriptorOpInterface>]> {
   let description = [{
@@ -129,7 +129,7 @@ def MaterializeMasksOp : Op<Transform_Dialect,
 }
 
 // TODO: evolve lowering_strategy to proper enums.
-def LowerMultiReductionOp : Op<Transform_Dialect,
+def ApplyLowerMultiReductionPatternsOp : Op<Transform_Dialect,
     "apply_patterns.vector.lower_multi_reduction",
     [DeclareOpInterfaceMethods<PatternDescriptorOpInterface>]> {
   let description = [{
@@ -149,7 +149,7 @@ def LowerMultiReductionOp : Op<Transform_Dialect,
   }];
 }
 
-def LowerOuterProductOp : Op<Transform_Dialect,
+def ApplyLowerOuterProductPatternsOp : Op<Transform_Dialect,
     "apply_patterns.vector.lower_outerproduct",
     [DeclareOpInterfaceMethods<PatternDescriptorOpInterface>]> {
   let description = [{
@@ -163,7 +163,29 @@ def LowerOuterProductOp : Op<Transform_Dialect,
   let assemblyFormat = "attr-dict";
 }
 
-def LowerShapeCastOp : Op<Transform_Dialect,
+def ApplyLowerGatherPatternsOp : Op<Transform_Dialect,
+    "apply_patterns.vector.lower_gather",
+    [DeclareOpInterfaceMethods<PatternDescriptorOpInterface>]> {
+  let description = [{
+    Indicates that vector.gather operations should be lowered to
+    finer-grained vector primitives.
+  }];
+
+  let assemblyFormat = "attr-dict";
+}
+
+def ApplyLowerScanPatternsOp : Op<Transform_Dialect,
+    "apply_patterns.vector.lower_scan",
+    [DeclareOpInterfaceMethods<PatternDescriptorOpInterface>]> {
+  let description = [{
+    Indicates that vector.scan operations should be lowered to
+    finer-grained vector primitives.
+  }];
+
+  let assemblyFormat = "attr-dict";
+}
+
+def ApplyLowerShapeCastPatternsOp : Op<Transform_Dialect,
     "apply_patterns.vector.lower_shape_cast",
     [DeclareOpInterfaceMethods<PatternDescriptorOpInterface>]> {
   let description = [{
@@ -177,7 +199,7 @@ def LowerShapeCastOp : Op<Transform_Dialect,
   let assemblyFormat = "attr-dict";
 }
 
-def LowerTransferOp : Op<Transform_Dialect,
+def ApplyLowerTransferPatternsOp : Op<Transform_Dialect,
     "apply_patterns.vector.lower_transfer",
     [DeclareOpInterfaceMethods<PatternDescriptorOpInterface>]> {
   let description = [{
@@ -196,7 +218,7 @@ def LowerTransferOp : Op<Transform_Dialect,
 }
 
 // TODO: evolve lowering_strategy to proper enums.
-def LowerTransposeOp : Op<Transform_Dialect,
+def ApplyLowerTransposePatternsOp : Op<Transform_Dialect,
     "apply_patterns.vector.lower_transpose",
     [DeclareOpInterfaceMethods<PatternDescriptorOpInterface>]> {
   let description = [{
@@ -223,7 +245,7 @@ def LowerTransposeOp : Op<Transform_Dialect,
 }
 
 // TODO: evolve split_transfer_strategy to proper enums.
-def SplitTransferFullPartialOp : Op<Transform_Dialect,
+def ApplySplitTransferFullPartialPatternsOp : Op<Transform_Dialect,
     "apply_patterns.vector.split_transfer_full_partial",
     [DeclareOpInterfaceMethods<PatternDescriptorOpInterface>]> {
   let description = [{
@@ -244,7 +266,7 @@ def SplitTransferFullPartialOp : Op<Transform_Dialect,
   }];
 }
 
-def TransferToScfOp : Op<Transform_Dialect,
+def ApplyTransferToScfPatternsOp : Op<Transform_Dialect,
     "apply_patterns.vector.transfer_to_scf",
     [DeclareOpInterfaceMethods<PatternDescriptorOpInterface>]> {
   let description = [{

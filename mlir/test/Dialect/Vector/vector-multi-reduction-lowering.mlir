@@ -267,7 +267,7 @@ func.func @vector_multi_reduction_parallel_middle(%arg0: vector<3x4x5xf32>, %acc
 
 transform.sequence failures(propagate) {
 ^bb1(%module_op: !transform.any_op):
-  transform.apply_patterns [] to %module_op {
+  transform.apply_patterns to %module_op {
     transform.apply_patterns.vector.lower_multi_reduction lowering_strategy = "innerreduction"
   } : !transform.any_op
 }

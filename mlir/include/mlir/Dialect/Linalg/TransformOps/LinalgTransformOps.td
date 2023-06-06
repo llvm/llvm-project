@@ -27,6 +27,53 @@ def TransformParamTypeOrAnyHandle : Type<
     "transform 'param' type or any handle type">;
 
 //===----------------------------------------------------------------------===//
+// Apply...PatternsOp
+//===----------------------------------------------------------------------===//
+
+def ApplyEraseUnnecessaryInputsPatternsOp : Op<Transform_Dialect,
+    "apply_patterns.linalg.erase_unnecessary_inputs",
+    [DeclareOpInterfaceMethods<PatternDescriptorOpInterface>]> {
+  let description = [{
+    Collects patterns that promote inputs to outputs and remove unused inputs of
+    `linalg.generic` ops.
+  }];
+
+  let assemblyFormat = "attr-dict";
+}
+
+def ApplyFoldUnitExtentDimsViaReshapesPatternsOp : Op<Transform_Dialect,
+    "apply_patterns.linalg.fold_unit_extent_dims_via_reshapes",
+    [DeclareOpInterfaceMethods<PatternDescriptorOpInterface>]> {
+  let description = [{
+    Collects patterns to fold unit-extent dimensions in operands/results of
+    linalg ops on tensors via reassociative reshape ops.
+  }];
+
+  let assemblyFormat = "attr-dict";
+}
+
+def ApplyFoldUnitExtentDimsViaSlicesPatternsOp : Op<Transform_Dialect,
+    "apply_patterns.linalg.fold_unit_extent_dims_via_slices",
+    [DeclareOpInterfaceMethods<PatternDescriptorOpInterface>]> {
+  let description = [{
+    Collects patterns to fold unit-extent dimensions in operands/results of
+    linalg ops on tensors via rank-reducing slices.
+  }];
+
+  let assemblyFormat = "attr-dict";
+}
+
+def ApplyTilingCanonicalizationPatternsOp : Op<Transform_Dialect,
+    "apply_patterns.linalg.tiling_canonicalization",
+    [DeclareOpInterfaceMethods<PatternDescriptorOpInterface>]> {
+  let description = [{
+    Collects canonicalization patterns relevant to apply after tiling patterns.
+  }];
+
+  let assemblyFormat = "attr-dict";
+}
+
+//===----------------------------------------------------------------------===//
 // BufferizeToAllocationOp
 //===----------------------------------------------------------------------===//
 
