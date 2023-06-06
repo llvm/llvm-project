@@ -13,6 +13,7 @@
 #ifndef LLVM_CLANG_LIB_CODEGEN_CIRGENMODULE_H
 #define LLVM_CLANG_LIB_CODEGEN_CIRGENMODULE_H
 
+#include "CIRDataLayout.h"
 #include "CIRGenBuilder.h"
 #include "CIRGenTypeCache.h"
 #include "CIRGenTypes.h"
@@ -125,6 +126,11 @@ public:
   CIRGenTypes &getTypes() { return genTypes; }
   const clang::LangOptions &getLangOpts() const { return langOpts; }
   CIRGenFunction *getCurrCIRGenFun() const { return CurCGF; }
+  const CIRDataLayout getDataLayout() const {
+    // FIXME(cir): instead of creating a CIRDataLayout every time, set it as an
+    // attribute for the CIRModule class.
+    return {theModule};
+  }
 
   CIRGenCXXABI &getCXXABI() const { return *ABI; }
 

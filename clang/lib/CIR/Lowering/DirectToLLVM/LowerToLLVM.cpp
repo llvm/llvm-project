@@ -258,6 +258,22 @@ public:
 
       return castOp.emitError() << "NYI cast from " << srcTy << " to " << dstTy;
     }
+    case mlir::cir::CastKind::int_to_ptr: {
+      auto dstTy = castOp.getType().cast<mlir::cir::PointerType>();
+      auto llvmSrcVal = adaptor.getOperands().front();
+      auto llvmDstTy = getTypeConverter()->convertType(dstTy);
+      rewriter.replaceOpWithNewOp<mlir::LLVM::IntToPtrOp>(castOp, llvmDstTy,
+                                                          llvmSrcVal);
+      return mlir::success();
+    }
+    case mlir::cir::CastKind::ptr_to_int: {
+      auto dstTy = castOp.getType().cast<mlir::cir::IntType>();
+      auto llvmSrcVal = adaptor.getOperands().front();
+      auto llvmDstTy = getTypeConverter()->convertType(dstTy);
+      rewriter.replaceOpWithNewOp<mlir::LLVM::PtrToIntOp>(castOp, llvmDstTy,
+                                                          llvmSrcVal);
+      return mlir::success();
+    }
     default:
       llvm_unreachable("NYI");
     }
@@ -498,6 +514,14 @@ public:
           typeConverter->convertType(op.getType()),
           op.getValue().cast<mlir::cir::IntAttr>().getValue());
     } else if (op.getType().isa<mlir::FloatType>()) {
+      attr = op.getValue();
+    } else if (op.getType().isa<mlir::cir::PointerType>()) {
+      // Optimize with dedicated LLVM op for null pointers.
+      if (op.getValue().isa<mlir::cir::NullAttr>()) {
+        rewriter.replaceOpWithNewOp<mlir::LLVM::ZeroOp>(
+            op, typeConverter->convertType(op.getType()));
+        return mlir::success();
+      }
       attr = op.getValue();
     } else
       return op.emitError("unsupported constant type");

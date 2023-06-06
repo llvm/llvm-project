@@ -1102,10 +1102,25 @@ mlir::Value ScalarExprEmitter::VisitCastExpr(CastExpr *CE) {
     assert(E->isGLValue() && "lvalue-to-rvalue applied to r-value!");
     return Visit(const_cast<Expr *>(E));
 
-  case CK_IntegralToPointer:
-    llvm_unreachable("NYI");
-  case CK_PointerToIntegral:
-    llvm_unreachable("NYI");
+  case CK_IntegralToPointer: {
+    auto DestCIRTy = ConvertType(DestTy);
+    mlir::Value Src = Visit(const_cast<Expr *>(E));
+
+    // Properly resize by casting to an int of the same size as the pointer.
+    auto MiddleTy = CGF.CGM.getDataLayout().getIntPtrType(DestCIRTy);
+    auto MiddleVal = Builder.createIntCast(Src, MiddleTy);
+
+    if (CGF.CGM.getCodeGenOpts().StrictVTablePointers)
+      llvm_unreachable("NYI");
+
+    return Builder.createIntToPtr(MiddleVal, DestCIRTy);
+  }
+  case CK_PointerToIntegral: {
+    assert(!DestTy->isBooleanType() && "bool should use PointerToBool");
+    if (CGF.CGM.getCodeGenOpts().StrictVTablePointers)
+      llvm_unreachable("NYI");
+    return Builder.createPtrToInt(Visit(E), ConvertType(DestTy));
+  }
   case CK_ToVoid: {
     CGF.buildIgnoredExpr(E);
     return nullptr;

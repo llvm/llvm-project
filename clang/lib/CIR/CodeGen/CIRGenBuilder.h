@@ -15,6 +15,7 @@
 
 #include "clang/CIR/Dialect/IR/CIRAttrs.h"
 #include "clang/CIR/Dialect/IR/CIRDialect.h"
+#include "clang/CIR/Dialect/IR/CIROpsEnums.h"
 #include "clang/CIR/Dialect/IR/CIRTypes.h"
 #include "clang/CIR/Dialect/IR/FPEnv.h"
 
@@ -344,6 +345,32 @@ public:
   mlir::Value createNot(mlir::Value value) {
     return create<mlir::cir::UnaryOp>(value.getLoc(), value.getType(),
                                       mlir::cir::UnaryOpKind::Not, value);
+  }
+
+  //===--------------------------------------------------------------------===//
+  // Cast/Conversion Operators
+  //===--------------------------------------------------------------------===//
+
+  mlir::Value createCast(mlir::cir::CastKind kind, mlir::Value src,
+                         mlir::Type newTy) {
+    if (newTy == src.getType())
+      return src;
+    return create<mlir::cir::CastOp>(src.getLoc(), newTy, kind, src);
+  }
+
+  mlir::Value createIntCast(mlir::Value src, mlir::Type newTy) {
+    return create<mlir::cir::CastOp>(src.getLoc(), newTy,
+                                     mlir::cir::CastKind::integral, src);
+  }
+
+  mlir::Value createIntToPtr(mlir::Value src, mlir::Type newTy) {
+    return create<mlir::cir::CastOp>(src.getLoc(), newTy,
+                                     mlir::cir::CastKind::int_to_ptr, src);
+  }
+
+  mlir::Value createPtrToInt(mlir::Value src, mlir::Type newTy) {
+    return create<mlir::cir::CastOp>(src.getLoc(), newTy,
+                                     mlir::cir::CastKind::ptr_to_int, src);
   }
 
   mlir::Value createZExtOrBitCast(mlir::Location loc, mlir::Value src,

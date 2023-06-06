@@ -48,12 +48,15 @@ def CK_BitCast : I32EnumAttrCase<"bitcast", 4>;
 def CK_FloatingCast : I32EnumAttrCase<"floating", 5>;
 def CK_PtrToBoolean : I32EnumAttrCase<"ptr_to_bool", 6>;
 def CK_FloatToIntegral : I32EnumAttrCase<"float_to_int", 7>;
+def CK_IntegralToPointer : I32EnumAttrCase<"int_to_ptr", 8>;
+def CK_PointerToIntegral : I32EnumAttrCase<"ptr_to_int", 9>;
 
 def CastKind : I32EnumAttr<
     "CastKind",
     "cast kind",
     [CK_IntegralToBoolean, CK_ArrayToPointerDecay, CK_IntegralCast,
-     CK_BitCast, CK_FloatingCast, CK_PtrToBoolean, CK_FloatToIntegral]> {
+     CK_BitCast, CK_FloatingCast, CK_PtrToBoolean, CK_FloatToIntegral,
+     CK_IntegralToPointer, CK_PointerToIntegral]> {
   let cppNamespace = "::mlir::cir";
 }
 

@@ -301,6 +301,20 @@ LogicalResult CastOp::verify() {
       return emitOpError() << "requires !IntegerType for result";
     return success();
   }
+  case cir::CastKind::int_to_ptr: {
+    if (!srcType.dyn_cast<mlir::cir::IntType>())
+      return emitOpError() << "requires integer for source";
+    if (!resType.dyn_cast<mlir::cir::PointerType>())
+      return emitOpError() << "requires pointer for result";
+    return success();
+  }
+  case cir::CastKind::ptr_to_int: {
+    if (!srcType.dyn_cast<mlir::cir::PointerType>())
+      return emitOpError() << "requires pointer for source";
+    if (!resType.dyn_cast<mlir::cir::IntType>())
+      return emitOpError() << "requires integer for result";
+    return success();
+  }
   }
 
   llvm_unreachable("Unknown CastOp kind?");
