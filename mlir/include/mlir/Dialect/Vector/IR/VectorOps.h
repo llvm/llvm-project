@@ -74,54 +74,6 @@ isBroadcastableTo(Type srcType, VectorType dstVectorType,
 void populateVectorToVectorCanonicalizationPatterns(RewritePatternSet &patterns,
                                                     PatternBenefit benefit = 1);
 
-/// Collect a set of vector.shape_cast folding patterns.
-void populateShapeCastFoldingPatterns(RewritePatternSet &patterns,
-                                      PatternBenefit benefit = 1);
-
-/// Cast away the leading unit dim, if exists, for the given contract op.
-/// Return success if the transformation applies; return failure otherwise.
-LogicalResult castAwayContractionLeadingOneDim(vector::ContractionOp contractOp,
-                                               RewriterBase &rewriter);
-
-/// Collect a set of leading one dimension removal patterns.
-///
-/// These patterns insert vector.shape_cast to remove leading one dimensions
-/// to expose more canonical forms of read/write/insert/extract operations.
-/// With them, there are more chances that we can cancel out extract-insert
-/// pairs or forward write-read pairs.
-void populateCastAwayVectorLeadingOneDimPatterns(RewritePatternSet &patterns,
-                                                 PatternBenefit benefit = 1);
-
-/// Collect a set of one dimension removal patterns.
-///
-/// These patterns insert rank-reducing memref.subview ops to remove one
-/// dimensions. With them, there are more chances that we can avoid
-/// potentially exensive vector.shape_cast operations.
-void populateVectorTransferDropUnitDimsPatterns(RewritePatternSet &patterns,
-                                                PatternBenefit benefit = 1);
-
-/// Collect a set of patterns to flatten n-D vector transfers on contiguous
-/// memref.
-///
-/// These patterns insert memref.collapse_shape + vector.shape_cast patterns
-/// to transform multiple small n-D transfers into a larger 1-D transfer where
-/// the memref contiguity properties allow it.
-void populateFlattenVectorTransferPatterns(RewritePatternSet &patterns,
-                                           PatternBenefit benefit = 1);
-
-/// Collect a set of patterns that bubble up/down bitcast ops.
-///
-/// These patterns move vector.bitcast ops to be before insert ops or after
-/// extract ops where suitable. With them, bitcast will happen on smaller
-/// vectors and there are more chances to share extract/insert ops.
-void populateBubbleVectorBitCastOpPatterns(RewritePatternSet &patterns,
-                                           PatternBenefit benefit = 1);
-
-/// These patterns materialize masks for various vector ops such as transfers.
-void populateVectorMaskMaterializationPatterns(RewritePatternSet &patterns,
-                                               bool force32BitVectorIndices,
-                                               PatternBenefit benefit = 1);
-
 /// Returns the integer type required for subscripts in the vector dialect.
 IntegerType getVectorSubscriptType(Builder &builder);
 
