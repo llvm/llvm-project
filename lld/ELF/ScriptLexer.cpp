@@ -120,7 +120,7 @@ void ScriptLexer::tokenize(MemoryBufferRef mb) {
     // because, in a glob match context, only unquoted tokens are interpreted
     // as glob patterns. Double-quoted tokens are literal patterns in that
     // context.
-    if (s.startswith("\"")) {
+    if (s.starts_with("\"")) {
       size_t e = s.find("\"", 1);
       if (e == StringRef::npos) {
         StringRef filename = mb.getBufferIdentifier();
@@ -135,7 +135,7 @@ void ScriptLexer::tokenize(MemoryBufferRef mb) {
     }
 
     // Some operators form separate tokens.
-    if (s.startswith("<<=") || s.startswith(">>=")) {
+    if (s.starts_with("<<=") || s.starts_with(">>=")) {
       vec.push_back(s.substr(0, 3));
       s = s.substr(3);
       continue;
@@ -167,7 +167,7 @@ void ScriptLexer::tokenize(MemoryBufferRef mb) {
 // Skip leading whitespace characters or comments.
 StringRef ScriptLexer::skipSpace(StringRef s) {
   for (;;) {
-    if (s.startswith("/*")) {
+    if (s.starts_with("/*")) {
       size_t e = s.find("*/", 2);
       if (e == StringRef::npos) {
         setError("unclosed comment in a linker script");
@@ -176,7 +176,7 @@ StringRef ScriptLexer::skipSpace(StringRef s) {
       s = s.substr(e + 2);
       continue;
     }
-    if (s.startswith("#")) {
+    if (s.starts_with("#")) {
       size_t e = s.find('\n', 1);
       if (e == StringRef::npos)
         e = s.size() - 1;
@@ -199,7 +199,7 @@ static std::vector<StringRef> tokenizeExpr(StringRef s) {
   StringRef ops = "!~*/+-<>?:="; // List of operators
 
   // Quoted strings are literal strings, so we don't want to split it.
-  if (s.startswith("\""))
+  if (s.starts_with("\""))
     return {s};
 
   // Split S with operators as separators.
@@ -219,9 +219,9 @@ static std::vector<StringRef> tokenizeExpr(StringRef s) {
 
     // Get the operator as a token.
     // Keep !=, ==, >=, <=, << and >> operators as a single tokens.
-    if (s.substr(e).startswith("!=") || s.substr(e).startswith("==") ||
-        s.substr(e).startswith(">=") || s.substr(e).startswith("<=") ||
-        s.substr(e).startswith("<<") || s.substr(e).startswith(">>")) {
+    if (s.substr(e).starts_with("!=") || s.substr(e).starts_with("==") ||
+        s.substr(e).starts_with(">=") || s.substr(e).starts_with("<=") ||
+        s.substr(e).starts_with("<<") || s.substr(e).starts_with(">>")) {
       ret.push_back(s.substr(e, 2));
       s = s.substr(e + 2);
     } else {

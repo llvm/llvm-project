@@ -1175,6 +1175,33 @@ MVT RISCVTargetLowering::getVPExplicitVectorLengthTy() const {
   return Subtarget.getXLenVT();
 }
 
+// Return false if we can lower get_vector_length to a vsetvli intrinsic.
+bool RISCVTargetLowering::shouldExpandGetVectorLength(EVT TripCountVT,
+                                                      unsigned VF,
+                                                      bool IsScalable) const {
+  if (!Subtarget.hasVInstructions())
+    return true;
+
+  if (!IsScalable)
+    return true;
+
+  if (TripCountVT != MVT::i32 && TripCountVT != Subtarget.getXLenVT())
+    return true;
+
+  // Don't allow VF=1 if those types are't legal.
+  if (VF < RISCV::RVVBitsPerBlock / Subtarget.getELEN())
+    return true;
+
+  // VLEN=32 support is incomplete.
+  if (Subtarget.getRealMinVLen() < RISCV::RVVBitsPerBlock)
+    return true;
+
+  // The maximum VF is for the smallest element width with LMUL=8.
+  // VF must be a power of 2.
+  unsigned MaxVF = (RISCV::RVVBitsPerBlock / 8) * 8;
+  return VF > MaxVF || !isPowerOf2_32(VF);
+}
+
 bool RISCVTargetLowering::getTgtMemIntrinsic(IntrinsicInfo &Info,
                                              const CallInst &I,
                                              MachineFunction &MF,
@@ -6623,6 +6650,48 @@ static SDValue lowerVectorIntrinsicScalars(SDValue Op, SelectionDAG &DAG,
   return DAG.getNode(Op->getOpcode(), DL, Op->getVTList(), Operands);
 }
 
+// Lower the llvm.get.vector.length intrinsic to vsetvli. We only support
+// scalable vector llvm.get.vector.length for now.
+//
+// We need to convert from a scalable VF to a vsetvli with VLMax equal to
+// (vscale * VF). The vscale and VF are independent of element width. We use
+// SEW=8 for the vsetvli because it is the only element width that supports all
+// fractional LMULs. The LMUL is choosen so that with SEW=8 the VLMax is
+// (vscale * VF). Where vscale is defined as VLEN/RVVBitsPerBlock. The
+// InsertVSETVLI pass can fix up the vtype of the vsetvli if a different
+// SEW and LMUL are better for the surrounding vector instructions.
+static SDValue lowerGetVectorLength(SDNode *N, SelectionDAG &DAG,
+                                    const RISCVSubtarget &Subtarget) {
+  MVT XLenVT = Subtarget.getXLenVT();
+
+  // The smallest LMUL is only valid for the smallest element width.
+  const unsigned ElementWidth = 8;
+
+  // Determine the VF that corresponds to LMUL 1 for ElementWidth.
+  unsigned LMul1VF = RISCV::RVVBitsPerBlock / ElementWidth;
+  // We don't support VF==1 with ELEN==32.
+  unsigned MinVF = RISCV::RVVBitsPerBlock / Subtarget.getELEN();
+
+  unsigned VF = N->getConstantOperandVal(2);
+  assert(VF >= MinVF && VF <= (LMul1VF * 8) && isPowerOf2_32(VF) &&
+         "Unexpected VF");
+
+  bool Fractional = VF < LMul1VF;
+  unsigned LMulVal = Fractional ? LMul1VF / VF : VF / LMul1VF;
+  unsigned VLMUL = (unsigned)RISCVVType::encodeLMUL(LMulVal, Fractional);
+  unsigned VSEW = RISCVVType::encodeSEW(ElementWidth);
+
+  SDLoc DL(N);
+
+  SDValue LMul = DAG.getTargetConstant(VLMUL, DL, XLenVT);
+  SDValue Sew = DAG.getTargetConstant(VSEW, DL, XLenVT);
+
+  SDValue AVL = DAG.getNode(ISD::ZERO_EXTEND, DL, XLenVT, N->getOperand(1));
+
+  SDValue ID = DAG.getTargetConstant(Intrinsic::riscv_vsetvli, DL, XLenVT);
+  return DAG.getNode(ISD::INTRINSIC_WO_CHAIN, DL, XLenVT, ID, AVL, Sew, LMul);
+}
+
 SDValue RISCVTargetLowering::LowerINTRINSIC_WO_CHAIN(SDValue Op,
                                                      SelectionDAG &DAG) const {
   unsigned IntNo = Op.getConstantOperandVal(0);
@@ -6648,6 +6717,8 @@ SDValue RISCVTargetLowering::LowerINTRINSIC_WO_CHAIN(SDValue Op,
         IntNo == Intrinsic::riscv_zip ? RISCVISD::ZIP : RISCVISD::UNZIP;
     return DAG.getNode(Opc, DL, XLenVT, Op.getOperand(1));
   }
+  case Intrinsic::experimental_get_vector_length:
+    return lowerGetVectorLength(Op.getNode(), DAG, Subtarget);
   case Intrinsic::riscv_vmv_x_s:
     assert(Op.getValueType() == XLenVT && "Unexpected VT!");
     return DAG.getNode(RISCVISD::VMV_X_S, DL, Op.getValueType(),
@@ -9471,6 +9542,11 @@ void RISCVTargetLowering::ReplaceNodeResults(SDNode *N,
     default:
       llvm_unreachable(
           "Don't know how to custom type legalize this intrinsic!");
+    case Intrinsic::experimental_get_vector_length: {
+      SDValue Res = lowerGetVectorLength(N, DAG, Subtarget);
+      Results.push_back(DAG.getNode(ISD::TRUNCATE, DL, MVT::i32, Res));
+      return;
+    }
     case Intrinsic::riscv_orc_b: {
       SDValue NewOp =
           DAG.getNode(ISD::ANY_EXTEND, DL, MVT::i64, N->getOperand(1));
@@ -11473,6 +11549,58 @@ static SDValue performVFMUL_VLCombine(SDNode *N, SelectionDAG &DAG) {
                      Op1, Merge, Mask, VL);
 }
 
+static SDValue performFADDSUB_VLCombine(SDNode *N, SelectionDAG &DAG) {
+  SDValue Op0 = N->getOperand(0);
+  SDValue Op1 = N->getOperand(1);
+  SDValue Merge = N->getOperand(2);
+  SDValue Mask = N->getOperand(3);
+  SDValue VL = N->getOperand(4);
+
+  bool IsAdd = N->getOpcode() == RISCVISD::FADD_VL;
+
+  // Look for foldable FP_EXTENDS.
+  bool Op0IsExtend =
+      Op0.getOpcode() == RISCVISD::FP_EXTEND_VL &&
+      (Op0.hasOneUse() || (Op0 == Op1 && Op0->hasNUsesOfValue(2, 0)));
+  bool Op1IsExtend =
+      (Op0 == Op1 && Op0IsExtend) ||
+      (Op1.getOpcode() == RISCVISD::FP_EXTEND_VL && Op1.hasOneUse());
+
+  // Check the mask and VL.
+  if (Op0IsExtend && (Op0.getOperand(1) != Mask || Op0.getOperand(2) != VL))
+    Op0IsExtend = false;
+  if (Op1IsExtend && (Op1.getOperand(1) != Mask || Op1.getOperand(2) != VL))
+    Op1IsExtend = false;
+
+  // Canonicalize.
+  if (!Op1IsExtend) {
+    // Sub requires at least operand 1 to be an extend.
+    if (!IsAdd)
+      return SDValue();
+
+    // Add is commutable, if the other operand is foldable, swap them.
+    if (!Op0IsExtend)
+      return SDValue();
+
+    std::swap(Op0, Op1);
+    std::swap(Op0IsExtend, Op1IsExtend);
+  }
+
+  // Op1 is a foldable extend. Op0 might be foldable.
+  Op1 = Op1.getOperand(0);
+  if (Op0IsExtend)
+    Op0 = Op0.getOperand(0);
+
+  unsigned Opc;
+  if (IsAdd)
+    Opc = Op0IsExtend ? RISCVISD::VFWADD_VL : RISCVISD::VFWADD_W_VL;
+  else
+    Opc = Op0IsExtend ? RISCVISD::VFWSUB_VL : RISCVISD::VFWSUB_W_VL;
+
+  return DAG.getNode(Opc, SDLoc(N), N->getValueType(0), Op0, Op1, Merge, Mask,
+                     VL);
+}
+
 static SDValue performSRACombine(SDNode *N, SelectionDAG &DAG,
                                  const RISCVSubtarget &Subtarget) {
   assert(N->getOpcode() == ISD::SRA && "Unexpected opcode");
@@ -12349,6 +12477,9 @@ SDValue RISCVTargetLowering::PerformDAGCombine(SDNode *N,
     return performVFMADD_VLCombine(N, DAG);
   case RISCVISD::FMUL_VL:
     return performVFMUL_VLCombine(N, DAG);
+  case RISCVISD::FADD_VL:
+  case RISCVISD::FSUB_VL:
+    return performFADDSUB_VLCombine(N, DAG);
   case ISD::LOAD:
   case ISD::STORE: {
     if (DCI.isAfterLegalizeDAG())
@@ -15460,6 +15591,10 @@ const char *RISCVTargetLowering::getTargetNodeName(unsigned Opcode) const {
   NODE_NAME_CASE(VWSUB_W_VL)
   NODE_NAME_CASE(VWSUBU_W_VL)
   NODE_NAME_CASE(VFWMUL_VL)
+  NODE_NAME_CASE(VFWADD_VL)
+  NODE_NAME_CASE(VFWSUB_VL)
+  NODE_NAME_CASE(VFWADD_W_VL)
+  NODE_NAME_CASE(VFWSUB_W_VL)
   NODE_NAME_CASE(VNSRL_VL)
   NODE_NAME_CASE(SETCC_VL)
   NODE_NAME_CASE(VSELECT_VL)

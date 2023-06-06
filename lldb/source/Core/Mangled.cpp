@@ -107,7 +107,7 @@ void Mangled::SetValue(ConstString name) {
 }
 
 // Local helpers for different demangling implementations.
-static char *GetMSVCDemangledStr(const char *M) {
+static char *GetMSVCDemangledStr(std::string_view M) {
   char *demangled_cstr = llvm::microsoftDemangle(
       M, nullptr, nullptr,
       llvm::MSDemangleFlags(
@@ -116,9 +116,9 @@ static char *GetMSVCDemangledStr(const char *M) {
 
   if (Log *log = GetLog(LLDBLog::Demangle)) {
     if (demangled_cstr && demangled_cstr[0])
-      LLDB_LOGF(log, "demangled msvc: %s -> \"%s\"", M, demangled_cstr);
+      LLDB_LOGF(log, "demangled msvc: %s -> \"%s\"", M.data(), demangled_cstr);
     else
-      LLDB_LOGF(log, "demangled msvc: %s -> error", M);
+      LLDB_LOGF(log, "demangled msvc: %s -> error", M.data());
   }
 
   return demangled_cstr;
@@ -204,7 +204,7 @@ bool Mangled::GetRichManglingInfo(RichManglingContext &context,
     // We have no rich mangling for MSVC-mangled names yet, so first try to
     // demangle it if necessary.
     if (!m_demangled && !m_mangled.GetMangledCounterpart(m_demangled)) {
-      if (char *d = GetMSVCDemangledStr(m_mangled.GetCString())) {
+      if (char *d = GetMSVCDemangledStr(m_mangled)) {
         // Without the rich mangling info we have to demangle the full name.
         // Copy it to string pool and connect the counterparts to accelerate
         // later access in GetDemangledName().

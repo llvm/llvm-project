@@ -4008,7 +4008,7 @@ public:
   TargetOptionValueProperties(ConstString name) : Cloneable(name) {}
 
   const Property *
-  GetPropertyAtIndex(uint32_t idx,
+  GetPropertyAtIndex(size_t idx,
                      const ExecutionContext *exe_ctx = nullptr) const override {
     // When getting the value for a key from the target options, we will always
     // try and grab the setting from the current target if there is one. Else

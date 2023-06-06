@@ -113,12 +113,12 @@ static std::string getOutputPath(StringRef path, bool isDll, bool isDriver) {
 
 // Returns true if S matches /crtend.?\.o$/.
 static bool isCrtend(StringRef s) {
-  if (!s.endswith(".o"))
+  if (!s.ends_with(".o"))
     return false;
   s = s.drop_back(2);
-  if (s.endswith("crtend"))
+  if (s.ends_with("crtend"))
     return true;
-  return !s.empty() && s.drop_back().endswith("crtend");
+  return !s.empty() && s.drop_back().ends_with("crtend");
 }
 
 // ErrorOr is not default constructible, so it cannot be used as the type
@@ -354,7 +354,7 @@ void LinkerDriver::enqueueArchiveMember(const Archive::Child &c,
 }
 
 bool LinkerDriver::isDecorated(StringRef sym) {
-  return sym.startswith("@") || sym.contains("@@") || sym.startswith("?") ||
+  return sym.starts_with("@") || sym.contains("@@") || sym.starts_with("?") ||
          (!ctx.config.mingw && sym.contains('@'));
 }
 
@@ -1085,7 +1085,7 @@ bool LinkerDriver::run() {
 void LinkerDriver::parseOrderFile(StringRef arg) {
   // For some reason, the MSVC linker requires a filename to be
   // preceded by "@".
-  if (!arg.startswith("@")) {
+  if (!arg.starts_with("@")) {
     error("malformed /order option: '@' missing");
     return;
   }
@@ -1778,7 +1778,7 @@ void LinkerDriver::linkerMain(ArrayRef<const char *> argsArr) {
         doGC = true;
       } else if (s == "noref") {
         doGC = false;
-      } else if (s == "icf" || s.startswith("icf=")) {
+      } else if (s == "icf" || s.starts_with("icf=")) {
         icfLevel = ICFLevel::All;
       } else if (s == "safeicf") {
         icfLevel = ICFLevel::Safe;
