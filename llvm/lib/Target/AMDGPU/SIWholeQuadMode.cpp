@@ -1373,6 +1373,10 @@ void SIWholeQuadMode::processBlock(MachineBasicBlock &MBB, bool IsEntry) {
         Needs = StateExact | StateWQM | StateStrict;
       }
 
+      // Exact mode exit can occur in terminators, but must be before branches.
+      if (MI.isBranch() && OutNeeds == StateExact)
+        Needs = StateExact;
+
       ++Next;
     } else {
       // End of basic block
