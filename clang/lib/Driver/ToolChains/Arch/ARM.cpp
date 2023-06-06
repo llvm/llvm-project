@@ -144,22 +144,6 @@ static void checkARMCPUName(const Driver &D, const Arg *A, const ArgList &Args,
         << A->getSpelling() << A->getValue();
 }
 
-// If -mfloat-abi=hard or -mhard-float are specified explicitly then check that
-// floating point registers are available on the target CPU.
-static void checkARMFloatABI(const Driver &D, const ArgList &Args,
-                             bool HasFPRegs) {
-  if (HasFPRegs)
-    return;
-  const Arg *A =
-      Args.getLastArg(options::OPT_msoft_float, options::OPT_mhard_float,
-                      options::OPT_mfloat_abi_EQ);
-  if (A && (A->getOption().matches(options::OPT_mhard_float) ||
-            (A->getOption().matches(options::OPT_mfloat_abi_EQ) &&
-             A->getValue() == StringRef("hard"))))
-    D.Diag(clang::diag::warn_drv_no_floating_point_registers)
-        << A->getAsString(Args);
-}
-
 bool arm::useAAPCSForMachO(const llvm::Triple &T) {
   // The backend is hardwired to assume AAPCS for M-class processors, ensure
   // the frontend matches that.
@@ -652,15 +636,13 @@ fp16_fml_fallthrough:
   // -march/-mcpu effectively disables the FPU (GCC ignores the -mfpu options in
   // this case). Note that the ABI can also be set implicitly by the target
   // selected.
-  bool HasFPRegs = true;
   if (ABI == arm::FloatABI::Soft) {
     llvm::ARM::getFPUFeatures(llvm::ARM::FK_NONE, Features);
 
     // Disable all features relating to hardware FP, not already disabled by the
     // above call.
-    Features.insert(Features.end(),
-                    {"-dotprod", "-fp16fml", "-bf16", "-mve", "-mve.fp"});
-    HasFPRegs = false;
+    Features.insert(Features.end(), {"-dotprod", "-fp16fml", "-bf16", "-mve",
+                                     "-mve.fp", "-fpregs"});
   } else if (FPUKind == llvm::ARM::FK_NONE ||
              ArchArgFPUKind == llvm::ARM::FK_NONE ||
              CPUArgFPUKind == llvm::ARM::FK_NONE) {
@@ -670,10 +652,9 @@ fp16_fml_fallthrough:
     // latter, is still supported.
     Features.insert(Features.end(),
                     {"-dotprod", "-fp16fml", "-bf16", "-mve.fp"});
-    HasFPRegs = hasIntegerMVE(Features);
+    if (!hasIntegerMVE(Features))
+      Features.emplace_back("-fpregs");
   }
-  if (!HasFPRegs)
-    Features.emplace_back("-fpregs");
 
   // En/disable crc code generation.
   if (Arg *A = Args.getLastArg(options::OPT_mcrc, options::OPT_mnocrc)) {
@@ -929,8 +910,6 @@ fp16_fml_fallthrough:
 
   if (Args.getLastArg(options::OPT_mno_bti_at_return_twice))
     Features.push_back("+no-bti-at-return-twice");
-
-  checkARMFloatABI(D, Args, HasFPRegs);
 }
 
 std::string arm::getARMArch(StringRef Arch, const llvm::Triple &Triple) {
