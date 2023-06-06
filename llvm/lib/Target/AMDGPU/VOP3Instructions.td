@@ -381,36 +381,43 @@ def V_INTERP_P2_F32_e64  : VOP3Interp <"v_interp_p2_f32", VOP3_INTERP>;
 def V_INTERP_MOV_F32_e64 : VOP3Interp <"v_interp_mov_f32", VOP3_INTERP_MOV>;
 } // End SubtargetPredicate = isGFX8Plus, Uses = [MODE, M0, EXEC], OtherPredicates = [isNotGFX90APlus]
 
-let Predicates = [Has16BitInsts, isGFX6GFX7GFX8GFX9] in {
-
-multiclass Ternary_i16_Pats <SDPatternOperator op1, SDPatternOperator op2,
-                             Instruction inst> {
-def : GCNPat <
-  (op2 (op1 i16:$src0, i16:$src1), i16:$src2),
-  (inst i16:$src0, i16:$src1, i16:$src2, (i1 0))
->;
-
+// Note: 16-bit instructions produce a 0 result in the high 16-bits
+// on GFX8 and GFX9 and preserve high 16 bits on GFX10+
+multiclass Arithmetic_i16_0Hi_TernaryPats <SDPatternOperator op, Instruction inst> {
+  def : GCNPat<
+    (i32 (zext (op i16:$src0, i16:$src1, i16:$src2))),
+    (inst VSrc_b16:$src0, VSrc_b16:$src1, VSrc_b16:$src2)
+  >;
 }
 
-defm: Ternary_i16_Pats<mul, add, V_MAD_U16_e64>;
-defm: Ternary_i16_Pats<mul, add, V_MAD_I16_e64>;
+let Predicates = [Has16BitInsts, isGFX8GFX9] in {
+defm : Arithmetic_i16_0Hi_TernaryPats<imad, V_MAD_U16_e64>;
+}
+
+let Predicates = [Has16BitInsts, isGFX6GFX7GFX8GFX9] in {
+
+// FIXME: Should be able to just pass imad to the instruction
+// definition pattern, but the implied clamp input interferes.
+multiclass Ternary_i16_Pats <SDPatternOperator op, Instruction inst> {
+  def : GCNPat <
+    (op i16:$src0, i16:$src1, i16:$src2),
+    (inst i16:$src0, i16:$src1, i16:$src2, (i1 0))
+  >;
+}
+
+defm: Ternary_i16_Pats<imad, V_MAD_U16_e64>;
 
 } // End Predicates = [Has16BitInsts, isGFX6GFX7GFX8GFX9]
 
-let Predicates = [Has16BitInsts, isGFX10Plus] in {
 
-multiclass Ternary_i16_Pats_gfx9<SDPatternOperator op1, SDPatternOperator op2,
-                                 Instruction inst> {
-def : GCNPat <
+class Ternary_i16_Pats_gfx9<SDPatternOperator op1, SDPatternOperator op2,
+                                 Instruction inst> : GCNPat <
   (op2 (op1 i16:$src0, i16:$src1), i16:$src2),
   (inst SRCMODS.NONE, $src0, SRCMODS.NONE, $src1, SRCMODS.NONE, $src2, DSTCLAMP.NONE)
 >;
 
-}
-
-defm: Ternary_i16_Pats_gfx9<mul, add, V_MAD_U16_gfx9_e64>;
-defm: Ternary_i16_Pats_gfx9<mul, add, V_MAD_I16_gfx9_e64>;
-
+let Predicates = [Has16BitInsts, isGFX10Plus] in {
+def: Ternary_i16_Pats_gfx9<mul, add, V_MAD_U16_gfx9_e64>;
 } // End Predicates = [Has16BitInsts, isGFX10Plus]
 
 class ThreeOpFragSDAG<SDPatternOperator op1, SDPatternOperator op2> : PatFrag<
