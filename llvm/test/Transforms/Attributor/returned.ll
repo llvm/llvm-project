@@ -41,7 +41,7 @@ target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
 ; CHECK: @[[_ZTI1Y:[a-zA-Z0-9_$"\\.-]+]] = external dso_local constant { ptr, ptr, ptr }, align 8
 ;.
 define i32 @sink_r0(i32 %r) #0 {
-; CHECK: Function Attrs: nofree noinline norecurse nosync nounwind willreturn memory(none) uwtable
+; CHECK: Function Attrs: mustprogress nofree noinline norecurse nosync nounwind willreturn memory(none) uwtable
 ; CHECK-LABEL: define {{[^@]+}}@sink_r0
 ; CHECK-SAME: (i32 returned [[R:%.*]]) #[[ATTR0:[0-9]+]] {
 ; CHECK-NEXT:  entry:
@@ -325,7 +325,7 @@ return:                                           ; preds = %cond.end, %if.then3
 ;   return a == b ? r : ptr_scc_r2(a, b, r);
 ; }
 define ptr @ptr_sink_r0(ptr %r) #0 {
-; CHECK: Function Attrs: nofree noinline norecurse nosync nounwind willreturn memory(none) uwtable
+; CHECK: Function Attrs: mustprogress nofree noinline norecurse nosync nounwind willreturn memory(none) uwtable
 ; CHECK-LABEL: define {{[^@]+}}@ptr_sink_r0
 ; CHECK-SAME: (ptr nofree readnone returned "no-capture-maybe-returned" [[R:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:  entry:
@@ -508,13 +508,13 @@ entry:
 ; }
 ;
 define ptr @rt1(ptr %a) #0 {
-; TUNIT: Function Attrs: nofree noinline nosync nounwind willreturn memory(none) uwtable
+; TUNIT: Function Attrs: mustprogress nofree noinline nosync nounwind willreturn memory(none) uwtable
 ; TUNIT-LABEL: define {{[^@]+}}@rt1
 ; TUNIT-SAME: (ptr nocapture nofree nonnull readnone align 4 dereferenceable(4) [[A:%.*]]) #[[ATTR4:[0-9]+]] {
 ; TUNIT-NEXT:  entry:
 ; TUNIT-NEXT:    ret ptr undef
 ;
-; CGSCC: Function Attrs: nofree noinline nosync nounwind willreturn memory(none) uwtable
+; CGSCC: Function Attrs: mustprogress nofree noinline nosync nounwind willreturn memory(none) uwtable
 ; CGSCC-LABEL: define {{[^@]+}}@rt1
 ; CGSCC-SAME: (ptr nocapture nofree nonnull readnone align 4 dereferenceable(4) [[A:%.*]]) #[[ATTR3:[0-9]+]] {
 ; CGSCC-NEXT:  entry:
@@ -791,7 +791,7 @@ entry:
 ; }
 ;
 define double @select_and_phi(double %b) #0 {
-; CHECK: Function Attrs: nofree noinline norecurse nosync nounwind willreturn memory(none) uwtable
+; CHECK: Function Attrs: mustprogress nofree noinline norecurse nosync nounwind willreturn memory(none) uwtable
 ; CHECK-LABEL: define {{[^@]+}}@select_and_phi
 ; CHECK-SAME: (double returned [[B:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:  entry:
@@ -880,7 +880,7 @@ if.end:                                           ; preds = %if.then, %entry
 ; }
 ;
 define ptr @bitcast(ptr %b) #0 {
-; CHECK: Function Attrs: nofree noinline norecurse nosync nounwind willreturn memory(none) uwtable
+; CHECK: Function Attrs: mustprogress nofree noinline norecurse nosync nounwind willreturn memory(none) uwtable
 ; CHECK-LABEL: define {{[^@]+}}@bitcast
 ; CHECK-SAME: (ptr nofree readnone returned "no-capture-maybe-returned" [[B:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:  entry:
@@ -901,7 +901,7 @@ entry:
 ; }
 ;
 define ptr @bitcasts_select_and_phi(ptr %b) #0 {
-; CHECK: Function Attrs: nofree noinline norecurse nosync nounwind willreturn memory(none) uwtable
+; CHECK: Function Attrs: mustprogress nofree noinline norecurse nosync nounwind willreturn memory(none) uwtable
 ; CHECK-LABEL: define {{[^@]+}}@bitcasts_select_and_phi
 ; CHECK-SAME: (ptr nofree readnone returned [[B:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:  entry:
@@ -939,7 +939,7 @@ if.end:                                           ; preds = %if.then, %entry
 ; }
 ;
 define ptr @ret_arg_arg_undef(ptr %b) #0 {
-; CHECK: Function Attrs: nofree noinline norecurse nosync nounwind willreturn memory(none) uwtable
+; CHECK: Function Attrs: mustprogress nofree noinline norecurse nosync nounwind willreturn memory(none) uwtable
 ; CHECK-LABEL: define {{[^@]+}}@ret_arg_arg_undef
 ; CHECK-SAME: (ptr nofree readnone returned [[B:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:  entry:
@@ -983,7 +983,7 @@ ret_undef:
 ; }
 ;
 define ptr @ret_undef_arg_arg(ptr %b) #0 {
-; CHECK: Function Attrs: nofree noinline norecurse nosync nounwind willreturn memory(none) uwtable
+; CHECK: Function Attrs: mustprogress nofree noinline norecurse nosync nounwind willreturn memory(none) uwtable
 ; CHECK-LABEL: define {{[^@]+}}@ret_undef_arg_arg
 ; CHECK-SAME: (ptr nofree readnone returned [[B:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:  entry:
@@ -1027,7 +1027,7 @@ ret_arg1:
 ; }
 ;
 define ptr @ret_undef_arg_undef(ptr %b) #0 {
-; CHECK: Function Attrs: nofree noinline norecurse nosync nounwind willreturn memory(none) uwtable
+; CHECK: Function Attrs: mustprogress nofree noinline norecurse nosync nounwind willreturn memory(none) uwtable
 ; CHECK-LABEL: define {{[^@]+}}@ret_undef_arg_undef
 ; CHECK-SAME: (ptr nofree readnone returned [[B:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:  entry:
@@ -1158,7 +1158,7 @@ r:
 ; TEST inconsistent IR in dead code.
 ;
 define i32 @deadblockcall1(i32 %A) #0 {
-; CHECK: Function Attrs: nofree noinline norecurse nosync nounwind willreturn memory(none) uwtable
+; CHECK: Function Attrs: mustprogress nofree noinline norecurse nosync nounwind willreturn memory(none) uwtable
 ; CHECK-LABEL: define {{[^@]+}}@deadblockcall1
 ; CHECK-SAME: (i32 returned [[A:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:  entry:
@@ -1176,7 +1176,7 @@ unreachableblock:
 declare i32 @deadblockcall_helper(i32 returned %A);
 
 define i32 @deadblockcall2(i32 %A) #0 {
-; CHECK: Function Attrs: nofree noinline norecurse nosync nounwind willreturn memory(none) uwtable
+; CHECK: Function Attrs: mustprogress nofree noinline norecurse nosync nounwind willreturn memory(none) uwtable
 ; CHECK-LABEL: define {{[^@]+}}@deadblockcall2
 ; CHECK-SAME: (i32 returned [[A:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:  entry:
@@ -1197,7 +1197,7 @@ unreachableblock2:
 }
 
 define i32 @deadblockphi1(i32 %A) #0 {
-; CHECK: Function Attrs: nofree noinline norecurse nosync nounwind willreturn memory(none) uwtable
+; CHECK: Function Attrs: mustprogress nofree noinline norecurse nosync nounwind willreturn memory(none) uwtable
 ; CHECK-LABEL: define {{[^@]+}}@deadblockphi1
 ; CHECK-SAME: (i32 returned [[A:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:  entry:
@@ -1223,7 +1223,7 @@ r:
 }
 
 define i32 @deadblockphi2(i32 %A) #0 {
-; CHECK: Function Attrs: nofree noinline norecurse nosync nounwind willreturn memory(none) uwtable
+; CHECK: Function Attrs: mustprogress nofree noinline norecurse nosync nounwind willreturn memory(none) uwtable
 ; CHECK-LABEL: define {{[^@]+}}@deadblockphi2
 ; CHECK-SAME: (i32 returned [[A:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:  entry:
@@ -1389,7 +1389,7 @@ define i32 @exact(ptr align 8 %a, ptr align 8 %b) {
 
 @G = external global i8
 define ptr @ret_const() #0 {
-; CHECK: Function Attrs: nofree noinline norecurse nosync nounwind willreturn memory(none) uwtable
+; CHECK: Function Attrs: mustprogress nofree noinline norecurse nosync nounwind willreturn memory(none) uwtable
 ; CHECK-LABEL: define {{[^@]+}}@ret_const
 ; CHECK-SAME: () #[[ATTR0]] {
 ; CHECK-NEXT:    ret ptr @G
@@ -1397,12 +1397,12 @@ define ptr @ret_const() #0 {
   ret ptr @G
 }
 define ptr @use_const() #0 {
-; TUNIT: Function Attrs: nofree noinline norecurse nosync nounwind willreturn memory(none) uwtable
+; TUNIT: Function Attrs: mustprogress nofree noinline norecurse nosync nounwind willreturn memory(none) uwtable
 ; TUNIT-LABEL: define {{[^@]+}}@use_const
 ; TUNIT-SAME: () #[[ATTR0]] {
 ; TUNIT-NEXT:    ret ptr @G
 ;
-; CGSCC: Function Attrs: nofree noinline nosync nounwind willreturn memory(none) uwtable
+; CGSCC: Function Attrs: mustprogress nofree noinline nosync nounwind willreturn memory(none) uwtable
 ; CGSCC-LABEL: define {{[^@]+}}@use_const
 ; CGSCC-SAME: () #[[ATTR3]] {
 ; CGSCC-NEXT:    [[C:%.*]] = call noundef nonnull dereferenceable(1) ptr @ret_const() #[[ATTR9:[0-9]+]]
@@ -1412,12 +1412,12 @@ define ptr @use_const() #0 {
   ret ptr %c
 }
 define ptr @dont_use_const() #0 {
-; TUNIT: Function Attrs: nofree noinline norecurse nosync nounwind willreturn memory(none) uwtable
+; TUNIT: Function Attrs: mustprogress nofree noinline norecurse nosync nounwind willreturn memory(none) uwtable
 ; TUNIT-LABEL: define {{[^@]+}}@dont_use_const
 ; TUNIT-SAME: () #[[ATTR0]] {
 ; TUNIT-NEXT:    ret ptr @G
 ;
-; CGSCC: Function Attrs: nofree noinline nosync nounwind willreturn memory(none) uwtable
+; CGSCC: Function Attrs: mustprogress nofree noinline nosync nounwind willreturn memory(none) uwtable
 ; CGSCC-LABEL: define {{[^@]+}}@dont_use_const
 ; CGSCC-SAME: () #[[ATTR3]] {
 ; CGSCC-NEXT:    [[C:%.*]] = musttail call noundef nonnull dereferenceable(1) ptr @ret_const() #[[ATTR9]]
@@ -1469,26 +1469,26 @@ declare dso_local ptr @__dynamic_cast(ptr, ptr, ptr, i64)
 
 attributes #0 = { noinline nounwind uwtable }
 ;.
-; TUNIT: attributes #[[ATTR0]] = { nofree noinline norecurse nosync nounwind willreturn memory(none) uwtable }
+; TUNIT: attributes #[[ATTR0]] = { mustprogress nofree noinline norecurse nosync nounwind willreturn memory(none) uwtable }
 ; TUNIT: attributes #[[ATTR1]] = { nofree noinline nosync nounwind memory(none) uwtable }
 ; TUNIT: attributes #[[ATTR2]] = { nofree noinline norecurse nosync nounwind memory(none) uwtable }
 ; TUNIT: attributes #[[ATTR3]] = { nofree noinline nosync nounwind memory(argmem: read) uwtable }
-; TUNIT: attributes #[[ATTR4]] = { nofree noinline nosync nounwind willreturn memory(none) uwtable }
+; TUNIT: attributes #[[ATTR4]] = { mustprogress nofree noinline nosync nounwind willreturn memory(none) uwtable }
 ; TUNIT: attributes #[[ATTR5]] = { noinline nounwind uwtable }
 ; TUNIT: attributes #[[ATTR6]] = { noinline norecurse nounwind uwtable }
 ; TUNIT: attributes #[[ATTR7]] = { noreturn }
 ; TUNIT: attributes #[[ATTR8]] = { norecurse }
-; TUNIT: attributes #[[ATTR9:[0-9]+]] = { nofree norecurse nosync nounwind willreturn memory(none) }
+; TUNIT: attributes #[[ATTR9:[0-9]+]] = { mustprogress nofree norecurse nosync nounwind willreturn memory(none) }
 ; TUNIT: attributes #[[ATTR10]] = { nofree nosync nounwind }
 ; TUNIT: attributes #[[ATTR11]] = { nounwind }
 ;.
-; CGSCC: attributes #[[ATTR0]] = { nofree noinline norecurse nosync nounwind willreturn memory(none) uwtable }
+; CGSCC: attributes #[[ATTR0]] = { mustprogress nofree noinline norecurse nosync nounwind willreturn memory(none) uwtable }
 ; CGSCC: attributes #[[ATTR1]] = { nofree noinline nosync nounwind memory(none) uwtable }
 ; CGSCC: attributes #[[ATTR2]] = { nofree noinline nosync nounwind memory(argmem: read) uwtable }
-; CGSCC: attributes #[[ATTR3]] = { nofree noinline nosync nounwind willreturn memory(none) uwtable }
+; CGSCC: attributes #[[ATTR3]] = { mustprogress nofree noinline nosync nounwind willreturn memory(none) uwtable }
 ; CGSCC: attributes #[[ATTR4]] = { noinline nounwind uwtable }
 ; CGSCC: attributes #[[ATTR5]] = { noreturn }
-; CGSCC: attributes #[[ATTR6:[0-9]+]] = { nofree norecurse nosync nounwind willreturn memory(none) }
+; CGSCC: attributes #[[ATTR6:[0-9]+]] = { mustprogress nofree norecurse nosync nounwind willreturn memory(none) }
 ; CGSCC: attributes #[[ATTR7]] = { nofree nosync nounwind }
 ; CGSCC: attributes #[[ATTR8]] = { nounwind }
 ; CGSCC: attributes #[[ATTR9]] = { willreturn }

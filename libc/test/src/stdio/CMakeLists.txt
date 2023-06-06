@@ -201,7 +201,7 @@ add_libc_unittest(
     LibcFPTestHelpers
 )
 
-add_libc_unittest(
+add_libc_test(
   puts_test
   SUITE
     libc_stdio_unittests
