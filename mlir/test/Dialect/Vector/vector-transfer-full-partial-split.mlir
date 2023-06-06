@@ -103,7 +103,7 @@ func.func @split_vector_transfer_read_strided_2d(
 
 transform.sequence failures(propagate) {
 ^bb1(%module_op: !transform.any_op):
-  transform.apply_patterns [] to %module_op {
+  transform.apply_patterns to %module_op {
     transform.apply_patterns.vector.split_transfer_full_partial split_transfer_strategy = "vector-transfer"
   } : !transform.any_op
 }
@@ -161,7 +161,7 @@ func.func @split_vector_transfer_write_2d(%V: vector<4x8xf32>, %A: memref<?x8xf3
 
 transform.sequence failures(propagate) {
 ^bb1(%module_op: !transform.any_op):
-  transform.apply_patterns [] to %module_op {
+  transform.apply_patterns to %module_op {
     transform.apply_patterns.vector.split_transfer_full_partial split_transfer_strategy = "vector-transfer"
   } : !transform.any_op
 }
@@ -223,7 +223,7 @@ func.func @split_vector_transfer_write_strided_2d(
 
 transform.sequence failures(propagate) {
 ^bb1(%module_op: !transform.any_op):
-  transform.apply_patterns [] to %module_op {
+  transform.apply_patterns to %module_op {
     transform.apply_patterns.vector.split_transfer_full_partial split_transfer_strategy = "vector-transfer"
   } : !transform.any_op
 }
@@ -265,7 +265,7 @@ func.func @transfer_read_within_scf_for(%A : memref<?x?xf32>, %lb : index, %ub :
 
 transform.sequence failures(propagate) {
 ^bb1(%module_op: !transform.any_op):
-  transform.apply_patterns [] to %module_op {
+  transform.apply_patterns to %module_op {
     transform.apply_patterns.vector.split_transfer_full_partial split_transfer_strategy = "vector-transfer"
   } : !transform.any_op
 }

@@ -142,8 +142,33 @@ static DiagnosedSilenceableFailure unpackSingleIndexResultPayloadOperations(
 }
 
 //===----------------------------------------------------------------------===//
+// Apply...PatternsOp
+//===----------------------------------------------------------------------===//
+
+void transform::ApplyEraseUnnecessaryInputsPatternsOp::populatePatterns(
+    RewritePatternSet &patterns) {
+  linalg::populateEraseUnnecessaryInputsPatterns(patterns);
+}
+
+void transform::ApplyFoldUnitExtentDimsViaReshapesPatternsOp::populatePatterns(
+    RewritePatternSet &patterns) {
+  linalg::populateFoldUnitExtentDimsViaReshapesPatterns(patterns);
+}
+
+void transform::ApplyFoldUnitExtentDimsViaSlicesPatternsOp::populatePatterns(
+    RewritePatternSet &patterns) {
+  linalg::populateFoldUnitExtentDimsViaSlicesPatterns(patterns);
+}
+
+void transform::ApplyTilingCanonicalizationPatternsOp::populatePatterns(
+    RewritePatternSet &patterns) {
+  linalg::populateLinalgTilingCanonicalizationPatterns(patterns);
+}
+
+//===----------------------------------------------------------------------===//
 // BufferizeToAllocationOp
 //===----------------------------------------------------------------------===//
+
 DiagnosedSilenceableFailure
 transform::BufferizeToAllocationOp::apply(transform::TransformResults &results,
                                           transform::TransformState &state) {

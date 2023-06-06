@@ -16,7 +16,6 @@
 #include "mlir/Dialect/SCF/IR/SCF.h"
 #include "mlir/Dialect/Transform/IR/TransformDialect.h"
 #include "mlir/Dialect/Transform/IR/TransformInterfaces.h"
-#include "mlir/Dialect/Transform/IR/TransformOps.h"
 #include "mlir/Dialect/Vector/IR/VectorOps.h"
 #include "mlir/Interfaces/LoopLikeInterface.h"
 #include "mlir/Transforms/GreedyPatternRewriteDriver.h"
@@ -26,6 +25,35 @@ using namespace mlir;
 
 #define DEBUG_TYPE "memref-transforms"
 #define DBGS() (llvm::dbgs() << '[' << DEBUG_TYPE << "] ")
+
+//===----------------------------------------------------------------------===//
+// Apply...PatternsOp
+//===----------------------------------------------------------------------===//
+
+void transform::ApplyExpandOpsPatternsOp::populatePatterns(
+    RewritePatternSet &patterns) {
+  memref::populateExpandOpsPatterns(patterns);
+}
+
+void transform::ApplyExpandStridedMetadataPatternsOp::populatePatterns(
+    RewritePatternSet &patterns) {
+  memref::populateExpandStridedMetadataPatterns(patterns);
+}
+
+void transform::ApplyExtractAddressComputationsPatternsOp::populatePatterns(
+    RewritePatternSet &patterns) {
+  memref::populateExtractAddressComputationsPatterns(patterns);
+}
+
+void transform::ApplyFoldMemrefAliasOpsPatternsOp::populatePatterns(
+    RewritePatternSet &patterns) {
+  memref::populateFoldMemRefAliasOpPatterns(patterns);
+}
+
+void transform::ApplyResolveRankedShapedTypeResultDimsPatternsOp::
+    populatePatterns(RewritePatternSet &patterns) {
+  memref::populateResolveRankedShapedTypeResultDimsPatterns(patterns);
+}
 
 //===----------------------------------------------------------------------===//
 // MemRefMultiBufferOp
@@ -69,31 +97,6 @@ DiagnosedSilenceableFailure transform::MemRefMultiBufferOp::apply(
     results.push_back(*newBuffer);
   }
   transformResults.set(cast<OpResult>(getResult()), results);
-  return DiagnosedSilenceableFailure::success();
-}
-
-//===----------------------------------------------------------------------===//
-// MemRefExtractAddressComputationsOp
-//===----------------------------------------------------------------------===//
-
-DiagnosedSilenceableFailure
-transform::MemRefExtractAddressComputationsOp::applyToOne(
-    Operation *target, transform::ApplyToEachResultList &results,
-    transform::TransformState &state) {
-  if (!target->hasTrait<OpTrait::IsIsolatedFromAbove>()) {
-    auto diag = this->emitOpError("requires isolated-from-above targets");
-    diag.attachNote(target->getLoc()) << "non-isolated target";
-    return DiagnosedSilenceableFailure::definiteFailure();
-  }
-
-  MLIRContext *ctx = getContext();
-  RewritePatternSet patterns(ctx);
-  memref::populateExtractAddressComputationsPatterns(patterns);
-
-  if (failed(applyPatternsAndFoldGreedily(target, std::move(patterns))))
-    return emitDefaultDefiniteFailure(target);
-
-  results.push_back(target);
   return DiagnosedSilenceableFailure::success();
 }
 
@@ -162,23 +165,6 @@ public:
 #define GET_OP_LIST
 #include "mlir/Dialect/MemRef/TransformOps/MemRefTransformOps.cpp.inc"
         >();
-
-    addDialectDataInitializer<transform::PatternRegistry>(
-        [&](transform::PatternRegistry &registry) {
-          registry.registerPatterns("memref.expand_ops",
-                                    memref::populateExpandOpsPatterns);
-          registry.registerPatterns("memref.fold_memref_alias_ops",
-                                    memref::populateFoldMemRefAliasOpPatterns);
-          registry.registerPatterns(
-              "memref.resolve_ranked_shaped_type_result_dims",
-              memref::populateResolveRankedShapedTypeResultDimsPatterns);
-          registry.registerPatterns(
-              "memref.expand_strided_metadata",
-              memref::populateExpandStridedMetadataPatterns);
-          registry.registerPatterns(
-              "memref.extract_address_computations",
-              memref::populateExtractAddressComputationsPatterns);
-        });
   }
 };
 } // namespace
