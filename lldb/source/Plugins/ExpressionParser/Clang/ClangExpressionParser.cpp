@@ -660,19 +660,12 @@ static void SetupLangOpts(CompilerInstance &compiler,
 
   if (process_sp && lang_opts.ObjC) {
     if (auto *runtime = ObjCLanguageRuntime::Get(*process_sp)) {
-      switch (runtime->GetRuntimeVersion()) {
-      case ObjCLanguageRuntime::ObjCRuntimeVersions::eAppleObjC_V2:
+      if (runtime->GetRuntimeVersion() ==
+          ObjCLanguageRuntime::ObjCRuntimeVersions::eAppleObjC_V2)
         lang_opts.ObjCRuntime.set(ObjCRuntime::MacOSX, VersionTuple(10, 7));
-        break;
-      case ObjCLanguageRuntime::ObjCRuntimeVersions::eObjC_VersionUnknown:
-      case ObjCLanguageRuntime::ObjCRuntimeVersions::eAppleObjC_V1:
+      else
         lang_opts.ObjCRuntime.set(ObjCRuntime::FragileMacOSX,
                                   VersionTuple(10, 7));
-        break;
-      case ObjCLanguageRuntime::ObjCRuntimeVersions::eGNUstep_libobjc2:
-        lang_opts.ObjCRuntime.set(ObjCRuntime::GNUstep, VersionTuple(2, 0));
-        break;
-      }
 
       if (runtime->HasNewLiteralsAndIndexing())
         lang_opts.DebuggerObjCLiteral = true;

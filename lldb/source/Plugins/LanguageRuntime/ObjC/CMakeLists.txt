@@ -7,6 +7,4 @@ add_lldb_library(lldbPluginObjCRuntime
     lldbTarget
     lldbUtility
 )
-
 add_subdirectory(AppleObjCRuntime)
-add_subdirectory(GNUstepObjCRuntime)
