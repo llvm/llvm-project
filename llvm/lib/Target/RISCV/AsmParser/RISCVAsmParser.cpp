@@ -2711,67 +2711,59 @@ bool RISCVAsmParser::parseDirectiveOption() {
   }
 
   if (Option == "arch") {
-
-    Parser.parseComma();
-
     bool PrefixEmitted = false;
     bool IsExtensionList = false;
-    while (true) {
-      bool IsAdd;
-      if (Parser.getTok().is(AsmToken::Plus)) {
+    do {
+      if (Parser.parseComma())
+        return true;
+
+      bool IsAdd, IsFull;
+      if (parseOptionalToken(AsmToken::Plus)) {
         IsAdd = true;
+        IsFull = false;
         IsExtensionList = true;
-      } else if (Parser.getTok().is(AsmToken::Minus)) {
+      } else if (parseOptionalToken(AsmToken::Minus)) {
         IsAdd = false;
+        IsFull = false;
         IsExtensionList = true;
       } else {
-        SMLoc ArchLoc = Parser.getTok().getLoc();
-
         if (IsExtensionList)
-          return Error(ArchLoc, "unexpected token, expected + or -");
+          return Error(Parser.getTok().getLoc(),
+                       "unexpected token, expected + or -");
 
-        StringRef Arch;
-        if (Parser.getTok().is(AsmToken::Identifier))
-          Arch = Parser.getTok().getString();
-        else
-          return Error(ArchLoc,
-                       "unexpected token, expected identifier");
-
-        std::string Result;
-        if (resetToArch(Arch, ArchLoc, Result, true))
-          return true;
-
-        getTargetStreamer().emitDirectiveOptionArchFullArch(Result,
-                                                            PrefixEmitted);
-
-        Parser.Lex();
-
-        return Parser.parseToken(AsmToken::EndOfStatement,
-                                 "unexpected token, expected end of statement");
+        IsFull = true;
       }
-
-      Parser.Lex();
 
       if (Parser.getTok().isNot(AsmToken::Identifier))
         return Error(Parser.getTok().getLoc(),
                      "unexpected token, expected identifier");
 
-      StringRef ExtStr = Parser.getTok().getString();
+      StringRef Arch = Parser.getTok().getString();
+      SMLoc Loc = Parser.getTok().getLoc();
+      Parser.Lex();
 
-      ArrayRef<SubtargetFeatureKV> KVArray(RISCVFeatureKV);
-      auto Ext = llvm::lower_bound(KVArray, ExtStr);
-      if (Ext == KVArray.end() || StringRef(Ext->Key) != ExtStr ||
-          !RISCVISAInfo::isSupportedExtension(ExtStr)) {
-        if (isDigit(ExtStr.back()))
-          return Error(
-              Parser.getTok().getLoc(),
-              "Extension version number parsing not currently implemented");
-        return Error(Parser.getTok().getLoc(), "unknown extension feature");
+      if (IsFull) {
+        std::string Result;
+        if (resetToArch(Arch, Loc, Result, true))
+          return true;
+
+        getTargetStreamer().emitDirectiveOptionArchFullArch(Result,
+                                                            PrefixEmitted);
+
+        break;
       }
 
-      SMLoc Loc = Parser.getTok().getLoc();
+      ArrayRef<SubtargetFeatureKV> KVArray(RISCVFeatureKV);
+      auto Ext = llvm::lower_bound(KVArray, Arch);
+      if (Ext == KVArray.end() || StringRef(Ext->Key) != Arch ||
+          !RISCVISAInfo::isSupportedExtension(Arch)) {
+        if (isDigit(Arch.back()))
+          return Error(
+              Loc,
+              "Extension version number parsing not currently implemented");
+        return Error(Loc, "unknown extension feature");
+      }
 
-      Parser.Lex(); // Eat arch string
       bool HasComma = getTok().is(AsmToken::Comma);
       if (IsAdd) {
         setFeatureBits(Ext->Value, Ext->Key);
@@ -2804,13 +2796,12 @@ bool RISCVAsmParser::parseDirectiveOption() {
         getTargetStreamer().emitDirectiveOptionArchPlusOrMinus(
             Ext->Key, /*Enable*/ false, PrefixEmitted, HasComma);
       }
+    } while (Parser.getTok().isNot(AsmToken::EndOfStatement));
 
-      if (!HasComma)
-        return Parser.parseToken(AsmToken::EndOfStatement,
-                                 "unexpected token, expected end of statement");
-      // Eat comma
-      Parser.Lex();
-    }
+    if (Parser.parseEOL())
+      return true;
+
+    return false;
   }
 
   if (Option == "rvc") {
