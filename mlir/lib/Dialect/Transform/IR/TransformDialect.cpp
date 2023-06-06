@@ -57,6 +57,16 @@ void transform::TransformDialect::initialize() {
 #include "mlir/Dialect/Transform/IR/TransformOps.cpp.inc"
       >();
   initializeTypes();
+
+  // Register all canonicalization patterns.
+  getOrCreateExtraData<transform::PatternRegistry>().registerPatterns(
+      "canonicalization", [](RewritePatternSet &patterns) {
+        MLIRContext *ctx = patterns.getContext();
+        for (Dialect *dialect : ctx->getLoadedDialects())
+          dialect->getCanonicalizationPatterns(patterns);
+        for (RegisteredOperationName op : ctx->getRegisteredOperations())
+          op.getCanonicalizationPatterns(patterns, ctx);
+      });
 }
 
 Type transform::TransformDialect::parseType(DialectAsmParser &parser) const {
