@@ -1,5 +1,5 @@
 // RUN: %clang_cc1 -std=c2x -fsyntax-only -verify -Wno-unused %s
-// RUN: %clang_cc1 -fsyntax-only -verify -Wno-unused -x c++ %s
+// RUN: %clang_cc1 -fsyntax-only -verify -Wno-unused -x c++ -std=c++17 %s
 
 // Test that the semantic behavior of the extension allowing the user to pass a
 // type as the first argument to _Generic.
