@@ -41,8 +41,13 @@ main:                                   # @main
 .Linfo_string2:
 	.asciz	"/tmp"                          # string offset=110
 	.section	.debug_str_offsets,"",@progbits
+        .long   .Lstr_off_end - .Lstr_off_begin # Length of String Offsets Set
+.Lstr_off_begin:
+        .short  5
+        .short  0
 	.long	.Linfo_string0
 	.long	.Linfo_string1
 	.long	.Linfo_string2
+.Lstr_off_end:
 	.ident	"clang version 17.0.0"
 .Lline_table_start0:
