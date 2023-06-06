@@ -65,8 +65,8 @@ static void generateInstSeqImpl(int64_t Val,
     // v[0,12) != 0 && v[12,32) == 0 : ADDI
     // v[0,12) == 0 && v[12,32) != 0 : LUI
     // v[0,32) != 0                  : LUI+ADDI(W)
-    int64_t Hi20 = ((Val + 0x800) >> 12) & 0xFFFFF;
     int64_t Lo12 = SignExtend64<12>(Val);
+    int64_t Hi20 = ((Val - Lo12) >> 12) & 0xFFFFF;
 
     if (Hi20)
       Res.emplace_back(RISCV::LUI, Hi20);
