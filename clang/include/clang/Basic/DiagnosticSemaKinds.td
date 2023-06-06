@@ -7661,7 +7661,7 @@ def warn_increment_bool : Warning<
   "incompatible with C++17">, InGroup<DeprecatedIncrementBool>;
 def ext_increment_bool : ExtWarn<
   "ISO C++17 does not allow incrementing expression of type bool">,
-  DefaultError, InGroup<IncrementBool>;
+  DefaultError, SFINAEFailure, InGroup<IncrementBool>;
 def err_increment_decrement_enum : Error<
   "cannot %select{decrement|increment}0 expression of enum type %1">;
 
