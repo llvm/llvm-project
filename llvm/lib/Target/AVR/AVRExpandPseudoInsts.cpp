@@ -101,6 +101,8 @@ private:
   bool expandLPMWELPMW(Block &MBB, BlockIt MBBI, bool IsELPM);
   // Common implementation of LPMBRdZ and ELPMBRdZ.
   bool expandLPMBELPMB(Block &MBB, BlockIt MBBI, bool IsELPM);
+  // Common implementation of ROLBRdR1 and ROLBRdR17.
+  bool expandROLBRd(Block &MBB, BlockIt MBBI);
 };
 
 char AVRExpandPseudo::ID = 0;
@@ -1479,20 +1481,17 @@ bool AVRExpandPseudo::expand<AVR::POPWRd>(Block &MBB, BlockIt MBBI) {
   return true;
 }
 
-template <>
-bool AVRExpandPseudo::expand<AVR::ROLBRd>(Block &MBB, BlockIt MBBI) {
+bool AVRExpandPseudo::expandROLBRd(Block &MBB, BlockIt MBBI) {
   // In AVR, the rotate instructions behave quite unintuitively. They rotate
   // bits through the carry bit in SREG, effectively rotating over 9 bits,
   // instead of 8. This is useful when we are dealing with numbers over
   // multiple registers, but when we actually need to rotate stuff, we have
   // to explicitly add the carry bit.
 
-  const AVRSubtarget &STI = MBB.getParent()->getSubtarget<AVRSubtarget>();
-
   MachineInstr &MI = *MBBI;
   unsigned OpShift, OpCarry;
   Register DstReg = MI.getOperand(0).getReg();
-  Register ZeroReg = STI.getZeroRegister();
+  Register ZeroReg = MI.getOperand(3).getReg();
   bool DstIsDead = MI.getOperand(0).isDead();
   bool DstIsKill = MI.getOperand(1).isKill();
   OpShift = AVR::ADDRdRr;
@@ -1518,6 +1517,16 @@ bool AVRExpandPseudo::expand<AVR::ROLBRd>(Block &MBB, BlockIt MBBI) {
 
   MI.eraseFromParent();
   return true;
+}
+
+template <>
+bool AVRExpandPseudo::expand<AVR::ROLBRdR1>(Block &MBB, BlockIt MBBI) {
+  return expandROLBRd(MBB, MBBI);
+}
+
+template <>
+bool AVRExpandPseudo::expand<AVR::ROLBRdR17>(Block &MBB, BlockIt MBBI) {
+  return expandROLBRd(MBB, MBBI);
 }
 
 template <>
@@ -2604,7 +2613,8 @@ bool AVRExpandPseudo::expandMI(Block &MBB, BlockIt MBBI) {
     EXPAND(AVR::OUTWARr);
     EXPAND(AVR::PUSHWRr);
     EXPAND(AVR::POPWRd);
-    EXPAND(AVR::ROLBRd);
+    EXPAND(AVR::ROLBRdR1);
+    EXPAND(AVR::ROLBRdR17);
     EXPAND(AVR::RORBRd);
     EXPAND(AVR::LSLWRd);
     EXPAND(AVR::LSRWRd);

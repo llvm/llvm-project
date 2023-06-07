@@ -1747,7 +1747,8 @@ AVRTargetLowering::LowerReturn(SDValue Chain, CallingConv::ID CallConv,
 //===----------------------------------------------------------------------===//
 
 MachineBasicBlock *AVRTargetLowering::insertShift(MachineInstr &MI,
-                                                  MachineBasicBlock *BB) const {
+                                                  MachineBasicBlock *BB,
+                                                  bool Tiny) const {
   unsigned Opc;
   const TargetRegisterClass *RC;
   bool HasRepeatedOperand = false;
@@ -1785,7 +1786,7 @@ MachineBasicBlock *AVRTargetLowering::insertShift(MachineInstr &MI,
     RC = &AVR::DREGSRegClass;
     break;
   case AVR::Rol8:
-    Opc = AVR::ROLBRd;
+    Opc = Tiny ? AVR::ROLBRdR17 : AVR::ROLBRdR1;
     RC = &AVR::GPR8RegClass;
     break;
   case AVR::Rol16:
@@ -2328,6 +2329,7 @@ MachineBasicBlock *
 AVRTargetLowering::EmitInstrWithCustomInserter(MachineInstr &MI,
                                                MachineBasicBlock *MBB) const {
   int Opc = MI.getOpcode();
+  const AVRSubtarget &STI = MBB->getParent()->getSubtarget<AVRSubtarget>();
 
   // Pseudo shift instructions with a non constant shift amount are expanded
   // into a loop.
@@ -2342,7 +2344,7 @@ AVRTargetLowering::EmitInstrWithCustomInserter(MachineInstr &MI,
   case AVR::Ror16:
   case AVR::Asr8:
   case AVR::Asr16:
-    return insertShift(MI, MBB);
+    return insertShift(MI, MBB, STI.hasTinyEncoding());
   case AVR::Lsl32:
   case AVR::Lsr32:
   case AVR::Asr32:
