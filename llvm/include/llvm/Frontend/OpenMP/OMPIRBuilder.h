@@ -1155,15 +1155,18 @@ public:
                                 InsertPointTy AllocaIP,
                                 BodyGenCallbackTy BodyGenCB);
 
+
+  using FileIdentifierInfoCallbackTy = std::function<std::tuple<std::string, uint64_t>()>;
+
   /// Creates a unique info for a target entry when provided a filename and
   /// line number from.
   ///
-  /// \param FileName The name of the file the target entry resides in
-  /// \param Line The line number where the target entry resides
+  /// \param CallBack A callback function which should return filename the entry
+  /// resides in as well as the line number for the target entry
   /// \param ParentName The name of the parent the target entry resides in, if
   /// any.
   static TargetRegionEntryInfo
-  getTargetEntryUniqueInfo(StringRef FileName, uint64_t Line,
+  getTargetEntryUniqueInfo(FileIdentifierInfoCallbackTy CallBack,
                            StringRef ParentName = "");
 
   /// Functions used to generate reductions. Such functions take two Values
