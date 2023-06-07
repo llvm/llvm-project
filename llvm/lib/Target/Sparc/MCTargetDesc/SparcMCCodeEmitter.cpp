@@ -53,7 +53,7 @@ public:
   SparcMCCodeEmitter &operator=(const SparcMCCodeEmitter &) = delete;
   ~SparcMCCodeEmitter() override = default;
 
-  void encodeInstruction(const MCInst &MI, raw_ostream &OS,
+  void encodeInstruction(const MCInst &MI, SmallVectorImpl<char> &CB,
                          SmallVectorImpl<MCFixup> &Fixups,
                          const MCSubtargetInfo &STI) const override;
 
@@ -87,11 +87,12 @@ public:
 
 } // end anonymous namespace
 
-void SparcMCCodeEmitter::encodeInstruction(const MCInst &MI, raw_ostream &OS,
+void SparcMCCodeEmitter::encodeInstruction(const MCInst &MI,
+                                           SmallVectorImpl<char> &CB,
                                            SmallVectorImpl<MCFixup> &Fixups,
                                            const MCSubtargetInfo &STI) const {
   unsigned Bits = getBinaryCodeForInstr(MI, Fixups, STI);
-  support::endian::write(OS, Bits,
+  support::endian::write(CB, Bits,
                          Ctx.getAsmInfo()->isLittleEndian() ? support::little
                                                             : support::big);
 
