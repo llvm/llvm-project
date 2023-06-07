@@ -249,97 +249,27 @@ define void @func_05(i32 %x) nounwind {
 define void @get_fpenv_01(ptr %ptr) #0 {
 ; X86-NOSSE-LABEL: get_fpenv_01:
 ; X86-NOSSE:       # %bb.0: # %entry
-; X86-NOSSE-NEXT:    pushl %ebp
-; X86-NOSSE-NEXT:    pushl %ebx
-; X86-NOSSE-NEXT:    pushl %edi
-; X86-NOSSE-NEXT:    pushl %esi
-; X86-NOSSE-NEXT:    subl $60, %esp
-; X86-NOSSE-NEXT:    movl {{[0-9]+}}(%esp), %esi
-; X86-NOSSE-NEXT:    leal {{[0-9]+}}(%esp), %eax
+; X86-NOSSE-NEXT:    subl $44, %esp
+; X86-NOSSE-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NOSSE-NEXT:    movl %eax, (%esp)
 ; X86-NOSSE-NEXT:    calll fegetenv
-; X86-NOSSE-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X86-NOSSE-NEXT:    movl %eax, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
-; X86-NOSSE-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X86-NOSSE-NEXT:    movl %eax, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
-; X86-NOSSE-NEXT:    movl {{[0-9]+}}(%esp), %edx
-; X86-NOSSE-NEXT:    movl {{[0-9]+}}(%esp), %edi
-; X86-NOSSE-NEXT:    movl {{[0-9]+}}(%esp), %ebx
-; X86-NOSSE-NEXT:    movl {{[0-9]+}}(%esp), %ebp
-; X86-NOSSE-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X86-NOSSE-NEXT:    movl {{[0-9]+}}(%esp), %ecx
-; X86-NOSSE-NEXT:    movl %ecx, 24(%esi)
-; X86-NOSSE-NEXT:    movl %eax, 28(%esi)
-; X86-NOSSE-NEXT:    movl %ebp, 16(%esi)
-; X86-NOSSE-NEXT:    movl %ebx, 20(%esi)
-; X86-NOSSE-NEXT:    movl %edi, 8(%esi)
-; X86-NOSSE-NEXT:    movl %edx, 12(%esi)
-; X86-NOSSE-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %eax # 4-byte Reload
-; X86-NOSSE-NEXT:    movl %eax, (%esi)
-; X86-NOSSE-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %eax # 4-byte Reload
-; X86-NOSSE-NEXT:    movl %eax, 4(%esi)
-; X86-NOSSE-NEXT:    addl $60, %esp
-; X86-NOSSE-NEXT:    popl %esi
-; X86-NOSSE-NEXT:    popl %edi
-; X86-NOSSE-NEXT:    popl %ebx
-; X86-NOSSE-NEXT:    popl %ebp
+; X86-NOSSE-NEXT:    addl $44, %esp
 ; X86-NOSSE-NEXT:    retl
 ;
 ; X86-SSE-LABEL: get_fpenv_01:
 ; X86-SSE:       # %bb.0: # %entry
-; X86-SSE-NEXT:    pushl %ebp
-; X86-SSE-NEXT:    pushl %ebx
-; X86-SSE-NEXT:    pushl %edi
-; X86-SSE-NEXT:    pushl %esi
-; X86-SSE-NEXT:    subl $60, %esp
-; X86-SSE-NEXT:    movl {{[0-9]+}}(%esp), %esi
-; X86-SSE-NEXT:    leal {{[0-9]+}}(%esp), %eax
+; X86-SSE-NEXT:    subl $44, %esp
+; X86-SSE-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-SSE-NEXT:    movl %eax, (%esp)
 ; X86-SSE-NEXT:    calll fegetenv
-; X86-SSE-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X86-SSE-NEXT:    movl %eax, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
-; X86-SSE-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X86-SSE-NEXT:    movl %eax, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
-; X86-SSE-NEXT:    movl {{[0-9]+}}(%esp), %edx
-; X86-SSE-NEXT:    movl {{[0-9]+}}(%esp), %edi
-; X86-SSE-NEXT:    movl {{[0-9]+}}(%esp), %ebx
-; X86-SSE-NEXT:    movl {{[0-9]+}}(%esp), %ebp
-; X86-SSE-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X86-SSE-NEXT:    movl {{[0-9]+}}(%esp), %ecx
-; X86-SSE-NEXT:    movl %ecx, 24(%esi)
-; X86-SSE-NEXT:    movl %eax, 28(%esi)
-; X86-SSE-NEXT:    movl %ebp, 16(%esi)
-; X86-SSE-NEXT:    movl %ebx, 20(%esi)
-; X86-SSE-NEXT:    movl %edi, 8(%esi)
-; X86-SSE-NEXT:    movl %edx, 12(%esi)
-; X86-SSE-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %eax # 4-byte Reload
-; X86-SSE-NEXT:    movl %eax, (%esi)
-; X86-SSE-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %eax # 4-byte Reload
-; X86-SSE-NEXT:    movl %eax, 4(%esi)
-; X86-SSE-NEXT:    addl $60, %esp
-; X86-SSE-NEXT:    popl %esi
-; X86-SSE-NEXT:    popl %edi
-; X86-SSE-NEXT:    popl %ebx
-; X86-SSE-NEXT:    popl %ebp
+; X86-SSE-NEXT:    addl $44, %esp
 ; X86-SSE-NEXT:    retl
 ;
 ; X64-LABEL: get_fpenv_01:
 ; X64:       # %bb.0: # %entry
-; X64-NEXT:    pushq %rbx
-; X64-NEXT:    subq $32, %rsp
-; X64-NEXT:    movq %rdi, %rbx
-; X64-NEXT:    movq %rsp, %rdi
+; X64-NEXT:    subq $40, %rsp
 ; X64-NEXT:    callq fegetenv@PLT
-; X64-NEXT:    movq (%rsp), %rax
-; X64-NEXT:    movq {{[0-9]+}}(%rsp), %rcx
-; X64-NEXT:    movq {{[0-9]+}}(%rsp), %rdx
-; X64-NEXT:    movq {{[0-9]+}}(%rsp), %rsi
-; X64-NEXT:    movq %rsi, 16(%rbx)
-; X64-NEXT:    movq %rdx, 24(%rbx)
-; X64-NEXT:    movq %rax, (%rbx)
-; X64-NEXT:    movq %rcx, 8(%rbx)
-; X64-NEXT:    addq $32, %rsp
-; X64-NEXT:    popq %rbx
+; X64-NEXT:    addq $40, %rsp
 ; X64-NEXT:    retq
 entry:
   %env = call i256 @llvm.get.fpenv.i256()
@@ -350,88 +280,25 @@ entry:
 define void @set_fpenv_01(ptr %ptr) #0 {
 ; X86-NOSSE-LABEL: set_fpenv_01:
 ; X86-NOSSE:       # %bb.0: # %entry
-; X86-NOSSE-NEXT:    pushl %ebp
-; X86-NOSSE-NEXT:    pushl %ebx
-; X86-NOSSE-NEXT:    pushl %edi
-; X86-NOSSE-NEXT:    pushl %esi
 ; X86-NOSSE-NEXT:    subl $44, %esp
 ; X86-NOSSE-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X86-NOSSE-NEXT:    movl (%eax), %ecx
-; X86-NOSSE-NEXT:    movl %ecx, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
-; X86-NOSSE-NEXT:    movl 4(%eax), %edx
-; X86-NOSSE-NEXT:    movl 12(%eax), %esi
-; X86-NOSSE-NEXT:    movl 8(%eax), %edi
-; X86-NOSSE-NEXT:    movl 20(%eax), %ebx
-; X86-NOSSE-NEXT:    movl 16(%eax), %ebp
-; X86-NOSSE-NEXT:    movl 28(%eax), %ecx
-; X86-NOSSE-NEXT:    movl 24(%eax), %eax
-; X86-NOSSE-NEXT:    movl %eax, {{[0-9]+}}(%esp)
-; X86-NOSSE-NEXT:    movl %ecx, {{[0-9]+}}(%esp)
-; X86-NOSSE-NEXT:    movl %ebp, {{[0-9]+}}(%esp)
-; X86-NOSSE-NEXT:    movl %ebx, {{[0-9]+}}(%esp)
-; X86-NOSSE-NEXT:    movl %edi, {{[0-9]+}}(%esp)
-; X86-NOSSE-NEXT:    movl %esi, {{[0-9]+}}(%esp)
-; X86-NOSSE-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %eax # 4-byte Reload
-; X86-NOSSE-NEXT:    movl %eax, {{[0-9]+}}(%esp)
-; X86-NOSSE-NEXT:    movl %edx, {{[0-9]+}}(%esp)
-; X86-NOSSE-NEXT:    leal {{[0-9]+}}(%esp), %eax
 ; X86-NOSSE-NEXT:    movl %eax, (%esp)
 ; X86-NOSSE-NEXT:    calll fesetenv
 ; X86-NOSSE-NEXT:    addl $44, %esp
-; X86-NOSSE-NEXT:    popl %esi
-; X86-NOSSE-NEXT:    popl %edi
-; X86-NOSSE-NEXT:    popl %ebx
-; X86-NOSSE-NEXT:    popl %ebp
 ; X86-NOSSE-NEXT:    retl
 ;
 ; X86-SSE-LABEL: set_fpenv_01:
 ; X86-SSE:       # %bb.0: # %entry
-; X86-SSE-NEXT:    pushl %ebp
-; X86-SSE-NEXT:    pushl %ebx
-; X86-SSE-NEXT:    pushl %edi
-; X86-SSE-NEXT:    pushl %esi
 ; X86-SSE-NEXT:    subl $44, %esp
 ; X86-SSE-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X86-SSE-NEXT:    movl (%eax), %ecx
-; X86-SSE-NEXT:    movl %ecx, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
-; X86-SSE-NEXT:    movl 4(%eax), %edx
-; X86-SSE-NEXT:    movl 12(%eax), %esi
-; X86-SSE-NEXT:    movl 8(%eax), %edi
-; X86-SSE-NEXT:    movl 20(%eax), %ebx
-; X86-SSE-NEXT:    movl 16(%eax), %ebp
-; X86-SSE-NEXT:    movl 28(%eax), %ecx
-; X86-SSE-NEXT:    movl 24(%eax), %eax
-; X86-SSE-NEXT:    movl %eax, {{[0-9]+}}(%esp)
-; X86-SSE-NEXT:    movl %ecx, {{[0-9]+}}(%esp)
-; X86-SSE-NEXT:    movl %ebp, {{[0-9]+}}(%esp)
-; X86-SSE-NEXT:    movl %ebx, {{[0-9]+}}(%esp)
-; X86-SSE-NEXT:    movl %edi, {{[0-9]+}}(%esp)
-; X86-SSE-NEXT:    movl %esi, {{[0-9]+}}(%esp)
-; X86-SSE-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %eax # 4-byte Reload
-; X86-SSE-NEXT:    movl %eax, {{[0-9]+}}(%esp)
-; X86-SSE-NEXT:    movl %edx, {{[0-9]+}}(%esp)
-; X86-SSE-NEXT:    leal {{[0-9]+}}(%esp), %eax
 ; X86-SSE-NEXT:    movl %eax, (%esp)
 ; X86-SSE-NEXT:    calll fesetenv
 ; X86-SSE-NEXT:    addl $44, %esp
-; X86-SSE-NEXT:    popl %esi
-; X86-SSE-NEXT:    popl %edi
-; X86-SSE-NEXT:    popl %ebx
-; X86-SSE-NEXT:    popl %ebp
 ; X86-SSE-NEXT:    retl
 ;
 ; X64-LABEL: set_fpenv_01:
 ; X64:       # %bb.0: # %entry
 ; X64-NEXT:    subq $40, %rsp
-; X64-NEXT:    movq (%rdi), %rax
-; X64-NEXT:    movq 8(%rdi), %rcx
-; X64-NEXT:    movq 24(%rdi), %rdx
-; X64-NEXT:    movq 16(%rdi), %rsi
-; X64-NEXT:    movq %rsi, {{[0-9]+}}(%rsp)
-; X64-NEXT:    movq %rdx, {{[0-9]+}}(%rsp)
-; X64-NEXT:    movq %rax, {{[0-9]+}}(%rsp)
-; X64-NEXT:    movq %rcx, {{[0-9]+}}(%rsp)
-; X64-NEXT:    leaq {{[0-9]+}}(%rsp), %rdi
 ; X64-NEXT:    callq fesetenv@PLT
 ; X64-NEXT:    addq $40, %rsp
 ; X64-NEXT:    retq

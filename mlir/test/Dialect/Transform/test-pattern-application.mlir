@@ -15,7 +15,9 @@ transform.sequence failures(propagate) {
 ^bb1(%arg1: !transform.any_op):
   %0 = transform.structured.match ops{["test.container"]} in %arg1 : (!transform.any_op) -> !transform.any_op
   %1 = transform.structured.match ops{["test.foo"]} in %arg1 : (!transform.any_op) -> !transform.any_op
-  transform.apply_patterns ["transform.test"] to %0 : !transform.any_op
+  transform.apply_patterns to %0 {
+    transform.apply_patterns.transform.test_patterns
+  } : !transform.any_op
   // Add an attribute to %1, which is now mapped to a new op.
   transform.annotate %1 "annotated" : !transform.any_op
 }
@@ -36,7 +38,9 @@ transform.sequence failures(propagate) {
   %0 = transform.structured.match ops{["test.container"]} in %arg1 : (!transform.any_op) -> !transform.any_op
   %1 = transform.structured.match ops{["test.foo"]} in %arg1 : (!transform.any_op) -> !transform.any_op
   // expected-error @below {{tracking listener failed to find replacement op}}
-  transform.apply_patterns ["transform.test"] to %0 : !transform.any_op
+  transform.apply_patterns to %0 {
+    transform.apply_patterns.transform.test_patterns
+  } : !transform.any_op
   // %1 must be used in some way. If no replacement payload op could be found,
   // an error is thrown only if the handle is not dead.
   transform.annotate %1 "annotated" : !transform.any_op
@@ -60,7 +64,9 @@ transform.sequence failures(propagate) {
   %0 = transform.structured.match ops{["test.container"]} in %arg1 : (!transform.any_op) -> !transform.any_op
   %1 = transform.structured.match ops{["test.foo"]} in %arg1 : (!transform.any_op) -> !transform.any_op
   // No error because %1 is dead.
-  transform.apply_patterns ["transform.test"] to %0 : !transform.any_op
+  transform.apply_patterns to %0 {
+    transform.apply_patterns.transform.test_patterns
+  } : !transform.any_op
 }
 
 // -----
@@ -80,7 +86,9 @@ transform.sequence failures(propagate) {
 ^bb1(%arg1: !transform.any_op):
   %0 = transform.structured.match ops{["test.container"]} in %arg1 : (!transform.any_op) -> !transform.any_op
   %1 = transform.structured.match ops{["test.foo"]} in %arg1 : (!transform.any_op) -> !transform.any_op
-  transform.apply_patterns ["transform.test"] to %0 {fail_on_payload_replacement_not_found = false}: !transform.any_op
+  transform.apply_patterns to %0 {
+    transform.apply_patterns.transform.test_patterns
+  } {fail_on_payload_replacement_not_found = false} : !transform.any_op
   transform.annotate %1 "annotated" : !transform.any_op
 }
 
@@ -95,8 +103,10 @@ func.func @patterns_apply_only_to_target_body() {
 
 transform.sequence failures(propagate) {
 ^bb1(%arg1: !transform.any_op):
-  %0 = transform.structured.match ops{["test.foo"]} in %arg1 : (!transform.any_op) -> !transform.any_op
-  transform.apply_patterns ["transform.test"] to %0 : !transform.any_op
+%0 = transform.structured.match ops{["test.foo"]} in %arg1 : (!transform.any_op) -> !transform.any_op
+  transform.apply_patterns to %0 {
+    transform.apply_patterns.transform.test_patterns
+  } : !transform.any_op
 }
 
 // -----
@@ -118,7 +128,9 @@ transform.sequence failures(propagate) {
   %0 = transform.structured.match ops{["test.container"]} in %arg1 : (!transform.any_op) -> !transform.any_op
   %1 = transform.structured.match ops{["test.erase_op"]} in %arg1 : (!transform.any_op) -> !transform.any_op
   transform.test_print_remark_at_operand %1, "matched op" : !transform.any_op
-  transform.apply_patterns ["transform.test"] to %0 : !transform.any_op
+  transform.apply_patterns to %0 {
+    transform.apply_patterns.transform.test_patterns
+  } : !transform.any_op
   transform.test_print_remark_at_operand %1, "op was deleted" : !transform.any_op
 }
 
@@ -138,6 +150,8 @@ transform.sequence failures(propagate) {
 ^bb1(%arg1: !transform.any_op):
   %0 = transform.structured.match ops{["tensor.dim"]} in %arg1 : (!transform.any_op) -> !transform.any_op
   %1 = transform.structured.match ops{["func.func"]} in %arg1 : (!transform.any_op) -> !transform.any_op
-  transform.apply_patterns ["canonicalization"] to %1 : !transform.any_op
+  transform.apply_patterns to %1 {
+    transform.apply_patterns.canonicalization
+  } : !transform.any_op
   transform.test_print_remark_at_operand %0, "op was replaced" : !transform.any_op
 }

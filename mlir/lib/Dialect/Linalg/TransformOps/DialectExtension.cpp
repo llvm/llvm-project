@@ -49,22 +49,6 @@ public:
 #define GET_OP_LIST
 #include "mlir/Dialect/Linalg/TransformOps/LinalgMatchOps.cpp.inc"
         >();
-
-    addDialectDataInitializer<transform::PatternRegistry>(
-        [&](transform::PatternRegistry &registry) {
-          registry.registerPatterns(
-              "linalg.erase_unnecessary_inputs",
-              linalg::populateEraseUnnecessaryInputsPatterns);
-          registry.registerPatterns(
-              "linalg.fold_unit_extent_dims_via_slices",
-              linalg::populateFoldUnitExtentDimsViaSlicesPatterns);
-          registry.registerPatterns(
-              "linalg.fold_unit_extent_dims_via_reshapes",
-              linalg::populateFoldUnitExtentDimsViaReshapesPatterns);
-          registry.registerPatterns(
-              "linalg.tiling_canonicalization",
-              linalg::populateLinalgTilingCanonicalizationPatterns);
-        });
   }
 };
 } // namespace

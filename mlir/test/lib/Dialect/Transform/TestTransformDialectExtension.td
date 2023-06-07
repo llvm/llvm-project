@@ -59,7 +59,6 @@ def TestProduceValueHandleToSelfOperand
   let results = (outs TransformValueHandleTypeInterface:$out);
   let assemblyFormat = "$in attr-dict `:` functional-type(operands, results)";
   let cppNamespace = "::mlir::test";
-  
 }
 
 def TestProduceValueHandleToResult
@@ -475,6 +474,15 @@ def TestTrackedRewriteOp
   let arguments = (ins TransformHandleTypeInterface:$in);
   let results = (outs);
   let assemblyFormat = "$in attr-dict `:` functional-type(operands, results)";
+  let cppNamespace = "::mlir::test";
+}
+
+def ApplyTestPatternsOp
+  : Op<Transform_Dialect, "apply_patterns.transform.test_patterns",
+      [DeclareOpInterfaceMethods<PatternDescriptorOpInterface>]> {
+  let arguments = (ins);
+  let results = (outs);
+  let assemblyFormat = "attr-dict";
   let cppNamespace = "::mlir::test";
 }
 

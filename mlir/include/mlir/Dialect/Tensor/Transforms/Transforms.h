@@ -39,8 +39,8 @@ FailureOr<TilingResult> replaceExtractSliceWithTiledProducer(
 void populateFoldTensorSubsetOpPatterns(RewritePatternSet &patterns);
 
 /// Collects patterns to merge consecutive tensor.insert_slice/extract_slice
-/// into one. These patterns are in in this separate entry point because the
-/// bufferization is sensitive over IR structure, particularly those
+/// into one. These patterns are in this separate entry point because the
+/// bufferization is sensitive to IR structure, particularly those
 /// tensor.extract_slice and tensor.insert_slice ops for creating the slices.
 void populateMergeConsecutiveInsertExtractSlicePatterns(
     RewritePatternSet &patterns);
@@ -55,7 +55,7 @@ void populateDropRedundantInsertSliceRankExpansionPatterns(
 void populateReassociativeReshapeFoldingPatterns(RewritePatternSet &patterns);
 
 /// Populates `patterns` with patterns that fold tensor.empty with
-/// tensor.[extract_slice|cast|expand_shape|collapse_shape].
+/// tensor.[extract_slice|expand_shape|collapse_shape].
 void populateFoldTensorEmptyPatterns(RewritePatternSet &patterns);
 
 /// Populates `patterns` with patterns that fold operations like `tensor.pad`
