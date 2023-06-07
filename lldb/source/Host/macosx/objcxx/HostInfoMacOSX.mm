@@ -152,8 +152,7 @@ bool HostInfoMacOSX::ComputeSupportExeDirectory(FileSpec &file_spec) {
     FileSystem::Instance().Resolve(support_dir_spec);
     if (!FileSystem::Instance().IsDirectory(support_dir_spec)) {
       Log *log = GetLog(LLDBLog::Host);
-      LLDB_LOGF(log, "HostInfoMacOSX::%s(): failed to find support directory",
-                __FUNCTION__);
+      LLDB_LOG(log, "failed to find support directory");
       return false;
     }
 
@@ -342,8 +341,8 @@ FileSpec HostInfoMacOSX::GetXcodeContentsDirectory() {
         HostInfo::GetSDKRoot(SDKOptions{XcodeSDK::GetAnyMacOS()});
     if (!sdk_path_or_err) {
       Log *log = GetLog(LLDBLog::Host);
-      LLDB_LOGF(log, "Error while searching for Xcode SDK: %s",
-                toString(sdk_path_or_err.takeError()).c_str());
+      LLDB_LOG_ERROR(log, sdk_path_or_err.takeError(),
+                     "Error while searching for Xcode SDK: {0}");
       return;
     }
     FileSpec fspec(*sdk_path_or_err);
@@ -496,7 +495,7 @@ static llvm::Expected<std::string> GetXcodeSDK(XcodeSDK sdk) {
       if (!path.empty())
         break;
     }
-    LLDB_LOGF(log, "Couldn't find SDK %s on host", sdk_name.c_str());
+    LLDB_LOG(log, "Couldn't find SDK {0} on host", sdk_name);
 
     // Try without the version.
     if (!info.version.empty()) {
@@ -510,13 +509,13 @@ static llvm::Expected<std::string> GetXcodeSDK(XcodeSDK sdk) {
         break;
     }
 
-    LLDB_LOGF(log, "Couldn't find any matching SDK on host");
+    LLDB_LOG(log, "Couldn't find any matching SDK on host");
     return "";
   }
 
   // Whatever is left in output should be a valid path.
   if (!FileSystem::Instance().Exists(path)) {
-    LLDB_LOGF(log, "SDK returned by xcrun doesn't exist");
+    LLDB_LOG(log, "SDK returned by xcrun doesn't exist");
     return llvm::createStringError(llvm::inconvertibleErrorCode(),
                                    "SDK returned by xcrun doesn't exist");
   }
