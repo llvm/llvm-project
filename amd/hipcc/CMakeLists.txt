@@ -55,7 +55,7 @@ set(CPACK_RESOURCE_FILE_LICENSE "${CMAKE_CURRENT_SOURCE_DIR}/LICENSE.txt")
 
 # Debian-specific packaging variables.
 set(CPACK_DEBIAN_FILE_NAME "DEB-DEFAULT")
-set(CPACK_DEBIAN_PACKAGE_DEPENDS "hip-dev, libfile-basedir-perl, libfile-copy-recursive-perl, libfile-listing-perl, libfile-which-perl, liburi-encode-perl, perl (>= 5.0), rocm-core, rocm-llvm")
+set(CPACK_DEBIAN_PACKAGE_DEPENDS "perl (>= 5.0), libfile-basedir-perl, hip-dev, rocm-core, rocm-llvm")
 set(CPACK_DEBIAN_PACKAGE_HOMEPAGE "https://github.com/ROCm-Developer-Tools/HIPCC")
 if(DEFINED ENV{CPACK_DEBIAN_PACKAGE_RELEASE})
   set(CPACK_DEBIAN_PACKAGE_RELEASE $ENV{CPACK_DEBIAN_PACKAGE_RELEASE})
@@ -66,8 +66,8 @@ endif()
 # RPM-specific packaging variables.
 set(CPACK_RPM_FILE_NAME "RPM-DEFAULT")
 set(CPACK_RPM_PACKAGE_LICENSE "MIT")
-set(CPACK_RPM_PACKAGE_REQUIRES "hip-devel, perl >= 5.0, perl-File-BaseDir, perl-File-Listing, perl-File-Which, perl-URI-Encode, rocm-core, rocm-llvm")
-set(CPACK_RPM_PACKAGE_AUTOPROV 0)
+set(CPACK_RPM_PACKAGE_REQUIRES "perl >= 5.0, perl-File-BaseDir, hip-devel, rocm-core, rocm-llvm")
+set(CPACK_RPM_PACKAGE_AUTOREQROV 0)
 if(DEFINED ENV{CPACK_RPM_PACKAGE_RELEASE})
   set(CPACK_RPM_PACKAGE_RELEASE $ENV{CPACK_RPM_PACKAGE_RELEASE})
 else()
@@ -88,18 +88,31 @@ else()
 endif()
 set(CPACK_PACKAGE_VERSION "${CPACK_PACKAGE_VERSION_MAJOR}.${CPACK_PACKAGE_VERSION_MINOR}.${CPACK_PACKAGE_VERSION_PATCH}.${ROCM_VERSION_FOR_PACKAGE}")
 
+# Exclude Windows specific BAT scripts from install/packaging for Linux.
+if (NOT WIN32)
+  set(exclusion_pattern "*.bat")
+else ()
+  set(exclusion_pattern "")
+endif()
+
 install(DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/bin
   DESTINATION .
   USE_SOURCE_PERMISSIONS
-  DIRECTORY_PERMISSIONS OWNER_READ OWNER_WRITE OWNER_EXECUTE GROUP_READ GROUP_EXECUTE WORLD_READ WORLD_EXECUTE)
+  DIRECTORY_PERMISSIONS OWNER_READ OWNER_WRITE OWNER_EXECUTE GROUP_READ GROUP_EXECUTE WORLD_READ WORLD_EXECUTE
+  FILES_MATCHING
+  PATTERN "*"
+  PATTERN ${exclusion_pattern} EXCLUDE )
+
 install(FILES
   "LICENSE.txt"
   "README.md"
   COMPONENT ${hipcc_NAME}
   DESTINATION ${CMAKE_INSTALL_DOCDIR})
+
 install(TARGETS ${HIPCC_BIN}
   COMPONENT ${hipcc_NAME}
   RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR})
+
 install(TARGETS ${HIPCONFIG_BIN}
   COMPONENT ${hipcc_NAME}
   RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR})

@@ -39,4 +39,7 @@ endfunction()
 # Create symlink to binaries
 create_binary_symlink()
 # TODO: Following has to modified if component based installation is required
-install(DIRECTORY ${HIPCC_WRAPPER_BIN_DIR} DESTINATION hip)
+install(DIRECTORY ${HIPCC_WRAPPER_BIN_DIR} DESTINATION hip
+        FILES_MATCHING
+        PATTERN "*"
+        PATTERN ${exclusion_pattern} EXCLUDE )
