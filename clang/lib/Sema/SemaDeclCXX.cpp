@@ -6084,9 +6084,9 @@ void AbstractUsageInfo::CheckType(const NamedDecl *D, TypeLoc TL,
 /// Check for invalid uses of an abstract type in a function declaration.
 static void CheckAbstractClassUsage(AbstractUsageInfo &Info,
                                     FunctionDecl *FD) {
-  // No need to do the check on definitions, which require that
-  // the return/param types be complete.
-  if (FD->doesThisDeclarationHaveABody())
+  // Only definitions are required to refer to complete and
+  // non-abstract types.
+  if (!FD->doesThisDeclarationHaveABody())
     return;
 
   // For safety's sake, just ignore it if we don't have type source
