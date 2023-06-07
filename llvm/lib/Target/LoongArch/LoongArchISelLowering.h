@@ -191,6 +191,11 @@ public:
 
   bool convertSelectOfConstantsToMath(EVT VT) const override { return true; }
 
+  bool allowsMisalignedMemoryAccesses(
+      EVT VT, unsigned AddrSpace = 0, Align Alignment = Align(1),
+      MachineMemOperand::Flags Flags = MachineMemOperand::MONone,
+      unsigned *Fast = nullptr) const override;
+
 private:
   /// Target-specific function used to lower LoongArch calling conventions.
   typedef bool LoongArchCCAssignFn(const DataLayout &DL, LoongArchABI::ABI ABI,
