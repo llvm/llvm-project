@@ -140,14 +140,10 @@ public:
       builder.create<fir::StoreOp>(loc, to, toMutableBox);
       fir::runtime::genAssign(builder, loc, toMutableBox, from);
     } else {
-      // Assume overlap does not matter for scalar (dealt with memmove for
-      // characters).
-      // This is not true if this is a derived type with "recursive" allocatable
-      // components, in which case an overlap would matter because the LHS
-      // reallocation, if any, may modify the RHS component value before it is
-      // copied into the LHS.
-      if (fir::isRecordWithAllocatableMember(lhs.getFortranElementType()))
-        TODO(loc, "assignment with allocatable components");
+      // genScalarAssignment() must take care of potential overlap
+      // between LHS and RHS. Note that the overlap is possible
+      // also for components of LHS/RHS, and the Assign() runtime
+      // must take care of it.
       fir::factory::genScalarAssignment(builder, loc, lhsExv, rhsExv);
     }
     rewriter.eraseOp(assignOp);

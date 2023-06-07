@@ -1785,6 +1785,18 @@ MachineBasicBlock *LoongArchTargetLowering::EmitInstrWithCustomInserter(
   }
 }
 
+bool LoongArchTargetLowering::allowsMisalignedMemoryAccesses(
+    EVT VT, unsigned AddrSpace, Align Alignment, MachineMemOperand::Flags Flags,
+    unsigned *Fast) const {
+  if (!Subtarget.hasUAL())
+    return false;
+
+  // TODO: set reasonable speed number.
+  if (Fast)
+    *Fast = 1;
+  return true;
+}
+
 const char *LoongArchTargetLowering::getTargetNodeName(unsigned Opcode) const {
   switch ((LoongArchISD::NodeType)Opcode) {
   case LoongArchISD::FIRST_NUMBER:
