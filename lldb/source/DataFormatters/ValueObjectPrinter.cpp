@@ -502,13 +502,16 @@ bool DumpValueObjectOptions::PointerDepth::CanAllowExpansion() const {
 }
 
 bool ValueObjectPrinter::ShouldPrintChildren(
-    bool is_failed_description,
     DumpValueObjectOptions::PointerDepth &curr_ptr_depth) {
   const bool is_ref = IsRef();
   const bool is_ptr = IsPtr();
   const bool is_uninit = IsUninitialized();
 
   if (is_uninit)
+    return false;
+
+  // If we have reached the maximum depth we shouldn't print any more children.
+  if (HasReachedMaximumDepth())
     return false;
 
   // if the user has specified an element count, always print children as it is
@@ -523,37 +526,34 @@ bool ValueObjectPrinter::ShouldPrintChildren(
   if (TypeSummaryImpl *type_summary = GetSummaryFormatter())
     print_children = type_summary->DoesPrintChildren(m_valobj);
 
-  if (is_failed_description || !HasReachedMaximumDepth()) {
-    // We will show children for all concrete types. We won't show pointer
-    // contents unless a pointer depth has been specified. We won't reference
-    // contents unless the reference is the root object (depth of zero).
+  // We will show children for all concrete types. We won't show pointer
+  // contents unless a pointer depth has been specified. We won't reference
+  // contents unless the reference is the root object (depth of zero).
 
-    // Use a new temporary pointer depth in case we override the current
-    // pointer depth below...
+  // Use a new temporary pointer depth in case we override the current
+  // pointer depth below...
 
-    if (is_ptr || is_ref) {
-      // We have a pointer or reference whose value is an address. Make sure
-      // that address is not NULL
-      AddressType ptr_address_type;
-      if (m_valobj->GetPointerValue(&ptr_address_type) == 0)
-        return false;
+  if (is_ptr || is_ref) {
+    // We have a pointer or reference whose value is an address. Make sure
+    // that address is not NULL
+    AddressType ptr_address_type;
+    if (m_valobj->GetPointerValue(&ptr_address_type) == 0)
+      return false;
 
-      const bool is_root_level = m_curr_depth == 0;
+    const bool is_root_level = m_curr_depth == 0;
 
-      if (is_ref && is_root_level && print_children) {
-        // If this is the root object (depth is zero) that we are showing and
-        // it is a reference, and no pointer depth has been supplied print out
-        // what it references. Don't do this at deeper depths otherwise we can
-        // end up with infinite recursion...
-        return true;
-      }
-
-      return curr_ptr_depth.CanAllowExpansion();
+    if (is_ref && is_root_level && print_children) {
+      // If this is the root object (depth is zero) that we are showing and
+      // it is a reference, and no pointer depth has been supplied print out
+      // what it references. Don't do this at deeper depths otherwise we can
+      // end up with infinite recursion...
+      return true;
     }
 
-    return print_children || m_summary.empty();
+    return curr_ptr_depth.CanAllowExpansion();
   }
-  return false;
+
+  return print_children || m_summary.empty();
 }
 
 bool ValueObjectPrinter::ShouldExpandEmptyAggregates() {
@@ -794,14 +794,10 @@ bool ValueObjectPrinter::PrintChildrenOneLiner(bool hide_names) {
 
 void ValueObjectPrinter::PrintChildrenIfNeeded(bool value_printed,
                                                bool summary_printed) {
-  // This flag controls whether we tried to display a description for this
-  // object and failed if that happens, we want to display the children if any.
-  bool is_failed_description =
-      !PrintObjectDescriptionIfNeeded(value_printed, summary_printed);
+  PrintObjectDescriptionIfNeeded(value_printed, summary_printed);
 
   DumpValueObjectOptions::PointerDepth curr_ptr_depth = m_ptr_depth;
-  const bool print_children =
-      ShouldPrintChildren(is_failed_description, curr_ptr_depth);
+  const bool print_children = ShouldPrintChildren(curr_ptr_depth);
   const bool print_oneline =
       (curr_ptr_depth.CanAllowExpansion() || m_options.m_show_types ||
        !m_options.m_allow_oneliner_mode || m_options.m_flat_output ||
