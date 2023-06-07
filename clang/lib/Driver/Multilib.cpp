@@ -49,7 +49,7 @@ void Multilib::print(raw_ostream &OS) const {
   }
   OS << ";";
   for (StringRef Flag : Flags) {
-    if (Flag.front() == '+')
+    if (Flag.front() == '-')
       OS << "@" << Flag.substr(1);
   }
 }

@@ -1299,7 +1299,7 @@ struct VPDoubleValueDef : public VPRecipeBase {
     new VPValue(nullptr, this);
   }
 
-  void execute(struct VPTransformState &State) override{};
+  void execute(struct VPTransformState &State) override {}
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
   void print(raw_ostream &O, const Twine &Indent,
              VPSlotTracker &SlotTracker) const override {}

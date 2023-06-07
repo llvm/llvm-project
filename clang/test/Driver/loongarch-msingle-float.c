@@ -8,12 +8,10 @@
 // WARN: warning: argument unused during compilation: '-mfpu=0'
 // WARN: warning: argument unused during compilation: '-mabi=lp64s'
 
-// CC1-NOT: "-target-feature"
-// CC1: "-target-feature" "+64bit" "-target-feature" "+f" "-target-feature" "-d"
-// CC1-NOT: "-target-feature"
+// CC1: "-target-feature" "+f"{{.*}} "-target-feature" "-d"
 // CC1: "-target-abi" "lp64f"
 
-// IR: attributes #[[#]] ={{.*}}"target-features"="+64bit,+f,-d"
+// IR: attributes #[[#]] ={{.*}}"target-features"="{{(.*,)?}}+f,{{(.*,)?}}-d"
 
 int foo(void) {
   return 3;

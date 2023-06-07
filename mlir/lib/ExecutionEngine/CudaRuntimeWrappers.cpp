@@ -19,7 +19,13 @@
 #include "cuda.h"
 #include "cuda_bf16.h"
 #include "cuda_fp16.h"
+
+#if MLIR_ENABLE_CUDA_CUSPARSE
 #include "cusparse.h"
+#if MLIR_ENABLE_CUDA_CUSPARSELT
+#include "cusparseLt.h"
+#endif // MLIR_ENABLE_CUDA_CUSPARSELT
+#endif // MLIR_ENABLE_CUDA_CUSPARSE
 
 #ifdef _WIN32
 #define MLIR_CUDA_WRAPPERS_EXPORT __declspec(dllexport)
@@ -225,6 +231,8 @@ mgpuMemHostUnregisterMemRef(int64_t rank,
 extern "C" MLIR_CUDA_WRAPPERS_EXPORT void mgpuSetDefaultDevice(int32_t device) {
   defaultDevice = device;
 }
+
+#if MLIR_ENABLE_CUDA_CUSPARSE
 
 ///
 /// Wrapper methods for the cuSparse library.
@@ -445,3 +453,162 @@ mgpuSDDMM(void *h, int32_t ma, int32_t mb, void *a, void *b, void *c,
                                          matB, betap, matC, cTp,
                                          CUSPARSE_SDDMM_ALG_DEFAULT, buf))
 }
+
+#if MLIR_ENABLE_CUDA_CUSPARSELT
+
+///
+/// Wrapper methods for the cuSparseLt library.
+///
+
+struct cusparseLtSpMatHandleAndData {
+  cusparseLtMatDescriptor_t mat;
+  void *values{nullptr};
+  // TODO: the following is associated with the SpMM operator rather than the
+  // sparse matrix. Create workspace buffers and pass them to the SpMM
+  // execution.
+  cusparseLtMatmulAlgSelection_t alg_sel;
+  cusparseLtMatmulPlan_t plan;
+  cusparseLtMatmulDescriptor_t matmul;
+};
+
+struct cusparseLtDnMatHandleAndData {
+  cusparseLtMatDescriptor_t mat;
+  void *values{nullptr};
+};
+
+extern "C" MLIR_CUDA_WRAPPERS_EXPORT void mgpuAssertSparseLTEnvHandleSize() {
+  assert(sizeof(cusparseLtHandle_t) == 11024);
+}
+
+extern "C" MLIR_CUDA_WRAPPERS_EXPORT void mgpuAssertSparseLtSpMatHandleSize() {
+  return assert(sizeof(cusparseLtSpMatHandleAndData) == 44104);
+}
+
+extern "C" MLIR_CUDA_WRAPPERS_EXPORT void mgpuSparseLtDnMatHandleSize() {
+  return assert(sizeof(cusparseLtDnMatHandleAndData) == 11032);
+}
+
+extern "C" MLIR_CUDA_WRAPPERS_EXPORT void *
+mgpuCreateSparseLtEnv(void *h, CUstream /*stream*/) {
+  // note that cuSparseLt still uses cusparseStatus_t
+  CUSPARSE_REPORT_IF_ERROR(
+      cusparseLtInit(reinterpret_cast<cusparseLtHandle_t *>(h)))
+  return;
+}
+
+extern "C" MLIR_CUDA_WRAPPERS_EXPORT void
+mgpuDestroySparseLtEnv(void *h, CUstream /*stream*/) {
+  auto handle = reinterpret_cast<cusparseLtHandle_t *>(h);
+  CUSPARSE_REPORT_IF_ERROR(cusparseLtDestroy(handle))
+}
+
+extern "C" MLIR_CUDA_WRAPPERS_EXPORT void
+mgpuCreateCuSparseLtDnMat(void *dh, void *h, intptr_t rows, intptr_t cols,
+                          void *values, int32_t dw, CUstream /*stream*/) {
+  cusparseLtMatDescriptor_t mat;
+  auto handle = reinterpret_cast<cusparseLtHandle_t *>(h);
+  auto dnmat_handle = reinterpret_cast<cusparseLtDnMatHandleAndData *>(dh);
+  cudaDataType_t dtp = dataTp(dw);
+  // assuming row-major when deciding lda
+  CUSPARSE_REPORT_IF_ERROR(cusparseLtDenseDescriptorInit(
+      handle, &(dh->mat), rows, cols, /*lda=*/cols,
+      /*alignment=*/16, dtp, CUSPARSE_ORDER_ROW))
+  dnmat_handle->values = values;
+}
+
+// This can be used to destroy both dense matrices and sparse matrices in
+// cusparseLt
+extern "C" MLIR_CUDA_WRAPPERS_EXPORT void
+mgpuDestroyCuSparseLtSpMat(void *m, CUstream /*stream*/) {
+  auto matAndData = reinterpret_cast<cusparseLtSpMatHandleAndData>(m);
+}
+
+extern "C" MLIR_CUDA_WRAPPERS_EXPORT void
+mgpuDestroyCuSparseLtDnMat(void *m, CUstream /*stream*/) {
+  auto matAndData = reinterpret_cast<cusparseLtDnMatHandleAndData>(m);
+  CUSPARSE_REPORT_IF_ERROR(cusparseLtMatDescriptorDestroy(&(mat->mat)))
+}
+
+extern "C" MLIR_CUDA_WRAPPERS_EXPORT void
+mgpuCusparseLtCreate2To4SpMat(void *sh, void *h, intptr_t rows, intptr_t cols,
+                              void *values, int32_t dw, CUstream /*stream*/) {
+  auto spmat_handle = reinterpret_cast<cusparseLtSpMatHandleAndData *>(sh);
+  spmat_handle->values = values;
+  auto handle = reinterpret_cast<cusparseLtHandle_t *>(h);
+  cudaDataType_t dtp = dataTp_cusparseLt(dw);
+  // assuming row-major when deciding lda
+  CUSPARSE_REPORT_IF_ERROR(cusparseLtStructuredDescriptorInit(
+      handle, &(sh->mat), rows, cols, /*ld=*/cols, /*alignment=*/16, dtp,
+      CUSPARSE_ORDER_ROW, CUSPARSELT_SPARSITY_50_PERCENT))
+}
+
+// Several things are being done in this stage, algorithm selection, planning,
+// and returning workspace and compressed matrices data buffer sizes.
+extern "C" MLIR_CUDA_WRAPPERS_EXPORT void
+mgpuCuSparseLtSpMMBufferSize(void *workspace_size, void *compressed_size,
+                             void *compressed_buffer_size, void *h, void *a,
+                             CUstream /*stream*/) {
+  // TODO: support more advanced settings, e.g., the input right operand is a
+  // sparse matrix assuming matA is the sparse matrix
+  auto handle = reinterpret_cast<cusparseLtHandle_t *>(h);
+  auto matA = reinterpret_cast<cusparseLtSpMatHandleAndData *>(a);
+
+  CHECK_CUSPARSE(cusparseLtMatmulAlgSelectionInit(
+      handle, &(matWithData.alg_sel), &matmul, CUSPARSELT_MATMUL_ALG_DEFAULT))
+  int alg = 0;
+  CHECK_CUSPARSE(cusparseLtMatmulAlgSetAttribute(
+      handle, &(matWithData.alg_sel), CUSPARSELT_MATMUL_ALG_CONFIG_ID, &alg,
+      sizeof(alg)))
+  // TODO: add transpose support
+  CHECK_CUSPARSE(cusparseLtMatmulDescriptorInit(
+      handle, &(matA.matmul), c, CUSPARSE_OPERATION_NON_TRANSPOSE, &(matA->mat),
+      &matB, &matC, &matC, compute_type))
+  CHECK_CUSPARSE(cusparseLtMatmulPlanInit(handle, &(matWithData.plan), &matmul,
+                                          &(matWithData.alg_sel)))
+
+  CHECK_CUSPARSE(
+      cusparseLtMatmulGetWorkspace(handle, &(matA.plan), workspace_size))
+  CHECK_CUSPARSE(cusparseLtSpMMACompressedSize(
+      handle, &(matA.plan), compressed_size, compressed_buffer_size))
+
+  // avoid zero-alloc
+  *workspace_size = (*workspace_size == 0 ? 1 : *workspace_size);
+  *compressed_size = (*compressed_size == 0 ? 1 : *compressed_size);
+  *compressed_buffer_size =
+      (*compressed_buffer_size == 0 ? 1 : *compressed_buffer_size);
+  return;
+}
+
+extern "C" MLIR_CUDA_WRAPPERS_EXPORT void
+mgpuCuSparseLtSpMM(void *alg_sel, void *plan, void *matmul, void *h, void *a,
+                   void *b, void *c, int32_t dw, void *buf, void *dA_compressed,
+                   void *dA_compressedBuffer, CUstream stream) {
+  auto handle = reinterpret_cast<cusparseLtHandle_t *>(h);
+  auto matA = reinterpret_cast<cusparseLtSpMatHandleAndData *>(a);
+  auto matB = reinterpret_cast<cusparseLtDnMatHandleAndData *>(b);
+  auto matC = reinterpret_cast<cusparseLtDnMatHandleAndData *>(c);
+
+  cusparseLtMatmulAlgSelection_t alg_sel;
+  cusparseLtMatmulPlan_t plan;
+  cusparseLtMatmulDescriptor_t matmul;
+
+  ALPHABETA(dw, alpha, beta)
+
+  CHECK_CUSPARSE(cusparseLtSpMMACompress(handle, &(matA->plan), &(matA->values),
+                                         dA_compressed, dA_compressedBuffer,
+                                         stream))
+
+  // TODO: add support to multi-stream execution
+  // Perform the matrix multiplication. D = A*B+C using C==D for now
+  CHECK_CUSPARSE(
+      cusparseLtMatmul(handle, reinterpret_cast<cusparseLtMatmulPlan_t *>(plan),
+                       &alpha, dA_compressed, dB, &beta, matC->values,
+                       /*dD*/ matC->values, d_workspace, &stream, 1))
+
+  CUSPARSE_REPORT_IF_ERROR(cusparseLtMatDescriptorDestroy(&(mat->mat)))
+  // destroy the plan associated with the sparse matrix
+  CUSPARSE_REPORT_IF_ERROR(cusparseLtMatmulPlanDestroy(&(mat->plan)))
+}
+
+#endif // MLIR_ENABLE_CUDA_CUSPARSELT
+#endif // MLIR_ENABLE_CUDA_CUSPARSE

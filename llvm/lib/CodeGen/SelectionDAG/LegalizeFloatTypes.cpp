@@ -111,7 +111,9 @@ void DAGTypeLegalizer::SoftenFloatResult(SDNode *N, unsigned ResNo) {
     case ISD::STRICT_FPOW:
     case ISD::FPOW:        R = SoftenFloatRes_FPOW(N); break;
     case ISD::STRICT_FPOWI:
-    case ISD::FPOWI:       R = SoftenFloatRes_FPOWI(N); break;
+    case ISD::FPOWI:
+    case ISD::FLDEXP:
+    case ISD::STRICT_FLDEXP: R = SoftenFloatRes_ExpOp(N); break;
     case ISD::STRICT_FREM:
     case ISD::FREM:        R = SoftenFloatRes_FREM(N); break;
     case ISD::STRICT_FRINT:
@@ -603,13 +605,17 @@ SDValue DAGTypeLegalizer::SoftenFloatRes_FPOW(SDNode *N) {
                                                RTLIB::POW_PPCF128));
 }
 
-SDValue DAGTypeLegalizer::SoftenFloatRes_FPOWI(SDNode *N) {
+SDValue DAGTypeLegalizer::SoftenFloatRes_ExpOp(SDNode *N) {
   bool IsStrict = N->isStrictFPOpcode();
   unsigned Offset = IsStrict ? 1 : 0;
   assert((N->getOperand(1 + Offset).getValueType() == MVT::i16 ||
           N->getOperand(1 + Offset).getValueType() == MVT::i32) &&
          "Unsupported power type!");
-  RTLIB::Libcall LC = RTLIB::getPOWI(N->getValueType(0));
+  bool IsPowI =
+      N->getOpcode() == ISD::FPOWI || N->getOpcode() == ISD::STRICT_FPOWI;
+
+  RTLIB::Libcall LC = IsPowI ? RTLIB::getPOWI(N->getValueType(0))
+                             : RTLIB::getLDEXP(N->getValueType(0));
   assert(LC != RTLIB::UNKNOWN_LIBCALL && "Unexpected fpowi.");
   if (!TLI.getLibcallName(LC)) {
     // Some targets don't have a powi libcall; use pow instead.
@@ -1274,6 +1280,8 @@ void DAGTypeLegalizer::ExpandFloatResult(SDNode *N, unsigned ResNo) {
   case ISD::FPOW:       ExpandFloatRes_FPOW(N, Lo, Hi); break;
   case ISD::STRICT_FPOWI:
   case ISD::FPOWI:      ExpandFloatRes_FPOWI(N, Lo, Hi); break;
+  case ISD::FLDEXP:
+  case ISD::STRICT_FLDEXP: ExpandFloatRes_FLDEXP(N, Lo, Hi); break;
   case ISD::FREEZE:     ExpandFloatRes_FREEZE(N, Lo, Hi); break;
   case ISD::STRICT_FRINT:
   case ISD::FRINT:      ExpandFloatRes_FRINT(N, Lo, Hi); break;
@@ -1567,6 +1575,11 @@ void DAGTypeLegalizer::ExpandFloatRes_FPOW(SDNode *N,
 void DAGTypeLegalizer::ExpandFloatRes_FPOWI(SDNode *N,
                                             SDValue &Lo, SDValue &Hi) {
   ExpandFloatRes_Binary(N, RTLIB::getPOWI(N->getValueType(0)), Lo, Hi);
+}
+
+void DAGTypeLegalizer::ExpandFloatRes_FLDEXP(SDNode *N, SDValue &Lo,
+                                             SDValue &Hi) {
+  ExpandFloatRes_Binary(N, RTLIB::getLDEXP(N->getValueType(0)), Lo, Hi);
 }
 
 void DAGTypeLegalizer::ExpandFloatRes_FREEZE(SDNode *N,
@@ -2310,7 +2323,8 @@ void DAGTypeLegalizer::PromoteFloatResult(SDNode *N, unsigned ResNo) {
     case ISD::FMA:        // FMA is same as FMAD
     case ISD::FMAD:       R = PromoteFloatRes_FMAD(N); break;
 
-    case ISD::FPOWI:      R = PromoteFloatRes_FPOWI(N); break;
+    case ISD::FPOWI:
+    case ISD::FLDEXP:     R = PromoteFloatRes_ExpOp(N); break;
 
     case ISD::FP_ROUND:   R = PromoteFloatRes_FP_ROUND(N); break;
     case ISD::LOAD:       R = PromoteFloatRes_LOAD(N); break;
@@ -2479,7 +2493,7 @@ SDValue DAGTypeLegalizer::PromoteFloatRes_FMAD(SDNode *N) {
 }
 
 // Promote the Float (first) operand and retain the Integer (second) operand
-SDValue DAGTypeLegalizer::PromoteFloatRes_FPOWI(SDNode *N) {
+SDValue DAGTypeLegalizer::PromoteFloatRes_ExpOp(SDNode *N) {
   EVT VT = N->getValueType(0);
   EVT NVT = TLI.getTypeToTransformTo(*DAG.getContext(), VT);
   SDValue Op0 = GetPromotedFloat(N->getOperand(0));
@@ -2676,7 +2690,8 @@ void DAGTypeLegalizer::SoftPromoteHalfResult(SDNode *N, unsigned ResNo) {
   case ISD::FMA:         // FMA is same as FMAD
   case ISD::FMAD:        R = SoftPromoteHalfRes_FMAD(N); break;
 
-  case ISD::FPOWI:       R = SoftPromoteHalfRes_FPOWI(N); break;
+  case ISD::FPOWI:
+  case ISD::FLDEXP:      R = SoftPromoteHalfRes_ExpOp(N); break;
 
   case ISD::LOAD:        R = SoftPromoteHalfRes_LOAD(N); break;
   case ISD::SELECT:      R = SoftPromoteHalfRes_SELECT(N); break;
@@ -2788,7 +2803,7 @@ SDValue DAGTypeLegalizer::SoftPromoteHalfRes_FMAD(SDNode *N) {
   return DAG.getNode(GetPromotionOpcode(NVT, OVT), dl, MVT::i16, Res);
 }
 
-SDValue DAGTypeLegalizer::SoftPromoteHalfRes_FPOWI(SDNode *N) {
+SDValue DAGTypeLegalizer::SoftPromoteHalfRes_ExpOp(SDNode *N) {
   EVT OVT = N->getValueType(0);
   EVT NVT = TLI.getTypeToTransformTo(*DAG.getContext(), OVT);
   SDValue Op0 = GetSoftPromotedHalf(N->getOperand(0));

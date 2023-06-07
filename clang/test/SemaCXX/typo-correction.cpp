@@ -1,5 +1,5 @@
-// RUN: %clang_cc1 -fspell-checking-limit 0 -verify -Wno-c++11-extensions -fcxx-exceptions %s
-// RUN: %clang_cc1 -fspell-checking-limit 0 -verify -Wno-c++11-extensions -fcxx-exceptions -std=c++20 %s
+// RUN: %clang_cc1 -fspell-checking-limit=0 -verify -Wno-c++11-extensions -fcxx-exceptions %s
+// RUN: %clang_cc1 -fspell-checking-limit=0 -verify -Wno-c++11-extensions -fcxx-exceptions -std=c++20 %s
 
 namespace PR21817{
 int a(-rsing[2]); // expected-error {{undeclared identifier 'rsing'; did you mean 'using'?}}

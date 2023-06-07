@@ -22,7 +22,7 @@ public:
 
   llvm::StringRef GetPluginName() override { return GetPluginNameStatic(); }
 
-  void OverrideStopInfo(Thread &thread) const override{};
+  void OverrideStopInfo(Thread &thread) const override {}
 
   const MemoryTagManager *GetMemoryTagManager() const override {
     return &m_memory_tag_manager;
