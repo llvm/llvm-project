@@ -175,7 +175,7 @@ void RISCVDAGToDAGISel::PostprocessISelDAG() {
 static SDValue selectImmSeq(SelectionDAG *CurDAG, const SDLoc &DL, const MVT VT,
                             RISCVMatInt::InstSeq &Seq) {
   SDValue SrcReg = CurDAG->getRegister(RISCV::X0, VT);
-  for (RISCVMatInt::Inst &Inst : Seq) {
+  for (const RISCVMatInt::Inst &Inst : Seq) {
     SDValue SDImm = CurDAG->getTargetConstant(Inst.getImm(), DL, VT);
     SDNode *Result = nullptr;
     switch (Inst.getOpndKind()) {
@@ -211,7 +211,7 @@ static SDValue selectImm(SelectionDAG *CurDAG, const SDLoc &DL, const MVT VT,
   // constant pool.
   if (Seq.size() > 3) {
     int64_t LoVal = SignExtend64<32>(Imm);
-    int64_t HiVal = SignExtend64<32>((Imm - LoVal) >> 32);
+    int64_t HiVal = SignExtend64<32>(((uint64_t)Imm - (uint64_t)LoVal) >> 32);
     if (LoVal == HiVal) {
       RISCVMatInt::InstSeq SeqLo =
           RISCVMatInt::generateInstSeq(LoVal, Subtarget.getFeatureBits());

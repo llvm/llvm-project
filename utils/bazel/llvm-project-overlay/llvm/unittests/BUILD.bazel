@@ -638,6 +638,7 @@ cc_test(
         "//llvm:AllTargetsCodeGens",
         "//llvm:BinaryFormat",
         "//llvm:Core",
+        "//llvm:ProfileData",
         "//llvm:Support",
         "//llvm:TargetParser",
         "//llvm:TestingSupport",

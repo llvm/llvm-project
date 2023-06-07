@@ -18,10 +18,6 @@ def AMDGPUDTIntTernaryOp : SDTypeProfile<1, 3, [
   SDTCisSameAs<0, 1>, SDTCisSameAs<0, 2>, SDTCisInt<0>, SDTCisInt<3>
 ]>;
 
-def AMDGPULdExpOp : SDTypeProfile<1, 2,
-  [SDTCisSameAs<0, 1>, SDTCisFP<0>, SDTCisInt<2>]
->;
-
 def AMDGPUFPClassOp : SDTypeProfile<1, 2,
   [SDTCisInt<0>, SDTCisFP<1>, SDTCisInt<2>]
 >;
@@ -127,8 +123,6 @@ def AMDGPUrcp_iflag : SDNode<"AMDGPUISD::RCP_IFLAG", SDTFPUnaryOp>;
 
 // out = 1.0 / sqrt(a) result clamped to +/- max_float.
 def AMDGPUrsq_clamp_impl : SDNode<"AMDGPUISD::RSQ_CLAMP", SDTFPUnaryOp>;
-
-def AMDGPUldexp_impl : SDNode<"AMDGPUISD::LDEXP", AMDGPULdExpOp>;
 
 def AMDGPUpkrtz_f16_f32_impl : SDNode<"AMDGPUISD::CVT_PKRTZ_F16_F32", AMDGPUFPPackOp>;
 def AMDGPUpknorm_i16_f32_impl : SDNode<"AMDGPUISD::CVT_PKNORM_I16_F32", AMDGPUFPPackOp>;
@@ -388,10 +382,6 @@ def AMDGPUcos : PatFrags<(ops node:$src), [(int_amdgcn_cos node:$src),
                                            (AMDGPUcos_impl node:$src)]>;
 def AMDGPUfract : PatFrags<(ops node:$src), [(int_amdgcn_fract node:$src),
                                              (AMDGPUfract_impl node:$src)]>;
-
-def AMDGPUldexp : PatFrags<(ops node:$src0, node:$src1),
-  [(int_amdgcn_ldexp node:$src0, node:$src1),
-   (AMDGPUldexp_impl node:$src0, node:$src1)]>;
 
 def AMDGPUfp_class : PatFrags<(ops node:$src0, node:$src1),
   [(int_amdgcn_class node:$src0, node:$src1),

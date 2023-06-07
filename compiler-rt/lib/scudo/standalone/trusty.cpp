@@ -43,6 +43,9 @@ void *map(void *Addr, uptr Size, const char *Name, uptr Flags,
   if (Addr)
     MmapFlags |= MMAP_FLAG_FIXED_NOREPLACE;
 
+  if (Flags & MAP_MEMTAG)
+    MmapFlags |= MMAP_FLAG_PROT_MTE;
+
   void *P = (void *)_trusty_mmap(Addr, Size, MmapFlags, 0);
 
   if (IS_ERR(P)) {

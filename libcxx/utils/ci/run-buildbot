@@ -124,19 +124,10 @@ function generate-cmake() {
 }
 
 function generate-cmake-libcxx-win() {
-    # TODO: Clang-cl in MSVC configurations don't have access to compiler_rt
-    # builtins helpers for int128 division. See
-    # https://reviews.llvm.org/D91139#2429595 for a comment about longterm
-    # intent for handling the issue. In the meantime, define
-    # -D_LIBCPP_HAS_NO_INT128 (both when building the library itself and
-    # when building tests) to allow enabling filesystem for running tests,
-    # even if it uses a non-permanent ABI.
     generate-cmake-base \
           -DLLVM_ENABLE_RUNTIMES="libcxx" \
           -DCMAKE_C_COMPILER=clang-cl \
           -DCMAKE_CXX_COMPILER=clang-cl \
-          -DLIBCXX_ENABLE_FILESYSTEM=YES \
-          -DLIBCXX_EXTRA_SITE_DEFINES="_LIBCPP_HAS_NO_INT128" \
           "${@}"
 }
 
