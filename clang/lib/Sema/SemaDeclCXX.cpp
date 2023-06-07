@@ -2437,6 +2437,88 @@ static bool CheckConstexprFunctionBody(Sema &SemaRef, const FunctionDecl *Dcl,
   return true;
 }
 
+bool Sema::CheckImmediateEscalatingFunctionDefinition(
+    FunctionDecl *FD, bool HasImmediateEscalatingExpression) {
+  if (!FD->hasBody() || !getLangOpts().CPlusPlus20 ||
+      !FD->isImmediateEscalating())
+    return true;
+  FD->setBodyContainsImmediateEscalatingExpressions(
+      HasImmediateEscalatingExpression);
+  if (HasImmediateEscalatingExpression) {
+    auto it = UndefinedButUsed.find(FD->getCanonicalDecl());
+    if (it != UndefinedButUsed.end()) {
+      Diag(it->second, diag::err_immediate_function_used_before_definition)
+          << it->first;
+      Diag(FD->getLocation(), diag::note_defined_here) << FD;
+      if (FD->isImmediateFunction() && !FD->isConsteval())
+        DiagnoseImmediateEscalatingReason(FD);
+      return false;
+    }
+  }
+  return true;
+}
+
+void Sema::DiagnoseImmediateEscalatingReason(const FunctionDecl *FD) {
+  assert(FD->isImmediateEscalating() && !FD->isConsteval() &&
+         "expected an immediate function");
+  assert(FD->hasBody() && "expected the function to have a body");
+  struct ImmediateEscalatingExpressionsVisitor
+      : public RecursiveASTVisitor<ImmediateEscalatingExpressionsVisitor> {
+    using Base = RecursiveASTVisitor<ImmediateEscalatingExpressionsVisitor>;
+    Sema &SemaRef;
+    const FunctionDecl *FD;
+    ImmediateEscalatingExpressionsVisitor(Sema &SemaRef, const FunctionDecl *FD)
+        : SemaRef(SemaRef), FD(FD) {}
+
+    bool shouldVisitImplicitCode() const { return true; }
+    bool shouldVisitLambdaBody() const { return false; }
+
+    bool TraverseCallExpr(CallExpr *E) {
+      if (const auto *DR =
+              dyn_cast<DeclRefExpr>(E->getCallee()->IgnoreImplicit());
+          DR && DR->isImmediateEscalating()) {
+        SemaRef.Diag(E->getBeginLoc(), diag::note_immediate_function_reason)
+            << FD << E->getDirectCallee() << E->getDirectCallee()->isConsteval()
+            << /*Call*/ 1 << /*Function*/ 0 << E->getSourceRange();
+      }
+      for (auto A : E->arguments()) {
+        getDerived().TraverseStmt(A);
+      }
+      return true;
+    }
+    bool VisitDeclRefExpr(DeclRefExpr *E) {
+      if (const auto *ReferencedFn = dyn_cast<FunctionDecl>(E->getDecl());
+          ReferencedFn && E->isImmediateEscalating()) {
+        SemaRef.Diag(E->getBeginLoc(), diag::note_immediate_function_reason)
+            << FD << ReferencedFn << ReferencedFn->isConsteval()
+            << /*Address*/ 0 << /*Function*/ 0 << E->getSourceRange();
+      }
+      return true;
+    }
+    bool VisitCXXConstructExpr(CXXConstructExpr *E) {
+      CXXConstructorDecl *D = E->getConstructor();
+      if (E->isImmediateEscalating()) {
+        SemaRef.Diag(E->getBeginLoc(), diag::note_immediate_function_reason)
+            << FD << D << D->isConsteval() << /*Call*/ 1 << /*Constructor*/ 1
+            << E->getSourceRange();
+      }
+      return true;
+    }
+
+    // These nodes can never contain an immediate escalating expression,
+    // we can skip them to avoid unecessary work.
+    bool TraverseDecl(Decl *D) {
+      if (isa<FunctionDecl, RecordDecl>(D))
+        return true;
+      return Base::TraverseDecl(D);
+    }
+    bool TraverseType(QualType T) { return true; }
+    bool VisitBlockExpr(BlockExpr *T) { return true; }
+
+  } Visitor(*this, FD);
+  Visitor.TraverseStmt(FD->getBody());
+}
+
 /// Get the class that is directly named by the current context. This is the
 /// class for which an unqualified-id in this scope could name a constructor
 /// or destructor.
