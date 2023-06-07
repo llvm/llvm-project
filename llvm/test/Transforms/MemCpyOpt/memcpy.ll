@@ -395,13 +395,9 @@ declare void @f2(ptr)
 declare void @f(ptr)
 declare void @f_full_readonly(ptr nocapture noalias readonly)
 
-; TODO: Remove memcpy, which is guaranteed to be invariant
-; before and after the call because of its attributes.
 define void @immut_param(ptr align 4 noalias %val) {
 ; CHECK-LABEL: @immut_param(
-; CHECK-NEXT:    [[VAL1:%.*]] = alloca i8, align 4
-; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr align 4 [[VAL1]], ptr align 4 [[VAL:%.*]], i64 1, i1 false)
-; CHECK-NEXT:    call void @f(ptr noalias nocapture readonly align 4 [[VAL1]])
+; CHECK-NEXT:    call void @f(ptr noalias nocapture readonly align 4 [[VAL:%.*]])
 ; CHECK-NEXT:    ret void
 ;
   %val1 = alloca i8, align 4
@@ -452,12 +448,9 @@ define void @immut_param_maywrite(ptr align 4 noalias %val) {
   ret void
 }
 
-; TODO: Remove memcpy
 define void @immut_param_readonly(ptr align 4 noalias %val) {
 ; CHECK-LABEL: @immut_param_readonly(
-; CHECK-NEXT:    [[VAL1:%.*]] = alloca i8, align 4
-; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr align 4 [[VAL1]], ptr align 4 [[VAL:%.*]], i64 1, i1 false)
-; CHECK-NEXT:    call void @f_full_readonly(ptr align 4 [[VAL1]])
+; CHECK-NEXT:    call void @f_full_readonly(ptr align 4 [[VAL:%.*]])
 ; CHECK-NEXT:    ret void
 ;
   %val1 = alloca i8, align 4
@@ -466,12 +459,9 @@ define void @immut_param_readonly(ptr align 4 noalias %val) {
   ret void
 }
 
-; TODO: Remove memcpy
 define void @immut_param_no_align(ptr align 4 noalias %val) {
 ; CHECK-LABEL: @immut_param_no_align(
-; CHECK-NEXT:    [[VAL1:%.*]] = alloca i8, align 4
-; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr align 4 [[VAL1]], ptr align 4 [[VAL:%.*]], i64 1, i1 false)
-; CHECK-NEXT:    call void @f(ptr noalias nocapture readonly [[VAL1]])
+; CHECK-NEXT:    call void @f(ptr noalias nocapture readonly [[VAL:%.*]])
 ; CHECK-NEXT:    ret void
 ;
   %val1 = alloca i8, align 4
@@ -580,12 +570,9 @@ define void @immut_param_different_addrespace(ptr addrspace(1) align 4 noalias %
   ret void
 }
 
-; TODO: remove memcpy
 define void @immut_param_bigger_align(ptr align 16 noalias %val) {
 ; CHECK-LABEL: @immut_param_bigger_align(
-; CHECK-NEXT:    [[VAL1:%.*]] = alloca i8, align 4
-; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr align 4 [[VAL1]], ptr [[VAL:%.*]], i64 1, i1 false)
-; CHECK-NEXT:    call void @f(ptr noalias nocapture readonly [[VAL1]])
+; CHECK-NEXT:    call void @f(ptr noalias nocapture readonly [[VAL:%.*]])
 ; CHECK-NEXT:    ret void
 ;
   %val1 = alloca i8, align 4
@@ -608,14 +595,11 @@ define void @immut_param_smaller_align(ptr align 4 noalias %val) {
   ret void
 }
 
-; TODO: remove memcpy.
 define void @immut_param_enforced_alignment() {
 ; CHECK-LABEL: @immut_param_enforced_alignment(
-; CHECK-NEXT:    [[VAL:%.*]] = alloca i8, align 1
+; CHECK-NEXT:    [[VAL:%.*]] = alloca i8, align 4
 ; CHECK-NEXT:    store i32 42, ptr [[VAL]], align 4
-; CHECK-NEXT:    [[VAL1:%.*]] = alloca i8, align 4
-; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr [[VAL1]], ptr [[VAL]], i64 1, i1 false)
-; CHECK-NEXT:    call void @f(ptr noalias nocapture readonly [[VAL1]])
+; CHECK-NEXT:    call void @f(ptr noalias nocapture readonly [[VAL]])
 ; CHECK-NEXT:    ret void
 ;
   %val = alloca i8, align 1
@@ -659,14 +643,11 @@ define void @immut_but_alias_src(ptr %val) {
   ret void
 }
 
-; TODO: remove memcpy
 define void @immut_unescaped_alloca() {
 ; CHECK-LABEL: @immut_unescaped_alloca(
 ; CHECK-NEXT:    [[VAL:%.*]] = alloca i8, align 4
 ; CHECK-NEXT:    store i32 42, ptr [[VAL]], align 4
-; CHECK-NEXT:    [[VAL1:%.*]] = alloca i8, align 4
-; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr align 4 [[VAL1]], ptr align 4 [[VAL]], i64 1, i1 false)
-; CHECK-NEXT:    call void @f_full_readonly(ptr [[VAL1]])
+; CHECK-NEXT:    call void @f_full_readonly(ptr [[VAL]])
 ; CHECK-NEXT:    ret void
 ;
   %val = alloca i8, align 4
