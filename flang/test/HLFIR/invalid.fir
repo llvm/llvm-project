@@ -509,6 +509,41 @@ func.func @bad_matmul8(%arg0: !hlfir.expr<2xi32>, %arg1: !hlfir.expr<2x3xi32>) {
 }
 
 // -----
+func.func @bad_dot_product1(%arg0: !hlfir.expr<2xi32>, %arg1: !hlfir.expr<2x3xi32>) {
+  // expected-error@+1 {{'hlfir.dot_product' op both arrays must have rank 1}}
+  %0 = hlfir.dot_product %arg0 %arg1 : (!hlfir.expr<2xi32>, !hlfir.expr<2x3xi32>) -> i32
+  return
+}
+
+// -----
+func.func @bad_dot_product2(%arg0: !hlfir.expr<2xi32>, %arg1: !hlfir.expr<3xi32>) {
+  // expected-error@+1 {{'hlfir.dot_product' op both arrays must have the same size}}
+  %0 = hlfir.dot_product %arg0 %arg1 : (!hlfir.expr<2xi32>, !hlfir.expr<3xi32>) -> i32
+  return
+}
+
+// -----
+func.func @bad_dot_product3(%arg0: !hlfir.expr<2xi32>, %arg1: !hlfir.expr<2x!fir.logical<4>>) {
+  // expected-error@+1 {{'hlfir.dot_product' op if one array is logical, so should the other be}}
+  %0 = hlfir.dot_product %arg0 %arg1 : (!hlfir.expr<2xi32>, !hlfir.expr<2x!fir.logical<4>>) -> i32
+  return
+}
+
+// -----
+func.func @bad_dot_product4(%arg0: !hlfir.expr<2xi32>, %arg1: !hlfir.expr<2xi32>) {
+  // expected-error@+1 {{'hlfir.dot_product' op the result type should be a logical only if the argument types are logical}}
+  %0 = hlfir.dot_product %arg0 %arg1 : (!hlfir.expr<2xi32>, !hlfir.expr<2xi32>) -> !fir.logical<4>
+  return
+}
+
+// -----
+func.func @bad_dot_product5(%arg0: !hlfir.expr<2xi32>, %arg1: !hlfir.expr<2xi32>) {
+  // expected-error@+1 {{'hlfir.dot_product' op the result must be of scalar numerical or logical type}}
+  %0 = hlfir.dot_product %arg0 %arg1 : (!hlfir.expr<2xi32>, !hlfir.expr<2xi32>) -> !hlfir.expr<i32>
+  return
+}
+
+// -----
 func.func @bad_transpose1(%arg0: !hlfir.expr<2xi32>) {
   // expected-error@+1 {{'hlfir.transpose' op input and output arrays should have rank 2}}
   %0 = hlfir.transpose %arg0 : (!hlfir.expr<2xi32>) -> !hlfir.expr<2xi32>
