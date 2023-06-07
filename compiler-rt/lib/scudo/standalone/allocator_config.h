@@ -271,7 +271,7 @@ struct FuchsiaConfig {
 };
 
 struct TrustyConfig {
-  static const bool MaySupportMemoryTagging = false;
+  static const bool MaySupportMemoryTagging = true;
   template <class A>
   using TSDRegistryT = TSDRegistrySharedT<A, 1U, 1U>; // Shared, max 1 TSD.
 
