@@ -121,6 +121,29 @@ ret:
   ret void
 }
 
+; GCN-LABEL: {{^}}non_entry_trap_no_unreachable:
+; TRAP-BIT: enable_trap_handler = 1
+; NO-TRAP-BIT: enable_trap_handler = 0
+
+; HSA-TRAP: BB{{[0-9]_[0-9]+}}: ; %trap
+; HSA-TRAP: s_mov_b64 s[0:1], s[4:5]
+; HSA-TRAP-NEXT: s_trap 2
+define amdgpu_kernel void @non_entry_trap_no_unreachable(ptr addrspace(1) nocapture readonly %arg0) local_unnamed_addr {
+entry:
+  %tmp29 = load volatile i32, ptr addrspace(1) %arg0
+  %cmp = icmp eq i32 %tmp29, -1
+  br i1 %cmp, label %ret, label %trap
+
+trap:
+  call void @llvm.trap()
+  store volatile i32 1234, ptr addrspace(3) null
+  br label %ret
+
+ret:
+  store volatile i32 3, ptr addrspace(1) %arg0
+  ret void
+}
+
 attributes #0 = { nounwind noreturn }
 attributes #1 = { nounwind }
 
