@@ -64,15 +64,18 @@ namespace llvm {
     SmallVector<TrackingMDNodeRef, 4> UnresolvedNodes;
     bool AllowUnresolvedNodes;
 
-    /// Each subprogram's preserved local variables.
+    /// Each subprogram's preserved local variables and labels.
     ///
     /// Do not use a std::vector.  Some versions of libc++ apparently copy
     /// instead of move on grow operations, and TrackingMDRef is expensive to
     /// copy.
-    DenseMap<MDNode *, SmallVector<TrackingMDNodeRef, 1>> PreservedVariables;
+    DenseMap<DISubprogram *, SmallVector<TrackingMDNodeRef, 4>>
+        SubprogramTrackedNodes;
 
-    /// Each subprogram's preserved labels.
-    DenseMap<MDNode *, SmallVector<TrackingMDNodeRef, 1>> PreservedLabels;
+    SmallVectorImpl<TrackingMDNodeRef> &
+    getSubprogramNodesTrackingVector(const DIScope *S) {
+      return SubprogramTrackedNodes[cast<DILocalScope>(S)->getSubprogram()];
+    }
 
     /// Create a temporary.
     ///
