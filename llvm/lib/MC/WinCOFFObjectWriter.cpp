@@ -385,7 +385,7 @@ void WinCOFFObjectWriter::DefineSymbol(const MCSymbol &MCSym,
   }
 
   COFFSymbol *Local = nullptr;
-  if (cast<MCSymbolCOFF>(MCSym).isWeakExternal()) {
+  if (cast<MCSymbolCOFF>(MCSym).getWeakExternalCharacteristics()) {
     Sym->Data.StorageClass = COFF::IMAGE_SYM_CLASS_WEAK_EXTERNAL;
     Sym->Section = nullptr;
 
@@ -407,9 +407,9 @@ void WinCOFFObjectWriter::DefineSymbol(const MCSymbol &MCSym,
     Sym->Aux.resize(1);
     memset(&Sym->Aux[0], 0, sizeof(Sym->Aux[0]));
     Sym->Aux[0].AuxType = ATWeakExternal;
-    Sym->Aux[0].Aux.WeakExternal.TagIndex = 0;
+    Sym->Aux[0].Aux.WeakExternal.TagIndex = 0; // Filled in later
     Sym->Aux[0].Aux.WeakExternal.Characteristics =
-        COFF::IMAGE_WEAK_EXTERN_SEARCH_ALIAS;
+        cast<MCSymbolCOFF>(MCSym).getWeakExternalCharacteristics();
   } else {
     if (!Base)
       Sym->Data.SectionNumber = COFF::IMAGE_SYM_ABSOLUTE;
