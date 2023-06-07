@@ -650,6 +650,15 @@ multiclass VRCP_FV_VS2<string opcodestr, bits<6> funct6, bits<5> vs1> {
                   ReadVMask]>;
 }
 
+multiclass VMINMAX_FV_V_F<string opcodestr, bits<6> funct6> {
+  def V : VALUVV<funct6, OPFVV, opcodestr # ".vv">,
+          Sched<[WriteVFMinMaxV_WorstCase, ReadVFMinMaxV_WorstCase,
+                 ReadVFMinMaxV_WorstCase, ReadVMask]>;
+  def F : VALUVF<funct6, OPFVF, opcodestr # ".vf">,
+          Sched<[WriteVFMinMaxF_WorstCase, ReadVFMinMaxV_WorstCase,
+                 ReadVFMinMaxF_WorstCase, ReadVMask]>;
+}
+
 multiclass VCMP_FV_V_F<string opcodestr, bits<6> funct6> {
   def V : VALUVV<funct6, OPFVV, opcodestr # ".vv">,
           Sched<[WriteVFCmpV_WorstCase, ReadVFCmpV_WorstCase,
@@ -802,6 +811,15 @@ multiclass VNSHT_IV_V_X_I<string opcodestr, bits<6> funct6> {
   def I  : VALUVI<funct6, opcodestr # ".wi", uimm5>,
            Sched<[WriteVNShiftI_WorstCase, ReadVNShiftV_WorstCase,
                   ReadVMask]>;
+}
+
+multiclass VMINMAX_IV_V_X<string opcodestr, bits<6> funct6> {
+  def V  : VALUVV<funct6, OPIVV, opcodestr # ".vv">,
+           Sched<[WriteVIMinMaxV_WorstCase, ReadVIMinMaxV_WorstCase,
+                  ReadVIMinMaxV_WorstCase, ReadVMask]>;
+  def X  : VALUVX<funct6, OPIVX, opcodestr # ".vx">,
+           Sched<[WriteVIMinMaxX_WorstCase, ReadVIMinMaxV_WorstCase,
+                  ReadVIMinMaxX_WorstCase, ReadVMask]>;
 }
 
 multiclass VCMP_IV_V_X_I<string opcodestr, bits<6> funct6> {
@@ -1228,10 +1246,10 @@ def PseudoVMSGE_VX_M_T : Pseudo<(outs VR:$vd, VRNoV0:$scratch),
 }
 
 // Vector Integer Min/Max Instructions
-defm VMINU_V : VCMP_IV_V_X<"vminu", 0b000100>;
-defm VMIN_V : VCMP_IV_V_X<"vmin", 0b000101>;
-defm VMAXU_V : VCMP_IV_V_X<"vmaxu", 0b000110>;
-defm VMAX_V : VCMP_IV_V_X<"vmax", 0b000111>;
+defm VMINU_V : VMINMAX_IV_V_X<"vminu", 0b000100>;
+defm VMIN_V : VMINMAX_IV_V_X<"vmin", 0b000101>;
+defm VMAXU_V : VMINMAX_IV_V_X<"vmaxu", 0b000110>;
+defm VMAX_V : VMINMAX_IV_V_X<"vmax", 0b000111>;
 
 // Vector Single-Width Integer Multiply Instructions
 defm VMUL_V : VMUL_MV_V_X<"vmul", 0b100101>;
@@ -1383,8 +1401,8 @@ defm VFRSQRT7_V : VRCP_FV_VS2<"vfrsqrt7.v", 0b010011, 0b00100>;
 
 // Vector Floating-Point MIN/MAX Instructions
 let mayRaiseFPException = true in {
-defm VFMIN_V : VCMP_FV_V_F<"vfmin", 0b000100>;
-defm VFMAX_V : VCMP_FV_V_F<"vfmax", 0b000110>;
+defm VFMIN_V : VMINMAX_FV_V_F<"vfmin", 0b000100>;
+defm VFMAX_V : VMINMAX_FV_V_F<"vfmax", 0b000110>;
 }
 
 // Vector Floating-Point Sign-Injection Instructions
