@@ -1,4 +1,5 @@
 set(LLVM_LINK_COMPONENTS
+  ProfileData
   Support
   TargetParser
   )
@@ -14,6 +15,7 @@ add_llvm_unittest(SupportTests
   BinaryStreamTest.cpp
   BLAKE3Test.cpp
   BlockFrequencyTest.cpp
+  BalancedPartitioningTest.cpp
   BranchProbabilityTest.cpp
   CachePruningTest.cpp
   CrashRecoveryTest.cpp
