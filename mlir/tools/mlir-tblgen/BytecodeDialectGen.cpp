@@ -99,6 +99,12 @@ void Generator::emitParseDispatch(StringRef kind, ArrayRef<Record *> vec) {
   os << formatv(head, capitalize(kind));
   auto funScope = os.scope(" {\n", "}\n\n");
 
+  if (vec.empty()) {
+    os << "return reader.emitError() << \"unknown attribute\", "
+       << capitalize(kind) << "();\n";
+    return;
+  }
+
   os << "uint64_t kind;\n";
   os << "if (failed(reader.readVarInt(kind)))\n"
      << "  return " << capitalize(kind) << "();\n";
