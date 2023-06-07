@@ -222,6 +222,8 @@ Non-comprehensive list of changes in this release
 - Clang now support ``__builtin_FUNCSIG()`` which returns the same information
   as the ``__FUNCSIG__`` macro (available only with ``-fms-extensions`` flag).
   This fixes (`#58951 <https://github.com/llvm/llvm-project/issues/58951>`_).
+- Clang now supports the `NO_COLOR <https://no-color.org/>`_ environment
+  variable as a way to disable color diagnostics.
 
 New Compiler Flags
 ------------------
