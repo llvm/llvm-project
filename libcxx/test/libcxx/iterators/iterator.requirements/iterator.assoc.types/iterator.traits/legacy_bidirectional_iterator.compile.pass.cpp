@@ -20,7 +20,7 @@
 
 #include <array>
 #include <deque>
-#ifndef TEST_HAS_NO_FILESYSTEM_LIBRARY
+#ifndef TEST_HAS_NO_FILESYSTEM
 #include <filesystem>
 #endif
 #include <forward_list>
@@ -61,7 +61,7 @@ static_assert(std::__iterator_traits_detail::__cpp17_bidirectional_iterator<std:
 static_assert(std::__iterator_traits_detail::__cpp17_bidirectional_iterator<std::deque<int>::const_reverse_iterator>);
 
 // <filesystem>
-#ifndef TEST_HAS_NO_FILESYSTEM_LIBRARY
+#ifndef TEST_HAS_NO_FILESYSTEM
 static_assert(!std::__iterator_traits_detail::__cpp17_bidirectional_iterator<std::filesystem::directory_iterator>);
 static_assert(!std::__iterator_traits_detail::__cpp17_bidirectional_iterator<std::filesystem::recursive_directory_iterator>);
 #endif
