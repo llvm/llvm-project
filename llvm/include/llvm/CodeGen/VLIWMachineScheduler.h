@@ -48,7 +48,8 @@ protected:
 
 public:
   VLIWResourceModel(const TargetSubtargetInfo &STI, const TargetSchedModel *SM);
-
+  VLIWResourceModel &operator=(const VLIWResourceModel &other) = delete;
+  VLIWResourceModel(const VLIWResourceModel &other) = delete;
   virtual ~VLIWResourceModel();
 
   virtual void reset();
