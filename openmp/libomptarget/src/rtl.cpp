@@ -454,7 +454,7 @@ bool RTLsTy::requiresAllocForGlobal(const void *HstPtr) {
 }
 void RTLsTy::markHostPtrForRequiresAlloc(const void *HstPtr) {
   if (!requiresAllocForGlobal(HstPtr))
-    HostPtrsRequireAlloc.push_back(HstPtr);
+    HostPtrsRequireAlloc.insert(HstPtr);
 }
 
 void RTLsTy::deMarkHostPtrForRequiresAlloc(const void *HstPtr) {
@@ -593,6 +593,14 @@ void RTLsTy::registerLib(__tgt_bin_desc *Desc) {
       PM->TrlTblMtx.lock();
       if (!PM->HostEntriesBeginToTransTable.count(Desc->HostEntriesBegin)) {
         PM->HostEntriesBeginRegistrationOrder.push_back(Desc->HostEntriesBegin);
+        // Add all globals to the list of globals in this image, so later
+        // look-ups for globals are faster.
+        for (auto *Entry : PM->HostEntriesBeginRegistrationOrder)
+          if (Entry->size > 0) // globals have a size larger 0
+            HostPtrsRequireAlloc.insert(Entry->addr);
+        DP("USM_SPECIAL: Marked %i pointers for alloc handling\n",
+           HostPtrsRequireAlloc.size());
+
         TranslationTable &TransTable =
             (PM->HostEntriesBeginToTransTable)[Desc->HostEntriesBegin];
         TransTable.HostTable.EntriesBegin = Desc->HostEntriesBegin;

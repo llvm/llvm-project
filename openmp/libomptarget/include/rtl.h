@@ -15,6 +15,7 @@
 
 #include "omptarget.h"
 #include "llvm/ADT/DenseSet.h"
+#include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/Support/DynamicLibrary.h"
 
@@ -204,7 +205,8 @@ struct RTLsTy {
   void disableAPUMapsForUSM(int64_t RequiresFlags);
 
   // List of pointers to be allocated when running in USM mode
-  std::vector<const void *> HostPtrsRequireAlloc;
+  // std::vector<const void *> HostPtrsRequireAlloc;
+  llvm::SmallPtrSet<const void *, 32> HostPtrsRequireAlloc;
 
   /// returns if a pointer requires allocation in USM mode
   bool requiresAllocForGlobal(const void *HstPtr);
