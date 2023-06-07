@@ -51,8 +51,6 @@
 # define ASM_TAIL_CALL jg
 #elif defined(__riscv)
 # define ASM_TAIL_CALL tail
-#else
-# error ASM_TAIL_CALL: Unimplemented architecture
 #endif
 
 #ifdef __ELF__
