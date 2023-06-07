@@ -21,6 +21,7 @@
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/SetVector.h"
 #include "llvm/ADT/StringExtras.h"
+#include "llvm/ADT/StringRef.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/FormatVariadic.h"
 #include "llvm/Support/Regex.h"
@@ -30,11 +31,20 @@
 #include "llvm/TableGen/TableGenBackend.h"
 
 #include <set>
+#include <string>
+
+//===----------------------------------------------------------------------===//
+// Commandline Options
+//===----------------------------------------------------------------------===//
+static llvm::cl::OptionCategory docCat("Options for -gen-(attrdef|typedef|op|dialect)-doc");
+llvm::cl::opt<std::string> stripPrefix(
+    "strip-prefix",
+    llvm::cl::desc("Strip prefix of the fully qualified names"),
+    llvm::cl::init("::mlir::"), llvm::cl::cat(docCat));
 
 using namespace llvm;
 using namespace mlir;
 using namespace mlir::tblgen;
-
 using mlir::tblgen::Operator;
 
 // Emit the description by aligning the text to the left per line (e.g.,
@@ -155,8 +165,10 @@ static void emitOpTraitsDoc(const Operator &op, raw_ostream &os) {
 }
 
 static void emitOpDoc(const Operator &op, raw_ostream &os) {
-  os << llvm::formatv("### `{0}` ({1})\n", op.getOperationName(),
-                      op.getQualCppClassName());
+  std::string classNameStr = op.getQualCppClassName();
+  StringRef className = classNameStr;
+  (void)className.consume_front(stripPrefix);
+  os << llvm::formatv("### `{0}` ({1})\n", op.getOperationName(), className);
 
   // Emit the summary, syntax, and description if present.
   if (op.hasSummary())
