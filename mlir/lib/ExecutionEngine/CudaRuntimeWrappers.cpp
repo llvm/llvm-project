@@ -20,9 +20,9 @@
 #include "cuda_bf16.h"
 #include "cuda_fp16.h"
 
-#if MLIR_ENABLE_CUDA_CUSPARSE
+#ifdef MLIR_ENABLE_CUDA_CUSPARSE
 #include "cusparse.h"
-#if MLIR_ENABLE_CUDA_CUSPARSELT
+#ifdef MLIR_ENABLE_CUDA_CUSPARSELT
 #include "cusparseLt.h"
 #endif // MLIR_ENABLE_CUDA_CUSPARSELT
 #endif // MLIR_ENABLE_CUDA_CUSPARSE
@@ -232,7 +232,7 @@ extern "C" MLIR_CUDA_WRAPPERS_EXPORT void mgpuSetDefaultDevice(int32_t device) {
   defaultDevice = device;
 }
 
-#if MLIR_ENABLE_CUDA_CUSPARSE
+#ifdef MLIR_ENABLE_CUDA_CUSPARSE
 
 ///
 /// Wrapper methods for the cuSparse library.
@@ -454,7 +454,7 @@ mgpuSDDMM(void *h, int32_t ma, int32_t mb, void *a, void *b, void *c,
                                          CUSPARSE_SDDMM_ALG_DEFAULT, buf))
 }
 
-#if MLIR_ENABLE_CUDA_CUSPARSELT
+#ifdef MLIR_ENABLE_CUDA_CUSPARSELT
 
 ///
 /// Wrapper methods for the cuSparseLt library.
