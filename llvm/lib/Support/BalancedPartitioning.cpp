@@ -211,8 +211,8 @@ unsigned BalancedPartitioning::runIteration(const FunctionNodeRange Nodes,
     unsigned R = Signature.RightCount;
     assert((L > 0 || R > 0) && "incorrect signature");
     float Cost = logCost(L, R);
-    Signature.CachedGainLR = 0;
-    Signature.CachedGainRL = 0;
+    Signature.CachedGainLR = 0.f;
+    Signature.CachedGainRL = 0.f;
     if (L > 0)
       Signature.CachedGainLR = Cost - logCost(L - 1, R + 1);
     if (R > 0)
@@ -247,7 +247,7 @@ unsigned BalancedPartitioning::runIteration(const FunctionNodeRange Nodes,
     auto &[LeftGain, LeftNode] = LeftPair;
     auto &[RightGain, RightNode] = RightPair;
     // Stop when the gain is no longer beneficial
-    if (LeftGain + RightGain <= 0.0)
+    if (LeftGain + RightGain <= 0.f)
       break;
     // Try to exchange the nodes between buckets
     if (moveFunctionNode(*LeftNode, LeftBucket, RightBucket, Signatures, RNG))
@@ -264,7 +264,7 @@ bool BalancedPartitioning::moveFunctionNode(BPFunctionNode &N,
                                             SignaturesT &Signatures,
                                             std::mt19937 &RNG) const {
   // Sometimes we skip the move. This helps to escape local optima
-  if (std::uniform_real_distribution<float>(0.0, 1.0)(RNG) <=
+  if (std::uniform_real_distribution<float>(0.f, 1.f)(RNG) <=
       Config.SkipProbability)
     return false;
 
@@ -309,7 +309,7 @@ void BalancedPartitioning::split(const FunctionNodeRange Nodes,
 float BalancedPartitioning::moveGain(const BPFunctionNode &N,
                                      bool FromLeftToRight,
                                      const SignaturesT &Signatures) {
-  float Gain = 0;
+  float Gain = 0.f;
   for (auto &UN : N.UtilityNodes)
     Gain += (FromLeftToRight ? Signatures[UN].CachedGainLR
                              : Signatures[UN].CachedGainRL);
