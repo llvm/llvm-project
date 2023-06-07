@@ -136,12 +136,11 @@ static bool lowerObjCCall(Function &F, const char *NewFn,
 static bool lowerIntrinsics(Module &M) {
   bool Changed = false;
   for (Function &F : M) {
-    if (F.getName().startswith("llvm.load.relative.")) {
-      Changed |= lowerLoadRelative(F);
-      continue;
-    }
     switch (F.getIntrinsicID()) {
     default:
+      break;
+    case Intrinsic::load_relative:
+      Changed |= lowerLoadRelative(F);
       break;
     case Intrinsic::objc_autorelease:
       Changed |= lowerObjCCall(F, "objc_autorelease");
