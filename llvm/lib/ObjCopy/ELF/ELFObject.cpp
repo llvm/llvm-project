@@ -2317,7 +2317,7 @@ static uint64_t layoutSections(Range Sections, uint64_t Offset) {
   for (auto &Sec : Sections) {
     Sec.Index = Index++;
     if (Sec.ParentSegment != nullptr) {
-      auto Segment = *Sec.ParentSegment;
+      const Segment &Segment = *Sec.ParentSegment;
       Sec.Offset =
           Segment.Offset + (Sec.OriginalOffset - Segment.OriginalOffset);
     } else
