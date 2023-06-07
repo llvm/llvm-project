@@ -94,7 +94,7 @@ void DwarfCFIException::beginFunction(const MachineFunction *MF) {
     shouldEmitCFI =
         MAI.usesCFIForEH() && (shouldEmitPersonality || shouldEmitMoves);
   else
-    shouldEmitCFI = Asm->needsCFIForDebug() && shouldEmitMoves;
+    shouldEmitCFI = Asm->usesCFIWithoutEH() && shouldEmitMoves;
 }
 
 void DwarfCFIException::beginBasicBlockSection(const MachineBasicBlock &MBB) {
