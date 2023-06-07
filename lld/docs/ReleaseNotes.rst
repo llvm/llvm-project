@@ -28,6 +28,8 @@ ELF Improvements
 
 * ``--remap-inputs=`` and ``--remap-inputs-file=`` are added to remap input files.
   (`D148859 <https://reviews.llvm.org/D148859>`_)
+* ``PT_RISCV_ATTRIBUTES`` is added to include the SHT_RISCV_ATTRIBUTES section.
+  (`D152065 <https://reviews.llvm.org/D152065>`_)
 
 Breaking changes
 ----------------
