@@ -95,7 +95,7 @@ lldb::TraceItemKind TraceCursorIntelPT::GetItemKind() const {
   return m_decoded_thread_sp->GetItemKindByIndex(m_pos);
 }
 
-const char *TraceCursorIntelPT::GetError() const {
+llvm::StringRef TraceCursorIntelPT::GetError() const {
   return m_decoded_thread_sp->GetErrorByIndex(m_pos);
 }
 
