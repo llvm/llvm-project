@@ -253,7 +253,7 @@ __cpp_lib_void_t                                        201411L <type_traits>
 # define __cpp_lib_clamp                                201603L
 # define __cpp_lib_enable_shared_from_this              201603L
 // # define __cpp_lib_execution                            201603L
-# if !defined(_LIBCPP_AVAILABILITY_HAS_NO_FILESYSTEM)
+# if !defined(_LIBCPP_AVAILABILITY_HAS_NO_FILESYSTEM_LIBRARY)
 #   define __cpp_lib_filesystem                         201703L
 # endif
 # define __cpp_lib_gcd_lcm                              201606L

@@ -32,7 +32,7 @@
 
 _LIBCPP_BEGIN_NAMESPACE_FILESYSTEM
 
-_LIBCPP_AVAILABILITY_FILESYSTEM_PUSH
+_LIBCPP_AVAILABILITY_FILESYSTEM_LIBRARY_PUSH
 
 class _LIBCPP_HIDDEN __dir_stream;
 class directory_iterator {
@@ -145,18 +145,18 @@ end(directory_iterator) noexcept {
   return directory_iterator();
 }
 
-_LIBCPP_AVAILABILITY_FILESYSTEM_POP
+_LIBCPP_AVAILABILITY_FILESYSTEM_LIBRARY_POP
 
 _LIBCPP_END_NAMESPACE_FILESYSTEM
 
 #if _LIBCPP_STD_VER >= 20
 
 template <>
-_LIBCPP_AVAILABILITY_FILESYSTEM
+_LIBCPP_AVAILABILITY_FILESYSTEM_LIBRARY
 inline constexpr bool _VSTD::ranges::enable_borrowed_range<_VSTD_FS::directory_iterator> = true;
 
 template <>
-_LIBCPP_AVAILABILITY_FILESYSTEM
+_LIBCPP_AVAILABILITY_FILESYSTEM_LIBRARY
 inline constexpr bool _VSTD::ranges::enable_view<_VSTD_FS::directory_iterator> = true;
 
 #endif // _LIBCPP_STD_VER >= 20
