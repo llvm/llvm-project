@@ -42,6 +42,10 @@ static cl::opt<unsigned> SVEScatterOverhead("sve-scatter-overhead",
 static cl::opt<unsigned> SVETailFoldInsnThreshold("sve-tail-folding-insn-threshold",
                                                   cl::init(15), cl::Hidden);
 
+static cl::opt<unsigned>
+    NeonNonConstStrideOverhead("neon-nonconst-stride-overhead", cl::init(10),
+                               cl::Hidden);
+
 namespace {
 class TailFoldingOption {
   // These bitfields will only ever be set to something non-zero in operator=,
@@ -2577,7 +2581,7 @@ InstructionCost AArch64TTIImpl::getAddressComputationCost(Type *Ty,
   // likely result in more instructions compared to scalar code where the
   // computation can more often be merged into the index mode. The resulting
   // extra micro-ops can significantly decrease throughput.
-  unsigned NumVectorInstToHideOverhead = 10;
+  unsigned NumVectorInstToHideOverhead = NeonNonConstStrideOverhead;
   int MaxMergeDistance = 64;
 
   if (Ty->isVectorTy() && SE &&
