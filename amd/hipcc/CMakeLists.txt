@@ -41,7 +41,7 @@ if(NOT WIN32)
 endif()
 
 # Copy scripts and batch files to build directory.
-file(COPY ${CMAKE_SOURCE_DIR}/bin/ DESTINATION ${CMAKE_CURRENT_BINARY_DIR})
+file(COPY ${PROJECT_SOURCE_DIR}/bin/ DESTINATION ${PROJECT_BINARY_DIR})
 
 set(CPACK_GENERATOR "DEB;RPM;ZIP" CACHE STRING "Default packaging generators")
 set(CPACK_PACKAGE_CONTACT "ROCm Compiler Support <rocm.compiler.support@amd.com>")
