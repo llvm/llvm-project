@@ -1608,7 +1608,7 @@ convertDeviceClause(const VarDecl *VD) {
   if (!DevTy)
     return llvm::OffloadEntriesInfoManager::OMPTargetDeviceClauseNone;
 
-  switch (*DevTy) {
+  switch ((int)*DevTy) { // Avoid -Wcovered-switch-default
   case OMPDeclareTargetDeclAttr::DT_Host:
     return llvm::OffloadEntriesInfoManager::OMPTargetDeviceClauseHost;
     break;
@@ -1630,7 +1630,7 @@ convertCaptureClause(const VarDecl *VD) {
       OMPDeclareTargetDeclAttr::isDeclareTargetDeclaration(VD);
   if (!MapType)
     return llvm::OffloadEntriesInfoManager::OMPTargetGlobalVarEntryNone;
-  switch (*MapType) {
+  switch ((int)*MapType) { // Avoid -Wcovered-switch-default
   case OMPDeclareTargetDeclAttr::MapTypeTy::MT_To:
     return llvm::OffloadEntriesInfoManager::OMPTargetGlobalVarEntryTo;
     break;
