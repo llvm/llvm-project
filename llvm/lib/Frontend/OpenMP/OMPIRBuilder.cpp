@@ -5200,8 +5200,8 @@ OpenMPIRBuilder::getTargetEntryUniqueInfo(FileIdentifierInfoCallbackTy CallBack,
   sys::fs::UniqueID ID;
   auto FileIDInfo = CallBack();
   if (auto EC = sys::fs::getUniqueID(std::get<0>(FileIDInfo), ID)) {
-    llvm_unreachable(
-        "Unable to get unique ID for file, during getTargetEntryUniqueInfo");
+    assert(!EC &&
+           "Unable to get unique ID for file during getTargetEntryUniqueInfo");
   }
 
   return TargetRegionEntryInfo(ParentName, ID.getDevice(), ID.getFile(),
