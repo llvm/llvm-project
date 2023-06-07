@@ -823,6 +823,7 @@ def PadOp : Op<Transform_Dialect, "structured.pad",
     (ins TransformHandleTypeInterface:$target,
          DefaultValuedAttr<ArrayAttr, "{}">:$padding_values,
          DefaultValuedAttr<I64ArrayAttr, "{}">:$padding_dimensions,
+         OptionalAttr<I64ArrayAttr>:$pad_to_multiple_of,
          DefaultValuedAttr<I64ArrayAttr, "{}">:$pack_paddings,
          DefaultValuedAttr<
           TypedArrayAttrBase<I64ArrayAttr, "array of arrays of i64">,
