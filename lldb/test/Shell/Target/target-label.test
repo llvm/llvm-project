@@ -1,3 +1,4 @@
+# REQUIRES: python
 # UNSUPPORTED: system-windows
 # RUN: %lldb -b -o 'settings set interpreter.stop-command-source-on-error false' -s %s 2>&1 | FileCheck %s
 
