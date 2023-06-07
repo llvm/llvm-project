@@ -1029,6 +1029,10 @@ macro(add_llvm_executable name)
     target_link_libraries(${name} PRIVATE ${LLVM_PTHREAD_LIB})
   endif()
 
+  if(HAVE_LLVM_LIBC)
+    target_link_libraries(${name} PRIVATE llvmlibc)
+  endif()
+
   llvm_codesign(${name} ENTITLEMENTS ${ARG_ENTITLEMENTS} BUNDLE_PATH ${ARG_BUNDLE_PATH})
 endmacro(add_llvm_executable name)
 
