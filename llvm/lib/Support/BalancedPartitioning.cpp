@@ -27,6 +27,7 @@ void BPFunctionNode::dump(raw_ostream &OS) const {
 
 template <typename Func>
 void BalancedPartitioning::BPThreadPool::async(Func &&F) {
+#if LLVM_ENABLE_THREADS
   // This new thread could spawn more threads, so mark it as active
   ++NumActiveThreads;
   TheThreadPool.async([=]() {
@@ -44,9 +45,13 @@ void BalancedPartitioning::BPThreadPool::async(Func &&F) {
       cv.notify_one();
     }
   });
+#else
+  llvm_unreachable("threads are disabled");
+#endif
 }
 
 void BalancedPartitioning::BPThreadPool::wait() {
+#if LLVM_ENABLE_THREADS
   // TODO: We could remove the mutex and condition variable and use
   // std::atomic::wait() instead, but that isn't available until C++20
   {
@@ -56,6 +61,9 @@ void BalancedPartitioning::BPThreadPool::wait() {
   }
   // Now we can call ThreadPool::wait() since all tasks have been submitted
   TheThreadPool.wait();
+#else
+  llvm_unreachable("threads are disabled");
+#endif
 }
 
 BalancedPartitioning::BalancedPartitioning(
@@ -73,8 +81,10 @@ void BalancedPartitioning::run(std::vector<BPFunctionNode> &Nodes) const {
           "Partitioning %d nodes using depth %d and %d iterations per split\n",
           Nodes.size(), Config.SplitDepth, Config.IterationsPerSplit));
   std::optional<BPThreadPool> TP;
+#if LLVM_ENABLE_THREADS
   if (Config.TaskSplitDepth > 1)
     TP.emplace();
+#endif
 
   // Record the input order
   for (unsigned I = 0; I < Nodes.size(); I++)
