@@ -477,6 +477,19 @@ class CommandLineCompletionTestCase(TestBase):
         self.complete_from_to("my_test_cmd main.cp", ["main.cpp"])
         self.expect("my_test_cmd main.cpp", substrs=["main.cpp"])
 
+    def test_completion_target_create_from_root_dir(self):
+        """Tests source file completion by completing ."""
+        root_dir = os.path.abspath(os.sep)
+        self.completions_contain(
+            "target create " + root_dir,
+            list(
+                filter(
+                    lambda x: os.path.exists(x),
+                    map(lambda x: root_dir + x + os.sep, os.listdir(root_dir)),
+                )
+            ),
+        )
+
     def test_target_modules_load_aout(self):
         """Tests modules completion by completing the target modules load argument."""
         self.build()
