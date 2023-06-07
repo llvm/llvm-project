@@ -2137,8 +2137,9 @@ def int_amdgcn_is_private : ClangBuiltin<"__builtin_amdgcn_is_private">,
   [IntrNoMem, IntrSpeculatable, NoCapture<ArgIndex<0>>]
 >;
 
-// Waterfall intrinics used to tag a region as requiring waterfall loops to
-// transform VGPR values into SGPR values in a loop
+// Waterfall intrinsics are used to tag a region as requiring waterfall loops to
+// activate and deactivate lanes in a loop (and sometimes transform VGPR values
+// into SGPR values)
 // Best case (uniform index in VGPR) the loop will execute once, worst case (all
 // values in the index are different) the loop will execute wave-size times.
 // There is a requirement that all three intrinsics are present.
@@ -2163,7 +2164,7 @@ def int_amdgcn_waterfall_begin :
 // intrinsic is required to be used, but often is a no-op if the index is the
 // thing that is used
 def int_amdgcn_waterfall_readfirstlane :
-    Intrinsic<[llvm_anyint_ty],  // Returns any sgpr value
+    Intrinsic<[llvm_any_ty],     // Returns any value
               [llvm_i32_ty,      // Token from final begin
                llvm_any_ty],     // VGPR value to be used in readfirstlane
               [IntrConvergent]>;
@@ -2185,10 +2186,17 @@ def int_amdgcn_waterfall_end :
 // can be used to tag values that are used in non-defining operations such as a
 // store
 def int_amdgcn_waterfall_last_use :
-    Intrinsic<[llvm_anyint_ty],   // Returns any sgpr value
+    Intrinsic<[llvm_any_ty],      // Returns any value
               [llvm_i32_ty,       // Token from begin
                LLVMMatchType<0>], // Same as return value
               [IntrConvergent]>;
+
+// Special variant where the last-use uses a VGPR that needs to be uniform
+def int_amdgcn_waterfall_last_use_vgpr :
+    Intrinsic<[llvm_any_ty],      // Returns any value
+              [llvm_i32_ty,       // Token from begin
+               LLVMMatchType<0>], // Same as return value
+              []>;
 
 //===----------------------------------------------------------------------===//
 // CI+ Intrinsics
