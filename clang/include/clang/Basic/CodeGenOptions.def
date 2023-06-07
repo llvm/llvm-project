@@ -114,6 +114,9 @@ CODEGENOPT(StackSizeSection  , 1, 0) ///< Set when -fstack-size-section is enabl
 CODEGENOPT(ForceDwarfFrameSection , 1, 0) ///< Set when -fforce-dwarf-frame is
                                           ///< enabled.
 
+///< Set when -femit-compact-unwind-non-canonical is enabled.
+CODEGENOPT(EmitCompactUnwindNonCanonical, 1, 0)
+
 ///< Set when -femit-dwarf-unwind is passed.
 ENUM_CODEGENOPT(EmitDwarfUnwind, llvm::EmitDwarfUnwindType, 2,
                 llvm::EmitDwarfUnwindType::Default)
