@@ -1028,6 +1028,16 @@ $Bracket[[>]]$Bracket[[>]] $LocalVariable_def[[s6]];
         template $Bracket[[<]]$Concept[[C2]]$Bracket[[<]]int$Bracket[[>]] $TemplateParameter_def[[A]]$Bracket[[>]]
         class $Class_def[[B]] {};
       )cpp",
+      // Labels
+      R"cpp(
+        bool $Function_def[[funcWithGoto]](bool $Parameter_def[[b]]) {
+          if ($Parameter[[b]])
+            goto $Label[[return_true]];
+          return false;
+          $Label_decl[[return_true]]:
+            return true;
+        }
+      )cpp",
       // no crash
       R"cpp(
         struct $Class_def[[Foo]] {

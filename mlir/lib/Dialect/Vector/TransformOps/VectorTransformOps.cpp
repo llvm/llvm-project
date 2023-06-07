@@ -27,6 +27,11 @@ using namespace mlir::transform;
 // Apply...PatternsOp
 //===----------------------------------------------------------------------===//
 
+void transform::ApplyCastAwayVectorLeadingOneDimPatternsOp::populatePatterns(
+    RewritePatternSet &patterns) {
+  vector::populateCastAwayVectorLeadingOneDimPatterns(patterns);
+}
+
 void transform::ApplyRankReducingSubviewPatternsOp::populatePatterns(
     RewritePatternSet &patterns) {
   vector::populateVectorTransferDropUnitDimsPatterns(patterns);
