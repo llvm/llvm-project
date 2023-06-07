@@ -15002,9 +15002,10 @@ static SDValue lowerShuffleAsBroadcast(const SDLoc &DL, MVT VT, SDValue V1,
                                        SDValue V2, ArrayRef<int> Mask,
                                        const X86Subtarget &Subtarget,
                                        SelectionDAG &DAG) {
+  MVT EltVT = VT.getVectorElementType();
   if (!((Subtarget.hasSSE3() && VT == MVT::v2f64) ||
-        (Subtarget.hasAVX() && VT.isFloatingPoint()) ||
-        (Subtarget.hasAVX2() && VT.isInteger())))
+        (Subtarget.hasAVX() && (EltVT == MVT::f64 || EltVT == MVT::f32)) ||
+        (Subtarget.hasAVX2() && (VT.isInteger() || EltVT == MVT::f16))))
     return SDValue();
 
   // With MOVDDUP (v2f64) we can broadcast from a register or a load, otherwise
