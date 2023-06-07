@@ -272,7 +272,7 @@ void stable_sort(_RandomAccessIterator __first, _RandomAccessIterator __last, _C
 template <class _RandomAccessIterator>
 inline _LIBCPP_HIDE_FROM_ABI
 void stable_sort(_RandomAccessIterator __first, _RandomAccessIterator __last) {
-  std::stable_sort(__first, __last, __less<typename iterator_traits<_RandomAccessIterator>::value_type>());
+  std::stable_sort(__first, __last, __less<>());
 }
 
 _LIBCPP_END_NAMESPACE_STD
