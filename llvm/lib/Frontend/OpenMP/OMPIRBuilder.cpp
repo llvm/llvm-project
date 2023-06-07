@@ -5195,14 +5195,17 @@ void OffloadEntriesInfoManager::getTargetRegionEntryFnName(
 }
 
 TargetRegionEntryInfo
-OpenMPIRBuilder::getTargetEntryUniqueInfo(StringRef FileName, uint64_t Line,
+OpenMPIRBuilder::getTargetEntryUniqueInfo(FileIdentifierInfoCallbackTy CallBack,
                                           StringRef ParentName) {
   sys::fs::UniqueID ID;
-  if (auto EC = sys::fs::getUniqueID(FileName, ID)) {
-    assert(EC &&
-           "Unable to get unique ID for file, during getTargetEntryUniqueInfo");
+  auto FileIDInfo = CallBack();
+  if (auto EC = sys::fs::getUniqueID(std::get<0>(FileIDInfo), ID)) {
+    llvm_unreachable(
+        "Unable to get unique ID for file, during getTargetEntryUniqueInfo");
   }
-  return TargetRegionEntryInfo(ParentName, ID.getDevice(), ID.getFile(), Line);
+
+  return TargetRegionEntryInfo(ParentName, ID.getDevice(), ID.getFile(),
+                               std::get<1>(FileIDInfo));
 }
 
 Constant *OpenMPIRBuilder::getAddrOfDeclareTargetVar(
