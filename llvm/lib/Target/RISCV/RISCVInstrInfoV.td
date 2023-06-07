@@ -465,7 +465,7 @@ multiclass VALU_IV_V_X<string opcodestr, bits<6> funct6> {
 
 multiclass VALU_IV_X_I<string opcodestr, bits<6> funct6> {
   def X  : VALUVX<funct6, OPIVX, opcodestr # ".vx">,
-           Sched<[WriteVIALUV_WorstCase, ReadVIALUV_WorstCase,
+           Sched<[WriteVIALUX_WorstCase, ReadVIALUV_WorstCase,
                   ReadVIALUX_WorstCase, ReadVMask]>;
   def I  : VALUVI<funct6, opcodestr # ".vi", simm5>,
            Sched<[WriteVIALUI_WorstCase, ReadVIALUV_WorstCase,
