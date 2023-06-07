@@ -46,9 +46,19 @@ namespace llvm {
 /// aware of any loss of information in this conversion. For example, setting
 /// value_type to float and key_type to int can produce very surprising results,
 /// but it is not explicitly disallowed.
+///
+/// The parameter N specifies the "small" size of the container, which is the
+/// number of elements upto which a linear scan over the Vector will be used
+/// when searching for elements instead of checking Set, due to it being better
+/// for performance. A value of 0 means that this mode of operation is not used,
+/// and is the default value.
 template <typename T, typename Vector = std::vector<T>,
-          typename Set = DenseSet<T>>
+          typename Set = DenseSet<T>, unsigned N = 0>
 class SetVector {
+  // Much like in SmallPtrSet, this value should not be too high to prevent
+  // excessively long linear scans from occuring.
+  static_assert(N <= 32, "Small size should be less than or equal to 32!");
+
 public:
   using value_type = typename Vector::value_type;
   using key_type = typename Set::key_type;
@@ -150,6 +160,17 @@ public:
   /// Insert a new element into the SetVector.
   /// \returns true if the element was inserted into the SetVector.
   bool insert(const value_type &X) {
+    if constexpr (canBeSmall())
+      if (isSmall()) {
+        if (llvm::find(vector_, X) == vector_.end()) {
+          vector_.push_back(X);
+          if (vector_.size() > N)
+            makeBig();
+          return true;
+        }
+        return false;
+      }
+
     bool result = set_.insert(X).second;
     if (result)
       vector_.push_back(X);
@@ -160,12 +181,21 @@ public:
   template<typename It>
   void insert(It Start, It End) {
     for (; Start != End; ++Start)
-      if (set_.insert(*Start).second)
-        vector_.push_back(*Start);
+      insert(*Start);
   }
 
   /// Remove an item from the set vector.
   bool remove(const value_type& X) {
+    if constexpr (canBeSmall())
+      if (isSmall()) {
+        typename vector_type::iterator I = find(vector_, X);
+        if (I != vector_.end()) {
+          vector_.erase(I);
+          return true;
+        }
+        return false;
+      }
+
     if (set_.erase(X)) {
       typename vector_type::iterator I = find(vector_, X);
       assert(I != vector_.end() && "Corrupted SetVector instances!");
@@ -180,6 +210,10 @@ public:
   /// element erased. This is the end of the SetVector if the last element is
   /// erased.
   iterator erase(const_iterator I) {
+    if constexpr (canBeSmall())
+      if (isSmall())
+        return vector_.erase(I);
+
     const key_type &V = *I;
     assert(set_.count(V) && "Corrupted SetVector instances!");
     set_.erase(V);
@@ -201,8 +235,15 @@ public:
   /// \returns true if any element is removed.
   template <typename UnaryPredicate>
   bool remove_if(UnaryPredicate P) {
-    typename vector_type::iterator I =
-        llvm::remove_if(vector_, TestAndEraseFromSet<UnaryPredicate>(P, set_));
+    typename vector_type::iterator I = [this, P] {
+      if constexpr (canBeSmall())
+        if (isSmall())
+          return llvm::remove_if(vector_, P);
+
+      return llvm::remove_if(vector_,
+                             TestAndEraseFromSet<UnaryPredicate>(P, set_));
+    }();
+
     if (I == vector_.end())
       return false;
     vector_.erase(I, vector_.end());
@@ -211,12 +252,20 @@ public:
 
   /// Check if the SetVector contains the given key.
   bool contains(const key_type &key) const {
+    if constexpr (canBeSmall())
+      if (isSmall())
+        return is_contained(vector_, key);
+
     return set_.find(key) != set_.end();
   }
 
   /// Count the number of elements of a given key in the SetVector.
   /// \returns 0 if the element is not in the SetVector, 1 if it is.
   size_type count(const key_type &key) const {
+    if constexpr (canBeSmall())
+      if (isSmall())
+        return is_contained(vector_, key);
+
     return set_.count(key);
   }
 
@@ -272,7 +321,7 @@ public:
       remove(*SI);
   }
 
-  void swap(SetVector<T, Vector, Set> &RHS) {
+  void swap(SetVector<T, Vector, Set, N> &RHS) {
     set_.swap(RHS.set_);
     vector_.swap(RHS.vector_);
   }
@@ -301,6 +350,16 @@ private:
     }
   };
 
+  [[nodiscard]] static constexpr bool canBeSmall() { return N != 0; }
+
+  [[nodiscard]] bool isSmall() const { return set_.empty(); }
+
+  void makeBig() {
+    if constexpr (canBeSmall())
+      for (const auto &entry : vector_)
+        set_.insert(entry);
+  }
+
   set_type set_;         ///< The set.
   vector_type vector_;   ///< The vector.
 };
@@ -308,8 +367,7 @@ private:
 /// A SetVector that performs no allocations if smaller than
 /// a certain size.
 template <typename T, unsigned N>
-class SmallSetVector
-    : public SetVector<T, SmallVector<T, N>, SmallDenseSet<T, N>> {
+class SmallSetVector : public SetVector<T, SmallVector<T, N>, DenseSet<T>, N> {
 public:
   SmallSetVector() = default;
 
@@ -325,9 +383,9 @@ public:
 namespace std {
 
 /// Implement std::swap in terms of SetVector swap.
-template<typename T, typename V, typename S>
-inline void
-swap(llvm::SetVector<T, V, S> &LHS, llvm::SetVector<T, V, S> &RHS) {
+template <typename T, typename V, typename S, unsigned N>
+inline void swap(llvm::SetVector<T, V, S, N> &LHS,
+                 llvm::SetVector<T, V, S, N> &RHS) {
   LHS.swap(RHS);
 }
 
