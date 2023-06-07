@@ -865,18 +865,18 @@ public:
     _LIBCPP_HIDE_FROM_ABI __remove_return_type unique(_BinaryPredicate __binary_pred);
 #ifndef _LIBCPP_CXX03_LANG
     _LIBCPP_INLINE_VISIBILITY
-    void merge(forward_list&& __x) {merge(__x, __less<value_type>());}
+    void merge(forward_list&& __x) {merge(__x, __less<>());}
     template <class _Compare>
         _LIBCPP_INLINE_VISIBILITY
         void merge(forward_list&& __x, _Compare __comp)
         {merge(__x, _VSTD::move(__comp));}
 #endif // _LIBCPP_CXX03_LANG
     _LIBCPP_INLINE_VISIBILITY
-    void merge(forward_list& __x) {merge(__x, __less<value_type>());}
+    void merge(forward_list& __x) {merge(__x, __less<>());}
     template <class _Compare>
     _LIBCPP_HIDE_FROM_ABI void merge(forward_list& __x, _Compare __comp);
     _LIBCPP_INLINE_VISIBILITY
-    void sort() {sort(__less<value_type>());}
+    void sort() {sort(__less<>());}
     template <class _Compare> _LIBCPP_INLINE_VISIBILITY void sort(_Compare __comp);
     _LIBCPP_HIDE_FROM_ABI void reverse() _NOEXCEPT;
 

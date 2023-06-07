@@ -45,8 +45,8 @@ module {
 // CHECK:           %[[VAL_38:.*]] = gpu.wait async
 // CHECK:           %[[VAL_39:.*]], %[[VAL_40:.*]] = gpu.create_sparse_env async {{\[}}%[[VAL_38]]]
 // CHECK:           %[[VAL_41:.*]], %[[VAL_42:.*]] = gpu.create_coo async {{\[}}%[[VAL_40]]] %[[VAL_6]], %[[VAL_7]], %[[VAL_5]], %[[VAL_13]], %[[VAL_18]], %[[VAL_23]] : memref<?xindex>, memref<?xindex>, memref<?xf64>
-// CHECK:           %[[VAL_43:.*]], %[[VAL_44:.*]] = gpu.create_dn_vec async {{\[}}%[[VAL_42]]] %[[VAL_29]], %[[VAL_7]] : memref<?xf64>
-// CHECK:           %[[VAL_45:.*]], %[[VAL_46:.*]] = gpu.create_dn_vec async {{\[}}%[[VAL_44]]] %[[VAL_35]], %[[VAL_6]] : memref<?xf64>
+// CHECK:           %[[VAL_43:.*]], %[[VAL_44:.*]] = gpu.create_dn_vec async {{\[}}%[[VAL_42]]] %[[VAL_39:.*]], %[[VAL_29]], %[[VAL_7]] : memref<?xf64>
+// CHECK:           %[[VAL_45:.*]], %[[VAL_46:.*]] = gpu.create_dn_vec async {{\[}}%[[VAL_44]]] %[[VAL_39:.*]], %[[VAL_35]], %[[VAL_6]] : memref<?xf64>
 // CHECK:           %[[VAL_47:.*]], %[[VAL_48:.*]] = gpu.spmv_buffer_size async {{\[}}%[[VAL_46]]] %[[VAL_39]], %[[VAL_41]], %[[VAL_43]], %[[VAL_45]]
 // CHECK:           %[[VAL_49:.*]], %[[VAL_50:.*]] = gpu.alloc async {{\[}}%[[VAL_48]]] (%[[VAL_47]]) : memref<?xi8>
 // CHECK:           %[[VAL_51:.*]] = gpu.spmv async {{\[}}%[[VAL_50]]] %[[VAL_39]], %[[VAL_41]], %[[VAL_43]], %[[VAL_45]], %[[VAL_49]] : memref<?xi8>

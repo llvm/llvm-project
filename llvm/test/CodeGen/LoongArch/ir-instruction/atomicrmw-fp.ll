@@ -315,10 +315,7 @@ define double @double_fadd_acquire(ptr %p) nounwind {
 ; LA64F-NEXT:    st.d $s2, $sp, 24 # 8-byte Folded Spill
 ; LA64F-NEXT:    st.d $s3, $sp, 16 # 8-byte Folded Spill
 ; LA64F-NEXT:    move $fp, $a0
-; LA64F-NEXT:    ld.wu $a0, $a0, 0
-; LA64F-NEXT:    ld.wu $a1, $fp, 4
-; LA64F-NEXT:    slli.d $a1, $a1, 32
-; LA64F-NEXT:    or $a0, $a1, $a0
+; LA64F-NEXT:    ld.d $a0, $a0, 0
 ; LA64F-NEXT:    ori $s0, $zero, 8
 ; LA64F-NEXT:    addi.d $s1, $sp, 8
 ; LA64F-NEXT:    addi.d $s2, $sp, 0
@@ -360,11 +357,7 @@ define double @double_fadd_acquire(ptr %p) nounwind {
 ; LA64D-NEXT:    st.d $s3, $sp, 32 # 8-byte Folded Spill
 ; LA64D-NEXT:    fst.d $fs0, $sp, 24 # 8-byte Folded Spill
 ; LA64D-NEXT:    move $fp, $a0
-; LA64D-NEXT:    ld.wu $a0, $a0, 0
-; LA64D-NEXT:    ld.wu $a1, $fp, 4
-; LA64D-NEXT:    slli.d $a1, $a1, 32
-; LA64D-NEXT:    or $a0, $a1, $a0
-; LA64D-NEXT:    movgr2fr.d $fa0, $a0
+; LA64D-NEXT:    fld.d $fa0, $a0, 0
 ; LA64D-NEXT:    addi.d $a0, $zero, 1
 ; LA64D-NEXT:    movgr2fr.d $fs0, $a0
 ; LA64D-NEXT:    ori $s0, $zero, 8
@@ -411,10 +404,7 @@ define double @double_fsub_acquire(ptr %p) nounwind {
 ; LA64F-NEXT:    st.d $s2, $sp, 24 # 8-byte Folded Spill
 ; LA64F-NEXT:    st.d $s3, $sp, 16 # 8-byte Folded Spill
 ; LA64F-NEXT:    move $fp, $a0
-; LA64F-NEXT:    ld.wu $a0, $a0, 0
-; LA64F-NEXT:    ld.wu $a1, $fp, 4
-; LA64F-NEXT:    slli.d $a1, $a1, 32
-; LA64F-NEXT:    or $a0, $a1, $a0
+; LA64F-NEXT:    ld.d $a0, $a0, 0
 ; LA64F-NEXT:    ori $s0, $zero, 8
 ; LA64F-NEXT:    addi.d $s1, $sp, 8
 ; LA64F-NEXT:    addi.d $s2, $sp, 0
@@ -456,11 +446,7 @@ define double @double_fsub_acquire(ptr %p) nounwind {
 ; LA64D-NEXT:    st.d $s3, $sp, 32 # 8-byte Folded Spill
 ; LA64D-NEXT:    fst.d $fs0, $sp, 24 # 8-byte Folded Spill
 ; LA64D-NEXT:    move $fp, $a0
-; LA64D-NEXT:    ld.wu $a0, $a0, 0
-; LA64D-NEXT:    ld.wu $a1, $fp, 4
-; LA64D-NEXT:    slli.d $a1, $a1, 32
-; LA64D-NEXT:    or $a0, $a1, $a0
-; LA64D-NEXT:    movgr2fr.d $fa0, $a0
+; LA64D-NEXT:    fld.d $fa0, $a0, 0
 ; LA64D-NEXT:    pcalau12i $a0, %pc_hi20(.LCPI5_0)
 ; LA64D-NEXT:    addi.d $a0, $a0, %pc_lo12(.LCPI5_0)
 ; LA64D-NEXT:    fld.d $fs0, $a0, 0
@@ -507,10 +493,7 @@ define double @double_fmin_acquire(ptr %p) nounwind {
 ; LA64F-NEXT:    st.d $s2, $sp, 24 # 8-byte Folded Spill
 ; LA64F-NEXT:    st.d $s3, $sp, 16 # 8-byte Folded Spill
 ; LA64F-NEXT:    move $fp, $a0
-; LA64F-NEXT:    ld.wu $a0, $a0, 0
-; LA64F-NEXT:    ld.wu $a1, $fp, 4
-; LA64F-NEXT:    slli.d $a1, $a1, 32
-; LA64F-NEXT:    or $a0, $a1, $a0
+; LA64F-NEXT:    ld.d $a0, $a0, 0
 ; LA64F-NEXT:    ori $s0, $zero, 8
 ; LA64F-NEXT:    addi.d $s1, $sp, 8
 ; LA64F-NEXT:    addi.d $s2, $sp, 0
@@ -552,11 +535,7 @@ define double @double_fmin_acquire(ptr %p) nounwind {
 ; LA64D-NEXT:    st.d $s3, $sp, 32 # 8-byte Folded Spill
 ; LA64D-NEXT:    fst.d $fs0, $sp, 24 # 8-byte Folded Spill
 ; LA64D-NEXT:    move $fp, $a0
-; LA64D-NEXT:    ld.wu $a0, $a0, 0
-; LA64D-NEXT:    ld.wu $a1, $fp, 4
-; LA64D-NEXT:    slli.d $a1, $a1, 32
-; LA64D-NEXT:    or $a0, $a1, $a0
-; LA64D-NEXT:    movgr2fr.d $fa0, $a0
+; LA64D-NEXT:    fld.d $fa0, $a0, 0
 ; LA64D-NEXT:    addi.d $a0, $zero, 1
 ; LA64D-NEXT:    movgr2fr.d $fs0, $a0
 ; LA64D-NEXT:    ori $s0, $zero, 8
@@ -604,10 +583,7 @@ define double @double_fmax_acquire(ptr %p) nounwind {
 ; LA64F-NEXT:    st.d $s2, $sp, 24 # 8-byte Folded Spill
 ; LA64F-NEXT:    st.d $s3, $sp, 16 # 8-byte Folded Spill
 ; LA64F-NEXT:    move $fp, $a0
-; LA64F-NEXT:    ld.wu $a0, $a0, 0
-; LA64F-NEXT:    ld.wu $a1, $fp, 4
-; LA64F-NEXT:    slli.d $a1, $a1, 32
-; LA64F-NEXT:    or $a0, $a1, $a0
+; LA64F-NEXT:    ld.d $a0, $a0, 0
 ; LA64F-NEXT:    ori $s0, $zero, 8
 ; LA64F-NEXT:    addi.d $s1, $sp, 8
 ; LA64F-NEXT:    addi.d $s2, $sp, 0
@@ -649,11 +625,7 @@ define double @double_fmax_acquire(ptr %p) nounwind {
 ; LA64D-NEXT:    st.d $s3, $sp, 32 # 8-byte Folded Spill
 ; LA64D-NEXT:    fst.d $fs0, $sp, 24 # 8-byte Folded Spill
 ; LA64D-NEXT:    move $fp, $a0
-; LA64D-NEXT:    ld.wu $a0, $a0, 0
-; LA64D-NEXT:    ld.wu $a1, $fp, 4
-; LA64D-NEXT:    slli.d $a1, $a1, 32
-; LA64D-NEXT:    or $a0, $a1, $a0
-; LA64D-NEXT:    movgr2fr.d $fa0, $a0
+; LA64D-NEXT:    fld.d $fa0, $a0, 0
 ; LA64D-NEXT:    addi.d $a0, $zero, 1
 ; LA64D-NEXT:    movgr2fr.d $fs0, $a0
 ; LA64D-NEXT:    ori $s0, $zero, 8

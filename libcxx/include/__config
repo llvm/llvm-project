@@ -685,7 +685,7 @@ _LIBCPP_BEGIN_NAMESPACE_STD _LIBCPP_END_NAMESPACE_STD
 #    define _LIBCPP_PREFERRED_OVERLOAD __attribute__((__enable_if__(true, "")))
 #  endif
 
-#  ifndef __SIZEOF_INT128__
+#if !defined(__SIZEOF_INT128__) || defined(_MSC_VER)
 #    define _LIBCPP_HAS_NO_INT128
 #  endif
 

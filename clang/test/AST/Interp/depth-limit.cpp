@@ -1,5 +1,5 @@
-// RUN: %clang_cc1 -fexperimental-new-constant-interpreter -fconstexpr-depth 100 -verify %s
-// RUN: %clang_cc1 -fconstexpr-depth 100 -verify=ref %s
+// RUN: %clang_cc1 -fexperimental-new-constant-interpreter -fconstexpr-depth=100 -verify %s
+// RUN: %clang_cc1 -fconstexpr-depth=100 -verify=ref %s
 
 constexpr int f(int a) {
   if (a == 100)

@@ -449,9 +449,8 @@ define i1 @test_shift(i64 %x, i64 %y, i64 %shift) {
 ; CHECK-LABEL: @test_shift(
 ; CHECK-NEXT:    [[LSHR:%.*]] = lshr i64 [[X:%.*]], [[SHIFT:%.*]]
 ; CHECK-NEXT:    [[ICMP1:%.*]] = icmp ugt i64 [[LSHR]], [[Y:%.*]]
-; CHECK-NEXT:    [[ICMP2:%.*]] = icmp ugt i64 [[X]], [[Y]]
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[ICMP1]])
-; CHECK-NEXT:    ret i1 [[ICMP2]]
+; CHECK-NEXT:    ret i1 true
 ;
   %lshr = lshr i64 %x, %shift
   %icmp1 = icmp ugt i64 %lshr, %y
@@ -474,6 +473,30 @@ define i1 @assume_x_ugt_y_plus_1(i64  %x, i64  %y)  {
   tail call void @llvm.assume(i1 %2)
   %3 = icmp eq i64 %x, %y
   ret i1 %3
+}
+
+; i <u L ==> i >> C <u L
+define i1 @lshr_constant(i32 %length.i, i32 %i) {
+; CHECK-LABEL: @lshr_constant(
+; CHECK-NEXT:    ret i1 true
+;
+  %shl = lshr i32 %i, 1
+  %var29 = icmp ult i32 %i, %length.i
+  %var30 = icmp ult i32 %shl, %length.i
+  %res = icmp ule i1 %var29, %var30
+  ret i1 %res
+}
+
+; i <u L ==> i >> V <u L
+define i1 @lshr_value(i32 %length.i, i32 %i, i32 %v) {
+; CHECK-LABEL: @lshr_value(
+; CHECK-NEXT:    ret i1 true
+;
+  %shl = lshr i32 %i, %v
+  %var29 = icmp ult i32 %i, %length.i
+  %var30 = icmp ult i32 %shl, %length.i
+  %res = icmp ule i1 %var29, %var30
+  ret i1 %res
 }
 
 declare void @llvm.assume(i1)
