@@ -27,20 +27,22 @@ TEST(MultilibBuilderTest, MultilibValidity) {
 
   ASSERT_TRUE(MultilibBuilder().isValid()) << "Empty multilib is not valid";
 
-  ASSERT_TRUE(MultilibBuilder().flag("+foo").isValid())
+  ASSERT_TRUE(MultilibBuilder().flag(true, "-foo").isValid())
       << "Single indicative flag is not valid";
 
-  ASSERT_TRUE(MultilibBuilder().flag("-foo").isValid())
+  ASSERT_TRUE(MultilibBuilder().flag(false, "-foo").isValid())
       << "Single contraindicative flag is not valid";
 
-  ASSERT_FALSE(MultilibBuilder().flag("+foo").flag("-foo").isValid())
+  ASSERT_FALSE(
+      MultilibBuilder().flag(true, "-foo").flag(false, "-foo").isValid())
       << "Conflicting flags should invalidate the Multilib";
 
-  ASSERT_TRUE(MultilibBuilder().flag("+foo").flag("+foo").isValid())
+  ASSERT_TRUE(MultilibBuilder().flag(true, "-foo").flag(true, "-foo").isValid())
       << "Multilib should be valid even if it has the same flag "
          "twice";
 
-  ASSERT_TRUE(MultilibBuilder().flag("+foo").flag("-foobar").isValid())
+  ASSERT_TRUE(
+      MultilibBuilder().flag(true, "-foo").flag(false, "-foobar").isValid())
       << "Seemingly conflicting prefixes shouldn't actually conflict";
 }
 
@@ -52,7 +54,8 @@ TEST(MultilibBuilderTest, Construction1) {
 }
 
 TEST(MultilibBuilderTest, Construction3) {
-  MultilibBuilder M = MultilibBuilder().flag("+f1").flag("+f2").flag("-f3");
+  MultilibBuilder M =
+      MultilibBuilder().flag(true, "-f1").flag(true, "-f2").flag(false, "-f3");
   for (const std::string &A : M.flags()) {
     ASSERT_TRUE(llvm::StringSwitch<bool>(A)
                     .Cases("+f1", "+f2", "-f3", true)
@@ -63,7 +66,7 @@ TEST(MultilibBuilderTest, Construction3) {
 TEST(MultilibBuilderTest, SetConstruction1) {
   // Single maybe
   MultilibSet MS = MultilibSetBuilder()
-                       .Maybe(MultilibBuilder("64").flag("+m64"))
+                       .Maybe(MultilibBuilder("64").flag(true, "-m64"))
                        .makeMultilibSet();
   ASSERT_TRUE(MS.size() == 2);
   for (MultilibSet::const_iterator I = MS.begin(), E = MS.end(); I != E; ++I) {
@@ -79,8 +82,8 @@ TEST(MultilibBuilderTest, SetConstruction1) {
 TEST(MultilibBuilderTest, SetConstruction2) {
   // Double maybe
   MultilibSet MS = MultilibSetBuilder()
-                       .Maybe(MultilibBuilder("sof").flag("+sof"))
-                       .Maybe(MultilibBuilder("el").flag("+EL"))
+                       .Maybe(MultilibBuilder("sof").flag(true, "-sof"))
+                       .Maybe(MultilibBuilder("el").flag(true, "-EL"))
                        .makeMultilibSet();
   ASSERT_TRUE(MS.size() == 4);
   for (MultilibSet::const_iterator I = MS.begin(), E = MS.end(); I != E; ++I) {
@@ -154,7 +157,7 @@ TEST(MultilibBuilderTest, SetFilterObject) {
 
 TEST(MultilibBuilderTest, SetSelection1) {
   MultilibSet MS1 = MultilibSetBuilder()
-                        .Maybe(MultilibBuilder("64").flag("+m64"))
+                        .Maybe(MultilibBuilder("64").flag(true, "-m64"))
                         .makeMultilibSet();
 
   Multilib::flags_list FlagM64 = {"+m64"};
@@ -174,8 +177,8 @@ TEST(MultilibBuilderTest, SetSelection1) {
 
 TEST(MultilibBuilderTest, SetSelection2) {
   MultilibSet MS2 = MultilibSetBuilder()
-                        .Maybe(MultilibBuilder("el").flag("+EL"))
-                        .Maybe(MultilibBuilder("sf").flag("+SF"))
+                        .Maybe(MultilibBuilder("el").flag(true, "-EL"))
+                        .Maybe(MultilibBuilder("sf").flag(true, "-SF"))
                         .makeMultilibSet();
 
   for (unsigned I = 0; I < 4; ++I) {
