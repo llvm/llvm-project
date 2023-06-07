@@ -15,7 +15,9 @@ set(link_libs
 if(CLANG_ENABLE_CIR)
   list(APPEND link_libs
     clangCIRFrontendAction
+    MLIRIR
     )
+  include_directories(${LLVM_MAIN_SRC_DIR}/../mlir/include)
 endif()
 
 if(CLANG_ENABLE_ARCMT)
