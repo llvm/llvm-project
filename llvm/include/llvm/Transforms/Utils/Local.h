@@ -262,15 +262,21 @@ CallInst *changeToCall(InvokeInst *II, DomTreeUpdater *DTU = nullptr);
 /// that has an associated llvm.dbg.declare intrinsic.
 void ConvertDebugDeclareToDebugValue(DbgVariableIntrinsic *DII,
                                      StoreInst *SI, DIBuilder &Builder);
+void ConvertDebugDeclareToDebugValue(DPValue *DPV,
+                                     StoreInst *SI, DIBuilder &Builder);
 
 /// Inserts a llvm.dbg.value intrinsic before a load of an alloca'd value
 /// that has an associated llvm.dbg.declare intrinsic.
 void ConvertDebugDeclareToDebugValue(DbgVariableIntrinsic *DII,
                                      LoadInst *LI, DIBuilder &Builder);
+void ConvertDebugDeclareToDebugValue(DPValue *DPV,
+                                     LoadInst *LI, DIBuilder &Builder);
 
 /// Inserts a llvm.dbg.value intrinsic after a phi that has an associated
 /// llvm.dbg.declare intrinsic.
 void ConvertDebugDeclareToDebugValue(DbgVariableIntrinsic *DII,
+                                     PHINode *LI, DIBuilder &Builder);
+void ConvertDebugDeclareToDebugValue(DPValue *DPV,
                                      PHINode *LI, DIBuilder &Builder);
 
 /// Lowers llvm.dbg.declare intrinsics into appropriate set of
@@ -307,7 +313,8 @@ void salvageDebugInfo(Instruction &I);
 /// \p Insns, rather than all debug users from findDbgUsers( \p I).
 /// Mark undef if salvaging cannot be completed.
 void salvageDebugInfoForDbgValues(Instruction &I,
-                                  ArrayRef<DbgVariableIntrinsic *> Insns);
+                                  ArrayRef<DbgVariableIntrinsic *> Insns,
+                                  ArrayRef<DPValue *> DPInsns);
 
 /// Given an instruction \p I and DIExpression \p DIExpr operating on
 /// it, append the effects of \p I to the DIExpression operand list
