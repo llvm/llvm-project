@@ -41,7 +41,7 @@ struct COFFModuleDefinition {
 
 Expected<COFFModuleDefinition>
 parseCOFFModuleDefinition(MemoryBufferRef MB, COFF::MachineTypes Machine,
-                          bool MingwDef = false);
+                          bool MingwDef = false, bool AddUnderscores = true);
 
 } // End namespace object.
 } // End namespace llvm.
