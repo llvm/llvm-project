@@ -1587,6 +1587,11 @@ void TypePrinter::printElaboratedBefore(const ElaboratedType *T,
     return;
   }
 
+  if (Policy.SuppressElaboration) {
+    printBefore(T->getNamedType(), OS);
+    return;
+  }
+
   // The tag definition will take care of these.
   if (!Policy.IncludeTagDefinition)
   {
@@ -1606,6 +1611,12 @@ void TypePrinter::printElaboratedAfter(const ElaboratedType *T,
                                         raw_ostream &OS) {
   if (Policy.IncludeTagDefinition && T->getOwnedTagDecl())
     return;
+
+  if (Policy.SuppressElaboration) {
+    printAfter(T->getNamedType(), OS);
+    return;
+  }
+
   ElaboratedTypePolicyRAII PolicyRAII(Policy);
   printAfter(T->getNamedType(), OS);
 }
