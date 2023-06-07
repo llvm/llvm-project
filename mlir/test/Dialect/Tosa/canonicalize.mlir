@@ -39,18 +39,42 @@ func.func @cast_nofold(%arg0: tensor<?x1xf32>) -> tensor<?x1xi32> {
   return %0 : tensor<?x1xi32>
 }
 
-// CHECK-LABEL: @clamp_not_noop
-func.func @clamp_not_noop(%arg0: tensor<4xi32>) -> tensor<4xi32> {
+// CHECK-LABEL: @clamp_i32_not_noop
+func.func @clamp_i32_not_noop(%arg0: tensor<4xi32>) -> tensor<4xi32> {
   // CHECK: "tosa.clamp"
   %0 = "tosa.clamp"(%arg0) {min_int = 1 : i64, max_int = 4 : i64, min_fp = 1.0 : f32, max_fp = 4.0 : f32} : (tensor<4xi32>) -> tensor<4xi32>
   return %0 : tensor<4xi32>
 }
 
-// CHECK-LABEL: @clamp_float_is_noop
-func.func @clamp_float_is_noop(%arg0: tensor<4xf32>) -> tensor<4xf32> {
+// CHECK-LABEL: @clamp_f16_not_noop
+func.func @clamp_f16_not_noop(%arg0: tensor<4xf16>) -> tensor<4xf16> {
+  // CHECK: "tosa.clamp"
+  %0 = "tosa.clamp"(%arg0) {min_int = -128 : i64, max_int = 127 : i64, min_fp = -3.40282347E+38 : f32, max_fp = 3.40282347E+38 : f32} : (tensor<4xf16>) -> tensor<4xf16>
+  return %0 : tensor<4xf16>
+}
+
+// CHECK-LABEL: @clamp_f32_not_noop
+func.func @clamp_f32_not_noop(%arg0: tensor<4xf32>) -> tensor<4xf32> {
+  // CHECK: "tosa.clamp"
+  %0 = "tosa.clamp"(%arg0) {min_int = -128 : i64, max_int = 127 : i64, min_fp = -3.40282347E+38 : f32, max_fp = 3.40282347E+38 : f32} : (tensor<4xf32>) -> tensor<4xf32>
+  return %0 : tensor<4xf32>
+}
+
+// CHECK-LABEL: @clamp_f16_is_noop
+func.func @clamp_f16_is_noop(%arg0: tensor<4xf16>) -> tensor<4xf16> {
   // CHECK: return %arg0
   // CHECK-NOT: "tosa.clamp"
-  %0 = "tosa.clamp"(%arg0) {min_int = -128 : i64, max_int = 127 : i64, min_fp = -3.40282347E+38 : f32, max_fp = 3.40282347E+38 : f32} :  (tensor<4xf32>) -> tensor<4xf32>
+  // 0xFF800000 and 0x7F800000 are respectively negative and positive F32 infinity.
+  %0 = "tosa.clamp"(%arg0) {min_int = -128 : i64, max_int = 127 : i64, min_fp = 0xFF800000 : f32, max_fp = 0x7F800000 : f32} : (tensor<4xf16>) -> tensor<4xf16>
+  return %0 : tensor<4xf16>
+}
+
+// CHECK-LABEL: @clamp_f32_is_noop
+func.func @clamp_f32_is_noop(%arg0: tensor<4xf32>) -> tensor<4xf32> {
+  // CHECK: return %arg0
+  // CHECK-NOT: "tosa.clamp"
+  // 0xFF800000 and 0x7F800000 are respectively negative and positive F32 infinity.
+  %0 = "tosa.clamp"(%arg0) {min_int = -128 : i64, max_int = 127 : i64, min_fp = 0xFF800000 : f32, max_fp = 0x7F800000 : f32} : (tensor<4xf32>) -> tensor<4xf32>
   return %0 : tensor<4xf32>
 }
 
