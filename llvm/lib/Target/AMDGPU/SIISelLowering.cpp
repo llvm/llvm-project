@@ -1041,7 +1041,8 @@ bool SITargetLowering::getTgtMemIntrinsic(IntrinsicInfo &Info,
 
     Info.flags |= MachineMemOperand::MODereferenceable;
     if (ME.onlyReadsMemory() ||
-        IntrID == Intrinsic::amdgcn_raw_atomic_buffer_load) {
+        IntrID == Intrinsic::amdgcn_raw_atomic_buffer_load ||
+        IntrID == Intrinsic::amdgcn_raw_atomic_ptr_buffer_load) {
       unsigned MaxNumLanes = 4;
 
       if (RsrcIntr->IsImage) {
@@ -7572,8 +7573,9 @@ SDValue SITargetLowering::LowerINTRINSIC_W_CHAIN(SDValue Op,
                                M->getMemOperand(), DAG);
   }
   case Intrinsic::amdgcn_raw_buffer_load:
-  case Intrinsic::amdgcn_raw_atomic_buffer_load:
   case Intrinsic::amdgcn_raw_ptr_buffer_load:
+  case Intrinsic::amdgcn_raw_atomic_buffer_load:
+  case Intrinsic::amdgcn_raw_atomic_ptr_buffer_load:
   case Intrinsic::amdgcn_raw_buffer_load_format:
   case Intrinsic::amdgcn_raw_ptr_buffer_load_format: {
     const bool IsFormat =

@@ -4642,9 +4642,10 @@ AMDGPURegisterBankInfo::getInstrMapping(const MachineInstr &MI) const {
       break;
     }
     case Intrinsic::amdgcn_raw_buffer_load:
-    case Intrinsic::amdgcn_raw_tbuffer_load:
-    case Intrinsic::amdgcn_raw_atomic_buffer_load:
     case Intrinsic::amdgcn_raw_ptr_buffer_load:
+    case Intrinsic::amdgcn_raw_atomic_buffer_load:
+    case Intrinsic::amdgcn_raw_atomic_ptr_buffer_load:
+    case Intrinsic::amdgcn_raw_tbuffer_load:
     case Intrinsic::amdgcn_raw_ptr_tbuffer_load: {
       // FIXME: Should make intrinsic ID the last operand of the instruction,
       // then this would be the same as store
