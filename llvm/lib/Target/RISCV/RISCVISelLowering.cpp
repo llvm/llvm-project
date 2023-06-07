@@ -4404,7 +4404,7 @@ static SDValue lowerConstant(SDValue Op, SelectionDAG &DAG,
   // that if it will avoid a constant pool.
   // It will require an extra temporary register though.
   int64_t LoVal = SignExtend64<32>(Imm);
-  int64_t HiVal = SignExtend64<32>((Imm - LoVal) >> 32);
+  int64_t HiVal = SignExtend64<32>(((uint64_t)Imm - (uint64_t)LoVal) >> 32);
   if (LoVal == HiVal) {
     RISCVMatInt::InstSeq SeqLo =
         RISCVMatInt::generateInstSeq(LoVal, Subtarget.getFeatureBits());
@@ -11412,8 +11412,6 @@ static SDValue performBITREVERSECombine(SDNode *N, SelectionDAG &DAG,
 // multiply result and/or the accumulator.
 // NOTE: Only supports RVV operations with VL.
 static unsigned negateFMAOpcode(unsigned Opcode, bool NegMul, bool NegAcc) {
-  assert((NegMul || NegAcc) && "Not negating anything?");
-
   // Negating the multiply result changes ADD<->SUB and toggles 'N'.
   if (NegMul) {
     // clang-format off

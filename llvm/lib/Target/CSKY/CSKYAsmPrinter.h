@@ -57,7 +57,7 @@ public:
   bool runOnMachineFunction(MachineFunction &MF) override;
 
   // we emit constant pools customly!
-  void emitConstantPool() override{};
+  void emitConstantPool() override {}
 
   bool PrintAsmOperand(const MachineInstr *MI, unsigned OpNo,
                        const char *ExtraCode, raw_ostream &OS) override;
