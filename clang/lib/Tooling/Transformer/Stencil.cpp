@@ -327,7 +327,7 @@ public:
     assert(containsNoNullStencils(CaseStencils) &&
            "cases of selectBound may not be null");
   }
-  ~SelectBoundStencil() override{};
+  ~SelectBoundStencil() override {}
 
   llvm::Error eval(const MatchFinder::MatchResult &match,
                    std::string *result) const override {
