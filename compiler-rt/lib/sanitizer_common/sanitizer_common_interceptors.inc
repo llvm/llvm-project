@@ -3312,7 +3312,8 @@ INTERCEPTOR(__sanitizer_dirent *, readdir, void *dirp) {
   // its metadata. See
   // https://github.com/google/sanitizers/issues/321.
   __sanitizer_dirent *res = REAL(readdir)(dirp);
-  if (res) COMMON_INTERCEPTOR_WRITE_RANGE(ctx, res, res->d_reclen);
+  if (res)
+    COMMON_INTERCEPTOR_WRITE_RANGE(ctx, res, __sanitizer_dirsiz(res));
   return res;
 }
 
@@ -3327,7 +3328,7 @@ INTERCEPTOR(int, readdir_r, void *dirp, __sanitizer_dirent *entry,
   if (!res) {
     COMMON_INTERCEPTOR_WRITE_RANGE(ctx, result, sizeof(*result));
     if (*result)
-      COMMON_INTERCEPTOR_WRITE_RANGE(ctx, *result, (*result)->d_reclen);
+      COMMON_INTERCEPTOR_WRITE_RANGE(ctx, *result, __sanitizer_dirsiz(*result));
   }
   return res;
 }
@@ -3348,7 +3349,8 @@ INTERCEPTOR(__sanitizer_dirent64 *, readdir64, void *dirp) {
   // its metadata. See
   // https://github.com/google/sanitizers/issues/321.
   __sanitizer_dirent64 *res = REAL(readdir64)(dirp);
-  if (res) COMMON_INTERCEPTOR_WRITE_RANGE(ctx, res, res->d_reclen);
+  if (res)
+    COMMON_INTERCEPTOR_WRITE_RANGE(ctx, res, __sanitizer_dirsiz(res));
   return res;
 }
 
@@ -3363,7 +3365,7 @@ INTERCEPTOR(int, readdir64_r, void *dirp, __sanitizer_dirent64 *entry,
   if (!res) {
     COMMON_INTERCEPTOR_WRITE_RANGE(ctx, result, sizeof(*result));
     if (*result)
-      COMMON_INTERCEPTOR_WRITE_RANGE(ctx, *result, (*result)->d_reclen);
+      COMMON_INTERCEPTOR_WRITE_RANGE(ctx, *result, __sanitizer_dirsiz(*result));
   }
   return res;
 }
@@ -3935,7 +3937,7 @@ static THREADLOCAL scandir_compar_f scandir_compar;
 
 static int wrapped_scandir_filter(const struct __sanitizer_dirent *dir) {
   COMMON_INTERCEPTOR_UNPOISON_PARAM(1);
-  COMMON_INTERCEPTOR_INITIALIZE_RANGE(dir, dir->d_reclen);
+  COMMON_INTERCEPTOR_INITIALIZE_RANGE(dir, __sanitizer_dirsiz(dir));
   return scandir_filter(dir);
 }
 
@@ -3943,9 +3945,9 @@ static int wrapped_scandir_compar(const struct __sanitizer_dirent **a,
                                   const struct __sanitizer_dirent **b) {
   COMMON_INTERCEPTOR_UNPOISON_PARAM(2);
   COMMON_INTERCEPTOR_INITIALIZE_RANGE(a, sizeof(*a));
-  COMMON_INTERCEPTOR_INITIALIZE_RANGE(*a, (*a)->d_reclen);
+  COMMON_INTERCEPTOR_INITIALIZE_RANGE(*a, __sanitizer_dirsiz(*a));
   COMMON_INTERCEPTOR_INITIALIZE_RANGE(b, sizeof(*b));
-  COMMON_INTERCEPTOR_INITIALIZE_RANGE(*b, (*b)->d_reclen);
+  COMMON_INTERCEPTOR_INITIALIZE_RANGE(*b, __sanitizer_dirsiz(*b));
   return scandir_compar(a, b);
 }
 
@@ -3969,7 +3971,7 @@ INTERCEPTOR(int, scandir, char *dirp, __sanitizer_dirent ***namelist,
     COMMON_INTERCEPTOR_WRITE_RANGE(ctx, *namelist, sizeof(**namelist) * res);
     for (int i = 0; i < res; ++i)
       COMMON_INTERCEPTOR_WRITE_RANGE(ctx, (*namelist)[i],
-                                     (*namelist)[i]->d_reclen);
+                                     __sanitizer_dirsiz((*namelist)[i]));
   }
   return res;
 }
@@ -3988,7 +3990,7 @@ static THREADLOCAL scandir64_compar_f scandir64_compar;
 
 static int wrapped_scandir64_filter(const struct __sanitizer_dirent64 *dir) {
   COMMON_INTERCEPTOR_UNPOISON_PARAM(1);
-  COMMON_INTERCEPTOR_INITIALIZE_RANGE(dir, dir->d_reclen);
+  COMMON_INTERCEPTOR_INITIALIZE_RANGE(dir, __sanitizer_dirsiz(dir));
   return scandir64_filter(dir);
 }
 
@@ -3996,9 +3998,9 @@ static int wrapped_scandir64_compar(const struct __sanitizer_dirent64 **a,
                                     const struct __sanitizer_dirent64 **b) {
   COMMON_INTERCEPTOR_UNPOISON_PARAM(2);
   COMMON_INTERCEPTOR_INITIALIZE_RANGE(a, sizeof(*a));
-  COMMON_INTERCEPTOR_INITIALIZE_RANGE(*a, (*a)->d_reclen);
+  COMMON_INTERCEPTOR_INITIALIZE_RANGE(*a, __sanitizer_dirsiz(*a));
   COMMON_INTERCEPTOR_INITIALIZE_RANGE(b, sizeof(*b));
-  COMMON_INTERCEPTOR_INITIALIZE_RANGE(*b, (*b)->d_reclen);
+  COMMON_INTERCEPTOR_INITIALIZE_RANGE(*b, __sanitizer_dirsiz(*b));
   return scandir64_compar(a, b);
 }
 
@@ -4023,7 +4025,7 @@ INTERCEPTOR(int, scandir64, char *dirp, __sanitizer_dirent64 ***namelist,
     COMMON_INTERCEPTOR_WRITE_RANGE(ctx, *namelist, sizeof(**namelist) * res);
     for (int i = 0; i < res; ++i)
       COMMON_INTERCEPTOR_WRITE_RANGE(ctx, (*namelist)[i],
-                                     (*namelist)[i]->d_reclen);
+                                     __sanitizer_dirsiz((*namelist)[i]));
   }
   return res;
 }

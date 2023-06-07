@@ -249,8 +249,14 @@ struct __sanitizer_dirent {
   unsigned int d_fileno;
 #  endif
   unsigned short d_reclen;
-  // more fields that we don't care about
+  u8 d_type;
+  u8 d_pad0;
+  u16 d_namlen;
+  u16 d_pad1;
+  char d_name[256];
 };
+
+u16 __sanitizer_dirsiz(const __sanitizer_dirent *dp);
 
 // 'clock_t' is 32 bits wide on x64 FreeBSD
 typedef int __sanitizer_clock_t;
