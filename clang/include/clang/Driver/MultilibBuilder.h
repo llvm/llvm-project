@@ -70,7 +70,7 @@ public:
   MultilibBuilder &includeSuffix(StringRef S);
 
   /// Get the flags that indicate or contraindicate this multilib's use
-  /// All elements begin with either '+' or '-'
+  /// All elements begin with either '-' or '!'
   const flags_list &flags() const { return Flags; }
   flags_list &flags() { return Flags; }
 
