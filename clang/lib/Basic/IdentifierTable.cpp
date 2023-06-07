@@ -849,7 +849,8 @@ StringRef clang::getNullabilitySpelling(NullabilityKind kind,
   llvm_unreachable("Unknown nullability kind.");
 }
 
-llvm::raw_ostream &operator<<(llvm::raw_ostream &OS, NullabilityKind NK) {
+llvm::raw_ostream &clang::operator<<(llvm::raw_ostream &OS,
+                                     NullabilityKind NK) {
   switch (NK) {
   case NullabilityKind::NonNull:
     return OS << "NonNull";
