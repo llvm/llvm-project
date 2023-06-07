@@ -48,34 +48,50 @@ using namespace mlir::linalg;
 
 /// Pad the `opOperand` in the `paddingDimensions` using the padding value and
 /// the nofold flag found in `paddingValues` and `packPaddings`, respectively.
-/// Exit early and return the `opOperand` value if the shape dimensions that
-/// match `paddingDimensions` have a static size and the nofold flag is not set.
+///
+/// Exit early and return the `opOperand` value if it already has the requested
+/// shape. I.e.:
+/// - static shape
+/// - nofold is not set
+/// - dim sizes are multiples of `padToMultipleOf`
+///
 /// Otherwise, try to pad the shape dimensions that match the iterator
 /// dimensions `paddingDimensions` and return the tensor::PadOp result if
 /// padding succeeds or failure otherwise.
 static FailureOr<Value> padOperandToSmallestStaticBoundingBox(
     RewriterBase &rewriter, linalg::LinalgOp opToPad, OpOperand *opOperand,
-    ArrayRef<int64_t> paddingDimensions, ArrayRef<Attribute> paddingValues,
-    ArrayRef<bool> packPaddings) {
+    ArrayRef<int64_t> paddingDimensions, ArrayRef<int64_t> padToMultipleOf,
+    ArrayRef<Attribute> paddingValues, ArrayRef<bool> packPaddings) {
+  assert(padToMultipleOf.size() == paddingDimensions.size() &&
+         "invalid number of elements in padToMultipleOf");
+
   AffineMap indexingMap = opToPad.getMatchingIndexingMap(opOperand);
   ArrayRef<int64_t> shape = opToPad.getShape(opOperand);
 
-  // Collect the shape dimension that are a function of the `paddingDimensions`.
-  llvm::SmallDenseSet<int64_t> shapeDimsToPad;
-  for (int64_t dim : paddingDimensions)
-    for (const auto &en : enumerate(indexingMap.getResults()))
-      if (en.value().isFunctionOfDim(dim))
-        shapeDimsToPad.insert(en.index());
+  // Collect the shape dimensions that are a function of `paddingDimensions`,
+  // along with the multiple that they should be padded to ("1" if none).
+  bool alreadyHasRequestedShape = true;
+  DenseMap<int64_t, int64_t> shapeDimToMultiple;
+  for (const auto &dimEn : enumerate(paddingDimensions)) {
+    for (const auto &en : enumerate(indexingMap.getResults())) {
+      if (en.value().isFunctionOfDim(dimEn.value())) {
+        int64_t dimSize = shape[en.index()];
+        shapeDimToMultiple[en.index()] = padToMultipleOf[dimEn.index()];
+        if (ShapedType::isDynamic(dimSize)) {
+          alreadyHasRequestedShape = false;
+        } else if (dimSize % shapeDimToMultiple[en.index()] != 0) {
+          alreadyHasRequestedShape = false;
+        }
+      }
+    }
+  }
 
   // Return the unpadded operand if padding to a static shape is not needed and
   // if the nofold flag is not set.
   bool nofold = opOperand->getOperandNumber() < packPaddings.size()
                     ? packPaddings[opOperand->getOperandNumber()]
                     : false;
-  bool hasStaticShape = llvm::none_of(shapeDimsToPad, [&](int64_t dim) {
-    return ShapedType::isDynamic(shape[dim]);
-  });
-  if (!nofold && hasStaticShape)
+  if (!nofold && alreadyHasRequestedShape)
     return opOperand->get();
 
   // Fail if `paddingValues` specifies no padding value.
@@ -86,12 +102,17 @@ static FailureOr<Value> padOperandToSmallestStaticBoundingBox(
   Value paddingValue = rewriter.create<arith::ConstantOp>(
       opToPad.getLoc(), cast<TypedAttr>(paddingAttr));
 
+  // Helper function to round a number up to a given multiple.
+  auto ceil = [](int64_t val, int64_t multiple) {
+    return ((val + multiple - 1) / multiple) * multiple;
+  };
+
   // Upper bound the sizes to obtain a static bounding box.
   SmallVector<int64_t> paddedShape(shape.begin(), shape.end());
   for (int64_t i = 0, e = shape.size(); i < e; ++i) {
     LLVM_DEBUG(DBGS() << "--compute padded size for dim " << i << "\n");
     // Skip dimensions that do not require padding.
-    if (!shapeDimsToPad.contains(i)) {
+    if (!shapeDimToMultiple.contains(i)) {
       LLVM_DEBUG(DBGS() << "----dim does not require padding, SKIP\n");
       continue;
     }
@@ -105,7 +126,7 @@ static FailureOr<Value> padOperandToSmallestStaticBoundingBox(
       return rewriter.notifyMatchFailure(
           opToPad, "count not compute a bounding box for padding");
     }
-    paddedShape[i] = *upperBound;
+    paddedShape[i] = ceil(*upperBound, shapeDimToMultiple[i]);
     LLVM_DEBUG(DBGS() << "----new dim size: " << paddedShape[i] << "\n");
   }
 
@@ -131,9 +152,11 @@ getNParallelLoopsAttrs(unsigned nParallelLoops) {
 //===----------------------------------------------------------------------===//
 // rewriteAsPaddedOp transformation.
 //===----------------------------------------------------------------------===//
+
 FailureOr<SmallVector<Value>>
 linalg::rewriteAsPaddedOp(RewriterBase &rewriter, LinalgOp opToPad,
                           ArrayRef<int64_t> paddingDimensions,
+                          ArrayRef<int64_t> padToMultipleOf,
                           ArrayRef<Attribute> paddingValues,
                           ArrayRef<bool> packPaddings, LinalgOp &paddedOp) {
   LLVM_DEBUG(DBGS() << "Start rewriteAsPaddedOp : " << opToPad << "\n");
@@ -153,8 +176,8 @@ linalg::rewriteAsPaddedOp(RewriterBase &rewriter, LinalgOp opToPad,
   newOperands.reserve(opToPad->getNumOperands());
   for (OpOperand &opOperand : opToPad->getOpOperands()) {
     FailureOr<Value> paddedOperand = padOperandToSmallestStaticBoundingBox(
-        rewriter, opToPad, &opOperand, paddingDimensions, paddingValues,
-        packPaddings);
+        rewriter, opToPad, &opOperand, paddingDimensions, padToMultipleOf,
+        paddingValues, packPaddings);
     // Exit if `paddingDimensions` cannot be bounded statically.
     if (failed(paddedOperand)) {
       LLVM_DEBUG(DBGS() << "--operand cannot be bound statically : "
@@ -241,9 +264,13 @@ mlir::linalg::padAndHoistLinalgOp(RewriterBase &rewriter, LinalgOp linalgOp,
 
   // Pad the operation.
   LinalgOp paddedOp;
-  FailureOr<SmallVector<Value>> newResults =
-      rewriteAsPaddedOp(rewriter, linalgOp, options.paddingDimensions,
-                        options.paddingValues, options.packPaddings, paddedOp);
+  SmallVector<int64_t> padToMultipleOf(options.paddingDimensions.size(), 1);
+  if (options.padToMultipleOf.has_value())
+    padToMultipleOf.assign(options.padToMultipleOf->begin(),
+                           options.padToMultipleOf->end());
+  FailureOr<SmallVector<Value>> newResults = rewriteAsPaddedOp(
+      rewriter, linalgOp, options.paddingDimensions, padToMultipleOf,
+      options.paddingValues, options.packPaddings, paddedOp);
   if (failed(newResults))
     return rewriter.notifyMatchFailure(linalgOp,
                                        "failed to rewrite as a padded op");
