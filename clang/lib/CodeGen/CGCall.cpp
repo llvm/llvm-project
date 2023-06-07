@@ -2033,7 +2033,8 @@ void CodeGenModule::mergeDefaultFunctionDefinitionAttributes(
   llvm::AttrBuilder FuncAttrs(F.getContext());
   getTrivialDefaultFunctionAttributes(F.getName(), F.hasOptNone(),
                                       /*AttrOnCallSite=*/false, FuncAttrs);
-  GetCPUAndFeaturesAttributes(GlobalDecl(), FuncAttrs);
+  GetCPUAndFeaturesAttributes(GlobalDecl(), FuncAttrs,
+                              /*AddTargetFeatures=*/false);
 
   if (!WillInternalize && F.isInterposable()) {
     // Do not promote "dynamic" denormal-fp-math to this translation unit's
