@@ -4,7 +4,6 @@ filter_available_targets(INTERCEPTION_UNITTEST_SUPPORTED_ARCH x86_64 i386 mips64
 
 set(INTERCEPTION_UNITTESTS
   interception_linux_test.cpp
-  interception_linux_foreign_test.cpp
   interception_test_main.cpp
   interception_win_test.cpp
   )
@@ -20,10 +19,6 @@ set(INTERCEPTION_TEST_CFLAGS_COMMON
   -I${COMPILER_RT_SOURCE_DIR}/lib/interception
   -DSANITIZER_COMMON_NO_REDEFINE_BUILTINS
   -fno-rtti
-  -fno-builtin-isdigit
-  -fno-builtin-isalpha
-  -fno-builtin-isalnum
-  -fno-builtin-islower
   -O2
   -Werror=sign-compare)
 

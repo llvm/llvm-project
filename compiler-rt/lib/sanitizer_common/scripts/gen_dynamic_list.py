@@ -125,7 +125,7 @@ def main(argv):
             result.append(func)
             continue
         # Export interceptors.
-        match = re.match("_?__interceptor_(.*)", func)
+        match = re.match("__interceptor_(.*)", func)
         if match:
             result.append(func)
             # We have to avoid exporting the interceptors for versioned library
