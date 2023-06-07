@@ -476,4 +476,36 @@ define i1 @assume_x_ugt_y_plus_1(i64  %x, i64  %y)  {
   ret i1 %3
 }
 
+; i <u L ==> i >> C <u L
+define i1 @lshr_constant(i32 %length.i, i32 %i) {
+; CHECK-LABEL: @lshr_constant(
+; CHECK-NEXT:    [[SHL:%.*]] = lshr i32 [[I:%.*]], 1
+; CHECK-NEXT:    [[VAR29:%.*]] = icmp ult i32 [[I]], [[LENGTH_I:%.*]]
+; CHECK-NEXT:    [[VAR30:%.*]] = icmp ult i32 [[SHL]], [[LENGTH_I]]
+; CHECK-NEXT:    [[RES:%.*]] = icmp ule i1 [[VAR29]], [[VAR30]]
+; CHECK-NEXT:    ret i1 [[RES]]
+;
+  %shl = lshr i32 %i, 1
+  %var29 = icmp ult i32 %i, %length.i
+  %var30 = icmp ult i32 %shl, %length.i
+  %res = icmp ule i1 %var29, %var30
+  ret i1 %res
+}
+
+; i <u L ==> i >> V <u L
+define i1 @lshr_value(i32 %length.i, i32 %i, i32 %v) {
+; CHECK-LABEL: @lshr_value(
+; CHECK-NEXT:    [[SHL:%.*]] = lshr i32 [[I:%.*]], [[V:%.*]]
+; CHECK-NEXT:    [[VAR29:%.*]] = icmp ult i32 [[I]], [[LENGTH_I:%.*]]
+; CHECK-NEXT:    [[VAR30:%.*]] = icmp ult i32 [[SHL]], [[LENGTH_I]]
+; CHECK-NEXT:    [[RES:%.*]] = icmp ule i1 [[VAR29]], [[VAR30]]
+; CHECK-NEXT:    ret i1 [[RES]]
+;
+  %shl = lshr i32 %i, %v
+  %var29 = icmp ult i32 %i, %length.i
+  %var30 = icmp ult i32 %shl, %length.i
+  %res = icmp ule i1 %var29, %var30
+  ret i1 %res
+}
+
 declare void @llvm.assume(i1)
