@@ -836,7 +836,7 @@ multiclass VCMP_IV_V_X_I<string opcodestr, bits<6> funct6> {
 
 multiclass VCMP_IV_X_I<string opcodestr, bits<6> funct6> {
   def X  : VALUVX<funct6, OPIVX, opcodestr # ".vx">,
-           Sched<[WriteVICmpV_WorstCase, ReadVICmpV_WorstCase,
+           Sched<[WriteVICmpX_WorstCase, ReadVICmpV_WorstCase,
                   ReadVICmpX_WorstCase, ReadVMask]>;
   def I  : VALUVI<funct6, opcodestr # ".vi", simm5>,
            Sched<[WriteVICmpI_WorstCase, ReadVICmpV_WorstCase,
