@@ -9,6 +9,7 @@
 #include "CommandObjectWatchpoint.h"
 #include "CommandObjectWatchpointCommand.h"
 
+#include <memory>
 #include <vector>
 
 #include "llvm/ADT/StringRef.h"
@@ -20,6 +21,7 @@
 #include "lldb/Interpreter/CommandInterpreter.h"
 #include "lldb/Interpreter/CommandOptionArgumentTable.h"
 #include "lldb/Interpreter/CommandReturnObject.h"
+#include "lldb/Symbol/Function.h"
 #include "lldb/Symbol/Variable.h"
 #include "lldb/Symbol/VariableList.h"
 #include "lldb/Target/StackFrame.h"
@@ -950,27 +952,32 @@ protected:
     error.Clear();
     WatchpointSP watch_sp =
         target->CreateWatchpoint(addr, size, &compiler_type, watch_type, error);
-    if (watch_sp) {
-      watch_sp->SetWatchSpec(command.GetArgumentAtIndex(0));
-      watch_sp->SetWatchVariable(true);
-      if (var_sp && var_sp->GetDeclaration().GetFile()) {
+    if (!watch_sp) {
+      result.AppendErrorWithFormat(
+          "Watchpoint creation failed (addr=0x%" PRIx64 ", size=%" PRIu64
+          ", variable expression='%s').\n",
+          addr, static_cast<uint64_t>(size), command.GetArgumentAtIndex(0));
+      if (const char *error_message = error.AsCString(nullptr))
+        result.AppendError(error_message);
+      return result.Succeeded();
+    }
+
+    watch_sp->SetWatchSpec(command.GetArgumentAtIndex(0));
+    watch_sp->SetWatchVariable(true);
+    if (var_sp) {
+      if (var_sp->GetDeclaration().GetFile()) {
         StreamString ss;
         // True to show fullpath for declaration file.
         var_sp->GetDeclaration().DumpStopContext(&ss, true);
         watch_sp->SetDeclInfo(std::string(ss.GetString()));
       }
-      output_stream.Printf("Watchpoint created: ");
-      watch_sp->GetDescription(&output_stream, lldb::eDescriptionLevelFull);
-      output_stream.EOL();
-      result.SetStatus(eReturnStatusSuccessFinishResult);
-    } else {
-      result.AppendErrorWithFormat(
-          "Watchpoint creation failed (addr=0x%" PRIx64 ", size=%" PRIu64
-          ", variable expression='%s').\n",
-          addr, (uint64_t)size, command.GetArgumentAtIndex(0));
-      if (error.AsCString(nullptr))
-        result.AppendError(error.AsCString());
+      if (var_sp->GetScope() == eValueTypeVariableLocal)
+        watch_sp->SetupVariableWatchpointDisabler(m_exe_ctx.GetFrameSP());
     }
+    output_stream.Printf("Watchpoint created: ");
+    watch_sp->GetDescription(&output_stream, lldb::eDescriptionLevelFull);
+    output_stream.EOL();
+    result.SetStatus(eReturnStatusSuccessFinishResult);
 
     return result.Succeeded();
   }
