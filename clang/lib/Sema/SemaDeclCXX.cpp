@@ -8582,8 +8582,8 @@ bool Sema::CheckExplicitlyDefaultedComparison(Scope *S, FunctionDecl *FD,
   // C++2a [class.compare.default]p1:
   //   A defaulted comparison operator function for some class C shall be a
   //   non-template function declared in the member-specification of C that is
-  //    -- a non-static const member of C having one parameter of type
-  //       const C&, or
+  //    -- a non-static const non-volatile member of C having one parameter of
+  //       type const C& and either no ref-qualifier or the ref-qualifier &, or
   //    -- a friend of C having two parameters of type const C& or two
   //       parameters of type C.
 
@@ -8592,6 +8592,17 @@ bool Sema::CheckExplicitlyDefaultedComparison(Scope *S, FunctionDecl *FD,
   if (IsMethod) {
     auto *MD = cast<CXXMethodDecl>(FD);
     assert(!MD->isStatic() && "comparison function cannot be a static member");
+
+    if (MD->getRefQualifier() == RQ_RValue) {
+      Diag(MD->getLocation(), diag::err_ref_qualifier_comparison_operator);
+
+      // Remove the ref qualifier to recover.
+      const auto *FPT = MD->getType()->castAs<FunctionProtoType>();
+      FunctionProtoType::ExtProtoInfo EPI = FPT->getExtProtoInfo();
+      EPI.RefQualifier = RQ_None;
+      MD->setType(Context.getFunctionType(FPT->getReturnType(),
+                                          FPT->getParamTypes(), EPI));
+    }
 
     // If we're out-of-class, this is the class we're comparing.
     if (!RD)
@@ -8612,6 +8623,17 @@ bool Sema::CheckExplicitlyDefaultedComparison(Scope *S, FunctionDecl *FD,
       const auto *FPT = MD->getType()->castAs<FunctionProtoType>();
       FunctionProtoType::ExtProtoInfo EPI = FPT->getExtProtoInfo();
       EPI.TypeQuals.addConst();
+      MD->setType(Context.getFunctionType(FPT->getReturnType(),
+                                          FPT->getParamTypes(), EPI));
+    }
+
+    if (MD->isVolatile()) {
+      Diag(MD->getLocation(), diag::err_volatile_comparison_operator);
+
+      // Remove the 'volatile' from the type to recover.
+      const auto *FPT = MD->getType()->castAs<FunctionProtoType>();
+      FunctionProtoType::ExtProtoInfo EPI = FPT->getExtProtoInfo();
+      EPI.TypeQuals.removeVolatile();
       MD->setType(Context.getFunctionType(FPT->getReturnType(),
                                           FPT->getParamTypes(), EPI));
     }
