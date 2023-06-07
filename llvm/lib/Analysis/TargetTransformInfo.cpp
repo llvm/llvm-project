@@ -1035,6 +1035,10 @@ InstructionCost TargetTransformInfo::getMemcpyCost(const Instruction *I) const {
   return Cost;
 }
 
+uint64_t TargetTransformInfo::getMaxMemIntrinsicInlineSizeThreshold() const {
+  return TTIImpl->getMaxMemIntrinsicInlineSizeThreshold();
+}
+
 InstructionCost TargetTransformInfo::getArithmeticReductionCost(
     unsigned Opcode, VectorType *Ty, std::optional<FastMathFlags> FMF,
     TTI::TargetCostKind CostKind) const {
