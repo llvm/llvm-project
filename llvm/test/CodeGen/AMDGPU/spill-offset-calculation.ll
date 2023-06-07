@@ -26,8 +26,8 @@ define amdgpu_kernel void @test_inst_offset_kernel() {
 ; FLATSCR:       ; %bb.0: ; %entry
 ; FLATSCR-NEXT:    s_add_u32 flat_scratch_lo, s0, s3
 ; FLATSCR-NEXT:    s_addc_u32 flat_scratch_hi, s1, 0
-; FLATSCR-NEXT:    s_mov_b32 s1, 0
-; FLATSCR-NEXT:    scratch_load_dword v0, off, s1 offset:8 glc
+; FLATSCR-NEXT:    s_mov_b32 s0, 0
+; FLATSCR-NEXT:    scratch_load_dword v0, off, s0 offset:8 glc
 ; FLATSCR-NEXT:    s_waitcnt vmcnt(0)
 ; FLATSCR-NEXT:    s_movk_i32 s0, 0xffc
 ; FLATSCR-NEXT:    scratch_store_dword off, v0, s0 ; 4-byte Folded Spill
@@ -79,8 +79,8 @@ define amdgpu_kernel void @test_sgpr_offset_kernel() {
 ; FLATSCR:       ; %bb.0: ; %entry
 ; FLATSCR-NEXT:    s_add_u32 flat_scratch_lo, s0, s3
 ; FLATSCR-NEXT:    s_addc_u32 flat_scratch_hi, s1, 0
-; FLATSCR-NEXT:    s_mov_b32 s1, 0
-; FLATSCR-NEXT:    scratch_load_dword v0, off, s1 offset:8 glc
+; FLATSCR-NEXT:    s_mov_b32 s0, 0
+; FLATSCR-NEXT:    scratch_load_dword v0, off, s0 offset:8 glc
 ; FLATSCR-NEXT:    s_waitcnt vmcnt(0)
 ; FLATSCR-NEXT:    s_movk_i32 s0, 0x1000
 ; FLATSCR-NEXT:    scratch_store_dword off, v0, s0 ; 4-byte Folded Spill
@@ -218,10 +218,10 @@ define amdgpu_kernel void @test_sgpr_offset_function_scavenge_fail_kernel() #3 {
 ; FLATSCR:       ; %bb.0: ; %entry
 ; FLATSCR-NEXT:    s_add_u32 flat_scratch_lo, s0, s3
 ; FLATSCR-NEXT:    s_addc_u32 flat_scratch_hi, s1, 0
-; FLATSCR-NEXT:    s_mov_b32 s9, 0
+; FLATSCR-NEXT:    s_mov_b32 s8, 0
 ; FLATSCR-NEXT:    ;;#ASMSTART
 ; FLATSCR-NEXT:    ;;#ASMEND
-; FLATSCR-NEXT:    scratch_load_dword v0, off, s9 offset:8 glc
+; FLATSCR-NEXT:    scratch_load_dword v0, off, s8 offset:8 glc
 ; FLATSCR-NEXT:    s_waitcnt vmcnt(0)
 ; FLATSCR-NEXT:    s_movk_i32 s8, 0x1004
 ; FLATSCR-NEXT:    scratch_store_dword off, v0, s8 ; 4-byte Folded Spill
@@ -301,16 +301,17 @@ define amdgpu_kernel void @test_sgpr_offset_subregs_kernel() {
 ; FLATSCR:       ; %bb.0: ; %entry
 ; FLATSCR-NEXT:    s_add_u32 flat_scratch_lo, s0, s3
 ; FLATSCR-NEXT:    s_addc_u32 flat_scratch_hi, s1, 0
-; FLATSCR-NEXT:    s_mov_b32 s2, 0
-; FLATSCR-NEXT:    scratch_load_dwordx2 v[0:1], off, s2 offset:12 glc
+; FLATSCR-NEXT:    s_mov_b32 s0, 0
+; FLATSCR-NEXT:    scratch_load_dwordx2 v[0:1], off, s0 offset:12 glc
 ; FLATSCR-NEXT:    s_waitcnt vmcnt(0)
 ; FLATSCR-NEXT:    s_movk_i32 s0, 0xff8
-; FLATSCR-NEXT:    s_mov_b32 s1, 0
 ; FLATSCR-NEXT:    scratch_store_dwordx2 off, v[0:1], s0 ; 8-byte Folded Spill
+; FLATSCR-NEXT:    s_mov_b32 s0, 0
 ; FLATSCR-NEXT:    ;;#ASMSTART
 ; FLATSCR-NEXT:    ;;#ASMEND
-; FLATSCR-NEXT:    scratch_load_dword v0, off, s1 offset:8 glc
+; FLATSCR-NEXT:    scratch_load_dword v0, off, s0 offset:8 glc
 ; FLATSCR-NEXT:    s_waitcnt vmcnt(0)
+; FLATSCR-NEXT:    s_movk_i32 s0, 0xff8
 ; FLATSCR-NEXT:    scratch_load_dwordx2 v[0:1], off, s0 ; 8-byte Folded Reload
 ; FLATSCR-NEXT:    s_waitcnt vmcnt(0)
 ; FLATSCR-NEXT:    ;;#ASMSTART
@@ -367,16 +368,17 @@ define amdgpu_kernel void @test_inst_offset_subregs_kernel() {
 ; FLATSCR:       ; %bb.0: ; %entry
 ; FLATSCR-NEXT:    s_add_u32 flat_scratch_lo, s0, s3
 ; FLATSCR-NEXT:    s_addc_u32 flat_scratch_hi, s1, 0
-; FLATSCR-NEXT:    s_mov_b32 s2, 0
-; FLATSCR-NEXT:    scratch_load_dwordx2 v[0:1], off, s2 offset:12 glc
+; FLATSCR-NEXT:    s_mov_b32 s0, 0
+; FLATSCR-NEXT:    scratch_load_dwordx2 v[0:1], off, s0 offset:12 glc
 ; FLATSCR-NEXT:    s_waitcnt vmcnt(0)
 ; FLATSCR-NEXT:    s_movk_i32 s0, 0xffc
-; FLATSCR-NEXT:    s_mov_b32 s1, 0
 ; FLATSCR-NEXT:    scratch_store_dwordx2 off, v[0:1], s0 ; 8-byte Folded Spill
+; FLATSCR-NEXT:    s_mov_b32 s0, 0
 ; FLATSCR-NEXT:    ;;#ASMSTART
 ; FLATSCR-NEXT:    ;;#ASMEND
-; FLATSCR-NEXT:    scratch_load_dword v0, off, s1 offset:8 glc
+; FLATSCR-NEXT:    scratch_load_dword v0, off, s0 offset:8 glc
 ; FLATSCR-NEXT:    s_waitcnt vmcnt(0)
+; FLATSCR-NEXT:    s_movk_i32 s0, 0xffc
 ; FLATSCR-NEXT:    scratch_load_dwordx2 v[0:1], off, s0 ; 8-byte Folded Reload
 ; FLATSCR-NEXT:    s_waitcnt vmcnt(0)
 ; FLATSCR-NEXT:    ;;#ASMSTART
