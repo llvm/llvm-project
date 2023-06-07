@@ -65,7 +65,6 @@ if (current_toolchain == default_toolchain) {
       # An empty value here means the feature is supported.
       # Unsupported values should be set to `$no`.
       "requires_LIBCXX_ENABLE_FILESYSTEM=",
-      "requires_LIBCXX_ENABLE_FSTREAM=",
       "requires_LIBCXX_ENABLE_LOCALIZATION=",
       "requires_LIBCXX_ENABLE_THREADS=",
       "requires_LIBCXX_ENABLE_WIDE_CHARACTERS=",
