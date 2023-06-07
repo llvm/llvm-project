@@ -59,20 +59,20 @@ define i64 @hoist_threadlocal() presplitcoroutine {
 ; CHECK-NEXT:    [[P:%.*]] = alloca i64, align 8
 ; CHECK-NEXT:    br label [[LOOP_PREHEADER:%.*]]
 ; CHECK:       loop.preheader:
-; CHECK-NEXT:    [[THREAD_LOCAL_0:%.*]] = call ptr @llvm.threadlocal.address.p0(ptr @tls)
-; CHECK-NEXT:    [[THREAD_LOCAL_1:%.*]] = call ptr @llvm.threadlocal.address.p0(ptr @tls)
-; CHECK-NEXT:    [[CMP_0:%.*]] = icmp eq ptr [[THREAD_LOCAL_0]], [[THREAD_LOCAL_1]]
 ; CHECK-NEXT:    br label [[FOR_BODY:%.*]]
 ; CHECK:       for.body:
 ; CHECK-NEXT:    [[I:%.*]] = phi i64 [ 0, [[LOOP_PREHEADER]] ], [ [[I_NEXT:%.*]], [[LOOP_END:%.*]] ]
 ; CHECK-NEXT:    [[I_NEXT]] = add i64 [[I]], 1
+; CHECK-NEXT:    [[THREAD_LOCAL_0:%.*]] = call ptr @llvm.threadlocal.address.p0(ptr @tls)
 ; CHECK-NEXT:    [[READONLY_0:%.*]] = call ptr @readonly_funcs()
 ; CHECK-NEXT:    [[SUSPEND:%.*]] = call i8 @llvm.coro.suspend(token none, i1 false)
 ; CHECK-NEXT:    switch i8 [[SUSPEND]], label [[EXIT:%.*]] [
 ; CHECK-NEXT:    i8 0, label [[AWAIT_READY:%.*]]
 ; CHECK-NEXT:    ]
 ; CHECK:       await.ready:
+; CHECK-NEXT:    [[THREAD_LOCAL_1:%.*]] = call ptr @llvm.threadlocal.address.p0(ptr @tls)
 ; CHECK-NEXT:    [[READONLY_1:%.*]] = call ptr @readonly_funcs()
+; CHECK-NEXT:    [[CMP_0:%.*]] = icmp eq ptr [[THREAD_LOCAL_0]], [[THREAD_LOCAL_1]]
 ; CHECK-NEXT:    [[CMP_1:%.*]] = icmp eq ptr [[READONLY_0]], [[READONLY_1]]
 ; CHECK-NEXT:    [[CMP:%.*]] = and i1 [[CMP_0]], [[CMP_1]]
 ; CHECK-NEXT:    br i1 [[CMP]], label [[NOT_REACHABLE:%.*]], label [[LOOP_END]]

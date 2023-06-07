@@ -1226,6 +1226,15 @@ bool llvm::canSinkOrHoistInst(Instruction &I, AAResults *AA, DominatorTree *DT,
 
     // Handle simple cases by querying alias analysis.
     MemoryEffects Behavior = AA->getMemoryEffects(CI);
+
+    // FIXME: we don't handle the semantics of thread local well. So that the
+    // address of thread locals are fake constants in coroutines. So We forbid
+    // to treat onlyReadsMemory call in coroutines as constants now. Note that
+    // it is possible to hide a thread local access in a onlyReadsMemory call.
+    // Remove this check after we handle the semantics of thread locals well.
+    if (Behavior.onlyReadsMemory() && CI->getFunction()->isPresplitCoroutine())
+      return false;
+
     if (Behavior.doesNotAccessMemory())
       return true;
     if (Behavior.onlyReadsMemory()) {
