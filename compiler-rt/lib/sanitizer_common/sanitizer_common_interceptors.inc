@@ -5417,21 +5417,20 @@ INTERCEPTOR(uptr, __tls_get_addr_internal, void *arg) {
 
 #if SANITIZER_S390 && \
     (SANITIZER_INTERCEPT_TLS_GET_ADDR || SANITIZER_INTERCEPT_TLS_GET_OFFSET)
-extern "C" uptr __tls_get_offset(void *arg);
-extern "C" uptr __interceptor___tls_get_offset(void *arg);
 // We need a hidden symbol aliasing the above, so that we can jump
 // directly to it from the assembly below.
-extern "C" __attribute__((alias("__interceptor___tls_get_addr_internal"),
-                          visibility("hidden")))
-uptr __tls_get_addr_hidden(void *arg);
+extern "C" __attribute__((visibility("hidden"))) uptr __tls_get_addr_hidden(
+    void *arg) ALIAS(WRAP(__tls_get_addr_internal));
+extern "C" uptr __tls_get_offset(void *arg);
+extern "C" uptr TRAMPOLINE(__tls_get_offset)(void *arg);
+extern "C" uptr WRAP(__tls_get_offset)(void *arg);
 // Now carefully intercept __tls_get_offset.
 asm(
   ".text\n"
 // The __intercept_ version has to exist, so that gen_dynamic_list.py
 // exports our symbol.
   ".weak __tls_get_offset\n"
-  ".type __tls_get_offset, @function\n"
-  "__tls_get_offset:\n"
+  ".set __tls_get_offset, __interceptor___tls_get_offset\n"
   ".global __interceptor___tls_get_offset\n"
   ".type __interceptor___tls_get_offset, @function\n"
   "__interceptor___tls_get_offset:\n"
