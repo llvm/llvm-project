@@ -1126,6 +1126,10 @@ static void CloneInstructionsIntoPredecessorBlockAndUpdateSSAUses(
     NewBonusInst->dropUBImplyingAttrsAndMetadata();
 
     NewBonusInst->insertInto(PredBlock, PTI->getIterator());
+    NewBonusInst->cloneDebugInfoFrom(&BonusInst);
+
+    for (DPValue &DPV : NewBonusInst->getDbgValueRange())
+      RemapDPValue(NewBonusInst->getModule(), &DPV, VMap, RF_NoModuleLevelChanges | RF_IgnoreMissingLocals);
 
     if (isa<DbgInfoIntrinsic>(BonusInst))
       continue;
@@ -3298,6 +3302,10 @@ FoldCondBranchOnValueKnownInPredecessorImpl(BranchInst *BI, DomTreeUpdater *DTU,
     BasicBlock::iterator InsertPt = EdgeBB->getFirstInsertionPt();
     DenseMap<Value *, Value *> TranslateMap; // Track translated values.
     TranslateMap[Cond] = CB;
+
+    // RemoveDIs: track instructions that we optimise away while folding, so
+    // that we can copy DPValues from them later.
+    BasicBlock::iterator DbgInfoCursor = BB->begin();
     for (BasicBlock::iterator BBI = BB->begin(); &*BBI != BI; ++BBI) {
       if (PHINode *PN = dyn_cast<PHINode>(BBI)) {
         TranslateMap[PN] = PN->getIncomingValueForBlock(EdgeBB);
@@ -3332,12 +3340,25 @@ FoldCondBranchOnValueKnownInPredecessorImpl(BranchInst *BI, DomTreeUpdater *DTU,
           TranslateMap[&*BBI] = N;
       }
       if (N) {
+        // Copy all debug-info attached to instructions from the last we
+        // successfully clone, up to this instruction (they might have been
+        // folded away).
+        for (; DbgInfoCursor != BBI; ++DbgInfoCursor)
+          N->cloneDebugInfoFrom(&*DbgInfoCursor);
+        DbgInfoCursor = std::next(BBI);
+        // Clone debug-info on this instruction too.
+        N->cloneDebugInfoFrom(&*BBI);
+
         // Register the new instruction with the assumption cache if necessary.
         if (auto *Assume = dyn_cast<AssumeInst>(N))
           if (AC)
             AC->registerAssumption(Assume);
       }
     }
+
+    for (; &*DbgInfoCursor != BI; ++DbgInfoCursor)
+      InsertPt->cloneDebugInfoFrom(&*DbgInfoCursor);
+    InsertPt->cloneDebugInfoFrom(BI);
 
     BB->removePredecessor(EdgeBB);
     BranchInst *EdgeBI = cast<BranchInst>(EdgeBB->getTerminator());
@@ -3742,6 +3763,15 @@ static bool performBranchToCommonDestFolding(BranchInst *BI, BranchInst *PBI,
 
   ValueToValueMapTy VMap; // maps original values to cloned values
   CloneInstructionsIntoPredecessorBlockAndUpdateSSAUses(BB, PredBlock, VMap);
+
+  Module *M = BB->getModule();
+
+  if (PredBlock->IsNewDbgInfoFormat) {
+    PredBlock->getTerminator()->cloneDebugInfoFrom(BB->getTerminator());
+    for (DPValue &DPV : PredBlock->getTerminator()->getDbgValueRange()) {
+      RemapDPValue(M, &DPV, VMap, RF_NoModuleLevelChanges | RF_IgnoreMissingLocals);
+    }
+  }
 
   // Now that the Cond was cloned into the predecessor basic block,
   // or/and the two conditions together.

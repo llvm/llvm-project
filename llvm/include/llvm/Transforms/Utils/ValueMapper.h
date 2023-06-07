@@ -15,17 +15,21 @@
 #define LLVM_TRANSFORMS_UTILS_VALUEMAPPER_H
 
 #include "llvm/ADT/ArrayRef.h"
+#include "llvm/ADT/simple_ilist.h"
 #include "llvm/IR/ValueHandle.h"
 #include "llvm/IR/ValueMap.h"
 
 namespace llvm {
 
 class Constant;
+class DIBuilder;
+class DPValue;
 class Function;
 class GlobalVariable;
 class Instruction;
 class MDNode;
 class Metadata;
+class Module;
 class Type;
 class Value;
 
@@ -175,6 +179,8 @@ public:
   Constant *mapConstant(const Constant &C);
 
   void remapInstruction(Instruction &I);
+  void remapDPValue(Module *M, DPValue &V);
+  void remapDPValueRange(Module *M, iterator_range<simple_ilist<DPValue>::iterator> Range);
   void remapFunction(Function &F);
   void remapGlobalObjectMetadata(GlobalObject &GO);
 
@@ -258,6 +264,22 @@ inline void RemapInstruction(Instruction *I, ValueToValueMapTy &VM,
                              ValueMapTypeRemapper *TypeMapper = nullptr,
                              ValueMaterializer *Materializer = nullptr) {
   ValueMapper(VM, Flags, TypeMapper, Materializer).remapInstruction(*I);
+}
+
+/// Remap the Values used in the DPValue \a V using the value map \a VM.
+inline void RemapDPValue(Module *M, DPValue *V, ValueToValueMapTy &VM,
+                  RemapFlags Flags = RF_None,
+                  ValueMapTypeRemapper *TypeMapper = nullptr,
+                  ValueMaterializer *Materializer = nullptr) {
+  ValueMapper(VM, Flags, TypeMapper, Materializer).remapDPValue(M, *V);
+}
+
+/// Remap the Values used in the DPValue \a V using the value map \a VM.
+inline void RemapDPValueRange(Module *M, iterator_range<simple_ilist<DPValue>::iterator> Range, ValueToValueMapTy &VM,
+                  RemapFlags Flags = RF_None,
+                  ValueMapTypeRemapper *TypeMapper = nullptr,
+                  ValueMaterializer *Materializer = nullptr) {
+  ValueMapper(VM, Flags, TypeMapper, Materializer).remapDPValueRange(M, Range);
 }
 
 /// Remap the operands, metadata, arguments, and instructions of a function.

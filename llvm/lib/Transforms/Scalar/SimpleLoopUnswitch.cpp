@@ -1260,8 +1260,10 @@ static BasicBlock *buildClonedLoopBlocks(
   // everything available. Also, we have inserted new instructions which may
   // include assume intrinsics, so we update the assumption cache while
   // processing this.
+  Module *M = ClonedPH->getParent()->getParent();
   for (auto *ClonedBB : NewBlocks)
     for (Instruction &I : *ClonedBB) {
+      RemapDPValueRange(M, I.getDbgValueRange(), VMap, RF_NoModuleLevelChanges | RF_IgnoreMissingLocals);
       RemapInstruction(&I, VMap,
                        RF_NoModuleLevelChanges | RF_IgnoreMissingLocals);
       if (auto *II = dyn_cast<AssumeInst>(&I))
