@@ -33,6 +33,7 @@
 #include "llvm/Support/ErrorHandling.h"
 
 #if CLANG_ENABLE_CIR
+#include "mlir/IR/MLIRContext.h"
 #include "clang/CIRFrontendAction/CIRGenAction.h"
 #endif
 
@@ -318,7 +319,18 @@ bool ExecuteCompilerInvocation(CompilerInstance *Clang) {
     return true;
   }
 #endif
-
+#if CLANG_ENABLE_CIR
+  if (!Clang->getFrontendOpts().MLIRArgs.empty()) {
+    mlir::registerMLIRContextCLOptions();
+    unsigned NumArgs = Clang->getFrontendOpts().MLIRArgs.size();
+    auto Args = std::make_unique<const char *[]>(NumArgs + 2);
+    Args[0] = "clang (MLIR option parsing)";
+    for (unsigned i = 0; i != NumArgs; ++i)
+      Args[i + 1] = Clang->getFrontendOpts().MLIRArgs[i].c_str();
+    Args[NumArgs + 1] = nullptr;
+    llvm::cl::ParseCommandLineOptions(NumArgs + 1, Args.get());
+  }
+#endif
   // If there were errors in processing arguments, don't do anything else.
   if (Clang->getDiagnostics().hasErrorOccurred())
     return false;
