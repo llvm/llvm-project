@@ -11412,8 +11412,6 @@ static SDValue performBITREVERSECombine(SDNode *N, SelectionDAG &DAG,
 // multiply result and/or the accumulator.
 // NOTE: Only supports RVV operations with VL.
 static unsigned negateFMAOpcode(unsigned Opcode, bool NegMul, bool NegAcc) {
-  assert((NegMul || NegAcc) && "Not negating anything?");
-
   // Negating the multiply result changes ADD<->SUB and toggles 'N'.
   if (NegMul) {
     // clang-format off
