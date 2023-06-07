@@ -2286,20 +2286,20 @@ static MVT getMaskTypeFor(MVT VecVT) {
 
 /// Creates an all ones mask suitable for masking a vector of type VecTy with
 /// vector length VL.  .
-static SDValue getAllOnesMask(MVT VecVT, SDValue VL, SDLoc DL,
+static SDValue getAllOnesMask(MVT VecVT, SDValue VL, const SDLoc &DL,
                               SelectionDAG &DAG) {
   MVT MaskVT = getMaskTypeFor(VecVT);
   return DAG.getNode(RISCVISD::VMSET_VL, DL, MaskVT, VL);
 }
 
-static SDValue getVLOp(uint64_t NumElts, SDLoc DL, SelectionDAG &DAG,
+static SDValue getVLOp(uint64_t NumElts, const SDLoc &DL, SelectionDAG &DAG,
                        const RISCVSubtarget &Subtarget) {
   return DAG.getConstant(NumElts, DL, Subtarget.getXLenVT());
 }
 
 static std::pair<SDValue, SDValue>
-getDefaultVLOps(uint64_t NumElts, MVT ContainerVT, SDLoc DL, SelectionDAG &DAG,
-                const RISCVSubtarget &Subtarget) {
+getDefaultVLOps(uint64_t NumElts, MVT ContainerVT, const SDLoc &DL,
+                SelectionDAG &DAG, const RISCVSubtarget &Subtarget) {
   assert(ContainerVT.isScalableVector() && "Expecting scalable container type");
   SDValue VL = getVLOp(NumElts, DL, DAG, Subtarget);
   SDValue Mask = getAllOnesMask(ContainerVT, VL, DL, DAG);
@@ -2311,7 +2311,7 @@ getDefaultVLOps(uint64_t NumElts, MVT ContainerVT, SDLoc DL, SelectionDAG &DAG,
 // the vector type that the fixed-length vector is contained in. Otherwise if
 // VecVT is scalable, then ContainerVT should be the same as VecVT.
 static std::pair<SDValue, SDValue>
-getDefaultVLOps(MVT VecVT, MVT ContainerVT, SDLoc DL, SelectionDAG &DAG,
+getDefaultVLOps(MVT VecVT, MVT ContainerVT, const SDLoc &DL, SelectionDAG &DAG,
                 const RISCVSubtarget &Subtarget) {
   if (VecVT.isFixedLengthVector())
     return getDefaultVLOps(VecVT.getVectorNumElements(), ContainerVT, DL, DAG,
@@ -2325,13 +2325,13 @@ getDefaultVLOps(MVT VecVT, MVT ContainerVT, SDLoc DL, SelectionDAG &DAG,
 
 // As above but assuming the given type is a scalable vector type.
 static std::pair<SDValue, SDValue>
-getDefaultScalableVLOps(MVT VecVT, SDLoc DL, SelectionDAG &DAG,
+getDefaultScalableVLOps(MVT VecVT, const SDLoc &DL, SelectionDAG &DAG,
                         const RISCVSubtarget &Subtarget) {
   assert(VecVT.isScalableVector() && "Expecting a scalable vector");
   return getDefaultVLOps(VecVT, VecVT, DL, DAG, Subtarget);
 }
 
-SDValue RISCVTargetLowering::computeVLMax(MVT VecVT, SDLoc DL,
+SDValue RISCVTargetLowering::computeVLMax(MVT VecVT, const SDLoc &DL,
                                           SelectionDAG &DAG) const {
   assert(VecVT.isScalableVector() && "Expected scalable vector");
   unsigned MinElts = VecVT.getVectorMinNumElements();
@@ -2724,9 +2724,9 @@ lowerFTRUNC_FCEIL_FFLOOR_FROUND(SDValue Op, SelectionDAG &DAG,
 }
 
 static SDValue
-getVSlidedown(SelectionDAG &DAG, const RISCVSubtarget &Subtarget, SDLoc DL,
-              EVT VT, SDValue Merge, SDValue Op, SDValue Offset, SDValue Mask,
-              SDValue VL,
+getVSlidedown(SelectionDAG &DAG, const RISCVSubtarget &Subtarget,
+              const SDLoc &DL, EVT VT, SDValue Merge, SDValue Op,
+              SDValue Offset, SDValue Mask, SDValue VL,
               unsigned Policy = RISCVII::TAIL_UNDISTURBED_MASK_UNDISTURBED) {
   if (Merge.isUndef())
     Policy = RISCVII::TAIL_AGNOSTIC | RISCVII::MASK_AGNOSTIC;
@@ -2736,7 +2736,7 @@ getVSlidedown(SelectionDAG &DAG, const RISCVSubtarget &Subtarget, SDLoc DL,
 }
 
 static SDValue
-getVSlideup(SelectionDAG &DAG, const RISCVSubtarget &Subtarget, SDLoc DL,
+getVSlideup(SelectionDAG &DAG, const RISCVSubtarget &Subtarget, const SDLoc &DL,
             EVT VT, SDValue Merge, SDValue Op, SDValue Offset, SDValue Mask,
             SDValue VL,
             unsigned Policy = RISCVII::TAIL_UNDISTURBED_MASK_UNDISTURBED) {
@@ -3335,7 +3335,7 @@ static SDValue splatSplitI64WithVL(const SDLoc &DL, MVT VT, SDValue Passthru,
 // length VL. It ensures the final sequence is type legal, which is useful when
 // lowering a splat after type legalization.
 static SDValue lowerScalarSplat(SDValue Passthru, SDValue Scalar, SDValue VL,
-                                MVT VT, SDLoc DL, SelectionDAG &DAG,
+                                MVT VT, const SDLoc &DL, SelectionDAG &DAG,
                                 const RISCVSubtarget &Subtarget) {
   bool HasPassthru = Passthru && !Passthru.isUndef();
   if (!HasPassthru && !Passthru)
@@ -3390,8 +3390,8 @@ static MVT getLMUL1VT(MVT VT) {
 // 0 of the vector regardless of the value of VL.  The contents of the
 // remaining lanes of the result vector are unspecified.  VL is assumed
 // to be non-zero.
-static SDValue lowerScalarInsert(SDValue Scalar, SDValue VL,
-                                 MVT VT, SDLoc DL, SelectionDAG &DAG,
+static SDValue lowerScalarInsert(SDValue Scalar, SDValue VL, MVT VT,
+                                 const SDLoc &DL, SelectionDAG &DAG,
                                  const RISCVSubtarget &Subtarget) {
   const MVT XLenVT = Subtarget.getXLenVT();
 
@@ -3443,7 +3443,6 @@ static SDValue lowerScalarInsert(SDValue Scalar, SDValue VL,
                          DAG.getUNDEF(VT),
                          Result, DAG.getConstant(0, DL, XLenVT));
   return Result;
-
 }
 
 // Is this a shuffle extracts either the even or odd elements of a vector?
@@ -3832,8 +3831,8 @@ static SDValue lowerVECTOR_SHUFFLEAsVSlide1(const SDLoc &DL, MVT VT,
 // Given two input vectors of <[vscale x ]n x ty>, use vwaddu.vv and vwmaccu.vx
 // to create an interleaved vector of <[vscale x] n*2 x ty>.
 // This requires that the size of ty is less than the subtarget's maximum ELEN.
-static SDValue getWideningInterleave(SDValue EvenV, SDValue OddV, SDLoc &DL,
-                                     SelectionDAG &DAG,
+static SDValue getWideningInterleave(SDValue EvenV, SDValue OddV,
+                                     const SDLoc &DL, SelectionDAG &DAG,
                                      const RISCVSubtarget &Subtarget) {
   MVT VecVT = EvenV.getSimpleValueType();
   MVT VecContainerVT = VecVT; // <vscale x n x ty>
@@ -5289,24 +5288,24 @@ SDValue RISCVTargetLowering::LowerOperation(SDValue Op,
   }
 }
 
-static SDValue getTargetNode(GlobalAddressSDNode *N, SDLoc DL, EVT Ty,
+static SDValue getTargetNode(GlobalAddressSDNode *N, const SDLoc &DL, EVT Ty,
                              SelectionDAG &DAG, unsigned Flags) {
   return DAG.getTargetGlobalAddress(N->getGlobal(), DL, Ty, 0, Flags);
 }
 
-static SDValue getTargetNode(BlockAddressSDNode *N, SDLoc DL, EVT Ty,
+static SDValue getTargetNode(BlockAddressSDNode *N, const SDLoc &DL, EVT Ty,
                              SelectionDAG &DAG, unsigned Flags) {
   return DAG.getTargetBlockAddress(N->getBlockAddress(), Ty, N->getOffset(),
                                    Flags);
 }
 
-static SDValue getTargetNode(ConstantPoolSDNode *N, SDLoc DL, EVT Ty,
+static SDValue getTargetNode(ConstantPoolSDNode *N, const SDLoc &DL, EVT Ty,
                              SelectionDAG &DAG, unsigned Flags) {
   return DAG.getTargetConstantPool(N->getConstVal(), Ty, N->getAlign(),
                                    N->getOffset(), Flags);
 }
 
-static SDValue getTargetNode(JumpTableSDNode *N, SDLoc DL, EVT Ty,
+static SDValue getTargetNode(JumpTableSDNode *N, const SDLoc &DL, EVT Ty,
                              SelectionDAG &DAG, unsigned Flags) {
   return DAG.getTargetJumpTable(N->getIndex(), Ty, Flags);
 }
@@ -7135,7 +7134,7 @@ static bool isNonZeroAVL(SDValue AVL) {
 /// scalar = reduce_op vec, scalar_start
 static SDValue lowerReductionSeq(unsigned RVVOpcode, MVT ResVT,
                                  SDValue StartValue, SDValue Vec, SDValue Mask,
-                                 SDValue VL, SDLoc DL, SelectionDAG &DAG,
+                                 SDValue VL, const SDLoc &DL, SelectionDAG &DAG,
                                  const RISCVSubtarget &Subtarget) {
   const MVT VecVT = Vec.getSimpleValueType();
   const MVT M1VT = getLMUL1VT(VecVT);
@@ -7594,7 +7593,8 @@ SDValue RISCVTargetLowering::lowerEXTRACT_SUBVECTOR(SDValue Op,
 
 // Widen a vector's operands to i8, then truncate its results back to the
 // original type, typically i1.  All operand and result types must be the same.
-static SDValue widenVectorOpsToi8(SDValue N, SDLoc &DL, SelectionDAG &DAG) {
+static SDValue widenVectorOpsToi8(SDValue N, const SDLoc &DL,
+                                  SelectionDAG &DAG) {
   MVT VT = N.getSimpleValueType();
   MVT WideVT = VT.changeVectorElementType(MVT::i8);
   SmallVector<SDValue, 4> WideOps;
