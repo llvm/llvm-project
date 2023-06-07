@@ -1037,6 +1037,10 @@ let IntrProperties = [IntrNoMem, IntrSpeculatable, IntrWillReturn] in {
   def int_llround : DefaultAttrsIntrinsic<[llvm_anyint_ty], [llvm_anyfloat_ty]>;
   def int_lrint : DefaultAttrsIntrinsic<[llvm_anyint_ty], [llvm_anyfloat_ty]>;
   def int_llrint : DefaultAttrsIntrinsic<[llvm_anyint_ty], [llvm_anyfloat_ty]>;
+
+  // TODO: int operand should be constrained to same number of elements as the result.
+  def int_ldexp : DefaultAttrsIntrinsic<[llvm_anyfloat_ty], [LLVMMatchType<0>,
+                                                             llvm_anyint_ty]>;
 }
 
 def int_minnum : DefaultAttrsIntrinsic<[llvm_anyfloat_ty],
@@ -1166,6 +1170,11 @@ let IntrProperties = [IntrInaccessibleMemOnly, IntrWillReturn] in {
   def int_experimental_constrained_powi : DefaultAttrsIntrinsic<[ llvm_anyfloat_ty ],
                                                     [ LLVMMatchType<0>,
                                                       llvm_i32_ty,
+                                                      llvm_metadata_ty,
+                                                      llvm_metadata_ty ]>;
+  def int_experimental_constrained_ldexp : DefaultAttrsIntrinsic<[ llvm_anyfloat_ty ],
+                                                    [ LLVMMatchType<0>,
+                                                      llvm_anyint_ty,
                                                       llvm_metadata_ty,
                                                       llvm_metadata_ty ]>;
   def int_experimental_constrained_sin  : DefaultAttrsIntrinsic<[ llvm_anyfloat_ty ],

@@ -777,7 +777,7 @@ let IsNeverUniform = 1 in {
 defm V_MBCNT_LO_U32_B32 : VOP2Inst <"v_mbcnt_lo_u32_b32", VOP_I32_I32_I32, int_amdgcn_mbcnt_lo>;
 defm V_MBCNT_HI_U32_B32 : VOP2Inst <"v_mbcnt_hi_u32_b32", VOP_I32_I32_I32, int_amdgcn_mbcnt_hi>;
 } // End IsNeverUniform = 1
-defm V_LDEXP_F32 : VOP2Inst <"v_ldexp_f32", VOP_F32_F32_I32, AMDGPUldexp>;
+defm V_LDEXP_F32 : VOP2Inst <"v_ldexp_f32", VOP_F32_F32_I32, any_fldexp>;
 
 let ReadsModeReg = 0, mayRaiseFPException = 0 in {
 defm V_CVT_PKNORM_I16_F32 : VOP2Inst <"v_cvt_pknorm_i16_f32", VOP_V2I16_F32_F32, AMDGPUpknorm_i16_f32>;
@@ -863,7 +863,7 @@ def :  divergent_i64_BinOp <xor, V_XOR_B32_e64>;
 // 16-Bit Operand Instructions
 //===----------------------------------------------------------------------===//
 
-def LDEXP_F16_VOPProfile_True16 : VOPProfile_True16<VOP_F16_F16_I32> {
+def LDEXP_F16_VOPProfile_True16 : VOPProfile_True16<VOP_F16_F16_I16> {
   // The ldexp.f16 intrinsic expects a i32 src1 operand, though the hardware
   // encoding treats src1 as an f16
   let Src1RC32 = RegisterOperand<VGPR_32_Lo128>;
@@ -874,9 +874,9 @@ def LDEXP_F16_VOPProfile_True16 : VOPProfile_True16<VOP_F16_F16_I32> {
 let isReMaterializable = 1 in {
 let FPDPRounding = 1 in {
   let SubtargetPredicate = NotHasTrue16BitInsts, OtherPredicates = [Has16BitInsts]  in
-    defm V_LDEXP_F16 : VOP2Inst <"v_ldexp_f16", VOP_F16_F16_I32, AMDGPUldexp>;
+    defm V_LDEXP_F16 : VOP2Inst <"v_ldexp_f16", VOP_F16_F16_I16, any_fldexp>;
   let SubtargetPredicate = HasTrue16BitInsts in
-    defm V_LDEXP_F16_t16 : VOP2Inst <"v_ldexp_f16_t16", LDEXP_F16_VOPProfile_True16, AMDGPUldexp>;
+    defm V_LDEXP_F16_t16 : VOP2Inst <"v_ldexp_f16_t16", LDEXP_F16_VOPProfile_True16, any_fldexp>;
 } // End FPDPRounding = 1
 // FIXME VOP3 Only instructions. NFC using VOPProfile_True16 for these until a planned change to use a new register class for VOP3 encoded True16 instuctions
 defm V_LSHLREV_B16 : VOP2Inst_e64_t16 <"v_lshlrev_b16", VOP_I16_I16_I16, clshl_rev_16>;

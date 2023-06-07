@@ -619,6 +619,7 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
     setOperationAction(ISD::FROUND, VT, Action);
     setOperationAction(ISD::FROUNDEVEN, VT, Action);
     setOperationAction(ISD::FTRUNC, VT, Action);
+    setOperationAction(ISD::FLDEXP, VT, Action);
   };
 
   if (!Subtarget.useSoftFloat() && Subtarget.hasSSE2()) {
@@ -678,6 +679,7 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
     setOperationAction(ISD::STRICT_FMAXIMUM, MVT::f16, Promote);
     setOperationAction(ISD::STRICT_FSQRT, MVT::f16, Promote);
     setOperationAction(ISD::STRICT_FPOW, MVT::f16, Promote);
+    setOperationAction(ISD::STRICT_FLDEXP, MVT::f16, Promote);
     setOperationAction(ISD::STRICT_FLOG, MVT::f16, Promote);
     setOperationAction(ISD::STRICT_FLOG2, MVT::f16, Promote);
     setOperationAction(ISD::STRICT_FLOG10, MVT::f16, Promote);

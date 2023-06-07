@@ -923,6 +923,13 @@ def G_FLOG10 : GenericInstruction {
   let hasSideEffects = false;
 }
 
+// Floating point x * 2^n
+def G_FLDEXP : GenericInstruction {
+  let OutOperandList = (outs type0:$dst);
+  let InOperandList = (ins type0:$src0, type1:$src1);
+  let hasSideEffects = false;
+}
+
 // Floating point ceiling of a value.
 def G_FCEIL : GenericInstruction {
   let OutOperandList = (outs type0:$dst);
@@ -1384,6 +1391,7 @@ def G_STRICT_FDIV : ConstrainedInstruction<G_FDIV>;
 def G_STRICT_FREM : ConstrainedInstruction<G_FREM>;
 def G_STRICT_FMA : ConstrainedInstruction<G_FMA>;
 def G_STRICT_FSQRT : ConstrainedInstruction<G_FSQRT>;
+def G_STRICT_FLDEXP : ConstrainedInstruction<G_FLDEXP>;
 
 //------------------------------------------------------------------------------
 // Memory intrinsics
