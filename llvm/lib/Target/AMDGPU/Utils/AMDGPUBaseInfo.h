@@ -517,7 +517,7 @@ struct CanBeVOPD {
 };
 
 LLVM_READONLY
-CanBeVOPD getCanBeVOPD(unsigned Opc, unsigned EncodingFamily);
+CanBeVOPD getCanBeVOPD(unsigned Opc, unsigned EncodingFamily, bool VOPD3);
 
 LLVM_READONLY
 const GcnBufferFormatInfo *getGcnBufferFormatInfo(uint8_t BitsPerComp,

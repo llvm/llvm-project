@@ -365,6 +365,7 @@ struct VOPDComponentInfo {
   uint16_t BaseVOP;
   uint16_t VOPDOp;
   bool CanBeVOPDX;
+  bool CanBeVOPD3X;
 };
 
 struct VOPDInfo {
@@ -507,7 +508,7 @@ bool getMAIIsGFX940XDL(unsigned Opc) {
   return Info ? Info->is_gfx940_xdl : false;
 }
 
-CanBeVOPD getCanBeVOPD(unsigned Opc, unsigned EncodingFamily) {
+CanBeVOPD getCanBeVOPD(unsigned Opc, unsigned EncodingFamily, bool VOPD3) {
   const VOPDComponentInfo *Info = getVOPDComponentHelper(Opc);
   if (Info) {
     // Check that Opc can be used as VOPDY for this encoding. V_MOV_B32 as a
@@ -516,10 +517,8 @@ CanBeVOPD getCanBeVOPD(unsigned Opc, unsigned EncodingFamily) {
     // opcodes per encoding.
     unsigned VOPDMov = AMDGPU::getVOPDOpcode(AMDGPU::V_MOV_B32_e32);
     bool CanBeVOPDY = getVOPDFull(VOPDMov, AMDGPU::getVOPDOpcode(Opc),
-                                  EncodingFamily, false) != -1 ||
-                      getVOPDFull(VOPDMov, AMDGPU::getVOPDOpcode(Opc),
-                                  EncodingFamily, true) != -1;
-    return {Info->CanBeVOPDX, CanBeVOPDY};
+                                  EncodingFamily, VOPD3) != -1;
+    return {VOPD3 ? Info->CanBeVOPD3X : Info->CanBeVOPDX, CanBeVOPDY};
   }
 
   return {false, false};

@@ -53,12 +53,14 @@ class VOP <string opName> {
 
 // First 13 insts from VOPDY are also VOPDX. DOT2ACC_F32_BF16 is omitted
 defvar VOPDX_Max_Index = 12;
+defvar VOPD3X_Max_Index = 30;
 
 class VOPD_Component<bits<5> OpIn, string vOPDName> {
   Instruction BaseVOP = !cast<Instruction>(NAME);
   string VOPDName = "v_dual_" # !substr(vOPDName, 2);
   bits<5> VOPDOp = OpIn;
   bit CanBeVOPDX = !le(VOPDOp, VOPDX_Max_Index);
+  bit CanBeVOPD3X = !le(VOPDOp, VOPD3X_Max_Index);
 }
 
 class VOPAnyCommon <dag outs, dag ins, string asm, list<dag> pattern> :

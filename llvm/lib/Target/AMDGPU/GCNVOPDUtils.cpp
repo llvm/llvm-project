@@ -137,24 +137,28 @@ static bool shouldScheduleVOPDAdjacent(const TargetInstrInfo &TII,
                                        const MachineInstr *FirstMI,
                                        const MachineInstr &SecondMI) {
   const SIInstrInfo &STII = static_cast<const SIInstrInfo &>(TII);
-  unsigned EncodingFamily = AMDGPU::getVOPDEncodingFamily(STII.getSubtarget());
-
+  const GCNSubtarget &ST = STII.getSubtarget();
+  unsigned EncodingFamily = AMDGPU::getVOPDEncodingFamily(ST);
   unsigned Opc2 = SecondMI.getOpcode();
-  auto SecondCanBeVOPD = AMDGPU::getCanBeVOPD(Opc2, EncodingFamily);
 
-  // One instruction case
-  if (!FirstMI)
-    return SecondCanBeVOPD.Y;
+  const auto checkVOPD = [&](bool VOPD3) -> bool {
+    auto SecondCanBeVOPD = AMDGPU::getCanBeVOPD(Opc2, EncodingFamily, VOPD3);
 
-  unsigned Opc = FirstMI->getOpcode();
-  auto FirstCanBeVOPD = AMDGPU::getCanBeVOPD(Opc, EncodingFamily);
+    // One instruction case
+    if (!FirstMI)
+      return SecondCanBeVOPD.Y;
 
-  if (!((FirstCanBeVOPD.X && SecondCanBeVOPD.Y) ||
-        (FirstCanBeVOPD.Y && SecondCanBeVOPD.X)))
-    return false;
+    unsigned Opc = FirstMI->getOpcode();
+    auto FirstCanBeVOPD = AMDGPU::getCanBeVOPD(Opc, EncodingFamily, VOPD3);
 
-  return checkVOPDRegConstraints(STII, *FirstMI, SecondMI, false) ||
-         checkVOPDRegConstraints(STII, *FirstMI, SecondMI, true);
+    if (!((FirstCanBeVOPD.X && SecondCanBeVOPD.Y) ||
+          (FirstCanBeVOPD.Y && SecondCanBeVOPD.X)))
+      return false;
+
+    return checkVOPDRegConstraints(STII, *FirstMI, SecondMI, VOPD3);
+  };
+
+  return checkVOPD(false) || (ST.hasVOPD3() && checkVOPD(true));
 }
 
 namespace {
