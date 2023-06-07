@@ -226,7 +226,7 @@ public:
 
   /// Returns the offset in bytes from the start of the input buffer
   ///        of the first explicit kernel argument.
-  unsigned getExplicitKernelArgOffset(const Function &F) const {
+  unsigned getExplicitKernelArgOffset() const {
     switch (TargetTriple.getOS()) {
     case Triple::AMDHSA:
     case Triple::AMDPAL:
