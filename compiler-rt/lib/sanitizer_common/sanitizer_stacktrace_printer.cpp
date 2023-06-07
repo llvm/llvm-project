@@ -218,9 +218,7 @@ void RenderFrame(InternalScopedString *buffer, const char *format, int frame_no,
         RenderModuleLocation(buffer, info->module, info->module_offset,
                              info->module_arch, strip_path_prefix);
 
-#ifndef SANITIZER_APPLE
         MaybeBuildIdToBuffer(*info, /*PrefixSpace=*/true, buffer);
-#endif
       } else {
         buffer->append("(<unknown module>)");
       }
@@ -233,9 +231,7 @@ void RenderFrame(InternalScopedString *buffer, const char *format, int frame_no,
         // Always strip the module name for %M.
         RenderModuleLocation(buffer, StripModuleName(info->module),
                              info->module_offset, info->module_arch, "");
-#ifndef SANITIZER_APPLE
         MaybeBuildIdToBuffer(*info, /*PrefixSpace=*/true, buffer);
-#endif
       } else {
         buffer->append("(%p)", (void *)address);
       }
