@@ -175,7 +175,7 @@ void RISCVDAGToDAGISel::PostprocessISelDAG() {
 static SDValue selectImmSeq(SelectionDAG *CurDAG, const SDLoc &DL, const MVT VT,
                             RISCVMatInt::InstSeq &Seq) {
   SDValue SrcReg = CurDAG->getRegister(RISCV::X0, VT);
-  for (RISCVMatInt::Inst &Inst : Seq) {
+  for (const RISCVMatInt::Inst &Inst : Seq) {
     SDValue SDImm = CurDAG->getTargetConstant(Inst.getImm(), DL, VT);
     SDNode *Result = nullptr;
     switch (Inst.getOpndKind()) {
