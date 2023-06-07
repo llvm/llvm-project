@@ -509,33 +509,25 @@ define void @ctlz_v2i64(ptr %x, ptr %y) nounwind {
 ; LMULMAX2-RV64I-NEXT:    vsrl.vx v9, v8, a1
 ; LMULMAX2-RV64I-NEXT:    vor.vv v8, v8, v9
 ; LMULMAX2-RV64I-NEXT:    vnot.v v8, v8
+; LMULMAX2-RV64I-NEXT:    lui a1, %hi(.LCPI3_0)
+; LMULMAX2-RV64I-NEXT:    ld a1, %lo(.LCPI3_0)(a1)
+; LMULMAX2-RV64I-NEXT:    lui a2, %hi(.LCPI3_1)
+; LMULMAX2-RV64I-NEXT:    ld a2, %lo(.LCPI3_1)(a2)
 ; LMULMAX2-RV64I-NEXT:    vsrl.vi v9, v8, 1
-; LMULMAX2-RV64I-NEXT:    lui a1, 349525
-; LMULMAX2-RV64I-NEXT:    addiw a1, a1, 1365
-; LMULMAX2-RV64I-NEXT:    slli a2, a1, 32
-; LMULMAX2-RV64I-NEXT:    add a1, a1, a2
 ; LMULMAX2-RV64I-NEXT:    vand.vx v9, v9, a1
 ; LMULMAX2-RV64I-NEXT:    vsub.vv v8, v8, v9
-; LMULMAX2-RV64I-NEXT:    lui a1, 209715
-; LMULMAX2-RV64I-NEXT:    addiw a1, a1, 819
-; LMULMAX2-RV64I-NEXT:    slli a2, a1, 32
-; LMULMAX2-RV64I-NEXT:    add a1, a1, a2
-; LMULMAX2-RV64I-NEXT:    vand.vx v9, v8, a1
+; LMULMAX2-RV64I-NEXT:    vand.vx v9, v8, a2
 ; LMULMAX2-RV64I-NEXT:    vsrl.vi v8, v8, 2
-; LMULMAX2-RV64I-NEXT:    vand.vx v8, v8, a1
+; LMULMAX2-RV64I-NEXT:    vand.vx v8, v8, a2
 ; LMULMAX2-RV64I-NEXT:    vadd.vv v8, v9, v8
+; LMULMAX2-RV64I-NEXT:    lui a1, %hi(.LCPI3_2)
+; LMULMAX2-RV64I-NEXT:    ld a1, %lo(.LCPI3_2)(a1)
+; LMULMAX2-RV64I-NEXT:    lui a2, %hi(.LCPI3_3)
+; LMULMAX2-RV64I-NEXT:    ld a2, %lo(.LCPI3_3)(a2)
 ; LMULMAX2-RV64I-NEXT:    vsrl.vi v9, v8, 4
 ; LMULMAX2-RV64I-NEXT:    vadd.vv v8, v8, v9
-; LMULMAX2-RV64I-NEXT:    lui a1, 61681
-; LMULMAX2-RV64I-NEXT:    addiw a1, a1, -241
-; LMULMAX2-RV64I-NEXT:    slli a2, a1, 32
-; LMULMAX2-RV64I-NEXT:    add a1, a1, a2
 ; LMULMAX2-RV64I-NEXT:    vand.vx v8, v8, a1
-; LMULMAX2-RV64I-NEXT:    lui a1, 4112
-; LMULMAX2-RV64I-NEXT:    addiw a1, a1, 257
-; LMULMAX2-RV64I-NEXT:    slli a2, a1, 32
-; LMULMAX2-RV64I-NEXT:    add a1, a1, a2
-; LMULMAX2-RV64I-NEXT:    vmul.vx v8, v8, a1
+; LMULMAX2-RV64I-NEXT:    vmul.vx v8, v8, a2
 ; LMULMAX2-RV64I-NEXT:    li a1, 56
 ; LMULMAX2-RV64I-NEXT:    vsrl.vx v8, v8, a1
 ; LMULMAX2-RV64I-NEXT:    vse64.v v8, (a0)
@@ -1182,33 +1174,25 @@ define void @ctlz_v4i64(ptr %x, ptr %y) nounwind {
 ; LMULMAX2-RV64I-NEXT:    vsrl.vx v10, v8, a1
 ; LMULMAX2-RV64I-NEXT:    vor.vv v8, v8, v10
 ; LMULMAX2-RV64I-NEXT:    vnot.v v8, v8
+; LMULMAX2-RV64I-NEXT:    lui a1, %hi(.LCPI7_0)
+; LMULMAX2-RV64I-NEXT:    ld a1, %lo(.LCPI7_0)(a1)
+; LMULMAX2-RV64I-NEXT:    lui a2, %hi(.LCPI7_1)
+; LMULMAX2-RV64I-NEXT:    ld a2, %lo(.LCPI7_1)(a2)
 ; LMULMAX2-RV64I-NEXT:    vsrl.vi v10, v8, 1
-; LMULMAX2-RV64I-NEXT:    lui a1, 349525
-; LMULMAX2-RV64I-NEXT:    addiw a1, a1, 1365
-; LMULMAX2-RV64I-NEXT:    slli a2, a1, 32
-; LMULMAX2-RV64I-NEXT:    add a1, a1, a2
 ; LMULMAX2-RV64I-NEXT:    vand.vx v10, v10, a1
 ; LMULMAX2-RV64I-NEXT:    vsub.vv v8, v8, v10
-; LMULMAX2-RV64I-NEXT:    lui a1, 209715
-; LMULMAX2-RV64I-NEXT:    addiw a1, a1, 819
-; LMULMAX2-RV64I-NEXT:    slli a2, a1, 32
-; LMULMAX2-RV64I-NEXT:    add a1, a1, a2
-; LMULMAX2-RV64I-NEXT:    vand.vx v10, v8, a1
+; LMULMAX2-RV64I-NEXT:    vand.vx v10, v8, a2
 ; LMULMAX2-RV64I-NEXT:    vsrl.vi v8, v8, 2
-; LMULMAX2-RV64I-NEXT:    vand.vx v8, v8, a1
+; LMULMAX2-RV64I-NEXT:    vand.vx v8, v8, a2
 ; LMULMAX2-RV64I-NEXT:    vadd.vv v8, v10, v8
+; LMULMAX2-RV64I-NEXT:    lui a1, %hi(.LCPI7_2)
+; LMULMAX2-RV64I-NEXT:    ld a1, %lo(.LCPI7_2)(a1)
+; LMULMAX2-RV64I-NEXT:    lui a2, %hi(.LCPI7_3)
+; LMULMAX2-RV64I-NEXT:    ld a2, %lo(.LCPI7_3)(a2)
 ; LMULMAX2-RV64I-NEXT:    vsrl.vi v10, v8, 4
 ; LMULMAX2-RV64I-NEXT:    vadd.vv v8, v8, v10
-; LMULMAX2-RV64I-NEXT:    lui a1, 61681
-; LMULMAX2-RV64I-NEXT:    addiw a1, a1, -241
-; LMULMAX2-RV64I-NEXT:    slli a2, a1, 32
-; LMULMAX2-RV64I-NEXT:    add a1, a1, a2
 ; LMULMAX2-RV64I-NEXT:    vand.vx v8, v8, a1
-; LMULMAX2-RV64I-NEXT:    lui a1, 4112
-; LMULMAX2-RV64I-NEXT:    addiw a1, a1, 257
-; LMULMAX2-RV64I-NEXT:    slli a2, a1, 32
-; LMULMAX2-RV64I-NEXT:    add a1, a1, a2
-; LMULMAX2-RV64I-NEXT:    vmul.vx v8, v8, a1
+; LMULMAX2-RV64I-NEXT:    vmul.vx v8, v8, a2
 ; LMULMAX2-RV64I-NEXT:    li a1, 56
 ; LMULMAX2-RV64I-NEXT:    vsrl.vx v8, v8, a1
 ; LMULMAX2-RV64I-NEXT:    vse64.v v8, (a0)

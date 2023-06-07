@@ -206,29 +206,6 @@ static SDValue selectImm(SelectionDAG *CurDAG, const SDLoc &DL, const MVT VT,
   RISCVMatInt::InstSeq Seq =
       RISCVMatInt::generateInstSeq(Imm, Subtarget.getFeatureBits());
 
-  // See if we can create this constant as (ADD (SLLI X, 32), X) where X is at
-  // worst an LUI+ADDIW. This will require an extra register, but avoids a
-  // constant pool.
-  if (Seq.size() > 3) {
-    int64_t LoVal = SignExtend64<32>(Imm);
-    int64_t HiVal = SignExtend64<32>((Imm - LoVal) >> 32);
-    if (LoVal == HiVal) {
-      RISCVMatInt::InstSeq SeqLo =
-          RISCVMatInt::generateInstSeq(LoVal, Subtarget.getFeatureBits());
-      if ((SeqLo.size() + 2) < Seq.size()) {
-        SDValue Lo = selectImmSeq(CurDAG, DL, VT, SeqLo);
-
-        SDValue SLLI = SDValue(
-            CurDAG->getMachineNode(RISCV::SLLI, DL, VT, Lo,
-                                   CurDAG->getTargetConstant(32, DL, VT)),
-            0);
-        return SDValue(CurDAG->getMachineNode(RISCV::ADD, DL, VT, Lo, SLLI),
-                       0);
-      }
-    }
-  }
-
-  // Otherwise, use the original sequence.
   return selectImmSeq(CurDAG, DL, VT, Seq);
 }
 
