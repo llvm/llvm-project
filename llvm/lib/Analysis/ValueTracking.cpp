@@ -7913,6 +7913,10 @@ static bool isTruePredicate(CmpInst::Predicate Pred, const Value *LHS,
     if (match(RHS, m_NUWAdd(m_Specific(LHS), m_APInt(C))))
       return true;
 
+    // RHS >> V u<= RHS for any V
+    if (match(LHS, m_LShr(m_Specific(RHS), m_Value())))
+      return true;
+
     // Match A to (X +_{nuw} CA) and B to (X +_{nuw} CB)
     auto MatchNUWAddsToSameValue = [&](const Value *A, const Value *B,
                                        const Value *&X,
