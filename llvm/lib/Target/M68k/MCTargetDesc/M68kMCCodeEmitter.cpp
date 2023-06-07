@@ -65,7 +65,7 @@ public:
 
   ~M68kMCCodeEmitter() override {}
 
-  void encodeInstruction(const MCInst &MI, raw_ostream &OS,
+  void encodeInstruction(const MCInst &MI, SmallVectorImpl<char> &CB,
                          SmallVectorImpl<MCFixup> &Fixups,
                          const MCSubtargetInfo &STI) const override;
 };
@@ -199,7 +199,8 @@ void M68kMCCodeEmitter::getMachineOpValue(const MCInst &MI, const MCOperand &Op,
   }
 }
 
-void M68kMCCodeEmitter::encodeInstruction(const MCInst &MI, raw_ostream &OS,
+void M68kMCCodeEmitter::encodeInstruction(const MCInst &MI,
+                                          SmallVectorImpl<char> &CB,
                                           SmallVectorImpl<MCFixup> &Fixups,
                                           const MCSubtargetInfo &STI) const {
   unsigned Opcode = MI.getOpcode();
@@ -216,7 +217,7 @@ void M68kMCCodeEmitter::encodeInstruction(const MCInst &MI, raw_ostream &OS,
   int64_t InstSize = EncodedInst.getBitWidth();
   for (uint64_t Word : Data) {
     for (int i = 0; i < 4 && InstSize > 0; ++i, InstSize -= 16) {
-      support::endian::write<uint16_t>(OS, static_cast<uint16_t>(Word),
+      support::endian::write<uint16_t>(CB, static_cast<uint16_t>(Word),
                                        support::big);
       Word >>= 16;
     }
