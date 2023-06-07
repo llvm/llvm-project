@@ -1310,7 +1310,7 @@ void SIRegisterInfo::buildSpillLoadStore(
   const TargetRegisterClass *RC = getRegClassForReg(MF->getRegInfo(), ValueReg);
   // On gfx90a+ AGPR is a regular VGPR acceptable for loads and stores.
   const bool IsAGPR = !ST.hasGFX90AInsts() && isAGPRClass(RC);
-  const unsigned RegWidth = AMDGPU::getRegBitWidth(RC->getID()) / 8;
+  const unsigned RegWidth = AMDGPU::getRegBitWidth(*RC) / 8;
 
   // Always use 4 byte operations for AGPRs because we need to scavenge
   // a temporary VGPR.
@@ -2904,7 +2904,7 @@ bool SIRegisterInfo::isUniformReg(const MachineRegisterInfo &MRI,
 
 ArrayRef<int16_t> SIRegisterInfo::getRegSplitParts(const TargetRegisterClass *RC,
                                                    unsigned EltSize) const {
-  const unsigned RegBitWidth = AMDGPU::getRegBitWidth(*RC->MC);
+  const unsigned RegBitWidth = AMDGPU::getRegBitWidth(*RC);
   assert(RegBitWidth >= 32 && RegBitWidth <= 1024);
 
   const unsigned RegDWORDs = RegBitWidth / 32;
