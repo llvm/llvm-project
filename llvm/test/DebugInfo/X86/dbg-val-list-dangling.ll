@@ -6,6 +6,7 @@
 ;; able to recover the value in some cases.
 
 ; RUN: llc %s -start-after=codegenprepare -stop-before=finalize-isel -o - -experimental-debug-variable-locations=false | FileCheck %s
+; RUN: llc %s -start-after=codegenprepare -stop-before=finalize-isel -o - -experimental-debug-variable-locations=false --try-experimental-debuginfo-iterators | FileCheck %s
 
 ;; Check that dangling debug info in the SelectionDAG build phase is handled
 ;; in the same way for variadic dbg_value ndoes as non-variadics.

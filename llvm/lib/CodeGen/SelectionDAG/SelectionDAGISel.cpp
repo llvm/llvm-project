@@ -685,10 +685,13 @@ void SelectionDAGISel::SelectBasicBlock(BasicBlock::const_iterator Begin,
   CurDAG->NewNodesMustHaveLegalTypes = false;
 
   // Lower the instructions. If a call is emitted as a tail call, cease emitting
-  // nodes for this block.
+  // nodes for this block. If an instruction is elided, don't emit it, but do
+  // handle any debug-info attached to it.
   for (BasicBlock::const_iterator I = Begin; I != End && !SDB->HasTailCall; ++I) {
     if (!ElidedArgCopyInstrs.count(&*I))
       SDB->visit(*I);
+    else
+      SDB->visitDbgInfo(*I);
   }
 
   // Make sure the root of the DAG is up-to-date.

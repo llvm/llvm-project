@@ -106,38 +106,24 @@ class SelectionDAGBuilder {
 
   /// Helper type for DanglingDebugInfoMap.
   class DanglingDebugInfo {
-    using DbgValTy = const DbgValueInst *;
-    using VarLocTy = const VarLocInfo *;
-    PointerUnion<DbgValTy, VarLocTy> Info;
     unsigned SDNodeOrder = 0;
 
   public:
+    DILocalVariable *Variable;
+    DIExpression *Expression;
+    DebugLoc dl;
     DanglingDebugInfo() = default;
-    DanglingDebugInfo(const DbgValueInst *DI, unsigned SDNO)
-        : Info(DI), SDNodeOrder(SDNO) {}
-    DanglingDebugInfo(const VarLocInfo *VarLoc, unsigned SDNO)
-        : Info(VarLoc), SDNodeOrder(SDNO) {}
+    DanglingDebugInfo(DILocalVariable *Var, DIExpression *Expr, DebugLoc DL, unsigned SDNO)
+        : SDNodeOrder(SDNO), Variable(Var), Expression(Expr), dl(std::move(DL)) {}
 
-    DILocalVariable *getVariable(const FunctionVarLocs *Locs) const {
-      if (isa<VarLocTy>(Info))
-        return Locs->getDILocalVariable(cast<VarLocTy>(Info)->VariableID);
-      return cast<DbgValTy>(Info)->getVariable();
+    DILocalVariable *getVariable() const {
+      return Variable;
     }
     DIExpression *getExpression() const {
-      if (isa<VarLocTy>(Info))
-        return cast<VarLocTy>(Info)->Expr;
-      return cast<DbgValTy>(Info)->getExpression();
-    }
-    Value *getVariableLocationOp(unsigned Idx) const {
-      assert(Idx == 0 && "Dangling variadic debug values not supported yet");
-      if (isa<VarLocTy>(Info))
-        return cast<VarLocTy>(Info)->Values.getVariableLocationOp(Idx);
-      return cast<DbgValTy>(Info)->getVariableLocationOp(Idx);
+      return Expression;
     }
     DebugLoc getDebugLoc() const {
-      if (isa<VarLocTy>(Info))
-        return cast<VarLocTy>(Info)->DL;
-      return cast<DbgValTy>(Info)->getDebugLoc();
+      return dl;
     }
     unsigned getSDNodeOrder() const { return SDNodeOrder; }
 
@@ -145,15 +131,19 @@ class SelectionDAGBuilder {
     /// accommodate the fact that an argument is required for getVariable.
     /// Call SelectionDAGBuilder::printDDI instead of using directly.
     struct Print {
-      Print(const DanglingDebugInfo &DDI, const FunctionVarLocs *VarLocs)
-          : DDI(DDI), VarLocs(VarLocs) {}
+      Print(const Value *V, const DanglingDebugInfo &DDI)
+          : V(V), DDI(DDI) {}
+      const Value *V;
       const DanglingDebugInfo &DDI;
-      const FunctionVarLocs *VarLocs;
       friend raw_ostream &operator<<(raw_ostream &OS,
                                      const DanglingDebugInfo::Print &P) {
-        OS << "DDI(var=" << *P.DDI.getVariable(P.VarLocs)
-           << ", val= " << *P.DDI.getVariableLocationOp(0)
-           << ", expr=" << *P.DDI.getExpression()
+        OS << "DDI(var=" << *P.DDI.getVariable();
+        if (P.V)
+          OS << ", val=" << *P.V;
+        else
+          OS << ", val=nullptr";
+
+        OS << ", expr=" << *P.DDI.getExpression()
            << ", order=" << P.DDI.getSDNodeOrder()
            << ", loc=" << P.DDI.getDebugLoc() << ")";
         return OS;
@@ -164,8 +154,8 @@ class SelectionDAGBuilder {
   /// Returns an object that defines `raw_ostream &operator<<` for printing.
   /// Usage example:
   ////    errs() << printDDI(MyDanglingInfo) << " is dangling\n";
-  DanglingDebugInfo::Print printDDI(const DanglingDebugInfo &DDI) {
-    return DanglingDebugInfo::Print(DDI, DAG.getFunctionVarLocs());
+  DanglingDebugInfo::Print printDDI(const Value *V, const DanglingDebugInfo &DDI) {
+    return DanglingDebugInfo::Print(V, DDI);
   }
 
   /// Helper type for DanglingDebugInfoMap.
@@ -344,6 +334,7 @@ public:
                                   ISD::NodeType ExtendType = ISD::ANY_EXTEND);
 
   void visit(const Instruction &I);
+  void visitDbgInfo(const Instruction &I);
 
   void visit(unsigned Opcode, const User &I);
 
@@ -352,8 +343,9 @@ public:
   SDValue getCopyFromRegs(const Value *V, Type *Ty);
 
   /// Register a dbg_value which relies on a Value which we have not yet seen.
-  void addDanglingDebugInfo(const DbgValueInst *DI, unsigned Order);
-  void addDanglingDebugInfo(const VarLocInfo *VarLoc, unsigned Order);
+  void addDanglingDebugInfo(SmallVectorImpl<Value *> &Values,
+    DILocalVariable *Var, DIExpression *Expr, bool IsVariadic,
+                                                 DebugLoc DL, unsigned Order);
 
   /// If we have dangling debug info that describes \p Variable, or an
   /// overlapping part of variable considering the \p Expr, then this method
@@ -368,7 +360,7 @@ public:
   /// For the given dangling debuginfo record, perform last-ditch efforts to
   /// resolve the debuginfo to something that is represented in this DAG. If
   /// this cannot be done, produce an Undef debug value record.
-  void salvageUnresolvedDbgValue(DanglingDebugInfo &DDI);
+  void salvageUnresolvedDbgValue(const Value *V, DanglingDebugInfo &DDI);
 
   /// For a given list of Values, attempt to create and record a SDDbgValue in
   /// the SelectionDAG.
