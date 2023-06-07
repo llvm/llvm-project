@@ -778,9 +778,11 @@ mlir::LogicalResult hlfir::MatmulOp::verify() {
   }
   if (resultShape.size() != expectedResultShape.size())
     return emitOpError("incorrect result shape");
-  if (resultShape[0] != expectedResultShape[0])
+  if (resultShape[0] != expectedResultShape[0] &&
+      expectedResultShape[0] != unknownExtent)
     return emitOpError("incorrect result shape");
-  if (resultShape.size() == 2 && resultShape[1] != expectedResultShape[1])
+  if (resultShape.size() == 2 && resultShape[1] != expectedResultShape[1] &&
+      expectedResultShape[1] != unknownExtent)
     return emitOpError("incorrect result shape");
 
   return mlir::success();
@@ -852,7 +854,10 @@ mlir::LogicalResult hlfir::TransposeOp::verify() {
   if (rank != 2 || resultRank != 2)
     return emitOpError("input and output arrays should have rank 2");
 
-  if (inShape[0] != resultShape[1] || inShape[1] != resultShape[0])
+  constexpr int64_t unknownExtent = fir::SequenceType::getUnknownExtent();
+  if ((inShape[0] != resultShape[1]) && (inShape[0] != unknownExtent))
+    return emitOpError("output shape does not match input array");
+  if ((inShape[1] != resultShape[0]) && (inShape[1] != unknownExtent))
     return emitOpError("output shape does not match input array");
 
   if (eleTy != resultEleTy)
