@@ -17,6 +17,13 @@ using testing::Not;
 using testing::UnorderedElementsAre;
 using testing::UnorderedElementsAreArray;
 
+// PR63168: Balanced Partitioning tests currently hang on ARM.
+#if defined(__arm__)
+#define SKIP_UNSUPPORTED_PLATFORM GTEST_SKIP()
+#else
+#define SKIP_UNSUPPORTED_PLATFORM do { } while(0)
+#endif
+
 namespace llvm {
 
 void PrintTo(const BPFunctionNode &Node, std::ostream *OS) {
@@ -40,6 +47,7 @@ protected:
 };
 
 TEST_F(BalancedPartitioningTest, Basic) {
+  SKIP_UNSUPPORTED_PLATFORM;
   std::vector<BPFunctionNode> Nodes = {
       BPFunctionNode(0, {1, 2}), BPFunctionNode(2, {3, 4}),
       BPFunctionNode(1, {1, 2}), BPFunctionNode(3, {3, 4}),
@@ -59,6 +67,7 @@ TEST_F(BalancedPartitioningTest, Basic) {
 }
 
 TEST_F(BalancedPartitioningTest, Large) {
+  SKIP_UNSUPPORTED_PLATFORM;
   const int ProblemSize = 1000;
   std::vector<BPFunctionNode::UtilityNodeT> AllUNs;
   for (int i = 0; i < ProblemSize; i++)
@@ -85,6 +94,7 @@ TEST_F(BalancedPartitioningTest, Large) {
 }
 
 TEST_F(BalancedPartitioningTest, MoveGain) {
+  SKIP_UNSUPPORTED_PLATFORM;
   BalancedPartitioning::SignaturesT Signatures = {
       {10, 10, 10.f, 0.f, true}, // 0
       {10, 10, 0.f, 10.f, true}, // 1

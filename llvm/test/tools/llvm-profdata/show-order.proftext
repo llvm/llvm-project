@@ -1,4 +1,6 @@
 # RUN: llvm-profdata order %s | FileCheck %s
+# PR63168: Balanced Partitioning tests currently hang on ARM.
+# UNSUPPORTED: target=arm{{.*}}
 
 # CHECK: a
 # CHECK: b
