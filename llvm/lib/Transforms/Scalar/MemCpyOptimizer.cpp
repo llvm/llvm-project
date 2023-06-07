@@ -1604,6 +1604,101 @@ bool MemCpyOptPass::processByValArgument(CallBase &CB, unsigned ArgNo) {
   return true;
 }
 
+/// This is called on memcpy dest pointer arguments attributed as immutable
+/// during call. Try to use memcpy source directly if all of the following
+/// conditions are satisfied.
+/// 1. The memcpy dst is neither modified during the call nor captured by the
+/// call. (if readonly, noalias, nocapture attributes on call-site.)
+/// 2. The memcpy dst is an alloca with known alignment & size.
+///     2-1. The memcpy length == the alloca size which ensures that the new
+///     pointer is dereferenceable for the required range
+///     2-2. The src pointer has alignment >= the alloca alignment or can be
+///     enforced so.
+/// 3. The memcpy dst and src is not modified between the memcpy and the call.
+/// (if MSSA clobber check is safe.)
+/// 4. The memcpy src is not modified during the call. (ModRef check shows no
+/// Mod.)
+bool MemCpyOptPass::processImmutArgument(CallBase &CB, unsigned ArgNo) {
+  // 1. Ensure passed argument is immutable during call.
+  if (!(CB.paramHasAttr(ArgNo, Attribute::NoAlias) &&
+        CB.paramHasAttr(ArgNo, Attribute::NoCapture)))
+    return false;
+  const DataLayout &DL = CB.getCaller()->getParent()->getDataLayout();
+  Value *ImmutArg = CB.getArgOperand(ArgNo);
+
+  // 2. Check that arg is alloca
+  // TODO: Even if the arg gets back to branches, we can remove memcpy if all
+  // the alloca alignments can be enforced to source alignment.
+  auto *AI = dyn_cast<AllocaInst>(ImmutArg->stripPointerCasts());
+  if (!AI)
+    return false;
+
+  std::optional<TypeSize> AllocaSize = AI->getAllocationSize(DL);
+  // Can't handle unknown size alloca.
+  // (e.g. Variable Length Array, Scalable Vector)
+  if (!AllocaSize || AllocaSize->isScalable())
+    return false;
+  MemoryLocation Loc(ImmutArg, LocationSize::precise(*AllocaSize));
+  MemoryUseOrDef *CallAccess = MSSA->getMemoryAccess(&CB);
+  if (!CallAccess)
+    return false;
+
+  MemCpyInst *MDep = nullptr;
+  BatchAAResults BAA(*AA);
+  MemoryAccess *Clobber = MSSA->getWalker()->getClobberingMemoryAccess(
+      CallAccess->getDefiningAccess(), Loc, BAA);
+  if (auto *MD = dyn_cast<MemoryDef>(Clobber))
+    MDep = dyn_cast_or_null<MemCpyInst>(MD->getMemoryInst());
+
+  // If the immut argument isn't fed by a memcpy, ignore it.  If it is fed by
+  // a memcpy, check that the arg equals the memcpy dest.
+  if (!MDep || MDep->isVolatile() || AI != MDep->getDest())
+    return false;
+
+  // The address space of the memcpy source must match the immut argument
+  if (MDep->getSource()->getType()->getPointerAddressSpace() !=
+      ImmutArg->getType()->getPointerAddressSpace())
+    return false;
+
+  // 2-1. The length of the memcpy must be equal to the size of the alloca.
+  auto *MDepLen = dyn_cast<ConstantInt>(MDep->getLength());
+  if (!MDepLen || AllocaSize != MDepLen->getValue())
+    return false;
+
+  // 2-2. the memcpy source align must be larger than or equal the alloca's
+  // align. If not so, we check to see if we can force the source of the memcpy
+  // to the alignment we need. If we fail, we bail out.
+  Align MemDepAlign = MDep->getSourceAlign().valueOrOne();
+  Align AllocaAlign = AI->getAlign();
+  if (MemDepAlign < AllocaAlign &&
+      getOrEnforceKnownAlignment(MDep->getSource(), AllocaAlign, DL, &CB, AC,
+                                 DT) < AllocaAlign)
+    return false;
+
+  // 3. Verify that the source doesn't change in between the memcpy and
+  // the call.
+  //    memcpy(a <- b)
+  //    *b = 42;
+  //    foo(*a)
+  // It would be invalid to transform the second memcpy into foo(*b).
+  if (writtenBetween(MSSA, BAA, MemoryLocation::getForSource(MDep),
+                     MSSA->getMemoryAccess(MDep), CallAccess))
+    return false;
+
+  // 4. The memcpy src must not be modified during the call.
+  if (isModSet(AA->getModRefInfo(&CB, MemoryLocation::getForSource(MDep))))
+    return false;
+
+  LLVM_DEBUG(dbgs() << "MemCpyOptPass: Forwarding memcpy to Immut src:\n"
+                    << "  " << *MDep << "\n"
+                    << "  " << CB << "\n");
+
+  // Otherwise we're good!  Update the immut argument.
+  CB.setArgOperand(ArgNo, MDep->getSource());
+  ++NumMemCpyInstr;
+  return true;
+}
+
 /// Executes one iteration of MemCpyOptPass.
 bool MemCpyOptPass::iterateOnFunction(Function &F) {
   bool MadeChange = false;
@@ -1632,9 +1727,12 @@ bool MemCpyOptPass::iterateOnFunction(Function &F) {
       else if (auto *M = dyn_cast<MemMoveInst>(I))
         RepeatInstruction = processMemMove(M);
       else if (auto *CB = dyn_cast<CallBase>(I)) {
-        for (unsigned i = 0, e = CB->arg_size(); i != e; ++i)
+        for (unsigned i = 0, e = CB->arg_size(); i != e; ++i) {
           if (CB->isByValArgument(i))
             MadeChange |= processByValArgument(*CB, i);
+          else if (CB->onlyReadsMemory(i))
+            MadeChange |= processImmutArgument(*CB, i);
+        }
       }
 
       // Reprocess the instruction if desired.
