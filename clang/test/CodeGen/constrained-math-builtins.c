@@ -7,7 +7,7 @@
 
 #pragma float_control(except, on)
 
-void foo(double *d, float f, float *fp, long double *l, int *i, const char *c) {
+void foo(double *d, float f, float *fp, long double *l, int *i, const char *c, _Float16 h) {
   f = __builtin_fmod(f,f);    f = __builtin_fmodf(f,f);   f =  __builtin_fmodl(f,f); f = __builtin_fmodf128(f,f);
 
 // CHECK: call double @llvm.experimental.constrained.frem.f64(double %{{.*}}, double %{{.*}}, metadata !"round.tonearest", metadata !"fpexcept.strict")
@@ -27,6 +27,14 @@ void foo(double *d, float f, float *fp, long double *l, int *i, const char *c) {
 // CHECK: call double @llvm.experimental.constrained.powi.f64(double %{{.*}}, metadata !"round.tonearest", metadata !"fpexcept.strict")
 // CHECK: call float @llvm.experimental.constrained.powi.f32(float %{{.*}}, metadata !"round.tonearest", metadata !"fpexcept.strict")
 // CHECK: call x86_fp80 @llvm.experimental.constrained.powi.f80(x86_fp80 %{{.*}}, metadata !"round.tonearest", metadata !"fpexcept.strict")
+
+
+  h = __builtin_ldexpf16(h, *i);  *d = __builtin_ldexp(*d, *i);        f = __builtin_ldexpf(f, *i);       __builtin_ldexpl(*l, *i);
+
+// CHECK: call half @llvm.experimental.constrained.ldexp.f16.i32(half %{{.*}}, i32 %{{.*}}, metadata !"round.tonearest", metadata !"fpexcept.strict")
+// CHECK: call double @llvm.experimental.constrained.ldexp.f64.i32(double %{{.*}}, i32 %{{.*}}, metadata !"round.tonearest", metadata !"fpexcept.strict")
+// CHECK: call float @llvm.experimental.constrained.ldexp.f32.i32(float %{{.*}}, i32 %{{.*}}, metadata !"round.tonearest", metadata !"fpexcept.strict")
+// CHECK: call x86_fp80 @llvm.experimental.constrained.ldexp.f80.i32(x86_fp80 %{{.*}}, i32 %{{.*}}, metadata !"round.tonearest", metadata !"fpexcept.strict")
 
   __builtin_ceil(f);       __builtin_ceilf(f);      __builtin_ceill(f); __builtin_ceilf128(f);
 
@@ -189,6 +197,11 @@ void foo(double *d, float f, float *fp, long double *l, int *i, const char *c) {
 // CHECK: declare double @llvm.experimental.constrained.powi.f64(double, i32, metadata, metadata)
 // CHECK: declare float @llvm.experimental.constrained.powi.f32(float, i32, metadata, metadata)
 // CHECK: declare x86_fp80 @llvm.experimental.constrained.powi.f80(x86_fp80, i32, metadata, metadata)
+
+// CHECK: declare half @llvm.experimental.constrained.ldexp.f16.i32(half, i32, metadata, metadata)
+// CHECK: declare double @llvm.experimental.constrained.ldexp.f64.i32(double, i32, metadata, metadata)
+// CHECK: declare float @llvm.experimental.constrained.ldexp.f32.i32(float, i32, metadata, metadata)
+// CHECK: declare x86_fp80 @llvm.experimental.constrained.ldexp.f80.i32(x86_fp80, i32, metadata, metadata)
 
 // CHECK: declare double @llvm.experimental.constrained.ceil.f64(double, metadata)
 // CHECK: declare float @llvm.experimental.constrained.ceil.f32(float, metadata)
