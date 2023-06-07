@@ -678,6 +678,8 @@ public:
     EI = new ElementInfo[VTy->getNumElements()];
   }
 
+  VectorInfo &operator=(const VectorInfo &other) = delete;
+
   virtual ~VectorInfo() { delete[] EI; }
 
   unsigned getDimension() const { return VTy->getNumElements(); }
