@@ -13,23 +13,19 @@
 
 import sys
 sys.path.append(sys.argv[1])
-from libcxx.test.header_information import header_restrictions, public_headers
+from libcxx.test.header_information import lit_header_restrictions, public_headers
 
 for header in public_headers:
   if header == 'cassert':
     continue
 
-  test_condition_begin = '#if ' + header_restrictions[header] if header in header_restrictions else ''
-  test_condition_end = '#endif' if header in header_restrictions else ''
-
   print(f"""\
 //--- {header}.compile.pass.cpp
+{lit_header_restrictions.get(header, '')}
 
-#include <__config>
-{test_condition_begin}
 #include <{header}>
+
 #ifdef assert
 # error "Do not include cassert or assert.h in standard header files"
 #endif
-{test_condition_end}
 """)

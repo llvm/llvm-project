@@ -13,7 +13,7 @@
 
 import sys
 sys.path.append(sys.argv[1])
-from libcxx.test.header_information import header_restrictions, private_headers, private_headers_still_public_in_modules
+from libcxx.test.header_information import lit_header_restrictions, private_headers, private_headers_still_public_in_modules
 
 for header in private_headers:
   # Skip headers that are not private yet in the modulemap
@@ -32,16 +32,11 @@ for header in private_headers:
   if header.startswith('__pstl'):
     continue
 
-  test_condition_begin = '#if ' + header_restrictions[header] if header in header_restrictions else ''
-  test_condition_end = '#endif' if header in header_restrictions else ''
   BLOCKLIT = '' # block Lit from interpreting a RUN/XFAIL/etc inside the generation script
-
   print(f"""\
 //--- {header}.verify.cpp
 // REQUIRES{BLOCKLIT}: modules-build
+{lit_header_restrictions.get(header, '')}
 
-#include <__config>
-{test_condition_begin}
 #include <{header}> // expected-error@*:* {{{{use of private header from outside its module: '{header}'}}}}
-{test_condition_end}
 """)
