@@ -19,31 +19,9 @@ target triple = "x86_64-unknown-linux-gnu"
 define noundef zeroext i1 @allones(<8 x i64> noundef %x) {
 ; CHECK-LABEL: @allones(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[VECEXT:%.*]] = extractelement <8 x i64> [[X:%.*]], i64 0
-; CHECK-NEXT:    [[VECEXT1:%.*]] = extractelement <8 x i64> [[X]], i64 1
-; CHECK-NEXT:    [[TMP0:%.*]] = and i64 [[VECEXT]], [[VECEXT1]]
-; CHECK-NEXT:    [[OR_COND:%.*]] = icmp eq i64 [[TMP0]], -1
-; CHECK-NEXT:    [[VECEXT4:%.*]] = extractelement <8 x i64> [[X]], i64 2
-; CHECK-NEXT:    [[VECEXT7:%.*]] = extractelement <8 x i64> [[X]], i64 3
-; CHECK-NEXT:    [[TMP1:%.*]] = and i64 [[VECEXT4]], [[VECEXT7]]
-; CHECK-NEXT:    [[TMP2:%.*]] = icmp eq i64 [[TMP1]], -1
-; CHECK-NEXT:    [[OR_COND21:%.*]] = and i1 [[OR_COND]], [[TMP2]]
-; CHECK-NEXT:    [[VECEXT10:%.*]] = extractelement <8 x i64> [[X]], i64 4
-; CHECK-NEXT:    [[VECEXT13:%.*]] = extractelement <8 x i64> [[X]], i64 5
-; CHECK-NEXT:    [[TMP3:%.*]] = and i64 [[VECEXT10]], [[VECEXT13]]
-; CHECK-NEXT:    [[TMP4:%.*]] = icmp eq i64 [[TMP3]], -1
-; CHECK-NEXT:    [[OR_COND23:%.*]] = and i1 [[TMP4]], [[OR_COND21]]
-; CHECK-NEXT:    [[VECEXT16:%.*]] = extractelement <8 x i64> [[X]], i64 6
-; CHECK-NEXT:    [[CMP17:%.*]] = icmp eq i64 [[VECEXT16]], -1
-; CHECK-NEXT:    [[OR_COND24:%.*]] = and i1 [[CMP17]], [[OR_COND23]]
-; CHECK-NEXT:    br i1 [[OR_COND24]], label [[LAND_RHS:%.*]], label [[LAND_END:%.*]]
-; CHECK:       land.rhs:
-; CHECK-NEXT:    [[VECEXT18:%.*]] = extractelement <8 x i64> [[X]], i64 7
-; CHECK-NEXT:    [[CMP19:%.*]] = icmp eq i64 [[VECEXT18]], -1
-; CHECK-NEXT:    br label [[LAND_END]]
-; CHECK:       land.end:
-; CHECK-NEXT:    [[TMP5:%.*]] = phi i1 [ false, [[ENTRY:%.*]] ], [ [[CMP19]], [[LAND_RHS]] ]
-; CHECK-NEXT:    ret i1 [[TMP5]]
+; CHECK-NEXT:    [[TMP0:%.*]] = tail call i64 @llvm.vector.reduce.and.v8i64(<8 x i64> [[X:%.*]])
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp eq i64 [[TMP0]], -1
+; CHECK-NEXT:    ret i1 [[TMP1]]
 ;
 entry:
   %vecext = extractelement <8 x i64> %x, i32 0
