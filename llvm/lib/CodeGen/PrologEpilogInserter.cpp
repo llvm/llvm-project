@@ -1459,13 +1459,23 @@ void PEI::replaceFrameIndicesBackward(MachineBasicBlock *BB,
   assert(MF.getSubtarget().getRegisterInfo() &&
          "getRegisterInfo() must be implemented!");
 
+  const TargetInstrInfo &TII = *MF.getSubtarget().getInstrInfo();
   const TargetRegisterInfo &TRI = *MF.getSubtarget().getRegisterInfo();
+  const TargetFrameLowering &TFI = *MF.getSubtarget().getFrameLowering();
 
-  RS->enterBasicBlockEnd(*BB);
+  RegScavenger *LocalRS = FrameIndexEliminationScavenging ? RS : nullptr;
+  if (LocalRS)
+    LocalRS->enterBasicBlockEnd(*BB);
 
   for (MachineInstr &MI : make_early_inc_range(reverse(*BB))) {
+    if (TII.isFrameInstr(MI)) {
+      TFI.eliminateCallFramePseudoInstr(MF, *BB, &MI);
+      continue;
+    }
+
     // Step backwards to get the liveness state at (immedately after) MI.
-    RS->backward(MI);
+    if (LocalRS)
+      LocalRS->backward(MI);
 
     for (unsigned i = 0; i != MI.getNumOperands(); ++i) {
       if (!MI.getOperand(i).isFI())
@@ -1478,9 +1488,12 @@ void PEI::replaceFrameIndicesBackward(MachineBasicBlock *BB,
       //
       // Save and restore the scavenger's position around the call to
       // eliminateFrameIndex in case it erases MI and invalidates the iterator.
-      MachineBasicBlock::iterator Save = std::next(RS->getCurrentPosition());
+      MachineBasicBlock::iterator Save;
+      if (LocalRS)
+	Save = std::next(LocalRS->getCurrentPosition());
       bool Removed = TRI.eliminateFrameIndex(MI, SPAdj, i, RS);
-      RS->skipTo(std::prev(Save));
+      if (LocalRS)
+	LocalRS->skipTo(std::prev(Save));
 
       if (Removed)
         break;
@@ -1496,7 +1509,7 @@ void PEI::replaceFrameIndices(MachineBasicBlock *BB, MachineFunction &MF,
   const TargetRegisterInfo &TRI = *MF.getSubtarget().getRegisterInfo();
   const TargetFrameLowering *TFI = MF.getSubtarget().getFrameLowering();
 
-  if (RS && TRI.supportsBackwardScavenger())
+  if (TRI.supportsBackwardScavenger())
     return replaceFrameIndicesBackward(BB, MF, SPAdj);
 
   if (RS && FrameIndexEliminationScavenging)
