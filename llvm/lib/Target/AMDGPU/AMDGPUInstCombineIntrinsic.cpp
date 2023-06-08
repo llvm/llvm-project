@@ -385,17 +385,20 @@ static APInt trimTrailingZerosInVector(InstCombiner &IC, Value *UseV,
   APInt DemandedElts = APInt::getAllOnes(VWidth);
 
   for (int i = VWidth - 1; i > 0; --i) {
-    APInt DemandOneElt = APInt::getOneBitSet(VWidth, i);
-    KnownFPClass KnownFPClass =
-        computeKnownFPClass(UseV, DemandOneElt, IC.getDataLayout(),
-                            /*InterestedClasses=*/fcAllFlags,
-                            /*Depth=*/0, &IC.getTargetLibraryInfo(),
-                            &IC.getAssumptionCache(), I,
-                            &IC.getDominatorTree());
-    if (KnownFPClass.KnownFPClasses != fcPosZero)
+    auto *Elt = findScalarElement(UseV, i);
+    if (!Elt)
       break;
+
+    if (auto *ConstElt = dyn_cast<Constant>(Elt)) {
+      if (!ConstElt->isNullValue() && !isa<UndefValue>(Elt))
+        break;
+    } else {
+      break;
+    }
+
     DemandedElts.clearBit(i);
   }
+
   return DemandedElts;
 }
 
