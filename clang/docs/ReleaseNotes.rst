@@ -488,6 +488,8 @@ Bug Fixes in This Version
   (`#63010 <https://github.com/llvm/llvm-project/issues/63010>`_).
 - Fix rejects-valid when consteval operator appears inside of a template.
   (`#62886 <https://github.com/llvm/llvm-project/issues/62886>`_).
+- Fix crash for code using ``_Atomic`` types in C++
+  (`See patch <https://reviews.llvm.org/D152303>`_).
 
 Bug Fixes to Compiler Builtins
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
