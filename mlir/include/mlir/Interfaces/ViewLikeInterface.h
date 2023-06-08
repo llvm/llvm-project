@@ -58,8 +58,8 @@ namespace mlir {
 void printDynamicIndexList(
     OpAsmPrinter &printer, Operation *op, OperandRange values,
     ArrayRef<int64_t> integers, TypeRange valueTypes = TypeRange(),
-    AsmParser::Delimiter delimiter = AsmParser::Delimiter::Square,
-    bool isTrailingIdxScalable = false);
+    BoolAttr isTrailingIdxScalable = {},
+    AsmParser::Delimiter delimiter = AsmParser::Delimiter::Square);
 
 /// Parser hook for custom directive in assemblyFormat.
 ///
@@ -99,6 +99,20 @@ inline ParseResult parseDynamicIndexList(
   return parseDynamicIndexList(parser, values, integers,
                                /*isTrailingIdxScalable=*/nullptr, &valueTypes,
                                delimiter);
+}
+inline ParseResult parseDynamicIndexList(
+    OpAsmParser &parser,
+    SmallVectorImpl<OpAsmParser::UnresolvedOperand> &values,
+    DenseI64ArrayAttr &integers, SmallVectorImpl<Type> &valueTypes,
+    BoolAttr &isTrailingIdxScalable,
+    AsmParser::Delimiter delimiter = AsmParser::Delimiter::Square) {
+
+  bool scalable = false;
+  auto res = parseDynamicIndexList(parser, values, integers, &scalable,
+                                   &valueTypes, delimiter);
+  auto scalableAttr = parser.getBuilder().getBoolAttr(scalable);
+  isTrailingIdxScalable = scalableAttr;
+  return res;
 }
 
 /// Verify that a the `values` has as many elements as the number of entries in
