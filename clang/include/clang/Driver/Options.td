@@ -3791,12 +3791,12 @@ def msve_vector_bits_EQ : Joined<["-"], "msve-vector-bits=">, Group<m_aarch64_Fe
 
 def mvscale_min_EQ : Joined<["-"], "mvscale-min=">,
   Group<m_aarch64_Features_Group>, Flags<[NoXarchOption,CC1Option]>,
-  HelpText<"Specify the vscale minimum. Defaults to \"1\". (AArch64 only)">,
+  HelpText<"Specify the vscale minimum. Defaults to \"1\". (AArch64/RISC-V only)">,
   MarshallingInfoInt<LangOpts<"VScaleMin">>;
 def mvscale_max_EQ : Joined<["-"], "mvscale-max=">,
   Group<m_aarch64_Features_Group>, Flags<[NoXarchOption,CC1Option]>,
   HelpText<"Specify the vscale maximum. Defaults to the"
-           " vector length agnostic value of \"0\". (AArch64 only)">,
+           " vector length agnostic value of \"0\". (AArch64/RISC-V only)">,
   MarshallingInfoInt<LangOpts<"VScaleMax">>;
 
 def msign_return_address_EQ : Joined<["-"], "msign-return-address=">,
