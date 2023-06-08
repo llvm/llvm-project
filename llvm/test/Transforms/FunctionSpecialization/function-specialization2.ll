@@ -2,7 +2,6 @@
 ; RUN: opt -passes="ipsccp<func-spec>,deadargelim" -force-specialization -S < %s | FileCheck %s
 ; RUN: opt -passes="ipsccp<func-spec>,deadargelim" -funcspec-max-iters=1 -force-specialization -S < %s | FileCheck %s
 ; RUN: opt -passes="ipsccp<func-spec>,deadargelim" -funcspec-max-iters=0 -force-specialization -S < %s | FileCheck %s --check-prefix=DISABLED
-; RUN: opt -passes="ipsccp<func-spec>,deadargelim" -funcspec-avg-loop-iters=1 -force-specialization -S < %s | FileCheck %s
 
 ; DISABLED-NOT: @func.1(
 ; DISABLED-NOT: @func.2(

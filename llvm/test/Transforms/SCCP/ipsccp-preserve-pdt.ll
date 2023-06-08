@@ -22,7 +22,7 @@
 ; CHECK-NEXT:       [3] %entry {4294967295,4294967295} [2]
 ; CHECK-NEXT:     [2] %for.cond34 {4294967295,4294967295} [1]
 ; CHECK-NEXT:       [3] %for.cond16 {4294967295,4294967295} [2]
-; CHECK-NEXT: Roots: %for.body %for.cond34
+; CHECK-NEXT: Roots: %for.cond34 %for.body
 ; CHECK-NEXT: PostDominatorTree for function: bar
 ; CHECK-NOT: <badref>
 

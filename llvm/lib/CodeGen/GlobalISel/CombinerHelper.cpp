@@ -1722,9 +1722,9 @@ bool CombinerHelper::matchCombineShlOfExtend(MachineInstr &MI,
       !mi_match(LHS, MRI, m_GSExt(m_Reg(ExtSrc))))
     return false;
 
-  // TODO: Should handle vector splat.
   Register RHS = MI.getOperand(2).getReg();
-  auto MaybeShiftAmtVal = getIConstantVRegValWithLookThrough(RHS, MRI);
+  MachineInstr *MIShiftAmt = MRI.getVRegDef(RHS);
+  auto MaybeShiftAmtVal = isConstantOrConstantSplatVector(*MIShiftAmt, MRI);
   if (!MaybeShiftAmtVal)
     return false;
 
@@ -1739,12 +1739,13 @@ bool CombinerHelper::matchCombineShlOfExtend(MachineInstr &MI,
       return false;
   }
 
-  int64_t ShiftAmt = MaybeShiftAmtVal->Value.getSExtValue();
+  int64_t ShiftAmt = MaybeShiftAmtVal->getSExtValue();
   MatchData.Reg = ExtSrc;
   MatchData.Imm = ShiftAmt;
 
   unsigned MinLeadingZeros = KB->getKnownZeroes(ExtSrc).countl_one();
-  return MinLeadingZeros >= ShiftAmt;
+  unsigned SrcTySize = MRI.getType(ExtSrc).getScalarSizeInBits();
+  return MinLeadingZeros >= ShiftAmt && ShiftAmt < SrcTySize;
 }
 
 void CombinerHelper::applyCombineShlOfExtend(MachineInstr &MI,

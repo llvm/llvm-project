@@ -4059,5 +4059,5 @@ void PragmaRISCVHandler::HandlePragma(Preprocessor &PP,
   if (II->isStr("vector"))
     Actions.DeclareRISCVVBuiltins = true;
   else if (II->isStr("sifive_vector"))
-    Actions.DeclareRISCVVectorBuiltins = true;
+    Actions.DeclareRISCVSiFiveVectorBuiltins = true;
 }
