@@ -3,7 +3,7 @@
 ; RUN: llc < %s -mtriple=x86_64-unknown-unknown -mattr=+sse4.2 | FileCheck %s --check-prefixes=SSE,SSE42
 ; RUN: llc < %s -mtriple=x86_64-unknown-unknown -mattr=+avx | FileCheck %s --check-prefix=AVX
 ; RUN: llc < %s -mtriple=x86_64-unknown-unknown -mattr=+avx2 | FileCheck %s --check-prefix=AVX
-; RUN: llc < %s -mtriple=x86_64-unknown-unknown -mcpu=alderlake | FileCheck %s --check-prefixes=ADL
+; RUN: llc < %s -mtriple=x86_64-unknown-unknown -mattr=+avx2,+prefer-movmsk-over-vtest | FileCheck %s --check-prefixes=ADL
 
 declare i32 @llvm.x86.sse.movmsk.ps(<4 x float>)
 declare i32 @llvm.x86.sse2.movmsk.pd(<2 x double>)
@@ -33,7 +33,8 @@ define i1 @movmskps_noneof_bitcast_v2f64(<2 x double> %a0) {
 ; ADL:       # %bb.0:
 ; ADL-NEXT:    vxorpd %xmm1, %xmm1, %xmm1
 ; ADL-NEXT:    vcmpeqpd %xmm0, %xmm1, %xmm0
-; ADL-NEXT:    vtestpd %xmm0, %xmm0
+; ADL-NEXT:    vmovmskpd %xmm0, %eax
+; ADL-NEXT:    testl %eax, %eax
 ; ADL-NEXT:    sete %al
 ; ADL-NEXT:    retq
   %1 = fcmp oeq <2 x double> zeroinitializer, %a0
@@ -67,9 +68,9 @@ define i1 @movmskps_allof_bitcast_v2f64(<2 x double> %a0) {
 ; ADL:       # %bb.0:
 ; ADL-NEXT:    vxorpd %xmm1, %xmm1, %xmm1
 ; ADL-NEXT:    vcmpeqpd %xmm0, %xmm1, %xmm0
-; ADL-NEXT:    vpcmpeqd %xmm1, %xmm1, %xmm1
-; ADL-NEXT:    vtestpd %xmm1, %xmm0
-; ADL-NEXT:    setb %al
+; ADL-NEXT:    vmovmskpd %xmm0, %eax
+; ADL-NEXT:    cmpl $3, %eax
+; ADL-NEXT:    sete %al
 ; ADL-NEXT:    retq
   %1 = fcmp oeq <2 x double> zeroinitializer, %a0
   %2 = sext <2 x i1> %1 to <2 x i64>
@@ -103,7 +104,8 @@ define i1 @pmovmskb_noneof_bitcast_v2i64(<2 x i64> %a0) {
 ;
 ; ADL-LABEL: pmovmskb_noneof_bitcast_v2i64:
 ; ADL:       # %bb.0:
-; ADL-NEXT:    vtestpd %xmm0, %xmm0
+; ADL-NEXT:    vmovmskpd %xmm0, %eax
+; ADL-NEXT:    testl %eax, %eax
 ; ADL-NEXT:    sete %al
 ; ADL-NEXT:    retq
   %1 = icmp sgt <2 x i64> zeroinitializer, %a0
@@ -139,9 +141,9 @@ define i1 @pmovmskb_allof_bitcast_v2i64(<2 x i64> %a0) {
 ;
 ; ADL-LABEL: pmovmskb_allof_bitcast_v2i64:
 ; ADL:       # %bb.0:
-; ADL-NEXT:    vpcmpeqd %xmm1, %xmm1, %xmm1
-; ADL-NEXT:    vtestpd %xmm1, %xmm0
-; ADL-NEXT:    setb %al
+; ADL-NEXT:    vmovmskpd %xmm0, %eax
+; ADL-NEXT:    cmpl $3, %eax
+; ADL-NEXT:    sete %al
 ; ADL-NEXT:    retq
   %1 = icmp sgt <2 x i64> zeroinitializer, %a0
   %2 = sext <2 x i1> %1 to <2 x i64>
@@ -173,7 +175,8 @@ define i1 @pmovmskb_noneof_bitcast_v4f32(<4 x float> %a0) {
 ; ADL:       # %bb.0:
 ; ADL-NEXT:    vxorps %xmm1, %xmm1, %xmm1
 ; ADL-NEXT:    vcmpeqps %xmm1, %xmm0, %xmm0
-; ADL-NEXT:    vtestps %xmm0, %xmm0
+; ADL-NEXT:    vmovmskps %xmm0, %eax
+; ADL-NEXT:    testl %eax, %eax
 ; ADL-NEXT:    sete %al
 ; ADL-NEXT:    retq
   %1 = fcmp oeq <4 x float> %a0, zeroinitializer
@@ -207,9 +210,9 @@ define i1 @pmovmskb_allof_bitcast_v4f32(<4 x float> %a0) {
 ; ADL:       # %bb.0:
 ; ADL-NEXT:    vxorps %xmm1, %xmm1, %xmm1
 ; ADL-NEXT:    vcmpeqps %xmm1, %xmm0, %xmm0
-; ADL-NEXT:    vpcmpeqd %xmm1, %xmm1, %xmm1
-; ADL-NEXT:    vtestps %xmm1, %xmm0
-; ADL-NEXT:    setb %al
+; ADL-NEXT:    vmovmskps %xmm0, %eax
+; ADL-NEXT:    cmpl $15, %eax
+; ADL-NEXT:    sete %al
 ; ADL-NEXT:    retq
   %1 = fcmp oeq <4 x float> %a0, zeroinitializer
   %2 = sext <4 x i1> %1 to <4 x i32>
@@ -513,10 +516,11 @@ define i32 @movmskps_ptest_numelts_mismatch(<16 x i8> %a0) {
 ; ADL:       # %bb.0:
 ; ADL-NEXT:    vpxor %xmm1, %xmm1, %xmm1
 ; ADL-NEXT:    vpcmpeqb %xmm1, %xmm0, %xmm0
-; ADL-NEXT:    vpcmpeqd %xmm1, %xmm1, %xmm1
+; ADL-NEXT:    vmovmskps %xmm0, %ecx
 ; ADL-NEXT:    xorl %eax, %eax
-; ADL-NEXT:    vtestps %xmm1, %xmm0
-; ADL-NEXT:    sbbl %eax, %eax
+; ADL-NEXT:    cmpl $15, %ecx
+; ADL-NEXT:    sete %al
+; ADL-NEXT:    negl %eax
 ; ADL-NEXT:    retq
   %1 = icmp eq <16 x i8> %a0, zeroinitializer
   %2 = sext <16 x i1> %1 to <16 x i8>
