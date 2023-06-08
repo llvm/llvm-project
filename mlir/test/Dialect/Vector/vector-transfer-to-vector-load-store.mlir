@@ -242,7 +242,7 @@ transform.sequence failures(propagate) {
 ^bb1(%module_op: !transform.any_op):
   transform.apply_patterns to %module_op {
     transform.apply_patterns.vector.lower_transfer max_transfer_rank = 99
-    transform.apply_patterns.vector.apply_transfer_permutation_patterns
+    transform.apply_patterns.vector.transfer_permutation_patterns
   } : !transform.any_op
 }
 
@@ -364,6 +364,6 @@ transform.sequence failures(propagate) {
 ^bb1(%module_op: !transform.any_op):
   transform.apply_patterns to %module_op {
     transform.apply_patterns.vector.lower_transfer max_transfer_rank = 99
-    transform.apply_patterns.vector.apply_transfer_permutation_patterns
+    transform.apply_patterns.vector.transfer_permutation_patterns
   } : !transform.any_op
 }

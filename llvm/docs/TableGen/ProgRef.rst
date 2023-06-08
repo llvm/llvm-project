@@ -225,10 +225,10 @@ TableGen provides "bang operators" that have a wide variety of uses:
                : !getdagname  !getdagop    !gt          !head        !if
                : !interleave  !isa         !le          !listconcat  !listremove
                : !listsplat   !logtwo      !lt          !mul         !ne
-               : !not         !or          !range       !setdagop    !shl
-               : !size        !sra         !srl         !strconcat   !sub
-               : !subst       !substr      !tail        !tolower     !toupper
-               : !xor
+               : !not         !or          !range       !setdagarg   !setdagname
+               : !setdagop    !shl         !size        !sra         !srl
+               : !strconcat   !sub         !subst       !substr      !tail
+               : !tolower     !toupper     !xor
 
 The ``!cond`` operator has a slightly different
 syntax compared to other bang operators, so it is defined separately:
@@ -1370,7 +1370,7 @@ DAG.
 
 The following bang operators are useful for working with DAGs:
 ``!con``, ``!dag``, ``!empty``, ``!foreach``, ``!getdagarg``, ``!getdagname``,
-``!getdagop``, ``!setdagop``, ``!size``.
+``!getdagop``, ``!setdagarg``, ``!setdagname``, ``!setdagop``, ``!size``.
 
 Defvar in a record body
 -----------------------
@@ -1820,6 +1820,16 @@ and non-0 as true.
 
 ``!range(``\ *list*\ ``)``
     Equivalent to ``!range(0, !size(list))``.
+
+``!setdagarg(``\ *dag*\ ``,``\ *key*\ ``,``\ *arg*\ ``)``
+    This operator produces a DAG node with the same operator and arguments as
+    *dag*, but replacing the value of the argument specified by the *key* with
+    *arg*. That *key* could be either an integer index or a string name.
+
+``!setdagname(``\ *dag*\ ``,``\ *key*\ ``,``\ *name*\ ``)``
+    This operator produces a DAG node with the same operator and arguments as
+    *dag*, but replacing the name of the argument specified by the *key* with
+    *name*. That *key* could be either an integer index or a string name.
 
 ``!setdagop(``\ *dag*\ ``,`` *op*\ ``)``
     This operator produces a DAG node with the same arguments as *dag*, but with its

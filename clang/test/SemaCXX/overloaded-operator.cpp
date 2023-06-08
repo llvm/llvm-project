@@ -585,3 +585,16 @@ namespace LateADLInNonDependentExpressions {
   float &operator->*(B, B);
   template void f<int>();
 }
+
+namespace test {
+namespace A {
+template<typename T> T f(T t) {
+  T operator+(T, T);
+  return t + t;
+}
+}
+namespace B {
+  struct X {};
+}
+void g(B::X x) { A::f(x); }
+}

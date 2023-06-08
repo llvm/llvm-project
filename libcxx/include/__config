@@ -35,6 +35,8 @@
 
 #ifdef __cplusplus
 
+// The attributes supported by clang are documented at https://clang.llvm.org/docs/AttributeReference.html
+
 // _LIBCPP_VERSION represents the version of libc++, which matches the version of LLVM.
 // Given a LLVM release LLVM XX.YY.ZZ (e.g. LLVM 17.0.1 == 17.00.01), _LIBCPP_VERSION is
 // defined to XXYYZZ.
@@ -1097,6 +1099,12 @@ _LIBCPP_BEGIN_NAMESPACE_STD _LIBCPP_END_NAMESPACE_STD
 #    define _LIBCPP_PREFERRED_NAME(x) __attribute__((__preferred_name__(x)))
 #  else
 #    define _LIBCPP_PREFERRED_NAME(x)
+#  endif
+
+#  if __has_attribute(__no_sanitize__)
+#    define _LIBCPP_NO_SANITIZE(...) __attribute__((__no_sanitize__(__VA_ARGS__)))
+#  else
+#    define _LIBCPP_NO_SANITIZE(...)
 #  endif
 
 // We often repeat things just for handling wide characters in the library.

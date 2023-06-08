@@ -631,10 +631,19 @@ class SVE2p1_Cvt_VG2_Pat<string name, SDPatternOperator intrinsic, ValueType out
 //===----------------------------------------------------------------------===//
 
 // Matches either an intrinsic, or a predicated operation with an all active predicate
-class EitherVSelectOrPassthruPatFrags<SDPatternOperator intrinsic, SDPatternOperator sdnode>
+class VSelectPredOrPassthruPatFrags<SDPatternOperator intrinsic, SDPatternOperator sdnode>
 : PatFrags<(ops node:$Pg, node:$Op1, node:$Op2), [
     (intrinsic node:$Pg, node:$Op1, node:$Op2),
     (vselect node:$Pg, (sdnode (SVEAllActive), node:$Op1, node:$Op2), node:$Op1),
+  ], [{
+    return N->getOpcode() != ISD::VSELECT || N->getOperand(1).hasOneUse();
+  }]>;
+// Same as above with a commutative operation
+class VSelectCommPredOrPassthruPatFrags<SDPatternOperator intrinsic, SDPatternOperator sdnode>
+: PatFrags<(ops node:$Pg, node:$Op1, node:$Op2), [
+    (intrinsic node:$Pg, node:$Op1, node:$Op2),
+    (vselect node:$Pg, (sdnode (SVEAllActive), node:$Op1, node:$Op2), node:$Op1),
+    (vselect node:$Pg, (sdnode (SVEAllActive), node:$Op2, node:$Op1), node:$Op1),
   ], [{
     return N->getOpcode() != ISD::VSELECT || N->getOperand(1).hasOneUse();
   }]>;

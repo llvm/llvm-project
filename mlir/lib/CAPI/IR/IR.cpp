@@ -870,6 +870,10 @@ MlirTypeID mlirAttributeGetTypeID(MlirAttribute attr) {
   return wrap(unwrap(attr).getTypeID());
 }
 
+MlirDialect mlirAttributeGetDialect(MlirAttribute attr) {
+  return wrap(&unwrap(attr).getDialect());
+}
+
 bool mlirAttributeEqual(MlirAttribute a1, MlirAttribute a2) {
   return unwrap(a1) == unwrap(a2);
 }

@@ -1513,7 +1513,9 @@ void UnwrappedLineFormatter::formatFirstToken(
     unsigned NewlineIndent) {
   FormatToken &RootToken = *Line.First;
   if (RootToken.is(tok::eof)) {
-    unsigned Newlines = std::min(RootToken.NewlinesBefore, 1u);
+    unsigned Newlines =
+        std::min(RootToken.NewlinesBefore,
+                 Style.KeepEmptyLinesAtEOF ? Style.MaxEmptyLinesToKeep + 1 : 1);
     unsigned TokenIndent = Newlines ? NewlineIndent : 0;
     Whitespaces->replaceWhitespace(RootToken, Newlines, TokenIndent,
                                    TokenIndent);

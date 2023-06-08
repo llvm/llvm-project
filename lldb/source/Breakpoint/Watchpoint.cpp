@@ -83,6 +83,94 @@ void Watchpoint::SetCallback(WatchpointHitCallback callback,
   SendWatchpointChangedEvent(eWatchpointEventTypeCommandChanged);
 }
 
+bool Watchpoint::SetupVariableWatchpointDisabler(StackFrameSP frame_sp) const {
+  if (!frame_sp)
+    return false;
+
+  ThreadSP thread_sp = frame_sp->GetThread();
+  if (!thread_sp)
+    return false;
+
+  uint32_t return_frame_index =
+      thread_sp->GetSelectedFrameIndex(DoNoSelectMostRelevantFrame) + 1;
+  if (return_frame_index >= LLDB_INVALID_FRAME_ID)
+    return false;
+
+  StackFrameSP return_frame_sp(
+      thread_sp->GetStackFrameAtIndex(return_frame_index));
+  if (!return_frame_sp)
+    return false;
+
+  ExecutionContext exe_ctx(return_frame_sp);
+  TargetSP target_sp = exe_ctx.GetTargetSP();
+  if (!target_sp)
+    return false;
+
+  Address return_address(return_frame_sp->GetFrameCodeAddress());
+  lldb::addr_t return_addr = return_address.GetLoadAddress(target_sp.get());
+  if (return_addr == LLDB_INVALID_ADDRESS)
+    return false;
+
+  BreakpointSP bp_sp = target_sp->CreateBreakpoint(
+      return_addr, /*internal=*/true, /*request_hardware=*/false);
+  if (!bp_sp || !bp_sp->HasResolvedLocations())
+    return false;
+
+  auto wvc_up = std::make_unique<WatchpointVariableContext>(GetID(), exe_ctx);
+  auto baton_sp = std::make_shared<WatchpointVariableBaton>(std::move(wvc_up));
+  bp_sp->SetCallback(VariableWatchpointDisabler, baton_sp);
+  bp_sp->SetOneShot(true);
+  bp_sp->SetBreakpointKind("variable watchpoint disabler");
+  return true;
+}
+
+bool Watchpoint::VariableWatchpointDisabler(void *baton,
+                                            StoppointCallbackContext *context,
+                                            user_id_t break_id,
+                                            user_id_t break_loc_id) {
+  assert(baton && "null baton");
+  if (!baton || !context)
+    return false;
+
+  Log *log = GetLog(LLDBLog::Watchpoints);
+
+  WatchpointVariableContext *wvc =
+      static_cast<WatchpointVariableContext *>(baton);
+
+  LLDB_LOGF(log, "called by breakpoint %" PRIu64 ".%" PRIu64, break_id,
+            break_loc_id);
+
+  if (wvc->watch_id == LLDB_INVALID_WATCH_ID)
+    return false;
+
+  TargetSP target_sp = context->exe_ctx_ref.GetTargetSP();
+  if (!target_sp)
+    return false;
+
+  ProcessSP process_sp = target_sp->GetProcessSP();
+  if (!process_sp)
+    return false;
+
+  WatchpointSP watch_sp =
+      target_sp->GetWatchpointList().FindByID(wvc->watch_id);
+  if (!watch_sp)
+    return false;
+
+  if (wvc->exe_ctx == context->exe_ctx_ref) {
+    LLDB_LOGF(log,
+              "callback for watchpoint %" PRId32
+              " matched internal breakpoint execution context",
+              watch_sp->GetID());
+    process_sp->DisableWatchpoint(watch_sp.get());
+    return false;
+  }
+  LLDB_LOGF(log,
+            "callback for watchpoint %" PRId32
+            " didn't match internal breakpoint execution context",
+            watch_sp->GetID());
+  return false;
+}
+
 void Watchpoint::ClearCallback() {
   m_options.ClearCallback();
   SendWatchpointChangedEvent(eWatchpointEventTypeCommandChanged);

@@ -997,7 +997,7 @@ createComputeOp(Fortran::lower::AbstractConverter &converter,
 
   llvm::SmallVector<mlir::Value> reductionOperands, privateOperands,
       firstprivateOperands;
-  llvm::SmallVector<mlir::Attribute> privatizations;
+  llvm::SmallVector<mlir::Attribute> privatizations, reductionRecipes;
 
   // Async, wait and self clause have optional values but can be present with
   // no value as well. When there is no value, the op has an attribute to
@@ -1151,8 +1151,11 @@ createComputeOp(Fortran::lower::AbstractConverter &converter,
                        &clause.u)) {
       genObjectList(firstprivateClause->v, converter, semanticsContext, stmtCtx,
                     firstprivateOperands);
-    } else if (std::get_if<Fortran::parser::AccClause::Reduction>(&clause.u)) {
-      TODO(clauseLocation, "compute construct reduction clause lowering");
+    } else if (const auto *reductionClause =
+                   std::get_if<Fortran::parser::AccClause::Reduction>(
+                       &clause.u)) {
+      genReductions(reductionClause->v, converter, semanticsContext, stmtCtx,
+                    reductionOperands, reductionRecipes);
     }
   }
 
@@ -1194,6 +1197,9 @@ createComputeOp(Fortran::lower::AbstractConverter &converter,
     if (!privatizations.empty())
       computeOp.setPrivatizationsAttr(
           mlir::ArrayAttr::get(builder.getContext(), privatizations));
+    if (!reductionRecipes.empty())
+      computeOp.setReductionRecipesAttr(
+          mlir::ArrayAttr::get(builder.getContext(), reductionRecipes));
   }
 
   auto insPt = builder.saveInsertionPoint();

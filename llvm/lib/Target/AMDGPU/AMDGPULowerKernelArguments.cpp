@@ -70,7 +70,7 @@ bool AMDGPULowerKernelArguments::runOnFunction(Function &F) {
   IRBuilder<> Builder(&*getInsertPt(EntryBlock));
 
   const Align KernArgBaseAlign(16); // FIXME: Increase if necessary
-  const uint64_t BaseOffset = ST.getExplicitKernelArgOffset(F);
+  const uint64_t BaseOffset = ST.getExplicitKernelArgOffset();
 
   Align MaxAlign;
   // FIXME: Alignment is broken with explicit arg offset.;

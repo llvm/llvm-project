@@ -1081,7 +1081,7 @@ void AMDGPUTargetLowering::analyzeFormalArgumentsCompute(
   const Function &Fn = MF.getFunction();
   LLVMContext &Ctx = Fn.getParent()->getContext();
   const AMDGPUSubtarget &ST = AMDGPUSubtarget::get(MF);
-  const unsigned ExplicitOffset = ST.getExplicitKernelArgOffset(Fn);
+  const unsigned ExplicitOffset = ST.getExplicitKernelArgOffset();
   CallingConv::ID CC = Fn.getCallingConv();
 
   Align MaxAlign = Align(1);
@@ -4578,14 +4578,11 @@ SDValue AMDGPUTargetLowering::loadInputValue(SelectionDAG &DAG,
 }
 
 uint32_t AMDGPUTargetLowering::getImplicitParameterOffset(
-    const MachineFunction &MF, const ImplicitParameter Param) const {
-  const AMDGPUMachineFunction *MFI = MF.getInfo<AMDGPUMachineFunction>();
-  const AMDGPUSubtarget &ST =
-      AMDGPUSubtarget::get(getTargetMachine(), MF.getFunction());
-  unsigned ExplicitArgOffset = ST.getExplicitKernelArgOffset(MF.getFunction());
-  const Align Alignment = ST.getAlignmentForImplicitArgPtr();
-  uint64_t ArgOffset = alignTo(MFI->getExplicitKernArgSize(), Alignment) +
-                       ExplicitArgOffset;
+    uint64_t ExplicitKernArgSize, const ImplicitParameter Param) const {
+  unsigned ExplicitArgOffset = Subtarget->getExplicitKernelArgOffset();
+  const Align Alignment = Subtarget->getAlignmentForImplicitArgPtr();
+  uint64_t ArgOffset =
+      alignTo(ExplicitKernArgSize, Alignment) + ExplicitArgOffset;
   switch (Param) {
   case FIRST_IMPLICIT:
     return ArgOffset;
@@ -4597,6 +4594,12 @@ uint32_t AMDGPUTargetLowering::getImplicitParameterOffset(
     return ArgOffset + AMDGPU::ImplicitArg::QUEUE_PTR_OFFSET;
   }
   llvm_unreachable("unexpected implicit parameter type");
+}
+
+uint32_t AMDGPUTargetLowering::getImplicitParameterOffset(
+    const MachineFunction &MF, const ImplicitParameter Param) const {
+  const AMDGPUMachineFunction *MFI = MF.getInfo<AMDGPUMachineFunction>();
+  return getImplicitParameterOffset(MFI->getExplicitKernArgSize(), Param);
 }
 
 #define NODE_NAME_CASE(node) case AMDGPUISD::node: return #node;

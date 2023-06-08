@@ -17,3 +17,41 @@ endsubroutine
 ! CHECK-NEXT:    hlfir.destroy %[[EXPR]]
 ! CHECK-NEXT:    return
 ! CHECK-NEXT:   }
+
+! regression test for a case where the AST and FIR have different amounts of
+! shape inference
+subroutine matmul2(c)
+  integer, parameter :: N = 4
+  integer, dimension(:,:), allocatable :: a, b, c
+  integer, dimension(N,N) :: x
+
+  allocate(a(3*N, N), b(N, N), c(3*N, N))
+
+  call fill(a)
+  call fill(b)
+  call fill(x)
+
+  c = matmul(a, b - x)
+endsubroutine
+! CHECK-LABEL: func.func @_QPmatmul2
+! CHECK:           %[[C_ARG:.*]]: !fir.ref<!fir.box<!fir.heap<!fir.array<?x?xi32>>>>
+! CHECK:         %[[B_BOX_ALLOC:.*]] = fir.alloca !fir.box<!fir.heap<!fir.array<?x?xi32>>> {bindc_name = "b"
+! CHECK:         %[[B_BOX_DECL:.*]]:2 = hlfir.declare %[[B_BOX_ALLOC]] {{.*}} uniq_name = "_QFmatmul2Eb"
+
+
+! CHECK:         fir.call @_QPfill
+! CHECK:         fir.call @_QPfill
+! CHECK:         fir.call @_QPfill
+! CHECK-NEXT:    %[[B_BOX:.*]] = fir.load %[[B_BOX_DECL]]#0 : !fir.ref<!fir.box<!fir.heap<!fir.array<?x?xi32>>>>
+! CHECK-NEXT:    %[[C0:.*]] = arith.constant 0 : index
+! CHECK-NEXT:    %[[B_DIMS_0:.*]]:3 = fir.box_dims %[[B_BOX]], %[[C0]]
+! CHECK-NEXT:    %[[C1:.*]] = arith.constant 1 : index
+! CHECK-NEXT:    %[[B_DIMS_1:.*]]:3 = fir.box_dims %[[B_BOX]], %[[C1]]
+! CHECK-NEXT:    %[[B_SHAPE:.*]] = fir.shape %[[B_DIMS_0]]#1, %[[B_DIMS_1]]#1
+! CHECK-NEXT:    %[[ELEMENTAL:.*]] = hlfir.elemental %[[B_SHAPE]] : (!fir.shape<2>) -> !hlfir.expr<?x?xi32> {
+
+! CHECK:         }
+! CHECK-NEXT:    %[[A_BOX:.*]] = fir.load %{{.*}} : !fir.ref<!fir.box<!fir.heap<!fir.array<?x?xi32>>>>
+
+! The shapes in these types are what is being tested:
+! CHECK-NEXT:    %[[MATMUL:.*]] = hlfir.matmul %[[A_BOX]] %[[ELEMENTAL]] {{.*}} : (!fir.box<!fir.heap<!fir.array<?x?xi32>>>, !hlfir.expr<?x?xi32>) -> !hlfir.expr<?x4xi32>

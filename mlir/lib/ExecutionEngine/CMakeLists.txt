@@ -191,9 +191,6 @@ if(LLVM_ENABLE_PIC)
     # We need the libcuda.so library.
     find_library(CUDA_RUNTIME_LIBRARY cuda HINTS ${CMAKE_CUDA_IMPLICIT_LINK_DIRECTORIES} REQUIRED)
 
-
-
-
     add_mlir_library(mlir_cuda_runtime
       SHARED
       CudaRuntimeWrappers.cpp
@@ -212,18 +209,22 @@ if(LLVM_ENABLE_PIC)
     )
 
     if(MLIR_ENABLE_CUDA_CUSPARSE)
-      
       # Find the libcusparse.so library if CUSPARSE build is requested.
       find_library(CUDA_CUSPARSE_LIBRARY cusparse HINTS ${CMAKE_CUDA_IMPLICIT_LINK_DIRECTORIES} REQUIRED)
+
       target_link_libraries(mlir_cuda_runtime
         PRIVATE
         ${CUDA_CUSPARSE_LIBRARY}
       )
+      target_compile_definitions(mlir_cuda_runtime
+        PRIVATE
+        MLIR_ENABLE_CUDA_CUSPARSE=1
+      )
 
       if(MLIR_ENABLE_CUDA_CUSPARSELT)
-        # Find the libcusparseLt.so library in package manager default path if 
-        # CUSPARSELT build is requested. libcusparseLt.so provides sm80+ tensor 
-        # core support for 2:4 sparsity acceleration. 
+        # Find the libcusparseLt.so library in package manager default path if
+        # CUSPARSELT build is requested. libcusparseLt.so provides sm80+ tensor
+        # core support for 2:4 sparsity acceleration.
         find_library(CUDA_CUSPARSELT_LIBRARY cusparseLt HINTS ${CMAKE_CUDA_IMPLICIT_LINK_DIRECTORIES} REQUIRED)
         find_path(CUDA_CUSPARSELT_HEADER cusparseLt.h HINTS ${CMAKE_CUDA_TOOLKIT_INCLUDE_DIRECTORIES} REQUIRED)
         target_include_directories(mlir_cuda_runtime
@@ -233,6 +234,10 @@ if(LLVM_ENABLE_PIC)
         target_link_libraries(mlir_cuda_runtime
           PRIVATE
           ${CUDA_CUSPARSELT_LIBRARY}
+        )
+        target_compile_definitions(mlir_cuda_runtime
+          PRIVATE
+          MLIR_ENABLE_CUDA_CUSPARSELT=1
         )
       endif()
     endif()

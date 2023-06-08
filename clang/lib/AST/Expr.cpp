@@ -492,6 +492,7 @@ DeclRefExpr::DeclRefExpr(const ASTContext &Ctx, ValueDecl *D,
   DeclRefExprBits.RefersToEnclosingVariableOrCapture =
       RefersToEnclosingVariableOrCapture;
   DeclRefExprBits.NonOdrUseReason = NOUR;
+  DeclRefExprBits.IsImmediateEscalating = false;
   DeclRefExprBits.Loc = L;
   setDependence(computeDependence(this, Ctx));
 }
@@ -529,6 +530,7 @@ DeclRefExpr::DeclRefExpr(const ASTContext &Ctx,
     getTrailingObjects<ASTTemplateKWAndArgsInfo>()->initializeFrom(
         TemplateKWLoc);
   }
+  DeclRefExprBits.IsImmediateEscalating = false;
   DeclRefExprBits.HadMultipleCandidates = 0;
   setDependence(computeDependence(this, Ctx));
 }
