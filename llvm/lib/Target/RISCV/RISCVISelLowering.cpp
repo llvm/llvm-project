@@ -2334,9 +2334,8 @@ getDefaultScalableVLOps(MVT VecVT, const SDLoc &DL, SelectionDAG &DAG,
 SDValue RISCVTargetLowering::computeVLMax(MVT VecVT, const SDLoc &DL,
                                           SelectionDAG &DAG) const {
   assert(VecVT.isScalableVector() && "Expected scalable vector");
-  unsigned MinElts = VecVT.getVectorMinNumElements();
-  return DAG.getNode(ISD::VSCALE, DL, Subtarget.getXLenVT(),
-                     getVLOp(MinElts, DL, DAG, Subtarget));
+  return DAG.getElementCount(DL, Subtarget.getXLenVT(),
+                             VecVT.getVectorElementCount());
 }
 
 // The state of RVV BUILD_VECTOR and VECTOR_SHUFFLE lowering is that very few
