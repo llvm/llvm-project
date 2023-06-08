@@ -2747,6 +2747,15 @@ llvm::Optional<SwiftScratchContextReader> Target::GetSwiftScratchContext(
         log->PutCString("not allowed to create a new context");
       return nullptr;
     }
+
+    // Call for its side effects of establishing the Swift scratch type system.
+    auto type_system_or_err =
+        GetScratchTypeSystemForLanguage(eLanguageTypeSwift, false);
+    if (!type_system_or_err) {
+      llvm::consumeError(type_system_or_err.takeError());
+      return nullptr;
+    }
+
     if (!GetSwiftScratchContextLock().try_lock()) {
       if (log)
         log->PutCString("couldn't acquire scratch context lock");
@@ -2756,8 +2765,12 @@ llvm::Optional<SwiftScratchContextReader> Target::GetSwiftScratchContext(
     auto unlock = llvm::make_scope_exit(
         [this] { GetSwiftScratchContextLock().unlock(); });
 
-    auto type_system_or_err =
-        GetScratchTypeSystemForLanguage(eLanguageTypeSwift, false);
+    // With the lock held, get the current scratch type system. This ensures the
+    // current instance is used even in the unlikely event it was changed during
+    // the brief window between the call to `GetScratchTypeSystemForLanguage`
+    // and taking the lock.
+    type_system_or_err = m_scratch_type_system_map.GetTypeSystemForLanguage(
+        eLanguageTypeSwift, this, false);
     if (!type_system_or_err) {
       llvm::consumeError(type_system_or_err.takeError());
       return nullptr;
