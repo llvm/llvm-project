@@ -66,10 +66,23 @@ Error AppleAcceleratorTable::extract() {
   HdrData.DIEOffsetBase = AccelSection.getU32(&Offset);
   uint32_t NumAtoms = AccelSection.getU32(&Offset);
 
+  HashDataEntryLength = 0;
+  auto MakeUnsupportedFormError = [](dwarf::Form Form) {
+    return createStringError(errc::not_supported,
+                             "Unsupported form:" +
+                                 dwarf::FormEncodingString(Form));
+  };
+
   for (unsigned i = 0; i < NumAtoms; ++i) {
     uint16_t AtomType = AccelSection.getU16(&Offset);
     auto AtomForm = static_cast<dwarf::Form>(AccelSection.getU16(&Offset));
     HdrData.Atoms.push_back(std::make_pair(AtomType, AtomForm));
+
+    std::optional<uint8_t> FormSize =
+        dwarf::getFixedFormByteSize(AtomForm, FormParams);
+    if (!FormSize)
+      return MakeUnsupportedFormError(AtomForm);
+    HashDataEntryLength += *FormSize;
   }
 
   IsValid = true;
@@ -207,6 +220,7 @@ LLVM_DUMP_METHOD void AppleAcceleratorTable::dump(raw_ostream &OS) const {
 
   W.printNumber("DIE offset base", HdrData.DIEOffsetBase);
   W.printNumber("Number of atoms", uint64_t(HdrData.Atoms.size()));
+  W.printNumber("Size of each hash data entry", getHashDataEntryLength());
   SmallVector<DWARFFormValue, 3> AtomForms;
   {
     ListScope AtomsScope(W, "Atoms");
