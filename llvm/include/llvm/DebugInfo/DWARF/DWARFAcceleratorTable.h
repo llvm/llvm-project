@@ -112,6 +112,78 @@ class AppleAcceleratorTable : public DWARFAcceleratorTable {
   bool dumpName(ScopedPrinter &W, SmallVectorImpl<DWARFFormValue> &AtomForms,
                 uint64_t *DataOffset) const;
 
+  /// Reads an uint32_t from the accelerator table at Offset, which is
+  /// incremented by the number of bytes read.
+  std::optional<uint32_t> readU32FromAccel(uint64_t &Offset,
+                                           bool UseRelocation = false) const;
+
+  /// Reads a StringRef from the string table at Offset.
+  std::optional<StringRef>
+  readStringFromStrSection(uint64_t StringSectionOffset) const;
+
+  /// Return the offset into the section where the Buckets begin.
+  uint64_t getBucketBase() const { return sizeof(Hdr) + Hdr.HeaderDataLength; }
+
+  /// Return the offset into the section where the I-th bucket is.
+  uint64_t getIthBucketBase(uint32_t I) const {
+    return getBucketBase() + I * 4;
+  }
+
+  /// Return the offset into the section where the hash list begins.
+  uint64_t getHashBase() const { return getBucketBase() + getNumBuckets() * 4; }
+
+  /// Return the offset into the section where the I-th hash is.
+  uint64_t getIthHashBase(uint32_t I) const { return getHashBase() + I * 4; }
+
+  /// Return the offset into the section where the offset list begins.
+  uint64_t getOffsetBase() const { return getHashBase() + getNumHashes() * 4; }
+
+  /// Return the offset into the section where the I-th offset is.
+  uint64_t getIthOffsetBase(uint32_t I) const {
+    return getOffsetBase() + I * 4;
+  }
+
+  /// Returns the index of the bucket where a hypothetical Hash would be.
+  uint32_t hashToBucketIdx(uint32_t Hash) const {
+    return Hash % getNumBuckets();
+  }
+
+  /// Returns true iff a hypothetical Hash would be assigned to the BucketIdx-th
+  /// bucket.
+  bool wouldHashBeInBucket(uint32_t Hash, uint32_t BucketIdx) const {
+    return hashToBucketIdx(Hash) == BucketIdx;
+  }
+
+  /// Reads the contents of the I-th bucket, that is, the index in the hash list
+  /// where the hashes corresponding to this bucket begin.
+  std::optional<uint32_t> readIthBucket(uint32_t I) const {
+    uint64_t Offset = getIthBucketBase(I);
+    return readU32FromAccel(Offset);
+  }
+
+  /// Reads the I-th hash in the hash list.
+  std::optional<uint32_t> readIthHash(uint32_t I) const {
+    uint64_t Offset = getIthHashBase(I);
+    return readU32FromAccel(Offset);
+  }
+
+  /// Reads the I-th offset in the offset list.
+  std::optional<uint32_t> readIthOffset(uint32_t I) const {
+    uint64_t Offset = getIthOffsetBase(I);
+    return readU32FromAccel(Offset);
+  }
+
+  /// Reads a string offset from the accelerator table at Offset, which is
+  /// incremented by the number of bytes read.
+  std::optional<uint32_t> readStringOffsetAt(uint64_t &Offset) const {
+    return readU32FromAccel(Offset, /*UseRelocation*/ true);
+  }
+
+  /// Scans through all Hashes in the BucketIdx-th bucket, attempting to find
+  /// HashToFind. If it is found, its index in the list of hashes is returned.
+  std::optional<uint32_t> idxOfHashInBucket(uint32_t HashToFind,
+                                            uint32_t BucketIdx) const;
+
 public:
   /// Apple-specific implementation of an Accelerator Entry.
   class Entry final : public DWARFAcceleratorTable::Entry {
@@ -183,10 +255,10 @@ public:
       : DWARFAcceleratorTable(AccelSection, StringSection) {}
 
   Error extract() override;
-  uint32_t getNumBuckets();
-  uint32_t getNumHashes();
-  uint32_t getSizeHdr();
-  uint32_t getHeaderDataLength();
+  uint32_t getNumBuckets() const;
+  uint32_t getNumHashes() const;
+  uint32_t getSizeHdr() const;
+  uint32_t getHeaderDataLength() const;
 
   /// Return the Atom description, which can be used to interpret the raw values
   /// of the Accelerator Entries in this table.

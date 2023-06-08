@@ -57,10 +57,7 @@ Error AppleAcceleratorTable::extract() {
 
   // Check that we can read all the hashes and offsets from the
   // section (see SourceLevelDebugging.rst for the structure of the index).
-  // We need to substract one because we're checking for an *offset* which is
-  // equal to the size for an empty table and hence pointer after the section.
-  if (!AccelSection.isValidOffset(sizeof(Hdr) + Hdr.HeaderDataLength +
-                                  Hdr.BucketCount * 4 + Hdr.HashCount * 8 - 1))
+  if (!AccelSection.isValidOffset(getIthBucketBase(Hdr.BucketCount - 1)))
     return createStringError(
         errc::illegal_byte_sequence,
         "Section too small: cannot read buckets and hashes.");
@@ -78,10 +75,12 @@ Error AppleAcceleratorTable::extract() {
   return Error::success();
 }
 
-uint32_t AppleAcceleratorTable::getNumBuckets() { return Hdr.BucketCount; }
-uint32_t AppleAcceleratorTable::getNumHashes() { return Hdr.HashCount; }
-uint32_t AppleAcceleratorTable::getSizeHdr() { return sizeof(Hdr); }
-uint32_t AppleAcceleratorTable::getHeaderDataLength() {
+uint32_t AppleAcceleratorTable::getNumBuckets() const {
+  return Hdr.BucketCount;
+}
+uint32_t AppleAcceleratorTable::getNumHashes() const { return Hdr.HashCount; }
+uint32_t AppleAcceleratorTable::getSizeHdr() const { return sizeof(Hdr); }
+uint32_t AppleAcceleratorTable::getHeaderDataLength() const {
   return Hdr.HeaderDataLength;
 }
 
@@ -327,39 +326,82 @@ void AppleAcceleratorTable::ValueIterator::Next() {
 
 iterator_range<AppleAcceleratorTable::ValueIterator>
 AppleAcceleratorTable::equal_range(StringRef Key) const {
+  const auto EmptyRange = make_range(ValueIterator(), ValueIterator());
   if (!IsValid)
-    return make_range(ValueIterator(), ValueIterator());
+    return EmptyRange;
 
   // Find the bucket.
-  unsigned HashValue = djbHash(Key);
-  unsigned Bucket = HashValue % Hdr.BucketCount;
-  uint64_t BucketBase = sizeof(Hdr) + Hdr.HeaderDataLength;
-  uint64_t HashesBase = BucketBase + Hdr.BucketCount * 4;
-  uint64_t OffsetsBase = HashesBase + Hdr.HashCount * 4;
+  uint32_t SearchHash = djbHash(Key);
+  uint32_t BucketIdx = hashToBucketIdx(SearchHash);
+  std::optional<uint32_t> HashIdx = idxOfHashInBucket(SearchHash, BucketIdx);
+  if (!HashIdx)
+    return EmptyRange;
 
-  uint64_t BucketOffset = BucketBase + Bucket * 4;
-  unsigned Index = AccelSection.getU32(&BucketOffset);
+  std::optional<uint64_t> MaybeDataOffset = readIthOffset(*HashIdx);
+  if (!MaybeDataOffset)
+    return EmptyRange;
 
-  // Search through all hashes in the bucket.
-  for (unsigned HashIdx = Index; HashIdx < Hdr.HashCount; ++HashIdx) {
-    uint64_t HashOffset = HashesBase + HashIdx * 4;
-    uint64_t OffsetsOffset = OffsetsBase + HashIdx * 4;
-    uint32_t Hash = AccelSection.getU32(&HashOffset);
+  uint64_t DataOffset = *MaybeDataOffset;
+  if (DataOffset >= AccelSection.size())
+    return EmptyRange;
 
-    if (Hash % Hdr.BucketCount != Bucket)
-      // We are already in the next bucket.
+  std::optional<uint32_t> StrOffset = readStringOffsetAt(DataOffset);
+
+  // Invalid input or no more strings in this hash.
+  if (!StrOffset || *StrOffset == 0)
+    return EmptyRange;
+
+  std::optional<StringRef> MaybeStr = readStringFromStrSection(*StrOffset);
+  if (!MaybeStr)
+    return EmptyRange;
+  if (Key == *MaybeStr)
+    return make_range({*this, DataOffset}, ValueIterator());
+
+  // FIXME: this shouldn't return, we haven't checked all the colliding strings
+  // in the bucket!
+  return EmptyRange;
+}
+
+std::optional<uint32_t>
+AppleAcceleratorTable::idxOfHashInBucket(uint32_t HashToFind,
+                                         uint32_t BucketIdx) const {
+  std::optional<uint32_t> HashStartIdx = readIthBucket(BucketIdx);
+  if (!HashStartIdx)
+    return std::nullopt;
+
+  for (uint32_t HashIdx = *HashStartIdx; HashIdx < getNumHashes(); HashIdx++) {
+    std::optional<uint32_t> MaybeHash = readIthHash(HashIdx);
+    if (!MaybeHash || !wouldHashBeInBucket(*MaybeHash, BucketIdx))
       break;
-
-    uint64_t DataOffset = AccelSection.getU32(&OffsetsOffset);
-    uint64_t StringOffset = AccelSection.getRelocatedValue(4, &DataOffset);
-    if (!StringOffset)
-      break;
-
-    // Finally, compare the key.
-    if (Key == StringSection.getCStr(&StringOffset))
-      return make_range({*this, DataOffset}, ValueIterator());
+    if (*MaybeHash == HashToFind)
+      return HashIdx;
   }
-  return make_range(ValueIterator(), ValueIterator());
+  return std::nullopt;
+}
+
+std::optional<StringRef> AppleAcceleratorTable::readStringFromStrSection(
+    uint64_t StringSectionOffset) const {
+  Error E = Error::success();
+  StringRef Str = StringSection.getCStrRef(&StringSectionOffset, &E);
+  if (E) {
+    consumeError(std::move(E));
+    return std::nullopt;
+  }
+  return Str;
+}
+
+std::optional<uint32_t>
+AppleAcceleratorTable::readU32FromAccel(uint64_t &Offset,
+                                        bool UseRelocation) const {
+  Error E = Error::success();
+  uint32_t Data = UseRelocation
+                      ? AccelSection.getRelocatedValue(4, &Offset, nullptr, &E)
+                      : AccelSection.getU32(&Offset, &E);
+  if (E) {
+    consumeError(std::move(E));
+    return std::nullopt;
+  }
+  return Data;
 }
 
 void DWARFDebugNames::Header::dump(ScopedPrinter &W) const {
