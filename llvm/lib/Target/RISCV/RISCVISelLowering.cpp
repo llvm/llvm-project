@@ -7712,6 +7712,24 @@ SDValue RISCVTargetLowering::lowerVECTOR_INTERLEAVE(SDValue Op,
   MVT XLenVT = Subtarget.getXLenVT();
   SDValue VL = DAG.getRegister(RISCV::X0, XLenVT);
 
+  // If the VT is LMUL=8, we need to split and reassemble.
+  if (VecVT.getSizeInBits().getKnownMinValue() == (8 * RISCV::RVVBitsPerBlock)) {
+    auto [Op0Lo, Op0Hi] = DAG.SplitVectorOperand(Op.getNode(), 0);
+    auto [Op1Lo, Op1Hi] = DAG.SplitVectorOperand(Op.getNode(), 1);
+    EVT SplitVT = Op0Lo.getValueType();
+
+    SDValue ResLo = DAG.getNode(ISD::VECTOR_INTERLEAVE, DL,
+                                DAG.getVTList(SplitVT, SplitVT), Op0Lo, Op1Lo);
+    SDValue ResHi = DAG.getNode(ISD::VECTOR_INTERLEAVE, DL,
+                                DAG.getVTList(SplitVT, SplitVT), Op0Hi, Op1Hi);
+
+    SDValue Lo = DAG.getNode(ISD::CONCAT_VECTORS, DL, VecVT,
+                             ResLo.getValue(0), ResLo.getValue(1));
+    SDValue Hi = DAG.getNode(ISD::CONCAT_VECTORS, DL, VecVT,
+                             ResHi.getValue(0), ResHi.getValue(1));
+    return DAG.getMergeValues({Lo, Hi}, DL);
+  }
+
   SDValue Interleaved;
 
   // If the element type is smaller than ELEN, then we can interleave with
