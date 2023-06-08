@@ -259,6 +259,18 @@ add_libc_test(
     libc.src.stdlib.qsort
 )
 
+
+add_libc_test(
+  qsort_r_test
+  SUITE
+    libc-stdlib-tests
+  SRCS
+    qsort_r_test.cpp
+  DEPENDS
+    libc.include.stdlib
+    libc.src.stdlib.qsort_r
+)
+
 add_libc_test(
   rand_test
   SUITE

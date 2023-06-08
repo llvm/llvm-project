@@ -138,6 +138,14 @@ libc_test(
     ],
 )
 
+libc_test(
+    name = "qsort_r_test",
+    srcs = ["qsort_r_test.cpp"],
+    libc_function_deps = [
+        "//libc:qsort_r",
+    ],
+)
+
 cc_library(
     name = "strtol_test_helper",
     hdrs = ["StrtolTest.h"],

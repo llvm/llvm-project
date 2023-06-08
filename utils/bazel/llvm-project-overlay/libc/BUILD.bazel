@@ -1859,12 +1859,32 @@ libc_function(
     ],
 )
 
+libc_support_library(
+    name = "qsort_util",
+    hdrs = ["src/stdlib/qsort_util.h"],
+    deps = [
+        ":__support_common",
+        ":__support_macros_attributes",
+    ],
+)
+
 libc_function(
     name = "qsort",
     srcs = ["src/stdlib/qsort.cpp"],
     hdrs = ["src/stdlib/qsort.h"],
     deps = [
         ":__support_common",
+        ":qsort_util",
+    ],
+)
+
+libc_function(
+    name = "qsort_r",
+    srcs = ["src/stdlib/qsort_r.cpp"],
+    hdrs = ["src/stdlib/qsort_r.h"],
+    deps = [
+        ":__support_common",
+        ":qsort_util",
     ],
 )
 
