@@ -41,6 +41,12 @@ bool DlAddrSymbolizer::SymbolizePC(uptr addr, SymbolizedStack *stack) {
     stack->info.function_offset = addr - sym_addr;
   }
 
+  if (info.dli_fname) {
+    if (auto *last_occurence = internal_strrchr(info.dli_fname, '/')) {
+      stack->info.module = internal_strdup(last_occurence + 1);
+    }
+  }
+
   const char *demangled = DemangleSwiftAndCXX(info.dli_sname);
   if (!demangled) return false;
   stack->info.function = internal_strdup(demangled);
