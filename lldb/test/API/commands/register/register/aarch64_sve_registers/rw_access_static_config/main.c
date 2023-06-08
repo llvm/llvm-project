@@ -9,7 +9,7 @@
 #define PR_SME_SET_VL 63
 #endif
 
-#define SMSTART() asm volatile("msr  s0_3_c4_c7_3, xzr" /*smstart*/)
+#define SMSTART_SM() asm volatile("msr  s0_3_c4_c3_3, xzr" /*smstart sm*/)
 
 void write_sve_regs() {
   // We assume the smefa64 feature is present, which allows ffr access
@@ -130,18 +130,18 @@ int expr_eval_func(bool streaming) {
   // Note that doing a syscall brings you back to non-streaming mode, so we
   // don't need to SMSTOP here.
   if (streaming)
-    SMSTART();
+    SMSTART_SM();
   write_sve_regs_expr();
   prctl(SET_VL_OPT, 8 * 4);
   if (streaming)
-    SMSTART();
+    SMSTART_SM();
   write_sve_regs_expr();
   return 1;
 }
 
 int main() {
 #ifdef START_SSVE
-  SMSTART();
+  SMSTART_SM();
 #endif
   write_sve_regs();
 

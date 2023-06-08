@@ -115,6 +115,7 @@ private:
   uint64_t m_mte_ctrl_reg;
 
   struct sme_pseudo_regs {
+    uint64_t ctrl_reg;
     uint64_t svg_reg;
   };
 
@@ -161,6 +162,9 @@ private:
   // No WriteZAHeader because writing only the header will disable ZA.
   // Instead use WriteZA and ensure you have the correct ZA buffer size set
   // beforehand if you wish to disable it.
+
+  // SVCR is a pseudo register and we do not allow writes to it.
+  Status ReadSMEControl();
 
   bool IsSVE(unsigned reg) const;
   bool IsSME(unsigned reg) const;

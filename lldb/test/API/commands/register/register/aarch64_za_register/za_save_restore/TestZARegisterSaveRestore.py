@@ -164,6 +164,10 @@ class AArch64ZATestCase(TestBase):
         self.runCmd("register read " + sve_reg_names)
         sve_values = self.res.GetOutput()
 
+        svcr_value = 1 if sve_mode == Mode.SSVE else 0
+        if za_state == ZA.Enabled:
+            svcr_value += 2
+
         def check_regs():
             if za_state == ZA.Enabled:
                 self.check_za(start_vl)
@@ -175,6 +179,7 @@ class AArch64ZATestCase(TestBase):
             self.assertEqual(start_vg, self.read_vg())
 
             self.expect("register read " + sve_reg_names, substrs=[sve_values])
+            self.expect("register read svcr", substrs=["0x{:016x}".format(svcr_value)])
 
         for expr in exprs:
             expr_cmd = "expression {}()".format(expr)

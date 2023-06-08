@@ -172,6 +172,13 @@ class RegisterCommandsTestCase(TestBase):
         svg = sme_registers.GetChildMemberWithName("svg").GetValueAsUnsigned()
         self.assertEqual(vg, svg)
 
+        # SVCR should be SVCR.SM | SVCR.ZA aka 3 because streaming mode is on
+        # and ZA is enabled.
+        svcr = sme_registers.GetChildMemberWithName("svcr").GetValueAsUnsigned()
+        self.assertEqual(3, svcr)
+
+        # SVCR is read only so we do not test writing to it.
+
     @no_debug_info_test
     @skipIf(archs=no_match(["aarch64"]))
     @skipIf(oslist=no_match(["linux"]))
@@ -192,6 +199,10 @@ class RegisterCommandsTestCase(TestBase):
         self.assertTrue(sme_registers.IsValid())
         svg = sme_registers.GetChildMemberWithName("svg").GetValueAsUnsigned()
 
+        # We are not in streaming mode, ZA is disabled, so this should be 0.
+        svcr = sme_registers.GetChildMemberWithName("svcr").GetValueAsUnsigned()
+        self.assertEqual(0, svcr)
+
         svl = svg * 8
         # A disabled ZA is shown as all 0s.
         self.expect("register read za", substrs=[self.make_za_value(svl, lambda r: 0)])
@@ -200,3 +211,8 @@ class RegisterCommandsTestCase(TestBase):
         # it back.
         self.runCmd("register write za '{}'".format(za_value))
         self.expect("register read za", substrs=[za_value])
+
+        # Now SVCR.ZA should be set, which is bit 1.
+        self.expect("register read svcr", substrs=["0x0000000000000002"])
+
+        # SVCR is read only so we do not test writing to it.
