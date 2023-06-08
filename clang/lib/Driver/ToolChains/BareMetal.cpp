@@ -37,12 +37,11 @@ static bool findRISCVMultilibs(const Driver &D,
   StringRef Abi = tools::riscv::getRISCVABI(Args, TargetTriple);
 
   if (TargetTriple.isRISCV64()) {
-    MultilibBuilder Imac = MultilibBuilder()
-                               .flag(true, "-march=rv64imac")
-                               .flag(true, "-mabi=lp64");
+    MultilibBuilder Imac =
+        MultilibBuilder().flag("-march=rv64imac").flag("-mabi=lp64");
     MultilibBuilder Imafdc = MultilibBuilder("/rv64imafdc/lp64d")
-                                 .flag(true, "-march=rv64imafdc")
-                                 .flag(true, "-mabi=lp64d");
+                                 .flag("-march=rv64imafdc")
+                                 .flag("-mabi=lp64d");
 
     // Multilib reuse
     bool UseImafdc =
@@ -58,21 +57,20 @@ static bool findRISCVMultilibs(const Driver &D,
     return Result.Multilibs.select(Flags, Result.SelectedMultilib);
   }
   if (TargetTriple.isRISCV32()) {
-    MultilibBuilder Imac = MultilibBuilder()
-                               .flag(true, "-march=rv32imac")
-                               .flag(true, "-mabi=ilp32");
+    MultilibBuilder Imac =
+        MultilibBuilder().flag("-march=rv32imac").flag("-mabi=ilp32");
     MultilibBuilder I = MultilibBuilder("/rv32i/ilp32")
-                            .flag(true, "-march=rv32i")
-                            .flag(true, "-mabi=ilp32");
+                            .flag("-march=rv32i")
+                            .flag("-mabi=ilp32");
     MultilibBuilder Im = MultilibBuilder("/rv32im/ilp32")
-                             .flag(true, "-march=rv32im")
-                             .flag(true, "-mabi=ilp32");
+                             .flag("-march=rv32im")
+                             .flag("-mabi=ilp32");
     MultilibBuilder Iac = MultilibBuilder("/rv32iac/ilp32")
-                              .flag(true, "-march=rv32iac")
-                              .flag(true, "-mabi=ilp32");
+                              .flag("-march=rv32iac")
+                              .flag("-mabi=ilp32");
     MultilibBuilder Imafc = MultilibBuilder("/rv32imafc/ilp32f")
-                                .flag(true, "-march=rv32imafc")
-                                .flag(true, "-mabi=ilp32f");
+                                .flag("-march=rv32imafc")
+                                .flag("-mabi=ilp32f");
 
     // Multilib reuse
     bool UseI = (Arch == "rv32i") || (Arch == "rv32ic");    // ic => i
