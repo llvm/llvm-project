@@ -1183,11 +1183,16 @@ define <4 x i32> @load_zext_v4i16_to_v4i32(ptr %p) {
 define <4 x i32> @load_sext_v4i8_to_v4i32(ptr %p) {
 ; CHECK-LABEL: load_sext_v4i8_to_v4i32:
 ; CHECK:         .functype load_sext_v4i8_to_v4i32 (i32) -> (v128)
+; CHECK-NEXT:    .local v128
 ; CHECK-NEXT:  # %bb.0:
 ; CHECK-NEXT:    local.get 0
 ; CHECK-NEXT:    v128.load32_zero 0
-; CHECK-NEXT:    i16x8.extend_low_i8x16_s
-; CHECK-NEXT:    i32x4.extend_low_i16x8_s
+; CHECK-NEXT:    local.get 1
+; CHECK-NEXT:    i8x16.shuffle 0, 0, 0, 0, 1, 0, 0, 0, 2, 0, 0, 0, 3, 0, 0, 0
+; CHECK-NEXT:    i32.const 24
+; CHECK-NEXT:    i32x4.shl
+; CHECK-NEXT:    i32.const 24
+; CHECK-NEXT:    i32x4.shr_s
 ; CHECK-NEXT:    # fallthrough-return
   %v = load <4 x i8>, ptr %p
   %v2 = sext <4 x i8> %v to <4 x i32>
@@ -1198,10 +1203,10 @@ define <4 x i32> @load_zext_v4i8_to_v4i32(ptr %p) {
 ; CHECK-LABEL: load_zext_v4i8_to_v4i32:
 ; CHECK:         .functype load_zext_v4i8_to_v4i32 (i32) -> (v128)
 ; CHECK-NEXT:  # %bb.0:
+; CHECK-NEXT:    v128.const 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
 ; CHECK-NEXT:    local.get 0
 ; CHECK-NEXT:    v128.load32_zero 0
-; CHECK-NEXT:    i16x8.extend_low_i8x16_u
-; CHECK-NEXT:    i32x4.extend_low_i16x8_u
+; CHECK-NEXT:    i8x16.shuffle 16, 1, 2, 3, 17, 5, 6, 7, 18, 9, 10, 11, 19, 13, 14, 15
 ; CHECK-NEXT:    # fallthrough-return
   %v = load <4 x i8>, ptr %p
   %v2 = zext <4 x i8> %v to <4 x i32>
@@ -1282,11 +1287,16 @@ define <4 x i32> @load_zext_v4i16_to_v4i32_with_folded_offset(ptr %p) {
 define <4 x i32> @load_sext_v4i8_to_v4i32_with_folded_offset(ptr %p) {
 ; CHECK-LABEL: load_sext_v4i8_to_v4i32_with_folded_offset:
 ; CHECK:         .functype load_sext_v4i8_to_v4i32_with_folded_offset (i32) -> (v128)
+; CHECK-NEXT:    .local v128
 ; CHECK-NEXT:  # %bb.0:
 ; CHECK-NEXT:    local.get 0
 ; CHECK-NEXT:    v128.load32_zero 16
-; CHECK-NEXT:    i16x8.extend_low_i8x16_s
-; CHECK-NEXT:    i32x4.extend_low_i16x8_s
+; CHECK-NEXT:    local.get 1
+; CHECK-NEXT:    i8x16.shuffle 0, 0, 0, 0, 1, 0, 0, 0, 2, 0, 0, 0, 3, 0, 0, 0
+; CHECK-NEXT:    i32.const 24
+; CHECK-NEXT:    i32x4.shl
+; CHECK-NEXT:    i32.const 24
+; CHECK-NEXT:    i32x4.shr_s
 ; CHECK-NEXT:    # fallthrough-return
   %q = ptrtoint ptr %p to i32
   %r = add nuw i32 %q, 16
@@ -1300,10 +1310,10 @@ define <4 x i32> @load_zext_v4i8_to_v4i32_with_folded_offset(ptr %p) {
 ; CHECK-LABEL: load_zext_v4i8_to_v4i32_with_folded_offset:
 ; CHECK:         .functype load_zext_v4i8_to_v4i32_with_folded_offset (i32) -> (v128)
 ; CHECK-NEXT:  # %bb.0:
+; CHECK-NEXT:    v128.const 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
 ; CHECK-NEXT:    local.get 0
 ; CHECK-NEXT:    v128.load32_zero 16
-; CHECK-NEXT:    i16x8.extend_low_i8x16_u
-; CHECK-NEXT:    i32x4.extend_low_i16x8_u
+; CHECK-NEXT:    i8x16.shuffle 16, 1, 2, 3, 17, 5, 6, 7, 18, 9, 10, 11, 19, 13, 14, 15
 ; CHECK-NEXT:    # fallthrough-return
   %q = ptrtoint ptr %p to i32
   %r = add nuw i32 %q, 16
@@ -1382,11 +1392,16 @@ define <4 x i32> @load_zext_v4i16_to_v4i32_with_folded_gep_offset(ptr %p) {
 define <4 x i32> @load_sext_v4i8_to_v4i32_with_folded_gep_offset(ptr %p) {
 ; CHECK-LABEL: load_sext_v4i8_to_v4i32_with_folded_gep_offset:
 ; CHECK:         .functype load_sext_v4i8_to_v4i32_with_folded_gep_offset (i32) -> (v128)
+; CHECK-NEXT:    .local v128
 ; CHECK-NEXT:  # %bb.0:
 ; CHECK-NEXT:    local.get 0
 ; CHECK-NEXT:    v128.load32_zero 4
-; CHECK-NEXT:    i16x8.extend_low_i8x16_s
-; CHECK-NEXT:    i32x4.extend_low_i16x8_s
+; CHECK-NEXT:    local.get 1
+; CHECK-NEXT:    i8x16.shuffle 0, 0, 0, 0, 1, 0, 0, 0, 2, 0, 0, 0, 3, 0, 0, 0
+; CHECK-NEXT:    i32.const 24
+; CHECK-NEXT:    i32x4.shl
+; CHECK-NEXT:    i32.const 24
+; CHECK-NEXT:    i32x4.shr_s
 ; CHECK-NEXT:    # fallthrough-return
   %s = getelementptr inbounds <4 x i8>, ptr %p, i32 1
   %v = load <4 x i8>, ptr %s
@@ -1398,10 +1413,10 @@ define <4 x i32> @load_zext_v4i8_to_v4i32_with_folded_gep_offset(ptr %p) {
 ; CHECK-LABEL: load_zext_v4i8_to_v4i32_with_folded_gep_offset:
 ; CHECK:         .functype load_zext_v4i8_to_v4i32_with_folded_gep_offset (i32) -> (v128)
 ; CHECK-NEXT:  # %bb.0:
+; CHECK-NEXT:    v128.const 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
 ; CHECK-NEXT:    local.get 0
 ; CHECK-NEXT:    v128.load32_zero 4
-; CHECK-NEXT:    i16x8.extend_low_i8x16_u
-; CHECK-NEXT:    i32x4.extend_low_i16x8_u
+; CHECK-NEXT:    i8x16.shuffle 16, 1, 2, 3, 17, 5, 6, 7, 18, 9, 10, 11, 19, 13, 14, 15
 ; CHECK-NEXT:    # fallthrough-return
   %s = getelementptr inbounds <4 x i8>, ptr %p, i32 1
   %v = load <4 x i8>, ptr %s
@@ -1484,13 +1499,18 @@ define <4 x i32> @load_zext_v4i16_to_v4i32_with_unfolded_gep_negative_offset(ptr
 define <4 x i32> @load_sext_v4i8_to_v4i32_with_unfolded_gep_negative_offset(ptr %p) {
 ; CHECK-LABEL: load_sext_v4i8_to_v4i32_with_unfolded_gep_negative_offset:
 ; CHECK:         .functype load_sext_v4i8_to_v4i32_with_unfolded_gep_negative_offset (i32) -> (v128)
+; CHECK-NEXT:    .local v128
 ; CHECK-NEXT:  # %bb.0:
 ; CHECK-NEXT:    local.get 0
 ; CHECK-NEXT:    i32.const -4
 ; CHECK-NEXT:    i32.add
 ; CHECK-NEXT:    v128.load32_zero 0
-; CHECK-NEXT:    i16x8.extend_low_i8x16_s
-; CHECK-NEXT:    i32x4.extend_low_i16x8_s
+; CHECK-NEXT:    local.get 1
+; CHECK-NEXT:    i8x16.shuffle 0, 0, 0, 0, 1, 0, 0, 0, 2, 0, 0, 0, 3, 0, 0, 0
+; CHECK-NEXT:    i32.const 24
+; CHECK-NEXT:    i32x4.shl
+; CHECK-NEXT:    i32.const 24
+; CHECK-NEXT:    i32x4.shr_s
 ; CHECK-NEXT:    # fallthrough-return
   %s = getelementptr inbounds <4 x i8>, ptr %p, i32 -1
   %v = load <4 x i8>, ptr %s
@@ -1502,12 +1522,12 @@ define <4 x i32> @load_zext_v4i8_to_v4i32_with_unfolded_gep_negative_offset(ptr 
 ; CHECK-LABEL: load_zext_v4i8_to_v4i32_with_unfolded_gep_negative_offset:
 ; CHECK:         .functype load_zext_v4i8_to_v4i32_with_unfolded_gep_negative_offset (i32) -> (v128)
 ; CHECK-NEXT:  # %bb.0:
+; CHECK-NEXT:    v128.const 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
 ; CHECK-NEXT:    local.get 0
 ; CHECK-NEXT:    i32.const -4
 ; CHECK-NEXT:    i32.add
 ; CHECK-NEXT:    v128.load32_zero 0
-; CHECK-NEXT:    i16x8.extend_low_i8x16_u
-; CHECK-NEXT:    i32x4.extend_low_i16x8_u
+; CHECK-NEXT:    i8x16.shuffle 16, 1, 2, 3, 17, 5, 6, 7, 18, 9, 10, 11, 19, 13, 14, 15
 ; CHECK-NEXT:    # fallthrough-return
   %s = getelementptr inbounds <4 x i8>, ptr %p, i32 -1
   %v = load <4 x i8>, ptr %s
@@ -1600,13 +1620,18 @@ define <4 x i32> @load_zext_v4i16_to_v4i32_with_unfolded_offset(ptr %p) {
 define <4 x i32> @load_sext_v4i8_to_v4i32_with_unfolded_offset(ptr %p) {
 ; CHECK-LABEL: load_sext_v4i8_to_v4i32_with_unfolded_offset:
 ; CHECK:         .functype load_sext_v4i8_to_v4i32_with_unfolded_offset (i32) -> (v128)
+; CHECK-NEXT:    .local v128
 ; CHECK-NEXT:  # %bb.0:
 ; CHECK-NEXT:    local.get 0
 ; CHECK-NEXT:    i32.const 16
 ; CHECK-NEXT:    i32.add
 ; CHECK-NEXT:    v128.load32_zero 0
-; CHECK-NEXT:    i16x8.extend_low_i8x16_s
-; CHECK-NEXT:    i32x4.extend_low_i16x8_s
+; CHECK-NEXT:    local.get 1
+; CHECK-NEXT:    i8x16.shuffle 0, 0, 0, 0, 1, 0, 0, 0, 2, 0, 0, 0, 3, 0, 0, 0
+; CHECK-NEXT:    i32.const 24
+; CHECK-NEXT:    i32x4.shl
+; CHECK-NEXT:    i32.const 24
+; CHECK-NEXT:    i32x4.shr_s
 ; CHECK-NEXT:    # fallthrough-return
   %q = ptrtoint ptr %p to i32
   %r = add nsw i32 %q, 16
@@ -1620,12 +1645,12 @@ define <4 x i32> @load_zext_v4i8_to_v4i32_with_unfolded_offset(ptr %p) {
 ; CHECK-LABEL: load_zext_v4i8_to_v4i32_with_unfolded_offset:
 ; CHECK:         .functype load_zext_v4i8_to_v4i32_with_unfolded_offset (i32) -> (v128)
 ; CHECK-NEXT:  # %bb.0:
+; CHECK-NEXT:    v128.const 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
 ; CHECK-NEXT:    local.get 0
 ; CHECK-NEXT:    i32.const 16
 ; CHECK-NEXT:    i32.add
 ; CHECK-NEXT:    v128.load32_zero 0
-; CHECK-NEXT:    i16x8.extend_low_i8x16_u
-; CHECK-NEXT:    i32x4.extend_low_i16x8_u
+; CHECK-NEXT:    i8x16.shuffle 16, 1, 2, 3, 17, 5, 6, 7, 18, 9, 10, 11, 19, 13, 14, 15
 ; CHECK-NEXT:    # fallthrough-return
   %q = ptrtoint ptr %p to i32
   %r = add nsw i32 %q, 16
@@ -1714,13 +1739,18 @@ define <4 x i32> @load_zext_v4i16_to_v4i32_with_unfolded_gep_offset(ptr %p) {
 define <4 x i32> @load_sext_v4i8_to_v4i32_with_unfolded_gep_offset(ptr %p) {
 ; CHECK-LABEL: load_sext_v4i8_to_v4i32_with_unfolded_gep_offset:
 ; CHECK:         .functype load_sext_v4i8_to_v4i32_with_unfolded_gep_offset (i32) -> (v128)
+; CHECK-NEXT:    .local v128
 ; CHECK-NEXT:  # %bb.0:
 ; CHECK-NEXT:    local.get 0
 ; CHECK-NEXT:    i32.const 4
 ; CHECK-NEXT:    i32.add
 ; CHECK-NEXT:    v128.load32_zero 0
-; CHECK-NEXT:    i16x8.extend_low_i8x16_s
-; CHECK-NEXT:    i32x4.extend_low_i16x8_s
+; CHECK-NEXT:    local.get 1
+; CHECK-NEXT:    i8x16.shuffle 0, 0, 0, 0, 1, 0, 0, 0, 2, 0, 0, 0, 3, 0, 0, 0
+; CHECK-NEXT:    i32.const 24
+; CHECK-NEXT:    i32x4.shl
+; CHECK-NEXT:    i32.const 24
+; CHECK-NEXT:    i32x4.shr_s
 ; CHECK-NEXT:    # fallthrough-return
   %s = getelementptr <4 x i8>, ptr %p, i32 1
   %v = load <4 x i8>, ptr %s
@@ -1732,12 +1762,12 @@ define <4 x i32> @load_zext_v4i8_to_v4i32_with_unfolded_gep_offset(ptr %p) {
 ; CHECK-LABEL: load_zext_v4i8_to_v4i32_with_unfolded_gep_offset:
 ; CHECK:         .functype load_zext_v4i8_to_v4i32_with_unfolded_gep_offset (i32) -> (v128)
 ; CHECK-NEXT:  # %bb.0:
+; CHECK-NEXT:    v128.const 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
 ; CHECK-NEXT:    local.get 0
 ; CHECK-NEXT:    i32.const 4
 ; CHECK-NEXT:    i32.add
 ; CHECK-NEXT:    v128.load32_zero 0
-; CHECK-NEXT:    i16x8.extend_low_i8x16_u
-; CHECK-NEXT:    i32x4.extend_low_i16x8_u
+; CHECK-NEXT:    i8x16.shuffle 16, 1, 2, 3, 17, 5, 6, 7, 18, 9, 10, 11, 19, 13, 14, 15
 ; CHECK-NEXT:    # fallthrough-return
   %s = getelementptr <4 x i8>, ptr %p, i32 1
   %v = load <4 x i8>, ptr %s
@@ -1814,11 +1844,16 @@ define <4 x i32> @load_zext_v4i16_to_v4i32_from_numeric_address() {
 define <4 x i32> @load_sext_v4i8_to_v4i32_from_numeric_address() {
 ; CHECK-LABEL: load_sext_v4i8_to_v4i32_from_numeric_address:
 ; CHECK:         .functype load_sext_v4i8_to_v4i32_from_numeric_address () -> (v128)
+; CHECK-NEXT:    .local v128
 ; CHECK-NEXT:  # %bb.0:
 ; CHECK-NEXT:    i32.const 0
 ; CHECK-NEXT:    v128.load32_zero 32
-; CHECK-NEXT:    i16x8.extend_low_i8x16_s
-; CHECK-NEXT:    i32x4.extend_low_i16x8_s
+; CHECK-NEXT:    local.get 0
+; CHECK-NEXT:    i8x16.shuffle 0, 0, 0, 0, 1, 0, 0, 0, 2, 0, 0, 0, 3, 0, 0, 0
+; CHECK-NEXT:    i32.const 24
+; CHECK-NEXT:    i32x4.shl
+; CHECK-NEXT:    i32.const 24
+; CHECK-NEXT:    i32x4.shr_s
 ; CHECK-NEXT:    # fallthrough-return
   %s = inttoptr i32 32 to ptr
   %v = load <4 x i8>, ptr %s
@@ -1830,10 +1865,10 @@ define <4 x i32> @load_zext_v4i8_to_v4i32_from_numeric_address() {
 ; CHECK-LABEL: load_zext_v4i8_to_v4i32_from_numeric_address:
 ; CHECK:         .functype load_zext_v4i8_to_v4i32_from_numeric_address () -> (v128)
 ; CHECK-NEXT:  # %bb.0:
+; CHECK-NEXT:    v128.const 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
 ; CHECK-NEXT:    i32.const 0
 ; CHECK-NEXT:    v128.load32_zero 32
-; CHECK-NEXT:    i16x8.extend_low_i8x16_u
-; CHECK-NEXT:    i32x4.extend_low_i16x8_u
+; CHECK-NEXT:    i8x16.shuffle 16, 1, 2, 3, 17, 5, 6, 7, 18, 9, 10, 11, 19, 13, 14, 15
 ; CHECK-NEXT:    # fallthrough-return
   %s = inttoptr i32 32 to ptr
   %v = load <4 x i8>, ptr %s
@@ -1908,11 +1943,16 @@ define <4 x i32> @load_zext_v4i16_to_v4i32_from_global_address() {
 define <4 x i32> @load_sext_v4i8_to_v4i32_from_global_address() {
 ; CHECK-LABEL: load_sext_v4i8_to_v4i32_from_global_address:
 ; CHECK:         .functype load_sext_v4i8_to_v4i32_from_global_address () -> (v128)
+; CHECK-NEXT:    .local v128
 ; CHECK-NEXT:  # %bb.0:
 ; CHECK-NEXT:    i32.const 0
 ; CHECK-NEXT:    v128.load32_zero gv_v4i8
-; CHECK-NEXT:    i16x8.extend_low_i8x16_s
-; CHECK-NEXT:    i32x4.extend_low_i16x8_s
+; CHECK-NEXT:    local.get 0
+; CHECK-NEXT:    i8x16.shuffle 0, 0, 0, 0, 1, 0, 0, 0, 2, 0, 0, 0, 3, 0, 0, 0
+; CHECK-NEXT:    i32.const 24
+; CHECK-NEXT:    i32x4.shl
+; CHECK-NEXT:    i32.const 24
+; CHECK-NEXT:    i32x4.shr_s
 ; CHECK-NEXT:    # fallthrough-return
   %v = load <4 x i8>, ptr @gv_v4i8
   %v2 = sext <4 x i8> %v to <4 x i32>
@@ -1923,10 +1963,10 @@ define <4 x i32> @load_zext_v4i8_to_v4i32_from_global_address() {
 ; CHECK-LABEL: load_zext_v4i8_to_v4i32_from_global_address:
 ; CHECK:         .functype load_zext_v4i8_to_v4i32_from_global_address () -> (v128)
 ; CHECK-NEXT:  # %bb.0:
+; CHECK-NEXT:    v128.const 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
 ; CHECK-NEXT:    i32.const 0
 ; CHECK-NEXT:    v128.load32_zero gv_v4i8
-; CHECK-NEXT:    i16x8.extend_low_i8x16_u
-; CHECK-NEXT:    i32x4.extend_low_i16x8_u
+; CHECK-NEXT:    i8x16.shuffle 16, 1, 2, 3, 17, 5, 6, 7, 18, 9, 10, 11, 19, 13, 14, 15
 ; CHECK-NEXT:    # fallthrough-return
   %v = load <4 x i8>, ptr @gv_v4i8
   %v2 = zext <4 x i8> %v to <4 x i32>
