@@ -111,20 +111,22 @@ static void computeBackwardSlice(tensor::PadOp padOp,
                                  scf::ForOp outermostEnclosingForOp,
                                  SetVector<Operation *> &backwardSlice) {
   DominanceInfo domInfo(outermostEnclosingForOp);
-  auto filter = [&](Operation *op) {
+  BackwardSliceOptions sliceOptions;
+  sliceOptions.filter = [&](Operation *op) {
     return domInfo.dominates(outermostEnclosingForOp, op) &&
            !padOp->isProperAncestor(op);
   };
+  sliceOptions.inclusive = true;
+
   // First, add the ops required to compute the region to the backwardSlice.
   SetVector<Value> valuesDefinedAbove;
   getUsedValuesDefinedAbove(padOp.getRegion(), padOp.getRegion(),
                             valuesDefinedAbove);
   for (Value v : valuesDefinedAbove) {
-    getBackwardSlice(v, &backwardSlice, filter, /*inclusive=*/true);
+    getBackwardSlice(v, &backwardSlice, sliceOptions);
   }
   // Then, add the backward slice from padOp itself.
-  getBackwardSlice(padOp.getOperation(), &backwardSlice, filter,
-                   /*inclusive=*/true);
+  getBackwardSlice(padOp.getOperation(), &backwardSlice, sliceOptions);
 }
 
 //===----------------------------------------------------------------------===//
