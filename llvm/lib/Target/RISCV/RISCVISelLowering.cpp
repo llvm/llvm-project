@@ -7633,6 +7633,25 @@ SDValue RISCVTargetLowering::lowerVECTOR_DEINTERLEAVE(SDValue Op,
   if (VecVT.getVectorElementType() == MVT::i1)
     return widenVectorOpsToi8(Op, DL, DAG);
 
+  // If the VT is LMUL=8, we need to split and reassemble.
+  if (VecVT.getSizeInBits().getKnownMinValue() ==
+      (8 * RISCV::RVVBitsPerBlock)) {
+    auto [Op0Lo, Op0Hi] = DAG.SplitVectorOperand(Op.getNode(), 0);
+    auto [Op1Lo, Op1Hi] = DAG.SplitVectorOperand(Op.getNode(), 1);
+    EVT SplitVT = Op0Lo.getValueType();
+
+    SDValue ResLo = DAG.getNode(ISD::VECTOR_DEINTERLEAVE, DL,
+                                DAG.getVTList(SplitVT, SplitVT), Op0Lo, Op0Hi);
+    SDValue ResHi = DAG.getNode(ISD::VECTOR_DEINTERLEAVE, DL,
+                                DAG.getVTList(SplitVT, SplitVT), Op1Lo, Op1Hi);
+
+    SDValue Even = DAG.getNode(ISD::CONCAT_VECTORS, DL, VecVT,
+                               ResLo.getValue(0), ResHi.getValue(0));
+    SDValue Odd = DAG.getNode(ISD::CONCAT_VECTORS, DL, VecVT, ResLo.getValue(1),
+                              ResHi.getValue(1));
+    return DAG.getMergeValues({Even, Odd}, DL);
+  }
+
   // Concatenate the two vectors as one vector to deinterleave
   MVT ConcatVT =
       MVT::getVectorVT(VecVT.getVectorElementType(),
