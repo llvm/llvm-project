@@ -308,6 +308,21 @@ X86LegalizerInfo::X86LegalizerInfo(const X86Subtarget &STI,
                (HasAVX512 && typeInSet(0, {v16s32, v8s64})(Query));
       });
 
+  // fp extension
+  getActionDefinitionsBuilder(G_FPEXT).legalIf([=](const LegalityQuery &Query) {
+    return (HasSSE2 && typePairInSet(0, 1, {{s64, s32}})(Query)) ||
+           (HasAVX && typePairInSet(0, 1, {{v4s64, v4s32}})(Query)) ||
+           (HasAVX512 && typePairInSet(0, 1, {{v8s64, v8s32}})(Query));
+  });
+
+  // fp truncation
+  getActionDefinitionsBuilder(G_FPTRUNC).legalIf(
+      [=](const LegalityQuery &Query) {
+        return (HasSSE2 && typePairInSet(0, 1, {{s32, s64}})(Query)) ||
+               (HasAVX && typePairInSet(0, 1, {{v4s32, v4s64}})(Query)) ||
+               (HasAVX512 && typePairInSet(0, 1, {{v8s32, v8s64}})(Query));
+      });
+
   // todo: vectors and address spaces
   getActionDefinitionsBuilder(G_SELECT)
        .legalFor({{s8, s32}, {s16, s32}, {s32, s32}, {s64, s32},
@@ -474,8 +489,6 @@ void X86LegalizerInfo::setLegalizerInfoSSE2() {
   if (!Subtarget.hasSSE2())
     return;
 
-  const LLT s32 = LLT::scalar(32);
-  const LLT s64 = LLT::scalar(64);
   const LLT v16s8 = LLT::fixed_vector(16, 8);
   const LLT v8s16 = LLT::fixed_vector(8, 16);
   const LLT v4s32 = LLT::fixed_vector(4, 32);
@@ -487,12 +500,6 @@ void X86LegalizerInfo::setLegalizerInfoSSE2() {
   const LLT v4s64 = LLT::fixed_vector(4, 64);
 
   auto &LegacyInfo = getLegacyLegalizerInfo();
-
-  LegacyInfo.setAction({G_FPEXT, s64}, LegacyLegalizeActions::Legal);
-  LegacyInfo.setAction({G_FPEXT, 1, s32}, LegacyLegalizeActions::Legal);
-
-  LegacyInfo.setAction({G_FPTRUNC, s32}, LegacyLegalizeActions::Legal);
-  LegacyInfo.setAction({G_FPTRUNC, 1, s64}, LegacyLegalizeActions::Legal);
 
   // Merge/Unmerge
   for (const auto &Ty :
