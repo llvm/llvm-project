@@ -137,7 +137,7 @@ LIBC_INLINE cpp::enable_if_t<cpp::is_floating_point_v<T>, T> sqrt(T x) {
       }
 
       // We compute one more iteration in order to round correctly.
-      bool lsb = y & 1; // Least significant bit
+      bool lsb = static_cast<bool>(y & 1); // Least significant bit
       bool rb = false;  // Round bit
       r <<= 2;
       UIntType tmp = (y << 2) + 1;

@@ -165,11 +165,10 @@ public:
     return convert<16>(val, buffer, lowercase);
   }
 
-  template <typename T,
-            cpp::enable_if_t<cpp::is_integral_v<T> && cpp::is_unsigned_v<T> &&
-                                 (sizeof(T) > sizeof(uintmax_t)) &&
-                                 sizeof(T) % sizeof(uintmax_t) == 0,
-                             int> = 0>
+  template <typename T, cpp::enable_if_t<cpp::is_integral_v<T> &&
+                                             (sizeof(T) > sizeof(uintmax_t)) &&
+                                             sizeof(T) % sizeof(uintmax_t) == 0,
+                                         int> = 0>
   LIBC_INLINE static cpp::optional<cpp::string_view>
   hex(T val, cpp::span<char> buffer, bool lowercase = true) {
     // We will assume the buffer is exactly sized, which will be the case if
