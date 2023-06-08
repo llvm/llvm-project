@@ -99,8 +99,8 @@ add_object_library(
     libc.src.__support.uint128
     libc.src.__support.integer_to_string
     libc.src.__support.float_to_string
-  # COMPILE_OPTIONS
-    # -DLIBC_COPT_FLOAT_TO_STR_USE_MEGA_LONG_DOUBLE_TABLE
+  COMPILE_OPTIONS
+    -DLIBC_COPT_FLOAT_TO_STR_USE_MEGA_LONG_DOUBLE_TABLE
 )
 
 
