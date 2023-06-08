@@ -503,13 +503,13 @@ extern "C" __device__ double test_ceil(double x) {
 
 // DEFAULT-LABEL: @test_copysignf(
 // DEFAULT-NEXT:  entry:
-// DEFAULT-NEXT:    [[CALL_I:%.*]] = tail call contract float @__ocml_copysign_f32(float noundef [[X:%.*]], float noundef [[Y:%.*]]) #[[ATTR14]]
-// DEFAULT-NEXT:    ret float [[CALL_I]]
+// DEFAULT-NEXT:    [[TMP0:%.*]] = tail call contract float @llvm.copysign.f32(float [[X:%.*]], float [[Y:%.*]])
+// DEFAULT-NEXT:    ret float [[TMP0]]
 //
 // FINITEONLY-LABEL: @test_copysignf(
 // FINITEONLY-NEXT:  entry:
-// FINITEONLY-NEXT:    [[CALL_I:%.*]] = tail call nnan ninf contract nofpclass(nan inf) float @__ocml_copysign_f32(float noundef nofpclass(nan inf) [[X:%.*]], float noundef nofpclass(nan inf) [[Y:%.*]]) #[[ATTR14]]
-// FINITEONLY-NEXT:    ret float [[CALL_I]]
+// FINITEONLY-NEXT:    [[TMP0:%.*]] = tail call nnan ninf contract float @llvm.copysign.f32(float [[X:%.*]], float [[Y:%.*]])
+// FINITEONLY-NEXT:    ret float [[TMP0]]
 //
 extern "C" __device__ float test_copysignf(float x, float y) {
   return copysignf(x, y);
@@ -517,13 +517,13 @@ extern "C" __device__ float test_copysignf(float x, float y) {
 
 // DEFAULT-LABEL: @test_copysign(
 // DEFAULT-NEXT:  entry:
-// DEFAULT-NEXT:    [[CALL_I:%.*]] = tail call contract double @__ocml_copysign_f64(double noundef [[X:%.*]], double noundef [[Y:%.*]]) #[[ATTR14]]
-// DEFAULT-NEXT:    ret double [[CALL_I]]
+// DEFAULT-NEXT:    [[TMP0:%.*]] = tail call contract double @llvm.copysign.f64(double [[X:%.*]], double [[Y:%.*]])
+// DEFAULT-NEXT:    ret double [[TMP0]]
 //
 // FINITEONLY-LABEL: @test_copysign(
 // FINITEONLY-NEXT:  entry:
-// FINITEONLY-NEXT:    [[CALL_I:%.*]] = tail call nnan ninf contract nofpclass(nan inf) double @__ocml_copysign_f64(double noundef nofpclass(nan inf) [[X:%.*]], double noundef nofpclass(nan inf) [[Y:%.*]]) #[[ATTR14]]
-// FINITEONLY-NEXT:    ret double [[CALL_I]]
+// FINITEONLY-NEXT:    [[TMP0:%.*]] = tail call nnan ninf contract double @llvm.copysign.f64(double [[X:%.*]], double [[Y:%.*]])
+// FINITEONLY-NEXT:    ret double [[TMP0]]
 //
 extern "C" __device__ double test_copysign(double x, double y) {
   return copysign(x, y);
