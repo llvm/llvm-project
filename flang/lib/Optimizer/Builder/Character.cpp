@@ -784,3 +784,68 @@ fir::factory::getCharacterProcedureTupleType(mlir::Type funcPointerType) {
   mlir::Type lenType = mlir::IntegerType::get(context, 64);
   return mlir::TupleType::get(context, {funcPointerType, lenType});
 }
+
+fir::CharBoxValue fir::factory::CharacterExprHelper::createCharExtremum(
+    bool predIsMin, llvm::ArrayRef<fir::CharBoxValue> opCBVs) {
+  // inputs: we are given a vector of all of the charboxes of the arguments
+  // passed to hlfir.char_extremum, as well as the predicate for whether we
+  // want llt or lgt
+  //
+  // note: we know that, regardless of whether we're looking at smallest or
+  // largest char, the size of the output buffer will be the same size as the
+  // largest character out of all of the operands. so, we find the biggest
+  // length first. It's okay if these char lengths are not known at compile
+  // time.
+
+  fir::CharBoxValue firstCBV = opCBVs[0];
+  mlir::Value firstBuf = getCharBoxBuffer(firstCBV);
+  auto firstLen = builder.createConvert(loc, builder.getCharacterLengthType(),
+                                        firstCBV.getLen());
+
+  mlir::Value resultBuf = firstBuf;
+  mlir::Value resultLen = firstLen;
+  mlir::Value biggestLen = firstLen;
+
+  // values for casting buf type and len type
+  auto typeLen = fir::CharacterType::unknownLen();
+  auto kind = recoverCharacterType(firstBuf.getType()).getFKind();
+  auto charTy = fir::CharacterType::get(builder.getContext(), kind, typeLen);
+  auto type = fir::ReferenceType::get(charTy);
+
+  size_t numOperands = opCBVs.size();
+  for (size_t cbv_idx = 1; cbv_idx < numOperands; ++cbv_idx) {
+    auto currChar = opCBVs[cbv_idx];
+    auto currBuf = getCharBoxBuffer(currChar);
+    auto currLen = builder.createConvert(loc, builder.getCharacterLengthType(),
+                                         currChar.getLen());
+    // biggest len result
+    mlir::Value lhsBigger = builder.create<mlir::arith::CmpIOp>(
+        loc, mlir::arith::CmpIPredicate::uge, biggestLen, currLen);
+    biggestLen = builder.create<mlir::arith::SelectOp>(loc, lhsBigger,
+                                                       biggestLen, currLen);
+
+    auto cmp = predIsMin ? mlir::arith::CmpIPredicate::slt
+                         : mlir::arith::CmpIPredicate::sgt;
+
+    // lexical compare result
+    mlir::Value resultCmp = fir::runtime::genCharCompare(
+        builder, loc, cmp, currBuf, currLen, resultBuf, resultLen);
+
+    // it's casting (to unknown size) time!
+    resultBuf = builder.createConvert(loc, type, resultBuf);
+    currBuf = builder.createConvert(loc, type, currBuf);
+
+    resultBuf = builder.create<mlir::arith::SelectOp>(loc, resultCmp, currBuf,
+                                                      resultBuf);
+    resultLen = builder.create<mlir::arith::SelectOp>(loc, resultCmp, currLen,
+                                                      resultLen);
+  }
+
+  // now that we know the lexicographically biggest/smallest char and which char
+  // had the biggest len, we can populate a temp CBV and return it
+  fir::CharBoxValue temp = createCharacterTemp(resultBuf.getType(), biggestLen);
+  auto toBuf = temp;
+  fir::CharBoxValue fromBuf{resultBuf, resultLen};
+  createAssign(toBuf, fromBuf);
+  return temp;
+}
