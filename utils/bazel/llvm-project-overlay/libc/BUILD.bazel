@@ -310,10 +310,14 @@ libc_support_library(
     hdrs = [
         "src/__support/float_to_string.h",
         "src/__support/ryu_constants.h",
+        "src/__support/ryu_long_double_constants.h",
     ],
+    # This is temporarily commented out since the table is too large to land in the same patch as the rest of the changes.
+    # defines = ["LIBC_COPT_FLOAT_TO_STR_USE_MEGA_LONG_DOUBLE_TABLE"],
     deps = [
         ":__support_common",
         ":__support_cpp_type_traits",
+        ":__support_fputil_dyadic_float",
         ":__support_fputil_fp_bits",
         ":__support_libc_assert",
         ":__support_uint",
@@ -759,6 +763,7 @@ libc_support_library(
         ":__support_common",
         ":__support_fputil_multiply_add",
         ":__support_number_pair",
+        ":libc_root",
     ],
 )
 
@@ -772,6 +777,7 @@ libc_support_library(
         ":__support_fputil_multiply_add",
         ":__support_macros_optimization",
         ":__support_uint",
+        ":libc_root",
     ],
 )
 

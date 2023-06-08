@@ -131,7 +131,6 @@ private:
   SDValue LowerCopyToReg(SDValue Op, SelectionDAG &DAG) const;
   SDValue LowerIntrinsic(SDValue Op, SelectionDAG &DAG) const;
   SDValue LowerSIGN_EXTEND_INREG(SDValue Op, SelectionDAG &DAG) const;
-  SDValue LowerEXTEND_VECTOR_INREG(SDValue Op, SelectionDAG &DAG) const;
   SDValue LowerBUILD_VECTOR(SDValue Op, SelectionDAG &DAG) const;
   SDValue LowerVECTOR_SHUFFLE(SDValue Op, SelectionDAG &DAG) const;
   SDValue LowerSETCC(SDValue Op, SelectionDAG &DAG) const;
