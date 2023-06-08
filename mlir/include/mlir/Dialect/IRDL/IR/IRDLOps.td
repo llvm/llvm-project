@@ -426,4 +426,39 @@ def IRDL_AllOf : IRDL_ConstraintOp<"all_of",
   let assemblyFormat = [{ `(` $args `)` ` ` attr-dict }];
 }
 
+def IRDL_CPredOp : IRDL_Op<"c_pred"> {
+  let summary = "Constraints an attribute using a C++ predicate";
+  let description = [{
+    `irdl.c_pred` defines a constraint that is written in C++.
+
+    Dialects using this operation cannot be registered at runtime, as it relies
+    on C++ code.
+
+    Special placeholders can be used to refer to entities in the context where
+    this predicate is used. They serve as "hooks" to the enclosing environment.
+    The following special placeholders are supported in constraints for an op:
+
+    * `$_builder` will be replaced by a mlir::Builder instance.
+    * `$_op` will be replaced by the current operation.
+    * `$_self` will be replaced with the entity this predicate is attached to.
+       Compared to ODS, `$_self` is always of type `mlir::Attribute`, and types
+       are manipulated as `TypeAttr` attributes.
+
+    Example:
+    ```mlir
+    irdl.type @op_with_attr {
+      %0 = irdl.c_pred "::llvm::isa<::mlir::IntegerAttr>($_self)"
+      irdl.parameters(%0)
+    }
+    ```
+
+    In this example, @op_with_attr is defined as a type with a single
+    parameter, which is an `IntegerAttr`, as constrained by the C++ predicate.
+  }];
+
+  let arguments = (ins StrAttr:$pred);
+  let results = (outs IRDL_AttributeType:$output);
+  let assemblyFormat = "$pred ` ` attr-dict";
+}
+
 #endif // MLIR_DIALECT_IRDL_IR_IRDLOPS
