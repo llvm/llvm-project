@@ -156,7 +156,7 @@ public:
       ScopedLock L(Region->Mutex);
       TransferBatch *B = popBatchImpl(C, ClassId, Region);
       if (LIKELY(B)) {
-        Region->Stats.PoppedBlocks += B->getCount();
+        Region->FreeListInfo.PoppedBlocks += B->getCount();
         return B;
       }
 
@@ -168,7 +168,7 @@ public:
         B = popBatchImpl(C, ClassId, Region);
         // if `populateFreeList` succeeded, we are supposed to get free blocks.
         DCHECK_NE(B, nullptr);
-        Region->Stats.PoppedBlocks += B->getCount();
+        Region->FreeListInfo.PoppedBlocks += B->getCount();
         return B;
       }
     }
@@ -202,7 +202,8 @@ public:
         // cause a recursive allocation). However, The number of free blocks may
         // be less than two. Therefore, populate the free list before inserting
         // the blocks.
-        const bool NeedToRefill = Size == 1U && Region->FreeList.empty();
+        const bool NeedToRefill =
+            Size == 1U && Region->FreeListInfo.BlockList.empty();
         // If BatchClass has been exhausted, the program should have been
         // aborted.
         DCHECK(!Region->Exhausted);
@@ -213,7 +214,7 @@ public:
           PrintStats = true;
         } else {
           pushBlocksImpl(C, SizeClassMap::BatchClassId, Region, Array, Size);
-          Region->Stats.PushedBlocks += Size;
+          Region->FreeListInfo.PushedBlocks += Size;
         }
       }
 
@@ -255,7 +256,7 @@ public:
     ScopedLock L(Region->Mutex);
     pushBlocksImpl(C, ClassId, Region, Array, Size, SameGroup);
 
-    Region->Stats.PushedBlocks += Size;
+    Region->FreeListInfo.PushedBlocks += Size;
     if (ClassId != SizeClassMap::BatchClassId)
       releaseToOSMaybe(Region, ClassId);
   }
@@ -306,8 +307,8 @@ public:
       ScopedLock L(Region->Mutex);
       if (Region->MappedUser)
         TotalMapped += Region->MappedUser;
-      PoppedBlocks += Region->Stats.PoppedBlocks;
-      PushedBlocks += Region->Stats.PushedBlocks;
+      PoppedBlocks += Region->FreeListInfo.PoppedBlocks;
+      PushedBlocks += Region->FreeListInfo.PushedBlocks;
     }
     Str->append("Stats: SizeClassAllocator64: %zuM mapped (%uM rss) in %zu "
                 "allocations; remains %zu\n",
@@ -429,11 +430,6 @@ private:
   // Fill at most this number of batches from the newly map'd memory.
   static const u32 MaxNumBatches = SCUDO_ANDROID ? 4U : 8U;
 
-  struct RegionStats {
-    uptr PoppedBlocks;
-    uptr PushedBlocks;
-  };
-
   struct ReleaseToOsInfo {
     uptr BytesInFreeListAtLastCheckpoint;
     uptr RangesReleased;
@@ -441,12 +437,17 @@ private:
     u64 LastReleaseAtNs;
   };
 
+  struct BlocksInfo {
+    SinglyLinkedList<BatchGroup> BlockList = {};
+    uptr PoppedBlocks = 0;
+    uptr PushedBlocks = 0;
+  };
+
   struct UnpaddedRegionInfo {
     HybridMutex Mutex;
-    SinglyLinkedList<BatchGroup> FreeList GUARDED_BY(Mutex);
+    BlocksInfo FreeListInfo GUARDED_BY(Mutex);
     // This is initialized before thread creation.
     uptr RegionBeg = 0;
-    RegionStats Stats GUARDED_BY(Mutex) = {};
     u32 RandState GUARDED_BY(Mutex) = 0;
     // Bytes mapped for user memory.
     uptr MappedUser GUARDED_BY(Mutex) = 0;
@@ -514,13 +515,13 @@ private:
 
   // Push the blocks to their batch group. The layout will be like,
   //
-  // FreeList - > BG -> BG -> BG
-  //              |     |     |
-  //              v     v     v
-  //              TB    TB    TB
-  //              |
-  //              v
-  //              TB
+  // FreeListInfo.BlockList - > BG -> BG -> BG
+  //                            |     |     |
+  //                            v     v     v
+  //                            TB    TB    TB
+  //                            |
+  //                            v
+  //                            TB
   //
   // Each BlockGroup(BG) will associate with unique group id and the free blocks
   // are managed by a list of TransferBatch(TB). To reduce the time of inserting
@@ -631,13 +632,13 @@ private:
       BG->PushedBlocks += Size;
     };
 
-    BatchGroup *Cur = Region->FreeList.front();
+    BatchGroup *Cur = Region->FreeListInfo.BlockList.front();
 
     if (ClassId == SizeClassMap::BatchClassId) {
       if (Cur == nullptr) {
         // Don't need to classify BatchClassId.
         Cur = CreateGroup(/*CompactPtrGroupBase=*/0);
-        Region->FreeList.push_front(Cur);
+        Region->FreeListInfo.BlockList.push_front(Cur);
       }
       InsertBlocks(Cur, Array, Size);
       return;
@@ -657,9 +658,9 @@ private:
         compactPtrGroup(Array[0]) != Cur->CompactPtrGroupBase) {
       Cur = CreateGroup(compactPtrGroup(Array[0]));
       if (Prev == nullptr)
-        Region->FreeList.push_front(Cur);
+        Region->FreeListInfo.BlockList.push_front(Cur);
       else
-        Region->FreeList.insert(Prev, Cur);
+        Region->FreeListInfo.BlockList.insert(Prev, Cur);
     }
 
     // All the blocks are from the same group, just push without checking group
@@ -690,7 +691,7 @@ private:
             compactPtrGroup(Array[I]) != Cur->CompactPtrGroupBase) {
           Cur = CreateGroup(compactPtrGroup(Array[I]));
           DCHECK_NE(Prev, nullptr);
-          Region->FreeList.insert(Prev, Cur);
+          Region->FreeListInfo.BlockList.insert(Prev, Cur);
         }
 
         Count = 1;
@@ -708,11 +709,11 @@ private:
   // The region mutex needs to be held while calling this method.
   TransferBatch *popBatchImpl(CacheT *C, uptr ClassId, RegionInfo *Region)
       REQUIRES(Region->Mutex) {
-    if (Region->FreeList.empty())
+    if (Region->FreeListInfo.BlockList.empty())
       return nullptr;
 
     SinglyLinkedList<TransferBatch> &Batches =
-        Region->FreeList.front()->Batches;
+        Region->FreeListInfo.BlockList.front()->Batches;
     DCHECK(!Batches.empty());
 
     TransferBatch *B = Batches.front();
@@ -721,8 +722,8 @@ private:
     DCHECK_GT(B->getCount(), 0U);
 
     if (Batches.empty()) {
-      BatchGroup *BG = Region->FreeList.front();
-      Region->FreeList.pop_front();
+      BatchGroup *BG = Region->FreeListInfo.BlockList.front();
+      Region->FreeListInfo.BlockList.pop_front();
 
       // We don't keep BatchGroup with zero blocks to avoid empty-checking while
       // allocating. Note that block used by constructing BatchGroup is recorded
@@ -821,15 +822,17 @@ private:
       REQUIRES(Region->Mutex) {
     if (Region->MappedUser == 0)
       return;
-    const uptr InUse = Region->Stats.PoppedBlocks - Region->Stats.PushedBlocks;
+    const uptr InUse =
+        Region->FreeListInfo.PoppedBlocks - Region->FreeListInfo.PushedBlocks;
     const uptr TotalChunks = Region->AllocatedUser / getSizeByClassId(ClassId);
     Str->append("%s %02zu (%6zu): mapped: %6zuK popped: %7zu pushed: %7zu "
                 "inuse: %6zu total: %6zu rss: %6zuK releases: %6zu last "
                 "released: %6zuK region: 0x%zx (0x%zx)\n",
                 Region->Exhausted ? "F" : " ", ClassId,
                 getSizeByClassId(ClassId), Region->MappedUser >> 10,
-                Region->Stats.PoppedBlocks, Region->Stats.PushedBlocks, InUse,
-                TotalChunks, Rss >> 10, Region->ReleaseInfo.RangesReleased,
+                Region->FreeListInfo.PoppedBlocks,
+                Region->FreeListInfo.PushedBlocks, InUse, TotalChunks,
+                Rss >> 10, Region->ReleaseInfo.RangesReleased,
                 Region->ReleaseInfo.LastReleasedBytes >> 10, Region->RegionBeg,
                 getRegionBaseByClassId(ClassId));
   }
@@ -840,10 +843,12 @@ private:
     const uptr BlockSize = getSizeByClassId(ClassId);
     const uptr PageSize = getPageSizeCached();
 
-    DCHECK_GE(Region->Stats.PoppedBlocks, Region->Stats.PushedBlocks);
+    DCHECK_GE(Region->FreeListInfo.PoppedBlocks,
+              Region->FreeListInfo.PushedBlocks);
     const uptr BytesInFreeList =
-        Region->AllocatedUser -
-        (Region->Stats.PoppedBlocks - Region->Stats.PushedBlocks) * BlockSize;
+        Region->AllocatedUser - (Region->FreeListInfo.PoppedBlocks -
+                                 Region->FreeListInfo.PushedBlocks) *
+                                    BlockSize;
 
     if (UNLIKELY(BytesInFreeList == 0))
       return 0;
@@ -924,7 +929,7 @@ private:
 
     // This is only used for debugging to ensure the consistency of the number
     // of groups.
-    uptr NumberOfBatchGroups = Region->FreeList.size();
+    uptr NumberOfBatchGroups = Region->FreeListInfo.BlockList.size();
 
     // We are examining each group and will take the minimum distance to the
     // release threshold as the next Region::TryReleaseThreshold(). Note that if
@@ -933,7 +938,8 @@ private:
     // the comment on `SmallerBlockReleasePageDelta` for more details.
     uptr MinDistToThreshold = GroupSize;
 
-    for (BatchGroup *BG = Region->FreeList.front(), *Prev = nullptr;
+    for (BatchGroup *BG = Region->FreeListInfo.BlockList.front(),
+                    *Prev = nullptr;
          BG != nullptr;) {
       // Group boundary is always GroupSize-aligned from CompactPtr base. The
       // layout of memory groups is like,
@@ -1025,7 +1031,8 @@ private:
       }
 
       // If `BG` is the first BatchGroup in the list, we only need to advance
-      // `BG` and call FreeList::pop_front(). No update is needed for `Prev`.
+      // `BG` and call FreeListInfo.BlockList::pop_front(). No update is needed
+      // for `Prev`.
       //
       //         (BG)   (BG->Next)
       // Prev     Cur      BG
@@ -1036,7 +1043,7 @@ private:
       //          +--+    +--+
       //
       // Otherwise, `Prev` will be used to extract the `Cur` from the
-      // `FreeList`.
+      // `FreeListInfo.BlockList`.
       //
       //         (BG)   (BG->Next)
       // Prev     Cur      BG
@@ -1046,7 +1053,7 @@ private:
       //  |  | -> |X | -> |  | -> ...
       //  +--+    +--+    +--+
       //
-      // After FreeList::extract(),
+      // After FreeListInfo.BlockList::extract(),
       //
       // Prev     Cur       BG
       //   |       |        |
@@ -1070,9 +1077,9 @@ private:
       Cur->BytesInBGAtLastCheckpoint = BytesInBG;
 
       if (Prev != nullptr)
-        Region->FreeList.extract(Prev, Cur);
+        Region->FreeListInfo.BlockList.extract(Prev, Cur);
       else
-        Region->FreeList.pop_front();
+        Region->FreeListInfo.BlockList.pop_front();
       GroupToRelease.push_back(Cur);
     }
 
@@ -1164,12 +1171,15 @@ private:
     }
     Region->ReleaseInfo.LastReleaseAtNs = getMonotonicTimeFast();
 
-    // Merge GroupToRelease back to the Region::FreeList. Note that both
-    // `Region->FreeList` and `GroupToRelease` are sorted.
-    for (BatchGroup *BG = Region->FreeList.front(), *Prev = nullptr;;) {
+    // Merge GroupToRelease back to the Region::FreeListInfo.BlockList. Note
+    // that both `Region->FreeListInfo.BlockList` and `GroupToRelease` are
+    // sorted.
+    for (BatchGroup *BG = Region->FreeListInfo.BlockList.front(),
+                    *Prev = nullptr;
+         ;) {
       if (BG == nullptr || GroupToRelease.empty()) {
         if (!GroupToRelease.empty())
-          Region->FreeList.append_back(&GroupToRelease);
+          Region->FreeListInfo.BlockList.append_back(&GroupToRelease);
         break;
       }
 
@@ -1188,7 +1198,7 @@ private:
       // `GroupToRelease::front()` (which is `Cur` below)  before `BG`.
       //
       //   1. If `Prev` is nullptr, we simply push `Cur` to the front of
-      //      FreeList.
+      //      FreeListInfo.BlockList.
       //   2. Otherwise, use `insert()` which inserts an element next to `Prev`.
       //
       // Afterwards, we don't need to advance `BG` because the order between
@@ -1196,18 +1206,18 @@ private:
       BatchGroup *Cur = GroupToRelease.front();
       GroupToRelease.pop_front();
       if (Prev == nullptr)
-        Region->FreeList.push_front(Cur);
+        Region->FreeListInfo.BlockList.push_front(Cur);
       else
-        Region->FreeList.insert(Prev, Cur);
+        Region->FreeListInfo.BlockList.insert(Prev, Cur);
       DCHECK_EQ(Cur->Next, BG);
       Prev = Cur;
     }
 
-    DCHECK_EQ(Region->FreeList.size(), NumberOfBatchGroups);
+    DCHECK_EQ(Region->FreeListInfo.BlockList.size(), NumberOfBatchGroups);
     (void)NumberOfBatchGroups;
 
     if (SCUDO_DEBUG) {
-      BatchGroup *Prev = Region->FreeList.front();
+      BatchGroup *Prev = Region->FreeListInfo.BlockList.front();
       for (BatchGroup *Cur = Prev->Next; Cur != nullptr;
            Prev = Cur, Cur = Cur->Next) {
         CHECK_LT(Prev->CompactPtrGroupBase, Cur->CompactPtrGroupBase);
