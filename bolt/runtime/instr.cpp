@@ -1471,6 +1471,7 @@ __bolt_instr_data_dump() {
   int FD = openProfile();
 
   BumpPtrAllocator Alloc;
+  Alloc.setMaxSize(0x6400000);
   const uint8_t *FuncDesc = Ctx.FuncDescriptions;
   for (int I = 0, E = __bolt_instr_num_funcs; I < E; ++I) {
     FuncDesc = writeFunctionProfile(FD, Ctx, FuncDesc, Alloc);
