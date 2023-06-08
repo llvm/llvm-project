@@ -291,7 +291,7 @@ public:
       Region->Mutex.assertHeld();
       const uptr BlockSize = getSizeByClassId(I);
       const uptr From = Region->RegionBeg;
-      const uptr To = From + Region->AllocatedUser;
+      const uptr To = From + Region->MemMapInfo.AllocatedUser;
       for (uptr Block = From; Block < To; Block += BlockSize)
         Callback(Block);
     }
@@ -305,8 +305,8 @@ public:
     for (uptr I = 0; I < NumClasses; I++) {
       RegionInfo *Region = getRegionInfo(I);
       ScopedLock L(Region->Mutex);
-      if (Region->MappedUser)
-        TotalMapped += Region->MappedUser;
+      if (Region->MemMapInfo.MappedUser)
+        TotalMapped += Region->MemMapInfo.MappedUser;
       PoppedBlocks += Region->FreeListInfo.PoppedBlocks;
       PushedBlocks += Region->FreeListInfo.PushedBlocks;
     }
@@ -384,7 +384,7 @@ public:
       // the const qualifier. This may lead to another undefined behavior (The
       // first one is accessing `AllocatedUser` without locking. It's better to
       // pass `RegionInfoData` as `void *` then we can lock the mutex properly.
-      uptr End = Begin + RegionInfoArray[I].AllocatedUser;
+      uptr End = Begin + RegionInfoArray[I].MemMapInfo.AllocatedUser;
       if (Begin > End || End - Begin < SizeClassMap::getSizeByClassId(I))
         continue;
       uptr RegionDistance;
@@ -406,7 +406,8 @@ public:
     BlockInfo B = {};
     if (MinDistance <= 8192) {
       B.RegionBegin = RegionInfoArray[ClassId].RegionBeg;
-      B.RegionEnd = B.RegionBegin + RegionInfoArray[ClassId].AllocatedUser;
+      B.RegionEnd =
+          B.RegionBegin + RegionInfoArray[ClassId].MemMapInfo.AllocatedUser;
       B.BlockSize = SizeClassMap::getSizeByClassId(ClassId);
       B.BlockBegin =
           B.RegionBegin + uptr(sptr(Ptr - B.RegionBegin) / sptr(B.BlockSize) *
@@ -443,19 +444,23 @@ private:
     uptr PushedBlocks = 0;
   };
 
+  struct PagesInfo {
+    MemMapT MemMap = {};
+    // Bytes mapped for user memory.
+    uptr MappedUser = 0;
+    // Bytes allocated for user memory.
+    uptr AllocatedUser = 0;
+  };
+
   struct UnpaddedRegionInfo {
     HybridMutex Mutex;
-    BlocksInfo FreeListInfo GUARDED_BY(Mutex);
     // This is initialized before thread creation.
     uptr RegionBeg = 0;
     u32 RandState GUARDED_BY(Mutex) = 0;
-    // Bytes mapped for user memory.
-    uptr MappedUser GUARDED_BY(Mutex) = 0;
-    // Bytes allocated for user memory.
-    uptr AllocatedUser GUARDED_BY(Mutex) = 0;
+    BlocksInfo FreeListInfo GUARDED_BY(Mutex);
+    PagesInfo MemMapInfo GUARDED_BY(Mutex);
     // The minimum size of pushed blocks to trigger page release.
     uptr TryReleaseThreshold GUARDED_BY(Mutex) = 0;
-    MemMapT MemMap = {};
     ReleaseToOsInfo ReleaseInfo GUARDED_BY(Mutex) = {};
     bool Exhausted GUARDED_BY(Mutex) = false;
   };
@@ -743,8 +748,9 @@ private:
     const u16 MaxCount = TransferBatch::getMaxCached(Size);
 
     const uptr RegionBeg = Region->RegionBeg;
-    const uptr MappedUser = Region->MappedUser;
-    const uptr TotalUserBytes = Region->AllocatedUser + MaxCount * Size;
+    const uptr MappedUser = Region->MemMapInfo.MappedUser;
+    const uptr TotalUserBytes =
+        Region->MemMapInfo.AllocatedUser + MaxCount * Size;
     // Map more space for blocks, if necessary.
     if (TotalUserBytes > MappedUser) {
       // Do the mmap for the user memory.
@@ -756,26 +762,28 @@ private:
         return false;
       }
       // TODO: Consider allocating MemMap in init().
-      if (!Region->MemMap.isAllocated()) {
-        Region->MemMap = ReservedMemory.dispatch(
+      if (!Region->MemMapInfo.MemMap.isAllocated()) {
+        Region->MemMapInfo.MemMap = ReservedMemory.dispatch(
             getRegionBaseByClassId(ClassId), RegionSize);
       }
-      DCHECK(Region->MemMap.isAllocated());
+      DCHECK(Region->MemMapInfo.MemMap.isAllocated());
 
-      if (UNLIKELY(!Region->MemMap.remap(
+      if (UNLIKELY(!Region->MemMapInfo.MemMap.remap(
               RegionBeg + MappedUser, MapSize, "scudo:primary",
               MAP_ALLOWNOMEM | MAP_RESIZABLE |
                   (useMemoryTagging<Config>(Options.load()) ? MAP_MEMTAG
                                                             : 0)))) {
         return false;
       }
-      Region->MappedUser += MapSize;
+      Region->MemMapInfo.MappedUser += MapSize;
       C->getStats().add(StatMapped, MapSize);
     }
 
-    const u32 NumberOfBlocks = Min(
-        MaxNumBatches * MaxCount,
-        static_cast<u32>((Region->MappedUser - Region->AllocatedUser) / Size));
+    const u32 NumberOfBlocks =
+        Min(MaxNumBatches * MaxCount,
+            static_cast<u32>((Region->MemMapInfo.MappedUser -
+                              Region->MemMapInfo.AllocatedUser) /
+                             Size));
     DCHECK_GT(NumberOfBlocks, 0);
 
     constexpr u32 ShuffleArraySize =
@@ -784,7 +792,7 @@ private:
     DCHECK_LE(NumberOfBlocks, ShuffleArraySize);
 
     const uptr CompactPtrBase = getCompactPtrBaseByClassId(ClassId);
-    uptr P = RegionBeg + Region->AllocatedUser;
+    uptr P = RegionBeg + Region->MemMapInfo.AllocatedUser;
     for (u32 I = 0; I < NumberOfBlocks; I++, P += Size)
       ShuffleArray[I] = compactPtrInternal(CompactPtrBase, P);
 
@@ -813,23 +821,24 @@ private:
 
     const uptr AllocatedUser = Size * NumberOfBlocks;
     C->getStats().add(StatFree, AllocatedUser);
-    Region->AllocatedUser += AllocatedUser;
+    Region->MemMapInfo.AllocatedUser += AllocatedUser;
 
     return true;
   }
 
   void getStats(ScopedString *Str, uptr ClassId, RegionInfo *Region, uptr Rss)
       REQUIRES(Region->Mutex) {
-    if (Region->MappedUser == 0)
+    if (Region->MemMapInfo.MappedUser == 0)
       return;
     const uptr InUse =
         Region->FreeListInfo.PoppedBlocks - Region->FreeListInfo.PushedBlocks;
-    const uptr TotalChunks = Region->AllocatedUser / getSizeByClassId(ClassId);
+    const uptr TotalChunks =
+        Region->MemMapInfo.AllocatedUser / getSizeByClassId(ClassId);
     Str->append("%s %02zu (%6zu): mapped: %6zuK popped: %7zu pushed: %7zu "
                 "inuse: %6zu total: %6zu rss: %6zuK releases: %6zu last "
                 "released: %6zuK region: 0x%zx (0x%zx)\n",
                 Region->Exhausted ? "F" : " ", ClassId,
-                getSizeByClassId(ClassId), Region->MappedUser >> 10,
+                getSizeByClassId(ClassId), Region->MemMapInfo.MappedUser >> 10,
                 Region->FreeListInfo.PoppedBlocks,
                 Region->FreeListInfo.PushedBlocks, InUse, TotalChunks,
                 Rss >> 10, Region->ReleaseInfo.RangesReleased,
@@ -846,9 +855,9 @@ private:
     DCHECK_GE(Region->FreeListInfo.PoppedBlocks,
               Region->FreeListInfo.PushedBlocks);
     const uptr BytesInFreeList =
-        Region->AllocatedUser - (Region->FreeListInfo.PoppedBlocks -
-                                 Region->FreeListInfo.PushedBlocks) *
-                                    BlockSize;
+        Region->MemMapInfo.AllocatedUser - (Region->FreeListInfo.PoppedBlocks -
+                                            Region->FreeListInfo.PushedBlocks) *
+                                               BlockSize;
 
     if (UNLIKELY(BytesInFreeList == 0))
       return 0;
@@ -911,7 +920,8 @@ private:
     } // if (ReleaseType == ReleaseToOS::Normal)
 
     const uptr GroupSize = (1U << GroupSizeLog);
-    const uptr AllocatedUserEnd = Region->AllocatedUser + Region->RegionBeg;
+    const uptr AllocatedUserEnd =
+        Region->MemMapInfo.AllocatedUser + Region->RegionBeg;
     const uptr CompactPtrBase = getCompactPtrBaseByClassId(ClassId);
     auto DecompactPtr = [CompactPtrBase](CompactPtrT CompactPtr) {
       return decompactPtrInternal(CompactPtrBase, CompactPtr);
@@ -1111,8 +1121,8 @@ private:
     const uptr ReleaseRangeSize = ReleaseEnd - ReleaseBase;
     const uptr ReleaseOffset = ReleaseBase - Region->RegionBeg;
 
-    RegionReleaseRecorder<MemMapT> Recorder(&Region->MemMap, Region->RegionBeg,
-                                            ReleaseOffset);
+    RegionReleaseRecorder<MemMapT> Recorder(&Region->MemMapInfo.MemMap,
+                                            Region->RegionBeg, ReleaseOffset);
     PageReleaseContext Context(BlockSize, /*NumberOfRegions=*/1U,
                                ReleaseRangeSize, ReleaseOffset);
     // We may not be able to do the page release in a rare case that we may
@@ -1147,7 +1157,7 @@ private:
 
         Context.markRangeAsAllCounted(BatchGroupBase, BatchGroupUsedEnd,
                                       Region->RegionBeg, /*RegionIndex=*/0,
-                                      Region->AllocatedUser);
+                                      Region->MemMapInfo.AllocatedUser);
       } else {
         DCHECK_LT(NumBlocks, MaxContainedBlocks);
         // Note that we don't always visit blocks in each BatchGroup so that we
@@ -1155,7 +1165,7 @@ private:
         // BatchGroups.
         Context.markFreeBlocksInRegion(
             BG.Batches, DecompactPtr, Region->RegionBeg, /*RegionIndex=*/0,
-            Region->AllocatedUser, MayContainLastBlockInRegion);
+            Region->MemMapInfo.AllocatedUser, MayContainLastBlockInRegion);
       }
     }
 
