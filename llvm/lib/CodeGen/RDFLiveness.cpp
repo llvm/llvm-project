@@ -560,7 +560,11 @@ void Liveness::computePhiInfo() {
         auto UA = DFG.addr<UseNode *>(I.first);
         // Undef flag is checked above.
         assert((UA.Addr->getFlags() & NodeAttrs::Undef) == 0);
-        RegisterRef R(UI->first, I.second);
+        RegisterRef UseR(UI->first, I.second); // Ref from Uses
+        // R = intersection of the ref from the phi and the ref from Uses
+        RegisterRef R = PhiDRs.at(PhiA.Id).intersectWith(UseR);
+        if (!R)
+          continue;
         // Calculate the exposed part of the reached use.
         RegisterAggr Covered(PRI);
         for (NodeAddr<DefNode *> DA : getAllReachingDefs(R, UA)) {
@@ -781,9 +785,10 @@ void Liveness::computeLiveIns() {
   for (NodeAddr<BlockNode *> BA : Blocks) {
     MachineBasicBlock *MB = BA.Addr->getCode();
     RefMap &LON = PhiLON[MB];
-    for (auto P : BA.Addr->members_if(DFG.IsCode<NodeAttrs::Phi>, DFG))
+    for (auto P : BA.Addr->members_if(DFG.IsCode<NodeAttrs::Phi>, DFG)) {
       for (const RefMap::value_type &S : RealUseMap[P.Id])
         LON[S.first].insert(S.second.begin(), S.second.end());
+    }
   }
 
   if (Trace) {
