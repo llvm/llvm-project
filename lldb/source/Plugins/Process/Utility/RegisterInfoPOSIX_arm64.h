@@ -15,7 +15,7 @@
 #include "lldb/lldb-private.h"
 #include <map>
 
-enum class SVEState { Unknown, Disabled, FPSIMD, Full };
+enum class SVEState : uint8_t { Unknown, Disabled, FPSIMD, Full, Streaming };
 
 class RegisterInfoPOSIX_arm64
     : public lldb_private::RegisterInfoAndSetInterface {
@@ -26,9 +26,10 @@ public:
   enum {
     eRegsetMaskDefault = 0,
     eRegsetMaskSVE = 1,
-    eRegsetMaskPAuth = 2,
-    eRegsetMaskMTE = 4,
-    eRegsetMaskTLS = 8,
+    eRegsetMaskSSVE = 2,
+    eRegsetMaskPAuth = 4,
+    eRegsetMaskMTE = 8,
+    eRegsetMaskTLS = 16,
     eRegsetMaskDynamic = ~1,
   };
 
@@ -115,6 +116,7 @@ public:
   }
 
   bool IsSVEEnabled() const { return m_opt_regsets.AnySet(eRegsetMaskSVE); }
+  bool IsSSVEEnabled() const { return m_opt_regsets.AnySet(eRegsetMaskSSVE); }
   bool IsPAuthEnabled() const { return m_opt_regsets.AnySet(eRegsetMaskPAuth); }
   bool IsMTEEnabled() const { return m_opt_regsets.AnySet(eRegsetMaskMTE); }
 
