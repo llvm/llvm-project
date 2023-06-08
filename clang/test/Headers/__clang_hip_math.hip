@@ -1221,17 +1221,13 @@ extern "C" __device__ BOOL_TYPE test___isinf(double x) {
 
 // DEFAULT-LABEL: @test___isnanf(
 // DEFAULT-NEXT:  entry:
-// DEFAULT-NEXT:    [[CALL_I:%.*]] = tail call i32 @__ocml_isnan_f32(float noundef [[X:%.*]]) #[[ATTR14]]
-// DEFAULT-NEXT:    [[TOBOOL_I:%.*]] = icmp ne i32 [[CALL_I]], 0
-// DEFAULT-NEXT:    [[CONV:%.*]] = zext i1 [[TOBOOL_I]] to i32
+// DEFAULT-NEXT:    [[CMP_I:%.*]] = fcmp contract uno float [[X:%.*]], 0.000000e+00
+// DEFAULT-NEXT:    [[CONV:%.*]] = zext i1 [[CMP_I]] to i32
 // DEFAULT-NEXT:    ret i32 [[CONV]]
 //
 // FINITEONLY-LABEL: @test___isnanf(
 // FINITEONLY-NEXT:  entry:
-// FINITEONLY-NEXT:    [[CALL_I:%.*]] = tail call i32 @__ocml_isnan_f32(float noundef nofpclass(nan inf) [[X:%.*]]) #[[ATTR14]]
-// FINITEONLY-NEXT:    [[TOBOOL_I:%.*]] = icmp ne i32 [[CALL_I]], 0
-// FINITEONLY-NEXT:    [[CONV:%.*]] = zext i1 [[TOBOOL_I]] to i32
-// FINITEONLY-NEXT:    ret i32 [[CONV]]
+// FINITEONLY-NEXT:    ret i32 0
 //
 extern "C" __device__ BOOL_TYPE test___isnanf(float x) {
   return __isnanf(x);
@@ -1239,17 +1235,13 @@ extern "C" __device__ BOOL_TYPE test___isnanf(float x) {
 
 // DEFAULT-LABEL: @test___isnan(
 // DEFAULT-NEXT:  entry:
-// DEFAULT-NEXT:    [[CALL_I:%.*]] = tail call i32 @__ocml_isnan_f64(double noundef [[X:%.*]]) #[[ATTR14]]
-// DEFAULT-NEXT:    [[TOBOOL_I:%.*]] = icmp ne i32 [[CALL_I]], 0
-// DEFAULT-NEXT:    [[CONV:%.*]] = zext i1 [[TOBOOL_I]] to i32
+// DEFAULT-NEXT:    [[CMP_I:%.*]] = fcmp contract uno double [[X:%.*]], 0.000000e+00
+// DEFAULT-NEXT:    [[CONV:%.*]] = zext i1 [[CMP_I]] to i32
 // DEFAULT-NEXT:    ret i32 [[CONV]]
 //
 // FINITEONLY-LABEL: @test___isnan(
 // FINITEONLY-NEXT:  entry:
-// FINITEONLY-NEXT:    [[CALL_I:%.*]] = tail call i32 @__ocml_isnan_f64(double noundef nofpclass(nan inf) [[X:%.*]]) #[[ATTR14]]
-// FINITEONLY-NEXT:    [[TOBOOL_I:%.*]] = icmp ne i32 [[CALL_I]], 0
-// FINITEONLY-NEXT:    [[CONV:%.*]] = zext i1 [[TOBOOL_I]] to i32
-// FINITEONLY-NEXT:    ret i32 [[CONV]]
+// FINITEONLY-NEXT:    ret i32 0
 //
 extern "C" __device__ BOOL_TYPE test___isnan(double x) {
   return __isnan(x);
