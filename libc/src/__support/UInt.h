@@ -23,10 +23,10 @@
 
 namespace __llvm_libc::cpp {
 
-template <size_t Bits> struct UInt {
+template <size_t Bits, bool Signed> struct BigInt {
 
   static_assert(Bits > 0 && Bits % 64 == 0,
-                "Number of bits in UInt should be a multiple of 64.");
+                "Number of bits in BigInt should be a multiple of 64.");
   static constexpr size_t WORDCOUNT = Bits / 64;
   uint64_t val[WORDCOUNT]{};
 
@@ -35,11 +35,12 @@ template <size_t Bits> struct UInt {
   static constexpr uint64_t low(uint64_t v) { return v & MASK32; }
   static constexpr uint64_t high(uint64_t v) { return (v >> 32) & MASK32; }
 
-  constexpr UInt() = default;
+  constexpr BigInt() = default;
 
-  constexpr UInt(const UInt<Bits> &other) = default;
+  constexpr BigInt(const BigInt<Bits, Signed> &other) = default;
 
-  template <size_t OtherBits> constexpr UInt(const UInt<OtherBits> &other) {
+  template <size_t OtherBits, bool OtherSigned>
+  constexpr BigInt(const BigInt<OtherBits, OtherSigned> &other) {
     if (OtherBits >= Bits) {
       for (size_t i = 0; i < WORDCOUNT; ++i)
         val[i] = other[i];
@@ -47,14 +48,19 @@ template <size_t Bits> struct UInt {
       size_t i = 0;
       for (; i < OtherBits / 64; ++i)
         val[i] = other[i];
+      uint64_t sign = 0;
+      if constexpr (Signed && OtherSigned) {
+        sign = static_cast<uint64_t>(
+            -static_cast<int64_t>(other[OtherBits / 64 - 1] >> 63));
+      }
       for (; i < WORDCOUNT; ++i)
-        val[i] = 0;
+        val[i] = sign;
     }
   }
 
-  // Construct a UInt from a C array.
+  // Construct a BigInt from a C array.
   template <size_t N, enable_if_t<N <= WORDCOUNT, int> = 0>
-  constexpr UInt(const uint64_t (&nums)[N]) {
+  constexpr BigInt(const uint64_t (&nums)[N]) {
     size_t min_wordcount = N < WORDCOUNT ? N : WORDCOUNT;
     size_t i = 0;
     for (; i < min_wordcount; ++i)
@@ -66,40 +72,57 @@ template <size_t Bits> struct UInt {
   }
 
   // Initialize the first word to |v| and the rest to 0.
-  constexpr UInt(uint64_t v) {
-    val[0] = v;
-    for (size_t i = 1; i < WORDCOUNT; ++i) {
-      val[i] = 0;
+  template <typename T,
+            typename = cpp::enable_if_t<is_integral_v<T> && sizeof(T) <= 16>>
+  constexpr BigInt(T v) {
+    val[0] = static_cast<uint64_t>(v);
+
+    if constexpr (Bits == 64)
+      return;
+
+    // Bits is at least 128.
+    size_t i = 1;
+    if constexpr (sizeof(T) == 16) {
+      val[1] = static_cast<uint64_t>(v >> 64);
+      i = 2;
+    }
+
+    uint64_t sign = (Signed && (v < 0)) ? 0xffff'ffff'ffff'ffff : 0;
+    for (; i < WORDCOUNT; ++i) {
+      val[i] = sign;
     }
   }
-  constexpr explicit UInt(const cpp::array<uint64_t, WORDCOUNT> &words) {
+
+  constexpr explicit BigInt(const cpp::array<uint64_t, WORDCOUNT> &words) {
     for (size_t i = 0; i < WORDCOUNT; ++i)
       val[i] = words[i];
   }
 
-  constexpr explicit operator unsigned long long() const {
-    return static_cast<unsigned long long>(val[0]);
-  }
+  template <typename T, typename = cpp::enable_if_t<cpp::is_integral_v<T> &&
+                                                    sizeof(T) <= 16 &&
+                                                    !cpp::is_same_v<T, bool>>>
+  constexpr explicit operator T() const {
+    if constexpr (sizeof(T) <= 8)
+      return static_cast<T>(val[0]);
 
-  constexpr explicit operator unsigned long() const {
-    return static_cast<unsigned long>(val[0]);
-  }
+    // T is 128-bit.
+    T lo = static_cast<T>(val[0]);
 
-  constexpr explicit operator unsigned int() const {
-    return static_cast<unsigned int>(val[0]);
-  }
-
-  constexpr explicit operator unsigned short() const {
-    return static_cast<unsigned short>(val[0]);
-  }
-
-  constexpr explicit operator unsigned char() const {
-    return static_cast<unsigned char>(val[0]);
+    if constexpr (Bits == 64) {
+      if constexpr (Signed) {
+        // Extend sign for negative numbers.
+        return (val[0] >> 63) ? ((T(-1) << 64) + lo) : lo;
+      } else {
+        return lo;
+      }
+    } else {
+      return (static_cast<T>(val[1]) << 64) + lo;
+    }
   }
 
   constexpr explicit operator bool() const { return !is_zero(); }
 
-  UInt<Bits> &operator=(const UInt<Bits> &other) = default;
+  BigInt<Bits, Signed> &operator=(const BigInt<Bits, Signed> &other) = default;
 
   constexpr bool is_zero() const {
     for (size_t i = 0; i < WORDCOUNT; ++i) {
@@ -111,7 +134,7 @@ template <size_t Bits> struct UInt {
 
   // Add x to this number and store the result in this number.
   // Returns the carry value produced by the addition operation.
-  constexpr uint64_t add(const UInt<Bits> &x) {
+  constexpr uint64_t add(const BigInt<Bits, Signed> &x) {
     SumCarry<uint64_t> s{0, 0};
     for (size_t i = 0; i < WORDCOUNT; ++i) {
       s = add_with_carry(val[i], x.val[i], s.carry);
@@ -120,8 +143,8 @@ template <size_t Bits> struct UInt {
     return s.carry;
   }
 
-  UInt<Bits> operator+(const UInt<Bits> &other) const {
-    UInt<Bits> result;
+  BigInt<Bits, Signed> operator+(const BigInt<Bits, Signed> &other) const {
+    BigInt<Bits, Signed> result;
     SumCarry<uint64_t> s{0, 0};
     for (size_t i = 0; i < WORDCOUNT; ++i) {
       s = add_with_carry(val[i], other.val[i], s.carry);
@@ -132,8 +155,8 @@ template <size_t Bits> struct UInt {
 
   // This will only apply when initializing a variable from constant values, so
   // it will always use the constexpr version of add_with_carry.
-  constexpr UInt<Bits> operator+(UInt<Bits> &&other) const {
-    UInt<Bits> result;
+  constexpr BigInt<Bits, Signed> operator+(BigInt<Bits, Signed> &&other) const {
+    BigInt<Bits, Signed> result;
     SumCarry<uint64_t> s{0, 0};
     for (size_t i = 0; i < WORDCOUNT; ++i) {
       s = add_with_carry_const(val[i], other.val[i], s.carry);
@@ -142,14 +165,15 @@ template <size_t Bits> struct UInt {
     return result;
   }
 
-  constexpr UInt<Bits> &operator+=(const UInt<Bits> &other) {
+  constexpr BigInt<Bits, Signed> &
+  operator+=(const BigInt<Bits, Signed> &other) {
     add(other); // Returned carry value is ignored.
     return *this;
   }
 
   // Subtract x to this number and store the result in this number.
   // Returns the carry value produced by the subtraction operation.
-  constexpr uint64_t sub(const UInt<Bits> &x) {
+  constexpr uint64_t sub(const BigInt<Bits, Signed> &x) {
     DiffBorrow<uint64_t> d{0, 0};
     for (size_t i = 0; i < WORDCOUNT; ++i) {
       d = sub_with_borrow(val[i], x.val[i], d.borrow);
@@ -158,8 +182,8 @@ template <size_t Bits> struct UInt {
     return d.borrow;
   }
 
-  UInt<Bits> operator-(const UInt<Bits> &other) const {
-    UInt<Bits> result;
+  BigInt<Bits, Signed> operator-(const BigInt<Bits, Signed> &other) const {
+    BigInt<Bits, Signed> result;
     DiffBorrow<uint64_t> d{0, 0};
     for (size_t i = 0; i < WORDCOUNT; ++i) {
       d = sub_with_borrow(val[i], other.val[i], d.borrow);
@@ -168,8 +192,8 @@ template <size_t Bits> struct UInt {
     return result;
   }
 
-  constexpr UInt<Bits> operator-(UInt<Bits> &&other) const {
-    UInt<Bits> result;
+  constexpr BigInt<Bits, Signed> operator-(BigInt<Bits, Signed> &&other) const {
+    BigInt<Bits, Signed> result;
     DiffBorrow<uint64_t> d{0, 0};
     for (size_t i = 0; i < WORDCOUNT; ++i) {
       d = sub_with_borrow_const(val[i], other.val[i], d.borrow);
@@ -178,7 +202,8 @@ template <size_t Bits> struct UInt {
     return result;
   }
 
-  constexpr UInt<Bits> &operator-=(const UInt<Bits> &other) {
+  constexpr BigInt<Bits, Signed> &
+  operator-=(const BigInt<Bits, Signed> &other) {
     // TODO(lntue): Set overflow flag / errno when carry is true.
     sub(other);
     return *this;
@@ -191,11 +216,11 @@ template <size_t Bits> struct UInt {
   // carry bits.
   // Returns the carry value produced by the multiplication operation.
   constexpr uint64_t mul(uint64_t x) {
-    UInt<128> partial_sum(0);
+    BigInt<128, Signed> partial_sum(0);
     uint64_t carry = 0;
     for (size_t i = 0; i < WORDCOUNT; ++i) {
       NumberPair<uint64_t> prod = full_mul(val[i], x);
-      UInt<128> tmp({prod.lo, prod.hi});
+      BigInt<128, Signed> tmp({prod.lo, prod.hi});
       carry += partial_sum.add(tmp);
       val[i] = partial_sum.val[0];
       partial_sum.val[0] = partial_sum.val[1];
@@ -205,42 +230,60 @@ template <size_t Bits> struct UInt {
     return partial_sum.val[1];
   }
 
-  constexpr UInt<Bits> operator*(const UInt<Bits> &other) const {
-    if constexpr (WORDCOUNT == 1) {
-      return {val[0] * other.val[0]};
+  constexpr BigInt<Bits, Signed>
+  operator*(const BigInt<Bits, Signed> &other) const {
+    if constexpr (Signed) {
+      BigInt<Bits, false> a(*this);
+      BigInt<Bits, false> b(other);
+      bool a_neg = (a.val[WORDCOUNT - 1] >> 63);
+      bool b_neg = (b.val[WORDCOUNT - 1] >> 63);
+      if (a_neg)
+        a = -a;
+      if (b_neg)
+        b = -b;
+      BigInt<Bits, false> prod = a * b;
+      if (a_neg != b_neg)
+        prod = -prod;
+      return static_cast<BigInt<Bits, true>>(prod);
     } else {
-      UInt<Bits> result(0);
-      UInt<128> partial_sum(0);
-      uint64_t carry = 0;
-      for (size_t i = 0; i < WORDCOUNT; ++i) {
-        for (size_t j = 0; j <= i; j++) {
-          NumberPair<uint64_t> prod = full_mul(val[j], other.val[i - j]);
-          UInt<128> tmp({prod.lo, prod.hi});
-          carry += partial_sum.add(tmp);
+
+      if constexpr (WORDCOUNT == 1) {
+        return {val[0] * other.val[0]};
+      } else {
+        BigInt<Bits, Signed> result(0);
+        BigInt<128, Signed> partial_sum(0);
+        uint64_t carry = 0;
+        for (size_t i = 0; i < WORDCOUNT; ++i) {
+          for (size_t j = 0; j <= i; j++) {
+            NumberPair<uint64_t> prod = full_mul(val[j], other.val[i - j]);
+            BigInt<128, Signed> tmp({prod.lo, prod.hi});
+            carry += partial_sum.add(tmp);
+          }
+          result.val[i] = partial_sum.val[0];
+          partial_sum.val[0] = partial_sum.val[1];
+          partial_sum.val[1] = carry;
+          carry = 0;
         }
-        result.val[i] = partial_sum.val[0];
-        partial_sum.val[0] = partial_sum.val[1];
-        partial_sum.val[1] = carry;
-        carry = 0;
+        return result;
       }
-      return result;
     }
   }
 
-  // Return the full product.
+  // Return the full product, only unsigned for now.
   template <size_t OtherBits>
-  constexpr UInt<Bits + OtherBits> ful_mul(const UInt<OtherBits> &other) const {
-    UInt<Bits + OtherBits> result(0);
-    UInt<128> partial_sum(0);
+  constexpr BigInt<Bits + OtherBits, Signed>
+  ful_mul(const BigInt<OtherBits, Signed> &other) const {
+    BigInt<Bits + OtherBits, Signed> result(0);
+    BigInt<128, Signed> partial_sum(0);
     uint64_t carry = 0;
-    constexpr size_t OTHER_WORDCOUNT = UInt<OtherBits>::WORDCOUNT;
+    constexpr size_t OTHER_WORDCOUNT = BigInt<OtherBits, Signed>::WORDCOUNT;
     for (size_t i = 0; i <= WORDCOUNT + OTHER_WORDCOUNT - 2; ++i) {
       const size_t lower_idx =
           i < OTHER_WORDCOUNT ? 0 : i - OTHER_WORDCOUNT + 1;
       const size_t upper_idx = i < WORDCOUNT ? i : WORDCOUNT - 1;
       for (size_t j = lower_idx; j <= upper_idx; ++j) {
         NumberPair<uint64_t> prod = full_mul(val[j], other.val[i - j]);
-        UInt<128> tmp({prod.lo, prod.hi});
+        BigInt<128, Signed> tmp({prod.lo, prod.hi});
         carry += partial_sum.add(tmp);
       }
       result.val[i] = partial_sum.val[0];
@@ -273,16 +316,17 @@ template <size_t Bits> struct UInt {
   //    196      3         9           6            2
   //    256      4        16          10            3
   //    512      8        64          36            7
-  constexpr UInt<Bits> quick_mul_hi(const UInt<Bits> &other) const {
-    UInt<Bits> result(0);
-    UInt<128> partial_sum(0);
+  constexpr BigInt<Bits, Signed>
+  quick_mul_hi(const BigInt<Bits, Signed> &other) const {
+    BigInt<Bits, Signed> result(0);
+    BigInt<128, Signed> partial_sum(0);
     uint64_t carry = 0;
     // First round of accumulation for those at WORDCOUNT - 1 in the full
     // product.
     for (size_t i = 0; i < WORDCOUNT; ++i) {
       NumberPair<uint64_t> prod =
           full_mul(val[i], other.val[WORDCOUNT - 1 - i]);
-      UInt<128> tmp({prod.lo, prod.hi});
+      BigInt<128, Signed> tmp({prod.lo, prod.hi});
       carry += partial_sum.add(tmp);
     }
     for (size_t i = WORDCOUNT; i < 2 * WORDCOUNT - 1; ++i) {
@@ -291,7 +335,7 @@ template <size_t Bits> struct UInt {
       carry = 0;
       for (size_t j = i - WORDCOUNT + 1; j < WORDCOUNT; ++j) {
         NumberPair<uint64_t> prod = full_mul(val[j], other.val[i - j]);
-        UInt<128> tmp({prod.lo, prod.hi});
+        BigInt<128, Signed> tmp({prod.lo, prod.hi});
         carry += partial_sum.add(tmp);
       }
       result.val[i - WORDCOUNT] = partial_sum.val[0];
@@ -303,8 +347,8 @@ template <size_t Bits> struct UInt {
   // pow takes a power and sets this to its starting value to that power. Zero
   // to the zeroth power returns 1.
   constexpr void pow_n(uint64_t power) {
-    UInt<Bits> result = 1;
-    UInt<Bits> cur_power = *this;
+    BigInt<Bits, Signed> result = 1;
+    BigInt<Bits, Signed> cur_power = *this;
 
     while (power > 0) {
       if ((power % 2) > 0) {
@@ -316,13 +360,16 @@ template <size_t Bits> struct UInt {
     *this = result;
   }
 
-  // div takes another UInt of the same size and divides this by it. The value
+  // TODO: Make division work correctly for signed integers.
+
+  // div takes another BigInt of the same size and divides this by it. The value
   // of this will be set to the quotient, and the return value is the remainder.
-  constexpr optional<UInt<Bits>> div(const UInt<Bits> &other) {
-    UInt<Bits> remainder(0);
+  constexpr optional<BigInt<Bits, Signed>>
+  div(const BigInt<Bits, Signed> &other) {
+    BigInt<Bits, Signed> remainder(0);
     if (*this < other) {
       remainder = *this;
-      *this = UInt<Bits>(0);
+      *this = BigInt<Bits, Signed>(0);
       return remainder;
     }
     if (other == 1) {
@@ -332,15 +379,15 @@ template <size_t Bits> struct UInt {
       return nullopt;
     }
 
-    UInt<Bits> quotient(0);
-    UInt<Bits> subtractor = other;
+    BigInt<Bits, Signed> quotient(0);
+    BigInt<Bits, Signed> subtractor = other;
     int cur_bit = subtractor.clz() - this->clz();
     subtractor.shift_left(cur_bit);
 
     for (; cur_bit >= 0 && *this > 0; --cur_bit, subtractor.shift_right(1)) {
       if (*this >= subtractor) {
         this->sub(subtractor);
-        quotient = quotient | (UInt<Bits>(1) << cur_bit);
+        quotient = quotient | (BigInt<Bits, Signed>(1) << cur_bit);
       }
     }
     remainder = *this;
@@ -348,9 +395,8 @@ template <size_t Bits> struct UInt {
     return remainder;
   }
 
-  // Efficiently perform UInt / (x * 2^e), where x is a 32-bit unsigned integer,
-  // and return the remainder.
-  // The main idea is as follow:
+  // Efficiently perform BigInt / (x * 2^e), where x is a 32-bit unsigned
+  // integer, and return the remainder. The main idea is as follow:
   //   Let q = y / (x * 2^e) be the quotient, and
   //       r = y % (x * 2^e) be the remainder.
   //   First, notice that:
@@ -361,19 +407,20 @@ template <size_t Bits> struct UInt {
   //   Since the remainder of each division step < x < 2^32, the computation of
   // each step is now properly contained within uint64_t.
   //   And finally we perform some extra alignment steps for the remaining bits.
-  constexpr optional<UInt<Bits>> div_uint32_times_pow_2(uint32_t x, size_t e) {
-    UInt<Bits> remainder(0);
+  constexpr optional<BigInt<Bits, Signed>> div_uint32_times_pow_2(uint32_t x,
+                                                                  size_t e) {
+    BigInt<Bits, Signed> remainder(0);
 
     if (x == 0) {
       return nullopt;
     }
     if (e >= Bits) {
       remainder = *this;
-      *this = UInt<Bits>(0);
+      *this = BigInt<Bits, false>(0);
       return remainder;
     }
 
-    UInt<Bits> quotient(0);
+    BigInt<Bits, Signed> quotient(0);
     uint64_t x64 = static_cast<uint64_t>(x);
     // lower64 = smallest multiple of 64 that is >= e.
     size_t lower64 = ((e >> 6) + ((e & 63) != 0)) << 6;
@@ -468,18 +515,27 @@ template <size_t Bits> struct UInt {
     return remainder;
   }
 
-  constexpr UInt<Bits> operator/(const UInt<Bits> &other) const {
-    UInt<Bits> result(*this);
+  constexpr BigInt<Bits, Signed>
+  operator/(const BigInt<Bits, Signed> &other) const {
+    BigInt<Bits, Signed> result(*this);
     result.div(other);
     return result;
   }
 
-  constexpr UInt<Bits> operator%(const UInt<Bits> &other) const {
-    UInt<Bits> result(*this);
+  constexpr BigInt<Bits, Signed> &
+  operator/=(const BigInt<Bits, Signed> &other) {
+    div(other);
+    return *this;
+  }
+
+  constexpr BigInt<Bits, Signed>
+  operator%(const BigInt<Bits, Signed> &other) const {
+    BigInt<Bits, Signed> result(*this);
     return *result.div(other);
   }
 
-  constexpr UInt<Bits> &operator*=(const UInt<Bits> &other) {
+  constexpr BigInt<Bits, Signed> &
+  operator*=(const BigInt<Bits, Signed> &other) {
     *this = *this * other;
     return *this;
   }
@@ -540,13 +596,13 @@ template <size_t Bits> struct UInt {
     }
   }
 
-  constexpr UInt<Bits> operator<<(size_t s) const {
-    UInt<Bits> result(*this);
+  constexpr BigInt<Bits, Signed> operator<<(size_t s) const {
+    BigInt<Bits, Signed> result(*this);
     result.shift_left(s);
     return result;
   }
 
-  constexpr UInt<Bits> &operator<<=(size_t s) {
+  constexpr BigInt<Bits, Signed> &operator<<=(size_t s) {
     shift_left(s);
     return *this;
   }
@@ -561,7 +617,11 @@ template <size_t Bits> struct UInt {
         return;
       }
       __uint128_t tmp = __uint128_t(val[0]) + (__uint128_t(val[1]) << 64);
-      tmp >>= s;
+      if constexpr (Signed) {
+        tmp = static_cast<__uint128_t>(static_cast<__int128_t>(tmp) >> s);
+      } else {
+        tmp >>= s;
+      }
       val[0] = uint64_t(tmp);
       val[1] = uint64_t(tmp >> 64);
       return;
@@ -574,13 +634,19 @@ template <size_t Bits> struct UInt {
     const size_t shift = s % 64; // Bit shift in the remaining words.
 
     size_t i = 0;
+    uint64_t sign = Signed ? (val[WORDCOUNT - 1] >> 63) : 0;
 
     if (drop < WORDCOUNT) {
       if (shift > 0) {
         for (size_t j = drop; j < WORDCOUNT - 1; ++i, ++j) {
           val[i] = (val[j] >> shift) | (val[j + 1] << (64 - shift));
         }
-        val[i] = val[WORDCOUNT - 1] >> shift;
+        if constexpr (Signed) {
+          val[i] = static_cast<uint64_t>(
+              static_cast<int64_t>(val[WORDCOUNT - 1]) >> shift);
+        } else {
+          val[i] = val[WORDCOUNT - 1] >> shift;
+        }
         ++i;
       } else {
         for (size_t j = drop; j < WORDCOUNT; ++i, ++j) {
@@ -590,68 +656,80 @@ template <size_t Bits> struct UInt {
     }
 
     for (; i < WORDCOUNT; ++i) {
-      val[i] = 0;
+      val[i] = sign;
     }
   }
 
-  constexpr UInt<Bits> operator>>(size_t s) const {
-    UInt<Bits> result(*this);
+  constexpr BigInt<Bits, Signed> operator>>(size_t s) const {
+    BigInt<Bits, Signed> result(*this);
     result.shift_right(s);
     return result;
   }
 
-  constexpr UInt<Bits> &operator>>=(size_t s) {
+  constexpr BigInt<Bits, Signed> &operator>>=(size_t s) {
     shift_right(s);
     return *this;
   }
 
-  constexpr UInt<Bits> operator&(const UInt<Bits> &other) const {
-    UInt<Bits> result;
+  constexpr BigInt<Bits, Signed>
+  operator&(const BigInt<Bits, Signed> &other) const {
+    BigInt<Bits, Signed> result;
     for (size_t i = 0; i < WORDCOUNT; ++i)
       result.val[i] = val[i] & other.val[i];
     return result;
   }
 
-  constexpr UInt<Bits> &operator&=(const UInt<Bits> &other) {
+  constexpr BigInt<Bits, Signed> &
+  operator&=(const BigInt<Bits, Signed> &other) {
     for (size_t i = 0; i < WORDCOUNT; ++i)
       val[i] &= other.val[i];
     return *this;
   }
 
-  constexpr UInt<Bits> operator|(const UInt<Bits> &other) const {
-    UInt<Bits> result;
+  constexpr BigInt<Bits, Signed>
+  operator|(const BigInt<Bits, Signed> &other) const {
+    BigInt<Bits, Signed> result;
     for (size_t i = 0; i < WORDCOUNT; ++i)
       result.val[i] = val[i] | other.val[i];
     return result;
   }
 
-  constexpr UInt<Bits> &operator|=(const UInt<Bits> &other) {
+  constexpr BigInt<Bits, Signed> &
+  operator|=(const BigInt<Bits, Signed> &other) {
     for (size_t i = 0; i < WORDCOUNT; ++i)
       val[i] |= other.val[i];
     return *this;
   }
 
-  constexpr UInt<Bits> operator^(const UInt<Bits> &other) const {
-    UInt<Bits> result;
+  constexpr BigInt<Bits, Signed>
+  operator^(const BigInt<Bits, Signed> &other) const {
+    BigInt<Bits, Signed> result;
     for (size_t i = 0; i < WORDCOUNT; ++i)
       result.val[i] = val[i] ^ other.val[i];
     return result;
   }
 
-  constexpr UInt<Bits> &operator^=(const UInt<Bits> &other) {
+  constexpr BigInt<Bits, Signed> &
+  operator^=(const BigInt<Bits, Signed> &other) {
     for (size_t i = 0; i < WORDCOUNT; ++i)
       val[i] ^= other.val[i];
     return *this;
   }
 
-  constexpr UInt<Bits> operator~() const {
-    UInt<Bits> result;
+  constexpr BigInt<Bits, Signed> operator~() const {
+    BigInt<Bits, Signed> result;
     for (size_t i = 0; i < WORDCOUNT; ++i)
       result.val[i] = ~val[i];
     return result;
   }
 
-  constexpr bool operator==(const UInt<Bits> &other) const {
+  constexpr BigInt<Bits, Signed> operator-() const {
+    BigInt<Bits, Signed> result = ~(*this);
+    result.add(BigInt<Bits, Signed>(1));
+    return result;
+  }
+
+  constexpr bool operator==(const BigInt<Bits, Signed> &other) const {
     for (size_t i = 0; i < WORDCOUNT; ++i) {
       if (val[i] != other.val[i])
         return false;
@@ -659,7 +737,7 @@ template <size_t Bits> struct UInt {
     return true;
   }
 
-  constexpr bool operator!=(const UInt<Bits> &other) const {
+  constexpr bool operator!=(const BigInt<Bits, Signed> &other) const {
     for (size_t i = 0; i < WORDCOUNT; ++i) {
       if (val[i] != other.val[i])
         return true;
@@ -667,7 +745,15 @@ template <size_t Bits> struct UInt {
     return false;
   }
 
-  constexpr bool operator>(const UInt<Bits> &other) const {
+  constexpr bool operator>(const BigInt<Bits, Signed> &other) const {
+    if constexpr (Signed) {
+      // Check for different signs;
+      bool a_sign = val[WORDCOUNT - 1] >> 63;
+      bool b_sign = other.val[WORDCOUNT - 1] >> 63;
+      if (a_sign != b_sign) {
+        return b_sign;
+      }
+    }
     for (size_t i = WORDCOUNT; i > 0; --i) {
       uint64_t word = val[i - 1];
       uint64_t other_word = other.val[i - 1];
@@ -680,7 +766,15 @@ template <size_t Bits> struct UInt {
     return false;
   }
 
-  constexpr bool operator>=(const UInt<Bits> &other) const {
+  constexpr bool operator>=(const BigInt<Bits, Signed> &other) const {
+    if constexpr (Signed) {
+      // Check for different signs;
+      bool a_sign = val[WORDCOUNT - 1] >> 63;
+      bool b_sign = other.val[WORDCOUNT - 1] >> 63;
+      if (a_sign != b_sign) {
+        return b_sign;
+      }
+    }
     for (size_t i = WORDCOUNT; i > 0; --i) {
       uint64_t word = val[i - 1];
       uint64_t other_word = other.val[i - 1];
@@ -693,7 +787,16 @@ template <size_t Bits> struct UInt {
     return true;
   }
 
-  constexpr bool operator<(const UInt<Bits> &other) const {
+  constexpr bool operator<(const BigInt<Bits, Signed> &other) const {
+    if constexpr (Signed) {
+      // Check for different signs;
+      bool a_sign = val[WORDCOUNT - 1] >> 63;
+      bool b_sign = other.val[WORDCOUNT - 1] >> 63;
+      if (a_sign != b_sign) {
+        return a_sign;
+      }
+    }
+
     for (size_t i = WORDCOUNT; i > 0; --i) {
       uint64_t word = val[i - 1];
       uint64_t other_word = other.val[i - 1];
@@ -706,7 +809,15 @@ template <size_t Bits> struct UInt {
     return false;
   }
 
-  constexpr bool operator<=(const UInt<Bits> &other) const {
+  constexpr bool operator<=(const BigInt<Bits, Signed> &other) const {
+    if constexpr (Signed) {
+      // Check for different signs;
+      bool a_sign = val[WORDCOUNT - 1] >> 63;
+      bool b_sign = other.val[WORDCOUNT - 1] >> 63;
+      if (a_sign != b_sign) {
+        return a_sign;
+      }
+    }
     for (size_t i = WORDCOUNT; i > 0; --i) {
       uint64_t word = val[i - 1];
       uint64_t other_word = other.val[i - 1];
@@ -719,10 +830,30 @@ template <size_t Bits> struct UInt {
     return true;
   }
 
-  constexpr UInt<Bits> &operator++() {
-    UInt<Bits> one(1);
+  constexpr BigInt<Bits, Signed> &operator++() {
+    BigInt<Bits, Signed> one(1);
     add(one);
     return *this;
+  }
+
+  constexpr BigInt<Bits, Signed> operator++(int) {
+    BigInt<Bits, Signed> oldval(*this);
+    BigInt<Bits, Signed> one(1);
+    add(one);
+    return oldval;
+  }
+
+  constexpr BigInt<Bits, Signed> &operator--() {
+    BigInt<Bits, Signed> one(1);
+    sub(one);
+    return *this;
+  }
+
+  constexpr BigInt<Bits, Signed> operator--(int) {
+    BigInt<Bits, Signed> oldval(*this);
+    BigInt<Bits, Signed> one(1);
+    sub(one);
+    return oldval;
   }
 
   // Return the i-th 64-bit word of the number.
@@ -736,23 +867,46 @@ template <size_t Bits> struct UInt {
   const uint64_t *data() const { return val; }
 };
 
-// Provides limits of UInt<128>.
+template <size_t Bits> using UInt = BigInt<Bits, false>;
+
+template <size_t Bits> using Int = BigInt<Bits, true>;
+
+// Provides limits of U/Int<128>.
 template <> class numeric_limits<UInt<128>> {
 public:
-  static constexpr UInt<128> max() { return ~UInt<128>(0); }
-  static constexpr UInt<128> min() { return 0; }
+  static constexpr UInt<128> max() {
+    return UInt<128>({0xffff'ffff'ffff'ffff, 0xffff'ffff'ffff'ffff});
+  }
+  static constexpr UInt<128> min() { return UInt<128>(0); }
 };
 
-// Provides is_integral of UInt<128>, UInt<192>, UInt<256>.
-template <size_t Bits> struct is_integral<UInt<Bits>> : public cpp::true_type {
+template <> class numeric_limits<Int<128>> {
+public:
+  static constexpr Int<128> max() {
+    return Int<128>({0xffff'ffff'ffff'ffff, 0x7fff'ffff'ffff'ffff});
+  }
+  static constexpr Int<128> min() {
+    return Int<128>({0, 0x8000'0000'0000'0000});
+  }
+};
+
+// Provides is_integral of U/Int<128>, U/Int<192>, U/Int<256>.
+template <size_t Bits, bool Signed>
+struct is_integral<BigInt<Bits, Signed>> : cpp::true_type {
   static_assert(Bits > 0 && Bits % 64 == 0,
-                "Number of bits in UInt should be a multiple of 64.");
+                "Number of bits in BigInt should be a multiple of 64.");
 };
 
 // Provides is_unsigned of UInt<128>, UInt<192>, UInt<256>.
 template <size_t Bits> struct is_unsigned<UInt<Bits>> : public cpp::true_type {
   static_assert(Bits > 0 && Bits % 64 == 0,
                 "Number of bits in UInt should be a multiple of 64.");
+};
+
+template <size_t Bits>
+struct make_unsigned<Int<Bits>> : type_identity<UInt<Bits>> {
+  static_assert(Bits > 0 && Bits % 64 == 0,
+                "Number of bits in Int should be a multiple of 64.");
 };
 
 } // namespace __llvm_libc::cpp
