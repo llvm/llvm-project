@@ -9,9 +9,16 @@
 #ifndef FORTRAN_LOWER_INTRINSICCALL_H
 #define FORTRAN_LOWER_INTRINSICCALL_H
 
+#include "flang/Optimizer/Builder/BoxValue.h"
 #include "flang/Optimizer/Builder/FIRBuilder.h"
+#include "flang/Optimizer/Builder/Runtime/Character.h"
+#include "flang/Optimizer/Builder/Runtime/Numeric.h"
 #include "flang/Optimizer/Builder/Runtime/RTBuilder.h"
+#include "flang/Runtime/entry-names.h"
 #include "flang/Runtime/iostat.h"
+#include "mlir/Dialect/Complex/IR/Complex.h"
+#include "mlir/Dialect/LLVMIR/LLVMDialect.h"
+#include "mlir/Dialect/Math/IR/Math.h"
 #include <optional>
 
 namespace fir {
@@ -88,10 +95,6 @@ enum class LowerIntrinsicArgAs {
   Inquired
 };
 
-/// Enums used to templatize vector intrinsic function generators. Enum does
-/// not contain every vector intrinsic, only intrinsics that share generators.
-enum class VecOp { Add, And, Mul, Sub, Xor };
-
 /// Define how a given intrinsic argument must be lowered.
 struct ArgLoweringRule {
   LowerIntrinsicArgAs lowerAs;
@@ -107,6 +110,11 @@ struct ArgLoweringRule {
   //    - no-op
   bool handleDynamicOptional;
 };
+
+constexpr auto asValue = fir::LowerIntrinsicArgAs::Value;
+constexpr auto asAddr = fir::LowerIntrinsicArgAs::Addr;
+constexpr auto asBox = fir::LowerIntrinsicArgAs::Box;
+constexpr auto asInquired = fir::LowerIntrinsicArgAs::Inquired;
 
 /// Opaque class defining the argument lowering rules for all the argument of
 /// an intrinsic.
@@ -314,10 +322,6 @@ struct IntrinsicLibrary {
   /// is ignored because this is already reflected in the result type.
   mlir::Value genConversion(mlir::Type, llvm::ArrayRef<mlir::Value>);
 
-  // PPC intrinsic handlers.
-  template <bool isImm>
-  void genMtfsf(llvm::ArrayRef<fir::ExtendedValue>);
-
   /// In the template helper below:
   ///  - "FN func" is a callback to generate the related intrinsic runtime call.
   ///  - "FD funcDim" is a callback to generate the "dim" runtime call.
@@ -338,11 +342,6 @@ struct IntrinsicLibrary {
   fir::ExtendedValue genReduction(FN func, FD funcDim, llvm::StringRef errMsg,
                                   mlir::Type resultType,
                                   llvm::ArrayRef<fir::ExtendedValue> args);
-
-  template <VecOp>
-  fir::ExtendedValue
-  genVecAddAndMulSubXor(mlir::Type resultType,
-                        llvm::ArrayRef<fir::ExtendedValue> args);
 
   /// Define the different FIR generators that can be mapped to intrinsic to
   /// generate the related code.
@@ -558,6 +557,58 @@ static inline mlir::FunctionType genFuncType(mlir::MLIRContext *context,
   auto resType = getTypeHelper(context, builder, TyR::ty, TyR::kind);
   return mlir::FunctionType::get(context, argTypes, {resType});
 }
+
+//===----------------------------------------------------------------------===//
+// Helper functions for argument handling.
+//===----------------------------------------------------------------------===//
+static inline mlir::Type getConvertedElementType(mlir::MLIRContext *context,
+                                                 mlir::Type eleTy) {
+  if (eleTy.isa<mlir::IntegerType>() && !eleTy.isSignlessInteger()) {
+    const auto intTy{eleTy.dyn_cast<mlir::IntegerType>()};
+    auto newEleTy{mlir::IntegerType::get(context, intTy.getWidth())};
+    return newEleTy;
+  }
+  return eleTy;
+}
+
+static inline llvm::SmallVector<mlir::Value, 4>
+getBasesForArgs(llvm::ArrayRef<fir::ExtendedValue> args) {
+  llvm::SmallVector<mlir::Value, 4> baseVec;
+  for (auto arg : args)
+    baseVec.push_back(getBase(arg));
+  return baseVec;
+}
+
+static inline llvm::SmallVector<mlir::Type, 4>
+getTypesForArgs(llvm::ArrayRef<mlir::Value> args) {
+  llvm::SmallVector<mlir::Type, 4> typeVec;
+  for (auto arg : args)
+    typeVec.push_back(arg.getType());
+  return typeVec;
+}
+
+mlir::Value genLibCall(fir::FirOpBuilder &builder, mlir::Location loc,
+                       llvm::StringRef libFuncName,
+                       mlir::FunctionType libFuncType,
+                       llvm::ArrayRef<mlir::Value> args);
+
+template <typename T>
+mlir::Value genMathOp(fir::FirOpBuilder &builder, mlir::Location loc,
+                      llvm::StringRef mathLibFuncName,
+                      mlir::FunctionType mathLibFuncType,
+                      llvm::ArrayRef<mlir::Value> args);
+
+template <typename T>
+mlir::Value genComplexMathOp(fir::FirOpBuilder &builder, mlir::Location loc,
+                             llvm::StringRef mathLibFuncName,
+                             mlir::FunctionType mathLibFuncType,
+                             llvm::ArrayRef<mlir::Value> args);
+
+mlir::Value genLibSplitComplexArgsCall(fir::FirOpBuilder &builder,
+                                       mlir::Location loc,
+                                       llvm::StringRef libFuncName,
+                                       mlir::FunctionType libFuncType,
+                                       llvm::ArrayRef<mlir::Value> args);
 
 /// Return argument lowering rules for an intrinsic.
 /// Returns a nullptr if all the intrinsic arguments should be lowered by value.
