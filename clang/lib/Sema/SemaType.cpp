@@ -40,7 +40,6 @@
 #include "llvm/ADT/SmallString.h"
 #include "llvm/IR/DerivedTypes.h"
 #include "llvm/Support/ErrorHandling.h"
-#include "llvm/TargetParser/RISCVTargetParser.h"
 #include <bitset>
 #include <optional>
 
@@ -8345,9 +8344,10 @@ static void HandleRISCVRVVVectorBitsTypeAttr(QualType &CurType,
   unsigned MinElts = Info.EC.getKnownMinValue();
 
   // The attribute vector size must match -mrvv-vector-bits.
-  if (VecSize != VScale->first * MinElts * EltSize) {
+  unsigned ExpectedSize = VScale->first * MinElts * EltSize;
+  if (VecSize != ExpectedSize) {
     S.Diag(Attr.getLoc(), diag::err_attribute_bad_rvv_vector_size)
-        << VecSize << VScale->first * llvm::RISCV::RVVBitsPerBlock;
+        << VecSize << ExpectedSize;
     Attr.setInvalid();
     return;
   }

@@ -2340,11 +2340,14 @@ unsupported for sizeless types.
 
 The attribute can be attached to a single RVV vector (such as ``vint8m1_t``).
 The attribute will be rejected unless
-``N==__riscv_v_fixed_vlen``, the implementation defined feature macro that
+``N==(__riscv_v_fixed_vlen*LMUL)``, the implementation defined feature macro that
 is enabled under the ``-mrvv-vector-bits`` flag. ``__riscv_v_fixed_vlen`` can
 only be a power of 2 between 64 and 65536.
 
-Only ``*m1_t`` (LMUL=1) types are supported at this time.
+For types where LMUL!=1, ``__riscv_v_fixed_vlen`` needs to be scaled by the LMUL
+of the type before passing to the attribute.
+
+``vbool*_t`` types are not supported at this time.
 }];
 }
 
