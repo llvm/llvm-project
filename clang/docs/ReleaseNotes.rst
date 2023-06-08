@@ -254,6 +254,7 @@ Removed Compiler Flags
 - The CodeGen flag `-lower-global-dtors-via-cxa-atexit` which affects how global
   destructors are lowered for MachO is removed without replacement. The default
   of `-lower-global-dtors-via-cxa-atexit=true` is now the only supported way.
+- The cc1 flag ``-no-opaque-pointers`` has been removed.
 
 Attribute Changes in Clang
 --------------------------
