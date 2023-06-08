@@ -269,7 +269,7 @@ class IRDL_ConstraintOp<string mnemonic, list<Trait> traits = []>
         DeclareOpInterfaceMethods<VerifyConstraintInterface>] # traits> {
 }
 
-def IRDL_Is : IRDL_ConstraintOp<"is",
+def IRDL_IsOp : IRDL_ConstraintOp<"is",
     [ParentOneOf<["TypeOp", "AttributeOp", "OperationOp"]>, Pure]> {
   let summary = "Constraints an attribute/type to be a specific attribute instance";
   let description = [{
@@ -296,7 +296,7 @@ def IRDL_Is : IRDL_ConstraintOp<"is",
   let assemblyFormat = " $expected ` ` attr-dict ";
 }
 
-def IRDL_Parametric : IRDL_ConstraintOp<"parametric",
+def IRDL_ParametricOp : IRDL_ConstraintOp<"parametric",
     [ParentOneOf<["TypeOp", "AttributeOp", "OperationOp"]>, Pure]> {
   let summary = "Constraints an attribute/type base and its parameters";
   let description = [{
@@ -331,7 +331,7 @@ def IRDL_Parametric : IRDL_ConstraintOp<"parametric",
   let assemblyFormat = " $base_type `<` $args `>` ` ` attr-dict ";
 }
 
-def IRDL_Any : IRDL_ConstraintOp<"any",
+def IRDL_AnyOp : IRDL_ConstraintOp<"any",
     [ParentOneOf<["TypeOp", "AttributeOp", "OperationOp"]>]> {
   let summary = "Accept any type or attribute";
   let description = [{
@@ -356,7 +356,7 @@ def IRDL_Any : IRDL_ConstraintOp<"any",
   let assemblyFormat = " attr-dict ";
 }
 
-def IRDL_AnyOf : IRDL_ConstraintOp<"any_of",
+def IRDL_AnyOfOp : IRDL_ConstraintOp<"any_of",
                   [ParentOneOf<["TypeOp", "AttributeOp", "OperationOp"]>,
                    SameOperandsAndResultType]> {
   let summary = "Constraints to the union of the provided constraints";
@@ -389,7 +389,7 @@ def IRDL_AnyOf : IRDL_ConstraintOp<"any_of",
   let assemblyFormat = [{ `(` $args `)` ` ` attr-dict }];
 }
 
-def IRDL_AllOf : IRDL_ConstraintOp<"all_of",
+def IRDL_AllOfOp : IRDL_ConstraintOp<"all_of",
                  [ParentOneOf<["TypeOp", "AttributeOp", "OperationOp"]>,
                   SameOperandsAndResultType]> {
   let summary = "Constraints to the intersection of the provided constraints";
