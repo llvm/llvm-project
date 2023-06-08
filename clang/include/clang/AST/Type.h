@@ -1649,7 +1649,8 @@ protected:
     unsigned : NumTypeBits;
 
     /// The kind (BuiltinType::Kind) of builtin type this is.
-    unsigned Kind : 8;
+    static constexpr unsigned NumOfBuiltinTypeBits = 8;
+    unsigned Kind : NumOfBuiltinTypeBits;
   };
 
   /// FunctionTypeBitfields store various bits belonging to FunctionProtoType.
@@ -2677,6 +2678,10 @@ private:
       : Type(Builtin, QualType(),
              K == Dependent ? TypeDependence::DependentInstantiation
                             : TypeDependence::None) {
+    static_assert(Kind::LastKind <
+                      (1 << BuiltinTypeBitfields::NumOfBuiltinTypeBits) &&
+                  "Defined builtin type exceeds the allocated space for serial "
+                  "numbering");
     BuiltinTypeBits.Kind = K;
   }
 
