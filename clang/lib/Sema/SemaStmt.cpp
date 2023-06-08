@@ -1729,9 +1729,7 @@ Sema::ActOnDoStmt(SourceLocation DoLoc, Stmt *Body,
 
 namespace {
   // Use SetVector since the diagnostic cares about the ordering of the Decl's.
-  using DeclSetVector =
-      llvm::SetVector<VarDecl *, llvm::SmallVector<VarDecl *, 8>,
-                      llvm::SmallPtrSet<VarDecl *, 8>>;
+  using DeclSetVector = llvm::SmallSetVector<VarDecl *, 8>;
 
   // This visitor will traverse a conditional statement and store all
   // the evaluated decls into a vector.  Simple is set to true if none

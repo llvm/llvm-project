@@ -318,9 +318,7 @@ class DwarfDebug : public DebugHandlerBase {
 
   /// This is a collection of subprogram MDNodes that are processed to
   /// create DIEs.
-  SetVector<const DISubprogram *, SmallVector<const DISubprogram *, 16>,
-            SmallPtrSet<const DISubprogram *, 16>>
-      ProcessedSPNodes;
+  SmallSetVector<const DISubprogram *, 16> ProcessedSPNodes;
 
   /// If nonnull, stores the current machine function we're processing.
   const MachineFunction *CurFn = nullptr;
