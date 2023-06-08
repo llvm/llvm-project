@@ -26,6 +26,8 @@ bool isFortranScalarCharacterExprType(mlir::Type);
 
 #include "flang/Optimizer/HLFIR/HLFIRDialect.h.inc"
 
+#include "flang/Optimizer/HLFIR/HLFIREnums.h.inc"
+
 #define GET_TYPEDEF_CLASSES
 #include "flang/Optimizer/HLFIR/HLFIRTypes.h.inc"
 
