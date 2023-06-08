@@ -166,6 +166,15 @@ def ApplyPatternsOp : TransformDialectOp<"apply_patterns",
   let assemblyFormat = "`to` $target $region attr-dict `:` type($target)";
   let hasVerifier = 1;
 
+  let skipDefaultBuilders = 1;
+  let builders = [
+    OpBuilder<(ins
+        "Value":$target,
+        CArg<"function_ref<void(OpBuilder &, Location)>", "nullptr">:
+            $bodyBuilder,
+        CArg<"bool", "true">:$failOnPayloadReplacementNotFound)>,
+  ];
+
   let extraClassDeclaration = [{
     ::mlir::DiagnosedSilenceableFailure applyToOne(
       ::mlir::Operation *target,

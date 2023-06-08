@@ -52,6 +52,7 @@ enum class HighlightingKind {
   Modifier,
   Operator,
   Bracket,
+  Label,
 
   // This one is different from the other kinds as it's a line style
   // rather than a token style.
