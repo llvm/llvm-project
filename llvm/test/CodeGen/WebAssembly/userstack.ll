@@ -148,16 +148,16 @@ define void @non_mem_use(ptr %addr) {
 ; CHECK-32-NEXT:    local.tee $push8=, 1, $pop9
 ; CHECK-32-NEXT:    global.set __stack_pointer, $pop8
 ; CHECK-32-NEXT:    local.get $push10=, 1
-; CHECK-32-NEXT:    i32.const $push4=, 8
-; CHECK-32-NEXT:    i32.add $push5=, $pop10, $pop4
-; CHECK-32-NEXT:    call ext_func, $pop5
+; CHECK-32-NEXT:    i32.const $push6=, 8
+; CHECK-32-NEXT:    i32.add $push7=, $pop10, $pop6
+; CHECK-32-NEXT:    call ext_func, $pop7
 ; CHECK-32-NEXT:    local.get $push11=, 1
 ; CHECK-32-NEXT:    call ext_func, $pop11
 ; CHECK-32-NEXT:    local.get $push13=, 0
 ; CHECK-32-NEXT:    local.get $push12=, 1
-; CHECK-32-NEXT:    i32.const $push6=, 16
-; CHECK-32-NEXT:    i32.add $push7=, $pop12, $pop6
-; CHECK-32-NEXT:    i32.store 0($pop13), $pop7
+; CHECK-32-NEXT:    i32.const $push4=, 16
+; CHECK-32-NEXT:    i32.add $push5=, $pop12, $pop4
+; CHECK-32-NEXT:    i32.store 0($pop13), $pop5
 ; CHECK-32-NEXT:    local.get $push14=, 1
 ; CHECK-32-NEXT:    i32.const $push2=, 48
 ; CHECK-32-NEXT:    i32.add $push3=, $pop14, $pop2
@@ -174,16 +174,16 @@ define void @non_mem_use(ptr %addr) {
 ; CHECK-64-NEXT:    local.tee $push8=, 1, $pop9
 ; CHECK-64-NEXT:    global.set __stack_pointer, $pop8
 ; CHECK-64-NEXT:    local.get $push10=, 1
-; CHECK-64-NEXT:    i64.const $push4=, 8
-; CHECK-64-NEXT:    i64.add $push5=, $pop10, $pop4
-; CHECK-64-NEXT:    call ext_func, $pop5
+; CHECK-64-NEXT:    i64.const $push6=, 8
+; CHECK-64-NEXT:    i64.add $push7=, $pop10, $pop6
+; CHECK-64-NEXT:    call ext_func, $pop7
 ; CHECK-64-NEXT:    local.get $push11=, 1
 ; CHECK-64-NEXT:    call ext_func, $pop11
 ; CHECK-64-NEXT:    local.get $push13=, 0
 ; CHECK-64-NEXT:    local.get $push12=, 1
-; CHECK-64-NEXT:    i64.const $push6=, 16
-; CHECK-64-NEXT:    i64.add $push7=, $pop12, $pop6
-; CHECK-64-NEXT:    i64.store 0($pop13), $pop7
+; CHECK-64-NEXT:    i64.const $push4=, 16
+; CHECK-64-NEXT:    i64.add $push5=, $pop12, $pop4
+; CHECK-64-NEXT:    i64.store 0($pop13), $pop5
 ; CHECK-64-NEXT:    local.get $push14=, 1
 ; CHECK-64-NEXT:    i64.const $push2=, 48
 ; CHECK-64-NEXT:    i64.add $push3=, $pop14, $pop2
