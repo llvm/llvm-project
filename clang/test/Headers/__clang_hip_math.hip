@@ -2798,37 +2798,22 @@ extern "C" __device__ double test_scalbn(double x, int y) {
   return scalbn(x, y);
 }
 
-// DEFAULT-LABEL: @test___signbitf(
-// DEFAULT-NEXT:  entry:
-// DEFAULT-NEXT:    [[CALL_I:%.*]] = tail call i32 @__ocml_signbit_f32(float noundef [[X:%.*]]) #[[ATTR14]]
-// DEFAULT-NEXT:    [[TOBOOL_I:%.*]] = icmp ne i32 [[CALL_I]], 0
-// DEFAULT-NEXT:    [[CONV:%.*]] = zext i1 [[TOBOOL_I]] to i32
-// DEFAULT-NEXT:    ret i32 [[CONV]]
-//
-// FINITEONLY-LABEL: @test___signbitf(
-// FINITEONLY-NEXT:  entry:
-// FINITEONLY-NEXT:    [[CALL_I:%.*]] = tail call i32 @__ocml_signbit_f32(float noundef nofpclass(nan inf) [[X:%.*]]) #[[ATTR14]]
-// FINITEONLY-NEXT:    [[TOBOOL_I:%.*]] = icmp ne i32 [[CALL_I]], 0
-// FINITEONLY-NEXT:    [[CONV:%.*]] = zext i1 [[TOBOOL_I]] to i32
-// FINITEONLY-NEXT:    ret i32 [[CONV]]
+// CHECK-LABEL: @test___signbitf(
+// CHECK-NEXT:  entry:
+// CHECK-NEXT:    [[TMP0:%.*]] = bitcast float [[X:%.*]] to i32
+// CHECK-NEXT:    [[DOTLOBIT:%.*]] = lshr i32 [[TMP0]], 31
+// CHECK-NEXT:    ret i32 [[DOTLOBIT]]
 //
 extern "C" __device__ BOOL_TYPE test___signbitf(float x) {
   return __signbitf(x);
 }
 
-// DEFAULT-LABEL: @test___signbit(
-// DEFAULT-NEXT:  entry:
-// DEFAULT-NEXT:    [[CALL_I:%.*]] = tail call i32 @__ocml_signbit_f64(double noundef [[X:%.*]]) #[[ATTR14]]
-// DEFAULT-NEXT:    [[TOBOOL_I:%.*]] = icmp ne i32 [[CALL_I]], 0
-// DEFAULT-NEXT:    [[CONV:%.*]] = zext i1 [[TOBOOL_I]] to i32
-// DEFAULT-NEXT:    ret i32 [[CONV]]
-//
-// FINITEONLY-LABEL: @test___signbit(
-// FINITEONLY-NEXT:  entry:
-// FINITEONLY-NEXT:    [[CALL_I:%.*]] = tail call i32 @__ocml_signbit_f64(double noundef nofpclass(nan inf) [[X:%.*]]) #[[ATTR14]]
-// FINITEONLY-NEXT:    [[TOBOOL_I:%.*]] = icmp ne i32 [[CALL_I]], 0
-// FINITEONLY-NEXT:    [[CONV:%.*]] = zext i1 [[TOBOOL_I]] to i32
-// FINITEONLY-NEXT:    ret i32 [[CONV]]
+// CHECK-LABEL: @test___signbit(
+// CHECK-NEXT:  entry:
+// CHECK-NEXT:    [[TMP0:%.*]] = bitcast double [[X:%.*]] to i64
+// CHECK-NEXT:    [[DOTLOBIT:%.*]] = lshr i64 [[TMP0]], 63
+// CHECK-NEXT:    [[CONV:%.*]] = trunc i64 [[DOTLOBIT]] to i32
+// CHECK-NEXT:    ret i32 [[CONV]]
 //
 extern "C" __device__ BOOL_TYPE test___signbit(double x) {
   return __signbit(x);
