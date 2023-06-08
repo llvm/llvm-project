@@ -1776,10 +1776,6 @@ bool X86AsmParser::CreateMemForMSInlineAsm(
                                              BaseReg && IndexReg));
     return false;
   }
-  // Otherwise, we set the base register to a non-zero value
-  // if we don't know the actual value at this time.  This is necessary to
-  // get the matching correct in some cases.
-  BaseReg = BaseReg ? BaseReg : 1;
   Operands.push_back(X86Operand::CreateMem(
       getPointerWidth(), SegReg, Disp, BaseReg, IndexReg, Scale, Start, End,
       Size,
