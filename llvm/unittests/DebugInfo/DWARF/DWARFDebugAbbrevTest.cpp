@@ -20,8 +20,8 @@ using namespace dwarf;
 
 enum OrderKind : bool { InOrder, OutOfOrder };
 
-void writeAbbreviationDeclarations(raw_ostream &OS, uint32_t FirstCode,
-                                   OrderKind Order) {
+void writeValidAbbreviationDeclarations(raw_ostream &OS, uint32_t FirstCode,
+                                        OrderKind Order) {
   encodeULEB128(FirstCode, OS);
   encodeULEB128(DW_TAG_compile_unit, OS);
   OS << static_cast<uint8_t>(DW_CHILDREN_yes);
@@ -57,14 +57,13 @@ TEST(DWARFDebugAbbrevTest, DWARFAbbrevDeclSetExtractSuccess) {
   raw_svector_ostream OS(RawData);
   uint32_t FirstCode = 5;
 
-  writeAbbreviationDeclarations(OS, FirstCode, InOrder);
+  writeValidAbbreviationDeclarations(OS, FirstCode, InOrder);
   encodeULEB128(0, OS);
 
   uint64_t Offset = 0;
   DataExtractor Data(RawData, sys::IsLittleEndianHost, sizeof(uint64_t));
   DWARFAbbreviationDeclarationSet AbbrevSet;
-  const bool DataWasExtracted = AbbrevSet.extract(Data, &Offset);
-  EXPECT_TRUE(DataWasExtracted);
+  ASSERT_THAT_ERROR(AbbrevSet.extract(Data, &Offset), Succeeded());
   // The Abbreviation Declarations are in order and contiguous, so we want to
   // make sure that FirstAbbrCode was correctly set.
   EXPECT_EQ(AbbrevSet.getFirstAbbrCode(), FirstCode);
@@ -89,14 +88,13 @@ TEST(DWARFDebugAbbrevTest, DWARFAbbrevDeclSetExtractSuccessOutOfOrder) {
   raw_svector_ostream OS(RawData);
   uint32_t FirstCode = 2;
 
-  writeAbbreviationDeclarations(OS, FirstCode, OutOfOrder);
+  writeValidAbbreviationDeclarations(OS, FirstCode, OutOfOrder);
   encodeULEB128(0, OS);
 
   uint64_t Offset = 0;
   DataExtractor Data(RawData, sys::IsLittleEndianHost, sizeof(uint64_t));
   DWARFAbbreviationDeclarationSet AbbrevSet;
-  const bool DataWasExtracted = AbbrevSet.extract(Data, &Offset);
-  EXPECT_TRUE(DataWasExtracted);
+  ASSERT_THAT_ERROR(AbbrevSet.extract(Data, &Offset), Succeeded());
   // The declarations are out of order, ensure that FirstAbbrCode is UINT32_MAX.
   EXPECT_EQ(AbbrevSet.getFirstAbbrCode(), UINT32_MAX);
 
@@ -126,7 +124,10 @@ TEST(DWARFDebugAbbrevTest, DWARFAbbreviationDeclSetCodeExtractionError) {
     uint64_t Offset = 0;
     DataExtractor Data(RawData, sys::IsLittleEndianHost, sizeof(uint64_t));
     DWARFAbbreviationDeclarationSet AbbrevSet;
-    EXPECT_FALSE(AbbrevSet.extract(Data, &Offset));
+    ASSERT_THAT_ERROR(
+        AbbrevSet.extract(Data, &Offset),
+        FailedWithMessage("unable to decode LEB128 at offset 0x00000000: "
+                          "malformed uleb128, extends past end"));
     EXPECT_EQ(Offset, 0u);
   }
 
@@ -139,7 +140,10 @@ TEST(DWARFDebugAbbrevTest, DWARFAbbreviationDeclSetCodeExtractionError) {
     uint64_t Offset = 0;
     DataExtractor Data(RawData, sys::IsLittleEndianHost, sizeof(uint64_t));
     DWARFAbbreviationDeclarationSet AbbrevSet;
-    EXPECT_FALSE(AbbrevSet.extract(Data, &Offset));
+    ASSERT_THAT_ERROR(
+        AbbrevSet.extract(Data, &Offset),
+        FailedWithMessage("unable to decode LEB128 at offset 0x00000000: "
+                          "uleb128 too big for uint64"));
     EXPECT_EQ(Offset, 0u);
   }
 }
@@ -157,7 +161,10 @@ TEST(DWARFDebugAbbrevTest, DWARFAbbreviationDeclSetTagExtractionError) {
     uint64_t Offset = 0;
     DataExtractor Data(RawData, sys::IsLittleEndianHost, sizeof(uint64_t));
     DWARFAbbreviationDeclarationSet AbbrevSet;
-    EXPECT_TRUE(AbbrevSet.extract(Data, &Offset));
+    ASSERT_THAT_ERROR(
+        AbbrevSet.extract(Data, &Offset),
+        FailedWithMessage("unable to decode LEB128 at offset 0x00000001: "
+                          "malformed uleb128, extends past end"));
     // Only the code was extracted correctly.
     EXPECT_EQ(Offset, 1u);
   }
@@ -172,13 +179,16 @@ TEST(DWARFDebugAbbrevTest, DWARFAbbreviationDeclSetTagExtractionError) {
     uint64_t Offset = 0;
     DataExtractor Data(RawData, sys::IsLittleEndianHost, sizeof(uint64_t));
     DWARFAbbreviationDeclarationSet AbbrevSet;
-    EXPECT_TRUE(AbbrevSet.extract(Data, &Offset));
+    ASSERT_THAT_ERROR(
+        AbbrevSet.extract(Data, &Offset),
+        FailedWithMessage("unable to decode LEB128 at offset 0x00000001: "
+                          "uleb128 too big for uint64"));
     // Only the code was extracted correctly.
     EXPECT_EQ(Offset, 1u);
   }
 }
 
-TEST(DWARFDebugAbbrevTest, DWARFAbbreviatioDeclSetChildExtractionError) {
+TEST(DWARFDebugAbbrevTest, DWARFAbbreviationDeclSetChildExtractionError) {
   SmallString<64> RawData;
   const uint32_t Code = 1;
   const dwarf::Tag Tag = DW_TAG_compile_unit;
@@ -188,11 +198,13 @@ TEST(DWARFDebugAbbrevTest, DWARFAbbreviatioDeclSetChildExtractionError) {
   raw_svector_ostream OS(RawData);
   encodeULEB128(Code, OS);
   encodeULEB128(Tag, OS);
-
   uint64_t Offset = 0;
   DataExtractor Data(RawData, sys::IsLittleEndianHost, sizeof(uint64_t));
   DWARFAbbreviationDeclarationSet AbbrevSet;
-  EXPECT_TRUE(AbbrevSet.extract(Data, &Offset));
+  ASSERT_THAT_ERROR(
+      AbbrevSet.extract(Data, &Offset),
+      FailedWithMessage(
+          "unexpected end of data at offset 0x2 while reading [0x2, 0x3)"));
   // The code and the tag were extracted correctly.
   EXPECT_EQ(Offset, 2u);
 }
@@ -214,7 +226,10 @@ TEST(DWARFDebugAbbrevTest, DWARFAbbreviationDeclSetAttributeExtractionError) {
     uint64_t Offset = 0;
     DataExtractor Data(RawData, sys::IsLittleEndianHost, sizeof(uint64_t));
     DWARFAbbreviationDeclarationSet AbbrevSet;
-    EXPECT_TRUE(AbbrevSet.extract(Data, &Offset));
+    ASSERT_THAT_ERROR(
+        AbbrevSet.extract(Data, &Offset),
+        FailedWithMessage("unable to decode LEB128 at offset 0x00000003: "
+                          "malformed uleb128, extends past end"));
     // The code, tag, and child byte were extracted correctly.
     EXPECT_EQ(Offset, 3u);
   }
@@ -231,7 +246,10 @@ TEST(DWARFDebugAbbrevTest, DWARFAbbreviationDeclSetAttributeExtractionError) {
     uint64_t Offset = 0;
     DataExtractor Data(RawData, sys::IsLittleEndianHost, sizeof(uint64_t));
     DWARFAbbreviationDeclarationSet AbbrevSet;
-    EXPECT_TRUE(AbbrevSet.extract(Data, &Offset));
+    ASSERT_THAT_ERROR(
+        AbbrevSet.extract(Data, &Offset),
+        FailedWithMessage("unable to decode LEB128 at offset 0x00000003: "
+                          "uleb128 too big for uint64"));
     // The code, tag, and child byte were extracted correctly.
     EXPECT_EQ(Offset, 3u);
   }
@@ -256,7 +274,10 @@ TEST(DWARFDebugAbbrevTest, DWARFAbbreviationDeclSetFormExtractionError) {
     uint64_t Offset = 0;
     DataExtractor Data(RawData, sys::IsLittleEndianHost, sizeof(uint64_t));
     DWARFAbbreviationDeclarationSet AbbrevSet;
-    EXPECT_TRUE(AbbrevSet.extract(Data, &Offset));
+    ASSERT_THAT_ERROR(
+        AbbrevSet.extract(Data, &Offset),
+        FailedWithMessage("unable to decode LEB128 at offset 0x00000004: "
+                          "malformed uleb128, extends past end"));
     // The code, tag, child byte, and first attribute were extracted correctly.
     EXPECT_EQ(Offset, 4u);
   }
@@ -274,8 +295,120 @@ TEST(DWARFDebugAbbrevTest, DWARFAbbreviationDeclSetFormExtractionError) {
     uint64_t Offset = 0;
     DataExtractor Data(RawData, sys::IsLittleEndianHost, sizeof(uint64_t));
     DWARFAbbreviationDeclarationSet AbbrevSet;
-    EXPECT_TRUE(AbbrevSet.extract(Data, &Offset));
+    ASSERT_THAT_ERROR(
+        AbbrevSet.extract(Data, &Offset),
+        FailedWithMessage("unable to decode LEB128 at offset 0x00000004: "
+                          "uleb128 too big for uint64"));
     // The code, tag, child byte, and first attribute were extracted correctly.
     EXPECT_EQ(Offset, 4u);
   }
+}
+
+TEST(DWARFDebugAbbrevTest, DWARFAbbrevDeclSetInvalidTag) {
+  SmallString<64> RawData;
+  raw_svector_ostream OS(RawData);
+  uint32_t FirstCode = 1;
+  // First, we're going to manually add good data.
+  writeValidAbbreviationDeclarations(OS, FirstCode, InOrder);
+
+  // Afterwards, we're going to write an Abbreviation Decl manually with an
+  // invalid tag.
+  encodeULEB128(FirstCode + 2, OS);
+  encodeULEB128(0, OS); // Invalid Tag
+  OS << static_cast<uint8_t>(DW_CHILDREN_no);
+  encodeULEB128(DW_AT_name, OS);
+  encodeULEB128(DW_FORM_strp, OS);
+  encodeULEB128(0, OS);
+  encodeULEB128(0, OS);
+
+  encodeULEB128(0, OS);
+  uint64_t Offset = 0;
+  DataExtractor Data(RawData, sys::IsLittleEndianHost, sizeof(uint64_t));
+  DWARFAbbreviationDeclarationSet AbbrevSet;
+  EXPECT_THAT_ERROR(
+      AbbrevSet.extract(Data, &Offset),
+      FailedWithMessage("abbreviation declaration requires a non-null tag"));
+}
+
+TEST(DWARFDebugAbbrevTest, DWARFAbbrevDeclSetInvalidAttrValidForm) {
+  SmallString<64> RawData;
+  raw_svector_ostream OS(RawData);
+  uint32_t FirstCode = 120;
+  // First, we're going to manually add good data.
+  writeValidAbbreviationDeclarations(OS, FirstCode, InOrder);
+
+  // Afterwards, we're going to write an Abbreviation Decl manually with an
+  // invalid attribute but valid form.
+  encodeULEB128(FirstCode - 5, OS);
+  encodeULEB128(DW_TAG_compile_unit, OS);
+  OS << static_cast<uint8_t>(DW_CHILDREN_no);
+  encodeULEB128(0, OS); // Invalid attribute followed by an invalid form.
+  encodeULEB128(DW_FORM_strp, OS);
+  encodeULEB128(0, OS);
+  encodeULEB128(0, OS);
+
+  encodeULEB128(0, OS);
+
+  uint64_t Offset = 0;
+  DataExtractor Data(RawData, sys::IsLittleEndianHost, sizeof(uint64_t));
+  DWARFAbbreviationDeclarationSet AbbrevSet;
+  EXPECT_THAT_ERROR(
+      AbbrevSet.extract(Data, &Offset),
+      FailedWithMessage(
+          "malformed abbreviation declaration attribute. Either the "
+          "attribute or the form is zero while the other is not"));
+}
+
+TEST(DWARFDebugAbbrevTest, DWARFAbbrevDeclSetValidAttrInvalidForm) {
+  SmallString<64> RawData;
+  raw_svector_ostream OS(RawData);
+  uint32_t FirstCode = 120;
+  // First, we're going to manually add good data.
+  writeValidAbbreviationDeclarations(OS, FirstCode, InOrder);
+
+  // Afterwards, we're going to write an Abbreviation Decl manually with a
+  // valid attribute but invalid form.
+  encodeULEB128(FirstCode - 5, OS);
+  encodeULEB128(DW_TAG_compile_unit, OS);
+  OS << static_cast<uint8_t>(DW_CHILDREN_no);
+  encodeULEB128(DW_AT_name, OS);
+  encodeULEB128(0, OS); // Invalid form after a valid attribute.
+  encodeULEB128(0, OS);
+  encodeULEB128(0, OS);
+
+  encodeULEB128(0, OS);
+
+  uint64_t Offset = 0;
+  DataExtractor Data(RawData, sys::IsLittleEndianHost, sizeof(uint64_t));
+  DWARFAbbreviationDeclarationSet AbbrevSet;
+  EXPECT_THAT_ERROR(
+      AbbrevSet.extract(Data, &Offset),
+      FailedWithMessage(
+          "malformed abbreviation declaration attribute. Either the "
+          "attribute or the form is zero while the other is not"));
+}
+
+TEST(DWARFDebugAbbrevTest, DWARFAbbrevDeclSetMissingTerminator) {
+  SmallString<64> RawData;
+  raw_svector_ostream OS(RawData);
+  uint32_t FirstCode = 120;
+  // First, we're going to manually add good data.
+  writeValidAbbreviationDeclarations(OS, FirstCode, InOrder);
+
+  // Afterwards, we're going to write an Abbreviation Decl manually without a
+  // termintating sequence.
+  encodeULEB128(FirstCode + 7, OS);
+  encodeULEB128(DW_TAG_compile_unit, OS);
+  OS << static_cast<uint8_t>(DW_CHILDREN_no);
+  encodeULEB128(DW_AT_name, OS);
+  encodeULEB128(DW_FORM_strp, OS);
+
+  uint64_t Offset = 0;
+  DataExtractor Data(RawData, sys::IsLittleEndianHost, sizeof(uint64_t));
+  DWARFAbbreviationDeclarationSet AbbrevSet;
+  EXPECT_THAT_ERROR(
+      AbbrevSet.extract(Data, &Offset),
+      FailedWithMessage(
+          "abbreviation declaration attribute list was not terminated with a "
+          "null entry"));
 }

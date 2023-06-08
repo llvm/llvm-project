@@ -387,7 +387,6 @@ class SCCPInstVisitor : public InstVisitor<SCCPInstVisitor> {
   using Edge = std::pair<BasicBlock *, BasicBlock *>;
   DenseSet<Edge> KnownFeasibleEdges;
 
-  DenseMap<Function *, LoopInfo *> FnLoopInfo;
   DenseMap<Function *, std::unique_ptr<PredicateInfo>> FnPredicateInfo;
 
   DenseMap<Value *, SmallPtrSet<User *, 2>> AdditionalUsers;
@@ -653,10 +652,6 @@ private:
   void visitInstruction(Instruction &I);
 
 public:
-  void addLoopInfo(Function &F, LoopInfo &LI) {
-    FnLoopInfo.insert({&F, &LI});
-  }
-
   void addPredicateInfo(Function &F, DominatorTree &DT, AssumptionCache &AC) {
     FnPredicateInfo.insert({&F, std::make_unique<PredicateInfo>(F, DT, AC)});
   }
@@ -670,13 +665,6 @@ public:
     if (It == FnPredicateInfo.end())
       return nullptr;
     return It->second->getPredicateInfoFor(I);
-  }
-
-  const LoopInfo &getLoopInfo(Function &F) {
-    auto It = FnLoopInfo.find(&F);
-    assert(It != FnLoopInfo.end() && It->second &&
-           "Need LoopInfo analysis results for function.");
-    return *It->second;
   }
 
   SCCPInstVisitor(const DataLayout &DL,
@@ -1976,10 +1964,6 @@ SCCPSolver::SCCPSolver(
 
 SCCPSolver::~SCCPSolver() = default;
 
-void SCCPSolver::addLoopInfo(Function &F, LoopInfo &LI) {
-  Visitor->addLoopInfo(F, LI);
-}
-
 void SCCPSolver::addPredicateInfo(Function &F, DominatorTree &DT,
                                   AssumptionCache &AC) {
   Visitor->addPredicateInfo(F, DT, AC);
@@ -1991,10 +1975,6 @@ bool SCCPSolver::markBlockExecutable(BasicBlock *BB) {
 
 const PredicateBase *SCCPSolver::getPredicateInfoFor(Instruction *I) {
   return Visitor->getPredicateInfoFor(I);
-}
-
-const LoopInfo &SCCPSolver::getLoopInfo(Function &F) {
-  return Visitor->getLoopInfo(F);
 }
 
 void SCCPSolver::trackValueOfGlobalVariable(GlobalVariable *GV) {

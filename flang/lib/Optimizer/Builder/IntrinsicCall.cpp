@@ -580,152 +580,6 @@ static llvm::cl::opt<bool>
                                       "dialect to lower complex operations"),
                        llvm::cl::init(false));
 
-static mlir::FunctionType genF32F32FuncType(mlir::MLIRContext *context) {
-  mlir::Type t = mlir::FloatType::getF32(context);
-  return mlir::FunctionType::get(context, {t}, {t});
-}
-
-static mlir::FunctionType genF64F64FuncType(mlir::MLIRContext *context) {
-  mlir::Type t = mlir::FloatType::getF64(context);
-  return mlir::FunctionType::get(context, {t}, {t});
-}
-
-static mlir::FunctionType genF80F80FuncType(mlir::MLIRContext *context) {
-  mlir::Type t = mlir::FloatType::getF80(context);
-  return mlir::FunctionType::get(context, {t}, {t});
-}
-
-static mlir::FunctionType genF128F128FuncType(mlir::MLIRContext *context) {
-  mlir::Type t = mlir::FloatType::getF128(context);
-  return mlir::FunctionType::get(context, {t}, {t});
-}
-
-static mlir::FunctionType genF32F32F32FuncType(mlir::MLIRContext *context) {
-  auto t = mlir::FloatType::getF32(context);
-  return mlir::FunctionType::get(context, {t, t}, {t});
-}
-
-static mlir::FunctionType genF64F64F64FuncType(mlir::MLIRContext *context) {
-  auto t = mlir::FloatType::getF64(context);
-  return mlir::FunctionType::get(context, {t, t}, {t});
-}
-
-static mlir::FunctionType genF80F80F80FuncType(mlir::MLIRContext *context) {
-  auto t = mlir::FloatType::getF80(context);
-  return mlir::FunctionType::get(context, {t, t}, {t});
-}
-
-static mlir::FunctionType genF128F128F128FuncType(mlir::MLIRContext *context) {
-  auto t = mlir::FloatType::getF128(context);
-  return mlir::FunctionType::get(context, {t, t}, {t});
-}
-
-static mlir::FunctionType genF32F32F32F32FuncType(mlir::MLIRContext *context) {
-  auto t = mlir::FloatType::getF32(context);
-  return mlir::FunctionType::get(context, {t, t, t}, {t});
-}
-
-static mlir::FunctionType genF64F64F64F64FuncType(mlir::MLIRContext *context) {
-  auto t = mlir::FloatType::getF64(context);
-  return mlir::FunctionType::get(context, {t, t, t}, {t});
-}
-
-template <int Bits>
-static mlir::FunctionType genVoidIntF64FuncType(mlir::MLIRContext *context) {
-  auto t = mlir::IntegerType::get(context, Bits);
-  auto u = mlir::FloatType::getF64(context);
-  return mlir::FunctionType::get(context, {t, u}, std::nullopt);
-}
-
-template <int BitsA, int BitsB>
-static mlir::FunctionType genVoidIntIntFuncType(mlir::MLIRContext *context) {
-  auto t = mlir::IntegerType::get(context, BitsA);
-  auto u = mlir::IntegerType::get(context, BitsB);
-  return mlir::FunctionType::get(context, {t, u}, std::nullopt);
-}
-
-template <int Bits>
-static mlir::FunctionType genIntF64FuncType(mlir::MLIRContext *context) {
-  auto t = mlir::FloatType::getF64(context);
-  auto r = mlir::IntegerType::get(context, Bits);
-  return mlir::FunctionType::get(context, {t}, {r});
-}
-
-template <int Bits>
-static mlir::FunctionType genIntF32FuncType(mlir::MLIRContext *context) {
-  auto t = mlir::FloatType::getF32(context);
-  auto r = mlir::IntegerType::get(context, Bits);
-  return mlir::FunctionType::get(context, {t}, {r});
-}
-
-template <int Bits>
-static mlir::FunctionType genF64F64IntFuncType(mlir::MLIRContext *context) {
-  auto ftype = mlir::FloatType::getF64(context);
-  auto itype = mlir::IntegerType::get(context, Bits);
-  return mlir::FunctionType::get(context, {ftype, itype}, {ftype});
-}
-
-template <int Bits>
-static mlir::FunctionType genF32F32IntFuncType(mlir::MLIRContext *context) {
-  auto ftype = mlir::FloatType::getF32(context);
-  auto itype = mlir::IntegerType::get(context, Bits);
-  return mlir::FunctionType::get(context, {ftype, itype}, {ftype});
-}
-
-template <int Bits>
-static mlir::FunctionType genF64IntF64FuncType(mlir::MLIRContext *context) {
-  auto ftype = mlir::FloatType::getF64(context);
-  auto itype = mlir::IntegerType::get(context, Bits);
-  return mlir::FunctionType::get(context, {itype, ftype}, {ftype});
-}
-
-template <int Bits>
-static mlir::FunctionType genF32IntF32FuncType(mlir::MLIRContext *context) {
-  auto ftype = mlir::FloatType::getF32(context);
-  auto itype = mlir::IntegerType::get(context, Bits);
-  return mlir::FunctionType::get(context, {itype, ftype}, {ftype});
-}
-
-template <int Bits>
-static mlir::FunctionType genIntIntIntFuncType(mlir::MLIRContext *context) {
-  auto itype = mlir::IntegerType::get(context, Bits);
-  return mlir::FunctionType::get(context, {itype, itype}, {itype});
-}
-
-template <int Kind>
-static mlir::FunctionType
-genComplexComplexFuncType(mlir::MLIRContext *context) {
-  auto ctype = fir::ComplexType::get(context, Kind);
-  return mlir::FunctionType::get(context, {ctype}, {ctype});
-}
-
-template <int Kind>
-static mlir::FunctionType
-genComplexComplexComplexFuncType(mlir::MLIRContext *context) {
-  auto ctype = fir::ComplexType::get(context, Kind);
-  return mlir::FunctionType::get(context, {ctype, ctype}, {ctype});
-}
-
-static mlir::FunctionType genF32ComplexFuncType(mlir::MLIRContext *context) {
-  auto ctype = fir::ComplexType::get(context, 4);
-  auto ftype = mlir::FloatType::getF32(context);
-  return mlir::FunctionType::get(context, {ctype}, {ftype});
-}
-
-static mlir::FunctionType genF64ComplexFuncType(mlir::MLIRContext *context) {
-  auto ctype = fir::ComplexType::get(context, 8);
-  auto ftype = mlir::FloatType::getF64(context);
-  return mlir::FunctionType::get(context, {ctype}, {ftype});
-}
-
-template <int Kind, int Bits>
-static mlir::FunctionType
-genComplexComplexIntFuncType(mlir::MLIRContext *context) {
-  auto ctype = fir::ComplexType::get(context, Kind);
-  auto itype = mlir::IntegerType::get(context, Bits);
-  return mlir::FunctionType::get(context, {ctype, itype}, {ctype});
-}
-
 static mlir::Value genLibCall(fir::FirOpBuilder &builder, mlir::Location loc,
                               llvm::StringRef libFuncName,
                               mlir::FunctionType libFuncType,
@@ -924,221 +778,321 @@ static mlir::Value genComplexMathOp(fir::FirOpBuilder &builder,
 ///       See https://gcc.gnu.org/onlinedocs/gcc-12.1.0/gfortran/\
 ///       Intrinsic-Procedures.html for a reference.
 static constexpr MathOperation mathOperations[] = {
-    {"abs", "fabsf", genF32F32FuncType, genMathOp<mlir::math::AbsFOp>},
-    {"abs", "fabs", genF64F64FuncType, genMathOp<mlir::math::AbsFOp>},
-    {"abs", "llvm.fabs.f128", genF128F128FuncType,
+    {"abs", "fabsf", genFuncType<Ty::Real<4>, Ty::Real<4>>,
      genMathOp<mlir::math::AbsFOp>},
-    {"abs", "cabsf", genF32ComplexFuncType,
+    {"abs", "fabs", genFuncType<Ty::Real<8>, Ty::Real<8>>,
+     genMathOp<mlir::math::AbsFOp>},
+    {"abs", "llvm.fabs.f128", genFuncType<Ty::Real<16>, Ty::Real<16>>,
+     genMathOp<mlir::math::AbsFOp>},
+    {"abs", "cabsf", genFuncType<Ty::Real<4>, Ty::Complex<4>>,
      genComplexMathOp<mlir::complex::AbsOp>},
-    {"abs", "cabs", genF64ComplexFuncType,
+    {"abs", "cabs", genFuncType<Ty::Real<8>, Ty::Complex<8>>,
      genComplexMathOp<mlir::complex::AbsOp>},
-    {"acos", "acosf", genF32F32FuncType, genLibCall},
-    {"acos", "acos", genF64F64FuncType, genLibCall},
-    {"acos", "cacosf", genComplexComplexFuncType<4>, genLibCall},
-    {"acos", "cacos", genComplexComplexFuncType<8>, genLibCall},
-    {"acosh", "acoshf", genF32F32FuncType, genLibCall},
-    {"acosh", "acosh", genF64F64FuncType, genLibCall},
-    {"acosh", "cacoshf", genComplexComplexFuncType<4>, genLibCall},
-    {"acosh", "cacosh", genComplexComplexFuncType<8>, genLibCall},
+    {"acos", "acosf", genFuncType<Ty::Real<4>, Ty::Real<4>>, genLibCall},
+    {"acos", "acos", genFuncType<Ty::Real<8>, Ty::Real<8>>, genLibCall},
+    {"acos", "cacosf", genFuncType<Ty::Complex<4>, Ty::Complex<4>>, genLibCall},
+    {"acos", "cacos", genFuncType<Ty::Complex<8>, Ty::Complex<8>>, genLibCall},
+    {"acosh", "acoshf", genFuncType<Ty::Real<4>, Ty::Real<4>>, genLibCall},
+    {"acosh", "acosh", genFuncType<Ty::Real<8>, Ty::Real<8>>, genLibCall},
+    {"acosh", "cacoshf", genFuncType<Ty::Complex<4>, Ty::Complex<4>>,
+     genLibCall},
+    {"acosh", "cacosh", genFuncType<Ty::Complex<8>, Ty::Complex<8>>,
+     genLibCall},
     // llvm.trunc behaves the same way as libm's trunc.
-    {"aint", "llvm.trunc.f32", genF32F32FuncType, genLibCall},
-    {"aint", "llvm.trunc.f64", genF64F64FuncType, genLibCall},
-    {"aint", "llvm.trunc.f80", genF80F80FuncType, genLibCall},
+    {"aint", "llvm.trunc.f32", genFuncType<Ty::Real<4>, Ty::Real<4>>,
+     genLibCall},
+    {"aint", "llvm.trunc.f64", genFuncType<Ty::Real<8>, Ty::Real<8>>,
+     genLibCall},
+    {"aint", "llvm.trunc.f80", genFuncType<Ty::Real<10>, Ty::Real<10>>,
+     genLibCall},
     // llvm.round behaves the same way as libm's round.
-    {"anint", "llvm.round.f32", genF32F32FuncType,
+    {"anint", "llvm.round.f32", genFuncType<Ty::Real<4>, Ty::Real<4>>,
      genMathOp<mlir::LLVM::RoundOp>},
-    {"anint", "llvm.round.f64", genF64F64FuncType,
+    {"anint", "llvm.round.f64", genFuncType<Ty::Real<8>, Ty::Real<8>>,
      genMathOp<mlir::LLVM::RoundOp>},
-    {"anint", "llvm.round.f80", genF80F80FuncType,
+    {"anint", "llvm.round.f80", genFuncType<Ty::Real<10>, Ty::Real<10>>,
      genMathOp<mlir::LLVM::RoundOp>},
-    {"asin", "asinf", genF32F32FuncType, genLibCall},
-    {"asin", "asin", genF64F64FuncType, genLibCall},
-    {"asin", "casinf", genComplexComplexFuncType<4>, genLibCall},
-    {"asin", "casin", genComplexComplexFuncType<8>, genLibCall},
-    {"asinh", "asinhf", genF32F32FuncType, genLibCall},
-    {"asinh", "asinh", genF64F64FuncType, genLibCall},
-    {"asinh", "casinhf", genComplexComplexFuncType<4>, genLibCall},
-    {"asinh", "casinh", genComplexComplexFuncType<8>, genLibCall},
-    {"atan", "atanf", genF32F32FuncType, genMathOp<mlir::math::AtanOp>},
-    {"atan", "atan", genF64F64FuncType, genMathOp<mlir::math::AtanOp>},
-    {"atan", "catanf", genComplexComplexFuncType<4>, genLibCall},
-    {"atan", "catan", genComplexComplexFuncType<8>, genLibCall},
-    {"atan2", "atan2f", genF32F32F32FuncType, genMathOp<mlir::math::Atan2Op>},
-    {"atan2", "atan2", genF64F64F64FuncType, genMathOp<mlir::math::Atan2Op>},
-    {"atanh", "atanhf", genF32F32FuncType, genLibCall},
-    {"atanh", "atanh", genF64F64FuncType, genLibCall},
-    {"atanh", "catanhf", genComplexComplexFuncType<4>, genLibCall},
-    {"atanh", "catanh", genComplexComplexFuncType<8>, genLibCall},
-    {"bessel_j0", "j0f", genF32F32FuncType, genLibCall},
-    {"bessel_j0", "j0", genF64F64FuncType, genLibCall},
-    {"bessel_j1", "j1f", genF32F32FuncType, genLibCall},
-    {"bessel_j1", "j1", genF64F64FuncType, genLibCall},
-    {"bessel_jn", "jnf", genF32IntF32FuncType<32>, genLibCall},
-    {"bessel_jn", "jn", genF64IntF64FuncType<32>, genLibCall},
-    {"bessel_y0", "y0f", genF32F32FuncType, genLibCall},
-    {"bessel_y0", "y0", genF64F64FuncType, genLibCall},
-    {"bessel_y1", "y1f", genF32F32FuncType, genLibCall},
-    {"bessel_y1", "y1", genF64F64FuncType, genLibCall},
-    {"bessel_yn", "ynf", genF32IntF32FuncType<32>, genLibCall},
-    {"bessel_yn", "yn", genF64IntF64FuncType<32>, genLibCall},
+    {"asin", "asinf", genFuncType<Ty::Real<4>, Ty::Real<4>>, genLibCall},
+    {"asin", "asin", genFuncType<Ty::Real<8>, Ty::Real<8>>, genLibCall},
+    {"asin", "casinf", genFuncType<Ty::Complex<4>, Ty::Complex<4>>, genLibCall},
+    {"asin", "casin", genFuncType<Ty::Complex<8>, Ty::Complex<8>>, genLibCall},
+    {"asinh", "asinhf", genFuncType<Ty::Real<4>, Ty::Real<4>>, genLibCall},
+    {"asinh", "asinh", genFuncType<Ty::Real<8>, Ty::Real<8>>, genLibCall},
+    {"asinh", "casinhf", genFuncType<Ty::Complex<4>, Ty::Complex<4>>,
+     genLibCall},
+    {"asinh", "casinh", genFuncType<Ty::Complex<8>, Ty::Complex<8>>,
+     genLibCall},
+    {"atan", "atanf", genFuncType<Ty::Real<4>, Ty::Real<4>>,
+     genMathOp<mlir::math::AtanOp>},
+    {"atan", "atan", genFuncType<Ty::Real<8>, Ty::Real<8>>,
+     genMathOp<mlir::math::AtanOp>},
+    {"atan", "catanf", genFuncType<Ty::Complex<4>, Ty::Complex<4>>, genLibCall},
+    {"atan", "catan", genFuncType<Ty::Complex<8>, Ty::Complex<8>>, genLibCall},
+    {"atan2", "atan2f", genFuncType<Ty::Real<4>, Ty::Real<4>, Ty::Real<4>>,
+     genMathOp<mlir::math::Atan2Op>},
+    {"atan2", "atan2", genFuncType<Ty::Real<8>, Ty::Real<8>, Ty::Real<8>>,
+     genMathOp<mlir::math::Atan2Op>},
+    {"atanh", "atanhf", genFuncType<Ty::Real<4>, Ty::Real<4>>, genLibCall},
+    {"atanh", "atanh", genFuncType<Ty::Real<8>, Ty::Real<8>>, genLibCall},
+    {"atanh", "catanhf", genFuncType<Ty::Complex<4>, Ty::Complex<4>>,
+     genLibCall},
+    {"atanh", "catanh", genFuncType<Ty::Complex<8>, Ty::Complex<8>>,
+     genLibCall},
+    {"bessel_j0", "j0f", genFuncType<Ty::Real<4>, Ty::Real<4>>, genLibCall},
+    {"bessel_j0", "j0", genFuncType<Ty::Real<8>, Ty::Real<8>>, genLibCall},
+    {"bessel_j1", "j1f", genFuncType<Ty::Real<4>, Ty::Real<4>>, genLibCall},
+    {"bessel_j1", "j1", genFuncType<Ty::Real<8>, Ty::Real<8>>, genLibCall},
+    {"bessel_jn", "jnf", genFuncType<Ty::Real<4>, Ty::Integer<4>, Ty::Real<4>>,
+     genLibCall},
+    {"bessel_jn", "jn", genFuncType<Ty::Real<8>, Ty::Integer<4>, Ty::Real<8>>,
+     genLibCall},
+    {"bessel_y0", "y0f", genFuncType<Ty::Real<4>, Ty::Real<4>>, genLibCall},
+    {"bessel_y0", "y0", genFuncType<Ty::Real<8>, Ty::Real<8>>, genLibCall},
+    {"bessel_y1", "y1f", genFuncType<Ty::Real<4>, Ty::Real<4>>, genLibCall},
+    {"bessel_y1", "y1", genFuncType<Ty::Real<8>, Ty::Real<8>>, genLibCall},
+    {"bessel_yn", "ynf", genFuncType<Ty::Real<4>, Ty::Integer<4>, Ty::Real<4>>,
+     genLibCall},
+    {"bessel_yn", "yn", genFuncType<Ty::Real<8>, Ty::Integer<4>, Ty::Real<8>>,
+     genLibCall},
     // math::CeilOp returns a real, while Fortran CEILING returns integer.
-    {"ceil", "ceilf", genF32F32FuncType, genMathOp<mlir::math::CeilOp>},
-    {"ceil", "ceil", genF64F64FuncType, genMathOp<mlir::math::CeilOp>},
-    {"cos", "cosf", genF32F32FuncType, genMathOp<mlir::math::CosOp>},
-    {"cos", "cos", genF64F64FuncType, genMathOp<mlir::math::CosOp>},
-    {"cos", "ccosf", genComplexComplexFuncType<4>,
+    {"ceil", "ceilf", genFuncType<Ty::Real<4>, Ty::Real<4>>,
+     genMathOp<mlir::math::CeilOp>},
+    {"ceil", "ceil", genFuncType<Ty::Real<8>, Ty::Real<8>>,
+     genMathOp<mlir::math::CeilOp>},
+    {"cos", "cosf", genFuncType<Ty::Real<4>, Ty::Real<4>>,
+     genMathOp<mlir::math::CosOp>},
+    {"cos", "cos", genFuncType<Ty::Real<8>, Ty::Real<8>>,
+     genMathOp<mlir::math::CosOp>},
+    {"cos", "ccosf", genFuncType<Ty::Complex<4>, Ty::Complex<4>>,
      genComplexMathOp<mlir::complex::CosOp>},
-    {"cos", "ccos", genComplexComplexFuncType<8>,
+    {"cos", "ccos", genFuncType<Ty::Complex<8>, Ty::Complex<8>>,
      genComplexMathOp<mlir::complex::CosOp>},
-    {"cosh", "coshf", genF32F32FuncType, genLibCall},
-    {"cosh", "cosh", genF64F64FuncType, genLibCall},
-    {"cosh", "ccoshf", genComplexComplexFuncType<4>, genLibCall},
-    {"cosh", "ccosh", genComplexComplexFuncType<8>, genLibCall},
+    {"cosh", "coshf", genFuncType<Ty::Real<4>, Ty::Real<4>>, genLibCall},
+    {"cosh", "cosh", genFuncType<Ty::Real<8>, Ty::Real<8>>, genLibCall},
+    {"cosh", "ccoshf", genFuncType<Ty::Complex<4>, Ty::Complex<4>>, genLibCall},
+    {"cosh", "ccosh", genFuncType<Ty::Complex<8>, Ty::Complex<8>>, genLibCall},
     {"divc",
      {},
-     genComplexComplexComplexFuncType<2>,
+     genFuncType<Ty::Complex<2>, Ty::Complex<2>, Ty::Complex<2>>,
      genComplexMathOp<mlir::complex::DivOp>},
     {"divc",
      {},
-     genComplexComplexComplexFuncType<3>,
+     genFuncType<Ty::Complex<3>, Ty::Complex<3>, Ty::Complex<3>>,
      genComplexMathOp<mlir::complex::DivOp>},
-    {"divc", "__divsc3", genComplexComplexComplexFuncType<4>,
+    {"divc", "__divsc3",
+     genFuncType<Ty::Complex<4>, Ty::Complex<4>, Ty::Complex<4>>,
      genLibSplitComplexArgsCall},
-    {"divc", "__divdc3", genComplexComplexComplexFuncType<8>,
+    {"divc", "__divdc3",
+     genFuncType<Ty::Complex<8>, Ty::Complex<8>, Ty::Complex<8>>,
      genLibSplitComplexArgsCall},
-    {"divc", "__divxc3", genComplexComplexComplexFuncType<10>,
+    {"divc", "__divxc3",
+     genFuncType<Ty::Complex<10>, Ty::Complex<10>, Ty::Complex<10>>,
      genLibSplitComplexArgsCall},
-    {"divc", "__divtc3", genComplexComplexComplexFuncType<16>,
+    {"divc", "__divtc3",
+     genFuncType<Ty::Complex<16>, Ty::Complex<16>, Ty::Complex<16>>,
      genLibSplitComplexArgsCall},
-    {"erf", "erff", genF32F32FuncType, genMathOp<mlir::math::ErfOp>},
-    {"erf", "erf", genF64F64FuncType, genMathOp<mlir::math::ErfOp>},
-    {"erfc", "erfcf", genF32F32FuncType, genLibCall},
-    {"erfc", "erfc", genF64F64FuncType, genLibCall},
-    {"exp", "expf", genF32F32FuncType, genMathOp<mlir::math::ExpOp>},
-    {"exp", "exp", genF64F64FuncType, genMathOp<mlir::math::ExpOp>},
-    {"exp", "cexpf", genComplexComplexFuncType<4>,
+    {"erf", "erff", genFuncType<Ty::Real<4>, Ty::Real<4>>,
+     genMathOp<mlir::math::ErfOp>},
+    {"erf", "erf", genFuncType<Ty::Real<8>, Ty::Real<8>>,
+     genMathOp<mlir::math::ErfOp>},
+    {"erfc", "erfcf", genFuncType<Ty::Real<4>, Ty::Real<4>>, genLibCall},
+    {"erfc", "erfc", genFuncType<Ty::Real<8>, Ty::Real<8>>, genLibCall},
+    {"exp", "expf", genFuncType<Ty::Real<4>, Ty::Real<4>>,
+     genMathOp<mlir::math::ExpOp>},
+    {"exp", "exp", genFuncType<Ty::Real<8>, Ty::Real<8>>,
+     genMathOp<mlir::math::ExpOp>},
+    {"exp", "cexpf", genFuncType<Ty::Complex<4>, Ty::Complex<4>>,
      genComplexMathOp<mlir::complex::ExpOp>},
-    {"exp", "cexp", genComplexComplexFuncType<8>,
+    {"exp", "cexp", genFuncType<Ty::Complex<8>, Ty::Complex<8>>,
      genComplexMathOp<mlir::complex::ExpOp>},
     // math::FloorOp returns a real, while Fortran FLOOR returns integer.
-    {"floor", "floorf", genF32F32FuncType, genMathOp<mlir::math::FloorOp>},
-    {"floor", "floor", genF64F64FuncType, genMathOp<mlir::math::FloorOp>},
-    {"fma", "llvm.fma.f32", genF32F32F32F32FuncType,
+    {"floor", "floorf", genFuncType<Ty::Real<4>, Ty::Real<4>>,
+     genMathOp<mlir::math::FloorOp>},
+    {"floor", "floor", genFuncType<Ty::Real<8>, Ty::Real<8>>,
+     genMathOp<mlir::math::FloorOp>},
+    {"fma", "llvm.fma.f32",
+     genFuncType<Ty::Real<4>, Ty::Real<4>, Ty::Real<4>, Ty::Real<4>>,
      genMathOp<mlir::math::FmaOp>},
-    {"fma", "llvm.fma.f64", genF64F64F64F64FuncType,
+    {"fma", "llvm.fma.f64",
+     genFuncType<Ty::Real<8>, Ty::Real<8>, Ty::Real<8>, Ty::Real<8>>,
      genMathOp<mlir::math::FmaOp>},
-    {"gamma", "tgammaf", genF32F32FuncType, genLibCall},
-    {"gamma", "tgamma", genF64F64FuncType, genLibCall},
-    {"hypot", "hypotf", genF32F32F32FuncType, genLibCall},
-    {"hypot", "hypot", genF64F64F64FuncType, genLibCall},
-    {"log", "logf", genF32F32FuncType, genMathOp<mlir::math::LogOp>},
-    {"log", "log", genF64F64FuncType, genMathOp<mlir::math::LogOp>},
-    {"log", "clogf", genComplexComplexFuncType<4>,
+    {"gamma", "tgammaf", genFuncType<Ty::Real<4>, Ty::Real<4>>, genLibCall},
+    {"gamma", "tgamma", genFuncType<Ty::Real<8>, Ty::Real<8>>, genLibCall},
+    {"hypot", "hypotf", genFuncType<Ty::Real<4>, Ty::Real<4>, Ty::Real<4>>,
+     genLibCall},
+    {"hypot", "hypot", genFuncType<Ty::Real<8>, Ty::Real<8>, Ty::Real<8>>,
+     genLibCall},
+    {"log", "logf", genFuncType<Ty::Real<4>, Ty::Real<4>>,
+     genMathOp<mlir::math::LogOp>},
+    {"log", "log", genFuncType<Ty::Real<8>, Ty::Real<8>>,
+     genMathOp<mlir::math::LogOp>},
+    {"log", "clogf", genFuncType<Ty::Complex<4>, Ty::Complex<4>>,
      genComplexMathOp<mlir::complex::LogOp>},
-    {"log", "clog", genComplexComplexFuncType<8>,
+    {"log", "clog", genFuncType<Ty::Complex<8>, Ty::Complex<8>>,
      genComplexMathOp<mlir::complex::LogOp>},
-    {"log10", "log10f", genF32F32FuncType, genMathOp<mlir::math::Log10Op>},
-    {"log10", "log10", genF64F64FuncType, genMathOp<mlir::math::Log10Op>},
-    {"log_gamma", "lgammaf", genF32F32FuncType, genLibCall},
-    {"log_gamma", "lgamma", genF64F64FuncType, genLibCall},
+    {"log10", "log10f", genFuncType<Ty::Real<4>, Ty::Real<4>>,
+     genMathOp<mlir::math::Log10Op>},
+    {"log10", "log10", genFuncType<Ty::Real<8>, Ty::Real<8>>,
+     genMathOp<mlir::math::Log10Op>},
+    {"log_gamma", "lgammaf", genFuncType<Ty::Real<4>, Ty::Real<4>>, genLibCall},
+    {"log_gamma", "lgamma", genFuncType<Ty::Real<8>, Ty::Real<8>>, genLibCall},
     // llvm.lround behaves the same way as libm's lround.
-    {"nint", "llvm.lround.i64.f64", genIntF64FuncType<64>, genLibCall},
-    {"nint", "llvm.lround.i64.f32", genIntF32FuncType<64>, genLibCall},
-    {"nint", "llvm.lround.i32.f64", genIntF64FuncType<32>, genLibCall},
-    {"nint", "llvm.lround.i32.f32", genIntF32FuncType<32>, genLibCall},
-    {"pow", {}, genIntIntIntFuncType<8>, genMathOp<mlir::math::IPowIOp>},
-    {"pow", {}, genIntIntIntFuncType<16>, genMathOp<mlir::math::IPowIOp>},
-    {"pow", {}, genIntIntIntFuncType<32>, genMathOp<mlir::math::IPowIOp>},
-    {"pow", {}, genIntIntIntFuncType<64>, genMathOp<mlir::math::IPowIOp>},
-    {"pow", "powf", genF32F32F32FuncType, genMathOp<mlir::math::PowFOp>},
-    {"pow", "pow", genF64F64F64FuncType, genMathOp<mlir::math::PowFOp>},
-    {"pow", "cpowf", genComplexComplexComplexFuncType<4>,
+    {"nint", "llvm.lround.i64.f64", genFuncType<Ty::Integer<8>, Ty::Real<8>>,
+     genLibCall},
+    {"nint", "llvm.lround.i64.f32", genFuncType<Ty::Integer<8>, Ty::Real<4>>,
+     genLibCall},
+    {"nint", "llvm.lround.i32.f64", genFuncType<Ty::Integer<4>, Ty::Real<8>>,
+     genLibCall},
+    {"nint", "llvm.lround.i32.f32", genFuncType<Ty::Integer<4>, Ty::Real<4>>,
+     genLibCall},
+    {"pow",
+     {},
+     genFuncType<Ty::Integer<1>, Ty::Integer<1>, Ty::Integer<1>>,
+     genMathOp<mlir::math::IPowIOp>},
+    {"pow",
+     {},
+     genFuncType<Ty::Integer<2>, Ty::Integer<2>, Ty::Integer<2>>,
+     genMathOp<mlir::math::IPowIOp>},
+    {"pow",
+     {},
+     genFuncType<Ty::Integer<4>, Ty::Integer<4>, Ty::Integer<4>>,
+     genMathOp<mlir::math::IPowIOp>},
+    {"pow",
+     {},
+     genFuncType<Ty::Integer<8>, Ty::Integer<8>, Ty::Integer<8>>,
+     genMathOp<mlir::math::IPowIOp>},
+    {"pow", "powf", genFuncType<Ty::Real<4>, Ty::Real<4>, Ty::Real<4>>,
+     genMathOp<mlir::math::PowFOp>},
+    {"pow", "pow", genFuncType<Ty::Real<8>, Ty::Real<8>, Ty::Real<8>>,
+     genMathOp<mlir::math::PowFOp>},
+    {"pow", "cpowf",
+     genFuncType<Ty::Complex<4>, Ty::Complex<4>, Ty::Complex<4>>,
      genComplexMathOp<mlir::complex::PowOp>},
-    {"pow", "cpow", genComplexComplexComplexFuncType<8>,
+    {"pow", "cpow", genFuncType<Ty::Complex<8>, Ty::Complex<8>, Ty::Complex<8>>,
      genComplexMathOp<mlir::complex::PowOp>},
-    {"pow", RTNAME_STRING(FPow4i), genF32F32IntFuncType<32>,
+    {"pow", RTNAME_STRING(FPow4i),
+     genFuncType<Ty::Real<4>, Ty::Real<4>, Ty::Integer<4>>,
      genMathOp<mlir::math::FPowIOp>},
-    {"pow", RTNAME_STRING(FPow8i), genF64F64IntFuncType<32>,
+    {"pow", RTNAME_STRING(FPow8i),
+     genFuncType<Ty::Real<8>, Ty::Real<8>, Ty::Integer<4>>,
      genMathOp<mlir::math::FPowIOp>},
-    {"pow", RTNAME_STRING(FPow4k), genF32F32IntFuncType<64>,
+    {"pow", RTNAME_STRING(FPow4k),
+     genFuncType<Ty::Real<4>, Ty::Real<4>, Ty::Integer<8>>,
      genMathOp<mlir::math::FPowIOp>},
-    {"pow", RTNAME_STRING(FPow8k), genF64F64IntFuncType<64>,
+    {"pow", RTNAME_STRING(FPow8k),
+     genFuncType<Ty::Real<8>, Ty::Real<8>, Ty::Integer<8>>,
      genMathOp<mlir::math::FPowIOp>},
-    {"pow", RTNAME_STRING(cpowi), genComplexComplexIntFuncType<4, 32>,
-     genLibCall},
-    {"pow", RTNAME_STRING(zpowi), genComplexComplexIntFuncType<8, 32>,
-     genLibCall},
-    {"pow", RTNAME_STRING(cpowk), genComplexComplexIntFuncType<4, 64>,
-     genLibCall},
-    {"pow", RTNAME_STRING(zpowk), genComplexComplexIntFuncType<8, 64>,
-     genLibCall},
-    {"sign", "copysignf", genF32F32F32FuncType,
+    {"pow", RTNAME_STRING(cpowi),
+     genFuncType<Ty::Complex<4>, Ty::Complex<4>, Ty::Integer<4>>, genLibCall},
+    {"pow", RTNAME_STRING(zpowi),
+     genFuncType<Ty::Complex<8>, Ty::Complex<8>, Ty::Integer<4>>, genLibCall},
+    {"pow", RTNAME_STRING(cpowk),
+     genFuncType<Ty::Complex<4>, Ty::Complex<4>, Ty::Integer<8>>, genLibCall},
+    {"pow", RTNAME_STRING(zpowk),
+     genFuncType<Ty::Complex<8>, Ty::Complex<8>, Ty::Integer<8>>, genLibCall},
+    {"sign", "copysignf", genFuncType<Ty::Real<4>, Ty::Real<4>, Ty::Real<4>>,
      genMathOp<mlir::math::CopySignOp>},
-    {"sign", "copysign", genF64F64F64FuncType,
+    {"sign", "copysign", genFuncType<Ty::Real<8>, Ty::Real<8>, Ty::Real<8>>,
      genMathOp<mlir::math::CopySignOp>},
-    {"sign", "copysignl", genF80F80F80FuncType,
+    {"sign", "copysignl", genFuncType<Ty::Real<10>, Ty::Real<10>, Ty::Real<10>>,
      genMathOp<mlir::math::CopySignOp>},
-    {"sign", "llvm.copysign.f128", genF128F128F128FuncType,
+    {"sign", "llvm.copysign.f128",
+     genFuncType<Ty::Real<16>, Ty::Real<16>, Ty::Real<16>>,
      genMathOp<mlir::math::CopySignOp>},
-    {"sin", "sinf", genF32F32FuncType, genMathOp<mlir::math::SinOp>},
-    {"sin", "sin", genF64F64FuncType, genMathOp<mlir::math::SinOp>},
-    {"sin", "csinf", genComplexComplexFuncType<4>,
+    {"sin", "sinf", genFuncType<Ty::Real<4>, Ty::Real<4>>,
+     genMathOp<mlir::math::SinOp>},
+    {"sin", "sin", genFuncType<Ty::Real<8>, Ty::Real<8>>,
+     genMathOp<mlir::math::SinOp>},
+    {"sin", "csinf", genFuncType<Ty::Complex<4>, Ty::Complex<4>>,
      genComplexMathOp<mlir::complex::SinOp>},
-    {"sin", "csin", genComplexComplexFuncType<8>,
+    {"sin", "csin", genFuncType<Ty::Complex<8>, Ty::Complex<8>>,
      genComplexMathOp<mlir::complex::SinOp>},
-    {"sinh", "sinhf", genF32F32FuncType, genLibCall},
-    {"sinh", "sinh", genF64F64FuncType, genLibCall},
-    {"sinh", "csinhf", genComplexComplexFuncType<4>, genLibCall},
-    {"sinh", "csinh", genComplexComplexFuncType<8>, genLibCall},
-    {"sqrt", "sqrtf", genF32F32FuncType, genMathOp<mlir::math::SqrtOp>},
-    {"sqrt", "sqrt", genF64F64FuncType, genMathOp<mlir::math::SqrtOp>},
-    {"sqrt", "csqrtf", genComplexComplexFuncType<4>,
+    {"sinh", "sinhf", genFuncType<Ty::Real<4>, Ty::Real<4>>, genLibCall},
+    {"sinh", "sinh", genFuncType<Ty::Real<8>, Ty::Real<8>>, genLibCall},
+    {"sinh", "csinhf", genFuncType<Ty::Complex<4>, Ty::Complex<4>>, genLibCall},
+    {"sinh", "csinh", genFuncType<Ty::Complex<8>, Ty::Complex<8>>, genLibCall},
+    {"sqrt", "sqrtf", genFuncType<Ty::Real<4>, Ty::Real<4>>,
+     genMathOp<mlir::math::SqrtOp>},
+    {"sqrt", "sqrt", genFuncType<Ty::Real<8>, Ty::Real<8>>,
+     genMathOp<mlir::math::SqrtOp>},
+    {"sqrt", "csqrtf", genFuncType<Ty::Complex<4>, Ty::Complex<4>>,
      genComplexMathOp<mlir::complex::SqrtOp>},
-    {"sqrt", "csqrt", genComplexComplexFuncType<8>,
+    {"sqrt", "csqrt", genFuncType<Ty::Complex<8>, Ty::Complex<8>>,
      genComplexMathOp<mlir::complex::SqrtOp>},
-    {"tan", "tanf", genF32F32FuncType, genMathOp<mlir::math::TanOp>},
-    {"tan", "tan", genF64F64FuncType, genMathOp<mlir::math::TanOp>},
-    {"tan", "ctanf", genComplexComplexFuncType<4>,
+    {"tan", "tanf", genFuncType<Ty::Real<4>, Ty::Real<4>>,
+     genMathOp<mlir::math::TanOp>},
+    {"tan", "tan", genFuncType<Ty::Real<8>, Ty::Real<8>>,
+     genMathOp<mlir::math::TanOp>},
+    {"tan", "ctanf", genFuncType<Ty::Complex<4>, Ty::Complex<4>>,
      genComplexMathOp<mlir::complex::TanOp>},
-    {"tan", "ctan", genComplexComplexFuncType<8>,
+    {"tan", "ctan", genFuncType<Ty::Complex<8>, Ty::Complex<8>>,
      genComplexMathOp<mlir::complex::TanOp>},
-    {"tanh", "tanhf", genF32F32FuncType, genMathOp<mlir::math::TanhOp>},
-    {"tanh", "tanh", genF64F64FuncType, genMathOp<mlir::math::TanhOp>},
-    {"tanh", "ctanhf", genComplexComplexFuncType<4>,
+    {"tanh", "tanhf", genFuncType<Ty::Real<4>, Ty::Real<4>>,
+     genMathOp<mlir::math::TanhOp>},
+    {"tanh", "tanh", genFuncType<Ty::Real<8>, Ty::Real<8>>,
+     genMathOp<mlir::math::TanhOp>},
+    {"tanh", "ctanhf", genFuncType<Ty::Complex<4>, Ty::Complex<4>>,
      genComplexMathOp<mlir::complex::TanhOp>},
-    {"tanh", "ctanh", genComplexComplexFuncType<8>,
+    {"tanh", "ctanh", genFuncType<Ty::Complex<8>, Ty::Complex<8>>,
      genComplexMathOp<mlir::complex::TanhOp>},
 };
 
 static constexpr MathOperation ppcMathOperations[] = {
     // fcfi is just another name for fcfid, there is no llvm.ppc.fcfi.
-    {"__ppc_fcfi", "llvm.ppc.fcfid", genF64F64FuncType, genLibCall},
-    {"__ppc_fcfid", "llvm.ppc.fcfid", genF64F64FuncType, genLibCall},
-    {"__ppc_fcfud", "llvm.ppc.fcfud", genF64F64FuncType, genLibCall},
-    {"__ppc_fctid", "llvm.ppc.fctid", genF64F64FuncType, genLibCall},
-    {"__ppc_fctidz", "llvm.ppc.fctidz", genF64F64FuncType, genLibCall},
-    {"__ppc_fctiw", "llvm.ppc.fctiw", genF64F64FuncType, genLibCall},
-    {"__ppc_fctiwz", "llvm.ppc.fctiwz", genF64F64FuncType, genLibCall},
-    {"__ppc_fctudz", "llvm.ppc.fctudz", genF64F64FuncType, genLibCall},
-    {"__ppc_fctuwz", "llvm.ppc.fctuwz", genF64F64FuncType, genLibCall},
-    {"__ppc_fmadd", "llvm.fma.f32", genF32F32F32F32FuncType,
-     genMathOp<mlir::math::FmaOp>},
-    {"__ppc_fmadd", "llvm.fma.f64", genF64F64F64F64FuncType,
-     genMathOp<mlir::math::FmaOp>},
-    {"__ppc_fmsub", "llvm.ppc.fmsubs", genF32F32F32F32FuncType, genLibCall},
-    {"__ppc_fmsub", "llvm.ppc.fmsub", genF64F64F64F64FuncType, genLibCall},
-    {"__ppc_fnabs", "llvm.ppc.fnabss", genF32F32FuncType, genLibCall},
-    {"__ppc_fnabs", "llvm.ppc.fnabs", genF64F64FuncType, genLibCall},
-    {"__ppc_fnmadd", "llvm.ppc.fnmadds", genF32F32F32F32FuncType, genLibCall},
-    {"__ppc_fnmadd", "llvm.ppc.fnmadd", genF64F64F64F64FuncType, genLibCall},
-    {"__ppc_fnmsub", "llvm.ppc.fnmsub.f32", genF32F32F32F32FuncType,
+    {"__ppc_fcfi", "llvm.ppc.fcfid", genFuncType<Ty::Real<8>, Ty::Real<8>>,
      genLibCall},
-    {"__ppc_fnmsub", "llvm.ppc.fnmsub.f64", genF64F64F64F64FuncType,
+    {"__ppc_fcfid", "llvm.ppc.fcfid", genFuncType<Ty::Real<8>, Ty::Real<8>>,
      genLibCall},
-    {"__ppc_fre", "llvm.ppc.fre", genF64F64FuncType, genLibCall},
-    {"__ppc_fres", "llvm.ppc.fres", genF32F32FuncType, genLibCall},
-    {"__ppc_frsqrte", "llvm.ppc.frsqrte", genF64F64FuncType, genLibCall},
-    {"__ppc_frsqrtes", "llvm.ppc.frsqrtes", genF32F32FuncType, genLibCall},
+    {"__ppc_fcfud", "llvm.ppc.fcfud", genFuncType<Ty::Real<8>, Ty::Real<8>>,
+     genLibCall},
+    {"__ppc_fctid", "llvm.ppc.fctid", genFuncType<Ty::Real<8>, Ty::Real<8>>,
+     genLibCall},
+    {"__ppc_fctidz", "llvm.ppc.fctidz", genFuncType<Ty::Real<8>, Ty::Real<8>>,
+     genLibCall},
+    {"__ppc_fctiw", "llvm.ppc.fctiw", genFuncType<Ty::Real<8>, Ty::Real<8>>,
+     genLibCall},
+    {"__ppc_fctiwz", "llvm.ppc.fctiwz", genFuncType<Ty::Real<8>, Ty::Real<8>>,
+     genLibCall},
+    {"__ppc_fctudz", "llvm.ppc.fctudz", genFuncType<Ty::Real<8>, Ty::Real<8>>,
+     genLibCall},
+    {"__ppc_fctuwz", "llvm.ppc.fctuwz", genFuncType<Ty::Real<8>, Ty::Real<8>>,
+     genLibCall},
+    {"__ppc_fmadd", "llvm.fma.f32",
+     genFuncType<Ty::Real<4>, Ty::Real<4>, Ty::Real<4>, Ty::Real<4>>,
+     genMathOp<mlir::math::FmaOp>},
+    {"__ppc_fmadd", "llvm.fma.f64",
+     genFuncType<Ty::Real<8>, Ty::Real<8>, Ty::Real<8>, Ty::Real<8>>,
+     genMathOp<mlir::math::FmaOp>},
+    {"__ppc_fmsub", "llvm.ppc.fmsubs",
+     genFuncType<Ty::Real<4>, Ty::Real<4>, Ty::Real<4>, Ty::Real<4>>,
+     genLibCall},
+    {"__ppc_fmsub", "llvm.ppc.fmsub",
+     genFuncType<Ty::Real<8>, Ty::Real<8>, Ty::Real<8>, Ty::Real<8>>,
+     genLibCall},
+    {"__ppc_fnabs", "llvm.ppc.fnabss", genFuncType<Ty::Real<4>, Ty::Real<4>>,
+     genLibCall},
+    {"__ppc_fnabs", "llvm.ppc.fnabs", genFuncType<Ty::Real<8>, Ty::Real<8>>,
+     genLibCall},
+    {"__ppc_fnmadd", "llvm.ppc.fnmadds",
+     genFuncType<Ty::Real<4>, Ty::Real<4>, Ty::Real<4>, Ty::Real<4>>,
+     genLibCall},
+    {"__ppc_fnmadd", "llvm.ppc.fnmadd",
+     genFuncType<Ty::Real<8>, Ty::Real<8>, Ty::Real<8>, Ty::Real<8>>,
+     genLibCall},
+    {"__ppc_fnmsub", "llvm.ppc.fnmsub.f32",
+     genFuncType<Ty::Real<4>, Ty::Real<4>, Ty::Real<4>, Ty::Real<4>>,
+     genLibCall},
+    {"__ppc_fnmsub", "llvm.ppc.fnmsub.f64",
+     genFuncType<Ty::Real<8>, Ty::Real<8>, Ty::Real<8>, Ty::Real<8>>,
+     genLibCall},
+    {"__ppc_fre", "llvm.ppc.fre", genFuncType<Ty::Real<8>, Ty::Real<8>>,
+     genLibCall},
+    {"__ppc_fres", "llvm.ppc.fres", genFuncType<Ty::Real<4>, Ty::Real<4>>,
+     genLibCall},
+    {"__ppc_frsqrte", "llvm.ppc.frsqrte", genFuncType<Ty::Real<8>, Ty::Real<8>>,
+     genLibCall},
+    {"__ppc_frsqrtes", "llvm.ppc.frsqrtes",
+     genFuncType<Ty::Real<4>, Ty::Real<4>>, genLibCall},
 };
 
 // This helper class computes a "distance" between two function types.
@@ -1314,7 +1268,7 @@ searchMathOperation(fir::FirOpBuilder &builder, llvm::StringRef name,
   }
   for (auto iter = range.first; iter != range.second && iter; ++iter) {
     const auto &impl = *iter;
-    auto implType = impl.typeGenerator(builder.getContext());
+    auto implType = impl.typeGenerator(builder.getContext(), builder);
     if (funcType == implType)
       return &impl; // exact match
 
@@ -1852,7 +1806,7 @@ IntrinsicLibrary::getRuntimeCallGenerator(llvm::StringRef name,
     crashOnMissingIntrinsic(loc, nameAndType);
   }
 
-  actualFuncType = mathOp->typeGenerator(builder.getContext());
+  actualFuncType = mathOp->typeGenerator(builder.getContext(), builder);
 
   assert(actualFuncType.getNumResults() == soughtFuncType.getNumResults() &&
          actualFuncType.getNumInputs() == soughtFuncType.getNumInputs() &&
@@ -5274,10 +5228,12 @@ void IntrinsicLibrary::genMtfsf(llvm::ArrayRef<fir::ExtendedValue> args) {
   mlir::FunctionType libFuncType;
   mlir::func::FuncOp funcOp;
   if (isImm) {
-    libFuncType = genVoidIntIntFuncType<32, 32>(builder.getContext());
+    libFuncType = genFuncType<Ty::Void, Ty::Integer<4>, Ty::Integer<4>>(
+        builder.getContext(), builder);
     funcOp = builder.addNamedFunction(loc, "llvm.ppc.mtfsfi", libFuncType);
   } else {
-    libFuncType = genVoidIntF64FuncType<32>(builder.getContext());
+    libFuncType = genFuncType<Ty::Void, Ty::Integer<4>, Ty::Real<8>>(
+        builder.getContext(), builder);
     funcOp = builder.addNamedFunction(loc, "llvm.ppc.mtfsf", libFuncType);
   }
   builder.create<fir::CallOp>(loc, funcOp, scalarArgs);

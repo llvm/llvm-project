@@ -15,3 +15,16 @@ endsubroutine
 ! CHECK-NEXT:    hlfir.destroy %[[EXPR]]
 ! CHECK-NEXT:    return
 ! CHECK-NEXT:  }
+
+! test the case where lowering has more exact information about the output
+! shape than is available from the argument
+subroutine transpose2(a, out)
+  real, allocatable, dimension(:) :: a
+  real, dimension(:,:) :: out
+  integer, parameter :: N = 3
+  integer, parameter :: M = 4
+
+  allocate(a(N*M))
+  out = transpose(reshape(a, (/N, M/)))
+end subroutine
+! CHECK-LABEL: func.func @_QPtranspose2(

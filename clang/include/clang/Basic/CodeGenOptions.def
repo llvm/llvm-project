@@ -114,6 +114,9 @@ CODEGENOPT(StackSizeSection  , 1, 0) ///< Set when -fstack-size-section is enabl
 CODEGENOPT(ForceDwarfFrameSection , 1, 0) ///< Set when -fforce-dwarf-frame is
                                           ///< enabled.
 
+///< Set when -femit-compact-unwind-non-canonical is enabled.
+CODEGENOPT(EmitCompactUnwindNonCanonical, 1, 0)
+
 ///< Set when -femit-dwarf-unwind is passed.
 ENUM_CODEGENOPT(EmitDwarfUnwind, llvm::EmitDwarfUnwindType, 2,
                 llvm::EmitDwarfUnwindType::Default)
@@ -497,9 +500,6 @@ CODEGENOPT(SkipRaxSetup, 1, 0)
 /// Whether to zero out caller-used registers before returning.
 ENUM_CODEGENOPT(ZeroCallUsedRegs, llvm::ZeroCallUsedRegs::ZeroCallUsedRegsKind,
                 5, llvm::ZeroCallUsedRegs::ZeroCallUsedRegsKind::Skip)
-
-/// Whether to use opaque pointers.
-CODEGENOPT(OpaquePointers, 1, 0)
 
 /// Modify C++ ABI to returning `this` pointer from constructors and
 /// non-deleting destructors. (No effect on Microsoft ABI.)

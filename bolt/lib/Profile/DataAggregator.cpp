@@ -777,7 +777,8 @@ bool DataAggregator::doBranch(uint64_t From, uint64_t To, uint64_t Count,
   if (!FromFunc && !ToFunc)
     return false;
 
-  if (FromFunc == ToFunc) {
+  // Treat recursive control transfers as inter-branches.
+  if (FromFunc == ToFunc && (To != ToFunc->getAddress())) {
     recordBranch(*FromFunc, From - FromFunc->getAddress(),
                  To - FromFunc->getAddress(), Count, Mispreds);
     return doIntraBranch(*FromFunc, From, To, Count, Mispreds);

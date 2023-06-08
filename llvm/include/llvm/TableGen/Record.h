@@ -918,7 +918,17 @@ public:
 /// !op (X, Y, Z) - Combine two inits.
 class TernOpInit : public OpInit, public FoldingSetNode {
 public:
-  enum TernaryOp : uint8_t { SUBST, FOREACH, FILTER, IF, DAG, SUBSTR, FIND };
+  enum TernaryOp : uint8_t {
+    SUBST,
+    FOREACH,
+    FILTER,
+    IF,
+    DAG,
+    SUBSTR,
+    FIND,
+    SETDAGARG,
+    SETDAGNAME,
+  };
 
 private:
   Init *LHS, *MHS, *RHS;
@@ -1406,6 +1416,10 @@ public:
     assert(Num < NumArgs && "Arg number out of range!");
     return getTrailingObjects<Init *>()[Num];
   }
+
+  /// This method looks up the specified argument name and returns its argument
+  /// number or std::nullopt if that argument name does not exist.
+  std::optional<unsigned> getArgNo(StringRef Name) const;
 
   StringInit *getArgName(unsigned Num) const {
     assert(Num < NumArgNames && "Arg number out of range!");

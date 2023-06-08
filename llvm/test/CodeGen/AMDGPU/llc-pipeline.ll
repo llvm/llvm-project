@@ -51,9 +51,6 @@
 ; GCN-O0-NEXT:      Scalarize Masked Memory Intrinsics
 ; GCN-O0-NEXT:      Expand reduction intrinsics
 ; GCN-O0-NEXT:    AMDGPU Remove Incompatible Functions
-; GCN-O0-NEXT:    AMDGPU Attributor
-; GCN-O0-NEXT:      FunctionPass Manager
-; GCN-O0-NEXT:        Cycle Info Analysis
 ; GCN-O0-NEXT:    CallGraph Construction
 ; GCN-O0-NEXT:    Call Graph SCC Pass Manager
 ; GCN-O0-NEXT:      AMDGPU Annotate Kernel Features

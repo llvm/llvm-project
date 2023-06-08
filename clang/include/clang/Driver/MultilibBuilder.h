@@ -75,9 +75,9 @@ public:
   flags_list &flags() { return Flags; }
 
   /// Add a flag to the flags list
-  /// \p Required defines whether the flag is required or disallowed.
   /// \p Flag must be a flag accepted by the driver.
-  MultilibBuilder &flag(bool Required, StringRef Flag);
+  /// \p Disallow defines whether the flag is negated and therefore disallowed.
+  MultilibBuilder &flag(StringRef Flag, bool Disallow = false);
 
   Multilib makeMultilib() const;
 

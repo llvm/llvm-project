@@ -1,4 +1,4 @@
-; RUN: opt -passes="ipsccp<func-spec>" -funcspec-avg-loop-iters=3 -funcspec-min-function-size=10 -S < %s | FileCheck %s
+; RUN: opt -passes="ipsccp<func-spec>" -force-specialization -S < %s | FileCheck %s
 
 ; CHECK-NOT: foo.{{[0-9]+}}
 

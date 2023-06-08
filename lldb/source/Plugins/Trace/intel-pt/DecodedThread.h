@@ -159,7 +159,7 @@ public:
 
   /// \return
   ///   The error associated with a given trace item.
-  const char *GetErrorByIndex(uint64_t item_index) const;
+  llvm::StringRef GetErrorByIndex(uint64_t item_index) const;
 
   /// \return
   ///   The trace item kind given an item index.
@@ -275,7 +275,7 @@ private:
     lldb::TraceEvent event;
 
     /// The string message of this item if it's an error
-    const char *error;
+    std::string error;
   };
 
   /// Create a new trace item.

@@ -63,11 +63,46 @@ bool CopyPropagation::interpretAsCopy(const MachineInstr *MI, EqualityMap &EM) {
 void CopyPropagation::recordCopy(NodeAddr<StmtNode*> SA, EqualityMap &EM) {
   CopyMap.insert(std::make_pair(SA.Id, EM));
   Copies.push_back(SA.Id);
+
+  for (auto I : EM) {
+    auto FS = DefM.find(I.second.Reg);
+    if (FS == DefM.end() || FS->second.empty())
+      continue; // Undefined source
+    RDefMap[I.second][SA.Id] = FS->second.top()->Id;
+    // Insert DstR into the map.
+    RDefMap[I.first];
+  }
+}
+
+
+void CopyPropagation::updateMap(NodeAddr<InstrNode*> IA) {
+  RegisterSet RRs;
+  for (NodeAddr<RefNode*> RA : IA.Addr->members(DFG))
+    RRs.insert(RA.Addr->getRegRef(DFG));
+  bool Common = false;
+  for (auto &R : RDefMap) {
+    if (!RRs.count(R.first))
+      continue;
+    Common = true;
+    break;
+  }
+  if (!Common)
+    return;
+
+  for (auto &R : RDefMap) {
+    if (!RRs.count(R.first))
+      continue;
+    auto F = DefM.find(R.first.Reg);
+    if (F == DefM.end() || F->second.empty())
+      continue;
+    R.second[IA.Id] = F->second.top()->Id;
+  }
 }
 
 bool CopyPropagation::scanBlock(MachineBasicBlock *B) {
   bool Changed = false;
   NodeAddr<BlockNode*> BA = DFG.findBlock(B);
+  DFG.markBlock(BA.Id, DefM);
 
   for (NodeAddr<InstrNode*> IA : BA.Addr->members(DFG)) {
     if (DFG.IsCode<NodeAttrs::Stmt>(IA)) {
@@ -76,26 +111,17 @@ bool CopyPropagation::scanBlock(MachineBasicBlock *B) {
       if (interpretAsCopy(SA.Addr->getCode(), EM))
         recordCopy(SA, EM);
     }
+
+    updateMap(IA);
+    DFG.pushAllDefs(IA, DefM);
   }
 
   MachineDomTreeNode *N = MDT.getNode(B);
   for (auto *I : *N)
     Changed |= scanBlock(I->getBlock());
 
+  DFG.releaseBlock(BA.Id, DefM);
   return Changed;
-}
-
-NodeId CopyPropagation::getLocalReachingDef(RegisterRef RefRR,
-      NodeAddr<InstrNode*> IA) {
-  NodeAddr<RefNode*> RA = L.getNearestAliasedRef(RefRR, IA);
-  if (RA.Id != 0) {
-    if (RA.Addr->getKind() == NodeAttrs::Def)
-      return RA.Id;
-    assert(RA.Addr->getKind() == NodeAttrs::Use);
-    if (NodeId RD = RA.Addr->getReachingDef())
-      return RD;
-  }
-  return 0;
 }
 
 bool CopyPropagation::run() {
@@ -109,6 +135,14 @@ bool CopyPropagation::run() {
       for (auto J : CopyMap[I])
         dbgs() << ' ' << Print<RegisterRef>(J.first, DFG) << '='
                << Print<RegisterRef>(J.second, DFG);
+      dbgs() << " }\n";
+    }
+    dbgs() << "\nRDef map:\n";
+    for (auto R : RDefMap) {
+      dbgs() << Print<RegisterRef>(R.first, DFG) << " -> {";
+      for (auto &M : R.second)
+        dbgs() << ' ' << Print<NodeId>(M.first, DFG) << ':'
+               << Print<NodeId>(M.second, DFG);
       dbgs() << " }\n";
     }
   }
@@ -150,7 +184,8 @@ bool CopyPropagation::run() {
       if (DR == SR)
         continue;
 
-      NodeId AtCopy = getLocalReachingDef(SR, SA);
+      auto &RDefSR = RDefMap[SR];
+      NodeId RDefSR_SA = RDefSR[SA.Id];
 
       for (NodeId N = DA.Addr->getReachedUse(), NextN; N; N = NextN) {
         auto UA = DFG.addr<UseNode*>(N);
@@ -163,8 +198,7 @@ bool CopyPropagation::run() {
 
         NodeAddr<InstrNode*> IA = UA.Addr->getOwner(DFG);
         assert(DFG.IsCode<NodeAttrs::Stmt>(IA));
-        NodeId AtUse = getLocalReachingDef(SR, IA);
-        if (AtCopy != AtUse)
+        if (RDefSR[IA.Id] != RDefSR_SA)
           continue;
 
         MachineOperand &Op = UA.Addr->getOp();
@@ -180,8 +214,8 @@ bool CopyPropagation::run() {
         Op.setReg(NewReg);
         Op.setSubReg(0);
         DFG.unlinkUse(UA, false);
-        if (AtCopy != 0) {
-          UA.Addr->linkToDef(UA.Id, DFG.addr<DefNode*>(AtCopy));
+        if (RDefSR_SA != 0) {
+          UA.Addr->linkToDef(UA.Id, DFG.addr<DefNode*>(RDefSR_SA));
         } else {
           UA.Addr->setReachingDef(0);
           UA.Addr->setSibling(0);

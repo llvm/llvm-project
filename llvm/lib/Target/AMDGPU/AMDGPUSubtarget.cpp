@@ -576,7 +576,7 @@ unsigned AMDGPUSubtarget::getKernArgSegmentSize(const Function &F,
                                                 Align &MaxAlign) const {
   uint64_t ExplicitArgBytes = getExplicitKernArgSize(F, MaxAlign);
 
-  unsigned ExplicitOffset = getExplicitKernelArgOffset(F);
+  unsigned ExplicitOffset = getExplicitKernelArgOffset();
 
   uint64_t TotalSize = ExplicitOffset + ExplicitArgBytes;
   unsigned ImplicitBytes = getImplicitArgNumBytes(F);
