@@ -1058,7 +1058,8 @@ void AMDGPUPassConfig::addCodeGenPrepare() {
     if (RemoveIncompatibleFunctions)
       addPass(createAMDGPURemoveIncompatibleFunctionsPass(TM));
 
-    addPass(createAMDGPUAttributorPass());
+    if (TM->getOptLevel() > CodeGenOpt::None)
+      addPass(createAMDGPUAttributorPass());
 
     // FIXME: This pass adds 2 hacky attributes that can be replaced with an
     // analysis, and should be removed.
