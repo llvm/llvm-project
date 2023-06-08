@@ -392,9 +392,14 @@ static FailureOr<ForallTilingResult> tileToForallOpImpl(
     FailureOr<TilingResult> tilingResult =
         cast<TilingInterface>(clonedOp).getTiledImplementation(b, tiledOffsets,
                                                                tiledSizes);
+    if (failed(tilingResult))
+      return clonedOp->emitError("Failed to tile op: ");
+    if (tilingResult->tiledOps.size() != 1) {
+      return clonedOp->emitError("expected a single produced tiled op, got ")
+             << tilingResult->tiledOps.size();
+    }
+
     b.eraseOp(clonedOp);
-    assert(tilingResult->tiledOps.size() == 1 &&
-           "expected a single produced tiled op");
     tiledOp = tilingResult->tiledOps.front();
     tiledValues = tilingResult->tiledValues;
   }
@@ -733,8 +738,12 @@ FailureOr<linalg::ForallReductionTilingResult> linalg::tileReductionUsingForall(
       FailureOr<TilingResult> tilingResult =
           cast<TilingInterface>(clonedOp).getTiledImplementation(
               b, tiledOffsets, tiledSizes);
-      assert(tilingResult->tiledOps.size() == 1 &&
-             "expected a single produced tiled op");
+      if (failed(tilingResult))
+        return clonedOp->emitError("Failed to tile op: ");
+      if (tilingResult->tiledOps.size() != 1) {
+        return clonedOp->emitError("expected a single produced tiled op, got ")
+               << tilingResult->tiledOps.size();
+      }
       tiledOp = tilingResult->tiledOps.front();
       tilingResults = tilingResult->tiledValues;
     } else {
@@ -747,8 +756,9 @@ FailureOr<linalg::ForallReductionTilingResult> linalg::tileReductionUsingForall(
       SmallVector<Value> ids = forallOp.getInductionVars();
       mapLoopToProcessorIds(cast<scf::ForOp>(maybeTiled->loops.back()), ids,
                             materializedNonZeroNumThreads);
-      assert(maybeTiled->loops.size() == 1 &&
-             "expected a single produced loop");
+      if (maybeTiled->loops.size() != 1) {
+        return clonedOp->emitError("expected a single produced loop");
+      }
       tiledOp = maybeTiled->op;
       tilingResults = maybeTiled->loops.front()->getResults();
     }
