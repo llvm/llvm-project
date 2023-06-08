@@ -12856,6 +12856,22 @@ TEST_F(FormatTest, FormatsAfterAccessModifiers) {
                "  void f() {}\n"
                "};\n",
                Style);
+  verifyFormat("struct foo {\n"
+               "#ifdef FOO\n"
+               "#else\n"
+               "private:\n"
+               "\n"
+               "#endif\n"
+               "};",
+               "struct foo {\n"
+               "#ifdef FOO\n"
+               "#else\n"
+               "private:\n"
+               "\n"
+               "\n"
+               "#endif\n"
+               "};",
+               Style);
 
   Style.EmptyLineAfterAccessModifier = FormatStyle::ELAAMS_Always;
   verifyFormat("struct foo {\n"
