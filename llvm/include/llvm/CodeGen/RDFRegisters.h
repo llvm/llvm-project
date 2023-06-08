@@ -11,6 +11,7 @@
 
 #include "llvm/ADT/BitVector.h"
 #include "llvm/ADT/STLExtras.h"
+#include "llvm/ADT/iterator_range.h"
 #include "llvm/CodeGen/TargetRegisterInfo.h"
 #include "llvm/MC/LaneBitmask.h"
 #include <cassert>
@@ -224,6 +225,13 @@ struct RegisterAggr {
 
   rr_iterator rr_begin() const { return rr_iterator(*this, false); }
   rr_iterator rr_end() const { return rr_iterator(*this, true); }
+
+  iterator_range<rr_iterator> refs() {
+    return make_range(rr_begin(), rr_end());
+  }
+  iterator_range<rr_iterator> refs() const {
+    return make_range(rr_begin(), rr_end());
+  }
 
 private:
   BitVector Units;
