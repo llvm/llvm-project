@@ -477,6 +477,22 @@ void transform::ApplyPatternsOp::getEffects(
   transform::modifiesPayload(effects);
 }
 
+void transform::ApplyPatternsOp::build(
+    OpBuilder &builder, OperationState &result, Value target,
+    function_ref<void(OpBuilder &, Location)> bodyBuilder,
+    bool failOnPayloadReplacementNotFound) {
+  result.addOperands(target);
+  result.getOrAddProperties<Properties>()
+      .fail_on_payload_replacement_not_found =
+      builder.getBoolAttr(failOnPayloadReplacementNotFound);
+
+  OpBuilder::InsertionGuard g(builder);
+  Region *region = result.addRegion();
+  builder.createBlock(region);
+  if (bodyBuilder)
+    bodyBuilder(builder, result.location);
+}
+
 //===----------------------------------------------------------------------===//
 // ApplyCanonicalizationPatternsOp
 //===----------------------------------------------------------------------===//
