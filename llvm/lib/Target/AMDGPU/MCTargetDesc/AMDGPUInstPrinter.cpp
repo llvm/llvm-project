@@ -1403,7 +1403,10 @@ void AMDGPUInstPrinter::printOpSel(const MCInst *MI, unsigned,
                                    const MCSubtargetInfo &STI,
                                    raw_ostream &O) {
   unsigned Opc = MI->getOpcode();
-  if (isPermlane16(Opc) || isVOP1Cvt_F32_Fp8_Bf8_e64(Opc)) {
+  if (isPermlane16(Opc) ||
+      (isVOP1Cvt_F32_Fp8_Bf8_e64(Opc) &&
+       Opc != AMDGPU::V_CVT_PK_F32_BF8_e64_gfx12 &&
+       Opc != AMDGPU::V_CVT_PK_F32_FP8_e64_gfx12)) {
     auto FIN = AMDGPU::getNamedOperandIdx(Opc, AMDGPU::OpName::src0_modifiers);
     auto BCN = AMDGPU::getNamedOperandIdx(Opc, AMDGPU::OpName::src1_modifiers);
     unsigned FI = !!(MI->getOperand(FIN).getImm() & SISrcMods::OP_SEL_0);
