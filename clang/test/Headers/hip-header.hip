@@ -123,7 +123,7 @@ __device__ float test_floor() {
 }
 
 // CHECK-LABEL: define{{.*}}@_Z8test_maxv
-// CHECK: call {{.*}}double @__ocml_fmax_f64(double {{.*}}, double
+// CHECK: call {{.*}}double @llvm.maxnum.f64(double {{.*}}, double
 __device__ float test_max() {
   return max(5, 6.0);
 }
