@@ -31,7 +31,7 @@ def ApplyCastAwayVectorLeadingOneDimPatternsOp : Op<Transform_Dialect,
 }
 
 def ApplyRankReducingSubviewPatternsOp : Op<Transform_Dialect,
-    "apply_patterns.vector.apply_rank_reducing_subview_patterns",
+    "apply_patterns.vector.rank_reducing_subview_patterns",
     [DeclareOpInterfaceMethods<PatternDescriptorOpInterface>]> {
   let description = [{
     Apply opt-in vector transfer permutation patterns that include:
@@ -47,7 +47,7 @@ def ApplyRankReducingSubviewPatternsOp : Op<Transform_Dialect,
 }
 
 def ApplyTransferPermutationPatternsOp : Op<Transform_Dialect,
-    "apply_patterns.vector.apply_transfer_permutation_patterns",
+    "apply_patterns.vector.transfer_permutation_patterns",
     [DeclareOpInterfaceMethods<PatternDescriptorOpInterface>]> {
   let description = [{
     Apply opt-in vector transfer permutation patterns that include:
