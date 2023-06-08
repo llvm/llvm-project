@@ -928,11 +928,15 @@ TEST_F(LlvmLibcSPrintfTest, FloatDecimalConv) {
 
   // Length Modifier Tests.
 
-  // TODO: Fix long doubles (needs bigger table or alternate algorithm.)
-  // Currently the table values are generated, which is very slow.
+  // TODO(michaelrj): Add tests for LONG_DOUBLE_IS_DOUBLE and 128 bit long
+  // double systems.
+  // TODO(michaelrj): Fix the tests to only depend on the digits the long double
+  // is accurate for.
 
   written = __llvm_libc::sprintf(buff, "%Lf", 1.0L);
   ASSERT_STREQ_LEN(written, buff, "1.000000");
+
+#if defined(SPECIAL_X86_LONG_DOUBLE)
 
   written = __llvm_libc::sprintf(buff, "%Lf", 1e100L);
   ASSERT_STREQ_LEN(written, buff,
@@ -940,8 +944,6 @@ TEST_F(LlvmLibcSPrintfTest, FloatDecimalConv) {
                    "91541752018669482644324418977840117055488.000000");
 
   char big_buff[10000];
-
-  // written = __llvm_libc::sprintf(big_buff, "%Lf", 0x1p16383L);
 
   written = __llvm_libc::sprintf(big_buff, "%Lf", 1e1000L);
   ASSERT_STREQ_LEN(
@@ -1035,10 +1037,8 @@ TEST_F(LlvmLibcSPrintfTest, FloatDecimalConv) {
       "231934194956788626761834746430104077432547436359522462253411168467463134"
       "24896.000000");
 
-
   written = __llvm_libc::sprintf(big_buff, "%.10Lf", 1e-10L);
-  ASSERT_STREQ_LEN(
-      written, big_buff, "0.0000000001");
+  ASSERT_STREQ_LEN(written, big_buff, "0.0000000001");
 
   written = __llvm_libc::sprintf(big_buff, "%.7500Lf", 1e-4900L);
   ASSERT_STREQ_LEN(
@@ -1149,6 +1149,7 @@ TEST_F(LlvmLibcSPrintfTest, FloatDecimalConv) {
       "570449525088342437216896462077260223998756027453411520977536701491759878"
       "422771447006016890777855573925295187921971811871399320142563330377888532"
       "179817332113");
+#endif // SPECIAL_X86_LONG_DOUBLE
 
   /*
     written = __llvm_libc::sprintf(buff, "%La", 0.1L);
