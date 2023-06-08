@@ -2494,3 +2494,80 @@ define i1 @samesign_inverted_wrong_cmp(i32 %x, i32 %y) {
   %r = and i1 %gt, %lt
   ret i1 %r
 }
+
+define <2 x i1> @icmp_eq_m1_and_eq_m1(<2 x i8> %x, <2 x i8> %y) {
+; CHECK-LABEL: @icmp_eq_m1_and_eq_m1(
+; CHECK-NEXT:    [[RX:%.*]] = icmp eq <2 x i8> [[X:%.*]], <i8 -1, i8 undef>
+; CHECK-NEXT:    [[RY:%.*]] = icmp eq <2 x i8> [[Y:%.*]], <i8 -1, i8 undef>
+; CHECK-NEXT:    [[R:%.*]] = and <2 x i1> [[RX]], [[RY]]
+; CHECK-NEXT:    ret <2 x i1> [[R]]
+;
+  %rx = icmp eq <2 x i8> %x, <i8 -1, i8 undef>
+  %ry = icmp eq <2 x i8> %y, <i8 -1, i8 undef>
+  %r = and <2 x i1> %rx, %ry
+  ret <2 x i1> %r
+}
+
+define <2 x i1> @icmp_eq_m1_and_eq_undef_m1(<2 x i8> %x, <2 x i8> %y) {
+; CHECK-LABEL: @icmp_eq_m1_and_eq_undef_m1(
+; CHECK-NEXT:    [[RX:%.*]] = icmp eq <2 x i8> [[X:%.*]], <i8 -1, i8 undef>
+; CHECK-NEXT:    [[RY:%.*]] = icmp eq <2 x i8> [[Y:%.*]], <i8 undef, i8 -1>
+; CHECK-NEXT:    [[R:%.*]] = and <2 x i1> [[RX]], [[RY]]
+; CHECK-NEXT:    ret <2 x i1> [[R]]
+;
+  %rx = icmp eq <2 x i8> %x, <i8 -1, i8 undef>
+  %ry = icmp eq <2 x i8> %y, <i8 undef, i8 -1>
+  %r = and <2 x i1> %rx, %ry
+  ret <2 x i1> %r
+}
+
+define <2 x i1> @icmp_eq_undef_and_eq_m1_m2(<2 x i8> %x, <2 x i8> %y) {
+; CHECK-LABEL: @icmp_eq_undef_and_eq_m1_m2(
+; CHECK-NEXT:    ret <2 x i1> zeroinitializer
+;
+  %rx = icmp eq <2 x i8> %x, <i8 undef, i8 undef>
+  %ry = icmp eq <2 x i8> %y, <i8 -1, i8 -2>
+  %r = and <2 x i1> %rx, %ry
+  ret <2 x i1> %r
+}
+
+define <2 x i1> @icmp_ne_m1_and_ne_m1_fail(<2 x i8> %x, <2 x i8> %y) {
+; CHECK-LABEL: @icmp_ne_m1_and_ne_m1_fail(
+; CHECK-NEXT:    [[RX:%.*]] = icmp ne <2 x i8> [[X:%.*]], <i8 -1, i8 undef>
+; CHECK-NEXT:    [[RY:%.*]] = icmp ne <2 x i8> [[Y:%.*]], <i8 -1, i8 undef>
+; CHECK-NEXT:    [[R:%.*]] = and <2 x i1> [[RX]], [[RY]]
+; CHECK-NEXT:    ret <2 x i1> [[R]]
+;
+  %rx = icmp ne <2 x i8> %x, <i8 -1, i8 undef>
+  %ry = icmp ne <2 x i8> %y, <i8 -1, i8 undef>
+  %r = and <2 x i1> %rx, %ry
+  ret <2 x i1> %r
+}
+
+
+define <2 x i1> @icmp_eq_m1_or_eq_m1_fail(<2 x i8> %x, <2 x i8> %y) {
+; CHECK-LABEL: @icmp_eq_m1_or_eq_m1_fail(
+; CHECK-NEXT:    [[RX:%.*]] = icmp eq <2 x i8> [[X:%.*]], <i8 -1, i8 undef>
+; CHECK-NEXT:    [[RY:%.*]] = icmp eq <2 x i8> [[Y:%.*]], <i8 -1, i8 undef>
+; CHECK-NEXT:    [[R:%.*]] = or <2 x i1> [[RX]], [[RY]]
+; CHECK-NEXT:    ret <2 x i1> [[R]]
+;
+  %rx = icmp eq <2 x i8> %x, <i8 -1, i8 undef>
+  %ry = icmp eq <2 x i8> %y, <i8 -1, i8 undef>
+  %r = or <2 x i1> %rx, %ry
+  ret <2 x i1> %r
+}
+
+
+define <2 x i1> @icmp_ne_m1_or_ne_m1(<2 x i8> %x, <2 x i8> %y) {
+; CHECK-LABEL: @icmp_ne_m1_or_ne_m1(
+; CHECK-NEXT:    [[RX:%.*]] = icmp ne <2 x i8> [[X:%.*]], <i8 -1, i8 -1>
+; CHECK-NEXT:    [[RY:%.*]] = icmp ne <2 x i8> [[Y:%.*]], <i8 -1, i8 undef>
+; CHECK-NEXT:    [[R:%.*]] = or <2 x i1> [[RX]], [[RY]]
+; CHECK-NEXT:    ret <2 x i1> [[R]]
+;
+  %rx = icmp ne <2 x i8> %x, <i8 -1, i8 -1>
+  %ry = icmp ne <2 x i8> %y, <i8 -1, i8 undef>
+  %r = or <2 x i1> %rx, %ry
+  ret <2 x i1> %r
+}
