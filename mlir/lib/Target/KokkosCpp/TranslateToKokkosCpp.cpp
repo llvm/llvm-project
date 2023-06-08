@@ -418,6 +418,13 @@ static LogicalResult printOperation(KokkosCppEmitter &emitter,
 }
 
 static LogicalResult printOperation(KokkosCppEmitter &emitter,
+                                    memref::DeallocOp op) {
+  // Do nothing
+  // TODO: explicily call view destructor
+  return success();
+}
+
+static LogicalResult printOperation(KokkosCppEmitter &emitter,
                                     memref::StoreOp op) {
   //TODO: if in host code, use a mirror view?
   emitter << emitter.getOrCreateName(op.getMemref()) << "(";
@@ -913,6 +920,7 @@ static LogicalResult printOperation(KokkosCppEmitter &emitter, scf::WhileOp whil
     emitter << ' ' << emitter.getOrCreateName(std::get<0>(pair)) << " = ";
     if(failed(emitter.emitValue(std::get<1>(pair))))
       return failure();
+    emitter << ";\n";
   }
   for (auto afterArg : whileOp.getAfterArguments()) {
     if (failed(emitter.emitVariableDeclaration(afterArg, /*trailingSemicolon=*/true)))
@@ -965,7 +973,7 @@ static LogicalResult printOperation(KokkosCppEmitter &emitter, scf::ConditionOp 
   emitter << "}\n";
   emitter << "else {\n";
   //Condition false: breaking out of loop
-  emitter << "break\n";
+  emitter << "break;\n";
   emitter << "}\n";
   return success();
 }
@@ -1774,10 +1782,14 @@ void KokkosCppEmitter::populateSparseSupportFunctions()
       sparseSupportFunctions.insert({name, {pointerResult, name}});
     };
   registerCIface(false, "newSparseTensor");
+  registerCIface(true, "sparseValuesF32");
   registerCIface(true, "sparseValuesF64");
   registerCIface(true, "sparseIndices0");
   registerCIface(true, "sparsePointers0");
+  registerCIface(false, "lexInsertF32");
   registerCIface(false, "lexInsertF64");
+  registerCIface(false, "expInsertF32");
+  registerCIface(false, "expInsertF64");
   // Now the functions _not_ prefixed with _mlir_ciface_
   registerNonPrefixed(false, "endInsert");
 }
@@ -2160,7 +2172,8 @@ static LogicalResult printOperation(KokkosCppEmitter &emitter,
         emitter << ">>(";
       }
     }
-    emitter << emitter.getOrCreateName(v);
+    if(failed(emitter.emitValue(v)))
+      return failure();
     if(needsCast)
       emitter << ')';
     return success();
@@ -2543,7 +2556,7 @@ LogicalResult KokkosCppEmitter::emitOperation(Operation &op, bool trailingSemico
           .Case<math::SqrtOp, math::AbsIOp, math::AbsFOp, math::ExpOp, math::Exp2Op, math::SinOp, math::CosOp, math::AtanOp, math::TanhOp, math::ErfOp, math::LogOp, math::Log2Op>(
               [&](auto op) { return printMathOperation(*this, op); })
           // Memref ops.
-          .Case<memref::GlobalOp, memref::GetGlobalOp, memref::AllocOp, memref::AllocaOp, memref::StoreOp, memref::LoadOp, memref::CopyOp, memref::SubViewOp, memref::CollapseShapeOp, memref::CastOp>(
+          .Case<memref::GlobalOp, memref::GetGlobalOp, memref::AllocOp, memref::AllocaOp, memref::StoreOp, memref::LoadOp, memref::CopyOp, memref::SubViewOp, memref::CollapseShapeOp, memref::CastOp, memref::DeallocOp>(
               [&](auto op) { return printOperation(*this, op); })
           // LLVM ops.
           .Case<LLVM::NullOp>(
