@@ -88,7 +88,7 @@ struct RegisterRef {
     return !isReg() || (Reg != 0 && Mask.any());
   }
 
-  constexpr size_t hash() const {
+  size_t hash() const {
     return std::hash<RegisterId>{}(Reg) ^
            std::hash<LaneBitmask::Type>{}(Mask.getAsInteger());
   }
