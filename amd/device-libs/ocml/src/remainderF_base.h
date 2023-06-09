@@ -47,7 +47,6 @@ MATH_MANGLE(remainder)(float x, float y)
 #if !defined(COMPILING_FMOD)
     if (DAZ_OPT()) {
         x = BUILTIN_CANONICALIZE_F32(x);
-        y = BUILTIN_CANONICALIZE_F32(y);
     }
 #endif
 
