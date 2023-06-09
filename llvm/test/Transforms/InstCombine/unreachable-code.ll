@@ -13,8 +13,7 @@ define i32 @br_true(i1 %x) {
 ; CHECK:       else:
 ; CHECK-NEXT:    br label [[JOIN]]
 ; CHECK:       join:
-; CHECK-NEXT:    [[PHI:%.*]] = phi i32 [ 1, [[IF]] ], [ 2, [[ELSE]] ]
-; CHECK-NEXT:    ret i32 [[PHI]]
+; CHECK-NEXT:    ret i32 1
 ;
   %c = or i1 %x, true
   br i1 %c, label %if, label %else
@@ -42,8 +41,7 @@ define i32 @br_false(i1 %x) {
 ; CHECK-NEXT:    call void @dummy()
 ; CHECK-NEXT:    br label [[JOIN]]
 ; CHECK:       join:
-; CHECK-NEXT:    [[PHI:%.*]] = phi i32 [ 1, [[IF]] ], [ 2, [[ELSE]] ]
-; CHECK-NEXT:    ret i32 [[PHI]]
+; CHECK-NEXT:    ret i32 2
 ;
   %c = and i1 %x, false
   br i1 %c, label %if, label %else
@@ -70,7 +68,7 @@ define i32 @br_undef(i1 %x) {
 ; CHECK:       else:
 ; CHECK-NEXT:    br label [[JOIN]]
 ; CHECK:       join:
-; CHECK-NEXT:    ret i32 poison
+; CHECK-NEXT:    ret i32 undef
 ;
   %c = xor i1 %x, undef
   br i1 %c, label %if, label %else
@@ -98,8 +96,7 @@ define i32 @br_true_phi_with_repeated_preds(i1 %x) {
 ; CHECK:       else:
 ; CHECK-NEXT:    br i1 false, label [[JOIN]], label [[JOIN]]
 ; CHECK:       join:
-; CHECK-NEXT:    [[PHI:%.*]] = phi i32 [ 1, [[IF]] ], [ 2, [[ELSE]] ], [ 2, [[ELSE]] ]
-; CHECK-NEXT:    ret i32 [[PHI]]
+; CHECK-NEXT:    ret i32 1
 ;
   %c = or i1 %x, true
   br i1 %c, label %if, label %else
