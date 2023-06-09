@@ -7,10 +7,12 @@
 //===----------------------------------------------------------------------===//
 
 #include "mlir/Dialect/Transform/IR/TransformInterfaces.h"
+
 #include "mlir/Dialect/Transform/IR/TransformTypes.h"
 #include "mlir/IR/Diagnostics.h"
 #include "mlir/IR/Operation.h"
 #include "mlir/IR/PatternMatch.h"
+#include "mlir/Interfaces/CastInterfaces.h"
 #include "mlir/Support/LogicalResult.h"
 #include "mlir/Transforms/GreedyPatternRewriteDriver.h"
 #include "llvm/ADT/STLExtras.h"
@@ -1153,6 +1155,175 @@ bool transform::TransformResults::isSet(unsigned resultNumber) const {
   return params[resultNumber].data() != nullptr ||
          operations[resultNumber].data() != nullptr ||
          values[resultNumber].data() != nullptr;
+}
+
+//===----------------------------------------------------------------------===//
+// TrackingListener
+//===----------------------------------------------------------------------===//
+
+Operation *transform::TrackingListener::getCommonDefiningOp(ValueRange values) {
+  Operation *defOp = nullptr;
+  for (Value v : values) {
+    // Skip empty values.
+    if (!v)
+      continue;
+    if (!defOp) {
+      defOp = v.getDefiningOp();
+      continue;
+    }
+    if (defOp != v.getDefiningOp())
+      return nullptr;
+  }
+  return defOp;
+}
+
+FailureOr<Operation *>
+transform::TrackingListener::findReplacementOp(Operation *op,
+                                               ValueRange newValues) const {
+  assert(op->getNumResults() == newValues.size() &&
+         "invalid number of replacement values");
+  SmallVector<Value> values(newValues.begin(), newValues.end());
+
+  do {
+    // If the replacement values belong to different ops, drop the mapping.
+    Operation *defOp = getCommonDefiningOp(values);
+    if (!defOp)
+      return failure();
+
+    // If the defining op has the same type, we take it as a replacement.
+    if (op->getName() == defOp->getName())
+      return defOp;
+
+    // Replacing an op with a constant-like equivalent is a common
+    // canonicalization.
+    if (defOp->hasTrait<OpTrait::ConstantLike>())
+      return defOp;
+
+    values.clear();
+
+    // Skip through ops that implement FindPayloadReplacementOpInterface.
+    if (auto findReplacementOpInterface =
+            dyn_cast<FindPayloadReplacementOpInterface>(defOp)) {
+      values.assign(findReplacementOpInterface.getNextOperands());
+      continue;
+    }
+
+    // Skip through ops that implement CastOpInterface.
+    if (isa<CastOpInterface>(defOp)) {
+      values.assign(defOp->getOperands().begin(), defOp->getOperands().end());
+      continue;
+    }
+  } while (!values.empty());
+
+  return failure();
+}
+
+LogicalResult transform::TrackingListener::notifyMatchFailure(
+    Location loc, function_ref<void(Diagnostic &)> reasonCallback) {
+  LLVM_DEBUG({
+    Diagnostic diag(loc, DiagnosticSeverity::Remark);
+    reasonCallback(diag);
+    DBGS() << "Match Failure : " << diag.str() << "\n";
+  });
+  return failure();
+}
+
+void transform::TrackingListener::notifyOperationRemoved(Operation *op) {
+  // TODO: Walk can be removed when D144193 has landed.
+  op->walk([&](Operation *op) {
+    // Remove mappings for result values.
+    for (OpResult value : op->getResults())
+      (void)replacePayloadValue(value, nullptr);
+    // Remove mapping for op.
+    (void)replacePayloadOp(op, nullptr);
+  });
+}
+
+/// Return true if `a` happens before `b`, i.e., `a` or one of its ancestors
+/// properly dominates `b` and `b` is not inside `a`.
+static bool happensBefore(Operation *a, Operation *b) {
+  do {
+    if (a->isProperAncestor(b))
+      return false;
+    if (Operation *bAncestor = a->getBlock()->findAncestorOpInBlock(*b)) {
+      return a->isBeforeInBlock(bAncestor);
+    }
+  } while ((a = a->getParentOp()));
+  return false;
+}
+
+void transform::TrackingListener::notifyOperationReplaced(
+    Operation *op, ValueRange newValues) {
+  assert(op->getNumResults() == newValues.size() &&
+         "invalid number of replacement values");
+
+  // Replace value handles.
+  for (auto [oldValue, newValue] : llvm::zip(op->getResults(), newValues))
+    (void)replacePayloadValue(oldValue, newValue);
+
+  // Replace op handle.
+  SmallVector<Value> opHandles;
+  if (failed(getTransformState().getHandlesForPayloadOp(op, opHandles))) {
+    // Op is not tracked.
+    return;
+  }
+  auto hasAliveUser = [&]() {
+    for (Value v : opHandles)
+      for (Operation *user : v.getUsers())
+        if (!happensBefore(user, transformOp))
+          return true;
+    return false;
+  };
+  if (!hasAliveUser()) {
+    // The op is tracked but the corresponding handles are dead.
+    (void)replacePayloadOp(op, nullptr);
+    return;
+  }
+
+  FailureOr<Operation *> replacement = findReplacementOp(op, newValues);
+  // If the op is tracked but no replacement op was found, send a
+  // notification.
+  if (failed(replacement)) {
+    notifyPayloadReplacementNotFound(op, newValues);
+    (void)replacePayloadOp(op, nullptr);
+    return;
+  }
+
+  (void)replacePayloadOp(op, *replacement);
+}
+
+transform::ErrorCheckingTrackingListener::~ErrorCheckingTrackingListener() {
+  // The state of the ErrorCheckingTrackingListener must be checked and reset
+  // if there was an error. This is to prevent errors from accidentally being
+  // missed.
+  assert(status.succeeded() && "listener state was not checked");
+}
+
+DiagnosedSilenceableFailure
+transform::ErrorCheckingTrackingListener::checkAndResetError() {
+  DiagnosedSilenceableFailure s = std::move(status);
+  status = DiagnosedSilenceableFailure::success();
+  errorCounter = 0;
+  return s;
+}
+
+bool transform::ErrorCheckingTrackingListener::failed() const {
+  return !status.succeeded();
+}
+
+void transform::ErrorCheckingTrackingListener::notifyPayloadReplacementNotFound(
+    Operation *op, ValueRange values) {
+  if (status.succeeded()) {
+    status = emitSilenceableFailure(
+        getTransformOp(), "tracking listener failed to find replacement op");
+  }
+
+  status.attachNote(op->getLoc()) << "[" << errorCounter << "] replaced op";
+  for (auto &&[index, value] : llvm::enumerate(values))
+    status.attachNote(value.getLoc())
+        << "[" << errorCounter << "] replacement value " << index;
+
+  ++errorCounter;
 }
 
 //===----------------------------------------------------------------------===//
