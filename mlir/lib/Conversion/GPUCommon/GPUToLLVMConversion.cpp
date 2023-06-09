@@ -548,51 +548,31 @@ private:
                   ConversionPatternRewriter &rewriter) const override;
 };
 
-class ConvertCreateDnVecOpToGpuRuntimeCallPattern
-    : public ConvertOpToGpuRuntimeCallPattern<gpu::CreateDnVecOp> {
+class ConvertCreateDnTensorOpToGpuRuntimeCallPattern
+    : public ConvertOpToGpuRuntimeCallPattern<gpu::CreateDnTensorOp> {
 public:
-  ConvertCreateDnVecOpToGpuRuntimeCallPattern(LLVMTypeConverter &typeConverter)
-      : ConvertOpToGpuRuntimeCallPattern<gpu::CreateDnVecOp>(typeConverter) {}
+  ConvertCreateDnTensorOpToGpuRuntimeCallPattern(
+      LLVMTypeConverter &typeConverter)
+      : ConvertOpToGpuRuntimeCallPattern<gpu::CreateDnTensorOp>(typeConverter) {
+  }
 
 private:
   LogicalResult
-  matchAndRewrite(gpu::CreateDnVecOp op, OpAdaptor adaptor,
+  matchAndRewrite(gpu::CreateDnTensorOp op, OpAdaptor adaptor,
                   ConversionPatternRewriter &rewriter) const override;
 };
 
-class ConvertDestroyDnVecOpToGpuRuntimeCallPattern
-    : public ConvertOpToGpuRuntimeCallPattern<gpu::DestroyDnVecOp> {
+class ConvertDestroyDnTensorOpToGpuRuntimeCallPattern
+    : public ConvertOpToGpuRuntimeCallPattern<gpu::DestroyDnTensorOp> {
 public:
-  ConvertDestroyDnVecOpToGpuRuntimeCallPattern(LLVMTypeConverter &typeConverter)
-      : ConvertOpToGpuRuntimeCallPattern<gpu::DestroyDnVecOp>(typeConverter) {}
+  ConvertDestroyDnTensorOpToGpuRuntimeCallPattern(
+      LLVMTypeConverter &typeConverter)
+      : ConvertOpToGpuRuntimeCallPattern<gpu::DestroyDnTensorOp>(
+            typeConverter) {}
 
 private:
   LogicalResult
-  matchAndRewrite(gpu::DestroyDnVecOp op, OpAdaptor adaptor,
-                  ConversionPatternRewriter &rewriter) const override;
-};
-
-class ConvertCreateDnMatOpToGpuRuntimeCallPattern
-    : public ConvertOpToGpuRuntimeCallPattern<gpu::CreateDnMatOp> {
-public:
-  ConvertCreateDnMatOpToGpuRuntimeCallPattern(LLVMTypeConverter &typeConverter)
-      : ConvertOpToGpuRuntimeCallPattern<gpu::CreateDnMatOp>(typeConverter) {}
-
-private:
-  LogicalResult
-  matchAndRewrite(gpu::CreateDnMatOp op, OpAdaptor adaptor,
-                  ConversionPatternRewriter &rewriter) const override;
-};
-
-class ConvertDestroyDnMatOpToGpuRuntimeCallPattern
-    : public ConvertOpToGpuRuntimeCallPattern<gpu::DestroyDnMatOp> {
-public:
-  ConvertDestroyDnMatOpToGpuRuntimeCallPattern(LLVMTypeConverter &typeConverter)
-      : ConvertOpToGpuRuntimeCallPattern<gpu::DestroyDnMatOp>(typeConverter) {}
-
-private:
-  LogicalResult
-  matchAndRewrite(gpu::DestroyDnMatOp op, OpAdaptor adaptor,
+  matchAndRewrite(gpu::DestroyDnTensorOp op, OpAdaptor adaptor,
                   ConversionPatternRewriter &rewriter) const override;
 };
 
@@ -1474,102 +1454,90 @@ LogicalResult ConvertDestroySparseEnvOpToGpuRuntimeCallPattern::matchAndRewrite(
   return success();
 }
 
-LogicalResult ConvertCreateDnVecOpToGpuRuntimeCallPattern::matchAndRewrite(
-    gpu::CreateDnVecOp op, OpAdaptor adaptor,
+LogicalResult ConvertCreateDnTensorOpToGpuRuntimeCallPattern::matchAndRewrite(
+    gpu::CreateDnTensorOp op, OpAdaptor adaptor,
     ConversionPatternRewriter &rewriter) const {
   if (failed(areAllLLVMTypes(op, adaptor.getOperands(), rewriter)) ||
       failed(isAsyncWithOneDependency(rewriter, op)))
     return failure();
   Location loc = op.getLoc();
   auto stream = adaptor.getAsyncDependencies().front();
-  Value pVec =
+  Value pTensor =
       MemRefDescriptor(adaptor.getMemref()).allocatedPtr(rewriter, loc);
   if (!getTypeConverter()->useOpaquePointers())
-    pVec = rewriter.create<LLVM::BitcastOp>(loc, llvmPointerType, pVec);
+    pTensor = rewriter.create<LLVM::BitcastOp>(loc, llvmPointerType, pTensor);
   Type dType = op.getMemref().getType().getElementType();
   auto dtp = genConstInt32From(rewriter, loc, getCuSparseDataTypeFrom(dType));
-  auto handle =
-      createDnVecCallBuilder
-          .create(loc, rewriter, {adaptor.getSize(), pVec, dtp, stream})
-          .getResult();
-  rewriter.replaceOp(op, {handle, stream});
-  return success();
-}
 
-LogicalResult ConvertDestroyDnVecOpToGpuRuntimeCallPattern::matchAndRewrite(
-    gpu::DestroyDnVecOp op, OpAdaptor adaptor,
-    ConversionPatternRewriter &rewriter) const {
-  if (failed(areAllLLVMTypes(op, adaptor.getOperands(), rewriter)) ||
-      failed(isAsyncWithOneDependency(rewriter, op)))
-    return failure();
-  Location loc = op.getLoc();
-  auto stream = adaptor.getAsyncDependencies().front();
-  destroyDnVecCallBuilder.create(loc, rewriter, {adaptor.getDvec(), stream});
-  rewriter.replaceOp(op, {stream});
-  return success();
-}
+  SmallVector<Value, 4> dims;
+  for (Value dim : adaptor.getDims()) {
+    dims.push_back(dim);
+  }
 
-LogicalResult ConvertCreateDnMatOpToGpuRuntimeCallPattern::matchAndRewrite(
-    gpu::CreateDnMatOp op, OpAdaptor adaptor,
-    ConversionPatternRewriter &rewriter) const {
-  if (failed(areAllLLVMTypes(op, adaptor.getOperands(), rewriter)) ||
-      failed(isAsyncWithOneDependency(rewriter, op)))
-    return failure();
-  Location loc = op.getLoc();
-  auto stream = adaptor.getAsyncDependencies().front();
-  Value pMat =
-      MemRefDescriptor(adaptor.getMemref()).allocatedPtr(rewriter, loc);
-  if (!getTypeConverter()->useOpaquePointers())
-    pMat = rewriter.create<LLVM::BitcastOp>(loc, llvmPointerType, pMat);
-  Type dType = op.getMemref().getType().getElementType();
-  auto dtp = genConstInt32From(rewriter, loc, getCuSparseDataTypeFrom(dType));
+  Value handle;
   // TODO: For now, we track the use of the handle and lower it to cusparse /
   // cusparseLt accordingly. If in a block, both cusparse and cusparseLt are
   // used, we require two separate Creation ops to be the correct logic. In
   // future, we may add support to using one handle in sparse tensor / GPU
   // dialect in both cusparse and cusparseLt. use the cusparseLt create call if
   // the dnmat is used with spmat with 2:4 sparsity
-  Value handle;
-  if (isSpMMCusparseLtOp(op.getDmat())) {
-    auto envHandle = adaptor.getEnv();
-    AssertSparseLTDnMatHandleSizeCallBuilder.create(loc, rewriter, {});
-    auto handleSz = rewriter.create<LLVM::ConstantOp>(
-        loc, getIndexType(), rewriter.getIndexAttr(11032));
-    handle = rewriter.create<LLVM::AllocaOp>(loc, llvmInt8PointerType,
-                                             llvmInt8Type, handleSz);
-    handle = rewriter.create<LLVM::BitcastOp>(loc, llvmPointerType, handle);
+  if (dims.size() == 2) {
+    if (isSpMMCusparseLtOp(op.getDnTensor())) {
+      auto envHandle = adaptor.getEnv();
+      AssertSparseLTDnMatHandleSizeCallBuilder.create(loc, rewriter, {});
+      auto handleSz = rewriter.create<LLVM::ConstantOp>(
+          loc, getIndexType(), rewriter.getIndexAttr(11032));
+      handle = rewriter.create<LLVM::AllocaOp>(loc, llvmInt8PointerType,
+                                               llvmInt8Type, handleSz);
+      handle = rewriter.create<LLVM::BitcastOp>(loc, llvmPointerType, handle);
 
-    createLtDnMatCallBuilder
-        .create(loc, rewriter,
-                {handle, envHandle, adaptor.getRows(), adaptor.getCols(), pMat,
-                 dtp, stream})
-        .getResult();
+      createLtDnMatCallBuilder
+          .create(loc, rewriter,
+                  {handle, envHandle, dims[0], dims[1], pTensor, dtp, stream})
+          .getResult();
+    } else {
+      handle =
+          createDnMatCallBuilder
+              .create(loc, rewriter, {dims[0], dims[1], pTensor, dtp, stream})
+              .getResult();
+    }
   } else {
-    handle =
-        createDnMatCallBuilder
-            .create(loc, rewriter,
-                    {adaptor.getRows(), adaptor.getCols(), pMat, dtp, stream})
-            .getResult();
+    assert(dims.size() == 1 && "Only 1D and 2D tensors are supported");
+    handle = createDnVecCallBuilder
+                 .create(loc, rewriter, {dims[0], pTensor, dtp, stream})
+                 .getResult();
   }
   rewriter.replaceOp(op, {handle, stream});
   return success();
 }
 
-LogicalResult ConvertDestroyDnMatOpToGpuRuntimeCallPattern::matchAndRewrite(
-    gpu::DestroyDnMatOp op, OpAdaptor adaptor,
+LogicalResult ConvertDestroyDnTensorOpToGpuRuntimeCallPattern::matchAndRewrite(
+    gpu::DestroyDnTensorOp op, OpAdaptor adaptor,
     ConversionPatternRewriter &rewriter) const {
   if (failed(areAllLLVMTypes(op, adaptor.getOperands(), rewriter)) ||
       failed(isAsyncWithOneDependency(rewriter, op)))
     return failure();
   Location loc = op.getLoc();
   auto stream = adaptor.getAsyncDependencies().front();
-  // Use the cusparseLt destroy call if the dnmat is used with spmat with
-  // 2:4 sparsity
-  if (isSpMMCusparseLtOp(op.getDmat())) {
-    destroyCuSparseLtDnMatBuilder.create(loc, rewriter,
-                                         {adaptor.getDmat(), stream});
+  auto definingOp = op.getDnTensor().getDefiningOp<gpu::CreateDnTensorOp>();
+  SmallVector<Value, 4> dims;
+  for (Value dim : definingOp.getDims()) {
+    dims.push_back(dim);
+  }
+  if (dims.size() == 2) {
+    // Use the cusparseLt destroy call if the dnmat is used with spmat with
+    // 2:4 sparsity
+    if (isSpMMCusparseLtOp(op.getDnTensor())) {
+      destroyCuSparseLtDnMatBuilder.create(loc, rewriter,
+                                           {adaptor.getDnTensor(), stream});
+    } else {
+      destroyDnMatCallBuilder.create(loc, rewriter,
+                                     {adaptor.getDnTensor(), stream});
+    }
   } else {
-    destroyDnMatCallBuilder.create(loc, rewriter, {adaptor.getDmat(), stream});
+    assert(dims.size() == 1 && "Only 1D and 2D tensors are supported");
+    destroyDnVecCallBuilder.create(loc, rewriter,
+                                   {adaptor.getDnTensor(), stream});
   }
   rewriter.replaceOp(op, {stream});
   return success();
@@ -1914,8 +1882,7 @@ void mlir::populateGpuToLLVMConversionPatterns(LLVMTypeConverter &converter,
                                                StringRef gpuBinaryAnnotation,
                                                bool kernelBarePtrCallConv) {
   addOpaquePointerConversion<gpu::AsyncTokenType>(converter);
-  addOpaquePointerConversion<gpu::SparseDnVecHandleType>(converter);
-  addOpaquePointerConversion<gpu::SparseDnMatHandleType>(converter);
+  addOpaquePointerConversion<gpu::SparseDnTensorHandleType>(converter);
   addOpaquePointerConversion<gpu::SparseSpMatHandleType>(converter);
   addOpaquePointerConversion<gpu::SparseEnvHandleType>(converter);
 
@@ -1931,10 +1898,8 @@ void mlir::populateGpuToLLVMConversionPatterns(LLVMTypeConverter &converter,
                ConvertAsyncYieldToGpuRuntimeCallPattern,
                ConvertCreateSparseEnvOpToGpuRuntimeCallPattern,
                ConvertDestroySparseEnvOpToGpuRuntimeCallPattern,
-               ConvertCreateDnVecOpToGpuRuntimeCallPattern,
-               ConvertDestroyDnVecOpToGpuRuntimeCallPattern,
-               ConvertCreateDnMatOpToGpuRuntimeCallPattern,
-               ConvertDestroyDnMatOpToGpuRuntimeCallPattern,
+               ConvertCreateDnTensorOpToGpuRuntimeCallPattern,
+               ConvertDestroyDnTensorOpToGpuRuntimeCallPattern,
                ConvertCreateCooOpToGpuRuntimeCallPattern,
                ConvertCreateCooAoSOpToGpuRuntimeCallPattern,
                ConvertCreateCsrOpToGpuRuntimeCallPattern,
