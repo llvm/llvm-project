@@ -1994,6 +1994,7 @@ NewGVN::performSymbolicEvaluation(Value *V,
       break;
     case Instruction::BitCast:
     case Instruction::AddrSpaceCast:
+    case Instruction::Freeze:
       return createExpression(I);
       break;
     case Instruction::ICmp:
