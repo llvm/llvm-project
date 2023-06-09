@@ -117,6 +117,11 @@ class SchedMachineModel {
   list<Predicate> UnsupportedFeatures = [];
 
   bit NoModel = false; // Special tag to indicate missing machine model.
+
+  // Tells the MachineScheduler whether or not to track resource usage
+  // using intervals via ResourceSegments (see
+  // llvm/include/llvm/CodeGen/MachineScheduler.h).
+  bit EnableIntervals = false;
 }
 
 def NoSchedModel : SchedMachineModel {
