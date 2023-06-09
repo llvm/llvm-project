@@ -40,32 +40,23 @@ namespace testing {
 // return boolean values, but use integral return values to indicate true or
 // false conditions. Hence, it is more appropriate to use the other comparison
 // conditions for such cases.
-enum TestCondition {
-  Cond_None,
-  Cond_EQ,
-  Cond_NE,
-  Cond_LT,
-  Cond_LE,
-  Cond_GT,
-  Cond_GE,
-};
+enum class TestCond { EQ, NE, LT, LE, GT, GE };
 
 namespace internal {
 
-class RunContext {
-public:
-  enum RunResult { Result_Pass = 1, Result_Fail = 2 };
+struct RunContext {
+  enum class RunResult : bool { Pass, Fail };
 
   RunResult status() const { return Status; }
 
-  void markFail() { Status = Result_Fail; }
+  void markFail() { Status = RunResult::Fail; }
 
 private:
-  RunResult Status = Result_Pass;
+  RunResult Status = RunResult::Pass;
 };
 
 template <typename ValType>
-bool test(RunContext *Ctx, TestCondition Cond, ValType LHS, ValType RHS,
+bool test(RunContext *Ctx, TestCond Cond, ValType LHS, ValType RHS,
           const char *LHSStr, const char *RHSStr, const char *File,
           unsigned long Line);
 
@@ -110,14 +101,14 @@ protected:
   // of type promotion.
   template <typename ValType,
             cpp::enable_if_t<cpp::is_integral_v<ValType>, int> = 0>
-  bool test(TestCondition Cond, ValType LHS, ValType RHS, const char *LHSStr,
+  bool test(TestCond Cond, ValType LHS, ValType RHS, const char *LHSStr,
             const char *RHSStr, const char *File, unsigned long Line) {
     return internal::test(Ctx, Cond, LHS, RHS, LHSStr, RHSStr, File, Line);
   }
 
   template <typename ValType,
             cpp::enable_if_t<cpp::is_enum<ValType>::value, int> = 0>
-  bool test(TestCondition Cond, ValType LHS, ValType RHS, const char *LHSStr,
+  bool test(TestCond Cond, ValType LHS, ValType RHS, const char *LHSStr,
             const char *RHSStr, const char *File, unsigned long Line) {
     return internal::test(Ctx, Cond, (long long)LHS, (long long)RHS, LHSStr,
                           RHSStr, File, Line);
@@ -125,7 +116,7 @@ protected:
 
   template <typename ValType,
             cpp::enable_if_t<cpp::is_pointer_v<ValType>, ValType> = nullptr>
-  bool test(TestCondition Cond, ValType LHS, ValType RHS, const char *LHSStr,
+  bool test(TestCond Cond, ValType LHS, ValType RHS, const char *LHSStr,
             const char *RHSStr, const char *File, unsigned long Line) {
     return internal::test(Ctx, Cond, (unsigned long long)LHS,
                           (unsigned long long)RHS, LHSStr, RHSStr, File, Line);
@@ -135,7 +126,7 @@ protected:
       typename ValType,
       cpp::enable_if_t<cpp::is_same_v<ValType, __llvm_libc::cpp::string_view>,
                        int> = 0>
-  bool test(TestCondition Cond, ValType LHS, ValType RHS, const char *LHSStr,
+  bool test(TestCond Cond, ValType LHS, ValType RHS, const char *LHSStr,
             const char *RHSStr, const char *File, unsigned long Line) {
     return internal::test(Ctx, Cond, LHS, RHS, LHSStr, RHSStr, File, Line);
   }
@@ -143,7 +134,7 @@ protected:
   template <typename ValType,
             cpp::enable_if_t<cpp::is_same_v<ValType, __llvm_libc::cpp::string>,
                              int> = 0>
-  bool test(TestCondition Cond, ValType LHS, ValType RHS, const char *LHSStr,
+  bool test(TestCond Cond, ValType LHS, ValType RHS, const char *LHSStr,
             const char *RHSStr, const char *File, unsigned long Line) {
     return internal::test(Ctx, Cond, LHS, RHS, LHSStr, RHSStr, File, Line);
   }
@@ -353,42 +344,42 @@ CString libc_make_test_file_path_func(const char *file_name);
   void SuiteClass##_##TestName::Run()
 
 #define EXPECT_EQ(LHS, RHS)                                                    \
-  this->test(__llvm_libc::testing::Cond_EQ, (LHS), (RHS), #LHS, #RHS,          \
+  this->test(__llvm_libc::testing::TestCond::EQ, (LHS), (RHS), #LHS, #RHS,     \
              __FILE__, __LINE__)
 #define ASSERT_EQ(LHS, RHS)                                                    \
   if (!EXPECT_EQ(LHS, RHS))                                                    \
   return
 
 #define EXPECT_NE(LHS, RHS)                                                    \
-  this->test(__llvm_libc::testing::Cond_NE, (LHS), (RHS), #LHS, #RHS,          \
+  this->test(__llvm_libc::testing::TestCond::NE, (LHS), (RHS), #LHS, #RHS,     \
              __FILE__, __LINE__)
 #define ASSERT_NE(LHS, RHS)                                                    \
   if (!EXPECT_NE(LHS, RHS))                                                    \
   return
 
 #define EXPECT_LT(LHS, RHS)                                                    \
-  this->test(__llvm_libc::testing::Cond_LT, (LHS), (RHS), #LHS, #RHS,          \
+  this->test(__llvm_libc::testing::TestCond::LT, (LHS), (RHS), #LHS, #RHS,     \
              __FILE__, __LINE__)
 #define ASSERT_LT(LHS, RHS)                                                    \
   if (!EXPECT_LT(LHS, RHS))                                                    \
   return
 
 #define EXPECT_LE(LHS, RHS)                                                    \
-  this->test(__llvm_libc::testing::Cond_LE, (LHS), (RHS), #LHS, #RHS,          \
+  this->test(__llvm_libc::testing::TestCond::LE, (LHS), (RHS), #LHS, #RHS,     \
              __FILE__, __LINE__)
 #define ASSERT_LE(LHS, RHS)                                                    \
   if (!EXPECT_LE(LHS, RHS))                                                    \
   return
 
 #define EXPECT_GT(LHS, RHS)                                                    \
-  this->test(__llvm_libc::testing::Cond_GT, (LHS), (RHS), #LHS, #RHS,          \
+  this->test(__llvm_libc::testing::TestCond::GT, (LHS), (RHS), #LHS, #RHS,     \
              __FILE__, __LINE__)
 #define ASSERT_GT(LHS, RHS)                                                    \
   if (!EXPECT_GT(LHS, RHS))                                                    \
   return
 
 #define EXPECT_GE(LHS, RHS)                                                    \
-  this->test(__llvm_libc::testing::Cond_GE, (LHS), (RHS), #LHS, #RHS,          \
+  this->test(__llvm_libc::testing::TestCond::GE, (LHS), (RHS), #LHS, #RHS,     \
              __FILE__, __LINE__)
 #define ASSERT_GE(LHS, RHS)                                                    \
   if (!EXPECT_GE(LHS, RHS))                                                    \
