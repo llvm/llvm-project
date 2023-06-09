@@ -235,8 +235,6 @@ bool TypePromotionImpl::isSource(Value *V) {
     return true;
   else if (isa<LoadInst>(V))
     return true;
-  else if (isa<BitCastInst>(V))
-    return true;
   else if (auto *Call = dyn_cast<CallInst>(V))
     return Call->hasRetAttr(Attribute::AttrKind::ZExt);
   else if (auto *Trunc = dyn_cast<TruncInst>(V))
@@ -724,8 +722,9 @@ bool TypePromotionImpl::isSupportedValue(Value *V) {
     case Instruction::Ret:
     case Instruction::Load:
     case Instruction::Trunc:
-    case Instruction::BitCast:
       return isSupportedType(I);
+    case Instruction::BitCast:
+      return I->getOperand(0)->getType() == I->getType();
     case Instruction::ZExt:
       return isSupportedType(I->getOperand(0));
     case Instruction::ICmp:
