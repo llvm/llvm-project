@@ -401,6 +401,11 @@ namespace ranges {
     requires invocable<F&> && indirectly_writable<O, invoke_result_t<F&>>
     constexpr O generate(O first, S last, F gen);                                           // since C++20
 
+  template<class ExecutionPolicy, class ForwardIterator, class Generator>
+    void generate(ExecutionPolicy&& exec,
+                  ForwardIterator first, ForwardIterator last,
+                  Generator gen);                                                           // since C++17
+
   template<class R, copy_constructible F>
     requires invocable<F&> && output_range<R, invoke_result_t<F&>>
     constexpr borrowed_iterator_t<R> generate(R&& r, F gen);                                // since C++20
@@ -408,6 +413,10 @@ namespace ranges {
   template<input_or_output_iterator O, copy_constructible F>
     requires invocable<F&> && indirectly_writable<O, invoke_result_t<F&>>
     constexpr O generate_n(O first, iter_difference_t<O> n, F gen);                         // since C++20
+
+  template<class ExecutionPolicy, class ForwardIterator, class Size, class Generator>
+    ForwardIterator generate_n(ExecutionPolicy&& exec,
+                               ForwardIterator first, Size n, Generator gen);               // since C++17
 
  template<input_iterator I1, sentinel_for<I1> S1, input_iterator I2, sentinel_for<I2> S2,
           class Pred = ranges::equal_to, class Proj1 = identity, class Proj2 = identity>
@@ -1806,6 +1815,7 @@ template <class BidirectionalIterator, class Compare>
 #include <__algorithm/pstl_fill.h>
 #include <__algorithm/pstl_find.h>
 #include <__algorithm/pstl_for_each.h>
+#include <__algorithm/pstl_generate.h>
 #include <__algorithm/pstl_merge.h>
 #include <__algorithm/pstl_replace.h>
 #include <__algorithm/pstl_stable_sort.h>
