@@ -1453,12 +1453,6 @@ void SubtargetEmitter::EmitProcessorModels(raw_ostream &OS) {
     OS << "  " << (CompleteModel ? "true" : "false") << ", // "
        << "CompleteModel\n";
 
-    bool EnableIntervals =
-        (PM.ModelDef ? PM.ModelDef->getValueAsBit("EnableIntervals") : false);
-
-    OS << "  " << (EnableIntervals ? "true" : "false") << ", // "
-       << "EnableIntervals\n";
-
     OS << "  " << PM.Index << ", // Processor ID\n";
     if (PM.hasInstrSchedModel())
       OS << "  " << PM.ModelName << "ProcResources" << ",\n"
