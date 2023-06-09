@@ -132,7 +132,7 @@ LValue CIRGenFunction::buildLValueForField(LValue base,
         hasAnyVptr(FieldType, getContext()))
       // Because unions can easily skip invariant.barriers, we need to add
       // a barrier every time CXXRecord field with vptr is referenced.
-      assert(!UnimplementedFeature::createLaunderInvariantGroup());
+      assert(!UnimplementedFeature::createInvariantGroup());
 
     if (IsInPreservedAIRegion ||
         (getDebugInfo() && rec->hasAttr<BPFPreserveAccessIndexAttr>())) {

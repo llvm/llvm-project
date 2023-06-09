@@ -146,13 +146,43 @@ public:
   }
 
   CIRGenCalleeInfo getAbstractInfo() const {
-    assert(!isVirtual() && "Virtual NYI");
+    if (isVirtual())
+      return VirtualInfo.MD;
     assert(isOrdinary());
     return AbstractInfo;
   }
 
   bool isVirtual() const {
     return KindOrFunctionPointer == SpecialKind::Virtual;
+  }
+
+  static CIRGenCallee forVirtual(const clang::CallExpr *CE,
+                                 clang::GlobalDecl MD, Address Addr,
+                                 mlir::cir::FuncType FTy) {
+    CIRGenCallee result(SpecialKind::Virtual);
+    result.VirtualInfo.CE = CE;
+    result.VirtualInfo.MD = MD;
+    result.VirtualInfo.Addr = Addr;
+    result.VirtualInfo.FTy = FTy;
+    return result;
+  }
+
+  const clang::CallExpr *getVirtualCallExpr() const {
+    assert(isVirtual());
+    return VirtualInfo.CE;
+  }
+
+  clang::GlobalDecl getVirtualMethodDecl() const {
+    assert(isVirtual());
+    return VirtualInfo.MD;
+  }
+  Address getThisAddress() const {
+    assert(isVirtual());
+    return VirtualInfo.Addr;
+  }
+  mlir::cir::FuncType getVirtualFunctionType() const {
+    assert(isVirtual());
+    return VirtualInfo.FTy;
   }
 };
 

@@ -427,3 +427,39 @@ void CIRGenVTables::buildThunks(GlobalDecl GD) {
   for ([[maybe_unused]] const ThunkInfo &Thunk : *ThunkInfoVector)
     llvm_unreachable("NYI");
 }
+
+bool CIRGenModule::AlwaysHasLTOVisibilityPublic(const CXXRecordDecl *RD) {
+  if (RD->hasAttr<LTOVisibilityPublicAttr>() || RD->hasAttr<UuidAttr>() ||
+      RD->hasAttr<DLLExportAttr>() || RD->hasAttr<DLLImportAttr>())
+    return true;
+
+  if (!getCodeGenOpts().LTOVisibilityPublicStd)
+    return false;
+
+  const DeclContext *DC = RD;
+  while (true) {
+    auto *D = cast<Decl>(DC);
+    DC = DC->getParent();
+    if (isa<TranslationUnitDecl>(DC->getRedeclContext())) {
+      if (auto *ND = dyn_cast<NamespaceDecl>(D))
+        if (const IdentifierInfo *II = ND->getIdentifier())
+          if (II->isStr("std") || II->isStr("stdext"))
+            return true;
+      break;
+    }
+  }
+
+  return false;
+}
+
+bool CIRGenModule::HasHiddenLTOVisibility(const CXXRecordDecl *RD) {
+  LinkageInfo LV = RD->getLinkageAndVisibility();
+  if (!isExternallyVisible(LV.getLinkage()))
+    return true;
+
+  if (!getTriple().isOSBinFormatCOFF() &&
+      LV.getVisibility() != HiddenVisibility)
+    return false;
+
+  return !AlwaysHasLTOVisibilityPublic(RD);
+}

@@ -123,6 +123,9 @@ public:
   bool canSpeculativelyEmitVTable(const CXXRecordDecl *RD) const override;
   mlir::cir::GlobalOp getAddrOfVTable(const CXXRecordDecl *RD,
                                       CharUnits VPtrOffset) override;
+  CIRGenCallee getVirtualFunctionPointer(CIRGenFunction &CGF, GlobalDecl GD,
+                                         Address This, mlir::Type Ty,
+                                         SourceLocation Loc) override;
   mlir::Value getVTableAddressPoint(BaseSubobject Base,
                                     const CXXRecordDecl *VTableClass) override;
   bool isVirtualOffsetNeededForVTableField(CIRGenFunction &CGF,
@@ -204,6 +207,12 @@ public:
 
   bool doStructorsInitializeVPtrs(const CXXRecordDecl *VTableClass) override {
     return true;
+  }
+
+  size_t getSrcArgforCopyCtor(const CXXConstructorDecl *,
+                              FunctionArgList &Args) const override {
+    assert(!Args.empty() && "expected the arglist to not be empty!");
+    return Args.size() - 1;
   }
 
   /**************************** RTTI Uniqueness ******************************/
@@ -574,6 +583,53 @@ CIRGenItaniumCXXABI::getAddrOfVTable(const CXXRecordDecl *RD,
 
   CGM.setGVProperties(vtable, RD);
   return vtable;
+}
+
+CIRGenCallee CIRGenItaniumCXXABI::getVirtualFunctionPointer(
+    CIRGenFunction &CGF, GlobalDecl GD, Address This, mlir::Type Ty,
+    SourceLocation Loc) {
+  auto loc = CGF.getLoc(Loc);
+  auto TyPtr = CGF.getBuilder().getPointerTo(Ty);
+  auto *MethodDecl = cast<CXXMethodDecl>(GD.getDecl());
+  auto VTable = CGF.getVTablePtr(
+      Loc, This, CGF.getBuilder().getPointerTo(TyPtr), MethodDecl->getParent());
+
+  uint64_t VTableIndex = CGM.getItaniumVTableContext().getMethodVTableIndex(GD);
+  mlir::Value VFunc{};
+  if (CGF.shouldEmitVTableTypeCheckedLoad(MethodDecl->getParent())) {
+    llvm_unreachable("NYI");
+  } else {
+    CGF.buildTypeMetadataCodeForVCall(MethodDecl->getParent(), VTable, Loc);
+
+    mlir::Value VFuncLoad;
+    if (CGM.getItaniumVTableContext().isRelativeLayout()) {
+      llvm_unreachable("NYI");
+    } else {
+      VTable = CGF.getBuilder().createBitcast(
+          loc, VTable, CGF.getBuilder().getPointerTo(TyPtr));
+      auto VTableSlotPtr =
+          CGF.getBuilder().create<mlir::cir::VTableAddrPointOp>(
+              loc, TyPtr, ::mlir::FlatSymbolRefAttr{}, VTable,
+              /*vtable_index=*/0, VTableIndex);
+      VFuncLoad = CGF.getBuilder().createAlignedLoad(loc, TyPtr, VTableSlotPtr,
+                                                     CGF.getPointerAlign());
+    }
+
+    // Add !invariant.load md to virtual function load to indicate that
+    // function didn't change inside vtable.
+    // It's safe to add it without -fstrict-vtable-pointers, but it would not
+    // help in devirtualization because it will only matter if we will have 2
+    // the same virtual function loads from the same vtable load, which won't
+    // happen without enabled devirtualization with -fstrict-vtable-pointers.
+    if (CGM.getCodeGenOpts().OptimizationLevel > 0 &&
+        CGM.getCodeGenOpts().StrictVTablePointers) {
+      llvm_unreachable("NYI");
+    }
+    VFunc = VFuncLoad;
+  }
+
+  CIRGenCallee Callee(GD, VFunc.getDefiningOp());
+  return Callee;
 }
 
 mlir::Value

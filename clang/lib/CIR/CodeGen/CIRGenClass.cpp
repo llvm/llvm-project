@@ -16,6 +16,7 @@
 
 #include "clang/AST/EvaluatedExprVisitor.h"
 #include "clang/AST/RecordLayout.h"
+#include "clang/Basic/NoSanitizeList.h"
 #include "clang/Basic/TargetBuiltins.h"
 
 using namespace clang;
@@ -261,18 +262,36 @@ private:
                                              const CXXConstructorDecl *CD,
                                              FunctionArgList &Args) {
     if (CD->isCopyOrMoveConstructor() && CD->isDefaulted())
-      llvm_unreachable("NYI");
+      return Args[CGF.CGM.getCXXABI().getSrcArgforCopyCtor(CD, Args)];
 
     return nullptr;
   }
 
   // Returns true if a CXXCtorInitializer represents a member initialization
-  // that can be rolled into a memcpy
+  // that can be rolled into a memcpy.
+  // TODO(cir): this could be shared with LLVM codegen.
   bool isMemberInitMemcpyable(CXXCtorInitializer *MemberInit) const {
     if (!MemcpyableCtor)
       return false;
 
     llvm_unreachable("NYI");
+    FieldDecl *Field = MemberInit->getMember();
+    assert(Field && "No field for member init.");
+    QualType FieldType = Field->getType();
+    CXXConstructExpr *CE = dyn_cast<CXXConstructExpr>(MemberInit->getInit());
+
+    // Bail out on non-memcpyable, not-trivially-copyable members.
+    if (!(CE && isMemcpyEquivalentSpecialMember(CE->getConstructor())) &&
+        !(FieldType.isTriviallyCopyableType(CGF.getContext()) ||
+          FieldType->isReferenceType()))
+      return false;
+
+    // Bail out on volatile fields.
+    if (!isMemcpyableField(Field))
+      return false;
+
+    // Otherwise we're good.
+    return true;
   }
 
 public:
@@ -287,7 +306,8 @@ public:
 
   void addMemberInitializer(CXXCtorInitializer *MemberInit) {
     if (isMemberInitMemcpyable(MemberInit)) {
-      llvm_unreachable("NYI");
+      AggregatedInits.push_back(MemberInit);
+      addMemcpyableField(MemberInit->getMember());
     } else {
       buildAggregatedInits();
       buildMemberInitializer(CGF, ConstructorDecl->getParent(), MemberInit,
@@ -318,7 +338,14 @@ public:
     (void)LHS;
 
     for (unsigned i = 0; i < AggregatedInits.size(); ++i) {
-      llvm_unreachable("NYI");
+      CXXCtorInitializer *MemberInit = AggregatedInits[i];
+      QualType FieldType = MemberInit->getAnyMember()->getType();
+      QualType::DestructionKind dtorKind = FieldType.isDestructedType();
+      if (!CGF.needsEHCleanup(dtorKind))
+        continue;
+      LValue FieldLHS = LHS;
+      buildLValueForAnyFieldInitialization(CGF, MemberInit, FieldLHS);
+      CGF.pushEHDestroy(dtorKind, FieldLHS.getAddress(), FieldType);
     }
   }
 
@@ -1230,4 +1257,51 @@ CIRGenFunction::getAddressOfBaseClass(Address Value,
 
   llvm_unreachable("NYI");
   return Value;
+}
+
+// TODO(cir): this can be shared with LLVM codegen.
+bool CIRGenFunction::shouldEmitVTableTypeCheckedLoad(const CXXRecordDecl *RD) {
+  if (!CGM.getCodeGenOpts().WholeProgramVTables ||
+      !CGM.HasHiddenLTOVisibility(RD))
+    return false;
+
+  if (CGM.getCodeGenOpts().VirtualFunctionElimination)
+    return true;
+
+  if (!SanOpts.has(SanitizerKind::CFIVCall) ||
+      !CGM.getCodeGenOpts().SanitizeTrap.has(SanitizerKind::CFIVCall))
+    return false;
+
+  std::string TypeName = RD->getQualifiedNameAsString();
+  return !getContext().getNoSanitizeList().containsType(SanitizerKind::CFIVCall,
+                                                        TypeName);
+}
+
+void CIRGenFunction::buildTypeMetadataCodeForVCall(const CXXRecordDecl *RD,
+                                                   mlir::Value VTable,
+                                                   SourceLocation Loc) {
+  if (SanOpts.has(SanitizerKind::CFIVCall)) {
+    llvm_unreachable("NYI");
+  } else if (CGM.getCodeGenOpts().WholeProgramVTables &&
+             // Don't insert type test assumes if we are forcing public
+             // visibility.
+             !CGM.AlwaysHasLTOVisibilityPublic(RD)) {
+    llvm_unreachable("NYI");
+  }
+}
+
+mlir::Value CIRGenFunction::getVTablePtr(SourceLocation Loc, Address This,
+                                         mlir::Type VTableTy,
+                                         const CXXRecordDecl *RD) {
+  auto loc = getLoc(Loc);
+  Address VTablePtrSrc = builder.createElementBitCast(loc, This, VTableTy);
+  auto VTable = builder.createLoad(loc, VTablePtrSrc);
+  assert(!UnimplementedFeature::tbaa());
+
+  if (CGM.getCodeGenOpts().OptimizationLevel > 0 &&
+      CGM.getCodeGenOpts().StrictVTablePointers) {
+    assert(!UnimplementedFeature::createInvariantGroup());
+  }
+
+  return VTable;
 }

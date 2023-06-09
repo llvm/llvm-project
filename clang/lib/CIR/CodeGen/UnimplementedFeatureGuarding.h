@@ -74,6 +74,10 @@ struct UnimplementedFeature {
   static bool shouldSplitConstantStore() { return false; }
   static bool shouldCreateMemCpyFromGlobal() { return false; }
   static bool shouldReverseUnaryCondOnBoolExpr() { return false; }
+  static bool fieldMemcpyizerBuildMemcpy() { return false; }
+  static bool isTrivialAndisDefaultConstructor() { return false; }
+  static bool isMemcpyEquivalentSpecialMember() { return false; }
+  static bool constructABIArgDirectExtend() { return false; }
 
   static bool capturedByInit() { return false; }
   static bool tryEmitAsConstant() { return false; }
@@ -90,15 +94,17 @@ struct UnimplementedFeature {
   static bool ehStack() { return false; }
   static bool isVarArg() { return false; }
   static bool setNonGC() { return false; }
+  static bool volatileLoadOrStore() { return false; }
   static bool armComputeVolatileBitfields() { return false; }
   static bool setCommonAttributes() { return false; }
   static bool insertBuiltinUnpredictable() { return false; }
-  static bool createLaunderInvariantGroup() { return false; }
+  static bool createInvariantGroup() { return false; }
   static bool addAutoInitAnnotation() { return false; }
   static bool addHeapAllocSiteMetadata() { return false; }
   static bool loopInfoStack() { return false; }
   static bool requiresCleanups() { return false; }
   static bool constantFoldsToSimpleInteger() { return false; }
+  static bool alignedLoad() { return false; }
 };
 } // namespace cir
 

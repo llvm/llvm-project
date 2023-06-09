@@ -613,7 +613,12 @@ void CIRGenFunction::buildCXXConstructorCall(const clang::CXXConstructorDecl *D,
 
   Args.add(RValue::get(ThisPtr), D->getThisType());
 
-  assert(!isMemcpyEquivalentSpecialMember(D) && "NYI");
+  // In LLVM Codegen: If this is a trivial constructor, just emit what's needed.
+  // If this is a union copy constructor, we must emit a memcpy, because the AST
+  // does not model that copy.
+  if (isMemcpyEquivalentSpecialMember(D)) {
+    assert(!UnimplementedFeature::isMemcpyEquivalentSpecialMember());
+  }
 
   const FunctionProtoType *FPT = D->getType()->castAs<FunctionProtoType>();
   EvaluationOrder Order = E->isListInitialization()
@@ -644,10 +649,11 @@ void CIRGenFunction::buildCXXConstructorCall(
   // In LLVM: do nothing.
   // In CIR: emit as a regular call, other later passes should lower the
   // ctor call into trivial initialization.
-  // if (CD->isTrivial() && CD->isDefaultConstructor())
-  //  return;
+  assert(!UnimplementedFeature::isTrivialAndisDefaultConstructor());
 
-  assert(!isMemcpyEquivalentSpecialMember(D) && "NYI");
+  if (isMemcpyEquivalentSpecialMember(D)) {
+    assert(!UnimplementedFeature::isMemcpyEquivalentSpecialMember());
+  }
 
   bool PassPrototypeArgs = true;
 

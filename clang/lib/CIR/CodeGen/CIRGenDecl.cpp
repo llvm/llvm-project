@@ -688,3 +688,12 @@ void CIRGenFunction::buildAutoVarTypeCleanup(
   EHStack.pushCleanup<DestroyObject>(cleanupKind, addr, type, destroyer,
                                      useEHCleanup);
 }
+
+/// Push the standard destructor for the given type as an EH-only cleanup.
+void CIRGenFunction::pushEHDestroy(QualType::DestructionKind dtorKind,
+                                   Address addr, QualType type) {
+  assert(dtorKind && "cannot push destructor for trivial type");
+  assert(needsEHCleanup(dtorKind));
+
+  pushDestroy(EHCleanup, addr, type, getDestroyer(dtorKind), true);
+}

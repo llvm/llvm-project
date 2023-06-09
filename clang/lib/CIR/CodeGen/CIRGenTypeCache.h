@@ -93,10 +93,10 @@ struct CIRGenTypeCache {
   //   unsigned char PointerWidthInBits;
 
   /// The size and alignment of a pointer into the generic address space.
-  //   union {
-  //     unsigned char PointerAlignInBytes;
-  //     unsigned char PointerSizeInBytes;
-  //   };
+  union {
+    unsigned char PointerAlignInBytes;
+    unsigned char PointerSizeInBytes;
+  };
 
   /// The size and alignment of size_t.
   //   union {
@@ -112,12 +112,12 @@ struct CIRGenTypeCache {
   //   clang::CharUnits getSizeAlign() const {
   //     return clang::CharUnits::fromQuantity(SizeAlignInBytes);
   //   }
-  //   clang::CharUnits getPointerSize() const {
-  //     return clang::CharUnits::fromQuantity(PointerSizeInBytes);
-  //   }
-  //   clang::CharUnits getPointerAlign() const {
-  //     return clang::CharUnits::fromQuantity(PointerAlignInBytes);
-  //   }
+  clang::CharUnits getPointerSize() const {
+    return clang::CharUnits::fromQuantity(PointerSizeInBytes);
+  }
+  clang::CharUnits getPointerAlign() const {
+    return clang::CharUnits::fromQuantity(PointerAlignInBytes);
+  }
 
   //   clang::LangAS getASTAllocaAddressSpace() const {
   //     return ASTAllocaAddressSpace;
