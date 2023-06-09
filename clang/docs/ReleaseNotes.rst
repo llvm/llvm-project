@@ -728,6 +728,9 @@ libclang
   has an evaluable bit width. Fixes undefined behavior when called on a
   bit-field whose width depends on a template parameter.
 
+- Added ``CXBinaryOperatorKind`` and ``CXUnaryOperatorKind``.
+  (`#29138 <https://github.com/llvm/llvm-project/issues/29138>`_)
+
 Static Analyzer
 ---------------
 - Fix incorrect alignment attribute on the this parameter of certain

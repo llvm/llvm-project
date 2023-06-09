@@ -1138,6 +1138,40 @@ void Class1::fun() {}
             "class ns1::Class1");
 }
 
+TEST_F(LibclangParseTest, BinaryOperator) {
+  std::string Main = "main.cpp";
+  WriteFile(Main, "int foo() { return 5 + 9; }");
+  ClangTU = clang_parseTranslationUnit(Index, Main.c_str(), nullptr, 0, nullptr,
+                                       0, TUFlags);
+
+  Traverse([](CXCursor cursor, CXCursor parent) -> CXChildVisitResult {
+    if (cursor.kind == CXCursor_BinaryOperator) {
+      EXPECT_EQ(clang_getCursorBinaryOperatorKind(cursor),
+                CXBinaryOperator_Add);
+      return CXChildVisit_Break;
+    }
+
+    return CXChildVisit_Recurse;
+  });
+}
+
+TEST_F(LibclangParseTest, UnaryOperator) {
+  std::string Main = "main.cpp";
+  WriteFile(Main, "int foo() { int a = 5; return a++; }");
+  ClangTU = clang_parseTranslationUnit(Index, Main.c_str(), nullptr, 0, nullptr,
+                                       0, TUFlags);
+
+  Traverse([](CXCursor cursor, CXCursor parent) -> CXChildVisitResult {
+    if (cursor.kind == CXCursor_UnaryOperator) {
+      EXPECT_EQ(clang_getCursorUnaryOperatorKind(cursor),
+                CXUnaryOperator_PostInc);
+      return CXChildVisit_Break;
+    }
+
+    return CXChildVisit_Recurse;
+  });
+}
+
 class LibclangRewriteTest : public LibclangParseTest {
 public:
   CXRewriter Rew = nullptr;
