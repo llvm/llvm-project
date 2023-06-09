@@ -77,8 +77,6 @@ public:
 
   int32_t GetSignalAtIndex(int32_t index) const;
 
-  ConstString GetShortName(ConstString name) const;
-
   // We assume that the elements of this object are constant once it is
   // constructed, since a process should never need to add or remove symbols as
   // it runs.  So don't call these functions anywhere but the constructor of
@@ -146,6 +144,8 @@ protected:
     ~Signal() = default;
     void Reset(bool reset_stop, bool reset_notify, bool reset_suppress);
   };
+
+  llvm::StringRef GetShortName(llvm::StringRef name) const;
 
   virtual void Reset();
 
