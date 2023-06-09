@@ -161,10 +161,6 @@ static cl::opt<bool, true> VerifySCEVOpt(
 static cl::opt<bool> VerifySCEVStrict(
     "verify-scev-strict", cl::Hidden,
     cl::desc("Enable stricter verification with -verify-scev is passed"));
-static cl::opt<bool>
-    VerifySCEVMap("verify-scev-maps", cl::Hidden,
-                  cl::desc("Verify no dangling value in ScalarEvolution's "
-                           "ExprValueMap (slow)"));
 
 static cl::opt<bool> VerifyIR(
     "scev-verify-ir", cl::Hidden,
@@ -4458,13 +4454,6 @@ ArrayRef<Value *> ScalarEvolution::getSCEVValues(const SCEV *S) {
   ExprValueMapType::iterator SI = ExprValueMap.find_as(S);
   if (SI == ExprValueMap.end())
     return std::nullopt;
-#ifndef NDEBUG
-  if (VerifySCEVMap) {
-    // Check there is no dangling Value in the set returned.
-    for (Value *V : SI->second)
-      assert(ValueExprMap.count(V));
-  }
-#endif
   return SI->second.getArrayRef();
 }
 
