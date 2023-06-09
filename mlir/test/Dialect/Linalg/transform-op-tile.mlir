@@ -238,7 +238,7 @@ func.func @scalable_and_fixed_length_tile(
 transform.sequence failures(propagate) {
 ^bb0(%arg1: !transform.any_op):
   %0 = transform.structured.match ops{["linalg.matmul"]} in %arg1 : (!transform.any_op) -> !transform.any_op
-  // expected-error @below {{non-trailing tile size cannot be scalable}}
+  // expected-error @below {{non-trailing index cannot be scalable}}
   // expected-error @below {{expected SSA value or integer}}
   %1, %loops:3 = transform.structured.tile %0 [4, [4], [4]] : (!transform.any_op) -> (!transform.any_op, !transform.any_op, !transform.any_op, !transform.any_op)
 }

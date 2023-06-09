@@ -353,7 +353,7 @@ static cl::opt<bool> EnableMaxIlpSchedStrategy(
 
 static cl::opt<bool> EnableRewritePartialRegUses(
     "amdgpu-enable-rewrite-partial-reg-uses",
-    cl::desc("Enable rewrite partial reg uses pass"), cl::init(true),
+    cl::desc("Enable rewrite partial reg uses pass"), cl::init(false),
     cl::Hidden);
 
 extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializeAMDGPUTarget() {
@@ -1080,7 +1080,8 @@ void AMDGPUPassConfig::addCodeGenPrepare() {
     if (RemoveIncompatibleFunctions)
       addPass(createAMDGPURemoveIncompatibleFunctionsPass(TM));
 
-    addPass(createAMDGPUAttributorPass());
+    if (TM->getOptLevel() > CodeGenOpt::None)
+      addPass(createAMDGPUAttributorPass());
 
     // FIXME: This pass adds 2 hacky attributes that can be replaced with an
     // analysis, and should be removed.

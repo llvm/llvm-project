@@ -26,5 +26,67 @@ exit:
   ret i32 %conv
 }
 
+define i32 @test2(i32 %N) nounwind {
+; CHECK-LABEL: @test2(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    br label [[HEADER:%.*]]
+; CHECK:       header:
+; CHECK-NEXT:    [[IV:%.*]] = phi i32 [ 0, [[ENTRY:%.*]] ], [ [[IV_INC:%.*]], [[HEADER]] ]
+; CHECK-NEXT:    [[IV2:%.*]] = phi i32 [ 0, [[ENTRY]] ], [ [[IV2_INC:%.*]], [[HEADER]] ]
+; CHECK-NEXT:    [[IV_INC]] = add i32 [[IV]], 1
+; CHECK-NEXT:    [[IV2_INC]] = add i32 [[IV2]], 1
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i32 [[IV]], [[N:%.*]]
+; CHECK-NEXT:    br i1 [[CMP]], label [[EXIT:%.*]], label [[HEADER]]
+; CHECK:       exit:
+; CHECK-NEXT:    ret i32 [[IV]]
+;
+entry:
+  br label %header
+
+header:
+  %iv = phi i32 [0, %entry], [%iv.inc, %header]
+  %iv2 = phi i32 [0, %entry], [%iv2.inc, %header]
+  %iv.inc = add i32 %iv, 1
+  %iv2.inc = add i32 %iv2, 1
+  %cmp = icmp eq i32 %iv, %N
+  %cmp2 = icmp slt i32 %iv2, %N
+  call void @llvm.assume(i1 %cmp2)
+  br i1 %cmp, label %exit, label %header
+
+exit:
+  ret i32 %iv
+}
+
+define i32 @test3(i32 %N) nounwind {
+; CHECK-LABEL: @test3(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    br label [[HEADER:%.*]]
+; CHECK:       header:
+; CHECK-NEXT:    [[IV:%.*]] = phi i32 [ 0, [[ENTRY:%.*]] ], [ [[IV_INC:%.*]], [[HEADER]] ]
+; CHECK-NEXT:    [[IV2:%.*]] = phi i32 [ 0, [[ENTRY]] ], [ [[IV2_INC:%.*]], [[HEADER]] ]
+; CHECK-NEXT:    [[IV_INC]] = add i32 [[IV]], 1
+; CHECK-NEXT:    [[IV2_INC]] = add i32 [[IV2]], 1
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i32 [[IV]], [[N:%.*]]
+; CHECK-NEXT:    br i1 [[CMP]], label [[EXIT:%.*]], label [[HEADER]]
+; CHECK:       exit:
+; CHECK-NEXT:    ret i32 [[IV]]
+;
+entry:
+  br label %header
+
+header:
+  %iv = phi i32 [0, %entry], [%iv.inc, %header]
+  %iv2 = phi i32 [0, %entry], [%iv2.inc, %header]
+  %iv.inc = add i32 %iv, 1
+  %iv2.inc = add i32 %iv2, 1
+  %cmp = icmp eq i32 %iv, %N
+  %cmp2 = icmp slt i32 %iv2.inc, %N
+  call void @llvm.assume(i1 %cmp2)
+  br i1 %cmp, label %exit, label %header
+
+exit:
+  ret i32 %iv
+}
+
 declare i64 @foo(ptr) nounwind readonly willreturn
 declare void @llvm.assume(i1 noundef) nounwind willreturn

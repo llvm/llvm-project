@@ -1107,14 +1107,19 @@ enum CompactUnwindEncodings {
 /// encoded in compact unwind, the method returns UNWIND_ARM_MODE_DWARF which
 /// tells the runtime to fallback and unwind using dwarf.
 uint32_t ARMAsmBackendDarwin::generateCompactUnwindEncoding(
-    ArrayRef<MCCFIInstruction> Instrs) const {
+    const MCDwarfFrameInfo *FI, const MCContext *Ctxt) const {
   DEBUG_WITH_TYPE("compact-unwind", llvm::dbgs() << "generateCU()\n");
   // Only armv7k uses CFI based unwinding.
   if (Subtype != MachO::CPU_SUBTYPE_ARM_V7K)
     return 0;
   // No .cfi directives means no frame.
+  ArrayRef<MCCFIInstruction> Instrs = FI->Instructions;
   if (Instrs.empty())
     return 0;
+  if (!isDarwinCanonicalPersonality(FI->Personality) &&
+      !Ctxt->emitCompactUnwindNonCanonical())
+    return CU::UNWIND_ARM_MODE_DWARF;
+
   // Start off assuming CFA is at SP+0.
   unsigned CFARegister = ARM::SP;
   int CFARegisterOffset = 0;

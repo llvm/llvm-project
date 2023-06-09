@@ -251,6 +251,11 @@ output format of the diagnostics that it generates.
                 ^
                 //
 
+   If the ``NO_COLOR`` environment variable is defined and not empty
+   (regardless of value), color diagnostics are disabled. If ``NO_COLOR`` is
+   defined and ``-fcolor-diagnostics`` is passed on the command line, Clang
+   will honor the command line argument.
+
 .. option:: -fansi-escape-codes
 
    Controls whether ANSI escape codes are used instead of the Windows Console

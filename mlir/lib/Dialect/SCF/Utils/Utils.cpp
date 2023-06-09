@@ -797,9 +797,11 @@ void mlir::collapseParallelLoops(
 // Return failure when any op fails to hoist.
 static LogicalResult hoistOpsBetween(scf::ForOp outer, scf::ForOp inner) {
   SetVector<Operation *> forwardSlice;
-  getForwardSlice(
-      outer.getInductionVar(), &forwardSlice,
-      [&inner](Operation *op) { return op != inner.getOperation(); });
+  ForwardSliceOptions options;
+  options.filter = [&inner](Operation *op) {
+    return op != inner.getOperation();
+  };
+  getForwardSlice(outer.getInductionVar(), &forwardSlice, options);
   LogicalResult status = success();
   SmallVector<Operation *, 8> toHoist;
   for (auto &op : outer.getBody()->without_terminator()) {

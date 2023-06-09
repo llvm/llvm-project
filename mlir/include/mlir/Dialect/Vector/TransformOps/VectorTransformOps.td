@@ -15,8 +15,23 @@ include "mlir/Dialect/Vector/Transforms/VectorTransformsBase.td"
 include "mlir/Interfaces/SideEffectInterfaces.td"
 include "mlir/IR/OpBase.td"
 
+def ApplyCastAwayVectorLeadingOneDimPatternsOp : Op<Transform_Dialect,
+    "apply_patterns.vector.cast_away_vector_leading_one_dim",
+    [DeclareOpInterfaceMethods<PatternDescriptorOpInterface>]> {
+  let description = [{
+    Collect a set of leading one dimension removal patterns.
+
+    These patterns insert vector.shape_cast to remove leading one dimensions
+    to expose more canonical forms of read/write/insert/extract operations.
+    With them, there are more chances that we can cancel out extract-insert
+    pairs or forward write-read pairs.
+  }];
+
+  let assemblyFormat = "attr-dict";
+}
+
 def ApplyRankReducingSubviewPatternsOp : Op<Transform_Dialect,
-    "apply_patterns.vector.apply_rank_reducing_subview_patterns",
+    "apply_patterns.vector.rank_reducing_subview_patterns",
     [DeclareOpInterfaceMethods<PatternDescriptorOpInterface>]> {
   let description = [{
     Apply opt-in vector transfer permutation patterns that include:
@@ -32,7 +47,7 @@ def ApplyRankReducingSubviewPatternsOp : Op<Transform_Dialect,
 }
 
 def ApplyTransferPermutationPatternsOp : Op<Transform_Dialect,
-    "apply_patterns.vector.apply_transfer_permutation_patterns",
+    "apply_patterns.vector.transfer_permutation_patterns",
     [DeclareOpInterfaceMethods<PatternDescriptorOpInterface>]> {
   let description = [{
     Apply opt-in vector transfer permutation patterns that include:

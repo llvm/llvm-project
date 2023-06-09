@@ -558,7 +558,7 @@ LogicalResult acc::ParallelOp::verify() {
     return failure();
   if (failed(checkSymOperandList<mlir::acc::ReductionRecipeOp>(
           *this, getReductionRecipes(), getReductionOperands(), "reduction",
-          "reductions")))
+          "reductions", false)))
     return failure();
   return checkDataOperands<acc::ParallelOp>(*this, getDataClauseOperands());
 }
@@ -586,7 +586,7 @@ LogicalResult acc::SerialOp::verify() {
     return failure();
   if (failed(checkSymOperandList<mlir::acc::ReductionRecipeOp>(
           *this, getReductionRecipes(), getReductionOperands(), "reduction",
-          "reductions")))
+          "reductions", false)))
     return failure();
   return checkDataOperands<acc::SerialOp>(*this, getDataClauseOperands());
 }

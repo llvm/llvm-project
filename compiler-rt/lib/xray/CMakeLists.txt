@@ -171,7 +171,7 @@ if (TARGET cxx-headers OR HAVE_LIBCXX)
 endif()
 
 if (APPLE)
-  add_asm_sources(XRAY_ASM_SOURCES xray_trampoline_x86_64.S)
+  set(XRAY_ASM_SOURCES xray_trampoline_x86_64.S)
 
   add_weak_symbols("sanitizer_common" WEAK_SYMBOL_LINK_FLAGS)
   add_weak_symbols("xray" WEAK_SYMBOL_LINK_FLAGS)

@@ -303,9 +303,9 @@ static bool supportsMMaMatrixType(Operation *op, bool useNvGpu) {
 /// Return an unsorted slice handling scf.for region differently than
 /// `getSlice`. In scf.for we only want to include as part of the slice elements
 /// that are part of the use/def chain.
-static SetVector<Operation *> getSliceContract(Operation *op,
-                                               TransitiveFilter backwardFilter,
-                                               TransitiveFilter forwardFilter) {
+static SetVector<Operation *>
+getSliceContract(Operation *op, BackwardSliceOptions backwardSliceOptions,
+                 ForwardSliceOptions forwardSliceOptions) {
   SetVector<Operation *> slice;
   slice.insert(op);
   unsigned currentIndex = 0;
@@ -315,7 +315,7 @@ static SetVector<Operation *> getSliceContract(Operation *op,
     auto *currentOp = (slice)[currentIndex];
     // Compute and insert the backwardSlice starting from currentOp.
     backwardSlice.clear();
-    getBackwardSlice(currentOp, &backwardSlice, backwardFilter);
+    getBackwardSlice(currentOp, &backwardSlice, backwardSliceOptions);
     slice.insert(backwardSlice.begin(), backwardSlice.end());
 
     // Compute and insert the forwardSlice starting from currentOp.
@@ -326,11 +326,11 @@ static SetVector<Operation *> getSliceContract(Operation *op,
     // converted to matrix type.
     if (auto forOp = dyn_cast<scf::ForOp>(currentOp)) {
       for (Value forOpResult : forOp.getResults())
-        getForwardSlice(forOpResult, &forwardSlice, forwardFilter);
+        getForwardSlice(forOpResult, &forwardSlice, forwardSliceOptions);
       for (BlockArgument &arg : forOp.getRegionIterArgs())
-        getForwardSlice(arg, &forwardSlice, forwardFilter);
+        getForwardSlice(arg, &forwardSlice, forwardSliceOptions);
     } else {
-      getForwardSlice(currentOp, &forwardSlice, forwardFilter);
+      getForwardSlice(currentOp, &forwardSlice, forwardSliceOptions);
     }
     slice.insert(forwardSlice.begin(), forwardSlice.end());
     ++currentIndex;
@@ -346,16 +346,22 @@ static SetVector<Operation *> getOpToConvert(mlir::Operation *op,
     return llvm::any_of(op->getResultTypes(),
                         [](Type t) { return isa<VectorType>(t); });
   };
+  BackwardSliceOptions backwardSliceOptions;
+  backwardSliceOptions.filter = hasVectorDest;
+
   auto hasVectorSrc = [](Operation *op) {
     return llvm::any_of(op->getOperandTypes(),
                         [](Type t) { return isa<VectorType>(t); });
   };
+  ForwardSliceOptions forwardSliceOptions;
+  forwardSliceOptions.filter = hasVectorSrc;
+
   SetVector<Operation *> opToConvert;
   op->walk([&](vector::ContractionOp contract) {
     if (opToConvert.contains(contract.getOperation()))
       return;
     SetVector<Operation *> dependentOps =
-        getSliceContract(contract, hasVectorDest, hasVectorSrc);
+        getSliceContract(contract, backwardSliceOptions, forwardSliceOptions);
     // If any instruction cannot use MMA matrix type drop the whole
     // chain. MMA matrix are stored in an opaque type so they cannot be used
     // by all operations.

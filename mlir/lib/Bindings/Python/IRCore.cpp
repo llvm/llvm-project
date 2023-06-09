@@ -2640,10 +2640,7 @@ void mlir::python::populateIRCore(py::module &m) {
           "Context that owns the Location")
       .def_property_readonly(
           "attr",
-          [](PyLocation &self) {
-            return PyAttribute(self.getContext(),
-                               mlirLocationGetAttribute(self));
-          },
+          [](PyLocation &self) { return mlirLocationGetAttribute(self); },
           "Get the underlying LocationAttr")
       .def(
           "emit_error",
@@ -3139,7 +3136,7 @@ void mlir::python::populateIRCore(py::module &m) {
                 context->get(), toMlirStringRef(attrSpec));
             if (mlirAttributeIsNull(type))
               throw MLIRError("Unable to parse attribute", errors.take());
-            return PyAttribute(context->getRef(), type);
+            return type;
           },
           py::arg("asm"), py::arg("context") = py::none(),
           "Parses an attribute from an assembly form. Raises an MLIRError on "
@@ -3175,18 +3172,38 @@ void mlir::python::populateIRCore(py::module &m) {
             return printAccum.join();
           },
           "Returns the assembly form of the Attribute.")
-      .def("__repr__", [](PyAttribute &self) {
-        // Generally, assembly formats are not printed for __repr__ because
-        // this can cause exceptionally long debug output and exceptions.
-        // However, attribute values are generally considered useful and are
-        // printed. This may need to be re-evaluated if debug dumps end up
-        // being excessive.
-        PyPrintAccumulator printAccum;
-        printAccum.parts.append("Attribute(");
-        mlirAttributePrint(self, printAccum.getCallback(),
-                           printAccum.getUserData());
-        printAccum.parts.append(")");
-        return printAccum.join();
+      .def("__repr__",
+           [](PyAttribute &self) {
+             // Generally, assembly formats are not printed for __repr__ because
+             // this can cause exceptionally long debug output and exceptions.
+             // However, attribute values are generally considered useful and
+             // are printed. This may need to be re-evaluated if debug dumps end
+             // up being excessive.
+             PyPrintAccumulator printAccum;
+             printAccum.parts.append("Attribute(");
+             mlirAttributePrint(self, printAccum.getCallback(),
+                                printAccum.getUserData());
+             printAccum.parts.append(")");
+             return printAccum.join();
+           })
+      .def_property_readonly(
+          "typeid",
+          [](PyAttribute &self) -> MlirTypeID {
+            MlirTypeID mlirTypeID = mlirAttributeGetTypeID(self);
+            assert(!mlirTypeIDIsNull(mlirTypeID) &&
+                   "mlirTypeID was expected to be non-null.");
+            return mlirTypeID;
+          })
+      .def(MLIR_PYTHON_MAYBE_DOWNCAST_ATTR, [](PyAttribute &self) {
+        MlirTypeID mlirTypeID = mlirAttributeGetTypeID(self);
+        assert(!mlirTypeIDIsNull(mlirTypeID) &&
+               "mlirTypeID was expected to be non-null.");
+        std::optional<pybind11::function> typeCaster =
+            PyGlobals::get().lookupTypeCaster(mlirTypeID,
+                                              mlirAttributeGetDialect(self));
+        if (!typeCaster)
+          return py::cast(self);
+        return typeCaster.value()(self);
       });
 
   //----------------------------------------------------------------------------
@@ -3216,13 +3233,7 @@ void mlir::python::populateIRCore(py::module &m) {
           "The name of the NamedAttribute binding")
       .def_property_readonly(
           "attr",
-          [](PyNamedAttribute &self) {
-            // TODO: When named attribute is removed/refactored, also remove
-            // this constructor (it does an inefficient table lookup).
-            auto contextRef = PyMlirContext::forContext(
-                mlirAttributeGetContext(self.namedAttr.attribute));
-            return PyAttribute(std::move(contextRef), self.namedAttr.attribute);
-          },
+          [](PyNamedAttribute &self) { return self.namedAttr.attribute; },
           py::keep_alive<0, 1>(),
           "The underlying generic attribute of the NamedAttribute binding");
 

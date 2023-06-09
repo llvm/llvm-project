@@ -2590,8 +2590,8 @@ ParseResult transform::TileOp::parse(OpAsmParser &parser,
 void TileOp::print(OpAsmPrinter &p) {
   p << ' ' << getTarget();
   printDynamicIndexList(p, getOperation(), getDynamicSizes(), getStaticSizes(),
-                        /*valueTypes=*/{}, OpAsmParser::Delimiter::Square,
-                        getLastTileSizeScalable());
+                        /*valueTypes=*/{}, getLastTileSizeScalableAttr(),
+                        OpAsmParser::Delimiter::Square);
   printOptionalInterchange(p, getInterchange());
   p << " : ";
   p.printFunctionalType(getOperands().getTypes(), getResults().getTypes());
@@ -3091,7 +3091,6 @@ transform::VectorizeOp::applyToOne(Operation *target,
 //===----------------------------------------------------------------------===//
 // MaskedVectorizeOp
 //===----------------------------------------------------------------------===//
-
 DiagnosedSilenceableFailure transform::MaskedVectorizeOp::apply(
     mlir::transform::TransformResults &transformResults,
     mlir::transform::TransformState &state) {
@@ -3146,7 +3145,8 @@ DiagnosedSilenceableFailure transform::MaskedVectorizeOp::apply(
     }
 
     if (failed(linalg::vectorize(rewriter, target, vectorSizes,
-                                 getVectorizeNdExtract()))) {
+                                 getVectorizeNdExtract(),
+                                 getLastVectorSizeScalable()))) {
       return mlir::emitSilenceableFailure(target->getLoc())
              << "Attempted to vectorize, but failed";
     }

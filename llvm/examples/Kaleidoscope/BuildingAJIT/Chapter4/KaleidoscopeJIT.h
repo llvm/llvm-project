@@ -175,7 +175,7 @@ public:
 
     auto ES = std::make_unique<ExecutionSession>(std::move(*EPC));
 
-    auto EPCIU = EPCIndirectionUtils::Create(ES->getExecutorProcessControl());
+    auto EPCIU = EPCIndirectionUtils::Create(*ES);
     if (!EPCIU)
       return EPCIU.takeError();
 

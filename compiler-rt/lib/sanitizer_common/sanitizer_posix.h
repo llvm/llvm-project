@@ -120,6 +120,9 @@ int GetNamedMappingFd(const char *name, uptr size, int *flags);
 // alive at least as long as the mapping exists.
 void DecorateMapping(uptr addr, uptr size, const char *name);
 
+#  if !SANITIZER_FREEBSD
+#    define __sanitizer_dirsiz(dp) ((dp)->d_reclen)
+#  endif
 
 }  // namespace __sanitizer
 

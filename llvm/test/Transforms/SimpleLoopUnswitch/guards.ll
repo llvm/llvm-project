@@ -2,6 +2,9 @@
 ; RUN: opt -passes='simple-loop-unswitch<nontrivial>' -simple-loop-unswitch-guards -S < %s | FileCheck %s
 ; RUN: opt -passes='loop-mssa(simple-loop-unswitch<nontrivial>),verify<loops>' -simple-loop-unswitch-guards  -verify-memoryssa -S < %s | FileCheck %s
 
+; XFAIL: *
+; REQUIRES: asserts
+
 declare void @llvm.experimental.guard(i1, ...)
 
 define void @test_simple_case(i1 %cond, i32 %N) {

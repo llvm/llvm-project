@@ -21,6 +21,8 @@ subroutine acc_serial
   logical :: ifCondition = .TRUE.
   real, dimension(10, 10) :: a, b, c
   real, pointer :: d, e
+  integer :: reduction_i
+  real :: reduction_r
 
 ! CHECK: %[[A:.*]] = fir.alloca !fir.array<10x10xf32> {{{.*}}uniq_name = "{{.*}}Ea"}
 ! CHECK: %[[B:.*]] = fir.alloca !fir.array<10x10xf32> {{{.*}}uniq_name = "{{.*}}Eb"}
@@ -242,6 +244,13 @@ subroutine acc_serial
   !$acc end serial
 
 ! CHECK:      acc.serial firstprivate(%[[B]] : !fir.ref<!fir.array<10x10xf32>>) private(@privatization_ref_10x10xf32 -> %[[A]] : !fir.ref<!fir.array<10x10xf32>>, @privatization_ref_10x10xf32 -> %[[C]] : !fir.ref<!fir.array<10x10xf32>>) {
+! CHECK:        acc.yield
+! CHECK-NEXT: }{{$}}
+
+!$acc serial reduction(+:reduction_r) reduction(*:reduction_i)
+!$acc end serial
+
+! CHECK:      acc.serial reduction(@reduction_add_f32 -> %{{.*}} : !fir.ref<f32>, @reduction_mul_i32 -> %{{.*}} : !fir.ref<i32>) {
 ! CHECK:        acc.yield
 ! CHECK-NEXT: }{{$}}
 

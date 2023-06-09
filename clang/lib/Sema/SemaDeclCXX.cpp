@@ -2437,6 +2437,88 @@ static bool CheckConstexprFunctionBody(Sema &SemaRef, const FunctionDecl *Dcl,
   return true;
 }
 
+bool Sema::CheckImmediateEscalatingFunctionDefinition(
+    FunctionDecl *FD, bool HasImmediateEscalatingExpression) {
+  if (!FD->hasBody() || !getLangOpts().CPlusPlus20 ||
+      !FD->isImmediateEscalating())
+    return true;
+  FD->setBodyContainsImmediateEscalatingExpressions(
+      HasImmediateEscalatingExpression);
+  if (HasImmediateEscalatingExpression) {
+    auto it = UndefinedButUsed.find(FD->getCanonicalDecl());
+    if (it != UndefinedButUsed.end()) {
+      Diag(it->second, diag::err_immediate_function_used_before_definition)
+          << it->first;
+      Diag(FD->getLocation(), diag::note_defined_here) << FD;
+      if (FD->isImmediateFunction() && !FD->isConsteval())
+        DiagnoseImmediateEscalatingReason(FD);
+      return false;
+    }
+  }
+  return true;
+}
+
+void Sema::DiagnoseImmediateEscalatingReason(const FunctionDecl *FD) {
+  assert(FD->isImmediateEscalating() && !FD->isConsteval() &&
+         "expected an immediate function");
+  assert(FD->hasBody() && "expected the function to have a body");
+  struct ImmediateEscalatingExpressionsVisitor
+      : public RecursiveASTVisitor<ImmediateEscalatingExpressionsVisitor> {
+    using Base = RecursiveASTVisitor<ImmediateEscalatingExpressionsVisitor>;
+    Sema &SemaRef;
+    const FunctionDecl *FD;
+    ImmediateEscalatingExpressionsVisitor(Sema &SemaRef, const FunctionDecl *FD)
+        : SemaRef(SemaRef), FD(FD) {}
+
+    bool shouldVisitImplicitCode() const { return true; }
+    bool shouldVisitLambdaBody() const { return false; }
+
+    bool TraverseCallExpr(CallExpr *E) {
+      if (const auto *DR =
+              dyn_cast<DeclRefExpr>(E->getCallee()->IgnoreImplicit());
+          DR && DR->isImmediateEscalating()) {
+        SemaRef.Diag(E->getBeginLoc(), diag::note_immediate_function_reason)
+            << FD << E->getDirectCallee() << E->getDirectCallee()->isConsteval()
+            << /*Call*/ 1 << /*Function*/ 0 << E->getSourceRange();
+      }
+      for (auto A : E->arguments()) {
+        getDerived().TraverseStmt(A);
+      }
+      return true;
+    }
+    bool VisitDeclRefExpr(DeclRefExpr *E) {
+      if (const auto *ReferencedFn = dyn_cast<FunctionDecl>(E->getDecl());
+          ReferencedFn && E->isImmediateEscalating()) {
+        SemaRef.Diag(E->getBeginLoc(), diag::note_immediate_function_reason)
+            << FD << ReferencedFn << ReferencedFn->isConsteval()
+            << /*Address*/ 0 << /*Function*/ 0 << E->getSourceRange();
+      }
+      return true;
+    }
+    bool VisitCXXConstructExpr(CXXConstructExpr *E) {
+      CXXConstructorDecl *D = E->getConstructor();
+      if (E->isImmediateEscalating()) {
+        SemaRef.Diag(E->getBeginLoc(), diag::note_immediate_function_reason)
+            << FD << D << D->isConsteval() << /*Call*/ 1 << /*Constructor*/ 1
+            << E->getSourceRange();
+      }
+      return true;
+    }
+
+    // These nodes can never contain an immediate escalating expression,
+    // we can skip them to avoid unecessary work.
+    bool TraverseDecl(Decl *D) {
+      if (isa<FunctionDecl, RecordDecl>(D))
+        return true;
+      return Base::TraverseDecl(D);
+    }
+    bool TraverseType(QualType T) { return true; }
+    bool VisitBlockExpr(BlockExpr *T) { return true; }
+
+  } Visitor(*this, FD);
+  Visitor.TraverseStmt(FD->getBody());
+}
+
 /// Get the class that is directly named by the current context. This is the
 /// class for which an unqualified-id in this scope could name a constructor
 /// or destructor.
@@ -6002,9 +6084,9 @@ void AbstractUsageInfo::CheckType(const NamedDecl *D, TypeLoc TL,
 /// Check for invalid uses of an abstract type in a function declaration.
 static void CheckAbstractClassUsage(AbstractUsageInfo &Info,
                                     FunctionDecl *FD) {
-  // No need to do the check on definitions, which require that
-  // the return/param types be complete.
-  if (FD->doesThisDeclarationHaveABody())
+  // Only definitions are required to refer to complete and
+  // non-abstract types.
+  if (!FD->doesThisDeclarationHaveABody())
     return;
 
   // For safety's sake, just ignore it if we don't have type source
@@ -8582,8 +8664,8 @@ bool Sema::CheckExplicitlyDefaultedComparison(Scope *S, FunctionDecl *FD,
   // C++2a [class.compare.default]p1:
   //   A defaulted comparison operator function for some class C shall be a
   //   non-template function declared in the member-specification of C that is
-  //    -- a non-static const member of C having one parameter of type
-  //       const C&, or
+  //    -- a non-static const non-volatile member of C having one parameter of
+  //       type const C& and either no ref-qualifier or the ref-qualifier &, or
   //    -- a friend of C having two parameters of type const C& or two
   //       parameters of type C.
 
@@ -8592,6 +8674,17 @@ bool Sema::CheckExplicitlyDefaultedComparison(Scope *S, FunctionDecl *FD,
   if (IsMethod) {
     auto *MD = cast<CXXMethodDecl>(FD);
     assert(!MD->isStatic() && "comparison function cannot be a static member");
+
+    if (MD->getRefQualifier() == RQ_RValue) {
+      Diag(MD->getLocation(), diag::err_ref_qualifier_comparison_operator);
+
+      // Remove the ref qualifier to recover.
+      const auto *FPT = MD->getType()->castAs<FunctionProtoType>();
+      FunctionProtoType::ExtProtoInfo EPI = FPT->getExtProtoInfo();
+      EPI.RefQualifier = RQ_None;
+      MD->setType(Context.getFunctionType(FPT->getReturnType(),
+                                          FPT->getParamTypes(), EPI));
+    }
 
     // If we're out-of-class, this is the class we're comparing.
     if (!RD)
@@ -8612,6 +8705,17 @@ bool Sema::CheckExplicitlyDefaultedComparison(Scope *S, FunctionDecl *FD,
       const auto *FPT = MD->getType()->castAs<FunctionProtoType>();
       FunctionProtoType::ExtProtoInfo EPI = FPT->getExtProtoInfo();
       EPI.TypeQuals.addConst();
+      MD->setType(Context.getFunctionType(FPT->getReturnType(),
+                                          FPT->getParamTypes(), EPI));
+    }
+
+    if (MD->isVolatile()) {
+      Diag(MD->getLocation(), diag::err_volatile_comparison_operator);
+
+      // Remove the 'volatile' from the type to recover.
+      const auto *FPT = MD->getType()->castAs<FunctionProtoType>();
+      FunctionProtoType::ExtProtoInfo EPI = FPT->getExtProtoInfo();
+      EPI.TypeQuals.removeVolatile();
       MD->setType(Context.getFunctionType(FPT->getReturnType(),
                                           FPT->getParamTypes(), EPI));
     }

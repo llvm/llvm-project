@@ -1271,7 +1271,7 @@ class Symbolicate:
         pass
 
     def __call__(self, debugger, command, exe_ctx, result):
-        SymbolicateCrashLogs(debugger, shlex.split(command), result)
+        SymbolicateCrashLogs(debugger, shlex.split(command), result, True)
 
     def get_short_help(self):
         return "Symbolicate one or more darwin crash log files."
@@ -1596,7 +1596,7 @@ be disassembled and lookups can be performed using the addresses found in the cr
     return CreateSymbolicateCrashLogOptions("crashlog", description, True)
 
 
-def SymbolicateCrashLogs(debugger, command_args, result):
+def SymbolicateCrashLogs(debugger, command_args, result, is_command):
     option_parser = CrashLogOptionParser()
 
     if not len(command_args):
@@ -1607,6 +1607,26 @@ def SymbolicateCrashLogs(debugger, command_args, result):
         (options, args) = option_parser.parse_args(command_args)
     except:
         return
+
+    # Interactive mode requires running the crashlog command from inside lldb.
+    if options.interactive and not is_command:
+        lldb_exec = (
+            subprocess.check_output(["/usr/bin/xcrun", "-f", "lldb"])
+            .decode("utf-8")
+            .strip()
+        )
+        sys.exit(
+            os.execv(
+                lldb_exec,
+                [
+                    lldb_exec,
+                    "-o",
+                    "command script import lldb.macosx",
+                    "-o",
+                    "crashlog {}".format(shlex.join(command_args)),
+                ],
+            )
+        )
 
     if options.version:
         print(debugger.GetVersionString())
@@ -1659,7 +1679,7 @@ if __name__ == "__main__":
     # Create a new debugger instance
     debugger = lldb.SBDebugger.Create()
     result = lldb.SBCommandReturnObject()
-    SymbolicateCrashLogs(debugger, sys.argv[1:], result)
+    SymbolicateCrashLogs(debugger, sys.argv[1:], result, False)
     lldb.SBDebugger.Destroy(debugger)
 
 

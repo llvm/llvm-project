@@ -86,8 +86,8 @@ bool MultilibBuilder::isValid() const {
   return true;
 }
 
-MultilibBuilder &MultilibBuilder::flag(bool Required, StringRef Flag) {
-  tools::addMultilibFlag(Required, Flag, Flags);
+MultilibBuilder &MultilibBuilder::flag(StringRef Flag, bool Disallow) {
+  tools::addMultilibFlag(!Disallow, Flag, Flags);
   return *this;
 }
 
@@ -100,7 +100,7 @@ MultilibSetBuilder &MultilibSetBuilder::Maybe(const MultilibBuilder &M) {
   // Negate positive flags
   for (StringRef Flag : M.flags()) {
     if (Flag.front() == '-')
-      Opposite.flags().push_back(("!" + Flag.substr(1)).str());
+      Opposite.flag(Flag, /*Disallow=*/true);
   }
   return Either(M, Opposite);
 }
