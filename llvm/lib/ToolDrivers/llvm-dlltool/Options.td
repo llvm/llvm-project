@@ -15,6 +15,9 @@ def d_long : JoinedOrSeparate<["--"], "input-def">, Alias<d>;
 def k: Flag<["-"], "k">, HelpText<"Kill @n Symbol from export">;
 def k_alias: Flag<["--"], "kill-at">, Alias<k>;
 
+def no_leading_underscore: Flag<["--"], "no-leading-underscore">,
+    HelpText<"Don't add leading underscores on symbols">;
+
 //==============================================================================
 // The flags below do nothing. They are defined only for dlltool compatibility.
 //==============================================================================
