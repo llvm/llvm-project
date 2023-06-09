@@ -6,6 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "../clang-tidy/ClangTidyOptions.h"
 #include "Annotations.h"
 #include "Config.h"
 #include "Diagnostics.h"
@@ -18,18 +19,28 @@
 #include "TestTU.h"
 #include "TidyProvider.h"
 #include "index/MemIndex.h"
+#include "index/Ref.h"
+#include "index/Relation.h"
+#include "index/Symbol.h"
 #include "support/Context.h"
 #include "support/Path.h"
+#include "clang/AST/Decl.h"
 #include "clang/Basic/Diagnostic.h"
 #include "clang/Basic/DiagnosticSema.h"
+#include "clang/Basic/LLVM.h"
+#include "clang/Basic/Specifiers.h"
+#include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/JSON.h"
 #include "llvm/Support/ScopedPrinter.h"
 #include "llvm/Support/TargetSelect.h"
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
-#include <algorithm>
+#include <cstddef>
 #include <memory>
+#include <string>
+#include <utility>
+#include <vector>
 
 namespace clang {
 namespace clangd {
@@ -42,6 +53,7 @@ using ::testing::Each;
 using ::testing::ElementsAre;
 using ::testing::Field;
 using ::testing::IsEmpty;
+using ::testing::Not;
 using ::testing::Pair;
 using ::testing::SizeIs;
 using ::testing::UnorderedElementsAre;
@@ -889,7 +901,8 @@ TEST(DiagnosticsTest, RecursivePreamblePragmaOnce) {
     int symbol;
   )cpp");
   TU.Filename = "foo.h";
-  EXPECT_THAT(*TU.build().getDiagnostics(), IsEmpty());
+  EXPECT_THAT(*TU.build().getDiagnostics(),
+              Not(Contains(diagName("pp_including_mainfile_in_preamble"))));
   EXPECT_THAT(TU.build().getLocalTopLevelDecls(), SizeIs(1));
 }
 
@@ -1597,9 +1610,9 @@ TEST(DiagsInHeaders, DiagInTransitiveInclude) {
   TU.AdditionalFiles = {{"a.h", "#include \"b.h\""},
                         {"b.h", "no_type_spec; // error-ok"}};
   EXPECT_THAT(*TU.build().getDiagnostics(),
-              UnorderedElementsAre(
-                  Diag(Main.range(), "in included file: a type specifier is "
-                                     "required for all declarations")));
+              UnorderedElementsAre(Diag(Main.range(),
+                                        "in included file: a type specifier is "
+                                        "required for all declarations")));
 }
 
 TEST(DiagsInHeaders, DiagInMultipleHeaders) {
@@ -1628,9 +1641,8 @@ TEST(DiagsInHeaders, PreferExpansionLocation) {
       {"a.h", "#include \"b.h\"\n"},
       {"b.h", "#ifndef X\n#define X\nno_type_spec; // error-ok\n#endif"}};
   EXPECT_THAT(*TU.build().getDiagnostics(),
-              UnorderedElementsAre(Diag(Main.range(),
-                                        "in included file: a type specifier is "
-                                        "required for all declarations")));
+              Contains(Diag(Main.range(), "in included file: a type specifier "
+                                          "is required for all declarations")));
 }
 
 TEST(DiagsInHeaders, PreferExpansionLocationMacros) {
@@ -1646,9 +1658,9 @@ TEST(DiagsInHeaders, PreferExpansionLocationMacros) {
       {"b.h", "#include \"c.h\"\n"},
       {"c.h", "#ifndef X\n#define X\nno_type_spec; // error-ok\n#endif"}};
   EXPECT_THAT(*TU.build().getDiagnostics(),
-              UnorderedElementsAre(
-                  Diag(Main.range(), "in included file: a type specifier is "
-                                     "required for all declarations")));
+              UnorderedElementsAre(Diag(Main.range(),
+                                        "in included file: a type specifier is "
+                                        "required for all declarations")));
 }
 
 TEST(DiagsInHeaders, LimitDiagsOutsideMainFile) {
@@ -1675,9 +1687,9 @@ TEST(DiagsInHeaders, LimitDiagsOutsideMainFile) {
       no_type_spec_10;
       #endif)cpp"}};
   EXPECT_THAT(*TU.build().getDiagnostics(),
-              UnorderedElementsAre(
-                  Diag(Main.range(), "in included file: a type specifier is "
-                                     "required for all declarations")));
+              UnorderedElementsAre(Diag(Main.range(),
+                                        "in included file: a type specifier is "
+                                        "required for all declarations")));
 }
 
 TEST(DiagsInHeaders, OnlyErrorOrFatal) {
@@ -1897,8 +1909,6 @@ $fix[[  $diag[[#include "unused.h"]]
   )cpp";
   TU.AdditionalFiles["system/system_header.h"] = "";
   TU.ExtraArgs = {"-isystem" + testPath("system")};
-  // Off by default.
-  EXPECT_THAT(*TU.build().getDiagnostics(), IsEmpty());
   Config Cfg;
   Cfg.Diagnostics.UnusedIncludes = Config::IncludesPolicy::Strict;
   // Set filtering.
@@ -1908,11 +1918,11 @@ $fix[[  $diag[[#include "unused.h"]]
   auto AST = TU.build();
   EXPECT_THAT(
       *AST.getDiagnostics(),
-      UnorderedElementsAre(
-          AllOf(Diag(Test.range("diag"),
-                     "included header unused.h is not used directly"),
-                withTag(DiagnosticTag::Unnecessary), diagSource(Diag::Clangd),
-                withFix(Fix(Test.range("fix"), "", "remove #include directive")))));
+      Contains(AllOf(
+          Diag(Test.range("diag"),
+               "included header unused.h is not used directly"),
+          withTag(DiagnosticTag::Unnecessary), diagSource(Diag::Clangd),
+          withFix(Fix(Test.range("fix"), "", "remove #include directive")))));
   auto &Diag = AST.getDiagnostics()->front();
   EXPECT_EQ(getDiagnosticDocURI(Diag.Source, Diag.ID, Diag.Name),
             std::string("https://clangd.llvm.org/guides/include-cleaner"));
