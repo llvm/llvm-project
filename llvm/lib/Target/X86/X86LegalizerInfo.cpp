@@ -348,6 +348,11 @@ X86LegalizerInfo::X86LegalizerInfo(const X86Subtarget &STI,
       .minScalar(0, LLT::scalar(32))
       .libcall();
 
+  getActionDefinitionsBuilder(G_FREEZE)
+    .legalFor({s8, s16, s32, s64, p0})
+    .widenScalarToNextPow2(0, /*Min=*/8)
+    .clampScalar(0, s8, sMaxScalar);
+
   setLegalizerInfo32bit();
   setLegalizerInfo64bit();
   setLegalizerInfoSSE1();
