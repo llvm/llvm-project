@@ -44,10 +44,12 @@ CONSTATTR float
 MATH_MANGLE(remainder)(float x, float y)
 #endif
 {
+#if !defined(COMPILING_FMOD)
     if (DAZ_OPT()) {
         x = BUILTIN_CANONICALIZE_F32(x);
         y = BUILTIN_CANONICALIZE_F32(y);
     }
+#endif
 
     // How many bits of the quotient per iteration
     const int bits = 12;
