@@ -1776,21 +1776,21 @@ foreach vti = AllIntegerVectors in {
   let Predicates = GetVTypePredicates<vti>.Predicates in {
     def : Pat<(vti.Vector (riscv_vmv_v_x_vl (vti.Vector undef), GPR:$rs2, VLOpFrag)),
               (!cast<Instruction>("PseudoVMV_V_X_"#vti.LMul.MX)
-               $rs2, GPR:$vl, vti.Log2SEW)>;
-    def : Pat<(vti.Vector (riscv_vmv_v_x_vl vti.Vector:$passthru, GPR:$rs2, VLOpFrag)),
+               GPR:$rs2, GPR:$vl, vti.Log2SEW)>;
+    def : Pat<(vti.Vector (riscv_vmv_v_x_vl vti.RegClass:$passthru, GPR:$rs2, VLOpFrag)),
               (!cast<Instruction>("PseudoVMV_V_X_"#vti.LMul.MX#"_TU")
-               $passthru, $rs2, GPR:$vl, vti.Log2SEW)>;
+               vti.RegClass:$passthru, GPR:$rs2, GPR:$vl, vti.Log2SEW)>;
     defvar ImmPat = !cast<ComplexPattern>("sew"#vti.SEW#"simm5");
-    def : Pat<(vti.Vector (riscv_vmv_v_x_vl (vti.Vector undef), (ImmPat XLenVT:$imm5),
+    def : Pat<(vti.Vector (riscv_vmv_v_x_vl (vti.Vector undef), (ImmPat simm5:$imm5),
                                             VLOpFrag)),
               (!cast<Instruction>("PseudoVMV_V_I_"#vti.LMul.MX)
-               XLenVT:$imm5, GPR:$vl, vti.Log2SEW)>;
-    def : Pat<(vti.Vector (riscv_vmv_v_x_vl vti.Vector:$passthru, (ImmPat XLenVT:$imm5),
+               simm5:$imm5, GPR:$vl, vti.Log2SEW)>;
+    def : Pat<(vti.Vector (riscv_vmv_v_x_vl vti.RegClass:$passthru, (ImmPat simm5:$imm5),
                                                 VLOpFrag)),
               (!cast<Instruction>("PseudoVMV_V_I_"#vti.LMul.MX#"_TU")
-               $passthru, XLenVT:$imm5, GPR:$vl, vti.Log2SEW)>;
+               vti.RegClass:$passthru, simm5:$imm5, GPR:$vl, vti.Log2SEW)>;
   }
-}  
+}
 
 // 12. Vector Fixed-Point Arithmetic Instructions
 
