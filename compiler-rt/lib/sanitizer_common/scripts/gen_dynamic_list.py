@@ -113,7 +113,7 @@ def main(argv):
     parser.add_argument("-o", "--output", required=True)
     args = parser.parse_args()
 
-    result = []
+    result = set()
 
     all_functions = []
     for library in args.libraries:
@@ -122,36 +122,35 @@ def main(argv):
     for func in all_functions:
         # Export new/delete operators.
         if func in new_delete:
-            result.append(func)
+            result.add(func)
             continue
         # Export interceptors.
-        match = re.match("__interceptor_(.*)", func)
+        match = re.match("_?__interceptor_(.*)", func)
         if match:
-            result.append(func)
+            result.add(func)
             # We have to avoid exporting the interceptors for versioned library
             # functions due to gold internal error.
             orig_name = match.group(1)
             if orig_name in function_set and (
                 args.version_list or orig_name not in versioned_functions
             ):
-                result.append(orig_name)
+                result.add(orig_name)
             continue
         # Export sanitizer interface functions.
         if re.match("__sanitizer_(.*)", func):
-            result.append(func)
+            result.add(func)
 
     # Additional exported functions from files.
     for fname in args.extra:
         f = open(fname, "r")
         for line in f:
-            result.append(line.rstrip())
+            result.add(line.rstrip())
     # Print the resulting list in the format recognized by ld.
     with open(args.output, "w") as f:
         print("{", file=f)
         if args.version_list:
             print("global:", file=f)
-        result.sort()
-        for sym in result:
+        for sym in sorted(result):
             print("  %s;" % sym, file=f)
         if args.version_list:
             print("local:", file=f)

@@ -108,6 +108,22 @@ def TestConsumeOperand : Op<Transform_Dialect, "test_consume_operand",
   let cppNamespace = "::mlir::test";
 }
 
+def TestConsumeOperandEach : Op<Transform_Dialect, "test_consume_operand_each",
+     [TransformOpInterface, TransformEachOpTrait,
+      MemoryEffectsOpInterface, FunctionalStyleTransformOpTrait]> {
+  let arguments = (ins TransformHandleTypeInterface:$target);
+  let assemblyFormat = "$target attr-dict `:` type($target)";
+  let cppNamespace = "::mlir::test";
+  let extraClassDeclaration = [{
+    ::mlir::DiagnosedSilenceableFailure applyToOne(
+        ::mlir::Operation *target,
+        ::mlir::transform::ApplyToEachResultList &results,
+        ::mlir::transform::TransformState &state) {
+      return ::mlir::DiagnosedSilenceableFailure::success();
+    }
+  }];
+}
+
 def TestConsumeOperandOfOpKindOrFail
   : Op<Transform_Dialect, "test_consume_operand_of_op_kind_or_fail",
        [DeclareOpInterfaceMethods<TransformOpInterface>,
@@ -465,6 +481,29 @@ def TestRequiredMemoryEffectsOp
   let results = (outs TransformHandleTypeInterface:$out);
   let assemblyFormat = "$in attr-dict `:` functional-type(operands, results)";
   let cppNamespace = "::mlir::test";
+}
+
+// This op is used as a payload op. It must be a registered op, so that it can
+// be created with "RewriterBase::replaceOpWithNewOp" (needed for a test case).
+// Since only TransformOpInterface can be injected into the transform dialect,
+// this op implements the interface, even though it is not used as a transform
+// op.
+def TestDummyPayloadOp
+  : Op<Transform_Dialect, "test_dummy_payload_op",
+      [DeclareOpInterfaceMethods<MemoryEffectsOpInterface>,
+       TransformOpInterface]> {
+  let arguments = (ins Variadic<AnyType>:$args);
+  let results = (outs Variadic<AnyType>:$outs);
+  let assemblyFormat = "$args attr-dict `:` functional-type(operands, results)";
+  let cppNamespace = "::mlir::test";
+
+  let extraClassDeclaration = [{
+    DiagnosedSilenceableFailure apply(transform::TransformResults &results,
+                                      transform::TransformState &state) {
+      llvm_unreachable("op should not be used as a transform");
+      return DiagnosedSilenceableFailure::definiteFailure();
+    }
+  }];
 }
 
 def TestTrackedRewriteOp

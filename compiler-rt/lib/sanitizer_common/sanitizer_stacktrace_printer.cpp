@@ -36,6 +36,8 @@ const char *StripFunctionName(const char *function) {
     if (const char *s = try_strip("__asan_wrap_"))
       return s;
   } else {
+    if (const char *s = try_strip("___interceptor_"))
+      return s;
     if (const char *s = try_strip("__interceptor_"))
       return s;
   }

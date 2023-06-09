@@ -228,6 +228,7 @@ public:
   bool visitLoadInst(LoadInst &LI);
   bool visitStoreInst(StoreInst &SI);
   bool visitCallInst(CallInst &ICI);
+  bool visitFreezeInst(FreezeInst &FI);
 
 private:
   Scatterer scatter(Instruction *Point, Value *V, Type *PtrElemTy = nullptr);
@@ -970,6 +971,12 @@ bool ScalarizerVisitor::visitStoreInst(StoreInst &SI) {
 
 bool ScalarizerVisitor::visitCallInst(CallInst &CI) {
   return splitCall(CI);
+}
+
+bool ScalarizerVisitor::visitFreezeInst(FreezeInst &FI) {
+  return splitUnary(FI, [](IRBuilder<> &Builder, Value *Op, const Twine &Name) {
+    return Builder.CreateFreeze(Op, Name);
+  });
 }
 
 // Delete the instructions that we scalarized.  If a full vector result

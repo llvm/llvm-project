@@ -285,6 +285,14 @@ public:
 private:
   /// Returns the impl interface instance for the given type.
   static typename InterfaceBase::Concept *getInterfaceFor(Attribute attr) {
+#ifndef NDEBUG
+    // Check that the current interface isn't an unresolved promise for the
+    // given attribute.
+    dialect_extension_detail::handleUseOfUndefinedPromisedInterface(
+        attr.getDialect(), ConcreteType::getInterfaceID(),
+        llvm::getTypeName<ConcreteType>());
+#endif
+
     return attr.getAbstractAttribute().getInterface<ConcreteType>();
   }
 

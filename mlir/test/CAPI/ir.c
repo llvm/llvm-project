@@ -1725,10 +1725,10 @@ int registerOnlyStd(void) {
   fprintf(stderr, "@registration\n");
   // CHECK-LABEL: @registration
 
-  // CHECK: cf.cond_br is_registered: 1
-  fprintf(stderr, "cf.cond_br is_registered: %d\n",
+  // CHECK: func.call is_registered: 1
+  fprintf(stderr, "func.call is_registered: %d\n",
           mlirContextIsRegisteredOperation(
-              ctx, mlirStringRefCreateFromCString("cf.cond_br")));
+              ctx, mlirStringRefCreateFromCString("func.call")));
 
   // CHECK: func.not_existing_op is_registered: 0
   fprintf(stderr, "func.not_existing_op is_registered: %d\n",
@@ -1942,6 +1942,7 @@ int testClone(void) {
   registerAllUpstreamDialects(ctx);
 
   mlirContextGetOrLoadDialect(ctx, mlirStringRefCreateFromCString("func"));
+  mlirContextGetOrLoadDialect(ctx, mlirStringRefCreateFromCString("arith"));
   MlirLocation loc = mlirLocationUnknownGet(ctx);
   MlirType indexType = mlirIndexTypeGet(ctx);
   MlirStringRef valueStringRef = mlirStringRefCreateFromCString("value");
