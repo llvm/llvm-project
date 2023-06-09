@@ -20,6 +20,7 @@ COMMANDS
 * :ref:`merge <profdata-merge>`
 * :ref:`show <profdata-show>`
 * :ref:`overlap <profdata-overlap>`
+* :ref:`order <profdata-order>`
 
 .. program:: llvm-profdata merge
 
@@ -417,6 +418,40 @@ OPTIONS
 
  Only show overlap for the context sensitive profile counts. The default is to show
  non-context sensitive profile counts.
+
+.. program:: llvm-profdata order
+
+.. _profdata-order:
+
+ORDER
+-------
+
+SYNOPSIS
+^^^^^^^^
+
+:program:`llvm-profdata order` [*options*] [*filename*]
+
+DESCRIPTION
+^^^^^^^^^^^
+
+:program:`llvm-profdata order` uses temporal profiling traces from a profile and
+finds a function order that reduces the number of page faults for those traces.
+This output can be directly passed to ``lld`` via ``--symbol-ordering-file=``
+for ELF or ``-order-file`` for Mach-O. If the traces found in the profile are
+representative of the real world, then this order should improve startup
+performance.
+
+OPTIONS
+^^^^^^^
+
+.. option:: --help
+
+ Print a summary of command line options.
+
+.. option:: --output=<output>, -o
+
+ Specify the output file name.  If *output* is ``-`` or it isn't specified,
+ then the output is sent to standard output.
 
 EXIT STATUS
 -----------

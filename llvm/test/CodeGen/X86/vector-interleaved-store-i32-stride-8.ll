@@ -263,8 +263,7 @@ define void @store_i32_stride8_vf4(ptr %in.vecptr0, ptr %in.vecptr1, ptr %in.vec
 ; AVX2-ONLY-NEXT:    vpermps %ymm7, %ymm6, %ymm9
 ; AVX2-ONLY-NEXT:    vpermps %ymm5, %ymm6, %ymm6
 ; AVX2-ONLY-NEXT:    vblendps {{.*#+}} ymm6 = ymm6[0,1,2,3,4,5],ymm9[6,7]
-; AVX2-ONLY-NEXT:    vmovddup {{.*#+}} xmm9 = [0,4,0,4]
-; AVX2-ONLY-NEXT:    # xmm9 = mem[0,0]
+; AVX2-ONLY-NEXT:    vmovaps {{.*#+}} xmm9 = <u,u,0,4>
 ; AVX2-ONLY-NEXT:    vpermps %ymm8, %ymm9, %ymm9
 ; AVX2-ONLY-NEXT:    vunpcklps {{.*#+}} xmm10 = xmm3[0],xmm4[0],xmm3[1],xmm4[1]
 ; AVX2-ONLY-NEXT:    vblendps {{.*#+}} xmm9 = xmm10[0,1],xmm9[2,3]
@@ -273,8 +272,7 @@ define void @store_i32_stride8_vf4(ptr %in.vecptr0, ptr %in.vecptr1, ptr %in.vec
 ; AVX2-ONLY-NEXT:    vpermps %ymm7, %ymm9, %ymm10
 ; AVX2-ONLY-NEXT:    vpermps %ymm5, %ymm9, %ymm9
 ; AVX2-ONLY-NEXT:    vblendps {{.*#+}} ymm9 = ymm9[0,1,2,3,4,5],ymm10[6,7]
-; AVX2-ONLY-NEXT:    vmovddup {{.*#+}} xmm10 = [1,5,1,5]
-; AVX2-ONLY-NEXT:    # xmm10 = mem[0,0]
+; AVX2-ONLY-NEXT:    vmovaps {{.*#+}} xmm10 = <1,5,u,u>
 ; AVX2-ONLY-NEXT:    vpermps %ymm2, %ymm10, %ymm10
 ; AVX2-ONLY-NEXT:    vunpcklps {{.*#+}} xmm11 = xmm0[0],xmm1[0],xmm0[1],xmm1[1]
 ; AVX2-ONLY-NEXT:    vblendps {{.*#+}} xmm10 = xmm10[0,1],xmm11[2,3]
@@ -283,8 +281,7 @@ define void @store_i32_stride8_vf4(ptr %in.vecptr0, ptr %in.vecptr1, ptr %in.vec
 ; AVX2-ONLY-NEXT:    vpermps %ymm7, %ymm10, %ymm11
 ; AVX2-ONLY-NEXT:    vpermps %ymm5, %ymm10, %ymm10
 ; AVX2-ONLY-NEXT:    vblendps {{.*#+}} ymm10 = ymm10[0,1,2,3,4,5],ymm11[6,7]
-; AVX2-ONLY-NEXT:    vmovddup {{.*#+}} xmm11 = [2,6,2,6]
-; AVX2-ONLY-NEXT:    # xmm11 = mem[0,0]
+; AVX2-ONLY-NEXT:    vmovaps {{.*#+}} xmm11 = <u,u,2,6>
 ; AVX2-ONLY-NEXT:    vpermps %ymm8, %ymm11, %ymm8
 ; AVX2-ONLY-NEXT:    vunpckhps {{.*#+}} xmm3 = xmm3[2],xmm4[2],xmm3[3],xmm4[3]
 ; AVX2-ONLY-NEXT:    vblendps {{.*#+}} xmm3 = xmm3[0,1],xmm8[2,3]
@@ -293,8 +290,7 @@ define void @store_i32_stride8_vf4(ptr %in.vecptr0, ptr %in.vecptr1, ptr %in.vec
 ; AVX2-ONLY-NEXT:    vpermps %ymm7, %ymm4, %ymm7
 ; AVX2-ONLY-NEXT:    vpermps %ymm5, %ymm4, %ymm4
 ; AVX2-ONLY-NEXT:    vblendps {{.*#+}} ymm4 = ymm4[0,1,2,3,4,5],ymm7[6,7]
-; AVX2-ONLY-NEXT:    vmovddup {{.*#+}} xmm5 = [3,7,3,7]
-; AVX2-ONLY-NEXT:    # xmm5 = mem[0,0]
+; AVX2-ONLY-NEXT:    vmovaps {{.*#+}} xmm5 = <3,7,u,u>
 ; AVX2-ONLY-NEXT:    vpermps %ymm2, %ymm5, %ymm2
 ; AVX2-ONLY-NEXT:    vunpckhps {{.*#+}} xmm0 = xmm0[2],xmm1[2],xmm0[3],xmm1[3]
 ; AVX2-ONLY-NEXT:    vblendps {{.*#+}} xmm0 = xmm2[0,1],xmm0[2,3]

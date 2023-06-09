@@ -194,7 +194,7 @@ define <3 x i1> @test_urem_vec(<3 x i11> %X) nounwind {
 ; AVX1-NEXT:    vpinsrd $2, %edx, %xmm0, %xmm0
 ; AVX1-NEXT:    vpsubd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
 ; AVX1-NEXT:    vpmulld {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
-; AVX1-NEXT:    vbroadcastss {{.*#+}} xmm1 = [2047,2047,2047,2047]
+; AVX1-NEXT:    vmovdqa {{.*#+}} xmm1 = [2047,2047,2047,2047]
 ; AVX1-NEXT:    vpand %xmm1, %xmm0, %xmm2
 ; AVX1-NEXT:    vpsrld $1, %xmm2, %xmm2
 ; AVX1-NEXT:    vpblendw {{.*#+}} xmm2 = xmm2[0,1],xmm0[2,3,4,5,6,7]

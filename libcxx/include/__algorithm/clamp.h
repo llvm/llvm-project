@@ -37,7 +37,7 @@ _LIBCPP_INLINE_VISIBILITY constexpr
 const _Tp&
 clamp(const _Tp& __v, const _Tp& __lo, const _Tp& __hi)
 {
-    return _VSTD::clamp(__v, __lo, __hi, __less<_Tp>());
+    return _VSTD::clamp(__v, __lo, __hi, __less<>());
 }
 #endif
 

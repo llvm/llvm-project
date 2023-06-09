@@ -206,6 +206,29 @@ static SDValue selectImm(SelectionDAG *CurDAG, const SDLoc &DL, const MVT VT,
   RISCVMatInt::InstSeq Seq =
       RISCVMatInt::generateInstSeq(Imm, Subtarget.getFeatureBits());
 
+  // See if we can create this constant as (ADD (SLLI X, 32), X) where X is at
+  // worst an LUI+ADDIW. This will require an extra register, but avoids a
+  // constant pool.
+  if (Seq.size() > 3) {
+    int64_t LoVal = SignExtend64<32>(Imm);
+    int64_t HiVal = SignExtend64<32>((Imm - LoVal) >> 32);
+    if (LoVal == HiVal) {
+      RISCVMatInt::InstSeq SeqLo =
+          RISCVMatInt::generateInstSeq(LoVal, Subtarget.getFeatureBits());
+      if ((SeqLo.size() + 2) < Seq.size()) {
+        SDValue Lo = selectImmSeq(CurDAG, DL, VT, SeqLo);
+
+        SDValue SLLI = SDValue(
+            CurDAG->getMachineNode(RISCV::SLLI, DL, VT, Lo,
+                                   CurDAG->getTargetConstant(32, DL, VT)),
+            0);
+        return SDValue(CurDAG->getMachineNode(RISCV::ADD, DL, VT, Lo, SLLI),
+                       0);
+      }
+    }
+  }
+
+  // Otherwise, use the original sequence.
   return selectImmSeq(CurDAG, DL, VT, Seq);
 }
 
@@ -3187,12 +3210,14 @@ bool RISCVDAGToDAGISel::doPeepholeMaskedRVV(SDNode *N) {
   // Check that we're dropping the mask operand and any policy operand
   // when we transform to this unmasked pseudo. Additionally, if this
   // instruction is tail agnostic, the unmasked instruction should not have a
-  // merge op.
-  uint64_t TSFlags = TII.get(Opc).TSFlags;
-  assert((UseTUPseudo == RISCVII::hasMergeOp(TSFlags)) &&
-         RISCVII::hasDummyMaskOp(TSFlags) &&
+  // tied destination.
+#ifndef NDEBUG
+  const MCInstrDesc &MCID = TII.get(Opc);
+  uint64_t TSFlags = MCID.TSFlags;
+  bool HasTiedDest = RISCVII::isFirstDefTiedToFirstUse(MCID);
+  assert(UseTUPseudo == HasTiedDest && RISCVII::hasDummyMaskOp(TSFlags) &&
          "Unexpected pseudo to transform to");
-  (void)TSFlags;
+#endif
 
   SmallVector<SDValue, 8> Ops;
   // Skip the merge operand at index 0 if !UseTUPseudo.
@@ -3246,15 +3271,14 @@ bool RISCVDAGToDAGISel::performCombineVMergeAndVOps(SDNode *N, bool IsTA) {
     return false;
 
   unsigned TrueOpc = True.getMachineOpcode();
-
-  // Skip if True has merge operand.
-  uint64_t TrueTSFlags = TII->get(TrueOpc).TSFlags;
-  bool HasMergeOp = RISCVII::hasMergeOp(TrueTSFlags);
+  const MCInstrDesc &TrueMCID = TII->get(TrueOpc);
+  uint64_t TrueTSFlags = TrueMCID.TSFlags;
+  bool HasTiedDest = RISCVII::isFirstDefTiedToFirstUse(TrueMCID);
 
   bool IsMasked = false;
   const RISCV::RISCVMaskedPseudoInfo *Info =
       RISCV::lookupMaskedIntrinsicByUnmaskedTA(TrueOpc);
-  if (!Info && HasMergeOp) {
+  if (!Info && HasTiedDest) {
     Info = RISCV::getMaskedPseudoInfo(TrueOpc);
     IsMasked = true;
   }
@@ -3262,7 +3286,7 @@ bool RISCVDAGToDAGISel::performCombineVMergeAndVOps(SDNode *N, bool IsTA) {
   if (!Info)
     return false;
 
-  if (HasMergeOp) {
+  if (HasTiedDest) {
     // The vmerge instruction must be TU.
     // FIXME: This could be relaxed, but we need to handle the policy for the
     // resulting op correctly.
@@ -3276,7 +3300,7 @@ bool RISCVDAGToDAGISel::performCombineVMergeAndVOps(SDNode *N, bool IsTA) {
   }
 
   if (IsMasked) {
-    assert(HasMergeOp && "Expected merge op");
+    assert(HasTiedDest && "Expected tied dest");
     // The vmerge instruction must be TU.
     if (IsTA)
       return false;
@@ -3335,10 +3359,14 @@ bool RISCVDAGToDAGISel::performCombineVMergeAndVOps(SDNode *N, bool IsTA) {
 
   SDLoc DL(N);
   unsigned MaskedOpc = Info->MaskedPseudo;
-  assert(RISCVII::hasVecPolicyOp(TII->get(MaskedOpc).TSFlags) &&
+#ifndef NDEBUG
+  const MCInstrDesc &MaskedMCID = TII->get(MaskedOpc);
+  assert(RISCVII::hasVecPolicyOp(MaskedMCID.TSFlags) &&
          "Expected instructions with mask have policy operand.");
-  assert(RISCVII::hasMergeOp(TII->get(MaskedOpc).TSFlags) &&
-         "Expected instructions with mask have merge operand.");
+  assert(MaskedMCID.getOperandConstraint(MaskedMCID.getNumDefs(),
+                                         MCOI::TIED_TO) == 0 &&
+         "Expected instructions with mask have a tied dest.");
+#endif
 
   SmallVector<SDValue, 8> Ops;
   if (IsMasked) {
@@ -3348,7 +3376,7 @@ bool RISCVDAGToDAGISel::performCombineVMergeAndVOps(SDNode *N, bool IsTA) {
         CurDAG->getTargetConstant(Policy, DL, Subtarget->getXLenVT()));
     Ops.append(True->op_begin() + TrueVLIndex + 3, True->op_end());
   } else {
-    if (!HasMergeOp)
+    if (!HasTiedDest)
       Ops.push_back(False);
     Ops.append(True->op_begin(), True->op_begin() + TrueVLIndex);
     Ops.append({Mask, VL, /* SEW */ True.getOperand(TrueVLIndex + 1)});

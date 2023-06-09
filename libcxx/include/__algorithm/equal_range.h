@@ -75,11 +75,7 @@ equal_range(_ForwardIterator __first, _ForwardIterator __last, const _Tp& __valu
 template <class _ForwardIterator, class _Tp>
 _LIBCPP_NODISCARD_EXT _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 pair<_ForwardIterator, _ForwardIterator>
 equal_range(_ForwardIterator __first, _ForwardIterator __last, const _Tp& __value) {
-  return std::equal_range(
-      std::move(__first),
-      std::move(__last),
-      __value,
-      __less<typename iterator_traits<_ForwardIterator>::value_type, _Tp>());
+  return std::equal_range(std::move(__first), std::move(__last), __value, __less<>());
 }
 
 _LIBCPP_END_NAMESPACE_STD

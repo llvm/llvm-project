@@ -961,7 +961,7 @@ define i1 @trunc_v32i16_cmp(<32 x i16> %a0) nounwind {
 ;
 ; AVX512-LABEL: trunc_v32i16_cmp:
 ; AVX512:       # %bb.0:
-; AVX512-NEXT:    vpbroadcastw {{.*#+}} zmm1 = [1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1]
+; AVX512-NEXT:    vmovdqa64 {{.*#+}} zmm1 = [1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1]
 ; AVX512-NEXT:    vpandq %zmm1, %zmm0, %zmm0
 ; AVX512-NEXT:    vpcmpneqd %zmm1, %zmm0, %k0
 ; AVX512-NEXT:    kortestw %k0, %k0

@@ -46,3 +46,7 @@ INTERFACE_FUNCTION(__sanitizer_purge_allocator)
 INTERFACE_FUNCTION(__sanitizer_print_memory_profile)
 INTERFACE_WEAK_FUNCTION(__sanitizer_free_hook)
 INTERFACE_WEAK_FUNCTION(__sanitizer_malloc_hook)
+// Memintrinsic functions.
+INTERFACE_FUNCTION(__sanitizer_internal_memcpy)
+INTERFACE_FUNCTION(__sanitizer_internal_memmove)
+INTERFACE_FUNCTION(__sanitizer_internal_memset)

@@ -5589,6 +5589,7 @@ ExprResult Sema::BuildTypeTrait(TypeTrait Kind, SourceLocation KWLoc,
                                  KWLoc, Kind, Args, RParenLoc, Result);
   }
   }
+  llvm_unreachable("unhandled type trait return type");
 }
 
 ExprResult Sema::ActOnTypeTrait(TypeTrait Kind, SourceLocation KWLoc,

@@ -387,17 +387,13 @@ join:
 define void @non_local_pre(i1 %c, ptr %p) {
 ; CHECK-LABEL: define void @non_local_pre
 ; CHECK-SAME: (i1 [[C:%.*]], ptr [[P:%.*]]) {
-; CHECK-NEXT:    br i1 [[C]], label [[IF:%.*]], label [[DOTJOIN_CRIT_EDGE:%.*]]
-; CHECK:       .join_crit_edge:
-; CHECK-NEXT:    [[V2_PRE:%.*]] = load i64, ptr [[P]], align 4, !range [[RNG11:![0-9]+]]
-; CHECK-NEXT:    br label [[JOIN:%.*]]
+; CHECK-NEXT:    [[V2_PRE:%.*]] = load i64, ptr [[P]], align 4, !range [[RNG9]]
+; CHECK-NEXT:    br i1 [[C]], label [[IF:%.*]], label [[JOIN:%.*]]
 ; CHECK:       if:
-; CHECK-NEXT:    [[V1:%.*]] = load i64, ptr [[P]], align 4, !range [[RNG9]]
-; CHECK-NEXT:    call void @use.i64(i64 [[V1]])
+; CHECK-NEXT:    call void @use.i64(i64 [[V2_PRE]])
 ; CHECK-NEXT:    br label [[JOIN]]
 ; CHECK:       join:
-; CHECK-NEXT:    [[V2:%.*]] = phi i64 [ [[V2_PRE]], [[DOTJOIN_CRIT_EDGE]] ], [ [[V1]], [[IF]] ]
-; CHECK-NEXT:    call void @use.i64(i64 [[V2]])
+; CHECK-NEXT:    call void @use.i64(i64 [[V2_PRE]])
 ; CHECK-NEXT:    ret void
 ;
   br i1 %c, label %if, label %join
@@ -439,5 +435,4 @@ join:
 ; CHECK: [[RNG8]] = !{i64 0, i64 10}
 ; CHECK: [[RNG9]] = !{i64 0, i64 10, i64 20, i64 30}
 ; CHECK: [[RNG10]] = !{i64 10, i64 30}
-; CHECK: [[RNG11]] = !{i64 20, i64 30}
 ;.

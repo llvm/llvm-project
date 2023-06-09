@@ -3092,8 +3092,7 @@ define void @vec384_v48i8_to_v8i48_factor6(ptr %in.vec.base.ptr, ptr %in.vec.bia
 ; AVX512BW-NEXT:    vmovdqa (%rdi), %xmm0
 ; AVX512BW-NEXT:    vpaddb (%rsi), %xmm0, %xmm0
 ; AVX512BW-NEXT:    vpmovzxbw {{.*#+}} xmm1 = xmm0[0],zero,xmm0[1],zero,xmm0[2],zero,xmm0[3],zero,xmm0[4],zero,xmm0[5],zero,xmm0[6],zero,xmm0[7],zero
-; AVX512BW-NEXT:    vbroadcasti128 {{.*#+}} ymm2 = [0,3,0,1,4,0,2,5,0,3,0,1,4,0,2,5]
-; AVX512BW-NEXT:    # ymm2 = mem[0,1,0,1]
+; AVX512BW-NEXT:    vmovdqa {{.*#+}} ymm2 = <0,u,u,1,u,u,2,u,u,3,u,u,4,u,u,5>
 ; AVX512BW-NEXT:    vpermw %ymm1, %ymm2, %ymm1
 ; AVX512BW-NEXT:    vpand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %ymm1, %ymm1
 ; AVX512BW-NEXT:    vpshufb {{.*#+}} xmm0 = zero,zero,zero,zero,xmm0[6],zero,zero,zero,zero,zero,xmm0[7],zero,zero,zero,zero,zero

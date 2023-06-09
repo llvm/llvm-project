@@ -194,7 +194,7 @@ define <8 x i16> @trunc(<8 x i16> %a, <8 x i16> %b, <8 x i32> %c, <8 x i32> %d) 
 ; AVX1-LABEL: trunc:
 ; AVX1:       # %bb.0:
 ; AVX1-NEXT:    vpcmpeqw %xmm1, %xmm0, %xmm0
-; AVX1-NEXT:    vbroadcastss {{.*#+}} ymm1 = [65535,65535,65535,65535,65535,65535,65535,65535]
+; AVX1-NEXT:    vmovaps {{.*#+}} ymm1 = [65535,65535,65535,65535,65535,65535,65535,65535]
 ; AVX1-NEXT:    vandps %ymm1, %ymm2, %ymm2
 ; AVX1-NEXT:    vextractf128 $1, %ymm2, %xmm4
 ; AVX1-NEXT:    vpackusdw %xmm4, %xmm2, %xmm2
@@ -337,7 +337,7 @@ define dso_local void @example25() nounwind {
 ; AVX1-LABEL: example25:
 ; AVX1:       # %bb.0: # %vector.ph
 ; AVX1-NEXT:    movq $-4096, %rax # imm = 0xF000
-; AVX1-NEXT:    vbroadcastss {{.*#+}} ymm0 = [1,1,1,1,1,1,1,1]
+; AVX1-NEXT:    vmovaps {{.*#+}} ymm0 = [1,1,1,1,1,1,1,1]
 ; AVX1-NEXT:    .p2align 4, 0x90
 ; AVX1-NEXT:  .LBB5_1: # %vector.body
 ; AVX1-NEXT:    # =>This Inner Loop Header: Depth=1

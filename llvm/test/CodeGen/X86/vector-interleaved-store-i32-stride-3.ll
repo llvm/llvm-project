@@ -136,7 +136,7 @@ define void @store_i32_stride3_vf4(ptr %in.vecptr0, ptr %in.vecptr1, ptr %in.vec
 ; AVX2-FAST:       # %bb.0:
 ; AVX2-FAST-NEXT:    vmovaps (%rdi), %xmm0
 ; AVX2-FAST-NEXT:    vinsertf128 $1, (%rsi), %ymm0, %ymm0
-; AVX2-FAST-NEXT:    vbroadcastsd {{.*#+}} ymm1 = [7,3,7,3,7,3,7,3]
+; AVX2-FAST-NEXT:    vmovaps {{.*#+}} ymm1 = <u,3,7,u,u,u,u,u>
 ; AVX2-FAST-NEXT:    vpermps %ymm0, %ymm1, %ymm1
 ; AVX2-FAST-NEXT:    vmovddup {{.*#+}} xmm2 = mem[0,0]
 ; AVX2-FAST-NEXT:    vblendps {{.*#+}} xmm1 = xmm2[0],xmm1[1,2],xmm2[3]
@@ -306,8 +306,7 @@ define void @store_i32_stride3_vf8(ptr %in.vecptr0, ptr %in.vecptr1, ptr %in.vec
 ; AVX2-FAST-NEXT:    vblendps {{.*#+}} ymm0 = ymm0[0,1],ymm4[2],ymm0[3,4],ymm4[5],ymm0[6,7]
 ; AVX2-FAST-NEXT:    vpermpd {{.*#+}} ymm4 = ymm2[1,1,2,2]
 ; AVX2-FAST-NEXT:    vblendps {{.*#+}} ymm0 = ymm4[0],ymm0[1,2],ymm4[3],ymm0[4,5],ymm4[6],ymm0[7]
-; AVX2-FAST-NEXT:    vbroadcastf128 {{.*#+}} ymm4 = [5,0,7,6,5,0,7,6]
-; AVX2-FAST-NEXT:    # ymm4 = mem[0,1,0,1]
+; AVX2-FAST-NEXT:    vmovaps {{.*#+}} ymm4 = <5,u,u,6,u,u,7,u>
 ; AVX2-FAST-NEXT:    vpermps %ymm1, %ymm4, %ymm1
 ; AVX2-FAST-NEXT:    vbroadcastsd 24(%rdi), %ymm4
 ; AVX2-FAST-NEXT:    vblendps {{.*#+}} ymm1 = ymm1[0,1],ymm4[2],ymm1[3,4],ymm4[5],ymm1[6,7]

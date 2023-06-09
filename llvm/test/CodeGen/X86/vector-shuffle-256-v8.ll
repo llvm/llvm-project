@@ -903,8 +903,7 @@ define <8 x float> @shuffle_v8f32_c348cda0(<8 x float> %a, <8 x float> %b) {
 ;
 ; AVX2-FAST-ALL-LABEL: shuffle_v8f32_c348cda0:
 ; AVX2-FAST-ALL:       # %bb.0:
-; AVX2-FAST-ALL-NEXT:    vbroadcastf128 {{.*#+}} ymm2 = [0,3,4,0,0,3,4,0]
-; AVX2-FAST-ALL-NEXT:    # ymm2 = mem[0,1,0,1]
+; AVX2-FAST-ALL-NEXT:    vmovaps {{.*#+}} ymm2 = <u,3,4,u,u,u,u,0>
 ; AVX2-FAST-ALL-NEXT:    vpermps %ymm0, %ymm2, %ymm0
 ; AVX2-FAST-ALL-NEXT:    vbroadcastf128 {{.*#+}} ymm2 = [4,5,2,0,4,5,2,0]
 ; AVX2-FAST-ALL-NEXT:    # ymm2 = mem[0,1,0,1]
@@ -954,7 +953,7 @@ define <8 x float> @shuffle_v8f32_f511235a(<8 x float> %a, <8 x float> %b) {
 ;
 ; AVX2-FAST-ALL-LABEL: shuffle_v8f32_f511235a:
 ; AVX2-FAST-ALL:       # %bb.0:
-; AVX2-FAST-ALL-NEXT:    vbroadcastsd {{.*#+}} ymm2 = [7,2,7,2,7,2,7,2]
+; AVX2-FAST-ALL-NEXT:    vmovaps {{.*#+}} ymm2 = <7,u,u,u,u,u,u,2>
 ; AVX2-FAST-ALL-NEXT:    vpermps %ymm1, %ymm2, %ymm1
 ; AVX2-FAST-ALL-NEXT:    vmovaps {{.*#+}} ymm2 = <u,5,1,1,2,3,5,u>
 ; AVX2-FAST-ALL-NEXT:    vpermps %ymm0, %ymm2, %ymm0

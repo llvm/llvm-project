@@ -79,9 +79,8 @@ public:
     if (!m_exe_ctx.HasProcessScope())
       return;
 
-    CommandCompletions::InvokeCommonCompletionCallbacks(
-        GetCommandInterpreter(), CommandCompletions::eRegisterCompletion,
-        request, nullptr);
+    lldb_private::CommandCompletions::InvokeCommonCompletionCallbacks(
+        GetCommandInterpreter(), lldb::eRegisterCompletion, request, nullptr);
   }
 
   Options *GetOptions() override { return &m_option_group; }
@@ -342,9 +341,8 @@ public:
     if (!m_exe_ctx.HasProcessScope() || request.GetCursorIndex() != 0)
       return;
 
-    CommandCompletions::InvokeCommonCompletionCallbacks(
-        GetCommandInterpreter(), CommandCompletions::eRegisterCompletion,
-        request, nullptr);
+    lldb_private::CommandCompletions::InvokeCommonCompletionCallbacks(
+        GetCommandInterpreter(), lldb::eRegisterCompletion, request, nullptr);
   }
 
 protected:

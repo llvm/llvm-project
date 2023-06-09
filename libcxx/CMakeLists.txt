@@ -57,16 +57,7 @@ option(LIBCXX_ENABLE_ASSERTIONS
    by users in their own code regardless of this option." OFF)
 option(LIBCXX_ENABLE_SHARED "Build libc++ as a shared library." ON)
 option(LIBCXX_ENABLE_STATIC "Build libc++ as a static library." ON)
-set(ENABLE_FILESYSTEM_DEFAULT ON)
-if (WIN32 AND NOT MINGW)
-  # Filesystem is buildable for windows, but it requires __int128 helper
-  # functions, that currently are provided by libgcc or compiler_rt builtins.
-  # These are available in MinGW environments, but not currently in MSVC
-  # environments.
-  set(ENABLE_FILESYSTEM_DEFAULT OFF)
-endif()
-option(LIBCXX_ENABLE_FILESYSTEM "Build filesystem as part of the main libc++ library"
-    ${ENABLE_FILESYSTEM_DEFAULT})
+option(LIBCXX_ENABLE_FILESYSTEM "Build filesystem as part of the main libc++ library" ON)
 option(LIBCXX_INCLUDE_TESTS "Build the libc++ tests." ${LLVM_INCLUDE_TESTS})
 option(LIBCXX_ENABLE_DEBUG_MODE
   "Whether to build libc++ with the debug mode enabled.

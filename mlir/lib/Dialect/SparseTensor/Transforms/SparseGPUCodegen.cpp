@@ -355,7 +355,11 @@ static bool areAdmissibleTypes(SparseTensorType aTp, SparseTensorType bTp,
     return false;
   if (isAdmissibleCOO(aTp)) {
     isCOO = true;
-    return enableRT; // TODO: CreateCooAoSOp was deprecated, find another way
+#ifdef CUSPARSE_COO_AOS
+    return true;
+#else
+    return enableRT;
+#endif
   }
   return isAdmissibleCSR(aTp);
 }
@@ -393,7 +397,13 @@ static Operation *genSpMat(OpBuilder &builder, Location loc, Type handleTp,
       return builder.create<gpu::CreateCooOp>(loc, handleTp, tokenTp, token,
                                               sz1, sz2, nseA, rowA, colA, valA);
     }
+#ifdef CUSPARSE_COO_AOS
+    assert(!colA);
+    return builder.create<gpu::CreateCooAoSOp>(loc, handleTp, tokenTp, token,
+                                               sz1, sz2, nseA, rowA, valA);
+#else
     llvm_unreachable("gpu::CreateCooAoSOp is deprecated");
+#endif
   }
   assert(colA);
   return builder.create<gpu::CreateCsrOp>(loc, handleTp, tokenTp, token, sz1,
