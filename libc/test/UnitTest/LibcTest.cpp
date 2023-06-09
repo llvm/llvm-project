@@ -46,78 +46,41 @@ describeValue(ValType Value) {
   return cpp::to_string(Value);
 }
 
-cpp::string describeValue(cpp::string Value) { return Value; }
+cpp::string_view describeValue(const cpp::string &Value) { return Value; }
 cpp::string_view describeValue(cpp::string_view Value) { return Value; }
 
 template <typename ValType>
-void explainDifference(ValType LHS, ValType RHS, const char *LHSStr,
-                       const char *RHSStr, const char *File, unsigned long Line,
-                       cpp::string OpString) {
-  size_t OffsetLength = OpString.size() > 2 ? OpString.size() - 2 : 0;
-  cpp::string Offset(OffsetLength, ' ');
-
-  tlog << File << ":" << Line << ": FAILURE\n"
-       << Offset << "Expected: " << LHSStr << '\n'
-       << Offset << "Which is: " << describeValue(LHS) << '\n'
-       << "To be " << OpString << ": " << RHSStr << '\n'
-       << Offset << "Which is: " << describeValue(RHS) << '\n';
-}
-
-template <typename ValType>
-bool test(RunContext *Ctx, TestCondition Cond, ValType LHS, ValType RHS,
+bool test(RunContext *Ctx, TestCond Cond, ValType LHS, ValType RHS,
           const char *LHSStr, const char *RHSStr, const char *File,
           unsigned long Line) {
-  auto ExplainDifference = [=](cpp::string OpString) {
-    explainDifference(LHS, RHS, LHSStr, RHSStr, File, Line, OpString);
+  auto ExplainDifference = [=, &Ctx](bool Cond,
+                                     cpp::string_view OpString) -> bool {
+    if (Cond)
+      return true;
+    Ctx->markFail();
+    size_t OffsetLength = OpString.size() > 2 ? OpString.size() - 2 : 0;
+    cpp::string Offset(OffsetLength, ' ');
+    tlog << File << ":" << Line << ": FAILURE\n"
+         << Offset << "Expected: " << LHSStr << '\n'
+         << Offset << "Which is: " << describeValue(LHS) << '\n'
+         << "To be " << OpString << ": " << RHSStr << '\n'
+         << Offset << "Which is: " << describeValue(RHS) << '\n';
+    return false;
   };
 
   switch (Cond) {
-  case Cond_EQ:
-    if (LHS == RHS)
-      return true;
-
-    Ctx->markFail();
-    ExplainDifference("equal to");
-    return false;
-  case Cond_NE:
-    if (LHS != RHS)
-      return true;
-
-    Ctx->markFail();
-    ExplainDifference("not equal to");
-    return false;
-  case Cond_LT:
-    if (LHS < RHS)
-      return true;
-
-    Ctx->markFail();
-    ExplainDifference("less than");
-    return false;
-  case Cond_LE:
-    if (LHS <= RHS)
-      return true;
-
-    Ctx->markFail();
-    ExplainDifference("less than or equal to");
-    return false;
-  case Cond_GT:
-    if (LHS > RHS)
-      return true;
-
-    Ctx->markFail();
-    ExplainDifference("greater than");
-    return false;
-  case Cond_GE:
-    if (LHS >= RHS)
-      return true;
-
-    Ctx->markFail();
-    ExplainDifference("greater than or equal to");
-    return false;
-  default:
-    Ctx->markFail();
-    tlog << "Unexpected test condition.\n";
-    return false;
+  case TestCond::EQ:
+    return ExplainDifference(LHS == RHS, "equal to");
+  case TestCond::NE:
+    return ExplainDifference(LHS != RHS, "not equal to");
+  case TestCond::LT:
+    return ExplainDifference(LHS < RHS, "less than");
+  case TestCond::LE:
+    return ExplainDifference(LHS <= RHS, "less than or equal to");
+  case TestCond::GT:
+    return ExplainDifference(LHS > RHS, "greater than");
+  case TestCond::GE:
+    return ExplainDifference(LHS >= RHS, "greater than or equal to");
   }
 }
 
@@ -163,13 +126,12 @@ int Test::runTests(const char *TestFilter) {
     T->Run();
     T->TearDown();
     [[maybe_unused]] const auto end_time = clock();
-    auto Result = Ctx.status();
-    switch (Result) {
-    case RunContext::Result_Fail:
+    switch (Ctx.status()) {
+    case RunContext::RunResult::Fail:
       tlog << RED << "[  FAILED  ] " << RESET << TestName << '\n';
       ++FailCount;
       break;
-    case RunContext::Result_Pass:
+    case RunContext::RunResult::Pass:
       tlog << GREEN << "[       OK ] " << RESET << TestName;
 #if __STDC_HOSTED__
       tlog << " (took ";
@@ -204,52 +166,52 @@ int Test::runTests(const char *TestFilter) {
 
 namespace internal {
 
-template bool test<char>(RunContext *Ctx, TestCondition Cond, char LHS,
-                         char RHS, const char *LHSStr, const char *RHSStr,
+template bool test<char>(RunContext *Ctx, TestCond Cond, char LHS, char RHS,
+                         const char *LHSStr, const char *RHSStr,
                          const char *File, unsigned long Line);
 
-template bool test<short>(RunContext *Ctx, TestCondition Cond, short LHS,
-                          short RHS, const char *LHSStr, const char *RHSStr,
+template bool test<short>(RunContext *Ctx, TestCond Cond, short LHS, short RHS,
+                          const char *LHSStr, const char *RHSStr,
                           const char *File, unsigned long Line);
 
-template bool test<int>(RunContext *Ctx, TestCondition Cond, int LHS, int RHS,
+template bool test<int>(RunContext *Ctx, TestCond Cond, int LHS, int RHS,
                         const char *LHSStr, const char *RHSStr,
                         const char *File, unsigned long Line);
 
-template bool test<long>(RunContext *Ctx, TestCondition Cond, long LHS,
-                         long RHS, const char *LHSStr, const char *RHSStr,
+template bool test<long>(RunContext *Ctx, TestCond Cond, long LHS, long RHS,
+                         const char *LHSStr, const char *RHSStr,
                          const char *File, unsigned long Line);
 
-template bool test<long long>(RunContext *Ctx, TestCondition Cond,
-                              long long LHS, long long RHS, const char *LHSStr,
+template bool test<long long>(RunContext *Ctx, TestCond Cond, long long LHS,
+                              long long RHS, const char *LHSStr,
                               const char *RHSStr, const char *File,
                               unsigned long Line);
 
-template bool test<unsigned char>(RunContext *Ctx, TestCondition Cond,
+template bool test<unsigned char>(RunContext *Ctx, TestCond Cond,
                                   unsigned char LHS, unsigned char RHS,
                                   const char *LHSStr, const char *RHSStr,
                                   const char *File, unsigned long Line);
 
-template bool test<unsigned short>(RunContext *Ctx, TestCondition Cond,
+template bool test<unsigned short>(RunContext *Ctx, TestCond Cond,
                                    unsigned short LHS, unsigned short RHS,
                                    const char *LHSStr, const char *RHSStr,
                                    const char *File, unsigned long Line);
 
-template bool test<unsigned int>(RunContext *Ctx, TestCondition Cond,
+template bool test<unsigned int>(RunContext *Ctx, TestCond Cond,
                                  unsigned int LHS, unsigned int RHS,
                                  const char *LHSStr, const char *RHSStr,
                                  const char *File, unsigned long Line);
 
-template bool test<unsigned long>(RunContext *Ctx, TestCondition Cond,
+template bool test<unsigned long>(RunContext *Ctx, TestCond Cond,
                                   unsigned long LHS, unsigned long RHS,
                                   const char *LHSStr, const char *RHSStr,
                                   const char *File, unsigned long Line);
 
-template bool test<bool>(RunContext *Ctx, TestCondition Cond, bool LHS,
-                         bool RHS, const char *LHSStr, const char *RHSStr,
+template bool test<bool>(RunContext *Ctx, TestCond Cond, bool LHS, bool RHS,
+                         const char *LHSStr, const char *RHSStr,
                          const char *File, unsigned long Line);
 
-template bool test<unsigned long long>(RunContext *Ctx, TestCondition Cond,
+template bool test<unsigned long long>(RunContext *Ctx, TestCond Cond,
                                        unsigned long long LHS,
                                        unsigned long long RHS,
                                        const char *LHSStr, const char *RHSStr,
@@ -262,39 +224,39 @@ template bool test<unsigned long long>(RunContext *Ctx, TestCondition Cond,
 #ifdef __SIZEOF_INT128__
 // When builtin __uint128_t type is available, include its specialization
 // also.
-template bool test<__uint128_t>(RunContext *Ctx, TestCondition Cond,
-                                __uint128_t LHS, __uint128_t RHS,
-                                const char *LHSStr, const char *RHSStr,
-                                const char *File, unsigned long Line);
+template bool test<__uint128_t>(RunContext *Ctx, TestCond Cond, __uint128_t LHS,
+                                __uint128_t RHS, const char *LHSStr,
+                                const char *RHSStr, const char *File,
+                                unsigned long Line);
 #endif
 
 template bool test<__llvm_libc::cpp::UInt<128>>(
-    RunContext *Ctx, TestCondition Cond, __llvm_libc::cpp::UInt<128> LHS,
+    RunContext *Ctx, TestCond Cond, __llvm_libc::cpp::UInt<128> LHS,
     __llvm_libc::cpp::UInt<128> RHS, const char *LHSStr, const char *RHSStr,
     const char *File, unsigned long Line);
 
 template bool test<__llvm_libc::cpp::UInt<192>>(
-    RunContext *Ctx, TestCondition Cond, __llvm_libc::cpp::UInt<192> LHS,
+    RunContext *Ctx, TestCond Cond, __llvm_libc::cpp::UInt<192> LHS,
     __llvm_libc::cpp::UInt<192> RHS, const char *LHSStr, const char *RHSStr,
     const char *File, unsigned long Line);
 
 template bool test<__llvm_libc::cpp::UInt<256>>(
-    RunContext *Ctx, TestCondition Cond, __llvm_libc::cpp::UInt<256> LHS,
+    RunContext *Ctx, TestCond Cond, __llvm_libc::cpp::UInt<256> LHS,
     __llvm_libc::cpp::UInt<256> RHS, const char *LHSStr, const char *RHSStr,
     const char *File, unsigned long Line);
 
 template bool test<__llvm_libc::cpp::UInt<320>>(
-    RunContext *Ctx, TestCondition Cond, __llvm_libc::cpp::UInt<320> LHS,
+    RunContext *Ctx, TestCond Cond, __llvm_libc::cpp::UInt<320> LHS,
     __llvm_libc::cpp::UInt<320> RHS, const char *LHSStr, const char *RHSStr,
     const char *File, unsigned long Line);
 
 template bool test<__llvm_libc::cpp::string_view>(
-    RunContext *Ctx, TestCondition Cond, __llvm_libc::cpp::string_view LHS,
+    RunContext *Ctx, TestCond Cond, __llvm_libc::cpp::string_view LHS,
     __llvm_libc::cpp::string_view RHS, const char *LHSStr, const char *RHSStr,
     const char *File, unsigned long Line);
 
 template bool test<__llvm_libc::cpp::string>(
-    RunContext *Ctx, TestCondition Cond, __llvm_libc::cpp::string LHS,
+    RunContext *Ctx, TestCond Cond, __llvm_libc::cpp::string LHS,
     __llvm_libc::cpp::string RHS, const char *LHSStr, const char *RHSStr,
     const char *File, unsigned long Line);
 
@@ -302,16 +264,18 @@ template bool test<__llvm_libc::cpp::string>(
 
 bool Test::testStrEq(const char *LHS, const char *RHS, const char *LHSStr,
                      const char *RHSStr, const char *File, unsigned long Line) {
-  return internal::test(Ctx, Cond_EQ, LHS ? cpp::string(LHS) : cpp::string(),
-                        RHS ? cpp::string(RHS) : cpp::string(), LHSStr, RHSStr,
-                        File, Line);
+  return internal::test(Ctx, TestCond::EQ,
+                        LHS ? cpp::string_view(LHS) : cpp::string_view(),
+                        RHS ? cpp::string_view(RHS) : cpp::string_view(),
+                        LHSStr, RHSStr, File, Line);
 }
 
 bool Test::testStrNe(const char *LHS, const char *RHS, const char *LHSStr,
                      const char *RHSStr, const char *File, unsigned long Line) {
-  return internal::test(Ctx, Cond_NE, LHS ? cpp::string(LHS) : cpp::string(),
-                        RHS ? cpp::string(RHS) : cpp::string(), LHSStr, RHSStr,
-                        File, Line);
+  return internal::test(Ctx, TestCond::NE,
+                        LHS ? cpp::string_view(LHS) : cpp::string_view(),
+                        RHS ? cpp::string_view(RHS) : cpp::string_view(),
+                        LHSStr, RHSStr, File, Line);
 }
 
 bool Test::testMatch(bool MatchResult, MatcherBase &Matcher, const char *LHSStr,
