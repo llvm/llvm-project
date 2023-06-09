@@ -22,7 +22,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 
-using MemoryView = __llvm_libc::memory::testing::MemoryView;
+using MemoryView = __llvm_libc::testing::MemoryView;
 
 struct StringStream {
   char *buf;
