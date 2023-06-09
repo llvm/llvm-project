@@ -41,4 +41,4 @@
 // RUN: %clang -target aarch64 -malign-branch-boundary=7 %s -c -### 2>&1 | FileCheck --check-prefix=UNUSED %s
 // RUN: %clang -target aarch64 -mpad-max-prefix-size=15 %s -c -### 2>&1 | FileCheck --check-prefix=UNUSED %s
 // RUN: %clang -target aarch64 -mbranches-within-32B-boundaries %s -c -### 2>&1 | FileCheck --check-prefix=UNUSED %s
-// UNUSED: warning: argument unused
+// UNUSED: error: unsupported option '{{.*}}' for target '{{.*}}'
