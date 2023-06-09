@@ -292,6 +292,9 @@ public:
                                     bool SNaN = false,
                                     unsigned Depth = 0) const override;
 
+  bool isReassocProfitable(MachineRegisterInfo &MRI, Register N0,
+                           Register N1) const override;
+
   /// Helper function that adds Reg to the LiveIn list of the DAG's
   /// MachineFunction.
   ///
