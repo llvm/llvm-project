@@ -26,6 +26,7 @@
 #include "llvm/MC/MCSubtargetInfo.h"
 #include "llvm/MC/SubtargetFeature.h"
 #include "llvm/Support/Casting.h"
+#include "llvm/Support/EndianStream.h"
 #include <optional>
 
 using namespace llvm;
@@ -47,7 +48,7 @@ public:
   SIMCCodeEmitter &operator=(const SIMCCodeEmitter &) = delete;
 
   /// Encode the instruction and write it to the OS.
-  void encodeInstruction(const MCInst &MI, raw_ostream &OS,
+  void encodeInstruction(const MCInst &MI, SmallVectorImpl<char> &CB,
                          SmallVectorImpl<MCFixup> &Fixups,
                          const MCSubtargetInfo &STI) const override;
 
@@ -316,7 +317,8 @@ static bool isVCMPX64(const MCInstrDesc &Desc) {
          Desc.hasImplicitDefOfPhysReg(AMDGPU::EXEC);
 }
 
-void SIMCCodeEmitter::encodeInstruction(const MCInst &MI, raw_ostream &OS,
+void SIMCCodeEmitter::encodeInstruction(const MCInst &MI,
+                                        SmallVectorImpl<char> &CB,
                                         SmallVectorImpl<MCFixup> &Fixups,
                                         const MCSubtargetInfo &STI) const {
   int Opcode = MI.getOpcode();
@@ -345,7 +347,7 @@ void SIMCCodeEmitter::encodeInstruction(const MCInst &MI, raw_ostream &OS,
   }
 
   for (unsigned i = 0; i < bytes; i++) {
-    OS.write((uint8_t)Encoding.extractBitsAsZExtValue(8, 8 * i));
+    CB.push_back((uint8_t)Encoding.extractBitsAsZExtValue(8, 8 * i));
   }
 
   // NSA encoding.
@@ -361,10 +363,9 @@ void SIMCCodeEmitter::encodeInstruction(const MCInst &MI, raw_ostream &OS,
     for (unsigned i = 0; i < NumExtraAddrs; ++i) {
       getMachineOpValue(MI, MI.getOperand(vaddr0 + 1 + i), Encoding, Fixups,
                         STI);
-      OS.write((uint8_t)Encoding.getLimitedValue());
+      CB.push_back((uint8_t)Encoding.getLimitedValue());
     }
-    for (unsigned i = 0; i < NumPadding; ++i)
-      OS.write(0);
+    CB.append(NumPadding, 0);
   }
 
   if ((bytes > 8 && STI.hasFeature(AMDGPU::FeatureVOP3Literal)) ||
@@ -400,9 +401,7 @@ void SIMCCodeEmitter::encodeInstruction(const MCInst &MI, raw_ostream &OS,
     } else if (!Op.isExpr()) // Exprs will be replaced with a fixup value.
       llvm_unreachable("Must be immediate or expr");
 
-    for (unsigned j = 0; j < 4; j++) {
-      OS.write((uint8_t) ((Imm >> (8 * j)) & 0xff));
-    }
+    support::endian::write<uint32_t>(CB, Imm, support::endianness::little);
 
     // Only one literal value allowed
     break;
