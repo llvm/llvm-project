@@ -10,6 +10,7 @@
 #include "clang/AST/ASTContext.h"
 #include "clang/AST/DeclTemplate.h"
 #include "clang/AST/ExprCXX.h"
+#include "clang/AST/Type.h"
 
 namespace clang {
 namespace clangd {
@@ -29,14 +30,38 @@ const auto TemplateFilter = [](const NamedDecl *D) {
   return isa<TemplateDecl>(D);
 };
 
+namespace {
+
+const Type *resolveDeclsToType(const std::vector<const NamedDecl *> &Decls,
+                               ASTContext &Ctx) {
+  if (Decls.size() != 1) // Names an overload set -- just bail.
+    return nullptr;
+  if (const auto *TD = dyn_cast<TypeDecl>(Decls[0])) {
+    return Ctx.getTypeDeclType(TD).getTypePtr();
+  }
+  if (const auto *VD = dyn_cast<ValueDecl>(Decls[0])) {
+    return VD->getType().getTypePtrOrNull();
+  }
+  return nullptr;
+}
+
+} // namespace
+
 // Helper function for HeuristicResolver::resolveDependentMember()
 // which takes a possibly-dependent type `T` and heuristically
 // resolves it to a CXXRecordDecl in which we can try name lookup.
-CXXRecordDecl *resolveTypeToRecordDecl(const Type *T) {
+CXXRecordDecl *HeuristicResolver::resolveTypeToRecordDecl(const Type *T) const {
   assert(T);
 
   // Unwrap type sugar such as type aliases.
   T = T->getCanonicalTypeInternal().getTypePtr();
+
+  if (const auto *DNT = T->getAs<DependentNameType>()) {
+    T = resolveDeclsToType(resolveDependentNameType(DNT), Ctx);
+    if (!T)
+      return nullptr;
+    T = T->getCanonicalTypeInternal().getTypePtr();
+  }
 
   if (const auto *RT = T->getAs<RecordType>())
     return dyn_cast<CXXRecordDecl>(RT->getDecl());
@@ -185,18 +210,6 @@ HeuristicResolver::resolveTemplateSpecializationType(
       DTST->getIdentifier(), TemplateFilter);
 }
 
-const Type *resolveDeclsToType(const std::vector<const NamedDecl *> &Decls) {
-  if (Decls.size() != 1) // Names an overload set -- just bail.
-    return nullptr;
-  if (const auto *TD = dyn_cast<TypeDecl>(Decls[0])) {
-    return TD->getTypeForDecl();
-  }
-  if (const auto *VD = dyn_cast<ValueDecl>(Decls[0])) {
-    return VD->getType().getTypePtrOrNull();
-  }
-  return nullptr;
-}
-
 std::vector<const NamedDecl *>
 HeuristicResolver::resolveExprToDecls(const Expr *E) const {
   if (const auto *ME = dyn_cast<CXXDependentScopeMemberExpr>(E)) {
@@ -220,7 +233,7 @@ HeuristicResolver::resolveExprToDecls(const Expr *E) const {
 const Type *HeuristicResolver::resolveExprToType(const Expr *E) const {
   std::vector<const NamedDecl *> Decls = resolveExprToDecls(E);
   if (!Decls.empty())
-    return resolveDeclsToType(Decls);
+    return resolveDeclsToType(Decls, Ctx);
 
   return E->getType().getTypePtr();
 }
@@ -239,9 +252,11 @@ const Type *HeuristicResolver::resolveNestedNameSpecifierToType(
   case NestedNameSpecifier::TypeSpecWithTemplate:
     return NNS->getAsType();
   case NestedNameSpecifier::Identifier: {
-    return resolveDeclsToType(resolveDependentMember(
-        resolveNestedNameSpecifierToType(NNS->getPrefix()),
-        NNS->getAsIdentifier(), TypeFilter));
+    return resolveDeclsToType(
+        resolveDependentMember(
+            resolveNestedNameSpecifierToType(NNS->getPrefix()),
+            NNS->getAsIdentifier(), TypeFilter),
+        Ctx);
   }
   default:
     break;
