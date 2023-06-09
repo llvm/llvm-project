@@ -72,7 +72,11 @@ if (CLANG_ENABLE_HLSL)
 endif()
 
 foreach(link ${CLANG_LINKS_TO_CREATE} ${HLSL_LINK})
-  add_clang_symlink(${link} clang)
+  if(CLANG_LINK_FLANG_LEGACY AND "${link}" STREQUAL "flang")
+    add_clang_symlink(${link} flang-legacy)
+  else()
+    add_clang_symlink(${link} clang)
+  endif()
 endforeach()
 
 # Configure plist creation for OS X.
