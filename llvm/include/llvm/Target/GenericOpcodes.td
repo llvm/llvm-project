@@ -1481,3 +1481,10 @@ def G_ASSERT_ALIGN : GenericInstruction {
   let InOperandList = (ins type0:$src, untyped_imm_0:$align);
   let hasSideEffects = false;
 }
+
+// Prevent constant folding of the source value with any users.
+def G_CONSTANT_FOLD_BARRIER : GenericInstruction {
+  let OutOperandList = (outs type0:$dst);
+  let InOperandList = (ins type0:$src);
+  let hasSideEffects = false;
+}

@@ -14729,9 +14729,11 @@ bool AArch64TargetLowering::hasPairedLoad(EVT LoadedType,
 unsigned AArch64TargetLowering::getNumInterleavedAccesses(
     VectorType *VecTy, const DataLayout &DL, bool UseScalable) const {
   unsigned VecSize = 128;
+  unsigned ElSize = DL.getTypeSizeInBits(VecTy->getElementType());
+  unsigned MinElts = VecTy->getElementCount().getKnownMinValue();
   if (UseScalable)
     VecSize = std::max(Subtarget->getMinSVEVectorSizeInBits(), 128u);
-  return std::max<unsigned>(1, (DL.getTypeSizeInBits(VecTy) + 127) / VecSize);
+  return std::max<unsigned>(1, (MinElts * ElSize + 127) / VecSize);
 }
 
 MachineMemOperand::Flags
@@ -14745,29 +14747,32 @@ AArch64TargetLowering::getTargetMMOFlags(const Instruction &I) const {
 bool AArch64TargetLowering::isLegalInterleavedAccessType(
     VectorType *VecTy, const DataLayout &DL, bool &UseScalable) const {
 
-  unsigned VecSize = DL.getTypeSizeInBits(VecTy);
   unsigned ElSize = DL.getTypeSizeInBits(VecTy->getElementType());
-  unsigned NumElements = cast<FixedVectorType>(VecTy)->getNumElements();
+  auto EC = VecTy->getElementCount();
+  unsigned MinElts = EC.getKnownMinValue();
 
   UseScalable = false;
-
   // Ensure that the predicate for this number of elements is available.
-  if (Subtarget->hasSVE() && !getSVEPredPatternFromNumElements(NumElements))
+  if (Subtarget->hasSVE() && !getSVEPredPatternFromNumElements(MinElts))
     return false;
 
   // Ensure the number of vector elements is greater than 1.
-  if (NumElements < 2)
+  if (MinElts < 2)
     return false;
 
   // Ensure the element type is legal.
   if (ElSize != 8 && ElSize != 16 && ElSize != 32 && ElSize != 64)
     return false;
 
+  if (EC.isScalable())
+    return MinElts * ElSize == 128;
+
+  unsigned VecSize = DL.getTypeSizeInBits(VecTy);
   if (Subtarget->forceStreamingCompatibleSVE() ||
       (Subtarget->useSVEForFixedLengthVectors() &&
        (VecSize % Subtarget->getMinSVEVectorSizeInBits() == 0 ||
         (VecSize < Subtarget->getMinSVEVectorSizeInBits() &&
-         isPowerOf2_32(NumElements) && VecSize > 128)))) {
+         isPowerOf2_32(MinElts) && VecSize > 128)))) {
     UseScalable = true;
     return true;
   }

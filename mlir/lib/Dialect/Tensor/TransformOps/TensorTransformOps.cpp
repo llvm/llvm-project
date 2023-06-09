@@ -90,7 +90,7 @@ void transform::ApplyDropRedundantInsertSliceRankExpansionPatternsOp::
 
 void transform::ApplyFoldTensorEmptyPatternsOp::populatePatterns(
     RewritePatternSet &patterns) {
-  tensor::populateFoldTensorEmptyPatterns(patterns);
+  tensor::populateFoldTensorEmptyPatterns(patterns, getFoldSingleUseOnly());
 }
 
 void transform::ApplyFoldIntoPackAndUnpackPatternsOp::populatePatterns(
@@ -111,6 +111,11 @@ void transform::ApplyMergeConsecutiveInsertExtractSlicePatternsOp::
 void transform::ApplyReassociativeReshapeFoldingPatternsOp::populatePatterns(
     RewritePatternSet &patterns) {
   tensor::populateReassociativeReshapeFoldingPatterns(patterns);
+}
+
+void transform::ApplyRewriteTensorOpsAsConstantPatternsOp::populatePatterns(
+    RewritePatternSet &patterns) {
+  tensor::populateRewriteAsConstantPatterns(patterns);
 }
 
 //===----------------------------------------------------------------------===//

@@ -138,6 +138,11 @@ void transform::ApplyTransferToScfPatternsOp::populatePatterns(
   populateVectorToSCFConversionPatterns(patterns, vectorTransferToSCFOptions);
 }
 
+void transform::ApplyFoldTensorSliceIntoTransferPatternsOp::populatePatterns(
+    RewritePatternSet &patterns) {
+  populateVectorTransferTensorSliceTransforms(patterns);
+}
+
 //===----------------------------------------------------------------------===//
 // Transform op registration
 //===----------------------------------------------------------------------===//

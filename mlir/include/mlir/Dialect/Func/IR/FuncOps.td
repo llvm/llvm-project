@@ -21,7 +21,6 @@ include "mlir/Interfaces/SideEffectInterfaces.td"
 def Func_Dialect : Dialect {
   let name = "func";
   let cppNamespace = "::mlir::func";
-  let dependentDialects = ["cf::ControlFlowDialect"];
   let hasConstantMaterializer = 1;
   let usePropertiesForAttributes = 1;
 }
