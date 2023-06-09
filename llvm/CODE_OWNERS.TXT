@@ -51,8 +51,8 @@ E: andrey.churbanov@intel.com
 D: OpenMP runtime library
 
 N: Johannes Doerfert
-E: jdoerfert@anl.gov
-D: OpenMP target offloading
+E: jdoerfert@llnl.gov
+D: OpenMP target offloading, OpenMP-Opt, Attributor
 
 N: Greg Clayton
 E: clayborg@gmail.com
