@@ -11,7 +11,9 @@
 #include "../clang-tidy/ClangTidyDiagnosticConsumer.h"
 #include "../clang-tidy/ClangTidyModule.h"
 #include "../clang-tidy/ClangTidyModuleRegistry.h"
+#include "../clang-tidy/ClangTidyOptions.h"
 #include "AST.h"
+#include "CollectMacros.h"
 #include "Compiler.h"
 #include "Config.h"
 #include "Diagnostics.h"
@@ -28,11 +30,18 @@
 #include "index/CanonicalIncludes.h"
 #include "index/Symbol.h"
 #include "support/Logger.h"
+#include "support/Path.h"
 #include "support/Trace.h"
 #include "clang/AST/ASTContext.h"
 #include "clang/AST/Decl.h"
+#include "clang/AST/DeclGroup.h"
+#include "clang/AST/ExternalASTSource.h"
+#include "clang/ASTMatchers/ASTMatchFinder.h"
 #include "clang/Basic/Diagnostic.h"
+#include "clang/Basic/DiagnosticIDs.h"
 #include "clang/Basic/DiagnosticSema.h"
+#include "clang/Basic/FileEntry.h"
+#include "clang/Basic/LLVM.h"
 #include "clang/Basic/LangOptions.h"
 #include "clang/Basic/SourceLocation.h"
 #include "clang/Basic/SourceManager.h"
@@ -40,18 +49,32 @@
 #include "clang/Frontend/CompilerInstance.h"
 #include "clang/Frontend/CompilerInvocation.h"
 #include "clang/Frontend/FrontendActions.h"
+#include "clang/Frontend/FrontendOptions.h"
+#include "clang/Frontend/PrecompiledPreamble.h"
 #include "clang/Lex/Lexer.h"
 #include "clang/Lex/PPCallbacks.h"
 #include "clang/Lex/Preprocessor.h"
 #include "clang/Serialization/ASTWriter.h"
 #include "clang/Tooling/CompilationDatabase.h"
+#include "clang/Tooling/Core/Diagnostic.h"
 #include "clang/Tooling/Syntax/Tokens.h"
 #include "llvm/ADT/ArrayRef.h"
+#include "llvm/ADT/DenseMap.h"
+#include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/STLExtras.h"
+#include "llvm/ADT/STLFunctionalExtras.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
+#include "llvm/Support/Error.h"
+#include "llvm/Support/MemoryBuffer.h"
+#include <cassert>
+#include <cstddef>
+#include <iterator>
 #include <memory>
 #include <optional>
+#include <string>
+#include <tuple>
+#include <utility>
 #include <vector>
 
 // Force the linker to link in Clang-tidy modules.
@@ -336,6 +359,27 @@ void applyWarningOptions(llvm::ArrayRef<std::string> ExtraArgs,
       Diags.setDiagnosticGroupWarningAsError(Group, false);
     }
   }
+}
+
+std::vector<Diag> getIncludeCleanerDiags(ParsedAST &AST, llvm::StringRef Code) {
+  auto &Cfg = Config::current();
+  if (Cfg.Diagnostics.SuppressAll)
+    return {};
+  bool SuppressMissing =
+      Cfg.Diagnostics.Suppress.contains("missing-includes") ||
+      Cfg.Diagnostics.MissingIncludes == Config::IncludesPolicy::None;
+  bool SuppressUnused =
+      Cfg.Diagnostics.Suppress.contains("unused-includes") ||
+      Cfg.Diagnostics.UnusedIncludes == Config::IncludesPolicy::None;
+  if (SuppressMissing && SuppressUnused)
+    return {};
+  auto Findings = computeIncludeCleanerFindings(AST);
+  if (SuppressMissing)
+    Findings.MissingIncludes.clear();
+  if (SuppressUnused)
+    Findings.UnusedIncludes.clear();
+  return issueIncludeCleanerDiagnostics(AST, Code, Findings,
+                                        Cfg.Diagnostics.Includes.IgnoreHeader);
 }
 
 } // namespace
@@ -688,7 +732,7 @@ ParsedAST::build(llvm::StringRef Filename, const ParseInputs &Inputs,
                    std::move(Diags), std::move(Includes),
                    std::move(CanonIncludes));
   if (Result.Diags)
-    llvm::move(issueIncludeCleanerDiagnostics(Result, Inputs.Contents),
+    llvm::move(getIncludeCleanerDiags(Result, Inputs.Contents),
                std::back_inserter(*Result.Diags));
   return std::move(Result);
 }
