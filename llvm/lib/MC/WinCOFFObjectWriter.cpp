@@ -121,7 +121,10 @@ public:
   SmallVector<COFFSymbol *, 1> OffsetSymbols;
 };
 
-class WinCOFFObjectWriter : public MCObjectWriter {
+class WinCOFFObjectWriter;
+
+class WinCOFFWriter {
+  WinCOFFObjectWriter &OWriter;
   support::endian::Writer W;
 
   using symbols = std::vector<std::unique_ptr<COFFSymbol>>;
@@ -131,8 +134,6 @@ class WinCOFFObjectWriter : public MCObjectWriter {
   using section_map = DenseMap<MCSection const *, COFFSection *>;
 
   using symbol_list = DenseSet<COFFSymbol *>;
-
-  std::unique_ptr<MCWinCOFFObjectTargetWriter> TargetObjectWriter;
 
   // Root level file contents.
   COFF::header Header = {};
@@ -149,37 +150,18 @@ class WinCOFFObjectWriter : public MCObjectWriter {
   bool UseBigObj;
   bool UseOffsetLabels = false;
 
+public:
   MCSectionCOFF *AddrsigSection = nullptr;
-
   MCSectionCOFF *CGProfileSection = nullptr;
 
-public:
-  WinCOFFObjectWriter(std::unique_ptr<MCWinCOFFObjectTargetWriter> MOTW,
-                      raw_pwrite_stream &OS);
+  WinCOFFWriter(WinCOFFObjectWriter &OWriter, raw_pwrite_stream &OS);
 
-  // MCObjectWriter interface implementation.
-  void reset() override {
-    memset(&Header, 0, sizeof(Header));
-    Header.Machine = TargetObjectWriter->getMachine();
-    Sections.clear();
-    Symbols.clear();
-    Strings.clear();
-    SectionMap.clear();
-    SymbolMap.clear();
-    WeakDefaults.clear();
-    MCObjectWriter::reset();
-  }
-
-  void executePostLayoutBinding(MCAssembler &Asm,
-                                const MCAsmLayout &Layout) override;
-  bool isSymbolRefDifferenceFullyResolvedImpl(const MCAssembler &Asm,
-                                              const MCSymbol &SymA,
-                                              const MCFragment &FB, bool InSet,
-                                              bool IsPCRel) const override;
+  void reset();
+  void executePostLayoutBinding(MCAssembler &Asm, const MCAsmLayout &Layout);
   void recordRelocation(MCAssembler &Asm, const MCAsmLayout &Layout,
                         const MCFragment *Fragment, const MCFixup &Fixup,
-                        MCValue Target, uint64_t &FixedValue) override;
-  uint64_t writeObject(MCAssembler &Asm, const MCAsmLayout &Layout) override;
+                        MCValue Target, uint64_t &FixedValue);
+  uint64_t writeObject(MCAssembler &Asm, const MCAsmLayout &Layout);
 
 private:
   COFFSymbol *createSymbol(StringRef Name);
@@ -198,7 +180,6 @@ private:
   bool IsPhysicalSection(COFFSection *S);
 
   // Entity writing methods.
-
   void WriteFileHeader(const COFF::header &Header);
   void WriteSymbol(const COFFSymbol &S);
   void WriteAuxiliarySymbols(const COFFSymbol::AuxiliarySymbols &S);
@@ -215,6 +196,32 @@ private:
   void assignFileOffsets(MCAssembler &Asm, const MCAsmLayout &Layout);
 };
 
+class WinCOFFObjectWriter : public MCObjectWriter {
+  friend class WinCOFFWriter;
+
+  std::unique_ptr<MCWinCOFFObjectTargetWriter> TargetObjectWriter;
+  std::unique_ptr<WinCOFFWriter> ObjWriter;
+
+public:
+  WinCOFFObjectWriter(std::unique_ptr<MCWinCOFFObjectTargetWriter> MOTW,
+                      raw_pwrite_stream &OS)
+      : TargetObjectWriter(std::move(MOTW)),
+        ObjWriter(std::make_unique<WinCOFFWriter>(*this, OS)) {}
+
+  // MCObjectWriter interface implementation.
+  void reset() override;
+  void executePostLayoutBinding(MCAssembler &Asm,
+                                const MCAsmLayout &Layout) override;
+  bool isSymbolRefDifferenceFullyResolvedImpl(const MCAssembler &Asm,
+                                              const MCSymbol &SymA,
+                                              const MCFragment &FB, bool InSet,
+                                              bool IsPCRel) const override;
+  void recordRelocation(MCAssembler &Asm, const MCAsmLayout &Layout,
+                        const MCFragment *Fragment, const MCFixup &Fixup,
+                        MCValue Target, uint64_t &FixedValue) override;
+  uint64_t writeObject(MCAssembler &Asm, const MCAsmLayout &Layout) override;
+};
+
 } // end anonymous namespace
 
 //------------------------------------------------------------------------------
@@ -229,12 +236,12 @@ void COFFSymbol::set_name_offset(uint32_t Offset) {
 }
 
 //------------------------------------------------------------------------------
-// WinCOFFObjectWriter class implementation
+// WinCOFFWriter class implementation
 
-WinCOFFObjectWriter::WinCOFFObjectWriter(
-    std::unique_ptr<MCWinCOFFObjectTargetWriter> MOTW, raw_pwrite_stream &OS)
-    : W(OS, support::little), TargetObjectWriter(std::move(MOTW)) {
-  Header.Machine = TargetObjectWriter->getMachine();
+WinCOFFWriter::WinCOFFWriter(WinCOFFObjectWriter &OWriter,
+                             raw_pwrite_stream &OS)
+    : OWriter(OWriter), W(OS, support::little) {
+  Header.Machine = OWriter.TargetObjectWriter->getMachine();
   // Some relocations on ARM64 (the 21 bit ADRP relocations) have a slightly
   // limited range for the immediate offset (+/- 1 MB); create extra offset
   // label symbols with regular intervals to allow referencing a
@@ -242,19 +249,19 @@ WinCOFFObjectWriter::WinCOFFObjectWriter(
   UseOffsetLabels = Header.Machine == COFF::IMAGE_FILE_MACHINE_ARM64;
 }
 
-COFFSymbol *WinCOFFObjectWriter::createSymbol(StringRef Name) {
+COFFSymbol *WinCOFFWriter::createSymbol(StringRef Name) {
   Symbols.push_back(std::make_unique<COFFSymbol>(Name));
   return Symbols.back().get();
 }
 
-COFFSymbol *WinCOFFObjectWriter::GetOrCreateCOFFSymbol(const MCSymbol *Symbol) {
+COFFSymbol *WinCOFFWriter::GetOrCreateCOFFSymbol(const MCSymbol *Symbol) {
   COFFSymbol *&Ret = SymbolMap[Symbol];
   if (!Ret)
     Ret = createSymbol(Symbol->getName());
   return Ret;
 }
 
-COFFSection *WinCOFFObjectWriter::createSection(StringRef Name) {
+COFFSection *WinCOFFWriter::createSection(StringRef Name) {
   Sections.emplace_back(std::make_unique<COFFSection>(Name));
   return Sections.back().get();
 }
@@ -295,8 +302,8 @@ static uint32_t getAlignment(const MCSectionCOFF &Sec) {
 
 /// This function takes a section data object from the assembler
 /// and creates the associated COFF section staging object.
-void WinCOFFObjectWriter::defineSection(const MCSectionCOFF &MCSec,
-                                        const MCAsmLayout &Layout) {
+void WinCOFFWriter::defineSection(const MCSectionCOFF &MCSec,
+                                  const MCAsmLayout &Layout) {
   COFFSection *Section = createSection(MCSec.getName());
   COFFSymbol *Symbol = createSymbol(MCSec.getName());
   Section->Symbol = Symbol;
@@ -354,7 +361,7 @@ static uint64_t getSymbolValue(const MCSymbol &Symbol,
   return Res;
 }
 
-COFFSymbol *WinCOFFObjectWriter::getLinkedSymbol(const MCSymbol &Symbol) {
+COFFSymbol *WinCOFFWriter::getLinkedSymbol(const MCSymbol &Symbol) {
   if (!Symbol.isVariable())
     return nullptr;
 
@@ -372,9 +379,8 @@ COFFSymbol *WinCOFFObjectWriter::getLinkedSymbol(const MCSymbol &Symbol) {
 
 /// This function takes a symbol data object from the assembler
 /// and creates the associated COFF symbol staging object.
-void WinCOFFObjectWriter::DefineSymbol(const MCSymbol &MCSym,
-                                       MCAssembler &Assembler,
-                                       const MCAsmLayout &Layout) {
+void WinCOFFWriter::DefineSymbol(const MCSymbol &MCSym, MCAssembler &Assembler,
+                                 const MCAsmLayout &Layout) {
   COFFSymbol *Sym = GetOrCreateCOFFSymbol(&MCSym);
   const MCSymbol *Base = Layout.getBaseSymbol(MCSym);
   COFFSection *Sec = nullptr;
@@ -438,7 +444,7 @@ void WinCOFFObjectWriter::DefineSymbol(const MCSymbol &MCSym,
   Sym->MC = &MCSym;
 }
 
-void WinCOFFObjectWriter::SetSectionName(COFFSection &S) {
+void WinCOFFWriter::SetSectionName(COFFSection &S) {
   if (S.Name.size() <= COFF::NameSize) {
     std::memcpy(S.Header.Name, S.Name.c_str(), S.Name.size());
     return;
@@ -449,14 +455,14 @@ void WinCOFFObjectWriter::SetSectionName(COFFSection &S) {
     report_fatal_error("COFF string table is greater than 64 GB.");
 }
 
-void WinCOFFObjectWriter::SetSymbolName(COFFSymbol &S) {
+void WinCOFFWriter::SetSymbolName(COFFSymbol &S) {
   if (S.Name.size() > COFF::NameSize)
     S.set_name_offset(Strings.getOffset(S.Name));
   else
     std::memcpy(S.Data.Name, S.Name.c_str(), S.Name.size());
 }
 
-bool WinCOFFObjectWriter::IsPhysicalSection(COFFSection *S) {
+bool WinCOFFWriter::IsPhysicalSection(COFFSection *S) {
   return (S->Header.Characteristics & COFF::IMAGE_SCN_CNT_UNINITIALIZED_DATA) ==
          0;
 }
@@ -464,7 +470,7 @@ bool WinCOFFObjectWriter::IsPhysicalSection(COFFSection *S) {
 //------------------------------------------------------------------------------
 // entity writing methods
 
-void WinCOFFObjectWriter::WriteFileHeader(const COFF::header &Header) {
+void WinCOFFWriter::WriteFileHeader(const COFF::header &Header) {
   if (UseBigObj) {
     W.write<uint16_t>(COFF::IMAGE_FILE_MACHINE_UNKNOWN);
     W.write<uint16_t>(0xFFFF);
@@ -490,7 +496,7 @@ void WinCOFFObjectWriter::WriteFileHeader(const COFF::header &Header) {
   }
 }
 
-void WinCOFFObjectWriter::WriteSymbol(const COFFSymbol &S) {
+void WinCOFFWriter::WriteSymbol(const COFFSymbol &S) {
   W.OS.write(S.Data.Name, COFF::NameSize);
   W.write<uint32_t>(S.Data.Value);
   if (UseBigObj)
@@ -503,7 +509,7 @@ void WinCOFFObjectWriter::WriteSymbol(const COFFSymbol &S) {
   WriteAuxiliarySymbols(S.Aux);
 }
 
-void WinCOFFObjectWriter::WriteAuxiliarySymbols(
+void WinCOFFWriter::WriteAuxiliarySymbols(
     const COFFSymbol::AuxiliarySymbols &S) {
   for (const AuxSymbol &i : S) {
     switch (i.AuxType) {
@@ -536,7 +542,7 @@ void WinCOFFObjectWriter::WriteAuxiliarySymbols(
 }
 
 // Write the section header.
-void WinCOFFObjectWriter::writeSectionHeaders() {
+void WinCOFFWriter::writeSectionHeaders() {
   // Section numbers must be monotonically increasing in the section
   // header, but our Sections array is not sorted by section number,
   // so make a copy of Sections and sort it.
@@ -567,7 +573,7 @@ void WinCOFFObjectWriter::writeSectionHeaders() {
   }
 }
 
-void WinCOFFObjectWriter::WriteRelocation(const COFF::relocation &R) {
+void WinCOFFWriter::WriteRelocation(const COFF::relocation &R) {
   W.write<uint32_t>(R.VirtualAddress);
   W.write<uint32_t>(R.SymbolTableIndex);
   W.write<uint16_t>(R.Type);
@@ -576,9 +582,9 @@ void WinCOFFObjectWriter::WriteRelocation(const COFF::relocation &R) {
 // Write MCSec's contents. What this function does is essentially
 // "Asm.writeSectionData(&MCSec, Layout)", but it's a bit complicated
 // because it needs to compute a CRC.
-uint32_t WinCOFFObjectWriter::writeSectionContents(MCAssembler &Asm,
-                                                   const MCAsmLayout &Layout,
-                                                   const MCSection &MCSec) {
+uint32_t WinCOFFWriter::writeSectionContents(MCAssembler &Asm,
+                                             const MCAsmLayout &Layout,
+                                             const MCSection &MCSec) {
   // Save the contents of the section to a temporary buffer, we need this
   // to CRC the data before we dump it into the object file.
   SmallVector<char, 128> Buf;
@@ -595,9 +601,8 @@ uint32_t WinCOFFObjectWriter::writeSectionContents(MCAssembler &Asm,
   return JC.getCRC();
 }
 
-void WinCOFFObjectWriter::writeSection(MCAssembler &Asm,
-                                       const MCAsmLayout &Layout,
-                                       const COFFSection &Sec) {
+void WinCOFFWriter::writeSection(MCAssembler &Asm, const MCAsmLayout &Layout,
+                                 const COFFSection &Sec) {
   if (Sec.Number == -1)
     return;
 
@@ -640,7 +645,7 @@ void WinCOFFObjectWriter::writeSection(MCAssembler &Asm,
 }
 
 // Create .file symbols.
-void WinCOFFObjectWriter::createFileSymbols(MCAssembler &Asm) {
+void WinCOFFWriter::createFileSymbols(MCAssembler &Asm) {
   for (const std::pair<std::string, size_t> &It : Asm.getFileNames()) {
     // round up to calculate the number of auxiliary symbols required
     const std::string &Name = It.first;
@@ -671,7 +676,7 @@ void WinCOFFObjectWriter::createFileSymbols(MCAssembler &Asm) {
   }
 }
 
-void WinCOFFObjectWriter::setWeakDefaultNames() {
+void WinCOFFWriter::setWeakDefaultNames() {
   if (WeakDefaults.empty())
     return;
 
@@ -717,7 +722,7 @@ static bool isAssociative(const COFFSection &Section) {
          COFF::IMAGE_COMDAT_SELECT_ASSOCIATIVE;
 }
 
-void WinCOFFObjectWriter::assignSectionNumbers() {
+void WinCOFFWriter::assignSectionNumbers() {
   size_t I = 1;
   auto Assign = [&](COFFSection &Section) {
     Section.Number = I;
@@ -738,8 +743,8 @@ void WinCOFFObjectWriter::assignSectionNumbers() {
 }
 
 // Assign file offsets to COFF object file structures.
-void WinCOFFObjectWriter::assignFileOffsets(MCAssembler &Asm,
-                                            const MCAsmLayout &Layout) {
+void WinCOFFWriter::assignFileOffsets(MCAssembler &Asm,
+                                      const MCAsmLayout &Layout) {
   unsigned Offset = W.OS.tell();
 
   Offset += UseBigObj ? COFF::Header32Size : COFF::Header16Size;
@@ -798,25 +803,19 @@ void WinCOFFObjectWriter::assignFileOffsets(MCAssembler &Asm,
   Header.PointerToSymbolTable = Offset;
 }
 
-////////////////////////////////////////////////////////////////////////////////
-// MCObjectWriter interface implementations
+void WinCOFFWriter::reset() {
+  memset(&Header, 0, sizeof(Header));
+  Header.Machine = OWriter.TargetObjectWriter->getMachine();
+  Sections.clear();
+  Symbols.clear();
+  Strings.clear();
+  SectionMap.clear();
+  SymbolMap.clear();
+  WeakDefaults.clear();
+}
 
-void WinCOFFObjectWriter::executePostLayoutBinding(MCAssembler &Asm,
-                                                   const MCAsmLayout &Layout) {
-  if (EmitAddrsigSection) {
-    AddrsigSection = Asm.getContext().getCOFFSection(
-        ".llvm_addrsig", COFF::IMAGE_SCN_LNK_REMOVE,
-        SectionKind::getMetadata());
-    Asm.registerSection(*AddrsigSection);
-  }
-
-  if (!Asm.CGProfile.empty()) {
-    CGProfileSection = Asm.getContext().getCOFFSection(
-        ".llvm.call-graph-profile", COFF::IMAGE_SCN_LNK_REMOVE,
-        SectionKind::getMetadata());
-    Asm.registerSection(*CGProfileSection);
-  }
-
+void WinCOFFWriter::executePostLayoutBinding(MCAssembler &Asm,
+                                             const MCAsmLayout &Layout) {
   // "Define" each section & symbol. This creates section & symbol
   // entries in the staging area.
   for (const auto &Section : Asm)
@@ -827,27 +826,11 @@ void WinCOFFObjectWriter::executePostLayoutBinding(MCAssembler &Asm,
       DefineSymbol(Symbol, Asm, Layout);
 }
 
-bool WinCOFFObjectWriter::isSymbolRefDifferenceFullyResolvedImpl(
-    const MCAssembler &Asm, const MCSymbol &SymA, const MCFragment &FB,
-    bool InSet, bool IsPCRel) const {
-  // Don't drop relocations between functions, even if they are in the same text
-  // section. Multiple Visual C++ linker features depend on having the
-  // relocations present. The /INCREMENTAL flag will cause these relocations to
-  // point to thunks, and the /GUARD:CF flag assumes that it can use relocations
-  // to approximate the set of all address taken functions. LLD's implementation
-  // of /GUARD:CF also relies on the existance of these relocations.
-  uint16_t Type = cast<MCSymbolCOFF>(SymA).getType();
-  if ((Type >> COFF::SCT_COMPLEX_TYPE_SHIFT) == COFF::IMAGE_SYM_DTYPE_FUNCTION)
-    return false;
-  return MCObjectWriter::isSymbolRefDifferenceFullyResolvedImpl(Asm, SymA, FB,
-                                                                InSet, IsPCRel);
-}
-
-void WinCOFFObjectWriter::recordRelocation(MCAssembler &Asm,
-                                           const MCAsmLayout &Layout,
-                                           const MCFragment *Fragment,
-                                           const MCFixup &Fixup, MCValue Target,
-                                           uint64_t &FixedValue) {
+void WinCOFFWriter::recordRelocation(MCAssembler &Asm,
+                                     const MCAsmLayout &Layout,
+                                     const MCFragment *Fragment,
+                                     const MCFixup &Fixup, MCValue Target,
+                                     uint64_t &FixedValue) {
   assert(Target.getSymA() && "Relocation must reference a symbol!");
 
   const MCSymbol &A = Target.getSymA()->getSymbol();
@@ -933,7 +916,7 @@ void WinCOFFObjectWriter::recordRelocation(MCAssembler &Asm,
   ++Reloc.Symb->Relocations;
 
   Reloc.Data.VirtualAddress += Fixup.getOffset();
-  Reloc.Data.Type = TargetObjectWriter->getRelocType(
+  Reloc.Data.Type = OWriter.TargetObjectWriter->getRelocType(
       Asm.getContext(), Target, Fixup, SymB, Asm.getBackend());
 
   // The *_REL32 relocations are relative to the end of the relocation,
@@ -990,7 +973,7 @@ void WinCOFFObjectWriter::recordRelocation(MCAssembler &Asm,
   if (Fixup.getKind() == FK_SecRel_2)
     FixedValue = 0;
 
-  if (TargetObjectWriter->recordRelocation(Fixup))
+  if (OWriter.TargetObjectWriter->recordRelocation(Fixup))
     Sec->Relocations.push_back(Reloc);
 }
 
@@ -1001,8 +984,8 @@ static std::time_t getTime() {
   return Now;
 }
 
-uint64_t WinCOFFObjectWriter::writeObject(MCAssembler &Asm,
-                                          const MCAsmLayout &Layout) {
+uint64_t WinCOFFWriter::writeObject(MCAssembler &Asm,
+                                    const MCAsmLayout &Layout) {
   uint64_t StartOffset = W.OS.tell();
 
   if (Sections.size() > INT32_MAX)
@@ -1085,11 +1068,11 @@ uint64_t WinCOFFObjectWriter::writeObject(MCAssembler &Asm,
   }
 
   // Create the contents of the .llvm_addrsig section.
-  if (EmitAddrsigSection) {
+  if (OWriter.EmitAddrsigSection) {
     auto Frag = new MCDataFragment(AddrsigSection);
     Frag->setLayoutOrder(0);
     raw_svector_ostream OS(Frag->getContents());
-    for (const MCSymbol *S : AddrsigSyms) {
+    for (const MCSymbol *S : OWriter.AddrsigSyms) {
       if (!S->isRegistered())
         continue;
       if (!S->isTemporary()) {
@@ -1161,6 +1144,64 @@ uint64_t WinCOFFObjectWriter::writeObject(MCAssembler &Asm,
   return W.OS.tell() - StartOffset;
 }
 
+//------------------------------------------------------------------------------
+// WinCOFFObjectWriter class implementation
+
+////////////////////////////////////////////////////////////////////////////////
+// MCObjectWriter interface implementations
+
+void WinCOFFObjectWriter::reset() {
+  ObjWriter->reset();
+  MCObjectWriter::reset();
+}
+
+bool WinCOFFObjectWriter::isSymbolRefDifferenceFullyResolvedImpl(
+    const MCAssembler &Asm, const MCSymbol &SymA, const MCFragment &FB,
+    bool InSet, bool IsPCRel) const {
+  // Don't drop relocations between functions, even if they are in the same text
+  // section. Multiple Visual C++ linker features depend on having the
+  // relocations present. The /INCREMENTAL flag will cause these relocations to
+  // point to thunks, and the /GUARD:CF flag assumes that it can use relocations
+  // to approximate the set of all address taken functions. LLD's implementation
+  // of /GUARD:CF also relies on the existance of these relocations.
+  uint16_t Type = cast<MCSymbolCOFF>(SymA).getType();
+  if ((Type >> COFF::SCT_COMPLEX_TYPE_SHIFT) == COFF::IMAGE_SYM_DTYPE_FUNCTION)
+    return false;
+  return MCObjectWriter::isSymbolRefDifferenceFullyResolvedImpl(Asm, SymA, FB,
+                                                                InSet, IsPCRel);
+}
+
+void WinCOFFObjectWriter::executePostLayoutBinding(MCAssembler &Asm,
+                                                   const MCAsmLayout &Layout) {
+  if (EmitAddrsigSection) {
+    ObjWriter->AddrsigSection = Asm.getContext().getCOFFSection(
+        ".llvm_addrsig", COFF::IMAGE_SCN_LNK_REMOVE,
+        SectionKind::getMetadata());
+    Asm.registerSection(*ObjWriter->AddrsigSection);
+  }
+
+  if (!Asm.CGProfile.empty()) {
+    ObjWriter->CGProfileSection = Asm.getContext().getCOFFSection(
+        ".llvm.call-graph-profile", COFF::IMAGE_SCN_LNK_REMOVE,
+        SectionKind::getMetadata());
+    Asm.registerSection(*ObjWriter->CGProfileSection);
+  }
+
+  ObjWriter->executePostLayoutBinding(Asm, Layout);
+}
+
+void WinCOFFObjectWriter::recordRelocation(MCAssembler &Asm,
+                                           const MCAsmLayout &Layout,
+                                           const MCFragment *Fragment,
+                                           const MCFixup &Fixup, MCValue Target,
+                                           uint64_t &FixedValue) {
+  ObjWriter->recordRelocation(Asm, Layout, Fragment, Fixup, Target, FixedValue);
+}
+
+uint64_t WinCOFFObjectWriter::writeObject(MCAssembler &Asm,
+                                          const MCAsmLayout &Layout) {
+  return ObjWriter->writeObject(Asm, Layout);
+}
 MCWinCOFFObjectTargetWriter::MCWinCOFFObjectTargetWriter(unsigned Machine_)
     : Machine(Machine_) {}
 

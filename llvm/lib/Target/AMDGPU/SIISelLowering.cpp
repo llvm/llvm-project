@@ -13572,6 +13572,11 @@ bool SITargetLowering::isReassocProfitable(SelectionDAG &DAG, SDValue N0,
           hasMemSDNodeUser(*N0->use_begin()));
 }
 
+bool SITargetLowering::isReassocProfitable(MachineRegisterInfo &MRI,
+                                           Register N0, Register N1) const {
+  return true; // FIXME: handle regbanks
+}
+
 MachineMemOperand::Flags
 SITargetLowering::getTargetMMOFlags(const Instruction &I) const {
   // Propagate metadata set by AMDGPUAnnotateUniformValues to the MMO of a load.

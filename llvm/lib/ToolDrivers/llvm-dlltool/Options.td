@@ -24,3 +24,6 @@ def S_alias: JoinedOrSeparate<["--"], "as">, Alias<S>;
 
 def f: JoinedOrSeparate<["-"], "f">, HelpText<"Assembler Flags">;
 def f_alias: JoinedOrSeparate<["--"], "as-flags">, Alias<f>;
+
+def t: JoinedOrSeparate<["-"], "t">, HelpText<"Prefix for temporary files (ignored)">;
+def t_alias: JoinedOrSeparate<["--"], "temp-prefix">, Alias<t>;
