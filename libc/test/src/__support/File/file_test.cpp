@@ -16,7 +16,7 @@
 #include <stdlib.h>
 
 using ModeFlags = __llvm_libc::File::ModeFlags;
-using MemoryView = __llvm_libc::memory::testing::MemoryView;
+using MemoryView = __llvm_libc::testing::MemoryView;
 using __llvm_libc::ErrorOr;
 using __llvm_libc::File;
 using __llvm_libc::FileIOResult;
