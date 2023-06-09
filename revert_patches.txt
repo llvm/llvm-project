@@ -48,3 +48,7 @@ Revert: lots of crashes in FastRegAlloc: Assertion `Reg.isPhysical()' failed.
 Revert: 2be0abb7fe72 Rewrite load-store-vectorizer.
 
 Revert "[AMDGPU] Remove extract_subvector patterns"  
+
+Revert:
+8a21ea1d0a38 clang: Start emitting intrinsic for __builtin_ldexp*  
+eece6ba283bd IR: Add llvm.ldexp and llvm.experimental.constrained.ldexp intrinsics 
