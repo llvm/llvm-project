@@ -41,9 +41,6 @@ public:
         ElementType(ElementType), Alignment(Alignment) {
     assert(Pointer != nullptr && "Pointer cannot be null");
     assert(ElementType != nullptr && "Element type cannot be null");
-    assert(llvm::cast<llvm::PointerType>(Pointer->getType())
-               ->isOpaqueOrPointeeTypeMatches(ElementType) &&
-           "Incorrect pointer element type");
   }
 
   static Address invalid() { return Address(nullptr); }
