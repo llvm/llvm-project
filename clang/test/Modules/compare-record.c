@@ -423,9 +423,10 @@ struct CompareDifferentFieldInIndirectStruct compareIndirectStruct;
 // expected-error@second-nested-struct.h:* {{'IndirectStruct::mismatchingField' from module 'Second' is not present in definition of 'struct IndirectStruct' in module 'First.Hidden'}}
 // expected-note@first-nested-struct.h:* {{declaration of 'mismatchingField' does not match}}
 #elif defined(CASE3)
+// This currently doesn't produce an error, because there is no dependency
+// on the layout of DirectStruct.
+// expected-no-diagnostics
 struct CompareIndirectStructPointer compareIndirectStructPointer;
-// expected-error@second-nested-struct.h:* {{'IndirectStruct::mismatchingField' from module 'Second' is not present in definition of 'struct IndirectStruct' in module 'First.Hidden'}}
-// expected-note@first-nested-struct.h:* {{declaration of 'mismatchingField' does not match}}
 #endif
 
 //--- include/first-anonymous.h
