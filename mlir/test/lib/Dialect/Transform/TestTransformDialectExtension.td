@@ -108,6 +108,22 @@ def TestConsumeOperand : Op<Transform_Dialect, "test_consume_operand",
   let cppNamespace = "::mlir::test";
 }
 
+def TestConsumeOperandEach : Op<Transform_Dialect, "test_consume_operand_each",
+     [TransformOpInterface, TransformEachOpTrait,
+      MemoryEffectsOpInterface, FunctionalStyleTransformOpTrait]> {
+  let arguments = (ins TransformHandleTypeInterface:$target);
+  let assemblyFormat = "$target attr-dict `:` type($target)";
+  let cppNamespace = "::mlir::test";
+  let extraClassDeclaration = [{
+    ::mlir::DiagnosedSilenceableFailure applyToOne(
+        ::mlir::Operation *target,
+        ::mlir::transform::ApplyToEachResultList &results,
+        ::mlir::transform::TransformState &state) {
+      return ::mlir::DiagnosedSilenceableFailure::success();
+    }
+  }];
+}
+
 def TestConsumeOperandOfOpKindOrFail
   : Op<Transform_Dialect, "test_consume_operand_of_op_kind_or_fail",
        [DeclareOpInterfaceMethods<TransformOpInterface>,

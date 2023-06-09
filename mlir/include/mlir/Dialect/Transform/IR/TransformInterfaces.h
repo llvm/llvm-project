@@ -187,6 +187,8 @@ private:
   detail::makeTransformStateForTesting(Region *region, Operation *payloadRoot);
 
 public:
+  const TransformOptions &getOptions() const { return options; }
+
   /// Returns the op at which the transformation state is rooted. This is
   /// typically helpful for transformations that apply globally.
   Operation *getTopLevel() const;
@@ -1352,6 +1354,12 @@ applyTransformToEach(TransformOpTy transformOp, Range &&targets,
   return DiagnosedSilenceableFailure::success();
 }
 
+/// Reports an error and returns failure if `targets` contains an ancestor
+/// operation before its descendant (or a copy of itself). Implementation detail
+/// for expensive checks during `TransformEachOpTrait::apply`.
+LogicalResult checkNestedConsumption(Location loc,
+                                     ArrayRef<Operation *> targets);
+
 } // namespace detail
 } // namespace transform
 } // namespace mlir
@@ -1360,7 +1368,18 @@ template <typename OpTy>
 mlir::DiagnosedSilenceableFailure
 mlir::transform::TransformEachOpTrait<OpTy>::apply(
     TransformResults &transformResults, TransformState &state) {
-  auto targets = state.getPayloadOps(this->getOperation()->getOperand(0));
+  Value handle = this->getOperation()->getOperand(0);
+  auto targets = state.getPayloadOps(handle);
+
+  // If the operand is consumed, check if it is associated with operations that
+  // may be erased before their nested operations are.
+  if (state.getOptions().getExpensiveChecksEnabled() &&
+      isHandleConsumed(handle, cast<transform::TransformOpInterface>(
+                                   this->getOperation())) &&
+      failed(detail::checkNestedConsumption(this->getOperation()->getLoc(),
+                                            llvm::to_vector(targets)))) {
+    return DiagnosedSilenceableFailure::definiteFailure();
+  }
 
   // Step 1. Handle the corner case where no target is specified.
   // This is typically the case when the matcher fails to apply and we need to
