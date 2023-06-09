@@ -843,21 +843,8 @@ transform::TransformState::applyTransform(TransformOpInterface transform) {
   }
 
   // Find which operands are consumed.
-  DenseSet<unsigned> consumedOperands;
-  auto memEffectInterface =
-      cast<MemoryEffectOpInterface>(transform.getOperation());
-  SmallVector<MemoryEffects::EffectInstance, 2> effects;
-  for (OpOperand &target : transform->getOpOperands()) {
-    effects.clear();
-    memEffectInterface.getEffectsOnValue(target.get(), effects);
-    if (llvm::any_of(effects, [](const MemoryEffects::EffectInstance &effect) {
-          return isa<transform::TransformMappingResource>(
-                     effect.getResource()) &&
-                 isa<MemoryEffects::Free>(effect.getEffect());
-        })) {
-      consumedOperands.insert(target.getOperandNumber());
-    }
-  }
+  SmallVector<OpOperand *> consumedOperands =
+      transform.getConsumedHandleOpOperands();
 
   // Remember the results of the payload ops associated with the consumed
   // op handles or the ops defining the value handles so we can drop the
@@ -869,8 +856,8 @@ transform::TransformState::applyTransform(TransformOpInterface transform) {
 #if LLVM_ENABLE_ABI_BREAKING_CHECKS
   DenseSet<Operation *> consumedPayloadOps;
 #endif // LLVM_ENABLE_ABI_BREAKING_CHECKS
-  for (unsigned index : consumedOperands) {
-    Value operand = transform->getOperand(index);
+  for (OpOperand *opOperand : consumedOperands) {
+    Value operand = opOperand->get();
     if (llvm::isa<TransformHandleTypeInterface>(operand.getType())) {
       for (Operation *payloadOp : getPayloadOps(operand)) {
         llvm::append_range(origOpFlatResults, payloadOp->getResults());
@@ -901,7 +888,7 @@ transform::TransformState::applyTransform(TransformOpInterface transform) {
     DiagnosedDefiniteFailure diag =
         emitDefiniteFailure(transform->getLoc())
         << "unexpectedly consumed a value that is not a handle as operand #"
-        << index;
+        << opOperand->getOperandNumber();
     diag.attachNote(operand.getLoc())
         << "value defined here with type " << operand.getType();
     return diag;
@@ -923,8 +910,8 @@ transform::TransformState::applyTransform(TransformOpInterface transform) {
 
   // Remove the mapping for the operand if it is consumed by the operation. This
   // allows us to catch use-after-free with assertions later on.
-  for (unsigned index : consumedOperands) {
-    Value operand = transform->getOperand(index);
+  for (OpOperand *opOperand : consumedOperands) {
+    Value operand = opOperand->get();
     if (llvm::isa<TransformHandleTypeInterface>(operand.getType())) {
       forgetMapping(operand, origOpFlatResults);
     } else if (llvm::isa<TransformValueHandleTypeInterface>(
@@ -1592,6 +1579,27 @@ void transform::getConsumedBlockArguments(
 //===----------------------------------------------------------------------===//
 // Utilities for TransformOpInterface.
 //===----------------------------------------------------------------------===//
+
+SmallVector<OpOperand *> transform::detail::getConsumedHandleOpOperands(
+    TransformOpInterface transformOp) {
+  SmallVector<OpOperand *> consumedOperands;
+  consumedOperands.reserve(transformOp->getNumOperands());
+  auto memEffectInterface =
+      cast<MemoryEffectOpInterface>(transformOp.getOperation());
+  SmallVector<MemoryEffects::EffectInstance, 2> effects;
+  for (OpOperand &target : transformOp->getOpOperands()) {
+    effects.clear();
+    memEffectInterface.getEffectsOnValue(target.get(), effects);
+    if (llvm::any_of(effects, [](const MemoryEffects::EffectInstance &effect) {
+          return isa<transform::TransformMappingResource>(
+                     effect.getResource()) &&
+                 isa<MemoryEffects::Free>(effect.getEffect());
+        })) {
+      consumedOperands.push_back(&target);
+    }
+  }
+  return consumedOperands;
+}
 
 LogicalResult transform::detail::verifyTransformOpInterface(Operation *op) {
   auto iface = cast<MemoryEffectOpInterface>(op);

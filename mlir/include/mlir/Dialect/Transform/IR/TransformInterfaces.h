@@ -64,6 +64,10 @@ void forwardTerminatorOperands(Block *block, transform::TransformState &state,
 /// outside of test cases.
 TransformState makeTransformStateForTesting(Region *region,
                                             Operation *payloadRoot);
+
+/// Returns all operands that are handles and being consumed by the given op.
+SmallVector<OpOperand *>
+getConsumedHandleOpOperands(transform::TransformOpInterface transformOp);
 } // namespace detail
 
 /// Options controlling the application of transform operations by the
