@@ -72,16 +72,19 @@ if(NOT LIBC_TARGET_ARCHITECTURE_IS_GPU)
   )
 endif()
 
-add_libc_test(
-  uint_test
-  SUITE
-    libc-support-tests
-  SRCS
-    uint_test.cpp
-  DEPENDS
-    libc.src.__support.uint
-    libc.src.__support.CPP.optional
-)
+# This test fails with an illegal memory access on NVPTX.
+if(NOT LIBC_GPU_TARGET_ARCHITECTURE_IS_NVPTX)
+  add_libc_test(
+    uint_test
+    SUITE
+      libc-support-tests
+    SRCS
+      uint_test.cpp
+    DEPENDS
+      libc.src.__support.uint
+      libc.src.__support.CPP.optional
+  )
+endif()
 
 add_libc_test(
   fixedvector_test

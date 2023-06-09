@@ -8,6 +8,10 @@ AtomicInt PR22043 = AtomicInt();
 // CHECK-DAG: @_ZN7PR180978constant1bE ={{.*}} local_unnamed_addr global { i16, i8 } { i16 2, i8 6 }, align 4
 // CHECK-DAG: @_ZN7PR180978constant1cE ={{.*}} local_unnamed_addr global { i16, i8 } { i16 3, i8 6 }, align 4
 // CHECK-DAG: @_ZN7PR180978constant1yE ={{.*}} local_unnamed_addr global { { i16, i8 }, i32 } { { i16, i8 } { i16 4, i8 6 }, i32 5 }, align 4
+// CHECK-DAG: @_ZN7PR180978constant1zE ={{.*}} global i32 0, align 4
+// CHECK-DAG: @_ZN7PR180978constant2y2E ={{.*}} global %"struct.PR18097::constant::Y" zeroinitializer
+// CHECK-DAG: @_ZN7PR180978constant1gE ={{.*}} global %"struct.PR18097::constant::Struct0" zeroinitializer
+// CHECK-DAG: @_ZN7PR180978constantL1xE = internal {{.*}} constant { i16, i8 } { i16 1, i8 6 }
 
 struct A {
   _Atomic(int) i;
@@ -102,5 +106,23 @@ namespace PR18097 {
       _Atomic(int) b;
     };
     Y y = { X(4), 5 };
+
+    // CHECK-LABEL: define {{.*}} @__cxx_global_var_init
+    // CHECK: tail call void @llvm.memcpy.p0.p0.i32(ptr{{.*}} @_ZN7PR180978constant2y2E, ptr{{.*}} @_ZN7PR180978constantL1xE, i32 3, i1 false)
+    // CHECK: %0 = load i32, ptr @_ZN7PR180978constant1zE
+    // CHECK: store i32 %0, ptr getelementptr inbounds (%"struct.PR18097::constant::Y", ptr @_ZN7PR180978constant2y2E, i32 0, i32 1)
+    int z;
+    constexpr X x{1};
+    Y y2 = { x, z };
+
+    typedef union {
+      unsigned int f0;
+    } Union0;
+
+    typedef struct {
+      _Atomic(Union0) f1;
+    } Struct0;
+
+    Struct0 g = {};
   }
 }

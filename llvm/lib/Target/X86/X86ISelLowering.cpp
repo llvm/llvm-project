@@ -2608,7 +2608,7 @@ MVT X86TargetLowering::getRegisterTypeForCallingConv(LLVMContext &Context,
 
   if (VT.isVector() && VT.getVectorElementType() == MVT::bf16)
     return getRegisterTypeForCallingConv(Context, CC,
-                                         VT.changeVectorElementTypeToInteger());
+                                         VT.changeVectorElementType(MVT::f16));
 
   return TargetLowering::getRegisterTypeForCallingConv(Context, CC, VT);
 }
@@ -2643,7 +2643,7 @@ unsigned X86TargetLowering::getNumRegistersForCallingConv(LLVMContext &Context,
 
   if (VT.isVector() && VT.getVectorElementType() == MVT::bf16)
     return getNumRegistersForCallingConv(Context, CC,
-                                         VT.changeVectorElementTypeToInteger());
+                                         VT.changeVectorElementType(MVT::f16));
 
   return TargetLowering::getNumRegistersForCallingConv(Context, CC, VT);
 }
@@ -2671,6 +2671,10 @@ unsigned X86TargetLowering::getVectorTypeBreakdownForCallingConv(
     NumIntermediates = 2;
     return 2;
   }
+
+  // Split vNbf16 vectors according to vNf16.
+  if (VT.isVector() && VT.getVectorElementType() == MVT::bf16)
+    VT = VT.changeVectorElementType(MVT::f16);
 
   return TargetLowering::getVectorTypeBreakdownForCallingConv(Context, CC, VT, IntermediateVT,
                                               NumIntermediates, RegisterVT);

@@ -344,8 +344,6 @@ public:
 
   lldb::BasicType GetBasicTypeEnumeration() const;
 
-  static lldb::BasicType GetBasicTypeEnumeration(ConstString name);
-
   /// If this type is an enumeration, iterate through all of its enumerators
   /// using a callback. If the callback returns true, keep iterating, else abort
   /// the iteration.
