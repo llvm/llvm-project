@@ -275,11 +275,19 @@ static cl::opt<bool> OptVGPRLiveRange(
     cl::init(true), cl::Hidden);
 
 // Enable atomic optimization
-static cl::opt<bool> EnableAtomicOptimizations(
-  "amdgpu-atomic-optimizations",
-  cl::desc("Enable atomic optimizations"),
-  cl::init(false),
-  cl::Hidden);
+static cl::opt<bool>
+    EnableAtomicOptimizations("amdgpu-atomic-optimizations",
+                              cl::desc("Enable atomic optimizations"),
+                              cl::init(false), cl::Hidden);
+
+static cl::opt<ScanOptions> AMDGPUAtomicOptimizerStrategy(
+    "amdgpu-atomic-optimizer-strategy",
+    cl::desc("Select DPP or Iterative strategy for scan"),
+    cl::init(ScanOptions::DPP),
+    cl::values(clEnumValN(ScanOptions::DPP, "DPP",
+                          "Use DPP operations for scan"),
+               clEnumValN(ScanOptions::Iterative, "Iterative",
+                          "Use Iterative approach for scan")));
 
 // Enable Mode register optimization
 static cl::opt<bool> EnableSIModeRegisterPass(
@@ -666,7 +674,8 @@ void AMDGPUTargetMachine::registerPassBuilderCallbacks(PassBuilder &PB) {
           return true;
         }
         if (PassName == "amdgpu-atomic-optimizer") {
-          PM.addPass(AMDGPUAtomicOptimizerPass(*this));
+          PM.addPass(
+              AMDGPUAtomicOptimizerPass(*this, AMDGPUAtomicOptimizerStrategy));
           return true;
         }
         if (PassName == "amdgpu-codegenprepare") {
@@ -1138,7 +1147,7 @@ bool GCNPassConfig::addPreISel() {
     addPass(createAMDGPULateCodeGenPreparePass());
 
   if (isPassEnabled(EnableAtomicOptimizations, CodeGenOpt::Less)) {
-    addPass(createAMDGPUAtomicOptimizerPass());
+    addPass(createAMDGPUAtomicOptimizerPass(AMDGPUAtomicOptimizerStrategy));
   }
 
   if (TM->getOptLevel() > CodeGenOpt::None)
