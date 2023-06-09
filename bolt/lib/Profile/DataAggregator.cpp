@@ -216,17 +216,7 @@ void DataAggregator::launchPerfProcess(StringRef Name, PerfProcessInfo &PPI,
   outs() << "PERF2BOLT: spawning perf job to read " << Name << '\n';
   Argv.push_back(PerfPath.data());
 
-  char *WritableArgsString = strdup(ArgsString);
-  char *Str = WritableArgsString;
-  do {
-    Argv.push_back(Str);
-    while (*Str && *Str != ' ')
-      ++Str;
-    if (!*Str)
-      break;
-    *Str++ = 0;
-  } while (true);
-
+  StringRef(ArgsString).split(Argv, ' ');
   Argv.push_back("-f");
   Argv.push_back("-i");
   Argv.push_back(Filename.c_str());
@@ -266,8 +256,6 @@ void DataAggregator::launchPerfProcess(StringRef Name, PerfProcessInfo &PPI,
   else
     PPI.PI = sys::ExecuteNoWait(PerfPath.data(), Argv, /*envp*/ std::nullopt,
                                 Redirects);
-
-  free(WritableArgsString);
 }
 
 void DataAggregator::processFileBuildID(StringRef FileBuildID) {
