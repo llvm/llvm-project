@@ -161,8 +161,8 @@ public:
   ~CommandObjectPlatformSelect() override = default;
 
   void HandleCompletion(CompletionRequest &request) override {
-    CommandCompletions::PlatformPluginNames(GetCommandInterpreter(), request,
-                                            nullptr);
+    lldb_private::CommandCompletions::PlatformPluginNames(
+        GetCommandInterpreter(), request, nullptr);
   }
 
   Options *GetOptions() override { return &m_option_group; }
@@ -385,8 +385,7 @@ public:
                             "Set settings for the current target's platform.",
                             "platform settings", 0),
         m_option_working_dir(LLDB_OPT_SET_1, false, "working-dir", 'w',
-                             CommandCompletions::eRemoteDiskDirectoryCompletion,
-                             eArgTypePath,
+                             lldb::eRemoteDiskDirectoryCompletion, eArgTypePath,
                              "The working directory for the platform.") {
     m_options.Append(&m_option_working_dir, LLDB_OPT_SET_ALL, LLDB_OPT_SET_1);
   }
@@ -484,9 +483,9 @@ public:
   HandleArgumentCompletion(CompletionRequest &request,
                            OptionElementVector &opt_element_vector) override {
     if (request.GetCursorIndex() == 0)
-      CommandCompletions::InvokeCommonCompletionCallbacks(
-          GetCommandInterpreter(),
-          CommandCompletions::eRemoteDiskFileCompletion, request, nullptr);
+      lldb_private::CommandCompletions::InvokeCommonCompletionCallbacks(
+          GetCommandInterpreter(), lldb::eRemoteDiskFileCompletion, request,
+          nullptr);
   }
 
   bool DoExecute(Args &args, CommandReturnObject &result) override {
@@ -831,13 +830,12 @@ public:
   HandleArgumentCompletion(CompletionRequest &request,
                            OptionElementVector &opt_element_vector) override {
     if (request.GetCursorIndex() == 0)
-      CommandCompletions::InvokeCommonCompletionCallbacks(
-          GetCommandInterpreter(),
-          CommandCompletions::eRemoteDiskFileCompletion, request, nullptr);
+      lldb_private::CommandCompletions::InvokeCommonCompletionCallbacks(
+          GetCommandInterpreter(), lldb::eRemoteDiskFileCompletion, request,
+          nullptr);
     else if (request.GetCursorIndex() == 1)
-      CommandCompletions::InvokeCommonCompletionCallbacks(
-          GetCommandInterpreter(), CommandCompletions::eDiskFileCompletion,
-          request, nullptr);
+      lldb_private::CommandCompletions::InvokeCommonCompletionCallbacks(
+          GetCommandInterpreter(), lldb::eDiskFileCompletion, request, nullptr);
   }
 
   bool DoExecute(Args &args, CommandReturnObject &result) override {
@@ -907,9 +905,9 @@ public:
     if (request.GetCursorIndex() != 0)
       return;
 
-    CommandCompletions::InvokeCommonCompletionCallbacks(
-        GetCommandInterpreter(), CommandCompletions::eRemoteDiskFileCompletion,
-        request, nullptr);
+    lldb_private::CommandCompletions::InvokeCommonCompletionCallbacks(
+        GetCommandInterpreter(), lldb::eRemoteDiskFileCompletion, request,
+        nullptr);
   }
 
   bool DoExecute(Args &args, CommandReturnObject &result) override {
@@ -978,9 +976,9 @@ public:
     if (request.GetCursorIndex() != 0)
       return;
 
-    CommandCompletions::InvokeCommonCompletionCallbacks(
-        GetCommandInterpreter(), CommandCompletions::eRemoteDiskFileCompletion,
-        request, nullptr);
+    lldb_private::CommandCompletions::InvokeCommonCompletionCallbacks(
+        GetCommandInterpreter(), lldb::eRemoteDiskFileCompletion, request,
+        nullptr);
   }
 
   bool DoExecute(Args &args, CommandReturnObject &result) override {
@@ -1048,9 +1046,9 @@ public:
     if (request.GetCursorIndex() != 0)
       return;
 
-    CommandCompletions::InvokeCommonCompletionCallbacks(
-        GetCommandInterpreter(), CommandCompletions::eRemoteDiskFileCompletion,
-        request, nullptr);
+    lldb_private::CommandCompletions::InvokeCommonCompletionCallbacks(
+        GetCommandInterpreter(), lldb::eRemoteDiskFileCompletion, request,
+        nullptr);
   }
 
   bool DoExecute(Args &args, CommandReturnObject &result) override {
@@ -1107,13 +1105,12 @@ public:
   HandleArgumentCompletion(CompletionRequest &request,
                            OptionElementVector &opt_element_vector) override {
     if (request.GetCursorIndex() == 0)
-      CommandCompletions::InvokeCommonCompletionCallbacks(
-          GetCommandInterpreter(), CommandCompletions::eDiskFileCompletion,
-          request, nullptr);
+      lldb_private::CommandCompletions::InvokeCommonCompletionCallbacks(
+          GetCommandInterpreter(), lldb::eDiskFileCompletion, request, nullptr);
     else if (request.GetCursorIndex() == 1)
-      CommandCompletions::InvokeCommonCompletionCallbacks(
-          GetCommandInterpreter(),
-          CommandCompletions::eRemoteDiskFileCompletion, request, nullptr);
+      lldb_private::CommandCompletions::InvokeCommonCompletionCallbacks(
+          GetCommandInterpreter(), lldb::eRemoteDiskFileCompletion, request,
+          nullptr);
   }
 
   bool DoExecute(Args &args, CommandReturnObject &result) override {
@@ -1523,9 +1520,8 @@ public:
   void
   HandleArgumentCompletion(CompletionRequest &request,
                            OptionElementVector &opt_element_vector) override {
-    CommandCompletions::InvokeCommonCompletionCallbacks(
-        GetCommandInterpreter(), CommandCompletions::eProcessIDCompletion,
-        request, nullptr);
+    lldb_private::CommandCompletions::InvokeCommonCompletionCallbacks(
+        GetCommandInterpreter(), lldb::eProcessIDCompletion, request, nullptr);
   }
 
 protected:
@@ -1834,9 +1830,8 @@ public:
                            OptionElementVector &opt_element_vector) override {
     if (request.GetCursorIndex())
       return;
-    CommandCompletions::InvokeCommonCompletionCallbacks(
-        GetCommandInterpreter(), CommandCompletions::eDiskFileCompletion,
-        request, nullptr);
+    lldb_private::CommandCompletions::InvokeCommonCompletionCallbacks(
+        GetCommandInterpreter(), lldb::eDiskFileCompletion, request, nullptr);
   }
 
   bool DoExecute(Args &args, CommandReturnObject &result) override {

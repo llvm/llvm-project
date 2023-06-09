@@ -292,9 +292,8 @@ public:
     if (request.GetCursorIndex() != 0)
       return;
 
-    CommandCompletions::InvokeCommonCompletionCallbacks(
-        GetCommandInterpreter(), CommandCompletions::eFrameIndexCompletion,
-        request, nullptr);
+    lldb_private::CommandCompletions::InvokeCommonCompletionCallbacks(
+        GetCommandInterpreter(), lldb::eFrameIndexCompletion, request, nullptr);
   }
 
   Options *GetOptions() override { return &m_options; }
@@ -445,9 +444,9 @@ may even involve JITing and running code in the target program.)");
   HandleArgumentCompletion(CompletionRequest &request,
                            OptionElementVector &opt_element_vector) override {
     // Arguments are the standard source file completer.
-    CommandCompletions::InvokeCommonCompletionCallbacks(
-        GetCommandInterpreter(), CommandCompletions::eVariablePathCompletion,
-        request, nullptr);
+    lldb_private::CommandCompletions::InvokeCommonCompletionCallbacks(
+        GetCommandInterpreter(), lldb::eVariablePathCompletion, request,
+        nullptr);
   }
 
 protected:

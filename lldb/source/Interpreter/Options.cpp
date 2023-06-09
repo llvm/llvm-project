@@ -714,8 +714,8 @@ void Options::HandleOptionArgumentCompletion(
     }
   }
 
-  if (completion_mask & CommandCompletions::eSourceFileCompletion ||
-      completion_mask & CommandCompletions::eSymbolCompletion) {
+  if (completion_mask & lldb::eSourceFileCompletion ||
+      completion_mask & lldb::eSymbolCompletion) {
     for (size_t i = 0; i < opt_element_vector.size(); i++) {
       int cur_defs_index = opt_element_vector[i].opt_defs_index;
 
@@ -748,7 +748,7 @@ void Options::HandleOptionArgumentCompletion(
     }
   }
 
-  CommandCompletions::InvokeCommonCompletionCallbacks(
+  lldb_private::CommandCompletions::InvokeCommonCompletionCallbacks(
       interpreter, completion_mask, request, filter_up.get());
 }
 

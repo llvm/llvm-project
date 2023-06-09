@@ -3063,10 +3063,10 @@ define <4 x i32> @strict_vector_fptoui_v4f32_to_v4i32(<4 x float> %a) #0 {
 ;
 ; AVX-LABEL: strict_vector_fptoui_v4f32_to_v4i32:
 ; AVX:       # %bb.0:
-; AVX-NEXT:    vbroadcastss {{.*#+}} xmm1 = [2.14748365E+9,2.14748365E+9,2.14748365E+9,2.14748365E+9]
+; AVX-NEXT:    vmovaps {{.*#+}} xmm1 = [2.14748365E+9,2.14748365E+9,2.14748365E+9,2.14748365E+9]
 ; AVX-NEXT:    vcmpltps %xmm1, %xmm0, %xmm2
 ; AVX-NEXT:    vxorps %xmm3, %xmm3, %xmm3
-; AVX-NEXT:    vbroadcastss {{.*#+}} xmm4 = [2147483648,2147483648,2147483648,2147483648]
+; AVX-NEXT:    vmovaps {{.*#+}} xmm4 = [2147483648,2147483648,2147483648,2147483648]
 ; AVX-NEXT:    vblendvps %xmm2, %xmm3, %xmm4, %xmm4
 ; AVX-NEXT:    vblendvps %xmm2, %xmm3, %xmm1, %xmm1
 ; AVX-NEXT:    vsubps %xmm1, %xmm0, %xmm0

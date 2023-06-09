@@ -177,10 +177,9 @@ define <vscale x 2 x i64> @umin_select_i64_multiuse(<vscale x 2 x i1> %pg, <vsca
 ; CHECK-LABEL: umin_select_i64_multiuse:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ptrue p1.d
-; CHECK-NEXT:    movprfx z2, z0
-; CHECK-NEXT:    umin z2.d, p1/m, z2.d, z1.d
-; CHECK-NEXT:    umin z0.d, p0/m, z0.d, z1.d
-; CHECK-NEXT:    st1d { z2.d }, p1, [x0]
+; CHECK-NEXT:    umin z1.d, p1/m, z1.d, z0.d
+; CHECK-NEXT:    mov z0.d, p0/m, z1.d
+; CHECK-NEXT:    st1d { z1.d }, p1, [x0]
 ; CHECK-NEXT:    ret
   %sel = call <vscale x 2 x i64> @llvm.umin.nxv2i64(<vscale x 2 x i64> %a, <vscale x 2 x i64> %b)
   store <vscale x 2 x i64> %sel, ptr %p

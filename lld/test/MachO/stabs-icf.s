@@ -64,6 +64,8 @@ Lsection_abbrev:
   .byte  18                      ## DW_AT_high_pc
   .byte  6                       ## DW_FORM_data4
   .byte  0                       ## EOM(1)
+  .byte  0                       ## EOM(2)
+  .byte  0                       ## EOM(3)
 .section  __DWARF,__debug_info,regular,debug
 .set Lset0, Ldebug_info_end0-Ldebug_info_start0 ## Length of Unit
   .long  Lset0

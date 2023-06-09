@@ -279,8 +279,7 @@ define void @load_i64_stride6_vf4(ptr %in.vec, ptr %out.vec0, ptr %out.vec1, ptr
 ; AVX512F-FAST-NEXT:    vmovdqa {{.*#+}} ymm8 = <11,1,7,u>
 ; AVX512F-FAST-NEXT:    vpermi2q %zmm2, %zmm3, %zmm8
 ; AVX512F-FAST-NEXT:    vpblendd {{.*#+}} ymm5 = ymm8[0,1,2,3,4,5],ymm5[6,7]
-; AVX512F-FAST-NEXT:    vbroadcasti128 {{.*#+}} ymm8 = [0,6,0,6]
-; AVX512F-FAST-NEXT:    # ymm8 = mem[0,1,0,1]
+; AVX512F-FAST-NEXT:    vmovdqa {{.*#+}} ymm8 = <u,u,0,6>
 ; AVX512F-FAST-NEXT:    vpermi2q %ymm7, %ymm4, %ymm8
 ; AVX512F-FAST-NEXT:    vmovdqa {{.*#+}} xmm4 = [4,10]
 ; AVX512F-FAST-NEXT:    vpermi2q %zmm3, %zmm2, %zmm4
@@ -363,8 +362,7 @@ define void @load_i64_stride6_vf4(ptr %in.vec, ptr %out.vec0, ptr %out.vec1, ptr
 ; AVX512BW-FAST-NEXT:    vmovdqa {{.*#+}} ymm8 = <11,1,7,u>
 ; AVX512BW-FAST-NEXT:    vpermi2q %zmm2, %zmm3, %zmm8
 ; AVX512BW-FAST-NEXT:    vpblendd {{.*#+}} ymm5 = ymm8[0,1,2,3,4,5],ymm5[6,7]
-; AVX512BW-FAST-NEXT:    vbroadcasti128 {{.*#+}} ymm8 = [0,6,0,6]
-; AVX512BW-FAST-NEXT:    # ymm8 = mem[0,1,0,1]
+; AVX512BW-FAST-NEXT:    vmovdqa {{.*#+}} ymm8 = <u,u,0,6>
 ; AVX512BW-FAST-NEXT:    vpermi2q %ymm7, %ymm4, %ymm8
 ; AVX512BW-FAST-NEXT:    vmovdqa {{.*#+}} xmm4 = [4,10]
 ; AVX512BW-FAST-NEXT:    vpermi2q %zmm3, %zmm2, %zmm4

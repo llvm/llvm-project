@@ -24,11 +24,11 @@ void quick_exit(int status) {
   port.close();
 
 #if defined(LIBC_TARGET_ARCH_IS_NVPTX)
-  asm("exit;" ::: "memory");
+  LIBC_INLINE_ASM("exit;" ::: "memory");
 #elif defined(LIBC_TARGET_ARCH_IS_AMDGPU)
   // This will terminate the entire wavefront, may not be valid with divergent
   // work items.
-  asm("s_endpgm" ::: "memory");
+  __builtin_amdgcn_endpgm();
 #endif
   __builtin_unreachable();
 }

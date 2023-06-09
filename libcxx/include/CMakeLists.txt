@@ -85,11 +85,13 @@ set(files
   __algorithm/pstl_backends/cpu_backends/transform.h
   __algorithm/pstl_backends/cpu_backends/transform_reduce.h
   __algorithm/pstl_copy.h
+  __algorithm/pstl_count.h
   __algorithm/pstl_fill.h
   __algorithm/pstl_find.h
   __algorithm/pstl_for_each.h
   __algorithm/pstl_frontend_dispatch.h
   __algorithm/pstl_merge.h
+  __algorithm/pstl_replace.h
   __algorithm/pstl_stable_sort.h
   __algorithm/pstl_transform.h
   __algorithm/push_heap.h

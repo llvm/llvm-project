@@ -289,9 +289,9 @@ public:
   void
   HandleArgumentCompletion(CompletionRequest &request,
                            OptionElementVector &opt_element_vector) override {
-    CommandCompletions::InvokeCommonCompletionCallbacks(
-        GetCommandInterpreter(), CommandCompletions::eWatchPointIDCompletion,
-        request, nullptr);
+    lldb_private::CommandCompletions::InvokeCommonCompletionCallbacks(
+        GetCommandInterpreter(), lldb::eWatchpointIDCompletion, request,
+        nullptr);
   }
 
 protected:
@@ -365,9 +365,9 @@ public:
   void
   HandleArgumentCompletion(CompletionRequest &request,
                            OptionElementVector &opt_element_vector) override {
-    CommandCompletions::InvokeCommonCompletionCallbacks(
-        GetCommandInterpreter(), CommandCompletions::eWatchPointIDCompletion,
-        request, nullptr);
+    lldb_private::CommandCompletions::InvokeCommonCompletionCallbacks(
+        GetCommandInterpreter(), lldb::eWatchpointIDCompletion, request,
+        nullptr);
   }
 
 protected:
@@ -446,9 +446,9 @@ public:
   void
   HandleArgumentCompletion(CompletionRequest &request,
                            OptionElementVector &opt_element_vector) override {
-    CommandCompletions::InvokeCommonCompletionCallbacks(
-        GetCommandInterpreter(), CommandCompletions::eWatchPointIDCompletion,
-        request, nullptr);
+    lldb_private::CommandCompletions::InvokeCommonCompletionCallbacks(
+        GetCommandInterpreter(), lldb::eWatchpointIDCompletion, request,
+        nullptr);
   }
 
   Options *GetOptions() override { return &m_options; }
@@ -569,9 +569,9 @@ public:
   void
   HandleArgumentCompletion(CompletionRequest &request,
                            OptionElementVector &opt_element_vector) override {
-    CommandCompletions::InvokeCommonCompletionCallbacks(
-        GetCommandInterpreter(), CommandCompletions::eWatchPointIDCompletion,
-        request, nullptr);
+    lldb_private::CommandCompletions::InvokeCommonCompletionCallbacks(
+        GetCommandInterpreter(), lldb::eWatchpointIDCompletion, request,
+        nullptr);
   }
 
   Options *GetOptions() override { return &m_options; }
@@ -694,9 +694,9 @@ public:
   void
   HandleArgumentCompletion(CompletionRequest &request,
                            OptionElementVector &opt_element_vector) override {
-    CommandCompletions::InvokeCommonCompletionCallbacks(
-        GetCommandInterpreter(), CommandCompletions::eWatchPointIDCompletion,
-        request, nullptr);
+    lldb_private::CommandCompletions::InvokeCommonCompletionCallbacks(
+        GetCommandInterpreter(), lldb::eWatchpointIDCompletion, request,
+        nullptr);
   }
 
   Options *GetOptions() override { return &m_options; }
@@ -846,9 +846,9 @@ corresponding to the byte size of the data type.");
                            OptionElementVector &opt_element_vector) override {
     if (request.GetCursorIndex() != 0)
       return;
-    CommandCompletions::InvokeCommonCompletionCallbacks(
-        GetCommandInterpreter(), CommandCompletions::eVariablePathCompletion,
-        request, nullptr);
+    lldb_private::CommandCompletions::InvokeCommonCompletionCallbacks(
+        GetCommandInterpreter(), lldb::eVariablePathCompletion, request,
+        nullptr);
   }
 
   Options *GetOptions() override { return &m_option_group; }

@@ -908,7 +908,7 @@ ELFDumper<ELFT>::getShndxTable(const Elf_Shdr *Symtab) const {
 }
 
 static std::string maybeDemangle(StringRef Name) {
-  return opts::Demangle ? demangle(std::string(Name)) : Name.str();
+  return opts::Demangle ? demangle(Name) : Name.str();
 }
 
 template <typename ELFT>

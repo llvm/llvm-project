@@ -2,13 +2,17 @@
 
 # RUN: llvm-mc -filetype=obj -triple=x86_64-unknown-linux %s -o %t1.o
 # RUN: llvm-objcopy %t1.o %t1copy.o
+# RUN: llvm-objcopy --localize-symbol=h1 %t1.o %t1changed.o
+# RUN: ld.lld -r %t1.o -o %t1reloc.o
 # RUN: llvm-mc -filetype=obj -triple=x86_64-unknown-linux %S/Inputs/icf-safe.s -o %t2.o
 # RUN: ld.lld %t1.o %t2.o -o %t2 --icf=safe --print-icf-sections | FileCheck %s
+# RUN: ld.lld %t1copy.o %t2.o -o %t2 --icf=safe --print-icf-sections | FileCheck %s
 # RUN: ld.lld %t1.o %t2.o -o %t3 --icf=safe --print-icf-sections -shared | FileCheck --check-prefix=EXPORT %s
 # RUN: ld.lld %t1.o %t2.o -o %t3 --icf=safe --print-icf-sections --export-dynamic | FileCheck --check-prefix=EXPORT %s
 # RUN: ld.lld %t1.o %t2.o -o %t2 --icf=all --print-icf-sections | FileCheck --check-prefix=ALL %s
 # RUN: ld.lld %t1.o %t2.o -o %t2 --icf=all --print-icf-sections --export-dynamic | FileCheck --check-prefix=ALL-EXPORT %s
-# RUN: ld.lld %t1copy.o -o %t4 --icf=safe 2>&1 | FileCheck --check-prefix=OBJCOPY %s
+# RUN: ld.lld %t1changed.o -o %t4 --icf=safe 2>&1 | FileCheck --check-prefix=SH_LINK_0 %s
+# RUN: ld.lld %t1reloc.o -o %t4 --icf=safe 2>&1 | FileCheck --check-prefix=SH_LINK_0 %s
 
 # CHECK-NOT: selected section {{.*}}:(.text.f1)
 # CHECK: selected section {{.*}}:(.text.f3)
@@ -89,7 +93,7 @@
 # ALL-EXPORT:   removing identical section {{.*}}:(.text.non_addrsig2)
 # ALL-EXPORT-NOT: selected section
 
-# OBJCOPY: --icf=safe conservatively ignores SHT_LLVM_ADDRSIG [index [[#]]] with sh_link=0 (likely created using objcopy or ld -r)
+# SH_LINK_0: --icf=safe conservatively ignores SHT_LLVM_ADDRSIG [index [[#]]] with sh_link=0 (likely created using objcopy or ld -r)
 
 .section .text.f1,"ax",@progbits
 .globl f1
