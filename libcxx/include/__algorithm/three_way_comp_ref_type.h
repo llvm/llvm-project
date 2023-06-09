@@ -13,6 +13,7 @@
 #include <__config>
 #include <__debug>
 #include <__utility/declval.h>
+#include <__utility/forward.h>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header
@@ -28,8 +29,8 @@ struct __debug_three_way_comp {
   _LIBCPP_HIDE_FROM_ABI constexpr __debug_three_way_comp(_Comp& __c) : __comp_(__c) {}
 
   template <class _Tp, class _Up>
-  _LIBCPP_HIDE_FROM_ABI constexpr auto operator()(_Tp& __x, _Up& __y) {
-    auto __r = __comp_(__x, __y);
+  _LIBCPP_HIDE_FROM_ABI constexpr auto operator()(_Tp&& __x, _Up&& __y) {
+    auto __r = __comp_(std::forward<_Tp>(__x), std::forward<_Up>(__y));
     __do_compare_assert(0, __y, __x, __r);
     return __r;
   }
@@ -55,7 +56,7 @@ struct __debug_three_way_comp {
 
 // Pass the comparator by lvalue reference. Or in debug mode, using a
 // debugging wrapper that stores a reference.
-#  ifndef _LIBCPP_ENABLE_DEBUG_MODE
+#  ifdef _LIBCPP_ENABLE_DEBUG_MODE
 template <class _Comp>
 using __three_way_comp_ref_type = __debug_three_way_comp<_Comp>;
 #  else
