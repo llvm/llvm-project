@@ -123,7 +123,11 @@ CIRGenModule::CIRGenModule(mlir::MLIRContext &context,
   FloatTy = builder.getF32Type();
   DoubleTy = builder.getF64Type();
   // TODO: PointerWidthInBits
-  // TODO: PointerAlignInBytes
+  PointerAlignInBytes =
+      astctx
+          .toCharUnitsFromBits(
+              astctx.getTargetInfo().getPointerAlign(LangAS::Default))
+          .getQuantity();
   // TODO: SizeSizeInBytes
   // TODO: IntAlignInBytes
   UCharTy = ::mlir::cir::IntType::get(builder.getContext(),

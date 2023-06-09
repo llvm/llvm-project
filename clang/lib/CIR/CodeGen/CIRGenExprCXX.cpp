@@ -224,7 +224,7 @@ RValue CIRGenFunction::buildCXXMemberOrOperatorMemberCallExpr(
 
   CIRGenCallee Callee;
   if (useVirtualCall) {
-    llvm_unreachable("NYI");
+    Callee = CIRGenCallee::forVirtual(CE, MD, This.getAddress(), Ty);
   } else {
     if (SanOpts.has(SanitizerKind::CFINVCall)) {
       llvm_unreachable("NYI");

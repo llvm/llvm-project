@@ -154,17 +154,14 @@ void ClangToCIRArgMapping::construct(const ASTContext &Context,
       llvm_unreachable("NYI");
     case ABIArgInfo::Extend:
     case ABIArgInfo::Direct: {
-      auto STy = AI.getCoerceToType().dyn_cast<mlir::cir::StructType>();
-      // FIXME: handle sseregparm someday...
-      if (AI.isDirect() && AI.getCanBeFlattened() && STy) {
-        // TODO(cir): we might not want to break it this early, revisit this
-        // once we have a better ABI lowering story.
-        CIRArgs.NumberOfArgs = STy.getMembers().size();
-        assert(CIRArgs.NumberOfArgs == 1 &&
-               "Initial CIR codegen is not the place to split arguments");
-      } else {
-        CIRArgs.NumberOfArgs = 1;
-      }
+      // Postpone splitting structs into elements since this makes it way
+      // more complicated for analysis to obtain information on the original
+      // arguments.
+      //
+      // TODO(cir): a LLVM lowering prepare pass should break this down into
+      // the appropriated pieces.
+      assert(!UnimplementedFeature::constructABIArgDirectExtend());
+      CIRArgs.NumberOfArgs = 1;
       break;
     }
     }
@@ -276,7 +273,12 @@ mlir::cir::FuncType CIRGenTypes::GetFunctionTypeForVTable(GlobalDecl GD) {
 }
 
 CIRGenCallee CIRGenCallee::prepareConcreteCallee(CIRGenFunction &CGF) const {
-  assert(!isVirtual() && "Virtual NYI");
+  if (isVirtual()) {
+    const CallExpr *CE = getVirtualCallExpr();
+    return CGF.CGM.getCXXABI().getVirtualFunctionPointer(
+        CGF, getVirtualMethodDecl(), getThisAddress(), getVirtualFunctionType(),
+        CE ? CE->getBeginLoc() : SourceLocation());
+  }
   return *this;
 }
 
@@ -444,12 +446,14 @@ RValue CIRGenFunction::buildCall(const CIRGenFunctionInfo &CallInfo,
           Src = builder.createElementBitCast(argLoc, Src, STy);
         }
 
-        assert(NumCIRArgs == STy.getMembers().size());
+        // assert(NumCIRArgs == STy.getMembers().size());
         // In LLVMGen: Still only pass the struct without any gaps but mark it
-        // as such somehow. In CIRGen: Emit a load from the "whole" struct,
+        // as such somehow.
+        //
+        // In CIRGen: Emit a load from the "whole" struct,
         // which shall be broken later by some lowering step into multiple
         // loads.
-        assert(STy.getMembers().size() == 1 && "dont break up arguments here!");
+        assert(NumCIRArgs == 1 && "dont break up arguments here!");
         CIRCallArgs[FirstCIRArg] = builder.createLoad(argLoc, Src);
       } else {
         llvm_unreachable("NYI");

@@ -297,6 +297,16 @@ public:
   /// Helper to convert Clang's alignment to CIR alignment
   mlir::IntegerAttr getSize(CharUnits size);
 
+  /// Returns whether the given record has public LTO visibility (regardless of
+  /// -lto-whole-program-visibility) and therefore may not participate in
+  /// (single-module) CFI and whole-program vtable optimization.
+  bool AlwaysHasLTOVisibilityPublic(const CXXRecordDecl *RD);
+
+  /// Returns whether the given record has hidden LTO visibility and therefore
+  /// may participate in (single-module) CFI and whole-program vtable
+  /// optimization.
+  bool HasHiddenLTOVisibility(const CXXRecordDecl *RD);
+
   /// Determine whether an object of this type can be emitted
   /// as a constant.
   ///

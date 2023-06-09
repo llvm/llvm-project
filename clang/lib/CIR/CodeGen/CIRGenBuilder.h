@@ -331,6 +331,26 @@ public:
                                      addr.getPointer());
   }
 
+  mlir::Value createAlignedLoad(mlir::Location loc, mlir::Type ty,
+                                mlir::Value ptr,
+                                [[maybe_unused]] llvm::MaybeAlign align,
+                                [[maybe_unused]] bool isVolatile) {
+    assert(!UnimplementedFeature::volatileLoadOrStore());
+    assert(!UnimplementedFeature::alignedLoad());
+    return create<mlir::cir::LoadOp>(loc, ty, ptr);
+  }
+
+  mlir::Value createAlignedLoad(mlir::Location loc, mlir::Type ty,
+                                mlir::Value ptr, llvm::MaybeAlign align) {
+    return createAlignedLoad(loc, ty, ptr, align, /*isVolatile=*/false);
+  }
+
+  mlir::Value
+  createAlignedLoad(mlir::Location loc, mlir::Type ty, mlir::Value addr,
+                    clang::CharUnits align = clang::CharUnits::One()) {
+    return createAlignedLoad(loc, ty, addr, align.getAsAlign());
+  }
+
   mlir::cir::StoreOp createStore(mlir::Location loc, mlir::Value val,
                                  Address dst) {
     return create<mlir::cir::StoreOp>(loc, val, dst.getPointer());

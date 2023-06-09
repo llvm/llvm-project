@@ -1223,6 +1223,27 @@ public:
   /// base classes in reverse order of their construction.
   void EnterDtorCleanups(const CXXDestructorDecl *Dtor, CXXDtorType Type);
 
+  /// Determines whether an EH cleanup is required to destroy a type
+  /// with the given destruction kind.
+  /// TODO(cir): could be shared with Clang LLVM codegen
+  bool needsEHCleanup(QualType::DestructionKind kind) {
+    switch (kind) {
+    case QualType::DK_none:
+      return false;
+    case QualType::DK_cxx_destructor:
+    case QualType::DK_objc_weak_lifetime:
+    case QualType::DK_nontrivial_c_struct:
+      return getLangOpts().Exceptions;
+    case QualType::DK_objc_strong_lifetime:
+      return getLangOpts().Exceptions &&
+             CGM.getCodeGenOpts().ObjCAutoRefCountExceptions;
+    }
+    llvm_unreachable("bad destruction kind");
+  }
+
+  void pushEHDestroy(QualType::DestructionKind dtorKind, Address addr,
+                     QualType type);
+
   static bool
   IsConstructorDelegationValid(const clang::CXXConstructorDecl *Ctor);
 
@@ -1244,6 +1265,21 @@ public:
                          bool BaseIsNonVirtualPrimaryBase,
                          const clang::CXXRecordDecl *VTableClass,
                          VisitedVirtualBasesSetTy &VBases, VPtrsVector &vptrs);
+  /// Return the Value of the vtable pointer member pointed to by This.
+  mlir::Value getVTablePtr(SourceLocation Loc, Address This,
+                           mlir::Type VTableTy,
+                           const CXXRecordDecl *VTableClass);
+
+  /// Returns whether we should perform a type checked load when loading a
+  /// virtual function for virtual calls to members of RD. This is generally
+  /// true when both vcall CFI and whole-program-vtables are enabled.
+  bool shouldEmitVTableTypeCheckedLoad(const CXXRecordDecl *RD);
+
+  /// If whole-program virtual table optimization is enabled, emit an assumption
+  /// that VTable is a member of RD's type identifier. Or, if vptr CFI is
+  /// enabled, emit a check that VTable is a member of RD's type identifier.
+  void buildTypeMetadataCodeForVCall(const CXXRecordDecl *RD,
+                                     mlir::Value VTable, SourceLocation Loc);
 
   /// Return the VTT parameter that should be passed to a base
   /// constructor/destructor with virtual bases.

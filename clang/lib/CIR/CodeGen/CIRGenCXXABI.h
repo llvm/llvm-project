@@ -160,10 +160,19 @@ public:
                                    bool Delegating, Address This,
                                    QualType ThisTy) = 0;
 
+  virtual size_t getSrcArgforCopyCtor(const CXXConstructorDecl *,
+                                      FunctionArgList &Args) const = 0;
+
   /// Get the address of the vtable for the given record decl which should be
   /// used for the vptr at the given offset in RD.
   virtual mlir::cir::GlobalOp getAddrOfVTable(const CXXRecordDecl *RD,
                                               CharUnits VPtrOffset) = 0;
+
+  /// Build a virtual function pointer in the ABI-specific way.
+  virtual CIRGenCallee getVirtualFunctionPointer(CIRGenFunction &CGF,
+                                                 GlobalDecl GD, Address This,
+                                                 mlir::Type Ty,
+                                                 SourceLocation Loc) = 0;
 
   /// Checks if ABI requires extra virtual offset for vtable field.
   virtual bool
