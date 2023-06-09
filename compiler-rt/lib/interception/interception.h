@@ -196,7 +196,7 @@ const interpose_substitution substitution_##func_name[]             \
        __ASM_WEAK_WRAPPER(func)                                                \
        ".set " #func ", " SANITIZER_STRINGIFY(TRAMPOLINE(func)) "\n"           \
        ".globl " SANITIZER_STRINGIFY(TRAMPOLINE(func)) "\n"                    \
-       ".type  " SANITIZER_STRINGIFY(TRAMPOLINE(func)) ", @function\n"         \
+       ".type  " SANITIZER_STRINGIFY(TRAMPOLINE(func)) ", %function\n"         \
        SANITIZER_STRINGIFY(TRAMPOLINE(func)) ":\n"                             \
        SANITIZER_STRINGIFY(CFI_STARTPROC) "\n"                                 \
        SANITIZER_STRINGIFY(ASM_TAIL_CALL) " __interceptor_"                    \
