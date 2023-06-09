@@ -331,6 +331,15 @@ X86LegalizerInfo::X86LegalizerInfo(const X86Subtarget &STI,
     .clampScalar(0, s8, sMaxScalar)
     .clampScalar(1, s32, s32);
 
+  // memory intrinsics
+  getActionDefinitionsBuilder({G_MEMCPY, G_MEMMOVE, G_MEMSET}).libcall();
+
+  // fp intrinsics
+  getActionDefinitionsBuilder(G_INTRINSIC_ROUNDEVEN)
+      .scalarize(0)
+      .minScalar(0, LLT::scalar(32))
+      .libcall();
+
   setLegalizerInfo32bit();
   setLegalizerInfo64bit();
   setLegalizerInfoSSE1();
@@ -338,11 +347,6 @@ X86LegalizerInfo::X86LegalizerInfo(const X86Subtarget &STI,
   setLegalizerInfoAVX();
   setLegalizerInfoAVX2();
   setLegalizerInfoAVX512();
-
-  getActionDefinitionsBuilder(G_INTRINSIC_ROUNDEVEN)
-    .scalarize(0)
-    .minScalar(0, LLT::scalar(32))
-    .libcall();
 
   auto &LegacyInfo = getLegacyLegalizerInfo();
   LegacyInfo.setLegalizeScalarToDifferentSizeStrategy(G_PHI, 0, widen_1);
@@ -352,8 +356,6 @@ X86LegalizerInfo::X86LegalizerInfo(const X86Subtarget &STI,
   LegacyInfo.setLegalizeScalarToDifferentSizeStrategy(
       G_PTR_ADD, 1,
       LegacyLegalizerInfo::widenToLargerTypesUnsupportedOtherwise);
-
-  getActionDefinitionsBuilder({G_MEMCPY, G_MEMMOVE, G_MEMSET}).libcall();
 
   LegacyInfo.computeTables();
   verify(*STI.getInstrInfo());
