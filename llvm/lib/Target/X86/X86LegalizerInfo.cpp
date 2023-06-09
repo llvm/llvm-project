@@ -278,6 +278,14 @@ X86LegalizerInfo::X86LegalizerInfo(const X86Subtarget &STI,
 
   getActionDefinitionsBuilder(G_INTTOPTR).legalFor({{p0, sMaxScalar}});
 
+  getActionDefinitionsBuilder(G_PTR_ADD)
+      .legalIf([=](const LegalityQuery &Query) -> bool {
+        return typePairInSet(0, 1, {{p0, s32}})(Query) ||
+               (Is64Bit && typePairInSet(0, 1, {{p0, s64}})(Query));
+      })
+      .widenScalarToNextPow2(1, /*Min*/ 32)
+      .clampScalar(1, s32, sMaxScalar);
+
   // sext, zext, and anyext
   getActionDefinitionsBuilder({G_SEXT, G_ZEXT, G_ANYEXT})
       .legalIf([=](const LegalityQuery &Query) {
@@ -353,9 +361,6 @@ X86LegalizerInfo::X86LegalizerInfo(const X86Subtarget &STI,
   for (unsigned MemOp : {G_LOAD, G_STORE})
     LegacyInfo.setLegalizeScalarToDifferentSizeStrategy(
         MemOp, 0, LegacyLegalizerInfo::narrowToSmallerAndWidenToSmallest);
-  LegacyInfo.setLegalizeScalarToDifferentSizeStrategy(
-      G_PTR_ADD, 1,
-      LegacyLegalizerInfo::widenToLargerTypesUnsupportedOtherwise);
 
   LegacyInfo.computeTables();
   verify(*STI.getInstrInfo());
@@ -397,9 +402,6 @@ void X86LegalizerInfo::setLegalizerInfo32bit() {
   LegacyInfo.setAction({G_FRAME_INDEX, p0}, LegacyLegalizeActions::Legal);
   LegacyInfo.setAction({G_GLOBAL_VALUE, p0}, LegacyLegalizeActions::Legal);
 
-  LegacyInfo.setAction({G_PTR_ADD, p0}, LegacyLegalizeActions::Legal);
-  LegacyInfo.setAction({G_PTR_ADD, 1, s32}, LegacyLegalizeActions::Legal);
-
   // Control-flow
   LegacyInfo.setAction({G_BRCOND, s1}, LegacyLegalizeActions::Legal);
 
@@ -431,9 +433,6 @@ void X86LegalizerInfo::setLegalizerInfo64bit() {
 
   for (unsigned MemOp : {G_LOAD, G_STORE})
     LegacyInfo.setAction({MemOp, s64}, LegacyLegalizeActions::Legal);
-
-  // Pointer-handling
-  LegacyInfo.setAction({G_PTR_ADD, 1, s64}, LegacyLegalizeActions::Legal);
 
   getActionDefinitionsBuilder(G_SITOFP)
     .legalForCartesianProduct({s32, s64})
