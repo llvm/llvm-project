@@ -44,12 +44,6 @@ CONSTATTR float
 MATH_MANGLE(remainder)(float x, float y)
 #endif
 {
-#if !defined(COMPILING_FMOD)
-    if (DAZ_OPT()) {
-        x = BUILTIN_CANONICALIZE_F32(x);
-    }
-#endif
-
     // How many bits of the quotient per iteration
     const int bits = 12;
     float ax = BUILTIN_ABS_F32(x);
@@ -135,7 +129,7 @@ MATH_MANGLE(remainder)(float x, float y)
 
         int qsgn = 1 + (((AS_INT(x) ^ AS_INT(y)) >> 31) << 1);
         float t = MATH_MAD(y, -(float)qsgn, x);
-        ret = c ? t : ret;
+        ret = c ? t : (DAZ_OPT() ? BUILTIN_CANONICALIZE_F32(x) : x);
 #if defined(COMPILING_REMQUO)
         q7 = c ? qsgn : q7;
 #endif
