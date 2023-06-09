@@ -1,3 +1,4 @@
+// REQUIRES: asserts
 // RUN: mlir-opt %s --test-transform-dialect-interpreter \
 // RUN:             --mlir-disable-threading \
 // RUN:             --debug-only=transform-dialect-dump-repro 2>&1 \
