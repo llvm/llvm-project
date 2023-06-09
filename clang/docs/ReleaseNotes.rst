@@ -490,6 +490,8 @@ Bug Fixes in This Version
   (`#62886 <https://github.com/llvm/llvm-project/issues/62886>`_).
 - Fix crash for code using ``_Atomic`` types in C++
   (`See patch <https://reviews.llvm.org/D152303>`_).
+- Fix crash when passing a value larger then 64 bits to the aligned attribute.
+  (`#50534 <https://github.com/llvm/llvm-project/issues/50534>`_).
 
 Bug Fixes to Compiler Builtins
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
