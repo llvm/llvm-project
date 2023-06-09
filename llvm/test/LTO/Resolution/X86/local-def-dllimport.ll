@@ -1,3 +1,8 @@
+; If a function has linkage "available_externally", make sure that a dllimport
+; attribute is not dropped. The library definition (with a dllexport attribute)
+; might be in a shared library, rather than merged into this module. Since we
+; can't guaranty the definition is available locally, the dllimport attribute
+; may be used by later passes and should be preserved.
 ; RUN: opt -thinlto-bc -thinlto-split-lto-unit -o %t0.bc %s
 ; RUN: llvm-lto2 run -r %t0.bc,__imp_f,l \
 ; RUN:               -r %t0.bc,g,p \

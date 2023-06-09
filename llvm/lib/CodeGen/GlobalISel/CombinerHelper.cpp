@@ -1113,7 +1113,6 @@ void CombinerHelper::applyCombineIndexedLoadStore(
 
 bool CombinerHelper::matchCombineDivRem(MachineInstr &MI,
                                         MachineInstr *&OtherMI) {
-  OtherMI = nullptr;
   unsigned Opcode = MI.getOpcode();
   bool IsDiv, IsSigned;
 
@@ -1168,44 +1167,11 @@ bool CombinerHelper::matchCombineDivRem(MachineInstr &MI,
         matchEqualDefs(MI.getOperand(2), UseMI.getOperand(2)) &&
         matchEqualDefs(MI.getOperand(1), UseMI.getOperand(1))) {
       OtherMI = &UseMI;
-      break;
+      return true;
     }
   }
-  if (!OtherMI)
-    return false;
 
-  // We may have a situation like this:
-  //   %4:_(s32) = G_SEXT %2:_(s1)
-  //   %5:_(s32) = G_SEXT %2:_(s1)
-  //   %6:_(s32) = G_UDIV %4:_, %5:_
-  //   %8:_(s32) = G_SEXT %2:_(s1)
-  //   %9:_(s32) = G_UREM %5:_, %8:_
-  // and choosing the insertion point as the G_UDIV will cause it to use %8
-  // before the def. We check here if any of the operands of the later
-  // instruction (i.e. one of DIV/REM that is the second in the block) are
-  // dominated by the first instruction. In this case we check if %8 is
-  // dominated by the G_UDIV and bail out if so.
-
-  SmallSet<Register, 2> RegsToCheck;
-  MachineInstr *First, *Second;
-  if (dominates(MI, *OtherMI)) {
-    First = &MI;
-    Second = OtherMI;
-  } else {
-    First = OtherMI;
-    Second = &MI;
-  }
-  RegsToCheck.insert(Second->getOperand(1).getReg());
-  RegsToCheck.insert(Second->getOperand(2).getReg());
-  for (MachineBasicBlock::iterator II = std::next(First->getIterator());
-       II != Second->getIterator(); ++II) {
-    for (auto &MO : II->operands()) {
-      if (MO.isReg() && MO.isDef() && RegsToCheck.count(MO.getReg()) &&
-          dominates(*First, *II))
-        return false;
-    }
-  }
-  return true;
+  return false;
 }
 
 void CombinerHelper::applyCombineDivRem(MachineInstr &MI,
@@ -1226,16 +1192,22 @@ void CombinerHelper::applyCombineDivRem(MachineInstr &MI,
       Opcode == TargetOpcode::G_SDIV || Opcode == TargetOpcode::G_SREM;
 
   // Check which instruction is first in the block so we don't break def-use
-  // deps by "moving" the instruction incorrectly.
-  if (dominates(MI, *OtherMI))
+  // deps by "moving" the instruction incorrectly. Also keep track of which
+  // instruction is first so we pick it's operands, avoiding use-before-def
+  // bugs.
+  MachineInstr *FirstInst;
+  if (dominates(MI, *OtherMI)) {
     Builder.setInstrAndDebugLoc(MI);
-  else
+    FirstInst = &MI;
+  } else {
     Builder.setInstrAndDebugLoc(*OtherMI);
+    FirstInst = OtherMI;
+  }
 
   Builder.buildInstr(IsSigned ? TargetOpcode::G_SDIVREM
                               : TargetOpcode::G_UDIVREM,
                      {DestDivReg, DestRemReg},
-                     {MI.getOperand(1).getReg(), MI.getOperand(2).getReg()});
+                     { FirstInst->getOperand(1), FirstInst->getOperand(2) });
   MI.eraseFromParent();
   OtherMI->eraseFromParent();
 }
