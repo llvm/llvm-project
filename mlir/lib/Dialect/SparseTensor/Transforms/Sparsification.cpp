@@ -1484,7 +1484,16 @@ static scf::IfOp genIf(CodegenEnv &env, OpBuilder &builder, LoopId ldx,
   env.merger().foreachTensorLoopId(
       p, /*simple=*/true,
       [&](TensorLoopId b, TensorId tid, std::optional<Level> lvl,
-          DimLevelType dlt, bool /*unused*/) {
+          DimLevelType dlt, bool isIdxRed) {
+        if (isIdxRed) {
+          // Since there is no 1:1 mapping from loop to level (multiple loops
+          // are required to resolve one level with non-trivial index
+          // expression), we need to reconstruct the tensor level types if this
+          // loop requires index reduction condition.
+          assert(lvl.has_value() && isUndefDLT(dlt));
+          auto stt = getSparseTensorType(env.op().getInputs()[tid]);
+          dlt = stt.getLvlType(*lvl);
+        }
         assert(ldx == env.merger().loop(b));
         Value clause;
         if (isCompressedDLT(dlt) || isSingletonDLT(dlt) ||
@@ -1517,14 +1526,16 @@ static scf::IfOp genIf(CodegenEnv &env, OpBuilder &builder, LoopId ldx,
 /// Generates end of true branch of if-statement within a while-loop.
 static void endIf(CodegenEnv &env, OpBuilder &builder, scf::IfOp ifOp,
                   Operation *loop, Value redInput, Value cntInput,
-                  Value insInput) {
+                  Value insInput, Value validIns) {
   SmallVector<Value> operands;
   if (env.isReduc()) {
     operands.push_back(env.getReduc());
     env.updateReduc(redInput);
-    if (env.getValidLexInsert())
+    if (env.getValidLexInsert()) {
       // Any overlapping indices during a reduction creates a valid lex insert.
       operands.push_back(constantI1(builder, env.op().getLoc(), true));
+      env.setValidLexInsert(validIns);
+    }
   }
   if (env.isExpand()) {
     operands.push_back(env.getExpandCount());
@@ -1852,6 +1863,7 @@ static void genStmt(CodegenEnv &env, RewriterBase &rewriter, ExprId exp,
     Value redInput = env.getReduc();
     Value cntInput = env.getExpandCount();
     Value insInput = env.getInsertionChain();
+    Value validIns = env.getValidLexInsert();
     // NOTE: We cannot change this to `for (const LatPointId lj : env.set(lts))`
     // because the loop body causes data-movement which invalidates the
     // iterator.
@@ -1863,7 +1875,8 @@ static void genStmt(CodegenEnv &env, RewriterBase &rewriter, ExprId exp,
         if (!isSingleCond) {
           scf::IfOp ifOp = genIf(env, rewriter, idx, lj);
           genStmt(env, rewriter, ej, at + 1);
-          endIf(env, rewriter, ifOp, loop, redInput, cntInput, insInput);
+          endIf(env, rewriter, ifOp, loop, redInput, cntInput, insInput,
+                validIns);
         } else {
           genStmt(env, rewriter, ej, at + 1);
         }

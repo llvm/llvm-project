@@ -470,6 +470,11 @@ private:
     return tid < lvlTypes.size() && lvl < lvlTypes[tid].size();
   }
 
+  /// Forwards the (conceptual) "tree iterator" when iterating over a fully
+  /// reduced slice created by index-reduction.
+  void forwardsReducedSliceLevelTreeIt(OpBuilder &builder, Location loc,
+                                       TensorId tid, Level lvl, Value fcnt);
+
   /// Prepares loop for iterating over `tensor[lvl]`, under the assumption
   /// that `tensor[0...lvl-1]` loops have already been set up.
   void prepareLoopOverTensorAtLvl(OpBuilder &builder, Location loc,
