@@ -1,4 +1,6 @@
+set(LIBC_INCLUDE_SOURCE_DIR ${CMAKE_CURRENT_SOURCE_DIR})
 set(LIBC_INCLUDE_BINARY_DIR ${CMAKE_CURRENT_BINARY_DIR})
+
 include(LLVMLibCHeaderRules)
 
 add_subdirectory(llvm-libc-macros)
@@ -522,8 +524,10 @@ function(get_all_install_header_targets out_var)
 endfunction(get_all_install_header_targets)
 
 get_all_install_header_targets(all_install_header_targets ${TARGET_PUBLIC_HEADERS})
-add_custom_target(libc-headers)
+add_library(libc-headers INTERFACE)
 add_dependencies(libc-headers ${all_install_header_targets})
+target_include_directories(libc-headers SYSTEM INTERFACE ${LIBC_INCLUDE_DIR})
+
 foreach(target IN LISTS all_install_header_targets)
   get_target_property(header_file ${target} HEADER_FILE_PATH)
   if(NOT header_file)
@@ -532,12 +536,7 @@ foreach(target IN LISTS all_install_header_targets)
   endif()
   file(RELATIVE_PATH relative_path ${LIBC_INCLUDE_BINARY_DIR} ${header_file})
   get_filename_component(nested_dir ${relative_path} DIRECTORY)
-  # The GPU headers are installed to 'gpu-none-llvm/' to prevent shadowing the
-  # system headers.
-  if(LIBC_TARGET_ARCHITECTURE_IS_GPU)
-    set(nested_dir gpu-none-llvm/${nested_dir})
-  endif()
   install(FILES ${header_file}
-          DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/${nested_dir}
+          DESTINATION ${LIBC_INSTALL_INCLUDE_DIR}/${nested_dir}
           COMPONENT libc-headers)
 endforeach()
