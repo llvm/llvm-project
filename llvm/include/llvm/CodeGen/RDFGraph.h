@@ -362,6 +362,32 @@ template <typename T> struct NodeAddr {
 
 struct NodeBase;
 
+struct RefNode;
+struct DefNode;
+struct UseNode;
+struct PhiUseNode;
+
+struct CodeNode;
+struct InstrNode;
+struct PhiNode;
+struct StmtNode;
+struct BlockNode;
+struct FuncNode;
+
+using Node = NodeAddr<NodeBase *>;
+
+using Ref = NodeAddr<RefNode *>;
+using Def = NodeAddr<DefNode *>;
+using Use = NodeAddr<UseNode *>;
+using PhiUse = NodeAddr<PhiUseNode *>;
+
+using Code = NodeAddr<CodeNode *>;
+using Instr = NodeAddr<InstrNode *>;
+using Phi = NodeAddr<PhiNode *>;
+using Stmt = NodeAddr<StmtNode *>;
+using Block = NodeAddr<BlockNode *>;
+using Func = NodeAddr<FuncNode *>;
+
 // Fast memory allocation and translation between node id and node address.
 // This is really the same idea as the one underlying the "bump pointer
 // allocator", the difference being in the translation. A node id is
@@ -396,7 +422,7 @@ struct NodeAllocator {
   }
 
   NodeId id(const NodeBase *P) const;
-  NodeAddr<NodeBase *> New();
+  Node New();
   void clear();
 
 private:
@@ -469,7 +495,7 @@ public:
   void setFlags(uint16_t F) { setAttrs(NodeAttrs::set_flags(getAttrs(), F)); }
 
   // Insert node NA after "this" in the circular chain.
-  void append(NodeAddr<NodeBase *> NA);
+  void append(Node NA);
 
   // Initialize all members to 0.
   void init() { memset(this, 0, sizeof *this); }
@@ -507,8 +533,8 @@ protected:
 
   // The actual payload.
   union {
-    Ref_struct Ref;
-    Code_struct Code;
+    Ref_struct RefData;
+    Code_struct CodeData;
   };
 };
 // The allocator allocates chunks of 32 bytes for each node. The fact that
@@ -517,7 +543,7 @@ protected:
 static_assert(sizeof(NodeBase) <= NodeAllocator::NodeMemSize,
               "NodeBase must be at most NodeAllocator::NodeMemSize bytes");
 
-using NodeList = SmallVector<NodeAddr<NodeBase *>, 4>;
+using NodeList = SmallVector<Node, 4>;
 using NodeSet = std::set<NodeId>;
 
 struct RefNode : public NodeBase {
@@ -527,17 +553,17 @@ struct RefNode : public NodeBase {
 
   MachineOperand &getOp() {
     assert(!(getFlags() & NodeAttrs::PhiRef));
-    return *Ref.Op;
+    return *RefData.Op;
   }
 
   void setRegRef(RegisterRef RR, DataFlowGraph &G);
   void setRegRef(MachineOperand *Op, DataFlowGraph &G);
 
-  NodeId getReachingDef() const { return Ref.RD; }
-  void setReachingDef(NodeId RD) { Ref.RD = RD; }
+  NodeId getReachingDef() const { return RefData.RD; }
+  void setReachingDef(NodeId RD) { RefData.RD = RD; }
 
-  NodeId getSibling() const { return Ref.Sib; }
-  void setSibling(NodeId Sib) { Ref.Sib = Sib; }
+  NodeId getSibling() const { return RefData.Sib; }
+  void setSibling(NodeId Sib) { RefData.Sib = Sib; }
 
   bool isUse() const {
     assert(getType() == NodeAttrs::Ref);
@@ -550,47 +576,46 @@ struct RefNode : public NodeBase {
   }
 
   template <typename Predicate>
-  NodeAddr<RefNode *> getNextRef(RegisterRef RR, Predicate P, bool NextOnly,
-                                 const DataFlowGraph &G);
-  NodeAddr<NodeBase *> getOwner(const DataFlowGraph &G);
+  Ref getNextRef(RegisterRef RR, Predicate P, bool NextOnly,
+                 const DataFlowGraph &G);
+  Node getOwner(const DataFlowGraph &G);
 };
 
 struct DefNode : public RefNode {
-  NodeId getReachedDef() const { return Ref.Def.DD; }
-  void setReachedDef(NodeId D) { Ref.Def.DD = D; }
-  NodeId getReachedUse() const { return Ref.Def.DU; }
-  void setReachedUse(NodeId U) { Ref.Def.DU = U; }
+  NodeId getReachedDef() const { return RefData.Def.DD; }
+  void setReachedDef(NodeId D) { RefData.Def.DD = D; }
+  NodeId getReachedUse() const { return RefData.Def.DU; }
+  void setReachedUse(NodeId U) { RefData.Def.DU = U; }
 
-  void linkToDef(NodeId Self, NodeAddr<DefNode *> DA);
+  void linkToDef(NodeId Self, Def DA);
 };
 
 struct UseNode : public RefNode {
-  void linkToDef(NodeId Self, NodeAddr<DefNode *> DA);
+  void linkToDef(NodeId Self, Def DA);
 };
 
 struct PhiUseNode : public UseNode {
   NodeId getPredecessor() const {
     assert(getFlags() & NodeAttrs::PhiRef);
-    return Ref.PhiU.PredB;
+    return RefData.PhiU.PredB;
   }
   void setPredecessor(NodeId B) {
     assert(getFlags() & NodeAttrs::PhiRef);
-    Ref.PhiU.PredB = B;
+    RefData.PhiU.PredB = B;
   }
 };
 
 struct CodeNode : public NodeBase {
   template <typename T> T getCode() const { //
-    return static_cast<T>(Code.CP);
+    return static_cast<T>(CodeData.CP);
   }
-  void setCode(void *C) { Code.CP = C; }
+  void setCode(void *C) { CodeData.CP = C; }
 
-  NodeAddr<NodeBase *> getFirstMember(const DataFlowGraph &G) const;
-  NodeAddr<NodeBase *> getLastMember(const DataFlowGraph &G) const;
-  void addMember(NodeAddr<NodeBase *> NA, const DataFlowGraph &G);
-  void addMemberAfter(NodeAddr<NodeBase *> MA, NodeAddr<NodeBase *> NA,
-                      const DataFlowGraph &G);
-  void removeMember(NodeAddr<NodeBase *> NA, const DataFlowGraph &G);
+  Node getFirstMember(const DataFlowGraph &G) const;
+  Node getLastMember(const DataFlowGraph &G) const;
+  void addMember(Node NA, const DataFlowGraph &G);
+  void addMemberAfter(Node MA, Node NA, const DataFlowGraph &G);
+  void removeMember(Node NA, const DataFlowGraph &G);
 
   NodeList members(const DataFlowGraph &G) const;
   template <typename Predicate>
@@ -598,7 +623,7 @@ struct CodeNode : public NodeBase {
 };
 
 struct InstrNode : public CodeNode {
-  NodeAddr<NodeBase *> getOwner(const DataFlowGraph &G);
+  Node getOwner(const DataFlowGraph &G);
 };
 
 struct PhiNode : public InstrNode {
@@ -616,7 +641,7 @@ struct BlockNode : public CodeNode {
     return CodeNode::getCode<MachineBasicBlock *>();
   }
 
-  void addPhi(NodeAddr<PhiNode *> PA, const DataFlowGraph &G);
+  void addPhi(Phi PA, const DataFlowGraph &G);
 };
 
 struct FuncNode : public CodeNode {
@@ -624,9 +649,8 @@ struct FuncNode : public CodeNode {
     return CodeNode::getCode<MachineFunction *>();
   }
 
-  NodeAddr<BlockNode *> findBlock(const MachineBasicBlock *BB,
-                                  const DataFlowGraph &G) const;
-  NodeAddr<BlockNode *> getEntryBlock(const DataFlowGraph &G);
+  Block findBlock(const MachineBasicBlock *BB, const DataFlowGraph &G) const;
+  Block getEntryBlock(const DataFlowGraph &G);
 };
 
 struct DataFlowGraph {
@@ -649,7 +673,7 @@ struct DataFlowGraph {
     return {ptr<T>(N), N};
   }
 
-  NodeAddr<FuncNode *> getFunc() const { return Func; }
+  Func getFunc() const { return TheFunc; }
   MachineFunction &getMF() const { return MF; }
   const TargetInstrInfo &getTII() const { return TII; }
   const TargetRegisterInfo &getTRI() const { return TRI; }
@@ -664,7 +688,7 @@ struct DataFlowGraph {
     bool empty() const { return Stack.empty() || top() == bottom(); }
 
   private:
-    using value_type = NodeAddr<DefNode *>;
+    using value_type = Def;
     struct Iterator {
       using value_type = DefStack::value_type;
 
@@ -706,7 +730,7 @@ struct DataFlowGraph {
     iterator bottom() const { return Iterator(*this, false); }
     unsigned size() const;
 
-    void push(NodeAddr<DefNode *> DA) { Stack.push_back(DA); }
+    void push(Def DA) { Stack.push_back(DA); }
     void pop();
     void start_block(NodeId N);
     void clear_block(NodeId N);
@@ -731,7 +755,7 @@ struct DataFlowGraph {
   using DefStackMap = std::unordered_map<RegisterId, DefStack>;
 
   void build(unsigned Options = BuildOptions::None);
-  void pushAllDefs(NodeAddr<InstrNode *> IA, DefStackMap &DM);
+  void pushAllDefs(Instr IA, DefStackMap &DM);
   void markBlock(NodeId B, DefStackMap &DefM);
   void releaseBlock(NodeId B, DefStackMap &DefM);
 
@@ -748,57 +772,51 @@ struct DataFlowGraph {
   RegisterRef makeRegRef(unsigned Reg, unsigned Sub) const;
   RegisterRef makeRegRef(const MachineOperand &Op) const;
 
-  NodeAddr<RefNode *> getNextRelated(NodeAddr<InstrNode *> IA,
-                                     NodeAddr<RefNode *> RA) const;
-  NodeAddr<RefNode *> getNextShadow(NodeAddr<InstrNode *> IA,
-                                    NodeAddr<RefNode *> RA, bool Create);
-  NodeAddr<RefNode *> getNextShadow(NodeAddr<InstrNode *> IA,
-                                    NodeAddr<RefNode *> RA) const;
+  Ref getNextRelated(Instr IA, Ref RA) const;
+  Ref getNextShadow(Instr IA, Ref RA, bool Create);
+  Ref getNextShadow(Instr IA, Ref RA) const;
 
-  NodeList getRelatedRefs(NodeAddr<InstrNode *> IA,
-                          NodeAddr<RefNode *> RA) const;
+  NodeList getRelatedRefs(Instr IA, Ref RA) const;
 
-  NodeAddr<BlockNode *> findBlock(MachineBasicBlock *BB) const {
-    return BlockNodes.at(BB);
-  }
+  Block findBlock(MachineBasicBlock *BB) const { return BlockNodes.at(BB); }
 
-  void unlinkUse(NodeAddr<UseNode *> UA, bool RemoveFromOwner) {
+  void unlinkUse(Use UA, bool RemoveFromOwner) {
     unlinkUseDF(UA);
     if (RemoveFromOwner)
       removeFromOwner(UA);
   }
 
-  void unlinkDef(NodeAddr<DefNode *> DA, bool RemoveFromOwner) {
+  void unlinkDef(Def DA, bool RemoveFromOwner) {
     unlinkDefDF(DA);
     if (RemoveFromOwner)
       removeFromOwner(DA);
   }
 
   // Some useful filters.
-  template <uint16_t Kind> static bool IsRef(const NodeAddr<NodeBase *> BA) {
+  template <uint16_t Kind> static bool IsRef(const Node BA) {
     return BA.Addr->getType() == NodeAttrs::Ref && BA.Addr->getKind() == Kind;
   }
 
-  template <uint16_t Kind> static bool IsCode(const NodeAddr<NodeBase *> BA) {
+  template <uint16_t Kind> static bool IsCode(const Node BA) {
     return BA.Addr->getType() == NodeAttrs::Code && BA.Addr->getKind() == Kind;
   }
 
-  static bool IsDef(const NodeAddr<NodeBase *> BA) {
+  static bool IsDef(const Node BA) {
     return BA.Addr->getType() == NodeAttrs::Ref &&
            BA.Addr->getKind() == NodeAttrs::Def;
   }
 
-  static bool IsUse(const NodeAddr<NodeBase *> BA) {
+  static bool IsUse(const Node BA) {
     return BA.Addr->getType() == NodeAttrs::Ref &&
            BA.Addr->getKind() == NodeAttrs::Use;
   }
 
-  static bool IsPhi(const NodeAddr<NodeBase *> BA) {
+  static bool IsPhi(const Node BA) {
     return BA.Addr->getType() == NodeAttrs::Code &&
            BA.Addr->getKind() == NodeAttrs::Phi;
   }
 
-  static bool IsPreservingDef(const NodeAddr<DefNode *> DA) {
+  static bool IsPreservingDef(const Def DA) {
     uint16_t Flags = DA.Addr->getFlags();
     return (Flags & NodeAttrs::Preserving) && !(Flags & NodeAttrs::Undef);
   }
@@ -808,49 +826,40 @@ private:
 
   RegisterAggr getLandingPadLiveIns() const;
 
-  NodeAddr<NodeBase *> newNode(uint16_t Attrs);
-  NodeAddr<NodeBase *> cloneNode(const NodeAddr<NodeBase *> B);
-  NodeAddr<UseNode *> newUse(NodeAddr<InstrNode *> Owner, MachineOperand &Op,
-                             uint16_t Flags = NodeAttrs::None);
-  NodeAddr<PhiUseNode *> newPhiUse(NodeAddr<PhiNode *> Owner, RegisterRef RR,
-                                   NodeAddr<BlockNode *> PredB,
-                                   uint16_t Flags = NodeAttrs::PhiRef);
-  NodeAddr<DefNode *> newDef(NodeAddr<InstrNode *> Owner, MachineOperand &Op,
-                             uint16_t Flags = NodeAttrs::None);
-  NodeAddr<DefNode *> newDef(NodeAddr<InstrNode *> Owner, RegisterRef RR,
-                             uint16_t Flags = NodeAttrs::PhiRef);
-  NodeAddr<PhiNode *> newPhi(NodeAddr<BlockNode *> Owner);
-  NodeAddr<StmtNode *> newStmt(NodeAddr<BlockNode *> Owner, MachineInstr *MI);
-  NodeAddr<BlockNode *> newBlock(NodeAddr<FuncNode *> Owner,
-                                 MachineBasicBlock *BB);
-  NodeAddr<FuncNode *> newFunc(MachineFunction *MF);
+  Node newNode(uint16_t Attrs);
+  Node cloneNode(const Node B);
+  Use newUse(Instr Owner, MachineOperand &Op, uint16_t Flags = NodeAttrs::None);
+  PhiUse newPhiUse(Phi Owner, RegisterRef RR, Block PredB,
+                   uint16_t Flags = NodeAttrs::PhiRef);
+  Def newDef(Instr Owner, MachineOperand &Op, uint16_t Flags = NodeAttrs::None);
+  Def newDef(Instr Owner, RegisterRef RR, uint16_t Flags = NodeAttrs::PhiRef);
+  Phi newPhi(Block Owner);
+  Stmt newStmt(Block Owner, MachineInstr *MI);
+  Block newBlock(Func Owner, MachineBasicBlock *BB);
+  Func newFunc(MachineFunction *MF);
 
   template <typename Predicate>
-  std::pair<NodeAddr<RefNode *>, NodeAddr<RefNode *>>
-  locateNextRef(NodeAddr<InstrNode *> IA, NodeAddr<RefNode *> RA,
-                Predicate P) const;
+  std::pair<Ref, Ref> locateNextRef(Instr IA, Ref RA, Predicate P) const;
 
   using BlockRefsMap = RegisterAggrMap<NodeId>;
 
-  void buildStmt(NodeAddr<BlockNode *> BA, MachineInstr &In);
-  void recordDefsForDF(BlockRefsMap &PhiM, NodeAddr<BlockNode *> BA);
-  void buildPhis(BlockRefsMap &PhiM, RegisterSet &AllRefs,
-                 NodeAddr<BlockNode *> BA);
+  void buildStmt(Block BA, MachineInstr &In);
+  void recordDefsForDF(BlockRefsMap &PhiM, Block BA);
+  void buildPhis(BlockRefsMap &PhiM, RegisterSet &AllRefs, Block BA);
   void removeUnusedPhis();
 
-  void pushClobbers(NodeAddr<InstrNode *> IA, DefStackMap &DM);
-  void pushDefs(NodeAddr<InstrNode *> IA, DefStackMap &DM);
-  template <typename T>
-  void linkRefUp(NodeAddr<InstrNode *> IA, NodeAddr<T> TA, DefStack &DS);
+  void pushClobbers(Instr IA, DefStackMap &DM);
+  void pushDefs(Instr IA, DefStackMap &DM);
+  template <typename T> void linkRefUp(Instr IA, NodeAddr<T> TA, DefStack &DS);
   template <typename Predicate>
-  void linkStmtRefs(DefStackMap &DefM, NodeAddr<StmtNode *> SA, Predicate P);
-  void linkBlockRefs(DefStackMap &DefM, NodeAddr<BlockNode *> BA);
+  void linkStmtRefs(DefStackMap &DefM, Stmt SA, Predicate P);
+  void linkBlockRefs(DefStackMap &DefM, Block BA);
 
-  void unlinkUseDF(NodeAddr<UseNode *> UA);
-  void unlinkDefDF(NodeAddr<DefNode *> DA);
+  void unlinkUseDF(Use UA);
+  void unlinkDefDF(Def DA);
 
-  void removeFromOwner(NodeAddr<RefNode *> RA) {
-    NodeAddr<InstrNode *> IA = RA.Addr->getOwner(*this);
+  void removeFromOwner(Ref RA) {
+    Instr IA = RA.Addr->getOwner(*this);
     IA.Addr->removeMember(RA, *this);
   }
 
@@ -866,24 +875,24 @@ private:
   const TargetOperandInfo &TOI;
 
   RegisterAggr LiveIns;
-  NodeAddr<FuncNode *> Func;
+  Func TheFunc;
   NodeAllocator Memory;
   // Local map:  MachineBasicBlock -> NodeAddr<BlockNode*>
-  std::map<MachineBasicBlock *, NodeAddr<BlockNode *>> BlockNodes;
+  std::map<MachineBasicBlock *, Block> BlockNodes;
   // Lane mask map.
   LaneMaskIndex LMI;
 }; // struct DataFlowGraph
 
 template <typename Predicate>
-NodeAddr<RefNode *> RefNode::getNextRef(RegisterRef RR, Predicate P,
-                                        bool NextOnly, const DataFlowGraph &G) {
+Ref RefNode::getNextRef(RegisterRef RR, Predicate P, bool NextOnly,
+                        const DataFlowGraph &G) {
   // Get the "Next" reference in the circular list that references RR and
   // satisfies predicate "Pred".
   auto NA = G.addr<NodeBase *>(getNext());
 
   while (NA.Addr != this) {
     if (NA.Addr->getType() == NodeAttrs::Ref) {
-      NodeAddr<RefNode *> RA = NA;
+      Ref RA = NA;
       if (G.getPRI().equal_to(RA.Addr->getRegRef(G), RR) && P(NA))
         return NA;
       if (NextOnly)
@@ -892,12 +901,12 @@ NodeAddr<RefNode *> RefNode::getNextRef(RegisterRef RR, Predicate P,
     } else {
       // We've hit the beginning of the chain.
       assert(NA.Addr->getType() == NodeAttrs::Code);
-      NodeAddr<CodeNode *> CA = NA;
+      Code CA = NA;
       NA = CA.Addr->getFirstMember(G);
     }
   }
   // Return the equivalent of "nullptr" if such a node was not found.
-  return NodeAddr<RefNode *>();
+  return Ref();
 }
 
 template <typename Predicate>
@@ -931,18 +940,17 @@ template <typename T> struct PrintNode : Print<NodeAddr<T>> {
 
 raw_ostream &operator<<(raw_ostream &OS, const Print<RegisterRef> &P);
 raw_ostream &operator<<(raw_ostream &OS, const Print<NodeId> &P);
-raw_ostream &operator<<(raw_ostream &OS, const Print<NodeAddr<DefNode *>> &P);
-raw_ostream &operator<<(raw_ostream &OS, const Print<NodeAddr<UseNode *>> &P);
-raw_ostream &operator<<(raw_ostream &OS,
-                        const Print<NodeAddr<PhiUseNode *>> &P);
-raw_ostream &operator<<(raw_ostream &OS, const Print<NodeAddr<RefNode *>> &P);
+raw_ostream &operator<<(raw_ostream &OS, const Print<Def> &P);
+raw_ostream &operator<<(raw_ostream &OS, const Print<Use> &P);
+raw_ostream &operator<<(raw_ostream &OS, const Print<PhiUse> &P);
+raw_ostream &operator<<(raw_ostream &OS, const Print<Ref> &P);
 raw_ostream &operator<<(raw_ostream &OS, const Print<NodeList> &P);
 raw_ostream &operator<<(raw_ostream &OS, const Print<NodeSet> &P);
-raw_ostream &operator<<(raw_ostream &OS, const Print<NodeAddr<PhiNode *>> &P);
-raw_ostream &operator<<(raw_ostream &OS, const Print<NodeAddr<StmtNode *>> &P);
-raw_ostream &operator<<(raw_ostream &OS, const Print<NodeAddr<InstrNode *>> &P);
-raw_ostream &operator<<(raw_ostream &OS, const Print<NodeAddr<BlockNode *>> &P);
-raw_ostream &operator<<(raw_ostream &OS, const Print<NodeAddr<FuncNode *>> &P);
+raw_ostream &operator<<(raw_ostream &OS, const Print<Phi> &P);
+raw_ostream &operator<<(raw_ostream &OS, const Print<Stmt> &P);
+raw_ostream &operator<<(raw_ostream &OS, const Print<Instr> &P);
+raw_ostream &operator<<(raw_ostream &OS, const Print<Block> &P);
+raw_ostream &operator<<(raw_ostream &OS, const Print<Func> &P);
 raw_ostream &operator<<(raw_ostream &OS, const Print<RegisterSet> &P);
 raw_ostream &operator<<(raw_ostream &OS, const Print<RegisterAggr> &P);
 raw_ostream &operator<<(raw_ostream &OS,
