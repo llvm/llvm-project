@@ -16,7 +16,7 @@
 
 #include "sanitizer_common/sanitizer_internal_defs.h"
 
-#if !SANITIZER_LINUX && !SANITIZER_FREEBSD && !SANITIZER_APPLE &&      \
+#if !SANITIZER_LINUX && !SANITIZER_FREEBSD && !SANITIZER_APPLE &&    \
     !SANITIZER_NETBSD && !SANITIZER_WINDOWS && !SANITIZER_FUCHSIA && \
     !SANITIZER_SOLARIS
 #  error "Interception doesn't work on this operating system."
@@ -100,21 +100,21 @@ struct interpose_substitution {
 // For a function foo() create a global pair of pointers { wrap_foo, foo } in
 // the __DATA,__interpose section.
 // As a result all the calls to foo() will be routed to wrap_foo() at runtime.
-#define INTERPOSER(func_name) __attribute__((used)) \
+#define INTERPOSER(func_name) __attribute__((used))     \
 const interpose_substitution substitution_##func_name[] \
     __attribute__((section("__DATA, __interpose"))) = { \
-    { reinterpret_cast<const uptr>(WRAP(func_name)), \
-      reinterpret_cast<const uptr>(func_name) } \
+    { reinterpret_cast<const uptr>(WRAP(func_name)),    \
+      reinterpret_cast<const uptr>(func_name) }         \
 }
 
 // For a function foo() and a wrapper function bar() create a global pair
 // of pointers { bar, foo } in the __DATA,__interpose section.
 // As a result all the calls to foo() will be routed to bar() at runtime.
 #define INTERPOSER_2(func_name, wrapper_name) __attribute__((used)) \
-const interpose_substitution substitution_##func_name[] \
-    __attribute__((section("__DATA, __interpose"))) = { \
-    { reinterpret_cast<const uptr>(wrapper_name), \
-      reinterpret_cast<const uptr>(func_name) } \
+const interpose_substitution substitution_##func_name[]             \
+    __attribute__((section("__DATA, __interpose"))) = {             \
+    { reinterpret_cast<const uptr>(wrapper_name),                   \
+      reinterpret_cast<const uptr>(func_name) }                     \
 }
 
 # define WRAP(x) wrap_##x
@@ -126,9 +126,9 @@ const interpose_substitution substitution_##func_name[] \
 # define WRAP(x) __asan_wrap_##x
 # define TRAMPOLINE(x) WRAP(x)
 # define INTERCEPTOR_ATTRIBUTE __declspec(dllexport)
-# define DECLARE_WRAPPER(ret_type, func, ...) \
+# define DECLARE_WRAPPER(ret_type, func, ...)         \
     extern "C" ret_type func(__VA_ARGS__);
-# define DECLARE_WRAPPER_WINAPI(ret_type, func, ...) \
+# define DECLARE_WRAPPER_WINAPI(ret_type, func, ...)  \
     extern "C" __declspec(dllimport) ret_type __stdcall func(__VA_ARGS__);
 #elif !SANITIZER_FUCHSIA  // LINUX, FREEBSD, NETBSD, SOLARIS
 # define WRAP(x) __interceptor_ ## x
@@ -160,10 +160,10 @@ const interpose_substitution substitution_##func_name[] \
 # define REAL(x) __interception::PTR_TO_REAL(x)
 # define FUNC_TYPE(x) x##_type
 
-# define DECLARE_REAL(ret_type, func, ...) \
+# define DECLARE_REAL(ret_type, func, ...)            \
     typedef ret_type (*FUNC_TYPE(func))(__VA_ARGS__); \
-    namespace __interception { \
-      extern FUNC_TYPE(func) PTR_TO_REAL(func); \
+    namespace __interception {                        \
+    extern FUNC_TYPE(func) PTR_TO_REAL(func);         \
     }
 # define ASSIGN_REAL(dst, src) REAL(dst) = REAL(src)
 #else  // SANITIZER_APPLE
@@ -215,12 +215,10 @@ const interpose_substitution substitution_##func_name[] \
 
 #elif !SANITIZER_APPLE
 
-#define INTERCEPTOR(ret_type, func, ...) \
-  DEFINE_REAL(ret_type, func, __VA_ARGS__) \
-  DECLARE_WRAPPER(ret_type, func, __VA_ARGS__) \
-  extern "C" \
-  INTERCEPTOR_ATTRIBUTE \
-  ret_type WRAP(func)(__VA_ARGS__)
+#define INTERCEPTOR(ret_type, func, ...)        \
+  DEFINE_REAL(ret_type, func, __VA_ARGS__)      \
+  DECLARE_WRAPPER(ret_type, func, __VA_ARGS__)  \
+  extern "C" INTERCEPTOR_ATTRIBUTE ret_type WRAP(func)(__VA_ARGS__)
 
 // We don't need INTERCEPTOR_WITH_SUFFIX on non-Darwin for now.
 #define INTERCEPTOR_WITH_SUFFIX(ret_type, func, ...) \
@@ -228,10 +226,10 @@ const interpose_substitution substitution_##func_name[] \
 
 #else  // SANITIZER_APPLE
 
-#define INTERCEPTOR_ZZZ(suffix, ret_type, func, ...) \
-  extern "C" ret_type func(__VA_ARGS__) suffix; \
-  extern "C" ret_type WRAP(func)(__VA_ARGS__); \
-  INTERPOSER(func); \
+#define INTERCEPTOR_ZZZ(suffix, ret_type, func, ...)  \
+  extern "C" ret_type func(__VA_ARGS__) suffix;       \
+  extern "C" ret_type WRAP(func)(__VA_ARGS__);        \
+  INTERPOSER(func);                                   \
   extern "C" INTERCEPTOR_ATTRIBUTE ret_type WRAP(func)(__VA_ARGS__)
 
 #define INTERCEPTOR(ret_type, func, ...) \
@@ -246,14 +244,12 @@ const interpose_substitution substitution_##func_name[] \
 #endif
 
 #if SANITIZER_WINDOWS
-# define INTERCEPTOR_WINAPI(ret_type, func, ...) \
+# define INTERCEPTOR_WINAPI(ret_type, func, ...)                \
     typedef ret_type (__stdcall *FUNC_TYPE(func))(__VA_ARGS__); \
-    namespace __interception { \
-      FUNC_TYPE(func) PTR_TO_REAL(func); \
-    } \
-    extern "C" \
-    INTERCEPTOR_ATTRIBUTE \
-    ret_type __stdcall WRAP(func)(__VA_ARGS__)
+    namespace __interception {                                  \
+      FUNC_TYPE(func) PTR_TO_REAL(func);                        \
+    }                                                           \
+    extern "C" INTERCEPTOR_ATTRIBUTE ret_type __stdcall WRAP(func)(__VA_ARGS__)
 #endif
 
 // ISO C++ forbids casting between pointer-to-function and pointer-to-object,
