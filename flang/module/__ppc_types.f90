@@ -1,4 +1,4 @@
-!===-- module/__fortran_ppc_types.f90----- ---------------------------------===!
+!===-- module/__ppc_types.f90 ----------------------------------------------===!
 !
 ! Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 ! See https://llvm.org/LICENSE.txt for license information.
@@ -6,7 +6,7 @@
 !
 !===------------------------------------------------------------------------===!
 
-module __Fortran_PPC_types
+module __ppc_types
   private
   ! Definition of derived-types that represent PowerPC vector types.
   type __builtin_ppc_intrinsic_vector(element_category, element_kind)
@@ -30,4 +30,4 @@ module __Fortran_PPC_types
   public :: __builtin_ppc_pair_vector
   public :: __builtin_ppc_quad_vector
 
-end module __Fortran_PPC_types
+end module __ppc_types

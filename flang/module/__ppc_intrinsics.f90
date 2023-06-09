@@ -1,4 +1,4 @@
-!===-- module/__fortran_ppc_intrinsics.f90 ---------------------------------===!
+!===-- module/__ppc_intrinsics.f90 -----------------------------------------===!
 !
 ! Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 ! See https://llvm.org/LICENSE.txt for license information.
@@ -6,7 +6,7 @@
 !
 !===------------------------------------------------------------------------===!
 
-module __Fortran_PPC_intrinsics
+module __ppc_intrinsics
 
   private
 
@@ -281,4 +281,4 @@ module __Fortran_PPC_intrinsics
 #undef VR_VR_VR
 #undef VU_VU_VU
 #undef VI_VI_VI
-end module __Fortran_PPC_intrinsics
+end module __ppc_intrinsics
