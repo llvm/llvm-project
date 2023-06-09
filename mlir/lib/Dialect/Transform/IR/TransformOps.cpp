@@ -70,7 +70,7 @@ Operation *transform::TrackingListener::getCommonDefiningOp(ValueRange values) {
   return defOp;
 }
 
-Operation *
+FailureOr<Operation *>
 transform::TrackingListener::findReplacementOp(Operation *op,
                                                ValueRange newValues) const {
   assert(op->getNumResults() == newValues.size() &&
@@ -81,7 +81,7 @@ transform::TrackingListener::findReplacementOp(Operation *op,
     // If the replacement values belong to different ops, drop the mapping.
     Operation *defOp = getCommonDefiningOp(values);
     if (!defOp)
-      return nullptr;
+      return failure();
 
     // If the defining op has the same type, we take it as a replacement.
     if (op->getName() == defOp->getName())
@@ -108,7 +108,7 @@ transform::TrackingListener::findReplacementOp(Operation *op,
     }
   } while (!values.empty());
 
-  return nullptr;
+  return failure();
 }
 
 LogicalResult transform::TrackingListener::notifyMatchFailure(
@@ -173,12 +173,16 @@ void transform::TrackingListener::notifyOperationReplaced(
     return;
   }
 
-  Operation *replacement = findReplacementOp(op, newValues);
+  FailureOr<Operation *> replacement = findReplacementOp(op, newValues);
   // If the op is tracked but no replacement op was found, send a
   // notification.
-  if (!replacement)
+  if (failed(replacement)) {
     notifyPayloadReplacementNotFound(op, newValues);
-  (void)replacePayloadOp(op, replacement);
+    (void)replacePayloadOp(op, nullptr);
+    return;
+  }
+
+  (void)replacePayloadOp(op, *replacement);
 }
 
 transform::ErrorCheckingTrackingListener::~ErrorCheckingTrackingListener() {

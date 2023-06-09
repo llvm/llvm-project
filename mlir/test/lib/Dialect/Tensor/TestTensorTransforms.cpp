@@ -302,7 +302,10 @@ public:
 
   // Expose `findReplacementOp` as a public function, so that it can be tested.
   Operation *getReplacementOp(Operation *op, ValueRange newValues) const {
-    return findReplacementOp(op, newValues);
+    FailureOr<Operation *> replacementOp = findReplacementOp(op, newValues);
+    if (failed(replacementOp))
+      return nullptr;
+    return *replacementOp;
   }
 };
 } // namespace
