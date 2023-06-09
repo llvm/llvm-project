@@ -330,9 +330,11 @@ private:
           EndList.push_back(Cand);
           Final = Cand;
           return true;
-        } else {
+        } else if (getWFLastUseSize(Opcode)) {
           LastUseList.push_back(Cand);
           return true;
+        } else {
+          report_fatal_error("Unknown opcode, expected waterfall intrinsic");
         }
       }
       LLVM_DEBUG(dbgs() << "malformed waterfall instruction group");

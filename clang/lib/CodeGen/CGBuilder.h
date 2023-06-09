@@ -89,8 +89,6 @@ public:
   llvm::LoadInst *CreateAlignedLoad(llvm::Type *Ty, llvm::Value *Addr,
                                     CharUnits Align,
                                     const llvm::Twine &Name = "") {
-    assert(llvm::cast<llvm::PointerType>(Addr->getType())
-               ->isOpaqueOrPointeeTypeMatches(Ty));
     return CreateAlignedLoad(Ty, Addr, Align.getAsAlign(), Name);
   }
 
@@ -120,15 +118,11 @@ public:
   /// Emit a load from an i1 flag variable.
   llvm::LoadInst *CreateFlagLoad(llvm::Value *Addr,
                                  const llvm::Twine &Name = "") {
-    assert(llvm::cast<llvm::PointerType>(Addr->getType())
-               ->isOpaqueOrPointeeTypeMatches(getInt1Ty()));
     return CreateAlignedLoad(getInt1Ty(), Addr, CharUnits::One(), Name);
   }
 
   /// Emit a store to an i1 flag variable.
   llvm::StoreInst *CreateFlagStore(bool Value, llvm::Value *Addr) {
-    assert(llvm::cast<llvm::PointerType>(Addr->getType())
-               ->isOpaqueOrPointeeTypeMatches(getInt1Ty()));
     return CreateAlignedStore(getInt1(Value), Addr, CharUnits::One());
   }
 
@@ -157,9 +151,6 @@ public:
   using CGBuilderBaseTy::CreateAddrSpaceCast;
   Address CreateAddrSpaceCast(Address Addr, llvm::Type *Ty,
                               const llvm::Twine &Name = "") {
-    assert(cast<llvm::PointerType>(Ty)->isOpaqueOrPointeeTypeMatches(
-               Addr.getElementType()) &&
-           "Should not change the element type");
     return Addr.withPointer(CreateAddrSpaceCast(Addr.getPointer(), Ty, Name),
                             Addr.isKnownNonNull());
   }
