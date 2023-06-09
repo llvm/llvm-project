@@ -829,8 +829,7 @@ define i32 @call_psz_psz_from_ieee_ieee_f32() #11 {
 
 define i32 @call_dynamic_dynamic_from_psz_psz_f32() #10 {
 ; CHECK-LABEL: @call_dynamic_dynamic_from_psz_psz_f32(
-; CHECK-NEXT:    [[RESULT:%.*]] = call i32 @func_dynamic_dynamic()
-; CHECK-NEXT:    ret i32 [[RESULT]]
+; CHECK-NEXT:    ret i32 5
 ;
   %result = call i32 @func_dynamic_dynamic()
   ret i32 %result
@@ -856,8 +855,7 @@ define i32 @call_psz_psz_f32_from_psz_psz() #1 {
 
 define i32 @call_dynamic_dynamic_psz_psz_f32_from_psz_psz() #1 {
 ; CHECK-LABEL: @call_dynamic_dynamic_psz_psz_f32_from_psz_psz(
-; CHECK-NEXT:    [[RESULT:%.*]] = call i32 @func_dynamic_dynamic_psz_psz_f32()
-; CHECK-NEXT:    ret i32 [[RESULT]]
+; CHECK-NEXT:    ret i32 12
 ;
   %result = call i32 @func_dynamic_dynamic_psz_psz_f32()
   ret i32 %result
