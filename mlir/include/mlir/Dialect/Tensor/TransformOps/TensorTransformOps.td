@@ -87,6 +87,17 @@ def ApplyReassociativeReshapeFoldingPatternsOp : Op<Transform_Dialect,
   let assemblyFormat = "attr-dict";
 }
 
+def ApplyRewriteTensorOpsAsConstantPatternsOp : Op<Transform_Dialect,
+    "apply_patterns.tensor.rewrite_as_constant",
+    [DeclareOpInterfaceMethods<PatternDescriptorOpInterface>]> {
+  let description = [{
+    Indicates that tensor ops (such as tensor.generate) should be replaced with
+    constants (arith.constant) when possible.
+  }];
+
+  let assemblyFormat = "attr-dict";
+}
+
 def Transform_TensorPadOp : Transform_ConcreteOpType<"tensor.pad">;
 
 def MakeLoopIndependentOp
