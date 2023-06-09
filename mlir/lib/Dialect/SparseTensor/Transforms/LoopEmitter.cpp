@@ -1439,42 +1439,25 @@ const LoopEmitter::SliceInfo &LoopEmitter::getMostRecentSliceOnLvl(TensorId tid,
   llvm_unreachable("Failed to find sliceInfo");
 }
 
-static Value genSparseReducedAffineCond(OpBuilder &builder, Location loc,
-                                        Value crdBuf, Value crdHi, Value posit,
-                                        Value posHi, Value cont) {
-  Value inBound = CMPI(ult, posit, posHi);
-  TypeRange types{cont.getType()};
-
-  auto ifOp = builder.create<scf::IfOp>(loc, types, inBound, true);
-  // if (inbound)
-  //   yield coord < crdHi
-  builder.setInsertionPointToStart(&ifOp.getThenRegion().front());
-  Value crd = genIndexLoad(builder, loc, crdBuf, posit);
-  YIELD(CMPI(ult, crd, crdHi));
-  // else
-  //   yield false
-  builder.setInsertionPointToStart(&ifOp.getElseRegion().front());
-  YIELD(constantI1(builder, loc, false));
-
-  builder.setInsertionPointAfter(ifOp);
-  return ifOp.getResult(0);
-}
-
 // Generates a while loop to iterate over a slice sparse level as follows.
 //
-// while(coords[loopLo] < offset + size) {
-//   body_builder
+// while(loopLo < loopHi) {
+//   if (coords[loopLo] < offset + size) {
+//     body_builder
+//   } else {
+//    break;
+//   }
 //   loopLo ++;
 // }
 std::pair<Operation *, ValueRange> LoopEmitter::genSliceLvlTraverseLoop(
-    OpBuilder &builder, Location loc, Value posLo, Value posHi, Value offset,
+    OpBuilder &builder, Location loc, Value loopLo, Value loopHi, Value offset,
     Value size, TensorId tid, Level lvl, ValueRange userReduc, bool genYield,
     LoopBodyBuilder bodyBuilder) {
   Value c1 = C_IDX(1);
   Value sliceHi = ADDI(offset, sliceSizes[tid][lvl].back());
 
   SmallVector<Value> reduc = {
-      posLo,                          // loop lower bounds
+      loopLo,                         // loop lower bounds
       constantI1(builder, loc, true), // continue
   };
   // Append user required reduction value.
@@ -1482,24 +1465,23 @@ std::pair<Operation *, ValueRange> LoopEmitter::genSliceLvlTraverseLoop(
   scf::WhileOp whileOp = builder.create<scf::WhileOp>(
       loc, ValueRange(reduc).getTypes(), reduc,
       /*beforeBuilder=*/
-      [this, posHi, sliceHi, tid, lvl](OpBuilder &builder, Location loc,
-                                       ValueRange args) {
-        Value cond = genSparseReducedAffineCond(
-            builder, loc, coordinatesBuffers[tid][lvl], sliceHi, args[0], posHi,
-            args[1]);
+      [loopHi](OpBuilder &builder, Location loc, ValueRange args) {
+        Value lo = args[0];
+        Value cont = args[1];
+        Value inBound = CMPI(ult, lo, loopHi);
+        Value cond = ANDI(cont, inBound);
         // continue if not yet break nor out of bound.
         builder.create<scf::ConditionOp>(loc, cond, args);
       },
       /*afterBuilder=*/
-      [c1, genYield, bodyBuilder](OpBuilder &builder, Location loc,
-                                  ValueRange args) {
+      [this, c1, tid, lvl, sliceHi, genYield,
+       bodyBuilder](OpBuilder &builder, Location loc, ValueRange args) {
         Value iv = args[0];
+        Value coord =
+            genIndexLoad(builder, loc, coordinatesBuffers[tid][lvl], iv);
+        Value cont = CMPI(ult, coord, sliceHi);
         TypeRange types = args.drop_front(2).getTypes();
-        // The coordinate must be in bound as guaranteed by the loop condition.
-        // We generate a fake if operation here only to hide the two extra loop
-        // induction variable maintained by us from user, and relies on later
-        // optimization pass to remove it.
-        Value cont = constantI1(builder, loc, true);
+
         auto ifOp = builder.create<scf::IfOp>(loc, types, cont,
                                               /*withElseBlock=*/!types.empty());
         {
