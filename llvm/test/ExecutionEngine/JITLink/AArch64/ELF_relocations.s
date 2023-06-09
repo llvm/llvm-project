@@ -39,6 +39,18 @@ local_func_jump26:
         b	local_func
         .size   local_func_jump26, .-local_func_jump26
 
+# Check R_AARCH64_ADR_PREL_LO21 relocation of a local symbol
+#
+# jitlink-check: decode_operand(test_adr_prel_lo21, 1) = (adr_data - test_adr_prel_lo21)[20:0]
+        .globl  test_adr_prel_lo21, adr_data
+        .p2align  2
+test_adr_prel_lo21:
+        adr	x0, adr_data
+        .size test_adr_prel_lo21, .-test_adr_prel_lo21
+## ADR encoding is a bit tricky so use an offset with an irregular bit pattern
+## to test this bit better
+adr_data = test_adr_prel_lo21 + 0xe46f2
+
 # Check R_AARCH64_ADR_PREL_PG_HI21 / R_AARCH64_ADD_ABS_LO12_NC relocation of a local symbol
 #
 # For the ADR_PREL_PG_HI21/ADRP instruction we have the 21-bit delta to the 4k page
