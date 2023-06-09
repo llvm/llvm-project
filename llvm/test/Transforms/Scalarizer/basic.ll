@@ -831,6 +831,38 @@ define <2 x i32> @f23_crash(<2 x i32> %srcvec, i32 %v1) {
   ret <2 x i32> %t1
 }
 
+define <2 x i32> @f24(<2 x i32> %src) {
+; CHECK-LABEL: @f24(
+; CHECK-NEXT:    [[FRZ:%.*]] = freeze <2 x i32> [[SRC:%.*]]
+; CHECK-NEXT:    ret <2 x i32> [[FRZ]]
+;
+  %frz = freeze <2 x i32> %src
+  ret <2 x i32> %frz
+}
+
+define <2 x float> @f25(<2 x float> %src) {
+; CHECK-LABEL: @f25(
+; CHECK-NEXT:    [[SRC_I0:%.*]] = extractelement <2 x float> [[SRC:%.*]], i64 0
+; CHECK-NEXT:    [[ADD_I0:%.*]] = fadd float [[SRC_I0]], [[SRC_I0]]
+; CHECK-NEXT:    [[SRC_I1:%.*]] = extractelement <2 x float> [[SRC]], i64 1
+; CHECK-NEXT:    [[ADD_I1:%.*]] = fadd float [[SRC_I1]], [[SRC_I1]]
+; CHECK-NEXT:    [[ADD_UPTO0:%.*]] = insertelement <2 x float> poison, float [[ADD_I0]], i64 0
+; CHECK-NEXT:    [[ADD:%.*]] = insertelement <2 x float> [[ADD_UPTO0]], float [[ADD_I1]], i64 1
+; CHECK-NEXT:    [[FRZ:%.*]] = freeze <2 x float> [[ADD]]
+; CHECK-NEXT:    [[FRZ_I0:%.*]] = extractelement <2 x float> [[FRZ]], i64 0
+; CHECK-NEXT:    [[MUL_I0:%.*]] = fmul float [[FRZ_I0]], [[FRZ_I0]]
+; CHECK-NEXT:    [[FRZ_I1:%.*]] = extractelement <2 x float> [[FRZ]], i64 1
+; CHECK-NEXT:    [[MUL_I1:%.*]] = fmul float [[FRZ_I1]], [[FRZ_I1]]
+; CHECK-NEXT:    [[MUL_UPTO0:%.*]] = insertelement <2 x float> poison, float [[MUL_I0]], i64 0
+; CHECK-NEXT:    [[MUL:%.*]] = insertelement <2 x float> [[MUL_UPTO0]], float [[MUL_I1]], i64 1
+; CHECK-NEXT:    ret <2 x float> [[MUL]]
+;
+  %add = fadd <2 x float> %src, %src
+  %frz = freeze <2 x float> %add
+  %mul = fmul <2 x float> %frz, %frz
+  ret <2 x float> %mul
+}
+
 !0 = !{ !"root" }
 !1 = !{ !"set1", !0 }
 !2 = !{ !"set2", !0 }
