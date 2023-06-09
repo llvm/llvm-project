@@ -1563,7 +1563,7 @@ std::optional<FixItList> UPCPreIncrementGadget::getFixits(const Strategy &S) con
 //   `Init` a pointer to the initializer expression
 //   `Ctx` a reference to the ASTContext
 static FixItList
-populateInitializerFixItWithSpan(const Expr *Init, const ASTContext &Ctx,
+populateInitializerFixItWithSpan(const Expr *Init, ASTContext &Ctx,
                                  const StringRef UserFillPlaceHolder) {
   const SourceManager &SM = Ctx.getSourceManager();
   const LangOptions &LangOpts = Ctx.getLangOpts();
@@ -1572,8 +1572,7 @@ populateInitializerFixItWithSpan(const Expr *Init, const ASTContext &Ctx,
   // NULL pointer, we use the default constructor to initialize the span
   // object, i.e., a `std:span` variable declaration with no initializer.
   // So the fix-it is just to remove the initializer.
-  if (Init->isNullPointerConstant(
-          std::remove_const_t<ASTContext &>(Ctx),
+  if (Init->isNullPointerConstant(Ctx,
           // FIXME: Why does this function not ask for `const ASTContext
           // &`? It should. Maybe worth an NFC patch later.
           Expr::NullPointerConstantValueDependence::
@@ -1654,7 +1653,7 @@ populateInitializerFixItWithSpan(const Expr *Init, const ASTContext &Ctx,
 //   `Ctx` a reference to the ASTContext
 // Returns:
 //    the generated fix-it
-static FixItList fixVarDeclWithSpan(const VarDecl *D, const ASTContext &Ctx,
+static FixItList fixVarDeclWithSpan(const VarDecl *D, ASTContext &Ctx,
                                     const StringRef UserFillPlaceHolder) {
   const QualType &SpanEltT = D->getType()->getPointeeType();
   assert(!SpanEltT.isNull() && "Trying to fix a non-pointer type variable!");
@@ -1940,7 +1939,7 @@ static FixItList fixParamWithSpan(const ParmVarDecl *PVD, const ASTContext &Ctx,
 
 static FixItList fixVariableWithSpan(const VarDecl *VD,
                                      const DeclUseTracker &Tracker,
-                                     const ASTContext &Ctx,
+                                     ASTContext &Ctx,
                                      UnsafeBufferUsageHandler &Handler) {
   const DeclStmt *DS = Tracker.lookupDecl(VD);
   assert(DS && "Fixing non-local variables not implemented yet!");
@@ -1962,7 +1961,7 @@ static FixItList fixVariableWithSpan(const VarDecl *VD,
 static FixItList
 fixVariable(const VarDecl *VD, Strategy::Kind K,
             /* The function decl under analysis */ const Decl *D,
-            const DeclUseTracker &Tracker, const ASTContext &Ctx,
+            const DeclUseTracker &Tracker, ASTContext &Ctx,
             UnsafeBufferUsageHandler &Handler) {
   if (const auto *PVD = dyn_cast<ParmVarDecl>(VD)) {
     auto *FD = dyn_cast<clang::FunctionDecl>(PVD->getDeclContext());
@@ -2035,7 +2034,7 @@ static bool impossibleToFixForVar(const FixableGadgetSets &FixablesForUnsafeVars
 
 static std::map<const VarDecl *, FixItList>
 getFixIts(FixableGadgetSets &FixablesForUnsafeVars, const Strategy &S,
-	  const ASTContext &Ctx,
+	  ASTContext &Ctx,
           /* The function decl under analysis */ const Decl *D,
     const DeclUseTracker &Tracker, UnsafeBufferUsageHandler &Handler,
 	  const DefMapTy &VarGrpMap) {
