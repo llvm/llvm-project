@@ -4,9 +4,7 @@
 define i1 @f(i1 %a) {
 ; CHECK-LABEL: @f(
 ; CHECK-NEXT:    [[B:%.*]] = freeze i1 [[A:%.*]]
-; CHECK-NEXT:    [[C:%.*]] = freeze i1 [[A]]
-; CHECK-NEXT:    [[D:%.*]] = and i1 [[B]], [[C]]
-; CHECK-NEXT:    ret i1 [[D]]
+; CHECK-NEXT:    ret i1 [[B]]
 ;
   %b = freeze i1 %a
   %c = freeze i1 %a
@@ -17,10 +15,9 @@ define i1 @f(i1 %a) {
 define void @f_multipleuses(i1 %a) {
 ; CHECK-LABEL: @f_multipleuses(
 ; CHECK-NEXT:    [[B:%.*]] = freeze i1 [[A:%.*]]
-; CHECK-NEXT:    [[C:%.*]] = freeze i1 [[A]]
 ; CHECK-NEXT:    call void @use1(i1 [[B]])
-; CHECK-NEXT:    call void @use1(i1 [[C]])
-; CHECK-NEXT:    call void @use1(i1 [[C]])
+; CHECK-NEXT:    call void @use1(i1 [[B]])
+; CHECK-NEXT:    call void @use1(i1 [[B]])
 ; CHECK-NEXT:    ret void
 ;
   %b = freeze i1 %a
