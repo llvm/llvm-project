@@ -5637,37 +5637,6 @@ static APInt getDemandedBitsLHSMask(ICmpInst &I, unsigned BitWidth) {
   }
 }
 
-/// Check if the order of \p Op0 and \p Op1 as operands in an ICmpInst
-/// should be swapped.
-/// The decision is based on how many times these two operands are reused
-/// as subtract operands and their positions in those instructions.
-/// The rationale is that several architectures use the same instruction for
-/// both subtract and cmp. Thus, it is better if the order of those operands
-/// match.
-/// TODO: Shouldn't this be part of CGP instead?
-/// \return true if Op0 and Op1 should be swapped.
-static bool swapMayExposeCSEOpportunities(const Value *Op0, const Value *Op1) {
-  // Filter out pointer values as those cannot appear directly in subtract.
-  // FIXME: we may want to go through inttoptrs or bitcasts.
-  if (Op0->getType()->isPointerTy() || isa<Constant>(Op0))
-    return false;
-  // If a subtract already has the same operands as a compare, swapping would be
-  // bad. If a subtract has the same operands as a compare but in reverse order,
-  // then swapping is good.
-  int GoodToSwap = 0;
-  unsigned NumInspected = 0;
-  for (const User *U : Op0->users()) {
-    // Avoid walking many users.
-    if (++NumInspected > 128)
-      return false;
-    if (match(U, m_Sub(m_Specific(Op1), m_Specific(Op0))))
-      GoodToSwap++;
-    else if (match(U, m_Sub(m_Specific(Op0), m_Specific(Op1))))
-      GoodToSwap--;
-  }
-  return GoodToSwap > 0;
-}
-
 /// Check that one use is in the same block as the definition and all
 /// other uses are in blocks dominated by a given block.
 ///
@@ -6517,8 +6486,7 @@ Instruction *InstCombinerImpl::visitICmpInst(ICmpInst &I) {
   /// Orders the operands of the compare so that they are listed from most
   /// complex to least complex.  This puts constants before unary operators,
   /// before binary operators.
-  if (Op0Cplxity < Op1Cplxity ||
-      (Op0Cplxity == Op1Cplxity && swapMayExposeCSEOpportunities(Op0, Op1))) {
+  if (Op0Cplxity < Op1Cplxity) {
     I.swapOperands();
     std::swap(Op0, Op1);
     Changed = true;
