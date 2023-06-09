@@ -446,6 +446,7 @@ cc_test(
         ["MI/*.cpp"],
         allow_empty = False,
     ),
+    features = ["-layering_check"],  # #include "../lib/CodeGen/RegisterCoalescer.h"
     deps = [
         "//llvm:AllTargetsAsmParsers",
         "//llvm:AllTargetsCodeGens",
@@ -458,7 +459,6 @@ cc_test(
         "//third-party/unittest:gtest",
         "//third-party/unittest:gtest_main",
     ],
-    features = ["-layering_check"],  # #include "../lib/CodeGen/RegisterCoalescer.h"
 )
 
 cc_test(
