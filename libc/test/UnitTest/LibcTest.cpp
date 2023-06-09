@@ -25,6 +25,10 @@ namespace testing {
 
 namespace internal {
 
+TestLogger &operator<<(TestLogger &logger, Location Loc) {
+  return logger << Loc.file << ":" << Loc.line << ": FAILURE\n";
+}
+
 // When the value is UInt128, __uint128_t or wider, show its hexadecimal digits.
 template <typename T>
 cpp::enable_if_t<cpp::is_integral_v<T> && cpp::is_unsigned_v<T> &&
@@ -51,8 +55,7 @@ cpp::string_view describeValue(cpp::string_view Value) { return Value; }
 
 template <typename ValType>
 bool test(RunContext *Ctx, TestCond Cond, ValType LHS, ValType RHS,
-          const char *LHSStr, const char *RHSStr, const char *File,
-          unsigned long Line) {
+          const char *LHSStr, const char *RHSStr, Location Loc) {
   auto ExplainDifference = [=, &Ctx](bool Cond,
                                      cpp::string_view OpString) -> bool {
     if (Cond)
@@ -60,8 +63,8 @@ bool test(RunContext *Ctx, TestCond Cond, ValType LHS, ValType RHS,
     Ctx->markFail();
     size_t OffsetLength = OpString.size() > 2 ? OpString.size() - 2 : 0;
     cpp::string Offset(OffsetLength, ' ');
-    tlog << File << ":" << Line << ": FAILURE\n"
-         << Offset << "Expected: " << LHSStr << '\n'
+    tlog << Loc;
+    tlog << Offset << "Expected: " << LHSStr << '\n'
          << Offset << "Which is: " << describeValue(LHS) << '\n'
          << "To be " << OpString << ": " << RHSStr << '\n'
          << Offset << "Which is: " << describeValue(RHS) << '\n';
@@ -167,55 +170,49 @@ int Test::runTests(const char *TestFilter) {
 namespace internal {
 
 template bool test<char>(RunContext *Ctx, TestCond Cond, char LHS, char RHS,
-                         const char *LHSStr, const char *RHSStr,
-                         const char *File, unsigned long Line);
+                         const char *LHSStr, const char *RHSStr, Location Loc);
 
 template bool test<short>(RunContext *Ctx, TestCond Cond, short LHS, short RHS,
-                          const char *LHSStr, const char *RHSStr,
-                          const char *File, unsigned long Line);
+                          const char *LHSStr, const char *RHSStr, Location Loc);
 
 template bool test<int>(RunContext *Ctx, TestCond Cond, int LHS, int RHS,
-                        const char *LHSStr, const char *RHSStr,
-                        const char *File, unsigned long Line);
+                        const char *LHSStr, const char *RHSStr, Location Loc);
 
 template bool test<long>(RunContext *Ctx, TestCond Cond, long LHS, long RHS,
-                         const char *LHSStr, const char *RHSStr,
-                         const char *File, unsigned long Line);
+                         const char *LHSStr, const char *RHSStr, Location Loc);
 
 template bool test<long long>(RunContext *Ctx, TestCond Cond, long long LHS,
                               long long RHS, const char *LHSStr,
-                              const char *RHSStr, const char *File,
-                              unsigned long Line);
+                              const char *RHSStr, Location Loc);
 
 template bool test<unsigned char>(RunContext *Ctx, TestCond Cond,
                                   unsigned char LHS, unsigned char RHS,
                                   const char *LHSStr, const char *RHSStr,
-                                  const char *File, unsigned long Line);
+                                  Location Loc);
 
 template bool test<unsigned short>(RunContext *Ctx, TestCond Cond,
                                    unsigned short LHS, unsigned short RHS,
                                    const char *LHSStr, const char *RHSStr,
-                                   const char *File, unsigned long Line);
+                                   Location Loc);
 
 template bool test<unsigned int>(RunContext *Ctx, TestCond Cond,
                                  unsigned int LHS, unsigned int RHS,
                                  const char *LHSStr, const char *RHSStr,
-                                 const char *File, unsigned long Line);
+                                 Location Loc);
 
 template bool test<unsigned long>(RunContext *Ctx, TestCond Cond,
                                   unsigned long LHS, unsigned long RHS,
                                   const char *LHSStr, const char *RHSStr,
-                                  const char *File, unsigned long Line);
+                                  Location Loc);
 
 template bool test<bool>(RunContext *Ctx, TestCond Cond, bool LHS, bool RHS,
-                         const char *LHSStr, const char *RHSStr,
-                         const char *File, unsigned long Line);
+                         const char *LHSStr, const char *RHSStr, Location Loc);
 
 template bool test<unsigned long long>(RunContext *Ctx, TestCond Cond,
                                        unsigned long long LHS,
                                        unsigned long long RHS,
                                        const char *LHSStr, const char *RHSStr,
-                                       const char *File, unsigned long Line);
+                                       Location Loc);
 
 // We cannot just use a single UInt128 specialization as that resolves to only
 // one type, UInt<128> or __uint128_t. We want both overloads as we want to
@@ -226,67 +223,73 @@ template bool test<unsigned long long>(RunContext *Ctx, TestCond Cond,
 // also.
 template bool test<__uint128_t>(RunContext *Ctx, TestCond Cond, __uint128_t LHS,
                                 __uint128_t RHS, const char *LHSStr,
-                                const char *RHSStr, const char *File,
-                                unsigned long Line);
+                                const char *RHSStr, Location Loc);
 #endif
 
-template bool test<__llvm_libc::cpp::UInt<128>>(
-    RunContext *Ctx, TestCond Cond, __llvm_libc::cpp::UInt<128> LHS,
-    __llvm_libc::cpp::UInt<128> RHS, const char *LHSStr, const char *RHSStr,
-    const char *File, unsigned long Line);
+template bool test<__llvm_libc::cpp::UInt<128>>(RunContext *Ctx, TestCond Cond,
+                                                __llvm_libc::cpp::UInt<128> LHS,
+                                                __llvm_libc::cpp::UInt<128> RHS,
+                                                const char *LHSStr,
+                                                const char *RHSStr,
+                                                Location Loc);
 
-template bool test<__llvm_libc::cpp::UInt<192>>(
-    RunContext *Ctx, TestCond Cond, __llvm_libc::cpp::UInt<192> LHS,
-    __llvm_libc::cpp::UInt<192> RHS, const char *LHSStr, const char *RHSStr,
-    const char *File, unsigned long Line);
+template bool test<__llvm_libc::cpp::UInt<192>>(RunContext *Ctx, TestCond Cond,
+                                                __llvm_libc::cpp::UInt<192> LHS,
+                                                __llvm_libc::cpp::UInt<192> RHS,
+                                                const char *LHSStr,
+                                                const char *RHSStr,
+                                                Location Loc);
 
-template bool test<__llvm_libc::cpp::UInt<256>>(
-    RunContext *Ctx, TestCond Cond, __llvm_libc::cpp::UInt<256> LHS,
-    __llvm_libc::cpp::UInt<256> RHS, const char *LHSStr, const char *RHSStr,
-    const char *File, unsigned long Line);
+template bool test<__llvm_libc::cpp::UInt<256>>(RunContext *Ctx, TestCond Cond,
+                                                __llvm_libc::cpp::UInt<256> LHS,
+                                                __llvm_libc::cpp::UInt<256> RHS,
+                                                const char *LHSStr,
+                                                const char *RHSStr,
+                                                Location Loc);
 
-template bool test<__llvm_libc::cpp::UInt<320>>(
-    RunContext *Ctx, TestCond Cond, __llvm_libc::cpp::UInt<320> LHS,
-    __llvm_libc::cpp::UInt<320> RHS, const char *LHSStr, const char *RHSStr,
-    const char *File, unsigned long Line);
+template bool test<__llvm_libc::cpp::UInt<320>>(RunContext *Ctx, TestCond Cond,
+                                                __llvm_libc::cpp::UInt<320> LHS,
+                                                __llvm_libc::cpp::UInt<320> RHS,
+                                                const char *LHSStr,
+                                                const char *RHSStr,
+                                                Location Loc);
 
 template bool test<__llvm_libc::cpp::string_view>(
     RunContext *Ctx, TestCond Cond, __llvm_libc::cpp::string_view LHS,
     __llvm_libc::cpp::string_view RHS, const char *LHSStr, const char *RHSStr,
-    const char *File, unsigned long Line);
+    Location Loc);
 
-template bool test<__llvm_libc::cpp::string>(
-    RunContext *Ctx, TestCond Cond, __llvm_libc::cpp::string LHS,
-    __llvm_libc::cpp::string RHS, const char *LHSStr, const char *RHSStr,
-    const char *File, unsigned long Line);
+template bool test<__llvm_libc::cpp::string>(RunContext *Ctx, TestCond Cond,
+                                             __llvm_libc::cpp::string LHS,
+                                             __llvm_libc::cpp::string RHS,
+                                             const char *LHSStr,
+                                             const char *RHSStr, Location Loc);
 
 } // namespace internal
 
 bool Test::testStrEq(const char *LHS, const char *RHS, const char *LHSStr,
-                     const char *RHSStr, const char *File, unsigned long Line) {
-  return internal::test(Ctx, TestCond::EQ,
-                        LHS ? cpp::string_view(LHS) : cpp::string_view(),
-                        RHS ? cpp::string_view(RHS) : cpp::string_view(),
-                        LHSStr, RHSStr, File, Line);
+                     const char *RHSStr, internal::Location Loc) {
+  return internal::test(
+      Ctx, TestCond::EQ, LHS ? cpp::string_view(LHS) : cpp::string_view(),
+      RHS ? cpp::string_view(RHS) : cpp::string_view(), LHSStr, RHSStr, Loc);
 }
 
 bool Test::testStrNe(const char *LHS, const char *RHS, const char *LHSStr,
-                     const char *RHSStr, const char *File, unsigned long Line) {
-  return internal::test(Ctx, TestCond::NE,
-                        LHS ? cpp::string_view(LHS) : cpp::string_view(),
-                        RHS ? cpp::string_view(RHS) : cpp::string_view(),
-                        LHSStr, RHSStr, File, Line);
+                     const char *RHSStr, internal::Location Loc) {
+  return internal::test(
+      Ctx, TestCond::NE, LHS ? cpp::string_view(LHS) : cpp::string_view(),
+      RHS ? cpp::string_view(RHS) : cpp::string_view(), LHSStr, RHSStr, Loc);
 }
 
 bool Test::testMatch(bool MatchResult, MatcherBase &Matcher, const char *LHSStr,
-                     const char *RHSStr, const char *File, unsigned long Line) {
+                     const char *RHSStr, internal::Location Loc) {
   if (MatchResult)
     return true;
 
   Ctx->markFail();
   if (!Matcher.is_silent()) {
-    tlog << File << ":" << Line << ": FAILURE\n"
-         << "Failed to match " << LHSStr << " against " << RHSStr << ".\n";
+    tlog << Loc;
+    tlog << "Failed to match " << LHSStr << " against " << RHSStr << ".\n";
     Matcher.explainError();
   }
   return false;
