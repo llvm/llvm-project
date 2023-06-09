@@ -276,8 +276,7 @@ define <2 x half> @test_frem(<2 x half> %a, <2 x half> %b) #0 {
 ; CHECK-DAG:    ld.param.u64    %[[A:rd[0-9]+]], [test_ldst_v2f16_param_0];
 ; CHECK-DAG:    ld.param.u64    %[[B:rd[0-9]+]], [test_ldst_v2f16_param_1];
 ; CHECK-DAG:    ld.b32          [[E:%r[0-9]+]], [%[[A]]]
-; CHECK:        mov.b32         {[[E0:%rs[0-9]+]], [[E1:%rs[0-9]+]]}, [[E]];
-; CHECK-DAG:    st.v2.b16       [%[[B]]], {[[E0]], [[E1]]};
+; CHECK-DAG:    st.b32          [%[[B]]], [[E]];
 ; CHECK:        ret;
 define void @test_ldst_v2f16(ptr %a, ptr %b) {
   %t1 = load <2 x half>, ptr %a
