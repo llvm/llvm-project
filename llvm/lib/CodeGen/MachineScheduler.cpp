@@ -4220,11 +4220,10 @@ unsigned ResourceSegments::getFirstAvailableAt(
 
 void ResourceSegments::add(ResourceSegments::IntervalTy A,
                            const unsigned CutOff) {
-  using IntervalTy = ResourceSegments::IntervalTy;
   assert(A.first < A.second && "Cannot add empty resource usage");
   assert(CutOff > 0 && "0-size interval history has no use.");
   assert(all_of(_Intervals,
-                [&A](const IntervalTy &Interval) -> bool {
+                [&A](const ResourceSegments::IntervalTy &Interval) -> bool {
                   return !intersects(A, Interval);
                 }) &&
          "A resource is being overwritten");
