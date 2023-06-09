@@ -108,7 +108,7 @@ struct Config {
     /// Enable emitting diagnostics using stale preambles.
     bool AllowStalePreamble = false;
 
-    IncludesPolicy UnusedIncludes = IncludesPolicy::None;
+    IncludesPolicy UnusedIncludes = IncludesPolicy::Strict;
     IncludesPolicy MissingIncludes = IncludesPolicy::None;
 
     /// IncludeCleaner will not diagnose usages of these headers matched by
