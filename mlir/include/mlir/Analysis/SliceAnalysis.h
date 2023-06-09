@@ -31,6 +31,10 @@ struct SliceOptions {
 
   /// Include the top level op in the slice.
   bool inclusive = false;
+
+  // TODO: Remove this alias once downstream users are updated.
+  SliceOptions() {}
+  SliceOptions(TransitiveFilter filter) : filter(std::move(filter)) {}
 };
 
 // TODO: Remove this alias once downstream users are updated.
