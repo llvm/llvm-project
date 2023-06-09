@@ -1,5 +1,5 @@
-// RUN: %clang_cc1 -fexperimental-new-constant-interpreter -fconstexpr-depth 2 -verify %s
-// RUN: %clang_cc1 -fconstexpr-depth 2 -verify=ref %s
+// RUN: %clang_cc1 -fexperimental-new-constant-interpreter -fconstexpr-depth=2 -verify %s
+// RUN: %clang_cc1 -fconstexpr-depth=2 -verify=ref %s
 
 
 constexpr int func() {

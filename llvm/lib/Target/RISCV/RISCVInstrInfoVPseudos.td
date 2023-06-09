@@ -2648,15 +2648,15 @@ multiclass VPseudoVAALU_VV_VX {
 multiclass VPseudoVMINMAX_VV_VX {
   foreach m = MxList in {
     defvar mx = m.MX;
-    defvar WriteVICmpV_MX = !cast<SchedWrite>("WriteVICmpV_" # mx);
-    defvar WriteVICmpX_MX = !cast<SchedWrite>("WriteVICmpX_" # mx);
-    defvar ReadVICmpV_MX = !cast<SchedRead>("ReadVICmpV_" # mx);
-    defvar ReadVICmpX_MX = !cast<SchedRead>("ReadVICmpX_" # mx);
+    defvar WriteVIMinMaxV_MX = !cast<SchedWrite>("WriteVIMinMaxV_" # mx);
+    defvar WriteVIMinMaxX_MX = !cast<SchedWrite>("WriteVIMinMaxX_" # mx);
+    defvar ReadVIMinMaxV_MX = !cast<SchedRead>("ReadVIMinMaxV_" # mx);
+    defvar ReadVIMinMaxX_MX = !cast<SchedRead>("ReadVIMinMaxX_" # mx);
 
     defm "" : VPseudoBinaryV_VV<m>,
-              Sched<[WriteVICmpV_MX, ReadVICmpV_MX, ReadVICmpV_MX, ReadVMask]>;
+              Sched<[WriteVIMinMaxV_MX, ReadVIMinMaxV_MX, ReadVIMinMaxV_MX, ReadVMask]>;
     defm "" : VPseudoBinaryV_VX<m>,
-              Sched<[WriteVICmpX_MX, ReadVICmpV_MX, ReadVICmpX_MX, ReadVMask]>;
+              Sched<[WriteVIMinMaxX_MX, ReadVIMinMaxV_MX, ReadVIMinMaxX_MX, ReadVMask]>;
   }
 }
 
@@ -2803,22 +2803,22 @@ multiclass VPseudoVSGNJ_VV_VF {
 multiclass VPseudoVMAX_VV_VF {
   foreach m = MxListF in {
     defvar mx = m.MX;
-    defvar WriteVFCmpV_MX = !cast<SchedWrite>("WriteVFCmpV_" # mx);
-    defvar ReadVFCmpV_MX = !cast<SchedRead>("ReadVFCmpV_" # mx);
+    defvar WriteVFMinMaxV_MX = !cast<SchedWrite>("WriteVFMinMaxV_" # mx);
+    defvar ReadVFMinMaxV_MX = !cast<SchedRead>("ReadVFMinMaxV_" # mx);
 
     defm "" : VPseudoBinaryFV_VV<m>,
-              Sched<[WriteVFCmpV_MX, ReadVFCmpV_MX, ReadVFCmpV_MX, ReadVMask]>;
+              Sched<[WriteVFMinMaxV_MX, ReadVFMinMaxV_MX, ReadVFMinMaxV_MX, ReadVMask]>;
   }
 
   foreach f = FPList in {
     foreach m = f.MxList in {
       defvar mx = m.MX;
-      defvar WriteVFCmpF_MX = !cast<SchedWrite>("WriteVFCmpF_" # mx);
-      defvar ReadVFCmpV_MX = !cast<SchedRead>("ReadVFCmpV_" # mx);
-      defvar ReadVFCmpF_MX = !cast<SchedRead>("ReadVFCmpF_" # mx);
+      defvar WriteVFMinMaxF_MX = !cast<SchedWrite>("WriteVFMinMaxF_" # mx);
+      defvar ReadVFMinMaxV_MX = !cast<SchedRead>("ReadVFMinMaxV_" # mx);
+      defvar ReadVFMinMaxF_MX = !cast<SchedRead>("ReadVFMinMaxF_" # mx);
 
       defm "" : VPseudoBinaryV_VF<m, f>,
-                Sched<[WriteVFCmpF_MX, ReadVFCmpV_MX, ReadVFCmpF_MX, ReadVMask]>;
+                Sched<[WriteVFMinMaxF_MX, ReadVFMinMaxV_MX, ReadVFMinMaxF_MX, ReadVMask]>;
     }
   }
 }

@@ -1109,6 +1109,39 @@ std::optional<bool> BinOpInit::CompareInit(unsigned Opc, Init *LHS,
   return std::nullopt;
 }
 
+static std::optional<unsigned> getDagArgNoByKey(DagInit *Dag, Init *Key,
+                                                std::string &Error) {
+  // Accessor by index
+  if (IntInit *Idx = dyn_cast<IntInit>(Key)) {
+    int64_t Pos = Idx->getValue();
+    if (Pos < 0) {
+      // The index is negative.
+      Error =
+          (Twine("index ") + std::to_string(Pos) + Twine(" is negative")).str();
+      return std::nullopt;
+    }
+    if (Pos >= Dag->getNumArgs()) {
+      // The index is out-of-range.
+      Error = (Twine("index ") + std::to_string(Pos) +
+               " is out of range (dag has " +
+               std::to_string(Dag->getNumArgs()) + " arguments)")
+                  .str();
+      return std::nullopt;
+    }
+    return Pos;
+  }
+  assert(isa<StringInit>(Key));
+  // Accessor by name
+  StringInit *Name = dyn_cast<StringInit>(Key);
+  auto ArgNo = Dag->getArgNo(Name->getValue());
+  if (!ArgNo) {
+    // The key is not found.
+    Error = (Twine("key '") + Name->getValue() + Twine("' is not found")).str();
+    return std::nullopt;
+  }
+  return *ArgNo;
+}
+
 Init *BinOpInit::Fold(Record *CurRec) const {
   switch (getOpcode()) {
   case CONCAT: {
@@ -1279,51 +1312,19 @@ Init *BinOpInit::Fold(Record *CurRec) const {
   }
   case GETDAGARG: {
     DagInit *Dag = dyn_cast<DagInit>(LHS);
-    if (!Dag)
-      break;
+    if (Dag && isa<IntInit, StringInit>(RHS)) {
+      std::string Error;
+      auto ArgNo = getDagArgNoByKey(Dag, RHS, Error);
+      if (!ArgNo)
+        PrintFatalError(CurRec->getLoc(), "!getdagarg " + Error);
 
-    // Helper returning the specified argument.
-    auto getDagArgAsType = [](DagInit *Dag, unsigned Pos,
-                              RecTy *Type) -> Init * {
-      assert(Pos < Dag->getNumArgs());
-      Init *Arg = Dag->getArg(Pos);
+      assert(*ArgNo < Dag->getNumArgs());
+
+      Init *Arg = Dag->getArg(*ArgNo);
       if (auto *TI = dyn_cast<TypedInit>(Arg))
-        if (!TI->getType()->typeIsConvertibleTo(Type))
+        if (!TI->getType()->typeIsConvertibleTo(getType()))
           return UnsetInit::get(Dag->getRecordKeeper());
       return Arg;
-    };
-
-    // Accessor by index
-    if (IntInit *Idx = dyn_cast<IntInit>(RHS)) {
-      int64_t Pos = Idx->getValue();
-      if (Pos < 0) {
-        // The index is negative.
-        PrintFatalError(CurRec->getLoc(), Twine("!getdagarg index ") +
-                                              std::to_string(Pos) +
-                                              Twine(" is negative"));
-      }
-      if (Pos >= Dag->getNumArgs()) {
-        // The index is out-of-range.
-        PrintFatalError(CurRec->getLoc(),
-                        Twine("!getdagarg index ") + std::to_string(Pos) +
-                            " is out of range (dag has " +
-                            std::to_string(Dag->getNumArgs()) + " arguments)");
-      }
-      return getDagArgAsType(Dag, Pos, getType());
-    }
-    // Accessor by name
-    if (StringInit *Key = dyn_cast<StringInit>(RHS)) {
-      for (unsigned i = 0, e = Dag->getNumArgs(); i < e; ++i) {
-        StringInit *ArgName = Dag->getArgName(i);
-        if (!ArgName || ArgName->getValue() != Key->getValue())
-          continue;
-        // Found
-        return getDagArgAsType(Dag, i, getType());
-      }
-      // The key is not found.
-      PrintFatalError(CurRec->getLoc(), Twine("!getdagarg key '") +
-                                            Key->getValue() +
-                                            Twine("' is not found"));
     }
     break;
   }
@@ -1702,6 +1703,42 @@ Init *TernOpInit::Fold(Record *CurRec) const {
     }
     break;
   }
+
+  case SETDAGARG: {
+    DagInit *Dag = dyn_cast<DagInit>(LHS);
+    if (Dag && isa<IntInit, StringInit>(MHS)) {
+      std::string Error;
+      auto ArgNo = getDagArgNoByKey(Dag, MHS, Error);
+      if (!ArgNo)
+        PrintFatalError(CurRec->getLoc(), "!setdagarg " + Error);
+
+      assert(*ArgNo < Dag->getNumArgs());
+
+      SmallVector<Init *, 8> Args(Dag->getArgs());
+      SmallVector<StringInit *, 8> Names(Dag->getArgNames());
+      Args[*ArgNo] = RHS;
+      return DagInit::get(Dag->getOperator(), Dag->getName(), Args, Names);
+    }
+    break;
+  }
+
+  case SETDAGNAME: {
+    DagInit *Dag = dyn_cast<DagInit>(LHS);
+    if (Dag && isa<IntInit, StringInit>(MHS)) {
+      std::string Error;
+      auto ArgNo = getDagArgNoByKey(Dag, MHS, Error);
+      if (!ArgNo)
+        PrintFatalError(CurRec->getLoc(), "!setdagname " + Error);
+
+      assert(*ArgNo < Dag->getNumArgs());
+
+      SmallVector<Init *, 8> Args(Dag->getArgs());
+      SmallVector<StringInit *, 8> Names(Dag->getArgNames());
+      Names[*ArgNo] = dyn_cast<StringInit>(RHS);
+      return DagInit::get(Dag->getOperator(), Dag->getName(), Args, Names);
+    }
+    break;
+  }
   }
 
   return const_cast<TernOpInit *>(this);
@@ -1748,6 +1785,12 @@ std::string TernOpInit::getAsString() const {
   case SUBST: Result = "!subst"; break;
   case SUBSTR: Result = "!substr"; break;
   case FIND: Result = "!find"; break;
+  case SETDAGARG:
+    Result = "!setdagarg";
+    break;
+  case SETDAGNAME:
+    Result = "!setdagname";
+    break;
   }
   return (Result + "(" +
           (UnquotedLHS ? LHS->getAsUnquotedString() : LHS->getAsString()) +
@@ -2460,6 +2503,15 @@ Record *DagInit::getOperatorAsDef(ArrayRef<SMLoc> Loc) const {
     return DefI->getDef();
   PrintFatalError(Loc, "Expected record as operator");
   return nullptr;
+}
+
+std::optional<unsigned> DagInit::getArgNo(StringRef Name) const {
+  for (unsigned i = 0, e = getNumArgs(); i < e; ++i) {
+    StringInit *ArgName = getArgName(i);
+    if (ArgName && ArgName->getValue() == Name)
+      return i;
+  }
+  return std::nullopt;
 }
 
 Init *DagInit::resolveReferences(Resolver &R) const {

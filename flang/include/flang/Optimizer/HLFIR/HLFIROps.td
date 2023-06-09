@@ -430,6 +430,29 @@ def hlfir_SumOp : hlfir_Op<"sum", [AttrSizedOperandSegments,
   let hasVerifier = 1;
 }
 
+def hlifr_DotProductOp : hlfir_Op<"dot_product",
+    [DeclareOpInterfaceMethods<ArithFastMathInterface>]> {
+  let summary = "DOT_PRODUCT transformational intrinsic";
+  let description = [{
+    Dot product of two vectors
+  }];
+
+  let arguments = (ins
+    AnyFortranNumericalOrLogicalArrayObject:$lhs,
+    AnyFortranNumericalOrLogicalArrayObject:$rhs,
+    DefaultValuedAttr<Arith_FastMathAttr,
+                      "::mlir::arith::FastMathFlags::none">:$fastmath
+  );
+
+  let results = (outs AnyFortranValue);
+
+  let assemblyFormat = [{
+    $lhs $rhs attr-dict `:` functional-type(operands, results)
+  }];
+
+  let hasVerifier = 1;
+}
+
 def hlfir_MatmulOp : hlfir_Op<"matmul",
     [DeclareOpInterfaceMethods<ArithFastMathInterface>]> {
   let summary = "MATMUL transformational intrinsic";

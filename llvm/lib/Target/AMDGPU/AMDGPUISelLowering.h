@@ -344,6 +344,8 @@ public:
   /// type of implicit parameter.
   uint32_t getImplicitParameterOffset(const MachineFunction &MF,
                                       const ImplicitParameter Param) const;
+  uint32_t getImplicitParameterOffset(const uint64_t ExplicitKernArgSize,
+                                      const ImplicitParameter Param) const;
 
   MVT getFenceOperandTy(const DataLayout &DL) const override {
     return MVT::i32;

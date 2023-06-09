@@ -12,6 +12,7 @@
 #include "AMDKernelCodeT.h"
 #include "MCTargetDesc/AMDGPUMCTargetDesc.h"
 #include "llvm/BinaryFormat/ELF.h"
+#include "llvm/CodeGen/TargetRegisterInfo.h"
 #include "llvm/IR/Attributes.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/Function.h"
@@ -2367,11 +2368,15 @@ unsigned getRegBitWidth(const MCRegisterClass &RC) {
   return getRegBitWidth(RC.getID());
 }
 
+unsigned getRegBitWidth(const TargetRegisterClass &RC) {
+  return getRegBitWidth(RC.getID());
+}
+
 unsigned getRegOperandSize(const MCRegisterInfo *MRI, const MCInstrDesc &Desc,
                            unsigned OpNo) {
   assert(OpNo < Desc.NumOperands);
   unsigned RCID = Desc.operands()[OpNo].RegClass;
-  return getRegBitWidth(MRI->getRegClass(RCID)) / 8;
+  return getRegBitWidth(RCID) / 8;
 }
 
 bool isInlinableLiteral64(int64_t Literal, bool HasInv2Pi) {

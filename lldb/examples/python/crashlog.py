@@ -1307,7 +1307,7 @@ def SymbolicateCrashLog(crash_log, options):
         for thread in crash_log.threads:
             if thread.did_crash():
                 for ident in thread.idents:
-                    for image in self.crashlog.find_images_with_identifier(ident):
+                    for image in crash_log.find_images_with_identifier(ident):
                         image.resolve = True
 
     futures = []

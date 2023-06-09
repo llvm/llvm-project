@@ -514,6 +514,11 @@ enabled sub-projects. Nearly all of these variable names begin with
   passed to invocations of both so that the project is built using libc++
   instead of stdlibc++. Defaults to OFF.
 
+**LLVM_ENABLE_LLVM_LIBC**: BOOL
+  If the LLVM libc overlay is installed in a location where the host linker
+  can access it, all built executables will be linked against the LLVM libc
+  overlay before linking against the system libc. Defaults to OFF.
+
 **LLVM_ENABLE_LIBPFM**:BOOL
   Enable building with libpfm to support hardware counter measurements in LLVM
   tools.

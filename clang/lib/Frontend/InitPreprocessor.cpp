@@ -683,7 +683,7 @@ static void InitializeCPlusPlusFeatureTestMacros(const LangOptions &LangOpts,
     // Refer to the discussion of this at https://reviews.llvm.org/D128619.
     Builder.defineMacro("__cpp_concepts", "201907L");
     Builder.defineMacro("__cpp_conditional_explicit", "201806L");
-    //Builder.defineMacro("__cpp_consteval", "201811L");
+    // Builder.defineMacro("__cpp_consteval", "202211L");
     Builder.defineMacro("__cpp_constexpr_dynamic_alloc", "201907L");
     Builder.defineMacro("__cpp_constinit", "201907L");
     Builder.defineMacro("__cpp_impl_coroutine", "201902L");

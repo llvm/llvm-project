@@ -1769,6 +1769,8 @@ Init *TGParser::ParseOperation(Record *CurRec, RecTy *ItemType) {
     return ParseOperationForEachFilter(CurRec, ItemType);
   }
 
+  case tgtok::XSetDagArg:
+  case tgtok::XSetDagName:
   case tgtok::XDag:
   case tgtok::XIf:
   case tgtok::XSubst: { // Value ::= !ternop '(' Value ',' Value ',' Value ')'
@@ -1789,6 +1791,16 @@ Init *TGParser::ParseOperation(Record *CurRec, RecTy *ItemType) {
       break;
     case tgtok::XSubst:
       Code = TernOpInit::SUBST;
+      break;
+    case tgtok::XSetDagArg:
+      Code = TernOpInit::SETDAGARG;
+      Type = DagRecTy::get(Records);
+      ItemType = nullptr;
+      break;
+    case tgtok::XSetDagName:
+      Code = TernOpInit::SETDAGNAME;
+      Type = DagRecTy::get(Records);
+      ItemType = nullptr;
       break;
     }
     if (!consume(tgtok::l_paren)) {
@@ -1900,6 +1912,35 @@ Init *TGParser::ParseOperation(Record *CurRec, RecTy *ItemType) {
         return nullptr;
       }
       Type = RHSt->getType();
+      break;
+    }
+    case tgtok::XSetDagArg: {
+      TypedInit *MHSt = dyn_cast<TypedInit>(MHS);
+      if (!MHSt || !isa<IntRecTy, StringRecTy>(MHSt->getType())) {
+        Error(MHSLoc, Twine("expected integer index or string name, got ") +
+                          (MHSt ? ("type '" + MHSt->getType()->getAsString())
+                                : ("'" + MHS->getAsString())) +
+                          "'");
+        return nullptr;
+      }
+      break;
+    }
+    case tgtok::XSetDagName: {
+      TypedInit *MHSt = dyn_cast<TypedInit>(MHS);
+      if (!MHSt || !isa<IntRecTy, StringRecTy>(MHSt->getType())) {
+        Error(MHSLoc, Twine("expected integer index or string name, got ") +
+                          (MHSt ? ("type '" + MHSt->getType()->getAsString())
+                                : ("'" + MHS->getAsString())) +
+                          "'");
+        return nullptr;
+      }
+      TypedInit *RHSt = dyn_cast<TypedInit>(RHS);
+      // The name could be a string or unset.
+      if (RHSt && !isa<StringRecTy>(RHSt->getType())) {
+        Error(RHSLoc, Twine("expected string or unset name, got type '") +
+                          RHSt->getType()->getAsString() + "'");
+        return nullptr;
+      }
       break;
     }
     }
@@ -2787,6 +2828,8 @@ Init *TGParser::ParseSimpleValue(Record *CurRec, RecTy *ItemType,
   case tgtok::XGetDagArg:
   case tgtok::XGetDagName:
   case tgtok::XSetDagOp: // Value ::= !binop '(' Value ',' Value ')'
+  case tgtok::XSetDagArg:
+  case tgtok::XSetDagName:
   case tgtok::XIf:
   case tgtok::XCond:
   case tgtok::XFoldl:

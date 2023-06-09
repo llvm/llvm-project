@@ -1,21 +1,13 @@
 // RUN: %clang_cc1 -fsyntax-only -verify -std=c++20 %s
 // RUN: %clang_cc1 -fsyntax-only -verify -std=c++23 %s
 
-consteval int undefined();  // expected-note 4 {{declared here}}
+consteval int undefined();  // expected-note 2 {{declared here}}
 
 void check_lambdas_unused(
-    int a = []
-    {
-        // The body of a lambda is not a subexpression of the lambda
-        // so this is immediately evaluated even if the parameter
-        // is never used.
-        return undefined();  // expected-error {{not a constant expression}} \
-                             // expected-note  {{undefined function 'undefined'}}
-    }(),
-    int b = [](int no_error = undefined()) {
+    int a = [](int no_error = undefined()) {
         return no_error;
     }(0),
-    int c = [](int defaulted = undefined()) {
+    int b = [](int defaulted = undefined()) {
         return defaulted;
     }()
 ) {}
@@ -40,8 +32,7 @@ int test_check_lambdas_used = check_lambdas_used();
 
 struct UnusedInitWithLambda {
     int a = [] {
-        return undefined();  // expected-error {{not a constant expression}} \
-                             // expected-note  {{undefined function 'undefined'}}
+        return undefined(); // never evaluated because immediate escalating
     }();
     // UnusedInitWithLambda is never constructed, so the initializer
     // of b and undefined() are never evaluated.
@@ -50,22 +41,19 @@ struct UnusedInitWithLambda {
     }();
 };
 
-consteval int ub(int n) {
-    return 0/n; // expected-note  {{division}}
+consteval int ub(int n) { // expected-note {{declared here}}
+    return 0/n;
 }
 
 struct InitWithLambda {
-    int b = [](int error = undefined()) { // expected-error {{not a constant expression}} \
-                              // expected-note  {{declared here}} \
-                              // expected-note  {{undefined function 'undefined'}}
+    int b = [](int error = undefined()) { // expected-error {{cannot take address of consteval function 'undefined' outside of an immediate invocation}}
         return error;
-    }(); // expected-note {{in the default initalizer of 'error'}}
-    int c = [](int error = sizeof(undefined()) + ub(0)) { // expected-error {{'ub' is not a constant expression}} \
-                                                          // expected-note  {{declared here}} \
-                                                          // expected-note {{in call to 'ub(0)}}
+    }();
+    int c = [](int error = sizeof(undefined()) + ub(0)) { // expected-error {{cannot take address of consteval function 'ub' outside of an immediate invocation}}
+
         return error;
-    }(); // expected-note {{in the default initalizer of 'error'}}
-} i; // expected-note {{in implicit default constructor}}
+    }();
+} i;
 
 namespace ShouldNotCrash {
     template<typename T>

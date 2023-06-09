@@ -1886,6 +1886,9 @@ public:
   void replaceRawLinkageName(MDString *LinkageName) {
     replaceOperandWith(3, LinkageName);
   }
+  void replaceRetainedNodes(DINodeArray N) {
+    replaceOperandWith(7, N.get());
+  }
 
   /// Check if this subprogram describes the given function.
   ///

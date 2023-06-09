@@ -92,7 +92,7 @@ const char *SBBroadcaster::GetName() const {
   LLDB_INSTRUMENT_VA(this);
 
   if (m_opaque_ptr)
-    return m_opaque_ptr->GetBroadcasterName().GetCString();
+    return ConstString(m_opaque_ptr->GetBroadcasterName()).GetCString();
   return nullptr;
 }
 

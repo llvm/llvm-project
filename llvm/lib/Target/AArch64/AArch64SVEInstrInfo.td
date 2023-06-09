@@ -260,7 +260,7 @@ def AArch64cls_mt  : PatFrags<(ops node:$pg, node:$op, node:$pt), [(int_aarch64_
 def AArch64cnot_mt : PatFrags<(ops node:$pg, node:$op, node:$pt), [(int_aarch64_sve_cnot node:$pt, node:$pg, node:$op)]>;
 def AArch64not_mt  : PatFrags<(ops node:$pg, node:$op, node:$pt), [(int_aarch64_sve_not  node:$pt, node:$pg, node:$op)]>;
 
-def AArch64fmul_m1 : EitherVSelectOrPassthruPatFrags<int_aarch64_sve_fmul, AArch64fmul_p>;
+def AArch64fmul_m1 : VSelectPredOrPassthruPatFrags<int_aarch64_sve_fmul, AArch64fmul_p>;
 def AArch64fadd_m1 : PatFrags<(ops node:$pg, node:$op1, node:$op2), [
     (int_aarch64_sve_fadd node:$pg, node:$op1, node:$op2),
     (vselect node:$pg, (AArch64fadd_p (SVEAllActive), node:$op1, node:$op2), node:$op1),
@@ -443,10 +443,10 @@ class fma_patfrags<SDPatternOperator intrinsic, SDPatternOperator add_zero, SDPa
 def AArch64fmla_m1 : fma_patfrags<int_aarch64_sve_fmla, AArch64fadd_p_nsz, AArch64fadd_p>;
 def AArch64fmls_m1 : fma_patfrags<int_aarch64_sve_fmls, AArch64fsub_p, AArch64fsub_p_nsz>;
 
-def AArch64smax_m1 : EitherVSelectOrPassthruPatFrags<int_aarch64_sve_smax, AArch64smax_p>;
-def AArch64umax_m1 : EitherVSelectOrPassthruPatFrags<int_aarch64_sve_umax, AArch64umax_p>;
-def AArch64smin_m1 : EitherVSelectOrPassthruPatFrags<int_aarch64_sve_smin, AArch64smin_p>;
-def AArch64umin_m1 : EitherVSelectOrPassthruPatFrags<int_aarch64_sve_umin, AArch64umin_p>;
+def AArch64smax_m1 : VSelectCommPredOrPassthruPatFrags<int_aarch64_sve_smax, AArch64smax_p>;
+def AArch64umax_m1 : VSelectCommPredOrPassthruPatFrags<int_aarch64_sve_umax, AArch64umax_p>;
+def AArch64smin_m1 : VSelectCommPredOrPassthruPatFrags<int_aarch64_sve_smin, AArch64smin_p>;
+def AArch64umin_m1 : VSelectCommPredOrPassthruPatFrags<int_aarch64_sve_umin, AArch64umin_p>;
 
 let Predicates = [HasSVE] in {
   defm RDFFR_PPz  : sve_int_rdffr_pred<0b0, "rdffr", int_aarch64_sve_rdffr_z>;

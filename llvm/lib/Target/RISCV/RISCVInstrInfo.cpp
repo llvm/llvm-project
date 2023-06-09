@@ -745,7 +745,7 @@ void RISCVInstrInfo::movImm(MachineBasicBlock &MBB,
       RISCVMatInt::generateInstSeq(Val, STI.getFeatureBits());
   assert(!Seq.empty());
 
-  for (RISCVMatInt::Inst &Inst : Seq) {
+  for (const RISCVMatInt::Inst &Inst : Seq) {
     switch (Inst.getOpndKind()) {
     case RISCVMatInt::Imm:
       BuildMI(MBB, MBBI, DL, get(Inst.getOpcode()), DstReg)

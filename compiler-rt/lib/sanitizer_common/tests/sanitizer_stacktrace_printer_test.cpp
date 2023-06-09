@@ -137,11 +137,19 @@ TEST(SanitizerStacktracePrinter, RenderFrame) {
   RenderFrame(&str, "%M", frame_no, info.address, &info, false);
   EXPECT_NE(nullptr, internal_strstr(str.data(), "(module+0x"));
   EXPECT_NE(nullptr, internal_strstr(str.data(), "200"));
+#if SANITIZER_APPLE
+  EXPECT_EQ(nullptr, internal_strstr(str.data(), "BuildId: 5566"));
+#else
   EXPECT_NE(nullptr, internal_strstr(str.data(), "BuildId: 5566"));
+#endif
   str.clear();
 
   RenderFrame(&str, "%L", frame_no, info.address, &info, false);
+#if SANITIZER_APPLE
+  EXPECT_STREQ("(/path/to/module+0x200)", str.data());
+#else
   EXPECT_STREQ("(/path/to/module+0x200) (BuildId: 5566)", str.data());
+#endif
   str.clear();
 
   RenderFrame(&str, "%b", frame_no, info.address, &info, false);

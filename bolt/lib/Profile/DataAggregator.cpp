@@ -791,23 +791,23 @@ bool DataAggregator::doTrace(const LBREntry &First, const LBREntry &Second,
   BinaryFunction *FromFunc = getBinaryFunctionContainingAddress(First.To);
   BinaryFunction *ToFunc = getBinaryFunctionContainingAddress(Second.From);
   if (!FromFunc || !ToFunc) {
-    LLVM_DEBUG(
-        dbgs() << "Out of range trace starting in " << FromFunc->getPrintName()
-               << " @ " << Twine::utohexstr(First.To - FromFunc->getAddress())
-               << " and ending in " << ToFunc->getPrintName() << " @ "
-               << ToFunc->getPrintName() << " @ "
-               << Twine::utohexstr(Second.From - ToFunc->getAddress()) << '\n');
+    LLVM_DEBUG({
+      dbgs() << "Out of range trace starting in " << FromFunc->getPrintName()
+             << formatv(" @ {0:x}", First.To - FromFunc->getAddress())
+             << " and ending in " << ToFunc->getPrintName()
+             << formatv(" @ {0:x}\n", Second.From - ToFunc->getAddress());
+    });
     NumLongRangeTraces += Count;
     return false;
   }
   if (FromFunc != ToFunc) {
     NumInvalidTraces += Count;
-    LLVM_DEBUG(
-        dbgs() << "Invalid trace starting in " << FromFunc->getPrintName()
-               << " @ " << Twine::utohexstr(First.To - FromFunc->getAddress())
-               << " and ending in " << ToFunc->getPrintName() << " @ "
-               << ToFunc->getPrintName() << " @ "
-               << Twine::utohexstr(Second.From - ToFunc->getAddress()) << '\n');
+    LLVM_DEBUG({
+      dbgs() << "Invalid trace starting in " << FromFunc->getPrintName()
+             << formatv(" @ {0:x}", First.To - FromFunc->getAddress())
+             << " and ending in " << ToFunc->getPrintName()
+             << formatv(" @ {0:x}\n", Second.From - ToFunc->getAddress());
+    });
     return false;
   }
 

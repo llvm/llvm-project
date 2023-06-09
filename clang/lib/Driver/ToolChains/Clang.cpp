@@ -2547,6 +2547,9 @@ static void CollectArgsForIntegratedAssembler(Compilation &C,
 
   Args.AddLastArg(CmdArgs, options::OPT_femit_dwarf_unwind_EQ);
 
+  Args.addOptInFlag(CmdArgs, options::OPT_femit_compact_unwind_non_canonical,
+                    options::OPT_fno_emit_compact_unwind_non_canonical);
+
   // If you add more args here, also add them to the block below that
   // starts with "// If CollectArgsForIntegratedAssembler() isn't called below".
 
@@ -6030,21 +6033,9 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
   addDebugPrefixMapArg(D, TC, Args, CmdArgs);
 
   Args.AddLastArg(CmdArgs, options::OPT_ftemplate_depth_EQ);
-
-  if (Arg *A = Args.getLastArg(options::OPT_foperator_arrow_depth_EQ)) {
-    CmdArgs.push_back("-foperator-arrow-depth");
-    CmdArgs.push_back(A->getValue());
-  }
-
-  if (Arg *A = Args.getLastArg(options::OPT_fconstexpr_depth_EQ)) {
-    CmdArgs.push_back("-fconstexpr-depth");
-    CmdArgs.push_back(A->getValue());
-  }
-
-  if (Arg *A = Args.getLastArg(options::OPT_fconstexpr_steps_EQ)) {
-    CmdArgs.push_back("-fconstexpr-steps");
-    CmdArgs.push_back(A->getValue());
-  }
+  Args.AddLastArg(CmdArgs, options::OPT_foperator_arrow_depth_EQ);
+  Args.AddLastArg(CmdArgs, options::OPT_fconstexpr_depth_EQ);
+  Args.AddLastArg(CmdArgs, options::OPT_fconstexpr_steps_EQ);
 
   Args.AddLastArg(CmdArgs, options::OPT_fexperimental_library);
 

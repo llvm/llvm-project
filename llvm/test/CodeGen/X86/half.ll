@@ -2037,4 +2037,85 @@ define <8 x half> @maxnum_v8f16(<8 x half> %0, <8 x half> %1) #0 {
   ret <8 x half> %3
 }
 
+define void @pr63114() {
+; CHECK-LIBCALL-LABEL: pr63114:
+; CHECK-LIBCALL:       # %bb.0:
+; CHECK-LIBCALL-NEXT:    movq (%rax), %rax
+; CHECK-LIBCALL-NEXT:    movq %rax, %rcx
+; CHECK-LIBCALL-NEXT:    movq %rax, %rdx
+; CHECK-LIBCALL-NEXT:    movq %rax, %rsi
+; CHECK-LIBCALL-NEXT:    movw %ax, 52
+; CHECK-LIBCALL-NEXT:    movw %ax, 20
+; CHECK-LIBCALL-NEXT:    # kill: def $eax killed $eax killed $rax
+; CHECK-LIBCALL-NEXT:    shrl $16, %eax
+; CHECK-LIBCALL-NEXT:    shrq $16, %rcx
+; CHECK-LIBCALL-NEXT:    shrq $32, %rdx
+; CHECK-LIBCALL-NEXT:    shrq $48, %rsi
+; CHECK-LIBCALL-NEXT:    movw %si, 60
+; CHECK-LIBCALL-NEXT:    movw %dx, 36
+; CHECK-LIBCALL-NEXT:    movw %si, 28
+; CHECK-LIBCALL-NEXT:    movw %cx, 12
+; CHECK-LIBCALL-NEXT:    movw %dx, 4
+; CHECK-LIBCALL-NEXT:    movw %ax, 44
+; CHECK-LIBCALL-NEXT:    movw $15360, 62 # imm = 0x3C00
+; CHECK-LIBCALL-NEXT:    movw $15360, 54 # imm = 0x3C00
+; CHECK-LIBCALL-NEXT:    movw $15360, 46 # imm = 0x3C00
+; CHECK-LIBCALL-NEXT:    movw $15360, 38 # imm = 0x3C00
+; CHECK-LIBCALL-NEXT:    movw $15360, 30 # imm = 0x3C00
+; CHECK-LIBCALL-NEXT:    movw $15360, 22 # imm = 0x3C00
+; CHECK-LIBCALL-NEXT:    movw $15360, 14 # imm = 0x3C00
+; CHECK-LIBCALL-NEXT:    movw $15360, 6 # imm = 0x3C00
+; CHECK-LIBCALL-NEXT:    retq
+;
+; BWON-F16C-LABEL: pr63114:
+; BWON-F16C:       # %bb.0:
+; BWON-F16C-NEXT:    vbroadcastsd (%rax), %ymm0
+; BWON-F16C-NEXT:    vpextrw $7, %xmm0, 60
+; BWON-F16C-NEXT:    vpextrw $4, %xmm0, 52
+; BWON-F16C-NEXT:    vpextrw $1, %xmm0, 44
+; BWON-F16C-NEXT:    vpextrw $6, %xmm0, 36
+; BWON-F16C-NEXT:    vpextrw $3, %xmm0, 28
+; BWON-F16C-NEXT:    vpextrw $0, %xmm0, 20
+; BWON-F16C-NEXT:    vpextrw $5, %xmm0, 12
+; BWON-F16C-NEXT:    vpextrw $2, %xmm0, 4
+; BWON-F16C-NEXT:    movw $15360, 62 # imm = 0x3C00
+; BWON-F16C-NEXT:    movw $15360, 54 # imm = 0x3C00
+; BWON-F16C-NEXT:    movw $15360, 46 # imm = 0x3C00
+; BWON-F16C-NEXT:    movw $15360, 38 # imm = 0x3C00
+; BWON-F16C-NEXT:    movw $15360, 30 # imm = 0x3C00
+; BWON-F16C-NEXT:    movw $15360, 22 # imm = 0x3C00
+; BWON-F16C-NEXT:    movw $15360, 14 # imm = 0x3C00
+; BWON-F16C-NEXT:    movw $15360, 6 # imm = 0x3C00
+; BWON-F16C-NEXT:    vzeroupper
+; BWON-F16C-NEXT:    retq
+;
+; CHECK-I686-LABEL: pr63114:
+; CHECK-I686:       # %bb.0:
+; CHECK-I686-NEXT:    movl (%eax), %eax
+; CHECK-I686-NEXT:    movw %ax, 52
+; CHECK-I686-NEXT:    movw %ax, 36
+; CHECK-I686-NEXT:    movw %ax, 20
+; CHECK-I686-NEXT:    movw %ax, 4
+; CHECK-I686-NEXT:    shrl $16, %eax
+; CHECK-I686-NEXT:    movw %ax, 60
+; CHECK-I686-NEXT:    movw %ax, 44
+; CHECK-I686-NEXT:    movw %ax, 28
+; CHECK-I686-NEXT:    movw %ax, 12
+; CHECK-I686-NEXT:    movw $15360, 62 # imm = 0x3C00
+; CHECK-I686-NEXT:    movw $15360, 54 # imm = 0x3C00
+; CHECK-I686-NEXT:    movw $15360, 46 # imm = 0x3C00
+; CHECK-I686-NEXT:    movw $15360, 38 # imm = 0x3C00
+; CHECK-I686-NEXT:    movw $15360, 30 # imm = 0x3C00
+; CHECK-I686-NEXT:    movw $15360, 22 # imm = 0x3C00
+; CHECK-I686-NEXT:    movw $15360, 14 # imm = 0x3C00
+; CHECK-I686-NEXT:    movw $15360, 6 # imm = 0x3C00
+; CHECK-I686-NEXT:    retl
+  %1 = load <24 x half>, ptr poison, align 2
+  %2 = shufflevector <24 x half> %1, <24 x half> poison, <8 x i32> <i32 2, i32 5, i32 8, i32 11, i32 14, i32 17, i32 20, i32 23>
+  %3 = shufflevector <8 x half> %2, <8 x half> <half 0xH3C00, half 0xH3C00, half 0xH3C00, half 0xH3C00, half 0xH3C00, half 0xH3C00, half 0xH3C00, half 0xH3C00>, <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>
+  %4 = shufflevector <16 x half> poison, <16 x half> %3, <32 x i32> <i32 0, i32 8, i32 16, i32 24, i32 1, i32 9, i32 17, i32 25, i32 2, i32 10, i32 18, i32 26, i32 3, i32 11, i32 19, i32 27, i32 4, i32 12, i32 20, i32 28, i32 5, i32 13, i32 21, i32 29, i32 6, i32 14, i32 22, i32 30, i32 7, i32 15, i32 23, i32 31>
+  store <32 x half> %4, ptr null, align 2
+  ret void
+}
+
 attributes #0 = { nounwind }

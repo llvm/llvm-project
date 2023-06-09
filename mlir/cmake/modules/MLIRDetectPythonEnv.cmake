@@ -2,13 +2,6 @@
 
 # Finds and configures python packages needed to build MLIR Python bindings.
 macro(mlir_configure_python_dev_packages)
-  if(CMAKE_VERSION VERSION_LESS "3.19.0")
-  message(SEND_ERROR
-      "Building MLIR Python bindings is known to rely on CMake features "
-      "that require at least version 3.19. Recommend upgrading to 3.19+ "
-      "for full support. Detected current version: ${CMAKE_VERSION}")
-  endif()
-
   if(MLIR_DETECT_PYTHON_ENV_PRIME_SEARCH)
     # Prime the search for python to see if there is a full development
     # package. This seems to work around cmake bugs searching only for

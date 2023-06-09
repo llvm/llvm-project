@@ -6007,8 +6007,9 @@ bool Sema::CheckCXXDefaultArgExpr(SourceLocation CallLoc, FunctionDecl *FD,
   //   is a function parameter scope of an immediate function.
   EnterExpressionEvaluationContext EvalContext(
       *this,
-      FD->isConsteval() ? ExpressionEvaluationContext::ImmediateFunctionContext
-                        : ExpressionEvaluationContext::PotentiallyEvaluated,
+      FD->isImmediateFunction()
+          ? ExpressionEvaluationContext::ImmediateFunctionContext
+          : ExpressionEvaluationContext::PotentiallyEvaluated,
       Param);
   ExprEvalContexts.back().IsCurrentlyCheckingDefaultArgumentOrInitializer =
       SkipImmediateInvocations;
@@ -6019,13 +6020,21 @@ bool Sema::CheckCXXDefaultArgExpr(SourceLocation CallLoc, FunctionDecl *FD,
 }
 
 struct ImmediateCallVisitor : public RecursiveASTVisitor<ImmediateCallVisitor> {
+  const ASTContext &Context;
+  ImmediateCallVisitor(const ASTContext &Ctx) : Context(Ctx) {}
+
   bool HasImmediateCalls = false;
+  bool IsImmediateInvocation = false;
 
   bool shouldVisitImplicitCode() const { return true; }
 
   bool VisitCallExpr(CallExpr *E) {
-    if (const FunctionDecl *FD = E->getDirectCallee())
-      HasImmediateCalls |= FD->isConsteval();
+    if (const FunctionDecl *FD = E->getDirectCallee()) {
+      HasImmediateCalls |= FD->isImmediateFunction();
+      if (FD->isConsteval() && !E->isCXX11ConstantExpr(Context))
+        IsImmediateInvocation = true;
+    }
+
     return RecursiveASTVisitor<ImmediateCallVisitor>::VisitStmt(E);
   }
 
@@ -6104,7 +6113,7 @@ ExprResult Sema::BuildCXXDefaultArgExpr(SourceLocation CallLoc,
     //   scope is a function parameter scope of an immediate function.
     EnterExpressionEvaluationContext EvalContext(
         *this,
-        FD->isConsteval()
+        FD->isImmediateFunction()
             ? ExpressionEvaluationContext::ImmediateFunctionContext
             : ExpressionEvaluationContext::PotentiallyEvaluated,
         Param);
@@ -6117,7 +6126,7 @@ ExprResult Sema::BuildCXXDefaultArgExpr(SourceLocation CallLoc,
     // An immediate invocation that is not evaluated where it appears is
     // evaluated and checked for whether it is a constant expression at the
     // point where the enclosing initializer is used in a function call.
-    ImmediateCallVisitor V;
+    ImmediateCallVisitor V(getASTContext());
     if (!NestedDefaultChecking)
       V.TraverseDecl(Param);
     if (V.HasImmediateCalls) {
@@ -6198,10 +6207,17 @@ ExprResult Sema::BuildCXXDefaultInitExpr(SourceLocation Loc, FieldDecl *Field) {
   // evaluated and checked for whether it is a constant expression at the
   // point where the enclosing initializer is used in a [...] a constructor
   // definition, or an aggregate initialization.
-  ImmediateCallVisitor V;
+  ImmediateCallVisitor V(getASTContext());
   if (!NestedDefaultChecking)
     V.TraverseDecl(Field);
   if (V.HasImmediateCalls) {
+    // C++23 [expr.const]/p15
+    // An aggregate initialization is an immediate invocation
+    // if it evaluates a default member initializer that has a subexpression
+    // that is an immediate-escalating expression.
+    ExprEvalContexts.back().InImmediateFunctionContext |=
+        V.IsImmediateInvocation;
+
     ExprEvalContexts.back().DelayedDefaultInitializationContext = {Loc, Field,
                                                                    CurContext};
     ExprEvalContexts.back().IsCurrentlyCheckingDefaultArgumentOrInitializer =
@@ -17925,9 +17941,17 @@ Sema::PushExpressionEvaluationContext(
   ExprEvalContexts.back().InDiscardedStatement =
       ExprEvalContexts[ExprEvalContexts.size() - 2]
           .isDiscardedStatementContext();
+
+  // C++23 [expr.const]/p15
+  // An expression or conversion is in an immediate function context if [...]
+  // it is a subexpression of a manifestly constant-evaluated expression or
+  // conversion.
+  const auto &Prev = ExprEvalContexts[ExprEvalContexts.size() - 2];
   ExprEvalContexts.back().InImmediateFunctionContext =
-      ExprEvalContexts[ExprEvalContexts.size() - 2]
-          .isImmediateFunctionContext();
+      Prev.isImmediateFunctionContext() || Prev.isConstantEvaluated();
+
+  ExprEvalContexts.back().InImmediateEscalatingFunctionContext =
+      Prev.InImmediateEscalatingFunctionContext;
 
   Cleanup.reset();
   if (!MaybeODRUseExprs.empty())
@@ -18006,9 +18030,30 @@ void Sema::CheckUnusedVolatileAssignment(Expr *E) {
   }
 }
 
+void Sema::MarkExpressionAsImmediateEscalating(Expr *E) {
+  assert(!FunctionScopes.empty() && "Expected a function scope");
+  assert(getLangOpts().CPlusPlus20 &&
+         ExprEvalContexts.back().InImmediateEscalatingFunctionContext &&
+         "Cannot mark an immediate escalating expression outside of an "
+         "immediate escalating context");
+  if (auto *Call = dyn_cast<CallExpr>(E->IgnoreImplicit());
+      Call && Call->getCallee()) {
+    if (auto *DeclRef =
+            dyn_cast<DeclRefExpr>(Call->getCallee()->IgnoreImplicit()))
+      DeclRef->setIsImmediateEscalating(true);
+  } else if (auto *Ctr = dyn_cast<CXXConstructExpr>(E->IgnoreImplicit())) {
+    Ctr->setIsImmediateEscalating(true);
+  } else if (auto *DeclRef = dyn_cast<DeclRefExpr>(E->IgnoreImplicit())) {
+    DeclRef->setIsImmediateEscalating(true);
+  } else {
+    assert(false && "expected an immediately escalating expression");
+  }
+  getCurFunction()->FoundImmediateEscalatingExpression = true;
+}
+
 ExprResult Sema::CheckForImmediateInvocation(ExprResult E, FunctionDecl *Decl) {
   if (isUnevaluatedContext() || !E.isUsable() || !Decl ||
-      !Decl->isConsteval() || isConstantEvaluated() ||
+      !Decl->isImmediateFunction() || isConstantEvaluated() ||
       isCheckingDefaultArgumentOrInitializer() ||
       RebuildingImmediateInvocation || isImmediateFunctionContext())
     return E;
@@ -18022,6 +18067,32 @@ ExprResult Sema::CheckForImmediateInvocation(ExprResult E, FunctionDecl *Decl) {
             dyn_cast<DeclRefExpr>(Call->getCallee()->IgnoreImplicit()))
       ExprEvalContexts.back().ReferenceToConsteval.erase(DeclRef);
 
+  // C++23 [expr.const]/p16
+  // An expression or conversion is immediate-escalating if it is not initially
+  // in an immediate function context and it is [...] an immediate invocation
+  // that is not a constant expression and is not a subexpression of an
+  // immediate invocation.
+  APValue Cached;
+  auto CheckConstantExpressionAndKeepResult = [&]() {
+    llvm::SmallVector<PartialDiagnosticAt, 8> Notes;
+    Expr::EvalResult Eval;
+    Eval.Diag = &Notes;
+    bool Res = E.get()->EvaluateAsConstantExpr(
+        Eval, getASTContext(), ConstantExprKind::ImmediateInvocation);
+    if (Res && Notes.empty()) {
+      Cached = std::move(Eval.Val);
+      return true;
+    }
+    return false;
+  };
+
+  if (!E.get()->isValueDependent() &&
+      ExprEvalContexts.back().InImmediateEscalatingFunctionContext &&
+      !CheckConstantExpressionAndKeepResult()) {
+    MarkExpressionAsImmediateEscalating(E.get());
+    return E;
+  }
+
   E = MaybeCreateExprWithCleanups(E);
 
   ConstantExpr *Res = ConstantExpr::Create(
@@ -18029,6 +18100,8 @@ ExprResult Sema::CheckForImmediateInvocation(ExprResult E, FunctionDecl *Decl) {
       ConstantExpr::getStorageKind(Decl->getReturnType().getTypePtr(),
                                    getASTContext()),
       /*IsImmediateInvocation*/ true);
+  if (Cached.hasValue())
+    Res->MoveIntoResult(Cached, getASTContext());
   /// Value-dependent constant expressions should not be immediately
   /// evaluated until they are instantiated.
   if (!Res->isValueDependent())
@@ -18056,14 +18129,17 @@ static void EvaluateAndDiagnoseImmediateInvocation(
       FD = Call->getConstructor();
     else
       llvm_unreachable("unhandled decl kind");
-    assert(FD && FD->isConsteval());
-    SemaRef.Diag(CE->getBeginLoc(), diag::err_invalid_consteval_call) << FD;
+    assert(FD && FD->isImmediateFunction());
+    SemaRef.Diag(CE->getBeginLoc(), diag::err_invalid_consteval_call)
+        << FD << FD->isConsteval();
     if (auto Context =
             SemaRef.InnermostDeclarationWithDelayedImmediateInvocations()) {
       SemaRef.Diag(Context->Loc, diag::note_invalid_consteval_initializer)
           << Context->Decl;
       SemaRef.Diag(Context->Decl->getBeginLoc(), diag::note_declared_at);
     }
+    if (!FD->isConsteval())
+      SemaRef.DiagnoseImmediateEscalatingReason(FD);
     for (auto &Note : Notes)
       SemaRef.Diag(Note.first, Note.second);
     return;
@@ -18209,13 +18285,36 @@ HandleImmediateInvocations(Sema &SemaRef,
     if (!CE.getInt())
       EvaluateAndDiagnoseImmediateInvocation(SemaRef, CE);
   for (auto *DR : Rec.ReferenceToConsteval) {
-    NamedDecl *ND = cast<FunctionDecl>(DR->getDecl());
-    if (auto *MD = llvm::dyn_cast<CXXMethodDecl>(ND);
+    const auto *FD = cast<FunctionDecl>(DR->getDecl());
+    const NamedDecl *ND = FD;
+    if (const auto *MD = dyn_cast<CXXMethodDecl>(ND);
         MD && (MD->isLambdaStaticInvoker() || isLambdaCallOperator(MD)))
       ND = MD->getParent();
-    SemaRef.Diag(DR->getBeginLoc(), diag::err_invalid_consteval_take_address)
-        << ND << isa<CXXRecordDecl>(ND);
-    SemaRef.Diag(ND->getLocation(), diag::note_declared_at);
+
+    // C++23 [expr.const]/p16
+    // An expression or conversion is immediate-escalating if it is not
+    // initially in an immediate function context and it is [...] a
+    // potentially-evaluated id-expression that denotes an immediate function
+    // that is not a subexpression of an immediate invocation.
+    bool ImmediateEscalating = false;
+    bool IsPotentiallyEvaluated =
+        Rec.Context ==
+            Sema::ExpressionEvaluationContext::PotentiallyEvaluated ||
+        Rec.Context ==
+            Sema::ExpressionEvaluationContext::PotentiallyEvaluatedIfUsed;
+    if (SemaRef.inTemplateInstantiation() && IsPotentiallyEvaluated)
+      ImmediateEscalating = Rec.InImmediateEscalatingFunctionContext;
+
+    if (!Rec.InImmediateEscalatingFunctionContext ||
+        (SemaRef.inTemplateInstantiation() && !ImmediateEscalating)) {
+      SemaRef.Diag(DR->getBeginLoc(), diag::err_invalid_consteval_take_address)
+          << ND << isa<CXXRecordDecl>(ND) << FD->isConsteval();
+      SemaRef.Diag(ND->getLocation(), diag::note_declared_at);
+      if (FD->isImmediateEscalating() && !FD->isConsteval())
+        SemaRef.DiagnoseImmediateEscalatingReason(FD);
+    } else {
+      SemaRef.MarkExpressionAsImmediateEscalating(DR);
+    }
   }
 }
 
@@ -20299,12 +20398,14 @@ void Sema::MarkDeclRefReferenced(DeclRefExpr *E, const Expr *Base) {
         !Method->getDevirtualizedMethod(Base, getLangOpts().AppleKext))
       OdrUse = false;
 
-  if (auto *FD = dyn_cast<FunctionDecl>(E->getDecl()))
+  if (auto *FD = dyn_cast<FunctionDecl>(E->getDecl())) {
     if (!isUnevaluatedContext() && !isConstantEvaluated() &&
         !isImmediateFunctionContext() &&
-        !isCheckingDefaultArgumentOrInitializer() && FD->isConsteval() &&
-        !RebuildingImmediateInvocation && !FD->isDependentContext())
+        !isCheckingDefaultArgumentOrInitializer() &&
+        FD->isImmediateFunction() && !RebuildingImmediateInvocation &&
+        !FD->isDependentContext())
       ExprEvalContexts.back().ReferenceToConsteval.insert(E);
+  }
   MarkExprReferenced(*this, E->getLocation(), E->getDecl(), E, OdrUse,
                      RefsMinusAssignments);
 }

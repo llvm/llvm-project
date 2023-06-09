@@ -622,6 +622,8 @@ void DeclPrinter::VisitFunctionDecl(FunctionDecl *D) {
     if (D->isConstexprSpecified() && !D->isExplicitlyDefaulted())
       Out << "constexpr ";
     if (D->isConsteval())        Out << "consteval ";
+    else if (D->isImmediateFunction())
+      Out << "immediate ";
     ExplicitSpecifier ExplicitSpec = ExplicitSpecifier::getFromDecl(D);
     if (ExplicitSpec.isSpecified())
       printExplicitSpecifier(ExplicitSpec, Out, Policy, Indentation, Context);
@@ -997,7 +999,10 @@ void DeclPrinter::VisitCXXRecordDecl(CXXRecordDecl *D) {
   prettyPrintAttributes(D);
 
   if (D->getIdentifier()) {
-    Out << ' ' << *D;
+    Out << ' ';
+    if (auto *NNS = D->getQualifier())
+      NNS->print(Out, Policy);
+    Out << *D;
 
     if (auto S = dyn_cast<ClassTemplateSpecializationDecl>(D)) {
       ArrayRef<TemplateArgument> Args = S->getTemplateArgs().asArray();
