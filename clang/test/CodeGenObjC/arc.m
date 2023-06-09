@@ -1414,14 +1414,14 @@ void test71(void) {
 // CHECK: %[[ARRAYDESTROY_ELEMENTPAST:.*]] = phi ptr [ %[[V7]], %{{.*}} ], [ %[[ARRAYDESTROY_ELEMENT:.*]], %{{.*}} ]
 // CHECK: %[[ARRAYDESTROY_ELEMENT]] = getelementptr inbounds ptr, ptr %[[ARRAYDESTROY_ELEMENTPAST]], i64 -1
 // CHECK: %[[V8:.*]] = load ptr, ptr %[[ARRAYDESTROY_ELEMENT]], align 8
-// CHECK: call void @llvm.objc.release(ptr %[[V8]]) #2, !clang.imprecise_release !10
+// CHECK: call void @llvm.objc.release(ptr %[[V8]]) #2, !clang.imprecise_release
 
 // CHECK-NOT: call void @llvm.objc.release
 
 // CHECK: %[[V10:.*]] = load ptr, ptr %[[B_ADDR]], align 8
-// CHECK: call void @llvm.objc.release(ptr %[[V10]]) #2, !clang.imprecise_release !10
+// CHECK: call void @llvm.objc.release(ptr %[[V10]]) #2, !clang.imprecise_release
 // CHECK: %[[V11:.*]] = load ptr, ptr %[[A_ADDR]], align 8
-// CHECK: call void @llvm.objc.release(ptr %[[V11]]) #2, !clang.imprecise_release !10
+// CHECK: call void @llvm.objc.release(ptr %[[V11]]) #2, !clang.imprecise_release
 
 void test72(id a, id b) {
   __strong id t[] = (__strong id[]){a, b};
