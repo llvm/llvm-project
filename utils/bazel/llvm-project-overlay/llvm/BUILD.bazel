@@ -17,7 +17,18 @@ package(
 
 licenses(["notice"])
 
-exports_files(["LICENSE.TXT"])
+exports_files([
+    "LICENSE.TXT",
+    "cmake/modules/llvm-driver-template.cpp.in",
+    "include/llvm/CodeGen/SDNodeProperties.td",
+    "include/llvm/CodeGen/ValueTypes.td",
+    "include/llvm/Frontend/Directive/DirectiveBase.td",
+    "include/llvm/Frontend/OpenACC/ACC.td",
+    "include/llvm/Frontend/OpenMP/OMP.td",
+    "include/llvm/IR/Intrinsics.td",
+    "include/llvm/Option/OptParser.td",
+    "utils/lit/lit.py",
+])
 
 # It may be tempting to add compiler flags here, but that should be avoided.
 # The necessary warnings and other compile flags should be provided by the
