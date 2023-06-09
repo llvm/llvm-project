@@ -125,8 +125,8 @@ multiclass VOP1Inst <string opName, VOPProfile P,
     if !eq(VOPDOp, -1) then
       def _e32 : VOP1_Pseudo <opName, P>;
     else
-      // Only for V_MOV_B32
-      def _e32 : VOP1_Pseudo <opName, P>, VOPD_Component<VOPDOp, "v_mov_b32">;
+      // Only for V_MOV_B32/V_MOV_B64
+      def _e32 : VOP1_Pseudo <opName, P>, VOPD_Component<VOPDOp, opName>;
     def _e64 : VOP3InstBase <opName, P, node>;
   }
 
@@ -232,7 +232,7 @@ let isReMaterializable = 1, isAsCheapAsAMove = 1 in {
 defm V_MOV_B32 : VOP1Inst <"v_mov_b32", VOPProfile_MOV, null_frag, 0x8>;
 
 let SubtargetPredicate = isGFX940orGFX12_10 in
-defm V_MOV_B64 : VOP1Inst <"v_mov_b64", VOPProfile_MOV_B64>;
+defm V_MOV_B64 : VOP1Inst <"v_mov_b64", VOPProfile_MOV_B64, null_frag, 0x1d>;
 } // End isMoveImm = 1
 
 // FIXME: Specify SchedRW for READFIRSTLANE_B32

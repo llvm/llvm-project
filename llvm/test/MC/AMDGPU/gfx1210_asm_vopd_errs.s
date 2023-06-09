@@ -174,3 +174,36 @@ v_dual_add_f32 v7, v4, v2 :: v_dual_add_f32 v7, v5, v3
 // GFX12: :[[@LINE-1]]:{{[0-9]+}}: error: dst registers must be distinct
 // GFX12-NEXT:{{^}}v_dual_add_f32 v7, v4, v2 :: v_dual_add_f32 v7, v5, v3
 // GFX12-NEXT:{{^}}                                            ^
+
+//===----------------------------------------------------------------------===//
+// A 64-bit operand shall not have bank conflicts with both subregs.
+// There is also NO exception that a 64 bit operand can start whith the same
+// register as 32 bit.
+//===----------------------------------------------------------------------===//
+v_dual_mov_b64 v[2:3], v[4:5] :: v_dual_ashrrev_i32 v5, v8, v6
+// GFX12: :[[@LINE-1]]:{{[0-9]+}}: error: src0 operands must use different VGPR banks
+// GFX12-NEXT:{{^}}v_dual_mov_b64 v[2:3], v[4:5] :: v_dual_ashrrev_i32 v5, v8, v6
+// GFX12-NEXT:{{^}}                                                        ^
+
+v_dual_mov_b64 v[2:3], v[4:5] :: v_dual_ashrrev_i32 v5, v9, v6
+// GFX12: :[[@LINE-1]]:{{[0-9]+}}: error: src0 operands must use different VGPR banks
+// GFX12-NEXT:{{^}}v_dual_mov_b64 v[2:3], v[4:5] :: v_dual_ashrrev_i32 v5, v9, v6
+// GFX12-NEXT:{{^}}                                                        ^
+
+v_dual_mov_b64 v[2:3], v[4:5] :: v_dual_ashrrev_i32 v5, v4, v6
+// GFX12: :[[@LINE-1]]:{{[0-9]+}}: error: src0 operands must use different VGPR banks
+// GFX12-NEXT:{{^}}v_dual_mov_b64 v[2:3], v[4:5] :: v_dual_ashrrev_i32 v5, v4, v6
+// GFX12-NEXT:{{^}}                                                        ^
+
+v_dual_mov_b64 v[2:3], 1 :: v_dual_ashrrev_i32 v3, v7, v6
+// GFX12: :[[@LINE-1]]:{{[0-9]+}}: error: dst registers must be distinct
+// GFX12-NEXT:{{^}}v_dual_mov_b64 v[2:3], 1 :: v_dual_ashrrev_i32 v3, v7, v6
+// GFX12-NEXT:{{^}}                                               ^
+
+//===----------------------------------------------------------------------===//
+// Literals not supported by VOPD3
+//===----------------------------------------------------------------------===//
+v_dual_mov_b64 v[2:3], 100 :: v_dual_ashrrev_i32 v4, v7, v6
+// GFX12: :[[@LINE-1]]:{{[0-9]+}}: error: invalid operand for instruction
+// GFX12-NEXT:{{^}}v_dual_mov_b64 v[2:3], 100 :: v_dual_ashrrev_i32 v4, v7, v6
+// GFX12-NEXT:{{^}}                       ^

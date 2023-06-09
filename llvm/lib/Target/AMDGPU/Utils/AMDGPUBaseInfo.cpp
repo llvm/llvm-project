@@ -663,6 +663,28 @@ std::optional<unsigned> InstInfo::getInvalidCompOperandIndex(
   auto OpXRegs = getRegIndices(ComponentIndex::X, GetRegIdx);
   auto OpYRegs = getRegIndices(ComponentIndex::Y, GetRegIdx);
 
+  const auto banksOverlap = [&MRI](MCRegister X, MCRegister Y,
+                                   unsigned BanksMask) -> bool {
+    MCRegister BaseX = MRI.getSubReg(X, AMDGPU::sub0);
+    MCRegister BaseY = MRI.getSubReg(Y, AMDGPU::sub0);
+    if (!BaseX)
+      BaseX = X;
+    if (!BaseY)
+      BaseY = Y;
+    if ((BaseX & BanksMask) == (BaseY & BanksMask))
+      return true;
+    if (BaseX != X /* This is 64-bit register */ &&
+        ((BaseX + 1) & BanksMask) == (BaseY & BanksMask))
+      return true;
+    if (BaseY != Y &&
+        (BaseX & BanksMask) == ((BaseY + 1) & BanksMask))
+      return true;
+
+    // If both are 64-bit bank conflict will be detected yet while checking
+    // the first subreg.
+    return false;
+  };
+
   unsigned CompOprIdx;
   for (CompOprIdx = 0; CompOprIdx < Component::MAX_OPR_NUM; ++CompOprIdx) {
     unsigned BanksMasks = VOPD3 ? VOPD3_VGPR_BANK_MASKS[CompOprIdx]
@@ -686,8 +708,7 @@ std::optional<unsigned> InstInfo::getInvalidCompOperandIndex(
         continue;
     }
 
-    if (((OpXRegs[CompOprIdx] & BanksMasks) ==
-         (OpYRegs[CompOprIdx] & BanksMasks)) &&
+    if (banksOverlap(OpXRegs[CompOprIdx], OpYRegs[CompOprIdx], BanksMasks) &&
         (!AllowSameVGPR || CompOprIdx < Component::DST_NUM ||
          OpXRegs[CompOprIdx] != OpYRegs[CompOprIdx]))
       return CompOprIdx;
