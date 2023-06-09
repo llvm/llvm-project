@@ -67,6 +67,10 @@ void populateFoldTensorEmptyPatterns(RewritePatternSet &patterns,
 /// respectively.
 void populateFoldIntoPackAndUnpackPatterns(RewritePatternSet &patterns);
 
+/// Populates `patterns` with patterns that replace tensor ops (such as
+/// tensor.generate) with constants when possible.
+void populateRewriteAsConstantPatterns(RewritePatternSet &patterns);
+
 //===----------------------------------------------------------------------===//
 // Transform helpers
 //===----------------------------------------------------------------------===//
