@@ -1551,8 +1551,10 @@ void Instruction::addAnnotationMetadata(SmallVector<StringRef> Annotations) {
   if (Existing) {
     auto *Tuple = cast<MDTuple>(Existing);
     for (auto &N : Tuple->operands()) {
-      if (isa<MDString>(N.get()))
+      if (isa<MDString>(N.get())) {
+        Names.push_back(N);
         continue;
+      }
       auto *MDAnnotationTuple = cast<MDTuple>(N);
       if (any_of(MDAnnotationTuple->operands(), [&AnnotationsSet](auto &Op) {
             return AnnotationsSet.contains(cast<MDString>(Op)->getString());
