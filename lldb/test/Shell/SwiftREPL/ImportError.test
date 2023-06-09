@@ -5,3 +5,4 @@
 
 import ModuleThatDoesNotExist
 // CHECK: error: no such module 'ModuleThatDoesNotExist'
+// CHECK-NOT: fixed expression suggested
