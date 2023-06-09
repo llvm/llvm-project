@@ -12856,22 +12856,6 @@ TEST_F(FormatTest, FormatsAfterAccessModifiers) {
                "  void f() {}\n"
                "};\n",
                Style);
-  verifyFormat("struct foo {\n"
-               "#ifdef FOO\n"
-               "#else\n"
-               "private:\n"
-               "\n"
-               "#endif\n"
-               "};",
-               "struct foo {\n"
-               "#ifdef FOO\n"
-               "#else\n"
-               "private:\n"
-               "\n"
-               "\n"
-               "#endif\n"
-               "};",
-               Style);
 
   Style.EmptyLineAfterAccessModifier = FormatStyle::ELAAMS_Always;
   verifyFormat("struct foo {\n"
@@ -25744,15 +25728,6 @@ TEST_F(FormatTest, InsertNewlineAtEOF) {
   verifyFormat("int i;\n", "int i;", Style);
 }
 
-TEST_F(FormatTest, KeepEmptyLinesAtEOF) {
-  FormatStyle Style = getLLVMStyle();
-  Style.KeepEmptyLinesAtEOF = true;
-
-  const StringRef Code{"int i;\n\n"};
-  verifyFormat(Code, Code, Style);
-  verifyFormat(Code, "int i;\n\n\n", Style);
-}
-
 TEST_F(FormatTest, SpaceAfterUDL) {
   verifyFormat("auto c = (4s).count();");
   verifyFormat("auto x = 5s .count() == 5;");
@@ -25763,6 +25738,18 @@ TEST_F(FormatTest, InterfaceAsClassMemberName) {
                "  int interface;\n"
                "  Foo::Foo(int iface) : interface{iface} {}\n"
                "}");
+}
+
+TEST_F(FormatTest, PreprocessorOverlappingRegions) {
+  verifyFormat("#ifdef\n\n"
+               "#else\n"
+               "#endif\n",
+               "#ifdef \n"
+               "    \n"
+               "\n"
+               "#else \n"
+               "#endif \n",
+               getGoogleStyle());
 }
 
 } // namespace
