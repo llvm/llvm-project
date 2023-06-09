@@ -11,7 +11,7 @@
 using namespace mlir;
 using namespace mlir::irdl;
 
-std::unique_ptr<Constraint> Is::getVerifier(
+std::unique_ptr<Constraint> IsOp::getVerifier(
     ArrayRef<Value> valueToConstr,
     DenseMap<TypeOp, std::unique_ptr<DynamicTypeDefinition>> const &types,
     DenseMap<AttributeOp, std::unique_ptr<DynamicAttrDefinition>> const
@@ -19,7 +19,7 @@ std::unique_ptr<Constraint> Is::getVerifier(
   return std::make_unique<IsConstraint>(getExpectedAttr());
 }
 
-std::unique_ptr<Constraint> Parametric::getVerifier(
+std::unique_ptr<Constraint> ParametricOp::getVerifier(
     ArrayRef<Value> valueToConstr,
     DenseMap<TypeOp, std::unique_ptr<DynamicTypeDefinition>> const &types,
     DenseMap<AttributeOp, std::unique_ptr<DynamicAttrDefinition>> const
@@ -55,7 +55,7 @@ std::unique_ptr<Constraint> Parametric::getVerifier(
                    "either a type or an attribute definition");
 }
 
-std::unique_ptr<Constraint> AnyOf::getVerifier(
+std::unique_ptr<Constraint> AnyOfOp::getVerifier(
     ArrayRef<Value> valueToConstr,
     DenseMap<TypeOp, std::unique_ptr<DynamicTypeDefinition>> const &types,
     DenseMap<AttributeOp, std::unique_ptr<DynamicAttrDefinition>> const
@@ -73,7 +73,7 @@ std::unique_ptr<Constraint> AnyOf::getVerifier(
   return std::make_unique<AnyOfConstraint>(constraints);
 }
 
-std::unique_ptr<Constraint> AllOf::getVerifier(
+std::unique_ptr<Constraint> AllOfOp::getVerifier(
     ArrayRef<Value> valueToConstr,
     DenseMap<TypeOp, std::unique_ptr<DynamicTypeDefinition>> const &types,
     DenseMap<AttributeOp, std::unique_ptr<DynamicAttrDefinition>> const
@@ -91,7 +91,7 @@ std::unique_ptr<Constraint> AllOf::getVerifier(
   return std::make_unique<AllOfConstraint>(constraints);
 }
 
-std::unique_ptr<Constraint> Any::getVerifier(
+std::unique_ptr<Constraint> AnyOp::getVerifier(
     ArrayRef<Value> valueToConstr,
     DenseMap<TypeOp, std::unique_ptr<DynamicTypeDefinition>> const &types,
     DenseMap<AttributeOp, std::unique_ptr<DynamicAttrDefinition>> const

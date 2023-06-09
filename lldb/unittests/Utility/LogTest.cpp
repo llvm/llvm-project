@@ -309,7 +309,7 @@ TEST_F(LogChannelEnabledTest, log_options) {
                               Err));
     llvm::StringRef Msg = logAndTakeOutputf("Hello World");
     char File[12];
-    char Function[17];
+    char Function[18];
 
     sscanf(Msg.str().c_str(),
            "%[^:]:%s                                 Hello World", File,

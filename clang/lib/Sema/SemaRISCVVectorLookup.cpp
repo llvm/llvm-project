@@ -321,7 +321,7 @@ void RISCVIntrinsicManagerImpl::InitIntrinsicList() {
   if (S.DeclareRISCVVBuiltins)
     ConstructRVVIntrinsics(RVVIntrinsicRecords,
                            IntrinsicKind::RVV);
-  if (S.DeclareRISCVVectorBuiltins)
+  if (S.DeclareRISCVSiFiveVectorBuiltins)
     ConstructRVVIntrinsics(RVSiFiveVectorIntrinsicRecords,
                            IntrinsicKind::SIFIVE_VECTOR);
 }

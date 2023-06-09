@@ -41,6 +41,15 @@ public:
     }
   }
 
+#if defined(__clang__)
+  // Recent upstream changes to -fsanitize=function find more instances of
+  // function type mismatches. One case is with the comparator passed to this
+  // class. Libraries like boringssl will tend to pass comparators that take
+  // pointers to varying types while this comparator expects to accept const
+  // void pointers. Ideally those tools would pass a function that strictly
+  // accepts const void*s to avoid UB, or we'd have something like qsort_r/s.
+  [[clang::no_sanitize("function")]]
+#endif
   int elem_compare(size_t i, const uint8_t *other) const {
     // An element must compare equal to itself so we don't need to consult the
     // user provided comparator.

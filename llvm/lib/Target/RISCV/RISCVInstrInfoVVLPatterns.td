@@ -1400,6 +1400,10 @@ multiclass VPatBinaryFPWVL_VV_VF_WV_WF<SDNode vop, SDNode vop_w, string instruct
       defm : VPatTiedBinaryNoMaskVL_V<vop_w, instruction_name, "WV",
                                       wti.Vector, vti.Vector, vti.Log2SEW,
                                       vti.LMul, wti.RegClass, vti.RegClass>;
+      def : VPatBinaryVL_V<vop_w, instruction_name, "WV",
+                           wti.Vector, wti.Vector, vti.Vector, vti.Mask,
+                           vti.Log2SEW, vti.LMul, wti.RegClass, wti.RegClass,
+                           vti.RegClass>;
       def : VPatBinaryVL_VF<vop_w, instruction_name#"_W"#vti.ScalarSuffix,
                             wti.Vector, wti.Vector, vti.Vector, vti.Mask,
                             vti.Log2SEW, vti.LMul, wti.RegClass, wti.RegClass,
@@ -2476,9 +2480,11 @@ def riscv_fslide1down_vl  : SDNode<"RISCVISD::VFSLIDE1DOWN_VL", SDTRVVFSlide1, [
 
 foreach vti = AllIntegerVectors in {
   let Predicates = GetVTypePredicates<vti>.Predicates in {
-    def : Pat<(vti.Vector (riscv_vid_vl (vti.Mask true_mask),
+    def : Pat<(vti.Vector (riscv_vid_vl (vti.Mask V0),
                                         VLOpFrag)),
-              (!cast<Instruction>("PseudoVID_V_"#vti.LMul.MX) GPR:$vl, vti.Log2SEW)>;
+              (!cast<Instruction>("PseudoVID_V_"#vti.LMul.MX#"_MASK")
+                  (vti.Vector (IMPLICIT_DEF)), (vti.Mask V0), GPR:$vl, vti.Log2SEW,
+                  TAIL_AGNOSTIC)>;
 
     def : Pat<(vti.Vector (riscv_slide1up_vl (vti.Vector undef),
                                              (vti.Vector vti.RegClass:$rs1),

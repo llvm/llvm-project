@@ -922,6 +922,12 @@ EmitDwarfUnwindType MCContext::emitDwarfUnwindInfo() const {
   return TargetOptions->EmitDwarfUnwind;
 }
 
+bool MCContext::emitCompactUnwindNonCanonical() const {
+  if (TargetOptions)
+    return TargetOptions->EmitCompactUnwindNonCanonical;
+  return false;
+}
+
 void MCContext::setGenDwarfRootFile(StringRef InputFileName, StringRef Buffer) {
   // MCDwarf needs the root file as well as the compilation directory.
   // If we find a '.file 0' directive that will supersede these values.

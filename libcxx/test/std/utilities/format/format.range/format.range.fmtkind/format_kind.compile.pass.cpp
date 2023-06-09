@@ -35,7 +35,7 @@
 
 #include "test_macros.h"
 
-#ifndef TEST_HAS_NO_FILESYSTEM_LIBRARY
+#ifndef TEST_HAS_NO_FILESYSTEM
 #  include <filesystem>
 #endif
 
@@ -67,7 +67,7 @@ struct recursive_range {
 static_assert(std::ranges::input_range<recursive_range>, "format_kind requires an input range");
 static_assert(std::format_kind<recursive_range> == std::range_format::disabled);
 
-#ifndef TEST_HAS_NO_FILESYSTEM_LIBRARY
+#ifndef TEST_HAS_NO_FILESYSTEM
 static_assert(std::format_kind<std::filesystem::path> == std::range_format::disabled);
 #endif
 

@@ -40,7 +40,7 @@
 #  include <istream>
 #endif
 
-#ifndef TEST_HAS_NO_FILESYSTEM_LIBRARY
+#ifndef TEST_HAS_NO_FILESYSTEM
 #  include <filesystem>
 #endif
 
@@ -156,7 +156,7 @@ static_assert(testConst<std::cregex_iterator, std::forward_iterator_tag, std::cm
 static_assert(testConst<std::cregex_token_iterator, std::forward_iterator_tag, std::csub_match>());
 #endif // !TEST_HAS_NO_LOCALIZATION
 
-#ifndef TEST_HAS_NO_FILESYSTEM_LIBRARY
+#ifndef TEST_HAS_NO_FILESYSTEM
 static_assert(test<std::filesystem::directory_iterator, std::input_iterator_tag, std::filesystem::directory_entry,
                    std::ptrdiff_t, const std::filesystem::directory_entry&, const std::filesystem::directory_entry*>());
 static_assert(test<std::filesystem::recursive_directory_iterator, std::input_iterator_tag,

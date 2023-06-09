@@ -265,33 +265,33 @@ Fuchsia::Fuchsia(const Driver &D, const llvm::Triple &Triple,
   Multilibs.push_back(Multilib());
   // Use the noexcept variant with -fno-exceptions to avoid the extra overhead.
   Multilibs.push_back(MultilibBuilder("noexcept", {}, {})
-                          .flag(false, "-fexceptions")
-                          .flag(true, "-fno-exceptions")
+                          .flag("-fexceptions", /*Disallow=*/true)
+                          .flag("-fno-exceptions")
                           .makeMultilib());
   // ASan has higher priority because we always want the instrumentated version.
   Multilibs.push_back(MultilibBuilder("asan", {}, {})
-                          .flag(true, "-fsanitize=address")
+                          .flag("-fsanitize=address")
                           .makeMultilib());
   // Use the asan+noexcept variant with ASan and -fno-exceptions.
   Multilibs.push_back(MultilibBuilder("asan+noexcept", {}, {})
-                          .flag(true, "-fsanitize=address")
-                          .flag(false, "-fexceptions")
-                          .flag(true, "-fno-exceptions")
+                          .flag("-fsanitize=address")
+                          .flag("-fexceptions", /*Disallow=*/true)
+                          .flag("-fno-exceptions")
                           .makeMultilib());
   // HWASan has higher priority because we always want the instrumentated
   // version.
   Multilibs.push_back(MultilibBuilder("hwasan", {}, {})
-                          .flag(true, "-fsanitize=hwaddress")
+                          .flag("-fsanitize=hwaddress")
                           .makeMultilib());
   // Use the hwasan+noexcept variant with HWASan and -fno-exceptions.
   Multilibs.push_back(MultilibBuilder("hwasan+noexcept", {}, {})
-                          .flag(true, "-fsanitize=hwaddress")
-                          .flag(false, "-fexceptions")
-                          .flag(true, "-fno-exceptions")
+                          .flag("-fsanitize=hwaddress")
+                          .flag("-fexceptions", /*Disallow=*/true)
+                          .flag("-fno-exceptions")
                           .makeMultilib());
   // Use Itanium C++ ABI for the compat multilib.
   Multilibs.push_back(MultilibBuilder("compat", {}, {})
-                          .flag(true, "-fc++-abi=itanium")
+                          .flag("-fc++-abi=itanium")
                           .makeMultilib());
 
   Multilibs.FilterOut([&](const Multilib &M) {

@@ -1488,6 +1488,15 @@ genHLFIRIntrinsicRefCore(PreparedActualArguments &loweredActuals,
     return buildReductionIntrinsic(loweredActuals, loc, builder, callContext,
                                    buildAllOperation, false);
   }
+  if (intrinsicName == "dot_product") {
+    llvm::SmallVector<mlir::Value> operands = getOperandVector(loweredActuals);
+    mlir::Type resultTy =
+        computeResultType(operands[0], *callContext.resultType);
+    hlfir::DotProductOp dotProductOp = builder.create<hlfir::DotProductOp>(
+        loc, resultTy, operands[0], operands[1]);
+
+    return {hlfir::EntityWithAttributes{dotProductOp.getResult()}};
+  }
 
   // TODO add hlfir operations for other transformational intrinsics here
 

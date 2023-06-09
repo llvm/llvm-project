@@ -9579,11 +9579,8 @@ bool ASTContext::areCompatibleRVVTypes(QualType FirstType,
   auto IsValidCast = [this](QualType FirstType, QualType SecondType) {
     if (const auto *BT = FirstType->getAs<BuiltinType>()) {
       if (const auto *VT = SecondType->getAs<VectorType>()) {
-        if (VT->getVectorKind() == VectorType::RVVFixedLengthDataVector)
-          return FirstType->isRVVVLSBuiltinType() &&
-                 VT->getElementType().getCanonicalType() ==
-                     FirstType->getRVVEltType(*this);
-        if (VT->getVectorKind() == VectorType::GenericVector)
+        if (VT->getVectorKind() == VectorType::RVVFixedLengthDataVector ||
+            VT->getVectorKind() == VectorType::GenericVector)
           return FirstType->isRVVVLSBuiltinType() &&
                  getTypeSize(SecondType) == getRVVTypeSize(*this, BT) &&
                  hasSameType(VT->getElementType(),

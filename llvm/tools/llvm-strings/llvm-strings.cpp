@@ -62,6 +62,7 @@ class StringsOptTable : public opt::GenericOptTable {
 public:
   StringsOptTable() : GenericOptTable(InfoTable) {
     setGroupedShortOptions(true);
+    setDashDashParsing(true);
   }
 };
 } // namespace

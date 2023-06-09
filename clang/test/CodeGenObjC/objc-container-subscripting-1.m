@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -no-opaque-pointers -emit-llvm -triple x86_64-apple-darwin -o - %s | FileCheck %s
+// RUN: %clang_cc1 -emit-llvm -triple x86_64-apple-darwin -o - %s | FileCheck %s
 
 typedef unsigned int size_t;
 @protocol P @end
@@ -18,39 +18,35 @@ int main(void) {
   id val;
 
   id oldObject = array[10];
-// CHECK: [[ARR:%.*]] = load {{%.*}} [[array:%.*]], align 8
-// CHECK-NEXT: [[ARRC:%.*]] = bitcast {{%.*}} [[ARR]] to i8*
-// CHECK-NEXT: [[SEL:%.*]] = load i8*, i8** @OBJC_SELECTOR_REFERENCES_
-// CHECK-NEXT: [[CALL:%.*]] = call i8* bitcast (i8* (i8*, i8*, ...)* @objc_msgSend to i8* (i8*, i8*, i32)*)(i8* noundef [[ARRC]], i8* noundef [[SEL]], i32 noundef 10)
-// CHECK-NEXT: store i8* [[CALL]], i8** [[OLDOBJ:%.*]], align 8
+// CHECK: [[ARR:%.*]] = load {{.*}} [[array:%.*]], align 8
+// CHECK-NEXT: [[SEL:%.*]] = load ptr, ptr @OBJC_SELECTOR_REFERENCES_
+// CHECK-NEXT: [[CALL:%.*]] = call ptr @objc_msgSend(ptr noundef [[ARR]], ptr noundef [[SEL]], i32 noundef 10)
+// CHECK-NEXT: store ptr [[CALL]], ptr [[OLDOBJ:%.*]], align 8
 
   val = (array[10] = oldObject);
-// CHECK:      [[FOUR:%.*]] = load i8*, i8** [[oldObject:%.*]], align 8
-// CHECK-NEXT: [[THREE:%.*]] = load {{%.*}} [[array:%.*]], align 8
-// CHECK-NEXT: [[SIX:%.*]] = bitcast {{%.*}} [[THREE]] to i8*
-// CHECK-NEXT: [[FIVE:%.*]] = load i8*, i8** @OBJC_SELECTOR_REFERENCES_.2
-// CHECK-NEXT: call void bitcast (i8* (i8*, i8*, ...)* @objc_msgSend to void (i8*, i8*, i8*, i32)*)(i8* noundef [[SIX]], i8* noundef [[FIVE]], i8* noundef [[FOUR]], i32 noundef 10)
-// CHECK-NEXT: store i8* [[FOUR]], i8** [[val:%.*]]
+// CHECK:      [[FOUR:%.*]] = load ptr, ptr [[oldObject:%.*]], align 8
+// CHECK-NEXT: [[THREE:%.*]] = load {{.*}} [[array:%.*]], align 8
+// CHECK-NEXT: [[FIVE:%.*]] = load ptr, ptr @OBJC_SELECTOR_REFERENCES_.2
+// CHECK-NEXT: call void @objc_msgSend(ptr noundef [[THREE]], ptr noundef [[FIVE]], ptr noundef [[FOUR]], i32 noundef 10)
+// CHECK-NEXT: store ptr [[FOUR]], ptr [[val:%.*]]
 
   NSMutableDictionary *dictionary;
   id key;
   id newObject;
   oldObject = dictionary[key];
-// CHECK:  [[SEVEN:%.*]] = load {{%.*}} [[DICTIONARY:%.*]], align 8
-// CHECK-NEXT:  [[EIGHT:%.*]] = load i8*, i8** [[KEY:%.*]], align 8
-// CHECK-NEXT:  [[ELEVEN:%.*]] = bitcast {{%.*}} [[SEVEN]] to i8*
-// CHECK-NEXT:  [[TEN:%.*]] = load i8*, i8** @OBJC_SELECTOR_REFERENCES_.4
-// CHECK-NEXT:  [[CALL1:%.*]] = call i8* bitcast (i8* (i8*, i8*, ...)* @objc_msgSend to i8* (i8*, i8*, i8*)*)(i8* noundef [[ELEVEN]], i8* noundef [[TEN]], i8* noundef [[EIGHT]])
-// CHECK-NEXT:  store i8* [[CALL1]], i8** [[oldObject:%.*]], align 8
+// CHECK:  [[SEVEN:%.*]] = load {{.*}} [[DICTIONARY:%.*]], align 8
+// CHECK-NEXT:  [[EIGHT:%.*]] = load ptr, ptr [[KEY:%.*]], align 8
+// CHECK-NEXT:  [[TEN:%.*]] = load ptr, ptr @OBJC_SELECTOR_REFERENCES_.4
+// CHECK-NEXT:  [[CALL1:%.*]] = call ptr @objc_msgSend(ptr noundef [[SEVEN]], ptr noundef [[TEN]], ptr noundef [[EIGHT]])
+// CHECK-NEXT:  store ptr [[CALL1]], ptr [[oldObject:%.*]], align 8
 
 
   val = (dictionary[key] = newObject);
-// CHECK:       [[FOURTEEN:%.*]] = load i8*, i8** [[NEWOBJECT:%.*]], align 8
-// CHECK-NEXT:  [[TWELVE:%.*]] = load {{%.*}} [[DICTIONARY]], align 8
-// CHECK-NEXT:  [[THIRTEEN:%.*]] = load i8*, i8** [[KEY]], align 8
-// CHECK-NEXT:  [[SEVENTEEN:%.*]] = bitcast {{%.*}} [[TWELVE]] to i8*
-// CHECK-NEXT:  [[SIXTEEN:%.*]] = load i8*, i8** @OBJC_SELECTOR_REFERENCES_.6
-// CHECK-NEXT:  call void bitcast (i8* (i8*, i8*, ...)* @objc_msgSend to void (i8*, i8*, i8*, i8*)*)(i8* noundef [[SEVENTEEN]], i8* noundef [[SIXTEEN]], i8* noundef [[FOURTEEN]], i8* noundef [[THIRTEEN]])
-// CHECK-NEXT: store i8* [[FOURTEEN]], i8** [[val:%.*]]
+// CHECK:       [[FOURTEEN:%.*]] = load ptr, ptr [[NEWOBJECT:%.*]], align 8
+// CHECK-NEXT:  [[TWELVE:%.*]] = load {{.*}} [[DICTIONARY]], align 8
+// CHECK-NEXT:  [[THIRTEEN:%.*]] = load ptr, ptr [[KEY]], align 8
+// CHECK-NEXT:  [[SIXTEEN:%.*]] = load ptr, ptr @OBJC_SELECTOR_REFERENCES_.6
+// CHECK-NEXT:  call void @objc_msgSend(ptr noundef [[TWELVE]], ptr noundef [[SIXTEEN]], ptr noundef [[FOURTEEN]], ptr noundef [[THIRTEEN]])
+// CHECK-NEXT: store ptr [[FOURTEEN]], ptr [[val:%.*]]
 }
 

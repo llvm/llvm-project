@@ -32,7 +32,7 @@ transform.sequence failures(propagate) {
   } : !transform.any_op
 
   transform.apply_patterns to %f {
-    transform.apply_patterns.vector.apply_transfer_permutation_patterns
+    transform.apply_patterns.vector.transfer_permutation_patterns
   } : !transform.any_op
 
   transform.apply_patterns to %f {

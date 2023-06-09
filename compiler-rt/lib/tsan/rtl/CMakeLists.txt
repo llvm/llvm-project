@@ -124,7 +124,7 @@ if(APPLE)
     message(FATAL_ERROR "Building the TSan runtime requires at least macOS SDK 10.12 (or aligned SDK on other platforms)")
   endif()
 
-  add_asm_sources(TSAN_ASM_SOURCES
+  set(TSAN_ASM_SOURCES
     tsan_rtl_amd64.S
     tsan_rtl_aarch64.S
     )
@@ -171,7 +171,7 @@ if(APPLE)
 else()
   foreach(arch ${TSAN_SUPPORTED_ARCH})
     if(arch STREQUAL "x86_64")
-      add_asm_sources(TSAN_ASM_SOURCES
+      set(TSAN_ASM_SOURCES
         tsan_rtl_amd64.S
         )
       # Check for Go runtime.
@@ -185,7 +185,7 @@ else()
         COMMENT "Checking TSan Go runtime..."
         VERBATIM)
     elseif(arch STREQUAL "aarch64")
-      add_asm_sources(TSAN_ASM_SOURCES
+      set(TSAN_ASM_SOURCES
         tsan_rtl_aarch64.S
         )
       # Check for Go runtime.
@@ -199,7 +199,7 @@ else()
 	COMMENT "Checking TSan Go runtime..."
 	VERBATIM)
     elseif(arch MATCHES "powerpc64|powerpc64le")
-      add_asm_sources(TSAN_ASM_SOURCES
+      set(TSAN_ASM_SOURCES
         tsan_rtl_ppc64.S
         )
       # Check for Go runtime.
@@ -213,15 +213,15 @@ else()
 	COMMENT "Checking TSan Go runtime..."
 	VERBATIM)
     elseif(arch MATCHES "loongarch64")
-      add_asm_sources(TSAN_ASM_SOURCES
+      set(TSAN_ASM_SOURCES
         tsan_rtl_loongarch64.S
         )
     elseif(arch MATCHES "mips64|mips64le")
-      add_asm_sources(TSAN_ASM_SOURCES
+      set(TSAN_ASM_SOURCES
         tsan_rtl_mips64.S
         )
     elseif(arch MATCHES "s390x")
-      add_asm_sources(TSAN_ASM_SOURCES
+      set(TSAN_ASM_SOURCES
         tsan_rtl_s390x.S
         )
       # Check for Go runtime.

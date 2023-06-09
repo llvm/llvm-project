@@ -57,7 +57,7 @@ ThreadedCommunication::ThreadedCommunication(const char *name)
 ThreadedCommunication::~ThreadedCommunication() {
   LLDB_LOG(GetLog(LLDBLog::Object | LLDBLog::Communication),
            "{0} ThreadedCommunication::~ThreadedCommunication (name = {1})",
-           this, GetBroadcasterName().AsCString());
+           this, GetBroadcasterName());
 }
 
 void ThreadedCommunication::Clear() {

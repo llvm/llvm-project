@@ -422,6 +422,9 @@ def FeatureHardenSlsIJmp
 //===----------------------------------------------------------------------===//
 // X86 Subtarget Tuning features
 //===----------------------------------------------------------------------===//
+def TuningPreferMovmskOverVTest : SubtargetFeature<"prefer-movmsk-over-vtest",
+                                       "PreferMovmskOverVTest", "true",
+                                       "Prefer movmsk over vtest instruction">;
 
 def TuningSlowSHLD : SubtargetFeature<"slow-shld", "IsSHLDSlow", "true",
                                        "SHLD instruction is slow">;
@@ -1166,7 +1169,8 @@ def ProcessorFeatures {
                                                   FeatureMOVDIRI,
                                                   FeatureMOVDIR64B,
                                                   FeatureWAITPKG];
-  list<SubtargetFeature> ADLAdditionalTuning = [TuningPERMFalseDeps];
+  list<SubtargetFeature> ADLAdditionalTuning = [TuningPERMFalseDeps,
+                                                TuningPreferMovmskOverVTest];
   list<SubtargetFeature> ADLTuning = !listconcat(SKLTuning, ADLAdditionalTuning);
   list<SubtargetFeature> ADLFeatures =
     !listconcat(TRMFeatures, ADLAdditionalFeatures);
