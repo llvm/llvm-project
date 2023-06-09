@@ -2672,6 +2672,10 @@ unsigned X86TargetLowering::getVectorTypeBreakdownForCallingConv(
     return 2;
   }
 
+  // Split vNbf16 vectors according to vNf16.
+  if (VT.isVector() && VT.getVectorElementType() == MVT::bf16)
+    VT = VT.changeVectorElementType(MVT::f16);
+
   return TargetLowering::getVectorTypeBreakdownForCallingConv(Context, CC, VT, IntermediateVT,
                                               NumIntermediates, RegisterVT);
 }
