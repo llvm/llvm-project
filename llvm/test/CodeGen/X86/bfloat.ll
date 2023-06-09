@@ -317,13 +317,13 @@ define <8 x bfloat> @addv(<8 x bfloat> %a, <8 x bfloat> %b) nounwind {
 ; SSE2-NEXT:    movq %rdx, %rax
 ; SSE2-NEXT:    shrq $48, %rax
 ; SSE2-NEXT:    movq %rax, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
-; SSE2-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[2,3,2,3]
+; SSE2-NEXT:    punpckhqdq {{.*#+}} xmm0 = xmm0[1,1]
 ; SSE2-NEXT:    movq %xmm0, %r12
 ; SSE2-NEXT:    movq %r12, %rax
 ; SSE2-NEXT:    shrq $32, %rax
 ; SSE2-NEXT:    movq %rax, (%rsp) # 8-byte Spill
-; SSE2-NEXT:    pshufd {{.*#+}} xmm0 = xmm1[2,3,2,3]
-; SSE2-NEXT:    movq %xmm0, %r14
+; SSE2-NEXT:    punpckhqdq {{.*#+}} xmm1 = xmm1[1,1]
+; SSE2-NEXT:    movq %xmm1, %r14
 ; SSE2-NEXT:    movq %r14, %rbp
 ; SSE2-NEXT:    shrq $32, %rbp
 ; SSE2-NEXT:    movq %r12, %r15
@@ -542,4 +542,26 @@ define <8 x bfloat> @addv(<8 x bfloat> %a, <8 x bfloat> %b) nounwind {
 ; BF16-NEXT:    retq
   %add = fadd <8 x bfloat> %a, %b
   ret <8 x bfloat> %add
+}
+
+define <2 x bfloat> @pr62997(bfloat %a, bfloat %b) {
+; SSE2-LABEL: pr62997:
+; SSE2:       # %bb.0:
+; SSE2-NEXT:    movd %xmm0, %eax
+; SSE2-NEXT:    movd %xmm1, %ecx
+; SSE2-NEXT:    pinsrw $0, %ecx, %xmm1
+; SSE2-NEXT:    pinsrw $0, %eax, %xmm0
+; SSE2-NEXT:    punpcklwd {{.*#+}} xmm0 = xmm0[0],xmm1[0],xmm0[1],xmm1[1],xmm0[2],xmm1[2],xmm0[3],xmm1[3]
+; SSE2-NEXT:    retq
+;
+; BF16-LABEL: pr62997:
+; BF16:       # %bb.0:
+; BF16-NEXT:    vmovd %xmm1, %eax
+; BF16-NEXT:    vmovd %xmm0, %ecx
+; BF16-NEXT:    vmovd %ecx, %xmm0
+; BF16-NEXT:    vpinsrw $1, %eax, %xmm0, %xmm0
+; BF16-NEXT:    retq
+  %1 = insertelement <2 x bfloat> undef, bfloat %a, i64 0
+  %2 = insertelement <2 x bfloat> %1, bfloat %b, i64 1
+  ret <2 x bfloat> %2
 }
