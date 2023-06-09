@@ -33,6 +33,9 @@ struct SliceOptions {
   bool inclusive = false;
 };
 
+// TODO: Remove this alias once downstream users are updated.
+using TransitiveFilter = SliceOptions::TransitiveFilter;
+
 struct BackwardSliceOptions : public SliceOptions {
   /// When omitBlockArguments is true, the backward slice computation omits
   /// traversing any block arguments. When omitBlockArguments is false, the
