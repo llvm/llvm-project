@@ -94,6 +94,11 @@ private:
   // `E`.
   const Type *resolveExprToType(const Expr *E) const;
   std::vector<const NamedDecl *> resolveExprToDecls(const Expr *E) const;
+
+  // Helper function for HeuristicResolver::resolveDependentMember()
+  // which takes a possibly-dependent type `T` and heuristically
+  // resolves it to a CXXRecordDecl in which we can try name lookup.
+  CXXRecordDecl *resolveTypeToRecordDecl(const Type *T) const;
 };
 
 } // namespace clangd
