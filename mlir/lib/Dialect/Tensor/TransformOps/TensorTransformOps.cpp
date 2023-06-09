@@ -90,7 +90,7 @@ void transform::ApplyDropRedundantInsertSliceRankExpansionPatternsOp::
 
 void transform::ApplyFoldTensorEmptyPatternsOp::populatePatterns(
     RewritePatternSet &patterns) {
-  tensor::populateFoldTensorEmptyPatterns(patterns);
+  tensor::populateFoldTensorEmptyPatterns(patterns, getFoldSingleUseOnly());
 }
 
 void transform::ApplyFoldIntoPackAndUnpackPatternsOp::populatePatterns(
