@@ -565,3 +565,19 @@ define <2 x bfloat> @pr62997(bfloat %a, bfloat %b) {
   %2 = insertelement <2 x bfloat> %1, bfloat %b, i64 1
   ret <2 x bfloat> %2
 }
+
+define <32 x bfloat> @pr63017() {
+; SSE2-LABEL: pr63017:
+; SSE2:       # %bb.0:
+; SSE2-NEXT:    xorps %xmm0, %xmm0
+; SSE2-NEXT:    xorps %xmm1, %xmm1
+; SSE2-NEXT:    xorps %xmm2, %xmm2
+; SSE2-NEXT:    xorps %xmm3, %xmm3
+; SSE2-NEXT:    retq
+;
+; BF16-LABEL: pr63017:
+; BF16:       # %bb.0:
+; BF16-NEXT:    vxorps %xmm0, %xmm0, %xmm0
+; BF16-NEXT:    retq
+  ret <32 x bfloat> zeroinitializer
+}
