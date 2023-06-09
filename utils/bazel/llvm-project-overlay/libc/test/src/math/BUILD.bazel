@@ -736,19 +736,19 @@ math_test(
 
 math_test(
     name = "fmod",
-    hdrs = ["FModTest.h"]
+    hdrs = ["FModTest.h"],
 )
 
 math_test(
     name = "fmodf",
-    hdrs = ["FModTest.h"]
+    hdrs = ["FModTest.h"],
 )
 
 math_test(
     name = "scalbn",
     hdrs = [
         "LdExpTest.h",
-        "ScalbnTest.h"
+        "ScalbnTest.h",
     ],
 )
 
@@ -756,7 +756,7 @@ math_test(
     name = "scalbnf",
     hdrs = [
         "LdExpTest.h",
-        "ScalbnTest.h"
+        "ScalbnTest.h",
     ],
 )
 
@@ -764,6 +764,6 @@ math_test(
     name = "scalbnl",
     hdrs = [
         "LdExpTest.h",
-        "ScalbnTest.h"
+        "ScalbnTest.h",
     ],
 )

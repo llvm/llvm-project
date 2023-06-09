@@ -422,6 +422,10 @@ LLVM_17 {
   global:
     clang_CXXMethod_isExplicit;
     clang_createIndexWithOptions;
+    clang_getBinaryOperatorKindSpelling;
+    clang_getCursorBinaryOperatorKind;
+    clang_getUnaryOperatorKindSpelling;
+    clang_getCursorUnaryOperatorKind;
 };
 
 # Example of how to add a new symbol version entry.  If you do add a new symbol

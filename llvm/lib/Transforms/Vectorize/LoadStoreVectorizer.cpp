@@ -801,12 +801,14 @@ std::vector<Chain> Vectorizer::splitChainByAlignment(Chain &C) {
       //
       // FIXME: We will upgrade the alignment of the alloca even if it turns out
       // we can't vectorize for some other reason.
+      Value *PtrOperand = getLoadStorePointerOperand(C[CBegin].Inst);
+      bool IsAllocaAccess = isa<AllocaInst>(PtrOperand->stripPointerCasts());
       Align Alignment = getLoadStoreAlignment(C[CBegin].Inst);
-      if (AS == DL.getAllocaAddrSpace() && Alignment.value() % SizeBytes != 0 &&
-          IsAllowedAndFast(Align(StackAdjustedAlignment))) {
+      Align PrefAlign = Align(StackAdjustedAlignment);
+      if (IsAllocaAccess && AS == DL.getAllocaAddrSpace() &&
+          Alignment.value() % SizeBytes != 0 && IsAllowedAndFast(PrefAlign)) {
         Align NewAlign = getOrEnforceKnownAlignment(
-            getLoadStorePointerOperand(C[CBegin].Inst),
-            Align(StackAdjustedAlignment), DL, C[CBegin].Inst, nullptr, &DT);
+            PtrOperand, PrefAlign, DL, C[CBegin].Inst, nullptr, &DT);
         if (NewAlign >= Alignment) {
           LLVM_DEBUG(dbgs()
                      << "LSV: splitByChain upgrading alloca alignment from "
