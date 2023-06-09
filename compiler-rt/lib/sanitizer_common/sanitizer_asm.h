@@ -66,7 +66,7 @@
 # define ASM_SIZE(symbol) .size symbol, .-symbol
 # define ASM_SYMBOL(symbol) symbol
 # define ASM_SYMBOL_INTERCEPTOR(symbol) symbol
-# if defined(__i386__) || defined(__powerpc__)
+# if defined(__i386__) || defined(__powerpc__) || defined(__s390__)
 // For details, see interception.h
 #  define ASM_WRAPPER_NAME(symbol) __interceptor_##symbol
 #  define ASM_TRAMPOLINE_ALIAS(symbol, name)                                   \
