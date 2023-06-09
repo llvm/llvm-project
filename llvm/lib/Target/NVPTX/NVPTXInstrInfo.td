@@ -2647,8 +2647,6 @@ let mayLoad=1, hasSideEffects=0 in {
   defm LDV_i16 : LD_VEC<Int16Regs>;
   defm LDV_i32 : LD_VEC<Int32Regs>;
   defm LDV_i64 : LD_VEC<Int64Regs>;
-  defm LDV_f16 : LD_VEC<Int16Regs>;
-  defm LDV_f16x2 : LD_VEC<Int32Regs>;
   defm LDV_f32 : LD_VEC<Float32Regs>;
   defm LDV_f64 : LD_VEC<Float64Regs>;
 }
@@ -2742,8 +2740,6 @@ let mayStore=1, hasSideEffects=0 in {
   defm STV_i16 : ST_VEC<Int16Regs>;
   defm STV_i32 : ST_VEC<Int32Regs>;
   defm STV_i64 : ST_VEC<Int64Regs>;
-  defm STV_f16 : ST_VEC<Int16Regs>;
-  defm STV_f16x2 : ST_VEC<Int32Regs>;
   defm STV_f32 : ST_VEC<Float32Regs>;
   defm STV_f64 : ST_VEC<Float64Regs>;
 }
@@ -3056,6 +3052,10 @@ let hasSideEffects = false in {
                              (ins Int32Regs:$s),
                              "{{ .reg .b16 tmp; mov.b32 {tmp, $high}, $s; }}",
                              []>;
+  def I32toI16L  : NVPTXInst<(outs Int16Regs:$low),
+                             (ins Int32Regs:$s),
+                             "{{ .reg .b16 tmp; mov.b32 {$low, tmp}, $s; }}",
+                             []>;
   def I64toI32H  : NVPTXInst<(outs Int32Regs:$high),
                              (ins Int64Regs:$s),
                              "{{ .reg .b32 tmp; mov.b64 {tmp, $high}, $s; }}",
@@ -3073,47 +3073,12 @@ def : Pat<(i32 (trunc (srl Int64Regs:$s, (i32 32)))),
 def : Pat<(i32 (trunc (sra Int64Regs:$s, (i32 32)))),
           (I64toI32H Int64Regs:$s)>;
 
-let hasSideEffects = false in {
-  // Extract element of f16x2 register. PTX does not provide any way
-  // to access elements of f16x2 vector directly, so we need to
-  // extract it using a temporary register.
-  def F16x2toF16_0 : NVPTXInst<(outs Int16Regs:$dst),
-                               (ins Int32Regs:$src),
-                               "{{ .reg .b16 \t%tmp_hi;\n\t"
-                               "  mov.b32 \t{$dst, %tmp_hi}, $src; }}",
-                               [(set Int16Regs:$dst,
-                                 (extractelt (v2f16 Int32Regs:$src), 0))]>;
-  def F16x2toF16_1 : NVPTXInst<(outs Int16Regs:$dst),
-                               (ins Int32Regs:$src),
-                               "{{ .reg .b16 \t%tmp_lo;\n\t"
-                               "  mov.b32 \t{%tmp_lo, $dst}, $src; }}",
-                               [(set Int16Regs:$dst,
-                                 (extractelt (v2f16 Int32Regs:$src), 1))]>;
-
-  // Coalesce two f16 registers into f16x2
-  def BuildF16x2 : NVPTXInst<(outs Int32Regs:$dst),
-                             (ins Int16Regs:$a, Int16Regs:$b),
-                             "mov.b32 \t$dst, {{$a, $b}};",
-                             [(set (v2f16 Int32Regs:$dst),
-                               (build_vector (f16 Int16Regs:$a), (f16 Int16Regs:$b)))]>;
-
-  // Directly initializing underlying the b32 register is one less SASS
-  // instruction than than vector-packing move.
-  def BuildF16x2i : NVPTXInst<(outs Int32Regs:$dst), (ins i32imm:$src),
-                              "mov.b32 \t$dst, $src;",
-                              []>;
-
-  // Split f16x2 into two f16 registers.
-  def SplitF16x2  : NVPTXInst<(outs Int16Regs:$lo, Int16Regs:$hi),
-                              (ins Int32Regs:$src),
-                              "mov.b32 \t{{$lo, $hi}}, $src;",
-                              []>;
-  // Split an i32 into two f16
-  def SplitI32toF16x2  : NVPTXInst<(outs Int16Regs:$lo, Int16Regs:$hi),
-                                   (ins Int32Regs:$src),
-                                   "mov.b32 \t{{$lo, $hi}}, $src;",
-                                   []>;
-}
+def : Pat<(f16 (extractelt (v2f16 Int32Regs:$src), 0)),
+          (I32toI16L Int32Regs:$src)>;
+def : Pat<(f16 (extractelt (v2f16 Int32Regs:$src), 1)),
+          (I32toI16H Int32Regs:$src)>;
+def : Pat<(v2f16 (build_vector (f16 Int16Regs:$a), (f16 Int16Regs:$b))),
+          (V2I16toI32 Int16Regs:$a, Int16Regs:$b)>;
 
 // Count leading zeros
 let hasSideEffects = false in {
