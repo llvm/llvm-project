@@ -62,6 +62,22 @@ __pstl_count_if(TestBackend, ForwardIterator, ForwardIterator, Pred) {
   return 0;
 }
 
+bool pstl_generate_called = false;
+
+template <class, class ForwardIterator, class Gen>
+void __pstl_generate(TestBackend, ForwardIterator, ForwardIterator, Gen) {
+  assert(!pstl_generate_called);
+  pstl_generate_called = true;
+}
+
+bool pstl_generate_n_called = false;
+
+template <class, class ForwardIterator, class Size, class Gen>
+void __pstl_generate_n(TestBackend, Size, ForwardIterator, Gen) {
+  assert(!pstl_generate_n_called);
+  pstl_generate_n_called = true;
+}
+
 bool pstl_none_of_called = false;
 
 template <class, class ForwardIterator, class Pred>
@@ -267,6 +283,10 @@ int main(int, char**) {
   assert(std::pstl_for_each_called);
   (void)std::for_each_n(TestPolicy{}, std::begin(a), std::size(a), pred);
   assert(std::pstl_for_each_n_called);
+  (void)std::generate(TestPolicy{}, std::begin(a), std::end(a), pred);
+  assert(std::pstl_generate_called);
+  (void)std::generate_n(TestPolicy{}, std::begin(a), std::size(a), pred);
+  assert(std::pstl_generate_n_called);
   (void)std::replace(TestPolicy{}, std::begin(a), std::end(a), 0, 0);
   assert(std::pstl_replace_called);
   (void)std::replace_if(TestPolicy{}, std::begin(a), std::end(a), pred, 0);
