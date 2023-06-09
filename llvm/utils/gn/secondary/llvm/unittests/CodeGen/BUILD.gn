@@ -38,6 +38,7 @@ unittest("CodeGenTests") {
     "PassManagerTest.cpp",
     "RegAllocScoreTest.cpp",
     "ScalableVectorMVTsTest.cpp",
+    "SchedBoundary.cpp",
     "SelectionDAGAddressAnalysisTest.cpp",
     "TargetOptionsTest.cpp",
     "TestAsmPrinter.cpp",
