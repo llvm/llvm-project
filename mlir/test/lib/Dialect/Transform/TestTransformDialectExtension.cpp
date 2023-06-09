@@ -696,15 +696,15 @@ class TestTrackingListener : public transform::TrackingListener {
   using transform::TrackingListener::TrackingListener;
 
 protected:
-  Operation *findReplacementOp(Operation *op,
-                               ValueRange newValues) const override {
+  FailureOr<Operation *>
+  findReplacementOp(Operation *op, ValueRange newValues) const override {
     if (newValues.size() != 1)
-      return nullptr;
+      return failure();
     Operation *replacement = newValues[0].getDefiningOp();
     if (!replacement)
-      return nullptr;
+      return failure();
     if (replacement->getName().getStringRef() != "test.update_mapping")
-      return nullptr;
+      return failure();
     return replacement;
   }
 };

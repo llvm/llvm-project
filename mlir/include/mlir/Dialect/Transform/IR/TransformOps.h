@@ -53,6 +53,11 @@ protected:
   /// the same op, which also has the same type as the given op, that defining
   /// op is used as a replacement.
   ///
+  /// A "failure" return value indicates that no replacement operation could be
+  /// found. A "nullptr" return value indicates that no replacement op is needed
+  /// (e.g., handle is dead or was consumed) and that the payload op should
+  /// be dropped from the mapping.
+  ///
   /// Example: A tracked "linalg.generic" with two results is replaced with two
   /// values defined by (another) "linalg.generic". It is reasonable to assume
   /// that the replacement "linalg.generic" represents the same "computation".
@@ -91,8 +96,8 @@ protected:
   ///
   /// Derived classes may override `findReplacementOp` to specify custom
   /// replacement rules.
-  virtual Operation *findReplacementOp(Operation *op,
-                                       ValueRange newValues) const;
+  virtual FailureOr<Operation *> findReplacementOp(Operation *op,
+                                                   ValueRange newValues) const;
 
   /// Notify the listener that the pattern failed to match the given operation,
   /// and provide a callback to populate a diagnostic with the reason why the
