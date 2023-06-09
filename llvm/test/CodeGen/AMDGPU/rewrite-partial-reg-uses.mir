@@ -52,3 +52,39 @@ body:             |
     S_NOP 0, implicit %4.sub1_sub2_sub3_sub4_sub5_sub6
     S_NOP 0, implicit %4.sub3_sub4_sub5_sub6_sub7_sub8
 ...
+---
+name: test_subregs_unknown_regclass_from_instructions
+tracksRegLiveness: true
+body:             |
+  bb.0:
+    ; CHECK-LABEL: name: test_subregs_unknown_regclass_from_instructions
+    ; CHECK: undef %2.sub0:sgpr_64 = S_MOV_B32 1
+    ; CHECK-NEXT: %2.sub1:sgpr_64 = S_MOV_B32 2
+    ; CHECK-NEXT: dead [[COPY:%[0-9]+]]:vreg_64 = COPY %2
+    undef %0.sub4:sgpr_1024 = S_MOV_B32 01
+    %0.sub5:sgpr_1024 = S_MOV_B32 02
+    %1:vreg_64 = COPY %0.sub4_sub5
+...
+---
+name: test_subregs_unknown_regclass_from_instructions_sgpr_1024_to_sgpr_64
+tracksRegLiveness: true
+registers:
+  - { id: 0, class: sgpr_1024 }
+body:             |
+  bb.0:
+    ; CHECK-LABEL: name: test_subregs_unknown_regclass_from_instructions_sgpr_1024_to_sgpr_64
+    ; CHECK: dead [[COPY:%[0-9]+]]:vreg_64 = COPY undef %2:sgpr_64
+    %1:vreg_64 = COPY undef %0.sub4_sub5
+...
+---
+name: test_subregs_regclass_defined_by_dst_operand_sreg_64_xexec
+tracksRegLiveness: true
+body:             |
+  bb.0:
+    ; CHECK-LABEL: name: test_subregs_regclass_defined_by_dst_operand_sreg_64_xexec
+    ; CHECK: [[S_LOAD_DWORDX2_IMM:%[0-9]+]]:sreg_64_xexec = S_LOAD_DWORDX2_IMM undef %1:sreg_64, 0, 0
+    ; CHECK-NEXT: dead [[COPY:%[0-9]+]]:vreg_64 = COPY [[S_LOAD_DWORDX2_IMM]]
+    undef %0.sub2_sub3:sgpr_128 = S_LOAD_DWORDX2_IMM undef %1:sreg_64, 0, 0
+    %2:vreg_64 = COPY %0.sub2_sub3:sgpr_128
+...
+
