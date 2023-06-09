@@ -35,6 +35,9 @@ const auto TemplateFilter = [](const NamedDecl *D) {
 CXXRecordDecl *resolveTypeToRecordDecl(const Type *T) {
   assert(T);
 
+  // Unwrap type sugar such as type aliases.
+  T = T->getCanonicalTypeInternal().getTypePtr();
+
   if (const auto *RT = T->getAs<RecordType>())
     return dyn_cast<CXXRecordDecl>(RT->getDecl());
 
