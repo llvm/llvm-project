@@ -467,6 +467,29 @@ def TestRequiredMemoryEffectsOp
   let cppNamespace = "::mlir::test";
 }
 
+// This op is used as a payload op. It must be a registered op, so that it can
+// be created with "RewriterBase::replaceOpWithNewOp" (needed for a test case).
+// Since only TransformOpInterface can be injected into the transform dialect,
+// this op implements the interface, even though it is not used as a transform
+// op.
+def TestDummyPayloadOp
+  : Op<Transform_Dialect, "test_dummy_payload_op",
+      [DeclareOpInterfaceMethods<MemoryEffectsOpInterface>,
+       TransformOpInterface]> {
+  let arguments = (ins Variadic<AnyType>:$args);
+  let results = (outs Variadic<AnyType>:$outs);
+  let assemblyFormat = "$args attr-dict `:` functional-type(operands, results)";
+  let cppNamespace = "::mlir::test";
+
+  let extraClassDeclaration = [{
+    DiagnosedSilenceableFailure apply(transform::TransformResults &results,
+                                      transform::TransformState &state) {
+      llvm_unreachable("op should not be used as a transform");
+      return DiagnosedSilenceableFailure::definiteFailure();
+    }
+  }];
+}
+
 def TestTrackedRewriteOp
   : Op<Transform_Dialect, "test_tracked_rewrite",
       [DeclareOpInterfaceMethods<MemoryEffectsOpInterface>,
