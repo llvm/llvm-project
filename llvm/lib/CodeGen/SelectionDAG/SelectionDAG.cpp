@@ -455,6 +455,10 @@ ISD::NodeType ISD::getVecReduceBaseOpcode(unsigned VecReduceOpcode) {
   case ISD::VECREDUCE_FMIN:
   case ISD::VP_REDUCE_FMIN:
     return ISD::FMINNUM;
+  case ISD::VECREDUCE_FMAXIMUM:
+    return ISD::FMAXIMUM;
+  case ISD::VECREDUCE_FMINIMUM:
+    return ISD::FMINIMUM;
   }
 }
 
@@ -12393,6 +12397,18 @@ SDValue SelectionDAG::getNeutralElement(unsigned Opcode, const SDLoc &DL,
 
     return getConstantFP(NeutralAF, DL, VT);
   }
+  case ISD::FMINIMUM:
+  case ISD::FMAXIMUM: {
+    // Neutral element for fminimum is Inf or FLT_MAX, depending on FMF.
+    const fltSemantics &Semantics = EVTToAPFloatSemantics(VT);
+    APFloat NeutralAF = !Flags.hasNoInfs() ? APFloat::getInf(Semantics)
+                                           : APFloat::getLargest(Semantics);
+    if (Opcode == ISD::FMAXIMUM)
+      NeutralAF.changeSign();
+
+    return getConstantFP(NeutralAF, DL, VT);
+  }
+
   }
 }
 
