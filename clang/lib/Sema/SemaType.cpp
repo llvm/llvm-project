@@ -8217,10 +8217,18 @@ static bool verifyValidIntegerConstantExpr(Sema &S, const ParsedAttr &Attr,
 /// match one of the standard Neon vector types.
 static void HandleNeonVectorTypeAttr(QualType &CurType, const ParsedAttr &Attr,
                                      Sema &S, VectorType::VectorKind VecKind) {
+  bool IsTargetCUDAAndHostARM = false;
+  if (S.getLangOpts().CUDAIsDevice) {
+    const TargetInfo *AuxTI = S.getASTContext().getAuxTargetInfo();
+    IsTargetCUDAAndHostARM =
+        AuxTI && (AuxTI->getTriple().isAArch64() || AuxTI->getTriple().isARM());
+  }
+
   // Target must have NEON (or MVE, whose vectors are similar enough
   // not to need a separate attribute)
-  if (!S.Context.getTargetInfo().hasFeature("neon") &&
-      !S.Context.getTargetInfo().hasFeature("mve")) {
+  if (!(S.Context.getTargetInfo().hasFeature("neon") ||
+        S.Context.getTargetInfo().hasFeature("mve") ||
+        IsTargetCUDAAndHostARM)) {
     S.Diag(Attr.getLoc(), diag::err_attribute_unsupported)
         << Attr << "'neon' or 'mve'";
     Attr.setInvalid();
@@ -8228,8 +8236,8 @@ static void HandleNeonVectorTypeAttr(QualType &CurType, const ParsedAttr &Attr,
   }
   // Check the attribute arguments.
   if (Attr.getNumArgs() != 1) {
-    S.Diag(Attr.getLoc(), diag::err_attribute_wrong_number_arguments) << Attr
-                                                                      << 1;
+    S.Diag(Attr.getLoc(), diag::err_attribute_wrong_number_arguments)
+        << Attr << 1;
     Attr.setInvalid();
     return;
   }
@@ -8239,7 +8247,8 @@ static void HandleNeonVectorTypeAttr(QualType &CurType, const ParsedAttr &Attr,
     return;
 
   // Only certain element types are supported for Neon vectors.
-  if (!isPermittedNeonBaseType(CurType, VecKind, S)) {
+  if (!isPermittedNeonBaseType(CurType, VecKind, S) &&
+      !IsTargetCUDAAndHostARM) {
     S.Diag(Attr.getLoc(), diag::err_attribute_invalid_vector_type) << CurType;
     Attr.setInvalid();
     return;
