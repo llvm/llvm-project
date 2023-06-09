@@ -1331,6 +1331,28 @@ void transform::ErrorCheckingTrackingListener::notifyPayloadReplacementNotFound(
 //===----------------------------------------------------------------------===//
 
 LogicalResult
+transform::detail::checkNestedConsumption(Location loc,
+                                          ArrayRef<Operation *> targets) {
+  for (auto &&[position, parent] : llvm::enumerate(targets)) {
+    for (Operation *child : targets.drop_front(position + 1)) {
+      if (parent->isAncestor(child)) {
+        InFlightDiagnostic diag =
+            emitError(loc)
+            << "transform operation consumes a handle pointing to an ancestor "
+               "payload operation before its descendant";
+        diag.attachNote()
+            << "the ancestor is likely erased or rewritten before the "
+               "descendant is accessed, leading to undefined behavior";
+        diag.attachNote(parent->getLoc()) << "ancestor payload op";
+        diag.attachNote(child->getLoc()) << "descendant payload op";
+        return diag;
+      }
+    }
+  }
+  return success();
+}
+
+LogicalResult
 transform::detail::checkApplyToOne(Operation *transformOp,
                                    Location payloadOpLoc,
                                    const ApplyToEachResultList &partialResult) {
