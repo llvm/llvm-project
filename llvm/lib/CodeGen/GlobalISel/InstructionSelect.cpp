@@ -22,6 +22,7 @@
 #include "llvm/CodeGen/MachineOptimizationRemarkEmitter.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
 #include "llvm/CodeGen/TargetLowering.h"
+#include "llvm/CodeGen/TargetOpcodes.h"
 #include "llvm/CodeGen/TargetPassConfig.h"
 #include "llvm/CodeGen/TargetSubtargetInfo.h"
 #include "llvm/Config/config.h"
@@ -165,12 +166,12 @@ bool InstructionSelect::runOnMachineFunction(MachineFunction &MF) {
         continue;
       }
 
-      // Eliminate hints.
-      if (isPreISelGenericOptimizationHint(MI.getOpcode())) {
-        Register DstReg = MI.getOperand(0).getReg();
-        Register SrcReg = MI.getOperand(1).getReg();
+      // Eliminate hints or G_CONSTANT_FOLD_BARRIER.
+      if (isPreISelGenericOptimizationHint(MI.getOpcode()) ||
+          MI.getOpcode() == TargetOpcode::G_CONSTANT_FOLD_BARRIER) {
+        auto [DstReg, SrcReg] = MI.getFirst2Regs();
 
-        // At this point, the destination register class of the hint may have
+        // At this point, the destination register class of the op may have
         // been decided.
         //
         // Propagate that through to the source register.

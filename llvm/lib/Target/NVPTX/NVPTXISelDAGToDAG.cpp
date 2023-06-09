@@ -638,18 +638,10 @@ bool NVPTXDAGToDAGISel::tryEXTRACT_VECTOR_ELEMENT(SDNode *N) {
   if (E0.empty() || E1.empty())
     return false;
 
-  unsigned Op = NVPTX::SplitF16x2;
-  // If the vector has been BITCAST'ed from i32, we can use original
-  // value directly and avoid register-to-register move.
-  SDValue Source = Vector;
-  if (Vector->getOpcode() == ISD::BITCAST) {
-    Op = NVPTX::SplitI32toF16x2;
-    Source = Vector->getOperand(0);
-  }
   // Merge (f16 extractelt(V, 0), f16 extractelt(V,1))
   // into f16,f16 SplitF16x2(V)
-  SDNode *ScatterOp =
-      CurDAG->getMachineNode(Op, SDLoc(N), MVT::f16, MVT::f16, Source);
+  SDNode *ScatterOp = CurDAG->getMachineNode(NVPTX::I32toV2I16, SDLoc(N),
+                                             MVT::f16, MVT::f16, Vector);
   for (auto *Node : E0)
     ReplaceUses(SDValue(Node, 0), SDValue(ScatterOp, 0));
   for (auto *Node : E1)

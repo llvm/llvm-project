@@ -116,17 +116,11 @@ def GPU_SparseEnvHandle :
     "sparse environment handle type">,
   BuildableType<"mlir::gpu::SparseEnvHandleType::get($_builder.getContext())">;
 
-def GPU_SparseDnVecHandle :
+def GPU_SparseDnTensorHandle :
   DialectType<GPU_Dialect,
-    CPred<"llvm::isa<::mlir::gpu::SparseDnVecHandleType>($_self)">,
-    "dense vector handle type">,
-  BuildableType<"mlir::gpu::SparseDnVecHandleType::get($_builder.getContext())">;
-
-def GPU_SparseDnMatHandle :
-  DialectType<GPU_Dialect,
-    CPred<"llvm::isa<::mlir::gpu::SparseDnMatHandleType>($_self)">,
-    "dense matrix handle type">,
-  BuildableType<"mlir::gpu::SparseDnMatHandleType::get($_builder.getContext())">;
+    CPred<"llvm::isa<::mlir::gpu::SparseDnTensorHandleType>($_self)">,
+    "dense tensor handle type">,
+  BuildableType<"mlir::gpu::SparseDnTensorHandleType::get($_builder.getContext())">;
 
 def GPU_SparseSpMatHandle :
   DialectType<GPU_Dialect,

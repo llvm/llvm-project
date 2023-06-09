@@ -2552,6 +2552,16 @@ static bool handlePotentiallyDeadBlock(BasicBlock *BB, InstCombiner &IC) {
     Changed = true;
   }
 
+  // Replace phi node operands in successor blocks with poison.
+  for (BasicBlock *Succ : successors(BB))
+    for (PHINode &PN : Succ->phis())
+      for (Use &U : PN.incoming_values())
+        if (PN.getIncomingBlock(U) == BB && !isa<PoisonValue>(U)) {
+          IC.replaceUse(U, PoisonValue::get(PN.getType()));
+          IC.addToWorklist(&PN);
+          Changed = true;
+        }
+
   // TODO: Successor blocks may also be dead.
   return Changed;
 }

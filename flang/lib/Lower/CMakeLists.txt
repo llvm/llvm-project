@@ -1,4 +1,5 @@
 get_property(dialect_libs GLOBAL PROPERTY MLIR_DIALECT_LIBS)
+get_property(extension_libs GLOBAL PROPERTY MLIR_EXTENSION_LIBS)
 
 add_flang_library(FortranLower
   Allocatable.cpp
@@ -33,6 +34,7 @@ add_flang_library(FortranLower
   FIRTransforms
   HLFIRDialect
   ${dialect_libs}
+  ${extension_libs}
 
   LINK_LIBS
   FIRDialect
@@ -42,6 +44,7 @@ add_flang_library(FortranLower
   FIRTransforms
   HLFIRDialect
   ${dialect_libs}
+  ${extension_libs}
   FortranCommon
   FortranParser
   FortranEvaluate
