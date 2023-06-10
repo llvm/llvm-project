@@ -11,6 +11,8 @@ declare void @llvm.memcpy.p3.p3.i32(ptr addrspace(3) nocapture, ptr addrspace(3)
 declare void @llvm.memmove.p1.p1.i64(ptr addrspace(1) nocapture, ptr addrspace(1) nocapture readonly, i64, i1) #1
 declare void @llvm.memmove.p1.p3.i32(ptr addrspace(1) nocapture, ptr addrspace(3) nocapture readonly, i32, i1) #1
 declare void @llvm.memmove.p5.p5.i32(ptr addrspace(5) nocapture, ptr addrspace(5) nocapture readonly, i32, i1) #1
+declare void @llvm.memmove.p3.p5.i32(ptr addrspace(3) nocapture, ptr addrspace(5) nocapture readonly, i32, i1) #1
+declare void @llvm.memmove.p5.p3.i32(ptr addrspace(5) nocapture, ptr addrspace(3) nocapture readonly, i32, i1) #1
 declare void @llvm.memmove.p0.p1.i64(ptr nocapture writeonly, ptr addrspace(1) nocapture readonly, i64, i1 immarg) #1
 declare void @llvm.memmove.p1.p0.i64(ptr addrspace(1) nocapture writeonly, ptr nocapture readonly, i64, i1 immarg) #1
 declare void @llvm.memmove.p5.p1.i64(ptr addrspace(5) nocapture writeonly, ptr addrspace(1) nocapture readonly, i64, i1 immarg) #1
@@ -1473,18 +1475,46 @@ define amdgpu_kernel void @memmove_private_align1_flat_align1(ptr addrspace(5) %
 }
 
 define amdgpu_kernel void @memmove_private_align1_global_align1(ptr addrspace(5) %dst, ptr addrspace(1) %src) {
-; OPT-LABEL: @memmove_private_align1_global_align1(
-; OPT-NEXT:    call void @llvm.memmove.p5.p1.i64(ptr addrspace(5) [[DST:%.*]], ptr addrspace(1) [[SRC:%.*]], i64 256, i1 false)
-; OPT-NEXT:    ret void
+; MAX1024-LABEL: @memmove_private_align1_global_align1(
+; MAX1024-NEXT:    call void @llvm.memmove.p5.p1.i64(ptr addrspace(5) [[DST:%.*]], ptr addrspace(1) [[SRC:%.*]], i64 256, i1 false)
+; MAX1024-NEXT:    ret void
+;
+; ALL-LABEL: @memmove_private_align1_global_align1(
+; ALL-NEXT:    br label [[LOAD_STORE_LOOP:%.*]]
+; ALL:       load-store-loop:
+; ALL-NEXT:    [[LOOP_INDEX:%.*]] = phi i64 [ 0, [[TMP0:%.*]] ], [ [[TMP4:%.*]], [[LOAD_STORE_LOOP]] ]
+; ALL-NEXT:    [[TMP1:%.*]] = getelementptr inbounds <4 x i32>, ptr addrspace(1) [[SRC:%.*]], i64 [[LOOP_INDEX]]
+; ALL-NEXT:    [[TMP2:%.*]] = load <4 x i32>, ptr addrspace(1) [[TMP1]], align 1, !alias.scope !0
+; ALL-NEXT:    [[TMP3:%.*]] = getelementptr inbounds <4 x i32>, ptr addrspace(5) [[DST:%.*]], i64 [[LOOP_INDEX]]
+; ALL-NEXT:    store <4 x i32> [[TMP2]], ptr addrspace(5) [[TMP3]], align 1, !noalias !0
+; ALL-NEXT:    [[TMP4]] = add i64 [[LOOP_INDEX]], 1
+; ALL-NEXT:    [[TMP5:%.*]] = icmp ult i64 [[TMP4]], 16
+; ALL-NEXT:    br i1 [[TMP5]], label [[LOAD_STORE_LOOP]], label [[MEMCPY_SPLIT:%.*]]
+; ALL:       memcpy-split:
+; ALL-NEXT:    ret void
 ;
   call void @llvm.memmove.p5.p1.i64(ptr addrspace(5) %dst, ptr addrspace(1) %src, i64 256, i1 false)
   ret void
 }
 
 define amdgpu_kernel void @memmove_global_align1_private_align1(ptr addrspace(1) %dst, ptr addrspace(5) %src) {
-; OPT-LABEL: @memmove_global_align1_private_align1(
-; OPT-NEXT:    call void @llvm.memmove.p1.p5.i64(ptr addrspace(1) [[DST:%.*]], ptr addrspace(5) [[SRC:%.*]], i64 256, i1 false)
-; OPT-NEXT:    ret void
+; MAX1024-LABEL: @memmove_global_align1_private_align1(
+; MAX1024-NEXT:    call void @llvm.memmove.p1.p5.i64(ptr addrspace(1) [[DST:%.*]], ptr addrspace(5) [[SRC:%.*]], i64 256, i1 false)
+; MAX1024-NEXT:    ret void
+;
+; ALL-LABEL: @memmove_global_align1_private_align1(
+; ALL-NEXT:    br label [[LOAD_STORE_LOOP:%.*]]
+; ALL:       load-store-loop:
+; ALL-NEXT:    [[LOOP_INDEX:%.*]] = phi i64 [ 0, [[TMP0:%.*]] ], [ [[TMP4:%.*]], [[LOAD_STORE_LOOP]] ]
+; ALL-NEXT:    [[TMP1:%.*]] = getelementptr inbounds <4 x i32>, ptr addrspace(5) [[SRC:%.*]], i64 [[LOOP_INDEX]]
+; ALL-NEXT:    [[TMP2:%.*]] = load <4 x i32>, ptr addrspace(5) [[TMP1]], align 1, !alias.scope !3
+; ALL-NEXT:    [[TMP3:%.*]] = getelementptr inbounds <4 x i32>, ptr addrspace(1) [[DST:%.*]], i64 [[LOOP_INDEX]]
+; ALL-NEXT:    store <4 x i32> [[TMP2]], ptr addrspace(1) [[TMP3]], align 1, !noalias !3
+; ALL-NEXT:    [[TMP4]] = add i64 [[LOOP_INDEX]], 1
+; ALL-NEXT:    [[TMP5:%.*]] = icmp ult i64 [[TMP4]], 16
+; ALL-NEXT:    br i1 [[TMP5]], label [[LOAD_STORE_LOOP]], label [[MEMCPY_SPLIT:%.*]]
+; ALL:       memcpy-split:
+; ALL-NEXT:    ret void
 ;
   call void @llvm.memmove.p1.p5.i64(ptr addrspace(1) %dst, ptr addrspace(5) %src, i64 256, i1 false)
   ret void
@@ -1514,6 +1544,186 @@ define amdgpu_kernel void @memmove_p999_align1_p998_align1(ptr addrspace(999) %d
 ; OPT-NEXT:    ret void
 ;
   call void @llvm.memmove.p999.p998.i64(ptr addrspace(999) %dst, ptr addrspace(998) %src, i64 %size, i1 false)
+  ret void
+}
+
+define amdgpu_kernel void @memmove_local_align1_private_align1(ptr addrspace(3) %dst, ptr addrspace(5) %src) {
+; MAX1024-LABEL: @memmove_local_align1_private_align1(
+; MAX1024-NEXT:    call void @llvm.memmove.p3.p5.i32(ptr addrspace(3) [[DST:%.*]], ptr addrspace(5) [[SRC:%.*]], i32 256, i1 false)
+; MAX1024-NEXT:    ret void
+;
+; ALL-LABEL: @memmove_local_align1_private_align1(
+; ALL-NEXT:    br label [[LOAD_STORE_LOOP:%.*]]
+; ALL:       load-store-loop:
+; ALL-NEXT:    [[LOOP_INDEX:%.*]] = phi i32 [ 0, [[TMP0:%.*]] ], [ [[TMP4:%.*]], [[LOAD_STORE_LOOP]] ]
+; ALL-NEXT:    [[TMP1:%.*]] = getelementptr inbounds <2 x i32>, ptr addrspace(5) [[SRC:%.*]], i32 [[LOOP_INDEX]]
+; ALL-NEXT:    [[TMP2:%.*]] = load <2 x i32>, ptr addrspace(5) [[TMP1]], align 1, !alias.scope !6
+; ALL-NEXT:    [[TMP3:%.*]] = getelementptr inbounds <2 x i32>, ptr addrspace(3) [[DST:%.*]], i32 [[LOOP_INDEX]]
+; ALL-NEXT:    store <2 x i32> [[TMP2]], ptr addrspace(3) [[TMP3]], align 1, !noalias !6
+; ALL-NEXT:    [[TMP4]] = add i32 [[LOOP_INDEX]], 1
+; ALL-NEXT:    [[TMP5:%.*]] = icmp ult i32 [[TMP4]], 32
+; ALL-NEXT:    br i1 [[TMP5]], label [[LOAD_STORE_LOOP]], label [[MEMCPY_SPLIT:%.*]]
+; ALL:       memcpy-split:
+; ALL-NEXT:    ret void
+;
+  call void @llvm.memmove.p3.p5.i32(ptr addrspace(3) %dst, ptr addrspace(5) %src, i32 256, i1 false)
+  ret void
+}
+
+define amdgpu_kernel void @memmove_local_align1_private_align1_unknown_size(ptr addrspace(3) %dst, ptr addrspace(5) %src, i32 %size) {
+; MAX1024-LABEL: @memmove_local_align1_private_align1_unknown_size(
+; MAX1024-NEXT:    [[TMP1:%.*]] = udiv i32 [[SIZE:%.*]], 8
+; MAX1024-NEXT:    [[TMP2:%.*]] = urem i32 [[SIZE]], 8
+; MAX1024-NEXT:    [[TMP3:%.*]] = sub i32 [[SIZE]], [[TMP2]]
+; MAX1024-NEXT:    [[TMP4:%.*]] = icmp ne i32 [[TMP1]], 0
+; MAX1024-NEXT:    br i1 [[TMP4]], label [[LOOP_MEMCPY_EXPANSION:%.*]], label [[LOOP_MEMCPY_RESIDUAL_HEADER:%.*]]
+; MAX1024:       loop-memcpy-expansion:
+; MAX1024-NEXT:    [[LOOP_INDEX:%.*]] = phi i32 [ 0, [[TMP0:%.*]] ], [ [[TMP8:%.*]], [[LOOP_MEMCPY_EXPANSION]] ]
+; MAX1024-NEXT:    [[TMP5:%.*]] = getelementptr inbounds <2 x i32>, ptr addrspace(5) [[SRC:%.*]], i32 [[LOOP_INDEX]]
+; MAX1024-NEXT:    [[TMP6:%.*]] = load <2 x i32>, ptr addrspace(5) [[TMP5]], align 1, !alias.scope !0
+; MAX1024-NEXT:    [[TMP7:%.*]] = getelementptr inbounds <2 x i32>, ptr addrspace(3) [[DST:%.*]], i32 [[LOOP_INDEX]]
+; MAX1024-NEXT:    store <2 x i32> [[TMP6]], ptr addrspace(3) [[TMP7]], align 1, !noalias !0
+; MAX1024-NEXT:    [[TMP8]] = add i32 [[LOOP_INDEX]], 1
+; MAX1024-NEXT:    [[TMP9:%.*]] = icmp ult i32 [[TMP8]], [[TMP1]]
+; MAX1024-NEXT:    br i1 [[TMP9]], label [[LOOP_MEMCPY_EXPANSION]], label [[LOOP_MEMCPY_RESIDUAL_HEADER]]
+; MAX1024:       loop-memcpy-residual:
+; MAX1024-NEXT:    [[RESIDUAL_LOOP_INDEX:%.*]] = phi i32 [ 0, [[LOOP_MEMCPY_RESIDUAL_HEADER]] ], [ [[TMP14:%.*]], [[LOOP_MEMCPY_RESIDUAL:%.*]] ]
+; MAX1024-NEXT:    [[TMP10:%.*]] = add i32 [[TMP3]], [[RESIDUAL_LOOP_INDEX]]
+; MAX1024-NEXT:    [[TMP11:%.*]] = getelementptr inbounds i8, ptr addrspace(5) [[SRC]], i32 [[TMP10]]
+; MAX1024-NEXT:    [[TMP12:%.*]] = load i8, ptr addrspace(5) [[TMP11]], align 1, !alias.scope !0
+; MAX1024-NEXT:    [[TMP13:%.*]] = getelementptr inbounds i8, ptr addrspace(3) [[DST]], i32 [[TMP10]]
+; MAX1024-NEXT:    store i8 [[TMP12]], ptr addrspace(3) [[TMP13]], align 1, !noalias !0
+; MAX1024-NEXT:    [[TMP14]] = add i32 [[RESIDUAL_LOOP_INDEX]], 1
+; MAX1024-NEXT:    [[TMP15:%.*]] = icmp ult i32 [[TMP14]], [[TMP2]]
+; MAX1024-NEXT:    br i1 [[TMP15]], label [[LOOP_MEMCPY_RESIDUAL]], label [[POST_LOOP_MEMCPY_EXPANSION:%.*]]
+; MAX1024:       post-loop-memcpy-expansion:
+; MAX1024-NEXT:    ret void
+; MAX1024:       loop-memcpy-residual-header:
+; MAX1024-NEXT:    [[TMP16:%.*]] = icmp ne i32 [[TMP2]], 0
+; MAX1024-NEXT:    br i1 [[TMP16]], label [[LOOP_MEMCPY_RESIDUAL]], label [[POST_LOOP_MEMCPY_EXPANSION]]
+;
+; ALL-LABEL: @memmove_local_align1_private_align1_unknown_size(
+; ALL-NEXT:    [[TMP1:%.*]] = udiv i32 [[SIZE:%.*]], 8
+; ALL-NEXT:    [[TMP2:%.*]] = urem i32 [[SIZE]], 8
+; ALL-NEXT:    [[TMP3:%.*]] = sub i32 [[SIZE]], [[TMP2]]
+; ALL-NEXT:    [[TMP4:%.*]] = icmp ne i32 [[TMP1]], 0
+; ALL-NEXT:    br i1 [[TMP4]], label [[LOOP_MEMCPY_EXPANSION:%.*]], label [[LOOP_MEMCPY_RESIDUAL_HEADER:%.*]]
+; ALL:       loop-memcpy-expansion:
+; ALL-NEXT:    [[LOOP_INDEX:%.*]] = phi i32 [ 0, [[TMP0:%.*]] ], [ [[TMP8:%.*]], [[LOOP_MEMCPY_EXPANSION]] ]
+; ALL-NEXT:    [[TMP5:%.*]] = getelementptr inbounds <2 x i32>, ptr addrspace(5) [[SRC:%.*]], i32 [[LOOP_INDEX]]
+; ALL-NEXT:    [[TMP6:%.*]] = load <2 x i32>, ptr addrspace(5) [[TMP5]], align 1, !alias.scope !9
+; ALL-NEXT:    [[TMP7:%.*]] = getelementptr inbounds <2 x i32>, ptr addrspace(3) [[DST:%.*]], i32 [[LOOP_INDEX]]
+; ALL-NEXT:    store <2 x i32> [[TMP6]], ptr addrspace(3) [[TMP7]], align 1, !noalias !9
+; ALL-NEXT:    [[TMP8]] = add i32 [[LOOP_INDEX]], 1
+; ALL-NEXT:    [[TMP9:%.*]] = icmp ult i32 [[TMP8]], [[TMP1]]
+; ALL-NEXT:    br i1 [[TMP9]], label [[LOOP_MEMCPY_EXPANSION]], label [[LOOP_MEMCPY_RESIDUAL_HEADER]]
+; ALL:       loop-memcpy-residual:
+; ALL-NEXT:    [[RESIDUAL_LOOP_INDEX:%.*]] = phi i32 [ 0, [[LOOP_MEMCPY_RESIDUAL_HEADER]] ], [ [[TMP14:%.*]], [[LOOP_MEMCPY_RESIDUAL:%.*]] ]
+; ALL-NEXT:    [[TMP10:%.*]] = add i32 [[TMP3]], [[RESIDUAL_LOOP_INDEX]]
+; ALL-NEXT:    [[TMP11:%.*]] = getelementptr inbounds i8, ptr addrspace(5) [[SRC]], i32 [[TMP10]]
+; ALL-NEXT:    [[TMP12:%.*]] = load i8, ptr addrspace(5) [[TMP11]], align 1, !alias.scope !9
+; ALL-NEXT:    [[TMP13:%.*]] = getelementptr inbounds i8, ptr addrspace(3) [[DST]], i32 [[TMP10]]
+; ALL-NEXT:    store i8 [[TMP12]], ptr addrspace(3) [[TMP13]], align 1, !noalias !9
+; ALL-NEXT:    [[TMP14]] = add i32 [[RESIDUAL_LOOP_INDEX]], 1
+; ALL-NEXT:    [[TMP15:%.*]] = icmp ult i32 [[TMP14]], [[TMP2]]
+; ALL-NEXT:    br i1 [[TMP15]], label [[LOOP_MEMCPY_RESIDUAL]], label [[POST_LOOP_MEMCPY_EXPANSION:%.*]]
+; ALL:       post-loop-memcpy-expansion:
+; ALL-NEXT:    ret void
+; ALL:       loop-memcpy-residual-header:
+; ALL-NEXT:    [[TMP16:%.*]] = icmp ne i32 [[TMP2]], 0
+; ALL-NEXT:    br i1 [[TMP16]], label [[LOOP_MEMCPY_RESIDUAL]], label [[POST_LOOP_MEMCPY_EXPANSION]]
+;
+  call void @llvm.memmove.p3.p5.i32(ptr addrspace(3) %dst, ptr addrspace(5) %src, i32 %size, i1 false)
+  ret void
+}
+
+define amdgpu_kernel void @memmove_private_align1_local_align1(ptr addrspace(5) %dst, ptr addrspace(3) %src) {
+; MAX1024-LABEL: @memmove_private_align1_local_align1(
+; MAX1024-NEXT:    call void @llvm.memmove.p5.p3.i32(ptr addrspace(5) [[DST:%.*]], ptr addrspace(3) [[SRC:%.*]], i32 256, i1 false)
+; MAX1024-NEXT:    ret void
+;
+; ALL-LABEL: @memmove_private_align1_local_align1(
+; ALL-NEXT:    br label [[LOAD_STORE_LOOP:%.*]]
+; ALL:       load-store-loop:
+; ALL-NEXT:    [[LOOP_INDEX:%.*]] = phi i32 [ 0, [[TMP0:%.*]] ], [ [[TMP4:%.*]], [[LOAD_STORE_LOOP]] ]
+; ALL-NEXT:    [[TMP1:%.*]] = getelementptr inbounds <2 x i32>, ptr addrspace(3) [[SRC:%.*]], i32 [[LOOP_INDEX]]
+; ALL-NEXT:    [[TMP2:%.*]] = load <2 x i32>, ptr addrspace(3) [[TMP1]], align 1, !alias.scope !12
+; ALL-NEXT:    [[TMP3:%.*]] = getelementptr inbounds <2 x i32>, ptr addrspace(5) [[DST:%.*]], i32 [[LOOP_INDEX]]
+; ALL-NEXT:    store <2 x i32> [[TMP2]], ptr addrspace(5) [[TMP3]], align 1, !noalias !12
+; ALL-NEXT:    [[TMP4]] = add i32 [[LOOP_INDEX]], 1
+; ALL-NEXT:    [[TMP5:%.*]] = icmp ult i32 [[TMP4]], 32
+; ALL-NEXT:    br i1 [[TMP5]], label [[LOAD_STORE_LOOP]], label [[MEMCPY_SPLIT:%.*]]
+; ALL:       memcpy-split:
+; ALL-NEXT:    ret void
+;
+  call void @llvm.memmove.p5.p3.i32(ptr addrspace(5) %dst, ptr addrspace(3) %src, i32 256, i1 false)
+  ret void
+}
+
+define amdgpu_kernel void @memmove_private_align1_local_align1_unknown_size(ptr addrspace(5) %dst, ptr addrspace(3) %src, i32 %size) {
+; MAX1024-LABEL: @memmove_private_align1_local_align1_unknown_size(
+; MAX1024-NEXT:    [[TMP1:%.*]] = udiv i32 [[SIZE:%.*]], 8
+; MAX1024-NEXT:    [[TMP2:%.*]] = urem i32 [[SIZE]], 8
+; MAX1024-NEXT:    [[TMP3:%.*]] = sub i32 [[SIZE]], [[TMP2]]
+; MAX1024-NEXT:    [[TMP4:%.*]] = icmp ne i32 [[TMP1]], 0
+; MAX1024-NEXT:    br i1 [[TMP4]], label [[LOOP_MEMCPY_EXPANSION:%.*]], label [[LOOP_MEMCPY_RESIDUAL_HEADER:%.*]]
+; MAX1024:       loop-memcpy-expansion:
+; MAX1024-NEXT:    [[LOOP_INDEX:%.*]] = phi i32 [ 0, [[TMP0:%.*]] ], [ [[TMP8:%.*]], [[LOOP_MEMCPY_EXPANSION]] ]
+; MAX1024-NEXT:    [[TMP5:%.*]] = getelementptr inbounds <2 x i32>, ptr addrspace(3) [[SRC:%.*]], i32 [[LOOP_INDEX]]
+; MAX1024-NEXT:    [[TMP6:%.*]] = load <2 x i32>, ptr addrspace(3) [[TMP5]], align 1, !alias.scope !3
+; MAX1024-NEXT:    [[TMP7:%.*]] = getelementptr inbounds <2 x i32>, ptr addrspace(5) [[DST:%.*]], i32 [[LOOP_INDEX]]
+; MAX1024-NEXT:    store <2 x i32> [[TMP6]], ptr addrspace(5) [[TMP7]], align 1, !noalias !3
+; MAX1024-NEXT:    [[TMP8]] = add i32 [[LOOP_INDEX]], 1
+; MAX1024-NEXT:    [[TMP9:%.*]] = icmp ult i32 [[TMP8]], [[TMP1]]
+; MAX1024-NEXT:    br i1 [[TMP9]], label [[LOOP_MEMCPY_EXPANSION]], label [[LOOP_MEMCPY_RESIDUAL_HEADER]]
+; MAX1024:       loop-memcpy-residual:
+; MAX1024-NEXT:    [[RESIDUAL_LOOP_INDEX:%.*]] = phi i32 [ 0, [[LOOP_MEMCPY_RESIDUAL_HEADER]] ], [ [[TMP14:%.*]], [[LOOP_MEMCPY_RESIDUAL:%.*]] ]
+; MAX1024-NEXT:    [[TMP10:%.*]] = add i32 [[TMP3]], [[RESIDUAL_LOOP_INDEX]]
+; MAX1024-NEXT:    [[TMP11:%.*]] = getelementptr inbounds i8, ptr addrspace(3) [[SRC]], i32 [[TMP10]]
+; MAX1024-NEXT:    [[TMP12:%.*]] = load i8, ptr addrspace(3) [[TMP11]], align 1, !alias.scope !3
+; MAX1024-NEXT:    [[TMP13:%.*]] = getelementptr inbounds i8, ptr addrspace(5) [[DST]], i32 [[TMP10]]
+; MAX1024-NEXT:    store i8 [[TMP12]], ptr addrspace(5) [[TMP13]], align 1, !noalias !3
+; MAX1024-NEXT:    [[TMP14]] = add i32 [[RESIDUAL_LOOP_INDEX]], 1
+; MAX1024-NEXT:    [[TMP15:%.*]] = icmp ult i32 [[TMP14]], [[TMP2]]
+; MAX1024-NEXT:    br i1 [[TMP15]], label [[LOOP_MEMCPY_RESIDUAL]], label [[POST_LOOP_MEMCPY_EXPANSION:%.*]]
+; MAX1024:       post-loop-memcpy-expansion:
+; MAX1024-NEXT:    ret void
+; MAX1024:       loop-memcpy-residual-header:
+; MAX1024-NEXT:    [[TMP16:%.*]] = icmp ne i32 [[TMP2]], 0
+; MAX1024-NEXT:    br i1 [[TMP16]], label [[LOOP_MEMCPY_RESIDUAL]], label [[POST_LOOP_MEMCPY_EXPANSION]]
+;
+; ALL-LABEL: @memmove_private_align1_local_align1_unknown_size(
+; ALL-NEXT:    [[TMP1:%.*]] = udiv i32 [[SIZE:%.*]], 8
+; ALL-NEXT:    [[TMP2:%.*]] = urem i32 [[SIZE]], 8
+; ALL-NEXT:    [[TMP3:%.*]] = sub i32 [[SIZE]], [[TMP2]]
+; ALL-NEXT:    [[TMP4:%.*]] = icmp ne i32 [[TMP1]], 0
+; ALL-NEXT:    br i1 [[TMP4]], label [[LOOP_MEMCPY_EXPANSION:%.*]], label [[LOOP_MEMCPY_RESIDUAL_HEADER:%.*]]
+; ALL:       loop-memcpy-expansion:
+; ALL-NEXT:    [[LOOP_INDEX:%.*]] = phi i32 [ 0, [[TMP0:%.*]] ], [ [[TMP8:%.*]], [[LOOP_MEMCPY_EXPANSION]] ]
+; ALL-NEXT:    [[TMP5:%.*]] = getelementptr inbounds <2 x i32>, ptr addrspace(3) [[SRC:%.*]], i32 [[LOOP_INDEX]]
+; ALL-NEXT:    [[TMP6:%.*]] = load <2 x i32>, ptr addrspace(3) [[TMP5]], align 1, !alias.scope !15
+; ALL-NEXT:    [[TMP7:%.*]] = getelementptr inbounds <2 x i32>, ptr addrspace(5) [[DST:%.*]], i32 [[LOOP_INDEX]]
+; ALL-NEXT:    store <2 x i32> [[TMP6]], ptr addrspace(5) [[TMP7]], align 1, !noalias !15
+; ALL-NEXT:    [[TMP8]] = add i32 [[LOOP_INDEX]], 1
+; ALL-NEXT:    [[TMP9:%.*]] = icmp ult i32 [[TMP8]], [[TMP1]]
+; ALL-NEXT:    br i1 [[TMP9]], label [[LOOP_MEMCPY_EXPANSION]], label [[LOOP_MEMCPY_RESIDUAL_HEADER]]
+; ALL:       loop-memcpy-residual:
+; ALL-NEXT:    [[RESIDUAL_LOOP_INDEX:%.*]] = phi i32 [ 0, [[LOOP_MEMCPY_RESIDUAL_HEADER]] ], [ [[TMP14:%.*]], [[LOOP_MEMCPY_RESIDUAL:%.*]] ]
+; ALL-NEXT:    [[TMP10:%.*]] = add i32 [[TMP3]], [[RESIDUAL_LOOP_INDEX]]
+; ALL-NEXT:    [[TMP11:%.*]] = getelementptr inbounds i8, ptr addrspace(3) [[SRC]], i32 [[TMP10]]
+; ALL-NEXT:    [[TMP12:%.*]] = load i8, ptr addrspace(3) [[TMP11]], align 1, !alias.scope !15
+; ALL-NEXT:    [[TMP13:%.*]] = getelementptr inbounds i8, ptr addrspace(5) [[DST]], i32 [[TMP10]]
+; ALL-NEXT:    store i8 [[TMP12]], ptr addrspace(5) [[TMP13]], align 1, !noalias !15
+; ALL-NEXT:    [[TMP14]] = add i32 [[RESIDUAL_LOOP_INDEX]], 1
+; ALL-NEXT:    [[TMP15:%.*]] = icmp ult i32 [[TMP14]], [[TMP2]]
+; ALL-NEXT:    br i1 [[TMP15]], label [[LOOP_MEMCPY_RESIDUAL]], label [[POST_LOOP_MEMCPY_EXPANSION:%.*]]
+; ALL:       post-loop-memcpy-expansion:
+; ALL-NEXT:    ret void
+; ALL:       loop-memcpy-residual-header:
+; ALL-NEXT:    [[TMP16:%.*]] = icmp ne i32 [[TMP2]], 0
+; ALL-NEXT:    br i1 [[TMP16]], label [[LOOP_MEMCPY_RESIDUAL]], label [[POST_LOOP_MEMCPY_EXPANSION]]
+;
+  call void @llvm.memmove.p5.p3.i32(ptr addrspace(5) %dst, ptr addrspace(3) %src, i32 %size, i1 false)
   ret void
 }
 
