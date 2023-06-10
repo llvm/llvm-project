@@ -4549,6 +4549,30 @@ MachineBasicBlock *SITargetLowering::EmitInstrWithCustomInserter(
     MI.eraseFromParent();
     return BB;
   }
+  case AMDGPU::ENDPGM_TRAP: {
+    const DebugLoc &DL = MI.getDebugLoc();
+    if (BB->succ_empty() && std::next(MI.getIterator()) == BB->end()) {
+      MI.setDesc(TII->get(AMDGPU::S_ENDPGM));
+      MI.addOperand(MachineOperand::CreateImm(0));
+      return BB;
+    }
+
+    // We need a block split to make the real endpgm a terminator. We also don't
+    // want to break phis in successor blocks, so we can't just delete to the
+    // end of the block.
+
+    MachineBasicBlock *SplitBB = BB->splitAt(MI, false /*UpdateLiveIns*/);
+    MachineBasicBlock *TrapBB = MF->CreateMachineBasicBlock();
+    MF->push_back(TrapBB);
+    BuildMI(*TrapBB, TrapBB->end(), DL, TII->get(AMDGPU::S_ENDPGM))
+      .addImm(0);
+    BuildMI(*BB, &MI, DL, TII->get(AMDGPU::S_CBRANCH_EXECNZ))
+      .addMBB(TrapBB);
+
+    BB->addSuccessor(TrapBB);
+    MI.eraseFromParent();
+    return SplitBB;
+  }
   default:
     return AMDGPUTargetLowering::EmitInstrWithCustomInserter(MI, BB);
   }
@@ -5572,7 +5596,7 @@ SDValue SITargetLowering::lowerTrapEndpgm(
     SDValue Op, SelectionDAG &DAG) const {
   SDLoc SL(Op);
   SDValue Chain = Op.getOperand(0);
-  return DAG.getNode(AMDGPUISD::ENDPGM, SL, MVT::Other, Chain);
+  return DAG.getNode(AMDGPUISD::ENDPGM_TRAP, SL, MVT::Other, Chain);
 }
 
 SDValue SITargetLowering::loadImplicitKernelArgument(SelectionDAG &DAG, MVT VT,
