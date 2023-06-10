@@ -795,8 +795,15 @@ define i32 @func_psz_psz_f32() #10 {
   ret i32 11
 }
 
-define i32 @call_dynamic_dynamic_from_psz_psz_f32() #10 {
-; CHECK-LABEL: @call_dynamic_dynamic_from_psz_psz_f32(
+define i32 @func_dynamic_dynamic_psz_psz_f32() #12 {
+; CHECK-LABEL: @func_dynamic_dynamic_psz_psz_f32(
+; CHECK-NEXT:    ret i32 12
+;
+  ret i32 12
+}
+
+define i32 @call_dynamic_dynamic_f32_from_psz_psz_f32() #10 {
+; CHECK-LABEL: @call_dynamic_dynamic_f32_from_psz_psz_f32(
 ; CHECK-NEXT:    ret i32 10
 ;
   %result = call i32 @func_dynamic_dynamic_f32()
@@ -820,6 +827,42 @@ define i32 @call_psz_psz_from_ieee_ieee_f32() #11 {
   ret i32 %result
 }
 
+define i32 @call_dynamic_dynamic_from_psz_psz_f32() #10 {
+; CHECK-LABEL: @call_dynamic_dynamic_from_psz_psz_f32(
+; CHECK-NEXT:    [[RESULT:%.*]] = call i32 @func_dynamic_dynamic()
+; CHECK-NEXT:    ret i32 [[RESULT]]
+;
+  %result = call i32 @func_dynamic_dynamic()
+  ret i32 %result
+}
+
+define i32 @call_dynamic_dynamic_f32_from_psz_psz() #1 {
+; CHECK-LABEL: @call_dynamic_dynamic_f32_from_psz_psz(
+; CHECK-NEXT:    [[RESULT:%.*]] = call i32 @func_dynamic_dynamic_f32()
+; CHECK-NEXT:    ret i32 [[RESULT]]
+;
+  %result = call i32 @func_dynamic_dynamic_f32()
+  ret i32 %result
+}
+
+define i32 @call_psz_psz_f32_from_psz_psz() #1 {
+; CHECK-LABEL: @call_psz_psz_f32_from_psz_psz(
+; CHECK-NEXT:    [[RESULT:%.*]] = call i32 @func_psz_psz_f32()
+; CHECK-NEXT:    ret i32 [[RESULT]]
+;
+  %result = call i32 @func_psz_psz_f32()
+  ret i32 %result
+}
+
+define i32 @call_dynamic_dynamic_psz_psz_f32_from_psz_psz() #1 {
+; CHECK-LABEL: @call_dynamic_dynamic_psz_psz_f32_from_psz_psz(
+; CHECK-NEXT:    [[RESULT:%.*]] = call i32 @func_dynamic_dynamic_psz_psz_f32()
+; CHECK-NEXT:    ret i32 [[RESULT]]
+;
+  %result = call i32 @func_dynamic_dynamic_psz_psz_f32()
+  ret i32 %result
+}
+
 attributes #0 = { "denormal-fp-math"="ieee,ieee" }
 attributes #1 = { "denormal-fp-math"="preserve-sign,preserve-sign" }
 attributes #2 = { "denormal-fp-math"="preserve-sign,ieee" }
@@ -832,3 +875,4 @@ attributes #8 = { "denormal-fp-math"="dynamic,preserve-sign" }
 attributes #9 = { "denormal-fp-math-f32"="dynamic,dynamic" }
 attributes #10 = { "denormal-fp-math-f32"="preserve-sign,preserve-sign" }
 attributes #11 = { "denormal-fp-math-f32"="ieee,ieee" "denormal-fp-math"="preserve-sign,preserve-sign" }
+attributes #12 = { "denormal-fp-math"="dynamic,dynamic" "denormal-fp-math-f32"="preserve-sign,preserve-sign" }
