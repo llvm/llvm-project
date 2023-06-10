@@ -570,9 +570,6 @@ INITIALIZE_PASS_DEPENDENCY(TargetTransformInfoWrapperPass)
 INITIALIZE_PASS_DEPENDENCY(DominatorTreeWrapperPass)
 INITIALIZE_PASS_END(CallSiteSplittingLegacyPass, "callsite-splitting",
                     "Call-site splitting", false, false)
-FunctionPass *llvm::createCallSiteSplittingPass() {
-  return new CallSiteSplittingLegacyPass();
-}
 
 PreservedAnalyses CallSiteSplittingPass::run(Function &F,
                                              FunctionAnalysisManager &AM) {
