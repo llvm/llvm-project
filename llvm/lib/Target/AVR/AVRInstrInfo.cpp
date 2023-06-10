@@ -58,16 +58,21 @@ void AVRInstrInfo::copyPhysReg(MachineBasicBlock &MBB,
       TRI.splitReg(DestReg, DestLo, DestHi);
       TRI.splitReg(SrcReg, SrcLo, SrcHi);
 
+      // Emit the copies.
+      // The original instruction was for a register pair, of which only one
+      // register might have been live. Add 'undef' to satisfy the machine
+      // verifier, when subreg liveness is enabled.
+      // TODO: Eliminate these unnecessary copies.
       if (DestLo == SrcHi) {
         BuildMI(MBB, MI, DL, get(AVR::MOVRdRr), DestHi)
-            .addReg(SrcHi, getKillRegState(KillSrc));
+            .addReg(SrcHi, getKillRegState(KillSrc) | RegState::Undef);
         BuildMI(MBB, MI, DL, get(AVR::MOVRdRr), DestLo)
-            .addReg(SrcLo, getKillRegState(KillSrc));
+            .addReg(SrcLo, getKillRegState(KillSrc) | RegState::Undef);
       } else {
         BuildMI(MBB, MI, DL, get(AVR::MOVRdRr), DestLo)
-            .addReg(SrcLo, getKillRegState(KillSrc));
+            .addReg(SrcLo, getKillRegState(KillSrc) | RegState::Undef);
         BuildMI(MBB, MI, DL, get(AVR::MOVRdRr), DestHi)
-            .addReg(SrcHi, getKillRegState(KillSrc));
+            .addReg(SrcHi, getKillRegState(KillSrc) | RegState::Undef);
       }
     }
   } else {

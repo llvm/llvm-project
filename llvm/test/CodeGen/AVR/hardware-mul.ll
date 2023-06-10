@@ -18,19 +18,19 @@ define i16 @mult16(i16 %a, i16 %b) {
 ; CHECK-LABEL: mult16:
 ; CHECK:       ; %bb.0:
 ; CHECK-NEXT:    muls r22, r25
-; CHECK-NEXT:    mov r20, r0
+; CHECK-NEXT:    mov r25, r0
 ; CHECK-NEXT:    clr r1
 ; CHECK-NEXT:    mul r22, r24
-; CHECK-NEXT:    mov r21, r0
+; CHECK-NEXT:    mov r20, r0
 ; CHECK-NEXT:    mov r18, r1
 ; CHECK-NEXT:    clr r1
-; CHECK-NEXT:    add r18, r20
+; CHECK-NEXT:    add r18, r25
 ; CHECK-NEXT:    muls r23, r24
 ; CHECK-NEXT:    clr r1
 ; CHECK-NEXT:    add r18, r0
 ; CHECK-NEXT:    mov r19, r18
 ; CHECK-NEXT:    clr r18
-; CHECK-NEXT:    mov r24, r21
+; CHECK-NEXT:    mov r24, r20
 ; CHECK-NEXT:    clr r25
 ; CHECK-NEXT:    or r24, r18
 ; CHECK-NEXT:    or r25, r19
