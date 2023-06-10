@@ -57,8 +57,6 @@ struct AssumeSimplifyPass : public PassInfoMixin<AssumeSimplifyPass> {
   PreservedAnalyses run(Function &F, FunctionAnalysisManager &AM);
 };
 
-FunctionPass *createAssumeSimplifyPass();
-
 /// This pass will try to build an llvm.assume for every instruction in the
 /// function. Its main purpose is testing.
 struct AssumeBuilderPass : public PassInfoMixin<AssumeBuilderPass> {
