@@ -139,7 +139,7 @@ Section,Description,Dependencies,Assignee,Complete
 "| `[complex.syn] <https://wg21.link/complex.syn>`_
 | `[complex.ops] <https://wg21.link/complex.ops>`_",| remove ops `complex <https://reviews.llvm.org/D152615>`_,None,Hristo Hristov,|In Progress|
 "| `[class.slice.overview] <https://wg21.link/class.slice.overview>`_
-| `[slice.ops] <https://wg21.link/slice.ops>`_",| `slice <https://reviews.llvm.org/D152617>`_,None,Hristo Hristov,|In Progress|
+| `[slice.ops] <https://wg21.link/slice.ops>`_",| `slice <https://reviews.llvm.org/D152617>`_,None,Hristo Hristov,|Complete|
 - `5.12 Clause 27: Time library <https://wg21.link/p1614r2#clause-27-time-library>`_,,,,
 | `[time.syn] <https://wg21.link/time.syn>`_,|,None,Unassigned,|Not Started|
 | `[time.duration.comparisons] <https://wg21.link/time.duration.comparisons>`_, `chrono::duration <https://reviews.llvm.org/D145881>`_, None, Hristo Hristov, |Complete|
