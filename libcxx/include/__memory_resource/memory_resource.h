@@ -55,9 +55,13 @@ inline _LIBCPP_HIDE_FROM_ABI bool operator==(const memory_resource& __lhs, const
   return &__lhs == &__rhs || __lhs.is_equal(__rhs);
 }
 
+#  if _LIBCPP_STD_VER <= 17
+
 inline _LIBCPP_HIDE_FROM_ABI bool operator!=(const memory_resource& __lhs, const memory_resource& __rhs) noexcept {
   return !(__lhs == __rhs);
 }
+
+#  endif
 
 // [mem.res.global]
 
