@@ -52,7 +52,7 @@ void expandMemCpyAsLoop(MemCpyInst *MemCpy, const TargetTransformInfo &TTI,
 
 /// Expand \p MemMove as a loop. \p MemMove is not deleted. Returns true if the
 /// memmove was lowered.
-bool expandMemMoveAsLoop(MemMoveInst *MemMove);
+bool expandMemMoveAsLoop(MemMoveInst *MemMove, const TargetTransformInfo &TTI);
 
 /// Expand \p MemSet as a loop. \p MemSet is not deleted.
 void expandMemSetAsLoop(MemSetInst *MemSet);
