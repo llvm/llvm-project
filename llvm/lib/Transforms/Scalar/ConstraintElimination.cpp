@@ -38,6 +38,7 @@
 #include "llvm/Transforms/Utils/ValueMapper.h"
 
 #include <cmath>
+#include <optional>
 #include <string>
 
 using namespace llvm;
@@ -109,12 +110,11 @@ struct ConstraintTy {
   SmallVector<SmallVector<int64_t, 8>> ExtraInfo;
 
   bool IsSigned = false;
-  bool IsEq = false;
 
   ConstraintTy() = default;
 
-  ConstraintTy(SmallVector<int64_t, 8> Coefficients, bool IsSigned)
-      : Coefficients(Coefficients), IsSigned(IsSigned) {}
+  ConstraintTy(SmallVector<int64_t, 8> Coefficients, bool IsSigned, bool IsEq)
+      : Coefficients(Coefficients), IsSigned(IsSigned), IsEq(IsEq) {}
 
   unsigned size() const { return Coefficients.size(); }
 
@@ -123,6 +123,18 @@ struct ConstraintTy {
   /// Returns true if all preconditions for this list of constraints are
   /// satisfied given \p CS and the corresponding \p Value2Index mapping.
   bool isValid(const ConstraintInfo &Info) const;
+
+  bool isEq() const { return IsEq; }
+
+  /// Check if the current constraint is implied by the given ConstraintSystem.
+  ///
+  /// \return true or false if the constraint is proven to be respectively true,
+  /// or false. When the constraint cannot be proven to be either true or false,
+  /// std::nullopt is returned.
+  std::optional<bool> isImpliedBy(const ConstraintSystem &CS) const;
+
+private:
+  bool IsEq = false;
 };
 
 /// Wrapper encapsulating separate constraint systems and corresponding value
@@ -480,11 +492,10 @@ ConstraintInfo::getConstraint(CmpInst::Predicate Pred, Value *Op0, Value *Op1,
   // subtracting all coefficients from B.
   ConstraintTy Res(
       SmallVector<int64_t, 8>(Value2Index.size() + NewVariables.size() + 1, 0),
-      IsSigned);
+      IsSigned, IsEq);
   // Collect variables that are known to be positive in all uses in the
   // constraint.
   DenseMap<Value *, bool> KnownNonNegativeVariables;
-  Res.IsEq = IsEq;
   auto &R = Res.Coefficients;
   for (const auto &KV : VariablesA) {
     R[GetOrAddIndex(KV.Variable)] += KV.Coefficient;
@@ -547,7 +558,7 @@ ConstraintTy ConstraintInfo::getConstraintForSolving(CmpInst::Predicate Pred,
 
   SmallVector<Value *> NewVariables;
   ConstraintTy R = getConstraint(Pred, Op0, Op1, NewVariables);
-  if (R.IsEq || !NewVariables.empty())
+  if (!NewVariables.empty())
     return {};
   return R;
 }
@@ -557,6 +568,47 @@ bool ConstraintTy::isValid(const ConstraintInfo &Info) const {
          all_of(Preconditions, [&Info](const PreconditionTy &C) {
            return Info.doesHold(C.Pred, C.Op0, C.Op1);
          });
+}
+
+std::optional<bool>
+ConstraintTy::isImpliedBy(const ConstraintSystem &CS) const {
+  bool IsConditionImplied = CS.isConditionImplied(Coefficients);
+
+  if (IsEq) {
+    auto NegatedOrEqual = ConstraintSystem::negateOrEqual(Coefficients);
+    bool IsNegatedOrEqualImplied =
+        !NegatedOrEqual.empty() && CS.isConditionImplied(NegatedOrEqual);
+
+    // In order to check that `%a == %b` is true, we want to check that `%a >=
+    // %b` and `%a <= %b` must hold.
+    if (IsConditionImplied && IsNegatedOrEqualImplied)
+      return true;
+
+    auto Negated = ConstraintSystem::negate(Coefficients);
+    bool IsNegatedImplied = !Negated.empty() && CS.isConditionImplied(Negated);
+
+    auto StrictLessThan = ConstraintSystem::toStrictLessThan(Coefficients);
+    bool IsStrictLessThanImplied =
+        !StrictLessThan.empty() && CS.isConditionImplied(StrictLessThan);
+
+    // In order to check that `%a == %b` is false, we want to check whether
+    // either `%a > %b` or `%a < %b` holds.
+    if (IsNegatedImplied || IsStrictLessThanImplied)
+      return false;
+
+    return std::nullopt;
+  }
+
+  if (IsConditionImplied)
+    return true;
+
+  auto Negated = ConstraintSystem::negate(Coefficients);
+  auto IsNegatedImplied = !Negated.empty() && CS.isConditionImplied(Negated);
+  if (IsNegatedImplied)
+    return false;
+
+  // Neither the condition nor its negated holds, did not prove anything.
+  return std::nullopt;
 }
 
 bool ConstraintInfo::doesHold(CmpInst::Predicate Pred, Value *A,
@@ -976,27 +1028,10 @@ static bool checkAndReplaceCondition(
     return true;
   };
 
-  bool Changed = false;
-  bool IsConditionImplied = CSToUse.isConditionImplied(R.Coefficients);
+  if (auto ImpliedCondition = R.isImpliedBy(CSToUse))
+    return ReplaceCmpWithConstant(Cmp, *ImpliedCondition);
 
-  if (IsConditionImplied) {
-    Changed = ReplaceCmpWithConstant(Cmp, true);
-    if (!Changed)
-      return false;
-  }
-
-  // Compute them separately.
-  auto Negated = ConstraintSystem::negate(R.Coefficients);
-  auto IsNegatedImplied =
-      !Negated.empty() && CSToUse.isConditionImplied(Negated);
-
-  if (IsNegatedImplied) {
-    Changed = ReplaceCmpWithConstant(Cmp, false);
-    if (!Changed)
-      return false;
-  }
-
-  return Changed;
+  return false;
 }
 
 static void
@@ -1054,7 +1089,7 @@ void ConstraintInfo::addFact(CmpInst::Predicate Pred, Value *A, Value *B,
     DFSInStack.emplace_back(NumIn, NumOut, R.IsSigned,
                             std::move(ValuesToRelease));
 
-    if (R.IsEq) {
+    if (R.isEq()) {
       // Also add the inverted constraint for equality constraints.
       for (auto &Coeff : R.Coefficients)
         Coeff *= -1;
