@@ -206,9 +206,16 @@ static void *mmap_interceptor(Mmap real_mmap, void *addr, SIZE_T length,
       errno = errno_ENOMEM;
       return (void *)-1;
     }
+    __hwasan::TagMemory(reinterpret_cast<uptr>(addr), length, 0);
   }
 
   return res;
+}
+
+template <class Munmap>
+static int munmap_interceptor(Munmap real_munmap, void *addr, SIZE_T length) {
+  __hwasan::TagMemoryAligned(reinterpret_cast<uptr>(addr), length, 0);
+  return real_munmap(addr, length);
 }
 
 #    define COMMON_INTERCEPTOR_MMAP_IMPL(ctx, mmap, addr, length, prot, flags, \
@@ -216,6 +223,12 @@ static void *mmap_interceptor(Mmap real_mmap, void *addr, SIZE_T length,
       do {                                                                     \
         (void)(ctx);                                                           \
         return mmap_interceptor(REAL(mmap), addr, sz, prot, flags, fd, off);   \
+      } while (false)
+
+#    define COMMON_INTERCEPTOR_MUNMAP_IMPL(ctx, munmap, addr, length)          \
+      do {                                                                     \
+        (void)(ctx);                                                           \
+        return munmap_interceptor(REAL(munmap), addr, sz);                     \
       } while (false)
 
 #    include "sanitizer_common/sanitizer_common_interceptors_memintrinsics.inc"
