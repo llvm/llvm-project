@@ -2680,9 +2680,7 @@ InlineResult CallAnalyzer::analyze() {
   // basic blocks in a breadth-first order as we insert live successors. To
   // accomplish this, prioritizing for small iterations because we exit after
   // crossing our threshold, we use a small-size optimized SetVector.
-  typedef SetVector<BasicBlock *, SmallVector<BasicBlock *, 16>,
-                    SmallPtrSet<BasicBlock *, 16>>
-      BBSetVector;
+  typedef SmallSetVector<BasicBlock *, 16> BBSetVector;
   BBSetVector BBWorklist;
   BBWorklist.insert(&F.getEntryBlock());
 
