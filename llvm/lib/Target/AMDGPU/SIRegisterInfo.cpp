@@ -175,7 +175,8 @@ struct SGPRSpillBuilder {
     // a register as actually in use in another lane, so we need to save all
     // used lanes of the chosen VGPR.
     assert(RS && "Cannot spill SGPR to memory without RegScavenger");
-    TmpVGPR = RS->scavengeRegister(&AMDGPU::VGPR_32RegClass, MI, 0, false);
+    TmpVGPR = RS->scavengeRegisterBackwards(AMDGPU::VGPR_32RegClass, MI, false,
+                                            0, false);
 
     // Reserve temporary stack slot
     TmpVGPRIndex = MFI.getScavengeFI(MF.getFrameInfo(), TRI);
@@ -204,7 +205,7 @@ struct SGPRSpillBuilder {
     const TargetRegisterClass &RC =
         IsWave32 ? AMDGPU::SGPR_32RegClass : AMDGPU::SGPR_64RegClass;
     RS->setRegUsed(SuperReg);
-    SavedExecReg = RS->scavengeRegister(&RC, MI, 0, false);
+    SavedExecReg = RS->scavengeRegisterBackwards(RC, MI, false, 0, false);
 
     int64_t VGPRLanes = getPerVGPRData().VGPRLanes;
 
@@ -1661,7 +1662,8 @@ void SIRegisterInfo::buildSpillLoadStore(
     } else if (UseVGPROffset) {
       // FIXME: change to scavengeRegisterBackwards()
       if (!TmpOffsetVGPR) {
-        TmpOffsetVGPR = RS->scavengeRegister(&AMDGPU::VGPR_32RegClass, MI, 0);
+        TmpOffsetVGPR = RS->scavengeRegisterBackwards(AMDGPU::VGPR_32RegClass,
+                                                      MI, false, 0);
         RS->setRegUsed(TmpOffsetVGPR);
       }
     }
@@ -2472,7 +2474,8 @@ bool SIRegisterInfo::eliminateFrameIndex(MachineBasicBlock::iterator MI,
         const TargetRegisterClass *RC = UseSGPR ? &AMDGPU::SReg_32_XM0RegClass
                                                 : &AMDGPU::VGPR_32RegClass;
 
-        Register TmpReg = RS->scavengeRegister(RC, MI, 0, !UseSGPR);
+        Register TmpReg =
+            RS->scavengeRegisterBackwards(*RC, MI, false, 0, !UseSGPR);
         FIOp.setReg(TmpReg);
         FIOp.setIsKill();
 
@@ -2492,8 +2495,8 @@ bool SIRegisterInfo::eliminateFrameIndex(MachineBasicBlock::iterator MI,
 
         Register TmpSReg =
             UseSGPR ? TmpReg
-                    : RS->scavengeRegister(&AMDGPU::SReg_32_XM0RegClass, MI, 0,
-                                           !UseSGPR);
+                    : RS->scavengeRegisterBackwards(AMDGPU::SReg_32_XM0RegClass,
+                                                    MI, false, 0, !UseSGPR);
 
         // TODO: for flat scratch another attempt can be made with a VGPR index
         //       if no SGPRs can be scavenged.
@@ -2567,8 +2570,9 @@ bool SIRegisterInfo::eliminateFrameIndex(MachineBasicBlock::iterator MI,
                                             : &AMDGPU::VGPR_32RegClass;
         bool IsCopy = MI->getOpcode() == AMDGPU::V_MOV_B32_e32 ||
                       MI->getOpcode() == AMDGPU::V_MOV_B32_e64;
-        Register ResultReg = IsCopy ? MI->getOperand(0).getReg()
-                                    : RS->scavengeRegister(RC, MI, 0);
+        Register ResultReg =
+            IsCopy ? MI->getOperand(0).getReg()
+                   : RS->scavengeRegisterBackwards(*RC, MI, false, 0);
 
         int64_t Offset = FrameInfo.getObjectOffset(Index);
         if (Offset == 0) {
@@ -2581,8 +2585,8 @@ bool SIRegisterInfo::eliminateFrameIndex(MachineBasicBlock::iterator MI,
           if (IsSALU && !LiveSCC)
             Shift.getInstr()->getOperand(3).setIsDead(); // Mark SCC as dead.
           if (IsSALU && LiveSCC) {
-            Register NewDest =
-                RS->scavengeRegister(&AMDGPU::SReg_32RegClass, Shift, 0);
+            Register NewDest = RS->scavengeRegisterBackwards(
+                AMDGPU::SReg_32RegClass, Shift, false, 0);
             BuildMI(*MBB, MI, DL, TII->get(AMDGPU::V_READFIRSTLANE_B32),
                     NewDest)
                 .addReg(ResultReg);
@@ -2636,8 +2640,8 @@ bool SIRegisterInfo::eliminateFrameIndex(MachineBasicBlock::iterator MI,
 
             // We may have 1 free scratch SGPR even though a carry out is
             // unavailable. Only one additional mov is needed.
-            Register TmpScaledReg =
-              RS->scavengeRegister(&AMDGPU::SReg_32_XM0RegClass, MI, 0, false);
+            Register TmpScaledReg = RS->scavengeRegisterBackwards(
+                AMDGPU::SReg_32_XM0RegClass, MI, false, 0, false);
             Register ScaledReg = TmpScaledReg.isValid() ? TmpScaledReg : FrameReg;
 
             BuildMI(*MBB, MI, DL, TII->get(AMDGPU::S_LSHR_B32), ScaledReg)
@@ -2702,7 +2706,8 @@ bool SIRegisterInfo::eliminateFrameIndex(MachineBasicBlock::iterator MI,
 
       FIOp.ChangeToImmediate(Offset);
       if (!TII->isImmOperandLegal(*MI, FIOperandNum, FIOp)) {
-        Register TmpReg = RS->scavengeRegister(&AMDGPU::VGPR_32RegClass, MI, 0);
+        Register TmpReg = RS->scavengeRegisterBackwards(AMDGPU::VGPR_32RegClass,
+                                                        MI, false, 0);
         BuildMI(*MBB, MI, DL, TII->get(AMDGPU::V_MOV_B32_e32), TmpReg)
           .addImm(Offset);
         FIOp.ChangeToRegister(TmpReg, false, false, true);

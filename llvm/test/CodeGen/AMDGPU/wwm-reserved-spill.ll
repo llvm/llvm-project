@@ -952,38 +952,38 @@ define amdgpu_gfx <32 x i32> @strict_wwm_callee_saves(<32 x i32> inreg %keep, pt
 ; GFX9-O0-NEXT:    buffer_store_dword v45, off, s[0:3], s32 offset:32 ; 4-byte Folded Spill
 ; GFX9-O0-NEXT:    buffer_store_dword v46, off, s[0:3], s32 offset:28 ; 4-byte Folded Spill
 ; GFX9-O0-NEXT:    buffer_store_dword v47, off, s[0:3], s32 offset:24 ; 4-byte Folded Spill
-; GFX9-O0-NEXT:    s_mov_b64 s[40:41], exec
-; GFX9-O0-NEXT:    s_mov_b64 exec, 1
-; GFX9-O0-NEXT:    buffer_store_dword v14, off, s[0:3], s32 offset:256
-; GFX9-O0-NEXT:    v_writelane_b32 v14, s64, 0
-; GFX9-O0-NEXT:    buffer_store_dword v14, off, s[0:3], s32 offset:200 ; 4-byte Folded Spill
-; GFX9-O0-NEXT:    buffer_load_dword v14, off, s[0:3], s32 offset:256
-; GFX9-O0-NEXT:    s_waitcnt vmcnt(0)
-; GFX9-O0-NEXT:    s_mov_b64 exec, s[40:41]
-; GFX9-O0-NEXT:    s_mov_b64 s[38:39], exec
-; GFX9-O0-NEXT:    s_mov_b64 exec, 1
-; GFX9-O0-NEXT:    buffer_store_dword v13, off, s[0:3], s32 offset:256
-; GFX9-O0-NEXT:    v_writelane_b32 v13, s65, 0
-; GFX9-O0-NEXT:    buffer_store_dword v13, off, s[0:3], s32 offset:204 ; 4-byte Folded Spill
-; GFX9-O0-NEXT:    buffer_load_dword v13, off, s[0:3], s32 offset:256
-; GFX9-O0-NEXT:    s_waitcnt vmcnt(0)
-; GFX9-O0-NEXT:    s_mov_b64 exec, s[38:39]
 ; GFX9-O0-NEXT:    s_mov_b64 s[34:35], exec
 ; GFX9-O0-NEXT:    s_mov_b64 exec, 1
-; GFX9-O0-NEXT:    buffer_store_dword v12, off, s[0:3], s32 offset:256
-; GFX9-O0-NEXT:    v_writelane_b32 v12, s66, 0
-; GFX9-O0-NEXT:    buffer_store_dword v12, off, s[0:3], s32 offset:208 ; 4-byte Folded Spill
-; GFX9-O0-NEXT:    buffer_load_dword v12, off, s[0:3], s32 offset:256
+; GFX9-O0-NEXT:    buffer_store_dword v11, off, s[0:3], s32 offset:256
+; GFX9-O0-NEXT:    v_writelane_b32 v11, s64, 0
+; GFX9-O0-NEXT:    buffer_store_dword v11, off, s[0:3], s32 offset:200 ; 4-byte Folded Spill
+; GFX9-O0-NEXT:    buffer_load_dword v11, off, s[0:3], s32 offset:256
 ; GFX9-O0-NEXT:    s_waitcnt vmcnt(0)
 ; GFX9-O0-NEXT:    s_mov_b64 exec, s[34:35]
-; GFX9-O0-NEXT:    s_mov_b64 s[36:37], exec
+; GFX9-O0-NEXT:    s_mov_b64 s[34:35], exec
+; GFX9-O0-NEXT:    s_mov_b64 exec, 1
+; GFX9-O0-NEXT:    buffer_store_dword v11, off, s[0:3], s32 offset:256
+; GFX9-O0-NEXT:    v_writelane_b32 v11, s65, 0
+; GFX9-O0-NEXT:    buffer_store_dword v11, off, s[0:3], s32 offset:204 ; 4-byte Folded Spill
+; GFX9-O0-NEXT:    buffer_load_dword v11, off, s[0:3], s32 offset:256
+; GFX9-O0-NEXT:    s_waitcnt vmcnt(0)
+; GFX9-O0-NEXT:    s_mov_b64 exec, s[34:35]
+; GFX9-O0-NEXT:    s_mov_b64 s[34:35], exec
+; GFX9-O0-NEXT:    s_mov_b64 exec, 1
+; GFX9-O0-NEXT:    buffer_store_dword v11, off, s[0:3], s32 offset:256
+; GFX9-O0-NEXT:    v_writelane_b32 v11, s66, 0
+; GFX9-O0-NEXT:    buffer_store_dword v11, off, s[0:3], s32 offset:208 ; 4-byte Folded Spill
+; GFX9-O0-NEXT:    buffer_load_dword v11, off, s[0:3], s32 offset:256
+; GFX9-O0-NEXT:    s_waitcnt vmcnt(0)
+; GFX9-O0-NEXT:    s_mov_b64 exec, s[34:35]
+; GFX9-O0-NEXT:    s_mov_b64 s[34:35], exec
 ; GFX9-O0-NEXT:    s_mov_b64 exec, 1
 ; GFX9-O0-NEXT:    buffer_store_dword v11, off, s[0:3], s32 offset:256
 ; GFX9-O0-NEXT:    v_writelane_b32 v11, s67, 0
 ; GFX9-O0-NEXT:    buffer_store_dword v11, off, s[0:3], s32 offset:212 ; 4-byte Folded Spill
 ; GFX9-O0-NEXT:    buffer_load_dword v11, off, s[0:3], s32 offset:256
 ; GFX9-O0-NEXT:    s_waitcnt vmcnt(0)
-; GFX9-O0-NEXT:    s_mov_b64 exec, s[36:37]
+; GFX9-O0-NEXT:    s_mov_b64 exec, s[34:35]
 ; GFX9-O0-NEXT:    buffer_store_dword v10, off, s[0:3], s32 offset:72 ; 4-byte Folded Spill
 ; GFX9-O0-NEXT:    buffer_store_dword v9, off, s[0:3], s32 offset:64 ; 4-byte Folded Spill
 ; GFX9-O0-NEXT:    buffer_store_dword v8, off, s[0:3], s32 offset:80 ; 4-byte Folded Spill
@@ -1245,32 +1245,32 @@ define amdgpu_gfx <32 x i32> @strict_wwm_callee_saves(<32 x i32> inreg %keep, pt
 ; GFX9-O0-NEXT:    v_mov_b32_e32 v25, s29
 ; GFX9-O0-NEXT:    s_mov_b64 s[34:35], exec
 ; GFX9-O0-NEXT:    s_mov_b64 exec, 1
-; GFX9-O0-NEXT:    buffer_store_dword v45, off, s[0:3], s32 offset:256
-; GFX9-O0-NEXT:    buffer_load_dword v45, off, s[0:3], s32 offset:212 ; 4-byte Folded Reload
+; GFX9-O0-NEXT:    buffer_store_dword v42, off, s[0:3], s32 offset:256
+; GFX9-O0-NEXT:    buffer_load_dword v42, off, s[0:3], s32 offset:212 ; 4-byte Folded Reload
 ; GFX9-O0-NEXT:    s_waitcnt vmcnt(0)
-; GFX9-O0-NEXT:    v_readlane_b32 s67, v45, 0
-; GFX9-O0-NEXT:    buffer_load_dword v45, off, s[0:3], s32 offset:256
+; GFX9-O0-NEXT:    v_readlane_b32 s67, v42, 0
+; GFX9-O0-NEXT:    buffer_load_dword v42, off, s[0:3], s32 offset:256
 ; GFX9-O0-NEXT:    s_waitcnt vmcnt(0)
 ; GFX9-O0-NEXT:    s_mov_b64 exec, s[34:35]
-; GFX9-O0-NEXT:    s_mov_b64 s[40:41], exec
+; GFX9-O0-NEXT:    s_mov_b64 s[34:35], exec
 ; GFX9-O0-NEXT:    s_mov_b64 exec, 1
-; GFX9-O0-NEXT:    buffer_store_dword v44, off, s[0:3], s32 offset:256
-; GFX9-O0-NEXT:    buffer_load_dword v44, off, s[0:3], s32 offset:208 ; 4-byte Folded Reload
+; GFX9-O0-NEXT:    buffer_store_dword v42, off, s[0:3], s32 offset:256
+; GFX9-O0-NEXT:    buffer_load_dword v42, off, s[0:3], s32 offset:208 ; 4-byte Folded Reload
 ; GFX9-O0-NEXT:    s_waitcnt vmcnt(0)
-; GFX9-O0-NEXT:    v_readlane_b32 s66, v44, 0
-; GFX9-O0-NEXT:    buffer_load_dword v44, off, s[0:3], s32 offset:256
+; GFX9-O0-NEXT:    v_readlane_b32 s66, v42, 0
+; GFX9-O0-NEXT:    buffer_load_dword v42, off, s[0:3], s32 offset:256
 ; GFX9-O0-NEXT:    s_waitcnt vmcnt(0)
-; GFX9-O0-NEXT:    s_mov_b64 exec, s[40:41]
-; GFX9-O0-NEXT:    s_mov_b64 s[38:39], exec
+; GFX9-O0-NEXT:    s_mov_b64 exec, s[34:35]
+; GFX9-O0-NEXT:    s_mov_b64 s[34:35], exec
 ; GFX9-O0-NEXT:    s_mov_b64 exec, 1
-; GFX9-O0-NEXT:    buffer_store_dword v43, off, s[0:3], s32 offset:256
-; GFX9-O0-NEXT:    buffer_load_dword v43, off, s[0:3], s32 offset:204 ; 4-byte Folded Reload
+; GFX9-O0-NEXT:    buffer_store_dword v42, off, s[0:3], s32 offset:256
+; GFX9-O0-NEXT:    buffer_load_dword v42, off, s[0:3], s32 offset:204 ; 4-byte Folded Reload
 ; GFX9-O0-NEXT:    s_waitcnt vmcnt(0)
-; GFX9-O0-NEXT:    v_readlane_b32 s65, v43, 0
-; GFX9-O0-NEXT:    buffer_load_dword v43, off, s[0:3], s32 offset:256
+; GFX9-O0-NEXT:    v_readlane_b32 s65, v42, 0
+; GFX9-O0-NEXT:    buffer_load_dword v42, off, s[0:3], s32 offset:256
 ; GFX9-O0-NEXT:    s_waitcnt vmcnt(0)
-; GFX9-O0-NEXT:    s_mov_b64 exec, s[38:39]
-; GFX9-O0-NEXT:    s_mov_b64 s[36:37], exec
+; GFX9-O0-NEXT:    s_mov_b64 exec, s[34:35]
+; GFX9-O0-NEXT:    s_mov_b64 s[34:35], exec
 ; GFX9-O0-NEXT:    s_mov_b64 exec, 1
 ; GFX9-O0-NEXT:    buffer_store_dword v42, off, s[0:3], s32 offset:256
 ; GFX9-O0-NEXT:    buffer_load_dword v42, off, s[0:3], s32 offset:200 ; 4-byte Folded Reload
@@ -1278,7 +1278,7 @@ define amdgpu_gfx <32 x i32> @strict_wwm_callee_saves(<32 x i32> inreg %keep, pt
 ; GFX9-O0-NEXT:    v_readlane_b32 s64, v42, 0
 ; GFX9-O0-NEXT:    buffer_load_dword v42, off, s[0:3], s32 offset:256
 ; GFX9-O0-NEXT:    s_waitcnt vmcnt(0)
-; GFX9-O0-NEXT:    s_mov_b64 exec, s[36:37]
+; GFX9-O0-NEXT:    s_mov_b64 exec, s[34:35]
 ; GFX9-O0-NEXT:    buffer_load_dword v47, off, s[0:3], s32 offset:24 ; 4-byte Folded Reload
 ; GFX9-O0-NEXT:    buffer_load_dword v46, off, s[0:3], s32 offset:28 ; 4-byte Folded Reload
 ; GFX9-O0-NEXT:    buffer_load_dword v45, off, s[0:3], s32 offset:32 ; 4-byte Folded Reload
