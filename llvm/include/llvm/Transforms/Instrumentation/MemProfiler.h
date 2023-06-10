@@ -43,10 +43,6 @@ public:
   static bool isRequired() { return true; }
 };
 
-// Insert MemProfiler instrumentation
-FunctionPass *createMemProfilerFunctionPass();
-ModulePass *createModuleMemProfilerLegacyPassPass();
-
 } // namespace llvm
 
 #endif
