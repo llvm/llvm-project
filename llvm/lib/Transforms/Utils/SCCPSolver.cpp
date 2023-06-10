@@ -1779,6 +1779,8 @@ void SCCPInstVisitor::handleCallResult(CallBase &CB) {
       SmallVector<ConstantRange, 2> OpRanges;
       for (Value *Op : II->args()) {
         const ValueLatticeElement &State = getValueState(Op);
+        if (State.isUnknownOrUndef())
+          return;
         OpRanges.push_back(getConstantRange(State, Op->getType()));
       }
 
