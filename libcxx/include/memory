@@ -160,7 +160,7 @@ template <class T, class U>
 bool operator==(const allocator<T>&, const allocator<U>&) noexcept; // constexpr in C++20
 
 template <class T, class U>
-bool operator!=(const allocator<T>&, const allocator<U>&) noexcept; // constexpr in C++20
+bool operator!=(const allocator<T>&, const allocator<U>&) noexcept; // removed in C++20
 
 template <class OutputIterator, class T>
 class raw_storage_iterator // deprecated in C++17, removed in C++20
