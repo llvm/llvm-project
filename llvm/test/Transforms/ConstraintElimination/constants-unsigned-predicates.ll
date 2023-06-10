@@ -75,9 +75,9 @@ define i1 @test_eq() {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[F_0:%.*]] = icmp eq i8 10, 11
 ; CHECK-NEXT:    [[T_0:%.*]] = icmp eq i8 10, 10
-; CHECK-NEXT:    [[RES_1:%.*]] = xor i1 [[T_0]], [[F_0]]
+; CHECK-NEXT:    [[RES_1:%.*]] = xor i1 true, false
 ; CHECK-NEXT:    [[F_1:%.*]] = icmp eq i8 10, 9
-; CHECK-NEXT:    [[RES_2:%.*]] = xor i1 [[RES_1]], [[F_1]]
+; CHECK-NEXT:    [[RES_2:%.*]] = xor i1 [[RES_1]], false
 ; CHECK-NEXT:    ret i1 [[RES_2]]
 ;
 entry:
