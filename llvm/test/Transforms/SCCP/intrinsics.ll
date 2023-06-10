@@ -107,8 +107,7 @@ define i8 @umax_including_undef(i1 %c.1, i1 %c.2) {
 ; CHECK:       false:
 ; CHECK-NEXT:    br label [[EXIT]]
 ; CHECK:       exit:
-; CHECK-NEXT:    [[P_UMAX:%.*]] = call i8 @llvm.umax.i8(i8 3, i8 1)
-; CHECK-NEXT:    ret i8 [[P_UMAX]]
+; CHECK-NEXT:    ret i8 3
 ;
   br i1 %c.1, label %true, label %false
 
