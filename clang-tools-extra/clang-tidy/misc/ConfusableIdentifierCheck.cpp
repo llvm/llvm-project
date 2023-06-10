@@ -11,6 +11,7 @@
 
 #include "clang/Frontend/CompilerInstance.h"
 #include "clang/Lex/Preprocessor.h"
+#include "llvm/ADT/SmallString.h"
 #include "llvm/Support/ConvertUTF.h"
 
 namespace {
@@ -45,14 +46,13 @@ ConfusableIdentifierCheck::~ConfusableIdentifierCheck() = default;
 // We're skipping 1. and 3. for the sake of simplicity, but this can lead to
 // false positive.
 
-static std::string skeleton(StringRef Name) {
+static llvm::SmallString<64U> skeleton(StringRef Name) {
   using namespace llvm;
-  std::string SName = Name.str();
-  std::string Skeleton;
-  Skeleton.reserve(1 + Name.size());
+  SmallString<64U> Skeleton;
+  Skeleton.reserve(1U + Name.size());
 
-  const char *Curr = SName.c_str();
-  const char *End = Curr + SName.size();
+  const char *Curr = Name.data();
+  const char *End = Curr + Name.size();
   while (Curr < End) {
 
     const char *Prev = Curr;
@@ -99,8 +99,6 @@ static bool mayShadowImpl(const NamedDecl *ND0, const NamedDecl *ND1) {
 
 static bool isMemberOf(const ConfusableIdentifierCheck::ContextInfo *DC0,
                        const ConfusableIdentifierCheck::ContextInfo *DC1) {
-  if (DC0->Bases.empty())
-    return false;
   return llvm::is_contained(DC1->Bases, DC0->PrimaryContext);
 }
 
@@ -117,16 +115,23 @@ static bool mayShadow(const NamedDecl *ND0,
                       const ConfusableIdentifierCheck::ContextInfo *DC0,
                       const NamedDecl *ND1,
                       const ConfusableIdentifierCheck::ContextInfo *DC1) {
-  if (!DC0->Bases.empty() && ND1->getAccess() != AS_private &&
-      isMemberOf(DC1, DC0))
-    return true;
-  if (!DC1->Bases.empty() && ND0->getAccess() != AS_private &&
-      isMemberOf(DC0, DC1))
-    return true;
 
-  return enclosesContext(DC0, DC1) &&
-         (mayShadowImpl(ND0, ND1) || mayShadowImpl(DC0->NonTransparentContext,
-                                                   DC1->NonTransparentContext));
+  if (!DC0->Bases.empty() && !DC1->Bases.empty()) {
+    // if any of the declaration is a non-private member of the other
+    // declaration, it's shadowed by the former
+
+    if (ND1->getAccess() != AS_private && isMemberOf(DC1, DC0))
+      return true;
+
+    if (ND0->getAccess() != AS_private && isMemberOf(DC0, DC1))
+      return true;
+  }
+
+  if (!mayShadowImpl(DC0->NonTransparentContext, DC1->NonTransparentContext) &&
+      !mayShadowImpl(ND0, ND1))
+    return false;
+
+  return enclosesContext(DC0, DC1);
 }
 
 const ConfusableIdentifierCheck::ContextInfo *
@@ -172,26 +177,41 @@ ConfusableIdentifierCheck::getContextInfo(const DeclContext *DC) {
 
 void ConfusableIdentifierCheck::check(
     const ast_matchers::MatchFinder::MatchResult &Result) {
-  if (const auto *ND = Result.Nodes.getNodeAs<NamedDecl>("nameddecl")) {
-    if (IdentifierInfo *NDII = ND->getIdentifier()) {
-      const ContextInfo *Info = getContextInfo(ND->getDeclContext());
-      StringRef NDName = NDII->getName();
-      llvm::SmallVector<Entry> &Mapped = Mapper[skeleton(NDName)];
-      for (const Entry &E : Mapped) {
-        const IdentifierInfo *ONDII = E.Declaration->getIdentifier();
-        if (mayShadow(ND, Info, E.Declaration, E.Info)) {
-          StringRef ONDName = ONDII->getName();
-          if (ONDName != NDName) {
-            diag(ND->getLocation(), "%0 is confusable with %1")
-                << ND << E.Declaration;
-            diag(E.Declaration->getLocation(), "other declaration found here",
-                 DiagnosticIDs::Note);
-          }
-        }
-      }
-      Mapped.push_back({ND, Info});
-    }
+  const auto *ND = Result.Nodes.getNodeAs<NamedDecl>("nameddecl");
+  if (!ND)
+    return;
+
+  IdentifierInfo *NDII = ND->getIdentifier();
+  if (!NDII)
+    return;
+
+  StringRef NDName = NDII->getName();
+  if (NDName.empty())
+    return;
+
+  const ContextInfo *Info = getContextInfo(ND->getDeclContext());
+
+  llvm::SmallVector<Entry> &Mapped = Mapper[skeleton(NDName)];
+  for (const Entry &E : Mapped) {
+    if (!mayShadow(ND, Info, E.Declaration, E.Info))
+      continue;
+
+    const IdentifierInfo *ONDII = E.Declaration->getIdentifier();
+    StringRef ONDName = ONDII->getName();
+    if (ONDName == NDName)
+      continue;
+
+    diag(ND->getLocation(), "%0 is confusable with %1") << ND << E.Declaration;
+    diag(E.Declaration->getLocation(), "other declaration found here",
+         DiagnosticIDs::Note);
   }
+
+  Mapped.push_back({ND, Info});
+}
+
+void ConfusableIdentifierCheck::onEndOfTranslationUnit() {
+  Mapper.clear();
+  ContextInfos.clear();
 }
 
 void ConfusableIdentifierCheck::registerMatchers(
