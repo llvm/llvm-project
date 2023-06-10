@@ -69,6 +69,7 @@ static const RISCVSupportedExtension SupportedExtensions[] = {
     {"xcvalu", RISCVExtensionVersion{1, 0}},
     {"xcvbitmanip", RISCVExtensionVersion{1, 0}},
     {"xcvmac", RISCVExtensionVersion{1, 0}},
+    {"xcvsimd", RISCVExtensionVersion{1, 0}},
     {"xsfcie", RISCVExtensionVersion{1, 0}},
     {"xsfvcp", RISCVExtensionVersion{1, 0}},
     {"xtheadba", RISCVExtensionVersion{1, 0}},
