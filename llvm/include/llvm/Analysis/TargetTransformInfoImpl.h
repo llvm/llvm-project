@@ -101,6 +101,10 @@ public:
     return false;
   }
 
+  bool addrspacesMayAlias(unsigned AS0, unsigned AS1) const {
+    return true;
+  }
+
   unsigned getFlatAddressSpace() const { return -1; }
 
   bool collectFlatAddressOperands(SmallVectorImpl<int> &OpIndexes,
