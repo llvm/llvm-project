@@ -3978,6 +3978,14 @@ StmtResult Sema::BuildReturnStmt(SourceLocation ReturnLoc, Expr *RetValExp,
   } else // If we don't have a function/method context, bail.
     return StmtError();
 
+  if (RetValExp) {
+    const auto *ATy = dyn_cast<ArrayType>(RetValExp->getType());
+    if (ATy && ATy->getElementType().isWebAssemblyReferenceType()) {
+      Diag(ReturnLoc, diag::err_wasm_table_art) << 1;
+      return StmtError();
+    }
+  }
+
   // C++1z: discarded return statements are not considered when deducing a
   // return type.
   if (ExprEvalContexts.back().isDiscardedStatementContext() &&

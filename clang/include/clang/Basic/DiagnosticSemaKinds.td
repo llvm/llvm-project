@@ -11864,4 +11864,34 @@ def err_wasm_ca_reference : Error<
   "cannot %select{capture|take address of}0 WebAssembly reference">;
 def err_wasm_funcref_not_wasm : Error<
   "invalid use of '__funcref' keyword outside the WebAssembly triple">;
+def err_wasm_table_pr : Error<
+  "cannot form a %select{pointer|reference}0 to a WebAssembly table">;
+def err_typecheck_wasm_table_must_have_zero_length : Error<
+  "only zero-length WebAssembly tables are currently supported">;
+def err_wasm_table_in_function : Error<
+  "WebAssembly table cannot be declared within a function">;
+def err_wasm_table_as_function_parameter : Error<
+  "cannot use WebAssembly table as a function parameter">;
+def err_wasm_table_invalid_uett_operand : Error<
+  "invalid application of '%0' to WebAssembly table">;
+def err_wasm_cast_table : Error<
+  "cannot cast %select{to|from}0 a WebAssembly table">;
+def err_wasm_table_conditional_expression : Error<
+  "cannot use a WebAssembly table within a branch of a conditional expression">;
+def err_wasm_table_art : Error<
+  "cannot %select{assign|return|throw|subscript}0 a WebAssembly table">;
+def err_wasm_reftype_tc : Error<
+  "cannot %select{throw|catch}0 a WebAssembly reference type">;
+def err_wasm_reftype_exception_spec : Error<
+  "WebAssembly reference type not allowed in exception specification">;
+def err_wasm_table_must_be_static : Error<
+  "WebAssembly table must be static">;
+def err_wasm_reftype_multidimensional_array : Error<
+  "multi-dimensional arrays of WebAssembly references are not allowed">;
+def err_wasm_builtin_arg_must_be_table_type : Error <
+  "%ordinal0 argument must be a WebAssembly table">;
+def err_wasm_builtin_arg_must_match_table_element_type : Error <
+  "%ordinal0 argument must match the element type of the WebAssembly table in the %ordinal1 argument">;
+def err_wasm_builtin_arg_must_be_integer_type : Error <
+  "%ordinal0 argument must be an integer">;
 } // end of sema component.
