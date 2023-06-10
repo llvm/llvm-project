@@ -1400,6 +1400,10 @@ multiclass VPatBinaryFPWVL_VV_VF_WV_WF<SDNode vop, SDNode vop_w, string instruct
       defm : VPatTiedBinaryNoMaskVL_V<vop_w, instruction_name, "WV",
                                       wti.Vector, vti.Vector, vti.Log2SEW,
                                       vti.LMul, wti.RegClass, vti.RegClass>;
+      def : VPatBinaryVL_V<vop_w, instruction_name, "WV",
+                           wti.Vector, wti.Vector, vti.Vector, vti.Mask,
+                           vti.Log2SEW, vti.LMul, wti.RegClass, wti.RegClass,
+                           vti.RegClass>;
       def : VPatBinaryVL_VF<vop_w, instruction_name#"_W"#vti.ScalarSuffix,
                             wti.Vector, wti.Vector, vti.Vector, vti.Mask,
                             vti.Log2SEW, vti.LMul, wti.RegClass, wti.RegClass,

@@ -132,6 +132,9 @@ class LLVM_LIBRARY_VISIBILITY AggressiveAntiDepState {
     AggressiveAntiDepBreaker(MachineFunction &MFi,
                           const RegisterClassInfo &RCI,
                           TargetSubtargetInfo::RegClassVector& CriticalPathRCs);
+    AggressiveAntiDepBreaker &
+    operator=(const AggressiveAntiDepBreaker &other) = delete;
+    AggressiveAntiDepBreaker(const AggressiveAntiDepBreaker &other) = delete;
     ~AggressiveAntiDepBreaker() override;
 
     /// Initialize anti-dep breaking for a new basic block.

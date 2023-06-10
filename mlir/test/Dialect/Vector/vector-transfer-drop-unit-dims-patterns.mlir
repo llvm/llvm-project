@@ -18,7 +18,7 @@ func.func @transfer_read_rank_reducing(
 transform.sequence failures(propagate) {
 ^bb1(%module_op: !transform.any_op):
   transform.apply_patterns to %module_op {
-    transform.apply_patterns.vector.apply_rank_reducing_subview_patterns
+    transform.apply_patterns.vector.rank_reducing_subview_patterns
   } : !transform.any_op
 }
 
@@ -40,7 +40,7 @@ func.func @transfer_write_rank_reducing(%arg : memref<1x1x3x2xi8, strided<[6, 6,
 transform.sequence failures(propagate) {
 ^bb1(%module_op: !transform.any_op):
   transform.apply_patterns to %module_op {
-    transform.apply_patterns.vector.apply_rank_reducing_subview_patterns
+    transform.apply_patterns.vector.rank_reducing_subview_patterns
   } : !transform.any_op
 }
 
@@ -64,7 +64,7 @@ func.func @transfer_read_and_vector_rank_reducing(
 transform.sequence failures(propagate) {
 ^bb1(%module_op: !transform.any_op):
   transform.apply_patterns to %module_op {
-    transform.apply_patterns.vector.apply_rank_reducing_subview_patterns
+    transform.apply_patterns.vector.rank_reducing_subview_patterns
   } : !transform.any_op
 }
 
@@ -88,7 +88,7 @@ func.func @transfer_write_and_vector_rank_reducing(
 transform.sequence failures(propagate) {
 ^bb1(%module_op: !transform.any_op):
   transform.apply_patterns to %module_op {
-    transform.apply_patterns.vector.apply_rank_reducing_subview_patterns
+    transform.apply_patterns.vector.rank_reducing_subview_patterns
   } : !transform.any_op
 }
 
@@ -112,7 +112,7 @@ func.func @transfer_read_and_vector_rank_reducing_to_0d(
 transform.sequence failures(propagate) {
 ^bb1(%module_op: !transform.any_op):
   transform.apply_patterns to %module_op {
-    transform.apply_patterns.vector.apply_rank_reducing_subview_patterns
+    transform.apply_patterns.vector.rank_reducing_subview_patterns
   } : !transform.any_op
 }
 
@@ -136,6 +136,6 @@ func.func @transfer_write_and_vector_rank_reducing_to_0d(
 transform.sequence failures(propagate) {
 ^bb1(%module_op: !transform.any_op):
   transform.apply_patterns to %module_op {
-    transform.apply_patterns.vector.apply_rank_reducing_subview_patterns
+    transform.apply_patterns.vector.rank_reducing_subview_patterns
   } : !transform.any_op
 }
