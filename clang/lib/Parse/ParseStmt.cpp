@@ -1625,7 +1625,7 @@ StmtResult Parser::ParseIfStatement(SourceLocation *TrailingElseLoc) {
   IfScope.Exit();
 
   // If the then or else stmt is invalid and the other is valid (and present),
-  // make turn the invalid one into a null stmt to avoid dropping the other
+  // turn the invalid one into a null stmt to avoid dropping the other
   // part.  If both are invalid, return error.
   if ((ThenStmt.isInvalid() && ElseStmt.isInvalid()) ||
       (ThenStmt.isInvalid() && ElseStmt.get() == nullptr) ||
@@ -1636,7 +1636,7 @@ StmtResult Parser::ParseIfStatement(SourceLocation *TrailingElseLoc) {
 
   if (IsConsteval) {
     auto IsCompoundStatement = [](const Stmt *S) {
-      if (const auto *Outer = dyn_cast_or_null<AttributedStmt>(S))
+      if (const auto *Outer = dyn_cast_if_present<AttributedStmt>(S))
         S = Outer->getSubStmt();
       return isa_and_nonnull<clang::CompoundStmt>(S);
     };
