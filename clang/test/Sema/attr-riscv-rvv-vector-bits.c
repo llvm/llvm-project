@@ -6,6 +6,30 @@
 
 #include <stdint.h>
 
+typedef __rvv_bool64_t vbool64_t;
+typedef __rvv_bool32_t vbool32_t;
+typedef __rvv_bool16_t vbool16_t;
+typedef __rvv_bool8_t vbool8_t;
+typedef __rvv_bool4_t vbool4_t;
+typedef __rvv_bool2_t vbool2_t;
+typedef __rvv_bool1_t vbool1_t;
+
+typedef __rvv_int8mf8_t vint8mf8_t;
+typedef __rvv_uint8mf8_t vuint8mf8_t;
+
+typedef __rvv_int8mf4_t vint8mf4_t;
+typedef __rvv_uint8mf4_t vuint8mf4_t;
+typedef __rvv_int16mf4_t vint16mf4_t;
+typedef __rvv_uint16mf4_t vuint16mf4_t;
+
+typedef __rvv_int8mf2_t vint8mf2_t;
+typedef __rvv_uint8mf2_t vuint8mf2_t;
+typedef __rvv_int16mf2_t vint16mf2_t;
+typedef __rvv_uint16mf2_t vuint16mf2_t;
+typedef __rvv_int32mf2_t vint32mf2_t;
+typedef __rvv_uint32mf2_t vuint32mf2_t;
+typedef __rvv_float32mf2_t vfloat32mf2_t;
+
 typedef __rvv_int8m1_t vint8m1_t;
 typedef __rvv_uint8m1_t vuint8m1_t;
 typedef __rvv_int16m1_t vint16m1_t;
@@ -17,7 +41,38 @@ typedef __rvv_uint64m1_t vuint64m1_t;
 typedef __rvv_float32m1_t vfloat32m1_t;
 typedef __rvv_float64m1_t vfloat64m1_t;
 
+typedef __rvv_int8m2_t vint8m2_t;
+typedef __rvv_uint8m2_t vuint8m2_t;
+typedef __rvv_int16m2_t vint16m2_t;
+typedef __rvv_uint16m2_t vuint16m2_t;
 typedef __rvv_int32m2_t vint32m2_t;
+typedef __rvv_uint32m2_t vuint32m2_t;
+typedef __rvv_int64m2_t vint64m2_t;
+typedef __rvv_uint64m2_t vuint64m2_t;
+typedef __rvv_float32m2_t vfloat32m2_t;
+typedef __rvv_float64m2_t vfloat64m2_t;
+
+typedef __rvv_int8m4_t vint8m4_t;
+typedef __rvv_uint8m4_t vuint8m4_t;
+typedef __rvv_int16m4_t vint16m4_t;
+typedef __rvv_uint16m4_t vuint16m4_t;
+typedef __rvv_int32m4_t vint32m4_t;
+typedef __rvv_uint32m4_t vuint32m4_t;
+typedef __rvv_int64m4_t vint64m4_t;
+typedef __rvv_uint64m4_t vuint64m4_t;
+typedef __rvv_float32m4_t vfloat32m4_t;
+typedef __rvv_float64m4_t vfloat64m4_t;
+
+typedef __rvv_int8m8_t vint8m8_t;
+typedef __rvv_uint8m8_t vuint8m8_t;
+typedef __rvv_int16m8_t vint16m8_t;
+typedef __rvv_uint16m8_t vuint16m8_t;
+typedef __rvv_int32m8_t vint32m8_t;
+typedef __rvv_uint32m8_t vuint32m8_t;
+typedef __rvv_int64m8_t vint64m8_t;
+typedef __rvv_uint64m8_t vuint64m8_t;
+typedef __rvv_float32m8_t vfloat32m8_t;
+typedef __rvv_float64m8_t vfloat64m8_t;
 
 // Define valid fixed-width RVV types
 typedef vint8m1_t fixed_int8m1_t __attribute__((riscv_rvv_vector_bits(__riscv_v_fixed_vlen)));
@@ -56,6 +111,15 @@ typedef vint8m1_t two_arguments __attribute__((riscv_rvv_vector_bits(2, 4))); //
 // The number of RVV vector bits must be an integer constant expression
 typedef vint8m1_t non_int_size1 __attribute__((riscv_rvv_vector_bits(2.0)));   // expected-error {{'riscv_rvv_vector_bits' attribute requires an integer constant}}
 typedef vint8m1_t non_int_size2 __attribute__((riscv_rvv_vector_bits("256"))); // expected-error {{'riscv_rvv_vector_bits' attribute requires an integer constant}}
+
+// bool types and LMUL != 1 are not supported.
+typedef vbool1_t fixed_vbool1_t_t __attribute__((riscv_rvv_vector_bits(__riscv_v_fixed_vlen))); // expected-error {{'riscv_rvv_vector_bits' attribute applied to non-RVV type 'vbool1_t'}}
+typedef vint8mf8_t fixed_int8mf8_t __attribute__((riscv_rvv_vector_bits(__riscv_v_fixed_vlen / 8))); // expected-error {{'riscv_rvv_vector_bits' attribute applied to non-RVV type 'vint8mf8_t'}}
+typedef vint8mf4_t fixed_int8mf4_t __attribute__((riscv_rvv_vector_bits(__riscv_v_fixed_vlen / 4))); // expected-error {{'riscv_rvv_vector_bits' attribute applied to non-RVV type 'vint8mf4_t'}}
+typedef vint8mf2_t fixed_int8mf2_t __attribute__((riscv_rvv_vector_bits(__riscv_v_fixed_vlen / 2))); // expected-error {{'riscv_rvv_vector_bits' attribute applied to non-RVV type 'vint8mf2_t'}}
+typedef vint8m2_t fixed_int8m2_t __attribute__((riscv_rvv_vector_bits(__riscv_v_fixed_vlen * 2))); // expected-error {{'riscv_rvv_vector_bits' attribute applied to non-RVV type 'vint8m2_t'}}
+typedef vint8m4_t fixed_int8m4_t __attribute__((riscv_rvv_vector_bits(__riscv_v_fixed_vlen * 4))); // expected-error {{'riscv_rvv_vector_bits' attribute applied to non-RVV type 'vint8m4_t'}}
+typedef vint8m8_t fixed_int8m8_t __attribute__((riscv_rvv_vector_bits(__riscv_v_fixed_vlen * 8))); // expected-error {{'riscv_rvv_vector_bits' attribute applied to non-RVV type 'vint8m8_t'}}
 
 // Attribute must be attached to a single RVV vector or predicate type.
 typedef void *badtype1 __attribute__((riscv_rvv_vector_bits(__riscv_v_fixed_vlen)));         // expected-error {{'riscv_rvv_vector_bits' attribute applied to non-RVV type 'void *'}}

@@ -179,7 +179,15 @@ static auto qualifyCalleeCandidates(
           return {FunctionImporter::ImportFailureReason::InterposableLinkage,
                   GVSummary};
 
-        auto *Summary = cast<FunctionSummary>(GVSummary->getBaseObject());
+        auto *Summary = dyn_cast<FunctionSummary>(GVSummary->getBaseObject());
+
+        // Ignore any callees that aren't actually functions. This could happen
+        // in the case of GUID hash collisions. It could also happen in theory
+        // for SamplePGO profiles collected on old versions of the code after
+        // renaming, since we synthesize edges to any inlined callees appearing
+        // in the profile.
+        if (!Summary)
+          return {FunctionImporter::ImportFailureReason::GlobalVar, GVSummary};
 
         // If this is a local function, make sure we import the copy
         // in the caller's module. The only time a local function can

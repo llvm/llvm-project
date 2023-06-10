@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -no-opaque-pointers -Wno-non-pod-varargs -emit-llvm %s -o - -triple=i686-pc-win32 -mconstructor-aliases -fno-rtti | FileCheck %s
+// RUN: %clang_cc1 -Wno-non-pod-varargs -emit-llvm %s -o - -triple=i686-pc-win32 -mconstructor-aliases -fno-rtti | FileCheck %s
 
 #include <stdarg.h>
 
@@ -19,14 +19,14 @@ int foo(A a, ...) {
   return sum;
 }
 
-// CHECK-LABEL: define dso_local noundef i32 @"?foo@@YAHUA@@ZZ"(<{ %struct.A }>* inalloca(<{ %struct.A }>) %0, ...)
+// CHECK-LABEL: define dso_local noundef i32 @"?foo@@YAHUA@@ZZ"(ptr inalloca(<{ %struct.A }>) %0, ...)
 
 int main() {
   return foo(A(3), 1, 2, 3);
 }
 // CHECK-LABEL: define dso_local noundef i32 @main()
 // CHECK: %[[argmem:[^ ]*]] = alloca inalloca <{ %struct.A, i32, i32, i32 }>
-// CHECK: call noundef i32 {{.*bitcast.*}}@"?foo@@YAHUA@@ZZ"{{.*}}(<{ %struct.A, i32, i32, i32 }>* inalloca(<{ %struct.A, i32, i32, i32 }>) %[[argmem]])
+// CHECK: call noundef i32 (ptr, ...) @"?foo@@YAHUA@@ZZ"{{.*}}(ptr inalloca(<{ %struct.A, i32, i32, i32 }>) %[[argmem]])
 
 void varargs_zero(...);
 void varargs_one(int, ...);
@@ -41,10 +41,10 @@ void call_var_args() {
 }
 
 // CHECK-LABEL: define dso_local void @"?call_var_args@@YAXXZ"()
-// CHECK: call void {{.*bitcast.*varargs_zero.*}}(<{ %struct.A }>* inalloca(<{ %struct.A }>) %{{.*}})
-// CHECK: call void {{.*bitcast.*varargs_one.*}}(<{ i32, %struct.A }>* inalloca(<{ i32, %struct.A }>) %{{.*}})
-// CHECK: call void {{.*bitcast.*varargs_two.*}}(<{ i32, i32, %struct.A }>* inalloca(<{ i32, i32, %struct.A }>) %{{.*}})
-// CHECK: call void {{.*bitcast.*varargs_three.*}}(<{ i32, i32, i32, %struct.A }>* inalloca(<{ i32, i32, i32, %struct.A }>) %{{.*}})
+// CHECK: call void {{.*varargs_zero.*}}(ptr inalloca(<{ %struct.A }>) %{{.*}})
+// CHECK: call void {{.*varargs_one.*}}(ptr inalloca(<{ i32, %struct.A }>) %{{.*}})
+// CHECK: call void {{.*varargs_two.*}}(ptr inalloca(<{ i32, i32, %struct.A }>) %{{.*}})
+// CHECK: call void {{.*varargs_three.*}}(ptr inalloca(<{ i32, i32, i32, %struct.A }>) %{{.*}})
 
 // CHECK-LABEL: declare dso_local void @"?varargs_zero@@YAXZZ"(...)
 // CHECK-LABEL: declare dso_local void @"?varargs_one@@YAXHZZ"(i32 noundef, ...)

@@ -445,6 +445,10 @@ using MathGeneratorTy = mlir::Value (*)(fir::FirOpBuilder &, mlir::Location,
                                         llvm::ArrayRef<mlir::Value>);
 
 struct MathOperation {
+  // Overrides fir::runtime::FuncTypeBuilderFunc to add FirOpBuilder argument.
+  using FuncTypeBuilderFunc = mlir::FunctionType (*)(mlir::MLIRContext *,
+                                                     fir::FirOpBuilder &);
+
   // llvm::StringRef comparison operator are not constexpr, so use string_view.
   using Key = std::string_view;
   // Needed for implicit compare with keys.
@@ -454,7 +458,7 @@ struct MathOperation {
 
   // Name of a runtime function that implements the operation.
   llvm::StringRef runtimeFunc;
-  fir::runtime::FuncTypeBuilderFunc typeGenerator;
+  FuncTypeBuilderFunc typeGenerator;
 
   // A callback to generate FIR for the intrinsic defined by 'key'.
   // A callback may generate either dedicated MLIR operation(s) or
@@ -462,6 +466,89 @@ struct MathOperation {
   // 'runtimeFunc'.
   MathGeneratorTy funcGenerator;
 };
+
+// Enum of most supported intrinsic argument or return types.
+enum class ParamTypeId {
+  Void,
+  Integer,
+  Real,
+  Complex,
+};
+
+template <ParamTypeId t, int k>
+struct ParamType {
+  // Supported kinds can be checked with static asserts at compile time.
+  static_assert(t != ParamTypeId::Integer || k == 1 || k == 2 || k == 4 ||
+                    k == 8,
+                "Unsupported integer kind");
+  static_assert(t != ParamTypeId::Real || k == 4 || k == 8 || k == 10 ||
+                    k == 16,
+                "Unsupported real kind");
+  static_assert(t != ParamTypeId::Complex || k == 2 || k == 3 || k == 4 ||
+                    k == 8 || k == 10 || k == 16,
+                "Unsupported complex kind");
+
+  static const ParamTypeId ty = t;
+  static const int kind = k;
+};
+
+// Namespace encapsulating type definitions for parameter types.
+namespace Ty {
+using Void = ParamType<ParamTypeId::Void, 0>;
+template <int k>
+using Real = ParamType<ParamTypeId::Real, k>;
+template <int k>
+using Integer = ParamType<ParamTypeId::Integer, k>;
+template <int k>
+using Complex = ParamType<ParamTypeId::Complex, k>;
+} // namespace Ty
+
+// Helper function that generates most types that are supported for intrinsic
+// arguments and return type. Used by `genFuncType` to generate function
+// types for most of the intrinsics.
+static inline mlir::Type getTypeHelper(mlir::MLIRContext *context,
+                                       fir::FirOpBuilder &builder,
+                                       ParamTypeId typeId, int kind) {
+  mlir::Type r;
+  int bits = 0;
+  switch (typeId) {
+  case ParamTypeId::Void:
+    llvm::report_fatal_error("can not get type of void");
+    break;
+  case ParamTypeId::Integer:
+    bits = builder.getKindMap().getIntegerBitsize(kind);
+    assert(bits != 0 && "failed to convert kind to integer bitsize");
+    r = mlir::IntegerType::get(context, bits);
+    break;
+  case ParamTypeId::Real:
+    r = builder.getRealType(kind);
+    break;
+  case ParamTypeId::Complex:
+    r = fir::ComplexType::get(context, kind);
+    break;
+  }
+  return r;
+}
+
+// Generic function type generator that supports most of the function types
+// used by intrinsics.
+template <typename TyR, typename... ArgTys>
+static inline mlir::FunctionType genFuncType(mlir::MLIRContext *context,
+                                             fir::FirOpBuilder &builder) {
+  llvm::SmallVector<ParamTypeId> argTys = {ArgTys::ty...};
+  llvm::SmallVector<int> argKinds = {ArgTys::kind...};
+  llvm::SmallVector<mlir::Type> argTypes;
+
+  for (size_t i = 0; i < argTys.size(); ++i) {
+    argTypes.push_back(getTypeHelper(context, builder, argTys[i], argKinds[i]));
+  }
+
+  if (TyR::ty == ParamTypeId::Void)
+    return mlir::FunctionType::get(context, argTypes, std::nullopt);
+
+  auto resType = getTypeHelper(context, builder, TyR::ty, TyR::kind);
+  return mlir::FunctionType::get(context, argTypes, {resType});
+}
 
 /// Return argument lowering rules for an intrinsic.
 /// Returns a nullptr if all the intrinsic arguments should be lowered by value.
