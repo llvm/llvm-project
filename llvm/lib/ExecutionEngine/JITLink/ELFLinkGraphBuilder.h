@@ -91,10 +91,7 @@ protected:
   }
 
   Block *getGraphBlock(ELFSectionIndex SecIndex) {
-    auto I = GraphBlocks.find(SecIndex);
-    if (I == GraphBlocks.end())
-      return nullptr;
-    return I->second;
+    return GraphBlocks.lookup(SecIndex);
   }
 
   void setGraphSymbol(ELFSymbolIndex SymIndex, Symbol &Sym) {
@@ -103,10 +100,7 @@ protected:
   }
 
   Symbol *getGraphSymbol(ELFSymbolIndex SymIndex) {
-    auto I = GraphSymbols.find(SymIndex);
-    if (I == GraphSymbols.end())
-      return nullptr;
-    return I->second;
+    return GraphSymbols.lookup(SymIndex);
   }
 
   Expected<std::pair<Linkage, Scope>>
