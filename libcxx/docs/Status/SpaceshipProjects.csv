@@ -55,9 +55,11 @@ Section,Description,Dependencies,Assignee,Complete
 | `[allocator.globals] <https://wg21.link/allocator.globals>`_,| remove ops `allocator <https://reviews.llvm.org/D152612>`_,None,Hristo Hristov,|In Progress|
 | `[unique.ptr.special] <https://wg21.link/unique.ptr.special>`_,| `unique_ptr <https://reviews.llvm.org/D130838>`_,[comparisons.three.way],Adrian Vogelsgesang,|Complete|
 | `[util.smartptr.shared.cmp] <https://wg21.link/util.smartptr.shared.cmp>`_,| `shared_ptr <https://reviews.llvm.org/D130852>`_,[comparisons.three.way],Adrian Vogelsgesang,|Complete|
-| `[mem.res.syn] <https://wg21.link/mem.res.syn>`_,|,None,Unassigned,|Not Started|
-| `[mem.res.eq] <https://wg21.link/mem.res.eq>`_,| remove ops `memory_resource`,None,Unassigned,|Not Started|
-| `[mem.poly.allocator.eq] <https://wg21.link/mem.poly.allocator.eq>`_,| remove ops `polymorphic_allocator`,None,Unassigned,|Not Started|
+"| `[mem.res.syn] <https://wg21.link/mem.res.syn>`_
+| `[mem.res.eq] <https://wg21.link/mem.res.eq>`_
+| `[mem.poly.allocator.eq] <https://wg21.link/mem.poly.allocator.eq>`_","|
+| remove ops `memory_resource <https://reviews.llvm.org/D152629>`_
+| remove ops `polymorphic_allocator <https://reviews.llvm.org/D152629>`_",None,Hristo Hristov,|Complete|
 "| `[allocator.adaptor.syn] <https://wg21.link/allocator.adaptor.syn>`_
 | `[scoped.adaptor.operators] <https://wg21.link/scoped.adaptor.operators>`_",| remove ops `scoped_allocator_adaptor`,None,Unassigned,|Not Started|
 "| `[functional.syn] <https://wg21.link/functional.syn>`_
