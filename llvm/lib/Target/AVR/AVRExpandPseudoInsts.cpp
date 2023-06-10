@@ -70,6 +70,7 @@ private:
   bool expandLogic(unsigned Op, Block &MBB, BlockIt MBBI);
   bool expandLogicImm(unsigned Op, Block &MBB, BlockIt MBBI);
   bool isLogicImmOpRedundant(unsigned Op, unsigned ImmVal) const;
+  bool isLogicRegOpUndef(unsigned Op, unsigned ImmVal) const;
 
   template <typename Func> bool expandAtomic(Block &MBB, BlockIt MBBI, Func f);
 
@@ -226,6 +227,18 @@ bool AVRExpandPseudo::isLogicImmOpRedundant(unsigned Op,
   return false;
 }
 
+bool AVRExpandPseudo::isLogicRegOpUndef(unsigned Op, unsigned ImmVal) const {
+  // ANDI Rd, 0x00 clears all input bits.
+  if (Op == AVR::ANDIRdK && ImmVal == 0x00)
+    return true;
+
+  // ORI Rd, 0xff sets all input bits.
+  if (Op == AVR::ORIRdK && ImmVal == 0xff)
+    return true;
+
+  return false;
+}
+
 bool AVRExpandPseudo::expandLogicImm(unsigned Op, Block &MBB, BlockIt MBBI) {
   MachineInstr &MI = *MBBI;
   Register DstLoReg, DstHiReg;
@@ -247,6 +260,9 @@ bool AVRExpandPseudo::expandLogicImm(unsigned Op, Block &MBB, BlockIt MBBI) {
 
     // SREG is always implicitly dead
     MIBLO->getOperand(3).setIsDead();
+
+    if (isLogicRegOpUndef(Op, Lo8))
+      MIBLO->getOperand(1).setIsUndef(true);
   }
 
   if (!isLogicImmOpRedundant(Op, Hi8)) {
@@ -258,6 +274,9 @@ bool AVRExpandPseudo::expandLogicImm(unsigned Op, Block &MBB, BlockIt MBBI) {
 
     if (ImpIsDead)
       MIBHI->getOperand(3).setIsDead();
+
+    if (isLogicRegOpUndef(Op, Hi8))
+      MIBHI->getOperand(1).setIsUndef(true);
   }
 
   MI.eraseFromParent();
