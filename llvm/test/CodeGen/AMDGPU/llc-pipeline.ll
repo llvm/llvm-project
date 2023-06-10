@@ -470,18 +470,8 @@
 ; GCN-O1-OPTS-NEXT:      AMDGPU Promote Alloca
 ; GCN-O1-OPTS-NEXT:      Dominator Tree Construction
 ; GCN-O1-OPTS-NEXT:      SROA
-; GCN-O1-OPTS-NEXT:      Basic Alias Analysis (stateless AA impl)
-; GCN-O1-OPTS-NEXT:      Function Alias Analysis Results
-; GCN-O1-OPTS-NEXT:      Memory SSA
 ; GCN-O1-OPTS-NEXT:      Natural Loop Information
-; GCN-O1-OPTS-NEXT:      Canonicalize natural loops
-; GCN-O1-OPTS-NEXT:      LCSSA Verifier
-; GCN-O1-OPTS-NEXT:      Loop-Closed SSA Form Pass
 ; GCN-O1-OPTS-NEXT:      Scalar Evolution Analysis
-; GCN-O1-OPTS-NEXT:      Lazy Branch Probability Analysis
-; GCN-O1-OPTS-NEXT:      Lazy Block Frequency Analysis
-; GCN-O1-OPTS-NEXT:      Loop Pass Manager
-; GCN-O1-OPTS-NEXT:        Loop Invariant Code Motion
 ; GCN-O1-OPTS-NEXT:      Split GEPs to a variadic base and a constant offset for better CSE
 ; GCN-O1-OPTS-NEXT:      Scalar Evolution Analysis
 ; GCN-O1-OPTS-NEXT:      Straight line strength reduction
@@ -492,6 +482,7 @@
 ; GCN-O1-OPTS-NEXT:      Cycle Info Analysis
 ; GCN-O1-OPTS-NEXT:      Uniformity Analysis
 ; GCN-O1-OPTS-NEXT:      AMDGPU IR optimizations
+; GCN-O1-OPTS-NEXT:      Basic Alias Analysis (stateless AA impl)
 ; GCN-O1-OPTS-NEXT:      Canonicalize natural loops
 ; GCN-O1-OPTS-NEXT:      Scalar Evolution Analysis
 ; GCN-O1-OPTS-NEXT:      Loop Pass Manager
@@ -777,18 +768,8 @@
 ; GCN-O2-NEXT:      AMDGPU Promote Alloca
 ; GCN-O2-NEXT:      Dominator Tree Construction
 ; GCN-O2-NEXT:      SROA
-; GCN-O2-NEXT:      Basic Alias Analysis (stateless AA impl)
-; GCN-O2-NEXT:      Function Alias Analysis Results
-; GCN-O2-NEXT:      Memory SSA
 ; GCN-O2-NEXT:      Natural Loop Information
-; GCN-O2-NEXT:      Canonicalize natural loops
-; GCN-O2-NEXT:      LCSSA Verifier
-; GCN-O2-NEXT:      Loop-Closed SSA Form Pass
 ; GCN-O2-NEXT:      Scalar Evolution Analysis
-; GCN-O2-NEXT:      Lazy Branch Probability Analysis
-; GCN-O2-NEXT:      Lazy Block Frequency Analysis
-; GCN-O2-NEXT:      Loop Pass Manager
-; GCN-O2-NEXT:        Loop Invariant Code Motion
 ; GCN-O2-NEXT:      Split GEPs to a variadic base and a constant offset for better CSE
 ; GCN-O2-NEXT:      Scalar Evolution Analysis
 ; GCN-O2-NEXT:      Straight line strength reduction
@@ -799,8 +780,17 @@
 ; GCN-O2-NEXT:      Cycle Info Analysis
 ; GCN-O2-NEXT:      Uniformity Analysis
 ; GCN-O2-NEXT:      AMDGPU IR optimizations
+; GCN-O2-NEXT:      Basic Alias Analysis (stateless AA impl)
+; GCN-O2-NEXT:      Function Alias Analysis Results
+; GCN-O2-NEXT:      Memory SSA
 ; GCN-O2-NEXT:      Canonicalize natural loops
+; GCN-O2-NEXT:      LCSSA Verifier
+; GCN-O2-NEXT:      Loop-Closed SSA Form Pass
 ; GCN-O2-NEXT:      Scalar Evolution Analysis
+; GCN-O2-NEXT:      Lazy Branch Probability Analysis
+; GCN-O2-NEXT:      Lazy Block Frequency Analysis
+; GCN-O2-NEXT:      Loop Pass Manager
+; GCN-O2-NEXT:        Loop Invariant Code Motion
 ; GCN-O2-NEXT:      Loop Pass Manager
 ; GCN-O2-NEXT:        Canonicalize Freeze Instructions in Loops
 ; GCN-O2-NEXT:        Induction Variable Users
@@ -1087,23 +1077,16 @@
 ; GCN-O3-NEXT:      AMDGPU Promote Alloca
 ; GCN-O3-NEXT:      Dominator Tree Construction
 ; GCN-O3-NEXT:      SROA
-; GCN-O3-NEXT:      Basic Alias Analysis (stateless AA impl)
-; GCN-O3-NEXT:      Function Alias Analysis Results
-; GCN-O3-NEXT:      Memory SSA
 ; GCN-O3-NEXT:      Natural Loop Information
-; GCN-O3-NEXT:      Canonicalize natural loops
-; GCN-O3-NEXT:      LCSSA Verifier
-; GCN-O3-NEXT:      Loop-Closed SSA Form Pass
 ; GCN-O3-NEXT:      Scalar Evolution Analysis
-; GCN-O3-NEXT:      Lazy Branch Probability Analysis
-; GCN-O3-NEXT:      Lazy Block Frequency Analysis
-; GCN-O3-NEXT:      Loop Pass Manager
-; GCN-O3-NEXT:        Loop Invariant Code Motion
 ; GCN-O3-NEXT:      Split GEPs to a variadic base and a constant offset for better CSE
 ; GCN-O3-NEXT:      Scalar Evolution Analysis
 ; GCN-O3-NEXT:      Straight line strength reduction
+; GCN-O3-NEXT:      Basic Alias Analysis (stateless AA impl)
 ; GCN-O3-NEXT:      Function Alias Analysis Results
 ; GCN-O3-NEXT:      Memory Dependence Analysis
+; GCN-O3-NEXT:      Lazy Branch Probability Analysis
+; GCN-O3-NEXT:      Lazy Block Frequency Analysis
 ; GCN-O3-NEXT:      Optimization Remark Emitter
 ; GCN-O3-NEXT:      Global Value Numbering
 ; GCN-O3-NEXT:      Scalar Evolution Analysis
@@ -1113,8 +1096,16 @@
 ; GCN-O3-NEXT:      Uniformity Analysis
 ; GCN-O3-NEXT:      AMDGPU IR optimizations
 ; GCN-O3-NEXT:      Basic Alias Analysis (stateless AA impl)
+; GCN-O3-NEXT:      Function Alias Analysis Results
+; GCN-O3-NEXT:      Memory SSA
 ; GCN-O3-NEXT:      Canonicalize natural loops
+; GCN-O3-NEXT:      LCSSA Verifier
+; GCN-O3-NEXT:      Loop-Closed SSA Form Pass
 ; GCN-O3-NEXT:      Scalar Evolution Analysis
+; GCN-O3-NEXT:      Lazy Branch Probability Analysis
+; GCN-O3-NEXT:      Lazy Block Frequency Analysis
+; GCN-O3-NEXT:      Loop Pass Manager
+; GCN-O3-NEXT:        Loop Invariant Code Motion
 ; GCN-O3-NEXT:      Loop Pass Manager
 ; GCN-O3-NEXT:        Canonicalize Freeze Instructions in Loops
 ; GCN-O3-NEXT:        Induction Variable Users
