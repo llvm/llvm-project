@@ -383,4 +383,58 @@ define i32 @private_load_2xi16_align1_not_alloca(ptr addrspace(5) %p) #0 {
   ret i32 %or
 }
 
+define void @load_alloca16_unknown_offset_align1_i8(ptr addrspace(1) noalias %out, i32 %offset) #0 {
+; ALIGNED-LABEL: @load_alloca16_unknown_offset_align1_i8(
+; ALIGNED-NEXT:    [[ALLOCA:%.*]] = alloca [128 x i8], align 16, addrspace(5)
+; ALIGNED-NEXT:    [[PTR0:%.*]] = getelementptr inbounds [128 x i8], ptr addrspace(5) [[ALLOCA]], i32 0, i32 [[OFFSET:%.*]]
+; ALIGNED-NEXT:    [[VAL0:%.*]] = load i8, ptr addrspace(5) [[PTR0]], align 1
+; ALIGNED-NEXT:    [[PTR1:%.*]] = getelementptr inbounds i8, ptr addrspace(5) [[PTR0]], i32 1
+; ALIGNED-NEXT:    [[VAL1:%.*]] = load i8, ptr addrspace(5) [[PTR1]], align 1
+; ALIGNED-NEXT:    [[ADD:%.*]] = add i8 [[VAL0]], [[VAL1]]
+; ALIGNED-NEXT:    store i8 [[ADD]], ptr addrspace(1) [[OUT:%.*]], align 1
+; ALIGNED-NEXT:    ret void
+;
+; UNALIGNED-LABEL: @load_alloca16_unknown_offset_align1_i8(
+; UNALIGNED-NEXT:    [[ALLOCA:%.*]] = alloca [128 x i8], align 16, addrspace(5)
+; UNALIGNED-NEXT:    [[PTR0:%.*]] = getelementptr inbounds [128 x i8], ptr addrspace(5) [[ALLOCA]], i32 0, i32 [[OFFSET:%.*]]
+; UNALIGNED-NEXT:    [[TMP1:%.*]] = load <2 x i8>, ptr addrspace(5) [[PTR0]], align 1
+; UNALIGNED-NEXT:    [[VAL01:%.*]] = extractelement <2 x i8> [[TMP1]], i32 0
+; UNALIGNED-NEXT:    [[VAL12:%.*]] = extractelement <2 x i8> [[TMP1]], i32 1
+; UNALIGNED-NEXT:    [[ADD:%.*]] = add i8 [[VAL01]], [[VAL12]]
+; UNALIGNED-NEXT:    store i8 [[ADD]], ptr addrspace(1) [[OUT:%.*]], align 1
+; UNALIGNED-NEXT:    ret void
+;
+  %alloca = alloca [128 x i8], align 16, addrspace(5)
+  %ptr0 = getelementptr inbounds [128 x i8], ptr addrspace(5) %alloca, i32 0, i32 %offset
+  %val0 = load i8, ptr addrspace(5) %ptr0, align 1
+  %ptr1 = getelementptr inbounds i8, ptr addrspace(5) %ptr0, i32 1
+  %val1 = load i8, ptr addrspace(5) %ptr1, align 1
+  %add = add i8 %val0, %val1
+  store i8 %add, ptr addrspace(1) %out
+  ret void
+}
+
+define void @store_alloca16_unknown_offset_align1_i32(ptr addrspace(1) noalias %out, i32 %offset) #0 {
+; ALIGNED-LABEL: @store_alloca16_unknown_offset_align1_i32(
+; ALIGNED-NEXT:    [[ALLOCA:%.*]] = alloca [128 x i32], align 16, addrspace(5)
+; ALIGNED-NEXT:    [[PTR0:%.*]] = getelementptr inbounds [128 x i32], ptr addrspace(5) [[ALLOCA]], i32 0, i32 [[OFFSET:%.*]]
+; ALIGNED-NEXT:    store i32 9, ptr addrspace(5) [[PTR0]], align 1
+; ALIGNED-NEXT:    [[PTR1:%.*]] = getelementptr inbounds i32, ptr addrspace(5) [[PTR0]], i32 1
+; ALIGNED-NEXT:    store i32 10, ptr addrspace(5) [[PTR1]], align 1
+; ALIGNED-NEXT:    ret void
+;
+; UNALIGNED-LABEL: @store_alloca16_unknown_offset_align1_i32(
+; UNALIGNED-NEXT:    [[ALLOCA:%.*]] = alloca [128 x i32], align 16, addrspace(5)
+; UNALIGNED-NEXT:    [[PTR0:%.*]] = getelementptr inbounds [128 x i32], ptr addrspace(5) [[ALLOCA]], i32 0, i32 [[OFFSET:%.*]]
+; UNALIGNED-NEXT:    store <2 x i32> <i32 9, i32 10>, ptr addrspace(5) [[PTR0]], align 4
+; UNALIGNED-NEXT:    ret void
+;
+  %alloca = alloca [128 x i32], align 16, addrspace(5)
+  %ptr0 = getelementptr inbounds [128 x i32], ptr addrspace(5) %alloca, i32 0, i32 %offset
+  store i32 9, ptr addrspace(5) %ptr0, align 1
+  %ptr1 = getelementptr inbounds i32, ptr addrspace(5) %ptr0, i32 1
+  store i32 10, ptr addrspace(5) %ptr1, align 1
+  ret void
+}
+
 attributes #0 = { nounwind }
