@@ -93,6 +93,7 @@ class X86TTIImpl : public BasicTTIImplBase<X86TTIImpl> {
       X86::TuningNoDomainDelayShuffle,
       X86::TuningNoDomainDelayBlend,
       X86::TuningPreferShiftShuffle,
+      X86::TuningFastImmVectorShift,
 
       // Perf-tuning flags.
       X86::TuningFastGather,
