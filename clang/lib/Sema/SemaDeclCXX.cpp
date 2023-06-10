@@ -16595,6 +16595,11 @@ VarDecl *Sema::BuildExceptionDeclaration(Scope *S,
       !BaseType->isDependentType() && RequireCompleteType(Loc, BaseType, DK))
     Invalid = true;
 
+  if (!Invalid && BaseType.isWebAssemblyReferenceType()) {
+    Diag(Loc, diag::err_wasm_reftype_tc) << 1;
+    Invalid = true;
+  }
+
   if (!Invalid && Mode != 1 && BaseType->isSizelessType()) {
     Diag(Loc, diag::err_catch_sizeless) << (Mode == 2 ? 1 : 0) << BaseType;
     Invalid = true;

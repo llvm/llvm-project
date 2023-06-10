@@ -4830,6 +4830,18 @@ bool Sema::CheckWebAssemblyBuiltinFunctionCall(const TargetInfo &TI,
     return BuiltinWasmRefNullExtern(TheCall);
   case WebAssembly::BI__builtin_wasm_ref_null_func:
     return BuiltinWasmRefNullFunc(TheCall);
+  case WebAssembly::BI__builtin_wasm_table_get:
+    return BuiltinWasmTableGet(TheCall);
+  case WebAssembly::BI__builtin_wasm_table_set:
+    return BuiltinWasmTableSet(TheCall);
+  case WebAssembly::BI__builtin_wasm_table_size:
+    return BuiltinWasmTableSize(TheCall);
+  case WebAssembly::BI__builtin_wasm_table_grow:
+    return BuiltinWasmTableGrow(TheCall);
+  case WebAssembly::BI__builtin_wasm_table_fill:
+    return BuiltinWasmTableFill(TheCall);
+  case WebAssembly::BI__builtin_wasm_table_copy:
+    return BuiltinWasmTableCopy(TheCall);
   }
 
   return false;
@@ -12330,6 +12342,10 @@ Sema::CheckReturnValExpr(Expr *RetValExp, QualType lhsType,
     }
   }
 
+  if (RetValExp && RetValExp->getType()->isWebAssemblyTableType()) {
+    Diag(ReturnLoc, diag::err_wasm_table_art) << 1;
+  }
+
   // PPC MMA non-pointer types are not allowed as return type. Checking the type
   // here prevent the user from using a PPC MMA type as trailing return type.
   if (Context.getTargetInfo().getTriple().isPPC64())
@@ -16063,6 +16079,13 @@ bool Sema::CheckParmsForFunctionDef(ArrayRef<ParmVarDecl *> Parameters,
                                      RD, /*DeclIsField*/ false);
       }
     }
+
+    if (!Param->isInvalidDecl() &&
+        Param->getOriginalType()->isWebAssemblyTableType()) {
+      Param->setInvalidDecl();
+      HasInvalidParm = true;
+      Diag(Param->getLocation(), diag::err_wasm_table_as_function_parameter);
+    }
   }
 
   return HasInvalidParm;
@@ -18343,6 +18366,168 @@ ExprResult Sema::SemaBuiltinMatrixColumnMajorStore(CallExpr *TheCall,
     return ExprError();
 
   return CallResult;
+}
+
+/// Checks the argument at the given index is a WebAssembly table and if it
+/// is, sets ElTy to the element type.
+static bool CheckWasmBuiltinArgIsTable(Sema &S, CallExpr *E, unsigned ArgIndex,
+                                       QualType &ElTy) {
+  Expr *ArgExpr = E->getArg(ArgIndex);
+  const auto *ATy = dyn_cast<ArrayType>(ArgExpr->getType());
+  if (!ATy || !ATy->getElementType().isWebAssemblyReferenceType()) {
+    return S.Diag(ArgExpr->getBeginLoc(),
+                  diag::err_wasm_builtin_arg_must_be_table_type)
+           << ArgIndex + 1 << ArgExpr->getSourceRange();
+  }
+  ElTy = ATy->getElementType();
+  return false;
+}
+
+/// Checks the argument at the given index is an integer.
+static bool CheckWasmBuiltinArgIsInteger(Sema &S, CallExpr *E,
+                                         unsigned ArgIndex) {
+  Expr *ArgExpr = E->getArg(ArgIndex);
+  if (!ArgExpr->getType()->isIntegerType()) {
+    return S.Diag(ArgExpr->getBeginLoc(),
+                  diag::err_wasm_builtin_arg_must_be_integer_type)
+           << ArgIndex + 1 << ArgExpr->getSourceRange();
+  }
+  return false;
+}
+
+/// Check that the first argument is a WebAssembly table, and the second
+/// is an index to use as index into the table.
+bool Sema::BuiltinWasmTableGet(CallExpr *TheCall) {
+  if (checkArgCount(*this, TheCall, 2))
+    return true;
+
+  QualType ElTy;
+  if (CheckWasmBuiltinArgIsTable(*this, TheCall, 0, ElTy))
+    return true;
+
+  if (CheckWasmBuiltinArgIsInteger(*this, TheCall, 1))
+    return true;
+
+  // If all is well, we set the type of TheCall to be the type of the
+  // element of the table.
+  // i.e. a table.get on an externref table has type externref,
+  // or whatever the type of the table element is.
+  TheCall->setType(ElTy);
+
+  return false;
+}
+
+/// Check that the first argumnet is a WebAssembly table, the second is
+/// an index to use as index into the table and the third is the reference
+/// type to set into the table.
+bool Sema::BuiltinWasmTableSet(CallExpr *TheCall) {
+  if (checkArgCount(*this, TheCall, 3))
+    return true;
+
+  QualType ElTy;
+  if (CheckWasmBuiltinArgIsTable(*this, TheCall, 0, ElTy))
+    return true;
+
+  if (CheckWasmBuiltinArgIsInteger(*this, TheCall, 1))
+    return true;
+
+  if (!Context.hasSameType(ElTy, TheCall->getArg(2)->getType()))
+    return true;
+
+  return false;
+}
+
+/// Check that the argument is a WebAssembly table.
+bool Sema::BuiltinWasmTableSize(CallExpr *TheCall) {
+  if (checkArgCount(*this, TheCall, 1))
+    return true;
+
+  QualType ElTy;
+  if (CheckWasmBuiltinArgIsTable(*this, TheCall, 0, ElTy))
+    return true;
+
+  return false;
+}
+
+/// Check that the first argument is a WebAssembly table, the second is the
+/// value to use for new elements (of a type matching the table type), the
+/// third value is an integer.
+bool Sema::BuiltinWasmTableGrow(CallExpr *TheCall) {
+  if (checkArgCount(*this, TheCall, 3))
+    return true;
+
+  QualType ElTy;
+  if (CheckWasmBuiltinArgIsTable(*this, TheCall, 0, ElTy))
+    return true;
+
+  Expr *NewElemArg = TheCall->getArg(1);
+  if (!Context.hasSameType(ElTy, NewElemArg->getType())) {
+    return Diag(NewElemArg->getBeginLoc(),
+                diag::err_wasm_builtin_arg_must_match_table_element_type)
+           << 2 << 1 << NewElemArg->getSourceRange();
+  }
+
+  if (CheckWasmBuiltinArgIsInteger(*this, TheCall, 2))
+    return true;
+
+  return false;
+}
+
+/// Check that the first argument is a WebAssembly table, the second is an
+/// integer, the third is the value to use to fill the table (of a type
+/// matching the table type), and the fourth is an integer.
+bool Sema::BuiltinWasmTableFill(CallExpr *TheCall) {
+  if (checkArgCount(*this, TheCall, 4))
+    return true;
+
+  QualType ElTy;
+  if (CheckWasmBuiltinArgIsTable(*this, TheCall, 0, ElTy))
+    return true;
+
+  if (CheckWasmBuiltinArgIsInteger(*this, TheCall, 1))
+    return true;
+
+  Expr *NewElemArg = TheCall->getArg(2);
+  if (!Context.hasSameType(ElTy, NewElemArg->getType())) {
+    return Diag(NewElemArg->getBeginLoc(),
+                diag::err_wasm_builtin_arg_must_match_table_element_type)
+           << 3 << 1 << NewElemArg->getSourceRange();
+  }
+
+  if (CheckWasmBuiltinArgIsInteger(*this, TheCall, 3))
+    return true;
+
+  return false;
+}
+
+/// Check that the first argument is a WebAssembly table, the second is also a
+/// WebAssembly table (of the same element type), and the third to fifth
+/// arguments are integers.
+bool Sema::BuiltinWasmTableCopy(CallExpr *TheCall) {
+  if (checkArgCount(*this, TheCall, 5))
+    return true;
+
+  QualType XElTy;
+  if (CheckWasmBuiltinArgIsTable(*this, TheCall, 0, XElTy))
+    return true;
+
+  QualType YElTy;
+  if (CheckWasmBuiltinArgIsTable(*this, TheCall, 1, YElTy))
+    return true;
+
+  Expr *TableYArg = TheCall->getArg(1);
+  if (!Context.hasSameType(XElTy, YElTy)) {
+    return Diag(TableYArg->getBeginLoc(),
+                diag::err_wasm_builtin_arg_must_match_table_element_type)
+           << 2 << 1 << TableYArg->getSourceRange();
+  }
+
+  for (int I = 2; I <= 4; I++) {
+    if (CheckWasmBuiltinArgIsInteger(*this, TheCall, I))
+      return true;
+  }
+
+  return false;
 }
 
 /// \brief Enforce the bounds of a TCB

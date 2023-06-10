@@ -12019,7 +12019,16 @@ void OverloadCandidateSet::NoteCandidates(
 
   S.Diag(PD.first, PD.second, shouldDeferDiags(S, Args, OpLoc));
 
-  NoteCandidates(S, Args, Cands, Opc, OpLoc);
+  // In WebAssembly we don't want to emit further diagnostics if a table is
+  // passed as an argument to a function.
+  bool NoteCands = true;
+  for (const Expr *Arg : Args) {
+    if (Arg->getType()->isWebAssemblyTableType())
+      NoteCands = false;
+  }
+
+  if (NoteCands)
+    NoteCandidates(S, Args, Cands, Opc, OpLoc);
 
   if (OCD == OCD_AmbiguousCandidates)
     MaybeDiagnoseAmbiguousConstraints(S, {begin(), end()});
