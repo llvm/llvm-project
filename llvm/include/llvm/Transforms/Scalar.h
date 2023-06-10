@@ -43,12 +43,6 @@ FunctionPass *createDeadCodeEliminationPass();
 
 //===----------------------------------------------------------------------===//
 //
-// CallSiteSplitting - This pass split call-site based on its known argument
-// values.
-FunctionPass *createCallSiteSplittingPass();
-
-//===----------------------------------------------------------------------===//
-//
 // GuardWidening - An optimization over the @llvm.experimental.guard intrinsic
 // that (optimistically) combines multiple guards into one to have fewer checks
 // at runtime.
