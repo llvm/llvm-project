@@ -46,12 +46,12 @@ using namespace rdf;
 namespace llvm {
 namespace rdf {
 
-auto operator<<(raw_ostream &OS, const Print<RegisterRef> &P) -> raw_ostream & {
+raw_ostream &operator<<(raw_ostream &OS, const Print<RegisterRef> &P) {
   P.G.getPRI().print(OS, P.Obj);
   return OS;
 }
 
-auto operator<<(raw_ostream &OS, const Print<NodeId> &P) -> raw_ostream & {
+raw_ostream &operator<<(raw_ostream &OS, const Print<NodeId> &P) {
   auto NA = P.G.addr<NodeBase *>(P.Obj);
   uint16_t Attrs = NA.Addr->getAttrs();
   uint16_t Kind = NodeAttrs::kind(Attrs);
@@ -110,14 +110,14 @@ auto operator<<(raw_ostream &OS, const Print<NodeId> &P) -> raw_ostream & {
   return OS;
 }
 
-static auto printRefHeader(raw_ostream &OS, const Ref RA,
-                           const DataFlowGraph &G) -> void {
+static void printRefHeader(raw_ostream &OS, const Ref RA,
+                           const DataFlowGraph &G) {
   OS << Print(RA.Id, G) << '<' << Print(RA.Addr->getRegRef(G), G) << '>';
   if (RA.Addr->getFlags() & NodeAttrs::Fixed)
     OS << '!';
 }
 
-auto operator<<(raw_ostream &OS, const Print<Def> &P) -> raw_ostream & {
+raw_ostream &operator<<(raw_ostream &OS, const Print<Def> &P) {
   printRefHeader(OS, P.Obj, P.G);
   OS << '(';
   if (NodeId N = P.Obj.Addr->getReachingDef())
@@ -134,7 +134,7 @@ auto operator<<(raw_ostream &OS, const Print<Def> &P) -> raw_ostream & {
   return OS;
 }
 
-auto operator<<(raw_ostream &OS, const Print<Use> &P) -> raw_ostream & {
+raw_ostream &operator<<(raw_ostream &OS, const Print<Use> &P) {
   printRefHeader(OS, P.Obj, P.G);
   OS << '(';
   if (NodeId N = P.Obj.Addr->getReachingDef())
@@ -145,7 +145,7 @@ auto operator<<(raw_ostream &OS, const Print<Use> &P) -> raw_ostream & {
   return OS;
 }
 
-auto operator<<(raw_ostream &OS, const Print<PhiUse> &P) -> raw_ostream & {
+raw_ostream &operator<<(raw_ostream &OS, const Print<PhiUse> &P) {
   printRefHeader(OS, P.Obj, P.G);
   OS << '(';
   if (NodeId N = P.Obj.Addr->getReachingDef())
@@ -159,7 +159,7 @@ auto operator<<(raw_ostream &OS, const Print<PhiUse> &P) -> raw_ostream & {
   return OS;
 }
 
-auto operator<<(raw_ostream &OS, const Print<Ref> &P) -> raw_ostream & {
+raw_ostream &operator<<(raw_ostream &OS, const Print<Ref> &P) {
   switch (P.Obj.Addr->getKind()) {
   case NodeAttrs::Def:
     OS << PrintNode<DefNode *>(P.Obj, P.G);
@@ -174,7 +174,7 @@ auto operator<<(raw_ostream &OS, const Print<Ref> &P) -> raw_ostream & {
   return OS;
 }
 
-auto operator<<(raw_ostream &OS, const Print<NodeList> &P) -> raw_ostream & {
+raw_ostream &operator<<(raw_ostream &OS, const Print<NodeList> &P) {
   unsigned N = P.Obj.size();
   for (auto I : P.Obj) {
     OS << Print(I.Id, P.G);
@@ -184,7 +184,7 @@ auto operator<<(raw_ostream &OS, const Print<NodeList> &P) -> raw_ostream & {
   return OS;
 }
 
-auto operator<<(raw_ostream &OS, const Print<NodeSet> &P) -> raw_ostream & {
+raw_ostream &operator<<(raw_ostream &OS, const Print<NodeSet> &P) {
   unsigned N = P.Obj.size();
   for (auto I : P.Obj) {
     OS << Print(I, P.G);
@@ -205,7 +205,7 @@ template <typename T> struct PrintListV {
 };
 
 template <typename T>
-auto operator<<(raw_ostream &OS, const PrintListV<T> &P) -> raw_ostream & {
+raw_ostream &operator<<(raw_ostream &OS, const PrintListV<T> &P) {
   unsigned N = P.List.size();
   for (NodeAddr<T> A : P.List) {
     OS << PrintNode<T>(A, P.G);
@@ -217,13 +217,13 @@ auto operator<<(raw_ostream &OS, const PrintListV<T> &P) -> raw_ostream & {
 
 } // end anonymous namespace
 
-auto operator<<(raw_ostream &OS, const Print<Phi> &P) -> raw_ostream & {
+raw_ostream &operator<<(raw_ostream &OS, const Print<Phi> &P) {
   OS << Print(P.Obj.Id, P.G) << ": phi ["
      << PrintListV<RefNode *>(P.Obj.Addr->members(P.G), P.G) << ']';
   return OS;
 }
 
-auto operator<<(raw_ostream &OS, const Print<Stmt> &P) -> raw_ostream & {
+raw_ostream &operator<<(raw_ostream &OS, const Print<Stmt> &P) {
   const MachineInstr &MI = *P.Obj.Addr->getCode();
   unsigned Opc = MI.getOpcode();
   OS << Print(P.Obj.Id, P.G) << ": " << P.G.getTII().getName(Opc);
@@ -247,7 +247,7 @@ auto operator<<(raw_ostream &OS, const Print<Stmt> &P) -> raw_ostream & {
   return OS;
 }
 
-auto operator<<(raw_ostream &OS, const Print<Instr> &P) -> raw_ostream & {
+raw_ostream &operator<<(raw_ostream &OS, const Print<Instr> &P) {
   switch (P.Obj.Addr->getKind()) {
   case NodeAttrs::Phi:
     OS << PrintNode<PhiNode *>(P.Obj, P.G);
@@ -262,7 +262,7 @@ auto operator<<(raw_ostream &OS, const Print<Instr> &P) -> raw_ostream & {
   return OS;
 }
 
-auto operator<<(raw_ostream &OS, const Print<Block> &P) -> raw_ostream & {
+raw_ostream &operator<<(raw_ostream &OS, const Print<Block> &P) {
   MachineBasicBlock *BB = P.Obj.Addr->getCode();
   unsigned NP = BB->pred_size();
   std::vector<int> Ns;
@@ -294,7 +294,7 @@ auto operator<<(raw_ostream &OS, const Print<Block> &P) -> raw_ostream & {
   return OS;
 }
 
-auto operator<<(raw_ostream &OS, const Print<Func> &P) -> raw_ostream & {
+raw_ostream &operator<<(raw_ostream &OS, const Print<Func> &P) {
   OS << "DFG dump:[\n"
      << Print(P.Obj.Id, P.G)
      << ": Function: " << P.Obj.Addr->getCode()->getName() << '\n';
@@ -304,7 +304,7 @@ auto operator<<(raw_ostream &OS, const Print<Func> &P) -> raw_ostream & {
   return OS;
 }
 
-auto operator<<(raw_ostream &OS, const Print<RegisterSet> &P) -> raw_ostream & {
+raw_ostream &operator<<(raw_ostream &OS, const Print<RegisterSet> &P) {
   OS << '{';
   for (auto I : P.Obj)
     OS << ' ' << Print(I, P.G);
@@ -312,14 +312,13 @@ auto operator<<(raw_ostream &OS, const Print<RegisterSet> &P) -> raw_ostream & {
   return OS;
 }
 
-auto operator<<(raw_ostream &OS, const Print<RegisterAggr> &P)
-    -> raw_ostream & {
+raw_ostream &operator<<(raw_ostream &OS, const Print<RegisterAggr> &P) {
   OS << P.Obj;
   return OS;
 }
 
-auto operator<<(raw_ostream &OS, const Print<DataFlowGraph::DefStack> &P)
-    -> raw_ostream & {
+raw_ostream &operator<<(raw_ostream &OS,
+                        const Print<DataFlowGraph::DefStack> &P) {
   for (auto I = P.Obj.top(), E = P.Obj.bottom(); I != E;) {
     OS << Print(I->Id, P.G) << '<' << Print(I->Addr->getRegRef(P.G), P.G)
        << '>';
@@ -342,7 +341,7 @@ auto operator<<(raw_ostream &OS, const Print<DataFlowGraph::DefStack> &P)
 // There is a mapping scheme between node id and its location in a block,
 // and within that block is described in the header file.
 //
-auto NodeAllocator::startNewBlock() -> void {
+void NodeAllocator::startNewBlock() {
   void *T = MemPool.Allocate(NodesPerBlock * NodeMemSize, NodeMemSize);
   char *P = static_cast<char *>(T);
   Blocks.push_back(P);
@@ -354,7 +353,7 @@ auto NodeAllocator::startNewBlock() -> void {
   ActiveEnd = P;
 }
 
-auto NodeAllocator::needNewBlock() -> bool {
+bool NodeAllocator::needNewBlock() {
   if (Blocks.empty())
     return true;
 
@@ -363,7 +362,7 @@ auto NodeAllocator::needNewBlock() -> bool {
   return Index >= NodesPerBlock;
 }
 
-auto NodeAllocator::New() -> Node {
+Node NodeAllocator::New() {
   if (needNewBlock())
     startNewBlock();
 
@@ -374,7 +373,7 @@ auto NodeAllocator::New() -> Node {
   return NA;
 }
 
-auto NodeAllocator::id(const NodeBase *P) const -> NodeId {
+NodeId NodeAllocator::id(const NodeBase *P) const {
   uintptr_t A = reinterpret_cast<uintptr_t>(P);
   for (unsigned i = 0, n = Blocks.size(); i != n; ++i) {
     uintptr_t B = reinterpret_cast<uintptr_t>(Blocks[i]);
@@ -386,14 +385,14 @@ auto NodeAllocator::id(const NodeBase *P) const -> NodeId {
   llvm_unreachable("Invalid node address");
 }
 
-auto NodeAllocator::clear() -> void {
+void NodeAllocator::clear() {
   MemPool.Reset();
   Blocks.clear();
   ActiveEnd = nullptr;
 }
 
 // Insert node NA after "this" in the circular chain.
-auto NodeBase::append(Node NA) -> void {
+void NodeBase::append(Node NA) {
   NodeId Nx = Next;
   // If NA is already "next", do nothing.
   if (Next != NA.Id) {
@@ -405,7 +404,7 @@ auto NodeBase::append(Node NA) -> void {
 // Fundamental node manipulator functions.
 
 // Obtain the register reference from a reference node.
-auto RefNode::getRegRef(const DataFlowGraph &G) const -> RegisterRef {
+RegisterRef RefNode::getRegRef(const DataFlowGraph &G) const {
   assert(NodeAttrs::type(Attrs) == NodeAttrs::Ref);
   if (NodeAttrs::flags(Attrs) & NodeAttrs::PhiRef)
     return G.unpack(RefData.PR);
@@ -415,7 +414,7 @@ auto RefNode::getRegRef(const DataFlowGraph &G) const -> RegisterRef {
 
 // Set the register reference in the reference node directly (for references
 // in phi nodes).
-auto RefNode::setRegRef(RegisterRef RR, DataFlowGraph &G) -> void {
+void RefNode::setRegRef(RegisterRef RR, DataFlowGraph &G) {
   assert(NodeAttrs::type(Attrs) == NodeAttrs::Ref);
   assert(NodeAttrs::flags(Attrs) & NodeAttrs::PhiRef);
   RefData.PR = G.pack(RR);
@@ -423,7 +422,7 @@ auto RefNode::setRegRef(RegisterRef RR, DataFlowGraph &G) -> void {
 
 // Set the register reference in the reference node based on a machine
 // operand (for references in statement nodes).
-auto RefNode::setRegRef(MachineOperand *Op, DataFlowGraph &G) -> void {
+void RefNode::setRegRef(MachineOperand *Op, DataFlowGraph &G) {
   assert(NodeAttrs::type(Attrs) == NodeAttrs::Ref);
   assert(!(NodeAttrs::flags(Attrs) & NodeAttrs::PhiRef));
   (void)G;
@@ -431,7 +430,7 @@ auto RefNode::setRegRef(MachineOperand *Op, DataFlowGraph &G) -> void {
 }
 
 // Get the owner of a given reference node.
-auto RefNode::getOwner(const DataFlowGraph &G) -> Node {
+Node RefNode::getOwner(const DataFlowGraph &G) {
   Node NA = G.addr<NodeBase *>(getNext());
 
   while (NA.Addr != this) {
@@ -443,35 +442,35 @@ auto RefNode::getOwner(const DataFlowGraph &G) -> Node {
 }
 
 // Connect the def node to the reaching def node.
-auto DefNode::linkToDef(NodeId Self, Def DA) -> void {
+void DefNode::linkToDef(NodeId Self, Def DA) {
   RefData.RD = DA.Id;
   RefData.Sib = DA.Addr->getReachedDef();
   DA.Addr->setReachedDef(Self);
 }
 
 // Connect the use node to the reaching def node.
-auto UseNode::linkToDef(NodeId Self, Def DA) -> void {
+void UseNode::linkToDef(NodeId Self, Def DA) {
   RefData.RD = DA.Id;
   RefData.Sib = DA.Addr->getReachedUse();
   DA.Addr->setReachedUse(Self);
 }
 
 // Get the first member of the code node.
-auto CodeNode::getFirstMember(const DataFlowGraph &G) const -> Node {
+Node CodeNode::getFirstMember(const DataFlowGraph &G) const {
   if (CodeData.FirstM == 0)
     return Node();
   return G.addr<NodeBase *>(CodeData.FirstM);
 }
 
 // Get the last member of the code node.
-auto CodeNode::getLastMember(const DataFlowGraph &G) const -> Node {
+Node CodeNode::getLastMember(const DataFlowGraph &G) const {
   if (CodeData.LastM == 0)
     return Node();
   return G.addr<NodeBase *>(CodeData.LastM);
 }
 
 // Add node NA at the end of the member list of the given code node.
-auto CodeNode::addMember(Node NA, const DataFlowGraph &G) -> void {
+void CodeNode::addMember(Node NA, const DataFlowGraph &G) {
   Node ML = getLastMember(G);
   if (ML.Id != 0) {
     ML.Addr->append(NA);
@@ -484,15 +483,14 @@ auto CodeNode::addMember(Node NA, const DataFlowGraph &G) -> void {
 }
 
 // Add node NA after member node MA in the given code node.
-auto CodeNode::addMemberAfter(Node MA, Node NA, const DataFlowGraph &G)
-    -> void {
+void CodeNode::addMemberAfter(Node MA, Node NA, const DataFlowGraph &G) {
   MA.Addr->append(NA);
   if (CodeData.LastM == MA.Id)
     CodeData.LastM = NA.Id;
 }
 
 // Remove member node NA from the given code node.
-auto CodeNode::removeMember(Node NA, const DataFlowGraph &G) -> void {
+void CodeNode::removeMember(Node NA, const DataFlowGraph &G) {
   Node MA = getFirstMember(G);
   assert(MA.Id != 0);
 
@@ -524,13 +522,13 @@ auto CodeNode::removeMember(Node NA, const DataFlowGraph &G) -> void {
 }
 
 // Return the list of all members of the code node.
-auto CodeNode::members(const DataFlowGraph &G) const -> NodeList {
+NodeList CodeNode::members(const DataFlowGraph &G) const {
   static auto True = [](Node) -> bool { return true; };
   return members_if(True, G);
 }
 
 // Return the owner of the given instr node.
-auto InstrNode::getOwner(const DataFlowGraph &G) -> Node {
+Node InstrNode::getOwner(const DataFlowGraph &G) {
   Node NA = G.addr<NodeBase *>(getNext());
 
   while (NA.Addr != this) {
@@ -543,7 +541,7 @@ auto InstrNode::getOwner(const DataFlowGraph &G) -> Node {
 }
 
 // Add the phi node PA to the given block node.
-auto BlockNode::addPhi(Phi PA, const DataFlowGraph &G) -> void {
+void BlockNode::addPhi(Phi PA, const DataFlowGraph &G) {
   Node M = getFirstMember(G);
   if (M.Id == 0) {
     addMember(PA, G);
@@ -573,8 +571,8 @@ auto BlockNode::addPhi(Phi PA, const DataFlowGraph &G) -> void {
 
 // Find the block node corresponding to the machine basic block BB in the
 // given func node.
-auto FuncNode::findBlock(const MachineBasicBlock *BB,
-                         const DataFlowGraph &G) const -> Block {
+Block FuncNode::findBlock(const MachineBasicBlock *BB,
+                          const DataFlowGraph &G) const {
   auto EqBB = [BB](Node NA) -> bool { return Block(NA).Addr->getCode() == BB; };
   NodeList Ms = members_if(EqBB, G);
   if (!Ms.empty())
@@ -583,7 +581,7 @@ auto FuncNode::findBlock(const MachineBasicBlock *BB,
 }
 
 // Get the block node for the entry block in the given function.
-auto FuncNode::getEntryBlock(const DataFlowGraph &G) -> Block {
+Block FuncNode::getEntryBlock(const DataFlowGraph &G) {
   MachineBasicBlock *EntryB = &getCode()->front();
   return findBlock(EntryB, G);
 }
@@ -593,14 +591,14 @@ auto FuncNode::getEntryBlock(const DataFlowGraph &G) -> Block {
 
 // For a given instruction, check if there are any bits of RR that can remain
 // unchanged across this def.
-auto TargetOperandInfo::isPreserving(const MachineInstr &In,
-                                     unsigned OpNum) const -> bool {
+bool TargetOperandInfo::isPreserving(const MachineInstr &In,
+                                     unsigned OpNum) const {
   return TII.isPredicated(In);
 }
 
 // Check if the definition of RR produces an unspecified value.
-auto TargetOperandInfo::isClobbering(const MachineInstr &In,
-                                     unsigned OpNum) const -> bool {
+bool TargetOperandInfo::isClobbering(const MachineInstr &In,
+                                     unsigned OpNum) const {
   const MachineOperand &Op = In.getOperand(OpNum);
   if (Op.isRegMask())
     return true;
@@ -612,8 +610,8 @@ auto TargetOperandInfo::isClobbering(const MachineInstr &In,
 }
 
 // Check if the given instruction specifically requires
-auto TargetOperandInfo::isFixedReg(const MachineInstr &In, unsigned OpNum) const
-    -> bool {
+bool TargetOperandInfo::isFixedReg(const MachineInstr &In,
+                                   unsigned OpNum) const {
   if (In.isCall() || In.isReturn() || In.isInlineAsm())
     return true;
   // Check for a tail call.
@@ -678,7 +676,7 @@ DataFlowGraph::DefStack::Iterator::Iterator(const DataFlowGraph::DefStack &S,
 }
 
 // Return the size of the stack, including block delimiters.
-auto DataFlowGraph::DefStack::size() const -> unsigned {
+unsigned DataFlowGraph::DefStack::size() const {
   unsigned S = 0;
   for (auto I = top(), E = bottom(); I != E; I.down())
     S++;
@@ -688,14 +686,14 @@ auto DataFlowGraph::DefStack::size() const -> unsigned {
 // Remove the top entry from the stack. Remove all intervening delimiters
 // so that after this, the stack is either empty, or the top of the stack
 // is a non-delimiter.
-auto DataFlowGraph::DefStack::pop() -> void {
+void DataFlowGraph::DefStack::pop() {
   assert(!empty());
   unsigned P = nextDown(Stack.size());
   Stack.resize(P);
 }
 
 // Push a delimiter for block node N on the stack.
-auto DataFlowGraph::DefStack::start_block(NodeId N) -> void {
+void DataFlowGraph::DefStack::start_block(NodeId N) {
   assert(N != 0);
   Stack.push_back(Def(nullptr, N));
 }
@@ -703,7 +701,7 @@ auto DataFlowGraph::DefStack::start_block(NodeId N) -> void {
 // Remove all nodes from the top of the stack, until the delimited for
 // block node N is encountered. Remove the delimiter as well. In effect,
 // this will remove from the stack all definitions from block N.
-auto DataFlowGraph::DefStack::clear_block(NodeId N) -> void {
+void DataFlowGraph::DefStack::clear_block(NodeId N) {
   assert(N != 0);
   unsigned P = Stack.size();
   while (P > 0) {
@@ -717,7 +715,7 @@ auto DataFlowGraph::DefStack::clear_block(NodeId N) -> void {
 }
 
 // Move the stack iterator up by one.
-auto DataFlowGraph::DefStack::nextUp(unsigned P) const -> unsigned {
+unsigned DataFlowGraph::DefStack::nextUp(unsigned P) const {
   // Get the next valid position after P (skipping all delimiters).
   // The input position P does not have to point to a non-delimiter.
   unsigned SS = Stack.size();
@@ -732,7 +730,7 @@ auto DataFlowGraph::DefStack::nextUp(unsigned P) const -> unsigned {
 }
 
 // Move the stack iterator down by one.
-auto DataFlowGraph::DefStack::nextDown(unsigned P) const -> unsigned {
+unsigned DataFlowGraph::DefStack::nextDown(unsigned P) const {
   // Get the preceding valid position before P (skipping all delimiters).
   // The input position P does not have to point to a non-delimiter.
   assert(P > 0 && P <= Stack.size());
@@ -748,7 +746,7 @@ auto DataFlowGraph::DefStack::nextDown(unsigned P) const -> unsigned {
 
 // Register information.
 
-auto DataFlowGraph::getLandingPadLiveIns() const -> RegisterAggr {
+RegisterAggr DataFlowGraph::getLandingPadLiveIns() const {
   RegisterAggr LR(getPRI());
   const Function &F = MF.getFunction();
   const Constant *PF = F.hasPersonalityFn() ? F.getPersonalityFn() : nullptr;
@@ -765,21 +763,21 @@ auto DataFlowGraph::getLandingPadLiveIns() const -> RegisterAggr {
 // Node management functions.
 
 // Get the pointer to the node with the id N.
-auto DataFlowGraph::ptr(NodeId N) const -> NodeBase * {
+NodeBase *DataFlowGraph::ptr(NodeId N) const {
   if (N == 0)
     return nullptr;
   return Memory.ptr(N);
 }
 
 // Get the id of the node at the address P.
-auto DataFlowGraph::id(const NodeBase *P) const -> NodeId {
+NodeId DataFlowGraph::id(const NodeBase *P) const {
   if (P == nullptr)
     return 0;
   return Memory.id(P);
 }
 
 // Allocate a new node and set the attributes to Attrs.
-auto DataFlowGraph::newNode(uint16_t Attrs) -> Node {
+Node DataFlowGraph::newNode(uint16_t Attrs) {
   Node P = Memory.New();
   P.Addr->init();
   P.Addr->setAttrs(Attrs);
@@ -788,7 +786,7 @@ auto DataFlowGraph::newNode(uint16_t Attrs) -> Node {
 
 // Make a copy of the given node B, except for the data-flow links, which
 // are set to 0.
-auto DataFlowGraph::cloneNode(const Node B) -> Node {
+Node DataFlowGraph::cloneNode(const Node B) {
   Node NA = newNode(0);
   memcpy(NA.Addr, B.Addr, sizeof(NodeBase));
   // Ref nodes need to have the data-flow links reset.
@@ -807,15 +805,15 @@ auto DataFlowGraph::cloneNode(const Node B) -> Node {
 
 // Allocation routines for specific node types/kinds.
 
-auto DataFlowGraph::newUse(Instr Owner, MachineOperand &Op, uint16_t Flags)
-    -> Use {
+rdf::Use DataFlowGraph::newUse(Instr Owner, MachineOperand &Op,
+                               uint16_t Flags) {
   Use UA = newNode(NodeAttrs::Ref | NodeAttrs::Use | Flags);
   UA.Addr->setRegRef(&Op, *this);
   return UA;
 }
 
-auto DataFlowGraph::newPhiUse(Phi Owner, RegisterRef RR, Block PredB,
-                              uint16_t Flags) -> PhiUse {
+PhiUse DataFlowGraph::newPhiUse(Phi Owner, RegisterRef RR, Block PredB,
+                                uint16_t Flags) {
   PhiUse PUA = newNode(NodeAttrs::Ref | NodeAttrs::Use | Flags);
   assert(Flags & NodeAttrs::PhiRef);
   PUA.Addr->setRegRef(RR, *this);
@@ -823,48 +821,47 @@ auto DataFlowGraph::newPhiUse(Phi Owner, RegisterRef RR, Block PredB,
   return PUA;
 }
 
-auto DataFlowGraph::newDef(Instr Owner, MachineOperand &Op, uint16_t Flags)
-    -> Def {
+Def DataFlowGraph::newDef(Instr Owner, MachineOperand &Op, uint16_t Flags) {
   Def DA = newNode(NodeAttrs::Ref | NodeAttrs::Def | Flags);
   DA.Addr->setRegRef(&Op, *this);
   return DA;
 }
 
-auto DataFlowGraph::newDef(Instr Owner, RegisterRef RR, uint16_t Flags) -> Def {
+Def DataFlowGraph::newDef(Instr Owner, RegisterRef RR, uint16_t Flags) {
   Def DA = newNode(NodeAttrs::Ref | NodeAttrs::Def | Flags);
   assert(Flags & NodeAttrs::PhiRef);
   DA.Addr->setRegRef(RR, *this);
   return DA;
 }
 
-auto DataFlowGraph::newPhi(Block Owner) -> Phi {
+Phi DataFlowGraph::newPhi(Block Owner) {
   Phi PA = newNode(NodeAttrs::Code | NodeAttrs::Phi);
   Owner.Addr->addPhi(PA, *this);
   return PA;
 }
 
-auto DataFlowGraph::newStmt(Block Owner, MachineInstr *MI) -> Stmt {
+Stmt DataFlowGraph::newStmt(Block Owner, MachineInstr *MI) {
   Stmt SA = newNode(NodeAttrs::Code | NodeAttrs::Stmt);
   SA.Addr->setCode(MI);
   Owner.Addr->addMember(SA, *this);
   return SA;
 }
 
-auto DataFlowGraph::newBlock(Func Owner, MachineBasicBlock *BB) -> Block {
+Block DataFlowGraph::newBlock(Func Owner, MachineBasicBlock *BB) {
   Block BA = newNode(NodeAttrs::Code | NodeAttrs::Block);
   BA.Addr->setCode(BB);
   Owner.Addr->addMember(BA, *this);
   return BA;
 }
 
-auto DataFlowGraph::newFunc(MachineFunction *MF) -> Func {
+Func DataFlowGraph::newFunc(MachineFunction *MF) {
   Func FA = newNode(NodeAttrs::Code | NodeAttrs::Func);
   FA.Addr->setCode(MF);
   return FA;
 }
 
 // Build the data flow graph.
-auto DataFlowGraph::build(unsigned Options) -> void {
+void DataFlowGraph::build(unsigned Options) {
   reset();
   TheFunc = newFunc(&MF);
 
@@ -960,8 +957,7 @@ auto DataFlowGraph::build(unsigned Options) -> void {
     removeUnusedPhis();
 }
 
-auto DataFlowGraph::makeRegRef(unsigned Reg, unsigned Sub) const
-    -> RegisterRef {
+RegisterRef DataFlowGraph::makeRegRef(unsigned Reg, unsigned Sub) const {
   assert(RegisterRef::isRegId(Reg) || RegisterRef::isMaskId(Reg));
   assert(Reg != 0);
   if (Sub != 0)
@@ -969,7 +965,7 @@ auto DataFlowGraph::makeRegRef(unsigned Reg, unsigned Sub) const
   return RegisterRef(Reg);
 }
 
-auto DataFlowGraph::makeRegRef(const MachineOperand &Op) const -> RegisterRef {
+RegisterRef DataFlowGraph::makeRegRef(const MachineOperand &Op) const {
   assert(Op.isReg() || Op.isRegMask());
   if (Op.isReg())
     return makeRegRef(Op.getReg(), Op.getSubReg());
@@ -978,14 +974,14 @@ auto DataFlowGraph::makeRegRef(const MachineOperand &Op) const -> RegisterRef {
 }
 
 // For each stack in the map DefM, push the delimiter for block B on it.
-auto DataFlowGraph::markBlock(NodeId B, DefStackMap &DefM) -> void {
+void DataFlowGraph::markBlock(NodeId B, DefStackMap &DefM) {
   // Push block delimiters.
   for (auto &P : DefM)
     P.second.start_block(B);
 }
 
 // Remove all definitions coming from block B from each stack in DefM.
-auto DataFlowGraph::releaseBlock(NodeId B, DefStackMap &DefM) -> void {
+void DataFlowGraph::releaseBlock(NodeId B, DefStackMap &DefM) {
   // Pop all defs from this block from the definition stack. Defs that were
   // added to the map during the traversal of instructions will not have a
   // delimiter, but for those, the whole stack will be emptied.
@@ -1003,14 +999,14 @@ auto DataFlowGraph::releaseBlock(NodeId B, DefStackMap &DefM) -> void {
 
 // Push all definitions from the instruction node IA to an appropriate
 // stack in DefM.
-auto DataFlowGraph::pushAllDefs(Instr IA, DefStackMap &DefM) -> void {
+void DataFlowGraph::pushAllDefs(Instr IA, DefStackMap &DefM) {
   pushClobbers(IA, DefM);
   pushDefs(IA, DefM);
 }
 
 // Push all definitions from the instruction node IA to an appropriate
 // stack in DefM.
-auto DataFlowGraph::pushClobbers(Instr IA, DefStackMap &DefM) -> void {
+void DataFlowGraph::pushClobbers(Instr IA, DefStackMap &DefM) {
   NodeSet Visited;
   std::set<RegisterId> Defined;
 
@@ -1054,7 +1050,7 @@ auto DataFlowGraph::pushClobbers(Instr IA, DefStackMap &DefM) -> void {
 
 // Push all definitions from the instruction node IA to an appropriate
 // stack in DefM.
-auto DataFlowGraph::pushDefs(Instr IA, DefStackMap &DefM) -> void {
+void DataFlowGraph::pushDefs(Instr IA, DefStackMap &DefM) {
   NodeSet Visited;
 #ifndef NDEBUG
   std::set<RegisterId> Defined;
@@ -1108,7 +1104,7 @@ auto DataFlowGraph::pushDefs(Instr IA, DefStackMap &DefM) -> void {
 
 // Return the list of all reference nodes related to RA, including RA itself.
 // See "getNextRelated" for the meaning of a "related reference".
-auto DataFlowGraph::getRelatedRefs(Instr IA, Ref RA) const -> NodeList {
+NodeList DataFlowGraph::getRelatedRefs(Instr IA, Ref RA) const {
   assert(IA.Id != 0 && RA.Id != 0);
 
   NodeList Refs;
@@ -1121,7 +1117,7 @@ auto DataFlowGraph::getRelatedRefs(Instr IA, Ref RA) const -> NodeList {
 }
 
 // Clear all information in the graph.
-auto DataFlowGraph::reset() -> void {
+void DataFlowGraph::reset() {
   Memory.clear();
   BlockNodes.clear();
   TheFunc = Func();
@@ -1133,7 +1129,7 @@ auto DataFlowGraph::reset() -> void {
 // characteristics. Specific examples of related nodes are shadow reference
 // nodes.
 // Return the equivalent of nullptr if there are no more related references.
-auto DataFlowGraph::getNextRelated(Instr IA, Ref RA) const -> Ref {
+Ref DataFlowGraph::getNextRelated(Instr IA, Ref RA) const {
   assert(IA.Id != 0 && RA.Id != 0);
 
   auto Related = [this, RA](Ref TA) -> bool {
@@ -1171,8 +1167,8 @@ auto DataFlowGraph::getNextRelated(Instr IA, Ref RA) const -> Ref {
 // first element is the element after which such a node should be inserted,
 // and the second element is a null-address.
 template <typename Predicate>
-auto DataFlowGraph::locateNextRef(Instr IA, Ref RA, Predicate P) const
-    -> std::pair<Ref, Ref> {
+std::pair<Ref, Ref> DataFlowGraph::locateNextRef(Instr IA, Ref RA,
+                                                 Predicate P) const {
   assert(IA.Id != 0 && RA.Id != 0);
 
   Ref NA;
@@ -1193,7 +1189,7 @@ auto DataFlowGraph::locateNextRef(Instr IA, Ref RA, Predicate P) const
 
 // Get the next shadow node in IA corresponding to RA, and optionally create
 // such a node if it does not exist.
-auto DataFlowGraph::getNextShadow(Instr IA, Ref RA, bool Create) -> Ref {
+Ref DataFlowGraph::getNextShadow(Instr IA, Ref RA, bool Create) {
   assert(IA.Id != 0 && RA.Id != 0);
 
   uint16_t Flags = RA.Addr->getFlags() | NodeAttrs::Shadow;
@@ -1213,7 +1209,7 @@ auto DataFlowGraph::getNextShadow(Instr IA, Ref RA, bool Create) -> Ref {
 
 // Get the next shadow node in IA corresponding to RA. Return null-address
 // if such a node does not exist.
-auto DataFlowGraph::getNextShadow(Instr IA, Ref RA) const -> Ref {
+Ref DataFlowGraph::getNextShadow(Instr IA, Ref RA) const {
   assert(IA.Id != 0 && RA.Id != 0);
   uint16_t Flags = RA.Addr->getFlags() | NodeAttrs::Shadow;
   auto IsShadow = [Flags](Ref TA) -> bool {
@@ -1224,7 +1220,7 @@ auto DataFlowGraph::getNextShadow(Instr IA, Ref RA) const -> Ref {
 
 // Create a new statement node in the block node BA that corresponds to
 // the machine instruction MI.
-auto DataFlowGraph::buildStmt(Block BA, MachineInstr &In) -> void {
+void DataFlowGraph::buildStmt(Block BA, MachineInstr &In) {
   Stmt SA = newStmt(BA, &In);
 
   auto isCall = [](const MachineInstr &In) -> bool {
@@ -1358,7 +1354,7 @@ auto DataFlowGraph::buildStmt(Block BA, MachineInstr &In) -> void {
 
 // Scan all defs in the block node BA and record in PhiM the locations of
 // phi nodes corresponding to these defs.
-auto DataFlowGraph::recordDefsForDF(BlockRefsMap &PhiM, Block BA) -> void {
+void DataFlowGraph::recordDefsForDF(BlockRefsMap &PhiM, Block BA) {
   // Check all defs from block BA and record them in each block in BA's
   // iterated dominance frontier. This information will later be used to
   // create phi nodes.
@@ -1397,8 +1393,8 @@ auto DataFlowGraph::recordDefsForDF(BlockRefsMap &PhiM, Block BA) -> void {
 
 // Given the locations of phi nodes in the map PhiM, create the phi nodes
 // that are located in the block node BA.
-auto DataFlowGraph::buildPhis(BlockRefsMap &PhiM, RegisterSet &AllRefs,
-                              Block BA) -> void {
+void DataFlowGraph::buildPhis(BlockRefsMap &PhiM, RegisterSet &AllRefs,
+                              Block BA) {
   // Check if this blocks has any DF defs, i.e. if there are any defs
   // that this block is in the iterated dominance frontier of.
   auto HasDF = PhiM.find(BA.Id);
@@ -1426,7 +1422,7 @@ auto DataFlowGraph::buildPhis(BlockRefsMap &PhiM, RegisterSet &AllRefs,
 }
 
 // Remove any unneeded phi nodes that were created during the build process.
-auto DataFlowGraph::removeUnusedPhis() -> void {
+void DataFlowGraph::removeUnusedPhis() {
   // This will remove unused phis, i.e. phis where each def does not reach
   // any uses or other defs. This will not detect or remove circular phi
   // chains that are otherwise dead. Unused/dead phis are created during
@@ -1480,7 +1476,7 @@ auto DataFlowGraph::removeUnusedPhis() -> void {
 // reaching def of TA to the appropriate def node. Create any shadow nodes
 // as appropriate.
 template <typename T>
-auto DataFlowGraph::linkRefUp(Instr IA, NodeAddr<T> TA, DefStack &DS) -> void {
+void DataFlowGraph::linkRefUp(Instr IA, NodeAddr<T> TA, DefStack &DS) {
   if (DS.empty())
     return;
   RegisterRef RR = TA.Addr->getRegRef(*this);
@@ -1524,8 +1520,7 @@ auto DataFlowGraph::linkRefUp(Instr IA, NodeAddr<T> TA, DefStack &DS) -> void {
 
 // Create data-flow links for all reference nodes in the statement node SA.
 template <typename Predicate>
-auto DataFlowGraph::linkStmtRefs(DefStackMap &DefM, Stmt SA, Predicate P)
-    -> void {
+void DataFlowGraph::linkStmtRefs(DefStackMap &DefM, Stmt SA, Predicate P) {
 #ifndef NDEBUG
   RegisterSet Defs(getPRI());
 #endif
@@ -1556,7 +1551,7 @@ auto DataFlowGraph::linkStmtRefs(DefStackMap &DefM, Stmt SA, Predicate P)
 
 // Create data-flow links for all instructions in the block node BA. This
 // will include updating any phi nodes in BA.
-auto DataFlowGraph::linkBlockRefs(DefStackMap &DefM, Block BA) -> void {
+void DataFlowGraph::linkBlockRefs(DefStackMap &DefM, Block BA) {
   // Push block delimiters.
   markBlock(BA.Id, DefM);
 
@@ -1634,7 +1629,7 @@ auto DataFlowGraph::linkBlockRefs(DefStackMap &DefM, Block BA) -> void {
 }
 
 // Remove the use node UA from any data-flow and structural links.
-auto DataFlowGraph::unlinkUseDF(Use UA) -> void {
+void DataFlowGraph::unlinkUseDF(Use UA) {
   NodeId RD = UA.Addr->getReachingDef();
   NodeId Sib = UA.Addr->getSibling();
 
@@ -1661,7 +1656,7 @@ auto DataFlowGraph::unlinkUseDF(Use UA) -> void {
 }
 
 // Remove the def node DA from any data-flow and structural links.
-auto DataFlowGraph::unlinkDefDF(Def DA) -> void {
+void DataFlowGraph::unlinkDefDF(Def DA) {
   //
   //         RD
   //         | reached

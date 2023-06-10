@@ -20,31 +20,28 @@ add_libc_test(
     libc.src.__support.common
 )
 
-# These tests fails with an illegal instruction
-if(NOT LIBC_GPU_TARGET_ARCHITECTURE_IS_NVPTX)
-  add_libc_test(
-    high_precision_decimal_test
-    SUITE
-      libc-support-tests
-    SRCS
-    high_precision_decimal_test.cpp
-    DEPENDS
-      libc.src.__support.high_precision_decimal
-      libc.src.__support.uint128
-  )
+add_libc_test(
+  high_precision_decimal_test
+  SUITE
+    libc-support-tests
+  SRCS
+  high_precision_decimal_test.cpp
+  DEPENDS
+    libc.src.__support.high_precision_decimal
+    libc.src.__support.uint128
+)
 
-  add_libc_test(
-    str_to_float_test
-    SUITE
-      libc-support-tests
-    SRCS
-      str_to_float_test.cpp
-    DEPENDS
-      libc.src.__support.str_to_float
-      libc.src.__support.uint128
-      libc.src.errno.errno
-  )
-endif()
+add_libc_test(
+  str_to_float_test
+  SUITE
+    libc-support-tests
+  SRCS
+    str_to_float_test.cpp
+  DEPENDS
+    libc.src.__support.str_to_float
+    libc.src.__support.uint128
+    libc.src.errno.errno
+)
 
 add_libc_test(
   integer_to_string_test
@@ -72,19 +69,16 @@ if(NOT LIBC_TARGET_ARCHITECTURE_IS_GPU)
   )
 endif()
 
-# This test fails with an illegal memory access on NVPTX.
-if(NOT LIBC_GPU_TARGET_ARCHITECTURE_IS_NVPTX)
-  add_libc_test(
-    uint_test
-    SUITE
-      libc-support-tests
-    SRCS
-      uint_test.cpp
-    DEPENDS
-      libc.src.__support.uint
-      libc.src.__support.CPP.optional
-  )
-endif()
+add_libc_test(
+  uint_test
+  SUITE
+    libc-support-tests
+  SRCS
+    uint_test.cpp
+  DEPENDS
+    libc.src.__support.uint
+    libc.src.__support.CPP.optional
+)
 
 add_libc_test(
   fixedvector_test
@@ -96,8 +90,6 @@ add_libc_test(
     libc.src.__support.fixedvector
 )
 
-# This test fails with a segmentation fault on NVPTX.
-if(NOT LIBC_GPU_TARGET_ARCHITECTURE_IS_NVPTX)
 add_libc_test(
   char_vector_test
   SUITE
@@ -107,7 +99,6 @@ add_libc_test(
   DEPENDS
     libc.src.__support.char_vector
 )
-endif()
 
 add_executable(
   libc_str_to_float_comparison_test
