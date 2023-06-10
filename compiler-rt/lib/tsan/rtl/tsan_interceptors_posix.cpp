@@ -795,10 +795,11 @@ static void *mmap_interceptor(ThreadState *thr, uptr pc, Mmap real_mmap,
   return res;
 }
 
-TSAN_INTERCEPTOR(int, munmap, void *addr, long_t sz) {
-  SCOPED_TSAN_INTERCEPTOR(munmap, addr, sz);
+template <class Munmap>
+static int munmap_interceptor(ThreadState *thr, uptr pc, Munmap real_munmap,
+                                void *addr, SIZE_T sz) {
   UnmapShadow(thr, (uptr)addr, sz);
-  int res = REAL(munmap)(addr, sz);
+  int res = real_munmap(addr, sz);
   return res;
 }
 
@@ -2502,6 +2503,11 @@ static void HandleRecvmsg(ThreadState *thr, uptr pc,
   do {                                                                      \
     return mmap_interceptor(thr, pc, REAL(mmap), addr, sz, prot, flags, fd, \
                             off);                                           \
+  } while (false)
+
+#define COMMON_INTERCEPTOR_MUNMAP_IMPL(ctx, mmap, addr, sz)   \
+  do {                                                        \
+    return munmap_interceptor(thr, pc, REAL(mmap), addr, sz); \
   } while (false)
 
 #if !SANITIZER_APPLE
