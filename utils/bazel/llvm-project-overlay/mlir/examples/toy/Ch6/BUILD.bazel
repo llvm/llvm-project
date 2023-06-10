@@ -111,6 +111,7 @@ cc_binary(
         "//mlir:ExecutionEngine",
         "//mlir:ExecutionEngineUtils",
         "//mlir:FuncDialect",
+        "//mlir:FuncExtensions",
         "//mlir:FuncToLLVM",
         "//mlir:IR",
         "//mlir:LLVMCommonConversion",
