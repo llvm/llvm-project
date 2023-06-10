@@ -11,6 +11,7 @@
 
 #include "src/__support/FPUtil/FEnvImpl.h"
 #include "src/__support/FPUtil/FPBits.h"
+#include "src/__support/FPUtil/fpbits_str.h"
 #include "test/UnitTest/RoundingModeUtils.h"
 #include "test/UnitTest/StringUtils.h"
 #include "test/UnitTest/Test.h"
@@ -24,7 +25,7 @@ template <typename T, TestCond Condition> class FPMatcher : public Matcher<T> {
   static_assert(cpp::is_floating_point_v<T>,
                 "FPMatcher can only be used with floating point values.");
   static_assert(Condition == TestCond::EQ || Condition == TestCond::NE,
-                "Unsupported FPMathcer test condition.");
+                "Unsupported FPMatcher test condition.");
 
   T expected;
   T actual;
@@ -48,8 +49,8 @@ public:
 
   void explainError() override {
     tlog << "Expected floating point value: "
-         << fputil::FPBits<T>(expected).str() << '\n';
-    tlog << "Actual floating point value: " << fputil::FPBits<T>(actual).str()
+         << str(fputil::FPBits<T>(expected)) << '\n';
+    tlog << "Actual floating point value: " << str(fputil::FPBits<T>(actual))
          << '\n';
   }
 };
