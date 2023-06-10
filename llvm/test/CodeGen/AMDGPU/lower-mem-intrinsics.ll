@@ -11,6 +11,12 @@ declare void @llvm.memcpy.p3.p3.i32(ptr addrspace(3) nocapture, ptr addrspace(3)
 declare void @llvm.memmove.p1.p1.i64(ptr addrspace(1) nocapture, ptr addrspace(1) nocapture readonly, i64, i1) #1
 declare void @llvm.memmove.p1.p3.i32(ptr addrspace(1) nocapture, ptr addrspace(3) nocapture readonly, i32, i1) #1
 declare void @llvm.memmove.p5.p5.i32(ptr addrspace(5) nocapture, ptr addrspace(5) nocapture readonly, i32, i1) #1
+declare void @llvm.memmove.p0.p1.i64(ptr nocapture writeonly, ptr addrspace(1) nocapture readonly, i64, i1 immarg) #1
+declare void @llvm.memmove.p1.p0.i64(ptr addrspace(1) nocapture writeonly, ptr nocapture readonly, i64, i1 immarg) #1
+declare void @llvm.memmove.p5.p1.i64(ptr addrspace(5) nocapture writeonly, ptr addrspace(1) nocapture readonly, i64, i1 immarg) #1
+declare void @llvm.memmove.p1.p5.i64(ptr addrspace(1) nocapture writeonly, ptr addrspace(5) nocapture readonly, i64, i1 immarg) #1
+declare void @llvm.memmove.p0.p5.i64(ptr nocapture writeonly, ptr addrspace(5) nocapture readonly, i64, i1 immarg) #1
+declare void @llvm.memmove.p5.p0.i64(ptr addrspace(5) nocapture writeonly, ptr nocapture readonly, i64, i1 immarg) #1
 
 declare void @llvm.memset.p1.i64(ptr addrspace(1) nocapture, i8, i64, i1) #1
 
@@ -1304,6 +1310,60 @@ define amdgpu_kernel void @memcpy_global_align4_global_align4_1(ptr addrspace(1)
 ; ALL-NEXT:    ret void
 ;
   call void @llvm.memcpy.p1.p1.i64(ptr addrspace(1) align 4 %dst, ptr addrspace(1) align 4 %src, i64 1, i1 false)
+  ret void
+}
+
+define amdgpu_kernel void @memmove_flat_align1_global_align1(ptr %dst, ptr addrspace(1) %src) {
+; OPT-LABEL: @memmove_flat_align1_global_align1(
+; OPT-NEXT:    call void @llvm.memmove.p0.p1.i64(ptr [[DST:%.*]], ptr addrspace(1) [[SRC:%.*]], i64 256, i1 false)
+; OPT-NEXT:    ret void
+;
+  call void @llvm.memmove.p0.p1.i64(ptr %dst, ptr addrspace(1) %src, i64 256, i1 false)
+  ret void
+}
+
+define amdgpu_kernel void @memmove_global_align1_flat_align1(ptr addrspace(1) %dst, ptr %src) {
+; OPT-LABEL: @memmove_global_align1_flat_align1(
+; OPT-NEXT:    call void @llvm.memmove.p1.p0.i64(ptr addrspace(1) [[DST:%.*]], ptr [[SRC:%.*]], i64 256, i1 false)
+; OPT-NEXT:    ret void
+;
+  call void @llvm.memmove.p1.p0.i64(ptr addrspace(1) %dst, ptr %src, i64 256, i1 false)
+  ret void
+}
+
+define amdgpu_kernel void @memmove_flat_align1_private_align1(ptr %dst, ptr addrspace(5) %src) {
+; OPT-LABEL: @memmove_flat_align1_private_align1(
+; OPT-NEXT:    call void @llvm.memmove.p0.p5.i64(ptr [[DST:%.*]], ptr addrspace(5) [[SRC:%.*]], i64 256, i1 false)
+; OPT-NEXT:    ret void
+;
+  call void @llvm.memmove.p0.p5.i64(ptr %dst, ptr addrspace(5) %src, i64 256, i1 false)
+  ret void
+}
+
+define amdgpu_kernel void @memmove_private_align1_flat_align1(ptr addrspace(5) %dst, ptr %src) {
+; OPT-LABEL: @memmove_private_align1_flat_align1(
+; OPT-NEXT:    call void @llvm.memmove.p5.p0.i64(ptr addrspace(5) [[DST:%.*]], ptr [[SRC:%.*]], i64 256, i1 false)
+; OPT-NEXT:    ret void
+;
+  call void @llvm.memmove.p5.p0.i64(ptr addrspace(5) %dst, ptr %src, i64 256, i1 false)
+  ret void
+}
+
+define amdgpu_kernel void @memmove_private_align1_global_align1(ptr addrspace(5) %dst, ptr addrspace(1) %src) {
+; OPT-LABEL: @memmove_private_align1_global_align1(
+; OPT-NEXT:    call void @llvm.memmove.p5.p1.i64(ptr addrspace(5) [[DST:%.*]], ptr addrspace(1) [[SRC:%.*]], i64 256, i1 false)
+; OPT-NEXT:    ret void
+;
+  call void @llvm.memmove.p5.p1.i64(ptr addrspace(5) %dst, ptr addrspace(1) %src, i64 256, i1 false)
+  ret void
+}
+
+define amdgpu_kernel void @memmove_global_align1_private_align1(ptr addrspace(1) %dst, ptr addrspace(5) %src) {
+; OPT-LABEL: @memmove_global_align1_private_align1(
+; OPT-NEXT:    call void @llvm.memmove.p1.p5.i64(ptr addrspace(1) [[DST:%.*]], ptr addrspace(5) [[SRC:%.*]], i64 256, i1 false)
+; OPT-NEXT:    ret void
+;
+  call void @llvm.memmove.p1.p5.i64(ptr addrspace(1) %dst, ptr addrspace(5) %src, i64 256, i1 false)
   ret void
 }
 
