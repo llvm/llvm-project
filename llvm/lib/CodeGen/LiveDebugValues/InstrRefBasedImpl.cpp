@@ -4055,10 +4055,7 @@ public:
   /// ValueIsPHI - Check if the instruction that defines the specified value
   /// is a PHI instruction.
   static LDVSSAPhi *ValueIsPHI(BlockValueNum Val, LDVSSAUpdater *Updater) {
-    auto PHIIt = Updater->PHIs.find(Val);
-    if (PHIIt == Updater->PHIs.end())
-      return nullptr;
-    return PHIIt->second;
+    return Updater->PHIs.lookup(Val);
   }
 
   /// ValueIsNewPHI - Like ValueIsPHI but also check if the PHI has no source
