@@ -10,6 +10,7 @@
 #define LLVM_LIBC_TEST_ERRNOSETTERMATCHER_H
 
 #include "src/__support/FPUtil/FPBits.h"
+#include "src/__support/FPUtil/fpbits_str.h"
 #include "src/__support/StringUtil/error_to_string.h"
 #include "src/__support/macros/properties/architectures.h"
 #include "src/errno/libc_errno.h"
@@ -46,10 +47,10 @@ public:
       if constexpr (cpp::is_floating_point_v<T>) {
         __llvm_libc::testing::tlog
             << "Expected return value to be: "
-            << __llvm_libc::fputil::FPBits<T>(ExpectedReturn).str() << '\n';
+            << str(__llvm_libc::fputil::FPBits<T>(ExpectedReturn)) << '\n';
         __llvm_libc::testing::tlog
             << "                    But got: "
-            << __llvm_libc::fputil::FPBits<T>(ActualReturn).str() << '\n';
+            << str(__llvm_libc::fputil::FPBits<T>(ActualReturn)) << '\n';
       } else {
         __llvm_libc::testing::tlog << "Expected return value to be "
                                    << ExpectedReturn << " but got "
