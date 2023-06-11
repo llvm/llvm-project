@@ -115,6 +115,9 @@ def AMDGPUfract_impl : SDNode<"AMDGPUISD::FRACT", SDTFPUnaryOp>;
 // out = 1.0 / a
 def AMDGPUrcp_impl : SDNode<"AMDGPUISD::RCP", SDTFPUnaryOp>;
 
+// v_log_f32, which is log2
+def AMDGPUlog_impl : SDNode<"AMDGPUISD::LOG", SDTFPUnaryOp>;
+
 // out = 1.0 / sqrt(a)
 def AMDGPUrsq_impl : SDNode<"AMDGPUISD::RSQ", SDTFPUnaryOp>;
 
@@ -385,6 +388,12 @@ def AMDGPUcos : PatFrags<(ops node:$src), [(int_amdgcn_cos node:$src),
                                            (AMDGPUcos_impl node:$src)]>;
 def AMDGPUfract : PatFrags<(ops node:$src), [(int_amdgcn_fract node:$src),
                                              (AMDGPUfract_impl node:$src)]>;
+def AMDGPUlog : PatFrags<(ops node:$src), [(int_amdgcn_log node:$src),
+                                           (AMDGPUlog_impl node:$src),
+                                           (flog2 node:$src)]>;
+def AMDGPUlogf16 : PatFrags<(ops node:$src), [(int_amdgcn_log node:$src),
+                                              (flog2 node:$src)]>;
+
 
 def AMDGPUfp_class : PatFrags<(ops node:$src0, node:$src1),
   [(int_amdgcn_class node:$src0, node:$src1),
