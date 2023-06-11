@@ -489,7 +489,7 @@ lowerIncomingStatepointValue(SDValue Incoming, bool RequireSpillSlot,
     Ops.push_back(std::get<0>(Res));
     if (auto *MMO = std::get<2>(Res))
       MemRefs.push_back(MMO);
-    Chain = std::get<1>(Res);;
+    Chain = std::get<1>(Res);
     Builder.DAG.setRoot(Chain);
   }
 

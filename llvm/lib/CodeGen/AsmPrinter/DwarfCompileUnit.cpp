@@ -1399,8 +1399,8 @@ void DwarfCompileUnit::createAbstractEntity(const DINode *Node,
   assert(Scope && Scope->isAbstractScope());
   auto &Entity = getAbstractEntities()[Node];
   if (isa<const DILocalVariable>(Node)) {
-    Entity = std::make_unique<DbgVariable>(
-                        cast<const DILocalVariable>(Node), nullptr /* IA */);;
+    Entity = std::make_unique<DbgVariable>(cast<const DILocalVariable>(Node),
+                                           nullptr /* IA */);
     DU->addScopeVariable(Scope, cast<DbgVariable>(Entity.get()));
   } else if (isa<const DILabel>(Node)) {
     Entity = std::make_unique<DbgLabel>(

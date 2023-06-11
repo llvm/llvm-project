@@ -2755,7 +2755,7 @@ bool AMDGPUDAGToDAGISel::SelectVOP3PMods(SDValue In, SDValue &Src,
       uint64_t Lit = cast<ConstantFPSDNode>(Lo)->getValueAPF()
                       .bitcastToAPInt().getZExtValue();
       if (AMDGPU::isInlinableLiteral32(Lit, Subtarget->hasInv2PiInlineImm())) {
-        Src = CurDAG->getTargetConstant(Lit, SDLoc(In), MVT::i64);;
+        Src = CurDAG->getTargetConstant(Lit, SDLoc(In), MVT::i64);
         SrcMods = CurDAG->getTargetConstant(Mods, SDLoc(In), MVT::i32);
         return true;
       }

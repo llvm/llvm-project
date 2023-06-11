@@ -680,7 +680,7 @@ Value *llvm::FindAvailableLoadedValue(LoadInst *Load, AAResults &AA,
 
   // Try to find an available value first, and delay expensive alias analysis
   // queries until later.
-  Value *Available = nullptr;;
+  Value *Available = nullptr;
   SmallVector<Instruction *> MustNotAliasInsts;
   for (Instruction &Inst : make_range(++Load->getReverseIterator(),
                                       ScanBB->rend())) {
