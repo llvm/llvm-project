@@ -83,7 +83,6 @@ void initializeCallGraphDOTPrinterPass(PassRegistry&);
 void initializeCallGraphPrinterLegacyPassPass(PassRegistry&);
 void initializeCallGraphViewerPass(PassRegistry&);
 void initializeCallGraphWrapperPassPass(PassRegistry&);
-void initializeCallSiteSplittingLegacyPassPass(PassRegistry&);
 void initializeCheckDebugMachineModulePass(PassRegistry &);
 void initializeCodeGenPreparePass(PassRegistry&);
 void initializeComplexDeinterleavingLegacyPassPass(PassRegistry&);
