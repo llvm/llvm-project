@@ -1157,9 +1157,8 @@ define i1 @is_pow2_fail_pr63327(i32 %x) {
 define i1 @blsmsk_is_p2_or_z(i32 %xx, i32 %yy) {
 ; CHECK-LABEL: @blsmsk_is_p2_or_z(
 ; CHECK-NEXT:    [[X:%.*]] = or i32 [[XX:%.*]], [[YY:%.*]]
-; CHECK-NEXT:    [[XM1:%.*]] = add i32 [[X]], -1
-; CHECK-NEXT:    [[Y:%.*]] = xor i32 [[X]], [[XM1]]
-; CHECK-NEXT:    [[R:%.*]] = icmp uge i32 [[X]], [[Y]]
+; CHECK-NEXT:    [[TMP1:%.*]] = call i32 @llvm.ctpop.i32(i32 [[X]]), !range [[RNG0]]
+; CHECK-NEXT:    [[R:%.*]] = icmp ult i32 [[TMP1]], 2
 ; CHECK-NEXT:    ret i1 [[R]]
 ;
   %x = or i32 %xx, %yy
@@ -1171,9 +1170,8 @@ define i1 @blsmsk_is_p2_or_z(i32 %xx, i32 %yy) {
 
 define i1 @blsmsk_isnt_p2_or_z(i32 %x) {
 ; CHECK-LABEL: @blsmsk_isnt_p2_or_z(
-; CHECK-NEXT:    [[XM1:%.*]] = add i32 [[X:%.*]], -1
-; CHECK-NEXT:    [[Y:%.*]] = xor i32 [[XM1]], [[X]]
-; CHECK-NEXT:    [[R:%.*]] = icmp ult i32 [[Y]], [[X]]
+; CHECK-NEXT:    [[TMP1:%.*]] = call i32 @llvm.ctpop.i32(i32 [[X:%.*]]), !range [[RNG0]]
+; CHECK-NEXT:    [[R:%.*]] = icmp ugt i32 [[TMP1]], 1
 ; CHECK-NEXT:    ret i1 [[R]]
 ;
   %xm1 = add i32 %x, -1
