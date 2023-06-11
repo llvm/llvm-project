@@ -23,7 +23,6 @@ using namespace clang::driver;
 using namespace llvm::opt;
 
 namespace {
-constexpr char XRayInstrumentOption[] = "-fxray-instrument";
 constexpr char XRayInstructionThresholdOption[] =
     "-fxray-instruction-threshold=";
 constexpr const char *const XRaySupportedModes[] = {"xray-fdr", "xray-basic"};
@@ -35,6 +34,7 @@ XRayArgs::XRayArgs(const ToolChain &TC, const ArgList &Args) {
   if (!Args.hasFlag(options::OPT_fxray_instrument,
                     options::OPT_fno_xray_instrument, false))
     return;
+  XRayInstrument = Args.getLastArg(options::OPT_fxray_instrument);
   if (Triple.getOS() == llvm::Triple::Linux) {
     switch (Triple.getArch()) {
     case llvm::Triple::x86_64:
@@ -48,14 +48,14 @@ XRayArgs::XRayArgs(const ToolChain &TC, const ArgList &Args) {
     case llvm::Triple::mips64el:
       break;
     default:
-      D.Diag(diag::err_drv_clang_unsupported)
-          << (std::string(XRayInstrumentOption) + " on " + Triple.str());
+      D.Diag(diag::err_drv_unsupported_opt_for_target)
+          << XRayInstrument->getSpelling() << Triple.str();
     }
   } else if (Triple.isOSFreeBSD() || Triple.isOSOpenBSD() ||
              Triple.isOSNetBSD() || Triple.isMacOSX()) {
     if (Triple.getArch() != llvm::Triple::x86_64) {
-      D.Diag(diag::err_drv_clang_unsupported)
-          << (std::string(XRayInstrumentOption) + " on " + Triple.str());
+      D.Diag(diag::err_drv_unsupported_opt_for_target)
+          << XRayInstrument->getSpelling() << Triple.str();
     }
   } else if (Triple.getOS() == llvm::Triple::Fuchsia) {
     switch (Triple.getArch()) {
@@ -63,21 +63,20 @@ XRayArgs::XRayArgs(const ToolChain &TC, const ArgList &Args) {
     case llvm::Triple::aarch64:
       break;
     default:
-      D.Diag(diag::err_drv_clang_unsupported)
-          << (std::string(XRayInstrumentOption) + " on " + Triple.str());
+      D.Diag(diag::err_drv_unsupported_opt_for_target)
+          << XRayInstrument->getSpelling() << Triple.str();
     }
   } else {
-    D.Diag(diag::err_drv_clang_unsupported)
-        << (std::string(XRayInstrumentOption) + " on " + Triple.str());
+    D.Diag(diag::err_drv_unsupported_opt_for_target)
+        << XRayInstrument->getSpelling() << Triple.str();
   }
 
   // Both XRay and -fpatchable-function-entry use
   // TargetOpcode::PATCHABLE_FUNCTION_ENTER.
   if (Arg *A = Args.getLastArg(options::OPT_fpatchable_function_entry_EQ))
     D.Diag(diag::err_drv_argument_not_allowed_with)
-        << "-fxray-instrument" << A->getSpelling();
+        << XRayInstrument->getSpelling() << A->getSpelling();
 
-  XRayInstrument = true;
   if (const Arg *A =
           Args.getLastArg(options::OPT_fxray_instruction_threshold_EQ)) {
     StringRef S = A->getValue();
@@ -211,7 +210,7 @@ void XRayArgs::addArgs(const ToolChain &TC, const ArgList &Args,
   if (!XRayInstrument)
     return;
 
-  CmdArgs.push_back(XRayInstrumentOption);
+  XRayInstrument->render(Args, CmdArgs);
 
   if (XRayAlwaysEmitCustomEvents)
     CmdArgs.push_back("-fxray-always-emit-customevents");
