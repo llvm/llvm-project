@@ -107,11 +107,6 @@ INITIALIZE_PASS_BEGIN(AddDiscriminatorsLegacyPass, "add-discriminators",
 INITIALIZE_PASS_END(AddDiscriminatorsLegacyPass, "add-discriminators",
                     "Add DWARF path discriminators", false, false)
 
-// Create the legacy AddDiscriminatorsPass.
-FunctionPass *llvm::createAddDiscriminatorsPass() {
-  return new AddDiscriminatorsLegacyPass();
-}
-
 static bool shouldHaveDiscriminator(const Instruction *I) {
   return !isa<IntrinsicInst>(I) || isa<MemIntrinsic>(I);
 }
