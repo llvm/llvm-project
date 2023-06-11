@@ -528,9 +528,9 @@ define <8 x i32> @test_rem7_8i32(<8 x i32> %a) nounwind {
 ; AVX2-NEXT:    vpsrld $1, %ymm2, %ymm2
 ; AVX2-NEXT:    vpaddd %ymm1, %ymm2, %ymm1
 ; AVX2-NEXT:    vpsrld $2, %ymm1, %ymm1
-; AVX2-NEXT:    vpbroadcastd {{.*#+}} ymm2 = [7,7,7,7,7,7,7,7]
-; AVX2-NEXT:    vpmulld %ymm2, %ymm1, %ymm1
-; AVX2-NEXT:    vpsubd %ymm1, %ymm0, %ymm0
+; AVX2-NEXT:    vpslld $3, %ymm1, %ymm2
+; AVX2-NEXT:    vpsubd %ymm2, %ymm1, %ymm1
+; AVX2-NEXT:    vpaddd %ymm1, %ymm0, %ymm0
 ; AVX2-NEXT:    retq
   %res = urem <8 x i32> %a, <i32 7, i32 7, i32 7, i32 7, i32 7, i32 7, i32 7, i32 7>
   ret <8 x i32> %res
@@ -567,8 +567,9 @@ define <16 x i16> @test_rem7_16i16(<16 x i16> %a) nounwind {
 ; AVX2-NEXT:    vpsrlw $1, %ymm2, %ymm2
 ; AVX2-NEXT:    vpaddw %ymm1, %ymm2, %ymm1
 ; AVX2-NEXT:    vpsrlw $2, %ymm1, %ymm1
-; AVX2-NEXT:    vpmullw {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %ymm1, %ymm1
-; AVX2-NEXT:    vpsubw %ymm1, %ymm0, %ymm0
+; AVX2-NEXT:    vpsllw $3, %ymm1, %ymm2
+; AVX2-NEXT:    vpsubw %ymm2, %ymm1, %ymm1
+; AVX2-NEXT:    vpaddw %ymm1, %ymm0, %ymm0
 ; AVX2-NEXT:    retq
   %res = urem <16 x i16> %a, <i16 7, i16 7, i16 7, i16 7, i16 7, i16 7, i16 7, i16 7, i16 7, i16 7, i16 7, i16 7, i16 7, i16 7, i16 7, i16 7>
   ret <16 x i16> %res

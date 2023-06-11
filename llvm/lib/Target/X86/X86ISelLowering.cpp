@@ -48722,12 +48722,25 @@ static SDValue combineMul(SDNode *N, SelectionDAG &DAG,
   if (DCI.isBeforeLegalize() || DCI.isCalledByLegalizer())
     return SDValue();
 
-  if (VT != MVT::i64 && VT != MVT::i32)
+  if (VT != MVT::i64 && VT != MVT::i32 &&
+      (!VT.isVector() || !VT.isSimple() || !VT.isInteger()))
     return SDValue();
 
-  ConstantSDNode *C = dyn_cast<ConstantSDNode>(N->getOperand(1));
-  if (!C)
-    return SDValue();
+  ConstantSDNode *CNode = isConstOrConstSplat(
+      N->getOperand(1), /*AllowUndefs*/ true, /*AllowTrunc*/ false);
+  const APInt *C = nullptr;
+  if (!CNode) {
+    if (VT.isVector())
+      if (auto *RawC = getTargetConstantFromNode(N->getOperand(1)))
+        if (auto *SplatC = RawC->getSplatValue())
+          C = &(SplatC->getUniqueInteger());
+
+    if (!C)
+      return SDValue();
+  } else {
+    C = &(CNode->getAPIntValue());
+  }
+
   if (isPowerOf2_64(C->getZExtValue()))
     return SDValue();
 
@@ -48736,68 +48749,69 @@ static SDValue combineMul(SDNode *N, SelectionDAG &DAG,
   uint64_t AbsMulAmt = SignMulAmt < 0 ? -SignMulAmt : SignMulAmt;
 
   SDLoc DL(N);
-  if (AbsMulAmt == 3 || AbsMulAmt == 5 || AbsMulAmt == 9) {
-    SDValue NewMul = DAG.getNode(X86ISD::MUL_IMM, DL, VT, N->getOperand(0),
-                                 DAG.getConstant(AbsMulAmt, DL, VT));
-    if (SignMulAmt < 0)
-      NewMul = DAG.getNode(ISD::SUB, DL, VT, DAG.getConstant(0, DL, VT),
-                           NewMul);
-
-    return NewMul;
-  }
-
-  uint64_t MulAmt1 = 0;
-  uint64_t MulAmt2 = 0;
-  if ((AbsMulAmt % 9) == 0) {
-    MulAmt1 = 9;
-    MulAmt2 = AbsMulAmt / 9;
-  } else if ((AbsMulAmt % 5) == 0) {
-    MulAmt1 = 5;
-    MulAmt2 = AbsMulAmt / 5;
-  } else if ((AbsMulAmt % 3) == 0) {
-    MulAmt1 = 3;
-    MulAmt2 = AbsMulAmt / 3;
-  }
-
-  SDValue NewMul;
-  // For negative multiply amounts, only allow MulAmt2 to be a power of 2.
-  if (MulAmt2 &&
-      (isPowerOf2_64(MulAmt2) ||
-       (SignMulAmt >= 0 && (MulAmt2 == 3 || MulAmt2 == 5 || MulAmt2 == 9)))) {
-
-    if (isPowerOf2_64(MulAmt2) &&
-        !(SignMulAmt >= 0 && N->hasOneUse() &&
-          N->use_begin()->getOpcode() == ISD::ADD))
-      // If second multiplifer is pow2, issue it first. We want the multiply by
-      // 3, 5, or 9 to be folded into the addressing mode unless the lone use
-      // is an add. Only do this for positive multiply amounts since the
-      // negate would prevent it from being used as an address mode anyway.
-      std::swap(MulAmt1, MulAmt2);
-
-    if (isPowerOf2_64(MulAmt1))
-      NewMul = DAG.getNode(ISD::SHL, DL, VT, N->getOperand(0),
-                           DAG.getConstant(Log2_64(MulAmt1), DL, MVT::i8));
-    else
+  SDValue NewMul = SDValue();
+  if (VT == MVT::i64 || VT == MVT::i32) {
+    if (AbsMulAmt == 3 || AbsMulAmt == 5 || AbsMulAmt == 9) {
       NewMul = DAG.getNode(X86ISD::MUL_IMM, DL, VT, N->getOperand(0),
-                           DAG.getConstant(MulAmt1, DL, VT));
+                           DAG.getConstant(AbsMulAmt, DL, VT));
+      if (SignMulAmt < 0)
+        NewMul =
+            DAG.getNode(ISD::SUB, DL, VT, DAG.getConstant(0, DL, VT), NewMul);
 
-    if (isPowerOf2_64(MulAmt2))
-      NewMul = DAG.getNode(ISD::SHL, DL, VT, NewMul,
-                           DAG.getConstant(Log2_64(MulAmt2), DL, MVT::i8));
-    else
-      NewMul = DAG.getNode(X86ISD::MUL_IMM, DL, VT, NewMul,
-                           DAG.getConstant(MulAmt2, DL, VT));
+      return NewMul;
+    }
 
-    // Negate the result.
-    if (SignMulAmt < 0)
-      NewMul = DAG.getNode(ISD::SUB, DL, VT, DAG.getConstant(0, DL, VT),
-                           NewMul);
-  } else if (!Subtarget.slowLEA())
-    NewMul = combineMulSpecial(C->getZExtValue(), N, DAG, VT, DL);
+    uint64_t MulAmt1 = 0;
+    uint64_t MulAmt2 = 0;
+    if ((AbsMulAmt % 9) == 0) {
+      MulAmt1 = 9;
+      MulAmt2 = AbsMulAmt / 9;
+    } else if ((AbsMulAmt % 5) == 0) {
+      MulAmt1 = 5;
+      MulAmt2 = AbsMulAmt / 5;
+    } else if ((AbsMulAmt % 3) == 0) {
+      MulAmt1 = 3;
+      MulAmt2 = AbsMulAmt / 3;
+    }
 
+    // For negative multiply amounts, only allow MulAmt2 to be a power of 2.
+    if (MulAmt2 &&
+        (isPowerOf2_64(MulAmt2) ||
+         (SignMulAmt >= 0 && (MulAmt2 == 3 || MulAmt2 == 5 || MulAmt2 == 9)))) {
+
+      if (isPowerOf2_64(MulAmt2) && !(SignMulAmt >= 0 && N->hasOneUse() &&
+                                      N->use_begin()->getOpcode() == ISD::ADD))
+        // If second multiplifer is pow2, issue it first. We want the multiply
+        // by 3, 5, or 9 to be folded into the addressing mode unless the lone
+        // use is an add. Only do this for positive multiply amounts since the
+        // negate would prevent it from being used as an address mode anyway.
+        std::swap(MulAmt1, MulAmt2);
+
+      if (isPowerOf2_64(MulAmt1))
+        NewMul = DAG.getNode(ISD::SHL, DL, VT, N->getOperand(0),
+                             DAG.getConstant(Log2_64(MulAmt1), DL, MVT::i8));
+      else
+        NewMul = DAG.getNode(X86ISD::MUL_IMM, DL, VT, N->getOperand(0),
+                             DAG.getConstant(MulAmt1, DL, VT));
+
+      if (isPowerOf2_64(MulAmt2))
+        NewMul = DAG.getNode(ISD::SHL, DL, VT, NewMul,
+                             DAG.getConstant(Log2_64(MulAmt2), DL, MVT::i8));
+      else
+        NewMul = DAG.getNode(X86ISD::MUL_IMM, DL, VT, NewMul,
+                             DAG.getConstant(MulAmt2, DL, VT));
+
+      // Negate the result.
+      if (SignMulAmt < 0)
+        NewMul =
+            DAG.getNode(ISD::SUB, DL, VT, DAG.getConstant(0, DL, VT), NewMul);
+    } else if (!Subtarget.slowLEA())
+      NewMul = combineMulSpecial(C->getZExtValue(), N, DAG, VT, DL);
+  }
   if (!NewMul) {
+    EVT ShiftVT = VT.isVector() ? VT : MVT::i8;
     assert(C->getZExtValue() != 0 &&
-           C->getZExtValue() != (VT == MVT::i64 ? UINT64_MAX : UINT32_MAX) &&
+           C->getZExtValue() != maxUIntN(VT.getScalarSizeInBits()) &&
            "Both cases that could cause potential overflows should have "
            "already been handled.");
     if (isPowerOf2_64(AbsMulAmt - 1)) {
@@ -48805,38 +48819,61 @@ static SDValue combineMul(SDNode *N, SelectionDAG &DAG,
       NewMul = DAG.getNode(
           ISD::ADD, DL, VT, N->getOperand(0),
           DAG.getNode(ISD::SHL, DL, VT, N->getOperand(0),
-                      DAG.getConstant(Log2_64(AbsMulAmt - 1), DL,
-                                      MVT::i8)));
+                      DAG.getConstant(Log2_64(AbsMulAmt - 1), DL, ShiftVT)));
       // To negate, subtract the number from zero
       if (SignMulAmt < 0)
-        NewMul = DAG.getNode(ISD::SUB, DL, VT,
-                             DAG.getConstant(0, DL, VT), NewMul);
+        NewMul =
+            DAG.getNode(ISD::SUB, DL, VT, DAG.getConstant(0, DL, VT), NewMul);
     } else if (isPowerOf2_64(AbsMulAmt + 1)) {
       // (mul x, 2^N - 1) => (sub (shl x, N), x)
-      NewMul = DAG.getNode(ISD::SHL, DL, VT, N->getOperand(0),
-                           DAG.getConstant(Log2_64(AbsMulAmt + 1),
-                                           DL, MVT::i8));
+      NewMul =
+          DAG.getNode(ISD::SHL, DL, VT, N->getOperand(0),
+                      DAG.getConstant(Log2_64(AbsMulAmt + 1), DL, ShiftVT));
       // To negate, reverse the operands of the subtract.
       if (SignMulAmt < 0)
         NewMul = DAG.getNode(ISD::SUB, DL, VT, N->getOperand(0), NewMul);
       else
         NewMul = DAG.getNode(ISD::SUB, DL, VT, NewMul, N->getOperand(0));
-    } else if (SignMulAmt >= 0 && isPowerOf2_64(AbsMulAmt - 2)) {
+    } else if (SignMulAmt >= 0 && isPowerOf2_64(AbsMulAmt - 2) &&
+               (!VT.isVector() || Subtarget.fastImmVectorShift())) {
       // (mul x, 2^N + 2) => (add (shl x, N), (add x, x))
-      NewMul = DAG.getNode(ISD::SHL, DL, VT, N->getOperand(0),
-                           DAG.getConstant(Log2_64(AbsMulAmt - 2),
-                                           DL, MVT::i8));
+      NewMul =
+          DAG.getNode(ISD::SHL, DL, VT, N->getOperand(0),
+                      DAG.getConstant(Log2_64(AbsMulAmt - 2), DL, ShiftVT));
       NewMul = DAG.getNode(
           ISD::ADD, DL, VT, NewMul,
           DAG.getNode(ISD::ADD, DL, VT, N->getOperand(0), N->getOperand(0)));
-    } else if (SignMulAmt >= 0 && isPowerOf2_64(AbsMulAmt + 2)) {
+    } else if (SignMulAmt >= 0 && isPowerOf2_64(AbsMulAmt + 2) &&
+               (!VT.isVector() || Subtarget.fastImmVectorShift())) {
       // (mul x, 2^N - 2) => (sub (shl x, N), (add x, x))
-      NewMul = DAG.getNode(ISD::SHL, DL, VT, N->getOperand(0),
-                           DAG.getConstant(Log2_64(AbsMulAmt + 2),
-                                           DL, MVT::i8));
+      NewMul =
+          DAG.getNode(ISD::SHL, DL, VT, N->getOperand(0),
+                      DAG.getConstant(Log2_64(AbsMulAmt + 2), DL, ShiftVT));
       NewMul = DAG.getNode(
           ISD::SUB, DL, VT, NewMul,
           DAG.getNode(ISD::ADD, DL, VT, N->getOperand(0), N->getOperand(0)));
+    } else if (SignMulAmt >= 0 && VT.isVector() &&
+               Subtarget.fastImmVectorShift()) {
+      uint64_t AbsMulAmtLowBit = AbsMulAmt & (-AbsMulAmt);
+      uint64_t ShiftAmt1;
+      std::optional<unsigned> Opc;
+      if (isPowerOf2_64(AbsMulAmt - AbsMulAmtLowBit)) {
+        ShiftAmt1 = AbsMulAmt - AbsMulAmtLowBit;
+        Opc = ISD::ADD;
+      } else if (isPowerOf2_64(AbsMulAmt + AbsMulAmtLowBit)) {
+        ShiftAmt1 = AbsMulAmt + AbsMulAmtLowBit;
+        Opc = ISD::SUB;
+      }
+
+      if (Opc) {
+        SDValue Shift1 =
+            DAG.getNode(ISD::SHL, DL, VT, N->getOperand(0),
+                        DAG.getConstant(Log2_64(ShiftAmt1), DL, ShiftVT));
+        SDValue Shift2 =
+            DAG.getNode(ISD::SHL, DL, VT, N->getOperand(0),
+                        DAG.getConstant(Log2_64(AbsMulAmtLowBit), DL, ShiftVT));
+        NewMul = DAG.getNode(*Opc, DL, VT, Shift1, Shift2);
+      }
     }
   }
 
