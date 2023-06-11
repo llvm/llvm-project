@@ -15,12 +15,10 @@ start:
 define i8 @rotl8_3(i8 %x) {
 ; CHECK-LABEL: rotl8_3:
 ; CHECK:       ; %bb.0: ; %start
-; CHECK-NEXT:    lsl r24
-; CHECK-NEXT:    adc r24, r1
-; CHECK-NEXT:    lsl r24
-; CHECK-NEXT:    adc r24, r1
-; CHECK-NEXT:    lsl r24
-; CHECK-NEXT:    adc r24, r1
+; CHECK-NEXT:    swap r24
+; CHECK-NEXT:    bst r24, 0
+; CHECK-NEXT:    ror r24
+; CHECK-NEXT:    bld r24, 7
 ; CHECK-NEXT:    ret
 start:
   %0 = call i8 @llvm.fshl.i8(i8 %x, i8 %x, i8 3)
@@ -85,15 +83,9 @@ start:
 define i8 @rotr8_3(i8 %x) {
 ; CHECK-LABEL: rotr8_3:
 ; CHECK:       ; %bb.0: ; %start
-; CHECK-NEXT:    bst r24, 0
-; CHECK-NEXT:    ror r24
-; CHECK-NEXT:    bld r24, 7
-; CHECK-NEXT:    bst r24, 0
-; CHECK-NEXT:    ror r24
-; CHECK-NEXT:    bld r24, 7
-; CHECK-NEXT:    bst r24, 0
-; CHECK-NEXT:    ror r24
-; CHECK-NEXT:    bld r24, 7
+; CHECK-NEXT:    swap r24
+; CHECK-NEXT:    lsl r24
+; CHECK-NEXT:    adc r24, r1
 ; CHECK-NEXT:    ret
 start:
   %0 = call i8 @llvm.fshr.i8(i8 %x, i8 %x, i8 3)
