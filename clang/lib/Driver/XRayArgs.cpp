@@ -178,8 +178,8 @@ void XRayArgs::addArgs(const ToolChain &TC, const ArgList &Args,
                     options::OPT_fno_xray_always_emit_typedevents);
   Args.addOptInFlag(CmdArgs, options::OPT_fxray_ignore_loops,
                     options::OPT_fno_xray_ignore_loops);
-  Args.addOptOutFlag(CmdArgs, options::OPT_fxray_function_index,
-                     options::OPT_fno_xray_function_index);
+  Args.addOptInFlag(CmdArgs, options::OPT_fxray_function_index,
+                    options::OPT_fno_xray_function_index);
 
   if (const Arg *A =
           Args.getLastArg(options::OPT_fxray_instruction_threshold_EQ)) {

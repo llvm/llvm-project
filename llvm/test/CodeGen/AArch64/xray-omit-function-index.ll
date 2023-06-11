@@ -1,5 +1,5 @@
-; RUN: llc -no-xray-index -mtriple=aarch64-unknown-linux-gnu < %s | FileCheck %s --check-prefixes=CHECK,CHECK-LINUX
-; RUN: llc -no-xray-index -mtriple=aarch64-apple-darwin      < %s | FileCheck %s --check-prefixes=CHECK,CHECK-MACOS
+; RUN: llc -mtriple=aarch64-unknown-linux-gnu -xray-function-index=0 < %s | FileCheck %s --check-prefixes=CHECK,CHECK-LINUX
+; RUN: llc -mtriple=aarch64-apple-darwin -xray-function-index=0 < %s | FileCheck %s --check-prefixes=CHECK,CHECK-MACOS
 
 define i32 @foo() nounwind noinline uwtable "function-instrument"="xray-always" {
 ; CHECK-LABEL: Lxray_sled_0:
