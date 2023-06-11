@@ -7438,15 +7438,13 @@ SDValue RISCVTargetLowering::lowerINSERT_SUBVECTOR(SDValue Op,
                                  DAG.getConstant(AlignedIdx, DL, XLenVT));
   }
 
-  SDValue SlideupAmt = DAG.getConstant(RemIdx, DL, XLenVT);
-  // For scalable vectors this must be further multiplied by vscale.
-  SlideupAmt = DAG.getNode(ISD::VSCALE, DL, XLenVT, SlideupAmt);
+  SDValue SlideupAmt =
+      DAG.getVScale(DL, XLenVT, APInt(XLenVT.getSizeInBits(), RemIdx));
 
   auto [Mask, VL] = getDefaultScalableVLOps(VecVT, DL, DAG, Subtarget);
 
   // Construct the vector length corresponding to RemIdx + length(SubVecVT).
-  VL = DAG.getConstant(SubVecVT.getVectorMinNumElements(), DL, XLenVT);
-  VL = DAG.getNode(ISD::VSCALE, DL, XLenVT, VL);
+  VL = computeVLMax(SubVecVT, DL, DAG);
   VL = DAG.getNode(ISD::ADD, DL, XLenVT, SlideupAmt, VL);
 
   SubVec = DAG.getNode(ISD::INSERT_SUBVECTOR, DL, InterSubVT,
@@ -7571,9 +7569,8 @@ SDValue RISCVTargetLowering::lowerEXTRACT_SUBVECTOR(SDValue Op,
 
   // Slide this vector register down by the desired number of elements in order
   // to place the desired subvector starting at element 0.
-  SDValue SlidedownAmt = DAG.getConstant(RemIdx, DL, XLenVT);
-  // For scalable vectors this must be further multiplied by vscale.
-  SlidedownAmt = DAG.getNode(ISD::VSCALE, DL, XLenVT, SlidedownAmt);
+  SDValue SlidedownAmt =
+      DAG.getVScale(DL, XLenVT, APInt(XLenVT.getSizeInBits(), RemIdx));
 
   auto [Mask, VL] = getDefaultScalableVLOps(InterSubVT, DL, DAG, Subtarget);
   SDValue Slidedown =

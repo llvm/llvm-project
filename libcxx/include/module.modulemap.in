@@ -1076,11 +1076,12 @@ module std [system] {
     export *
 
     module __iterator {
-      module access                { private header "__iterator/access.h" }
-      module advance               { private header "__iterator/advance.h" }
-      module back_insert_iterator  { private header "__iterator/back_insert_iterator.h" }
-      module bounded_iter          { private header "__iterator/bounded_iter.h" }
-      module common_iterator       { private header "__iterator/common_iterator.h" }
+      module access                  { private header "__iterator/access.h" }
+      module advance                 { private header "__iterator/advance.h" }
+      module back_insert_iterator    { private header "__iterator/back_insert_iterator.h" }
+      module bounded_iter            { private header "__iterator/bounded_iter.h" }
+      module common_iterator         { private header "__iterator/common_iterator.h" }
+      module cpp17_iterator_concepts { private header "__iterator/cpp17_iterator_concepts.h" }
       module concepts {
         private header "__iterator/concepts.h"
         export concepts.equality_comparable

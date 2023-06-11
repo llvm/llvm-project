@@ -278,6 +278,14 @@ X86LegalizerInfo::X86LegalizerInfo(const X86Subtarget &STI,
 
   getActionDefinitionsBuilder(G_INTTOPTR).legalFor({{p0, sMaxScalar}});
 
+  getActionDefinitionsBuilder(G_PTR_ADD)
+      .legalIf([=](const LegalityQuery &Query) -> bool {
+        return typePairInSet(0, 1, {{p0, s32}})(Query) ||
+               (Is64Bit && typePairInSet(0, 1, {{p0, s64}})(Query));
+      })
+      .widenScalarToNextPow2(1, /*Min*/ 32)
+      .clampScalar(1, s32, sMaxScalar);
+
   // sext, zext, and anyext
   getActionDefinitionsBuilder({G_SEXT, G_ZEXT, G_ANYEXT})
       .legalIf([=](const LegalityQuery &Query) {
@@ -308,6 +316,21 @@ X86LegalizerInfo::X86LegalizerInfo(const X86Subtarget &STI,
                (HasAVX512 && typeInSet(0, {v16s32, v8s64})(Query));
       });
 
+  // fp extension
+  getActionDefinitionsBuilder(G_FPEXT).legalIf([=](const LegalityQuery &Query) {
+    return (HasSSE2 && typePairInSet(0, 1, {{s64, s32}})(Query)) ||
+           (HasAVX && typePairInSet(0, 1, {{v4s64, v4s32}})(Query)) ||
+           (HasAVX512 && typePairInSet(0, 1, {{v8s64, v8s32}})(Query));
+  });
+
+  // fp truncation
+  getActionDefinitionsBuilder(G_FPTRUNC).legalIf(
+      [=](const LegalityQuery &Query) {
+        return (HasSSE2 && typePairInSet(0, 1, {{s32, s64}})(Query)) ||
+               (HasAVX && typePairInSet(0, 1, {{v4s32, v4s64}})(Query)) ||
+               (HasAVX512 && typePairInSet(0, 1, {{v8s32, v8s64}})(Query));
+      });
+
   // todo: vectors and address spaces
   getActionDefinitionsBuilder(G_SELECT)
        .legalFor({{s8, s32}, {s16, s32}, {s32, s32}, {s64, s32},
@@ -315,6 +338,20 @@ X86LegalizerInfo::X86LegalizerInfo(const X86Subtarget &STI,
     .widenScalarToNextPow2(0, /*Min=*/8)
     .clampScalar(0, s8, sMaxScalar)
     .clampScalar(1, s32, s32);
+
+  // memory intrinsics
+  getActionDefinitionsBuilder({G_MEMCPY, G_MEMMOVE, G_MEMSET}).libcall();
+
+  // fp intrinsics
+  getActionDefinitionsBuilder(G_INTRINSIC_ROUNDEVEN)
+      .scalarize(0)
+      .minScalar(0, LLT::scalar(32))
+      .libcall();
+
+  getActionDefinitionsBuilder(G_FREEZE)
+    .legalFor({s8, s16, s32, s64, p0})
+    .widenScalarToNextPow2(0, /*Min=*/8)
+    .clampScalar(0, s8, sMaxScalar);
 
   setLegalizerInfo32bit();
   setLegalizerInfo64bit();
@@ -324,21 +361,11 @@ X86LegalizerInfo::X86LegalizerInfo(const X86Subtarget &STI,
   setLegalizerInfoAVX2();
   setLegalizerInfoAVX512();
 
-  getActionDefinitionsBuilder(G_INTRINSIC_ROUNDEVEN)
-    .scalarize(0)
-    .minScalar(0, LLT::scalar(32))
-    .libcall();
-
   auto &LegacyInfo = getLegacyLegalizerInfo();
   LegacyInfo.setLegalizeScalarToDifferentSizeStrategy(G_PHI, 0, widen_1);
   for (unsigned MemOp : {G_LOAD, G_STORE})
     LegacyInfo.setLegalizeScalarToDifferentSizeStrategy(
         MemOp, 0, LegacyLegalizerInfo::narrowToSmallerAndWidenToSmallest);
-  LegacyInfo.setLegalizeScalarToDifferentSizeStrategy(
-      G_PTR_ADD, 1,
-      LegacyLegalizerInfo::widenToLargerTypesUnsupportedOtherwise);
-
-  getActionDefinitionsBuilder({G_MEMCPY, G_MEMMOVE, G_MEMSET}).libcall();
 
   LegacyInfo.computeTables();
   verify(*STI.getInstrInfo());
@@ -380,9 +407,6 @@ void X86LegalizerInfo::setLegalizerInfo32bit() {
   LegacyInfo.setAction({G_FRAME_INDEX, p0}, LegacyLegalizeActions::Legal);
   LegacyInfo.setAction({G_GLOBAL_VALUE, p0}, LegacyLegalizeActions::Legal);
 
-  LegacyInfo.setAction({G_PTR_ADD, p0}, LegacyLegalizeActions::Legal);
-  LegacyInfo.setAction({G_PTR_ADD, 1, s32}, LegacyLegalizeActions::Legal);
-
   // Control-flow
   LegacyInfo.setAction({G_BRCOND, s1}, LegacyLegalizeActions::Legal);
 
@@ -414,9 +438,6 @@ void X86LegalizerInfo::setLegalizerInfo64bit() {
 
   for (unsigned MemOp : {G_LOAD, G_STORE})
     LegacyInfo.setAction({MemOp, s64}, LegacyLegalizeActions::Legal);
-
-  // Pointer-handling
-  LegacyInfo.setAction({G_PTR_ADD, 1, s64}, LegacyLegalizeActions::Legal);
 
   getActionDefinitionsBuilder(G_SITOFP)
     .legalForCartesianProduct({s32, s64})
@@ -474,8 +495,6 @@ void X86LegalizerInfo::setLegalizerInfoSSE2() {
   if (!Subtarget.hasSSE2())
     return;
 
-  const LLT s32 = LLT::scalar(32);
-  const LLT s64 = LLT::scalar(64);
   const LLT v16s8 = LLT::fixed_vector(16, 8);
   const LLT v8s16 = LLT::fixed_vector(8, 16);
   const LLT v4s32 = LLT::fixed_vector(4, 32);
@@ -487,12 +506,6 @@ void X86LegalizerInfo::setLegalizerInfoSSE2() {
   const LLT v4s64 = LLT::fixed_vector(4, 64);
 
   auto &LegacyInfo = getLegacyLegalizerInfo();
-
-  LegacyInfo.setAction({G_FPEXT, s64}, LegacyLegalizeActions::Legal);
-  LegacyInfo.setAction({G_FPEXT, 1, s32}, LegacyLegalizeActions::Legal);
-
-  LegacyInfo.setAction({G_FPTRUNC, s32}, LegacyLegalizeActions::Legal);
-  LegacyInfo.setAction({G_FPTRUNC, 1, s64}, LegacyLegalizeActions::Legal);
 
   // Merge/Unmerge
   for (const auto &Ty :

@@ -33,6 +33,9 @@
 
 #include <queue>
 
+#undef DEBUG_TYPE
+#define DEBUG_TYPE "bolt-prof"
+
 using namespace llvm;
 
 namespace opts {
@@ -133,6 +136,176 @@ cl::opt<unsigned> StaleMatchingCostJumpUnknownFTInc(
 namespace llvm {
 namespace bolt {
 
+/// An object wrapping several components of a basic block hash. The combined
+/// (blended) hash is represented and stored as one uint64_t, while individual
+/// components are of smaller size (e.g., uint16_t or uint8_t).
+struct BlendedBlockHash {
+private:
+  static uint64_t combineHashes(uint16_t Hash1, uint16_t Hash2, uint16_t Hash3,
+                                uint16_t Hash4) {
+    uint64_t Hash = 0;
+
+    Hash |= uint64_t(Hash4);
+    Hash <<= 16;
+
+    Hash |= uint64_t(Hash3);
+    Hash <<= 16;
+
+    Hash |= uint64_t(Hash2);
+    Hash <<= 16;
+
+    Hash |= uint64_t(Hash1);
+
+    return Hash;
+  }
+
+  static void parseHashes(uint64_t Hash, uint16_t &Hash1, uint16_t &Hash2,
+                          uint16_t &Hash3, uint16_t &Hash4) {
+    Hash1 = Hash & 0xffff;
+    Hash >>= 16;
+
+    Hash2 = Hash & 0xffff;
+    Hash >>= 16;
+
+    Hash3 = Hash & 0xffff;
+    Hash >>= 16;
+
+    Hash4 = Hash & 0xffff;
+    Hash >>= 16;
+  }
+
+public:
+  explicit BlendedBlockHash() {}
+
+  explicit BlendedBlockHash(uint64_t CombinedHash) {
+    parseHashes(CombinedHash, Offset, OpcodeHash, InstrHash, NeighborHash);
+  }
+
+  /// Combine the blended hash into uint64_t.
+  uint64_t combine() const {
+    return combineHashes(Offset, OpcodeHash, InstrHash, NeighborHash);
+  }
+
+  /// Compute a distance between two given blended hashes. The smaller the
+  /// distance, the more similar two blocks are. For identical basic blocks,
+  /// the distance is zero.
+  uint64_t distance(const BlendedBlockHash &BBH) const {
+    assert(OpcodeHash == BBH.OpcodeHash &&
+           "incorrect blended hash distance computation");
+    uint64_t Dist = 0;
+    // Account for NeighborHash
+    Dist += NeighborHash == BBH.NeighborHash ? 0 : 1;
+    Dist <<= 16;
+    // Account for InstrHash
+    Dist += InstrHash == BBH.InstrHash ? 0 : 1;
+    Dist <<= 16;
+    // Account for Offset
+    Dist += (Offset >= BBH.Offset ? Offset - BBH.Offset : BBH.Offset - Offset);
+    return Dist;
+  }
+
+  /// The offset of the basic block from the function start.
+  uint16_t Offset{0};
+  /// (Loose) Hash of the basic block instructions, excluding operands.
+  uint16_t OpcodeHash{0};
+  /// (Strong) Hash of the basic block instructions, including opcodes and
+  /// operands.
+  uint16_t InstrHash{0};
+  /// Hash of the (loose) basic block together with (loose) hashes of its
+  /// successors and predecessors.
+  uint16_t NeighborHash{0};
+};
+
+/// The object is used to identify and match basic blocks in a BinaryFunction
+/// given their hashes computed on a binary built from several revisions behind
+/// release.
+class StaleMatcher {
+public:
+  /// Initialize stale matcher.
+  void init(const std::vector<FlowBlock *> &Blocks,
+            const std::vector<BlendedBlockHash> &Hashes) {
+    assert(Blocks.size() == Hashes.size() &&
+           "incorrect matcher initialization");
+    for (size_t I = 0; I < Blocks.size(); I++) {
+      FlowBlock *Block = Blocks[I];
+      uint16_t OpHash = Hashes[I].OpcodeHash;
+      OpHashToBlocks[OpHash].push_back(std::make_pair(Hashes[I], Block));
+    }
+  }
+
+  /// Find the most similar block for a given hash.
+  const FlowBlock *matchBlock(BlendedBlockHash BlendedHash) const {
+    auto BlockIt = OpHashToBlocks.find(BlendedHash.OpcodeHash);
+    if (BlockIt == OpHashToBlocks.end()) {
+      return nullptr;
+    }
+    FlowBlock *BestBlock = nullptr;
+    uint64_t BestDist = std::numeric_limits<uint64_t>::max();
+    for (auto It : BlockIt->second) {
+      FlowBlock *Block = It.second;
+      BlendedBlockHash Hash = It.first;
+      uint64_t Dist = Hash.distance(BlendedHash);
+      if (BestBlock == nullptr || Dist < BestDist) {
+        BestDist = Dist;
+        BestBlock = Block;
+      }
+    }
+    return BestBlock;
+  }
+
+private:
+  using HashBlockPairType = std::pair<BlendedBlockHash, FlowBlock *>;
+  std::unordered_map<uint16_t, std::vector<HashBlockPairType>> OpHashToBlocks;
+};
+
+void BinaryFunction::computeBlockHashes() const {
+  if (size() == 0)
+    return;
+
+  assert(hasCFG() && "the function is expected to have CFG");
+
+  std::vector<BlendedBlockHash> BlendedHashes(BasicBlocks.size());
+  std::vector<uint64_t> OpcodeHashes(BasicBlocks.size());
+  // Initialize hash components
+  for (size_t I = 0; I < BasicBlocks.size(); I++) {
+    const BinaryBasicBlock *BB = BasicBlocks[I];
+    assert(BB->getIndex() == I && "incorrect block index");
+    BlendedHashes[I].Offset = BB->getOffset();
+    // Hashing complete instructions
+    std::string InstrHashStr = hashBlock(
+        BC, *BB, [&](const MCOperand &Op) { return hashInstOperand(BC, Op); });
+    uint64_t InstrHash = std::hash<std::string>{}(InstrHashStr);
+    BlendedHashes[I].InstrHash = hash_64_to_16(InstrHash);
+    // Hashing opcodes
+    std::string OpcodeHashStr =
+        hashBlock(BC, *BB, [](const MCOperand &Op) { return std::string(); });
+    OpcodeHashes[I] = std::hash<std::string>{}(OpcodeHashStr);
+    BlendedHashes[I].OpcodeHash = hash_64_to_16(OpcodeHashes[I]);
+  }
+
+  // Initialize neighbor hash
+  for (size_t I = 0; I < BasicBlocks.size(); I++) {
+    const BinaryBasicBlock *BB = BasicBlocks[I];
+    uint64_t Hash = OpcodeHashes[I];
+    // Append hashes of successors
+    for (BinaryBasicBlock *SuccBB : BB->successors()) {
+      uint64_t SuccHash = OpcodeHashes[SuccBB->getIndex()];
+      Hash = hashing::detail::hash_16_bytes(Hash, SuccHash);
+    }
+    // Append hashes of predecessors
+    for (BinaryBasicBlock *PredBB : BB->predecessors()) {
+      uint64_t PredHash = OpcodeHashes[PredBB->getIndex()];
+      Hash = hashing::detail::hash_16_bytes(Hash, PredHash);
+    }
+    BlendedHashes[I].NeighborHash = hash_64_to_16(Hash);
+  }
+
+  //  Assign hashes
+  for (size_t I = 0; I < BasicBlocks.size(); I++) {
+    const BinaryBasicBlock *BB = BasicBlocks[I];
+    BB->setHash(BlendedHashes[I].combine());
+  }
+}
 /// Create a wrapper flow function to use with the profile inference algorithm,
 /// and initialize its jumps and metadata.
 FlowFunction
@@ -224,23 +397,38 @@ void matchWeightsByHashes(const BinaryFunction::BasicBlockOrderType &BlockOrder,
                           const yaml::bolt::BinaryFunctionProfile &YamlBF,
                           FlowFunction &Func) {
   assert(Func.Blocks.size() == BlockOrder.size() + 1);
-  // Initialize stale matcher
-  DenseMap<uint64_t, std::vector<FlowBlock *>> HashToBlocks;
+
+  std::vector<FlowBlock *> Blocks;
+  std::vector<BlendedBlockHash> BlendedHashes;
   for (uint64_t I = 0; I < BlockOrder.size(); I++) {
     const BinaryBasicBlock *BB = BlockOrder[I];
     assert(BB->getHash() != 0 && "empty hash of BinaryBasicBlock");
-    HashToBlocks[BB->getHash()].push_back(&Func.Blocks[I + 1]);
+    Blocks.push_back(&Func.Blocks[I + 1]);
+    BlendedBlockHash BlendedHash(BB->getHash());
+    BlendedHashes.push_back(BlendedHash);
+    LLVM_DEBUG(dbgs() << "BB with index " << I << " has hash = "
+                      << Twine::utohexstr(BB->getHash()) << "\n");
   }
+  StaleMatcher Matcher;
+  Matcher.init(Blocks, BlendedHashes);
 
   // Index in yaml profile => corresponding (matched) block
   DenseMap<uint64_t, const FlowBlock *> MatchedBlocks;
   // Match blocks from the profile to the blocks in CFG
   for (const yaml::bolt::BinaryBasicBlockProfile &YamlBB : YamlBF.Blocks) {
     assert(YamlBB.Hash != 0 && "empty hash of BinaryBasicBlockProfile");
-    auto It = HashToBlocks.find(YamlBB.Hash);
-    if (It != HashToBlocks.end()) {
-      const FlowBlock *MatchedBlock = It->second.front();
+    BlendedBlockHash BlendedHash(YamlBB.Hash);
+    const FlowBlock *MatchedBlock = Matcher.matchBlock(BlendedHash);
+    if (MatchedBlock != nullptr) {
       MatchedBlocks[YamlBB.Index] = MatchedBlock;
+      LLVM_DEBUG(dbgs() << "Matched yaml block with bid = " << YamlBB.Index
+                        << " and hash = " << Twine::utohexstr(YamlBB.Hash)
+                        << " to BB with index = " << MatchedBlock->Index - 1
+                        << "\n");
+    } else {
+      LLVM_DEBUG(
+          dbgs() << "Couldn't match yaml block with bid = " << YamlBB.Index
+                 << " and hash = " << Twine::utohexstr(YamlBB.Hash) << "\n");
     }
   }
 

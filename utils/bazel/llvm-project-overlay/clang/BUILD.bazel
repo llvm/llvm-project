@@ -579,10 +579,10 @@ cc_library(
         ":basic_arm_mve_inc_gen",
         ":basic_arm_mve_sema_gen",
         ":basic_arm_neon_inc_gen",
+        ":basic_arm_sme_builtin_cg_gen",
+        ":basic_arm_sme_builtins_gen",
         ":basic_arm_sve_builtins_gen",
         ":basic_arm_sve_typeflags_gen",
-        ":basic_arm_sme_builtins_gen",
-        ":basic_arm_sme_builtin_cg_gen",
         ":basic_attr_gen",
         ":basic_internal_headers",
         ":basic_riscv_sifive_vector_builtins_gen",
@@ -927,14 +927,14 @@ cc_library(
 
 genrule(
     name = "analysis_htmllogger_gen",
-    outs = ["lib/Analysis/FlowSensitive/HTMLLogger.inc"],
     srcs = [
         "lib/Analysis/FlowSensitive/HTMLLogger.html",
         "lib/Analysis/FlowSensitive/HTMLLogger.css",
         "lib/Analysis/FlowSensitive/HTMLLogger.js",
     ],
-    tools = [":bundle_resources"],
+    outs = ["lib/Analysis/FlowSensitive/HTMLLogger.inc"],
     cmd = "$(location :bundle_resources) $@ $(SRCS)",
+    tools = [":bundle_resources"],
 )
 
 cc_library(
@@ -945,7 +945,7 @@ cc_library(
         "lib/Analysis/*.cpp",
         "lib/Analysis/*.h",
     ]) + [
-        ":analysis_htmllogger_gen"
+        ":analysis_htmllogger_gen",
     ],
     hdrs = glob([
         "include/clang/Analysis/**/*.h",
@@ -1027,10 +1027,10 @@ cc_library(
         ":basic",
         ":basic_arm_cde_aliases_gen",
         ":basic_arm_cde_sema_gen",
-        ":basic_arm_sve_builtins_gen",
-        ":basic_arm_sve_sema_rangechecks_gen",
         ":basic_arm_sme_builtins_gen",
         ":basic_arm_sme_sema_rangechecks_gen",
+        ":basic_arm_sve_builtins_gen",
+        ":basic_arm_sve_sema_rangechecks_gen",
         ":basic_riscv_sifive_vector_builtin_sema_gen",
         ":basic_riscv_vector_builtin_sema_gen",
         ":edit",
@@ -1819,8 +1819,8 @@ cc_library(
         ":ast",
         ":basic",
         ":basic_arm_cde_cg_gen",
-        ":basic_arm_sve_builtin_cg_gen",
         ":basic_arm_sme_builtin_cg_gen",
+        ":basic_arm_sve_builtin_cg_gen",
         ":basic_riscv_sifive_vector_builtin_cg_gen",
         ":basic_riscv_vector_builtin_cg_gen",
         ":driver",
@@ -2365,29 +2365,29 @@ cc_binary(
     copts = [
         "-I$(GENDIR)/$(WORKSPACE_ROOT)/clang/tools/clang-linker-wrapper",
     ],
+    stamp = 0,
     toolchains = [
         ":workspace_root",
     ],
-    stamp = 0,
     deps = [
         ":basic",
         ":linker_wrapper_opts_gen",
         "//llvm:AllTargetsAsmParsers",
-        "//llvm:BitWriter",
-        "//llvm:Core",
-        "//llvm:BinaryFormat",
-        "//llvm:MC",
-        "//llvm:Target",
-        "//llvm:TransformUtils",
         "//llvm:Analysis",
-        "//llvm:Passes",
+        "//llvm:BinaryFormat",
+        "//llvm:BitWriter",
+        "//llvm:CodeGen",
+        "//llvm:Core",
         "//llvm:IRReader",
+        "//llvm:LTO",
+        "//llvm:MC",
         "//llvm:Object",
         "//llvm:Option",
+        "//llvm:Passes",
         "//llvm:Support",
+        "//llvm:Target",
         "//llvm:TargetParser",
-        "//llvm:CodeGen",
-        "//llvm:LTO",
+        "//llvm:TransformUtils",
     ],
 )
 

@@ -207,7 +207,7 @@ public:
 
   CompilerType GetBasicType(lldb::BasicType type);
 
-  static lldb::BasicType GetBasicTypeEnumeration(ConstString name);
+  static lldb::BasicType GetBasicTypeEnumeration(llvm::StringRef name);
 
   CompilerType
   GetBuiltinTypeForDWARFEncodingAndBitSize(llvm::StringRef type_name,
@@ -833,10 +833,6 @@ public:
 
   lldb::BasicType
   GetBasicTypeEnumeration(lldb::opaque_compiler_type_t type) override;
-
-  static lldb::BasicType
-  GetBasicTypeEnumeration(lldb::opaque_compiler_type_t type,
-                          ConstString name);
 
   void ForEachEnumerator(
       lldb::opaque_compiler_type_t type,

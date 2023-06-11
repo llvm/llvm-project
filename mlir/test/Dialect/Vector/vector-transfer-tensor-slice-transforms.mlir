@@ -1,4 +1,11 @@
-// RUN: mlir-opt -split-input-file -test-vector-transfer-tensor-slice-patterns %s | FileCheck %s
+// RUN: mlir-opt -split-input-file -test-transform-dialect-interpreter %s | FileCheck %s
+
+transform.sequence failures(propagate) {
+^bb1(%module_op: !transform.any_op):
+  transform.apply_patterns to %module_op {
+    transform.apply_patterns.vector.fold_tensor_slice_into_transfer
+  } : !transform.any_op
+}
 
 // CHECK-LABEL: func @transfer_read_of_extract_slice(
 //  CHECK-SAME:     %[[t:.*]]: tensor<?x?xf32>, %[[s1:.*]]: index, %[[s2:.*]]: index
@@ -16,16 +23,14 @@ func.func @transfer_read_of_extract_slice(%t : tensor<?x?xf32>, %s1 : index, %s2
   return %1 : vector<5x6xf32>
 }
 
-// -----
-
-// CHECK-LABEL: func @transfer_read_of_extract_slice(
+// CHECK-LABEL: func @transfer_read_of_extract_slice_1d(
 //  CHECK-SAME:     %[[t:.*]]: tensor<?x?xf32>, %[[s1:.*]]: index, %[[s2:.*]]: index
 //   CHECK-DAG:   %[[c4:.*]] = arith.constant 4 : index
 //   CHECK-DAG:   %[[c8:.*]] = arith.constant 8 : index
 //       CHECK:   %[[add:.*]] = arith.addi %[[s1]], %[[c4]]
 //       CHECK:   %[[r:.*]] = vector.transfer_read %[[t]][%[[c8]], %[[add]]], %{{.*}} {in_bounds = [true]} : tensor<?x?xf32>, vector<6xf32>
 //       CHECK:   return %[[r]]
-func.func @transfer_read_of_extract_slice(%t : tensor<?x?xf32>, %s1 : index, %s2 : index) -> vector<6xf32> {
+func.func @transfer_read_of_extract_slice_1d(%t : tensor<?x?xf32>, %s1 : index, %s2 : index) -> vector<6xf32> {
   %c3 = arith.constant 3 : index
   %c4 = arith.constant 4 : index
   %cst = arith.constant 0.0 : f32
@@ -33,8 +38,6 @@ func.func @transfer_read_of_extract_slice(%t : tensor<?x?xf32>, %s1 : index, %s2
   %1 = vector.transfer_read %0[%c3, %c4], %cst {in_bounds = [true]} : tensor<10x?xf32>, vector<6xf32>
   return %1 : vector<6xf32>
 }
-
-// -----
 
 // CHECK-LABEL: func @transfer_read_of_extract_slice_rank_reducing(
 //  CHECK-SAME:     %[[t:.*]]: tensor<?x?x?xf32>, %[[s1:.*]]: index, %[[s2:.*]]: index
@@ -53,8 +56,6 @@ func.func @transfer_read_of_extract_slice_rank_reducing(%t : tensor<?x?x?xf32>, 
   return %1 : vector<5x6xf32>
 }
 
-// -----
-
 // CHECK-LABEL: func @transfer_read_of_extract_slice_illegal_rank_reducing(
 //       CHECK:   extract_slice
 //       CHECK:   vector.transfer_read
@@ -66,8 +67,6 @@ func.func @transfer_read_of_extract_slice_illegal_rank_reducing(%t : tensor<?x?x
   %1 = vector.transfer_read %0[%c3, %c4], %cst {in_bounds = [true, true]} : tensor<?x12xf32>, vector<5x6xf32>
   return %1 : vector<5x6xf32>
 }
-
-// -----
 
 // CHECK-LABEL: func @insert_slice_of_transfer_write(
 //  CHECK-SAME:     %[[t1:.*]]: tensor<?x12xf32>, %[[v:.*]]: vector<5x6xf32>, %[[s:.*]]: index
@@ -81,8 +80,6 @@ func.func @insert_slice_of_transfer_write(%t1 : tensor<?x12xf32>, %v : vector<5x
   return %1 : tensor<?x12xf32>
 }
 
-// -----
-
 // CHECK-LABEL: func @insert_slice_of_transfer_write_illegal_rank_extending(
 //       CHECK:   vector.transfer_write
 //       CHECK:   insert_slice
@@ -92,8 +89,6 @@ func.func @insert_slice_of_transfer_write_illegal_rank_extending(%t1 : tensor<?x
   %1 = tensor.insert_slice %0 into %t1[4, 3, %s] [5, 1, 6] [1, 1, 1] : tensor<5x6xf32> into tensor<?x?x12xf32>
   return %1 : tensor<?x?x12xf32>
 }
-
-// -----
 
 // CHECK-LABEL: func @insert_slice_of_transfer_write_rank_extending(
 //  CHECK-SAME:     %[[t1:.*]]: tensor<?x?x12xf32>, %[[v:.*]]: vector<5x6xf32>, %[[s:.*]]: index

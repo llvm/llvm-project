@@ -356,6 +356,10 @@ public:
   /// source/destination type and alignment and the number of bytes copied.
   InstructionCost getMemcpyCost(const Instruction *I) const;
 
+  /// Returns the maximum memset / memcpy size in bytes that still makes it
+  /// profitable to inline the call.
+  uint64_t getMaxMemIntrinsicInlineSizeThreshold() const;
+
   /// \return The estimated number of case clusters when lowering \p 'SI'.
   /// \p JTSize Set a jump table size only when \p SI is suitable for a jump
   /// table.
@@ -1673,6 +1677,7 @@ public:
   virtual unsigned adjustInliningThreshold(const CallBase *CB) = 0;
   virtual int getInlinerVectorBonusPercent() const = 0;
   virtual InstructionCost getMemcpyCost(const Instruction *I) = 0;
+  virtual uint64_t getMaxMemIntrinsicInlineSizeThreshold() const = 0;
   virtual unsigned
   getEstimatedNumberOfCaseClusters(const SwitchInst &SI, unsigned &JTSize,
                                    ProfileSummaryInfo *PSI,
@@ -2044,6 +2049,11 @@ public:
   InstructionCost getMemcpyCost(const Instruction *I) override {
     return Impl.getMemcpyCost(I);
   }
+
+  uint64_t getMaxMemIntrinsicInlineSizeThreshold() const override {
+    return Impl.getMaxMemIntrinsicInlineSizeThreshold();
+  }
+
   InstructionCost getInstructionCost(const User *U,
                                      ArrayRef<const Value *> Operands,
                                      TargetCostKind CostKind) override {

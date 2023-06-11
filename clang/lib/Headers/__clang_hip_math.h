@@ -207,7 +207,7 @@ __DEVICE__
 float ceilf(float __x) { return __ocml_ceil_f32(__x); }
 
 __DEVICE__
-float copysignf(float __x, float __y) { return __ocml_copysign_f32(__x, __y); }
+float copysignf(float __x, float __y) { return __builtin_copysignf(__x, __y); }
 
 __DEVICE__
 float cosf(float __x) { return __ocml_cos_f32(__x); }
@@ -296,7 +296,7 @@ __DEVICE__
 __RETURN_TYPE __isinff(float __x) { return __builtin_isinf(__x); }
 
 __DEVICE__
-__RETURN_TYPE __isnanf(float __x) { return __ocml_isnan_f32(__x); }
+__RETURN_TYPE __isnanf(float __x) { return __builtin_isnan(__x); }
 
 __DEVICE__
 float j0f(float __x) { return __ocml_j0_f32(__x); }
@@ -780,7 +780,7 @@ double ceil(double __x) { return __ocml_ceil_f64(__x); }
 
 __DEVICE__
 double copysign(double __x, double __y) {
-  return __ocml_copysign_f64(__x, __y);
+  return __builtin_copysign(__x, __y);
 }
 
 __DEVICE__
@@ -867,7 +867,7 @@ __DEVICE__
 __RETURN_TYPE __isinf(double __x) { return __builtin_isinf(__x); }
 
 __DEVICE__
-__RETURN_TYPE __isnan(double __x) { return __ocml_isnan_f64(__x); }
+__RETURN_TYPE __isnan(double __x) { return __builtin_isnan(__x); }
 
 __DEVICE__
 double j0(double __x) { return __ocml_j0_f64(__x); }

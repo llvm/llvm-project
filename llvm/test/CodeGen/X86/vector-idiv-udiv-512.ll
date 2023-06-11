@@ -420,8 +420,9 @@ define <16 x i32> @test_rem7_16i32(<16 x i32> %a) nounwind {
 ; AVX-NEXT:    vpsrld $1, %zmm1, %zmm1
 ; AVX-NEXT:    vpaddd %zmm3, %zmm1, %zmm1
 ; AVX-NEXT:    vpsrld $2, %zmm1, %zmm1
-; AVX-NEXT:    vpmulld {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to16}, %zmm1, %zmm1
-; AVX-NEXT:    vpsubd %zmm1, %zmm0, %zmm0
+; AVX-NEXT:    vpslld $3, %zmm1, %zmm2
+; AVX-NEXT:    vpsubd %zmm2, %zmm1, %zmm1
+; AVX-NEXT:    vpaddd %zmm1, %zmm0, %zmm0
 ; AVX-NEXT:    retq
   %res = urem <16 x i32> %a, <i32 7, i32 7, i32 7, i32 7, i32 7, i32 7, i32 7, i32 7, i32 7, i32 7, i32 7, i32 7, i32 7, i32 7, i32 7, i32 7>
   ret <16 x i32> %res
@@ -458,8 +459,9 @@ define <32 x i16> @test_rem7_32i16(<32 x i16> %a) nounwind {
 ; AVX512BW-NEXT:    vpsrlw $1, %zmm2, %zmm2
 ; AVX512BW-NEXT:    vpaddw %zmm1, %zmm2, %zmm1
 ; AVX512BW-NEXT:    vpsrlw $2, %zmm1, %zmm1
-; AVX512BW-NEXT:    vpmullw {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %zmm1, %zmm1
-; AVX512BW-NEXT:    vpsubw %zmm1, %zmm0, %zmm0
+; AVX512BW-NEXT:    vpsllw $3, %zmm1, %zmm2
+; AVX512BW-NEXT:    vpsubw %zmm2, %zmm1, %zmm1
+; AVX512BW-NEXT:    vpaddw %zmm1, %zmm0, %zmm0
 ; AVX512BW-NEXT:    retq
   %res = urem <32 x i16> %a, <i16 7, i16 7, i16 7, i16 7, i16 7, i16 7, i16 7, i16 7, i16 7, i16 7, i16 7, i16 7, i16 7, i16 7, i16 7, i16 7, i16 7, i16 7, i16 7, i16 7, i16 7, i16 7, i16 7, i16 7, i16 7, i16 7, i16 7, i16 7, i16 7, i16 7, i16 7, i16 7>
   ret <32 x i16> %res

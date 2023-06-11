@@ -165,8 +165,9 @@ int llvm::dlltoolDriverMain(llvm::ArrayRef<const char *> ArgsArr) {
     return 1;
   }
 
-  Expected<COFFModuleDefinition> Def =
-      parseCOFFModuleDefinition(*MB, Machine, true);
+  bool AddUnderscores = !Args.hasArg(OPT_no_leading_underscore);
+  Expected<COFFModuleDefinition> Def = parseCOFFModuleDefinition(
+      *MB, Machine, /*MingwDef=*/true, AddUnderscores);
 
   if (!Def) {
     llvm::errs() << "error parsing definition\n"
@@ -197,7 +198,7 @@ int llvm::dlltoolDriverMain(llvm::ArrayRef<const char *> ArgsArr) {
     }
   }
 
-  if (Machine == IMAGE_FILE_MACHINE_I386 && Args.getLastArg(OPT_k)) {
+  if (Machine == IMAGE_FILE_MACHINE_I386 && Args.hasArg(OPT_k)) {
     for (COFFShortExport& E : Def->Exports) {
       if (!E.AliasTarget.empty() || (!E.Name.empty() && E.Name[0] == '?'))
         continue;
@@ -214,8 +215,8 @@ int llvm::dlltoolDriverMain(llvm::ArrayRef<const char *> ArgsArr) {
     }
   }
 
-  if (!Path.empty() &&
-      writeImportLibrary(Def->OutputFile, Path, Def->Exports, Machine, true))
+  if (!Path.empty() && writeImportLibrary(Def->OutputFile, Path, Def->Exports,
+                                          Machine, /*MinGW=*/true))
     return 1;
   return 0;
 }

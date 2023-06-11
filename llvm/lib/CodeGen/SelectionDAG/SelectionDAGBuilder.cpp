@@ -417,6 +417,10 @@ static SDValue getCopyFromPartsVector(SelectionDAG &DAG, const SDLoc &DL,
         return Val;
       if (PartEVT.isInteger() && ValueVT.isFloatingPoint())
         return DAG.getNode(ISD::BITCAST, DL, ValueVT, Val);
+
+      // Vector/Vector bitcast (e.g. <2 x bfloat> -> <2 x half>).
+      if (ValueVT.getSizeInBits() == PartEVT.getSizeInBits())
+        return DAG.getNode(ISD::BITCAST, DL, ValueVT, Val);
     }
 
     // Promoted vector extract
@@ -622,6 +626,8 @@ static SDValue widenVectorToPartType(SelectionDAG &DAG, SDValue Val,
     return SDValue();
 
   EVT ValueVT = Val.getValueType();
+  EVT PartEVT = PartVT.getVectorElementType();
+  EVT ValueEVT = ValueVT.getVectorElementType();
   ElementCount PartNumElts = PartVT.getVectorElementCount();
   ElementCount ValueNumElts = ValueVT.getVectorElementCount();
 
@@ -629,9 +635,18 @@ static SDValue widenVectorToPartType(SelectionDAG &DAG, SDValue Val,
   // fixed/scalable properties. If a target needs to widen a fixed-length type
   // to a scalable one, it should be possible to use INSERT_SUBVECTOR below.
   if (ElementCount::isKnownLE(PartNumElts, ValueNumElts) ||
-      PartNumElts.isScalable() != ValueNumElts.isScalable() ||
-      PartVT.getVectorElementType() != ValueVT.getVectorElementType())
+      PartNumElts.isScalable() != ValueNumElts.isScalable())
     return SDValue();
+
+  // Have a try for bf16 because some targets share its ABI with fp16.
+  if (ValueEVT == MVT::bf16 && PartEVT == MVT::f16) {
+    assert(DAG.getTargetLoweringInfo().isTypeLegal(PartVT) &&
+           "Cannot widen to illegal type");
+    Val = DAG.getNode(ISD::BITCAST, DL,
+                      ValueVT.changeVectorElementType(MVT::f16), Val);
+  } else if (PartEVT != ValueEVT) {
+    return SDValue();
+  }
 
   // Widening a scalable vector to another scalable vector is done by inserting
   // the vector into a larger undef one.
@@ -639,12 +654,11 @@ static SDValue widenVectorToPartType(SelectionDAG &DAG, SDValue Val,
     return DAG.getNode(ISD::INSERT_SUBVECTOR, DL, PartVT, DAG.getUNDEF(PartVT),
                        Val, DAG.getVectorIdxConstant(0, DL));
 
-  EVT ElementVT = PartVT.getVectorElementType();
   // Vector widening case, e.g. <2 x float> -> <4 x float>.  Shuffle in
   // undef elements.
   SmallVector<SDValue, 16> Ops;
   DAG.ExtractVectorElements(Val, Ops);
-  SDValue EltUndef = DAG.getUNDEF(ElementVT);
+  SDValue EltUndef = DAG.getUNDEF(PartEVT);
   Ops.append((PartNumElts - ValueNumElts).getFixedValue(), EltUndef);
 
   // FIXME: Use CONCAT for 2x -> 4x.

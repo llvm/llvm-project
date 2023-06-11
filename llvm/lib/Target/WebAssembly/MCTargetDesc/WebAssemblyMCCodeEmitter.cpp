@@ -43,7 +43,7 @@ class WebAssemblyMCCodeEmitter final : public MCCodeEmitter {
                                  SmallVectorImpl<MCFixup> &Fixups,
                                  const MCSubtargetInfo &STI) const;
 
-  void encodeInstruction(const MCInst &MI, raw_ostream &OS,
+  void encodeInstruction(const MCInst &MI, SmallVectorImpl<char> &CB,
                          SmallVectorImpl<MCFixup> &Fixups,
                          const MCSubtargetInfo &STI) const override;
 
@@ -57,8 +57,9 @@ MCCodeEmitter *llvm::createWebAssemblyMCCodeEmitter(const MCInstrInfo &MCII) {
 }
 
 void WebAssemblyMCCodeEmitter::encodeInstruction(
-    const MCInst &MI, raw_ostream &OS, SmallVectorImpl<MCFixup> &Fixups,
-    const MCSubtargetInfo &STI) const {
+    const MCInst &MI, SmallVectorImpl<char> &CB,
+    SmallVectorImpl<MCFixup> &Fixups, const MCSubtargetInfo &STI) const {
+  raw_svector_ostream OS(CB);
   uint64_t Start = OS.tell();
 
   uint64_t Binary = getBinaryCodeForInstr(MI, Fixups, STI);

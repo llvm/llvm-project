@@ -19,4 +19,5 @@ add_libc_test(
     fpbits_test.cpp
   DEPENDS
     libc.src.__support.FPUtil.fp_bits
+    libc.src.__support.FPUtil.fpbits_str
 )

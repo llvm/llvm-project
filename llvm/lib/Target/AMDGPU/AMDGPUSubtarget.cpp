@@ -574,6 +574,10 @@ uint64_t AMDGPUSubtarget::getExplicitKernArgSize(const Function &F,
 
 unsigned AMDGPUSubtarget::getKernArgSegmentSize(const Function &F,
                                                 Align &MaxAlign) const {
+  if (F.getCallingConv() != CallingConv::AMDGPU_KERNEL &&
+      F.getCallingConv() != CallingConv::SPIR_KERNEL)
+    return 0;
+
   uint64_t ExplicitArgBytes = getExplicitKernArgSize(F, MaxAlign);
 
   unsigned ExplicitOffset = getExplicitKernelArgOffset();

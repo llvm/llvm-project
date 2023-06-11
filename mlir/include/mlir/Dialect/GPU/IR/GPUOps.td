@@ -1597,73 +1597,13 @@ def GPU_DestroySparseEnvOp : GPU_Op<
   }];
 }
 
-def GPU_CreateDnVecOp : GPU_Op<"create_dn_vec", [GPU_AsyncOpInterface]> {
-  let summary = "Create dense vector operation";
+def GPU_CreateDnTensorOp : GPU_Op<"create_dn_tensor", [GPU_AsyncOpInterface, AttrSizedOperandSegments]> {
+  let summary = "Create dense tensor operation";
   let description = [{
-    The `gpu.create_dn_vec` operation initializes a dense vector from
-    the given values buffer and size. The buffer must already be copied
-    from the host to the device prior to using this operation. The
-    operation returns a handle to the dense vector descriptor.
-
-    If the `async` keyword is present, the op is executed asynchronously (i.e.
-    it does not block until the execution has finished on the device). In
-    that case, it returns a !gpu.async.token in addition to the environment.
-
-    Example:
-
-    ```mlir
-    %dvec, %token = gpu.create_dn_vec async [%dep] %env, %mem, %size : memref<?xf64>
-    ```
-  }];
-
-  let arguments = (ins Variadic<GPU_AsyncToken>:$asyncDependencies,
-                       GPU_SparseEnvHandle:$env,
-                       AnyMemRef:$memref, 
-                       Index:$size);
-  let results = (outs Res<GPU_SparseDnVecHandle>:$dvec, 
-                      Optional<GPU_AsyncToken>:$asyncToken);
-
-  let assemblyFormat = [{
-    custom<AsyncDependencies>(type($asyncToken), $asyncDependencies)
-    $env `,` $memref `,` $size attr-dict `:` type($memref)
-  }];
-}
-
-def GPU_DestroyDnVecOp : GPU_Op<"destroy_dn_vec", [GPU_AsyncOpInterface]> {
-  let summary = "Destroy dense vector operation";
-  let description = [{
-    The `gpu.destroy_dn_vec` operation releases all resources of a dense
-    vector represented by a handle that was previously created by a
-    `gpu.create_dn_vec` operation.
-
-    If the `async` keyword is present, the op is executed asynchronously (i.e.
-    it does not block until the execution has finished on the device). In
-    that case, it returns a !gpu.async.token in addition to the environment.
-
-    Example:
-
-    ```mlir
-    %token = gpu.destroy_dn_vec async [%dep] %dvec
-    ```
-  }];
-
-  let arguments = (ins Variadic<GPU_AsyncToken>:$asyncDependencies,
-                       Arg<GPU_SparseDnVecHandle>:$dvec);
-  let results = (outs Optional<GPU_AsyncToken>:$asyncToken);
-
-  let assemblyFormat = [{
-    custom<AsyncDependencies>(type($asyncToken), $asyncDependencies)
-    $dvec attr-dict
-  }];
-}
-
-def GPU_CreateDnMatOp : GPU_Op<"create_dn_mat", [GPU_AsyncOpInterface]> {
-  let summary = "Create dense matrix operation";
-  let description = [{
-    The `gpu.create_dn_mat` operation initializes a dense matrix from
+    The `gpu.create_dn_tensor` operation initializes a dense tensor from
     the given values buffer and sizes. The buffer must already be copied
     from the host to the device prior to using this operation. The
-    operation returns a handle to the dense matrix descriptor.
+    operation returns a handle to the dense tensor descriptor.
 
     If the `async` keyword is present, the op is executed asynchronously (i.e.
     it does not block until the execution has finished on the device). In
@@ -1672,29 +1612,28 @@ def GPU_CreateDnMatOp : GPU_Op<"create_dn_mat", [GPU_AsyncOpInterface]> {
     Example:
 
     ```mlir
-    %dmat, %token = gpu.create_dn_mat async [%dep] %env, %rows, %cols, %mem : memref<?xf64>
+    %dmat, %token = gpu.create_dn_tensor async [%dep] %env, %mem, %dims : index, index into memref<?xf64>
     ```
   }];
 
   let arguments = (ins Variadic<GPU_AsyncToken>:$asyncDependencies,
                        GPU_SparseEnvHandle:$env,
-                       Index:$rows,
-                       Index:$cols,
-                       AnyMemRef:$memref);
-  let results = (outs Res<GPU_SparseDnMatHandle>:$dmat, Optional<GPU_AsyncToken>:$asyncToken);
+                       AnyMemRef:$memref,
+                       Variadic<Index>:$dims);
+  let results = (outs Res<GPU_SparseDnTensorHandle>:$dnTensor, Optional<GPU_AsyncToken>:$asyncToken);
 
   let assemblyFormat = [{
     custom<AsyncDependencies>(type($asyncToken), $asyncDependencies)
-    $env `,` $rows `,` $cols `,` $memref attr-dict `:` type($memref)
+    $env  `,` $memref `,` $dims attr-dict `:` type($dims) `into` type($memref)
   }];
 }
 
-def GPU_DestroyDnMatOp : GPU_Op<"destroy_dn_mat", [GPU_AsyncOpInterface]> {
-  let summary = "Destroy dense matrix operation";
+def GPU_DestroyDnTensorOp : GPU_Op<"destroy_dn_tensor", [GPU_AsyncOpInterface]> {
+  let summary = "Destroy dense tensor operation";
   let description = [{
-    The `gpu.destroy_dn_mat` operation releases all resources of a dense
-    matrix represented by a handle that was previously created by a
-    `gpu.create_dn_mat` operation.
+    The `gpu.destroy_dn_tensor` operation releases all resources of a dense
+    tensor represented by a handle that was previously created by a
+    `gpu.create_dn_tensor` operation.
 
     If the `async` keyword is present, the op is executed asynchronously (i.e.
     it does not block until the execution has finished on the device). In
@@ -1703,17 +1642,17 @@ def GPU_DestroyDnMatOp : GPU_Op<"destroy_dn_mat", [GPU_AsyncOpInterface]> {
     Example:
 
     ```mlir
-    %token = gpu.destroy_dn_vec async [%dep] %dmat
+    %token = gpu.destroy_dn_tensor async [%dep] %dnTensor
     ```
   }];
 
   let arguments = (ins Variadic<GPU_AsyncToken>:$asyncDependencies,
-                       Arg<GPU_SparseDnMatHandle>:$dmat);
+                       Arg<GPU_SparseDnTensorHandle>:$dnTensor);
   let results = (outs Optional<GPU_AsyncToken>:$asyncToken);
 
   let assemblyFormat = [{
     custom<AsyncDependencies>(type($asyncToken), $asyncDependencies)
-    $dmat attr-dict
+    $dnTensor attr-dict
   }];
 }
 
@@ -1945,8 +1884,8 @@ def GPU_SpMVBufferSizeOp : GPU_Op<"spmv_buffer_size", [GPU_AsyncOpInterface]> {
                        GPU_SparseEnvHandle:$env,
                        GPU_TransposeModeAttr:$modeA,
                        GPU_SparseSpMatHandle:$spmatA,
-                       GPU_SparseDnVecHandle:$dnX,
-                       GPU_SparseDnVecHandle:$dnY,
+                       GPU_SparseDnTensorHandle:$dnX,
+                       GPU_SparseDnTensorHandle:$dnY,
                        TypeAttr:$computeType);
   let results = (outs Res<Index>:$bufferSz,
                       Optional<GPU_AsyncToken>:$asyncToken);
@@ -1998,8 +1937,8 @@ def GPU_SpMVOp : GPU_Op<"spmv", [GPU_AsyncOpInterface]> {
                        GPU_SparseEnvHandle:$env,
                        GPU_TransposeModeAttr:$modeA,
                        GPU_SparseSpMatHandle:$spmatA,
-                       GPU_SparseDnVecHandle:$dnX,
-                       GPU_SparseDnVecHandle:$dnY,
+                       GPU_SparseDnTensorHandle:$dnX,
+                       GPU_SparseDnTensorHandle:$dnY,
                        TypeAttr:$computeType,
                        AnyMemRef:$buffer);
   let results = (outs Optional<GPU_AsyncToken>:$asyncToken);
@@ -2052,8 +1991,8 @@ def GPU_SpMMBufferSizeOp : GPU_Op<"spmm_buffer_size", [GPU_AsyncOpInterface]> {
                        GPU_TransposeModeAttr:$modeA,
                        GPU_TransposeModeAttr:$modeB,
                        GPU_SparseSpMatHandle:$spmatA,
-                       GPU_SparseDnMatHandle:$dnmatB,
-                       GPU_SparseDnMatHandle:$dnmatC,
+                       GPU_SparseDnTensorHandle:$dnmatB,
+                       GPU_SparseDnTensorHandle:$dnmatC,
                        TypeAttr:$computeType);
   let results = (outs Res<AnyTypeOf<[Index, TupleOf<[Index, Index, 
                                                      Index]>]>>:$bufferSzs, 
@@ -2108,8 +2047,8 @@ def GPU_SpMMOp : GPU_Op<"spmm", [GPU_AsyncOpInterface, AttrSizedOperandSegments]
                        GPU_TransposeModeAttr:$modeA,
                        GPU_TransposeModeAttr:$modeB,
                        GPU_SparseSpMatHandle:$spmatA,
-                       GPU_SparseDnMatHandle:$dnmatB,
-                       GPU_SparseDnMatHandle:$dnmatC,
+                       GPU_SparseDnTensorHandle:$dnmatB,
+                       GPU_SparseDnTensorHandle:$dnmatC,
                        TypeAttr:$computeType,
                        Variadic<AnyMemRef>:$buffers);
   let results = (outs Optional<GPU_AsyncToken>:$asyncToken);
@@ -2162,8 +2101,8 @@ def GPU_SDDMMBufferSizeOp : GPU_Op<"sddmm_buffer_size", [GPU_AsyncOpInterface]> 
                    GPU_SparseEnvHandle:$env,
                    GPU_TransposeModeAttr:$modeA,
                    GPU_TransposeModeAttr:$modeB,
-                   GPU_SparseDnMatHandle:$dnmatA,
-                   GPU_SparseDnMatHandle:$dnmatB,
+                   GPU_SparseDnTensorHandle:$dnmatA,
+                   GPU_SparseDnTensorHandle:$dnmatB,
                    GPU_SparseSpMatHandle:$spmatC,
                    TypeAttr:$computeType);
   let results = (outs Res<Index>:$bufferSz, Optional<GPU_AsyncToken>:$asyncToken);
@@ -2216,8 +2155,8 @@ def GPU_SDDMMOp : GPU_Op<"sddmm", [GPU_AsyncOpInterface]> {
                    GPU_SparseEnvHandle:$env,
                    GPU_TransposeModeAttr:$modeA,
                    GPU_TransposeModeAttr:$modeB,
-                   GPU_SparseDnMatHandle:$dnmatA,
-                   GPU_SparseDnMatHandle:$dnmatB,
+                   GPU_SparseDnTensorHandle:$dnmatA,
+                   GPU_SparseDnTensorHandle:$dnmatB,
                    GPU_SparseSpMatHandle:$spmatC,
                    TypeAttr:$computeType,
                    AnyMemRef:$buffer);

@@ -590,7 +590,7 @@ void ValueObjectPrinter::PrintChildrenPreamble(bool value_printed,
 void ValueObjectPrinter::PrintChild(
     ValueObjectSP child_sp,
     const DumpValueObjectOptions::PointerDepth &curr_ptr_depth) {
-  const uint32_t consumed_depth = (!m_options.m_pointer_as_array) ? 1 : 0;
+  const uint32_t consumed_summary_depth = m_options.m_pointer_as_array ? 0 : 1;
   const bool does_consume_ptr_depth =
       ((IsPtr() && !m_options.m_pointer_as_array) || IsRef());
 
@@ -603,15 +603,18 @@ void ValueObjectPrinter::PrintChild(
       .SetHideValue(m_options.m_hide_value)
       .SetOmitSummaryDepth(child_options.m_omit_summary_depth > 1
                                ? child_options.m_omit_summary_depth -
-                                     consumed_depth
+                                     consumed_summary_depth
                                : 0)
       .SetElementCount(0);
 
   if (child_sp.get()) {
-    ValueObjectPrinter child_printer(
-        child_sp.get(), m_stream, child_options,
-        does_consume_ptr_depth ? --curr_ptr_depth : curr_ptr_depth,
-        m_curr_depth + consumed_depth, m_printed_instance_pointers);
+    auto ptr_depth = curr_ptr_depth;
+    if (does_consume_ptr_depth)
+      ptr_depth = curr_ptr_depth.Decremented();
+
+    ValueObjectPrinter child_printer(child_sp.get(), m_stream, child_options,
+                                     ptr_depth, m_curr_depth + 1,
+                                     m_printed_instance_pointers);
     child_printer.PrintValueObject();
   }
 }

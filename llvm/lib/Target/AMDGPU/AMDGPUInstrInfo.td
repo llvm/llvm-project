@@ -39,6 +39,7 @@ def AMDGPUFmasOp : SDTypeProfile<1, 4,
   [SDTCisFP<0>, SDTCisSameAs<0, 1>, SDTCisSameAs<0, 2>, SDTCisSameAs<0, 3>, SDTCisInt<4>]
 >;
 
+def ImmOp : SDTypeProfile<0, 1, [SDTCisInt<0>]>;
 def AMDGPUKillSDT : SDTypeProfile<0, 1, [SDTCisInt<0>]>;
 
 def AMDGPUIfOp : SDTypeProfile<1, 2,
@@ -352,6 +353,8 @@ def IL_brcond      : SDNode<"AMDGPUISD::BRANCH_COND", SDTIL_BRCond, [SDNPHasChai
 //===----------------------------------------------------------------------===//
 def AMDGPUendpgm : SDNode<"AMDGPUISD::ENDPGM", SDTNone,
     [SDNPHasChain, SDNPOptInGlue]>;
+def AMDGPUendpgm_trap : SDNode<"AMDGPUISD::ENDPGM_TRAP", SDTNone,
+    [SDNPHasChain]>;
 
 def AMDGPUreturn_to_epilog : SDNode<"AMDGPUISD::RETURN_TO_EPILOG", SDTNone,
     [SDNPHasChain, SDNPOptInGlue, SDNPVariadic]>;

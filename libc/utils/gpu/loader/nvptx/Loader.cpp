@@ -233,6 +233,12 @@ int load(int argc, char **argv, char **envp, void *image, size_t size,
   if (CUresult err = cuCtxSetCurrent(context))
     handle_error(err);
 
+  // Increase the stack size per thread.
+  // TODO: We should allow this to be passed in so only the tests that require a
+  // larger stack can specify it to save on memory usage.
+  if (CUresult err = cuCtxSetLimit(CU_LIMIT_STACK_SIZE, 3 * 1024))
+    handle_error(err);
+
   // Initialize a non-blocking CUDA stream to execute the kernel.
   CUstream stream;
   if (CUresult err = cuStreamCreate(&stream, CU_STREAM_NON_BLOCKING))

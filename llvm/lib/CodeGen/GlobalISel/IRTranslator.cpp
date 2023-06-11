@@ -44,6 +44,7 @@
 #include "llvm/CodeGen/TargetFrameLowering.h"
 #include "llvm/CodeGen/TargetInstrInfo.h"
 #include "llvm/CodeGen/TargetLowering.h"
+#include "llvm/CodeGen/TargetOpcodes.h"
 #include "llvm/CodeGen/TargetPassConfig.h"
 #include "llvm/CodeGen/TargetRegisterInfo.h"
 #include "llvm/CodeGen/TargetSubtargetInfo.h"
@@ -1468,8 +1469,14 @@ bool IRTranslator::translateBitCast(const User &U,
                                     MachineIRBuilder &MIRBuilder) {
   // If we're bitcasting to the source type, we can reuse the source vreg.
   if (getLLTForType(*U.getOperand(0)->getType(), *DL) ==
-      getLLTForType(*U.getType(), *DL))
+      getLLTForType(*U.getType(), *DL)) {
+    // If the source is a ConstantInt then it was probably created by
+    // ConstantHoisting and we should leave it alone.
+    if (isa<ConstantInt>(U.getOperand(0)))
+      return translateCast(TargetOpcode::G_CONSTANT_FOLD_BARRIER, U,
+                           MIRBuilder);
     return translateCopy(U, *U.getOperand(0), MIRBuilder);
+  }
 
   return translateCast(TargetOpcode::G_BITCAST, U, MIRBuilder);
 }

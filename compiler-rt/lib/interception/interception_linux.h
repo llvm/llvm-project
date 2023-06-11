@@ -15,7 +15,7 @@
     SANITIZER_SOLARIS
 
 #if !defined(INCLUDED_FROM_INTERCEPTION_LIB)
-# error "interception_linux.h should be included from interception library only"
+# error interception_linux.h should be included from interception library only
 #endif
 
 #ifndef INTERCEPTION_LINUX_H
@@ -31,18 +31,18 @@ bool InterceptFunction(const char *name, const char *ver, uptr *ptr_to_real,
 #define INTERCEPT_FUNCTION_LINUX_OR_FREEBSD(func) \
   ::__interception::InterceptFunction(            \
       #func,                                      \
-      (::__interception::uptr *) & REAL(func),    \
-      (::__interception::uptr) & (func),          \
-      (::__interception::uptr) & TRAMPOLINE(func))
+      (::__interception::uptr *)&REAL(func),      \
+      (::__interception::uptr)&(func),            \
+      (::__interception::uptr)&TRAMPOLINE(func))
 
 // dlvsym is a GNU extension supported by some other platforms.
 #if SANITIZER_GLIBC || SANITIZER_FREEBSD || SANITIZER_NETBSD
 #define INTERCEPT_FUNCTION_VER_LINUX_OR_FREEBSD(func, symver) \
   ::__interception::InterceptFunction(                        \
       #func, symver,                                          \
-      (::__interception::uptr *) & REAL(func),                \
-      (::__interception::uptr) & (func),                      \
-      (::__interception::uptr) & TRAMPOLINE(func))
+      (::__interception::uptr *)&REAL(func),                  \
+      (::__interception::uptr)&(func),                        \
+      (::__interception::uptr)&TRAMPOLINE(func))
 #else
 #define INTERCEPT_FUNCTION_VER_LINUX_OR_FREEBSD(func, symver) \
   INTERCEPT_FUNCTION_LINUX_OR_FREEBSD(func)

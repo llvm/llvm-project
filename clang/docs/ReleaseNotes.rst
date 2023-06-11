@@ -488,6 +488,10 @@ Bug Fixes in This Version
   (`#63010 <https://github.com/llvm/llvm-project/issues/63010>`_).
 - Fix rejects-valid when consteval operator appears inside of a template.
   (`#62886 <https://github.com/llvm/llvm-project/issues/62886>`_).
+- Fix crash for code using ``_Atomic`` types in C++
+  (`See patch <https://reviews.llvm.org/D152303>`_).
+- Fix crash when passing a value larger then 64 bits to the aligned attribute.
+  (`#50534 <https://github.com/llvm/llvm-project/issues/50534>`_).
 
 Bug Fixes to Compiler Builtins
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -584,6 +588,12 @@ AMDGPU Support
   --undefined`` if using an offloading language.
 - The deprecated ``-mcode-object-v3`` and ``-mno-code-object-v3`` command-line
   options have been removed.
+- A new option ``-mprintf-kind`` has been introduced that controls printf lowering
+  scheme. It is currently supported only for HIP and takes following values,
+  ``hostcall`` - printing happens during kernel execution via series of hostcalls,
+  The scheme requires the system to support pcie atomics.(default)
+  ``buffered`` - Scheme uses a debug buffer to populate printf varargs, does not
+  rely on pcie atomics support.
 
 X86 Support
 ^^^^^^^^^^^
@@ -703,7 +713,6 @@ clang-format
 - Fix all known issues associated with ``LambdaBodyIndentation: OuterScope``.
 - Add ``BracedInitializerIndentWidth`` which can be used to configure
   the indentation level of the contents of braced init lists.
-- Add ``KeepEmptyLinesAtEOF`` to keep empty lines at end of file.
 
 libclang
 --------
@@ -723,6 +732,9 @@ libclang
 - Added check in ``clang_getFieldDeclBitWidth`` for whether a bit-field
   has an evaluable bit width. Fixes undefined behavior when called on a
   bit-field whose width depends on a template parameter.
+
+- Added ``CXBinaryOperatorKind`` and ``CXUnaryOperatorKind``.
+  (`#29138 <https://github.com/llvm/llvm-project/issues/29138>`_)
 
 Static Analyzer
 ---------------

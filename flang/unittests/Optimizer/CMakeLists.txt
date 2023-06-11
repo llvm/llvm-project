@@ -1,4 +1,5 @@
 get_property(dialect_libs GLOBAL PROPERTY MLIR_DIALECT_LIBS)
+get_property(extension_libs GLOBAL PROPERTY MLIR_EXTENSION_LIBS)
 
 set(LIBS
   FIRBuilder
@@ -8,6 +9,7 @@ set(LIBS
   FIRSupport
   HLFIRDialect
   ${dialect_libs}
+  ${extension_libs}
   LLVMTargetParser
 )
 

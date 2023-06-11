@@ -133,6 +133,46 @@ define i64 @test_clock64() {
   ret i64 %ret
 }
 
+%struct.S = type { [4 x i64] }
+
+; CHECK-LABEL: test_memcpy
+define dso_local void @test_memcpy(ptr noundef %dst, ptr noundef %src) #0 {
+; CHECK-DAG:        ld.param.u{{32|64}}    %[[D:(r|rd)[0-9]+]], [test_memcpy_param_0];
+; CHECK-DAG:        ld.param.u{{32|64}}    %[[S:(r|rd)[0-9]+]], [test_memcpy_param_1];
+; CHECK-DAG:        ld.u8   %[[V30:rs[0-9]+]], [%[[S]]+30];
+; CHECK-DAG:        st.u8   [%[[D]]+30], %[[V30]];
+; CHECK-DAG:        ld.u16  %[[V28:rs[0-9]+]], [%[[S]]+28];
+; CHECK-DAG:        st.u16  [%[[D]]+28], %[[V28]];
+; CHECK-DAG:        ld.u32  %[[V24:r[0-9]+]], [%[[S]]+24];
+; CHECK-DAG:        st.u32  [%[[D]]+24], %[[V24]];
+; CHECK-DAG:        ld.u64  %[[V16:rd[0-9]+]], [%[[S]]+16];
+; CHECK-DAG:        st.u64  [%[[D]]+16], %[[V16]];
+; CHECK-DAG:        ld.v4.u32       {[[V0:%r[0-9]+, %r[0-9]+, %r[0-9]+, %r[0-9]+]]}, [%[[S]]];
+; CHECK-DAG:        st.v4.u32       [%[[D]]], {[[V0]]};
+  call void @llvm.memcpy.p0.p0.i64(ptr align 16 %dst, ptr align 16 %src, i64 31, i1 false)
+  ret void
+}
+
+; CHECK-LABEL: test_memcpy_a8
+define dso_local void @test_memcpy_a8(ptr noundef %dst, ptr noundef %src) #0 {
+; CHECK-DAG:        ld.param.u{{32|64}}    %[[D:(r|rd)[0-9]+]], [test_memcpy_a8_param_0];
+; CHECK-DAG:        ld.param.u{{32|64}}    %[[S:(r|rd)[0-9]+]], [test_memcpy_a8_param_1];
+; CHECK-DAG:        ld.u8   %[[V30:rs[0-9]+]], [%[[S]]+30];
+; CHECK-DAG:        st.u8   [%[[D]]+30], %[[V30]];
+; CHECK-DAG:        ld.u16  %[[V28:rs[0-9]+]], [%[[S]]+28];
+; CHECK-DAG:        st.u16  [%[[D]]+28], %[[V28]];
+; CHECK-DAG:        ld.u32  %[[V24:r[0-9]+]], [%[[S]]+24];
+; CHECK-DAG:        st.u32  [%[[D]]+24], %[[V24]];
+; CHECK-DAG:        ld.u64  %[[V16:rd[0-9]+]], [%[[S]]+16];
+; CHECK-DAG:        st.u64  [%[[D]]+16], %[[V16]];
+; CHECK-DAG:        ld.u64  %[[V8:rd[0-9]+]], [%[[S]]+8];
+; CHECK-DAG:        st.u64  [%[[D]]+8], %[[V8]];
+; CHECK-DAG:        ld.u64  %[[V0:rd[0-9]+]], [%[[S]]];
+; CHECK-DAG:        st.u64  [%[[D]]], %[[V0]];
+  call void @llvm.memcpy.p0.p0.i64(ptr align 8 %dst, ptr align 8 %src, i64 31, i1 false)
+  ret void
+}
+
 declare float @llvm.fabs.f32(float)
 declare double @llvm.fabs.f64(double)
 declare float @llvm.nvvm.sqrt.f(float)
@@ -142,6 +182,7 @@ declare i64 @llvm.bitreverse.i64(i64)
 declare i16 @llvm.ctpop.i16(i16)
 declare i32 @llvm.ctpop.i32(i32)
 declare i64 @llvm.ctpop.i64(i64)
+declare void @llvm.memcpy.p0.p0.i64(ptr noalias nocapture writeonly, ptr noalias nocapture readonly, i64, i1 immarg)
 
 declare i32 @llvm.nvvm.read.ptx.sreg.tid.x()
 declare i32 @llvm.nvvm.read.ptx.sreg.clock()

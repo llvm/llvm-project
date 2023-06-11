@@ -160,7 +160,7 @@ static void emitOpDoc(const Operator &op, raw_ostream &os) {
 
   // Emit the summary, syntax, and description if present.
   if (op.hasSummary())
-    os << "\n" << op.getSummary() << "\n\n";
+    os << "\n**Summary:** _" << op.getSummary() << "_\n\n";
   if (op.hasAssemblyFormat())
     emitAssemblyFormat(op.getOperationName(), op.getAssemblyFormat().trim(),
                        os);

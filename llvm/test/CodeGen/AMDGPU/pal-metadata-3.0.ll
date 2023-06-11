@@ -110,7 +110,6 @@
 ; CHECK-NEXT:      .ps:
 ; CHECK-NEXT:        .debug_mode:     false
 ; CHECK-NEXT:        .entry_point:    ps_shader
-; CHECK-NEXT:        .float_mode:     0xf0
 ; CHECK-NEXT:        .ieee_mode:      false
 ; CHECK-NEXT:        .mem_ordered:    true
 ; CHECK-NEXT:        .scratch_en:     false

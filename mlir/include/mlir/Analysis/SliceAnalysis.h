@@ -31,9 +31,17 @@ struct SliceOptions {
 
   /// Include the top level op in the slice.
   bool inclusive = false;
+
+  // TODO: Remove this alias once downstream users are updated.
+  SliceOptions() {}
+  SliceOptions(TransitiveFilter filter) : filter(std::move(filter)) {}
 };
 
+// TODO: Remove this alias once downstream users are updated.
+using TransitiveFilter = SliceOptions::TransitiveFilter;
+
 struct BackwardSliceOptions : public SliceOptions {
+  using SliceOptions::SliceOptions;
   /// When omitBlockArguments is true, the backward slice computation omits
   /// traversing any block arguments. When omitBlockArguments is false, the
   /// backward slice computation traverses block arguments and asserts that the

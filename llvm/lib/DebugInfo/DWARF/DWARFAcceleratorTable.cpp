@@ -267,38 +267,33 @@ LLVM_DUMP_METHOD void AppleAcceleratorTable::dump(raw_ostream &OS) const {
   }
 }
 
-AppleAcceleratorTable::Entry::Entry(
-    const AppleAcceleratorTable::HeaderData &HdrData)
-    : HdrData(&HdrData) {
-  Values.reserve(HdrData.Atoms.size());
-  for (const auto &Atom : HdrData.Atoms)
+AppleAcceleratorTable::Entry::Entry(const AppleAcceleratorTable &Table)
+    : Table(Table) {
+  Values.reserve(Table.HdrData.Atoms.size());
+  for (const auto &Atom : Table.HdrData.Atoms)
     Values.push_back(DWARFFormValue(Atom.second));
 }
 
-void AppleAcceleratorTable::Entry::extract(
-    const AppleAcceleratorTable &AccelTable, uint64_t *Offset) {
-  for (auto &Atom : Values)
-    Atom.extractValue(AccelTable.AccelSection, Offset, AccelTable.FormParams);
+void AppleAcceleratorTable::Entry::extract(uint64_t *Offset) {
+  for (auto &FormValue : Values)
+    FormValue.extractValue(Table.AccelSection, Offset, Table.FormParams);
 }
 
 std::optional<DWARFFormValue>
-AppleAcceleratorTable::Entry::lookup(HeaderData::AtomType Atom) const {
-  assert(HdrData && "Dereferencing end iterator?");
-  assert(HdrData->Atoms.size() == Values.size());
-  for (auto Tuple : zip_first(HdrData->Atoms, Values)) {
-    if (std::get<0>(Tuple).first == Atom)
-      return std::get<1>(Tuple);
-  }
+AppleAcceleratorTable::Entry::lookup(HeaderData::AtomType AtomToFind) const {
+  for (auto [Atom, FormValue] : zip_equal(Table.HdrData.Atoms, Values))
+    if (Atom.first == AtomToFind)
+      return FormValue;
   return std::nullopt;
 }
 
 std::optional<uint64_t>
 AppleAcceleratorTable::Entry::getDIESectionOffset() const {
-  return HdrData->extractOffset(lookup(dwarf::DW_ATOM_die_offset));
+  return Table.HdrData.extractOffset(lookup(dwarf::DW_ATOM_die_offset));
 }
 
 std::optional<uint64_t> AppleAcceleratorTable::Entry::getCUOffset() const {
-  return HdrData->extractOffset(lookup(dwarf::DW_ATOM_cu_offset));
+  return Table.HdrData.extractOffset(lookup(dwarf::DW_ATOM_cu_offset));
 }
 
 std::optional<dwarf::Tag> AppleAcceleratorTable::Entry::getTag() const {
@@ -311,32 +306,14 @@ std::optional<dwarf::Tag> AppleAcceleratorTable::Entry::getTag() const {
 }
 
 AppleAcceleratorTable::ValueIterator::ValueIterator(
-    const AppleAcceleratorTable &AccelTable, uint64_t Offset)
-    : AccelTable(&AccelTable), Current(AccelTable.HdrData), DataOffset(Offset) {
-  if (!AccelTable.AccelSection.isValidOffsetForDataOfSize(DataOffset, 4))
-    return;
-
-  // Read the first entry.
-  NumData = AccelTable.AccelSection.getU32(&DataOffset);
-  Next();
-}
-
-void AppleAcceleratorTable::ValueIterator::Next() {
-  assert(NumData > 0 && "attempted to increment iterator past the end");
-  auto &AccelSection = AccelTable->AccelSection;
-  if (Data >= NumData ||
-      !AccelSection.isValidOffsetForDataOfSize(DataOffset, 4)) {
-    NumData = 0;
-    DataOffset = 0;
-    return;
-  }
-  Current.extract(*AccelTable, &DataOffset);
-  ++Data;
+    const AppleAcceleratorTable &AccelTable, uint64_t DataOffset)
+    : Current(AccelTable), Offset(DataOffset) {
 }
 
 iterator_range<AppleAcceleratorTable::ValueIterator>
 AppleAcceleratorTable::equal_range(StringRef Key) const {
-  const auto EmptyRange = make_range(ValueIterator(), ValueIterator());
+  const auto EmptyRange =
+      make_range(ValueIterator(*this, 0), ValueIterator(*this, 0));
   if (!IsValid)
     return EmptyRange;
 
@@ -362,10 +339,13 @@ AppleAcceleratorTable::equal_range(StringRef Key) const {
     return EmptyRange;
 
   std::optional<StringRef> MaybeStr = readStringFromStrSection(*StrOffset);
-  if (!MaybeStr)
+  std::optional<uint32_t> NumEntries = this->readU32FromAccel(DataOffset);
+  if (!MaybeStr || !NumEntries)
     return EmptyRange;
-  if (Key == *MaybeStr)
-    return make_range({*this, DataOffset}, ValueIterator());
+  if (Key == *MaybeStr) {
+    uint64_t EndOffset = DataOffset + *NumEntries * getHashDataEntryLength();
+    return make_range({*this, DataOffset}, ValueIterator{*this, EndOffset});
+  }
 
   // FIXME: this shouldn't return, we haven't checked all the colliding strings
   // in the bucket!

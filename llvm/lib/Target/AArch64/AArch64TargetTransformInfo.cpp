@@ -2814,19 +2814,23 @@ InstructionCost AArch64TTIImpl::getInterleavedMemoryOpCost(
     Align Alignment, unsigned AddressSpace, TTI::TargetCostKind CostKind,
     bool UseMaskForCond, bool UseMaskForGaps) {
   assert(Factor >= 2 && "Invalid interleave factor");
-  auto *VecVTy = cast<FixedVectorType>(VecTy);
+  auto *VecVTy = cast<VectorType>(VecTy);
+
+  if (VecTy->isScalableTy() && (!ST->hasSVE() || Factor != 2))
+    return InstructionCost::getInvalid();
 
   if (!UseMaskForCond && !UseMaskForGaps &&
       Factor <= TLI->getMaxSupportedInterleaveFactor()) {
-    unsigned NumElts = VecVTy->getNumElements();
+    unsigned MinElts = VecVTy->getElementCount().getKnownMinValue();
     auto *SubVecTy =
-        FixedVectorType::get(VecTy->getScalarType(), NumElts / Factor);
+        VectorType::get(VecVTy->getElementType(),
+                        VecVTy->getElementCount().divideCoefficientBy(Factor));
 
     // ldN/stN only support legal vector types of size 64 or 128 in bits.
     // Accesses having vector types that are a multiple of 128 bits can be
     // matched to more than one ldN/stN instruction.
     bool UseScalable;
-    if (NumElts % Factor == 0 &&
+    if (MinElts % Factor == 0 &&
         TLI->isLegalInterleavedAccessType(SubVecTy, DL, UseScalable))
       return Factor * TLI->getNumInterleavedAccesses(SubVecTy, DL, UseScalable);
   }

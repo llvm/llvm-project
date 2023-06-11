@@ -15064,6 +15064,7 @@ static bool Evaluate(APValue &Result, EvalInfo &Info, const Expr *E) {
           E, Unqual, ScopeKind::FullExpression, LV);
       if (!EvaluateAtomic(E, &LV, Value, Info))
         return false;
+      Result = Value;
     } else {
       if (!EvaluateAtomic(E, nullptr, Result, Info))
         return false;

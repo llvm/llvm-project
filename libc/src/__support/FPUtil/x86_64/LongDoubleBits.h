@@ -10,10 +10,8 @@
 #define LLVM_LIBC_SRC_SUPPORT_FPUTIL_X86_64_LONG_DOUBLE_BITS_H
 
 #include "src/__support/CPP/bit.h"
-#include "src/__support/CPP/string.h"
 #include "src/__support/UInt128.h"
 #include "src/__support/common.h"
-#include "src/__support/integer_to_string.h"
 #include "src/__support/macros/properties/architectures.h"
 
 #if !defined(LIBC_TARGET_ARCH_IS_X86)
@@ -208,50 +206,6 @@ template <> struct FPBits<long double> {
     result.set_unbiased_exponent(unbiased_exp);
     result.set_mantissa(mantissa);
     return result;
-  }
-
-  // Converts the bits to a string in the following format:
-  //    "0x<NNN...N> = S: N, E: 0xNNNN, I: N, M:0xNNN...N"
-  // 1. N is a hexadecimal digit.
-  // 2. "I" denotes the implicit bit.
-  // 3. The hexadecimal number on the LHS is the raw numerical representation
-  //    of the bits.
-  // 4. The exponent is always 16 bits wide irrespective of the type of the
-  //    floating encoding.
-  LIBC_INLINE cpp::string str() const {
-    if (is_nan())
-      return "(NaN)";
-    if (is_inf())
-      return get_sign() ? "(-Infinity)" : "(+Infinity)";
-
-    auto zerofill = [](char *arr, size_t n) {
-      for (size_t i = 0; i < n; ++i)
-        arr[i] = '0';
-    };
-
-    cpp::string s("0x");
-    char bitsbuf[IntegerToString::hex_bufsize<UIntType>()] = {'0'};
-    zerofill(bitsbuf, sizeof(bitsbuf));
-    IntegerToString::hex(bits, bitsbuf, false);
-    s += cpp::string(bitsbuf, sizeof(bitsbuf));
-
-    s += " = (";
-    s += cpp::string("S: ") + (get_sign() ? "1" : "0");
-
-    char expbuf[IntegerToString::hex_bufsize<uint16_t>()] = {'0'};
-    zerofill(expbuf, sizeof(expbuf));
-    IntegerToString::hex(get_unbiased_exponent(), expbuf, false);
-    s += cpp::string(", E: 0x") + cpp::string(expbuf, sizeof(expbuf));
-
-    s += cpp::string(", I: ") + (get_implicit_bit() ? "1" : "0");
-
-    char mantbuf[IntegerToString::hex_bufsize<UIntType>()] = {'0'};
-    zerofill(mantbuf, sizeof(mantbuf));
-    IntegerToString::hex(get_mantissa(), mantbuf, false);
-    s += cpp::string(", M: 0x") + cpp::string(mantbuf, sizeof(mantbuf));
-
-    s += ")";
-    return s;
   }
 };
 

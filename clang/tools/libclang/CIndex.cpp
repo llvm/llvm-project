@@ -23,8 +23,11 @@
 #include "clang-c/FatalErrorHandler.h"
 #include "clang/AST/Attr.h"
 #include "clang/AST/DeclObjCCommon.h"
+#include "clang/AST/Expr.h"
+#include "clang/AST/ExprCXX.h"
 #include "clang/AST/Mangle.h"
 #include "clang/AST/OpenMPClause.h"
+#include "clang/AST/OperationKinds.h"
 #include "clang/AST/StmtVisitor.h"
 #include "clang/Basic/Diagnostic.h"
 #include "clang/Basic/DiagnosticCategories.h"
@@ -9603,4 +9606,39 @@ cxindex::Logger::~Logger() {
     llvm::sys::PrintStackTrace(OS);
     OS << "--------------------------------------------------\n";
   }
+}
+
+CXString clang_getBinaryOperatorKindSpelling(enum CXBinaryOperatorKind kind) {
+  return cxstring::createRef(
+      BinaryOperator::getOpcodeStr(static_cast<BinaryOperatorKind>(kind - 1)));
+}
+
+enum CXBinaryOperatorKind clang_getCursorBinaryOperatorKind(CXCursor cursor) {
+  if (clang_isExpression(cursor.kind)) {
+    const Expr *expr = getCursorExpr(cursor);
+
+    if (const auto *op = dyn_cast<BinaryOperator>(expr))
+      return static_cast<CXBinaryOperatorKind>(op->getOpcode() + 1);
+
+    if (const auto *op = dyn_cast<CXXRewrittenBinaryOperator>(expr))
+      return static_cast<CXBinaryOperatorKind>(op->getOpcode() + 1);
+  }
+
+  return CXBinaryOperator_Invalid;
+}
+
+CXString clang_getUnaryOperatorKindSpelling(enum CXUnaryOperatorKind kind) {
+  return cxstring::createRef(
+      UnaryOperator::getOpcodeStr(static_cast<UnaryOperatorKind>(kind - 1)));
+}
+
+enum CXUnaryOperatorKind clang_getCursorUnaryOperatorKind(CXCursor cursor) {
+  if (clang_isExpression(cursor.kind)) {
+    const Expr *expr = getCursorExpr(cursor);
+
+    if (const auto *op = dyn_cast<UnaryOperator>(expr))
+      return static_cast<CXUnaryOperatorKind>(op->getOpcode() + 1);
+  }
+
+  return CXUnaryOperator_Invalid;
 }

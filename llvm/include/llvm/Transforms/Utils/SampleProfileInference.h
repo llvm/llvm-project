@@ -136,9 +136,9 @@ public:
 
 private:
   /// Initialize flow function blocks, jumps and misc metadata.
-  void initFunction(FlowFunction &Func,
-                    const std::vector<const BasicBlockT *> &BasicBlocks,
-                    DenseMap<const BasicBlockT *, uint64_t> &BlockIndex);
+  FlowFunction
+  createFlowFunction(const std::vector<const BasicBlockT *> &BasicBlocks,
+                     DenseMap<const BasicBlockT *, uint64_t> &BlockIndex);
 
   /// Try to infer branch probabilities mimicking implementation of
   /// BranchProbabilityInfo. Unlikely taken branches are marked so that the
@@ -207,8 +207,7 @@ void SampleProfileInference<BT>::apply(BlockWeightMap &BlockWeights,
   }
 
   // Create necessary objects
-  FlowFunction Func;
-  initFunction(Func, BasicBlocks, BlockIndex);
+  FlowFunction Func = createFlowFunction(BasicBlocks, BlockIndex);
 
   // Create and apply the inference network model.
   applyFlowInference(Func);
@@ -240,9 +239,10 @@ void SampleProfileInference<BT>::apply(BlockWeightMap &BlockWeights,
 }
 
 template <typename BT>
-void SampleProfileInference<BT>::initFunction(
-    FlowFunction &Func, const std::vector<const BasicBlockT *> &BasicBlocks,
+FlowFunction SampleProfileInference<BT>::createFlowFunction(
+    const std::vector<const BasicBlockT *> &BasicBlocks,
     DenseMap<const BasicBlockT *, uint64_t> &BlockIndex) {
+  FlowFunction Func;
   Func.Blocks.reserve(BasicBlocks.size());
   // Create FlowBlocks
   for (const auto *BB : BasicBlocks) {
@@ -293,6 +293,8 @@ void SampleProfileInference<BT>::initFunction(
     EntryBlock.Weight = 1;
     EntryBlock.HasUnknownWeight = false;
   }
+
+  return Func;
 }
 
 template <typename BT>

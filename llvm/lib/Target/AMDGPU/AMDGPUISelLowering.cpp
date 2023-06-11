@@ -18,6 +18,7 @@
 #include "AMDGPUMachineFunction.h"
 #include "SIMachineFunctionInfo.h"
 #include "llvm/CodeGen/Analysis.h"
+#include "llvm/CodeGen/GlobalISel/GISelKnownBits.h"
 #include "llvm/CodeGen/MachineFrameInfo.h"
 #include "llvm/IR/DiagnosticInfo.h"
 #include "llvm/IR/IntrinsicsAMDGPU.h"
@@ -3507,6 +3508,16 @@ static SDValue getMul24(SelectionDAG &DAG, const SDLoc &SL,
   return DAG.getNode(ISD::BUILD_PAIR, SL, MVT::i64, MulLo, MulHi);
 }
 
+/// If \p V is an add of a constant 1, returns the other operand. Otherwise
+/// return SDValue().
+static SDValue getAddOneOp(const SDNode *V) {
+  if (V->getOpcode() != ISD::ADD)
+    return SDValue();
+
+  auto *C = dyn_cast<ConstantSDNode>(V->getOperand(1));
+  return C && C->isOne() ? V->getOperand(0) : SDValue();
+}
+
 SDValue AMDGPUTargetLowering::performMulCombine(SDNode *N,
                                                 DAGCombinerInfo &DCI) const {
   EVT VT = N->getValueType(0);
@@ -3522,15 +3533,48 @@ SDValue AMDGPUTargetLowering::performMulCombine(SDNode *N,
   if (VT.isVector() || Size > 64)
     return SDValue();
 
-  // There are i16 integer mul/mad.
-  if (Subtarget->has16BitInsts() && VT.getScalarType().bitsLE(MVT::i16))
-    return SDValue();
-
   SelectionDAG &DAG = DCI.DAG;
   SDLoc DL(N);
 
   SDValue N0 = N->getOperand(0);
   SDValue N1 = N->getOperand(1);
+
+  // Undo InstCombine canonicalize X * (Y + 1) -> X * Y + X to enable mad
+  // matching.
+
+  // mul x, (add y, 1) -> add (mul x, y), x
+  auto IsFoldableAdd = [](SDValue V) -> SDValue {
+    SDValue AddOp = getAddOneOp(V.getNode());
+    if (!AddOp)
+      return SDValue();
+
+    if (V.hasOneUse() || all_of(V->uses(), [](const SDNode *U) -> bool {
+          return U->getOpcode() == ISD::MUL;
+        }))
+      return AddOp;
+
+    return SDValue();
+  };
+
+  // FIXME: The selection pattern is not properly checking for commuted
+  // operands, so we have to place the mul in the LHS
+  if (SDValue MulOper = IsFoldableAdd(N0)) {
+    SDValue MulVal = DAG.getNode(N->getOpcode(), DL, VT, N1, MulOper);
+    return DAG.getNode(ISD::ADD, DL, VT, MulVal, N1);
+  }
+
+  if (SDValue MulOper = IsFoldableAdd(N1)) {
+    SDValue MulVal = DAG.getNode(N->getOpcode(), DL, VT, N0, MulOper);
+    return DAG.getNode(ISD::ADD, DL, VT, MulVal, N0);
+  }
+
+  // Skip if already mul24.
+  if (N->getOpcode() != ISD::MUL)
+    return SDValue();
+
+  // There are i16 integer mul/mad.
+  if (Subtarget->has16BitInsts() && VT.getScalarType().bitsLE(MVT::i16))
+    return SDValue();
 
   // SimplifyDemandedBits has the annoying habit of turning useful zero_extends
   // in the source into any_extends if the result of the mul is truncated. Since
@@ -4339,6 +4383,15 @@ SDValue AMDGPUTargetLowering::PerformDAGCombine(SDNode *N,
     return performTruncateCombine(N, DCI);
   case ISD::MUL:
     return performMulCombine(N, DCI);
+  case AMDGPUISD::MUL_U24:
+  case AMDGPUISD::MUL_I24: {
+    if (SDValue Simplified = simplifyMul24(N, DCI))
+      return Simplified;
+    return performMulCombine(N, DCI);
+  }
+  case AMDGPUISD::MULHI_I24:
+  case AMDGPUISD::MULHI_U24:
+    return simplifyMul24(N, DCI);
   case ISD::SMUL_LOHI:
   case ISD::UMUL_LOHI:
     return performMulLoHiCombine(N, DCI);
@@ -4346,11 +4399,6 @@ SDValue AMDGPUTargetLowering::PerformDAGCombine(SDNode *N,
     return performMulhsCombine(N, DCI);
   case ISD::MULHU:
     return performMulhuCombine(N, DCI);
-  case AMDGPUISD::MUL_I24:
-  case AMDGPUISD::MUL_U24:
-  case AMDGPUISD::MULHI_I24:
-  case AMDGPUISD::MULHI_U24:
-    return simplifyMul24(N, DCI);
   case ISD::SELECT:
     return performSelectCombine(N, DCI);
   case ISD::FNEG:
@@ -4598,6 +4646,7 @@ const char* AMDGPUTargetLowering::getTargetNodeName(unsigned Opcode) const {
   NODE_NAME_CASE(RET_GLUE)
   NODE_NAME_CASE(RETURN_TO_EPILOG)
   NODE_NAME_CASE(ENDPGM)
+  NODE_NAME_CASE(ENDPGM_TRAP)
   NODE_NAME_CASE(DWORDADDR)
   NODE_NAME_CASE(FRACT)
   NODE_NAME_CASE(SETCC)
@@ -4907,6 +4956,29 @@ void AMDGPUTargetLowering::computeKnownBitsForTargetNode(
     Known.Zero.setLowBits(Log2(Alignment));
     break;
   }
+  case AMDGPUISD::SMIN3:
+  case AMDGPUISD::SMAX3:
+  case AMDGPUISD::SMED3:
+  case AMDGPUISD::UMIN3:
+  case AMDGPUISD::UMAX3:
+  case AMDGPUISD::UMED3: {
+    KnownBits Known2 = DAG.computeKnownBits(Op.getOperand(2), Depth + 1);
+    if (Known2.isUnknown())
+      break;
+
+    KnownBits Known1 = DAG.computeKnownBits(Op.getOperand(1), Depth + 1);
+    if (Known1.isUnknown())
+      break;
+
+    KnownBits Known0 = DAG.computeKnownBits(Op.getOperand(0), Depth + 1);
+    if (Known0.isUnknown())
+      break;
+
+    // TODO: Handle LeadZero/LeadOne from UMIN/UMAX handling.
+    Known.Zero = Known0.Zero & Known1.Zero & Known2.Zero;
+    Known.One = Known0.One & Known1.One & Known2.One;
+    break;
+  }
   case ISD::INTRINSIC_WO_CHAIN: {
     unsigned IID = cast<ConstantSDNode>(Op.getOperand(0))->getZExtValue();
     switch (IID) {
@@ -4961,6 +5033,26 @@ unsigned AMDGPUTargetLowering::ComputeNumSignBitsForTargetNode(
     return 16;
   case AMDGPUISD::FP_TO_FP16:
     return 16;
+  case AMDGPUISD::SMIN3:
+  case AMDGPUISD::SMAX3:
+  case AMDGPUISD::SMED3:
+  case AMDGPUISD::UMIN3:
+  case AMDGPUISD::UMAX3:
+  case AMDGPUISD::UMED3: {
+    unsigned Tmp2 = DAG.ComputeNumSignBits(Op.getOperand(2), Depth + 1);
+    if (Tmp2 == 1)
+      return 1; // Early out.
+
+    unsigned Tmp1 = DAG.ComputeNumSignBits(Op.getOperand(1), Depth + 1);
+    if (Tmp1 == 1)
+      return 1; // Early out.
+
+    unsigned Tmp0 = DAG.ComputeNumSignBits(Op.getOperand(0), Depth + 1);
+    if (Tmp0 == 1)
+      return 1; // Early out.
+
+    return std::min(Tmp0, std::min(Tmp1, Tmp2));
+  }
   default:
     return 1;
   }
@@ -4984,6 +5076,20 @@ unsigned AMDGPUTargetLowering::computeNumSignBitsForTargetInstr(
     return 24;
   case AMDGPU::G_AMDGPU_BUFFER_LOAD_USHORT:
     return 16;
+  case AMDGPU::G_AMDGPU_SMED3:
+  case AMDGPU::G_AMDGPU_UMED3: {
+    auto [Dst, Src0, Src1, Src2] = MI->getFirst4Regs();
+    unsigned Tmp2 = Analysis.computeNumSignBits(Src2, DemandedElts, Depth + 1);
+    if (Tmp2 == 1)
+      return 1;
+    unsigned Tmp1 = Analysis.computeNumSignBits(Src1, DemandedElts, Depth + 1);
+    if (Tmp1 == 1)
+      return 1;
+    unsigned Tmp0 = Analysis.computeNumSignBits(Src0, DemandedElts, Depth + 1);
+    if (Tmp0 == 1)
+      return 1;
+    return std::min(Tmp0, std::min(Tmp1, Tmp2));
+  }
   default:
     return 1;
   }
@@ -5100,6 +5206,11 @@ bool AMDGPUTargetLowering::isKnownNeverNaNForTargetNode(SDValue Op,
   default:
     return false;
   }
+}
+
+bool AMDGPUTargetLowering::isReassocProfitable(MachineRegisterInfo &MRI,
+                                               Register N0, Register N1) const {
+  return true; // FIXME: handle regbanks
 }
 
 TargetLowering::AtomicExpansionKind

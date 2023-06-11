@@ -1091,8 +1091,8 @@ bool TargetPassConfig::addISelPasses() {
   if (TM->useEmulatedTLS())
     addPass(createLowerEmuTLSPass());
 
-  addPass(createPreISelIntrinsicLoweringPass());
   PM->add(createTargetTransformInfoWrapperPass(TM->getTargetIRAnalysis()));
+  addPass(createPreISelIntrinsicLoweringPass());
   addPass(createExpandLargeDivRemPass());
   addPass(createExpandLargeFpConvertPass());
   addIRPasses();

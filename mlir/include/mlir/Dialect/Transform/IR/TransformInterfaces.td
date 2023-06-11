@@ -100,6 +100,11 @@ def TransformOpInterface : OpInterface<"TransformOpInterface"> {
       diag.attachNote(target->getLoc()) << "when applied to this op";
       return diag;
     }
+
+    /// Returns all operands that are handles and being consumed by this op.
+    ::llvm::SmallVector<OpOperand *> getConsumedHandleOpOperands() {
+      return ::mlir::transform::detail::getConsumedHandleOpOperands($_op);
+    }
   }];
 
   let verify = [{

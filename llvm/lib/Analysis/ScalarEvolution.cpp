@@ -161,10 +161,6 @@ static cl::opt<bool, true> VerifySCEVOpt(
 static cl::opt<bool> VerifySCEVStrict(
     "verify-scev-strict", cl::Hidden,
     cl::desc("Enable stricter verification with -verify-scev is passed"));
-static cl::opt<bool>
-    VerifySCEVMap("verify-scev-maps", cl::Hidden,
-                  cl::desc("Verify no dangling value in ScalarEvolution's "
-                           "ExprValueMap (slow)"));
 
 static cl::opt<bool> VerifyIR(
     "scev-verify-ir", cl::Hidden,
@@ -4458,13 +4454,6 @@ ArrayRef<Value *> ScalarEvolution::getSCEVValues(const SCEV *S) {
   ExprValueMapType::iterator SI = ExprValueMap.find_as(S);
   if (SI == ExprValueMap.end())
     return std::nullopt;
-#ifndef NDEBUG
-  if (VerifySCEVMap) {
-    // Check there is no dangling Value in the set returned.
-    for (Value *V : SI->second)
-      assert(ValueExprMap.count(V));
-  }
-#endif
   return SI->second.getArrayRef();
 }
 
@@ -14969,9 +14958,25 @@ public:
 
   const SCEV *visitZeroExtendExpr(const SCEVZeroExtendExpr *Expr) {
     auto I = Map.find(Expr);
-    if (I == Map.end())
+    if (I == Map.end()) {
+      // If we didn't find the extact ZExt expr in the map, check if there's an
+      // entry for a smaller ZExt we can use instead.
+      Type *Ty = Expr->getType();
+      const SCEV *Op = Expr->getOperand(0);
+      unsigned Bitwidth = Ty->getScalarSizeInBits() / 2;
+      while (Bitwidth % 8 == 0 && Bitwidth >= 8 &&
+             Bitwidth > Op->getType()->getScalarSizeInBits()) {
+        Type *NarrowTy = IntegerType::get(SE.getContext(), Bitwidth);
+        auto *NarrowExt = SE.getZeroExtendExpr(Op, NarrowTy);
+        auto I = Map.find(NarrowExt);
+        if (I != Map.end())
+          return SE.getZeroExtendExpr(I->second, Ty);
+        Bitwidth = Bitwidth / 2;
+      }
+
       return SCEVRewriteVisitor<SCEVLoopGuardRewriter>::visitZeroExtendExpr(
           Expr);
+    }
     return I->second;
   }
 

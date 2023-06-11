@@ -2675,10 +2675,6 @@ struct FormatStyle {
   bool JavaScriptWrapImports;
   // clang-format on
 
-  /// Keep empty lines (up to ``MaxEmptyLinesToKeep``) at end of file.
-  /// \version 17
-  bool KeepEmptyLinesAtEOF;
-
   /// If true, the empty line at the start of blocks is kept.
   /// \code
   ///    true:                                  false:
@@ -4368,7 +4364,6 @@ struct FormatStyle {
            JavaImportGroups == R.JavaImportGroups &&
            JavaScriptQuotes == R.JavaScriptQuotes &&
            JavaScriptWrapImports == R.JavaScriptWrapImports &&
-           KeepEmptyLinesAtEOF == R.KeepEmptyLinesAtEOF &&
            KeepEmptyLinesAtTheStartOfBlocks ==
                R.KeepEmptyLinesAtTheStartOfBlocks &&
            Language == R.Language &&

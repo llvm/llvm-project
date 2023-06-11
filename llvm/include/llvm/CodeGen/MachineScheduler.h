@@ -92,6 +92,7 @@
 #include "llvm/Support/ErrorHandling.h"
 #include <algorithm>
 #include <cassert>
+#include <llvm/Support/raw_ostream.h>
 #include <memory>
 #include <string>
 #include <vector>
@@ -610,6 +611,222 @@ struct SchedRemainder {
   void init(ScheduleDAGMI *DAG, const TargetSchedModel *SchedModel);
 };
 
+/// ResourceSegments are a collection of intervals closed on the
+/// left and opened on the right:
+///
+///     list{ [a1, b1), [a2, b2), ..., [a_N, b_N) }
+///
+/// The collection has the following properties:
+///
+/// 1. The list is ordered: a_i < b_i and b_i < a_(i+1)
+///
+/// 2. The intervals in the collection do not intersect each other.
+///
+/// A \ref ResourceSegments instance represents the cycle
+/// reservation history of the instance of and individual resource.
+class ResourceSegments {
+public:
+  /// Represents an interval of discrete integer values closed on
+  /// the left and open on the right: [a, b).
+  typedef std::pair<int64_t, int64_t> IntervalTy;
+
+  /// Adds an interval [a, b) to the collection of the instance.
+  ///
+  /// When adding [a, b[ to the collection, the operation merges the
+  /// adjacent intervals. For example
+  ///
+  ///       0  1  2  3  4  5  6  7  8  9  10
+  ///       [-----)  [--)     [--)
+  ///     +       [--)
+  ///     = [-----------)     [--)
+  ///
+  /// To be able to debug duplicate resource usage, the function has
+  /// assertion that checks that no interval should be added if it
+  /// overlaps any of the intervals in the collection. We can
+  /// require this because by definition a \ref ResourceSegments is
+  /// attached only to an individual resource instance.
+  void add(IntervalTy A, const unsigned CutOff = 10);
+
+public:
+  /// Checks whether intervals intersect.
+  static bool intersects(IntervalTy A, IntervalTy B);
+
+  /// These function return the interval used by a resource in bottom and top
+  /// scheduling.
+  ///
+  /// Consider an instruction that uses resources X0, X1 and X2 as follows:
+  ///
+  /// X0 X1 X1 X2    +--------+------------+------+
+  ///                |Resource|StartAtCycle|Cycles|
+  ///                +--------+------------+------+
+  ///                |   X0   |     0      |  1   |
+  ///                +--------+------------+------+
+  ///                |   X1   |     1      |  3   |
+  ///                +--------+------------+------+
+  ///                |   X2   |     3      |  4   |
+  ///                +--------+------------+------+
+  ///
+  /// If we can schedule the instruction at cycle C, we need to
+  /// compute the interval of the resource as follows:
+  ///
+  /// # TOP DOWN SCHEDULING
+  ///
+  /// Cycles scheduling flows to the _right_, in the same direction
+  /// of time.
+  ///
+  ///       C      1      2      3      4      5  ...
+  /// ------|------|------|------|------|------|----->
+  ///       X0     X1     X1     X2   ---> direction of time
+  /// X0    [C, C+1)
+  /// X1           [C+1,      C+3)
+  /// X2                         [C+3, C+4)
+  ///
+  /// Therefore, the formula to compute the interval for a resource
+  /// of an instruction that can be scheduled at cycle C in top-down
+  /// scheduling is:
+  ///
+  ///       [C+StartAtCycle, C+Cycles)
+  ///
+  ///
+  /// # BOTTOM UP SCHEDULING
+  ///
+  /// Cycles scheduling flows to the _left_, in opposite direction
+  /// of time.
+  ///
+  /// In bottom up scheduling, the scheduling happens in opposite
+  /// direction to the execution of the cycles of the
+  /// instruction. When the instruction is scheduled at cycle `C`,
+  /// the resources are allocated in the past relative to `C`:
+  ///
+  ///       2      1      C     -1     -2     -3     -4     -5  ...
+  /// <-----|------|------|------|------|------|------|------|---
+  ///                     X0     X1     X1     X2   ---> direction of time
+  /// X0           (C+1, C]
+  /// X1                  (C,        C-2]
+  /// X2                              (C-2, C-3]
+  ///
+  /// Therefore, the formula to compute the interval for a resource
+  /// of an instruction that can be scheduled at cycle C in bottom-up
+  /// scheduling is:
+  ///
+  ///       [C-Cycle+1, C-StartAtCycle+1)
+  ///
+  ///
+  /// NOTE: In both cases, the number of cycles booked by a
+  /// resources is the value (Cycle - StartAtCycles).
+  static IntervalTy getResourceIntervalBottom(unsigned C, unsigned StartAtCycle,
+                                              unsigned Cycle) {
+    return std::make_pair<long, long>((long)C - (long)Cycle + 1L,
+                                      (long)C - (long)StartAtCycle + 1L);
+  }
+  static IntervalTy getResourceIntervalTop(unsigned C, unsigned StartAtCycle,
+                                           unsigned Cycle) {
+    return std::make_pair<long, long>((long)C + (long)StartAtCycle,
+                                      (long)C + (long)Cycle);
+  }
+
+private:
+  /// Finds the first cycle in which a resource can be allocated.
+  ///
+  /// The function uses the \param IntervalBuider [*] to build a
+  /// resource interval [a, b[ out of the input parameters \param
+  /// CurrCycle, \param StartAtCycle and \param Cycle.
+  ///
+  /// The function then loops through the intervals in the ResourceSegments
+  /// and shifts the interval [a, b[ and the ReturnCycle to the
+  /// right until there is no intersection between the intervals of
+  /// the \ref ResourceSegments instance and the new shifted [a, b[. When
+  /// this condition is met, the ReturnCycle  (which
+  /// correspond to the cycle in which the resource can be
+  /// allocated) is returned.
+  ///
+  ///               c = CurrCycle in input
+  ///               c   1   2   3   4   5   6   7   8   9   10 ... ---> (time
+  ///               flow)
+  ///  ResourceSegments...  [---)   [-------)           [-----------)
+  ///               c   [1     3[  -> StartAtCycle=1, Cycles=3
+  ///                 ++c   [1     3)
+  ///                     ++c   [1     3)
+  ///                         ++c   [1     3)
+  ///                             ++c   [1     3)
+  ///                                 ++c   [1     3)    ---> returns c
+  ///                                 incremented by 5 (c+5)
+  ///
+  ///
+  /// Notice that for bottom-up scheduling the diagram is slightly
+  /// different because the current cycle c is always on the right
+  /// of the interval [a, b) (see \ref
+  /// `getResourceIntervalBottom`). This is because the cycle
+  /// increments for bottom-up scheduling moved in the direction
+  /// opposite to the direction of time:
+  ///
+  ///     --------> direction of time.
+  ///     XXYZZZ    (resource usage)
+  ///     --------> direction of top-down execution cycles.
+  ///     <-------- direction of bottom-up execution cycles.
+  ///
+  /// Even though bottom-up scheduling moves against the flow of
+  /// time, the algorithm used to find the first free slot in between
+  /// intervals is the same as for top-down scheduling.
+  ///
+  /// [*] See \ref `getResourceIntervalTop` and
+  /// \ref `getResourceIntervalBottom` to see how such resource intervals
+  /// are built.
+  unsigned
+  getFirstAvailableAt(unsigned CurrCycle, unsigned StartAtCycle, unsigned Cycle,
+                      std::function<IntervalTy(unsigned, unsigned, unsigned)>
+                          IntervalBuilder) const;
+
+public:
+  /// getFirstAvailableAtFromBottom and getFirstAvailableAtFromTop
+  /// should be merged in a single function in which a function that
+  /// creates the `NewInterval` is passed as a parameter.
+  unsigned getFirstAvailableAtFromBottom(unsigned CurrCycle,
+                                         unsigned StartAtCycle,
+                                         unsigned Cycle) const {
+    return getFirstAvailableAt(CurrCycle, StartAtCycle, Cycle,
+                               getResourceIntervalBottom);
+  }
+  unsigned getFirstAvailableAtFromTop(unsigned CurrCycle, unsigned StartAtCycle,
+                                      unsigned Cycle) const {
+    return getFirstAvailableAt(CurrCycle, StartAtCycle, Cycle,
+                               getResourceIntervalTop);
+  }
+
+private:
+  std::list<IntervalTy> _Intervals;
+  /// Merge all adjacent intervals in the collection. For all pairs
+  /// of adjacient intervals, it performs [a, b) + [b, c) -> [a, c).
+  ///
+  /// Before performing the merge operation, the intervals are
+  /// sorted with \ref sort_predicate.
+  void sortAndMerge();
+
+public:
+  // constructor for empty set
+  explicit ResourceSegments(){};
+  bool empty() const { return _Intervals.empty(); }
+  explicit ResourceSegments(std::list<IntervalTy> Intervals)
+      : _Intervals(Intervals) {
+    sortAndMerge();
+  }
+
+  friend bool operator==(const ResourceSegments &c1,
+                         const ResourceSegments &c2) {
+    return c1._Intervals == c2._Intervals;
+  }
+#ifndef NDEBUG
+  friend llvm::raw_ostream &operator<<(llvm::raw_ostream &os,
+                                       const ResourceSegments &Segments) {
+    os << "{ ";
+    for (auto p : Segments._Intervals)
+      os << "[" << p.first << ", " << p.second << "), ";
+    os << "}\n";
+    return os;
+  }
+#endif
+};
+
 /// Each Scheduling boundary is associated with ready queues. It tracks the
 /// current cycle in the direction of movement, and maintains the state
 /// of "hazards" and other interlocks at the current cycle.
@@ -675,12 +892,14 @@ private:
   // Is the scheduled region resource limited vs. latency limited.
   bool IsResourceLimited;
 
-  // Record the highest cycle at which each resource has been reserved by a
-  // scheduled instruction.
-  SmallVector<unsigned, 16> ReservedCycles;
-
-  /// For each PIdx, stores first index into ReservedCycles that corresponds to
-  /// it.
+public:
+private:
+  /// Record how resources have been allocated across the cycles of
+  /// the execution.
+  std::map<unsigned, ResourceSegments> ReservedResourceSegments;
+  std::vector<unsigned> ReservedCycles;
+  /// For each PIdx, stores first index into ReservedResourceSegments that
+  /// corresponds to it.
   ///
   /// For example, consider the following 3 resources (ResourceCount =
   /// 3):
@@ -696,12 +915,14 @@ private:
   ///   +------------+--------+
   ///
   /// In this case, the total number of resource instances is 6. The
-  /// vector \ref ReservedCycles will have a slot for each instance. The
-  /// vector \ref ReservedCyclesIndex will track at what index the first
+  /// vector \ref ReservedResourceSegments will have a slot for each instance.
+  /// The vector \ref ReservedCyclesIndex will track at what index the first
   /// instance of the resource is found in the vector of \ref
-  /// ReservedCycles:
+  /// ReservedResourceSegments:
   ///
-  ///                              Indexes of instances in ReservedCycles
+  ///                              Indexes of instances in
+  ///                              ReservedResourceSegments
+  ///
   ///                              0   1   2   3   4  5
   /// ReservedCyclesIndex[0] = 0; [X0, X1,
   /// ReservedCyclesIndex[1] = 2;          Y0, Y1, Y2
@@ -787,11 +1008,13 @@ public:
   unsigned getLatencyStallCycles(SUnit *SU);
 
   unsigned getNextResourceCycleByInstance(unsigned InstanceIndex,
-                                          unsigned Cycles);
+                                          unsigned Cycles,
+                                          unsigned StartAtCycle);
 
   std::pair<unsigned, unsigned> getNextResourceCycle(const MCSchedClassDesc *SC,
                                                      unsigned PIdx,
-                                                     unsigned Cycles);
+                                                     unsigned Cycles,
+                                                     unsigned StartAtCycle);
 
   bool isUnbufferedGroup(unsigned PIdx) const {
     return SchedModel->getProcResource(PIdx)->SubUnitsIdxBegin &&
@@ -820,7 +1043,8 @@ public:
   void incExecutedResources(unsigned PIdx, unsigned Count);
 
   unsigned countResource(const MCSchedClassDesc *SC, unsigned PIdx,
-                         unsigned Cycles, unsigned ReadyCycle);
+                         unsigned Cycles, unsigned ReadyCycle,
+                         unsigned StartAtCycle);
 
   void bumpNode(SUnit *SU);
 

@@ -319,8 +319,6 @@ bool Legalizer::runOnMachineFunction(MachineFunction &MF) {
       getAnalysis<GISelCSEAnalysisWrapperPass>().getCSEWrapper();
   MachineOptimizationRemarkEmitter MORE(MF, /*MBFI=*/nullptr);
 
-  const size_t NumBlocks = MF.size();
-
   std::unique_ptr<MachineIRBuilder> MIRBuilder;
   GISelCSEInfo *CSEInfo = nullptr;
   bool EnableCSE = EnableCSEInLegalizer.getNumOccurrences()
@@ -353,16 +351,6 @@ bool Legalizer::runOnMachineFunction(MachineFunction &MF) {
   if (Result.FailedOn) {
     reportGISelFailure(MF, TPC, MORE, "gisel-legalize",
                        "unable to legalize instruction", *Result.FailedOn);
-    return false;
-  }
-  // For now don't support if new blocks are inserted - we would need to fix the
-  // outer loop for that.
-  if (MF.size() != NumBlocks) {
-    MachineOptimizationRemarkMissed R("gisel-legalize", "GISelFailure",
-                                      MF.getFunction().getSubprogram(),
-                                      /*MBB=*/nullptr);
-    R << "inserting blocks is not supported yet";
-    reportGISelFailure(MF, TPC, MORE, R);
     return false;
   }
 

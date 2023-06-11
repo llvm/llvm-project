@@ -15,32 +15,28 @@
 #include <errno.h>
 
 namespace __llvm_libc {
-namespace printf_core {
 namespace testing {
 
-class FormatSectionMatcher
-    : public __llvm_libc::testing::Matcher<FormatSection> {
-  FormatSection expected;
-  FormatSection actual;
+class FormatSectionMatcher : public Matcher<printf_core::FormatSection> {
+  printf_core::FormatSection expected;
+  printf_core::FormatSection actual;
 
 public:
-  FormatSectionMatcher(FormatSection expectedValue) : expected(expectedValue) {}
+  FormatSectionMatcher(printf_core::FormatSection expectedValue)
+      : expected(expectedValue) {}
 
-  bool match(FormatSection actualValue);
+  bool match(printf_core::FormatSection actualValue);
 
   void explainError() override;
 };
 
 } // namespace testing
-} // namespace printf_core
 } // namespace __llvm_libc
 
 #define EXPECT_PFORMAT_EQ(expected, actual)                                    \
-  EXPECT_THAT(actual, __llvm_libc::printf_core::testing::FormatSectionMatcher( \
-                          expected))
+  EXPECT_THAT(actual, __llvm_libc::testing::FormatSectionMatcher(expected))
 
 #define ASSERT_PFORMAT_EQ(expected, actual)                                    \
-  ASSERT_THAT(actual, __llvm_libc::printf_core::testing::FormatSectionMatcher( \
-                          expected))
+  ASSERT_THAT(actual, __llvm_libc::testing::FormatSectionMatcher(expected))
 
 #endif // LLVM_LIBC_UTILS_UNITTEST_PRINTF_MATCHER_H

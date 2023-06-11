@@ -1214,8 +1214,8 @@ WebAssemblyTargetLowering::LowerCall(CallLoweringInfo &CLI,
 
   // Lastly, if this is a call to a funcref we need to add an instruction
   // table.set to the chain and transform the call.
-  if (CLI.CB &&
-      WebAssembly::isFuncrefType(CLI.CB->getCalledOperand()->getType())) {
+  if (CLI.CB && WebAssembly::isWebAssemblyFuncrefType(
+                    CLI.CB->getCalledOperand()->getType())) {
     // In the absence of function references proposal where a funcref call is
     // lowered to call_ref, using reference types we generate a table.set to set
     // the funcref to a special table used solely for this purpose, followed by
@@ -2767,7 +2767,8 @@ static SDValue performBitcastCombine(SDNode *N,
   if (DCI.isBeforeLegalize() && VT.isScalarInteger() &&
       SrcVT.isFixedLengthVector() && SrcVT.getScalarType() == MVT::i1) {
     unsigned NumElts = SrcVT.getVectorNumElements();
-    assert(NumElts == 2 || NumElts == 4 || NumElts == 8 || NumElts == 16);
+    if (NumElts != 2 && NumElts != 4 && NumElts != 8 && NumElts != 16)
+      return SDValue();
     EVT Width = MVT::getIntegerVT(128 / NumElts);
     return DAG.getZExtOrTrunc(
         DAG.getNode(ISD::INTRINSIC_WO_CHAIN, DL, MVT::i32,

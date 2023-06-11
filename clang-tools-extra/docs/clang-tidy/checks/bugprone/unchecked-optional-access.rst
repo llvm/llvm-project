@@ -146,9 +146,8 @@ have a value. For example:
 Ensure that a value exists using common macros
 ----------------------------------------------
 
-The check is aware of common macros like ``CHECK``, ``DCHECK``, and
-``ASSERT_THAT``. Those can be used to ensure that an optional object has
-a value. For example:
+The check is aware of common macros like ``CHECK`` and ``DCHECK``. Those can be
+used to ensure that an optional object has a value. For example:
 
 .. code-block:: c++
 

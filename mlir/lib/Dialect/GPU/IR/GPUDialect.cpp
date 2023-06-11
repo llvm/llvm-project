@@ -147,8 +147,7 @@ void GPUDialect::initialize() {
   addTypes<AsyncTokenType>();
   addTypes<MMAMatrixType>();
   addTypes<SparseEnvHandleType>();
-  addTypes<SparseDnVecHandleType>();
-  addTypes<SparseDnMatHandleType>();
+  addTypes<SparseDnTensorHandleType>();
   addTypes<SparseSpMatHandleType>();
   addOperations<
 #define GET_OP_LIST
@@ -165,10 +164,8 @@ static std::string getSparseHandleKeyword(SparseHandleKind kind) {
   switch (kind) {
   case SparseHandleKind::Env:
     return "sparse.env_handle";
-  case SparseHandleKind::DnVec:
-    return "sparse.dnvec_handle";
-  case SparseHandleKind::DnMat:
-    return "sparse.dnmat_handle";
+  case SparseHandleKind::DnTensor:
+    return "sparse.dntensor_handle";
   case SparseHandleKind::SpMat:
     return "sparse.spmat_handle";
   }
@@ -221,10 +218,8 @@ Type GPUDialect::parseType(DialectAsmParser &parser) const {
 
   if (keyword == getSparseHandleKeyword(SparseHandleKind::Env))
     return SparseEnvHandleType::get(context);
-  if (keyword == getSparseHandleKeyword(SparseHandleKind::DnVec))
-    return SparseDnVecHandleType::get(context);
-  if (keyword == getSparseHandleKeyword(SparseHandleKind::DnMat))
-    return SparseDnMatHandleType::get(context);
+  if (keyword == getSparseHandleKeyword(SparseHandleKind::DnTensor))
+    return SparseDnTensorHandleType::get(context);
   if (keyword == getSparseHandleKeyword(SparseHandleKind::SpMat))
     return SparseSpMatHandleType::get(context);
 
@@ -238,10 +233,9 @@ void GPUDialect::printType(Type type, DialectAsmPrinter &os) const {
       .Case<AsyncTokenType>([&](Type) { os << "async.token"; })
       .Case<SparseEnvHandleType>(
           [&](Type) { os << getSparseHandleKeyword(SparseHandleKind::Env); })
-      .Case<SparseDnVecHandleType>(
-          [&](Type) { os << getSparseHandleKeyword(SparseHandleKind::DnVec); })
-      .Case<SparseDnMatHandleType>(
-          [&](Type) { os << getSparseHandleKeyword(SparseHandleKind::DnMat); })
+      .Case<SparseDnTensorHandleType>([&](Type) {
+        os << getSparseHandleKeyword(SparseHandleKind::DnTensor);
+      })
       .Case<SparseSpMatHandleType>(
           [&](Type) { os << getSparseHandleKeyword(SparseHandleKind::SpMat); })
       .Case<MMAMatrixType>([&](MMAMatrixType fragTy) {

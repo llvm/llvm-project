@@ -36,11 +36,23 @@ add_header_library(
     .platform_defs
     .float_properties
     libc.src.__support.builtin_wrappers
-    libc.src.__support.integer_to_string
     libc.src.__support.CPP.bit
-    libc.src.__support.CPP.string
     libc.src.__support.CPP.type_traits
     libc.src.__support.common
+)
+
+add_header_library(
+  fpbits_str
+  HDRS
+    fpbits_str.h
+  DEPENDS
+    .float_properties
+    .fp_bits
+    libc.src.__support.CPP.bit
+    libc.src.__support.CPP.type_traits
+    libc.src.__support.macros.attributes
+    libc.src.__support.common
+    libc.src.__support.integer_to_string
 )
 
 add_header_library(

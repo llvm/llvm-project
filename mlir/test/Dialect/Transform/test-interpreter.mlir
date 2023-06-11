@@ -1601,19 +1601,20 @@ module attributes { transform.with_named_sequence } {
 // -----
 
 // CHECK-LABEL: func @test_tracked_rewrite() {
-//  CHECK-NEXT:   "test.update_mapping"() {original_op = "test.replace_me"}
-//  CHECK-NEXT:   "test.drop_mapping"() {original_op = "test.replace_me"}
-//  CHECK-NEXT:   "test.update_mapping"() {original_op = "test.replace_me"}
+//  CHECK-NEXT:   transform.test_dummy_payload_op  {new_op} : () -> i1
+//  CHECK-NEXT:   transform.test_dummy_payload_op  {new_op} : () -> i1
+//  CHECK-NEXT:   return
 //  CHECK-NEXT: }
 func.func @test_tracked_rewrite() {
-  %0 = "test.replace_me"() {replacement = "test.update_mapping"} : () -> (i1)
-  %1 = "test.replace_me"() {replacement = "test.drop_mapping"} : () -> (i1)
-  %2 = "test.replace_me"() {replacement = "test.update_mapping"} : () -> (i1)
+  %0 = transform.test_dummy_payload_op {replace_me} : () -> (i1)
+  %1 = transform.test_dummy_payload_op {erase_me} : () -> (i1)
+  %2 = transform.test_dummy_payload_op {replace_me} : () -> (i1)
+  func.return
 }
 
 transform.sequence failures(propagate) {
 ^bb1(%arg1: !transform.any_op):
-  %0 = transform.structured.match ops{["test.replace_me"]} in %arg1 : (!transform.any_op) -> !transform.any_op
+  %0 = transform.structured.match ops{["transform.test_dummy_payload_op"]} in %arg1 : (!transform.any_op) -> !transform.any_op
   // expected-remark @below {{2 iterations}}
   transform.test_tracked_rewrite %0 : (!transform.any_op) -> ()
   // One replacement op (test.drop_mapping) is dropped from the mapping.

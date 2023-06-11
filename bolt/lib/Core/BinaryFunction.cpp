@@ -3611,14 +3611,6 @@ size_t BinaryFunction::computeHash(bool UseDFS,
   return Hash = std::hash<std::string>{}(HashString);
 }
 
-void BinaryFunction::computeBlockHashes() const {
-  for (const BinaryBasicBlock *BB : BasicBlocks) {
-    std::string Hash =
-        hashBlock(BC, *BB, [](const MCOperand &Op) { return std::string(); });
-    BB->setHash(std::hash<std::string>{}(Hash));
-  }
-}
-
 void BinaryFunction::insertBasicBlocks(
     BinaryBasicBlock *Start,
     std::vector<std::unique_ptr<BinaryBasicBlock>> &&NewBBs,

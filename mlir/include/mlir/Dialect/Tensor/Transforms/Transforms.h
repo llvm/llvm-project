@@ -56,12 +56,20 @@ void populateReassociativeReshapeFoldingPatterns(RewritePatternSet &patterns);
 
 /// Populates `patterns` with patterns that fold tensor.empty with
 /// tensor.[extract_slice|expand_shape|collapse_shape].
-void populateFoldTensorEmptyPatterns(RewritePatternSet &patterns);
+///
+/// If `singleUseOnly` is set to "true", only tensor.empty ops with a single
+/// use are folded.
+void populateFoldTensorEmptyPatterns(RewritePatternSet &patterns,
+                                     bool foldSingleUseOnly = false);
 
 /// Populates `patterns` with patterns that fold operations like `tensor.pad`
 /// and `tensor.extract_slice` into `tensor.pack` and `tensor.unpack` operations
 /// respectively.
 void populateFoldIntoPackAndUnpackPatterns(RewritePatternSet &patterns);
+
+/// Populates `patterns` with patterns that replace tensor ops (such as
+/// tensor.generate) with constants when possible.
+void populateRewriteAsConstantPatterns(RewritePatternSet &patterns);
 
 //===----------------------------------------------------------------------===//
 // Transform helpers
