@@ -5,7 +5,9 @@ target datalayout = "e-m:o-p270:32:32-p271:32:32-p272:64:64-i64:64-f80:128-n8:16
 
 
 declare void @use(ptr)
+declare void @use.i1(i1)
 declare void @llvm.assume(i1)
+declare i1 @cond()
 
 define void @test_monotonic_ptr_iv_inc_1_eq_to_uge(ptr %start, i16 %len) {
 ; CHECK-LABEL: @test_monotonic_ptr_iv_inc_1_eq_to_uge(
@@ -168,9 +170,9 @@ define void @test_ptr_iv_upper_may_be_less_than_start(ptr %start, i16 %len) {
 ; CHECK-NEXT:    [[C:%.*]] = icmp eq ptr [[PTR_IV]], [[UPPER]]
 ; CHECK-NEXT:    br i1 [[C]], label [[EXIT:%.*]], label [[FOR_BODY:%.*]]
 ; CHECK:       for.body:
-; CHECK-NEXT:    [[T_1:%.*]] = icmp uge ptr [[PTR_IV]], [[START]]
-; CHECK-NEXT:    [[T_2:%.*]] = icmp ult ptr [[PTR_IV]], [[UPPER]]
-; CHECK-NEXT:    [[AND:%.*]] = and i1 [[T_1]], [[T_2]]
+; CHECK-NEXT:    [[C_1:%.*]] = icmp uge ptr [[PTR_IV]], [[START]]
+; CHECK-NEXT:    [[C_2:%.*]] = icmp ult ptr [[PTR_IV]], [[UPPER]]
+; CHECK-NEXT:    [[AND:%.*]] = and i1 [[C_1]], [[C_2]]
 ; CHECK-NEXT:    br i1 [[AND]], label [[LOOP_LATCH]], label [[EXIT]]
 ; CHECK:       loop.latch:
 ; CHECK-NEXT:    call void @use(ptr [[PTR_IV]])
@@ -189,9 +191,9 @@ loop.header:
   br i1 %c, label %exit, label %for.body
 
 for.body:
-  %t.1 = icmp uge ptr %ptr.iv, %start
-  %t.2 = icmp ult ptr %ptr.iv, %upper
-  %and = and i1 %t.1, %t.2
+  %c.1 = icmp uge ptr %ptr.iv, %start
+  %c.2 = icmp ult ptr %ptr.iv, %upper
+  %and = and i1 %c.1, %c.2
   br i1 %and, label %loop.latch, label %exit
 
 loop.latch:
@@ -268,9 +270,9 @@ define void @test_no_ptr_iv_different_start(ptr %start, ptr %p, i16 %len) {
 ; CHECK-NEXT:    [[C:%.*]] = icmp eq ptr [[PTR_IV]], [[UPPER]]
 ; CHECK-NEXT:    br i1 [[C]], label [[EXIT]], label [[FOR_BODY:%.*]]
 ; CHECK:       for.body:
-; CHECK-NEXT:    [[T_1:%.*]] = icmp uge ptr [[PTR_IV]], [[START]]
-; CHECK-NEXT:    [[T_2:%.*]] = icmp ult ptr [[PTR_IV]], [[UPPER]]
-; CHECK-NEXT:    [[AND:%.*]] = and i1 [[T_1]], [[T_2]]
+; CHECK-NEXT:    [[C_1:%.*]] = icmp uge ptr [[PTR_IV]], [[START]]
+; CHECK-NEXT:    [[C_2:%.*]] = icmp ult ptr [[PTR_IV]], [[UPPER]]
+; CHECK-NEXT:    [[AND:%.*]] = and i1 [[C_1]], [[C_2]]
 ; CHECK-NEXT:    br i1 [[AND]], label [[LOOP_LATCH]], label [[EXIT]]
 ; CHECK:       loop.latch:
 ; CHECK-NEXT:    call void @use(ptr [[PTR_IV]])
@@ -293,9 +295,9 @@ loop.header:
   br i1 %c, label %exit, label %for.body
 
 for.body:
-  %t.1 = icmp uge ptr %ptr.iv, %start
-  %t.2 = icmp ult ptr %ptr.iv, %upper
-  %and = and i1 %t.1, %t.2
+  %c.1 = icmp uge ptr %ptr.iv, %start
+  %c.2 = icmp ult ptr %ptr.iv, %upper
+  %and = and i1 %c.1, %c.2
   br i1 %and, label %loop.latch, label %exit
 
 loop.latch:
@@ -320,9 +322,9 @@ define void @test_ptr_iv_not_inbounds(ptr %start, i16 %len) {
 ; CHECK-NEXT:    [[C:%.*]] = icmp eq ptr [[PTR_IV]], [[UPPER]]
 ; CHECK-NEXT:    br i1 [[C]], label [[EXIT]], label [[FOR_BODY:%.*]]
 ; CHECK:       for.body:
-; CHECK-NEXT:    [[T_1:%.*]] = icmp uge ptr [[PTR_IV]], [[START]]
-; CHECK-NEXT:    [[T_2:%.*]] = icmp ult ptr [[PTR_IV]], [[UPPER]]
-; CHECK-NEXT:    [[AND:%.*]] = and i1 [[T_1]], [[T_2]]
+; CHECK-NEXT:    [[C_1:%.*]] = icmp uge ptr [[PTR_IV]], [[START]]
+; CHECK-NEXT:    [[C_2:%.*]] = icmp ult ptr [[PTR_IV]], [[UPPER]]
+; CHECK-NEXT:    [[AND:%.*]] = and i1 [[C_1]], [[C_2]]
 ; CHECK-NEXT:    br i1 [[AND]], label [[LOOP_LATCH]], label [[EXIT]]
 ; CHECK:       loop.latch:
 ; CHECK-NEXT:    call void @use(ptr [[PTR_IV]])
@@ -345,9 +347,9 @@ loop.header:
   br i1 %c, label %exit, label %for.body
 
 for.body:
-  %t.1 = icmp uge ptr %ptr.iv, %start
-  %t.2 = icmp ult ptr %ptr.iv, %upper
-  %and = and i1 %t.1, %t.2
+  %c.1 = icmp uge ptr %ptr.iv, %start
+  %c.2 = icmp ult ptr %ptr.iv, %upper
+  %and = and i1 %c.1, %c.2
   br i1 %and, label %loop.latch, label %exit
 
 loop.latch:
@@ -372,9 +374,9 @@ define void @test_var_step_not_monotonic(ptr %start, i16 %len, i16 %step) {
 ; CHECK-NEXT:    [[C:%.*]] = icmp eq ptr [[PTR_IV]], [[UPPER]]
 ; CHECK-NEXT:    br i1 [[C]], label [[EXIT]], label [[FOR_BODY:%.*]]
 ; CHECK:       for.body:
-; CHECK-NEXT:    [[T_1:%.*]] = icmp uge ptr [[PTR_IV]], [[START]]
-; CHECK-NEXT:    [[T_2:%.*]] = icmp ult ptr [[PTR_IV]], [[UPPER]]
-; CHECK-NEXT:    [[AND:%.*]] = and i1 [[T_1]], [[T_2]]
+; CHECK-NEXT:    [[C_1:%.*]] = icmp uge ptr [[PTR_IV]], [[START]]
+; CHECK-NEXT:    [[C_2:%.*]] = icmp ult ptr [[PTR_IV]], [[UPPER]]
+; CHECK-NEXT:    [[AND:%.*]] = and i1 [[C_1]], [[C_2]]
 ; CHECK-NEXT:    br i1 [[AND]], label [[LOOP_LATCH]], label [[EXIT]]
 ; CHECK:       loop.latch:
 ; CHECK-NEXT:    call void @use(ptr [[PTR_IV]])
@@ -397,9 +399,9 @@ loop.header:
   br i1 %c, label %exit, label %for.body
 
 for.body:
-  %t.1 = icmp uge ptr %ptr.iv, %start
-  %t.2 = icmp ult ptr %ptr.iv, %upper
-  %and = and i1 %t.1, %t.2
+  %c.1 = icmp uge ptr %ptr.iv, %start
+  %c.2 = icmp ult ptr %ptr.iv, %upper
+  %and = and i1 %c.1, %c.2
   br i1 %and, label %loop.latch, label %exit
 
 loop.latch:
@@ -424,9 +426,9 @@ define void @test_monotonic_ptr_iv_step_neg_1(ptr %start, i16 %len) {
 ; CHECK-NEXT:    [[C:%.*]] = icmp eq ptr [[PTR_IV]], [[UPPER]]
 ; CHECK-NEXT:    br i1 [[C]], label [[EXIT]], label [[FOR_BODY:%.*]]
 ; CHECK:       for.body:
-; CHECK-NEXT:    [[T_1:%.*]] = icmp uge ptr [[PTR_IV]], [[START]]
-; CHECK-NEXT:    [[T_2:%.*]] = icmp ult ptr [[PTR_IV]], [[UPPER]]
-; CHECK-NEXT:    [[AND:%.*]] = and i1 [[T_1]], [[T_2]]
+; CHECK-NEXT:    [[C_1:%.*]] = icmp uge ptr [[PTR_IV]], [[START]]
+; CHECK-NEXT:    [[C_2:%.*]] = icmp ult ptr [[PTR_IV]], [[UPPER]]
+; CHECK-NEXT:    [[AND:%.*]] = and i1 [[C_1]], [[C_2]]
 ; CHECK-NEXT:    br i1 [[AND]], label [[LOOP_LATCH]], label [[EXIT]]
 ; CHECK:       loop.latch:
 ; CHECK-NEXT:    call void @use(ptr [[PTR_IV]])
@@ -449,9 +451,9 @@ loop.header:
   br i1 %c, label %exit, label %for.body
 
 for.body:
-  %t.1 = icmp uge ptr %ptr.iv, %start
-  %t.2 = icmp ult ptr %ptr.iv, %upper
-  %and = and i1 %t.1, %t.2
+  %c.1 = icmp uge ptr %ptr.iv, %start
+  %c.2 = icmp ult ptr %ptr.iv, %upper
+  %and = and i1 %c.1, %c.2
   br i1 %and, label %loop.latch, label %exit
 
 loop.latch:
@@ -476,9 +478,9 @@ define void @test_monotonic_ptr_iv_step_sign_unknown(ptr %start, i16 %len, i16 %
 ; CHECK-NEXT:    [[C:%.*]] = icmp eq ptr [[PTR_IV]], [[UPPER]]
 ; CHECK-NEXT:    br i1 [[C]], label [[EXIT]], label [[FOR_BODY:%.*]]
 ; CHECK:       for.body:
-; CHECK-NEXT:    [[T_1:%.*]] = icmp uge ptr [[PTR_IV]], [[START]]
-; CHECK-NEXT:    [[T_2:%.*]] = icmp ult ptr [[PTR_IV]], [[UPPER]]
-; CHECK-NEXT:    [[AND:%.*]] = and i1 [[T_1]], [[T_2]]
+; CHECK-NEXT:    [[C_1:%.*]] = icmp uge ptr [[PTR_IV]], [[START]]
+; CHECK-NEXT:    [[C_2:%.*]] = icmp ult ptr [[PTR_IV]], [[UPPER]]
+; CHECK-NEXT:    [[AND:%.*]] = and i1 [[C_1]], [[C_2]]
 ; CHECK-NEXT:    br i1 [[AND]], label [[LOOP_LATCH]], label [[EXIT]]
 ; CHECK:       loop.latch:
 ; CHECK-NEXT:    call void @use(ptr [[PTR_IV]])
@@ -501,9 +503,9 @@ loop.header:
   br i1 %c, label %exit, label %for.body
 
 for.body:
-  %t.1 = icmp uge ptr %ptr.iv, %start
-  %t.2 = icmp ult ptr %ptr.iv, %upper
-  %and = and i1 %t.1, %t.2
+  %c.1 = icmp uge ptr %ptr.iv, %start
+  %c.2 = icmp ult ptr %ptr.iv, %upper
+  %and = and i1 %c.1, %c.2
   br i1 %and, label %loop.latch, label %exit
 
 loop.latch:
@@ -571,6 +573,69 @@ exit:
   ret void
 }
 
+define void @test_monotonic_ptr_iv_step_sign_positive_through_assume_multi_exit(ptr %start, i16 %len, i16 %step) {
+; CHECK-LABEL: @test_monotonic_ptr_iv_step_sign_positive_through_assume_multi_exit(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[STEP_POS:%.*]] = icmp sge i16 [[STEP:%.*]], 0
+; CHECK-NEXT:    call void @llvm.assume(i1 [[STEP_POS]])
+; CHECK-NEXT:    [[UPPER:%.*]] = getelementptr inbounds i32, ptr [[START:%.*]], i16 [[LEN:%.*]]
+; CHECK-NEXT:    [[LEN_NEG:%.*]] = icmp slt i16 [[LEN]], 0
+; CHECK-NEXT:    br i1 [[LEN_NEG]], label [[EXIT:%.*]], label [[LOOP_PH:%.*]]
+; CHECK:       loop.ph:
+; CHECK-NEXT:    br label [[LOOP_HEADER:%.*]]
+; CHECK:       loop.header:
+; CHECK-NEXT:    [[PTR_IV:%.*]] = phi ptr [ [[START]], [[LOOP_PH]] ], [ [[PTR_IV_NEXT:%.*]], [[LOOP_LATCH:%.*]] ]
+; CHECK-NEXT:    [[C:%.*]] = icmp eq ptr [[PTR_IV]], [[UPPER]]
+; CHECK-NEXT:    br i1 [[C]], label [[EXIT]], label [[FOR_BODY:%.*]]
+; CHECK:       for.body:
+; CHECK-NEXT:    [[C_1:%.*]] = call i1 @cond()
+; CHECK-NEXT:    br i1 [[C_1]], label [[THEN:%.*]], label [[EXIT]]
+; CHECK:       then:
+; CHECK-NEXT:    [[C_2:%.*]] = icmp uge ptr [[PTR_IV]], [[START]]
+; CHECK-NEXT:    [[C_3:%.*]] = icmp ult ptr [[PTR_IV]], [[UPPER]]
+; CHECK-NEXT:    [[AND:%.*]] = and i1 [[C_2]], [[C_3]]
+; CHECK-NEXT:    br i1 [[AND]], label [[LOOP_LATCH]], label [[EXIT]]
+; CHECK:       loop.latch:
+; CHECK-NEXT:    call void @use(ptr [[PTR_IV]])
+; CHECK-NEXT:    [[PTR_IV_NEXT]] = getelementptr inbounds i32, ptr [[PTR_IV]], i16 [[STEP]]
+; CHECK-NEXT:    br label [[LOOP_HEADER]]
+; CHECK:       exit:
+; CHECK-NEXT:    ret void
+;
+entry:
+  %step.pos = icmp sge i16 %step, 0
+  call void @llvm.assume(i1 %step.pos)
+  %upper = getelementptr inbounds i32, ptr %start, i16 %len
+  %len.neg = icmp slt i16 %len, 0
+  br i1 %len.neg, label %exit, label %loop.ph
+
+loop.ph:
+  br label %loop.header
+
+loop.header:
+  %ptr.iv = phi ptr [ %start, %loop.ph ], [ %ptr.iv.next, %loop.latch ]
+  %c = icmp eq ptr %ptr.iv, %upper
+  br i1 %c, label %exit, label %for.body
+
+for.body:
+  %c.1 = call i1 @cond()
+  br i1 %c.1, label %then, label %exit
+
+then:
+  %c.2 = icmp uge ptr %ptr.iv, %start
+  %c.3 = icmp ult ptr %ptr.iv, %upper
+  %and = and i1 %c.2, %c.3
+  br i1 %and, label %loop.latch, label %exit
+
+loop.latch:
+  call void @use(ptr %ptr.iv)
+  %ptr.iv.next = getelementptr inbounds i32, ptr %ptr.iv, i16 %step
+  br label %loop.header
+
+exit:
+  ret void
+}
+
 define void @test_monotonic_ptr_iv_step_sign_negative_through_assume(ptr %start, i16 %len, i16 %step) {
 ; CHECK-LABEL: @test_monotonic_ptr_iv_step_sign_negative_through_assume(
 ; CHECK-NEXT:  entry:
@@ -586,9 +651,9 @@ define void @test_monotonic_ptr_iv_step_sign_negative_through_assume(ptr %start,
 ; CHECK-NEXT:    [[C:%.*]] = icmp eq ptr [[PTR_IV]], [[UPPER]]
 ; CHECK-NEXT:    br i1 [[C]], label [[EXIT]], label [[FOR_BODY:%.*]]
 ; CHECK:       for.body:
-; CHECK-NEXT:    [[T_1:%.*]] = icmp uge ptr [[PTR_IV]], [[START]]
-; CHECK-NEXT:    [[T_2:%.*]] = icmp ult ptr [[PTR_IV]], [[UPPER]]
-; CHECK-NEXT:    [[AND:%.*]] = and i1 [[T_1]], [[T_2]]
+; CHECK-NEXT:    [[C_1:%.*]] = icmp uge ptr [[PTR_IV]], [[START]]
+; CHECK-NEXT:    [[C_2:%.*]] = icmp ult ptr [[PTR_IV]], [[UPPER]]
+; CHECK-NEXT:    [[AND:%.*]] = and i1 [[C_1]], [[C_2]]
 ; CHECK-NEXT:    br i1 [[AND]], label [[LOOP_LATCH]], label [[EXIT]]
 ; CHECK:       loop.latch:
 ; CHECK-NEXT:    call void @use(ptr [[PTR_IV]])
@@ -613,9 +678,9 @@ loop.header:
   br i1 %c, label %exit, label %for.body
 
 for.body:
-  %t.1 = icmp uge ptr %ptr.iv, %start
-  %t.2 = icmp ult ptr %ptr.iv, %upper
-  %and = and i1 %t.1, %t.2
+  %c.1 = icmp uge ptr %ptr.iv, %start
+  %c.2 = icmp ult ptr %ptr.iv, %upper
+  %and = and i1 %c.1, %c.2
   br i1 %and, label %loop.latch, label %exit
 
 loop.latch:
@@ -624,5 +689,420 @@ loop.latch:
   br label %loop.header
 
 exit:
+  ret void
+}
+
+define void @test_monotonic_ptr_iv_cond_doesnt_control_exit(ptr %start, i16 %len) {
+; CHECK-LABEL: @test_monotonic_ptr_iv_cond_doesnt_control_exit(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[UPPER:%.*]] = getelementptr inbounds i32, ptr [[START:%.*]], i16 [[LEN:%.*]]
+; CHECK-NEXT:    [[LEN_NEG:%.*]] = icmp slt i16 [[LEN]], 0
+; CHECK-NEXT:    br i1 [[LEN_NEG]], label [[EXIT:%.*]], label [[LOOP_PH:%.*]]
+; CHECK:       loop.ph:
+; CHECK-NEXT:    br label [[LOOP_HEADER:%.*]]
+; CHECK:       loop.header:
+; CHECK-NEXT:    [[PTR_IV:%.*]] = phi ptr [ [[START]], [[LOOP_PH]] ], [ [[PTR_IV_NEXT:%.*]], [[LOOP_LATCH:%.*]] ]
+; CHECK-NEXT:    [[C_0:%.*]] = call i1 @cond()
+; CHECK-NEXT:    br i1 [[C_0]], label [[EXIT]], label [[FOR_BODY:%.*]]
+; CHECK:       for.body:
+; CHECK-NEXT:    [[C_1:%.*]] = icmp ne ptr [[PTR_IV]], [[UPPER]]
+; CHECK-NEXT:    br i1 [[C_1]], label [[THEN:%.*]], label [[LOOP_LATCH]]
+; CHECK:       then:
+; CHECK-NEXT:    [[T_1:%.*]] = icmp uge ptr [[PTR_IV]], [[START]]
+; CHECK-NEXT:    [[T_2:%.*]] = icmp ult ptr [[PTR_IV]], [[UPPER]]
+; CHECK-NEXT:    [[AND:%.*]] = and i1 [[T_1]], [[T_2]]
+; CHECK-NEXT:    call void @use.i1(i1 [[AND]])
+; CHECK-NEXT:    br label [[LOOP_LATCH]]
+; CHECK:       loop.latch:
+; CHECK-NEXT:    call void @use(ptr [[PTR_IV]])
+; CHECK-NEXT:    [[PTR_IV_NEXT]] = getelementptr inbounds i32, ptr [[PTR_IV]], i16 1
+; CHECK-NEXT:    br label [[LOOP_HEADER]]
+; CHECK:       exit:
+; CHECK-NEXT:    ret void
+;
+entry:
+  %upper = getelementptr inbounds i32, ptr %start, i16 %len
+  %len.neg = icmp slt i16 %len, 0
+  br i1 %len.neg, label %exit, label %loop.ph
+
+loop.ph:
+  br label %loop.header
+
+loop.header:
+  %ptr.iv = phi ptr [ %start, %loop.ph ], [ %ptr.iv.next, %loop.latch ]
+  %c.0 = call i1 @cond()
+  br i1 %c.0, label %exit, label %for.body
+
+for.body:
+  %c.1 = icmp ne ptr %ptr.iv, %upper
+  br i1 %c.1, label %then, label %loop.latch
+
+then:
+  %t.1 = icmp uge ptr %ptr.iv, %start
+  %t.2 = icmp ult ptr %ptr.iv, %upper
+  %and = and i1 %t.1, %t.2
+  call void @use.i1(i1 %and)
+  br label %loop.latch
+
+loop.latch:
+  call void @use(ptr %ptr.iv)
+  %ptr.iv.next = getelementptr inbounds i32, ptr %ptr.iv, i16 1
+  br label %loop.header
+
+exit:
+  ret void
+}
+
+
+define void @test_monotonic_ptr_iv_cond_doesnt_dominate_checks(ptr %start, i16 %len) {
+; CHECK-LABEL: @test_monotonic_ptr_iv_cond_doesnt_dominate_checks(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[UPPER:%.*]] = getelementptr inbounds i32, ptr [[START:%.*]], i16 [[LEN:%.*]]
+; CHECK-NEXT:    [[LEN_NEG:%.*]] = icmp slt i16 [[LEN]], 0
+; CHECK-NEXT:    br i1 [[LEN_NEG]], label [[EXIT:%.*]], label [[LOOP_PH:%.*]]
+; CHECK:       loop.ph:
+; CHECK-NEXT:    br label [[LOOP_HEADER:%.*]]
+; CHECK:       loop.header:
+; CHECK-NEXT:    [[PTR_IV:%.*]] = phi ptr [ [[START]], [[LOOP_PH]] ], [ [[PTR_IV_NEXT:%.*]], [[LOOP_LATCH:%.*]] ]
+; CHECK-NEXT:    [[C_0:%.*]] = call i1 @cond()
+; CHECK-NEXT:    br i1 [[C_0]], label [[EXIT]], label [[FOR_BODY:%.*]]
+; CHECK:       for.body:
+; CHECK-NEXT:    [[C_1:%.*]] = icmp ne ptr [[PTR_IV]], [[UPPER]]
+; CHECK-NEXT:    br i1 [[C_1]], label [[THEN:%.*]], label [[LOOP_LATCH]]
+; CHECK:       then:
+; CHECK-NEXT:    br label [[LOOP_LATCH]]
+; CHECK:       loop.latch:
+; CHECK-NEXT:    [[C_2:%.*]] = icmp uge ptr [[PTR_IV]], [[START]]
+; CHECK-NEXT:    [[C_3:%.*]] = icmp ult ptr [[PTR_IV]], [[UPPER]]
+; CHECK-NEXT:    [[AND:%.*]] = and i1 [[C_2]], [[C_3]]
+; CHECK-NEXT:    call void @use.i1(i1 [[AND]])
+; CHECK-NEXT:    call void @use(ptr [[PTR_IV]])
+; CHECK-NEXT:    [[PTR_IV_NEXT]] = getelementptr inbounds i32, ptr [[PTR_IV]], i16 1
+; CHECK-NEXT:    br label [[LOOP_HEADER]]
+; CHECK:       exit:
+; CHECK-NEXT:    ret void
+;
+entry:
+  %upper = getelementptr inbounds i32, ptr %start, i16 %len
+  %len.neg = icmp slt i16 %len, 0
+  br i1 %len.neg, label %exit, label %loop.ph
+
+loop.ph:
+  br label %loop.header
+
+loop.header:
+  %ptr.iv = phi ptr [ %start, %loop.ph ], [ %ptr.iv.next, %loop.latch ]
+  %c.0 = call i1 @cond()
+  br i1 %c.0, label %exit, label %for.body
+
+for.body:
+  %c.1 = icmp ne ptr %ptr.iv, %upper
+  br i1 %c.1, label %then, label %loop.latch
+
+then:
+  br label %loop.latch
+
+loop.latch:
+  %c.2 = icmp uge ptr %ptr.iv, %start
+  %c.3 = icmp ult ptr %ptr.iv, %upper
+  %and = and i1 %c.2, %c.3
+  call void @use.i1(i1 %and)
+  call void @use(ptr %ptr.iv)
+  %ptr.iv.next = getelementptr inbounds i32, ptr %ptr.iv, i16 1
+  br label %loop.header
+
+exit:
+  ret void
+}
+
+define void @test_monotonic_ptr_iv_inc_2(ptr %start, i16 %len) {
+; CHECK-LABEL: @test_monotonic_ptr_iv_inc_2(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[UPPER:%.*]] = getelementptr inbounds i32, ptr [[START:%.*]], i16 [[LEN:%.*]]
+; CHECK-NEXT:    [[LEN_NEG:%.*]] = icmp slt i16 [[LEN]], 0
+; CHECK-NEXT:    br i1 [[LEN_NEG]], label [[EXIT:%.*]], label [[LOOP_PH:%.*]]
+; CHECK:       loop.ph:
+; CHECK-NEXT:    br label [[LOOP_HEADER:%.*]]
+; CHECK:       loop.header:
+; CHECK-NEXT:    [[PTR_IV:%.*]] = phi ptr [ [[START]], [[LOOP_PH]] ], [ [[PTR_IV_NEXT:%.*]], [[LOOP_LATCH:%.*]] ]
+; CHECK-NEXT:    [[C:%.*]] = icmp eq ptr [[PTR_IV]], [[UPPER]]
+; CHECK-NEXT:    br i1 [[C]], label [[EXIT]], label [[FOR_BODY:%.*]]
+; CHECK:       for.body:
+; CHECK-NEXT:    [[T_1:%.*]] = icmp uge ptr [[PTR_IV]], [[START]]
+; CHECK-NEXT:    [[T_2:%.*]] = icmp ult ptr [[PTR_IV]], [[UPPER]]
+; CHECK-NEXT:    [[AND:%.*]] = and i1 [[T_1]], [[T_2]]
+; CHECK-NEXT:    br i1 [[AND]], label [[LOOP_LATCH]], label [[EXIT]]
+; CHECK:       loop.latch:
+; CHECK-NEXT:    call void @use(ptr [[PTR_IV]])
+; CHECK-NEXT:    [[PTR_IV_NEXT]] = getelementptr inbounds i32, ptr [[PTR_IV]], i16 2
+; CHECK-NEXT:    br label [[LOOP_HEADER]]
+; CHECK:       exit:
+; CHECK-NEXT:    ret void
+;
+entry:
+  %upper = getelementptr inbounds i32, ptr %start, i16 %len
+  %len.neg = icmp slt i16 %len, 0
+  br i1 %len.neg, label %exit, label %loop.ph
+
+loop.ph:
+  br label %loop.header
+
+loop.header:
+  %ptr.iv = phi ptr [ %start, %loop.ph ], [ %ptr.iv.next, %loop.latch ]
+  %c = icmp eq ptr %ptr.iv, %upper
+  br i1 %c, label %exit, label %for.body
+
+for.body:
+  %t.1 = icmp uge ptr %ptr.iv, %start
+  %t.2 = icmp ult ptr %ptr.iv, %upper
+  %and = and i1 %t.1, %t.2
+  br i1 %and, label %loop.latch, label %exit
+
+loop.latch:
+  call void @use(ptr %ptr.iv)
+  %ptr.iv.next = getelementptr inbounds i32, ptr %ptr.iv, i16 2
+  br label %loop.header
+
+exit:
+  ret void
+}
+
+define void @test_monotonic_ptr_iv_step_2_multi_exit(ptr %start, i16 %len) {
+; CHECK-LABEL: @test_monotonic_ptr_iv_step_2_multi_exit(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[UPPER:%.*]] = getelementptr inbounds i32, ptr [[START:%.*]], i16 [[LEN:%.*]]
+; CHECK-NEXT:    [[LEN_NEG:%.*]] = icmp slt i16 [[LEN]], 0
+; CHECK-NEXT:    br i1 [[LEN_NEG]], label [[EXIT:%.*]], label [[LOOP_PH:%.*]]
+; CHECK:       loop.ph:
+; CHECK-NEXT:    br label [[LOOP_HEADER:%.*]]
+; CHECK:       loop.header:
+; CHECK-NEXT:    [[PTR_IV:%.*]] = phi ptr [ [[START]], [[LOOP_PH]] ], [ [[PTR_IV_NEXT:%.*]], [[LOOP_LATCH:%.*]] ]
+; CHECK-NEXT:    [[C_1:%.*]] = icmp eq ptr [[PTR_IV]], [[UPPER]]
+; CHECK-NEXT:    br i1 [[C_1]], label [[EXIT]], label [[FOR_BODY:%.*]]
+; CHECK:       for.body:
+; CHECK-NEXT:    [[C_0:%.*]] = call i1 @cond()
+; CHECK-NEXT:    br i1 [[C_0]], label [[EXIT]], label [[THEN:%.*]]
+; CHECK:       then:
+; CHECK-NEXT:    [[C_2:%.*]] = icmp uge ptr [[PTR_IV]], [[START]]
+; CHECK-NEXT:    [[C_3:%.*]] = icmp ult ptr [[PTR_IV]], [[UPPER]]
+; CHECK-NEXT:    [[AND:%.*]] = and i1 [[C_2]], [[C_3]]
+; CHECK-NEXT:    call void @use.i1(i1 [[AND]])
+; CHECK-NEXT:    br label [[LOOP_LATCH]]
+; CHECK:       loop.latch:
+; CHECK-NEXT:    call void @use(ptr [[PTR_IV]])
+; CHECK-NEXT:    [[PTR_IV_NEXT]] = getelementptr inbounds i32, ptr [[PTR_IV]], i16 2
+; CHECK-NEXT:    br label [[LOOP_HEADER]]
+; CHECK:       exit:
+; CHECK-NEXT:    ret void
+;
+entry:
+  %upper = getelementptr inbounds i32, ptr %start, i16 %len
+  %len.neg = icmp slt i16 %len, 0
+  br i1 %len.neg, label %exit, label %loop.ph
+
+loop.ph:
+  br label %loop.header
+
+loop.header:
+  %ptr.iv = phi ptr [ %start, %loop.ph ], [ %ptr.iv.next, %loop.latch ]
+  %c.1 = icmp eq ptr %ptr.iv, %upper
+  br i1 %c.1, label %exit, label %for.body
+
+for.body:
+  %c.0 = call i1 @cond()
+  br i1 %c.0, label %exit, label %then
+
+then:
+  %c.2 = icmp uge ptr %ptr.iv, %start
+  %c.3 = icmp ult ptr %ptr.iv, %upper
+  %and = and i1 %c.2, %c.3
+  call void @use.i1(i1 %and)
+  br label %loop.latch
+
+loop.latch:
+  call void @use(ptr %ptr.iv)
+  %ptr.iv.next = getelementptr inbounds i32, ptr %ptr.iv, i16 2
+  br label %loop.header
+
+exit:
+  ret void
+}
+
+define void @test_monotonic_ptr_iv_step_2_cond_controls_single_exit(ptr %start, i16 %len) {
+; CHECK-LABEL: @test_monotonic_ptr_iv_step_2_cond_controls_single_exit(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[UPPER:%.*]] = getelementptr inbounds i32, ptr [[START:%.*]], i16 [[LEN:%.*]]
+; CHECK-NEXT:    [[LEN_NEG:%.*]] = icmp slt i16 [[LEN]], 0
+; CHECK-NEXT:    br i1 [[LEN_NEG]], label [[EXIT:%.*]], label [[LOOP_PH:%.*]]
+; CHECK:       loop.ph:
+; CHECK-NEXT:    br label [[LOOP_HEADER:%.*]]
+; CHECK:       loop.header:
+; CHECK-NEXT:    [[PTR_IV:%.*]] = phi ptr [ [[START]], [[LOOP_PH]] ], [ [[PTR_IV_NEXT:%.*]], [[LOOP_LATCH:%.*]] ]
+; CHECK-NEXT:    [[C_1:%.*]] = icmp eq ptr [[PTR_IV]], [[UPPER]]
+; CHECK-NEXT:    br i1 [[C_1]], label [[EXIT]], label [[FOR_BODY:%.*]]
+; CHECK:       for.body:
+; CHECK-NEXT:    [[T_1:%.*]] = icmp uge ptr [[PTR_IV]], [[START]]
+; CHECK-NEXT:    [[T_2:%.*]] = icmp ult ptr [[PTR_IV]], [[UPPER]]
+; CHECK-NEXT:    [[AND:%.*]] = and i1 [[T_1]], [[T_2]]
+; CHECK-NEXT:    call void @use.i1(i1 [[AND]])
+; CHECK-NEXT:    br label [[LOOP_LATCH]]
+; CHECK:       loop.latch:
+; CHECK-NEXT:    call void @use(ptr [[PTR_IV]])
+; CHECK-NEXT:    [[PTR_IV_NEXT]] = getelementptr inbounds i32, ptr [[PTR_IV]], i16 2
+; CHECK-NEXT:    br label [[LOOP_HEADER]]
+; CHECK:       exit:
+; CHECK-NEXT:    ret void
+;
+entry:
+  %upper = getelementptr inbounds i32, ptr %start, i16 %len
+  %len.neg = icmp slt i16 %len, 0
+  br i1 %len.neg, label %exit, label %loop.ph
+
+loop.ph:
+  br label %loop.header
+
+loop.header:
+  %ptr.iv = phi ptr [ %start, %loop.ph ], [ %ptr.iv.next, %loop.latch ]
+  %c.1 = icmp eq ptr %ptr.iv, %upper
+  br i1 %c.1, label %exit, label %for.body
+
+for.body:
+  %t.1 = icmp uge ptr %ptr.iv, %start
+  %t.2 = icmp ult ptr %ptr.iv, %upper
+  %and = and i1 %t.1, %t.2
+  call void @use.i1(i1 %and)
+  br label %loop.latch
+
+loop.latch:
+  call void @use(ptr %ptr.iv)
+  %ptr.iv.next = getelementptr inbounds i32, ptr %ptr.iv, i16 2
+  br label %loop.header
+
+exit:
+  ret void
+}
+
+define void @test_monotonic_ptr_iv_step_2_cond_doesnt_control_exit(ptr %start, i16 %len) {
+; CHECK-LABEL: @test_monotonic_ptr_iv_step_2_cond_doesnt_control_exit(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[UPPER:%.*]] = getelementptr inbounds i32, ptr [[START:%.*]], i16 [[LEN:%.*]]
+; CHECK-NEXT:    [[LEN_NEG:%.*]] = icmp slt i16 [[LEN]], 0
+; CHECK-NEXT:    br i1 [[LEN_NEG]], label [[EXIT:%.*]], label [[LOOP_PH:%.*]]
+; CHECK:       loop.ph:
+; CHECK-NEXT:    br label [[LOOP_HEADER:%.*]]
+; CHECK:       loop.header:
+; CHECK-NEXT:    [[PTR_IV:%.*]] = phi ptr [ [[START]], [[LOOP_PH]] ], [ [[PTR_IV_NEXT:%.*]], [[LOOP_LATCH:%.*]] ]
+; CHECK-NEXT:    [[C_0:%.*]] = call i1 @cond()
+; CHECK-NEXT:    br i1 [[C_0]], label [[EXIT]], label [[FOR_BODY:%.*]]
+; CHECK:       for.body:
+; CHECK-NEXT:    [[C_1:%.*]] = icmp ne ptr [[PTR_IV]], [[UPPER]]
+; CHECK-NEXT:    br i1 [[C_1]], label [[THEN:%.*]], label [[LOOP_LATCH]]
+; CHECK:       then:
+; CHECK-NEXT:    [[C_2:%.*]] = icmp uge ptr [[PTR_IV]], [[START]]
+; CHECK-NEXT:    [[C_3:%.*]] = icmp ult ptr [[PTR_IV]], [[UPPER]]
+; CHECK-NEXT:    [[AND:%.*]] = and i1 [[C_2]], [[C_3]]
+; CHECK-NEXT:    call void @use.i1(i1 [[AND]])
+; CHECK-NEXT:    br label [[LOOP_LATCH]]
+; CHECK:       loop.latch:
+; CHECK-NEXT:    call void @use(ptr [[PTR_IV]])
+; CHECK-NEXT:    [[PTR_IV_NEXT]] = getelementptr inbounds i32, ptr [[PTR_IV]], i16 2
+; CHECK-NEXT:    br label [[LOOP_HEADER]]
+; CHECK:       exit:
+; CHECK-NEXT:    ret void
+;
+entry:
+  %upper = getelementptr inbounds i32, ptr %start, i16 %len
+  %len.neg = icmp slt i16 %len, 0
+  br i1 %len.neg, label %exit, label %loop.ph
+
+loop.ph:
+  br label %loop.header
+
+loop.header:
+  %ptr.iv = phi ptr [ %start, %loop.ph ], [ %ptr.iv.next, %loop.latch ]
+  %c.0 = call i1 @cond()
+  br i1 %c.0, label %exit, label %for.body
+
+for.body:
+  %c.1 = icmp ne ptr %ptr.iv, %upper
+  br i1 %c.1, label %then, label %loop.latch
+
+then:
+  %c.2 = icmp uge ptr %ptr.iv, %start
+  %c.3 = icmp ult ptr %ptr.iv, %upper
+  %and = and i1 %c.2, %c.3
+  call void @use.i1(i1 %and)
+  br label %loop.latch
+
+loop.latch:
+  call void @use(ptr %ptr.iv)
+  %ptr.iv.next = getelementptr inbounds i32, ptr %ptr.iv, i16 2
+  br label %loop.header
+
+exit:
+  ret void
+}
+
+
+define void @test_monotonic_ptr_iv_inc_1_check_outside_loop(ptr %start, i16 %len) {
+; CHECK-LABEL: @test_monotonic_ptr_iv_inc_1_check_outside_loop(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[UPPER:%.*]] = getelementptr inbounds i32, ptr [[START:%.*]], i16 [[LEN:%.*]]
+; CHECK-NEXT:    [[LEN_NEG:%.*]] = icmp sge i16 [[LEN]], 0
+; CHECK-NEXT:    call void @llvm.assume(i1 [[LEN_NEG]])
+; CHECK-NEXT:    br label [[LOOP_PH:%.*]]
+; CHECK:       loop.ph:
+; CHECK-NEXT:    br label [[LOOP_HEADER:%.*]]
+; CHECK:       loop.header:
+; CHECK-NEXT:    [[PTR_IV:%.*]] = phi ptr [ [[START]], [[LOOP_PH]] ], [ [[PTR_IV_NEXT:%.*]], [[LOOP_LATCH:%.*]] ]
+; CHECK-NEXT:    [[C_0:%.*]] = call i1 @cond()
+; CHECK-NEXT:    br i1 [[C_0]], label [[EXIT:%.*]], label [[LOOP_LATCH]]
+; CHECK:       loop.latch:
+; CHECK-NEXT:    call void @use(ptr [[PTR_IV]])
+; CHECK-NEXT:    [[PTR_IV_NEXT]] = getelementptr inbounds i32, ptr [[PTR_IV]], i16 1
+; CHECK-NEXT:    br label [[LOOP_HEADER]]
+; CHECK:       exit:
+; CHECK-NEXT:    [[C_1:%.*]] = icmp ne ptr [[PTR_IV]], [[UPPER]]
+; CHECK-NEXT:    br i1 [[C_1]], label [[THEN:%.*]], label [[EXIT_2:%.*]]
+; CHECK:       then:
+; CHECK-NEXT:    [[C_2:%.*]] = icmp uge ptr [[PTR_IV]], [[START]]
+; CHECK-NEXT:    [[C_3:%.*]] = icmp ult ptr [[PTR_IV]], [[UPPER]]
+; CHECK-NEXT:    [[AND:%.*]] = and i1 [[C_2]], [[C_3]]
+; CHECK-NEXT:    call void @use.i1(i1 [[AND]])
+; CHECK-NEXT:    br label [[EXIT_2]]
+; CHECK:       exit.2:
+; CHECK-NEXT:    ret void
+;
+entry:
+  %upper = getelementptr inbounds i32, ptr %start, i16 %len
+  %len.neg = icmp sge i16 %len, 0
+  call void @llvm.assume(i1 %len.neg)
+  br label %loop.ph
+
+loop.ph:
+  br label %loop.header
+
+loop.header:
+  %ptr.iv = phi ptr [ %start, %loop.ph ], [ %ptr.iv.next, %loop.latch ]
+  %c.0 = call i1 @cond()
+  br i1 %c.0, label %exit, label %loop.latch
+
+loop.latch:
+  call void @use(ptr %ptr.iv)
+  %ptr.iv.next = getelementptr inbounds i32, ptr %ptr.iv, i16 1
+  br label %loop.header
+
+exit:
+  %c.1 = icmp ne ptr %ptr.iv, %upper
+  br i1 %c.1, label %then, label %exit.2
+
+then:
+  %c.2 = icmp uge ptr %ptr.iv, %start
+  %c.3 = icmp ult ptr %ptr.iv, %upper
+  %and = and i1 %c.2, %c.3
+  call void @use.i1(i1 %and)
+  br label %exit.2
+
+exit.2:
   ret void
 }
