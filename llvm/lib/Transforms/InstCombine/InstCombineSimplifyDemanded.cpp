@@ -1775,7 +1775,7 @@ Value *InstCombinerImpl::SimplifyDemandedVectorElts(Value *V,
   // If we've proven all of the lanes undef, return an undef value.
   // TODO: Intersect w/demanded lanes
   if (UndefElts.isAllOnes())
-    return UndefValue::get(I->getType());;
+    return UndefValue::get(I->getType());
 
   return MadeChange ? I : nullptr;
 }

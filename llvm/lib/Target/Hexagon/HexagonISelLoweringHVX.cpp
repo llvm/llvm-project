@@ -3626,7 +3626,7 @@ HexagonTargetLowering::PerformHvxDAGCombine(SDNode *N, DAGCombinerInfo &DCI)
       break;
     case HexagonISD::VINSERTW0:
       if (isUndef(Ops[1]))
-        return Ops[0];;
+        return Ops[0];
       break;
     case HexagonISD::VROR: {
       if (Ops[0].getOpcode() == HexagonISD::VROR) {
