@@ -53,7 +53,7 @@ public:
     // locale operations:
     basic_string<char> name() const;
     bool operator==(const locale& other) const;
-    bool operator!=(const locale& other) const;
+    bool operator!=(const locale& other) const;                              // removed C++20
     template <class charT, class Traits, class Allocator>
       bool operator()(const basic_string<charT,Traits,Allocator>& s1,
                       const basic_string<charT,Traits,Allocator>& s2) const;
