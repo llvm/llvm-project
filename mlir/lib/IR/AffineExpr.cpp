@@ -511,7 +511,6 @@ unsigned AffineSymbolExpr::getPosition() const {
 
 AffineExpr mlir::getAffineSymbolExpr(unsigned position, MLIRContext *context) {
   return getAffineDimOrSymbol(AffineExprKind::SymbolId, position, context);
-  ;
 }
 
 AffineConstantExpr::AffineConstantExpr(AffineExpr::ImplType *ptr)
