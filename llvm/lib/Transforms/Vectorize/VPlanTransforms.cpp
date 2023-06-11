@@ -507,8 +507,7 @@ void VPlanTransforms::optimizeInductions(VPlan &Plan, ScalarEvolution &SE) {
     if (Instruction *TruncI = WideIV->getTruncInst())
       ResultTy = TruncI->getType();
     const InductionDescriptor &ID = WideIV->getInductionDescriptor();
-    VPValue *Step =
-        vputils::getOrCreateVPValueForSCEVExpr(Plan, ID.getStep(), SE);
+    VPValue *Step = WideIV->getStepValue();
     VPValue *BaseIV = CanonicalIV;
     if (!CanonicalIV->isCanonical(ID.getKind(), WideIV->getStartValue(), Step,
                                   ResultTy)) {
