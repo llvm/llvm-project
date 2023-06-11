@@ -956,6 +956,15 @@ The AMDGPU backend implements the following LLVM IR intrinsics.
 
   llvm.amdgcn.exp2                           Provides direct access to v_exp_f32 and v_exp_f16
                                              (on targets with half support). Performs exp2 function.
+
+  :ref:`llvm.log2 <int_log2>`                Implemented for float and half (and vectors of float or
+                                             half). Not implemented for double. Hardware provides
+                                             1ULP accuracy for float, and 0.51ULP for half. Float
+                                             instruction does not natively support denormal
+                                             inputs. Backend will optimize out denormal scaling if
+                                             marked with the :ref:`afn <fastmath_afn>` flag.
+
+
   =========================================  ==========================================================
 
 .. TODO::
