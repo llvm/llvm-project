@@ -13088,6 +13088,30 @@ void SITargetLowering::computeKnownBitsForTargetInstr(
   case AMDGPU::G_AMDGPU_BUFFER_LOAD_USHORT:
     Known.Zero.setHighBits(16);
     break;
+  case AMDGPU::G_AMDGPU_SMED3:
+  case AMDGPU::G_AMDGPU_UMED3: {
+    auto [Dst, Src0, Src1, Src2] = MI->getFirst4Regs();
+
+    KnownBits Known2;
+    KB.computeKnownBitsImpl(Src2, Known2, DemandedElts, Depth + 1);
+    if (Known2.isUnknown())
+      break;
+
+    KnownBits Known1;
+    KB.computeKnownBitsImpl(Src1, Known1, DemandedElts, Depth + 1);
+    if (Known1.isUnknown())
+      break;
+
+    KnownBits Known0;
+    KB.computeKnownBitsImpl(Src0, Known0, DemandedElts, Depth + 1);
+    if (Known0.isUnknown())
+      break;
+
+    // TODO: Handle LeadZero/LeadOne from UMIN/UMAX handling.
+    Known.Zero = Known0.Zero & Known1.Zero & Known2.Zero;
+    Known.One = Known0.One & Known1.One & Known2.One;
+    break;
+  }
   }
 }
 

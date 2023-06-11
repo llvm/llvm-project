@@ -18,6 +18,7 @@
 #include "AMDGPUMachineFunction.h"
 #include "SIMachineFunctionInfo.h"
 #include "llvm/CodeGen/Analysis.h"
+#include "llvm/CodeGen/GlobalISel/GISelKnownBits.h"
 #include "llvm/CodeGen/MachineFrameInfo.h"
 #include "llvm/IR/DiagnosticInfo.h"
 #include "llvm/IR/IntrinsicsAMDGPU.h"
@@ -4964,6 +4965,29 @@ void AMDGPUTargetLowering::computeKnownBitsForTargetNode(
     Known.Zero.setLowBits(Log2(Alignment));
     break;
   }
+  case AMDGPUISD::SMIN3:
+  case AMDGPUISD::SMAX3:
+  case AMDGPUISD::SMED3:
+  case AMDGPUISD::UMIN3:
+  case AMDGPUISD::UMAX3:
+  case AMDGPUISD::UMED3: {
+    KnownBits Known2 = DAG.computeKnownBits(Op.getOperand(2), Depth + 1);
+    if (Known2.isUnknown())
+      break;
+
+    KnownBits Known1 = DAG.computeKnownBits(Op.getOperand(1), Depth + 1);
+    if (Known1.isUnknown())
+      break;
+
+    KnownBits Known0 = DAG.computeKnownBits(Op.getOperand(0), Depth + 1);
+    if (Known0.isUnknown())
+      break;
+
+    // TODO: Handle LeadZero/LeadOne from UMIN/UMAX handling.
+    Known.Zero = Known0.Zero & Known1.Zero & Known2.Zero;
+    Known.One = Known0.One & Known1.One & Known2.One;
+    break;
+  }
   case ISD::INTRINSIC_WO_CHAIN: {
     unsigned IID = cast<ConstantSDNode>(Op.getOperand(0))->getZExtValue();
     switch (IID) {
@@ -5018,6 +5042,26 @@ unsigned AMDGPUTargetLowering::ComputeNumSignBitsForTargetNode(
     return 16;
   case AMDGPUISD::FP_TO_FP16:
     return 16;
+  case AMDGPUISD::SMIN3:
+  case AMDGPUISD::SMAX3:
+  case AMDGPUISD::SMED3:
+  case AMDGPUISD::UMIN3:
+  case AMDGPUISD::UMAX3:
+  case AMDGPUISD::UMED3: {
+    unsigned Tmp2 = DAG.ComputeNumSignBits(Op.getOperand(2), Depth + 1);
+    if (Tmp2 == 1)
+      return 1; // Early out.
+
+    unsigned Tmp1 = DAG.ComputeNumSignBits(Op.getOperand(1), Depth + 1);
+    if (Tmp1 == 1)
+      return 1; // Early out.
+
+    unsigned Tmp0 = DAG.ComputeNumSignBits(Op.getOperand(0), Depth + 1);
+    if (Tmp0 == 1)
+      return 1; // Early out.
+
+    return std::min(Tmp0, std::min(Tmp1, Tmp2));
+  }
   default:
     return 1;
   }
@@ -5041,6 +5085,20 @@ unsigned AMDGPUTargetLowering::computeNumSignBitsForTargetInstr(
     return 24;
   case AMDGPU::G_AMDGPU_BUFFER_LOAD_USHORT:
     return 16;
+  case AMDGPU::G_AMDGPU_SMED3:
+  case AMDGPU::G_AMDGPU_UMED3: {
+    auto [Dst, Src0, Src1, Src2] = MI->getFirst4Regs();
+    unsigned Tmp2 = Analysis.computeNumSignBits(Src2, DemandedElts, Depth + 1);
+    if (Tmp2 == 1)
+      return 1;
+    unsigned Tmp1 = Analysis.computeNumSignBits(Src1, DemandedElts, Depth + 1);
+    if (Tmp1 == 1)
+      return 1;
+    unsigned Tmp0 = Analysis.computeNumSignBits(Src0, DemandedElts, Depth + 1);
+    if (Tmp0 == 1)
+      return 1;
+    return std::min(Tmp0, std::min(Tmp1, Tmp2));
+  }
   default:
     return 1;
   }
