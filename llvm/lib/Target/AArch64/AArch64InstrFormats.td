@@ -7463,7 +7463,7 @@ multiclass SIMDAcrossLanesHSD<bit U, bits<5> opcode, string asm> {
 
 let mayRaiseFPException = 1, Uses = [FPCR] in
 multiclass SIMDFPAcrossLanes<bits<5> opcode, bit sz1, string asm,
-                            Intrinsic intOp> {
+                            SDPatternOperator intOp> {
   let Predicates = [HasNEON, HasFullFP16] in {
   def v4i16v : BaseSIMDAcrossLanes<0, 0, {sz1, 0}, opcode, FPR16, V64,
                                    asm, ".4h",
