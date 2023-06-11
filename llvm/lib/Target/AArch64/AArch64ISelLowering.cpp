@@ -1158,8 +1158,8 @@ AArch64TargetLowering::AArch64TargetLowering(const TargetMachine &TM,
     for (MVT VT : { MVT::v4f16, MVT::v2f32,
                     MVT::v8f16, MVT::v4f32, MVT::v2f64 }) {
       if (VT.getVectorElementType() != MVT::f16 || Subtarget->hasFullFP16()) {
-        setOperationAction(ISD::VECREDUCE_FMAX, VT, Custom);
-        setOperationAction(ISD::VECREDUCE_FMIN, VT, Custom);
+        setOperationAction(ISD::VECREDUCE_FMAX, VT, Legal);
+        setOperationAction(ISD::VECREDUCE_FMIN, VT, Legal);
 
         setOperationAction(ISD::VECREDUCE_FADD, VT, Legal);
       }
@@ -13588,18 +13588,6 @@ SDValue AArch64TargetLowering::LowerVECREDUCE(SDValue Op,
     return getReductionSDNode(AArch64ISD::UMAXV, dl, Op, DAG);
   case ISD::VECREDUCE_UMIN:
     return getReductionSDNode(AArch64ISD::UMINV, dl, Op, DAG);
-  case ISD::VECREDUCE_FMAX: {
-    return DAG.getNode(
-        ISD::INTRINSIC_WO_CHAIN, dl, Op.getValueType(),
-        DAG.getConstant(Intrinsic::aarch64_neon_fmaxnmv, dl, MVT::i32),
-        Src);
-  }
-  case ISD::VECREDUCE_FMIN: {
-    return DAG.getNode(
-        ISD::INTRINSIC_WO_CHAIN, dl, Op.getValueType(),
-        DAG.getConstant(Intrinsic::aarch64_neon_fminnmv, dl, MVT::i32),
-        Src);
-  }
   default:
     llvm_unreachable("Unhandled reduction");
   }
