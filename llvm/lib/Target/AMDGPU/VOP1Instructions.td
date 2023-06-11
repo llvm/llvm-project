@@ -120,7 +120,7 @@ multiclass VOP1Inst <string opName, VOPProfile P,
       def _e32 : VOP1_Pseudo <opName, P>;
     else
       // Only for V_MOV_B32
-      def _e32 : VOP1_Pseudo <opName, P>, VOPD_Component<VOPDOp, "v_mov_b32">;
+      def _e32 : VOP1_Pseudo <opName, P>, VOPD_Component<VOPDOp, opName>;
     def _e64 : VOP3InstBase <opName, P, node>;
   }
 
