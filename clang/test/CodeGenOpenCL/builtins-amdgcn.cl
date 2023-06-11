@@ -172,6 +172,13 @@ void test_cos_f32(global float* out, float a)
   *out = __builtin_amdgcn_cosf(a);
 }
 
+// CHECK-LABEL: @test_log_f32
+// CHECK: call float @llvm.amdgcn.log.f32
+void test_log_f32(global float* out, float a)
+{
+  *out = __builtin_amdgcn_logf(a);
+}
+
 // CHECK-LABEL: @test_log_clamp_f32
 // CHECK: call float @llvm.amdgcn.log.clamp.f32
 void test_log_clamp_f32(global float* out, float a)
