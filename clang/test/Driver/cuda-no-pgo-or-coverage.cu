@@ -26,7 +26,7 @@
 // CHECK-NOT: error: unsupported option '-fprofile
 // CHECK-NOT: error: invalid argument
 // CHECK-DAG: "-fcuda-is-device"
-// CHECK-NOT: "-f{{[^"]*coverage.*}}"
+// CHECK-NOT: "-f{{[^"/]*coverage.*}}"
 // CHECK-NOT: "-fprofile{{[^"]*}}"
 // CHECK: "-triple" "x86_64-unknown-linux-gnu"
 // PROF:      "-fprofile{{.*}}"
