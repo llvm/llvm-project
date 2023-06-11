@@ -2216,10 +2216,10 @@ defm xray_ignore_loops : BoolFOption<"xray-ignore-loops",
   NegFlag<SetFalse>>;
 
 defm xray_function_index : BoolFOption<"xray-function-index",
-  CodeGenOpts<"XRayOmitFunctionIndex">, DefaultTrue,
-  NegFlag<SetFalse, [CC1Option], "Omit function index section at the"
-          " expense of single-function patching performance">,
-  PosFlag<SetTrue>>;
+  CodeGenOpts<"XRayFunctionIndex">, DefaultFalse,
+  PosFlag<SetTrue, [CC1Option]>,
+  NegFlag<SetFalse, [], "Omit function index section at the"
+          " expense of single-function patching performance">>;
 
 def fxray_link_deps : Flag<["-"], "fxray-link-deps">, Group<f_Group>,
   Flags<[CC1Option]>,
