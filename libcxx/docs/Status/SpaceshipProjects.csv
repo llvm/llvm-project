@@ -99,8 +99,8 @@ Section,Description,Dependencies,Assignee,Complete
 | `set <https://reviews.llvm.org/D148416>`_",[expos.only.func],Hristo Hristov,|Complete|
 | `[unord.map.syn] <https://wg21.link/unord.map.syn>`_,"| remove ops `unordered_map`
 | remove ops `unordered_multimap`",None,Unassigned,|Not Started|
-| `[unordered.set.syn] <https://wg21.link/unordered.set.syn>`_,"| remove ops `unordered_set`
-| remove ops `unordered_multiset`",None,Unassigned,|Not Started|
+| `[unordered.set.syn] <https://wg21.link/unordered.set.syn>`_,"| remove ops `unordered_set <https://reviews.llvm.org/D152643>`_
+| remove ops `unordered_multiset <https://reviews.llvm.org/D152643>`_",None,Hristo Hristov,|Complete|
 | `[queue.syn] <https://wg21.link/queue.syn>`_,| `queue <https://reviews.llvm.org/D146066>`_,None,Hristo Hristov,|Complete|
 | `[stack.syn] <https://wg21.link/stack.syn>`_,| `stack <https://reviews.llvm.org/D146094>`_,None,Hristo Hristov,|Complete|
 | `[queue.ops] <https://wg21.link/queue.ops>`_,| `queue <https://reviews.llvm.org/D146066>`_,None,Hristo Hristov,|Complete|
