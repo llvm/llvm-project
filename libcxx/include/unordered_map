@@ -270,7 +270,7 @@ template <class Key, class T, class Hash, class Pred, class Alloc>
 template <class Key, class T, class Hash, class Pred, class Alloc>
     bool
     operator!=(const unordered_map<Key, T, Hash, Pred, Alloc>& x,
-               const unordered_map<Key, T, Hash, Pred, Alloc>& y);
+               const unordered_map<Key, T, Hash, Pred, Alloc>& y); // Removed in C++20
 
 template <class Key, class T, class Hash = hash<Key>, class Pred = equal_to<Key>,
           class Alloc = allocator<pair<const Key, T>>>
@@ -508,7 +508,7 @@ template <class Key, class T, class Hash, class Pred, class Alloc>
 template <class Key, class T, class Hash, class Pred, class Alloc>
     bool
     operator!=(const unordered_multimap<Key, T, Hash, Pred, Alloc>& x,
-               const unordered_multimap<Key, T, Hash, Pred, Alloc>& y);
+               const unordered_multimap<Key, T, Hash, Pred, Alloc>& y); // Removed in C++20
 
 }  // std
 
@@ -954,9 +954,11 @@ public:
     friend _LIBCPP_INLINE_VISIBILITY
         bool operator==(const __hash_map_iterator& __x, const __hash_map_iterator& __y)
         {return __x.__i_ == __y.__i_;}
+#if _LIBCPP_STD_VER <= 17
     friend _LIBCPP_INLINE_VISIBILITY
         bool operator!=(const __hash_map_iterator& __x, const __hash_map_iterator& __y)
         {return __x.__i_ != __y.__i_;}
+#endif
 
     template <class, class, class, class, class> friend class _LIBCPP_TEMPLATE_VIS unordered_map;
     template <class, class, class, class, class> friend class _LIBCPP_TEMPLATE_VIS unordered_multimap;
@@ -1008,9 +1010,11 @@ public:
     friend _LIBCPP_INLINE_VISIBILITY
         bool operator==(const __hash_map_const_iterator& __x, const __hash_map_const_iterator& __y)
         {return __x.__i_ == __y.__i_;}
+#if _LIBCPP_STD_VER <= 17
     friend _LIBCPP_INLINE_VISIBILITY
         bool operator!=(const __hash_map_const_iterator& __x, const __hash_map_const_iterator& __y)
         {return __x.__i_ != __y.__i_;}
+#endif
 
     template <class, class, class, class, class> friend class _LIBCPP_TEMPLATE_VIS unordered_map;
     template <class, class, class, class, class> friend class _LIBCPP_TEMPLATE_VIS unordered_multimap;
@@ -1905,6 +1909,8 @@ operator==(const unordered_map<_Key, _Tp, _Hash, _Pred, _Alloc>& __x,
     return true;
 }
 
+#if _LIBCPP_STD_VER <= 17
+
 template <class _Key, class _Tp, class _Hash, class _Pred, class _Alloc>
 inline _LIBCPP_INLINE_VISIBILITY
 bool
@@ -1913,6 +1919,8 @@ operator!=(const unordered_map<_Key, _Tp, _Hash, _Pred, _Alloc>& __x,
 {
     return !(__x == __y);
 }
+
+#endif
 
 template <class _Key, class _Tp, class _Hash = hash<_Key>, class _Pred = equal_to<_Key>,
           class _Alloc = allocator<pair<const _Key, _Tp> > >
@@ -2619,6 +2627,8 @@ operator==(const unordered_multimap<_Key, _Tp, _Hash, _Pred, _Alloc>& __x,
     return true;
 }
 
+#if _LIBCPP_STD_VER <= 17
+
 template <class _Key, class _Tp, class _Hash, class _Pred, class _Alloc>
 inline _LIBCPP_INLINE_VISIBILITY
 bool
@@ -2627,6 +2637,8 @@ operator!=(const unordered_multimap<_Key, _Tp, _Hash, _Pred, _Alloc>& __x,
 {
     return !(__x == __y);
 }
+
+#endif
 
 _LIBCPP_END_NAMESPACE_STD
 
