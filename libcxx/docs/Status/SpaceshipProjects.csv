@@ -179,7 +179,7 @@ Section,Description,Dependencies,Assignee,Complete
 | chrono::time_zone_link",A ``<chrono>`` implementation,Unassigned,|Not Started|
 - `5.13 Clause 28: Localization library <https://wg21.link/p1614r2#clause-28-localization-library>`_,,,,
 "| `[locale] <https://wg21.link/locale>`_
-| `[locale.operators] <https://wg21.link/locale.operators>`_",| remove ops `locale`,None,Unassigned,|Not Started|
+| `[locale.operators] <https://wg21.link/locale.operators>`_",| remove ops `locale <https://reviews.llvm.org/D152654>`_,None,Hristo Hristov,|Complete|
 - `5.14 Clause 29: Input/output library <https://wg21.link/p1614r2#clause-29-inputoutput-library>`_,,,,
 | `[fs.filesystem.syn] <https://wg21.link/fs.filesystem.syn>`_,| `filesystem::space_info <https://reviews.llvm.org/D130861>`_,None,Adrian Vogelsgesang,|Complete|
 "| `[fs.class.path] <https://wg21.link/fs.class.path>`_
