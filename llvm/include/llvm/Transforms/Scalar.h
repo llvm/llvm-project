@@ -71,9 +71,6 @@ FunctionPass *createSROAPass(bool PreserveCFG = true);
 // LICM - This pass is a loop invariant code motion and memory promotion pass.
 //
 Pass *createLICMPass();
-Pass *createLICMPass(unsigned LicmMssaOptCap,
-                     unsigned LicmMssaNoAccForPromotionCap,
-                     bool AllowSpeculation);
 
 //===----------------------------------------------------------------------===//
 //
