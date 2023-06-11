@@ -181,11 +181,11 @@ Section,Description,Dependencies,Assignee,Complete
 - `5.13 Clause 28: Localization library <https://wg21.link/p1614r2#clause-28-localization-library>`_,,,,
 "| `[locale] <https://wg21.link/locale>`_
 | `[locale.operators] <https://wg21.link/locale.operators>`_",| remove ops `locale`,None,Unassigned,|Not Started|
-- `5.14 Clause 29: Input/output library <https://wg21.link/p1614r2clause-29-inputoutput-library>`_,,,,
+- `5.14 Clause 29: Input/output library <https://wg21.link/p1614r2#clause-29-inputoutput-library>`_,,,,
 | `[fs.filesystem.syn] <https://wg21.link/fs.filesystem.syn>`_,| `filesystem::space_info <https://reviews.llvm.org/D130861>`_,None,Adrian Vogelsgesang,|Complete|
 "| `[fs.class.path] <https://wg21.link/fs.class.path>`_
 | `[fs.path.nonmember] <https://wg21.link/fs.path.nonmember>`_",| `filesystem::path <https://reviews.llvm.org/D130859>`_,None,Adrian Vogelsgesang,|Complete|
-| `[fs.class.file.status] <https://wg21.link/fs.class.file.status>`_,|,None,Unassigned,|Not Started|
+| `[fs.class.file.status] <https://wg21.link/fs.class.file.status>`_,| `file_status <https://reviews.llvm.org/D152647>`_,None,Hristo Hristov,|Complete|
 "| `[fs.class.directory.entry] <https://wg21.link/fs.class.directory.entry>`_
 | `[fs.dir.entry.obs] <https://wg21.link/fs.dir.entry.obs>`_",| `filesystem::directory_entry <https://reviews.llvm.org/D130860>`_,None,Adrian Vogelsgesang,|Complete|
 - `5.15 Clause 30: Regular expressions library <https://wg21.link/p1614r2#clause-30-regular-expressions-library>`_,,,,
