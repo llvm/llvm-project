@@ -103,8 +103,8 @@ void mlir::printDynamicIndexList(OpAsmPrinter &printer, Operation *op,
                                  OperandRange values,
                                  ArrayRef<int64_t> integers,
                                  TypeRange valueTypes,
-                                 AsmParser::Delimiter delimiter,
-                                 bool isTrailingIdxScalable) {
+                                 BoolAttr isTrailingIdxScalable,
+                                 AsmParser::Delimiter delimiter) {
   char leftDelimiter = getLeftDelimiter(delimiter);
   char rightDelimiter = getRightDelimiter(delimiter);
   printer << leftDelimiter;
@@ -114,7 +114,7 @@ void mlir::printDynamicIndexList(OpAsmPrinter &printer, Operation *op,
   }
 
   int64_t trailingScalableInteger;
-  if (isTrailingIdxScalable) {
+  if (isTrailingIdxScalable && isTrailingIdxScalable.getValue()) {
     // ATM only the trailing idx can be scalable
     trailingScalableInteger = integers.back();
     integers = integers.drop_back();
@@ -133,8 +133,9 @@ void mlir::printDynamicIndexList(OpAsmPrinter &printer, Operation *op,
   });
 
   // Print the trailing scalable index
-  if (isTrailingIdxScalable) {
-    printer << ", ";
+  if (isTrailingIdxScalable && isTrailingIdxScalable.getValue()) {
+    if (!integers.empty())
+      printer << ", ";
     printer << "[";
     printer << trailingScalableInteger;
     printer << "]";
@@ -156,10 +157,10 @@ ParseResult mlir::parseDynamicIndexList(
     auto res = parser.parseOptionalOperand(operand);
 
     // If `foundScalable` has already been set to `true` then a non-trailing
-    // tile size was identified as scalable.
+    // index was identified as scalable.
     if (foundScalable) {
       parser.emitError(parser.getNameLoc())
-          << "non-trailing tile size cannot be scalable";
+          << "non-trailing index cannot be scalable";
       return failure();
     }
 

@@ -875,9 +875,6 @@ static void propagateMemProfHelper(const CallBase *OrigCall,
 // inlined callee's callsite metadata with that of the inlined call,
 // and moving the subset of any memprof contexts to the inlined callee
 // allocations if they match the new inlined call stack.
-// FIXME: Replace memprof metadata with function attribute if all MIB end up
-// having the same behavior. Do other context trimming/merging optimizations
-// too.
 static void
 propagateMemProfMetadata(Function *Callee, CallBase &CB,
                          bool ContainsMemProfMetadata,

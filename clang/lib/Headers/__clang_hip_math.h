@@ -269,10 +269,10 @@ float fmaf(float __x, float __y, float __z) {
 }
 
 __DEVICE__
-float fmaxf(float __x, float __y) { return __ocml_fmax_f32(__x, __y); }
+float fmaxf(float __x, float __y) { return __builtin_fmaxf(__x, __y); }
 
 __DEVICE__
-float fminf(float __x, float __y) { return __ocml_fmin_f32(__x, __y); }
+float fminf(float __x, float __y) { return __builtin_fminf(__x, __y); }
 
 __DEVICE__
 float fmodf(float __x, float __y) { return __ocml_fmod_f32(__x, __y); }
@@ -293,7 +293,7 @@ __DEVICE__
 __RETURN_TYPE __finitef(float __x) { return __ocml_isfinite_f32(__x); }
 
 __DEVICE__
-__RETURN_TYPE __isinff(float __x) { return __ocml_isinf_f32(__x); }
+__RETURN_TYPE __isinff(float __x) { return __builtin_isinf(__x); }
 
 __DEVICE__
 __RETURN_TYPE __isnanf(float __x) { return __ocml_isnan_f32(__x); }
@@ -520,7 +520,7 @@ __DEVICE__
 float scalbnf(float __x, int __n) { return __ocml_scalbn_f32(__x, __n); }
 
 __DEVICE__
-__RETURN_TYPE __signbitf(float __x) { return __ocml_signbit_f32(__x); }
+__RETURN_TYPE __signbitf(float __x) { return __builtin_signbitf(__x); }
 
 __DEVICE_NOCE__
 void sincosf(float __x, float *__sinptr, float *__cosptr) {
@@ -840,10 +840,10 @@ double fma(double __x, double __y, double __z) {
 }
 
 __DEVICE__
-double fmax(double __x, double __y) { return __ocml_fmax_f64(__x, __y); }
+double fmax(double __x, double __y) { return __builtin_fmax(__x, __y); }
 
 __DEVICE__
-double fmin(double __x, double __y) { return __ocml_fmin_f64(__x, __y); }
+double fmin(double __x, double __y) { return __builtin_fmin(__x, __y); }
 
 __DEVICE__
 double fmod(double __x, double __y) { return __ocml_fmod_f64(__x, __y); }
@@ -864,7 +864,7 @@ __DEVICE__
 __RETURN_TYPE __finite(double __x) { return __ocml_isfinite_f64(__x); }
 
 __DEVICE__
-__RETURN_TYPE __isinf(double __x) { return __ocml_isinf_f64(__x); }
+__RETURN_TYPE __isinf(double __x) { return __builtin_isinf(__x); }
 
 __DEVICE__
 __RETURN_TYPE __isnan(double __x) { return __ocml_isnan_f64(__x); }
@@ -1079,7 +1079,7 @@ __DEVICE__
 double scalbn(double __x, int __n) { return __ocml_scalbn_f64(__x, __n); }
 
 __DEVICE__
-__RETURN_TYPE __signbit(double __x) { return __ocml_signbit_f64(__x); }
+__RETURN_TYPE __signbit(double __x) { return __builtin_signbit(__x); }
 
 __DEVICE__
 double sin(double __x) { return __ocml_sin_f64(__x); }
@@ -1326,16 +1326,16 @@ __DEVICE__ int max(int __arg1, int __arg2) {
 }
 
 __DEVICE__
-float max(float __x, float __y) { return fmaxf(__x, __y); }
+float max(float __x, float __y) { return __builtin_fmaxf(__x, __y); }
 
 __DEVICE__
-double max(double __x, double __y) { return fmax(__x, __y); }
+double max(double __x, double __y) { return __builtin_fmax(__x, __y); }
 
 __DEVICE__
-float min(float __x, float __y) { return fminf(__x, __y); }
+float min(float __x, float __y) { return __builtin_fminf(__x, __y); }
 
 __DEVICE__
-double min(double __x, double __y) { return fmin(__x, __y); }
+double min(double __x, double __y) { return __builtin_fmin(__x, __y); }
 
 #ifndef __OPENMP_AMDGCN__
 #if !defined(__HIPCC_RTC__)

@@ -106,6 +106,7 @@ class AppleAcceleratorTable : public DWARFAcceleratorTable {
   Header Hdr;
   HeaderData HdrData;
   dwarf::FormParams FormParams;
+  uint32_t HashDataEntryLength;
   bool IsValid = false;
 
   /// Returns true if we should continue scanning for entries or false if we've
@@ -260,6 +261,9 @@ public:
   uint32_t getNumHashes() const;
   uint32_t getSizeHdr() const;
   uint32_t getHeaderDataLength() const;
+
+  /// Returns the size of one HashData entry.
+  uint32_t getHashDataEntryLength() const { return HashDataEntryLength; }
 
   /// Return the Atom description, which can be used to interpret the raw values
   /// of the Accelerator Entries in this table.

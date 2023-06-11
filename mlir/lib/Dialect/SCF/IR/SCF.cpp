@@ -1220,17 +1220,21 @@ void ForallOp::print(OpAsmPrinter &p) {
   if (isNormalized()) {
     p << ") in ";
     printDynamicIndexList(p, op, getDynamicUpperBound(), getStaticUpperBound(),
-                          /*valueTypes=*/{}, OpAsmParser::Delimiter::Paren);
+                          /*valueTypes=*/{}, /*=isTrailingIdxScalable=*/{},
+                          OpAsmParser::Delimiter::Paren);
   } else {
     p << ") = ";
     printDynamicIndexList(p, op, getDynamicLowerBound(), getStaticLowerBound(),
-                          /*valueTypes=*/{}, OpAsmParser::Delimiter::Paren);
+                          /*valueTypes=*/{}, /*=isTrailingIdxScalable=*/{},
+                          OpAsmParser::Delimiter::Paren);
     p << " to ";
     printDynamicIndexList(p, op, getDynamicUpperBound(), getStaticUpperBound(),
-                          /*valueTypes=*/{}, OpAsmParser::Delimiter::Paren);
+                          /*valueTypes=*/{}, /*=isTrailingIdxScalable=*/{},
+                          OpAsmParser::Delimiter::Paren);
     p << " step ";
     printDynamicIndexList(p, op, getDynamicStep(), getStaticStep(),
-                          /*valueTypes=*/{}, OpAsmParser::Delimiter::Paren);
+                          /*valueTypes=*/{}, /*=isTrailingIdxScalable=*/{},
+                          OpAsmParser::Delimiter::Paren);
   }
   printInitializationList(p, getRegionOutArgs(), getOutputs(), " shared_outs");
   p << " ";

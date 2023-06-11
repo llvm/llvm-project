@@ -1631,7 +1631,7 @@ public:
   bool DeclareRISCVVBuiltins = false;
 
   /// Indicate RISC-V SiFive vector builtin functions enabled or not.
-  bool DeclareRISCVVectorBuiltins = false;
+  bool DeclareRISCVSiFiveVectorBuiltins = false;
 
 private:
   std::unique_ptr<sema::RISCVIntrinsicManager> RVIntrinsicManager;
