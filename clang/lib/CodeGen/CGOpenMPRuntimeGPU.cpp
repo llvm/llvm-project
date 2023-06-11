@@ -485,10 +485,7 @@ public:
   const FieldDecl *getFieldForGlobalizedVar(const ValueDecl *VD) const {
     assert(GlobalizedRD &&
            "Record for globalized variables must be generated already.");
-    auto I = MappedDeclsFields.find(VD);
-    if (I == MappedDeclsFields.end())
-      return nullptr;
-    return I->getSecond();
+    return MappedDeclsFields.lookup(VD);
   }
 
   /// Returns the list of the escaped local variables/parameters.
