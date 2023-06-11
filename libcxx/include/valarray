@@ -116,6 +116,8 @@ public:
     size_t start()  const;
     size_t size()   const;
     size_t stride() const;
+
+    friend bool operator==(const slice& x, const slice& y); // since C++20
 };
 
 template <class T>
@@ -402,6 +404,14 @@ public:
     _LIBCPP_INLINE_VISIBILITY size_t start()  const {return __start_;}
     _LIBCPP_INLINE_VISIBILITY size_t size()   const {return __size_;}
     _LIBCPP_INLINE_VISIBILITY size_t stride() const {return __stride_;}
+
+#if _LIBCPP_STD_VER >= 20
+
+    _LIBCPP_HIDE_FROM_ABI friend bool operator==(const slice& __x, const slice& __y) {
+      return __x.start() == __y.start() && __x.size() == __y.size() && __x.stride() == __y.stride();
+    }
+
+#endif
 };
 
 template <class _Tp> class _LIBCPP_TEMPLATE_VIS slice_array;
