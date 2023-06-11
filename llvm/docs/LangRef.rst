@@ -14813,6 +14813,8 @@ is unspecified.
 If the argument is an infinity, returns an infinity with the same sign
 and an unspecified exponent.
 
+.. _int_log:
+
 '``llvm.log.*``' Intrinsic
 ^^^^^^^^^^^^^^^^^^^^^^^^^^
 
@@ -14850,6 +14852,8 @@ trapping or setting ``errno``.
 
 When specified with the fast-math-flag 'afn', the result may be approximated
 using a less accurate calculation.
+
+.. _int_log10:
 
 '``llvm.log10.*``' Intrinsic
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^

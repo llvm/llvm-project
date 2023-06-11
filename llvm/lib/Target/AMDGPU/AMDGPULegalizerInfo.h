@@ -78,9 +78,14 @@ public:
 
   bool legalizeAtomicCmpXChg(MachineInstr &MI, MachineRegisterInfo &MRI,
                              MachineIRBuilder &B) const;
+
+  std::pair<Register, Register>
+  getScaledLogInput(MachineIRBuilder &B, Register Src, unsigned Flags) const;
+
   bool legalizeFlog2(MachineInstr &MI, MachineIRBuilder &B) const;
-  bool legalizeFlog(MachineInstr &MI, MachineIRBuilder &B,
-                    double Log2BaseInverted) const;
+  bool legalizeFlogCommon(MachineInstr &MI, MachineIRBuilder &B) const;
+  bool legalizeFlogUnsafe(MachineIRBuilder &B, Register Dst, Register Src,
+                          double Log2BaseInverted, unsigned Flags) const;
   bool legalizeFExp(MachineInstr &MI, MachineIRBuilder &B) const;
   bool legalizeFPow(MachineInstr &MI, MachineIRBuilder &B) const;
   bool legalizeFFloor(MachineInstr &MI, MachineRegisterInfo &MRI,
