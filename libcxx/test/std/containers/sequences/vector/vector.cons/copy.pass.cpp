@@ -100,11 +100,20 @@ TEST_CONSTEXPR_CXX20 bool tests() {
     return true;
 }
 
+void test_copy_from_volatile_src() {
+    volatile int src[] = {1, 2, 3};
+    std::vector<int> v(src, src + 3);
+    assert(v[0] == 1);
+    assert(v[1] == 2);
+    assert(v[2] == 3);
+}
+
 int main(int, char**)
 {
     tests();
 #if TEST_STD_VER > 17
     static_assert(tests());
 #endif
+    test_copy_from_volatile_src();
     return 0;
 }
