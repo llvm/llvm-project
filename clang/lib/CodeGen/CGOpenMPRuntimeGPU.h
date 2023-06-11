@@ -256,12 +256,6 @@ public:
                      ArrayRef<const Expr *> ReductionOps,
                      ReductionOptionsTy Options) override;
 
-  /// Returns specified OpenMP runtime function for the current OpenMP
-  /// implementation.  Specialized for the NVPTX device.
-  /// \param Function OpenMP runtime function.
-  /// \return Specified function.
-  llvm::FunctionCallee createNVPTXRuntimeFunction(unsigned Function);
-
   /// Translates the native parameter of outlined function if this is required
   /// for target.
   /// \param FD Field decl from captured record for the parameter.
