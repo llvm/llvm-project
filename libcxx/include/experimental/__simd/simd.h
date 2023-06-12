@@ -11,6 +11,8 @@
 #define _LIBCPP_EXPERIMENTAL___SIMD_SIMD_H
 
 #include <experimental/__simd/abi_tag.h>
+#include <experimental/__simd/declaration.h>
+#include <experimental/__simd/traits.h>
 
 #if _LIBCPP_STD_VER >= 17 && defined(_LIBCPP_ENABLE_EXPERIMENTAL)
 
@@ -19,8 +21,15 @@ inline namespace parallelism_v2 {
 
 // class template simd [simd.class]
 // TODO: implement simd class
-template <class _Tp, class _Abi = simd_abi::compatible<_Tp>>
-class simd;
+template <class _Tp, class _Abi>
+class simd {
+public:
+  using value_type = _Tp;
+  using mask_type  = simd_mask<_Tp, _Abi>;
+  using abi_type   = _Abi;
+
+  static _LIBCPP_HIDE_FROM_ABI constexpr size_t size() noexcept { return simd_size_v<value_type, abi_type>; }
+};
 
 template <class _Tp>
 using native_simd = simd<_Tp, simd_abi::native<_Tp>>;

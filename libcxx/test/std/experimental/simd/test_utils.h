@@ -36,9 +36,10 @@ struct TestAllSimdAbiFunctor {
   }
 };
 
+using arithmetic_no_bool_types = types::concatenate_t<types::integer_types, types::floating_point_types>;
+
 template <template <class T, std::size_t N> class Func>
 void test_all_simd_abi() {
-  using arithmetic_no_bool_types = types::concatenate_t<types::integer_types, types::floating_point_types>;
   types::for_each(arithmetic_no_bool_types(), TestAllSimdAbiFunctor<Func>());
 }
 

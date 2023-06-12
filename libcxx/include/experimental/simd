@@ -47,6 +47,10 @@ inline namespace parallelism_v2 {
   template <class T> struct is_simd_mask;
   template <class T> inline constexpr bool is_simd_mask_v = is_simd_mask<T>::value;
 
+  template<class T, class Abi = simd_abi::compatible<T>> struct simd_size;
+  template<class T, class Abi = simd_abi::compatible<T>>
+    inline constexpr size_t simd_size_v = simd_size<T,Abi>::value;
+
 } // namespace parallelism_v2
 } // namespace std::experimental
 
