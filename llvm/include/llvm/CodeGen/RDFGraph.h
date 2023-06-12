@@ -892,6 +892,14 @@ NodeAddr<RefNode *> RefNode::getNextRef(RegisterRef RR, Predicate P,
     } else {
       // We've hit the beginning of the chain.
       assert(NA.Addr->getType() == NodeAttrs::Code);
+      // Make sure we stop here with NextOnly. Otherwise we can return the
+      // wrong ref. Consider the following while creating/linking shadow uses:
+      //   -> code -> sr1 -> sr2 -> [back to code]
+      // Say that shadow refs sr1, and sr2 have been linked, but we need to
+      // create and link another one. Starting from sr2, we'd hit the code
+      // node and return sr1 if the iteration didn't stop here.
+      if (NextOnly)
+        break;
       NodeAddr<CodeNode *> CA = NA;
       NA = CA.Addr->getFirstMember(G);
     }
