@@ -209,6 +209,7 @@ static bool runIPSCCP(
       MadeChanges |= ReplacedPointerArg;
     }
 
+    SmallPtrSet<Value *, 32> InsertedValues;
     for (BasicBlock &BB : F) {
       if (!Solver.isBlockExecutable(&BB)) {
         LLVM_DEBUG(dbgs() << "  BasicBlock Dead:" << BB);
@@ -222,7 +223,7 @@ static bool runIPSCCP(
       }
 
       MadeChanges |= Solver.simplifyInstsInBlock(
-          BB, NumInstRemoved, NumInstReplaced);
+          BB, InsertedValues, NumInstRemoved, NumInstReplaced);
     }
 
     DominatorTree *DT = FAM->getCachedResult<DominatorTreeAnalysis>(F);
