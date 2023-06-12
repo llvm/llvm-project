@@ -11,6 +11,7 @@ from lldbsuite.test.decorators import *
 class LLDBUtilFailedToHitBreakpointTest(TestBase):
     NO_DEBUG_INFO_TESTCASE = True
 
+    @skipIfAsan
     @expectedFailureAll(oslist=["windows"])
     def test_error_message(self):
         """

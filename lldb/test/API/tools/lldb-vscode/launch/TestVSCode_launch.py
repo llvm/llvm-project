@@ -16,6 +16,7 @@ class TestVSCode_launch(lldbvscode_testcase.VSCodeTestCaseBase):
     @skipIfWindows
     @skipIfDarwin  # Flaky
     @skipIfRemote
+    @skipIfAsan
     def test_default(self):
         """
         Tests the default launch of a simple program. No arguments,
@@ -32,6 +33,7 @@ class TestVSCode_launch(lldbvscode_testcase.VSCodeTestCaseBase):
 
     @skipIfWindows
     @skipIfRemote
+    @skipIfAsan
     def test_termination(self):
         """
         Tests the correct termination of lldb-vscode upon a 'disconnect'
@@ -57,6 +59,7 @@ class TestVSCode_launch(lldbvscode_testcase.VSCodeTestCaseBase):
 
     @skipIfWindows
     @skipIfRemote
+    @skipIfAsan
     def test_stopOnEntry(self):
         """
         Tests the default launch of a simple program that stops at the
@@ -77,6 +80,7 @@ class TestVSCode_launch(lldbvscode_testcase.VSCodeTestCaseBase):
 
     @skipIfWindows
     @skipIfRemote
+    @skipIfAsan
     def test_cwd(self):
         """
         Tests the default launch of a simple program with a current working
@@ -104,6 +108,7 @@ class TestVSCode_launch(lldbvscode_testcase.VSCodeTestCaseBase):
 
     @skipIfWindows
     @skipIfRemote
+    @skipIfAsan
     def test_debuggerRoot(self):
         """
         Tests the "debuggerRoot" will change the working directory of
@@ -134,6 +139,7 @@ class TestVSCode_launch(lldbvscode_testcase.VSCodeTestCaseBase):
 
     @skipIfWindows
     @skipIfRemote
+    @skipIfAsan
     def test_sourcePath(self):
         """
         Tests the "sourcePath" will set the target.source-map.
@@ -160,6 +166,7 @@ class TestVSCode_launch(lldbvscode_testcase.VSCodeTestCaseBase):
 
     @skipIfWindows
     @skipIfRemote
+    @skipIfAsan
     def test_disableSTDIO(self):
         """
         Tests the default launch of a simple program with STDIO disabled.
@@ -175,6 +182,7 @@ class TestVSCode_launch(lldbvscode_testcase.VSCodeTestCaseBase):
     @skipIfLinux  # shell argument expansion doesn't seem to work on Linux
     @expectedFailureAll(oslist=["freebsd", "netbsd"], bugnumber="llvm.org/pr48349")
     @skipIfRemote
+    @skipIfAsan
     def test_shellExpandArguments_enabled(self):
         """
         Tests the default launch of a simple program with shell expansion
@@ -198,6 +206,7 @@ class TestVSCode_launch(lldbvscode_testcase.VSCodeTestCaseBase):
 
     @skipIfWindows
     @skipIfRemote
+    @skipIfAsan
     def test_shellExpandArguments_disabled(self):
         """
         Tests the default launch of a simple program with shell expansion
@@ -221,6 +230,7 @@ class TestVSCode_launch(lldbvscode_testcase.VSCodeTestCaseBase):
 
     @skipIfWindows
     @skipIfRemote
+    @skipIfAsan
     def test_args(self):
         """
         Tests launch of a simple program with arguments
@@ -247,6 +257,7 @@ class TestVSCode_launch(lldbvscode_testcase.VSCodeTestCaseBase):
 
     @skipIfWindows
     @skipIfRemote
+    @skipIfAsan
     def test_environment(self):
         """
         Tests launch of a simple program with environment variables
@@ -277,6 +288,7 @@ class TestVSCode_launch(lldbvscode_testcase.VSCodeTestCaseBase):
 
     @skipIfWindows
     @skipIfRemote
+    @skipIfAsan
     @skipIf(
         archs=["arm", "aarch64"]
     )  # failed run https://lab.llvm.org/buildbot/#/builders/96/builds/6933
@@ -361,6 +373,7 @@ class TestVSCode_launch(lldbvscode_testcase.VSCodeTestCaseBase):
 
     @skipIfWindows
     @skipIfRemote
+    @skipIfAsan
     def test_extra_launch_commands(self):
         """
         Tests the "launchCommands" with extra launching settings
@@ -428,6 +441,7 @@ class TestVSCode_launch(lldbvscode_testcase.VSCodeTestCaseBase):
     @skipIfWindows
     @skipIfNetBSD  # Hangs on NetBSD as well
     @skipIfDarwin
+    @skipIfAsan
     @skipIf(
         archs=["arm", "aarch64"]
     )  # Example of a flaky run http://lab.llvm.org:8011/builders/lldb-aarch64-ubuntu/builds/5540/steps/test/logs/stdio
