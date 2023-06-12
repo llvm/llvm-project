@@ -8969,74 +8969,6 @@ public:
 };
 } // anonymous namespace
 
-static void emitNonContiguousDescriptor(
-    CodeGenFunction &CGF, MappableExprsHandler::MapCombinedInfoTy &CombinedInfo,
-    CGOpenMPRuntime::TargetDataInfo &Info) {
-  CodeGenModule &CGM = CGF.CGM;
-  MappableExprsHandler::MapCombinedInfoTy::StructNonContiguousInfo
-      &NonContigInfo = CombinedInfo.NonContigInfo;
-
-  // Build an array of struct descriptor_dim and then assign it to
-  // offload_args.
-  //
-  // struct descriptor_dim {
-  //  uint64_t offset;
-  //  uint64_t count;
-  //  uint64_t stride
-  // };
-  ASTContext &C = CGF.getContext();
-  QualType Int64Ty = C.getIntTypeForBitwidth(/*DestWidth=*/64, /*Signed=*/0);
-  RecordDecl *RD;
-  RD = C.buildImplicitRecord("descriptor_dim");
-  RD->startDefinition();
-  addFieldToRecordDecl(C, RD, Int64Ty);
-  addFieldToRecordDecl(C, RD, Int64Ty);
-  addFieldToRecordDecl(C, RD, Int64Ty);
-  RD->completeDefinition();
-  QualType DimTy = C.getRecordType(RD);
-
-  enum { OffsetFD = 0, CountFD, StrideFD };
-  // We need two index variable here since the size of "Dims" is the same as the
-  // size of Components, however, the size of offset, count, and stride is equal
-  // to the size of base declaration that is non-contiguous.
-  for (unsigned I = 0, L = 0, E = NonContigInfo.Dims.size(); I < E; ++I) {
-    // Skip emitting ir if dimension size is 1 since it cannot be
-    // non-contiguous.
-    if (NonContigInfo.Dims[I] == 1)
-      continue;
-    llvm::APInt Size(/*numBits=*/32, NonContigInfo.Dims[I]);
-    QualType ArrayTy =
-        C.getConstantArrayType(DimTy, Size, nullptr, ArrayType::Normal, 0);
-    Address DimsAddr = CGF.CreateMemTemp(ArrayTy, "dims");
-    for (unsigned II = 0, EE = NonContigInfo.Dims[I]; II < EE; ++II) {
-      unsigned RevIdx = EE - II - 1;
-      LValue DimsLVal = CGF.MakeAddrLValue(
-          CGF.Builder.CreateConstArrayGEP(DimsAddr, II), DimTy);
-      // Offset
-      LValue OffsetLVal = CGF.EmitLValueForField(
-          DimsLVal, *std::next(RD->field_begin(), OffsetFD));
-      CGF.EmitStoreOfScalar(NonContigInfo.Offsets[L][RevIdx], OffsetLVal);
-      // Count
-      LValue CountLVal = CGF.EmitLValueForField(
-          DimsLVal, *std::next(RD->field_begin(), CountFD));
-      CGF.EmitStoreOfScalar(NonContigInfo.Counts[L][RevIdx], CountLVal);
-      // Stride
-      LValue StrideLVal = CGF.EmitLValueForField(
-          DimsLVal, *std::next(RD->field_begin(), StrideFD));
-      CGF.EmitStoreOfScalar(NonContigInfo.Strides[L][RevIdx], StrideLVal);
-    }
-    // args[I] = &dims
-    Address DAddr = CGF.Builder.CreatePointerBitCastOrAddrSpaceCast(
-        DimsAddr, CGM.Int8PtrTy, CGM.Int8Ty);
-    llvm::Value *P = CGF.Builder.CreateConstInBoundsGEP2_32(
-        llvm::ArrayType::get(CGM.VoidPtrTy, Info.NumberOfPtrs),
-        Info.RTArgs.PointersArray, 0, I);
-    Address PAddr(P, CGM.VoidPtrTy, CGF.getPointerAlign());
-    CGF.Builder.CreateStore(DAddr.getPointer(), PAddr);
-    ++L;
-  }
-}
-
 // Try to extract the base declaration from a `this->x` expression if possible.
 static ValueDecl *getDeclFromThisExpr(const Expr *E) {
   if (!E)
@@ -9099,190 +9031,42 @@ static void emitOffloadingArrays(
   Info.clearArrayInfo();
   Info.NumberOfPtrs = CombinedInfo.BasePointers.size();
 
-  if (Info.NumberOfPtrs) {
-    // Detect if we have any capture size requiring runtime evaluation of the
-    // size so that a constant array could be eventually used.
+  using InsertPointTy = llvm::OpenMPIRBuilder::InsertPointTy;
+  InsertPointTy AllocaIP(CGF.AllocaInsertPt->getParent(),
+                         CGF.AllocaInsertPt->getIterator());
+  InsertPointTy CodeGenIP(CGF.Builder.GetInsertBlock(),
+                          CGF.Builder.GetInsertPoint());
 
-    llvm::APInt PointerNumAP(32, Info.NumberOfPtrs, /*isSigned=*/true);
-    QualType PointerArrayType = Ctx.getConstantArrayType(
-        Ctx.VoidPtrTy, PointerNumAP, nullptr, ArrayType::Normal,
-        /*IndexTypeQuals=*/0);
-
-    Info.RTArgs.BasePointersArray =
-        CGF.CreateMemTemp(PointerArrayType, ".offload_baseptrs").getPointer();
-    Info.RTArgs.PointersArray =
-        CGF.CreateMemTemp(PointerArrayType, ".offload_ptrs").getPointer();
-    Address MappersArray =
-        CGF.CreateMemTemp(PointerArrayType, ".offload_mappers");
-    Info.RTArgs.MappersArray = MappersArray.getPointer();
-
-    // If we don't have any VLA types or other types that require runtime
-    // evaluation, we can use a constant array for the map sizes, otherwise we
-    // need to fill up the arrays as we do for the pointers.
-    QualType Int64Ty =
-        Ctx.getIntTypeForBitwidth(/*DestWidth=*/64, /*Signed=*/1);
-    SmallVector<llvm::Constant *> ConstSizes(
-        CombinedInfo.Sizes.size(), llvm::ConstantInt::get(CGF.Int64Ty, 0));
-    llvm::SmallBitVector RuntimeSizes(CombinedInfo.Sizes.size());
-    for (unsigned I = 0, E = CombinedInfo.Sizes.size(); I < E; ++I) {
-      if (auto *CI = dyn_cast<llvm::Constant>(CombinedInfo.Sizes[I])) {
-        if (!isa<llvm::ConstantExpr>(CI) && !isa<llvm::GlobalValue>(CI)) {
-          if (IsNonContiguous &&
-              static_cast<std::underlying_type_t<OpenMPOffloadMappingFlags>>(
-                  CombinedInfo.Types[I] &
-                  OpenMPOffloadMappingFlags::OMP_MAP_NON_CONTIG))
-            ConstSizes[I] = llvm::ConstantInt::get(
-                CGF.Int64Ty, CombinedInfo.NonContigInfo.Dims[I]);
-          else
-            ConstSizes[I] = CI;
-          continue;
-        }
-      }
-      RuntimeSizes.set(I);
-    }
-
-    if (RuntimeSizes.all()) {
-      QualType SizeArrayType = Ctx.getConstantArrayType(
-          Int64Ty, PointerNumAP, nullptr, ArrayType::Normal,
-          /*IndexTypeQuals=*/0);
-      Info.RTArgs.SizesArray =
-          CGF.CreateMemTemp(SizeArrayType, ".offload_sizes").getPointer();
-    } else {
-      auto *SizesArrayInit = llvm::ConstantArray::get(
-          llvm::ArrayType::get(CGM.Int64Ty, ConstSizes.size()), ConstSizes);
-      std::string Name = CGM.getOpenMPRuntime().getName({"offload_sizes"});
-      auto *SizesArrayGbl = new llvm::GlobalVariable(
-          CGM.getModule(), SizesArrayInit->getType(), /*isConstant=*/true,
-          llvm::GlobalValue::PrivateLinkage, SizesArrayInit, Name);
-      SizesArrayGbl->setUnnamedAddr(llvm::GlobalValue::UnnamedAddr::Global);
-      if (RuntimeSizes.any()) {
-        QualType SizeArrayType = Ctx.getConstantArrayType(
-            Int64Ty, PointerNumAP, nullptr, ArrayType::Normal,
-            /*IndexTypeQuals=*/0);
-        Address Buffer = CGF.CreateMemTemp(SizeArrayType, ".offload_sizes");
-        llvm::Value *GblConstPtr =
-            CGF.Builder.CreatePointerBitCastOrAddrSpaceCast(
-                SizesArrayGbl, CGM.Int64Ty->getPointerTo());
-        CGF.Builder.CreateMemCpy(
-            Buffer,
-            Address(GblConstPtr, CGM.Int64Ty,
-                    CGM.getNaturalTypeAlignment(Ctx.getIntTypeForBitwidth(
-                        /*DestWidth=*/64, /*Signed=*/false))),
-            CGF.getTypeSize(SizeArrayType));
-        Info.RTArgs.SizesArray = Buffer.getPointer();
-      } else {
-        Info.RTArgs.SizesArray = SizesArrayGbl;
-      }
-    }
-
-    // The map types are always constant so we don't need to generate code to
-    // fill arrays. Instead, we create an array constant.
-    SmallVector<uint64_t, 4> Mapping;
-    for (auto mapFlag : CombinedInfo.Types)
-      Mapping.push_back(
-          static_cast<std::underlying_type_t<OpenMPOffloadMappingFlags>>(
-              mapFlag));
-    std::string MaptypesName =
-        CGM.getOpenMPRuntime().getName({"offload_maptypes"});
-    auto *MapTypesArrayGbl =
-        OMPBuilder.createOffloadMaptypes(Mapping, MaptypesName);
-    Info.RTArgs.MapTypesArray = MapTypesArrayGbl;
-
-    // The information types are only built if there is debug information
-    // requested.
-    if (CGM.getCodeGenOpts().getDebugInfo() ==
-        llvm::codegenoptions::NoDebugInfo) {
-      Info.RTArgs.MapNamesArray = llvm::Constant::getNullValue(
-          llvm::Type::getInt8Ty(CGF.Builder.getContext())->getPointerTo());
-    } else {
-      auto fillInfoMap = [&](MappableExprsHandler::MappingExprInfo &MapExpr) {
-        return emitMappingInformation(CGF, OMPBuilder, MapExpr);
-      };
-      SmallVector<llvm::Constant *, 4> InfoMap(CombinedInfo.Exprs.size());
-      llvm::transform(CombinedInfo.Exprs, InfoMap.begin(), fillInfoMap);
-      std::string MapnamesName =
-          CGM.getOpenMPRuntime().getName({"offload_mapnames"});
-      auto *MapNamesArrayGbl =
-          OMPBuilder.createOffloadMapnames(InfoMap, MapnamesName);
-      Info.RTArgs.MapNamesArray = MapNamesArrayGbl;
-    }
-
-    // If there's a present map type modifier, it must not be applied to the end
-    // of a region, so generate a separate map type array in that case.
-    if (Info.separateBeginEndCalls()) {
-      bool EndMapTypesDiffer = false;
-      for (uint64_t &Type : Mapping) {
-        if (Type &
-            static_cast<std::underlying_type_t<OpenMPOffloadMappingFlags>>(
-                OpenMPOffloadMappingFlags::OMP_MAP_PRESENT)) {
-          Type &=
-              ~static_cast<std::underlying_type_t<OpenMPOffloadMappingFlags>>(
-                  OpenMPOffloadMappingFlags::OMP_MAP_PRESENT);
-          EndMapTypesDiffer = true;
-        }
-      }
-      if (EndMapTypesDiffer) {
-        MapTypesArrayGbl =
-            OMPBuilder.createOffloadMaptypes(Mapping, MaptypesName);
-        Info.RTArgs.MapTypesArrayEnd = MapTypesArrayGbl;
-      }
-    }
-
-    for (unsigned I = 0; I < Info.NumberOfPtrs; ++I) {
-      llvm::Value *BPVal = CombinedInfo.BasePointers[I];
-      llvm::Value *BP = CGF.Builder.CreateConstInBoundsGEP2_32(
-          llvm::ArrayType::get(CGM.VoidPtrTy, Info.NumberOfPtrs),
-          Info.RTArgs.BasePointersArray, 0, I);
-      BP = CGF.Builder.CreatePointerBitCastOrAddrSpaceCast(
-          BP, BPVal->getType()->getPointerTo(/*AddrSpace=*/0));
-      Address BPAddr(BP, BPVal->getType(),
-                     Ctx.getTypeAlignInChars(Ctx.VoidPtrTy));
-      CGF.Builder.CreateStore(BPVal, BPAddr);
-
-      if (Info.requiresDevicePointerInfo())
-        if (const ValueDecl *DevVD = CombinedInfo.DevicePtrDecls[I])
-          Info.CaptureDeviceAddrMap.try_emplace(DevVD, BPAddr);
-
-      llvm::Value *PVal = CombinedInfo.Pointers[I];
-      llvm::Value *P = CGF.Builder.CreateConstInBoundsGEP2_32(
-          llvm::ArrayType::get(CGM.VoidPtrTy, Info.NumberOfPtrs),
-          Info.RTArgs.PointersArray, 0, I);
-      P = CGF.Builder.CreatePointerBitCastOrAddrSpaceCast(
-          P, PVal->getType()->getPointerTo(/*AddrSpace=*/0));
-      Address PAddr(P, PVal->getType(), Ctx.getTypeAlignInChars(Ctx.VoidPtrTy));
-      CGF.Builder.CreateStore(PVal, PAddr);
-
-      if (RuntimeSizes.test(I)) {
-        llvm::Value *S = CGF.Builder.CreateConstInBoundsGEP2_32(
-            llvm::ArrayType::get(CGM.Int64Ty, Info.NumberOfPtrs),
-            Info.RTArgs.SizesArray,
-            /*Idx0=*/0,
-            /*Idx1=*/I);
-        Address SAddr(S, CGM.Int64Ty, Ctx.getTypeAlignInChars(Int64Ty));
-        CGF.Builder.CreateStore(CGF.Builder.CreateIntCast(CombinedInfo.Sizes[I],
-                                                          CGM.Int64Ty,
-                                                          /*isSigned=*/true),
-                                SAddr);
-      }
-
-      // Fill up the mapper array.
-      llvm::Value *MFunc = llvm::ConstantPointerNull::get(CGM.VoidPtrTy);
-      if (CombinedInfo.Mappers[I]) {
-        MFunc = CGM.getOpenMPRuntime().getOrCreateUserDefinedMapperFunc(
-            cast<OMPDeclareMapperDecl>(CombinedInfo.Mappers[I]));
-        MFunc = CGF.Builder.CreatePointerCast(MFunc, CGM.VoidPtrTy);
-        Info.HasMapper = true;
-      }
-      Address MAddr = CGF.Builder.CreateConstArrayGEP(MappersArray, I);
-      CGF.Builder.CreateStore(MFunc, MAddr);
-    }
+  auto fillInfoMap = [&](MappableExprsHandler::MappingExprInfo &MapExpr) {
+    return emitMappingInformation(CGF, OMPBuilder, MapExpr);
+  };
+  if (CGM.getCodeGenOpts().getDebugInfo() !=
+      llvm::codegenoptions::NoDebugInfo) {
+    CombinedInfo.Names.resize(CombinedInfo.Exprs.size());
+    llvm::transform(CombinedInfo.Exprs, CombinedInfo.Names.begin(),
+                    fillInfoMap);
   }
 
-  if (!IsNonContiguous || CombinedInfo.NonContigInfo.Offsets.empty() ||
-      Info.NumberOfPtrs == 0)
-    return;
+  auto DeviceAddrCB = [&](unsigned int I, llvm::Value *BP, llvm::Value *BPVal) {
+    if (const ValueDecl *DevVD = CombinedInfo.DevicePtrDecls[I]) {
+      Address BPAddr(BP, BPVal->getType(),
+                     Ctx.getTypeAlignInChars(Ctx.VoidPtrTy));
+      Info.CaptureDeviceAddrMap.try_emplace(DevVD, BPAddr);
+    }
+  };
 
-  emitNonContiguousDescriptor(CGF, CombinedInfo, Info);
+  auto CustomMapperCB = [&](unsigned int I) {
+    llvm::Value *MFunc = nullptr;
+    if (CombinedInfo.Mappers[I]) {
+      Info.HasMapper = true;
+      MFunc = CGF.CGM.getOpenMPRuntime().getOrCreateUserDefinedMapperFunc(
+          cast<OMPDeclareMapperDecl>(CombinedInfo.Mappers[I]));
+    }
+    return MFunc;
+  };
+  OMPBuilder.emitOffloadingArrays(AllocaIP, CodeGenIP, CombinedInfo, Info,
+                                  /*IsNonContiguous=*/true, DeviceAddrCB,
+                                  CustomMapperCB);
 }
 
 /// Check for inner distribute directive.
