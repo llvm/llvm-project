@@ -8,6 +8,7 @@
 # RUN:  -misched-topdown=true -sched-print-cycles=true \
 # RUN:  -misched-dump-schedule-trace=true --misched-sort-resources-in-trace=false 2>&1 | FileCheck --check-prefix=UNSORTED %s
 
+# REQUIRES: asserts, aarch64-registered-target
 ---
 name: test
 tracksRegLiveness: true
