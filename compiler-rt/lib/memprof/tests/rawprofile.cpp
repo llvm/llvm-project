@@ -4,6 +4,7 @@
 #include <memory>
 
 #include "profile/MemProfData.inc"
+#include "sanitizer_common/sanitizer_array_ref.h"
 #include "sanitizer_common/sanitizer_common.h"
 #include "sanitizer_common/sanitizer_procmaps.h"
 #include "sanitizer_common/sanitizer_stackdepot.h"
