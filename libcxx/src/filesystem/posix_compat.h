@@ -24,9 +24,10 @@
 #define POSIX_COMPAT_H
 
 #include <__assert>
+#include <__config>
 #include <filesystem>
 
-#include "filesystem_common.h"
+#include "error.h"
 
 #if defined(_LIBCPP_WIN32API)
 # define WIN32_LEAN_AND_MEAN
@@ -35,10 +36,12 @@
 # include <io.h>
 # include <winioctl.h>
 #else
+# include <fcntl.h>
 # include <unistd.h>
 # include <sys/stat.h>
 # include <sys/statvfs.h>
 #endif
+#include <stdlib.h>
 #include <time.h>
 
 #if defined(_LIBCPP_WIN32API)
@@ -71,10 +74,51 @@ struct LIBCPP_REPARSE_DATA_BUFFER {
 };
 #endif
 
+// TODO: Check whether these functions actually need internal linkage, or if they can be made normal header functions
+_LIBCPP_DIAGNOSTIC_PUSH
+_LIBCPP_GCC_DIAGNOSTIC_IGNORED("-Wunused-function")
+_LIBCPP_CLANG_DIAGNOSTIC_IGNORED("-Wunused-function")
+_LIBCPP_CLANG_DIAGNOSTIC_IGNORED("-Wunused-template")
+
 _LIBCPP_BEGIN_NAMESPACE_FILESYSTEM
 
 namespace detail {
 namespace {
+
+#if defined(_LIBCPP_WIN32API)
+// Various C runtime versions (UCRT, or the legacy msvcrt.dll used by
+// some mingw toolchains) provide different stat function implementations,
+// with a number of limitations with respect to what we want from the
+// stat function. Instead provide our own which does exactly what we want,
+// along with our own stat structure and flag macros.
+
+struct TimeSpec {
+  int64_t tv_sec;
+  int64_t tv_nsec;
+};
+struct StatT {
+  unsigned st_mode;
+  TimeSpec st_atim;
+  TimeSpec st_mtim;
+  uint64_t st_dev; // FILE_ID_INFO::VolumeSerialNumber
+  struct FileIdStruct {
+    unsigned char id[16]; // FILE_ID_INFO::FileId
+    bool operator==(const FileIdStruct &other) const {
+      for (int i = 0; i < 16; i++)
+        if (id[i] != other.id[i])
+          return false;
+      return true;
+    }
+  } st_ino;
+  uint32_t st_nlink;
+  uintmax_t st_size;
+};
+
+#else
+using TimeSpec = struct timespec;
+using TimeVal = struct timeval;
+using StatT = struct stat;
+#endif
 
 #if defined(_LIBCPP_WIN32API)
 
@@ -400,7 +444,7 @@ int fchmod_handle(HANDLE h, int perms) {
   return 0;
 }
 
-int fchmodat(int fd, const wchar_t *path, int perms, int flag) {
+int fchmodat(int /*fd*/, const wchar_t *path, int perms, int flag) {
   DWORD attributes = GetFileAttributesW(path);
   if (attributes == INVALID_FILE_ATTRIBUTES)
     return set_errno();
@@ -518,5 +562,7 @@ using SSizeT = ::ssize_t;
 } // end namespace detail
 
 _LIBCPP_END_NAMESPACE_FILESYSTEM
+
+_LIBCPP_DIAGNOSTIC_POP
 
 #endif // POSIX_COMPAT_H
