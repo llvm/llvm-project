@@ -15,6 +15,7 @@
 
 #include "lldb/Host/posix/ConnectionFileDescriptorPosix.h"
 #include "lldb/Host/Config.h"
+#include "lldb/Host/FileSystem.h"
 #include "lldb/Host/Socket.h"
 #include "lldb/Host/SocketAddress.h"
 #include "lldb/Utility/LLDBLog.h"
@@ -726,7 +727,7 @@ ConnectionStatus ConnectionFileDescriptor::ConnectFile(
 #if LLDB_ENABLE_POSIX
   std::string addr_str = s.str();
   // file:///PATH
-  int fd = llvm::sys::RetryAfterSignal(-1, ::open, addr_str.c_str(), O_RDWR);
+  int fd = FileSystem::Instance().Open(addr_str.c_str(), O_RDWR);
   if (fd == -1) {
     if (error_ptr)
       error_ptr->SetErrorToErrno();
@@ -776,7 +777,7 @@ ConnectionStatus ConnectionFileDescriptor::ConnectSerialPort(
     return eConnectionStatusError;
   }
 
-  int fd = llvm::sys::RetryAfterSignal(-1, ::open, path.str().c_str(), O_RDWR);
+  int fd = FileSystem::Instance().Open(path.str().c_str(), O_RDWR);
   if (fd == -1) {
     if (error_ptr)
       error_ptr->SetErrorToErrno();
