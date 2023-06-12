@@ -1305,9 +1305,9 @@ SDValue AMDGPUTargetLowering::LowerOperation(SDValue Op,
   case ISD::FROUND: return LowerFROUND(Op, DAG);
   case ISD::FFLOOR: return LowerFFLOOR(Op, DAG);
   case ISD::FLOG:
-    return LowerFLOG(Op, DAG, numbers::ln2f);
+    return LowerFLOG(Op, DAG, numbers::ln2);
   case ISD::FLOG10:
-    return LowerFLOG(Op, DAG, numbers::ln2f / numbers::ln10f);
+    return LowerFLOG(Op, DAG, numbers::ln2 / numbers::ln10);
   case ISD::FEXP:
     return lowerFEXP(Op, DAG);
   case ISD::SINT_TO_FP: return LowerSINT_TO_FP(Op, DAG);
