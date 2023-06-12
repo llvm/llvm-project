@@ -97,8 +97,8 @@ Section,Description,Dependencies,Assignee,Complete
 | `multimap <https://reviews.llvm.org/D145976>`_",[expos.only.func],Hristo Hristov,|Complete|
 | `[associative.set.syn] <https://wg21.link/associative.set.syn>`_ (`general <https://wg21.link/container.opt.reqmts>`_),"| `multiset <https://reviews.llvm.org/D148416>`_
 | `set <https://reviews.llvm.org/D148416>`_",[expos.only.func],Hristo Hristov,|Complete|
-| `[unord.map.syn] <https://wg21.link/unord.map.syn>`_,"| remove ops `unordered_map`
-| remove ops `unordered_multimap`",None,Unassigned,|Not Started|
+| `[unord.map.syn] <https://wg21.link/unord.map.syn>`_,"| remove ops `unordered_map <https://reviews.llvm.org/D152642>`_
+| remove ops `unordered_multimap <https://reviews.llvm.org/D152642>`_",None,Hristo Hristov,|Complete|
 | `[unordered.set.syn] <https://wg21.link/unordered.set.syn>`_,"| remove ops `unordered_set <https://reviews.llvm.org/D152643>`_
 | remove ops `unordered_multiset <https://reviews.llvm.org/D152643>`_",None,Hristo Hristov,|Complete|
 | `[queue.syn] <https://wg21.link/queue.syn>`_,| `queue <https://reviews.llvm.org/D146066>`_,None,Hristo Hristov,|Complete|
