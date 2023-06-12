@@ -1627,6 +1627,21 @@ public:
                                     bool EmitDebug = false,
                                     bool ForEndCall = false);
 
+  /// Emit an array of struct descriptors to be assigned to the offload args.
+  void emitNonContiguousDescriptor(InsertPointTy AllocaIP,
+                                   InsertPointTy CodeGenIP,
+                                   MapInfosTy &CombinedInfo,
+                                   TargetDataInfo &Info);
+
+  /// Emit the arrays used to pass the captures and map information to the
+  /// offloading runtime library. If there is no map or capture information,
+  /// return nullptr by reference.
+  void emitOffloadingArrays(
+      InsertPointTy AllocaIP, InsertPointTy CodeGenIP, MapInfosTy &CombinedInfo,
+      TargetDataInfo &Info, bool IsNonContiguous = false,
+      function_ref<void(unsigned int, Value *, Value *)> DeviceAddrCB = nullptr,
+      function_ref<Value *(unsigned int)> CustomMapperCB = nullptr);
+
   /// Creates offloading entry for the provided entry ID \a ID, address \a
   /// Addr, size \a Size, and flags \a Flags.
   void createOffloadEntry(Constant *ID, Constant *Addr, uint64_t Size,
