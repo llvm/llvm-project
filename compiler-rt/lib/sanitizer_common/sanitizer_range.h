@@ -1,4 +1,4 @@
-//===-- sanitizer_common_range.h --------------------------------*- C++ -*-===//
+//===-- sanitizer_range.h ---------------------------------------*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -10,8 +10,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef SANITIZER_COMMON_REGION_H
-#define SANITIZER_COMMON_REGION_H
+#ifndef SANITIZER_RANGE_H
+#define SANITIZER_RANGE_H
 
 #include "sanitizer_common.h"
 #include "sanitizer_common/sanitizer_array_ref.h"
@@ -37,4 +37,4 @@ void Intersect(ArrayRef<Range> a, ArrayRef<Range> b,
 
 }  // namespace __sanitizer
 
-#endif  // SANITIZER_COMMON_REGION_H
+#endif  // SANITIZER_RANGE_H

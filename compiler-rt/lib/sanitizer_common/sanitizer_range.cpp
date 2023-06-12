@@ -1,4 +1,4 @@
-//===-- sanitizer_common_range.cpp ----------------------------------------===//
+//===-- sanitizer_range.cpp -----------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "sanitizer_common_range.h"
+#include "sanitizer_range.h"
 
 #include "sanitizer_common/sanitizer_array_ref.h"
 
