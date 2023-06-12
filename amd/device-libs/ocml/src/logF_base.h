@@ -7,6 +7,8 @@
 
 #include "mathF.h"
 
+#define IS_SUBNORMAL_ZERO_OR_NEG_F32(x) (x < 0x1p-126f)
+
 CONSTATTR float
 #if defined COMPILING_LOG2
 MATH_MANGLE(log2)(float x)
@@ -62,7 +64,7 @@ MATH_MANGLE(log)(float x)
     } else {
         // not DAZ
         if (UNSAFE_MATH_OPT()) {
-            bool s = BUILTIN_ISSUBNORMAL_F32(x);
+            bool s = IS_SUBNORMAL_ZERO_OR_NEG_F32(x);
             x *= s ? 0x1.0p+32f : 1.0f;
 #if defined COMPILING_LOG2
             return BUILTIN_AMDGPU_LOG2_F32(x) - (s ? 32.0f : 0.0f);
@@ -72,7 +74,7 @@ MATH_MANGLE(log)(float x)
             return MATH_MAD(BUILTIN_AMDGPU_LOG2_F32(x), 0x1.62e430p-1f, s ? -0x1.62e430p+4f : 0.0f);
 #endif
         } else {
-            bool s = BUILTIN_ISSUBNORMAL_F32(x);
+            bool s = IS_SUBNORMAL_ZERO_OR_NEG_F32(x);
             x *= s ? 0x1.0p+32f : 1.0f;
 #if defined COMPILING_LOG2
             return BUILTIN_AMDGPU_LOG2_F32(x) - (s ? 32.0f : 0.0f);
