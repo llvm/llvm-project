@@ -40,7 +40,6 @@
 
 // Forward Declarations for this DWARF plugin
 class DebugMapModule;
-class DWARFAbbreviationDeclarationSet;
 class DWARFCompileUnit;
 class DWARFDebugAbbrev;
 class DWARFDebugAranges;
