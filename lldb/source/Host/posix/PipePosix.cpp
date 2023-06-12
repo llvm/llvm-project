@@ -7,11 +7,11 @@
 //===----------------------------------------------------------------------===//
 
 #include "lldb/Host/posix/PipePosix.h"
+#include "lldb/Host/FileSystem.h"
 #include "lldb/Host/HostInfo.h"
 #include "lldb/Utility/SelectHelper.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/Support/Errno.h"
-#include "llvm/Support/FileSystem.h"
 #include <functional>
 #include <thread>
 
@@ -148,7 +148,7 @@ Status PipePosix::OpenAsReader(llvm::StringRef name,
     flags |= O_CLOEXEC;
 
   Status error;
-  int fd = llvm::sys::RetryAfterSignal(-1, ::open, name.str().c_str(), flags);
+  int fd = FileSystem::Instance().Open(name.str().c_str(), flags);
   if (fd != -1)
     m_fds[READ] = fd;
   else
