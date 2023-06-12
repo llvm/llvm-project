@@ -65,7 +65,7 @@ raw_ostream &operator<<(raw_ostream &OS, const Print<Liveness::RefMap> &P) {
   for (const auto &I : P.Obj) {
     OS << ' ' << printReg(I.first, &P.G.getTRI()) << '{';
     for (auto J = I.second.begin(), E = I.second.end(); J != E;) {
-      OS << Print(J->first, P.G) << PrintLaneMaskShort(J->second);
+      OS << Print(J->first, P.G) << PrintLaneMaskOpt(J->second);
       if (++J != E)
         OS << ',';
     }
@@ -659,8 +659,6 @@ void Liveness::computePhiInfo() {
   // The operation "clearIn" can be expensive. For a given set of intervening
   // defs, cache the result of subtracting these defs from a given register
   // ref.
-  using RefHash = std::hash<RegisterRef>;
-  using RefEqual = std::equal_to<RegisterRef>;
   using SubMap = std::unordered_map<RegisterRef, RegisterRef>;
   std::unordered_map<RegisterAggr, SubMap> Subs;
   auto ClearIn = [](RegisterRef RR, const RegisterAggr &Mid, SubMap &SM) {
@@ -692,10 +690,7 @@ void Liveness::computePhiInfo() {
 
         if (MidDefs.hasCoverOf(UR))
           continue;
-        if (Subs.find(MidDefs) == Subs.end()) {
-          Subs.insert({MidDefs, SubMap(1, RefHash(), RefEqual(PRI))});
-        }
-        SubMap &SM = Subs.at(MidDefs);
+        SubMap &SM = Subs[MidDefs];
 
         // General algorithm:
         //   for each (R,U) : U is use node of R, U is reached by PA
@@ -878,7 +873,7 @@ void Liveness::computeLiveIns() {
       std::vector<RegisterRef> LV;
       for (const MachineBasicBlock::RegisterMaskPair &LI : B.liveins())
         LV.push_back(RegisterRef(LI.PhysReg, LI.LaneMask));
-      llvm::sort(LV, std::less<RegisterRef>(PRI));
+      llvm::sort(LV);
       dbgs() << printMBBReference(B) << "\t rec = {";
       for (auto I : LV)
         dbgs() << ' ' << Print(I, DFG);
@@ -888,7 +883,7 @@ void Liveness::computeLiveIns() {
       LV.clear();
       for (RegisterRef RR : LiveMap[&B].refs())
         LV.push_back(RR);
-      llvm::sort(LV, std::less<RegisterRef>(PRI));
+      llvm::sort(LV);
       dbgs() << "\tcomp = {";
       for (auto I : LV)
         dbgs() << ' ' << Print(I, DFG);

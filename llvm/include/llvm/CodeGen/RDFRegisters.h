@@ -14,7 +14,6 @@
 #include "llvm/ADT/iterator_range.h"
 #include "llvm/CodeGen/TargetRegisterInfo.h"
 #include "llvm/MC/LaneBitmask.h"
-#include "llvm/MC/MCRegister.h"
 #include <cassert>
 #include <cstdint>
 #include <map>
@@ -27,7 +26,6 @@ class MachineFunction;
 class raw_ostream;
 
 namespace rdf {
-struct RegisterAggr;
 
 using RegisterId = uint32_t;
 
@@ -72,50 +70,35 @@ private:
 
 struct RegisterRef {
   RegisterId Reg = 0;
-  LaneBitmask Mask = LaneBitmask::getNone(); // Only for registers.
+  LaneBitmask Mask = LaneBitmask::getNone();
 
-  constexpr RegisterRef() = default;
-  constexpr explicit RegisterRef(RegisterId R,
-                                 LaneBitmask M = LaneBitmask::getAll())
-      : Reg(R), Mask(isRegId(R) && R != 0 ? M : LaneBitmask::getNone()) {}
+  RegisterRef() = default;
+  explicit RegisterRef(RegisterId R, LaneBitmask M = LaneBitmask::getAll())
+      : Reg(R), Mask(R != 0 ? M : LaneBitmask::getNone()) {}
 
-  // Classify null register as a "register".
-  constexpr bool isReg() const { return Reg == 0 || isRegId(Reg); }
-  constexpr bool isUnit() const { return isUnitId(Reg); }
-  constexpr bool isMask() const { return isMaskId(Reg); }
+  operator bool() const { return Reg != 0 && Mask.any(); }
 
-  constexpr operator bool() const {
-    return !isReg() || (Reg != 0 && Mask.any());
+  bool operator==(const RegisterRef &RR) const {
+    return Reg == RR.Reg && Mask == RR.Mask;
+  }
+
+  bool operator!=(const RegisterRef &RR) const { return !operator==(RR); }
+
+  bool operator<(const RegisterRef &RR) const {
+    return Reg < RR.Reg || (Reg == RR.Reg && Mask < RR.Mask);
   }
 
   size_t hash() const {
     return std::hash<RegisterId>{}(Reg) ^
            std::hash<LaneBitmask::Type>{}(Mask.getAsInteger());
   }
-
-  static constexpr bool isRegId(unsigned Id) {
-    return Register::isPhysicalRegister(Id);
-  }
-  static constexpr bool isUnitId(unsigned Id) {
-    return Register::isVirtualRegister(Id);
-  }
-  static constexpr bool isMaskId(unsigned Id) {
-    return Register::isStackSlot(Id);
-  }
-
-  static RegisterId toUnitId(unsigned Idx) {
-    return Register::index2VirtReg(Idx);
-  }
-  static unsigned toRegUnit(RegisterId U) { return Register::virtReg2Index(U); }
-
-  bool operator<(RegisterRef) const = delete;
-  bool operator==(RegisterRef) const = delete;
-  bool operator!=(RegisterRef) const = delete;
 };
 
 struct PhysicalRegisterInfo {
   PhysicalRegisterInfo(const TargetRegisterInfo &tri,
                        const MachineFunction &mf);
+
+  static bool isRegMaskId(RegisterId R) { return Register::isStackSlot(R); }
 
   RegisterId getRegMaskId(const uint32_t *RM) const {
     return Register::index2StackSlot(RegMasks.find(RM));
@@ -126,13 +109,11 @@ struct PhysicalRegisterInfo {
   }
 
   bool alias(RegisterRef RA, RegisterRef RB) const {
-    if (!RA.isMask())
-      return !RB.isMask() ? aliasRR(RA, RB) : aliasRM(RA, RB);
-    return !RB.isMask() ? aliasRM(RB, RA) : aliasMM(RA, RB);
+    if (!isRegMaskId(RA.Reg))
+      return !isRegMaskId(RB.Reg) ? aliasRR(RA, RB) : aliasRM(RA, RB);
+    return !isRegMaskId(RB.Reg) ? aliasRM(RB, RA) : aliasMM(RA, RB);
   }
 
-  // Returns the set of aliased physical registers or register masks.
-  // The returned set does not contain register units.
   std::set<RegisterId> getAliasSet(RegisterId Reg) const;
 
   RegisterRef getRefForUnit(uint32_t U) const {
@@ -149,12 +130,6 @@ struct PhysicalRegisterInfo {
 
   RegisterRef mapTo(RegisterRef RR, unsigned R) const;
   const TargetRegisterInfo &getTRI() const { return TRI; }
-
-  bool equal_to(RegisterRef A, RegisterRef B) const;
-  bool less(RegisterRef A, RegisterRef B) const;
-
-  void print(raw_ostream &OS, RegisterRef A) const;
-  void print(raw_ostream &OS, const RegisterAggr &A) const;
 
 private:
   struct RegInfo {
@@ -193,8 +168,6 @@ struct RegisterAggr {
   bool hasAliasOf(RegisterRef RR) const;
   bool hasCoverOf(RegisterRef RR) const;
 
-  const PhysicalRegisterInfo &getPRI() const { return PRI; }
-
   bool operator==(const RegisterAggr &A) const {
     return DenseMapInfo<BitVector>::isEqual(Units, A.Units);
   }
@@ -217,7 +190,9 @@ struct RegisterAggr {
 
   size_t hash() const { return DenseMapInfo<BitVector>::getHashValue(Units); }
 
-  struct ref_iterator {
+  void print(raw_ostream &OS) const;
+
+  struct rr_iterator {
     using MapType = std::map<RegisterId, LaneBitmask>;
 
   private:
@@ -227,39 +202,35 @@ struct RegisterAggr {
     const RegisterAggr *Owner;
 
   public:
-    ref_iterator(const RegisterAggr &RG, bool End);
+    rr_iterator(const RegisterAggr &RG, bool End);
 
     RegisterRef operator*() const {
       return RegisterRef(Pos->first, Pos->second);
     }
 
-    ref_iterator &operator++() {
+    rr_iterator &operator++() {
       ++Pos;
       ++Index;
       return *this;
     }
 
-    bool operator==(const ref_iterator &I) const {
+    bool operator==(const rr_iterator &I) const {
       assert(Owner == I.Owner);
       (void)Owner;
       return Index == I.Index;
     }
 
-    bool operator!=(const ref_iterator &I) const { return !(*this == I); }
+    bool operator!=(const rr_iterator &I) const { return !(*this == I); }
   };
 
-  ref_iterator ref_begin() const { return ref_iterator(*this, false); }
-  ref_iterator ref_end() const { return ref_iterator(*this, true); }
+  rr_iterator rr_begin() const { return rr_iterator(*this, false); }
+  rr_iterator rr_end() const { return rr_iterator(*this, true); }
 
-  using unit_iterator = typename BitVector::const_set_bits_iterator;
-  unit_iterator unit_begin() const { return Units.set_bits_begin(); }
-  unit_iterator unit_end() const { return Units.set_bits_end(); }
-
-  iterator_range<ref_iterator> refs() const {
-    return make_range(ref_begin(), ref_end());
+  iterator_range<rr_iterator> refs() {
+    return make_range(rr_begin(), rr_end());
   }
-  iterator_range<unit_iterator> units() const {
-    return make_range(unit_begin(), unit_end());
+  iterator_range<rr_iterator> refs() const {
+    return make_range(rr_begin(), rr_end());
   }
 
 private:
@@ -292,65 +263,34 @@ public:
   using value_type = typename decltype(Map)::value_type;
 };
 
-raw_ostream &operator<<(raw_ostream &OS, const RegisterAggr &A);
-
-// Print the lane mask in a short form (or not at all if all bits are set).
-struct PrintLaneMaskShort {
-  PrintLaneMaskShort(LaneBitmask M) : Mask(M) {}
+// Optionally print the lane mask, if it is not ~0.
+struct PrintLaneMaskOpt {
+  PrintLaneMaskOpt(LaneBitmask M) : Mask(M) {}
   LaneBitmask Mask;
 };
-raw_ostream &operator<<(raw_ostream &OS, const PrintLaneMaskShort &P);
+raw_ostream &operator<<(raw_ostream &OS, const PrintLaneMaskOpt &P);
 
+raw_ostream &operator<<(raw_ostream &OS, const RegisterAggr &A);
 } // end namespace rdf
+
 } // end namespace llvm
 
 namespace std {
-
 template <> struct hash<llvm::rdf::RegisterRef> {
   size_t operator()(llvm::rdf::RegisterRef A) const { //
     return A.hash();
   }
 };
-
 template <> struct hash<llvm::rdf::RegisterAggr> {
   size_t operator()(const llvm::rdf::RegisterAggr &A) const { //
     return A.hash();
   }
 };
-
-template <> struct equal_to<llvm::rdf::RegisterRef> {
-  constexpr equal_to(const llvm::rdf::PhysicalRegisterInfo &pri) : PRI(pri) {}
-
-  bool operator()(llvm::rdf::RegisterRef A, llvm::rdf::RegisterRef B) const {
-    return PRI.equal_to(A, B);
-  }
-
-private:
-  const llvm::rdf::PhysicalRegisterInfo &PRI;
-};
-
 template <> struct equal_to<llvm::rdf::RegisterAggr> {
   bool operator()(const llvm::rdf::RegisterAggr &A,
                   const llvm::rdf::RegisterAggr &B) const {
     return A == B;
   }
 };
-
-template <> struct less<llvm::rdf::RegisterRef> {
-  constexpr less(const llvm::rdf::PhysicalRegisterInfo &pri) : PRI(pri) {}
-
-  bool operator()(llvm::rdf::RegisterRef A, llvm::rdf::RegisterRef B) const {
-    return PRI.less(A, B);
-  }
-
-private:
-  const llvm::rdf::PhysicalRegisterInfo &PRI;
-};
-
 } // namespace std
-
-namespace llvm::rdf {
-using RegisterSet = std::set<RegisterRef, std::less<RegisterRef>>;
-} // namespace llvm::rdf
-
 #endif // LLVM_CODEGEN_RDFREGISTERS_H
