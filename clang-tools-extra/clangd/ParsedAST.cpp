@@ -666,7 +666,7 @@ ParsedAST::build(llvm::StringRef Filename, const ParseInputs &Inputs,
   // non-preamble includes below.
   CanonicalIncludes CanonIncludes;
   if (Preamble)
-    CanonIncludes = Preamble->CanonIncludes;
+    CanonIncludes = *Preamble->CanonIncludes;
   else
     CanonIncludes.addSystemHeadersMapping(Clang->getLangOpts());
   std::unique_ptr<CommentHandler> IWYUHandler =

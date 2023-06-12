@@ -228,15 +228,16 @@ public:
   // Build preamble and AST, and index them.
   bool buildAST() {
     log("Building preamble...");
-    Preamble = buildPreamble(File, *Invocation, Inputs, /*StoreInMemory=*/true,
-                             [&](ASTContext &Ctx, Preprocessor &PP,
-                                 const CanonicalIncludes &Includes) {
-                               if (!Opts.BuildDynamicSymbolIndex)
-                                 return;
-                               log("Indexing headers...");
-                               Index.updatePreamble(File, /*Version=*/"null",
-                                                    Ctx, PP, Includes);
-                             });
+    Preamble = buildPreamble(
+        File, *Invocation, Inputs, /*StoreInMemory=*/true,
+        [&](CapturedASTCtx Ctx,
+            const std::shared_ptr<const CanonicalIncludes> Includes) {
+          if (!Opts.BuildDynamicSymbolIndex)
+            return;
+          log("Indexing headers...");
+          Index.updatePreamble(File, /*Version=*/"null", Ctx.getASTContext(),
+                               Ctx.getPreprocessor(), *Includes);
+        });
     if (!Preamble) {
       elog("Failed to build preamble");
       return false;
