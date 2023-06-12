@@ -39,13 +39,6 @@ class TargetLibraryInfo;
 class Value;
 class ValueLatticeElement;
 
-/// Helper struct for bundling up the analysis results per function for IPSCCP.
-struct AnalysisResultsForFn {
-  std::unique_ptr<PredicateInfo> PredInfo;
-  DominatorTree *DT;
-  PostDominatorTree *PDT;
-};
-
 /// Helper struct shared between Function Specialization and SCCP Solver.
 struct ArgInfo {
   Argument *Formal; // The Formal argument being analysed.
@@ -81,7 +74,7 @@ public:
 
   ~SCCPSolver();
 
-  void addAnalysis(Function &F, AnalysisResultsForFn A);
+  void addPredicateInfo(Function &F, DominatorTree &DT, AssumptionCache &AC);
 
   /// markBlockExecutable - This method can be used by clients to mark all of
   /// the blocks that are known to be intrinsically live in the processed unit.
@@ -89,8 +82,6 @@ public:
   bool markBlockExecutable(BasicBlock *BB);
 
   const PredicateBase *getPredicateInfoFor(Instruction *I);
-
-  DomTreeUpdater getDTU(Function &F);
 
   /// trackValueOfGlobalVariable - Clients can use this method to
   /// inform the SCCPSolver that it should track loads and stores to the

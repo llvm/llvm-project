@@ -1,11 +1,11 @@
 // RUN: %clang_cc1 -triple x86_64-linux-gnu -emit-llvm -mreassociate  -o - %s \
-// RUN: -opaque-pointers | FileCheck --check-prefix CHECK %s
+// RUN: | FileCheck --check-prefix CHECK %s
 
 // RUN: %clang_cc1 -triple i386-pc-linux-gnu -emit-llvm -mreassociate  -o - %s \
-// RUN: -opaque-pointers | FileCheck --check-prefix CHECK %s
+// RUN: | FileCheck --check-prefix CHECK %s
 
 // RUN: %clang_cc1 -triple x86_64-linux-gnu -emit-llvm -mreassociate \
-// RUN: -fprotect-parens -ffp-contract=on -o - %s -opaque-pointers \
+// RUN: -fprotect-parens -ffp-contract=on -o - %s \
 // RUN: | FileCheck --check-prefix CHECK %s
 
 template <typename T> T addAF(T a, T b) {

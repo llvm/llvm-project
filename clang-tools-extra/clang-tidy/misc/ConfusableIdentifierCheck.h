@@ -11,6 +11,7 @@
 #define LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_MISC_CONFUSABLE_IDENTIFIER_CHECK_H
 
 #include "../ClangTidyCheck.h"
+#include <unordered_map>
 
 namespace clang::tidy::misc {
 
@@ -26,9 +27,23 @@ public:
   void registerMatchers(ast_matchers::MatchFinder *Finder) override;
   void check(const ast_matchers::MatchFinder::MatchResult &Result) override;
 
+  struct ContextInfo {
+    const DeclContext *PrimaryContext;
+    const DeclContext *NonTransparentContext;
+    llvm::SmallVector<const DeclContext *> PrimaryContexts;
+    llvm::SmallVector<const CXXRecordDecl *> Bases;
+  };
+
 private:
-  std::string skeleton(StringRef);
-  llvm::StringMap<llvm::SmallVector<const NamedDecl *>> Mapper;
+  struct Entry {
+    const NamedDecl *Declaration;
+    const ContextInfo *Info;
+  };
+
+  const ContextInfo *getContextInfo(const DeclContext *DC);
+
+  llvm::StringMap<llvm::SmallVector<Entry>> Mapper;
+  std::unordered_map<const DeclContext *, ContextInfo> ContextInfos;
 };
 
 } // namespace clang::tidy::misc

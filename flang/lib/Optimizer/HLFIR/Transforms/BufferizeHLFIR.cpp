@@ -151,7 +151,7 @@ struct AsExprOpConversion : public mlir::OpConversionPattern<hlfir::AsExprOp> {
                   mlir::ConversionPatternRewriter &rewriter) const override {
     mlir::Location loc = asExpr->getLoc();
     auto module = asExpr->getParentOfType<mlir::ModuleOp>();
-    fir::FirOpBuilder builder(rewriter, fir::getKindMapping(module));
+    fir::FirOpBuilder builder(rewriter, module);
     if (asExpr.isMove()) {
       // Move variable storage for the hlfir.expr buffer.
       mlir::Value bufferizedExpr = packageBufferizedExpr(
@@ -179,7 +179,7 @@ struct ShapeOfOpConversion
                   mlir::ConversionPatternRewriter &rewriter) const override {
     mlir::Location loc = shapeOf.getLoc();
     mlir::ModuleOp mod = shapeOf->getParentOfType<mlir::ModuleOp>();
-    fir::FirOpBuilder builder(rewriter, fir::getKindMapping(mod));
+    fir::FirOpBuilder builder(rewriter, mod);
 
     mlir::Value shape;
     hlfir::Entity bufferizedExpr{getBufferizedExprStorage(adaptor.getExpr())};

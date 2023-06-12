@@ -252,7 +252,7 @@ static bool getBases(Operation *op, SmallPtrSet<TypeID, 4> &paramIds,
                      SmallPtrSet<Operation *, 4> &paramIrdlOps,
                      SmallPtrSet<TypeID, 4> &isIds) {
   // For `irdl.any_of`, we get the bases from all its arguments.
-  if (auto anyOf = dyn_cast<AnyOf>(op)) {
+  if (auto anyOf = dyn_cast<AnyOfOp>(op)) {
     bool has_any = false;
     for (Value arg : anyOf.getArgs())
       has_any &= getBases(arg.getDefiningOp(), paramIds, paramIrdlOps, isIds);
@@ -261,12 +261,12 @@ static bool getBases(Operation *op, SmallPtrSet<TypeID, 4> &paramIds,
 
   // For `irdl.all_of`, we get the bases from the first argument.
   // This is restrictive, but we can relax it later if needed.
-  if (auto allOf = dyn_cast<AllOf>(op))
+  if (auto allOf = dyn_cast<AllOfOp>(op))
     return getBases(allOf.getArgs()[0].getDefiningOp(), paramIds, paramIrdlOps,
                     isIds);
 
   // For `irdl.parametric`, we get directly the base from the operation.
-  if (auto params = dyn_cast<Parametric>(op)) {
+  if (auto params = dyn_cast<ParametricOp>(op)) {
     SymbolRefAttr symRef = params.getBaseType();
     Operation *defOp = SymbolTable::lookupNearestSymbolFrom(op, symRef);
     assert(defOp && "symbol reference should refer to an existing operation");
@@ -275,7 +275,7 @@ static bool getBases(Operation *op, SmallPtrSet<TypeID, 4> &paramIds,
   }
 
   // For `irdl.is`, we get the base TypeID directly.
-  if (auto is = dyn_cast<Is>(op)) {
+  if (auto is = dyn_cast<IsOp>(op)) {
     Attribute expected = is.getExpected();
     isIds.insert(expected.getTypeID());
     return false;
@@ -283,7 +283,7 @@ static bool getBases(Operation *op, SmallPtrSet<TypeID, 4> &paramIds,
 
   // For `irdl.any`, we return `false` since we can match any type or attribute
   // base.
-  if (auto isA = dyn_cast<Any>(op))
+  if (auto isA = dyn_cast<AnyOp>(op))
     return true;
 
   llvm_unreachable("unknown IRDL constraint");
@@ -300,7 +300,7 @@ static bool getBases(Operation *op, SmallPtrSet<TypeID, 4> &paramIds,
 /// that they are disjoint between `parametric` and `is` operations.
 /// This restriction will be relaxed in the future, when we will change our
 /// algorithm to be non-greedy.
-static LogicalResult checkCorrectAnyOf(AnyOf anyOf) {
+static LogicalResult checkCorrectAnyOf(AnyOfOp anyOf) {
   SmallPtrSet<TypeID, 4> paramIds;
   SmallPtrSet<Operation *, 4> paramIrdlOps;
   SmallPtrSet<TypeID, 4> isIds;
@@ -404,8 +404,8 @@ preallocateAttrDefs(ModuleOp op,
 LogicalResult mlir::irdl::loadDialects(ModuleOp op) {
   // First, check that all any_of constraints are in a correct form.
   // This is to ensure we can do the verification correctly.
-  WalkResult anyOfCorrects =
-      op.walk([](AnyOf anyOf) { return (WalkResult)checkCorrectAnyOf(anyOf); });
+  WalkResult anyOfCorrects = op.walk(
+      [](AnyOfOp anyOf) { return (WalkResult)checkCorrectAnyOf(anyOf); });
   if (anyOfCorrects.wasInterrupted())
     return op.emitError("any_of constraints are not in the correct form");
 

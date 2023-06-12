@@ -757,10 +757,31 @@ struct WarpOpTransferRead : public OpRewritePattern<WarpExecuteOnLane0Op> {
           rewriter, read.getLoc(), d0 + scale * d1,
           {indices[indexPos], warpOp.getLaneid()});
     }
-    Value newRead = rewriter.create<vector::TransferReadOp>(
+    auto newRead = rewriter.create<vector::TransferReadOp>(
         read.getLoc(), distributedVal.getType(), read.getSource(), indices,
         read.getPermutationMapAttr(), read.getPadding(), read.getMask(),
         read.getInBoundsAttr());
+
+    // Check that the produced operation is legal.
+    // The transfer op may be reading from values that are defined within
+    // warpOp's body, which is illegal.
+    // We do the check late because incdices may be changed by
+    // makeComposeAffineApply. This rewrite may remove dependencies from
+    // warOp's body.
+    // E.g., warop {
+    //   %idx = affine.apply...[%outsideDef]
+    //   ... = transfer_read ...[%idx]
+    // }
+    // will be rewritten in:
+    // warop {
+    // }
+    //  %new_idx = affine.apply...[%outsideDef]
+    //   ... = transfer_read ...[%new_idx]
+    if (!llvm::all_of(newRead->getOperands(), [&](Value value) {
+          return warpOp.isDefinedOutsideOfRegion(value);
+        }))
+      return failure();
+
     rewriter.replaceAllUsesWith(distributedVal, newRead);
     return success();
   }
@@ -875,10 +896,19 @@ struct WarpOpBroadcast : public OpRewritePattern<WarpExecuteOnLane0Op> {
     Location loc = broadcastOp.getLoc();
     auto destVecType =
         cast<VectorType>(warpOp->getResultTypes()[operandNumber]);
+    Value broadcastSrc = broadcastOp.getSource();
+    Type broadcastSrcType = broadcastSrc.getType();
+
+    // Check that the broadcast actually spans a set of values uniformly across
+    // all threads. In other words, check that each thread can reconstruct
+    // their own broadcast.
+    // For that we simply check that the broadcast we want to build makes sense.
+    if (vector::isBroadcastableTo(broadcastSrcType, destVecType) !=
+        vector::BroadcastableToResult::Success)
+      return failure();
     SmallVector<size_t> newRetIndices;
     WarpExecuteOnLane0Op newWarpOp = moveRegionToNewWarpOpAndAppendReturns(
-        rewriter, warpOp, {broadcastOp.getSource()},
-        {broadcastOp.getSource().getType()}, newRetIndices);
+        rewriter, warpOp, {broadcastSrc}, {broadcastSrcType}, newRetIndices);
     rewriter.setInsertionPointAfter(newWarpOp);
     Value broadcasted = rewriter.create<vector::BroadcastOp>(
         loc, destVecType, newWarpOp->getResult(newRetIndices[0]));

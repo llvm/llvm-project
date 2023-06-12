@@ -97,8 +97,12 @@ clang_tidy_library(
         ":lib",
         ":utils",
         "//clang:analysis",
+        "//clang:format",
         "//clang:serialization",
         "//clang:tooling",
+        "//clang:tooling_core",
+        "//clang:tooling_inclusions",
+        "//clang-tools-extra/include-cleaner:include_cleaner",
     ],
 )
 

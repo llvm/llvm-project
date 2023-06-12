@@ -7,10 +7,12 @@
 //===----------------------------------------------------------------------===//
 
 #include "mlir/Dialect/Transform/IR/TransformInterfaces.h"
+
 #include "mlir/Dialect/Transform/IR/TransformTypes.h"
 #include "mlir/IR/Diagnostics.h"
 #include "mlir/IR/Operation.h"
 #include "mlir/IR/PatternMatch.h"
+#include "mlir/Interfaces/CastInterfaces.h"
 #include "mlir/Support/LogicalResult.h"
 #include "mlir/Transforms/GreedyPatternRewriteDriver.h"
 #include "llvm/ADT/STLExtras.h"
@@ -431,10 +433,13 @@ transform::TransformState::replacePayloadValue(Value value, Value replacement) {
 
 void transform::TransformState::recordOpHandleInvalidationOne(
     OpOperand &consumingHandle, ArrayRef<Operation *> potentialAncestors,
-    Operation *payloadOp, Value otherHandle, Value throughValue) {
+    Operation *payloadOp, Value otherHandle, Value throughValue,
+    transform::TransformState::InvalidatedHandleMap &newlyInvalidated) const {
   // If the op is associated with invalidated handle, skip the check as it
-  // may be reading invalid IR.
-  if (invalidatedHandles.count(otherHandle))
+  // may be reading invalid IR. This also ensures we report the first
+  // invalidation and not the last one.
+  if (invalidatedHandles.count(otherHandle) ||
+      newlyInvalidated.count(otherHandle))
     return;
 
   FULL_LDBG("--recordOpHandleInvalidationOne\n");
@@ -443,6 +448,9 @@ void transform::TransformState::recordOpHandleInvalidationOne(
       llvm::interleaveComma(potentialAncestors, DBGS() << "--ancestors: ",
                             [](Operation *op) { llvm::dbgs() << *op; });
       llvm::dbgs() << "\n");
+
+  Operation *owner = consumingHandle.getOwner();
+  unsigned operandNo = consumingHandle.getOperandNumber();
   for (Operation *ancestor : potentialAncestors) {
     // clang-format off
     DEBUG_WITH_TYPE(DEBUG_TYPE_FULL, 
@@ -462,13 +470,11 @@ void transform::TransformState::recordOpHandleInvalidationOne(
     // deleted before the lambda gets called.
     Location ancestorLoc = ancestor->getLoc();
     Location opLoc = payloadOp->getLoc();
-    Operation *owner = consumingHandle.getOwner();
-    unsigned operandNo = consumingHandle.getOperandNumber();
     std::optional<Location> throughValueLoc =
         throughValue ? std::make_optional(throughValue.getLoc()) : std::nullopt;
-    invalidatedHandles[otherHandle] = [ancestorLoc, opLoc, owner, operandNo,
-                                       otherHandle,
-                                       throughValueLoc](Location currentLoc) {
+    newlyInvalidated[otherHandle] = [ancestorLoc, opLoc, owner, operandNo,
+                                     otherHandle,
+                                     throughValueLoc](Location currentLoc) {
       InFlightDiagnostic diag = emitError(currentLoc)
                                 << "op uses a handle invalidated by a "
                                    "previously executed transform op";
@@ -489,11 +495,14 @@ void transform::TransformState::recordOpHandleInvalidationOne(
 }
 
 void transform::TransformState::recordValueHandleInvalidationByOpHandleOne(
-    OpOperand &consumingHandle, ArrayRef<Operation *> potentialAncestors,
-    Value payloadValue, Value valueHandle) {
+    OpOperand &opHandle, ArrayRef<Operation *> potentialAncestors,
+    Value payloadValue, Value valueHandle,
+    transform::TransformState::InvalidatedHandleMap &newlyInvalidated) const {
   // If the op is associated with invalidated handle, skip the check as it
-  // may be reading invalid IR.
-  if (invalidatedHandles.count(valueHandle))
+  // may be reading invalid IR. This also ensures we report the first
+  // invalidation and not the last one.
+  if (invalidatedHandles.count(valueHandle) ||
+      newlyInvalidated.count(valueHandle))
     return;
 
   for (Operation *ancestor : potentialAncestors) {
@@ -516,12 +525,12 @@ void transform::TransformState::recordValueHandleInvalidationByOpHandleOne(
     if (!ancestor->isAncestor(definingOp))
       continue;
 
-    Operation *owner = consumingHandle.getOwner();
-    unsigned operandNo = consumingHandle.getOperandNumber();
+    Operation *owner = opHandle.getOwner();
+    unsigned operandNo = opHandle.getOperandNumber();
     Location ancestorLoc = ancestor->getLoc();
     Location opLoc = definingOp->getLoc();
     Location valueLoc = payloadValue.getLoc();
-    invalidatedHandles[valueHandle] =
+    newlyInvalidated[valueHandle] =
         [valueHandle, owner, operandNo, resultNo, argumentNo, blockNo, regionNo,
          ancestorLoc, opLoc, valueLoc](Location currentLoc) {
           InFlightDiagnostic diag = emitError(currentLoc)
@@ -550,7 +559,29 @@ void transform::TransformState::recordValueHandleInvalidationByOpHandleOne(
 
 void transform::TransformState::recordOpHandleInvalidation(
     OpOperand &handle, ArrayRef<Operation *> potentialAncestors,
-    Value throughValue) {
+    Value throughValue,
+    transform::TransformState::InvalidatedHandleMap &newlyInvalidated) const {
+
+  if (potentialAncestors.empty()) {
+    DEBUG_WITH_TYPE(DEBUG_TYPE_FULL, {
+      (DBGS() << "----recording invalidation for empty handle: " << handle.get()
+              << "\n");
+    });
+
+    Operation *owner = handle.getOwner();
+    unsigned operandNo = handle.getOperandNumber();
+    newlyInvalidated[handle.get()] = [owner, operandNo](Location currentLoc) {
+      InFlightDiagnostic diag = emitError(currentLoc)
+                                << "op uses a handle associated with empty "
+                                   "payload and invalidated by a "
+                                   "previously executed transform op";
+      diag.attachNote(owner->getLoc())
+          << "invalidated by this transform op that consumes its operand #"
+          << operandNo;
+    };
+    return;
+  }
+
   // Iterate over the mapping and invalidate aliasing handles. This is quite
   // expensive and only necessary for error reporting in case of transform
   // dialect misuse with dangling handles. Iteration over the handles is based
@@ -558,14 +589,16 @@ void transform::TransformState::recordOpHandleInvalidation(
   // number of IR objects (operations and values). Alternatively, we could walk
   // the IR nested in each payload op associated with the given handle and look
   // for handles associated with each operation and value.
-  for (const Mappings &mapping : llvm::make_second_range(mappings)) {
+  for (const transform::TransformState::Mappings &mapping :
+       llvm::make_second_range(mappings)) {
     // Go over all op handle mappings and mark as invalidated any handle
     // pointing to any of the payload ops associated with the given handle or
     // any op nested in them.
     for (const auto &[payloadOp, otherHandles] : mapping.reverse) {
       for (Value otherHandle : otherHandles)
         recordOpHandleInvalidationOne(handle, potentialAncestors, payloadOp,
-                                      otherHandle, throughValue);
+                                      otherHandle, throughValue,
+                                      newlyInvalidated);
     }
     // Go over all value handle mappings and mark as invalidated any handle
     // pointing to any result of the payload op associated with the given handle
@@ -575,13 +608,15 @@ void transform::TransformState::recordOpHandleInvalidation(
     for (const auto &[payloadValue, valueHandles] : mapping.reverseValues) {
       for (Value valueHandle : valueHandles)
         recordValueHandleInvalidationByOpHandleOne(handle, potentialAncestors,
-                                                   payloadValue, valueHandle);
+                                                   payloadValue, valueHandle,
+                                                   newlyInvalidated);
     }
   }
 }
 
 void transform::TransformState::recordValueHandleInvalidation(
-    OpOperand &valueHandle) {
+    OpOperand &valueHandle,
+    transform::TransformState::InvalidatedHandleMap &newlyInvalidated) const {
   // Invalidate other handles to the same value.
   for (Value payloadValue : getPayloadValues(valueHandle.get())) {
     SmallVector<Value> otherValueHandles;
@@ -590,8 +625,8 @@ void transform::TransformState::recordValueHandleInvalidation(
       Operation *owner = valueHandle.getOwner();
       unsigned operandNo = valueHandle.getOperandNumber();
       Location valueLoc = payloadValue.getLoc();
-      invalidatedHandles[otherHandle] = [otherHandle, owner, operandNo,
-                                         valueLoc](Location currentLoc) {
+      newlyInvalidated[otherHandle] = [otherHandle, owner, operandNo,
+                                       valueLoc](Location currentLoc) {
         InFlightDiagnostic diag = emitError(currentLoc)
                                   << "op uses a handle invalidated by a "
                                      "previously executed transform op";
@@ -607,17 +642,24 @@ void transform::TransformState::recordValueHandleInvalidation(
 
     if (auto opResult = llvm::dyn_cast<OpResult>(payloadValue)) {
       Operation *payloadOp = opResult.getOwner();
-      recordOpHandleInvalidation(valueHandle, payloadOp, payloadValue);
+      recordOpHandleInvalidation(valueHandle, payloadOp, payloadValue,
+                                 newlyInvalidated);
     } else {
       auto arg = llvm::dyn_cast<BlockArgument>(payloadValue);
       for (Operation &payloadOp : *arg.getOwner())
-        recordOpHandleInvalidation(valueHandle, &payloadOp, payloadValue);
+        recordOpHandleInvalidation(valueHandle, &payloadOp, payloadValue,
+                                   newlyInvalidated);
     }
   }
 }
 
-LogicalResult transform::TransformState::checkAndRecordHandleInvalidation(
-    TransformOpInterface transform) {
+/// Checks that the operation does not use invalidated handles as operands.
+/// Reports errors and returns failure if it does. Otherwise, invalidates the
+/// handles consumed by the operation as well as any handles pointing to payload
+/// IR operations nested in the operations associated with the consumed handles.
+LogicalResult transform::TransformState::checkAndRecordHandleInvalidationImpl(
+    transform::TransformOpInterface transform,
+    transform::TransformState::InvalidatedHandleMap &newlyInvalidated) const {
   FULL_LDBG("--Start checkAndRecordHandleInvalidation\n");
   auto memoryEffectsIface =
       cast<MemoryEffectOpInterface>(transform.getOperation());
@@ -629,12 +671,22 @@ LogicalResult transform::TransformState::checkAndRecordHandleInvalidation(
     DEBUG_WITH_TYPE(DEBUG_TYPE_FULL, {
       (DBGS() << "----iterate on handle: " << target.get() << "\n");
     });
-    // If the operand uses an invalidated handle, report it.
+    // If the operand uses an invalidated handle, report it. If the operation
+    // allows handles to point to repeated payload operations, only report
+    // pre-existing invalidation errors. Otherwise, also report invalidations
+    // caused by the current transform operation affecting its other operands.
     auto it = invalidatedHandles.find(target.get());
-    if (!transform.allowsRepeatedHandleOperands() &&
-        it != invalidatedHandles.end()) {
-      FULL_LDBG("--End checkAndRecordHandleInvalidation -> FAILURE\n");
+    auto nit = newlyInvalidated.find(target.get());
+    if (it != invalidatedHandles.end()) {
+      FULL_LDBG("--End checkAndRecordHandleInvalidation, found already "
+                "invalidated -> FAILURE\n");
       return it->getSecond()(transform->getLoc()), failure();
+    }
+    if (!transform.allowsRepeatedHandleOperands() &&
+        nit != newlyInvalidated.end()) {
+      FULL_LDBG("--End checkAndRecordHandleInvalidation, found newly "
+                "invalidated (by this op) -> FAILURE\n");
+      return nit->getSecond()(transform->getLoc()), failure();
     }
 
     // Invalidate handles pointing to the operations nested in the operation
@@ -644,15 +696,18 @@ LogicalResult transform::TransformState::checkAndRecordHandleInvalidation(
              effect.getValue() == target.get();
     };
     if (llvm::any_of(effects, consumesTarget)) {
-      FULL_LDBG("----found consume effect -> SKIP\n");
-      if (llvm::isa<TransformHandleTypeInterface>(target.get().getType())) {
+      FULL_LDBG("----found consume effect\n");
+      if (llvm::isa<transform::TransformHandleTypeInterface>(
+              target.get().getType())) {
         FULL_LDBG("----recordOpHandleInvalidation\n");
-        ArrayRef<Operation *> payloadOps = getPayloadOpsView(target.get());
-        recordOpHandleInvalidation(target, payloadOps);
-      } else if (llvm::isa<TransformValueHandleTypeInterface>(
+        SmallVector<Operation *> payloadOps =
+            llvm::to_vector(getPayloadOps(target.get()));
+        recordOpHandleInvalidation(target, payloadOps, nullptr,
+                                   newlyInvalidated);
+      } else if (llvm::isa<transform::TransformValueHandleTypeInterface>(
                      target.get().getType())) {
         FULL_LDBG("----recordValueHandleInvalidation\n");
-        recordValueHandleInvalidation(target);
+        recordValueHandleInvalidation(target, newlyInvalidated);
       } else {
         FULL_LDBG("----not a TransformHandle -> SKIP AND DROP ON THE FLOOR\n");
       }
@@ -663,6 +718,16 @@ LogicalResult transform::TransformState::checkAndRecordHandleInvalidation(
 
   FULL_LDBG("--End checkAndRecordHandleInvalidation -> SUCCESS\n");
   return success();
+}
+
+LogicalResult transform::TransformState::checkAndRecordHandleInvalidation(
+    transform::TransformOpInterface transform) {
+  InvalidatedHandleMap newlyInvalidated;
+  LogicalResult checkResult =
+      checkAndRecordHandleInvalidationImpl(transform, newlyInvalidated);
+  invalidatedHandles.insert(std::make_move_iterator(newlyInvalidated.begin()),
+                            std::make_move_iterator(newlyInvalidated.end()));
+  return checkResult;
 }
 
 template <typename T>
@@ -780,21 +845,8 @@ transform::TransformState::applyTransform(TransformOpInterface transform) {
   }
 
   // Find which operands are consumed.
-  DenseSet<unsigned> consumedOperands;
-  auto memEffectInterface =
-      cast<MemoryEffectOpInterface>(transform.getOperation());
-  SmallVector<MemoryEffects::EffectInstance, 2> effects;
-  for (OpOperand &target : transform->getOpOperands()) {
-    effects.clear();
-    memEffectInterface.getEffectsOnValue(target.get(), effects);
-    if (llvm::any_of(effects, [](const MemoryEffects::EffectInstance &effect) {
-          return isa<transform::TransformMappingResource>(
-                     effect.getResource()) &&
-                 isa<MemoryEffects::Free>(effect.getEffect());
-        })) {
-      consumedOperands.insert(target.getOperandNumber());
-    }
-  }
+  SmallVector<OpOperand *> consumedOperands =
+      transform.getConsumedHandleOpOperands();
 
   // Remember the results of the payload ops associated with the consumed
   // op handles or the ops defining the value handles so we can drop the
@@ -806,8 +858,8 @@ transform::TransformState::applyTransform(TransformOpInterface transform) {
 #if LLVM_ENABLE_ABI_BREAKING_CHECKS
   DenseSet<Operation *> consumedPayloadOps;
 #endif // LLVM_ENABLE_ABI_BREAKING_CHECKS
-  for (unsigned index : consumedOperands) {
-    Value operand = transform->getOperand(index);
+  for (OpOperand *opOperand : consumedOperands) {
+    Value operand = opOperand->get();
     if (llvm::isa<TransformHandleTypeInterface>(operand.getType())) {
       for (Operation *payloadOp : getPayloadOps(operand)) {
         llvm::append_range(origOpFlatResults, payloadOp->getResults());
@@ -838,7 +890,7 @@ transform::TransformState::applyTransform(TransformOpInterface transform) {
     DiagnosedDefiniteFailure diag =
         emitDefiniteFailure(transform->getLoc())
         << "unexpectedly consumed a value that is not a handle as operand #"
-        << index;
+        << opOperand->getOperandNumber();
     diag.attachNote(operand.getLoc())
         << "value defined here with type " << operand.getType();
     return diag;
@@ -860,8 +912,8 @@ transform::TransformState::applyTransform(TransformOpInterface transform) {
 
   // Remove the mapping for the operand if it is consumed by the operation. This
   // allows us to catch use-after-free with assertions later on.
-  for (unsigned index : consumedOperands) {
-    Value operand = transform->getOperand(index);
+  for (OpOperand *opOperand : consumedOperands) {
+    Value operand = opOperand->get();
     if (llvm::isa<TransformHandleTypeInterface>(operand.getType())) {
       forgetMapping(operand, origOpFlatResults);
     } else if (llvm::isa<TransformValueHandleTypeInterface>(
@@ -1106,8 +1158,199 @@ bool transform::TransformResults::isSet(unsigned resultNumber) const {
 }
 
 //===----------------------------------------------------------------------===//
+// TrackingListener
+//===----------------------------------------------------------------------===//
+
+Operation *transform::TrackingListener::getCommonDefiningOp(ValueRange values) {
+  Operation *defOp = nullptr;
+  for (Value v : values) {
+    // Skip empty values.
+    if (!v)
+      continue;
+    if (!defOp) {
+      defOp = v.getDefiningOp();
+      continue;
+    }
+    if (defOp != v.getDefiningOp())
+      return nullptr;
+  }
+  return defOp;
+}
+
+FailureOr<Operation *>
+transform::TrackingListener::findReplacementOp(Operation *op,
+                                               ValueRange newValues) const {
+  assert(op->getNumResults() == newValues.size() &&
+         "invalid number of replacement values");
+  SmallVector<Value> values(newValues.begin(), newValues.end());
+
+  do {
+    // If the replacement values belong to different ops, drop the mapping.
+    Operation *defOp = getCommonDefiningOp(values);
+    if (!defOp)
+      return failure();
+
+    // If the defining op has the same type, we take it as a replacement.
+    if (op->getName() == defOp->getName())
+      return defOp;
+
+    // Replacing an op with a constant-like equivalent is a common
+    // canonicalization.
+    if (defOp->hasTrait<OpTrait::ConstantLike>())
+      return defOp;
+
+    values.clear();
+
+    // Skip through ops that implement FindPayloadReplacementOpInterface.
+    if (auto findReplacementOpInterface =
+            dyn_cast<FindPayloadReplacementOpInterface>(defOp)) {
+      values.assign(findReplacementOpInterface.getNextOperands());
+      continue;
+    }
+
+    // Skip through ops that implement CastOpInterface.
+    if (isa<CastOpInterface>(defOp)) {
+      values.assign(defOp->getOperands().begin(), defOp->getOperands().end());
+      continue;
+    }
+  } while (!values.empty());
+
+  return failure();
+}
+
+LogicalResult transform::TrackingListener::notifyMatchFailure(
+    Location loc, function_ref<void(Diagnostic &)> reasonCallback) {
+  LLVM_DEBUG({
+    Diagnostic diag(loc, DiagnosticSeverity::Remark);
+    reasonCallback(diag);
+    DBGS() << "Match Failure : " << diag.str() << "\n";
+  });
+  return failure();
+}
+
+void transform::TrackingListener::notifyOperationRemoved(Operation *op) {
+  // TODO: Walk can be removed when D144193 has landed.
+  op->walk([&](Operation *op) {
+    // Remove mappings for result values.
+    for (OpResult value : op->getResults())
+      (void)replacePayloadValue(value, nullptr);
+    // Remove mapping for op.
+    (void)replacePayloadOp(op, nullptr);
+  });
+}
+
+/// Return true if `a` happens before `b`, i.e., `a` or one of its ancestors
+/// properly dominates `b` and `b` is not inside `a`.
+static bool happensBefore(Operation *a, Operation *b) {
+  do {
+    if (a->isProperAncestor(b))
+      return false;
+    if (Operation *bAncestor = a->getBlock()->findAncestorOpInBlock(*b)) {
+      return a->isBeforeInBlock(bAncestor);
+    }
+  } while ((a = a->getParentOp()));
+  return false;
+}
+
+void transform::TrackingListener::notifyOperationReplaced(
+    Operation *op, ValueRange newValues) {
+  assert(op->getNumResults() == newValues.size() &&
+         "invalid number of replacement values");
+
+  // Replace value handles.
+  for (auto [oldValue, newValue] : llvm::zip(op->getResults(), newValues))
+    (void)replacePayloadValue(oldValue, newValue);
+
+  // Replace op handle.
+  SmallVector<Value> opHandles;
+  if (failed(getTransformState().getHandlesForPayloadOp(op, opHandles))) {
+    // Op is not tracked.
+    return;
+  }
+  auto hasAliveUser = [&]() {
+    for (Value v : opHandles)
+      for (Operation *user : v.getUsers())
+        if (!happensBefore(user, transformOp))
+          return true;
+    return false;
+  };
+  if (!hasAliveUser()) {
+    // The op is tracked but the corresponding handles are dead.
+    (void)replacePayloadOp(op, nullptr);
+    return;
+  }
+
+  FailureOr<Operation *> replacement = findReplacementOp(op, newValues);
+  // If the op is tracked but no replacement op was found, send a
+  // notification.
+  if (failed(replacement)) {
+    notifyPayloadReplacementNotFound(op, newValues);
+    (void)replacePayloadOp(op, nullptr);
+    return;
+  }
+
+  (void)replacePayloadOp(op, *replacement);
+}
+
+transform::ErrorCheckingTrackingListener::~ErrorCheckingTrackingListener() {
+  // The state of the ErrorCheckingTrackingListener must be checked and reset
+  // if there was an error. This is to prevent errors from accidentally being
+  // missed.
+  assert(status.succeeded() && "listener state was not checked");
+}
+
+DiagnosedSilenceableFailure
+transform::ErrorCheckingTrackingListener::checkAndResetError() {
+  DiagnosedSilenceableFailure s = std::move(status);
+  status = DiagnosedSilenceableFailure::success();
+  errorCounter = 0;
+  return s;
+}
+
+bool transform::ErrorCheckingTrackingListener::failed() const {
+  return !status.succeeded();
+}
+
+void transform::ErrorCheckingTrackingListener::notifyPayloadReplacementNotFound(
+    Operation *op, ValueRange values) {
+  if (status.succeeded()) {
+    status = emitSilenceableFailure(
+        getTransformOp(), "tracking listener failed to find replacement op");
+  }
+
+  status.attachNote(op->getLoc()) << "[" << errorCounter << "] replaced op";
+  for (auto &&[index, value] : llvm::enumerate(values))
+    status.attachNote(value.getLoc())
+        << "[" << errorCounter << "] replacement value " << index;
+
+  ++errorCounter;
+}
+
+//===----------------------------------------------------------------------===//
 // Utilities for TransformEachOpTrait.
 //===----------------------------------------------------------------------===//
+
+LogicalResult
+transform::detail::checkNestedConsumption(Location loc,
+                                          ArrayRef<Operation *> targets) {
+  for (auto &&[position, parent] : llvm::enumerate(targets)) {
+    for (Operation *child : targets.drop_front(position + 1)) {
+      if (parent->isAncestor(child)) {
+        InFlightDiagnostic diag =
+            emitError(loc)
+            << "transform operation consumes a handle pointing to an ancestor "
+               "payload operation before its descendant";
+        diag.attachNote()
+            << "the ancestor is likely erased or rewritten before the "
+               "descendant is accessed, leading to undefined behavior";
+        diag.attachNote(parent->getLoc()) << "ancestor payload op";
+        diag.attachNote(child->getLoc()) << "descendant payload op";
+        return diag;
+      }
+    }
+  }
+  return success();
+}
 
 LogicalResult
 transform::detail::checkApplyToOne(Operation *transformOp,
@@ -1438,24 +1681,6 @@ transform::detail::verifyParamProducerTransformOpTrait(Operation *op) {
   return success();
 }
 
-DiagnosedSilenceableFailure transform::detail::transformWithPatternsApply(
-    Operation *transformOp, Operation *target, ApplyToEachResultList &results,
-    TransformState &state,
-    function_ref<void(RewritePatternSet &)> populatePatterns) {
-  if (!target->hasTrait<OpTrait::IsIsolatedFromAbove>()) {
-    return emitDefiniteFailure(transformOp)
-           << "applies only to isolated-from-above targets because it needs to "
-              "apply patterns greedily";
-  }
-  RewritePatternSet patterns(transformOp->getContext());
-  populatePatterns(patterns);
-  if (failed(applyPatternsAndFoldGreedily(target, std::move(patterns))))
-    return emitDefiniteFailure(transformOp) << "failed to apply patterns";
-
-  results.push_back(target);
-  return DiagnosedSilenceableFailure::success();
-}
-
 //===----------------------------------------------------------------------===//
 // Memory effects.
 //===----------------------------------------------------------------------===//
@@ -1547,6 +1772,27 @@ void transform::getConsumedBlockArguments(
 //===----------------------------------------------------------------------===//
 // Utilities for TransformOpInterface.
 //===----------------------------------------------------------------------===//
+
+SmallVector<OpOperand *> transform::detail::getConsumedHandleOpOperands(
+    TransformOpInterface transformOp) {
+  SmallVector<OpOperand *> consumedOperands;
+  consumedOperands.reserve(transformOp->getNumOperands());
+  auto memEffectInterface =
+      cast<MemoryEffectOpInterface>(transformOp.getOperation());
+  SmallVector<MemoryEffects::EffectInstance, 2> effects;
+  for (OpOperand &target : transformOp->getOpOperands()) {
+    effects.clear();
+    memEffectInterface.getEffectsOnValue(target.get(), effects);
+    if (llvm::any_of(effects, [](const MemoryEffects::EffectInstance &effect) {
+          return isa<transform::TransformMappingResource>(
+                     effect.getResource()) &&
+                 isa<MemoryEffects::Free>(effect.getEffect());
+        })) {
+      consumedOperands.push_back(&target);
+    }
+  }
+  return consumedOperands;
+}
 
 LogicalResult transform::detail::verifyTransformOpInterface(Operation *op) {
   auto iface = cast<MemoryEffectOpInterface>(op);

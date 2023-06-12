@@ -15,12 +15,14 @@ endif()
 get_filename_component(CLANG_LINT_SOURCE_DIR
   ${CMAKE_CURRENT_SOURCE_DIR}/../../clang-tidy REALPATH)
 include_directories(${CLANG_LINT_SOURCE_DIR})
+include_directories(BEFORE "${CMAKE_CURRENT_SOURCE_DIR}/../../include-cleaner/include")
 
 add_extra_unittest(ClangTidyTests
   AddConstTest.cpp
   ClangTidyDiagnosticConsumerTest.cpp
   ClangTidyOptionsTest.cpp
   DeclRefExprUtilsTest.cpp
+  IncludeCleanerTest.cpp
   IncludeInserterTest.cpp
   GlobListTest.cpp
   GoogleModuleTest.cpp
@@ -46,12 +48,14 @@ clang_target_link_libraries(ClangTidyTests
   clangTooling
   clangToolingCore
   clangTransformer
+  clangIncludeCleaner
   )
 target_link_libraries(ClangTidyTests
   PRIVATE
   clangTidy
   clangTidyAndroidModule
   clangTidyGoogleModule
+  clangTidyMiscModule
   clangTidyLLVMModule
   clangTidyModernizeModule
   clangTidyObjCModule

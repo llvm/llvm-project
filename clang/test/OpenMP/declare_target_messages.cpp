@@ -233,6 +233,42 @@ int MultiDevTy;
 #pragma omp declare target to(MultiDevTy) device_type(host)   // omp45-error {{unexpected 'device_type' clause, only 'to' or 'link' clauses expected}} omp5-error {{'device_type(host)' does not match previously specified 'device_type(any)' for the same declaration}} omp51-error {{'device_type(host)' does not match previously specified 'device_type(any)' for the same declaration}} omp52-error {{unexpected 'to' clause, use 'enter' instead}} omp52-error {{expected at least one 'enter', 'link' or 'indirect' clause}}
 #pragma omp declare target to(MultiDevTy) device_type(nohost) // omp45-error {{unexpected 'device_type' clause, only 'to' or 'link' clauses expected}} omp5-error {{'device_type(nohost)' does not match previously specified 'device_type(any)' for the same declaration}} // omp51-error {{'device_type(nohost)' does not match previously specified 'device_type(any)' for the same declaration}} omp52-error {{unexpected 'to' clause, use 'enter' instead}} omp52-error {{expected at least one 'enter', 'link' or 'indirect' clause}}
 
+static int variable = 100;  //expected-warning {{declaration is not declared in any declare target region}}
+static float variable1 = 200;
+static float variable2 = variable1;  //expected-warning {{declaration is not declared in any declare target region}}
+
+static int var = 1;  //expected-warning {{declaration is not declared in any declare target region}}
+
+static int var1 = 10;
+static int *var2 = &var1;
+static int **ptr1 = &var2;  //expected-warning {{declaration is not declared in any declare target region}}
+
+int arr[2] = {1,2};
+int (*arrptr)[2] = &arr;  //expected-warning {{declaration is not declared in any declare target region}}
+
+class declare{
+  public: int x;
+          void print();
+};
+declare obj1;
+declare *obj2 = &obj1;  //expected-warning {{declaration is not declared in any declare target region}}
+
+struct target{
+  int x;
+  void print();
+};
+static target S;  //expected-warning {{declaration is not declared in any declare target region}}
+
+#pragma omp declare target
+int target_var = variable;  //expected-note {{used here}}
+float target_var1 = variable2;  //expected-note {{used here}}
+int *ptr = &var;  //expected-note {{used here}}
+int ***ptr2 = &ptr1;  //expected-note {{used here}}
+int (**ptr3)[2] = &arrptr;  //expected-note {{used here}}
+declare **obj3 = &obj2;  //expected-note {{used here}}
+target *S1 = &S; //expected-note {{used here}}
+#pragma omp end declare target
+
 #if TESTENDINC
 #include "unterminated_declare_target_include.h"
 #elif TESTEND

@@ -23,6 +23,7 @@
 #include "llvm/ProfileData/RawMemProfReader.h"
 #include "llvm/ProfileData/SampleProfReader.h"
 #include "llvm/ProfileData/SampleProfWriter.h"
+#include "llvm/Support/BalancedPartitioning.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Discriminator.h"
 #include "llvm/Support/Errc.h"
@@ -3038,6 +3039,51 @@ static int show_main(int argc, const char *argv[]) {
   return showMemProfProfile(Filename, ProfiledBinary, SFormat, OS);
 }
 
+static int order_main(int argc, const char *argv[]) {
+  cl::opt<std::string> Filename(cl::Positional, cl::desc("<profdata-file>"));
+  cl::opt<std::string> OutputFilename("output", cl::value_desc("output"),
+                                      cl::init("-"), cl::desc("Output file"));
+  cl::alias OutputFilenameA("o", cl::desc("Alias for --output"),
+                            cl::aliasopt(OutputFilename));
+  cl::ParseCommandLineOptions(argc, argv, "LLVM profile data order\n");
+
+  std::error_code EC;
+  raw_fd_ostream OS(OutputFilename.data(), EC, sys::fs::OF_TextWithCRLF);
+  if (EC)
+    exitWithErrorCode(EC, OutputFilename);
+  auto FS = vfs::getRealFileSystem();
+  auto ReaderOrErr = InstrProfReader::create(Filename, *FS);
+  if (Error E = ReaderOrErr.takeError())
+    exitWithError(std::move(E), Filename);
+
+  auto Reader = std::move(ReaderOrErr.get());
+  for (auto &I : *Reader) {
+    // Read all entries
+    (void)I;
+  }
+  auto &Traces = Reader->getTemporalProfTraces();
+  auto Nodes = TemporalProfTraceTy::createBPFunctionNodes(Traces);
+  BalancedPartitioningConfig Config;
+  BalancedPartitioning BP(Config);
+  BP.run(Nodes);
+
+  WithColor::note() << "# Ordered " << Nodes.size() << " functions\n";
+  for (auto &N : Nodes) {
+    auto FuncName = Reader->getSymtab().getFuncName(N.Id);
+    if (FuncName.contains(':')) {
+      // GlobalValue::getGlobalIdentifier() prefixes the filename if the symbol
+      // is local. This logic will break if there is a colon in the filename,
+      // but we cannot use rsplit() because ObjC symbols can have colons.
+      auto [Filename, ParsedFuncName] = FuncName.split(':');
+      // Emit a comment describing where this symbol came from
+      OS << "# " << Filename << "\n";
+      FuncName = ParsedFuncName;
+    }
+    OS << FuncName << "\n";
+  }
+  return 0;
+}
+
 int llvm_profdata_main(int argc, char **argvNonConst,
                        const llvm::ToolContext &) {
   const char **argv = const_cast<const char **>(argvNonConst);
@@ -3053,6 +3099,8 @@ int llvm_profdata_main(int argc, char **argvNonConst,
       func = show_main;
     else if (strcmp(argv[1], "overlap") == 0)
       func = overlap_main;
+    else if (strcmp(argv[1], "order") == 0)
+      func = order_main;
 
     if (func) {
       std::string Invocation(ProgName.str() + " " + argv[1]);
@@ -3083,6 +3131,6 @@ int llvm_profdata_main(int argc, char **argvNonConst,
   else
     errs() << ProgName << ": Unknown command!\n";
 
-  errs() << "USAGE: " << ProgName << " <merge|show|overlap> [args...]\n";
+  errs() << "USAGE: " << ProgName << " <merge|show|overlap|order> [args...]\n";
   return 1;
 }

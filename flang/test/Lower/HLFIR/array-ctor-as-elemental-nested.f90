@@ -1,5 +1,5 @@
 ! Test lowering of nested array constructors as hlfir.elemental.
-! RUN: bbc -emit-fir -hlfir -o - %s | FileCheck %s
+! RUN: bbc -emit-hlfir -o - %s | FileCheck %s
 
 ! hlfir.end_associate and hlfir.destroy used to be generated
 ! after hlfir.yield_element for the outermost hlfir.elemental.

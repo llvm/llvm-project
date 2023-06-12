@@ -232,6 +232,9 @@ public:
                          std::forward<Args>(args)...));
   }
 
+  void Formatf(llvm::StringRef file, llvm::StringRef function,
+               const char *format, ...) __attribute__((format(printf, 4, 5)));
+
   /// Prefer using LLDB_LOGF whenever possible.
   void Printf(const char *format, ...) __attribute__((format(printf, 2, 3)));
 
@@ -249,6 +252,8 @@ public:
 
   void VAPrintf(const char *format, va_list args);
   void VAError(const char *format, va_list args);
+  void VAFormatf(llvm::StringRef file, llvm::StringRef function,
+                 const char *format, va_list args);
 
 private:
   Channel &m_channel;
@@ -345,7 +350,7 @@ template <typename Cat> Log *GetLog(Cat mask) {
   do {                                                                         \
     ::lldb_private::Log *log_private = (log);                                  \
     if (log_private)                                                           \
-      log_private->Printf(__VA_ARGS__);                                        \
+      log_private->Formatf(__FILE__, __func__, __VA_ARGS__);                   \
   } while (0)
 
 #define LLDB_LOGV(log, ...)                                                    \

@@ -131,7 +131,7 @@ protected:
 
   virtual Status DoInitialization() = 0;
 
-  virtual ConstString GetSourceFileBasename() = 0;
+  virtual llvm::StringRef GetSourceFileBasename() = 0;
 
   virtual const char *GetAutoIndentCharacters() = 0;
 

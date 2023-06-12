@@ -521,7 +521,7 @@ uint64_t InputSection::getTombstoneForSection(StringRef name) {
   // meaning of -1 so we use -2.
   // Returning 0 means there is no tombstone value for this section, and relocation
   // will just use the addend.
-  if (!name.startswith(".debug_"))
+  if (!name.starts_with(".debug_"))
     return 0;
   if (name.equals(".debug_ranges") || name.equals(".debug_loc"))
     return UINT64_C(-2);

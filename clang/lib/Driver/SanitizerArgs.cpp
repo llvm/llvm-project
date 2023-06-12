@@ -77,7 +77,7 @@ static const SanitizerMask CFIClasses =
 static const SanitizerMask CompatibleWithMinimalRuntime =
     TrappingSupported | SanitizerKind::Scudo | SanitizerKind::ShadowCallStack |
     SanitizerKind::MemtagStack | SanitizerKind::MemtagHeap |
-    SanitizerKind::MemtagGlobals;
+    SanitizerKind::MemtagGlobals | SanitizerKind::KCFI;
 
 enum CoverageFeature {
   CoverageFunc = 1 << 0,

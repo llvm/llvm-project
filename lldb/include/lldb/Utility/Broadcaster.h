@@ -149,10 +149,12 @@ class Broadcaster {
 public:
   /// Construct with a broadcaster with a name.
   ///
+  /// \param[in] manager_sp
+  ///   A shared pointer to the BroadcasterManager that will manage this
+  ///   broadcaster.
   /// \param[in] name
-  ///     A NULL terminated C string that contains the name of the
-  ///     broadcaster object.
-  Broadcaster(lldb::BroadcasterManagerSP manager_sp, const char *name);
+  ///   A std::string of the name that this broadcaster will have.
+  Broadcaster(lldb::BroadcasterManagerSP manager_sp, std::string name);
 
   /// Destructor.
   ///
@@ -213,11 +215,12 @@ public:
     return m_broadcaster_sp->AddListener(listener_sp, event_mask);
   }
 
-  /// Get the NULL terminated C string name of this Broadcaster object.
+  /// Get this broadcaster's name.
   ///
   /// \return
-  ///     The NULL terminated C string name of this Broadcaster.
-  ConstString GetBroadcasterName() { return m_broadcaster_name; }
+  ///     A reference to a constant std::string containing the name of the
+  ///     broadcaster.
+  const std::string &GetBroadcasterName() { return m_broadcaster_name; }
 
   /// Get the event name(s) for one or more event bits.
   ///
@@ -352,8 +355,8 @@ protected:
     uint32_t AddListener(const lldb::ListenerSP &listener_sp,
                          uint32_t event_mask);
 
-    const char *GetBroadcasterName() const {
-      return m_broadcaster.GetBroadcasterName().AsCString();
+    const std::string &GetBroadcasterName() const {
+      return m_broadcaster.GetBroadcasterName();
     }
 
     Broadcaster *GetBroadcaster();
@@ -443,7 +446,7 @@ private:
   lldb::BroadcasterManagerSP m_manager_sp;
 
   /// The name of this broadcaster object.
-  const ConstString m_broadcaster_name;
+  const std::string m_broadcaster_name;
 
   Broadcaster(const Broadcaster &) = delete;
   const Broadcaster &operator=(const Broadcaster &) = delete;

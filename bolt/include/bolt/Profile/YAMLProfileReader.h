@@ -70,6 +70,10 @@ private:
   bool parseFunctionProfile(BinaryFunction &Function,
                             const yaml::bolt::BinaryFunctionProfile &YamlBF);
 
+  /// Infer function profile from stale data (collected on older binaries).
+  bool inferStaleProfile(BinaryFunction &Function,
+                         const yaml::bolt::BinaryFunctionProfile &YamlBF);
+
   /// Initialize maps for profile matching.
   void buildNameMaps(std::map<uint64_t, BinaryFunction> &Functions);
 

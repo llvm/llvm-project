@@ -44,10 +44,11 @@ using ReductionLoopMap = DenseMap<Operation *, SmallVector<LoopReduction, 2>>;
 /// (mlir::isLoopParallel can be used to detect a parallel affine.for op.) The
 /// reductions specified in `parallelReductions` are also parallelized.
 /// Parallelization will fail in the presence of loop iteration arguments that
-/// are not listed in `parallelReductions`.
-LogicalResult
-affineParallelize(AffineForOp forOp,
-                  ArrayRef<LoopReduction> parallelReductions = {});
+/// are not listed in `parallelReductions`. `resOp` if non-null is set to the
+/// newly created affine.parallel op.
+LogicalResult affineParallelize(AffineForOp forOp,
+                                ArrayRef<LoopReduction> parallelReductions = {},
+                                AffineParallelOp *resOp = nullptr);
 
 /// Hoists out affine.if/else to as high as possible, i.e., past all invariant
 /// affine.fors/parallel's. Returns success if any hoisting happened; folded` is

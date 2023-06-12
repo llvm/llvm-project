@@ -384,7 +384,7 @@ int llvm::libDriverMain(ArrayRef<const char *> ArgsArr) {
     }
 
     Expected<COFFModuleDefinition> Def =
-        parseCOFFModuleDefinition(*MB, LibMachine, true);
+        parseCOFFModuleDefinition(*MB, LibMachine, /*MingwDef=*/false);
 
     if (!Def) {
       llvm::errs() << "error parsing definition\n"

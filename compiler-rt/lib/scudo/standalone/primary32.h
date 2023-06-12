@@ -42,13 +42,14 @@ namespace scudo {
 
 template <typename Config> class SizeClassAllocator32 {
 public:
-  typedef typename Config::PrimaryCompactPtrT CompactPtrT;
-  typedef typename Config::SizeClassMap SizeClassMap;
-  static const uptr GroupSizeLog = Config::PrimaryGroupSizeLog;
+  typedef typename Config::Primary::CompactPtrT CompactPtrT;
+  typedef typename Config::Primary::SizeClassMap SizeClassMap;
+  static const uptr GroupSizeLog = Config::Primary::GroupSizeLog;
   // The bytemap can only track UINT8_MAX - 1 classes.
   static_assert(SizeClassMap::LargestClassId <= (UINT8_MAX - 1), "");
   // Regions should be large enough to hold the largest Block.
-  static_assert((1UL << Config::PrimaryRegionSizeLog) >= SizeClassMap::MaxSize,
+  static_assert((1UL << Config::Primary::RegionSizeLog) >=
+                    SizeClassMap::MaxSize,
                 "");
   typedef SizeClassAllocator32<Config> ThisT;
   typedef SizeClassAllocatorLocalCache<ThisT> CacheT;
@@ -129,6 +130,16 @@ public:
 
   uptr decompactGroupBase(uptr CompactPtrGroupBase) {
     return CompactPtrGroupBase;
+  }
+
+  ALWAYS_INLINE static bool isSmallBlock(uptr BlockSize) {
+    const uptr PageSize = getPageSizeCached();
+    return BlockSize < PageSize / 16U;
+  }
+
+  ALWAYS_INLINE static bool isLargeBlock(uptr BlockSize) {
+    const uptr PageSize = getPageSizeCached();
+    return BlockSize > PageSize;
   }
 
   TransferBatch *popBatch(CacheT *C, uptr ClassId) {
@@ -271,9 +282,9 @@ public:
 
   bool setOption(Option O, sptr Value) {
     if (O == Option::ReleaseInterval) {
-      const s32 Interval = Max(
-          Min(static_cast<s32>(Value), Config::PrimaryMaxReleaseToOsIntervalMs),
-          Config::PrimaryMinReleaseToOsIntervalMs);
+      const s32 Interval = Max(Min(static_cast<s32>(Value),
+                                   Config::Primary::MaxReleaseToOsIntervalMs),
+                               Config::Primary::MinReleaseToOsIntervalMs);
       atomic_store_relaxed(&ReleaseToOsIntervalMs, Interval);
       return true;
     }
@@ -305,9 +316,9 @@ public:
 
 private:
   static const uptr NumClasses = SizeClassMap::NumClasses;
-  static const uptr RegionSize = 1UL << Config::PrimaryRegionSizeLog;
+  static const uptr RegionSize = 1UL << Config::Primary::RegionSizeLog;
   static const uptr NumRegions =
-      SCUDO_MMAP_RANGE_SIZE >> Config::PrimaryRegionSizeLog;
+      SCUDO_MMAP_RANGE_SIZE >> Config::Primary::RegionSizeLog;
   static const u32 MaxNumBatches = SCUDO_ANDROID ? 4U : 8U;
   typedef FlatByteMap<NumRegions> ByteMap;
 
@@ -340,7 +351,7 @@ private:
   static_assert(sizeof(SizeClassInfo) % SCUDO_CACHE_LINE_SIZE == 0, "");
 
   uptr computeRegionId(uptr Mem) {
-    const uptr Id = Mem >> Config::PrimaryRegionSizeLog;
+    const uptr Id = Mem >> Config::Primary::RegionSizeLog;
     CHECK_LT(Id, NumRegions);
     return Id;
   }
@@ -369,7 +380,7 @@ private:
       unmap(reinterpret_cast<void *>(End), MapEnd - End);
 
     DCHECK_EQ(Region % RegionSize, 0U);
-    static_assert(Config::PrimaryRegionSizeLog == GroupSizeLog,
+    static_assert(Config::Primary::RegionSizeLog == GroupSizeLog,
                   "Memory group should be the same size as Region");
 
     return Region;
@@ -740,12 +751,8 @@ private:
     if (UNLIKELY(BytesInFreeList == 0))
       return 0;
 
-    bool MaySkip = false;
-
-    if (BytesInFreeList <= Sci->ReleaseInfo.BytesInFreeListAtLastCheckpoint) {
+    if (BytesInFreeList <= Sci->ReleaseInfo.BytesInFreeListAtLastCheckpoint)
       Sci->ReleaseInfo.BytesInFreeListAtLastCheckpoint = BytesInFreeList;
-      MaySkip = true;
-    }
 
     // Always update `BytesInFreeListAtLastCheckpoint` with the smallest value
     // so that we won't underestimate the releasable pages. For example, the
@@ -765,34 +772,38 @@ private:
     // (BytesInFreeListAtLastCheckpoint - BytesInFreeList).
     const uptr PushedBytesDelta =
         BytesInFreeList - Sci->ReleaseInfo.BytesInFreeListAtLastCheckpoint;
-    if (PushedBytesDelta < PageSize)
-      MaySkip = true;
+    if (PushedBytesDelta < PageSize && ReleaseType != ReleaseToOS::ForceAll)
+      return 0;
 
     const bool CheckDensity =
-        BlockSize < PageSize / 16U && ReleaseType != ReleaseToOS::ForceAll;
+        isSmallBlock(BlockSize) && ReleaseType != ReleaseToOS::ForceAll;
     // Releasing smaller blocks is expensive, so we want to make sure that a
     // significant amount of bytes are free, and that there has been a good
     // amount of batches pushed to the freelist before attempting to release.
-    if (CheckDensity) {
-      if (ReleaseType == ReleaseToOS::Normal &&
-          PushedBytesDelta < Sci->AllocatedUser / 16U) {
-        MaySkip = true;
-      }
-    }
-
-    if (MaySkip && ReleaseType != ReleaseToOS::ForceAll)
-      return 0;
+    if (CheckDensity && ReleaseType == ReleaseToOS::Normal)
+      if (PushedBytesDelta < Sci->AllocatedUser / 16U)
+        return 0;
 
     if (ReleaseType == ReleaseToOS::Normal) {
       const s32 IntervalMs = atomic_load_relaxed(&ReleaseToOsIntervalMs);
       if (IntervalMs < 0)
         return 0;
-      if (Sci->ReleaseInfo.LastReleaseAtNs +
-              static_cast<u64>(IntervalMs) * 1000000 >
-          getMonotonicTimeFast()) {
-        return 0; // Memory was returned recently.
+
+      // The constant 8 here is selected from profiling some apps and the number
+      // of unreleased pages in the large size classes is around 16 pages or
+      // more. Choose half of it as a heuristic and which also avoids page
+      // release every time for every pushBlocks() attempt by large blocks.
+      const bool ByPassReleaseInterval =
+          isLargeBlock(BlockSize) && PushedBytesDelta > 8 * PageSize;
+      if (!ByPassReleaseInterval) {
+        if (Sci->ReleaseInfo.LastReleaseAtNs +
+                static_cast<u64>(IntervalMs) * 1000000 >
+            getMonotonicTimeFast()) {
+          // Memory was returned recently.
+          return 0;
+        }
       }
-    }
+    } // if (ReleaseType == ReleaseToOS::Normal)
 
     const uptr First = Sci->MinRegionIndex;
     const uptr Last = Sci->MaxRegionIndex;
@@ -835,7 +846,7 @@ private:
         continue;
       }
       const uptr PushedBytesDelta = BytesInBG - BG.BytesInBGAtLastCheckpoint;
-      if (PushedBytesDelta < PageSize)
+      if (ReleaseType != ReleaseToOS::ForceAll && PushedBytesDelta < PageSize)
         continue;
 
       // Given the randomness property, we try to release the pages only if the

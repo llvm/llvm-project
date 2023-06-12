@@ -61,6 +61,9 @@ class WithType<string ty="", Bytecode t=Bytecode<>> :
 class WithGetter<string g="", Bytecode t=Bytecode<>> :
   Bytecode<t.cParser, t.cBuilder, t.cPrinter, g, t.cType>;
 
+// Representation of a bytecode element consisting of other bytecode atoms.
+// E.g., it is effectively a struct of bytecode elements. Set the members by
+// define a members dag: `dag members = (attr ...)`.
 class CompositeBytecode<string t = ""> : WithType<t>;
 
 class AttributeKind :
@@ -73,6 +76,7 @@ class TypeKind :
   WithBuilder<"$_args",
   WithPrinter<"$_writer.writeType($_getter)">>>;
 def Type : TypeKind;
+
 def VarInt :
   WithParser <"succeeded($_reader.readVarInt($_var))",
   WithBuilder<"$_args",
@@ -82,14 +86,12 @@ def SignedVarInt :
   WithParser <"succeeded($_reader.readSignedVarInt($_var))",
   WithBuilder<"$_args",
   WithPrinter<"$_writer.writeSignedVarInt($_getter)",
-  WithGetter<"$_attrType",
-  WithType   <"int64_t">>>>>;
+  WithType   <"int64_t">>>>;
 def Blob :
   WithParser <"succeeded($_reader.readBlob($_var))",
   WithBuilder<"$_args",
   WithPrinter<"$_writer.writeOwnedBlob($_getter)",
   WithType   <"ArrayRef<char>">>>>;
-
 class KnownWidthAPInt<string s> :
   WithParser <"succeeded(readAPIntWithKnownWidth($_reader, " # s # ", $_var))",
   WithBuilder<"$_args",
@@ -119,6 +121,10 @@ class Array<Bytecode t> {
 
   string cBuilder = "$_args";
 }
+// - Array elements currently needs a different bytecode type to accommodate
+//   for the list print/parsing.
+class List<Bytecode t> : WithGetter<"$_member", t>;
+def SignedVarIntList : List<SignedVarInt>;
 
 // Define dialect attribute or type.
 class DialectAttrOrType<dag d> {
@@ -154,6 +160,11 @@ class DialectTypes<string d> {
 
 def attr;
 def type;
+
+// Marker to indicate a skipped attribute or type in the enum. Could either be
+// reserved for a future value or for marking a previously used value as dead.
+def none;
+def ReservedOrDead : DialectAttrOrType<(none)>;
 
 #endif // BYTECODE_BASE
 

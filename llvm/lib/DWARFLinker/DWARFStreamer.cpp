@@ -28,33 +28,37 @@
 
 namespace llvm {
 
-bool DwarfStreamer::init(Triple TheTriple,
-                         StringRef Swift5ReflectionSegmentName) {
+Error DwarfStreamer::init(Triple TheTriple,
+                          StringRef Swift5ReflectionSegmentName) {
   std::string ErrorStr;
   std::string TripleName;
-  StringRef Context = "dwarf streamer init";
 
   // Get the target.
   const Target *TheTarget =
       TargetRegistry::lookupTarget(TripleName, TheTriple, ErrorStr);
   if (!TheTarget)
-    return error(ErrorStr, Context), false;
+    return createStringError(std::errc::invalid_argument, ErrorStr.c_str());
+
   TripleName = TheTriple.getTriple();
 
   // Create all the MC Objects.
   MRI.reset(TheTarget->createMCRegInfo(TripleName));
   if (!MRI)
-    return error(Twine("no register info for target ") + TripleName, Context),
-           false;
+    return createStringError(std::errc::invalid_argument,
+                             "no register info for target %s",
+                             TripleName.c_str());
 
   MCTargetOptions MCOptions = mc::InitMCTargetOptionsFromFlags();
   MAI.reset(TheTarget->createMCAsmInfo(*MRI, TripleName, MCOptions));
   if (!MAI)
-    return error("no asm info for target " + TripleName, Context), false;
+    return createStringError(std::errc::invalid_argument,
+                             "no asm info for target %s", TripleName.c_str());
 
   MSTI.reset(TheTarget->createMCSubtargetInfo(TripleName, "", ""));
   if (!MSTI)
-    return error("no subtarget info for target " + TripleName, Context), false;
+    return createStringError(std::errc::invalid_argument,
+                             "no subtarget info for target %s",
+                             TripleName.c_str());
 
   MC.reset(new MCContext(TheTriple, MAI.get(), MRI.get(), MSTI.get(), nullptr,
                          nullptr, true, Swift5ReflectionSegmentName));
@@ -63,18 +67,24 @@ bool DwarfStreamer::init(Triple TheTriple,
 
   MAB = TheTarget->createMCAsmBackend(*MSTI, *MRI, MCOptions);
   if (!MAB)
-    return error("no asm backend for target " + TripleName, Context), false;
+    return createStringError(std::errc::invalid_argument,
+                             "no asm backend for target %s",
+                             TripleName.c_str());
 
   MII.reset(TheTarget->createMCInstrInfo());
   if (!MII)
-    return error("no instr info info for target " + TripleName, Context), false;
+    return createStringError(std::errc::invalid_argument,
+                             "no instr info info for target %s",
+                             TripleName.c_str());
 
   MCE = TheTarget->createMCCodeEmitter(*MII, *MC);
   if (!MCE)
-    return error("no code emitter for target " + TripleName, Context), false;
+    return createStringError(std::errc::invalid_argument,
+                             "no code emitter for target %s",
+                             TripleName.c_str());
 
   switch (OutFileType) {
-  case OutputFileType::Assembly: {
+  case DWARFLinker::OutputFileType::Assembly: {
     MIP = TheTarget->createMCInstPrinter(TheTriple, MAI->getAssemblerDialect(),
                                          *MAI, *MII, *MRI);
     MS = TheTarget->createAsmStreamer(
@@ -83,7 +93,7 @@ bool DwarfStreamer::init(Triple TheTriple,
         true);
     break;
   }
-  case OutputFileType::Object: {
+  case DWARFLinker::OutputFileType::Object: {
     MS = TheTarget->createMCObjectStreamer(
         TheTriple, *MC, std::unique_ptr<MCAsmBackend>(MAB),
         MAB->createObjectWriter(OutFile), std::unique_ptr<MCCodeEmitter>(MCE),
@@ -94,17 +104,23 @@ bool DwarfStreamer::init(Triple TheTriple,
   }
 
   if (!MS)
-    return error("no object streamer for target " + TripleName, Context), false;
+    return createStringError(std::errc::invalid_argument,
+                             "no object streamer for target %s",
+                             TripleName.c_str());
 
   // Finally create the AsmPrinter we'll use to emit the DIEs.
   TM.reset(TheTarget->createTargetMachine(TripleName, "", "", TargetOptions(),
                                           std::nullopt));
   if (!TM)
-    return error("no target machine for target " + TripleName, Context), false;
+    return createStringError(std::errc::invalid_argument,
+                             "no target machine for target %s",
+                             TripleName.c_str());
 
   Asm.reset(TheTarget->createAsmPrinter(*TM, std::unique_ptr<MCStreamer>(MS)));
   if (!Asm)
-    return error("no asm printer for target " + TripleName, Context), false;
+    return createStringError(std::errc::invalid_argument,
+                             "no asm printer for target %s",
+                             TripleName.c_str());
   Asm->setDwarfUsesRelocationsAcrossSections(false);
 
   RangesSectionSize = 0;
@@ -117,7 +133,7 @@ bool DwarfStreamer::init(Triple TheTriple,
   MacInfoSectionSize = 0;
   MacroSectionSize = 0;
 
-  return true;
+  return Error::success();
 }
 
 void DwarfStreamer::finish() { MS->finish(); }

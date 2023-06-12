@@ -10,9 +10,6 @@
 // UNSUPPORTED: c++03, c++11, c++14, c++17
 // UNSUPPORTED: no-localization
 
-// TODO FMT Investigate Windows issues.
-// UNSUPPORTED: msvc, target={{.+}}-windows-gnu
-
 // TODO FMT Fix this test using GCC, it currently crashes.
 // UNSUPPORTED: gcc-12
 
@@ -88,7 +85,7 @@ static void test_valid_values() {
 
   // Non localized output using C-locale
   check(SV("%C='00'\t"
-#if defined(__APPLE__)
+#if defined(__APPLE__) || defined(_WIN32)
            "%EC='00'\t"
 #else
            "%EC='0'\t"
@@ -97,7 +94,7 @@ static void test_valid_values() {
            "%Ey='00'\t"
            "%Oy='00'\t"
            "%Y='0000'\t"
-#if defined(__APPLE__)
+#if defined(__APPLE__) || defined(_WIN32)
            "%EY='0000'\t"
 #elif defined(_AIX)
            "%EY=''\t"
@@ -132,7 +129,7 @@ static void test_valid_values() {
 
   // Use the global locale (fr_FR)
   check(SV("%C='00'\t"
-#if defined(__APPLE__)
+#if defined(__APPLE__) || defined(_WIN32)
            "%EC='00'\t"
 #else
            "%EC='0'\t"
@@ -141,7 +138,7 @@ static void test_valid_values() {
            "%Ey='00'\t"
            "%Oy='00'\t"
            "%Y='0000'\t"
-#if defined(__APPLE__)
+#if defined(__APPLE__) || defined(_WIN32)
            "%EY='0000'\t"
 #elif defined(_AIX)
            "%EY=''\t"
@@ -175,10 +172,10 @@ static void test_valid_values() {
         std::chrono::year{2038});
 
   // Use supplied locale (ja_JP). This locale has a different alternate.
-#if defined(__APPLE__) || defined(_AIX)
+#if defined(__APPLE__) || defined(_AIX) || defined(_WIN32)
 
   check(SV("%C='00'\t"
-#  if defined(__APPLE__)
+#  if defined(__APPLE__) || defined(_WIN32)
            "%EC='00'\t"
 #  else
            "%EC='0'\t"
@@ -218,12 +215,12 @@ static void test_valid_values() {
         lfmt,
         std::chrono::year{2038});
 
-#else // defined(__APPLE__) || defined(_AIX)
+#else // defined(__APPLE__) || defined(_AIX) || defined(_WIN32)
   check(loc,
         SV("%C='00'\t"
            "%EC='紀元前'\t"
            "%y='00'\t"
-// https://sourceware.org/bugzilla/show_bug.cgi?id=23758
+  // https://sourceware.org/bugzilla/show_bug.cgi?id=23758
 #  if defined(__GLIBC__) && __GLIBC__ <= 2 && __GLIBC_MINOR__ < 29
            "%Ey='1'\t"
 #  else
@@ -231,7 +228,7 @@ static void test_valid_values() {
 #  endif
            "%Oy='〇'\t"
            "%Y='0000'\t"
-// https://sourceware.org/bugzilla/show_bug.cgi?id=23758
+  // https://sourceware.org/bugzilla/show_bug.cgi?id=23758
 #  if defined(__GLIBC__) && __GLIBC__ <= 2 && __GLIBC_MINOR__ < 29
            "%EY='紀元前1年'\t"
 #  else
@@ -265,7 +262,7 @@ static void test_valid_values() {
            "\n"),
         lfmt,
         std::chrono::year{2038});
-#endif // defined(__APPLE__) || defined(_AIX)
+#endif // defined(__APPLE__) || defined(_AIX) || defined(_WIN32)
 
   std::locale::global(std::locale::classic());
 }
@@ -273,7 +270,6 @@ static void test_valid_values() {
 template <class CharT>
 static void test_padding() {
   constexpr std::basic_string_view<CharT> fmt = SV("{:%%C='%C'%t%%y='%y'%t%%Y='%Y'%t%n}");
-
   check(SV("%C='-100'\t%y='99'\t%Y='-9999'\t\n"), fmt, std::chrono::year{-9'999});
   check(SV("%C='-10'\t%y='99'\t%Y='-0999'\t\n"), fmt, std::chrono::year{-999});
   check(SV("%C='-1'\t%y='99'\t%Y='-0099'\t\n"), fmt, std::chrono::year{-99});

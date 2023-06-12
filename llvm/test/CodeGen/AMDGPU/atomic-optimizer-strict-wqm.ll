@@ -2,7 +2,7 @@
 ; RUN: llc -march=amdgcn -mcpu=gfx1010 -amdgpu-atomic-optimizations < %s | FileCheck %s -check-prefixes=GFX10
 
 declare void @llvm.amdgcn.exp.f32(i32 immarg, i32 immarg, float, float, float, float, i1 immarg, i1 immarg)
-declare i32 @llvm.amdgcn.raw.buffer.atomic.and.i32(i32, <4 x i32>, i32, i32, i32 immarg)
+declare i32 @llvm.amdgcn.raw.ptr.buffer.atomic.and.i32(i32, ptr addrspace(8), i32, i32, i32 immarg)
 declare float @llvm.amdgcn.strict.wqm.f32(float)
 
 define amdgpu_ps void @main(i32 %arg) {
@@ -48,7 +48,7 @@ bb:
   br label %bb4
 
 bb4:
-  %i5 = call i32 @llvm.amdgcn.raw.buffer.atomic.and.i32(i32 0, <4 x i32> zeroinitializer, i32 0, i32 0, i32 0)
+  %i5 = call i32 @llvm.amdgcn.raw.ptr.buffer.atomic.and.i32(i32 0, ptr addrspace(8) null, i32 0, i32 0, i32 0)
   %i7 = icmp eq i32 %arg, 1
   br i1 %i7, label %bb8, label %bb4
 

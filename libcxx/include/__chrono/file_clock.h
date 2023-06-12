@@ -63,7 +63,7 @@ struct _FilesystemClock {
   _LIBCPP_EXPORTED_FROM_ABI
   static _LIBCPP_CONSTEXPR_SINCE_CXX14 const bool is_steady = false;
 
-  _LIBCPP_AVAILABILITY_FILESYSTEM _LIBCPP_FUNC_VIS static time_point now() noexcept;
+  _LIBCPP_AVAILABILITY_FILESYSTEM_LIBRARY _LIBCPP_FUNC_VIS static time_point now() noexcept;
 
 #if _LIBCPP_STD_VER >= 20
   template <class _Duration>

@@ -43,6 +43,8 @@ void EmitClangAttrSubjectMatchRuleList(llvm::RecordKeeper &Records,
                                        llvm::raw_ostream &OS);
 void EmitClangAttrPCHRead(llvm::RecordKeeper &Records, llvm::raw_ostream &OS);
 void EmitClangAttrPCHWrite(llvm::RecordKeeper &Records, llvm::raw_ostream &OS);
+void EmitClangAttrTokenKinds(llvm::RecordKeeper &Records,
+                             llvm::raw_ostream &OS);
 void EmitClangAttrHasAttrImpl(llvm::RecordKeeper &Records,
                               llvm::raw_ostream &OS);
 void EmitClangAttrSpellingListIndex(llvm::RecordKeeper &Records,
@@ -100,6 +102,11 @@ void EmitSveBuiltins(llvm::RecordKeeper &Records, llvm::raw_ostream &OS);
 void EmitSveBuiltinCG(llvm::RecordKeeper &Records, llvm::raw_ostream &OS);
 void EmitSveTypeFlags(llvm::RecordKeeper &Records, llvm::raw_ostream &OS);
 void EmitSveRangeChecks(llvm::RecordKeeper &Records, llvm::raw_ostream &OS);
+
+void EmitSmeHeader(llvm::RecordKeeper &Records, llvm::raw_ostream &OS);
+void EmitSmeBuiltins(llvm::RecordKeeper &Records, llvm::raw_ostream &OS);
+void EmitSmeBuiltinCG(llvm::RecordKeeper &Records, llvm::raw_ostream &OS);
+void EmitSmeRangeChecks(llvm::RecordKeeper &Records, llvm::raw_ostream &OS);
 
 void EmitMveHeader(llvm::RecordKeeper &Records, llvm::raw_ostream &OS);
 void EmitMveBuiltinDef(llvm::RecordKeeper &Records, llvm::raw_ostream &OS);

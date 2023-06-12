@@ -855,7 +855,7 @@ define void @load_i8_stride4_vf32(ptr %in.vec, ptr %out.vec0, ptr %out.vec1, ptr
 ; AVX2-ONLY-NEXT:    vpblendd {{.*#+}} xmm7 = xmm7[0,1],xmm6[2,3]
 ; AVX2-ONLY-NEXT:    vmovdqa {{.*#+}} ymm8 = <0,4,8,12,u,u,u,u,u,u,u,u,u,u,u,u,0,4,8,12,u,u,u,u,u,u,u,u,u,u,u,u>
 ; AVX2-ONLY-NEXT:    vpshufb %ymm8, %ymm1, %ymm9
-; AVX2-ONLY-NEXT:    vpbroadcastq {{.*#+}} ymm6 = [17179869184,17179869184,17179869184,17179869184]
+; AVX2-ONLY-NEXT:    vpbroadcastq {{.*#+}} ymm6 = [0,4,0,4,0,4,0,4]
 ; AVX2-ONLY-NEXT:    vpermd %ymm9, %ymm6, %ymm9
 ; AVX2-ONLY-NEXT:    vpshufb %ymm8, %ymm0, %ymm8
 ; AVX2-ONLY-NEXT:    vpermd %ymm8, %ymm6, %ymm8
@@ -1758,7 +1758,7 @@ define void @load_i8_stride4_vf64(ptr %in.vec, ptr %out.vec0, ptr %out.vec1, ptr
 ; AVX2-ONLY-NEXT:    vpshufb %ymm13, %ymm1, %ymm9
 ; AVX2-ONLY-NEXT:    vmovdqa %ymm1, %ymm4
 ; AVX2-ONLY-NEXT:    vmovdqu %ymm1, {{[-0-9]+}}(%r{{[sb]}}p) # 32-byte Spill
-; AVX2-ONLY-NEXT:    vpbroadcastq {{.*#+}} ymm2 = [17179869184,17179869184,17179869184,17179869184]
+; AVX2-ONLY-NEXT:    vpbroadcastq {{.*#+}} ymm2 = [0,4,0,4,0,4,0,4]
 ; AVX2-ONLY-NEXT:    vpermd %ymm9, %ymm2, %ymm9
 ; AVX2-ONLY-NEXT:    vpshufb %ymm13, %ymm0, %ymm11
 ; AVX2-ONLY-NEXT:    vpermd %ymm11, %ymm2, %ymm11

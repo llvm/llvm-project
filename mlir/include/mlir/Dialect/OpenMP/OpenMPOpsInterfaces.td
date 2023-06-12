@@ -126,27 +126,27 @@ def OffloadModuleInterface : OpInterface<"OffloadModuleInterface"> {
   let methods = [
     InterfaceMethod<
       /*description=*/[{
-        Set the attribute IsDeviceAttr on the current module with the
-        specified boolean argument.
+      Set the attribute on the current module with the specified boolean
+      argument.
       }],
       /*retTy=*/"void",
       /*methodName=*/"setIsDevice",
       (ins "bool":$isDevice), [{}], [{
         $_op->setAttr(
           mlir::StringAttr::get($_op->getContext(), llvm::Twine{"omp.is_device"}),
-            mlir::omp::IsDeviceAttr::get($_op->getContext(), isDevice));
+            mlir::BoolAttr::get($_op->getContext(), isDevice));
       }]>,
       InterfaceMethod<
       /*description=*/[{
-        Get the IsDeviceAttr attribute on the current module if it exists and return
-        its value, if it doesn't exist it returns false by default.
+        Get the attribute on the current module if it exists and
+        return its value, if it doesn't exist it returns false by default.
       }],
       /*retTy=*/"bool",
       /*methodName=*/"getIsDevice",
       (ins), [{}], [{
         if (Attribute isDevice = $_op->getAttr("omp.is_device"))
-          if (::llvm::isa<mlir::omp::IsDeviceAttr>(isDevice))
-            return ::llvm::dyn_cast<IsDeviceAttr>(isDevice).getIsDevice();
+          if (isDevice.isa<mlir::BoolAttr>())
+           return isDevice.dyn_cast<BoolAttr>().getValue();
         return false;
       }]>,
       InterfaceMethod<

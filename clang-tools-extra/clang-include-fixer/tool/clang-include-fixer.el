@@ -168,9 +168,9 @@ STDIN, STDOUT, and STDERR are buffers for the standard streams;
 only STDERR may be nil.  CALLBACK is called in the case of
 success; it is called with a single argument, STDOUT.  On
 failure, a buffer containing the error output is displayed."
-  (cl-check-type stdin buffer-live)
-  (cl-check-type stdout buffer-live)
-  (cl-check-type stderr (or null buffer-live))
+  (cl-check-type stdin buffer)
+  (cl-check-type stdout buffer)
+  (cl-check-type stderr (or null buffer))
   (cl-check-type callback function)
   (lambda (process event)
     (cl-check-type process process)
@@ -192,7 +192,7 @@ failure, a buffer containing the error output is displayed."
 
 (defun clang-include-fixer--replace-buffer (stdout)
   "Replace current buffer by content of STDOUT."
-  (cl-check-type stdout buffer-live)
+  (cl-check-type stdout buffer)
   (barf-if-buffer-read-only)
   (cond ((fboundp 'replace-buffer-contents) (replace-buffer-contents stdout))
         ((clang-include-fixer--insert-line stdout (current-buffer)))
@@ -207,8 +207,8 @@ equal, do nothing and return non-nil.  If FROM contains a single
 line missing from TO, insert that line into TO so that the buffer
 contents are equal and return non-nil.  Otherwise, do nothing and
 return nil.  Buffer restrictions are ignored."
-  (cl-check-type from buffer-live)
-  (cl-check-type to buffer-live)
+  (cl-check-type from buffer)
+  (cl-check-type to buffer)
   (with-current-buffer from
     (save-excursion
       (save-restriction

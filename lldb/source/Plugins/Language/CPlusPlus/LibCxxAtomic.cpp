@@ -55,13 +55,12 @@ lldb_private::formatters::GetLibCxxAtomicValue(ValueObject &valobj) {
   if (!non_sythetic)
     return {};
 
-  ValueObjectSP member__a_ =
-      non_sythetic->GetChildMemberWithName(ConstString("__a_"), true);
+  ValueObjectSP member__a_ = non_sythetic->GetChildMemberWithName("__a_", true);
   if (!member__a_)
     return {};
 
   ValueObjectSP member__a_value =
-      member__a_->GetChildMemberWithName(ConstString("__a_value"), true);
+      member__a_->GetChildMemberWithName("__a_value", true);
   if (!member__a_value)
     return member__a_;
 

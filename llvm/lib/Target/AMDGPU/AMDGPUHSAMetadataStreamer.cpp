@@ -943,11 +943,12 @@ void MetadataStreamerMsgPackV3::end() {
 void MetadataStreamerMsgPackV3::emitKernel(const MachineFunction &MF,
                                            const SIProgramInfo &ProgramInfo) {
   auto &Func = MF.getFunction();
+  if (Func.getCallingConv() != CallingConv::AMDGPU_KERNEL &&
+      Func.getCallingConv() != CallingConv::SPIR_KERNEL)
+    return;
+
   auto CodeObjectVersion = AMDGPU::getCodeObjectVersion(*Func.getParent());
   auto Kern = getHSAKernelProps(MF, ProgramInfo, CodeObjectVersion);
-
-  assert(Func.getCallingConv() == CallingConv::AMDGPU_KERNEL ||
-         Func.getCallingConv() == CallingConv::SPIR_KERNEL);
 
   auto Kernels =
       getRootMetadata("amdhsa.kernels").getArray(/*Convert=*/true);

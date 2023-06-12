@@ -582,14 +582,23 @@ func.func @empty_loops_not_folded_3() -> (index, index) {
 
 // -----
 
+// CHECK-LABEL:  func @zero_iter_loop_not_folded
+func.func @zero_iter_loop_not_folded() {
+  %A = memref.alloc() : memref<4xf32>
+  affine.for %i = 0 to 0 {
+      %load = affine.load %A[%i] : memref<4xf32>
+      affine.store %load, %A[%i] : memref<4xf32>
+  }
+  // CHECK:   affine.for {{.*}} = 0 to 0 {
+  return
+}
+
+// -----
+
 // CHECK-LABEL:  func @fold_zero_iter_loops
 // CHECK-SAME: %[[ARG:.*]]: index
 func.func @fold_zero_iter_loops(%in : index) -> index {
   %c1 = arith.constant 1 : index
-  affine.for %i = 0 to 0 {
-    affine.for %j = 0 to -1 {
-    }
-  }
   %res = affine.for %i = 0 to 0 iter_args(%loop_arg = %in) -> index {
     %yield = arith.addi %loop_arg, %c1 : index
     affine.yield %yield : index

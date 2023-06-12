@@ -164,7 +164,7 @@ TextEdit toTextEdit(const FixItHint &FixIt, const SourceManager &M,
 /// component that generate it, so that paths are normalized as much as
 /// possible.
 std::optional<std::string> getCanonicalPath(const FileEntryRef F,
-                                            const SourceManager &SourceMgr);
+                                            FileManager &FileMgr);
 
 /// Choose the clang-format style we should apply to a certain file.
 /// This will usually use FS to look for .clang-format directories.

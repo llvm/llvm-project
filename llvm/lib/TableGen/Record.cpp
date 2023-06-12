@@ -1026,89 +1026,123 @@ Init *BinOpInit::getListConcat(TypedInit *LHS, Init *RHS) {
   assert(isa<ListRecTy>(LHS->getType()) && "First arg must be a list");
 
   // Shortcut for the common case of concatenating two lists.
-   if (const ListInit *LHSList = dyn_cast<ListInit>(LHS))
-     if (const ListInit *RHSList = dyn_cast<ListInit>(RHS))
-       return ConcatListInits(LHSList, RHSList);
-   return BinOpInit::get(BinOpInit::LISTCONCAT, LHS, RHS, LHS->getType());
+  if (const ListInit *LHSList = dyn_cast<ListInit>(LHS))
+    if (const ListInit *RHSList = dyn_cast<ListInit>(RHS))
+      return ConcatListInits(LHSList, RHSList);
+  return BinOpInit::get(BinOpInit::LISTCONCAT, LHS, RHS, LHS->getType());
 }
 
-std::optional<bool> BinOpInit::CompareInit(unsigned Opc, Init *LHS, Init *RHS) const {
-   // First see if we have two bit, bits, or int.
-   IntInit *LHSi = dyn_cast_or_null<IntInit>(
-       LHS->convertInitializerTo(IntRecTy::get(getRecordKeeper())));
-   IntInit *RHSi = dyn_cast_or_null<IntInit>(
-       RHS->convertInitializerTo(IntRecTy::get(getRecordKeeper())));
+std::optional<bool> BinOpInit::CompareInit(unsigned Opc, Init *LHS,
+                                           Init *RHS) const {
+  // First see if we have two bit, bits, or int.
+  IntInit *LHSi = dyn_cast_or_null<IntInit>(
+      LHS->convertInitializerTo(IntRecTy::get(getRecordKeeper())));
+  IntInit *RHSi = dyn_cast_or_null<IntInit>(
+      RHS->convertInitializerTo(IntRecTy::get(getRecordKeeper())));
 
-   if (LHSi && RHSi) {
-     bool Result;
-     switch (Opc) {
-     case EQ:
-       Result = LHSi->getValue() == RHSi->getValue();
-       break;
-     case NE:
-       Result = LHSi->getValue() != RHSi->getValue();
-       break;
-     case LE:
-       Result = LHSi->getValue() <= RHSi->getValue();
-       break;
-     case LT:
-       Result = LHSi->getValue() < RHSi->getValue();
-       break;
-     case GE:
-       Result = LHSi->getValue() >= RHSi->getValue();
-       break;
-     case GT:
-       Result = LHSi->getValue() > RHSi->getValue();
-       break;
-     default:
-       llvm_unreachable("unhandled comparison");
-     }
-     return Result;
-   }
+  if (LHSi && RHSi) {
+    bool Result;
+    switch (Opc) {
+    case EQ:
+      Result = LHSi->getValue() == RHSi->getValue();
+      break;
+    case NE:
+      Result = LHSi->getValue() != RHSi->getValue();
+      break;
+    case LE:
+      Result = LHSi->getValue() <= RHSi->getValue();
+      break;
+    case LT:
+      Result = LHSi->getValue() < RHSi->getValue();
+      break;
+    case GE:
+      Result = LHSi->getValue() >= RHSi->getValue();
+      break;
+    case GT:
+      Result = LHSi->getValue() > RHSi->getValue();
+      break;
+    default:
+      llvm_unreachable("unhandled comparison");
+    }
+    return Result;
+  }
 
-   // Next try strings.
-   StringInit *LHSs = dyn_cast<StringInit>(LHS);
-   StringInit *RHSs = dyn_cast<StringInit>(RHS);
+  // Next try strings.
+  StringInit *LHSs = dyn_cast<StringInit>(LHS);
+  StringInit *RHSs = dyn_cast<StringInit>(RHS);
 
-   if (LHSs && RHSs) {
-     bool Result;
-     switch (Opc) {
-     case EQ:
-       Result = LHSs->getValue() == RHSs->getValue();
-       break;
-     case NE:
-       Result = LHSs->getValue() != RHSs->getValue();
-       break;
-     case LE:
-       Result = LHSs->getValue() <= RHSs->getValue();
-       break;
-     case LT:
-       Result = LHSs->getValue() < RHSs->getValue();
-       break;
-     case GE:
-       Result = LHSs->getValue() >= RHSs->getValue();
-       break;
-     case GT:
-       Result = LHSs->getValue() > RHSs->getValue();
-       break;
-     default:
-       llvm_unreachable("unhandled comparison");
-     }
-     return Result;
-   }
+  if (LHSs && RHSs) {
+    bool Result;
+    switch (Opc) {
+    case EQ:
+      Result = LHSs->getValue() == RHSs->getValue();
+      break;
+    case NE:
+      Result = LHSs->getValue() != RHSs->getValue();
+      break;
+    case LE:
+      Result = LHSs->getValue() <= RHSs->getValue();
+      break;
+    case LT:
+      Result = LHSs->getValue() < RHSs->getValue();
+      break;
+    case GE:
+      Result = LHSs->getValue() >= RHSs->getValue();
+      break;
+    case GT:
+      Result = LHSs->getValue() > RHSs->getValue();
+      break;
+    default:
+      llvm_unreachable("unhandled comparison");
+    }
+    return Result;
+  }
 
-   // Finally, !eq and !ne can be used with records.
-   if (Opc == EQ || Opc == NE) {
-     DefInit *LHSd = dyn_cast<DefInit>(LHS);
-     DefInit *RHSd = dyn_cast<DefInit>(RHS);
-     if (LHSd && RHSd)
-       return (Opc == EQ) ? LHSd == RHSd : LHSd != RHSd;
-   }
+  // Finally, !eq and !ne can be used with records.
+  if (Opc == EQ || Opc == NE) {
+    DefInit *LHSd = dyn_cast<DefInit>(LHS);
+    DefInit *RHSd = dyn_cast<DefInit>(RHS);
+    if (LHSd && RHSd)
+      return (Opc == EQ) ? LHSd == RHSd : LHSd != RHSd;
+  }
 
-   return std::nullopt;
+  return std::nullopt;
 }
 
- Init *BinOpInit::Fold(Record *CurRec) const {
+static std::optional<unsigned> getDagArgNoByKey(DagInit *Dag, Init *Key,
+                                                std::string &Error) {
+  // Accessor by index
+  if (IntInit *Idx = dyn_cast<IntInit>(Key)) {
+    int64_t Pos = Idx->getValue();
+    if (Pos < 0) {
+      // The index is negative.
+      Error =
+          (Twine("index ") + std::to_string(Pos) + Twine(" is negative")).str();
+      return std::nullopt;
+    }
+    if (Pos >= Dag->getNumArgs()) {
+      // The index is out-of-range.
+      Error = (Twine("index ") + std::to_string(Pos) +
+               " is out of range (dag has " +
+               std::to_string(Dag->getNumArgs()) + " arguments)")
+                  .str();
+      return std::nullopt;
+    }
+    return Pos;
+  }
+  assert(isa<StringInit>(Key));
+  // Accessor by name
+  StringInit *Name = dyn_cast<StringInit>(Key);
+  auto ArgNo = Dag->getArgNo(Name->getValue());
+  if (!ArgNo) {
+    // The key is not found.
+    Error = (Twine("key '") + Name->getValue() + Twine("' is not found")).str();
+    return std::nullopt;
+  }
+  return *ArgNo;
+}
+
+Init *BinOpInit::Fold(Record *CurRec) const {
   switch (getOpcode()) {
   case CONCAT: {
     DagInit *LHSs = dyn_cast<DagInit>(LHS);
@@ -1276,6 +1310,43 @@ std::optional<bool> BinOpInit::CompareInit(unsigned Opc, Init *LHS, Init *RHS) c
       return BitInit::get(getRecordKeeper(), *Result);
     break;
   }
+  case GETDAGARG: {
+    DagInit *Dag = dyn_cast<DagInit>(LHS);
+    if (Dag && isa<IntInit, StringInit>(RHS)) {
+      std::string Error;
+      auto ArgNo = getDagArgNoByKey(Dag, RHS, Error);
+      if (!ArgNo)
+        PrintFatalError(CurRec->getLoc(), "!getdagarg " + Error);
+
+      assert(*ArgNo < Dag->getNumArgs());
+
+      Init *Arg = Dag->getArg(*ArgNo);
+      if (auto *TI = dyn_cast<TypedInit>(Arg))
+        if (!TI->getType()->typeIsConvertibleTo(getType()))
+          return UnsetInit::get(Dag->getRecordKeeper());
+      return Arg;
+    }
+    break;
+  }
+  case GETDAGNAME: {
+    DagInit *Dag = dyn_cast<DagInit>(LHS);
+    IntInit *Idx = dyn_cast<IntInit>(RHS);
+    if (Dag && Idx) {
+      int64_t Pos = Idx->getValue();
+      if (Pos < 0 || Pos >= Dag->getNumArgs()) {
+        // The index is out-of-range.
+        PrintError(CurRec->getLoc(),
+                   Twine("!getdagname index is out of range 0...") +
+                       std::to_string(Dag->getNumArgs() - 1) + ": " +
+                       std::to_string(Pos));
+      }
+      Init *ArgName = Dag->getArgName(Pos);
+      if (!ArgName)
+        return UnsetInit::get(getRecordKeeper());
+      return ArgName;
+    }
+    break;
+  }
   case SETDAGOP: {
     DagInit *Dag = dyn_cast<DagInit>(LHS);
     DefInit *Op = dyn_cast<DefInit>(RHS);
@@ -1380,6 +1451,12 @@ std::string BinOpInit::getAsString() const {
   case STRCONCAT: Result = "!strconcat"; break;
   case INTERLEAVE: Result = "!interleave"; break;
   case SETDAGOP: Result = "!setdagop"; break;
+  case GETDAGARG:
+    Result = "!getdagarg<" + getType()->getAsString() + ">";
+    break;
+  case GETDAGNAME:
+    Result = "!getdagname";
+    break;
   }
   return Result + "(" + LHS->getAsString() + ", " + RHS->getAsString() + ")";
 }
@@ -1626,6 +1703,42 @@ Init *TernOpInit::Fold(Record *CurRec) const {
     }
     break;
   }
+
+  case SETDAGARG: {
+    DagInit *Dag = dyn_cast<DagInit>(LHS);
+    if (Dag && isa<IntInit, StringInit>(MHS)) {
+      std::string Error;
+      auto ArgNo = getDagArgNoByKey(Dag, MHS, Error);
+      if (!ArgNo)
+        PrintFatalError(CurRec->getLoc(), "!setdagarg " + Error);
+
+      assert(*ArgNo < Dag->getNumArgs());
+
+      SmallVector<Init *, 8> Args(Dag->getArgs());
+      SmallVector<StringInit *, 8> Names(Dag->getArgNames());
+      Args[*ArgNo] = RHS;
+      return DagInit::get(Dag->getOperator(), Dag->getName(), Args, Names);
+    }
+    break;
+  }
+
+  case SETDAGNAME: {
+    DagInit *Dag = dyn_cast<DagInit>(LHS);
+    if (Dag && isa<IntInit, StringInit>(MHS)) {
+      std::string Error;
+      auto ArgNo = getDagArgNoByKey(Dag, MHS, Error);
+      if (!ArgNo)
+        PrintFatalError(CurRec->getLoc(), "!setdagname " + Error);
+
+      assert(*ArgNo < Dag->getNumArgs());
+
+      SmallVector<Init *, 8> Args(Dag->getArgs());
+      SmallVector<StringInit *, 8> Names(Dag->getArgNames());
+      Names[*ArgNo] = dyn_cast<StringInit>(RHS);
+      return DagInit::get(Dag->getOperator(), Dag->getName(), Args, Names);
+    }
+    break;
+  }
   }
 
   return const_cast<TernOpInit *>(this);
@@ -1672,6 +1785,12 @@ std::string TernOpInit::getAsString() const {
   case SUBST: Result = "!subst"; break;
   case SUBSTR: Result = "!substr"; break;
   case FIND: Result = "!find"; break;
+  case SETDAGARG:
+    Result = "!setdagarg";
+    break;
+  case SETDAGNAME:
+    Result = "!setdagname";
+    break;
   }
   return (Result + "(" +
           (UnquotedLHS ? LHS->getAsUnquotedString() : LHS->getAsString()) +
@@ -2384,6 +2503,15 @@ Record *DagInit::getOperatorAsDef(ArrayRef<SMLoc> Loc) const {
     return DefI->getDef();
   PrintFatalError(Loc, "Expected record as operator");
   return nullptr;
+}
+
+std::optional<unsigned> DagInit::getArgNo(StringRef Name) const {
+  for (unsigned i = 0, e = getNumArgs(); i < e; ++i) {
+    StringInit *ArgName = getArgName(i);
+    if (ArgName && ArgName->getValue() == Name)
+      return i;
+  }
+  return std::nullopt;
 }
 
 Init *DagInit::resolveReferences(Resolver &R) const {

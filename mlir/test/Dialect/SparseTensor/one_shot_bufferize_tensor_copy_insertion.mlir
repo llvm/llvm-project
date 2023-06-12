@@ -3,7 +3,7 @@
 
 #DCSR = #sparse_tensor.encoding<{
   lvlTypes = [ "compressed", "compressed" ],
-  dimOrdering = affine_map<(i,j) -> (i,j)>
+  dimToLvl = affine_map<(i,j) -> (i,j)>
 }>
 
 // CHECK-LABEL: func @bufferization_alloc_tensor

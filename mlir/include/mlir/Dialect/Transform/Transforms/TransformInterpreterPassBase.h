@@ -35,7 +35,9 @@ LogicalResult interpreterBaseInitializeImpl(
     MLIRContext *context, StringRef transformFileName,
     StringRef transformLibraryFileName,
     std::shared_ptr<OwningOpRef<ModuleOp>> &module,
-    std::shared_ptr<OwningOpRef<ModuleOp>> &libraryModule);
+    std::shared_ptr<OwningOpRef<ModuleOp>> &libraryModule,
+    function_ref<std::optional<LogicalResult>(OpBuilder &, Location)>
+        moduleBuilder = nullptr);
 
 /// Template-free implementation of
 /// TransformInterpreterPassBase::runOnOperation.
@@ -123,7 +125,11 @@ public:
         static_cast<Concrete *>(this)->transformLibraryFileName;
     return detail::interpreterBaseInitializeImpl(
         context, transformFileName, transformLibraryFileName,
-        sharedTransformModule, transformLibraryModule);
+        sharedTransformModule, transformLibraryModule,
+        [this](OpBuilder &builder, Location loc) {
+          return static_cast<Concrete *>(this)->constructTransformModule(
+              builder, loc);
+        });
   }
 
   /// Hook for passes to run additional logic in the pass before the
@@ -135,6 +141,14 @@ public:
   /// Only runs if everything succeeded before. If failure is returned, the pass
   /// fails.
   LogicalResult runAfterInterpreter(Operation *) { return success(); }
+
+  /// Hook for passes to run custom logic to construct the transform module.
+  /// This will run during initialization. If the external script is provided,
+  /// it overrides the construction, which will not be called.
+  std::optional<LogicalResult> constructTransformModule(OpBuilder &builder,
+                                                        Location loc) {
+    return std::nullopt;
+  }
 
   void runOnOperation() override {
     auto *pass = static_cast<Concrete *>(this);

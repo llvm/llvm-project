@@ -451,13 +451,16 @@ TYPE_PARSER(construct<DataComponentDefStmt>(declarationTypeSpec,
 // R738 component-attr-spec ->
 //        access-spec | ALLOCATABLE |
 //        CODIMENSION lbracket coarray-spec rbracket |
-//        CONTIGUOUS | DIMENSION ( component-array-spec ) | POINTER
+//        CONTIGUOUS | DIMENSION ( component-array-spec ) | POINTER |
+//        CUDA-data-attr
 TYPE_PARSER(construct<ComponentAttrSpec>(accessSpec) ||
     construct<ComponentAttrSpec>(allocatable) ||
     construct<ComponentAttrSpec>("CODIMENSION" >> coarraySpec) ||
     construct<ComponentAttrSpec>(contiguous) ||
     construct<ComponentAttrSpec>("DIMENSION" >> Parser<ComponentArraySpec>{}) ||
     construct<ComponentAttrSpec>(pointer) ||
+    extension<LanguageFeature::CUDA>(
+        construct<ComponentAttrSpec>(Parser<common::CUDADataAttr>{})) ||
     construct<ComponentAttrSpec>(recovery(
         fail<ErrorRecovery>(
             "type parameter definitions must appear before component declarations"_err_en_US),
@@ -677,7 +680,8 @@ TYPE_PARSER(
 //        CODIMENSION lbracket coarray-spec rbracket | CONTIGUOUS |
 //        DIMENSION ( array-spec ) | EXTERNAL | INTENT ( intent-spec ) |
 //        INTRINSIC | language-binding-spec | OPTIONAL | PARAMETER | POINTER |
-//        PROTECTED | SAVE | TARGET | VALUE | VOLATILE
+//        PROTECTED | SAVE | TARGET | VALUE | VOLATILE |
+//        CUDA-data-attr
 TYPE_PARSER(construct<AttrSpec>(accessSpec) ||
     construct<AttrSpec>(allocatable) ||
     construct<AttrSpec>(construct<Asynchronous>("ASYNCHRONOUS"_tok)) ||
@@ -693,7 +697,17 @@ TYPE_PARSER(construct<AttrSpec>(accessSpec) ||
     construct<AttrSpec>(save) ||
     construct<AttrSpec>(construct<Target>("TARGET"_tok)) ||
     construct<AttrSpec>(construct<Value>("VALUE"_tok)) ||
-    construct<AttrSpec>(construct<Volatile>("VOLATILE"_tok)))
+    construct<AttrSpec>(construct<Volatile>("VOLATILE"_tok)) ||
+    extension<LanguageFeature::CUDA>(
+        construct<AttrSpec>(Parser<common::CUDADataAttr>{})))
+
+// CUDA-data-attr -> CONSTANT | DEVICE | MANAGED | PINNED | SHARED | TEXTURE
+TYPE_PARSER("CONSTANT" >> pure(common::CUDADataAttr::Constant) ||
+    "DEVICE" >> pure(common::CUDADataAttr::Device) ||
+    "MANAGED" >> pure(common::CUDADataAttr::Managed) ||
+    "PINNED" >> pure(common::CUDADataAttr::Pinned) ||
+    "SHARED" >> pure(common::CUDADataAttr::Shared) ||
+    "TEXTURE" >> pure(common::CUDADataAttr::Texture))
 
 // R804 object-name -> name
 constexpr auto objectName{name};
@@ -1181,13 +1195,20 @@ TYPE_CONTEXT_PARSER("ALLOCATE statement"_en_US,
 
 // R928 alloc-opt ->
 //        ERRMSG = errmsg-variable | MOLD = source-expr |
-//        SOURCE = source-expr | STAT = stat-variable
+//        SOURCE = source-expr | STAT = stat-variable |
+// (CUDA) STREAM = scalar-int-expr
+//        PINNED = scalar-logical-variable
 // R931 source-expr -> expr
 TYPE_PARSER(construct<AllocOpt>(
                 construct<AllocOpt::Mold>("MOLD =" >> indirect(expr))) ||
     construct<AllocOpt>(
         construct<AllocOpt::Source>("SOURCE =" >> indirect(expr))) ||
-    construct<AllocOpt>(statOrErrmsg))
+    construct<AllocOpt>(statOrErrmsg) ||
+    extension<LanguageFeature::CUDA>(
+        construct<AllocOpt>(construct<AllocOpt::Stream>(
+            "STREAM =" >> indirect(scalarIntExpr))) ||
+        construct<AllocOpt>(construct<AllocOpt::Pinned>(
+            "PINNED =" >> indirect(scalarLogicalVariable)))))
 
 // R929 stat-variable -> scalar-int-variable
 TYPE_PARSER(construct<StatVariable>(scalar(integer(variable))))
@@ -1239,14 +1260,12 @@ TYPE_PARSER(construct<StatOrErrmsg>("STAT =" >> statVariable) ||
 // !DIR$ IGNORE_TKR [ [(tkrdmac...)] name ]...
 // !DIR$ LOOP COUNT (n1[, n2]...)
 // !DIR$ name...
-constexpr auto beginDirective{skipStuffBeforeStatement >> "!"_ch};
 constexpr auto ignore_tkr{
     "DIR$ IGNORE_TKR" >> optionalList(construct<CompilerDirective::IgnoreTKR>(
                              maybe(parenthesized(many(letter))), name))};
 constexpr auto loopCount{
     "DIR$ LOOP COUNT" >> construct<CompilerDirective::LoopCount>(
                              parenthesized(nonemptyList(digitString64)))};
-
 TYPE_PARSER(beginDirective >>
     sourced(construct<CompilerDirective>(ignore_tkr) ||
         construct<CompilerDirective>(loopCount) ||
@@ -1261,6 +1280,12 @@ TYPE_PARSER(extension<LanguageFeature::CrayPointer>(
         "POINTER" >> nonemptyList("expected POINTER associations"_err_en_US,
                          construct<BasedPointer>("(" >> objectName / ",",
                              objectName, maybe(Parser<ArraySpec>{}) / ")")))))
+
+// CUDA-attributes-stmt -> ATTRIBUTES (CUDA-data-attr) [::] name-list
+TYPE_PARSER(extension<LanguageFeature::CUDA>(construct<CUDAAttributesStmt>(
+    "ATTRIBUTES" >> parenthesized(Parser<common::CUDADataAttr>{}),
+    defaulted(
+        maybe("::"_tok) >> nonemptyList("expected names"_err_en_US, name)))))
 
 // Subtle: the name includes the surrounding slashes, which avoids
 // clashes with other uses of the name in the same scope.

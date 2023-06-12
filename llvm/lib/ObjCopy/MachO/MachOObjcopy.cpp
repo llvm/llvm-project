@@ -112,6 +112,9 @@ static void updateAndRemoveSymbols(const CommonConfig &Config,
     if (Config.DiscardMode == DiscardType::All && !(N->n_type & MachO::N_EXT))
       return true;
     // This behavior is consistent with cctools' strip.
+    if (Config.StripDebug && (N->n_type & MachO::N_STAB))
+      return true;
+    // This behavior is consistent with cctools' strip.
     if (MachOConfig.StripSwiftSymbols &&
         (Obj.Header.Flags & MachO::MH_DYLDLINK) && Obj.SwiftVersion &&
         *Obj.SwiftVersion && N->isSwiftSymbol())

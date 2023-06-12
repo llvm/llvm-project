@@ -113,13 +113,14 @@ void UnixSignals::AddSignal(int signo, const char *name, bool default_suppress,
   ++m_version;
 }
 
-void UnixSignals::AddSignalCode(int signo, int code, const char *description,
+void UnixSignals::AddSignalCode(int signo, int code,
+                                const llvm::StringLiteral description,
                                 SignalCodePrintOption print_option) {
   collection::iterator signal = m_signals.find(signo);
   assert(signal != m_signals.end() &&
          "Tried to add code to signal that does not exist.");
   signal->second.m_codes.insert(
-      std::pair{code, SignalCode{ConstString(description), print_option}});
+      std::pair{code, SignalCode{description, print_option}});
   ++m_version;
 }
 
@@ -150,13 +151,13 @@ UnixSignals::GetSignalDescription(int32_t signo, std::optional<int32_t> code,
     str = pos->second.m_name.GetCString();
 
     if (code) {
-      std::map<int, SignalCode>::const_iterator cpos =
+      std::map<int32_t, SignalCode>::const_iterator cpos =
           pos->second.m_codes.find(*code);
       if (cpos != pos->second.m_codes.end()) {
         const SignalCode &sc = cpos->second;
         str += ": ";
         if (sc.m_print_option != SignalCodePrintOption::Bounds)
-          str += sc.m_description.GetCString();
+          str += sc.m_description.str();
 
         std::stringstream strm;
         switch (sc.m_print_option) {
@@ -178,7 +179,7 @@ UnixSignals::GetSignalDescription(int32_t signo, std::optional<int32_t> code,
             strm << ", upper bound: 0x" << std::hex << *upper;
             strm << ")";
           } else
-            strm << sc.m_description.GetCString();
+            strm << sc.m_description.str();
 
           break;
         }

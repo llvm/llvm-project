@@ -249,8 +249,7 @@ void nth_element(_RandomAccessIterator __first, _RandomAccessIterator __nth, _Ra
 template <class _RandomAccessIterator>
 inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20
 void nth_element(_RandomAccessIterator __first, _RandomAccessIterator __nth, _RandomAccessIterator __last) {
-  std::nth_element(std::move(__first), std::move(__nth), std::move(__last), __less<typename
-      iterator_traits<_RandomAccessIterator>::value_type>());
+  std::nth_element(std::move(__first), std::move(__nth), std::move(__last), __less<>());
 }
 
 _LIBCPP_END_NAMESPACE_STD

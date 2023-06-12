@@ -1,50 +1,43 @@
-;; Test to check the callgraph in summary when partial sample profile scaling
-;; enabled.
-; RUN: opt -module-summary %s -o %t.o -scale-partial-sample-profile-working-set-size
-; RUN: llvm-bcanalyzer -dump %t.o | FileCheck %s --check-prefix=PERMODULE
-; RUN: opt -module-summary %p/Inputs/thinlto-function-summary-callgraph-partial-sample-profile-summary.ll -o %t2.o -scale-partial-sample-profile-working-set-size
+; Test to check the callgraph in summary when there is PGO
+; RUN: opt -module-summary %s -o %t.o
+; RUN: llvm-bcanalyzer -dump %t.o | FileCheck %s
+; RUN: opt -module-summary %p/Inputs/thinlto-function-summary-callgraph-partial-sample-profile-summary.ll -o %t2.o
 ; RUN: llvm-lto -thinlto -o %t3 %t.o %t2.o
 ; RUN: llvm-bcanalyzer -dump %t3.thinlto.bc | FileCheck %s --check-prefix=COMBINED
 
-;; Check that we don't get block count records when it isn't explicitly enabled.
-; RUN: opt -module-summary %s -o %t.o
-; RUN: llvm-bcanalyzer -dump %t.o | FileCheck %s --implicit-check-not=BLOCK_COUNT
-; RUN: opt -module-summary %p/Inputs/thinlto-function-summary-callgraph-partial-sample-profile-summary.ll -o %t2.o
-; RUN: llvm-lto -thinlto -o %t3 %t.o %t2.o
-; RUN: llvm-bcanalyzer -dump %t3.thinlto.bc | FileCheck %s --implicit-check-not=BLOCK_COUNT
 
-; PERMODULE: <SOURCE_FILENAME
+; CHECK: <SOURCE_FILENAME
 ; "hot_function"
-; PERMODULE-NEXT: <FUNCTION op0=0 op1=12
+; CHECK-NEXT: <FUNCTION op0=0 op1=12
 ; "hot1"
-; PERMODULE-NEXT: <FUNCTION op0=12 op1=4
+; CHECK-NEXT: <FUNCTION op0=12 op1=4
 ; "hot2"
-; PERMODULE-NEXT: <FUNCTION op0=16 op1=4
+; CHECK-NEXT: <FUNCTION op0=16 op1=4
 ; "hot3"
-; PERMODULE-NEXT: <FUNCTION op0=20 op1=4
+; CHECK-NEXT: <FUNCTION op0=20 op1=4
 ; "hot4"
-; PERMODULE-NEXT: <FUNCTION op0=24 op1=5
+; CHECK-NEXT: <FUNCTION op0=24 op1=5
 ; "cold"
-; PERMODULE-NEXT: <FUNCTION op0=29 op1=5
+; CHECK-NEXT: <FUNCTION op0=29 op1=5
 ; "none1"
-; PERMODULE-NEXT: <FUNCTION op0=34 op1=5
+; CHECK-NEXT: <FUNCTION op0=34 op1=5
 ; "none2"
-; PERMODULE-NEXT: <FUNCTION op0=39 op1=5
+; CHECK-NEXT: <FUNCTION op0=39 op1=5
 ; "none3"
-; PERMODULE-NEXT: <FUNCTION op0=44 op1=5
-; PERMODULE-NEXT: <FUNCTION op0=49 op1=5
+; CHECK-NEXT: <FUNCTION op0=44 op1=5
+; CHECK-NEXT: <FUNCTION op0=49 op1=5
 
-; PERMODULE-LABEL:       <GLOBALVAL_SUMMARY_BLOCK
-; PERMODULE-NEXT:    <VERSION
-; PERMODULE-NEXT:    <FLAGS
-; PERMODULE-NEXT:    <VALUE_GUID op0=27 op1=123/>
+; CHECK-LABEL:       <GLOBALVAL_SUMMARY_BLOCK
+; CHECK-NEXT:    <VERSION
+; CHECK-NEXT:    <FLAGS
+; CHECK-NEXT:    <VALUE_GUID op0=27 op1=123/>
 ; op4=none1 op6=hot1 op8=cold1 op10=none2 op12=hot2 op14=cold2 op16=none3 op18=hot3 op20=cold3 op22=123
-; PERMODULE-NEXT:    <PERMODULE_PROFILE {{.*}} op7=7 op8=0 op9=1 op10=3 op11=4 op12=1 op13=8 op14=0 op15=2 op16=3 op17=5 op18=1 op19=9 op20=0 op21=3 op22=3 op23=6 op24=1 op25=27 op26=4/>
-; PERMODULE-NEXT:    <BLOCK_COUNT op0=4/>
-; PERMODULE-NEXT:  </GLOBALVAL_SUMMARY_BLOCK>
+; CHECK-NEXT:    <PERMODULE_PROFILE {{.*}} op7=7 op8=0 op9=1 op10=3 op11=4 op12=1 op13=8 op14=0 op15=2 op16=3 op17=5 op18=1 op19=9 op20=0 op21=3 op22=3 op23=6 op24=1 op25=27 op26=4/>
+; CHECK-NEXT:    <BLOCK_COUNT op0=4/>
+; CHECK-NEXT:  </GLOBALVAL_SUMMARY_BLOCK>
 
-; PERMODULE: <STRTAB_BLOCK
-; PERMODULE-NEXT: blob data = 'hot_functionhot1hot2hot3cold1cold2cold3none1none2none3{{.*}}'
+; CHECK: <STRTAB_BLOCK
+; CHECK-NEXT: blob data = 'hot_functionhot1hot2hot3cold1cold2cold3none1none2none3{{.*}}'
 
 ; COMBINED:       <GLOBALVAL_SUMMARY_BLOCK
 ; COMBINED-NEXT:    <VERSION

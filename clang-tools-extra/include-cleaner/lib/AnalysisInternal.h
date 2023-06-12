@@ -63,7 +63,7 @@ std::vector<Hinted<SymbolLocation>> locateSymbol(const Symbol &S);
 void writeHTMLReport(FileID File, const Includes &,
                      llvm::ArrayRef<Decl *> Roots,
                      llvm::ArrayRef<SymbolReference> MacroRefs, ASTContext &Ctx,
-                     HeaderSearch &HS, PragmaIncludes *PI,
+                     const HeaderSearch &HS, PragmaIncludes *PI,
                      llvm::raw_ostream &OS);
 
 } // namespace include_cleaner

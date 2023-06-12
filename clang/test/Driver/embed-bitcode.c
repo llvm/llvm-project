@@ -16,7 +16,7 @@
 // CHECK-BITCODE: -emit-obj
 // CHECK-BITCODE: -fembed-bitcode=bitcode
 //
-// RUN: %clang %s -c -save-temps -fembed-bitcode -fintegrated-as 2>&1 -### | FileCheck %s -check-prefix=CHECK-SAVE-TEMP
+// RUN: %clang %s -c -target powerpc-ibm-aix -save-temps -fembed-bitcode -fintegrated-as 2>&1 -### | FileCheck %s -check-prefix=CHECK-SAVE-TEMP
 // CHECK-SAVE-TEMP: -cc1
 // CHECK-SAVE-TEMP: -E
 // CHECK-SAVE-TEMP: -cc1
@@ -24,7 +24,7 @@
 // CHECK-SAVE-TEMP: -cc1
 // CHECK-SAVE-TEMP: -S
 // CHECK-SAVE-TEMP: -fembed-bitcode=all
-// CHECK-SAVE-TEMP: -cc1as
+// CHECK-SAVE-TEMP: "{{.*}}as{{(.exe)?}}"
 
 // RUN: %clang -c %s -flto -fembed-bitcode 2>&1 -### | FileCheck %s -check-prefix=CHECK-LTO
 // RUN: %clang -c %s -flto=full -fembed-bitcode 2>&1 -### | FileCheck %s -check-prefix=CHECK-LTO

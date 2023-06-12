@@ -112,6 +112,11 @@ void aix::Linker::ConstructJob(Compilation &C, const JobAction &JA,
   if (!(IsArch32Bit || IsArch64Bit))
     llvm_unreachable("Unsupported bit width value.");
 
+  if (Arg *A = C.getArgs().getLastArg(options::OPT_G)) {
+    D.Diag(diag::err_drv_unsupported_opt_for_target)
+        << A->getSpelling() << D.getTargetTriple();
+  }
+
   // Force static linking when "-static" is present.
   if (Args.hasArg(options::OPT_static))
     CmdArgs.push_back("-bnso");
@@ -407,6 +412,18 @@ void AIX::AddCXXStdlibLibArgs(const llvm::opt::ArgList &Args,
   }
 
   llvm_unreachable("Unexpected C++ library type; only libc++ is supported.");
+}
+
+void AIX::addClangTargetOptions(
+    const llvm::opt::ArgList &Args, llvm::opt::ArgStringList &CC1Args,
+    Action::OffloadKind DeviceOffloadingKind) const {
+  Args.AddLastArg(CC1Args, options::OPT_mignore_xcoff_visibility);
+  Args.AddLastArg(CC1Args, options::OPT_mdefault_visibility_export_mapping_EQ);
+  Args.addOptInFlag(CC1Args, options::OPT_mxcoff_roptr, options::OPT_mno_xcoff_roptr);
+
+  if (Args.hasFlag(options::OPT_fxl_pragma_pack,
+                   options::OPT_fno_xl_pragma_pack, true))
+    CC1Args.push_back("-fxl-pragma-pack");
 }
 
 void AIX::addProfileRTLibs(const llvm::opt::ArgList &Args,

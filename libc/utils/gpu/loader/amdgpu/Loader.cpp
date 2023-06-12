@@ -134,6 +134,7 @@ hsa_status_t get_agent_memory_pool(hsa_agent_t agent,
 template <typename args_t>
 hsa_status_t launch_kernel(hsa_agent_t dev_agent, hsa_executable_t executable,
                            hsa_amd_memory_pool_t kernargs_pool,
+                           hsa_amd_memory_pool_t coarsegrained_pool,
                            hsa_queue_t *queue, const LaunchParameters &params,
                            const char *kernel_name, args_t kernel_args) {
   // Look up the '_start' kernel in the loaded executable.
@@ -141,6 +142,21 @@ hsa_status_t launch_kernel(hsa_agent_t dev_agent, hsa_executable_t executable,
   if (hsa_status_t err = hsa_executable_get_symbol_by_name(
           executable, kernel_name, &dev_agent, &symbol))
     return err;
+
+  auto allocator = [&](uint64_t size) -> void * {
+    void *dev_ptr = nullptr;
+    if (hsa_status_t err =
+            hsa_amd_memory_pool_allocate(coarsegrained_pool, size,
+                                         /*flags=*/0, &dev_ptr))
+      handle_error(err);
+    hsa_amd_agents_allow_access(1, &dev_agent, nullptr, dev_ptr);
+    return dev_ptr;
+  };
+
+  auto deallocator = [](void *ptr) -> void {
+    if (hsa_status_t err = hsa_amd_memory_pool_free(ptr))
+      handle_error(err);
+  };
 
   // Retrieve different properties of the kernel symbol used for launch.
   uint64_t kernel;
@@ -219,11 +235,11 @@ hsa_status_t launch_kernel(hsa_agent_t dev_agent, hsa_executable_t executable,
   while (hsa_signal_wait_scacquire(
              packet->completion_signal, HSA_SIGNAL_CONDITION_EQ, 0,
              /*timeout_hint=*/1024, HSA_WAIT_STATE_ACTIVE) != 0)
-    handle_server();
+    handle_server(allocator, deallocator);
 
   // Handle the server one more time in case the kernel exited with a pending
   // send still in flight.
-  handle_server();
+  handle_server(allocator, deallocator);
 
   // Destroy the resources acquired to launch the kernel and return.
   if (hsa_status_t err = hsa_amd_memory_pool_free(args))
@@ -366,14 +382,15 @@ int load(int argc, char **argv, char **envp, void *image, size_t size,
 
   LaunchParameters single_threaded_params = {1, 1, 1, 1, 1, 1};
   begin_args_t init_args = {argc, dev_argv, dev_envp, rpc_shared_buffer};
-  if (hsa_status_t err =
-          launch_kernel(dev_agent, executable, kernargs_pool, queue,
-                        single_threaded_params, "_begin.kd", init_args))
+  if (hsa_status_t err = launch_kernel(
+          dev_agent, executable, kernargs_pool, coarsegrained_pool, queue,
+          single_threaded_params, "_begin.kd", init_args))
     handle_error(err);
 
   start_args_t args = {argc, dev_argv, dev_envp, dev_ret};
-  if (hsa_status_t err = launch_kernel(dev_agent, executable, kernargs_pool,
-                                       queue, params, "_start.kd", args))
+  if (hsa_status_t err =
+          launch_kernel(dev_agent, executable, kernargs_pool,
+                        coarsegrained_pool, queue, params, "_start.kd", args))
     handle_error(err);
 
   // Create a memory signal and copy the return value back from the device into
@@ -402,9 +419,9 @@ int load(int argc, char **argv, char **envp, void *image, size_t size,
   int ret = *static_cast<int *>(host_ret);
 
   end_args_t fini_args = {ret};
-  if (hsa_status_t err =
-          launch_kernel(dev_agent, executable, kernargs_pool, queue,
-                        single_threaded_params, "_end.kd", fini_args))
+  if (hsa_status_t err = launch_kernel(
+          dev_agent, executable, kernargs_pool, coarsegrained_pool, queue,
+          single_threaded_params, "_end.kd", fini_args))
     handle_error(err);
 
   // Free the memory allocated for the device.

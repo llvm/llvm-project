@@ -78,10 +78,6 @@ namespace llvm {
     FCTIDUZ,
     FCTIWUZ,
 
-    /// Floating-point-to-integer conversion instructions
-    FP_TO_UINT_IN_VSR,
-    FP_TO_SINT_IN_VSR,
-
     /// VEXTS, ByteWidth - takes an input in VSFRC and produces an output in
     /// VSFRC that is sign-extended from ByteWidth to a 64-byte integer.
     VEXTS,

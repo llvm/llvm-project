@@ -5,14 +5,14 @@ void raw_ptr() {
   RefCountable* ref_countable = nullptr;
   auto foo1 = [ref_countable](){};
   // CHECK: warning: Captured raw-pointer 'ref_countable' to uncounted type is unsafe [webkit.UncountedLambdaCapturesChecker]
-  // CHECK-NEXT:{{^}}  auto foo1 = [ref_countable](){};
-  // CHECK-NEXT:{{^}}               ^
+  // CHECK-NEXT:{{^   6 | }}  auto foo1 = [ref_countable](){};
+  // CHECK-NEXT:{{^     | }}               ^
   auto foo2 = [&ref_countable](){};
   // CHECK: warning: Captured raw-pointer 'ref_countable' to uncounted type is unsafe [webkit.UncountedLambdaCapturesChecker]
   auto foo3 = [&](){ ref_countable = nullptr; };
   // CHECK: warning: Implicitly captured raw-pointer 'ref_countable' to uncounted type is unsafe [webkit.UncountedLambdaCapturesChecker]
-  // CHECK-NEXT:{{^}}  auto foo3 = [&](){ ref_countable = nullptr; };
-  // CHECK-NEXT:{{^}}                     ^
+  // CHECK-NEXT:{{^  12 | }}  auto foo3 = [&](){ ref_countable = nullptr; };
+  // CHECK-NEXT:{{^     | }}                     ^
   auto foo4 = [=](){ (void) ref_countable; };
   // CHECK: warning: Implicitly captured raw-pointer 'ref_countable' to uncounted type is unsafe [webkit.UncountedLambdaCapturesChecker]
 }

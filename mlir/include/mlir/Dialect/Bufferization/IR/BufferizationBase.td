@@ -17,10 +17,12 @@ def Bufferization_Dialect : Dialect {
   let description = [{
     Bufferization in MLIR is the process of converting the `tensor` type to the
     `memref` type.
-    The `bufferization` dialect is intended to collect operations/interfaces
-    specific to the bufferization passes.
+    Simply put, bufferization is the process of converting computations on the
+    mathematical tensor construct to computations on physical memory buffers.
+    The `bufferization` dialect contains operations/interfaces specific to the
+    bufferization passes.
 
-    Overview of the bufferization infrastructure and important conceptual
+    An overview of the bufferization infrastructure and important conceptual
     details related to using the MLIR dialect conversion infrastructure can be
     found in [bufferization](/docs/Bufferization/) and [buffer
     deallocation](/docs/BufferDeallocationInternals/).

@@ -103,8 +103,10 @@ class AppleAcceleratorTable : public DWARFAcceleratorTable {
     extractOffset(std::optional<DWARFFormValue> Value) const;
   };
 
-  struct Header Hdr;
-  struct HeaderData HdrData;
+  Header Hdr;
+  HeaderData HdrData;
+  dwarf::FormParams FormParams;
+  uint32_t HashDataEntryLength;
   bool IsValid = false;
 
   /// Returns true if we should continue scanning for entries or false if we've
@@ -112,15 +114,85 @@ class AppleAcceleratorTable : public DWARFAcceleratorTable {
   bool dumpName(ScopedPrinter &W, SmallVectorImpl<DWARFFormValue> &AtomForms,
                 uint64_t *DataOffset) const;
 
+  /// Reads an uint32_t from the accelerator table at Offset, which is
+  /// incremented by the number of bytes read.
+  std::optional<uint32_t> readU32FromAccel(uint64_t &Offset,
+                                           bool UseRelocation = false) const;
+
+  /// Reads a StringRef from the string table at Offset.
+  std::optional<StringRef>
+  readStringFromStrSection(uint64_t StringSectionOffset) const;
+
+  /// Return the offset into the section where the Buckets begin.
+  uint64_t getBucketBase() const { return sizeof(Hdr) + Hdr.HeaderDataLength; }
+
+  /// Return the offset into the section where the I-th bucket is.
+  uint64_t getIthBucketBase(uint32_t I) const {
+    return getBucketBase() + I * 4;
+  }
+
+  /// Return the offset into the section where the hash list begins.
+  uint64_t getHashBase() const { return getBucketBase() + getNumBuckets() * 4; }
+
+  /// Return the offset into the section where the I-th hash is.
+  uint64_t getIthHashBase(uint32_t I) const { return getHashBase() + I * 4; }
+
+  /// Return the offset into the section where the offset list begins.
+  uint64_t getOffsetBase() const { return getHashBase() + getNumHashes() * 4; }
+
+  /// Return the offset into the section where the I-th offset is.
+  uint64_t getIthOffsetBase(uint32_t I) const {
+    return getOffsetBase() + I * 4;
+  }
+
+  /// Returns the index of the bucket where a hypothetical Hash would be.
+  uint32_t hashToBucketIdx(uint32_t Hash) const {
+    return Hash % getNumBuckets();
+  }
+
+  /// Returns true iff a hypothetical Hash would be assigned to the BucketIdx-th
+  /// bucket.
+  bool wouldHashBeInBucket(uint32_t Hash, uint32_t BucketIdx) const {
+    return hashToBucketIdx(Hash) == BucketIdx;
+  }
+
+  /// Reads the contents of the I-th bucket, that is, the index in the hash list
+  /// where the hashes corresponding to this bucket begin.
+  std::optional<uint32_t> readIthBucket(uint32_t I) const {
+    uint64_t Offset = getIthBucketBase(I);
+    return readU32FromAccel(Offset);
+  }
+
+  /// Reads the I-th hash in the hash list.
+  std::optional<uint32_t> readIthHash(uint32_t I) const {
+    uint64_t Offset = getIthHashBase(I);
+    return readU32FromAccel(Offset);
+  }
+
+  /// Reads the I-th offset in the offset list.
+  std::optional<uint32_t> readIthOffset(uint32_t I) const {
+    uint64_t Offset = getIthOffsetBase(I);
+    return readU32FromAccel(Offset);
+  }
+
+  /// Reads a string offset from the accelerator table at Offset, which is
+  /// incremented by the number of bytes read.
+  std::optional<uint32_t> readStringOffsetAt(uint64_t &Offset) const {
+    return readU32FromAccel(Offset, /*UseRelocation*/ true);
+  }
+
+  /// Scans through all Hashes in the BucketIdx-th bucket, attempting to find
+  /// HashToFind. If it is found, its index in the list of hashes is returned.
+  std::optional<uint32_t> idxOfHashInBucket(uint32_t HashToFind,
+                                            uint32_t BucketIdx) const;
+
 public:
   /// Apple-specific implementation of an Accelerator Entry.
   class Entry final : public DWARFAcceleratorTable::Entry {
-    const HeaderData *HdrData = nullptr;
+    const AppleAcceleratorTable &Table;
 
-    Entry(const HeaderData &Data);
-    Entry() = default;
-
-    void extract(const AppleAcceleratorTable &AccelTable, uint64_t *Offset);
+    Entry(const AppleAcceleratorTable &Table);
+    void extract(uint64_t *Offset);
 
   public:
     std::optional<uint64_t> getCUOffset() const override;
@@ -141,37 +213,25 @@ public:
     friend class ValueIterator;
   };
 
+  /// An iterator for Entries all having the same string as key.
   class ValueIterator {
-    const AppleAcceleratorTable *AccelTable = nullptr;
-    Entry Current;           ///< The current entry.
-    uint64_t DataOffset = 0; ///< Offset into the section.
-    unsigned Data = 0; ///< Current data entry.
-    unsigned NumData = 0; ///< Number of data entries.
+    Entry Current;
+    uint64_t Offset = 0;
 
-    /// Advance the iterator.
-    void Next();
+    void Next() { Offset += Current.Table.getHashDataEntryLength(); }
 
   public:
-    using iterator_category = std::input_iterator_tag;
-    using value_type = Entry;
-    using difference_type = std::ptrdiff_t;
-    using pointer = value_type *;
-    using reference = value_type &;
-
     /// Construct a new iterator for the entries at \p DataOffset.
     ValueIterator(const AppleAcceleratorTable &AccelTable, uint64_t DataOffset);
-    /// End marker.
-    ValueIterator() = default;
 
-    const Entry &operator*() const { return Current; }
-    ValueIterator &operator++() { Next(); return *this; }
-    ValueIterator operator++(int) {
-      ValueIterator I = *this;
-      Next();
-      return I;
+    const Entry &operator*() {
+      uint64_t OffsetCopy = Offset;
+      Current.extract(&OffsetCopy);
+      return Current;
     }
+    ValueIterator &operator++() { Next(); return *this; }
     friend bool operator==(const ValueIterator &A, const ValueIterator &B) {
-      return A.NumData == B.NumData && A.DataOffset == B.DataOffset;
+      return A.Offset == B.Offset;
     }
     friend bool operator!=(const ValueIterator &A, const ValueIterator &B) {
       return !(A == B);
@@ -183,10 +243,13 @@ public:
       : DWARFAcceleratorTable(AccelSection, StringSection) {}
 
   Error extract() override;
-  uint32_t getNumBuckets();
-  uint32_t getNumHashes();
-  uint32_t getSizeHdr();
-  uint32_t getHeaderDataLength();
+  uint32_t getNumBuckets() const;
+  uint32_t getNumHashes() const;
+  uint32_t getSizeHdr() const;
+  uint32_t getHeaderDataLength() const;
+
+  /// Returns the size of one HashData entry.
+  uint32_t getHashDataEntryLength() const { return HashDataEntryLength; }
 
   /// Return the Atom description, which can be used to interpret the raw values
   /// of the Accelerator Entries in this table.

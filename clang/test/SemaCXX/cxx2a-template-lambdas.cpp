@@ -43,3 +43,30 @@ constexpr T outer() {
 }
 static_assert(outer<int>() == 123);
 template int *outer<int *>(); // expected-note {{in instantiation}}
+
+
+namespace GH62611 {
+template <auto A = [](auto x){}>
+struct C {
+  static constexpr auto B = A;
+};
+
+int test() {
+  C<>::B(42);
+}
+
+namespace AutoParam
+{
+template <auto A = [](auto x) { return x;}>
+auto B = A;
+static_assert(B<>(42) == 42);
+}
+
+namespace TypeParam
+{
+template <typename T = decltype([](auto x) {return x;})>
+auto B = T{};
+static_assert(B<>(42) == 42);
+}
+
+}

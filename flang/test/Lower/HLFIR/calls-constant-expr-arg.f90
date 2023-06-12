@@ -1,4 +1,4 @@
-! RUN: bbc -emit-fir -hlfir -o - %s | FileCheck %s
+! RUN: bbc -emit-hlfir -o - %s | FileCheck %s
 
 ! Test that the constant array expression actual argument
 ! is placed into a temporary inside 'test' subroutine before

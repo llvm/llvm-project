@@ -35,7 +35,7 @@ inline constexpr in_place_type_t<_Tp> in_place_type{};
 
 template <size_t _Idx>
 struct _LIBCPP_TEMPLATE_VIS in_place_index_t {
-  explicit in_place_index_t() = default;
+  _LIBCPP_HIDE_FROM_ABI explicit in_place_index_t() = default;
 };
 template <size_t _Idx>
 inline constexpr in_place_index_t<_Idx> in_place_index{};

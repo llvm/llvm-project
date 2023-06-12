@@ -221,13 +221,14 @@ TableGen provides "bang operators" that have a wide variety of uses:
    BangOperator: one of
                : !add         !and         !cast        !con         !dag
                : !div         !empty       !eq          !exists      !filter
-               : !find        !foldl       !foreach     !ge          !getdagop
-               : !gt          !head        !if          !interleave  !isa
-               : !le          !listconcat  !listremove  !listsplat   !logtwo
-               : !lt          !mul         !ne          !not         !or
-               : !range       !setdagop    !shl         !size        !sra
-               : !srl         !strconcat   !sub         !subst       !substr
-               : !tail        !tolower     !toupper     !xor
+               : !find        !foldl       !foreach     !ge          !getdagarg
+               : !getdagname  !getdagop    !gt          !head        !if
+               : !interleave  !isa         !le          !listconcat  !listremove
+               : !listsplat   !logtwo      !lt          !mul         !ne
+               : !not         !or          !range       !setdagarg   !setdagname
+               : !setdagop    !shl         !size        !sra         !srl
+               : !strconcat   !sub         !subst       !substr      !tail
+               : !tolower     !toupper     !xor
 
 The ``!cond`` operator has a slightly different
 syntax compared to other bang operators, so it is defined separately:
@@ -1368,7 +1369,8 @@ or to associate an argument in one DAG with a like-named argument in another
 DAG.
 
 The following bang operators are useful for working with DAGs:
-``!con``, ``!dag``, ``!empty``, ``!foreach``, ``!getdagop``, ``!setdagop``, ``!size``.
+``!con``, ``!dag``, ``!empty``, ``!foreach``, ``!getdagarg``, ``!getdagname``,
+``!getdagop``, ``!setdagarg``, ``!setdagname``, ``!setdagop``, ``!size``.
 
 Defvar in a record body
 -----------------------
@@ -1711,6 +1713,16 @@ and non-0 as true.
     This operator produces 1 if *a* is greater than or equal to *b*; 0 otherwise.
     The arguments must be ``bit``, ``bits``, ``int``, or ``string`` values.
 
+``!getdagarg<``\ *type*\ ``>(``\ *dag*\ ``,``\ *key*\ ``)``
+    This operator retrieves the argument from the given *dag* node by the
+    specified *key*, which is either an integer index or a string name. If that
+    argument is not convertible to the specified *type*, ``?`` is returned.
+
+``!getdagname(``\ *dag*\ ``,``\ *index*\ ``)``
+    This operator retrieves the argument name from the given *dag* node by the
+    specified *index*. If that argument has no name associated, ``?`` is
+    returned.
+
 ``!getdagop(``\ *dag*\ ``)`` --or-- ``!getdagop<``\ *type*\ ``>(``\ *dag*\ ``)``
     This operator produces the operator of the given *dag* node.
     Example: ``!getdagop((foo 1, 2))`` results in ``foo``. Recall that
@@ -1808,6 +1820,16 @@ and non-0 as true.
 
 ``!range(``\ *list*\ ``)``
     Equivalent to ``!range(0, !size(list))``.
+
+``!setdagarg(``\ *dag*\ ``,``\ *key*\ ``,``\ *arg*\ ``)``
+    This operator produces a DAG node with the same operator and arguments as
+    *dag*, but replacing the value of the argument specified by the *key* with
+    *arg*. That *key* could be either an integer index or a string name.
+
+``!setdagname(``\ *dag*\ ``,``\ *key*\ ``,``\ *name*\ ``)``
+    This operator produces a DAG node with the same operator and arguments as
+    *dag*, but replacing the name of the argument specified by the *key* with
+    *name*. That *key* could be either an integer index or a string name.
 
 ``!setdagop(``\ *dag*\ ``,`` *op*\ ``)``
     This operator produces a DAG node with the same arguments as *dag*, but with its

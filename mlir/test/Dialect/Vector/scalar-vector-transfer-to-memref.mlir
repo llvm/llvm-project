@@ -136,3 +136,20 @@ func.func @transfer_read_multi_use(%m: memref<?xf32>, %idx: index) -> (f32, f32)
   return %1, %2 : f32, f32
 }
 
+// -----
+
+// Check that patterns don't trigger for an sub-vector (not scalar) extraction.
+// CHECK-LABEL: func @subvector_extract(
+//  CHECK-SAME:   %[[m:.*]]: memref<?x?xf32>, %[[idx:.*]]: index
+//   CHECK-NOT:   memref.load
+//       CHECK:   %[[r:.*]] = vector.transfer_read %[[m]][%[[idx]], %[[idx]]]
+//       CHECK:   %[[e0:.*]] = vector.extract %[[r]][0]
+//       CHECK:   return %[[e0]]
+
+func.func @subvector_extract(%m: memref<?x?xf32>, %idx: index) -> vector<16xf32> {
+  %cst = arith.constant 0.0 : f32
+  %0 = vector.transfer_read %m[%idx, %idx], %cst {in_bounds = [true, true]} : memref<?x?xf32>, vector<8x16xf32>
+  %1 = vector.extract %0[0] : vector<8x16xf32>
+  return %1 : vector<16xf32>
+}
+

@@ -53,8 +53,6 @@ __parallel_find(_Index __first, _Index __last, _Brick __f, _Compare __comp, bool
   return __extremum != __initial_dist ? __first + __extremum : __last;
 }
 
-const std::size_t __lane_size = 64;
-
 template <class _Index, class _DifferenceType, class _Compare>
 _LIBCPP_HIDE_FROM_ABI _Index
 __simd_first(_Index __first, _DifferenceType __begin, _DifferenceType __end, _Compare __comp) noexcept {

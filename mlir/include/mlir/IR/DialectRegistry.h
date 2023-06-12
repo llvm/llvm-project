@@ -97,6 +97,22 @@ protected:
   }
 };
 
+namespace dialect_extension_detail {
+
+/// Checks if the given interface, which is attempting to be used, is a
+/// promised interface of this dialect that has yet to be implemented. If so,
+/// emits a fatal error.
+void handleUseOfUndefinedPromisedInterface(Dialect &dialect, TypeID interfaceID,
+                                           StringRef interfaceName);
+
+/// Checks if the given interface, which is attempting to be attached, is a
+/// promised interface of this dialect that has yet to be implemented. If so,
+/// the promised interface is marked as resolved.
+void handleAdditionOfUndefinedPromisedInterface(Dialect &dialect,
+                                                TypeID interfaceID);
+
+} // namespace dialect_extension_detail
+
 //===----------------------------------------------------------------------===//
 // DialectRegistry
 //===----------------------------------------------------------------------===//

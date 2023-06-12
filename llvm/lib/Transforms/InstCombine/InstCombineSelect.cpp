@@ -1094,99 +1094,6 @@ static Value *foldSelectCttzCtlz(ICmpInst *ICI, Value *TrueVal, Value *FalseVal,
   return nullptr;
 }
 
-/// Return true if we find and adjust an icmp+select pattern where the compare
-/// is with a constant that can be incremented or decremented to match the
-/// minimum or maximum idiom.
-static bool adjustMinMax(SelectInst &Sel, ICmpInst &Cmp) {
-  ICmpInst::Predicate Pred = Cmp.getPredicate();
-  Value *CmpLHS = Cmp.getOperand(0);
-  Value *CmpRHS = Cmp.getOperand(1);
-  Value *TrueVal = Sel.getTrueValue();
-  Value *FalseVal = Sel.getFalseValue();
-
-  // We may move or edit the compare, so make sure the select is the only user.
-  const APInt *CmpC;
-  if (!Cmp.hasOneUse() || !match(CmpRHS, m_APInt(CmpC)))
-    return false;
-
-  // These transforms only work for selects of integers or vector selects of
-  // integer vectors.
-  Type *SelTy = Sel.getType();
-  auto *SelEltTy = dyn_cast<IntegerType>(SelTy->getScalarType());
-  if (!SelEltTy || SelTy->isVectorTy() != Cmp.getType()->isVectorTy())
-    return false;
-
-  Constant *AdjustedRHS;
-  if (Pred == ICmpInst::ICMP_UGT || Pred == ICmpInst::ICMP_SGT)
-    AdjustedRHS = ConstantInt::get(CmpRHS->getType(), *CmpC + 1);
-  else if (Pred == ICmpInst::ICMP_ULT || Pred == ICmpInst::ICMP_SLT)
-    AdjustedRHS = ConstantInt::get(CmpRHS->getType(), *CmpC - 1);
-  else
-    return false;
-
-  // X > C ? X : C+1  -->  X < C+1 ? C+1 : X
-  // X < C ? X : C-1  -->  X > C-1 ? C-1 : X
-  if ((CmpLHS == TrueVal && AdjustedRHS == FalseVal) ||
-      (CmpLHS == FalseVal && AdjustedRHS == TrueVal)) {
-    ; // Nothing to do here. Values match without any sign/zero extension.
-  }
-  // Types do not match. Instead of calculating this with mixed types, promote
-  // all to the larger type. This enables scalar evolution to analyze this
-  // expression.
-  else if (CmpRHS->getType()->getScalarSizeInBits() < SelEltTy->getBitWidth()) {
-    Constant *SextRHS = ConstantExpr::getSExt(AdjustedRHS, SelTy);
-
-    // X = sext x; x >s c ? X : C+1 --> X = sext x; X <s C+1 ? C+1 : X
-    // X = sext x; x <s c ? X : C-1 --> X = sext x; X >s C-1 ? C-1 : X
-    // X = sext x; x >u c ? X : C+1 --> X = sext x; X <u C+1 ? C+1 : X
-    // X = sext x; x <u c ? X : C-1 --> X = sext x; X >u C-1 ? C-1 : X
-    if (match(TrueVal, m_SExt(m_Specific(CmpLHS))) && SextRHS == FalseVal) {
-      CmpLHS = TrueVal;
-      AdjustedRHS = SextRHS;
-    } else if (match(FalseVal, m_SExt(m_Specific(CmpLHS))) &&
-               SextRHS == TrueVal) {
-      CmpLHS = FalseVal;
-      AdjustedRHS = SextRHS;
-    } else if (Cmp.isUnsigned()) {
-      Constant *ZextRHS = ConstantExpr::getZExt(AdjustedRHS, SelTy);
-      // X = zext x; x >u c ? X : C+1 --> X = zext x; X <u C+1 ? C+1 : X
-      // X = zext x; x <u c ? X : C-1 --> X = zext x; X >u C-1 ? C-1 : X
-      // zext + signed compare cannot be changed:
-      //    0xff <s 0x00, but 0x00ff >s 0x0000
-      if (match(TrueVal, m_ZExt(m_Specific(CmpLHS))) && ZextRHS == FalseVal) {
-        CmpLHS = TrueVal;
-        AdjustedRHS = ZextRHS;
-      } else if (match(FalseVal, m_ZExt(m_Specific(CmpLHS))) &&
-                 ZextRHS == TrueVal) {
-        CmpLHS = FalseVal;
-        AdjustedRHS = ZextRHS;
-      } else {
-        return false;
-      }
-    } else {
-      return false;
-    }
-  } else {
-    return false;
-  }
-
-  Pred = ICmpInst::getSwappedPredicate(Pred);
-  CmpRHS = AdjustedRHS;
-  std::swap(FalseVal, TrueVal);
-  Cmp.setPredicate(Pred);
-  Cmp.setOperand(0, CmpLHS);
-  Cmp.setOperand(1, CmpRHS);
-  Sel.setOperand(1, TrueVal);
-  Sel.setOperand(2, FalseVal);
-  Sel.swapProfMetadata();
-
-  // Move the compare instruction right before the select instruction. Otherwise
-  // the sext/zext value may be defined after the compare instruction uses it.
-  Cmp.moveBefore(&Sel);
-
-  return true;
-}
-
 static Instruction *canonicalizeSPF(SelectInst &Sel, ICmpInst &Cmp,
                                     InstCombinerImpl &IC) {
   Value *LHS, *RHS;
@@ -1718,12 +1625,11 @@ Instruction *InstCombinerImpl::foldSelectInstWithICmp(SelectInst &SI,
           tryToReuseConstantFromSelectInComparison(SI, *ICI, *this))
     return NewSel;
 
-  bool Changed = adjustMinMax(SI, *ICI);
-
   if (Value *V = foldSelectICmpAnd(SI, ICI, Builder))
     return replaceInstUsesWith(SI, V);
 
   // NOTE: if we wanted to, this is where to detect integer MIN/MAX
+  bool Changed = false;
   Value *TrueVal = SI.getTrueValue();
   Value *FalseVal = SI.getFalseValue();
   ICmpInst::Predicate Pred = ICI->getPredicate();
@@ -2924,31 +2830,20 @@ Instruction *InstCombinerImpl::foldSelectOfBools(SelectInst &SI) {
   auto *Zero = ConstantInt::getFalse(SelType);
   Value *A, *B, *C, *D;
 
-  auto dropPoisonGeneratingFlagsAndMetadata =
-      [](ArrayRef<Instruction *> Insts) {
-        for (auto *I : Insts)
-          I->dropPoisonGeneratingFlagsAndMetadata();
-      };
   // Folding select to and/or i1 isn't poison safe in general. impliesPoison
   // checks whether folding it does not convert a well-defined value into
   // poison.
   if (match(TrueVal, m_One())) {
+    if (impliesPoison(FalseVal, CondVal)) {
+      // Change: A = select B, true, C --> A = or B, C
+      return BinaryOperator::CreateOr(CondVal, FalseVal);
+    }
+
     if (auto *LHS = dyn_cast<FCmpInst>(CondVal))
       if (auto *RHS = dyn_cast<FCmpInst>(FalseVal))
         if (Value *V = foldLogicOfFCmps(LHS, RHS, /*IsAnd*/ false,
                                         /*IsSelectLogical*/ true))
           return replaceInstUsesWith(SI, V);
-
-    // Some patterns can be matched by both of the above and following
-    // combinations. Because we need to drop poison generating
-    // flags and metadatas for the following combination, it has less priority
-    // than the above combination.
-    SmallVector<Instruction *> IgnoredInsts;
-    if (impliesPoisonIgnoreFlagsOrMetadata(FalseVal, CondVal, IgnoredInsts)) {
-      dropPoisonGeneratingFlagsAndMetadata(IgnoredInsts);
-      // Change: A = select B, true, C --> A = or B, C
-      return BinaryOperator::CreateOr(CondVal, FalseVal);
-    }
 
     // (A && B) || (C && B) --> (A || C) && B
     if (match(CondVal, m_LogicalAnd(m_Value(A), m_Value(B))) &&
@@ -2980,22 +2875,16 @@ Instruction *InstCombinerImpl::foldSelectOfBools(SelectInst &SI) {
   }
 
   if (match(FalseVal, m_Zero())) {
+    if (impliesPoison(TrueVal, CondVal)) {
+      // Change: A = select B, C, false --> A = and B, C
+      return BinaryOperator::CreateAnd(CondVal, TrueVal);
+    }
+
     if (auto *LHS = dyn_cast<FCmpInst>(CondVal))
       if (auto *RHS = dyn_cast<FCmpInst>(TrueVal))
         if (Value *V = foldLogicOfFCmps(LHS, RHS, /*IsAnd*/ true,
                                         /*IsSelectLogical*/ true))
           return replaceInstUsesWith(SI, V);
-
-    // Some patterns can be matched by both of the above and following
-    // combinations. Because we need to drop poison generating
-    // flags and metadatas for the following combination, it has less priority
-    // than the above combination.
-    SmallVector<Instruction *> IgnoredInsts;
-    if (impliesPoisonIgnoreFlagsOrMetadata(TrueVal, CondVal, IgnoredInsts)) {
-      dropPoisonGeneratingFlagsAndMetadata(IgnoredInsts);
-      // Change: A = select B, C, false --> A = and B, C
-      return BinaryOperator::CreateAnd(CondVal, TrueVal);
-    }
 
     // (A || B) && (C || B) --> (A && C) || B
     if (match(CondVal, m_LogicalOr(m_Value(A), m_Value(B))) &&

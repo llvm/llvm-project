@@ -152,7 +152,8 @@ public:
   // The AAResults parameter can be nullptr.
   VLIWPacketizerList(MachineFunction &MF, MachineLoopInfo &MLI,
                      AAResults *AA);
-
+  VLIWPacketizerList &operator=(const VLIWPacketizerList &other) = delete;
+  VLIWPacketizerList(const VLIWPacketizerList &other) = delete;
   virtual ~VLIWPacketizerList();
 
   // Implement this API in the backend to bundle instructions.

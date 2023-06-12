@@ -118,6 +118,12 @@ Expr<Type<TypeCategory::Character, KIND>> FoldIntrinsicFunction(
       return Expr<T>{Constant<T>{
           CharacterUtils<KIND>::TRIM(std::get<Scalar<T>>(*scalar))}};
     }
+  } else if (name == "__builtin_compiler_options") {
+    auto &o = context.targetCharacteristics().compilerOptionsString();
+    return Expr<T>{Constant<T>{StringType(o.begin(), o.end())}};
+  } else if (name == "__builtin_compiler_version") {
+    auto &v = context.targetCharacteristics().compilerVersionString();
+    return Expr<T>{Constant<T>{StringType(v.begin(), v.end())}};
   }
   return Expr<T>{std::move(funcRef)};
 }

@@ -10,6 +10,71 @@ package(default_visibility = ["//visibility:public"])
 
 licenses(["notice"])
 
+libc_test(
+    name = "abs_test",
+    srcs = ["abs_test.cpp"],
+    libc_function_deps = [
+        "//libc:abs",
+    ],
+)
+
+libc_test(
+    name = "labs_test",
+    srcs = ["labs_test.cpp"],
+    libc_function_deps = [
+        "//libc:labs",
+    ],
+)
+
+libc_test(
+    name = "llabs_test",
+    srcs = ["llabs_test.cpp"],
+    libc_function_deps = [
+        "//libc:llabs",
+    ],
+)
+
+cc_library(
+    name = "div_test_helper",
+    hdrs = ["DivTest.h"],
+    deps = [
+        "//libc/test/UnitTest:LibcUnitTest",
+    ],
+)
+
+libc_test(
+    name = "div_test",
+    srcs = ["div_test.cpp"],
+    libc_function_deps = [
+        "//libc:div",
+    ],
+    deps = [
+        ":div_test_helper",
+    ],
+)
+
+libc_test(
+    name = "ldiv_test",
+    srcs = ["ldiv_test.cpp"],
+    libc_function_deps = [
+        "//libc:ldiv",
+    ],
+    deps = [
+        ":div_test_helper",
+    ],
+)
+
+libc_test(
+    name = "lldiv_test",
+    srcs = ["lldiv_test.cpp"],
+    libc_function_deps = [
+        "//libc:lldiv",
+    ],
+    deps = [
+        ":div_test_helper",
+    ],
+)
+
 cc_library(
     name = "atoi_test_helper",
     hdrs = ["AtoiTest.h"],

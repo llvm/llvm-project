@@ -34,18 +34,20 @@ FailureOr<TilingResult> replaceExtractSliceWithTiledProducer(
 // Populate functions.
 //===----------------------------------------------------------------------===//
 
-/// Collects a set of patterns to rewrite ops within the tensor dialect.
-void populateExpandOpsPatterns(RewritePatternSet &patterns);
-
 /// Appends patterns for folding tensor aliasing ops into consumer load/store
 /// ops into `patterns`.
 void populateFoldTensorSubsetOpPatterns(RewritePatternSet &patterns);
 
 /// Collects patterns to merge consecutive tensor.insert_slice/extract_slice
-/// into one. These patterns are in in this separate entry point because the
-/// bufferization is sensitive over IR structure, particularly those
+/// into one. These patterns are in this separate entry point because the
+/// bufferization is sensitive to IR structure, particularly those
 /// tensor.extract_slice and tensor.insert_slice ops for creating the slices.
 void populateMergeConsecutiveInsertExtractSlicePatterns(
+    RewritePatternSet &patterns);
+
+/// Populates `patterns` with patterns that drop redundant tensor.insert_slice
+/// rank expansions.
+void populateDropRedundantInsertSliceRankExpansionPatterns(
     RewritePatternSet &patterns);
 
 /// Populates `patterns` with patterns that fold `tensor.expand_shape` and
@@ -53,13 +55,21 @@ void populateMergeConsecutiveInsertExtractSlicePatterns(
 void populateReassociativeReshapeFoldingPatterns(RewritePatternSet &patterns);
 
 /// Populates `patterns` with patterns that fold tensor.empty with
-/// tensor.[extract_slice|cast|expand_shape|collapse_shape].
-void populateFoldTensorEmptyPatterns(RewritePatternSet &patterns);
+/// tensor.[extract_slice|expand_shape|collapse_shape].
+///
+/// If `singleUseOnly` is set to "true", only tensor.empty ops with a single
+/// use are folded.
+void populateFoldTensorEmptyPatterns(RewritePatternSet &patterns,
+                                     bool foldSingleUseOnly = false);
 
 /// Populates `patterns` with patterns that fold operations like `tensor.pad`
 /// and `tensor.extract_slice` into `tensor.pack` and `tensor.unpack` operations
 /// respectively.
 void populateFoldIntoPackAndUnpackPatterns(RewritePatternSet &patterns);
+
+/// Populates `patterns` with patterns that replace tensor ops (such as
+/// tensor.generate) with constants when possible.
+void populateRewriteAsConstantPatterns(RewritePatternSet &patterns);
 
 //===----------------------------------------------------------------------===//
 // Transform helpers

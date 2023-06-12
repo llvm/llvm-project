@@ -220,6 +220,7 @@ struct DummyDataObject {
   common::Intent intent{common::Intent::Default};
   Attrs attrs;
   common::IgnoreTKRSet ignoreTKR;
+  std::optional<common::CUDADataAttr> cudaDataAttr;
 };
 
 // 15.3.2.3
@@ -317,6 +318,7 @@ struct FunctionResult {
 
   Attrs attrs;
   std::variant<TypeAndShape, CopyableIndirection<Procedure>> u;
+  std::optional<common::CUDADataAttr> cudaDataAttr;
 };
 
 // 15.3.1
@@ -368,6 +370,8 @@ struct Procedure {
   std::optional<FunctionResult> functionResult;
   DummyArguments dummyArguments;
   Attrs attrs;
+  std::optional<common::CUDASubprogramAttrs> cudaSubprogramAttrs;
 };
+
 } // namespace Fortran::evaluate::characteristics
 #endif // FORTRAN_EVALUATE_CHARACTERISTICS_H_

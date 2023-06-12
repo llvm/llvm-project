@@ -462,7 +462,8 @@ bool MachineCopyPropagation::eraseIfRedundant(MachineInstr &Copy,
 
   auto PrevCopyOperands = isCopyInstr(*PrevCopy, *TII, UseCopyInstr);
   // Check that the existing copy uses the correct sub registers.
-  if (PrevCopyOperands->Destination->isDead())
+  if (PrevCopyOperands->Destination->isDead() ||
+      PrevCopyOperands->Source->isUndef())
     return false;
   if (!isNopCopy(*PrevCopy, Src, Def, TRI, TII, UseCopyInstr))
     return false;

@@ -29,6 +29,9 @@ bool containsOpenMP(Module &M);
 /// Helper to determine if \p M is a OpenMP target offloading device module.
 bool isOpenMPDevice(Module &M);
 
+/// Return true iff \p Fn is a GPU kernel; \p Fn has the "kernel" attribute.
+bool isKernel(Function &Fn);
+
 /// Get OpenMP device kernels in \p M.
 KernelSet getDeviceKernels(Module &M);
 

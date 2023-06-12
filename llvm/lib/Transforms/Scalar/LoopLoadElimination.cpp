@@ -88,8 +88,9 @@ struct StoreToLoadForwardingCandidate {
   StoreToLoadForwardingCandidate(LoadInst *Load, StoreInst *Store)
       : Load(Load), Store(Store) {}
 
-  /// Return true if the dependence from the store to the load has a
-  /// distance of one.  E.g. A[i+1] = A[i]
+  /// Return true if the dependence from the store to the load has an
+  /// absolute distance of one.
+  /// E.g. A[i+1] = A[i] (or A[i-1] = A[i] for descending loop)
   bool isDependenceDistanceOfOne(PredicatedScalarEvolution &PSE,
                                  Loop *L) const {
     Value *LoadPtr = Load->getPointerOperand();
@@ -103,11 +104,19 @@ struct StoreToLoadForwardingCandidate {
                DL.getTypeSizeInBits(getLoadStoreType(Store)) &&
            "Should be a known dependence");
 
-    // Currently we only support accesses with unit stride.  FIXME: we should be
-    // able to handle non unit stirde as well as long as the stride is equal to
-    // the dependence distance.
-    if (getPtrStride(PSE, LoadType, LoadPtr, L).value_or(0) != 1 ||
-        getPtrStride(PSE, LoadType, StorePtr, L).value_or(0) != 1)
+    int64_t StrideLoad = getPtrStride(PSE, LoadType, LoadPtr, L).value_or(0);
+    int64_t StrideStore = getPtrStride(PSE, LoadType, StorePtr, L).value_or(0);
+    if (!StrideLoad || !StrideStore || StrideLoad != StrideStore)
+      return false;
+
+    // TODO: This check for stride values other than 1 and -1 can be eliminated.
+    // However, doing so may cause the LoopAccessAnalysis to overcompensate,
+    // generating numerous non-wrap runtime checks that may undermine the
+    // benefits of load elimination. To safely implement support for non-unit
+    // strides, we would need to ensure either that the processed case does not
+    // require these additional checks, or improve the LAA to handle them more
+    // efficiently, or potentially both.
+    if (std::abs(StrideLoad) != 1)
       return false;
 
     unsigned TypeByteSize = DL.getTypeAllocSize(const_cast<Type *>(LoadType));
@@ -120,7 +129,7 @@ struct StoreToLoadForwardingCandidate {
     auto *Dist = cast<SCEVConstant>(
         PSE.getSE()->getMinusSCEV(StorePtrSCEV, LoadPtrSCEV));
     const APInt &Val = Dist->getAPInt();
-    return Val == TypeByteSize;
+    return Val == TypeByteSize * StrideLoad;
   }
 
   Value *getLoadPtr() const { return Load->getPointerOperand(); }

@@ -54,7 +54,7 @@ program. The example uses only CMake language-defined functions.
 
 .. code-block:: cmake
 
-   cmake_minimum_required(VERSION 3.15)
+   cmake_minimum_required(VERSION 3.20.0)
    project(HelloWorld)
    add_executable(HelloWorld HelloWorld.cpp)
 
@@ -64,7 +64,7 @@ block to define "APPLE" when targeting Apple platforms:
 
 .. code-block:: cmake
 
-   cmake_minimum_required(VERSION 3.15)
+   cmake_minimum_required(VERSION 3.20.0)
    project(HelloWorld)
    add_executable(HelloWorld HelloWorld.cpp)
    if(APPLE)

@@ -1,0 +1,38 @@
+# This script checks that YamlProfileReader in llvm-bolt is reading data
+# correctly and stale data is corrected.
+
+RUN: yaml2obj %p/Inputs/blarge.yaml &> %t.exe
+RUN: llvm-bolt %t.exe -o /dev/null --b %p/Inputs/blarge_profile_stale.yaml --print-cfg --print-only=usqrt --infer-stale-profile=1 --profile-ignore-hash=1 \
+RUN:   2>&1 | FileCheck %s -check-prefix=CHECK
+
+# Verify that yaml reader works as expected.
+CHECK:  pre-processing profile using YAML profile reader
+
+# Verify the inferred counts of "usqrt" that has stale profile:
+#   - the function has nblocks=6 in the profile, which makes it stale
+#   - block with bid=0 has an incorrect (missing) count, which is inferred
+CHECK:    Binary Function "usqrt" after building cfg {
+CHECK:      State       : CFG constructed
+CHECK:      Address     : 0x401170
+CHECK:      Size        : 0x43
+CHECK:      Section     : .text
+CHECK:      IsSimple    : 1
+CHECK:      BB Count    : 5
+CHECK:      Exec Count  : 20
+CHECK:      Branch Count: 640
+CHECK:    }
+
+# Verify block counts.
+CHECK:    .LBB01 (4 instructions, align : 1)
+CHECK:      Successors: .Ltmp[[#BB13:]] (mispreds: 0, count: 20)
+CHECK:    .Ltmp[[#BB13:]] (9 instructions, align : 1)
+CHECK:      Successors: .Ltmp[[#BB12:]] (mispreds: 0, count: 320), .LFT[[#BB0:]] (mispreds: 0, count: 0)
+CHECK:    .LFT[[#BB0:]] (2 instructions, align : 1)
+CHECK:      Successors: .Ltmp[[#BB12:]] (mispreds: 0, count: 0)
+CHECK:    .Ltmp[[#BB12:]] (2 instructions, align : 1)
+CHECK:      Successors: .Ltmp[[#BB13:]] (mispreds: 0, count: 300), .LFT[[#BB1:]] (mispreds: 0, count: 20)
+CHECK:    .LFT[[#BB1:]] (2 instructions, align : 1)
+
+# Check the overal inference stats.
+CHECK:  2 out of 7 functions in the binary (28.6%) have non-empty execution profile
+CHECK:  inferred profile for 1 (50.00% of profiled, 100.00% of stale) functions responsible for 87.31% samples (640 out of 733)

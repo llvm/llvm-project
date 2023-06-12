@@ -23,6 +23,15 @@ using namespace mlir;
 using namespace mlir::affine;
 
 //===----------------------------------------------------------------------===//
+// Apply...PatternsOp
+//===----------------------------------------------------------------------===//
+
+void transform::ApplyForLoopCanonicalizationPatternsOp::populatePatterns(
+    RewritePatternSet &patterns) {
+  scf::populateSCFForLoopCanonicalizationPatterns(patterns);
+}
+
+//===----------------------------------------------------------------------===//
 // GetParentForOp
 //===----------------------------------------------------------------------===//
 DiagnosedSilenceableFailure

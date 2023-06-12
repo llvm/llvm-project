@@ -623,6 +623,7 @@ static void EmitAtomicOp(CodeGenFunction &CGF, AtomicExpr *E, Address Dest,
                                                  : llvm::Instruction::Sub;
     [[fallthrough]];
   case AtomicExpr::AO__c11_atomic_fetch_sub:
+  case AtomicExpr::AO__hip_atomic_fetch_sub:
   case AtomicExpr::AO__opencl_atomic_fetch_sub:
   case AtomicExpr::AO__atomic_fetch_sub:
     Op = E->getValueType()->isFloatingType() ? llvm::AtomicRMWInst::FSub
@@ -636,8 +637,11 @@ static void EmitAtomicOp(CodeGenFunction &CGF, AtomicExpr *E, Address Dest,
   case AtomicExpr::AO__hip_atomic_fetch_min:
   case AtomicExpr::AO__opencl_atomic_fetch_min:
   case AtomicExpr::AO__atomic_fetch_min:
-    Op = E->getValueType()->isSignedIntegerType() ? llvm::AtomicRMWInst::Min
-                                                  : llvm::AtomicRMWInst::UMin;
+    Op = E->getValueType()->isFloatingType()
+             ? llvm::AtomicRMWInst::FMin
+             : (E->getValueType()->isSignedIntegerType()
+                    ? llvm::AtomicRMWInst::Min
+                    : llvm::AtomicRMWInst::UMin);
     break;
 
   case AtomicExpr::AO__atomic_max_fetch:
@@ -647,8 +651,11 @@ static void EmitAtomicOp(CodeGenFunction &CGF, AtomicExpr *E, Address Dest,
   case AtomicExpr::AO__hip_atomic_fetch_max:
   case AtomicExpr::AO__opencl_atomic_fetch_max:
   case AtomicExpr::AO__atomic_fetch_max:
-    Op = E->getValueType()->isSignedIntegerType() ? llvm::AtomicRMWInst::Max
-                                                  : llvm::AtomicRMWInst::UMax;
+    Op = E->getValueType()->isFloatingType()
+             ? llvm::AtomicRMWInst::FMax
+             : (E->getValueType()->isSignedIntegerType()
+                    ? llvm::AtomicRMWInst::Max
+                    : llvm::AtomicRMWInst::UMax);
     break;
 
   case AtomicExpr::AO__atomic_and_fetch:
@@ -897,6 +904,7 @@ RValue CodeGenFunction::EmitAtomicExpr(AtomicExpr *E) {
   case AtomicExpr::AO__c11_atomic_fetch_add:
   case AtomicExpr::AO__c11_atomic_fetch_sub:
   case AtomicExpr::AO__hip_atomic_fetch_add:
+  case AtomicExpr::AO__hip_atomic_fetch_sub:
   case AtomicExpr::AO__opencl_atomic_fetch_add:
   case AtomicExpr::AO__opencl_atomic_fetch_sub:
     if (MemTy->isPointerType()) {
@@ -916,9 +924,19 @@ RValue CodeGenFunction::EmitAtomicExpr(AtomicExpr *E) {
     }
     [[fallthrough]];
   case AtomicExpr::AO__atomic_fetch_add:
+  case AtomicExpr::AO__atomic_fetch_max:
+  case AtomicExpr::AO__atomic_fetch_min:
   case AtomicExpr::AO__atomic_fetch_sub:
   case AtomicExpr::AO__atomic_add_fetch:
+  case AtomicExpr::AO__atomic_max_fetch:
+  case AtomicExpr::AO__atomic_min_fetch:
   case AtomicExpr::AO__atomic_sub_fetch:
+  case AtomicExpr::AO__c11_atomic_fetch_max:
+  case AtomicExpr::AO__c11_atomic_fetch_min:
+  case AtomicExpr::AO__opencl_atomic_fetch_max:
+  case AtomicExpr::AO__opencl_atomic_fetch_min:
+  case AtomicExpr::AO__hip_atomic_fetch_max:
+  case AtomicExpr::AO__hip_atomic_fetch_min:
     ShouldCastToIntPtrTy = !MemTy->isFloatingType();
     [[fallthrough]];
 
@@ -934,13 +952,9 @@ RValue CodeGenFunction::EmitAtomicExpr(AtomicExpr *E) {
   case AtomicExpr::AO__c11_atomic_fetch_or:
   case AtomicExpr::AO__c11_atomic_fetch_xor:
   case AtomicExpr::AO__c11_atomic_fetch_nand:
-  case AtomicExpr::AO__c11_atomic_fetch_max:
-  case AtomicExpr::AO__c11_atomic_fetch_min:
   case AtomicExpr::AO__opencl_atomic_fetch_and:
   case AtomicExpr::AO__opencl_atomic_fetch_or:
   case AtomicExpr::AO__opencl_atomic_fetch_xor:
-  case AtomicExpr::AO__opencl_atomic_fetch_min:
-  case AtomicExpr::AO__opencl_atomic_fetch_max:
   case AtomicExpr::AO__atomic_fetch_and:
   case AtomicExpr::AO__hip_atomic_fetch_and:
   case AtomicExpr::AO__atomic_fetch_or:
@@ -952,12 +966,6 @@ RValue CodeGenFunction::EmitAtomicExpr(AtomicExpr *E) {
   case AtomicExpr::AO__atomic_or_fetch:
   case AtomicExpr::AO__atomic_xor_fetch:
   case AtomicExpr::AO__atomic_nand_fetch:
-  case AtomicExpr::AO__atomic_max_fetch:
-  case AtomicExpr::AO__atomic_min_fetch:
-  case AtomicExpr::AO__atomic_fetch_max:
-  case AtomicExpr::AO__hip_atomic_fetch_max:
-  case AtomicExpr::AO__atomic_fetch_min:
-  case AtomicExpr::AO__hip_atomic_fetch_min:
     Val1 = EmitValToTemp(*this, E->getVal1());
     break;
   }
@@ -1013,6 +1021,7 @@ RValue CodeGenFunction::EmitAtomicExpr(AtomicExpr *E) {
     case AtomicExpr::AO__c11_atomic_fetch_sub:
     case AtomicExpr::AO__opencl_atomic_fetch_sub:
     case AtomicExpr::AO__atomic_fetch_sub:
+    case AtomicExpr::AO__hip_atomic_fetch_sub:
     case AtomicExpr::AO__c11_atomic_fetch_xor:
     case AtomicExpr::AO__opencl_atomic_fetch_xor:
     case AtomicExpr::AO__opencl_atomic_fetch_min:
@@ -1218,6 +1227,7 @@ RValue CodeGenFunction::EmitAtomicExpr(AtomicExpr *E) {
       [[fallthrough]];
     case AtomicExpr::AO__c11_atomic_fetch_sub:
     case AtomicExpr::AO__opencl_atomic_fetch_sub:
+    case AtomicExpr::AO__hip_atomic_fetch_sub:
     case AtomicExpr::AO__atomic_fetch_sub:
       LibCallName = "__atomic_fetch_sub";
       AddDirectArgument(*this, Args, UseOptimizedLibcall, Val1.getPointer(),

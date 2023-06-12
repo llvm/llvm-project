@@ -572,16 +572,15 @@ cc_binary(
     srcs = [
         "utils/TableGen/Attributes.cpp",
         "utils/TableGen/CodeGenIntrinsics.cpp",
+        "utils/TableGen/CodeGenIntrinsics.h",
         "utils/TableGen/DirectiveEmitter.cpp",
         "utils/TableGen/IntrinsicEmitter.cpp",
         "utils/TableGen/RISCVTargetDefEmitter.cpp",
         "utils/TableGen/SDNodeProperties.cpp",
-        "utils/TableGen/TableGen.cpp",
-        "utils/TableGen/VTEmitter.cpp",
-
-        "utils/TableGen/CodeGenIntrinsics.h",
         "utils/TableGen/SDNodeProperties.h",
         "utils/TableGen/SequenceToOffsetTable.h",
+        "utils/TableGen/TableGen.cpp",
+        "utils/TableGen/VTEmitter.cpp",
     ],
     copts = llvm_copts,
     stamp = 0,
@@ -2751,6 +2750,25 @@ cc_library(
     ],
 )
 
+cc_library(
+    name = "DWARFLinkerParallel",
+    srcs = glob([
+        "lib/DWARFLinkerParallel/*.cpp",
+        "lib/DWARFLinkerParallel/*.h",
+    ]),
+    hdrs = glob(["include/llvm/DWARFLinkerParallel/*.h"]),
+    copts = llvm_copts,
+    deps = [
+        ":BinaryFormat",
+        ":CodeGen",
+        ":DWARFLinker",
+        ":DebugInfoDWARF",
+        ":MC",
+        ":Support",
+        ":TargetParser",
+    ],
+)
+
 gentbl(
     name = "DllOptionsTableGen",
     strip_include_prefix = "lib/ToolDrivers/llvm-dlltool",
@@ -3023,6 +3041,7 @@ cc_binary(
         ":CodeGen",
         ":CodeGenTypes",
         ":DWARFLinker",
+        ":DWARFLinkerParallel",
         ":DebugInfo",
         ":DebugInfoDWARF",
         ":DsymutilTableGen",
@@ -3445,6 +3464,7 @@ cc_binary(
         ":AllTargetsCodeGens",
         ":CodeGenTypes",
         ":DWARFLinker",
+        ":DWARFLinkerParallel",
         ":DebugInfoDWARF",
         ":DwarfutilOptionsTableGen",
         ":MC",

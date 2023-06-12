@@ -98,7 +98,7 @@ public:
     return nullptr;
   }
 
-  const char *GetConstCStringWithStringRef(const llvm::StringRef &string_ref) {
+  const char *GetConstCStringWithStringRef(llvm::StringRef string_ref) {
     if (string_ref.data()) {
       const uint8_t h = hash(string_ref);
 
@@ -171,7 +171,7 @@ public:
   }
 
 protected:
-  uint8_t hash(const llvm::StringRef &s) const {
+  uint8_t hash(llvm::StringRef s) const {
     uint32_t h = llvm::djbHash(s);
     return ((h >> 24) ^ (h >> 16) ^ (h >> 8) ^ h) & 0xff;
   }
@@ -208,7 +208,7 @@ ConstString::ConstString(const char *cstr)
 ConstString::ConstString(const char *cstr, size_t cstr_len)
     : m_string(StringPool().GetConstCStringWithLength(cstr, cstr_len)) {}
 
-ConstString::ConstString(const llvm::StringRef &s)
+ConstString::ConstString(llvm::StringRef s)
     : m_string(StringPool().GetConstCStringWithStringRef(s)) {}
 
 bool ConstString::operator<(ConstString rhs) const {
@@ -302,8 +302,8 @@ void ConstString::SetCString(const char *cstr) {
   m_string = StringPool().GetConstCString(cstr);
 }
 
-void ConstString::SetString(const llvm::StringRef &s) {
-  m_string = StringPool().GetConstCStringWithLength(s.data(), s.size());
+void ConstString::SetString(llvm::StringRef s) {
+  m_string = StringPool().GetConstCStringWithStringRef(s);
 }
 
 void ConstString::SetStringWithMangledCounterpart(llvm::StringRef demangled,

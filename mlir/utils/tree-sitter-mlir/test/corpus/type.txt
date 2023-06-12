@@ -1,0 +1,1362 @@
+================================================================================
+Tensor type of known dimensions
+================================================================================
+func.func @test_addi_tensor(%arg0 : tensor<8x8xi64>, %arg1 : tensor<8x8xi64>) -> tensor<8x8xi64> {
+  %0 = arith.addi %arg0, %arg1 : tensor<8x8xi64>
+  return %0 : tensor<8x8xi64>
+}
+--------------------------------------------------------------------------------
+
+(toplevel
+  (operation
+    (custom_operation
+      (func_dialect
+        (symbol_ref_id)
+        (func_arg_list
+          (value_use)
+          (type
+            (builtin_type
+              (tensor_type
+                (dim_list
+                  (integer_type)))))
+          (value_use)
+          (type
+            (builtin_type
+              (tensor_type
+                (dim_list
+                  (integer_type))))))
+        (func_return
+          (type_list_attr_parens
+            (type
+              (builtin_type
+                (tensor_type
+                  (dim_list
+                    (integer_type)))))))
+        (region
+          (entry_block
+            (operation
+              (op_result
+                (value_use))
+              (custom_operation
+                (arith_dialect
+                  (value_use)
+                  (value_use)
+                  (type
+                    (builtin_type
+                      (tensor_type
+                        (dim_list
+                          (integer_type))))))))
+            (operation
+              (custom_operation
+                (func_dialect
+                  (value_use)
+                  (type
+                    (builtin_type
+                      (tensor_type
+                        (dim_list
+                          (integer_type))))))))))))))
+
+================================================================================
+vector type with one dimension
+================================================================================
+func.func @test_addi_vector(%arg0 : vector<8xi64>, %arg1 : vector<8xi64>) -> vector<8xi64> {
+  %0 = arith.addi %arg0, %arg1 : vector<8xi64>
+  return %0 : vector<8xi64>
+}
+--------------------------------------------------------------------------------
+
+(toplevel
+  (operation
+    (custom_operation
+      (func_dialect
+        (symbol_ref_id)
+        (func_arg_list
+          (value_use)
+          (type
+            (builtin_type
+              (vector_type
+                (vector_dim_list)
+                (integer_type))))
+          (value_use)
+          (type
+            (builtin_type
+              (vector_type
+                (vector_dim_list)
+                (integer_type)))))
+        (func_return
+          (type_list_attr_parens
+            (type
+              (builtin_type
+                (vector_type
+                  (vector_dim_list)
+                  (integer_type))))))
+        (region
+          (entry_block
+            (operation
+              (op_result
+                (value_use))
+              (custom_operation
+                (arith_dialect
+                  (value_use)
+                  (value_use)
+                  (type
+                    (builtin_type
+                      (vector_type
+                        (vector_dim_list)
+                        (integer_type)))))))
+            (operation
+              (custom_operation
+                (func_dialect
+                  (value_use)
+                  (type
+                    (builtin_type
+                      (vector_type
+                        (vector_dim_list)
+                        (integer_type)))))))))))))
+
+================================================================================
+vector type without dimensions
+================================================================================
+func.func @test_cmpi_vector_0d(%arg0 : vector<i64>, %arg1 : vector<i64>) -> vector<i1> {
+  %0 = arith.cmpi ult, %arg0, %arg1 : vector<i64>
+  return %0 : vector<i1>
+}
+--------------------------------------------------------------------------------
+
+(toplevel
+  (operation
+    (custom_operation
+      (func_dialect
+        (symbol_ref_id)
+        (func_arg_list
+          (value_use)
+          (type
+            (builtin_type
+              (vector_type
+                (integer_type))))
+          (value_use)
+          (type
+            (builtin_type
+              (vector_type
+                (integer_type)))))
+        (func_return
+          (type_list_attr_parens
+            (type
+              (builtin_type
+                (vector_type
+                  (integer_type))))))
+        (region
+          (entry_block
+            (operation
+              (op_result
+                (value_use))
+              (custom_operation
+                (arith_dialect
+                  (value_use)
+                  (value_use)
+                  (type
+                    (builtin_type
+                      (vector_type
+                        (integer_type)))))))
+            (operation
+              (custom_operation
+                (func_dialect
+                  (value_use)
+                  (type
+                    (builtin_type
+                      (vector_type
+                        (integer_type)))))))))))))
+
+================================================================================
+vector type with multiple dimensions
+================================================================================
+func.func @cmpi_equal_vector_operands(%arg0: vector<1x8xi64>)
+    -> (vector<1x8xi1>, vector<1x8xi1>, vector<1x8xi1>, vector<1x8xi1>,
+        vector<1x8xi1>, vector<1x8xi1>, vector<1x8xi1>, vector<1x8xi1>,
+	vector<1x8xi1>, vector<1x8xi1>) {
+  %0 = arith.cmpi eq, %arg0, %arg0 : vector<1x8xi64>
+  %1 = arith.cmpi sle, %arg0, %arg0 : vector<1x8xi64>
+  %2 = arith.cmpi sge, %arg0, %arg0 : vector<1x8xi64>
+  %3 = arith.cmpi ule, %arg0, %arg0 : vector<1x8xi64>
+  %4 = arith.cmpi uge, %arg0, %arg0 : vector<1x8xi64>
+  %5 = arith.cmpi ne, %arg0, %arg0 : vector<1x8xi64>
+  %6 = arith.cmpi slt, %arg0, %arg0 : vector<1x8xi64>
+  %7 = arith.cmpi sgt, %arg0, %arg0 : vector<1x8xi64>
+  %8 = arith.cmpi ult, %arg0, %arg0 : vector<1x8xi64>
+  %9 = arith.cmpi ugt, %arg0, %arg0 : vector<1x8xi64>
+  return %0, %1, %2, %3, %4, %5, %6, %7, %8, %9
+      : vector<1x8xi1>, vector<1x8xi1>, vector<1x8xi1>, vector<1x8xi1>,
+        vector<1x8xi1>, vector<1x8xi1>, vector<1x8xi1>, vector<1x8xi1>,
+	vector<1x8xi1>, vector<1x8xi1>
+}
+--------------------------------------------------------------------------------
+
+(toplevel
+  (operation
+    (custom_operation
+      (func_dialect
+        (symbol_ref_id)
+        (func_arg_list
+          (value_use)
+          (type
+            (builtin_type
+              (vector_type
+                (vector_dim_list)
+                (integer_type)))))
+        (func_return
+          (type_list_attr_parens
+            (type
+              (builtin_type
+                (vector_type
+                  (vector_dim_list)
+                  (integer_type))))
+            (type
+              (builtin_type
+                (vector_type
+                  (vector_dim_list)
+                  (integer_type))))
+            (type
+              (builtin_type
+                (vector_type
+                  (vector_dim_list)
+                  (integer_type))))
+            (type
+              (builtin_type
+                (vector_type
+                  (vector_dim_list)
+                  (integer_type))))
+            (type
+              (builtin_type
+                (vector_type
+                  (vector_dim_list)
+                  (integer_type))))
+            (type
+              (builtin_type
+                (vector_type
+                  (vector_dim_list)
+                  (integer_type))))
+            (type
+              (builtin_type
+                (vector_type
+                  (vector_dim_list)
+                  (integer_type))))
+            (type
+              (builtin_type
+                (vector_type
+                  (vector_dim_list)
+                  (integer_type))))
+            (type
+              (builtin_type
+                (vector_type
+                  (vector_dim_list)
+                  (integer_type))))
+            (type
+              (builtin_type
+                (vector_type
+                  (vector_dim_list)
+                  (integer_type))))))
+        (region
+          (entry_block
+            (operation
+              (op_result
+                (value_use))
+              (custom_operation
+                (arith_dialect
+                  (value_use)
+                  (value_use)
+                  (type
+                    (builtin_type
+                      (vector_type
+                        (vector_dim_list)
+                        (integer_type)))))))
+            (operation
+              (op_result
+                (value_use))
+              (custom_operation
+                (arith_dialect
+                  (value_use)
+                  (value_use)
+                  (type
+                    (builtin_type
+                      (vector_type
+                        (vector_dim_list)
+                        (integer_type)))))))
+            (operation
+              (op_result
+                (value_use))
+              (custom_operation
+                (arith_dialect
+                  (value_use)
+                  (value_use)
+                  (type
+                    (builtin_type
+                      (vector_type
+                        (vector_dim_list)
+                        (integer_type)))))))
+            (operation
+              (op_result
+                (value_use))
+              (custom_operation
+                (arith_dialect
+                  (value_use)
+                  (value_use)
+                  (type
+                    (builtin_type
+                      (vector_type
+                        (vector_dim_list)
+                        (integer_type)))))))
+            (operation
+              (op_result
+                (value_use))
+              (custom_operation
+                (arith_dialect
+                  (value_use)
+                  (value_use)
+                  (type
+                    (builtin_type
+                      (vector_type
+                        (vector_dim_list)
+                        (integer_type)))))))
+            (operation
+              (op_result
+                (value_use))
+              (custom_operation
+                (arith_dialect
+                  (value_use)
+                  (value_use)
+                  (type
+                    (builtin_type
+                      (vector_type
+                        (vector_dim_list)
+                        (integer_type)))))))
+            (operation
+              (op_result
+                (value_use))
+              (custom_operation
+                (arith_dialect
+                  (value_use)
+                  (value_use)
+                  (type
+                    (builtin_type
+                      (vector_type
+                        (vector_dim_list)
+                        (integer_type)))))))
+            (operation
+              (op_result
+                (value_use))
+              (custom_operation
+                (arith_dialect
+                  (value_use)
+                  (value_use)
+                  (type
+                    (builtin_type
+                      (vector_type
+                        (vector_dim_list)
+                        (integer_type)))))))
+            (operation
+              (op_result
+                (value_use))
+              (custom_operation
+                (arith_dialect
+                  (value_use)
+                  (value_use)
+                  (type
+                    (builtin_type
+                      (vector_type
+                        (vector_dim_list)
+                        (integer_type)))))))
+            (operation
+              (op_result
+                (value_use))
+              (custom_operation
+                (arith_dialect
+                  (value_use)
+                  (value_use)
+                  (type
+                    (builtin_type
+                      (vector_type
+                        (vector_dim_list)
+                        (integer_type)))))))
+            (operation
+              (custom_operation
+                (func_dialect
+                  (value_use)
+                  (value_use)
+                  (value_use)
+                  (value_use)
+                  (value_use)
+                  (value_use)
+                  (value_use)
+                  (value_use)
+                  (value_use)
+                  (value_use)
+                  (type
+                    (builtin_type
+                      (vector_type
+                        (vector_dim_list)
+                        (integer_type))))
+                  (type
+                    (builtin_type
+                      (vector_type
+                        (vector_dim_list)
+                        (integer_type))))
+                  (type
+                    (builtin_type
+                      (vector_type
+                        (vector_dim_list)
+                        (integer_type))))
+                  (type
+                    (builtin_type
+                      (vector_type
+                        (vector_dim_list)
+                        (integer_type))))
+                  (type
+                    (builtin_type
+                      (vector_type
+                        (vector_dim_list)
+                        (integer_type))))
+                  (type
+                    (builtin_type
+                      (vector_type
+                        (vector_dim_list)
+                        (integer_type))))
+                  (type
+                    (builtin_type
+                      (vector_type
+                        (vector_dim_list)
+                        (integer_type))))
+                  (type
+                    (builtin_type
+                      (vector_type
+                        (vector_dim_list)
+                        (integer_type))))
+                  (type
+                    (builtin_type
+                      (vector_type
+                        (vector_dim_list)
+                        (integer_type))))
+                  (type
+                    (builtin_type
+                      (vector_type
+                        (vector_dim_list)
+                        (integer_type)))))))))))))
+
+================================================================================
+Scalable vector type
+================================================================================
+func.func @test_addi_scalable_vector(%arg0 : vector<[8]xi64>, %arg1 : vector<[8]xi64>)
+  -> vector<[8]xi64> {
+  %0 = arith.addi %arg0, %arg1 : vector<[8]xi64>
+  return %0 : vector<[8]xi64>
+}
+--------------------------------------------------------------------------------
+
+(toplevel
+  (operation
+    (custom_operation
+      (func_dialect
+        (symbol_ref_id)
+        (func_arg_list
+          (value_use)
+          (type
+            (builtin_type
+              (vector_type
+                (vector_dim_list)
+                (integer_type))))
+          (value_use)
+          (type
+            (builtin_type
+              (vector_type
+                (vector_dim_list)
+                (integer_type)))))
+        (func_return
+          (type_list_attr_parens
+            (type
+              (builtin_type
+                (vector_type
+                  (vector_dim_list)
+                  (integer_type))))))
+        (region
+          (entry_block
+            (operation
+              (op_result
+                (value_use))
+              (custom_operation
+                (arith_dialect
+                  (value_use)
+                  (value_use)
+                  (type
+                    (builtin_type
+                      (vector_type
+                        (vector_dim_list)
+                        (integer_type)))))))
+            (operation
+              (custom_operation
+                (func_dialect
+                  (value_use)
+                  (type
+                    (builtin_type
+                      (vector_type
+                        (vector_dim_list)
+                        (integer_type)))))))))))))
+
+================================================================================
+!llvm.ptr dialect type
+================================================================================
+llvm.func @byvalattr(%arg0: !llvm.ptr<i32> {llvm.byval}) {
+  llvm.return
+}
+--------------------------------------------------------------------------------
+
+(toplevel
+  (operation
+    (custom_operation
+      (llvm_dialect
+        (symbol_ref_id)
+        (func_arg_list
+          (value_use)
+          (type
+            (dialect_type
+              (pretty_dialect_item
+                (dialect_namespace)
+                (dialect_ident)
+                (pretty_dialect_item_body))))
+          (attribute
+            (dictionary_attribute
+              (attribute_entry
+                (bare_id)))))
+        (region
+          (entry_block
+            (operation
+              (custom_operation
+                (llvm_dialect)))))))))
+
+================================================================================
+Linalg matmul with memref of unknown dimensions
+================================================================================
+func.func @matmul(%arg0: memref<?xi8>, %M: index, %N: index, %K: index) {
+  %c0 = arith.constant 0 : index
+  %c1 = arith.constant 1 : index
+  %A = memref.view %arg0[%c0][%M, %K] : memref<?xi8> to memref<?x?xf32>
+  %B = memref.view %arg0[%c0][%K, %N] : memref<?xi8> to memref<?x?xf32>
+  %C = memref.view %arg0[%c0][%M, %N] : memref<?xi8> to memref<?x?xf32>
+  linalg.matmul ins(%A, %B: memref<?x?xf32>, memref<?x?xf32>)
+                outs(%C: memref<?x?xf32>)
+  return
+}
+--------------------------------------------------------------------------------
+
+(toplevel
+  (operation
+    (custom_operation
+      (func_dialect
+        (symbol_ref_id)
+        (func_arg_list
+          (value_use)
+          (type
+            (builtin_type
+              (memref_type
+                (dim_list
+                  (integer_type)))))
+          (value_use)
+          (type
+            (builtin_type
+              (index_type)))
+          (value_use)
+          (type
+            (builtin_type
+              (index_type)))
+          (value_use)
+          (type
+            (builtin_type
+              (index_type))))
+        (region
+          (entry_block
+            (operation
+              (op_result
+                (value_use))
+              (custom_operation
+                (arith_dialect
+                  (integer_literal)
+                  (type
+                    (builtin_type
+                      (index_type))))))
+            (operation
+              (op_result
+                (value_use))
+              (custom_operation
+                (arith_dialect
+                  (integer_literal)
+                  (type
+                    (builtin_type
+                      (index_type))))))
+            (operation
+              (op_result
+                (value_use))
+              (custom_operation
+                (memref_dialect
+                  (value_use)
+                  (value_use)
+                  (value_use)
+                  (value_use)
+                  (type
+                    (builtin_type
+                      (memref_type
+                        (dim_list
+                          (integer_type)))))
+                  (type
+                    (builtin_type
+                      (memref_type
+                        (dim_list
+                          (float_type))))))))
+            (operation
+              (op_result
+                (value_use))
+              (custom_operation
+                (memref_dialect
+                  (value_use)
+                  (value_use)
+                  (value_use)
+                  (value_use)
+                  (type
+                    (builtin_type
+                      (memref_type
+                        (dim_list
+                          (integer_type)))))
+                  (type
+                    (builtin_type
+                      (memref_type
+                        (dim_list
+                          (float_type))))))))
+            (operation
+              (op_result
+                (value_use))
+              (custom_operation
+                (memref_dialect
+                  (value_use)
+                  (value_use)
+                  (value_use)
+                  (value_use)
+                  (type
+                    (builtin_type
+                      (memref_type
+                        (dim_list
+                          (integer_type)))))
+                  (type
+                    (builtin_type
+                      (memref_type
+                        (dim_list
+                          (float_type))))))))
+            (operation
+              (custom_operation
+                (linalg_dialect
+                  (value_use)
+                  (value_use)
+                  (type
+                    (builtin_type
+                      (memref_type
+                        (dim_list
+                          (float_type)))))
+                  (type
+                    (builtin_type
+                      (memref_type
+                        (dim_list
+                          (float_type)))))
+                  (value_use)
+                  (type
+                    (builtin_type
+                      (memref_type
+                        (dim_list
+                          (float_type))))))))
+            (operation
+              (custom_operation
+                (func_dialect)))))))))
+
+================================================================================
+Various tensors of dimensions `?` and `*` using tensor.cast
+================================================================================
+func.func @cast(%arg0: tensor<*xf32>, %arg1 : tensor<4x4xf32>, %arg2: tensor<?x?xf32>) {
+  %0 = tensor.cast %arg0 : tensor<*xf32> to tensor<?x?xf32>
+  %1 = tensor.cast %arg1 : tensor<4x4xf32> to tensor<*xf32>
+  %2 = tensor.cast %arg2 : tensor<?x?xf32> to tensor<4x?xf32>
+  %3 = tensor.cast %2 : tensor<4x?xf32> to tensor<?x?xf32>
+  return
+}
+--------------------------------------------------------------------------------
+
+(toplevel
+  (operation
+    (custom_operation
+      (func_dialect
+        (symbol_ref_id)
+        (func_arg_list
+          (value_use)
+          (type
+            (builtin_type
+              (tensor_type
+                (dim_list
+                  (float_type)))))
+          (value_use)
+          (type
+            (builtin_type
+              (tensor_type
+                (dim_list
+                  (float_type)))))
+          (value_use)
+          (type
+            (builtin_type
+              (tensor_type
+                (dim_list
+                  (float_type))))))
+        (region
+          (entry_block
+            (operation
+              (op_result
+                (value_use))
+              (custom_operation
+                (tensor_dialect
+                  (value_use)
+                  (type
+                    (builtin_type
+                      (tensor_type
+                        (dim_list
+                          (float_type)))))
+                  (type
+                    (builtin_type
+                      (tensor_type
+                        (dim_list
+                          (float_type))))))))
+            (operation
+              (op_result
+                (value_use))
+              (custom_operation
+                (tensor_dialect
+                  (value_use)
+                  (type
+                    (builtin_type
+                      (tensor_type
+                        (dim_list
+                          (float_type)))))
+                  (type
+                    (builtin_type
+                      (tensor_type
+                        (dim_list
+                          (float_type))))))))
+            (operation
+              (op_result
+                (value_use))
+              (custom_operation
+                (tensor_dialect
+                  (value_use)
+                  (type
+                    (builtin_type
+                      (tensor_type
+                        (dim_list
+                          (float_type)))))
+                  (type
+                    (builtin_type
+                      (tensor_type
+                        (dim_list
+                          (float_type))))))))
+            (operation
+              (op_result
+                (value_use))
+              (custom_operation
+                (tensor_dialect
+                  (value_use)
+                  (type
+                    (builtin_type
+                      (tensor_type
+                        (dim_list
+                          (float_type)))))
+                  (type
+                    (builtin_type
+                      (tensor_type
+                        (dim_list
+                          (float_type))))))))
+            (operation
+              (custom_operation
+                (func_dialect)))))))))
+
+================================================================================
+Dense and sparse matrix literals
+================================================================================
+func.func @fold_extract(%arg0 : index) -> (f32, f16, f16, i32, complex<f32>) {
+  %const_0 = arith.constant 0 : index
+  %const_1 = arith.constant 1 : index
+  %const_3 = arith.constant 3 : index
+
+  %0 = arith.constant dense<4.0> : tensor<4xf32>
+  %ext_1 = tensor.extract %0[%arg0] : tensor<4xf32>
+
+  // Fold an extract into a sparse with a sparse index.
+  %1 = arith.constant sparse<[[0, 0, 0], [1, 1, 1]],  [-5.0, -2.0]> : tensor<4x4x4xf16>
+  %ext_2 = tensor.extract %1[%const_1, %const_1, %const_1] : tensor<4x4x4xf16>
+
+  // Fold an extract into a sparse with a non sparse index.
+  %2 = arith.constant sparse<[[1, 1, 1]],  [-2.0]> : tensor<2x2x2xf16>
+  %ext_3 = tensor.extract %2[%const_0, %const_0, %const_0] : tensor<2x2x2xf16>
+
+  // Fold an extract into a dense tensor.
+  %3 = arith.constant dense<[[[1, -2, 1, 36]], [[0, 2, -1, 64]]]> : tensor<2x1x4xi32>
+  %ext_4 = tensor.extract %3[%const_1, %const_0, %const_3] : tensor<2x1x4xi32>
+
+  // Fold an extract into a complex constant.
+  %4 = arith.constant dense<(1.2, 2.3)> : tensor<complex<f32>>
+  %ext_5 = tensor.extract %4[] : tensor<complex<f32>>
+
+  return %ext_1, %ext_2, %ext_3, %ext_4, %ext_5 : f32, f16, f16, i32, complex<f32>
+}
+--------------------------------------------------------------------------------
+
+(toplevel
+  (operation
+    (custom_operation
+      (func_dialect
+        (symbol_ref_id)
+        (func_arg_list
+          (value_use)
+          (type
+            (builtin_type
+              (index_type))))
+        (func_return
+          (type_list_attr_parens
+            (type
+              (builtin_type
+                (float_type)))
+            (type
+              (builtin_type
+                (float_type)))
+            (type
+              (builtin_type
+                (float_type)))
+            (type
+              (builtin_type
+                (integer_type)))
+            (type
+              (builtin_type
+                (complex_type
+                  (float_type))))))
+        (region
+          (entry_block
+            (operation
+              (op_result
+                (value_use))
+              (custom_operation
+                (arith_dialect
+                  (integer_literal)
+                  (type
+                    (builtin_type
+                      (index_type))))))
+            (operation
+              (op_result
+                (value_use))
+              (custom_operation
+                (arith_dialect
+                  (integer_literal)
+                  (type
+                    (builtin_type
+                      (index_type))))))
+            (operation
+              (op_result
+                (value_use))
+              (custom_operation
+                (arith_dialect
+                  (integer_literal)
+                  (type
+                    (builtin_type
+                      (index_type))))))
+            (operation
+              (op_result
+                (value_use))
+              (custom_operation
+                (arith_dialect
+                  (tensor_literal
+                    (float_literal))
+                  (type
+                    (builtin_type
+                      (tensor_type
+                        (dim_list
+                          (float_type))))))))
+            (operation
+              (op_result
+                (value_use))
+              (custom_operation
+                (tensor_dialect
+                  (value_use)
+                  (value_use)
+                  (type
+                    (builtin_type
+                      (tensor_type
+                        (dim_list
+                          (float_type))))))))
+            (comment)
+            (operation
+              (op_result
+                (value_use))
+              (custom_operation
+                (arith_dialect
+                  (tensor_literal
+                    (nested_idx_list
+                      (nested_idx_list
+                        (integer_literal)
+                        (integer_literal)
+                        (integer_literal))
+                      (nested_idx_list
+                        (integer_literal)
+                        (integer_literal)
+                        (integer_literal)))
+                    (nested_idx_list
+                      (float_literal)
+                      (float_literal)))
+                  (type
+                    (builtin_type
+                      (tensor_type
+                        (dim_list
+                          (float_type))))))))
+            (operation
+              (op_result
+                (value_use))
+              (custom_operation
+                (tensor_dialect
+                  (value_use)
+                  (value_use)
+                  (value_use)
+                  (value_use)
+                  (type
+                    (builtin_type
+                      (tensor_type
+                        (dim_list
+                          (float_type))))))))
+            (comment)
+            (operation
+              (op_result
+                (value_use))
+              (custom_operation
+                (arith_dialect
+                  (tensor_literal
+                    (nested_idx_list
+                      (nested_idx_list
+                        (integer_literal)
+                        (integer_literal)
+                        (integer_literal)))
+                    (nested_idx_list
+                      (float_literal)))
+                  (type
+                    (builtin_type
+                      (tensor_type
+                        (dim_list
+                          (float_type))))))))
+            (operation
+              (op_result
+                (value_use))
+              (custom_operation
+                (tensor_dialect
+                  (value_use)
+                  (value_use)
+                  (value_use)
+                  (value_use)
+                  (type
+                    (builtin_type
+                      (tensor_type
+                        (dim_list
+                          (float_type))))))))
+            (comment)
+            (operation
+              (op_result
+                (value_use))
+              (custom_operation
+                (arith_dialect
+                  (tensor_literal
+                    (nested_idx_list
+                      (nested_idx_list
+                        (nested_idx_list
+                          (integer_literal)
+                          (integer_literal)
+                          (integer_literal)
+                          (integer_literal)))
+                      (nested_idx_list
+                        (nested_idx_list
+                          (integer_literal)
+                          (integer_literal)
+                          (integer_literal)
+                          (integer_literal)))))
+                  (type
+                    (builtin_type
+                      (tensor_type
+                        (dim_list
+                          (integer_type))))))))
+            (operation
+              (op_result
+                (value_use))
+              (custom_operation
+                (tensor_dialect
+                  (value_use)
+                  (value_use)
+                  (value_use)
+                  (value_use)
+                  (type
+                    (builtin_type
+                      (tensor_type
+                        (dim_list
+                          (integer_type))))))))
+            (comment)
+            (operation
+              (op_result
+                (value_use))
+              (custom_operation
+                (arith_dialect
+                  (tensor_literal
+                    (complex_literal
+                      (float_literal)
+                      (float_literal)))
+                  (type
+                    (builtin_type
+                      (tensor_type
+                        (dim_list
+                          (complex_type
+                            (float_type)))))))))
+            (operation
+              (op_result
+                (value_use))
+              (custom_operation
+                (tensor_dialect
+                  (value_use)
+                  (type
+                    (builtin_type
+                      (tensor_type
+                        (dim_list
+                          (complex_type
+                            (float_type)))))))))
+            (operation
+              (custom_operation
+                (func_dialect
+                  (value_use)
+                  (value_use)
+                  (value_use)
+                  (value_use)
+                  (value_use)
+                  (type
+                    (builtin_type
+                      (float_type)))
+                  (type
+                    (builtin_type
+                      (float_type)))
+                  (type
+                    (builtin_type
+                      (float_type)))
+                  (type
+                    (builtin_type
+                      (integer_type)))
+                  (type
+                    (builtin_type
+                      (complex_type
+                        (float_type)))))))))))))
+
+================================================================================
+Empty dense literal
+================================================================================
+func.func @empty_dense_literal() -> () {
+  "foo2"(){bar = dense<> : tensor<0xi32>} : () -> ()
+  return
+}
+--------------------------------------------------------------------------------
+
+(toplevel
+  (operation
+    (custom_operation
+      (func_dialect
+        (symbol_ref_id)
+        (func_arg_list)
+        (func_return
+          (type_list_attr_parens))
+        (region
+          (entry_block
+            (operation
+              (generic_operation
+                (string_literal)
+                (attribute
+                  (dictionary_attribute
+                    (attribute_entry
+                      (bare_id)
+                      (attribute_value
+                        (tensor_literal)
+                        (type
+                          (builtin_type
+                            (tensor_type
+                              (dim_list
+                                (integer_type)))))))))
+                (function_type)))
+            (operation
+              (custom_operation
+                (func_dialect)))))))))
+
+================================================================================
+!llvm.struct dialect type
+================================================================================
+llvm.func @return_s_long() ->
+  !llvm.struct<"long", (i32, struct<(i32, i1)>, f32, ptr<func<void ()>>)>
+--------------------------------------------------------------------------------
+
+(toplevel
+  (operation
+    (custom_operation
+      (llvm_dialect
+        (symbol_ref_id)
+        (func_arg_list)
+        (func_return
+          (type_list_attr_parens
+            (type
+              (dialect_type
+                (pretty_dialect_item
+                  (dialect_namespace)
+                  (dialect_ident)
+                  (pretty_dialect_item_body
+                    (pretty_dialect_item_body)
+                    (pretty_dialect_item_body
+                      (pretty_dialect_item_body))))))))))))
+
+================================================================================
+Type alias definition
+================================================================================
+!baz = i64
+!qux = !llvm.struct<(!baz)>
+!rec = !llvm.struct<"a", (ptr<struct<"a">>)>
+llvm.func @aliases() {
+  "some.op"() : () -> !llvm.struct<(i32, f32, !qux)>
+  "some.op"() : () -> !rec
+  llvm.return
+}
+--------------------------------------------------------------------------------
+
+(toplevel
+  (type_alias_def
+    (type
+      (builtin_type
+        (integer_type))))
+  (type_alias_def
+    (type
+      (dialect_type
+        (pretty_dialect_item
+          (dialect_namespace)
+          (dialect_ident)
+          (pretty_dialect_item_body)))))
+  (type_alias_def
+    (type
+      (dialect_type
+        (pretty_dialect_item
+          (dialect_namespace)
+          (dialect_ident)
+          (pretty_dialect_item_body
+            (pretty_dialect_item_body
+              (pretty_dialect_item_body)))))))
+  (operation
+    (custom_operation
+      (llvm_dialect
+        (symbol_ref_id)
+        (func_arg_list)
+        (region
+          (entry_block
+            (operation
+              (generic_operation
+                (string_literal)
+                (function_type
+                  (type
+                    (dialect_type
+                      (pretty_dialect_item
+                        (dialect_namespace)
+                        (dialect_ident)
+                        (pretty_dialect_item_body)))))))
+            (operation
+              (generic_operation
+                (string_literal)
+                (function_type
+                  (type
+                    (type_alias)))))
+            (operation
+              (custom_operation
+                (llvm_dialect)))))))))
+
+================================================================================
+negative constant value_use
+================================================================================
+func.func @indexCastFold(%arg0: i8) -> index {
+  %c-2 = arith.constant -2 : i8
+  %idx = arith.index_cast %c-2 : i8 to index
+  return %idx : index
+}
+--------------------------------------------------------------------------------
+
+(toplevel
+  (operation
+    (custom_operation
+      (func_dialect
+        (symbol_ref_id)
+        (func_arg_list
+          (value_use)
+          (type
+            (builtin_type
+              (integer_type))))
+        (func_return
+          (type_list_attr_parens
+            (type
+              (builtin_type
+                (index_type)))))
+        (region
+          (entry_block
+            (operation
+              (op_result
+                (value_use))
+              (custom_operation
+                (arith_dialect
+                  (integer_literal)
+                  (type
+                    (builtin_type
+                      (integer_type))))))
+            (operation
+              (op_result
+                (value_use))
+              (custom_operation
+                (arith_dialect
+                  (value_use)
+                  (type
+                    (builtin_type
+                      (integer_type)))
+                  (type
+                    (builtin_type
+                      (index_type))))))
+            (operation
+              (custom_operation
+                (func_dialect
+                  (value_use)
+                  (type
+                    (builtin_type
+                      (index_type))))))))))))
+
+================================================================================
+inf value_use
+================================================================================
+func.func @test_maxf(%arg0 : f32) -> f32 {
+  %c0 = arith.constant 0.0 : f32
+  %-inf = arith.constant 0xFF800000 : f32
+  %0 = arith.maxf %-inf, %arg0 : f32
+  return %0 : f32
+}
+--------------------------------------------------------------------------------
+
+(toplevel
+  (operation
+    (custom_operation
+      (func_dialect
+        (symbol_ref_id)
+        (func_arg_list
+          (value_use)
+          (type
+            (builtin_type
+              (float_type))))
+        (func_return
+          (type_list_attr_parens
+            (type
+              (builtin_type
+                (float_type)))))
+        (region
+          (entry_block
+            (operation
+              (op_result
+                (value_use))
+              (custom_operation
+                (arith_dialect
+                  (float_literal)
+                  (type
+                    (builtin_type
+                      (float_type))))))
+            (operation
+              (op_result
+                (value_use))
+              (custom_operation
+                (arith_dialect
+                  (integer_literal)
+                  (type
+                    (builtin_type
+                      (float_type))))))
+            (operation
+              (op_result
+                (value_use))
+              (custom_operation
+                (arith_dialect
+                  (value_use)
+                  (value_use)
+                  (type
+                    (builtin_type
+                      (float_type))))))
+            (operation
+              (custom_operation
+                (func_dialect
+                  (value_use)
+                  (type
+                    (builtin_type
+                      (float_type))))))))))))
+
+================================================================================
+array literal
+================================================================================
+func.func @foo(%a : f32) -> vector<1x2xf32> {
+  %0 = "test_create_broadcast"(%a) {broadcast_dims = array<i64: 0, 1>} : (f32) -> vector<1x2xf32>
+  return %0: vector<1x2xf32>
+}
+--------------------------------------------------------------------------------
+
+(toplevel
+  (operation
+    (custom_operation
+      (func_dialect
+        (symbol_ref_id)
+        (func_arg_list
+          (value_use)
+          (type
+            (builtin_type
+              (float_type))))
+        (func_return
+          (type_list_attr_parens
+            (type
+              (builtin_type
+                (vector_type
+                  (vector_dim_list)
+                  (float_type))))))
+        (region
+          (entry_block
+            (operation
+              (op_result
+                (value_use))
+              (generic_operation
+                (string_literal)
+                (value_use)
+                (attribute
+                  (dictionary_attribute
+                    (attribute_entry
+                      (bare_id)
+                      (attribute_value
+                        (array_literal
+                          (type
+                            (builtin_type
+                              (integer_type)))
+                          (integer_literal)
+                          (integer_literal))))))
+                (function_type
+                  (type
+                    (builtin_type
+                      (float_type)))
+                  (type
+                    (builtin_type
+                      (vector_type
+                        (vector_dim_list)
+                        (float_type)))))))
+            (operation
+              (custom_operation
+                (func_dialect
+                  (value_use)
+                  (type
+                    (builtin_type
+                      (vector_type
+                        (vector_dim_list)
+                        (float_type)))))))))))))

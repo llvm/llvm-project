@@ -457,6 +457,31 @@ void ModFileWriter::PutSubprogram(const Symbol &symbol) {
     os << (isAbstract ? "abstract " : "") << "interface\n";
   }
   PutAttrs(os, prefixAttrs, nullptr, false, ""s, " "s);
+  if (auto attrs{details.cudaSubprogramAttrs()}) {
+    if (*attrs == common::CUDASubprogramAttrs::HostDevice) {
+      os << "attributes(host,device) ";
+    } else {
+      PutLower(os << "attributes(", common::EnumToString(*attrs)) << ") ";
+    }
+    if (!details.cudaLaunchBounds().empty()) {
+      os << "launch_bounds";
+      char sep{'('};
+      for (auto x : details.cudaLaunchBounds()) {
+        os << sep << x;
+        sep = ',';
+      }
+      os << ") ";
+    }
+    if (!details.cudaClusterDims().empty()) {
+      os << "cluster_dims";
+      char sep{'('};
+      for (auto x : details.cudaClusterDims()) {
+        os << sep << x;
+        sep = ',';
+      }
+      os << ") ";
+    }
+  }
   os << (details.isFunction() ? "function " : "subroutine ");
   os << symbol.name() << '(';
   int n = 0;
@@ -709,6 +734,10 @@ void ModFileWriter::PutObjectEntity(
       }
     });
     os << ") " << symbol.name() << '\n';
+  }
+  if (auto attr{details.cudaDataAttr()}) {
+    PutLower(os << "attributes(", common::EnumToString(*attr))
+        << ") " << symbol.name() << '\n';
   }
 }
 
@@ -990,6 +1019,7 @@ Scope *ModFileReader::Read(const SourceName &name,
   options.isModuleFile = true;
   options.features.Enable(common::LanguageFeature::BackslashEscapes);
   options.features.Enable(common::LanguageFeature::OpenMP);
+  options.features.Enable(common::LanguageFeature::CUDA);
   if (!isIntrinsic.value_or(false) && !notAModule) {
     // The search for this module file will scan non-intrinsic module
     // directories.  If a directory is in both the intrinsic and non-intrinsic

@@ -16,3 +16,13 @@ def StdlibAPI : PublicAPI<"stdlib.h"> {
 def FenvAPI: PublicAPI<"fenv.h"> {
   let Types = ["fenv_t"];
 }
+
+def StdIOAPI : PublicAPI<"stdio.h"> {
+  let Macros = [
+    SimpleMacroDef<"_IOFBF", "0">,
+    SimpleMacroDef<"_IOLBF", "1">,
+    SimpleMacroDef<"_IONBF", "2">,
+    SimpleMacroDef<"EOF", "-1">,
+  ];
+  let Types = ["size_t", "FILE"];
+}

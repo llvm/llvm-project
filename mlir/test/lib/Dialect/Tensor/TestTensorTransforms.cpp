@@ -14,10 +14,10 @@
 #include "mlir/Dialect/Linalg/IR/Linalg.h"
 #include "mlir/Dialect/SCF/IR/SCF.h"
 #include "mlir/Dialect/Tensor/IR/Tensor.h"
-#include "mlir/Dialect/Tensor/TransformOps/TensorTransformOps.h"
 #include "mlir/Dialect/Tensor/Transforms/TransformUtils.h"
 #include "mlir/Dialect/Tensor/Transforms/Transforms.h"
 #include "mlir/Dialect/Transform/IR/TransformInterfaces.h"
+#include "mlir/Dialect/Transform/IR/TransformOps.h"
 #include "mlir/Pass/Pass.h"
 #include "mlir/Transforms/GreedyPatternRewriteDriver.h"
 
@@ -62,14 +62,15 @@ struct TestTensorTransforms
                      "with loop nest"),
       llvm::cl::init(false)};
 
+  Option<bool> testDropRedundantInsertSliceRankExpansion{
+      *this, "test-drop-redundant-insert-slice-rank-expansion",
+      llvm::cl::desc("Test dropping redundant insert_slice rank expansions"),
+      llvm::cl::init(false)};
+
   Option<bool> testReassociativeReshapeFolding{
       *this, "test-reassociative-reshape-folding",
       llvm::cl::desc("Test folding of expand_shape/collapse_shape"),
       llvm::cl::init(false)};
-
-  Option<bool> testEmptyOpFolding{
-      *this, "test-empty-op-folding",
-      llvm::cl::desc("Test folding of tensor.empty"), llvm::cl::init(false)};
 
   Option<bool> testFoldIntoPackAndUnpack{
       *this, "test-fold-into-pack-and-unpack",
@@ -101,12 +102,6 @@ static void applyReassociativeReshapeFoldingPatterns(Operation *rootOp) {
   (void)applyPatternsAndFoldGreedily(rootOp, std::move(patterns));
 }
 
-static void applyEmptyOpFoldingPatterns(Operation *rootOp) {
-  RewritePatternSet patterns(rootOp->getContext());
-  tensor::populateFoldTensorEmptyPatterns(patterns);
-  (void)applyPatternsAndFoldGreedily(rootOp, std::move(patterns));
-}
-
 static void applyFoldIntoPackAndUnpackPatterns(Operation *rootOp) {
   RewritePatternSet patterns(rootOp->getContext());
   tensor::populateFoldIntoPackAndUnpackPatterns(patterns);
@@ -132,6 +127,13 @@ static void applyFoldConstantExtractSlicePatterns(Operation *rootOp) {
 static void applyFoldConsecutiveInsertExtractSlicePatterns(Operation *rootOp) {
   RewritePatternSet patterns(rootOp->getContext());
   tensor::populateMergeConsecutiveInsertExtractSlicePatterns(patterns);
+  (void)applyPatternsAndFoldGreedily(rootOp, std::move(patterns));
+}
+
+static void
+applyDropRedundantInsertSliceRankExpansionPatterns(Operation *rootOp) {
+  RewritePatternSet patterns(rootOp->getContext());
+  tensor::populateDropRedundantInsertSliceRankExpansionPatterns(patterns);
   (void)applyPatternsAndFoldGreedily(rootOp, std::move(patterns));
 }
 
@@ -284,13 +286,16 @@ applyRewriteExtractFromCollapseShapePatterns(Operation *rootOp,
 }
 
 namespace {
-class DummyTrackingListener : public tensor::TrackingListener {
+class DummyTrackingListener : public transform::TrackingListener {
 public:
-  using tensor::TrackingListener::TrackingListener;
+  using transform::TrackingListener::TrackingListener;
 
   // Expose `findReplacementOp` as a public function, so that it can be tested.
   Operation *getReplacementOp(Operation *op, ValueRange newValues) const {
-    return findReplacementOp(op, newValues);
+    FailureOr<Operation *> replacementOp = findReplacementOp(op, newValues);
+    if (failed(replacementOp))
+      return nullptr;
+    return *replacementOp;
   }
 };
 } // namespace
@@ -367,10 +372,10 @@ void TestTensorTransforms::runOnOperation() {
     applyFoldConstantExtractSlicePatterns(rootOp);
   if (testFoldConsecutiveInsertExtractSlice)
     applyFoldConsecutiveInsertExtractSlicePatterns(rootOp);
+  if (testDropRedundantInsertSliceRankExpansion)
+    applyDropRedundantInsertSliceRankExpansionPatterns(rootOp);
   if (testReassociativeReshapeFolding)
     applyReassociativeReshapeFoldingPatterns(rootOp);
-  if (testEmptyOpFolding)
-    applyEmptyOpFoldingPatterns(rootOp);
   if (testFoldIntoPackAndUnpack)
     applyFoldIntoPackAndUnpackPatterns(rootOp);
   if (testRewriteExtractSliceWithTiledCollapseShape) {

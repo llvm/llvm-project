@@ -30,12 +30,12 @@ func.func @sparse_foreach_constant() -> () {
 
 #CSR_SLICE = #sparse_tensor.encoding<{
   lvlTypes = [ "compressed", "compressed" ],
-  slice = [ (0, 4, 1), (2, 4, 1) ]
+  dimSlices = [ (0, 4, 1), (2, 4, 1) ]
 }>
 
 #CSR_SLICE_DYN = #sparse_tensor.encoding<{
   lvlTypes = [ "compressed", "compressed" ],
-  slice = [ (?, ?, ?), (?, ?, ?) ]
+  dimSlices = [ (?, ?, ?), (?, ?, ?) ]
 }>
 
 

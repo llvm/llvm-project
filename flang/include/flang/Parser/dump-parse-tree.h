@@ -14,6 +14,7 @@
 #include "parse-tree.h"
 #include "tools.h"
 #include "unparse.h"
+#include "flang/Common/Fortran.h"
 #include "flang/Common/idioms.h"
 #include "flang/Common/indirection.h"
 #include "llvm/Support/raw_ostream.h"
@@ -45,6 +46,8 @@ public:
   NODE(std, string)
   NODE(std, int64_t)
   NODE(std, uint64_t)
+  NODE_ENUM(common, CUDADataAttr)
+  NODE_ENUM(common, CUDASubprogramAttrs)
   NODE(format, ControlEditDesc)
   NODE(format::ControlEditDesc, Kind)
   NODE(format, DerivedTypeDataEditDesc)
@@ -120,6 +123,8 @@ public:
   NODE(parser, AllocOpt)
   NODE(AllocOpt, Mold)
   NODE(AllocOpt, Source)
+  NODE(AllocOpt, Stream)
+  NODE(AllocOpt, Pinned)
   NODE(parser, Allocatable)
   NODE(parser, AllocatableStmt)
   NODE(parser, AllocateCoarraySpec)
@@ -165,6 +170,7 @@ public:
   NODE(parser, BoundsSpec)
   NODE(parser, Call)
   NODE(parser, CallStmt)
+  NODE(CallStmt, Chevrons)
   NODE(parser, CaseConstruct)
   NODE(CaseConstruct, Case)
   NODE(parser, CaseSelector)
@@ -216,6 +222,9 @@ public:
   NODE(parser, ContinueStmt)
   NODE(parser, CriticalConstruct)
   NODE(parser, CriticalStmt)
+  NODE(parser, CUDAAttributesStmt)
+  NODE(parser, CUFKernelDoConstruct)
+  NODE(CUFKernelDoConstruct, Directive)
   NODE(parser, CycleStmt)
   NODE(parser, DataComponentDefStmt)
   NODE(parser, DataIDoObject)
@@ -610,6 +619,9 @@ public:
   NODE(PrefixSpec, Non_Recursive)
   NODE(PrefixSpec, Pure)
   NODE(PrefixSpec, Recursive)
+  NODE(PrefixSpec, Attributes)
+  NODE(PrefixSpec, Launch_Bounds)
+  NODE(PrefixSpec, Cluster_Dims)
   NODE(parser, PrintStmt)
   NODE(parser, PrivateStmt)
   NODE(parser, PrivateOrSequence)

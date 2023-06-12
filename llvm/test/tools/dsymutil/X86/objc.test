@@ -21,6 +21,7 @@ CHECK-NEXT:   HeaderData length: 12
 CHECK-NEXT: }
 CHECK-NEXT: DIE offset base: 0
 CHECK-NEXT: Number of atoms: 1
+CHECK-NEXT: Size of each hash data entry: 4
 CHECK-NEXT: Atoms [
 CHECK-NEXT:   Atom 0 {
 CHECK-NEXT:     Type: DW_ATOM_die_offset

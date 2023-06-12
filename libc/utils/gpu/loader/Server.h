@@ -21,7 +21,8 @@ static __llvm_libc::rpc::Server server;
 
 /// Queries the RPC client at least once and performs server-side work if there
 /// are any active requests.
-void handle_server() {
+template <typename Alloc, typename Dealloc>
+void handle_server(Alloc allocator, Dealloc deallocator) {
   using namespace __llvm_libc;
 
   // Continue servicing the client until there is no work left and we return.
@@ -31,22 +32,48 @@ void handle_server() {
       return;
 
     switch (port->get_opcode()) {
-    case rpc::Opcode::PRINT_TO_STDERR: {
+    case rpc::Opcode::WRITE_TO_STREAM:
+    case rpc::Opcode::WRITE_TO_STDERR:
+    case rpc::Opcode::WRITE_TO_STDOUT: {
       uint64_t sizes[rpc::MAX_LANE_SIZE] = {0};
       void *strs[rpc::MAX_LANE_SIZE] = {nullptr};
+      FILE *files[rpc::MAX_LANE_SIZE] = {nullptr};
+      if (port->get_opcode() == rpc::Opcode::WRITE_TO_STREAM)
+        port->recv([&](rpc::Buffer *buffer, uint32_t id) {
+          files[id] = reinterpret_cast<FILE *>(buffer->data[0]);
+        });
       port->recv_n(strs, sizes, [&](uint64_t size) { return new char[size]; });
-      port->send([](rpc::Buffer *) { /* void */ });
+      port->send([&](rpc::Buffer *buffer, uint32_t id) {
+        FILE *file = port->get_opcode() == rpc::Opcode::WRITE_TO_STDOUT
+                         ? stdout
+                         : (port->get_opcode() == rpc::Opcode::WRITE_TO_STDERR
+                                ? stderr
+                                : files[id]);
+        int ret = fwrite(strs[id], sizes[id], 1, file);
+        reinterpret_cast<int *>(buffer->data)[0] = ret >= 0 ? sizes[id] : ret;
+      });
       for (uint64_t i = 0; i < rpc::MAX_LANE_SIZE; ++i) {
-        if (strs[i]) {
-          fwrite(strs[i], sizes[i], 1, stderr);
+        if (strs[i])
           delete[] reinterpret_cast<uint8_t *>(strs[i]);
-        }
       }
       break;
     }
     case rpc::Opcode::EXIT: {
       port->recv([](rpc::Buffer *buffer) {
         exit(reinterpret_cast<uint32_t *>(buffer->data)[0]);
+      });
+      break;
+    }
+    case rpc::Opcode::MALLOC: {
+      port->recv_and_send([&](rpc::Buffer *buffer) {
+        buffer->data[0] =
+            reinterpret_cast<uintptr_t>(allocator(buffer->data[0]));
+      });
+      break;
+    }
+    case rpc::Opcode::FREE: {
+      port->recv([&](rpc::Buffer *buffer) {
+        deallocator(reinterpret_cast<void *>(buffer->data[0]));
       });
       break;
     }

@@ -14,6 +14,7 @@
 #define MLIR_IR_STORAGEUNIQUERSUPPORT_H
 
 #include "mlir/IR/AttrTypeSubElements.h"
+#include "mlir/IR/DialectRegistry.h"
 #include "mlir/Support/InterfaceSupport.h"
 #include "mlir/Support/LogicalResult.h"
 #include "mlir/Support/StorageUniquer.h"
@@ -159,6 +160,11 @@ public:
     if (!abstract)
       llvm::report_fatal_error("Registering an interface for an attribute/type "
                                "that is not itself registered.");
+
+    // Handle the case where the models resolve a promised interface.
+    (dialect_extension_detail::handleAdditionOfUndefinedPromisedInterface(
+         abstract->getDialect(), IfaceModels::Interface::getInterfaceID()),
+     ...);
 
     (checkInterfaceTarget<IfaceModels>(), ...);
     abstract->interfaceMap.template insertModels<IfaceModels...>();

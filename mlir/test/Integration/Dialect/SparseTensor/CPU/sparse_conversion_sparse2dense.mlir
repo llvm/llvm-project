@@ -28,32 +28,32 @@
 
 #Tensor1  = #sparse_tensor.encoding<{
   lvlTypes = [ "compressed", "compressed", "compressed" ],
-  dimOrdering = affine_map<(i,j,k) -> (i,j,k)>
+  dimToLvl = affine_map<(i,j,k) -> (i,j,k)>
 }>
 
 #Tensor2  = #sparse_tensor.encoding<{
   lvlTypes = [ "compressed", "compressed", "compressed" ],
-  dimOrdering = affine_map<(i,j,k) -> (j,k,i)>
+  dimToLvl = affine_map<(i,j,k) -> (j,k,i)>
 }>
 
 #Tensor3  = #sparse_tensor.encoding<{
   lvlTypes = [ "compressed", "compressed", "compressed" ],
-  dimOrdering = affine_map<(i,j,k) -> (k,i,j)>
+  dimToLvl = affine_map<(i,j,k) -> (k,i,j)>
 }>
 
 #Tensor4  = #sparse_tensor.encoding<{
   lvlTypes = [ "dense", "compressed", "compressed" ],
-  dimOrdering = affine_map<(i,j,k) -> (i,j,k)>
+  dimToLvl = affine_map<(i,j,k) -> (i,j,k)>
 }>
 
 #Tensor5  = #sparse_tensor.encoding<{
   lvlTypes = [ "dense", "compressed", "compressed" ],
-  dimOrdering = affine_map<(i,j,k) -> (j,k,i)>
+  dimToLvl = affine_map<(i,j,k) -> (j,k,i)>
 }>
 
 #Tensor6  = #sparse_tensor.encoding<{
   lvlTypes = [ "dense", "compressed", "compressed" ],
-  dimOrdering = affine_map<(i,j,k) -> (k,i,j)>
+  dimToLvl = affine_map<(i,j,k) -> (k,i,j)>
 }>
 
 //

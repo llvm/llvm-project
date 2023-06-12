@@ -447,6 +447,8 @@ void SectionChunk::applyRelocation(uint8_t *off,
     applyRelARM(off, rel.Type, os, s, p, imageBase);
     break;
   case ARM64:
+  case ARM64EC:
+  case ARM64X:
     applyRelARM64(off, rel.Type, os, s, p, imageBase);
     break;
   default:
@@ -532,6 +534,8 @@ static uint8_t getBaserelType(const coff_relocation &rel,
       return IMAGE_REL_BASED_ARM_MOV32T;
     return IMAGE_REL_BASED_ABSOLUTE;
   case ARM64:
+  case ARM64EC:
+  case ARM64X:
     if (rel.Type == IMAGE_REL_ARM64_ADDR64)
       return IMAGE_REL_BASED_DIR64;
     return IMAGE_REL_BASED_ABSOLUTE;
@@ -699,7 +703,7 @@ ArrayRef<uint8_t> SectionChunk::consumeDebugMagic(ArrayRef<uint8_t> data,
   if (data.size() < 4)
     fatal("the section is too short: " + sectionName);
 
-  if (!sectionName.startswith(".debug$"))
+  if (!sectionName.starts_with(".debug$"))
     fatal("invalid section: " + sectionName);
 
   uint32_t magic = support::endian::read32le(data.data());

@@ -10,6 +10,7 @@ set(MODULES
   "__fortran_type_info"
   "__fortran_ppc_types"
   "__fortran_ppc_intrinsics"
+  "__cuda_builtins"
   "ieee_arithmetic"
   "ieee_exceptions"
   "ieee_features"

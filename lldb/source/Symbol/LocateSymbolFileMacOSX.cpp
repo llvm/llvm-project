@@ -559,14 +559,17 @@ bool Symbols::DownloadObjectAndSymbolFile(ModuleSpec &module_spec,
   const UUID *uuid_ptr = module_spec.GetUUIDPtr();
   const FileSpec *file_spec_ptr = module_spec.GetFileSpecPtr();
 
+  // If \a dbgshell_command is set, the user has specified
+  // forced symbol lookup via that command.  We'll get the
+  // path back from GetDsymForUUIDExecutable() later.
   llvm::StringRef dbgshell_command = GetDbgShellCommand();
 
-  // When dbgshell_command is empty, the user has not enabled the use of an
-  // external program to find the symbols, don't run it for them.
+  // If forced lookup isn't set, by the user's \a dbgshell_command or
+  // by the \a force_lookup argument, exit this method.
   if (!force_lookup && dbgshell_command.empty())
     return false;
 
-  // We need a UUID or valid (existing FileSpec.
+  // We need a UUID or valid existing FileSpec.
   if (!uuid_ptr &&
       (!file_spec_ptr || !FileSystem::Instance().Exists(*file_spec_ptr)))
     return false;

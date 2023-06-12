@@ -158,6 +158,8 @@ template<class T>
 #include <__numeric/iota.h>
 #include <__numeric/midpoint.h>
 #include <__numeric/partial_sum.h>
+#include <__numeric/pstl_reduce.h>
+#include <__numeric/pstl_transform_reduce.h>
 #include <__numeric/reduce.h>
 #include <__numeric/transform_exclusive_scan.h>
 #include <__numeric/transform_inclusive_scan.h>

@@ -630,10 +630,10 @@ entry:
   store i8 %conv, ptr %ptr, align 1
   ret void
 ; CHECK-LABEL: storefsc
-; CHECK: xscvdpsxws 0, 1
+; CHECK: xscvdpsxds 0, 1
 ; CHECK: stxsibx 0, 0, 4
 ; CHECK-BE-LABEL: storefsc
-; CHECK-BE: xscvdpsxws 0, 1
+; CHECK-BE: xscvdpsxds 0, 1
 ; CHECK-BE: stxsibx 0, 0, 4
 }
 
@@ -644,10 +644,10 @@ entry:
   store i8 %conv, ptr %ptr, align 1
   ret void
 ; CHECK-LABEL: storedsc
-; CHECK: xscvdpsxws 0, 1
+; CHECK: xscvdpsxds 0, 1
 ; CHECK: stxsibx 0, 0, 4
 ; CHECK-BE-LABEL: storedsc
-; CHECK-BE: xscvdpsxws 0, 1
+; CHECK-BE: xscvdpsxds 0, 1
 ; CHECK-BE: stxsibx 0, 0, 4
 }
 
@@ -880,10 +880,10 @@ entry:
   store i16 %conv, ptr %ptr, align 2
   ret void
 ; CHECK-LABEL: storefss
-; CHECK: xscvdpsxws 0, 1
+; CHECK: xscvdpsxds 0, 1
 ; CHECK: stxsihx 0, 0, 4
 ; CHECK-BE-LABEL: storefss
-; CHECK-BE: xscvdpsxws 0, 1
+; CHECK-BE: xscvdpsxds 0, 1
 ; CHECK-BE: stxsihx 0, 0, 4
 }
 
@@ -894,10 +894,10 @@ entry:
   store i16 %conv, ptr %ptr, align 2
   ret void
 ; CHECK-LABEL: storedss
-; CHECK: xscvdpsxws 0, 1
+; CHECK: xscvdpsxds 0, 1
 ; CHECK: stxsihx 0, 0, 4
 ; CHECK-BE-LABEL: storedss
-; CHECK-BE: xscvdpsxws 0, 1
+; CHECK-BE: xscvdpsxds 0, 1
 ; CHECK-BE: stxsihx 0, 0, 4
 }
 

@@ -653,7 +653,12 @@ ExprDependence clang::computeDependence(GenericSelectionExpr *E,
                                   : ExprDependence::None;
   for (auto *AE : E->getAssocExprs())
     D |= AE->getDependence() & ExprDependence::Error;
-  D |= E->getControllingExpr()->getDependence() & ExprDependence::Error;
+
+  if (E->isExprPredicate())
+    D |= E->getControllingExpr()->getDependence() & ExprDependence::Error;
+  else
+    D |= toExprDependenceAsWritten(
+        E->getControllingType()->getType()->getDependence());
 
   if (E->isResultDependent())
     return D | ExprDependence::TypeValueInstantiation;

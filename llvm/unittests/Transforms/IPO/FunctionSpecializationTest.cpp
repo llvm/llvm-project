@@ -56,22 +56,22 @@ protected:
     auto GetTTI = [this](Function &F) -> TargetTransformInfo & {
       return FAM.getResult<TargetIRAnalysis>(F);
     };
-    auto GetBFI = [this](Function &F) -> BlockFrequencyInfo & {
-      return FAM.getResult<BlockFrequencyAnalysis>(F);
-    };
     auto GetAC = [this](Function &F) -> AssumptionCache & {
       return FAM.getResult<AssumptionAnalysis>(F);
     };
-    auto GetAnalysis = [this](Function &F) -> AnalysisResultsForFn {
-      DominatorTree &DT = FAM.getResult<DominatorTreeAnalysis>(F);
-      return { std::make_unique<PredicateInfo>(F, DT,
-                                FAM.getResult<AssumptionAnalysis>(F)),
-               &DT, FAM.getCachedResult<PostDominatorTreeAnalysis>(F) };
+    auto GetDT = [this](Function &F) -> DominatorTree & {
+      return FAM.getResult<DominatorTreeAnalysis>(F);
+    };
+    auto GetBFI = [this](Function &F) -> BlockFrequencyInfo & {
+      return FAM.getResult<BlockFrequencyAnalysis>(F);
     };
 
     Solver = std::make_unique<SCCPSolver>(M->getDataLayout(), GetTLI, Ctx);
 
-    Solver->addAnalysis(*F, GetAnalysis(*F));
+    DominatorTree &DT = GetDT(*F);
+    AssumptionCache &AC = GetAC(*F);
+    Solver->addPredicateInfo(*F, DT, AC);
+
     Solver->markBlockExecutable(&F->front());
     for (Argument &Arg : F->args())
       Solver->markOverdefined(&Arg);
@@ -85,10 +85,7 @@ protected:
     auto &TTI = FAM.getResult<TargetIRAnalysis>(*I.getFunction());
     auto &BFI = FAM.getResult<BlockFrequencyAnalysis>(*I.getFunction());
 
-    uint64_t Weight = FunctionSpecializer::getBlockFreqMultiplier() *
-                      BFI.getBlockFreq(I.getParent()).getFrequency() /
-                      BFI.getEntryFreq();
-    return Weight *
+    return BFI.getBlockFreq(I.getParent()).getFrequency() / BFI.getEntryFreq() *
          TTI.getInstructionCost(&I, TargetTransformInfo::TCK_SizeAndLatency);
   }
 };

@@ -33,6 +33,7 @@
 #include "llvm/CodeGen/NonRelocatableStringpool.h"
 #include "llvm/Config/config.h"
 #include "llvm/DWARFLinker/DWARFLinkerDeclContext.h"
+#include "llvm/DWARFLinkerParallel/DWARFLinker.h"
 #include "llvm/DebugInfo/DIContext.h"
 #include "llvm/DebugInfo/DWARF/DWARFAbbreviationDeclaration.h"
 #include "llvm/DebugInfo/DWARF/DWARFContext.h"
@@ -134,22 +135,6 @@ void DwarfLinkerForBinary::reportError(Twine Error, Twine Context,
   dumpDIE(DIE, Options.Verbose);
 }
 
-bool DwarfLinkerForBinary::createStreamer(const Triple &TheTriple,
-                                          raw_fd_ostream &OutFile) {
-  if (Options.NoOutput)
-    return true;
-
-  Streamer = std::make_unique<DwarfStreamer>(
-      Options.FileType, OutFile, Options.Translator,
-      [&](const Twine &Error, StringRef Context, const DWARFDie *) {
-        reportError(Error, Context);
-      },
-      [&](const Twine &Warning, StringRef Context, const DWARFDie *) {
-        reportWarning(Warning, Context);
-      });
-  return Streamer->init(TheTriple, "__DWARF");
-}
-
 ErrorOr<const object::ObjectFile &>
 DwarfLinkerForBinary::loadObject(const DebugMapObject &Obj,
                                  const Triple &Triple) {
@@ -238,22 +223,19 @@ static Error emitRemarks(const LinkOptions &Options, StringRef BinaryPath,
   return Error::success();
 }
 
-ErrorOr<DWARFFile &>
+template <typename OutDWARFFile, typename AddressesMap>
+ErrorOr<std::unique_ptr<OutDWARFFile>>
 DwarfLinkerForBinary::loadObject(const DebugMapObject &Obj,
                                  const DebugMap &DebugMap,
                                  remarks::RemarkLinker &RL) {
   auto ErrorOrObj = loadObject(Obj, DebugMap.getTriple());
+  std::unique_ptr<OutDWARFFile> Res;
 
   if (ErrorOrObj) {
-    ContextForLinking.push_back(
-        std::unique_ptr<DWARFContext>(DWARFContext::create(*ErrorOrObj)));
-    AddressMapForLinking.push_back(
-        std::make_unique<AddressManager>(*this, *ErrorOrObj, Obj));
-
-    ObjectsForLinking.push_back(std::make_unique<DWARFFile>(
-        Obj.getObjectFilename(), ContextForLinking.back().get(),
-        AddressMapForLinking.back().get(),
-        Obj.empty() ? Obj.getWarnings() : EmptyWarnings));
+    Res = std::make_unique<OutDWARFFile>(
+        Obj.getObjectFilename(), DWARFContext::create(*ErrorOrObj),
+        std::make_unique<AddressesMap>(*this, *ErrorOrObj, Obj),
+        Obj.empty() ? Obj.getWarnings() : EmptyWarnings);
 
     Error E = RL.link(*ErrorOrObj);
     if (Error NewE = handleErrors(
@@ -262,7 +244,7 @@ DwarfLinkerForBinary::loadObject(const DebugMapObject &Obj,
             }))
       return errorToErrorCode(std::move(NewE));
 
-    return *ObjectsForLinking.back();
+    return std::move(Res);
   }
 
   return ErrorOrObj.getError();
@@ -274,7 +256,7 @@ static bool binaryHasStrippableSwiftReflectionSections(
   // need to copy them to the .dSYM. Only copy them for binaries where the
   // linker omitted the reflection metadata.
   if (!Map.getBinaryPath().empty() &&
-      Options.FileType == OutputFileType::Object) {
+      Options.FileType == DWARFLinker::OutputFileType::Object) {
 
     auto ObjectEntry = BinHolder.getObjectEntry(Map.getBinaryPath());
     // If ObjectEntry or Object has an error, no binary exists, therefore no
@@ -498,8 +480,9 @@ Error DwarfLinkerForBinary::copySwiftInterfaces(StringRef Architecture) const {
   return Error::success();
 }
 
+template <typename OutStreamer>
 void DwarfLinkerForBinary::copySwiftReflectionMetadata(
-    const llvm::dsymutil::DebugMapObject *Obj, DwarfStreamer *Streamer,
+    const llvm::dsymutil::DebugMapObject *Obj, OutStreamer *Streamer,
     std::vector<uint64_t> &SectionToOffsetInDwarf,
     std::vector<MachOUtils::DwarfRelocationApplicationInfo>
         &RelocationsToApply) {
@@ -557,59 +540,117 @@ void DwarfLinkerForBinary::copySwiftReflectionMetadata(
 }
 
 bool DwarfLinkerForBinary::link(const DebugMap &Map) {
-  if (!createStreamer(Map.getTriple(), OutFile))
-    return false;
+  if (Options.DWARFLinkerType == DsymutilDWARFLinkerType::LLVM) {
+    dwarflinker_parallel::DWARFLinker::OutputFileType DWARFLinkerOutputType;
+    switch (Options.FileType) {
+    case DWARFLinker::OutputFileType::Object:
+      DWARFLinkerOutputType =
+          dwarflinker_parallel::DWARFLinker::OutputFileType::Object;
+      break;
 
-  ObjectsForLinking.clear();
-  ContextForLinking.clear();
-  AddressMapForLinking.clear();
+    case DWARFLinker::OutputFileType::Assembly:
+      DWARFLinkerOutputType =
+          dwarflinker_parallel::DWARFLinker::OutputFileType::Assembly;
+      break;
+    }
+
+    return linkImpl<dwarflinker_parallel::DWARFLinker,
+                    dwarflinker_parallel::DWARFFile,
+                    AddressManager<dwarflinker_parallel::AddressesMap>>(
+        Map, DWARFLinkerOutputType);
+  }
+
+  return linkImpl<DWARFLinker, DWARFFile, AddressManager<AddressesMap>>(
+      Map, Options.FileType);
+}
+
+template <typename Linker>
+void setAcceleratorTables(Linker &GeneralLinker,
+                          DsymutilAccelTableKind TableKind,
+                          uint16_t MaxDWARFVersion) {
+  switch (TableKind) {
+  case DsymutilAccelTableKind::Apple:
+    GeneralLinker.addAccelTableKind(Linker::AccelTableKind::Apple);
+    return;
+  case DsymutilAccelTableKind::Dwarf:
+    GeneralLinker.addAccelTableKind(Linker::AccelTableKind::DebugNames);
+    return;
+  case DsymutilAccelTableKind::Pub:
+    GeneralLinker.addAccelTableKind(Linker::AccelTableKind::Pub);
+    return;
+  case DsymutilAccelTableKind::Default:
+    if (MaxDWARFVersion >= 5)
+      GeneralLinker.addAccelTableKind(Linker::AccelTableKind::DebugNames);
+    else
+      GeneralLinker.addAccelTableKind(Linker::AccelTableKind::Apple);
+    return;
+  case DsymutilAccelTableKind::None:
+    // Nothing to do.
+    return;
+  }
+
+  llvm_unreachable("All cases handled above!");
+}
+
+template <typename Linker, typename OutDwarfFile, typename AddressMap>
+bool DwarfLinkerForBinary::linkImpl(
+    const DebugMap &Map, typename Linker::OutputFileType ObjectType) {
+
+  std::vector<std::unique_ptr<OutDwarfFile>> ObjectsForLinking;
 
   DebugMap DebugMap(Map.getTriple(), Map.getBinaryPath());
-
-  DWARFLinker GeneralLinker(Streamer.get(), DwarfLinkerClient::Dsymutil);
-
-  remarks::RemarkLinker RL;
-  if (!Options.RemarksPrependPath.empty())
-    RL.setExternalFilePrependPath(Options.RemarksPrependPath);
-  RL.setKeepAllRemarks(Options.RemarksKeepAll);
-  GeneralLinker.setObjectPrefixMap(&Options.ObjectPrefixMap);
 
   std::function<StringRef(StringRef)> TranslationLambda = [&](StringRef Input) {
     assert(Options.Translator);
     return Options.Translator(Input);
   };
 
-  GeneralLinker.setVerbosity(Options.Verbose);
-  GeneralLinker.setStatistics(Options.Statistics);
-  GeneralLinker.setVerifyInputDWARF(Options.VerifyInputDWARF);
-  GeneralLinker.setNoOutput(Options.NoOutput);
-  GeneralLinker.setNoODR(Options.NoODR);
-  GeneralLinker.setUpdate(Options.Update);
-  GeneralLinker.setNumThreads(Options.Threads);
-  GeneralLinker.setPrependPath(Options.PrependPath);
-  GeneralLinker.setKeepFunctionForStatic(Options.KeepFunctionForStatic);
-  if (Options.Translator)
-    GeneralLinker.setStringsTranslator(TranslationLambda);
-  GeneralLinker.setWarningHandler(
-      [&](const Twine &Warning, StringRef Context, const DWARFDie *DIE) {
-        reportWarning(Warning, Context, DIE);
-      });
-  GeneralLinker.setErrorHandler(
+  std::unique_ptr<Linker> GeneralLinker = Linker::createLinker(
       [&](const Twine &Error, StringRef Context, const DWARFDie *DIE) {
         reportError(Error, Context, DIE);
+      },
+      [&](const Twine &Warning, StringRef Context, const DWARFDie *DIE) {
+        reportWarning(Warning, Context, DIE);
+      },
+      Options.Translator ? TranslationLambda : nullptr);
+
+  if (!Options.NoOutput) {
+    if (Error Err = GeneralLinker->createEmitter(Map.getTriple(), ObjectType,
+                                                 OutFile)) {
+      handleAllErrors(std::move(Err), [&](const ErrorInfoBase &EI) {
+        reportError(EI.message(), "dwarf streamer init");
       });
-  GeneralLinker.setInputVerificationHandler([&](const DWARFFile &File) {
+      return false;
+    }
+  }
+
+  remarks::RemarkLinker RL;
+  if (!Options.RemarksPrependPath.empty())
+    RL.setExternalFilePrependPath(Options.RemarksPrependPath);
+  RL.setKeepAllRemarks(Options.RemarksKeepAll);
+  GeneralLinker->setObjectPrefixMap(&Options.ObjectPrefixMap);
+
+  GeneralLinker->setVerbosity(Options.Verbose);
+  GeneralLinker->setStatistics(Options.Statistics);
+  GeneralLinker->setVerifyInputDWARF(Options.VerifyInputDWARF);
+  GeneralLinker->setNoODR(Options.NoODR);
+  GeneralLinker->setUpdateIndexTablesOnly(Options.Update);
+  GeneralLinker->setNumThreads(Options.Threads);
+  GeneralLinker->setPrependPath(Options.PrependPath);
+  GeneralLinker->setKeepFunctionForStatic(Options.KeepFunctionForStatic);
+  GeneralLinker->setInputVerificationHandler([&](const OutDwarfFile &File) {
     reportWarning("input verification failed", File.FileName);
     HasVerificationErrors = true;
   });
-  objFileLoader Loader = [&DebugMap, &RL,
-                          this](StringRef ContainerName,
-                                StringRef Path) -> ErrorOr<DWARFFile &> {
+  auto Loader = [&](StringRef ContainerName,
+                    StringRef Path) -> ErrorOr<OutDwarfFile &> {
     auto &Obj = DebugMap.addDebugMapObject(
         Path, sys::TimePoint<std::chrono::seconds>(), MachO::N_OSO);
 
-    if (auto ErrorOrObj = loadObject(Obj, DebugMap, RL)) {
-      return *ErrorOrObj;
+    if (ErrorOr<std::unique_ptr<OutDwarfFile>> ErrorOrObj =
+            loadObject<OutDwarfFile, AddressMap>(Obj, DebugMap, RL)) {
+      ObjectsForLinking.emplace_back(std::move(*ErrorOrObj));
+      return *ObjectsForLinking.back();
     } else {
       // Try and emit more helpful warnings by applying some heuristics.
       StringRef ObjFile = ContainerName;
@@ -654,7 +695,7 @@ bool DwarfLinkerForBinary::link(const DebugMap &Map) {
 
     llvm_unreachable("Unhandled DebugMap object");
   };
-  GeneralLinker.setSwiftInterfacesMap(&ParseableSwiftInterfaces);
+  GeneralLinker->setSwiftInterfacesMap(&ParseableSwiftInterfaces);
   bool ReflectionSectionsPresentInBinary = false;
   // If there is no output specified, no point in checking the binary for swift5
   // reflection sections.
@@ -668,7 +709,7 @@ bool DwarfLinkerForBinary::link(const DebugMap &Map) {
     auto SectionToOffsetInDwarf =
         calculateStartOfStrippableReflectionSections(Map);
     for (const auto &Obj : Map.objects())
-      copySwiftReflectionMetadata(Obj.get(), Streamer.get(),
+      copySwiftReflectionMetadata(Obj.get(), GeneralLinker->getEmitter(),
                                   SectionToOffsetInDwarf, RelocationsToApply);
   }
 
@@ -715,18 +756,21 @@ bool DwarfLinkerForBinary::link(const DebugMap &Map) {
 
       // Copy the module into the .swift_ast section.
       if (!Options.NoOutput)
-        Streamer->emitSwiftAST((*ErrorOrMem)->getBuffer());
+        GeneralLinker->getEmitter()->emitSwiftAST((*ErrorOrMem)->getBuffer());
 
       continue;
     }
 
-    if (auto ErrorOrObj = loadObject(*Obj, Map, RL))
-      GeneralLinker.addObjectFile(*ErrorOrObj, Loader, OnCUDieLoaded);
-    else {
-      ObjectsForLinking.push_back(std::make_unique<DWARFFile>(
+    if (ErrorOr<std::unique_ptr<OutDwarfFile>> ErrorOrObj =
+            loadObject<OutDwarfFile, AddressMap>(*Obj, Map, RL)) {
+      ObjectsForLinking.emplace_back(std::move(*ErrorOrObj));
+      GeneralLinker->addObjectFile(*ObjectsForLinking.back(), Loader,
+                                   OnCUDieLoaded);
+    } else {
+      ObjectsForLinking.push_back(std::make_unique<OutDwarfFile>(
           Obj->getObjectFilename(), nullptr, nullptr,
           Obj->empty() ? Obj->getWarnings() : EmptyWarnings));
-      GeneralLinker.addObjectFile(*ObjectsForLinking.back());
+      GeneralLinker->addObjectFile(*ObjectsForLinking.back());
     }
   }
 
@@ -734,32 +778,14 @@ bool DwarfLinkerForBinary::link(const DebugMap &Map) {
   if (MaxDWARFVersion == 0)
     MaxDWARFVersion = 3;
 
-  if (Error E = GeneralLinker.setTargetDWARFVersion(MaxDWARFVersion))
+  if (Error E = GeneralLinker->setTargetDWARFVersion(MaxDWARFVersion))
     return error(toString(std::move(E)));
 
-  switch (Options.TheAccelTableKind) {
-  case DsymutilAccelTableKind::Apple:
-    GeneralLinker.addAccelTableKind(DwarfLinkerAccelTableKind::Apple);
-    break;
-  case DsymutilAccelTableKind::Dwarf:
-    GeneralLinker.addAccelTableKind(DwarfLinkerAccelTableKind::DebugNames);
-    break;
-  case DsymutilAccelTableKind::Pub:
-    GeneralLinker.addAccelTableKind(DwarfLinkerAccelTableKind::Pub);
-    break;
-  case DsymutilAccelTableKind::Default:
-    if (MaxDWARFVersion >= 5)
-      GeneralLinker.addAccelTableKind(DwarfLinkerAccelTableKind::DebugNames);
-    else
-      GeneralLinker.addAccelTableKind(DwarfLinkerAccelTableKind::Apple);
-    break;
-  case DsymutilAccelTableKind::None:
-    // Nothing to do.
-    break;
-  }
+  setAcceleratorTables<Linker>(*GeneralLinker, Options.TheAccelTableKind,
+                               MaxDWARFVersion);
 
   // link debug info for loaded object files.
-  if (Error E = GeneralLinker.link())
+  if (Error E = GeneralLinker->link())
     return error(toString(std::move(E)));
 
   StringRef ArchName = Map.getTriple().getArchName();
@@ -776,21 +802,25 @@ bool DwarfLinkerForBinary::link(const DebugMap &Map) {
   }
 
   if (Map.getTriple().isOSDarwin() && !Map.getBinaryPath().empty() &&
-      Options.FileType == OutputFileType::Object)
+      ObjectType == Linker::OutputFileType::Object)
     return MachOUtils::generateDsymCompanion(
         Options.VFS, Map, Options.Translator,
-        *Streamer->getAsmPrinter().OutStreamer, OutFile, RelocationsToApply);
+        *GeneralLinker->getEmitter()->getAsmPrinter().OutStreamer, OutFile,
+        RelocationsToApply);
 
-  Streamer->finish();
+  GeneralLinker->getEmitter()->finish();
   return true;
 }
 
 /// Iterate over the relocations of the given \p Section and
 /// store the ones that correspond to debug map entries into the
 /// ValidRelocs array.
-void DwarfLinkerForBinary::AddressManager::findValidRelocsMachO(
-    const object::SectionRef &Section, const object::MachOObjectFile &Obj,
-    const DebugMapObject &DMO, std::vector<ValidReloc> &ValidRelocs) {
+template <typename AddressesMapBase>
+void DwarfLinkerForBinary::AddressManager<AddressesMapBase>::
+    findValidRelocsMachO(const object::SectionRef &Section,
+                         const object::MachOObjectFile &Obj,
+                         const DebugMapObject &DMO,
+                         std::vector<ValidReloc> &ValidRelocs) {
   Expected<StringRef> ContentsOrErr = Section.getContents();
   if (!ContentsOrErr) {
     consumeError(ContentsOrErr.takeError());
@@ -865,7 +895,8 @@ void DwarfLinkerForBinary::AddressManager::findValidRelocsMachO(
 
 /// Dispatch the valid relocation finding logic to the
 /// appropriate handler depending on the object file format.
-bool DwarfLinkerForBinary::AddressManager::findValidRelocs(
+template <typename AddressesMapBase>
+bool DwarfLinkerForBinary::AddressManager<AddressesMapBase>::findValidRelocs(
     const object::SectionRef &Section, const object::ObjectFile &Obj,
     const DebugMapObject &DMO, std::vector<ValidReloc> &Relocs) {
   // Dispatch to the right handler depending on the file type.
@@ -890,8 +921,10 @@ bool DwarfLinkerForBinary::AddressManager::findValidRelocs(
 /// entries in the debug map. These relocations will drive the Dwarf link by
 /// indicating which DIEs refer to symbols present in the linked binary.
 /// \returns whether there are any valid relocations in the debug info.
-bool DwarfLinkerForBinary::AddressManager::findValidRelocsInDebugSections(
-    const object::ObjectFile &Obj, const DebugMapObject &DMO) {
+template <typename AddressesMapBase>
+bool DwarfLinkerForBinary::AddressManager<AddressesMapBase>::
+    findValidRelocsInDebugSections(const object::ObjectFile &Obj,
+                                   const DebugMapObject &DMO) {
   // Find the debug_info section.
   bool FoundValidRelocs = false;
   for (const object::SectionRef &Section : Obj.sections()) {
@@ -912,10 +945,14 @@ bool DwarfLinkerForBinary::AddressManager::findValidRelocsInDebugSections(
   return FoundValidRelocs;
 }
 
-std::vector<DwarfLinkerForBinary::AddressManager::ValidReloc>
-DwarfLinkerForBinary::AddressManager::getRelocations(
+template <typename AddressesMapBase>
+std::vector<
+    typename DwarfLinkerForBinary::AddressManager<AddressesMapBase>::ValidReloc>
+DwarfLinkerForBinary::AddressManager<AddressesMapBase>::getRelocations(
     const std::vector<ValidReloc> &Relocs, uint64_t StartPos, uint64_t EndPos) {
-  std::vector<DwarfLinkerForBinary::AddressManager::ValidReloc> Res;
+  std::vector<
+      DwarfLinkerForBinary::AddressManager<AddressesMapBase>::ValidReloc>
+      Res;
 
   auto CurReloc = partition_point(Relocs, [StartPos](const ValidReloc &Reloc) {
     return Reloc.Offset < StartPos;
@@ -930,7 +967,9 @@ DwarfLinkerForBinary::AddressManager::getRelocations(
   return Res;
 }
 
-void DwarfLinkerForBinary::AddressManager::printReloc(const ValidReloc &Reloc) {
+template <typename AddressesMapBase>
+void DwarfLinkerForBinary::AddressManager<AddressesMapBase>::printReloc(
+    const ValidReloc &Reloc) {
   const auto &Mapping = Reloc.Mapping->getValue();
   const uint64_t ObjectAddress = Mapping.ObjectAddress
                                      ? uint64_t(*Mapping.ObjectAddress)
@@ -941,16 +980,18 @@ void DwarfLinkerForBinary::AddressManager::printReloc(const ValidReloc &Reloc) {
                    uint64_t(Mapping.BinaryAddress));
 }
 
-int64_t
-DwarfLinkerForBinary::AddressManager::getRelocValue(const ValidReloc &Reloc) {
+template <typename AddressesMapBase>
+int64_t DwarfLinkerForBinary::AddressManager<AddressesMapBase>::getRelocValue(
+    const ValidReloc &Reloc) {
   int64_t AddrAdjust = relocate(Reloc);
   if (Reloc.Mapping->getValue().ObjectAddress)
     AddrAdjust -= uint64_t(*Reloc.Mapping->getValue().ObjectAddress);
   return AddrAdjust;
 }
 
+template <typename AddressesMapBase>
 std::optional<int64_t>
-DwarfLinkerForBinary::AddressManager::hasValidRelocationAt(
+DwarfLinkerForBinary::AddressManager<AddressesMapBase>::hasValidRelocationAt(
     const std::vector<ValidReloc> &AllRelocs, uint64_t StartOffset,
     uint64_t EndOffset) {
   std::vector<ValidReloc> Relocs =
@@ -986,10 +1027,11 @@ getAttributeOffsets(const DWARFAbbreviationDeclaration *Abbrev, unsigned Idx,
   return std::make_pair(Offset, End);
 }
 
-std::optional<int64_t>
-DwarfLinkerForBinary::AddressManager::getExprOpAddressRelocAdjustment(
-    DWARFUnit &U, const DWARFExpression::Operation &Op, uint64_t StartOffset,
-    uint64_t EndOffset) {
+template <typename AddressesMapBase>
+std::optional<int64_t> DwarfLinkerForBinary::AddressManager<AddressesMapBase>::
+    getExprOpAddressRelocAdjustment(DWARFUnit &U,
+                                    const DWARFExpression::Operation &Op,
+                                    uint64_t StartOffset, uint64_t EndOffset) {
   switch (Op.getCode()) {
   default: {
     assert(false && "Specified operation does not have address operand");
@@ -1010,9 +1052,9 @@ DwarfLinkerForBinary::AddressManager::getExprOpAddressRelocAdjustment(
   return std::nullopt;
 }
 
-std::optional<int64_t>
-DwarfLinkerForBinary::AddressManager::getSubprogramRelocAdjustment(
-    const DWARFDie &DIE) {
+template <typename AddressesMapBase>
+std::optional<int64_t> DwarfLinkerForBinary::AddressManager<
+    AddressesMapBase>::getSubprogramRelocAdjustment(const DWARFDie &DIE) {
   const auto *Abbrev = DIE.getAbbreviationDeclarationPtr();
 
   std::optional<uint32_t> LowPcIdx =
@@ -1053,8 +1095,9 @@ DwarfLinkerForBinary::AddressManager::getSubprogramRelocAdjustment(
   }
 }
 
-uint64_t
-DwarfLinkerForBinary::AddressManager::relocate(const ValidReloc &Reloc) const {
+template <typename AddressesMapBase>
+uint64_t DwarfLinkerForBinary::AddressManager<AddressesMapBase>::relocate(
+    const ValidReloc &Reloc) const {
   return Reloc.Mapping->getValue().BinaryAddress + Reloc.Addend;
 }
 
@@ -1066,7 +1109,8 @@ DwarfLinkerForBinary::AddressManager::relocate(const ValidReloc &Reloc) const {
 /// monotonic \p BaseOffset values.
 ///
 /// \returns whether any reloc has been applied.
-bool DwarfLinkerForBinary::AddressManager::applyValidRelocs(
+template <typename AddressesMapBase>
+bool DwarfLinkerForBinary::AddressManager<AddressesMapBase>::applyValidRelocs(
     MutableArrayRef<char> Data, uint64_t BaseOffset, bool IsLittleEndian) {
   std::vector<ValidReloc> Relocs = getRelocations(
       ValidDebugInfoRelocs, BaseOffset, BaseOffset + Data.size());

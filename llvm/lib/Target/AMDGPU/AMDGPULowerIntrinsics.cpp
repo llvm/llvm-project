@@ -36,9 +36,6 @@ static cl::opt<int, true> MemIntrinsicExpandSizeThresholdOpt(
 
 
 class AMDGPULowerIntrinsics : public ModulePass {
-private:
-  bool makeLIDRangeMetadata(Function &F) const;
-
 public:
   static char ID;
 
@@ -120,26 +117,6 @@ bool AMDGPULowerIntrinsics::expandMemIntrinsicUses(Function &F) {
   return Changed;
 }
 
-bool AMDGPULowerIntrinsics::makeLIDRangeMetadata(Function &F) const {
-  auto *TPC = getAnalysisIfAvailable<TargetPassConfig>();
-  if (!TPC)
-    return false;
-
-  const TargetMachine &TM = TPC->getTM<TargetMachine>();
-  bool Changed = false;
-
-  for (auto *U : F.users()) {
-    auto *CI = dyn_cast<CallInst>(U);
-    if (!CI)
-      continue;
-
-    Function *Caller = CI->getParent()->getParent();
-    const AMDGPUSubtarget &ST = AMDGPUSubtarget::get(TM, *Caller);
-    Changed |= ST.makeLIDRangeMetadata(CI);
-  }
-  return Changed;
-}
-
 bool AMDGPULowerIntrinsics::runOnModule(Module &M) {
   bool Changed = false;
 
@@ -154,16 +131,6 @@ bool AMDGPULowerIntrinsics::runOnModule(Module &M) {
       if (expandMemIntrinsicUses(F))
         Changed = true;
       break;
-
-    case Intrinsic::r600_read_tidig_x:
-    case Intrinsic::r600_read_tidig_y:
-    case Intrinsic::r600_read_tidig_z:
-    case Intrinsic::r600_read_local_size_x:
-    case Intrinsic::r600_read_local_size_y:
-    case Intrinsic::r600_read_local_size_z:
-      Changed |= makeLIDRangeMetadata(F);
-      break;
-
     default:
       break;
     }

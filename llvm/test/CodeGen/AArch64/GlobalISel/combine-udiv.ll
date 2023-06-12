@@ -6,7 +6,7 @@
 define <8 x i16> @combine_vec_udiv_uniform(<8 x i16> %x) {
 ; SDAG-LABEL: combine_vec_udiv_uniform:
 ; SDAG:       // %bb.0:
-; SDAG-NEXT:    mov w8, #25645
+; SDAG-NEXT:    mov w8, #25645 // =0x642d
 ; SDAG-NEXT:    dup v1.8h, w8
 ; SDAG-NEXT:    umull2 v2.4s, v0.8h, v1.8h
 ; SDAG-NEXT:    umull v1.4s, v0.4h, v1.4h

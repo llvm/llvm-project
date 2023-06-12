@@ -137,8 +137,8 @@ bool Watchpoint::VariableWatchpointDisabler(void *baton,
   WatchpointVariableContext *wvc =
       static_cast<WatchpointVariableContext *>(baton);
 
-  LLDB_LOGF(log, "Watchpoint::%s called by breakpoint %" PRIu64 ".%" PRIu64,
-            __FUNCTION__, break_id, break_loc_id);
+  LLDB_LOGF(log, "called by breakpoint %" PRIu64 ".%" PRIu64, break_id,
+            break_loc_id);
 
   if (wvc->watch_id == LLDB_INVALID_WATCH_ID)
     return false;
@@ -158,16 +158,16 @@ bool Watchpoint::VariableWatchpointDisabler(void *baton,
 
   if (wvc->exe_ctx == context->exe_ctx_ref) {
     LLDB_LOGF(log,
-              "Watchpoint::%s callback for watchpoint %" PRId32
+              "callback for watchpoint %" PRId32
               " matched internal breakpoint execution context",
-              __FUNCTION__, watch_sp->GetID());
+              watch_sp->GetID());
     process_sp->DisableWatchpoint(watch_sp.get());
     return false;
   }
   LLDB_LOGF(log,
-            "Watchpoint::%s callback for watchpoint %" PRId32
+            "callback for watchpoint %" PRId32
             " didn't match internal breakpoint execution context",
-            __FUNCTION__, watch_sp->GetID());
+            watch_sp->GetID());
   return false;
 }
 

@@ -354,4 +354,25 @@ private:
 
 } // namespace mlir
 
+namespace llvm {
+
+template <>
+struct DenseMapInfo<MlirTypeID> {
+  static inline MlirTypeID getEmptyKey() {
+    auto *pointer = llvm::DenseMapInfo<void *>::getEmptyKey();
+    return mlirTypeIDCreate(pointer);
+  }
+  static inline MlirTypeID getTombstoneKey() {
+    auto *pointer = llvm::DenseMapInfo<void *>::getTombstoneKey();
+    return mlirTypeIDCreate(pointer);
+  }
+  static inline unsigned getHashValue(const MlirTypeID &val) {
+    return mlirTypeIDHashValue(val);
+  }
+  static inline bool isEqual(const MlirTypeID &lhs, const MlirTypeID &rhs) {
+    return mlirTypeIDEqual(lhs, rhs);
+  }
+};
+} // namespace llvm
+
 #endif // MLIR_BINDINGS_PYTHON_PYBINDUTILS_H

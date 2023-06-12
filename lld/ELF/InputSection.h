@@ -426,7 +426,7 @@ public:
 
 inline bool isDebugSection(const InputSectionBase &sec) {
   return (sec.flags & llvm::ELF::SHF_ALLOC) == 0 &&
-         sec.name.startswith(".debug");
+         sec.name.starts_with(".debug");
 }
 
 // The set of TOC entries (.toc + addend) for which we should not apply

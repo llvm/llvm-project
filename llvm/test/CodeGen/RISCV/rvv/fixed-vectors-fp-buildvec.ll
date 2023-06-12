@@ -36,9 +36,8 @@ define <4 x float> @hang_when_merging_stores_after_legalization(<8 x float> %x, 
 ; LMULMAX1-LABEL: hang_when_merging_stores_after_legalization:
 ; LMULMAX1:       # %bb.0:
 ; LMULMAX1-NEXT:    li a0, 2
-; LMULMAX1-NEXT:    vsetivli zero, 1, e8, mf8, ta, ma
-; LMULMAX1-NEXT:    vmv.s.x v0, a0
 ; LMULMAX1-NEXT:    vsetivli zero, 4, e32, m1, ta, mu
+; LMULMAX1-NEXT:    vmv.s.x v0, a0
 ; LMULMAX1-NEXT:    vrgather.vi v12, v8, 0
 ; LMULMAX1-NEXT:    vrgather.vi v12, v9, 3, v0.t
 ; LMULMAX1-NEXT:    vsetivli zero, 3, e32, m1, tu, ma
@@ -152,9 +151,8 @@ define void @buildvec_merge0_v4f32(<4 x float>* %x, float %f) {
 ; CHECK-LABEL: buildvec_merge0_v4f32:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    li a1, 6
-; CHECK-NEXT:    vsetivli zero, 1, e8, mf8, ta, ma
-; CHECK-NEXT:    vmv.s.x v0, a1
 ; CHECK-NEXT:    vsetivli zero, 4, e32, m1, ta, ma
+; CHECK-NEXT:    vmv.s.x v0, a1
 ; CHECK-NEXT:    vfmv.v.f v8, fa0
 ; CHECK-NEXT:    lui a1, 262144
 ; CHECK-NEXT:    vmerge.vxm v8, v8, a1, v0

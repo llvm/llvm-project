@@ -59,8 +59,8 @@ def quant_StorageValueType :
 
 // Either a real valued or storage primitive or container type.
 def quant_RealOrStorageValueType :
-    Type<Or<[quant_RealValueType.predicate,
-                quant_StorageValueType.predicate]>>;
+    Type<Or<[quant_RealValueType.predicate, quant_StorageValueType.predicate]>,
+    "real valued or storage primitive or container type">;
 
 // An implementation of UniformQuantizedType.
 def quant_UniformQuantizedType :

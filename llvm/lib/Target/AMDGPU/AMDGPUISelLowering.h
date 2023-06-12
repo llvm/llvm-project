@@ -292,6 +292,9 @@ public:
                                     bool SNaN = false,
                                     unsigned Depth = 0) const override;
 
+  bool isReassocProfitable(MachineRegisterInfo &MRI, Register N0,
+                           Register N1) const override;
+
   /// Helper function that adds Reg to the LiveIn list of the DAG's
   /// MachineFunction.
   ///
@@ -343,6 +346,8 @@ public:
   /// Helper function that returns the byte offset of the given
   /// type of implicit parameter.
   uint32_t getImplicitParameterOffset(const MachineFunction &MF,
+                                      const ImplicitParameter Param) const;
+  uint32_t getImplicitParameterOffset(const uint64_t ExplicitKernArgSize,
                                       const ImplicitParameter Param) const;
 
   MVT getFenceOperandTy(const DataLayout &DL) const override {
@@ -440,7 +445,6 @@ enum NodeType : unsigned {
   RCP_IFLAG,
   FMUL_LEGACY,
   RSQ_CLAMP,
-  LDEXP,
   FP_CLASS,
   DOT4,
   CARRY,

@@ -1,7 +1,7 @@
-; RUN: llc < %s -march=nvptx -mcpu=sm_20 -nvptx-prec-divf32=0 -nvptx-prec-sqrtf32=0 \
+; RUN: llc < %s -march=nvptx64 -mcpu=sm_20 -nvptx-prec-divf32=0 -nvptx-prec-sqrtf32=0 \
 ; RUN:   | FileCheck %s
 ; RUN: %if ptxas %{                                                                   \
-; RUN:   llc < %s -march=nvptx -mcpu=sm_20 -nvptx-prec-divf32=0 -nvptx-prec-sqrtf32=0 \
+; RUN:   llc < %s -march=nvptx64 -mcpu=sm_20 -nvptx-prec-divf32=0 -nvptx-prec-sqrtf32=0 \
 ; RUN:   | %ptxas-verify                                                              \
 ; RUN: %}
 

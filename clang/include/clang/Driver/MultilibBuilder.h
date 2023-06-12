@@ -70,23 +70,14 @@ public:
   MultilibBuilder &includeSuffix(StringRef S);
 
   /// Get the flags that indicate or contraindicate this multilib's use
-  /// All elements begin with either '+' or '-'
+  /// All elements begin with either '-' or '!'
   const flags_list &flags() const { return Flags; }
   flags_list &flags() { return Flags; }
 
   /// Add a flag to the flags list
-  /// \p Flag must be a flag accepted by the driver with its leading '-'
-  /// removed,
-  ///     and replaced with either:
-  ///       '-' which contraindicates using this multilib with that flag
-  ///     or:
-  ///       '+' which promotes using this multilib in the presence of that flag
-  ///     otherwise '-print-multi-lib' will not emit them correctly.
-  MultilibBuilder &flag(StringRef F) {
-    assert(F.front() == '+' || F.front() == '-');
-    Flags.push_back(std::string(F));
-    return *this;
-  }
+  /// \p Flag must be a flag accepted by the driver.
+  /// \p Disallow defines whether the flag is negated and therefore disallowed.
+  MultilibBuilder &flag(StringRef Flag, bool Disallow = false);
 
   Multilib makeMultilib() const;
 

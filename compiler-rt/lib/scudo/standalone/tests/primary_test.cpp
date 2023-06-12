@@ -25,82 +25,96 @@
 // 32-bit architectures. It's not something we want to encourage, but we still
 // should ensure the tests pass.
 
-struct TestConfig1 {
-  static const scudo::uptr PrimaryRegionSizeLog = 18U;
-  static const scudo::uptr PrimaryGroupSizeLog = 18U;
-  static const scudo::s32 PrimaryMinReleaseToOsIntervalMs = INT32_MIN;
-  static const scudo::s32 PrimaryMaxReleaseToOsIntervalMs = INT32_MAX;
+template <typename SizeClassMapT> struct TestConfig1 {
   static const bool MaySupportMemoryTagging = false;
-  typedef scudo::uptr PrimaryCompactPtrT;
-  static const scudo::uptr PrimaryCompactPtrScale = 0;
-  static const bool PrimaryEnableRandomOffset = true;
-  static const scudo::uptr PrimaryMapSizeIncrement = 1UL << 18;
+
+  struct Primary {
+    using SizeClassMap = SizeClassMapT;
+    static const scudo::uptr RegionSizeLog = 18U;
+    static const scudo::uptr GroupSizeLog = 18U;
+    static const scudo::s32 MinReleaseToOsIntervalMs = INT32_MIN;
+    static const scudo::s32 MaxReleaseToOsIntervalMs = INT32_MAX;
+    typedef scudo::uptr CompactPtrT;
+    static const scudo::uptr CompactPtrScale = 0;
+    static const bool EnableRandomOffset = true;
+    static const scudo::uptr MapSizeIncrement = 1UL << 18;
+  };
 };
 
-struct TestConfig2 {
-#if defined(__mips__)
-  // Unable to allocate greater size on QEMU-user.
-  static const scudo::uptr PrimaryRegionSizeLog = 23U;
-#else
-  static const scudo::uptr PrimaryRegionSizeLog = 24U;
-#endif
-  static const scudo::uptr PrimaryGroupSizeLog = 20U;
-  static const scudo::s32 PrimaryMinReleaseToOsIntervalMs = INT32_MIN;
-  static const scudo::s32 PrimaryMaxReleaseToOsIntervalMs = INT32_MAX;
+template <typename SizeClassMapT> struct TestConfig2 {
   static const bool MaySupportMemoryTagging = false;
-  typedef scudo::uptr PrimaryCompactPtrT;
-  static const scudo::uptr PrimaryCompactPtrScale = 0;
-  static const bool PrimaryEnableRandomOffset = true;
-  static const scudo::uptr PrimaryMapSizeIncrement = 1UL << 18;
-};
 
-struct TestConfig3 {
+  struct Primary {
+    using SizeClassMap = SizeClassMapT;
 #if defined(__mips__)
-  // Unable to allocate greater size on QEMU-user.
-  static const scudo::uptr PrimaryRegionSizeLog = 23U;
+    // Unable to allocate greater size on QEMU-user.
+    static const scudo::uptr RegionSizeLog = 23U;
 #else
-  static const scudo::uptr PrimaryRegionSizeLog = 24U;
+    static const scudo::uptr RegionSizeLog = 24U;
 #endif
-  static const scudo::uptr PrimaryGroupSizeLog = 20U;
-  static const scudo::s32 PrimaryMinReleaseToOsIntervalMs = INT32_MIN;
-  static const scudo::s32 PrimaryMaxReleaseToOsIntervalMs = INT32_MAX;
-  static const bool MaySupportMemoryTagging = true;
-  typedef scudo::uptr PrimaryCompactPtrT;
-  static const scudo::uptr PrimaryCompactPtrScale = 0;
-  static const bool PrimaryEnableRandomOffset = true;
-  static const scudo::uptr PrimaryMapSizeIncrement = 1UL << 18;
+    static const scudo::uptr GroupSizeLog = 20U;
+    static const scudo::s32 MinReleaseToOsIntervalMs = INT32_MIN;
+    static const scudo::s32 MaxReleaseToOsIntervalMs = INT32_MAX;
+    typedef scudo::uptr CompactPtrT;
+    static const scudo::uptr CompactPtrScale = 0;
+    static const bool EnableRandomOffset = true;
+    static const scudo::uptr MapSizeIncrement = 1UL << 18;
+  };
 };
 
-struct TestConfig4 {
+template <typename SizeClassMapT> struct TestConfig3 {
+  static const bool MaySupportMemoryTagging = true;
+
+  struct Primary {
+    using SizeClassMap = SizeClassMapT;
 #if defined(__mips__)
-  // Unable to allocate greater size on QEMU-user.
-  static const scudo::uptr PrimaryRegionSizeLog = 23U;
+    // Unable to allocate greater size on QEMU-user.
+    static const scudo::uptr RegionSizeLog = 23U;
 #else
-  static const scudo::uptr PrimaryRegionSizeLog = 24U;
+    static const scudo::uptr RegionSizeLog = 24U;
 #endif
-  static const scudo::s32 PrimaryMinReleaseToOsIntervalMs = INT32_MIN;
-  static const scudo::s32 PrimaryMaxReleaseToOsIntervalMs = INT32_MAX;
+    static const scudo::uptr GroupSizeLog = 20U;
+    static const scudo::s32 MinReleaseToOsIntervalMs = INT32_MIN;
+    static const scudo::s32 MaxReleaseToOsIntervalMs = INT32_MAX;
+    typedef scudo::uptr CompactPtrT;
+    static const scudo::uptr CompactPtrScale = 0;
+    static const bool EnableRandomOffset = true;
+    static const scudo::uptr MapSizeIncrement = 1UL << 18;
+  };
+};
+
+template <typename SizeClassMapT> struct TestConfig4 {
   static const bool MaySupportMemoryTagging = true;
-  static const scudo::uptr PrimaryCompactPtrScale = 3U;
-  static const scudo::uptr PrimaryGroupSizeLog = 20U;
-  typedef scudo::u32 PrimaryCompactPtrT;
-  static const bool PrimaryEnableRandomOffset = true;
-  static const scudo::uptr PrimaryMapSizeIncrement = 1UL << 18;
+
+  struct Primary {
+    using SizeClassMap = SizeClassMapT;
+#if defined(__mips__)
+    // Unable to allocate greater size on QEMU-user.
+    static const scudo::uptr RegionSizeLog = 23U;
+#else
+    static const scudo::uptr RegionSizeLog = 24U;
+#endif
+    static const scudo::s32 MinReleaseToOsIntervalMs = INT32_MIN;
+    static const scudo::s32 MaxReleaseToOsIntervalMs = INT32_MAX;
+    static const scudo::uptr CompactPtrScale = 3U;
+    static const scudo::uptr GroupSizeLog = 20U;
+    typedef scudo::u32 CompactPtrT;
+    static const bool EnableRandomOffset = true;
+    static const scudo::uptr MapSizeIncrement = 1UL << 18;
+  };
 };
 
-template <typename BaseConfig, typename SizeClassMapT>
-struct Config : public BaseConfig {
-  using SizeClassMap = SizeClassMapT;
-};
+template <template <typename> class BaseConfig, typename SizeClassMapT>
+struct Config : public BaseConfig<SizeClassMapT> {};
 
-template <typename BaseConfig, typename SizeClassMapT>
+template <template <typename> class BaseConfig, typename SizeClassMapT>
 struct SizeClassAllocator
     : public scudo::SizeClassAllocator64<Config<BaseConfig, SizeClassMapT>> {};
 template <typename SizeClassMapT>
 struct SizeClassAllocator<TestConfig1, SizeClassMapT>
     : public scudo::SizeClassAllocator32<Config<TestConfig1, SizeClassMapT>> {};
 
-template <typename BaseConfig, typename SizeClassMapT>
+template <template <typename> class BaseConfig, typename SizeClassMapT>
 struct TestAllocator : public SizeClassAllocator<BaseConfig, SizeClassMapT> {
   ~TestAllocator() { this->unmapTestOnly(); }
 
@@ -113,7 +127,8 @@ struct TestAllocator : public SizeClassAllocator<BaseConfig, SizeClassMapT> {
   void operator delete(void *ptr) { free(ptr); }
 };
 
-template <class BaseConfig> struct ScudoPrimaryTest : public Test {};
+template <template <typename> class BaseConfig>
+struct ScudoPrimaryTest : public Test {};
 
 #if SCUDO_FUCHSIA
 #define SCUDO_TYPED_TEST_ALL_TYPES(FIXTURE, NAME)                              \
@@ -132,12 +147,13 @@ template <class BaseConfig> struct ScudoPrimaryTest : public Test {};
   TEST_F(FIXTURE##NAME##_##TYPE, NAME) { FIXTURE##NAME<TYPE>::Run(); }
 
 #define SCUDO_TYPED_TEST(FIXTURE, NAME)                                        \
-  template <class TypeParam>                                                   \
+  template <template <typename> class TypeParam>                               \
   struct FIXTURE##NAME : public FIXTURE<TypeParam> {                           \
     void Run();                                                                \
   };                                                                           \
   SCUDO_TYPED_TEST_ALL_TYPES(FIXTURE, NAME)                                    \
-  template <class TypeParam> void FIXTURE##NAME<TypeParam>::Run()
+  template <template <typename> class TypeParam>                               \
+  void FIXTURE##NAME<TypeParam>::Run()
 
 SCUDO_TYPED_TEST(ScudoPrimaryTest, BasicPrimary) {
   using Primary = TestAllocator<TypeParam, scudo::DefaultSizeClassMap>;
@@ -168,16 +184,19 @@ SCUDO_TYPED_TEST(ScudoPrimaryTest, BasicPrimary) {
 }
 
 struct SmallRegionsConfig {
-  using SizeClassMap = scudo::DefaultSizeClassMap;
-  static const scudo::uptr PrimaryRegionSizeLog = 21U;
-  static const scudo::s32 PrimaryMinReleaseToOsIntervalMs = INT32_MIN;
-  static const scudo::s32 PrimaryMaxReleaseToOsIntervalMs = INT32_MAX;
   static const bool MaySupportMemoryTagging = false;
-  typedef scudo::uptr PrimaryCompactPtrT;
-  static const scudo::uptr PrimaryCompactPtrScale = 0;
-  static const bool PrimaryEnableRandomOffset = true;
-  static const scudo::uptr PrimaryMapSizeIncrement = 1UL << 18;
-  static const scudo::uptr PrimaryGroupSizeLog = 20U;
+
+  struct Primary {
+    using SizeClassMap = scudo::DefaultSizeClassMap;
+    static const scudo::uptr RegionSizeLog = 21U;
+    static const scudo::s32 MinReleaseToOsIntervalMs = INT32_MIN;
+    static const scudo::s32 MaxReleaseToOsIntervalMs = INT32_MAX;
+    typedef scudo::uptr CompactPtrT;
+    static const scudo::uptr CompactPtrScale = 0;
+    static const bool EnableRandomOffset = true;
+    static const scudo::uptr MapSizeIncrement = 1UL << 18;
+    static const scudo::uptr GroupSizeLog = 20U;
+  };
 };
 
 // The 64-bit SizeClassAllocator can be easily OOM'd with small region sizes.
@@ -322,7 +341,7 @@ SCUDO_TYPED_TEST(ScudoPrimaryTest, ReleaseToOS) {
   EXPECT_NE(P, nullptr);
   Cache.deallocate(ClassId, P);
   Cache.destroy(nullptr);
-  EXPECT_GT(Allocator->releaseToOS(scudo::ReleaseToOS::Force), 0U);
+  EXPECT_GT(Allocator->releaseToOS(scudo::ReleaseToOS::ForceAll), 0U);
 }
 
 SCUDO_TYPED_TEST(ScudoPrimaryTest, MemoryGroup) {

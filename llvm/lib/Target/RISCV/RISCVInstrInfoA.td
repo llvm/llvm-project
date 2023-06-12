@@ -43,11 +43,10 @@ multiclass AMO_rr_aq_rl<bits<5> funct5, bits<3> funct3, string opcodestr> {
   def _AQ_RL : AMO_rr<funct5, 1, 1, funct3, opcodestr # ".aqrl">;
 }
 
-multiclass AtomicStPat<PatFrag StoreOp, RVInst Inst, RegisterClass StTy,
-                       ValueType vt = XLenVT> {
-  def : Pat<(StoreOp (AddrRegImm GPR:$rs1, simm12:$imm12), (vt StTy:$rs2)),
-            (Inst StTy:$rs2, GPR:$rs1, simm12:$imm12)>;
-}
+class AtomicStPat<PatFrag StoreOp, RVInst Inst, RegisterClass StTy,
+                  ValueType vt = XLenVT>
+    : Pat<(StoreOp (AddrRegImm GPR:$rs1, simm12:$imm12), (vt StTy:$rs2)),
+          (Inst StTy:$rs2, GPR:$rs1, simm12:$imm12)>;
 
 //===----------------------------------------------------------------------===//
 // Instructions
@@ -109,18 +108,18 @@ defm AMOMAXU_D  : AMO_rr_aq_rl<0b11100, 0b011, "amomaxu.d">,
 // Fences will be inserted for atomic load/stores according to the logic in
 // RISCVTargetLowering::{emitLeadingFence,emitTrailingFence}.
 let Predicates = [HasAtomicLdSt] in {
-  defm : LdPat<atomic_load_8,  LB>;
-  defm : LdPat<atomic_load_16, LH>;
-  defm : LdPat<atomic_load_32, LW>;
+  def : LdPat<atomic_load_8,  LB>;
+  def : LdPat<atomic_load_16, LH>;
+  def : LdPat<atomic_load_32, LW>;
 
-  defm : AtomicStPat<atomic_store_8,  SB, GPR>;
-  defm : AtomicStPat<atomic_store_16, SH, GPR>;
-  defm : AtomicStPat<atomic_store_32, SW, GPR>;
+  def : AtomicStPat<atomic_store_8,  SB, GPR>;
+  def : AtomicStPat<atomic_store_16, SH, GPR>;
+  def : AtomicStPat<atomic_store_32, SW, GPR>;
 }
 
 let Predicates = [HasAtomicLdSt, IsRV64] in {
-  defm : LdPat<atomic_load_64, LD, i64>;
-  defm : AtomicStPat<atomic_store_64, SD, GPR, i64>;
+  def : LdPat<atomic_load_64, LD, i64>;
+  def : AtomicStPat<atomic_store_64, SD, GPR, i64>;
 }
 
 let Predicates = [HasStdExtA] in {

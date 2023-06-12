@@ -97,4 +97,23 @@ std::string AsFortran(IgnoreTKRSet tkr) {
   return result;
 }
 
+bool AreCompatibleCUDADataAttrs(std::optional<CUDADataAttr> x,
+    std::optional<CUDADataAttr> y, IgnoreTKRSet ignoreTKR) {
+  if (!x && !y) {
+    return true;
+  } else if (x && y && *x == *y) {
+    return true;
+  } else if (ignoreTKR.test(IgnoreTKR::Device) &&
+      x.value_or(CUDADataAttr::Device) == CUDADataAttr::Device &&
+      y.value_or(CUDADataAttr::Device) == CUDADataAttr::Device) {
+    return true;
+  } else if (ignoreTKR.test(IgnoreTKR::Managed) &&
+      x.value_or(CUDADataAttr::Managed) == CUDADataAttr::Managed &&
+      y.value_or(CUDADataAttr::Managed) == CUDADataAttr::Managed) {
+    return true;
+  } else {
+    return false;
+  }
+}
+
 } // namespace Fortran::common

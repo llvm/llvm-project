@@ -1,10 +1,10 @@
 ; RUN: opt -mtriple=nvptx64-nvidia-cuda -passes=load-store-vectorizer -S -o - %s | FileCheck %s
 
 define void @ldg_f16(ptr nocapture align 16 %rd0) {
-  %load1 = load <2 x half>, ptr %rd0, align 4
+  %load1 = load <2 x half>, ptr %rd0, align 16
   %p1 = fcmp ogt <2 x half> %load1, zeroinitializer
   %s1 = select <2 x i1> %p1, <2 x half> %load1, <2 x half> zeroinitializer
-  store <2 x half> %s1, ptr %rd0, align 4
+  store <2 x half> %s1, ptr %rd0, align 16
   %in2 = getelementptr half, ptr %rd0, i64 2
   %load2 = load <2 x half>, ptr %in2, align 4
   %p2 = fcmp ogt <2 x half> %load2, zeroinitializer

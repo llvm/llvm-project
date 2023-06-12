@@ -13,11 +13,11 @@
 #include <utility>
 
 #include "mlir/Dialect/Vector/IR/VectorOps.h"
-#include "mlir/Dialect/Vector/Transforms/VectorTransformsEnums.h.inc"
 #include "mlir/Dialect/Vector/Utils/VectorUtils.h"
-#include "mlir/IR/BuiltinOps.h"
 #include "mlir/IR/PatternMatch.h"
 #include "mlir/Support/LogicalResult.h"
+
+#include "mlir/Dialect/Vector/Transforms/VectorTransformsEnums.h.inc"
 
 namespace mlir {
 class RewritePatternSet;
@@ -57,7 +57,7 @@ struct UnrollVectorOptions {
   }
 
   /// Function that returns the traversal order (in terms of "for loop order",
-  /// i.e. slowest varying dimension to fastest varying dimension) that shoudl
+  /// i.e. slowest varying dimension to fastest varying dimension) that should
   /// be used when unrolling the given operation into units of the native vector
   /// size.
   using UnrollTraversalOrderFnType =
@@ -69,10 +69,6 @@ struct UnrollVectorOptions {
     return *this;
   }
 };
-
-//===----------------------------------------------------------------------===//
-// Vector transformation exposed as populate functions over rewrite patterns.
-//===----------------------------------------------------------------------===//
 
 /// Canonicalization of a `vector.contraction %a, %b, %c` with row-major matmul
 /// semantics to a contraction with MMT semantics (matrix matrix multiplication
@@ -133,10 +129,6 @@ void populateVectorReductionToContractPatterns(RewritePatternSet &patterns,
 ///  rank-reducing subviews.
 void populateVectorTransferFullPartialPatterns(
     RewritePatternSet &patterns, const VectorTransformsOptions &options);
-
-//===----------------------------------------------------------------------===//
-// Vector.transfer patterns.
-//===----------------------------------------------------------------------===//
 
 /// Collect a set of patterns to reduce the rank of the operands of vector
 /// transfer ops to operate on the largest contigious vector.
@@ -262,6 +254,49 @@ void populateVectorTransferTensorSliceTransforms(
 void populateVectorUnrollPatterns(RewritePatternSet &patterns,
                                   const UnrollVectorOptions &options,
                                   PatternBenefit benefit = 1);
+
+/// Collect a set of vector.shape_cast folding patterns.
+void populateShapeCastFoldingPatterns(RewritePatternSet &patterns,
+                                      PatternBenefit benefit = 1);
+
+/// Collect a set of leading one dimension removal patterns.
+///
+/// These patterns insert vector.shape_cast to remove leading one dimensions
+/// to expose more canonical forms of read/write/insert/extract operations.
+/// With them, there are more chances that we can cancel out extract-insert
+/// pairs or forward write-read pairs.
+void populateCastAwayVectorLeadingOneDimPatterns(RewritePatternSet &patterns,
+                                                 PatternBenefit benefit = 1);
+
+/// Collect a set of one dimension removal patterns.
+///
+/// These patterns insert rank-reducing memref.subview ops to remove one
+/// dimensions. With them, there are more chances that we can avoid
+/// potentially expensive vector.shape_cast operations.
+void populateVectorTransferDropUnitDimsPatterns(RewritePatternSet &patterns,
+                                                PatternBenefit benefit = 1);
+
+/// Collect a set of patterns to flatten n-D vector transfers on contiguous
+/// memref.
+///
+/// These patterns insert memref.collapse_shape + vector.shape_cast patterns
+/// to transform multiple small n-D transfers into a larger 1-D transfer where
+/// the memref contiguity properties allow it.
+void populateFlattenVectorTransferPatterns(RewritePatternSet &patterns,
+                                           PatternBenefit benefit = 1);
+
+/// Collect a set of patterns that bubble up/down bitcast ops.
+///
+/// These patterns move vector.bitcast ops to be before insert ops or after
+/// extract ops where suitable. With them, bitcast will happen on smaller
+/// vectors and there are more chances to share extract/insert ops.
+void populateBubbleVectorBitCastOpPatterns(RewritePatternSet &patterns,
+                                           PatternBenefit benefit = 1);
+
+/// These patterns materialize masks for various vector ops such as transfers.
+void populateVectorMaskMaterializationPatterns(RewritePatternSet &patterns,
+                                               bool force32BitVectorIndices,
+                                               PatternBenefit benefit = 1);
 
 } // namespace vector
 } // namespace mlir

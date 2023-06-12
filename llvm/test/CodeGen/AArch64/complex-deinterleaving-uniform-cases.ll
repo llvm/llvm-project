@@ -115,15 +115,7 @@ entry:
 define <4 x float> @simple_add_270_false(<4 x float> %a, <4 x float> %b) {
 ; CHECK-LABEL: simple_add_270_false:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    ext v2.16b, v0.16b, v0.16b, #8
-; CHECK-NEXT:    ext v3.16b, v1.16b, v1.16b, #8
-; CHECK-NEXT:    zip1 v4.2s, v0.2s, v2.2s
-; CHECK-NEXT:    zip2 v0.2s, v0.2s, v2.2s
-; CHECK-NEXT:    zip1 v2.2s, v1.2s, v3.2s
-; CHECK-NEXT:    zip2 v1.2s, v1.2s, v3.2s
-; CHECK-NEXT:    fadd v1.2s, v1.2s, v4.2s
-; CHECK-NEXT:    fsub v0.2s, v0.2s, v2.2s
-; CHECK-NEXT:    zip1 v0.4s, v1.4s, v0.4s
+; CHECK-NEXT:    fcadd v0.4s, v0.4s, v1.4s, #270
 ; CHECK-NEXT:    ret
 entry:
   %strided.vec = shufflevector <4 x float> %a, <4 x float> poison, <2 x i32> <i32 0, i32 2>

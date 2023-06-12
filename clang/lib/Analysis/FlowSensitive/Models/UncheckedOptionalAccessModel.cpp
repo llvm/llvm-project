@@ -307,12 +307,12 @@ StorageLocation *maybeInitializeOptionalValueMember(QualType Q,
                                                     Environment &Env) {
   // The "value" property represents a synthetic field. As such, it needs
   // `StorageLocation`, like normal fields (and other variables). So, we model
-  // it with a `ReferenceValue`, since that includes a storage location.  Once
+  // it with a `PointerValue`, since that includes a storage location.  Once
   // the property is set, it will be shared by all environments that access the
   // `Value` representing the optional (here, `OptionalVal`).
   if (auto *ValueProp = OptionalVal.getProperty("value")) {
-    auto *ValueRef = clang::cast<ReferenceValue>(ValueProp);
-    auto &ValueLoc = ValueRef->getReferentLoc();
+    auto *ValuePtr = clang::cast<PointerValue>(ValueProp);
+    auto &ValueLoc = ValuePtr->getPointeeLoc();
     if (Env.getValue(ValueLoc) == nullptr) {
       // The property was previously set, but the value has been lost. This can
       // happen, for example, because of an environment merge (where the two
@@ -339,8 +339,8 @@ StorageLocation *maybeInitializeOptionalValueMember(QualType Q,
     return nullptr;
   auto &ValueLoc = Env.createStorageLocation(Ty);
   Env.setValue(ValueLoc, *ValueVal);
-  auto &ValueRef = Env.create<ReferenceValue>(ValueLoc);
-  OptionalVal.setProperty("value", ValueRef);
+  auto &ValuePtr = Env.create<PointerValue>(ValueLoc);
+  OptionalVal.setProperty("value", ValuePtr);
   return &ValueLoc;
 }
 

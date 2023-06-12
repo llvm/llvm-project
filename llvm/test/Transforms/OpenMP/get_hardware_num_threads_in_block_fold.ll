@@ -18,7 +18,7 @@ target triple = "nvptx64"
 ; CHECK: @[[GLOB0:[0-9]+]] = private unnamed_addr constant [23 x i8] c"
 ; CHECK: @[[GLOB1:[0-9]+]] = private unnamed_addr constant [[STRUCT_IDENT_T:%.*]] { i32 0, i32 2, i32 0, i32 22, ptr @[[GLOB0]] }, align 8
 ;.
-define weak void @kernel0() #0 {
+define weak void @kernel0() "kernel" #0 {
 ; CHECK-LABEL: define {{[^@]+}}@kernel0
 ; CHECK-SAME: () #[[ATTR0:[0-9]+]] {
 ; CHECK-NEXT:    [[I:%.*]] = call i32 @__kmpc_target_init(ptr null, i8 2, i1 false)
@@ -45,7 +45,7 @@ define weak void @kernel0() #0 {
 
 @kernel1_exec_mode = weak constant i8 1
 
-define weak void @kernel1() #0 {
+define weak void @kernel1() "kernel" #0 {
 ; CHECK-LABEL: define {{[^@]+}}@kernel1
 ; CHECK-SAME: () #[[ATTR0]] {
 ; CHECK-NEXT:    [[I:%.*]] = call i32 @__kmpc_target_init(ptr null, i8 2, i1 false)
@@ -68,7 +68,7 @@ define weak void @kernel1() #0 {
 
 @kernel2_exec_mode = weak constant i8 1
 
-define weak void @kernel2() #0 {
+define weak void @kernel2() "kernel" #0 {
 ; CHECK-LABEL: define {{[^@]+}}@kernel2
 ; CHECK-SAME: () #[[ATTR0]] {
 ; CHECK-NEXT:  entry:
@@ -216,7 +216,7 @@ attributes #0 = { "omp_target_thread_limit"="666" "omp_target_num_teams"="777"}
 !4 = !{ptr @kernel2, !"kernel", i32 1}
 ;
 ;.
-; CHECK: attributes #[[ATTR0]] = { "omp_target_num_teams"="777" "omp_target_thread_limit"="666" }
+; CHECK: attributes #[[ATTR0]] = { "kernel" "omp_target_num_teams"="777" "omp_target_thread_limit"="666" }
 ; CHECK: attributes #[[ATTR1]] = { nounwind }
 ; CHECK: attributes #[[ATTR2:[0-9]+]] = { alwaysinline }
 ; CHECK: attributes #[[ATTR3:[0-9]+]] = { convergent nounwind }

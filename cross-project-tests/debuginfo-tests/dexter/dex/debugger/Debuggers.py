@@ -9,6 +9,7 @@
 from collections import OrderedDict
 import os
 import pickle
+import platform
 import subprocess
 import sys
 from tempfile import NamedTemporaryFile
@@ -97,7 +98,7 @@ def add_debugger_tool_arguments(parser, context, defaults):
     parser.add_argument(
         "--show-debugger", action="store_true", default=None, help="show the debugger"
     )
-    defaults.arch = "x86_64"
+    defaults.arch = platform.machine()
     parser.add_argument(
         "--arch",
         type=str,

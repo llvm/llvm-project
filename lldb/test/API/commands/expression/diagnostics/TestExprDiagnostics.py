@@ -30,20 +30,38 @@ class ExprDiagnosticsTestCase(TestBase):
         self.assertFalse(value.GetError().Success())
         # We should get a nice diagnostic with a caret pointing at the start of
         # the identifier.
-        self.assertIn("\nunknown_identifier\n^\n", value.GetError().GetCString())
+        self.assertIn(
+            """
+    1 | unknown_identifier
+      | ^
+""",
+            value.GetError().GetCString(),
+        )
         self.assertIn("<user expression 0>:1:1", value.GetError().GetCString())
 
         # Same as above but with the identifier in the middle.
-        value = frame.EvaluateExpression("1 + unknown_identifier  ")
+        value = frame.EvaluateExpression("1 + unknown_identifier")
         self.assertFalse(value.GetError().Success())
-        self.assertIn("\n1 + unknown_identifier", value.GetError().GetCString())
-        self.assertIn("\n    ^\n", value.GetError().GetCString())
+        self.assertIn(
+            """
+    1 | 1 + unknown_identifier
+      |     ^
+""",
+            value.GetError().GetCString(),
+        )
 
         # Multiline expressions.
         value = frame.EvaluateExpression("int a = 0;\nfoobar +=1;\na")
         self.assertFalse(value.GetError().Success())
         # We should still get the right line information and caret position.
-        self.assertIn("\nfoobar +=1;\n^\n", value.GetError().GetCString())
+        self.assertIn(
+            """
+    2 | foobar +=1;
+      | ^
+""",
+            value.GetError().GetCString(),
+        )
+
         # It's the second line of the user expression.
         self.assertIn("<user expression 2>:2:1", value.GetError().GetCString())
 
@@ -54,8 +72,13 @@ class ExprDiagnosticsTestCase(TestBase):
         value = frame.EvaluateExpression("void foo(unknown_type x) {}", top_level_opts)
         self.assertFalse(value.GetError().Success())
         self.assertIn(
-            "\nvoid foo(unknown_type x) {}\n         ^\n", value.GetError().GetCString()
+            """
+    1 | void foo(unknown_type x) {}
+      |          ^
+""",
+            value.GetError().GetCString(),
         )
+
         # Top-level expressions might use a different wrapper code, but the file name should still
         # be the same.
         self.assertIn("<user expression 3>:1:10", value.GetError().GetCString())
@@ -63,7 +86,14 @@ class ExprDiagnosticsTestCase(TestBase):
         # Multiline top-level expressions.
         value = frame.EvaluateExpression("void x() {}\nvoid foo;", top_level_opts)
         self.assertFalse(value.GetError().Success())
-        self.assertIn("\nvoid foo;\n     ^", value.GetError().GetCString())
+        self.assertIn(
+            """
+    2 | void foo;
+      |      ^
+""",
+            value.GetError().GetCString(),
+        )
+
         self.assertIn("<user expression 4>:2:6", value.GetError().GetCString())
 
         # Test that we render Clang's 'notes' correctly.
@@ -72,7 +102,14 @@ class ExprDiagnosticsTestCase(TestBase):
         )
         self.assertFalse(value.GetError().Success())
         self.assertIn(
-            "<user expression 5>:1:8: previous definition is here\nstruct SFoo{}; struct SFoo { int x; };\n       ^\n",
+            "<user expression 5>:1:8: previous definition is here\n",
+            value.GetError().GetCString(),
+        )
+        self.assertIn(
+            """
+    1 | struct SFoo{}; struct SFoo { int x; };
+      |        ^
+""",
             value.GetError().GetCString(),
         )
 
@@ -82,14 +119,29 @@ class ExprDiagnosticsTestCase(TestBase):
         value = frame.EvaluateExpression("struct FooBar { double x };", top_level_opts)
         self.assertFalse(value.GetError().Success())
         self.assertIn(
-            "error: <user expression 6>:1:8: redefinition of 'FooBar'\nstruct FooBar { double x };\n       ^\n",
+            "error: <user expression 6>:1:8: redefinition of 'FooBar'\n",
+            value.GetError().GetCString(),
+        )
+        self.assertIn(
+            """
+    1 | struct FooBar { double x };
+      |        ^
+""",
             value.GetError().GetCString(),
         )
 
         value = frame.EvaluateExpression("foo(1, 2)")
         self.assertFalse(value.GetError().Success())
         self.assertIn(
-            "error: <user expression 7>:1:1: no matching function for call to 'foo'\nfoo(1, 2)\n^~~\nnote: candidate function not viable: requires single argument 'x', but 2 arguments were provided\n\n",
+            "error: <user expression 7>:1:1: no matching function for call to 'foo'\n",
+            value.GetError().GetCString(),
+        )
+        self.assertIn(
+            """
+    1 | foo(1, 2)
+      | ^~~
+note: candidate function not viable: requires single argument 'x', but 2 arguments were provided
+""",
             value.GetError().GetCString(),
         )
 
@@ -99,7 +151,14 @@ class ExprDiagnosticsTestCase(TestBase):
         value = frame.EvaluateExpression("struct Redef { float y; };", top_level_opts)
         self.assertFalse(value.GetError().Success())
         self.assertIn(
-            "error: <user expression 9>:1:8: redefinition of 'Redef'\nstruct Redef { float y; };\n       ^\n<user expression 8>:1:8: previous definition is here\nstruct Redef { double x; };\n       ^",
+            """
+error: <user expression 9>:1:8: redefinition of 'Redef'
+    1 | struct Redef { float y; };
+      |        ^
+<user expression 8>:1:8: previous definition is here
+    1 | struct Redef { double x; };
+      |        ^
+""",
             value.GetError().GetCString(),
         )
 

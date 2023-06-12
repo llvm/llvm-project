@@ -25,7 +25,8 @@ class MCRelaxableFragment;
 class MCSymbol;
 class MCAsmLayout;
 class MCAssembler;
-class MCCFIInstruction;
+class MCContext;
+struct MCDwarfFrameInfo;
 struct MCFixupKindInfo;
 class MCInst;
 class MCObjectStreamer;
@@ -210,8 +211,8 @@ public:
   virtual void handleAssemblerFlag(MCAssemblerFlag Flag) {}
 
   /// Generate the compact unwind encoding for the CFI instructions.
-  virtual uint32_t
-      generateCompactUnwindEncoding(ArrayRef<MCCFIInstruction>) const {
+  virtual uint32_t generateCompactUnwindEncoding(const MCDwarfFrameInfo *FI,
+                                                 const MCContext *Ctxt) const {
     return 0;
   }
 
@@ -219,6 +220,8 @@ public:
   virtual bool isMicroMips(const MCSymbol *Sym) const {
     return false;
   }
+
+  bool isDarwinCanonicalPersonality(const MCSymbol *Sym) const;
 };
 
 } // end namespace llvm

@@ -37,6 +37,10 @@ bool mlirTypeIsATransformOperationType(MlirType type) {
   return isa<transform::OperationType>(unwrap(type));
 }
 
+MlirTypeID mlirTransformOperationTypeGetTypeID(void) {
+  return wrap(transform::OperationType::getTypeID());
+}
+
 MlirType mlirTransformOperationTypeGet(MlirContext ctx,
                                        MlirStringRef operationName) {
   return wrap(

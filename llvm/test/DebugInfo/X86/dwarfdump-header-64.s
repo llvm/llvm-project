@@ -41,6 +41,7 @@ abbrev:
         .byte   0x17    # DW_FORM_sec_offset
         .byte   0x00    # EOM(1)
         .byte   0x00    # EOM(2)
+        .byte   0x00    # EOM(3)
 
 .ifdef ELF
         .section .debug_info,"",@progbits

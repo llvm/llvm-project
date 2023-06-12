@@ -15,7 +15,6 @@
 
 #include "Frame.h"
 #include "Program.h"
-#include "State.h"
 #include <cstdint>
 #include <vector>
 
@@ -120,6 +119,8 @@ public:
   const Expr *getExpr(CodePtr PC) const;
   SourceLocation getLocation(CodePtr PC) const;
 
+  unsigned getDepth() const { return Depth; }
+
 private:
   /// Returns an original argument from the stack.
   template <typename T> const T &stackRef(unsigned Offset) const {
@@ -145,6 +146,8 @@ private:
 private:
   /// Reference to the interpreter state.
   InterpState &S;
+  /// Depth of this frame.
+  unsigned Depth;
   /// Reference to the function being executed.
   const Function *Func;
   /// Current object pointer for methods.

@@ -21,7 +21,7 @@
 
 _LIBCPP_BEGIN_NAMESPACE_FILESYSTEM
 
-_LIBCPP_AVAILABILITY_FILESYSTEM_PUSH
+_LIBCPP_AVAILABILITY_FILESYSTEM_LIBRARY_PUSH
 
 // On Windows, these permission bits map to one single readonly flag per
 // file, and the executable bit is always returned as set. When setting
@@ -86,7 +86,7 @@ inline perms& operator|=(perms& __lhs, perms __rhs) { return __lhs = __lhs | __r
 _LIBCPP_INLINE_VISIBILITY
 inline perms& operator^=(perms& __lhs, perms __rhs) { return __lhs = __lhs ^ __rhs; }
 
-_LIBCPP_AVAILABILITY_FILESYSTEM_POP
+_LIBCPP_AVAILABILITY_FILESYSTEM_LIBRARY_POP
 
 _LIBCPP_END_NAMESPACE_FILESYSTEM
 

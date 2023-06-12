@@ -165,8 +165,6 @@ private:
     Error bootstrapPipelineRecordRuntimeFunctions(jitlink::LinkGraph &G);
     Error bootstrapPipelineEnd(jitlink::LinkGraph &G);
 
-    Error recordRuntimeRegistrationFunctions(jitlink::LinkGraph &G);
-
     Error associateJITDylibHeaderSymbol(jitlink::LinkGraph &G,
                                         MaterializationResponsibility &MR);
 

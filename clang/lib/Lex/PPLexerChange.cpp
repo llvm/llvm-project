@@ -223,18 +223,17 @@ void Preprocessor::EnterTokenStream(const Token *Toks, unsigned NumToks,
 /// Compute the relative path that names the given file relative to
 /// the given directory.
 static void computeRelativePath(FileManager &FM, const DirectoryEntry *Dir,
-                                const FileEntry *File,
-                                SmallString<128> &Result) {
+                                FileEntryRef File, SmallString<128> &Result) {
   Result.clear();
 
-  StringRef FilePath = File->getDir()->getName();
+  StringRef FilePath = File.getDir().getName();
   StringRef Path = FilePath;
   while (!Path.empty()) {
     if (auto CurDir = FM.getDirectory(Path)) {
       if (*CurDir == Dir) {
         Result = FilePath.substr(Path.size());
         llvm::sys::path::append(Result,
-                                llvm::sys::path::filename(File->getName()));
+                                llvm::sys::path::filename(File.getName()));
         return;
       }
     }
@@ -242,7 +241,7 @@ static void computeRelativePath(FileManager &FM, const DirectoryEntry *Dir,
     Path = llvm::sys::path::parent_path(Path);
   }
 
-  Result = File->getName();
+  Result = File.getName();
 }
 
 void Preprocessor::PropagateLineStartLeadingSpaceInfo(Token &Result) {
@@ -282,23 +281,24 @@ const char *Preprocessor::getCurLexerEndPos() {
 
 static void collectAllSubModulesWithUmbrellaHeader(
     const Module &Mod, SmallVectorImpl<const Module *> &SubMods) {
-  if (Mod.getUmbrellaHeader())
+  if (Mod.getUmbrellaHeaderAsWritten())
     SubMods.push_back(&Mod);
   for (auto *M : Mod.submodules())
     collectAllSubModulesWithUmbrellaHeader(*M, SubMods);
 }
 
 void Preprocessor::diagnoseMissingHeaderInUmbrellaDir(const Module &Mod) {
-  const Module::Header &UmbrellaHeader = Mod.getUmbrellaHeader();
-  assert(UmbrellaHeader.Entry && "Module must use umbrella header");
-  const FileID &File = SourceMgr.translateFile(UmbrellaHeader.Entry);
+  std::optional<Module::Header> UmbrellaHeader =
+      Mod.getUmbrellaHeaderAsWritten();
+  assert(UmbrellaHeader && "Module must use umbrella header");
+  const FileID &File = SourceMgr.translateFile(UmbrellaHeader->Entry);
   SourceLocation ExpectedHeadersLoc = SourceMgr.getLocForEndOfFile(File);
   if (getDiagnostics().isIgnored(diag::warn_uncovered_module_header,
                                  ExpectedHeadersLoc))
     return;
 
   ModuleMap &ModMap = getHeaderSearchInfo().getModuleMap();
-  const DirectoryEntry *Dir = Mod.getUmbrellaDir().Entry;
+  OptionalDirectoryEntryRef Dir = Mod.getEffectiveUmbrellaDir();
   llvm::vfs::FileSystem &FS = FileMgr.getVirtualFileSystem();
   std::error_code EC;
   for (llvm::vfs::recursive_directory_iterator Entry(FS, Dir->getName(), EC),
@@ -313,12 +313,12 @@ void Preprocessor::diagnoseMissingHeaderInUmbrellaDir(const Module &Mod) {
              .Default(false))
       continue;
 
-    if (auto Header = getFileManager().getFile(Entry->path()))
+    if (auto Header = getFileManager().getOptionalFileRef(Entry->path()))
       if (!getSourceManager().hasFileInfo(*Header)) {
         if (!ModMap.isHeaderInUnavailableModule(*Header)) {
           // Find the relative path that would access this header.
           SmallString<128> RelativePath;
-          computeRelativePath(FileMgr, Dir, *Header, RelativePath);
+          computeRelativePath(FileMgr, *Dir, *Header, RelativePath);
           Diag(ExpectedHeadersLoc, diag::warn_uncovered_module_header)
               << Mod.getFullModuleName() << RelativePath;
         }

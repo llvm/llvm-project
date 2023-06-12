@@ -9,63 +9,86 @@
 
 
 ; Spills eax, putting original esp at +4.
-; No stack adjustment if declared with no error code
+; Stack is dyamically realigned to 16 bytes, and then reloaded to ebp - 4
+; With no error code, the stack is not incremented by 4 bytes before returning
 define x86_intrcc void @test_isr_no_ecode(ptr byval(%struct.interrupt_frame) %frame) nounwind {
 ; CHECK-LABEL: test_isr_no_ecode:
 ; CHECK:       # %bb.0:
+; CHECK-NEXT:    pushl %ebp
+; CHECK-NEXT:    movl %esp, %ebp
 ; CHECK-NEXT:    pushl %eax
+; CHECK-NEXT:    andl $-16, %esp
 ; CHECK-NEXT:    cld
-; CHECK-NEXT:    movl 12(%esp), %eax
+; CHECK-NEXT:    movl 12(%ebp), %eax
 ; CHECK-NEXT:    #APP
 ; CHECK-NEXT:    #NO_APP
+; CHECK-NEXT:    leal -4(%ebp), %esp
 ; CHECK-NEXT:    popl %eax
+; CHECK-NEXT:    popl %ebp
 ; CHECK-NEXT:    iretl
 ;
 ; CHECK0-LABEL: test_isr_no_ecode:
 ; CHECK0:       # %bb.0:
+; CHECK0-NEXT:    pushl %ebp
+; CHECK0-NEXT:    movl %esp, %ebp
 ; CHECK0-NEXT:    pushl %eax
+; CHECK0-NEXT:    andl $-16, %esp
 ; CHECK0-NEXT:    cld
-; CHECK0-NEXT:    leal 4(%esp), %eax
+; CHECK0-NEXT:    leal 4(%ebp), %eax
 ; CHECK0-NEXT:    movl 8(%eax), %eax
 ; CHECK0-NEXT:    #APP
 ; CHECK0-NEXT:    #NO_APP
+; CHECK0-NEXT:    leal -4(%ebp), %esp
 ; CHECK0-NEXT:    popl %eax
+; CHECK0-NEXT:    popl %ebp
 ; CHECK0-NEXT:    iretl
+; CHECK-NEXT;    movl %esp, %ebp
   %pflags = getelementptr inbounds %struct.interrupt_frame, ptr %frame, i32 0, i32 2
   %flags = load i32, ptr %pflags, align 4
   call void asm sideeffect "", "r"(i32 %flags)
   ret void
 }
 
-; Spills eax and ecx, putting original esp at +8. Stack is adjusted up another 4 bytes
-; before return, popping the error code.
+; Spills eax and ecx, putting original esp at +8.
+; Stack is dynamically realigned to 16 bytes, and then reloaded to ebp - 8
+; Error code is popped from the stack with an increment of 4 before returning
 define x86_intrcc void @test_isr_ecode(ptr byval(%struct.interrupt_frame) %frame, i32 %ecode) nounwind {
 ; CHECK-LABEL: test_isr_ecode:
 ; CHECK:       # %bb.0:
+; CHECK-NEXT:    pushl %ebp
+; CHECK-NEXT:    movl %esp, %ebp
 ; CHECK-NEXT:    pushl %ecx
 ; CHECK-NEXT:    pushl %eax
+; CHECK-NEXT:    andl $-16, %esp
 ; CHECK-NEXT:    cld
-; CHECK-NEXT:    movl 8(%esp), %eax
-; CHECK-NEXT:    movl 20(%esp), %ecx
+; CHECK-NEXT:    movl 4(%ebp), %eax
+; CHECK-NEXT:    movl 16(%ebp), %ecx
 ; CHECK-NEXT:    #APP
 ; CHECK-NEXT:    #NO_APP
+; CHECK-NEXT:    leal -8(%ebp), %esp
 ; CHECK-NEXT:    popl %eax
 ; CHECK-NEXT:    popl %ecx
+; CHECK-NEXT:    popl %ebp
 ; CHECK-NEXT:    addl $4, %esp
 ; CHECK-NEXT:    iretl
 ;
 ; CHECK0-LABEL: test_isr_ecode:
 ; CHECK0:       # %bb.0:
+; CHECK0-NEXT:    pushl %ebp
+; CHECK0-NEXT:    movl %esp, %ebp
 ; CHECK0-NEXT:    pushl %ecx
 ; CHECK0-NEXT:    pushl %eax
+; CHECK0-NEXT:    andl $-16, %esp
 ; CHECK0-NEXT:    cld
-; CHECK0-NEXT:    movl 8(%esp), %ecx
-; CHECK0-NEXT:    leal 12(%esp), %eax
+; CHECK0-NEXT:    movl 4(%ebp), %ecx
+; CHECK0-NEXT:    leal 8(%ebp), %eax
 ; CHECK0-NEXT:    movl 8(%eax), %eax
 ; CHECK0-NEXT:    #APP
 ; CHECK0-NEXT:    #NO_APP
+; CHECK0-NEXT:    leal -8(%ebp), %esp
 ; CHECK0-NEXT:    popl %eax
 ; CHECK0-NEXT:    popl %ecx
+; CHECK0-NEXT:    popl %ebp
 ; CHECK0-NEXT:    addl $4, %esp
 ; CHECK0-NEXT:    iretl
   %pflags = getelementptr inbounds %struct.interrupt_frame, ptr %frame, i32 0, i32 2
@@ -79,13 +102,18 @@ define x86_intrcc void @test_isr_clobbers(ptr byval(%struct.interrupt_frame) %fr
 ; CHECK-LABEL: test_isr_clobbers:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    pushl %ebp
+; CHECK-NEXT:    movl %esp, %ebp
+; CHECK-NEXT:    pushl %ecx
 ; CHECK-NEXT:    pushl %ebx
 ; CHECK-NEXT:    pushl %eax
+; CHECK-NEXT:    andl $-16, %esp
 ; CHECK-NEXT:    cld
 ; CHECK-NEXT:    #APP
 ; CHECK-NEXT:    #NO_APP
+; CHECK-NEXT:    leal -12(%ebp), %esp
 ; CHECK-NEXT:    popl %eax
 ; CHECK-NEXT:    popl %ebx
+; CHECK-NEXT:    popl %ecx
 ; CHECK-NEXT:    popl %ebp
 ; CHECK-NEXT:    addl $4, %esp
 ; CHECK-NEXT:    iretl
@@ -93,17 +121,22 @@ define x86_intrcc void @test_isr_clobbers(ptr byval(%struct.interrupt_frame) %fr
 ; CHECK0-LABEL: test_isr_clobbers:
 ; CHECK0:       # %bb.0:
 ; CHECK0-NEXT:    pushl %ebp
+; CHECK0-NEXT:    movl %esp, %ebp
+; CHECK0-NEXT:    pushl %ecx
 ; CHECK0-NEXT:    pushl %ebx
 ; CHECK0-NEXT:    pushl %eax
+; CHECK0-NEXT:    andl $-16, %esp
 ; CHECK0-NEXT:    cld
 ; CHECK0-NEXT:    #APP
 ; CHECK0-NEXT:    #NO_APP
+; CHECK0-NEXT:    leal -12(%ebp), %esp
 ; CHECK0-NEXT:    popl %eax
 ; CHECK0-NEXT:    popl %ebx
+; CHECK0-NEXT:    popl %ecx
 ; CHECK0-NEXT:    popl %ebp
 ; CHECK0-NEXT:    addl $4, %esp
 ; CHECK0-NEXT:    iretl
-  call void asm sideeffect "", "~{eax},~{ebx},~{ebp}"()
+  call void asm sideeffect "", "~{eax},~{ebx},~{ecx},~{ebp}"()
   ret void
 }
 
@@ -113,20 +146,30 @@ define x86_intrcc void @test_isr_clobbers(ptr byval(%struct.interrupt_frame) %fr
 define x86_intrcc void @test_isr_x87(ptr byval(%struct.interrupt_frame) %frame) nounwind {
 ; CHECK-LABEL: test_isr_x87:
 ; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    pushl %ebp
+; CHECK-NEXT:    movl %esp, %ebp
+; CHECK-NEXT:    andl $-16, %esp
 ; CHECK-NEXT:    cld
 ; CHECK-NEXT:    fldt f80
 ; CHECK-NEXT:    fld1
 ; CHECK-NEXT:    faddp %st, %st(1)
 ; CHECK-NEXT:    fstpt f80
+; CHECK-NEXT:    movl %ebp, %esp
+; CHECK-NEXT:    popl %ebp
 ; CHECK-NEXT:    iretl
 ;
 ; CHECK0-LABEL: test_isr_x87:
 ; CHECK0:       # %bb.0: # %entry
+; CHECK0-NEXT:    pushl %ebp
+; CHECK0-NEXT:    movl %esp, %ebp
+; CHECK0-NEXT:    andl $-16, %esp
 ; CHECK0-NEXT:    cld
 ; CHECK0-NEXT:    fldt f80
 ; CHECK0-NEXT:    fld1
 ; CHECK0-NEXT:    faddp %st, %st(1)
 ; CHECK0-NEXT:    fstpt f80
+; CHECK0-NEXT:    movl %ebp, %esp
+; CHECK0-NEXT:    popl %ebp
 ; CHECK0-NEXT:    iretl
 entry:
   %ld = load x86_fp80, ptr @f80, align 4
@@ -135,8 +178,8 @@ entry:
   ret void
 }
 
-; Use a frame pointer to check the offsets. No return address, arguments start
-; at EBP+4.
+; Use the interrupt_frame pointer to check the offsets.
+; No return address, arguments start at EBP+4.
 define dso_local x86_intrcc void @test_fp_1(ptr byval(%struct.interrupt_frame) %p) #0 {
 ; CHECK-LABEL: test_fp_1:
 ; CHECK:       # %bb.0: # %entry
@@ -144,11 +187,13 @@ define dso_local x86_intrcc void @test_fp_1(ptr byval(%struct.interrupt_frame) %
 ; CHECK-NEXT:    movl %esp, %ebp
 ; CHECK-NEXT:    pushl %ecx
 ; CHECK-NEXT:    pushl %eax
+; CHECK-NEXT:    andl $-16, %esp
 ; CHECK-NEXT:    cld
 ; CHECK-NEXT:    leal 20(%ebp), %eax
 ; CHECK-NEXT:    leal 4(%ebp), %ecx
 ; CHECK-NEXT:    movl %ecx, sink_address
 ; CHECK-NEXT:    movl %eax, sink_address
+; CHECK-NEXT:    leal -8(%ebp), %esp
 ; CHECK-NEXT:    popl %eax
 ; CHECK-NEXT:    popl %ecx
 ; CHECK-NEXT:    popl %ebp
@@ -160,12 +205,14 @@ define dso_local x86_intrcc void @test_fp_1(ptr byval(%struct.interrupt_frame) %
 ; CHECK0-NEXT:    movl %esp, %ebp
 ; CHECK0-NEXT:    pushl %ecx
 ; CHECK0-NEXT:    pushl %eax
+; CHECK0-NEXT:    andl $-16, %esp
 ; CHECK0-NEXT:    cld
 ; CHECK0-NEXT:    leal 4(%ebp), %ecx
 ; CHECK0-NEXT:    movl %ecx, %eax
 ; CHECK0-NEXT:    addl $16, %eax
 ; CHECK0-NEXT:    movl %ecx, sink_address
 ; CHECK0-NEXT:    movl %eax, sink_address
+; CHECK0-NEXT:    leal -8(%ebp), %esp
 ; CHECK0-NEXT:    popl %eax
 ; CHECK0-NEXT:    popl %ecx
 ; CHECK0-NEXT:    popl %ebp
@@ -186,6 +233,7 @@ define dso_local x86_intrcc void @test_fp_2(ptr byval(%struct.interrupt_frame) %
 ; CHECK-NEXT:    pushl %edx
 ; CHECK-NEXT:    pushl %ecx
 ; CHECK-NEXT:    pushl %eax
+; CHECK-NEXT:    andl $-16, %esp
 ; CHECK-NEXT:    cld
 ; CHECK-NEXT:    movl 4(%ebp), %eax
 ; CHECK-NEXT:    leal 24(%ebp), %ecx
@@ -193,6 +241,7 @@ define dso_local x86_intrcc void @test_fp_2(ptr byval(%struct.interrupt_frame) %
 ; CHECK-NEXT:    movl %edx, sink_address
 ; CHECK-NEXT:    movl %ecx, sink_address
 ; CHECK-NEXT:    movl %eax, sink_i32
+; CHECK-NEXT:    leal -12(%ebp), %esp
 ; CHECK-NEXT:    popl %eax
 ; CHECK-NEXT:    popl %ecx
 ; CHECK-NEXT:    popl %edx
@@ -207,6 +256,7 @@ define dso_local x86_intrcc void @test_fp_2(ptr byval(%struct.interrupt_frame) %
 ; CHECK0-NEXT:    pushl %edx
 ; CHECK0-NEXT:    pushl %ecx
 ; CHECK0-NEXT:    pushl %eax
+; CHECK0-NEXT:    andl $-16, %esp
 ; CHECK0-NEXT:    cld
 ; CHECK0-NEXT:    movl 4(%ebp), %eax
 ; CHECK0-NEXT:    leal 8(%ebp), %edx
@@ -215,6 +265,7 @@ define dso_local x86_intrcc void @test_fp_2(ptr byval(%struct.interrupt_frame) %
 ; CHECK0-NEXT:    movl %edx, sink_address
 ; CHECK0-NEXT:    movl %ecx, sink_address
 ; CHECK0-NEXT:    movl %eax, sink_i32
+; CHECK0-NEXT:    leal -12(%ebp), %esp
 ; CHECK0-NEXT:    popl %eax
 ; CHECK0-NEXT:    popl %ecx
 ; CHECK0-NEXT:    popl %edx
@@ -236,9 +287,11 @@ define x86_intrcc void @test_copy_elide(ptr byval(%struct.interrupt_frame) %fram
 ; CHECK-NEXT:    pushl %ebp
 ; CHECK-NEXT:    movl %esp, %ebp
 ; CHECK-NEXT:    pushl %eax
+; CHECK-NEXT:    andl $-16, %esp
 ; CHECK-NEXT:    cld
 ; CHECK-NEXT:    leal 4(%ebp), %eax
 ; CHECK-NEXT:    movl %eax, sink_address
+; CHECK-NEXT:    leal -4(%ebp), %esp
 ; CHECK-NEXT:    popl %eax
 ; CHECK-NEXT:    popl %ebp
 ; CHECK-NEXT:    addl $4, %esp
@@ -249,10 +302,12 @@ define x86_intrcc void @test_copy_elide(ptr byval(%struct.interrupt_frame) %fram
 ; CHECK0-NEXT:    pushl %ebp
 ; CHECK0-NEXT:    movl %esp, %ebp
 ; CHECK0-NEXT:    pushl %eax
+; CHECK0-NEXT:    andl $-16, %esp
 ; CHECK0-NEXT:    cld
 ; CHECK0-NEXT:    movl 4(%ebp), %eax
 ; CHECK0-NEXT:    leal 4(%ebp), %eax
 ; CHECK0-NEXT:    movl %eax, sink_address
+; CHECK0-NEXT:    leal -4(%ebp), %esp
 ; CHECK0-NEXT:    popl %eax
 ; CHECK0-NEXT:    popl %ebp
 ; CHECK0-NEXT:    addl $4, %esp
@@ -264,4 +319,75 @@ entry:
   ret void
 }
 
+; Disabling dynamic realignment with attributes should work
+define x86_intrcc void @test_isr_no_realign(ptr byval(%struct.interrupt_frame) %frame) #1 {
+; CHECK-LABEL: test_isr_no_realign:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    pushl %eax
+; CHECK-NEXT:    cld
+; CHECK-NEXT:    movl 12(%esp), %eax
+; CHECK-NEXT:    #APP
+; CHECK-NEXT:    #NO_APP
+; CHECK-NEXT:    popl %eax
+; CHECK-NEXT:    iretl
+;
+; CHECK0-LABEL: test_isr_no_realign:
+; CHECK0:       # %bb.0:
+; CHECK0-NEXT:    pushl %eax
+; CHECK0-NEXT:    cld
+; CHECK0-NEXT:    leal 4(%esp), %eax
+; CHECK0-NEXT:    movl 8(%eax), %eax
+; CHECK0-NEXT:    #APP
+; CHECK0-NEXT:    #NO_APP
+; CHECK0-NEXT:    popl %eax
+; CHECK0-NEXT:    iretl
+  %pflags = getelementptr inbounds %struct.interrupt_frame, ptr %frame, i32 0, i32 2
+  %flags = load i32, ptr %pflags, align 4
+  call void asm sideeffect "", "r"(i32 %flags)
+  ret void
+}
+
+; The stackrealign attribute should work, and the function's alignment
+; should be respected over the default 16-byte alignment required by the calling
+; convention.
+define x86_intrcc void @test_isr_realign(ptr byval(%struct.interrupt_frame) %frame, i32 %ecode) #2 {
+; CHECK-LABEL: test_isr_realign:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    pushl %ebp
+; CHECK-NEXT:    movl %esp, %ebp
+; CHECK-NEXT:    pushl %eax
+; CHECK-NEXT:    andl $-32, %esp
+; CHECK-NEXT:    subl $32, %esp
+; CHECK-NEXT:    cld
+; CHECK-NEXT:    movl 4(%ebp), %eax
+; CHECK-NEXT:    movl %eax, (%esp)
+; CHECK-NEXT:    leal -4(%ebp), %esp
+; CHECK-NEXT:    popl %eax
+; CHECK-NEXT:    popl %ebp
+; CHECK-NEXT:    addl $4, %esp
+; CHECK-NEXT:    iretl
+;
+; CHECK0-LABEL: test_isr_realign:
+; CHECK0:       # %bb.0:
+; CHECK0-NEXT:    pushl %ebp
+; CHECK0-NEXT:    movl %esp, %ebp
+; CHECK0-NEXT:    pushl %eax
+; CHECK0-NEXT:    andl $-32, %esp
+; CHECK0-NEXT:    subl $32, %esp
+; CHECK0-NEXT:    cld
+; CHECK0-NEXT:    movl 4(%ebp), %eax
+; CHECK0-NEXT:    movl %eax, (%esp)
+; CHECK0-NEXT:    leal -4(%ebp), %esp
+; CHECK0-NEXT:    popl %eax
+; CHECK0-NEXT:    popl %ebp
+; CHECK0-NEXT:    addl $4, %esp
+; CHECK0-NEXT:    iretl
+  %ecode.stack = alloca i32, align 32
+  store i32 %ecode, ptr %ecode.stack
+  ret void
+}
+
+
 attributes #0 = { nounwind "frame-pointer"="all" }
+attributes #1 = { nounwind "no-realign-stack" }
+attributes #2 = { nounwind "stackrealign" }

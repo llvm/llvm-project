@@ -733,23 +733,19 @@ void InstrInfoEmitter::emitFeatureVerifier(raw_ostream &OS,
   std::map<Record *, SubtargetFeatureInfo, LessRecordByID> SubtargetFeatures;
   SubtargetFeatures.insert(All.begin(), All.end());
 
-  OS << "#ifdef ENABLE_INSTR_PREDICATE_VERIFIER\n"
-     << "#undef ENABLE_INSTR_PREDICATE_VERIFIER\n"
-     << "#include <sstream>\n\n";
-
-  OS << "namespace llvm {\n";
-  OS << "namespace " << Target.getName() << "_MC {\n\n";
+  OS << "#if defined(ENABLE_INSTR_PREDICATE_VERIFIER) && !defined(NDEBUG)\n"
+     << "#define GET_COMPUTE_FEATURES\n"
+     << "#endif\n";
+  OS << "#ifdef GET_COMPUTE_FEATURES\n"
+     << "#undef GET_COMPUTE_FEATURES\n"
+     << "namespace llvm {\n"
+     << "namespace " << Target.getName() << "_MC {\n\n";
 
   // Emit the subtarget feature enumeration.
   SubtargetFeatureInfo::emitSubtargetFeatureBitEnumeration(SubtargetFeatures,
                                                            OS);
-
-  // Emit the name table for error messages.
-  OS << "#ifndef NDEBUG\n";
-  SubtargetFeatureInfo::emitNameTable(SubtargetFeatures, OS);
-  OS << "#endif // NDEBUG\n\n";
-
   // Emit the available features compute function.
+  OS << "inline ";
   SubtargetFeatureInfo::emitComputeAssemblerAvailableFeatures(
       Target.getName(), "", "computeAvailableFeatures", SubtargetFeatures, OS);
 
@@ -780,22 +776,21 @@ void InstrInfoEmitter::emitFeatureVerifier(raw_ostream &OS,
   FeatureBitsets.erase(
       std::unique(FeatureBitsets.begin(), FeatureBitsets.end()),
       FeatureBitsets.end());
-  OS << "#ifndef NDEBUG\n"
-     << "// Feature bitsets.\n"
-     << "enum : " << getMinimalTypeForRange(FeatureBitsets.size()) << " {\n"
-     << "  CEFBS_None,\n";
+  OS << "inline FeatureBitset computeRequiredFeatures(unsigned Opcode) {\n"
+     << "  enum : " << getMinimalTypeForRange(FeatureBitsets.size()) << " {\n"
+     << "    CEFBS_None,\n";
   for (const auto &FeatureBitset : FeatureBitsets) {
     if (FeatureBitset.empty())
       continue;
-    OS << "  " << getNameForFeatureBitset(FeatureBitset) << ",\n";
+    OS << "    " << getNameForFeatureBitset(FeatureBitset) << ",\n";
   }
-  OS << "};\n\n"
-     << "static constexpr FeatureBitset FeatureBitsets[] = {\n"
-     << "  {}, // CEFBS_None\n";
+  OS << "  };\n\n"
+     << "  static constexpr FeatureBitset FeatureBitsets[] = {\n"
+     << "    {}, // CEFBS_None\n";
   for (const auto &FeatureBitset : FeatureBitsets) {
     if (FeatureBitset.empty())
       continue;
-    OS << "  {";
+    OS << "    {";
     for (const auto &Feature : FeatureBitset) {
       const auto &I = SubtargetFeatures.find(Feature);
       assert(I != SubtargetFeatures.end() && "Didn't import predicate?");
@@ -803,13 +798,7 @@ void InstrInfoEmitter::emitFeatureVerifier(raw_ostream &OS,
     }
     OS << "},\n";
   }
-  OS << "};\n"
-     << "#endif // NDEBUG\n\n";
-
-  // Emit the predicate verifier.
-  OS << "void verifyInstructionPredicates(\n"
-     << "    unsigned Opcode, const FeatureBitset &Features) {\n"
-     << "#ifndef NDEBUG\n"
+  OS << "  };\n"
      << "  static " << getMinimalTypeForRange(FeatureBitsets.size())
      << " RequiredFeaturesRefs[] = {\n";
   unsigned InstIdx = 0;
@@ -828,12 +817,35 @@ void InstrInfoEmitter::emitFeatureVerifier(raw_ostream &OS,
     OS << ", // " << Inst->TheDef->getName() << " = " << InstIdx << "\n";
     InstIdx++;
   }
-  OS << "  };\n\n";
-  OS << "  assert(Opcode < " << InstIdx << ");\n";
+  OS << "  };\n\n"
+     << "  assert(Opcode < " << InstIdx << ");\n"
+     << "  return FeatureBitsets[RequiredFeaturesRefs[Opcode]];\n"
+     << "}\n\n";
+
+  OS << "} // end namespace " << Target.getName() << "_MC\n"
+     << "} // end namespace llvm\n"
+     << "#endif // GET_COMPUTE_FEATURES\n\n";
+
+  OS << "#ifdef ENABLE_INSTR_PREDICATE_VERIFIER\n"
+     << "#undef ENABLE_INSTR_PREDICATE_VERIFIER\n"
+     << "#include <sstream>\n\n";
+
+  OS << "namespace llvm {\n";
+  OS << "namespace " << Target.getName() << "_MC {\n\n";
+
+  // Emit the name table for error messages.
+  OS << "#ifndef NDEBUG\n";
+  SubtargetFeatureInfo::emitNameTable(SubtargetFeatures, OS);
+  OS << "#endif // NDEBUG\n\n";
+
+  // Emit the predicate verifier.
+  OS << "void verifyInstructionPredicates(\n"
+     << "    unsigned Opcode, const FeatureBitset &Features) {\n"
+     << "#ifndef NDEBUG\n";
   OS << "  FeatureBitset AvailableFeatures = "
         "computeAvailableFeatures(Features);\n";
-  OS << "  const FeatureBitset &RequiredFeatures = "
-        "FeatureBitsets[RequiredFeaturesRefs[Opcode]];\n";
+  OS << "  FeatureBitset RequiredFeatures = "
+     << "computeRequiredFeatures(Opcode);\n";
   OS << "  FeatureBitset MissingFeatures =\n"
      << "      (AvailableFeatures & RequiredFeatures) ^\n"
      << "      RequiredFeatures;\n"

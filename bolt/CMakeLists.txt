@@ -4,6 +4,9 @@ set(BOLT_SOURCE_DIR ${CMAKE_CURRENT_SOURCE_DIR})
 set(BOLT_BINARY_DIR ${CMAKE_CURRENT_BINARY_DIR})
 set(CMAKE_CXX_STANDARD 17)
 
+# Add path for custom modules.
+list(INSERT CMAKE_MODULE_PATH 0 "${BOLT_SOURCE_DIR}/cmake/modules")
+
 # Determine default set of targets to build -- the intersection of
 # those BOLT supports and those LLVM is targeting.
 set(BOLT_TARGETS_TO_BUILD_all "AArch64;X86")
@@ -110,6 +113,15 @@ if (BOLT_ENABLE_RUNTIME)
 endif()
 
 find_program(GNU_LD_EXECUTABLE NAMES ${LLVM_DEFAULT_TARGET_TRIPLE}-ld.bfd ld.bfd DOC "GNU ld")
+
+include(AddBOLT)
+
+option(BOLT_BUILD_TOOLS
+  "Build the BOLT tools. If OFF, just generate build targets." ON)
+
+add_custom_target(bolt)
+set_target_properties(bolt PROPERTIES FOLDER "BOLT")
+add_llvm_install_targets(install-bolt DEPENDS bolt COMPONENT bolt)
 
 include_directories(
   ${CMAKE_CURRENT_SOURCE_DIR}/include

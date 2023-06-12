@@ -36,7 +36,7 @@ public:
 protected:
   Status DoInitialization() override;
 
-  ConstString GetSourceFileBasename() override;
+  llvm::StringRef GetSourceFileBasename() override;
 
   const char *GetAutoIndentCharacters() override;
 

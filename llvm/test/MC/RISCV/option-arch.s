@@ -90,7 +90,7 @@ mul a4, ra, s0
 lr.w t0, (t1)
 
 # Test arch string without version number
-#CHECK: .option arch, rv32i2p1_m2p0_a2p1_c2p0
+# CHECK: .option arch, rv32i2p1_m2p0_a2p1_c2p0
 .option arch, rv32imac
 # CHECK-INST: mul a4, ra, s0
 # CHECK: # encoding:  [0x33,0x87,0x80,0x02]

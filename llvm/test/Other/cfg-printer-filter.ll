@@ -1,6 +1,8 @@
 ; RUN: rm -f %t.other.dot %t-only.other.dot
 
 ;; Both f and func are dumped because their names contain the pattern 'f' as a substring.
+;; Also checks dot-cfg pass runs on func which has optnone attribute.
+
 ; RUN: opt < %s -passes=dot-cfg -cfg-dot-filename-prefix=%t -cfg-func-name=f 2>/dev/null > /dev/null
 ; RUN: FileCheck %s -input-file=%t.f.dot -check-prefix=F
 ; RUN: FileCheck %s -input-file=%t.func.dot -check-prefix=Func
@@ -23,7 +25,7 @@ exit:                   ; preds = %entry, %if
 }
 
 ; Func: digraph "CFG for 'func' function"
-define void @func(i32) {
+define void @func(i32) optnone noinline {
 entry:
   %check = icmp sgt i32 %0, 0
   br label %exit

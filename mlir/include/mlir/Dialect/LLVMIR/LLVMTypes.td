@@ -225,4 +225,40 @@ def LLVMScalableVectorType : LLVMType<"LLVMScalableVector", "vec"> {
   }];
 }
 
+//===----------------------------------------------------------------------===//
+// LLVMTargetExtType
+//===----------------------------------------------------------------------===//
+
+def LLVMTargetExtType : LLVMType<"LLVMTargetExt", "target"> {
+  let summary = "LLVM target-specific extension type";
+  let description = [{
+    LLVM dialect target extension type, which are generally unintrospectable
+    from target-independent optimizations.
+
+    Target extension types have a string name, and optionally have type and/or
+    integer parameters. The exact meaning of any parameters is dependent on the
+    target.
+  }];
+
+  let parameters = (ins StringRefParameter<>:$extTypeName,
+                        OptionalArrayRefParameter<"Type">:$typeParams,
+                        OptionalArrayRefParameter<"unsigned int">:$intParams);
+
+  let assemblyFormat = [{
+    `<` $extTypeName (`,` custom<ExtTypeParams>($typeParams, $intParams)^ )? `>`
+  }];
+
+  let extraClassDeclaration = [{
+    enum Property {
+      /// zeroinitializer is valid for this target extension type.
+      HasZeroInit = 1U << 0,
+      /// This type may be used as the value type of a global variable.
+      CanBeGlobal = 1U << 1,
+    };
+
+    bool hasProperty(Property Prop) const;
+    bool supportsMemOps() const;
+  }];
+}
+
 #endif // LLVMTYPES_TD

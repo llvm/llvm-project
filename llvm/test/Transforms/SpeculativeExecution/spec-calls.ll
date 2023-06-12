@@ -302,3 +302,19 @@ b:
 }
 
 declare float @llvm.vector.reduce.fmin.v2f32(<2 x float>)
+
+; CHECK-LABEL: @ifThen_ldexp(
+; CHECK: %ldexp = call float @llvm.ldexp.f32.i32(float %x, i32 %y)
+; CHECK-NEXT: br i1 true
+define void @ifThen_ldexp(float %x, i32 %y) {
+  br i1 true, label %a, label %b
+
+a:
+  %ldexp = call float @llvm.ldexp.f32.i32(float %x, i32 %y)
+  br label %b
+
+b:
+  ret void
+}
+
+declare float @llvm.ldexp.f32.i32(float, i32)

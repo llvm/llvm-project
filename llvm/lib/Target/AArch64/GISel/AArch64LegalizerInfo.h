@@ -47,7 +47,6 @@ private:
                                   MachineIRBuilder &MIRBuilder,
                                   GISelChangeObserver &Observer) const;
   bool legalizeVectorTrunc(MachineInstr &MI, LegalizerHelper &Helper) const;
-  bool legalizeShuffleVector(MachineInstr &MI, LegalizerHelper &Helper) const;
   bool legalizeBitfieldExtract(MachineInstr &MI, MachineRegisterInfo &MRI,
                                LegalizerHelper &Helper) const;
   bool legalizeRotate(MachineInstr &MI, MachineRegisterInfo &MRI,

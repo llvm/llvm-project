@@ -1,5 +1,5 @@
 ! Test lowering of variables to fir.declare
-! RUN: bbc -emit-fir -hlfir %s -o - | FileCheck %s
+! RUN: bbc -emit-hlfir %s -o - | FileCheck %s
 
 subroutine scalar_numeric(x)
   integer :: x

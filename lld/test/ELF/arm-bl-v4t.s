@@ -154,11 +154,11 @@ thumb_start:
 // FAR-EB-PIE-NEXT:   100002c: 04 ff ff d9  	.word	0x04ffffd9
 
 // NEAR-LABEL: <_start>:
-// NEAR-NEXT:  1000000:      	bl	0x100000c <thumb_start+0x4> @ imm = #4
+// NEAR-NEXT:  1000000:      	bl	0x1000010 <target> @ imm = #8
 // NEAR-NEXT:               	bx	lr
 // NEAR-EMPTY:
 // NEAR-LABEL: <thumb_start>:
-// NEAR-NEXT:  1000008:      	bl	0x1000012 <thumb_target> @ imm = #6
+// NEAR-NEXT:  1000008:      	bl	0x1000014 <thumb_target> @ imm = #8
 // NEAR-NEXT:               	bx	lr
 
 .section .high, "ax", %progbits
@@ -187,10 +187,10 @@ thumb_target:
 // FAR-PIE-NEXT:   6000004:     bx	lr
 
 // NEAR-LABEL: <target>:
-// NEAR-LABEL:  100000e:      	bx	lr
+// NEAR-LABEL:  1000010:      	bx	lr
 // NEAR-EMPTY:
 // NEAR-NEXT: <thumb_target>:
-// NEAR-NEXT:  1000012:      	bx	lr
+// NEAR-NEXT:  1000014:      	bx	lr
 
                                      
 #--- far.lds

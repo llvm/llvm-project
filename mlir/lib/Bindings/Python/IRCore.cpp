@@ -25,6 +25,7 @@
 #include <utility>
 
 namespace py = pybind11;
+using namespace py::literals;
 using namespace mlir;
 using namespace mlir::python;
 
@@ -2121,13 +2122,12 @@ public:
 
 /// Returns the list of types of the values held by container.
 template <typename Container>
-static std::vector<PyType> getValueTypes(Container &container,
-                                         PyMlirContextRef &context) {
-  std::vector<PyType> result;
+static std::vector<MlirType> getValueTypes(Container &container,
+                                           PyMlirContextRef &context) {
+  std::vector<MlirType> result;
   result.reserve(container.size());
   for (int i = 0, e = container.size(); i < e; ++i) {
-    result.push_back(
-        PyType(context, mlirValueGetType(container.getElement(i).get())));
+    result.push_back(mlirValueGetType(container.getElement(i).get()));
   }
   return result;
 }
@@ -2640,10 +2640,7 @@ void mlir::python::populateIRCore(py::module &m) {
           "Context that owns the Location")
       .def_property_readonly(
           "attr",
-          [](PyLocation &self) {
-            return PyAttribute(self.getContext(),
-                               mlirLocationGetAttribute(self));
-          },
+          [](PyLocation &self) { return mlirLocationGetAttribute(self); },
           "Get the underlying LocationAttr")
       .def(
           "emit_error",
@@ -3139,7 +3136,7 @@ void mlir::python::populateIRCore(py::module &m) {
                 context->get(), toMlirStringRef(attrSpec));
             if (mlirAttributeIsNull(type))
               throw MLIRError("Unable to parse attribute", errors.take());
-            return PyAttribute(context->getRef(), type);
+            return type;
           },
           py::arg("asm"), py::arg("context") = py::none(),
           "Parses an attribute from an assembly form. Raises an MLIRError on "
@@ -3148,11 +3145,8 @@ void mlir::python::populateIRCore(py::module &m) {
           "context",
           [](PyAttribute &self) { return self.getContext().getObject(); },
           "Context that owns the Attribute")
-      .def_property_readonly("type",
-                             [](PyAttribute &self) {
-                               return PyType(self.getContext()->getRef(),
-                                             mlirAttributeGetType(self));
-                             })
+      .def_property_readonly(
+          "type", [](PyAttribute &self) { return mlirAttributeGetType(self); })
       .def(
           "get_named",
           [](PyAttribute &self, std::string name) {
@@ -3178,18 +3172,38 @@ void mlir::python::populateIRCore(py::module &m) {
             return printAccum.join();
           },
           "Returns the assembly form of the Attribute.")
-      .def("__repr__", [](PyAttribute &self) {
-        // Generally, assembly formats are not printed for __repr__ because
-        // this can cause exceptionally long debug output and exceptions.
-        // However, attribute values are generally considered useful and are
-        // printed. This may need to be re-evaluated if debug dumps end up
-        // being excessive.
-        PyPrintAccumulator printAccum;
-        printAccum.parts.append("Attribute(");
-        mlirAttributePrint(self, printAccum.getCallback(),
-                           printAccum.getUserData());
-        printAccum.parts.append(")");
-        return printAccum.join();
+      .def("__repr__",
+           [](PyAttribute &self) {
+             // Generally, assembly formats are not printed for __repr__ because
+             // this can cause exceptionally long debug output and exceptions.
+             // However, attribute values are generally considered useful and
+             // are printed. This may need to be re-evaluated if debug dumps end
+             // up being excessive.
+             PyPrintAccumulator printAccum;
+             printAccum.parts.append("Attribute(");
+             mlirAttributePrint(self, printAccum.getCallback(),
+                                printAccum.getUserData());
+             printAccum.parts.append(")");
+             return printAccum.join();
+           })
+      .def_property_readonly(
+          "typeid",
+          [](PyAttribute &self) -> MlirTypeID {
+            MlirTypeID mlirTypeID = mlirAttributeGetTypeID(self);
+            assert(!mlirTypeIDIsNull(mlirTypeID) &&
+                   "mlirTypeID was expected to be non-null.");
+            return mlirTypeID;
+          })
+      .def(MLIR_PYTHON_MAYBE_DOWNCAST_ATTR, [](PyAttribute &self) {
+        MlirTypeID mlirTypeID = mlirAttributeGetTypeID(self);
+        assert(!mlirTypeIDIsNull(mlirTypeID) &&
+               "mlirTypeID was expected to be non-null.");
+        std::optional<pybind11::function> typeCaster =
+            PyGlobals::get().lookupTypeCaster(mlirTypeID,
+                                              mlirAttributeGetDialect(self));
+        if (!typeCaster)
+          return py::cast(self);
+        return typeCaster.value()(self);
       });
 
   //----------------------------------------------------------------------------
@@ -3219,13 +3233,7 @@ void mlir::python::populateIRCore(py::module &m) {
           "The name of the NamedAttribute binding")
       .def_property_readonly(
           "attr",
-          [](PyNamedAttribute &self) {
-            // TODO: When named attribute is removed/refactored, also remove
-            // this constructor (it does an inefficient table lookup).
-            auto contextRef = PyMlirContext::forContext(
-                mlirAttributeGetContext(self.namedAttr.attribute));
-            return PyAttribute(std::move(contextRef), self.namedAttr.attribute);
-          },
+          [](PyNamedAttribute &self) { return self.namedAttr.attribute; },
           py::keep_alive<0, 1>(),
           "The underlying generic attribute of the NamedAttribute binding");
 
@@ -3247,7 +3255,7 @@ void mlir::python::populateIRCore(py::module &m) {
                 mlirTypeParseGet(context->get(), toMlirStringRef(typeSpec));
             if (mlirTypeIsNull(type))
               throw MLIRError("Unable to parse type", errors.take());
-            return PyType(context->getRef(), type);
+            return type;
           },
           py::arg("asm"), py::arg("context") = py::none(),
           kContextParseTypeDocstring)
@@ -3283,6 +3291,18 @@ void mlir::python::populateIRCore(py::module &m) {
                            printAccum.getUserData());
              printAccum.parts.append(")");
              return printAccum.join();
+           })
+      .def(MLIR_PYTHON_MAYBE_DOWNCAST_ATTR,
+           [](PyType &self) {
+             MlirTypeID mlirTypeID = mlirTypeGetTypeID(self);
+             assert(!mlirTypeIDIsNull(mlirTypeID) &&
+                    "mlirTypeID was expected to be non-null.");
+             std::optional<pybind11::function> typeCaster =
+                 PyGlobals::get().lookupTypeCaster(mlirTypeID,
+                                                   mlirTypeGetDialect(self));
+             if (!typeCaster)
+               return py::cast(self);
+             return typeCaster.value()(self);
            })
       .def_property_readonly("typeid", [](PyType &self) -> MlirTypeID {
         MlirTypeID mlirTypeID = mlirTypeGetTypeID(self);
@@ -3387,12 +3407,8 @@ void mlir::python::populateIRCore(py::module &m) {
             return printAccum.join();
           },
           py::arg("use_local_scope") = false, kGetNameAsOperand)
-      .def_property_readonly("type",
-                             [](PyValue &self) {
-                               return PyType(
-                                   self.getParentOperation()->getContext(),
-                                   mlirValueGetType(self.get()));
-                             })
+      .def_property_readonly(
+          "type", [](PyValue &self) { return mlirValueGetType(self.get()); })
       .def(
           "replace_all_uses_with",
           [](PyValue &self, PyValue &with) {

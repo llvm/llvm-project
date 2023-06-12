@@ -84,6 +84,12 @@ public:
   static Expected<std::unique_ptr<EPCIndirectionUtils>>
   Create(ExecutorProcessControl &EPC);
 
+  /// Create based on the ExecutorProcessControl triple.
+  static Expected<std::unique_ptr<EPCIndirectionUtils>>
+  Create(ExecutionSession &ES) {
+    return Create(ES.getExecutorProcessControl());
+  }
+
   /// Return a reference to the ExecutorProcessControl object.
   ExecutorProcessControl &getExecutorProcessControl() const { return EPC; }
 

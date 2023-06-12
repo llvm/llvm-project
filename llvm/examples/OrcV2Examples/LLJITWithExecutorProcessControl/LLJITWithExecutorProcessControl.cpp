@@ -144,8 +144,7 @@ int main(int argc, char *argv[]) {
       });
 
   // (3) Create stubs and call-through managers:
-  auto EPCIU = ExitOnErr(EPCIndirectionUtils::Create(
-      J->getExecutionSession().getExecutorProcessControl()));
+  auto EPCIU = ExitOnErr(EPCIndirectionUtils::Create(J->getExecutionSession()));
   ExitOnErr(EPCIU->writeResolverBlock(ExecutorAddr::fromPtr(&reenter),
                                       ExecutorAddr::fromPtr(EPCIU.get())));
   EPCIU->createLazyCallThroughManager(

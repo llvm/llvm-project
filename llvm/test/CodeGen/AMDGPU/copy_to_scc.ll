@@ -26,9 +26,9 @@ define amdgpu_kernel void @copy_to_scc(ptr addrspace(1) %out, ptr addrspace(1) %
 ; GCN-NEXT:    s_endpgm
 entry:                                             ; preds = %1009
   %0 = load i32, ptr addrspace(1) %in, align 4
-  %1 = load <4 x i32>, ptr addrspace(4) %addrSrc, align 16
+  %1 = load ptr addrspace(8), ptr addrspace(4) %addrSrc, align 16
   %2 = icmp ne i32 %0, 0
-  %3 = call i32 @llvm.amdgcn.raw.buffer.load.i32(<4 x i32> %1, i32 252, i32 0, i32 0)
+  %3 = call i32 @llvm.amdgcn.raw.ptr.buffer.load.i32(ptr addrspace(8) %1, i32 252, i32 0, i32 0)
   %4 = icmp ne i32 %3, 0
   %5 = xor i1 %2, %4
   %result = select i1 %5, i32 2, i32 3
@@ -36,4 +36,4 @@ entry:                                             ; preds = %1009
   ret void
 }
 
-declare i32 @llvm.amdgcn.raw.buffer.load.i32(<4 x i32>, i32, i32, i32 immarg)
+declare i32 @llvm.amdgcn.raw.ptr.buffer.load.i32(ptr addrspace(8), i32, i32, i32 immarg)

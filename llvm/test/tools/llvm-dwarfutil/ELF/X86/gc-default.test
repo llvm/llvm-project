@@ -5,6 +5,8 @@
 
 # RUN: llvm-dwarfutil %t.o - | llvm-dwarfdump -a - | FileCheck %s --check-prefixes=CHECK,CHECK-GC
 
+# RUN: llvm-dwarfutil --linker apple %t.o - | llvm-dwarfdump -a - | FileCheck %s --check-prefixes=CHECK,CHECK-GC
+
 # RUN: llvm-dwarfutil --garbage-collection %t.o - | llvm-dwarfdump -a - | FileCheck %s --check-prefixes=CHECK,CHECK-GC
 
 # RUN: llvm-dwarfutil --no-garbage-collection --garbage-collection %t.o - | llvm-dwarfdump -a - | FileCheck %s --check-prefixes=CHECK,CHECK-GC

@@ -391,6 +391,39 @@ TYPED_TEST(OptTableTest, ParseGroupedShortOptions) {
   EXPECT_TRUE(AL3.hasArg(OPT_Blorp));
 }
 
+TYPED_TEST(OptTableTest, ParseDashDash) {
+  TypeParam T;
+  T.setDashDashParsing(true);
+  unsigned MAI, MAC;
+
+  const char *Args1[] = {"-A", "--"};
+  InputArgList AL = T.ParseArgs(Args1, MAI, MAC);
+  EXPECT_TRUE(AL.hasArg(OPT_A));
+  EXPECT_EQ(size_t(0), AL.getAllArgValues(OPT_INPUT).size());
+  EXPECT_EQ(size_t(0), AL.getAllArgValues(OPT_UNKNOWN).size());
+
+  const char *Args2[] = {"-A", "--", "-A", "--", "-B"};
+  AL = T.ParseArgs(Args2, MAI, MAC);
+  EXPECT_TRUE(AL.hasArg(OPT_A));
+  EXPECT_FALSE(AL.hasArg(OPT_B));
+  const std::vector<std::string> Input = AL.getAllArgValues(OPT_INPUT);
+  ASSERT_EQ(size_t(3), Input.size());
+  EXPECT_EQ("-A", Input[0]);
+  EXPECT_EQ("--", Input[1]);
+  EXPECT_EQ("-B", Input[2]);
+  EXPECT_EQ(size_t(0), AL.getAllArgValues(OPT_UNKNOWN).size());
+
+  T.setDashDashParsing(false);
+  AL = T.ParseArgs(Args2, MAI, MAC);
+  EXPECT_TRUE(AL.hasArg(OPT_A));
+  EXPECT_TRUE(AL.hasArg(OPT_B));
+  EXPECT_EQ(size_t(0), AL.getAllArgValues(OPT_INPUT).size());
+  const std::vector<std::string> Unknown = AL.getAllArgValues(OPT_UNKNOWN);
+  ASSERT_EQ(size_t(2), Unknown.size());
+  EXPECT_EQ("--", Unknown[0]);
+  EXPECT_EQ("--", Unknown[1]);
+}
+
 TYPED_TEST(OptTableTest, UnknownOptions) {
   TypeParam T;
   unsigned MAI, MAC;

@@ -11,7 +11,7 @@
 ## the broken output would only appear if the compact unwind entry that pointed
 ## to it was not itself folded.
 
-# RUN: llvm-mc -filetype=obj -triple=x86_64-apple-darwin19.0.0 %t/test.s -o %t/test.o
+# RUN: llvm-mc -emit-compact-unwind-non-canonical=true -filetype=obj -triple=x86_64-apple-darwin19.0.0 %t/test.s -o %t/test.o
 # RUN: %lld -dylib -dead_strip --icf=all %t/test.o -o %t/test
 # RUN: llvm-objdump --macho --syms --unwind-info %t/test | FileCheck %s
 

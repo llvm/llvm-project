@@ -176,6 +176,8 @@ struct ExtensionInfo {
       1000; // Maximum priority for FMV feature
 };
 
+// NOTE: If adding a new extension here, consider adding it to ExtensionMap
+// in AArch64AsmParser too, if supported as an extension name by binutils.
 // clang-format off
 inline constexpr ExtensionInfo Extensions[] = {
     {"aes", AArch64::AEK_AES, "+aes", "-aes", FEAT_AES, "+fp-armv8,+neon", 150},

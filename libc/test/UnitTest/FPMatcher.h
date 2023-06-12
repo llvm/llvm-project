@@ -18,15 +18,12 @@
 #include <math.h>
 
 namespace __llvm_libc {
-namespace fputil {
 namespace testing {
 
-template <typename T, __llvm_libc::testing::TestCondition Condition>
-class FPMatcher : public __llvm_libc::testing::Matcher<T> {
-  static_assert(__llvm_libc::cpp::is_floating_point_v<T>,
+template <typename T, TestCond Condition> class FPMatcher : public Matcher<T> {
+  static_assert(cpp::is_floating_point_v<T>,
                 "FPMatcher can only be used with floating point values.");
-  static_assert(Condition == __llvm_libc::testing::Cond_EQ ||
-                    Condition == __llvm_libc::testing::Cond_NE,
+  static_assert(Condition == TestCond::EQ || Condition == TestCond::NE,
                 "Unsupported FPMathcer test condition.");
 
   T expected;
@@ -38,11 +35,11 @@ public:
   bool match(T actualValue) {
     actual = actualValue;
     fputil::FPBits<T> actualBits(actual), expectedBits(expected);
-    if (Condition == __llvm_libc::testing::Cond_EQ)
+    if (Condition == TestCond::EQ)
       return (actualBits.is_nan() && expectedBits.is_nan()) ||
              (actualBits.uintval() == expectedBits.uintval());
 
-    // If condition == Cond_NE.
+    // If condition == TestCond::NE.
     if (actualBits.is_nan())
       return !expectedBits.is_nan();
     return expectedBits.is_nan() ||
@@ -50,21 +47,18 @@ public:
   }
 
   void explainError() override {
-    __llvm_libc::testing::tlog
-        << "Expected floating point value: " << FPBits<T>(expected).str()
-        << '\n';
-    __llvm_libc::testing::tlog
-        << "Actual floating point value: " << FPBits<T>(actual).str() << '\n';
+    tlog << "Expected floating point value: "
+         << fputil::FPBits<T>(expected).str() << '\n';
+    tlog << "Actual floating point value: " << fputil::FPBits<T>(actual).str()
+         << '\n';
   }
 };
 
-template <__llvm_libc::testing::TestCondition C, typename T>
-FPMatcher<T, C> getMatcher(T expectedValue) {
+template <TestCond C, typename T> FPMatcher<T, C> getMatcher(T expectedValue) {
   return FPMatcher<T, C>(expectedValue);
 }
 
 } // namespace testing
-} // namespace fputil
 } // namespace __llvm_libc
 
 #define DECLARE_SPECIAL_CONSTANTS(T)                                           \
@@ -79,7 +73,7 @@ FPMatcher<T, C> getMatcher(T expectedValue) {
 #define EXPECT_FP_EQ(expected, actual)                                         \
   EXPECT_THAT(                                                                 \
       actual,                                                                  \
-      __llvm_libc::fputil::testing::getMatcher<__llvm_libc::testing::Cond_EQ>( \
+      __llvm_libc::testing::getMatcher<__llvm_libc::testing::TestCond::EQ>(    \
           expected))
 
 #define EXPECT_FP_IS_NAN(actual) EXPECT_TRUE((actual) != (actual))
@@ -87,19 +81,19 @@ FPMatcher<T, C> getMatcher(T expectedValue) {
 #define ASSERT_FP_EQ(expected, actual)                                         \
   ASSERT_THAT(                                                                 \
       actual,                                                                  \
-      __llvm_libc::fputil::testing::getMatcher<__llvm_libc::testing::Cond_EQ>( \
+      __llvm_libc::testing::getMatcher<__llvm_libc::testing::TestCond::EQ>(    \
           expected))
 
 #define EXPECT_FP_NE(expected, actual)                                         \
   EXPECT_THAT(                                                                 \
       actual,                                                                  \
-      __llvm_libc::fputil::testing::getMatcher<__llvm_libc::testing::Cond_NE>( \
+      __llvm_libc::testing::getMatcher<__llvm_libc::testing::TestCond::NE>(    \
           expected))
 
 #define ASSERT_FP_NE(expected, actual)                                         \
   ASSERT_THAT(                                                                 \
       actual,                                                                  \
-      __llvm_libc::fputil::testing::getMatcher<__llvm_libc::testing::Cond_NE>( \
+      __llvm_libc::testing::getMatcher<__llvm_libc::testing::TestCond::NE>(    \
           expected))
 
 #define EXPECT_MATH_ERRNO(expected)                                            \

@@ -1,5 +1,5 @@
 ! Test lowering of procedure designators to HLFIR.
-! RUN: bbc -emit-fir -hlfir -o - %s | FileCheck %s
+! RUN: bbc -emit-hlfir -o - %s | FileCheck %s
 
 module test_proc_designator
   interface

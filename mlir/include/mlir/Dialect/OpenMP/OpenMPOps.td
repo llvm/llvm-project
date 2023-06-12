@@ -45,14 +45,6 @@ class OpenMP_Attr<string name, string attrMnemonic,
   let mnemonic = attrMnemonic;
 }
 
-def IsDeviceAttr : OpenMP_Attr<"IsDevice", "isdevice"> {
-  let parameters = (ins
-    "bool":$is_device
-  );
-
-  let assemblyFormat = "`<` struct(params) `>`";
-}
-
 def VersionAttr : OpenMP_Attr<"Version", "version"> {
   let parameters = (ins
     "uint32_t":$version

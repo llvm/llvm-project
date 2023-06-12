@@ -16,7 +16,7 @@
 
 #DCSR_SLICE = #sparse_tensor.encoding<{
   lvlTypes = [ "compressed", "compressed" ],
-  slice = [ (0, 4, 1), (0, 8, 1) ]
+  dimSlices = [ (0, 4, 1), (0, 8, 1) ]
 }>
 
 #CSR = #sparse_tensor.encoding<{
@@ -25,7 +25,7 @@
 
 #CSR_SLICE = #sparse_tensor.encoding<{
   lvlTypes = [ "dense", "compressed" ],
-  slice = [ (0, 4, 1), (0, 8, 1) ]
+  dimSlices = [ (0, 4, 1), (0, 8, 1) ]
 }>
 
 #COO = #sparse_tensor.encoding<{
@@ -34,32 +34,32 @@
 
 #CSR_SLICE_1 = #sparse_tensor.encoding<{
   lvlTypes = [ "dense", "compressed" ],
-  slice = [ (0, 4, 2), (0, 4, 1) ]
+  dimSlices = [ (0, 4, 2), (0, 4, 1) ]
 }>
 
 #DCSR_SLICE_1 = #sparse_tensor.encoding<{
   lvlTypes = [ "compressed", "compressed" ],
-  slice = [ (0, 4, 2), (1, 4, 1) ]
+  dimSlices = [ (0, 4, 2), (1, 4, 1) ]
 }>
 
 #COO_SLICE_1 = #sparse_tensor.encoding<{
   lvlTypes = [ "compressed-nu", "singleton" ],
-  slice = [ (0, 4, 2), (0, 4, 1) ]
+  dimSlices = [ (0, 4, 2), (0, 4, 1) ]
 }>
 
 #COO_SLICE_2 = #sparse_tensor.encoding<{
   lvlTypes = [ "compressed-nu", "singleton" ],
-  slice = [ (0, 4, 2), (1, 4, 1) ]
+  dimSlices = [ (0, 4, 2), (1, 4, 1) ]
 }>
 
 #CSR_SLICE_dyn = #sparse_tensor.encoding<{
   lvlTypes = [ "dense", "compressed" ],
-  slice = [ (?, 4, ?), (?, 4, ?) ]
+  dimSlices = [ (?, 4, ?), (?, 4, ?) ]
 }>
 
 #DCSR_SLICE_dyn = #sparse_tensor.encoding<{
   lvlTypes = [ "compressed", "compressed" ],
-  slice = [ (?, 4, ?), (?, 4, ?) ]
+  dimSlices = [ (?, 4, ?), (?, 4, ?) ]
 }>
 
 module {

@@ -1,6 +1,6 @@
 ! Test captured variables instantiation inside internal procedures
 ! when lowering to HLFIR.
-! RUN: bbc -emit-fir -hlfir -o - %s | FileCheck %s
+! RUN: bbc -emit-hlfir -o - %s | FileCheck %s
 subroutine test_explicit_shape_array(x, n)
   integer(8) :: n
   real :: x(n)

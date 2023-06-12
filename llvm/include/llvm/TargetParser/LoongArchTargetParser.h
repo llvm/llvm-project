@@ -46,6 +46,9 @@ enum FeatureKind : uint32_t {
 
   // Loongson Virtualization Extension is available.
   FK_LVZ = 1 << 7,
+
+  // Allow memory accesses to be unaligned.
+  FK_UAL = 1 << 8,
 };
 
 struct FeatureInfo {

@@ -5,7 +5,7 @@
 #DENSE = #sparse_tensor.encoding<{lvlTypes = ["dense", "dense"]}>
 #DENSE_P = #sparse_tensor.encoding<{
   lvlTypes = ["dense", "dense"],
-  dimOrdering = affine_map<(i,j) -> (j,i)>
+  dimToLvl = affine_map<(i,j) -> (j,i)>
 }>
 // CHECK-LABEL: @concat_sparse_sparse(
 //  CHECK-SAME:  %[[TMP_arg0:.*]]: tensor<2x4xf64, #sparse_tensor
@@ -417,7 +417,7 @@ func.func @concat_sparse_sparse_annotated_dense(%arg0: tensor<2x4xf64, #DCSR>,
 //       CHECK:    }
 //       CHECK:  }
 //       CHECK:  %[[R:.*]] = sparse_tensor.convert %[[TMP_0]]
-//       CHECK:  return %[[R]] : tensor<?x?xf64, #sparse_tensor.encoding<{ lvlTypes = [ "dense", "dense" ], dimOrdering = affine_map<(d0, d1) -> (d1, d0)> }>>
+//       CHECK:  return %[[R]] : tensor<?x?xf64, #sparse_tensor.encoding<{ lvlTypes = [ "dense", "dense" ], dimToLvl = affine_map<(d0, d1) -> (d1, d0)> }>>
 func.func @concat_sparse_sparse_annotated_dense_permute(%arg0: tensor<2x4xf64, #DCSR>,
                                 %arg1: tensor<3x4xf64, #DCSR>,
                                 %arg2: tensor<4x4xf64, #DCSR>)

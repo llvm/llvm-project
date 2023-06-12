@@ -139,6 +139,8 @@ define ptr @checkAndAdvance(ptr align 16 %0) {
 ; GRAPH-EMPTY:
 ; GRAPH-NEXT: [AANoRecurse] for CtxI '  %6 = call ptr @checkAndAdvance(ptr %5)' at position {cs: [@-1]} with state may-recurse
 ; GRAPH-EMPTY:
+; GRAPH-NEXT: [AAMustProgress] for CtxI ' %2 = load i32, ptr %0, align 4' at position {fn:checkAndAdvance [checkAndAdvance@-1]} with state may-not-progress
+; GRAPH-EMPTY:
 ; GRAPH-NEXT: [AAUndefinedBehavior] for CtxI '  %2 = load i32, ptr %0, align 4' at position {fn:checkAndAdvance [checkAndAdvance@-1]} with state undefined-behavior
 ; GRAPH-EMPTY:
 ; GRAPH-NEXT: [AANoUndef] for CtxI '  %6 = call ptr @checkAndAdvance(ptr %5)' at position {cs_arg: [@0]} with state may-undef-or-poison

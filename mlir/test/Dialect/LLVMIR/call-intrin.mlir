@@ -5,13 +5,13 @@
 // CHECK: declare ptr @malloc(i64)
 // CHECK: declare void @free(ptr)
 // CHECK: define <4 x float> @round_sse41() {
-// CHECK:  %1 = call <4 x float> @llvm.x86.sse41.round.ss(<4 x float> <float 0x3FC99999A0000000, float 0x3FC99999A0000000, float 0x3FC99999A0000000, float 0x3FC99999A0000000>, <4 x float> <float 0x3FC99999A0000000, float 0x3FC99999A0000000, float 0x3FC99999A0000000, float 0x3FC99999A0000000>, i32 1)
+// CHECK:  %1 = call reassoc <4 x float> @llvm.x86.sse41.round.ss(<4 x float> <float 0x3FC99999A0000000, float 0x3FC99999A0000000, float 0x3FC99999A0000000, float 0x3FC99999A0000000>, <4 x float> <float 0x3FC99999A0000000, float 0x3FC99999A0000000, float 0x3FC99999A0000000, float 0x3FC99999A0000000>, i32 1)
 // CHECK:  ret <4 x float> %1
 // CHECK: }
 llvm.func @round_sse41() -> vector<4xf32> {
     %0 = llvm.mlir.constant(1 : i32) : i32
     %1 = llvm.mlir.constant(dense<0.2> : vector<4xf32>) : vector<4xf32>
-    %res = llvm.call_intrinsic "llvm.x86.sse41.round.ss"(%1, %1, %0) : (vector<4xf32>, vector<4xf32>, i32) -> vector<4xf32> {}
+    %res = llvm.call_intrinsic "llvm.x86.sse41.round.ss"(%1, %1, %0) : (vector<4xf32>, vector<4xf32>, i32) -> vector<4xf32> {fastmathFlags = #llvm.fastmath<reassoc>}
     llvm.return %res: vector<4xf32>
 }
 

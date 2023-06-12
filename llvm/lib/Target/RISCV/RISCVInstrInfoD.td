@@ -473,11 +473,11 @@ def PseudoFROUND_D : PseudoFROUND<FPR64>;
 
 /// Loads
 
-defm : LdPat<load, FLD, f64>;
+def : LdPat<load, FLD, f64>;
 
 /// Stores
 
-defm : StPat<store, FSD, FPR64, f64>;
+def : StPat<store, FSD, FPR64, f64>;
 
 /// Pseudo-instructions needed for the soft-float ABI with RV32D
 

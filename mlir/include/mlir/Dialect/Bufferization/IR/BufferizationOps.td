@@ -26,7 +26,7 @@ class Bufferization_Op<string mnemonic, list<Trait> traits = []>
 def Bufferization_AllocTensorOp : Bufferization_Op<"alloc_tensor",
     [AttrSizedOperandSegments, BufferizableOpInterface,
      DeclareOpInterfaceMethods<ReifyRankedShapedTypeOpInterface>]> {
-  let summary = "buffer allocation in tensor land";
+  let summary = "allocate buffer for a tensor";
 
   let description = [{
     `bufferization.alloc_tensor` materializes an uninitialized tensor with a
@@ -172,6 +172,7 @@ def Bufferization_CloneOp : Bufferization_Op<"clone", [
       return build($_builder, $_state, value.getType(), value);
     }]>];
 
+  let summary = "clone a memref";
   let description = [{
     Clones the data in the input view into an implicitly defined output view.
 
@@ -207,7 +208,7 @@ def Bufferization_CloneOp : Bufferization_Op<"clone", [
 
 def Bufferization_DeallocTensorOp : Bufferization_Op<"dealloc_tensor",
     [BufferizableOpInterface]> {
-  string summary = "Releases underlying sparse storage format of given tensor";
+  string summary = "release underlying storage format of given tensor";
   string description = [{
     `bufferization.dealloc_tensor` is a buffer deallocation in tensor land. This
     op can be used for manual buffer deallocation. Some bufferizations (such as
@@ -270,7 +271,7 @@ def Bufferization_ToTensorOp : Bufferization_Op<"to_tensor", [
                    "memref", "result",
                    "memref::getTensorTypeFromMemRefType($_self)">
   ]> {
-  let summary = "memref to tensor operation";
+  let summary = "create a tensor from a `memref`";
   let description = [{
     An operation that creates a tensor from a `memref`. The result value is a
     tensor whose shape and element type match the memref operand.
@@ -369,7 +370,7 @@ def Bufferization_ToMemrefOp : Bufferization_Op<"to_memref", [
                    "memref", "tensor",
                    "memref::getTensorTypeFromMemRefType($_self)">
   ]> {
-  let summary = "tensor to memref cast operation";
+  let summary = "cast a tensor to memref";
   let description = [{
     An operation that returns the future buffer of a `tensor`.
 

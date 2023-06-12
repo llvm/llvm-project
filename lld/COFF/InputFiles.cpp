@@ -237,7 +237,7 @@ SectionChunk *ObjFile::readSection(uint32_t sectionNumber,
   // and then write it to a separate .pdb file.
 
   // Ignore DWARF debug info unless /debug is given.
-  if (!ctx.config.debug && name.startswith(".debug_"))
+  if (!ctx.config.debug && name.starts_with(".debug_"))
     return nullptr;
 
   if (sec->Characteristics & llvm::COFF::IMAGE_SCN_LNK_REMOVE)
@@ -261,12 +261,12 @@ SectionChunk *ObjFile::readSection(uint32_t sectionNumber,
   else if (name == ".sxdata")
     sxDataChunks.push_back(c);
   else if (ctx.config.tailMerge && sec->NumberOfRelocations == 0 &&
-           name == ".rdata" && leaderName.startswith("??_C@"))
+           name == ".rdata" && leaderName.starts_with("??_C@"))
     // COFF sections that look like string literal sections (i.e. no
     // relocations, in .rdata, leader symbol name matches the MSVC name mangling
     // for string literals) are subject to string tail merging.
     MergeChunk::addSection(ctx, c);
-  else if (name == ".rsrc" || name.startswith(".rsrc$"))
+  else if (name == ".rsrc" || name.starts_with(".rsrc$"))
     resourceChunks.push_back(c);
   else
     chunks.push_back(c);
@@ -366,7 +366,7 @@ Symbol *ObjFile::createRegular(COFFSymbolRef sym) {
     // everything should be fine. If something actually refers to the symbol
     // (e.g. the undefined weak alias), linking will fail due to undefined
     // references at the end.
-    if (ctx.config.mingw && name.startswith(".weak."))
+    if (ctx.config.mingw && name.starts_with(".weak."))
       return nullptr;
     return ctx.symtab.addUndefined(name, this, false);
   }

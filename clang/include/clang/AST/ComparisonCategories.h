@@ -39,9 +39,8 @@ class NamespaceDecl;
 /// An enumeration representing the different comparison categories
 /// types.
 ///
-/// C++2a [cmp.categories.pre] The types weak_equality, strong_equality,
-/// partial_ordering, weak_ordering, and strong_ordering are collectively
-/// termed the comparison category types.
+/// C++20 [cmp.categories.pre] The types partial_ordering, weak_ordering, and
+/// strong_ordering are collectively termed the comparison category types.
 enum class ComparisonCategoryType : unsigned char {
   PartialOrdering,
   WeakOrdering,

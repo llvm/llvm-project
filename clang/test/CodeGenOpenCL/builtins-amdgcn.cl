@@ -180,14 +180,14 @@ void test_log_clamp_f32(global float* out, float a)
 }
 
 // CHECK-LABEL: @test_ldexp_f32
-// CHECK: call float @llvm.amdgcn.ldexp.f32
+// CHECK: call float @llvm.ldexp.f32.i32
 void test_ldexp_f32(global float* out, float a, int b)
 {
   *out = __builtin_amdgcn_ldexpf(a, b);
 }
 
 // CHECK-LABEL: @test_ldexp_f64
-// CHECK: call double @llvm.amdgcn.ldexp.f64
+// CHECK: call double @llvm.ldexp.f64.i32
 void test_ldexp_f64(global double* out, double a, int b)
 {
   *out = __builtin_amdgcn_ldexp(a, b);

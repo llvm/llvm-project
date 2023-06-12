@@ -857,10 +857,7 @@ bool AMDGPURegisterBankInfo::executeInWaterfallLoop(
   assert(std::distance(NewBegin, NewEnd) == OrigRangeSize);
 
   for (MachineInstr &MI : make_range(NewBegin, NewEnd)) {
-    for (MachineOperand &Op : MI.uses()) {
-      if (!Op.isReg() || Op.isDef())
-        continue;
-
+    for (MachineOperand &Op : MI.all_uses()) {
       Register OldReg = Op.getReg();
       if (!SGPROperandRegs.count(OldReg))
         continue;
@@ -2119,6 +2116,121 @@ bool AMDGPURegisterBankInfo::foldInsertEltToCmpSelect(
   return true;
 }
 
+// Break s_mul_u64 into 32-bit vector operations.
+void AMDGPURegisterBankInfo::applyMappingSMULU64(
+    const OperandsMapper &OpdMapper) const {
+
+  MachineInstr &MI = OpdMapper.getMI();
+  MachineRegisterInfo &MRI = OpdMapper.getMRI();
+  Register DstReg = MI.getOperand(0).getReg();
+
+  // Insert basic copies.
+  applyDefaultMapping(OpdMapper);
+
+  Register SrcReg0 = MI.getOperand(1).getReg();
+  Register SrcReg1 = MI.getOperand(2).getReg();
+  assert(MRI.getRegBankOrNull(SrcReg0) == &AMDGPU::VGPRRegBank &&
+         MRI.getRegBankOrNull(SrcReg1) == &AMDGPU::VGPRRegBank &&
+         "Source operands should be in vector registers.");
+  MachineBasicBlock *MBB = MI.getParent();
+  DebugLoc DL = MI.getDebugLoc();
+
+  // Extract subregisters from the first operand
+  Register NewSrcReg0 = MRI.createVirtualRegister(&AMDGPU::VReg_64RegClass);
+  MRI.setRegClass(NewSrcReg0, &AMDGPU::VReg_64RegClass);
+  BuildMI(*MBB, MI, DL, TII->get(TargetOpcode::COPY), NewSrcReg0)
+      .addReg(SrcReg0, 0, MI.getOperand(1).getSubReg());
+  Register Op0L = MRI.createVirtualRegister(&AMDGPU::VGPR_32RegClass);
+  MRI.setRegClass(Op0L, &AMDGPU::VGPR_32RegClass);
+  Register Op0H = MRI.createVirtualRegister(&AMDGPU::VGPR_32RegClass);
+  MRI.setRegClass(Op0H, &AMDGPU::VGPR_32RegClass);
+  BuildMI(*MBB, MI, DL, TII->get(TargetOpcode::COPY), Op0L)
+      .addReg(NewSrcReg0, 0, AMDGPU::sub0);
+  BuildMI(*MBB, MI, DL, TII->get(TargetOpcode::COPY), Op0H)
+      .addReg(NewSrcReg0, 0, AMDGPU::sub1);
+
+  // Extract subregisters from the second operand.
+  Register NewSrcReg1 = MRI.createVirtualRegister(&AMDGPU::VReg_64RegClass);
+  MRI.setRegClass(NewSrcReg1, &AMDGPU::VReg_64RegClass);
+  BuildMI(*MBB, MI, DL, TII->get(TargetOpcode::COPY), NewSrcReg1)
+      .addReg(SrcReg1, 0, MI.getOperand(2).getSubReg());
+  Register Op1L = MRI.createVirtualRegister(&AMDGPU::VGPR_32RegClass);
+  MRI.setRegClass(Op1L, &AMDGPU::VGPR_32RegClass);
+  Register Op1H = MRI.createVirtualRegister(&AMDGPU::VGPR_32RegClass);
+  MRI.setRegClass(Op1H, &AMDGPU::VGPR_32RegClass);
+  BuildMI(*MBB, MI, DL, TII->get(TargetOpcode::COPY), Op1L)
+      .addReg(NewSrcReg1, 0, AMDGPU::sub0);
+  BuildMI(*MBB, MI, DL, TII->get(TargetOpcode::COPY), Op1H)
+      .addReg(NewSrcReg1, 0, AMDGPU::sub1);
+
+  // Split s_mul_u64 in 32-bit multiplications.
+  Register NewDestReg = MRI.createVirtualRegister(&AMDGPU::VReg_64RegClass);
+  MRI.setRegClass(NewDestReg, &AMDGPU::VReg_64RegClass);
+  Register DestSub0 = MRI.createVirtualRegister(&AMDGPU::VGPR_32RegClass);
+  MRI.setRegClass(DestSub0, &AMDGPU::VGPR_32RegClass);
+  Register DestSub1 = MRI.createVirtualRegister(&AMDGPU::VGPR_32RegClass);
+  MRI.setRegClass(DestSub1, &AMDGPU::VGPR_32RegClass);
+
+  // The multiplication is done as follows:
+  //
+  //                            Op1H  Op1L
+  //                          * Op0H  Op0L
+  //                       --------------------
+  //                       Op1H*Op0L  Op1L*Op0L
+  //          + Op1H*Op0H  Op1L*Op0H
+  // -----------------------------------------
+  // (Op1H*Op0L + Op1L*Op0H + carry)  Op1L*Op0L
+  //
+  //  We drop Op1H*Op0H because the result of the multiplication is a 64-bit
+  //  value and that would overflow.
+  //  The low 32-bit value is Op1L*Op0L.
+  //  The high 32-bit value is Op1H*Op0L + Op1L*Op0H + carry (from
+  //  Op1L*Op0L).
+
+  Register Op1L_Op0H_Reg = MRI.createVirtualRegister(&AMDGPU::VGPR_32RegClass);
+  MRI.setRegClass(Op1L_Op0H_Reg, &AMDGPU::VGPR_32RegClass);
+  BuildMI(*MBB, MI, DL, TII->get(AMDGPU::V_MUL_LO_U32_e64), Op1L_Op0H_Reg)
+      .addReg(Op1L)
+      .addReg(Op0H);
+
+  Register Op1H_Op0L_Reg = MRI.createVirtualRegister(&AMDGPU::VGPR_32RegClass);
+  MRI.setRegClass(Op1H_Op0L_Reg, &AMDGPU::VGPR_32RegClass);
+  BuildMI(*MBB, MI, DL, TII->get(AMDGPU::V_MUL_LO_U32_e64), Op1H_Op0L_Reg)
+      .addReg(Op1H)
+      .addReg(Op0L);
+
+  Register CarryReg = MRI.createVirtualRegister(&AMDGPU::VGPR_32RegClass);
+  MRI.setRegClass(CarryReg, &AMDGPU::VGPR_32RegClass);
+  BuildMI(*MBB, MI, DL, TII->get(AMDGPU::V_MUL_HI_U32_e64), CarryReg)
+      .addReg(Op1L)
+      .addReg(Op0L);
+
+  BuildMI(*MBB, MI, DL, TII->get(AMDGPU::V_MUL_LO_U32_e64), DestSub0)
+      .addReg(Op1L)
+      .addReg(Op0L);
+
+  Register AddReg = MRI.createVirtualRegister(&AMDGPU::VGPR_32RegClass);
+  MRI.setRegClass(AddReg, &AMDGPU::VGPR_32RegClass);
+  BuildMI(*MBB, MI, DL, TII->get(AMDGPU::V_ADD_U32_e32), AddReg)
+      .addReg(Op1L_Op0H_Reg)
+      .addReg(Op1H_Op0L_Reg);
+
+  BuildMI(*MBB, MI, DL, TII->get(AMDGPU::V_ADD_U32_e32), DestSub1)
+      .addReg(AddReg)
+      .addReg(CarryReg);
+
+  BuildMI(*MBB, MI, DL, TII->get(TargetOpcode::REG_SEQUENCE), NewDestReg)
+      .addReg(DestSub0)
+      .addImm(AMDGPU::sub0)
+      .addReg(DestSub1)
+      .addImm(AMDGPU::sub1);
+
+  BuildMI(*MBB, MI, DL, TII->get(TargetOpcode::COPY), DstReg)
+      .addReg(NewDestReg);
+
+  MI.eraseFromParent();
+}
+
 void AMDGPURegisterBankInfo::applyMappingImpl(
     const OperandsMapper &OpdMapper) const {
   MachineInstr &MI = OpdMapper.getMI();
@@ -2428,14 +2540,24 @@ void AMDGPURegisterBankInfo::applyMappingImpl(
   case AMDGPU::G_UMAX: {
     Register DstReg = MI.getOperand(0).getReg();
     LLT DstTy = MRI.getType(DstReg);
+    const LLT S64 = LLT::scalar(64);
+    const RegisterBank *DstBank =
+        OpdMapper.getInstrMapping().getOperandMapping(0).BreakDown[0].RegBank;
+
+    // Special case for s_mul_u64. There is not a vector equivalent of
+    // s_mul_u64. Hence, we have to break down s_mul_u64 into 32-bit vector
+    // multiplications.
+    if (Opc == AMDGPU::G_MUL && DstTy == S64 &&
+        DstBank == &AMDGPU::VGPRRegBank) {
+      applyMappingSMULU64(OpdMapper);
+      return;
+    }
 
     // 16-bit operations are VALU only, but can be promoted to 32-bit SALU.
     // Packed 16-bit operations need to be scalarized and promoted.
     if (DstTy != LLT::scalar(16) && DstTy != LLT::fixed_vector(2, 16))
       break;
 
-    const RegisterBank *DstBank =
-      OpdMapper.getInstrMapping().getOperandMapping(0).BreakDown[0].RegBank;
     if (DstBank == &AMDGPU::VGPRRegBank)
       break;
 
@@ -2473,6 +2595,86 @@ void AMDGPURegisterBankInfo::applyMappingImpl(
       }
     }
 
+    return;
+  }
+  case AMDGPU::G_AMDGPU_S_MUL_I64_I32_PSEUDO:
+  case AMDGPU::G_AMDGPU_S_MUL_U64_U32_PSEUDO: {
+    // This is a special case for s_mul_u64. We use
+    // G_AMDGPU_S_MUL_I64_I32_PSEUDO opcode to represent an s_mul_u64 operation
+    // where the 33 higher bits are sign-extended and
+    // G_AMDGPU_S_MUL_U64_U32_PSEUDO opcode to represent an s_mul_u64 operation
+    // where the 32 higher bits are zero-extended. In case scalar registers are
+    // selected, both opcodes are lowered as s_mul_u64. If the vector registers
+    // are selected, then G_AMDGPU_S_MUL_I64_I32_PSEUDO and
+    // G_AMDGPU_S_MUL_U64_U32_PSEUDO are lowered with a vector mad instruction.
+
+    // Insert basic copies.
+    applyDefaultMapping(OpdMapper);
+
+    Register DstReg = MI.getOperand(0).getReg();
+    Register SrcReg0 = MI.getOperand(1).getReg();
+    Register SrcReg1 = MI.getOperand(2).getReg();
+    LLT DstTy = MRI.getType(DstReg);
+    const LLT S64 = LLT::scalar(64);
+    assert(DstTy == S64 && "This is a special case for s_mul_u64 that handles "
+                           "only 64-bit operands.");
+    const RegisterBank *DstBank =
+        OpdMapper.getInstrMapping().getOperandMapping(0).BreakDown[0].RegBank;
+
+    // Replace G_AMDGPU_S_MUL_I64_I32_PSEUDO and G_AMDGPU_S_MUL_U64_U32_PSEUDO
+    // with s_mul_u64 operation.
+    if (DstBank == &AMDGPU::SGPRRegBank) {
+      MI.setDesc(TII->get(AMDGPU::S_MUL_U64));
+      MRI.setRegClass(DstReg, &AMDGPU::SGPR_64RegClass);
+      MRI.setRegClass(SrcReg0, &AMDGPU::SGPR_64RegClass);
+      MRI.setRegClass(SrcReg1, &AMDGPU::SGPR_64RegClass);
+      return;
+    }
+
+    // Replace G_AMDGPU_S_MUL_I64_I32_PSEUDO and G_AMDGPU_S_MUL_U64_U32_PSEUDO
+    // with a vector mad.
+    assert(MRI.getRegBankOrNull(DstReg) == &AMDGPU::VGPRRegBank &&
+           "The destination operand should be in vector registers.");
+
+    MachineBasicBlock *MBB = MI.getParent();
+    DebugLoc DL = MI.getDebugLoc();
+
+    // Extract the lower subregister from the first operand.
+    Register NewSrcReg0 = MRI.createVirtualRegister(&AMDGPU::VReg_64RegClass);
+    MRI.setRegClass(NewSrcReg0, &AMDGPU::VReg_64RegClass);
+    BuildMI(*MBB, MI, DL, TII->get(TargetOpcode::COPY), NewSrcReg0)
+        .addReg(SrcReg0, 0, MI.getOperand(1).getSubReg());
+    Register Op0L = MRI.createVirtualRegister(&AMDGPU::VGPR_32RegClass);
+    MRI.setRegClass(Op0L, &AMDGPU::VGPR_32RegClass);
+    BuildMI(*MBB, MI, DL, TII->get(TargetOpcode::COPY), Op0L)
+        .addReg(NewSrcReg0, 0, AMDGPU::sub0);
+
+    // Extract the lower subregister from the second operand.
+    Register NewSrcReg1 = MRI.createVirtualRegister(&AMDGPU::VReg_64RegClass);
+    MRI.setRegClass(NewSrcReg1, &AMDGPU::VReg_64RegClass);
+    BuildMI(*MBB, MI, DL, TII->get(TargetOpcode::COPY), NewSrcReg1)
+        .addReg(SrcReg1, 0, MI.getOperand(2).getSubReg());
+    Register Op1L = MRI.createVirtualRegister(&AMDGPU::VGPR_32RegClass);
+    MRI.setRegClass(Op1L, &AMDGPU::VGPR_32RegClass);
+    BuildMI(*MBB, MI, DL, TII->get(TargetOpcode::COPY), Op1L)
+        .addReg(NewSrcReg1, 0, AMDGPU::sub0);
+
+    Register NewDestReg = MRI.createVirtualRegister(&AMDGPU::VReg_64RegClass);
+    MRI.setRegClass(NewDestReg, &AMDGPU::VReg_64RegClass);
+
+    unsigned NewOpc = Opc == AMDGPU::G_AMDGPU_S_MUL_U64_U32_PSEUDO
+                          ? AMDGPU::G_AMDGPU_MAD_U64_U32
+                          : AMDGPU::G_AMDGPU_MAD_I64_I32;
+
+    MachineIRBuilder B(MI);
+    Register Zero64 = B.buildConstant(S64, 0).getReg(0);
+    MRI.setRegClass(Zero64, &AMDGPU::VReg_64RegClass);
+    Register CarryOut = MRI.createVirtualRegister(&AMDGPU::VReg_64RegClass);
+    MRI.setRegClass(CarryOut, &AMDGPU::VReg_64RegClass);
+    B.buildInstr(NewOpc, {NewDestReg, CarryOut}, {Op0L, Op1L, Zero64});
+    BuildMI(*MBB, MI, DL, TII->get(TargetOpcode::COPY), DstReg)
+        .addReg(NewDestReg);
+    MI.eraseFromParent();
     return;
   }
   case AMDGPU::G_SEXT_INREG: {
@@ -3108,14 +3310,16 @@ void AMDGPURegisterBankInfo::applyMappingImpl(
       constrainOpWithReadfirstlane(MI, MRI, 2);
       return;
     }
-    case Intrinsic::amdgcn_raw_buffer_load_lds: {
+    case Intrinsic::amdgcn_raw_buffer_load_lds:
+    case Intrinsic::amdgcn_raw_ptr_buffer_load_lds: {
       applyDefaultMapping(OpdMapper);
       constrainOpWithReadfirstlane(MI, MRI, 1); // rsrc
       constrainOpWithReadfirstlane(MI, MRI, 2); // M0
       constrainOpWithReadfirstlane(MI, MRI, 5); // soffset
       return;
     }
-    case Intrinsic::amdgcn_struct_buffer_load_lds: {
+    case Intrinsic::amdgcn_struct_buffer_load_lds:
+    case Intrinsic::amdgcn_struct_ptr_buffer_load_lds: {
       applyDefaultMapping(OpdMapper);
       constrainOpWithReadfirstlane(MI, MRI, 1); // rsrc
       constrainOpWithReadfirstlane(MI, MRI, 2); // M0
@@ -3786,6 +3990,8 @@ AMDGPURegisterBankInfo::getInstrMapping(const MachineInstr &MI) const {
   case AMDGPU::G_SHUFFLE_VECTOR:
   case AMDGPU::G_SBFX:
   case AMDGPU::G_UBFX:
+  case AMDGPU::G_AMDGPU_S_MUL_I64_I32_PSEUDO:
+  case AMDGPU::G_AMDGPU_S_MUL_U64_U32_PSEUDO:
     if (isSALUMapping(MI))
       return getDefaultMappingSOP(MI);
     return getDefaultMappingVOP(MI);
@@ -3846,9 +4052,11 @@ AMDGPURegisterBankInfo::getInstrMapping(const MachineInstr &MI) const {
   case AMDGPU::G_UADDSAT:
   case AMDGPU::G_USUBSAT:
   case AMDGPU::G_FMAD:
+  case AMDGPU::G_FLDEXP:
   case AMDGPU::G_FMINNUM_IEEE:
   case AMDGPU::G_FMAXNUM_IEEE:
   case AMDGPU::G_FCANONICALIZE:
+  case AMDGPU::G_STRICT_FLDEXP:
   case AMDGPU::G_BSWAP: // TODO: Somehow expand for scalar?
   case AMDGPU::G_FSHR: // TODO: Expand for scalar
   case AMDGPU::G_AMDGPU_FMIN_LEGACY:
@@ -4318,7 +4526,6 @@ AMDGPURegisterBankInfo::getInstrMapping(const MachineInstr &MI) const {
     case Intrinsic::amdgcn_rsq_clamp:
     case Intrinsic::amdgcn_fmul_legacy:
     case Intrinsic::amdgcn_fma_legacy:
-    case Intrinsic::amdgcn_ldexp:
     case Intrinsic::amdgcn_frexp_mant:
     case Intrinsic::amdgcn_frexp_exp:
     case Intrinsic::amdgcn_fract:
@@ -4818,7 +5025,9 @@ AMDGPURegisterBankInfo::getInstrMapping(const MachineInstr &MI) const {
       break;
     }
     case Intrinsic::amdgcn_raw_buffer_load:
-    case Intrinsic::amdgcn_raw_tbuffer_load: {
+    case Intrinsic::amdgcn_raw_ptr_buffer_load:
+    case Intrinsic::amdgcn_raw_tbuffer_load:
+    case Intrinsic::amdgcn_raw_ptr_tbuffer_load: {
       // FIXME: Should make intrinsic ID the last operand of the instruction,
       // then this would be the same as store
       OpdsMapping[0] = getVGPROpMapping(MI.getOperand(0).getReg(), MRI, *TRI);
@@ -4827,7 +5036,8 @@ AMDGPURegisterBankInfo::getInstrMapping(const MachineInstr &MI) const {
       OpdsMapping[4] = getSGPROpMapping(MI.getOperand(4).getReg(), MRI, *TRI);
       break;
     }
-    case Intrinsic::amdgcn_raw_buffer_load_lds: {
+    case Intrinsic::amdgcn_raw_buffer_load_lds:
+    case Intrinsic::amdgcn_raw_ptr_buffer_load_lds: {
       OpdsMapping[1] = getSGPROpMapping(MI.getOperand(1).getReg(), MRI, *TRI);
       OpdsMapping[2] = getSGPROpMapping(MI.getOperand(2).getReg(), MRI, *TRI);
       OpdsMapping[4] = getVGPROpMapping(MI.getOperand(4).getReg(), MRI, *TRI);
@@ -4835,8 +5045,11 @@ AMDGPURegisterBankInfo::getInstrMapping(const MachineInstr &MI) const {
       break;
     }
     case Intrinsic::amdgcn_raw_buffer_store:
+    case Intrinsic::amdgcn_raw_ptr_buffer_store:
     case Intrinsic::amdgcn_raw_buffer_store_format:
-    case Intrinsic::amdgcn_raw_tbuffer_store: {
+    case Intrinsic::amdgcn_raw_ptr_buffer_store_format:
+    case Intrinsic::amdgcn_raw_tbuffer_store:
+    case Intrinsic::amdgcn_raw_ptr_tbuffer_store: {
       OpdsMapping[1] = getVGPROpMapping(MI.getOperand(1).getReg(), MRI, *TRI);
       OpdsMapping[2] = getSGPROpMapping(MI.getOperand(2).getReg(), MRI, *TRI);
       OpdsMapping[3] = getVGPROpMapping(MI.getOperand(3).getReg(), MRI, *TRI);
@@ -4844,7 +5057,9 @@ AMDGPURegisterBankInfo::getInstrMapping(const MachineInstr &MI) const {
       break;
     }
     case Intrinsic::amdgcn_struct_buffer_load:
-    case Intrinsic::amdgcn_struct_tbuffer_load: {
+    case Intrinsic::amdgcn_struct_ptr_buffer_load:
+    case Intrinsic::amdgcn_struct_tbuffer_load:
+    case Intrinsic::amdgcn_struct_ptr_tbuffer_load: {
       OpdsMapping[0] = getVGPROpMapping(MI.getOperand(0).getReg(), MRI, *TRI);
       OpdsMapping[2] = getSGPROpMapping(MI.getOperand(2).getReg(), MRI, *TRI);
       OpdsMapping[3] = getVGPROpMapping(MI.getOperand(3).getReg(), MRI, *TRI);
@@ -4852,7 +5067,8 @@ AMDGPURegisterBankInfo::getInstrMapping(const MachineInstr &MI) const {
       OpdsMapping[5] = getSGPROpMapping(MI.getOperand(5).getReg(), MRI, *TRI);
       break;
     }
-    case Intrinsic::amdgcn_struct_buffer_load_lds: {
+    case Intrinsic::amdgcn_struct_buffer_load_lds:
+    case Intrinsic::amdgcn_struct_ptr_buffer_load_lds: {
       OpdsMapping[1] = getSGPROpMapping(MI.getOperand(1).getReg(), MRI, *TRI);
       OpdsMapping[2] = getSGPROpMapping(MI.getOperand(2).getReg(), MRI, *TRI);
       OpdsMapping[4] = getVGPROpMapping(MI.getOperand(4).getReg(), MRI, *TRI);
@@ -4861,7 +5077,9 @@ AMDGPURegisterBankInfo::getInstrMapping(const MachineInstr &MI) const {
       break;
     }
     case Intrinsic::amdgcn_struct_buffer_store:
-    case Intrinsic::amdgcn_struct_tbuffer_store: {
+    case Intrinsic::amdgcn_struct_ptr_buffer_store:
+    case Intrinsic::amdgcn_struct_tbuffer_store:
+    case Intrinsic::amdgcn_struct_ptr_tbuffer_store: {
       OpdsMapping[1] = getVGPROpMapping(MI.getOperand(1).getReg(), MRI, *TRI);
       OpdsMapping[2] = getSGPROpMapping(MI.getOperand(2).getReg(), MRI, *TRI);
       OpdsMapping[3] = getVGPROpMapping(MI.getOperand(3).getReg(), MRI, *TRI);

@@ -266,3 +266,9 @@ O o2(0, 0); // no-error
 O o3(0);
 // expected-error@-1 {{reference member of type 'int &&' uninitialized}}
 }
+
+namespace gh63008 {
+auto a = new A('a', {1.1});
+// expected-warning@-1 {{braces around scalar init}}
+// beforecxx20-warning@-2 {{aggregate initialization of type 'A' from a parenthesized list of values is a C++20 extension}}
+}

@@ -173,6 +173,12 @@ uptr __sanitizer_in_addr_sz(int af) {
     return 0;
 }
 
+// For FreeBSD the actual size of a directory entry is not always in d_reclen.
+// Use the appropriate macro to get the correct size for all cases (e.g. NFS).
+u16 __sanitizer_dirsiz(const __sanitizer_dirent *dp) {
+  return _GENERIC_DIRSIZ(dp);
+}
+
 unsigned struct_ElfW_Phdr_sz = sizeof(Elf_Phdr);
 int glob_nomatch = GLOB_NOMATCH;
 int glob_altdirfunc = GLOB_ALTDIRFUNC;

@@ -63,7 +63,11 @@ int main() {
     defined(__i386__) || defined(__x86_64__)
 // Skip these tests for MSVC because its scalbn function always behaves as if
 // the default rounding mode is set (FE_TONEAREST).
-#ifndef _MSC_VER
+// Also skip for newlib because although its scalbn function does respect the
+// rounding mode, where the tests trigger an underflow or overflow using a
+// large exponent the result is rounded in the opposite direction to that which
+// would be expected in the (FE_UPWARD) and (FE_DOWNWARD) modes.
+#  if !defined(_MSC_VER) && !defined(_NEWLIB_VERSION)
   fesetround(FE_UPWARD);
   if (iterate_cases("FE_UPWARD")) return 1;
 

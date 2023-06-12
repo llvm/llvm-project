@@ -69,64 +69,67 @@ static testing::AssertionResult isOptimal(const KnownBits &Exact,
 static void
 testUnaryOpExhaustive(UnaryBitsFn BitsFn, UnaryIntFn IntFn,
                       UnaryCheckFn CheckOptimalityFn = checkOptimalityUnary) {
-  unsigned Bits = 4;
-  ForeachKnownBits(Bits, [&](const KnownBits &Known) {
-    KnownBits Computed = BitsFn(Known);
-    KnownBits Exact(Bits);
-    Exact.Zero.setAllBits();
-    Exact.One.setAllBits();
+  for (unsigned Bits : {1, 4}) {
+    ForeachKnownBits(Bits, [&](const KnownBits &Known) {
+      KnownBits Computed = BitsFn(Known);
+      KnownBits Exact(Bits);
+      Exact.Zero.setAllBits();
+      Exact.One.setAllBits();
 
-    ForeachNumInKnownBits(Known, [&](const APInt &N) {
-      if (std::optional<APInt> Res = IntFn(N)) {
-        Exact.One &= *Res;
-        Exact.Zero &= ~*Res;
+      ForeachNumInKnownBits(Known, [&](const APInt &N) {
+        if (std::optional<APInt> Res = IntFn(N)) {
+          Exact.One &= *Res;
+          Exact.Zero &= ~*Res;
+        }
+      });
+
+      EXPECT_TRUE(!Computed.hasConflict());
+      EXPECT_TRUE(isCorrect(Exact, Computed, Known));
+      // We generally don't want to return conflicting known bits, even if it is
+      // legal for always poison results.
+      if (CheckOptimalityFn(Known) && !Exact.hasConflict()) {
+        EXPECT_TRUE(isOptimal(Exact, Computed, Known));
       }
     });
-
-    EXPECT_TRUE(!Computed.hasConflict());
-    EXPECT_TRUE(isCorrect(Exact, Computed, Known));
-    // We generally don't want to return conflicting known bits, even if it is
-    // legal for always poison results.
-    if (CheckOptimalityFn(Known) && !Exact.hasConflict()) {
-      EXPECT_TRUE(isOptimal(Exact, Computed, Known));
-    }
-  });
+  }
 }
 
 static void
 testBinaryOpExhaustive(BinaryBitsFn BitsFn, BinaryIntFn IntFn,
                        BinaryCheckFn CheckOptimalityFn = checkOptimalityBinary,
                        bool RefinePoisonToZero = false) {
-  unsigned Bits = 4;
-  ForeachKnownBits(Bits, [&](const KnownBits &Known1) {
-    ForeachKnownBits(Bits, [&](const KnownBits &Known2) {
-      KnownBits Computed = BitsFn(Known1, Known2);
-      KnownBits Exact(Bits);
-      Exact.Zero.setAllBits();
-      Exact.One.setAllBits();
+  for (unsigned Bits : {1, 4}) {
+    ForeachKnownBits(Bits, [&](const KnownBits &Known1) {
+      ForeachKnownBits(Bits, [&](const KnownBits &Known2) {
+        KnownBits Computed = BitsFn(Known1, Known2);
+        KnownBits Exact(Bits);
+        Exact.Zero.setAllBits();
+        Exact.One.setAllBits();
 
-      ForeachNumInKnownBits(Known1, [&](const APInt &N1) {
-        ForeachNumInKnownBits(Known2, [&](const APInt &N2) {
-          if (std::optional<APInt> Res = IntFn(N1, N2)) {
-            Exact.One &= *Res;
-            Exact.Zero &= ~*Res;
-          }
+        ForeachNumInKnownBits(Known1, [&](const APInt &N1) {
+          ForeachNumInKnownBits(Known2, [&](const APInt &N2) {
+            if (std::optional<APInt> Res = IntFn(N1, N2)) {
+              Exact.One &= *Res;
+              Exact.Zero &= ~*Res;
+            }
+          });
         });
-      });
 
-      EXPECT_TRUE(!Computed.hasConflict());
-      EXPECT_TRUE(isCorrect(Exact, Computed, {Known1, Known2}));
-      // We generally don't want to return conflicting known bits, even if it is
-      // legal for always poison results.
-      if (CheckOptimalityFn(Known1, Known2) && !Exact.hasConflict()) {
-        EXPECT_TRUE(isOptimal(Exact, Computed, {Known1, Known2}));
-      }
-      // In some cases we choose to return zero if the result is always poison.
-      if (RefinePoisonToZero && Exact.hasConflict()) {
-        EXPECT_TRUE(Computed.isZero());
-      }
+        EXPECT_TRUE(!Computed.hasConflict());
+        EXPECT_TRUE(isCorrect(Exact, Computed, {Known1, Known2}));
+        // We generally don't want to return conflicting known bits, even if it
+        // is legal for always poison results.
+        if (CheckOptimalityFn(Known1, Known2) && !Exact.hasConflict()) {
+          EXPECT_TRUE(isOptimal(Exact, Computed, {Known1, Known2}));
+        }
+        // In some cases we choose to return zero if the result is always
+        // poison.
+        if (RefinePoisonToZero && Exact.hasConflict()) {
+          EXPECT_TRUE(Computed.isZero());
+        }
+      });
     });
-  });
+  }
 }
 
 namespace {

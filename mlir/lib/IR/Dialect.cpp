@@ -96,6 +96,9 @@ bool Dialect::isValidNamespace(StringRef str) {
 
 /// Register a set of dialect interfaces with this dialect instance.
 void Dialect::addInterface(std::unique_ptr<DialectInterface> interface) {
+  // Handle the case where the models resolve a promised interface.
+  handleAdditionOfUndefinedPromisedInterface(interface->getID());
+
   auto it = registeredInterfaces.try_emplace(interface->getID(),
                                              std::move(interface));
   (void)it;
@@ -142,6 +145,16 @@ DialectInterfaceCollectionBase::getInterfaceFor(Operation *op) const {
 //===----------------------------------------------------------------------===//
 
 DialectExtensionBase::~DialectExtensionBase() = default;
+
+void dialect_extension_detail::handleUseOfUndefinedPromisedInterface(
+    Dialect &dialect, TypeID interfaceID, StringRef interfaceName) {
+  dialect.handleUseOfUndefinedPromisedInterface(interfaceID, interfaceName);
+}
+
+void dialect_extension_detail::handleAdditionOfUndefinedPromisedInterface(
+    Dialect &dialect, TypeID interfaceID) {
+  dialect.handleAdditionOfUndefinedPromisedInterface(interfaceID);
+}
 
 //===----------------------------------------------------------------------===//
 // DialectRegistry

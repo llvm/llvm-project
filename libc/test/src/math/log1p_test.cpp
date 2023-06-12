@@ -81,7 +81,7 @@ TEST(LlvmLibcLog1pTest, AllExponents) {
 }
 
 TEST(LlvmLibcLog1pTest, InDoubleRange) {
-  constexpr uint64_t COUNT = 234561;
+  constexpr uint64_t COUNT = 4501;
 
   auto test = [&](uint64_t start, uint64_t stop,
                   mpfr::RoundingMode rounding_mode) {

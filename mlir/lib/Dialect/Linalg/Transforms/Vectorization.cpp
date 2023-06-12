@@ -1529,11 +1529,16 @@ static void convertAffineApply(RewriterBase &rewriter, LinalgOp linalgOp) {
 /// operations with dynamic shapes.
 LogicalResult mlir::linalg::vectorize(RewriterBase &rewriter, Operation *op,
                                       ArrayRef<int64_t> inputVectorSizes,
-                                      bool vectorizeNDExtract) {
+                                      bool vectorizeNDExtract,
+                                      bool lastVectorSizeScalable) {
   LDBG("Attempting to vectorize:\n" << *op << "\n");
   LDBG("Input vector sizes: ");
   LLVM_DEBUG(llvm::interleaveComma(inputVectorSizes, llvm::dbgs()));
   LLVM_DEBUG(llvm::dbgs() << "\n");
+  LDBG("Scalable vectorisation: " << lastVectorSizeScalable << "\n");
+
+  if (lastVectorSizeScalable)
+    op->emitWarning("Scalable vectorization is not supported yet");
 
   if (failed(
           vectorizeOpPrecondition(op, inputVectorSizes, vectorizeNDExtract))) {

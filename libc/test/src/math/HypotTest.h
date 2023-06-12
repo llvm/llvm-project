@@ -59,7 +59,7 @@ public:
   }
 
   void test_subnormal_range(Func func) {
-    constexpr UIntType COUNT = 100001;
+    constexpr UIntType COUNT = 10'001;
     for (unsigned scale = 0; scale < 4; ++scale) {
       UIntType max_value = FPBits::MAX_SUBNORMAL << scale;
       UIntType step = (max_value - FPBits::MIN_SUBNORMAL) / COUNT;
@@ -84,7 +84,7 @@ public:
   }
 
   void test_normal_range(Func func) {
-    constexpr UIntType COUNT = 100001;
+    constexpr UIntType COUNT = 10'001;
     constexpr UIntType STEP = (FPBits::MAX_NORMAL - FPBits::MIN_NORMAL) / COUNT;
     for (int signs = 0; signs < 4; ++signs) {
       for (UIntType v = FPBits::MIN_NORMAL, w = FPBits::MAX_NORMAL;

@@ -221,12 +221,19 @@ LogicalResult FlatLinearConstraints::composeMatchingMap(AffineMap other) {
 //
 // `var_q = var_n floordiv divisor`.
 //
+// First 'num' dimensional variables starting at 'offset' are
+// derived/to-be-derived in terms of the remaining variables. The remaining
+// variables are assigned trivial affine expressions in `memo`. For example,
+// memo is initilized as follows for a `cst` with 5 dims, when offset=2, num=2:
+// memo ==>  d0  d1  .   .   d2 ...
+// cst  ==>  c0  c1  c2  c3  c4 ...
+//
 // Returns true if the above mod or floordiv are detected, updating 'memo' with
 // these new expressions. Returns false otherwise.
 static bool detectAsMod(const FlatLinearConstraints &cst, unsigned pos,
-                        int64_t lbConst, int64_t ubConst,
-                        SmallVectorImpl<AffineExpr> &memo,
-                        MLIRContext *context) {
+                        unsigned offset, unsigned num, int64_t lbConst,
+                        int64_t ubConst, MLIRContext *context,
+                        SmallVectorImpl<AffineExpr> &memo) {
   assert(pos < cst.getNumVars() && "invalid position");
 
   // Check if a divisor satisfying the condition `0 <= var_r <= divisor - 1` can
@@ -308,7 +315,13 @@ static bool detectAsMod(const FlatLinearConstraints &cst, unsigned pos,
 
     // Express `var_r` as `var_n % divisor` and store the expression in `memo`.
     if (quotientCount >= 1) {
-      auto ub = cst.getConstantBound64(BoundType::UB, dimExpr.getPosition());
+      // Find the column corresponding to `dimExpr`. `num` columns starting at
+      // `offset` correspond to previously unknown variables. The column
+      // corresponding to the trivially known `dimExpr` can be on either side
+      // of these.
+      unsigned dimExprPos = dimExpr.getPosition();
+      unsigned dimExprCol = dimExprPos < offset ? dimExprPos : dimExprPos + num;
+      auto ub = cst.getConstantBound64(BoundType::UB, dimExprCol);
       // If `var_n` has an upperbound that is less than the divisor, mod can be
       // eliminated altogether.
       if (ub && *ub < divisor)
@@ -499,7 +512,8 @@ void FlatLinearConstraints::getSliceBounds(unsigned offset, unsigned num,
 
         // Detect a variable as modulo of another variable w.r.t a
         // constant.
-        if (detectAsMod(*this, pos, *lbConst, *ubConst, memo, context)) {
+        if (detectAsMod(*this, pos, offset, num, *lbConst, *ubConst, context,
+                        memo)) {
           changed = true;
           continue;
         }

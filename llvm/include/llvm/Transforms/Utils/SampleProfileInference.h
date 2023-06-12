@@ -18,29 +18,7 @@
 #include "llvm/ADT/DepthFirstIterator.h"
 #include "llvm/ADT/SmallVector.h"
 
-#include "llvm/IR/BasicBlock.h"
-#include "llvm/IR/Instruction.h"
-#include "llvm/IR/Instructions.h"
-
 namespace llvm {
-
-class Function;
-class MachineBasicBlock;
-class MachineFunction;
-
-namespace afdo_detail {
-
-template <class BlockT> struct TypeMap {};
-template <> struct TypeMap<BasicBlock> {
-  using BasicBlockT = BasicBlock;
-  using FunctionT = Function;
-};
-template <> struct TypeMap<MachineBasicBlock> {
-  using BasicBlockT = MachineBasicBlock;
-  using FunctionT = MachineFunction;
-};
-
-} // end namespace afdo_detail
 
 struct FlowJump;
 
@@ -138,10 +116,11 @@ void applyFlowInference(const ProfiParams &Params, FlowFunction &Func);
 void applyFlowInference(FlowFunction &Func);
 
 /// Sample profile inference pass.
-template <typename BT> class SampleProfileInference {
+template <typename FT> class SampleProfileInference {
 public:
-  using BasicBlockT = typename afdo_detail::TypeMap<BT>::BasicBlockT;
-  using FunctionT = typename afdo_detail::TypeMap<BT>::FunctionT;
+  using NodeRef = typename GraphTraits<FT *>::NodeRef;
+  using BasicBlockT = typename std::remove_pointer<NodeRef>::type;
+  using FunctionT = FT;
   using Edge = std::pair<const BasicBlockT *, const BasicBlockT *>;
   using BlockWeightMap = DenseMap<const BasicBlockT *, uint64_t>;
   using EdgeWeightMap = DenseMap<Edge, uint64_t>;
@@ -157,9 +136,9 @@ public:
 
 private:
   /// Initialize flow function blocks, jumps and misc metadata.
-  void initFunction(FlowFunction &Func,
-                    const std::vector<const BasicBlockT *> &BasicBlocks,
-                    DenseMap<const BasicBlockT *, uint64_t> &BlockIndex);
+  FlowFunction
+  createFlowFunction(const std::vector<const BasicBlockT *> &BasicBlocks,
+                     DenseMap<const BasicBlockT *, uint64_t> &BlockIndex);
 
   /// Try to infer branch probabilities mimicking implementation of
   /// BranchProbabilityInfo. Unlikely taken branches are marked so that the
@@ -228,8 +207,7 @@ void SampleProfileInference<BT>::apply(BlockWeightMap &BlockWeights,
   }
 
   // Create necessary objects
-  FlowFunction Func;
-  initFunction(Func, BasicBlocks, BlockIndex);
+  FlowFunction Func = createFlowFunction(BasicBlocks, BlockIndex);
 
   // Create and apply the inference network model.
   applyFlowInference(Func);
@@ -261,9 +239,10 @@ void SampleProfileInference<BT>::apply(BlockWeightMap &BlockWeights,
 }
 
 template <typename BT>
-void SampleProfileInference<BT>::initFunction(
-    FlowFunction &Func, const std::vector<const BasicBlockT *> &BasicBlocks,
+FlowFunction SampleProfileInference<BT>::createFlowFunction(
+    const std::vector<const BasicBlockT *> &BasicBlocks,
     DenseMap<const BasicBlockT *, uint64_t> &BlockIndex) {
+  FlowFunction Func;
   Func.Blocks.reserve(BasicBlocks.size());
   // Create FlowBlocks
   for (const auto *BB : BasicBlocks) {
@@ -314,6 +293,8 @@ void SampleProfileInference<BT>::initFunction(
     EntryBlock.Weight = 1;
     EntryBlock.HasUnknownWeight = false;
   }
+
+  return Func;
 }
 
 template <typename BT>
@@ -321,39 +302,9 @@ inline void SampleProfileInference<BT>::findUnlikelyJumps(
     const std::vector<const BasicBlockT *> &BasicBlocks,
     BlockEdgeMap &Successors, FlowFunction &Func) {}
 
-template <>
-inline void SampleProfileInference<BasicBlock>::findUnlikelyJumps(
-    const std::vector<const BasicBlockT *> &BasicBlocks,
-    BlockEdgeMap &Successors, FlowFunction &Func) {
-  for (auto &Jump : Func.Jumps) {
-    const auto *BB = BasicBlocks[Jump.Source];
-    const auto *Succ = BasicBlocks[Jump.Target];
-    const Instruction *TI = BB->getTerminator();
-    // Check if a block ends with InvokeInst and mark non-taken branch unlikely.
-    // In that case block Succ should be a landing pad
-    if (Successors[BB].size() == 2 && Successors[BB].back() == Succ) {
-      if (isa<InvokeInst>(TI)) {
-        Jump.IsUnlikely = true;
-      }
-    }
-    const Instruction *SuccTI = Succ->getTerminator();
-    // Check if the target block contains UnreachableInst and mark it unlikely
-    if (SuccTI->getNumSuccessors() == 0) {
-      if (isa<UnreachableInst>(SuccTI)) {
-        Jump.IsUnlikely = true;
-      }
-    }
-  }
-}
-
 template <typename BT>
 inline bool SampleProfileInference<BT>::isExit(const BasicBlockT *BB) {
   return BB->succ_empty();
-}
-
-template <>
-inline bool SampleProfileInference<BasicBlock>::isExit(const BasicBlock *BB) {
-  return succ_empty(BB);
 }
 
 } // end namespace llvm

@@ -118,7 +118,7 @@ class MMAType:
         }[ptx_type]
 
         self.ptx_reg_pattern = {
-            "f16": "%hh[0-9]+",
+            "f16": "%r[0-9]+",
             "f32": "%f[0-9]+",
             "f64": "%fd[0-9]+",
         }.get(ptx_type, "%r[0-9]+")

@@ -18,7 +18,7 @@ namespace clang::tidy::llvm_libc {
 /// are tagged with the LIBC_INLINE macro.
 ///
 /// For more information about the LIBC_INLINE macro, see
-/// https://libc.llvm.org/code_style.html.
+/// https://libc.llvm.org/dev/code_style.html.
 ///
 /// For the user-facing documentation see:
 /// http://clang.llvm.org/extra/clang-tidy/checks/llvmlibc/inline-function-decl-check.html

@@ -32,11 +32,18 @@ public:
 
 protected:
   /// Must be called by the subclass with the appropriate type ID.
-  explicit TransformDialectDataBase(TypeID typeID) : typeID(typeID) {}
+  explicit TransformDialectDataBase(TypeID typeID, MLIRContext *ctx)
+      : typeID(typeID), ctx(ctx) {}
+
+  /// Return the MLIR context.
+  MLIRContext *getContext() const { return ctx; }
 
 private:
   /// The type ID of the subclass.
   const TypeID typeID;
+
+  /// The MLIR context.
+  MLIRContext *ctx;
 };
 } // namespace detail
 
@@ -55,7 +62,8 @@ template <typename DerivedTy>
 class TransformDialectData : public detail::TransformDialectDataBase {
 protected:
   /// Forward the TypeID of the derived class to the base.
-  TransformDialectData() : TransformDialectDataBase(TypeID::get<DerivedTy>()) {}
+  TransformDialectData(MLIRContext *ctx)
+      : TransformDialectDataBase(TypeID::get<DerivedTy>(), ctx) {}
 };
 
 #ifndef NDEBUG
@@ -294,7 +302,8 @@ DataTy &TransformDialect::getOrCreateExtraData() {
   if (it != extraData.end())
     return static_cast<DataTy &>(*it->getSecond());
 
-  auto emplaced = extraData.try_emplace(typeID, std::make_unique<DataTy>());
+  auto emplaced =
+      extraData.try_emplace(typeID, std::make_unique<DataTy>(getContext()));
   return static_cast<DataTy &>(*emplaced.first->getSecond());
 }
 

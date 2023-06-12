@@ -260,27 +260,6 @@ add_lit_testsuite(check-lldb "Running lldb lit test suite"
     lldb-unit-test-deps)
 set_target_properties(check-lldb PROPERTIES FOLDER "lldb tests")
 
-# Add a lit test suite that runs the API & shell test while capturing a
-# reproducer.
-add_lit_testsuite(check-lldb-reproducers-capture
-  "Running lldb test suite with reproducer capture"
-  ${CMAKE_CURRENT_BINARY_DIR}/API
-  ${CMAKE_CURRENT_BINARY_DIR}/Shell
-  PARAMS "lldb-run-with-repro=capture"
-  EXCLUDE_FROM_CHECK_ALL
-  DEPENDS lldb-test-depends)
-
-# Add a lit test suite that runs the API & shell test by replaying a
-# reproducer.
-add_lit_testsuite(check-lldb-reproducers
-  "Running lldb test suite with reproducer replay"
-  ${CMAKE_CURRENT_BINARY_DIR}/API
-  ${CMAKE_CURRENT_BINARY_DIR}/Shell
-  PARAMS "lldb-run-with-repro=replay"
-  EXCLUDE_FROM_CHECK_ALL
-  DEPENDS lldb-test-depends)
-add_dependencies(check-lldb-reproducers check-lldb-reproducers-capture)
-
 if(LLDB_BUILT_STANDALONE)
   # This has to happen *AFTER* add_lit_testsuite.
   if (EXISTS ${LLVM_MAIN_SRC_DIR}/utils/llvm-lit)

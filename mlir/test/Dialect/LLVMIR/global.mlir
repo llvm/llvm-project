@@ -232,3 +232,16 @@ llvm.func @dtor() {
 
 // CHECK: llvm.mlir.global_dtors {dtors = [@dtor], priorities = [0 : i32]}
 llvm.mlir.global_dtors { dtors = [@dtor], priorities = [0 : i32]}
+
+// -----
+
+// CHECK: llvm.mlir.global external @target_ext() {addr_space = 0 : i32} : !llvm.target<"spirv.Image", i32, 0>
+llvm.mlir.global @target_ext() : !llvm.target<"spirv.Image", i32, 0>
+
+// CHECK: llvm.mlir.global external @target_ext_init(0 : i64) {addr_space = 0 : i32} : !llvm.target<"spirv.Image", i32, 0>
+llvm.mlir.global @target_ext_init(0 : i64) : !llvm.target<"spirv.Image", i32, 0>
+
+// -----
+
+// expected-error @+1 {{expected zero value for global with target extension type}}
+llvm.mlir.global @target_fail(1 : i64) : !llvm.target<"spirv.Image", i32, 0>

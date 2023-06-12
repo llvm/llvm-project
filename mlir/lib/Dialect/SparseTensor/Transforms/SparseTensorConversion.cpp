@@ -96,7 +96,7 @@ static Value createOrFoldLvlCall(OpBuilder &builder, Location loc,
   // `getDimPosition` checks that the expr isa `AffineDimExpr`,
   // which is all we care about (for supporting permutations).
   const Dimension dim =
-      stt.isIdentity() ? lvl : stt.getDimToLvlMap().getDimPosition(lvl);
+      stt.isIdentity() ? lvl : stt.getDimToLvl().getDimPosition(lvl);
   if (const auto sz = stt.getStaticDimSize(dim))
     return constantIndex(builder, loc, *sz);
   // If we cannot statically compute the size from the shape, then we
@@ -259,9 +259,9 @@ public:
   // TODO: This is only ever used for passing into `genAddEltCall`;
   // is there a better way to encapsulate that pattern (both to avoid
   // this one-off getter, and to avoid potential mixups)?
-  Value getDim2LvlMap() const {
-    assert(isInitialized() && "Must initialize before getDim2LvlMap");
-    return params[kParamDim2Lvl];
+  Value getDimToLvl() const {
+    assert(isInitialized() && "Must initialize before getDimToLvl");
+    return params[kParamDimToLvl];
   }
 
   /// Generates a function call, with the current static parameters
@@ -282,8 +282,8 @@ private:
   static constexpr unsigned kParamDimSizes = 0;
   static constexpr unsigned kParamLvlSizes = 1;
   static constexpr unsigned kParamLvlTypes = 2;
-  static constexpr unsigned kParamLvl2Dim = 3;
-  static constexpr unsigned kParamDim2Lvl = 4;
+  static constexpr unsigned kParamLvlToDim = 3;
+  static constexpr unsigned kParamDimToLvl = 4;
   static constexpr unsigned kParamPosTp = 5;
   static constexpr unsigned kParamCrdTp = 6;
   static constexpr unsigned kParamValTp = 7;
@@ -311,39 +311,39 @@ NewCallParams &NewCallParams::genBuffers(SparseTensorType stt,
          "Dimension-rank mismatch");
   params[kParamDimSizes] = allocaBuffer(builder, loc, dimSizes);
   // The level-sizes array must be passed as well, since for arbitrary
-  // dim2lvl mappings it cannot be trivially reconstructed at runtime.
+  // dimToLvl mappings it cannot be trivially reconstructed at runtime.
   // For now however, since we're still assuming permutations, we will
-  // initialize this parameter alongside the `dim2lvl` and `lvl2dim`
+  // initialize this parameter alongside the `dimToLvl` and `lvlToDim`
   // parameters below.  We preinitialize `lvlSizes` for code symmetry.
   SmallVector<Value> lvlSizes(lvlRank);
   // The dimension-to-level mapping and its inverse.  We must preinitialize
-  // `dim2lvl` so that the true branch below can perform random-access
-  // `operator[]` assignment.  We preinitialize `lvl2dim` for code symmetry.
-  SmallVector<Value> dim2lvl(dimRank);
-  SmallVector<Value> lvl2dim(lvlRank);
+  // `dimToLvl` so that the true branch below can perform random-access
+  // `operator[]` assignment.  We preinitialize `lvlToDim` for code symmetry.
+  SmallVector<Value> dimToLvl(dimRank);
+  SmallVector<Value> lvlToDim(lvlRank);
   if (!stt.isIdentity()) {
-    const auto dimOrder = stt.getDimToLvlMap();
-    assert(dimOrder.isPermutation());
+    const auto dimToLvlMap = stt.getDimToLvl();
+    assert(dimToLvlMap.isPermutation());
     for (Level l = 0; l < lvlRank; l++) {
       // The `d`th source variable occurs in the `l`th result position.
-      const Dimension d = dimOrder.getDimPosition(l);
-      dim2lvl[d] = constantIndex(builder, loc, l);
-      lvl2dim[l] = constantIndex(builder, loc, d);
+      const Dimension d = dimToLvlMap.getDimPosition(l);
+      dimToLvl[d] = constantIndex(builder, loc, l);
+      lvlToDim[l] = constantIndex(builder, loc, d);
       lvlSizes[l] = dimSizes[d];
     }
   } else {
     // The `SparseTensorType` ctor already ensures `dimRank == lvlRank`
     // when `isIdentity`; so no need to re-assert it here.
     for (Level l = 0; l < lvlRank; l++) {
-      dim2lvl[l] = lvl2dim[l] = constantIndex(builder, loc, l);
+      dimToLvl[l] = lvlToDim[l] = constantIndex(builder, loc, l);
       lvlSizes[l] = dimSizes[l];
     }
   }
   params[kParamLvlSizes] = allocaBuffer(builder, loc, lvlSizes);
-  params[kParamLvl2Dim] = allocaBuffer(builder, loc, lvl2dim);
-  params[kParamDim2Lvl] = stt.isIdentity()
-                              ? params[kParamLvl2Dim]
-                              : allocaBuffer(builder, loc, dim2lvl);
+  params[kParamLvlToDim] = allocaBuffer(builder, loc, lvlToDim);
+  params[kParamDimToLvl] = stt.isIdentity()
+                               ? params[kParamLvlToDim]
+                               : allocaBuffer(builder, loc, dimToLvl);
   // Secondary and primary types encoding.
   setTemplateTypes(stt);
   // Finally, make note that initialization is complete.
@@ -383,9 +383,9 @@ static void genDelIteratorCall(OpBuilder &builder, Location loc, Type elemTp,
 ///     t->add(&val, [i1,..,ik], [p1,..,pk]);
 static void genAddEltCall(OpBuilder &builder, Location loc, Type eltType,
                           Value lvlCOO, Value valPtr, Value dimCoords,
-                          Value dim2lvl) {
+                          Value dimToLvl) {
   SmallString<9> name{"addElt", primaryTypeFunctionSuffix(eltType)};
-  SmallVector<Value, 4> params{lvlCOO, valPtr, dimCoords, dim2lvl};
+  SmallVector<Value, 4> params{lvlCOO, valPtr, dimCoords, dimToLvl};
   Type pTp = getOpaquePointerType(builder);
   createFuncCall(builder, loc, name, pTp, params, EmitCInterface::On);
 }
@@ -481,7 +481,7 @@ genSparse2SparseReshape(ReshapeOp op, typename ReshapeOp::Adaptor adaptor,
   SmallVector<Value> srcDimSizes =
       getDimSizes(rewriter, loc, srcTp, adaptor.getSrc());
   NewCallParams params(rewriter, loc);
-  Value iter = params.genBuffers(srcTp.withoutOrdering(), srcDimSizes)
+  Value iter = params.genBuffers(srcTp.withoutDimToLvl(), srcDimSizes)
                    .genNewCall(Action::kToIterator, adaptor.getSrc());
   // Start a new COO for the destination tensor.
   SmallVector<Value> dstDimSizes;
@@ -493,7 +493,7 @@ genSparse2SparseReshape(ReshapeOp op, typename ReshapeOp::Adaptor adaptor,
                        dstTp.getDimShape(), op.getReassociationIndices());
   const Value coo =
       params.genBuffers(dstTp, dstDimSizes).genNewCall(Action::kEmptyCOO);
-  const Value dstPerm = params.getDim2LvlMap();
+  const Value dstDimToLvl = params.getDimToLvl();
   // Construct a while loop over the iterator.
   const Type iTp = rewriter.getIndexType();
   const Value srcDimCoords = genAlloca(rewriter, loc, srcTp.getDimRank(), iTp);
@@ -515,7 +515,7 @@ genSparse2SparseReshape(ReshapeOp op, typename ReshapeOp::Adaptor adaptor,
   assert(dstTp.getDimRank() == dstDimSizes.size());
   reshapeCoords(loc, rewriter, op.getReassociationIndices(), srcDimSizes,
                 srcDimCoords, dstDimSizes, dstDimCoords);
-  genAddEltCall(rewriter, loc, elemTp, coo, elemPtr, dstDimCoords, dstPerm);
+  genAddEltCall(rewriter, loc, elemTp, coo, elemPtr, dstDimCoords, dstDimToLvl);
   rewriter.create<scf::YieldOp>(loc);
   // Final call to construct sparse tensor storage and free temporary resources.
   rewriter.setInsertionPointAfter(whileOp);
@@ -544,7 +544,7 @@ static void genSparseCOOIterationLoop(
   const Type elemTp = stt.getElementType();
 
   // Start an iterator over the tensor (in coordinate order).
-  const auto noPerm = stt.withoutOrdering();
+  const auto noPerm = stt.withoutDimToLvl();
   SmallVector<Value> dimSizes = getDimSizes(rewriter, loc, noPerm, t);
   Value iter = NewCallParams(rewriter, loc)
                    .genBuffers(noPerm, dimSizes)
@@ -714,7 +714,7 @@ public:
     SmallVector<Value> dimShapeValues = getDimShape(rewriter, loc, stt);
     Value dimShapeBuffer = allocaBuffer(rewriter, loc, dimShapeValues);
     // Allocate `SparseTensorReader` and perform all initial setup that
-    // does not depend on lvlSizes (nor dim2lvl, lvl2dim, etc).
+    // does not depend on lvlSizes (nor dimToLvl, lvlToDim, etc).
     Type opaqueTp = getOpaquePointerType(rewriter);
     Value valTp =
         constantPrimaryTypeEncoding(rewriter, loc, stt.getElementType());
@@ -729,7 +729,7 @@ public:
     // compile-time.  If dimShape is dynamic, then we'll need to generate
     // code for computing lvlSizes from the `reader`'s actual dimSizes.
     //
-    // TODO: For now we're still assuming `dim2lvl` is a permutation.
+    // TODO: For now we're still assuming `dimToLvl` is a permutation.
     // But since we're computing lvlSizes here (rather than in the runtime),
     // we can easily generalize that simply by adjusting this code.
     //
@@ -744,31 +744,31 @@ public:
               .getResult(0);
     }
     Value lvlSizesBuffer;
-    Value lvl2dimBuffer;
-    Value dim2lvlBuffer;
+    Value lvlToDimBuffer;
+    Value dimToLvlBuffer;
     if (!stt.isIdentity()) {
-      const auto dimOrder = stt.getDimToLvlMap();
-      assert(dimOrder.isPermutation() && "Got non-permutation");
-      // We preinitialize `dim2lvlValues` since we need random-access writing.
+      const auto dimToLvl = stt.getDimToLvl();
+      assert(dimToLvl.isPermutation() && "Got non-permutation");
+      // We preinitialize `dimToLvlValues` since we need random-access writing.
       // And we preinitialize the others for stylistic consistency.
       SmallVector<Value> lvlSizeValues(lvlRank);
-      SmallVector<Value> lvl2dimValues(lvlRank);
-      SmallVector<Value> dim2lvlValues(dimRank);
+      SmallVector<Value> lvlToDimValues(lvlRank);
+      SmallVector<Value> dimToLvlValues(dimRank);
       for (Level l = 0; l < lvlRank; l++) {
         // The `d`th source variable occurs in the `l`th result position.
-        Dimension d = dimOrder.getDimPosition(l);
+        Dimension d = dimToLvl.getDimPosition(l);
         Value lvl = constantIndex(rewriter, loc, l);
         Value dim = constantIndex(rewriter, loc, d);
-        dim2lvlValues[d] = lvl;
-        lvl2dimValues[l] = dim;
+        dimToLvlValues[d] = lvl;
+        lvlToDimValues[l] = dim;
         lvlSizeValues[l] =
             stt.isDynamicDim(d)
                 ? rewriter.create<memref::LoadOp>(loc, dimSizesBuffer, dim)
                 : dimShapeValues[d];
       }
       lvlSizesBuffer = allocaBuffer(rewriter, loc, lvlSizeValues);
-      lvl2dimBuffer = allocaBuffer(rewriter, loc, lvl2dimValues);
-      dim2lvlBuffer = allocaBuffer(rewriter, loc, dim2lvlValues);
+      lvlToDimBuffer = allocaBuffer(rewriter, loc, lvlToDimValues);
+      dimToLvlBuffer = allocaBuffer(rewriter, loc, dimToLvlValues);
     } else {
       // The `SparseTensorType` ctor already ensures `dimRank == lvlRank`
       // when `isIdentity`; so no need to re-assert it here.
@@ -777,15 +777,15 @@ public:
       for (Level l = 0; l < lvlRank; l++)
         iotaValues.push_back(constantIndex(rewriter, loc, l));
       lvlSizesBuffer = dimSizesBuffer ? dimSizesBuffer : dimShapeBuffer;
-      dim2lvlBuffer = lvl2dimBuffer = allocaBuffer(rewriter, loc, iotaValues);
+      dimToLvlBuffer = lvlToDimBuffer = allocaBuffer(rewriter, loc, iotaValues);
     }
     // Use the `reader` to parse the file.
     SmallVector<Value, 8> params{
         reader,
         lvlSizesBuffer,
         genLvlTypesBuffer(rewriter, loc, stt),
-        lvl2dimBuffer,
-        dim2lvlBuffer,
+        lvlToDimBuffer,
+        dimToLvlBuffer,
         constantPosTypeEncoding(rewriter, loc, stt.getEncoding()),
         constantCrdTypeEncoding(rewriter, loc, stt.getEncoding()),
         valTp};
@@ -895,10 +895,8 @@ public:
         // Set up encoding with right mix of src and dst so that the two
         // method calls can share most parameters, while still providing
         // the correct sparsity information to either of them.
-        const auto mixedEnc = SparseTensorEncodingAttr::get(
-            op->getContext(), dstEnc.getLvlTypes(), dstEnc.getDimOrdering(),
-            dstEnc.getHigherOrdering(), srcEnc.getPosWidth(),
-            srcEnc.getCrdWidth());
+        const auto mixedEnc =
+            dstEnc.withBitWidths(srcEnc.getPosWidth(), srcEnc.getCrdWidth());
         // TODO: This is the only place where `kToCOO` (or `kToIterator`)
         // is called with a non-identity permutation.  Is there any clean
         // way to push the permutation over to the `kFromCOO` side instead?
@@ -927,7 +925,7 @@ public:
       const auto dstEnc = SparseTensorEncodingAttr::get(
           op->getContext(),
           SmallVector<DimLevelType>(dimRank, DimLevelType::Dense), AffineMap(),
-          AffineMap(), srcEnc.getPosWidth(), srcEnc.getCrdWidth());
+          srcEnc.getPosWidth(), srcEnc.getCrdWidth());
       SmallVector<Value> dimSizes = getDimSizes(rewriter, loc, srcTp, src);
       Value iter = NewCallParams(rewriter, loc)
                        .genBuffers(dstTp.withEncoding(dstEnc), dimSizes)
@@ -996,7 +994,7 @@ public:
         params.genBuffers(dstTp, dimSizes).genNewCall(Action::kEmptyCOO);
     const Type iTp = rewriter.getIndexType();
     Value dimCoords = genAlloca(rewriter, loc, dimRank, iTp);
-    Value perm = params.getDim2LvlMap();
+    Value dimToLvl = params.getDimToLvl();
     Value elemPtr = genAllocaScalar(rewriter, loc, elemTp);
     genDenseTensorOrSparseConstantIterLoop(
         rewriter, loc, src, dimRank,
@@ -1004,7 +1002,8 @@ public:
           assert(dcvs.size() == static_cast<size_t>(dimRank));
           storeAll(builder, loc, dimCoords, dcvs);
           builder.create<memref::StoreOp>(loc, val, elemPtr);
-          genAddEltCall(builder, loc, elemTp, coo, elemPtr, dimCoords, perm);
+          genAddEltCall(builder, loc, elemTp, coo, elemPtr, dimCoords,
+                        dimToLvl);
         });
     // Final call to construct sparse tensor storage.
     Value dst = params.genNewCall(Action::kFromCOO, coo);
@@ -1284,7 +1283,7 @@ public:
     const Dimension dimRank = dstTp.getDimRank();
 
     Value dst;     // destination tensor
-    Value dstPerm; // destination tensor permutation (if sparse out)
+    Value dstDimToLvl; // destination tensor permutation (if sparse out)
     // A pointer to the value being inserted (if dense => sparse)
     Value elemPtr;
     // Memory that holds the dim-coords for destination tensor (if sparse out)
@@ -1318,7 +1317,7 @@ public:
         dst = reshapeValuesToLevels(rewriter, loc, dstEnc, dimSizes, dst,
                                     dstDimCoords);
       } else {
-        dstPerm = params.getDim2LvlMap();
+        dstDimToLvl = params.getDimToLvl();
         elemPtr = genAllocaScalar(rewriter, loc, elemTp);
       }
     } else {
@@ -1350,7 +1349,7 @@ public:
                 // Case: sparse => sparse, except for annotated all dense.
                 storeAll(builder, loc, dstDimCoords, dcvs);
                 genAddEltCall(builder, loc, elemTp, dst, elemPtr, dstDimCoords,
-                              dstPerm);
+                              dstDimToLvl);
               } else {
                 // Case: sparse => dense, or annotated all dense.
                 const auto lcvs = allDense ? dcvs2lcvs(dcvs) : dcvs;
@@ -1368,7 +1367,7 @@ public:
                 Value val = genValueForDense(builder, loc, adaptedOp, dcvs);
                 builder.create<memref::StoreOp>(loc, val, elemPtr);
                 genAddEltCall(builder, loc, elemTp, dst, elemPtr, dstDimCoords,
-                              dstPerm);
+                              dstDimToLvl);
               } else {
                 // Case: dense => dense, or annotated all dense.
                 Value val = genValueForDense(builder, loc, adaptedOp, dcvs);
@@ -1420,7 +1419,7 @@ public:
     Value src = adaptor.getOperands()[0];
     SmallVector<Value> dimSizes = getDimSizes(rewriter, loc, srcTp, src);
     Value coo = NewCallParams(rewriter, loc)
-                    .genBuffers(srcTp.withoutOrdering(), dimSizes)
+                    .genBuffers(srcTp.withoutDimToLvl(), dimSizes)
                     .genNewCall(Action::kToCOO, src);
     // Then output the tensor to external file with coordinates in the
     // externally visible lexicographic coordinate order.  A sort is

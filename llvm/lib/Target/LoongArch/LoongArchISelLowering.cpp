@@ -183,7 +183,7 @@ LoongArchTargetLowering::LoongArchTargetLowering(const TargetMachine &TM,
   }
 
   // Compute derived properties from the register classes.
-  computeRegisterProperties(STI.getRegisterInfo());
+  computeRegisterProperties(Subtarget.getRegisterInfo());
 
   setStackPointerRegisterToSaveRestore(LoongArch::R3);
 
@@ -1783,6 +1783,18 @@ MachineBasicBlock *LoongArchTargetLowering::EmitInstrWithCustomInserter(
     return BB;
   }
   }
+}
+
+bool LoongArchTargetLowering::allowsMisalignedMemoryAccesses(
+    EVT VT, unsigned AddrSpace, Align Alignment, MachineMemOperand::Flags Flags,
+    unsigned *Fast) const {
+  if (!Subtarget.hasUAL())
+    return false;
+
+  // TODO: set reasonable speed number.
+  if (Fast)
+    *Fast = 1;
+  return true;
 }
 
 const char *LoongArchTargetLowering::getTargetNodeName(unsigned Opcode) const {

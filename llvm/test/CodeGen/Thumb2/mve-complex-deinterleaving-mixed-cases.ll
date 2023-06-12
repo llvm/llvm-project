@@ -553,11 +553,10 @@ define <4 x float> @mul_negequal(<4 x float> %a, <4 x float> %b) {
 ; CHECK-NEXT:    mov r0, sp
 ; CHECK-NEXT:    vldrw.u32 q1, [r0]
 ; CHECK-NEXT:    vmov d1, r2, r3
-; CHECK-NEXT:    vcmul.f32 q2, q0, q1, #0
-; CHECK-NEXT:    vcmla.f32 q2, q0, q1, #90
-; CHECK-NEXT:    vneg.f32 q0, q2
-; CHECK-NEXT:    vmov r0, r1, d0
-; CHECK-NEXT:    vmov r2, r3, d1
+; CHECK-NEXT:    vcmul.f32 q2, q0, q1, #180
+; CHECK-NEXT:    vcmla.f32 q2, q0, q1, #270
+; CHECK-NEXT:    vmov r0, r1, d4
+; CHECK-NEXT:    vmov r2, r3, d5
 ; CHECK-NEXT:    bx lr
 entry:
   %strided.vec = shufflevector <4 x float> %a, <4 x float> poison, <2 x i32> <i32 0, i32 2>

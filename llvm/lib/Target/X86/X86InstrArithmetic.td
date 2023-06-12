@@ -58,26 +58,6 @@ class SchedLoadReg<X86FoldableSchedWrite Sched> : Sched<[Sched.Folded,
   // Register reads (implicit or explicit).
   Sched.ReadAfterFold, Sched.ReadAfterFold]>;
 
-/// ITy - This instruction base class takes the type info for the instruction.
-/// Using this, it:
-/// 1. Concatenates together the instruction mnemonic with the appropriate
-///    suffix letter, a tab, and the arguments.
-/// 2. Infers whether the instruction should have a 0x66 prefix byte.
-/// 3. Infers whether the instruction should have a 0x40 REX_W prefix.
-/// 4. Infers whether the low bit of the opcode should be 0 (for i8 operations)
-///    or 1 (for i16,i32,i64 operations).
-class ITy<bits<8> opcode, Format f, X86TypeInfo typeinfo, dag outs, dag ins,
-          string mnemonic, string args, list<dag> pattern>
-  : I<{opcode{7}, opcode{6}, opcode{5}, opcode{4},
-       opcode{3}, opcode{2}, opcode{1}, typeinfo.HasOddOpcode },
-      f, outs, ins,
-      !strconcat(mnemonic, "{", typeinfo.InstrSuffix, "}\t", args), pattern> {
-
-  // Infer instruction prefixes from type info.
-  let OpSize = typeinfo.OpSize;
-  let hasREX_W  = typeinfo.HasREX_W;
-}
-
 // BinOpRR - Binary instructions with inputs "reg, reg".
 class BinOpRR<bits<8> opcode, string mnemonic, X86TypeInfo typeinfo,
               dag outlist, X86FoldableSchedWrite sched, list<dag> pattern>
@@ -539,13 +519,13 @@ def X86sub_flag_nocf : PatFrag<(ops node:$lhs, node:$rhs),
 
 let Defs = [EFLAGS] in {
 let Constraints = "$src1 = $dst", SchedRW = [WriteALU] in {
-let isConvertibleToThreeAddress = 1, CodeSize = 2 in { // Can xform into LEA.
 // Short forms only valid in 32-bit mode. Selected during MCInst lowering.
 let CodeSize = 1, hasSideEffects = 0 in {
 def INC16r_alt : INCDECR_ALT<0x40, "inc", Xi16>;
 def INC32r_alt : INCDECR_ALT<0x40, "inc", Xi32>;
 } // CodeSize = 1, hasSideEffects = 0
 
+let isConvertibleToThreeAddress = 1, CodeSize = 2 in { // Can xform into LEA.
 def INC8r  : INCDECR<MRM0r, "inc", Xi8, X86add_flag_nocf>;
 def INC16r : INCDECR<MRM0r, "inc", Xi16, X86add_flag_nocf>;
 def INC32r : INCDECR<MRM0r, "inc", Xi32, X86add_flag_nocf>;
@@ -777,7 +757,7 @@ let Defs = [RAX,RDX,EFLAGS], Uses = [RAX,RDX] in // RDX:RAX/[mem64] = RAX,RDX
 def IDIV64m: MulOpM<0xF7, MRM7m, "idiv", Xi64, WriteIDiv64, []>,
              Requires<[In64BitMode]>;
 }
-} // hasSideEffects = 0
+} // hasSideEffects = 1
 
 //===----------------------------------------------------------------------===//
 //  Two address Instructions.

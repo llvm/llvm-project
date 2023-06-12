@@ -60,6 +60,12 @@ private:
     bool __last_consumed_is_next_;
     bool __always_noconv_;
 
+#if defined(_LIBCPP_WIN32API)
+    static constexpr bool __is_win32api_wide_char = !is_same_v<_CharT, char>;
+#else
+    static constexpr bool __is_win32api_wide_char = false;
+#endif
+
     __stdinbuf(const __stdinbuf&);
     __stdinbuf& operator=(const __stdinbuf&);
 
@@ -74,6 +80,12 @@ __stdinbuf<_CharT>::__stdinbuf(FILE* __fp, state_type* __st)
       __last_consumed_is_next_(false)
 {
     imbue(this->getloc());
+    // On Windows, in wchar_t mode, ignore the codecvt from the locale by
+    // default and assume noconv; this passes wchar_t through unmodified from
+    // getwc. If the user sets a custom locale with imbue(), that gets honored,
+    // the IO is done with getc() and converted with the provided codecvt.
+    if constexpr (__is_win32api_wide_char)
+        __always_noconv_ = true;
 }
 
 template <class _CharT>
@@ -101,6 +113,36 @@ __stdinbuf<_CharT>::uflow()
     return __getchar(true);
 }
 
+static bool __do_getc(FILE *__fp, char *__pbuf) {
+    int __c = getc(__fp);
+    if (__c == EOF)
+        return false;
+    *__pbuf = static_cast<char>(__c);
+    return true;
+}
+#ifndef _LIBCPP_HAS_NO_WIDE_CHARACTERS
+static bool __do_getc(FILE *__fp, wchar_t *__pbuf) {
+    wint_t __c = getwc(__fp);
+    if (__c == WEOF)
+        return false;
+    *__pbuf = static_cast<wchar_t>(__c);
+    return true;
+}
+#endif
+
+static bool __do_ungetc(int __c, FILE *__fp, char __dummy) {
+    if (ungetc(__c, __fp) == EOF)
+        return false;
+    return true;
+}
+#ifndef _LIBCPP_HAS_NO_WIDE_CHARACTERS
+static bool __do_ungetc(std::wint_t __c, FILE *__fp, wchar_t __dummy) {
+    if (ungetwc(__c, __fp) == WEOF)
+        return false;
+    return true;
+}
+#endif
+
 template <class _CharT>
 typename __stdinbuf<_CharT>::int_type
 __stdinbuf<_CharT>::__getchar(bool __consume)
@@ -115,6 +157,20 @@ __stdinbuf<_CharT>::__getchar(bool __consume)
         }
         return __result;
     }
+    if (__always_noconv_) {
+        char_type __1buf;
+        if (!__do_getc(__file_, &__1buf))
+            return traits_type::eof();
+        if (!__consume)
+        {
+            if (!__do_ungetc(traits_type::to_int_type(__1buf), __file_, __1buf))
+                return traits_type::eof();
+        }
+        else
+            __last_consumed_ = traits_type::to_int_type(__1buf);
+        return traits_type::to_int_type(__1buf);
+    }
+
     char __extbuf[__limit];
     int __nread = _VSTD::max(1, __encoding_);
     for (int __i = 0; __i < __nread; ++__i)
@@ -125,42 +181,37 @@ __stdinbuf<_CharT>::__getchar(bool __consume)
         __extbuf[__i] = static_cast<char>(__c);
     }
     char_type __1buf;
-    if (__always_noconv_)
-        __1buf = static_cast<char_type>(__extbuf[0]);
-    else
+    const char* __enxt;
+    char_type* __inxt;
+    codecvt_base::result __r;
+    do
     {
-        const char* __enxt;
-        char_type* __inxt;
-        codecvt_base::result __r;
-        do
+        state_type __sv_st = *__st_;
+        __r = __cv_->in(*__st_, __extbuf, __extbuf + __nread, __enxt,
+                               &__1buf, &__1buf + 1, __inxt);
+        switch (__r)
         {
-            state_type __sv_st = *__st_;
-            __r = __cv_->in(*__st_, __extbuf, __extbuf + __nread, __enxt,
-                                   &__1buf, &__1buf + 1, __inxt);
-            switch (__r)
-            {
-            case _VSTD::codecvt_base::ok:
-                break;
-            case codecvt_base::partial:
-                *__st_ = __sv_st;
-                if (__nread == sizeof(__extbuf))
-                    return traits_type::eof();
-                {
-                    int __c = getc(__file_);
-                    if (__c == EOF)
-                        return traits_type::eof();
-                    __extbuf[__nread] = static_cast<char>(__c);
-                }
-                ++__nread;
-                break;
-            case codecvt_base::error:
+        case _VSTD::codecvt_base::ok:
+            break;
+        case codecvt_base::partial:
+            *__st_ = __sv_st;
+            if (__nread == sizeof(__extbuf))
                 return traits_type::eof();
-            case _VSTD::codecvt_base::noconv:
-                __1buf = static_cast<char_type>(__extbuf[0]);
-                break;
+            {
+                int __c = getc(__file_);
+                if (__c == EOF)
+                    return traits_type::eof();
+                __extbuf[__nread] = static_cast<char>(__c);
             }
-        } while (__r == _VSTD::codecvt_base::partial);
-    }
+            ++__nread;
+            break;
+        case codecvt_base::error:
+            return traits_type::eof();
+        case _VSTD::codecvt_base::noconv:
+            __1buf = static_cast<char_type>(__extbuf[0]);
+            break;
+        }
+    } while (__r == _VSTD::codecvt_base::partial);
     if (!__consume)
     {
         for (int __i = __nread; __i > 0;)
@@ -188,8 +239,11 @@ __stdinbuf<_CharT>::pbackfail(int_type __c)
         }
         return __c;
     }
-    if (__last_consumed_is_next_)
-    {
+    if (__always_noconv_ && __last_consumed_is_next_) {
+        if (!__do_ungetc(__last_consumed_, __file_,
+                         traits_type::to_char_type(__last_consumed_)))
+            return traits_type::eof();
+    } else if (__last_consumed_is_next_) {
         char __extbuf[__limit];
         char* __enxt;
         const char_type __ci = traits_type::to_char_type(__last_consumed_);
@@ -244,6 +298,12 @@ private:
     state_type* __st_;
     bool __always_noconv_;
 
+#if defined(_LIBCPP_WIN32API)
+    static constexpr bool __is_win32api_wide_char = !is_same_v<_CharT, char>;
+#else
+    static constexpr bool __is_win32api_wide_char = false;
+#endif
+
     __stdoutbuf(const __stdoutbuf&);
     __stdoutbuf& operator=(const __stdoutbuf&);
 };
@@ -255,7 +315,30 @@ __stdoutbuf<_CharT>::__stdoutbuf(FILE* __fp, state_type* __st)
       __st_(__st),
       __always_noconv_(__cv_->always_noconv())
 {
+    // On Windows, in wchar_t mode, ignore the codecvt from the locale by
+    // default and assume noconv; this passes wchar_t through unmodified to
+    // fputwc, which handles it correctly depending on the actual mode of the
+    // output stream. If the user sets a custom locale with imbue(), that
+    // gets honored.
+    if constexpr (__is_win32api_wide_char)
+        __always_noconv_ = true;
 }
+
+static bool __do_fputc(char __c, FILE* __fp) {
+    if (fwrite(&__c, sizeof(__c), 1, __fp) != 1)
+        return false;
+    return true;
+}
+#ifndef _LIBCPP_HAS_NO_WIDE_CHARACTERS
+static bool __do_fputc(wchar_t __c, FILE* __fp) {
+    // fputwc works regardless of wide/narrow mode of stdout, while
+    // fwrite of wchar_t only works if the stream actually has been set
+    // into wide mode.
+    if (fputwc(__c, __fp) == WEOF)
+        return false;
+    return true;
+}
+#endif
 
 template <class _CharT>
 typename __stdoutbuf<_CharT>::int_type
@@ -268,7 +351,7 @@ __stdoutbuf<_CharT>::overflow(int_type __c)
         __1buf = traits_type::to_char_type(__c);
         if (__always_noconv_)
         {
-            if (fwrite(&__1buf, sizeof(char_type), 1, __file_) != 1)
+            if (!__do_fputc(__1buf, __file_))
                 return traits_type::eof();
         }
         else
@@ -313,7 +396,10 @@ template <class _CharT>
 streamsize
 __stdoutbuf<_CharT>::xsputn(const char_type* __s, streamsize __n)
 {
-    if (__always_noconv_)
+    // For wchar_t on Windows, don't call fwrite(), but write characters one
+    // at a time with fputwc(); that works both when stdout is in the default
+    // mode and when it is set to Unicode mode.
+    if (__always_noconv_ && !__is_win32api_wide_char)
         return fwrite(__s, sizeof(char_type), __n, __file_);
     streamsize __i = 0;
     for (; __i < __n; ++__i, ++__s)

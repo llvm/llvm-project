@@ -45,7 +45,7 @@ Section,Description,Dependencies,Assignee,Complete
 | `multimap <https://reviews.llvm.org/D145976>`_",[expos.only.func],Hristo Hristov,|Complete|
 | `[associative.set.syn] <https://wg21.link/associative.set.syn>`_ (`general <https://wg21.link/container.opt.reqmts>`_),"| multiset
 | set",[expos.only.func],Hristo Hristov,|In Progress|
-| `[queue.ops] <https://wg21.link/queue.ops>`_,| `queue <https://reviews.llvm.org/D146066>`_,None,Hristo Hristov,|In Progress|
+| `[queue.ops] <https://wg21.link/queue.ops>`_,| `queue <https://reviews.llvm.org/D146066>`_,None,Hristo Hristov,|Complete|
 | `[stack.ops] <https://wg21.link/stack.ops>`_,| `stack <https://reviews.llvm.org/D146094>`_,None,Hristo Hristov,|In Progress|
 | `[reverse.iter.cmp] <https://wg21.link/reverse.iter.cmp>`_,| `reverse_iterator <https://reviews.llvm.org/D113695>`_,None,Mikhail Maltsev,|Complete|
 | `[move.iter.op.comp] <https://wg21.link/move.iter.op.comp>`_,| `move_iterator <https://reviews.llvm.org/D117656>`_,None,Arthur O'Dwyer,|Complete|

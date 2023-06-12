@@ -25,7 +25,7 @@ void detail::InterfaceMap::insert(TypeID interfaceId, void *conceptImpl) {
         return compare(it.first, id);
       });
   if (it != interfaces.end() && it->first == interfaceId) {
-    LLVM_DEBUG(llvm::dbgs() << "Ignoring repeated interface registration");
+    LLVM_DEBUG(llvm::dbgs() << "Ignoring repeated interface registration\n");
     free(conceptImpl);
     return;
   }

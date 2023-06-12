@@ -36,7 +36,7 @@
 
 #DCSC = #sparse_tensor.encoding<{
   lvlTypes = [ "compressed", "compressed" ],
-  dimOrdering = affine_map<(i,j) -> (j,i)>
+  dimToLvl = affine_map<(i,j) -> (j,i)>
 }>
 
 #SortedCOO = #sparse_tensor.encoding<{
@@ -45,12 +45,12 @@
 
 #SortedCOOPerm = #sparse_tensor.encoding<{
   lvlTypes = [ "compressed-nu", "singleton" ],
-  dimOrdering = affine_map<(i,j) -> (j,i)>
+  dimToLvl = affine_map<(i,j) -> (j,i)>
 }>
 
 #CCCPerm = #sparse_tensor.encoding<{
   lvlTypes = [ "compressed", "compressed", "compressed"],
-  dimOrdering = affine_map<(d0, d1, d2) -> (d1, d2, d0)>
+  dimToLvl = affine_map<(d0, d1, d2) -> (d1, d2, d0)>
 }>
 
 module {

@@ -1,0 +1,30 @@
+# This file is licensed under the Apache License v2.0 with LLVM Exceptions.
+# See https://llvm.org/LICENSE.txt for license information.
+# SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+
+# Tests for LLVM libc inttypes.h functions.
+
+load("//libc/test:libc_test_rules.bzl", "libc_test")
+
+package(default_visibility = ["//visibility:public"])
+
+licenses(["notice"])
+
+libc_test(
+    name = "imaxabs_test",
+    srcs = ["imaxabs_test.cpp"],
+    libc_function_deps = [
+        "//libc:imaxabs",
+    ],
+)
+
+libc_test(
+    name = "imaxdiv_test",
+    srcs = ["imaxdiv_test.cpp"],
+    libc_function_deps = [
+        "//libc:imaxdiv",
+    ],
+    deps = [
+        "//libc/test/src/stdlib:div_test_helper",
+    ],
+)

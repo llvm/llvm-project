@@ -69,6 +69,7 @@
 #include <memory>
 #include <mutex>
 #include <optional>
+#include <sstream>
 
 using namespace lldb;
 using namespace lldb_private;
@@ -2536,6 +2537,27 @@ void Target::SetDefaultArchitecture(const ArchSpec &arch) {
   Target::GetGlobalProperties().SetDefaultArchitecture(arch);
 }
 
+llvm::Error Target::SetLabel(llvm::StringRef label) {
+  size_t n = LLDB_INVALID_INDEX32;
+  if (llvm::to_integer(label, n))
+    return llvm::make_error<llvm::StringError>(
+        "Cannot use integer as target label.", llvm::inconvertibleErrorCode());
+  TargetList &targets = GetDebugger().GetTargetList();
+  for (size_t i = 0; i < targets.GetNumTargets(); i++) {
+    TargetSP target_sp = targets.GetTargetAtIndex(i);
+    if (target_sp && target_sp->GetLabel() == label) {
+        return llvm::make_error<llvm::StringError>(
+            llvm::formatv(
+                "Cannot use label '{0}' since it's set in target #{1}.", label,
+                i),
+            llvm::inconvertibleErrorCode());
+    }
+  }
+
+  m_label = label.str();
+  return llvm::Error::success();
+}
+
 Target *Target::GetTargetFromContexts(const ExecutionContext *exe_ctx_ptr,
                                       const SymbolContext *sc_ptr) {
   // The target can either exist in the "process" of ExecutionContext, or in
@@ -4008,7 +4030,7 @@ public:
   TargetOptionValueProperties(ConstString name) : Cloneable(name) {}
 
   const Property *
-  GetPropertyAtIndex(uint32_t idx,
+  GetPropertyAtIndex(size_t idx,
                      const ExecutionContext *exe_ctx = nullptr) const override {
     // When getting the value for a key from the target options, we will always
     // try and grab the setting from the current target if there is one. Else

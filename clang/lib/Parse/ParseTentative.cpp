@@ -656,7 +656,12 @@ bool Parser::isCXXTypeId(TentativeCXXTypeIdContext Context, bool &isAmbiguous) {
     if (Context == TypeIdInParens && Tok.is(tok::r_paren)) {
       TPR = TPResult::True;
       isAmbiguous = true;
-
+    // We are supposed to be inside the first operand to a _Generic selection
+    // expression, so if we find a comma after the declarator, we've found a
+    // type and not an expression.
+    } else if (Context == TypeIdAsGenericSelectionArgument && Tok.is(tok::comma)) {
+      TPR = TPResult::True;
+      isAmbiguous = true;
     // We are supposed to be inside a template argument, so if after
     // the abstract declarator we encounter a '>', '>>' (in C++0x), or
     // ','; or, in C++0x, an ellipsis immediately preceding such, this
@@ -721,6 +726,9 @@ Parser::CXX11AttributeKind
 Parser::isCXX11AttributeSpecifier(bool Disambiguate,
                                   bool OuterMightBeMessageSend) {
   if (Tok.is(tok::kw_alignas))
+    return CAK_AttributeSpecifier;
+
+  if (Tok.isRegularKeywordAttribute())
     return CAK_AttributeSpecifier;
 
   if (Tok.isNot(tok::l_square) || NextToken().isNot(tok::l_square))
@@ -862,7 +870,8 @@ Parser::isCXX11AttributeSpecifier(bool Disambiguate,
 
 bool Parser::TrySkipAttributes() {
   while (Tok.isOneOf(tok::l_square, tok::kw___attribute, tok::kw___declspec,
-                     tok::kw_alignas)) {
+                     tok::kw_alignas) ||
+         Tok.isRegularKeywordAttribute()) {
     if (Tok.is(tok::l_square)) {
       ConsumeBracket();
       if (Tok.isNot(tok::l_square))
@@ -873,6 +882,8 @@ bool Parser::TrySkipAttributes() {
       // Note that explicitly checking for `[[` and `]]` allows to fail as
       // expected in the case of the Objective-C message send syntax.
       ConsumeBracket();
+    } else if (Tok.isRegularKeywordAttribute()) {
+      ConsumeToken();
     } else {
       ConsumeToken();
       if (Tok.isNot(tok::l_paren))

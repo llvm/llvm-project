@@ -13,6 +13,7 @@
 #include <utility>
 #include <vector>
 
+#include "Globals.h"
 #include "PybindUtils.h"
 
 #include "mlir-c/AffineExpr.h"
@@ -868,9 +869,7 @@ public:
 
   PyConcreteType() = default;
   PyConcreteType(PyMlirContextRef contextRef, MlirType t)
-      : BaseTy(std::move(contextRef), t) {
-    pybind11::implicitly_convertible<PyType, DerivedTy>();
-  }
+      : BaseTy(std::move(contextRef), t) {}
   PyConcreteType(PyType &orig)
       : PyConcreteType(orig.getContext(), castFrom(orig)) {}
 
@@ -913,6 +912,13 @@ public:
       printAccum.parts.append(")");
       return printAccum.join();
     });
+
+    if (DerivedTy::getTypeIdFunction) {
+      PyGlobals::get().registerTypeCaster(
+          DerivedTy::getTypeIdFunction(),
+          pybind11::cpp_function(
+              [](PyType pyType) -> DerivedTy { return pyType; }));
+    }
 
     DerivedTy::bindDerived(cls);
   }
@@ -980,6 +986,8 @@ public:
   //   const char *pyClassName
   using ClassTy = pybind11::class_<DerivedTy, BaseTy>;
   using IsAFunctionTy = bool (*)(MlirAttribute);
+  using GetTypeIDFunctionTy = MlirTypeID (*)();
+  static constexpr GetTypeIDFunctionTy getTypeIdFunction = nullptr;
 
   PyConcreteAttribute() = default;
   PyConcreteAttribute(PyMlirContextRef contextRef, MlirAttribute attr)
@@ -1009,9 +1017,36 @@ public:
           return DerivedTy::isaFunction(otherAttr);
         },
         pybind11::arg("other"));
-    cls.def_property_readonly("type", [](PyAttribute &attr) {
-      return PyType(attr.getContext(), mlirAttributeGetType(attr));
+    cls.def_property_readonly(
+        "type", [](PyAttribute &attr) { return mlirAttributeGetType(attr); });
+    cls.def_property_readonly_static(
+        "static_typeid", [](py::object & /*class*/) -> MlirTypeID {
+          if (DerivedTy::getTypeIdFunction)
+            return DerivedTy::getTypeIdFunction();
+          throw py::attribute_error(
+              (DerivedTy::pyClassName + llvm::Twine(" has no typeid.")).str());
+        });
+    cls.def_property_readonly("typeid", [](PyAttribute &self) {
+      return py::cast(self).attr("typeid").cast<MlirTypeID>();
     });
+    cls.def("__repr__", [](DerivedTy &self) {
+      PyPrintAccumulator printAccum;
+      printAccum.parts.append(DerivedTy::pyClassName);
+      printAccum.parts.append("(");
+      mlirAttributePrint(self, printAccum.getCallback(),
+                         printAccum.getUserData());
+      printAccum.parts.append(")");
+      return printAccum.join();
+    });
+
+    if (DerivedTy::getTypeIdFunction) {
+      PyGlobals::get().registerTypeCaster(
+          DerivedTy::getTypeIdFunction(),
+          pybind11::cpp_function([](PyAttribute pyAttribute) -> DerivedTy {
+            return pyAttribute;
+          }));
+    }
+
     DerivedTy::bindDerived(cls);
   }
 

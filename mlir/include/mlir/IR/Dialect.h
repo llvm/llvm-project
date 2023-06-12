@@ -159,11 +159,20 @@ public:
   /// Lookup an interface for the given ID if one is registered, otherwise
   /// nullptr.
   DialectInterface *getRegisteredInterface(TypeID interfaceID) {
+#ifndef NDEBUG
+    handleUseOfUndefinedPromisedInterface(interfaceID);
+#endif
+
     auto it = registeredInterfaces.find(interfaceID);
     return it != registeredInterfaces.end() ? it->getSecond().get() : nullptr;
   }
   template <typename InterfaceT>
   InterfaceT *getRegisteredInterface() {
+#ifndef NDEBUG
+    handleUseOfUndefinedPromisedInterface(InterfaceT::getInterfaceID(),
+                                          llvm::getTypeName<InterfaceT>());
+#endif
+
     return static_cast<InterfaceT *>(
         getRegisteredInterface(InterfaceT::getInterfaceID()));
   }
@@ -194,6 +203,37 @@ public:
     InterfaceT *interface = new InterfaceT(this, std::forward<Args>(args)...);
     addInterface(std::unique_ptr<DialectInterface>(interface));
     return *interface;
+  }
+
+  /// Declare that the given interface will be implemented, but has a delayed
+  /// registration. The promised interface type can be an interface of any type
+  /// not just a dialect interface, i.e. it may also be an
+  /// AttributeInterface/OpInterface/TypeInterface/etc.
+  template <typename InterfaceT>
+  void declarePromisedInterface() {
+    unresolvedPromisedInterfaces.insert(InterfaceT::getInterfaceID());
+  }
+
+  /// Checks if the given interface, which is attempting to be used, is a
+  /// promised interface of this dialect that has yet to be implemented. If so,
+  /// emits a fatal error. `interfaceName` is an optional string that contains a
+  /// more user readable name for the interface (such as the class name).
+  void handleUseOfUndefinedPromisedInterface(TypeID interfaceID,
+                                             StringRef interfaceName = "") {
+    if (unresolvedPromisedInterfaces.count(interfaceID)) {
+      llvm::report_fatal_error(
+          "checking for an interface (`" + interfaceName +
+          "`) that was promised by dialect '" + getNamespace() +
+          "' but never implemented. This is generally an indication "
+          "that the dialect extension implementing the interface was never "
+          "registered.");
+    }
+  }
+  /// Checks if the given interface, which is attempting to be attached to a
+  /// construct owned by this dialect, is a promised interface of this dialect
+  /// that has yet to be implemented. If so, it resolves the interface promise.
+  void handleAdditionOfUndefinedPromisedInterface(TypeID interfaceID) {
+    unresolvedPromisedInterfaces.erase(interfaceID);
   }
 
 protected:
@@ -288,6 +328,11 @@ private:
 
   /// A collection of registered dialect interfaces.
   DenseMap<TypeID, std::unique_ptr<DialectInterface>> registeredInterfaces;
+
+  /// A set of interfaces that the dialect (or its constructs, i.e.
+  /// Attributes/Operations/Types/etc.) has promised to implement, but has yet
+  /// to provide an implementation for.
+  DenseSet<TypeID> unresolvedPromisedInterfaces;
 
   friend class DialectRegistry;
   friend void registerDialect();

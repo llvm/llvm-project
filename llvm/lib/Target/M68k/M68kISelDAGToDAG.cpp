@@ -666,6 +666,15 @@ void M68kDAGToDAGISel::Select(SDNode *Node) {
   default:
     break;
 
+  case ISD::GLOBAL_OFFSET_TABLE: {
+    SDValue GOT = CurDAG->getTargetExternalSymbol(
+        "_GLOBAL_OFFSET_TABLE_", MVT::i32, M68kII::MO_GOTPCREL);
+    MachineSDNode *Res =
+        CurDAG->getMachineNode(M68k::LEA32q, DL, MVT::i32, GOT);
+    ReplaceNode(Node, Res);
+    return;
+  }
+
   case M68kISD::GLOBAL_BASE_REG:
     ReplaceNode(Node, getGlobalBaseReg());
     return;

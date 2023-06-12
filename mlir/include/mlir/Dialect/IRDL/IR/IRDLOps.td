@@ -269,7 +269,7 @@ class IRDL_ConstraintOp<string mnemonic, list<Trait> traits = []>
         DeclareOpInterfaceMethods<VerifyConstraintInterface>] # traits> {
 }
 
-def IRDL_Is : IRDL_ConstraintOp<"is",
+def IRDL_IsOp : IRDL_ConstraintOp<"is",
     [ParentOneOf<["TypeOp", "AttributeOp", "OperationOp"]>, Pure]> {
   let summary = "Constraints an attribute/type to be a specific attribute instance";
   let description = [{
@@ -296,7 +296,7 @@ def IRDL_Is : IRDL_ConstraintOp<"is",
   let assemblyFormat = " $expected ` ` attr-dict ";
 }
 
-def IRDL_Parametric : IRDL_ConstraintOp<"parametric",
+def IRDL_ParametricOp : IRDL_ConstraintOp<"parametric",
     [ParentOneOf<["TypeOp", "AttributeOp", "OperationOp"]>, Pure]> {
   let summary = "Constraints an attribute/type base and its parameters";
   let description = [{
@@ -331,7 +331,7 @@ def IRDL_Parametric : IRDL_ConstraintOp<"parametric",
   let assemblyFormat = " $base_type `<` $args `>` ` ` attr-dict ";
 }
 
-def IRDL_Any : IRDL_ConstraintOp<"any",
+def IRDL_AnyOp : IRDL_ConstraintOp<"any",
     [ParentOneOf<["TypeOp", "AttributeOp", "OperationOp"]>]> {
   let summary = "Accept any type or attribute";
   let description = [{
@@ -356,7 +356,7 @@ def IRDL_Any : IRDL_ConstraintOp<"any",
   let assemblyFormat = " attr-dict ";
 }
 
-def IRDL_AnyOf : IRDL_ConstraintOp<"any_of",
+def IRDL_AnyOfOp : IRDL_ConstraintOp<"any_of",
                   [ParentOneOf<["TypeOp", "AttributeOp", "OperationOp"]>,
                    SameOperandsAndResultType]> {
   let summary = "Constraints to the union of the provided constraints";
@@ -389,7 +389,7 @@ def IRDL_AnyOf : IRDL_ConstraintOp<"any_of",
   let assemblyFormat = [{ `(` $args `)` ` ` attr-dict }];
 }
 
-def IRDL_AllOf : IRDL_ConstraintOp<"all_of",
+def IRDL_AllOfOp : IRDL_ConstraintOp<"all_of",
                  [ParentOneOf<["TypeOp", "AttributeOp", "OperationOp"]>,
                   SameOperandsAndResultType]> {
   let summary = "Constraints to the intersection of the provided constraints";
@@ -424,6 +424,41 @@ def IRDL_AllOf : IRDL_ConstraintOp<"all_of",
   let arguments = (ins Variadic<IRDL_AttributeType>:$args);
   let results = (outs IRDL_AttributeType:$output);
   let assemblyFormat = [{ `(` $args `)` ` ` attr-dict }];
+}
+
+def IRDL_CPredOp : IRDL_Op<"c_pred"> {
+  let summary = "Constraints an attribute using a C++ predicate";
+  let description = [{
+    `irdl.c_pred` defines a constraint that is written in C++.
+
+    Dialects using this operation cannot be registered at runtime, as it relies
+    on C++ code.
+
+    Special placeholders can be used to refer to entities in the context where
+    this predicate is used. They serve as "hooks" to the enclosing environment.
+    The following special placeholders are supported in constraints for an op:
+
+    * `$_builder` will be replaced by a mlir::Builder instance.
+    * `$_op` will be replaced by the current operation.
+    * `$_self` will be replaced with the entity this predicate is attached to.
+       Compared to ODS, `$_self` is always of type `mlir::Attribute`, and types
+       are manipulated as `TypeAttr` attributes.
+
+    Example:
+    ```mlir
+    irdl.type @op_with_attr {
+      %0 = irdl.c_pred "::llvm::isa<::mlir::IntegerAttr>($_self)"
+      irdl.parameters(%0)
+    }
+    ```
+
+    In this example, @op_with_attr is defined as a type with a single
+    parameter, which is an `IntegerAttr`, as constrained by the C++ predicate.
+  }];
+
+  let arguments = (ins StrAttr:$pred);
+  let results = (outs IRDL_AttributeType:$output);
+  let assemblyFormat = "$pred ` ` attr-dict";
 }
 
 #endif // MLIR_DIALECT_IRDL_IR_IRDLOPS

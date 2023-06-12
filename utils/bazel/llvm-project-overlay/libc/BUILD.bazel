@@ -310,10 +310,13 @@ libc_support_library(
     hdrs = [
         "src/__support/float_to_string.h",
         "src/__support/ryu_constants.h",
+        "src/__support/ryu_long_double_constants.h",
     ],
+    defines = ["LIBC_COPT_FLOAT_TO_STR_USE_MEGA_LONG_DOUBLE_TABLE"],
     deps = [
         ":__support_common",
         ":__support_cpp_type_traits",
+        ":__support_fputil_dyadic_float",
         ":__support_fputil_fp_bits",
         ":__support_libc_assert",
         ":__support_uint",
@@ -697,6 +700,7 @@ libc_support_library(
         ":__support_fputil_fenv_impl",
         ":__support_fputil_float_properties",
         ":__support_fputil_fp_bits",
+        ":__support_macros_attributes",
         ":__support_macros_optimization",
         ":__support_macros_properties_cpu_features",
         ":__support_uint128",
@@ -758,6 +762,7 @@ libc_support_library(
         ":__support_common",
         ":__support_fputil_multiply_add",
         ":__support_number_pair",
+        ":libc_root",
     ],
 )
 
@@ -771,6 +776,7 @@ libc_support_library(
         ":__support_fputil_multiply_add",
         ":__support_macros_optimization",
         ":__support_uint",
+        ":libc_root",
     ],
 )
 
@@ -1677,7 +1683,89 @@ libc_math_function(name = "scalbnf")
 
 libc_math_function(name = "scalbnl")
 
+############################## inttypes targets ##############################
+
+libc_function(
+    name = "imaxabs",
+    srcs = ["src/inttypes/imaxabs.cpp"],
+    hdrs = ["src/inttypes/imaxabs.h"],
+    deps = [
+        ":__support_common",
+        ":__support_integer_operations",
+    ],
+)
+
+libc_function(
+    name = "imaxdiv",
+    srcs = ["src/inttypes/imaxdiv.cpp"],
+    hdrs = ["src/inttypes/imaxdiv.h"],
+    deps = [
+        ":__support_common",
+        ":__support_integer_operations",
+    ],
+)
+
 ############################### stdlib targets ###############################
+
+libc_function(
+    name = "abs",
+    srcs = ["src/stdlib/abs.cpp"],
+    hdrs = ["src/stdlib/abs.h"],
+    deps = [
+        ":__support_common",
+        ":__support_integer_operations",
+    ],
+)
+
+libc_function(
+    name = "labs",
+    srcs = ["src/stdlib/labs.cpp"],
+    hdrs = ["src/stdlib/labs.h"],
+    deps = [
+        ":__support_common",
+        ":__support_integer_operations",
+    ],
+)
+
+libc_function(
+    name = "llabs",
+    srcs = ["src/stdlib/llabs.cpp"],
+    hdrs = ["src/stdlib/llabs.h"],
+    deps = [
+        ":__support_common",
+        ":__support_integer_operations",
+    ],
+)
+
+libc_function(
+    name = "div",
+    srcs = ["src/stdlib/div.cpp"],
+    hdrs = ["src/stdlib/div.h"],
+    deps = [
+        ":__support_common",
+        ":__support_integer_operations",
+    ],
+)
+
+libc_function(
+    name = "ldiv",
+    srcs = ["src/stdlib/ldiv.cpp"],
+    hdrs = ["src/stdlib/ldiv.h"],
+    deps = [
+        ":__support_common",
+        ":__support_integer_operations",
+    ],
+)
+
+libc_function(
+    name = "lldiv",
+    srcs = ["src/stdlib/lldiv.cpp"],
+    hdrs = ["src/stdlib/lldiv.h"],
+    deps = [
+        ":__support_common",
+        ":__support_integer_operations",
+    ],
+)
 
 libc_function(
     name = "atoi",

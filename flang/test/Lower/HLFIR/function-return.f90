@@ -1,5 +1,5 @@
 ! Test lowering of function return to HLFIR
-! RUN: bbc -emit-fir -hlfir -o - %s 2>&1 | FileCheck %s
+! RUN: bbc -emit-hlfir -o - %s 2>&1 | FileCheck %s
 
 integer function simple_return()
   simple_return = 42

@@ -89,6 +89,7 @@ DAG_FUNCTION(minimum,         2, 0, experimental_constrained_minimum,    FMINIMU
 DAG_FUNCTION(nearbyint,       1, 1, experimental_constrained_nearbyint,  FNEARBYINT)
 DAG_FUNCTION(pow,             2, 1, experimental_constrained_pow,        FPOW)
 DAG_FUNCTION(powi,            2, 1, experimental_constrained_powi,       FPOWI)
+DAG_FUNCTION(ldexp,           2, 1, experimental_constrained_ldexp,      FLDEXP)
 DAG_FUNCTION(rint,            1, 1, experimental_constrained_rint,       FRINT)
 DAG_FUNCTION(round,           1, 0, experimental_constrained_round,      FROUND)
 DAG_FUNCTION(roundeven,       1, 0, experimental_constrained_roundeven,  FROUNDEVEN)

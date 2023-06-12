@@ -58,8 +58,7 @@ _ForwardIterator lower_bound(_ForwardIterator __first, _ForwardIterator __last, 
 template <class _ForwardIterator, class _Tp>
 _LIBCPP_NODISCARD_EXT inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20
 _ForwardIterator lower_bound(_ForwardIterator __first, _ForwardIterator __last, const _Tp& __value) {
-  return std::lower_bound(__first, __last, __value,
-                          __less<typename iterator_traits<_ForwardIterator>::value_type, _Tp>());
+  return std::lower_bound(__first, __last, __value, __less<>());
 }
 
 _LIBCPP_END_NAMESPACE_STD

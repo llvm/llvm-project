@@ -11,7 +11,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/CodeGen/MachineOperand.h"
-#include "llvm/ADT/FoldingSet.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/Analysis/Loads.h"
 #include "llvm/CodeGen/MIRFormatter.h"
@@ -1097,16 +1096,6 @@ MachineMemOperand::MachineMemOperand(MachinePointerInfo ptrinfo, Flags f,
     : MachineMemOperand(ptrinfo, f,
                         s == ~UINT64_C(0) ? LLT() : LLT::scalar(8 * s), a,
                         AAInfo, Ranges, SSID, Ordering, FailureOrdering) {}
-
-/// Profile - Gather unique data for the object.
-///
-void MachineMemOperand::Profile(FoldingSetNodeID &ID) const {
-  ID.AddInteger(getOffset());
-  ID.AddInteger(getMemoryType().getUniqueRAWLLTData());
-  ID.AddPointer(getOpaqueValue());
-  ID.AddInteger(getFlags());
-  ID.AddInteger(getBaseAlign().value());
-}
 
 void MachineMemOperand::refineAlignment(const MachineMemOperand *MMO) {
   // The Value and Offset may differ due to CSE. But the flags and size

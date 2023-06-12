@@ -37,6 +37,7 @@ cc_test(
         "//clang-tools-extra/clang-tidy:google",
         "//clang-tools-extra/clang-tidy:lib",
         "//clang-tools-extra/clang-tidy:llvm",
+        "//clang-tools-extra/clang-tidy:misc",
         "//clang-tools-extra/clang-tidy:modernize",
         "//clang-tools-extra/clang-tidy:objc",
         "//clang-tools-extra/clang-tidy:readability",

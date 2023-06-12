@@ -18,6 +18,7 @@
 #include "mlir/Conversion/Passes.h"
 #include "mlir/Dialect/Affine/Passes.h"
 #include "mlir/Dialect/Complex/IR/Complex.h"
+#include "mlir/Dialect/Func/Extensions/InlinerExtension.h"
 #include "mlir/InitAllDialects.h"
 #include "mlir/Pass/Pass.h"
 #include "mlir/Pass/PassRegistry.h"
@@ -34,20 +35,28 @@ namespace fir::support {
       mlir::vector::VectorDialect, mlir::math::MathDialect,                    \
       mlir::complex::ComplexDialect, mlir::DLTIDialect
 
+#define FLANG_CODEGEN_DIALECT_LIST FIRCodeGenDialect, mlir::LLVM::LLVMDialect
+
 // The definitive list of dialects used by flang.
 #define FLANG_DIALECT_LIST                                                     \
-  FLANG_NONCODEGEN_DIALECT_LIST, FIRCodeGenDialect, mlir::LLVM::LLVMDialect
+  FLANG_NONCODEGEN_DIALECT_LIST, FLANG_CODEGEN_DIALECT_LIST
 
 inline void registerNonCodegenDialects(mlir::DialectRegistry &registry) {
   registry.insert<FLANG_NONCODEGEN_DIALECT_LIST>();
+  mlir::func::registerInlinerExtension(registry);
 }
 
 /// Register all the dialects used by flang.
 inline void registerDialects(mlir::DialectRegistry &registry) {
-  registry.insert<FLANG_DIALECT_LIST>();
+  registerNonCodegenDialects(registry);
+  registry.insert<FLANG_CODEGEN_DIALECT_LIST>();
 }
 
 inline void loadNonCodegenDialects(mlir::MLIRContext &context) {
+  mlir::DialectRegistry registry;
+  registerNonCodegenDialects(registry);
+  context.appendDialectRegistry(registry);
+
   context.loadDialect<FLANG_NONCODEGEN_DIALECT_LIST>();
 }
 
@@ -55,6 +64,10 @@ inline void loadNonCodegenDialects(mlir::MLIRContext &context) {
 /// pass, but a producer of FIR and MLIR. It is therefore a requirement that the
 /// dialects be preloaded to be able to build the IR.
 inline void loadDialects(mlir::MLIRContext &context) {
+  mlir::DialectRegistry registry;
+  registerDialects(registry);
+  context.appendDialectRegistry(registry);
+
   context.loadDialect<FLANG_DIALECT_LIST>();
 }
 

@@ -3821,7 +3821,7 @@ protected:
 
 // This is a searcher delegate wrapper around CommandCompletions common
 // callbacks. The callbacks are only given the match string. The completion_mask
-// can be a combination of CommonCompletionTypes.
+// can be a combination of lldb::CompletionType.
 class CommonCompletionSearcherDelegate : public SearcherDelegate {
 public:
   typedef std::function<void(const std::string &)> CallbackType;
@@ -3840,7 +3840,7 @@ public:
   void UpdateMatches(const std::string &text) override {
     CompletionResult result;
     CompletionRequest request(text.c_str(), text.size(), result);
-    CommandCompletions::InvokeCommonCompletionCallbacks(
+    lldb_private::CommandCompletions::InvokeCommonCompletionCallbacks(
         m_debugger.GetCommandInterpreter(), m_completion_mask, request,
         nullptr);
     result.GetMatches(m_matches);
@@ -3852,7 +3852,7 @@ public:
 
 protected:
   Debugger &m_debugger;
-  // A compound mask from CommonCompletionTypes.
+  // A compound mask from lldb::CompletionType.
   uint32_t m_completion_mask;
   // A callback to execute once the user selects a match. The match is passed to
   // the callback as a string.

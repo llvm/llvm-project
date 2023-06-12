@@ -2393,6 +2393,24 @@ bool LoopIdiomRecognize::recognizeShiftUntilBitTest() {
   // Ok, transform appears worthwhile.
   MadeChange = true;
 
+  if (!isGuaranteedNotToBeUndefOrPoison(BitPos)) {
+    // BitMask may be computed from BitPos, Freeze BitPos so we can increase
+    // it's use count.
+    Instruction *InsertPt = nullptr;
+    if (auto *BitPosI = dyn_cast<Instruction>(BitPos))
+      InsertPt = BitPosI->getInsertionPointAfterDef();
+    else
+      InsertPt = &*DT->getRoot()->getFirstNonPHIOrDbgOrAlloca();
+    if (!InsertPt)
+      return false;
+    FreezeInst *BitPosFrozen =
+        new FreezeInst(BitPos, BitPos->getName() + ".fr", InsertPt);
+    BitPos->replaceUsesWithIf(BitPosFrozen, [BitPosFrozen](Use &U) {
+      return U.getUser() != BitPosFrozen;
+    });
+    BitPos = BitPosFrozen;
+  }
+
   // Step 1: Compute the loop trip count.
 
   Value *LowBitMask = Builder.CreateAdd(BitMask, Constant::getAllOnesValue(Ty),

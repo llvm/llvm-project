@@ -23,7 +23,7 @@ def testParsePrint():
     gc.collect()
     # CHECK: "hello"
     print(str(t))
-    # CHECK: Attribute("hello")
+    # CHECK: StringAttr("hello")
     print(repr(t))
 
 
@@ -134,7 +134,7 @@ def testStandardAttrCasts():
         a1 = Attribute.parse('"attr1"')
         astr = StringAttr(a1)
         aself = StringAttr(astr)
-        # CHECK: Attribute("attr1")
+        # CHECK: StringAttr("attr1")
         print(repr(astr))
         try:
             tillegal = StringAttr(Attribute.parse("1.0"))
@@ -324,32 +324,32 @@ def testDenseIntAttr():
 
 @run
 def testDenseArrayGetItem():
-    def print_item(AttrClass, attr_asm):
-        attr = AttrClass(Attribute.parse(attr_asm))
+    def print_item(attr_asm):
+        attr = Attribute.parse(attr_asm)
         print(f"{len(attr)}: {attr[0]}, {attr[1]}")
 
     with Context():
         # CHECK: 2: 0, 1
-        print_item(DenseBoolArrayAttr, "array<i1: false, true>")
+        print_item("array<i1: false, true>")
         # CHECK: 2: 2, 3
-        print_item(DenseI8ArrayAttr, "array<i8: 2, 3>")
+        print_item("array<i8: 2, 3>")
         # CHECK: 2: 4, 5
-        print_item(DenseI16ArrayAttr, "array<i16: 4, 5>")
+        print_item("array<i16: 4, 5>")
         # CHECK: 2: 6, 7
-        print_item(DenseI32ArrayAttr, "array<i32: 6, 7>")
+        print_item("array<i32: 6, 7>")
         # CHECK: 2: 8, 9
-        print_item(DenseI64ArrayAttr, "array<i64: 8, 9>")
+        print_item("array<i64: 8, 9>")
         # CHECK: 2: 1.{{0+}}, 2.{{0+}}
-        print_item(DenseF32ArrayAttr, "array<f32: 1.0, 2.0>")
+        print_item("array<f32: 1.0, 2.0>")
         # CHECK: 2: 3.{{0+}}, 4.{{0+}}
-        print_item(DenseF64ArrayAttr, "array<f64: 3.0, 4.0>")
+        print_item("array<f64: 3.0, 4.0>")
 
 
 # CHECK-LABEL: TEST: testDenseIntAttrGetItem
 @run
 def testDenseIntAttrGetItem():
     def print_item(attr_asm):
-        attr = DenseIntElementsAttr(Attribute.parse(attr_asm))
+        attr = Attribute.parse(attr_asm)
         dtype = ShapedType(attr.type).element_type
         try:
             item = attr[0]
@@ -553,3 +553,53 @@ def testStridedLayoutAttr():
         print(f"rank: {len(attr.strides)}")
         # CHECK: strides are dynamic: [True, True, True]
         print(f"strides are dynamic: {[s == dynamic for s in attr.strides]}")
+
+
+# CHECK-LABEL: TEST: testConcreteTypesRoundTrip
+@run
+def testConcreteTypesRoundTrip():
+    with Context(), Location.unknown():
+
+        def print_item(attr):
+            print(repr(attr.type))
+
+        # CHECK: F32Type(f32)
+        print_item(Attribute.parse("42.0 : f32"))
+        # CHECK: F32Type(f32)
+        print_item(FloatAttr.get_f32(42.0))
+        # CHECK: IntegerType(i64)
+        print_item(IntegerAttr.get(IntegerType.get_signless(64), 42))
+
+        def print_container_item(attr_asm):
+            attr = DenseElementsAttr(Attribute.parse(attr_asm))
+            print(repr(attr.type))
+            print(repr(attr.type.element_type))
+
+        # CHECK: RankedTensorType(tensor<i16>)
+        # CHECK: IntegerType(i16)
+        print_container_item("dense<123> : tensor<i16>")
+
+        # CHECK: RankedTensorType(tensor<f64>)
+        # CHECK: F64Type(f64)
+        print_container_item("dense<1.0> : tensor<f64>")
+
+        raw = Attribute.parse("vector<4xf32>")
+        # CHECK: attr: vector<4xf32>
+        print("attr:", raw)
+        type_attr = TypeAttr(raw)
+
+        # CHECK: VectorType(vector<4xf32>)
+        print(repr(type_attr.value))
+        # CHECK: F32Type(f32)
+        print(repr(type_attr.value.element_type))
+
+
+# CHECK-LABEL: TEST: testConcreteAttributesRoundTrip
+@run
+def testConcreteAttributesRoundTrip():
+    with Context(), Location.unknown():
+
+        # CHECK: FloatAttr(4.200000e+01 : f32)
+        print(repr(Attribute.parse("42.0 : f32")))
+
+        assert IntegerAttr.static_typeid is not None

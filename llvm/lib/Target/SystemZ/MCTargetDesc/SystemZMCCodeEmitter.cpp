@@ -47,7 +47,7 @@ public:
   ~SystemZMCCodeEmitter() override = default;
 
   // OVerride MCCodeEmitter.
-  void encodeInstruction(const MCInst &MI, raw_ostream &OS,
+  void encodeInstruction(const MCInst &MI, SmallVectorImpl<char> &CB,
                          SmallVectorImpl<MCFixup> &Fixups,
                          const MCSubtargetInfo &STI) const override;
 
@@ -154,7 +154,8 @@ private:
 
 } // end anonymous namespace
 
-void SystemZMCCodeEmitter::encodeInstruction(const MCInst &MI, raw_ostream &OS,
+void SystemZMCCodeEmitter::encodeInstruction(const MCInst &MI,
+                                             SmallVectorImpl<char> &CB,
                                              SmallVectorImpl<MCFixup> &Fixups,
                                              const MCSubtargetInfo &STI) const {
   MemOpsEmitted = 0;
@@ -163,7 +164,7 @@ void SystemZMCCodeEmitter::encodeInstruction(const MCInst &MI, raw_ostream &OS,
   // Big-endian insertion of Size bytes.
   unsigned ShiftValue = (Size * 8) - 8;
   for (unsigned I = 0; I != Size; ++I) {
-    OS << uint8_t(Bits >> ShiftValue);
+    CB.push_back(uint8_t(Bits >> ShiftValue));
     ShiftValue -= 8;
   }
 }

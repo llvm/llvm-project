@@ -110,15 +110,16 @@ template <typename T>
 static void modifyRecords(const T &Records, const StringRef &Name) {
   for (const auto &Record : Records) {
     if (Name == Record.second.get()->Name) {
-      Record.second.get()->Declaration.removeLast();
-      Record.second.get()
-          ->Declaration
-          .appendFront(" ", DeclarationFragments::FragmentKind::Text)
-          .appendFront("typedef", DeclarationFragments::FragmentKind::Keyword,
-                       "", nullptr)
-          .append(" { ... } ", DeclarationFragments::FragmentKind::Text)
-          .append(Name, DeclarationFragments::FragmentKind::Identifier)
-          .append(";", DeclarationFragments::FragmentKind::Text);
+      auto &DeclFragment = Record.second->Declaration;
+      DeclFragment.insert(DeclFragment.begin(), " ",
+                          DeclarationFragments::FragmentKind::Text);
+      DeclFragment.insert(DeclFragment.begin(), "typedef",
+                          DeclarationFragments::FragmentKind::Keyword, "",
+                          nullptr);
+      DeclFragment.insert(--DeclFragment.end(), " { ... } ",
+                          DeclarationFragments::FragmentKind::Text);
+      DeclFragment.insert(--DeclFragment.end(), Name,
+                          DeclarationFragments::FragmentKind::Identifier);
       break;
     }
   }

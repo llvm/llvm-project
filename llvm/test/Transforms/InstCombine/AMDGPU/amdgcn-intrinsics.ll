@@ -569,14 +569,14 @@ define i1 @test_class_undef_mask_f32(float %x) nounwind {
 
 define i1 @test_class_poison_poison_f32(float %x) nounwind {
 ; CHECK-LABEL: @test_class_poison_poison_f32(
-; CHECK-NEXT:    ret i1 undef
+; CHECK-NEXT:    ret i1 poison
 ;
   %val = call i1 @llvm.amdgcn.class.f32(float poison, i32 poison)
   ret i1 %val
 }
 define i1 @test_class_val_poison_f32(float %arg) nounwind {
 ; CHECK-LABEL: @test_class_val_poison_f32(
-; CHECK-NEXT:    ret i1 false
+; CHECK-NEXT:    ret i1 poison
 ;
   %val = call i1 @llvm.amdgcn.class.f32(float %arg, i32 poison)
   ret i1 %val
@@ -584,7 +584,7 @@ define i1 @test_class_val_poison_f32(float %arg) nounwind {
 
 define i1 @test_class_poison_val_f32(i32 %arg) nounwind {
 ; CHECK-LABEL: @test_class_poison_val_f32(
-; CHECK-NEXT:    ret i1 undef
+; CHECK-NEXT:    ret i1 poison
 ;
   %val = call i1 @llvm.amdgcn.class.f32(float poison, i32 %arg)
   ret i1 %val
@@ -639,6 +639,15 @@ define i1 @test_class_undef_val_f32() nounwind {
   ret i1 %val
 }
 
+define i1 @test_class_undef_val_f32_var(i32 %arg) nounwind {
+; CHECK-LABEL: @test_class_undef_val_f32_var(
+; CHECK-NEXT:    [[VAL:%.*]] = icmp ne i32 [[ARG:%.*]], 0
+; CHECK-NEXT:    ret i1 [[VAL]]
+;
+  %val = call i1 @llvm.amdgcn.class.f32(float undef, i32 %arg)
+  ret i1 %val
+}
+
 define i1 @test_class_val_undef_f32(float %arg) nounwind {
 ; CHECK-LABEL: @test_class_val_undef_f32(
 ; CHECK-NEXT:    ret i1 false
@@ -649,7 +658,7 @@ define i1 @test_class_val_undef_f32(float %arg) nounwind {
 
 define i1 @test_class_undef_undef_f32() nounwind {
 ; CHECK-LABEL: @test_class_undef_undef_f32(
-; CHECK-NEXT:    ret i1 undef
+; CHECK-NEXT:    ret i1 false
 ;
   %val = call i1 @llvm.amdgcn.class.f32(float undef, i32 undef)
   ret i1 %val

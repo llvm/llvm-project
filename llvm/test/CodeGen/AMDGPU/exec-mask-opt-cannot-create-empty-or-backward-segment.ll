@@ -6,24 +6,26 @@ define amdgpu_kernel void @cannot_create_empty_or_backwards_segment(i1 %arg, i1 
 ; CHECK:       ; %bb.0: ; %bb
 ; CHECK-NEXT:    s_mov_b64 s[26:27], s[2:3]
 ; CHECK-NEXT:    s_mov_b64 s[24:25], s[0:1]
+; CHECK-NEXT:    s_load_dword s2, s[4:5], 0x0
 ; CHECK-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x0
+; CHECK-NEXT:    s_load_dword s6, s[4:5], 0x4
 ; CHECK-NEXT:    s_add_u32 s24, s24, s7
 ; CHECK-NEXT:    s_addc_u32 s25, s25, 0
 ; CHECK-NEXT:    s_waitcnt lgkmcnt(0)
-; CHECK-NEXT:    s_bitcmp1_b32 s0, 0
-; CHECK-NEXT:    s_cselect_b64 s[2:3], -1, 0
-; CHECK-NEXT:    s_bitcmp1_b32 s0, 8
+; CHECK-NEXT:    s_bitcmp1_b32 s2, 0
+; CHECK-NEXT:    s_cselect_b64 s[16:17], -1, 0
+; CHECK-NEXT:    s_bitcmp1_b32 s2, 8
 ; CHECK-NEXT:    s_cselect_b64 s[10:11], -1, 0
-; CHECK-NEXT:    s_bitcmp1_b32 s0, 16
-; CHECK-NEXT:    v_cndmask_b32_e64 v1, 0, 1, s[2:3]
+; CHECK-NEXT:    s_bitcmp1_b32 s2, 16
 ; CHECK-NEXT:    s_cselect_b64 s[2:3], -1, 0
 ; CHECK-NEXT:    s_bitcmp1_b32 s0, 24
 ; CHECK-NEXT:    s_cselect_b64 s[8:9], -1, 0
 ; CHECK-NEXT:    s_xor_b64 s[4:5], s[8:9], -1
 ; CHECK-NEXT:    s_bitcmp1_b32 s1, 0
-; CHECK-NEXT:    v_cndmask_b32_e64 v0, 0, 1, s[2:3]
 ; CHECK-NEXT:    s_cselect_b64 s[12:13], -1, 0
-; CHECK-NEXT:    s_bitcmp1_b32 s1, 8
+; CHECK-NEXT:    s_bitcmp1_b32 s6, 8
+; CHECK-NEXT:    v_cndmask_b32_e64 v0, 0, 1, s[2:3]
+; CHECK-NEXT:    v_cndmask_b32_e64 v1, 0, 1, s[16:17]
 ; CHECK-NEXT:    s_cselect_b64 s[14:15], -1, 0
 ; CHECK-NEXT:    v_cmp_ne_u32_e64 s[2:3], 1, v0
 ; CHECK-NEXT:    s_and_b64 s[4:5], exec, s[4:5]

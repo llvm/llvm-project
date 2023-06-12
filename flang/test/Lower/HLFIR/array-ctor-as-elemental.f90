@@ -1,5 +1,5 @@
 ! Test lowering of array constructors as hlfir.elemental.
-! RUN: bbc -emit-fir -hlfir -o - %s | FileCheck %s
+! RUN: bbc -emit-hlfir -o - %s | FileCheck %s
 
 subroutine test_as_simple_elemental(n)
   integer :: n

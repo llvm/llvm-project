@@ -1,5 +1,6 @@
-// RUN: mlir-tblgen -gen-attrdef-defs -I %S/../../include %s | FileCheck %s --check-prefix=ATTR
-// RUN: mlir-tblgen -gen-typedef-defs -I %S/../../include %s | FileCheck %s --check-prefix=TYPE
+// RUN: sed 's/DEFAULT_TYPE_PARSER/0/' %s | mlir-tblgen -gen-attrdef-defs -I %S/../../include | FileCheck %s --check-prefix=ATTR
+// RUN: sed 's/DEFAULT_TYPE_PARSER/0/' %s | mlir-tblgen -gen-typedef-defs -I %S/../../include | FileCheck %s --check-prefix=TYPE
+// RUN: sed 's/DEFAULT_TYPE_PARSER/1/' %s | mlir-tblgen -gen-typedef-defs -I %S/../../include | FileCheck %s --check-prefix=TYPE --check-prefix=DEFAULT_TYPE_PARSER
 
 include "mlir/IR/AttrTypeBase.td"
 include "mlir/IR/EnumAttr.td"
@@ -9,7 +10,8 @@ include "mlir/IR/OpBase.td"
 def Test_Dialect : Dialect {
   let name = "TestDialect";
   let cppNamespace = "::test";
-  let useDefaultTypePrinterParser = 0;
+  let useDefaultTypePrinterParser = DEFAULT_TYPE_PARSER;
+  let isExtensible = 1;
 }
 
 class TestAttr<string name> : AttrDef<Test_Dialect, name>;
@@ -642,3 +644,9 @@ def TypeN : TestType<"TestP"> {
   let mnemonic = "type_n";
   let assemblyFormat = "`<` (`?`) : (struct($a, $b)^)? `>`";
 }
+
+// DEFAULT_TYPE_PARSER: TestDialect::parseType(::mlir::DialectAsmParser &parser)
+// DEFAULT_TYPE_PARSER: auto parseResult = parseOptionalDynamicType(mnemonic, parser, genType);
+// DEFAULT_TYPE_PARSER: if (parseResult.has_value()) {
+// DEFAULT_TYPE_PARSER:   if (::mlir::succeeded(parseResult.getValue()))
+// DEFAULT_TYPE_PARSER:     return genType;

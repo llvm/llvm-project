@@ -198,6 +198,24 @@ func.func @floordivs_nofold() -> index {
   return %0 : index
 }
 
+// CHECK-LABEL: @rems_zerodiv_nofold
+func.func @rems_zerodiv_nofold() -> index {
+  %lhs = index.constant 2
+  %rhs = index.constant 0
+  // CHECK: index.rems
+  %0 = index.rems %lhs, %rhs
+  return %0 : index
+}
+
+// CHECK-LABEL: @remu_zerodiv_nofold
+func.func @remu_zerodiv_nofold() -> index {
+  %lhs = index.constant 2
+  %rhs = index.constant 0
+  // CHECK: index.remu
+  %0 = index.remu %lhs, %rhs
+  return %0 : index
+}
+
 // CHECK-LABEL: @rems
 func.func @rems() -> index {
   %lhs = index.constant -5

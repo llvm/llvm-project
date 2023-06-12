@@ -23,6 +23,7 @@ static_library("Interpreter") {
     "//llvm/lib/TargetParser",
   ]
   sources = [
+    "DeviceOffload.cpp",
     "IncrementalExecutor.cpp",
     "IncrementalParser.cpp",
     "Interpreter.cpp",

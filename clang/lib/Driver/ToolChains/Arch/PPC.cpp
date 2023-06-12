@@ -87,10 +87,6 @@ std::string ppc::getPPCTuneCPU(const ArgList &Args, const llvm::Triple &T) {
 /// Get the (LLVM) name of the PowerPC cpu we are targeting.
 std::string ppc::getPPCTargetCPU(const Driver &D, const ArgList &Args,
                                  const llvm::Triple &T) {
-  if (const Arg *A = Args.getLastArg(clang::driver::options::OPT_march_EQ)) {
-    D.Diag(diag::err_drv_unsupported_opt_for_target)
-        << A->getSpelling() << T.getTriple();
-  }
   if (Arg *A = Args.getLastArg(clang::driver::options::OPT_mcpu_EQ))
     return normalizeCPUName(A->getValue(), T);
   return getPPCGenericTargetCPU(T);

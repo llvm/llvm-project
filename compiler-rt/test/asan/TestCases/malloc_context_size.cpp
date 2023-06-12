@@ -11,11 +11,11 @@ int main() {
   return x[0];
 
   // CHECK: freed by thread T{{.*}} here:
-  // CHECK-NEXT: #0 0x{{.*}} in {{operator delete( )?\[\]|wrap__ZdaPv}}
+  // CHECK-NEXT: #0 0x{{.*}} in {{operator delete( )?\[\]|_ZdaPv}}
   // CHECK-NOT: #1 0x{{.*}}
 
   // CHECK: previously allocated by thread T{{.*}} here:
-  // CHECK-NEXT: #0 0x{{.*}} in {{operator new( )?\[\]|wrap__Znam}}
+  // CHECK-NEXT: #0 0x{{.*}} in {{operator new( )?\[\]|_Znam}}
   // CHECK-NOT: #1 0x{{.*}}
 
   // CHECK: SUMMARY: AddressSanitizer: heap-use-after-free

@@ -392,19 +392,19 @@ const Expr *getDerefExpr(const Stmt *S);
 } // namespace bugreporter
 
 class TrackConstraintBRVisitor final : public BugReporterVisitor {
-  DefinedSVal Constraint;
-  bool Assumption;
+  const SmallString<64> Message;
+  const DefinedSVal Constraint;
+  const bool Assumption;
   bool IsSatisfied = false;
-  bool IsZeroCheck;
 
   /// We should start tracking from the last node along the path in which the
   /// value is constrained.
   bool IsTrackingTurnedOn = false;
 
 public:
-  TrackConstraintBRVisitor(DefinedSVal constraint, bool assumption)
-      : Constraint(constraint), Assumption(assumption),
-        IsZeroCheck(!Assumption && isa<Loc>(Constraint)) {}
+  TrackConstraintBRVisitor(DefinedSVal constraint, bool assumption,
+                           StringRef Message)
+      : Message(Message), Constraint(constraint), Assumption(assumption) {}
 
   void Profile(llvm::FoldingSetNodeID &ID) const override;
 
@@ -417,6 +417,9 @@ public:
                                    PathSensitiveBugReport &BR) override;
 
 private:
+  /// Checks if the constraint refers to a null-location.
+  bool isZeroCheck() const;
+
   /// Checks if the constraint is valid in the current state.
   bool isUnderconstrained(const ExplodedNode *N) const;
 };

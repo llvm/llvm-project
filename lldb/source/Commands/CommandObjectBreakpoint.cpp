@@ -828,9 +828,8 @@ public:
   void
   HandleArgumentCompletion(CompletionRequest &request,
                            OptionElementVector &opt_element_vector) override {
-    CommandCompletions::InvokeCommonCompletionCallbacks(
-        GetCommandInterpreter(), CommandCompletions::eBreakpointCompletion,
-        request, nullptr);
+    lldb_private::CommandCompletions::InvokeCommonCompletionCallbacks(
+        GetCommandInterpreter(), lldb::eBreakpointCompletion, request, nullptr);
   }
 
   Options *GetOptions() override { return &m_options; }
@@ -902,9 +901,8 @@ public:
   void
   HandleArgumentCompletion(CompletionRequest &request,
                            OptionElementVector &opt_element_vector) override {
-    CommandCompletions::InvokeCommonCompletionCallbacks(
-        GetCommandInterpreter(), CommandCompletions::eBreakpointCompletion,
-        request, nullptr);
+    lldb_private::CommandCompletions::InvokeCommonCompletionCallbacks(
+        GetCommandInterpreter(), lldb::eBreakpointCompletion, request, nullptr);
   }
 
 protected:
@@ -1017,9 +1015,8 @@ the second re-enables the first location.");
   void
   HandleArgumentCompletion(CompletionRequest &request,
                            OptionElementVector &opt_element_vector) override {
-    CommandCompletions::InvokeCommonCompletionCallbacks(
-        GetCommandInterpreter(), CommandCompletions::eBreakpointCompletion,
-        request, nullptr);
+    lldb_private::CommandCompletions::InvokeCommonCompletionCallbacks(
+        GetCommandInterpreter(), lldb::eBreakpointCompletion, request, nullptr);
   }
 
 protected:
@@ -1394,9 +1391,8 @@ public:
   void
   HandleArgumentCompletion(CompletionRequest &request,
                            OptionElementVector &opt_element_vector) override {
-    CommandCompletions::InvokeCommonCompletionCallbacks(
-        GetCommandInterpreter(), CommandCompletions::eBreakpointCompletion,
-        request, nullptr);
+    lldb_private::CommandCompletions::InvokeCommonCompletionCallbacks(
+        GetCommandInterpreter(), lldb::eBreakpointCompletion, request, nullptr);
   }
 
   Options *GetOptions() override { return &m_options; }
@@ -1803,9 +1799,8 @@ public:
   void
   HandleArgumentCompletion(CompletionRequest &request,
                            OptionElementVector &opt_element_vector) override {
-    CommandCompletions::InvokeCommonCompletionCallbacks(
-        GetCommandInterpreter(), CommandCompletions::eBreakpointCompletion,
-        request, nullptr);
+    lldb_private::CommandCompletions::InvokeCommonCompletionCallbacks(
+        GetCommandInterpreter(), lldb::eBreakpointCompletion, request, nullptr);
   }
 
   Options *GetOptions() override { return &m_option_group; }
@@ -1887,9 +1882,8 @@ public:
   void
   HandleArgumentCompletion(CompletionRequest &request,
                            OptionElementVector &opt_element_vector) override {
-    CommandCompletions::InvokeCommonCompletionCallbacks(
-        GetCommandInterpreter(), CommandCompletions::eBreakpointCompletion,
-        request, nullptr);
+    lldb_private::CommandCompletions::InvokeCommonCompletionCallbacks(
+        GetCommandInterpreter(), lldb::eBreakpointCompletion, request, nullptr);
   }
 
   Options *GetOptions() override { return &m_option_group; }
@@ -2203,9 +2197,8 @@ public:
 
       switch (GetDefinitions()[opt_defs_index].short_option) {
       case 'f':
-        CommandCompletions::InvokeCommonCompletionCallbacks(
-            interpreter, CommandCompletions::eDiskFileCompletion, request,
-            nullptr);
+        lldb_private::CommandCompletions::InvokeCommonCompletionCallbacks(
+            interpreter, lldb::eDiskFileCompletion, request, nullptr);
         break;
 
       case 'N':
@@ -2343,9 +2336,8 @@ public:
   void
   HandleArgumentCompletion(CompletionRequest &request,
                            OptionElementVector &opt_element_vector) override {
-    CommandCompletions::InvokeCommonCompletionCallbacks(
-        GetCommandInterpreter(), CommandCompletions::eBreakpointCompletion,
-        request, nullptr);
+    lldb_private::CommandCompletions::InvokeCommonCompletionCallbacks(
+        GetCommandInterpreter(), lldb::eBreakpointCompletion, request, nullptr);
   }
 
   Options *GetOptions() override { return &m_options; }

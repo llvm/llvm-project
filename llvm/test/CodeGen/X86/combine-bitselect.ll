@@ -1123,7 +1123,7 @@ define void @constantfold_andn_mask() nounwind {
 ; AVX2-NEXT:    pushq %rax
 ; AVX2-NEXT:    callq use@PLT
 ; AVX2-NEXT:    vmovdqu (%rax), %xmm1
-; AVX2-NEXT:    vpbroadcastw {{.*#+}} xmm2 = [63519,63519,63519,63519,63519,63519,63519,63519]
+; AVX2-NEXT:    vpbroadcastw {{.*#+}} xmm2 = [31,248,31,248,31,248,31,248,31,248,31,248,31,248,31,248]
 ; AVX2-NEXT:    vpand %xmm2, %xmm1, %xmm3
 ; AVX2-NEXT:    vpand %xmm2, %xmm0, %xmm0
 ; AVX2-NEXT:    vpavgb %xmm2, %xmm0, %xmm0
@@ -1141,7 +1141,7 @@ define void @constantfold_andn_mask() nounwind {
 ; AVX512F-NEXT:    pushq %rax
 ; AVX512F-NEXT:    callq use@PLT
 ; AVX512F-NEXT:    vmovdqu (%rax), %xmm1
-; AVX512F-NEXT:    vpbroadcastw {{.*#+}} xmm2 = [63519,63519,63519,63519,63519,63519,63519,63519]
+; AVX512F-NEXT:    vpbroadcastw {{.*#+}} xmm2 = [31,248,31,248,31,248,31,248,31,248,31,248,31,248,31,248]
 ; AVX512F-NEXT:    vpand %xmm2, %xmm0, %xmm0
 ; AVX512F-NEXT:    vpavgb %xmm2, %xmm0, %xmm0
 ; AVX512F-NEXT:    vpandn %xmm1, %xmm0, %xmm0
@@ -1158,7 +1158,7 @@ define void @constantfold_andn_mask() nounwind {
 ; AVX512VL-NEXT:    pushq %rax
 ; AVX512VL-NEXT:    callq use@PLT
 ; AVX512VL-NEXT:    vmovdqu (%rax), %xmm1
-; AVX512VL-NEXT:    vpbroadcastw {{.*#+}} xmm2 = [63519,63519,63519,63519,63519,63519,63519,63519]
+; AVX512VL-NEXT:    vpbroadcastw {{.*#+}} xmm2 = [31,248,31,248,31,248,31,248,31,248,31,248,31,248,31,248]
 ; AVX512VL-NEXT:    vpand %xmm2, %xmm0, %xmm0
 ; AVX512VL-NEXT:    vpavgb %xmm2, %xmm0, %xmm0
 ; AVX512VL-NEXT:    vpandn %xmm1, %xmm0, %xmm0

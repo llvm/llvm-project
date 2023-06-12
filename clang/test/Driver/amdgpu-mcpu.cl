@@ -110,6 +110,7 @@
 // RUN: %clang -### -target amdgcn -mcpu=gfx1101 %s 2>&1 | FileCheck --check-prefix=GFX1101 %s
 // RUN: %clang -### -target amdgcn -mcpu=gfx1102 %s 2>&1 | FileCheck --check-prefix=GFX1102 %s
 // RUN: %clang -### -target amdgcn -mcpu=gfx1103 %s 2>&1 | FileCheck --check-prefix=GFX1103 %s
+// RUN: %clang -### -target amdgcn -mcpu=gfx1105 %s 2>&1 | FileCheck --check-prefix=GFX1105 %s
 // RUN: %clang -### -target amdgcn -mcpu=gfx1150 %s 2>&1 | FileCheck --check-prefix=GFX1150 %s
 // RUN: %clang -### -target amdgcn -mcpu=gfx1151 %s 2>&1 | FileCheck --check-prefix=GFX1151 %s
 // RUN: %clang -### -target amdgcn -mcpu=gfx1200 %s 2>&1 | FileCheck --check-prefix=GFX1200 %s
@@ -157,6 +158,7 @@
 // GFX1101:   "-target-cpu" "gfx1101"
 // GFX1102:   "-target-cpu" "gfx1102"
 // GFX1103:   "-target-cpu" "gfx1103"
+// GFX1105:   "-target-cpu" "gfx1105"
 // GFX1150:   "-target-cpu" "gfx1150"
 // GFX1151:   "-target-cpu" "gfx1151"
 // GFX1200:   "-target-cpu" "gfx1200"

@@ -14,16 +14,11 @@
 #include "clang/ExtractAPI/Serialization/SymbolGraphSerializer.h"
 #include "clang/Basic/SourceLocation.h"
 #include "clang/Basic/Version.h"
-#include "clang/ExtractAPI/API.h"
-#include "clang/ExtractAPI/APIIgnoresList.h"
 #include "clang/ExtractAPI/DeclarationFragments.h"
-#include "clang/ExtractAPI/Serialization/SerializerBase.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/STLFunctionalExtras.h"
-#include "llvm/ADT/SmallVector.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/Compiler.h"
-#include "llvm/Support/JSON.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Support/VersionTuple.h"
 #include <optional>
@@ -541,18 +536,15 @@ template <typename RecordTy>
 Array generateParentContexts(const RecordTy &Record, const APISet &API,
                              Language Lang) {
   Array ParentContexts;
-  generatePathComponents(Record, API,
-                         [Lang, &ParentContexts](const PathComponent &PC) {
-                           ParentContexts.push_back(
-                               serializeParentContext(PC, Lang));
-                         });
+  generatePathComponents(
+      Record, API, [Lang, &ParentContexts](const PathComponent &PC) {
+        ParentContexts.push_back(serializeParentContext(PC, Lang));
+      });
 
   return ParentContexts;
 }
 
 } // namespace
-
-void SymbolGraphSerializer::anchor() {}
 
 /// Defines the format version emitted by SymbolGraphSerializer.
 const VersionTuple SymbolGraphSerializer::FormatVersion{0, 5, 3};
@@ -670,7 +662,7 @@ void SymbolGraphSerializer::serializeRelationship(RelationshipKind Kind,
   Relationships.emplace_back(std::move(Relationship));
 }
 
-void SymbolGraphSerializer::serializeGlobalFunctionRecord(
+void SymbolGraphSerializer::visitGlobalFunctionRecord(
     const GlobalFunctionRecord &Record) {
   auto Obj = serializeAPIRecord(Record);
   if (!Obj)
@@ -679,7 +671,7 @@ void SymbolGraphSerializer::serializeGlobalFunctionRecord(
   Symbols.emplace_back(std::move(*Obj));
 }
 
-void SymbolGraphSerializer::serializeGlobalVariableRecord(
+void SymbolGraphSerializer::visitGlobalVariableRecord(
     const GlobalVariableRecord &Record) {
   auto Obj = serializeAPIRecord(Record);
   if (!Obj)
@@ -688,7 +680,7 @@ void SymbolGraphSerializer::serializeGlobalVariableRecord(
   Symbols.emplace_back(std::move(*Obj));
 }
 
-void SymbolGraphSerializer::serializeEnumRecord(const EnumRecord &Record) {
+void SymbolGraphSerializer::visitEnumRecord(const EnumRecord &Record) {
   auto Enum = serializeAPIRecord(Record);
   if (!Enum)
     return;
@@ -697,7 +689,7 @@ void SymbolGraphSerializer::serializeEnumRecord(const EnumRecord &Record) {
   serializeMembers(Record, Record.Constants);
 }
 
-void SymbolGraphSerializer::serializeStructRecord(const StructRecord &Record) {
+void SymbolGraphSerializer::visitStructRecord(const StructRecord &Record) {
   auto Struct = serializeAPIRecord(Record);
   if (!Struct)
     return;
@@ -706,7 +698,7 @@ void SymbolGraphSerializer::serializeStructRecord(const StructRecord &Record) {
   serializeMembers(Record, Record.Fields);
 }
 
-void SymbolGraphSerializer::serializeObjCContainerRecord(
+void SymbolGraphSerializer::visitObjCContainerRecord(
     const ObjCContainerRecord &Record) {
   auto ObjCContainer = serializeAPIRecord(Record);
   if (!ObjCContainer)
@@ -743,7 +735,7 @@ void SymbolGraphSerializer::serializeObjCContainerRecord(
   }
 }
 
-void SymbolGraphSerializer::serializeMacroDefinitionRecord(
+void SymbolGraphSerializer::visitMacroDefinitionRecord(
     const MacroDefinitionRecord &Record) {
   auto Macro = serializeAPIRecord(Record);
 
@@ -758,28 +750,28 @@ void SymbolGraphSerializer::serializeSingleRecord(const APIRecord *Record) {
   case APIRecord::RK_Unknown:
     llvm_unreachable("Records should have a known kind!");
   case APIRecord::RK_GlobalFunction:
-    serializeGlobalFunctionRecord(*cast<GlobalFunctionRecord>(Record));
+    visitGlobalFunctionRecord(*cast<GlobalFunctionRecord>(Record));
     break;
   case APIRecord::RK_GlobalVariable:
-    serializeGlobalVariableRecord(*cast<GlobalVariableRecord>(Record));
+    visitGlobalVariableRecord(*cast<GlobalVariableRecord>(Record));
     break;
   case APIRecord::RK_Enum:
-    serializeEnumRecord(*cast<EnumRecord>(Record));
+    visitEnumRecord(*cast<EnumRecord>(Record));
     break;
   case APIRecord::RK_Struct:
-    serializeStructRecord(*cast<StructRecord>(Record));
+    visitStructRecord(*cast<StructRecord>(Record));
     break;
   case APIRecord::RK_ObjCInterface:
-    serializeObjCContainerRecord(*cast<ObjCInterfaceRecord>(Record));
+    visitObjCContainerRecord(*cast<ObjCInterfaceRecord>(Record));
     break;
   case APIRecord::RK_ObjCProtocol:
-    serializeObjCContainerRecord(*cast<ObjCProtocolRecord>(Record));
+    visitObjCContainerRecord(*cast<ObjCProtocolRecord>(Record));
     break;
   case APIRecord::RK_MacroDefinition:
-    serializeMacroDefinitionRecord(*cast<MacroDefinitionRecord>(Record));
+    visitMacroDefinitionRecord(*cast<MacroDefinitionRecord>(Record));
     break;
   case APIRecord::RK_Typedef:
-    serializeTypedefRecord(*cast<TypedefRecord>(Record));
+    visitTypedefRecord(*cast<TypedefRecord>(Record));
     break;
   default:
     if (auto Obj = serializeAPIRecord(*Record)) {
@@ -793,8 +785,7 @@ void SymbolGraphSerializer::serializeSingleRecord(const APIRecord *Record) {
   }
 }
 
-void SymbolGraphSerializer::serializeTypedefRecord(
-    const TypedefRecord &Record) {
+void SymbolGraphSerializer::visitTypedefRecord(const TypedefRecord &Record) {
   // Typedefs of anonymous types have their entries unified with the underlying
   // type.
   bool ShouldDrop = Record.UnderlyingType.Name.empty();
@@ -814,35 +805,7 @@ void SymbolGraphSerializer::serializeTypedefRecord(
 }
 
 Object SymbolGraphSerializer::serialize() {
-  // Serialize global variables in the API set.
-  for (const auto &GlobalVar : API.getGlobalVariables())
-    serializeGlobalVariableRecord(*GlobalVar.second);
-
-  for (const auto &GlobalFunction : API.getGlobalFunctions())
-    serializeGlobalFunctionRecord(*GlobalFunction.second);
-
-  // Serialize enum records in the API set.
-  for (const auto &Enum : API.getEnums())
-    serializeEnumRecord(*Enum.second);
-
-  // Serialize struct records in the API set.
-  for (const auto &Struct : API.getStructs())
-    serializeStructRecord(*Struct.second);
-
-  // Serialize Objective-C interface records in the API set.
-  for (const auto &ObjCInterface : API.getObjCInterfaces())
-    serializeObjCContainerRecord(*ObjCInterface.second);
-
-  // Serialize Objective-C protocol records in the API set.
-  for (const auto &ObjCProtocol : API.getObjCProtocols())
-    serializeObjCContainerRecord(*ObjCProtocol.second);
-
-  for (const auto &Macro : API.getMacros())
-    serializeMacroDefinitionRecord(*Macro.second);
-
-  for (const auto &Typedef : API.getTypedefs())
-    serializeTypedefRecord(*Typedef.second);
-
+  traverseAPISet();
   return serializeCurrentGraph();
 }
 

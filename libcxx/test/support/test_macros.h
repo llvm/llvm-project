@@ -386,12 +386,8 @@ inline void DoNotOptimize(Tp const& value) {
 #  define TEST_HAS_NO_THREADS
 #endif
 
-#if defined(_LIBCPP_HAS_NO_FILESYSTEM_LIBRARY)
-#  define TEST_HAS_NO_FILESYSTEM_LIBRARY
-#endif
-
-#if defined(_LIBCPP_HAS_NO_FSTREAM)
-#  define TEST_HAS_NO_FSTREAM
+#if defined(_LIBCPP_HAS_NO_FILESYSTEM)
+#  define TEST_HAS_NO_FILESYSTEM
 #endif
 
 #if defined(_LIBCPP_HAS_NO_FGETPOS_FSETPOS)

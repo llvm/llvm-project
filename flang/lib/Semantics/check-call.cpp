@@ -196,7 +196,8 @@ static void CheckExplicitDataArg(const characteristics::DummyDataObject &dummy,
     characteristics::TypeAndShape &actualType, bool isElemental,
     SemanticsContext &context, evaluate::FoldingContext &foldingContext,
     const Scope *scope, const evaluate::SpecificIntrinsic *intrinsic,
-    bool allowActualArgumentConversions) {
+    bool allowActualArgumentConversions,
+    const characteristics::Procedure &procedure) {
 
   // Basic type & rank checking
   parser::ContextualMessages &messages{foldingContext.messages()};
@@ -525,30 +526,49 @@ static void CheckExplicitDataArg(const characteristics::DummyDataObject &dummy,
   }
 
   // 15.5.2.5 -- actual & dummy are both POINTER or both ALLOCATABLE
-  if ((actualIsPointer && dummyIsPointer) ||
+  // For INTENT(IN) we relax two checks that are in Fortran to
+  // prevent the callee from changing the type or to avoid having
+  // to use a descriptor.
+  if (!typesCompatible) {
+    // Don't pile on the errors emitted above
+  } else if ((actualIsPointer && dummyIsPointer) ||
       (actualIsAllocatable && dummyIsAllocatable)) {
     bool actualIsUnlimited{actualType.type().IsUnlimitedPolymorphic()};
     bool dummyIsUnlimited{dummy.type.type().IsUnlimitedPolymorphic()};
     if (actualIsUnlimited != dummyIsUnlimited) {
-      if (typesCompatible) {
+      if (dummyIsUnlimited && dummy.intent == common::Intent::In &&
+          context.IsEnabled(common::LanguageFeature::RelaxedIntentInChecking)) {
+        if (context.ShouldWarn(
+                common::LanguageFeature::RelaxedIntentInChecking)) {
+          messages.Say(
+              "If a POINTER or ALLOCATABLE dummy or actual argument is unlimited polymorphic, both should be so"_port_en_US);
+        }
+      } else {
         messages.Say(
             "If a POINTER or ALLOCATABLE dummy or actual argument is unlimited polymorphic, both must be so"_err_en_US);
       }
     } else if (dummyIsPolymorphic != actualIsPolymorphic) {
-      if (dummy.intent == common::Intent::In && typesCompatible) {
-        // extension: allow with warning, rule is only relevant for definables
-        messages.Say(
-            "If a POINTER or ALLOCATABLE dummy or actual argument is polymorphic, both should be so"_port_en_US);
+      if (dummyIsPolymorphic && dummy.intent == common::Intent::In &&
+          context.IsEnabled(common::LanguageFeature::RelaxedIntentInChecking)) {
+        if (context.ShouldWarn(
+                common::LanguageFeature::RelaxedIntentInChecking)) {
+          messages.Say(
+              "If a POINTER or ALLOCATABLE dummy or actual argument is polymorphic, both should be so"_port_en_US);
+        }
       } else {
         messages.Say(
             "If a POINTER or ALLOCATABLE dummy or actual argument is polymorphic, both must be so"_err_en_US);
       }
-    } else if (!actualIsUnlimited && typesCompatible) {
+    } else if (!actualIsUnlimited) {
       if (!actualType.type().IsTkCompatibleWith(dummy.type.type())) {
-        if (dummy.intent == common::Intent::In) {
-          // extension: allow with warning, rule is only relevant for definables
-          messages.Say(
-              "POINTER or ALLOCATABLE dummy and actual arguments should have the same declared type and kind"_port_en_US);
+        if (dummy.intent == common::Intent::In &&
+            context.IsEnabled(
+                common::LanguageFeature::RelaxedIntentInChecking)) {
+          if (context.ShouldWarn(
+                  common::LanguageFeature::RelaxedIntentInChecking)) {
+            messages.Say(
+                "POINTER or ALLOCATABLE dummy and actual arguments should have the same declared type and kind"_port_en_US);
+          }
         } else {
           messages.Say(
               "POINTER or ALLOCATABLE dummy and actual arguments must have the same declared type and kind"_err_en_US);
@@ -626,6 +646,46 @@ static void CheckExplicitDataArg(const characteristics::DummyDataObject &dummy,
             "Any pointer associated with TARGET %s during this call must not be used afterwards, as '%s' is not a target"_warn_en_US,
             dummyName, actual.AsFortran());
       }
+    }
+  }
+
+  // CUDA
+  if (!intrinsic &&
+      !dummy.attrs.test(characteristics::DummyDataObject::Attr::Value)) {
+    std::optional<common::CUDADataAttr> actualDataAttr, dummyDataAttr;
+    if (const auto *actualObject{actualLastSymbol
+                ? actualLastSymbol->detailsIf<ObjectEntityDetails>()
+                : nullptr}) {
+      actualDataAttr = actualObject->cudaDataAttr();
+    }
+    dummyDataAttr = dummy.cudaDataAttr;
+    // Treat MANAGED like DEVICE for nonallocatable nonpointer arguments to
+    // device subprograms
+    if (procedure.cudaSubprogramAttrs.value_or(
+            common::CUDASubprogramAttrs::Host) !=
+            common::CUDASubprogramAttrs::Host &&
+        !dummy.attrs.test(
+            characteristics::DummyDataObject::Attr::Allocatable) &&
+        !dummy.attrs.test(characteristics::DummyDataObject::Attr::Pointer)) {
+      if (!dummyDataAttr || *dummyDataAttr == common::CUDADataAttr::Managed) {
+        dummyDataAttr = common::CUDADataAttr::Device;
+      }
+      if ((!actualDataAttr && FindCUDADeviceContext(scope)) ||
+          (actualDataAttr &&
+              *actualDataAttr == common::CUDADataAttr::Managed)) {
+        actualDataAttr = common::CUDADataAttr::Device;
+      }
+    }
+    if (!common::AreCompatibleCUDADataAttrs(
+            dummyDataAttr, actualDataAttr, dummy.ignoreTKR)) {
+      auto toStr{[](std::optional<common::CUDADataAttr> x) {
+        return x ? "ATTRIBUTES("s +
+                parser::ToUpperCaseLetters(common::EnumToString(*x)) + ")"s
+                 : "no CUDA data attribute"s;
+      }};
+      messages.Say(
+          "%s has %s but its associated actual argument has %s"_err_en_US,
+          dummyName, toStr(dummyDataAttr), toStr(actualDataAttr));
     }
   }
 }
@@ -819,7 +879,7 @@ static void CheckExplicitInterfaceArg(evaluate::ActualArgument &arg,
                       object.type.Rank() == 0 && proc.IsElemental()};
                   CheckExplicitDataArg(object, dummyName, *expr, *type,
                       isElemental, context, foldingContext, scope, intrinsic,
-                      allowActualArgumentConversions);
+                      allowActualArgumentConversions, proc);
                 } else if (object.type.type().IsTypelessIntrinsicArgument() &&
                     IsBOZLiteral(*expr)) {
                   // ok

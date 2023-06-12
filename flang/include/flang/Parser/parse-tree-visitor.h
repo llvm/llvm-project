@@ -568,17 +568,33 @@ template <typename M> void Walk(Designator &x, M &mutator) {
     mutator.Post(x);
   }
 }
-template <typename V> void Walk(const Call &x, V &visitor) {
+template <typename V> void Walk(const FunctionReference &x, V &visitor) {
   if (visitor.Pre(x)) {
     Walk(x.source, visitor);
-    Walk(x.t, visitor);
+    Walk(x.v, visitor);
     visitor.Post(x);
   }
 }
-template <typename M> void Walk(Call &x, M &mutator) {
+template <typename M> void Walk(FunctionReference &x, M &mutator) {
   if (mutator.Pre(x)) {
     Walk(x.source, mutator);
-    Walk(x.t, mutator);
+    Walk(x.v, mutator);
+    mutator.Post(x);
+  }
+}
+template <typename V> void Walk(const CallStmt &x, V &visitor) {
+  if (visitor.Pre(x)) {
+    Walk(x.source, visitor);
+    Walk(x.call, visitor);
+    Walk(x.chevrons, visitor);
+    visitor.Post(x);
+  }
+}
+template <typename M> void Walk(CallStmt &x, M &mutator) {
+  if (mutator.Pre(x)) {
+    Walk(x.source, mutator);
+    Walk(x.call, mutator);
+    Walk(x.chevrons, mutator);
     mutator.Post(x);
   }
 }

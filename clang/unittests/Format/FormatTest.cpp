@@ -25740,6 +25740,18 @@ TEST_F(FormatTest, InterfaceAsClassMemberName) {
                "}");
 }
 
+TEST_F(FormatTest, PreprocessorOverlappingRegions) {
+  verifyFormat("#ifdef\n\n"
+               "#else\n"
+               "#endif\n",
+               "#ifdef \n"
+               "    \n"
+               "\n"
+               "#else \n"
+               "#endif \n",
+               getGoogleStyle());
+}
+
 } // namespace
 } // namespace test
 } // namespace format

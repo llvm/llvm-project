@@ -69,18 +69,18 @@ define void @vgpr_descriptor_waterfall_loop_idom_update(ptr %arg) #0 {
 ; GFX11-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX11-NEXT:    s_mov_b32 vcc_lo, exec_lo
 ; GFX11-NEXT:    s_cbranch_vccnz .LBB0_1
-; GFX11-NEXT: ; %bb.4: ; %DummyReturnBlock 
-; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0 
+; GFX11-NEXT: ; %bb.4: ; %DummyReturnBlock
+; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-NEXT:    s_setpc_b64 s[30:31]
 entry:
   br label %bb0
 
 bb0:
-  %desc = load <4 x i32>, ptr %arg, align 8
-  tail call void @llvm.amdgcn.raw.buffer.store.f32(float undef, <4 x i32> %desc, i32 undef, i32 0, i32 0)
+  %desc = load ptr addrspace(8), ptr %arg, align 8
+  tail call void @llvm.amdgcn.raw.ptr.buffer.store.f32(float undef, ptr addrspace(8) %desc, i32 undef, i32 0, i32 0)
   br label %bb0
 }
 
-declare void @llvm.amdgcn.raw.buffer.store.f32(float, <4 x i32>, i32, i32, i32 immarg) #0
+declare void @llvm.amdgcn.raw.ptr.buffer.store.f32(float, ptr addrspace(8), i32, i32, i32 immarg) #0
 
-attributes #0 = { nounwind writeonly }
+attributes #0 = { nounwind memory(argmem: write) }

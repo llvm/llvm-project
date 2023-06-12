@@ -720,12 +720,13 @@ variables is defined below.
     * ``LIBOMPTARGET_JIT_REPLACEMENT_MODULE=<in:Filename> (LLVM-IR file)``
     * ``LIBOMPTARGET_JIT_PRE_OPT_IR_MODULE=<out:Filename> (LLVM-IR file)``
     * ``LIBOMPTARGET_JIT_POST_OPT_IR_MODULE=<out:Filename> (LLVM-IR file)``
+    * ``LIBOMPTARGET_MIN_THREADS_FOR_LOW_TRIP_COUNT=<Num> (default: 32)``
 
 LIBOMPTARGET_DEBUG
 """"""""""""""""""
 
 ``LIBOMPTARGET_DEBUG`` controls whether or not debugging information will be
-displayed. This feature is only availible if ``libomptarget`` was built with
+displayed. This feature is only available if ``libomptarget`` was built with
 ``-DOMPTARGET_DEBUG``. The debugging output provided is intended for use by
 ``libomptarget`` developers. More user-friendly output is presented when using
 ``LIBOMPTARGET_INFO``.
@@ -975,7 +976,7 @@ going wrong.
     Libomptarget error: Consult https://openmp.llvm.org/design/Runtimes.html for debugging options.
     sum.cpp:5:1: Libomptarget error 1: failure of target construct while offloading is mandatory
 
-This shows that there is an illegal memory access occuring inside the OpenMP
+This shows that there is an illegal memory access occurring inside the OpenMP
 target region once execution has moved to the CUDA device, suggesting a
 segmentation fault. This then causes a chain reaction of failures in
 ``libomptarget``. Another message suggests using the ``LIBOMPTARGET_INFO``
@@ -1061,7 +1062,7 @@ of LLVM did not.
 LIBOMPTARGET_JIT_OPT_LEVEL
 """"""""""""""""""""""""""
 
-This environment variable can be used to change the optimization pipeleine used
+This environment variable can be used to change the optimization pipeline used
 to optimize the embedded device code as part of the device JIT. The value is
 corresponds to the ``-O{0,1,2,3}`` command line argument passed to ``clang``.
 
@@ -1108,7 +1109,7 @@ transformed and loaded back into the JIT pipeline via
 
 
 LIBOMPTARGET_JIT_POST_OPT_IR_MODULE
-""""""""""""""""""""""""""""""""""
+"""""""""""""""""""""""""""""""""""
 
 This environment variable can be used to extract the embedded device code after
 the device JIT runs additional IR optimizations on it (see
@@ -1116,6 +1117,18 @@ the device JIT runs additional IR optimizations on it (see
 which the LLVM-IR module is written. The module can be the analyzed, and
 transformed and loaded back into the JIT pipeline via
 :ref:`LIBOMPTARGET_JIT_REPLACEMENT_MODULE`.
+
+
+LIBOMPTARGET_MIN_THREADS_FOR_LOW_TRIP_COUNT
+"""""""""""""""""""""""""""""""""""""""""""
+
+This environment variable defines a lower bound for the number of threads if a
+combined kernel, e.g., `target teams distribute parallel for`, has insufficient
+parallelism. Especially if the trip count of the loops is lower than the number
+of threads possible times the number of teams (aka. blocks) the device preferes
+(see also :ref:`LIBOMPTARGET_AMDGPU_TEAMS_PER_CU), we will reduce the thread
+count to increase outer (team/block) parallelism. The thread count will never
+be reduced below the value passed for this environment variable though.
 
 
 
@@ -1225,9 +1238,9 @@ LIBOMPTARGET_AMDGPU_MAX_ASYNC_COPY_BYTES
 
 This environment variable specifies the maximum size in bytes where the memory
 copies are asynchronous operations in the AMDGPU plugin. Up to this transfer
-size, the memory copies are asychronous operations pushed to the corresponding
+size, the memory copies are asynchronous operations pushed to the corresponding
 stream. For larger transfers, they are synchronous transfers. Memory copies
-involving already locked/pinned host buffers are always asychronous. The default
+involving already locked/pinned host buffers are always asynchronous. The default
 value is ``1*1024*1024`` bytes (1 MB).
 
 LIBOMPTARGET_AMDGPU_NUM_INITIAL_HSA_SIGNALS
@@ -1288,7 +1301,7 @@ LIBOMPTARGET_RPC_ADDRESS
 The address and port at which the server is running. This needs to be set for
 the server and the application, the default is ``0.0.0.0:50051``. A single
 OpenMP executable can offload onto multiple remote hosts by setting this to
-comma-seperated values of the addresses.
+comma-separated values of the addresses.
 
 LIBOMPTARGET_RPC_ALLOCATOR_MAX
 """"""""""""""""""""""""""""""

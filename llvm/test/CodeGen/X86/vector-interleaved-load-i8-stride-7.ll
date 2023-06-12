@@ -501,7 +501,7 @@ define void @load_i8_stride7_vf8(ptr %in.vec, ptr %out.vec0, ptr %out.vec1, ptr 
 ; AVX1-ONLY-NEXT:    vpalignr {{.*#+}} xmm5 = xmm2[3,4,5,6,7,8,9,10,11,12,13,14,15],xmm3[0,1,2]
 ; AVX1-ONLY-NEXT:    vmovdqa {{.*#+}} xmm6 = <u,u,u,u,u,0,7,14,u,u,u,u,u,u,u,u>
 ; AVX1-ONLY-NEXT:    vpshufb %xmm6, %xmm5, %xmm5
-; AVX1-ONLY-NEXT:    vmovddup {{.*#+}} xmm7 = [1099511627775,1099511627775]
+; AVX1-ONLY-NEXT:    vmovddup {{.*#+}} xmm7 = [255,255,255,255,255,0,0,0,255,255,255,255,255,0,0,0]
 ; AVX1-ONLY-NEXT:    # xmm7 = mem[0,0]
 ; AVX1-ONLY-NEXT:    vpblendvb %xmm7, %xmm4, %xmm5, %xmm4
 ; AVX1-ONLY-NEXT:    vpshufb {{.*#+}} xmm5 = zero,zero,zero,xmm1[6,13,u,u,u,u,u,u,u,u,u,u,u]

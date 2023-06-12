@@ -80,7 +80,9 @@
 // CHECK-NOT: ".*llc"
 // CHECK: [[LLD]] {{.*}} "-plugin-opt=-amdgpu-internalize-symbols"
 // CHECK-SAME: "-plugin-opt=mcpu=gfx900"
+// CHECK-SAME: "--whole-archive"
 // CHECK-SAME: "-o" "[[IMG_DEV2:.*out]]" [[A_BC2]] [[B_BC2]]
+// CHECK-SAME: "--no-whole-archive"
 
 // combine images generated into hip fat binary object
 // CHECK: [[BUNDLER:".*clang-offload-bundler"]] "-type=o"

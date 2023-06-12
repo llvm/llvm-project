@@ -90,7 +90,7 @@ public:
   bool hasInstrSchedModelOrItineraries() const {
     return hasInstrSchedModel() || hasInstrItineraries();
   }
-
+  bool enableIntervals() const { return SchedModel.EnableIntervals; }
   /// Identify the processor corresponding to the current subtarget.
   unsigned getProcessorID() const { return SchedModel.getProcessorID(); }
 

@@ -63,4 +63,4 @@ typedef vint32m1_t noflag __attribute__((riscv_rvv_vector_bits(256)));
 
 typedef vint32_t bad_vector_size __attribute__((riscv_rvv_vector_bits(256)));
 
-// CHECK-BAD-VECTOR-SIZE-ERROR: error: invalid RVV vector size '256', must match value set by '-mrvv-vector-bits' ('128')
+// CHECK-BAD-VECTOR-SIZE-ERROR: error: invalid RVV vector size '256', expected size is '128' based on LMUL of type and '-mrvv-vector-bits'

@@ -1591,24 +1591,15 @@ bool MemCpyOptPass::processByValArgument(CallBase &CB, unsigned ArgNo) {
   //    foo(*a)
   // It would be invalid to transform the second memcpy into foo(*b).
   if (writtenBetween(MSSA, BAA, MemoryLocation::getForSource(MDep),
-                     MSSA->getMemoryAccess(MDep), MSSA->getMemoryAccess(&CB)))
+                     MSSA->getMemoryAccess(MDep), CallAccess))
     return false;
-
-  Value *TmpCast = MDep->getSource();
-  if (MDep->getSource()->getType() != ByValArg->getType()) {
-    BitCastInst *TmpBitCast = new BitCastInst(MDep->getSource(), ByValArg->getType(),
-                                              "tmpcast", &CB);
-    // Set the tmpcast's DebugLoc to MDep's
-    TmpBitCast->setDebugLoc(MDep->getDebugLoc());
-    TmpCast = TmpBitCast;
-  }
 
   LLVM_DEBUG(dbgs() << "MemCpyOptPass: Forwarding memcpy to byval:\n"
                     << "  " << *MDep << "\n"
                     << "  " << CB << "\n");
 
   // Otherwise we're good!  Update the byval argument.
-  CB.setArgOperand(ArgNo, TmpCast);
+  CB.setArgOperand(ArgNo, MDep->getSource());
   ++NumMemCpyInstr;
   return true;
 }

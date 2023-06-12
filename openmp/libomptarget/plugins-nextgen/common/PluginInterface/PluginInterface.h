@@ -313,9 +313,11 @@ private:
   /// user-defined threads and block clauses.
   uint32_t getNumThreads(GenericDeviceTy &GenericDevice,
                          uint32_t ThreadLimitClause[3]) const;
+
+  /// The number of threads \p NumThreads can be adjusted by this method.
   uint64_t getNumBlocks(GenericDeviceTy &GenericDevice,
                         uint32_t BlockLimitClause[3], uint64_t LoopTripCount,
-                        uint32_t NumThreads) const;
+                        uint32_t &NumThreads) const;
 
   /// Indicate if the kernel works in Generic SPMD, Generic or SPMD mode.
   bool isGenericSPMDMode() const {
@@ -740,6 +742,14 @@ struct GenericDeviceTy : public DeviceAllocatorTy {
     return std::move(MB);
   }
 
+  /// The minimum number of threads we use for a low-trip count combined loop.
+  /// Instead of using more threads we increase the outer (block/team)
+  /// parallelism.
+  /// @see OMPX_MinThreadsForLowTripCount
+  virtual uint32_t getMinThreadsForLowTripCountLoop() {
+    return OMPX_MinThreadsForLowTripCount;
+  }
+
 private:
   /// Register offload entry for global variable.
   Error registerGlobalOffloadEntry(DeviceImageTy &DeviceImage,
@@ -782,6 +792,12 @@ private:
   UInt32Envar OMPX_SharedMemorySize;
   UInt64Envar OMPX_TargetStackSize;
   UInt64Envar OMPX_TargetHeapSize;
+
+  /// Environment flag to set the minimum number of threads we use for a
+  /// low-trip count combined loop. Instead of using more threads we increase
+  /// the outer (block/team) parallelism.
+  UInt32Envar OMPX_MinThreadsForLowTripCount =
+      UInt32Envar("LIBOMPTARGET_MIN_THREADS_FOR_LOW_TRIP_COUNT", 32);
 
 protected:
   /// Return the execution mode used for kernel \p Name.

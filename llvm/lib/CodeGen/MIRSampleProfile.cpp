@@ -140,7 +140,7 @@ template <> struct IRTraits<MachineBasicBlock> {
 } // namespace afdo_detail
 
 class MIRProfileLoader final
-    : public SampleProfileLoaderBaseImpl<MachineBasicBlock> {
+    : public SampleProfileLoaderBaseImpl<MachineFunction> {
 public:
   void setInitVals(MachineDominatorTree *MDT, MachinePostDominatorTree *MPDT,
                    MachineLoopInfo *MLI, MachineBlockFrequencyInfo *MBFI,
@@ -195,8 +195,8 @@ protected:
 };
 
 template <>
-void SampleProfileLoaderBaseImpl<
-    MachineBasicBlock>::computeDominanceAndLoopInfo(MachineFunction &F) {}
+void SampleProfileLoaderBaseImpl<MachineFunction>::computeDominanceAndLoopInfo(
+    MachineFunction &F) {}
 
 void MIRProfileLoader::setBranchProbs(MachineFunction &F) {
   LLVM_DEBUG(dbgs() << "\nPropagation complete. Setting branch probs\n");

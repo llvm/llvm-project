@@ -25,21 +25,18 @@ void DWARFAbbreviationDeclarationSet::clear() {
   Decls.clear();
 }
 
-bool DWARFAbbreviationDeclarationSet::extract(DataExtractor Data,
-                                              uint64_t *OffsetPtr) {
+Error DWARFAbbreviationDeclarationSet::extract(DataExtractor Data,
+                                               uint64_t *OffsetPtr) {
   clear();
   const uint64_t BeginOffset = *OffsetPtr;
   Offset = BeginOffset;
   DWARFAbbreviationDeclaration AbbrDecl;
   uint32_t PrevAbbrCode = 0;
   while (true) {
-    llvm::Expected<DWARFAbbreviationDeclaration::ExtractState> ES =
+    Expected<DWARFAbbreviationDeclaration::ExtractState> ES =
         AbbrDecl.extract(Data, OffsetPtr);
-    if (!ES) {
-      // FIXME: We should propagate the error upwards.
-      llvm::consumeError(ES.takeError());
-      break;
-    }
+    if (!ES)
+      return ES.takeError();
 
     if (*ES == DWARFAbbreviationDeclaration::ExtractState::Complete)
       break;
@@ -53,7 +50,7 @@ bool DWARFAbbreviationDeclarationSet::extract(DataExtractor Data,
     PrevAbbrCode = AbbrDecl.getCode();
     Decls.push_back(std::move(AbbrDecl));
   }
-  return BeginOffset != *OffsetPtr;
+  return Error::success();
 }
 
 void DWARFAbbreviationDeclarationSet::dump(raw_ostream &OS) const {
@@ -127,8 +124,11 @@ void DWARFDebugAbbrev::parse() const {
       ++I;
     uint64_t CUAbbrOffset = Offset;
     DWARFAbbreviationDeclarationSet AbbrDecls;
-    if (!AbbrDecls.extract(*Data, &Offset))
+    if (Error Err = AbbrDecls.extract(*Data, &Offset)) {
+      // FIXME: We should propagate the error upwards.
+      consumeError(std::move(Err));
       break;
+    }
     AbbrDeclSets.insert(I, std::make_pair(CUAbbrOffset, std::move(AbbrDecls)));
   }
   Data = std::nullopt;
@@ -164,8 +164,11 @@ DWARFDebugAbbrev::getAbbreviationDeclarationSet(uint64_t CUAbbrOffset) const {
   if (Data && CUAbbrOffset < Data->getData().size()) {
     uint64_t Offset = CUAbbrOffset;
     DWARFAbbreviationDeclarationSet AbbrDecls;
-    if (!AbbrDecls.extract(*Data, &Offset))
+    if (Error Err = AbbrDecls.extract(*Data, &Offset)) {
+      // FIXME: We should propagate the error upwards.
+      consumeError(std::move(Err));
       return nullptr;
+    }
     PrevAbbrOffsetPos =
         AbbrDeclSets.insert(std::make_pair(CUAbbrOffset, std::move(AbbrDecls)))
             .first;

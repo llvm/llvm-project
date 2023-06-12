@@ -16,7 +16,7 @@
 // redefine it as necessary.
 #define libc_make_test_file_path(file_name) (file_name)
 
-#ifdef LIBC_COPT_TEST_USE_FUCHSIA
+#if defined(LIBC_COPT_TEST_USE_FUCHSIA)
 #include "FuchsiaTest.h"
 #elif defined(LIBC_COPT_TEST_USE_PIGWEED)
 #include "PigweedTest.h"

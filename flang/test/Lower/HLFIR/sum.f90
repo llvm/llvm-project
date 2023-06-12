@@ -1,5 +1,5 @@
 ! Test lowering of SUM intrinsic to HLFIR
-! RUN: bbc -emit-fir -hlfir -o - %s 2>&1 | FileCheck %s
+! RUN: bbc -emit-hlfir -o - %s 2>&1 | FileCheck %s
 
 ! simple 1 argument SUM
 subroutine sum1(a, s)

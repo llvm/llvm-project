@@ -635,10 +635,6 @@ public:
                       std::shared_ptr<const PreambleData> Preamble,
                       std::vector<Diag> CIDiags, WantDiagnostics WantDiags);
 
-  /// Obtain a preamble reflecting all updates so far. Threadsafe.
-  /// It may be delivered immediately, or later on the worker thread.
-  void getCurrentPreamble(
-      llvm::unique_function<void(std::shared_ptr<const PreambleData>)>);
   /// Returns compile command from the current file inputs.
   tooling::CompileCommand getCurrentCompileCommand() const;
 

@@ -320,8 +320,10 @@ bool HexagonRDFOpt::runOnMachineFunction(MachineFunction &MF) {
   Changed |= DCE.run();
 
   if (Changed) {
-    if (RDFDump)
-      dbgs() << "Starting liveness recomputation on: " << MF.getName() << '\n';
+    if (RDFDump) {
+      dbgs() << "Starting liveness recomputation on: " << MF.getName() << '\n'
+             << PrintNode<FuncNode*>(G.getFunc(), G) << '\n';
+    }
     Liveness LV(*MRI, G);
     LV.trace(RDFDump);
     LV.computeLiveIns();

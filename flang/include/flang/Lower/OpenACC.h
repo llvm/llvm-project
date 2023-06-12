@@ -13,6 +13,8 @@
 #ifndef FORTRAN_LOWER_OPENACC_H
 #define FORTRAN_LOWER_OPENACC_H
 
+#include "mlir/Dialect/OpenACC/OpenACC.h"
+
 namespace llvm {
 class StringRef;
 }
@@ -21,9 +23,6 @@ namespace mlir {
 class Location;
 class Type;
 class OpBuilder;
-namespace acc {
-class PrivateRecipeOp;
-}
 } // namespace mlir
 
 namespace Fortran {
@@ -56,6 +55,12 @@ void genOpenACCDeclarativeConstruct(
 mlir::acc::PrivateRecipeOp createOrGetPrivateRecipe(mlir::OpBuilder &,
                                                     llvm::StringRef,
                                                     mlir::Location, mlir::Type);
+
+/// Get a acc.reduction.recipe op for the given type or create it if it does not
+/// exist yet.
+mlir::acc::ReductionRecipeOp
+createOrGetReductionRecipe(mlir::OpBuilder &, llvm::StringRef, mlir::Location,
+                           mlir::Type, mlir::acc::ReductionOperator);
 
 } // namespace lower
 } // namespace Fortran

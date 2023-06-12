@@ -1468,10 +1468,12 @@ bool AVRExpandPseudo::expand<AVR::ROLBRd>(Block &MBB, BlockIt MBBI) {
   // multiple registers, but when we actually need to rotate stuff, we have
   // to explicitly add the carry bit.
 
+  const AVRSubtarget &STI = MBB.getParent()->getSubtarget<AVRSubtarget>();
+
   MachineInstr &MI = *MBBI;
   unsigned OpShift, OpCarry;
   Register DstReg = MI.getOperand(0).getReg();
-  Register ZeroReg = MI.getOperand(2).getReg();
+  Register ZeroReg = STI.getZeroRegister();
   bool DstIsDead = MI.getOperand(0).isDead();
   bool DstIsKill = MI.getOperand(1).isKill();
   OpShift = AVR::ADDRdRr;

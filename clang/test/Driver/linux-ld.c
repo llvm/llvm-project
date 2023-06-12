@@ -1259,6 +1259,22 @@
 // CHECK-ANDROID-32: "-dynamic-linker" "/system/bin/linker"
 // CHECK-ANDROID-64: "-dynamic-linker" "/system/bin/linker64"
 //
+// Test that Android 14 and newer use linker_hwasan64 for hwasan builds
+// RUN: %clang -### %s -no-pie 2>&1 \
+// RUN:     -fsanitize=hwaddress \
+// RUN:     --target=x86_64-linux-android33 \
+// RUN:     --gcc-toolchain="" \
+// RUN:     --sysroot=%S/Inputs/basic_android_tree/sysroot \
+// RUN:   | FileCheck --check-prefix=CHECK-ANDROID-OLD %s
+// RUN: %clang -### %s -no-pie 2>&1 \
+// RUN:     -fsanitize=hwaddress \
+// RUN:     --target=x86_64-linux-android34 \
+// RUN:     --gcc-toolchain="" \
+// RUN:     --sysroot=%S/Inputs/basic_android_tree/sysroot \
+// RUN:   | FileCheck --check-prefix=CHECK-ANDROID-NEW %s
+// CHECK-ANDROID-OLD: "-dynamic-linker" "/system/bin/linker64"
+// CHECK-ANDROID-NEW: "-dynamic-linker" "/system/bin/linker_hwasan64"
+//
 // Test that -pthread does not add -lpthread on Android.
 // RUN: %clang -### %s -no-pie 2>&1 \
 // RUN:     --target=arm-linux-androideabi -pthread \

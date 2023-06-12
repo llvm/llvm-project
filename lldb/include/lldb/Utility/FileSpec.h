@@ -408,6 +408,18 @@ public:
   ///     A boolean value indicating whether the path was updated.
   bool RemoveLastPathComponent();
 
+  /// Gets the components of the FileSpec's path.
+  /// For example, given the path:
+  ///   /System/Library/PrivateFrameworks/UIFoundation.framework/UIFoundation
+  ///
+  /// This function returns:
+  ///   {"System", "Library", "PrivateFrameworks", "UIFoundation.framework",
+  ///   "UIFoundation"}
+  /// \return
+  ///   A std::vector of llvm::StringRefs for each path component.
+  ///   The lifetime of the StringRefs is tied to the lifetime of the FileSpec.
+  std::vector<llvm::StringRef> GetComponents() const;
+
 protected:
   // Convenience method for setting the file without changing the style.
   void SetFile(llvm::StringRef path);

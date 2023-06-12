@@ -39,7 +39,7 @@
 
 #Tensor3 = #sparse_tensor.encoding<{
   lvlTypes = [ "dense", "dense", "compressed" ],
-  dimOrdering = affine_map<(i,j,k) -> (i,k,j)>
+  dimToLvl = affine_map<(i,j,k) -> (i,k,j)>
 }>
 
 #SingletonTensor1 = #sparse_tensor.encoding<{

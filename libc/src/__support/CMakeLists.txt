@@ -102,6 +102,7 @@ add_header_library(
   HDRS
     float_to_string.h
     ryu_constants.h
+    ryu_long_double_constants.h
   DEPENDS
     .libc_assert
     libc.src.__support.CPP.type_traits

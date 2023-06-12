@@ -38,6 +38,7 @@ enum ClangFlags {
   DXCOption = (1 << 17),
   CLDXCOption = (1 << 18),
   Ignored = (1 << 19),
+  TargetSpecific = (1 << 20),
 };
 
 enum ID {

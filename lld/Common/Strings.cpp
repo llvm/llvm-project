@@ -19,8 +19,8 @@ using namespace llvm;
 using namespace lld;
 
 SingleStringMatcher::SingleStringMatcher(StringRef Pattern) {
-  if (Pattern.size() > 2 && Pattern.startswith("\"") &&
-      Pattern.endswith("\"")) {
+  if (Pattern.size() > 2 && Pattern.starts_with("\"") &&
+      Pattern.ends_with("\"")) {
     ExactMatch = true;
     ExactPattern = Pattern.substr(1, Pattern.size() - 2);
   } else {

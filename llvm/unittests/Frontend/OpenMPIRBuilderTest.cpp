@@ -5855,4 +5855,84 @@ TEST_F(OpenMPIRBuilderTest, OffloadEntriesInfoManager) {
       GlobalValue::WeakAnyLinkage);
   EXPECT_TRUE(InfoManager.hasDeviceGlobalVarEntryInfo("gvar"));
 }
+
+// Tests both registerTargetGlobalVariable and getAddrOfDeclareTargetVar as they
+// call each other (recursively in some cases). The test case test these
+// functions by utilising them for host code generation for declare target
+// global variables
+TEST_F(OpenMPIRBuilderTest, registerTargetGlobalVariable) {
+  OpenMPIRBuilder OMPBuilder(*M);
+  OMPBuilder.initialize();
+  OpenMPIRBuilderConfig Config(false, false, false, false);
+  OMPBuilder.setConfig(Config);
+
+  std::vector<llvm::Triple> TargetTriple;
+  TargetTriple.emplace_back("amdgcn-amd-amdhsa");
+
+  TargetRegionEntryInfo EntryInfo("", 42, 4711, 17);
+  std::vector<GlobalVariable *> RefsGathered;
+
+  std::vector<Constant *> Globals;
+  auto *IntTy = Type::getInt32Ty(Ctx);
+  for (int I = 0; I < 2; ++I) {
+    Globals.push_back(M->getOrInsertGlobal(
+        "test_data_int_" + std::to_string(I), IntTy, [&]() -> GlobalVariable * {
+          return new GlobalVariable(
+              *M, IntTy, false, GlobalValue::LinkageTypes::WeakAnyLinkage,
+              ConstantInt::get(IntTy, I), "test_data_int_" + std::to_string(I));
+        }));
+  }
+
+  OMPBuilder.registerTargetGlobalVariable(
+      OffloadEntriesInfoManager::OMPTargetGlobalVarEntryTo,
+      OffloadEntriesInfoManager::OMPTargetDeviceClauseAny, false, true,
+      EntryInfo, Globals[0]->getName(), RefsGathered, false, TargetTriple,
+      nullptr, nullptr, Globals[0]->getType(), Globals[0]);
+
+  OMPBuilder.registerTargetGlobalVariable(
+      OffloadEntriesInfoManager::OMPTargetGlobalVarEntryLink,
+      OffloadEntriesInfoManager::OMPTargetDeviceClauseAny, false, true,
+      EntryInfo, Globals[1]->getName(), RefsGathered, false, TargetTriple,
+      nullptr, nullptr, Globals[1]->getType(), Globals[1]);
+
+  llvm::OpenMPIRBuilder::EmitMetadataErrorReportFunctionTy &&ErrorReportfn =
+      [](llvm::OpenMPIRBuilder::EmitMetadataErrorKind Kind,
+         const llvm::TargetRegionEntryInfo &EntryInfo) -> void {
+    // If this is invoked, then we want to emit an error, even if it is not
+    // neccesarily the most readable, as something has went wrong. The
+    // test-suite unfortunately eats up all error output
+    ASSERT_EQ(Kind, Kind);
+  };
+
+  OMPBuilder.createOffloadEntriesAndInfoMetadata(ErrorReportfn);
+
+  // Clauses for data_int_0 with To + Any clauses for the host
+  std::vector<GlobalVariable *> OffloadEntries;
+  OffloadEntries.push_back(M->getNamedGlobal(".omp_offloading.entry_name"));
+  OffloadEntries.push_back(
+      M->getNamedGlobal(".omp_offloading.entry.test_data_int_0"));
+
+  // Clauses for data_int_1 with Link + Any clauses for the host
+  OffloadEntries.push_back(
+      M->getNamedGlobal("test_data_int_1_decl_tgt_ref_ptr"));
+  OffloadEntries.push_back(M->getNamedGlobal(".omp_offloading.entry_name.1"));
+  OffloadEntries.push_back(M->getNamedGlobal(
+      ".omp_offloading.entry.test_data_int_1_decl_tgt_ref_ptr"));
+
+  for (unsigned I = 0; I < OffloadEntries.size(); ++I)
+    EXPECT_NE(OffloadEntries[I], nullptr);
+
+  // Metadata generated for the host offload module
+  NamedMDNode *OffloadMetadata = M->getNamedMetadata("omp_offload.info");
+  EXPECT_NE(OffloadMetadata, nullptr);
+  if (OffloadMetadata) {
+    EXPECT_EQ(OffloadMetadata->getOperand(0)->getOperand(1).equalsStr(
+                  "test_data_int_0"),
+              true);
+    EXPECT_EQ(OffloadMetadata->getOperand(1)->getOperand(1).equalsStr(
+                  "test_data_int_1_decl_tgt_ref_ptr"),
+              true);
+  }
+}
+
 } // namespace

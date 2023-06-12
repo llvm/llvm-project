@@ -267,6 +267,7 @@ module std [system] {
       module find_if_not                     { private header "__algorithm/find_if_not.h" }
       module for_each                        { private header "__algorithm/for_each.h" }
       module for_each_n                      { private header "__algorithm/for_each_n.h" }
+      module for_each_segment                { private header "__algorithm/for_each_segment.h" }
       module generate                        { private header "__algorithm/generate.h" }
       module generate_n                      { private header "__algorithm/generate_n.h" }
       module half_positive                   { private header "__algorithm/half_positive.h" }
@@ -338,14 +339,23 @@ module std [system] {
       module pstl_backends_cpu_backends_for_each {
         private header "__algorithm/pstl_backends/cpu_backends/for_each.h"
       }
+      module pstl_backends_cpu_backends_merge {
+        private header "__algorithm/pstl_backends/cpu_backends/merge.h"
+      }
       module pstl_backends_cpu_backends_serial {
         private header "__algorithm/pstl_backends/cpu_backends/serial.h"
+      }
+      module pstl_backends_cpu_backends_stable_sort {
+        private header "__algorithm/pstl_backends/cpu_backends/stable_sort.h"
       }
       module pstl_backends_cpu_backends_thread {
         private header "__algorithm/pstl_backends/cpu_backends/thread.h"
       }
       module pstl_backends_cpu_backends_transform {
         private header "__algorithm/pstl_backends/cpu_backends/transform.h"
+      }
+      module pstl_backends_cpu_backends_transform_reduce {
+        private header "__algorithm/pstl_backends/cpu_backends/transform_reduce.h"
       }
       module push_heap                       { private header "__algorithm/push_heap.h" }
       module ranges_adjacent_find            { private header "__algorithm/ranges_adjacent_find.h" }
@@ -966,7 +976,7 @@ module std [system] {
   }
   module fstream {
     @requires_LIBCXX_ENABLE_LOCALIZATION@
-    @requires_LIBCXX_ENABLE_FSTREAM@
+    @requires_LIBCXX_ENABLE_FILESYSTEM@
     header "fstream"
     export *
   }
@@ -1066,11 +1076,12 @@ module std [system] {
     export *
 
     module __iterator {
-      module access                { private header "__iterator/access.h" }
-      module advance               { private header "__iterator/advance.h" }
-      module back_insert_iterator  { private header "__iterator/back_insert_iterator.h" }
-      module bounded_iter          { private header "__iterator/bounded_iter.h" }
-      module common_iterator       { private header "__iterator/common_iterator.h" }
+      module access                  { private header "__iterator/access.h" }
+      module advance                 { private header "__iterator/advance.h" }
+      module back_insert_iterator    { private header "__iterator/back_insert_iterator.h" }
+      module bounded_iter            { private header "__iterator/bounded_iter.h" }
+      module common_iterator         { private header "__iterator/common_iterator.h" }
+      module cpp17_iterator_concepts { private header "__iterator/cpp17_iterator_concepts.h" }
       module concepts {
         private header "__iterator/concepts.h"
         export concepts.equality_comparable
@@ -1131,7 +1142,8 @@ module std [system] {
   }
 
   module __debug_utils {
-    module randomize_range { private header "__debug_utils/randomize_range.h" }
+    module randomize_range            { private header "__debug_utils/randomize_range.h" }
+    module strict_weak_ordering_check { private header "__debug_utils/strict_weak_ordering_check.h" }
   }
 
   module limits {
@@ -1451,11 +1463,17 @@ module std [system] {
     export *
   }
   module stop_token {
+    @requires_LIBCXX_ENABLE_THREADS@
+    header "stop_token"
     export *
     module __stop_token {
       module atomic_unique_lock   { private header "__stop_token/atomic_unique_lock.h" }
       module intrusive_list_view  { private header "__stop_token/intrusive_list_view.h" }
       module intrusive_shared_ptr { private header "__stop_token/intrusive_shared_ptr.h" }
+      module stop_callback        { private header "__stop_token/stop_callback.h" }
+      module stop_source          { private header "__stop_token/stop_source.h" }
+      module stop_state           { private header "__stop_token/stop_state.h" }
+      module stop_token           { private header "__stop_token/stop_token.h" }
     }
   }
   module streambuf {
@@ -1675,6 +1693,7 @@ module std [system] {
     module nat                                       { private header "__type_traits/nat.h" }
     module negation                                  { private header "__type_traits/negation.h" }
     module noexcept_move_assign_container            { private header "__type_traits/noexcept_move_assign_container.h" }
+    module operation_traits                          { private header "__type_traits/operation_traits.h" }
     module predicate_traits                          { private header "__type_traits/predicate_traits.h" }
     module promote                                   { private header "__type_traits/promote.h" }
     module rank                                      { private header "__type_traits/rank.h" }
@@ -1737,6 +1756,7 @@ module std [system] {
       module forward_like           { private header "__utility/forward_like.h" }
       module in_place               { private header "__utility/in_place.h" }
       module integer_sequence       { private header "__utility/integer_sequence.h" }
+      module is_pointer_in_range    { private header "__utility/is_pointer_in_range.h" }
       module move                   { private header "__utility/move.h" }
       module pair                   { private header "__utility/pair.h" }
       module pair_fwd               { private header "__fwd/pair.h" }

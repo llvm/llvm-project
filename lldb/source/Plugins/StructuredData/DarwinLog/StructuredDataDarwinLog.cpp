@@ -162,13 +162,13 @@ const char *const s_filter_attributes[] = {
     // used to format message text
 };
 
-static ConstString GetDarwinLogTypeName() {
-  static const ConstString s_key_name("DarwinLog");
+static llvm::StringRef GetDarwinLogTypeName() {
+  static constexpr llvm::StringLiteral s_key_name("DarwinLog");
   return s_key_name;
 }
 
-static ConstString GetLogEventType() {
-  static const ConstString s_event_type("log");
+static llvm::StringRef GetLogEventType() {
+  static constexpr llvm::StringLiteral s_event_type("log");
   return s_event_type;
 }
 
@@ -799,8 +799,8 @@ protected:
     }
 
     // Get the plugin for the process.
-    auto plugin_sp =
-        process_sp->GetStructuredDataPlugin(GetDarwinLogTypeName());
+    auto plugin_sp = process_sp->GetStructuredDataPlugin(
+        ConstString(GetDarwinLogTypeName()));
     if (!plugin_sp || (plugin_sp->GetPluginName() !=
                        StructuredDataDarwinLog::GetStaticPluginName())) {
       result.AppendError("failed to get StructuredDataPlugin for "
@@ -822,8 +822,8 @@ protected:
     // Send configuration to the feature by way of the process. Construct the
     // options we will use.
     auto config_sp = m_options_sp->BuildConfigurationData(m_enable);
-    const Status error =
-        process_sp->ConfigureStructuredData(GetDarwinLogTypeName(), config_sp);
+    const Status error = process_sp->ConfigureStructuredData(
+        ConstString(GetDarwinLogTypeName()), config_sp);
 
     // Report results.
     if (!error.Success()) {
@@ -871,8 +871,8 @@ protected:
       stream.PutCString("Enabled: not applicable "
                         "(requires process)\n");
     } else {
-      auto plugin_sp =
-          process_sp->GetStructuredDataPlugin(GetDarwinLogTypeName());
+      auto plugin_sp = process_sp->GetStructuredDataPlugin(
+          ConstString(GetDarwinLogTypeName()));
       stream.Printf("Availability: %s\n",
                     plugin_sp ? "available" : "unavailable");
       llvm::StringRef plugin_name = StructuredDataDarwinLog::GetStaticPluginName();
@@ -1089,7 +1089,7 @@ void StructuredDataDarwinLog::HandleArrivalOfStructuredData(
     LLDB_LOGF(log,
               "StructuredDataDarwinLog::%s() StructuredData type "
               "expected to be %s but was %s, ignoring",
-              __FUNCTION__, GetDarwinLogTypeName().AsCString(),
+              __FUNCTION__, GetDarwinLogTypeName().str().c_str(),
               type_name.AsCString());
     return;
   }
@@ -1142,7 +1142,7 @@ Status StructuredDataDarwinLog::GetDescription(
   }
 
   // Validate this is really a message for our plugin.
-  ConstString type_name;
+  llvm::StringRef type_name;
   if (!dictionary->GetValueForKeyAsString("type", type_name)) {
     SetErrorWithJSON(error, "Structured data doesn't contain mandatory "
                             "type field",
@@ -1490,13 +1490,11 @@ bool StructuredDataDarwinLog::InitCompletionHookCallback(
   LLDB_LOGF(log, "StructuredDataDarwinLog::%s() call is for process uid %d",
             __FUNCTION__, process_sp->GetUniqueID());
 
-  auto plugin_sp = process_sp->GetStructuredDataPlugin(GetDarwinLogTypeName());
+  auto plugin_sp =
+      process_sp->GetStructuredDataPlugin(ConstString(GetDarwinLogTypeName()));
   if (!plugin_sp) {
-    LLDB_LOGF(log,
-              "StructuredDataDarwinLog::%s() warning: no plugin for "
-              "feature %s in process uid %u",
-              __FUNCTION__, GetDarwinLogTypeName().AsCString(),
-              process_sp->GetUniqueID());
+    LLDB_LOG(log, "warning: no plugin for feature {0} in process uid {1}",
+             GetDarwinLogTypeName(), process_sp->GetUniqueID());
     return false;
   }
 
@@ -1736,7 +1734,7 @@ StructuredDataDarwinLog::DumpHeader(Stream &output_stream,
 size_t StructuredDataDarwinLog::HandleDisplayOfEvent(
     const StructuredData::Dictionary &event, Stream &stream) {
   // Check the type of the event.
-  ConstString event_type;
+  llvm::StringRef event_type;
   if (!event.GetValueForKeyAsString("type", event_type)) {
     // Hmm, we expected to get events that describe what they are.  Continue
     // anyway.
@@ -1836,8 +1834,8 @@ void StructuredDataDarwinLog::EnableNow() {
 
   // We can run it directly.
   // Send configuration to the feature by way of the process.
-  const Status error =
-      process_sp->ConfigureStructuredData(GetDarwinLogTypeName(), config_sp);
+  const Status error = process_sp->ConfigureStructuredData(
+      ConstString(GetDarwinLogTypeName()), config_sp);
 
   // Report results.
   if (!error.Success()) {

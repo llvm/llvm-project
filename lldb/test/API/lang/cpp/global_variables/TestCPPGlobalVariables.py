@@ -75,6 +75,7 @@ class GlobalVariablesCppTestCase(TestBase):
         )
         self.assertEqual(var.GetValue(), "100")
 
+    @expectedFailureAll(oslist=["windows"], bugnumber="llvm.org/pr24764")
     def test_access_by_mangled_name(self):
         self.build()
 

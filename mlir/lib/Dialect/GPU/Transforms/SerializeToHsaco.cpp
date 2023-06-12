@@ -74,21 +74,12 @@ public:
   }
 
 protected:
-  Option<int> optLevel{
-      *this, "opt-level",
-      llvm::cl::desc("Optimization level for HSACO compilation"),
-      llvm::cl::init(2)};
-
   Option<std::string> rocmPath{*this, "rocm-path",
                                llvm::cl::desc("Path to ROCm install")};
 
   // Overload to allow linking in device libs
   std::unique_ptr<llvm::Module>
   translateToLLVMIR(llvm::LLVMContext &llvmContext) override;
-
-  /// Adds LLVM optimization passes
-  LogicalResult optimizeLlvm(llvm::Module &llvmModule,
-                             llvm::TargetMachine &targetMachine) override;
 
 private:
   void getDependentDialects(DialectRegistry &registry) const override;
@@ -318,30 +309,6 @@ SerializeToHsacoPass::translateToLLVMIR(llvm::LLVMContext &llvmContext) {
   }
 
   return ret;
-}
-
-LogicalResult
-SerializeToHsacoPass::optimizeLlvm(llvm::Module &llvmModule,
-                                   llvm::TargetMachine &targetMachine) {
-  int optLevel = this->optLevel.getValue();
-  if (optLevel < 0 || optLevel > 3)
-    return getOperation().emitError()
-           << "Invalid HSA optimization level" << optLevel << "\n";
-
-  targetMachine.setOptLevel(static_cast<llvm::CodeGenOpt::Level>(optLevel));
-
-  auto transformer =
-      makeOptimizingTransformer(optLevel, /*sizeLevel=*/0, &targetMachine);
-  auto error = transformer(&llvmModule);
-  if (error) {
-    InFlightDiagnostic mlirError = getOperation()->emitError();
-    llvm::handleAllErrors(
-        std::move(error), [&mlirError](const llvm::ErrorInfoBase &ei) {
-          mlirError << "Could not optimize LLVM IR: " << ei.message() << "\n";
-        });
-    return mlirError;
-  }
-  return success();
 }
 
 std::unique_ptr<SmallVectorImpl<char>>

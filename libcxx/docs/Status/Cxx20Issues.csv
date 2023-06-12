@@ -210,7 +210,7 @@
 "`3250 <https://wg21.link/LWG3250>`__","``std::format``\ : ``#``\  (alternate form) for NaN and inf","Prague","|Complete|","14.0","|format|"
 "`3251 <https://wg21.link/LWG3251>`__","Are ``std::format``\  alignment specifiers applied to string arguments?","Prague","|Complete|","14.0","|format|"
 "`3252 <https://wg21.link/LWG3252>`__","Parse locale's aware modifiers for commands are not consistent with POSIX spec","Prague","","","|chrono|"
-"`3254 <https://wg21.link/LWG3254>`__","Strike ``stop_token``\ 's ``operator!=``\ ","Prague","",""
+"`3254 <https://wg21.link/LWG3254>`__","Strike ``stop_token``\ 's ``operator!=``\ ","Prague","|Complete|","17.0"
 "`3255 <https://wg21.link/LWG3255>`__","``span``\ 's ``array``\  constructor is too strict","Prague","|Complete|",""
 "`3260 <https://wg21.link/LWG3260>`__","``year_month*``\  arithmetic rejects durations convertible to years","Prague","","","|chrono|"
 "`3262 <https://wg21.link/LWG3262>`__","Formatting of negative durations is not specified","Prague","|Complete|","16.0","|chrono| |format|"

@@ -675,6 +675,13 @@ void t46(void) {
   // CHECK: call void asm sideeffect inteldialect "add eax, [eax + $$-128]", "~{eax},~{flags},~{dirflag},~{fpsr},~{flags}"()
 }
 
+void t47(void) {
+  // CHECK-LABEL: define{{.*}} void @t47
+  int arr[1000];
+  __asm movdir64b eax, zmmword ptr [arr]
+  // CHECK: call void asm sideeffect inteldialect "movdir64b eax, zmmword ptr $0", "*m,~{dirflag},~{fpsr},~{flags}"(ptr elementtype([1000 x i32]) %arr)
+}
+
 void dot_operator(void){
   // CHECK-LABEL: define{{.*}} void @dot_operator
 	__asm { mov eax, 3[ebx]A.b}

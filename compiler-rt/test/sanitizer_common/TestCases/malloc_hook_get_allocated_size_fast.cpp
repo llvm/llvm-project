@@ -6,9 +6,6 @@
 // Must not be implemented, no other reason to install interceptors.
 // XFAIL: ubsan
 
-// FIXME: Implement.
-// XFAIL: hwasan
-
 #include <assert.h>
 #include <sanitizer/allocator_interface.h>
 #include <stdlib.h>

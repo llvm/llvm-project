@@ -391,3 +391,44 @@ define <32 x double> @vfwmul_vf_v32f32(ptr %x, float %y) {
   %f = fmul <32 x double> %d, %e
   ret <32 x double> %f
 }
+
+define <2 x float> @vfwmul_squared_v2f16_v2f32(ptr %x) {
+; CHECK-LABEL: vfwmul_squared_v2f16_v2f32:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetivli zero, 2, e16, mf4, ta, ma
+; CHECK-NEXT:    vle16.v v9, (a0)
+; CHECK-NEXT:    vfwmul.vv v8, v9, v9
+; CHECK-NEXT:    ret
+  %a = load <2 x half>, ptr %x
+  %b = fpext <2 x half> %a to <2 x float>
+  %c = fmul <2 x float> %b, %b
+  ret <2 x float> %c
+}
+
+define <2 x double> @vfwmul_squared_v2f32_v2f64(ptr %x) {
+; CHECK-LABEL: vfwmul_squared_v2f32_v2f64:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetivli zero, 2, e32, mf2, ta, ma
+; CHECK-NEXT:    vle32.v v9, (a0)
+; CHECK-NEXT:    vfwmul.vv v8, v9, v9
+; CHECK-NEXT:    ret
+  %a = load <2 x float>, ptr %x
+  %b = fpext <2 x float> %a to <2 x double>
+  %c = fmul <2 x double> %b, %b
+  ret <2 x double> %c
+}
+
+define <2 x double> @vfwmul_squared_v2f16_v2f64(ptr %x) {
+; CHECK-LABEL: vfwmul_squared_v2f16_v2f64:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetivli zero, 2, e16, mf4, ta, ma
+; CHECK-NEXT:    vle16.v v8, (a0)
+; CHECK-NEXT:    vfwcvt.f.f.v v9, v8
+; CHECK-NEXT:    vsetvli zero, zero, e32, mf2, ta, ma
+; CHECK-NEXT:    vfwmul.vv v8, v9, v9
+; CHECK-NEXT:    ret
+  %a = load <2 x half>, ptr %x
+  %b = fpext <2 x half> %a to <2 x double>
+  %c = fmul <2 x double> %b, %b
+  ret <2 x double> %c
+}

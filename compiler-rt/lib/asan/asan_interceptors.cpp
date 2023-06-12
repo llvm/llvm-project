@@ -87,12 +87,6 @@ using namespace __asan;
 DECLARE_REAL_AND_INTERCEPTOR(void *, malloc, uptr)
 DECLARE_REAL_AND_INTERCEPTOR(void, free, void *)
 
-#define ASAN_INTERCEPTOR_ENTER(ctx, func)                                      \
-  AsanInterceptorContext _ctx = {#func};                                       \
-  ctx = (void *)&_ctx;                                                         \
-  (void) ctx;                                                                  \
-
-#define COMMON_INTERCEPT_FUNCTION(name) ASAN_INTERCEPT_FUNC(name)
 #define COMMON_INTERCEPT_FUNCTION_VER(name, ver) \
   ASAN_INTERCEPT_FUNC_VER(name, ver)
 #define COMMON_INTERCEPT_FUNCTION_VER_UNVERSIONED_FALLBACK(name, ver) \
@@ -151,24 +145,6 @@ DECLARE_REAL_AND_INTERCEPTOR(void, free, void *)
     } else {                                           \
       *begin = *end = 0;                               \
     }
-
-#define COMMON_INTERCEPTOR_MEMMOVE_IMPL(ctx, to, from, size) \
-  do {                                                       \
-    ASAN_INTERCEPTOR_ENTER(ctx, memmove);                    \
-    ASAN_MEMMOVE_IMPL(ctx, to, from, size);                  \
-  } while (false)
-
-#define COMMON_INTERCEPTOR_MEMCPY_IMPL(ctx, to, from, size) \
-  do {                                                      \
-    ASAN_INTERCEPTOR_ENTER(ctx, memcpy);                    \
-    ASAN_MEMCPY_IMPL(ctx, to, from, size);                  \
-  } while (false)
-
-#define COMMON_INTERCEPTOR_MEMSET_IMPL(ctx, block, c, size) \
-  do {                                                      \
-    ASAN_INTERCEPTOR_ENTER(ctx, memset);                    \
-    ASAN_MEMSET_IMPL(ctx, block, c, size);                  \
-  } while (false)
 
 #if CAN_SANITIZE_LEAKS
 #define COMMON_INTERCEPTOR_STRERROR()                       \

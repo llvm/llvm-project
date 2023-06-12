@@ -24,15 +24,33 @@ namespace __sanitizer {
 
 // internal_X() is a custom implementation of X() for use in RTL.
 
+extern "C" {
+// These are used as builtin replacements; see sanitizer_redefine_builtins.h.
+// In normal runtime code, use the __sanitizer::internal_X() aliases instead.
+SANITIZER_INTERFACE_ATTRIBUTE void *__sanitizer_internal_memcpy(void *dest,
+                                                                const void *src,
+                                                                uptr n);
+SANITIZER_INTERFACE_ATTRIBUTE void *__sanitizer_internal_memmove(
+    void *dest, const void *src, uptr n);
+SANITIZER_INTERFACE_ATTRIBUTE void *__sanitizer_internal_memset(void *s, int c,
+                                                                uptr n);
+}  // extern "C"
+
 // String functions
 s64 internal_atoll(const char *nptr);
 void *internal_memchr(const void *s, int c, uptr n);
 void *internal_memrchr(const void *s, int c, uptr n);
 int internal_memcmp(const void* s1, const void* s2, uptr n);
-void *internal_memcpy(void *dest, const void *src, uptr n);
-void *internal_memmove(void *dest, const void *src, uptr n);
+ALWAYS_INLINE void *internal_memcpy(void *dest, const void *src, uptr n) {
+  return __sanitizer_internal_memcpy(dest, src, n);
+}
+ALWAYS_INLINE void *internal_memmove(void *dest, const void *src, uptr n) {
+  return __sanitizer_internal_memmove(dest, src, n);
+}
 // Should not be used in performance-critical places.
-void *internal_memset(void *s, int c, uptr n);
+ALWAYS_INLINE void *internal_memset(void *s, int c, uptr n) {
+  return __sanitizer_internal_memset(s, c, n);
+}
 char* internal_strchr(const char *s, int c);
 char *internal_strchrnul(const char *s, int c);
 int internal_strcmp(const char *s1, const char *s2);

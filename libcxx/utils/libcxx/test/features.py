@@ -38,6 +38,10 @@ def _getSuitableClangTidy(cfg):
         ):
             return None
 
+        # TODO MODULES require ToT due module specific fixes.
+        if runScriptExitCode(cfg, ['clang-tidy-17 --version']) == 0:
+          return 'clang-tidy-17'
+
         # TODO This should be the last stable release.
         # LLVM RELEASE bump to latest stable version
         if runScriptExitCode(cfg, ["clang-tidy-16 --version"]) == 0:
@@ -329,10 +333,9 @@ macros = {
     "_LIBCPP_HAS_THREAD_API_PTHREAD": "libcpp-has-thread-api-pthread",
     "_LIBCPP_NO_VCRUNTIME": "libcpp-no-vcruntime",
     "_LIBCPP_ABI_VERSION": "libcpp-abi-version",
-    "_LIBCPP_HAS_NO_FILESYSTEM_LIBRARY": "no-filesystem",
+    "_LIBCPP_HAS_NO_FILESYSTEM": "no-filesystem",
     "_LIBCPP_HAS_NO_RANDOM_DEVICE": "no-random-device",
     "_LIBCPP_HAS_NO_LOCALIZATION": "no-localization",
-    "_LIBCPP_HAS_NO_FSTREAM": "no-fstream",
     "_LIBCPP_HAS_NO_WIDE_CHARACTERS": "no-wide-characters",
     "_LIBCPP_HAS_NO_UNICODE": "libcpp-has-no-unicode",
     "_LIBCPP_ENABLE_DEBUG_MODE": "libcpp-has-debug-mode",

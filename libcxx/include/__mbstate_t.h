@@ -35,7 +35,11 @@
 #  define __CORRECT_ISO_CPP_WCHAR_H_PROTO
 #endif
 
-#if __has_include(<bits/types/mbstate_t.h>)
+#if defined(_LIBCPP_HAS_MUSL_LIBC)
+#   define __NEED_mbstate_t
+#   include <bits/alltypes.h>
+#   undef __NEED_mbstate_t
+#elif __has_include(<bits/types/mbstate_t.h>)
 #   include <bits/types/mbstate_t.h> // works on most Unixes
 #elif __has_include(<sys/_types/_mbstate_t.h>)
 #   include <sys/_types/_mbstate_t.h> // works on Darwin

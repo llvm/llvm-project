@@ -73,7 +73,7 @@ bool LibStdcppTupleSyntheticFrontEnd::Update() {
         next_child_sp = child_sp;
       } else if (name_str.startswith("std::_Head_base<")) {
         ValueObjectSP value_sp =
-            child_sp->GetChildMemberWithName(ConstString("_M_head_impl"), true);
+            child_sp->GetChildMemberWithName("_M_head_impl", true);
         if (value_sp) {
           StreamString name;
           name.Printf("[%zd]", m_members.size());

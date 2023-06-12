@@ -322,7 +322,7 @@ void LinkerDriver::parseSwaprun(StringRef arg) {
     else
       error("/swaprun: invalid argument: " + swaprun);
     // To catch trailing commas, e.g. `/spawrun:cd,`
-    if (newArg.empty() && arg.endswith(","))
+    if (newArg.empty() && arg.ends_with(","))
       error("/swaprun: missing argument");
     arg = newArg;
   } while (!arg.empty());
@@ -592,7 +592,7 @@ Export LinkerDriver::parseExport(StringRef arg) {
       e.isPrivate = true;
       continue;
     }
-    if (tok.startswith("@")) {
+    if (tok.starts_with("@")) {
       int32_t ord;
       if (tok.substr(1).getAsInteger(0, ord))
         goto err;
@@ -616,9 +616,9 @@ static StringRef undecorate(COFFLinkerContext &ctx, StringRef sym) {
   // as-is with the leading underscore (with type IMPORT_NAME).
   // In MinGW mode, a decorated stdcall function gets the underscore
   // removed, just like normal cdecl functions.
-  if (sym.startswith("_") && sym.contains('@') && !ctx.config.mingw)
+  if (sym.starts_with("_") && sym.contains('@') && !ctx.config.mingw)
     return sym;
-  return sym.startswith("_") ? sym.substr(1) : sym;
+  return sym.starts_with("_") ? sym.substr(1) : sym;
 }
 
 // Convert stdcall/fastcall style symbols into unsuffixed symbols,
@@ -628,8 +628,8 @@ static StringRef killAt(StringRef sym, bool prefix) {
     return sym;
   // Strip any trailing stdcall suffix
   sym = sym.substr(0, sym.find('@', 1));
-  if (!sym.startswith("@")) {
-    if (prefix && !sym.startswith("_"))
+  if (!sym.starts_with("@")) {
+    if (prefix && !sym.starts_with("_"))
       return saver().save("_" + sym);
     return sym;
   }

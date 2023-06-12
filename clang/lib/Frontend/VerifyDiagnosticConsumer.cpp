@@ -737,12 +737,12 @@ void VerifyDiagnosticConsumer::HandleDiagnostic(
       Loc = SrcManager->getExpansionLoc(Loc);
       FileID FID = SrcManager->getFileID(Loc);
 
-      const FileEntry *FE = SrcManager->getFileEntryForID(FID);
+      auto FE = SrcManager->getFileEntryRefForID(FID);
       if (FE && CurrentPreprocessor && SrcManager->isLoadedFileID(FID)) {
         // If the file is a modules header file it shall not be parsed
         // for expected-* directives.
         HeaderSearch &HS = CurrentPreprocessor->getHeaderSearchInfo();
-        if (HS.findModuleForHeader(FE))
+        if (HS.findModuleForHeader(*FE))
           PS = IsUnparsedNoDirectives;
       }
 

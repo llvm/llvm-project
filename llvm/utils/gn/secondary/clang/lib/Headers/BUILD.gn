@@ -22,6 +22,13 @@ clang_tablegen("arm_sve") {
   output_name = "arm_sve.h"
 }
 
+# Generate arm_sme_draft_spec_subject_to_change.h
+clang_tablegen("arm_sme_draft_spec_subject_to_change") {
+  args = [ "-gen-arm-sme-header" ]
+  td_file = "//clang/include/clang/Basic/arm_sme.td"
+  output_name = "arm_sme_draft_spec_subject_to_change.h"
+}
+
 # Generate arm_bf16.h
 clang_tablegen("arm_bf16") {
   args = [ "-gen-arm-bf16" ]
@@ -58,6 +65,7 @@ copy("tablegen_headers") {
     ":arm_fp16",
     ":arm_mve",
     ":arm_neon",
+    ":arm_sme_draft_spec_subject_to_change",
     ":arm_sve",
     ":riscv_vector",
   ]

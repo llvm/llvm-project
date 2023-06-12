@@ -44,7 +44,7 @@ TEST(LlvmLibcAtanfTest, SpecialNumbers) {
 }
 
 TEST(LlvmLibcAtanfTest, InFloatRange) {
-  constexpr uint32_t COUNT = 1000000;
+  constexpr uint32_t COUNT = 100'000;
   const uint32_t STEP = FPBits(inf).uintval() / COUNT;
   for (uint32_t i = 0, v = 0; i <= COUNT; ++i, v += STEP) {
     float x = float(FPBits(v));

@@ -13749,13 +13749,13 @@ bool EmulateInstructionARM::SetArchitecture(const ArchSpec &arch) {
     m_arm_isa = ARMvAll;
   else if (arch_cstr.equals_insensitive("thumb"))
     m_arm_isa = ARMvAll;
-  else if (arch_cstr.startswith_insensitive("armv4"))
+  else if (arch_cstr.starts_with_insensitive("armv4"))
     m_arm_isa = ARMv4;
-  else if (arch_cstr.startswith_insensitive("armv6"))
+  else if (arch_cstr.starts_with_insensitive("armv6"))
     m_arm_isa = ARMv6;
-  else if (arch_cstr.startswith_insensitive("armv7"))
+  else if (arch_cstr.starts_with_insensitive("armv7"))
     m_arm_isa = ARMv7;
-  else if (arch_cstr.startswith_insensitive("armv8"))
+  else if (arch_cstr.starts_with_insensitive("armv8"))
     m_arm_isa = ARMv8;
   return m_arm_isa != 0;
 }

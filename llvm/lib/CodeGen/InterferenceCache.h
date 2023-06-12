@@ -156,7 +156,8 @@ class LLVM_LIBRARY_VISIBILITY InterferenceCache {
 
 public:
   InterferenceCache() = default;
-
+  InterferenceCache &operator=(const InterferenceCache &other) = delete;
+  InterferenceCache(const InterferenceCache &other) = delete;
   ~InterferenceCache() {
     free(PhysRegEntries);
   }

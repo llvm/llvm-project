@@ -24,6 +24,7 @@
 #include "clang/Basic/Specifiers.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/STLFunctionalExtras.h"
+#include "llvm/ADT/SmallVector.h"
 #include "llvm/Support/Casting.h"
 
 namespace clang::include_cleaner {
@@ -169,12 +170,39 @@ public:
     return true;
   }
 
+  // Report all (partial) specializations of a class/var template decl.
+  template <typename TemplateDeclType, typename ParitialDeclType>
+  void reportSpecializations(SourceLocation Loc, NamedDecl *ND) {
+    const auto *TD = llvm::dyn_cast<TemplateDeclType>(ND);
+    if (!TD)
+      return;
+
+    for (auto *Spec : TD->specializations())
+      report(Loc, Spec, RefType::Ambiguous);
+    llvm::SmallVector<ParitialDeclType *> PartialSpecializations;
+    TD->getPartialSpecializations(PartialSpecializations);
+    for (auto *PartialSpec : PartialSpecializations)
+      report(Loc, PartialSpec, RefType::Ambiguous);
+  }
   bool VisitUsingDecl(UsingDecl *UD) {
     for (const auto *Shadow : UD->shadows()) {
       auto *TD = Shadow->getTargetDecl();
       auto IsUsed = TD->isUsed() || TD->isReferenced();
       report(UD->getLocation(), TD,
              IsUsed ? RefType::Explicit : RefType::Ambiguous);
+
+      // All (partial) template specializations are visible via a using-decl,
+      // However a using-decl only refers to the primary template (per C++ name
+      // lookup). Thus, we need to manually report all specializations.
+      reportSpecializations<ClassTemplateDecl,
+                            ClassTemplatePartialSpecializationDecl>(
+          UD->getLocation(), TD);
+      reportSpecializations<VarTemplateDecl,
+                            VarTemplatePartialSpecializationDecl>(
+          UD->getLocation(), TD);
+      if (const auto *FTD = llvm::dyn_cast<FunctionTemplateDecl>(TD))
+        for (auto *Spec : FTD->specializations())
+          report(UD->getLocation(), Spec, RefType::Ambiguous);
     }
     return true;
   }

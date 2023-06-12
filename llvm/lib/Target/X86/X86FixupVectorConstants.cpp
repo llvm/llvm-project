@@ -229,7 +229,7 @@ bool X86FixupVectorConstantsPass::processInstruction(MachineFunction &MF,
                                                      MachineBasicBlock &MBB,
                                                      MachineInstr &MI) {
   unsigned Opc = MI.getOpcode();
-  MachineConstantPool *CP  = MI.getParent()->getParent()->getConstantPool();
+  MachineConstantPool *CP = MI.getParent()->getParent()->getConstantPool();
 
   auto ConvertToBroadcast = [&](unsigned OpBcst256, unsigned OpBcst128,
                                 unsigned OpBcst64, unsigned OpBcst32,

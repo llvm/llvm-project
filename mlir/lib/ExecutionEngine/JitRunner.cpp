@@ -393,8 +393,8 @@ int mlir::JitRunnerMain(int argc, char **argv, const DialectRegistry &registry,
   // Configure TargetMachine builder based on the command line options
   llvm::SubtargetFeatures features;
   if (!options.mAttrs.empty()) {
-    for (unsigned i = 0; i != options.mAttrs.size(); ++i)
-      features.AddFeature(options.mAttrs[i]);
+    for (StringRef attr : options.mAttrs)
+      features.AddFeature(attr);
     tmBuilderOrError->addFeatures(features.getFeatures());
   }
 

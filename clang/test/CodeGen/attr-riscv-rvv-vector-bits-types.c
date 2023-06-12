@@ -19,6 +19,39 @@ typedef __rvv_uint64m1_t vuint64m1_t;
 typedef __rvv_float32m1_t vfloat32m1_t;
 typedef __rvv_float64m1_t vfloat64m1_t;
 
+typedef __rvv_int8m2_t vint8m2_t;
+typedef __rvv_uint8m2_t vuint8m2_t;
+typedef __rvv_int16m2_t vint16m2_t;
+typedef __rvv_uint16m2_t vuint16m2_t;
+typedef __rvv_int32m2_t vint32m2_t;
+typedef __rvv_uint32m2_t vuint32m2_t;
+typedef __rvv_int64m2_t vint64m2_t;
+typedef __rvv_uint64m2_t vuint64m2_t;
+typedef __rvv_float32m2_t vfloat32m2_t;
+typedef __rvv_float64m2_t vfloat64m2_t;
+
+typedef __rvv_int8m4_t vint8m4_t;
+typedef __rvv_uint8m4_t vuint8m4_t;
+typedef __rvv_int16m4_t vint16m4_t;
+typedef __rvv_uint16m4_t vuint16m4_t;
+typedef __rvv_int32m4_t vint32m4_t;
+typedef __rvv_uint32m4_t vuint32m4_t;
+typedef __rvv_int64m4_t vint64m4_t;
+typedef __rvv_uint64m4_t vuint64m4_t;
+typedef __rvv_float32m4_t vfloat32m4_t;
+typedef __rvv_float64m4_t vfloat64m4_t;
+
+typedef __rvv_int8m8_t vint8m8_t;
+typedef __rvv_uint8m8_t vuint8m8_t;
+typedef __rvv_int16m8_t vint16m8_t;
+typedef __rvv_uint16m8_t vuint16m8_t;
+typedef __rvv_int32m8_t vint32m8_t;
+typedef __rvv_uint32m8_t vuint32m8_t;
+typedef __rvv_int64m8_t vint64m8_t;
+typedef __rvv_uint64m8_t vuint64m8_t;
+typedef __rvv_float32m8_t vfloat32m8_t;
+typedef __rvv_float64m8_t vfloat64m8_t;
+
 // Define valid fixed-width RVV types
 typedef vint8m1_t fixed_int8m1_t __attribute__((riscv_rvv_vector_bits(__riscv_v_fixed_vlen)));
 typedef vint16m1_t fixed_int16m1_t __attribute__((riscv_rvv_vector_bits(__riscv_v_fixed_vlen)));
@@ -32,6 +65,45 @@ typedef vuint64m1_t fixed_uint64m1_t __attribute__((riscv_rvv_vector_bits(__risc
 
 typedef vfloat32m1_t fixed_float32m1_t __attribute__((riscv_rvv_vector_bits(__riscv_v_fixed_vlen)));
 typedef vfloat64m1_t fixed_float64m1_t __attribute__((riscv_rvv_vector_bits(__riscv_v_fixed_vlen)));
+
+typedef vint8m2_t fixed_int8m2_t __attribute__((riscv_rvv_vector_bits(__riscv_v_fixed_vlen * 2)));
+typedef vint16m2_t fixed_int16m2_t __attribute__((riscv_rvv_vector_bits(__riscv_v_fixed_vlen * 2)));
+typedef vint32m2_t fixed_int32m2_t __attribute__((riscv_rvv_vector_bits(__riscv_v_fixed_vlen * 2)));
+typedef vint64m2_t fixed_int64m2_t __attribute__((riscv_rvv_vector_bits(__riscv_v_fixed_vlen * 2)));
+
+typedef vuint8m2_t fixed_uint8m2_t __attribute__((riscv_rvv_vector_bits(__riscv_v_fixed_vlen * 2)));
+typedef vuint16m2_t fixed_uint16m2_t __attribute__((riscv_rvv_vector_bits(__riscv_v_fixed_vlen * 2)));
+typedef vuint32m2_t fixed_uint32m2_t __attribute__((riscv_rvv_vector_bits(__riscv_v_fixed_vlen * 2)));
+typedef vuint64m2_t fixed_uint64m2_t __attribute__((riscv_rvv_vector_bits(__riscv_v_fixed_vlen * 2)));
+
+typedef vfloat32m2_t fixed_float32m2_t __attribute__((riscv_rvv_vector_bits(__riscv_v_fixed_vlen * 2)));
+typedef vfloat64m2_t fixed_float64m2_t __attribute__((riscv_rvv_vector_bits(__riscv_v_fixed_vlen * 2)));
+
+typedef vint8m4_t fixed_int8m4_t __attribute__((riscv_rvv_vector_bits(__riscv_v_fixed_vlen * 4)));
+typedef vint16m4_t fixed_int16m4_t __attribute__((riscv_rvv_vector_bits(__riscv_v_fixed_vlen * 4)));
+typedef vint32m4_t fixed_int32m4_t __attribute__((riscv_rvv_vector_bits(__riscv_v_fixed_vlen * 4)));
+typedef vint64m4_t fixed_int64m4_t __attribute__((riscv_rvv_vector_bits(__riscv_v_fixed_vlen * 4)));
+
+typedef vuint8m4_t fixed_uint8m4_t __attribute__((riscv_rvv_vector_bits(__riscv_v_fixed_vlen * 4)));
+typedef vuint16m4_t fixed_uint16m4_t __attribute__((riscv_rvv_vector_bits(__riscv_v_fixed_vlen * 4)));
+typedef vuint32m4_t fixed_uint32m4_t __attribute__((riscv_rvv_vector_bits(__riscv_v_fixed_vlen * 4)));
+typedef vuint64m4_t fixed_uint64m4_t __attribute__((riscv_rvv_vector_bits(__riscv_v_fixed_vlen * 4)));
+
+typedef vfloat32m4_t fixed_float32m4_t __attribute__((riscv_rvv_vector_bits(__riscv_v_fixed_vlen * 4)));
+typedef vfloat64m4_t fixed_float64m4_t __attribute__((riscv_rvv_vector_bits(__riscv_v_fixed_vlen * 4)));
+
+typedef vint8m8_t fixed_int8m8_t __attribute__((riscv_rvv_vector_bits(__riscv_v_fixed_vlen * 8)));
+typedef vint16m8_t fixed_int16m8_t __attribute__((riscv_rvv_vector_bits(__riscv_v_fixed_vlen * 8)));
+typedef vint32m8_t fixed_int32m8_t __attribute__((riscv_rvv_vector_bits(__riscv_v_fixed_vlen * 8)));
+typedef vint64m8_t fixed_int64m8_t __attribute__((riscv_rvv_vector_bits(__riscv_v_fixed_vlen * 8)));
+
+typedef vuint8m8_t fixed_uint8m8_t __attribute__((riscv_rvv_vector_bits(__riscv_v_fixed_vlen * 8)));
+typedef vuint16m8_t fixed_uint16m8_t __attribute__((riscv_rvv_vector_bits(__riscv_v_fixed_vlen * 8)));
+typedef vuint32m8_t fixed_uint32m8_t __attribute__((riscv_rvv_vector_bits(__riscv_v_fixed_vlen * 8)));
+typedef vuint64m8_t fixed_uint64m8_t __attribute__((riscv_rvv_vector_bits(__riscv_v_fixed_vlen * 8)));
+
+typedef vfloat32m8_t fixed_float32m8_t __attribute__((riscv_rvv_vector_bits(__riscv_v_fixed_vlen * 8)));
+typedef vfloat64m8_t fixed_float64m8_t __attribute__((riscv_rvv_vector_bits(__riscv_v_fixed_vlen * 8)));
 
 //===----------------------------------------------------------------------===//
 // Structs and unions
@@ -57,6 +129,39 @@ DEFINE_STRUCT(uint64m1)
 DEFINE_STRUCT(float32m1)
 DEFINE_STRUCT(float64m1)
 
+DEFINE_STRUCT(int8m2)
+DEFINE_STRUCT(int16m2)
+DEFINE_STRUCT(int32m2)
+DEFINE_STRUCT(int64m2)
+DEFINE_STRUCT(uint8m2)
+DEFINE_STRUCT(uint16m2)
+DEFINE_STRUCT(uint32m2)
+DEFINE_STRUCT(uint64m2)
+DEFINE_STRUCT(float32m2)
+DEFINE_STRUCT(float64m2)
+
+DEFINE_STRUCT(int8m4)
+DEFINE_STRUCT(int16m4)
+DEFINE_STRUCT(int32m4)
+DEFINE_STRUCT(int64m4)
+DEFINE_STRUCT(uint8m4)
+DEFINE_STRUCT(uint16m4)
+DEFINE_STRUCT(uint32m4)
+DEFINE_STRUCT(uint64m4)
+DEFINE_STRUCT(float32m4)
+DEFINE_STRUCT(float64m4)
+
+DEFINE_STRUCT(int8m8)
+DEFINE_STRUCT(int16m8)
+DEFINE_STRUCT(int32m8)
+DEFINE_STRUCT(int64m8)
+DEFINE_STRUCT(uint8m8)
+DEFINE_STRUCT(uint16m8)
+DEFINE_STRUCT(uint32m8)
+DEFINE_STRUCT(uint64m8)
+DEFINE_STRUCT(float32m8)
+DEFINE_STRUCT(float64m8)
+
 DEFINE_UNION(int8m1)
 DEFINE_UNION(int16m1)
 DEFINE_UNION(int32m1)
@@ -67,6 +172,39 @@ DEFINE_UNION(uint32m1)
 DEFINE_UNION(uint64m1)
 DEFINE_UNION(float32m1)
 DEFINE_UNION(float64m1)
+
+DEFINE_UNION(int8m2)
+DEFINE_UNION(int16m2)
+DEFINE_UNION(int32m2)
+DEFINE_UNION(int64m2)
+DEFINE_UNION(uint8m2)
+DEFINE_UNION(uint16m2)
+DEFINE_UNION(uint32m2)
+DEFINE_UNION(uint64m2)
+DEFINE_UNION(float32m2)
+DEFINE_UNION(float64m2)
+
+DEFINE_UNION(int8m4)
+DEFINE_UNION(int16m4)
+DEFINE_UNION(int32m4)
+DEFINE_UNION(int64m4)
+DEFINE_UNION(uint8m4)
+DEFINE_UNION(uint16m4)
+DEFINE_UNION(uint32m4)
+DEFINE_UNION(uint64m4)
+DEFINE_UNION(float32m4)
+DEFINE_UNION(float64m4)
+
+DEFINE_UNION(int8m8)
+DEFINE_UNION(int16m8)
+DEFINE_UNION(int32m8)
+DEFINE_UNION(int64m8)
+DEFINE_UNION(uint8m8)
+DEFINE_UNION(uint16m8)
+DEFINE_UNION(uint32m8)
+DEFINE_UNION(uint64m8)
+DEFINE_UNION(float32m8)
+DEFINE_UNION(float64m8)
 
 //===----------------------------------------------------------------------===//
 // Global variables
@@ -84,6 +222,45 @@ fixed_uint64m1_t global_u64;
 fixed_float32m1_t global_f32;
 fixed_float64m1_t global_f64;
 
+fixed_int8m2_t global_i8m2;
+fixed_int16m2_t global_i16m2;
+fixed_int32m2_t global_i32m2;
+fixed_int64m2_t global_i64m2;
+
+fixed_uint8m2_t global_u8m2;
+fixed_uint16m2_t global_u16m2;
+fixed_uint32m2_t global_u32m2;
+fixed_uint64m2_t global_u64m2;
+
+fixed_float32m2_t global_f32m2;
+fixed_float64m2_t global_f64m2;
+
+fixed_int8m4_t global_i8m4;
+fixed_int16m4_t global_i16m4;
+fixed_int32m4_t global_i32m4;
+fixed_int64m4_t global_i64m4;
+
+fixed_uint8m4_t global_u8m4;
+fixed_uint16m4_t global_u16m4;
+fixed_uint32m4_t global_u32m4;
+fixed_uint64m4_t global_u64m4;
+
+fixed_float32m4_t global_f32m4;
+fixed_float64m4_t global_f64m4;
+
+fixed_int8m8_t global_i8m8;
+fixed_int16m8_t global_i16m8;
+fixed_int32m8_t global_i32m8;
+fixed_int64m8_t global_i64m8;
+
+fixed_uint8m8_t global_u8m8;
+fixed_uint16m8_t global_u16m8;
+fixed_uint32m8_t global_u32m8;
+fixed_uint64m8_t global_u64m8;
+
+fixed_float32m8_t global_f32m8;
+fixed_float64m8_t global_f64m8;
+
 //===----------------------------------------------------------------------===//
 // Global arrays
 //===----------------------------------------------------------------------===//
@@ -99,6 +276,45 @@ fixed_uint64m1_t global_arr_u64[3];
 
 fixed_float32m1_t global_arr_f32[3];
 fixed_float64m1_t global_arr_f64[3];
+
+fixed_int8m2_t global_arr_i8m2[3];
+fixed_int16m2_t global_arr_i16m2[3];
+fixed_int32m2_t global_arr_i32m2[3];
+fixed_int64m2_t global_arr_i64m2[3];
+
+fixed_uint8m2_t global_arr_u8m2[3];
+fixed_uint16m2_t global_arr_u16m2[3];
+fixed_uint32m2_t global_arr_u32m2[3];
+fixed_uint64m2_t global_arr_u64m2[3];
+
+fixed_float32m2_t global_arr_f32m2[3];
+fixed_float64m2_t global_arr_f64m2[3];
+
+fixed_int8m4_t global_arr_i8m4[3];
+fixed_int16m4_t global_arr_i16m4[3];
+fixed_int32m4_t global_arr_i32m4[3];
+fixed_int64m4_t global_arr_i64m4[3];
+
+fixed_uint8m4_t global_arr_u8m4[3];
+fixed_uint16m4_t global_arr_u16m4[3];
+fixed_uint32m4_t global_arr_u32m4[3];
+fixed_uint64m4_t global_arr_u64m4[3];
+
+fixed_float32m4_t global_arr_f32m4[3];
+fixed_float64m4_t global_arr_f64m4[3];
+
+fixed_int8m8_t global_arr_i8m8[3];
+fixed_int16m8_t global_arr_i16m8[3];
+fixed_int32m8_t global_arr_i32m8[3];
+fixed_int64m8_t global_arr_i64m8[3];
+
+fixed_uint8m8_t global_arr_u8m8[3];
+fixed_uint16m8_t global_arr_u16m8[3];
+fixed_uint32m8_t global_arr_u32m8[3];
+fixed_uint64m8_t global_arr_u64m8[3];
+
+fixed_float32m8_t global_arr_f32m8[3];
+fixed_float64m8_t global_arr_f64m8[3];
 
 //===----------------------------------------------------------------------===//
 // Locals
@@ -116,6 +332,39 @@ void f() {
   fixed_float32m1_t local_f32;
   fixed_float64m1_t local_f64;
 
+  fixed_int8m2_t local_i8m2;
+  fixed_int16m2_t local_i16m2;
+  fixed_int32m2_t local_i32m2;
+  fixed_int64m2_t local_i64m2;
+  fixed_uint8m2_t local_u8m2;
+  fixed_uint16m2_t local_u16m2;
+  fixed_uint32m2_t local_u32m2;
+  fixed_uint64m2_t local_u64m2;
+  fixed_float32m2_t local_f32m2;
+  fixed_float64m2_t local_f64m2;
+
+  fixed_int8m4_t local_i8m4;
+  fixed_int16m4_t local_i16m4;
+  fixed_int32m4_t local_i32m4;
+  fixed_int64m4_t local_i64m4;
+  fixed_uint8m4_t local_u8m4;
+  fixed_uint16m4_t local_u16m4;
+  fixed_uint32m4_t local_u32m4;
+  fixed_uint64m4_t local_u64m4;
+  fixed_float32m4_t local_f32m4;
+  fixed_float64m4_t local_f64m4;
+
+  fixed_int8m8_t local_i8m8;
+  fixed_int16m8_t local_i16m8;
+  fixed_int32m8_t local_i32m8;
+  fixed_int64m8_t local_i64m8;
+  fixed_uint8m8_t local_u8m8;
+  fixed_uint16m8_t local_u16m8;
+  fixed_uint32m8_t local_u32m8;
+  fixed_uint64m8_t local_u64m8;
+  fixed_float32m8_t local_f32m8;
+  fixed_float64m8_t local_f64m8;
+
   // Arrays
   fixed_int8m1_t local_arr_i8[3];
   fixed_int16m1_t local_arr_i16[3];
@@ -127,6 +376,39 @@ void f() {
   fixed_uint64m1_t local_arr_u64[3];
   fixed_float32m1_t local_arr_f32[3];
   fixed_float64m1_t local_arr_f64[3];
+
+  fixed_int8m2_t local_arr_i8m2[3];
+  fixed_int16m2_t local_arr_i16m2[3];
+  fixed_int32m2_t local_arr_i32m2[3];
+  fixed_int64m2_t local_arr_i64m2[3];
+  fixed_uint8m2_t local_arr_u8m2[3];
+  fixed_uint16m2_t local_arr_u16m2[3];
+  fixed_uint32m2_t local_arr_u32m2[3];
+  fixed_uint64m2_t local_arr_u64m2[3];
+  fixed_float32m2_t local_arr_f32m2[3];
+  fixed_float64m2_t local_arr_f64m2[3];
+
+  fixed_int8m4_t local_arr_i8m4[3];
+  fixed_int16m4_t local_arr_i16m4[3];
+  fixed_int32m4_t local_arr_i32m4[3];
+  fixed_int64m4_t local_arr_i64m4[3];
+  fixed_uint8m4_t local_arr_u8m4[3];
+  fixed_uint16m4_t local_arr_u16m4[3];
+  fixed_uint32m4_t local_arr_u32m4[3];
+  fixed_uint64m4_t local_arr_u64m4[3];
+  fixed_float32m4_t local_arr_f32m4[3];
+  fixed_float64m4_t local_arr_f64m4[3];
+
+  fixed_int8m8_t local_arr_i8m8[3];
+  fixed_int16m8_t local_arr_i16m8[3];
+  fixed_int32m8_t local_arr_i32m8[3];
+  fixed_int64m8_t local_arr_i64m8[3];
+  fixed_uint8m8_t local_arr_u8m8[3];
+  fixed_uint16m8_t local_arr_u16m8[3];
+  fixed_uint32m8_t local_arr_u32m8[3];
+  fixed_uint64m8_t local_arr_u64m8[3];
+  fixed_float32m8_t local_arr_f32m8[3];
+  fixed_float64m8_t local_arr_f64m8[3];
 }
 
 //===----------------------------------------------------------------------===//
@@ -142,6 +424,36 @@ void f() {
 // CHECK-64-NEXT: %struct.struct_uint64m1 = type { <1 x i64> }
 // CHECK-64-NEXT: %struct.struct_float32m1 = type { <2 x float> }
 // CHECK-64-NEXT: %struct.struct_float64m1 = type { <1 x double> }
+// CHECK-64-NEXT: %struct.struct_int8m2 = type { <16 x i8> }
+// CHECK-64-NEXT: %struct.struct_int16m2 = type { <8 x i16> }
+// CHECK-64-NEXT: %struct.struct_int32m2 = type { <4 x i32> }
+// CHECK-64-NEXT: %struct.struct_int64m2 = type { <2 x i64> }
+// CHECK-64-NEXT: %struct.struct_uint8m2 = type { <16 x i8> }
+// CHECK-64-NEXT: %struct.struct_uint16m2 = type { <8 x i16> }
+// CHECK-64-NEXT: %struct.struct_uint32m2 = type { <4 x i32> }
+// CHECK-64-NEXT: %struct.struct_uint64m2 = type { <2 x i64> }
+// CHECK-64-NEXT: %struct.struct_float32m2 = type { <4 x float> }
+// CHECK-64-NEXT: %struct.struct_float64m2 = type { <2 x double> }
+// CHECK-64-NEXT: %struct.struct_int8m4 = type { <32 x i8> }
+// CHECK-64-NEXT: %struct.struct_int16m4 = type { <16 x i16> }
+// CHECK-64-NEXT: %struct.struct_int32m4 = type { <8 x i32> }
+// CHECK-64-NEXT: %struct.struct_int64m4 = type { <4 x i64> }
+// CHECK-64-NEXT: %struct.struct_uint8m4 = type { <32 x i8> }
+// CHECK-64-NEXT: %struct.struct_uint16m4 = type { <16 x i16> }
+// CHECK-64-NEXT: %struct.struct_uint32m4 = type { <8 x i32> }
+// CHECK-64-NEXT: %struct.struct_uint64m4 = type { <4 x i64> }
+// CHECK-64-NEXT: %struct.struct_float32m4 = type { <8 x float> }
+// CHECK-64-NEXT: %struct.struct_float64m4 = type { <4 x double> }
+// CHECK-64-NEXT: %struct.struct_int8m8 = type { <64 x i8> }
+// CHECK-64-NEXT: %struct.struct_int16m8 = type { <32 x i16> }
+// CHECK-64-NEXT: %struct.struct_int32m8 = type { <16 x i32> }
+// CHECK-64-NEXT: %struct.struct_int64m8 = type { <8 x i64> }
+// CHECK-64-NEXT: %struct.struct_uint8m8 = type { <64 x i8> }
+// CHECK-64-NEXT: %struct.struct_uint16m8 = type { <32 x i16> }
+// CHECK-64-NEXT: %struct.struct_uint32m8 = type { <16 x i32> }
+// CHECK-64-NEXT: %struct.struct_uint64m8 = type { <8 x i64> }
+// CHECK-64-NEXT: %struct.struct_float32m8 = type { <16 x float> }
+// CHECK-64-NEXT: %struct.struct_float64m8 = type { <8 x double> }
 
 // CHECK-128:      %struct.struct_int8m1 = type { <16 x i8> }
 // CHECK-128-NEXT: %struct.struct_int16m1 = type { <8 x i16> }
@@ -153,6 +465,36 @@ void f() {
 // CHECK-128-NEXT: %struct.struct_uint64m1 = type { <2 x i64> }
 // CHECK-128-NEXT: %struct.struct_float32m1 = type { <4 x float> }
 // CHECK-128-NEXT: %struct.struct_float64m1 = type { <2 x double> }
+// CHECK-128-NEXT: %struct.struct_int8m2 = type { <32 x i8> }
+// CHECK-128-NEXT: %struct.struct_int16m2 = type { <16 x i16> }
+// CHECK-128-NEXT: %struct.struct_int32m2 = type { <8 x i32> }
+// CHECK-128-NEXT: %struct.struct_int64m2 = type { <4 x i64> }
+// CHECK-128-NEXT: %struct.struct_uint8m2 = type { <32 x i8> }
+// CHECK-128-NEXT: %struct.struct_uint16m2 = type { <16 x i16> }
+// CHECK-128-NEXT: %struct.struct_uint32m2 = type { <8 x i32> }
+// CHECK-128-NEXT: %struct.struct_uint64m2 = type { <4 x i64> }
+// CHECK-128-NEXT: %struct.struct_float32m2 = type { <8 x float> }
+// CHECK-128-NEXT: %struct.struct_float64m2 = type { <4 x double> }
+// CHECK-128-NEXT: %struct.struct_int8m4 = type { <64 x i8> }
+// CHECK-128-NEXT: %struct.struct_int16m4 = type { <32 x i16> }
+// CHECK-128-NEXT: %struct.struct_int32m4 = type { <16 x i32> }
+// CHECK-128-NEXT: %struct.struct_int64m4 = type { <8 x i64> }
+// CHECK-128-NEXT: %struct.struct_uint8m4 = type { <64 x i8> }
+// CHECK-128-NEXT: %struct.struct_uint16m4 = type { <32 x i16> }
+// CHECK-128-NEXT: %struct.struct_uint32m4 = type { <16 x i32> }
+// CHECK-128-NEXT: %struct.struct_uint64m4 = type { <8 x i64> }
+// CHECK-128-NEXT: %struct.struct_float32m4 = type { <16 x float> }
+// CHECK-128-NEXT: %struct.struct_float64m4 = type { <8 x double> }
+// CHECK-128-NEXT: %struct.struct_int8m8 = type { <128 x i8> }
+// CHECK-128-NEXT: %struct.struct_int16m8 = type { <64 x i16> }
+// CHECK-128-NEXT: %struct.struct_int32m8 = type { <32 x i32> }
+// CHECK-128-NEXT: %struct.struct_int64m8 = type { <16 x i64> }
+// CHECK-128-NEXT: %struct.struct_uint8m8 = type { <128 x i8> }
+// CHECK-128-NEXT: %struct.struct_uint16m8 = type { <64 x i16> }
+// CHECK-128-NEXT: %struct.struct_uint32m8 = type { <32 x i32> }
+// CHECK-128-NEXT: %struct.struct_uint64m8 = type { <16 x i64> }
+// CHECK-128-NEXT: %struct.struct_float32m8 = type { <32 x float> }
+// CHECK-128-NEXT: %struct.struct_float64m8 = type { <16 x double> }
 
 // CHECK-256:      %struct.struct_int8m1 = type { <32 x i8> }
 // CHECK-256-NEXT: %struct.struct_int16m1 = type { <16 x i16> }
@@ -164,6 +506,35 @@ void f() {
 // CHECK-256-NEXT: %struct.struct_uint64m1 = type { <4 x i64> }
 // CHECK-256-NEXT: %struct.struct_float32m1 = type { <8 x float> }
 // CHECK-256-NEXT: %struct.struct_float64m1 = type { <4 x double> }
+// CHECK-256-NEXT: %struct.struct_int8m2 = type { <64 x i8> }
+// CHECK-256-NEXT: %struct.struct_int16m2 = type { <32 x i16> }
+// CHECK-256-NEXT: %struct.struct_int32m2 = type { <16 x i32> }
+// CHECK-256-NEXT: %struct.struct_int64m2 = type { <8 x i64> }
+// CHECK-256-NEXT: %struct.struct_uint8m2 = type { <64 x i8> }
+// CHECK-256-NEXT: %struct.struct_uint16m2 = type { <32 x i16> }
+// CHECK-256-NEXT: %struct.struct_uint32m2 = type { <16 x i32> }
+// CHECK-256-NEXT: %struct.struct_uint64m2 = type { <8 x i64> }
+// CHECK-256-NEXT: %struct.struct_float32m2 = type { <16 x float> }
+// CHECK-256-NEXT: %struct.struct_float64m2 = type { <8 x double> }
+// CHECK-256-NEXT: %struct.struct_int8m4 = type { <128 x i8> }
+// CHECK-256-NEXT: %struct.struct_int16m4 = type { <64 x i16> }
+// CHECK-256-NEXT: %struct.struct_int32m4 = type { <32 x i32> }
+// CHECK-256-NEXT: %struct.struct_int64m4 = type { <16 x i64> }
+// CHECK-256-NEXT: %struct.struct_uint8m4 = type { <128 x i8> }
+// CHECK-256-NEXT: %struct.struct_uint16m4 = type { <64 x i16> }
+// CHECK-256-NEXT: %struct.struct_uint32m4 = type { <32 x i32> }
+// CHECK-256-NEXT: %struct.struct_uint64m4 = type { <16 x i64> }
+// CHECK-256-NEXT: %struct.struct_float32m4 = type { <32 x float> }
+// CHECK-256-NEXT: %struct.struct_float64m4 = type { <16 x double> }
+// CHECK-256-NEXT: %struct.struct_int8m8 = type { <256 x i8> }
+// CHECK-256-NEXT: %struct.struct_int16m8 = type { <128 x i16> }
+// CHECK-256-NEXT: %struct.struct_int32m8 = type { <64 x i32> }
+// CHECK-256-NEXT: %struct.struct_int64m8 = type { <32 x i64> }
+// CHECK-256-NEXT: %struct.struct_uint8m8 = type { <256 x i8> }
+// CHECK-256-NEXT: %struct.struct_uint16m8 = type { <128 x i16> }
+// CHECK-256-NEXT: %struct.struct_uint32m8 = type { <64 x i32> }
+// CHECK-256-NEXT: %struct.struct_uint64m8 = type { <32 x i64> }
+// CHECK-256-NEXT: %struct.struct_float32m8 = type { <64 x float> }
 
 // CHECK-512:      %struct.struct_int8m1 = type { <64 x i8> }
 // CHECK-512-NEXT: %struct.struct_int16m1 = type { <32 x i16> }
@@ -175,6 +546,35 @@ void f() {
 // CHECK-512-NEXT: %struct.struct_uint64m1 = type { <8 x i64> }
 // CHECK-512-NEXT: %struct.struct_float32m1 = type { <16 x float> }
 // CHECK-512-NEXT: %struct.struct_float64m1 = type { <8 x double> }
+// CHECK-512-NEXT: %struct.struct_int8m2 = type { <128 x i8> }
+// CHECK-512-NEXT: %struct.struct_int16m2 = type { <64 x i16> }
+// CHECK-512-NEXT: %struct.struct_int32m2 = type { <32 x i32> }
+// CHECK-512-NEXT: %struct.struct_int64m2 = type { <16 x i64> }
+// CHECK-512-NEXT: %struct.struct_uint8m2 = type { <128 x i8> }
+// CHECK-512-NEXT: %struct.struct_uint16m2 = type { <64 x i16> }
+// CHECK-512-NEXT: %struct.struct_uint32m2 = type { <32 x i32> }
+// CHECK-512-NEXT: %struct.struct_uint64m2 = type { <16 x i64> }
+// CHECK-512-NEXT: %struct.struct_float32m2 = type { <32 x float> }
+// CHECK-512-NEXT: %struct.struct_float64m2 = type { <16 x double> }
+// CHECK-512-NEXT: %struct.struct_int8m4 = type { <256 x i8> }
+// CHECK-512-NEXT: %struct.struct_int16m4 = type { <128 x i16> }
+// CHECK-512-NEXT: %struct.struct_int32m4 = type { <64 x i32> }
+// CHECK-512-NEXT: %struct.struct_int64m4 = type { <32 x i64> }
+// CHECK-512-NEXT: %struct.struct_uint8m4 = type { <256 x i8> }
+// CHECK-512-NEXT: %struct.struct_uint16m4 = type { <128 x i16> }
+// CHECK-512-NEXT: %struct.struct_uint32m4 = type { <64 x i32> }
+// CHECK-512-NEXT: %struct.struct_uint64m4 = type { <32 x i64> }
+// CHECK-512-NEXT: %struct.struct_float32m4 = type { <64 x float> }
+// CHECK-512-NEXT: %struct.struct_float64m4 = type { <32 x double> }
+// CHECK-512-NEXT: %struct.struct_int8m8 = type { <512 x i8> }
+// CHECK-512-NEXT: %struct.struct_int16m8 = type { <256 x i16> }
+// CHECK-512-NEXT: %struct.struct_int32m8 = type { <128 x i32> }
+// CHECK-512-NEXT: %struct.struct_int64m8 = type { <64 x i64> }
+// CHECK-512-NEXT: %struct.struct_uint8m8 = type { <512 x i8> }
+// CHECK-512-NEXT: %struct.struct_uint16m8 = type { <256 x i16> }
+// CHECK-512-NEXT: %struct.struct_uint32m8 = type { <128 x i32> }
+// CHECK-512-NEXT: %struct.struct_uint64m8 = type { <64 x i64> }
+// CHECK-512-NEXT: %struct.struct_float32m8 = type { <128 x float> }
 
 // CHECK-1024:      %struct.struct_int8m1 = type { <128 x i8> }
 // CHECK-1024-NEXT: %struct.struct_int16m1 = type { <64 x i16> }
@@ -186,6 +586,35 @@ void f() {
 // CHECK-1024-NEXT: %struct.struct_uint64m1 = type { <16 x i64> }
 // CHECK-1024-NEXT: %struct.struct_float32m1 = type { <32 x float> }
 // CHECK-1024-NEXT: %struct.struct_float64m1 = type { <16 x double> }
+// CHECK-1024-NEXT: %struct.struct_int8m2 = type { <256 x i8> }
+// CHECK-1024-NEXT: %struct.struct_int16m2 = type { <128 x i16> }
+// CHECK-1024-NEXT: %struct.struct_int32m2 = type { <64 x i32> }
+// CHECK-1024-NEXT: %struct.struct_int64m2 = type { <32 x i64> }
+// CHECK-1024-NEXT: %struct.struct_uint8m2 = type { <256 x i8> }
+// CHECK-1024-NEXT: %struct.struct_uint16m2 = type { <128 x i16> }
+// CHECK-1024-NEXT: %struct.struct_uint32m2 = type { <64 x i32> }
+// CHECK-1024-NEXT: %struct.struct_uint64m2 = type { <32 x i64> }
+// CHECK-1024-NEXT: %struct.struct_float32m2 = type { <64 x float> }
+// CHECK-1024-NEXT: %struct.struct_float64m2 = type { <32 x double> }
+// CHECK-1024-NEXT: %struct.struct_int8m4 = type { <512 x i8> }
+// CHECK-1024-NEXT: %struct.struct_int16m4 = type { <256 x i16> }
+// CHECK-1024-NEXT: %struct.struct_int32m4 = type { <128 x i32> }
+// CHECK-1024-NEXT: %struct.struct_int64m4 = type { <64 x i64> }
+// CHECK-1024-NEXT: %struct.struct_uint8m4 = type { <512 x i8> }
+// CHECK-1024-NEXT: %struct.struct_uint16m4 = type { <256 x i16> }
+// CHECK-1024-NEXT: %struct.struct_uint32m4 = type { <128 x i32> }
+// CHECK-1024-NEXT: %struct.struct_uint64m4 = type { <64 x i64> }
+// CHECK-1024-NEXT: %struct.struct_float32m4 = type { <128 x float> }
+// CHECK-1024-NEXT: %struct.struct_float64m4 = type { <64 x double> }
+// CHECK-1024-NEXT: %struct.struct_int8m8 = type { <1024 x i8> }
+// CHECK-1024-NEXT: %struct.struct_int16m8 = type { <512 x i16> }
+// CHECK-1024-NEXT: %struct.struct_int32m8 = type { <256 x i32> }
+// CHECK-1024-NEXT: %struct.struct_int64m8 = type { <128 x i64> }
+// CHECK-1024-NEXT: %struct.struct_uint8m8 = type { <1024 x i8> }
+// CHECK-1024-NEXT: %struct.struct_uint16m8 = type { <512 x i16> }
+// CHECK-1024-NEXT: %struct.struct_uint32m8 = type { <256 x i32> }
+// CHECK-1024-NEXT: %struct.struct_uint64m8 = type { <128 x i64> }
+// CHECK-1024-NEXT: %struct.struct_float32m8 = type { <256 x float> }
 
 // CHECK-64:      %union.union_int8m1 = type { <8 x i8> }
 // CHECK-64-NEXT: %union.union_int16m1 = type { <4 x i16> }
@@ -197,6 +626,36 @@ void f() {
 // CHECK-64-NEXT: %union.union_uint64m1 = type { <1 x i64> }
 // CHECK-64-NEXT: %union.union_float32m1 = type { <2 x float> }
 // CHECK-64-NEXT: %union.union_float64m1 = type { <1 x double> }
+// CHECK-64-NEXT: %union.union_int8m2 = type { <16 x i8> }
+// CHECK-64-NEXT: %union.union_int16m2 = type { <8 x i16> }
+// CHECK-64-NEXT: %union.union_int32m2 = type { <4 x i32> }
+// CHECK-64-NEXT: %union.union_int64m2 = type { <2 x i64> }
+// CHECK-64-NEXT: %union.union_uint8m2 = type { <16 x i8> }
+// CHECK-64-NEXT: %union.union_uint16m2 = type { <8 x i16> }
+// CHECK-64-NEXT: %union.union_uint32m2 = type { <4 x i32> }
+// CHECK-64-NEXT: %union.union_uint64m2 = type { <2 x i64> }
+// CHECK-64-NEXT: %union.union_float32m2 = type { <4 x float> }
+// CHECK-64-NEXT: %union.union_float64m2 = type { <2 x double> }
+// CHECK-64-NEXT: %union.union_int8m4 = type { <32 x i8> }
+// CHECK-64-NEXT: %union.union_int16m4 = type { <16 x i16> }
+// CHECK-64-NEXT: %union.union_int32m4 = type { <8 x i32> }
+// CHECK-64-NEXT: %union.union_int64m4 = type { <4 x i64> }
+// CHECK-64-NEXT: %union.union_uint8m4 = type { <32 x i8> }
+// CHECK-64-NEXT: %union.union_uint16m4 = type { <16 x i16> }
+// CHECK-64-NEXT: %union.union_uint32m4 = type { <8 x i32> }
+// CHECK-64-NEXT: %union.union_uint64m4 = type { <4 x i64> }
+// CHECK-64-NEXT: %union.union_float32m4 = type { <8 x float> }
+// CHECK-64-NEXT: %union.union_float64m4 = type { <4 x double> }
+// CHECK-64-NEXT: %union.union_int8m8 = type { <64 x i8> }
+// CHECK-64-NEXT: %union.union_int16m8 = type { <32 x i16> }
+// CHECK-64-NEXT: %union.union_int32m8 = type { <16 x i32> }
+// CHECK-64-NEXT: %union.union_int64m8 = type { <8 x i64> }
+// CHECK-64-NEXT: %union.union_uint8m8 = type { <64 x i8> }
+// CHECK-64-NEXT: %union.union_uint16m8 = type { <32 x i16> }
+// CHECK-64-NEXT: %union.union_uint32m8 = type { <16 x i32> }
+// CHECK-64-NEXT: %union.union_uint64m8 = type { <8 x i64> }
+// CHECK-64-NEXT: %union.union_float32m8 = type { <16 x float> }
+// CHECK-64-NEXT: %union.union_float64m8 = type { <8 x double> }
 
 // CHECK-128:      %union.union_int8m1 = type { <16 x i8> }
 // CHECK-128-NEXT: %union.union_int16m1 = type { <8 x i16> }
@@ -208,6 +667,36 @@ void f() {
 // CHECK-128-NEXT: %union.union_uint64m1 = type { <2 x i64> }
 // CHECK-128-NEXT: %union.union_float32m1 = type { <4 x float> }
 // CHECK-128-NEXT: %union.union_float64m1 = type { <2 x double> }
+// CHECK-128-NEXT: %union.union_int8m2 = type { <32 x i8> }
+// CHECK-128-NEXT: %union.union_int16m2 = type { <16 x i16> }
+// CHECK-128-NEXT: %union.union_int32m2 = type { <8 x i32> }
+// CHECK-128-NEXT: %union.union_int64m2 = type { <4 x i64> }
+// CHECK-128-NEXT: %union.union_uint8m2 = type { <32 x i8> }
+// CHECK-128-NEXT: %union.union_uint16m2 = type { <16 x i16> }
+// CHECK-128-NEXT: %union.union_uint32m2 = type { <8 x i32> }
+// CHECK-128-NEXT: %union.union_uint64m2 = type { <4 x i64> }
+// CHECK-128-NEXT: %union.union_float32m2 = type { <8 x float> }
+// CHECK-128-NEXT: %union.union_float64m2 = type { <4 x double> }
+// CHECK-128-NEXT: %union.union_int8m4 = type { <64 x i8> }
+// CHECK-128-NEXT: %union.union_int16m4 = type { <32 x i16> }
+// CHECK-128-NEXT: %union.union_int32m4 = type { <16 x i32> }
+// CHECK-128-NEXT: %union.union_int64m4 = type { <8 x i64> }
+// CHECK-128-NEXT: %union.union_uint8m4 = type { <64 x i8> }
+// CHECK-128-NEXT: %union.union_uint16m4 = type { <32 x i16> }
+// CHECK-128-NEXT: %union.union_uint32m4 = type { <16 x i32> }
+// CHECK-128-NEXT: %union.union_uint64m4 = type { <8 x i64> }
+// CHECK-128-NEXT: %union.union_float32m4 = type { <16 x float> }
+// CHECK-128-NEXT: %union.union_float64m4 = type { <8 x double> }
+// CHECK-128-NEXT: %union.union_int8m8 = type { <128 x i8> }
+// CHECK-128-NEXT: %union.union_int16m8 = type { <64 x i16> }
+// CHECK-128-NEXT: %union.union_int32m8 = type { <32 x i32> }
+// CHECK-128-NEXT: %union.union_int64m8 = type { <16 x i64> }
+// CHECK-128-NEXT: %union.union_uint8m8 = type { <128 x i8> }
+// CHECK-128-NEXT: %union.union_uint16m8 = type { <64 x i16> }
+// CHECK-128-NEXT: %union.union_uint32m8 = type { <32 x i32> }
+// CHECK-128-NEXT: %union.union_uint64m8 = type { <16 x i64> }
+// CHECK-128-NEXT: %union.union_float32m8 = type { <32 x float> }
+// CHECK-128-NEXT: %union.union_float64m8 = type { <16 x double> }
 
 // CHECK-256:      %union.union_int8m1 = type { <32 x i8> }
 // CHECK-256-NEXT: %union.union_int16m1 = type { <16 x i16> }
@@ -219,6 +708,36 @@ void f() {
 // CHECK-256-NEXT: %union.union_uint64m1 = type { <4 x i64> }
 // CHECK-256-NEXT: %union.union_float32m1 = type { <8 x float> }
 // CHECK-256-NEXT: %union.union_float64m1 = type { <4 x double> }
+// CHECK-256-NEXT: %union.union_int8m2 = type { <64 x i8> }
+// CHECK-256-NEXT: %union.union_int16m2 = type { <32 x i16> }
+// CHECK-256-NEXT: %union.union_int32m2 = type { <16 x i32> }
+// CHECK-256-NEXT: %union.union_int64m2 = type { <8 x i64> }
+// CHECK-256-NEXT: %union.union_uint8m2 = type { <64 x i8> }
+// CHECK-256-NEXT: %union.union_uint16m2 = type { <32 x i16> }
+// CHECK-256-NEXT: %union.union_uint32m2 = type { <16 x i32> }
+// CHECK-256-NEXT: %union.union_uint64m2 = type { <8 x i64> }
+// CHECK-256-NEXT: %union.union_float32m2 = type { <16 x float> }
+// CHECK-256-NEXT: %union.union_float64m2 = type { <8 x double> }
+// CHECK-256-NEXT: %union.union_int8m4 = type { <128 x i8> }
+// CHECK-256-NEXT: %union.union_int16m4 = type { <64 x i16> }
+// CHECK-256-NEXT: %union.union_int32m4 = type { <32 x i32> }
+// CHECK-256-NEXT: %union.union_int64m4 = type { <16 x i64> }
+// CHECK-256-NEXT: %union.union_uint8m4 = type { <128 x i8> }
+// CHECK-256-NEXT: %union.union_uint16m4 = type { <64 x i16> }
+// CHECK-256-NEXT: %union.union_uint32m4 = type { <32 x i32> }
+// CHECK-256-NEXT: %union.union_uint64m4 = type { <16 x i64> }
+// CHECK-256-NEXT: %union.union_float32m4 = type { <32 x float> }
+// CHECK-256-NEXT: %union.union_float64m4 = type { <16 x double> }
+// CHECK-256-NEXT: %union.union_int8m8 = type { <256 x i8> }
+// CHECK-256-NEXT: %union.union_int16m8 = type { <128 x i16> }
+// CHECK-256-NEXT: %union.union_int32m8 = type { <64 x i32> }
+// CHECK-256-NEXT: %union.union_int64m8 = type { <32 x i64> }
+// CHECK-256-NEXT: %union.union_uint8m8 = type { <256 x i8> }
+// CHECK-256-NEXT: %union.union_uint16m8 = type { <128 x i16> }
+// CHECK-256-NEXT: %union.union_uint32m8 = type { <64 x i32> }
+// CHECK-256-NEXT: %union.union_uint64m8 = type { <32 x i64> }
+// CHECK-256-NEXT: %union.union_float32m8 = type { <64 x float> }
+// CHECK-256-NEXT: %union.union_float64m8 = type { <32 x double> }
 
 // CHECK-512:      %union.union_int8m1 = type { <64 x i8> }
 // CHECK-512-NEXT: %union.union_int16m1 = type { <32 x i16> }
@@ -230,6 +749,36 @@ void f() {
 // CHECK-512-NEXT: %union.union_uint64m1 = type { <8 x i64> }
 // CHECK-512-NEXT: %union.union_float32m1 = type { <16 x float> }
 // CHECK-512-NEXT: %union.union_float64m1 = type { <8 x double> }
+// CHECK-512-NEXT: %union.union_int8m2 = type { <128 x i8> }
+// CHECK-512-NEXT: %union.union_int16m2 = type { <64 x i16> }
+// CHECK-512-NEXT: %union.union_int32m2 = type { <32 x i32> }
+// CHECK-512-NEXT: %union.union_int64m2 = type { <16 x i64> }
+// CHECK-512-NEXT: %union.union_uint8m2 = type { <128 x i8> }
+// CHECK-512-NEXT: %union.union_uint16m2 = type { <64 x i16> }
+// CHECK-512-NEXT: %union.union_uint32m2 = type { <32 x i32> }
+// CHECK-512-NEXT: %union.union_uint64m2 = type { <16 x i64> }
+// CHECK-512-NEXT: %union.union_float32m2 = type { <32 x float> }
+// CHECK-512-NEXT: %union.union_float64m2 = type { <16 x double> }
+// CHECK-512-NEXT: %union.union_int8m4 = type { <256 x i8> }
+// CHECK-512-NEXT: %union.union_int16m4 = type { <128 x i16> }
+// CHECK-512-NEXT: %union.union_int32m4 = type { <64 x i32> }
+// CHECK-512-NEXT: %union.union_int64m4 = type { <32 x i64> }
+// CHECK-512-NEXT: %union.union_uint8m4 = type { <256 x i8> }
+// CHECK-512-NEXT: %union.union_uint16m4 = type { <128 x i16> }
+// CHECK-512-NEXT: %union.union_uint32m4 = type { <64 x i32> }
+// CHECK-512-NEXT: %union.union_uint64m4 = type { <32 x i64> }
+// CHECK-512-NEXT: %union.union_float32m4 = type { <64 x float> }
+// CHECK-512-NEXT: %union.union_float64m4 = type { <32 x double> }
+// CHECK-512-NEXT: %union.union_int8m8 = type { <512 x i8> }
+// CHECK-512-NEXT: %union.union_int16m8 = type { <256 x i16> }
+// CHECK-512-NEXT: %union.union_int32m8 = type { <128 x i32> }
+// CHECK-512-NEXT: %union.union_int64m8 = type { <64 x i64> }
+// CHECK-512-NEXT: %union.union_uint8m8 = type { <512 x i8> }
+// CHECK-512-NEXT: %union.union_uint16m8 = type { <256 x i16> }
+// CHECK-512-NEXT: %union.union_uint32m8 = type { <128 x i32> }
+// CHECK-512-NEXT: %union.union_uint64m8 = type { <64 x i64> }
+// CHECK-512-NEXT: %union.union_float32m8 = type { <128 x float> }
+// CHECK-512-NEXT: %union.union_float64m8 = type { <64 x double> }
 
 // CHECK-1024:      %union.union_int8m1 = type { <128 x i8> }
 // CHECK-1024-NEXT: %union.union_int16m1 = type { <64 x i16> }
@@ -241,6 +790,36 @@ void f() {
 // CHECK-1024-NEXT: %union.union_uint64m1 = type { <16 x i64> }
 // CHECK-1024-NEXT: %union.union_float32m1 = type { <32 x float> }
 // CHECK-1024-NEXT: %union.union_float64m1 = type { <16 x double> }
+// CHECK-1024-NEXT: %union.union_int8m2 = type { <256 x i8> }
+// CHECK-1024-NEXT: %union.union_int16m2 = type { <128 x i16> }
+// CHECK-1024-NEXT: %union.union_int32m2 = type { <64 x i32> }
+// CHECK-1024-NEXT: %union.union_int64m2 = type { <32 x i64> }
+// CHECK-1024-NEXT: %union.union_uint8m2 = type { <256 x i8> }
+// CHECK-1024-NEXT: %union.union_uint16m2 = type { <128 x i16> }
+// CHECK-1024-NEXT: %union.union_uint32m2 = type { <64 x i32> }
+// CHECK-1024-NEXT: %union.union_uint64m2 = type { <32 x i64> }
+// CHECK-1024-NEXT: %union.union_float32m2 = type { <64 x float> }
+// CHECK-1024-NEXT: %union.union_float64m2 = type { <32 x double> }
+// CHECK-1024-NEXT: %union.union_int8m4 = type { <512 x i8> }
+// CHECK-1024-NEXT: %union.union_int16m4 = type { <256 x i16> }
+// CHECK-1024-NEXT: %union.union_int32m4 = type { <128 x i32> }
+// CHECK-1024-NEXT: %union.union_int64m4 = type { <64 x i64> }
+// CHECK-1024-NEXT: %union.union_uint8m4 = type { <512 x i8> }
+// CHECK-1024-NEXT: %union.union_uint16m4 = type { <256 x i16> }
+// CHECK-1024-NEXT: %union.union_uint32m4 = type { <128 x i32> }
+// CHECK-1024-NEXT: %union.union_uint64m4 = type { <64 x i64> }
+// CHECK-1024-NEXT: %union.union_float32m4 = type { <128 x float> }
+// CHECK-1024-NEXT: %union.union_float64m4 = type { <64 x double> }
+// CHECK-1024-NEXT: %union.union_int8m8 = type { <1024 x i8> }
+// CHECK-1024-NEXT: %union.union_int16m8 = type { <512 x i16> }
+// CHECK-1024-NEXT: %union.union_int32m8 = type { <256 x i32> }
+// CHECK-1024-NEXT: %union.union_int64m8 = type { <128 x i64> }
+// CHECK-1024-NEXT: %union.union_uint8m8 = type { <1024 x i8> }
+// CHECK-1024-NEXT: %union.union_uint16m8 = type { <512 x i16> }
+// CHECK-1024-NEXT: %union.union_uint32m8 = type { <256 x i32> }
+// CHECK-1024-NEXT: %union.union_uint64m8 = type { <128 x i64> }
+// CHECK-1024-NEXT: %union.union_float32m8 = type { <256 x float> }
+// CHECK-1024-NEXT: %union.union_float64m8 = type { <128 x double> }
 
 //===----------------------------------------------------------------------===//
 // Global variables
@@ -255,6 +834,36 @@ void f() {
 // CHECK-64-NEXT: @global_u64 ={{.*}} global <1 x i64> zeroinitializer, align 8
 // CHECK-64-NEXT: @global_f32 ={{.*}} global <2 x float> zeroinitializer, align 8
 // CHECK-64-NEXT: @global_f64 ={{.*}} global <1 x double> zeroinitializer, align 8
+// CHECK-64-NEXT: @global_i8m2 ={{.*}} global <16 x i8> zeroinitializer, align 8
+// CHECK-64-NEXT: @global_i16m2 ={{.*}} global <8 x i16> zeroinitializer, align 8
+// CHECK-64-NEXT: @global_i32m2 ={{.*}} global <4 x i32> zeroinitializer, align 8
+// CHECK-64-NEXT: @global_i64m2 ={{.*}} global <2 x i64> zeroinitializer, align 8
+// CHECK-64-NEXT: @global_u8m2 ={{.*}} global <16 x i8> zeroinitializer, align 8
+// CHECK-64-NEXT: @global_u16m2 ={{.*}} global <8 x i16> zeroinitializer, align 8
+// CHECK-64-NEXT: @global_u32m2 ={{.*}} global <4 x i32> zeroinitializer, align 8
+// CHECK-64-NEXT: @global_u64m2 ={{.*}} global <2 x i64> zeroinitializer, align 8
+// CHECK-64-NEXT: @global_f32m2 ={{.*}} global <4 x float> zeroinitializer, align 8
+// CHECK-64-NEXT: @global_f64m2 ={{.*}} global <2 x double> zeroinitializer, align 8
+// CHECK-64-NEXT: @global_i8m4 ={{.*}} global <32 x i8> zeroinitializer, align 8
+// CHECK-64-NEXT: @global_i16m4 ={{.*}} global <16 x i16> zeroinitializer, align 8
+// CHECK-64-NEXT: @global_i32m4 ={{.*}} global <8 x i32> zeroinitializer, align 8
+// CHECK-64-NEXT: @global_i64m4 ={{.*}} global <4 x i64> zeroinitializer, align 8
+// CHECK-64-NEXT: @global_u8m4 ={{.*}} global <32 x i8> zeroinitializer, align 8
+// CHECK-64-NEXT: @global_u16m4 ={{.*}} global <16 x i16> zeroinitializer, align 8
+// CHECK-64-NEXT: @global_u32m4 ={{.*}} global <8 x i32> zeroinitializer, align 8
+// CHECK-64-NEXT: @global_u64m4 ={{.*}} global <4 x i64> zeroinitializer, align 8
+// CHECK-64-NEXT: @global_f32m4 ={{.*}} global <8 x float> zeroinitializer, align 8
+// CHECK-64-NEXT: @global_f64m4 ={{.*}} global <4 x double> zeroinitializer, align 8
+// CHECK-64-NEXT: @global_i8m8 ={{.*}} global <64 x i8> zeroinitializer, align 8
+// CHECK-64-NEXT: @global_i16m8 ={{.*}} global <32 x i16> zeroinitializer, align 8
+// CHECK-64-NEXT: @global_i32m8 ={{.*}} global <16 x i32> zeroinitializer, align 8
+// CHECK-64-NEXT: @global_i64m8 ={{.*}} global <8 x i64> zeroinitializer, align 8
+// CHECK-64-NEXT: @global_u8m8 ={{.*}} global <64 x i8> zeroinitializer, align 8
+// CHECK-64-NEXT: @global_u16m8 ={{.*}} global <32 x i16> zeroinitializer, align 8
+// CHECK-64-NEXT: @global_u32m8 ={{.*}} global <16 x i32> zeroinitializer, align 8
+// CHECK-64-NEXT: @global_u64m8 ={{.*}} global <8 x i64> zeroinitializer, align 8
+// CHECK-64-NEXT: @global_f32m8 ={{.*}} global <16 x float> zeroinitializer, align 8
+// CHECK-64-NEXT: @global_f64m8 ={{.*}} global <8 x double> zeroinitializer, align 8
 
 // CHECK-128:      @global_i8 ={{.*}} global <16 x i8> zeroinitializer, align 8
 // CHECK-128-NEXT: @global_i16 ={{.*}} global <8 x i16> zeroinitializer, align 8
@@ -266,6 +875,36 @@ void f() {
 // CHECK-128-NEXT: @global_u64 ={{.*}} global <2 x i64> zeroinitializer, align 8
 // CHECK-128-NEXT: @global_f32 ={{.*}} global <4 x float> zeroinitializer, align 8
 // CHECK-128-NEXT: @global_f64 ={{.*}} global <2 x double> zeroinitializer, align 8
+// CHECK-128-NEXT: @global_i8m2 ={{.*}} global <32 x i8> zeroinitializer, align 8
+// CHECK-128-NEXT: @global_i16m2 ={{.*}} global <16 x i16> zeroinitializer, align 8
+// CHECK-128-NEXT: @global_i32m2 ={{.*}} global <8 x i32> zeroinitializer, align 8
+// CHECK-128-NEXT: @global_i64m2 ={{.*}} global <4 x i64> zeroinitializer, align 8
+// CHECK-128-NEXT: @global_u8m2 ={{.*}} global <32 x i8> zeroinitializer, align 8
+// CHECK-128-NEXT: @global_u16m2 ={{.*}} global <16 x i16> zeroinitializer, align 8
+// CHECK-128-NEXT: @global_u32m2 ={{.*}} global <8 x i32> zeroinitializer, align 8
+// CHECK-128-NEXT: @global_u64m2 ={{.*}} global <4 x i64> zeroinitializer, align 8
+// CHECK-128-NEXT: @global_f32m2 ={{.*}} global <8 x float> zeroinitializer, align 8
+// CHECK-128-NEXT: @global_f64m2 ={{.*}} global <4 x double> zeroinitializer, align 8
+// CHECK-128-NEXT: @global_i8m4 ={{.*}} global <64 x i8> zeroinitializer, align 8
+// CHECK-128-NEXT: @global_i16m4 ={{.*}} global <32 x i16> zeroinitializer, align 8
+// CHECK-128-NEXT: @global_i32m4 ={{.*}} global <16 x i32> zeroinitializer, align 8
+// CHECK-128-NEXT: @global_i64m4 ={{.*}} global <8 x i64> zeroinitializer, align 8
+// CHECK-128-NEXT: @global_u8m4 ={{.*}} global <64 x i8> zeroinitializer, align 8
+// CHECK-128-NEXT: @global_u16m4 ={{.*}} global <32 x i16> zeroinitializer, align 8
+// CHECK-128-NEXT: @global_u32m4 ={{.*}} global <16 x i32> zeroinitializer, align 8
+// CHECK-128-NEXT: @global_u64m4 ={{.*}} global <8 x i64> zeroinitializer, align 8
+// CHECK-128-NEXT: @global_f32m4 ={{.*}} global <16 x float> zeroinitializer, align 8
+// CHECK-128-NEXT: @global_f64m4 ={{.*}} global <8 x double> zeroinitializer, align 8
+// CHECK-128-NEXT: @global_i8m8 ={{.*}} global <128 x i8> zeroinitializer, align 8
+// CHECK-128-NEXT: @global_i16m8 ={{.*}} global <64 x i16> zeroinitializer, align 8
+// CHECK-128-NEXT: @global_i32m8 ={{.*}} global <32 x i32> zeroinitializer, align 8
+// CHECK-128-NEXT: @global_i64m8 ={{.*}} global <16 x i64> zeroinitializer, align 8
+// CHECK-128-NEXT: @global_u8m8 ={{.*}} global <128 x i8> zeroinitializer, align 8
+// CHECK-128-NEXT: @global_u16m8 ={{.*}} global <64 x i16> zeroinitializer, align 8
+// CHECK-128-NEXT: @global_u32m8 ={{.*}} global <32 x i32> zeroinitializer, align 8
+// CHECK-128-NEXT: @global_u64m8 ={{.*}} global <16 x i64> zeroinitializer, align 8
+// CHECK-128-NEXT: @global_f32m8 ={{.*}} global <32 x float> zeroinitializer, align 8
+// CHECK-128-NEXT: @global_f64m8 ={{.*}} global <16 x double> zeroinitializer, align 8
 
 // CHECK-256:      @global_i8 ={{.*}} global <32 x i8> zeroinitializer, align 8
 // CHECK-256-NEXT: @global_i16 ={{.*}} global <16 x i16> zeroinitializer, align 8
@@ -277,6 +916,36 @@ void f() {
 // CHECK-256-NEXT: @global_u64 ={{.*}} global <4 x i64> zeroinitializer, align 8
 // CHECK-256-NEXT: @global_f32 ={{.*}} global <8 x float> zeroinitializer, align 8
 // CHECK-256-NEXT: @global_f64 ={{.*}} global <4 x double> zeroinitializer, align 8
+// CHECK-256-NEXT: @global_i8m2 ={{.*}} global <64 x i8> zeroinitializer, align 8
+// CHECK-256-NEXT: @global_i16m2 ={{.*}} global <32 x i16> zeroinitializer, align 8
+// CHECK-256-NEXT: @global_i32m2 ={{.*}} global <16 x i32> zeroinitializer, align 8
+// CHECK-256-NEXT: @global_i64m2 ={{.*}} global <8 x i64> zeroinitializer, align 8
+// CHECK-256-NEXT: @global_u8m2 ={{.*}} global <64 x i8> zeroinitializer, align 8
+// CHECK-256-NEXT: @global_u16m2 ={{.*}} global <32 x i16> zeroinitializer, align 8
+// CHECK-256-NEXT: @global_u32m2 ={{.*}} global <16 x i32> zeroinitializer, align 8
+// CHECK-256-NEXT: @global_u64m2 ={{.*}} global <8 x i64> zeroinitializer, align 8
+// CHECK-256-NEXT: @global_f32m2 ={{.*}} global <16 x float> zeroinitializer, align 8
+// CHECK-256-NEXT: @global_f64m2 ={{.*}} global <8 x double> zeroinitializer, align 8
+// CHECK-256-NEXT: @global_i8m4 ={{.*}} global <128 x i8> zeroinitializer, align 8
+// CHECK-256-NEXT: @global_i16m4 ={{.*}} global <64 x i16> zeroinitializer, align 8
+// CHECK-256-NEXT: @global_i32m4 ={{.*}} global <32 x i32> zeroinitializer, align 8
+// CHECK-256-NEXT: @global_i64m4 ={{.*}} global <16 x i64> zeroinitializer, align 8
+// CHECK-256-NEXT: @global_u8m4 ={{.*}} global <128 x i8> zeroinitializer, align 8
+// CHECK-256-NEXT: @global_u16m4 ={{.*}} global <64 x i16> zeroinitializer, align 8
+// CHECK-256-NEXT: @global_u32m4 ={{.*}} global <32 x i32> zeroinitializer, align 8
+// CHECK-256-NEXT: @global_u64m4 ={{.*}} global <16 x i64> zeroinitializer, align 8
+// CHECK-256-NEXT: @global_f32m4 ={{.*}} global <32 x float> zeroinitializer, align 8
+// CHECK-256-NEXT: @global_f64m4 ={{.*}} global <16 x double> zeroinitializer, align 8
+// CHECK-256-NEXT: @global_i8m8 ={{.*}} global <256 x i8> zeroinitializer, align 8
+// CHECK-256-NEXT: @global_i16m8 ={{.*}} global <128 x i16> zeroinitializer, align 8
+// CHECK-256-NEXT: @global_i32m8 ={{.*}} global <64 x i32> zeroinitializer, align 8
+// CHECK-256-NEXT: @global_i64m8 ={{.*}} global <32 x i64> zeroinitializer, align 8
+// CHECK-256-NEXT: @global_u8m8 ={{.*}} global <256 x i8> zeroinitializer, align 8
+// CHECK-256-NEXT: @global_u16m8 ={{.*}} global <128 x i16> zeroinitializer, align 8
+// CHECK-256-NEXT: @global_u32m8 ={{.*}} global <64 x i32> zeroinitializer, align 8
+// CHECK-256-NEXT: @global_u64m8 ={{.*}} global <32 x i64> zeroinitializer, align 8
+// CHECK-256-NEXT: @global_f32m8 ={{.*}} global <64 x float> zeroinitializer, align 8
+// CHECK-256-NEXT: @global_f64m8 ={{.*}} global <32 x double> zeroinitializer, align 8
 
 // CHECK-512:      @global_i8 ={{.*}} global <64 x i8> zeroinitializer, align 8
 // CHECK-512-NEXT: @global_i16 ={{.*}} global <32 x i16> zeroinitializer, align 8
@@ -288,6 +957,36 @@ void f() {
 // CHECK-512-NEXT: @global_u64 ={{.*}} global <8 x i64> zeroinitializer, align 8
 // CHECK-512-NEXT: @global_f32 ={{.*}} global <16 x float> zeroinitializer, align 8
 // CHECK-512-NEXT: @global_f64 ={{.*}} global <8 x double> zeroinitializer, align 8
+// CHECK-512-NEXT: @global_i8m2 ={{.*}} global <128 x i8> zeroinitializer, align 8
+// CHECK-512-NEXT: @global_i16m2 ={{.*}} global <64 x i16> zeroinitializer, align 8
+// CHECK-512-NEXT: @global_i32m2 ={{.*}} global <32 x i32> zeroinitializer, align 8
+// CHECK-512-NEXT: @global_i64m2 ={{.*}} global <16 x i64> zeroinitializer, align 8
+// CHECK-512-NEXT: @global_u8m2 ={{.*}} global <128 x i8> zeroinitializer, align 8
+// CHECK-512-NEXT: @global_u16m2 ={{.*}} global <64 x i16> zeroinitializer, align 8
+// CHECK-512-NEXT: @global_u32m2 ={{.*}} global <32 x i32> zeroinitializer, align 8
+// CHECK-512-NEXT: @global_u64m2 ={{.*}} global <16 x i64> zeroinitializer, align 8
+// CHECK-512-NEXT: @global_f32m2 ={{.*}} global <32 x float> zeroinitializer, align 8
+// CHECK-512-NEXT: @global_f64m2 ={{.*}} global <16 x double> zeroinitializer, align 8
+// CHECK-512-NEXT: @global_i8m4 ={{.*}} global <256 x i8> zeroinitializer, align 8
+// CHECK-512-NEXT: @global_i16m4 ={{.*}} global <128 x i16> zeroinitializer, align 8
+// CHECK-512-NEXT: @global_i32m4 ={{.*}} global <64 x i32> zeroinitializer, align 8
+// CHECK-512-NEXT: @global_i64m4 ={{.*}} global <32 x i64> zeroinitializer, align 8
+// CHECK-512-NEXT: @global_u8m4 ={{.*}} global <256 x i8> zeroinitializer, align 8
+// CHECK-512-NEXT: @global_u16m4 ={{.*}} global <128 x i16> zeroinitializer, align 8
+// CHECK-512-NEXT: @global_u32m4 ={{.*}} global <64 x i32> zeroinitializer, align 8
+// CHECK-512-NEXT: @global_u64m4 ={{.*}} global <32 x i64> zeroinitializer, align 8
+// CHECK-512-NEXT: @global_f32m4 ={{.*}} global <64 x float> zeroinitializer, align 8
+// CHECK-512-NEXT: @global_f64m4 ={{.*}} global <32 x double> zeroinitializer, align 8
+// CHECK-512-NEXT: @global_i8m8 ={{.*}} global <512 x i8> zeroinitializer, align 8
+// CHECK-512-NEXT: @global_i16m8 ={{.*}} global <256 x i16> zeroinitializer, align 8
+// CHECK-512-NEXT: @global_i32m8 ={{.*}} global <128 x i32> zeroinitializer, align 8
+// CHECK-512-NEXT: @global_i64m8 ={{.*}} global <64 x i64> zeroinitializer, align 8
+// CHECK-512-NEXT: @global_u8m8 ={{.*}} global <512 x i8> zeroinitializer, align 8
+// CHECK-512-NEXT: @global_u16m8 ={{.*}} global <256 x i16> zeroinitializer, align 8
+// CHECK-512-NEXT: @global_u32m8 ={{.*}} global <128 x i32> zeroinitializer, align 8
+// CHECK-512-NEXT: @global_u64m8 ={{.*}} global <64 x i64> zeroinitializer, align 8
+// CHECK-512-NEXT: @global_f32m8 ={{.*}} global <128 x float> zeroinitializer, align 8
+// CHECK-512-NEXT: @global_f64m8 ={{.*}} global <64 x double> zeroinitializer, align 8
 
 // CHECK-1024:      @global_i8 ={{.*}} global <128 x i8> zeroinitializer, align 8
 // CHECK-1024-NEXT: @global_i16 ={{.*}} global <64 x i16> zeroinitializer, align 8
@@ -299,6 +998,36 @@ void f() {
 // CHECK-1024-NEXT: @global_u64 ={{.*}} global <16 x i64> zeroinitializer, align 8
 // CHECK-1024-NEXT: @global_f32 ={{.*}} global <32 x float> zeroinitializer, align 8
 // CHECK-1024-NEXT: @global_f64 ={{.*}} global <16 x double> zeroinitializer, align 8
+// CHECK-1024-NEXT: @global_i8m2 ={{.*}} global <256 x i8> zeroinitializer, align 8
+// CHECK-1024-NEXT: @global_i16m2 ={{.*}} global <128 x i16> zeroinitializer, align 8
+// CHECK-1024-NEXT: @global_i32m2 ={{.*}} global <64 x i32> zeroinitializer, align 8
+// CHECK-1024-NEXT: @global_i64m2 ={{.*}} global <32 x i64> zeroinitializer, align 8
+// CHECK-1024-NEXT: @global_u8m2 ={{.*}} global <256 x i8> zeroinitializer, align 8
+// CHECK-1024-NEXT: @global_u16m2 ={{.*}} global <128 x i16> zeroinitializer, align 8
+// CHECK-1024-NEXT: @global_u32m2 ={{.*}} global <64 x i32> zeroinitializer, align 8
+// CHECK-1024-NEXT: @global_u64m2 ={{.*}} global <32 x i64> zeroinitializer, align 8
+// CHECK-1024-NEXT: @global_f32m2 ={{.*}} global <64 x float> zeroinitializer, align 8
+// CHECK-1024-NEXT: @global_f64m2 ={{.*}} global <32 x double> zeroinitializer, align 8
+// CHECK-1024-NEXT: @global_i8m4 ={{.*}} global <512 x i8> zeroinitializer, align 8
+// CHECK-1024-NEXT: @global_i16m4 ={{.*}} global <256 x i16> zeroinitializer, align 8
+// CHECK-1024-NEXT: @global_i32m4 ={{.*}} global <128 x i32> zeroinitializer, align 8
+// CHECK-1024-NEXT: @global_i64m4 ={{.*}} global <64 x i64> zeroinitializer, align 8
+// CHECK-1024-NEXT: @global_u8m4 ={{.*}} global <512 x i8> zeroinitializer, align 8
+// CHECK-1024-NEXT: @global_u16m4 ={{.*}} global <256 x i16> zeroinitializer, align 8
+// CHECK-1024-NEXT: @global_u32m4 ={{.*}} global <128 x i32> zeroinitializer, align 8
+// CHECK-1024-NEXT: @global_u64m4 ={{.*}} global <64 x i64> zeroinitializer, align 8
+// CHECK-1024-NEXT: @global_f32m4 ={{.*}} global <128 x float> zeroinitializer, align 8
+// CHECK-1024-NEXT: @global_f64m4 ={{.*}} global <64 x double> zeroinitializer, align 8
+// CHECK-1024-NEXT: @global_i8m8 ={{.*}} global <1024 x i8> zeroinitializer, align 8
+// CHECK-1024-NEXT: @global_i16m8 ={{.*}} global <512 x i16> zeroinitializer, align 8
+// CHECK-1024-NEXT: @global_i32m8 ={{.*}} global <256 x i32> zeroinitializer, align 8
+// CHECK-1024-NEXT: @global_i64m8 ={{.*}} global <128 x i64> zeroinitializer, align 8
+// CHECK-1024-NEXT: @global_u8m8 ={{.*}} global <1024 x i8> zeroinitializer, align 8
+// CHECK-1024-NEXT: @global_u16m8 ={{.*}} global <512 x i16> zeroinitializer, align 8
+// CHECK-1024-NEXT: @global_u32m8 ={{.*}} global <256 x i32> zeroinitializer, align 8
+// CHECK-1024-NEXT: @global_u64m8 ={{.*}} global <128 x i64> zeroinitializer, align 8
+// CHECK-1024-NEXT: @global_f32m8 ={{.*}} global <256 x float> zeroinitializer, align 8
+// CHECK-1024-NEXT: @global_f64m8 ={{.*}} global <128 x double> zeroinitializer, align 8
 
 //===----------------------------------------------------------------------===//
 // Global arrays
@@ -313,6 +1042,36 @@ void f() {
 // CHECK-64-NEXT: @global_arr_u64 ={{.*}} global [3 x <1 x i64>] zeroinitializer, align 8
 // CHECK-64-NEXT: @global_arr_f32 ={{.*}} global [3 x <2 x float>] zeroinitializer, align 8
 // CHECK-64-NEXT: @global_arr_f64 ={{.*}} global [3 x <1 x double>] zeroinitializer, align 8
+// CHECK-64-NEXT: @global_arr_i8m2 ={{.*}} global [3 x <16 x i8>] zeroinitializer, align 8
+// CHECK-64-NEXT: @global_arr_i16m2 ={{.*}} global [3 x <8 x i16>] zeroinitializer, align 8
+// CHECK-64-NEXT: @global_arr_i32m2 ={{.*}} global [3 x <4 x i32>] zeroinitializer, align 8
+// CHECK-64-NEXT: @global_arr_i64m2 ={{.*}} global [3 x <2 x i64>] zeroinitializer, align 8
+// CHECK-64-NEXT: @global_arr_u8m2 ={{.*}} global [3 x <16 x i8>] zeroinitializer, align 8
+// CHECK-64-NEXT: @global_arr_u16m2 ={{.*}} global [3 x <8 x i16>] zeroinitializer, align 8
+// CHECK-64-NEXT: @global_arr_u32m2 ={{.*}} global [3 x <4 x i32>] zeroinitializer, align 8
+// CHECK-64-NEXT: @global_arr_u64m2 ={{.*}} global [3 x <2 x i64>] zeroinitializer, align 8
+// CHECK-64-NEXT: @global_arr_f32m2 ={{.*}} global [3 x <4 x float>] zeroinitializer, align 8
+// CHECK-64-NEXT: @global_arr_f64m2 ={{.*}} global [3 x <2 x double>] zeroinitializer, align 8
+// CHECK-64-NEXT: @global_arr_i8m4 ={{.*}} global [3 x <32 x i8>] zeroinitializer, align 8
+// CHECK-64-NEXT: @global_arr_i16m4 ={{.*}} global [3 x <16 x i16>] zeroinitializer, align 8
+// CHECK-64-NEXT: @global_arr_i32m4 ={{.*}} global [3 x <8 x i32>] zeroinitializer, align 8
+// CHECK-64-NEXT: @global_arr_i64m4 ={{.*}} global [3 x <4 x i64>] zeroinitializer, align 8
+// CHECK-64-NEXT: @global_arr_u8m4 ={{.*}} global [3 x <32 x i8>] zeroinitializer, align 8
+// CHECK-64-NEXT: @global_arr_u16m4 ={{.*}} global [3 x <16 x i16>] zeroinitializer, align 8
+// CHECK-64-NEXT: @global_arr_u32m4 ={{.*}} global [3 x <8 x i32>] zeroinitializer, align 8
+// CHECK-64-NEXT: @global_arr_u64m4 ={{.*}} global [3 x <4 x i64>] zeroinitializer, align 8
+// CHECK-64-NEXT: @global_arr_f32m4 ={{.*}} global [3 x <8 x float>] zeroinitializer, align 8
+// CHECK-64-NEXT: @global_arr_f64m4 ={{.*}} global [3 x <4 x double>] zeroinitializer, align 8
+// CHECK-64-NEXT: @global_arr_i8m8 ={{.*}} global [3 x <64 x i8>] zeroinitializer, align 8
+// CHECK-64-NEXT: @global_arr_i16m8 ={{.*}} global [3 x <32 x i16>] zeroinitializer, align 8
+// CHECK-64-NEXT: @global_arr_i32m8 ={{.*}} global [3 x <16 x i32>] zeroinitializer, align 8
+// CHECK-64-NEXT: @global_arr_i64m8 ={{.*}} global [3 x <8 x i64>] zeroinitializer, align 8
+// CHECK-64-NEXT: @global_arr_u8m8 ={{.*}} global [3 x <64 x i8>] zeroinitializer, align 8
+// CHECK-64-NEXT: @global_arr_u16m8 ={{.*}} global [3 x <32 x i16>] zeroinitializer, align 8
+// CHECK-64-NEXT: @global_arr_u32m8 ={{.*}} global [3 x <16 x i32>] zeroinitializer, align 8
+// CHECK-64-NEXT: @global_arr_u64m8 ={{.*}} global [3 x <8 x i64>] zeroinitializer, align 8
+// CHECK-64-NEXT: @global_arr_f32m8 ={{.*}} global [3 x <16 x float>] zeroinitializer, align 8
+// CHECK-64-NEXT: @global_arr_f64m8 ={{.*}} global [3 x <8 x double>] zeroinitializer, align 8
 
 // CHECK-128:      @global_arr_i8 ={{.*}} global [3 x <16 x i8>] zeroinitializer, align 8
 // CHECK-128-NEXT: @global_arr_i16 ={{.*}} global [3 x <8 x i16>] zeroinitializer, align 8
@@ -324,6 +1083,36 @@ void f() {
 // CHECK-128-NEXT: @global_arr_u64 ={{.*}} global [3 x <2 x i64>] zeroinitializer, align 8
 // CHECK-128-NEXT: @global_arr_f32 ={{.*}} global [3 x <4 x float>] zeroinitializer, align 8
 // CHECK-128-NEXT: @global_arr_f64 ={{.*}} global [3 x <2 x double>] zeroinitializer, align 8
+// CHECK-128-NEXT: @global_arr_i8m2 ={{.*}} global [3 x <32 x i8>] zeroinitializer, align 8
+// CHECK-128-NEXT: @global_arr_i16m2 ={{.*}} global [3 x <16 x i16>] zeroinitializer, align 8
+// CHECK-128-NEXT: @global_arr_i32m2 ={{.*}} global [3 x <8 x i32>] zeroinitializer, align 8
+// CHECK-128-NEXT: @global_arr_i64m2 ={{.*}} global [3 x <4 x i64>] zeroinitializer, align 8
+// CHECK-128-NEXT: @global_arr_u8m2 ={{.*}} global [3 x <32 x i8>] zeroinitializer, align 8
+// CHECK-128-NEXT: @global_arr_u16m2 ={{.*}} global [3 x <16 x i16>] zeroinitializer, align 8
+// CHECK-128-NEXT: @global_arr_u32m2 ={{.*}} global [3 x <8 x i32>] zeroinitializer, align 8
+// CHECK-128-NEXT: @global_arr_u64m2 ={{.*}} global [3 x <4 x i64>] zeroinitializer, align 8
+// CHECK-128-NEXT: @global_arr_f32m2 ={{.*}} global [3 x <8 x float>] zeroinitializer, align 8
+// CHECK-128-NEXT: @global_arr_f64m2 ={{.*}} global [3 x <4 x double>] zeroinitializer, align 8
+// CHECK-128-NEXT: @global_arr_i8m4 ={{.*}} global [3 x <64 x i8>] zeroinitializer, align 8
+// CHECK-128-NEXT: @global_arr_i16m4 ={{.*}} global [3 x <32 x i16>] zeroinitializer, align 8
+// CHECK-128-NEXT: @global_arr_i32m4 ={{.*}} global [3 x <16 x i32>] zeroinitializer, align 8
+// CHECK-128-NEXT: @global_arr_i64m4 ={{.*}} global [3 x <8 x i64>] zeroinitializer, align 8
+// CHECK-128-NEXT: @global_arr_u8m4 ={{.*}} global [3 x <64 x i8>] zeroinitializer, align 8
+// CHECK-128-NEXT: @global_arr_u16m4 ={{.*}} global [3 x <32 x i16>] zeroinitializer, align 8
+// CHECK-128-NEXT: @global_arr_u32m4 ={{.*}} global [3 x <16 x i32>] zeroinitializer, align 8
+// CHECK-128-NEXT: @global_arr_u64m4 ={{.*}} global [3 x <8 x i64>] zeroinitializer, align 8
+// CHECK-128-NEXT: @global_arr_f32m4 ={{.*}} global [3 x <16 x float>] zeroinitializer, align 8
+// CHECK-128-NEXT: @global_arr_f64m4 ={{.*}} global [3 x <8 x double>] zeroinitializer, align 8
+// CHECK-128-NEXT: @global_arr_i8m8 ={{.*}} global [3 x <128 x i8>] zeroinitializer, align 8
+// CHECK-128-NEXT: @global_arr_i16m8 ={{.*}} global [3 x <64 x i16>] zeroinitializer, align 8
+// CHECK-128-NEXT: @global_arr_i32m8 ={{.*}} global [3 x <32 x i32>] zeroinitializer, align 8
+// CHECK-128-NEXT: @global_arr_i64m8 ={{.*}} global [3 x <16 x i64>] zeroinitializer, align 8
+// CHECK-128-NEXT: @global_arr_u8m8 ={{.*}} global [3 x <128 x i8>] zeroinitializer, align 8
+// CHECK-128-NEXT: @global_arr_u16m8 ={{.*}} global [3 x <64 x i16>] zeroinitializer, align 8
+// CHECK-128-NEXT: @global_arr_u32m8 ={{.*}} global [3 x <32 x i32>] zeroinitializer, align 8
+// CHECK-128-NEXT: @global_arr_u64m8 ={{.*}} global [3 x <16 x i64>] zeroinitializer, align 8
+// CHECK-128-NEXT: @global_arr_f32m8 ={{.*}} global [3 x <32 x float>] zeroinitializer, align 8
+// CHECK-128-NEXT: @global_arr_f64m8 ={{.*}} global [3 x <16 x double>] zeroinitializer, align 8
 
 // CHECK-256:      @global_arr_i8 ={{.*}} global [3 x <32 x i8>] zeroinitializer, align 8
 // CHECK-256-NEXT: @global_arr_i16 ={{.*}} global [3 x <16 x i16>] zeroinitializer, align 8
@@ -335,7 +1124,36 @@ void f() {
 // CHECK-256-NEXT: @global_arr_u64 ={{.*}} global [3 x <4 x i64>] zeroinitializer, align 8
 // CHECK-256-NEXT: @global_arr_f32 ={{.*}} global [3 x <8 x float>] zeroinitializer, align 8
 // CHECK-256-NEXT: @global_arr_f64 ={{.*}} global [3 x <4 x double>] zeroinitializer, align 8
-
+// CHECK-256-NEXT: @global_arr_i8m2 ={{.*}} global [3 x <64 x i8>] zeroinitializer, align 8
+// CHECK-256-NEXT: @global_arr_i16m2 ={{.*}} global [3 x <32 x i16>] zeroinitializer, align 8
+// CHECK-256-NEXT: @global_arr_i32m2 ={{.*}} global [3 x <16 x i32>] zeroinitializer, align 8
+// CHECK-256-NEXT: @global_arr_i64m2 ={{.*}} global [3 x <8 x i64>] zeroinitializer, align 8
+// CHECK-256-NEXT: @global_arr_u8m2 ={{.*}} global [3 x <64 x i8>] zeroinitializer, align 8
+// CHECK-256-NEXT: @global_arr_u16m2 ={{.*}} global [3 x <32 x i16>] zeroinitializer, align 8
+// CHECK-256-NEXT: @global_arr_u32m2 ={{.*}} global [3 x <16 x i32>] zeroinitializer, align 8
+// CHECK-256-NEXT: @global_arr_u64m2 ={{.*}} global [3 x <8 x i64>] zeroinitializer, align 8
+// CHECK-256-NEXT: @global_arr_f32m2 ={{.*}} global [3 x <16 x float>] zeroinitializer, align 8
+// CHECK-256-NEXT: @global_arr_f64m2 ={{.*}} global [3 x <8 x double>] zeroinitializer, align 8
+// CHECK-256-NEXT: @global_arr_i8m4 ={{.*}} global [3 x <128 x i8>] zeroinitializer, align 8
+// CHECK-256-NEXT: @global_arr_i16m4 ={{.*}} global [3 x <64 x i16>] zeroinitializer, align 8
+// CHECK-256-NEXT: @global_arr_i32m4 ={{.*}} global [3 x <32 x i32>] zeroinitializer, align 8
+// CHECK-256-NEXT: @global_arr_i64m4 ={{.*}} global [3 x <16 x i64>] zeroinitializer, align 8
+// CHECK-256-NEXT: @global_arr_u8m4 ={{.*}} global [3 x <128 x i8>] zeroinitializer, align 8
+// CHECK-256-NEXT: @global_arr_u16m4 ={{.*}} global [3 x <64 x i16>] zeroinitializer, align 8
+// CHECK-256-NEXT: @global_arr_u32m4 ={{.*}} global [3 x <32 x i32>] zeroinitializer, align 8
+// CHECK-256-NEXT: @global_arr_u64m4 ={{.*}} global [3 x <16 x i64>] zeroinitializer, align 8
+// CHECK-256-NEXT: @global_arr_f32m4 ={{.*}} global [3 x <32 x float>] zeroinitializer, align 8
+// CHECK-256-NEXT: @global_arr_f64m4 ={{.*}} global [3 x <16 x double>] zeroinitializer, align 8
+// CHECK-256-NEXT: @global_arr_i8m8 ={{.*}} global [3 x <256 x i8>] zeroinitializer, align 8
+// CHECK-256-NEXT: @global_arr_i16m8 ={{.*}} global [3 x <128 x i16>] zeroinitializer, align 8
+// CHECK-256-NEXT: @global_arr_i32m8 ={{.*}} global [3 x <64 x i32>] zeroinitializer, align 8
+// CHECK-256-NEXT: @global_arr_i64m8 ={{.*}} global [3 x <32 x i64>] zeroinitializer, align 8
+// CHECK-256-NEXT: @global_arr_u8m8 ={{.*}} global [3 x <256 x i8>] zeroinitializer, align 8
+// CHECK-256-NEXT: @global_arr_u16m8 ={{.*}} global [3 x <128 x i16>] zeroinitializer, align 8
+// CHECK-256-NEXT: @global_arr_u32m8 ={{.*}} global [3 x <64 x i32>] zeroinitializer, align 8
+// CHECK-256-NEXT: @global_arr_u64m8 ={{.*}} global [3 x <32 x i64>] zeroinitializer, align 8
+// CHECK-256-NEXT: @global_arr_f32m8 ={{.*}} global [3 x <64 x float>] zeroinitializer, align 8
+// CHECK-256-NEXT: @global_arr_f64m8 ={{.*}} global [3 x <32 x double>] zeroinitializer, align 8
 // CHECK-512:      @global_arr_i8 ={{.*}} global [3 x <64 x i8>] zeroinitializer, align 8
 // CHECK-512-NEXT: @global_arr_i16 ={{.*}} global [3 x <32 x i16>] zeroinitializer, align 8
 // CHECK-512-NEXT: @global_arr_i32 ={{.*}} global [3 x <16 x i32>] zeroinitializer, align 8
@@ -346,6 +1164,36 @@ void f() {
 // CHECK-512-NEXT: @global_arr_u64 ={{.*}} global [3 x <8 x i64>] zeroinitializer, align 8
 // CHECK-512-NEXT: @global_arr_f32 ={{.*}} global [3 x <16 x float>] zeroinitializer, align 8
 // CHECK-512-NEXT: @global_arr_f64 ={{.*}} global [3 x <8 x double>] zeroinitializer, align 8
+// CHECK-512-NEXT: @global_arr_i8m2 ={{.*}} global [3 x <128 x i8>] zeroinitializer, align 8
+// CHECK-512-NEXT: @global_arr_i16m2 ={{.*}} global [3 x <64 x i16>] zeroinitializer, align 8
+// CHECK-512-NEXT: @global_arr_i32m2 ={{.*}} global [3 x <32 x i32>] zeroinitializer, align 8
+// CHECK-512-NEXT: @global_arr_i64m2 ={{.*}} global [3 x <16 x i64>] zeroinitializer, align 8
+// CHECK-512-NEXT: @global_arr_u8m2 ={{.*}} global [3 x <128 x i8>] zeroinitializer, align 8
+// CHECK-512-NEXT: @global_arr_u16m2 ={{.*}} global [3 x <64 x i16>] zeroinitializer, align 8
+// CHECK-512-NEXT: @global_arr_u32m2 ={{.*}} global [3 x <32 x i32>] zeroinitializer, align 8
+// CHECK-512-NEXT: @global_arr_u64m2 ={{.*}} global [3 x <16 x i64>] zeroinitializer, align 8
+// CHECK-512-NEXT: @global_arr_f32m2 ={{.*}} global [3 x <32 x float>] zeroinitializer, align 8
+// CHECK-512-NEXT: @global_arr_f64m2 ={{.*}} global [3 x <16 x double>] zeroinitializer, align 8
+// CHECK-512-NEXT: @global_arr_i8m4 ={{.*}} global [3 x <256 x i8>] zeroinitializer, align 8
+// CHECK-512-NEXT: @global_arr_i16m4 ={{.*}} global [3 x <128 x i16>] zeroinitializer, align 8
+// CHECK-512-NEXT: @global_arr_i32m4 ={{.*}} global [3 x <64 x i32>] zeroinitializer, align 8
+// CHECK-512-NEXT: @global_arr_i64m4 ={{.*}} global [3 x <32 x i64>] zeroinitializer, align 8
+// CHECK-512-NEXT: @global_arr_u8m4 ={{.*}} global [3 x <256 x i8>] zeroinitializer, align 8
+// CHECK-512-NEXT: @global_arr_u16m4 ={{.*}} global [3 x <128 x i16>] zeroinitializer, align 8
+// CHECK-512-NEXT: @global_arr_u32m4 ={{.*}} global [3 x <64 x i32>] zeroinitializer, align 8
+// CHECK-512-NEXT: @global_arr_u64m4 ={{.*}} global [3 x <32 x i64>] zeroinitializer, align 8
+// CHECK-512-NEXT: @global_arr_f32m4 ={{.*}} global [3 x <64 x float>] zeroinitializer, align 8
+// CHECK-512-NEXT: @global_arr_f64m4 ={{.*}} global [3 x <32 x double>] zeroinitializer, align 8
+// CHECK-512-NEXT: @global_arr_i8m8 ={{.*}} global [3 x <512 x i8>] zeroinitializer, align 8
+// CHECK-512-NEXT: @global_arr_i16m8 ={{.*}} global [3 x <256 x i16>] zeroinitializer, align 8
+// CHECK-512-NEXT: @global_arr_i32m8 ={{.*}} global [3 x <128 x i32>] zeroinitializer, align 8
+// CHECK-512-NEXT: @global_arr_i64m8 ={{.*}} global [3 x <64 x i64>] zeroinitializer, align 8
+// CHECK-512-NEXT: @global_arr_u8m8 ={{.*}} global [3 x <512 x i8>] zeroinitializer, align 8
+// CHECK-512-NEXT: @global_arr_u16m8 ={{.*}} global [3 x <256 x i16>] zeroinitializer, align 8
+// CHECK-512-NEXT: @global_arr_u32m8 ={{.*}} global [3 x <128 x i32>] zeroinitializer, align 8
+// CHECK-512-NEXT: @global_arr_u64m8 ={{.*}} global [3 x <64 x i64>] zeroinitializer, align 8
+// CHECK-512-NEXT: @global_arr_f32m8 ={{.*}} global [3 x <128 x float>] zeroinitializer, align 8
+// CHECK-512-NEXT: @global_arr_f64m8 ={{.*}} global [3 x <64 x double>] zeroinitializer, align 8
 
 // CHECK-1024:      @global_arr_i8 ={{.*}} global [3 x <128 x i8>] zeroinitializer, align 8
 // CHECK-1024-NEXT: @global_arr_i16 ={{.*}} global [3 x <64 x i16>] zeroinitializer, align 8
@@ -357,6 +1205,36 @@ void f() {
 // CHECK-1024-NEXT: @global_arr_u64 ={{.*}} global [3 x <16 x i64>] zeroinitializer, align 8
 // CHECK-1024-NEXT: @global_arr_f32 ={{.*}} global [3 x <32 x float>] zeroinitializer, align 8
 // CHECK-1024-NEXT: @global_arr_f64 ={{.*}} global [3 x <16 x double>] zeroinitializer, align 8
+// CHECK-1024-NEXT: @global_arr_i8m2 ={{.*}} global [3 x <256 x i8>] zeroinitializer, align 8
+// CHECK-1024-NEXT: @global_arr_i16m2 ={{.*}} global [3 x <128 x i16>] zeroinitializer, align 8
+// CHECK-1024-NEXT: @global_arr_i32m2 ={{.*}} global [3 x <64 x i32>] zeroinitializer, align 8
+// CHECK-1024-NEXT: @global_arr_i64m2 ={{.*}} global [3 x <32 x i64>] zeroinitializer, align 8
+// CHECK-1024-NEXT: @global_arr_u8m2 ={{.*}} global [3 x <256 x i8>] zeroinitializer, align 8
+// CHECK-1024-NEXT: @global_arr_u16m2 ={{.*}} global [3 x <128 x i16>] zeroinitializer, align 8
+// CHECK-1024-NEXT: @global_arr_u32m2 ={{.*}} global [3 x <64 x i32>] zeroinitializer, align 8
+// CHECK-1024-NEXT: @global_arr_u64m2 ={{.*}} global [3 x <32 x i64>] zeroinitializer, align 8
+// CHECK-1024-NEXT: @global_arr_f32m2 ={{.*}} global [3 x <64 x float>] zeroinitializer, align 8
+// CHECK-1024-NEXT: @global_arr_f64m2 ={{.*}} global [3 x <32 x double>] zeroinitializer, align 8
+// CHECK-1024-NEXT: @global_arr_i8m4 ={{.*}} global [3 x <512 x i8>] zeroinitializer, align 8
+// CHECK-1024-NEXT: @global_arr_i16m4 ={{.*}} global [3 x <256 x i16>] zeroinitializer, align 8
+// CHECK-1024-NEXT: @global_arr_i32m4 ={{.*}} global [3 x <128 x i32>] zeroinitializer, align 8
+// CHECK-1024-NEXT: @global_arr_i64m4 ={{.*}} global [3 x <64 x i64>] zeroinitializer, align 8
+// CHECK-1024-NEXT: @global_arr_u8m4 ={{.*}} global [3 x <512 x i8>] zeroinitializer, align 8
+// CHECK-1024-NEXT: @global_arr_u16m4 ={{.*}} global [3 x <256 x i16>] zeroinitializer, align 8
+// CHECK-1024-NEXT: @global_arr_u32m4 ={{.*}} global [3 x <128 x i32>] zeroinitializer, align 8
+// CHECK-1024-NEXT: @global_arr_u64m4 ={{.*}} global [3 x <64 x i64>] zeroinitializer, align 8
+// CHECK-1024-NEXT: @global_arr_f32m4 ={{.*}} global [3 x <128 x float>] zeroinitializer, align 8
+// CHECK-1024-NEXT: @global_arr_f64m4 ={{.*}} global [3 x <64 x double>] zeroinitializer, align 8
+// CHECK-1024-NEXT: @global_arr_i8m8 ={{.*}} global [3 x <1024 x i8>] zeroinitializer, align 8
+// CHECK-1024-NEXT: @global_arr_i16m8 ={{.*}} global [3 x <512 x i16>] zeroinitializer, align 8
+// CHECK-1024-NEXT: @global_arr_i32m8 ={{.*}} global [3 x <256 x i32>] zeroinitializer, align 8
+// CHECK-1024-NEXT: @global_arr_i64m8 ={{.*}} global [3 x <128 x i64>] zeroinitializer, align 8
+// CHECK-1024-NEXT: @global_arr_u8m8 ={{.*}} global [3 x <1024 x i8>] zeroinitializer, align 8
+// CHECK-1024-NEXT: @global_arr_u16m8 ={{.*}} global [3 x <512 x i16>] zeroinitializer, align 8
+// CHECK-1024-NEXT: @global_arr_u32m8 ={{.*}} global [3 x <256 x i32>] zeroinitializer, align 8
+// CHECK-1024-NEXT: @global_arr_u64m8 ={{.*}} global [3 x <128 x i64>] zeroinitializer, align 8
+// CHECK-1024-NEXT: @global_arr_f32m8 ={{.*}} global [3 x <256 x float>] zeroinitializer, align 8
+// CHECK-1024-NEXT: @global_arr_f64m8 ={{.*}} global [3 x <128 x double>] zeroinitializer, align 8
 
 //===----------------------------------------------------------------------===//
 // Local variables
@@ -371,6 +1249,36 @@ void f() {
 // CHECK-64-NEXT: %local_u64 = alloca <1 x i64>, align 8
 // CHECK-64-NEXT: %local_f32 = alloca <2 x float>, align 8
 // CHECK-64-NEXT: %local_f64 = alloca <1 x double>, align 8
+// CHECK-64-NEXT: %local_i8m2 = alloca <16 x i8>, align 8
+// CHECK-64-NEXT: %local_i16m2 = alloca <8 x i16>, align 8
+// CHECK-64-NEXT: %local_i32m2 = alloca <4 x i32>, align 8
+// CHECK-64-NEXT: %local_i64m2 = alloca <2 x i64>, align 8
+// CHECK-64-NEXT: %local_u8m2 = alloca <16 x i8>, align 8
+// CHECK-64-NEXT: %local_u16m2 = alloca <8 x i16>, align 8
+// CHECK-64-NEXT: %local_u32m2 = alloca <4 x i32>, align 8
+// CHECK-64-NEXT: %local_u64m2 = alloca <2 x i64>, align 8
+// CHECK-64-NEXT: %local_f32m2 = alloca <4 x float>, align 8
+// CHECK-64-NEXT: %local_f64m2 = alloca <2 x double>, align 8
+// CHECK-64-NEXT: %local_i8m4 = alloca <32 x i8>, align 8
+// CHECK-64-NEXT: %local_i16m4 = alloca <16 x i16>, align 8
+// CHECK-64-NEXT: %local_i32m4 = alloca <8 x i32>, align 8
+// CHECK-64-NEXT: %local_i64m4 = alloca <4 x i64>, align 8
+// CHECK-64-NEXT: %local_u8m4 = alloca <32 x i8>, align 8
+// CHECK-64-NEXT: %local_u16m4 = alloca <16 x i16>, align 8
+// CHECK-64-NEXT: %local_u32m4 = alloca <8 x i32>, align 8
+// CHECK-64-NEXT: %local_u64m4 = alloca <4 x i64>, align 8
+// CHECK-64-NEXT: %local_f32m4 = alloca <8 x float>, align 8
+// CHECK-64-NEXT: %local_f64m4 = alloca <4 x double>, align 8
+// CHECK-64-NEXT: %local_i8m8 = alloca <64 x i8>, align 8
+// CHECK-64-NEXT: %local_i16m8 = alloca <32 x i16>, align 8
+// CHECK-64-NEXT: %local_i32m8 = alloca <16 x i32>, align 8
+// CHECK-64-NEXT: %local_i64m8 = alloca <8 x i64>, align 8
+// CHECK-64-NEXT: %local_u8m8 = alloca <64 x i8>, align 8
+// CHECK-64-NEXT: %local_u16m8 = alloca <32 x i16>, align 8
+// CHECK-64-NEXT: %local_u32m8 = alloca <16 x i32>, align 8
+// CHECK-64-NEXT: %local_u64m8 = alloca <8 x i64>, align 8
+// CHECK-64-NEXT: %local_f32m8 = alloca <16 x float>, align 8
+// CHECK-64-NEXT: %local_f64m8 = alloca <8 x double>, align 8
 
 // CHECK-128:      %local_i8 = alloca <16 x i8>, align 8
 // CHECK-128-NEXT: %local_i16 = alloca <8 x i16>, align 8
@@ -382,6 +1290,36 @@ void f() {
 // CHECK-128-NEXT: %local_u64 = alloca <2 x i64>, align 8
 // CHECK-128-NEXT: %local_f32 = alloca <4 x float>, align 8
 // CHECK-128-NEXT: %local_f64 = alloca <2 x double>, align 8
+// CHECK-128-NEXT: %local_i8m2 = alloca <32 x i8>, align 8
+// CHECK-128-NEXT: %local_i16m2 = alloca <16 x i16>, align 8
+// CHECK-128-NEXT: %local_i32m2 = alloca <8 x i32>, align 8
+// CHECK-128-NEXT: %local_i64m2 = alloca <4 x i64>, align 8
+// CHECK-128-NEXT: %local_u8m2 = alloca <32 x i8>, align 8
+// CHECK-128-NEXT: %local_u16m2 = alloca <16 x i16>, align 8
+// CHECK-128-NEXT: %local_u32m2 = alloca <8 x i32>, align 8
+// CHECK-128-NEXT: %local_u64m2 = alloca <4 x i64>, align 8
+// CHECK-128-NEXT: %local_f32m2 = alloca <8 x float>, align 8
+// CHECK-128-NEXT: %local_f64m2 = alloca <4 x double>, align 8
+// CHECK-128-NEXT: %local_i8m4 = alloca <64 x i8>, align 8
+// CHECK-128-NEXT: %local_i16m4 = alloca <32 x i16>, align 8
+// CHECK-128-NEXT: %local_i32m4 = alloca <16 x i32>, align 8
+// CHECK-128-NEXT: %local_i64m4 = alloca <8 x i64>, align 8
+// CHECK-128-NEXT: %local_u8m4 = alloca <64 x i8>, align 8
+// CHECK-128-NEXT: %local_u16m4 = alloca <32 x i16>, align 8
+// CHECK-128-NEXT: %local_u32m4 = alloca <16 x i32>, align 8
+// CHECK-128-NEXT: %local_u64m4 = alloca <8 x i64>, align 8
+// CHECK-128-NEXT: %local_f32m4 = alloca <16 x float>, align 8
+// CHECK-128-NEXT: %local_f64m4 = alloca <8 x double>, align 8
+// CHECK-128-NEXT: %local_i8m8 = alloca <128 x i8>, align 8
+// CHECK-128-NEXT: %local_i16m8 = alloca <64 x i16>, align 8
+// CHECK-128-NEXT: %local_i32m8 = alloca <32 x i32>, align 8
+// CHECK-128-NEXT: %local_i64m8 = alloca <16 x i64>, align 8
+// CHECK-128-NEXT: %local_u8m8 = alloca <128 x i8>, align 8
+// CHECK-128-NEXT: %local_u16m8 = alloca <64 x i16>, align 8
+// CHECK-128-NEXT: %local_u32m8 = alloca <32 x i32>, align 8
+// CHECK-128-NEXT: %local_u64m8 = alloca <16 x i64>, align 8
+// CHECK-128-NEXT: %local_f32m8 = alloca <32 x float>, align 8
+// CHECK-128-NEXT: %local_f64m8 = alloca <16 x double>, align 8
 
 // CHECK-256:      %local_i8 = alloca <32 x i8>, align 8
 // CHECK-256-NEXT: %local_i16 = alloca <16 x i16>, align 8
@@ -393,6 +1331,36 @@ void f() {
 // CHECK-256-NEXT: %local_u64 = alloca <4 x i64>, align 8
 // CHECK-256-NEXT: %local_f32 = alloca <8 x float>, align 8
 // CHECK-256-NEXT: %local_f64 = alloca <4 x double>, align 8
+// CHECK-256-NEXT: %local_i8m2 = alloca <64 x i8>, align 8
+// CHECK-256-NEXT: %local_i16m2 = alloca <32 x i16>, align 8
+// CHECK-256-NEXT: %local_i32m2 = alloca <16 x i32>, align 8
+// CHECK-256-NEXT: %local_i64m2 = alloca <8 x i64>, align 8
+// CHECK-256-NEXT: %local_u8m2 = alloca <64 x i8>, align 8
+// CHECK-256-NEXT: %local_u16m2 = alloca <32 x i16>, align 8
+// CHECK-256-NEXT: %local_u32m2 = alloca <16 x i32>, align 8
+// CHECK-256-NEXT: %local_u64m2 = alloca <8 x i64>, align 8
+// CHECK-256-NEXT: %local_f32m2 = alloca <16 x float>, align 8
+// CHECK-256-NEXT: %local_f64m2 = alloca <8 x double>, align 8
+// CHECK-256-NEXT: %local_i8m4 = alloca <128 x i8>, align 8
+// CHECK-256-NEXT: %local_i16m4 = alloca <64 x i16>, align 8
+// CHECK-256-NEXT: %local_i32m4 = alloca <32 x i32>, align 8
+// CHECK-256-NEXT: %local_i64m4 = alloca <16 x i64>, align 8
+// CHECK-256-NEXT: %local_u8m4 = alloca <128 x i8>, align 8
+// CHECK-256-NEXT: %local_u16m4 = alloca <64 x i16>, align 8
+// CHECK-256-NEXT: %local_u32m4 = alloca <32 x i32>, align 8
+// CHECK-256-NEXT: %local_u64m4 = alloca <16 x i64>, align 8
+// CHECK-256-NEXT: %local_f32m4 = alloca <32 x float>, align 8
+// CHECK-256-NEXT: %local_f64m4 = alloca <16 x double>, align 8
+// CHECK-256-NEXT: %local_i8m8 = alloca <256 x i8>, align 8
+// CHECK-256-NEXT: %local_i16m8 = alloca <128 x i16>, align 8
+// CHECK-256-NEXT: %local_i32m8 = alloca <64 x i32>, align 8
+// CHECK-256-NEXT: %local_i64m8 = alloca <32 x i64>, align 8
+// CHECK-256-NEXT: %local_u8m8 = alloca <256 x i8>, align 8
+// CHECK-256-NEXT: %local_u16m8 = alloca <128 x i16>, align 8
+// CHECK-256-NEXT: %local_u32m8 = alloca <64 x i32>, align 8
+// CHECK-256-NEXT: %local_u64m8 = alloca <32 x i64>, align 8
+// CHECK-256-NEXT: %local_f32m8 = alloca <64 x float>, align 8
+// CHECK-256-NEXT: %local_f64m8 = alloca <32 x double>, align 8
 
 // CHECK-512:      %local_i8 = alloca <64 x i8>, align 8
 // CHECK-512-NEXT: %local_i16 = alloca <32 x i16>, align 8
@@ -404,6 +1372,36 @@ void f() {
 // CHECK-512-NEXT: %local_u64 = alloca <8 x i64>, align 8
 // CHECK-512-NEXT: %local_f32 = alloca <16 x float>, align 8
 // CHECK-512-NEXT: %local_f64 = alloca <8 x double>, align 8
+// CHECK-512-NEXT: %local_i8m2 = alloca <128 x i8>, align 8
+// CHECK-512-NEXT: %local_i16m2 = alloca <64 x i16>, align 8
+// CHECK-512-NEXT: %local_i32m2 = alloca <32 x i32>, align 8
+// CHECK-512-NEXT: %local_i64m2 = alloca <16 x i64>, align 8
+// CHECK-512-NEXT: %local_u8m2 = alloca <128 x i8>, align 8
+// CHECK-512-NEXT: %local_u16m2 = alloca <64 x i16>, align 8
+// CHECK-512-NEXT: %local_u32m2 = alloca <32 x i32>, align 8
+// CHECK-512-NEXT: %local_u64m2 = alloca <16 x i64>, align 8
+// CHECK-512-NEXT: %local_f32m2 = alloca <32 x float>, align 8
+// CHECK-512-NEXT: %local_f64m2 = alloca <16 x double>, align 8
+// CHECK-512-NEXT: %local_i8m4 = alloca <256 x i8>, align 8
+// CHECK-512-NEXT: %local_i16m4 = alloca <128 x i16>, align 8
+// CHECK-512-NEXT: %local_i32m4 = alloca <64 x i32>, align 8
+// CHECK-512-NEXT: %local_i64m4 = alloca <32 x i64>, align 8
+// CHECK-512-NEXT: %local_u8m4 = alloca <256 x i8>, align 8
+// CHECK-512-NEXT: %local_u16m4 = alloca <128 x i16>, align 8
+// CHECK-512-NEXT: %local_u32m4 = alloca <64 x i32>, align 8
+// CHECK-512-NEXT: %local_u64m4 = alloca <32 x i64>, align 8
+// CHECK-512-NEXT: %local_f32m4 = alloca <64 x float>, align 8
+// CHECK-512-NEXT: %local_f64m4 = alloca <32 x double>, align 8
+// CHECK-512-NEXT: %local_i8m8 = alloca <512 x i8>, align 8
+// CHECK-512-NEXT: %local_i16m8 = alloca <256 x i16>, align 8
+// CHECK-512-NEXT: %local_i32m8 = alloca <128 x i32>, align 8
+// CHECK-512-NEXT: %local_i64m8 = alloca <64 x i64>, align 8
+// CHECK-512-NEXT: %local_u8m8 = alloca <512 x i8>, align 8
+// CHECK-512-NEXT: %local_u16m8 = alloca <256 x i16>, align 8
+// CHECK-512-NEXT: %local_u32m8 = alloca <128 x i32>, align 8
+// CHECK-512-NEXT: %local_u64m8 = alloca <64 x i64>, align 8
+// CHECK-512-NEXT: %local_f32m8 = alloca <128 x float>, align 8
+// CHECK-512-NEXT: %local_f64m8 = alloca <64 x double>, align 8
 
 // CHECK-1024:       %local_i8 = alloca <128 x i8>, align 8
 // CHECK-1024-NEXT:  %local_i16 = alloca <64 x i16>, align 8
@@ -415,6 +1413,36 @@ void f() {
 // CHECK-1024-NEXT:  %local_u64 = alloca <16 x i64>, align 8
 // CHECK-1024-NEXT:  %local_f32 = alloca <32 x float>, align 8
 // CHECK-1024-NEXT:  %local_f64 = alloca <16 x double>, align 8
+// CHECK-1024-NEXT:  %local_i8m2 = alloca <256 x i8>, align 8
+// CHECK-1024-NEXT:  %local_i16m2 = alloca <128 x i16>, align 8
+// CHECK-1024-NEXT:  %local_i32m2 = alloca <64 x i32>, align 8
+// CHECK-1024-NEXT:  %local_i64m2 = alloca <32 x i64>, align 8
+// CHECK-1024-NEXT:  %local_u8m2 = alloca <256 x i8>, align 8
+// CHECK-1024-NEXT:  %local_u16m2 = alloca <128 x i16>, align 8
+// CHECK-1024-NEXT:  %local_u32m2 = alloca <64 x i32>, align 8
+// CHECK-1024-NEXT:  %local_u64m2 = alloca <32 x i64>, align 8
+// CHECK-1024-NEXT:  %local_f32m2 = alloca <64 x float>, align 8
+// CHECK-1024-NEXT:  %local_f64m2 = alloca <32 x double>, align 8
+// CHECK-1024-NEXT:  %local_i8m4 = alloca <512 x i8>, align 8
+// CHECK-1024-NEXT:  %local_i16m4 = alloca <256 x i16>, align 8
+// CHECK-1024-NEXT:  %local_i32m4 = alloca <128 x i32>, align 8
+// CHECK-1024-NEXT:  %local_i64m4 = alloca <64 x i64>, align 8
+// CHECK-1024-NEXT:  %local_u8m4 = alloca <512 x i8>, align 8
+// CHECK-1024-NEXT:  %local_u16m4 = alloca <256 x i16>, align 8
+// CHECK-1024-NEXT:  %local_u32m4 = alloca <128 x i32>, align 8
+// CHECK-1024-NEXT:  %local_u64m4 = alloca <64 x i64>, align 8
+// CHECK-1024-NEXT:  %local_f32m4 = alloca <128 x float>, align 8
+// CHECK-1024-NEXT:  %local_f64m4 = alloca <64 x double>, align 8
+// CHECK-1024-NEXT:  %local_i8m8 = alloca <1024 x i8>, align 8
+// CHECK-1024-NEXT:  %local_i16m8 = alloca <512 x i16>, align 8
+// CHECK-1024-NEXT:  %local_i32m8 = alloca <256 x i32>, align 8
+// CHECK-1024-NEXT:  %local_i64m8 = alloca <128 x i64>, align 8
+// CHECK-1024-NEXT:  %local_u8m8 = alloca <1024 x i8>, align 8
+// CHECK-1024-NEXT:  %local_u16m8 = alloca <512 x i16>, align 8
+// CHECK-1024-NEXT:  %local_u32m8 = alloca <256 x i32>, align 8
+// CHECK-1024-NEXT:  %local_u64m8 = alloca <128 x i64>, align 8
+// CHECK-1024-NEXT:  %local_f32m8 = alloca <256 x float>, align 8
+// CHECK-1024-NEXT:  %local_f64m8 = alloca <128 x double>, align 8
 
 //===----------------------------------------------------------------------===//
 // Local arrays
@@ -429,6 +1457,36 @@ void f() {
 // CHECK-64-NEXT: %local_arr_u64 = alloca [3 x <1 x i64>], align 8
 // CHECK-64-NEXT: %local_arr_f32 = alloca [3 x <2 x float>], align 8
 // CHECK-64-NEXT: %local_arr_f64 = alloca [3 x <1 x double>], align 8
+// CHECK-64-NEXT: %local_arr_i8m2 = alloca [3 x <16 x i8>], align 8
+// CHECK-64-NEXT: %local_arr_i16m2 = alloca [3 x <8 x i16>], align 8
+// CHECK-64-NEXT: %local_arr_i32m2 = alloca [3 x <4 x i32>], align 8
+// CHECK-64-NEXT: %local_arr_i64m2 = alloca [3 x <2 x i64>], align 8
+// CHECK-64-NEXT: %local_arr_u8m2 = alloca [3 x <16 x i8>], align 8
+// CHECK-64-NEXT: %local_arr_u16m2 = alloca [3 x <8 x i16>], align 8
+// CHECK-64-NEXT: %local_arr_u32m2 = alloca [3 x <4 x i32>], align 8
+// CHECK-64-NEXT: %local_arr_u64m2 = alloca [3 x <2 x i64>], align 8
+// CHECK-64-NEXT: %local_arr_f32m2 = alloca [3 x <4 x float>], align 8
+// CHECK-64-NEXT: %local_arr_f64m2 = alloca [3 x <2 x double>], align 8
+// CHECK-64-NEXT: %local_arr_i8m4 = alloca [3 x <32 x i8>], align 8
+// CHECK-64-NEXT: %local_arr_i16m4 = alloca [3 x <16 x i16>], align 8
+// CHECK-64-NEXT: %local_arr_i32m4 = alloca [3 x <8 x i32>], align 8
+// CHECK-64-NEXT: %local_arr_i64m4 = alloca [3 x <4 x i64>], align 8
+// CHECK-64-NEXT: %local_arr_u8m4 = alloca [3 x <32 x i8>], align 8
+// CHECK-64-NEXT: %local_arr_u16m4 = alloca [3 x <16 x i16>], align 8
+// CHECK-64-NEXT: %local_arr_u32m4 = alloca [3 x <8 x i32>], align 8
+// CHECK-64-NEXT: %local_arr_u64m4 = alloca [3 x <4 x i64>], align 8
+// CHECK-64-NEXT: %local_arr_f32m4 = alloca [3 x <8 x float>], align 8
+// CHECK-64-NEXT: %local_arr_f64m4 = alloca [3 x <4 x double>], align 8
+// CHECK-64-NEXT: %local_arr_i8m8 = alloca [3 x <64 x i8>], align 8
+// CHECK-64-NEXT: %local_arr_i16m8 = alloca [3 x <32 x i16>], align 8
+// CHECK-64-NEXT: %local_arr_i32m8 = alloca [3 x <16 x i32>], align 8
+// CHECK-64-NEXT: %local_arr_i64m8 = alloca [3 x <8 x i64>], align 8
+// CHECK-64-NEXT: %local_arr_u8m8 = alloca [3 x <64 x i8>], align 8
+// CHECK-64-NEXT: %local_arr_u16m8 = alloca [3 x <32 x i16>], align 8
+// CHECK-64-NEXT: %local_arr_u32m8 = alloca [3 x <16 x i32>], align 8
+// CHECK-64-NEXT: %local_arr_u64m8 = alloca [3 x <8 x i64>], align 8
+// CHECK-64-NEXT: %local_arr_f32m8 = alloca [3 x <16 x float>], align 8
+// CHECK-64-NEXT: %local_arr_f64m8 = alloca [3 x <8 x double>], align 8
 
 // CHECK-128:      %local_arr_i8 = alloca [3 x <16 x i8>], align 8
 // CHECK-128-NEXT: %local_arr_i16 = alloca [3 x <8 x i16>], align 8
@@ -440,6 +1498,36 @@ void f() {
 // CHECK-128-NEXT: %local_arr_u64 = alloca [3 x <2 x i64>], align 8
 // CHECK-128-NEXT: %local_arr_f32 = alloca [3 x <4 x float>], align 8
 // CHECK-128-NEXT: %local_arr_f64 = alloca [3 x <2 x double>], align 8
+// CHECK-128-NEXT: %local_arr_i8m2 = alloca [3 x <32 x i8>], align 8
+// CHECK-128-NEXT: %local_arr_i16m2 = alloca [3 x <16 x i16>], align 8
+// CHECK-128-NEXT: %local_arr_i32m2 = alloca [3 x <8 x i32>], align 8
+// CHECK-128-NEXT: %local_arr_i64m2 = alloca [3 x <4 x i64>], align 8
+// CHECK-128-NEXT: %local_arr_u8m2 = alloca [3 x <32 x i8>], align 8
+// CHECK-128-NEXT: %local_arr_u16m2 = alloca [3 x <16 x i16>], align 8
+// CHECK-128-NEXT: %local_arr_u32m2 = alloca [3 x <8 x i32>], align 8
+// CHECK-128-NEXT: %local_arr_u64m2 = alloca [3 x <4 x i64>], align 8
+// CHECK-128-NEXT: %local_arr_f32m2 = alloca [3 x <8 x float>], align 8
+// CHECK-128-NEXT: %local_arr_f64m2 = alloca [3 x <4 x double>], align 8
+// CHECK-128-NEXT: %local_arr_i8m4 = alloca [3 x <64 x i8>], align 8
+// CHECK-128-NEXT: %local_arr_i16m4 = alloca [3 x <32 x i16>], align 8
+// CHECK-128-NEXT: %local_arr_i32m4 = alloca [3 x <16 x i32>], align 8
+// CHECK-128-NEXT: %local_arr_i64m4 = alloca [3 x <8 x i64>], align 8
+// CHECK-128-NEXT: %local_arr_u8m4 = alloca [3 x <64 x i8>], align 8
+// CHECK-128-NEXT: %local_arr_u16m4 = alloca [3 x <32 x i16>], align 8
+// CHECK-128-NEXT: %local_arr_u32m4 = alloca [3 x <16 x i32>], align 8
+// CHECK-128-NEXT: %local_arr_u64m4 = alloca [3 x <8 x i64>], align 8
+// CHECK-128-NEXT: %local_arr_f32m4 = alloca [3 x <16 x float>], align 8
+// CHECK-128-NEXT: %local_arr_f64m4 = alloca [3 x <8 x double>], align 8
+// CHECK-128-NEXT: %local_arr_i8m8 = alloca [3 x <128 x i8>], align 8
+// CHECK-128-NEXT: %local_arr_i16m8 = alloca [3 x <64 x i16>], align 8
+// CHECK-128-NEXT: %local_arr_i32m8 = alloca [3 x <32 x i32>], align 8
+// CHECK-128-NEXT: %local_arr_i64m8 = alloca [3 x <16 x i64>], align 8
+// CHECK-128-NEXT: %local_arr_u8m8 = alloca [3 x <128 x i8>], align 8
+// CHECK-128-NEXT: %local_arr_u16m8 = alloca [3 x <64 x i16>], align 8
+// CHECK-128-NEXT: %local_arr_u32m8 = alloca [3 x <32 x i32>], align 8
+// CHECK-128-NEXT: %local_arr_u64m8 = alloca [3 x <16 x i64>], align 8
+// CHECK-128-NEXT: %local_arr_f32m8 = alloca [3 x <32 x float>], align 8
+// CHECK-128-NEXT: %local_arr_f64m8 = alloca [3 x <16 x double>], align 8
 
 // CHECK-256:      %local_arr_i8 = alloca [3 x <32 x i8>], align 8
 // CHECK-256-NEXT: %local_arr_i16 = alloca [3 x <16 x i16>], align 8
@@ -451,6 +1539,36 @@ void f() {
 // CHECK-256-NEXT: %local_arr_u64 = alloca [3 x <4 x i64>], align 8
 // CHECK-256-NEXT: %local_arr_f32 = alloca [3 x <8 x float>], align 8
 // CHECK-256-NEXT: %local_arr_f64 = alloca [3 x <4 x double>], align 8
+// CHECK-256-NEXT: %local_arr_i8m2 = alloca [3 x <64 x i8>], align 8
+// CHECK-256-NEXT: %local_arr_i16m2 = alloca [3 x <32 x i16>], align 8
+// CHECK-256-NEXT: %local_arr_i32m2 = alloca [3 x <16 x i32>], align 8
+// CHECK-256-NEXT: %local_arr_i64m2 = alloca [3 x <8 x i64>], align 8
+// CHECK-256-NEXT: %local_arr_u8m2 = alloca [3 x <64 x i8>], align 8
+// CHECK-256-NEXT: %local_arr_u16m2 = alloca [3 x <32 x i16>], align 8
+// CHECK-256-NEXT: %local_arr_u32m2 = alloca [3 x <16 x i32>], align 8
+// CHECK-256-NEXT: %local_arr_u64m2 = alloca [3 x <8 x i64>], align 8
+// CHECK-256-NEXT: %local_arr_f32m2 = alloca [3 x <16 x float>], align 8
+// CHECK-256-NEXT: %local_arr_f64m2 = alloca [3 x <8 x double>], align 8
+// CHECK-256-NEXT: %local_arr_i8m4 = alloca [3 x <128 x i8>], align 8
+// CHECK-256-NEXT: %local_arr_i16m4 = alloca [3 x <64 x i16>], align 8
+// CHECK-256-NEXT: %local_arr_i32m4 = alloca [3 x <32 x i32>], align 8
+// CHECK-256-NEXT: %local_arr_i64m4 = alloca [3 x <16 x i64>], align 8
+// CHECK-256-NEXT: %local_arr_u8m4 = alloca [3 x <128 x i8>], align 8
+// CHECK-256-NEXT: %local_arr_u16m4 = alloca [3 x <64 x i16>], align 8
+// CHECK-256-NEXT: %local_arr_u32m4 = alloca [3 x <32 x i32>], align 8
+// CHECK-256-NEXT: %local_arr_u64m4 = alloca [3 x <16 x i64>], align 8
+// CHECK-256-NEXT: %local_arr_f32m4 = alloca [3 x <32 x float>], align 8
+// CHECK-256-NEXT: %local_arr_f64m4 = alloca [3 x <16 x double>], align 8
+// CHECK-256-NEXT: %local_arr_i8m8 = alloca [3 x <256 x i8>], align 8
+// CHECK-256-NEXT: %local_arr_i16m8 = alloca [3 x <128 x i16>], align 8
+// CHECK-256-NEXT: %local_arr_i32m8 = alloca [3 x <64 x i32>], align 8
+// CHECK-256-NEXT: %local_arr_i64m8 = alloca [3 x <32 x i64>], align 8
+// CHECK-256-NEXT: %local_arr_u8m8 = alloca [3 x <256 x i8>], align 8
+// CHECK-256-NEXT: %local_arr_u16m8 = alloca [3 x <128 x i16>], align 8
+// CHECK-256-NEXT: %local_arr_u32m8 = alloca [3 x <64 x i32>], align 8
+// CHECK-256-NEXT: %local_arr_u64m8 = alloca [3 x <32 x i64>], align 8
+// CHECK-256-NEXT: %local_arr_f32m8 = alloca [3 x <64 x float>], align 8
+// CHECK-256-NEXT: %local_arr_f64m8 = alloca [3 x <32 x double>], align 8
 
 // CHECK-512:      %local_arr_i8 = alloca [3 x <64 x i8>], align 8
 // CHECK-512-NEXT: %local_arr_i16 = alloca [3 x <32 x i16>], align 8
@@ -462,6 +1580,36 @@ void f() {
 // CHECK-512-NEXT: %local_arr_u64 = alloca [3 x <8 x i64>], align 8
 // CHECK-512-NEXT: %local_arr_f32 = alloca [3 x <16 x float>], align 8
 // CHECK-512-NEXT: %local_arr_f64 = alloca [3 x <8 x double>], align 8
+// CHECK-512-NEXT: %local_arr_i8m2 = alloca [3 x <128 x i8>], align 8
+// CHECK-512-NEXT: %local_arr_i16m2 = alloca [3 x <64 x i16>], align 8
+// CHECK-512-NEXT: %local_arr_i32m2 = alloca [3 x <32 x i32>], align 8
+// CHECK-512-NEXT: %local_arr_i64m2 = alloca [3 x <16 x i64>], align 8
+// CHECK-512-NEXT: %local_arr_u8m2 = alloca [3 x <128 x i8>], align 8
+// CHECK-512-NEXT: %local_arr_u16m2 = alloca [3 x <64 x i16>], align 8
+// CHECK-512-NEXT: %local_arr_u32m2 = alloca [3 x <32 x i32>], align 8
+// CHECK-512-NEXT: %local_arr_u64m2 = alloca [3 x <16 x i64>], align 8
+// CHECK-512-NEXT: %local_arr_f32m2 = alloca [3 x <32 x float>], align 8
+// CHECK-512-NEXT: %local_arr_f64m2 = alloca [3 x <16 x double>], align 8
+// CHECK-512-NEXT: %local_arr_i8m4 = alloca [3 x <256 x i8>], align 8
+// CHECK-512-NEXT: %local_arr_i16m4 = alloca [3 x <128 x i16>], align 8
+// CHECK-512-NEXT: %local_arr_i32m4 = alloca [3 x <64 x i32>], align 8
+// CHECK-512-NEXT: %local_arr_i64m4 = alloca [3 x <32 x i64>], align 8
+// CHECK-512-NEXT: %local_arr_u8m4 = alloca [3 x <256 x i8>], align 8
+// CHECK-512-NEXT: %local_arr_u16m4 = alloca [3 x <128 x i16>], align 8
+// CHECK-512-NEXT: %local_arr_u32m4 = alloca [3 x <64 x i32>], align 8
+// CHECK-512-NEXT: %local_arr_u64m4 = alloca [3 x <32 x i64>], align 8
+// CHECK-512-NEXT: %local_arr_f32m4 = alloca [3 x <64 x float>], align 8
+// CHECK-512-NEXT: %local_arr_f64m4 = alloca [3 x <32 x double>], align 8
+// CHECK-512-NEXT: %local_arr_i8m8 = alloca [3 x <512 x i8>], align 8
+// CHECK-512-NEXT: %local_arr_i16m8 = alloca [3 x <256 x i16>], align 8
+// CHECK-512-NEXT: %local_arr_i32m8 = alloca [3 x <128 x i32>], align 8
+// CHECK-512-NEXT: %local_arr_i64m8 = alloca [3 x <64 x i64>], align 8
+// CHECK-512-NEXT: %local_arr_u8m8 = alloca [3 x <512 x i8>], align 8
+// CHECK-512-NEXT: %local_arr_u16m8 = alloca [3 x <256 x i16>], align 8
+// CHECK-512-NEXT: %local_arr_u32m8 = alloca [3 x <128 x i32>], align 8
+// CHECK-512-NEXT: %local_arr_u64m8 = alloca [3 x <64 x i64>], align 8
+// CHECK-512-NEXT: %local_arr_f32m8 = alloca [3 x <128 x float>], align 8
+// CHECK-512-NEXT: %local_arr_f64m8 = alloca [3 x <64 x double>], align 8
 
 // CHECK-1024:       %local_arr_i8 = alloca [3 x <128 x i8>], align 8
 // CHECK-1024-NEXT:  %local_arr_i16 = alloca [3 x <64 x i16>], align 8
@@ -473,3 +1621,33 @@ void f() {
 // CHECK-1024-NEXT:  %local_arr_u64 = alloca [3 x <16 x i64>], align 8
 // CHECK-1024-NEXT:  %local_arr_f32 = alloca [3 x <32 x float>], align 8
 // CHECK-1024-NEXT:  %local_arr_f64 = alloca [3 x <16 x double>], align 8
+// CHECK-1024-NEXT:  %local_arr_i8m2 = alloca [3 x <256 x i8>], align 8
+// CHECK-1024-NEXT:  %local_arr_i16m2 = alloca [3 x <128 x i16>], align 8
+// CHECK-1024-NEXT:  %local_arr_i32m2 = alloca [3 x <64 x i32>], align 8
+// CHECK-1024-NEXT:  %local_arr_i64m2 = alloca [3 x <32 x i64>], align 8
+// CHECK-1024-NEXT:  %local_arr_u8m2 = alloca [3 x <256 x i8>], align 8
+// CHECK-1024-NEXT:  %local_arr_u16m2 = alloca [3 x <128 x i16>], align 8
+// CHECK-1024-NEXT:  %local_arr_u32m2 = alloca [3 x <64 x i32>], align 8
+// CHECK-1024-NEXT:  %local_arr_u64m2 = alloca [3 x <32 x i64>], align 8
+// CHECK-1024-NEXT:  %local_arr_f32m2 = alloca [3 x <64 x float>], align 8
+// CHECK-1024-NEXT:  %local_arr_f64m2 = alloca [3 x <32 x double>], align 8
+// CHECK-1024-NEXT:  %local_arr_i8m4 = alloca [3 x <512 x i8>], align 8
+// CHECK-1024-NEXT:  %local_arr_i16m4 = alloca [3 x <256 x i16>], align 8
+// CHECK-1024-NEXT:  %local_arr_i32m4 = alloca [3 x <128 x i32>], align 8
+// CHECK-1024-NEXT:  %local_arr_i64m4 = alloca [3 x <64 x i64>], align 8
+// CHECK-1024-NEXT:  %local_arr_u8m4 = alloca [3 x <512 x i8>], align 8
+// CHECK-1024-NEXT:  %local_arr_u16m4 = alloca [3 x <256 x i16>], align 8
+// CHECK-1024-NEXT:  %local_arr_u32m4 = alloca [3 x <128 x i32>], align 8
+// CHECK-1024-NEXT:  %local_arr_u64m4 = alloca [3 x <64 x i64>], align 8
+// CHECK-1024-NEXT:  %local_arr_f32m4 = alloca [3 x <128 x float>], align 8
+// CHECK-1024-NEXT:  %local_arr_f64m4 = alloca [3 x <64 x double>], align 8
+// CHECK-1024-NEXT:  %local_arr_i8m8 = alloca [3 x <1024 x i8>], align 8
+// CHECK-1024-NEXT:  %local_arr_i16m8 = alloca [3 x <512 x i16>], align 8
+// CHECK-1024-NEXT:  %local_arr_i32m8 = alloca [3 x <256 x i32>], align 8
+// CHECK-1024-NEXT:  %local_arr_i64m8 = alloca [3 x <128 x i64>], align 8
+// CHECK-1024-NEXT:  %local_arr_u8m8 = alloca [3 x <1024 x i8>], align 8
+// CHECK-1024-NEXT:  %local_arr_u16m8 = alloca [3 x <512 x i16>], align 8
+// CHECK-1024-NEXT:  %local_arr_u32m8 = alloca [3 x <256 x i32>], align 8
+// CHECK-1024-NEXT:  %local_arr_u64m8 = alloca [3 x <128 x i64>], align 8
+// CHECK-1024-NEXT:  %local_arr_f32m8 = alloca [3 x <256 x float>], align 8
+// CHECK-1024-NEXT:  %local_arr_f64m8 = alloca [3 x <128 x double>], align 8

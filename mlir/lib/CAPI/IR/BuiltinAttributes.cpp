@@ -44,6 +44,10 @@ MlirAffineMap mlirAffineMapAttrGetValue(MlirAttribute attr) {
   return wrap(llvm::cast<AffineMapAttr>(unwrap(attr)).getValue());
 }
 
+MlirTypeID mlirAffineMapAttrGetTypeID(void) {
+  return wrap(AffineMapAttr::getTypeID());
+}
+
 //===----------------------------------------------------------------------===//
 // Array attribute.
 //===----------------------------------------------------------------------===//
@@ -67,6 +71,8 @@ intptr_t mlirArrayAttrGetNumElements(MlirAttribute attr) {
 MlirAttribute mlirArrayAttrGetElement(MlirAttribute attr, intptr_t pos) {
   return wrap(llvm::cast<ArrayAttr>(unwrap(attr)).getValue()[pos]);
 }
+
+MlirTypeID mlirArrayAttrGetTypeID(void) { return wrap(ArrayAttr::getTypeID()); }
 
 //===----------------------------------------------------------------------===//
 // Dictionary attribute.
@@ -102,6 +108,10 @@ MlirAttribute mlirDictionaryAttrGetElementByName(MlirAttribute attr,
   return wrap(llvm::cast<DictionaryAttr>(unwrap(attr)).get(unwrap(name)));
 }
 
+MlirTypeID mlirDictionaryAttrGetTypeID(void) {
+  return wrap(DictionaryAttr::getTypeID());
+}
+
 //===----------------------------------------------------------------------===//
 // Floating point attribute.
 //===----------------------------------------------------------------------===//
@@ -123,6 +133,8 @@ MlirAttribute mlirFloatAttrDoubleGetChecked(MlirLocation loc, MlirType type,
 double mlirFloatAttrGetValueDouble(MlirAttribute attr) {
   return llvm::cast<FloatAttr>(unwrap(attr)).getValueAsDouble();
 }
+
+MlirTypeID mlirFloatAttrGetTypeID(void) { return wrap(FloatAttr::getTypeID()); }
 
 //===----------------------------------------------------------------------===//
 // Integer attribute.
@@ -148,6 +160,10 @@ uint64_t mlirIntegerAttrGetValueUInt(MlirAttribute attr) {
   return llvm::cast<IntegerAttr>(unwrap(attr)).getUInt();
 }
 
+MlirTypeID mlirIntegerAttrGetTypeID(void) {
+  return wrap(IntegerAttr::getTypeID());
+}
+
 //===----------------------------------------------------------------------===//
 // Bool attribute.
 //===----------------------------------------------------------------------===//
@@ -170,6 +186,10 @@ bool mlirBoolAttrGetValue(MlirAttribute attr) {
 
 bool mlirAttributeIsAIntegerSet(MlirAttribute attr) {
   return llvm::isa<IntegerSetAttr>(unwrap(attr));
+}
+
+MlirTypeID mlirIntegerSetAttrGetTypeID(void) {
+  return wrap(IntegerSetAttr::getTypeID());
 }
 
 //===----------------------------------------------------------------------===//
@@ -197,6 +217,10 @@ MlirStringRef mlirOpaqueAttrGetData(MlirAttribute attr) {
   return wrap(llvm::cast<OpaqueAttr>(unwrap(attr)).getAttrData());
 }
 
+MlirTypeID mlirOpaqueAttrGetTypeID(void) {
+  return wrap(OpaqueAttr::getTypeID());
+}
+
 //===----------------------------------------------------------------------===//
 // String attribute.
 //===----------------------------------------------------------------------===//
@@ -215,6 +239,10 @@ MlirAttribute mlirStringAttrTypedGet(MlirType type, MlirStringRef str) {
 
 MlirStringRef mlirStringAttrGetValue(MlirAttribute attr) {
   return wrap(llvm::cast<StringAttr>(unwrap(attr)).getValue());
+}
+
+MlirTypeID mlirStringAttrGetTypeID(void) {
+  return wrap(StringAttr::getTypeID());
 }
 
 //===----------------------------------------------------------------------===//
@@ -257,6 +285,10 @@ MlirAttribute mlirSymbolRefAttrGetNestedReference(MlirAttribute attr,
       llvm::cast<SymbolRefAttr>(unwrap(attr)).getNestedReferences()[pos]);
 }
 
+MlirTypeID mlirSymbolRefAttrGetTypeID(void) {
+  return wrap(SymbolRefAttr::getTypeID());
+}
+
 //===----------------------------------------------------------------------===//
 // Flat SymbolRef attribute.
 //===----------------------------------------------------------------------===//
@@ -271,6 +303,10 @@ MlirAttribute mlirFlatSymbolRefAttrGet(MlirContext ctx, MlirStringRef symbol) {
 
 MlirStringRef mlirFlatSymbolRefAttrGetValue(MlirAttribute attr) {
   return wrap(llvm::cast<FlatSymbolRefAttr>(unwrap(attr)).getValue());
+}
+
+MlirTypeID mlirFlatSymbolRefAttrGetTypeID(void) {
+  return wrap(FlatSymbolRefAttr::getTypeID());
 }
 
 //===----------------------------------------------------------------------===//
@@ -289,6 +325,8 @@ MlirType mlirTypeAttrGetValue(MlirAttribute attr) {
   return wrap(llvm::cast<TypeAttr>(unwrap(attr)).getValue());
 }
 
+MlirTypeID mlirTypeAttrGetTypeID(void) { return wrap(TypeAttr::getTypeID()); }
+
 //===----------------------------------------------------------------------===//
 // Unit attribute.
 //===----------------------------------------------------------------------===//
@@ -300,6 +338,8 @@ bool mlirAttributeIsAUnit(MlirAttribute attr) {
 MlirAttribute mlirUnitAttrGet(MlirContext ctx) {
   return wrap(UnitAttr::get(unwrap(ctx)));
 }
+
+MlirTypeID mlirUnitAttrGetTypeID(void) { return wrap(UnitAttr::getTypeID()); }
 
 //===----------------------------------------------------------------------===//
 // Elements attributes.
@@ -329,8 +369,13 @@ int64_t mlirElementsAttrGetNumElements(MlirAttribute attr) {
 // Dense array attribute.
 //===----------------------------------------------------------------------===//
 
+MlirTypeID mlirDenseArrayAttrGetTypeID() {
+  return wrap(DenseArrayAttr::getTypeID());
+}
+
 //===----------------------------------------------------------------------===//
 // IsA support.
+//===----------------------------------------------------------------------===//
 
 bool mlirAttributeIsADenseBoolArray(MlirAttribute attr) {
   return llvm::isa<DenseBoolArrayAttr>(unwrap(attr));
@@ -356,6 +401,7 @@ bool mlirAttributeIsADenseF64Array(MlirAttribute attr) {
 
 //===----------------------------------------------------------------------===//
 // Constructors.
+//===----------------------------------------------------------------------===//
 
 MlirAttribute mlirDenseBoolArrayGet(MlirContext ctx, intptr_t size,
                                     int const *values) {
@@ -395,6 +441,7 @@ MlirAttribute mlirDenseF64ArrayGet(MlirContext ctx, intptr_t size,
 
 //===----------------------------------------------------------------------===//
 // Accessors.
+//===----------------------------------------------------------------------===//
 
 intptr_t mlirDenseArrayGetNumElements(MlirAttribute attr) {
   return llvm::cast<DenseArrayAttr>(unwrap(attr)).size();
@@ -402,6 +449,7 @@ intptr_t mlirDenseArrayGetNumElements(MlirAttribute attr) {
 
 //===----------------------------------------------------------------------===//
 // Indexed accessors.
+//===----------------------------------------------------------------------===//
 
 bool mlirDenseBoolArrayGetElement(MlirAttribute attr, intptr_t pos) {
   return llvm::cast<DenseBoolArrayAttr>(unwrap(attr))[pos];
@@ -431,19 +479,27 @@ double mlirDenseF64ArrayGetElement(MlirAttribute attr, intptr_t pos) {
 
 //===----------------------------------------------------------------------===//
 // IsA support.
+//===----------------------------------------------------------------------===//
 
 bool mlirAttributeIsADenseElements(MlirAttribute attr) {
   return llvm::isa<DenseElementsAttr>(unwrap(attr));
 }
+
 bool mlirAttributeIsADenseIntElements(MlirAttribute attr) {
   return llvm::isa<DenseIntElementsAttr>(unwrap(attr));
 }
+
 bool mlirAttributeIsADenseFPElements(MlirAttribute attr) {
   return llvm::isa<DenseFPElementsAttr>(unwrap(attr));
 }
 
+MlirTypeID mlirDenseIntOrFPElementsAttrGetTypeID(void) {
+  return wrap(DenseIntOrFPElementsAttr::getTypeID());
+}
+
 //===----------------------------------------------------------------------===//
 // Constructors.
+//===----------------------------------------------------------------------===//
 
 MlirAttribute mlirDenseElementsAttrGet(MlirType shapedType,
                                        intptr_t numElements,
@@ -620,6 +676,7 @@ MlirAttribute mlirDenseElementsAttrReshapeGet(MlirAttribute attr,
 
 //===----------------------------------------------------------------------===//
 // Splat accessors.
+//===----------------------------------------------------------------------===//
 
 bool mlirDenseElementsAttrIsSplat(MlirAttribute attr) {
   return llvm::cast<DenseElementsAttr>(unwrap(attr)).isSplat();
@@ -663,6 +720,7 @@ MlirStringRef mlirDenseElementsAttrGetStringSplatValue(MlirAttribute attr) {
 
 //===----------------------------------------------------------------------===//
 // Indexed accessors.
+//===----------------------------------------------------------------------===//
 
 bool mlirDenseElementsAttrGetBoolValue(MlirAttribute attr, intptr_t pos) {
   return llvm::cast<DenseElementsAttr>(unwrap(attr)).getValues<bool>()[pos];
@@ -705,6 +763,7 @@ MlirStringRef mlirDenseElementsAttrGetStringValue(MlirAttribute attr,
 
 //===----------------------------------------------------------------------===//
 // Raw data accessors.
+//===----------------------------------------------------------------------===//
 
 const void *mlirDenseElementsAttrGetRawData(MlirAttribute attr) {
   return static_cast<const void *>(
@@ -876,6 +935,10 @@ MlirAttribute mlirSparseElementsAttrGetValues(MlirAttribute attr) {
   return wrap(llvm::cast<SparseElementsAttr>(unwrap(attr)).getValues());
 }
 
+MlirTypeID mlirSparseElementsAttrGetTypeID(void) {
+  return wrap(SparseElementsAttr::getTypeID());
+}
+
 //===----------------------------------------------------------------------===//
 // Strided layout attribute.
 //===----------------------------------------------------------------------===//
@@ -902,4 +965,8 @@ intptr_t mlirStridedLayoutAttrGetNumStrides(MlirAttribute attr) {
 
 int64_t mlirStridedLayoutAttrGetStride(MlirAttribute attr, intptr_t pos) {
   return llvm::cast<StridedLayoutAttr>(unwrap(attr)).getStrides()[pos];
+}
+
+MlirTypeID mlirStridedLayoutAttrGetTypeID(void) {
+  return wrap(StridedLayoutAttr::getTypeID());
 }

@@ -2,7 +2,7 @@
 ! This is a special case because characters are always returned
 ! or handled in memory otherwise.
 
-! RUN: bbc -emit-fir -hlfir -o - %s | FileCheck %s
+! RUN: bbc -emit-hlfir -o - %s | FileCheck %s
 
 subroutine scalar_char(c, i)
   character(1) :: c

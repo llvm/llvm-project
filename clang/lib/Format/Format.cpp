@@ -375,6 +375,7 @@ template <> struct ScalarEnumerationTraits<FormatStyle::LanguageKind> {
     IO.enumCase(Value, "TextProto", FormatStyle::LK_TextProto);
     IO.enumCase(Value, "CSharp", FormatStyle::LK_CSharp);
     IO.enumCase(Value, "Json", FormatStyle::LK_Json);
+    IO.enumCase(Value, "Verilog", FormatStyle::LK_Verilog);
   }
 };
 
@@ -2687,6 +2688,8 @@ private:
         "CGSizeMake",
         "CGVector",
         "CGVectorMake",
+        "FOUNDATION_EXPORT", // This is an alias for FOUNDATION_EXTERN.
+        "FOUNDATION_EXTERN",
         "NSAffineTransform",
         "NSArray",
         "NSAttributedString",
@@ -2743,6 +2746,7 @@ private:
         "NSURLQueryItem",
         "NSUUID",
         "NSValue",
+        "NS_ASSUME_NONNULL_BEGIN",
         "UIImage",
         "UIView",
     };

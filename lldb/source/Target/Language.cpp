@@ -452,11 +452,9 @@ bool Language::ImageListTypeScavenger::Find_Impl(
   return result;
 }
 
-bool Language::GetFormatterPrefixSuffix(ValueObject &valobj,
-                                        ConstString type_hint,
-                                        std::string &prefix,
-                                        std::string &suffix) {
-  return false;
+std::pair<llvm::StringRef, llvm::StringRef>
+Language::GetFormatterPrefixSuffix(llvm::StringRef type_hint) {
+  return std::pair<llvm::StringRef, llvm::StringRef>();
 }
 
 bool Language::DemangledNameContainsPath(llvm::StringRef path, 

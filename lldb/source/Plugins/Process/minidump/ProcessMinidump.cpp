@@ -467,7 +467,7 @@ void ProcessMinidump::ReadModuleList() {
 
     // check if the process is wow64 - a 32 bit windows process running on a
     // 64 bit windows
-    if (llvm::StringRef(name).endswith_insensitive("wow64.dll")) {
+    if (llvm::StringRef(name).ends_with_insensitive("wow64.dll")) {
       m_is_wow64 = true;
     }
 

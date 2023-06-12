@@ -217,10 +217,12 @@ UnrealizedConversionCastOp::fold(FoldAdaptor adaptor,
   return success();
 }
 
-bool UnrealizedConversionCastOp::areCastCompatible(TypeRange inputs,
-                                                   TypeRange outputs) {
-  // `UnrealizedConversionCastOp` is agnostic of the input/output types.
-  return true;
+LogicalResult UnrealizedConversionCastOp::verify() {
+  // TODO: The verifier of external models is not called. This op verifier can
+  // be removed when that is fixed.
+  if (getNumResults() == 0)
+    return emitOpError() << "expected at least one result for cast operation";
+  return success();
 }
 
 //===----------------------------------------------------------------------===//

@@ -27,6 +27,7 @@ namespace vector {
 //===----------------------------------------------------------------------===//
 // Vector transformation options exposed as auxiliary structs.
 //===----------------------------------------------------------------------===//
+
 /// Structure to control the behavior of vector transform patterns.
 struct VectorTransformsOptions {
   /// Option to control the lowering of vector.contract.
@@ -63,6 +64,7 @@ struct VectorTransformsOptions {
 //===----------------------------------------------------------------------===//
 // Standalone transformations and helpers.
 //===----------------------------------------------------------------------===//
+
 /// Split a vector.transfer operation into an in-bounds (i.e., no
 /// out-of-bounds masking) fastpath and a slowpath. If `ifOp` is not null and
 /// the result is `success, the `ifOp` points to the newly created conditional
@@ -105,6 +107,11 @@ LogicalResult splitFullAndPartialTransfer(
 /// Implements transfer op write to read forwarding and dead transfer write
 /// optimizations.
 void transferOpflowOpt(RewriterBase &rewriter, Operation *rootOp);
+
+/// Cast away the leading unit dim, if exists, for the given contract op.
+/// Return success if the transformation applies; return failure otherwise.
+LogicalResult castAwayContractionLeadingOneDim(vector::ContractionOp contractOp,
+                                               RewriterBase &rewriter);
 
 } // namespace vector
 } // namespace mlir

@@ -305,6 +305,7 @@ def enable_ptxas(ptxas_executable):
             (11, 7),
             (11, 8),
             (12, 0),
+            (12, 1),
         ]
 
         def version_int(ver):

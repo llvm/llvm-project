@@ -2,6 +2,7 @@
 
 import gc
 from mlir.ir import *
+from mlir.dialects import arith, tensor, func, memref
 
 
 def run(f):
@@ -382,15 +383,15 @@ def testMemRefType():
         f32 = F32Type.get()
         shape = [2, 3]
         loc = Location.unknown()
-        memref = MemRefType.get(shape, f32, memory_space=Attribute.parse("2"))
+        memref_f32 = MemRefType.get(shape, f32, memory_space=Attribute.parse("2"))
         # CHECK: memref type: memref<2x3xf32, 2>
-        print("memref type:", memref)
+        print("memref type:", memref_f32)
         # CHECK: memref layout: affine_map<(d0, d1) -> (d0, d1)>
-        print("memref layout:", memref.layout)
+        print("memref layout:", memref_f32.layout)
         # CHECK: memref affine map: (d0, d1) -> (d0, d1)
-        print("memref affine map:", memref.affine_map)
+        print("memref affine map:", memref_f32.affine_map)
         # CHECK: memory space: 2
-        print("memory space:", memref.memory_space)
+        print("memory space:", memref_f32.memory_space)
 
         layout = AffineMapAttr.get(AffineMap.get_permutation([1, 0]))
         memref_layout = MemRefType.get(shape, f32, layout=layout)
@@ -413,7 +414,7 @@ def testMemRefType():
         else:
             print("Exception not produced")
 
-        assert memref.shape == shape
+    assert memref_f32.shape == shape
 
 
 # CHECK-LABEL: TEST: testUnrankedMemRefType
@@ -482,9 +483,9 @@ def testFunctionType():
         input_types = [IntegerType.get_signless(32), IntegerType.get_signless(16)]
         result_types = [IndexType.get()]
         func = FunctionType.get(input_types, result_types)
-        # CHECK: INPUTS: [Type(i32), Type(i16)]
+        # CHECK: INPUTS: [IntegerType(i32), IntegerType(i16)]
         print("INPUTS:", func.inputs)
-        # CHECK: RESULTS: [Type(index)]
+        # CHECK: RESULTS: [IndexType(index)]
         print("RESULTS:", func.results)
 
 
@@ -599,3 +600,130 @@ def testTypeIDs():
         vector_type = Type.parse("vector<2x3xf32>")
         # CHECK: True
         print(ShapedType(vector_type).typeid == vector_type.typeid)
+
+
+# CHECK-LABEL: TEST: testConcreteTypesRoundTrip
+@run
+def testConcreteTypesRoundTrip():
+    with Context() as ctx, Location.unknown():
+        ctx.allow_unregistered_dialects = True
+
+        def print_downcasted(typ):
+            downcasted = Type(typ).maybe_downcast()
+            print(type(downcasted).__name__)
+            print(repr(downcasted))
+
+        # CHECK: F16Type
+        # CHECK: F16Type(f16)
+        print_downcasted(F16Type.get())
+        # CHECK: F32Type
+        # CHECK: F32Type(f32)
+        print_downcasted(F32Type.get())
+        # CHECK: F64Type
+        # CHECK: F64Type(f64)
+        print_downcasted(F64Type.get())
+        # CHECK: Float8E4M3B11FNUZType
+        # CHECK: Float8E4M3B11FNUZType(f8E4M3B11FNUZ)
+        print_downcasted(Float8E4M3B11FNUZType.get())
+        # CHECK: Float8E4M3FNType
+        # CHECK: Float8E4M3FNType(f8E4M3FN)
+        print_downcasted(Float8E4M3FNType.get())
+        # CHECK: Float8E4M3FNUZType
+        # CHECK: Float8E4M3FNUZType(f8E4M3FNUZ)
+        print_downcasted(Float8E4M3FNUZType.get())
+        # CHECK: Float8E5M2Type
+        # CHECK: Float8E5M2Type(f8E5M2)
+        print_downcasted(Float8E5M2Type.get())
+        # CHECK: Float8E5M2FNUZType
+        # CHECK: Float8E5M2FNUZType(f8E5M2FNUZ)
+        print_downcasted(Float8E5M2FNUZType.get())
+        # CHECK: BF16Type
+        # CHECK: BF16Type(bf16)
+        print_downcasted(BF16Type.get())
+        # CHECK: IndexType
+        # CHECK: IndexType(index)
+        print_downcasted(IndexType.get())
+        # CHECK: IntegerType
+        # CHECK: IntegerType(i32)
+        print_downcasted(IntegerType.get_signless(32))
+
+        f32 = F32Type.get()
+        ranked_tensor = tensor.EmptyOp([10, 10], f32).result
+        # CHECK: RankedTensorType
+        print(type(ranked_tensor.type).__name__)
+        # CHECK: RankedTensorType(tensor<10x10xf32>)
+        print(repr(ranked_tensor.type))
+
+        cf32 = ComplexType.get(f32)
+        # CHECK: ComplexType
+        print(type(cf32).__name__)
+        # CHECK: ComplexType(complex<f32>)
+        print(repr(cf32))
+
+        ranked_tensor = tensor.EmptyOp([10, 10], f32).result
+        # CHECK: RankedTensorType
+        print(type(ranked_tensor.type).__name__)
+        # CHECK: RankedTensorType(tensor<10x10xf32>)
+        print(repr(ranked_tensor.type))
+
+        vector = VectorType.get([10, 10], f32)
+        tuple_type = TupleType.get_tuple([f32, vector])
+        # CHECK: TupleType
+        print(type(tuple_type).__name__)
+        # CHECK: TupleType(tuple<f32, vector<10x10xf32>>)
+        print(repr(tuple_type))
+        # CHECK: F32Type(f32)
+        print(repr(tuple_type.get_type(0)))
+        # CHECK: VectorType(vector<10x10xf32>)
+        print(repr(tuple_type.get_type(1)))
+
+        index_type = IndexType.get()
+
+        @func.FuncOp.from_py_func()
+        def default_builder():
+            c0 = arith.ConstantOp(f32, 0.0)
+            unranked_tensor_type = UnrankedTensorType.get(f32)
+            unranked_tensor = tensor.FromElementsOp(unranked_tensor_type, [c0]).result
+            # CHECK: UnrankedTensorType
+            print(type(unranked_tensor.type).__name__)
+            # CHECK: UnrankedTensorType(tensor<*xf32>)
+            print(repr(unranked_tensor.type))
+
+            c10 = arith.ConstantOp(index_type, 10)
+            memref_f32_t = MemRefType.get([10, 10], f32)
+            memref_f32 = memref.AllocOp(memref_f32_t, [c10, c10], []).result
+            # CHECK: MemRefType
+            print(type(memref_f32.type).__name__)
+            # CHECK: MemRefType(memref<10x10xf32>)
+            print(repr(memref_f32.type))
+
+            unranked_memref_t = UnrankedMemRefType.get(f32, Attribute.parse("2"))
+            memref_f32 = memref.AllocOp(unranked_memref_t, [c10, c10], []).result
+            # CHECK: UnrankedMemRefType
+            print(type(memref_f32.type).__name__)
+            # CHECK: UnrankedMemRefType(memref<*xf32, 2>)
+            print(repr(memref_f32.type))
+
+            tuple_type = Operation.parse(
+                f'"test.make_tuple"() : () -> tuple<i32, f32>'
+            ).result
+            # CHECK: TupleType
+            print(type(tuple_type.type).__name__)
+            # CHECK: TupleType(tuple<i32, f32>)
+            print(repr(tuple_type.type))
+
+            return c0, c10
+
+
+# CHECK-LABEL: TEST: testCustomTypeTypeCaster
+# This tests being able to materialize a type from a dialect *and* have
+# the implemented type caster called without explicitly importing the dialect.
+# I.e., we get a transform.OperationType without explicitly importing the transform dialect.
+@run
+def testCustomTypeTypeCaster():
+    with Context() as ctx, Location.unknown():
+        t = Type.parse('!transform.op<"foo.bar">', Context())
+        # CHECK: !transform.op<"foo.bar">
+        print(t)
+        # CHECK: OperationType(!transform.op<"foo.bar">)
+        print(repr(t))

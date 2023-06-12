@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -no-opaque-pointers -triple i386-unknown-unknown -std=c++11 %s -emit-llvm -o - | FileCheck %s
+// RUN: %clang_cc1 -triple i386-unknown-unknown -std=c++11 %s -emit-llvm -o - | FileCheck %s
 
 namespace Test1 {
   struct A {
@@ -175,7 +175,7 @@ namespace Test8 {
   // CHECK-LABEL: define{{.*}} i32 @_ZN5Test84testEPNS_1CE
   int test(C *c) {
     // CHECK: %[[THIS:.*]] = phi
-    // CHECK-NEXT: call noundef i32 @_ZN5Test81B3fooEv(%"struct.Test8::B"* {{[^,]*}} %[[THIS]])
+    // CHECK-NEXT: call noundef i32 @_ZN5Test81B3fooEv(ptr {{[^,]*}} %[[THIS]])
     return static_cast<B*>(c)->foo();
   }
 }
@@ -216,9 +216,7 @@ namespace Test9 {
     // FIXME: It should be possible to devirtualize this case, but that is
     // not implemented yet.
     // CHECK: load
-    // CHECK: bitcast
-    // CHECK: [[F_PTR_RA:%.+]] = bitcast
-    // CHECK: [[VTABLE:%.+]] = load {{.+}} [[F_PTR_RA]]
+    // CHECK: [[VTABLE:%.+]] = load {{.+}}
     // CHECK: [[VFN:%.+]] = getelementptr inbounds {{.+}} [[VTABLE]], i{{[0-9]+}} 0
     // CHECK-NEXT: %[[FUNC:.*]] = load {{.+}} [[VFN]]
     // CHECK-NEXT: = call {{.*}} %[[FUNC]]
@@ -229,9 +227,7 @@ namespace Test9 {
     // FIXME: It should be possible to devirtualize this case, but that is
     // not implemented yet.
     // CHECK: load
-    // CHECK: bitcast
-    // CHECK: [[F_PTR_RA:%.+]] = bitcast
-    // CHECK: [[VTABLE:%.+]] = load {{.+}} [[F_PTR_RA]]
+    // CHECK: [[VTABLE:%.+]] = load {{.+}}
     // CHECK: [[VFN:%.+]] = getelementptr inbounds {{.+}} [[VTABLE]], i{{[0-9]+}} 1
     // CHECK-NEXT: %[[FUNC:.*]] = load {{.+}} [[VFN]]
     // CHECK-NEXT: = call {{.*}} %[[FUNC]]
@@ -305,11 +301,11 @@ namespace Test11 {
   // CHECK: call void @_ZN6Test111SIiE7DerivedclEv(
   // CHECK: call noundef zeroext i1 @_ZN6Test111SIiE7DerivedeqERKNS_4BaseE(
   // CHECK: call noundef zeroext i1 @_ZN6Test111SIiE7DerivedntEv(
-  // CHECK: call noundef nonnull align 4 dereferenceable(4) %"class.Test11::Base"* @_ZN6Test111SIiE7DerivedixEi(
+  // CHECK: call noundef nonnull align 4 dereferenceable(4) ptr @_ZN6Test111SIiE7DerivedixEi(
   // CHECK: define linkonce_odr void @_ZN6Test111SIiE7DerivedclEv(
   // CHECK: define linkonce_odr noundef zeroext i1 @_ZN6Test111SIiE7DerivedeqERKNS_4BaseE(
   // CHECK: define linkonce_odr noundef zeroext i1 @_ZN6Test111SIiE7DerivedntEv(
-  // CHECK: define linkonce_odr noundef nonnull align 4 dereferenceable(4) %"class.Test11::Base"* @_ZN6Test111SIiE7DerivedixEi(
+  // CHECK: define linkonce_odr noundef nonnull align 4 dereferenceable(4) ptr @_ZN6Test111SIiE7DerivedixEi(
   class Base {
   public:
     virtual void operator()() {}

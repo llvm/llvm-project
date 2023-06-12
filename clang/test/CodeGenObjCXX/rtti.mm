@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -no-opaque-pointers %s -triple=x86_64-apple-darwin10 -emit-llvm -o - | FileCheck %s
+// RUN: %clang_cc1 %s -triple=x86_64-apple-darwin10 -emit-llvm -o - | FileCheck %s
 
 // PR7864.  This all follows GCC's lead.
 
@@ -12,7 +12,7 @@ namespace std { class type_info; }
 @interface B : A
 @end
 
-// CHECK: @_ZTIP1B = linkonce_odr constant {{.*}}@_ZTVN10__cxxabiv119__pointer_type_infoE{{.*}}@_ZTSP1B{{.*}}), i32 0, {{.*}}@_ZTI1B
+// CHECK: @_ZTIP1B = linkonce_odr constant {{.*}}@_ZTVN10__cxxabiv119__pointer_type_infoE{{.*}}@_ZTSP1B{{.*}}, i32 0, {{.*}}@_ZTI1B
 // CHECK: @_ZTI11objc_object = linkonce_odr constant {{.*}}@_ZTVN10__cxxabiv117__class_type_infoE{{.*}}@_ZTS11objc_object
 // CHECK: @_ZTIP11objc_object = linkonce_odr constant {{.*}}@_ZTVN10__cxxabiv119__pointer_type_infoE{{.*}}@_ZTSP11objc_object{{.*}}@_ZTI11objc_object
 // CHECK: @_ZTI10objc_class = linkonce_odr constant {{.*}}@_ZTVN10__cxxabiv117__class_type_infoE{{.*}}@_ZTS10objc_class

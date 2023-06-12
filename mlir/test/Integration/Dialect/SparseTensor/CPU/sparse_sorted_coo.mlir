@@ -34,7 +34,7 @@
 
 #SortedCOOPermuted = #sparse_tensor.encoding<{
   lvlTypes = [ "compressed-nu", "singleton" ],
-  dimOrdering = affine_map<(i,j) -> (j,i)>
+  dimToLvl = affine_map<(i,j) -> (j,i)>
 }>
 
 #SortedCOO3D = #sparse_tensor.encoding<{
@@ -43,7 +43,7 @@
 
 #SortedCOO3DPermuted = #sparse_tensor.encoding<{
   lvlTypes = [ "compressed-nu", "singleton-nu", "singleton" ],
-  dimOrdering = affine_map<(i,j,k) -> (k,i,j)>
+  dimToLvl = affine_map<(i,j,k) -> (k,i,j)>
 }>
 
 #trait_scale = {

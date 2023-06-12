@@ -230,9 +230,8 @@ define void @splat_v4i64(ptr %x, i64 %y) {
 ; LMULMAX1-RV32-LABEL: splat_v4i64:
 ; LMULMAX1-RV32:       # %bb.0:
 ; LMULMAX1-RV32-NEXT:    li a3, 5
-; LMULMAX1-RV32-NEXT:    vsetivli zero, 1, e8, mf8, ta, ma
-; LMULMAX1-RV32-NEXT:    vmv.s.x v0, a3
 ; LMULMAX1-RV32-NEXT:    vsetivli zero, 4, e32, m1, ta, ma
+; LMULMAX1-RV32-NEXT:    vmv.s.x v0, a3
 ; LMULMAX1-RV32-NEXT:    vmv.v.x v8, a2
 ; LMULMAX1-RV32-NEXT:    vmerge.vxm v8, v8, a1, v0
 ; LMULMAX1-RV32-NEXT:    addi a1, a0, 16

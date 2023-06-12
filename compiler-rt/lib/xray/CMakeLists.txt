@@ -141,7 +141,7 @@ include_directories(../../include)
 set(XRAY_CFLAGS
   ${COMPILER_RT_COMMON_CFLAGS}
   ${COMPILER_RT_CXX_CFLAGS})
-set(XRAY_COMMON_DEFINITIONS XRAY_HAS_EXCEPTIONS=1)
+set(XRAY_COMMON_DEFINITIONS SANITIZER_COMMON_NO_REDEFINE_BUILTINS XRAY_HAS_EXCEPTIONS=1)
 
 # Too many existing bugs, needs cleanup.
 append_list_if(COMPILER_RT_HAS_WNO_FORMAT -Wno-format XRAY_CFLAGS)
@@ -171,7 +171,7 @@ if (TARGET cxx-headers OR HAVE_LIBCXX)
 endif()
 
 if (APPLE)
-  add_asm_sources(XRAY_ASM_SOURCES xray_trampoline_x86_64.S)
+  set(XRAY_ASM_SOURCES xray_trampoline_x86_64.S)
 
   add_weak_symbols("sanitizer_common" WEAK_SYMBOL_LINK_FLAGS)
   add_weak_symbols("xray" WEAK_SYMBOL_LINK_FLAGS)

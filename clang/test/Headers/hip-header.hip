@@ -123,7 +123,7 @@ __device__ float test_floor() {
 }
 
 // CHECK-LABEL: define{{.*}}@_Z8test_maxv
-// CHECK: call {{.*}}double @__ocml_fmax_f64(double {{.*}}, double
+// CHECK: call {{.*}}double @llvm.maxnum.f64(double {{.*}}, double
 __device__ float test_max() {
   return max(5, 6.0);
 }
@@ -134,12 +134,12 @@ __device__ double test_isnan() {
   double d = 5.0;
   float f = 5.0;
 
-  // AMD_INT_RETURN: call i32 @__ocml_isnan_f32(float
-  // AMD_BOOL_RETURN: call i32 @__ocml_isnan_f32(float
+  // AMD_INT_RETURN: fcmp contract uno float
+  // AMD_BOOL_RETURN: fcmp contract uno float
   r += isnan(f);
 
-  // AMD_INT_RETURN: call i32 @__ocml_isnan_f64(double
-  // AMD_BOOL_RETURN: call i32 @__ocml_isnan_f64(double
+  // AMD_INT_RETURN: fcmp contract uno double
+  // AMD_BOOL_RETURN: fcmp contract uno double
   r += isnan(d);
 
   return r ;

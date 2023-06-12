@@ -105,6 +105,9 @@ Deprecations and Removals
 
 - The ``_LIBCPP_ABI_OLD_LOGNORMAL_DISTRIBUTION`` macro has been removed.
 
+- The classes ``strstreambuf`` , ``istrstream``, ``ostrstream``, and ``strstream`` have been deprecated.
+  They have been deprecated in the Standard since C++98, but were never marked as deprecated in libc++.
+
 Upcoming Deprecations and Removals
 ----------------------------------
 
@@ -150,3 +153,11 @@ Build System Changes
 - Building libc++ and libc++abi for Apple platforms now requires targeting macOS 10.13 and later.
   This is relevant for vendors building the libc++ shared library and for folks statically linking
   libc++ into an application that has back-deployment requirements on Apple platforms.
+
+- ``LIBCXX_ENABLE_FILESYSTEM`` now represents whether a filesystem is supported on the platform instead
+  of representing merely whether ``<filesystem>`` should be provided. This means that vendors building
+  with ``LIBCXX_ENABLE_FILESYSTEM=OFF`` will now also get ``<fstream>`` excluded from their configuration
+  of the library.
+
+- ``LIBCXX_ENABLE_FSTREAM`` is not supported anymore, please use ``LIBCXX_ENABLE_FILESYSTEM=OFF`` if your
+  platform does not have support for a filesystem.

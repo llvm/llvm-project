@@ -43,6 +43,9 @@ class DWARFObject;
 class raw_ostream;
 struct DIDumpOptions;
 struct DWARFSection;
+namespace dwarflinker_parallel {
+class CompileUnit;
+}
 
 /// Base class describing the header of any kind of "unit."  Some information
 /// is specific to certain unit types.  We separate this class out so we can
@@ -253,6 +256,8 @@ class DWARFUnit {
   std::shared_ptr<DWARFUnit> DWO;
 
 protected:
+  friend dwarflinker_parallel::CompileUnit;
+
   /// Return the index of a \p Die entry inside the unit's DIE vector.
   ///
   /// It is illegal to call this method with a DIE that hasn't be

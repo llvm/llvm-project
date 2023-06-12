@@ -1,7 +1,7 @@
 ! Test lowering of extent and lower bound inquires that
 ! come in lowering as evaluate::DescriptorInquiry.
 
-! RUN: bbc -emit-fir -hlfir -o - %s | FileCheck %s
+! RUN: bbc -emit-hlfir -o - %s | FileCheck %s
 
 subroutine test_assumed_shape(x, r)
   integer(8) :: r

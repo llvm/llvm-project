@@ -14,7 +14,6 @@
 // void pop_back();
 // void pop_front();
 
-#include "asan_testing.h"
 #include <deque>
 #include <cassert>
 
@@ -54,7 +53,6 @@ void test(int size)
     {
         C c = make<C>(size, rng[j]);
         typename C::const_iterator it = c.begin();
-        LIBCPP_ASSERT(is_double_ended_contiguous_container_asan_correct(c));
         for (int i = 0; i < size; ++i, (void) ++it)
             assert(*it == MoveOnly(i));
     }
@@ -74,12 +72,6 @@ int main(int, char**)
     const int N = sizeof(rng)/sizeof(rng[0]);
     for (int j = 0; j < N; ++j)
         test<std::deque<MoveOnly, min_allocator<MoveOnly>> >(rng[j]);
-    }
-    {
-    int rng[] = {0, 1, 2, 3, 1023, 1024, 1025, 2046, 2047, 2048, 2049, 4094, 4095, 4096};
-    const int N = sizeof(rng)/sizeof(rng[0]);
-    for (int j = 0; j < N; ++j)
-        test<std::deque<MoveOnly, safe_allocator<MoveOnly>> >(rng[j]);
     }
 
   return 0;

@@ -91,7 +91,7 @@ struct HoverInfo {
   std::optional<std::vector<Param>> TemplateParameters;
   /// Contains the evaluated value of the symbol if available.
   std::optional<std::string> Value;
-  /// Contains the byte-size of fields and types where it's interesting.
+  /// Contains the bit-size of fields and types where it's interesting.
   std::optional<uint64_t> Size;
   /// Contains the offset of fields within the enclosing class.
   std::optional<uint64_t> Offset;

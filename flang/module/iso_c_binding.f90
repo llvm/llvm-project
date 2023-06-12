@@ -15,7 +15,8 @@ module iso_c_binding
     c_ptr => __builtin_c_ptr, &
     c_funptr => __builtin_c_funptr, &
     c_sizeof => sizeof, &
-    c_loc => __builtin_c_loc
+    c_loc => __builtin_c_loc, &
+    operator(==), operator(/=)
 
   type(c_ptr), parameter :: c_null_ptr = c_ptr(0)
   type(c_funptr), parameter :: c_null_funptr = c_funptr(0)

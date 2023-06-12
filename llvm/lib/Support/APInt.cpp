@@ -479,7 +479,6 @@ APInt APInt::extractBits(unsigned numBits, unsigned bitPosition) const {
 
 uint64_t APInt::extractBitsAsZExtValue(unsigned numBits,
                                        unsigned bitPosition) const {
-  assert(numBits > 0 && "Can't extract zero bits");
   assert(bitPosition < BitWidth && (numBits + bitPosition) <= BitWidth &&
          "Illegal bit extraction");
   assert(numBits <= 64 && "Illegal bit extraction");

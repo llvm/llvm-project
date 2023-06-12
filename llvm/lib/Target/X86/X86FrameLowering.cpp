@@ -1235,11 +1235,19 @@ uint64_t X86FrameLowering::calculateMaxStackAlign(const MachineFunction &MF) con
   const MachineFrameInfo &MFI = MF.getFrameInfo();
   Align MaxAlign = MFI.getMaxAlign(); // Desired stack alignment.
   Align StackAlign = getStackAlign();
-  if (MF.getFunction().hasFnAttribute("stackrealign")) {
+  bool HasRealign = MF.getFunction().hasFnAttribute("stackrealign");
+  if (HasRealign) {
     if (MFI.hasCalls())
       MaxAlign = (StackAlign > MaxAlign) ? StackAlign : MaxAlign;
     else if (MaxAlign < SlotSize)
       MaxAlign = Align(SlotSize);
+  }
+
+  if (!Is64Bit && MF.getFunction().getCallingConv() == CallingConv::X86_INTR) {
+    if (HasRealign)
+      MaxAlign = (MaxAlign > 16) ? MaxAlign : Align(16);
+    else
+      MaxAlign = Align(16);
   }
   return MaxAlign.value();
 }

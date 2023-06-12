@@ -83,6 +83,14 @@ public:
   // signed buffer laod instructions.
   bool matchCombineSignExtendInReg(MachineInstr &MI, MachineInstr *&MatchInfo);
   void applyCombineSignExtendInReg(MachineInstr &MI, MachineInstr *&MatchInfo);
+
+  // Find the s_mul_u64 instructions where the higher bits are either
+  // zero-extended or sign-extended.
+  bool matchCombine_s_mul_u64(MachineInstr &MI, unsigned &NewOpcode);
+  // Replace the s_mul_u64 instructions with S_MUL_I64_I32_PSEUDO if the higher
+  // 33 bits are sign extended and with S_MUL_U64_U32_PSEUDO if the higher 32
+  // bits are zero extended.
+  void applyCombine_s_mul_u64(MachineInstr &MI, unsigned &NewOpcode);
 };
 
 bool AMDGPUPostLegalizerCombinerHelper::matchFMinFMaxLegacy(
@@ -366,6 +374,34 @@ void AMDGPUPostLegalizerCombinerHelper::applyCombineSignExtendInReg(
   SubwordBufferLoad->getOperand(0).setReg(SignExtendInsnDst);
   // Remove the sign extension.
   MI.eraseFromParent();
+}
+
+bool AMDGPUPostLegalizerCombinerHelper::matchCombine_s_mul_u64(
+    MachineInstr &MI, unsigned &NewOpcode) {
+  GISelKnownBits &KB = *Helper.getKnownBits();
+  Register Src0 = MI.getOperand(1).getReg();
+  Register Src1 = MI.getOperand(2).getReg();
+  KnownBits Op0KnownBits = KB.getKnownBits(Src0);
+  unsigned Op0LeadingZeros = Op0KnownBits.countMinLeadingZeros();
+  KnownBits Op1KnownBits = KB.getKnownBits(Src1);
+  unsigned Op1LeadingZeros = Op1KnownBits.countMinLeadingZeros();
+  if (Op0LeadingZeros >= 32 && Op1LeadingZeros >= 32) {
+    NewOpcode = AMDGPU::G_AMDGPU_S_MUL_U64_U32_PSEUDO;
+    return true;
+  }
+
+  unsigned Op0SignBits = KB.computeNumSignBits(Src0);
+  unsigned Op1SignBits = KB.computeNumSignBits(Src1);
+  if (Op0SignBits >= 33 && Op1SignBits >= 33) {
+    NewOpcode = AMDGPU::G_AMDGPU_S_MUL_I64_I32_PSEUDO;
+    return true;
+  }
+  return false;
+}
+
+void AMDGPUPostLegalizerCombinerHelper::applyCombine_s_mul_u64(
+    MachineInstr &MI, unsigned &NewOpcode) {
+  MI.setDesc(TII.get(NewOpcode));
 }
 
 class AMDGPUPostLegalizerCombinerHelperState {

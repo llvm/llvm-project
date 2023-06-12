@@ -298,7 +298,11 @@ ConversionToBinaryResult<PREC> IntermediateFloat<PREC>::ToBinary(
   if (expo >= Binary::maxExponent) {
     expo = Binary::maxExponent; // Inf
     flags |= Overflow;
-    fraction = 0;
+    if constexpr (Binary::bits == 80) { // x87
+      fraction = IntType{1} << 63;
+    } else {
+      fraction = 0;
+    }
   }
   using Raw = typename Binary::RawType;
   Raw raw = static_cast<Raw>(isNegative) << (Binary::bits - 1);

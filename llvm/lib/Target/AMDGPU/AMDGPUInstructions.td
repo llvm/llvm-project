@@ -123,20 +123,32 @@ def FMA : Predicate<"Subtarget->hasFMA()">;
 
 def InstFlag : OperandWithDefaultOps <i32, (ops (i32 0))>;
 
-class ImmOperandClass<string name, bit optional> : AsmOperandClass {
+class CustomOperandClass<string name, bit optional, string parserMethod>
+    : AsmOperandClass {
   let Name = name;
   let PredicateMethod = "is"#name;
-  let ParserMethod = "";
+  let ParserMethod = parserMethod;
   let RenderMethod = "addImmOperands";
   let IsOptional = optional;
   let DefaultMethod = "default"#name;
 }
 
+class CustomOperandProps<bit optional = 0, string name = NAME> {
+  string ParserMethod = "parse"#name;
+  string PrintMethod = "print"#name;
+  AsmOperandClass ParserMatchClass =
+    CustomOperandClass<name, optional, ParserMethod>;
+  string OperandType = "OPERAND_IMMEDIATE";
+}
+
+class CustomOperand<ValueType type, bit optional = 0, string name = NAME>
+  : Operand<type>, CustomOperandProps<optional, name>;
+
 class ImmOperand<ValueType type, string name, bit optional = 0,
-                 string printer = "print"#name> : Operand<type> {
-  let ParserMatchClass = ImmOperandClass<name, optional>;
+                 string printer = "print"#name>
+    : CustomOperand<type, optional, name> {
+  let ParserMethod = "";
   let PrintMethod = printer;
-  let OperandType = "OPERAND_IMMEDIATE";
 }
 
 def s16imm : ImmOperand<i16, "S16Imm", 0, "printU16ImmOperand">;
@@ -200,6 +212,12 @@ class is_canonicalized<SDPatternOperator op> : PatFrag<
   }];
 }
 
+class FoldTernaryOpPat<SDPatternOperator op1, SDPatternOperator op2> : PatFrag<
+  (ops node:$src0, node:$src1, node:$src2),
+  (op2 (op1 node:$src0, node:$src1), node:$src2)
+>;
+
+def imad : FoldTernaryOpPat<mul, add>;
 
 let Properties = [SDNPCommutative, SDNPAssociative] in {
 def smax_oneuse : HasOneUseBinOp<smax>;

@@ -121,6 +121,7 @@ void WebAssemblyExceptionInfo::recalculate(
   // and A's unwind destination is B and B's is C. When we visit B before A, we
   // end up extracting C only out of B but not out of A.
   const auto *EHInfo = MF.getWasmEHFuncInfo();
+  assert(EHInfo);
   SmallVector<std::pair<WebAssemblyException *, WebAssemblyException *>>
       UnwindWEVec;
   for (auto *DomNode : depth_first(&MDT)) {

@@ -100,10 +100,7 @@ define i1 @knownbits_out_of_range_shift(i32 %x) {
 ; CHECK:       block1:
 ; CHECK-NEXT:    br label [[BLOCK2]]
 ; CHECK:       block2:
-; CHECK-NEXT:    [[P:%.*]] = phi i32 [ 63, [[ENTRY:%.*]] ], [ 31, [[BLOCK1:%.*]] ]
-; CHECK-NEXT:    [[L:%.*]] = lshr i32 [[X:%.*]], [[P]]
-; CHECK-NEXT:    [[R:%.*]] = icmp eq i32 [[L]], 2
-; CHECK-NEXT:    ret i1 [[R]]
+; CHECK-NEXT:    ret i1 false
 ;
 entry:
   br label %block2
@@ -187,11 +184,9 @@ define i8 @PR49475_infloop(i32 %t0, i16 %insert, i64 %e, i8 %i162) {
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp sle i64 [[CONV18]], [[XOR1]]
 ; CHECK-NEXT:    [[CONV19:%.*]] = zext i1 [[CMP]] to i16
 ; CHECK-NEXT:    [[OR21:%.*]] = or i16 [[CONV19]], [[INSERT]]
-; CHECK-NEXT:    [[TRUNC44:%.*]] = trunc i16 [[OR21]] to i8
-; CHECK-NEXT:    [[INC:%.*]] = or i8 [[TRUNC44]], [[I162]]
 ; CHECK-NEXT:    [[TOBOOL23_NOT:%.*]] = icmp eq i16 [[OR21]], 0
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[TOBOOL23_NOT]])
-; CHECK-NEXT:    ret i8 [[INC]]
+; CHECK-NEXT:    ret i8 [[I162]]
 ;
   %b = icmp eq i32 %t0, 0
   %b2 = icmp eq i16 %insert, 0
@@ -251,7 +246,7 @@ define i1 @PR51762(ptr %i, i32 %t0, i16 %t1, ptr %p, ptr %d, ptr %f, i32 %p2, i1
 ; CHECK-NEXT:    store i32 [[SROA38]], ptr [[D]], align 8
 ; CHECK-NEXT:    [[R:%.*]] = icmp ult i64 [[INSERT_INSERT41]], [[CONV19]]
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[R]])
-; CHECK-NEXT:    ret i1 true
+; CHECK-NEXT:    ret i1 [[R]]
 ;
 entry:
   br label %for.cond

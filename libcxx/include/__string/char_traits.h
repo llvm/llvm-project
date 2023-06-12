@@ -373,7 +373,7 @@ struct _LIBCPP_TEMPLATE_VIS char_traits<char8_t>
 
   static _LIBCPP_HIDE_FROM_ABI constexpr int
   compare(const char_type* __s1, const char_type* __s2, size_t __n) _NOEXCEPT {
-      return std::__constexpr_memcmp(__s1, __s2, __n);
+      return std::__constexpr_memcmp(__s1, __s2, __element_count(__n));
   }
 
     static _LIBCPP_HIDE_FROM_ABI constexpr

@@ -7,7 +7,7 @@ define void @f1(ptr noundef %x) {
   ; CHECK-NEXT: %[[#ICMP:]] = icmp ne i32 %[[#LOAD]], 12345678
   ; CHECK-NEXT: br i1 %[[#ICMP]], label %[[#TRAP:]], label %[[#CALL:]], !prof ![[#WEIGHTS:]]
   ; CHECK:      [[#TRAP]]:
-  ; CHECK-NEXT: call void @llvm.trap()
+  ; CHECK-NEXT: call void @llvm.debugtrap()
   ; CHECK-NEXT: br label %[[#CALL]]
   ; CHECK:      [[#CALL]]:
   ; CHECK-NEXT: call void %x()

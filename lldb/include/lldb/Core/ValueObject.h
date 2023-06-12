@@ -480,17 +480,16 @@ public:
                       size_t *index_of_error = nullptr);
 
   // this will always create the children if necessary
-  lldb::ValueObjectSP GetChildAtNamePath(llvm::ArrayRef<ConstString> names,
-                                         ConstString *name_of_error = nullptr);
+  lldb::ValueObjectSP GetChildAtNamePath(llvm::ArrayRef<llvm::StringRef> names);
 
   lldb::ValueObjectSP
   GetChildAtNamePath(llvm::ArrayRef<std::pair<ConstString, bool>> names,
                      ConstString *name_of_error = nullptr);
 
-  virtual lldb::ValueObjectSP GetChildMemberWithName(ConstString name,
+  virtual lldb::ValueObjectSP GetChildMemberWithName(llvm::StringRef name,
                                                      bool can_create);
 
-  virtual size_t GetIndexOfChildWithName(ConstString name);
+  virtual size_t GetIndexOfChildWithName(llvm::StringRef name);
 
   size_t GetNumChildren(uint32_t max = UINT32_MAX);
 

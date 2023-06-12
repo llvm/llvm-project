@@ -339,13 +339,12 @@ struct ClampIsNoOp : public OpRewritePattern<tosa::ClampOp> {
       return failure();
     }
 
-    if (inputElementType.isF32()) {
+    if (inputElementType.isa<FloatType>()) {
+      // Unlike integer types, floating point types can represent infinity.
       auto minClamp = op.getMinFp();
       auto maxClamp = op.getMaxFp();
-      bool isMin = (minClamp.isLargest() || minClamp.isInfinity()) &&
-                   minClamp.isNegative();
-      bool isMax = (maxClamp.isLargest() || maxClamp.isInfinity()) &&
-                   !maxClamp.isNegative();
+      bool isMin = minClamp.isInfinity() && minClamp.isNegative();
+      bool isMax = maxClamp.isInfinity() && !maxClamp.isNegative();
 
       if (isMin && isMax) {
         rewriter.replaceOp(op, input);

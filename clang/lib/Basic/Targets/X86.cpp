@@ -359,6 +359,8 @@ bool X86TargetInfo::handleTargetFeatures(std::vector<std::string> &Features,
       HasCRC32 = true;
     } else if (Feature == "+x87") {
       HasX87 = true;
+    } else if (Feature == "+fullbf16") {
+      HasFullBFloat16 = true;
     }
 
     X86SSEEnum Level = llvm::StringSwitch<X86SSEEnum>(Feature)
@@ -376,6 +378,15 @@ bool X86TargetInfo::handleTargetFeatures(std::vector<std::string> &Features,
 
     HasFloat16 = SSELevel >= SSE2;
 
+    // X86 target has bfloat16 emulation support in the backend, where
+    // bfloat16 is treated as a 32-bit float, arithmetic operations are
+    // performed in 32-bit, and the result is converted back to bfloat16.
+    // Truncation and extension between bfloat16 and 32-bit float are supported
+    // by the compiler-rt library. However, native bfloat16 support is currently
+    // not available in the X86 target. Hence, HasFullBFloat16 will be false
+    // until native bfloat16 support is available. HasFullBFloat16 is used to
+    // determine whether to automatically use excess floating point precision
+    // for bfloat16 arithmetic operations in the front-end.
     HasBFloat16 = SSELevel >= SSE2;
 
     MMX3DNowEnum ThreeDNowLevel = llvm::StringSwitch<MMX3DNowEnum>(Feature)
@@ -1117,6 +1128,7 @@ bool X86TargetInfo::hasFeature(StringRef Feature) const {
       .Case("xsavec", HasXSAVEC)
       .Case("xsaves", HasXSAVES)
       .Case("xsaveopt", HasXSAVEOPT)
+      .Case("fullbf16", HasFullBFloat16)
       .Default(false);
 }
 

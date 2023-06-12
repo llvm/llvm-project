@@ -27,6 +27,53 @@ def TransformParamTypeOrAnyHandle : Type<
     "transform 'param' type or any handle type">;
 
 //===----------------------------------------------------------------------===//
+// Apply...PatternsOp
+//===----------------------------------------------------------------------===//
+
+def ApplyEraseUnnecessaryInputsPatternsOp : Op<Transform_Dialect,
+    "apply_patterns.linalg.erase_unnecessary_inputs",
+    [DeclareOpInterfaceMethods<PatternDescriptorOpInterface>]> {
+  let description = [{
+    Collects patterns that promote inputs to outputs and remove unused inputs of
+    `linalg.generic` ops.
+  }];
+
+  let assemblyFormat = "attr-dict";
+}
+
+def ApplyFoldUnitExtentDimsViaReshapesPatternsOp : Op<Transform_Dialect,
+    "apply_patterns.linalg.fold_unit_extent_dims_via_reshapes",
+    [DeclareOpInterfaceMethods<PatternDescriptorOpInterface>]> {
+  let description = [{
+    Collects patterns to fold unit-extent dimensions in operands/results of
+    linalg ops on tensors via reassociative reshape ops.
+  }];
+
+  let assemblyFormat = "attr-dict";
+}
+
+def ApplyFoldUnitExtentDimsViaSlicesPatternsOp : Op<Transform_Dialect,
+    "apply_patterns.linalg.fold_unit_extent_dims_via_slices",
+    [DeclareOpInterfaceMethods<PatternDescriptorOpInterface>]> {
+  let description = [{
+    Collects patterns to fold unit-extent dimensions in operands/results of
+    linalg ops on tensors via rank-reducing slices.
+  }];
+
+  let assemblyFormat = "attr-dict";
+}
+
+def ApplyTilingCanonicalizationPatternsOp : Op<Transform_Dialect,
+    "apply_patterns.linalg.tiling_canonicalization",
+    [DeclareOpInterfaceMethods<PatternDescriptorOpInterface>]> {
+  let description = [{
+    Collects canonicalization patterns relevant to apply after tiling patterns.
+  }];
+
+  let assemblyFormat = "attr-dict";
+}
+
+//===----------------------------------------------------------------------===//
 // BufferizeToAllocationOp
 //===----------------------------------------------------------------------===//
 
@@ -150,11 +197,12 @@ def FuseIntoContainingOp :
 
   let description = [{
     Fuses the `producer_op` into the `containing_op`.
-    Returns a handle to the fused ops.
+    Returns a handle to the fused ops and the `new_containing_op`.
 
     The producer is typically a slice of a tileable op (i.e., implements
     TilingInterface). In that case, this transform computes the accessed
-    producer slice inside of the containing op ("tile and fuse"). Otherwise,
+    producer slice inside of the containing op ("tile and fuse") and if required,
+    creates a new containing op with outputs from the fused producer. Otherwise,
     the entire producer is cloned inside the containing op ("clone and fuse").
 
     The containing op handle must be associated with exactly one payload op. The
@@ -775,6 +823,7 @@ def PadOp : Op<Transform_Dialect, "structured.pad",
     (ins TransformHandleTypeInterface:$target,
          DefaultValuedAttr<ArrayAttr, "{}">:$padding_values,
          DefaultValuedAttr<I64ArrayAttr, "{}">:$padding_dimensions,
+         OptionalAttr<I64ArrayAttr>:$pad_to_multiple_of,
          DefaultValuedAttr<I64ArrayAttr, "{}">:$pack_paddings,
          DefaultValuedAttr<
           TypedArrayAttrBase<I64ArrayAttr, "array of arrays of i64">,
@@ -1528,7 +1577,8 @@ def TileOp : Op<Transform_Dialect, "structured.tile",
   let arguments = (ins TransformHandleTypeInterface:$target,
                    Variadic<TransformParamTypeOrAnyHandle>:$dynamic_sizes,
                    DefaultValuedOptionalAttr<DenseI64ArrayAttr, "{}">:$static_sizes,
-                   DefaultValuedOptionalAttr<DenseI64ArrayAttr, "{}">:$interchange);
+                   DefaultValuedOptionalAttr<DenseI64ArrayAttr, "{}">:$interchange,
+                   DefaultValuedOptionalAttr<BoolAttr, "false">:$last_tile_size_scalable);
   let results = (outs TransformHandleTypeInterface:$tiled_linalg_op,
                       Variadic<TransformHandleTypeInterface>:$loops);
   let builders = [
@@ -1847,13 +1897,16 @@ def MaskedVectorizeOp : Op<Transform_Dialect, "structured.masked_vectorize",
                        Variadic<TransformHandleTypeInterface>:$vector_sizes,
                        UnitAttr:$vectorize_nd_extract,
                        DefaultValuedOptionalAttr<DenseI64ArrayAttr, "{}">:
-                          $static_vector_sizes);
+                          $static_vector_sizes,
+                       DefaultValuedOptionalAttr<BoolAttr, "false">:$last_vector_size_scalable);
+
   let results = (outs);
   let assemblyFormat = [{
       $target
       `vector_sizes` custom<DynamicIndexList>($vector_sizes,
                                               $static_vector_sizes,
-                                              type($vector_sizes))
+                                              type($vector_sizes),
+                                              $last_vector_size_scalable)
       attr-dict
       `:` type($target)
   }];

@@ -71,10 +71,11 @@ ASM_FUNCTION_HEXAGON_RE = re.compile(
 
 ASM_FUNCTION_M68K_RE = re.compile(
     r'^_?(?P<func>[^:]+):[ \t]*;[ \t]*@"?(?P=func)"?\n'
-    r"(?P<body>.*?)\s*"  # (body of the function)
-    r".Lfunc_end[0-9]+:\n",
-    flags=(re.M | re.S),
-)
+    r'(?:\.L(?P=func)\$local:\n)?'  # drop .L<func>$local:
+    r'(?:[ \t]+\.type[ \t]+\.L(?P=func)\$local,@function\n)?' # drop .type .L<func>$local,@function
+    r'(?P<body>.*?)\s*' # (body of the function)
+    r'.Lfunc_end[0-9]+:\n',
+    flags=(re.M | re.S))
 
 ASM_FUNCTION_MIPS_RE = re.compile(
     r'^_?(?P<func>[^:]+):[ \t]*#+[ \t]*@"?(?P=func)"?\n[^:]*?'  # f: (name of func)

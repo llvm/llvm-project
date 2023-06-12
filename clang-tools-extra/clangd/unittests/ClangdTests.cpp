@@ -1332,26 +1332,31 @@ TEST(ClangdServer, InactiveRegions) {
 #define PREAMBLEMACRO 42
 #if PREAMBLEMACRO > 40
   #define ACTIVE
-$inactive1[[#else
-  #define INACTIVE
-#endif]]
-int endPreamble;
-$inactive2[[#ifndef CMDMACRO
-    int inactiveInt;
-#endif]]
-#undef CMDMACRO
-$inactive3[[#ifdef CMDMACRO
-  int inactiveInt2;
-#else]]
-  int activeInt;
+#else
+$inactive1[[  #define INACTIVE]]
 #endif
+int endPreamble;
+#ifndef CMDMACRO
+$inactive2[[    int inactiveInt;]]
+#endif
+#undef CMDMACRO
+#ifdef CMDMACRO
+$inactive3[[  int inactiveInt2;]]
+#elif PREAMBLEMACRO > 0
+  int activeInt1;
+  int activeInt2;
+#else
+$inactive4[[  int inactiveInt3;]]
+#endif
+#ifdef CMDMACRO
+#endif  // empty inactive range, gets dropped
   )cpp");
   Server.addDocument(testPath("foo.cpp"), Source.code());
   ASSERT_TRUE(Server.blockUntilIdleForTest());
   EXPECT_THAT(Callback.FoundInactiveRegions,
-              ElementsAre(ElementsAre(Source.range("inactive1"),
-                                      Source.range("inactive2"),
-                                      Source.range("inactive3"))));
+              ElementsAre(ElementsAre(
+                  Source.range("inactive1"), Source.range("inactive2"),
+                  Source.range("inactive3"), Source.range("inactive4"))));
 }
 
 } // namespace

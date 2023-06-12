@@ -134,6 +134,33 @@ static std::optional<parser::Message> WhyNotDefinableBase(parser::CharBlock at,
           original, visible->name());
     }
   }
+  if (const Scope * deviceContext{FindCUDADeviceContext(&scope)}) {
+    bool isOwnedByDeviceCode{deviceContext->Contains(ultimate.owner())};
+    if (isPointerDefinition && !acceptAllocatable) {
+      return BlameSymbol(at,
+          "'%s' is a pointer and may not be associated in a device subprogram"_err_en_US,
+          original);
+    } else if (auto cudaDataAttr{GetCUDADataAttr(&ultimate)}) {
+      if (*cudaDataAttr == common::CUDADataAttr::Constant) {
+        return BlameSymbol(at,
+            "'%s' has ATTRIBUTES(CONSTANT) and is not definable in a device subprogram"_err_en_US,
+            original);
+      } else if (acceptAllocatable && !isOwnedByDeviceCode) {
+        return BlameSymbol(at,
+            "'%s' is a host-associated allocatable and is not definable in a device subprogram"_err_en_US,
+            original);
+      } else if (*cudaDataAttr != common::CUDADataAttr::Device &&
+          *cudaDataAttr != common::CUDADataAttr::Managed) {
+        return BlameSymbol(at,
+            "'%s' is not device or managed data and is not definable in a device subprogram"_err_en_US,
+            original);
+      }
+    } else if (!isOwnedByDeviceCode) {
+      return BlameSymbol(at,
+          "'%s' is a host variable and is not definable in a device subprogram"_err_en_US,
+          original);
+    }
+  }
   return std::nullopt;
 }
 

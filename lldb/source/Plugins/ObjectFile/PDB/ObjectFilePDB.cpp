@@ -27,10 +27,10 @@ using namespace llvm::codeview;
 
 LLDB_PLUGIN_DEFINE(ObjectFilePDB)
 
-static UUID GetPDBUUID(InfoStream &IS) {
+static UUID GetPDBUUID(InfoStream &IS, DbiStream &DS) {
   UUID::CvRecordPdb70 debug_info;
   memcpy(&debug_info.Uuid, IS.getGuid().Guid, sizeof(debug_info.Uuid));
-  debug_info.Age = IS.getAge();
+  debug_info.Age = DS.getAge();
   return UUID(debug_info);
 }
 
@@ -82,7 +82,12 @@ bool ObjectFilePDB::initPDBFile() {
     llvm::consumeError(info_stream.takeError());
     return false;
   }
-  m_uuid = GetPDBUUID(*info_stream);
+  auto dbi_stream = m_file_up->getPDBDbiStream();
+  if (!dbi_stream) {
+    llvm::consumeError(dbi_stream.takeError());
+    return false;
+  }
+  m_uuid = GetPDBUUID(*info_stream, *dbi_stream);
   return true;
 }
 
@@ -126,7 +131,7 @@ size_t ObjectFilePDB::GetModuleSpecifications(
   }
 
   lldb_private::UUID &uuid = module_spec.GetUUID();
-  uuid = GetPDBUUID(*info_stream);
+  uuid = GetPDBUUID(*info_stream, *dbi_stream);
 
   ArchSpec &module_arch = module_spec.GetArchitecture();
   switch (dbi_stream->getMachineType()) {

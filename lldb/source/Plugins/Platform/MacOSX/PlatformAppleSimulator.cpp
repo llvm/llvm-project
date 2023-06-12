@@ -284,7 +284,8 @@ static llvm::StringRef GetXcodeSDKDir(std::string preferred,
                                       std::string secondary) {
   llvm::StringRef sdk;
   auto get_sdk = [&](std::string sdk) -> llvm::StringRef {
-    auto sdk_path_or_err = HostInfo::GetXcodeSDKPath(XcodeSDK(std::move(sdk)));
+    auto sdk_path_or_err =
+        HostInfo::GetSDKRoot(HostInfo::SDKOptions{XcodeSDK(std::move(sdk))});
     if (!sdk_path_or_err) {
       Debugger::ReportError("Error while searching for Xcode SDK: " +
                             toString(sdk_path_or_err.takeError()));

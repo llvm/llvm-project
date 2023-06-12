@@ -103,6 +103,8 @@ private:
   APInt uminVal, umaxVal, sminVal, smaxVal;
 };
 
+raw_ostream &operator<<(raw_ostream &, const ConstantIntRanges &);
+
 /// The type of the `setResultRanges` callback provided to ops implementing
 /// InferIntRangeInterface. It should be called once for each integer result
 /// value and be passed the ConstantIntRanges corresponding to that value.

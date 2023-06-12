@@ -103,8 +103,10 @@ define i64 @udiv64_constant_no_add(i64 %a) nounwind {
 ;
 ; RV64-LABEL: udiv64_constant_no_add:
 ; RV64:       # %bb.0:
-; RV64-NEXT:    lui a1, %hi(.LCPI2_0)
-; RV64-NEXT:    ld a1, %lo(.LCPI2_0)(a1)
+; RV64-NEXT:    lui a1, 838861
+; RV64-NEXT:    addiw a1, a1, -819
+; RV64-NEXT:    slli a2, a1, 32
+; RV64-NEXT:    add a1, a1, a2
 ; RV64-NEXT:    mulhu a0, a0, a1
 ; RV64-NEXT:    srli a0, a0, 2
 ; RV64-NEXT:    ret
@@ -437,8 +439,10 @@ define i64 @sdiv64_constant_add_srai(i64 %a) nounwind {
 ;
 ; RV64-LABEL: sdiv64_constant_add_srai:
 ; RV64:       # %bb.0:
-; RV64-NEXT:    lui a1, %hi(.LCPI14_0)
-; RV64-NEXT:    ld a1, %lo(.LCPI14_0)(a1)
+; RV64-NEXT:    lui a1, 559241
+; RV64-NEXT:    addiw a1, a1, -1911
+; RV64-NEXT:    slli a2, a1, 32
+; RV64-NEXT:    add a1, a1, a2
 ; RV64-NEXT:    mulh a1, a0, a1
 ; RV64-NEXT:    add a0, a1, a0
 ; RV64-NEXT:    srli a1, a0, 63
@@ -463,8 +467,10 @@ define i64 @sdiv64_constant_sub_srai(i64 %a) nounwind {
 ;
 ; RV64-LABEL: sdiv64_constant_sub_srai:
 ; RV64:       # %bb.0:
-; RV64-NEXT:    lui a1, %hi(.LCPI15_0)
-; RV64-NEXT:    ld a1, %lo(.LCPI15_0)(a1)
+; RV64-NEXT:    lui a1, 349525
+; RV64-NEXT:    addiw a1, a1, 1365
+; RV64-NEXT:    slli a2, a1, 32
+; RV64-NEXT:    add a1, a1, a2
 ; RV64-NEXT:    mulh a1, a0, a1
 ; RV64-NEXT:    sub a1, a1, a0
 ; RV64-NEXT:    srli a0, a1, 63

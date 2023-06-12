@@ -270,20 +270,19 @@ _LIBCPP_HIDE_FROM_ABI void __format_chrono_using_chrono_specs(
         //
         // TODO FMT evaluate the comment above.
 
-#  if defined(__GLIBC__) || defined(_AIX)
+#  if defined(__GLIBC__) || defined(_AIX) || defined(_WIN32)
       case _CharT('y'):
         // Glibc fails for negative values, AIX for positive values too.
         __sstr << std::format(_LIBCPP_STATICALLY_WIDEN(_CharT, "{:02}"), (std::abs(__t.tm_year + 1900)) % 100);
         break;
-#  endif // defined(__GLIBC__) || defined(_AIX)
+#  endif // defined(__GLIBC__) || defined(_AIX) || defined(_WIN32)
 
-      case _CharT('Y'): {
-        int __year = __t.tm_year + 1900;
-        if (__year < 1000)
-          __formatter::__format_year(__year, __sstr);
-        else
-          __facet.put({__sstr}, __sstr, _CharT(' '), std::addressof(__t), std::to_address(__s), std::to_address(__it + 1));
-      } break;
+      case _CharT('Y'):
+        // Depending on the platform's libc the range of supported years is
+        // limited. Intead of of testing all conditions use the internal
+        // implementation unconditionally.
+        __formatter::__format_year(__t.tm_year + 1900, __sstr);
+        break;
 
       case _CharT('F'): {
         int __year = __t.tm_year + 1900;

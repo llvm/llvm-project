@@ -240,7 +240,7 @@ performance improvement can be expected by an optimal automatic optimizer.
 -------------------------------------------------------------------------------------
 
 	Polly can reimport jscop files, in which the schedules of the statements
-        are changed. These changed schedules are used to descripe
+        are changed. These changed schedules are used to describe
         transformations. It is possible to import different jscop files by
         providing the postfix of the jscop file that is imported.
 

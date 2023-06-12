@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "LoongArch.h"
+#include "ToolChains/CommonArgs.h"
 #include "clang/Basic/DiagnosticDriver.h"
 #include "clang/Driver/Driver.h"
 #include "clang/Driver/DriverDiagnostic.h"
@@ -133,4 +134,9 @@ void loongarch::getLoongArchTargetFeatures(const Driver &D,
       D.Diag(diag::err_drv_loongarch_invalid_mfpu_EQ) << FPU;
     }
   }
+
+  // Select the `ual` feature determined by -m[no-]unaligned-access
+  // or the alias -m[no-]strict-align.
+  AddTargetFeature(Args, Features, options::OPT_munaligned_access,
+                   options::OPT_mno_unaligned_access, "ual");
 }

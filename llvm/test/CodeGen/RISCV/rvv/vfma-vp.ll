@@ -7708,3 +7708,16 @@ define <vscale x 8 x double> @vfnmsub_vf_nxv8f64_neg_splat_unmasked_commute(<vsc
   %v = call <vscale x 8 x double> @llvm.vp.fma.nxv8f64(<vscale x 8 x double> %negvb, <vscale x 8 x double> %va, <vscale x 8 x double> %vc, <vscale x 8 x i1> %m, i32 %evl)
   ret <vscale x 8 x double> %v
 }
+
+define <vscale x 1 x half> @vfma_vv_nxv1f16_double_neg(<vscale x 1 x half> %a, <vscale x 1 x half> %b, <vscale x 1 x half> %c, <vscale x 1 x i1> %m, i32 zeroext %evl) {
+; CHECK-LABEL: vfma_vv_nxv1f16_double_neg:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetvli zero, a0, e16, mf4, ta, ma
+; CHECK-NEXT:    vfmadd.vv v9, v8, v10, v0.t
+; CHECK-NEXT:    vmv1r.v v8, v9
+; CHECK-NEXT:    ret
+  %nega = call <vscale x 1 x half> @llvm.vp.fneg.nxv1f16(<vscale x 1 x half> %a, <vscale x 1 x i1> %m, i32 %evl)
+  %negb = call <vscale x 1 x half> @llvm.vp.fneg.nxv1f16(<vscale x 1 x half> %b, <vscale x 1 x i1> %m, i32 %evl)
+  %v = call <vscale x 1 x half> @llvm.vp.fma.nxv1f16(<vscale x 1 x half> %nega, <vscale x 1 x half> %negb, <vscale x 1 x half> %c, <vscale x 1 x i1> %m, i32 %evl)
+  ret <vscale x 1 x half> %v
+}

@@ -1,9 +1,9 @@
 // https://github.com/llvm/llvm-project/issues/59765
 // FIXME: Since the signature of the constructors/destructors is
 // different in different targets. The current CHECK can't work
-// well when targeting or running on AIX.
+// well when targeting or running on AIX and z/OS.
 // It would be better to add the corresponding test for other test.
-// UNSUPPORTED: system-aix
+// UNSUPPORTED: system-zos, system-aix
 //
 // RUN: rm -rf %t
 // RUN: mkdir %t

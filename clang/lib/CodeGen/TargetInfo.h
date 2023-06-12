@@ -398,6 +398,12 @@ public:
   virtual llvm::Type *getOpenCLType(CodeGenModule &CGM, const Type *T) const {
     return nullptr;
   }
+
+protected:
+  static std::string qualifyWindowsLibrary(StringRef Lib);
+
+  void addStackProbeTargetAttributes(const Decl *D, llvm::GlobalValue *GV,
+                                     CodeGen::CodeGenModule &CGM) const;
 };
 
 } // namespace CodeGen

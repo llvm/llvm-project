@@ -61,14 +61,6 @@ __parallel_reduce(__pstl::__internal::__serial_backend_tag, _ExecutionPolicy&&, 
     }
 }
 
-template <class _ExecutionPolicy, class _Index, class _UnaryOp, class _Tp, class _BinaryOp, class _Reduce>
-_LIBCPP_HIDE_FROM_ABI _Tp
-__parallel_transform_reduce(__pstl::__internal::__serial_backend_tag, _ExecutionPolicy&&, _Index __first, _Index __last,
-                            _UnaryOp, _Tp __init, _BinaryOp, _Reduce __reduce)
-{
-    return __reduce(__first, __last, __init);
-}
-
 template <class _ExecutionPolicy, typename _Index, typename _Tp, typename _Rp, typename _Cp, typename _Sp, typename _Ap>
 _LIBCPP_HIDE_FROM_ABI void
 __parallel_strict_scan(__pstl::__internal::__serial_backend_tag, _ExecutionPolicy&&, _Index __n, _Tp __initial,
@@ -96,16 +88,6 @@ __parallel_stable_sort(__pstl::__internal::__serial_backend_tag, _ExecutionPolic
                        _RandomAccessIterator __last, _Compare __comp, _LeafSort __leaf_sort, std::size_t = 0)
 {
     __leaf_sort(__first, __last, __comp);
-}
-
-template <class _ExecutionPolicy, typename _RandomAccessIterator1, typename _RandomAccessIterator2,
-          typename _RandomAccessIterator3, typename _Compare, typename _LeafMerge>
-_LIBCPP_HIDE_FROM_ABI void
-__parallel_merge(__pstl::__internal::__serial_backend_tag, _ExecutionPolicy&&, _RandomAccessIterator1 __first1,
-                 _RandomAccessIterator1 __last1, _RandomAccessIterator2 __first2, _RandomAccessIterator2 __last2,
-                 _RandomAccessIterator3 __outit, _Compare __comp, _LeafMerge __leaf_merge)
-{
-    __leaf_merge(__first1, __last1, __first2, __last2, __outit, __comp);
 }
 
 template <class _ExecutionPolicy, typename _F1, typename _F2>

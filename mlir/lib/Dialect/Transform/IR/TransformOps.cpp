@@ -16,6 +16,7 @@
 #include "mlir/IR/FunctionImplementation.h"
 #include "mlir/IR/PatternMatch.h"
 #include "mlir/Interfaces/ControlFlowInterfaces.h"
+#include "mlir/Transforms/GreedyPatternRewriteDriver.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/ScopeExit.h"
 #include "llvm/ADT/SmallPtrSet.h"
@@ -48,114 +49,6 @@ static ParseResult parseForeachMatchSymbols(OpAsmParser &parser,
 
 #define GET_OP_CLASSES
 #include "mlir/Dialect/Transform/IR/TransformOps.cpp.inc"
-
-//===----------------------------------------------------------------------===//
-// TrackingListener
-//===----------------------------------------------------------------------===//
-
-Operation *transform::TrackingListener::getCommonDefiningOp(ValueRange values) {
-  Operation *defOp = nullptr;
-  for (Value v : values) {
-    // Skip empty values.
-    if (!v)
-      continue;
-    if (!defOp) {
-      defOp = v.getDefiningOp();
-      continue;
-    }
-    if (defOp != v.getDefiningOp())
-      return nullptr;
-  }
-  return defOp;
-}
-
-Operation *
-transform::TrackingListener::findReplacementOp(Operation *op,
-                                               ValueRange newValues) const {
-  assert(op->getNumResults() == newValues.size() &&
-         "invalid number of replacement values");
-
-  // If the replacement values belong to different ops, drop the mapping.
-  Operation *defOp = getCommonDefiningOp(newValues);
-  if (!defOp)
-    return nullptr;
-
-  // If the replacement op has a different type, drop the mapping.
-  if (op->getName() != defOp->getName())
-    return nullptr;
-
-  return defOp;
-}
-
-LogicalResult transform::TrackingListener::notifyMatchFailure(
-    Location loc, function_ref<void(Diagnostic &)> reasonCallback) {
-  LLVM_DEBUG({
-    Diagnostic diag(loc, DiagnosticSeverity::Remark);
-    reasonCallback(diag);
-    DBGS() << "Match Failure : " << diag.str() << "\n";
-  });
-  return failure();
-}
-
-void transform::TrackingListener::notifyOperationRemoved(Operation *op) {
-  // TODO: Walk can be removed when D144193 has landed.
-  op->walk([&](Operation *op) {
-    // Remove mappings for result values.
-    for (OpResult value : op->getResults())
-      (void)replacePayloadValue(value, nullptr);
-    // Remove mapping for op.
-    (void)replacePayloadOp(op, nullptr);
-  });
-}
-
-/// Return true if `a` happens before `b`, i.e., `a` or one of its ancestors
-/// properly dominates `b` and `b` is not inside `a`.
-static bool happensBefore(Operation *a, Operation *b) {
-  do {
-    if (a->isProperAncestor(b))
-      return false;
-    if (Operation *bAncestor = a->getBlock()->findAncestorOpInBlock(*b)) {
-      return a->isBeforeInBlock(bAncestor);
-    }
-  } while ((a = a->getParentOp()));
-  return false;
-}
-
-void transform::TrackingListener::notifyOperationReplaced(
-    Operation *op, ValueRange newValues) {
-  assert(op->getNumResults() == newValues.size() &&
-         "invalid number of replacement values");
-
-  // Replace value handles.
-  for (auto [oldValue, newValue] : llvm::zip(op->getResults(), newValues))
-    (void)replacePayloadValue(oldValue, newValue);
-
-  // Replace op handle.
-  SmallVector<Value> opHandles;
-  if (failed(getTransformState().getHandlesForPayloadOp(op, opHandles))) {
-    // Op is not tracked.
-    return;
-  }
-  auto hasAliveUser = [&]() {
-    for (Value v : opHandles)
-      for (Operation *user : v.getUsers())
-        if (!happensBefore(user, transformOp))
-          return true;
-    return false;
-  };
-  if (!hasAliveUser()) {
-    // The op is tracked but the corresponding handles are dead.
-    (void)replacePayloadOp(op, nullptr);
-    return;
-  }
-
-  Operation *replacement = findReplacementOp(op, newValues);
-  // If the op is tracked but no replacement op was found, send a
-  // notification.
-  if (!replacement)
-    notifyPayloadReplacementNotFound(op, newValues);
-  (void)replacePayloadOp(op, replacement);
-}
 
 //===----------------------------------------------------------------------===//
 // AlternativesOp
@@ -299,6 +192,153 @@ LogicalResult transform::AlternativesOp::verify() {
   }
 
   return success();
+}
+
+//===----------------------------------------------------------------------===//
+// AnnotateOp
+//===----------------------------------------------------------------------===//
+
+DiagnosedSilenceableFailure
+transform::AnnotateOp::apply(transform::TransformResults &results,
+                             transform::TransformState &state) {
+  SmallVector<Operation *> targets =
+      llvm::to_vector(state.getPayloadOps(getTarget()));
+
+  Attribute attr = UnitAttr::get(getContext());
+  if (auto paramH = getParam()) {
+    ArrayRef<Attribute> params = state.getParams(paramH);
+    if (params.size() != 1) {
+      if (targets.size() != params.size()) {
+        return emitSilenceableError()
+               << "parameter and target have different payload lengths ("
+               << params.size() << " vs " << targets.size() << ")";
+      }
+      for (auto &&[target, attr] : llvm::zip_equal(targets, params))
+        target->setAttr(getName(), attr);
+      return DiagnosedSilenceableFailure::success();
+    }
+    attr = params[0];
+  }
+  for (auto target : targets)
+    target->setAttr(getName(), attr);
+  return DiagnosedSilenceableFailure::success();
+}
+
+void transform::AnnotateOp::getEffects(
+    SmallVectorImpl<MemoryEffects::EffectInstance> &effects) {
+  onlyReadsHandle(getTarget(), effects);
+  onlyReadsHandle(getParam(), effects);
+  modifiesPayload(effects);
+}
+
+//===----------------------------------------------------------------------===//
+// ApplyPatternsOp
+//===----------------------------------------------------------------------===//
+
+DiagnosedSilenceableFailure
+transform::ApplyPatternsOp::applyToOne(Operation *target,
+                                       ApplyToEachResultList &results,
+                                       transform::TransformState &state) {
+  // Gather all specified patterns.
+  MLIRContext *ctx = target->getContext();
+  RewritePatternSet patterns(ctx);
+  if (!getRegion().empty()) {
+    for (Operation &op : getRegion().front()) {
+      cast<transform::PatternDescriptorOpInterface>(&op).populatePatterns(
+          patterns);
+    }
+  }
+
+  // Configure the GreedyPatternRewriteDriver.
+  ErrorCheckingTrackingListener listener(state, *this);
+  GreedyRewriteConfig config;
+  config.listener = &listener;
+
+  LogicalResult result = failure();
+  if (target->hasTrait<OpTrait::IsIsolatedFromAbove>()) {
+    // Op is isolated from above. Apply patterns and also perform region
+    // simplification.
+    result = applyPatternsAndFoldGreedily(target, std::move(patterns), config);
+  } else {
+    // Manually gather list of ops because the other GreedyPatternRewriteDriver
+    // overloads only accepts ops that are isolated from above. This way,
+    // patterns can be applied to ops that are not isolated from above. Regions
+    // are not being simplified. Furthermore, only a single greedy rewrite
+    // iteration is performed.
+    SmallVector<Operation *> ops;
+    target->walk([&](Operation *nestedOp) {
+      if (target != nestedOp)
+        ops.push_back(nestedOp);
+    });
+    result = applyOpPatternsAndFold(ops, std::move(patterns), config);
+  }
+
+  // A failure typically indicates that the pattern application did not
+  // converge.
+  if (failed(result)) {
+    return emitSilenceableFailure(target)
+           << "greedy pattern application failed";
+  }
+
+  // Check listener state for tracking errors.
+  if (listener.failed()) {
+    DiagnosedSilenceableFailure status = listener.checkAndResetError();
+    if (getFailOnPayloadReplacementNotFound())
+      return status;
+    (void)status.silence();
+  }
+
+  return DiagnosedSilenceableFailure::success();
+}
+
+LogicalResult transform::ApplyPatternsOp::verify() {
+  if (!getRegion().empty()) {
+    for (Operation &op : getRegion().front()) {
+      if (!isa<transform::PatternDescriptorOpInterface>(&op)) {
+        InFlightDiagnostic diag = emitOpError()
+                                  << "expected children ops to implement "
+                                     "PatternDescriptorOpInterface";
+        diag.attachNote(op.getLoc()) << "op without interface";
+        return diag;
+      }
+    }
+  }
+  return success();
+}
+
+void transform::ApplyPatternsOp::getEffects(
+    SmallVectorImpl<MemoryEffects::EffectInstance> &effects) {
+  transform::onlyReadsHandle(getTarget(), effects);
+  transform::modifiesPayload(effects);
+}
+
+void transform::ApplyPatternsOp::build(
+    OpBuilder &builder, OperationState &result, Value target,
+    function_ref<void(OpBuilder &, Location)> bodyBuilder,
+    bool failOnPayloadReplacementNotFound) {
+  result.addOperands(target);
+  result.getOrAddProperties<Properties>()
+      .fail_on_payload_replacement_not_found =
+      builder.getBoolAttr(failOnPayloadReplacementNotFound);
+
+  OpBuilder::InsertionGuard g(builder);
+  Region *region = result.addRegion();
+  builder.createBlock(region);
+  if (bodyBuilder)
+    bodyBuilder(builder, result.location);
+}
+
+//===----------------------------------------------------------------------===//
+// ApplyCanonicalizationPatternsOp
+//===----------------------------------------------------------------------===//
+
+void transform::ApplyCanonicalizationPatternsOp::populatePatterns(
+    RewritePatternSet &patterns) {
+  MLIRContext *ctx = patterns.getContext();
+  for (Dialect *dialect : ctx->getLoadedDialects())
+    dialect->getCanonicalizationPatterns(patterns);
+  for (RegisteredOperationName op : ctx->getRegisteredOperations())
+    op.getCanonicalizationPatterns(patterns, ctx);
 }
 
 //===----------------------------------------------------------------------===//

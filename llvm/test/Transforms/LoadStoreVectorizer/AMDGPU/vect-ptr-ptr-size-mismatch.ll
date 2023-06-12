@@ -62,6 +62,23 @@ entry:
   unreachable
 }
 
+; CHECK-LABEL: @select_different_as
+; CHECK: load <2 x i32>
+define void @select_different_as(ptr addrspace(1) %p0, ptr addrspace(5) %q0, i1 %cond) {
+entry:
+  %p1 = getelementptr inbounds i32, ptr addrspace(1) %p0, i64 1
+  %q1 = getelementptr inbounds i32, ptr addrspace(5) %q0, i64 1
+  %p0.ascast = addrspacecast ptr addrspace(1) %p0 to ptr
+  %p1.ascast = addrspacecast ptr addrspace(1) %p1 to ptr
+  %q0.ascast = addrspacecast ptr addrspace(5) %q0 to ptr
+  %q1.ascast = addrspacecast ptr addrspace(5) %q1 to ptr
+  %sel0 = select i1 %cond, ptr %p0.ascast, ptr %q0.ascast
+  %sel1 = select i1 %cond, ptr %p1.ascast, ptr %q1.ascast
+  %tmp1 = load i32, ptr %sel0, align 8
+  %tmp2 = load i32, ptr %sel1, align 8
+  unreachable
+}
+
 ; CHECK-LABEL: @shrink_ptr
 ; CHECK: load <2 x i32>
 define void @shrink_ptr(ptr %p) {
@@ -82,7 +99,7 @@ entry:
   %a.ascast = addrspacecast ptr addrspace(5) %p to ptr
   %b.ascast = addrspacecast ptr addrspace(5) %gep2 to ptr
   %tmp1 = load i8, ptr %a.ascast, align 1
-  %tmp2 = load i8, ptr %b.ascast, align 1
+  %tmp2 = load i8, ptr %b.ascast, align 2
   unreachable
 }
 
