@@ -410,6 +410,10 @@ Changes in existing checks
   for coroutines where previously a warning would be emitted with coroutines
   throwing exceptions in their bodies.
 
+- Improved :doc:`readability-container-data-pointer
+  <clang-tidy/checks/readability/container-data-pointer>` check with new
+  `IgnoredContainers` option to ignore some containers.
+
 Removed checks
 ^^^^^^^^^^^^^^
 
