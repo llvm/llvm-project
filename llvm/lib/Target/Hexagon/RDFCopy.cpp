@@ -76,7 +76,7 @@ void CopyPropagation::recordCopy(NodeAddr<StmtNode*> SA, EqualityMap &EM) {
 
 
 void CopyPropagation::updateMap(NodeAddr<InstrNode*> IA) {
-  RegisterSet RRs;
+  RegisterSet RRs(DFG.getPRI());
   for (NodeAddr<RefNode*> RA : IA.Addr->members(DFG))
     RRs.insert(RA.Addr->getRegRef(DFG));
   bool Common = false;
@@ -107,7 +107,7 @@ bool CopyPropagation::scanBlock(MachineBasicBlock *B) {
   for (NodeAddr<InstrNode*> IA : BA.Addr->members(DFG)) {
     if (DFG.IsCode<NodeAttrs::Stmt>(IA)) {
       NodeAddr<StmtNode*> SA = IA;
-      EqualityMap EM;
+      EqualityMap EM(std::less<RegisterRef>(DFG.getPRI()));
       if (interpretAsCopy(SA.Addr->getCode(), EM))
         recordCopy(SA, EM);
     }
@@ -132,9 +132,11 @@ bool CopyPropagation::run() {
     for (NodeId I : Copies) {
       dbgs() << "Instr: " << *DFG.addr<StmtNode*>(I).Addr->getCode();
       dbgs() << "   eq: {";
-      for (auto J : CopyMap[I])
-        dbgs() << ' ' << Print<RegisterRef>(J.first, DFG) << '='
-               << Print<RegisterRef>(J.second, DFG);
+      if (CopyMap.count(I)) {
+        for (auto J : CopyMap.at(I))
+          dbgs() << ' ' << Print<RegisterRef>(J.first, DFG) << '='
+                 << Print<RegisterRef>(J.second, DFG);
+      }
       dbgs() << " }\n";
     }
     dbgs() << "\nRDef map:\n";
@@ -164,6 +166,8 @@ bool CopyPropagation::run() {
     return 0;
   };
 
+  const PhysicalRegisterInfo &PRI = DFG.getPRI();
+
   for (NodeId C : Copies) {
 #ifndef NDEBUG
     if (HasLimit && CpCount >= CpLimit)
@@ -181,7 +185,7 @@ bool CopyPropagation::run() {
       if (FR == EM.end())
         continue;
       RegisterRef SR = FR->second;
-      if (DR == SR)
+      if (PRI.equal_to(DR, SR))
         continue;
 
       auto &RDefSR = RDefMap[SR];
@@ -193,7 +197,7 @@ bool CopyPropagation::run() {
         uint16_t F = UA.Addr->getFlags();
         if ((F & NodeAttrs::PhiRef) || (F & NodeAttrs::Fixed))
           continue;
-        if (UA.Addr->getRegRef(DFG) != DR)
+        if (!PRI.equal_to(UA.Addr->getRegRef(DFG), DR))
           continue;
 
         NodeAddr<InstrNode*> IA = UA.Addr->getOwner(DFG);
@@ -233,7 +237,7 @@ bool CopyPropagation::run() {
           // Update the EM map in the copy's entry.
           auto &M = FC->second;
           for (auto &J : M) {
-            if (J.second != DR)
+            if (!PRI.equal_to(J.second, DR))
               continue;
             J.second = SR;
             break;
