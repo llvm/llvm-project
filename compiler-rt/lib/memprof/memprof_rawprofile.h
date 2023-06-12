@@ -2,6 +2,7 @@
 #define MEMPROF_RAWPROFILE_H_
 
 #include "memprof_mibmap.h"
+#include "sanitizer_common/sanitizer_array_ref.h"
 #include "sanitizer_common/sanitizer_common.h"
 
 namespace __memprof {

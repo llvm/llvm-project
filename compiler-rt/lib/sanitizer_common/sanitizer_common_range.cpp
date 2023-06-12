@@ -8,6 +8,8 @@
 
 #include "sanitizer_common_range.h"
 
+#include "sanitizer_common/sanitizer_array_ref.h"
+
 namespace __sanitizer {
 
 void Intersect(ArrayRef<Range> a, ArrayRef<Range> b,

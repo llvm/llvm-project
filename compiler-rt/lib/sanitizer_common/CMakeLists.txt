@@ -114,6 +114,7 @@ set(SANITIZER_IMPL_HEADERS
   sanitizer_allocator_secondary.h
   sanitizer_allocator_size_class_map.h
   sanitizer_allocator_stats.h
+  sanitizer_array_ref.h
   sanitizer_asm.h
   sanitizer_atomic.h
   sanitizer_atomic_clang.h

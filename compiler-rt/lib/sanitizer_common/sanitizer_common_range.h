@@ -14,6 +14,7 @@
 #define SANITIZER_COMMON_REGION_H
 
 #include "sanitizer_common.h"
+#include "sanitizer_common/sanitizer_array_ref.h"
 
 namespace __sanitizer {
 
