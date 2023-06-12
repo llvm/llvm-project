@@ -3766,14 +3766,21 @@ static SDValue lowerVECTOR_SHUFFLEAsVSlideup(const SDLoc &DL, MVT VT,
   // up to the very end of it, then we don't actually care about the tail.
   if (NumSubElts + Index >= (int)NumElts)
     Policy |= RISCVII::TAIL_AGNOSTIC;
-  SDValue Slideup = getVSlideup(
-      DAG, Subtarget, DL, ContainerVT,
-      convertToScalableVector(ContainerVT, InPlace, DAG, Subtarget),
-      convertToScalableVector(ContainerVT, ToInsert, DAG, Subtarget),
-      DAG.getConstant(Index, DL, XLenVT), TrueMask,
-      DAG.getConstant(NumSubElts + Index, DL, XLenVT),
-      Policy);
-  return convertFromScalableVector(VT, Slideup, DAG, Subtarget);
+
+  InPlace = convertToScalableVector(ContainerVT, InPlace, DAG, Subtarget);
+  ToInsert = convertToScalableVector(ContainerVT, ToInsert, DAG, Subtarget);
+  SDValue VL = DAG.getConstant(NumSubElts + Index, DL, XLenVT);
+
+  SDValue Res;
+  // If we're inserting into the lowest elements, use a tail undisturbed
+  // vmv.v.v.
+  if (Index == 0)
+    Res = DAG.getNode(RISCVISD::VMV_V_V_VL, DL, ContainerVT, InPlace, ToInsert,
+                      VL);
+  else
+    Res = getVSlideup(DAG, Subtarget, DL, ContainerVT, InPlace, ToInsert,
+                      DAG.getConstant(Index, DL, XLenVT), TrueMask, VL, Policy);
+  return convertFromScalableVector(VT, Res, DAG, Subtarget);
 }
 
 /// Match v(f)slide1up/down idioms.  These operations involve sliding
