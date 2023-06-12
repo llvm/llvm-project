@@ -1,4 +1,4 @@
-; RUN llc -mtriple=amdgcn-amd-amdpal -mcpu=gfx1100 -verify-machineinstrs < %s | FileCheck %s
+; RUN: llc -mtriple=amdgcn-amd-amdpal -mcpu=gfx1100 -verify-machineinstrs < %s | FileCheck %s
 
 ; Check that we do not assume any default stack size for PAL code object
 ; indirect calls. The driver knows the max recursion depth, so it can compute
