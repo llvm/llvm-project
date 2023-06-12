@@ -3408,44 +3408,31 @@ bool RISCVDAGToDAGISel::performCombineVMergeAndVOps(SDNode *N, bool IsTA) {
 }
 
 // Transform (VMERGE_VVM_<LMUL>_TU false, false, true, allones, vl, sew) to
-// (VADD_VI_<LMUL>_TU false, true, 0, vl, sew). It may decrease uses of VMSET.
-bool RISCVDAGToDAGISel::performVMergeToVAdd(SDNode *N) {
+// (MMV_V_V_<LMUL>_TU false, true, vl, sew). It may decrease uses of VMSET.
+bool RISCVDAGToDAGISel::performVMergeToVMv(SDNode *N) {
+#define CASE_VMERGE_TO_VMV(lmul)                                               \
+  case RISCV::PseudoVMERGE_VVM_##lmul##_TU:                                    \
+    NewOpc = RISCV::PseudoVMV_V_V_##lmul##_TU;                                 \
+    break;
   unsigned NewOpc;
   switch (N->getMachineOpcode()) {
   default:
     llvm_unreachable("Expected VMERGE_VVM_<LMUL>_TU instruction.");
-  case RISCV::PseudoVMERGE_VVM_MF8_TU:
-    NewOpc = RISCV::PseudoVADD_VI_MF8_TU;
-    break;
-  case RISCV::PseudoVMERGE_VVM_MF4_TU:
-    NewOpc = RISCV::PseudoVADD_VI_MF4_TU;
-    break;
-  case RISCV::PseudoVMERGE_VVM_MF2_TU:
-    NewOpc = RISCV::PseudoVADD_VI_MF2_TU;
-    break;
-  case RISCV::PseudoVMERGE_VVM_M1_TU:
-    NewOpc = RISCV::PseudoVADD_VI_M1_TU;
-    break;
-  case RISCV::PseudoVMERGE_VVM_M2_TU:
-    NewOpc = RISCV::PseudoVADD_VI_M2_TU;
-    break;
-  case RISCV::PseudoVMERGE_VVM_M4_TU:
-    NewOpc = RISCV::PseudoVADD_VI_M4_TU;
-    break;
-  case RISCV::PseudoVMERGE_VVM_M8_TU:
-    NewOpc = RISCV::PseudoVADD_VI_M8_TU;
-    break;
+  CASE_VMERGE_TO_VMV(MF8)
+  CASE_VMERGE_TO_VMV(MF4)
+  CASE_VMERGE_TO_VMV(MF2)
+  CASE_VMERGE_TO_VMV(M1)
+  CASE_VMERGE_TO_VMV(M2)
+  CASE_VMERGE_TO_VMV(M4)
+  CASE_VMERGE_TO_VMV(M8)
   }
 
   if (!usesAllOnesMask(N, /* MaskOpIdx */ 3))
     return false;
 
-  SDLoc DL(N);
-  EVT VT = N->getValueType(0);
-  SDValue Ops[] = {N->getOperand(1), N->getOperand(2),
-                   CurDAG->getTargetConstant(0, DL, Subtarget->getXLenVT()),
-                   N->getOperand(4), N->getOperand(5)};
-  SDNode *Result = CurDAG->getMachineNode(NewOpc, DL, VT, Ops);
+  SDNode *Result = CurDAG->getMachineNode(
+      NewOpc, SDLoc(N), N->getValueType(0),
+      {N->getOperand(1), N->getOperand(2), N->getOperand(4), N->getOperand(5)});
   ReplaceUses(N, Result);
   return true;
 }
@@ -3486,7 +3473,7 @@ bool RISCVDAGToDAGISel::doPeepholeMergeVVMFold() {
         IsVMergeTA(Opc))
       MadeChange |= performCombineVMergeAndVOps(N, IsVMergeTA(Opc));
     if (IsVMergeTU(Opc) && N->getOperand(0) == N->getOperand(1))
-      MadeChange |= performVMergeToVAdd(N);
+      MadeChange |= performVMergeToVMv(N);
   }
   return MadeChange;
 }
