@@ -72,6 +72,10 @@ TYPE_PARSER(construct<AccGangArgument>(
     maybe(("NUM:"_tok >> scalarIntExpr || scalarIntExpr)),
     maybe(", STATIC:" >> Parser<AccSizeExpr>{})))
 
+// 2.9.1 collapse
+TYPE_PARSER(construct<AccCollapseArg>(
+    "FORCE:"_tok >> pure(true) || pure(false), scalarIntConstantExpr))
+
 // 2.5.13 Reduction
 // Operator for reduction
 TYPE_PARSER(sourced(construct<AccReductionOperator>(

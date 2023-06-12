@@ -910,9 +910,16 @@ createLoopOp(Fortran::lower::AbstractConverter &converter,
 
   // Lower clauses mapped to attributes
   for (const Fortran::parser::AccClause &clause : accClauseList.v) {
+    mlir::Location clauseLocation = converter.genLocation(clause.source);
     if (const auto *collapseClause =
             std::get_if<Fortran::parser::AccClause::Collapse>(&clause.u)) {
-      const auto *expr = Fortran::semantics::GetExpr(collapseClause->v);
+      const Fortran::parser::AccCollapseArg &arg = collapseClause->v;
+      const auto &force = std::get<bool>(arg.t);
+      if (force)
+        TODO(clauseLocation, "OpenACC collapse force modifier");
+      const auto &intExpr =
+          std::get<Fortran::parser::ScalarIntConstantExpr>(arg.t);
+      const auto *expr = Fortran::semantics::GetExpr(intExpr);
       const std::optional<int64_t> collapseValue =
           Fortran::evaluate::ToInt64(*expr);
       if (collapseValue) {
