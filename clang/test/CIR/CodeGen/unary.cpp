@@ -157,10 +157,18 @@ void floats(float f) {
 // CHECK: cir.func @{{.+}}floats{{.+}}
   +f; // CHECK: %{{[0-9]+}} = cir.unary(plus, %{{[0-9]+}}) : f32, f32
   -f; // CHECK: %{{[0-9]+}} = cir.unary(minus, %{{[0-9]+}}) : f32, f32
+  ++f; // CHECK: = cir.unary(inc, %{{[0-9]+}}) : f32, f32
+  --f; // CHECK: = cir.unary(dec, %{{[0-9]+}}) : f32, f32
+  f++; // CHECK: = cir.unary(inc, %{{[0-9]+}}) : f32, f32
+  f--; // CHECK: = cir.unary(dec, %{{[0-9]+}}) : f32, f32
 }
 
 void doubles(double d) {
 // CHECK: cir.func @{{.+}}doubles{{.+}}
   +d; // CHECK: %{{[0-9]+}} = cir.unary(plus, %{{[0-9]+}}) : f64, f64
   -d; // CHECK: %{{[0-9]+}} = cir.unary(minus, %{{[0-9]+}}) : f64, f64
+  ++d; // CHECK: = cir.unary(inc, %{{[0-9]+}}) : f64, f64
+  --d; // CHECK: = cir.unary(dec, %{{[0-9]+}}) : f64, f64
+  d++; // CHECK: = cir.unary(inc, %{{[0-9]+}}) : f64, f64
+  d--; // CHECK: = cir.unary(dec, %{{[0-9]+}}) : f64, f64
 }

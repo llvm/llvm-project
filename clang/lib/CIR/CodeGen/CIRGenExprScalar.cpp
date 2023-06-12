@@ -17,9 +17,12 @@
 #include "clang/AST/StmtVisitor.h"
 #include "clang/CIR/Dialect/IR/CIRAttrs.h"
 #include "clang/CIR/Dialect/IR/CIRDialect.h"
+#include "clang/CIR/Dialect/IR/CIROpsEnums.h"
 #include "clang/CIR/Dialect/IR/CIRTypes.h"
+#include "llvm/Support/ErrorHandling.h"
 #include <cstdint>
 
+#include "mlir/IR/BuiltinTypes.h"
 #include "mlir/IR/Value.h"
 
 using namespace cir;
@@ -338,7 +341,15 @@ public:
     } else if (type->isVectorType()) {
       llvm_unreachable("no vector inc/dec yet");
     } else if (type->isRealFloatingType()) {
-      llvm_unreachable("no float inc/dec yet");
+      auto isFloatOrDouble = type->isSpecificBuiltinType(BuiltinType::Float) ||
+                             type->isSpecificBuiltinType(BuiltinType::Double);
+      assert(isFloatOrDouble && "Non-float/double NYI");
+
+      // Create the inc/dec operation.
+      auto kind =
+          (isInc ? mlir::cir::UnaryOpKind::Inc : mlir::cir::UnaryOpKind::Dec);
+      value = buildUnaryOp(E, kind, input);
+
     } else if (type->isFixedPointType()) {
       llvm_unreachable("no fixed point inc/dec yet");
     } else {
