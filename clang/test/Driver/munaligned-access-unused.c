@@ -5,4 +5,4 @@
 // RUN: %clang --target=x86_64 -mstrict-align -fsyntax-only %s -### 2>&1 | FileCheck %s -DOPTION=strict-align
 // RUN: %clang --target=x86_64 -mno-strict-align -fsyntax-only %s -### 2>&1 | FileCheck %s -DOPTION=no-strict-align
 
-// CHECK: error: unsupported option '-m{{(no-)?}}unaligned-access' for target '{{.*}}'
+// CHECK: clang: warning: argument unused during compilation: '-m[[OPTION]]' [-Wunused-command-line-argument]
