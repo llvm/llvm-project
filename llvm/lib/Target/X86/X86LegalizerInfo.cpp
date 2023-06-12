@@ -329,20 +329,47 @@ X86LegalizerInfo::X86LegalizerInfo(const X86Subtarget &STI,
       .clampScalar(1, s32, HasSSE2 ? s64 : s32)
       .widenScalarToNextPow2(1);
 
-  // fp extension
+  // fp conversions
   getActionDefinitionsBuilder(G_FPEXT).legalIf([=](const LegalityQuery &Query) {
     return (HasSSE2 && typePairInSet(0, 1, {{s64, s32}})(Query)) ||
            (HasAVX && typePairInSet(0, 1, {{v4s64, v4s32}})(Query)) ||
            (HasAVX512 && typePairInSet(0, 1, {{v8s64, v8s32}})(Query));
   });
 
-  // fp truncation
   getActionDefinitionsBuilder(G_FPTRUNC).legalIf(
       [=](const LegalityQuery &Query) {
         return (HasSSE2 && typePairInSet(0, 1, {{s32, s64}})(Query)) ||
                (HasAVX && typePairInSet(0, 1, {{v4s32, v4s64}})(Query)) ||
                (HasAVX512 && typePairInSet(0, 1, {{v8s32, v8s64}})(Query));
       });
+
+  getActionDefinitionsBuilder(G_SITOFP)
+      .legalIf([=](const LegalityQuery &Query) {
+        return (HasSSE1 &&
+                (typePairInSet(0, 1, {{s32, s32}})(Query) ||
+                 (Is64Bit && typePairInSet(0, 1, {{s32, s64}})(Query)))) ||
+               (HasSSE2 &&
+                (typePairInSet(0, 1, {{s64, s32}})(Query) ||
+                 (Is64Bit && typePairInSet(0, 1, {{s64, s64}})(Query))));
+      })
+      .clampScalar(1, s32, sMaxScalar)
+      .widenScalarToNextPow2(1)
+      .clampScalar(0, s32, HasSSE2 ? s64 : s32)
+      .widenScalarToNextPow2(0);
+
+  getActionDefinitionsBuilder(G_FPTOSI)
+      .legalIf([=](const LegalityQuery &Query) {
+        return (HasSSE1 &&
+                (typePairInSet(0, 1, {{s32, s32}})(Query) ||
+                 (Is64Bit && typePairInSet(0, 1, {{s64, s32}})(Query)))) ||
+               (HasSSE2 &&
+                (typePairInSet(0, 1, {{s32, s64}})(Query) ||
+                 (Is64Bit && typePairInSet(0, 1, {{s64, s64}})(Query))));
+      })
+      .clampScalar(1, s32, HasSSE2 ? s64 : s32)
+      .widenScalarToNextPow2(0)
+      .clampScalar(0, s32, sMaxScalar)
+      .widenScalarToNextPow2(1);
 
   // todo: vectors and address spaces
   getActionDefinitionsBuilder(G_SELECT)
@@ -450,20 +477,6 @@ void X86LegalizerInfo::setLegalizerInfo64bit() {
 
   for (unsigned MemOp : {G_LOAD, G_STORE})
     LegacyInfo.setAction({MemOp, s64}, LegacyLegalizeActions::Legal);
-
-  getActionDefinitionsBuilder(G_SITOFP)
-    .legalForCartesianProduct({s32, s64})
-      .clampScalar(1, s32, s64)
-      .widenScalarToNextPow2(1)
-      .clampScalar(0, s32, s64)
-      .widenScalarToNextPow2(0);
-
-  getActionDefinitionsBuilder(G_FPTOSI)
-      .legalForCartesianProduct({s32, s64})
-      .clampScalar(1, s32, s64)
-      .widenScalarToNextPow2(0)
-      .clampScalar(0, s32, s64)
-      .widenScalarToNextPow2(1);
 
   // Merge/Unmerge
   LegacyInfo.setAction({G_MERGE_VALUES, s128}, LegacyLegalizeActions::Legal);
