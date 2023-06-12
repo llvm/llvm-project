@@ -6,24 +6,12 @@
 //
 //===----------------------------------------------------------------------===//
 
-// UNSUPPORTED: c++03, c++11, c++14
+// REQUIRES: c++03 || c++11 || c++14
 
 // <filesystem>
 
 // namespace std::filesystem
 
 #include <filesystem>
-#include <type_traits>
 
-#include "test_macros.h"
-
-using namespace std::filesystem;
-
-int main(int, char**) {
-  static_assert(std::is_same<
-          path,
-          std::filesystem::path
-      >::value, "");
-
-  return 0;
-}
+namespace fs = std::filesystem; // expected-error-re {{{{(no namespace named 'filesystem' in namespace 'std';)|(expected namespace name)}}}}
