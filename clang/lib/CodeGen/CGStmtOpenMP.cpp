@@ -34,10 +34,13 @@
 #include "llvm/IR/IntrinsicInst.h"
 #include "llvm/IR/Metadata.h"
 #include "llvm/Support/AtomicOrdering.h"
+#include "llvm/Support/Debug.h"
 #include <optional>
 using namespace clang;
 using namespace CodeGen;
 using namespace llvm::omp;
+
+#define TTL_CODEGEN_TYPE "target-teams-loop-codegen"
 
 static const VarDecl *getBaseDecl(const Expr *Ref);
 
@@ -8209,6 +8212,10 @@ static void emitTargetTeamsGenericLoopRegionAsParallel(
         CGF, OMPD_distribute, CodeGenDistribute, /*HasCancel=*/false);
     CGF.EmitOMPReductionClauseFinal(S, /*ReductionKind=*/OMPD_teams);
   };
+  DEBUG_WITH_TYPE(TTL_CODEGEN_TYPE,
+      CGF.CGM.emitTargetTeamsLoopCodegenStatus(
+          TTL_CODEGEN_TYPE " as parallel for", S,
+          CGF.CGM.getLangOpts().OpenMPIsDevice));
   emitCommonOMPTeamsDirective(CGF, S, OMPD_distribute_parallel_for,
                               CodeGenTeams);
   emitPostUpdateForReductionClause(CGF, S,
@@ -8235,6 +8242,10 @@ static void emitTargetTeamsGenericLoopRegionAsDistribute(
         CGF, OMPD_distribute, CodeGenDistribute, /*HasCancel=*/false);
     CGF.EmitOMPReductionClauseFinal(S, /*ReductionKind=*/OMPD_teams);
   };
+  DEBUG_WITH_TYPE(TTL_CODEGEN_TYPE,
+      CGF.CGM.emitTargetTeamsLoopCodegenStatus(
+          TTL_CODEGEN_TYPE " as distribute", S,
+          CGF.CGM.getLangOpts().OpenMPIsDevice));
   emitCommonOMPTeamsDirective(CGF, S, OMPD_distribute, CodeGen);
   emitPostUpdateForReductionClause(CGF, S,
                                    [](CodeGenFunction &) { return nullptr; });

@@ -7548,6 +7548,21 @@ void CodeGenModule::emitNxResult(std::string StatusMsg,
   llvm::dbgs() << StatusMsg << ": " << FileName << ": " << LineNo << "\n";
 }
 
+void CodeGenModule::emitTargetTeamsLoopCodegenStatus(
+    std::string StatusMsg, const OMPExecutableDirective &D, bool IsDevice) {
+  if (IsDevice)
+    StatusMsg += ": DEVICE";
+  else
+    StatusMsg += ": HOST";
+  SourceLocation L = D.getBeginLoc();
+  SourceManager &SM = getContext().getSourceManager();
+  PresumedLoc PLoc = SM.getPresumedLoc(L);
+  const char *FileName = PLoc.isValid() ? PLoc.getFilename() : nullptr;
+  unsigned LineNo =
+      PLoc.isValid() ? PLoc.getLine() : SM.getExpansionLineNumber(L);
+  llvm::dbgs() << StatusMsg << ": " << FileName << ": " << LineNo << "\n";
+}
+
 const ForStmt *CodeGenModule::getSingleForStmt(const Stmt *S) {
   if (S == nullptr)
     return nullptr;
@@ -8146,27 +8161,30 @@ CodeGenModule::checkTargetTeamsNest(const OMPExecutableDirective &D,
   llvm_unreachable("Unexpected OpenMP clause");
 }
 
+/// Determine if 'target teams loop' can be emitted using 'parallel for'.
 bool
 CodeGenModule::canBeParallelFor(const OMPExecutableDirective &D) {
   NoLoopXteamErr NxStatus = NxSuccess;
 
-  OptKernelNestDirectives NestDirs;
-  if ((NxStatus = checkNest(D, &NestDirs)))
-    return false;
+  OpenMPDirectiveKind DKind = D.getDirectiveKind();
+  assert(DKind == llvm::omp::Directive::OMPD_target_teams_loop &&
+      "Expected 'target teams loop' directive");
 
   // Make sure CodeGen can handle the FOR statement
   if (!D.hasAssociatedStmt())
     return false;
 
-  const OMPExecutableDirective &InnermostDir = *NestDirs.back();
-  if (!InnermostDir.hasAssociatedStmt())
-    return false;
-
+  // For our purposes, checks for valid canonical loop, presence of
+  // 'parallel', 'loop bind(parallel)', or function call in associated
+  // loop-nest.
   std::pair<NoLoopXteamErr, bool> ForStmtStatus =
-      getNoLoopForStmtStatus(InnermostDir, InnermostDir.getAssociatedStmt());
+      getNoLoopForStmtStatus(D, D.getAssociatedStmt());
+
+  // A status other than NxSuccess (non-zero) means loop cannot be parallel.
   if ((NxStatus = ForStmtStatus.first))
     return false;
 
+  // We don't go parallel if there's a nested function call.
   bool HasNestedGenericCall = ForStmtStatus.second;
   return !HasNestedGenericCall;
 }
