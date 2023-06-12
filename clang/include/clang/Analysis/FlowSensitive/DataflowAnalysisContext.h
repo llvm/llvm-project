@@ -111,8 +111,7 @@ public:
   /// Returns the storage location assigned to `D` or null if `D` has no
   /// assigned storage location.
   StorageLocation *getStorageLocation(const ValueDecl &D) const {
-    auto It = DeclToLoc.find(&D);
-    return It == DeclToLoc.end() ? nullptr : It->second;
+    return DeclToLoc.lookup(&D);
   }
 
   /// Assigns `Loc` as the storage location of `E`.
@@ -129,8 +128,7 @@ public:
   /// Returns the storage location assigned to `E` or null if `E` has no
   /// assigned storage location.
   StorageLocation *getStorageLocation(const Expr &E) const {
-    auto It = ExprToLoc.find(&ignoreCFGOmittedNodes(E));
-    return It == ExprToLoc.end() ? nullptr : It->second;
+    return ExprToLoc.lookup(&ignoreCFGOmittedNodes(E));
   }
 
   /// Returns a pointer value that represents a null pointer. Calls with
