@@ -1080,9 +1080,9 @@ void PreambleThread::build(Request Req) {
   bool IsFirstPreamble = !LatestBuild;
   LatestBuild = clang::clangd::buildPreamble(
       FileName, *Req.CI, Inputs, StoreInMemory,
-      [&](ASTContext &Ctx, Preprocessor &PP,
-          const CanonicalIncludes &CanonIncludes) {
-        Callbacks.onPreambleAST(FileName, Inputs.Version, *Req.CI, Ctx, PP,
+      [&](CapturedASTCtx ASTCtx,
+          std::shared_ptr<const CanonicalIncludes> CanonIncludes) {
+        Callbacks.onPreambleAST(FileName, Inputs.Version, std::move(ASTCtx),
                                 CanonIncludes);
       },
       &Stats);
