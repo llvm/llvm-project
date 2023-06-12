@@ -12,19 +12,14 @@ define i1 @is_pow2_non_zero(i32 %xin) {
 ; CHECK-NOBMI-NEXT:    orl $256, %edi # imm = 0x100
 ; CHECK-NOBMI-NEXT:    leal -1(%rdi), %eax
 ; CHECK-NOBMI-NEXT:    testl %eax, %edi
-; CHECK-NOBMI-NEXT:    sete %cl
-; CHECK-NOBMI-NEXT:    testl %edi, %edi
-; CHECK-NOBMI-NEXT:    setne %al
-; CHECK-NOBMI-NEXT:    andb %cl, %al
+; CHECK-NOBMI-NEXT:    sete %al
 ; CHECK-NOBMI-NEXT:    retq
 ;
 ; CHECK-BMI2-LABEL: is_pow2_non_zero:
 ; CHECK-BMI2:       # %bb.0:
 ; CHECK-BMI2-NEXT:    orl $256, %edi # imm = 0x100
-; CHECK-BMI2-NEXT:    setne %cl
 ; CHECK-BMI2-NEXT:    blsrl %edi, %eax
 ; CHECK-BMI2-NEXT:    sete %al
-; CHECK-BMI2-NEXT:    andb %cl, %al
 ; CHECK-BMI2-NEXT:    retq
   %x = or i32 %xin, 256
   %cnt = call i32 @llvm.ctpop.i32(i32 %x)
@@ -64,19 +59,14 @@ define i1 @neither_pow2_non_zero(i32 %xin) {
 ; CHECK-NOBMI-NEXT:    orl $256, %edi # imm = 0x100
 ; CHECK-NOBMI-NEXT:    leal -1(%rdi), %eax
 ; CHECK-NOBMI-NEXT:    testl %eax, %edi
-; CHECK-NOBMI-NEXT:    setne %cl
-; CHECK-NOBMI-NEXT:    testl %edi, %edi
-; CHECK-NOBMI-NEXT:    sete %al
-; CHECK-NOBMI-NEXT:    orb %cl, %al
+; CHECK-NOBMI-NEXT:    setne %al
 ; CHECK-NOBMI-NEXT:    retq
 ;
 ; CHECK-BMI2-LABEL: neither_pow2_non_zero:
 ; CHECK-BMI2:       # %bb.0:
 ; CHECK-BMI2-NEXT:    orl $256, %edi # imm = 0x100
-; CHECK-BMI2-NEXT:    sete %cl
 ; CHECK-BMI2-NEXT:    blsrl %edi, %eax
 ; CHECK-BMI2-NEXT:    setne %al
-; CHECK-BMI2-NEXT:    orb %cl, %al
 ; CHECK-BMI2-NEXT:    retq
   %x = or i32 %xin, 256
   %cnt = call i32 @llvm.ctpop.i32(i32 %x)
@@ -94,24 +84,16 @@ define <4 x i1> @is_pow2_non_zero_4xv64(<4 x i64> %xin) {
 ; CHECK-NOBMI-NEXT:    movdqa %xmm1, %xmm3
 ; CHECK-NOBMI-NEXT:    paddq %xmm2, %xmm3
 ; CHECK-NOBMI-NEXT:    pand %xmm1, %xmm3
-; CHECK-NOBMI-NEXT:    pxor %xmm4, %xmm4
-; CHECK-NOBMI-NEXT:    pcmpeqd %xmm4, %xmm3
-; CHECK-NOBMI-NEXT:    pshufd {{.*#+}} xmm5 = xmm3[1,0,3,2]
-; CHECK-NOBMI-NEXT:    pand %xmm3, %xmm5
-; CHECK-NOBMI-NEXT:    pcmpeqd %xmm4, %xmm1
-; CHECK-NOBMI-NEXT:    pshufd {{.*#+}} xmm3 = xmm1[1,0,3,2]
-; CHECK-NOBMI-NEXT:    pand %xmm1, %xmm3
-; CHECK-NOBMI-NEXT:    pandn %xmm5, %xmm3
+; CHECK-NOBMI-NEXT:    pxor %xmm1, %xmm1
+; CHECK-NOBMI-NEXT:    pcmpeqd %xmm1, %xmm3
+; CHECK-NOBMI-NEXT:    pshufd {{.*#+}} xmm4 = xmm3[1,0,3,2]
+; CHECK-NOBMI-NEXT:    pand %xmm3, %xmm4
 ; CHECK-NOBMI-NEXT:    paddq %xmm0, %xmm2
-; CHECK-NOBMI-NEXT:    pand %xmm0, %xmm2
-; CHECK-NOBMI-NEXT:    pcmpeqd %xmm4, %xmm2
-; CHECK-NOBMI-NEXT:    pshufd {{.*#+}} xmm1 = xmm2[1,0,3,2]
-; CHECK-NOBMI-NEXT:    pand %xmm2, %xmm1
-; CHECK-NOBMI-NEXT:    pcmpeqd %xmm4, %xmm0
-; CHECK-NOBMI-NEXT:    pshufd {{.*#+}} xmm2 = xmm0[1,0,3,2]
 ; CHECK-NOBMI-NEXT:    pand %xmm2, %xmm0
-; CHECK-NOBMI-NEXT:    pandn %xmm1, %xmm0
-; CHECK-NOBMI-NEXT:    packssdw %xmm3, %xmm0
+; CHECK-NOBMI-NEXT:    pcmpeqd %xmm1, %xmm0
+; CHECK-NOBMI-NEXT:    pshufd {{.*#+}} xmm1 = xmm0[1,0,3,2]
+; CHECK-NOBMI-NEXT:    pand %xmm1, %xmm0
+; CHECK-NOBMI-NEXT:    packssdw %xmm4, %xmm0
 ; CHECK-NOBMI-NEXT:    retq
 ;
 ; CHECK-AVX2-LABEL: is_pow2_non_zero_4xv64:
@@ -153,27 +135,19 @@ define <4 x i1> @neither_pow2_non_zero_4xv64(<4 x i64> %xin) {
 ; CHECK-NOBMI-NEXT:    movdqa %xmm1, %xmm3
 ; CHECK-NOBMI-NEXT:    paddq %xmm2, %xmm3
 ; CHECK-NOBMI-NEXT:    pand %xmm1, %xmm3
-; CHECK-NOBMI-NEXT:    pxor %xmm4, %xmm4
-; CHECK-NOBMI-NEXT:    pcmpeqd %xmm4, %xmm3
-; CHECK-NOBMI-NEXT:    pshufd {{.*#+}} xmm5 = xmm3[1,0,3,2]
-; CHECK-NOBMI-NEXT:    pand %xmm3, %xmm5
-; CHECK-NOBMI-NEXT:    pxor %xmm2, %xmm5
-; CHECK-NOBMI-NEXT:    pcmpeqd %xmm4, %xmm1
-; CHECK-NOBMI-NEXT:    pshufd {{.*#+}} xmm3 = xmm1[1,0,3,2]
-; CHECK-NOBMI-NEXT:    pand %xmm1, %xmm3
-; CHECK-NOBMI-NEXT:    por %xmm5, %xmm3
-; CHECK-NOBMI-NEXT:    movdqa %xmm0, %xmm1
-; CHECK-NOBMI-NEXT:    paddq %xmm2, %xmm1
-; CHECK-NOBMI-NEXT:    pand %xmm0, %xmm1
-; CHECK-NOBMI-NEXT:    pcmpeqd %xmm4, %xmm1
-; CHECK-NOBMI-NEXT:    pshufd {{.*#+}} xmm5 = xmm1[1,0,3,2]
-; CHECK-NOBMI-NEXT:    pand %xmm1, %xmm5
-; CHECK-NOBMI-NEXT:    pxor %xmm2, %xmm5
-; CHECK-NOBMI-NEXT:    pcmpeqd %xmm4, %xmm0
+; CHECK-NOBMI-NEXT:    pxor %xmm1, %xmm1
+; CHECK-NOBMI-NEXT:    pcmpeqd %xmm1, %xmm3
+; CHECK-NOBMI-NEXT:    pshufd {{.*#+}} xmm4 = xmm3[1,0,3,2]
+; CHECK-NOBMI-NEXT:    pand %xmm3, %xmm4
+; CHECK-NOBMI-NEXT:    pxor %xmm2, %xmm4
+; CHECK-NOBMI-NEXT:    movdqa %xmm0, %xmm3
+; CHECK-NOBMI-NEXT:    paddq %xmm2, %xmm3
+; CHECK-NOBMI-NEXT:    pand %xmm3, %xmm0
+; CHECK-NOBMI-NEXT:    pcmpeqd %xmm1, %xmm0
 ; CHECK-NOBMI-NEXT:    pshufd {{.*#+}} xmm1 = xmm0[1,0,3,2]
 ; CHECK-NOBMI-NEXT:    pand %xmm1, %xmm0
-; CHECK-NOBMI-NEXT:    por %xmm5, %xmm0
-; CHECK-NOBMI-NEXT:    packssdw %xmm3, %xmm0
+; CHECK-NOBMI-NEXT:    pxor %xmm2, %xmm0
+; CHECK-NOBMI-NEXT:    packssdw %xmm4, %xmm0
 ; CHECK-NOBMI-NEXT:    retq
 ;
 ; CHECK-AVX2-LABEL: neither_pow2_non_zero_4xv64:
