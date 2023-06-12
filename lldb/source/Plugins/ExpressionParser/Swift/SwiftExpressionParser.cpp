@@ -1690,11 +1690,13 @@ SwiftExpressionParser::Parse(DiagnosticManager &diagnostic_manager,
         parsed_expr.takeError(),
         [&](const ModuleImportError &MIE) {
           diagnostic_manager.PutString(eDiagnosticSeverityError, MIE.message());
-          // There are no fallback contexts in REPL and playgrounds.
-          if (repl || playground || MIE.is_new_dylib) {
+          if (MIE.is_new_dylib) {
             retry = true;
             return;
           }
+          // There are no fallback contexts in REPL and playgrounds.
+          if (repl || playground)
+            return;
           if (!m_sc.target_sp->UseScratchTypesystemPerModule()) {
             // This, together with the fatal error forces
             // a per-module scratch to be instantiated on
