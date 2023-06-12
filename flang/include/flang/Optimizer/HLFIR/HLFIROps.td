@@ -359,6 +359,27 @@ def hlfir_AnyOp : hlfir_Op<"any", []> {
   let hasVerifier = 1;
 }
 
+def hlfir_CountOp : hlfir_Op<"count", [AttrSizedOperandSegments]> {
+  let summary = "COUNT transformational intrinsic";
+  let description = [{
+    Takes a logical and counts the number of true values.
+  }];
+
+  let arguments = (ins
+    AnyFortranLogicalArrayObject:$mask,
+    Optional<AnyIntegerType>:$dim,
+    Optional<AnyIntegerType>:$kind
+  );
+
+  let results = (outs AnyFortranValue);
+
+  let assemblyFormat = [{
+    $mask  (`dim` $dim^)? (`kind` $kind^)?  attr-dict `:` functional-type(operands, results)
+  }];
+
+  let hasVerifier = 1;
+}
+
 
 def hlfir_ProductOp : hlfir_Op<"product", [AttrSizedOperandSegments,
     DeclareOpInterfaceMethods<ArithFastMathInterface>]> {
@@ -430,7 +451,7 @@ def hlfir_SumOp : hlfir_Op<"sum", [AttrSizedOperandSegments,
   let hasVerifier = 1;
 }
 
-def hlifr_DotProductOp : hlfir_Op<"dot_product",
+def hlfir_DotProductOp : hlfir_Op<"dot_product",
     [DeclareOpInterfaceMethods<ArithFastMathInterface>]> {
   let summary = "DOT_PRODUCT transformational intrinsic";
   let description = [{

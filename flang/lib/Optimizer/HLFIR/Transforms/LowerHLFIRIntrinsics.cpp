@@ -262,6 +262,39 @@ using AnyOpConversion = HlfirReductionIntrinsicConversion<hlfir::AnyOp>;
 
 using AllOpConversion = HlfirReductionIntrinsicConversion<hlfir::AllOp>;
 
+struct CountOpConversion : public HlfirIntrinsicConversion<hlfir::CountOp> {
+  using HlfirIntrinsicConversion<hlfir::CountOp>::HlfirIntrinsicConversion;
+
+  mlir::LogicalResult
+  matchAndRewrite(hlfir::CountOp count,
+                  mlir::PatternRewriter &rewriter) const override {
+    fir::KindMapping kindMapping{rewriter.getContext()};
+    fir::FirOpBuilder builder{rewriter, kindMapping};
+    const mlir::Location &loc = count->getLoc();
+
+    mlir::Type i32 = builder.getI32Type();
+    mlir::Type logicalType = fir::LogicalType::get(
+        builder.getContext(), builder.getKindMap().defaultLogicalKind());
+
+    llvm::SmallVector<IntrinsicArgument, 3> inArgs;
+    inArgs.push_back({count.getMask(), logicalType});
+    inArgs.push_back({count.getDim(), i32});
+    inArgs.push_back({count.getKind(), i32});
+
+    auto *argLowering = fir::getIntrinsicArgumentLowering("count");
+    llvm::SmallVector<fir::ExtendedValue, 3> args =
+        lowerArguments(count, inArgs, rewriter, argLowering);
+
+    mlir::Type scalarResultType = hlfir::getFortranElementType(count.getType());
+
+    auto [resultExv, mustBeFreed] =
+        fir::genIntrinsicCall(builder, loc, "count", scalarResultType, args);
+
+    processReturnValue(count, resultExv, mustBeFreed, builder, rewriter);
+    return mlir::success();
+  }
+};
+
 struct MatmulOpConversion : public HlfirIntrinsicConversion<hlfir::MatmulOp> {
   using HlfirIntrinsicConversion<hlfir::MatmulOp>::HlfirIntrinsicConversion;
 
@@ -405,14 +438,14 @@ public:
     patterns.insert<MatmulOpConversion, MatmulTransposeOpConversion,
                     AllOpConversion, AnyOpConversion, SumOpConversion,
                     ProductOpConversion, TransposeOpConversion,
-                    DotProductOpConversion>(context);
+                    CountOpConversion, DotProductOpConversion>(context);
     mlir::ConversionTarget target(*context);
     target.addLegalDialect<mlir::BuiltinDialect, mlir::arith::ArithDialect,
                            mlir::func::FuncDialect, fir::FIROpsDialect,
                            hlfir::hlfirDialect>();
     target.addIllegalOp<hlfir::MatmulOp, hlfir::MatmulTransposeOp, hlfir::SumOp,
                         hlfir::ProductOp, hlfir::TransposeOp, hlfir::AnyOp,
-                        hlfir::AllOp, hlfir::DotProductOp>();
+                        hlfir::AllOp, hlfir::DotProductOp, hlfir::CountOp>();
     target.markUnknownOpDynamicallyLegal(
         [](mlir::Operation *) { return true; });
     if (mlir::failed(
