@@ -2917,7 +2917,8 @@ void RewriteInstance::selectFunctionsToProcess() {
 
   uint64_t NumFunctionsToProcess = 0;
   auto mustSkip = [&](const BinaryFunction &Function) {
-    if (opts::MaxFunctions && NumFunctionsToProcess > opts::MaxFunctions)
+    if (opts::MaxFunctions.getNumOccurrences() &&
+        NumFunctionsToProcess >= opts::MaxFunctions)
       return true;
     for (std::string &Name : opts::SkipFunctionNames)
       if (Function.hasNameRegex(Name))
@@ -2992,7 +2993,8 @@ void RewriteInstance::selectFunctionsToProcess() {
       Function.setIgnored();
     } else {
       ++NumFunctionsToProcess;
-      if (opts::MaxFunctions && NumFunctionsToProcess == opts::MaxFunctions)
+      if (opts::MaxFunctions.getNumOccurrences() &&
+          NumFunctionsToProcess == opts::MaxFunctions)
         outs() << "BOLT-INFO: processing ending on " << Function << '\n';
     }
   }
@@ -5787,6 +5789,8 @@ void RewriteInstance::rewriteFile() {
     }
 
     OverwrittenScore += Function->getFunctionScore();
+    ++CountOverwrittenFunctions;
+
     // Overwrite function in the output file.
     if (opts::Verbosity >= 2)
       outs() << "BOLT: rewriting function \"" << *Function << "\"\n";
@@ -5804,31 +5808,19 @@ void RewriteInstance::rewriteFile() {
       OS.seek(Pos);
     }
 
-    if (!Function->isSplit()) {
-      ++CountOverwrittenFunctions;
-      if (opts::MaxFunctions &&
-          CountOverwrittenFunctions == opts::MaxFunctions) {
-        outs() << "BOLT: maximum number of functions reached\n";
-        break;
-      }
+    if (!Function->isSplit())
       continue;
-    }
 
     // Write cold part
-    if (opts::Verbosity >= 2)
+    if (opts::Verbosity >= 2) {
       outs() << formatv("BOLT: rewriting function \"{0}\" (split parts)\n",
                         *Function);
+    }
 
     for (const FunctionFragment &FF :
          Function->getLayout().getSplitFragments()) {
       OS.pwrite(reinterpret_cast<char *>(FF.getImageAddress()),
                 FF.getImageSize(), FF.getFileOffset());
-    }
-
-    ++CountOverwrittenFunctions;
-    if (opts::MaxFunctions && CountOverwrittenFunctions == opts::MaxFunctions) {
-      outs() << "BOLT: maximum number of functions reached\n";
-      break;
     }
   }
 
