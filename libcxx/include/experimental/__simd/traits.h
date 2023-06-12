@@ -11,8 +11,8 @@
 #define _LIBCPP_EXPERIMENTAL___SIMD_TRAITS_H
 
 #include <experimental/__simd/abi_tag.h>
-#include <experimental/__simd/simd.h>
-#include <experimental/__simd/simd_mask.h>
+#include <experimental/__simd/declaration.h>
+#include <experimental/__simd/utility.h>
 
 #if _LIBCPP_STD_VER >= 17 && defined(_LIBCPP_ENABLE_EXPERIMENTAL)
 
@@ -49,6 +49,15 @@ inline constexpr bool is_simd_mask_v<simd_mask<_Tp, _Abi>> = true;
 
 template <class _Tp>
 struct is_simd_mask : bool_constant<is_simd_mask_v<_Tp>> {};
+
+template <class _Tp, class _Abi = simd_abi::compatible<_Tp>, bool = (__is_vectorizable_v<_Tp> && is_abi_tag_v<_Abi>)>
+struct simd_size : integral_constant<size_t, _Abi::__simd_size> {};
+
+template <class _Tp, class _Abi>
+struct simd_size<_Tp, _Abi, false> {};
+
+template <class _Tp, class _Abi = simd_abi::compatible<_Tp>>
+inline constexpr size_t simd_size_v = simd_size<_Tp, _Abi>::value;
 
 } // namespace parallelism_v2
 _LIBCPP_END_NAMESPACE_EXPERIMENTAL
