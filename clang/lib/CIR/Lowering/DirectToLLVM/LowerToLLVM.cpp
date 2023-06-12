@@ -279,6 +279,24 @@ public:
                                                           llvmSrcVal);
       return mlir::success();
     }
+    case mlir::cir::CastKind::float_to_bool: {
+      auto dstTy = castOp.getType().cast<mlir::cir::BoolType>();
+      auto llvmSrcVal = adaptor.getOperands().front();
+      auto llvmDstTy = getTypeConverter()->convertType(dstTy);
+      auto kind = mlir::LLVM::FCmpPredicate::une;
+      
+      // Check if float is not equal to zero.
+      auto zeroFloat = rewriter.create<mlir::LLVM::ConstantOp>(
+          castOp.getLoc(), llvmSrcVal.getType(),
+          mlir::FloatAttr::get(llvmSrcVal.getType(), 0.0));
+      
+      // Extend comparison result to either bool (C++) or int (C).
+      mlir::Value cmpResult = rewriter.create<mlir::LLVM::FCmpOp>(
+          castOp.getLoc(), kind, llvmSrcVal, zeroFloat);
+      rewriter.replaceOpWithNewOp<mlir::LLVM::ZExtOp>(castOp, llvmDstTy,
+                                                      cmpResult);
+      return mlir::success();
+    }
     default:
       llvm_unreachable("NYI");
     }
@@ -911,6 +929,21 @@ public:
       }
       default:
         op.emitError() << "Floating point unary lowering ot implemented";
+        return mlir::failure();
+      }
+    }
+
+    // Boolean unary operations.
+    if (type.isa<mlir::cir::BoolType>()) {
+      switch (op.getKind()) {
+      case mlir::cir::UnaryOpKind::Not:
+        rewriter.replaceOpWithNewOp<mlir::LLVM::XOrOp>(
+            op, llvmType, adaptor.getInput(),
+            rewriter.create<mlir::LLVM::ConstantOp>(
+                op.getLoc(), llvmType, mlir::IntegerAttr::get(llvmType, 1)));
+        return mlir::success();
+      default:
+        op.emitError() << "Unary operator not implemented for bool type";
         return mlir::failure();
       }
     }
