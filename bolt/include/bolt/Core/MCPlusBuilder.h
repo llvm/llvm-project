@@ -336,9 +336,12 @@ public:
     initSizeMap();
   }
 
-  /// Create and return target-specific MC symbolizer for the \p Function.
+  /// Create and return a target-specific MC symbolizer for the \p Function.
+  /// When \p CreateNewSymbols is set, the symbolizer can create new symbols
+  /// e.g. for jump table references.
   virtual std::unique_ptr<MCSymbolizer>
-  createTargetSymbolizer(BinaryFunction &Function) const {
+  createTargetSymbolizer(BinaryFunction &Function,
+                         bool CreateNewSymbols = true) const {
     return nullptr;
   }
 
