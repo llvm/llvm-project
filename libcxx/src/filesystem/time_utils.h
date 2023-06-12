@@ -6,34 +6,30 @@
 //
 //===----------------------------------------------------------------------===////
 
-#ifndef FILESYSTEM_COMMON_H
-#define FILESYSTEM_COMMON_H
+#ifndef FILESYSTEM_TIME_UTILS_H
+#define FILESYSTEM_TIME_UTILS_H
 
-#include <__assert>
 #include <__config>
 #include <array>
-#include <cerrno>
 #include <chrono>
-#include <climits>
-#include <cstdarg>
-#include <ctime>
 #include <filesystem>
+#include <limits>
 #include <ratio>
-#include <utility>
 #include <system_error>
+#include <type_traits>
+#include <utility>
+
+#include "error.h"
+#include "format_string.h"
+#include "posix_compat.h"
 
 #if defined(_LIBCPP_WIN32API)
 # define WIN32_LEAN_AND_MEAN
 # define NOMINMAX
 # include <windows.h>
 #else
-# include <dirent.h>   // for DIR & friends
-# include <fcntl.h>    /* values for fchmodat */
-# include <sys/stat.h>
-# include <sys/statvfs.h>
 # include <sys/time.h> // for ::utimes as used in __last_write_time
-# include <unistd.h>
-#endif // defined(_LIBCPP_WIN32API)
+#endif
 
 // We can use the presence of UTIME_OMIT to detect platforms that provide utimensat.
 #if defined(UTIME_OMIT)
@@ -46,239 +42,13 @@ _LIBCPP_GCC_DIAGNOSTIC_IGNORED("-Wunused-function")
 _LIBCPP_CLANG_DIAGNOSTIC_IGNORED("-Wunused-function")
 _LIBCPP_CLANG_DIAGNOSTIC_IGNORED("-Wunused-template")
 
-#if defined(_LIBCPP_WIN32API)
-#  define PATHSTR(x) (L##x)
-#  define PATH_CSTR_FMT "\"%ls\""
-#else
-#  define PATHSTR(x) (x)
-#  define PATH_CSTR_FMT "\"%s\""
-#endif
-
 _LIBCPP_BEGIN_NAMESPACE_FILESYSTEM
 
 namespace detail {
-
-#if defined(_LIBCPP_WIN32API)
-// Non anonymous, to allow access from two translation units.
-errc __win_err_to_errc(int err);
-#endif
-
 namespace {
-
-static _LIBCPP_ATTRIBUTE_FORMAT(__printf__, 1, 0) string
-format_string_impl(const char* msg, va_list ap) {
-  array<char, 256> buf;
-
-  va_list apcopy;
-  va_copy(apcopy, ap);
-  int ret = ::vsnprintf(buf.data(), buf.size(), msg, apcopy);
-  va_end(apcopy);
-
-  string result;
-  if (static_cast<size_t>(ret) < buf.size()) {
-    result.assign(buf.data(), static_cast<size_t>(ret));
-  } else {
-    // we did not provide a long enough buffer on our first attempt. The
-    // return value is the number of bytes (excluding the null byte) that are
-    // needed for formatting.
-    size_t size_with_null = static_cast<size_t>(ret) + 1;
-    result.__resize_default_init(size_with_null - 1);
-    ret = ::vsnprintf(&result[0], size_with_null, msg, ap);
-    _LIBCPP_ASSERT(static_cast<size_t>(ret) == (size_with_null - 1), "TODO");
-  }
-  return result;
-}
-
-static _LIBCPP_ATTRIBUTE_FORMAT(__printf__, 1, 2) string
-format_string(const char* msg, ...) {
-  string ret;
-  va_list ap;
-  va_start(ap, msg);
-#ifndef _LIBCPP_HAS_NO_EXCEPTIONS
-  try {
-#endif // _LIBCPP_HAS_NO_EXCEPTIONS
-    ret = format_string_impl(msg, ap);
-#ifndef _LIBCPP_HAS_NO_EXCEPTIONS
-  } catch (...) {
-    va_end(ap);
-    throw;
-  }
-#endif // _LIBCPP_HAS_NO_EXCEPTIONS
-  va_end(ap);
-  return ret;
-}
-
-error_code capture_errno() {
-  _LIBCPP_ASSERT(errno != 0, "Expected errno to be non-zero");
-  return error_code(errno, generic_category());
-}
-
-#if defined(_LIBCPP_WIN32API)
-error_code make_windows_error(int err) {
-  return make_error_code(__win_err_to_errc(err));
-}
-#endif
-
-template <class T>
-T error_value();
-template <>
-_LIBCPP_CONSTEXPR_SINCE_CXX14 void error_value<void>() {}
-template <>
-bool error_value<bool>() {
-  return false;
-}
-#if __SIZEOF_SIZE_T__ != __SIZEOF_LONG_LONG__
-template <>
-size_t error_value<size_t>() {
-  return size_t(-1);
-}
-#endif
-template <>
-uintmax_t error_value<uintmax_t>() {
-  return uintmax_t(-1);
-}
-template <>
-_LIBCPP_CONSTEXPR_SINCE_CXX14 file_time_type error_value<file_time_type>() {
-  return file_time_type::min();
-}
-template <>
-path error_value<path>() {
-  return {};
-}
-
-template <class T>
-struct ErrorHandler {
-  const char* func_name_;
-  error_code* ec_ = nullptr;
-  const path* p1_ = nullptr;
-  const path* p2_ = nullptr;
-
-  ErrorHandler(const char* fname, error_code* ec, const path* p1 = nullptr,
-               const path* p2 = nullptr)
-      : func_name_(fname), ec_(ec), p1_(p1), p2_(p2) {
-    if (ec_)
-      ec_->clear();
-  }
-
-  T report(const error_code& ec) const {
-    if (ec_) {
-      *ec_ = ec;
-      return error_value<T>();
-    }
-    string what = string("in ") + func_name_;
-    switch (bool(p1_) + bool(p2_)) {
-    case 0:
-      __throw_filesystem_error(what, ec);
-    case 1:
-      __throw_filesystem_error(what, *p1_, ec);
-    case 2:
-      __throw_filesystem_error(what, *p1_, *p2_, ec);
-    }
-    __libcpp_unreachable();
-  }
-
-  _LIBCPP_ATTRIBUTE_FORMAT(__printf__, 3, 0)
-  void report_impl(const error_code& ec, const char* msg, va_list ap) const {
-    if (ec_) {
-      *ec_ = ec;
-      return;
-    }
-    string what =
-        string("in ") + func_name_ + ": " + format_string_impl(msg, ap);
-    switch (bool(p1_) + bool(p2_)) {
-    case 0:
-      __throw_filesystem_error(what, ec);
-    case 1:
-      __throw_filesystem_error(what, *p1_, ec);
-    case 2:
-      __throw_filesystem_error(what, *p1_, *p2_, ec);
-    }
-    __libcpp_unreachable();
-  }
-
-  _LIBCPP_ATTRIBUTE_FORMAT(__printf__, 3, 4)
-  T report(const error_code& ec, const char* msg, ...) const {
-    va_list ap;
-    va_start(ap, msg);
-#ifndef _LIBCPP_HAS_NO_EXCEPTIONS
-    try {
-#endif // _LIBCPP_HAS_NO_EXCEPTIONS
-      report_impl(ec, msg, ap);
-#ifndef _LIBCPP_HAS_NO_EXCEPTIONS
-    } catch (...) {
-      va_end(ap);
-      throw;
-    }
-#endif // _LIBCPP_HAS_NO_EXCEPTIONS
-    va_end(ap);
-    return error_value<T>();
-  }
-
-  T report(errc const& err) const {
-    return report(make_error_code(err));
-  }
-
-  _LIBCPP_ATTRIBUTE_FORMAT(__printf__, 3, 4)
-  T report(errc const& err, const char* msg, ...) const {
-    va_list ap;
-    va_start(ap, msg);
-#ifndef _LIBCPP_HAS_NO_EXCEPTIONS
-    try {
-#endif // _LIBCPP_HAS_NO_EXCEPTIONS
-      report_impl(make_error_code(err), msg, ap);
-#ifndef _LIBCPP_HAS_NO_EXCEPTIONS
-    } catch (...) {
-      va_end(ap);
-      throw;
-    }
-#endif // _LIBCPP_HAS_NO_EXCEPTIONS
-    va_end(ap);
-    return error_value<T>();
-  }
-
-private:
-  ErrorHandler(ErrorHandler const&) = delete;
-  ErrorHandler& operator=(ErrorHandler const&) = delete;
-};
 
 using chrono::duration;
 using chrono::duration_cast;
-
-#if defined(_LIBCPP_WIN32API)
-// Various C runtime versions (UCRT, or the legacy msvcrt.dll used by
-// some mingw toolchains) provide different stat function implementations,
-// with a number of limitations with respect to what we want from the
-// stat function. Instead provide our own (in the anonymous detail namespace
-// in posix_compat.h) which does exactly what we want, along with our own
-// stat structure and flag macros.
-
-struct TimeSpec {
-  int64_t tv_sec;
-  int64_t tv_nsec;
-};
-struct StatT {
-  unsigned st_mode;
-  TimeSpec st_atim;
-  TimeSpec st_mtim;
-  uint64_t st_dev; // FILE_ID_INFO::VolumeSerialNumber
-  struct FileIdStruct {
-    unsigned char id[16]; // FILE_ID_INFO::FileId
-    bool operator==(const FileIdStruct &other) const {
-      for (int i = 0; i < 16; i++)
-        if (id[i] != other.id[i])
-          return false;
-      return true;
-    }
-  } st_ino;
-  uint32_t st_nlink;
-  uintmax_t st_size;
-};
-
-#else
-using TimeSpec = struct timespec;
-using TimeVal = struct timeval;
-using StatT = struct stat;
-#endif
 
 template <class FileTimeT, class TimeT,
           bool IsFloat = is_floating_point<typename FileTimeT::rep>::value>
@@ -307,7 +77,7 @@ struct time_util_base {
           .count();
 
 private:
-  static _LIBCPP_CONSTEXPR_SINCE_CXX14 fs_duration get_min_nsecs() {
+  static _LIBCPP_CONSTEXPR fs_duration get_min_nsecs() {
     return duration_cast<fs_duration>(
         fs_nanoseconds(min_nsec_timespec) -
         duration_cast<fs_nanoseconds>(fs_seconds(1)));
@@ -327,7 +97,9 @@ private:
     return max_seconds >= numeric_limits<TimeT>::max() &&
            min_seconds <= numeric_limits<TimeT>::min();
   }
+#if _LIBCPP_STD_VER >= 14
   static_assert(check_range(), "the representable range is unacceptable small");
+#endif
 };
 
 template <class FileTimeT, class TimeT>
@@ -531,75 +303,19 @@ bool set_file_times(const path& p, std::array<TimeSpec, 2> const& TS,
 #endif
 }
 
-#if defined(DT_BLK)
-template <class DirEntT, class = decltype(DirEntT::d_type)>
-static file_type get_file_type(DirEntT* ent, int) {
-  switch (ent->d_type) {
-  case DT_BLK:
-    return file_type::block;
-  case DT_CHR:
-    return file_type::character;
-  case DT_DIR:
-    return file_type::directory;
-  case DT_FIFO:
-    return file_type::fifo;
-  case DT_LNK:
-    return file_type::symlink;
-  case DT_REG:
-    return file_type::regular;
-  case DT_SOCK:
-    return file_type::socket;
-  // Unlike in lstat, hitting "unknown" here simply means that the underlying
-  // filesystem doesn't support d_type. Report is as 'none' so we correctly
-  // set the cache to empty.
-  case DT_UNKNOWN:
-    break;
-  }
-  return file_type::none;
-}
-#endif // defined(DT_BLK)
-
-template <class DirEntT>
-static file_type get_file_type(DirEntT*, long) {
-  return file_type::none;
-}
-
-static pair<string_view, file_type> posix_readdir(DIR* dir_stream,
-                                                  error_code& ec) {
-  struct dirent* dir_entry_ptr = nullptr;
-  errno = 0; // zero errno in order to detect errors
-  ec.clear();
-  if ((dir_entry_ptr = ::readdir(dir_stream)) == nullptr) {
-    if (errno)
-      ec = capture_errno();
-    return {};
-  } else {
-    return {dir_entry_ptr->d_name, get_file_type(dir_entry_ptr, 0)};
-  }
-}
-
-#else // _LIBCPP_WIN32API
-
-static file_type get_file_type(const WIN32_FIND_DATAW& data) {
-  if (data.dwFileAttributes & FILE_ATTRIBUTE_REPARSE_POINT &&
-      data.dwReserved0 == IO_REPARSE_TAG_SYMLINK)
-    return file_type::symlink;
-  if (data.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY)
-    return file_type::directory;
-  return file_type::regular;
-}
-static uintmax_t get_file_size(const WIN32_FIND_DATAW& data) {
-  return (static_cast<uint64_t>(data.nFileSizeHigh) << 32) + data.nFileSizeLow;
-}
-static file_time_type get_write_time(const WIN32_FIND_DATAW& data) {
-  ULARGE_INTEGER tmp;
-  const FILETIME& time = data.ftLastWriteTime;
-  tmp.u.LowPart = time.dwLowDateTime;
-  tmp.u.HighPart = time.dwHighDateTime;
-  return file_time_type(file_time_type::duration(tmp.QuadPart));
-}
-
 #endif // !_LIBCPP_WIN32API
+
+file_time_type __extract_last_write_time(const path& p, const StatT& st,
+                                         error_code* ec) {
+  using detail::fs_time;
+  ErrorHandler<file_time_type> err("last_write_time", ec, &p);
+
+  auto ts = detail::extract_mtime(st);
+  if (!fs_time::is_representable(ts))
+    return err.report(errc::value_too_large);
+
+  return fs_time::convert_from_timespec(ts);
+}
 
 } // namespace
 } // end namespace detail
@@ -608,4 +324,4 @@ _LIBCPP_END_NAMESPACE_FILESYSTEM
 
 _LIBCPP_DIAGNOSTIC_POP
 
-#endif // FILESYSTEM_COMMON_H
+#endif // FILESYSTEM_TIME_UTILS_H
