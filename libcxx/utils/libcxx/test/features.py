@@ -294,6 +294,7 @@ DEFAULT_FEATURES = [
             AddCompileFlag("-D_LIBCPP_DISABLE_DEPRECATION_WARNINGS"),
             AddCompileFlag("-Wno-placement-new"),
             AddCompileFlag("-Wno-class-memaccess"),
+            AddFeature("GCC-ALWAYS_INLINE-FIXME"),
         ],
     ),
     Feature(

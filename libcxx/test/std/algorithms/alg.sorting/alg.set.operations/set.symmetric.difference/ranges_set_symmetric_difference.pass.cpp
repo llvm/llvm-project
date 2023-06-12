@@ -9,6 +9,7 @@
 // <algorithm>
 
 // UNSUPPORTED: c++03, c++11, c++14, c++17
+// UNSUPPORTED: GCC-ALWAYS_INLINE-FIXME
 
 // template<input_iterator I1, sentinel_for<I1> S1, input_iterator I2, sentinel_for<I2> S2,
 //          weakly_incrementable O, class Comp = ranges::less,
