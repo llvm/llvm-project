@@ -1893,9 +1893,21 @@ ABIArgInfo X86_32ABIInfo::classifyArgumentType(QualType Ty,
     llvm::IntegerType *PaddingType = NeedsPadding ? Int32 : nullptr;
 
     // Pass over-aligned aggregates on Windows indirectly. This behavior was
-    // added in MSVC 2015.
-    if (IsWin32StructABI && TI.isAlignRequired() && TI.Align > 32)
-      return getIndirectResult(Ty, /*ByVal=*/false, State);
+    // added in MSVC 2015. Use the required alignment from the record layout,
+    // since that may be less than the regular type alignment, and types with
+    // required alignment of less than 4 bytes are not passed indirectly.
+    if (IsWin32StructABI) {
+      unsigned AlignInBits = 0;
+      if (RT) {
+        const ASTRecordLayout &Layout =
+          getContext().getASTRecordLayout(RT->getDecl());
+        AlignInBits = getContext().toBits(Layout.getRequiredAlignment());
+      } else if (TI.isAlignRequired()) {
+        AlignInBits = TI.Align;
+      }
+      if (AlignInBits > 32)
+        return getIndirectResult(Ty, /*ByVal=*/false, State);
+    }
 
     // Expand small (<= 128-bit) record types when we know that the stack layout
     // of those arguments will match the struct. This is important because the
