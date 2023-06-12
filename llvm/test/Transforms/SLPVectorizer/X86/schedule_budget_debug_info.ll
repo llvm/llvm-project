@@ -5,9 +5,6 @@
 target datalayout = "e-m:o-i64:64-f80:128-n8:16:32:64-S128"
 target triple = "x86_64-apple-macosx10.9.0"
 
-; FIXME: Currently we get different code in the two cases, i.e. debug info
-; affects codegen!
-
 ; Verify that we get vectorization with -slp-schedule-budget=3. We should
 ; get vectorization even if there happens to be some dbg.value calls since they
 ; should be ignored, to not let debug information affect the code we get.
@@ -17,10 +14,35 @@ declare void @unknown()
 define void @test(ptr %a, ptr %b, ptr %c, ptr %d) {
 ; VECTOR_DBG-LABEL: @test(
 ; VECTOR_DBG-NEXT:  entry:
-; VECTOR_DBG-NEXT:    [[L0:%.*]] = load float, ptr [[A:%.*]], align 4
-; VECTOR_DBG-NEXT:    [[A1:%.*]] = getelementptr inbounds float, ptr [[A]], i64 1
-; VECTOR_DBG-NEXT:    [[L1:%.*]] = load float, ptr [[A1]], align 4
-; VECTOR_DBG-NEXT:    [[A2:%.*]] = getelementptr inbounds float, ptr [[A]], i64 2
+; VECTOR_DBG-NEXT:    [[TMP0:%.*]] = load <4 x float>, ptr [[A:%.*]], align 4
+; VECTOR_DBG-NEXT:    call void @unknown()
+; VECTOR_DBG-NEXT:    call void @unknown()
+; VECTOR_DBG-NEXT:    call void @unknown()
+; VECTOR_DBG-NEXT:    call void @unknown()
+; VECTOR_DBG-NEXT:    call void @unknown()
+; VECTOR_DBG-NEXT:    call void @unknown()
+; VECTOR_DBG-NEXT:    call void @unknown()
+; VECTOR_DBG-NEXT:    call void @unknown()
+; VECTOR_DBG-NEXT:    call void @unknown()
+; VECTOR_DBG-NEXT:    call void @unknown()
+; VECTOR_DBG-NEXT:    call void @unknown()
+; VECTOR_DBG-NEXT:    call void @unknown()
+; VECTOR_DBG-NEXT:    call void @unknown()
+; VECTOR_DBG-NEXT:    call void @unknown()
+; VECTOR_DBG-NEXT:    call void @unknown()
+; VECTOR_DBG-NEXT:    call void @unknown()
+; VECTOR_DBG-NEXT:    call void @unknown()
+; VECTOR_DBG-NEXT:    call void @unknown()
+; VECTOR_DBG-NEXT:    call void @unknown()
+; VECTOR_DBG-NEXT:    call void @unknown()
+; VECTOR_DBG-NEXT:    call void @unknown()
+; VECTOR_DBG-NEXT:    call void @unknown()
+; VECTOR_DBG-NEXT:    call void @unknown()
+; VECTOR_DBG-NEXT:    call void @unknown()
+; VECTOR_DBG-NEXT:    call void @unknown()
+; VECTOR_DBG-NEXT:    call void @unknown()
+; VECTOR_DBG-NEXT:    call void @unknown()
+; VECTOR_DBG-NEXT:    call void @unknown()
 ; VECTOR_DBG-NEXT:    call void @llvm.dbg.value(metadata i16 1, metadata [[META3:![0-9]+]], metadata !DIExpression()), !dbg [[DBG5:![0-9]+]]
 ; VECTOR_DBG-NEXT:    call void @llvm.dbg.value(metadata i16 1, metadata [[META3]], metadata !DIExpression()), !dbg [[DBG5]]
 ; VECTOR_DBG-NEXT:    call void @llvm.dbg.value(metadata i16 1, metadata [[META3]], metadata !DIExpression()), !dbg [[DBG5]]
@@ -29,40 +51,7 @@ define void @test(ptr %a, ptr %b, ptr %c, ptr %d) {
 ; VECTOR_DBG-NEXT:    call void @llvm.dbg.value(metadata i16 1, metadata [[META3]], metadata !DIExpression()), !dbg [[DBG5]]
 ; VECTOR_DBG-NEXT:    call void @llvm.dbg.value(metadata i16 1, metadata [[META3]], metadata !DIExpression()), !dbg [[DBG5]]
 ; VECTOR_DBG-NEXT:    call void @llvm.dbg.value(metadata i16 1, metadata [[META3]], metadata !DIExpression()), !dbg [[DBG5]]
-; VECTOR_DBG-NEXT:    [[B1:%.*]] = getelementptr inbounds float, ptr [[B:%.*]], i64 1
-; VECTOR_DBG-NEXT:    [[B2:%.*]] = getelementptr inbounds float, ptr [[B]], i64 2
-; VECTOR_DBG-NEXT:    [[TMP0:%.*]] = load <2 x float>, ptr [[A2]], align 4
-; VECTOR_DBG-NEXT:    call void @unknown()
-; VECTOR_DBG-NEXT:    call void @unknown()
-; VECTOR_DBG-NEXT:    call void @unknown()
-; VECTOR_DBG-NEXT:    call void @unknown()
-; VECTOR_DBG-NEXT:    call void @unknown()
-; VECTOR_DBG-NEXT:    call void @unknown()
-; VECTOR_DBG-NEXT:    call void @unknown()
-; VECTOR_DBG-NEXT:    call void @unknown()
-; VECTOR_DBG-NEXT:    call void @unknown()
-; VECTOR_DBG-NEXT:    call void @unknown()
-; VECTOR_DBG-NEXT:    call void @unknown()
-; VECTOR_DBG-NEXT:    call void @unknown()
-; VECTOR_DBG-NEXT:    call void @unknown()
-; VECTOR_DBG-NEXT:    call void @unknown()
-; VECTOR_DBG-NEXT:    call void @unknown()
-; VECTOR_DBG-NEXT:    call void @unknown()
-; VECTOR_DBG-NEXT:    call void @unknown()
-; VECTOR_DBG-NEXT:    call void @unknown()
-; VECTOR_DBG-NEXT:    call void @unknown()
-; VECTOR_DBG-NEXT:    call void @unknown()
-; VECTOR_DBG-NEXT:    call void @unknown()
-; VECTOR_DBG-NEXT:    call void @unknown()
-; VECTOR_DBG-NEXT:    call void @unknown()
-; VECTOR_DBG-NEXT:    call void @unknown()
-; VECTOR_DBG-NEXT:    call void @unknown()
-; VECTOR_DBG-NEXT:    call void @unknown()
-; VECTOR_DBG-NEXT:    call void @unknown()
-; VECTOR_DBG-NEXT:    call void @unknown()
-; VECTOR_DBG-NEXT:    store float [[L0]], ptr [[B]], align 4
-; VECTOR_DBG-NEXT:    store float [[L1]], ptr [[B1]], align 4
-; VECTOR_DBG-NEXT:    store <2 x float> [[TMP0]], ptr [[B2]], align 4
+; VECTOR_DBG-NEXT:    store <4 x float> [[TMP0]], ptr [[B:%.*]], align 4
 ; VECTOR_DBG-NEXT:    [[TMP1:%.*]] = load <4 x float>, ptr [[C:%.*]], align 4
 ; VECTOR_DBG-NEXT:    store <4 x float> [[TMP1]], ptr [[D:%.*]], align 4
 ; VECTOR_DBG-NEXT:    ret void
