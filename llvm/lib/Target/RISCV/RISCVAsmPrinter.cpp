@@ -630,9 +630,8 @@ static bool lowerRISCVVMachineInstrToMCInst(const MachineInstr *MI,
   const MachineFunction *MF = MBB->getParent();
   assert(MF && "MBB expected to be in a machine function");
 
-  const TargetRegisterInfo *TRI =
-      MF->getSubtarget<RISCVSubtarget>().getRegisterInfo();
-
+  const RISCVSubtarget &Subtarget = MF->getSubtarget<RISCVSubtarget>();
+  const TargetRegisterInfo *TRI = Subtarget.getRegisterInfo();
   assert(TRI && "TargetRegisterInfo expected");
 
   uint64_t TSFlags = MI->getDesc().TSFlags;
@@ -705,9 +704,16 @@ static bool lowerRISCVVMachineInstrToMCInst(const MachineInstr *MI,
 
   // Unmasked pseudo instructions need to append dummy mask operand to
   // V instructions. All V instructions are modeled as the masked version.
-  if (RISCVII::hasDummyMaskOp(TSFlags))
+  const TargetInstrInfo *TII = Subtarget.getInstrInfo();
+  const MCInstrDesc &OutMCID = TII->get(OutMI.getOpcode());
+  if (OutMI.getNumOperands() < OutMCID.getNumOperands()) {
+    assert(OutMCID.operands()[OutMI.getNumOperands()].RegClass ==
+               RISCV::VMV0RegClassID &&
+           "Expected only mask operand to be missing");
     OutMI.addOperand(MCOperand::createReg(RISCV::NoRegister));
+  }
 
+  assert(OutMI.getNumOperands() == OutMCID.getNumOperands());
   return true;
 }
 
