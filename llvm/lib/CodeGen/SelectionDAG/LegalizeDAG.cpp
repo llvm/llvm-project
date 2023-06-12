@@ -4167,6 +4167,9 @@ void SelectionDAGLegalize::ConvertNodeToLibcall(SDNode *Node) {
                     RTLIB::FMIN_F80, RTLIB::FMIN_F128,
                     RTLIB::FMIN_PPCF128, Results);
     break;
+  // FIXME: We do not have libcalls for FMAXIMUM and FMINIMUM. So, we cannot use
+  // libcall legalization for these nodes, but there is no default expasion for
+  // these nodes either (see PR63267 for example).
   case ISD::FMAXNUM:
   case ISD::STRICT_FMAXNUM:
     ExpandFPLibCall(Node, RTLIB::FMAX_F32, RTLIB::FMAX_F64,
@@ -4951,6 +4954,8 @@ void SelectionDAGLegalize::PromoteNode(SDNode *Node) {
   case ISD::FREM:
   case ISD::FMINNUM:
   case ISD::FMAXNUM:
+  case ISD::FMINIMUM:
+  case ISD::FMAXIMUM:
   case ISD::FPOW:
     Tmp1 = DAG.getNode(ISD::FP_EXTEND, dl, NVT, Node->getOperand(0));
     Tmp2 = DAG.getNode(ISD::FP_EXTEND, dl, NVT, Node->getOperand(1));
