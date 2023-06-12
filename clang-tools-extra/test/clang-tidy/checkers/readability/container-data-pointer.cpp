@@ -1,4 +1,6 @@
-// RUN: %check_clang_tidy %s readability-container-data-pointer %t -- -- -isystem %clang_tidy_headers -fno-delayed-template-parsing
+// RUN: %check_clang_tidy -check-suffixes=,CLASSIC %s readability-container-data-pointer %t -- -- -isystem %clang_tidy_headers -fno-delayed-template-parsing
+// RUN: %check_clang_tidy -check-suffixes=,WITH-CONFIG %s readability-container-data-pointer %t -- -config="{CheckOptions: [{key: readability-container-data-pointer.IgnoredContainers, value: '::std::basic_string'}]}" -- -isystem %clang_tidy_headers -fno-delayed-template-parsing
+
 #include <string>
 
 typedef __SIZE_TYPE__ size_t;
@@ -50,13 +52,15 @@ void g(size_t s) {
 void h() {
   std::string s;
   f(&((s).operator[]((z))));
-  // CHECK-MESSAGES: :[[@LINE-1]]:5: warning: 'data' should be used for accessing the data pointer instead of taking the address of the 0-th element [readability-container-data-pointer]
-  // CHECK-FIXES: {{^  }}f(s.data());{{$}}
+  // CHECK-MESSAGES-CLASSIC: :[[@LINE-1]]:5: warning: 'data' should be used for accessing the data pointer instead of taking the address of the 0-th element [readability-container-data-pointer]
+  // CHECK-FIXES-CLASSIC: {{^  }}f(s.data());{{$}}
+  // CHECK-MESSAGES-WITH-CONFIG-NOT: :[[@LINE-3]]:5: warning: 'data' should be used for accessing the data pointer instead of taking the address of the 0-th element [readability-container-data-pointer]
 
   std::wstring w;
   f(&((&(w))->operator[]((z))));
-  // CHECK-MESSAGES: :[[@LINE-1]]:5: warning: 'data' should be used for accessing the data pointer instead of taking the address of the 0-th element [readability-container-data-pointer]
-  // CHECK-FIXES: {{^  }}f(w.data());{{$}}
+  // CHECK-MESSAGES-CLASSIC: :[[@LINE-1]]:5: warning: 'data' should be used for accessing the data pointer instead of taking the address of the 0-th element [readability-container-data-pointer]
+  // CHECK-FIXES-CLASSIC: {{^  }}f(w.data());{{$}}
+  // CHECK-MESSAGES-WITH-CONFIG-NOT: :[[@LINE-3]]:5: warning: 'data' should be used for accessing the data pointer instead of taking the address of the 0-th element [readability-container-data-pointer]
 }
 
 template <typename T, typename U,
