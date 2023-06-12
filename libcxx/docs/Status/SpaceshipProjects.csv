@@ -65,7 +65,7 @@ Section,Description,Dependencies,Assignee,Complete
 "| `[functional.syn] <https://wg21.link/functional.syn>`_
 | `[range.cmp] <https://wg21.link/range.cmp>`_
 | `[func.wrap.func] <https://wg21.link/func.wrap.func>`_
-| `[func.wrap.func.nullptr] <https://wg21.link/func.wrap.func.nullptr>`_",| remove ops `function`,None,Unassigned,|Not Started|
+| `[func.wrap.func.nullptr] <https://wg21.link/func.wrap.func.nullptr>`_",| remove ops `function <https://reviews.llvm.org/D152704>`_,None,Hristo Hristov,|Complete|
 | `[meta.unary.prop] <https://wg21.link/meta.unary.prop>`_,| replaced by `issue LWG3354 <https://wg21.link/LWG3354>`_,None,Unassigned,|Nothing To Do|
 | `[meta.trans.other] <https://wg21.link/meta.trans.other>`_,|,None,Unassigned,|Not Started|
 "| `[type.index.overview] <https://wg21.link/type.index.overview>`_
