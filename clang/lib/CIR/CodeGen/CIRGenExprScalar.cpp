@@ -809,6 +809,12 @@ public:
                                  E->getExprLoc());
   }
 
+  mlir::Value buildFloatToBoolConversion(mlir::Value src, mlir::Location loc) {
+    auto boolTy = Builder.getBoolTy();
+    return Builder.create<mlir::cir::CastOp>(
+        loc, boolTy, mlir::cir::CastKind::float_to_bool, src);
+  }
+
   mlir::Value buildIntToBoolConversion(mlir::Value srcVal, mlir::Location loc) {
     // Because of the type rules of C, we often end up computing a
     // logical value, then zero extending it to int, then wanting it
@@ -827,7 +833,7 @@ public:
     assert(SrcType.isCanonical() && "EmitScalarConversion strips typedefs");
 
     if (SrcType->isRealFloatingType())
-      assert(0 && "not implemented");
+      return buildFloatToBoolConversion(Src, loc);
 
     if (auto *MPT = llvm::dyn_cast<MemberPointerType>(SrcType))
       assert(0 && "not implemented");
@@ -1180,7 +1186,7 @@ mlir::Value ScalarExprEmitter::VisitCastExpr(CastExpr *CE) {
   case CK_PointerToBoolean:
     return buildPointerToBoolConversion(Visit(E), E->getType());
   case CK_FloatingToBoolean:
-    llvm_unreachable("NYI");
+    return buildFloatToBoolConversion(Visit(E), CGF.getLoc(E->getExprLoc()));
   case CK_MemberPointerToBoolean:
     llvm_unreachable("NYI");
   case CK_FloatingComplexToReal:

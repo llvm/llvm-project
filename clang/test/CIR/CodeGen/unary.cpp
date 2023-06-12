@@ -161,6 +161,10 @@ void floats(float f) {
   --f; // CHECK: = cir.unary(dec, %{{[0-9]+}}) : f32, f32
   f++; // CHECK: = cir.unary(inc, %{{[0-9]+}}) : f32, f32
   f--; // CHECK: = cir.unary(dec, %{{[0-9]+}}) : f32, f32
+
+  !f;
+  // CHECK: %[[#F_BOOL:]] = cir.cast(float_to_bool, %{{[0-9]+}} : f32), !cir.bool
+  // CHECK: = cir.unary(not, %[[#F_BOOL]]) : !cir.bool, !cir.bool
 }
 
 void doubles(double d) {
@@ -171,4 +175,8 @@ void doubles(double d) {
   --d; // CHECK: = cir.unary(dec, %{{[0-9]+}}) : f64, f64
   d++; // CHECK: = cir.unary(inc, %{{[0-9]+}}) : f64, f64
   d--; // CHECK: = cir.unary(dec, %{{[0-9]+}}) : f64, f64
+
+  !d;
+  // CHECK: %[[#D_BOOL:]] = cir.cast(float_to_bool, %{{[0-9]+}} : f64), !cir.bool
+  // CHECK: = cir.unary(not, %[[#D_BOOL]]) : !cir.bool, !cir.bool
 }

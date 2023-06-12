@@ -13,10 +13,36 @@ module {
         %5 = cir.load %0 : cir.ptr <!s32i>, !s32i
         cir.return %5 : !s32i
     }
-}
 
 // MLIR: = llvm.load
 // MLIR: = llvm.mlir.constant(-1 : i32)
 // MLIR: = llvm.xor
 
 // LLVM: = xor i32 -1, %[[#]]
+
+
+    cir.func @floatingPoint(%arg0: f32, %arg1: f64) {
+    // MLIR: llvm.func @floatingPoint
+        %0 = cir.alloca f32, cir.ptr <f32>, ["f", init] {alignment = 4 : i64}
+        %1 = cir.alloca f64, cir.ptr <f64>, ["d", init] {alignment = 8 : i64}
+        cir.store %arg0, %0 : f32, cir.ptr <f32>
+        cir.store %arg1, %1 : f64, cir.ptr <f64>
+        %2 = cir.load %0 : cir.ptr <f32>, f32
+        %3 = cir.cast(float_to_bool, %2 : f32), !cir.bool
+        // MLIR: %[[#F_ZERO:]] = llvm.mlir.constant(0.000000e+00 : f32) : f32
+        // MLIR: %[[#F_BOOL:]] = llvm.fcmp "une" %{{.+}}, %[[#F_ZERO]] : f32
+        // MLIR: %[[#F_ZEXT:]] = llvm.zext %[[#F_BOOL]] : i1 to i8
+        %4 = cir.unary(not, %3) : !cir.bool, !cir.bool
+        // MLIR: %[[#F_ONE:]] = llvm.mlir.constant(1 : i8) : i8
+        // MLIR: = llvm.xor %[[#F_ZEXT]], %[[#F_ONE]]  : i8
+        %5 = cir.load %1 : cir.ptr <f64>, f64
+        %6 = cir.cast(float_to_bool, %5 : f64), !cir.bool
+        // MLIR: %[[#D_ZERO:]] = llvm.mlir.constant(0.000000e+00 : f64) : f64
+        // MLIR: %[[#D_BOOL:]] = llvm.fcmp "une" %{{.+}}, %[[#D_ZERO]] : f64
+        // MLIR: %[[#D_ZEXT:]] = llvm.zext %[[#D_BOOL]] : i1 to i8
+        %7 = cir.unary(not, %6) : !cir.bool, !cir.bool
+        // MLIR: %[[#D_ONE:]] = llvm.mlir.constant(1 : i8) : i8
+        // MLIR: = llvm.xor %[[#D_ZEXT]], %[[#D_ONE]]  : i8
+        cir.return
+    }
+}
