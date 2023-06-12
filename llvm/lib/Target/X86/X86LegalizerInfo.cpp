@@ -440,7 +440,6 @@ void X86LegalizerInfo::setLegalizerInfo64bit() {
   if (!Subtarget.is64Bit())
     return;
 
-  const LLT s8 = LLT::scalar(8);
   const LLT s32 = LLT::scalar(32);
   const LLT s64 = LLT::scalar(64);
   const LLT s128 = LLT::scalar(128);
