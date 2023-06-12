@@ -50,7 +50,7 @@ Section,Description,Dependencies,Assignee,Complete
 | `[variant.monostate.relops] <https://wg21.link/variant.monostate.relops>`_","| `monostate <https://reviews.llvm.org/D131372>`_
 | `variant <https://reviews.llvm.org/D131372>`_",None,Kent Ross,|Complete|
 "| `[template.bitset] <https://wg21.link/template.bitset>`_
-| `[bitset.members] <https://wg21.link/bitset.members>`_","| remove ops `bitset <https://reviews.llvm.org/D152611>`_",None,Hristo Hristov,|In Progress|
+| `[bitset.members] <https://wg21.link/bitset.members>`_","| remove ops `bitset <https://reviews.llvm.org/D152611>`_",None,Hristo Hristov,|Complete|
 | `[memory.syn] <https://wg21.link/memory.syn>`_,|,None,Unassigned,|Not Started|
 | `[allocator.globals] <https://wg21.link/allocator.globals>`_,| remove ops `allocator <https://reviews.llvm.org/D152612>`_,None,Hristo Hristov,|In Progress|
 | `[unique.ptr.special] <https://wg21.link/unique.ptr.special>`_,| `unique_ptr <https://reviews.llvm.org/D130838>`_,[comparisons.three.way],Adrian Vogelsgesang,|Complete|
