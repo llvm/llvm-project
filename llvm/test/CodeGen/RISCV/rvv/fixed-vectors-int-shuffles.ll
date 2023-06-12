@@ -690,7 +690,7 @@ define <8 x i8> @merge_end_into_end(<8 x i8> %v, <8 x i8> %w) {
 ; CHECK-LABEL: merge_end_into_end:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 4, e8, mf2, tu, ma
-; CHECK-NEXT:    vslideup.vi v9, v8, 0
+; CHECK-NEXT:    vmv.v.v v9, v8
 ; CHECK-NEXT:    vmv1r.v v8, v9
 ; CHECK-NEXT:    ret
   %res = shufflevector <8 x i8> %v, <8 x i8> %w, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 12, i32 13, i32 14, i32 15>
@@ -711,7 +711,7 @@ define <8 x i8> @merge_start_into_start(<8 x i8> %v, <8 x i8> %w) {
 ; CHECK-LABEL: merge_start_into_start:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 4, e8, mf2, tu, ma
-; CHECK-NEXT:    vslideup.vi v8, v9, 0
+; CHECK-NEXT:    vmv.v.v v8, v9
 ; CHECK-NEXT:    ret
   %res = shufflevector <8 x i8> %v, <8 x i8> %w, <8 x i32> <i32 8, i32 9, i32 10, i32 11, i32 4, i32 5, i32 6, i32 7>
   ret <8 x i8> %res

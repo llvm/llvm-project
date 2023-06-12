@@ -43,7 +43,7 @@ define <4 x float> @hang_when_merging_stores_after_legalization(<8 x float> %x, 
 ; LMULMAX1-NEXT:    vsetivli zero, 3, e32, m1, tu, ma
 ; LMULMAX1-NEXT:    vslideup.vi v11, v10, 2
 ; LMULMAX1-NEXT:    vsetivli zero, 2, e32, m1, tu, ma
-; LMULMAX1-NEXT:    vslideup.vi v11, v12, 0
+; LMULMAX1-NEXT:    vmv.v.v v11, v12
 ; LMULMAX1-NEXT:    vmv1r.v v8, v11
 ; LMULMAX1-NEXT:    ret
 ;
