@@ -4419,6 +4419,256 @@ void OpenMPIRBuilder::emitOffloadingArraysArgument(IRBuilderBase &Builder,
         Builder.CreatePointerCast(Info.RTArgs.MappersArray, VoidPtrPtrTy);
 }
 
+void OpenMPIRBuilder::emitNonContiguousDescriptor(InsertPointTy AllocaIP,
+                                                  InsertPointTy CodeGenIP,
+                                                  MapInfosTy &CombinedInfo,
+                                                  TargetDataInfo &Info) {
+  MapInfosTy::StructNonContiguousInfo &NonContigInfo =
+      CombinedInfo.NonContigInfo;
+
+  // Build an array of struct descriptor_dim and then assign it to
+  // offload_args.
+  //
+  // struct descriptor_dim {
+  //  uint64_t offset;
+  //  uint64_t count;
+  //  uint64_t stride
+  // };
+  Type *Int64Ty = Builder.getInt64Ty();
+  StructType *DimTy = StructType::create(
+      M.getContext(), ArrayRef<Type *>({Int64Ty, Int64Ty, Int64Ty}),
+      "struct.descriptor_dim");
+
+  enum { OffsetFD = 0, CountFD, StrideFD };
+  // We need two index variable here since the size of "Dims" is the same as
+  // the size of Components, however, the size of offset, count, and stride is
+  // equal to the size of base declaration that is non-contiguous.
+  for (unsigned I = 0, L = 0, E = NonContigInfo.Dims.size(); I < E; ++I) {
+    // Skip emitting ir if dimension size is 1 since it cannot be
+    // non-contiguous.
+    if (NonContigInfo.Dims[I] == 1)
+      continue;
+    Builder.restoreIP(AllocaIP);
+    ArrayType *ArrayTy = ArrayType::get(DimTy, NonContigInfo.Dims[I]);
+    AllocaInst *DimsAddr =
+        Builder.CreateAlloca(ArrayTy, /* ArraySize = */ nullptr, "dims");
+    Builder.restoreIP(CodeGenIP);
+    for (unsigned II = 0, EE = NonContigInfo.Dims[I]; II < EE; ++II) {
+      unsigned RevIdx = EE - II - 1;
+      Value *DimsLVal = Builder.CreateInBoundsGEP(
+          DimsAddr->getAllocatedType(), DimsAddr,
+          {Builder.getInt64(0), Builder.getInt64(II)});
+      // Offset
+      Value *OffsetLVal = Builder.CreateStructGEP(DimTy, DimsLVal, OffsetFD);
+      Builder.CreateAlignedStore(
+          NonContigInfo.Offsets[L][RevIdx], OffsetLVal,
+          M.getDataLayout().getPrefTypeAlign(OffsetLVal->getType()));
+      // Count
+      Value *CountLVal = Builder.CreateStructGEP(DimTy, DimsLVal, CountFD);
+      Builder.CreateAlignedStore(
+          NonContigInfo.Counts[L][RevIdx], CountLVal,
+          M.getDataLayout().getPrefTypeAlign(CountLVal->getType()));
+      // Stride
+      Value *StrideLVal = Builder.CreateStructGEP(DimTy, DimsLVal, StrideFD);
+      Builder.CreateAlignedStore(
+          NonContigInfo.Strides[L][RevIdx], StrideLVal,
+          M.getDataLayout().getPrefTypeAlign(CountLVal->getType()));
+    }
+    // args[I] = &dims
+    Builder.restoreIP(CodeGenIP);
+    Value *DAddr = Builder.CreatePointerBitCastOrAddrSpaceCast(
+        DimsAddr, Builder.getInt8PtrTy());
+    Value *P = Builder.CreateConstInBoundsGEP2_32(
+        ArrayType::get(Builder.getInt8PtrTy(), Info.NumberOfPtrs),
+        Info.RTArgs.PointersArray, 0, I);
+    Builder.CreateAlignedStore(
+        DAddr, P, M.getDataLayout().getPrefTypeAlign(Builder.getInt8PtrTy()));
+    ++L;
+  }
+}
+
+void OpenMPIRBuilder::emitOffloadingArrays(
+    InsertPointTy AllocaIP, InsertPointTy CodeGenIP, MapInfosTy &CombinedInfo,
+    TargetDataInfo &Info, bool IsNonContiguous,
+    function_ref<void(unsigned int, Value *, Value *)> DeviceAddrCB,
+    function_ref<Value *(unsigned int)> CustomMapperCB) {
+
+  // Reset the array information.
+  Info.clearArrayInfo();
+  Info.NumberOfPtrs = CombinedInfo.BasePointers.size();
+
+  if (Info.NumberOfPtrs == 0)
+    return;
+
+  Builder.restoreIP(AllocaIP);
+  // Detect if we have any capture size requiring runtime evaluation of the
+  // size so that a constant array could be eventually used.
+  ArrayType *PointerArrayType =
+      ArrayType::get(Builder.getInt8PtrTy(), Info.NumberOfPtrs);
+
+  Info.RTArgs.BasePointersArray = Builder.CreateAlloca(
+      PointerArrayType, /* ArraySize = */ nullptr, ".offload_baseptrs");
+
+  Info.RTArgs.PointersArray = Builder.CreateAlloca(
+      PointerArrayType, /* ArraySize = */ nullptr, ".offload_ptrs");
+  AllocaInst *MappersArray = Builder.CreateAlloca(
+      PointerArrayType, /* ArraySize = */ nullptr, ".offload_mappers");
+  Info.RTArgs.MappersArray = MappersArray;
+
+  // If we don't have any VLA types or other types that require runtime
+  // evaluation, we can use a constant array for the map sizes, otherwise we
+  // need to fill up the arrays as we do for the pointers.
+  Type *Int64Ty = Builder.getInt64Ty();
+  SmallVector<Constant *> ConstSizes(CombinedInfo.Sizes.size(),
+                                     ConstantInt::get(Builder.getInt64Ty(), 0));
+  SmallBitVector RuntimeSizes(CombinedInfo.Sizes.size());
+  for (unsigned I = 0, E = CombinedInfo.Sizes.size(); I < E; ++I) {
+    if (auto *CI = dyn_cast<Constant>(CombinedInfo.Sizes[I])) {
+      if (!isa<ConstantExpr>(CI) && !isa<GlobalValue>(CI)) {
+        if (IsNonContiguous &&
+            static_cast<std::underlying_type_t<OpenMPOffloadMappingFlags>>(
+                CombinedInfo.Types[I] &
+                OpenMPOffloadMappingFlags::OMP_MAP_NON_CONTIG))
+          ConstSizes[I] = ConstantInt::get(Builder.getInt64Ty(),
+                                           CombinedInfo.NonContigInfo.Dims[I]);
+        else
+          ConstSizes[I] = CI;
+        continue;
+      }
+    }
+    RuntimeSizes.set(I);
+  }
+
+  if (RuntimeSizes.all()) {
+    ArrayType *SizeArrayType = ArrayType::get(Int64Ty, Info.NumberOfPtrs);
+    Info.RTArgs.SizesArray = Builder.CreateAlloca(
+        SizeArrayType, /* ArraySize = */ nullptr, ".offload_sizes");
+    Builder.restoreIP(CodeGenIP);
+  } else {
+    auto *SizesArrayInit = ConstantArray::get(
+        ArrayType::get(Int64Ty, ConstSizes.size()), ConstSizes);
+    std::string Name = createPlatformSpecificName({"offload_sizes"});
+    auto *SizesArrayGbl =
+        new GlobalVariable(M, SizesArrayInit->getType(), /*isConstant=*/true,
+                           GlobalValue::PrivateLinkage, SizesArrayInit, Name);
+    SizesArrayGbl->setUnnamedAddr(GlobalValue::UnnamedAddr::Global);
+
+    if (!RuntimeSizes.any()) {
+      Info.RTArgs.SizesArray = SizesArrayGbl;
+    } else {
+      unsigned IndexSize = M.getDataLayout().getIndexSizeInBits(0);
+      Align OffloadSizeAlign = M.getDataLayout().getABIIntegerTypeAlignment(64);
+      ArrayType *SizeArrayType = ArrayType::get(Int64Ty, Info.NumberOfPtrs);
+      AllocaInst *Buffer = Builder.CreateAlloca(
+          SizeArrayType, /* ArraySize = */ nullptr, ".offload_sizes");
+      Buffer->setAlignment(OffloadSizeAlign);
+      Builder.restoreIP(CodeGenIP);
+      Value *GblConstPtr = Builder.CreatePointerBitCastOrAddrSpaceCast(
+          SizesArrayGbl, Int64Ty->getPointerTo());
+      Builder.CreateMemCpy(
+          Buffer, M.getDataLayout().getPrefTypeAlign(Buffer->getType()),
+          GblConstPtr, OffloadSizeAlign,
+          Builder.getIntN(
+              IndexSize,
+              Buffer->getAllocationSize(M.getDataLayout())->getFixedValue()));
+
+      Info.RTArgs.SizesArray = Buffer;
+    }
+    Builder.restoreIP(CodeGenIP);
+  }
+
+  // The map types are always constant so we don't need to generate code to
+  // fill arrays. Instead, we create an array constant.
+  SmallVector<uint64_t, 4> Mapping;
+  for (auto mapFlag : CombinedInfo.Types)
+    Mapping.push_back(
+        static_cast<std::underlying_type_t<OpenMPOffloadMappingFlags>>(
+            mapFlag));
+  std::string MaptypesName = createPlatformSpecificName({"offload_maptypes"});
+  auto *MapTypesArrayGbl = createOffloadMaptypes(Mapping, MaptypesName);
+  Info.RTArgs.MapTypesArray = MapTypesArrayGbl;
+
+  // The information types are only built if provided.
+  if (!CombinedInfo.Names.empty()) {
+    std::string MapnamesName = createPlatformSpecificName({"offload_mapnames"});
+    auto *MapNamesArrayGbl =
+        createOffloadMapnames(CombinedInfo.Names, MapnamesName);
+    Info.RTArgs.MapNamesArray = MapNamesArrayGbl;
+  }
+
+  // If there's a present map type modifier, it must not be applied to the end
+  // of a region, so generate a separate map type array in that case.
+  if (Info.separateBeginEndCalls()) {
+    bool EndMapTypesDiffer = false;
+    for (uint64_t &Type : Mapping) {
+      if (Type & static_cast<std::underlying_type_t<OpenMPOffloadMappingFlags>>(
+                     OpenMPOffloadMappingFlags::OMP_MAP_PRESENT)) {
+        Type &= ~static_cast<std::underlying_type_t<OpenMPOffloadMappingFlags>>(
+            OpenMPOffloadMappingFlags::OMP_MAP_PRESENT);
+        EndMapTypesDiffer = true;
+      }
+    }
+    if (EndMapTypesDiffer) {
+      MapTypesArrayGbl = createOffloadMaptypes(Mapping, MaptypesName);
+      Info.RTArgs.MapTypesArrayEnd = MapTypesArrayGbl;
+    }
+  }
+
+  for (unsigned I = 0; I < Info.NumberOfPtrs; ++I) {
+    Value *BPVal = CombinedInfo.BasePointers[I];
+    Value *BP = Builder.CreateConstInBoundsGEP2_32(
+        ArrayType::get(Builder.getInt8PtrTy(), Info.NumberOfPtrs),
+        Info.RTArgs.BasePointersArray, 0, I);
+    BP = Builder.CreatePointerBitCastOrAddrSpaceCast(
+        BP, BPVal->getType()->getPointerTo(/*AddrSpace=*/0));
+    Builder.CreateAlignedStore(
+        BPVal, BP, M.getDataLayout().getPrefTypeAlign(Builder.getInt8PtrTy()));
+
+    if (Info.requiresDevicePointerInfo()) {
+      assert(DeviceAddrCB &&
+             "DeviceAddrCB missing for DevicePtr code generation");
+      DeviceAddrCB(I, BP, BPVal);
+    }
+
+    Value *PVal = CombinedInfo.Pointers[I];
+    Value *P = Builder.CreateConstInBoundsGEP2_32(
+        ArrayType::get(Builder.getInt8PtrTy(), Info.NumberOfPtrs),
+        Info.RTArgs.PointersArray, 0, I);
+    P = Builder.CreatePointerBitCastOrAddrSpaceCast(
+        P, PVal->getType()->getPointerTo(/*AddrSpace=*/0));
+    // TODO: Check alignment correct.
+    Builder.CreateAlignedStore(
+        PVal, P, M.getDataLayout().getPrefTypeAlign(Builder.getInt8PtrTy()));
+
+    if (RuntimeSizes.test(I)) {
+      Value *S = Builder.CreateConstInBoundsGEP2_32(
+          ArrayType::get(Int64Ty, Info.NumberOfPtrs), Info.RTArgs.SizesArray,
+          /*Idx0=*/0,
+          /*Idx1=*/I);
+      Builder.CreateAlignedStore(
+          Builder.CreateIntCast(CombinedInfo.Sizes[I], Int64Ty,
+                                /*isSigned=*/true),
+          S, M.getDataLayout().getPrefTypeAlign(Builder.getInt8PtrTy()));
+    }
+    // Fill up the mapper array.
+    unsigned IndexSize = M.getDataLayout().getIndexSizeInBits(0);
+    Value *MFunc = ConstantPointerNull::get(Builder.getInt8PtrTy());
+    if (CustomMapperCB)
+      if (Value *CustomMFunc = CustomMapperCB(I))
+        MFunc = Builder.CreatePointerCast(CustomMFunc, Builder.getInt8PtrTy());
+    Value *MAddr = Builder.CreateInBoundsGEP(
+        MappersArray->getAllocatedType(), MappersArray,
+        {Builder.getIntN(IndexSize, 0), Builder.getIntN(IndexSize, I)});
+    Builder.CreateAlignedStore(
+        MFunc, MAddr, M.getDataLayout().getPrefTypeAlign(MAddr->getType()));
+  }
+
+  if (!IsNonContiguous || CombinedInfo.NonContigInfo.Offsets.empty() ||
+      Info.NumberOfPtrs == 0)
+    return;
+  emitNonContiguousDescriptor(AllocaIP, CodeGenIP, CombinedInfo, Info);
+}
+
 bool OpenMPIRBuilder::checkAndEmitFlushAfterAtomic(
     const LocationDescription &Loc, llvm::AtomicOrdering AO, AtomicKind AK) {
   assert(!(AO == AtomicOrdering::NotAtomic ||
