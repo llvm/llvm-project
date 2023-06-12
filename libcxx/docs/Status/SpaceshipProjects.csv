@@ -61,7 +61,7 @@ Section,Description,Dependencies,Assignee,Complete
 | remove ops `memory_resource <https://reviews.llvm.org/D152629>`_
 | remove ops `polymorphic_allocator <https://reviews.llvm.org/D152629>`_",None,Hristo Hristov,|Complete|
 "| `[allocator.adaptor.syn] <https://wg21.link/allocator.adaptor.syn>`_
-| `[scoped.adaptor.operators] <https://wg21.link/scoped.adaptor.operators>`_",| remove ops `scoped_allocator_adaptor`,None,Unassigned,|Not Started|
+| `[scoped.adaptor.operators] <https://wg21.link/scoped.adaptor.operators>`_",| remove ops `scoped_allocator_adaptor <https://reviews.llvm.org/D152678>`_,None,Hristo Hristov,|Complete|
 "| `[functional.syn] <https://wg21.link/functional.syn>`_
 | `[range.cmp] <https://wg21.link/range.cmp>`_
 | `[func.wrap.func] <https://wg21.link/func.wrap.func>`_
