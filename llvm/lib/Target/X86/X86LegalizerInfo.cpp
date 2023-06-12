@@ -319,6 +319,16 @@ X86LegalizerInfo::X86LegalizerInfo(const X86Subtarget &STI,
                (HasAVX512 && typeInSet(0, {v16s32, v8s64})(Query));
       });
 
+  // fp comparison
+  getActionDefinitionsBuilder(G_FCMP)
+      .legalIf([=](const LegalityQuery &Query) {
+        return (HasSSE1 && typePairInSet(0, 1, {{s8, s32}})(Query)) ||
+               (HasSSE2 && typePairInSet(0, 1, {{s8, s64}})(Query));
+      })
+      .clampScalar(0, s8, s8)
+      .clampScalar(1, s32, HasSSE2 ? s64 : s32)
+      .widenScalarToNextPow2(1);
+
   // fp extension
   getActionDefinitionsBuilder(G_FPEXT).legalIf([=](const LegalityQuery &Query) {
     return (HasSSE2 && typePairInSet(0, 1, {{s64, s32}})(Query)) ||
@@ -454,12 +464,6 @@ void X86LegalizerInfo::setLegalizerInfo64bit() {
       .clampScalar(1, s32, s64)
       .widenScalarToNextPow2(0)
       .clampScalar(0, s32, s64)
-      .widenScalarToNextPow2(1);
-
-  getActionDefinitionsBuilder(G_FCMP)
-      .legalForCartesianProduct({s8}, {s32, s64})
-      .clampScalar(0, s8, s8)
-      .clampScalar(1, s32, s64)
       .widenScalarToNextPow2(1);
 
   // Merge/Unmerge
