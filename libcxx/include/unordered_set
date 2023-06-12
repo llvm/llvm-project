@@ -232,7 +232,7 @@ template <class Value, class Hash, class Pred, class Alloc>
 template <class Value, class Hash, class Pred, class Alloc>
     bool
     operator!=(const unordered_set<Value, Hash, Pred, Alloc>& x,
-               const unordered_set<Value, Hash, Pred, Alloc>& y);
+               const unordered_set<Value, Hash, Pred, Alloc>& y); // removed in C++20
 
 template <class Value, class Hash = hash<Value>, class Pred = equal_to<Value>,
           class Alloc = allocator<Value>>
@@ -454,7 +454,7 @@ template <class Value, class Hash, class Pred, class Alloc>
 template <class Value, class Hash, class Pred, class Alloc>
     bool
     operator!=(const unordered_multiset<Value, Hash, Pred, Alloc>& x,
-               const unordered_multiset<Value, Hash, Pred, Alloc>& y);
+               const unordered_multiset<Value, Hash, Pred, Alloc>& y); // removed in C++20
 }  // std
 
 */
@@ -1150,6 +1150,8 @@ operator==(const unordered_set<_Value, _Hash, _Pred, _Alloc>& __x,
     return true;
 }
 
+#if _LIBCPP_STD_VER <= 17
+
 template <class _Value, class _Hash, class _Pred, class _Alloc>
 inline _LIBCPP_INLINE_VISIBILITY
 bool
@@ -1158,6 +1160,8 @@ operator!=(const unordered_set<_Value, _Hash, _Pred, _Alloc>& __x,
 {
     return !(__x == __y);
 }
+
+#endif
 
 template <class _Value, class _Hash = hash<_Value>, class _Pred = equal_to<_Value>,
           class _Alloc = allocator<_Value> >
@@ -1792,6 +1796,8 @@ operator==(const unordered_multiset<_Value, _Hash, _Pred, _Alloc>& __x,
     return true;
 }
 
+#if _LIBCPP_STD_VER <= 17
+
 template <class _Value, class _Hash, class _Pred, class _Alloc>
 inline _LIBCPP_INLINE_VISIBILITY
 bool
@@ -1800,6 +1806,8 @@ operator!=(const unordered_multiset<_Value, _Hash, _Pred, _Alloc>& __x,
 {
     return !(__x == __y);
 }
+
+#endif
 
 _LIBCPP_END_NAMESPACE_STD
 

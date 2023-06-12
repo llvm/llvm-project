@@ -5,12 +5,8 @@
 define void @store_v5i8(ptr %p, <5 x i8> %v) {
 ; CHECK-LABEL: store_v5i8:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetivli zero, 1, e8, mf2, ta, ma
-; CHECK-NEXT:    vslidedown.vi v9, v8, 4
-; CHECK-NEXT:    addi a1, a0, 4
-; CHECK-NEXT:    vse8.v v9, (a1)
-; CHECK-NEXT:    vsetivli zero, 1, e32, mf2, ta, ma
-; CHECK-NEXT:    vse32.v v8, (a0)
+; CHECK-NEXT:    vsetivli zero, 5, e8, mf2, ta, ma
+; CHECK-NEXT:    vse8.v v8, (a0)
 ; CHECK-NEXT:    ret
   store <5 x i8> %v, ptr %p
   ret void
@@ -19,19 +15,8 @@ define void @store_v5i8(ptr %p, <5 x i8> %v) {
 define void @store_v5i8_align1(ptr %p, <5 x i8> %v) {
 ; CHECK-LABEL: store_v5i8_align1:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetivli zero, 1, e8, mf2, ta, ma
-; CHECK-NEXT:    vslidedown.vi v9, v8, 4
-; CHECK-NEXT:    addi a1, a0, 4
-; CHECK-NEXT:    vse8.v v9, (a1)
-; CHECK-NEXT:    vsetivli zero, 0, e32, mf2, ta, ma
-; CHECK-NEXT:    vmv.x.s a1, v8
-; CHECK-NEXT:    sb a1, 0(a0)
-; CHECK-NEXT:    srli a2, a1, 24
-; CHECK-NEXT:    sb a2, 3(a0)
-; CHECK-NEXT:    srli a2, a1, 16
-; CHECK-NEXT:    sb a2, 2(a0)
-; CHECK-NEXT:    srli a1, a1, 8
-; CHECK-NEXT:    sb a1, 1(a0)
+; CHECK-NEXT:    vsetivli zero, 5, e8, mf2, ta, ma
+; CHECK-NEXT:    vse8.v v8, (a0)
 ; CHECK-NEXT:    ret
   store <5 x i8> %v, ptr %p, align 1
   ret void
@@ -41,110 +26,49 @@ define void @store_v5i8_align1(ptr %p, <5 x i8> %v) {
 define void @store_v6i8(ptr %p, <6 x i8> %v) {
 ; CHECK-LABEL: store_v6i8:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetivli zero, 1, e32, mf2, ta, ma
-; CHECK-NEXT:    vse32.v v8, (a0)
-; CHECK-NEXT:    vsetivli zero, 1, e16, mf2, ta, ma
-; CHECK-NEXT:    vslidedown.vi v8, v8, 2
-; CHECK-NEXT:    addi a0, a0, 4
-; CHECK-NEXT:    vse16.v v8, (a0)
+; CHECK-NEXT:    vsetivli zero, 6, e8, mf2, ta, ma
+; CHECK-NEXT:    vse8.v v8, (a0)
 ; CHECK-NEXT:    ret
   store <6 x i8> %v, ptr %p
   ret void
 }
 
 define void @store_v12i8(ptr %p, <12 x i8> %v) {
-; RV32-LABEL: store_v12i8:
-; RV32:       # %bb.0:
-; RV32-NEXT:    vsetivli zero, 1, e32, m1, ta, ma
-; RV32-NEXT:    vslidedown.vi v9, v8, 2
-; RV32-NEXT:    addi a1, a0, 8
-; RV32-NEXT:    vse32.v v9, (a1)
-; RV32-NEXT:    vsetivli zero, 8, e8, mf2, ta, ma
-; RV32-NEXT:    vse8.v v8, (a0)
-; RV32-NEXT:    ret
-;
-; RV64-LABEL: store_v12i8:
-; RV64:       # %bb.0:
-; RV64-NEXT:    vsetivli zero, 1, e64, m1, ta, ma
-; RV64-NEXT:    vse64.v v8, (a0)
-; RV64-NEXT:    vsetivli zero, 1, e32, m1, ta, ma
-; RV64-NEXT:    vslidedown.vi v8, v8, 2
-; RV64-NEXT:    addi a0, a0, 8
-; RV64-NEXT:    vse32.v v8, (a0)
-; RV64-NEXT:    ret
+; CHECK-LABEL: store_v12i8:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetivli zero, 12, e8, m1, ta, ma
+; CHECK-NEXT:    vse8.v v8, (a0)
+; CHECK-NEXT:    ret
   store <12 x i8> %v, ptr %p
   ret void
 }
 
 define void @store_v6i16(ptr %p, <6 x i16> %v) {
-; RV32-LABEL: store_v6i16:
-; RV32:       # %bb.0:
-; RV32-NEXT:    vsetivli zero, 1, e32, m1, ta, ma
-; RV32-NEXT:    vslidedown.vi v9, v8, 2
-; RV32-NEXT:    addi a1, a0, 8
-; RV32-NEXT:    vse32.v v9, (a1)
-; RV32-NEXT:    vsetivli zero, 4, e16, mf2, ta, ma
-; RV32-NEXT:    vse16.v v8, (a0)
-; RV32-NEXT:    ret
-;
-; RV64-LABEL: store_v6i16:
-; RV64:       # %bb.0:
-; RV64-NEXT:    vsetivli zero, 1, e64, m1, ta, ma
-; RV64-NEXT:    vse64.v v8, (a0)
-; RV64-NEXT:    vsetivli zero, 1, e32, m1, ta, ma
-; RV64-NEXT:    vslidedown.vi v8, v8, 2
-; RV64-NEXT:    addi a0, a0, 8
-; RV64-NEXT:    vse32.v v8, (a0)
-; RV64-NEXT:    ret
+; CHECK-LABEL: store_v6i16:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetivli zero, 6, e16, m1, ta, ma
+; CHECK-NEXT:    vse16.v v8, (a0)
+; CHECK-NEXT:    ret
   store <6 x i16> %v, ptr %p
   ret void
 }
 
 define void @store_v6f16(ptr %p, <6 x half> %v) {
-; RV32-LABEL: store_v6f16:
-; RV32:       # %bb.0:
-; RV32-NEXT:    vsetivli zero, 1, e32, m1, ta, ma
-; RV32-NEXT:    vslidedown.vi v9, v8, 2
-; RV32-NEXT:    addi a1, a0, 8
-; RV32-NEXT:    vse32.v v9, (a1)
-; RV32-NEXT:    vsetivli zero, 4, e16, mf2, ta, ma
-; RV32-NEXT:    vse16.v v8, (a0)
-; RV32-NEXT:    ret
-;
-; RV64-LABEL: store_v6f16:
-; RV64:       # %bb.0:
-; RV64-NEXT:    vsetivli zero, 1, e64, m1, ta, ma
-; RV64-NEXT:    vse64.v v8, (a0)
-; RV64-NEXT:    vsetivli zero, 1, e32, m1, ta, ma
-; RV64-NEXT:    vslidedown.vi v8, v8, 2
-; RV64-NEXT:    addi a0, a0, 8
-; RV64-NEXT:    vse32.v v8, (a0)
-; RV64-NEXT:    ret
+; CHECK-LABEL: store_v6f16:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetivli zero, 6, e16, m1, ta, ma
+; CHECK-NEXT:    vse16.v v8, (a0)
+; CHECK-NEXT:    ret
   store <6 x half> %v, ptr %p
   ret void
 }
 
 define void @store_v6f32(ptr %p, <6 x float> %v) {
-; RV32-LABEL: store_v6f32:
-; RV32:       # %bb.0:
-; RV32-NEXT:    vsetivli zero, 2, e32, m2, ta, ma
-; RV32-NEXT:    vslidedown.vi v10, v8, 4
-; RV32-NEXT:    addi a1, a0, 16
-; RV32-NEXT:    vsetivli zero, 2, e32, mf2, ta, ma
-; RV32-NEXT:    vse32.v v10, (a1)
-; RV32-NEXT:    vsetivli zero, 4, e32, m1, ta, ma
-; RV32-NEXT:    vse32.v v8, (a0)
-; RV32-NEXT:    ret
-;
-; RV64-LABEL: store_v6f32:
-; RV64:       # %bb.0:
-; RV64-NEXT:    vsetivli zero, 1, e64, m2, ta, ma
-; RV64-NEXT:    vslidedown.vi v10, v8, 2
-; RV64-NEXT:    addi a1, a0, 16
-; RV64-NEXT:    vse64.v v10, (a1)
-; RV64-NEXT:    vsetivli zero, 4, e32, m1, ta, ma
-; RV64-NEXT:    vse32.v v8, (a0)
-; RV64-NEXT:    ret
+; CHECK-LABEL: store_v6f32:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetivli zero, 6, e32, m2, ta, ma
+; CHECK-NEXT:    vse32.v v8, (a0)
+; CHECK-NEXT:    ret
   store <6 x float> %v, ptr %p
   ret void
 }
@@ -152,12 +76,7 @@ define void @store_v6f32(ptr %p, <6 x float> %v) {
 define void @store_v6f64(ptr %p, <6 x double> %v) {
 ; CHECK-LABEL: store_v6f64:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetivli zero, 2, e64, m4, ta, ma
-; CHECK-NEXT:    vslidedown.vi v12, v8, 4
-; CHECK-NEXT:    addi a1, a0, 32
-; CHECK-NEXT:    vsetivli zero, 2, e64, m1, ta, ma
-; CHECK-NEXT:    vse64.v v12, (a1)
-; CHECK-NEXT:    vsetivli zero, 4, e64, m2, ta, ma
+; CHECK-NEXT:    vsetivli zero, 6, e64, m4, ta, ma
 ; CHECK-NEXT:    vse64.v v8, (a0)
 ; CHECK-NEXT:    ret
   store <6 x double> %v, ptr %p

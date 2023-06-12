@@ -363,8 +363,7 @@ func.func @realloc_static(%in: memref<2xi32>) -> memref<4xi32>{
 // CHECK:           %[[src_size:.*]] = llvm.mul %[[src_dim]], %[[dst_es]]
 // CHECK:           %[[new_buffer_raw:.*]] = llvm.call @malloc(%[[dst_size]])
 // CHECK:           %[[old_buffer_aligned:.*]] = llvm.extractvalue %[[descriptor]][1]
-// CHECK:           %[[volatile:.*]] = llvm.mlir.constant(false) : i1
-// CHECK:           "llvm.intr.memcpy"(%[[new_buffer_raw]], %[[old_buffer_aligned]], %[[src_size]], %[[volatile]])
+// CHECK:           "llvm.intr.memcpy"(%[[new_buffer_raw]], %[[old_buffer_aligned]], %[[src_size]]) <{isVolatile = false}>
 // CHECK:           %[[old_buffer_unaligned:.*]] = llvm.extractvalue %[[descriptor]][0]
 // CHECK:           llvm.call @free(%[[old_buffer_unaligned]])
 // CHECK:           %[[descriptor_update1:.*]] = llvm.insertvalue %[[new_buffer_raw]], %[[descriptor]][0]
@@ -406,8 +405,7 @@ func.func @realloc_static_alignment(%in: memref<2xf32>) -> memref<4xf32>{
 // CHECK:           %[[new_buffer_aligned_int:.*]] = llvm.sub %[[ptr_alignment_m1]], %[[padding]]
 // CHECK:           %[[new_buffer_aligned:.*]] = llvm.inttoptr %[[new_buffer_aligned_int]] : i64 to !llvm.ptr
 // CHECK:           %[[old_buffer_aligned:.*]] = llvm.extractvalue %[[descriptor]][1]
-// CHECK:           %[[volatile:.*]] = llvm.mlir.constant(false) : i1
-// CHECK:           "llvm.intr.memcpy"(%[[new_buffer_aligned]], %[[old_buffer_aligned]], %[[src_size]], %[[volatile]])
+// CHECK:           "llvm.intr.memcpy"(%[[new_buffer_aligned]], %[[old_buffer_aligned]], %[[src_size]]) <{isVolatile = false}>
 // CHECK:           %[[old_buffer_unaligned:.*]] = llvm.extractvalue %[[descriptor]][0]
 // CHECK:           llvm.call @free(%[[old_buffer_unaligned]])
 // CHECK:           %[[descriptor_update1:.*]] = llvm.insertvalue %[[new_buffer_raw]], %[[descriptor]][0]

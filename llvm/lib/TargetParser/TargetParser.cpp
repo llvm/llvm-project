@@ -13,7 +13,6 @@
 
 #include "llvm/TargetParser/TargetParser.h"
 #include "llvm/ADT/ArrayRef.h"
-#include "llvm/ADT/StringSwitch.h"
 #include "llvm/TargetParser/Triple.h"
 
 using namespace llvm;

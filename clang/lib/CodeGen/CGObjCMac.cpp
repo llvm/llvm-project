@@ -5293,12 +5293,7 @@ llvm::Constant *CGObjCCommonMac::GetClassName(StringRef RuntimeName) {
 }
 
 llvm::Function *CGObjCCommonMac::GetMethodDefinition(const ObjCMethodDecl *MD) {
-  llvm::DenseMap<const ObjCMethodDecl*, llvm::Function*>::iterator
-      I = MethodDefinitions.find(MD);
-  if (I != MethodDefinitions.end())
-    return I->second;
-
-  return nullptr;
+  return MethodDefinitions.lookup(MD);
 }
 
 /// GetIvarLayoutName - Returns a unique constant for the given

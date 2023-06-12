@@ -26,7 +26,6 @@ class GlobalValueSummary;
 class ModuleSummaryIndex;
 class Function;
 class Module;
-class Pass;
 
 /// Returns the memory access properties of this copy of the function.
 MemoryEffects computeFunctionBodyMemoryAccess(Function &F, AAResults &AAR);

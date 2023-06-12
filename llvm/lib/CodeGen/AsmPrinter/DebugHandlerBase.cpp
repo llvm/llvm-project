@@ -223,6 +223,7 @@ bool DebugHandlerBase::isUnsignedDIType(const DIType *Ty) {
           Encoding == dwarf::DW_ATE_signed_char ||
           Encoding == dwarf::DW_ATE_float || Encoding == dwarf::DW_ATE_UTF ||
           Encoding == dwarf::DW_ATE_boolean ||
+          Encoding == dwarf::DW_ATE_complex_float ||
           (Ty->getTag() == dwarf::DW_TAG_unspecified_type &&
            Ty->getName() == "decltype(nullptr)")) &&
          "Unsupported encoding");

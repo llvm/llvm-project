@@ -26,7 +26,9 @@
 #include "clang/Basic/LangOptions.h"
 #include "clang/Basic/SourceLocation.h"
 #include "clang/Basic/SourceManager.h"
+#include "clang/Basic/TargetInfo.h"
 #include "clang/Basic/TokenKinds.h"
+#include "clang/Frontend/CompilerInstance.h"
 #include "clang/Frontend/CompilerInvocation.h"
 #include "clang/Frontend/FrontendActions.h"
 #include "clang/Frontend/PrecompiledPreamble.h"
@@ -35,6 +37,7 @@
 #include "clang/Lex/PPCallbacks.h"
 #include "clang/Lex/Preprocessor.h"
 #include "clang/Lex/PreprocessorOptions.h"
+#include "clang/Serialization/ASTReader.h"
 #include "clang/Tooling/CompilationDatabase.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/DenseMap.h"
@@ -77,10 +80,9 @@ bool compileCommandsAreEqual(const tooling::CompileCommand &LHS,
 class CppFilePreambleCallbacks : public PreambleCallbacks {
 public:
   CppFilePreambleCallbacks(
-      PathRef File, PreambleParsedCallback ParsedCallback,
-      PreambleBuildStats *Stats, bool ParseForwardingFunctions,
+      PathRef File, PreambleBuildStats *Stats, bool ParseForwardingFunctions,
       std::function<void(CompilerInstance &)> BeforeExecuteCallback)
-      : File(File), ParsedCallback(ParsedCallback), Stats(Stats),
+      : File(File), Stats(Stats),
         ParseForwardingFunctions(ParseForwardingFunctions),
         BeforeExecuteCallback(std::move(BeforeExecuteCallback)) {}
 
@@ -95,13 +97,22 @@ public:
   }
   CanonicalIncludes takeCanonicalIncludes() { return std::move(CanonIncludes); }
 
+  std::optional<CapturedASTCtx> takeLife() { return std::move(CapturedCtx); }
+
   bool isMainFileIncludeGuarded() const { return IsMainFileIncludeGuarded; }
 
   void AfterExecute(CompilerInstance &CI) override {
-    if (ParsedCallback) {
-      trace::Span Tracer("Running PreambleCallback");
-      ParsedCallback(CI.getASTContext(), CI.getPreprocessor(), CanonIncludes);
+    // As part of the Preamble compilation, ASTConsumer
+    // PrecompilePreambleConsumer/PCHGenerator is setup. This would be called
+    // when Preamble consists of modules. Therefore while capturing AST context,
+    // we have to reset ast consumer and ASTMutationListener.
+    if (CI.getASTReader()) {
+      CI.getASTReader()->setDeserializationListener(nullptr);
+      // This just sets consumer to null when DeserializationListener is null.
+      CI.getASTReader()->StartTranslationUnit(nullptr);
     }
+    CI.getASTContext().setASTMutationListener(nullptr);
+    CapturedCtx.emplace(CI);
 
     const SourceManager &SM = CI.getSourceManager();
     const FileEntry *MainFE = SM.getFileEntryForID(SM.getMainFileID());
@@ -202,7 +213,6 @@ public:
 
 private:
   PathRef File;
-  PreambleParsedCallback ParsedCallback;
   IncludeStructure Includes;
   CanonicalIncludes CanonIncludes;
   include_cleaner::PragmaIncludes Pragmas;
@@ -216,6 +226,7 @@ private:
   PreambleBuildStats *Stats;
   bool ParseForwardingFunctions;
   std::function<void(CompilerInstance &)> BeforeExecuteCallback;
+  std::optional<CapturedASTCtx> CapturedCtx;
 };
 
 // Represents directives other than includes, where basic textual information is
@@ -635,8 +646,7 @@ buildPreamble(PathRef FileName, CompilerInvocation CI,
   CI.getPreprocessorOpts().WriteCommentListToPCH = false;
 
   CppFilePreambleCallbacks CapturedInfo(
-      FileName, PreambleCallback, Stats,
-      Inputs.Opts.PreambleParseForwardingFunctions,
+      FileName, Stats, Inputs.Opts.PreambleParseForwardingFunctions,
       [&ASTListeners](CompilerInstance &CI) {
         for (const auto &L : ASTListeners)
           L->beforeExecute(CI);
@@ -644,7 +654,7 @@ buildPreamble(PathRef FileName, CompilerInvocation CI,
   auto VFS = Inputs.TFS->view(Inputs.CompileCommand.Directory);
   llvm::SmallString<32> AbsFileName(FileName);
   VFS->makeAbsolute(AbsFileName);
-  auto StatCache = std::make_unique<PreambleFileStatusCache>(AbsFileName);
+  auto StatCache = std::make_shared<PreambleFileStatusCache>(AbsFileName);
   auto StatCacheFS = StatCache->getProducingFS(VFS);
   llvm::IntrusiveRefCntPtr<TimerFS> TimedFS(new TimerFS(StatCacheFS));
 
@@ -679,9 +689,22 @@ buildPreamble(PathRef FileName, CompilerInvocation CI,
     Result->Pragmas = CapturedInfo.takePragmaIncludes();
     Result->Macros = CapturedInfo.takeMacros();
     Result->Marks = CapturedInfo.takeMarks();
-    Result->CanonIncludes = CapturedInfo.takeCanonicalIncludes();
-    Result->StatCache = std::move(StatCache);
+    Result->CanonIncludes = std::make_shared<const CanonicalIncludes>(
+        (CapturedInfo.takeCanonicalIncludes()));
+    Result->StatCache = StatCache;
     Result->MainIsIncludeGuarded = CapturedInfo.isMainFileIncludeGuarded();
+    if (PreambleCallback) {
+      trace::Span Tracer("Running PreambleCallback");
+      auto Ctx = CapturedInfo.takeLife();
+      // Stat cache is thread safe only when there are no producers. Hence
+      // change the VFS underneath to a consuming fs.
+      Ctx->getFileManager().setVirtualFileSystem(
+          Result->StatCache->getConsumingFS(VFS));
+      // While extending the life of FileMgr and VFS, StatCache should also be
+      // extended.
+      Ctx->setStatCache(Result->StatCache);
+      PreambleCallback(std::move(*Ctx), Result->CanonIncludes);
+    }
     return Result;
   }
 

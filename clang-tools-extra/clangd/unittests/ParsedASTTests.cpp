@@ -15,6 +15,7 @@
 #include "AST.h"
 #include "Annotations.h"
 #include "Compiler.h"
+#include "Config.h"
 #include "Diagnostics.h"
 #include "Headers.h"
 #include "ParsedAST.h"
@@ -23,6 +24,7 @@
 #include "TestFS.h"
 #include "TestTU.h"
 #include "TidyProvider.h"
+#include "support/Context.h"
 #include "clang/AST/DeclTemplate.h"
 #include "clang/Basic/SourceLocation.h"
 #include "clang/Basic/SourceManager.h"
@@ -33,6 +35,7 @@
 #include "gmock/gmock-matchers.h"
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
+#include <utility>
 
 namespace clang {
 namespace clangd {
@@ -513,6 +516,13 @@ TEST(ParsedASTTest, HeaderGuards) {
 //   size is part of the lookup key for HeaderFileInfo, and we don't want to
 //   rely on the preamble's HFI being looked up when parsing the main file.
 TEST(ParsedASTTest, HeaderGuardsSelfInclude) {
+  // Disable include cleaner diagnostics to prevent them from interfering with
+  // other diagnostics.
+  Config Cfg;
+  Cfg.Diagnostics.MissingIncludes = Config::IncludesPolicy::None;
+  Cfg.Diagnostics.UnusedIncludes = Config::IncludesPolicy::None;
+  WithContextValue Ctx(Config::Key, std::move(Cfg));
+
   TestTU TU;
   TU.ImplicitHeaderGuard = false;
   TU.Filename = "self.h";

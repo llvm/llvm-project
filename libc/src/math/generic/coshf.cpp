@@ -9,6 +9,7 @@
 #include "src/math/coshf.h"
 #include "src/__support/FPUtil/FPBits.h"
 #include "src/__support/FPUtil/multiply_add.h"
+#include "src/__support/FPUtil/rounding_mode.h"
 #include "src/__support/macros/optimization.h" // LIBC_UNLIKELY
 #include "src/math/generic/explogxf.h"
 
@@ -32,7 +33,7 @@ LLVM_LIBC_FUNCTION(float, coshf, (float x)) {
     if (xbits.is_inf_or_nan())
       return x + FPBits::inf().get_val();
 
-    int rounding = fputil::get_round();
+    int rounding = fputil::quick_get_round();
     if (LIBC_UNLIKELY(rounding == FE_DOWNWARD || rounding == FE_TOWARDZERO))
       return FPBits(FPBits::MAX_NORMAL).get_val();
 

@@ -50,14 +50,16 @@ Section,Description,Dependencies,Assignee,Complete
 | `[variant.monostate.relops] <https://wg21.link/variant.monostate.relops>`_","| `monostate <https://reviews.llvm.org/D131372>`_
 | `variant <https://reviews.llvm.org/D131372>`_",None,Kent Ross,|Complete|
 "| `[template.bitset] <https://wg21.link/template.bitset>`_
-| `[bitset.members] <https://wg21.link/bitset.members>`_","| remove ops `bitset <https://reviews.llvm.org/D152611>`_",None,Hristo Hristov,|In Progress|
+| `[bitset.members] <https://wg21.link/bitset.members>`_","| remove ops `bitset <https://reviews.llvm.org/D152611>`_",None,Hristo Hristov,|Complete|
 | `[memory.syn] <https://wg21.link/memory.syn>`_,|,None,Unassigned,|Not Started|
-| `[allocator.globals] <https://wg21.link/allocator.globals>`_,| remove ops `allocator <https://reviews.llvm.org/D152612>`_,None,Hristo Hristov,|In Progress|
+| `[allocator.globals] <https://wg21.link/allocator.globals>`_,| remove ops `allocator <https://reviews.llvm.org/D152612>`_,None,Hristo Hristov,|Complete|
 | `[unique.ptr.special] <https://wg21.link/unique.ptr.special>`_,| `unique_ptr <https://reviews.llvm.org/D130838>`_,[comparisons.three.way],Adrian Vogelsgesang,|Complete|
 | `[util.smartptr.shared.cmp] <https://wg21.link/util.smartptr.shared.cmp>`_,| `shared_ptr <https://reviews.llvm.org/D130852>`_,[comparisons.three.way],Adrian Vogelsgesang,|Complete|
-| `[mem.res.syn] <https://wg21.link/mem.res.syn>`_,|,None,Unassigned,|Not Started|
-| `[mem.res.eq] <https://wg21.link/mem.res.eq>`_,| remove ops `memory_resource`,None,Unassigned,|Not Started|
-| `[mem.poly.allocator.eq] <https://wg21.link/mem.poly.allocator.eq>`_,| remove ops `polymorphic_allocator`,None,Unassigned,|Not Started|
+"| `[mem.res.syn] <https://wg21.link/mem.res.syn>`_
+| `[mem.res.eq] <https://wg21.link/mem.res.eq>`_
+| `[mem.poly.allocator.eq] <https://wg21.link/mem.poly.allocator.eq>`_","|
+| remove ops `memory_resource <https://reviews.llvm.org/D152629>`_
+| remove ops `polymorphic_allocator <https://reviews.llvm.org/D152629>`_",None,Hristo Hristov,|Complete|
 "| `[allocator.adaptor.syn] <https://wg21.link/allocator.adaptor.syn>`_
 | `[scoped.adaptor.operators] <https://wg21.link/scoped.adaptor.operators>`_",| remove ops `scoped_allocator_adaptor`,None,Unassigned,|Not Started|
 "| `[functional.syn] <https://wg21.link/functional.syn>`_
@@ -95,10 +97,10 @@ Section,Description,Dependencies,Assignee,Complete
 | `multimap <https://reviews.llvm.org/D145976>`_",[expos.only.func],Hristo Hristov,|Complete|
 | `[associative.set.syn] <https://wg21.link/associative.set.syn>`_ (`general <https://wg21.link/container.opt.reqmts>`_),"| `multiset <https://reviews.llvm.org/D148416>`_
 | `set <https://reviews.llvm.org/D148416>`_",[expos.only.func],Hristo Hristov,|Complete|
-| `[unord.map.syn] <https://wg21.link/unord.map.syn>`_,"| remove ops `unordered_map`
-| remove ops `unordered_multimap`",None,Unassigned,|Not Started|
-| `[unordered.set.syn] <https://wg21.link/unordered.set.syn>`_,"| remove ops `unordered_set`
-| remove ops `unordered_multiset`",None,Unassigned,|Not Started|
+| `[unord.map.syn] <https://wg21.link/unord.map.syn>`_,"| remove ops `unordered_map <https://reviews.llvm.org/D152642>`_
+| remove ops `unordered_multimap <https://reviews.llvm.org/D152642>`_",None,Hristo Hristov,|Complete|
+| `[unordered.set.syn] <https://wg21.link/unordered.set.syn>`_,"| remove ops `unordered_set <https://reviews.llvm.org/D152643>`_
+| remove ops `unordered_multiset <https://reviews.llvm.org/D152643>`_",None,Hristo Hristov,|Complete|
 | `[queue.syn] <https://wg21.link/queue.syn>`_,| `queue <https://reviews.llvm.org/D146066>`_,None,Hristo Hristov,|Complete|
 | `[stack.syn] <https://wg21.link/stack.syn>`_,| `stack <https://reviews.llvm.org/D146094>`_,None,Hristo Hristov,|Complete|
 | `[queue.ops] <https://wg21.link/queue.ops>`_,| `queue <https://reviews.llvm.org/D146066>`_,None,Hristo Hristov,|Complete|
@@ -135,9 +137,9 @@ Section,Description,Dependencies,Assignee,Complete
 | `[alg.three.way] <https://wg21.link/alg.three.way>`_",| `lexicographical_compare_three_way <https://reviews.llvm.org/D131395>`_,[comparisons.three.way],Adrian Vogelsgesang,|Complete|
 - `5.11 Clause 26: Numerics library <https://wg21.link/p1614r2#clause-26-numerics-library>`_,,,,
 "| `[complex.syn] <https://wg21.link/complex.syn>`_
-| `[complex.ops] <https://wg21.link/complex.ops>`_",| remove ops `complex <https://reviews.llvm.org/D152615>`_,None,Hristo Hristov,|In Progress|
+| `[complex.ops] <https://wg21.link/complex.ops>`_",| remove ops `complex <https://reviews.llvm.org/D152615>`_,None,Hristo Hristov,|Complete|
 "| `[class.slice.overview] <https://wg21.link/class.slice.overview>`_
-| `[slice.ops] <https://wg21.link/slice.ops>`_",| `slice <https://reviews.llvm.org/D152617>`_,None,Hristo Hristov,|In Progress|
+| `[slice.ops] <https://wg21.link/slice.ops>`_",| `slice <https://reviews.llvm.org/D152617>`_,None,Hristo Hristov,|Complete|
 - `5.12 Clause 27: Time library <https://wg21.link/p1614r2#clause-27-time-library>`_,,,,
 | `[time.syn] <https://wg21.link/time.syn>`_,|,None,Unassigned,|Not Started|
 | `[time.duration.comparisons] <https://wg21.link/time.duration.comparisons>`_, `chrono::duration <https://reviews.llvm.org/D145881>`_, None, Hristo Hristov, |Complete|

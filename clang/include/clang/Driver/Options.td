@@ -255,10 +255,6 @@ def flang_ignored_w_Group : OptionGroup<"<flang ignored W group>">,
 def clang_ignored_legacy_options_Group : OptionGroup<"<clang legacy flags>">,
   Group<f_Group>, Flags<[Ignored]>;
 
-def LongDouble_Group : OptionGroup<"<LongDouble group>">, Group<m_Group>,
-  DocName<"Long double flags">,
-  DocBrief<[{Selects the long double implementation}]>;
-
 // Retired with clang-5.0
 def : Flag<["-"], "fslp-vectorize-aggressive">, Group<clang_ignored_legacy_options_Group>;
 def : Flag<["-"], "fno-slp-vectorize-aggressive">, Group<clang_ignored_legacy_options_Group>;
@@ -2231,10 +2227,10 @@ defm xray_ignore_loops : BoolFOption<"xray-ignore-loops",
   NegFlag<SetFalse>>;
 
 defm xray_function_index : BoolFOption<"xray-function-index",
-  CodeGenOpts<"XRayOmitFunctionIndex">, DefaultTrue,
+  CodeGenOpts<"XRayFunctionIndex">, DefaultTrue,
+  PosFlag<SetTrue, []>,
   NegFlag<SetFalse, [CC1Option], "Omit function index section at the"
-          " expense of single-function patching performance">,
-  PosFlag<SetTrue>>;
+          " expense of single-function patching performance">>;
 
 def fxray_link_deps : Flag<["-"], "fxray-link-deps">, Group<f_Group>,
   Flags<[CC1Option]>,
@@ -2327,6 +2323,11 @@ def fmacro_backtrace_limit_EQ : Joined<["-"], "fmacro-backtrace-limit=">,
   Group<f_Group>, Flags<[NoXarchOption, CC1Option, CoreOption]>,
   HelpText<"Set the maximum number of entries to print in a macro expansion backtrace (0 = no limit)">,
   MarshallingInfoInt<DiagnosticOpts<"MacroBacktraceLimit">, "DiagnosticOptions::DefaultMacroBacktraceLimit">;
+def fcaret_diagnostics_max_lines_EQ :
+  Joined<["-"], "fcaret-diagnostics-max-lines=">,
+  Group<f_Group>, Flags<[CC1Option, CoreOption]>,
+  HelpText<"Set the maximum number of source lines to show in a caret diagnostic (0 = no limit).">,
+  MarshallingInfoInt<DiagnosticOpts<"SnippetLineLimit">, "DiagnosticOptions::DefaultSnippetLineLimit">;
 defm merge_all_constants : BoolFOption<"merge-all-constants",
   CodeGenOpts<"MergeAllConstants">, DefaultFalse,
   PosFlag<SetTrue, [CC1Option, CoreOption], "Allow">, NegFlag<SetFalse, [], "Disallow">,
@@ -3562,9 +3563,9 @@ def l : JoinedOrSeparate<["-"], "l">, Flags<[LinkerInput, RenderJoined]>,
         Group<Link_Group>;
 def lazy__framework : Separate<["-"], "lazy_framework">, Flags<[LinkerInput]>;
 def lazy__library : Separate<["-"], "lazy_library">, Flags<[LinkerInput]>;
-def mlittle_endian : Flag<["-"], "mlittle-endian">, Flags<[NoXarchOption,TargetSpecific]>;
+def mlittle_endian : Flag<["-"], "mlittle-endian">, Group<m_Group>, Flags<[NoXarchOption,TargetSpecific]>;
 def EL : Flag<["-"], "EL">, Alias<mlittle_endian>;
-def mbig_endian : Flag<["-"], "mbig-endian">, Flags<[NoXarchOption,TargetSpecific]>;
+def mbig_endian : Flag<["-"], "mbig-endian">, Group<m_Group>, Flags<[NoXarchOption,TargetSpecific]>;
 def EB : Flag<["-"], "EB">, Alias<mbig_endian>;
 def m16 : Flag<["-"], "m16">, Group<m_Group>, Flags<[NoXarchOption, CoreOption]>;
 def m32 : Flag<["-"], "m32">, Group<m_Group>, Flags<[NoXarchOption, CoreOption]>;
@@ -3582,39 +3583,36 @@ def mno_iamcu : Flag<["-"], "mno-iamcu">, Group<m_Group>, Flags<[NoXarchOption, 
 def malign_functions_EQ : Joined<["-"], "malign-functions=">, Group<clang_ignored_m_Group>;
 def malign_loops_EQ : Joined<["-"], "malign-loops=">, Group<clang_ignored_m_Group>;
 def malign_jumps_EQ : Joined<["-"], "malign-jumps=">, Group<clang_ignored_m_Group>;
-
-let Flags = [TargetSpecific] in {
-def malign_branch_EQ : CommaJoined<["-"], "malign-branch=">, Group<m_Group>,
+def malign_branch_EQ : CommaJoined<["-"], "malign-branch=">, Group<m_Group>, Flags<[NoXarchOption]>,
   HelpText<"Specify types of branches to align">;
-def malign_branch_boundary_EQ : Joined<["-"], "malign-branch-boundary=">, Group<m_Group>,
+def malign_branch_boundary_EQ : Joined<["-"], "malign-branch-boundary=">, Group<m_Group>, Flags<[NoXarchOption]>,
   HelpText<"Specify the boundary's size to align branches">;
-def mpad_max_prefix_size_EQ : Joined<["-"], "mpad-max-prefix-size=">, Group<m_Group>,
+def mpad_max_prefix_size_EQ : Joined<["-"], "mpad-max-prefix-size=">, Group<m_Group>, Flags<[NoXarchOption]>,
   HelpText<"Specify maximum number of prefixes to use for padding">;
-def mbranches_within_32B_boundaries : Flag<["-"], "mbranches-within-32B-boundaries">, Group<m_Group>,
+def mbranches_within_32B_boundaries : Flag<["-"], "mbranches-within-32B-boundaries">, Flags<[NoXarchOption]>, Group<m_Group>,
   HelpText<"Align selected branches (fused, jcc, jmp) within 32-byte boundary">;
 def mfancy_math_387 : Flag<["-"], "mfancy-math-387">, Group<clang_ignored_m_Group>;
 def mlong_calls : Flag<["-"], "mlong-calls">, Group<m_Group>,
   HelpText<"Generate branches with extended addressability, usually via indirect jumps.">;
-} // let Flags = [TargetSpecific]
 def mdouble_EQ : Joined<["-"], "mdouble=">, Group<m_Group>,
   MetaVarName<"<n">, Values<"32,64">, Flags<[CC1Option]>,
   HelpText<"Force double to be <n> bits">,
   MarshallingInfoInt<LangOpts<"DoubleSize">, "0">;
+def LongDouble_Group : OptionGroup<"<LongDouble group>">, Group<m_Group>,
+  DocName<"Long double flags">,
+  DocBrief<[{Selects the long double implementation}]>;
 def mlong_double_64 : Flag<["-"], "mlong-double-64">, Group<LongDouble_Group>, Flags<[CC1Option]>,
   HelpText<"Force long double to be 64 bits">;
 def mlong_double_80 : Flag<["-"], "mlong-double-80">, Group<LongDouble_Group>, Flags<[CC1Option]>,
   HelpText<"Force long double to be 80 bits, padded to 128 bits for storage">;
 def mlong_double_128 : Flag<["-"], "mlong-double-128">, Group<LongDouble_Group>, Flags<[CC1Option]>,
   HelpText<"Force long double to be 128 bits">;
-let Flags = [TargetSpecific] in {
 def mno_long_calls : Flag<["-"], "mno-long-calls">, Group<m_Group>,
   HelpText<"Restore the default behaviour of not generating long calls">;
-} // let Flags = [TargetSpecific]
 def mexecute_only : Flag<["-"], "mexecute-only">, Group<m_arm_Features_Group>,
   HelpText<"Disallow generation of data access to code sections (ARM only)">;
 def mno_execute_only : Flag<["-"], "mno-execute-only">, Group<m_arm_Features_Group>,
   HelpText<"Allow generation of data access to code sections (ARM only)">;
-let Flags = [TargetSpecific] in {
 def mtp_mode_EQ : Joined<["-"], "mtp=">, Group<m_arm_Features_Group>, Values<"soft,cp15,el0,el1,el2,el3">,
   HelpText<"Thread pointer access method (AArch32/AArch64 only)">;
 def mpure_code : Flag<["-"], "mpure-code">, Alias<mexecute_only>; // Alias for GCC compatibility
@@ -3624,9 +3622,8 @@ def mappletvos_version_min_EQ : Joined<["-"], "mappletvos-version-min=">, Alias<
 def mtvos_simulator_version_min_EQ : Joined<["-"], "mtvos-simulator-version-min=">;
 def mappletvsimulator_version_min_EQ : Joined<["-"], "mappletvsimulator-version-min=">, Alias<mtvos_simulator_version_min_EQ>;
 def mwatchos_version_min_EQ : Joined<["-"], "mwatchos-version-min=">, Group<m_Group>;
-def mwatchos_simulator_version_min_EQ : Joined<["-"], "mwatchos-simulator-version-min=">;
+def mwatchos_simulator_version_min_EQ : Joined<["-"], "mwatchos-simulator-version-min=">, Group<m_Group>;
 def mwatchsimulator_version_min_EQ : Joined<["-"], "mwatchsimulator-version-min=">, Alias<mwatchos_simulator_version_min_EQ>;
-} // let Flags = [TargetSpecific]
 def march_EQ : Joined<["-"], "march=">, Group<m_Group>, Flags<[CoreOption,TargetSpecific]>,
   HelpText<"For a list of available architectures for the target use '-mcpu=help'">;
 def masm_EQ : Joined<["-"], "masm=">, Group<m_Group>, Flags<[NoXarchOption]>;
@@ -3643,9 +3640,7 @@ def mtls_size_EQ : Joined<["-"], "mtls-size=">, Group<m_Group>, Flags<[NoXarchOp
 def mimplicit_it_EQ : Joined<["-"], "mimplicit-it=">, Group<m_Group>;
 def mdefault_build_attributes : Joined<["-"], "mdefault-build-attributes">, Group<m_Group>;
 def mno_default_build_attributes : Joined<["-"], "mno-default-build-attributes">, Group<m_Group>;
-let Flags = [TargetSpecific] in {
 def mconstant_cfstrings : Flag<["-"], "mconstant-cfstrings">, Group<clang_ignored_m_Group>;
-} // let Flags = [TargetSpecific]
 def mconsole : Joined<["-"], "mconsole">, Group<m_Group>, Flags<[NoXarchOption]>;
 def mwindows : Joined<["-"], "mwindows">, Group<m_Group>, Flags<[NoXarchOption]>;
 def mdll : Joined<["-"], "mdll">, Group<m_Group>, Flags<[NoXarchOption]>;
@@ -3654,8 +3649,7 @@ def mthreads : Joined<["-"], "mthreads">, Group<m_Group>, Flags<[NoXarchOption]>
 def mguard_EQ : Joined<["-"], "mguard=">, Group<m_Group>, Flags<[NoXarchOption]>,
   HelpText<"Enable or disable Control Flow Guard checks and guard tables emission">,
   Values<"none,cf,cf-nochecks">;
-let Flags = [TargetSpecific] in {
-def mcpu_EQ : Joined<["-"], "mcpu=">, Group<m_Group>,
+def mcpu_EQ : Joined<["-"], "mcpu=">, Group<m_Group>, TargetSpecific,
   HelpText<"For a list of available CPUs for the target use '-mcpu=help'">;
 def mmcu_EQ : Joined<["-"], "mmcu=">, Group<m_Group>;
 def msim : Flag<["-"], "msim">, Group<m_Group>;
@@ -3664,33 +3658,26 @@ def mfix_and_continue : Flag<["-"], "mfix-and-continue">, Group<clang_ignored_m_
 def mieee_fp : Flag<["-"], "mieee-fp">, Group<clang_ignored_m_Group>;
 def minline_all_stringops : Flag<["-"], "minline-all-stringops">, Group<clang_ignored_m_Group>;
 def mno_inline_all_stringops : Flag<["-"], "mno-inline-all-stringops">, Group<clang_ignored_m_Group>;
-} // let Flags = [TargetSpecific]
 def malign_double : Flag<["-"], "malign-double">, Group<m_Group>, Flags<[CC1Option]>,
   HelpText<"Align doubles to two words in structs (x86 only)">,
   MarshallingInfoFlag<LangOpts<"AlignDouble">>;
-let Flags = [TargetSpecific] in {
 def mfloat_abi_EQ : Joined<["-"], "mfloat-abi=">, Group<m_Group>, Values<"soft,softfp,hard">;
 def mfpmath_EQ : Joined<["-"], "mfpmath=">, Group<m_Group>;
-} // let Flags = [TargetSpecific]
 def mfpu_EQ : Joined<["-"], "mfpu=">, Group<m_Group>;
-let Flags = [TargetSpecific] in {
 def mhwdiv_EQ : Joined<["-"], "mhwdiv=">, Group<m_Group>;
 def mhwmult_EQ : Joined<["-"], "mhwmult=">, Group<m_Group>;
-} // let Flags = [TargetSpecific]
 def mglobal_merge : Flag<["-"], "mglobal-merge">, Group<m_Group>, Flags<[CC1Option]>,
   HelpText<"Enable merging of globals">;
-let Flags = [TargetSpecific] in {
 def mhard_float : Flag<["-"], "mhard-float">, Group<m_Group>;
 def mios_version_min_EQ : Joined<["-"], "mios-version-min=">,
   Group<m_Group>, HelpText<"Set iOS deployment target">;
 def : Joined<["-"], "miphoneos-version-min=">,
   Group<m_Group>, Alias<mios_version_min_EQ>;
-def mios_simulator_version_min_EQ : Joined<["-"], "mios-simulator-version-min=">;
+def mios_simulator_version_min_EQ : Joined<["-"], "mios-simulator-version-min=">, Group<m_Group>;
 def : Joined<["-"], "miphonesimulator-version-min=">, Alias<mios_simulator_version_min_EQ>;
 def mkernel : Flag<["-"], "mkernel">, Group<m_Group>;
-def mlinker_version_EQ : Joined<["-"], "mlinker-version=">,
+def mlinker_version_EQ : Joined<["-"], "mlinker-version=">, Group<m_Group>, 
   Flags<[NoXarchOption]>;
-} // let Flags = [TargetSpecific]
 def mllvm : Separate<["-"], "mllvm">,Flags<[CC1Option,CC1AsOption,CoreOption,FC1Option,FlangOption]>,
   HelpText<"Additional arguments to forward to LLVM's option processing">,
   MarshallingInfoStringVector<FrontendOpts<"LLVMArgs">>;
@@ -3754,11 +3741,9 @@ def mno_tls_direct_seg_refs : Flag<["-"], "mno-tls-direct-seg-refs">, Group<m_Gr
   HelpText<"Disable direct TLS access through segment registers">,
   MarshallingInfoFlag<CodeGenOpts<"IndirectTlsSegRefs">>;
 def mno_relax_all : Flag<["-"], "mno-relax-all">, Group<m_Group>;
-let Flags = [TargetSpecific] in {
 def mno_rtd: Flag<["-"], "mno-rtd">, Group<m_Group>;
 def mno_soft_float : Flag<["-"], "mno-soft-float">, Group<m_Group>;
 def mno_stackrealign : Flag<["-"], "mno-stackrealign">, Group<m_Group>;
-} // let Flags = [TargetSpecific]
 
 def mretpoline : Flag<["-"], "mretpoline">, Group<m_Group>, Flags<[CoreOption,NoXarchOption]>;
 def mno_retpoline : Flag<["-"], "mno-retpoline">, Group<m_Group>, Flags<[CoreOption,NoXarchOption]>;
@@ -3787,19 +3772,16 @@ def mno_relax : Flag<["-"], "mno-relax">, Group<m_Group>,
 def msmall_data_limit_EQ : Joined<["-"], "msmall-data-limit=">, Group<m_Group>,
   Alias<G>,
   HelpText<"Put global and static data smaller than the limit into a special section">;
-let Flags = [TargetSpecific] in {
 def msave_restore : Flag<["-"], "msave-restore">, Group<m_riscv_Features_Group>,
   HelpText<"Enable using library calls for save and restore">;
 def mno_save_restore : Flag<["-"], "mno-save-restore">, Group<m_riscv_Features_Group>,
   HelpText<"Disable using library calls for save and restore">;
-} // let Flags = [TargetSpecific]
 def mcmodel_EQ_medlow : Flag<["-"], "mcmodel=medlow">, Group<m_Group>,
   Flags<[CC1Option]>, Alias<mcmodel_EQ>, AliasArgs<["small"]>,
   HelpText<"Equivalent to -mcmodel=small, compatible with RISC-V gcc.">;
 def mcmodel_EQ_medany : Flag<["-"], "mcmodel=medany">, Group<m_Group>,
   Flags<[CC1Option]>, Alias<mcmodel_EQ>, AliasArgs<["medium"]>,
   HelpText<"Equivalent to -mcmodel=medium, compatible with RISC-V gcc.">;
-let Flags = [TargetSpecific] in {
 def menable_experimental_extensions : Flag<["-"], "menable-experimental-extensions">, Group<m_Group>,
   HelpText<"Enable use of experimental RISC-V extensions.">;
 def mrvv_vector_bits_EQ : Joined<["-"], "mrvv-vector-bits=">, Group<m_Group>,
@@ -3813,12 +3795,10 @@ def munaligned_access : Flag<["-"], "munaligned-access">, Group<m_Group>,
   HelpText<"Allow memory accesses to be unaligned (AArch32/AArch64/LoongArch only)">;
 def mno_unaligned_access : Flag<["-"], "mno-unaligned-access">, Group<m_Group>,
   HelpText<"Force all memory accesses to be aligned (AArch32/AArch64/LoongArch only)">;
-} // let Flags = [TargetSpecific]
 def mstrict_align : Flag<["-"], "mstrict-align">, Alias<mno_unaligned_access>, Flags<[CC1Option,HelpHidden]>,
   HelpText<"Force all memory accesses to be aligned (same as mno-unaligned-access)">;
 def mno_strict_align : Flag<["-"], "mno-strict-align">, Alias<munaligned_access>, Flags<[CC1Option,HelpHidden]>,
   HelpText<"Allow memory accesses to be unaligned (same as munaligned-access)">;
-let Flags = [TargetSpecific] in {
 def mno_thumb : Flag<["-"], "mno-thumb">, Group<m_arm_Features_Group>;
 def mrestrict_it: Flag<["-"], "mrestrict-it">, Group<m_arm_Features_Group>,
   HelpText<"Disallow generation of complex IT blocks.">;
@@ -3835,7 +3815,6 @@ def mnocrc : Flag<["-"], "mnocrc">, Group<m_arm_Features_Group>,
   HelpText<"Disallow use of CRC instructions (ARM only)">;
 def mno_neg_immediates: Flag<["-"], "mno-neg-immediates">, Group<m_arm_Features_Group>,
   HelpText<"Disallow converting instructions with negative immediates to their negation or inversion.">;
-} // let Flags = [TargetSpecific]
 def mcmse : Flag<["-"], "mcmse">, Group<m_arm_Features_Group>,
   Flags<[NoXarchOption,CC1Option]>,
   HelpText<"Allow use of CMSE (Armv8-M Security Extensions)">,
@@ -3850,7 +3829,6 @@ defm aapcs_bitfield_width : BoolOption<"f", "aapcs-bitfield-width",
   BothFlags<[NoXarchOption, CC1Option], " the AAPCS standard requirement stating that"
             " volatile bit-field width is dictated by the field container type. (ARM only).">>,
   Group<m_arm_Features_Group>;
-let Flags = [TargetSpecific] in {
 def mframe_chain : Joined<["-"], "mframe-chain=">,
   Group<m_arm_Features_Group>, Values<"none,aapcs,aapcs+leaf">,
   HelpText<"Select the frame chain model used to emit frame records (Arm only).">;
@@ -3901,7 +3879,6 @@ foreach i = {8-15,18} in
 def msve_vector_bits_EQ : Joined<["-"], "msve-vector-bits=">, Group<m_aarch64_Features_Group>,
   HelpText<"Specify the size in bits of an SVE vector register. Defaults to the"
            " vector length agnostic value of \"scalable\". (AArch64 only)">;
-} // let Flags = [TargetSpecific]
 
 def mvscale_min_EQ : Joined<["-"], "mvscale-min=">,
   Group<m_aarch64_Features_Group>, Flags<[NoXarchOption,CC1Option]>,
@@ -3916,12 +3893,11 @@ def mvscale_max_EQ : Joined<["-"], "mvscale-max=">,
 def msign_return_address_EQ : Joined<["-"], "msign-return-address=">,
   Flags<[CC1Option]>, Group<m_Group>, Values<"none,all,non-leaf">,
   HelpText<"Select return address signing scope">;
-let Flags = [TargetSpecific] in {
 def mbranch_protection_EQ : Joined<["-"], "mbranch-protection=">,
   Group<m_Group>,
   HelpText<"Enforce targets of indirect branches and function returns">;
 
-def mharden_sls_EQ : Joined<["-"], "mharden-sls=">,
+def mharden_sls_EQ : Joined<["-"], "mharden-sls=">, Group<m_Group>,
   HelpText<"Select straight-line speculation hardening scope (ARM/AArch64/X86"
            " only). <arg> must be: all, none, retbr(ARM/AArch64),"
            " blr(ARM/AArch64), comdat(ARM/AArch64), nocomdat(ARM/AArch64),"
@@ -3954,7 +3930,6 @@ def mno_extended_const : Flag<["-"], "mno-extended-const">, Group<m_wasm_Feature
 def mexec_model_EQ : Joined<["-"], "mexec-model=">, Group<m_wasm_Features_Driver_Group>,
                      Values<"command,reactor">,
                      HelpText<"Execution model (WebAssembly only)">;
-} // let Flags = [TargetSpecific]
 
 defm amdgpu_ieee : BoolOption<"m", "amdgpu-ieee",
   CodeGenOpts<"EmitIEEENaNCompliantInsts">, DefaultTrue,
@@ -3995,7 +3970,6 @@ def mno_xnack : Flag<["-"], "mno-xnack">, Group<m_amdgpu_Features_Group>;
 
 def faltivec : Flag<["-"], "faltivec">, Group<f_Group>, Flags<[NoXarchOption]>;
 def fno_altivec : Flag<["-"], "fno-altivec">, Group<f_Group>, Flags<[NoXarchOption]>;
-let Flags = [TargetSpecific] in {
 def maltivec : Flag<["-"], "maltivec">, Group<m_ppc_Features_Group>;
 def mno_altivec : Flag<["-"], "mno-altivec">, Group<m_ppc_Features_Group>;
 def mpcrel: Flag<["-"], "mpcrel">, Group<m_ppc_Features_Group>;
@@ -4005,12 +3979,10 @@ def mno_prefixed: Flag<["-"], "mno-prefixed">, Group<m_ppc_Features_Group>;
 def mspe : Flag<["-"], "mspe">, Group<m_ppc_Features_Group>;
 def mno_spe : Flag<["-"], "mno-spe">, Group<m_ppc_Features_Group>;
 def mefpu2 : Flag<["-"], "mefpu2">, Group<m_ppc_Features_Group>;
-} // let Flags = [TargetSpecific]
 def mabi_EQ_quadword_atomics : Flag<["-"], "mabi=quadword-atomics">,
   Group<m_Group>, Flags<[CC1Option]>,
   HelpText<"Enable quadword atomics ABI on AIX (AIX PPC64 only). Uses lqarx/stqcx. instructions.">,
   MarshallingInfoFlag<LangOpts<"EnableAIXQuadwordAtomicsABI">>;
-let Flags = [TargetSpecific] in {
 def mvsx : Flag<["-"], "mvsx">, Group<m_ppc_Features_Group>;
 def mno_vsx : Flag<["-"], "mno-vsx">, Group<m_ppc_Features_Group>;
 def msecure_plt : Flag<["-"], "msecure-plt">, Group<m_ppc_Features_Group>;
@@ -4073,7 +4045,6 @@ def mrop_protect : Flag<["-"], "mrop-protect">,
     Group<m_ppc_Features_Group>;
 def mprivileged : Flag<["-"], "mprivileged">,
     Group<m_ppc_Features_Group>;
-} // let Flags = [TargetSpecific]
 def maix_struct_return : Flag<["-"], "maix-struct-return">,
   Group<m_Group>, Flags<[CC1Option]>,
   HelpText<"Return all structs in memory (PPC32 only)">;
@@ -4084,10 +4055,8 @@ def mxcoff_roptr : Flag<["-"], "mxcoff-roptr">, Group<m_Group>, Flags<[CC1Option
   HelpText<"Place constant objects with relocatable address values in the RO data section and add -bforceimprw to the linker flags (AIX only)">;
 def mno_xcoff_roptr : Flag<["-"], "mno-xcoff-roptr">, Group<m_Group>, TargetSpecific;
 
-let Flags = [TargetSpecific] in {
 def mvx : Flag<["-"], "mvx">, Group<m_Group>;
 def mno_vx : Flag<["-"], "mno-vx">, Group<m_Group>;
-} // let Flags = [TargetSpecific]
 
 defm zvector : BoolFOption<"zvector",
   LangOpts<"ZVector">, DefaultFalse,
@@ -4176,8 +4145,6 @@ def mpacked_stack : Flag<["-"], "mpacked-stack">, HelpText<"Use packed stack lay
   Flags<[CC1Option]>, Group<m_Group>,
   MarshallingInfoFlag<CodeGenOpts<"PackedStack">>;
 def mno_packed_stack : Flag<["-"], "mno-packed-stack">, Flags<[CC1Option]>, Group<m_Group>;
-
-let Flags = [TargetSpecific] in {
 def mips16 : Flag<["-"], "mips16">, Group<m_mips_Features_Group>;
 def mno_mips16 : Flag<["-"], "mno-mips16">, Group<m_mips_Features_Group>;
 def mmicromips : Flag<["-"], "mmicromips">, Group<m_mips_Features_Group>;
@@ -4193,12 +4160,10 @@ def mno_check_zero_division : Flag<["-"], "mno-check-zero-division">,
 def mfix4300 : Flag<["-"], "mfix4300">, Group<m_mips_Features_Group>;
 def mcompact_branches_EQ : Joined<["-"], "mcompact-branches=">,
                            Group<m_mips_Features_Group>;
-} // let Flags = [TargetSpecific]
 def mbranch_likely : Flag<["-"], "mbranch-likely">, Group<m_Group>,
   IgnoredGCCCompat;
 def mno_branch_likely : Flag<["-"], "mno-branch-likely">, Group<m_Group>,
   IgnoredGCCCompat;
-let Flags = [TargetSpecific] in {
 def mindirect_jump_EQ : Joined<["-"], "mindirect-jump=">,
   Group<m_mips_Features_Group>,
   HelpText<"Change indirect jump instructions to inhibit speculation">;
@@ -4264,7 +4229,6 @@ def mvirt : Flag<["-"], "mvirt">, Group<m_mips_Features_Group>;
 def mno_virt : Flag<["-"], "mno-virt">, Group<m_mips_Features_Group>;
 def mginv : Flag<["-"], "mginv">, Group<m_mips_Features_Group>;
 def mno_ginv : Flag<["-"], "mno-ginv">, Group<m_mips_Features_Group>;
-} // let Flags = [TargetSpecific]
 def mips1 : Flag<["-"], "mips1">,
   Alias<march_EQ>, AliasArgs<["mips1"]>, Group<m_mips_Features_Group>,
   HelpText<"Equivalent to -march=mips1">, Flags<[HelpHidden]>;
@@ -4740,7 +4704,6 @@ def _write_user_dependencies : Flag<["--"], "write-user-dependencies">, Alias<MM
 def _ : Joined<["--"], "">, Flags<[Unsupported]>;
 
 // Hexagon feature flags.
-let Flags = [TargetSpecific] in {
 def mieee_rnd_near : Flag<["-"], "mieee-rnd-near">,
   Group<m_hexagon_Features_Group>;
 def mv5 : Flag<["-"], "mv5">, Group<m_hexagon_Features_Group>, Alias<mcpu_EQ>,
@@ -4792,9 +4755,8 @@ def mhexagon_hvx_ieee_fp : Flag<["-"], "mhvx-ieee-fp">,
 def mno_hexagon_hvx_ieee_fp : Flag<["-"], "mno-hvx-ieee-fp">,
   Group<m_hexagon_Features_Group>,
   HelpText<"Disable Hexagon HVX IEEE floating-point">;
-def ffixed_r19: Flag<["-"], "ffixed-r19">,
+def ffixed_r19: Flag<["-"], "ffixed-r19">, Group<f_Group>,
   HelpText<"Reserve register r19 (Hexagon only)">;
-} // let Flags = [TargetSpecific]
 def mmemops : Flag<["-"], "mmemops">, Group<m_hexagon_Features_Group>,
   Flags<[CC1Option]>, HelpText<"Enable generation of memop instructions">;
 def mno_memops : Flag<["-"], "mno-memops">, Group<m_hexagon_Features_Group>,
@@ -4815,7 +4777,6 @@ def mcabac: Flag<["-"], "mcabac">, Group<m_hexagon_Features_Group>,
   HelpText<"Enable CABAC instructions">;
 
 // SPARC feature flags
-let Flags = [TargetSpecific] in {
 def mfpu : Flag<["-"], "mfpu">, Group<m_sparc_Features_Group>;
 def mno_fpu : Flag<["-"], "mno-fpu">, Group<m_sparc_Features_Group>;
 def mfsmuld : Flag<["-"], "mfsmuld">, Group<m_sparc_Features_Group>;
@@ -4830,10 +4791,8 @@ def mvis3 : Flag<["-"], "mvis3">, Group<m_sparc_Features_Group>;
 def mno_vis3 : Flag<["-"], "mno-vis3">, Group<m_sparc_Features_Group>;
 def mhard_quad_float : Flag<["-"], "mhard-quad-float">, Group<m_sparc_Features_Group>;
 def msoft_quad_float : Flag<["-"], "msoft-quad-float">, Group<m_sparc_Features_Group>;
-} // let Flags = [TargetSpecific]
 
 // M68k features flags
-let Flags = [TargetSpecific] in {
 def m68000 : Flag<["-"], "m68000">, Group<m_m68k_Features_Group>;
 def m68010 : Flag<["-"], "m68010">, Group<m_m68k_Features_Group>;
 def m68020 : Flag<["-"], "m68020">, Group<m_m68k_Features_Group>;
@@ -4849,10 +4808,8 @@ foreach i = {0-6} in
 foreach i = {0-7} in
   def ffixed_d#i : Flag<["-"], "ffixed-d"#i>, Group<m_m68k_Features_Group>,
     HelpText<"Reserve the d"#i#" register (M68k only)">;
-} // let Flags = [TargetSpecific]
 
 // X86 feature flags
-let Flags = [TargetSpecific] in {
 def mx87 : Flag<["-"], "mx87">, Group<m_x86_Features_Group>;
 def mno_x87 : Flag<["-"], "mno-x87">, Group<m_x86_Features_Group>;
 def m80387 : Flag<["-"], "m80387">, Alias<mx87>;
@@ -5057,7 +5014,6 @@ def mretpoline_external_thunk : Flag<["-"], "mretpoline-external-thunk">, Group<
 def mno_retpoline_external_thunk : Flag<["-"], "mno-retpoline-external-thunk">, Group<m_x86_Features_Group>;
 def mvzeroupper : Flag<["-"], "mvzeroupper">, Group<m_x86_Features_Group>;
 def mno_vzeroupper : Flag<["-"], "mno-vzeroupper">, Group<m_x86_Features_Group>;
-} // let Flags = [TargetSpecific]
 
 // These are legacy user-facing driver-level option spellings. They are always
 // aliases for options that are spelled using the more common Unix / GNU flag
@@ -6221,10 +6177,6 @@ def ftabstop : Separate<["-"], "ftabstop">, MetaVarName<"<N>">,
 def ferror_limit : Separate<["-"], "ferror-limit">, MetaVarName<"<N>">,
   HelpText<"Set the maximum number of errors to emit before stopping (0 = no limit).">,
   MarshallingInfoInt<DiagnosticOpts<"ErrorLimit">>;
-def fcaret_diagnostics_max_lines :
-  Separate<["-"], "fcaret-diagnostics-max-lines">, MetaVarName<"<N>">,
-  HelpText<"Set the maximum number of source lines to show in a caret diagnostic">,
-  MarshallingInfoInt<DiagnosticOpts<"SnippetLineLimit">, "DiagnosticOptions::DefaultSnippetLineLimit">;
 def verify_EQ : CommaJoined<["-"], "verify=">,
   MetaVarName<"<prefixes>">,
   HelpText<"Verify diagnostic output using comment directives that start with"

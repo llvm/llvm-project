@@ -3458,11 +3458,9 @@ mlir::Value IntrinsicLibrary::genIsFPClass(mlir::Type resultType,
   assert(args.size() == 1);
   mlir::MLIRContext *context = builder.getContext();
   mlir::IntegerType i1ty = mlir::IntegerType::get(context, 1);
-  mlir::IntegerType i32ty = mlir::IntegerType::get(context, 32);
 
-  mlir::Value test = builder.createIntegerConstant(loc, i32ty, fpclass);
   mlir::Value isfpclass =
-      builder.create<mlir::LLVM::IsFPClass>(loc, i1ty, args[0], test);
+      builder.create<mlir::LLVM::IsFPClass>(loc, i1ty, args[0], fpclass);
   return builder.createConvert(loc, resultType, isfpclass);
 }
 
