@@ -15,7 +15,7 @@ MATH_MANGLE(rcbrt)(double x)
     int e = (int)BUILTIN_RINT_F32(0x1.555556p-2f * (float)e3);
     a = BUILTIN_FLDEXP_F64(a, -3*e);
 
-    double c = (double)BUILTIN_AMDGPU_EXP2_F32(-0x1.555556p-2f * BUILTIN_LOG2_F32((float)a));
+    double c = (double)BUILTIN_AMDGPU_EXP2_F32(-0x1.555556p-2f * BUILTIN_AMDGPU_LOG2_F32((float)a));
 
     // Correction is c + c*(1 - a c^3)/(1 + 2 a c^3)
     //  = c + c*t/(3 - 2t) where t = 1 - a c^3

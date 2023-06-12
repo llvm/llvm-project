@@ -19,17 +19,17 @@ MATH_MANGLE(log)(float x)
     if (DAZ_OPT()) {
         if (UNSAFE_MATH_OPT()) {
 #if defined COMPILING_LOG2
-            return BUILTIN_LOG2_F32(x);
+            return BUILTIN_AMDGPU_LOG2_F32(x);
 #elif defined COMPILING_LOG10
-            return BUILTIN_LOG2_F32(x) * 0x1.344136p-2f;
+            return BUILTIN_AMDGPU_LOG2_F32(x) * 0x1.344136p-2f;
 #else
-            return BUILTIN_LOG2_F32(x) * 0x1.62e430p-1f;
+            return BUILTIN_AMDGPU_LOG2_F32(x) * 0x1.62e430p-1f;
 #endif
         } else {
 #if defined COMPILING_LOG2
-            return BUILTIN_LOG2_F32(x);
+            return BUILTIN_AMDGPU_LOG2_F32(x);
 #else
-            float y = BUILTIN_LOG2_F32(x);
+            float y = BUILTIN_AMDGPU_LOG2_F32(x);
             float r;
 
             if (HAVE_FAST_FMA32()) {
@@ -65,19 +65,19 @@ MATH_MANGLE(log)(float x)
             bool s = BUILTIN_ISSUBNORMAL_F32(x);
             x *= s ? 0x1.0p+32f : 1.0f;
 #if defined COMPILING_LOG2
-            return BUILTIN_LOG2_F32(x) - (s ? 32.0f : 0.0f);
+            return BUILTIN_AMDGPU_LOG2_F32(x) - (s ? 32.0f : 0.0f);
 #elif defined COMPILING_LOG10
-            return MATH_MAD(BUILTIN_LOG2_F32(x), 0x1.344136p-2f, s ? -0x1.344136p+3f : 0.0f);
+            return MATH_MAD(BUILTIN_AMDGPU_LOG2_F32(x), 0x1.344136p-2f, s ? -0x1.344136p+3f : 0.0f);
 #else
-            return MATH_MAD(BUILTIN_LOG2_F32(x), 0x1.62e430p-1f, s ? -0x1.62e430p+4f : 0.0f);
+            return MATH_MAD(BUILTIN_AMDGPU_LOG2_F32(x), 0x1.62e430p-1f, s ? -0x1.62e430p+4f : 0.0f);
 #endif
         } else {
             bool s = BUILTIN_ISSUBNORMAL_F32(x);
             x *= s ? 0x1.0p+32f : 1.0f;
 #if defined COMPILING_LOG2
-            return BUILTIN_LOG2_F32(x) - (s ? 32.0f : 0.0f);
+            return BUILTIN_AMDGPU_LOG2_F32(x) - (s ? 32.0f : 0.0f);
 #else
-            float y = BUILTIN_LOG2_F32(x);
+            float y = BUILTIN_AMDGPU_LOG2_F32(x);
             float r;
 
             if (HAVE_FAST_FMA32()) {

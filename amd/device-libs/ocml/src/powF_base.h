@@ -40,10 +40,10 @@ MATH_MANGLE(pow)(float x, float y)
         float y = MATH_FAST_RCP((float)ny);
 #endif
         if (DAZ_OPT()) {
-            expylnx = BUILTIN_AMDGPU_EXP2_F32(y * BUILTIN_LOG2_F32(ax));
+            expylnx = BUILTIN_AMDGPU_EXP2_F32(y * BUILTIN_AMDGPU_LOG2_F32(ax));
         } else {
             bool b = ax < 0x1.0p-126f;
-            float ylnx = y * (BUILTIN_LOG2_F32(ax * (b ? 0x1.0p+24f : 1.0f)) - (b ? 24.0f : 0.0f));
+            float ylnx = y * (BUILTIN_AMDGPU_LOG2_F32(ax * (b ? 0x1.0p+24f : 1.0f)) - (b ? 24.0f : 0.0f));
             b = ylnx < -126.0f;
             expylnx = BUILTIN_AMDGPU_EXP2_F32(ylnx + (b ? 24.0f : 0.0f)) * (b ? 0x1.0p-24f : 1.0f);
         }
