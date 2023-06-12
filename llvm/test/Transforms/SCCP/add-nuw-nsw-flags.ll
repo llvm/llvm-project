@@ -125,9 +125,9 @@ define i16 @sge_with_sext_to_zext_conversion(i8 %a)  {
 ; CHECK-NEXT:    br i1 [[CMP]], label [[THEN:%.*]], label [[ELSE:%.*]]
 ; CHECK:       then:
 ; CHECK-NEXT:    [[SEXT:%.*]] = zext i8 [[A]] to i16
-; CHECK-NEXT:    [[ADD_1:%.*]] = add nuw nsw i16 [[SEXT]], 1
-; CHECK-NEXT:    [[ADD_2:%.*]] = add nuw nsw i16 [[SEXT]], -128
-; CHECK-NEXT:    [[ADD_3:%.*]] = add nsw i16 [[SEXT]], -127
+; CHECK-NEXT:    [[ADD_1:%.*]] = add i16 [[SEXT]], 1
+; CHECK-NEXT:    [[ADD_2:%.*]] = add i16 [[SEXT]], -128
+; CHECK-NEXT:    [[ADD_3:%.*]] = add i16 [[SEXT]], -127
 ; CHECK-NEXT:    [[RES_1:%.*]] = xor i16 [[ADD_1]], [[ADD_2]]
 ; CHECK-NEXT:    [[RES_2:%.*]] = xor i16 [[RES_1]], [[ADD_3]]
 ; CHECK-NEXT:    ret i16 [[RES_2]]
@@ -222,7 +222,7 @@ define i16 @test_add_in_different_block(i1 %c, i8 %a) {
 ; CHECK-NEXT:    [[CONV:%.*]] = zext i8 [[COND4]] to i16
 ; CHECK-NEXT:    br i1 [[C:%.*]], label [[THEN:%.*]], label [[ELSE:%.*]]
 ; CHECK:       then:
-; CHECK-NEXT:    [[ADD:%.*]] = add nuw nsw i16 1, [[CONV]]
+; CHECK-NEXT:    [[ADD:%.*]] = add i16 1, [[CONV]]
 ; CHECK-NEXT:    ret i16 [[ADD]]
 ; CHECK:       else:
 ; CHECK-NEXT:    ret i16 0
