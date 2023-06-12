@@ -98,8 +98,8 @@ class ExprDiagnosticsTestCase(TestBase):
         value = frame.EvaluateExpression("struct Redef { double x; };", top_level_opts)
         value = frame.EvaluateExpression("struct Redef { float y; };", top_level_opts)
         self.assertFalse(value.GetError().Success())
-        self.assertIn(
-            "error: <user expression 9>:1:8: redefinition of 'Redef'\nstruct Redef { float y; };\n       ^\n<user expression 8>:1:8: previous definition is here\nstruct Redef { double x; };\n       ^",
+        self.assertIn(            
+            "error: <user expression 9>:1:8: redefinition of 'Redef'\nstruct Redef { float y; };\n       ^\n<user expression 8>:1:8: previous definition is here\nstruct Redef { double x; };\n       ^\n\n",
             value.GetError().GetCString(),
         )
 
