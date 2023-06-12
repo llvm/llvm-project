@@ -1497,6 +1497,18 @@ genHLFIRIntrinsicRefCore(PreparedActualArguments &loweredActuals,
 
     return {hlfir::EntityWithAttributes{dotProductOp.getResult()}};
   }
+  if (intrinsicName == "count") {
+    llvm::SmallVector<mlir::Value> operands = getOperandVector(loweredActuals);
+    mlir::Value array = operands[0];
+    mlir::Value dim = operands[1];
+    if (dim)
+      dim = hlfir::loadTrivialScalar(loc, builder, hlfir::Entity{dim});
+    mlir::Value kind = operands[2];
+    mlir::Type resultTy = computeResultType(array, *callContext.resultType);
+    hlfir::CountOp countOp =
+        builder.create<hlfir::CountOp>(loc, resultTy, array, dim, kind);
+    return {hlfir::EntityWithAttributes{countOp.getResult()}};
+  }
 
   // TODO add hlfir operations for other transformational intrinsics here
 

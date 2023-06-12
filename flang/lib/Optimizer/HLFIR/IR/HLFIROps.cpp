@@ -510,6 +510,43 @@ mlir::LogicalResult hlfir::AnyOp::verify() {
 }
 
 //===----------------------------------------------------------------------===//
+// CountOp
+//===----------------------------------------------------------------------===//
+
+mlir::LogicalResult hlfir::CountOp::verify() {
+  mlir::Operation *op = getOperation();
+
+  auto results = op->getResultTypes();
+  assert(results.size() == 1);
+  mlir::Value mask = getMask();
+  mlir::Value dim = getDim();
+
+  fir::SequenceType maskTy =
+      hlfir::getFortranElementOrSequenceType(mask.getType())
+          .cast<fir::SequenceType>();
+  llvm::ArrayRef<int64_t> maskShape = maskTy.getShape();
+
+  mlir::Type resultType = results[0];
+  if (auto resultExpr = mlir::dyn_cast_or_null<hlfir::ExprType>(resultType)) {
+    if (maskShape.size() > 1 && dim != nullptr) {
+      if (!resultExpr.isArray())
+        return emitOpError("result must be an array");
+
+      llvm::ArrayRef<int64_t> resultShape = resultExpr.getShape();
+      // Result has rank n-1
+      if (resultShape.size() != (maskShape.size() - 1))
+        return emitOpError("result rank must be one less than MASK");
+    } else {
+      return emitOpError("result must be of numerical scalar type");
+    }
+  } else if (!hlfir::isFortranScalarNumericalType(resultType)) {
+    return emitOpError("result must be of numerical scalar type");
+  }
+
+  return mlir::success();
+}
+
+//===----------------------------------------------------------------------===//
 // ConcatOp
 //===----------------------------------------------------------------------===//
 
