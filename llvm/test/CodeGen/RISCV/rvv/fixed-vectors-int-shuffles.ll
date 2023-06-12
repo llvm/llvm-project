@@ -523,7 +523,7 @@ define <8 x i8> @widen_splat_ve3(<4 x i8> %v) {
 ; CHECK-NEXT:    vsetivli zero, 8, e8, mf2, ta, ma
 ; CHECK-NEXT:    vmv.v.i v9, 0
 ; CHECK-NEXT:    vsetivli zero, 4, e8, mf2, tu, ma
-; CHECK-NEXT:    vslideup.vi v9, v8, 0
+; CHECK-NEXT:    vmv.v.v v9, v8
 ; CHECK-NEXT:    vsetivli zero, 8, e8, mf2, ta, ma
 ; CHECK-NEXT:    vrgather.vi v8, v9, 3
 ; CHECK-NEXT:    ret

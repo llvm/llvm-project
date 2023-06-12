@@ -473,7 +473,7 @@ define <vscale x 6 x half> @extract_nxv6f16_nxv12f16_6(<vscale x 12 x half> %in)
 ; CHECK-NEXT:    vslidedown.vx v11, v10, a0
 ; CHECK-NEXT:    vslidedown.vx v8, v9, a0
 ; CHECK-NEXT:    vsetvli zero, a0, e16, m1, tu, ma
-; CHECK-NEXT:    vslideup.vi v9, v11, 0
+; CHECK-NEXT:    vmv.v.v v9, v11
 ; CHECK-NEXT:    add a1, a0, a0
 ; CHECK-NEXT:    vsetvli zero, a1, e16, m1, tu, ma
 ; CHECK-NEXT:    vslideup.vx v8, v10, a0
