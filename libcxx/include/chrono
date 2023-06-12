@@ -390,7 +390,6 @@ template<class charT, class traits>
 class weekday;
 
 constexpr bool operator==(const weekday& x, const weekday& y) noexcept;
-constexpr bool operator!=(const weekday& x, const weekday& y) noexcept;
 constexpr weekday operator+(const weekday& x, const days&    y) noexcept;
 constexpr weekday operator+(const days&    x, const weekday& y) noexcept;
 constexpr weekday operator-(const weekday& x, const days&    y) noexcept;
@@ -403,7 +402,6 @@ template<class charT, class traits>
 
 class weekday_indexed;
 constexpr bool operator==(const weekday_indexed& x, const weekday_indexed& y) noexcept;
-constexpr bool operator!=(const weekday_indexed& x, const weekday_indexed& y) noexcept;
 
 template<class charT, class traits>
   basic_ostream<charT, traits>&
@@ -413,7 +411,6 @@ template<class charT, class traits>
 class weekday_last;
 
 constexpr bool operator==(const weekday_last& x, const weekday_last& y) noexcept;
-constexpr bool operator!=(const weekday_last& x, const weekday_last& y) noexcept;
 
 template<class charT, class traits>
   basic_ostream<charT, traits>&
@@ -443,7 +440,6 @@ template<class charT, class traits>
 class month_weekday;
 
 constexpr bool operator==(const month_weekday& x, const month_weekday& y) noexcept;
-constexpr bool operator!=(const month_weekday& x, const month_weekday& y) noexcept;
 
 template<class charT, class traits>
   basic_ostream<charT, traits>&
@@ -453,7 +449,6 @@ template<class charT, class traits>
 class month_weekday_last;
 
 constexpr bool operator==(const month_weekday_last& x, const month_weekday_last& y) noexcept;
-constexpr bool operator!=(const month_weekday_last& x, const month_weekday_last& y) noexcept;
 
 template<class charT, class traits>
   basic_ostream<charT, traits>&
@@ -523,8 +518,6 @@ class year_month_weekday;
 
 constexpr bool operator==(const year_month_weekday& x,
                           const year_month_weekday& y) noexcept;
-constexpr bool operator!=(const year_month_weekday& x,
-                          const year_month_weekday& y) noexcept;
 
 constexpr year_month_weekday
   operator+(const year_month_weekday& ymwd, const months& dm) noexcept;
@@ -547,8 +540,6 @@ template<class charT, class traits>
 class year_month_weekday_last;
 
 constexpr bool operator==(const year_month_weekday_last& x,
-                          const year_month_weekday_last& y) noexcept;
-constexpr bool operator!=(const year_month_weekday_last& x,
                           const year_month_weekday_last& y) noexcept;
 constexpr year_month_weekday_last
   operator+(const year_month_weekday_last& ymwdl, const months& dm) noexcept;

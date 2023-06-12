@@ -165,13 +165,13 @@ Section,Description,Dependencies,Assignee,Complete
 | `[time.cal.mwd] <https://wg21.link/time.cal.mwd>`_
 | `[time.cal.mwdlast] <https://wg21.link/time.cal.mwdlast>`_
 | `[time.cal.ymwd] <https://wg21.link/time.cal.ymwd>`_
-| `[time.cal.ymwdlast] <https://wg21.link/time.cal.ymwdlast>`_","| `weekday`
-| `weekday_indexed`
-| `weekday_last`
-| `month_weekday`
-| `month_weekday_last`
-| `year_month_weekday`
-| `year_month_weekday_last`",None,Unassigned,|Not Started|
+| `[time.cal.ymwdlast] <https://wg21.link/time.cal.ymwdlast>`_","| `weekday <https://reviews.llvm.org/D152699>`_
+| `weekday_indexed <https://reviews.llvm.org/D152699>`_
+| `weekday_last <https://reviews.llvm.org/D152699>`_
+| `month_weekday <https://reviews.llvm.org/D152699>`_
+| `month_weekday_last <https://reviews.llvm.org/D152699>`_
+| `year_month_weekday <https://reviews.llvm.org/D152699>`_
+| `year_month_weekday_last <https://reviews.llvm.org/D152699>`_",None,Hristo Hristov,|Complete|
 "| `[time.zone.nonmembers] <https://wg21.link/time.zone.nonmembers>`_
 | `[time.zone.zonedtime.nonmembers] <https://wg21.link/time.zone.zonedtime.nonmembers>`_
 | `[time.zone.leap.nonmembers] <https://wg21.link/time.zone.leap.nonmembers>`_
