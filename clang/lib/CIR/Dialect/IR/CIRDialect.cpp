@@ -12,6 +12,7 @@
 
 #include "clang/CIR/Dialect/IR/CIRDialect.h"
 #include "clang/CIR/Dialect/IR/CIRAttrs.h"
+#include "clang/CIR/Dialect/IR/CIROpsEnums.h"
 #include "clang/CIR/Dialect/IR/CIRTypes.h"
 
 #include "mlir/Dialect/Func/IR/FuncOps.h"
@@ -320,6 +321,13 @@ LogicalResult CastOp::verify() {
       return emitOpError() << "requires float for source";
     if (!resType.isa<mlir::cir::BoolType>())
       return emitOpError() << "requires !cir.bool for result";
+    return success();
+  }
+  case cir::CastKind::bool_to_int: {
+    if (!srcType.isa<mlir::cir::BoolType>())
+      return emitOpError() << "requires !cir.bool for source";
+    if (!resType.isa<mlir::cir::IntType>())
+      return emitOpError() << "requires !cir.int for result";
     return success();
   }
   }

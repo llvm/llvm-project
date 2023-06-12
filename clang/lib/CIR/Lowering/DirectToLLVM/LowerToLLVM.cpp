@@ -297,6 +297,14 @@ public:
                                                       cmpResult);
       return mlir::success();
     }
+    case mlir::cir::CastKind::bool_to_int: {
+      auto dstTy = castOp.getType().cast<mlir::cir::IntType>();
+      auto llvmSrcVal = adaptor.getOperands().front();
+      auto llvmDstTy = getTypeConverter()->convertType(dstTy);
+      rewriter.replaceOpWithNewOp<mlir::LLVM::ZExtOp>(castOp, llvmDstTy,
+                                                      llvmSrcVal);
+      return mlir::success();
+    }
     default:
       llvm_unreachable("NYI");
     }
