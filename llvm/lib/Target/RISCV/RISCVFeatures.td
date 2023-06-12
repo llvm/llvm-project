@@ -555,6 +555,11 @@ def FeatureStdExtZvkn
                        "This extension is shorthand for the following set of "
                        "other extensions: Zvkned, Zvknhb, Zvbb, Zvbc, and Zvkt.">;
 
+def FeatureStdExtZvknc
+    : SubtargetFeature<"experimental-zvknc", "HasStdExtZvknc", "true",
+                       "This extension is shorthand for the following set of "
+                       "other extensions: Zvkn and Zvbc.">;
+
 def FeatureStdExtZvkned
     : SubtargetFeature<"experimental-zvkned", "HasStdExtZvkned", "true",
                        "'Zvkned' (Vector AES Encryption & Decryption (Single Round))">;
@@ -583,6 +588,11 @@ def FeatureStdExtZvks
     : SubtargetFeature<"experimental-zvks", "HasStdExtZvks", "true",
                        "This extension is shorthand for the following set of "
                        "other extensions: Zvksed, Zvksh, Zvbb, Zvbc, and Zvkt.">;
+
+def FeatureStdExtZvksc
+    : SubtargetFeature<"experimental-zvksc", "HasStdExtZvksc", "true",
+                       "This extension is shorthand for the following set of "
+                       "other extensions: Zvks and Zvbc.">;
 
 def FeatureStdExtZvksed
     : SubtargetFeature<"experimental-zvksed", "HasStdExtZvksed", "true",
