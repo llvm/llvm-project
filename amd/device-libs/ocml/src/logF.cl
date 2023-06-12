@@ -5,6 +5,9 @@
  * License. See LICENSE.TXT for details.
  *===------------------------------------------------------------------------*/
 
-#define COMPILING_LOG
-#include "logF_base.h"
+#include "mathF.h"
 
+CONSTATTR float
+MATH_MANGLE(log)(float x) {
+    return BUILTIN_LOG_F32(x);
+}

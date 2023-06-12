@@ -58,22 +58,3 @@ MATH_MANGLE(native_exp10)(float x)
 {
     return __builtin_exp2f(M_LOG2_10_F * x);
 }
-
-CONSTATTR float
-MATH_MANGLE(native_log)(float x)
-{
-    return __builtin_logf(x);
-}
-
-CONSTATTR float
-MATH_MANGLE(native_log2)(float x)
-{
-    return __builtin_log2f(x);
-}
-
-CONSTATTR float
-MATH_MANGLE(native_log10)(float x)
-{
-    return __builtin_log10f(x);
-}
-

@@ -154,7 +154,11 @@
 #define BUILTIN_EXP2_F16 __builtin_exp2f16
 
 #define BUILTIN_AMDGPU_LOG2_F32 __builtin_amdgcn_logf
+#define BUILTIN_LOG2_F32 __builtin_log2f
 #define BUILTIN_LOG2_F16 __builtin_log2f16
+
+#define BUILTIN_LOG_F32 __builtin_logf
+#define BUILTIN_LOG10_F32 __builtin_log10f
 
 #define BUILTIN_AMDGPU_RCP_F32 __builtin_amdgcn_rcpf
 #define BUILTIN_AMDGPU_RCP_F64 __builtin_amdgcn_rcp
