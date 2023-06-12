@@ -1033,7 +1033,7 @@ define half @vreduce_ord_fadd_nxv10f16(<vscale x 10 x half> %v, half %s) {
 ; CHECK-NEXT:    vsetvli zero, a1, e16, m1, tu, ma
 ; CHECK-NEXT:    vslideup.vx v10, v12, a0
 ; CHECK-NEXT:    vsetvli zero, a0, e16, m1, tu, ma
-; CHECK-NEXT:    vslideup.vi v11, v12, 0
+; CHECK-NEXT:    vmv.v.v v11, v12
 ; CHECK-NEXT:    vsetvli zero, a1, e16, m1, tu, ma
 ; CHECK-NEXT:    vslideup.vx v11, v12, a0
 ; CHECK-NEXT:    vsetvli a0, zero, e16, m4, ta, ma
@@ -1120,7 +1120,7 @@ define half @vreduce_fmin_nxv10f16(<vscale x 10 x half> %v) {
 ; CHECK-NEXT:    vsetvli zero, a1, e16, m1, tu, ma
 ; CHECK-NEXT:    vslideup.vx v10, v12, a0
 ; CHECK-NEXT:    vsetvli zero, a0, e16, m1, tu, ma
-; CHECK-NEXT:    vslideup.vi v11, v12, 0
+; CHECK-NEXT:    vmv.v.v v11, v12
 ; CHECK-NEXT:    vsetvli zero, a1, e16, m1, tu, ma
 ; CHECK-NEXT:    vslideup.vx v11, v12, a0
 ; CHECK-NEXT:    vsetvli a0, zero, e16, m4, ta, ma
