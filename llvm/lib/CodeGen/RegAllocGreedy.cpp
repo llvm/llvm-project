@@ -444,31 +444,27 @@ MCRegister RAGreedy::tryAssign(const LiveInterval &VirtReg,
 //                         Interference eviction
 //===----------------------------------------------------------------------===//
 
-Register RegAllocEvictionAdvisor::canReassign(const LiveInterval &VirtReg,
-                                              Register PrevReg) const {
-  auto Order =
-      AllocationOrder::create(VirtReg.reg(), *VRM, RegClassInfo, Matrix);
-  MCRegister PhysReg;
-  for (auto I = Order.begin(), E = Order.end(); I != E && !PhysReg; ++I) {
-    if ((*I).id() == PrevReg.id())
-      continue;
+bool RegAllocEvictionAdvisor::canReassign(const LiveInterval &VirtReg,
+                                          MCRegister FromReg) const {
+  auto HasRegUnitInterference = [&](MCRegUnit Unit) {
+    // Instantiate a "subquery", not to be confused with the Queries array.
+    LiveIntervalUnion::Query SubQ(VirtReg, Matrix->getLiveUnions()[Unit]);
+    return SubQ.checkInterference();
+  };
 
-    MCRegUnitIterator Units(*I, TRI);
-    for (; Units.isValid(); ++Units) {
-      // Instantiate a "subquery", not to be confused with the Queries array.
-      LiveIntervalUnion::Query subQ(VirtReg, Matrix->getLiveUnions()[*Units]);
-      if (subQ.checkInterference())
-        break;
+  for (MCRegister Reg :
+       AllocationOrder::create(VirtReg.reg(), *VRM, RegClassInfo, Matrix)) {
+    if (Reg == FromReg)
+      continue;
+    // If no units have interference, reassignment is possible.
+    if (none_of(TRI->regunits(Reg), HasRegUnitInterference)) {
+      LLVM_DEBUG(dbgs() << "can reassign: " << VirtReg << " from "
+                        << printReg(FromReg, TRI) << " to "
+                        << printReg(Reg, TRI) << '\n');
+      return true;
     }
-    // If no units have interference, break out with the current PhysReg.
-    if (!Units.isValid())
-      PhysReg = *I;
   }
-  if (PhysReg)
-    LLVM_DEBUG(dbgs() << "can reassign: " << VirtReg << " from "
-                      << printReg(PrevReg, TRI) << " to "
-                      << printReg(PhysReg, TRI) << '\n');
-  return PhysReg;
+  return false;
 }
 
 /// evictInterference - Evict any interferring registers that prevent VirtReg
