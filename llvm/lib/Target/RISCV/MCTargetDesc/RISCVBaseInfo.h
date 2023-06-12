@@ -64,12 +64,8 @@ enum {
   VLMulShift = ConstraintShift + 3,
   VLMulMask = 0b111 << VLMulShift,
 
-  // Do we need to add a dummy mask op when converting RVV Pseudo to MCInst.
-  HasDummyMaskOpShift = VLMulShift + 3,
-  HasDummyMaskOpMask = 1 << HasDummyMaskOpShift,
-
   // Force a tail agnostic policy even this instruction has a tied destination.
-  ForceTailAgnosticShift = HasDummyMaskOpShift + 1,
+  ForceTailAgnosticShift = VLMulShift + 3,
   ForceTailAgnosticMask = 1 << ForceTailAgnosticShift,
 
   // Does this instruction have a merge operand that must be removed when
