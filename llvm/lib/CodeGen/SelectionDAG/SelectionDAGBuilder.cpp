@@ -6599,7 +6599,7 @@ void SelectionDAGBuilder::visitIntrinsicCall(const CallInst &I,
     SDValue Chain = getRoot();
     // Use GET_FPENV if it is legal or custom. Otherwise use memory-based node
     // and temporary storage in stack.
-    if (TLI.isOperationLegalOrCustom(ISD::SET_FPENV, EnvVT)) {
+    if (TLI.isOperationLegalOrCustom(ISD::GET_FPENV, EnvVT)) {
       Res = DAG.getNode(
           ISD::GET_FPENV, sdl,
           DAG.getVTList(TLI.getValueType(DAG.getDataLayout(), I.getType()),
