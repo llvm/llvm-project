@@ -6,8 +6,7 @@ subroutine ieee_is_normal_f16(r)
   use ieee_arithmetic
   real(KIND=2) :: r
   i = ieee_is_normal(r)
-  ! CHECK: %[[test:.*]] = arith.constant 360 : i32
-  ! CHECK: %[[l:.*]] = "llvm.intr.is.fpclass"(%{{.*}}, %[[test]]) : (f16, i32) -> i1
+  ! CHECK: %[[l:.*]] = "llvm.intr.is.fpclass"(%{{.*}}) <{bit = 360 : i32}> : (f16) -> i1
   ! CHECK: fir.convert %[[l]] : (i1) -> !fir.logical<4>
 end subroutine ieee_is_normal_f16
 
@@ -16,8 +15,7 @@ subroutine ieee_is_normal_bf16(r)
   use ieee_arithmetic
   real(KIND=3) :: r
   i = ieee_is_normal(r)
-  ! CHECK: %[[test:.*]] = arith.constant 360 : i32
-  ! CHECK: %[[l:.*]] = "llvm.intr.is.fpclass"(%{{.*}}, %[[test]]) : (bf16, i32) -> i1
+  ! CHECK: %[[l:.*]] = "llvm.intr.is.fpclass"(%{{.*}}) <{bit = 360 : i32}> : (bf16) -> i1
   ! CHECK: fir.convert %[[l]] : (i1) -> !fir.logical<4>
 end subroutine ieee_is_normal_bf16
 
@@ -28,8 +26,7 @@ subroutine ieee_is_normal_f32(r)
   use ieee_arithmetic
   real :: r
   i = ieee_is_normal(r)
-  ! CHECK: %[[test:.*]] = arith.constant 360 : i32
-  ! CHECK: %[[l:.*]] = "llvm.intr.is.fpclass"(%{{.*}}, %[[test]]) : (f32, i32) -> i1
+  ! CHECK: %[[l:.*]] = "llvm.intr.is.fpclass"(%{{.*}}) <{bit = 360 : i32}> : (f32) -> i1
   ! CHECK: fir.convert %[[l]] : (i1) -> !fir.logical<4>
 end subroutine ieee_is_normal_f32
 
@@ -38,8 +35,7 @@ subroutine ieee_is_normal_f64(r)
   use ieee_arithmetic
   real(KIND=8) :: r
   i = ieee_is_normal(r)
-  ! CHECK: %[[test:.*]] = arith.constant 360 : i32
-  ! CHECK: %[[l:.*]] = "llvm.intr.is.fpclass"(%{{.*}}, %[[test]]) : (f64, i32) -> i1
+  ! CHECK: %[[l:.*]] = "llvm.intr.is.fpclass"(%{{.*}}) <{bit = 360 : i32}> : (f64) -> i1
   ! CHECK: fir.convert %[[l]] : (i1) -> !fir.logical<4>
 end subroutine ieee_is_normal_f64
 
@@ -48,8 +44,7 @@ subroutine ieee_is_normal_f80(r)
   use ieee_arithmetic
   real(KIND=10) :: r
   i = ieee_is_normal(r)
-  ! CHECK: %[[test:.*]] = arith.constant 360 : i32
-  ! CHECK: %[[l:.*]] = "llvm.intr.is.fpclass"(%{{.*}}, %[[test]]) : (f80, i32) -> i1
+  ! CHECK: %[[l:.*]] = "llvm.intr.is.fpclass"(%{{.*}}) <{bit = 360 : i32}> : (f80) -> i1
   ! CHECK: fir.convert %[[l]] : (i1) -> !fir.logical<4>
 end subroutine ieee_is_normal_f80
 
@@ -58,7 +53,6 @@ subroutine ieee_is_normal_f128(r)
   use ieee_arithmetic
   real(KIND=16) :: r
   i = ieee_is_normal(r)
-  ! CHECK: %[[test:.*]] = arith.constant 360 : i32
-  ! CHECK: %[[l:.*]] = "llvm.intr.is.fpclass"(%{{.*}}, %[[test]]) : (f128, i32) -> i1
+  ! CHECK: %[[l:.*]] = "llvm.intr.is.fpclass"(%{{.*}}) <{bit = 360 : i32}> : (f128) -> i1
   ! CHECK: fir.convert %[[l]] : (i1) -> !fir.logical<4>
 end subroutine ieee_is_normal_f128

@@ -207,9 +207,8 @@ static Value handleByValArgumentInit(OpBuilder &builder, Location loc,
   // Copy the pointee to the newly allocated value.
   Value copySize = builder.create<LLVM::ConstantOp>(
       loc, builder.getI64Type(), builder.getI64IntegerAttr(elementTypeSize));
-  Value isVolatile = builder.create<LLVM::ConstantOp>(
-      loc, builder.getI1Type(), builder.getBoolAttr(false));
-  builder.create<LLVM::MemcpyOp>(loc, allocaOp, argument, copySize, isVolatile);
+  builder.create<LLVM::MemcpyOp>(loc, allocaOp, argument, copySize,
+                                 /*isVolatile=*/false);
   return allocaOp;
 }
 

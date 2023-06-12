@@ -106,41 +106,25 @@ llvm.func @powi_intr_wrong_type(%arg0 : f32, %arg1 : f32) -> f32 {
 
 // -----
 
-llvm.func @ctlz_intr_wrong_type(%arg0 : i32, %arg1 : i32) -> i32 {
-  // expected-error @below{{op operand #1 must be 1-bit signless integer, but got 'i32'}}
-  %0 = "llvm.intr.ctlz"(%arg0, %arg1) : (i32, i32) -> i32
-  llvm.return %0 : i32
-}
-
-// -----
-
-llvm.func @memcpy_intr_wrong_type(%src : i64, %dst : i64, %len : i64, %volatile : i1) {
+llvm.func @memcpy_intr_wrong_type(%src : i64, %dst : i64, %len : i64) {
   // expected-error @below{{op operand #0 must be LLVM pointer type, but got 'i64'}}
-  "llvm.intr.memcpy"(%src, %dst, %len, %volatile) : (i64, i64, i64, i1) -> ()
+  "llvm.intr.memcpy"(%src, %dst, %len) <{isVolatile = false}> : (i64, i64, i64) -> ()
   llvm.return
 }
 
 // -----
 
-llvm.func @memcpy_inline_intr_wrong_type(%src : !llvm.ptr, %dst : !llvm.ptr, %len : i64, %volatile : i32) {
-  // expected-error @below{{op operand #3 must be 1-bit signless integer, but got 'i32'}}
-  "llvm.intr.memcpy.inline"(%src, %dst, %len, %volatile) : (!llvm.ptr, !llvm.ptr, i64, i32) -> ()
-  llvm.return
-}
-
-// -----
-
-llvm.func @memmove_intr_wrong_type(%src : !llvm.ptr, %dst : i64, %len : i64, %volatile : i1) {
+llvm.func @memmove_intr_wrong_type(%src : !llvm.ptr, %dst : i64, %len : i64) {
   // expected-error @below{{op operand #1 must be LLVM pointer type, but got 'i64'}}
-  "llvm.intr.memmove"(%src, %dst, %len, %volatile) : (!llvm.ptr, i64, i64, i1) -> ()
+  "llvm.intr.memmove"(%src, %dst, %len) <{isVolatile = false}> : (!llvm.ptr, i64, i64) -> ()
   llvm.return
 }
 
 // -----
 
-llvm.func @memset_intr_wrong_type(%dst : !llvm.ptr, %val : i32, %len : i64, %volatile : i1) {
+llvm.func @memset_intr_wrong_type(%dst : !llvm.ptr, %val : i32, %len : i64) {
   // expected-error @below{{op operand #1 must be 8-bit signless integer, but got 'i32'}}
-  "llvm.intr.memset"(%dst, %val, %len, %volatile) : (!llvm.ptr, i32, i64, i1) -> ()
+  "llvm.intr.memset"(%dst, %val, %len) <{isVolatile = false}> : (!llvm.ptr, i32, i64) -> ()
   llvm.return
 }
 
