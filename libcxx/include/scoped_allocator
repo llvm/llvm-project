@@ -103,7 +103,7 @@ template <class OuterA1, class OuterA2, class... InnerAllocs>
 template <class OuterA1, class OuterA2, class... InnerAllocs>
     bool
     operator!=(const scoped_allocator_adaptor<OuterA1, InnerAllocs...>& a,
-               const scoped_allocator_adaptor<OuterA2, InnerAllocs...>& b) noexcept;
+               const scoped_allocator_adaptor<OuterA2, InnerAllocs...>& b) noexcept; // removed in C++20
 
 }  // std
 
@@ -703,6 +703,8 @@ operator==(const scoped_allocator_adaptor<_OuterA1, _InnerA0, _InnerAllocs...>& 
            __a.inner_allocator() == __b.inner_allocator();
 }
 
+#if _LIBCPP_STD_VER <= 17
+
 template <class _OuterA1, class _OuterA2, class... _InnerAllocs>
 inline _LIBCPP_INLINE_VISIBILITY
 bool
@@ -711,6 +713,8 @@ operator!=(const scoped_allocator_adaptor<_OuterA1, _InnerAllocs...>& __a,
 {
     return !(__a == __b);
 }
+
+#endif // _LIBCPP_STD_VER <= 17
 
 #endif // !defined(_LIBCPP_CXX03_LANG)
 
