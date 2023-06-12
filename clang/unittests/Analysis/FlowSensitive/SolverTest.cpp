@@ -360,4 +360,22 @@ TEST(SolverTest, ImplicationConflict) {
   expectUnsatisfiable(solve({XImplY, XAndNotY}));
 }
 
+TEST(SolverTest, LowTimeoutResultsInTimedOut) {
+  WatchedLiteralsSolver solver(10);
+  ConstraintContext Ctx;
+  auto X = Ctx.atom();
+  auto Y = Ctx.atom();
+  auto Z = Ctx.atom();
+  auto W = Ctx.atom();
+
+  // !(X v Y) <=> !X ^ !Y
+  auto A = Ctx.iff(Ctx.neg(Ctx.disj(X, Y)), Ctx.conj(Ctx.neg(X), Ctx.neg(Y)));
+
+  // !(Z ^ W) <=> !Z v !W
+  auto B = Ctx.iff(Ctx.neg(Ctx.conj(Z, W)), Ctx.disj(Ctx.neg(Z), Ctx.neg(W)));
+
+  // A ^ B
+  EXPECT_EQ(solver.solve({A, B}).getStatus(), Solver::Result::Status::TimedOut);
+}
+
 } // namespace
