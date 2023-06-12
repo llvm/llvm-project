@@ -658,14 +658,15 @@ unsigned ComponentInfo::getIndexInParsedOperands(unsigned CompOprIdx) const {
 std::optional<unsigned> InstInfo::getInvalidCompOperandIndex(
     std::function<unsigned(unsigned, unsigned)> GetRegIdx,
     const MCRegisterInfo &MRI, bool SkipSrc, bool AllowSameVGPR,
-    bool CheckDst) const {
+    bool VOPD3) const {
 
   auto OpXRegs = getRegIndices(ComponentIndex::X, GetRegIdx);
   auto OpYRegs = getRegIndices(ComponentIndex::Y, GetRegIdx);
 
   unsigned CompOprIdx;
   for (CompOprIdx = 0; CompOprIdx < Component::MAX_OPR_NUM; ++CompOprIdx) {
-    unsigned BanksNum = BANKS_NUM[CompOprIdx];
+    unsigned BanksMasks = VOPD3 ? VOPD3_VGPR_BANK_MASKS[CompOprIdx]
+                                : VOPD_VGPR_BANK_MASKS[CompOprIdx];
     if (!OpXRegs[CompOprIdx] || !OpYRegs[CompOprIdx])
       continue;
 
@@ -676,10 +677,17 @@ std::optional<unsigned> InstInfo::getInvalidCompOperandIndex(
     if (SkipSrc && CompOprIdx >= Component::DST_NUM)
       continue;
 
-    if (!CheckDst && CompOprIdx < Component::DST_NUM)
-      continue;
+    if (CompOprIdx < Component::DST_NUM) {
+      // Even if we do not check vdst parity, vdst operands still shall not
+      // overlap.
+      if (MRI.regsOverlap(OpXRegs[CompOprIdx], OpYRegs[CompOprIdx]))
+        return CompOprIdx;
+      if (VOPD3) // No need to check dst parity.
+        continue;
+    }
 
-    if (OpXRegs[CompOprIdx] % BanksNum == OpYRegs[CompOprIdx] % BanksNum &&
+    if (((OpXRegs[CompOprIdx] & BanksMasks) ==
+         (OpYRegs[CompOprIdx] & BanksMasks)) &&
         (!AllowSameVGPR || CompOprIdx < Component::DST_NUM ||
          OpXRegs[CompOprIdx] != OpYRegs[CompOprIdx]))
       return CompOprIdx;

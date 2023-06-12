@@ -3757,7 +3757,7 @@ std::optional<unsigned> AMDGPUAsmParser::checkVOPDRegBankConstraints(
   const auto &InstInfo = getVOPDInstInfo(Opcode, &MII);
   auto InvalidCompOprIdx =
       InstInfo.getInvalidCompOperandIndex(getVRegIdx, *TRI, SkipSrc,
-                                          AllowSameVGPR, !AsVOPD3);
+                                          AllowSameVGPR, AsVOPD3);
 
   return InvalidCompOprIdx;
 }
@@ -3780,7 +3780,10 @@ bool AMDGPUAsmParser::validateVOPDRegBankConstraints(
 
   auto Loc = ((AMDGPUOperand &)*Operands[ParsedIdx]).getStartLoc();
   if (CompOprIdx == VOPD::Component::DST) {
-    Error(Loc, "one dst register must be even and the other odd");
+    if (AsVOPD3)
+      Error(Loc, "dst registers must be distinct");
+    else
+      Error(Loc, "one dst register must be even and the other odd");
   } else {
     auto CompSrcIdx = CompOprIdx - VOPD::Component::DST_NUM;
     Error(Loc, Twine("src") + Twine(CompSrcIdx) +
@@ -3805,7 +3808,16 @@ bool AMDGPUAsmParser::tryVOPD3(const MCInst &Inst) {
 
   // Then if it fits VOPD3
   InvalidCompOprIdx = checkVOPDRegBankConstraints(Inst, true);
-  return !InvalidCompOprIdx.has_value();
+  if (InvalidCompOprIdx.has_value()) {
+    // If failed operand is dst it is better to show error about VOPD3
+    // instruction as it has more capabilities and error message will be
+    // more informative. If the dst is not legal for VOPD3, then it is not
+    // legal for VOPD either.
+    if (*InvalidCompOprIdx == VOPD::Component::DST)
+      return true;
+    return false;
+  }
+  return true;
 }
 
 bool AMDGPUAsmParser::validateIntClampSupported(const MCInst &Inst) {

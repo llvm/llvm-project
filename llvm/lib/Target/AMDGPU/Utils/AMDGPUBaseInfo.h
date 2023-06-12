@@ -564,8 +564,10 @@ enum Component : unsigned {
   MAX_OPR_NUM = DST_NUM + MAX_SRC_NUM
 };
 
-// Number of VGPR banks per VOPD component operand.
-constexpr unsigned BANKS_NUM[] = {2, 4, 4, 2};
+// LSB mask for VGPR banks per VOPD component operand.
+// 4 banks result in a mask 3, setting 2 lower bits.
+constexpr unsigned VOPD_VGPR_BANK_MASKS[] = {1, 3, 3, 1};
+constexpr unsigned VOPD3_VGPR_BANK_MASKS[] = {1, 3, 3, 3};
 
 enum ComponentIndex : unsigned { X = 0, Y = 1 };
 constexpr unsigned COMPONENTS[] = {ComponentIndex::X, ComponentIndex::Y};
@@ -764,15 +766,15 @@ public:
   // checked.
   // If \p AllowSameVGPR is set then same VGPRs are allowed for X and Y sources
   // even though it violates requirement to be from different banks.
-  // If \p CheckDst is set to false both dst registers allowed to be either odd
+  // If \p VOPD3 is set to true both dst registers allowed to be either odd
   // or even.
   bool hasInvalidOperand(std::function<unsigned(unsigned, unsigned)> GetRegIdx,
                          const MCRegisterInfo &MRI,
                          bool SkipSrc = false,
                          bool AllowSameVGPR = false,
-                         bool CheckDst = true) const {
+                         bool VOPD3 = false) const {
     return getInvalidCompOperandIndex(GetRegIdx, MRI, SkipSrc, AllowSameVGPR,
-                                      CheckDst).has_value();
+                                      VOPD3).has_value();
   }
 
   // Check VOPD operands constraints.
@@ -781,14 +783,14 @@ public:
   // checked except for being from the same halves of VGPR file on gfx1210.
   // If \p AllowSameVGPR is set then same VGPRs are allowed for X and Y sources
   // even though it violates requirement to be from different banks.
-  // If \p CheckDst is set to false both dst registers allowed to be either odd
+  // If \p VOPD3 is set to true both dst registers allowed to be either odd
   // or even.
   std::optional<unsigned> getInvalidCompOperandIndex(
       std::function<unsigned(unsigned, unsigned)> GetRegIdx,
       const MCRegisterInfo &MRI,
       bool SkipSrc = false,
       bool AllowSameVGPR = false,
-      bool CheckDst = true) const;
+      bool VOPD3 = false) const;
 
 private:
   RegIndices

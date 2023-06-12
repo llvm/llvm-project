@@ -163,3 +163,14 @@ v_dual_fmac_f32 v255, s105, v2 :: v_dual_fmac_f32 v7, s1, v3
 // GFX12: :[[@LINE-1]]:{{[0-9]+}}: error: one dst register must be even and the other odd
 // GFX12-NEXT:{{^}}v_dual_fmac_f32 v255, s105, v2 :: v_dual_fmac_f32 v7, s1, v3
 // GFX12-NEXT:{{^}}                                                  ^
+
+// Destination should be distinct even if not checked for parity in VOPD3
+v_dual_fmac_f32 v7, v4, v2 :: v_dual_fmac_f32 v7, v1, v3
+// GFX12: :[[@LINE-1]]:{{[0-9]+}}: error: dst registers must be distinct
+// GFX12-NEXT:{{^}}v_dual_fmac_f32 v7, v4, v2 :: v_dual_fmac_f32 v7, v1, v3
+// GFX12-NEXT:{{^}}                                              ^
+
+v_dual_add_f32 v7, v4, v2 :: v_dual_add_f32 v7, v5, v3
+// GFX12: :[[@LINE-1]]:{{[0-9]+}}: error: dst registers must be distinct
+// GFX12-NEXT:{{^}}v_dual_add_f32 v7, v4, v2 :: v_dual_add_f32 v7, v5, v3
+// GFX12-NEXT:{{^}}                                            ^

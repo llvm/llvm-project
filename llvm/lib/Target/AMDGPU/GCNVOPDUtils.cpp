@@ -118,10 +118,9 @@ bool llvm::checkVOPDRegConstraints(const SIInstrInfo &TII,
                  FirstMI.getOpcode() == AMDGPU::V_MOV_B32_e32 &&
                  SecondMI.getOpcode() == AMDGPU::V_MOV_B32_e32;
   bool AllowSameVGPR = ST.hasGFX12_10Insts();
-  bool CheckDST = !IsVOPD3;
 
   if (InstInfo.hasInvalidOperand(getVRegIdx, *TRI, SkipSrc, AllowSameVGPR,
-                                 CheckDST))
+                                 IsVOPD3))
     return false;
 
   LLVM_DEBUG(dbgs() << "VOPD Reg Constraints Passed\n\tX: " << FirstMI
