@@ -2122,8 +2122,7 @@ CanonicalLoopInfo *OpenMPIRBuilder::createCanonicalLoop(
     // Avoid incrementing past stop since it could overflow.
     Value *CountIfTwo = Builder.CreateAdd(
         Builder.CreateUDiv(Builder.CreateSub(Span, One), Incr), One);
-    Value *OneCmp = Builder.CreateICmp(
-        InclusiveStop ? CmpInst::ICMP_ULT : CmpInst::ICMP_ULE, Span, Incr);
+    Value *OneCmp = Builder.CreateICmp(CmpInst::ICMP_ULE, Span, Incr);
     CountIfLooping = Builder.CreateSelect(OneCmp, One, CountIfTwo);
   }
   Value *TripCount = Builder.CreateSelect(ZeroCmp, Zero, CountIfLooping,
