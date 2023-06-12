@@ -2034,12 +2034,11 @@ llvm.func @aliasScope(%arg1 : !llvm.ptr) {
   %2 = llvm.atomicrmw add %arg1, %0 monotonic {alias_scopes = [@metadata::@scope3], noalias_scopes = [@metadata::@scope1, @metadata::@scope2]} : !llvm.ptr, i32
   // CHECK:  cmpxchg {{.*}}, !alias.scope ![[SCOPES3]]
   %3 = llvm.cmpxchg %arg1, %1, %2 acq_rel monotonic {alias_scopes = [@metadata::@scope3]} : !llvm.ptr, i32
-  %4 = llvm.mlir.constant(0 : i1) : i1
   %5 = llvm.mlir.constant(42 : i8) : i8
   // CHECK:  llvm.memcpy{{.*}}, !alias.scope ![[SCOPES3]]
-  "llvm.intr.memcpy"(%arg1, %arg1, %0, %4) {alias_scopes = [@metadata::@scope3]} : (!llvm.ptr, !llvm.ptr, i32, i1) -> ()
+  "llvm.intr.memcpy"(%arg1, %arg1, %0) <{isVolatile = false}> {alias_scopes = [@metadata::@scope3]} : (!llvm.ptr, !llvm.ptr, i32) -> ()
   // CHECK:  llvm.memset{{.*}}, !noalias ![[SCOPES3]]
-  "llvm.intr.memset"(%arg1, %5, %0, %4) {noalias_scopes = [@metadata::@scope3]} : (!llvm.ptr, i8, i32, i1) -> ()
+  "llvm.intr.memset"(%arg1, %5, %0) <{isVolatile = false}> {noalias_scopes = [@metadata::@scope3]} : (!llvm.ptr, i8, i32) -> ()
   // CHECK: call void @foo({{.*}} !alias.scope ![[SCOPES3]]
   llvm.call @foo(%arg1) {alias_scopes = [@metadata::@scope3]} : (!llvm.ptr) -> ()
   // CHECK: call void @foo({{.*}} !noalias ![[SCOPES3]]

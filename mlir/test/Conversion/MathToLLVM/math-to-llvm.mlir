@@ -16,8 +16,7 @@ func.func @ops(%arg0: f32, %arg1: f32, %arg2: i32, %arg3: i32, %arg4: f64) {
 // -----
 
 func.func @absi(%arg0: i32) -> i32 {
-  // CHECK: %[[FALSE:.*]] = llvm.mlir.constant(false
-  // CHECK: = "llvm.intr.abs"(%{{.*}}, %[[FALSE]]) : (i32, i1) -> i32
+  // CHECK: = "llvm.intr.abs"(%{{.*}}) <{is_int_min_poison = false}> : (i32) -> i32
   %0 = math.absi %arg0 : i32
   return %0 : i32
 }
@@ -147,8 +146,7 @@ func.func @sine(%arg0 : f32) {
 // CHECK-LABEL: func @ctlz(
 // CHECK-SAME: i32
 func.func @ctlz(%arg0 : i32) {
-  // CHECK: %[[ZERO:.+]] = llvm.mlir.constant(false) : i1
-  // CHECK: "llvm.intr.ctlz"(%arg0, %[[ZERO]]) : (i32, i1) -> i32
+  // CHECK: "llvm.intr.ctlz"(%arg0) <{is_zero_poison = false}> : (i32) -> i32
   %0 = math.ctlz %arg0 : i32
   func.return
 }
@@ -158,8 +156,7 @@ func.func @ctlz(%arg0 : i32) {
 // CHECK-LABEL: func @cttz(
 // CHECK-SAME: i32
 func.func @cttz(%arg0 : i32) {
-  // CHECK: %[[ZERO:.+]] = llvm.mlir.constant(false) : i1
-  // CHECK: "llvm.intr.cttz"(%arg0, %[[ZERO]]) : (i32, i1) -> i32
+  // CHECK: "llvm.intr.cttz"(%arg0) <{is_zero_poison = false}> : (i32) -> i32
   %0 = math.cttz %arg0 : i32
   func.return
 }
@@ -169,8 +166,7 @@ func.func @cttz(%arg0 : i32) {
 // CHECK-LABEL: func @cttz_vec(
 // CHECK-SAME: i32
 func.func @cttz_vec(%arg0 : vector<4xi32>) {
-  // CHECK: %[[ZERO:.+]] = llvm.mlir.constant(false) : i1
-  // CHECK: "llvm.intr.cttz"(%arg0, %[[ZERO]]) : (vector<4xi32>, i1) -> vector<4xi32>
+  // CHECK: "llvm.intr.cttz"(%arg0) <{is_zero_poison = false}> : (vector<4xi32>) -> vector<4xi32>
   %0 = math.cttz %arg0 : vector<4xi32>
   func.return
 }
