@@ -160,6 +160,9 @@ static cl::opt<unsigned>
     ColWidth("misched-dump-schedule-trace-col-width", cl::Hidden,
              cl::desc("Set width of the columns showing resource booking."),
              cl::init(5));
+static cl::opt<bool> MISchedSortResourcesInTrace(
+    "misched-sort-resources-in-trace", cl::Hidden, cl::init(true),
+    cl::desc("Sort the resources printed in the dump trace"));
 #endif
 
 static cl::opt<unsigned>
@@ -953,6 +956,10 @@ void ScheduleDAGMI::placeDebugValues() {
 static const char *scheduleTableLegend = "  i: issue\n  x: resource booked";
 
 LLVM_DUMP_METHOD void ScheduleDAGMI::dumpScheduleTraceTopDown() const {
+  // Bail off when there is no schedule model to query.
+  if (!SchedModel.hasInstrSchedModel())
+    return;
+
   //  Nothing to show if there is no or just one instruction.
   if (BB->size() < 2)
     return;
@@ -997,17 +1004,28 @@ LLVM_DUMP_METHOD void ScheduleDAGMI::dumpScheduleTraceTopDown() const {
     }
     dbgs() << "|\n";
     const MCSchedClassDesc *SC = getSchedClass(SU);
-    for (TargetSchedModel::ProcResIter PI = SchedModel.getWriteProcResBegin(SC),
-                                       PE = SchedModel.getWriteProcResEnd(SC);
-         PI != PE; ++PI) {
+
+    SmallVector<MCWriteProcResEntry, 4> ResourcesIt(
+        make_range(SchedModel.getWriteProcResBegin(SC),
+                   SchedModel.getWriteProcResEnd(SC)));
+
+    if (MISchedSortResourcesInTrace)
+      llvm::sort(ResourcesIt.begin(), ResourcesIt.end(),
+                 [](const MCWriteProcResEntry &LHS,
+                    const MCWriteProcResEntry &RHS) -> bool {
+                   return LHS.StartAtCycle < RHS.StartAtCycle ||
+                          (LHS.StartAtCycle == RHS.StartAtCycle &&
+                           LHS.Cycles < RHS.Cycles);
+                 });
+    for (const MCWriteProcResEntry &PI : ResourcesIt) {
       C = FirstCycle;
       const std::string ResName =
-          SchedModel.getResourceName(PI->ProcResourceIdx);
-      dbgs() << llvm::left_justify(ResName, HeaderColWidth);
-      for (; C < SU->TopReadyCycle; ++C) {
+          SchedModel.getResourceName(PI.ProcResourceIdx);
+      dbgs() << llvm::right_justify(ResName + " ", HeaderColWidth);
+      for (; C < SU->TopReadyCycle + PI.StartAtCycle; ++C) {
         dbgs() << llvm::left_justify("|", ColWidth);
       }
-      for (unsigned i = 0; i < PI->Cycles; ++i, ++C)
+      for (unsigned I = 0, E = PI.Cycles - PI.StartAtCycle; I != E; ++I, ++C)
         dbgs() << llvm::left_justify("| x", ColWidth);
       while (C++ <= LastCycle)
         dbgs() << llvm::left_justify("|", ColWidth);
@@ -1018,6 +1036,10 @@ LLVM_DUMP_METHOD void ScheduleDAGMI::dumpScheduleTraceTopDown() const {
 }
 
 LLVM_DUMP_METHOD void ScheduleDAGMI::dumpScheduleTraceBottomUp() const {
+  // Bail off when there is no schedule model to query.
+  if (!SchedModel.hasInstrSchedModel())
+    return;
+
   //  Nothing to show if there is no or just one instruction.
   if (BB->size() < 2)
     return;
@@ -1063,17 +1085,27 @@ LLVM_DUMP_METHOD void ScheduleDAGMI::dumpScheduleTraceBottomUp() const {
     }
     dbgs() << "|\n";
     const MCSchedClassDesc *SC = getSchedClass(SU);
-    for (TargetSchedModel::ProcResIter PI = SchedModel.getWriteProcResBegin(SC),
-                                       PE = SchedModel.getWriteProcResEnd(SC);
-         PI != PE; ++PI) {
+    SmallVector<MCWriteProcResEntry, 4> ResourcesIt(
+        make_range(SchedModel.getWriteProcResBegin(SC),
+                   SchedModel.getWriteProcResEnd(SC)));
+
+    if (MISchedSortResourcesInTrace)
+      llvm::sort(ResourcesIt.begin(), ResourcesIt.end(),
+                 [](const MCWriteProcResEntry &LHS,
+                    const MCWriteProcResEntry &RHS) -> bool {
+                   return LHS.StartAtCycle < RHS.StartAtCycle ||
+                          (LHS.StartAtCycle == RHS.StartAtCycle &&
+                           LHS.Cycles < RHS.Cycles);
+                 });
+    for (const MCWriteProcResEntry &PI : ResourcesIt) {
       C = FirstCycle;
       const std::string ResName =
-          SchedModel.getResourceName(PI->ProcResourceIdx);
-      dbgs() << llvm::left_justify(ResName, HeaderColWidth);
-      for (; C > (int)SU->BotReadyCycle; --C) {
+          SchedModel.getResourceName(PI.ProcResourceIdx);
+      dbgs() << llvm::right_justify(ResName + " ", HeaderColWidth);
+      for (; C > ((int)SU->BotReadyCycle - (int)PI.StartAtCycle); --C) {
         dbgs() << llvm::left_justify("|", ColWidth);
       }
-      for (unsigned i = 0; i < PI->Cycles; ++i, --C)
+      for (unsigned I = 0, E = PI.Cycles - PI.StartAtCycle; I != E; ++I, --C)
         dbgs() << llvm::left_justify("| x", ColWidth);
       while (C-- >= LastCycle)
         dbgs() << llvm::left_justify("|", ColWidth);
