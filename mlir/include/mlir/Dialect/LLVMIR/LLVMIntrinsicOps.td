@@ -88,16 +88,52 @@ class LLVM_CountZerosIntrOp<string func, list<Trait> traits = []> :
     LLVM_OneResultIntrOp<func, [], [0],
            !listconcat([Pure], traits)> {
   let arguments = (ins LLVM_ScalarOrVectorOf<AnySignlessInteger>:$in,
-                   I1:$zero_undefined);
+                   I1Attr:$is_zero_poison);
+  string mlirBuilder = [{
+    auto op = $_builder.create<$_qualCppClassName>($_location,
+      $_resultType, $in, $_int_attr($is_zero_poison));
+      $res = op;
+  }];
+  string llvmBuilder = [{
+    auto *inst = createIntrinsicCall(
+      builder, llvm::Intrinsic::}] # llvmEnumName # [{,
+      {$in, builder.getInt1(op.getIsZeroPoison())}, }]
+      # declTypes # [{);
+    $res = inst;
+  }];
 }
 
 def LLVM_AbsOp : LLVM_OneResultIntrOp<"abs", [], [0], [Pure]> {
   let arguments = (ins LLVM_ScalarOrVectorOf<AnySignlessInteger>:$in,
-                   I1:$is_int_min_poison);
+                   I1Attr:$is_int_min_poison);
+  string mlirBuilder = [{
+    auto op = $_builder.create<$_qualCppClassName>($_location,
+      $_resultType, $in, $_int_attr($is_int_min_poison));
+      $res = op;
+  }];
+  string llvmBuilder = [{
+    auto *inst = createIntrinsicCall(
+      builder, llvm::Intrinsic::}] # llvmEnumName # [{,
+      {$in, builder.getInt1(op.getIsIntMinPoison())}, }]
+      # declTypes # [{);
+    $res = inst;
+  }];
 }
 
 def LLVM_IsFPClass : LLVM_OneResultIntrOp<"is.fpclass", [], [0], [Pure]> {
-  let arguments = (ins LLVM_ScalarOrVectorOf<LLVM_AnyFloat>:$in, I32:$bit);
+  let arguments = (ins LLVM_ScalarOrVectorOf<LLVM_AnyFloat>:$in, I32Attr:$bit);
+  string mlirBuilder = [{
+    auto op = $_builder.create<$_qualCppClassName>($_location,
+      $_resultType, $in, $_int_attr($bit));
+      $res = op;
+  }];
+  string llvmBuilder = [{
+    auto *inst = createIntrinsicCall(
+      builder, llvm::Intrinsic::}] # llvmEnumName # [{,
+      {$in, builder.getInt32(op.getBit())},
+      }] # declTypes # [{);
+    $res = inst;
+  }];
 }
 
 def LLVM_CopySignOp : LLVM_BinarySameArgsIntrOpF<"copysign">;
@@ -113,7 +149,19 @@ def LLVM_Log10Op : LLVM_UnaryIntrOpF<"log10">;
 def LLVM_Log2Op : LLVM_UnaryIntrOpF<"log2">;
 def LLVM_LogOp : LLVM_UnaryIntrOpF<"log">;
 def LLVM_Prefetch : LLVM_ZeroResultIntrOp<"prefetch", [0]> {
-  let arguments = (ins LLVM_AnyPointer:$addr, I32:$rw, I32:$hint, I32:$cache);
+  let arguments = (ins LLVM_AnyPointer:$addr, I32Attr:$rw, I32Attr:$hint, I32Attr:$cache);
+  string mlirBuilder = [{
+    $_op = $_builder.create<$_qualCppClassName>($_location,
+      $addr, $_int_attr($rw), $_int_attr($hint), $_int_attr($cache));
+  }];
+  string llvmBuilder = [{
+    createIntrinsicCall(
+      builder, llvm::Intrinsic::}] # llvmEnumName # [{,
+      {$addr, builder.getInt32(op.getRw()),
+       builder.getInt32(op.getHint()),
+       builder.getInt32(op.getCache())},
+      }] # declTypes # [{);
+  }];
 }
 def LLVM_SinOp : LLVM_UnaryIntrOpF<"sin">;
 def LLVM_RoundEvenOp : LLVM_UnaryIntrOpF<"roundeven">;
@@ -163,37 +211,108 @@ class LLVM_MemcpyIntrOpBase<string name> :
                                                /*requiresAliasAnalysis=*/1> {
   dag args = (ins Arg<LLVM_AnyPointer,"",[MemWrite]>:$dst,
                   Arg<LLVM_AnyPointer,"",[MemRead]>:$src,
-                  AnySignlessInteger:$len, I1:$isVolatile);
+                  AnySignlessInteger:$len, I1Attr:$isVolatile);
   // Append the alias attributes defined by LLVM_IntrOpBase.
   let arguments = !con(args, aliasAttrs);
   let builders = [
     OpBuilder<(ins "Value":$dst, "Value":$src, "Value":$len,
-                   "Value":$isVolatile), [{
+                   "bool":$isVolatile), [{
+      build($_builder, $_state, dst, src, len,
+            $_builder.getBoolAttr(isVolatile));
+    }]>,
+    OpBuilder<(ins "Value":$dst, "Value":$src, "Value":$len,
+                   "IntegerAttr":$isVolatile), [{
       build($_builder, $_state, dst, src, len, isVolatile,
             /*access_groups=*/nullptr, /*alias_scopes=*/nullptr,
             /*noalias_scopes=*/nullptr, /*tbaa=*/nullptr);
-    }]
-  >];
+    }]>
+  ];
+  string mlirBuilder = [{
+    $_op = $_builder.create<$_qualCppClassName>($_location,
+      $dst, $src, $len, $_int_attr($isVolatile));
+  }];
+  string llvmBuilder = [{
+    auto *inst = createIntrinsicCall(
+      builder, llvm::Intrinsic::}] # llvmEnumName # [{,
+      {$dst, $src, $len,
+       builder.getInt1(op.getIsVolatile())},
+      }] # declTypes # [{ ); }]
+      # setAccessGroupsMetadataCode
+      # setAliasAnalysisMetadataCode;
 }
 
 def LLVM_MemcpyOp : LLVM_MemcpyIntrOpBase<"memcpy">;
-def LLVM_MemcpyInlineOp : LLVM_MemcpyIntrOpBase<"memcpy.inline">;
 def LLVM_MemmoveOp : LLVM_MemcpyIntrOpBase<"memmove">;
+
+def LLVM_MemcpyInlineOp :
+    LLVM_ZeroResultIntrOp<"memcpy.inline", [0, 1], [],
+                          /*requiresAccessGroup=*/1,
+                          /*requiresAliasAnalysis=*/1> {
+  dag args = (ins Arg<LLVM_AnyPointer,"",[MemWrite]>:$dst,
+                  Arg<LLVM_AnyPointer,"",[MemRead]>:$src,
+                  APIntAttr:$len, I1Attr:$isVolatile);
+  // Append the alias attributes defined by LLVM_IntrOpBase.
+  let arguments = !con(args, aliasAttrs);
+  let builders = [
+    OpBuilder<(ins "Value":$dst, "Value":$src, "IntegerAttr":$len,
+                   "bool":$isVolatile), [{
+      build($_builder, $_state, dst, src, len,
+            $_builder.getBoolAttr(isVolatile));
+    }]>,
+    OpBuilder<(ins "Value":$dst, "Value":$src, "IntegerAttr":$len,
+                   "IntegerAttr":$isVolatile), [{
+      build($_builder, $_state, dst, src, len, isVolatile,
+            /*access_groups=*/nullptr, /*alias_scopes=*/nullptr,
+            /*noalias_scopes=*/nullptr, /*tbaa=*/nullptr);
+    }]>
+  ];
+  string mlirBuilder = [{
+    $_op = $_builder.create<$_qualCppClassName>($_location,
+      $dst, $src, $_int_attr($len), $_int_attr($isVolatile));
+  }];
+  string llvmBuilder = [{
+    auto *inst = createIntrinsicCall(
+      builder, llvm::Intrinsic::}] # llvmEnumName # [{,
+      {$dst, $src, builder.getInt(op.getLen()),
+       builder.getInt1(op.getIsVolatile())}, { }]
+      # !interleave(!listconcat(declTypeList, [
+       [{ moduleTranslation.convertType(op.getLenAttr().getType()) }]
+       ]), ", ") # [{ }); }]
+      # setAccessGroupsMetadataCode
+      # setAliasAnalysisMetadataCode;
+}
 
 def LLVM_MemsetOp : LLVM_ZeroResultIntrOp<"memset", [0, 2], [],
                       /*requiresAccessGroup=*/1, /*requiresAliasAnalysis=*/1> {
   dag args = (ins Arg<LLVM_AnyPointer,"",[MemWrite]>:$dst,
-                  I8:$val, AnySignlessInteger:$len, I1:$isVolatile);
+                  I8:$val, AnySignlessInteger:$len, I1Attr:$isVolatile);
   // Append the alias attributes defined by LLVM_IntrOpBase.
   let arguments = !con(args, aliasAttrs);
   let builders = [
     OpBuilder<(ins "Value":$dst, "Value":$val, "Value":$len,
-                    "Value":$isVolatile), [{
+                    "bool":$isVolatile), [{
+      build($_builder, $_state, dst, val, len,
+            $_builder.getBoolAttr(isVolatile));
+    }]>,
+    OpBuilder<(ins "Value":$dst, "Value":$val, "Value":$len,
+                    "IntegerAttr":$isVolatile), [{
       build($_builder, $_state, dst, val, len, isVolatile,
             /*access_groups=*/nullptr, /*alias_scopes=*/nullptr,
             /*noalias_scopes=*/nullptr, /*tbaa=*/nullptr);
-    }]
-  >];
+    }]>
+  ];
+  string mlirBuilder = [{
+    $_op = $_builder.create<$_qualCppClassName>($_location,
+      $dst, $val, $len, $_int_attr($isVolatile));
+  }];
+  string llvmBuilder = [{
+    auto *inst = createIntrinsicCall(
+      builder, llvm::Intrinsic::}] # llvmEnumName # [{,
+      {$dst, $val, $len,
+       builder.getInt1(op.getIsVolatile())},
+      }] # declTypes # [{ ); }]
+      # setAccessGroupsMetadataCode
+      # setAliasAnalysisMetadataCode;
 }
 
 def LLVM_NoAliasScopeDeclOp

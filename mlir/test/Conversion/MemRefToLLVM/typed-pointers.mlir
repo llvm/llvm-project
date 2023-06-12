@@ -394,10 +394,9 @@ func.func @realloc_dynamic(%in: memref<?xf32>, %d: index) -> memref<?xf32>{
 // CHECK:           %[[new_buffer_raw:.*]] = llvm.call @malloc(%[[dst_size]])
 // CHECK:           %[[new_buffer:.*]] = llvm.bitcast %[[new_buffer_raw]] : !llvm.ptr<i8> to !llvm.ptr<f32>
 // CHECK:           %[[old_buffer_aligned:.*]] = llvm.extractvalue %[[descriptor]][1]
-// CHECK:           %[[volatile:.*]] = llvm.mlir.constant(false) : i1
 // CHECK-DAG:       %[[new_buffer_void:.*]] = llvm.bitcast %[[new_buffer]] : !llvm.ptr<f32> to !llvm.ptr<i8>
 // CHECK-DAG:       %[[old_buffer_void:.*]] = llvm.bitcast %[[old_buffer_aligned]] : !llvm.ptr<f32> to !llvm.ptr<i8>
-// CHECK:           "llvm.intr.memcpy"(%[[new_buffer_void]], %[[old_buffer_void]], %[[src_size]], %[[volatile]])
+// CHECK:           "llvm.intr.memcpy"(%[[new_buffer_void]], %[[old_buffer_void]], %[[src_size]]) <{isVolatile = false}>
 // CHECK:           %[[old_buffer_unaligned:.*]] = llvm.extractvalue %[[descriptor]][0]
 // CHECK:           %[[old_buffer_unaligned_void:.*]] = llvm.bitcast %[[old_buffer_unaligned]] : !llvm.ptr<f32> to !llvm.ptr<i8>
 // CHECK:           llvm.call @free(%[[old_buffer_unaligned_void]])
