@@ -3207,16 +3207,13 @@ bool RISCVDAGToDAGISel::doPeepholeMaskedRVV(SDNode *N) {
 
   unsigned Opc = UseTUPseudo ? I->UnmaskedTUPseudo : I->UnmaskedPseudo;
 
-  // Check that we're dropping the mask operand and any policy operand
-  // when we transform to this unmasked pseudo. Additionally, if this
-  // instruction is tail agnostic, the unmasked instruction should not have a
-  // tied destination.
+  // If this instruction is tail agnostic, the unmasked instruction should not
+  // have a tied destination.
 #ifndef NDEBUG
   const MCInstrDesc &MCID = TII.get(Opc);
   uint64_t TSFlags = MCID.TSFlags;
   bool HasTiedDest = RISCVII::isFirstDefTiedToFirstUse(MCID);
-  assert(UseTUPseudo == HasTiedDest && RISCVII::hasDummyMaskOp(TSFlags) &&
-         "Unexpected pseudo to transform to");
+  assert((UseTUPseudo == HasTiedDest) && "Unexpected pseudo to transform to");
 #endif
 
   SmallVector<SDValue, 8> Ops;

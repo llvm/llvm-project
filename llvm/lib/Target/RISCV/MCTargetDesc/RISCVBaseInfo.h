@@ -140,10 +140,6 @@ static inline unsigned getFormat(uint64_t TSFlags) {
 static inline VLMUL getLMul(uint64_t TSFlags) {
   return static_cast<VLMUL>((TSFlags & VLMulMask) >> VLMulShift);
 }
-/// \returns true if there is a dummy mask operand for the instruction.
-static inline bool hasDummyMaskOp(uint64_t TSFlags) {
-  return TSFlags & HasDummyMaskOpMask;
-}
 /// \returns true if tail agnostic is enforced for the instruction.
 static inline bool doesForceTailAgnostic(uint64_t TSFlags) {
   return TSFlags & ForceTailAgnosticMask;
