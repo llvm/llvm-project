@@ -7386,17 +7386,26 @@ SDValue RISCVTargetLowering::lowerINSERT_SUBVECTOR(SDValue Op,
     // that for slideup this includes the offset.
     unsigned EndIndex = OrigIdx + SubVecVT.getVectorNumElements();
     SDValue VL = getVLOp(EndIndex, DL, DAG, Subtarget);
-    SDValue SlideupAmt = DAG.getConstant(OrigIdx, DL, XLenVT);
 
     // Use tail agnostic policy if we're inserting over Vec's tail.
     unsigned Policy = RISCVII::TAIL_UNDISTURBED_MASK_UNDISTURBED;
     if (VecVT.isFixedLengthVector() && EndIndex == VecVT.getVectorNumElements())
       Policy = RISCVII::TAIL_AGNOSTIC;
-    SDValue Slideup = getVSlideup(DAG, Subtarget, DL, ContainerVT, Vec, SubVec,
-                                  SlideupAmt, Mask, VL, Policy);
+
+    // If we're inserting into the lowest elements, use a tail undisturbed
+    // vmv.v.v.
+    if (OrigIdx == 0) {
+      SubVec =
+          DAG.getNode(RISCVISD::VMV_V_V_VL, DL, ContainerVT, Vec, SubVec, VL);
+    } else {
+      SDValue SlideupAmt = DAG.getConstant(OrigIdx, DL, XLenVT);
+      SubVec = getVSlideup(DAG, Subtarget, DL, ContainerVT, Vec, SubVec,
+                           SlideupAmt, Mask, VL, Policy);
+    }
+
     if (VecVT.isFixedLengthVector())
-      Slideup = convertFromScalableVector(VecVT, Slideup, DAG, Subtarget);
-    return DAG.getBitcast(Op.getValueType(), Slideup);
+      SubVec = convertFromScalableVector(VecVT, SubVec, DAG, Subtarget);
+    return DAG.getBitcast(Op.getValueType(), SubVec);
   }
 
   unsigned SubRegIdx, RemIdx;
@@ -7440,31 +7449,39 @@ SDValue RISCVTargetLowering::lowerINSERT_SUBVECTOR(SDValue Op,
                                  DAG.getConstant(AlignedIdx, DL, XLenVT));
   }
 
-  SDValue SlideupAmt =
-      DAG.getVScale(DL, XLenVT, APInt(XLenVT.getSizeInBits(), RemIdx));
-
-  auto [Mask, VL] = getDefaultScalableVLOps(VecVT, DL, DAG, Subtarget);
-
-  // Construct the vector length corresponding to RemIdx + length(SubVecVT).
-  VL = computeVLMax(SubVecVT, DL, DAG);
-  VL = DAG.getNode(ISD::ADD, DL, XLenVT, SlideupAmt, VL);
-
   SubVec = DAG.getNode(ISD::INSERT_SUBVECTOR, DL, InterSubVT,
                        DAG.getUNDEF(InterSubVT), SubVec,
                        DAG.getConstant(0, DL, XLenVT));
 
-  SDValue Slideup = getVSlideup(DAG, Subtarget, DL, InterSubVT, AlignedExtract,
-                                SubVec, SlideupAmt, Mask, VL);
+  auto [Mask, VL] = getDefaultScalableVLOps(VecVT, DL, DAG, Subtarget);
+
+  VL = computeVLMax(SubVecVT, DL, DAG);
+
+  // If we're inserting into the lowest elements, use a tail undisturbed
+  // vmv.v.v.
+  if (RemIdx == 0) {
+    SubVec = DAG.getNode(RISCVISD::VMV_V_V_VL, DL, InterSubVT, AlignedExtract,
+                         SubVec, VL);
+  } else {
+    SDValue SlideupAmt =
+        DAG.getVScale(DL, XLenVT, APInt(XLenVT.getSizeInBits(), RemIdx));
+
+    // Construct the vector length corresponding to RemIdx + length(SubVecVT).
+    VL = DAG.getNode(ISD::ADD, DL, XLenVT, SlideupAmt, VL);
+
+    SubVec = getVSlideup(DAG, Subtarget, DL, InterSubVT, AlignedExtract, SubVec,
+                         SlideupAmt, Mask, VL);
+  }
 
   // If required, insert this subvector back into the correct vector register.
   // This should resolve to an INSERT_SUBREG instruction.
   if (VecVT.bitsGT(InterSubVT))
-    Slideup = DAG.getNode(ISD::INSERT_SUBVECTOR, DL, VecVT, Vec, Slideup,
-                          DAG.getConstant(AlignedIdx, DL, XLenVT));
+    SubVec = DAG.getNode(ISD::INSERT_SUBVECTOR, DL, VecVT, Vec, SubVec,
+                         DAG.getConstant(AlignedIdx, DL, XLenVT));
 
   // We might have bitcast from a mask type: cast back to the original type if
   // required.
-  return DAG.getBitcast(Op.getSimpleValueType(), Slideup);
+  return DAG.getBitcast(Op.getSimpleValueType(), SubVec);
 }
 
 SDValue RISCVTargetLowering::lowerEXTRACT_SUBVECTOR(SDValue Op,
@@ -15535,6 +15552,7 @@ const char *RISCVTargetLowering::getTargetNodeName(unsigned Opcode) const {
   NODE_NAME_CASE(TH_LDD)
   NODE_NAME_CASE(TH_SWD)
   NODE_NAME_CASE(TH_SDD)
+  NODE_NAME_CASE(VMV_V_V_VL)
   NODE_NAME_CASE(VMV_V_X_VL)
   NODE_NAME_CASE(VFMV_V_F_VL)
   NODE_NAME_CASE(VMV_X_S)
