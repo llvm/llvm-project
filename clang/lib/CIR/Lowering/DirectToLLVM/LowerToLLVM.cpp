@@ -882,6 +882,22 @@ public:
     // Floating point unary operations.
     if (type.isa<mlir::FloatType>()) {
       switch (op.getKind()) {
+      case mlir::cir::UnaryOpKind::Inc: {
+        auto oneAttr = rewriter.getFloatAttr(llvmInType, 1.0);
+        auto oneConst = rewriter.create<mlir::LLVM::ConstantOp>(
+            op.getLoc(), llvmInType, oneAttr);
+        rewriter.replaceOpWithNewOp<mlir::LLVM::FAddOp>(op, llvmType, oneConst,
+                                                        adaptor.getInput());
+        return mlir::success();
+      }
+      case mlir::cir::UnaryOpKind::Dec: {
+        auto negOneAttr = rewriter.getFloatAttr(llvmInType, -1.0);
+        auto negOneConst = rewriter.create<mlir::LLVM::ConstantOp>(
+            op.getLoc(), llvmInType, negOneAttr);
+        rewriter.replaceOpWithNewOp<mlir::LLVM::FSubOp>(
+            op, llvmType, negOneConst, adaptor.getInput());
+        return mlir::success();
+      }
       case mlir::cir::UnaryOpKind::Plus:
         rewriter.replaceOp(op, adaptor.getInput());
         return mlir::success();
