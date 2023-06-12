@@ -399,6 +399,10 @@ public:
       return src;
     llvm_unreachable("NYI");
   }
+
+  mlir::Value createBoolToInt(mlir::Value src, mlir::Type newTy) {
+    return createCast(mlir::cir::CastKind::bool_to_int, src, newTy);
+  }
 };
 
 } // namespace cir
