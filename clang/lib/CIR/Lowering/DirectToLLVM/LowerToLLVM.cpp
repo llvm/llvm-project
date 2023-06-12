@@ -33,8 +33,10 @@
 #include "mlir/IR/BuiltinDialect.h"
 #include "mlir/IR/BuiltinTypes.h"
 #include "mlir/IR/IRMapping.h"
+#include "mlir/IR/Value.h"
 #include "mlir/Pass/Pass.h"
 #include "mlir/Pass/PassManager.h"
+#include "mlir/Support/LLVM.h"
 #include "mlir/Support/LogicalResult.h"
 #include "mlir/Target/LLVMIR/Dialect/Builtin/BuiltinToLLVMIRTranslation.h"
 #include "mlir/Target/LLVMIR/Dialect/LLVMIR/LLVMToLLVMIRTranslation.h"
@@ -835,47 +837,69 @@ public:
   matchAndRewrite(mlir::cir::UnaryOp op, OpAdaptor adaptor,
                   mlir::ConversionPatternRewriter &rewriter) const override {
     mlir::Type type = op.getInput().getType();
-    assert(type.isa<mlir::cir::IntType>() && "operand type not supported yet");
 
     auto llvmInType = adaptor.getInput().getType();
     auto llvmType = getTypeConverter()->convertType(op.getType());
 
-    switch (op.getKind()) {
-    case mlir::cir::UnaryOpKind::Inc: {
-      auto One = rewriter.create<mlir::LLVM::ConstantOp>(
-          op.getLoc(), llvmInType, mlir::IntegerAttr::get(llvmInType, 1));
-      rewriter.replaceOpWithNewOp<mlir::LLVM::AddOp>(op, llvmType,
-                                                     adaptor.getInput(), One);
-      break;
-    }
-    case mlir::cir::UnaryOpKind::Dec: {
-      auto One = rewriter.create<mlir::LLVM::ConstantOp>(
-          op.getLoc(), llvmInType, mlir::IntegerAttr::get(llvmInType, 1));
-      rewriter.replaceOpWithNewOp<mlir::LLVM::SubOp>(op, llvmType,
-                                                     adaptor.getInput(), One);
-      break;
-    }
-    case mlir::cir::UnaryOpKind::Plus: {
-      rewriter.replaceOp(op, adaptor.getInput());
-      break;
-    }
-    case mlir::cir::UnaryOpKind::Minus: {
-      auto Zero = rewriter.create<mlir::LLVM::ConstantOp>(
-          op.getLoc(), llvmInType, mlir::IntegerAttr::get(llvmInType, 0));
-      rewriter.replaceOpWithNewOp<mlir::LLVM::SubOp>(op, llvmType, Zero,
-                                                     adaptor.getInput());
-      break;
-    }
-    case mlir::cir::UnaryOpKind::Not: {
-      auto MinusOne = rewriter.create<mlir::LLVM::ConstantOp>(
-          op.getLoc(), llvmType, mlir::IntegerAttr::get(llvmType, -1));
-      rewriter.replaceOpWithNewOp<mlir::LLVM::XOrOp>(op, llvmType, MinusOne,
-                                                     adaptor.getInput());
-      break;
-    }
+    // Integer unary operations.
+    if (type.isa<mlir::cir::IntType>()) {
+      switch (op.getKind()) {
+      case mlir::cir::UnaryOpKind::Inc: {
+        auto One = rewriter.create<mlir::LLVM::ConstantOp>(
+            op.getLoc(), llvmInType, mlir::IntegerAttr::get(llvmInType, 1));
+        rewriter.replaceOpWithNewOp<mlir::LLVM::AddOp>(op, llvmType,
+                                                       adaptor.getInput(), One);
+        return mlir::success();
+      }
+      case mlir::cir::UnaryOpKind::Dec: {
+        auto One = rewriter.create<mlir::LLVM::ConstantOp>(
+            op.getLoc(), llvmInType, mlir::IntegerAttr::get(llvmInType, 1));
+        rewriter.replaceOpWithNewOp<mlir::LLVM::SubOp>(op, llvmType,
+                                                       adaptor.getInput(), One);
+        return mlir::success();
+      }
+      case mlir::cir::UnaryOpKind::Plus: {
+        rewriter.replaceOp(op, adaptor.getInput());
+        return mlir::success();
+      }
+      case mlir::cir::UnaryOpKind::Minus: {
+        auto Zero = rewriter.create<mlir::LLVM::ConstantOp>(
+            op.getLoc(), llvmInType, mlir::IntegerAttr::get(llvmInType, 0));
+        rewriter.replaceOpWithNewOp<mlir::LLVM::SubOp>(op, llvmType, Zero,
+                                                       adaptor.getInput());
+        return mlir::success();
+      }
+      case mlir::cir::UnaryOpKind::Not: {
+        auto MinusOne = rewriter.create<mlir::LLVM::ConstantOp>(
+            op.getLoc(), llvmType, mlir::IntegerAttr::get(llvmType, -1));
+        rewriter.replaceOpWithNewOp<mlir::LLVM::XOrOp>(op, llvmType, MinusOne,
+                                                       adaptor.getInput());
+        return mlir::success();
+      }
+      }
     }
 
-    return mlir::LogicalResult::success();
+    // Floating point unary operations.
+    if (type.isa<mlir::FloatType>()) {
+      switch (op.getKind()) {
+      case mlir::cir::UnaryOpKind::Plus:
+        rewriter.replaceOp(op, adaptor.getInput());
+        return mlir::success();
+      case mlir::cir::UnaryOpKind::Minus: {
+        auto negOneAttr = mlir::FloatAttr::get(llvmInType, -1.0);
+        auto negOneConst = rewriter.create<mlir::LLVM::ConstantOp>(
+            op.getLoc(), llvmInType, negOneAttr);
+        rewriter.replaceOpWithNewOp<mlir::LLVM::FMulOp>(
+            op, llvmType, negOneConst, adaptor.getInput());
+        return mlir::success();
+      }
+      default:
+        op.emitError() << "Floating point unary lowering ot implemented";
+        return mlir::failure();
+      }
+    }
+
+    return op.emitError() << "Unary operation has unsupported type: " << type;
   }
 };
 

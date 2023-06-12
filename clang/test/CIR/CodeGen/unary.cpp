@@ -152,3 +152,15 @@ int *inc_p(int *i) {
 // CHECK:   %[[#i_inc:]] = cir.load %0 : cir.ptr <!cir.ptr<!s32i>>, !cir.ptr<!s32i>
 // CHECK:   %[[#inc_const:]] = cir.const(#cir.int<1> : !s32i) : !s32i
 // CHECK:   = cir.ptr_stride(%[[#i_inc]] : !cir.ptr<!s32i>, %[[#inc_const]] : !s32i), !cir.ptr<!s32i>
+
+void floats(float f) {
+// CHECK: cir.func @{{.+}}floats{{.+}}
+  +f; // CHECK: %{{[0-9]+}} = cir.unary(plus, %{{[0-9]+}}) : f32, f32
+  -f; // CHECK: %{{[0-9]+}} = cir.unary(minus, %{{[0-9]+}}) : f32, f32
+}
+
+void doubles(double d) {
+// CHECK: cir.func @{{.+}}doubles{{.+}}
+  +d; // CHECK: %{{[0-9]+}} = cir.unary(plus, %{{[0-9]+}}) : f64, f64
+  -d; // CHECK: %{{[0-9]+}} = cir.unary(minus, %{{[0-9]+}}) : f64, f64
+}
