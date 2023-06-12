@@ -56,7 +56,7 @@ def ACCC_Capture : Clause<"capture"> {
 
 // 2.9.1
 def ACCC_Collapse : Clause<"collapse"> {
-  let flangClass = "ScalarIntConstantExpr";
+  let flangClass = "AccCollapseArg";
 }
 
 // 2.7.6

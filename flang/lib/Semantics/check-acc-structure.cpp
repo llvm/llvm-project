@@ -307,8 +307,6 @@ void AccStructureChecker::Leave(const parser::OpenACCCacheConstruct &x) {
 }
 
 // Clause checkers
-CHECK_REQ_SCALAR_INT_CONSTANT_CLAUSE(Collapse, ACCC_collapse)
-
 CHECK_SIMPLE_CLAUSE(Auto, ACCC_auto)
 CHECK_SIMPLE_CLAUSE(Async, ACCC_async)
 CHECK_SIMPLE_CLAUSE(Attach, ACCC_attach)
@@ -430,6 +428,15 @@ void AccStructureChecker::Enter(const parser::AccClause::Self &x) {
           ContextDirectiveAsFortran());
     }
   }
+}
+
+void AccStructureChecker::Enter(const parser::AccClause::Collapse &x) {
+  CheckAllowed(llvm::acc::Clause::ACCC_collapse);
+  const parser::AccCollapseArg &accCollapseArg = x.v;
+  const auto &collapseValue{
+      std::get<parser::ScalarIntConstantExpr>(accCollapseArg.t)};
+  RequiresConstantPositiveParameter(
+      llvm::acc::Clause::ACCC_collapse, collapseValue);
 }
 
 llvm::StringRef AccStructureChecker::getClauseName(llvm::acc::Clause clause) {

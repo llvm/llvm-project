@@ -4097,6 +4097,11 @@ struct AccGangArgument {
   std::tuple<std::optional<ScalarIntExpr>, std::optional<AccSizeExpr>> t;
 };
 
+struct AccCollapseArg {
+  TUPLE_CLASS_BOILERPLATE(AccCollapseArg);
+  std::tuple<bool, ScalarIntConstantExpr> t;
+};
+
 struct AccClause {
   UNION_CLASS_BOILERPLATE(AccClause);
 
