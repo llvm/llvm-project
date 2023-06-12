@@ -102,6 +102,7 @@ set(TARGET_LIBC_ENTRYPOINTS
     libc.src.stdlib.llabs
     libc.src.stdlib.lldiv
     libc.src.stdlib.qsort
+    libc.src.stdlib.qsort_r
     libc.src.stdlib.rand
     libc.src.stdlib.srand
     libc.src.stdlib.strtod
