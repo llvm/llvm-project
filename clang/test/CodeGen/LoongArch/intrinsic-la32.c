@@ -62,8 +62,8 @@ unsigned int csrrd_w() {
 
 // LA32-LABEL: @csrwr_w(
 // LA32-NEXT:  entry:
-// LA32-NEXT:    [[TMP0:%.*]] = tail call i32 @llvm.loongarch.csrwr.w(i32 [[A:%.*]], i32 1)
-// LA32-NEXT:    [[TMP1:%.*]] = tail call i32 @llvm.loongarch.csrwr.w(i32 [[A]], i32 1)
+// LA32-NEXT:    [[TMP0:%.*]] = tail call i32 @llvm.loongarch.csrwr.w(i32 noundef [[A:%.*]], i32 1)
+// LA32-NEXT:    [[TMP1:%.*]] = tail call i32 @llvm.loongarch.csrwr.w(i32 noundef [[A]], i32 1)
 // LA32-NEXT:    ret i32 0
 //
 unsigned int csrwr_w(unsigned int a) {
@@ -74,8 +74,8 @@ unsigned int csrwr_w(unsigned int a) {
 
 // LA32-LABEL: @csrxchg_w(
 // LA32-NEXT:  entry:
-// LA32-NEXT:    [[TMP0:%.*]] = tail call i32 @llvm.loongarch.csrxchg.w(i32 [[A:%.*]], i32 [[B:%.*]], i32 1)
-// LA32-NEXT:    [[TMP1:%.*]] = tail call i32 @llvm.loongarch.csrxchg.w(i32 [[A]], i32 [[B]], i32 1)
+// LA32-NEXT:    [[TMP0:%.*]] = tail call i32 @llvm.loongarch.csrxchg.w(i32 noundef [[A:%.*]], i32 noundef [[B:%.*]], i32 1)
+// LA32-NEXT:    [[TMP1:%.*]] = tail call i32 @llvm.loongarch.csrxchg.w(i32 noundef [[A]], i32 noundef [[B]], i32 1)
 // LA32-NEXT:    ret i32 0
 //
 unsigned int csrxchg_w(unsigned int a, unsigned int b) {
@@ -86,8 +86,8 @@ unsigned int csrxchg_w(unsigned int a, unsigned int b) {
 
 // LA32-LABEL: @iocsrrd_b(
 // LA32-NEXT:  entry:
-// LA32-NEXT:    [[TMP0:%.*]] = tail call i32 @llvm.loongarch.iocsrrd.b(i32 [[A:%.*]])
-// LA32-NEXT:    [[TMP1:%.*]] = tail call i32 @llvm.loongarch.iocsrrd.b(i32 [[A]])
+// LA32-NEXT:    [[TMP0:%.*]] = tail call i32 @llvm.loongarch.iocsrrd.b(i32 noundef [[A:%.*]])
+// LA32-NEXT:    [[TMP1:%.*]] = tail call i32 @llvm.loongarch.iocsrrd.b(i32 noundef [[A]])
 // LA32-NEXT:    ret i8 0
 //
 unsigned char iocsrrd_b(unsigned int a) {
@@ -98,8 +98,8 @@ unsigned char iocsrrd_b(unsigned int a) {
 
 // LA32-LABEL: @iocsrrd_h(
 // LA32-NEXT:  entry:
-// LA32-NEXT:    [[TMP0:%.*]] = tail call i32 @llvm.loongarch.iocsrrd.h(i32 [[A:%.*]])
-// LA32-NEXT:    [[TMP1:%.*]] = tail call i32 @llvm.loongarch.iocsrrd.h(i32 [[A]])
+// LA32-NEXT:    [[TMP0:%.*]] = tail call i32 @llvm.loongarch.iocsrrd.h(i32 noundef [[A:%.*]])
+// LA32-NEXT:    [[TMP1:%.*]] = tail call i32 @llvm.loongarch.iocsrrd.h(i32 noundef [[A]])
 // LA32-NEXT:    ret i16 0
 //
 unsigned short iocsrrd_h(unsigned int a) {
@@ -110,8 +110,8 @@ unsigned short iocsrrd_h(unsigned int a) {
 
 // LA32-LABEL: @iocsrrd_w(
 // LA32-NEXT:  entry:
-// LA32-NEXT:    [[TMP0:%.*]] = tail call i32 @llvm.loongarch.iocsrrd.w(i32 [[A:%.*]])
-// LA32-NEXT:    [[TMP1:%.*]] = tail call i32 @llvm.loongarch.iocsrrd.w(i32 [[A]])
+// LA32-NEXT:    [[TMP0:%.*]] = tail call i32 @llvm.loongarch.iocsrrd.w(i32 noundef [[A:%.*]])
+// LA32-NEXT:    [[TMP1:%.*]] = tail call i32 @llvm.loongarch.iocsrrd.w(i32 noundef [[A]])
 // LA32-NEXT:    ret i32 0
 //
 unsigned int iocsrrd_w(unsigned int a) {
@@ -123,8 +123,8 @@ unsigned int iocsrrd_w(unsigned int a) {
 // LA32-LABEL: @iocsrwr_b(
 // LA32-NEXT:  entry:
 // LA32-NEXT:    [[CONV_I:%.*]] = zext i8 [[A:%.*]] to i32
-// LA32-NEXT:    tail call void @llvm.loongarch.iocsrwr.b(i32 [[CONV_I]], i32 [[B:%.*]])
-// LA32-NEXT:    tail call void @llvm.loongarch.iocsrwr.b(i32 [[CONV_I]], i32 [[B]])
+// LA32-NEXT:    tail call void @llvm.loongarch.iocsrwr.b(i32 [[CONV_I]], i32 noundef [[B:%.*]])
+// LA32-NEXT:    tail call void @llvm.loongarch.iocsrwr.b(i32 [[CONV_I]], i32 noundef [[B]])
 // LA32-NEXT:    ret void
 //
 void iocsrwr_b(unsigned char a, unsigned int b) {
@@ -135,8 +135,8 @@ void iocsrwr_b(unsigned char a, unsigned int b) {
 // LA32-LABEL: @iocsrwr_h(
 // LA32-NEXT:  entry:
 // LA32-NEXT:    [[CONV_I:%.*]] = zext i16 [[A:%.*]] to i32
-// LA32-NEXT:    tail call void @llvm.loongarch.iocsrwr.h(i32 [[CONV_I]], i32 [[B:%.*]])
-// LA32-NEXT:    tail call void @llvm.loongarch.iocsrwr.h(i32 [[CONV_I]], i32 [[B]])
+// LA32-NEXT:    tail call void @llvm.loongarch.iocsrwr.h(i32 [[CONV_I]], i32 noundef [[B:%.*]])
+// LA32-NEXT:    tail call void @llvm.loongarch.iocsrwr.h(i32 [[CONV_I]], i32 noundef [[B]])
 // LA32-NEXT:    ret void
 //
 void iocsrwr_h(unsigned short a, unsigned int b) {
@@ -146,8 +146,8 @@ void iocsrwr_h(unsigned short a, unsigned int b) {
 
 // LA32-LABEL: @iocsrwr_w(
 // LA32-NEXT:  entry:
-// LA32-NEXT:    tail call void @llvm.loongarch.iocsrwr.w(i32 [[A:%.*]], i32 [[B:%.*]])
-// LA32-NEXT:    tail call void @llvm.loongarch.iocsrwr.w(i32 [[A]], i32 [[B]])
+// LA32-NEXT:    tail call void @llvm.loongarch.iocsrwr.w(i32 noundef [[A:%.*]], i32 noundef [[B:%.*]])
+// LA32-NEXT:    tail call void @llvm.loongarch.iocsrwr.w(i32 noundef [[A]], i32 noundef [[B]])
 // LA32-NEXT:    ret void
 //
 void iocsrwr_w(unsigned int a, unsigned int b) {
@@ -157,8 +157,8 @@ void iocsrwr_w(unsigned int a, unsigned int b) {
 
 // LA32-LABEL: @cpucfg(
 // LA32-NEXT:  entry:
-// LA32-NEXT:    [[TMP0:%.*]] = tail call i32 @llvm.loongarch.cpucfg(i32 [[A:%.*]])
-// LA32-NEXT:    [[TMP1:%.*]] = tail call i32 @llvm.loongarch.cpucfg(i32 [[A]])
+// LA32-NEXT:    [[TMP0:%.*]] = tail call i32 @llvm.loongarch.cpucfg(i32 noundef [[A:%.*]])
+// LA32-NEXT:    [[TMP1:%.*]] = tail call i32 @llvm.loongarch.cpucfg(i32 noundef [[A]])
 // LA32-NEXT:    ret i32 0
 //
 unsigned int cpucfg(unsigned int a) {
@@ -192,8 +192,8 @@ int loongarch_movfcsr2gr() {
 
 // LA32-LABEL: @loongarch_movgr2fcsr(
 // LA32-NEXT:  entry:
-// LA32-NEXT:    tail call void @llvm.loongarch.movgr2fcsr(i32 1, i32 [[A:%.*]])
-// LA32-NEXT:    tail call void @llvm.loongarch.movgr2fcsr(i32 1, i32 [[A]])
+// LA32-NEXT:    tail call void @llvm.loongarch.movgr2fcsr(i32 1, i32 noundef [[A:%.*]])
+// LA32-NEXT:    tail call void @llvm.loongarch.movgr2fcsr(i32 1, i32 noundef [[A]])
 // LA32-NEXT:    ret void
 //
 void loongarch_movgr2fcsr(int a) {
@@ -206,6 +206,11 @@ void loongarch_movgr2fcsr(int a) {
 // CHECK-NEXT:    tail call void @llvm.loongarch.cacop.w(i32 1, i32 [[A:%.*]], i32 1024)
 // CHECK-NEXT:    tail call void @llvm.loongarch.cacop.w(i32 1, i32 [[A]], i32 1024)
 // CHECK-NEXT:    ret void
+// LA32-LABEL: @cacop_w(
+// LA32-NEXT:  entry:
+// LA32-NEXT:    tail call void @llvm.loongarch.cacop.w(i32 1, i32 noundef [[A:%.*]], i32 1024)
+// LA32-NEXT:    tail call void @llvm.loongarch.cacop.w(i32 1, i32 noundef [[A]], i32 1024)
+// LA32-NEXT:    ret void
 //
 void cacop_w(unsigned long int a) {
   __cacop_w(1, a, 1024);

@@ -59,12 +59,12 @@ void test_K(void) {
 
 void test_ZB(int *p) {
 // CHECK-LABEL: define{{.*}} void @test_ZB(ptr noundef %p)
-// CHECK: call void asm sideeffect "", "*^ZB"(ptr elementtype(i32) %p)
+// CHECK: call void asm sideeffect "", "*^ZB"(ptr noundef elementtype(i32) %p)
   asm volatile ("" :: "ZB"(*p));
 }
 
 void test_ZC(int *p) {
 // CHECK-LABEL: define{{.*}} void @test_ZC(ptr noundef %p)
-// CHECK: call void asm sideeffect "", "*^ZC"(ptr elementtype(i32) %p)
+// CHECK: call void asm sideeffect "", "*^ZC"(ptr noundef elementtype(i32) %p)
   asm volatile ("" :: "ZC"(*p));
 }

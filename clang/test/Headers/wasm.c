@@ -1519,7 +1519,7 @@ bool test_v128_any_true(v128_t a) {
 
 // CHECK-LABEL: @test_v128_bitselect(
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[TMP0:%.*]] = tail call <4 x i32> @llvm.wasm.bitselect.v4i32(<4 x i32> [[A:%.*]], <4 x i32> [[B:%.*]], <4 x i32> [[MASK:%.*]])
+// CHECK-NEXT:    [[TMP0:%.*]] = tail call <4 x i32> @llvm.wasm.bitselect.v4i32(<4 x i32> noundef [[A:%.*]], <4 x i32> noundef [[B:%.*]], <4 x i32> noundef [[MASK:%.*]])
 // CHECK-NEXT:    ret <4 x i32> [[TMP0]]
 //
 v128_t test_v128_bitselect(v128_t a, v128_t b, v128_t mask) {
@@ -1529,7 +1529,7 @@ v128_t test_v128_bitselect(v128_t a, v128_t b, v128_t mask) {
 // CHECK-LABEL: @test_i8x16_abs(
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    [[TMP0:%.*]] = bitcast <4 x i32> [[A:%.*]] to <16 x i8>
-// CHECK-NEXT:    [[ABS_I:%.*]] = tail call <16 x i8> @llvm.abs.v16i8(<16 x i8> [[TMP0]], i1 false)
+// CHECK-NEXT:    [[ABS_I:%.*]] = tail call <16 x i8> @llvm.abs.v16i8(<16 x i8> [[TMP0]], i1 false) #[[ATTR6:[0-9]+]]
 // CHECK-NEXT:    [[TMP1:%.*]] = bitcast <16 x i8> [[ABS_I]] to <4 x i32>
 // CHECK-NEXT:    ret <4 x i32> [[TMP1]]
 //
@@ -1572,7 +1572,7 @@ uint32_t test_i8x16_bitmask(v128_t a) {
 // CHECK-LABEL: @test_i8x16_popcnt(
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    [[TMP0:%.*]] = bitcast <4 x i32> [[A:%.*]] to <16 x i8>
-// CHECK-NEXT:    [[TMP1:%.*]] = tail call <16 x i8> @llvm.ctpop.v16i8(<16 x i8> [[TMP0]])
+// CHECK-NEXT:    [[TMP1:%.*]] = tail call <16 x i8> @llvm.ctpop.v16i8(<16 x i8> [[TMP0]]), !range [[RNG5:![0-9]+]]
 // CHECK-NEXT:    [[TMP2:%.*]] = bitcast <16 x i8> [[TMP1]] to <4 x i32>
 // CHECK-NEXT:    ret <4 x i32> [[TMP2]]
 //
@@ -1701,7 +1701,7 @@ v128_t test_u8x16_sub_sat(v128_t a, v128_t b) {
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    [[TMP0:%.*]] = bitcast <4 x i32> [[A:%.*]] to <16 x i8>
 // CHECK-NEXT:    [[TMP1:%.*]] = bitcast <4 x i32> [[B:%.*]] to <16 x i8>
-// CHECK-NEXT:    [[TMP2:%.*]] = tail call <16 x i8> @llvm.smin.v16i8(<16 x i8> [[TMP0]], <16 x i8> [[TMP1]])
+// CHECK-NEXT:    [[TMP2:%.*]] = tail call <16 x i8> @llvm.smin.v16i8(<16 x i8> [[TMP0]], <16 x i8> [[TMP1]]) #[[ATTR6]]
 // CHECK-NEXT:    [[TMP3:%.*]] = bitcast <16 x i8> [[TMP2]] to <4 x i32>
 // CHECK-NEXT:    ret <4 x i32> [[TMP3]]
 //
@@ -1713,7 +1713,7 @@ v128_t test_i8x16_min(v128_t a, v128_t b) {
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    [[TMP0:%.*]] = bitcast <4 x i32> [[A:%.*]] to <16 x i8>
 // CHECK-NEXT:    [[TMP1:%.*]] = bitcast <4 x i32> [[B:%.*]] to <16 x i8>
-// CHECK-NEXT:    [[TMP2:%.*]] = tail call <16 x i8> @llvm.umin.v16i8(<16 x i8> [[TMP0]], <16 x i8> [[TMP1]])
+// CHECK-NEXT:    [[TMP2:%.*]] = tail call <16 x i8> @llvm.umin.v16i8(<16 x i8> [[TMP0]], <16 x i8> [[TMP1]]) #[[ATTR6]]
 // CHECK-NEXT:    [[TMP3:%.*]] = bitcast <16 x i8> [[TMP2]] to <4 x i32>
 // CHECK-NEXT:    ret <4 x i32> [[TMP3]]
 //
@@ -1725,7 +1725,7 @@ v128_t test_u8x16_min(v128_t a, v128_t b) {
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    [[TMP0:%.*]] = bitcast <4 x i32> [[A:%.*]] to <16 x i8>
 // CHECK-NEXT:    [[TMP1:%.*]] = bitcast <4 x i32> [[B:%.*]] to <16 x i8>
-// CHECK-NEXT:    [[TMP2:%.*]] = tail call <16 x i8> @llvm.smax.v16i8(<16 x i8> [[TMP0]], <16 x i8> [[TMP1]])
+// CHECK-NEXT:    [[TMP2:%.*]] = tail call <16 x i8> @llvm.smax.v16i8(<16 x i8> [[TMP0]], <16 x i8> [[TMP1]]) #[[ATTR6]]
 // CHECK-NEXT:    [[TMP3:%.*]] = bitcast <16 x i8> [[TMP2]] to <4 x i32>
 // CHECK-NEXT:    ret <4 x i32> [[TMP3]]
 //
@@ -1737,7 +1737,7 @@ v128_t test_i8x16_max(v128_t a, v128_t b) {
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    [[TMP0:%.*]] = bitcast <4 x i32> [[A:%.*]] to <16 x i8>
 // CHECK-NEXT:    [[TMP1:%.*]] = bitcast <4 x i32> [[B:%.*]] to <16 x i8>
-// CHECK-NEXT:    [[TMP2:%.*]] = tail call <16 x i8> @llvm.umax.v16i8(<16 x i8> [[TMP0]], <16 x i8> [[TMP1]])
+// CHECK-NEXT:    [[TMP2:%.*]] = tail call <16 x i8> @llvm.umax.v16i8(<16 x i8> [[TMP0]], <16 x i8> [[TMP1]]) #[[ATTR6]]
 // CHECK-NEXT:    [[TMP3:%.*]] = bitcast <16 x i8> [[TMP2]] to <4 x i32>
 // CHECK-NEXT:    ret <4 x i32> [[TMP3]]
 //
@@ -1760,7 +1760,7 @@ v128_t test_u8x16_avgr(v128_t a, v128_t b) {
 // CHECK-LABEL: @test_i16x8_abs(
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    [[TMP0:%.*]] = bitcast <4 x i32> [[A:%.*]] to <8 x i16>
-// CHECK-NEXT:    [[ABS_I:%.*]] = tail call <8 x i16> @llvm.abs.v8i16(<8 x i16> [[TMP0]], i1 false)
+// CHECK-NEXT:    [[ABS_I:%.*]] = tail call <8 x i16> @llvm.abs.v8i16(<8 x i16> [[TMP0]], i1 false) #[[ATTR6]]
 // CHECK-NEXT:    [[TMP1:%.*]] = bitcast <8 x i16> [[ABS_I]] to <4 x i32>
 // CHECK-NEXT:    ret <4 x i32> [[TMP1]]
 //
@@ -1933,7 +1933,7 @@ v128_t test_i16x8_mul(v128_t a, v128_t b) {
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    [[TMP0:%.*]] = bitcast <4 x i32> [[A:%.*]] to <8 x i16>
 // CHECK-NEXT:    [[TMP1:%.*]] = bitcast <4 x i32> [[B:%.*]] to <8 x i16>
-// CHECK-NEXT:    [[TMP2:%.*]] = tail call <8 x i16> @llvm.smin.v8i16(<8 x i16> [[TMP0]], <8 x i16> [[TMP1]])
+// CHECK-NEXT:    [[TMP2:%.*]] = tail call <8 x i16> @llvm.smin.v8i16(<8 x i16> [[TMP0]], <8 x i16> [[TMP1]]) #[[ATTR6]]
 // CHECK-NEXT:    [[TMP3:%.*]] = bitcast <8 x i16> [[TMP2]] to <4 x i32>
 // CHECK-NEXT:    ret <4 x i32> [[TMP3]]
 //
@@ -1945,7 +1945,7 @@ v128_t test_i16x8_min(v128_t a, v128_t b) {
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    [[TMP0:%.*]] = bitcast <4 x i32> [[A:%.*]] to <8 x i16>
 // CHECK-NEXT:    [[TMP1:%.*]] = bitcast <4 x i32> [[B:%.*]] to <8 x i16>
-// CHECK-NEXT:    [[TMP2:%.*]] = tail call <8 x i16> @llvm.umin.v8i16(<8 x i16> [[TMP0]], <8 x i16> [[TMP1]])
+// CHECK-NEXT:    [[TMP2:%.*]] = tail call <8 x i16> @llvm.umin.v8i16(<8 x i16> [[TMP0]], <8 x i16> [[TMP1]]) #[[ATTR6]]
 // CHECK-NEXT:    [[TMP3:%.*]] = bitcast <8 x i16> [[TMP2]] to <4 x i32>
 // CHECK-NEXT:    ret <4 x i32> [[TMP3]]
 //
@@ -1957,7 +1957,7 @@ v128_t test_u16x8_min(v128_t a, v128_t b) {
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    [[TMP0:%.*]] = bitcast <4 x i32> [[A:%.*]] to <8 x i16>
 // CHECK-NEXT:    [[TMP1:%.*]] = bitcast <4 x i32> [[B:%.*]] to <8 x i16>
-// CHECK-NEXT:    [[TMP2:%.*]] = tail call <8 x i16> @llvm.smax.v8i16(<8 x i16> [[TMP0]], <8 x i16> [[TMP1]])
+// CHECK-NEXT:    [[TMP2:%.*]] = tail call <8 x i16> @llvm.smax.v8i16(<8 x i16> [[TMP0]], <8 x i16> [[TMP1]]) #[[ATTR6]]
 // CHECK-NEXT:    [[TMP3:%.*]] = bitcast <8 x i16> [[TMP2]] to <4 x i32>
 // CHECK-NEXT:    ret <4 x i32> [[TMP3]]
 //
@@ -1969,7 +1969,7 @@ v128_t test_i16x8_max(v128_t a, v128_t b) {
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    [[TMP0:%.*]] = bitcast <4 x i32> [[A:%.*]] to <8 x i16>
 // CHECK-NEXT:    [[TMP1:%.*]] = bitcast <4 x i32> [[B:%.*]] to <8 x i16>
-// CHECK-NEXT:    [[TMP2:%.*]] = tail call <8 x i16> @llvm.umax.v8i16(<8 x i16> [[TMP0]], <8 x i16> [[TMP1]])
+// CHECK-NEXT:    [[TMP2:%.*]] = tail call <8 x i16> @llvm.umax.v8i16(<8 x i16> [[TMP0]], <8 x i16> [[TMP1]]) #[[ATTR6]]
 // CHECK-NEXT:    [[TMP3:%.*]] = bitcast <8 x i16> [[TMP2]] to <4 x i32>
 // CHECK-NEXT:    ret <4 x i32> [[TMP3]]
 //
@@ -1991,7 +1991,7 @@ v128_t test_u16x8_avgr(v128_t a, v128_t b) {
 
 // CHECK-LABEL: @test_i32x4_abs(
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[ABS_I:%.*]] = tail call <4 x i32> @llvm.abs.v4i32(<4 x i32> [[A:%.*]], i1 false)
+// CHECK-NEXT:    [[ABS_I:%.*]] = tail call <4 x i32> @llvm.abs.v4i32(<4 x i32> noundef [[A:%.*]], i1 false) #[[ATTR6]]
 // CHECK-NEXT:    ret <4 x i32> [[ABS_I]]
 //
 v128_t test_i32x4_abs(v128_t a) {
@@ -2009,7 +2009,7 @@ v128_t test_i32x4_neg(v128_t a) {
 
 // CHECK-LABEL: @test_i32x4_all_true(
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[TMP0:%.*]] = tail call i32 @llvm.wasm.alltrue.v4i32(<4 x i32> [[A:%.*]])
+// CHECK-NEXT:    [[TMP0:%.*]] = tail call i32 @llvm.wasm.alltrue.v4i32(<4 x i32> noundef [[A:%.*]])
 // CHECK-NEXT:    [[TOBOOL_I:%.*]] = icmp ne i32 [[TMP0]], 0
 // CHECK-NEXT:    ret i1 [[TOBOOL_I]]
 //
@@ -2019,7 +2019,7 @@ bool test_i32x4_all_true(v128_t a) {
 
 // CHECK-LABEL: @test_i32x4_bitmask(
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[TMP0:%.*]] = tail call i32 @llvm.wasm.bitmask.v4i32(<4 x i32> [[A:%.*]])
+// CHECK-NEXT:    [[TMP0:%.*]] = tail call i32 @llvm.wasm.bitmask.v4i32(<4 x i32> noundef [[A:%.*]])
 // CHECK-NEXT:    ret i32 [[TMP0]]
 //
 uint32_t test_i32x4_bitmask(v128_t a) {
@@ -2028,8 +2028,8 @@ uint32_t test_i32x4_bitmask(v128_t a) {
 
 // CHECK-LABEL: @test_i32x4_shl(
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[REM_I:%.*]] = and i32 [[B:%.*]], 31
-// CHECK-NEXT:    [[SPLAT_SPLATINSERT_I:%.*]] = insertelement <4 x i32> poison, i32 [[REM_I]], i64 0
+// CHECK-NEXT:    [[AND_I:%.*]] = and i32 [[B:%.*]], 31
+// CHECK-NEXT:    [[SPLAT_SPLATINSERT_I:%.*]] = insertelement <4 x i32> poison, i32 [[AND_I]], i64 0
 // CHECK-NEXT:    [[SPLAT_SPLAT_I:%.*]] = shufflevector <4 x i32> [[SPLAT_SPLATINSERT_I]], <4 x i32> poison, <4 x i32> zeroinitializer
 // CHECK-NEXT:    [[SHL_I:%.*]] = shl <4 x i32> [[A:%.*]], [[SPLAT_SPLAT_I]]
 // CHECK-NEXT:    ret <4 x i32> [[SHL_I]]
@@ -2040,8 +2040,8 @@ v128_t test_i32x4_shl(v128_t a, uint32_t b) {
 
 // CHECK-LABEL: @test_i32x4_shr(
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[REM_I:%.*]] = and i32 [[B:%.*]], 31
-// CHECK-NEXT:    [[SPLAT_SPLATINSERT_I:%.*]] = insertelement <4 x i32> poison, i32 [[REM_I]], i64 0
+// CHECK-NEXT:    [[AND_I:%.*]] = and i32 [[B:%.*]], 31
+// CHECK-NEXT:    [[SPLAT_SPLATINSERT_I:%.*]] = insertelement <4 x i32> poison, i32 [[AND_I]], i64 0
 // CHECK-NEXT:    [[SPLAT_SPLAT_I:%.*]] = shufflevector <4 x i32> [[SPLAT_SPLATINSERT_I]], <4 x i32> poison, <4 x i32> zeroinitializer
 // CHECK-NEXT:    [[SHR_I:%.*]] = ashr <4 x i32> [[A:%.*]], [[SPLAT_SPLAT_I]]
 // CHECK-NEXT:    ret <4 x i32> [[SHR_I]]
@@ -2052,8 +2052,8 @@ v128_t test_i32x4_shr(v128_t a, uint32_t b) {
 
 // CHECK-LABEL: @test_u32x4_shr(
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[REM_I:%.*]] = and i32 [[B:%.*]], 31
-// CHECK-NEXT:    [[SPLAT_SPLATINSERT_I:%.*]] = insertelement <4 x i32> poison, i32 [[REM_I]], i64 0
+// CHECK-NEXT:    [[AND_I:%.*]] = and i32 [[B:%.*]], 31
+// CHECK-NEXT:    [[SPLAT_SPLATINSERT_I:%.*]] = insertelement <4 x i32> poison, i32 [[AND_I]], i64 0
 // CHECK-NEXT:    [[SPLAT_SPLAT_I:%.*]] = shufflevector <4 x i32> [[SPLAT_SPLATINSERT_I]], <4 x i32> poison, <4 x i32> zeroinitializer
 // CHECK-NEXT:    [[SHR_I:%.*]] = lshr <4 x i32> [[A:%.*]], [[SPLAT_SPLAT_I]]
 // CHECK-NEXT:    ret <4 x i32> [[SHR_I]]
@@ -2091,7 +2091,7 @@ v128_t test_i32x4_mul(v128_t a, v128_t b) {
 
 // CHECK-LABEL: @test_i32x4_min(
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[TMP0:%.*]] = tail call <4 x i32> @llvm.smin.v4i32(<4 x i32> [[A:%.*]], <4 x i32> [[B:%.*]])
+// CHECK-NEXT:    [[TMP0:%.*]] = tail call <4 x i32> @llvm.smin.v4i32(<4 x i32> noundef [[A:%.*]], <4 x i32> noundef [[B:%.*]]) #[[ATTR6]]
 // CHECK-NEXT:    ret <4 x i32> [[TMP0]]
 //
 v128_t test_i32x4_min(v128_t a, v128_t b) {
@@ -2100,7 +2100,7 @@ v128_t test_i32x4_min(v128_t a, v128_t b) {
 
 // CHECK-LABEL: @test_u32x4_min(
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[TMP0:%.*]] = tail call <4 x i32> @llvm.umin.v4i32(<4 x i32> [[A:%.*]], <4 x i32> [[B:%.*]])
+// CHECK-NEXT:    [[TMP0:%.*]] = tail call <4 x i32> @llvm.umin.v4i32(<4 x i32> noundef [[A:%.*]], <4 x i32> noundef [[B:%.*]]) #[[ATTR6]]
 // CHECK-NEXT:    ret <4 x i32> [[TMP0]]
 //
 v128_t test_u32x4_min(v128_t a, v128_t b) {
@@ -2109,7 +2109,7 @@ v128_t test_u32x4_min(v128_t a, v128_t b) {
 
 // CHECK-LABEL: @test_i32x4_max(
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[TMP0:%.*]] = tail call <4 x i32> @llvm.smax.v4i32(<4 x i32> [[A:%.*]], <4 x i32> [[B:%.*]])
+// CHECK-NEXT:    [[TMP0:%.*]] = tail call <4 x i32> @llvm.smax.v4i32(<4 x i32> noundef [[A:%.*]], <4 x i32> noundef [[B:%.*]]) #[[ATTR6]]
 // CHECK-NEXT:    ret <4 x i32> [[TMP0]]
 //
 v128_t test_i32x4_max(v128_t a, v128_t b) {
@@ -2118,7 +2118,7 @@ v128_t test_i32x4_max(v128_t a, v128_t b) {
 
 // CHECK-LABEL: @test_u32x4_max(
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[TMP0:%.*]] = tail call <4 x i32> @llvm.umax.v4i32(<4 x i32> [[A:%.*]], <4 x i32> [[B:%.*]])
+// CHECK-NEXT:    [[TMP0:%.*]] = tail call <4 x i32> @llvm.umax.v4i32(<4 x i32> noundef [[A:%.*]], <4 x i32> noundef [[B:%.*]]) #[[ATTR6]]
 // CHECK-NEXT:    ret <4 x i32> [[TMP0]]
 //
 v128_t test_u32x4_max(v128_t a, v128_t b) {
@@ -2139,7 +2139,7 @@ v128_t test_i32x4_dot_i16x8(v128_t a, v128_t b) {
 // CHECK-LABEL: @test_i64x2_abs(
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    [[TMP0:%.*]] = bitcast <4 x i32> [[A:%.*]] to <2 x i64>
-// CHECK-NEXT:    [[ABS_I:%.*]] = tail call <2 x i64> @llvm.abs.v2i64(<2 x i64> [[TMP0]], i1 false)
+// CHECK-NEXT:    [[ABS_I:%.*]] = tail call <2 x i64> @llvm.abs.v2i64(<2 x i64> [[TMP0]], i1 false) #[[ATTR6]]
 // CHECK-NEXT:    [[TMP1:%.*]] = bitcast <2 x i64> [[ABS_I]] to <4 x i32>
 // CHECK-NEXT:    ret <4 x i32> [[TMP1]]
 //
@@ -2183,8 +2183,8 @@ uint32_t test_i64x2_bitmask(v128_t a) {
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    [[TMP0:%.*]] = bitcast <4 x i32> [[A:%.*]] to <2 x i64>
 // CHECK-NEXT:    [[TMP1:%.*]] = and i32 [[B:%.*]], 63
-// CHECK-NEXT:    [[REM_I:%.*]] = zext i32 [[TMP1]] to i64
-// CHECK-NEXT:    [[SPLAT_SPLATINSERT_I:%.*]] = insertelement <2 x i64> poison, i64 [[REM_I]], i64 0
+// CHECK-NEXT:    [[AND_I:%.*]] = zext i32 [[TMP1]] to i64
+// CHECK-NEXT:    [[SPLAT_SPLATINSERT_I:%.*]] = insertelement <2 x i64> poison, i64 [[AND_I]], i64 0
 // CHECK-NEXT:    [[SPLAT_SPLAT_I:%.*]] = shufflevector <2 x i64> [[SPLAT_SPLATINSERT_I]], <2 x i64> poison, <2 x i32> zeroinitializer
 // CHECK-NEXT:    [[SHL_I:%.*]] = shl <2 x i64> [[TMP0]], [[SPLAT_SPLAT_I]]
 // CHECK-NEXT:    [[TMP2:%.*]] = bitcast <2 x i64> [[SHL_I]] to <4 x i32>
@@ -2198,8 +2198,8 @@ v128_t test_i64x2_shl(v128_t a, uint32_t b) {
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    [[TMP0:%.*]] = bitcast <4 x i32> [[A:%.*]] to <2 x i64>
 // CHECK-NEXT:    [[TMP1:%.*]] = and i32 [[B:%.*]], 63
-// CHECK-NEXT:    [[REM_I:%.*]] = zext i32 [[TMP1]] to i64
-// CHECK-NEXT:    [[SPLAT_SPLATINSERT_I:%.*]] = insertelement <2 x i64> poison, i64 [[REM_I]], i64 0
+// CHECK-NEXT:    [[AND_I:%.*]] = zext i32 [[TMP1]] to i64
+// CHECK-NEXT:    [[SPLAT_SPLATINSERT_I:%.*]] = insertelement <2 x i64> poison, i64 [[AND_I]], i64 0
 // CHECK-NEXT:    [[SPLAT_SPLAT_I:%.*]] = shufflevector <2 x i64> [[SPLAT_SPLATINSERT_I]], <2 x i64> poison, <2 x i32> zeroinitializer
 // CHECK-NEXT:    [[SHR_I:%.*]] = ashr <2 x i64> [[TMP0]], [[SPLAT_SPLAT_I]]
 // CHECK-NEXT:    [[TMP2:%.*]] = bitcast <2 x i64> [[SHR_I]] to <4 x i32>
@@ -2213,8 +2213,8 @@ v128_t test_i64x2_shr(v128_t a, uint32_t b) {
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    [[TMP0:%.*]] = bitcast <4 x i32> [[A:%.*]] to <2 x i64>
 // CHECK-NEXT:    [[TMP1:%.*]] = and i32 [[B:%.*]], 63
-// CHECK-NEXT:    [[REM_I:%.*]] = zext i32 [[TMP1]] to i64
-// CHECK-NEXT:    [[SPLAT_SPLATINSERT_I:%.*]] = insertelement <2 x i64> poison, i64 [[REM_I]], i64 0
+// CHECK-NEXT:    [[AND_I:%.*]] = zext i32 [[TMP1]] to i64
+// CHECK-NEXT:    [[SPLAT_SPLATINSERT_I:%.*]] = insertelement <2 x i64> poison, i64 [[AND_I]], i64 0
 // CHECK-NEXT:    [[SPLAT_SPLAT_I:%.*]] = shufflevector <2 x i64> [[SPLAT_SPLATINSERT_I]], <2 x i64> poison, <2 x i32> zeroinitializer
 // CHECK-NEXT:    [[SHR_I:%.*]] = lshr <2 x i64> [[TMP0]], [[SPLAT_SPLAT_I]]
 // CHECK-NEXT:    [[TMP2:%.*]] = bitcast <2 x i64> [[SHR_I]] to <4 x i32>
@@ -2800,7 +2800,7 @@ v128_t test_u8x16_narrow_i16x8(v128_t a, v128_t b) {
 
 // CHECK-LABEL: @test_i16x8_narrow_i32x4(
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[TMP0:%.*]] = tail call <8 x i16> @llvm.wasm.narrow.signed.v8i16.v4i32(<4 x i32> [[A:%.*]], <4 x i32> [[B:%.*]])
+// CHECK-NEXT:    [[TMP0:%.*]] = tail call <8 x i16> @llvm.wasm.narrow.signed.v8i16.v4i32(<4 x i32> noundef [[A:%.*]], <4 x i32> noundef [[B:%.*]])
 // CHECK-NEXT:    [[TMP1:%.*]] = bitcast <8 x i16> [[TMP0]] to <4 x i32>
 // CHECK-NEXT:    ret <4 x i32> [[TMP1]]
 //
@@ -2810,7 +2810,7 @@ v128_t test_i16x8_narrow_i32x4(v128_t a, v128_t b) {
 
 // CHECK-LABEL: @test_u16x8_narrow_i32x4(
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[TMP0:%.*]] = tail call <8 x i16> @llvm.wasm.narrow.unsigned.v8i16.v4i32(<4 x i32> [[A:%.*]], <4 x i32> [[B:%.*]])
+// CHECK-NEXT:    [[TMP0:%.*]] = tail call <8 x i16> @llvm.wasm.narrow.unsigned.v8i16.v4i32(<4 x i32> noundef [[A:%.*]], <4 x i32> noundef [[B:%.*]])
 // CHECK-NEXT:    [[TMP1:%.*]] = bitcast <8 x i16> [[TMP0]] to <4 x i32>
 // CHECK-NEXT:    ret <4 x i32> [[TMP1]]
 //

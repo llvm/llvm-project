@@ -45,7 +45,7 @@ define void @test4_2(ptr %p) {
 ; CHECK: Function Attrs: nofree memory(read)
 ; CHECK-LABEL: define {{[^@]+}}@test4_2
 ; CHECK-SAME: (ptr nocapture readonly [[P:%.*]]) #[[ATTR3:[0-9]+]] {
-; CHECK-NEXT:    call void @test4_1(ptr [[P]])
+; CHECK-NEXT:    call void @test4_1(ptr readonly [[P]])
 ; CHECK-NEXT:    ret void
 ;
   call void @test4_1(ptr %p)
@@ -115,7 +115,7 @@ define void @test8_2(ptr %p) {
 ; CHECK-LABEL: define {{[^@]+}}@test8_2
 ; CHECK-SAME: (ptr writeonly [[P:%.*]]) #[[ATTR4]] {
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[CALL:%.*]] = call ptr @test8_1(ptr [[P]])
+; CHECK-NEXT:    [[CALL:%.*]] = call ptr @test8_1(ptr writeonly [[P]])
 ; CHECK-NEXT:    store i32 10, ptr [[CALL]], align 4
 ; CHECK-NEXT:    ret void
 ;

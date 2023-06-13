@@ -357,7 +357,7 @@ define void @parent1(ptr %a, ptr %b, ptr %c) {
 define void @parent2(ptr %a, ptr %b, ptr %c) {
 ; FNATTR-LABEL: @parent2(ptr nonnull %a, ptr nonnull %b, ptr nonnull %c)
 ; FNATTR-NEXT:    call void @use3nonnull(ptr %b, ptr %c, ptr %a)
-; FNATTR-NEXT:    call void @use3(ptr %c, ptr %a, ptr %b)
+; FNATTR-NEXT:    call void @use3(ptr nonnull %c, ptr nonnull %a, ptr nonnull %b)
 
 
 ; FNATTR-NEXT:    ret void
@@ -371,7 +371,7 @@ define void @parent2(ptr %a, ptr %b, ptr %c) {
 define void @parent3(ptr %a, ptr %b, ptr %c) {
 ; FNATTR-LABEL: @parent3(ptr nonnull %a, ptr %b, ptr %c)
 ; FNATTR-NEXT:    call void @use1nonnull(ptr %a)
-; FNATTR-NEXT:    call void @use3(ptr %c, ptr %b, ptr %a)
+; FNATTR-NEXT:    call void @use3(ptr %c, ptr %b, ptr nonnull %a)
 
 
 ; FNATTR-NEXT:  ret void
@@ -437,7 +437,7 @@ define i8 @parent6(ptr %a, ptr %b) {
 
 define i8 @parent7(ptr %a) {
 ; FNATTR-LABEL: @parent7(ptr nonnull %a)
-; FNATTR-NEXT:    [[RET:%.*]] = call i8 @use1safecall(ptr %a)
+; FNATTR-NEXT:    [[RET:%.*]] = call i8 @use1safecall(ptr nonnull %a)
 ; FNATTR-NEXT:    call void @use1nonnull(ptr %a)
 
 
