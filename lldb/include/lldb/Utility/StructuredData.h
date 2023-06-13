@@ -484,6 +484,7 @@ public:
       }
       return success;
     }
+      
     template <class IntType>
     bool GetValueForKeyAsInteger(llvm::StringRef key, IntType &result) const {
       ObjectSP value_sp = GetValueForKey(key);
