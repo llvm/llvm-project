@@ -826,8 +826,10 @@ class SMRDLoadPat<PatFrag Op> : PatFrag <(ops node:$ptr), (Op node:$ptr), [{ ret
 }
 
 def smrd_load : SMRDLoadPat<load>;
+def smrd_extloadi8 : SMRDLoadPat<extloadi8_constant>;
 def smrd_zextloadi8 : SMRDLoadPat<zextloadi8_constant>;
 def smrd_sextloadi8 : SMRDLoadPat<sextloadi8_constant>;
+def smrd_extloadi16 : SMRDLoadPat<extloadi16_constant>;
 def smrd_zextloadi16 : SMRDLoadPat<zextloadi16_constant>;
 def smrd_sextloadi16 : SMRDLoadPat<sextloadi16_constant>;
 
@@ -981,8 +983,10 @@ multiclass ScalarBufferLoadIntrinsicPat <SDPatternOperator name, string Instr> {
 // selector to prefer those.
 let AddedComplexity = 100 in {
 
+defm : ScalarLoadWithExtensionPat <"S_LOAD_U8", smrd_extloadi8, i32>;
 defm : ScalarLoadWithExtensionPat <"S_LOAD_U8", smrd_zextloadi8, i32>;
 defm : ScalarLoadWithExtensionPat <"S_LOAD_I8", smrd_sextloadi8, i32>;
+defm : ScalarLoadWithExtensionPat <"S_LOAD_U16", smrd_extloadi16, i32>;
 defm : ScalarLoadWithExtensionPat <"S_LOAD_U16", smrd_zextloadi16, i32>;
 defm : ScalarLoadWithExtensionPat <"S_LOAD_I16", smrd_sextloadi16, i32>;
 defm : ScalarBufferLoadIntrinsicPat <SIsbuffer_load_byte, "S_BUFFER_LOAD_I8">;
