@@ -87,6 +87,23 @@ extern void setOmptAsyncCopyProfile(bool Enable);
 extern void setGlobalOmptKernelProfile(int DeviceId, int Enable);
 extern uint64_t getSystemTimestampInNs();
 
+/// Search for FuncName inside the ompt_device_callbacks object and assign to
+/// FuncPtr while std::lock_guard Mtx.
+template <typename FT>
+void ensureFuncPtrLoaded(const std::string &FuncName, FT *FuncPtr,
+                         std::mutex &Mtx) {
+  std::lock_guard L(Mtx);
+  if (!(*FuncPtr)) {
+    auto libomptarget_dyn_lib = ompt_device_callbacks.get_parent_dyn_lib();
+    if (libomptarget_dyn_lib == nullptr || !libomptarget_dyn_lib->isValid())
+      return;
+    void *VPtr = libomptarget_dyn_lib->getAddressOfSymbol(FuncName.c_str());
+    if (!VPtr)
+      return;
+    *FuncPtr = reinterpret_cast<FT>(VPtr);
+  }
+}
+
 // Runtime entry-points for device tracing
 
 OMPT_API_ROUTINE ompt_set_result_t ompt_set_trace_ompt(ompt_device_t *device,
@@ -95,24 +112,10 @@ OMPT_API_ROUTINE ompt_set_result_t ompt_set_trace_ompt(ompt_device_t *device,
   DP("Executing ompt_set_trace_ompt\n");
 
   // TODO handle device
-
-  {
-    // protect the function pointer
-    std::unique_lock<std::mutex> lck(set_trace_mutex);
-    // plugin specific
-    ompt_device_callbacks.set_trace_ompt(device, enable, etype);
-    // libomptarget specific
-    if (!ompt_set_trace_ompt_fn) {
-      auto libomptarget_dyn_lib = ompt_device_callbacks.get_parent_dyn_lib();
-      if (libomptarget_dyn_lib != nullptr && libomptarget_dyn_lib->isValid()) {
-        void *vptr = libomptarget_dyn_lib->getAddressOfSymbol(
-            "libomptarget_ompt_set_trace_ompt");
-        assert(vptr && "OMPT set trace ompt entry point not found");
-        ompt_set_trace_ompt_fn =
-            reinterpret_cast<libomptarget_ompt_set_trace_ompt_t>(vptr);
-      }
-    }
-  }
+  ensureFuncPtrLoaded<libomptarget_ompt_set_trace_ompt_t>(
+      "libomptarget_ompt_set_trace_ompt", &ompt_set_trace_ompt_fn,
+      set_trace_mutex);
+  assert(ompt_set_trace_ompt_fn && "libomptarget_ompt_set_trace_ompt loaded");
   return ompt_set_trace_ompt_fn(device, enable, etype);
 }
 
@@ -142,17 +145,10 @@ ompt_start_trace(ompt_device_t *device, ompt_callback_buffer_request_t request,
     }
 
     // libomptarget specific
-    if (!ompt_start_trace_fn) {
-      auto libomptarget_dyn_lib = ompt_device_callbacks.get_parent_dyn_lib();
-      if (libomptarget_dyn_lib != nullptr && libomptarget_dyn_lib->isValid()) {
-        void *vptr = libomptarget_dyn_lib->getAddressOfSymbol(
-            "libomptarget_ompt_start_trace");
-        assert(vptr && "OMPT start trace entry point not found");
-        ompt_start_trace_fn =
-            reinterpret_cast<libomptarget_ompt_start_trace_t>(vptr);
-      }
-    }
   }
+  ensureFuncPtrLoaded<libomptarget_ompt_start_trace_t>(
+      "libomptarget_ompt_start_trace", &ompt_start_trace_fn, start_trace_mutex);
+  assert(ompt_start_trace_fn && "libomptarget_ompt_start_trace loaded");
   return ompt_start_trace_fn(request, complete);
 }
 
@@ -160,21 +156,9 @@ OMPT_API_ROUTINE int ompt_flush_trace(ompt_device_t *device) {
   DP("OMPT: Executing ompt_flush_trace\n");
 
   // TODO handle device
-
-  {
-    // Protect the function pointer
-    std::unique_lock<std::mutex> lck(flush_trace_mutex);
-    if (!ompt_flush_trace_fn) {
-      auto libomptarget_dyn_lib = ompt_device_callbacks.get_parent_dyn_lib();
-      if (libomptarget_dyn_lib != nullptr && libomptarget_dyn_lib->isValid()) {
-        void *vptr = libomptarget_dyn_lib->getAddressOfSymbol(
-            "libomptarget_ompt_flush_trace");
-        assert(vptr && "OMPT flush trace entry point not found");
-        ompt_flush_trace_fn =
-            reinterpret_cast<libomptarget_ompt_flush_trace_t>(vptr);
-      }
-    }
-  }
+  ensureFuncPtrLoaded<libomptarget_ompt_flush_trace_t>(
+      "libomptarget_ompt_flush_trace", &ompt_flush_trace_fn, flush_trace_mutex);
+  assert(ompt_start_trace_fn && "libomptarget_ompt_flush_trace loaded");
   return ompt_flush_trace_fn(device);
 }
 
@@ -190,18 +174,10 @@ OMPT_API_ROUTINE int ompt_stop_trace(ompt_device_t *device) {
     setOmptAsyncCopyProfile(/*Enable=*/false);
     // Disable queue dispatch profiling
     setGlobalOmptKernelProfile(0, /*Enable=*/0);
-
-    if (!ompt_stop_trace_fn) {
-      auto libomptarget_dyn_lib = ompt_device_callbacks.get_parent_dyn_lib();
-      if (libomptarget_dyn_lib != nullptr && libomptarget_dyn_lib->isValid()) {
-        void *vptr = libomptarget_dyn_lib->getAddressOfSymbol(
-            "libomptarget_ompt_stop_trace");
-        assert(vptr && "OMPT stop trace entry point not found");
-        ompt_stop_trace_fn =
-            reinterpret_cast<libomptarget_ompt_stop_trace_t>(vptr);
-      }
-    }
   }
+  ensureFuncPtrLoaded<libomptarget_ompt_stop_trace_t>(
+      "libomptarget_ompt_stop_trace", &ompt_stop_trace_fn, stop_trace_mutex);
+  assert(ompt_stop_trace_fn && "libomptarget_ompt_stop_trace loaded");
   return ompt_stop_trace_fn(device);
 }
 
@@ -228,37 +204,21 @@ ompt_advance_buffer_cursor(ompt_device_t *device, ompt_buffer_t *buffer,
   // function pointer. The actual libomptarget function does not need
   // to be synchronized since it must be working on logically disjoint
   // buffers.
-  {
-    std::unique_lock<std::mutex> lck(advance_buffer_cursor_mutex);
-    if (!ompt_advance_buffer_cursor_fn) {
-      auto libomptarget_dyn_lib = ompt_device_callbacks.get_parent_dyn_lib();
-      if (libomptarget_dyn_lib != nullptr && libomptarget_dyn_lib->isValid()) {
-        void *vptr = libomptarget_dyn_lib->getAddressOfSymbol(
-            "libomptarget_ompt_advance_buffer_cursor");
-        assert(vptr && "OMPT advance buffer cursor entry point not found");
-        ompt_advance_buffer_cursor_fn =
-            reinterpret_cast<libomptarget_ompt_advance_buffer_cursor_t>(vptr);
-      }
-    }
-  }
+  ensureFuncPtrLoaded<libomptarget_ompt_advance_buffer_cursor_t>(
+      "libomptarget_ompt_advance_buffer_cursor", &ompt_advance_buffer_cursor_fn,
+      advance_buffer_cursor_mutex);
+  assert(ompt_advance_buffer_cursor_fn &&
+         "libomptarget_ompt_advance_buffer_cursor loaded");
   return ompt_advance_buffer_cursor_fn(device, buffer, size, current, next);
 }
 
 OMPT_API_ROUTINE ompt_record_t
 ompt_get_record_type(ompt_buffer_t *buffer, ompt_buffer_cursor_t current) {
-  {
-    std::unique_lock<std::mutex> lck(get_record_type_mutex);
-    if (!ompt_get_record_type_fn) {
-      auto libomptarget_dyn_lib = ompt_device_callbacks.get_parent_dyn_lib();
-      if (libomptarget_dyn_lib != nullptr && libomptarget_dyn_lib->isValid()) {
-        void *vptr = libomptarget_dyn_lib->getAddressOfSymbol(
-            "libomptarget_ompt_get_record_type");
-        assert(vptr && "OMPT get record type entry point not found");
-        ompt_get_record_type_fn =
-            reinterpret_cast<libomptarget_ompt_get_record_type_t>(vptr);
-      }
-    }
-  }
+
+  ensureFuncPtrLoaded<libomptarget_ompt_get_record_type_t>(
+      "libomptarget_ompt_get_record_type", &ompt_get_record_type_fn,
+      get_record_type_mutex);
+  assert(ompt_get_record_type_fn && "libomptarget_ompt_get_record_type loaded");
   return ompt_get_record_type_fn(buffer, current);
 }
 
@@ -288,20 +248,9 @@ std::mutex ompt_set_timestamp_mtx;
 
 /// Set timestamps in trace records.
 void setOmptTimestamp(uint64_t StartTime, uint64_t EndTime) {
-  {
-    std::unique_lock<std::mutex> timestamp_fn_lck(ompt_set_timestamp_mtx);
-    if (!ompt_set_timestamp_fn) {
-      auto libomptarget_dyn_lib = ompt_device_callbacks.get_parent_dyn_lib();
-      if (libomptarget_dyn_lib == nullptr || !libomptarget_dyn_lib->isValid())
-        return;
-      void *vptr = libomptarget_dyn_lib->getAddressOfSymbol(
-          "libomptarget_ompt_set_timestamp");
-      if (!vptr)
-        return;
-      ompt_set_timestamp_fn =
-          reinterpret_cast<libomptarget_ompt_set_timestamp_t>(vptr);
-    }
-  }
+  ensureFuncPtrLoaded<libomptarget_ompt_set_timestamp_t>(
+      "libomptarget_ompt_set_timestamp", &ompt_set_timestamp_fn,
+      ompt_set_timestamp_mtx);
   // No need to hold a lock
   ompt_set_timestamp_fn(StartTime, EndTime);
 }
@@ -318,20 +267,9 @@ std::mutex granted_teams_mtx;
 
 /// Set granted number of teams in trace records.
 void setOmptGrantedNumTeams(uint64_t NumTeams) {
-  {
-    std::unique_lock<std::mutex> granted_teams_fn_lck(granted_teams_mtx);
-    if (!ompt_set_granted_teams_fn) {
-      auto libomptarget_dyn_lib = ompt_device_callbacks.get_parent_dyn_lib();
-      if (libomptarget_dyn_lib == nullptr || !libomptarget_dyn_lib->isValid())
-        return;
-      void *vptr = libomptarget_dyn_lib->getAddressOfSymbol(
-          "libomptarget_ompt_set_granted_teams");
-      if (!vptr)
-        return;
-      ompt_set_granted_teams_fn =
-          reinterpret_cast<libomptarget_ompt_set_granted_teams_t>(vptr);
-    }
-  }
+  ensureFuncPtrLoaded<libomptarget_ompt_set_granted_teams_t>(
+      "libomptarget_ompt_set_granted_teams", &ompt_set_granted_teams_fn,
+      granted_teams_mtx);
   // No need to hold a lock
   ompt_set_granted_teams_fn(NumTeams);
 }
