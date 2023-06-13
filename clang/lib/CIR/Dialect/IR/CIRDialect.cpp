@@ -1309,6 +1309,10 @@ LogicalResult cir::VTableAddrPointOp::verify() {
   if (getName() && getSymAddr())
     return emitOpError("should use either a symbol or value, but not both");
 
+  // If not a symbol, stick with the concrete type used for getSymAddr.
+  if (getSymAddr())
+    return success();
+
   auto resultType = getAddr().getType();
   auto fnTy = mlir::cir::FuncType::get(
       getContext(), {},

@@ -609,7 +609,8 @@ CIRGenCallee CIRGenItaniumCXXABI::getVirtualFunctionPointer(
           loc, VTable, CGF.getBuilder().getPointerTo(TyPtr));
       auto VTableSlotPtr =
           CGF.getBuilder().create<mlir::cir::VTableAddrPointOp>(
-              loc, TyPtr, ::mlir::FlatSymbolRefAttr{}, VTable,
+              loc, CGF.getBuilder().getPointerTo(TyPtr),
+              ::mlir::FlatSymbolRefAttr{}, VTable,
               /*vtable_index=*/0, VTableIndex);
       VFuncLoad = CGF.getBuilder().createAlignedLoad(loc, TyPtr, VTableSlotPtr,
                                                      CGF.getPointerAlign());

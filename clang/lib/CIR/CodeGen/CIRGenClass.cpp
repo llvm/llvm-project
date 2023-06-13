@@ -269,29 +269,12 @@ private:
 
   // Returns true if a CXXCtorInitializer represents a member initialization
   // that can be rolled into a memcpy.
-  // TODO(cir): this could be shared with LLVM codegen.
   bool isMemberInitMemcpyable(CXXCtorInitializer *MemberInit) const {
     if (!MemcpyableCtor)
       return false;
 
-    llvm_unreachable("NYI");
-    FieldDecl *Field = MemberInit->getMember();
-    assert(Field && "No field for member init.");
-    QualType FieldType = Field->getType();
-    CXXConstructExpr *CE = dyn_cast<CXXConstructExpr>(MemberInit->getInit());
-
-    // Bail out on non-memcpyable, not-trivially-copyable members.
-    if (!(CE && isMemcpyEquivalentSpecialMember(CE->getConstructor())) &&
-        !(FieldType.isTriviallyCopyableType(CGF.getContext()) ||
-          FieldType->isReferenceType()))
-      return false;
-
-    // Bail out on volatile fields.
-    if (!isMemcpyableField(Field))
-      return false;
-
-    // Otherwise we're good.
-    return true;
+    assert(!UnimplementedFeature::fieldMemcpyizerBuildMemcpy());
+    return false;
   }
 
 public:
