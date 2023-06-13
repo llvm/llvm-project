@@ -16,6 +16,7 @@
 #include "llvm/MC/MCRegisterInfo.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/Format.h"
+#include "llvm/Support/MathExtras.h"
 #include "llvm/Support/raw_ostream.h"
 #include <cassert>
 #include <cstdint>
@@ -103,6 +104,10 @@ PhysicalRegisterInfo::PhysicalRegisterInfo(const TargetRegisterInfo &tri,
   }
 }
 
+bool PhysicalRegisterInfo::alias(RegisterRef RA, RegisterRef RB) const {
+  return !disjoint(getUnits(RA), getUnits(RB));
+}
+
 std::set<RegisterId> PhysicalRegisterInfo::getAliasSet(RegisterId Reg) const {
   // Do not include Reg in the alias set.
   std::set<RegisterId> AS;
@@ -125,97 +130,43 @@ std::set<RegisterId> PhysicalRegisterInfo::getAliasSet(RegisterId Reg) const {
   return AS;
 }
 
-bool PhysicalRegisterInfo::aliasRR(RegisterRef RA, RegisterRef RB) const {
-  assert(RA.isReg() && RB.isReg());
+std::set<RegisterId> PhysicalRegisterInfo::getUnits(RegisterRef RR) const {
+  std::set<RegisterId> Units;
 
-  MCRegUnitMaskIterator UMA(RA.Reg, &TRI);
-  MCRegUnitMaskIterator UMB(RB.Reg, &TRI);
-  // Reg units are returned in the numerical order.
-  while (UMA.isValid() && UMB.isValid()) {
-    // Skip units that are masked off in RA.
-    std::pair<RegisterId, LaneBitmask> PA = *UMA;
-    if (PA.second.any() && (PA.second & RA.Mask).none()) {
-      ++UMA;
-      continue;
+  if (RR.Reg == 0)
+    return Units; // Empty
+
+  if (RR.isReg()) {
+    if (RR.Mask.none())
+      return Units; // Empty
+    for (MCRegUnitMaskIterator UM(RR.idx(), &TRI); UM.isValid(); ++UM) {
+      auto [U, M] = *UM;
+      if (M.none() || (M & RR.Mask).any())
+        Units.insert(U);
     }
-    // Skip units that are masked off in RB.
-    std::pair<RegisterId, LaneBitmask> PB = *UMB;
-    if (PB.second.any() && (PB.second & RB.Mask).none()) {
-      ++UMB;
-      continue;
-    }
-
-    if (PA.first == PB.first)
-      return true;
-    if (PA.first < PB.first)
-      ++UMA;
-    else if (PB.first < PA.first)
-      ++UMB;
-  }
-  return false;
-}
-
-bool PhysicalRegisterInfo::aliasRM(RegisterRef RR, RegisterRef RM) const {
-  assert(RR.isReg() && RM.isMask());
-  const uint32_t *MB = getRegMaskBits(RM.Reg);
-  bool Preserved = MB[RR.Reg / 32] & (1u << (RR.Reg % 32));
-  // If the lane mask information is "full", e.g. when the given lane mask
-  // is a superset of the lane mask from the register class, check the regmask
-  // bit directly.
-  if (RR.Mask == LaneBitmask::getAll())
-    return !Preserved;
-  const TargetRegisterClass *RC = RegInfos[RR.Reg].RegClass;
-  if (RC != nullptr && (RR.Mask & RC->LaneMask) == RC->LaneMask)
-    return !Preserved;
-
-  // Otherwise, check all subregisters whose lane mask overlaps the given
-  // mask. For each such register, if it is preserved by the regmask, then
-  // clear the corresponding bits in the given mask. If at the end, all
-  // bits have been cleared, the register does not alias the regmask (i.e.
-  // is it preserved by it).
-  LaneBitmask M = RR.Mask;
-  for (MCSubRegIndexIterator SI(RR.Reg, &TRI); SI.isValid(); ++SI) {
-    LaneBitmask SM = TRI.getSubRegIndexLaneMask(SI.getSubRegIndex());
-    if ((SM & RR.Mask).none())
-      continue;
-    unsigned SR = SI.getSubReg();
-    if (!(MB[SR / 32] & (1u << (SR % 32))))
-      continue;
-    // The subregister SR is preserved.
-    M &= ~SM;
-    if (M.none())
-      return false;
+    return Units;
   }
 
-  return true;
-}
-
-bool PhysicalRegisterInfo::aliasMM(RegisterRef RM, RegisterRef RN) const {
-  assert(RM.isMask() && RN.isMask());
+  assert(RR.isMask());
   unsigned NumRegs = TRI.getNumRegs();
-  const uint32_t *BM = getRegMaskBits(RM.Reg);
-  const uint32_t *BN = getRegMaskBits(RN.Reg);
-
-  for (unsigned w = 0, nw = NumRegs / 32; w != nw; ++w) {
-    // Intersect the negations of both words. Disregard reg=0,
-    // i.e. 0th bit in the 0th word.
-    uint32_t C = ~BM[w] & ~BN[w];
-    if (w == 0)
-      C &= ~1;
-    if (C)
-      return true;
+  const uint32_t *MB = getRegMaskBits(RR.idx());
+  for (unsigned I = 0, E = (NumRegs + 31) / 32; I != E; ++I) {
+    uint32_t C = ~MB[I]; // Clobbered regs
+    if (I == 0)          // Reg 0 should be ignored
+      C &= maskLeadingOnes<unsigned>(31);
+    if (I + 1 == E && NumRegs % 32 != 0) // Last word may be partial
+      C &= maskTrailingOnes<unsigned>(NumRegs % 32);
+    if (C == 0)
+      continue;
+    while (C != 0) {
+      unsigned T = llvm::countr_zero(C);
+      unsigned CR = 32 * I + T; // Clobbered reg
+      for (MCRegUnitIterator U(CR, &TRI); U.isValid(); ++U)
+        Units.insert(*U);
+      C &= ~(1u << T);
+    }
   }
-
-  // Check the remaining registers in the last word.
-  unsigned TailRegs = NumRegs % 32;
-  if (TailRegs == 0)
-    return false;
-  unsigned TW = NumRegs / 32;
-  uint32_t TailMask = (1u << TailRegs) - 1;
-  if (~BM[TW] & ~BN[TW] & TailMask)
-    return true;
-
-  return false;
+  return Units;
 }
 
 RegisterRef PhysicalRegisterInfo::mapTo(RegisterRef RR, unsigned R) const {
