@@ -258,8 +258,7 @@ public:
         Cfg(Cfg), RestrictRange(std::move(RestrictRange)),
         MainFileID(AST.getSourceManager().getMainFileID()),
         Resolver(AST.getHeuristicResolver()),
-        TypeHintPolicy(this->AST.getPrintingPolicy()),
-        StructuredBindingPolicy(this->AST.getPrintingPolicy()) {
+        TypeHintPolicy(this->AST.getPrintingPolicy()) {
     bool Invalid = false;
     llvm::StringRef Buf =
         AST.getSourceManager().getBufferData(MainFileID, &Invalid);
@@ -269,14 +268,8 @@ public:
     TypeHintPolicy.AnonymousTagLocations =
         false; // do not print lambda locations
 
-    // For structured bindings, print canonical types. This is important because
-    // for bindings that use the tuple_element protocol, the non-canonical types
-    // would be "tuple_element<I, A>::type".
-    // For "auto", we often prefer sugared types.
     // Not setting PrintCanonicalTypes for "auto" allows
     // SuppressDefaultTemplateArgs (set by default) to have an effect.
-    StructuredBindingPolicy = TypeHintPolicy;
-    StructuredBindingPolicy.PrintCanonicalTypes = true;
   }
 
   bool VisitTypeLoc(TypeLoc TL) {
@@ -358,8 +351,12 @@ public:
     // but show hints for the individual bindings.
     if (auto *DD = dyn_cast<DecompositionDecl>(D)) {
       for (auto *Binding : DD->bindings()) {
-        addTypeHint(Binding->getLocation(), Binding->getType(), /*Prefix=*/": ",
-                    StructuredBindingPolicy);
+        // For structured bindings, print canonical types. This is important
+        // because for bindings that use the tuple_element protocol, the
+        // non-canonical types would be "tuple_element<I, A>::type".
+        if (auto Type = Binding->getType(); !Type.isNull())
+          addTypeHint(Binding->getLocation(), Type.getCanonicalType(),
+                      /*Prefix=*/": ");
       }
       return true;
     }
@@ -724,22 +721,17 @@ private:
   }
 
   void addTypeHint(SourceRange R, QualType T, llvm::StringRef Prefix) {
-    addTypeHint(R, T, Prefix, TypeHintPolicy);
-  }
-
-  void addTypeHint(SourceRange R, QualType T, llvm::StringRef Prefix,
-                   const PrintingPolicy &Policy) {
     if (!Cfg.InlayHints.DeducedTypes || T.isNull())
       return;
 
     // The sugared type is more useful in some cases, and the canonical
     // type in other cases.
     auto Desugared = maybeDesugar(AST, T);
-    std::string TypeName = Desugared.getAsString(Policy);
+    std::string TypeName = Desugared.getAsString(TypeHintPolicy);
     if (T != Desugared && !shouldPrintTypeHint(TypeName)) {
       // If the desugared type is too long to display, fallback to the sugared
       // type.
-      TypeName = T.getAsString(Policy);
+      TypeName = T.getAsString(TypeHintPolicy);
     }
     if (shouldPrintTypeHint(TypeName))
       addInlayHint(R, HintSide::Right, InlayHintKind::Type, Prefix, TypeName,
@@ -764,14 +756,7 @@ private:
   FileID MainFileID;
   StringRef MainFileBuf;
   const HeuristicResolver *Resolver;
-  // We want to suppress default template arguments, but otherwise print
-  // canonical types. Unfortunately, they're conflicting policies so we can't
-  // have both. For regular types, suppressing template arguments is more
-  // important, whereas printing canonical types is crucial for structured
-  // bindings, so we use two separate policies. (See the constructor where
-  // the policies are initialized for more details.)
   PrintingPolicy TypeHintPolicy;
-  PrintingPolicy StructuredBindingPolicy;
 };
 
 } // namespace

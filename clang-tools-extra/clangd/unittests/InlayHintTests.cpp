@@ -1347,8 +1347,11 @@ TEST(TypeHints, DefaultTemplateArgs) {
     struct A {};
     A<float> foo();
     auto $var[[var]] = foo();
+    A<float> bar[1];
+    auto [$binding[[value]]] = bar;
   )cpp",
-                  ExpectedHint{": A<float>", "var"});
+                  ExpectedHint{": A<float>", "var"},
+                  ExpectedHint{": A<float>", "binding"});
 }
 
 TEST(TypeHints, Deduplication) {
