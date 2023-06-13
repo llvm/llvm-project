@@ -1663,10 +1663,10 @@ cir::CallOp::verifySymbolUses(SymbolTableCollection &symbolTable) {
   if (!parser.parseOptionalAttribute(calleeAttr, "callee", result.attributes)
            .has_value()) {
     OpAsmParser::UnresolvedOperand indirectVal;
-    mlir::Type indirectValTy;
-    if (parser.parseOperand(indirectVal) ||
-        parser.resolveOperand(indirectVal, indirectValTy, result.operands))
+    // Do not resolve right now, since we need to figure out the type
+    if (parser.parseOperand(indirectVal).failed())
       return failure();
+    ops.push_back(indirectVal);
   }
 
   if (parser.parseLParen())
