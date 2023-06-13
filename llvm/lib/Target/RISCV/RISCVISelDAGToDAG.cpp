@@ -3238,6 +3238,11 @@ bool RISCVDAGToDAGISel::doPeepholeMaskedRVV(SDNode *N) {
   return true;
 }
 
+static bool isImplicitDef(SDValue V) {
+  return V.isMachineOpcode() &&
+         V.getMachineOpcode() == TargetOpcode::IMPLICIT_DEF;
+}
+
 // Try to fold away VMERGE_VVM instructions. We handle these cases:
 // -Masked TU VMERGE_VVM combined with an unmasked TA instruction instruction
 //  folds to a masked TU instruction. VMERGE_VVM must have have merge operand
@@ -3247,9 +3252,14 @@ bool RISCVDAGToDAGISel::doPeepholeMaskedRVV(SDNode *N) {
 // -Unmasked TU VMERGE_VVM combined with a masked MU TA instruction folds to
 //  masked TU instruction. Both instructions must have the same merge operand.
 //  VMERGE_VVM must have have merge operand same as false operand.
+// Note: The VMERGE_VVM forms above (TA, and TU) refer to the policy implied,
+// not the pseudo name.  That is, a TA VMERGE_VVM can be either the _TU pseudo
+// form with an IMPLICIT_DEF passthrough operand or the unsuffixed (TA) pseudo
+// form.
 bool RISCVDAGToDAGISel::performCombineVMergeAndVOps(SDNode *N, bool IsTA) {
   unsigned Offset = IsTA ? 0 : 1;
-  uint64_t Policy = IsTA ? RISCVII::TAIL_AGNOSTIC : /*TUMU*/ 0;
+  uint64_t Policy = (IsTA || isImplicitDef(N->getOperand(0))) ?
+    RISCVII::TAIL_AGNOSTIC : /*TUMU*/ 0;
 
   SDValue False = N->getOperand(0 + Offset);
   SDValue True = N->getOperand(1 + Offset);
@@ -3286,7 +3296,7 @@ bool RISCVDAGToDAGISel::performCombineVMergeAndVOps(SDNode *N, bool IsTA) {
     // The vmerge instruction must be TU.
     // FIXME: This could be relaxed, but we need to handle the policy for the
     // resulting op correctly.
-    if (IsTA)
+    if (IsTA || isImplicitDef(N->getOperand(0)))
       return false;
     SDValue MergeOpTrue = True->getOperand(0);
     // Both the vmerge instruction and the True instruction must have the same
@@ -3298,7 +3308,7 @@ bool RISCVDAGToDAGISel::performCombineVMergeAndVOps(SDNode *N, bool IsTA) {
   if (IsMasked) {
     assert(HasTiedDest && "Expected tied dest");
     // The vmerge instruction must be TU.
-    if (IsTA)
+    if (IsTA || isImplicitDef(N->getOperand(0)))
       return false;
     // The vmerge instruction must have an all 1s mask since we're going to keep
     // the mask from the True instruction.
@@ -3465,7 +3475,8 @@ bool RISCVDAGToDAGISel::doPeepholeMergeVVMFold() {
     unsigned Opc = N->getMachineOpcode();
     // The following optimizations require that the merge operand of N is same
     // as the false operand of N.
-    if ((IsVMergeTU(Opc) && N->getOperand(0) == N->getOperand(1)) ||
+    if ((IsVMergeTU(Opc) && (N->getOperand(0) == N->getOperand(1) ||
+                             isImplicitDef(N->getOperand(0)))) ||
         IsVMergeTA(Opc))
       MadeChange |= performCombineVMergeAndVOps(N, IsVMergeTA(Opc));
     if (IsVMergeTU(Opc) && N->getOperand(0) == N->getOperand(1))
