@@ -1066,6 +1066,11 @@ parseFunctionSimplificationPipelineOptions(StringRef Params) {
   return *L;
 }
 
+Expected<bool> parseMemorySSAPrinterPassOptions(StringRef Params) {
+  return parseSinglePassOption(Params, "no-ensure-optimized-uses",
+                               "MemorySSAPrinterPass");
+}
+
 } // namespace
 
 /// Tests whether a pass name starts with a valid prefix for a default pipeline
