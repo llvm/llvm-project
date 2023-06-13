@@ -31,8 +31,7 @@ TestLogger &operator<<(TestLogger &logger, Location Loc) {
 
 // When the value is UInt128, __uint128_t or wider, show its hexadecimal digits.
 template <typename T>
-cpp::enable_if_t<cpp::is_integral_v<T> && cpp::is_unsigned_v<T> &&
-                     (sizeof(T) > sizeof(uint64_t)),
+cpp::enable_if_t<cpp::is_integral_v<T> && (sizeof(T) > sizeof(uint64_t)),
                  cpp::string>
 describeValue(T Value) {
   static_assert(sizeof(T) % 8 == 0, "Unsupported size of UInt");
@@ -225,6 +224,13 @@ template bool test<__uint128_t>(RunContext *Ctx, TestCond Cond, __uint128_t LHS,
                                 __uint128_t RHS, const char *LHSStr,
                                 const char *RHSStr, Location Loc);
 #endif
+
+template bool test<__llvm_libc::cpp::Int<128>>(RunContext *Ctx, TestCond Cond,
+                                               __llvm_libc::cpp::Int<128> LHS,
+                                               __llvm_libc::cpp::Int<128> RHS,
+                                               const char *LHSStr,
+                                               const char *RHSStr,
+                                               Location Loc);
 
 template bool test<__llvm_libc::cpp::UInt<128>>(RunContext *Ctx, TestCond Cond,
                                                 __llvm_libc::cpp::UInt<128> LHS,

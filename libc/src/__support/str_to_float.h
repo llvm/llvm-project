@@ -13,6 +13,7 @@
 #include "src/__support/CPP/optional.h"
 #include "src/__support/FPUtil/FEnvImpl.h"
 #include "src/__support/FPUtil/FPBits.h"
+#include "src/__support/FPUtil/dyadic_float.h"
 #include "src/__support/FPUtil/rounding_mode.h"
 #include "src/__support/UInt128.h"
 #include "src/__support/builtin_wrappers.h"
@@ -301,7 +302,8 @@ eisel_lemire<long double>(ExpandedFloat<long double> init_num,
   }
 
   // Shifting to 65 bits for 80 bit floats and 113 bits for 128 bit floats
-  BitsType msb = final_approx_upper >> (BITS_IN_MANTISSA - 1);
+  uint32_t msb =
+      static_cast<uint32_t>(final_approx_upper >> (BITS_IN_MANTISSA - 1));
   BitsType final_mantissa =
       final_approx_upper >>
       (msb + BITS_IN_MANTISSA -
@@ -571,7 +573,16 @@ clinger_fast_path(ExpandedFloat<T> init_num,
   }
 
   fputil::FPBits<T> result;
-  T float_mantissa = static_cast<T>(mantissa);
+  T float_mantissa;
+  if constexpr (cpp::is_same_v<typename fputil::FPBits<T>::UIntType,
+                               cpp::UInt<128>>) {
+    float_mantissa = static_cast<T>(fputil::DyadicFloat<128>(
+        false, 0,
+        fputil::DyadicFloat<128>::MantissaType(
+            {uint64_t(mantissa), uint64_t(mantissa >> 64)})));
+  } else {
+    float_mantissa = static_cast<T>(mantissa);
+  }
 
   if (exp10 == 0) {
     result = fputil::FPBits<T>(float_mantissa);
@@ -806,7 +817,7 @@ LIBC_INLINE FloatConvertReturn<T> binary_exp_to_float(ExpandedFloat<T> init_num,
 
   BitsType round_bit_mask = BitsType(1) << (amount_to_shift_right - 1);
   BitsType sticky_mask = round_bit_mask - 1;
-  bool round_bit = mantissa & round_bit_mask;
+  bool round_bit = static_cast<bool>(mantissa & round_bit_mask);
   bool sticky_bit = static_cast<bool>(mantissa & sticky_mask) || truncated;
 
   if (amount_to_shift_right < NUMBITS) {
@@ -816,7 +827,7 @@ LIBC_INLINE FloatConvertReturn<T> binary_exp_to_float(ExpandedFloat<T> init_num,
   } else {
     mantissa = 0;
   }
-  bool least_significant_bit = mantissa & BitsType(1);
+  bool least_significant_bit = static_cast<bool>(mantissa & BitsType(1));
 
   // TODO: check that this rounding behavior is correct.
 
