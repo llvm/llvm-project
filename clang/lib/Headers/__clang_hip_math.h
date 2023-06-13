@@ -436,22 +436,6 @@ float powf(float __x, float __y) { return __ocml_pow_f32(__x, __y); }
 __DEVICE__
 float powif(float __x, int __y) { return __ocml_pown_f32(__x, __y); }
 
-__DEVICE_NOCE__
-int powii(int __base, int __exp) {
-  if (__exp < 0 )
-    return -1;
-  int __result = 1;
-  for (;;) {
-    if (__exp & 1)
-      __result *= __base;
-    __exp >>= 1;
-    if (!__exp)
-      break;
-    __base *= __base;
-  }
-  return __result;
-}
-
 __DEVICE__
 float rcbrtf(float __x) { return __ocml_rcbrt_f32(__x); }
 
