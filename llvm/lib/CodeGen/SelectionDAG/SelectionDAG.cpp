@@ -6922,6 +6922,11 @@ SDValue SelectionDAG::getNode(unsigned Opcode, const SDLoc &DL, EVT VT,
     if (N1.getValueType() == VT)
       return N1;
     break;
+  case ISD::VP_TRUNCATE:
+    // Don't create noop vp_truncate.
+    if (N1.getValueType() == VT)
+      return N1;
+    break;
   }
 
   // Memoize node if it doesn't produce a flag.
