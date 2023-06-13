@@ -121,7 +121,7 @@ TEST(ArrayRefTest, ArrayRef) {
 
   // A copy is expected for non-const ArrayRef (thin copy)
   ArrayRef<int> ar1(kA1);
-  const ArrayRef<int> &ar1_ref = ArrayRef(ar1);
+  const ArrayRef<int> &ar1_ref = ArrayRef<int>(ar1);
   EXPECT_NE(&ar1, &ar1_ref);
   EXPECT_TRUE(ar1.equals(ar1_ref));
 
