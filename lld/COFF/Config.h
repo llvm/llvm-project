@@ -42,6 +42,13 @@ static const auto ARM64X = llvm::COFF::IMAGE_FILE_MACHINE_ARM64X;
 static const auto ARMNT = llvm::COFF::IMAGE_FILE_MACHINE_ARMNT;
 static const auto I386 = llvm::COFF::IMAGE_FILE_MACHINE_I386;
 
+enum class ExportSource {
+  Unset,
+  Directives,
+  Export,
+  ModuleDefinition,
+};
+
 // Represents an /export option.
 struct Export {
   StringRef name;       // N in /export:N or /export:E=N
@@ -60,8 +67,7 @@ struct Export {
   StringRef forwardTo;
   StringChunk *forwardChunk = nullptr;
 
-  // True if this /export option was in .drectves section.
-  bool directives = false;
+  ExportSource source = ExportSource::Unset;
   StringRef symbolName;
   StringRef exportName; // Name in DLL
 
