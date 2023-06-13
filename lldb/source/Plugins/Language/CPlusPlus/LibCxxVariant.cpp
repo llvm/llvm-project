@@ -83,7 +83,7 @@ uint64_t VariantNposValue(uint64_t index_byte_size) {
 
 LibcxxVariantIndexValidity
 LibcxxVariantGetIndexValidity(ValueObjectSP &impl_sp) {
-  ValueObjectSP index_sp(impl_sp->GetChildMemberWithName("__index", true));
+  ValueObjectSP index_sp(impl_sp->GetChildMemberWithName("__index"));
 
   if (!index_sp)
     return LibcxxVariantIndexValidity::Invalid;
@@ -111,7 +111,7 @@ LibcxxVariantGetIndexValidity(ValueObjectSP &impl_sp) {
 }
 
 std::optional<uint64_t> LibcxxVariantIndexValue(ValueObjectSP &impl_sp) {
-  ValueObjectSP index_sp(impl_sp->GetChildMemberWithName("__index", true));
+  ValueObjectSP index_sp(impl_sp->GetChildMemberWithName("__index"));
 
   if (!index_sp)
     return {};
@@ -120,15 +120,14 @@ std::optional<uint64_t> LibcxxVariantIndexValue(ValueObjectSP &impl_sp) {
 }
 
 ValueObjectSP LibcxxVariantGetNthHead(ValueObjectSP &impl_sp, uint64_t index) {
-  ValueObjectSP data_sp(impl_sp->GetChildMemberWithName("__data", true));
+  ValueObjectSP data_sp(impl_sp->GetChildMemberWithName("__data"));
 
   if (!data_sp)
     return ValueObjectSP{};
 
   ValueObjectSP current_level = data_sp;
   for (uint64_t n = index; n != 0; --n) {
-    ValueObjectSP tail_sp(
-        current_level->GetChildMemberWithName("__tail", true));
+    ValueObjectSP tail_sp(current_level->GetChildMemberWithName("__tail"));
 
     if (!tail_sp)
       return ValueObjectSP{};
@@ -136,7 +135,7 @@ ValueObjectSP LibcxxVariantGetNthHead(ValueObjectSP &impl_sp, uint64_t index) {
     current_level = tail_sp;
   }
 
-  return current_level->GetChildMemberWithName("__head", true);
+  return current_level->GetChildMemberWithName("__head");
 }
 } // namespace
 
@@ -265,7 +264,7 @@ ValueObjectSP VariantFrontEnd::GetChildAtIndex(size_t idx) {
   if (!template_type)
     return {};
 
-  ValueObjectSP head_value(nth_head->GetChildMemberWithName("__value", true));
+  ValueObjectSP head_value(nth_head->GetChildMemberWithName("__value"));
 
   if (!head_value)
     return {};

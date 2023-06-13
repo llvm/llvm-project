@@ -604,7 +604,7 @@ ValueObjectSP StackFrame::GetValueForVariableExpressionPath(
       valobj_sp = GetValueObjectForFrameVariable(variable_sp, use_dynamic);
       if (!valobj_sp)
         return valobj_sp;
-      valobj_sp = valobj_sp->GetChildMemberWithName(name_const_string, true);
+      valobj_sp = valobj_sp->GetChildMemberWithName(name_const_string);
       if (valobj_sp)
         break;
     }
@@ -705,13 +705,13 @@ ValueObjectSP StackFrame::GetValueForVariableExpressionPath(
           return ValueObjectSP();
         }
       }
-      child_valobj_sp = valobj_sp->GetChildMemberWithName(child_name, true);
+      child_valobj_sp = valobj_sp->GetChildMemberWithName(child_name);
       if (!child_valobj_sp) {
         if (!no_synth_child) {
           child_valobj_sp = valobj_sp->GetSyntheticValue();
           if (child_valobj_sp)
             child_valobj_sp =
-                child_valobj_sp->GetChildMemberWithName(child_name, true);
+                child_valobj_sp->GetChildMemberWithName(child_name);
         }
 
         if (no_synth_child || !child_valobj_sp) {
