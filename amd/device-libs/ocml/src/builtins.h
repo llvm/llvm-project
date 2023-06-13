@@ -207,10 +207,10 @@
 })
 
 #define BUILTIN_FMA_F32 __builtin_fmaf
-#define BUILTIN_FMA_2F32 __llvm_fma_2f32
+#define BUILTIN_FMA_2F32 __builtin_elementwise_fma
 #define BUILTIN_FMA_F64 __builtin_fma
 #define BUILTIN_FMA_F16 __builtin_fmaf16
-#define BUILTIN_FMA_2F16 __llvm_fma_2f16
+#define BUILTIN_FMA_2F16 __builtin_elementwise_fma
 
 #define BUILTIN_FLDEXP_F32 __builtin_ldexpf
 #define BUILTIN_FLDEXP_F64 __builtin_ldexp
