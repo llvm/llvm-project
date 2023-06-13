@@ -321,7 +321,9 @@ ObjCDeallocChecker::getInstanceSymbolFromIvarSymbol(SymbolRef IvarSym) const {
   if (!IvarRegion)
     return nullptr;
 
-  return IvarRegion->getSymbolicBase()->getSymbol();
+  const SymbolicRegion *SR = IvarRegion->getSymbolicBase();
+  assert(SR && "Symbolic base should not be nullptr");
+  return SR->getSymbol();
 }
 
 /// If we are in -dealloc or -dealloc is on the stack, handle the call if it is
