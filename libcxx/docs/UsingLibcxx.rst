@@ -383,12 +383,20 @@ which no dialect declares as such (See the second form described above).
 * ``as_const``
 * ``binary_search``
 * ``bit_cast``
+* ``bit_ceil``
+* ``bit_floor``
+* ``bit_width``
+* ``byteswap``
 * ``cbrt``
 * ``ceil``
 * ``clamp``
 * ``copysign``
 * ``count_if``
 * ``count``
+* ``countl_zero``
+* ``countl_one``
+* ``countr_zero``
+* ``countr_one``
 * ``equal_range``
 * ``equal``
 * ``fabs``
@@ -403,6 +411,7 @@ which no dialect declares as such (See the second form described above).
 * ``forward``
 * ``fpclassify``
 * ``get_temporary_buffer``
+* ``has_single_bit``
 * ``identity::operator()``
 * ``includes``
 * ``is_heap_until``
@@ -437,6 +446,7 @@ which no dialect declares as such (See the second form described above).
 * ``move``
 * ``nearbyint``
 * ``none_of``
+* ``popcount``
 * ``ranges::adjacent_find``
 * ``ranges::all_of``
 * ``ranges::any_of``
