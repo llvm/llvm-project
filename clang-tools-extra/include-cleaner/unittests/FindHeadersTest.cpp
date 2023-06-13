@@ -486,5 +486,16 @@ TEST_F(HeadersForSymbolTest, AmbiguousStdSymbols) {
   }
 }
 
+TEST_F(HeadersForSymbolTest, StandardHeaders) {
+  Inputs.Code = "void assert();";
+  buildAST();
+  EXPECT_THAT(
+      headersFor("assert"),
+      // Respect the ordering from the stdlib mapping.
+      UnorderedElementsAre(tooling::stdlib::Header::named("<cassert>"),
+                           tooling::stdlib::Header::named("<assert.h>")));
+}
+
+
 } // namespace
 } // namespace clang::include_cleaner
