@@ -10,6 +10,9 @@
 //
 //===----------------------------------------------------------------------===//
 
+#ifndef LLVM_DXILWRITER_DXILBITCODEWRITER_H
+#define LLVM_DXILWRITER_DXILBITCODEWRITER_H
+
 #include "llvm/ADT/StringRef.h"
 #include "llvm/IR/ModuleSummaryIndex.h"
 #include "llvm/MC/StringTableBuilder.h"
@@ -61,3 +64,5 @@ void WriteDXILToFile(const Module &M, raw_ostream &Out);
 } // namespace dxil
 
 } // namespace llvm
+
+#endif // LLVM_DXILWRITER_DXILBITCODEWRITER_H
