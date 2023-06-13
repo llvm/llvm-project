@@ -17,6 +17,9 @@ declare void @llvm.memmove.p5.p1.i64(ptr addrspace(5) nocapture writeonly, ptr a
 declare void @llvm.memmove.p1.p5.i64(ptr addrspace(1) nocapture writeonly, ptr addrspace(5) nocapture readonly, i64, i1 immarg) #1
 declare void @llvm.memmove.p0.p5.i64(ptr nocapture writeonly, ptr addrspace(5) nocapture readonly, i64, i1 immarg) #1
 declare void @llvm.memmove.p5.p0.i64(ptr addrspace(5) nocapture writeonly, ptr nocapture readonly, i64, i1 immarg) #1
+declare void @llvm.memmove.p1.p999.i64(ptr addrspace(1) nocapture writeonly, ptr addrspace(999) nocapture readonly, i64, i1 immarg) #1
+declare void @llvm.memmove.p999.p1.i64(ptr addrspace(999) nocapture writeonly, ptr addrspace(1) nocapture readonly, i64, i1 immarg) #1
+declare void @llvm.memmove.p999.p998.i64(ptr addrspace(999) nocapture writeonly, ptr addrspace(998) nocapture readonly, i64, i1 immarg) #1
 
 declare void @llvm.memset.p1.i64(ptr addrspace(1) nocapture, i8, i64, i1) #1
 
@@ -1314,36 +1317,156 @@ define amdgpu_kernel void @memcpy_global_align4_global_align4_1(ptr addrspace(1)
 }
 
 define amdgpu_kernel void @memmove_flat_align1_global_align1(ptr %dst, ptr addrspace(1) %src) {
-; OPT-LABEL: @memmove_flat_align1_global_align1(
-; OPT-NEXT:    call void @llvm.memmove.p0.p1.i64(ptr [[DST:%.*]], ptr addrspace(1) [[SRC:%.*]], i64 256, i1 false)
-; OPT-NEXT:    ret void
+; MAX1024-LABEL: @memmove_flat_align1_global_align1(
+; MAX1024-NEXT:    call void @llvm.memmove.p0.p1.i64(ptr [[DST:%.*]], ptr addrspace(1) [[SRC:%.*]], i64 256, i1 false)
+; MAX1024-NEXT:    ret void
+;
+; ALL-LABEL: @memmove_flat_align1_global_align1(
+; ALL-NEXT:    [[TMP1:%.*]] = addrspacecast ptr addrspace(1) [[SRC:%.*]] to ptr
+; ALL-NEXT:    [[COMPARE_SRC_DST:%.*]] = icmp ult ptr [[TMP1]], [[DST:%.*]]
+; ALL-NEXT:    [[COMPARE_N_TO_0:%.*]] = icmp eq i64 256, 0
+; ALL-NEXT:    br i1 [[COMPARE_SRC_DST]], label [[COPY_BACKWARDS:%.*]], label [[COPY_FORWARD:%.*]]
+; ALL:       copy_backwards:
+; ALL-NEXT:    br i1 [[COMPARE_N_TO_0]], label [[MEMMOVE_DONE:%.*]], label [[COPY_BACKWARDS_LOOP:%.*]]
+; ALL:       copy_backwards_loop:
+; ALL-NEXT:    [[TMP2:%.*]] = phi i64 [ [[INDEX_PTR:%.*]], [[COPY_BACKWARDS_LOOP]] ], [ 256, [[COPY_BACKWARDS]] ]
+; ALL-NEXT:    [[INDEX_PTR]] = sub i64 [[TMP2]], 1
+; ALL-NEXT:    [[TMP3:%.*]] = getelementptr inbounds i8, ptr [[TMP1]], i64 [[INDEX_PTR]]
+; ALL-NEXT:    [[ELEMENT:%.*]] = load i8, ptr [[TMP3]], align 1
+; ALL-NEXT:    [[TMP4:%.*]] = getelementptr inbounds i8, ptr [[DST]], i64 [[INDEX_PTR]]
+; ALL-NEXT:    store i8 [[ELEMENT]], ptr [[TMP4]], align 1
+; ALL-NEXT:    [[TMP5:%.*]] = icmp eq i64 [[INDEX_PTR]], 0
+; ALL-NEXT:    br i1 [[TMP5]], label [[MEMMOVE_DONE]], label [[COPY_BACKWARDS_LOOP]]
+; ALL:       copy_forward:
+; ALL-NEXT:    br i1 [[COMPARE_N_TO_0]], label [[MEMMOVE_DONE]], label [[COPY_FORWARD_LOOP:%.*]]
+; ALL:       copy_forward_loop:
+; ALL-NEXT:    [[INDEX_PTR1:%.*]] = phi i64 [ [[INDEX_INCREMENT:%.*]], [[COPY_FORWARD_LOOP]] ], [ 0, [[COPY_FORWARD]] ]
+; ALL-NEXT:    [[TMP6:%.*]] = getelementptr inbounds i8, ptr [[TMP1]], i64 [[INDEX_PTR1]]
+; ALL-NEXT:    [[ELEMENT2:%.*]] = load i8, ptr [[TMP6]], align 1
+; ALL-NEXT:    [[TMP7:%.*]] = getelementptr inbounds i8, ptr [[DST]], i64 [[INDEX_PTR1]]
+; ALL-NEXT:    store i8 [[ELEMENT2]], ptr [[TMP7]], align 1
+; ALL-NEXT:    [[INDEX_INCREMENT]] = add i64 [[INDEX_PTR1]], 1
+; ALL-NEXT:    [[TMP8:%.*]] = icmp eq i64 [[INDEX_INCREMENT]], 256
+; ALL-NEXT:    br i1 [[TMP8]], label [[MEMMOVE_DONE]], label [[COPY_FORWARD_LOOP]]
+; ALL:       memmove_done:
+; ALL-NEXT:    ret void
 ;
   call void @llvm.memmove.p0.p1.i64(ptr %dst, ptr addrspace(1) %src, i64 256, i1 false)
   ret void
 }
 
 define amdgpu_kernel void @memmove_global_align1_flat_align1(ptr addrspace(1) %dst, ptr %src) {
-; OPT-LABEL: @memmove_global_align1_flat_align1(
-; OPT-NEXT:    call void @llvm.memmove.p1.p0.i64(ptr addrspace(1) [[DST:%.*]], ptr [[SRC:%.*]], i64 256, i1 false)
-; OPT-NEXT:    ret void
+; MAX1024-LABEL: @memmove_global_align1_flat_align1(
+; MAX1024-NEXT:    call void @llvm.memmove.p1.p0.i64(ptr addrspace(1) [[DST:%.*]], ptr [[SRC:%.*]], i64 256, i1 false)
+; MAX1024-NEXT:    ret void
+;
+; ALL-LABEL: @memmove_global_align1_flat_align1(
+; ALL-NEXT:    [[TMP1:%.*]] = addrspacecast ptr addrspace(1) [[DST:%.*]] to ptr
+; ALL-NEXT:    [[COMPARE_SRC_DST:%.*]] = icmp ult ptr [[SRC:%.*]], [[TMP1]]
+; ALL-NEXT:    [[COMPARE_N_TO_0:%.*]] = icmp eq i64 256, 0
+; ALL-NEXT:    br i1 [[COMPARE_SRC_DST]], label [[COPY_BACKWARDS:%.*]], label [[COPY_FORWARD:%.*]]
+; ALL:       copy_backwards:
+; ALL-NEXT:    br i1 [[COMPARE_N_TO_0]], label [[MEMMOVE_DONE:%.*]], label [[COPY_BACKWARDS_LOOP:%.*]]
+; ALL:       copy_backwards_loop:
+; ALL-NEXT:    [[TMP2:%.*]] = phi i64 [ [[INDEX_PTR:%.*]], [[COPY_BACKWARDS_LOOP]] ], [ 256, [[COPY_BACKWARDS]] ]
+; ALL-NEXT:    [[INDEX_PTR]] = sub i64 [[TMP2]], 1
+; ALL-NEXT:    [[TMP3:%.*]] = getelementptr inbounds i8, ptr [[SRC]], i64 [[INDEX_PTR]]
+; ALL-NEXT:    [[ELEMENT:%.*]] = load i8, ptr [[TMP3]], align 1
+; ALL-NEXT:    [[TMP4:%.*]] = getelementptr inbounds i8, ptr [[TMP1]], i64 [[INDEX_PTR]]
+; ALL-NEXT:    store i8 [[ELEMENT]], ptr [[TMP4]], align 1
+; ALL-NEXT:    [[TMP5:%.*]] = icmp eq i64 [[INDEX_PTR]], 0
+; ALL-NEXT:    br i1 [[TMP5]], label [[MEMMOVE_DONE]], label [[COPY_BACKWARDS_LOOP]]
+; ALL:       copy_forward:
+; ALL-NEXT:    br i1 [[COMPARE_N_TO_0]], label [[MEMMOVE_DONE]], label [[COPY_FORWARD_LOOP:%.*]]
+; ALL:       copy_forward_loop:
+; ALL-NEXT:    [[INDEX_PTR1:%.*]] = phi i64 [ [[INDEX_INCREMENT:%.*]], [[COPY_FORWARD_LOOP]] ], [ 0, [[COPY_FORWARD]] ]
+; ALL-NEXT:    [[TMP6:%.*]] = getelementptr inbounds i8, ptr [[SRC]], i64 [[INDEX_PTR1]]
+; ALL-NEXT:    [[ELEMENT2:%.*]] = load i8, ptr [[TMP6]], align 1
+; ALL-NEXT:    [[TMP7:%.*]] = getelementptr inbounds i8, ptr [[TMP1]], i64 [[INDEX_PTR1]]
+; ALL-NEXT:    store i8 [[ELEMENT2]], ptr [[TMP7]], align 1
+; ALL-NEXT:    [[INDEX_INCREMENT]] = add i64 [[INDEX_PTR1]], 1
+; ALL-NEXT:    [[TMP8:%.*]] = icmp eq i64 [[INDEX_INCREMENT]], 256
+; ALL-NEXT:    br i1 [[TMP8]], label [[MEMMOVE_DONE]], label [[COPY_FORWARD_LOOP]]
+; ALL:       memmove_done:
+; ALL-NEXT:    ret void
 ;
   call void @llvm.memmove.p1.p0.i64(ptr addrspace(1) %dst, ptr %src, i64 256, i1 false)
   ret void
 }
 
 define amdgpu_kernel void @memmove_flat_align1_private_align1(ptr %dst, ptr addrspace(5) %src) {
-; OPT-LABEL: @memmove_flat_align1_private_align1(
-; OPT-NEXT:    call void @llvm.memmove.p0.p5.i64(ptr [[DST:%.*]], ptr addrspace(5) [[SRC:%.*]], i64 256, i1 false)
-; OPT-NEXT:    ret void
+; MAX1024-LABEL: @memmove_flat_align1_private_align1(
+; MAX1024-NEXT:    call void @llvm.memmove.p0.p5.i64(ptr [[DST:%.*]], ptr addrspace(5) [[SRC:%.*]], i64 256, i1 false)
+; MAX1024-NEXT:    ret void
+;
+; ALL-LABEL: @memmove_flat_align1_private_align1(
+; ALL-NEXT:    [[TMP1:%.*]] = addrspacecast ptr addrspace(5) [[SRC:%.*]] to ptr
+; ALL-NEXT:    [[COMPARE_SRC_DST:%.*]] = icmp ult ptr [[TMP1]], [[DST:%.*]]
+; ALL-NEXT:    [[COMPARE_N_TO_0:%.*]] = icmp eq i64 256, 0
+; ALL-NEXT:    br i1 [[COMPARE_SRC_DST]], label [[COPY_BACKWARDS:%.*]], label [[COPY_FORWARD:%.*]]
+; ALL:       copy_backwards:
+; ALL-NEXT:    br i1 [[COMPARE_N_TO_0]], label [[MEMMOVE_DONE:%.*]], label [[COPY_BACKWARDS_LOOP:%.*]]
+; ALL:       copy_backwards_loop:
+; ALL-NEXT:    [[TMP2:%.*]] = phi i64 [ [[INDEX_PTR:%.*]], [[COPY_BACKWARDS_LOOP]] ], [ 256, [[COPY_BACKWARDS]] ]
+; ALL-NEXT:    [[INDEX_PTR]] = sub i64 [[TMP2]], 1
+; ALL-NEXT:    [[TMP3:%.*]] = getelementptr inbounds i8, ptr [[TMP1]], i64 [[INDEX_PTR]]
+; ALL-NEXT:    [[ELEMENT:%.*]] = load i8, ptr [[TMP3]], align 1
+; ALL-NEXT:    [[TMP4:%.*]] = getelementptr inbounds i8, ptr [[DST]], i64 [[INDEX_PTR]]
+; ALL-NEXT:    store i8 [[ELEMENT]], ptr [[TMP4]], align 1
+; ALL-NEXT:    [[TMP5:%.*]] = icmp eq i64 [[INDEX_PTR]], 0
+; ALL-NEXT:    br i1 [[TMP5]], label [[MEMMOVE_DONE]], label [[COPY_BACKWARDS_LOOP]]
+; ALL:       copy_forward:
+; ALL-NEXT:    br i1 [[COMPARE_N_TO_0]], label [[MEMMOVE_DONE]], label [[COPY_FORWARD_LOOP:%.*]]
+; ALL:       copy_forward_loop:
+; ALL-NEXT:    [[INDEX_PTR1:%.*]] = phi i64 [ [[INDEX_INCREMENT:%.*]], [[COPY_FORWARD_LOOP]] ], [ 0, [[COPY_FORWARD]] ]
+; ALL-NEXT:    [[TMP6:%.*]] = getelementptr inbounds i8, ptr [[TMP1]], i64 [[INDEX_PTR1]]
+; ALL-NEXT:    [[ELEMENT2:%.*]] = load i8, ptr [[TMP6]], align 1
+; ALL-NEXT:    [[TMP7:%.*]] = getelementptr inbounds i8, ptr [[DST]], i64 [[INDEX_PTR1]]
+; ALL-NEXT:    store i8 [[ELEMENT2]], ptr [[TMP7]], align 1
+; ALL-NEXT:    [[INDEX_INCREMENT]] = add i64 [[INDEX_PTR1]], 1
+; ALL-NEXT:    [[TMP8:%.*]] = icmp eq i64 [[INDEX_INCREMENT]], 256
+; ALL-NEXT:    br i1 [[TMP8]], label [[MEMMOVE_DONE]], label [[COPY_FORWARD_LOOP]]
+; ALL:       memmove_done:
+; ALL-NEXT:    ret void
 ;
   call void @llvm.memmove.p0.p5.i64(ptr %dst, ptr addrspace(5) %src, i64 256, i1 false)
   ret void
 }
 
 define amdgpu_kernel void @memmove_private_align1_flat_align1(ptr addrspace(5) %dst, ptr %src) {
-; OPT-LABEL: @memmove_private_align1_flat_align1(
-; OPT-NEXT:    call void @llvm.memmove.p5.p0.i64(ptr addrspace(5) [[DST:%.*]], ptr [[SRC:%.*]], i64 256, i1 false)
-; OPT-NEXT:    ret void
+; MAX1024-LABEL: @memmove_private_align1_flat_align1(
+; MAX1024-NEXT:    call void @llvm.memmove.p5.p0.i64(ptr addrspace(5) [[DST:%.*]], ptr [[SRC:%.*]], i64 256, i1 false)
+; MAX1024-NEXT:    ret void
+;
+; ALL-LABEL: @memmove_private_align1_flat_align1(
+; ALL-NEXT:    [[TMP1:%.*]] = addrspacecast ptr addrspace(5) [[DST:%.*]] to ptr
+; ALL-NEXT:    [[COMPARE_SRC_DST:%.*]] = icmp ult ptr [[SRC:%.*]], [[TMP1]]
+; ALL-NEXT:    [[COMPARE_N_TO_0:%.*]] = icmp eq i64 256, 0
+; ALL-NEXT:    br i1 [[COMPARE_SRC_DST]], label [[COPY_BACKWARDS:%.*]], label [[COPY_FORWARD:%.*]]
+; ALL:       copy_backwards:
+; ALL-NEXT:    br i1 [[COMPARE_N_TO_0]], label [[MEMMOVE_DONE:%.*]], label [[COPY_BACKWARDS_LOOP:%.*]]
+; ALL:       copy_backwards_loop:
+; ALL-NEXT:    [[TMP2:%.*]] = phi i64 [ [[INDEX_PTR:%.*]], [[COPY_BACKWARDS_LOOP]] ], [ 256, [[COPY_BACKWARDS]] ]
+; ALL-NEXT:    [[INDEX_PTR]] = sub i64 [[TMP2]], 1
+; ALL-NEXT:    [[TMP3:%.*]] = getelementptr inbounds i8, ptr [[SRC]], i64 [[INDEX_PTR]]
+; ALL-NEXT:    [[ELEMENT:%.*]] = load i8, ptr [[TMP3]], align 1
+; ALL-NEXT:    [[TMP4:%.*]] = getelementptr inbounds i8, ptr [[TMP1]], i64 [[INDEX_PTR]]
+; ALL-NEXT:    store i8 [[ELEMENT]], ptr [[TMP4]], align 1
+; ALL-NEXT:    [[TMP5:%.*]] = icmp eq i64 [[INDEX_PTR]], 0
+; ALL-NEXT:    br i1 [[TMP5]], label [[MEMMOVE_DONE]], label [[COPY_BACKWARDS_LOOP]]
+; ALL:       copy_forward:
+; ALL-NEXT:    br i1 [[COMPARE_N_TO_0]], label [[MEMMOVE_DONE]], label [[COPY_FORWARD_LOOP:%.*]]
+; ALL:       copy_forward_loop:
+; ALL-NEXT:    [[INDEX_PTR1:%.*]] = phi i64 [ [[INDEX_INCREMENT:%.*]], [[COPY_FORWARD_LOOP]] ], [ 0, [[COPY_FORWARD]] ]
+; ALL-NEXT:    [[TMP6:%.*]] = getelementptr inbounds i8, ptr [[SRC]], i64 [[INDEX_PTR1]]
+; ALL-NEXT:    [[ELEMENT2:%.*]] = load i8, ptr [[TMP6]], align 1
+; ALL-NEXT:    [[TMP7:%.*]] = getelementptr inbounds i8, ptr [[TMP1]], i64 [[INDEX_PTR1]]
+; ALL-NEXT:    store i8 [[ELEMENT2]], ptr [[TMP7]], align 1
+; ALL-NEXT:    [[INDEX_INCREMENT]] = add i64 [[INDEX_PTR1]], 1
+; ALL-NEXT:    [[TMP8:%.*]] = icmp eq i64 [[INDEX_INCREMENT]], 256
+; ALL-NEXT:    br i1 [[TMP8]], label [[MEMMOVE_DONE]], label [[COPY_FORWARD_LOOP]]
+; ALL:       memmove_done:
+; ALL-NEXT:    ret void
 ;
   call void @llvm.memmove.p5.p0.i64(ptr addrspace(5) %dst, ptr %src, i64 256, i1 false)
   ret void
@@ -1364,6 +1487,33 @@ define amdgpu_kernel void @memmove_global_align1_private_align1(ptr addrspace(1)
 ; OPT-NEXT:    ret void
 ;
   call void @llvm.memmove.p1.p5.i64(ptr addrspace(1) %dst, ptr addrspace(5) %src, i64 256, i1 false)
+  ret void
+}
+
+define amdgpu_kernel void @memmove_global_align1_p999_align1(ptr addrspace(1) %dst, ptr addrspace(999) %src, i64 %size) {
+; OPT-LABEL: @memmove_global_align1_p999_align1(
+; OPT-NEXT:    call void @llvm.memmove.p1.p999.i64(ptr addrspace(1) [[DST:%.*]], ptr addrspace(999) [[SRC:%.*]], i64 [[SIZE:%.*]], i1 false)
+; OPT-NEXT:    ret void
+;
+  call void @llvm.memmove.p1.p999.i64(ptr addrspace(1) %dst, ptr addrspace(999) %src, i64 %size, i1 false)
+  ret void
+}
+
+define amdgpu_kernel void @memmove_p999_align1_p1_align1(ptr addrspace(999) %dst, ptr addrspace(1) %src, i64 %size) {
+; OPT-LABEL: @memmove_p999_align1_p1_align1(
+; OPT-NEXT:    call void @llvm.memmove.p999.p1.i64(ptr addrspace(999) [[DST:%.*]], ptr addrspace(1) [[SRC:%.*]], i64 [[SIZE:%.*]], i1 false)
+; OPT-NEXT:    ret void
+;
+  call void @llvm.memmove.p999.p1.i64(ptr addrspace(999) %dst, ptr addrspace(1) %src, i64 %size, i1 false)
+  ret void
+}
+
+define amdgpu_kernel void @memmove_p999_align1_p998_align1(ptr addrspace(999) %dst, ptr addrspace(998) %src, i64 %size) {
+; OPT-LABEL: @memmove_p999_align1_p998_align1(
+; OPT-NEXT:    call void @llvm.memmove.p999.p998.i64(ptr addrspace(999) [[DST:%.*]], ptr addrspace(998) [[SRC:%.*]], i64 [[SIZE:%.*]], i1 false)
+; OPT-NEXT:    ret void
+;
+  call void @llvm.memmove.p999.p998.i64(ptr addrspace(999) %dst, ptr addrspace(998) %src, i64 %size, i1 false)
   ret void
 }
 
