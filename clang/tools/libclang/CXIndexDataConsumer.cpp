@@ -970,12 +970,7 @@ void CXIndexDataConsumer::addContainerInMap(const DeclContext *DC,
 }
 
 CXIdxClientEntity CXIndexDataConsumer::getClientEntity(const Decl *D) const {
-  if (!D)
-    return nullptr;
-  EntityMapTy::const_iterator I = EntityMap.find(D);
-  if (I == EntityMap.end())
-    return nullptr;
-  return I->second;
+  return D ? EntityMap.lookup(D) : nullptr;
 }
 
 void CXIndexDataConsumer::setClientEntity(const Decl *D, CXIdxClientEntity client) {
@@ -1079,25 +1074,11 @@ CXIndexDataConsumer::getEntityContainer(const Decl *D) const {
 
 CXIdxClientContainer
 CXIndexDataConsumer::getClientContainerForDC(const DeclContext *DC) const {
-  if (!DC)
-    return nullptr;
-
-  ContainerMapTy::const_iterator I = ContainerMap.find(DC);
-  if (I == ContainerMap.end())
-    return nullptr;
-
-  return I->second;
+  return DC ? ContainerMap.lookup(DC) : nullptr;
 }
 
 CXIdxClientFile CXIndexDataConsumer::getIndexFile(const FileEntry *File) {
-  if (!File)
-    return nullptr;
-
-  FileMapTy::iterator FI = FileMap.find(File);
-  if (FI != FileMap.end())
-    return FI->second;
-
-  return nullptr;
+  return File ? FileMap.lookup(File) : nullptr;
 }
 
 CXIdxLoc CXIndexDataConsumer::getIndexLoc(SourceLocation Loc) const {

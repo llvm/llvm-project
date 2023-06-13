@@ -1285,10 +1285,6 @@ bool MemRegion::hasStackParametersStorage() const {
   return isa<StackArgumentsSpaceRegion>(getMemorySpace());
 }
 
-bool MemRegion::hasGlobalsOrParametersStorage() const {
-  return isa<StackArgumentsSpaceRegion, GlobalsSpaceRegion>(getMemorySpace());
-}
-
 // Strips away all elements and fields.
 // Returns the base region of them.
 const MemRegion *MemRegion::getBaseRegion() const {

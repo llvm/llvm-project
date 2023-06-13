@@ -136,8 +136,6 @@ public:
   /// It might return null.
   const SymbolicRegion *getSymbolicBase() const;
 
-  bool hasGlobalsOrParametersStorage() const;
-
   bool hasStackStorage() const;
 
   bool hasStackNonParametersStorage() const;

@@ -155,19 +155,21 @@ static const RISCVSupportedExtension SupportedExperimentalExtensions[] = {
     {"ztso", RISCVExtensionVersion{0, 1}},
 
     // vector crypto
-    {"zvbb", RISCVExtensionVersion{0, 5}},
-    {"zvbc", RISCVExtensionVersion{0, 5}},
-    {"zvkg", RISCVExtensionVersion{0, 5}},
-    {"zvkn", RISCVExtensionVersion{0, 5}},
-    {"zvkned", RISCVExtensionVersion{0, 5}},
-    {"zvkng", RISCVExtensionVersion{0, 5}},
-    {"zvknha", RISCVExtensionVersion{0, 5}},
-    {"zvknhb", RISCVExtensionVersion{0, 5}},
-    {"zvks", RISCVExtensionVersion{0, 5}},
-    {"zvksed", RISCVExtensionVersion{0, 5}},
-    {"zvksg", RISCVExtensionVersion{0, 5}},
-    {"zvksh", RISCVExtensionVersion{0, 5}},
-    {"zvkt", RISCVExtensionVersion{0, 5}},
+    {"zvbb", RISCVExtensionVersion{0, 9}},
+    {"zvbc", RISCVExtensionVersion{0, 9}},
+    {"zvkg", RISCVExtensionVersion{0, 9}},
+    {"zvkn", RISCVExtensionVersion{0, 9}},
+    {"zvknc", RISCVExtensionVersion{0, 9}},
+    {"zvkned", RISCVExtensionVersion{0, 9}},
+    {"zvkng", RISCVExtensionVersion{0, 9}},
+    {"zvknha", RISCVExtensionVersion{0, 9}},
+    {"zvknhb", RISCVExtensionVersion{0, 9}},
+    {"zvks", RISCVExtensionVersion{0, 9}},
+    {"zvksc", RISCVExtensionVersion{0, 9}},
+    {"zvksed", RISCVExtensionVersion{0, 9}},
+    {"zvksg", RISCVExtensionVersion{0, 9}},
+    {"zvksh", RISCVExtensionVersion{0, 9}},
+    {"zvkt", RISCVExtensionVersion{0, 9}},
 };
 
 static bool stripExperimentalPrefix(StringRef &Ext) {
@@ -944,13 +946,13 @@ static const char *ImpliedExtsZve64x[] = {"zve32x", "zvl64b"};
 static const char *ImpliedExtsZvfbfmin[] = {"zve32f"};
 static const char *ImpliedExtsZvfbfwma[] = {"zve32f"};
 static const char *ImpliedExtsZvfh[] = {"zve32f", "zfhmin"};
-static const char *ImpliedExtsZvkn[] = {"zvbb", "zvbc", "zvkned", "zvknhb",
-                                        "zvkt"};
+static const char *ImpliedExtsZvkn[] = {"zvbb", "zvkned", "zvknhb", "zvkt"};
+static const char *ImpliedExtsZvknc[] = {"zvbc", "zvkn"};
 static const char *ImpliedExtsZvkng[] = {"zvkg", "zvkn"};
 static const char *ImpliedExtsZvknhb[] = {"zvknha"};
-static const char *ImpliedExtsZvks[] = {"zvbb", "zvbc", "zvksed", "zvksh",
-                                        "zvkt"};
-static const char *ImpliedExtsZvksg[] = {"zvks", "zvkg"};
+static const char *ImpliedExtsZvks[] = {"zvbb", "zvksed", "zvksh", "zvkt"};
+static const char *ImpliedExtsZvksc[] = {"zvbc", "zvks"};
+static const char *ImpliedExtsZvksg[] = {"zvkg", "zvks"};
 static const char *ImpliedExtsZvl1024b[] = {"zvl512b"};
 static const char *ImpliedExtsZvl128b[] = {"zvl64b"};
 static const char *ImpliedExtsZvl16384b[] = {"zvl8192b"};
@@ -1006,9 +1008,11 @@ static constexpr ImpliedExtsEntry ImpliedExts[] = {
     {{"zvfbfwma"}, {ImpliedExtsZvfbfwma}},
     {{"zvfh"}, {ImpliedExtsZvfh}},
     {{"zvkn"}, {ImpliedExtsZvkn}},
+    {{"zvknc"}, {ImpliedExtsZvknc}},
     {{"zvkng"}, {ImpliedExtsZvkng}},
     {{"zvknhb"}, {ImpliedExtsZvknhb}},
     {{"zvks"}, {ImpliedExtsZvks}},
+    {{"zvksc"}, {ImpliedExtsZvksc}},
     {{"zvksg"}, {ImpliedExtsZvksg}},
     {{"zvl1024b"}, {ImpliedExtsZvl1024b}},
     {{"zvl128b"}, {ImpliedExtsZvl128b}},
