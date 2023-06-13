@@ -8,14 +8,8 @@
 
 let Component = "CAS" in {
 
-def err_builtin_cas_cannot_be_initialized : Error<
-  "CAS cannot be initialized from '%0' on disk (check -fcas-path): %1">,
-  DefaultFatal;
-def err_plugin_cas_cannot_be_initialized : Error<
-  "plugin CAS cannot be initialized from '%0': %1">,
-  DefaultFatal;
-def err_builtin_actioncache_cannot_be_initialized : Error<
-  "ActionCache cannot be initialized from '%0' on disk (check -fcas-path)">,
+def err_cas_cannot_be_initialized : Error<
+  "CAS cannot be initialized from the specified '-fcas-*' options: %0">,
   DefaultFatal;
 def err_cas_cannot_parse_root_id : Error<
   "CAS cannot parse root-id '%0' specified by -fcas-fs">, DefaultFatal;

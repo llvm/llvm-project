@@ -12,6 +12,7 @@
 #include "llvm/CAS/ActionCache.h"
 #include "llvm/CAS/BuiltinUnifiedCASDatabases.h"
 #include "llvm/CAS/ObjectStore.h"
+#include "llvm/Support/Error.h"
 #include "llvm/Support/Path.h"
 
 using namespace clang;
@@ -31,7 +32,9 @@ CASOptions::getOrCreateDatabases(DiagnosticsEngine &Diags,
   if (Cache.Config.IsFrozen)
     return {Cache.CAS, Cache.AC};
 
-  initCache(Diags);
+  if (auto E = initCache())
+    Diags.Report(diag::err_cas_cannot_be_initialized) << toString(std::move(E));
+
   if (!Cache.CAS && CreateEmptyDBsOnFailure)
     Cache.CAS = llvm::cas::createInMemoryCAS();
   if (!Cache.AC && CreateEmptyDBsOnFailure)
@@ -39,12 +42,21 @@ CASOptions::getOrCreateDatabases(DiagnosticsEngine &Diags,
   return {Cache.CAS, Cache.AC};
 }
 
+llvm::Expected<std::pair<std::shared_ptr<llvm::cas::ObjectStore>,
+                         std::shared_ptr<llvm::cas::ActionCache>>>
+CASOptions::getOrCreateDatabases() const {
+  if (auto E = initCache())
+    return std::move(E);
+  return std::pair{Cache.CAS, Cache.AC};
+}
+
 void CASOptions::freezeConfig(DiagnosticsEngine &Diags) {
   if (Cache.Config.IsFrozen)
     return;
 
   // Make sure the cache is initialized.
-  initCache(Diags);
+  if (auto E = initCache())
+    Diags.Report(diag::err_cas_cannot_be_initialized) << toString(std::move(E));
 
   // Freeze the CAS and wipe out the visible config to hide it from future
   // accesses. For example, future diagnostics cannot see this. Something that
@@ -77,10 +89,10 @@ void CASOptions::ensurePersistentCAS() {
   }
 }
 
-void CASOptions::initCache(DiagnosticsEngine &Diags) const {
+llvm::Error CASOptions::initCache() const {
   auto &CurrentConfig = static_cast<const CASConfiguration &>(*this);
   if (CurrentConfig == Cache.Config && Cache.CAS && Cache.AC)
-    return;
+    return llvm::Error::success();
 
   Cache.Config = CurrentConfig;
   StringRef CASPath = Cache.Config.CASPath;
@@ -90,18 +102,16 @@ void CASOptions::initCache(DiagnosticsEngine &Diags) const {
     if (llvm::Error E =
             createPluginCASDatabases(PluginPath, CASPath, PluginOptions)
                 .moveInto(DBs)) {
-      Diags.Report(diag::err_plugin_cas_cannot_be_initialized)
-          << PluginPath << toString(std::move(E));
-      return;
+      return E;
     }
     std::tie(Cache.CAS, Cache.AC) = std::move(DBs);
-    return;
+    return llvm::Error::success();
   }
 
   if (CASPath.empty()) {
     Cache.CAS = llvm::cas::createInMemoryCAS();
     Cache.AC = llvm::cas::createInMemoryActionCache();
-    return;
+    return llvm::Error::success();
   }
 
   SmallString<256> PathBuf;
@@ -110,10 +120,9 @@ void CASOptions::initCache(DiagnosticsEngine &Diags) const {
     CASPath = PathBuf;
   }
   std::pair<std::unique_ptr<ObjectStore>, std::unique_ptr<ActionCache>> DBs;
-  if (llvm::Error E = createOnDiskUnifiedCASDatabases(CASPath).moveInto(DBs)) {
-    Diags.Report(diag::err_builtin_cas_cannot_be_initialized)
-        << CASPath << toString(std::move(E));
-    return;
-  }
+  if (llvm::Error E = createOnDiskUnifiedCASDatabases(CASPath).moveInto(DBs))
+    return E;
+
   std::tie(Cache.CAS, Cache.AC) = std::move(DBs);
+  return llvm::Error::success();
 }
