@@ -48,11 +48,11 @@
 // RUN:   -cc1 %s -fcas-path %t/cas \
 // RUN:   -fcas-plugin-path %llvmshlibdir/libCASPluginTest%pluginext \
 // RUN:   -fcas-plugin-option no-such-option=2 2>&1 | FileCheck %s --check-prefix=FAIL-PLUGIN-OPT
-// FAIL-PLUGIN-OPT: fatal error: plugin CAS cannot be initialized {{.*}}: unknown option: no-such-option
+// FAIL-PLUGIN-OPT: fatal error: CAS cannot be initialized from the specified '-fcas-*' options: unknown option: no-such-option
 
 // RUN: not %clang -cc1depscan -o %t/t.rsp -fdepscan=inline -cc1-args \
 // RUN:   -cc1 %s -fcas-path %t/cas -fcas-plugin-path %t/non-existent 2>&1 | FileCheck %s --check-prefix=NOTEXISTENT
-// NOTEXISTENT: fatal error: plugin CAS cannot be initialized
+// NOTEXISTENT: fatal error: CAS cannot be initialized from the specified '-fcas-*' options
 
 #warning some warning
 void test() {}

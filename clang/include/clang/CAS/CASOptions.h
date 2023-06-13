@@ -15,6 +15,7 @@
 #define LLVM_CLANG_CAS_CASOPTIONS_H
 
 #include "llvm/ADT/SmallVector.h"
+#include "llvm/Support/Error.h"
 #include <string>
 #include <vector>
 
@@ -63,7 +64,8 @@ public:
 
   friend bool operator==(const CASConfiguration &LHS,
                          const CASConfiguration &RHS) {
-    return LHS.CASPath == RHS.CASPath;
+    return LHS.CASPath == RHS.CASPath && LHS.PluginPath == RHS.PluginPath &&
+           LHS.PluginOptions == RHS.PluginOptions;
   }
   friend bool operator!=(const CASConfiguration &LHS,
                          const CASConfiguration &RHS) {
@@ -101,6 +103,10 @@ public:
   getOrCreateDatabases(DiagnosticsEngine &Diags,
                        bool CreateEmptyDBsOnFailure = false) const;
 
+  llvm::Expected<std::pair<std::shared_ptr<llvm::cas::ObjectStore>,
+                           std::shared_ptr<llvm::cas::ActionCache>>>
+  getOrCreateDatabases() const;
+
   /// Freeze CAS Configuration. Future calls will return the same
   /// CAS instance, even if the configuration changes again later.
   ///
@@ -116,7 +122,7 @@ public:
 
 private:
   /// Initialize Cached CAS and ActionCache.
-  void initCache(DiagnosticsEngine &Diags) const;
+  llvm::Error initCache() const;
 
   struct CachedCAS {
     /// A cached CAS instance.

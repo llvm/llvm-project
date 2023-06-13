@@ -153,4 +153,30 @@ TEST(CASOptionsTest, freezeConfig) {
   EXPECT_EQ(CASOptions::UnknownCAS, Opts.getKind());
 }
 
+TEST(CASOptionsTest, equal) {
+  CASOptions Opt1, Opt2;
+  ASSERT_TRUE(Opt1 == Opt2);
+
+  Opt1.CASPath = "some/path";
+  Opt2.CASPath = "some/path";
+  ASSERT_TRUE(Opt1 == Opt2);
+  Opt2.CASPath = "other/path";
+  ASSERT_TRUE(Opt1 != Opt2);
+
+  Opt1.CASPath.clear();
+  Opt1.PluginPath = "plugin/path";
+  ASSERT_TRUE(Opt1 != Opt2);
+  Opt2.CASPath.clear();
+  ASSERT_TRUE(Opt1 != Opt2);
+  Opt2.PluginPath = "plugin/path2";
+  ASSERT_TRUE(Opt1 != Opt2);
+  Opt2.PluginPath = "plugin/path";
+  ASSERT_TRUE(Opt1 == Opt2);
+
+  Opt1.PluginOptions.emplace_back("key", "value");
+  ASSERT_TRUE(Opt1 != Opt2);
+  Opt2.PluginOptions.emplace_back("key", "value");
+  ASSERT_TRUE(Opt1 == Opt2);
+}
+
 } // end namespace
