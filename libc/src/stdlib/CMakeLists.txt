@@ -202,6 +202,14 @@ add_entrypoint_object(
     libc.include.stdlib
 )
 
+add_header_library(
+  qsort_util
+  HDRS
+    qsort_util.h
+  DEPENDS
+    libc.include.stdlib
+)
+
 add_entrypoint_object(
   qsort
   SRCS
@@ -209,6 +217,18 @@ add_entrypoint_object(
   HDRS
     qsort.h
   DEPENDS
+    .qsort_util
+    libc.include.stdlib
+)
+
+add_entrypoint_object(
+  qsort_r
+  SRCS
+    qsort_r.cpp
+  HDRS
+    qsort_r.h
+  DEPENDS
+    .qsort_util
     libc.include.stdlib
 )
 

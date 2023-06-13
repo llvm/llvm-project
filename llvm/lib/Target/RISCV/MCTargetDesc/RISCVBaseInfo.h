@@ -64,12 +64,8 @@ enum {
   VLMulShift = ConstraintShift + 3,
   VLMulMask = 0b111 << VLMulShift,
 
-  // Do we need to add a dummy mask op when converting RVV Pseudo to MCInst.
-  HasDummyMaskOpShift = VLMulShift + 3,
-  HasDummyMaskOpMask = 1 << HasDummyMaskOpShift,
-
   // Force a tail agnostic policy even this instruction has a tied destination.
-  ForceTailAgnosticShift = HasDummyMaskOpShift + 1,
+  ForceTailAgnosticShift = VLMulShift + 3,
   ForceTailAgnosticMask = 1 << ForceTailAgnosticShift,
 
   // Does this instruction have a merge operand that must be removed when
@@ -139,10 +135,6 @@ static inline unsigned getFormat(uint64_t TSFlags) {
 /// \returns the LMUL for the instruction.
 static inline VLMUL getLMul(uint64_t TSFlags) {
   return static_cast<VLMUL>((TSFlags & VLMulMask) >> VLMulShift);
-}
-/// \returns true if there is a dummy mask operand for the instruction.
-static inline bool hasDummyMaskOp(uint64_t TSFlags) {
-  return TSFlags & HasDummyMaskOpMask;
 }
 /// \returns true if tail agnostic is enforced for the instruction.
 static inline bool doesForceTailAgnostic(uint64_t TSFlags) {

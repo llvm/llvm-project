@@ -1165,7 +1165,7 @@ public:
 
   /// Return a dynamic relocation registered at a given \p Address, or nullptr
   /// if there is no dynamic relocation at such address.
-  const Relocation *getDynamicRelocationAt(uint64_t Address);
+  const Relocation *getDynamicRelocationAt(uint64_t Address) const;
 
   /// Remove registered relocation at a given \p Address.
   bool removeRelocationAt(uint64_t Address);

@@ -3766,14 +3766,21 @@ static SDValue lowerVECTOR_SHUFFLEAsVSlideup(const SDLoc &DL, MVT VT,
   // up to the very end of it, then we don't actually care about the tail.
   if (NumSubElts + Index >= (int)NumElts)
     Policy |= RISCVII::TAIL_AGNOSTIC;
-  SDValue Slideup = getVSlideup(
-      DAG, Subtarget, DL, ContainerVT,
-      convertToScalableVector(ContainerVT, InPlace, DAG, Subtarget),
-      convertToScalableVector(ContainerVT, ToInsert, DAG, Subtarget),
-      DAG.getConstant(Index, DL, XLenVT), TrueMask,
-      DAG.getConstant(NumSubElts + Index, DL, XLenVT),
-      Policy);
-  return convertFromScalableVector(VT, Slideup, DAG, Subtarget);
+
+  InPlace = convertToScalableVector(ContainerVT, InPlace, DAG, Subtarget);
+  ToInsert = convertToScalableVector(ContainerVT, ToInsert, DAG, Subtarget);
+  SDValue VL = DAG.getConstant(NumSubElts + Index, DL, XLenVT);
+
+  SDValue Res;
+  // If we're inserting into the lowest elements, use a tail undisturbed
+  // vmv.v.v.
+  if (Index == 0)
+    Res = DAG.getNode(RISCVISD::VMV_V_V_VL, DL, ContainerVT, InPlace, ToInsert,
+                      VL);
+  else
+    Res = getVSlideup(DAG, Subtarget, DL, ContainerVT, InPlace, ToInsert,
+                      DAG.getConstant(Index, DL, XLenVT), TrueMask, VL, Policy);
+  return convertFromScalableVector(VT, Res, DAG, Subtarget);
 }
 
 /// Match v(f)slide1up/down idioms.  These operations involve sliding
@@ -4401,13 +4408,15 @@ static SDValue lowerConstant(SDValue Op, SelectionDAG &DAG,
   // Special case. See if we can build the constant as (ADD (SLLI X, 32), X) do
   // that if it will avoid a constant pool.
   // It will require an extra temporary register though.
-  int64_t LoVal = SignExtend64<32>(Imm);
-  int64_t HiVal = SignExtend64<32>(((uint64_t)Imm - (uint64_t)LoVal) >> 32);
-  if (LoVal == HiVal) {
-    RISCVMatInt::InstSeq SeqLo =
-        RISCVMatInt::generateInstSeq(LoVal, Subtarget.getFeatureBits());
-    if ((SeqLo.size() + 2) <= Subtarget.getMaxBuildIntsCost())
-      return Op;
+  if (!DAG.shouldOptForSize()) {
+    int64_t LoVal = SignExtend64<32>(Imm);
+    int64_t HiVal = SignExtend64<32>(((uint64_t)Imm - (uint64_t)LoVal) >> 32);
+    if (LoVal == HiVal) {
+      RISCVMatInt::InstSeq SeqLo =
+          RISCVMatInt::generateInstSeq(LoVal, Subtarget.getFeatureBits());
+      if ((SeqLo.size() + 2) <= Subtarget.getMaxBuildIntsCost())
+        return Op;
+    }
   }
 
   // Expand to a constant pool using the default expansion code.
@@ -5604,6 +5613,65 @@ static SDValue combineSelectToBinOp(SDNode *N, SelectionDAG &DAG,
   return SDValue();
 }
 
+// Transform `binOp (select cond, x, c0), c1` where `c0` and `c1` are constants
+// into `select cond, binOp(x, c1), binOp(c0, c1)` if profitable.
+// For now we only consider transformation profitable if `binOp(c0, c1)` ends up
+// being `0` or `-1`. In such cases we can replace `select` with `and`.
+// TODO: Should we also do this if `binOp(c0, c1)` is cheaper to materialize
+// than `c0`?
+static SDValue
+foldBinOpIntoSelectIfProfitable(SDNode *BO, SelectionDAG &DAG,
+                                const RISCVSubtarget &Subtarget) {
+  if (Subtarget.hasShortForwardBranchOpt())
+    return SDValue();
+
+  unsigned SelOpNo = 0;
+  SDValue Sel = BO->getOperand(0);
+  if (Sel.getOpcode() != ISD::SELECT || !Sel.hasOneUse()) {
+    SelOpNo = 1;
+    Sel = BO->getOperand(1);
+  }
+
+  if (Sel.getOpcode() != ISD::SELECT || !Sel.hasOneUse())
+    return SDValue();
+
+  unsigned ConstSelOpNo = 1;
+  unsigned OtherSelOpNo = 2;
+  SDValue ConstSelOp = Sel->getOperand(1);
+  ConstantSDNode *ConstSelOpNode = dyn_cast<ConstantSDNode>(ConstSelOp);
+  if (!ConstSelOpNode) {
+    ConstSelOpNo = 2;
+    OtherSelOpNo = 1;
+    ConstSelOp = Sel->getOperand(2);
+    ConstSelOpNode = dyn_cast<ConstantSDNode>(ConstSelOp);
+  }
+  if (!ConstSelOpNode)
+    return SDValue();
+  if (!ConstSelOpNode || ConstSelOpNode->isOpaque())
+    return SDValue();
+
+  SDValue ConstBinOp = BO->getOperand(SelOpNo ^ 1);
+  ConstantSDNode *ConstBinOpNode = dyn_cast<ConstantSDNode>(ConstBinOp);
+  if (!ConstBinOpNode || ConstBinOpNode->isOpaque())
+    return SDValue();
+
+  SDLoc DL(Sel);
+  EVT VT = BO->getValueType(0);
+
+  SDValue NewConstOp = DAG.FoldConstantArithmetic(BO->getOpcode(), DL, VT,
+                                                  {ConstSelOp, ConstBinOp});
+  const APInt &NewConstAPInt =
+      cast<ConstantSDNode>(NewConstOp)->getAPIntValue();
+  if (!NewConstAPInt.isZero() && !NewConstAPInt.isAllOnes())
+    return SDValue();
+
+  SDValue NewNonConstOp = DAG.getNode(
+      BO->getOpcode(), DL, VT, Sel->getOperand(OtherSelOpNo), ConstBinOp);
+  SDValue NewT = (ConstSelOpNo == 1) ? NewConstOp : NewNonConstOp;
+  SDValue NewF = (ConstSelOpNo == 1) ? NewNonConstOp : NewConstOp;
+  return DAG.getSelect(DL, VT, Sel.getOperand(0), NewT, NewF);
+}
+
 SDValue RISCVTargetLowering::lowerSELECT(SDValue Op, SelectionDAG &DAG) const {
   SDValue CondV = Op.getOperand(0);
   SDValue TrueV = Op.getOperand(1);
@@ -5621,6 +5689,15 @@ SDValue RISCVTargetLowering::lowerSELECT(SDValue Op, SelectionDAG &DAG) const {
 
   if (SDValue V = combineSelectToBinOp(Op.getNode(), DAG, Subtarget))
     return V;
+
+  if (Op.hasOneUse() && isBinOp(Op->use_begin()->getOpcode())) {
+    SDNode *BinOp = *Op->use_begin();
+    if (SDValue NewSel =
+            foldBinOpIntoSelectIfProfitable(*Op->use_begin(), DAG, Subtarget)) {
+      DAG.ReplaceAllUsesWith(BinOp, &NewSel);
+      return lowerSELECT(NewSel, DAG);
+    }
+  }
 
   // (select cc, 1.0, 0.0) -> (sint_to_fp (zext cc))
   // (select cc, 0.0, 1.0) -> (sint_to_fp (zext (xor cc, 1)))
@@ -7384,17 +7461,26 @@ SDValue RISCVTargetLowering::lowerINSERT_SUBVECTOR(SDValue Op,
     // that for slideup this includes the offset.
     unsigned EndIndex = OrigIdx + SubVecVT.getVectorNumElements();
     SDValue VL = getVLOp(EndIndex, DL, DAG, Subtarget);
-    SDValue SlideupAmt = DAG.getConstant(OrigIdx, DL, XLenVT);
 
     // Use tail agnostic policy if we're inserting over Vec's tail.
     unsigned Policy = RISCVII::TAIL_UNDISTURBED_MASK_UNDISTURBED;
     if (VecVT.isFixedLengthVector() && EndIndex == VecVT.getVectorNumElements())
       Policy = RISCVII::TAIL_AGNOSTIC;
-    SDValue Slideup = getVSlideup(DAG, Subtarget, DL, ContainerVT, Vec, SubVec,
-                                  SlideupAmt, Mask, VL, Policy);
+
+    // If we're inserting into the lowest elements, use a tail undisturbed
+    // vmv.v.v.
+    if (OrigIdx == 0) {
+      SubVec =
+          DAG.getNode(RISCVISD::VMV_V_V_VL, DL, ContainerVT, Vec, SubVec, VL);
+    } else {
+      SDValue SlideupAmt = DAG.getConstant(OrigIdx, DL, XLenVT);
+      SubVec = getVSlideup(DAG, Subtarget, DL, ContainerVT, Vec, SubVec,
+                           SlideupAmt, Mask, VL, Policy);
+    }
+
     if (VecVT.isFixedLengthVector())
-      Slideup = convertFromScalableVector(VecVT, Slideup, DAG, Subtarget);
-    return DAG.getBitcast(Op.getValueType(), Slideup);
+      SubVec = convertFromScalableVector(VecVT, SubVec, DAG, Subtarget);
+    return DAG.getBitcast(Op.getValueType(), SubVec);
   }
 
   unsigned SubRegIdx, RemIdx;
@@ -7438,31 +7524,39 @@ SDValue RISCVTargetLowering::lowerINSERT_SUBVECTOR(SDValue Op,
                                  DAG.getConstant(AlignedIdx, DL, XLenVT));
   }
 
-  SDValue SlideupAmt =
-      DAG.getVScale(DL, XLenVT, APInt(XLenVT.getSizeInBits(), RemIdx));
-
-  auto [Mask, VL] = getDefaultScalableVLOps(VecVT, DL, DAG, Subtarget);
-
-  // Construct the vector length corresponding to RemIdx + length(SubVecVT).
-  VL = computeVLMax(SubVecVT, DL, DAG);
-  VL = DAG.getNode(ISD::ADD, DL, XLenVT, SlideupAmt, VL);
-
   SubVec = DAG.getNode(ISD::INSERT_SUBVECTOR, DL, InterSubVT,
                        DAG.getUNDEF(InterSubVT), SubVec,
                        DAG.getConstant(0, DL, XLenVT));
 
-  SDValue Slideup = getVSlideup(DAG, Subtarget, DL, InterSubVT, AlignedExtract,
-                                SubVec, SlideupAmt, Mask, VL);
+  auto [Mask, VL] = getDefaultScalableVLOps(VecVT, DL, DAG, Subtarget);
+
+  VL = computeVLMax(SubVecVT, DL, DAG);
+
+  // If we're inserting into the lowest elements, use a tail undisturbed
+  // vmv.v.v.
+  if (RemIdx == 0) {
+    SubVec = DAG.getNode(RISCVISD::VMV_V_V_VL, DL, InterSubVT, AlignedExtract,
+                         SubVec, VL);
+  } else {
+    SDValue SlideupAmt =
+        DAG.getVScale(DL, XLenVT, APInt(XLenVT.getSizeInBits(), RemIdx));
+
+    // Construct the vector length corresponding to RemIdx + length(SubVecVT).
+    VL = DAG.getNode(ISD::ADD, DL, XLenVT, SlideupAmt, VL);
+
+    SubVec = getVSlideup(DAG, Subtarget, DL, InterSubVT, AlignedExtract, SubVec,
+                         SlideupAmt, Mask, VL);
+  }
 
   // If required, insert this subvector back into the correct vector register.
   // This should resolve to an INSERT_SUBREG instruction.
   if (VecVT.bitsGT(InterSubVT))
-    Slideup = DAG.getNode(ISD::INSERT_SUBVECTOR, DL, VecVT, Vec, Slideup,
-                          DAG.getConstant(AlignedIdx, DL, XLenVT));
+    SubVec = DAG.getNode(ISD::INSERT_SUBVECTOR, DL, VecVT, Vec, SubVec,
+                         DAG.getConstant(AlignedIdx, DL, XLenVT));
 
   // We might have bitcast from a mask type: cast back to the original type if
   // required.
-  return DAG.getBitcast(Op.getSimpleValueType(), Slideup);
+  return DAG.getBitcast(Op.getSimpleValueType(), SubVec);
 }
 
 SDValue RISCVTargetLowering::lowerEXTRACT_SUBVECTOR(SDValue Op,
@@ -15533,6 +15627,7 @@ const char *RISCVTargetLowering::getTargetNodeName(unsigned Opcode) const {
   NODE_NAME_CASE(TH_LDD)
   NODE_NAME_CASE(TH_SWD)
   NODE_NAME_CASE(TH_SDD)
+  NODE_NAME_CASE(VMV_V_V_VL)
   NODE_NAME_CASE(VMV_V_X_VL)
   NODE_NAME_CASE(VFMV_V_F_VL)
   NODE_NAME_CASE(VMV_X_S)
