@@ -248,6 +248,10 @@ llvm::SmallVector<Header> headersForSymbol(const Symbol &S,
   // Add name match hints to deduplicated providers.
   llvm::StringRef SymbolName = symbolName(S);
   for (auto &H : Headers) {
+    // Don't apply name match hints to standard headers as the standard headers
+    // are already ranked in the stdlib mapping.
+    if (H.kind() == Header::Standard)
+      continue;
     if (nameMatch(SymbolName, H))
       H.Hint |= Hints::PreferredHeader;
   }
