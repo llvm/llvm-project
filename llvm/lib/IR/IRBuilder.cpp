@@ -482,6 +482,14 @@ CallInst *IRBuilderBase::CreateFPMinReduce(Value *Src) {
   return getReductionIntrinsic(Intrinsic::vector_reduce_fmin, Src);
 }
 
+CallInst *IRBuilderBase::CreateFPMaximumReduce(Value *Src) {
+  return getReductionIntrinsic(Intrinsic::vector_reduce_fmaximum, Src);
+}
+
+CallInst *IRBuilderBase::CreateFPMinimumReduce(Value *Src) {
+  return getReductionIntrinsic(Intrinsic::vector_reduce_fminimum, Src);
+}
+
 CallInst *IRBuilderBase::CreateLifetimeStart(Value *Ptr, ConstantInt *Size) {
   assert(isa<PointerType>(Ptr->getType()) &&
          "lifetime.start only applies to pointers.");
