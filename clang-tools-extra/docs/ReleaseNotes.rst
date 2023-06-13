@@ -325,6 +325,10 @@ Changes in existing checks
   constructors toward hand written constructors so that they are skipped if more
   than one exists.
 
+- Fixed crash in :doc:`modernize-use-default-member-init
+  <clang-tidy/checks/modernize/use-default-member-init>` with array members which
+  are value initialized.
+
 - Fixed false positive in :doc:`modernize-use-equals-default
   <clang-tidy/checks/modernize/use-equals-default>` check for special member
   functions containing macros or preprocessor directives, and out-of-line special
