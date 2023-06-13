@@ -300,12 +300,12 @@ entry:
 define <4 x float> @_e2(ptr %ptr) nounwind uwtable readnone ssp {
 ; X86-LABEL: _e2:
 ; X86:       ## %bb.0: ## %entry
-; X86-NEXT:    vmovaps {{.*#+}} xmm0 = [-7.8125E-3,-7.8125E-3,-7.8125E-3,-7.8125E-3]
+; X86-NEXT:    vbroadcastss {{.*#+}} xmm0 = [-7.8125E-3,-7.8125E-3,-7.8125E-3,-7.8125E-3]
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: _e2:
 ; X64:       ## %bb.0: ## %entry
-; X64-NEXT:    vmovaps {{.*#+}} xmm0 = [-7.8125E-3,-7.8125E-3,-7.8125E-3,-7.8125E-3]
+; X64-NEXT:    vbroadcastss {{.*#+}} xmm0 = [-7.8125E-3,-7.8125E-3,-7.8125E-3,-7.8125E-3]
 ; X64-NEXT:    retq
 entry:
    %vecinit.i = insertelement <4 x float> undef, float       0xbf80000000000000, i32 0
