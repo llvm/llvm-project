@@ -115,22 +115,13 @@ std::set<RegisterId> PhysicalRegisterInfo::getAliasSet(RegisterId Reg) const {
         continue;
       AS.insert(i);
     }
-    for (const uint32_t *RM : RegMasks) {
-      RegisterId MI = getRegMaskId(RM);
-      if (MI != Reg && aliasMM(RegisterRef(Reg), RegisterRef(MI)))
-        AS.insert(MI);
-    }
     return AS;
   }
 
   assert(RegisterRef::isRegId(Reg));
   for (MCRegAliasIterator AI(Reg, &TRI, false); AI.isValid(); ++AI)
     AS.insert(*AI);
-  for (const uint32_t *RM : RegMasks) {
-    RegisterId MI = getRegMaskId(RM);
-    if (aliasRM(RegisterRef(Reg), RegisterRef(MI)))
-      AS.insert(MI);
-  }
+
   return AS;
 }
 

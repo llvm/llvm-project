@@ -142,7 +142,7 @@ struct PhysicalRegisterInfo {
   }
 
   // Returns the set of aliased physical registers or register masks.
-  // The returned set does not contain register units.
+  // The returned set only contains physical registers (not masks or units).
   std::set<RegisterId> getAliasSet(RegisterId Reg) const;
 
   RegisterRef getRefForUnit(uint32_t U) const {
