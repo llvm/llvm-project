@@ -710,9 +710,9 @@ Constant *llvm::ConstantFoldShuffleVectorInstruction(Constant *V1, Constant *V2,
       ElementCount::get(MaskNumElts, isa<ScalableVectorType>(V1VTy));
   Type *EltTy = V1VTy->getElementType();
 
-  // Undefined shuffle mask -> undefined value.
+  // Poison shuffle mask -> poison value.
   if (all_of(Mask, [](int Elt) { return Elt == PoisonMaskElem; })) {
-    return UndefValue::get(VectorType::get(EltTy, MaskEltCount));
+    return PoisonValue::get(VectorType::get(EltTy, MaskEltCount));
   }
 
   // If the mask is all zeros this is a splat, no need to go through all
