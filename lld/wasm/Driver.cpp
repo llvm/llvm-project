@@ -84,7 +84,7 @@ private:
 
 bool link(ArrayRef<const char *> args, llvm::raw_ostream &stdoutOS,
           llvm::raw_ostream &stderrOS, bool exitEarly, bool disableOutput) {
-  // This driver-specific context will be freed later by lldMain().
+  // This driver-specific context will be freed later by unsafeLldMain().
   auto *ctx = new CommonLinkerContext;
 
   ctx->e.initialize(stdoutOS, stderrOS, exitEarly, disableOutput);
