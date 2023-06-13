@@ -1,5 +1,8 @@
 // RUN: %clangxx -O0 -g %s -o %t
 
+// Android doesn't have ttyent.h.
+// UNSUPPORTED: android
+
 #include <assert.h>
 #include <stdlib.h>
 #include <ttyent.h>
