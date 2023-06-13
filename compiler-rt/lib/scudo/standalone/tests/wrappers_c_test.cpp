@@ -333,7 +333,7 @@ static void callback(uintptr_t Base, size_t Size, void *Arg) {
 // block is a boundary for. It must only be seen once by the callback function.
 TEST(ScudoWrappersCTest, MallocIterateBoundary) {
   const size_t PageSize = sysconf(_SC_PAGESIZE);
-  const size_t BlockDelta = 16U;
+  const size_t BlockDelta = FIRST_32_SECOND_64(8U, 16U);
   const size_t SpecialSize = PageSize - BlockDelta;
 
   // We aren't guaranteed that any size class is exactly a page wide. So we need
