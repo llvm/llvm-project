@@ -8747,6 +8747,8 @@ protected:
     if (!Accesses)
       Accesses = new (Allocator) AccessSet();
     Changed |= Accesses->insert(AccessInfo{I, Ptr, AK}).second;
+    if (MLK == NO_UNKOWN_MEM)
+      MLK = NO_LOCATIONS;
     State.removeAssumedBits(MLK);
   }
 
@@ -8822,7 +8824,7 @@ void AAMemoryLocationImpl::categorizePtrValue(
     assert(MLK != NO_LOCATIONS && "No location specified!");
     LLVM_DEBUG(dbgs() << "[AAMemoryLocation] Ptr value can be categorized: "
                       << Obj << " -> " << getMemoryLocationsAsStr(MLK) << "\n");
-    updateStateAndAccessesMap(getState(), MLK, &I, &Obj, Changed,
+    updateStateAndAccessesMap(State, MLK, &I, &Obj, Changed,
                               getAccessKindFromInst(&I));
 
     return true;
