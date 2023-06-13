@@ -22,4 +22,4 @@ void m() {
 // CHECK:   cir.func @_Z1mv() {
 // CHECK:   cir.alloca !ty_22union2Eyolm22, cir.ptr <!ty_22union2Eyolm22>, ["q"] {alignment = 4 : i64}
 // CHECK:   cir.alloca !ty_22union2Eyolm222, cir.ptr <!ty_22union2Eyolm222>, ["q2"] {alignment = 8 : i64}
-// CHECK:   cir.alloca !ty_22union2Eyolm322, cir.ptr <!ty_22union2Eyolm322>, ["q3"] {alignment = 4 : i64} loc(#loc12)
+// CHECK:   cir.alloca !ty_22union2Eyolm322, cir.ptr <!ty_22union2Eyolm322>, ["q3"] {alignment = 4 : i64}
