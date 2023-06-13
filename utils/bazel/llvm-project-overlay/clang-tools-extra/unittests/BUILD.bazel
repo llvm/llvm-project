@@ -40,6 +40,7 @@ cc_test(
         "//clang-tools-extra/clang-tidy:misc",
         "//clang-tools-extra/clang-tidy:modernize",
         "//clang-tools-extra/clang-tidy:objc",
+        "//clang-tools-extra/clang-tidy:performance",
         "//clang-tools-extra/clang-tidy:readability",
         "//clang-tools-extra/clang-tidy:tool",
         "//clang-tools-extra/clang-tidy:utils",
