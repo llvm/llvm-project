@@ -490,7 +490,7 @@ func.func @fct1(%0 : !llvm.ptr<i32>) -> () {
 
 // -----
 
-// expected-error@+1 {{expect num and/or static value(s)}}
+// expected-error@+1 {{expect at least one of num, dim or static values}}
 acc.loop gang() {
   "test.openacc_dummy_op"() : () -> ()
   acc.yield

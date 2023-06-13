@@ -799,6 +799,7 @@ createLoopOp(Fortran::lower::AbstractConverter &converter,
   mlir::Value workerNum;
   mlir::Value vectorNum;
   mlir::Value gangNum;
+  mlir::Value gangDim;
   mlir::Value gangStatic;
   llvm::SmallVector<mlir::Value, 2> tileOperands, privateOperands,
       reductionOperands;
@@ -883,6 +884,7 @@ createLoopOp(Fortran::lower::AbstractConverter &converter,
   llvm::SmallVector<mlir::Value> operands;
   llvm::SmallVector<int32_t> operandSegments;
   addOperand(operands, operandSegments, gangNum);
+  addOperand(operands, operandSegments, gangDim);
   addOperand(operands, operandSegments, gangStatic);
   addOperand(operands, operandSegments, workerNum);
   addOperand(operands, operandSegments, vectorNum);

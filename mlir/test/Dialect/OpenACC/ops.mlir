@@ -276,6 +276,10 @@ func.func @testloopop() -> () {
     "test.openacc_dummy_op"() : () -> ()
     acc.yield
   }
+  acc.loop gang(dim=%i64Value : i64, static=%i64Value: i64) {
+    "test.openacc_dummy_op"() : () -> ()
+    acc.yield
+  }
   return
 }
 
@@ -339,6 +343,10 @@ func.func @testloopop() -> () {
 // CHECK-NEXT:   acc.yield
 // CHECK-NEXT: }
 // CHECK:      acc.loop gang(num=[[I64VALUE]] : i64, static=[[I64VALUE]] : i64) {
+// CHECK-NEXT:   "test.openacc_dummy_op"() : () -> ()
+// CHECK-NEXT:   acc.yield
+// CHECK-NEXT: }
+// CHECK:      acc.loop gang(dim=[[I64VALUE]] : i64, static=[[I64VALUE]] : i64) {
 // CHECK-NEXT:   "test.openacc_dummy_op"() : () -> ()
 // CHECK-NEXT:   acc.yield
 // CHECK-NEXT: }
