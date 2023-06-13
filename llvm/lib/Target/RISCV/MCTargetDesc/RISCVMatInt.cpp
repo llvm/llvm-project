@@ -190,11 +190,12 @@ InstSeq generateInstSeq(int64_t Val, const FeatureBitset &ActiveFeatures) {
               isInt<6>(ShiftedVal) && !ActiveFeatures[RISCV::TuneLUIADDIFusion];
     RISCVMatInt::InstSeq TmpSeq;
     generateInstSeqImpl(ShiftedVal, ActiveFeatures, TmpSeq);
-    TmpSeq.emplace_back(RISCV::SLLI, TrailingZeros);
 
     // Keep the new sequence if it is an improvement.
-    if (TmpSeq.size() < Res.size() || IsShiftedCompressible)
+    if ((TmpSeq.size() + 1) < Res.size() || IsShiftedCompressible) {
+      TmpSeq.emplace_back(RISCV::SLLI, TrailingZeros);
       Res = TmpSeq;
+    }
   }
 
   // If we have a 1 or 2 instruction sequence this is the best we can do. This
@@ -218,21 +219,23 @@ InstSeq generateInstSeq(int64_t Val, const FeatureBitset &ActiveFeatures) {
 
     RISCVMatInt::InstSeq TmpSeq;
     generateInstSeqImpl(ShiftedVal, ActiveFeatures, TmpSeq);
-    TmpSeq.emplace_back(RISCV::SRLI, LeadingZeros);
 
     // Keep the new sequence if it is an improvement.
-    if (TmpSeq.size() < Res.size())
+    if ((TmpSeq.size() + 1) < Res.size()) {
+      TmpSeq.emplace_back(RISCV::SRLI, LeadingZeros);
       Res = TmpSeq;
+    }
 
     // Some cases can benefit from filling the lower bits with zeros instead.
     ShiftedVal &= maskTrailingZeros<uint64_t>(LeadingZeros);
     TmpSeq.clear();
     generateInstSeqImpl(ShiftedVal, ActiveFeatures, TmpSeq);
-    TmpSeq.emplace_back(RISCV::SRLI, LeadingZeros);
 
     // Keep the new sequence if it is an improvement.
-    if (TmpSeq.size() < Res.size())
+    if ((TmpSeq.size() + 1) < Res.size()) {
+      TmpSeq.emplace_back(RISCV::SRLI, LeadingZeros);
       Res = TmpSeq;
+    }
 
     // If we have exactly 32 leading zeros and Zba, we can try using zext.w at
     // the end of the sequence.
@@ -241,11 +244,12 @@ InstSeq generateInstSeq(int64_t Val, const FeatureBitset &ActiveFeatures) {
       uint64_t LeadingOnesVal = Val | maskLeadingOnes<uint64_t>(LeadingZeros);
       TmpSeq.clear();
       generateInstSeqImpl(LeadingOnesVal, ActiveFeatures, TmpSeq);
-      TmpSeq.emplace_back(RISCV::ADD_UW, 0);
 
       // Keep the new sequence if it is an improvement.
-      if (TmpSeq.size() < Res.size())
+      if ((TmpSeq.size() + 1) < Res.size()) {
+        TmpSeq.emplace_back(RISCV::ADD_UW, 0);
         Res = TmpSeq;
+      }
     }
   }
 
@@ -258,9 +262,10 @@ InstSeq generateInstSeq(int64_t Val, const FeatureBitset &ActiveFeatures) {
     if (LoVal == HiVal) {
       RISCVMatInt::InstSeq TmpSeq;
       generateInstSeqImpl(LoVal, ActiveFeatures, TmpSeq);
-      TmpSeq.emplace_back(RISCV::PACK, 0);
-      if (TmpSeq.size() < Res.size())
+      if ((TmpSeq.size() + 1) < Res.size()) {
+        TmpSeq.emplace_back(RISCV::PACK, 0);
         Res = TmpSeq;
+      }
     }
   }
 
@@ -284,9 +289,10 @@ InstSeq generateInstSeq(int64_t Val, const FeatureBitset &ActiveFeatures) {
     if (isInt<32>(NewVal)) {
       RISCVMatInt::InstSeq TmpSeq;
       generateInstSeqImpl(NewVal, ActiveFeatures, TmpSeq);
-      TmpSeq.emplace_back(Opc, 31);
-      if (TmpSeq.size() < Res.size())
+      if ((TmpSeq.size() + 1) < Res.size()) {
+        TmpSeq.emplace_back(Opc, 31);
         Res = TmpSeq;
+      }
     }
 
     // Try to use BCLRI for upper 32 bits if the original lower 32 bits are
@@ -335,9 +341,10 @@ InstSeq generateInstSeq(int64_t Val, const FeatureBitset &ActiveFeatures) {
     // Build the new instruction sequence.
     if (Div > 0) {
       generateInstSeqImpl(Val / Div, ActiveFeatures, TmpSeq);
-      TmpSeq.emplace_back(Opc, 0);
-      if (TmpSeq.size() < Res.size())
+      if ((TmpSeq.size() + 1) < Res.size()) {
+        TmpSeq.emplace_back(Opc, 0);
         Res = TmpSeq;
+      }
     } else {
       // Try to use LUI+SH*ADD+ADDI.
       int64_t Hi52 = ((uint64_t)Val + 0x800ull) & ~0xfffull;
@@ -361,10 +368,11 @@ InstSeq generateInstSeq(int64_t Val, const FeatureBitset &ActiveFeatures) {
                "unexpected instruction sequence for immediate materialisation");
         assert(TmpSeq.empty() && "Expected empty TmpSeq");
         generateInstSeqImpl(Hi52 / Div, ActiveFeatures, TmpSeq);
-        TmpSeq.emplace_back(Opc, 0);
-        TmpSeq.emplace_back(RISCV::ADDI, Lo12);
-        if (TmpSeq.size() < Res.size())
+        if ((TmpSeq.size() + 2) < Res.size()) {
+          TmpSeq.emplace_back(Opc, 0);
+          TmpSeq.emplace_back(RISCV::ADDI, Lo12);
           Res = TmpSeq;
+        }
       }
     }
   }

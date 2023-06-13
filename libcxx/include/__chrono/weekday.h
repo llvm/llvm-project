@@ -70,10 +70,6 @@ bool operator==(const weekday& __lhs, const weekday& __rhs) noexcept
 { return __lhs.c_encoding() == __rhs.c_encoding(); }
 
 _LIBCPP_HIDE_FROM_ABI inline constexpr
-bool operator!=(const weekday& __lhs, const weekday& __rhs) noexcept
-{ return !(__lhs == __rhs); }
-
-_LIBCPP_HIDE_FROM_ABI inline constexpr
 bool operator< (const weekday& __lhs, const weekday& __rhs) noexcept
 { return __lhs.c_encoding() < __rhs.c_encoding(); }
 
@@ -138,11 +134,6 @@ _LIBCPP_HIDE_FROM_ABI inline constexpr
 bool operator==(const weekday_indexed& __lhs, const weekday_indexed& __rhs) noexcept
 { return __lhs.weekday() == __rhs.weekday() && __lhs.index() == __rhs.index(); }
 
-_LIBCPP_HIDE_FROM_ABI inline constexpr
-bool operator!=(const weekday_indexed& __lhs, const weekday_indexed& __rhs) noexcept
-{ return !(__lhs == __rhs); }
-
-
 class weekday_last {
 private:
     chrono::weekday __wd_;
@@ -156,10 +147,6 @@ public:
 _LIBCPP_HIDE_FROM_ABI inline constexpr
 bool operator==(const weekday_last& __lhs, const weekday_last& __rhs) noexcept
 { return __lhs.weekday() == __rhs.weekday(); }
-
-_LIBCPP_HIDE_FROM_ABI inline constexpr
-bool operator!=(const weekday_last& __lhs, const weekday_last& __rhs) noexcept
-{ return !(__lhs == __rhs); }
 
 _LIBCPP_HIDE_FROM_ABI inline constexpr
 weekday_indexed weekday::operator[](unsigned __index) const noexcept { return weekday_indexed{*this, __index}; }

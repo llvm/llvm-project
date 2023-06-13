@@ -560,8 +560,9 @@ enum Component : unsigned {
   MAX_OPR_NUM = DST_NUM + MAX_SRC_NUM
 };
 
-// Number of VGPR banks per VOPD component operand.
-constexpr unsigned BANKS_NUM[] = {2, 4, 4, 2};
+// LSB mask for VGPR banks per VOPD component operand.
+// 4 banks result in a mask 3, setting 2 lower bits.
+constexpr unsigned VOPD_VGPR_BANK_MASKS[] = {1, 3, 3, 1};
 
 enum ComponentIndex : unsigned { X = 0, Y = 1 };
 constexpr unsigned COMPONENTS[] = {ComponentIndex::X, ComponentIndex::Y};

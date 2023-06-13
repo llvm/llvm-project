@@ -85,6 +85,7 @@ public:
   NODE(parser, AccEndBlockDirective)
   NODE(parser, AccEndCombinedDirective)
   NODE(parser, AccGangArgument)
+  NODE(parser, AccCollapseArg)
   NODE(parser, AccObject)
   NODE(parser, AccObjectList)
   NODE(parser, AccObjectListWithModifier)

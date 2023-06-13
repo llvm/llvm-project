@@ -58,6 +58,14 @@ public:
   _LIBCPP_INLINE_VISIBILITY
   void permissions(perms __p) noexcept { __prms_ = __p; }
 
+#  if _LIBCPP_STD_VER >= 20
+
+  _LIBCPP_HIDE_FROM_ABI friend bool operator==(const file_status& __lhs, const file_status& __rhs) noexcept {
+    return __lhs.type() == __rhs.type() && __lhs.permissions() == __rhs.permissions();
+  }
+
+#  endif
+
 private:
   file_type __ft_;
   perms __prms_;

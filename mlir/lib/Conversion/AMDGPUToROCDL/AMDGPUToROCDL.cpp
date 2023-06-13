@@ -213,7 +213,7 @@ struct RawBufferOpLowering : public ConvertOpToLLVMPattern<GpuOp> {
     //  none, 3 = either swizzles or testing against offset field) RDNA only
     // bits 30-31: Type (must be 0)
     uint32_t word3 = (7 << 12) | (4 << 15);
-    if (chipset.majorVersion == 10) {
+    if (chipset.majorVersion >= 10) {
       word3 |= (1 << 24);
       uint32_t oob = adaptor.getBoundsCheck() ? 3 : 2;
       word3 |= (oob << 28);

@@ -1,15 +1,11 @@
-//===-- sanitizer_common_region_test.cpp ----------------------------------===//
+//===-- sanitizer_region_test.cpp -----------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
-//
-// This file is a part of ThreadSanitizer/AddressSanitizer runtime.
-//
-//===----------------------------------------------------------------------===//
-#include "sanitizer_common/sanitizer_common_range.h"
+#include "sanitizer_common/sanitizer_range.h"
 
 #include <algorithm>
 

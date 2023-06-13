@@ -142,7 +142,7 @@ let test_get_function m dibuilder file_di m_di =
       ~flags:flags_zero ~is_optimized:false
   in
   stdout_metadata f_di;
-  (* CHECK: [[SBPRG_PTR:<0x[0-9a-f]*>]] = distinct !DISubprogram(name: "tfun", linkageName: "tfun", scope: [[MODULE_PTR]], file: [[FILE_PTR]], line: 10, type: [[SBRTNTY_PTR]], scopeLine: 10, spFlags: DISPFlagDefinition, unit: [[CMPUNIT_PTR]], retainedNodes: {{<0x[0-9a-f]*>}})
+  (* CHECK: [[SBPRG_PTR:<0x[0-9a-f]*>]] = distinct !DISubprogram(name: "tfun", linkageName: "tfun", scope: [[MODULE_PTR]], file: [[FILE_PTR]], line: 10, type: [[SBRTNTY_PTR]], scopeLine: 10, spFlags: DISPFlagDefinition, unit: [[CMPUNIT_PTR]])
   *)
   Llvm_debuginfo.set_subprogram f f_di;
   ( match Llvm_debuginfo.get_subprogram f with

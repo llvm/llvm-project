@@ -1912,6 +1912,14 @@ public:
     Walk("NUM:", std::get<std::optional<ScalarIntExpr>>(x.t));
     Walk(", STATIC:", std::get<std::optional<AccSizeExpr>>(x.t));
   }
+  void Unparse(const AccCollapseArg &x) {
+    const auto &force{std::get<bool>(x.t)};
+    const auto &collapseValue{std::get<parser::ScalarIntConstantExpr>(x.t)};
+    if (force) {
+      Put("FORCE:");
+    }
+    Walk(collapseValue);
+  }
   void Unparse(const OpenACCBlockConstruct &x) {
     BeginOpenACC();
     Word("!$ACC ");

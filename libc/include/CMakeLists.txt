@@ -202,6 +202,7 @@ add_gen_header(
     .llvm-libc-types.size_t
     .llvm-libc-types.__bsearchcompare_t
     .llvm-libc-types.__qsortcompare_t
+    .llvm-libc-types.__qsortrcompare_t
     .llvm-libc-types.__atexithandler_t
 )
 
