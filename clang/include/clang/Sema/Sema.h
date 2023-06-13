@@ -1158,9 +1158,6 @@ public:
   /// The C++ "type_info" declaration, which is defined in \<typeinfo>.
   RecordDecl *CXXTypeInfoDecl;
 
-  /// The MSVC "_GUID" struct, which is defined in MSVC header files.
-  RecordDecl *MSVCGuidDecl;
-
   /// The C++ "std::source_location::__impl" struct, defined in
   /// \<source_location>.
   RecordDecl *StdSourceLocationImplDecl;
