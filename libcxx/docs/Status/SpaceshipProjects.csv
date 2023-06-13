@@ -111,15 +111,14 @@ Section,Description,Dependencies,Assignee,Complete
 "| `[move.iterator] <https://wg21.link/move.iterator>`_
 | `[move.iter.op.comp] <https://wg21.link/move.iter.op.comp>`_",| `move_iterator <https://reviews.llvm.org/D117656>`_,None,Arthur O'Dwyer,|Complete|
 "| `[common.iterator] <https://wg21.link/common.iterator>`_
-| `[common.iter.cmp] <https://wg21.link/common.iter.cmp>`_",| remove ops `common_iterator`,None,Unassigned,|Not Started|
+| `[common.iter.cmp] <https://wg21.link/common.iter.cmp>`_",| `common_iterator <https://reviews.llvm.org/D103335>`_,None,Zoe Carver,|Complete|
 "| `[counted.iterator] <https://wg21.link/counted.iterator>`_
 | `[counted.iter.cmp] <https://wg21.link/counted.iter.cmp>`_",| `counted_iterator <https://reviews.llvm.org/D106205>`_,None,Zoe Carver,|Complete|
-"| `[unreachable.sentinel] <https://wg21.link/unreachable.sentinel>`_
-| `[unreachable.sentinel.cmp] <https://wg21.link/common.iter.cmp>`_",| `unreachable_sentinel_t`,None,Unassigned,|Not Started|
+| `[unreachable.sentinel] <https://wg21.link/unreachable.sentinel>`_,| `unreachable_sentinel_t <https://reviews.llvm.org/D107920>`_,None,Zoe Carver,|Complete|
 "| `[istream.iterator] <https://wg21.link/istream.iterator>`_
-| `[istream.iterator.ops] <https://wg21.link/istream.iterator.ops>`_",| remove ops `istream_iterator`,None,Unassigned,|Not Started|
+| `[istream.iterator.ops] <https://wg21.link/istream.iterator.ops>`_",| remove ops `istream_iterator <https://reviews.llvm.org/D119620>`_,None,Konstantin Varlamov,|Complete|
 "| `[istreambuf.iterator] <https://wg21.link/istreambuf.iterator>`_
-| `[istreambuf.iterator.ops] <https://wg21.link/istreambuf.iterator.ops>`_",| remove ops `istreambuf_iterator`,None,Unassigned,|Not Started|
+| `[istreambuf.iterator.ops] <https://wg21.link/istreambuf.iterator.ops>`_",| remove ops `istreambuf_iterator <https://reviews.llvm.org/D119620>`_,None,Konstantin Varlamov,|Complete|
 - `5.9 Clause 24: Ranges library <https://wg21.link/p1614r2#clause-24-ranges-library>`_,,,,
 | `[range.iota.iterator] <https://wg21.link/range.iota.iterator>`_,| `ranges::iota_view::iterator <https://reviews.llvm.org/D110774>`_,[concepts.cmp],Arthur O'Dwyer,|Complete|
 | `[range.iota.sentinel] <https://wg21.link/range.iota.sentinel>`_,| remove ops `iota_view::sentinel`,None,Unassigned,|Not Started|
