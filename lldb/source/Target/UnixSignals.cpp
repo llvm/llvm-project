@@ -195,10 +195,8 @@ bool UnixSignals::SignalIsValid(int32_t signo) const {
   return m_signals.find(signo) != m_signals.end();
 }
 
-ConstString UnixSignals::GetShortName(ConstString name) const {
-  if (name)
-    return ConstString(name.GetStringRef().substr(3)); // Remove "SIG" from name
-  return name;
+llvm::StringRef UnixSignals::GetShortName(llvm::StringRef name) const {
+  return name.substr(3); // Remove "SIG" from name
 }
 
 int32_t UnixSignals::GetSignalNumberFromName(const char *name) const {

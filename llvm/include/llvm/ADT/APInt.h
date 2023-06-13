@@ -176,9 +176,6 @@ public:
   /// Get the '0' value for the specified bit-width.
   static APInt getZero(unsigned numBits) { return APInt(numBits, 0); }
 
-  LLVM_DEPRECATED("use getZero instead", "getZero")
-  static APInt getNullValue(unsigned numBits) { return getZero(numBits); }
-
   /// Return an APInt zero bits wide.
   static APInt getZeroWidth() { return getZero(0); }
 
@@ -214,9 +211,6 @@ public:
   static APInt getAllOnes(unsigned numBits) {
     return APInt(numBits, WORDTYPE_MAX, true);
   }
-
-  LLVM_DEPRECATED("use getAllOnes instead", "getAllOnes")
-  static APInt getAllOnesValue(unsigned numBits) { return getAllOnes(numBits); }
 
   /// Return an APInt with exactly one bit set in the result.
   static APInt getOneBitSet(unsigned numBits, unsigned BitNo) {
@@ -359,18 +353,12 @@ public:
     return countTrailingOnesSlowCase() == BitWidth;
   }
 
-  LLVM_DEPRECATED("use isAllOnes instead", "isAllOnes")
-  bool isAllOnesValue() const { return isAllOnes(); }
-
   /// Determine if this value is zero, i.e. all bits are clear.
   bool isZero() const {
     if (isSingleWord())
       return U.VAL == 0;
     return countLeadingZerosSlowCase() == BitWidth;
   }
-
-  LLVM_DEPRECATED("use isZero instead", "isZero")
-  bool isNullValue() const { return isZero(); }
 
   /// Determine if this is a value of 1.
   ///
@@ -380,9 +368,6 @@ public:
       return U.VAL == 1;
     return countLeadingZerosSlowCase() == BitWidth - 1;
   }
-
-  LLVM_DEPRECATED("use isOne instead", "isOne")
-  bool isOneValue() const { return isOne(); }
 
   /// Determine if this is the largest unsigned value.
   ///
@@ -1487,9 +1472,6 @@ public:
     return BitWidth - getNumSignBits() + 1;
   }
 
-  LLVM_DEPRECATED("use getSignificantBits instead", "getSignificantBits")
-  unsigned getMinSignedBits() const { return getSignificantBits(); }
-
   /// Get zero extended value
   ///
   /// This method attempts to return the value of this APInt as a zero extended
@@ -1629,9 +1611,6 @@ public:
       return llvm::popcount(U.VAL);
     return countPopulationSlowCase();
   }
-
-  LLVM_DEPRECATED("use popcount instead", "popcount")
-  unsigned countPopulation() const { return popcount(); }
 
   /// @}
   /// \name Conversion Functions
