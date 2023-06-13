@@ -396,6 +396,10 @@ Changes in existing checks
   <clang-tidy/checks/readability/misleading-indentation>` check when warning would
   be unnecessarily emitted for template dependent ``if constexpr``.
 
+- Fixed a false positive in :doc:`readability-named-parameter
+  <clang-tidy/checks/readability/named-parameter>` for defaulted out-of-line
+  special member functions.
+
 - Fixed incorrect fixes in :doc:`readability-redundant-declaration
   <clang-tidy/checks/readability/redundant-declaration>` check when linkage
   (like ``extern "C"``) is explicitly specified.
