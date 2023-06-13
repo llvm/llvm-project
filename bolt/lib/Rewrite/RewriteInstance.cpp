@@ -5730,10 +5730,6 @@ void RewriteInstance::rewriteFile() {
   // Copy allocatable part of the input.
   OS << InputFile->getData().substr(0, FirstNonAllocatableOffset);
 
-  // We obtain an asm-specific writer so that we can emit nops in an
-  // architecture-specific way at the end of the function.
-  std::unique_ptr<MCAsmBackend> MAB(
-      BC->TheTarget->createMCAsmBackend(*BC->STI, *BC->MRI, MCTargetOptions()));
   auto Streamer = BC->createStreamer(OS);
   // Make sure output stream has enough reserved space, otherwise
   // pwrite() will fail.
@@ -5802,8 +5798,8 @@ void RewriteInstance::rewriteFile() {
     if (Function->getMaxSize() != std::numeric_limits<uint64_t>::max()) {
       uint64_t Pos = OS.tell();
       OS.seek(Function->getFileOffset() + Function->getImageSize());
-      MAB->writeNopData(OS, Function->getMaxSize() - Function->getImageSize(),
-                        &*BC->STI);
+      BC->MAB->writeNopData(
+          OS, Function->getMaxSize() - Function->getImageSize(), &*BC->STI);
 
       OS.seek(Pos);
     }
