@@ -245,7 +245,8 @@ InstructionCost X86TTIImpl::getArithmeticInstrCost(
   assert(ISD && "Invalid opcode");
 
   if (ISD == ISD::MUL && Args.size() == 2 && LT.second.isVector() &&
-      LT.second.getScalarType() == MVT::i32) {
+      (LT.second.getScalarType() == MVT::i32 ||
+       LT.second.getScalarType() == MVT::i64)) {
     // Check if the operands can be represented as a smaller datatype.
     bool Op1Signed = false, Op2Signed = false;
     unsigned Op1MinSize = BaseT::minRequiredElementSize(Args[0], Op1Signed);
@@ -253,10 +254,11 @@ InstructionCost X86TTIImpl::getArithmeticInstrCost(
     unsigned OpMinSize = std::max(Op1MinSize, Op2MinSize);
     bool SignedMode = Op1Signed || Op2Signed;
 
-    // If both are representable as i15 and at least one is constant,
+    // If both vXi32 are representable as i15 and at least one is constant,
     // zero-extended, or sign-extended from vXi16 (or less pre-SSE41) then we
     // can treat this as PMADDWD which has the same costs as a vXi16 multiply.
-    if (OpMinSize <= 15 && !ST->isPMADDWDSlow()) {
+    if (OpMinSize <= 15 && !ST->isPMADDWDSlow() &&
+        LT.second.getScalarType() == MVT::i32) {
       bool Op1Constant =
           isa<ConstantDataVector>(Args[0]) || isa<ConstantVector>(Args[0]);
       bool Op2Constant =
@@ -287,6 +289,12 @@ InstructionCost X86TTIImpl::getArithmeticInstrCost(
       if (!SignedMode && OpMinSize <= 16)
         return LT.first * 5; // pmullw/pmulhw/pshuf
     }
+
+    // If both vXi64 are representable as (unsigned) i32, then we can perform
+    // the multiple with a single PMULUDQ instruction.
+    // TODO: Add (SSE41+) PMULDQ handling for signed extensions.
+    if (!SignedMode && OpMinSize <= 32 && LT.second.getScalarType() == MVT::i64)
+      ISD = X86ISD::PMULUDQ;
   }
 
   // Vector multiply by pow2 will be simplified to shifts.
@@ -893,6 +901,8 @@ InstructionCost X86TTIImpl::getArithmeticInstrCost(
     { ISD::MUL,     MVT::v8i64,   {  6,  9, 8, 8 } }, // 3*pmuludq/3*shift/2*add
     { ISD::MUL,     MVT::i64,     {  1 } }, // Skylake from http://www.agner.org/
 
+    { X86ISD::PMULUDQ, MVT::v8i64, { 1,  5, 1, 1 } },
+
     { ISD::FNEG,    MVT::v8f64,   {  1,  1, 1, 2 } }, // Skylake from http://www.agner.org/
     { ISD::FADD,    MVT::v8f64,   {  1,  4, 1, 1 } }, // Skylake from http://www.agner.org/
     { ISD::FADD,    MVT::v4f64,   {  1,  4, 1, 1 } }, // Skylake from http://www.agner.org/
@@ -1092,6 +1102,8 @@ InstructionCost X86TTIImpl::getArithmeticInstrCost(
     { ISD::MUL,  MVT::v4i32,   {  2, 10, 1, 2 } }, // pmulld
     { ISD::MUL,  MVT::v4i64,   {  6, 10, 8,13 } }, // 3*pmuludq/3*shift/2*add
     { ISD::MUL,  MVT::v2i64,   {  6, 10, 8, 8 } }, // 3*pmuludq/3*shift/2*add
+
+    { X86ISD::PMULUDQ, MVT::v4i64, { 1,  5, 1, 1 } },
 
     { ISD::FNEG, MVT::v4f64,   {  1,  1, 1, 2 } }, // vxorpd
     { ISD::FNEG, MVT::v8f32,   {  1,  1, 1, 2 } }, // vxorps
@@ -1324,6 +1336,8 @@ InstructionCost X86TTIImpl::getArithmeticInstrCost(
     { ISD::MUL,  MVT::v8i16,  {  1,  5, 1, 1 } }, // pmullw
     { ISD::MUL,  MVT::v4i32,  {  6,  8, 7, 7 } }, // 3*pmuludq/4*shuffle
     { ISD::MUL,  MVT::v2i64,  {  8, 10, 8, 8 } }, // 3*pmuludq/3*shift/2*add
+
+    { X86ISD::PMULUDQ, MVT::v2i64, { 1,  5, 1, 1 } },
 
     { ISD::FDIV, MVT::f32,    { 23, 23, 1, 1 } }, // Pentium IV from http://www.agner.org/
     { ISD::FDIV, MVT::v4f32,  { 39, 39, 1, 1 } }, // Pentium IV from http://www.agner.org/
