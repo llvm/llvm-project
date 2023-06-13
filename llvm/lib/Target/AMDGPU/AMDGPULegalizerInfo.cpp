@@ -1987,9 +1987,9 @@ bool AMDGPULegalizerInfo::legalizeCustom(LegalizerHelper &Helper,
   case TargetOpcode::G_ATOMIC_CMPXCHG:
     return legalizeAtomicCmpXChg(MI, MRI, B);
   case TargetOpcode::G_FLOG:
-    return legalizeFlog(MI, B, numbers::ln2f);
+    return legalizeFlog(MI, B, numbers::ln2);
   case TargetOpcode::G_FLOG10:
-    return legalizeFlog(MI, B, numbers::ln2f / numbers::ln10f);
+    return legalizeFlog(MI, B, numbers::ln2 / numbers::ln10);
   case TargetOpcode::G_FEXP:
     return legalizeFExp(MI, B);
   case TargetOpcode::G_FPOW:
