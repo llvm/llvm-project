@@ -88,6 +88,10 @@ enum class LowerIntrinsicArgAs {
   Inquired
 };
 
+/// Enums used to templatize vector intrinsic function generators. Enum does
+/// not contain every vector intrinsic, only intrinsics that share generators.
+enum class VecOp { Add, And, Mul, Sub, Xor };
+
 /// Define how a given intrinsic argument must be lowered.
 struct ArgLoweringRule {
   LowerIntrinsicArgAs lowerAs;
@@ -334,6 +338,11 @@ struct IntrinsicLibrary {
   fir::ExtendedValue genReduction(FN func, FD funcDim, llvm::StringRef errMsg,
                                   mlir::Type resultType,
                                   llvm::ArrayRef<fir::ExtendedValue> args);
+
+  template <VecOp>
+  fir::ExtendedValue
+  genVecAddAndMulSubXor(mlir::Type resultType,
+                        llvm::ArrayRef<fir::ExtendedValue> args);
 
   /// Define the different FIR generators that can be mapped to intrinsic to
   /// generate the related code.
