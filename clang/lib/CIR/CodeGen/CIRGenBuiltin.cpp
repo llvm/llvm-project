@@ -353,14 +353,12 @@ RValue CIRGenFunction::buildBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
   // C stdarg builtins.
   case Builtin::BI__builtin_stdarg_start:
   case Builtin::BI__builtin_va_start:
-  case Builtin::BI__va_start: {
-    auto vaList = buildScalarExpr(E->getArg(0));
-    builder.create<mlir::cir::VAStartOp>(vaList.getLoc(), vaList);
-    return {};
-  }
+  case Builtin::BI__va_start:
   case Builtin::BI__builtin_va_end: {
-    auto vaList = buildVAListRef(E->getArg(0)).getPointer();
-    builder.create<mlir::cir::VAEndOp>(vaList.getLoc(), vaList);
+    buildVAStartEnd(BuiltinID == Builtin::BI__va_start
+                        ? buildScalarExpr(E->getArg(0))
+                        : buildVAListRef(E->getArg(0)).getPointer(),
+                    BuiltinID != Builtin::BI__builtin_va_end);
     return {};
   }
   case Builtin::BI__builtin_va_copy: {
@@ -497,4 +495,13 @@ CIRGenFunction::buildTargetBuiltinExpr(unsigned BuiltinID, const CallExpr *E,
 
   return buildTargetArchBuiltinExpr(this, BuiltinID, E, ReturnValue,
                                     getTarget().getTriple().getArch());
+}
+
+void CIRGenFunction::buildVAStartEnd(mlir::Value ArgValue, bool IsStart) {
+  // LLVM codegen casts to *i8, no real gain on doing this for CIRGen this
+  // early, defer to LLVM lowering.
+  if (IsStart)
+    builder.create<mlir::cir::VAStartOp>(ArgValue.getLoc(), ArgValue);
+  else
+    builder.create<mlir::cir::VAEndOp>(ArgValue.getLoc(), ArgValue);
 }
