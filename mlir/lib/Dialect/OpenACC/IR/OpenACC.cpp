@@ -650,14 +650,15 @@ parseGangValue(OpAsmParser &parser, llvm::StringRef keyword,
   return success();
 }
 
-static ParseResult
-parseGangClause(OpAsmParser &parser,
-                std::optional<OpAsmParser::UnresolvedOperand> &gangNum,
-                Type &gangNumType,
-                std::optional<OpAsmParser::UnresolvedOperand> &gangStatic,
-                Type &gangStaticType, UnitAttr &hasGang) {
+static ParseResult parseGangClause(
+    OpAsmParser &parser, std::optional<OpAsmParser::UnresolvedOperand> &gangNum,
+    Type &gangNumType, std::optional<OpAsmParser::UnresolvedOperand> &gangDim,
+    Type &gangDimType,
+    std::optional<OpAsmParser::UnresolvedOperand> &gangStatic,
+    Type &gangStaticType, UnitAttr &hasGang) {
   hasGang = UnitAttr::get(parser.getBuilder().getContext());
   gangNum = std::nullopt;
+  gangDim = std::nullopt;
   gangStatic = std::nullopt;
   bool needComa = false;
 
@@ -676,6 +677,9 @@ parseGangClause(OpAsmParser &parser,
       if (failed(parseGangValue(parser, LoopOp::getGangNumKeyword(), gangNum,
                                 gangNumType, needComa, newValue)))
         return failure();
+      if (failed(parseGangValue(parser, LoopOp::getGangDimKeyword(), gangDim,
+                                gangDimType, needComa, newValue)))
+        return failure();
       if (failed(parseGangValue(parser, LoopOp::getGangStaticKeyword(),
                                 gangStatic, gangStaticType, needComa,
                                 newValue)))
@@ -691,9 +695,9 @@ parseGangClause(OpAsmParser &parser,
         break;
     }
 
-    if (!gangNum && !gangStatic) {
+    if (!gangNum && !gangDim && !gangStatic) {
       parser.emitError(parser.getCurrentLocation(),
-                       "expect num and/or static value(s)");
+                       "expect at least one of num, dim or static values");
       return failure();
     }
 
@@ -704,13 +708,19 @@ parseGangClause(OpAsmParser &parser,
 }
 
 void printGangClause(OpAsmPrinter &p, Operation *op, Value gangNum,
-                     Type gangNumType, Value gangStatic, Type gangStaticType,
-                     UnitAttr hasGang) {
-  if (gangNum || gangStatic) {
+                     Type gangNumType, Value gangDim, Type gangDimType,
+                     Value gangStatic, Type gangStaticType, UnitAttr hasGang) {
+  if (gangNum || gangStatic || gangDim) {
     p << "(";
     if (gangNum) {
       p << LoopOp::getGangNumKeyword() << "=" << gangNum << " : "
         << gangNumType;
+      if (gangStatic || gangDim)
+        p << ", ";
+    }
+    if (gangDim) {
+      p << LoopOp::getGangDimKeyword() << "=" << gangDim << " : "
+        << gangDimType;
       if (gangStatic)
         p << ", ";
     }
