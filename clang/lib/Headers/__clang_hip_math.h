@@ -347,9 +347,6 @@ __DEVICE__
 float log2f(float __x) { return __ocml_log2_f32(__x); }
 
 __DEVICE__
-float log2fi(int __x) { return __ocml_log2_f32((float) __x); }
-
-__DEVICE__
 float logbf(float __x) { return __ocml_logb_f32(__x); }
 
 __DEVICE__
