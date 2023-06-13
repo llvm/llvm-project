@@ -11,7 +11,7 @@ _Static_assert(sizeof(long double) == 8, "Assumption failed");
 
 // CHECK-LABEL: @powif(
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[TMP0:%.*]] = tail call float @llvm.powi.f32.i16(float noundef [[X:%.*]], i16 noundef [[Y:%.*]])
+// CHECK-NEXT:    [[TMP0:%.*]] = tail call float @llvm.powi.f32.i16(float [[X:%.*]], i16 [[Y:%.*]])
 // CHECK-NEXT:    ret float [[TMP0]]
 //
 float powif(float x, int y) {
@@ -20,7 +20,7 @@ float powif(float x, int y) {
 
 // CHECK-LABEL: @powi(
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[TMP0:%.*]] = tail call double @llvm.powi.f64.i16(double noundef [[X:%.*]], i16 noundef [[Y:%.*]])
+// CHECK-NEXT:    [[TMP0:%.*]] = tail call double @llvm.powi.f64.i16(double [[X:%.*]], i16 [[Y:%.*]])
 // CHECK-NEXT:    ret double [[TMP0]]
 //
 double powi(double x, int y) {
@@ -29,7 +29,7 @@ double powi(double x, int y) {
 
 // CHECK-LABEL: @powil(
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[TMP0:%.*]] = tail call double @llvm.powi.f64.i16(double noundef [[X:%.*]], i16 noundef [[Y:%.*]])
+// CHECK-NEXT:    [[TMP0:%.*]] = tail call double @llvm.powi.f64.i16(double [[X:%.*]], i16 [[Y:%.*]])
 // CHECK-NEXT:    ret double [[TMP0]]
 //
 long double powil(long double x, int y) {

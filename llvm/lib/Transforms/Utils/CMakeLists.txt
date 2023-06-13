@@ -30,7 +30,6 @@ add_llvm_component_library(LLVMTransformUtils
   GlobalStatus.cpp
   GuardUtils.cpp
   HelloWorld.cpp
-  InferCallsiteAttrs.cpp
   InlineFunction.cpp
   InjectTLIMappings.cpp
   InstructionNamer.cpp
