@@ -24,39 +24,6 @@ using namespace TargetOpcode;
 using namespace LegalizeActions;
 using namespace LegalityPredicates;
 
-/// FIXME: The following static functions are SizeChangeStrategy functions
-/// that are meant to temporarily mimic the behaviour of the old legalization
-/// based on doubling/halving non-legal types as closely as possible. This is
-/// not entirly possible as only legalizing the types that are exactly a power
-/// of 2 times the size of the legal types would require specifying all those
-/// sizes explicitly.
-/// In practice, not specifying those isn't a problem, and the below functions
-/// should disappear quickly as we add support for legalizing non-power-of-2
-/// sized types further.
-static void addAndInterleaveWithUnsupported(
-    LegacyLegalizerInfo::SizeAndActionsVec &result,
-    const LegacyLegalizerInfo::SizeAndActionsVec &v) {
-  for (unsigned i = 0; i < v.size(); ++i) {
-    result.push_back(v[i]);
-    if (i + 1 < v[i].first && i + 1 < v.size() &&
-        v[i + 1].first != v[i].first + 1)
-      result.push_back({v[i].first + 1, LegacyLegalizeActions::Unsupported});
-  }
-}
-
-static LegacyLegalizerInfo::SizeAndActionsVec
-widen_1(const LegacyLegalizerInfo::SizeAndActionsVec &v) {
-  assert(v.size() >= 1);
-  assert(v[0].first > 1);
-  LegacyLegalizerInfo::SizeAndActionsVec result = {
-      {1, LegacyLegalizeActions::WidenScalar},
-      {2, LegacyLegalizeActions::Unsupported}};
-  addAndInterleaveWithUnsupported(result, v);
-  auto Largest = result.back().first;
-  result.push_back({Largest + 1, LegacyLegalizeActions::Unsupported});
-  return result;
-}
-
 X86LegalizerInfo::X86LegalizerInfo(const X86Subtarget &STI,
                                    const X86TargetMachine &TM)
     : Subtarget(STI), TM(TM) {
