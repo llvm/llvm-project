@@ -513,7 +513,7 @@ private:
 /// Clone a function declaration into a new module.
 ///
 ///   This function can be used as the first step towards creating a callback
-/// stub (see makeStub), or moving a function body (see moveFunctionBody).
+/// stub (see makeStub).
 ///
 ///   If the VMap argument is non-null, a mapping will be added between F and
 /// the new declaration, and between each of F's arguments and the new
@@ -525,42 +525,13 @@ private:
 Function *cloneFunctionDecl(Module &Dst, const Function &F,
                             ValueToValueMapTy *VMap = nullptr);
 
-/// Move the body of function 'F' to a cloned function declaration in a
-///        different module (See related cloneFunctionDecl).
-///
-///   If the target function declaration is not supplied via the NewF parameter
-/// then it will be looked up via the VMap.
-///
-///   This will delete the body of function 'F' from its original parent module,
-/// but leave its declaration.
-void moveFunctionBody(Function &OrigF, ValueToValueMapTy &VMap,
-                      ValueMaterializer *Materializer = nullptr,
-                      Function *NewF = nullptr);
-
 /// Clone a global variable declaration into a new module.
 GlobalVariable *cloneGlobalVariableDecl(Module &Dst, const GlobalVariable &GV,
                                         ValueToValueMapTy *VMap = nullptr);
 
-/// Move global variable GV from its parent module to cloned global
-///        declaration in a different module.
-///
-///   If the target global declaration is not supplied via the NewGV parameter
-/// then it will be looked up via the VMap.
-///
-///   This will delete the initializer of GV from its original parent module,
-/// but leave its declaration.
-void moveGlobalVariableInitializer(GlobalVariable &OrigGV,
-                                   ValueToValueMapTy &VMap,
-                                   ValueMaterializer *Materializer = nullptr,
-                                   GlobalVariable *NewGV = nullptr);
-
 /// Clone a global alias declaration into a new module.
 GlobalAlias *cloneGlobalAliasDecl(Module &Dst, const GlobalAlias &OrigA,
                                   ValueToValueMapTy &VMap);
-
-/// Clone module flags metadata into the destination module.
-void cloneModuleFlagsMetadata(Module &Dst, const Module &Src,
-                              ValueToValueMapTy &VMap);
 
 /// Introduce relocations to \p Sym in its own definition if there are any
 /// pointers formed via PC-relative address that do not already have a
