@@ -635,37 +635,68 @@ void acc::HostDataOp::getCanonicalizationPatterns(RewritePatternSet &results,
 //===----------------------------------------------------------------------===//
 
 static ParseResult
+parseGangValue(OpAsmParser &parser, llvm::StringRef keyword,
+               std::optional<OpAsmParser::UnresolvedOperand> &value,
+               Type &valueType, bool &needComa, bool &newValue) {
+  if (succeeded(parser.parseOptionalKeyword(keyword))) {
+    if (parser.parseEqual())
+      return failure();
+    value = OpAsmParser::UnresolvedOperand{};
+    if (parser.parseOperand(*value) || parser.parseColonType(valueType))
+      return failure();
+    needComa = true;
+    newValue = true;
+  }
+  return success();
+}
+
+static ParseResult
 parseGangClause(OpAsmParser &parser,
                 std::optional<OpAsmParser::UnresolvedOperand> &gangNum,
                 Type &gangNumType,
                 std::optional<OpAsmParser::UnresolvedOperand> &gangStatic,
                 Type &gangStaticType, UnitAttr &hasGang) {
   hasGang = UnitAttr::get(parser.getBuilder().getContext());
+  gangNum = std::nullopt;
+  gangStatic = std::nullopt;
+  bool needComa = false;
+
   // optional gang operands
   if (succeeded(parser.parseOptionalLParen())) {
-    if (succeeded(parser.parseOptionalKeyword(LoopOp::getGangNumKeyword()))) {
-      if (parser.parseEqual())
+    while (true) {
+      bool newValue = false;
+      bool needValue = false;
+      if (needComa) {
+        if (succeeded(parser.parseOptionalComma()))
+          needValue = true; // expect a new value after comma.
+        else
+          break;
+      }
+
+      if (failed(parseGangValue(parser, LoopOp::getGangNumKeyword(), gangNum,
+                                gangNumType, needComa, newValue)))
         return failure();
-      gangNum = OpAsmParser::UnresolvedOperand{};
-      if (parser.parseOperand(*gangNum) || parser.parseColonType(gangNumType))
+      if (failed(parseGangValue(parser, LoopOp::getGangStaticKeyword(),
+                                gangStatic, gangStaticType, needComa,
+                                newValue)))
         return failure();
-    } else {
-      gangNum = std::nullopt;
+
+      if (!newValue && needValue) {
+        parser.emitError(parser.getCurrentLocation(),
+                         "new value expected after comma");
+        return failure();
+      }
+
+      if (!newValue)
+        break;
     }
-    // FIXME: Comma should require subsequent operands.
-    (void)parser.parseOptionalComma();
-    if (succeeded(
-            parser.parseOptionalKeyword(LoopOp::getGangStaticKeyword()))) {
-      gangStatic = OpAsmParser::UnresolvedOperand{};
-      if (parser.parseEqual())
-        return failure();
-      gangStatic = OpAsmParser::UnresolvedOperand{};
-      if (parser.parseOperand(*gangStatic) ||
-          parser.parseColonType(gangStaticType))
-        return failure();
+
+    if (!gangNum && !gangStatic) {
+      parser.emitError(parser.getCurrentLocation(),
+                       "expect num and/or static value(s)");
+      return failure();
     }
-    // FIXME: Why allow optional last commas?
-    (void)parser.parseOptionalComma();
+
     if (failed(parser.parseRParen()))
       return failure();
   }
