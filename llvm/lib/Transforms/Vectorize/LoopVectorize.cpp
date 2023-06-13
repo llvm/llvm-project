@@ -9116,6 +9116,19 @@ std::optional<VPlanPtr> LoopVectorizationPlanner::tryToBuildVPlanWithVPRecipes(
     Plan->addVF(VF);
   Plan->setName("Initial VPlan");
 
+  // Replace VPValues for known constant strides guaranteed by predicate scalar
+  // evolution.
+  for (auto [_, Stride] : Legal->getLAI()->getSymbolicStrides()) {
+    auto *StrideV = cast<SCEVUnknown>(Stride)->getValue();
+    auto *ScevStride = cast<SCEVConstant>(PSE.getSCEV(StrideV));
+    Constant *CI = ConstantInt::get(Stride->getType(), ScevStride->getAPInt());
+
+    auto *ConstVPV = Plan->getVPValueOrAddLiveIn(CI);
+    // The versioned value may not be used in the loop directly, so just add a
+    // new live-in in those cases.
+    Plan->getVPValueOrAddLiveIn(StrideV)->replaceAllUsesWith(ConstVPV);
+  }
+
   // From this point onwards, VPlan-to-VPlan transformations may change the plan
   // in ways that accessing values using original IR values is incorrect.
   Plan->disableValue2VPValue();
