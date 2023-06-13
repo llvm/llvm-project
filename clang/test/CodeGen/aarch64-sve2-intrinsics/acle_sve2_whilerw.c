@@ -17,12 +17,12 @@
 
 // CHECK-LABEL: @test_svwhilerw_s8(
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 16 x i1> @llvm.aarch64.sve.whilerw.b.nxv16i1.p0(ptr noundef readnone [[OP1:%.*]], ptr noundef readnone [[OP2:%.*]])
+// CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 16 x i1> @llvm.aarch64.sve.whilerw.b.nxv16i1.p0(ptr [[OP1:%.*]], ptr [[OP2:%.*]])
 // CHECK-NEXT:    ret <vscale x 16 x i1> [[TMP0]]
 //
 // CPP-CHECK-LABEL: @_Z17test_svwhilerw_s8PKaS0_(
 // CPP-CHECK-NEXT:  entry:
-// CPP-CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 16 x i1> @llvm.aarch64.sve.whilerw.b.nxv16i1.p0(ptr noundef readnone [[OP1:%.*]], ptr noundef readnone [[OP2:%.*]])
+// CPP-CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 16 x i1> @llvm.aarch64.sve.whilerw.b.nxv16i1.p0(ptr [[OP1:%.*]], ptr [[OP2:%.*]])
 // CPP-CHECK-NEXT:    ret <vscale x 16 x i1> [[TMP0]]
 //
 svbool_t test_svwhilerw_s8(const int8_t *op1, const int8_t *op2)
@@ -32,13 +32,13 @@ svbool_t test_svwhilerw_s8(const int8_t *op1, const int8_t *op2)
 
 // CHECK-LABEL: @test_svwhilerw_s16(
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 8 x i1> @llvm.aarch64.sve.whilerw.h.nxv8i1.p0(ptr noundef readnone [[OP1:%.*]], ptr noundef readnone [[OP2:%.*]])
+// CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 8 x i1> @llvm.aarch64.sve.whilerw.h.nxv8i1.p0(ptr [[OP1:%.*]], ptr [[OP2:%.*]])
 // CHECK-NEXT:    [[TMP1:%.*]] = tail call <vscale x 16 x i1> @llvm.aarch64.sve.convert.to.svbool.nxv8i1(<vscale x 8 x i1> [[TMP0]])
 // CHECK-NEXT:    ret <vscale x 16 x i1> [[TMP1]]
 //
 // CPP-CHECK-LABEL: @_Z18test_svwhilerw_s16PKsS0_(
 // CPP-CHECK-NEXT:  entry:
-// CPP-CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 8 x i1> @llvm.aarch64.sve.whilerw.h.nxv8i1.p0(ptr noundef readnone [[OP1:%.*]], ptr noundef readnone [[OP2:%.*]])
+// CPP-CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 8 x i1> @llvm.aarch64.sve.whilerw.h.nxv8i1.p0(ptr [[OP1:%.*]], ptr [[OP2:%.*]])
 // CPP-CHECK-NEXT:    [[TMP1:%.*]] = tail call <vscale x 16 x i1> @llvm.aarch64.sve.convert.to.svbool.nxv8i1(<vscale x 8 x i1> [[TMP0]])
 // CPP-CHECK-NEXT:    ret <vscale x 16 x i1> [[TMP1]]
 //
@@ -49,13 +49,13 @@ svbool_t test_svwhilerw_s16(const int16_t *op1, const int16_t *op2)
 
 // CHECK-LABEL: @test_svwhilerw_s32(
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 4 x i1> @llvm.aarch64.sve.whilerw.s.nxv4i1.p0(ptr noundef readnone [[OP1:%.*]], ptr noundef readnone [[OP2:%.*]])
+// CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 4 x i1> @llvm.aarch64.sve.whilerw.s.nxv4i1.p0(ptr [[OP1:%.*]], ptr [[OP2:%.*]])
 // CHECK-NEXT:    [[TMP1:%.*]] = tail call <vscale x 16 x i1> @llvm.aarch64.sve.convert.to.svbool.nxv4i1(<vscale x 4 x i1> [[TMP0]])
 // CHECK-NEXT:    ret <vscale x 16 x i1> [[TMP1]]
 //
 // CPP-CHECK-LABEL: @_Z18test_svwhilerw_s32PKiS0_(
 // CPP-CHECK-NEXT:  entry:
-// CPP-CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 4 x i1> @llvm.aarch64.sve.whilerw.s.nxv4i1.p0(ptr noundef readnone [[OP1:%.*]], ptr noundef readnone [[OP2:%.*]])
+// CPP-CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 4 x i1> @llvm.aarch64.sve.whilerw.s.nxv4i1.p0(ptr [[OP1:%.*]], ptr [[OP2:%.*]])
 // CPP-CHECK-NEXT:    [[TMP1:%.*]] = tail call <vscale x 16 x i1> @llvm.aarch64.sve.convert.to.svbool.nxv4i1(<vscale x 4 x i1> [[TMP0]])
 // CPP-CHECK-NEXT:    ret <vscale x 16 x i1> [[TMP1]]
 //
@@ -66,13 +66,13 @@ svbool_t test_svwhilerw_s32(const int32_t *op1, const int32_t *op2)
 
 // CHECK-LABEL: @test_svwhilerw_s64(
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 2 x i1> @llvm.aarch64.sve.whilerw.d.nxv2i1.p0(ptr noundef readnone [[OP1:%.*]], ptr noundef readnone [[OP2:%.*]])
+// CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 2 x i1> @llvm.aarch64.sve.whilerw.d.nxv2i1.p0(ptr [[OP1:%.*]], ptr [[OP2:%.*]])
 // CHECK-NEXT:    [[TMP1:%.*]] = tail call <vscale x 16 x i1> @llvm.aarch64.sve.convert.to.svbool.nxv2i1(<vscale x 2 x i1> [[TMP0]])
 // CHECK-NEXT:    ret <vscale x 16 x i1> [[TMP1]]
 //
 // CPP-CHECK-LABEL: @_Z18test_svwhilerw_s64PKlS0_(
 // CPP-CHECK-NEXT:  entry:
-// CPP-CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 2 x i1> @llvm.aarch64.sve.whilerw.d.nxv2i1.p0(ptr noundef readnone [[OP1:%.*]], ptr noundef readnone [[OP2:%.*]])
+// CPP-CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 2 x i1> @llvm.aarch64.sve.whilerw.d.nxv2i1.p0(ptr [[OP1:%.*]], ptr [[OP2:%.*]])
 // CPP-CHECK-NEXT:    [[TMP1:%.*]] = tail call <vscale x 16 x i1> @llvm.aarch64.sve.convert.to.svbool.nxv2i1(<vscale x 2 x i1> [[TMP0]])
 // CPP-CHECK-NEXT:    ret <vscale x 16 x i1> [[TMP1]]
 //
@@ -83,12 +83,12 @@ svbool_t test_svwhilerw_s64(const int64_t *op1, const int64_t *op2)
 
 // CHECK-LABEL: @test_svwhilerw_u8(
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 16 x i1> @llvm.aarch64.sve.whilerw.b.nxv16i1.p0(ptr noundef readnone [[OP1:%.*]], ptr noundef readnone [[OP2:%.*]])
+// CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 16 x i1> @llvm.aarch64.sve.whilerw.b.nxv16i1.p0(ptr [[OP1:%.*]], ptr [[OP2:%.*]])
 // CHECK-NEXT:    ret <vscale x 16 x i1> [[TMP0]]
 //
 // CPP-CHECK-LABEL: @_Z17test_svwhilerw_u8PKhS0_(
 // CPP-CHECK-NEXT:  entry:
-// CPP-CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 16 x i1> @llvm.aarch64.sve.whilerw.b.nxv16i1.p0(ptr noundef readnone [[OP1:%.*]], ptr noundef readnone [[OP2:%.*]])
+// CPP-CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 16 x i1> @llvm.aarch64.sve.whilerw.b.nxv16i1.p0(ptr [[OP1:%.*]], ptr [[OP2:%.*]])
 // CPP-CHECK-NEXT:    ret <vscale x 16 x i1> [[TMP0]]
 //
 svbool_t test_svwhilerw_u8(const uint8_t *op1, const uint8_t *op2)
@@ -98,13 +98,13 @@ svbool_t test_svwhilerw_u8(const uint8_t *op1, const uint8_t *op2)
 
 // CHECK-LABEL: @test_svwhilerw_u16(
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 8 x i1> @llvm.aarch64.sve.whilerw.h.nxv8i1.p0(ptr noundef readnone [[OP1:%.*]], ptr noundef readnone [[OP2:%.*]])
+// CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 8 x i1> @llvm.aarch64.sve.whilerw.h.nxv8i1.p0(ptr [[OP1:%.*]], ptr [[OP2:%.*]])
 // CHECK-NEXT:    [[TMP1:%.*]] = tail call <vscale x 16 x i1> @llvm.aarch64.sve.convert.to.svbool.nxv8i1(<vscale x 8 x i1> [[TMP0]])
 // CHECK-NEXT:    ret <vscale x 16 x i1> [[TMP1]]
 //
 // CPP-CHECK-LABEL: @_Z18test_svwhilerw_u16PKtS0_(
 // CPP-CHECK-NEXT:  entry:
-// CPP-CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 8 x i1> @llvm.aarch64.sve.whilerw.h.nxv8i1.p0(ptr noundef readnone [[OP1:%.*]], ptr noundef readnone [[OP2:%.*]])
+// CPP-CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 8 x i1> @llvm.aarch64.sve.whilerw.h.nxv8i1.p0(ptr [[OP1:%.*]], ptr [[OP2:%.*]])
 // CPP-CHECK-NEXT:    [[TMP1:%.*]] = tail call <vscale x 16 x i1> @llvm.aarch64.sve.convert.to.svbool.nxv8i1(<vscale x 8 x i1> [[TMP0]])
 // CPP-CHECK-NEXT:    ret <vscale x 16 x i1> [[TMP1]]
 //
@@ -115,13 +115,13 @@ svbool_t test_svwhilerw_u16(const uint16_t *op1, const uint16_t *op2)
 
 // CHECK-LABEL: @test_svwhilerw_u32(
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 4 x i1> @llvm.aarch64.sve.whilerw.s.nxv4i1.p0(ptr noundef readnone [[OP1:%.*]], ptr noundef readnone [[OP2:%.*]])
+// CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 4 x i1> @llvm.aarch64.sve.whilerw.s.nxv4i1.p0(ptr [[OP1:%.*]], ptr [[OP2:%.*]])
 // CHECK-NEXT:    [[TMP1:%.*]] = tail call <vscale x 16 x i1> @llvm.aarch64.sve.convert.to.svbool.nxv4i1(<vscale x 4 x i1> [[TMP0]])
 // CHECK-NEXT:    ret <vscale x 16 x i1> [[TMP1]]
 //
 // CPP-CHECK-LABEL: @_Z18test_svwhilerw_u32PKjS0_(
 // CPP-CHECK-NEXT:  entry:
-// CPP-CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 4 x i1> @llvm.aarch64.sve.whilerw.s.nxv4i1.p0(ptr noundef readnone [[OP1:%.*]], ptr noundef readnone [[OP2:%.*]])
+// CPP-CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 4 x i1> @llvm.aarch64.sve.whilerw.s.nxv4i1.p0(ptr [[OP1:%.*]], ptr [[OP2:%.*]])
 // CPP-CHECK-NEXT:    [[TMP1:%.*]] = tail call <vscale x 16 x i1> @llvm.aarch64.sve.convert.to.svbool.nxv4i1(<vscale x 4 x i1> [[TMP0]])
 // CPP-CHECK-NEXT:    ret <vscale x 16 x i1> [[TMP1]]
 //
@@ -132,13 +132,13 @@ svbool_t test_svwhilerw_u32(const uint32_t *op1, const uint32_t *op2)
 
 // CHECK-LABEL: @test_svwhilerw_u64(
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 2 x i1> @llvm.aarch64.sve.whilerw.d.nxv2i1.p0(ptr noundef readnone [[OP1:%.*]], ptr noundef readnone [[OP2:%.*]])
+// CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 2 x i1> @llvm.aarch64.sve.whilerw.d.nxv2i1.p0(ptr [[OP1:%.*]], ptr [[OP2:%.*]])
 // CHECK-NEXT:    [[TMP1:%.*]] = tail call <vscale x 16 x i1> @llvm.aarch64.sve.convert.to.svbool.nxv2i1(<vscale x 2 x i1> [[TMP0]])
 // CHECK-NEXT:    ret <vscale x 16 x i1> [[TMP1]]
 //
 // CPP-CHECK-LABEL: @_Z18test_svwhilerw_u64PKmS0_(
 // CPP-CHECK-NEXT:  entry:
-// CPP-CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 2 x i1> @llvm.aarch64.sve.whilerw.d.nxv2i1.p0(ptr noundef readnone [[OP1:%.*]], ptr noundef readnone [[OP2:%.*]])
+// CPP-CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 2 x i1> @llvm.aarch64.sve.whilerw.d.nxv2i1.p0(ptr [[OP1:%.*]], ptr [[OP2:%.*]])
 // CPP-CHECK-NEXT:    [[TMP1:%.*]] = tail call <vscale x 16 x i1> @llvm.aarch64.sve.convert.to.svbool.nxv2i1(<vscale x 2 x i1> [[TMP0]])
 // CPP-CHECK-NEXT:    ret <vscale x 16 x i1> [[TMP1]]
 //
@@ -149,13 +149,13 @@ svbool_t test_svwhilerw_u64(const uint64_t *op1, const uint64_t *op2)
 
 // CHECK-LABEL: @test_svwhilerw_f16(
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 8 x i1> @llvm.aarch64.sve.whilerw.h.nxv8i1.p0(ptr noundef readnone [[OP1:%.*]], ptr noundef readnone [[OP2:%.*]])
+// CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 8 x i1> @llvm.aarch64.sve.whilerw.h.nxv8i1.p0(ptr [[OP1:%.*]], ptr [[OP2:%.*]])
 // CHECK-NEXT:    [[TMP1:%.*]] = tail call <vscale x 16 x i1> @llvm.aarch64.sve.convert.to.svbool.nxv8i1(<vscale x 8 x i1> [[TMP0]])
 // CHECK-NEXT:    ret <vscale x 16 x i1> [[TMP1]]
 //
 // CPP-CHECK-LABEL: @_Z18test_svwhilerw_f16PKDhS0_(
 // CPP-CHECK-NEXT:  entry:
-// CPP-CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 8 x i1> @llvm.aarch64.sve.whilerw.h.nxv8i1.p0(ptr noundef readnone [[OP1:%.*]], ptr noundef readnone [[OP2:%.*]])
+// CPP-CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 8 x i1> @llvm.aarch64.sve.whilerw.h.nxv8i1.p0(ptr [[OP1:%.*]], ptr [[OP2:%.*]])
 // CPP-CHECK-NEXT:    [[TMP1:%.*]] = tail call <vscale x 16 x i1> @llvm.aarch64.sve.convert.to.svbool.nxv8i1(<vscale x 8 x i1> [[TMP0]])
 // CPP-CHECK-NEXT:    ret <vscale x 16 x i1> [[TMP1]]
 //
@@ -166,13 +166,13 @@ svbool_t test_svwhilerw_f16(const float16_t *op1, const float16_t *op2)
 
 // CHECK-LABEL: @test_svwhilerw_f32(
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 4 x i1> @llvm.aarch64.sve.whilerw.s.nxv4i1.p0(ptr noundef readnone [[OP1:%.*]], ptr noundef readnone [[OP2:%.*]])
+// CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 4 x i1> @llvm.aarch64.sve.whilerw.s.nxv4i1.p0(ptr [[OP1:%.*]], ptr [[OP2:%.*]])
 // CHECK-NEXT:    [[TMP1:%.*]] = tail call <vscale x 16 x i1> @llvm.aarch64.sve.convert.to.svbool.nxv4i1(<vscale x 4 x i1> [[TMP0]])
 // CHECK-NEXT:    ret <vscale x 16 x i1> [[TMP1]]
 //
 // CPP-CHECK-LABEL: @_Z18test_svwhilerw_f32PKfS0_(
 // CPP-CHECK-NEXT:  entry:
-// CPP-CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 4 x i1> @llvm.aarch64.sve.whilerw.s.nxv4i1.p0(ptr noundef readnone [[OP1:%.*]], ptr noundef readnone [[OP2:%.*]])
+// CPP-CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 4 x i1> @llvm.aarch64.sve.whilerw.s.nxv4i1.p0(ptr [[OP1:%.*]], ptr [[OP2:%.*]])
 // CPP-CHECK-NEXT:    [[TMP1:%.*]] = tail call <vscale x 16 x i1> @llvm.aarch64.sve.convert.to.svbool.nxv4i1(<vscale x 4 x i1> [[TMP0]])
 // CPP-CHECK-NEXT:    ret <vscale x 16 x i1> [[TMP1]]
 //
@@ -183,13 +183,13 @@ svbool_t test_svwhilerw_f32(const float32_t *op1, const float32_t *op2)
 
 // CHECK-LABEL: @test_svwhilerw_f64(
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 2 x i1> @llvm.aarch64.sve.whilerw.d.nxv2i1.p0(ptr noundef readnone [[OP1:%.*]], ptr noundef readnone [[OP2:%.*]])
+// CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 2 x i1> @llvm.aarch64.sve.whilerw.d.nxv2i1.p0(ptr [[OP1:%.*]], ptr [[OP2:%.*]])
 // CHECK-NEXT:    [[TMP1:%.*]] = tail call <vscale x 16 x i1> @llvm.aarch64.sve.convert.to.svbool.nxv2i1(<vscale x 2 x i1> [[TMP0]])
 // CHECK-NEXT:    ret <vscale x 16 x i1> [[TMP1]]
 //
 // CPP-CHECK-LABEL: @_Z18test_svwhilerw_f64PKdS0_(
 // CPP-CHECK-NEXT:  entry:
-// CPP-CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 2 x i1> @llvm.aarch64.sve.whilerw.d.nxv2i1.p0(ptr noundef readnone [[OP1:%.*]], ptr noundef readnone [[OP2:%.*]])
+// CPP-CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 2 x i1> @llvm.aarch64.sve.whilerw.d.nxv2i1.p0(ptr [[OP1:%.*]], ptr [[OP2:%.*]])
 // CPP-CHECK-NEXT:    [[TMP1:%.*]] = tail call <vscale x 16 x i1> @llvm.aarch64.sve.convert.to.svbool.nxv2i1(<vscale x 2 x i1> [[TMP0]])
 // CPP-CHECK-NEXT:    ret <vscale x 16 x i1> [[TMP1]]
 //

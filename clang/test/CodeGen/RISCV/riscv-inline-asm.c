@@ -41,7 +41,7 @@ void test_f(void) {
 
 void test_A(int *p) {
 // CHECK-LABEL: define{{.*}} void @test_A(ptr noundef %p)
-// CHECK: call void asm sideeffect "", "*A"(ptr noundef elementtype(i32) %p)
+// CHECK: call void asm sideeffect "", "*A"(ptr elementtype(i32) %p)
   asm volatile("" :: "A"(*p));
 }
 
