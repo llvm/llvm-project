@@ -148,7 +148,7 @@ define protected amdgpu_kernel void @InferPHI(i32 %a, ptr addrspace(1) %b, doubl
 ; CHECK-NEXT:    s_addc_u32 s1, s5, s1
 ; CHECK-NEXT:    s_add_u32 s2, s0, -8
 ; CHECK-NEXT:    s_addc_u32 s3, s1, -1
-; CHECK-NEXT:    s_cmp_eq_u64 s[2:3], 1
+; CHECK-NEXT:    s_cmp_eq_u64 s[0:1], 9
 ; CHECK-NEXT:    s_cselect_b64 s[0:1], -1, 0
 ; CHECK-NEXT:    v_cndmask_b32_e64 v0, 0, 1, s[0:1]
 ; CHECK-NEXT:    v_cmp_ne_u32_e64 s[0:1], 1, v0
