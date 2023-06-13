@@ -15,9 +15,10 @@ MATH_MANGLE(cbrt)(float x)
     }
 
     float ax = BUILTIN_ABS_F32(x);
+    bool denorm_or_zero = ax < 0x1p-126f;
 
     if (!DAZ_OPT()) {
-        ax = BUILTIN_ISSUBNORMAL_F32(x) ?
+        ax = denorm_or_zero ?
              BUILTIN_FLDEXP_F32(ax, 24) : ax;
     }
 
@@ -25,7 +26,7 @@ MATH_MANGLE(cbrt)(float x)
     z = MATH_MAD(MATH_MAD(MATH_FAST_RCP(z*z), -ax, z), -0x1.555556p-2f, z);
 
     if (!DAZ_OPT()) {
-        z = BUILTIN_ISSUBNORMAL_F32(x) ?
+        z = denorm_or_zero ?
             BUILTIN_FLDEXP_F32(z, -8) : z;
     }
 
