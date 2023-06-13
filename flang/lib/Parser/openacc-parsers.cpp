@@ -232,10 +232,19 @@ TYPE_CONTEXT_PARSER("OpenACC construct"_en_US,
             construct<OpenACCConstruct>(Parser<OpenACCWaitConstruct>{}),
             construct<OpenACCConstruct>(Parser<OpenACCAtomicConstruct>{})))
 
-TYPE_PARSER(startAccLine >> sourced(construct<AccEndCombinedDirective>(sourced(
-                                "END"_tok >> Parser<AccCombinedDirective>{}))))
+TYPE_PARSER(startAccLine >>
+    sourced(construct<AccEndCombinedDirective>(sourced("END"_tok >>
+        construct<AccCombinedDirective>("KERNELS"_tok >> maybe("LOOP"_tok) >>
+                pure(llvm::acc::Directive::ACCD_kernels_loop) ||
+            "PARALLEL"_tok >> maybe("LOOP"_tok) >>
+                pure(llvm::acc::Directive::ACCD_parallel_loop) ||
+            "SERIAL"_tok >> maybe("LOOP"_tok) >>
+                pure(llvm::acc::Directive::ACCD_serial_loop))))))
 
 TYPE_PARSER(construct<OpenACCCombinedConstruct>(
-    sourced(Parser<AccBeginCombinedDirective>{} / endAccLine)))
+    sourced(Parser<AccBeginCombinedDirective>{} / endAccLine),
+    withMessage("A DO loop must follow the combined construct"_err_en_US,
+        Parser<DoConstruct>{}),
+    maybe(Parser<AccEndCombinedDirective>{} / endAccLine)))
 
 } // namespace Fortran::parser
