@@ -51,14 +51,12 @@
 #include <vector>
 
 using namespace llvm;
-using namespace rdf;
 
 static cl::opt<unsigned> MaxRecNest("rdf-liveness-max-rec", cl::init(25),
                                     cl::Hidden,
                                     cl::desc("Maximum recursion level"));
 
-namespace llvm {
-namespace rdf {
+namespace llvm::rdf {
 
 raw_ostream &operator<<(raw_ostream &OS, const Print<Liveness::RefMap> &P) {
   OS << '{';
@@ -74,9 +72,6 @@ raw_ostream &operator<<(raw_ostream &OS, const Print<Liveness::RefMap> &P) {
   OS << " }";
   return OS;
 }
-
-} // end namespace rdf
-} // end namespace llvm
 
 // The order in the returned sequence is the order of reaching defs in the
 // upward traversal: the first def is the closest to the given reference RefA,
@@ -1178,3 +1173,5 @@ void Liveness::emptify(RefMap &M) {
   for (auto I = M.begin(), E = M.end(); I != E;)
     I = I->second.empty() ? M.erase(I) : std::next(I);
 }
+
+} // namespace llvm::rdf

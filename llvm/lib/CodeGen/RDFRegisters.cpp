@@ -22,8 +22,7 @@
 #include <set>
 #include <utility>
 
-using namespace llvm;
-using namespace rdf;
+namespace llvm::rdf {
 
 PhysicalRegisterInfo::PhysicalRegisterInfo(const TargetRegisterInfo &tri,
                                            const MachineFunction &mf)
@@ -478,12 +477,12 @@ RegisterAggr::ref_iterator::ref_iterator(const RegisterAggr &RG, bool End)
   Index = End ? Masks.size() : 0;
 }
 
-raw_ostream &rdf::operator<<(raw_ostream &OS, const RegisterAggr &A) {
+raw_ostream &operator<<(raw_ostream &OS, const RegisterAggr &A) {
   A.getPRI().print(OS, A);
   return OS;
 }
 
-raw_ostream &rdf::operator<<(raw_ostream &OS, const PrintLaneMaskShort &P) {
+raw_ostream &operator<<(raw_ostream &OS, const PrintLaneMaskShort &P) {
   if (P.Mask.all())
     return OS;
   if (P.Mask.none())
@@ -496,3 +495,5 @@ raw_ostream &rdf::operator<<(raw_ostream &OS, const PrintLaneMaskShort &P) {
     return OS << ':' << format("%08llX", Val);
   return OS << ':' << PrintLaneMask(P.Mask);
 }
+
+} // namespace llvm::rdf
