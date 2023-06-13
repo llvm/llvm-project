@@ -47,6 +47,14 @@ using namespace mlir;
 using namespace mlir::tblgen;
 using mlir::tblgen::Operator;
 
+void mlir::tblgen::emitSummary(StringRef summary, raw_ostream &os) {
+  if (!summary.empty()) {
+    char first = std::toupper(summary.front());
+    llvm::StringRef rest = summary.drop_front();
+    os << "\n_" << first << rest << "_\n\n";
+  }
+}
+
 // Emit the description by aligning the text to the left per line (e.g.,
 // removing the minimum indentation across the block).
 //
@@ -172,7 +180,7 @@ static void emitOpDoc(const Operator &op, raw_ostream &os) {
 
   // Emit the summary, syntax, and description if present.
   if (op.hasSummary())
-    os << "\n**Summary:** _" << op.getSummary() << "_\n\n";
+    emitSummary(op.getSummary(), os);
   if (op.hasAssemblyFormat())
     emitAssemblyFormat(op.getOperationName(), op.getAssemblyFormat().trim(),
                        os);
