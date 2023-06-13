@@ -109,13 +109,6 @@ TEST(ArrayRefTest, ConstConvert) {
   a = ArrayRef<int *>(ptrs);
 }
 
-static std::vector<int> ReturnTest12() { return {1, 2}; }
-static void ArgTest12(ArrayRef<int> a) {
-  EXPECT_EQ(2U, a.size());
-  EXPECT_EQ(1, a[0]);
-  EXPECT_EQ(2, a[1]);
-}
-
 TEST(ArrayRefTest, ArrayRef) {
   static const int kA1[] = {1, 2, 3, 4, 5, 6, 7, 8};
 
@@ -127,7 +120,7 @@ TEST(ArrayRefTest, ArrayRef) {
 
   // A copy is expected for non-const ArrayRef (thin copy)
   const ArrayRef<int> ar2(kA1);
-  const ArrayRef<int> &ar2_ref = ArrayRef(ar2);
+  const ArrayRef<int> &ar2_ref = ArrayRef<int>(ar2);
   EXPECT_NE(&ar2_ref, &ar2);
   EXPECT_TRUE(ar2.equals(ar2_ref));
 }
