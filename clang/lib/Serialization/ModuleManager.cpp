@@ -59,11 +59,7 @@ ModuleFile *ModuleManager::lookupByModuleName(StringRef Name) const {
 }
 
 ModuleFile *ModuleManager::lookup(const FileEntry *File) const {
-  auto Known = Modules.find(File);
-  if (Known == Modules.end())
-    return nullptr;
-
-  return Known->second;
+  return Modules.lookup(File);
 }
 
 std::unique_ptr<llvm::MemoryBuffer>
