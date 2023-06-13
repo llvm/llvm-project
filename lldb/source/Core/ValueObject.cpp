@@ -484,7 +484,7 @@ ValueObject::GetChildAtIndexPath(llvm::ArrayRef<size_t> idxs,
     return GetSP();
   ValueObjectSP root(GetSP());
   for (size_t idx : idxs) {
-    root = root->GetChildAtIndex(idx, true);
+    root = root->GetChildAtIndex(idx);
     if (!root) {
       if (index_of_error)
         *index_of_error = idx;
@@ -783,7 +783,7 @@ size_t ValueObject::GetPointeeData(DataExtractor &data, uint32_t item_idx,
         return 0;
       return pointee_sp->GetData(data, error);
     } else {
-      ValueObjectSP child_sp = GetChildAtIndex(0, true);
+      ValueObjectSP child_sp = GetChildAtIndex(0);
       if (child_sp.get() == nullptr)
         return 0;
       Status error;
@@ -1322,7 +1322,7 @@ bool ValueObject::DumpPrintableRepresentation(
             if (low)
               s << ',';
 
-            ValueObjectSP child = GetChildAtIndex(low, true);
+            ValueObjectSP child = GetChildAtIndex(low);
             if (!child.get()) {
               s << "<invalid child>";
               continue;
@@ -1363,7 +1363,7 @@ bool ValueObject::DumpPrintableRepresentation(
             if (low)
               s << ',';
 
-            ValueObjectSP child = GetChildAtIndex(low, true);
+            ValueObjectSP child = GetChildAtIndex(low);
             if (!child.get()) {
               s << "<invalid child>";
               continue;
@@ -2465,14 +2465,14 @@ ValueObjectSP ValueObject::GetValueForExpressionPath_Impl(
 
         // from here on we do have a valid index
         if (root_compiler_type_info.Test(eTypeIsArray)) {
-          ValueObjectSP child_valobj_sp = root->GetChildAtIndex(index, true);
+          ValueObjectSP child_valobj_sp = root->GetChildAtIndex(index);
           if (!child_valobj_sp)
             child_valobj_sp = root->GetSyntheticArrayMember(index, true);
           if (!child_valobj_sp)
             if (root->HasSyntheticValue() &&
                 root->GetSyntheticValue()->GetNumChildren() > index)
               child_valobj_sp =
-                  root->GetSyntheticValue()->GetChildAtIndex(index, true);
+                  root->GetSyntheticValue()->GetChildAtIndex(index);
           if (child_valobj_sp) {
             root = child_valobj_sp;
             remainder =
@@ -2520,7 +2520,7 @@ ValueObjectSP ValueObject::GetValueForExpressionPath_Impl(
                  options.m_synthetic_children_traversal ==
                      GetValueForExpressionPathOptions::
                          SyntheticChildrenTraversal::Both)) {
-              root = root->GetSyntheticValue()->GetChildAtIndex(index, true);
+              root = root->GetSyntheticValue()->GetChildAtIndex(index);
             } else
               root = root->GetSyntheticArrayMember(index, true);
             if (!root) {
@@ -2551,7 +2551,7 @@ ValueObjectSP ValueObject::GetValueForExpressionPath_Impl(
             return root;
           }
         } else if (root_compiler_type_info.Test(eTypeIsVector)) {
-          root = root->GetChildAtIndex(index, true);
+          root = root->GetChildAtIndex(index);
           if (!root) {
             *reason_to_stop =
                 ValueObject::eExpressionPathScanEndReasonNoSuchChild;
@@ -2586,7 +2586,7 @@ ValueObjectSP ValueObject::GetValueForExpressionPath_Impl(
             *final_result = ValueObject::eExpressionPathEndResultTypeInvalid;
             return nullptr;
           }
-          root = root->GetChildAtIndex(index, true);
+          root = root->GetChildAtIndex(index);
           if (!root) {
             *reason_to_stop =
                 ValueObject::eExpressionPathScanEndReasonNoSuchChild;

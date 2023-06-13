@@ -4522,7 +4522,7 @@ struct Row {
       if (valobj) {
         const size_t num_children = valobj->GetNumChildren();
         for (size_t i = 0; i < num_children; ++i) {
-          children.push_back(Row(valobj->GetChildAtIndex(i, true), this));
+          children.push_back(Row(valobj->GetChildAtIndex(i), this));
         }
       }
     }

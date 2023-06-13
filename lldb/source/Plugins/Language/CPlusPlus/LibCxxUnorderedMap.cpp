@@ -125,7 +125,7 @@ lldb::ValueObjectSP lldb_private::formatters::
         case 2: {
           // Assume a post llvm r300140 __compressed_pair implementation:
           ValueObjectSP first_elem_parent_sp =
-            p1_sp->GetChildAtIndex(0, true);
+            p1_sp->GetChildAtIndex(0);
           first_sp = p1_sp->GetChildMemberWithName("__value_");
           break;
         }
@@ -207,7 +207,7 @@ bool lldb_private::formatters::LibcxxStdUnorderedMapSyntheticFrontEnd::
     break;
   case 2: {
     // Assume a post llvm r300140 __compressed_pair implementation:
-    ValueObjectSP first_elem_parent = p2_sp->GetChildAtIndex(0, true);
+    ValueObjectSP first_elem_parent = p2_sp->GetChildAtIndex(0);
     num_elements_sp = first_elem_parent->GetChildMemberWithName("__value_");
     next_path.append({"__p1_", "__value_", "__next_"});
     break;

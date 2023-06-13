@@ -33,7 +33,7 @@ public:
   }
 
   ValueObjectSP GetChildAtIndex(size_t idx) override {
-    return m_container_sp ? m_container_sp->GetChildAtIndex(idx, true)
+    return m_container_sp ? m_container_sp->GetChildAtIndex(idx)
                           : nullptr;
   }
 

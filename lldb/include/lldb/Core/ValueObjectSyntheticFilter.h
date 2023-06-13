@@ -51,7 +51,8 @@ public:
 
   lldb::ValueType GetValueType() const override;
 
-  lldb::ValueObjectSP GetChildAtIndex(size_t idx, bool can_create) override;
+  lldb::ValueObjectSP GetChildAtIndex(size_t idx,
+                                      bool can_create = true) override;
 
   lldb::ValueObjectSP GetChildMemberWithName(llvm::StringRef name,
                                              bool can_create = true) override;

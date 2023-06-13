@@ -226,7 +226,7 @@ size_t lldb_private::formatters::LibcxxStdMapSyntheticFrontEnd::
     break;
   case 2: {
     // Assume a post llvm r300140 __compressed_pair implementation:
-    ValueObjectSP first_elem_parent = m_item->GetChildAtIndex(0, true);
+    ValueObjectSP first_elem_parent = m_item->GetChildAtIndex(0);
     m_item = first_elem_parent->GetChildMemberWithName("__value_");
     break;
   }
@@ -394,15 +394,15 @@ lldb_private::formatters::LibcxxStdMapSyntheticFrontEnd::GetChildAtIndex(
   if (potential_child_sp) {
     switch (potential_child_sp->GetNumChildren()) {
     case 1: {
-      auto child0_sp = potential_child_sp->GetChildAtIndex(0, true);
+      auto child0_sp = potential_child_sp->GetChildAtIndex(0);
       if (child0_sp &&
           (child0_sp->GetName() == g_cc_ || child0_sp->GetName() == g_cc))
         potential_child_sp = child0_sp->Clone(ConstString(name.GetString()));
       break;
     }
     case 2: {
-      auto child0_sp = potential_child_sp->GetChildAtIndex(0, true);
-      auto child1_sp = potential_child_sp->GetChildAtIndex(1, true);
+      auto child0_sp = potential_child_sp->GetChildAtIndex(0);
+      auto child1_sp = potential_child_sp->GetChildAtIndex(1);
       if (child0_sp &&
           (child0_sp->GetName() == g_cc_ || child0_sp->GetName() == g_cc) &&
           child1_sp && child1_sp->GetName() == g_nc)

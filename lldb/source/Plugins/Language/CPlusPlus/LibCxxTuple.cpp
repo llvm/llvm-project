@@ -70,11 +70,11 @@ ValueObjectSP TupleFrontEnd::GetChildAtIndex(size_t idx) {
       m_base->GetCompilerType().GetDirectBaseClassAtIndex(idx, nullptr);
   if (!holder_type)
     return ValueObjectSP();
-  ValueObjectSP holder_sp = m_base->GetChildAtIndex(idx, true);
+  ValueObjectSP holder_sp = m_base->GetChildAtIndex(idx);
   if (!holder_sp)
     return ValueObjectSP();
 
-  ValueObjectSP elem_sp = holder_sp->GetChildAtIndex(0, true);
+  ValueObjectSP elem_sp = holder_sp->GetChildAtIndex(0);
   if (elem_sp)
     m_elements[idx] =
         elem_sp->Clone(ConstString(llvm::formatv("[{0}]", idx).str())).get();

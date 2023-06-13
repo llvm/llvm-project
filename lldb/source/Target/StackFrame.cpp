@@ -814,7 +814,7 @@ ValueObjectSP StackFrame::GetValueForVariableExpressionPath(
           // extract bit low out of it. reading array item low would be done by
           // saying arr[low], without a deref * sign
           Status error;
-          ValueObjectSP temp(valobj_sp->GetChildAtIndex(0, true));
+          ValueObjectSP temp(valobj_sp->GetChildAtIndex(0));
           if (error.Fail()) {
             valobj_sp->GetExpressionPath(var_expr_path_strm);
             error.SetErrorStringWithFormat(
@@ -868,7 +868,7 @@ ValueObjectSP StackFrame::GetValueForVariableExpressionPath(
                   valobj_sp->GetTypeName().AsCString("<invalid type>"),
                   var_expr_path_strm.GetData());
             } else {
-              child_valobj_sp = synthetic->GetChildAtIndex(child_index, true);
+              child_valobj_sp = synthetic->GetChildAtIndex(child_index);
               if (!child_valobj_sp) {
                 valobj_sp->GetExpressionPath(var_expr_path_strm);
                 error.SetErrorStringWithFormat(
@@ -898,10 +898,10 @@ ValueObjectSP StackFrame::GetValueForVariableExpressionPath(
           if (!no_synth_child) {
             ValueObjectSP synthetic = valobj_sp->GetSyntheticValue();
             if (synthetic)
-              child_valobj_sp = synthetic->GetChildAtIndex(child_index, true);
+              child_valobj_sp = synthetic->GetChildAtIndex(child_index);
           }
           if (!child_valobj_sp)
-            child_valobj_sp = valobj_sp->GetChildAtIndex(child_index, true);
+            child_valobj_sp = valobj_sp->GetChildAtIndex(child_index);
           // END SWIFT MOD
 
           if (!child_valobj_sp && (is_incomplete_array || !no_synth_child))
@@ -949,7 +949,7 @@ ValueObjectSP StackFrame::GetValueForVariableExpressionPath(
                 valobj_sp->GetTypeName().AsCString("<invalid type>"),
                 var_expr_path_strm.GetData());
           } else {
-            child_valobj_sp = synthetic->GetChildAtIndex(child_index, true);
+            child_valobj_sp = synthetic->GetChildAtIndex(child_index);
             if (!child_valobj_sp) {
               valobj_sp->GetExpressionPath(var_expr_path_strm);
               error.SetErrorStringWithFormat(
@@ -1021,7 +1021,7 @@ ValueObjectSP StackFrame::GetValueForVariableExpressionPath(
         // extract bits low thru high out of it. reading array items low thru
         // high would be done by saying arr[low-high], without a deref * sign
         Status error;
-        ValueObjectSP temp(valobj_sp->GetChildAtIndex(0, true));
+        ValueObjectSP temp(valobj_sp->GetChildAtIndex(0));
         if (error.Fail()) {
           valobj_sp->GetExpressionPath(var_expr_path_strm);
           error.SetErrorStringWithFormat(
@@ -1409,8 +1409,7 @@ ValueObjectSP GetValueForOffset(StackFrame &frame, ValueObjectSP &parent,
   }
 
   for (int ci = 0, ce = parent->GetNumChildren(); ci != ce; ++ci) {
-    const bool can_create = true;
-    ValueObjectSP child_sp = parent->GetChildAtIndex(ci, can_create);
+    ValueObjectSP child_sp = parent->GetChildAtIndex(ci);
 
     if (!child_sp) {
       return ValueObjectSP();

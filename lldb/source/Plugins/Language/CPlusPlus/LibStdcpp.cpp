@@ -143,7 +143,7 @@ LibstdcppMapIteratorSyntheticFrontEnd::GetChildAtIndex(size_t idx) {
       m_pair_sp = CreateValueObjectFromAddress("pair", m_pair_address,
                                                m_exe_ctx_ref, m_pair_type);
     if (m_pair_sp)
-      return m_pair_sp->GetChildAtIndex(idx, true);
+      return m_pair_sp->GetChildAtIndex(idx);
   }
   return lldb::ValueObjectSP();
 }
