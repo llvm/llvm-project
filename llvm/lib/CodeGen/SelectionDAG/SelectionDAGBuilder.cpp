@@ -6595,7 +6595,7 @@ void SelectionDAGBuilder::visitIntrinsicCall(const CallInst &I,
     const DataLayout DLayout = DAG.getDataLayout();
     EVT EnvVT = TLI.getValueType(DLayout, I.getType());
     Align TempAlign = DAG.getEVTAlign(EnvVT);
-    SDValue Chain = DAG.getRoot();
+    SDValue Chain = getRoot();
     // Use GET_FPENV if it is legal or custom. Otherwise use memory-based node
     // and temporary storage in stack.
     if (TLI.isOperationLegalOrCustom(ISD::SET_FPENV, EnvVT)) {
