@@ -7,7 +7,7 @@
 
 // CHECK-LABEL: @vwrite_csr_vstart(
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    tail call void asm sideeffect "csrw\09vstart, ${0:z}", "rJ,~{memory}"(i64 noundef [[VALUE:%.*]]) #[[ATTR1:[0-9]+]], !srcloc !4
+// CHECK-NEXT:    tail call void asm sideeffect "csrw\09vstart, ${0:z}", "rJ,~{memory}"(i64 [[VALUE:%.*]]) #[[ATTR1:[0-9]+]], !srcloc !4
 // CHECK-NEXT:    ret void
 //
 void vwrite_csr_vstart(unsigned long value) {
@@ -16,7 +16,7 @@ void vwrite_csr_vstart(unsigned long value) {
 
 // CHECK-LABEL: @vwrite_csr_vxsat(
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    tail call void asm sideeffect "csrw\09vxsat, ${0:z}", "rJ,~{memory}"(i64 noundef [[VALUE:%.*]]) #[[ATTR1]], !srcloc !5
+// CHECK-NEXT:    tail call void asm sideeffect "csrw\09vxsat, ${0:z}", "rJ,~{memory}"(i64 [[VALUE:%.*]]) #[[ATTR1]], !srcloc !5
 // CHECK-NEXT:    ret void
 //
 void vwrite_csr_vxsat(unsigned long value) {
@@ -25,7 +25,7 @@ void vwrite_csr_vxsat(unsigned long value) {
 
 // CHECK-LABEL: @vwrite_csr_vxrm(
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    tail call void asm sideeffect "csrw\09vxrm, ${0:z}", "rJ,~{memory}"(i64 noundef [[VALUE:%.*]]) #[[ATTR1]], !srcloc !6
+// CHECK-NEXT:    tail call void asm sideeffect "csrw\09vxrm, ${0:z}", "rJ,~{memory}"(i64 [[VALUE:%.*]]) #[[ATTR1]], !srcloc !6
 // CHECK-NEXT:    ret void
 //
 void vwrite_csr_vxrm(unsigned long value) {
@@ -34,7 +34,7 @@ void vwrite_csr_vxrm(unsigned long value) {
 
 // CHECK-LABEL: @vwrite_csr_vcsr(
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    tail call void asm sideeffect "csrw\09vcsr, ${0:z}", "rJ,~{memory}"(i64 noundef [[VALUE:%.*]]) #[[ATTR1]], !srcloc !7
+// CHECK-NEXT:    tail call void asm sideeffect "csrw\09vcsr, ${0:z}", "rJ,~{memory}"(i64 [[VALUE:%.*]]) #[[ATTR1]], !srcloc !7
 // CHECK-NEXT:    ret void
 //
 void vwrite_csr_vcsr(unsigned long value) {

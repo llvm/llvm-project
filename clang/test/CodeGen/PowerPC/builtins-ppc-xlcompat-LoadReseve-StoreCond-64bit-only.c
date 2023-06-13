@@ -10,14 +10,14 @@
 
 long test_ldarx(volatile long* a) {
   // CHECK64-LABEL: @test_ldarx
-  // CHECK64: %0 = tail call i64 asm sideeffect "ldarx $0, ${1:y}", "=r,*Z,~{memory}"(ptr noundef elementtype(i64) %a)
+  // CHECK64: %0 = tail call i64 asm sideeffect "ldarx $0, ${1:y}", "=r,*Z,~{memory}"(ptr elementtype(i64) %a)
   // CHECK32-ERROR: error: this builtin is only available on 64-bit targets
   return __ldarx(a);
 }
 
 int test_stdcx(volatile long* addr, long val) {
   // CHECK64-LABEL: @test_stdcx
-  // CHECK64: %0 = tail call i32 @llvm.ppc.stdcx(ptr noundef %addr, i64 noundef %val)
+  // CHECK64: %0 = tail call i32 @llvm.ppc.stdcx(ptr %addr, i64 %val)
   // CHECK32-ERROR: error: this builtin is only available on 64-bit targets
   return __stdcx(addr, val);
 }

@@ -6,7 +6,7 @@
 
 // CHECK-LABEL: @test_z_zero(
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[TMP0:%.*]] = tail call i32 asm sideeffect "add.w $0, $1, ${2:z}", "=r,r,ri"(i32 noundef [[A:%.*]], i32 0) #[[ATTR1:[0-9]+]], !srcloc !2
+// CHECK-NEXT:    [[TMP0:%.*]] = tail call i32 asm sideeffect "add.w $0, $1, ${2:z}", "=r,r,ri"(i32 [[A:%.*]], i32 0) #[[ATTR1:[0-9]+]], !srcloc !2
 // CHECK-NEXT:    ret void
 //
 void test_z_zero(int a) {
@@ -16,7 +16,7 @@ void test_z_zero(int a) {
 
 // CHECK-LABEL: @test_z_nonzero(
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[TMP0:%.*]] = tail call i32 asm sideeffect "add.w $0, $1, ${2:z}", "=r,r,ri"(i32 noundef [[A:%.*]], i32 1) #[[ATTR1]], !srcloc !3
+// CHECK-NEXT:    [[TMP0:%.*]] = tail call i32 asm sideeffect "add.w $0, $1, ${2:z}", "=r,r,ri"(i32 [[A:%.*]], i32 1) #[[ATTR1]], !srcloc !3
 // CHECK-NEXT:    ret void
 //
 void test_z_nonzero(int a) {

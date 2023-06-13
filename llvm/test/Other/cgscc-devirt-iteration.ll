@@ -67,7 +67,7 @@ entry:
   ; This indirect call is the first to be resolved, allowing us to deduce
   ; readonly but not (yet) readnone.
   call void %f1(ptr %ignore)
-; CHECK: call void @readnone_with_arg(ptr
+; CHECK: call void @readnone_with_arg(ptr %ignore)
 
   ; Bogus call to test2_b to make this a cycle.
   call void @test2_b()
