@@ -61,8 +61,8 @@ unsigned int csrrd_w() {
 
 // CHECK-LABEL: @csrwr_w(
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[TMP0:%.*]] = tail call i32 @llvm.loongarch.csrwr.w(i32 [[A:%.*]], i32 1)
-// CHECK-NEXT:    [[TMP1:%.*]] = tail call i32 @llvm.loongarch.csrwr.w(i32 [[A]], i32 1)
+// CHECK-NEXT:    [[TMP0:%.*]] = tail call i32 @llvm.loongarch.csrwr.w(i32 noundef [[A:%.*]], i32 1)
+// CHECK-NEXT:    [[TMP1:%.*]] = tail call i32 @llvm.loongarch.csrwr.w(i32 noundef [[A]], i32 1)
 // CHECK-NEXT:    ret i32 0
 //
 unsigned int csrwr_w(unsigned int a) {
@@ -73,8 +73,8 @@ unsigned int csrwr_w(unsigned int a) {
 
 // CHECK-LABEL: @csrxchg_w(
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[TMP0:%.*]] = tail call i32 @llvm.loongarch.csrxchg.w(i32 [[A:%.*]], i32 [[B:%.*]], i32 1)
-// CHECK-NEXT:    [[TMP1:%.*]] = tail call i32 @llvm.loongarch.csrxchg.w(i32 [[A]], i32 [[B]], i32 1)
+// CHECK-NEXT:    [[TMP0:%.*]] = tail call i32 @llvm.loongarch.csrxchg.w(i32 noundef [[A:%.*]], i32 noundef [[B:%.*]], i32 1)
+// CHECK-NEXT:    [[TMP1:%.*]] = tail call i32 @llvm.loongarch.csrxchg.w(i32 noundef [[A]], i32 noundef [[B]], i32 1)
 // CHECK-NEXT:    ret i32 0
 //
 unsigned int csrxchg_w(unsigned int a, unsigned int b) {
@@ -87,8 +87,8 @@ unsigned int csrxchg_w(unsigned int a, unsigned int b) {
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    [[TMP0:%.*]] = shl i32 [[A:%.*]], 24
 // CHECK-NEXT:    [[CONV_I:%.*]] = ashr exact i32 [[TMP0]], 24
-// CHECK-NEXT:    [[TMP1:%.*]] = tail call i32 @llvm.loongarch.crc.w.b.w(i32 [[CONV_I]], i32 [[B:%.*]])
-// CHECK-NEXT:    [[TMP2:%.*]] = tail call i32 @llvm.loongarch.crc.w.b.w(i32 [[A]], i32 [[B]])
+// CHECK-NEXT:    [[TMP1:%.*]] = tail call i32 @llvm.loongarch.crc.w.b.w(i32 [[CONV_I]], i32 noundef [[B:%.*]])
+// CHECK-NEXT:    [[TMP2:%.*]] = tail call i32 @llvm.loongarch.crc.w.b.w(i32 noundef [[A]], i32 noundef [[B]])
 // CHECK-NEXT:    ret i32 0
 //
 int crc_w_b_w(int a, int b) {
@@ -101,8 +101,8 @@ int crc_w_b_w(int a, int b) {
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    [[TMP0:%.*]] = shl i32 [[A:%.*]], 16
 // CHECK-NEXT:    [[CONV_I:%.*]] = ashr exact i32 [[TMP0]], 16
-// CHECK-NEXT:    [[TMP1:%.*]] = tail call i32 @llvm.loongarch.crc.w.h.w(i32 [[CONV_I]], i32 [[B:%.*]])
-// CHECK-NEXT:    [[TMP2:%.*]] = tail call i32 @llvm.loongarch.crc.w.h.w(i32 [[A]], i32 [[B]])
+// CHECK-NEXT:    [[TMP1:%.*]] = tail call i32 @llvm.loongarch.crc.w.h.w(i32 [[CONV_I]], i32 noundef [[B:%.*]])
+// CHECK-NEXT:    [[TMP2:%.*]] = tail call i32 @llvm.loongarch.crc.w.h.w(i32 noundef [[A]], i32 noundef [[B]])
 // CHECK-NEXT:    ret i32 0
 //
 int crc_w_h_w(int a, int b) {
@@ -113,8 +113,8 @@ int crc_w_h_w(int a, int b) {
 
 // CHECK-LABEL: @crc_w_w_w(
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[TMP0:%.*]] = tail call i32 @llvm.loongarch.crc.w.w.w(i32 [[A:%.*]], i32 [[B:%.*]])
-// CHECK-NEXT:    [[TMP1:%.*]] = tail call i32 @llvm.loongarch.crc.w.w.w(i32 [[A]], i32 [[B]])
+// CHECK-NEXT:    [[TMP0:%.*]] = tail call i32 @llvm.loongarch.crc.w.w.w(i32 noundef [[A:%.*]], i32 noundef [[B:%.*]])
+// CHECK-NEXT:    [[TMP1:%.*]] = tail call i32 @llvm.loongarch.crc.w.w.w(i32 noundef [[A]], i32 noundef [[B]])
 // CHECK-NEXT:    ret i32 0
 //
 int crc_w_w_w(int a, int b) {
@@ -125,8 +125,8 @@ int crc_w_w_w(int a, int b) {
 
 // CHECK-LABEL: @cacop_d(
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    tail call void @llvm.loongarch.cacop.d(i64 1, i64 [[A:%.*]], i64 1024)
-// CHECK-NEXT:    tail call void @llvm.loongarch.cacop.d(i64 1, i64 [[A]], i64 1024)
+// CHECK-NEXT:    tail call void @llvm.loongarch.cacop.d(i64 1, i64 noundef [[A:%.*]], i64 1024)
+// CHECK-NEXT:    tail call void @llvm.loongarch.cacop.d(i64 1, i64 noundef [[A]], i64 1024)
 // CHECK-NEXT:    ret void
 //
 void cacop_d(unsigned long int a) {
@@ -136,8 +136,8 @@ void cacop_d(unsigned long int a) {
 
 // CHECK-LABEL: @crc_w_d_w(
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[TMP0:%.*]] = tail call i32 @llvm.loongarch.crc.w.d.w(i64 [[A:%.*]], i32 [[B:%.*]])
-// CHECK-NEXT:    [[TMP1:%.*]] = tail call i32 @llvm.loongarch.crc.w.d.w(i64 [[A]], i32 [[B]])
+// CHECK-NEXT:    [[TMP0:%.*]] = tail call i32 @llvm.loongarch.crc.w.d.w(i64 noundef [[A:%.*]], i32 noundef [[B:%.*]])
+// CHECK-NEXT:    [[TMP1:%.*]] = tail call i32 @llvm.loongarch.crc.w.d.w(i64 noundef [[A]], i32 noundef [[B]])
 // CHECK-NEXT:    ret i32 0
 //
 int crc_w_d_w(long int a, int b) {
@@ -150,8 +150,8 @@ int crc_w_d_w(long int a, int b) {
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    [[TMP0:%.*]] = shl i32 [[A:%.*]], 24
 // CHECK-NEXT:    [[CONV_I:%.*]] = ashr exact i32 [[TMP0]], 24
-// CHECK-NEXT:    [[TMP1:%.*]] = tail call i32 @llvm.loongarch.crcc.w.b.w(i32 [[CONV_I]], i32 [[B:%.*]])
-// CHECK-NEXT:    [[TMP2:%.*]] = tail call i32 @llvm.loongarch.crcc.w.b.w(i32 [[A]], i32 [[B]])
+// CHECK-NEXT:    [[TMP1:%.*]] = tail call i32 @llvm.loongarch.crcc.w.b.w(i32 [[CONV_I]], i32 noundef [[B:%.*]])
+// CHECK-NEXT:    [[TMP2:%.*]] = tail call i32 @llvm.loongarch.crcc.w.b.w(i32 noundef [[A]], i32 noundef [[B]])
 // CHECK-NEXT:    ret i32 0
 //
 int crcc_w_b_w(int a, int b) {
@@ -164,8 +164,8 @@ int crcc_w_b_w(int a, int b) {
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    [[TMP0:%.*]] = shl i32 [[A:%.*]], 16
 // CHECK-NEXT:    [[CONV_I:%.*]] = ashr exact i32 [[TMP0]], 16
-// CHECK-NEXT:    [[TMP1:%.*]] = tail call i32 @llvm.loongarch.crcc.w.h.w(i32 [[CONV_I]], i32 [[B:%.*]])
-// CHECK-NEXT:    [[TMP2:%.*]] = tail call i32 @llvm.loongarch.crcc.w.h.w(i32 [[A]], i32 [[B]])
+// CHECK-NEXT:    [[TMP1:%.*]] = tail call i32 @llvm.loongarch.crcc.w.h.w(i32 [[CONV_I]], i32 noundef [[B:%.*]])
+// CHECK-NEXT:    [[TMP2:%.*]] = tail call i32 @llvm.loongarch.crcc.w.h.w(i32 noundef [[A]], i32 noundef [[B]])
 // CHECK-NEXT:    ret i32 0
 //
 int crcc_w_h_w(int a, int b) {
@@ -176,8 +176,8 @@ int crcc_w_h_w(int a, int b) {
 
 // CHECK-LABEL: @crcc_w_w_w(
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[TMP0:%.*]] = tail call i32 @llvm.loongarch.crcc.w.w.w(i32 [[A:%.*]], i32 [[B:%.*]])
-// CHECK-NEXT:    [[TMP1:%.*]] = tail call i32 @llvm.loongarch.crcc.w.w.w(i32 [[A]], i32 [[B]])
+// CHECK-NEXT:    [[TMP0:%.*]] = tail call i32 @llvm.loongarch.crcc.w.w.w(i32 noundef [[A:%.*]], i32 noundef [[B:%.*]])
+// CHECK-NEXT:    [[TMP1:%.*]] = tail call i32 @llvm.loongarch.crcc.w.w.w(i32 noundef [[A]], i32 noundef [[B]])
 // CHECK-NEXT:    ret i32 0
 //
 int crcc_w_w_w(int a, int b) {
@@ -188,8 +188,8 @@ int crcc_w_w_w(int a, int b) {
 
 // CHECK-LABEL: @crcc_w_d_w(
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[TMP0:%.*]] = tail call i32 @llvm.loongarch.crcc.w.d.w(i64 [[A:%.*]], i32 [[B:%.*]])
-// CHECK-NEXT:    [[TMP1:%.*]] = tail call i32 @llvm.loongarch.crcc.w.d.w(i64 [[A]], i32 [[B]])
+// CHECK-NEXT:    [[TMP0:%.*]] = tail call i32 @llvm.loongarch.crcc.w.d.w(i64 noundef [[A:%.*]], i32 noundef [[B:%.*]])
+// CHECK-NEXT:    [[TMP1:%.*]] = tail call i32 @llvm.loongarch.crcc.w.d.w(i64 noundef [[A]], i32 noundef [[B]])
 // CHECK-NEXT:    ret i32 0
 //
 int crcc_w_d_w(long int a, int b) {
@@ -212,8 +212,8 @@ unsigned long int csrrd_d() {
 
 // CHECK-LABEL: @csrwr_d(
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[TMP0:%.*]] = tail call i64 @llvm.loongarch.csrwr.d(i64 [[A:%.*]], i32 1)
-// CHECK-NEXT:    [[TMP1:%.*]] = tail call i64 @llvm.loongarch.csrwr.d(i64 [[A]], i32 1)
+// CHECK-NEXT:    [[TMP0:%.*]] = tail call i64 @llvm.loongarch.csrwr.d(i64 noundef [[A:%.*]], i32 1)
+// CHECK-NEXT:    [[TMP1:%.*]] = tail call i64 @llvm.loongarch.csrwr.d(i64 noundef [[A]], i32 1)
 // CHECK-NEXT:    ret i64 0
 //
 unsigned long int csrwr_d(unsigned long int a) {
@@ -224,8 +224,8 @@ unsigned long int csrwr_d(unsigned long int a) {
 
 // CHECK-LABEL: @csrxchg_d(
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[TMP0:%.*]] = tail call i64 @llvm.loongarch.csrxchg.d(i64 [[A:%.*]], i64 [[B:%.*]], i32 1)
-// CHECK-NEXT:    [[TMP1:%.*]] = tail call i64 @llvm.loongarch.csrxchg.d(i64 [[A]], i64 [[B]], i32 1)
+// CHECK-NEXT:    [[TMP0:%.*]] = tail call i64 @llvm.loongarch.csrxchg.d(i64 noundef [[A:%.*]], i64 noundef [[B:%.*]], i32 1)
+// CHECK-NEXT:    [[TMP1:%.*]] = tail call i64 @llvm.loongarch.csrxchg.d(i64 noundef [[A]], i64 noundef [[B]], i32 1)
 // CHECK-NEXT:    ret i64 0
 //
 unsigned long int csrxchg_d(unsigned long int a, unsigned long int b) {
@@ -236,8 +236,8 @@ unsigned long int csrxchg_d(unsigned long int a, unsigned long int b) {
 
 // CHECK-LABEL: @iocsrrd_b(
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[TMP0:%.*]] = tail call i32 @llvm.loongarch.iocsrrd.b(i32 [[A:%.*]])
-// CHECK-NEXT:    [[TMP1:%.*]] = tail call i32 @llvm.loongarch.iocsrrd.b(i32 [[A]])
+// CHECK-NEXT:    [[TMP0:%.*]] = tail call i32 @llvm.loongarch.iocsrrd.b(i32 noundef [[A:%.*]])
+// CHECK-NEXT:    [[TMP1:%.*]] = tail call i32 @llvm.loongarch.iocsrrd.b(i32 noundef [[A]])
 // CHECK-NEXT:    ret i8 0
 //
 unsigned char iocsrrd_b(unsigned int a) {
@@ -248,8 +248,8 @@ unsigned char iocsrrd_b(unsigned int a) {
 
 // CHECK-LABEL: @iocsrrd_h(
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[TMP0:%.*]] = tail call i32 @llvm.loongarch.iocsrrd.h(i32 [[A:%.*]])
-// CHECK-NEXT:    [[TMP1:%.*]] = tail call i32 @llvm.loongarch.iocsrrd.h(i32 [[A]])
+// CHECK-NEXT:    [[TMP0:%.*]] = tail call i32 @llvm.loongarch.iocsrrd.h(i32 noundef [[A:%.*]])
+// CHECK-NEXT:    [[TMP1:%.*]] = tail call i32 @llvm.loongarch.iocsrrd.h(i32 noundef [[A]])
 // CHECK-NEXT:    ret i16 0
 //
 unsigned short iocsrrd_h(unsigned int a) {
@@ -260,8 +260,8 @@ unsigned short iocsrrd_h(unsigned int a) {
 
 // CHECK-LABEL: @iocsrrd_w(
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[TMP0:%.*]] = tail call i32 @llvm.loongarch.iocsrrd.w(i32 [[A:%.*]])
-// CHECK-NEXT:    [[TMP1:%.*]] = tail call i32 @llvm.loongarch.iocsrrd.w(i32 [[A]])
+// CHECK-NEXT:    [[TMP0:%.*]] = tail call i32 @llvm.loongarch.iocsrrd.w(i32 noundef [[A:%.*]])
+// CHECK-NEXT:    [[TMP1:%.*]] = tail call i32 @llvm.loongarch.iocsrrd.w(i32 noundef [[A]])
 // CHECK-NEXT:    ret i32 0
 //
 unsigned int iocsrrd_w(unsigned int a) {
@@ -273,8 +273,8 @@ unsigned int iocsrrd_w(unsigned int a) {
 // CHECK-LABEL: @iocsrwr_b(
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    [[CONV_I:%.*]] = zext i8 [[A:%.*]] to i32
-// CHECK-NEXT:    tail call void @llvm.loongarch.iocsrwr.b(i32 [[CONV_I]], i32 [[B:%.*]])
-// CHECK-NEXT:    tail call void @llvm.loongarch.iocsrwr.b(i32 [[CONV_I]], i32 [[B]])
+// CHECK-NEXT:    tail call void @llvm.loongarch.iocsrwr.b(i32 [[CONV_I]], i32 noundef [[B:%.*]])
+// CHECK-NEXT:    tail call void @llvm.loongarch.iocsrwr.b(i32 [[CONV_I]], i32 noundef [[B]])
 // CHECK-NEXT:    ret void
 //
 void iocsrwr_b(unsigned char a, unsigned int b) {
@@ -285,8 +285,8 @@ void iocsrwr_b(unsigned char a, unsigned int b) {
 // CHECK-LABEL: @iocsrwr_h(
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    [[CONV_I:%.*]] = zext i16 [[A:%.*]] to i32
-// CHECK-NEXT:    tail call void @llvm.loongarch.iocsrwr.h(i32 [[CONV_I]], i32 [[B:%.*]])
-// CHECK-NEXT:    tail call void @llvm.loongarch.iocsrwr.h(i32 [[CONV_I]], i32 [[B]])
+// CHECK-NEXT:    tail call void @llvm.loongarch.iocsrwr.h(i32 [[CONV_I]], i32 noundef [[B:%.*]])
+// CHECK-NEXT:    tail call void @llvm.loongarch.iocsrwr.h(i32 [[CONV_I]], i32 noundef [[B]])
 // CHECK-NEXT:    ret void
 //
 void iocsrwr_h(unsigned short a, unsigned int b) {
@@ -296,8 +296,8 @@ void iocsrwr_h(unsigned short a, unsigned int b) {
 
 // CHECK-LABEL: @iocsrwr_w(
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    tail call void @llvm.loongarch.iocsrwr.w(i32 [[A:%.*]], i32 [[B:%.*]])
-// CHECK-NEXT:    tail call void @llvm.loongarch.iocsrwr.w(i32 [[A]], i32 [[B]])
+// CHECK-NEXT:    tail call void @llvm.loongarch.iocsrwr.w(i32 noundef [[A:%.*]], i32 noundef [[B:%.*]])
+// CHECK-NEXT:    tail call void @llvm.loongarch.iocsrwr.w(i32 noundef [[A]], i32 noundef [[B]])
 // CHECK-NEXT:    ret void
 //
 void iocsrwr_w(unsigned int a, unsigned int b) {
@@ -307,8 +307,8 @@ void iocsrwr_w(unsigned int a, unsigned int b) {
 
 // CHECK-LABEL: @iocsrrd_d(
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[TMP0:%.*]] = tail call i64 @llvm.loongarch.iocsrrd.d(i32 [[A:%.*]])
-// CHECK-NEXT:    [[TMP1:%.*]] = tail call i64 @llvm.loongarch.iocsrrd.d(i32 [[A]])
+// CHECK-NEXT:    [[TMP0:%.*]] = tail call i64 @llvm.loongarch.iocsrrd.d(i32 noundef [[A:%.*]])
+// CHECK-NEXT:    [[TMP1:%.*]] = tail call i64 @llvm.loongarch.iocsrrd.d(i32 noundef [[A]])
 // CHECK-NEXT:    ret i64 0
 //
 unsigned long int iocsrrd_d(unsigned int a) {
@@ -319,8 +319,8 @@ unsigned long int iocsrrd_d(unsigned int a) {
 
 // CHECK-LABEL: @iocsrwr_d(
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    tail call void @llvm.loongarch.iocsrwr.d(i64 [[A:%.*]], i32 [[B:%.*]])
-// CHECK-NEXT:    tail call void @llvm.loongarch.iocsrwr.d(i64 [[A]], i32 [[B]])
+// CHECK-NEXT:    tail call void @llvm.loongarch.iocsrwr.d(i64 noundef [[A:%.*]], i32 noundef [[B:%.*]])
+// CHECK-NEXT:    tail call void @llvm.loongarch.iocsrwr.d(i64 noundef [[A]], i32 noundef [[B]])
 // CHECK-NEXT:    ret void
 //
 void iocsrwr_d(unsigned long int a, unsigned int b) {
@@ -330,8 +330,8 @@ void iocsrwr_d(unsigned long int a, unsigned int b) {
 
 // CHECK-LABEL: @asrtle_d(
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    tail call void @llvm.loongarch.asrtle.d(i64 [[A:%.*]], i64 [[B:%.*]])
-// CHECK-NEXT:    tail call void @llvm.loongarch.asrtle.d(i64 [[A]], i64 [[B]])
+// CHECK-NEXT:    tail call void @llvm.loongarch.asrtle.d(i64 noundef [[A:%.*]], i64 noundef [[B:%.*]])
+// CHECK-NEXT:    tail call void @llvm.loongarch.asrtle.d(i64 noundef [[A]], i64 noundef [[B]])
 // CHECK-NEXT:    ret void
 //
 void asrtle_d(long int a, long int b) {
@@ -341,8 +341,8 @@ void asrtle_d(long int a, long int b) {
 
 // CHECK-LABEL: @asrtgt_d(
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    tail call void @llvm.loongarch.asrtgt.d(i64 [[A:%.*]], i64 [[B:%.*]])
-// CHECK-NEXT:    tail call void @llvm.loongarch.asrtgt.d(i64 [[A]], i64 [[B]])
+// CHECK-NEXT:    tail call void @llvm.loongarch.asrtgt.d(i64 noundef [[A:%.*]], i64 noundef [[B:%.*]])
+// CHECK-NEXT:    tail call void @llvm.loongarch.asrtgt.d(i64 noundef [[A]], i64 noundef [[B]])
 // CHECK-NEXT:    ret void
 //
 void asrtgt_d(long int a, long int b) {
@@ -352,8 +352,8 @@ void asrtgt_d(long int a, long int b) {
 
 // CHECK-LABEL: @lddir_d(
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[TMP0:%.*]] = tail call i64 @llvm.loongarch.lddir.d(i64 [[A:%.*]], i64 1)
-// CHECK-NEXT:    [[TMP1:%.*]] = tail call i64 @llvm.loongarch.lddir.d(i64 [[A]], i64 1)
+// CHECK-NEXT:    [[TMP0:%.*]] = tail call i64 @llvm.loongarch.lddir.d(i64 noundef [[A:%.*]], i64 1)
+// CHECK-NEXT:    [[TMP1:%.*]] = tail call i64 @llvm.loongarch.lddir.d(i64 noundef [[A]], i64 1)
 // CHECK-NEXT:    ret i64 0
 //
 long int lddir_d(long int a) {
@@ -364,8 +364,8 @@ long int lddir_d(long int a) {
 
 // CHECK-LABEL: @ldpte_d(
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    tail call void @llvm.loongarch.ldpte.d(i64 [[A:%.*]], i64 1)
-// CHECK-NEXT:    tail call void @llvm.loongarch.ldpte.d(i64 [[A]], i64 1)
+// CHECK-NEXT:    tail call void @llvm.loongarch.ldpte.d(i64 noundef [[A:%.*]], i64 1)
+// CHECK-NEXT:    tail call void @llvm.loongarch.ldpte.d(i64 noundef [[A]], i64 1)
 // CHECK-NEXT:    ret void
 //
 void ldpte_d(long int a) {
@@ -375,8 +375,8 @@ void ldpte_d(long int a) {
 
 // CHECK-LABEL: @cpucfg(
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[TMP0:%.*]] = tail call i32 @llvm.loongarch.cpucfg(i32 [[A:%.*]])
-// CHECK-NEXT:    [[TMP1:%.*]] = tail call i32 @llvm.loongarch.cpucfg(i32 [[A]])
+// CHECK-NEXT:    [[TMP0:%.*]] = tail call i32 @llvm.loongarch.cpucfg(i32 noundef [[A:%.*]])
+// CHECK-NEXT:    [[TMP1:%.*]] = tail call i32 @llvm.loongarch.cpucfg(i32 noundef [[A]])
 // CHECK-NEXT:    ret i32 0
 //
 unsigned int cpucfg(unsigned int a) {
@@ -419,8 +419,8 @@ int loongarch_movfcsr2gr() {
 
 // CHECK-LABEL: @loongarch_movgr2fcsr(
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    tail call void @llvm.loongarch.movgr2fcsr(i32 1, i32 [[A:%.*]])
-// CHECK-NEXT:    tail call void @llvm.loongarch.movgr2fcsr(i32 1, i32 [[A]])
+// CHECK-NEXT:    tail call void @llvm.loongarch.movgr2fcsr(i32 1, i32 noundef [[A:%.*]])
+// CHECK-NEXT:    tail call void @llvm.loongarch.movgr2fcsr(i32 1, i32 noundef [[A]])
 // CHECK-NEXT:    ret void
 //
 void loongarch_movgr2fcsr(int a) {

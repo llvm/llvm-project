@@ -63,9 +63,9 @@ fixed_bool_t from_svbool_t(svbool_t type) {
 // CHECK-LABEL: @lax_cast(
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    [[SAVED_VALUE:%.*]] = alloca <16 x i32>, align 64
-// CHECK-NEXT:    [[TYPE:%.*]] = tail call <16 x i32> @llvm.vector.extract.v16i32.nxv4i32(<vscale x 4 x i32> [[TYPE_COERCE:%.*]], i64 0)
-// CHECK-NEXT:    store <16 x i32> [[TYPE]], ptr [[SAVED_VALUE]], align 64, !tbaa [[TBAA6:![0-9]+]]
-// CHECK-NEXT:    [[TMP0:%.*]] = load <vscale x 2 x i64>, ptr [[SAVED_VALUE]], align 64, !tbaa [[TBAA6]]
+// CHECK-NEXT:    [[TYPE:%.*]] = tail call <16 x i32> @llvm.vector.extract.v16i32.nxv4i32(<vscale x 4 x i32> noundef [[TYPE_COERCE:%.*]], i64 0)
+// CHECK-NEXT:    store <16 x i32> [[TYPE]], ptr [[SAVED_VALUE]], align 64, !tbaa [[TBAA2:![0-9]+]]
+// CHECK-NEXT:    [[TMP0:%.*]] = load <vscale x 2 x i64>, ptr [[SAVED_VALUE]], align 64, !tbaa [[TBAA2]]
 // CHECK-NEXT:    ret <vscale x 2 x i64> [[TMP0]]
 //
 svint64_t lax_cast(fixed_int32_t type) {
@@ -74,7 +74,7 @@ svint64_t lax_cast(fixed_int32_t type) {
 
 // CHECK-LABEL: @to_svint32_t__from_gnu_int32_t(
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[TYPE:%.*]] = load <16 x i32>, ptr [[TMP0:%.*]], align 16, !tbaa [[TBAA6]]
+// CHECK-NEXT:    [[TYPE:%.*]] = load <16 x i32>, ptr [[TMP0:%.*]], align 16, !tbaa [[TBAA2]]
 // CHECK-NEXT:    [[CASTSCALABLESVE:%.*]] = tail call <vscale x 4 x i32> @llvm.vector.insert.nxv4i32.v16i32(<vscale x 4 x i32> undef, <16 x i32> [[TYPE]], i64 0)
 // CHECK-NEXT:    ret <vscale x 4 x i32> [[CASTSCALABLESVE]]
 //
@@ -85,7 +85,7 @@ svint32_t to_svint32_t__from_gnu_int32_t(gnu_int32_t type) {
 // CHECK-LABEL: @from_svint32_t__to_gnu_int32_t(
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    [[CASTFIXEDSVE:%.*]] = tail call <16 x i32> @llvm.vector.extract.v16i32.nxv4i32(<vscale x 4 x i32> [[TYPE:%.*]], i64 0)
-// CHECK-NEXT:    store <16 x i32> [[CASTFIXEDSVE]], ptr [[AGG_RESULT:%.*]], align 16, !tbaa [[TBAA6]]
+// CHECK-NEXT:    store <16 x i32> [[CASTFIXEDSVE]], ptr [[AGG_RESULT:%.*]], align 16, !tbaa [[TBAA2]]
 // CHECK-NEXT:    ret void
 //
 gnu_int32_t from_svint32_t__to_gnu_int32_t(svint32_t type) {
@@ -94,7 +94,7 @@ gnu_int32_t from_svint32_t__to_gnu_int32_t(svint32_t type) {
 
 // CHECK-LABEL: @to_fixed_int32_t__from_gnu_int32_t(
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[TYPE:%.*]] = load <16 x i32>, ptr [[TMP0:%.*]], align 16, !tbaa [[TBAA6]]
+// CHECK-NEXT:    [[TYPE:%.*]] = load <16 x i32>, ptr [[TMP0:%.*]], align 16, !tbaa [[TBAA2]]
 // CHECK-NEXT:    [[CASTSCALABLESVE:%.*]] = tail call <vscale x 4 x i32> @llvm.vector.insert.nxv4i32.v16i32(<vscale x 4 x i32> undef, <16 x i32> [[TYPE]], i64 0)
 // CHECK-NEXT:    ret <vscale x 4 x i32> [[CASTSCALABLESVE]]
 //
@@ -104,8 +104,8 @@ fixed_int32_t to_fixed_int32_t__from_gnu_int32_t(gnu_int32_t type) {
 
 // CHECK-LABEL: @from_fixed_int32_t__to_gnu_int32_t(
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[TYPE:%.*]] = tail call <16 x i32> @llvm.vector.extract.v16i32.nxv4i32(<vscale x 4 x i32> [[TYPE_COERCE:%.*]], i64 0)
-// CHECK-NEXT:    store <16 x i32> [[TYPE]], ptr [[AGG_RESULT:%.*]], align 16, !tbaa [[TBAA6]]
+// CHECK-NEXT:    [[TYPE:%.*]] = tail call <16 x i32> @llvm.vector.extract.v16i32.nxv4i32(<vscale x 4 x i32> noundef [[TYPE_COERCE:%.*]], i64 0)
+// CHECK-NEXT:    store <16 x i32> [[TYPE]], ptr [[AGG_RESULT:%.*]], align 16, !tbaa [[TBAA2]]
 // CHECK-NEXT:    ret void
 //
 gnu_int32_t from_fixed_int32_t__to_gnu_int32_t(fixed_int32_t type) {
