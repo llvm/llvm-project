@@ -39,15 +39,19 @@ InstructionCost RISCVTTIImpl::getLMULCost(MVT VT) {
   // implementation-defined.
   if (!VT.isVector())
     return InstructionCost::getInvalid();
+  unsigned DLenFactor = ST->getDLenFactor();
   unsigned Cost;
   if (VT.isScalableVector()) {
     unsigned LMul;
     bool Fractional;
     std::tie(LMul, Fractional) =
         RISCVVType::decodeVLMUL(RISCVTargetLowering::getLMUL(VT));
-    Cost = Fractional ? 1 : LMul;
+    if (Fractional)
+      Cost = LMul <= DLenFactor ? (DLenFactor / LMul) : 1;
+    else
+      Cost = (LMul * DLenFactor);
   } else {
-    Cost = divideCeil(VT.getSizeInBits(), ST->getRealMinVLen());
+    Cost = divideCeil(VT.getSizeInBits(), ST->getRealMinVLen() / DLenFactor);
   }
   return Cost;
 }
