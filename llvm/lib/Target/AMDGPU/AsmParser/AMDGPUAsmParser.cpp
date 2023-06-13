@@ -1823,8 +1823,8 @@ public:
   AMDGPUOperand::Ptr defaultCBSZ() const;
   AMDGPUOperand::Ptr defaultABID() const;
 
-  OperandMatchResultTy parseEndpgmOp(OperandVector &Operands);
-  AMDGPUOperand::Ptr defaultEndpgmImmOperands() const;
+  OperandMatchResultTy parseEndpgm(OperandVector &Operands);
+  AMDGPUOperand::Ptr defaultEndpgm() const;
 
   AMDGPUOperand::Ptr defaultWaitVDST() const;
   AMDGPUOperand::Ptr defaultWaitEXP() const;
@@ -8713,7 +8713,7 @@ AMDGPUOperand::Ptr AMDGPUAsmParser::defaultDppRowMask() const {
   return AMDGPUOperand::CreateImm(this, 0xf, SMLoc(), AMDGPUOperand::ImmTyDppRowMask);
 }
 
-AMDGPUOperand::Ptr AMDGPUAsmParser::defaultEndpgmImmOperands() const {
+AMDGPUOperand::Ptr AMDGPUAsmParser::defaultEndpgm() const {
   return AMDGPUOperand::CreateImm(this, 0, SMLoc(), AMDGPUOperand::ImmTyEndpgm);
 }
 
@@ -9196,7 +9196,7 @@ unsigned AMDGPUAsmParser::validateTargetOperandClass(MCParsedAsmOperand &Op,
 // endpgm
 //===----------------------------------------------------------------------===//
 
-OperandMatchResultTy AMDGPUAsmParser::parseEndpgmOp(OperandVector &Operands) {
+OperandMatchResultTy AMDGPUAsmParser::parseEndpgm(OperandVector &Operands) {
   SMLoc S = getLoc();
   int64_t Imm = 0;
 

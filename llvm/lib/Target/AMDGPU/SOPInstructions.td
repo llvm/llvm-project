@@ -1175,7 +1175,7 @@ multiclass SOPP_With_Relaxation <string opName, dag ins,
 def S_NOP : SOPP_Pseudo<"s_nop" , (ins i16imm:$simm16), "$simm16">;
 
 let isTerminator = 1 in {
-def S_ENDPGM : SOPP_Pseudo<"s_endpgm", (ins EndpgmImm:$simm16), "$simm16", [], ""> {
+def S_ENDPGM : SOPP_Pseudo<"s_endpgm", (ins Endpgm:$simm16), "$simm16", [], ""> {
   let isBarrier = 1;
   let isReturn = 1;
   let hasSideEffects = 1;
