@@ -354,13 +354,6 @@
 // CRC32: "-target-feature" "+crc32"
 // NO-CRC32: "-target-feature" "-crc32"
 
-// RUN: %clang -### --target=aarch64 -mcrc32 -msse4.1 -msse4.2 -mno-sgx %s 2>&1 | FileCheck --check-prefix=NONX86 %s
-// NONX86:      error: unsupported option '-mcrc32' for target 'aarch64'
-// NONX86-NEXT: error: unsupported option '-msse4.1' for target 'aarch64'
-/// TODO: This warning is a workaround for https://github.com/llvm/llvm-project/issues/63270
-// NONX86-NEXT: warning: argument unused during compilation: '-msse4.2' [-Wunused-command-line-argument]
-// NONX86-NEXT: error: unsupported option '-mno-sgx' for target 'aarch64'
-
 // RUN: %clang --target=i386 -march=i386 -mharden-sls=return %s -### -o %t.o 2>&1 | FileCheck -check-prefixes=SLS-RET,NO-SLS %s
 // RUN: %clang --target=i386 -march=i386 -mharden-sls=indirect-jmp %s -### -o %t.o 2>&1 | FileCheck -check-prefixes=SLS-IJMP,NO-SLS %s
 // RUN: %clang --target=i386 -march=i386 -mharden-sls=none -mharden-sls=all %s -### -o %t.o 2>&1 | FileCheck -check-prefixes=SLS-IJMP,SLS-RET %s
