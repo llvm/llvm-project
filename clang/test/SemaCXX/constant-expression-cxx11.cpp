@@ -2440,40 +2440,49 @@ E2 testDefaultArgForParam(E2 e2Param = (E2)-1) { // ok, not a constant expressio
 void testValueInRangeOfEnumerationValues() {
   constexpr E1 x1 = static_cast<E1>(-8);
   constexpr E1 x2 = static_cast<E1>(8);
-  // expected-error@-1 {{integer value 8 is outside the valid range of values [-8, 7] for this enumeration type}}
+  // expected-error@-1 {{integer value 8 is outside the valid range of values [-8, 7] for the enumeration type 'E1'}}
   E1 x2b = static_cast<E1>(8); // ok, not a constant expression context
 
   constexpr E2 x3 = static_cast<E2>(-8);
-  // expected-error@-1 {{integer value -8 is outside the valid range of values [0, 7] for this enumeration type}}
+  // expected-error@-1 {{integer value -8 is outside the valid range of values [0, 7] for the enumeration type 'E2'}}
   constexpr E2 x4 = static_cast<E2>(0);
   constexpr E2 x5 = static_cast<E2>(8);
-  // expected-error@-1 {{integer value 8 is outside the valid range of values [0, 7] for this enumeration type}}
+  // expected-error@-1 {{integer value 8 is outside the valid range of values [0, 7] for the enumeration type 'E2'}}
 
   constexpr E3 x6 = static_cast<E3>(-2048);
   constexpr E3 x7 = static_cast<E3>(-8);
   constexpr E3 x8 = static_cast<E3>(0);
   constexpr E3 x9 = static_cast<E3>(8);
   constexpr E3 x10 = static_cast<E3>(2048);
-  // expected-error@-1 {{integer value 2048 is outside the valid range of values [-2048, 2047] for this enumeration type}}
+  // expected-error@-1 {{integer value 2048 is outside the valid range of values [-2048, 2047] for the enumeration type 'E3'}}
 
   constexpr E4 x11 = static_cast<E4>(0);
   constexpr E4 x12 = static_cast<E4>(1);
   constexpr E4 x13 = static_cast<E4>(2);
-  // expected-error@-1 {{integer value 2 is outside the valid range of values [0, 1] for this enumeration type}}
+  // expected-error@-1 {{integer value 2 is outside the valid range of values [0, 1] for the enumeration type 'E4'}}
 
   constexpr EEmpty x14 = static_cast<EEmpty>(0);
   constexpr EEmpty x15 = static_cast<EEmpty>(1);
   constexpr EEmpty x16 = static_cast<EEmpty>(2);
-  // expected-error@-1 {{integer value 2 is outside the valid range of values [0, 1] for this enumeration type}}
+  // expected-error@-1 {{integer value 2 is outside the valid range of values [0, 1] for the enumeration type 'EEmpty'}}
 
   constexpr EFixed x17 = static_cast<EFixed>(100);
   constexpr EScoped x18 = static_cast<EScoped>(100);
 
   constexpr EMaxInt x19 = static_cast<EMaxInt>(__INT_MAX__-1);
   constexpr EMaxInt x20 = static_cast<EMaxInt>((long)__INT_MAX__+1);
-  // expected-error@-1 {{integer value 2147483648 is outside the valid range of values [-2147483648, 2147483647] for this enumeration type}}
+  // expected-error@-1 {{integer value 2147483648 is outside the valid range of values [-2147483648, 2147483647] for the enumeration type 'EMaxInt'}}
 
   const NumberType neg_one = (NumberType) ((NumberType) 0 - (NumberType) 1); // ok, not a constant expression context
+}
+
+template<class T, unsigned size> struct Bitfield {
+  static constexpr T max = static_cast<T>((1 << size) - 1); // #enum
+};
+
+void testValueInRangeOfEnumerationValuesViaTemplate() {
+  Bitfield<E2, 3> good;
+  Bitfield<E2, 4> bad; // cxx11-error@#enum {{integer value 15 is outside the valid range of values [0, 7] for the enumeration type 'E2'}}
 }
 
 enum SortOrder {
@@ -2494,4 +2503,4 @@ void A::f(SortOrder order) {
 GH50055::E2 GlobalInitNotCE1 = (GH50055::E2)-1; // ok, not a constant expression context
 GH50055::E2 GlobalInitNotCE2 = GH50055::testDefaultArgForParam(); // ok, not a constant expression context
 constexpr GH50055::E2 GlobalInitCE = (GH50055::E2)-1;
-// expected-error@-1 {{integer value -1 is outside the valid range of values [0, 7] for this enumeration type}}
+// expected-error@-1 {{integer value -1 is outside the valid range of values [0, 7] for the enumeration type 'E2'}}
