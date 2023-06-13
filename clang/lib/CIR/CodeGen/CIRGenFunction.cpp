@@ -486,9 +486,14 @@ CIRGenFunction::generateCode(clang::GlobalDecl GD, mlir::cir::FuncOp Fn,
   SymTableScopeTy varScope(symbolTable);
 
   {
-    auto FnBeginLoc = getLoc(FD->getBody()->getEndLoc());
-    auto FnEndLoc = getLoc(FD->getBody()->getEndLoc());
-    SourceLocRAIIObject fnLoc{*this, getLoc(Loc)};
+    // Compiler synthetized functions might have invalid slocs...
+    auto bSrcLoc = FD->getBody()->getBeginLoc();
+    auto eSrcLoc = FD->getBody()->getEndLoc();
+    auto unknownLoc = builder.getUnknownLoc();
+
+    auto FnBeginLoc = bSrcLoc.isValid() ? getLoc(bSrcLoc) : unknownLoc;
+    auto FnEndLoc = eSrcLoc.isValid() ? getLoc(eSrcLoc) : unknownLoc;
+    SourceLocRAIIObject fnLoc{*this, Loc.isValid() ? getLoc(Loc) : unknownLoc};
 
     assert(Fn.isDeclaration() && "Function already has body?");
     mlir::Block *EntryBB = Fn.addEntryBlock();
