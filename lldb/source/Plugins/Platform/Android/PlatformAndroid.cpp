@@ -201,12 +201,14 @@ Status PlatformAndroid::GetFile(const FileSpec &source,
 
   // mode == 0 can signify that adbd cannot access the file due security
   // constraints - try "cat ..." as a fallback.
-  AdbClient adb(m_device_id);
+  AdbClientUP adb(GetAdbClient(error));
+  if (error.Fail())
+    return error;
 
   char cmd[PATH_MAX];
   snprintf(cmd, sizeof(cmd), "cat '%s'", source_file.c_str());
 
-  return adb.ShellToFile(cmd, minutes(1), destination);
+  return adb->ShellToFile(cmd, minutes(1), destination);
 }
 
 Status PlatformAndroid::PutFile(const FileSpec &source,
@@ -250,7 +252,10 @@ Status PlatformAndroid::DownloadModuleSlice(const FileSpec &src_file_spec,
   if (pos != std::string::npos)
     source_file = source_file.substr(0, pos);
 
-  AdbClient adb(m_device_id);
+  Status error;
+  AdbClientUP adb(GetAdbClient(error));
+  if (error.Fail())
+    return error;
 
   // Use 'shell dd' to download the file slice with the offset and size.
   char cmd[PATH_MAX];
@@ -259,7 +264,7 @@ Status PlatformAndroid::DownloadModuleSlice(const FileSpec &src_file_spec,
            "skip=%" PRIu64 " count=%" PRIu64 " status=none",
            source_file.c_str(), src_offset, src_size);
 
-  return adb.ShellToFile(cmd, minutes(1), dst_file_spec);
+  return adb->ShellToFile(cmd, minutes(1), dst_file_spec);
 }
 
 Status PlatformAndroid::DisconnectRemote() {
@@ -283,9 +288,12 @@ uint32_t PlatformAndroid::GetSdkVersion() {
     return m_sdk_version;
 
   std::string version_string;
-  AdbClient adb(m_device_id);
-  Status error =
-      adb.Shell("getprop ro.build.version.sdk", seconds(5), &version_string);
+  Status error;
+  AdbClientUP adb(GetAdbClient(error));
+  if (error.Fail())
+    return 0;
+  error =
+      adb->Shell("getprop ro.build.version.sdk", seconds(5), &version_string);
   version_string = llvm::StringRef(version_string).trim().str();
 
   if (error.Fail() || version_string.empty()) {
@@ -321,10 +329,13 @@ Status PlatformAndroid::DownloadSymbolFile(const lldb::ModuleSP &module_sp,
       nullptr)
     return Status("Symtab already available in the module");
 
-  AdbClient adb(m_device_id);
+  Status error;
+  AdbClientUP adb(GetAdbClient(error));
+  if (error.Fail())
+    return error;
   std::string tmpdir;
-  Status error = adb.Shell("mktemp --directory --tmpdir /data/local/tmp",
-                           seconds(5), &tmpdir);
+  error = adb->Shell("mktemp --directory --tmpdir /data/local/tmp", seconds(5),
+                     &tmpdir);
   if (error.Fail() || tmpdir.empty())
     return Status("Failed to generate temporary directory on the device (%s)",
                   error.AsCString());
@@ -335,7 +346,7 @@ Status PlatformAndroid::DownloadSymbolFile(const lldb::ModuleSP &module_sp,
       tmpdir_remover(&tmpdir, [&adb](std::string *s) {
         StreamString command;
         command.Printf("rm -rf %s", s->c_str());
-        Status error = adb.Shell(command.GetData(), seconds(5), nullptr);
+        Status error = adb->Shell(command.GetData(), seconds(5), nullptr);
 
         Log *log = GetLog(LLDBLog::Platform);
         if (log && error.Fail())
@@ -351,7 +362,7 @@ Status PlatformAndroid::DownloadSymbolFile(const lldb::ModuleSP &module_sp,
   command.Printf("oatdump --symbolize=%s --output=%s",
                  module_sp->GetPlatformFileSpec().GetPath(false).c_str(),
                  symfile_platform_filespec.GetPath(false).c_str());
-  error = adb.Shell(command.GetData(), minutes(1), nullptr);
+  error = adb->Shell(command.GetData(), minutes(1), nullptr);
   if (error.Fail())
     return Status("Oatdump failed: %s", error.AsCString());
 
@@ -390,11 +401,22 @@ PlatformAndroid::GetLibdlFunctionDeclarations(lldb_private::Process *process) {
   return PlatformPOSIX::GetLibdlFunctionDeclarations(process);
 }
 
+PlatformAndroid::AdbClientUP PlatformAndroid::GetAdbClient(Status &error) {
+  AdbClientUP adb(std::make_unique<AdbClient>(m_device_id));
+  if (adb)
+    error.Clear();
+  else
+    error = Status("Failed to create AdbClient");
+  return adb;
+}
+
 AdbClient::SyncService *PlatformAndroid::GetSyncService(Status &error) {
   if (m_adb_sync_svc && m_adb_sync_svc->IsConnected())
     return m_adb_sync_svc.get();
 
-  AdbClient adb(m_device_id);
-  m_adb_sync_svc = adb.GetSyncService(error);
+  AdbClientUP adb(GetAdbClient(error));
+  if (error.Fail())
+    return nullptr;
+  m_adb_sync_svc = adb->GetSyncService(error);
   return (error.Success()) ? m_adb_sync_svc.get() : nullptr;
 }
