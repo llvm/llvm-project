@@ -5723,8 +5723,7 @@ declare half @llvm.amdgcn.log.f16(half) nounwind readnone
 
 define float @test_constant_fold_log_f32_undef() {
 ; CHECK-LABEL: @test_constant_fold_log_f32_undef(
-; CHECK-NEXT:    [[VAL:%.*]] = call float @llvm.amdgcn.log.f32(float undef)
-; CHECK-NEXT:    ret float [[VAL]]
+; CHECK-NEXT:    ret float 0x7FF8000000000000
 ;
   %val = call float @llvm.amdgcn.log.f32(float undef)
   ret float %val
@@ -5732,8 +5731,7 @@ define float @test_constant_fold_log_f32_undef() {
 
 define float @test_constant_fold_log_f32_poison() {
 ; CHECK-LABEL: @test_constant_fold_log_f32_poison(
-; CHECK-NEXT:    [[VAL:%.*]] = call float @llvm.amdgcn.log.f32(float poison)
-; CHECK-NEXT:    ret float [[VAL]]
+; CHECK-NEXT:    ret float poison
 ;
   %val = call float @llvm.amdgcn.log.f32(float poison)
   ret float %val
@@ -5741,8 +5739,7 @@ define float @test_constant_fold_log_f32_poison() {
 
 define float @test_constant_fold_log_f32_p0() {
 ; CHECK-LABEL: @test_constant_fold_log_f32_p0(
-; CHECK-NEXT:    [[VAL:%.*]] = call float @llvm.amdgcn.log.f32(float 0.000000e+00)
-; CHECK-NEXT:    ret float [[VAL]]
+; CHECK-NEXT:    ret float 0xFFF0000000000000
 ;
   %val = call float @llvm.amdgcn.log.f32(float 0.0)
   ret float %val
@@ -5750,8 +5747,7 @@ define float @test_constant_fold_log_f32_p0() {
 
 define float @test_constant_fold_log_f32_n0() {
 ; CHECK-LABEL: @test_constant_fold_log_f32_n0(
-; CHECK-NEXT:    [[VAL:%.*]] = call float @llvm.amdgcn.log.f32(float -0.000000e+00)
-; CHECK-NEXT:    ret float [[VAL]]
+; CHECK-NEXT:    ret float 0xFFF0000000000000
 ;
   %val = call float @llvm.amdgcn.log.f32(float -0.0)
   ret float %val
@@ -5759,8 +5755,7 @@ define float @test_constant_fold_log_f32_n0() {
 
 define float @test_constant_fold_log_f32_subnormal() {
 ; CHECK-LABEL: @test_constant_fold_log_f32_subnormal(
-; CHECK-NEXT:    [[VAL:%.*]] = call float @llvm.amdgcn.log.f32(float 0x380FFFFFC0000000)
-; CHECK-NEXT:    ret float [[VAL]]
+; CHECK-NEXT:    ret float 0xFFF0000000000000
 ;
   %val = call float @llvm.amdgcn.log.f32(float 0x380FFFFFC0000000)
   ret float %val
@@ -5768,8 +5763,7 @@ define float @test_constant_fold_log_f32_subnormal() {
 
 define float @test_constant_fold_log_f32_negsubnormal() {
 ; CHECK-LABEL: @test_constant_fold_log_f32_negsubnormal(
-; CHECK-NEXT:    [[VAL:%.*]] = call float @llvm.amdgcn.log.f32(float 0xB80FFFFFC0000000)
-; CHECK-NEXT:    ret float [[VAL]]
+; CHECK-NEXT:    ret float 0xFFF0000000000000
 ;
   %val = call float @llvm.amdgcn.log.f32(float 0xB80FFFFFC0000000)
   ret float %val
@@ -5777,8 +5771,7 @@ define float @test_constant_fold_log_f32_negsubnormal() {
 
 define float @test_constant_fold_log_f32_pinf() {
 ; CHECK-LABEL: @test_constant_fold_log_f32_pinf(
-; CHECK-NEXT:    [[VAL:%.*]] = call float @llvm.amdgcn.log.f32(float 0x7FF0000000000000)
-; CHECK-NEXT:    ret float [[VAL]]
+; CHECK-NEXT:    ret float 0x7FF0000000000000
 ;
   %val = call float @llvm.amdgcn.log.f32(float 0x7FF0000000000000)
   ret float %val
@@ -5786,8 +5779,7 @@ define float @test_constant_fold_log_f32_pinf() {
 
 define float @test_constant_fold_log_f32_ninf() {
 ; CHECK-LABEL: @test_constant_fold_log_f32_ninf(
-; CHECK-NEXT:    [[VAL:%.*]] = call float @llvm.amdgcn.log.f32(float 0xFFF0000000000000)
-; CHECK-NEXT:    ret float [[VAL]]
+; CHECK-NEXT:    ret float 0x7FF8000000000000
 ;
   %val = call float @llvm.amdgcn.log.f32(float 0xFFF0000000000000)
   ret float %val
@@ -5813,8 +5805,7 @@ define float @test_constant_fold_log_f32_p10() {
 
 define float @test_constant_fold_log_f32_neg10() {
 ; CHECK-LABEL: @test_constant_fold_log_f32_neg10(
-; CHECK-NEXT:    [[VAL:%.*]] = call float @llvm.amdgcn.log.f32(float -1.000000e+01)
-; CHECK-NEXT:    ret float [[VAL]]
+; CHECK-NEXT:    ret float 0x7FF8000000000000
 ;
   %val = call float @llvm.amdgcn.log.f32(float -10.0)
   ret float %val
@@ -5822,8 +5813,7 @@ define float @test_constant_fold_log_f32_neg10() {
 
 define float @test_constant_fold_log_f32_qnan() {
 ; CHECK-LABEL: @test_constant_fold_log_f32_qnan(
-; CHECK-NEXT:    [[VAL:%.*]] = call float @llvm.amdgcn.log.f32(float 0x7FF8000000000000)
-; CHECK-NEXT:    ret float [[VAL]]
+; CHECK-NEXT:    ret float 0x7FF8000000000000
 ;
   %val = call float @llvm.amdgcn.log.f32(float 0x7FF8000000000000)
   ret float %val
@@ -5831,8 +5821,7 @@ define float @test_constant_fold_log_f32_qnan() {
 
 define float @test_constant_fold_log_f32_snan() {
 ; CHECK-LABEL: @test_constant_fold_log_f32_snan(
-; CHECK-NEXT:    [[VAL:%.*]] = call float @llvm.amdgcn.log.f32(float 0x7FF0000020000000)
-; CHECK-NEXT:    ret float [[VAL]]
+; CHECK-NEXT:    ret float 0x7FF8000020000000
 ;
   %val = call float @llvm.amdgcn.log.f32(float 0x7FF0000020000000)
   ret float %val
@@ -5840,8 +5829,7 @@ define float @test_constant_fold_log_f32_snan() {
 
 define half @test_constant_fold_log_f16_p0() {
 ; CHECK-LABEL: @test_constant_fold_log_f16_p0(
-; CHECK-NEXT:    [[VAL:%.*]] = call half @llvm.amdgcn.log.f16(half 0xH0000)
-; CHECK-NEXT:    ret half [[VAL]]
+; CHECK-NEXT:    ret half 0xHFC00
 ;
   %val = call half @llvm.amdgcn.log.f16(half 0.0)
   ret half %val
@@ -5849,8 +5837,7 @@ define half @test_constant_fold_log_f16_p0() {
 
 define half @test_constant_fold_log_f16_neg10() {
 ; CHECK-LABEL: @test_constant_fold_log_f16_neg10(
-; CHECK-NEXT:    [[VAL:%.*]] = call half @llvm.amdgcn.log.f16(half 0xHC900)
-; CHECK-NEXT:    ret half [[VAL]]
+; CHECK-NEXT:    ret half 0xH7E00
 ;
   %val = call half @llvm.amdgcn.log.f16(half -10.0)
   ret half %val
@@ -5894,8 +5881,7 @@ define float @test_constant_fold_log_f32_neg_strictfp() strictfp {
 
 define float @test_constant_fold_log_f32_pinf_strictfp() strictfp {
 ; CHECK-LABEL: @test_constant_fold_log_f32_pinf_strictfp(
-; CHECK-NEXT:    [[VAL:%.*]] = call float @llvm.amdgcn.log.f32(float 0x7FF0000000000000) #[[ATTR16]]
-; CHECK-NEXT:    ret float [[VAL]]
+; CHECK-NEXT:    ret float 0x7FF0000000000000
 ;
   %val = call float @llvm.amdgcn.log.f32(float 0x7FF0000000000000) strictfp
   ret float %val
@@ -5921,8 +5907,7 @@ define half @test_constant_fold_log_f16_denorm() {
 
 define half @test_constant_fold_log_f16_neg_denorm() {
 ; CHECK-LABEL: @test_constant_fold_log_f16_neg_denorm(
-; CHECK-NEXT:    [[VAL:%.*]] = call half @llvm.amdgcn.log.f16(half 0xH83FF)
-; CHECK-NEXT:    ret half [[VAL]]
+; CHECK-NEXT:    ret half 0xH7E00
 ;
   %val = call half @llvm.amdgcn.log.f16(half 0xH83ff)
   ret half %val
