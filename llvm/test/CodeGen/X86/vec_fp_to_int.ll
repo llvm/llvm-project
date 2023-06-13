@@ -1912,7 +1912,8 @@ define <4 x i32> @fptosi_2f64_to_2i32_const() {
 ;
 ; AVX-LABEL: fptosi_2f64_to_2i32_const:
 ; AVX:       # %bb.0:
-; AVX-NEXT:    vmovaps {{.*#+}} xmm0 = <4294967295,1,u,u>
+; AVX-NEXT:    vmovddup {{.*#+}} xmm0 = [4294967295,1,4294967295,1]
+; AVX-NEXT:    # xmm0 = mem[0,0]
 ; AVX-NEXT:    retq
   %cvt = fptosi <2 x double> <double -1.0, double 1.0> to <2 x i32>
   %ext = shufflevector <2 x i32> %cvt, <2 x i32> undef, <4 x i32> <i32 0, i32 1, i32 undef, i32 undef>
@@ -1970,7 +1971,8 @@ define <4 x i32> @fptoui_2f64_to_2i32_const(<2 x double> %a) {
 ;
 ; AVX-LABEL: fptoui_2f64_to_2i32_const:
 ; AVX:       # %bb.0:
-; AVX-NEXT:    vmovaps {{.*#+}} xmm0 = <2,4,u,u>
+; AVX-NEXT:    vmovddup {{.*#+}} xmm0 = [2,4,2,4]
+; AVX-NEXT:    # xmm0 = mem[0,0]
 ; AVX-NEXT:    retq
   %cvt = fptoui <2 x double> <double 2.0, double 4.0> to <2 x i32>
   %ext = shufflevector <2 x i32> %cvt, <2 x i32> undef, <4 x i32> <i32 0, i32 1, i32 undef, i32 undef>

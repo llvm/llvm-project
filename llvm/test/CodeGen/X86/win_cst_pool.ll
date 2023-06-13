@@ -65,16 +65,14 @@ define <8 x i16> @vec2() {
 define <4 x float> @undef1() {
   ret <4 x float> <float 1.0, float 1.0, float undef, float undef>
 
-; CHECK:             .globl  __xmm@00000000000000003f8000003f800000
-; CHECK-NEXT:        .section        .rdata,"dr",discard,__xmm@00000000000000003f8000003f800000
-; CHECK-NEXT:        .p2align  4
-; CHECK-NEXT: __xmm@00000000000000003f8000003f800000:
+; CHECK:             .globl  __real@3f800000
+; CHECK-NEXT:        .section        .rdata,"dr",discard,__real@3f800000
+; CHECK-NEXT:        .p2align  2
+; CHECK-NEXT: __real@3f800000:
 ; CHECK-NEXT:        .long   0x3f800000              # float 1
-; CHECK-NEXT:        .long   0x3f800000              # float 1
-; CHECK-NEXT:        .zero   4
-; CHECK-NEXT:        .zero   4
+; CHECK-NEXT:        .text
 ; CHECK:      undef1:
-; CHECK:               movaps  __xmm@00000000000000003f8000003f800000(%rip), %xmm0
+; CHECK:               vbroadcastss  __real@3f800000(%rip), %xmm0
 ; CHECK-NEXT:          ret
 }
 
