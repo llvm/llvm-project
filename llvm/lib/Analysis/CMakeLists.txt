@@ -92,7 +92,6 @@ add_llvm_component_library(LLVMAnalysis
   LoopInfo.cpp
   LoopPass.cpp
   MLInlineAdvisor.cpp
-  MemDepPrinter.cpp
   MemDerefPrinter.cpp
   MemoryBuiltins.cpp
   MemoryDependenceAnalysis.cpp

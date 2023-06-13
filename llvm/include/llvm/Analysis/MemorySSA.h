@@ -798,7 +798,6 @@ public:
 
 protected:
   // Used by Memory SSA dumpers and wrapper pass
-  friend class MemorySSAPrinterLegacyPass;
   friend class MemorySSAUpdater;
 
   void verifyOrderingDominationAndDefUses(
@@ -917,18 +916,6 @@ protected:
   // This function should not be used by new passes.
   static bool defClobbersUseOrDef(MemoryDef *MD, const MemoryUseOrDef *MU,
                                   AliasAnalysis &AA);
-};
-
-// This pass does eager building and then printing of MemorySSA. It is used by
-// the tests to be able to build, dump, and verify Memory SSA.
-class MemorySSAPrinterLegacyPass : public FunctionPass {
-public:
-  MemorySSAPrinterLegacyPass();
-
-  bool runOnFunction(Function &) override;
-  void getAnalysisUsage(AnalysisUsage &AU) const override;
-
-  static char ID;
 };
 
 /// An analysis that produces \c MemorySSA for a function.
