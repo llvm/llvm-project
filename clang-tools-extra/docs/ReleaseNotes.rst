@@ -181,6 +181,16 @@ New checks
 
   Finds uses of ``std::endl`` on streams and replaces them with ``'\n'``.
 
+- New :doc:`performance-noexcept-destructor
+  <clang-tidy/checks/performance/noexcept-destructor>` check.
+
+  Finds user declared destructors which are not ``noexcept``.
+
+- New :doc:`performance-noexcept-swap
+  <clang-tidy/checks/performance/noexcept-swap>` check.
+
+  Finds user declared swap functions which are not ``noexcept``.
+
 - New :doc:`readability-avoid-unconditional-preprocessor-if
   <clang-tidy/checks/readability/avoid-unconditional-preprocessor-if>` check.
 
@@ -204,6 +214,21 @@ New check aliases
 - New alias :doc:`cert-msc33-c
   <clang-tidy/checks/cert/msc33-c>` to :doc:`bugprone-unsafe-functions
   <clang-tidy/checks/bugprone/unsafe-functions>` was added.
+
+- New alias :doc:`cppcoreguidelines-noexcept-destructor
+  <clang-tidy/checks/cppcoreguidelines/noexcept-destructor>` to
+  :doc`performance-noexcept-destructor
+  <clang-tidy/checks/performance/noexcept-destructor>` was added.
+
+- New alias :doc:`cppcoreguidelines-noexcept-move-operations
+  <clang-tidy/checks/cppcoreguidelines/noexcept-move-operations>` to
+  :doc`performance-noexcept-move-constructor
+  <clang-tidy/checks/performance/noexcept-move-constructor>` was added.
+
+- New alias :doc:`cppcoreguidelines-noexcept-swap
+  <clang-tidy/checks/cppcoreguidelines/noexcept-swap>` to
+  :doc`performance-noexcept-swap
+  <clang-tidy/checks/performance/noexcept-swap>` was added.
 
 - New alias :doc:`cppcoreguidelines-use-default-member-init
   <clang-tidy/checks/cppcoreguidelines/use-default-member-init>` to

@@ -134,6 +134,11 @@ ExceptionSpecAnalyzer::analyzeFunctionEST(const FunctionDecl *FuncDecl,
   if (isUnresolvedExceptionSpec(FuncProto->getExceptionSpecType()))
     return State::Unknown;
 
+  // A non defaulted destructor without the noexcept specifier is still noexcept
+  if (isa<CXXDestructorDecl>(FuncDecl) &&
+      FuncDecl->getExceptionSpecType() == EST_None)
+    return State::NotThrowing;
+
   switch (FuncProto->canThrow()) {
   case CT_Cannot:
     return State::NotThrowing;

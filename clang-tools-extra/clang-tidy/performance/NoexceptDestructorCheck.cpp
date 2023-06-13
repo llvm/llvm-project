@@ -1,4 +1,4 @@
-//===--- NoexceptMoveConstructorCheck.cpp - clang-tidy---------------------===//
+//===--- NoexceptDestructorCheck.cpp - clang-tidy -------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,36 +6,28 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "NoexceptMoveConstructorCheck.h"
+#include "NoexceptDestructorCheck.h"
 #include "../utils/LexerUtils.h"
 #include "clang/AST/ASTContext.h"
 #include "clang/ASTMatchers/ASTMatchFinder.h"
-#include "clang/Lex/Lexer.h"
-#include "clang/Tooling/FixIt.h"
 
 using namespace clang::ast_matchers;
 
 namespace clang::tidy::performance {
 
-void NoexceptMoveConstructorCheck::registerMatchers(MatchFinder *Finder) {
+void NoexceptDestructorCheck::registerMatchers(MatchFinder *Finder) {
   Finder->addMatcher(
-      cxxMethodDecl(unless(isDeleted()),
-                    anyOf(cxxConstructorDecl(isMoveConstructor()),
-                          isMoveAssignmentOperator()))
-          .bind("decl"),
+      functionDecl(unless(isDeleted()), cxxDestructorDecl()).bind("decl"),
       this);
 }
 
-void NoexceptMoveConstructorCheck::check(
-    const MatchFinder::MatchResult &Result) {
-  const auto *FuncDecl = Result.Nodes.getNodeAs<CXXMethodDecl>("decl");
+void NoexceptDestructorCheck::check(const MatchFinder::MatchResult &Result) {
+  const auto *FuncDecl = Result.Nodes.getNodeAs<FunctionDecl>("decl");
   assert(FuncDecl);
 
   if (SpecAnalyzer.analyze(FuncDecl) !=
       utils::ExceptionSpecAnalyzer::State::Throwing)
     return;
-
-  const bool IsConstructor = CXXConstructorDecl::classof(FuncDecl);
 
   // Don't complain about nothrow(false), but complain on nothrow(expr)
   // where expr evaluates to false.
@@ -45,19 +37,15 @@ void NoexceptMoveConstructorCheck::check(
     NoexceptExpr = NoexceptExpr->IgnoreImplicit();
     if (!isa<CXXBoolLiteralExpr>(NoexceptExpr)) {
       diag(NoexceptExpr->getExprLoc(),
-           "noexcept specifier on the move %select{assignment "
-           "operator|constructor}0 evaluates to 'false'")
-          << IsConstructor;
+           "noexcept specifier on the destructor evaluates to 'false'");
     }
     return;
   }
 
-  auto Diag = diag(FuncDecl->getLocation(),
-                   "move %select{assignment operator|constructor}0s should "
-                   "be marked noexcept")
-              << IsConstructor;
-  // Add FixIt hints.
+  auto Diag = diag(FuncDecl->getLocation(), "destructors should "
+                                            "be marked noexcept");
 
+  // Add FixIt hints.
   const SourceManager &SM = *Result.SourceManager;
 
   const SourceLocation NoexceptLoc =
