@@ -6,6 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
+// UNSUPPORTED: GCC-ALWAYS_INLINE-FIXME
+
 // <string>
 
 // int compare(size_type pos1, size_type n1, const basic_string& str,

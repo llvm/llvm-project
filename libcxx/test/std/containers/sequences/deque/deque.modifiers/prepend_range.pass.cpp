@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 // UNSUPPORTED: c++03, c++11, c++14, c++17, c++20
+// UNSUPPORTED: GCC-ALWAYS_INLINE-FIXME
 
 // template<container-compatible-range<T> R>
 //   constexpr void prepend_range(R&& rg); // C++23

@@ -6,6 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
+// UNSUPPORTED: GCC-ALWAYS_INLINE-FIXME
+
 // <string>
 
 // template <class T>
