@@ -212,9 +212,9 @@
 #define BUILTIN_FMA_F16 __builtin_fmaf16
 #define BUILTIN_FMA_2F16 __llvm_fma_2f16
 
-#define BUILTIN_FLDEXP_F32 __builtin_amdgcn_ldexpf
-#define BUILTIN_FLDEXP_F64 __builtin_amdgcn_ldexp
-#define BUILTIN_FLDEXP_F16 __builtin_amdgcn_ldexph
+#define BUILTIN_FLDEXP_F32 __builtin_ldexpf
+#define BUILTIN_FLDEXP_F64 __builtin_ldexp
+#define BUILTIN_FLDEXP_F16 __builtin_ldexpf16
 
 #define BUILTIN_FREXP_EXP_F32 __builtin_amdgcn_frexp_expf
 #define BUILTIN_FREXP_EXP_F64 __builtin_amdgcn_frexp_exp
