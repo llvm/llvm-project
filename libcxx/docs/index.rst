@@ -47,6 +47,7 @@ Getting Started with libc++
    Status/Cxx2c
    Status/Format
    Status/Parallelism
+   Status/PSTL
    Status/Ranges
    Status/Spaceship
    Status/Zip
