@@ -58,7 +58,7 @@ fixed_float64m1_t from_vfloat64m1_t(vfloat64m1_t type) {
 // CHECK-LABEL: @lax_cast(
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    [[SAVED_VALUE:%.*]] = alloca <8 x i32>, align 32
-// CHECK-NEXT:    [[TYPE:%.*]] = tail call <8 x i32> @llvm.vector.extract.v8i32.nxv2i32(<vscale x 2 x i32> [[TYPE_COERCE:%.*]], i64 0)
+// CHECK-NEXT:    [[TYPE:%.*]] = tail call <8 x i32> @llvm.vector.extract.v8i32.nxv2i32(<vscale x 2 x i32> noundef [[TYPE_COERCE:%.*]], i64 0)
 // CHECK-NEXT:    store <8 x i32> [[TYPE]], ptr [[SAVED_VALUE]], align 32, !tbaa [[TBAA4:![0-9]+]]
 // CHECK-NEXT:    [[TMP0:%.*]] = load <vscale x 1 x i64>, ptr [[SAVED_VALUE]], align 32, !tbaa [[TBAA4]]
 // CHECK-NEXT:    ret <vscale x 1 x i64> [[TMP0]]
@@ -99,7 +99,7 @@ fixed_int32m1_t to_fixed_int32m1_t__from_gnu_int32m1_t(gnu_int32m1_t type) {
 
 // CHECK-LABEL: @from_fixed_int32m1_t__to_gnu_int32m1_t(
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[TYPE:%.*]] = tail call <8 x i32> @llvm.vector.extract.v8i32.nxv2i32(<vscale x 2 x i32> [[TYPE_COERCE:%.*]], i64 0)
+// CHECK-NEXT:    [[TYPE:%.*]] = tail call <8 x i32> @llvm.vector.extract.v8i32.nxv2i32(<vscale x 2 x i32> noundef [[TYPE_COERCE:%.*]], i64 0)
 // CHECK-NEXT:    store <8 x i32> [[TYPE]], ptr [[AGG_RESULT:%.*]], align 32, !tbaa [[TBAA4]]
 // CHECK-NEXT:    ret void
 //

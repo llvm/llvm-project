@@ -8,10 +8,10 @@ declare void @decl_unknown()
 define void @test_fn_mustprogress(ptr %ptr) mustprogress {
 ; CHECK: Function Attrs: mustprogress
 ; CHECK-LABEL: @test_fn_mustprogress(
-; CHECK-NOT:     call void @decl_readonly() #
-; CHECK-NOT:     call void @decl_readnone() #
-; CHECK-NOT:     call void @decl_unknown() #
-; CHECK-NOT:     call void @decl_argmemonly(ptr [[PTR:%.*]]) #
+; CHECK:     call void @decl_readonly() #
+; CHECK:     call void @decl_readnone() #
+; CHECK:     call void @decl_unknown() #
+; CHECK:     call void @decl_argmemonly(ptr [[PTR:%.*]]) #
 ; CHECK:         ret void
 ;
   call void @decl_readonly()
@@ -24,10 +24,10 @@ define void @test_fn_mustprogress(ptr %ptr) mustprogress {
 define void @test_fn_willreturn(ptr %ptr) willreturn {
 ; CHECK: Function Attrs: mustprogress willreturn
 ; CHECK-LABEL: @test_fn_willreturn(
-; CHECK-NOT:     call void @decl_readonly() #
-; CHECK-NOT:    call void @decl_readnone() #
-; CHECK-NOT:     call void @decl_unknown() #
-; CHECK-NOT:     call void @decl_argmemonly(ptr [[PTR:%.*]]) #
+; CHECK:     call void @decl_readonly() #
+; CHECK:    call void @decl_readnone() #
+; CHECK:     call void @decl_unknown() #
+; CHECK:     call void @decl_argmemonly(ptr [[PTR:%.*]]) #
 ; CHECK:         ret void
 ;
   call void @decl_readonly()
@@ -40,8 +40,8 @@ define void @test_fn_willreturn(ptr %ptr) willreturn {
 define void @test_fn_mustprogress_readonly_calls(ptr %ptr) mustprogress {
 ; CHECK: Function Attrs: mustprogress nofree willreturn memory(read)
 ; CHECK-LABEL: @test_fn_mustprogress_readonly_calls(
-; CHECK-NOT:     call void @decl_readonly() #
-; CHECK-NOT:     call void @decl_readnone() #
+; CHECK:     call void @decl_readonly() #
+; CHECK:     call void @decl_readnone() #
 ; CHECK:         ret void
 ;
   call void @decl_readonly()
@@ -52,8 +52,8 @@ define void @test_fn_mustprogress_readonly_calls(ptr %ptr) mustprogress {
 define void @test_fn_mustprogress_readonly_calls_but_stores(ptr %ptr) mustprogress {
 ; CHECK: Function Attrs: mustprogress nofree
 ; CHECK-LABEL: @test_fn_mustprogress_readonly_calls_but_stores(
-; CHECK-NOT:     call void @decl_readonly() #
-; CHECK-NOT:     call void @decl_readnone() #
+; CHECK:     call void @decl_readonly() #
+; CHECK:     call void @decl_readnone() #
 ; CHECK:         store i32 0, ptr [[PTR:%.*]], align 4
 ; CHECK-NEXT:    ret void
 ;

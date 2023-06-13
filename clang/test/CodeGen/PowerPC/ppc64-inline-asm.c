@@ -5,7 +5,7 @@ _Bool test_wc_i1(_Bool b1, _Bool b2) {
   asm("crand %0, %1, %2" : "=wc"(o) : "wc"(b1), "wc"(b2) : );
   return o;
 // CHECK-LABEL: define{{.*}} zeroext i1 @test_wc_i1(i1 noundef zeroext %b1, i1 noundef zeroext %b2)
-// CHECK: call i8 asm "crand $0, $1, $2", "=^wc,^wc,^wc"(i1 %b1, i1 %b2)
+// CHECK: call i8 asm "crand $0, $1, $2", "=^wc,^wc,^wc"(i1 noundef %b1, i1 noundef %b2)
 }
 
 int test_wc_i32(int b1, int b2) {
@@ -13,7 +13,7 @@ int test_wc_i32(int b1, int b2) {
   asm("crand %0, %1, %2" : "=wc"(o) : "wc"(b1), "wc"(b2) : );
   return o;
 // CHECK-LABEL: signext i32 @test_wc_i32(i32 noundef signext %b1, i32 noundef signext %b2)
-// CHECK: call i32 asm "crand $0, $1, $2", "=^wc,^wc,^wc"(i32 %b1, i32 %b2)
+// CHECK: call i32 asm "crand $0, $1, $2", "=^wc,^wc,^wc"(i32 noundef %b1, i32 noundef %b2)
 }
 
 unsigned char test_wc_i8(unsigned char b1, unsigned char b2) {
@@ -21,27 +21,27 @@ unsigned char test_wc_i8(unsigned char b1, unsigned char b2) {
   asm("crand %0, %1, %2" : "=wc"(o) : "wc"(b1), "wc"(b2) : );
   return o;
 // CHECK-LABEL: zeroext i8 @test_wc_i8(i8 noundef zeroext %b1, i8 noundef zeroext %b2)
-// CHECK: call i8 asm "crand $0, $1, $2", "=^wc,^wc,^wc"(i8 %b1, i8 %b2)
+// CHECK: call i8 asm "crand $0, $1, $2", "=^wc,^wc,^wc"(i8 noundef %b1, i8 noundef %b2)
 }
 
 float test_fmaxf(float x, float y) {
   asm("xsmaxdp %x0, %x1, %x2" : "=ww"(x) : "ww"(x), "ww"(y));
   return x;
 // CHECK-LABEL: float @test_fmaxf(float noundef %x, float noundef %y)
-// CHECK: call float asm "xsmaxdp ${0:x}, ${1:x}, ${2:x}", "=^ww,^ww,^ww"(float %x, float %y)
+// CHECK: call float asm "xsmaxdp ${0:x}, ${1:x}, ${2:x}", "=^ww,^ww,^ww"(float noundef %x, float noundef %y)
 }
 
 double test_fmax(double x, double y) {
   asm("xsmaxdp %x0, %x1, %x2" : "=ws"(x) : "ws"(x), "ws"(y));
   return x;
 // CHECK-LABEL: double @test_fmax(double noundef %x, double noundef %y)
-// CHECK: call double asm "xsmaxdp ${0:x}, ${1:x}, ${2:x}", "=^ws,^ws,^ws"(double %x, double %y)
+// CHECK: call double asm "xsmaxdp ${0:x}, ${1:x}, ${2:x}", "=^ws,^ws,^ws"(double noundef %x, double noundef %y)
 }
 
 void testZ(void *addr) {
   asm volatile ("dcbz %y0\n" :: "Z"(*(unsigned char *)addr) : "memory");
 // CHECK-LABEL: void @testZ(ptr noundef %addr)
-// CHECK: call void asm sideeffect "dcbz ${0:y}\0A", "*Z,~{memory}"(ptr elementtype(i8) %addr)
+// CHECK: call void asm sideeffect "dcbz ${0:y}\0A", "*Z,~{memory}"(ptr noundef elementtype(i8) %addr)
 }
 
 void testZwOff(void *addr, long long off) {
