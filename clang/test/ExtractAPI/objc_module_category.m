@@ -14,15 +14,15 @@
 // CHECK-NOT: warning:
 
 //--- input.h
-@protocol Protocol;
-
-@interface Interface
+#import <Foundation/Foundation.h>
+/// Doc comment 1
+@interface NSString (Category1)
+-(void)method1;
 @end
 
-@interface Interface (Category) <Protocol>
-@property int Property;
-- (void)InstanceMethod;
-+ (void)ClassMethod;
+/// Doc comment 2
+@interface NSString (Category2)
+-(void)method2;
 @end
 
 //--- reference.output.json.in
@@ -53,27 +53,27 @@
   "relationships": [
     {
       "kind": "memberOf",
-      "source": "c:objc(cs)Interface(im)InstanceMethod",
-      "target": "c:objc(cy)Interface@Category",
-      "targetFallback": "Category"
+      "source": "c:objc(cs)NSString(im)method1",
+      "target": "c:objc(cy)NSString@Category1",
+      "targetFallback": "Category1"
     },
     {
       "kind": "memberOf",
-      "source": "c:objc(cs)Interface(cm)ClassMethod",
-      "target": "c:objc(cy)Interface@Category",
-      "targetFallback": "Category"
+      "source": "c:objc(cs)NSString(im)method2",
+      "target": "c:objc(cy)NSString@Category2",
+      "targetFallback": "Category2"
     },
     {
       "kind": "memberOf",
-      "source": "c:objc(cs)Interface(py)Property",
-      "target": "c:objc(cy)Interface@Category",
-      "targetFallback": "Category"
+      "source": "c:objc(cy)NSString@Category1",
+      "target": "c:objc(cs)NSString",
+      "targetFallback": "NSString"
     },
     {
-      "kind": "conformsTo",
-      "source": "c:objc(cy)Interface@Category",
-      "target": "c:objc(pl)Protocol",
-      "targetFallback": "Protocol"
+      "kind": "memberOf",
+      "source": "c:objc(cy)NSString@Category2",
+      "target": "c:objc(cs)NSString",
+      "targetFallback": "NSString"
     }
   ],
   "symbols": [
@@ -89,17 +89,47 @@
           "spelling": " "
         },
         {
+          "kind": "typeIdentifier",
+          "preciseIdentifier": "c:objc(cs)NSString",
+          "spelling": "NSString"
+        },
+        {
+          "kind": "text",
+          "spelling": " ("
+        },
+        {
           "kind": "identifier",
-          "spelling": "Interface"
+          "spelling": "Category1"
+        },
+        {
+          "kind": "text",
+          "spelling": ")"
         }
       ],
+      "docComment": {
+        "lines": [
+          {
+            "range": {
+              "end": {
+                "character": 18,
+                "line": 2
+              },
+              "start": {
+                "character": 5,
+                "line": 2
+              }
+            },
+            "text": "Doc comment 1"
+          }
+        ]
+      },
       "identifier": {
         "interfaceLanguage": "objective-c",
-        "precise": "c:objc(cs)Interface"
+        "precise": "c:objc(cy)NSString@Category1"
       },
       "kind": {
-        "displayName": "Class",
-        "identifier": "objective-c.class"
+        "displayName": "Class Extension",
+        "identifier": "objective-c.class.extension"
       },
       "location": {
         "position": {
@@ -112,82 +142,19 @@
         "navigator": [
           {
             "kind": "identifier",
-            "spelling": "Interface"
+            "spelling": "Category1"
           }
         ],
         "subHeading": [
           {
             "kind": "identifier",
-            "spelling": "Interface"
+            "spelling": "Category1"
           }
         ],
-        "title": "Interface"
+        "title": "NSString (Category1)"
       },
       "pathComponents": [
-        "Interface"
-      ]
-    },
-    {
-      "accessLevel": "public",
-      "declarationFragments": [
-        {
-          "kind": "keyword",
-          "spelling": "@interface"
-        },
-        {
-          "kind": "text",
-          "spelling": " "
-        },
-        {
-          "kind": "typeIdentifier",
-          "preciseIdentifier": "c:objc(cs)Interface",
-          "spelling": "Interface"
-        },
-        {
-          "kind": "text",
-          "spelling": " ("
-        },
-        {
-          "kind": "identifier",
-          "spelling": "Category"
-        },
-        {
-          "kind": "text",
-          "spelling": ")"
-        }
-      ],
-      "identifier": {
-        "interfaceLanguage": "objective-c",
-        "precise": "c:objc(cy)Interface@Category"
-      },
-      "kind": {
-        "displayName": "Class Extension",
-        "identifier": "objective-c.class.extension"
-      },
-      "location": {
-        "position": {
-          "character": 12,
-          "line": 6
-        },
-        "uri": "file://INPUT_DIR/input.h"
-      },
-      "names": {
-        "navigator": [
-          {
-            "kind": "identifier",
-            "spelling": "Category"
-          }
-        ],
-        "subHeading": [
-          {
-            "kind": "identifier",
-            "spelling": "Category"
-          }
-        ],
-        "title": "Interface (Category)"
-      },
-      "pathComponents": [
-        "Category"
+        "Category1"
       ]
     },
     {
@@ -208,7 +175,7 @@
         },
         {
           "kind": "identifier",
-          "spelling": "InstanceMethod"
+          "spelling": "method1"
         },
         {
           "kind": "text",
@@ -226,7 +193,7 @@
       },
       "identifier": {
         "interfaceLanguage": "objective-c",
-        "precise": "c:objc(cs)Interface(im)InstanceMethod"
+        "precise": "c:objc(cs)NSString(im)method1"
       },
       "kind": {
         "displayName": "Instance Method",
@@ -235,7 +202,7 @@
       "location": {
         "position": {
           "character": 1,
-          "line": 8
+          "line": 4
         },
         "uri": "file://INPUT_DIR/input.h"
       },
@@ -243,7 +210,7 @@
         "navigator": [
           {
             "kind": "identifier",
-            "spelling": "InstanceMethod"
+            "spelling": "method1"
           }
         ],
         "subHeading": [
@@ -253,14 +220,94 @@
           },
           {
             "kind": "identifier",
-            "spelling": "InstanceMethod"
+            "spelling": "method1"
           }
         ],
-        "title": "InstanceMethod"
+        "title": "method1"
       },
       "pathComponents": [
-        "Category",
-        "InstanceMethod"
+        "Category1",
+        "method1"
+      ]
+    },
+    {
+      "accessLevel": "public",
+      "declarationFragments": [
+        {
+          "kind": "keyword",
+          "spelling": "@interface"
+        },
+        {
+          "kind": "text",
+          "spelling": " "
+        },
+        {
+          "kind": "typeIdentifier",
+          "preciseIdentifier": "c:objc(cs)NSString",
+          "spelling": "NSString"
+        },
+        {
+          "kind": "text",
+          "spelling": " ("
+        },
+        {
+          "kind": "identifier",
+          "spelling": "Category2"
+        },
+        {
+          "kind": "text",
+          "spelling": ")"
+        }
+      ],
+      "docComment": {
+        "lines": [
+          {
+            "range": {
+              "end": {
+                "character": 18,
+                "line": 7
+              },
+              "start": {
+                "character": 5,
+                "line": 7
+              }
+            },
+            "text": "Doc comment 2"
+          }
+        ]
+      },
+      "identifier": {
+        "interfaceLanguage": "objective-c",
+        "precise": "c:objc(cy)NSString@Category2"
+      },
+      "kind": {
+        "displayName": "Class Extension",
+        "identifier": "objective-c.class.extension"
+      },
+      "location": {
+        "position": {
+          "character": 12,
+          "line": 8
+        },
+        "uri": "file://INPUT_DIR/input.h"
+      },
+      "names": {
+        "navigator": [
+          {
+            "kind": "identifier",
+            "spelling": "Category2"
+          }
+        ],
+        "subHeading": [
+          {
+            "kind": "identifier",
+            "spelling": "Category2"
+          }
+        ],
+        "title": "NSString (Category2)"
+      },
+      "pathComponents": [
+        "Category2"
       ]
     },
     {
@@ -268,7 +315,7 @@
       "declarationFragments": [
         {
           "kind": "text",
-          "spelling": "+ ("
+          "spelling": "- ("
         },
         {
           "kind": "typeIdentifier",
@@ -281,7 +328,7 @@
         },
         {
           "kind": "identifier",
-          "spelling": "ClassMethod"
+          "spelling": "method2"
         },
         {
           "kind": "text",
@@ -299,11 +346,11 @@
       },
       "identifier": {
         "interfaceLanguage": "objective-c",
-        "precise": "c:objc(cs)Interface(cm)ClassMethod"
+        "precise": "c:objc(cs)NSString(im)method2"
       },
       "kind": {
-        "displayName": "Type Method",
-        "identifier": "objective-c.type.method"
+        "displayName": "Instance Method",
+        "identifier": "objective-c.method"
       },
       "location": {
         "position": {
@@ -316,85 +363,36 @@
         "navigator": [
           {
             "kind": "identifier",
-            "spelling": "ClassMethod"
+            "spelling": "method2"
           }
         ],
         "subHeading": [
           {
             "kind": "text",
-            "spelling": "+ "
+            "spelling": "- "
           },
           {
             "kind": "identifier",
-            "spelling": "ClassMethod"
+            "spelling": "method2"
           }
         ],
-        "title": "ClassMethod"
+        "title": "method2"
       },
       "pathComponents": [
-        "Category",
-        "ClassMethod"
+        "Category2",
+        "method2"
       ]
     },
     {
       "accessLevel": "public",
-      "declarationFragments": [
-        {
-          "kind": "keyword",
-          "spelling": "@property"
-        },
-        {
-          "kind": "text",
-          "spelling": " "
-        },
-        {
-          "kind": "typeIdentifier",
-          "preciseIdentifier": "c:I",
-          "spelling": "int"
-        },
-        {
-          "kind": "text",
-          "spelling": " "
-        },
-        {
-          "kind": "identifier",
-          "spelling": "Property"
-        }
-      ],
       "identifier": {
         "interfaceLanguage": "objective-c",
-        "precise": "c:objc(cs)Interface(py)Property"
+        "precise": "c:objc(cs)NSString"
       },
       "kind": {
-        "displayName": "Instance Property",
-        "identifier": "objective-c.property"
-      },
-      "location": {
-        "position": {
-          "character": 15,
-          "line": 7
-        },
-        "uri": "file://INPUT_DIR/input.h"
-      },
-      "names": {
-        "navigator": [
-          {
-            "kind": "identifier",
-            "spelling": "Property"
-          }
-        ],
-        "subHeading": [
-          {
-            "kind": "identifier",
-            "spelling": "Property"
-          }
-        ],
-        "title": "Property"
-      },
-      "pathComponents": [
-        "Category",
-        "Property"
-      ]
+        "displayName": "Module Extension",
+        "identifier": "objective-c.module.extension"
+      }
     }
   ]
 }

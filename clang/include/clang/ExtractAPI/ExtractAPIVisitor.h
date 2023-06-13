@@ -484,9 +484,13 @@ bool ExtractAPIVisitorBase<Derived>::VisitObjCCategoryDecl(
   SymbolReference Interface(InterfaceDecl->getName(),
                             API.recordUSR(InterfaceDecl));
 
+  if (isInSystemHeader(InterfaceDecl))
+    API.addObjCCategoryModule(InterfaceDecl->getName(),
+                              API.recordUSR(InterfaceDecl));
+
   ObjCCategoryRecord *ObjCCategoryRecord = API.addObjCCategory(
       Name, USR, Loc, AvailabilitySet(Decl), Comment, Declaration, SubHeading,
-      Interface, isInSystemHeader(Decl));
+      Interface, isInSystemHeader(Decl), isInSystemHeader(InterfaceDecl));
 
   getDerivedExtractAPIVisitor().recordObjCMethods(ObjCCategoryRecord,
                                                   Decl->methods());

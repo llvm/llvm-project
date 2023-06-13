@@ -66,24 +66,6 @@
     },
     {
       "kind": "memberOf",
-      "source": "c:objc(cs)Interface(cpy)myCategoryTypeProp",
-      "target": "c:objc(cs)Interface",
-      "targetFallback": "Interface"
-    },
-    {
-      "kind": "memberOf",
-      "source": "c:objc(cs)Interface(py)myCategoryInstanceProp",
-      "target": "c:objc(cs)Interface",
-      "targetFallback": "Interface"
-    },
-    {
-      "kind": "conformsTo",
-      "source": "c:objc(cs)Interface",
-      "target": "c:objc(pl)Protocol",
-      "targetFallback": "Protocol"
-    },
-    {
-      "kind": "memberOf",
       "source": "c:objc(pl)Protocol(cpy)myProtocolTypeProp",
       "target": "c:objc(pl)Protocol",
       "targetFallback": "Protocol"
@@ -91,6 +73,24 @@
     {
       "kind": "memberOf",
       "source": "c:objc(pl)Protocol(py)myProtocolInstanceProp",
+      "target": "c:objc(pl)Protocol",
+      "targetFallback": "Protocol"
+    },
+    {
+      "kind": "memberOf",
+      "source": "c:objc(cs)Interface(cpy)myCategoryTypeProp",
+      "target": "c:objc(cy)Interface@Category",
+      "targetFallback": "Category"
+    },
+    {
+      "kind": "memberOf",
+      "source": "c:objc(cs)Interface(py)myCategoryInstanceProp",
+      "target": "c:objc(cy)Interface@Category",
+      "targetFallback": "Category"
+    },
+    {
+      "kind": "conformsTo",
+      "source": "c:objc(cy)Interface@Category",
       "target": "c:objc(pl)Protocol",
       "targetFallback": "Protocol"
     }
@@ -279,134 +279,6 @@
       "declarationFragments": [
         {
           "kind": "keyword",
-          "spelling": "@property"
-        },
-        {
-          "kind": "text",
-          "spelling": " ("
-        },
-        {
-          "kind": "keyword",
-          "spelling": "class"
-        },
-        {
-          "kind": "text",
-          "spelling": ") "
-        },
-        {
-          "kind": "typeIdentifier",
-          "preciseIdentifier": "c:I",
-          "spelling": "int"
-        },
-        {
-          "kind": "text",
-          "spelling": " "
-        },
-        {
-          "kind": "identifier",
-          "spelling": "myCategoryTypeProp"
-        }
-      ],
-      "identifier": {
-        "interfaceLanguage": "objective-c",
-        "precise": "c:objc(cs)Interface(cpy)myCategoryTypeProp"
-      },
-      "kind": {
-        "displayName": "Type Property",
-        "identifier": "objective-c.type.property"
-      },
-      "location": {
-        "position": {
-          "character": 22,
-          "line": 12
-        },
-        "uri": "file://INPUT_DIR/input.h"
-      },
-      "names": {
-        "navigator": [
-          {
-            "kind": "identifier",
-            "spelling": "myCategoryTypeProp"
-          }
-        ],
-        "subHeading": [
-          {
-            "kind": "identifier",
-            "spelling": "myCategoryTypeProp"
-          }
-        ],
-        "title": "myCategoryTypeProp"
-      },
-      "pathComponents": [
-        "Interface",
-        "myCategoryTypeProp"
-      ]
-    },
-    {
-      "accessLevel": "public",
-      "declarationFragments": [
-        {
-          "kind": "keyword",
-          "spelling": "@property"
-        },
-        {
-          "kind": "text",
-          "spelling": " "
-        },
-        {
-          "kind": "typeIdentifier",
-          "preciseIdentifier": "c:I",
-          "spelling": "int"
-        },
-        {
-          "kind": "text",
-          "spelling": " "
-        },
-        {
-          "kind": "identifier",
-          "spelling": "myCategoryInstanceProp"
-        }
-      ],
-      "identifier": {
-        "interfaceLanguage": "objective-c",
-        "precise": "c:objc(cs)Interface(py)myCategoryInstanceProp"
-      },
-      "kind": {
-        "displayName": "Instance Property",
-        "identifier": "objective-c.property"
-      },
-      "location": {
-        "position": {
-          "character": 15,
-          "line": 13
-        },
-        "uri": "file://INPUT_DIR/input.h"
-      },
-      "names": {
-        "navigator": [
-          {
-            "kind": "identifier",
-            "spelling": "myCategoryInstanceProp"
-          }
-        ],
-        "subHeading": [
-          {
-            "kind": "identifier",
-            "spelling": "myCategoryInstanceProp"
-          }
-        ],
-        "title": "myCategoryInstanceProp"
-      },
-      "pathComponents": [
-        "Interface",
-        "myCategoryInstanceProp"
-      ]
-    },
-    {
-      "accessLevel": "public",
-      "declarationFragments": [
-        {
-          "kind": "keyword",
           "spelling": "@protocol"
         },
         {
@@ -578,6 +450,197 @@
       "pathComponents": [
         "Protocol",
         "myProtocolInstanceProp"
+      ]
+    },
+    {
+      "accessLevel": "public",
+      "declarationFragments": [
+        {
+          "kind": "keyword",
+          "spelling": "@interface"
+        },
+        {
+          "kind": "text",
+          "spelling": " "
+        },
+        {
+          "kind": "typeIdentifier",
+          "preciseIdentifier": "c:objc(cs)Interface",
+          "spelling": "Interface"
+        },
+        {
+          "kind": "text",
+          "spelling": " ("
+        },
+        {
+          "kind": "identifier",
+          "spelling": "Category"
+        },
+        {
+          "kind": "text",
+          "spelling": ")"
+        }
+      ],
+      "identifier": {
+        "interfaceLanguage": "objective-c",
+        "precise": "c:objc(cy)Interface@Category"
+      },
+      "kind": {
+        "displayName": "Class Extension",
+        "identifier": "objective-c.class.extension"
+      },
+      "location": {
+        "position": {
+          "character": 12,
+          "line": 11
+        },
+        "uri": "file://INPUT_DIR/input.h"
+      },
+      "names": {
+        "navigator": [
+          {
+            "kind": "identifier",
+            "spelling": "Category"
+          }
+        ],
+        "subHeading": [
+          {
+            "kind": "identifier",
+            "spelling": "Category"
+          }
+        ],
+        "title": "Interface (Category)"
+      },
+      "pathComponents": [
+        "Category"
+      ]
+    },
+    {
+      "accessLevel": "public",
+      "declarationFragments": [
+        {
+          "kind": "keyword",
+          "spelling": "@property"
+        },
+        {
+          "kind": "text",
+          "spelling": " ("
+        },
+        {
+          "kind": "keyword",
+          "spelling": "class"
+        },
+        {
+          "kind": "text",
+          "spelling": ") "
+        },
+        {
+          "kind": "typeIdentifier",
+          "preciseIdentifier": "c:I",
+          "spelling": "int"
+        },
+        {
+          "kind": "text",
+          "spelling": " "
+        },
+        {
+          "kind": "identifier",
+          "spelling": "myCategoryTypeProp"
+        }
+      ],
+      "identifier": {
+        "interfaceLanguage": "objective-c",
+        "precise": "c:objc(cs)Interface(cpy)myCategoryTypeProp"
+      },
+      "kind": {
+        "displayName": "Type Property",
+        "identifier": "objective-c.type.property"
+      },
+      "location": {
+        "position": {
+          "character": 22,
+          "line": 12
+        },
+        "uri": "file://INPUT_DIR/input.h"
+      },
+      "names": {
+        "navigator": [
+          {
+            "kind": "identifier",
+            "spelling": "myCategoryTypeProp"
+          }
+        ],
+        "subHeading": [
+          {
+            "kind": "identifier",
+            "spelling": "myCategoryTypeProp"
+          }
+        ],
+        "title": "myCategoryTypeProp"
+      },
+      "pathComponents": [
+        "Category",
+        "myCategoryTypeProp"
+      ]
+    },
+    {
+      "accessLevel": "public",
+      "declarationFragments": [
+        {
+          "kind": "keyword",
+          "spelling": "@property"
+        },
+        {
+          "kind": "text",
+          "spelling": " "
+        },
+        {
+          "kind": "typeIdentifier",
+          "preciseIdentifier": "c:I",
+          "spelling": "int"
+        },
+        {
+          "kind": "text",
+          "spelling": " "
+        },
+        {
+          "kind": "identifier",
+          "spelling": "myCategoryInstanceProp"
+        }
+      ],
+      "identifier": {
+        "interfaceLanguage": "objective-c",
+        "precise": "c:objc(cs)Interface(py)myCategoryInstanceProp"
+      },
+      "kind": {
+        "displayName": "Instance Property",
+        "identifier": "objective-c.property"
+      },
+      "location": {
+        "position": {
+          "character": 15,
+          "line": 13
+        },
+        "uri": "file://INPUT_DIR/input.h"
+      },
+      "names": {
+        "navigator": [
+          {
+            "kind": "identifier",
+            "spelling": "myCategoryInstanceProp"
+          }
+        ],
+        "subHeading": [
+          {
+            "kind": "identifier",
+            "spelling": "myCategoryInstanceProp"
+          }
+        ],
+        "title": "myCategoryInstanceProp"
+      },
+      "pathComponents": [
+        "Category",
+        "myCategoryInstanceProp"
       ]
     }
   ]

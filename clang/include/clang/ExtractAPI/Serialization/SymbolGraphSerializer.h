@@ -163,6 +163,12 @@ public:
   /// Visit an Objective-C container record.
   void visitObjCContainerRecord(const ObjCContainerRecord &Record);
 
+  /// Visit an Objective-C category record.
+  void visitObjCCategoryRecord(const ObjCCategoryRecord &Record);
+
+  /// Visit an Objective-C category module record.
+  void visitObjCCategoryModuleRecord(const ObjCCategoryModuleRecord &Record);
+
   /// Visit a macro definition record.
   void visitMacroDefinitionRecord(const MacroDefinitionRecord &Record);
 

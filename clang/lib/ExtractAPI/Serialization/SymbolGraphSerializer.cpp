@@ -319,7 +319,13 @@ serializeDeclarationFragments(const DeclarationFragments &DF) {
 ///     Objective-C methods). Can be used as sub-headings for documentation.
 Object serializeNames(const APIRecord &Record) {
   Object Names;
-  Names["title"] = Record.Name;
+  if (auto *CategoryRecord =
+          dyn_cast_or_null<const ObjCCategoryRecord>(&Record))
+    Names["title"] =
+        (CategoryRecord->Interface.Name + " (" + Record.Name + ")").str();
+  else
+    Names["title"] = Record.Name;
+
   serializeArray(Names, "subHeading",
                  serializeDeclarationFragments(Record.SubHeading));
   DeclarationFragments NavigatorFragments;
@@ -391,9 +397,12 @@ Object serializeSymbolKind(APIRecord::RecordKind RK, Language Lang) {
     Kind["displayName"] = "Class";
     break;
   case APIRecord::RK_ObjCCategory:
-    // We don't serialize out standalone Objective-C category symbols yet.
-    llvm_unreachable("Serializing standalone Objective-C category symbols is "
-                     "not supported.");
+    Kind["identifier"] = AddLangPrefix("class.extension");
+    Kind["displayName"] = "Class Extension";
+    break;
+  case APIRecord::RK_ObjCCategoryModule:
+    Kind["identifier"] = AddLangPrefix("module.extension");
+    Kind["displayName"] = "Module Extension";
     break;
   case APIRecord::RK_ObjCProtocol:
     Kind["identifier"] = AddLangPrefix("protocol");
@@ -496,16 +505,6 @@ bool generatePathComponents(
     // Slow path if we don't have a direct reference to the ParentRecord
     if (!ParentRecord)
       ParentRecord = API.findRecordForUSR(CurrentParent->ParentUSR);
-
-    // If the parent is a category then we need to pretend this belongs to the
-    // associated interface.
-    if (auto *CategoryRecord =
-            dyn_cast_or_null<ObjCCategoryRecord>(ParentRecord)) {
-      ParentRecord = API.findRecordForUSR(CategoryRecord->Interface.USR);
-      CurrentParentComponent = PathComponent(CategoryRecord->Interface.USR,
-                                             CategoryRecord->Interface.Name,
-                                             APIRecord::RK_ObjCInterface);
-    }
 
     // The parent record doesn't exist which means the symbol shouldn't be
     // treated as part of the current product.
@@ -720,19 +719,41 @@ void SymbolGraphSerializer::visitObjCContainerRecord(
       // record that Record is inherited from SuperClass.
       serializeRelationship(RelationshipKind::InheritsFrom, Record,
                             ObjCInterface->SuperClass);
-
-    // Members of categories extending an interface are serialized as members of
-    // the interface.
-    for (const auto *Category : ObjCInterface->Categories) {
-      serializeMembers(Record, Category->Ivars);
-      serializeMembers(Record, Category->Methods);
-      serializeMembers(Record, Category->Properties);
-
-      // Surface the protocols of the category to the interface.
-      for (const auto &Protocol : Category->Protocols)
-        serializeRelationship(RelationshipKind::ConformsTo, Record, Protocol);
-    }
   }
+}
+
+void SymbolGraphSerializer::visitObjCCategoryModuleRecord(
+    const ObjCCategoryModuleRecord &Record) {
+  Object Obj;
+  serializeObject(Obj, "identifier",
+                  serializeIdentifier(Record, API.getLanguage()));
+  serializeObject(
+      Obj, "kind",
+      serializeSymbolKind(APIRecord::RK_ObjCCategoryModule, API.getLanguage()));
+  Obj["accessLevel"] = "public";
+  Symbols.emplace_back(std::move(Obj));
+
+  // If the category is extended from an external module, it is then member of
+  // that module.
+  for (const auto &Category : Record.Categories)
+    serializeRelationship(RelationshipKind::MemberOf, *Category, Record);
+}
+
+void SymbolGraphSerializer::visitObjCCategoryRecord(
+    const ObjCCategoryRecord &Record) {
+  auto ObjCCategory = serializeAPIRecord(Record);
+
+  if (!ObjCCategory)
+    return;
+
+  Symbols.emplace_back(std::move(*ObjCCategory));
+  serializeMembers(Record, Record.Ivars);
+  serializeMembers(Record, Record.Methods);
+  serializeMembers(Record, Record.Properties);
+
+  // Surface the protocols of the category to the interface.
+  for (const auto &Protocol : Record.Protocols)
+    serializeRelationship(RelationshipKind::ConformsTo, Record, Protocol);
 }
 
 void SymbolGraphSerializer::visitMacroDefinitionRecord(
@@ -766,6 +787,12 @@ void SymbolGraphSerializer::serializeSingleRecord(const APIRecord *Record) {
     break;
   case APIRecord::RK_ObjCProtocol:
     visitObjCContainerRecord(*cast<ObjCProtocolRecord>(Record));
+    break;
+  case APIRecord::RK_ObjCCategory:
+    visitObjCCategoryRecord(*cast<ObjCCategoryRecord>(Record));
+    break;
+  case APIRecord::RK_ObjCCategoryModule:
+    visitObjCCategoryModuleRecord(*cast<ObjCCategoryModuleRecord>(Record));
     break;
   case APIRecord::RK_MacroDefinition:
     visitMacroDefinitionRecord(*cast<MacroDefinitionRecord>(Record));
@@ -833,9 +860,6 @@ SymbolGraphSerializer::serializeSingleSymbolSGF(StringRef USR,
                                                 const APISet &API) {
   APIRecord *Record = API.findRecordForUSR(USR);
   if (!Record)
-    return {};
-
-  if (isa<ObjCCategoryRecord>(Record))
     return {};
 
   Object Root;

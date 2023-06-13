@@ -71,6 +71,7 @@ struct APIRecord {
     RK_ObjCInstanceMethod,
     RK_ObjCInterface,
     RK_ObjCCategory,
+    RK_ObjCCategoryModule,
     RK_ObjCProtocol,
     RK_MacroDefinition,
     RK_Typedef,
@@ -143,6 +144,9 @@ public:
         Availabilities(std::move(Availabilities)), Linkage(Linkage),
         Comment(Comment), Declaration(Declaration), SubHeading(SubHeading),
         IsFromSystemHeader(IsFromSystemHeader), Kind(Kind) {}
+
+  APIRecord(RecordKind Kind, StringRef USR, StringRef Name)
+      : USR(USR), Name(Name), Kind(Kind) {}
 
   // Pure virtual destructor to make APIRecord abstract
   virtual ~APIRecord() = 0;
@@ -488,11 +492,24 @@ private:
   virtual void anchor();
 };
 
+struct ObjCCategoryModuleRecord : APIRecord {
+  // ObjCCategoryRecord%s are stored in and owned by APISet.
+  SmallVector<ObjCCategoryRecord *> Categories;
+
+  ObjCCategoryModuleRecord(StringRef USR, StringRef Name)
+      : APIRecord(RK_ObjCCategoryModule, USR, Name) {}
+
+  static bool classof(const APIRecord *Record) {
+    return Record->getKind() == RK_ObjCCategoryModule;
+  }
+
+private:
+  virtual void anchor();
+};
+
 /// This holds information associated with Objective-C interfaces/classes.
 struct ObjCInterfaceRecord : ObjCContainerRecord {
   SymbolReference SuperClass;
-  // ObjCCategoryRecord%s are stored in and owned by APISet.
-  SmallVector<ObjCCategoryRecord *> Categories;
 
   ObjCInterfaceRecord(StringRef USR, StringRef Name, PresumedLoc Loc,
                       AvailabilitySet Availabilities, LinkageInfo Linkage,
@@ -668,6 +685,9 @@ public:
                           DeclarationFragments SubHeading,
                           bool IsFromSystemHeader);
 
+  ObjCCategoryModuleRecord *addObjCCategoryModule(StringRef Name,
+                                                  StringRef USR);
+
   /// Create and add an Objective-C category record into the API set.
   ///
   /// Note: the caller is responsible for keeping the StringRef \p Name and
@@ -679,7 +699,7 @@ public:
                   AvailabilitySet Availability, const DocComment &Comment,
                   DeclarationFragments Declaration,
                   DeclarationFragments SubHeading, SymbolReference Interface,
-                  bool IsFromSystemHeader);
+                  bool IsFromSystemHeader, bool IsFromExternalModule);
 
   /// Create and add an Objective-C interface record into the API set.
   ///
@@ -795,6 +815,9 @@ public:
   const RecordMap<ObjCCategoryRecord> &getObjCCategories() const {
     return ObjCCategories;
   }
+  const RecordMap<ObjCCategoryModuleRecord> &getObjCCategoryModule() const {
+    return ObjCCategoryModule;
+  }
   const RecordMap<ObjCInterfaceRecord> &getObjCInterfaces() const {
     return ObjCInterfaces;
   }
@@ -848,6 +871,7 @@ private:
   RecordMap<EnumRecord> Enums;
   RecordMap<StructRecord> Structs;
   RecordMap<ObjCCategoryRecord> ObjCCategories;
+  RecordMap<ObjCCategoryModuleRecord> ObjCCategoryModule;
   RecordMap<ObjCInterfaceRecord> ObjCInterfaces;
   RecordMap<ObjCProtocolRecord> ObjCProtocols;
   RecordMap<MacroDefinitionRecord> Macros;

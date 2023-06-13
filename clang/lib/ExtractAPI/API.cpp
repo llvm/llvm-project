@@ -120,22 +120,34 @@ StructRecord *APISet::addStruct(StringRef Name, StringRef USR, PresumedLoc Loc,
                            SubHeading, IsFromSystemHeader);
 }
 
+ObjCCategoryModuleRecord *APISet::addObjCCategoryModule(StringRef Name,
+                                                        StringRef USR) {
+  // Create the category record.
+  auto *Record =
+      addTopLevelRecord(USRBasedLookupTable, ObjCCategoryModule, USR, Name);
+
+  return Record;
+}
+
 ObjCCategoryRecord *APISet::addObjCCategory(
     StringRef Name, StringRef USR, PresumedLoc Loc,
     AvailabilitySet Availabilities, const DocComment &Comment,
     DeclarationFragments Declaration, DeclarationFragments SubHeading,
-    SymbolReference Interface, bool IsFromSystemHeader) {
+    SymbolReference Interface, bool IsFromSystemHeader,
+    bool IsFromExternalModule) {
   // Create the category record.
   auto *Record =
       addTopLevelRecord(USRBasedLookupTable, ObjCCategories, USR, Name, Loc,
                         std::move(Availabilities), Comment, Declaration,
                         SubHeading, Interface, IsFromSystemHeader);
 
-  // If this category is extending a known interface, associate it with the
-  // ObjCInterfaceRecord.
-  auto It = ObjCInterfaces.find(Interface.USR);
-  if (It != ObjCInterfaces.end())
-    It->second->Categories.push_back(Record);
+  // If this category is extending an external module, associate it with that
+  // module.
+  if (IsFromExternalModule) {
+    auto It = ObjCCategoryModule.find(Interface.USR);
+    if (It != ObjCCategoryModule.end())
+      It->second->Categories.push_back(Record);
+  }
 
   return Record;
 }
@@ -295,6 +307,7 @@ void ObjCInstanceVariableRecord::anchor() {}
 void ObjCInstanceMethodRecord::anchor() {}
 void ObjCClassMethodRecord::anchor() {}
 void ObjCCategoryRecord::anchor() {}
+void ObjCCategoryModuleRecord::anchor() {}
 void ObjCInterfaceRecord::anchor() {}
 void ObjCProtocolRecord::anchor() {}
 void MacroDefinitionRecord::anchor() {}
