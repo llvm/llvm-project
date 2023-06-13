@@ -12,7 +12,7 @@ class TestFrameVarDepthAndElemCount(TestBase):
         """Test that bool types work in the expression parser"""
         self.build()
         lldbutil.run_to_source_breakpoint(
-            self, "// break here", lldb.SBFileSpec("main.cpp")
+            self, "break here", lldb.SBFileSpec("main.cpp")
         )
 
         # Check that we print 5 elements but only 2 levels deep.
