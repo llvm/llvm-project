@@ -78,8 +78,7 @@
 #error "wrong value for __cpp_conditional_explicit"
 #endif
 
-#if check(consteval, 0, 0, 0, 0, 0, 0)
-// FIXME: 201811 in C++20
+#if check(consteval, 0, 0, 0, 0, 202211, 202211)
 #error "wrong value for __cpp_consteval"
 #endif
 
