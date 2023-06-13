@@ -94,7 +94,7 @@ MATH_MANGLE(pow)(float x, float y)
     if (x == 1.0f)
         ret = BUILTIN_ISINF_F32(y) ? QNAN_F32 : 1.0f;
 
-    if (x < 0.0f || BUILTIN_ISNAN_F32(x) || BUILTIN_ISNAN_F32(y))
+    if (x < 0.0f || BUILTIN_ISUNORDERED_F32(x, y))
         ret = QNAN_F32;
 #elif defined COMPILING_POWN
     if (BUILTIN_ISINF_F32(ax) || x == 0.0f)
@@ -124,7 +124,7 @@ MATH_MANGLE(pow)(float x, float y)
         ret = BUILTIN_COPYSIGN_F32((x == 0.0f) ^ (y < 0.0f) ? 0.0f : PINF_F32,
                                    inty == 1 ? x : 0.0f);
 
-    if (BUILTIN_ISNAN_F32(x) || BUILTIN_ISNAN_F32(y))
+    if (BUILTIN_ISUNORDERED_F32(x, y))
         ret = QNAN_F32;
 
     if (x == 1.0f || y == 0.0f)

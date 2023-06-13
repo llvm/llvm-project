@@ -76,7 +76,7 @@ MATH_MANGLE(pow)(double x, double y)
     if (x == 1.0)
         ret = BUILTIN_ISINF_F64(y) ? QNAN_F64 : 1.0;
 
-    if (x < 0.0 || BUILTIN_ISNAN_F64(x) || BUILTIN_ISNAN_F64(y))
+    if (x < 0.0 || BUILTIN_ISUNORDERED_F64(x, y))
         ret = QNAN_F64;
 #elif defined COMPILING_POWN
     if (BUILTIN_ISINF_F64(ax) || x == 0.0)
@@ -106,7 +106,7 @@ MATH_MANGLE(pow)(double x, double y)
         ret = BUILTIN_COPYSIGN_F64((x == 0.0) ^ (y < 0.0) ? 0.0 : PINF_F64,
                                    inty == 1 ? x : 0.0);
 
-    if (BUILTIN_ISNAN_F64(x) || BUILTIN_ISNAN_F64(y))
+    if (BUILTIN_ISUNORDERED_F64(x, y))
         ret = QNAN_F64;
 
     if (x == 1.0 || y == 0.0)
