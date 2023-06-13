@@ -132,9 +132,9 @@ NativeRegisterContextLinux_arm64::NativeRegisterContextLinux_arm64(
   ::memset(&m_hbp_regs, 0, sizeof(m_hbp_regs));
   ::memset(&m_sve_header, 0, sizeof(m_sve_header));
   ::memset(&m_pac_mask, 0, sizeof(m_pac_mask));
+  ::memset(&m_tls_regs, 0, sizeof(m_tls_regs));
 
   m_mte_ctrl_reg = 0;
-  m_tls_tpidr_reg = 0;
 
   // 16 is just a maximum value, query hardware for actual watchpoint count
   m_max_hwp_supported = 16;
@@ -148,7 +148,11 @@ NativeRegisterContextLinux_arm64::NativeRegisterContextLinux_arm64(
   m_sve_header_is_valid = false;
   m_pac_mask_is_valid = false;
   m_mte_ctrl_is_valid = false;
-  m_tls_tpidr_is_valid = false;
+  m_tls_is_valid = false;
+
+  // SME adds the tpidr2 register
+  m_tls_size = GetRegisterInfo().IsSSVEEnabled() ? sizeof(m_tls_regs)
+                                                 : sizeof(m_tls_regs.tpidr_reg);
 
   if (GetRegisterInfo().IsSVEEnabled() || GetRegisterInfo().IsSSVEEnabled())
     m_sve_state = SVEState::Unknown;
@@ -255,13 +259,13 @@ NativeRegisterContextLinux_arm64::ReadRegister(const RegisterInfo *reg_info,
       src = (uint8_t *)GetSVEBuffer() + offset;
     }
   } else if (IsTLS(reg)) {
-    error = ReadTLSTPIDR();
+    error = ReadTLS();
     if (error.Fail())
       return error;
 
     offset = reg_info->byte_offset - GetRegisterInfo().GetTLSOffset();
-    assert(offset < GetTLSTPIDRSize());
-    src = (uint8_t *)GetTLSTPIDR() + offset;
+    assert(offset < GetTLSBufferSize());
+    src = (uint8_t *)GetTLSBuffer() + offset;
   } else if (IsSVE(reg)) {
     if (m_sve_state == SVEState::Disabled || m_sve_state == SVEState::Unknown)
       return Status("SVE disabled or not supported");
@@ -480,16 +484,16 @@ Status NativeRegisterContextLinux_arm64::WriteRegister(
 
     return WriteMTEControl();
   } else if (IsTLS(reg)) {
-    error = ReadTLSTPIDR();
+    error = ReadTLS();
     if (error.Fail())
       return error;
 
     offset = reg_info->byte_offset - GetRegisterInfo().GetTLSOffset();
-    assert(offset < GetTLSTPIDRSize());
-    dst = (uint8_t *)GetTLSTPIDR() + offset;
+    assert(offset < GetTLSBufferSize());
+    dst = (uint8_t *)GetTLSBuffer() + offset;
     ::memcpy(dst, reg_value.GetBytes(), reg_info->byte_size);
 
-    return WriteTLSTPIDR();
+    return WriteTLS();
   }
 
   return Status("Failed to write register value");
@@ -533,9 +537,9 @@ Status NativeRegisterContextLinux_arm64::ReadAllRegisterValues(
       return error;
   }
 
-  // tpidr is always present but there will be more in future.
-  reg_data_byte_size += GetTLSTPIDRSize();
-  error = ReadTLSTPIDR();
+  // tpidr is always present but tpidr2 depends on SME.
+  reg_data_byte_size += GetTLSBufferSize();
+  error = ReadTLS();
   if (error.Fail())
     return error;
 
@@ -558,7 +562,7 @@ Status NativeRegisterContextLinux_arm64::ReadAllRegisterValues(
   if (GetRegisterInfo().IsMTEEnabled())
     ::memcpy(dst, GetMTEControl(), GetMTEControlSize());
 
-  ::memcpy(dst, GetTLSTPIDR(), GetTLSTPIDRSize());
+  ::memcpy(dst, GetTLSBuffer(), GetTLSBufferSize());
 
   return error;
 }
@@ -845,7 +849,7 @@ void NativeRegisterContextLinux_arm64::InvalidateAllRegisters() {
   m_sve_header_is_valid = false;
   m_pac_mask_is_valid = false;
   m_mte_ctrl_is_valid = false;
-  m_tls_tpidr_is_valid = false;
+  m_tls_is_valid = false;
 
   // Update SVE registers in case there is change in configuration.
   ConfigureRegisterContext();
@@ -979,38 +983,38 @@ Status NativeRegisterContextLinux_arm64::WriteMTEControl() {
   return WriteRegisterSet(&ioVec, GetMTEControlSize(), NT_ARM_TAGGED_ADDR_CTRL);
 }
 
-Status NativeRegisterContextLinux_arm64::ReadTLSTPIDR() {
+Status NativeRegisterContextLinux_arm64::ReadTLS() {
   Status error;
 
-  if (m_tls_tpidr_is_valid)
+  if (m_tls_is_valid)
     return error;
 
   struct iovec ioVec;
-  ioVec.iov_base = GetTLSTPIDR();
-  ioVec.iov_len = GetTLSTPIDRSize();
+  ioVec.iov_base = GetTLSBuffer();
+  ioVec.iov_len = GetTLSBufferSize();
 
-  error = ReadRegisterSet(&ioVec, GetTLSTPIDRSize(), NT_ARM_TLS);
+  error = ReadRegisterSet(&ioVec, GetTLSBufferSize(), NT_ARM_TLS);
 
   if (error.Success())
-    m_tls_tpidr_is_valid = true;
+    m_tls_is_valid = true;
 
   return error;
 }
 
-Status NativeRegisterContextLinux_arm64::WriteTLSTPIDR() {
+Status NativeRegisterContextLinux_arm64::WriteTLS() {
   Status error;
 
-  error = ReadTLSTPIDR();
+  error = ReadTLS();
   if (error.Fail())
     return error;
 
   struct iovec ioVec;
-  ioVec.iov_base = GetTLSTPIDR();
-  ioVec.iov_len = GetTLSTPIDRSize();
+  ioVec.iov_base = GetTLSBuffer();
+  ioVec.iov_len = GetTLSBufferSize();
 
-  m_tls_tpidr_is_valid = false;
+  m_tls_is_valid = false;
 
-  return WriteRegisterSet(&ioVec, GetTLSTPIDRSize(), NT_ARM_TLS);
+  return WriteRegisterSet(&ioVec, GetTLSBufferSize(), NT_ARM_TLS);
 }
 
 void NativeRegisterContextLinux_arm64::ConfigureRegisterContext() {
