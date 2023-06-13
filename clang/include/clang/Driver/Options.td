@@ -4772,7 +4772,6 @@ foreach i = {0-7} in
 } // let Flags = [TargetSpecific]
 
 // X86 feature flags
-let Flags = [TargetSpecific] in {
 def mx87 : Flag<["-"], "mx87">, Group<m_x86_Features_Group>;
 def mno_x87 : Flag<["-"], "mno-x87">, Group<m_x86_Features_Group>;
 def m80387 : Flag<["-"], "m80387">, Alias<mx87>;
@@ -4806,11 +4805,7 @@ def mssse3 : Flag<["-"], "mssse3">, Group<m_x86_Features_Group>;
 def mno_ssse3 : Flag<["-"], "mno-ssse3">, Group<m_x86_Features_Group>;
 def msse4_1 : Flag<["-"], "msse4.1">, Group<m_x86_Features_Group>;
 def mno_sse4_1 : Flag<["-"], "mno-sse4.1">, Group<m_x86_Features_Group>;
-} // let Flags = [TargetSpecific]
-// TODO: Make -msse4.2 TargetSpecific after
-// https://github.com/llvm/llvm-project/issues/63270 is fixed.
 def msse4_2 : Flag<["-"], "msse4.2">, Group<m_x86_Features_Group>;
-let Flags = [TargetSpecific] in {
 def mno_sse4_2 : Flag<["-"], "mno-sse4.2">, Group<m_x86_Features_Group>;
 def msse4 : Flag<["-"], "msse4">, Alias<msse4_2>;
 // -mno-sse4 turns off sse4.1 which has the effect of turning off everything
@@ -4983,7 +4978,6 @@ def mretpoline_external_thunk : Flag<["-"], "mretpoline-external-thunk">, Group<
 def mno_retpoline_external_thunk : Flag<["-"], "mno-retpoline-external-thunk">, Group<m_x86_Features_Group>;
 def mvzeroupper : Flag<["-"], "mvzeroupper">, Group<m_x86_Features_Group>;
 def mno_vzeroupper : Flag<["-"], "mno-vzeroupper">, Group<m_x86_Features_Group>;
-} // let Flags = [TargetSpecific]
 
 // These are legacy user-facing driver-level option spellings. They are always
 // aliases for options that are spelled using the more common Unix / GNU flag
