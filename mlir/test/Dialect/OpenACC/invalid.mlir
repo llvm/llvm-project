@@ -395,6 +395,14 @@ acc.firstprivate.recipe @privatization_i32 : i32 init {
 
 // -----
 
+// expected-error@+1 {{expected ')'}}
+acc.loop gang(static=%i64Value: i64, num=%i64Value: i64 {
+  "test.openacc_dummy_op"() : () -> ()
+  acc.yield
+}
+
+// -----
+
 // expected-error@+1 {{expects non-empty init region}}
 acc.reduction.recipe @reduction_i64 : i64 reduction_operator<add> init {
 } combiner {}
@@ -465,9 +473,25 @@ acc.reduction.recipe @reduction_i64 : i64 reduction_operator<add> init {
 
 // -----
 
+// expected-error@+1 {{new value expected after comma}}
+acc.loop gang(static=%i64Value: i64, ) {
+  "test.openacc_dummy_op"() : () -> ()
+  acc.yield
+}
+
+// -----
+
 func.func @fct1(%0 : !llvm.ptr<i32>) -> () {
   // expected-error@+1 {{expected symbol reference @privatization_i32 to point to a private declaration}}
   acc.serial private(@privatization_i32 -> %0 : !llvm.ptr<i32>) {
   }
   return
+}
+
+// -----
+
+// expected-error@+1 {{expect num and/or static value(s)}}
+acc.loop gang() {
+  "test.openacc_dummy_op"() : () -> ()
+  acc.yield
 }
