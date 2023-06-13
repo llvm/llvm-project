@@ -38,6 +38,11 @@
 
 // Start with functions that cannot be defined by DEF macros below.
 #if defined(__cplusplus)
+#if defined __OPENMP_AMDGCN__
+__DEVICE__ __CONSTEXPR__ float fabs(float __x) { return ::fabsf(__x); }
+__DEVICE__ __CONSTEXPR__ float sin(float __x) { return ::sinf(__x); }
+__DEVICE__ __CONSTEXPR__ float cos(float __x) { return ::cosf(__x); }
+#endif
 __DEVICE__ __CONSTEXPR__ double abs(double __x) { return ::fabs(__x); }
 __DEVICE__ __CONSTEXPR__ float abs(float __x) { return ::fabsf(__x); }
 __DEVICE__ __CONSTEXPR__ long long abs(long long __n) { return ::llabs(__n); }
