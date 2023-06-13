@@ -190,8 +190,8 @@ class RVInst<dag outs, dag ins, string opcodestr, string argstr,
   bit ForceTailAgnostic = false;
   let TSFlags{11} = ForceTailAgnostic;
 
-  bit HasMergeOp = 0;
-  let TSFlags{12} = HasMergeOp;
+  bit IsTiedPseudo = 0;
+  let TSFlags{12} = IsTiedPseudo;
 
   bit HasSEWOp = 0;
   let TSFlags{13} = HasSEWOp;
