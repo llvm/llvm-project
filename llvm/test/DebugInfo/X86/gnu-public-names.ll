@@ -119,10 +119,10 @@
 ; CHECK:       DW_AT_name ("D")
 ; CHECK:       DW_TAG_member
 ; CHECK:       NULL
-; CHECK:     DW_TAG_variable
 ; CHECK:     [[GLOB_NS_FUNC:0x[0-9a-f]+]]: DW_TAG_subprogram
 ; CHECK:       DW_AT_linkage_name
 ; CHECK:       DW_AT_name ("global_namespace_function")
+; CHECK:     DW_TAG_variable
 ; CHECK:     NULL
 
 ; CHECK:   [[F3:0x[0-9a-f]+]]: DW_TAG_subprogram
@@ -172,8 +172,6 @@
 ; CHECK:       DW_AT_name ("named_enum_class_enumerator")
 ; CHECK:     NULL
 
-; CHECK:   DW_TAG_imported_declaration
-
 ; CHECK:   [[MEM_FUNC:0x[0-9a-f]+]]: DW_TAG_subprogram
 ; CHECK:     DW_AT_specification {{.*}} "_ZN1C15member_functionEv"
 ; CHECK:     DW_TAG_formal_parameter
@@ -190,6 +188,7 @@
 ; CHECK:     DW_AT_linkage_name
 ; CHECK:     DW_AT_name ("f7")
 
+; CHECK:   DW_TAG_imported_declaration
 ; CHECK:   DW_TAG_pointer_type
 ; CHECK:   DW_TAG_pointer_type
 ; CHECK:   NULL

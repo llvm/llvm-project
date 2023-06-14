@@ -57,13 +57,8 @@
 ; CHECK: NULL
 
 ; CHECK: DW_TAG_base_type
-; CHECK: DW_TAG_imported_module
-; CHECK:   DW_AT_decl_file ([[F2:.*]])
-; CHECK:   DW_AT_decl_line (18)
-; CHECK:   DW_AT_import ([[NS1]])
-; CHECK: DW_TAG_imported_declaration
-
 ; CHECK: DW_TAG_subprogram
+
 ; CHECK: DW_TAG_subprogram
 ; CHECK:   DW_AT_MIPS_linkage_name
 ; CHECK:   DW_AT_name ("func")
@@ -127,6 +122,11 @@
 ; CHECK:   NULL
 
 ; CHECK: DW_TAG_subprogram
+; CHECK: DW_TAG_imported_module
+; CHECK:   DW_AT_decl_file ([[F2:.*]])
+; CHECK:   DW_AT_decl_line (18)
+; CHECK:   DW_AT_import ([[NS1]])
+; CHECK: DW_TAG_imported_declaration
 ; CHECK: DW_TAG_base_type
 ; CHECK: NULL
 
