@@ -2045,6 +2045,23 @@ struct AMDGPUDeviceTy : public GenericDeviceTy, AMDGenericDeviceTy {
 
   ~AMDGPUDeviceTy() {}
 
+  /// Returns the maximum of HSA queues to create
+  /// This reads a non-cached environment variable, don't call everywhere.
+  uint32_t getMaxNumHsaQueues() const {
+    // In case this environment variable is set: respect it and give it
+    // precendence
+    if (const char *GPUMaxHwQsEnv = getenv("GPU_MAX_HW_QUEUES")) {
+      uint32_t MaxGPUHwQueues = std::atoi(GPUMaxHwQsEnv);
+      if (MaxGPUHwQueues != OMPX_NumQueues)
+        DP("Different numbers of maximum HSA queues specified. Using %u\n",
+           MaxGPUHwQueues);
+
+      return MaxGPUHwQueues;
+    }
+    // Otherwise use the regular environment variable
+    return OMPX_NumQueues;
+  }
+
   virtual uint32_t getOMPXLowTripCount() const override {
     return OMPX_LowTripCount;
   }
@@ -2130,8 +2147,9 @@ struct AMDGPUDeviceTy : public GenericDeviceTy, AMDGenericDeviceTy {
       return Err;
 
     // Compute the number of queues and their size.
-    const uint32_t NumQueues = std::min(OMPX_NumQueues.get(), MaxQueues);
+    const uint32_t NumQueues = std::min(getMaxNumHsaQueues(), MaxQueues);
     const uint32_t QueueSize = std::min(OMPX_QueueSize.get(), MaxQueueSize);
+    DP("Using a maximum of %u HSA queues\n", NumQueues);
 
     // Default-Construct each device queue (and initialize only the first) to
     // avoid unnecessary initialization overhead.
@@ -2925,6 +2943,9 @@ struct AMDGPUDeviceTy : public GenericDeviceTy, AMDGenericDeviceTy {
     // TODO: Improve implementation and get rid of lock if possible
     std::lock_guard<std::mutex> LG(QueuesLock);
 
+    // The size is the maximum number of queues
+    int MaxNumQueues = Queues.size();
+
     // Determine queues that are busy right now
     // If an idle and already initialized queue is encountered, return it
     int NumBusyQueues = 0;
@@ -2940,7 +2961,7 @@ struct AMDGPUDeviceTy : public GenericDeviceTy, AMDGenericDeviceTy {
     // For now we always take this code path, as no queue is initialized at the
     // beginning, so we need to execute here at least once.
     int QueueCount = NumInitQueues.load();
-    if (QueueCount < OMPX_NumQueues && QueueCount <= NumBusyQueues) {
+    if (QueueCount < MaxNumQueues && QueueCount <= NumBusyQueues) {
       DP("LAZY_QUEUE: Constructing new Queue: %i (Device %i)\n", QueueCount,
          getDeviceId());
       // TODO: Handle errors here: abort? Gracefully? Ignore?
