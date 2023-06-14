@@ -790,7 +790,6 @@ createLoopOp(Fortran::lower::AbstractConverter &converter,
           } else if (const auto *staticArg =
                          std::get_if<Fortran::parser::AccGangArg::Static>(
                              &gangArg.u)) {
-
             const Fortran::parser::AccSizeExpr &sizeExpr = staticArg->v;
             if (sizeExpr.v) {
               gangStatic = fir::getBase(converter.genExprValue(
@@ -801,6 +800,11 @@ createLoopOp(Fortran::lower::AbstractConverter &converter,
               gangStatic = builder.createIntegerConstant(
                   clauseLocation, builder.getIndexType(), starCst);
             }
+          } else if (const auto *dim =
+                         std::get_if<Fortran::parser::AccGangArg::Dim>(
+                             &gangArg.u)) {
+            gangDim = fir::getBase(converter.genExprValue(
+                *Fortran::semantics::GetExpr(dim->v), stmtCtx));
           }
         }
       }
