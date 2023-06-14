@@ -1787,10 +1787,6 @@ Value *ComplexDeinterleavingGraph::replaceNode(IRBuilderBase &Builder,
     ReplacementNode = replaceNode(Builder, Node->Operands[0]);
     processReductionOperation(ReplacementNode, Node);
     break;
-  default:
-    llvm_unreachable(
-        "Unhandled case in ComplexDeinterleavingGraph::replaceNode");
-    break;
   }
 
   assert(ReplacementNode && "Target failed to create Intrinsic call.");
