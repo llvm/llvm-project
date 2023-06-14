@@ -210,6 +210,10 @@ public:
 
   InstructionCost getMemcpyCost(const Instruction *I);
 
+  uint64_t getMaxMemIntrinsicInlineSizeThreshold() const {
+    return ST->getMaxInlineSizeThreshold();
+  }
+
   int getNumMemOps(const IntrinsicInst *I) const;
 
   InstructionCost getShuffleCost(TTI::ShuffleKind Kind, VectorType *Tp,

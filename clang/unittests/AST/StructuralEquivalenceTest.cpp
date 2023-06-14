@@ -1143,6 +1143,18 @@ TEST_F(StructuralEquivalenceObjCCategoryTest, CategoriesWithDifferentNames) {
   EXPECT_FALSE(testStructuralMatch(t));
 }
 
+TEST_F(StructuralEquivalenceObjCCategoryTest, CategoriesWithoutInterfaces) {
+  auto t = makeDecls<ObjCCategoryDecl>("                  @interface A(X) @end",
+                                       "@interface A @end @interface A(X) @end",
+                                       Lang_OBJC, objcCategoryDecl());
+  EXPECT_FALSE(testStructuralMatch(t));
+
+  auto t2 = makeDecls<ObjCCategoryDecl>("@interface A(X) @end",
+                                        "@interface A(X) @end",
+                                        Lang_OBJC, objcCategoryDecl());
+  EXPECT_TRUE(testStructuralMatch(t2));
+}
+
 TEST_F(StructuralEquivalenceObjCCategoryTest, CategoryAndExtension) {
   auto t = makeDecls<ObjCCategoryDecl>("@interface A @end @interface A(X) @end",
                                        "@interface A @end @interface A() @end",

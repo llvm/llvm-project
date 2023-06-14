@@ -103,6 +103,7 @@ cc_binary(
         "//mlir:ArithDialect",
         "//mlir:CastInterfaces",
         "//mlir:FuncDialect",
+        "//mlir:FuncExtensions",
         "//mlir:IR",
         "//mlir:MemRefDialect",
         "//mlir:Parser",

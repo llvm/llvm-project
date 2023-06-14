@@ -268,14 +268,12 @@ Changes to the C API
 
   * ``LLVMConstSelect``
 
-Changes to the FastISel infrastructure
---------------------------------------
+Changes to the CodeGen infrastructure
+-------------------------------------
 
-* ...
-
-Changes to the DAG infrastructure
----------------------------------
-
+* ``llvm.memcpy``, ``llvm.memmove`` and ``llvm.memset`` are now
+  expanded into loops by default for targets which do not report the
+  corresponding library function is available.
 
 Changes to the Metadata Info
 ---------------------------------
