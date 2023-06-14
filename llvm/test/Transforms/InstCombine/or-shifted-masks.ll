@@ -54,10 +54,13 @@ define i32 @or_and_shift_shift_and(i32 %x) {
 
 define i32 @multiuse1(i32 %x) {
 ; CHECK-LABEL: @multiuse1(
-; CHECK-NEXT:    [[I21:%.*]] = shl i32 [[X:%.*]], 6
+; CHECK-NEXT:    [[I:%.*]] = lshr i32 [[X:%.*]], 1
+; CHECK-NEXT:    [[I3:%.*]] = and i32 [[I]], 1
+; CHECK-NEXT:    [[I1:%.*]] = lshr i32 [[X]], 1
+; CHECK-NEXT:    [[I5:%.*]] = and i32 [[I1]], 2
+; CHECK-NEXT:    [[I21:%.*]] = shl i32 [[X]], 6
 ; CHECK-NEXT:    [[I6:%.*]] = and i32 [[I21]], 384
-; CHECK-NEXT:    [[I32:%.*]] = lshr i32 [[X]], 1
-; CHECK-NEXT:    [[I7:%.*]] = and i32 [[I32]], 3
+; CHECK-NEXT:    [[I7:%.*]] = or i32 [[I3]], [[I5]]
 ; CHECK-NEXT:    [[I8:%.*]] = or i32 [[I7]], [[I6]]
 ; CHECK-NEXT:    ret i32 [[I8]]
 ;
@@ -75,10 +78,16 @@ define i32 @multiuse1(i32 %x) {
 
 define i32 @multiuse2(i32 %x) {
 ; CHECK-LABEL: @multiuse2(
-; CHECK-NEXT:    [[TMP1:%.*]] = shl i32 [[X:%.*]], 8
+; CHECK-NEXT:    [[I:%.*]] = shl i32 [[X:%.*]], 1
+; CHECK-NEXT:    [[I2:%.*]] = and i32 [[I]], 12
+; CHECK-NEXT:    [[I3:%.*]] = shl i32 [[X]], 1
+; CHECK-NEXT:    [[I5:%.*]] = and i32 [[I3]], 48
+; CHECK-NEXT:    [[I6:%.*]] = shl i32 [[X]], 1
+; CHECK-NEXT:    [[I8:%.*]] = and i32 [[I6]], 192
+; CHECK-NEXT:    [[TMP1:%.*]] = shl i32 [[X]], 8
 ; CHECK-NEXT:    [[I10:%.*]] = and i32 [[TMP1]], 32256
-; CHECK-NEXT:    [[TMP2:%.*]] = shl i32 [[X]], 1
-; CHECK-NEXT:    [[I12:%.*]] = and i32 [[TMP2]], 252
+; CHECK-NEXT:    [[I11:%.*]] = or i32 [[I8]], [[I5]]
+; CHECK-NEXT:    [[I12:%.*]] = or i32 [[I2]], [[I11]]
 ; CHECK-NEXT:    [[I13:%.*]] = or i32 [[I10]], [[I12]]
 ; CHECK-NEXT:    ret i32 [[I13]]
 ;
@@ -101,10 +110,13 @@ define i32 @multiuse2(i32 %x) {
 
 define i32 @multiuse3(i32 %x) {
 ; CHECK-LABEL: @multiuse3(
-; CHECK-NEXT:    [[TMP1:%.*]] = shl i32 [[X:%.*]], 6
+; CHECK-NEXT:    [[I:%.*]] = lshr i32 [[X:%.*]], 1
+; CHECK-NEXT:    [[I2:%.*]] = and i32 [[I]], 48
+; CHECK-NEXT:    [[TMP1:%.*]] = shl i32 [[X]], 6
 ; CHECK-NEXT:    [[I5:%.*]] = and i32 [[TMP1]], 8064
-; CHECK-NEXT:    [[TMP2:%.*]] = lshr i32 [[X]], 1
-; CHECK-NEXT:    [[I8:%.*]] = and i32 [[TMP2]], 63
+; CHECK-NEXT:    [[I6:%.*]] = lshr i32 [[X]], 1
+; CHECK-NEXT:    [[I7:%.*]] = and i32 [[I6]], 15
+; CHECK-NEXT:    [[I8:%.*]] = or i32 [[I2]], [[I7]]
 ; CHECK-NEXT:    [[I9:%.*]] = or i32 [[I8]], [[I5]]
 ; CHECK-NEXT:    ret i32 [[I9]]
 ;
