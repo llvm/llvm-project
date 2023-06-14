@@ -555,10 +555,6 @@ function(cxx_add_basic_build_flags target)
   # errors.
   target_compile_definitions(${target} PRIVATE -D_LIBCPP_REMOVE_TRANSITIVE_INCLUDES)
 
-  if (NOT LIBCXX_ENABLE_NEW_DELETE_DEFINITIONS)
-    target_compile_definitions(${target} PRIVATE -D_LIBCPP_DISABLE_NEW_DELETE_DEFINITIONS)
-  endif()
-
   if (C_SUPPORTS_COMMENT_LIB_PRAGMA)
     if (LIBCXX_HAS_PTHREAD_LIB)
       target_compile_definitions(${target} PRIVATE -D_LIBCPP_LINK_PTHREAD_LIB)
