@@ -3,7 +3,7 @@ import os
 import sys
 
 main_config = sys.argv[1]
-main_config = os.path.realpath(main_config)
+main_config = os.path.abspath(main_config)
 main_config = os.path.normcase(main_config)
 
 config_map = {main_config: sys.argv[2]}
