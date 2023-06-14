@@ -849,6 +849,7 @@ std::pair<Operation *, Value> LoopEmitter::emitWhileLoopOverTensorsAtLvls(
     // Must be a recognizable sparse level.
     assert(isCompressedDLT(lvlTp) || isCompressedWithHiDLT(lvlTp) ||
            isSingletonDLT(lvlTp));
+    (void)lvlTp;
 
     unsigned prevSz = ivs.size();
     const auto reassoc = getCollapseReassociation(tid, lvl);
@@ -1054,12 +1055,14 @@ Operation *LoopEmitter::enterCoIterationOverTensorsAtLvls(
     OpBuilder &builder, Location loc, ArrayRef<TensorLevel> tidLvls,
     MutableArrayRef<Value> reduc, bool tryParallel, bool genDedup,
     bool needsUniv) {
+#ifndef NDEBUG
   // Sanity checks.
   assert(!tidLvls.empty());
   for (auto [t, l] : unpackTensorLevelRange(tidLvls)) {
     assert(!coords[t][l] ||                 // We cannot re-enter the same level
            !dependentLvlMap[t][l].empty()); // unless it is a slice-driver loop
   }
+#endif
   // TODO: support multiple return on parallel for?
   tryParallel = tryParallel && reduc.size() <= 1;
 
