@@ -16,6 +16,8 @@
 #include <os/log.h>
 #endif
 
+#include <atomic>
+
 namespace lldb_private {
 
 static void DefaultAssertCallback(llvm::StringRef message,
