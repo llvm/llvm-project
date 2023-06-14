@@ -26,8 +26,8 @@ struct LlvmLibcAcosfExhaustiveTest : public LlvmLibcExhaustiveTest<uint32_t> {
     do {
       FPBits xbits(bits);
       float x = float(xbits);
-      result &= EXPECT_MPFR_MATCH(mpfr::Operation::Acos, x,
-                                  __llvm_libc::acosf(x), 0.5, rounding);
+      result &= TEST_MPFR_MATCH(mpfr::Operation::Acos, x, __llvm_libc::acosf(x),
+                                0.5, rounding);
     } while (bits++ < stop);
     return result;
   }

@@ -29,8 +29,8 @@ struct LlvmLibcSinCosfExhaustiveTest : public LlvmLibcExhaustiveTest<uint32_t> {
       float x = float(xbits);
       float sinx, cosx;
       __llvm_libc::sincosf(x, &sinx, &cosx);
-      result &= EXPECT_MPFR_MATCH(mpfr::Operation::Sin, x, sinx, 0.5, rounding);
-      result &= EXPECT_MPFR_MATCH(mpfr::Operation::Cos, x, cosx, 0.5, rounding);
+      result &= TEST_MPFR_MATCH(mpfr::Operation::Sin, x, sinx, 0.5, rounding);
+      result &= TEST_MPFR_MATCH(mpfr::Operation::Cos, x, cosx, 0.5, rounding);
     } while (++bits < stop);
     return result;
   }
