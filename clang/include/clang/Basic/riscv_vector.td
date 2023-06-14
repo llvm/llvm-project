@@ -1806,11 +1806,11 @@ multiclass RVVStridedSegStoreTuple<string op> {
 }
 
 multiclass RVVIndexedSegLoadTuple<string op> {
-  foreach type = ["i"] in {
-    foreach eew_info = [["32", "(Log2EEW:5)"]] in {
+  foreach type = TypeList in {
+    foreach eew_info = EEWList in {
       defvar eew = eew_info[0];
       defvar eew_type = eew_info[1];
-      foreach nf = [2] in {
+      foreach nf = NFList in {
         let Name = op # nf # "ei" # eew # "_v_tuple",
             OverloadedName = op # nf # "ei" # eew # "_tuple",
             IRName = op # nf,
@@ -1818,17 +1818,23 @@ multiclass RVVIndexedSegLoadTuple<string op> {
             NF = nf,
             ManualCodegen = [{
     {
-      assert(((IsMasked && (PolicyAttrs & RVV_VTA) && (PolicyAttrs & RVV_VMA)) ||
-             (!IsMasked && (PolicyAttrs & RVV_VTA))) &&
-             "FIXME: Only handling default policy (TAMA) for now");
-
       llvm::Type *ElementVectorType = cast<StructType>(ResultType)->elements()[0];
-
+      IntrinsicTypes = {ElementVectorType, Ops.back()->getType()};
       SmallVector<llvm::Value*, 12> Operands;
 
-      Operands.append(NF, llvm::PoisonValue::get(ElementVectorType));
+      bool NoPassthru =
+        (IsMasked && (PolicyAttrs & RVV_VTA) && (PolicyAttrs & RVV_VMA)) |
+        (!IsMasked && (PolicyAttrs & RVV_VTA));
+      unsigned Offset = IsMasked ? NoPassthru ? 1 : 2 : NoPassthru ? 0 : 1;
 
-      unsigned Offset = IsMasked ? 1 : 0;
+      if (NoPassthru) { // Push poison into passthru
+        Operands.append(NF, llvm::PoisonValue::get(ElementVectorType));
+      } else { // Push intrinsics operands into passthru
+        llvm::Value *PassthruOperand = IsMasked ? Ops[1] : Ops[0];
+        for (unsigned I = 0; I < NF; ++I)
+          Operands.push_back(Builder.CreateExtractValue(PassthruOperand, {I}));
+      }
+
       Operands.push_back(Ops[Offset]); // Ptr
       Operands.push_back(Ops[Offset + 1]); // Idx
       if (IsMasked)
@@ -1849,7 +1855,10 @@ multiclass RVVIndexedSegLoadTuple<string op> {
     }
     }] in {
           defvar T = "(Tuple:" # nf # ")";
-          def : RVVBuiltin<"v", T # "vPCe" # eew_type # "Uv", type>;
+          def : RVVBuiltin<T # "v", T # "vPCe" # eew_type # "Uv", type>;
+          if !not(IsFloat<type>.val) then {
+            def : RVVBuiltin<T # "Uv", T # "UvPCUe" # eew_type # "Uv", type>;
+          }
         }
       }
     }
@@ -1910,14 +1919,8 @@ let UnMaskedPolicyScheme = HasPassthruOperand,
   defm : RVVUnitStridedSegLoadTuple<"vlseg">;
   defm : RVVUnitStridedSegLoadFFTuple<"vlseg">;
   defm : RVVStridedSegLoadTuple<"vlsseg">;
-}
-
-// TODO: Extend for policy
-let UnMaskedPolicyScheme = NonePolicy,
-    MaskedPolicyScheme = NonePolicy,
-    IsTuple = true in {
-defm : RVVIndexedSegLoadTuple<"vluxseg">;
-defm : RVVIndexedSegLoadTuple<"vloxseg">;
+  defm : RVVIndexedSegLoadTuple<"vluxseg">;
+  defm : RVVIndexedSegLoadTuple<"vloxseg">;
 }
 
 let UnMaskedPolicyScheme = NonePolicy,
