@@ -214,7 +214,7 @@ static void *mmap_interceptor(Mmap real_mmap, void *addr, SIZE_T length,
 
 template <class Munmap>
 static int munmap_interceptor(Munmap real_munmap, void *addr, SIZE_T length) {
-  __hwasan::TagMemoryAligned(reinterpret_cast<uptr>(addr), length, 0);
+  __hwasan::TagMemory(reinterpret_cast<uptr>(addr), length, 0);
   return real_munmap(addr, length);
 }
 
