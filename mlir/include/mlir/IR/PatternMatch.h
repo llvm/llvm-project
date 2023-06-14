@@ -406,13 +406,24 @@ public:
     virtual void notifyOperationModified(Operation *op) {}
 
     /// Notify the listener that the specified operation is about to be replaced
-    /// with the set of values potentially produced by new operations. This is
-    /// called before the uses of the operation have been changed.
+    /// with another operation. This is called before the uses of the old
+    /// operation have been changed.
+    ///
+    /// By default, this function calls the "operation replaced with values"
+    /// notification.
+    virtual void notifyOperationReplaced(Operation *op,
+                                         Operation *replacement) {
+      notifyOperationReplaced(op, replacement->getResults());
+    }
+
+    /// Notify the listener that the specified operation is about to be replaced
+    /// with the a range of values, potentially produced by other operations.
+    /// This is called before the uses of the operation have been changed.
     virtual void notifyOperationReplaced(Operation *op,
                                          ValueRange replacement) {}
 
-    /// This is called on an operation that a rewrite is removing, right before
-    /// the operation is deleted. At this point, the operation has zero uses.
+    /// Notify the listener that the specified operation is about to be erased.
+    /// At this point, the operation has zero uses.
     virtual void notifyOperationRemoved(Operation *op) {}
 
     /// Notify the listener that the pattern failed to match the given
@@ -443,6 +454,9 @@ public:
     }
     void notifyOperationModified(Operation *op) override {
       listener->notifyOperationModified(op);
+    }
+    void notifyOperationReplaced(Operation *op, Operation *newOp) override {
+      listener->notifyOperationReplaced(op, newOp);
     }
     void notifyOperationReplaced(Operation *op,
                                  ValueRange replacement) override {
@@ -505,15 +519,20 @@ public:
 
   /// This method replaces the results of the operation with the specified list
   /// of values. The number of provided values must match the number of results
-  /// of the operation.
+  /// of the operation. The replaced op is erased.
   virtual void replaceOp(Operation *op, ValueRange newValues);
+
+  /// This method replaces the results of the operation with the specified
+  /// new op (replacement). The number of results of the two operations must
+  /// match. The replaced op is erased.
+  virtual void replaceOp(Operation *op, Operation *newOp);
 
   /// Replaces the result op with a new op that is created without verification.
   /// The result values of the two ops must be the same types.
   template <typename OpTy, typename... Args>
   OpTy replaceOpWithNewOp(Operation *op, Args &&...args) {
     auto newOp = create<OpTy>(op->getLoc(), std::forward<Args>(args)...);
-    replaceOpWithResultsOfAnotherOp(op, newOp.getOperation());
+    replaceOp(op, newOp.getOperation());
     return newOp;
   }
 
@@ -666,10 +685,6 @@ protected:
 private:
   void operator=(const RewriterBase &) = delete;
   RewriterBase(const RewriterBase &) = delete;
-
-  /// 'op' and 'newOp' are known to have the same number of results, replace the
-  /// uses of op with uses of newOp.
-  void replaceOpWithResultsOfAnotherOp(Operation *op, Operation *newOp);
 };
 
 //===----------------------------------------------------------------------===//
