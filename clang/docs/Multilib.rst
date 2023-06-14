@@ -59,6 +59,7 @@ Multilib processing
 
 Clang goes through the following steps to use multilib from a configuration
 file:
+
 #. Normalize command line options. Clang can accept the same
    information via different options - for example,
    ``--target=arm-none-eabi -march=armv7-m`` and
@@ -91,6 +92,7 @@ matches.
 
 It is up to the ToolChain subclass to decide what to do in this case.
 There are two options permitted:
+
 #. Use only the *last* matching multilib variant. This option exists primarily
    for compatibility with the previous multilib design.
 #. Use all matching variants, thereby layering them.
