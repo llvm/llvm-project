@@ -1352,6 +1352,13 @@ bool Debugger::FormatDisassemblerAddress(const FormatEntity::Entry *format,
                               function_changed, initial_function);
 }
 
+void Debugger::AssertCallback(llvm::StringRef message,
+                              llvm::StringRef backtrace,
+                              llvm::StringRef prompt) {
+  Debugger::ReportError(
+      llvm::formatv("{0}\n{1}{2}", message, backtrace, prompt).str());
+}
+
 void Debugger::SetLoggingCallback(lldb::LogOutputCallback log_callback,
                                   void *baton) {
   // For simplicity's sake, I am not going to deal with how to close down any
