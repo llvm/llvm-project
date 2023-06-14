@@ -1,4 +1,3 @@
-// -*- C++ -*-
 //===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
@@ -7,7 +6,27 @@
 //
 //===----------------------------------------------------------------------===//
 
-namespace std {
+#include <new>
+
+#include "include/atomic_support.h"
+
+#if defined(_LIBCPP_ABI_MICROSOFT)
+#   if !defined(_LIBCPP_ABI_VCRUNTIME)
+#       define _LIBPCPP_DEFINE_NEW_HANDLER
+#   endif
+#elif defined(LIBCXX_BUILDING_LIBCXXABI)
+    // nothing to do, we use the one from libc++abi
+#elif defined(LIBCXXRT)
+#   define _LIBPCPP_DEFINE_NEW_HANDLER
+#elif defined(__GLIBCXX__)
+    // nothing to do, we use the one from libstdc++/libsupc++
+#else
+#   define _LIBPCPP_DEFINE_NEW_HANDLER
+#endif
+
+#if defined(_LIBPCPP_DEFINE_NEW_HANDLER)
+
+namespace std { // purposefully not versioned
 
 static constinit std::new_handler __new_handler = nullptr;
 
@@ -24,3 +43,5 @@ get_new_handler() noexcept
 }
 
 } // namespace std
+
+#endif // _LIBPCPP_DEFINE_NEW_HANDLER
