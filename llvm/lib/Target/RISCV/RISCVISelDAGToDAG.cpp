@@ -3193,14 +3193,11 @@ bool RISCVDAGToDAGISel::doPeepholeMaskedRVV(SDNode *N) {
       TailPolicyOpIdx = getVecPolicyOpIdx(N, MaskedMCID);
       if (!(N->getConstantOperandVal(*TailPolicyOpIdx) &
             RISCVII::TAIL_AGNOSTIC)) {
-        // We can't use TA if the tie-operand is not IMPLICIT_DEF
-        if (!N->getOperand(0).isUndef()) {
-          // Keep the true-masked instruction when there is no unmasked TU
-          // instruction
-          if (I->UnmaskedTUPseudo == I->MaskedPseudo)
-            return false;
-          UseTUPseudo = true;
-        }
+        // Keep the true-masked instruction when there is no unmasked TU
+        // instruction
+        if (I->UnmaskedTUPseudo == I->MaskedPseudo)
+          return false;
+        UseTUPseudo = true;
       }
     }
   }
