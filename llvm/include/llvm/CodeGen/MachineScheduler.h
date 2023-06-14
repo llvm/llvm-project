@@ -815,7 +815,6 @@ public:
                          const ResourceSegments &c2) {
     return c1._Intervals == c2._Intervals;
   }
-#ifndef NDEBUG
   friend llvm::raw_ostream &operator<<(llvm::raw_ostream &os,
                                        const ResourceSegments &Segments) {
     os << "{ ";
@@ -824,7 +823,6 @@ public:
     os << "}\n";
     return os;
   }
-#endif
 };
 
 /// Each Scheduling boundary is associated with ready queues. It tracks the
