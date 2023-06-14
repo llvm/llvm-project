@@ -36,6 +36,7 @@ set(LIBCXX_SOURCES
   mutex_destructor.cpp
   new.cpp
   new_handler.cpp
+  new_helpers.cpp
   optional.cpp
   random_shuffle.cpp
   ryu/d2fixed.cpp
