@@ -21,7 +21,7 @@ MATH_MANGLE(cbrt)(float x)
              BUILTIN_FLDEXP_F32(ax, 24) : ax;
     }
 
-    float z = BUILTIN_EXP2_F32(0x1.555556p-2f * BUILTIN_LOG2_F32(ax));
+    float z = BUILTIN_AMDGPU_EXP2_F32(0x1.555556p-2f * BUILTIN_LOG2_F32(ax));
     z = MATH_MAD(MATH_MAD(MATH_FAST_RCP(z*z), -ax, z), -0x1.555556p-2f, z);
 
     if (!DAZ_OPT()) {

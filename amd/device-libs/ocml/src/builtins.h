@@ -150,7 +150,7 @@
 
 #define BUILTIN_COS_F32 __builtin_amdgcn_cosf
 
-#define BUILTIN_EXP2_F32 __builtin_exp2f
+#define BUILTIN_AMDGPU_EXP2_F32 __builtin_amdgcn_exp2f
 #define BUILTIN_EXP2_F16 __builtin_exp2f16
 
 #define BUILTIN_LOG2_F32 __builtin_log2f

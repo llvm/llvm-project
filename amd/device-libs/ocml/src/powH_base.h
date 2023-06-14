@@ -32,7 +32,7 @@ MATH_MANGLE(pow)(half x, half y)
     float fy = (float)y;
 #endif
 
-    float p = BUILTIN_EXP2_F32(fy * BUILTIN_LOG2_F32((float)ax));
+    float p = BUILTIN_AMDGPU_EXP2_F32(fy * BUILTIN_LOG2_F32((float)ax));
 
     // Classify y:
     //   inty = 0 means not an integer.

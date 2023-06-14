@@ -44,15 +44,15 @@ MATH_MANGLE(exp)(float x)
     if (DAZ_OPT()) {
         if (UNSAFE_MATH_OPT()) {
 #if defined COMPILING_EXP2
-            return BUILTIN_EXP2_F32(x);
+            return BUILTIN_AMDGPU_EXP2_F32(x);
 #elif defined COMPILING_EXP10
-            return BUILTIN_EXP2_F32(x * 0x1.a92000p+1f) * BUILTIN_EXP2_F32(x * 0x1.4f0978p-11f);
+            return BUILTIN_AMDGPU_EXP2_F32(x * 0x1.a92000p+1f) * BUILTIN_AMDGPU_EXP2_F32(x * 0x1.4f0978p-11f);
 #else
-            return BUILTIN_EXP2_F32(x * 0x1.715476p+0f);
+            return BUILTIN_AMDGPU_EXP2_F32(x * 0x1.715476p+0f);
 #endif
         } else {
 #if defined COMPILING_EXP2
-            return BUILTIN_EXP2_F32(x);
+            return BUILTIN_AMDGPU_EXP2_F32(x);
 #else
             float ph, pl;
 
@@ -82,7 +82,7 @@ MATH_MANGLE(exp)(float x)
 
             float e = BUILTIN_RINT_F32(ph);
             float a = ph - e + pl;
-            float r = BUILTIN_FLDEXP_F32(BUILTIN_EXP2_F32(a), (int)e);
+            float r = BUILTIN_FLDEXP_F32(BUILTIN_AMDGPU_EXP2_F32(a), (int)e);
 
 #if defined COMPILING_EXP
             r = x < -0x1.5d58a0p+6f ? 0.0f : r;
@@ -98,21 +98,21 @@ MATH_MANGLE(exp)(float x)
         if (UNSAFE_MATH_OPT()) {
 #if defined COMPILING_EXP2
             bool s = x < -0x1.f80000p+6f;
-            return BUILTIN_EXP2_F32(x + (s ? 0x1.0p+6f : 0.0f)) * (s ? 0x1.0p-64f : 1.0f);
+            return BUILTIN_AMDGPU_EXP2_F32(x + (s ? 0x1.0p+6f : 0.0f)) * (s ? 0x1.0p-64f : 1.0f);
 #elif defined COMPILING_EXP10
             bool s = x < -0x1.2f7030p+5f;
             x += s ? 0x1.0p+5f : 0.0f;
-            return BUILTIN_EXP2_F32(x * 0x1.a92000p+1f) *
-                   BUILTIN_EXP2_F32(x * 0x1.4f0978p-11f) *
+            return BUILTIN_AMDGPU_EXP2_F32(x * 0x1.a92000p+1f) *
+                   BUILTIN_AMDGPU_EXP2_F32(x * 0x1.4f0978p-11f) *
                    (s ? 0x1.9f623ep-107f : 1.0f);
 #else
             bool s = x < -0x1.5d58a0p+6f;
-            return BUILTIN_EXP2_F32((x + (s ? 0x1.0p+6f : 0.0f)) * 0x1.715476p+0f) * (s ? 0x1.969d48p-93f : 1.0f);
+            return BUILTIN_AMDGPU_EXP2_F32((x + (s ? 0x1.0p+6f : 0.0f)) * 0x1.715476p+0f) * (s ? 0x1.969d48p-93f : 1.0f);
 #endif
         } else {
 #if defined COMPILING_EXP2
             bool s = x < -0x1.f80000p+6f;
-            return BUILTIN_EXP2_F32(x + (s ? 0x1.0p+6f : 0.0f)) * (s ? 0x1.0p-64f : 1.0f);
+            return BUILTIN_AMDGPU_EXP2_F32(x + (s ? 0x1.0p+6f : 0.0f)) * (s ? 0x1.0p-64f : 1.0f);
 #else
             float ph, pl;
 
@@ -142,7 +142,7 @@ MATH_MANGLE(exp)(float x)
 
             float e = BUILTIN_RINT_F32(ph);
             float a = ph - e + pl;
-            float r = BUILTIN_FLDEXP_F32(BUILTIN_EXP2_F32(a), (int)e);
+            float r = BUILTIN_FLDEXP_F32(BUILTIN_AMDGPU_EXP2_F32(a), (int)e);
 
 #if defined COMPILING_EXP
             r = x < -0x1.9d1da0p+6f ? 0.0f : r;

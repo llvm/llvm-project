@@ -13,6 +13,6 @@ CONSTATTR half
 MATH_MANGLE(cosh)(half hx)
 {
     float x = (float)hx * 0x1.715476p+0f;
-    return (half)(0.5f * (BUILTIN_EXP2_F32(x) + BUILTIN_EXP2_F32(-x)));
+    return (half)(0.5f * (BUILTIN_AMDGPU_EXP2_F32(x) + BUILTIN_AMDGPU_EXP2_F32(-x)));
 }
 
