@@ -52,7 +52,7 @@
 namespace llvm {
 class raw_ostream;
 class ThreadPool;
-}
+} // namespace llvm
 
 namespace lldb_private {
 class Address;
@@ -377,19 +377,19 @@ public:
   bool IsHandlingEvents() const { return m_event_handler_thread.IsJoinable(); }
 
   Status RunREPL(lldb::LanguageType language, const char *repl_options);
-  
+
   /// Interruption in LLDB:
-  /// 
+  ///
   /// This is a voluntary interruption mechanism, not preemptive.  Parts of lldb
-  /// that do work that can be safely interrupted call 
+  /// that do work that can be safely interrupted call
   /// Debugger::InterruptRequested and if that returns true, they should return
   /// at a safe point, shortcutting the rest of the work they were to do.
-  ///  
-  /// lldb clients can both offer a CommandInterpreter (through 
+  ///
+  /// lldb clients can both offer a CommandInterpreter (through
   /// RunCommandInterpreter) and use the SB API's for their own purposes, so it
   /// is convenient to separate "interrupting the CommandInterpreter execution"
-  /// and interrupting the work it is doing with the SB API's.  So there are two 
-  /// ways to cause an interrupt: 
+  /// and interrupting the work it is doing with the SB API's.  So there are two
+  /// ways to cause an interrupt:
   ///   * CommandInterpreter::InterruptCommand: Interrupts the command currently
   ///     running in the command interpreter IOHandler thread
   ///   * Debugger::RequestInterrupt: Interrupts are active on anything but the
@@ -398,7 +398,6 @@ public:
   /// Since the two checks are mutually exclusive, however, it's also convenient
   /// to have just one function to check the interrupt state.
 
-
   /// Bump the "interrupt requested" count on the debugger to support
   /// cooperative interruption.  If this is non-zero, InterruptRequested will
   /// return true.  Interruptible operations are expected to query the
@@ -406,13 +405,13 @@ public:
   /// if it returns \b true.
   ///
   void RequestInterrupt();
-  
+
   /// Decrement the "interrupt requested" counter.
   void CancelInterruptRequest();
-  
+
   /// This is the correct way to query the state of Interruption.
-  /// If you are on the RunCommandInterpreter thread, it will check the 
-  /// command interpreter state, and if it is on another thread it will 
+  /// If you are on the RunCommandInterpreter thread, it will check the
+  /// command interpreter state, and if it is on another thread it will
   /// check the debugger Interrupt Request state.
   ///
   /// \return
@@ -574,13 +573,13 @@ protected:
   bool StartIOHandlerThread();
 
   void StopIOHandlerThread();
-  
+
   // Sets the IOHandler thread to the new_thread, and returns
   // the previous IOHandler thread.
   HostThread SetIOHandlerThread(HostThread &new_thread);
 
   void JoinIOHandlerThread();
-  
+
   bool IsIOHandlerThreadCurrentThread() const;
 
   lldb::thread_result_t IOHandlerThread();
