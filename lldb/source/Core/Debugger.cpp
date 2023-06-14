@@ -236,8 +236,10 @@ Status Debugger::SetPropertyValue(const ExecutionContext *exe_ctx,
       // use-color changed. Ping the prompt so it can reset the ansi terminal
       // codes.
       SetPrompt(GetPrompt());
-    } else if (property_path == g_debugger_properties[ePropertyUseSourceCache].name) {
-      // use-source-cache changed. Wipe out the cache contents if it was disabled.
+    } else if (property_path ==
+               g_debugger_properties[ePropertyUseSourceCache].name) {
+      // use-source-cache changed. Wipe out the cache contents if it was
+      // disabled.
       if (!GetUseSourceCache()) {
         m_source_file_cache.Clear();
       }
@@ -1707,7 +1709,7 @@ void Debugger::HandleProcessEvent(const EventSP &event_sp) {
 
     // Display running state changes first before any STDIO
     if (got_state_changed && !state_is_stopped) {
-      // This is a public stop which we are going to announce to the user, so 
+      // This is a public stop which we are going to announce to the user, so
       // we should force the most relevant frame selection here.
       Process::HandleProcessStateChangedEvent(event_sp, output_stream_sp.get(),
                                               SelectMostRelevantFrame,
