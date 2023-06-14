@@ -82,18 +82,36 @@ static unsigned getWFEndSize(const unsigned Opcode) {
 static unsigned getWFLastUseSize(const unsigned Opcode) {
   switch (Opcode) {
   case AMDGPU::SI_WATERFALL_LAST_USE_V1:
+  case AMDGPU::SI_WATERFALL_LAST_USE_V1_V:
     return 1;
   case AMDGPU::SI_WATERFALL_LAST_USE_V2:
+  case AMDGPU::SI_WATERFALL_LAST_USE_V2_V:
     return 2;
   case AMDGPU::SI_WATERFALL_LAST_USE_V4:
+  case AMDGPU::SI_WATERFALL_LAST_USE_V4_V:
     return 4;
   case AMDGPU::SI_WATERFALL_LAST_USE_V8:
+  case AMDGPU::SI_WATERFALL_LAST_USE_V8_V:
     return 8;
   default:
     break;
   }
 
   return 0; // Not SI_WATERFALL_LAST_USE_*
+}
+
+static bool isWFLastUseVGPR(const unsigned Opcode) {
+  switch (Opcode) {
+  case AMDGPU::SI_WATERFALL_LAST_USE_V1_V:
+  case AMDGPU::SI_WATERFALL_LAST_USE_V2_V:
+  case AMDGPU::SI_WATERFALL_LAST_USE_V4_V:
+  case AMDGPU::SI_WATERFALL_LAST_USE_V8_V:
+    return true;
+  default:
+    break;
+  }
+
+  return false;
 }
 
 static void readFirstLaneReg(MachineBasicBlock &MBB, MachineRegisterInfo *MRI,
@@ -218,6 +236,7 @@ private:
     const MachineRegisterInfo *MRI;
     Register TokReg; // This is always the token from the last begin intrinsic
     MachineInstr *Final;
+    bool hasVGPRLastUse;
 
     std::vector<MachineInstr *> BeginList;
     std::vector<MachineInstr *> RFLList;
@@ -232,7 +251,7 @@ private:
     WaterfallWorkitem() = default;
     WaterfallWorkitem(MachineInstr *_Begin, const SIInstrInfo *_TII,
                       MachineRegisterInfo *_MRI)
-        : TII(_TII), MRI(_MRI), Final(nullptr) {
+        : TII(_TII), MRI(_MRI), Final(nullptr), hasVGPRLastUse(false) {
 
       auto TokMO = TII->getNamedOperand(*_Begin, AMDGPU::OpName::tok_ret);
 
@@ -332,6 +351,8 @@ private:
           return true;
         } else if (getWFLastUseSize(Opcode)) {
           LastUseList.push_back(Cand);
+          if (isWFLastUseVGPR(Opcode))
+            hasVGPRLastUse = true;
           return true;
         } else {
           report_fatal_error("Unknown opcode, expected waterfall intrinsic");
@@ -423,8 +444,12 @@ bool SIInsertWaterfall::removeRedundantWaterfall(WaterfallWorkitem &Item) {
   }
 
   // Note: this test also returns true when there are NO RFL intrinsics, the
-  // case where a prior pass has removed all of them and the loop is now redundant
-  if (!Item.BeginList.size() || Removed == Item.RFLList.size()) {
+  // case where a prior pass has removed all of them and the loop is now
+  // redundant
+  // Also check for the special case where there are no RFL intrinsics, but
+  // there are some last.use with VGPR uses.
+  if (!Item.BeginList.size() ||
+      (Removed == Item.RFLList.size() && !Item.hasVGPRLastUse)) {
     // Removed all of the RFLs
     // We can remove the waterfall loop entirely
 
@@ -513,7 +538,7 @@ bool SIInsertWaterfall::processWaterfall(MachineBasicBlock &MBB) {
       continue;
     }
 
-    assert(Item.RFLList.size() &&
+    assert((Item.RFLList.size() || Item.hasVGPRLastUse) &&
            (Item.EndList.size() || Item.LastUseList.size()) &&
            "SI_WATERFALL* pseudo instruction group must have at least 1 of "
            "each type");

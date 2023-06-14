@@ -1011,10 +1011,14 @@ def SI_WATERFALL_END_V2 : SI_WATERFALL_END<VReg_64>;
 def SI_WATERFALL_END_V4 : SI_WATERFALL_END<VReg_128>;
 def SI_WATERFALL_END_V8 : SI_WATERFALL_END<VReg_256>;
 
-def SI_WATERFALL_LAST_USE_V1 : SI_WATERFALL_LAST_USE<SGPR_32>;
-def SI_WATERFALL_LAST_USE_V2 : SI_WATERFALL_LAST_USE<SReg_64>;
-def SI_WATERFALL_LAST_USE_V4 : SI_WATERFALL_LAST_USE<SGPR_128>;
-def SI_WATERFALL_LAST_USE_V8 : SI_WATERFALL_LAST_USE<SReg_256>;
+def SI_WATERFALL_LAST_USE_V1   : SI_WATERFALL_LAST_USE<SGPR_32>;
+def SI_WATERFALL_LAST_USE_V1_V : SI_WATERFALL_LAST_USE<VGPR_32>;
+def SI_WATERFALL_LAST_USE_V2   : SI_WATERFALL_LAST_USE<SReg_64>;
+def SI_WATERFALL_LAST_USE_V2_V : SI_WATERFALL_LAST_USE<VReg_64>;
+def SI_WATERFALL_LAST_USE_V4   : SI_WATERFALL_LAST_USE<SGPR_128>;
+def SI_WATERFALL_LAST_USE_V4_V : SI_WATERFALL_LAST_USE<SReg_128>;
+def SI_WATERFALL_LAST_USE_V8   : SI_WATERFALL_LAST_USE<SReg_256>;
+def SI_WATERFALL_LAST_USE_V8_V : SI_WATERFALL_LAST_USE<VReg_256>;
 
 //===----------------------------------------------------------------------===//
 // VOP1 Patterns
@@ -2049,6 +2053,10 @@ multiclass SI_WATERFALL_S_Pattern < ValueType svt, string VecSize> {
   def : GCNPat<
     (svt (int_amdgcn_waterfall_last_use i32:$tok, svt:$src)),
     (!cast<Instruction>("SI_WATERFALL_LAST_USE_"#VecSize) i32:$tok, svt:$src)
+  >;
+  def : GCNPat<
+    (svt (int_amdgcn_waterfall_last_use_vgpr i32:$tok, svt:$src)),
+    (!cast<Instruction>("SI_WATERFALL_LAST_USE_"#VecSize#"_V") i32:$tok, svt:$src)
   >;
 }
 
