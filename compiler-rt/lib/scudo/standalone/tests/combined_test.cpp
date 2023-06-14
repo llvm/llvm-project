@@ -641,6 +641,7 @@ SCUDO_TYPED_TEST(ScudoCombinedTest, ReleaseToOS) {
 
 SCUDO_TYPED_TEST(ScudoCombinedTest, OddEven) {
   auto *Allocator = this->Allocator.get();
+  Allocator->setOption(scudo::Option::MemtagTuning, M_MEMTAG_TUNING_BUFFER_OVERFLOW);
 
   if (!Allocator->useMemoryTaggingTestOnly())
     return;
