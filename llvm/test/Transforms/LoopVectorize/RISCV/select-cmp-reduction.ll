@@ -1,11 +1,11 @@
-; RUN: opt -opaque-pointers=0 -passes=loop-vectorize -force-vector-interleave=1 -force-vector-width=4 -S \
+; RUN: opt -passes=loop-vectorize -force-vector-interleave=1 -force-vector-width=4 -S \
 ; RUN:   < %s | FileCheck %s
-; RUN: opt -opaque-pointers=0 -passes=loop-vectorize -force-vector-interleave=1 -force-vector-width=4 \
+; RUN: opt -passes=loop-vectorize -force-vector-interleave=1 -force-vector-width=4 \
 ; RUN:   -scalable-vectorization=on -S < %s | FileCheck %s -check-prefix=SCALABLE
 
 target triple = "riscv64"
 
-define i32 @select_icmp(i32 %x, i32 %y, i32* nocapture readonly %c, i64 %n) #0 {
+define i32 @select_icmp(i32 %x, i32 %y, ptr nocapture readonly %c, i64 %n) #0 {
 ; CHECK-LABEL: @select_icmp
 ; CHECK:       vector.ph:
 ; CHECK-NEXT:    [[N_MOD_VF:%.*]] = urem i64 %n, 4
@@ -19,10 +19,9 @@ define i32 @select_icmp(i32 %x, i32 %y, i32* nocapture readonly %c, i64 %n) #0 {
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH:%.*]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[VEC_PHI:%.*]] = phi <4 x i32> [ zeroinitializer, [[VECTOR_PH]] ], [ [[TMP5:%.*]], [[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[TMP0:%.*]] = add i64 [[INDEX]], 0
-; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr inbounds i32, i32* [[C:%.*]], i64 [[TMP0]]
-; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr inbounds i32, i32* [[TMP1]], i32 0
-; CHECK-NEXT:    [[TMP3:%.*]] = bitcast i32* [[TMP2]] to <4 x i32>*
-; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <4 x i32>, <4 x i32>* [[TMP3]], align 4
+; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr inbounds i32, ptr [[C:%.*]], i64 [[TMP0]]
+; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr inbounds i32, ptr [[TMP1]], i32 0
+; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <4 x i32>, ptr [[TMP2]], align 4
 ; CHECK-NEXT:    [[TMP4:%.*]] = icmp slt <4 x i32> [[WIDE_LOAD]], [[BROADCAST_SPLAT]]
 ; CHECK-NEXT:    [[TMP5]] = select <4 x i1> [[TMP4]], <4 x i32> [[VEC_PHI]], <4 x i32> [[BROADCAST_SPLAT2]]
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 4
@@ -48,10 +47,9 @@ define i32 @select_icmp(i32 %x, i32 %y, i32* nocapture readonly %c, i64 %n) #0 {
 ; SCALABLE-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH:%.*]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
 ; SCALABLE-NEXT:    [[VEC_PHI:%.*]] = phi <vscale x 4 x i32> [ zeroinitializer, [[VECTOR_PH]] ], [ [[TMP9:%.*]], [[VECTOR_BODY]] ]
 ; SCALABLE-NEXT:    [[TMP4:%.*]] = add i64 [[INDEX]], 0
-; SCALABLE-NEXT:    [[TMP5:%.*]] = getelementptr inbounds i32, i32* [[C:%.*]], i64 [[TMP4]]
-; SCALABLE-NEXT:    [[TMP6:%.*]] = getelementptr inbounds i32, i32* [[TMP5]], i32 0
-; SCALABLE-NEXT:    [[TMP7:%.*]] = bitcast i32* [[TMP6]] to <vscale x 4 x i32>*
-; SCALABLE-NEXT:    [[WIDE_LOAD:%.*]] = load <vscale x 4 x i32>, <vscale x 4 x i32>* [[TMP7]], align 4
+; SCALABLE-NEXT:    [[TMP5:%.*]] = getelementptr inbounds i32, ptr [[C:%.*]], i64 [[TMP4]]
+; SCALABLE-NEXT:    [[TMP6:%.*]] = getelementptr inbounds i32, ptr [[TMP5]], i32 0
+; SCALABLE-NEXT:    [[WIDE_LOAD:%.*]] = load <vscale x 4 x i32>, ptr [[TMP6]], align 4
 ; SCALABLE-NEXT:    [[TMP8:%.*]] = icmp slt <vscale x 4 x i32> [[WIDE_LOAD]], [[BROADCAST_SPLAT]]
 ; SCALABLE-NEXT:    [[TMP9]] = select <vscale x 4 x i1> [[TMP8]], <vscale x 4 x i32> [[VEC_PHI]], <vscale x 4 x i32> [[BROADCAST_SPLAT2]]
 ; SCALABLE-NEXT:    [[TMP10:%.*]] = call i64 @llvm.vscale.i64()
@@ -70,8 +68,8 @@ entry:
 for.body:
   %indvars.iv = phi i64 [ 0, %entry ], [ %indvars.iv.next, %for.body ]
   %a = phi i32 [ 0, %entry], [ %cond, %for.body ]
-  %arrayidx = getelementptr inbounds i32, i32* %c, i64 %indvars.iv
-  %0 = load i32, i32* %arrayidx, align 4
+  %arrayidx = getelementptr inbounds i32, ptr %c, i64 %indvars.iv
+  %0 = load i32, ptr %arrayidx, align 4
   %cmp1 = icmp slt i32 %0, %x
   %cond = select i1 %cmp1, i32 %a, i32 %y
   %indvars.iv.next = add nuw nsw i64 %indvars.iv, 1
@@ -82,7 +80,7 @@ for.end:
   ret i32 %cond
 }
 
-define i32 @select_fcmp(float %x, i32 %y, float* nocapture readonly %c, i64 %n) #0 {
+define i32 @select_fcmp(float %x, i32 %y, ptr nocapture readonly %c, i64 %n) #0 {
 ; CHECK-LABEL: @select_fcmp
 ; CHECK:       vector.ph:
 ; CHECK-NEXT:    [[N_MOD_VF:%.*]] = urem i64 %n, 4
@@ -96,10 +94,9 @@ define i32 @select_fcmp(float %x, i32 %y, float* nocapture readonly %c, i64 %n) 
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH:%.*]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[VEC_PHI:%.*]] = phi <4 x i32> [ zeroinitializer, [[VECTOR_PH]] ], [ [[TMP5:%.*]], [[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[TMP0:%.*]] = add i64 [[INDEX]], 0
-; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr inbounds float, float* [[C:%.*]], i64 [[TMP0]]
-; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr inbounds float, float* [[TMP1]], i32 0
-; CHECK-NEXT:    [[TMP3:%.*]] = bitcast float* [[TMP2]] to <4 x float>*
-; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <4 x float>, <4 x float>* [[TMP3]], align 4
+; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr inbounds float, ptr [[C:%.*]], i64 [[TMP0]]
+; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr inbounds float, ptr [[TMP1]], i32 0
+; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <4 x float>, ptr [[TMP2]], align 4
 ; CHECK-NEXT:    [[TMP4:%.*]] = fcmp fast olt <4 x float> [[WIDE_LOAD]], [[BROADCAST_SPLAT]]
 ; CHECK-NEXT:    [[TMP5]] = select <4 x i1> [[TMP4]], <4 x i32> [[VEC_PHI]], <4 x i32> [[BROADCAST_SPLAT2]]
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 4
@@ -125,10 +122,9 @@ define i32 @select_fcmp(float %x, i32 %y, float* nocapture readonly %c, i64 %n) 
 ; SCALABLE-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH:%.*]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
 ; SCALABLE-NEXT:    [[VEC_PHI:%.*]] = phi <vscale x 4 x i32> [ zeroinitializer, [[VECTOR_PH]] ], [ [[TMP9:%.*]], [[VECTOR_BODY]] ]
 ; SCALABLE-NEXT:    [[TMP4:%.*]] = add i64 [[INDEX]], 0
-; SCALABLE-NEXT:    [[TMP5:%.*]] = getelementptr inbounds float, float* [[C:%.*]], i64 [[TMP4]]
-; SCALABLE-NEXT:    [[TMP6:%.*]] = getelementptr inbounds float, float* [[TMP5]], i32 0
-; SCALABLE-NEXT:    [[TMP7:%.*]] = bitcast float* [[TMP6]] to <vscale x 4 x float>*
-; SCALABLE-NEXT:    [[WIDE_LOAD:%.*]] = load <vscale x 4 x float>, <vscale x 4 x float>* [[TMP7]], align 4
+; SCALABLE-NEXT:    [[TMP5:%.*]] = getelementptr inbounds float, ptr [[C:%.*]], i64 [[TMP4]]
+; SCALABLE-NEXT:    [[TMP6:%.*]] = getelementptr inbounds float, ptr [[TMP5]], i32 0
+; SCALABLE-NEXT:    [[WIDE_LOAD:%.*]] = load <vscale x 4 x float>, ptr [[TMP6]], align 4
 ; SCALABLE-NEXT:    [[TMP8:%.*]] = fcmp fast olt <vscale x 4 x float> [[WIDE_LOAD]], [[BROADCAST_SPLAT]]
 ; SCALABLE-NEXT:    [[TMP9]] = select <vscale x 4 x i1> [[TMP8]], <vscale x 4 x i32> [[VEC_PHI]], <vscale x 4 x i32> [[BROADCAST_SPLAT2]]
 ; SCALABLE-NEXT:    [[TMP10:%.*]] = call i64 @llvm.vscale.i64()
@@ -147,8 +143,8 @@ entry:
 for.body:
   %indvars.iv = phi i64 [ 0, %entry ], [ %indvars.iv.next, %for.body ]
   %a = phi i32 [ 0, %entry], [ %cond, %for.body ]
-  %arrayidx = getelementptr inbounds float, float* %c, i64 %indvars.iv
-  %0 = load float, float* %arrayidx, align 4
+  %arrayidx = getelementptr inbounds float, ptr %c, i64 %indvars.iv
+  %0 = load float, ptr %arrayidx, align 4
   %cmp1 = fcmp fast olt float %0, %x
   %cond = select i1 %cmp1, i32 %a, i32 %y
   %indvars.iv.next = add nuw nsw i64 %indvars.iv, 1
@@ -159,7 +155,7 @@ for.end:
   ret i32 %cond
 }
 
-define i32 @select_const_i32_from_icmp(i32* nocapture readonly %v, i64 %n) #0 {
+define i32 @select_const_i32_from_icmp(ptr nocapture readonly %v, i64 %n) #0 {
 ; CHECK-LABEL: @select_const_i32_from_icmp
 ; CHECK:       vector.ph:
 ; CHECK-NEXT:    [[N_MOD_VF:%.*]] = urem i64 %n, 4
@@ -169,10 +165,9 @@ define i32 @select_const_i32_from_icmp(i32* nocapture readonly %v, i64 %n) #0 {
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH:%.*]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[VEC_PHI:%.*]] = phi <4 x i32> [ <i32 3, i32 3, i32 3, i32 3>, [[VECTOR_PH]] ], [ [[TMP5:%.*]], [[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[TMP0:%.*]] = add i64 [[INDEX]], 0
-; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr inbounds i32, i32* [[V:%.*]], i64 [[TMP0]]
-; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr inbounds i32, i32* [[TMP1]], i32 0
-; CHECK-NEXT:    [[TMP3:%.*]] = bitcast i32* [[TMP2]] to <4 x i32>*
-; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <4 x i32>, <4 x i32>* [[TMP3]], align 4
+; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr inbounds i32, ptr [[V:%.*]], i64 [[TMP0]]
+; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr inbounds i32, ptr [[TMP1]], i32 0
+; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <4 x i32>, ptr [[TMP2]], align 4
 ; CHECK-NEXT:    [[TMP4:%.*]] = icmp eq <4 x i32> [[WIDE_LOAD]], <i32 3, i32 3, i32 3, i32 3>
 ; CHECK-NEXT:    [[TMP5]] = select <4 x i1> [[TMP4]], <4 x i32> [[VEC_PHI]], <4 x i32> <i32 7, i32 7, i32 7, i32 7>
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 4
@@ -194,10 +189,9 @@ define i32 @select_const_i32_from_icmp(i32* nocapture readonly %v, i64 %n) #0 {
 ; SCALABLE-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH:%.*]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
 ; SCALABLE-NEXT:    [[VEC_PHI:%.*]] = phi <vscale x 4 x i32> [ shufflevector (<vscale x 4 x i32> insertelement (<vscale x 4 x i32> poison, i32 3, i64 0), <vscale x 4 x i32> poison, <vscale x 4 x i32> zeroinitializer), [[VECTOR_PH]] ], [ [[TMP9:%.*]], [[VECTOR_BODY]] ]
 ; SCALABLE-NEXT:    [[TMP4:%.*]] = add i64 [[INDEX]], 0
-; SCALABLE-NEXT:    [[TMP5:%.*]] = getelementptr inbounds i32, i32* [[V:%.*]], i64 [[TMP4]]
-; SCALABLE-NEXT:    [[TMP6:%.*]] = getelementptr inbounds i32, i32* [[TMP5]], i32 0
-; SCALABLE-NEXT:    [[TMP7:%.*]] = bitcast i32* [[TMP6]] to <vscale x 4 x i32>*
-; SCALABLE-NEXT:    [[WIDE_LOAD:%.*]] = load <vscale x 4 x i32>, <vscale x 4 x i32>* [[TMP7]], align 4
+; SCALABLE-NEXT:    [[TMP5:%.*]] = getelementptr inbounds i32, ptr [[V:%.*]], i64 [[TMP4]]
+; SCALABLE-NEXT:    [[TMP6:%.*]] = getelementptr inbounds i32, ptr [[TMP5]], i32 0
+; SCALABLE-NEXT:    [[WIDE_LOAD:%.*]] = load <vscale x 4 x i32>, ptr [[TMP6]], align 4
 ; SCALABLE-NEXT:    [[TMP8:%.*]] = icmp eq <vscale x 4 x i32> [[WIDE_LOAD]], shufflevector (<vscale x 4 x i32> insertelement (<vscale x 4 x i32> poison, i32 3, i64 0), <vscale x 4 x i32> poison, <vscale x 4 x i32> zeroinitializer)
 ; SCALABLE-NEXT:    [[TMP9]] = select <vscale x 4 x i1> [[TMP8]], <vscale x 4 x i32> [[VEC_PHI]], <vscale x 4 x i32> shufflevector (<vscale x 4 x i32> insertelement (<vscale x 4 x i32> poison, i32 7, i64 0), <vscale x 4 x i32> poison, <vscale x 4 x i32> zeroinitializer)
 ; SCALABLE-NEXT:    [[TMP10:%.*]] = call i64 @llvm.vscale.i64()
@@ -216,8 +210,8 @@ entry:
 for.body:                                      ; preds = %entry, %for.body
   %0 = phi i64 [ 0, %entry ], [ %6, %for.body ]
   %1 = phi i32 [ 3, %entry ], [ %5, %for.body ]
-  %2 = getelementptr inbounds i32, i32* %v, i64 %0
-  %3 = load i32, i32* %2, align 4
+  %2 = getelementptr inbounds i32, ptr %v, i64 %0
+  %3 = load i32, ptr %2, align 4
   %4 = icmp eq i32 %3, 3
   %5 = select i1 %4, i32 %1, i32 7
   %6 = add nuw nsw i64 %0, 1
@@ -228,7 +222,7 @@ exit:                                     ; preds = %for.body
   ret i32 %5
 }
 
-define i32 @select_i32_from_icmp(i32* nocapture readonly %v, i32 %a, i32 %b, i64 %n) #0 {
+define i32 @select_i32_from_icmp(ptr nocapture readonly %v, i32 %a, i32 %b, i64 %n) #0 {
 ; CHECK-LABEL: @select_i32_from_icmp
 ; CHECK:       vector.ph:
 ; CHECK-NEXT:    [[N_MOD_VF:%.*]] = urem i64 %n, 4
@@ -242,10 +236,9 @@ define i32 @select_i32_from_icmp(i32* nocapture readonly %v, i32 %a, i32 %b, i64
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH:%.*]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[VEC_PHI:%.*]] = phi <4 x i32> [ [[MINMAX_IDENT_SPLAT]], [[VECTOR_PH]] ], [ [[TMP5:%.*]], [[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[TMP0:%.*]] = add i64 [[INDEX]], 0
-; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr inbounds i32, i32* [[V:%.*]], i64 [[TMP0]]
-; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr inbounds i32, i32* [[TMP1]], i32 0
-; CHECK-NEXT:    [[TMP3:%.*]] = bitcast i32* [[TMP2]] to <4 x i32>*
-; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <4 x i32>, <4 x i32>* [[TMP3]], align 4
+; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr inbounds i32, ptr [[V:%.*]], i64 [[TMP0]]
+; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr inbounds i32, ptr [[TMP1]], i32 0
+; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <4 x i32>, ptr [[TMP2]], align 4
 ; CHECK-NEXT:    [[TMP4:%.*]] = icmp eq <4 x i32> [[WIDE_LOAD]], <i32 3, i32 3, i32 3, i32 3>
 ; CHECK-NEXT:    [[TMP5]] = select <4 x i1> [[TMP4]], <4 x i32> [[VEC_PHI]], <4 x i32> [[BROADCAST_SPLAT]]
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 4
@@ -273,10 +266,9 @@ define i32 @select_i32_from_icmp(i32* nocapture readonly %v, i32 %a, i32 %b, i64
 ; SCALABLE-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH:%.*]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
 ; SCALABLE-NEXT:    [[VEC_PHI:%.*]] = phi <vscale x 4 x i32> [ [[MINMAX_IDENT_SPLAT]], [[VECTOR_PH]] ], [ [[TMP9:%.*]], [[VECTOR_BODY]] ]
 ; SCALABLE-NEXT:    [[TMP4:%.*]] = add i64 [[INDEX]], 0
-; SCALABLE-NEXT:    [[TMP5:%.*]] = getelementptr inbounds i32, i32* [[V:%.*]], i64 [[TMP4]]
-; SCALABLE-NEXT:    [[TMP6:%.*]] = getelementptr inbounds i32, i32* [[TMP5]], i32 0
-; SCALABLE-NEXT:    [[TMP7:%.*]] = bitcast i32* [[TMP6]] to <vscale x 4 x i32>*
-; SCALABLE-NEXT:    [[WIDE_LOAD:%.*]] = load <vscale x 4 x i32>, <vscale x 4 x i32>* [[TMP7]], align 4
+; SCALABLE-NEXT:    [[TMP5:%.*]] = getelementptr inbounds i32, ptr [[V:%.*]], i64 [[TMP4]]
+; SCALABLE-NEXT:    [[TMP6:%.*]] = getelementptr inbounds i32, ptr [[TMP5]], i32 0
+; SCALABLE-NEXT:    [[WIDE_LOAD:%.*]] = load <vscale x 4 x i32>, ptr [[TMP6]], align 4
 ; SCALABLE-NEXT:    [[TMP8:%.*]] = icmp eq <vscale x 4 x i32> [[WIDE_LOAD]], shufflevector (<vscale x 4 x i32> insertelement (<vscale x 4 x i32> poison, i32 3, i64 0), <vscale x 4 x i32> poison, <vscale x 4 x i32> zeroinitializer)
 ; SCALABLE-NEXT:    [[TMP9]] = select <vscale x 4 x i1> [[TMP8]], <vscale x 4 x i32> [[VEC_PHI]], <vscale x 4 x i32> [[BROADCAST_SPLAT]]
 ; SCALABLE-NEXT:    [[TMP10:%.*]] = call i64 @llvm.vscale.i64()
@@ -297,8 +289,8 @@ entry:
 for.body:                                      ; preds = %entry, %for.body
   %0 = phi i64 [ 0, %entry ], [ %6, %for.body ]
   %1 = phi i32 [ %a, %entry ], [ %5, %for.body ]
-  %2 = getelementptr inbounds i32, i32* %v, i64 %0
-  %3 = load i32, i32* %2, align 4
+  %2 = getelementptr inbounds i32, ptr %v, i64 %0
+  %3 = load i32, ptr %2, align 4
   %4 = icmp eq i32 %3, 3
   %5 = select i1 %4, i32 %1, i32 %b
   %6 = add nuw nsw i64 %0, 1
@@ -309,7 +301,7 @@ exit:                                     ; preds = %for.body
   ret i32 %5
 }
 
-define i32 @select_const_i32_from_fcmp(float* nocapture readonly %v, i64 %n) #0 {
+define i32 @select_const_i32_from_fcmp(ptr nocapture readonly %v, i64 %n) #0 {
 ; CHECK-LABEL: @select_const_i32_from_fcmp
 ; CHECK:       vector.ph:
 ; CHECK-NEXT:    [[N_MOD_VF:%.*]] = urem i64 %n, 4
@@ -319,10 +311,9 @@ define i32 @select_const_i32_from_fcmp(float* nocapture readonly %v, i64 %n) #0 
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH:%.*]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[VEC_PHI:%.*]] = phi <4 x i32> [ <i32 2, i32 2, i32 2, i32 2>, [[VECTOR_PH]] ], [ [[TMP5:%.*]], [[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[TMP0:%.*]] = add i64 [[INDEX]], 0
-; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr inbounds float, float* [[V:%.*]], i64 [[TMP0]]
-; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr inbounds float, float* [[TMP1]], i32 0
-; CHECK-NEXT:    [[TMP3:%.*]] = bitcast float* [[TMP2]] to <4 x float>*
-; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <4 x float>, <4 x float>* [[TMP3]], align 4
+; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr inbounds float, ptr [[V:%.*]], i64 [[TMP0]]
+; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr inbounds float, ptr [[TMP1]], i32 0
+; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <4 x float>, ptr [[TMP2]], align 4
 ; CHECK-NEXT:    [[TMP4:%.*]] = fcmp fast ueq <4 x float> [[WIDE_LOAD]], <float 3.000000e+00, float 3.000000e+00, float 3.000000e+00, float 3.000000e+00>
 ; CHECK-NEXT:    [[TMP5]] = select <4 x i1> [[TMP4]], <4 x i32> [[VEC_PHI]], <4 x i32> <i32 1, i32 1, i32 1, i32 1>
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 4
@@ -344,10 +335,9 @@ define i32 @select_const_i32_from_fcmp(float* nocapture readonly %v, i64 %n) #0 
 ; SCALABLE-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH:%.*]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
 ; SCALABLE-NEXT:    [[VEC_PHI:%.*]] = phi <vscale x 4 x i32> [ shufflevector (<vscale x 4 x i32> insertelement (<vscale x 4 x i32> poison, i32 2, i64 0), <vscale x 4 x i32> poison, <vscale x 4 x i32> zeroinitializer), [[VECTOR_PH]] ], [ [[TMP9:%.*]], [[VECTOR_BODY]] ]
 ; SCALABLE-NEXT:    [[TMP4:%.*]] = add i64 [[INDEX]], 0
-; SCALABLE-NEXT:    [[TMP5:%.*]] = getelementptr inbounds float, float* [[V:%.*]], i64 [[TMP4]]
-; SCALABLE-NEXT:    [[TMP6:%.*]] = getelementptr inbounds float, float* [[TMP5]], i32 0
-; SCALABLE-NEXT:    [[TMP7:%.*]] = bitcast float* [[TMP6]] to <vscale x 4 x float>*
-; SCALABLE-NEXT:    [[WIDE_LOAD:%.*]] = load <vscale x 4 x float>, <vscale x 4 x float>* [[TMP7]], align 4
+; SCALABLE-NEXT:    [[TMP5:%.*]] = getelementptr inbounds float, ptr [[V:%.*]], i64 [[TMP4]]
+; SCALABLE-NEXT:    [[TMP6:%.*]] = getelementptr inbounds float, ptr [[TMP5]], i32 0
+; SCALABLE-NEXT:    [[WIDE_LOAD:%.*]] = load <vscale x 4 x float>, ptr [[TMP6]], align 4
 ; SCALABLE-NEXT:    [[TMP8:%.*]] = fcmp fast ueq <vscale x 4 x float> [[WIDE_LOAD]], shufflevector (<vscale x 4 x float> insertelement (<vscale x 4 x float> poison, float 3.000000e+00, i64 0), <vscale x 4 x float> poison, <vscale x 4 x i32> zeroinitializer)
 ; SCALABLE-NEXT:    [[TMP9]] = select <vscale x 4 x i1> [[TMP8]], <vscale x 4 x i32> [[VEC_PHI]], <vscale x 4 x i32> shufflevector (<vscale x 4 x i32> insertelement (<vscale x 4 x i32> poison, i32 1, i64 0), <vscale x 4 x i32> poison, <vscale x 4 x i32> zeroinitializer)
 ; SCALABLE-NEXT:    [[TMP10:%.*]] = call i64 @llvm.vscale.i64()
@@ -366,8 +356,8 @@ entry:
 for.body:                                      ; preds = %entry, %for.body
   %0 = phi i64 [ 0, %entry ], [ %6, %for.body ]
   %1 = phi i32 [ 2, %entry ], [ %5, %for.body ]
-  %2 = getelementptr inbounds float, float* %v, i64 %0
-  %3 = load float, float* %2, align 4
+  %2 = getelementptr inbounds float, ptr %v, i64 %0
+  %3 = load float, ptr %2, align 4
   %4 = fcmp fast ueq float %3, 3.0
   %5 = select i1 %4, i32 %1, i32 1
   %6 = add nuw nsw i64 %0, 1
@@ -378,7 +368,7 @@ exit:                                     ; preds = %for.body
   ret i32 %5
 }
 
-define float @select_const_f32_from_icmp(i32* nocapture readonly %v, i64 %n) #0 {
+define float @select_const_f32_from_icmp(ptr nocapture readonly %v, i64 %n) #0 {
 ; CHECK-LABEL: @select_const_f32_from_icmp
 ; CHECK-NOT: vector.body
 ;
@@ -391,8 +381,8 @@ entry:
 for.body:                                      ; preds = %entry, %for.body
   %0 = phi i64 [ 0, %entry ], [ %6, %for.body ]
   %1 = phi fast float [ 3.0, %entry ], [ %5, %for.body ]
-  %2 = getelementptr inbounds i32, i32* %v, i64 %0
-  %3 = load i32, i32* %2, align 4
+  %2 = getelementptr inbounds i32, ptr %v, i64 %0
+  %3 = load i32, ptr %2, align 4
   %4 = icmp eq i32 %3, 3
   %5 = select fast i1 %4, float %1, float 7.0
   %6 = add nuw nsw i64 %0, 1
@@ -403,7 +393,7 @@ exit:                                     ; preds = %for.body
   ret float %5
 }
 
-define i32 @pred_select_const_i32_from_icmp(i32* noalias nocapture readonly %src1, i32* noalias nocapture readonly %src2, i64 %n) #0 {
+define i32 @pred_select_const_i32_from_icmp(ptr noalias nocapture readonly %src1, ptr noalias nocapture readonly %src2, i64 %n) #0 {
 ; CHECK-LABEL: @pred_select_const_i32_from_icmp
 ; CHECK:       vector.ph:
 ; CHECK-NEXT:    [[N_MOD_VF:%.*]] = urem i64 %n, 4
@@ -413,15 +403,13 @@ define i32 @pred_select_const_i32_from_icmp(i32* noalias nocapture readonly %src
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH:%.*]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[VEC_PHI:%.*]] = phi <4 x i32> [ zeroinitializer, [[VECTOR_PH]] ], [ [[PREDPHI:%.*]], [[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[TMP0:%.*]] = add i64 [[INDEX]], 0
-; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr inbounds i32, i32* [[SRC1:%.*]], i64 [[TMP0]]
-; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr inbounds i32, i32* [[TMP1]], i32 0
-; CHECK-NEXT:    [[TMP3:%.*]] = bitcast i32* [[TMP2]] to <4 x i32>*
-; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <4 x i32>, <4 x i32>* [[TMP3]], align 4
+; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr inbounds i32, ptr [[SRC1:%.*]], i64 [[TMP0]]
+; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr inbounds i32, ptr [[TMP1]], i32 0
+; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <4 x i32>, ptr [[TMP2]], align 4
 ; CHECK-NEXT:    [[TMP4:%.*]] = icmp sgt <4 x i32> [[WIDE_LOAD]], <i32 35, i32 35, i32 35, i32 35>
-; CHECK-NEXT:    [[TMP5:%.*]] = getelementptr i32, i32* [[SRC2:%.*]], i64 [[TMP0]]
-; CHECK-NEXT:    [[TMP6:%.*]] = getelementptr i32, i32* [[TMP5]], i32 0
-; CHECK-NEXT:    [[TMP7:%.*]] = bitcast i32* [[TMP6]] to <4 x i32>*
-; CHECK-NEXT:    [[WIDE_MASKED_LOAD:%.*]] = call <4 x i32> @llvm.masked.load.v4i32.p0v4i32(<4 x i32>* [[TMP7]], i32 4, <4 x i1> [[TMP4]], <4 x i32> poison)
+; CHECK-NEXT:    [[TMP5:%.*]] = getelementptr i32, ptr [[SRC2:%.*]], i64 [[TMP0]]
+; CHECK-NEXT:    [[TMP6:%.*]] = getelementptr i32, ptr [[TMP5]], i32 0
+; CHECK-NEXT:    [[WIDE_MASKED_LOAD:%.*]] = call <4 x i32> @llvm.masked.load.v4i32.p0(ptr [[TMP6]], i32 4, <4 x i1> [[TMP4]], <4 x i32> poison)
 ; CHECK-NEXT:    [[TMP8:%.*]] = icmp eq <4 x i32> [[WIDE_MASKED_LOAD]], <i32 2, i32 2, i32 2, i32 2>
 ; CHECK-NEXT:    [[TMP9:%.*]] = select <4 x i1> [[TMP8]], <4 x i32> <i32 1, i32 1, i32 1, i32 1>, <4 x i32> [[VEC_PHI]]
 ; CHECK-NEXT:    [[TMP10:%.*]] = xor <4 x i1> [[TMP4]], <i1 true, i1 true, i1 true, i1 true>
@@ -445,15 +433,13 @@ define i32 @pred_select_const_i32_from_icmp(i32* noalias nocapture readonly %src
 ; SCALABLE-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH:%.*]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
 ; SCALABLE-NEXT:    [[VEC_PHI:%.*]] = phi <vscale x 4 x i32> [ zeroinitializer, [[VECTOR_PH]] ], [ [[PREDPHI:%.*]], [[VECTOR_BODY]] ]
 ; SCALABLE-NEXT:    [[TMP4:%.*]] = add i64 [[INDEX]], 0
-; SCALABLE-NEXT:    [[TMP5:%.*]] = getelementptr inbounds i32, i32* [[SRC1:%.*]], i64 [[TMP4]]
-; SCALABLE-NEXT:    [[TMP6:%.*]] = getelementptr inbounds i32, i32* [[TMP5]], i32 0
-; SCALABLE-NEXT:    [[TMP7:%.*]] = bitcast i32* [[TMP6]] to <vscale x 4 x i32>*
-; SCALABLE-NEXT:    [[WIDE_LOAD:%.*]] = load <vscale x 4 x i32>, <vscale x 4 x i32>* [[TMP7]], align 4
+; SCALABLE-NEXT:    [[TMP5:%.*]] = getelementptr inbounds i32, ptr [[SRC1:%.*]], i64 [[TMP4]]
+; SCALABLE-NEXT:    [[TMP6:%.*]] = getelementptr inbounds i32, ptr [[TMP5]], i32 0
+; SCALABLE-NEXT:    [[WIDE_LOAD:%.*]] = load <vscale x 4 x i32>, ptr [[TMP6]], align 4
 ; SCALABLE-NEXT:    [[TMP8:%.*]] = icmp sgt <vscale x 4 x i32> [[WIDE_LOAD]], shufflevector (<vscale x 4 x i32> insertelement (<vscale x 4 x i32> poison, i32 35, i64 0), <vscale x 4 x i32> poison, <vscale x 4 x i32> zeroinitializer)
-; SCALABLE-NEXT:    [[TMP9:%.*]] = getelementptr i32, i32* [[SRC2:%.*]], i64 [[TMP4]]
-; SCALABLE-NEXT:    [[TMP10:%.*]] = getelementptr i32, i32* [[TMP9]], i32 0
-; SCALABLE-NEXT:    [[TMP11:%.*]] = bitcast i32* [[TMP10]] to <vscale x 4 x i32>*
-; SCALABLE-NEXT:    [[WIDE_MASKED_LOAD:%.*]] = call <vscale x 4 x i32> @llvm.masked.load.nxv4i32.p0nxv4i32(<vscale x 4 x i32>* [[TMP11]], i32 4, <vscale x 4 x i1> [[TMP8]], <vscale x 4 x i32> poison)
+; SCALABLE-NEXT:    [[TMP9:%.*]] = getelementptr i32, ptr [[SRC2:%.*]], i64 [[TMP4]]
+; SCALABLE-NEXT:    [[TMP10:%.*]] = getelementptr i32, ptr [[TMP9]], i32 0
+; SCALABLE-NEXT:    [[WIDE_MASKED_LOAD:%.*]] = call <vscale x 4 x i32> @llvm.masked.load.nxv4i32.p0(ptr [[TMP10]], i32 4, <vscale x 4 x i1> [[TMP8]], <vscale x 4 x i32> poison)
 ; SCALABLE-NEXT:    [[TMP12:%.*]] = icmp eq <vscale x 4 x i32> [[WIDE_MASKED_LOAD]], shufflevector (<vscale x 4 x i32> insertelement (<vscale x 4 x i32> poison, i32 2, i64 0), <vscale x 4 x i32> poison, <vscale x 4 x i32> zeroinitializer)
 ; SCALABLE-NEXT:    [[TMP13:%.*]] = select <vscale x 4 x i1> [[TMP12]], <vscale x 4 x i32> shufflevector (<vscale x 4 x i32> insertelement (<vscale x 4 x i32> poison, i32 1, i64 0), <vscale x 4 x i32> poison, <vscale x 4 x i32> zeroinitializer), <vscale x 4 x i32> [[VEC_PHI]]
 ; SCALABLE-NEXT:    [[TMP14:%.*]] = xor <vscale x 4 x i1> [[TMP8]], shufflevector (<vscale x 4 x i1> insertelement (<vscale x 4 x i1> poison, i1 true, i64 0), <vscale x 4 x i1> poison, <vscale x 4 x i32> zeroinitializer)
@@ -474,14 +460,14 @@ entry:
 for.body:                                         ; preds = %entry, %for.inc
   %i.013 = phi i64 [ %inc, %for.inc ], [ 0, %entry ]
   %r.012 = phi i32 [ %r.1, %for.inc ], [ 0, %entry ]
-  %arrayidx = getelementptr inbounds i32, i32* %src1, i64 %i.013
-  %0 = load i32, i32* %arrayidx, align 4
+  %arrayidx = getelementptr inbounds i32, ptr %src1, i64 %i.013
+  %0 = load i32, ptr %arrayidx, align 4
   %cmp1 = icmp sgt i32 %0, 35
   br i1 %cmp1, label %if.then, label %for.inc
 
 if.then:                                          ; preds = %for.body
-  %arrayidx2 = getelementptr inbounds i32, i32* %src2, i64 %i.013
-  %1 = load i32, i32* %arrayidx2, align 4
+  %arrayidx2 = getelementptr inbounds i32, ptr %src2, i64 %i.013
+  %1 = load i32, ptr %arrayidx2, align 4
   %cmp3 = icmp eq i32 %1, 2
   %spec.select = select i1 %cmp3, i32 1, i32 %r.012
   br label %for.inc

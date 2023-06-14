@@ -759,7 +759,7 @@ SIPeepholeSDWA::matchSDWAOperand(MachineInstr &MI) {
       break;
 
     SdwaSel DstSel = static_cast<SdwaSel>(
-      TII->getNamedImmOperand(*SDWAInst, AMDGPU::OpName::dst_sel));;
+        TII->getNamedImmOperand(*SDWAInst, AMDGPU::OpName::dst_sel));
     SdwaSel OtherDstSel = static_cast<SdwaSel>(
       TII->getNamedImmOperand(*OtherInst, AMDGPU::OpName::dst_sel));
 

@@ -8,6 +8,7 @@
 
 #include "src/math/sinhf.h"
 #include "src/__support/FPUtil/FPBits.h"
+#include "src/__support/FPUtil/rounding_mode.h"
 #include "src/__support/macros/optimization.h" // LIBC_UNLIKELY
 #include "src/math/generic/explogxf.h"
 
@@ -33,7 +34,7 @@ LLVM_LIBC_FUNCTION(float, sinhf, (float x)) {
     if (xbits.is_inf())
       return x;
 
-    int rounding = fputil::get_round();
+    int rounding = fputil::quick_get_round();
     if (sign) {
       if (LIBC_UNLIKELY(rounding == FE_UPWARD || rounding == FE_TOWARDZERO))
         return FPBits(FPBits::MAX_NORMAL | FPBits::FloatProp::SIGN_MASK)
@@ -53,7 +54,7 @@ LLVM_LIBC_FUNCTION(float, sinhf, (float x)) {
   if (LIBC_UNLIKELY(x_abs <= 0x3da0'0000U)) {
     // |x| = 0.0005589424981735646724700927734375
     if (LIBC_UNLIKELY(x_abs == 0x3a12'85ffU)) {
-      if (fputil::get_round() == FE_TONEAREST)
+      if (fputil::fenv_is_round_to_nearest())
         return x;
     }
 

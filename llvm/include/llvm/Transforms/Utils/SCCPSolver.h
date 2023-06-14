@@ -130,7 +130,7 @@ public:
 
   std::vector<ValueLatticeElement> getStructLatticeValueFor(Value *V) const;
 
-  void removeLatticeValueFor(Value *V);
+  void moveLatticeValue(Value *From, Value *To);
 
   /// Invalidate the Lattice Value of \p Call and its users after specializing
   /// the call. Then recompute it.
@@ -184,7 +184,6 @@ public:
   void visitCall(CallInst &I);
 
   bool simplifyInstsInBlock(BasicBlock &BB,
-                            SmallPtrSetImpl<Value *> &InsertedValues,
                             Statistic &InstRemovedStat,
                             Statistic &InstReplacedStat);
 

@@ -16,11 +16,12 @@
 
 #include <stdint.h>
 
-using __llvm_libc::testing::tlog;
-
 namespace __llvm_libc {
-namespace printf_core {
 namespace testing {
+
+using printf_core::FormatFlags;
+using printf_core::FormatSection;
+using printf_core::LengthModifier;
 
 bool FormatSectionMatcher::match(FormatSection actualValue) {
   actual = actualValue;
@@ -93,5 +94,4 @@ void FormatSectionMatcher::explainError() {
 }
 
 } // namespace testing
-} // namespace printf_core
 } // namespace __llvm_libc

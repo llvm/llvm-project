@@ -59,6 +59,15 @@ void Thread::Init(uptr stack_buffer_start, uptr stack_buffer_size,
   InitStackAndTls(state);
   dtls_ = DTLS_Get();
   AllocatorThreadStart(allocator_cache());
+
+  if (flags()->verbose_threads) {
+    if (IsMainThread()) {
+      Printf("sizeof(Thread): %zd sizeof(HeapRB): %zd sizeof(StackRB): %zd\n",
+             sizeof(Thread), heap_allocations_->SizeInBytes(),
+             stack_allocations_->size() * sizeof(uptr));
+    }
+    Print("Creating  : ");
+  }
 }
 
 void Thread::InitStackRingBuffer(uptr stack_buffer_start,
@@ -79,15 +88,6 @@ void Thread::InitStackRingBuffer(uptr stack_buffer_start,
     CHECK(AddrIsInStack((uptr)&local));
     CHECK(MemIsApp(stack_bottom_));
     CHECK(MemIsApp(stack_top_ - 1));
-  }
-
-  if (flags()->verbose_threads) {
-    if (IsMainThread()) {
-      Printf("sizeof(Thread): %zd sizeof(HeapRB): %zd sizeof(StackRB): %zd\n",
-             sizeof(Thread), heap_allocations_->SizeInBytes(),
-             stack_allocations_->size() * sizeof(uptr));
-    }
-    Print("Creating  : ");
   }
 }
 

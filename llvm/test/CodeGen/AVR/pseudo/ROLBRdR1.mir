@@ -17,8 +17,8 @@ body: |
     liveins: $r14
 
     ; CHECK-LABEL: test_rolbrd
+    ; CHECK:         $r14 = ADDRdRr killed $r14, killed $r14, implicit-def $sreg
+    ; CHECK-NEXT:    $r14 = ADCRdRr $r14, $r1, implicit-def dead $sreg, implicit killed $sreg
 
-    ; CHECK:      $r14 = ADDRdRr killed $r14, killed $r14, implicit-def $sreg
-    ; CHECK-NEXT: $r14 = ADCRdRr $r14, $r1, implicit-def dead $sreg, implicit killed $sreg
-    $r14 = ROLBRd $r14, implicit-def $sreg
+    $r14 = ROLBRdR1  $r14, implicit-def $sreg, implicit $r1
 ...

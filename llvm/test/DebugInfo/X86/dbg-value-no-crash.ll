@@ -1,6 +1,8 @@
-; RUN: llc -mtriple=x86_64-unknown-linux-gnu -mattr=avx512bw,avx512vl -o - %s
+; RUN: llc -mtriple=x86_64-unknown-linux-gnu -mattr=avx512bw,avx512vl -o - %s -stop-before livedebugvalues | FileCheck %s
 
-;; Check this won't result in crash.
+;; Check we won't salvage debug info for vector type.
+; CHECK-NOT: DBG_VALUE
+
 define <8 x i32> @foo(ptr %0, <8 x i32> %1, i8 %2, i8 %3) {
   %5 = call <8 x i32> @llvm.smax.v8i32(<8 x i32> %1, <8 x i32> zeroinitializer)
   %6 = add nsw <8 x i32> %1, <i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1>

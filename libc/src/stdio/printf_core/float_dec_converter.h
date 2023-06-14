@@ -13,6 +13,7 @@
 #include "src/__support/FPUtil/FEnvImpl.h"
 #include "src/__support/FPUtil/FPBits.h"
 #include "src/__support/FPUtil/FloatProperties.h"
+#include "src/__support/FPUtil/rounding_mode.h"
 #include "src/__support/UInt.h"
 #include "src/__support/UInt128.h"
 #include "src/__support/common.h"
@@ -600,7 +601,7 @@ LIBC_INLINE int convert_float_decimal_typed(Writer *writer,
             (requiredTwos < 60 &&
              multiple_of_power_of_2(float_bits.get_explicit_mantissa(),
                                     static_cast<uint32_t>(requiredTwos)));
-        switch (fputil::get_round()) {
+        switch (fputil::quick_get_round()) {
         case FE_TONEAREST:
           // Round to nearest, if it's exactly halfway then round to even.
           if (last_digit != 5) {
@@ -774,7 +775,7 @@ LIBC_INLINE int convert_float_dec_exp_typed(Writer *writer,
       (requiredTwos < 60 &&
        multiple_of_power_of_2(float_bits.get_explicit_mantissa(),
                               static_cast<uint32_t>(requiredTwos)));
-  switch (fputil::get_round()) {
+  switch (fputil::quick_get_round()) {
   case FE_TONEAREST:
     // Round to nearest, if it's exactly halfway then round to even.
     if (last_digit != 5) {
@@ -1022,7 +1023,7 @@ LIBC_INLINE int convert_float_dec_auto_typed(Writer *writer,
       (requiredTwos < 60 &&
        multiple_of_power_of_2(float_bits.get_explicit_mantissa(),
                               static_cast<uint32_t>(requiredTwos)));
-  switch (fputil::get_round()) {
+  switch (fputil::quick_get_round()) {
   case FE_TONEAREST:
     // Round to nearest, if it's exactly halfway then round to even.
     if (last_digit != 5) {

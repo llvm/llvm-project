@@ -15,6 +15,7 @@
 #include "src/__support/FPUtil/FEnvImpl.h"
 #include "src/__support/FPUtil/FPBits.h"
 #include "src/__support/FPUtil/PlatformDefs.h"
+#include "src/__support/FPUtil/rounding_mode.h"
 #include "src/__support/UInt128.h"
 #include "src/__support/builtin_wrappers.h"
 #include "src/__support/common.h"
@@ -150,7 +151,7 @@ LIBC_INLINE cpp::enable_if_t<cpp::is_floating_point_v<T>, T> sqrt(T x) {
 
       y = (y - ONE) | (static_cast<UIntType>(x_exp) << MantissaWidth<T>::VALUE);
 
-      switch (get_round()) {
+      switch (quick_get_round()) {
       case FE_TONEAREST:
         // Round to nearest, ties to even
         if (rb && (lsb || (r != 0)))

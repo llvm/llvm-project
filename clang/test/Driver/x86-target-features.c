@@ -364,3 +364,6 @@
 // SLS-IJMP-DAG: "-target-feature" "+harden-sls-ijmp"
 // NO-SLS-NOT: "+harden-sls-
 // BAD-SLS: unsupported argument '{{[^']+}}' to option '-mharden-sls='
+
+// RUN: touch %t.o
+// RUN: %clang -fdriver-only -Werror --target=x86_64-pc-linux-gnu -mharden-sls=all %t.o -o /dev/null 2>&1 | count 0

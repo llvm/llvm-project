@@ -8,6 +8,7 @@
 
 #include "src/math/tanhf.h"
 #include "src/__support/FPUtil/FPBits.h"
+#include "src/__support/FPUtil/rounding_mode.h"
 #include "src/__support/macros/optimization.h"            // LIBC_UNLIKELY
 #include "src/__support/macros/properties/cpu_features.h" // LIBC_TARGET_CPU_HAS_FMA
 #include "src/math/generic/explogxf.h"
@@ -52,7 +53,7 @@ LLVM_LIBC_FUNCTION(float, tanhf, (float x)) {
   }
 
   if (LIBC_UNLIKELY(xbits.bits == 0x4058'e0a3U)) {
-    if (fputil::get_round() == FE_DOWNWARD)
+    if (fputil::fenv_is_round_down())
       return FPBits(0x3f7f'6ad9U).get_val();
   }
 

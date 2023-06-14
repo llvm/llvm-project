@@ -100,10 +100,6 @@ FunctionPass *createAMDGPUAtomicOptimizerPass(ScanOptions ScanStrategy);
 void initializeAMDGPUAtomicOptimizerPass(PassRegistry &);
 extern char &AMDGPUAtomicOptimizerID;
 
-ModulePass *createAMDGPULowerIntrinsicsPass();
-void initializeAMDGPULowerIntrinsicsPass(PassRegistry &);
-extern char &AMDGPULowerIntrinsicsID;
-
 ModulePass *createAMDGPUCtorDtorLoweringLegacyPass();
 void initializeAMDGPUCtorDtorLoweringLegacyPass(PassRegistry &);
 extern char &AMDGPUCtorDtorLoweringLegacyPassID;

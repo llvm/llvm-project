@@ -1881,6 +1881,20 @@ func.func @omp_taskloop(%lb: i32, %ub: i32, %step: i32) -> () {
   return
 }
 
+// CHECK: func.func @omp_requires_one
+// CHECK-SAME: omp.requires = #omp<clause_requires reverse_offload>
+func.func @omp_requires_one() -> ()
+    attributes {omp.requires = #omp<clause_requires reverse_offload>} {
+  return
+}
+
+// CHECK: func.func @omp_requires_multiple
+// CHECK-SAME: omp.requires = #omp<clause_requires unified_address|dynamic_allocators>
+func.func @omp_requires_multiple() -> ()
+    attributes {omp.requires = #omp<clause_requires unified_address|dynamic_allocators>} {
+  return
+}
+
 // -----
 
 // CHECK-LABEL: @opaque_pointers_atomic_rwu

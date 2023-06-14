@@ -199,8 +199,8 @@ void CodeGenFunction::EmitCXXGlobalVarDeclInit(const VarDecl &D,
   unsigned ActualAddrSpace = GV->getAddressSpace();
   llvm::Constant *DeclPtr = GV;
   if (ActualAddrSpace != ExpectedAddrSpace) {
-    llvm::PointerType *PTy = llvm::PointerType::getWithSamePointeeType(
-        GV->getType(), ExpectedAddrSpace);
+    llvm::PointerType *PTy =
+        llvm::PointerType::get(getLLVMContext(), ExpectedAddrSpace);
     DeclPtr = llvm::ConstantExpr::getAddrSpaceCast(DeclPtr, PTy);
   }
 

@@ -4549,6 +4549,30 @@ MachineBasicBlock *SITargetLowering::EmitInstrWithCustomInserter(
     MI.eraseFromParent();
     return BB;
   }
+  case AMDGPU::ENDPGM_TRAP: {
+    const DebugLoc &DL = MI.getDebugLoc();
+    if (BB->succ_empty() && std::next(MI.getIterator()) == BB->end()) {
+      MI.setDesc(TII->get(AMDGPU::S_ENDPGM));
+      MI.addOperand(MachineOperand::CreateImm(0));
+      return BB;
+    }
+
+    // We need a block split to make the real endpgm a terminator. We also don't
+    // want to break phis in successor blocks, so we can't just delete to the
+    // end of the block.
+
+    MachineBasicBlock *SplitBB = BB->splitAt(MI, false /*UpdateLiveIns*/);
+    MachineBasicBlock *TrapBB = MF->CreateMachineBasicBlock();
+    MF->push_back(TrapBB);
+    BuildMI(*TrapBB, TrapBB->end(), DL, TII->get(AMDGPU::S_ENDPGM))
+      .addImm(0);
+    BuildMI(*BB, &MI, DL, TII->get(AMDGPU::S_CBRANCH_EXECNZ))
+      .addMBB(TrapBB);
+
+    BB->addSuccessor(TrapBB);
+    MI.eraseFromParent();
+    return SplitBB;
+  }
   default:
     return AMDGPUTargetLowering::EmitInstrWithCustomInserter(MI, BB);
   }
@@ -5572,7 +5596,7 @@ SDValue SITargetLowering::lowerTrapEndpgm(
     SDValue Op, SelectionDAG &DAG) const {
   SDLoc SL(Op);
   SDValue Chain = Op.getOperand(0);
-  return DAG.getNode(AMDGPUISD::ENDPGM, SL, MVT::Other, Chain);
+  return DAG.getNode(AMDGPUISD::ENDPGM_TRAP, SL, MVT::Other, Chain);
 }
 
 SDValue SITargetLowering::loadImplicitKernelArgument(SelectionDAG &DAG, MVT VT,
@@ -13064,6 +13088,30 @@ void SITargetLowering::computeKnownBitsForTargetInstr(
   case AMDGPU::G_AMDGPU_BUFFER_LOAD_USHORT:
     Known.Zero.setHighBits(16);
     break;
+  case AMDGPU::G_AMDGPU_SMED3:
+  case AMDGPU::G_AMDGPU_UMED3: {
+    auto [Dst, Src0, Src1, Src2] = MI->getFirst4Regs();
+
+    KnownBits Known2;
+    KB.computeKnownBitsImpl(Src2, Known2, DemandedElts, Depth + 1);
+    if (Known2.isUnknown())
+      break;
+
+    KnownBits Known1;
+    KB.computeKnownBitsImpl(Src1, Known1, DemandedElts, Depth + 1);
+    if (Known1.isUnknown())
+      break;
+
+    KnownBits Known0;
+    KB.computeKnownBitsImpl(Src0, Known0, DemandedElts, Depth + 1);
+    if (Known0.isUnknown())
+      break;
+
+    // TODO: Handle LeadZero/LeadOne from UMIN/UMAX handling.
+    Known.Zero = Known0.Zero & Known1.Zero & Known2.Zero;
+    Known.One = Known0.One & Known1.One & Known2.One;
+    break;
+  }
   }
 }
 

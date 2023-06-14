@@ -269,12 +269,15 @@ template<ranges::input_range R, class Allocator = allocator<ranges::range_value_
 
 template <class Allocator> struct hash<std::vector<bool, Allocator>>;
 
-template <class T, class Allocator> bool operator==(const vector<T,Allocator>& x, const vector<T,Allocator>& y);
-template <class T, class Allocator> bool operator< (const vector<T,Allocator>& x, const vector<T,Allocator>& y);
-template <class T, class Allocator> bool operator!=(const vector<T,Allocator>& x, const vector<T,Allocator>& y);
-template <class T, class Allocator> bool operator> (const vector<T,Allocator>& x, const vector<T,Allocator>& y);
-template <class T, class Allocator> bool operator>=(const vector<T,Allocator>& x, const vector<T,Allocator>& y);
-template <class T, class Allocator> bool operator<=(const vector<T,Allocator>& x, const vector<T,Allocator>& y);
+template <class T, class Allocator> bool operator==(const vector<T,Allocator>& x, const vector<T,Allocator>& y);   // constexpr since C++20
+template <class T, class Allocator> bool operator!=(const vector<T,Allocator>& x, const vector<T,Allocator>& y);   // removed in C++20
+template <class T, class Allocator> bool operator< (const vector<T,Allocator>& x, const vector<T,Allocator>& y);   // removed in C++20
+template <class T, class Allocator> bool operator> (const vector<T,Allocator>& x, const vector<T,Allocator>& y);   // removed in C++20
+template <class T, class Allocator> bool operator>=(const vector<T,Allocator>& x, const vector<T,Allocator>& y);   // removed in C++20
+template <class T, class Allocator> bool operator<=(const vector<T,Allocator>& x, const vector<T,Allocator>& y);   // removed in C++20
+template <class T, class Allocator> constexpr
+  constexpr synth-three-way-result<T> operator<=>(const vector<T, Allocator>& x,
+                                                  const vector<T, Allocator>& y);                                  // since C++20
 
 template <class T, class Allocator>
 void swap(vector<T,Allocator>& x, vector<T,Allocator>& y)
@@ -282,10 +285,10 @@ void swap(vector<T,Allocator>& x, vector<T,Allocator>& y)
 
 template <class T, class Allocator, class U>
 typename vector<T, Allocator>::size_type
-erase(vector<T, Allocator>& c, const U& value);       // C++20
+erase(vector<T, Allocator>& c, const U& value);       // since C++20
 template <class T, class Allocator, class Predicate>
 typename vector<T, Allocator>::size_type
-erase_if(vector<T, Allocator>& c, Predicate pred);    // C++20
+erase_if(vector<T, Allocator>& c, Predicate pred);    // since C++20
 
 
 template<class T>
@@ -303,6 +306,7 @@ template<class T, class charT> requires is-vector-bool-reference<T> // Since C++
 #include <__algorithm/fill_n.h>
 #include <__algorithm/iterator_operations.h>
 #include <__algorithm/lexicographical_compare.h>
+#include <__algorithm/lexicographical_compare_three_way.h>
 #include <__algorithm/remove.h>
 #include <__algorithm/remove_if.h>
 #include <__algorithm/rotate.h>
@@ -3441,8 +3445,9 @@ operator==(const vector<_Tp, _Allocator>& __x, const vector<_Tp, _Allocator>& __
     return __sz == __y.size() && std::equal(__x.begin(), __x.end(), __y.begin());
 }
 
+#if _LIBCPP_STD_VER <= 17
+
 template <class _Tp, class _Allocator>
-_LIBCPP_CONSTEXPR_SINCE_CXX20
 inline _LIBCPP_HIDE_FROM_ABI
 bool
 operator!=(const vector<_Tp, _Allocator>& __x, const vector<_Tp, _Allocator>& __y)
@@ -3451,7 +3456,6 @@ operator!=(const vector<_Tp, _Allocator>& __x, const vector<_Tp, _Allocator>& __
 }
 
 template <class _Tp, class _Allocator>
-_LIBCPP_CONSTEXPR_SINCE_CXX20
 inline _LIBCPP_HIDE_FROM_ABI
 bool
 operator< (const vector<_Tp, _Allocator>& __x, const vector<_Tp, _Allocator>& __y)
@@ -3460,7 +3464,6 @@ operator< (const vector<_Tp, _Allocator>& __x, const vector<_Tp, _Allocator>& __
 }
 
 template <class _Tp, class _Allocator>
-_LIBCPP_CONSTEXPR_SINCE_CXX20
 inline _LIBCPP_HIDE_FROM_ABI
 bool
 operator> (const vector<_Tp, _Allocator>& __x, const vector<_Tp, _Allocator>& __y)
@@ -3469,7 +3472,6 @@ operator> (const vector<_Tp, _Allocator>& __x, const vector<_Tp, _Allocator>& __
 }
 
 template <class _Tp, class _Allocator>
-_LIBCPP_CONSTEXPR_SINCE_CXX20
 inline _LIBCPP_HIDE_FROM_ABI
 bool
 operator>=(const vector<_Tp, _Allocator>& __x, const vector<_Tp, _Allocator>& __y)
@@ -3478,13 +3480,23 @@ operator>=(const vector<_Tp, _Allocator>& __x, const vector<_Tp, _Allocator>& __
 }
 
 template <class _Tp, class _Allocator>
-_LIBCPP_CONSTEXPR_SINCE_CXX20
 inline _LIBCPP_HIDE_FROM_ABI
 bool
 operator<=(const vector<_Tp, _Allocator>& __x, const vector<_Tp, _Allocator>& __y)
 {
     return !(__y < __x);
 }
+
+#else // _LIBCPP_STD_VER <= 17
+
+template <class _Tp, class _Allocator>
+_LIBCPP_HIDE_FROM_ABI constexpr __synth_three_way_result<_Tp>
+operator<=>(const vector<_Tp, _Allocator>& __x, const vector<_Tp, _Allocator>& __y) {
+    return std::lexicographical_compare_three_way(
+        __x.begin(), __x.end(), __y.begin(), __y.end(), std::__synth_three_way<_Tp, _Tp>);
+}
+
+#endif // _LIBCPP_STD_VER <= 17
 
 template <class _Tp, class _Allocator>
 _LIBCPP_CONSTEXPR_SINCE_CXX20

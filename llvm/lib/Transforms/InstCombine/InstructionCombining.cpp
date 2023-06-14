@@ -4161,18 +4161,13 @@ bool InstructionCombiningPass::runOnFunction(Function &F) {
       nullptr;
 
   return combineInstructionsOverFunction(F, Worklist, AA, AC, TLI, TTI, DT, ORE,
-                                         BFI, PSI, MaxIterations, LI);
+                                         BFI, PSI,
+                                         InstCombineDefaultMaxIterations, LI);
 }
 
 char InstructionCombiningPass::ID = 0;
 
-InstructionCombiningPass::InstructionCombiningPass()
-    : FunctionPass(ID), MaxIterations(InstCombineDefaultMaxIterations) {
-  initializeInstructionCombiningPassPass(*PassRegistry::getPassRegistry());
-}
-
-InstructionCombiningPass::InstructionCombiningPass(unsigned MaxIterations)
-    : FunctionPass(ID), MaxIterations(MaxIterations) {
+InstructionCombiningPass::InstructionCombiningPass() : FunctionPass(ID) {
   initializeInstructionCombiningPassPass(*PassRegistry::getPassRegistry());
 }
 
@@ -4197,8 +4192,4 @@ void llvm::initializeInstCombine(PassRegistry &Registry) {
 
 FunctionPass *llvm::createInstructionCombiningPass() {
   return new InstructionCombiningPass();
-}
-
-FunctionPass *llvm::createInstructionCombiningPass(unsigned MaxIterations) {
-  return new InstructionCombiningPass(MaxIterations);
 }

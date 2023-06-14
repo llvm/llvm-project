@@ -393,7 +393,6 @@ extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializeAMDGPUTarget() {
   initializeAMDGPULowerKernelArgumentsPass(*PR);
   initializeAMDGPUPromoteKernelArgumentsPass(*PR);
   initializeAMDGPULowerKernelAttributesPass(*PR);
-  initializeAMDGPULowerIntrinsicsPass(*PR);
   initializeAMDGPUOpenCLEnqueuedBlockLoweringPass(*PR);
   initializeAMDGPUPostLegalizerCombinerPass(*PR);
   initializeAMDGPUPreLegalizerCombinerPass(*PR);
@@ -978,7 +977,6 @@ void AMDGPUPassConfig::addEarlyCSEOrGVNPass() {
 }
 
 void AMDGPUPassConfig::addStraightLineScalarOptimizationPasses() {
-  addPass(createLICMPass());
   addPass(createSeparateConstOffsetFromGEPPass());
   // ReassociateGEPs exposes more opportunities for SLSR. See
   // the example in reassociate-geps-and-slsr.ll.
@@ -1010,8 +1008,6 @@ void AMDGPUPassConfig::addIRPasses() {
 
   if (isPassEnabled(EnableImageIntrinsicOptimizer))
     addPass(createAMDGPUImageIntrinsicOptimizerPass(&TM));
-
-  addPass(createAMDGPULowerIntrinsicsPass());
 
   // Function calls are not supported, so make sure we inline everything.
   addPass(createAMDGPUAlwaysInlinePass());
@@ -1055,6 +1051,11 @@ void AMDGPUPassConfig::addIRPasses() {
       // TODO: May want to move later or split into an early and late one.
       addPass(createAMDGPUCodeGenPreparePass());
     }
+
+    // Try to hoist loop invariant parts of divisions AMDGPUCodeGenPrepare may
+    // have expanded.
+    if (TM.getOptLevel() > CodeGenOpt::Less)
+      addPass(createLICMPass());
   }
 
   TargetPassConfig::addIRPasses();

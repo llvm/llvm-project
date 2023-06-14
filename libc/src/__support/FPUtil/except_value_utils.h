@@ -11,6 +11,7 @@
 
 #include "FEnvImpl.h"
 #include "FPBits.h"
+#include "rounding_mode.h"
 #include "src/__support/CPP/optional.h"
 #include "src/__support/macros/optimization.h" // LIBC_UNLIKELY
 
@@ -52,7 +53,7 @@ template <typename T, size_t N> struct ExceptValues {
     for (size_t i = 0; i < N; ++i) {
       if (LIBC_UNLIKELY(x_bits == values[i].input)) {
         UIntType out_bits = values[i].rnd_towardzero_result;
-        switch (fputil::get_round()) {
+        switch (fputil::quick_get_round()) {
         case FE_UPWARD:
           out_bits += values[i].rnd_upward_offset;
           break;
@@ -74,7 +75,7 @@ template <typename T, size_t N> struct ExceptValues {
     for (size_t i = 0; i < N; ++i) {
       if (LIBC_UNLIKELY(x_abs == values[i].input)) {
         UIntType out_bits = values[i].rnd_towardzero_result;
-        switch (fputil::get_round()) {
+        switch (fputil::quick_get_round()) {
         case FE_UPWARD:
           out_bits += sign ? values[i].rnd_downward_offset
                            : values[i].rnd_upward_offset;
