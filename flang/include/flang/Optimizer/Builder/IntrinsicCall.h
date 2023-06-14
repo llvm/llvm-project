@@ -481,7 +481,18 @@ enum class ParamTypeId {
   Integer,
   Real,
   Complex,
+  IntegerVector,
+  UnsignedVector,
+  RealVector,
 };
+
+// Helper function to get length of a 16-byte vector of element type eleTy.
+static int getVecLen(mlir::Type eleTy) {
+  assert((mlir::isa<mlir::IntegerType>(eleTy) ||
+          mlir::isa<mlir::FloatType>(eleTy)) &&
+         "unsupported vector element type");
+  return 16 / (eleTy.getIntOrFloatBitWidth() / 8);
+}
 
 template <ParamTypeId t, int k>
 struct ParamType {
@@ -509,6 +520,12 @@ template <int k>
 using Integer = ParamType<ParamTypeId::Integer, k>;
 template <int k>
 using Complex = ParamType<ParamTypeId::Complex, k>;
+template <int k>
+using IntegerVector = ParamType<ParamTypeId::IntegerVector, k>;
+template <int k>
+using RealVector = ParamType<ParamTypeId::RealVector, k>;
+template <int k>
+using UnsignedVector = ParamType<ParamTypeId::UnsignedVector, k>;
 } // namespace Ty
 
 // Helper function that generates most types that are supported for intrinsic
@@ -518,24 +535,46 @@ static inline mlir::Type getTypeHelper(mlir::MLIRContext *context,
                                        fir::FirOpBuilder &builder,
                                        ParamTypeId typeId, int kind) {
   mlir::Type r;
-  int bits = 0;
+  unsigned bits{0};
   switch (typeId) {
   case ParamTypeId::Void:
     llvm::report_fatal_error("can not get type of void");
     break;
   case ParamTypeId::Integer:
+  case ParamTypeId::IntegerVector:
     bits = builder.getKindMap().getIntegerBitsize(kind);
     assert(bits != 0 && "failed to convert kind to integer bitsize");
     r = mlir::IntegerType::get(context, bits);
     break;
+  case ParamTypeId::UnsignedVector:
+    bits = builder.getKindMap().getIntegerBitsize(kind);
+    assert(bits != 0 && "failed to convert kind to unsigned bitsize");
+    r = mlir::IntegerType::get(context, bits, mlir::IntegerType::Unsigned);
+    break;
   case ParamTypeId::Real:
+  case ParamTypeId::RealVector:
     r = builder.getRealType(kind);
     break;
   case ParamTypeId::Complex:
     r = fir::ComplexType::get(context, kind);
     break;
   }
-  return r;
+
+  switch (typeId) {
+  case ParamTypeId::Void:
+  case ParamTypeId::Integer:
+  case ParamTypeId::Real:
+  case ParamTypeId::Complex:
+    // keep original type for void and non-vector
+    return r;
+    break;
+  case ParamTypeId::IntegerVector:
+  case ParamTypeId::UnsignedVector:
+  case ParamTypeId::RealVector:
+    // convert to FIR vector type
+    return fir::VectorType::get(getVecLen(r), r);
+    break;
+  }
 }
 
 // Generic function type generator that supports most of the function types
