@@ -376,8 +376,15 @@ void LoopEmitter::initialize(ValueRange ts, StringAttr loopTag, bool hasOutput,
     loopIdToOrd[topSort[n]] = n;
 }
 
-void LoopEmitter::initializeLoopEmit(OpBuilder &builder, Location loc,
-                                     LoopEmitter::OutputUpdater updater) {
+void LoopEmitter::initializeLoopEmit(
+    OpBuilder &builder, Location loc, LoopEmitter::OutputUpdater updater,
+    LoopEmitter::SynTensorBoundSetter synSetter) {
+
+  // For every synthetic tensor, set the high bound by calling the callback.
+  if (synSetter)
+    for (unsigned i = 0, e = highs[getSynTensorId()].size(); i < e; i++)
+      highs[getSynTensorId()][i] = synSetter(builder, loc, i);
+
   // For every manifest tensor:
   // * get the values buffer.
   // * For every level:
@@ -534,27 +541,15 @@ void LoopEmitter::enterNewLoopSeq(OpBuilder &builder, Location loc,
   // Prepares for all the tensors used in the current loop sequence.
   std::vector<std::tuple<TensorId, Level, bool>> slicedTids;
 
-  bool hasSynTensor = false;
-  std::optional<std::pair<TensorId, Level>> loopBoundDefLevel = std::nullopt;
   for (auto [tid, lvl] : unpackTensorLevelRange(tidLvls)) {
     if (!dependentLvlMap[tid][lvl].empty()) {
       bool fullyRed = genSliceBegin(builder, loc, tid, lvl);
       slicedTids.emplace_back(tid, lvl, fullyRed);
-    } else {
-      if (isSynTensor(tid)) {
-        hasSynTensor = true;
-      } else {
-        loopBoundDefLevel = std::make_pair(tid, lvl);
-        prepareLoopOverTensorAtLvl(builder, loc, tid, lvl);
-      }
+    } else if (!isSynTensor(tid)) {
+      prepareLoopOverTensorAtLvl(builder, loc, tid, lvl);
     }
   }
 
-  if (hasSynTensor && loopBoundDefLevel.has_value()) {
-    // TODO: compute the loopBound for index reduction by d - sum(unres_lvls).
-    highs[getSynTensorId()][getCurrentDepth()] =
-        lvlSizes[loopBoundDefLevel->first][loopBoundDefLevel->second];
-  }
   // Universal Index starts from 0.
   loopSeqStack.emplace_back(C_IDX(0), std::move(slicedTids));
 }
