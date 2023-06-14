@@ -157,12 +157,6 @@ OutputDesc *LinkerScript::getOrCreateOutputSection(StringRef name) {
 static void expandMemoryRegion(MemoryRegion *memRegion, uint64_t size,
                                StringRef secName) {
   memRegion->curPos += size;
-  uint64_t newSize = memRegion->curPos - memRegion->getOrigin();
-  uint64_t length = memRegion->getLength();
-  if (newSize > length)
-    error("section '" + secName + "' will not fit in region '" +
-          memRegion->name + "': overflowed by " + Twine(newSize - length) +
-          " bytes");
 }
 
 void LinkerScript::expandMemoryRegions(uint64_t size) {
@@ -1459,5 +1453,25 @@ void LinkerScript::printMemoryUsage(raw_ostream& os) {
       os << "    " << format("%6.2f%%", percent);
     }
     os << '\n';
+  }
+}
+
+static void checkMemoryRegion(const MemoryRegion *region,
+                              const OutputSection *osec, uint64_t addr) {
+  uint64_t osecEnd = addr + osec->size;
+  uint64_t regionEnd = region->getOrigin() + region->getLength();
+  if (osecEnd > regionEnd) {
+    error("section '" + osec->name + "' will not fit in region '" +
+          region->name + "': overflowed by " + Twine(osecEnd - regionEnd) +
+          " bytes");
+  }
+}
+
+void LinkerScript::checkMemoryRegions() const {
+  for (const OutputSection *sec : outputSections) {
+    if (const MemoryRegion *memoryRegion = sec->memRegion)
+      checkMemoryRegion(memoryRegion, sec, sec->addr);
+    if (const MemoryRegion *lmaRegion = sec->lmaRegion)
+      checkMemoryRegion(lmaRegion, sec, sec->getLMA());
   }
 }
