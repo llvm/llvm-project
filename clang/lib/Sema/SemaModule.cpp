@@ -814,76 +814,22 @@ Decl *Sema::ActOnStartExportDecl(Scope *S, SourceLocation ExportLoc,
   return D;
 }
 
+static bool checkExportedDecl(Sema &, Decl *, SourceLocation);
+
+/// Check that it's valid to export all the declarations in \p DC.
 static bool checkExportedDeclContext(Sema &S, DeclContext *DC,
-                                     SourceLocation BlockStart);
-
-namespace {
-enum class UnnamedDeclKind {
-  Empty,
-  StaticAssert,
-  Asm,
-  UsingDirective,
-  Namespace,
-  Context
-};
-}
-
-static std::optional<UnnamedDeclKind> getUnnamedDeclKind(Decl *D) {
-  if (isa<EmptyDecl>(D))
-    return UnnamedDeclKind::Empty;
-  if (isa<StaticAssertDecl>(D))
-    return UnnamedDeclKind::StaticAssert;
-  if (isa<FileScopeAsmDecl>(D))
-    return UnnamedDeclKind::Asm;
-  if (isa<UsingDirectiveDecl>(D))
-    return UnnamedDeclKind::UsingDirective;
-  // Everything else either introduces one or more names or is ill-formed.
-  return std::nullopt;
-}
-
-unsigned getUnnamedDeclDiag(UnnamedDeclKind UDK, bool InBlock) {
-  switch (UDK) {
-  case UnnamedDeclKind::Empty:
-  case UnnamedDeclKind::StaticAssert:
-    // Allow empty-declarations and static_asserts in an export block as an
-    // extension.
-    return InBlock ? diag::ext_export_no_name_block : diag::err_export_no_name;
-
-  case UnnamedDeclKind::UsingDirective:
-    // Allow exporting using-directives as an extension.
-    return diag::ext_export_using_directive;
-
-  case UnnamedDeclKind::Namespace:
-    // Anonymous namespace with no content.
-    return diag::introduces_no_names;
-
-  case UnnamedDeclKind::Context:
-    // Allow exporting DeclContexts that transitively contain no declarations
-    // as an extension.
-    return diag::ext_export_no_names;
-
-  case UnnamedDeclKind::Asm:
-    return diag::err_export_no_name;
-  }
-  llvm_unreachable("unknown kind");
-}
-
-static void diagExportedUnnamedDecl(Sema &S, UnnamedDeclKind UDK, Decl *D,
-                                    SourceLocation BlockStart) {
-  S.Diag(D->getLocation(), getUnnamedDeclDiag(UDK, BlockStart.isValid()))
-      << (unsigned)UDK;
-  if (BlockStart.isValid())
-    S.Diag(BlockStart, diag::note_export);
+                                     SourceLocation BlockStart) {
+  bool AllUnnamed = true;
+  for (auto *D : DC->decls())
+    AllUnnamed &= checkExportedDecl(S, D, BlockStart);
+  return AllUnnamed;
 }
 
 /// Check that it's valid to export \p D.
 static bool checkExportedDecl(Sema &S, Decl *D, SourceLocation BlockStart) {
-  // C++2a [module.interface]p3:
-  //   An exported declaration shall declare at least one name
-  if (auto UDK = getUnnamedDeclKind(D))
-    diagExportedUnnamedDecl(S, *UDK, D, BlockStart);
 
-  //   [...] shall not declare a name with internal linkage.
+  //  C++20 [module.interface]p3:
+  //   [...] it shall not declare a name with internal linkage.
   bool HasName = false;
   if (auto *ND = dyn_cast<NamedDecl>(D)) {
     // Don't diagnose anonymous union objects; we'll diagnose their members
@@ -893,6 +839,7 @@ static bool checkExportedDecl(Sema &S, Decl *D, SourceLocation BlockStart) {
       S.Diag(ND->getLocation(), diag::err_export_internal) << ND;
       if (BlockStart.isValid())
         S.Diag(BlockStart, diag::note_export);
+      return false;
     }
   }
 
@@ -908,31 +855,29 @@ static bool checkExportedDecl(Sema &S, Decl *D, SourceLocation BlockStart) {
       S.Diag(Target->getLocation(), diag::note_using_decl_target);
       if (BlockStart.isValid())
         S.Diag(BlockStart, diag::note_export);
+      return false;
     }
   }
 
   // Recurse into namespace-scope DeclContexts. (Only namespace-scope
-  // declarations are exported.).
+  // declarations are exported).
   if (auto *DC = dyn_cast<DeclContext>(D)) {
-    if (isa<NamespaceDecl>(D) && DC->decls().empty()) {
-      if (!HasName)
-        // We don't allow an empty anonymous namespace (we don't allow decls
-        // in them either, but that's handled in the recursion).
-        diagExportedUnnamedDecl(S, UnnamedDeclKind::Namespace, D, BlockStart);
-      // We allow an empty named namespace decl.
-    } else if (DC->getRedeclContext()->isFileContext() && !isa<EnumDecl>(D))
-      return checkExportedDeclContext(S, DC, BlockStart);
-  }
-  return false;
-}
+    if (!isa<NamespaceDecl>(D))
+      return true;
 
-/// Check that it's valid to export all the declarations in \p DC.
-static bool checkExportedDeclContext(Sema &S, DeclContext *DC,
-                                     SourceLocation BlockStart) {
-  bool AllUnnamed = true;
-  for (auto *D : DC->decls())
-    AllUnnamed &= checkExportedDecl(S, D, BlockStart);
-  return AllUnnamed;
+    if (auto *ND = dyn_cast<NamedDecl>(D)) {
+      if (!ND->getDeclName()) {
+        S.Diag(ND->getLocation(), diag::err_export_anon_ns_internal);
+        if (BlockStart.isValid())
+          S.Diag(BlockStart, diag::note_export);
+        return false;
+      } else if (!DC->decls().empty() &&
+                 DC->getRedeclContext()->isFileContext()) {
+        return checkExportedDeclContext(S, DC, BlockStart);
+      }
+    }
+  }
+  return true;
 }
 
 /// Complete the definition of an export declaration.
@@ -947,12 +892,7 @@ Decl *Sema::ActOnFinishExportDecl(Scope *S, Decl *D, SourceLocation RBraceLoc) {
     SourceLocation BlockStart =
         ED->hasBraces() ? ED->getBeginLoc() : SourceLocation();
     for (auto *Child : ED->decls()) {
-      if (checkExportedDecl(*this, Child, BlockStart)) {
-        // If a top-level child is a linkage-spec declaration, it might contain
-        // no declarations (transitively), in which case it's ill-formed.
-        diagExportedUnnamedDecl(*this, UnnamedDeclKind::Context, Child,
-                                BlockStart);
-      }
+      checkExportedDecl(*this, Child, BlockStart);
       if (auto *FD = dyn_cast<FunctionDecl>(Child)) {
         // [dcl.inline]/7
         // If an inline function or variable that is attached to a named module
