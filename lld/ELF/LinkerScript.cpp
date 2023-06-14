@@ -911,7 +911,12 @@ std::pair<MemoryRegion *, MemoryRegion *>
 LinkerScript::findMemoryRegion(OutputSection *sec, MemoryRegion *hint) {
   // Non-allocatable sections are not part of the process image.
   if (!(sec->flags & SHF_ALLOC)) {
-    if (!sec->memoryRegionName.empty())
+    bool hasInputOrByteCommand =
+        sec->hasInputSections ||
+        llvm::any_of(sec->commands, [](SectionCommand *comm) {
+          return ByteCommand::classof(comm);
+        });
+    if (!sec->memoryRegionName.empty() && hasInputOrByteCommand)
       warn("ignoring memory region assignment for non-allocatable section '" +
            sec->name + "'");
     return {nullptr, nullptr};
