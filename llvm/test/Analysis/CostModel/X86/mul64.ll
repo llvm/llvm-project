@@ -31,12 +31,12 @@ define void @mul_sext_vXi8(<2 x i8> %a2, <2 x i8> %b2, <4 x i8> %a4, <4 x i8> %b
 ; SSE2-NEXT:  Cost Model: Found an estimated cost of 64 for instruction: %xb32 = sext <32 x i8> %b32 to <32 x i64>
 ; SSE2-NEXT:  Cost Model: Found an estimated cost of 128 for instruction: %xa64 = sext <64 x i8> %a64 to <64 x i64>
 ; SSE2-NEXT:  Cost Model: Found an estimated cost of 128 for instruction: %xb64 = sext <64 x i8> %b64 to <64 x i64>
-; SSE2-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %res2 = mul <2 x i64> %xa2, %xb2
-; SSE2-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: %res4 = mul <4 x i64> %xa4, %xb4
-; SSE2-NEXT:  Cost Model: Found an estimated cost of 32 for instruction: %res8 = mul <8 x i64> %xa8, %xb8
-; SSE2-NEXT:  Cost Model: Found an estimated cost of 64 for instruction: %res16 = mul <16 x i64> %xa16, %xb16
-; SSE2-NEXT:  Cost Model: Found an estimated cost of 128 for instruction: %res32 = mul <32 x i64> %xa32, %xb32
-; SSE2-NEXT:  Cost Model: Found an estimated cost of 256 for instruction: %res64 = mul <64 x i64> %xa64, %xb64
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 7 for instruction: %res2 = mul <2 x i64> %xa2, %xb2
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 14 for instruction: %res4 = mul <4 x i64> %xa4, %xb4
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 28 for instruction: %res8 = mul <8 x i64> %xa8, %xb8
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 56 for instruction: %res16 = mul <16 x i64> %xa16, %xb16
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 112 for instruction: %res32 = mul <32 x i64> %xa32, %xb32
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 224 for instruction: %res64 = mul <64 x i64> %xa64, %xb64
 ; SSE2-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret void
 ;
 ; SSSE3-LABEL: 'mul_sext_vXi8'
@@ -52,12 +52,12 @@ define void @mul_sext_vXi8(<2 x i8> %a2, <2 x i8> %b2, <4 x i8> %a4, <4 x i8> %b
 ; SSSE3-NEXT:  Cost Model: Found an estimated cost of 64 for instruction: %xb32 = sext <32 x i8> %b32 to <32 x i64>
 ; SSSE3-NEXT:  Cost Model: Found an estimated cost of 128 for instruction: %xa64 = sext <64 x i8> %a64 to <64 x i64>
 ; SSSE3-NEXT:  Cost Model: Found an estimated cost of 128 for instruction: %xb64 = sext <64 x i8> %b64 to <64 x i64>
-; SSSE3-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %res2 = mul <2 x i64> %xa2, %xb2
-; SSSE3-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: %res4 = mul <4 x i64> %xa4, %xb4
-; SSSE3-NEXT:  Cost Model: Found an estimated cost of 32 for instruction: %res8 = mul <8 x i64> %xa8, %xb8
-; SSSE3-NEXT:  Cost Model: Found an estimated cost of 64 for instruction: %res16 = mul <16 x i64> %xa16, %xb16
-; SSSE3-NEXT:  Cost Model: Found an estimated cost of 128 for instruction: %res32 = mul <32 x i64> %xa32, %xb32
-; SSSE3-NEXT:  Cost Model: Found an estimated cost of 256 for instruction: %res64 = mul <64 x i64> %xa64, %xb64
+; SSSE3-NEXT:  Cost Model: Found an estimated cost of 7 for instruction: %res2 = mul <2 x i64> %xa2, %xb2
+; SSSE3-NEXT:  Cost Model: Found an estimated cost of 14 for instruction: %res4 = mul <4 x i64> %xa4, %xb4
+; SSSE3-NEXT:  Cost Model: Found an estimated cost of 28 for instruction: %res8 = mul <8 x i64> %xa8, %xb8
+; SSSE3-NEXT:  Cost Model: Found an estimated cost of 56 for instruction: %res16 = mul <16 x i64> %xa16, %xb16
+; SSSE3-NEXT:  Cost Model: Found an estimated cost of 112 for instruction: %res32 = mul <32 x i64> %xa32, %xb32
+; SSSE3-NEXT:  Cost Model: Found an estimated cost of 224 for instruction: %res64 = mul <64 x i64> %xa64, %xb64
 ; SSSE3-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret void
 ;
 ; SSE42-LABEL: 'mul_sext_vXi8'
@@ -453,12 +453,12 @@ define void @mul_sext_zext_vXi8(<2 x i8> %a2, <2 x i8> %b2, <4 x i8> %a4, <4 x i
 ; SSE2-NEXT:  Cost Model: Found an estimated cost of 64 for instruction: %xb32 = zext <32 x i8> %b32 to <32 x i64>
 ; SSE2-NEXT:  Cost Model: Found an estimated cost of 128 for instruction: %xa64 = sext <64 x i8> %a64 to <64 x i64>
 ; SSE2-NEXT:  Cost Model: Found an estimated cost of 128 for instruction: %xb64 = zext <64 x i8> %b64 to <64 x i64>
-; SSE2-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %res2 = mul <2 x i64> %xa2, %xb2
-; SSE2-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: %res4 = mul <4 x i64> %xa4, %xb4
-; SSE2-NEXT:  Cost Model: Found an estimated cost of 32 for instruction: %res8 = mul <8 x i64> %xa8, %xb8
-; SSE2-NEXT:  Cost Model: Found an estimated cost of 64 for instruction: %res16 = mul <16 x i64> %xa16, %xb16
-; SSE2-NEXT:  Cost Model: Found an estimated cost of 128 for instruction: %res32 = mul <32 x i64> %xa32, %xb32
-; SSE2-NEXT:  Cost Model: Found an estimated cost of 256 for instruction: %res64 = mul <64 x i64> %xa64, %xb64
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 7 for instruction: %res2 = mul <2 x i64> %xa2, %xb2
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 14 for instruction: %res4 = mul <4 x i64> %xa4, %xb4
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 28 for instruction: %res8 = mul <8 x i64> %xa8, %xb8
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 56 for instruction: %res16 = mul <16 x i64> %xa16, %xb16
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 112 for instruction: %res32 = mul <32 x i64> %xa32, %xb32
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 224 for instruction: %res64 = mul <64 x i64> %xa64, %xb64
 ; SSE2-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret void
 ;
 ; SSSE3-LABEL: 'mul_sext_zext_vXi8'
@@ -474,12 +474,12 @@ define void @mul_sext_zext_vXi8(<2 x i8> %a2, <2 x i8> %b2, <4 x i8> %a4, <4 x i
 ; SSSE3-NEXT:  Cost Model: Found an estimated cost of 64 for instruction: %xb32 = zext <32 x i8> %b32 to <32 x i64>
 ; SSSE3-NEXT:  Cost Model: Found an estimated cost of 128 for instruction: %xa64 = sext <64 x i8> %a64 to <64 x i64>
 ; SSSE3-NEXT:  Cost Model: Found an estimated cost of 128 for instruction: %xb64 = zext <64 x i8> %b64 to <64 x i64>
-; SSSE3-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %res2 = mul <2 x i64> %xa2, %xb2
-; SSSE3-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: %res4 = mul <4 x i64> %xa4, %xb4
-; SSSE3-NEXT:  Cost Model: Found an estimated cost of 32 for instruction: %res8 = mul <8 x i64> %xa8, %xb8
-; SSSE3-NEXT:  Cost Model: Found an estimated cost of 64 for instruction: %res16 = mul <16 x i64> %xa16, %xb16
-; SSSE3-NEXT:  Cost Model: Found an estimated cost of 128 for instruction: %res32 = mul <32 x i64> %xa32, %xb32
-; SSSE3-NEXT:  Cost Model: Found an estimated cost of 256 for instruction: %res64 = mul <64 x i64> %xa64, %xb64
+; SSSE3-NEXT:  Cost Model: Found an estimated cost of 7 for instruction: %res2 = mul <2 x i64> %xa2, %xb2
+; SSSE3-NEXT:  Cost Model: Found an estimated cost of 14 for instruction: %res4 = mul <4 x i64> %xa4, %xb4
+; SSSE3-NEXT:  Cost Model: Found an estimated cost of 28 for instruction: %res8 = mul <8 x i64> %xa8, %xb8
+; SSSE3-NEXT:  Cost Model: Found an estimated cost of 56 for instruction: %res16 = mul <16 x i64> %xa16, %xb16
+; SSSE3-NEXT:  Cost Model: Found an estimated cost of 112 for instruction: %res32 = mul <32 x i64> %xa32, %xb32
+; SSSE3-NEXT:  Cost Model: Found an estimated cost of 224 for instruction: %res64 = mul <64 x i64> %xa64, %xb64
 ; SSSE3-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret void
 ;
 ; SSE42-LABEL: 'mul_sext_zext_vXi8'
@@ -689,12 +689,12 @@ define void @mul_sext_vXi16(<2 x i16> %a2, <2 x i16> %b2, <4 x i16> %a4, <4 x i1
 ; SSE2-NEXT:  Cost Model: Found an estimated cost of 48 for instruction: %xb32 = sext <32 x i16> %b32 to <32 x i64>
 ; SSE2-NEXT:  Cost Model: Found an estimated cost of 96 for instruction: %xa64 = sext <64 x i16> %a64 to <64 x i64>
 ; SSE2-NEXT:  Cost Model: Found an estimated cost of 96 for instruction: %xb64 = sext <64 x i16> %b64 to <64 x i64>
-; SSE2-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %res2 = mul <2 x i64> %xa2, %xb2
-; SSE2-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: %res4 = mul <4 x i64> %xa4, %xb4
-; SSE2-NEXT:  Cost Model: Found an estimated cost of 32 for instruction: %res8 = mul <8 x i64> %xa8, %xb8
-; SSE2-NEXT:  Cost Model: Found an estimated cost of 64 for instruction: %res16 = mul <16 x i64> %xa16, %xb16
-; SSE2-NEXT:  Cost Model: Found an estimated cost of 128 for instruction: %res32 = mul <32 x i64> %xa32, %xb32
-; SSE2-NEXT:  Cost Model: Found an estimated cost of 256 for instruction: %res64 = mul <64 x i64> %xa64, %xb64
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 7 for instruction: %res2 = mul <2 x i64> %xa2, %xb2
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 14 for instruction: %res4 = mul <4 x i64> %xa4, %xb4
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 28 for instruction: %res8 = mul <8 x i64> %xa8, %xb8
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 56 for instruction: %res16 = mul <16 x i64> %xa16, %xb16
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 112 for instruction: %res32 = mul <32 x i64> %xa32, %xb32
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 224 for instruction: %res64 = mul <64 x i64> %xa64, %xb64
 ; SSE2-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret void
 ;
 ; SSSE3-LABEL: 'mul_sext_vXi16'
@@ -710,12 +710,12 @@ define void @mul_sext_vXi16(<2 x i16> %a2, <2 x i16> %b2, <4 x i16> %a4, <4 x i1
 ; SSSE3-NEXT:  Cost Model: Found an estimated cost of 48 for instruction: %xb32 = sext <32 x i16> %b32 to <32 x i64>
 ; SSSE3-NEXT:  Cost Model: Found an estimated cost of 96 for instruction: %xa64 = sext <64 x i16> %a64 to <64 x i64>
 ; SSSE3-NEXT:  Cost Model: Found an estimated cost of 96 for instruction: %xb64 = sext <64 x i16> %b64 to <64 x i64>
-; SSSE3-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %res2 = mul <2 x i64> %xa2, %xb2
-; SSSE3-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: %res4 = mul <4 x i64> %xa4, %xb4
-; SSSE3-NEXT:  Cost Model: Found an estimated cost of 32 for instruction: %res8 = mul <8 x i64> %xa8, %xb8
-; SSSE3-NEXT:  Cost Model: Found an estimated cost of 64 for instruction: %res16 = mul <16 x i64> %xa16, %xb16
-; SSSE3-NEXT:  Cost Model: Found an estimated cost of 128 for instruction: %res32 = mul <32 x i64> %xa32, %xb32
-; SSSE3-NEXT:  Cost Model: Found an estimated cost of 256 for instruction: %res64 = mul <64 x i64> %xa64, %xb64
+; SSSE3-NEXT:  Cost Model: Found an estimated cost of 7 for instruction: %res2 = mul <2 x i64> %xa2, %xb2
+; SSSE3-NEXT:  Cost Model: Found an estimated cost of 14 for instruction: %res4 = mul <4 x i64> %xa4, %xb4
+; SSSE3-NEXT:  Cost Model: Found an estimated cost of 28 for instruction: %res8 = mul <8 x i64> %xa8, %xb8
+; SSSE3-NEXT:  Cost Model: Found an estimated cost of 56 for instruction: %res16 = mul <16 x i64> %xa16, %xb16
+; SSSE3-NEXT:  Cost Model: Found an estimated cost of 112 for instruction: %res32 = mul <32 x i64> %xa32, %xb32
+; SSSE3-NEXT:  Cost Model: Found an estimated cost of 224 for instruction: %res64 = mul <64 x i64> %xa64, %xb64
 ; SSSE3-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret void
 ;
 ; SSE42-LABEL: 'mul_sext_vXi16'
@@ -1111,12 +1111,12 @@ define void @mul_sext_zext_vXi16(<2 x i16> %a2, <2 x i16> %b2, <4 x i16> %a4, <4
 ; SSE2-NEXT:  Cost Model: Found an estimated cost of 32 for instruction: %xb32 = zext <32 x i16> %b32 to <32 x i64>
 ; SSE2-NEXT:  Cost Model: Found an estimated cost of 96 for instruction: %xa64 = sext <64 x i16> %a64 to <64 x i64>
 ; SSE2-NEXT:  Cost Model: Found an estimated cost of 64 for instruction: %xb64 = zext <64 x i16> %b64 to <64 x i64>
-; SSE2-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %res2 = mul <2 x i64> %xa2, %xb2
-; SSE2-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: %res4 = mul <4 x i64> %xa4, %xb4
-; SSE2-NEXT:  Cost Model: Found an estimated cost of 32 for instruction: %res8 = mul <8 x i64> %xa8, %xb8
-; SSE2-NEXT:  Cost Model: Found an estimated cost of 64 for instruction: %res16 = mul <16 x i64> %xa16, %xb16
-; SSE2-NEXT:  Cost Model: Found an estimated cost of 128 for instruction: %res32 = mul <32 x i64> %xa32, %xb32
-; SSE2-NEXT:  Cost Model: Found an estimated cost of 256 for instruction: %res64 = mul <64 x i64> %xa64, %xb64
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 7 for instruction: %res2 = mul <2 x i64> %xa2, %xb2
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 14 for instruction: %res4 = mul <4 x i64> %xa4, %xb4
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 28 for instruction: %res8 = mul <8 x i64> %xa8, %xb8
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 56 for instruction: %res16 = mul <16 x i64> %xa16, %xb16
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 112 for instruction: %res32 = mul <32 x i64> %xa32, %xb32
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 224 for instruction: %res64 = mul <64 x i64> %xa64, %xb64
 ; SSE2-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret void
 ;
 ; SSSE3-LABEL: 'mul_sext_zext_vXi16'
@@ -1132,12 +1132,12 @@ define void @mul_sext_zext_vXi16(<2 x i16> %a2, <2 x i16> %b2, <4 x i16> %a4, <4
 ; SSSE3-NEXT:  Cost Model: Found an estimated cost of 32 for instruction: %xb32 = zext <32 x i16> %b32 to <32 x i64>
 ; SSSE3-NEXT:  Cost Model: Found an estimated cost of 96 for instruction: %xa64 = sext <64 x i16> %a64 to <64 x i64>
 ; SSSE3-NEXT:  Cost Model: Found an estimated cost of 64 for instruction: %xb64 = zext <64 x i16> %b64 to <64 x i64>
-; SSSE3-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %res2 = mul <2 x i64> %xa2, %xb2
-; SSSE3-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: %res4 = mul <4 x i64> %xa4, %xb4
-; SSSE3-NEXT:  Cost Model: Found an estimated cost of 32 for instruction: %res8 = mul <8 x i64> %xa8, %xb8
-; SSSE3-NEXT:  Cost Model: Found an estimated cost of 64 for instruction: %res16 = mul <16 x i64> %xa16, %xb16
-; SSSE3-NEXT:  Cost Model: Found an estimated cost of 128 for instruction: %res32 = mul <32 x i64> %xa32, %xb32
-; SSSE3-NEXT:  Cost Model: Found an estimated cost of 256 for instruction: %res64 = mul <64 x i64> %xa64, %xb64
+; SSSE3-NEXT:  Cost Model: Found an estimated cost of 7 for instruction: %res2 = mul <2 x i64> %xa2, %xb2
+; SSSE3-NEXT:  Cost Model: Found an estimated cost of 14 for instruction: %res4 = mul <4 x i64> %xa4, %xb4
+; SSSE3-NEXT:  Cost Model: Found an estimated cost of 28 for instruction: %res8 = mul <8 x i64> %xa8, %xb8
+; SSSE3-NEXT:  Cost Model: Found an estimated cost of 56 for instruction: %res16 = mul <16 x i64> %xa16, %xb16
+; SSSE3-NEXT:  Cost Model: Found an estimated cost of 112 for instruction: %res32 = mul <32 x i64> %xa32, %xb32
+; SSSE3-NEXT:  Cost Model: Found an estimated cost of 224 for instruction: %res64 = mul <64 x i64> %xa64, %xb64
 ; SSSE3-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret void
 ;
 ; SSE42-LABEL: 'mul_sext_zext_vXi16'
@@ -1347,12 +1347,12 @@ define void @mul_sext_vXi32(<2 x i32> %a2, <2 x i32> %b2, <4 x i32> %a4, <4 x i3
 ; SSE2-NEXT:  Cost Model: Found an estimated cost of 32 for instruction: %xb32 = sext <32 x i32> %b32 to <32 x i64>
 ; SSE2-NEXT:  Cost Model: Found an estimated cost of 64 for instruction: %xa64 = sext <64 x i32> %a64 to <64 x i64>
 ; SSE2-NEXT:  Cost Model: Found an estimated cost of 64 for instruction: %xb64 = sext <64 x i32> %b64 to <64 x i64>
-; SSE2-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %res2 = mul <2 x i64> %xa2, %xb2
-; SSE2-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: %res4 = mul <4 x i64> %xa4, %xb4
-; SSE2-NEXT:  Cost Model: Found an estimated cost of 32 for instruction: %res8 = mul <8 x i64> %xa8, %xb8
-; SSE2-NEXT:  Cost Model: Found an estimated cost of 64 for instruction: %res16 = mul <16 x i64> %xa16, %xb16
-; SSE2-NEXT:  Cost Model: Found an estimated cost of 128 for instruction: %res32 = mul <32 x i64> %xa32, %xb32
-; SSE2-NEXT:  Cost Model: Found an estimated cost of 256 for instruction: %res64 = mul <64 x i64> %xa64, %xb64
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 7 for instruction: %res2 = mul <2 x i64> %xa2, %xb2
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 14 for instruction: %res4 = mul <4 x i64> %xa4, %xb4
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 28 for instruction: %res8 = mul <8 x i64> %xa8, %xb8
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 56 for instruction: %res16 = mul <16 x i64> %xa16, %xb16
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 112 for instruction: %res32 = mul <32 x i64> %xa32, %xb32
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 224 for instruction: %res64 = mul <64 x i64> %xa64, %xb64
 ; SSE2-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret void
 ;
 ; SSSE3-LABEL: 'mul_sext_vXi32'
@@ -1368,12 +1368,12 @@ define void @mul_sext_vXi32(<2 x i32> %a2, <2 x i32> %b2, <4 x i32> %a4, <4 x i3
 ; SSSE3-NEXT:  Cost Model: Found an estimated cost of 32 for instruction: %xb32 = sext <32 x i32> %b32 to <32 x i64>
 ; SSSE3-NEXT:  Cost Model: Found an estimated cost of 64 for instruction: %xa64 = sext <64 x i32> %a64 to <64 x i64>
 ; SSSE3-NEXT:  Cost Model: Found an estimated cost of 64 for instruction: %xb64 = sext <64 x i32> %b64 to <64 x i64>
-; SSSE3-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %res2 = mul <2 x i64> %xa2, %xb2
-; SSSE3-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: %res4 = mul <4 x i64> %xa4, %xb4
-; SSSE3-NEXT:  Cost Model: Found an estimated cost of 32 for instruction: %res8 = mul <8 x i64> %xa8, %xb8
-; SSSE3-NEXT:  Cost Model: Found an estimated cost of 64 for instruction: %res16 = mul <16 x i64> %xa16, %xb16
-; SSSE3-NEXT:  Cost Model: Found an estimated cost of 128 for instruction: %res32 = mul <32 x i64> %xa32, %xb32
-; SSSE3-NEXT:  Cost Model: Found an estimated cost of 256 for instruction: %res64 = mul <64 x i64> %xa64, %xb64
+; SSSE3-NEXT:  Cost Model: Found an estimated cost of 7 for instruction: %res2 = mul <2 x i64> %xa2, %xb2
+; SSSE3-NEXT:  Cost Model: Found an estimated cost of 14 for instruction: %res4 = mul <4 x i64> %xa4, %xb4
+; SSSE3-NEXT:  Cost Model: Found an estimated cost of 28 for instruction: %res8 = mul <8 x i64> %xa8, %xb8
+; SSSE3-NEXT:  Cost Model: Found an estimated cost of 56 for instruction: %res16 = mul <16 x i64> %xa16, %xb16
+; SSSE3-NEXT:  Cost Model: Found an estimated cost of 112 for instruction: %res32 = mul <32 x i64> %xa32, %xb32
+; SSSE3-NEXT:  Cost Model: Found an estimated cost of 224 for instruction: %res64 = mul <64 x i64> %xa64, %xb64
 ; SSSE3-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret void
 ;
 ; SSE42-LABEL: 'mul_sext_vXi32'
@@ -1769,12 +1769,12 @@ define void @mul_sext_zext_vXi32(<2 x i32> %a2, <2 x i32> %b2, <4 x i32> %a4, <4
 ; SSE2-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: %xb32 = zext <32 x i32> %b32 to <32 x i64>
 ; SSE2-NEXT:  Cost Model: Found an estimated cost of 64 for instruction: %xa64 = sext <64 x i32> %a64 to <64 x i64>
 ; SSE2-NEXT:  Cost Model: Found an estimated cost of 32 for instruction: %xb64 = zext <64 x i32> %b64 to <64 x i64>
-; SSE2-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %res2 = mul <2 x i64> %xa2, %xb2
-; SSE2-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: %res4 = mul <4 x i64> %xa4, %xb4
-; SSE2-NEXT:  Cost Model: Found an estimated cost of 32 for instruction: %res8 = mul <8 x i64> %xa8, %xb8
-; SSE2-NEXT:  Cost Model: Found an estimated cost of 64 for instruction: %res16 = mul <16 x i64> %xa16, %xb16
-; SSE2-NEXT:  Cost Model: Found an estimated cost of 128 for instruction: %res32 = mul <32 x i64> %xa32, %xb32
-; SSE2-NEXT:  Cost Model: Found an estimated cost of 256 for instruction: %res64 = mul <64 x i64> %xa64, %xb64
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 7 for instruction: %res2 = mul <2 x i64> %xa2, %xb2
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 14 for instruction: %res4 = mul <4 x i64> %xa4, %xb4
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 28 for instruction: %res8 = mul <8 x i64> %xa8, %xb8
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 56 for instruction: %res16 = mul <16 x i64> %xa16, %xb16
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 112 for instruction: %res32 = mul <32 x i64> %xa32, %xb32
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 224 for instruction: %res64 = mul <64 x i64> %xa64, %xb64
 ; SSE2-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret void
 ;
 ; SSSE3-LABEL: 'mul_sext_zext_vXi32'
@@ -1790,12 +1790,12 @@ define void @mul_sext_zext_vXi32(<2 x i32> %a2, <2 x i32> %b2, <4 x i32> %a4, <4
 ; SSSE3-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: %xb32 = zext <32 x i32> %b32 to <32 x i64>
 ; SSSE3-NEXT:  Cost Model: Found an estimated cost of 64 for instruction: %xa64 = sext <64 x i32> %a64 to <64 x i64>
 ; SSSE3-NEXT:  Cost Model: Found an estimated cost of 32 for instruction: %xb64 = zext <64 x i32> %b64 to <64 x i64>
-; SSSE3-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %res2 = mul <2 x i64> %xa2, %xb2
-; SSSE3-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: %res4 = mul <4 x i64> %xa4, %xb4
-; SSSE3-NEXT:  Cost Model: Found an estimated cost of 32 for instruction: %res8 = mul <8 x i64> %xa8, %xb8
-; SSSE3-NEXT:  Cost Model: Found an estimated cost of 64 for instruction: %res16 = mul <16 x i64> %xa16, %xb16
-; SSSE3-NEXT:  Cost Model: Found an estimated cost of 128 for instruction: %res32 = mul <32 x i64> %xa32, %xb32
-; SSSE3-NEXT:  Cost Model: Found an estimated cost of 256 for instruction: %res64 = mul <64 x i64> %xa64, %xb64
+; SSSE3-NEXT:  Cost Model: Found an estimated cost of 7 for instruction: %res2 = mul <2 x i64> %xa2, %xb2
+; SSSE3-NEXT:  Cost Model: Found an estimated cost of 14 for instruction: %res4 = mul <4 x i64> %xa4, %xb4
+; SSSE3-NEXT:  Cost Model: Found an estimated cost of 28 for instruction: %res8 = mul <8 x i64> %xa8, %xb8
+; SSSE3-NEXT:  Cost Model: Found an estimated cost of 56 for instruction: %res16 = mul <16 x i64> %xa16, %xb16
+; SSSE3-NEXT:  Cost Model: Found an estimated cost of 112 for instruction: %res32 = mul <32 x i64> %xa32, %xb32
+; SSSE3-NEXT:  Cost Model: Found an estimated cost of 224 for instruction: %res64 = mul <64 x i64> %xa64, %xb64
 ; SSSE3-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret void
 ;
 ; SSE42-LABEL: 'mul_sext_zext_vXi32'
