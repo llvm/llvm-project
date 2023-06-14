@@ -166,7 +166,6 @@ public:
     if (allocatorSupportsMemoryTagging<Config>() &&
         systemSupportsMemoryTagging())
       Primary.Options.set(OptionBit::UseMemoryTagging);
-    Primary.Options.set(OptionBit::UseOddEvenTags);
 
     QuarantineMaxChunkSize =
         static_cast<u32>(getFlags()->quarantine_max_chunk_size);
