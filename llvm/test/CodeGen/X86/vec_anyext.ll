@@ -173,7 +173,7 @@ define <4 x i8> @func_8_64(ptr %a, ptr %b) nounwind {
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; X86-NEXT:    vmovdqa (%ecx), %xmm0
 ; X86-NEXT:    vmovdqa 16(%ecx), %xmm1
-; X86-NEXT:    vmovdqa {{.*#+}} xmm2 = <0,8,u,u,u,u,u,u,u,u,u,u,u,u,u,u>
+; X86-NEXT:    vbroadcastss {{.*#+}} xmm2 = [0,8,0,0,0,8,0,0,0,8,0,0,0,8,0,0]
 ; X86-NEXT:    vpshufb %xmm2, %xmm1, %xmm1
 ; X86-NEXT:    vpshufb %xmm2, %xmm0, %xmm0
 ; X86-NEXT:    vpunpcklwd {{.*#+}} xmm0 = xmm0[0],xmm1[0],xmm0[1],xmm1[1],xmm0[2],xmm1[2],xmm0[3],xmm1[3]
@@ -189,7 +189,7 @@ define <4 x i8> @func_8_64(ptr %a, ptr %b) nounwind {
 ; X64:       # %bb.0:
 ; X64-NEXT:    vmovdqa (%rdi), %xmm0
 ; X64-NEXT:    vmovdqa 16(%rdi), %xmm1
-; X64-NEXT:    vmovdqa {{.*#+}} xmm2 = <0,8,u,u,u,u,u,u,u,u,u,u,u,u,u,u>
+; X64-NEXT:    vpbroadcastw {{.*#+}} xmm2 = [0,8,0,8,0,8,0,8,0,8,0,8,0,8,0,8]
 ; X64-NEXT:    vpshufb %xmm2, %xmm1, %xmm1
 ; X64-NEXT:    vpshufb %xmm2, %xmm0, %xmm0
 ; X64-NEXT:    vpunpcklwd {{.*#+}} xmm0 = xmm0[0],xmm1[0],xmm0[1],xmm1[1],xmm0[2],xmm1[2],xmm0[3],xmm1[3]

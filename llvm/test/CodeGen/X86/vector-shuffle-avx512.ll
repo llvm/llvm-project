@@ -455,7 +455,7 @@ define <32 x i8> @test_mm256_mask_blend_epi8(<32 x i8> %A, <32 x i8> %W){
 ;
 ; AVX512F-LABEL: test_mm256_mask_blend_epi8:
 ; AVX512F:       # %bb.0: # %entry
-; AVX512F-NEXT:    vmovdqa {{.*#+}} ymm2 = [255,0,255,0,255,0,255,0,255,0,255,0,255,0,255,0,255,0,255,0,255,0,255,0,255,0,255,0,255,0,255,0]
+; AVX512F-NEXT:    vpbroadcastw {{.*#+}} ymm2 = [255,0,255,0,255,0,255,0,255,0,255,0,255,0,255,0,255,0,255,0,255,0,255,0,255,0,255,0,255,0,255,0]
 ; AVX512F-NEXT:    vpblendvb %ymm2, %ymm1, %ymm0, %ymm0
 ; AVX512F-NEXT:    ret{{[l|q]}}
 entry:
@@ -473,7 +473,7 @@ define <16 x i8> @test_mm_mask_blend_epi8(<16 x i8> %A, <16 x i8> %W){
 ;
 ; AVX512F-LABEL: test_mm_mask_blend_epi8:
 ; AVX512F:       # %bb.0: # %entry
-; AVX512F-NEXT:    vmovdqa {{.*#+}} xmm2 = [255,0,255,0,255,0,255,0,255,0,255,0,255,0,255,0]
+; AVX512F-NEXT:    vpbroadcastw {{.*#+}} xmm2 = [255,0,255,0,255,0,255,0,255,0,255,0,255,0,255,0]
 ; AVX512F-NEXT:    vpblendvb %xmm2, %xmm1, %xmm0, %xmm0
 ; AVX512F-NEXT:    ret{{[l|q]}}
 entry:
