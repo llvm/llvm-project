@@ -267,7 +267,7 @@ define <4 x i32> @extractelt_insertion(<2 x i32> %x, i32 %y) {
 ; CHECK-LABEL: @extractelt_insertion(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[TMP0:%.*]] = shufflevector <2 x i32> [[X:%.*]], <2 x i32> poison, <4 x i32> <i32 0, i32 1, i32 poison, i32 poison>
-; CHECK-NEXT:    [[B:%.*]] = shufflevector <4 x i32> <i32 0, i32 0, i32 0, i32 poison>, <4 x i32> [[TMP0]], <4 x i32> <i32 0, i32 1, i32 2, i32 5>
+; CHECK-NEXT:    [[B:%.*]] = shufflevector <4 x i32> <i32 0, i32 poison, i32 poison, i32 poison>, <4 x i32> [[TMP0]], <4 x i32> <i32 0, i32 0, i32 0, i32 5>
 ; CHECK-NEXT:    [[C:%.*]] = add i32 [[Y:%.*]], 3
 ; CHECK-NEXT:    [[D:%.*]] = extractelement <4 x i32> [[TMP0]], i32 [[C]]
 ; CHECK-NEXT:    [[E:%.*]] = icmp eq i32 [[D]], 0
