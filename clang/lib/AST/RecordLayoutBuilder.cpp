@@ -2926,7 +2926,8 @@ void MicrosoftRecordLayoutBuilder::layoutNonVirtualBase(
   bool FoundBase = false;
   if (UseExternalLayout) {
     FoundBase = External.getExternalNVBaseOffset(BaseDecl, BaseOffset);
-    if (BaseOffset > Size) {
+    if (FoundBase) {
+      assert(BaseOffset >= Size && "base offset already allocated");
       Size = BaseOffset;
     }
   }
@@ -3722,28 +3723,6 @@ void ASTContext::DumpRecordLayout(const RecordDecl *RD, raw_ostream &OS,
   if (Target->defaultsToAIXPowerAlignment())
     OS << "  PreferredAlignment:" << toBits(Info.getPreferredAlignment())
        << "\n";
-  if (const CXXRecordDecl *CXXRD = dyn_cast<CXXRecordDecl>(RD)) {
-    OS << "  BaseOffsets: [";
-    const CXXRecordDecl *Base = nullptr;
-    for (auto I : CXXRD->bases()) {
-      if (I.isVirtual())
-        continue;
-      if (Base)
-        OS << ", ";
-      Base = I.getType()->getAsCXXRecordDecl();
-      OS << Info.CXXInfo->BaseOffsets[Base].getQuantity();
-    }
-    OS << "]>\n";
-    OS << "  VBaseOffsets: [";
-    const CXXRecordDecl *VBase = nullptr;
-    for (auto I : CXXRD->vbases()) {
-      if (VBase)
-        OS << ", ";
-      VBase = I.getType()->getAsCXXRecordDecl();
-      OS << Info.CXXInfo->VBaseOffsets[VBase].VBaseOffset.getQuantity();
-    }
-    OS << "]>\n";
-  }
   OS << "  FieldOffsets: [";
   for (unsigned i = 0, e = Info.getFieldCount(); i != e; ++i) {
     if (i)
