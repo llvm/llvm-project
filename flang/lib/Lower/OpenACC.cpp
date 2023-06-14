@@ -499,6 +499,36 @@ Fortran::lower::createOrGetPrivateRecipe(mlir::OpBuilder &builder,
   return recipe;
 }
 
+mlir::acc::FirstprivateRecipeOp Fortran::lower::createOrGetFirstprivateRecipe(
+    mlir::OpBuilder &builder, llvm::StringRef recipeName, mlir::Location loc,
+    mlir::Type ty) {
+  mlir::ModuleOp mod =
+      builder.getBlock()->getParent()->getParentOfType<mlir::ModuleOp>();
+  if (auto recipe =
+          mod.lookupSymbol<mlir::acc::FirstprivateRecipeOp>(recipeName))
+    return recipe;
+
+  auto crtPos = builder.saveInsertionPoint();
+  mlir::OpBuilder modBuilder(mod.getBodyRegion());
+  auto recipe =
+      modBuilder.create<mlir::acc::FirstprivateRecipeOp>(loc, recipeName, ty);
+  builder.createBlock(&recipe.getInitRegion(), recipe.getInitRegion().end(),
+                      {ty}, {loc});
+  builder.setInsertionPointToEnd(&recipe.getInitRegion().back());
+  builder.create<mlir::acc::YieldOp>(
+      loc, recipe.getInitRegion().front().getArgument(0));
+
+  // Add empty copy region for firstprivate. TODO add copy sequence.
+  builder.createBlock(&recipe.getCopyRegion(), recipe.getCopyRegion().end(),
+                      {ty, ty}, {loc, loc});
+  builder.setInsertionPointToEnd(&recipe.getCopyRegion().back());
+  builder.create<mlir::acc::TerminatorOp>(loc);
+
+  builder.restoreInsertionPoint(crtPos);
+  return recipe;
+}
+
+template <typename Op>
 static void
 genPrivatizations(const Fortran::parser::AccObjectList &objectList,
                   Fortran::lower::AbstractConverter &converter,
@@ -514,11 +544,18 @@ genPrivatizations(const Fortran::parser::AccObjectList &objectList,
     mlir::Value baseAddr = gatherDataOperandAddrAndBounds(
         converter, builder, semanticsContext, stmtCtx, accObject,
         operandLocation, asFortran, bounds);
-    std::string recipeName = fir::getTypeAsString(
-        baseAddr.getType(), converter.getKindMap(), "privatization");
-    mlir::acc::PrivateRecipeOp recipe =
-        Fortran::lower::createOrGetPrivateRecipe(
-            builder, recipeName, operandLocation, baseAddr.getType());
+    Op recipe;
+    if constexpr (std::is_same_v<Op, mlir::acc::PrivateRecipeOp>) {
+      std::string recipeName = fir::getTypeAsString(
+          baseAddr.getType(), converter.getKindMap(), "privatization");
+      recipe = Fortran::lower::createOrGetPrivateRecipe(
+          builder, recipeName, operandLocation, baseAddr.getType());
+    } else {
+      std::string recipeName = fir::getTypeAsString(
+          baseAddr.getType(), converter.getKindMap(), "firstprivatization");
+      recipe = Fortran::lower::createOrGetFirstprivateRecipe(
+          builder, recipeName, operandLocation, baseAddr.getType());
+    }
     privatizations.push_back(mlir::SymbolRefAttr::get(
         builder.getContext(), recipe.getSymName().str()));
     dataOperands.push_back(baseAddr);
@@ -870,8 +907,9 @@ createLoopOp(Fortran::lower::AbstractConverter &converter,
     } else if (const auto *privateClause =
                    std::get_if<Fortran::parser::AccClause::Private>(
                        &clause.u)) {
-      genPrivatizations(privateClause->v, converter, semanticsContext, stmtCtx,
-                        privateOperands, privatizations);
+      genPrivatizations<mlir::acc::PrivateRecipeOp>(
+          privateClause->v, converter, semanticsContext, stmtCtx,
+          privateOperands, privatizations);
     } else if (const auto *reductionClause =
                    std::get_if<Fortran::parser::AccClause::Reduction>(
                        &clause.u)) {
@@ -1006,7 +1044,8 @@ createComputeOp(Fortran::lower::AbstractConverter &converter,
 
   llvm::SmallVector<mlir::Value> reductionOperands, privateOperands,
       firstprivateOperands;
-  llvm::SmallVector<mlir::Attribute> privatizations, reductionRecipes;
+  llvm::SmallVector<mlir::Attribute> privatizations, firstPrivatizations,
+      reductionRecipes;
 
   // Async, wait and self clause have optional values but can be present with
   // no value as well. When there is no value, the op has an attribute to
@@ -1153,13 +1192,15 @@ createComputeOp(Fortran::lower::AbstractConverter &converter,
     } else if (const auto *privateClause =
                    std::get_if<Fortran::parser::AccClause::Private>(
                        &clause.u)) {
-      genPrivatizations(privateClause->v, converter, semanticsContext, stmtCtx,
-                        privateOperands, privatizations);
+      genPrivatizations<mlir::acc::PrivateRecipeOp>(
+          privateClause->v, converter, semanticsContext, stmtCtx,
+          privateOperands, privatizations);
     } else if (const auto *firstprivateClause =
                    std::get_if<Fortran::parser::AccClause::Firstprivate>(
                        &clause.u)) {
-      genObjectList(firstprivateClause->v, converter, semanticsContext, stmtCtx,
-                    firstprivateOperands);
+      genPrivatizations<mlir::acc::FirstprivateRecipeOp>(
+          firstprivateClause->v, converter, semanticsContext, stmtCtx,
+          firstprivateOperands, firstPrivatizations);
     } else if (const auto *reductionClause =
                    std::get_if<Fortran::parser::AccClause::Reduction>(
                        &clause.u)) {
@@ -1209,6 +1250,9 @@ createComputeOp(Fortran::lower::AbstractConverter &converter,
     if (!reductionRecipes.empty())
       computeOp.setReductionRecipesAttr(
           mlir::ArrayAttr::get(builder.getContext(), reductionRecipes));
+    if (!firstPrivatizations.empty())
+      computeOp.setFirstprivatizationsAttr(
+          mlir::ArrayAttr::get(builder.getContext(), firstPrivatizations));
   }
 
   auto insPt = builder.saveInsertionPoint();
