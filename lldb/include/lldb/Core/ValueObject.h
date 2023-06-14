@@ -487,7 +487,7 @@ public:
                      ConstString *name_of_error = nullptr);
 
   virtual lldb::ValueObjectSP GetChildMemberWithName(llvm::StringRef name,
-                                                     bool can_create);
+                                                     bool can_create = true);
 
   virtual size_t GetIndexOfChildWithName(llvm::StringRef name);
 

@@ -146,10 +146,8 @@ namespace {
       llvm::raw_string_ostream os(buf);
       (void) llvm::createPrintModulePass(os);
       (void) llvm::createPrintFunctionPass(os);
-      (void) llvm::createModuleDebugInfoPrinterPass();
       (void) llvm::createSinkingPass();
       (void) llvm::createLowerAtomicPass();
-      (void) llvm::createMemDepPrinter();
       (void) llvm::createLoadStoreVectorizerPass();
       (void) llvm::createPartiallyInlineLibCallsPass();
       (void) llvm::createScalarizerPass();
@@ -158,9 +156,6 @@ namespace {
       (void) llvm::createSpeculativeExecutionIfHasBranchDivergencePass();
       (void) llvm::createRewriteSymbolsPass();
       (void) llvm::createStraightLineStrengthReducePass();
-      (void) llvm::createMemDerefPrinter();
-      (void) llvm::createMustExecutePrinter();
-      (void) llvm::createMustBeExecutedContextPrinter();
       (void)llvm::createScalarizeMaskedMemIntrinLegacyPass();
       (void) llvm::createHardwareLoopsLegacyPass();
       (void) llvm::createUnifyLoopExitsPass();

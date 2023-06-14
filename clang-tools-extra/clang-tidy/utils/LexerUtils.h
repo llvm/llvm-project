@@ -116,6 +116,11 @@ std::optional<Token> getQualifyingToken(tok::TokenKind TK,
 SourceLocation getUnifiedEndLoc(const Stmt &S, const SourceManager &SM,
                                 const LangOptions &LangOpts);
 
+/// For a given FunctionDecl returns the location where you would need to place
+/// the noexcept specifier.
+SourceLocation getLocationForNoexceptSpecifier(const FunctionDecl *FuncDecl,
+                                               const SourceManager &SM);
+
 } // namespace tidy::utils::lexer
 } // namespace clang
 

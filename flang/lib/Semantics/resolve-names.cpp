@@ -4849,6 +4849,13 @@ int DeclarationVisitor::GetVectorElementKind(
 }
 
 bool DeclarationVisitor::Pre(const parser::VectorTypeSpec &) {
+  // PowerPC vector types are allowed only on Power architectures.
+  if (!currScope().context().targetCharacteristics().isPPC()) {
+    Say(currStmtSource().value(),
+        "Vector type is only supported for PowerPC"_err_en_US);
+    isVectorType_ = false;
+    return false;
+  }
   isVectorType_ = true;
   return true;
 }

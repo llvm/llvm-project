@@ -980,14 +980,6 @@ def SwizzleMatchClass : AsmOperandClass {
   let IsOptional = 1;
 }
 
-def EndpgmMatchClass : AsmOperandClass {
-  let Name = "EndpgmImm";
-  let PredicateMethod = "isEndpgm";
-  let ParserMethod = "parseEndpgmOp";
-  let RenderMethod = "addImmOperands";
-  let IsOptional = 1;
-}
-
 def SWaitMatchClass : AsmOperandClass {
   let Name = "SWaitCnt";
   let RenderMethod = "addImmOperands";
@@ -1022,10 +1014,7 @@ def SwizzleImm : Operand<i16> {
   let ParserMatchClass = SwizzleMatchClass;
 }
 
-def EndpgmImm : Operand<i16> {
-  let PrintMethod = "printEndpgm";
-  let ParserMatchClass = EndpgmMatchClass;
-}
+def Endpgm : CustomOperand<i16, 1>;
 
 def WAIT_FLAG : Operand <i32> {
   let ParserMatchClass = SWaitMatchClass;

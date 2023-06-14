@@ -218,7 +218,7 @@ bool isSugaredTemplateParameter(QualType QT) {
 // A simple wrapper for `clang::desugarForDiagnostic` that provides optional
 // semantic.
 std::optional<QualType> desugar(ASTContext &AST, QualType QT) {
-  bool ShouldAKA;
+  bool ShouldAKA = false;
   auto Desugared = clang::desugarForDiagnostic(AST, QT, ShouldAKA);
   if (!ShouldAKA)
     return std::nullopt;

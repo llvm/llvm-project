@@ -102,6 +102,8 @@ void TargetCharacteristics::set_isBigEndian(bool isBig) {
   isBigEndian_ = isBig;
 }
 
+void TargetCharacteristics::set_isPPC(bool isPowerPC) { isPPC_ = isPowerPC; }
+
 void TargetCharacteristics::set_areSubnormalsFlushedToZero(bool yes) {
   areSubnormalsFlushedToZero_ = yes;
 }

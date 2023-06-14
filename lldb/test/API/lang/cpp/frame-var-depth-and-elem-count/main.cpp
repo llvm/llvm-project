@@ -15,5 +15,5 @@ struct C {
 int main() {
   C *c = new C[5];
   puts("break here");
-  return 0; // break here
+  return 0;
 }

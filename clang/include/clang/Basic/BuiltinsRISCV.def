@@ -38,8 +38,8 @@ TARGET_BUILTIN(__builtin_riscv_zip_32, "ZiZi", "nc", "zbkb,32bit")
 TARGET_BUILTIN(__builtin_riscv_unzip_32, "ZiZi", "nc", "zbkb,32bit")
 
 // Zknd extension
-TARGET_BUILTIN(__builtin_riscv_aes32dsi_32, "ZiZiZiIUc", "nc", "zknd,32bit")
-TARGET_BUILTIN(__builtin_riscv_aes32dsmi_32, "ZiZiZiIUc", "nc", "zknd,32bit")
+TARGET_BUILTIN(__builtin_riscv_aes32dsi_32, "ZiZiZiIUi", "nc", "zknd,32bit")
+TARGET_BUILTIN(__builtin_riscv_aes32dsmi_32, "ZiZiZiIUi", "nc", "zknd,32bit")
 TARGET_BUILTIN(__builtin_riscv_aes64ds_64, "WiWiWi", "nc", "zknd,64bit")
 TARGET_BUILTIN(__builtin_riscv_aes64dsm_64, "WiWiWi", "nc", "zknd,64bit")
 TARGET_BUILTIN(__builtin_riscv_aes64im_64, "WiWi", "nc", "zknd,64bit")
@@ -49,8 +49,8 @@ TARGET_BUILTIN(__builtin_riscv_aes64ks1i_64, "WiWiIUi", "nc", "zknd|zkne,64bit")
 TARGET_BUILTIN(__builtin_riscv_aes64ks2_64, "WiWiWi", "nc", "zknd|zkne,64bit")
 
 // Zkne extension
-TARGET_BUILTIN(__builtin_riscv_aes32esi_32, "ZiZiZiIUc", "nc", "zkne,32bit")
-TARGET_BUILTIN(__builtin_riscv_aes32esmi_32, "ZiZiZiIUc", "nc", "zkne,32bit")
+TARGET_BUILTIN(__builtin_riscv_aes32esi_32, "ZiZiZiIUi", "nc", "zkne,32bit")
+TARGET_BUILTIN(__builtin_riscv_aes32esmi_32, "ZiZiZiIUi", "nc", "zkne,32bit")
 TARGET_BUILTIN(__builtin_riscv_aes64es_64, "WiWiWi", "nc", "zkne,64bit")
 TARGET_BUILTIN(__builtin_riscv_aes64esm_64, "WiWiWi", "nc", "zkne,64bit")
 
@@ -72,8 +72,8 @@ TARGET_BUILTIN(__builtin_riscv_sha512sum0_64, "WiWi", "nc", "zknh,64bit")
 TARGET_BUILTIN(__builtin_riscv_sha512sum1_64, "WiWi", "nc", "zknh,64bit")
 
 // Zksed extension
-TARGET_BUILTIN(__builtin_riscv_sm4ed, "LiLiLiIUc", "nc", "zksed")
-TARGET_BUILTIN(__builtin_riscv_sm4ks, "LiLiLiIUc", "nc", "zksed")
+TARGET_BUILTIN(__builtin_riscv_sm4ed, "LiLiLiIUi", "nc", "zksed")
+TARGET_BUILTIN(__builtin_riscv_sm4ks, "LiLiLiIUi", "nc", "zksed")
 
 // Zksh extension
 TARGET_BUILTIN(__builtin_riscv_sm3p0, "LiLi", "nc", "zksh")

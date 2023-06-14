@@ -6,6 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
+// UNSUPPORTED: GCC-ALWAYS_INLINE-FIXME
+
 // <string>
 
 // basic_string<charT,traits,Allocator>&

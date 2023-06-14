@@ -215,19 +215,19 @@ size_t lldb_private::formatters::LibcxxStdMapSyntheticFrontEnd::
     return m_count;
   if (m_tree == nullptr)
     return 0;
-  ValueObjectSP m_item(m_tree->GetChildMemberWithName("__pair3_", true));
+  ValueObjectSP m_item(m_tree->GetChildMemberWithName("__pair3_"));
   if (!m_item)
     return 0;
 
   switch (m_item->GetCompilerType().GetNumDirectBaseClasses()) {
   case 1:
     // Assume a pre llvm r300140 __compressed_pair implementation:
-    m_item = m_item->GetChildMemberWithName("__first_", true);
+    m_item = m_item->GetChildMemberWithName("__first_");
     break;
   case 2: {
     // Assume a post llvm r300140 __compressed_pair implementation:
     ValueObjectSP first_elem_parent = m_item->GetChildAtIndex(0, true);
-    m_item = first_elem_parent->GetChildMemberWithName("__value_", true);
+    m_item = first_elem_parent->GetChildMemberWithName("__value_");
     break;
   }
   default:
@@ -249,7 +249,7 @@ bool lldb_private::formatters::LibcxxStdMapSyntheticFrontEnd::GetDataType() {
   deref = m_root_node->Dereference(error);
   if (!deref || error.Fail())
     return false;
-  deref = deref->GetChildMemberWithName("__value_", true);
+  deref = deref->GetChildMemberWithName("__value_");
   if (deref) {
     m_element_type = deref->GetCompilerType();
     return true;
@@ -355,7 +355,7 @@ lldb_private::formatters::LibcxxStdMapSyntheticFrontEnd::GetChildAtIndex(
         return lldb::ValueObjectSP();
       }
       GetValueOffset(iterated_sp);
-      auto child_sp = iterated_sp->GetChildMemberWithName("__value_", true);
+      auto child_sp = iterated_sp->GetChildMemberWithName("__value_");
       if (child_sp)
         iterated_sp = child_sp;
       else
@@ -419,10 +419,10 @@ bool lldb_private::formatters::LibcxxStdMapSyntheticFrontEnd::Update() {
   m_count = UINT32_MAX;
   m_tree = m_root_node = nullptr;
   m_iterators.clear();
-  m_tree = m_backend.GetChildMemberWithName("__tree_", true).get();
+  m_tree = m_backend.GetChildMemberWithName("__tree_").get();
   if (!m_tree)
     return false;
-  m_root_node = m_tree->GetChildMemberWithName("__begin_node_", true).get();
+  m_root_node = m_tree->GetChildMemberWithName("__begin_node_").get();
   return false;
 }
 

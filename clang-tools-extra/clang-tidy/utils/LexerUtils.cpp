@@ -20,7 +20,7 @@ Token getPreviousToken(SourceLocation Location, const SourceManager &SM,
 
   Location = Location.getLocWithOffset(-1);
   if (Location.isInvalid())
-      return Token;
+    return Token;
 
   auto StartOfFile = SM.getLocForStartOfFile(SM.getFileID(Location));
   while (Location != StartOfFile) {
@@ -181,7 +181,8 @@ static bool breakAndReturnEnd(const Stmt &S) {
 }
 
 static bool breakAndReturnEndPlus1Token(const Stmt &S) {
-  return isa<Expr, DoStmt, ReturnStmt, BreakStmt, ContinueStmt, GotoStmt, SEHLeaveStmt>(S);
+  return isa<Expr, DoStmt, ReturnStmt, BreakStmt, ContinueStmt, GotoStmt,
+             SEHLeaveStmt>(S);
 }
 
 // Given a Stmt which does not include it's semicolon this method returns the
@@ -233,11 +234,45 @@ SourceLocation getUnifiedEndLoc(const Stmt &S, const SourceManager &SM,
       LastChild = Child;
   }
 
-  if (!breakAndReturnEnd(*LastChild) &&
-      breakAndReturnEndPlus1Token(*LastChild))
+  if (!breakAndReturnEnd(*LastChild) && breakAndReturnEndPlus1Token(*LastChild))
     return getSemicolonAfterStmtEndLoc(S.getEndLoc(), SM, LangOpts);
 
   return S.getEndLoc();
+}
+
+SourceLocation getLocationForNoexceptSpecifier(const FunctionDecl *FuncDecl,
+                                               const SourceManager &SM) {
+  if (!FuncDecl)
+    return {};
+
+  const LangOptions &LangOpts = FuncDecl->getLangOpts();
+
+  if (FuncDecl->getNumParams() == 0) {
+    // Start at the beginning of the function declaration, and find the closing
+    // parenthesis after which we would place the noexcept specifier.
+    Token CurrentToken;
+    SourceLocation CurrentLocation = FuncDecl->getBeginLoc();
+    while (!Lexer::getRawToken(CurrentLocation, CurrentToken, SM, LangOpts,
+                               true)) {
+      if (CurrentToken.is(tok::r_paren))
+        return CurrentLocation.getLocWithOffset(1);
+
+      CurrentLocation = CurrentToken.getEndLoc();
+    }
+
+    // Failed to find the closing parenthesis, so just return an invalid
+    // SourceLocation.
+    return {};
+  }
+
+  // FunctionDecl with parameters
+  const SourceLocation NoexceptLoc =
+      FuncDecl->getParamDecl(FuncDecl->getNumParams() - 1)->getEndLoc();
+  if (NoexceptLoc.isValid())
+    return Lexer::findLocationAfterToken(NoexceptLoc, tok::r_paren, SM,
+                                         LangOpts, true);
+
+  return {};
 }
 
 } // namespace clang::tidy::utils::lexer

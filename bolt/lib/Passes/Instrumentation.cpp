@@ -381,7 +381,7 @@ void Instrumentation::instrumentFunction(BinaryFunction &Function,
       else if (BC.MIB->isUnconditionalBranch(Inst))
         HasUnconditionalBranch = true;
       else if ((!BC.MIB->isCall(Inst) && !BC.MIB->isConditionalBranch(Inst)) ||
-               BC.MIB->isUnsupportedBranch(Inst.getOpcode()))
+               BC.MIB->isUnsupportedBranch(Inst))
         continue;
 
       const uint32_t FromOffset = *BC.MIB->getOffset(Inst);

@@ -12,6 +12,7 @@ endif()
 set(SANITIZER_UNITTESTS
   sanitizer_addrhashmap_test.cpp
   sanitizer_allocator_test.cpp
+  sanitizer_array_ref_test.cpp
   sanitizer_atomic_test.cpp
   sanitizer_bitvector_test.cpp
   sanitizer_bvgraph_test.cpp
