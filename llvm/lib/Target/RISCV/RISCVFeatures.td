@@ -805,6 +805,13 @@ def TuneNoOptimizedZeroStrideLoad
                       "false", "Hasn't optimized (perform fewer memory operations)"
                       "zero-stride vector load">;
 
+// Some vector hardware implementations do not process all VLEN bits in parallel
+// and instead split over multiple cycles. DLEN refers to the datapath width
+// that can be done in parallel.
+def TuneDLenFactor2
+   : SubtargetFeature<"dlen-factor-2", "DLenFactor2", "true",
+                      "Vector unit DLEN(data path width) is half of VLEN">;
+
 def TuneLUIADDIFusion
     : SubtargetFeature<"lui-addi-fusion", "HasLUIADDIFusion",
                        "true", "Enable LUI+ADDI macrofusion">;
