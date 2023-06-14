@@ -345,6 +345,10 @@ Changes in existing checks
   using macro between namespace declarations, to fix false positive when using namespace
   with attributes and to support nested inline namespace introduced in c++20.
 
+- Fixed an issue in `modernize-loop-convert
+  <clang-tidy/checks/modernize/modernize-loop-convert>` generating wrong code
+  when using structured bindings.
+
 - In :doc:`modernize-use-default-member-init
   <clang-tidy/checks/modernize/use-default-member-init>` count template
   constructors toward hand written constructors so that they are skipped if more
