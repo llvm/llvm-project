@@ -1436,7 +1436,8 @@ def forder_file_instrumentation : Flag<["-"], "forder-file-instrumentation">,
     HelpText<"Generate instrumented code to collect order file into default.profraw file (overridden by '=' form of option or LLVM_PROFILE_FILE env var)">;
 def fprofile_list_EQ : Joined<["-"], "fprofile-list=">,
     Group<f_Group>, Flags<[CC1Option, CoreOption]>,
-    HelpText<"Filename defining the list of functions/files to instrument">,
+    HelpText<"Filename defining the list of functions/files to instrument. "
+             "The file uses the sanitizer special case list format.">,
     MarshallingInfoStringVector<LangOpts<"ProfileListFiles">>;
 def fprofile_function_groups : Joined<["-"], "fprofile-function-groups=">,
   Group<f_Group>, Flags<[CC1Option]>, MetaVarName<"<N>">,
@@ -1492,6 +1493,13 @@ def fcomment_block_commands : CommaJoined<["-"], "fcomment-block-commands=">, Gr
 def fparse_all_comments : Flag<["-"], "fparse-all-comments">, Group<f_clang_Group>, Flags<[CC1Option]>,
   MarshallingInfoFlag<LangOpts<"CommentOpts.ParseAllComments">>;
 def frecord_command_line : Flag<["-"], "frecord-command-line">,
+  DocBrief<[{Generate a section named ".GCC.command.line" containing the clang
+driver command-line. After linking, the section may contain multiple command
+lines, which will be individually terminated by null bytes. Separate arguments
+within a command line are combined with spaces; spaces and backslashes within an
+argument are escaped with backslashes. This format differs from the format of
+the equivalent section produced by GCC with the -frecord-gcc-switches flag.
+This option is currently only supported on ELF targets.}]>,
   Group<f_clang_Group>;
 def fno_record_command_line : Flag<["-"], "fno-record-command-line">,
   Group<f_clang_Group>;
@@ -1499,7 +1507,10 @@ def : Flag<["-"], "frecord-gcc-switches">, Alias<frecord_command_line>;
 def : Flag<["-"], "fno-record-gcc-switches">, Alias<fno_record_command_line>;
 def fcommon : Flag<["-"], "fcommon">, Group<f_Group>,
   Flags<[CoreOption, CC1Option]>, HelpText<"Place uninitialized global variables in a common block">,
-  MarshallingInfoNegativeFlag<CodeGenOpts<"NoCommon">>;
+  MarshallingInfoNegativeFlag<CodeGenOpts<"NoCommon">>,
+  DocBrief<[{Place definitions of variables with no storage class and no initializer
+(tentative definitions) in a common block, instead of generating individual
+zero-initialized definitions (default -fno-common).}]>;
 def fcompile_resource_EQ : Joined<["-"], "fcompile-resource=">, Group<f_Group>;
 defm complete_member_pointers : BoolOption<"f", "complete-member-pointers",
   LangOpts<"CompleteMemberPointers">, DefaultFalse,
@@ -1738,7 +1749,7 @@ defm force_enable_int128 : BoolFOption<"force-enable-int128",
 defm keep_static_consts : BoolFOption<"keep-static-consts",
   CodeGenOpts<"KeepStaticConsts">, DefaultFalse,
   PosFlag<SetTrue, [CC1Option], "Keep">, NegFlag<SetFalse, [], "Don't keep">,
-  BothFlags<[NoXarchOption], " static const variables if unused">>;
+  BothFlags<[NoXarchOption], " static const variables even if unused">>;
 defm fixed_point : BoolFOption<"fixed-point",
   LangOpts<"FixedPoint">, DefaultFalse,
   PosFlag<SetTrue, [CC1Option], "Enable">, NegFlag<SetFalse, [], "Disable">,
@@ -1869,6 +1880,17 @@ defm sanitize_address_poison_custom_array_cookie : BoolOption<"f", "sanitize-add
   CodeGenOpts<"SanitizeAddressPoisonCustomArrayCookie">, DefaultFalse,
   PosFlag<SetTrue, [], "Enable">, NegFlag<SetFalse, [], "Disable">,
   BothFlags<[], " poisoning array cookies when using custom operator new[] in AddressSanitizer">>,
+  DocBrief<[{Enable "poisoning" array cookies when allocating arrays with a
+custom operator new\[\] in Address Sanitizer, preventing accesses to the
+cookies from user code. An array cookie is a small implementation-defined
+header added to certain array allocations to record metadata such as the
+length of the array. Accesses to array cookies from user code are technically
+allowed by the standard but are more likely to be the result of an
+out-of-bounds array access.
+
+An operator new\[\] is "custom" if it is not one of the allocation functions
+provided by the C++ standard library. Array cookies from non-custom allocation
+functions are always poisoned.}]>,
   Group<f_clang_Group>;
 defm sanitize_address_globals_dead_stripping : BoolOption<"f", "sanitize-address-globals-dead-stripping",
   CodeGenOpts<"SanitizeAddressGlobalsDeadStripping">, DefaultFalse,
@@ -1884,7 +1906,10 @@ defm sanitize_address_use_odr_indicator : BoolOption<"f", "sanitize-address-use-
 def sanitize_address_destructor_EQ
     : Joined<["-"], "fsanitize-address-destructor=">,
       Flags<[CC1Option]>,
-      HelpText<"Set destructor type used in ASan instrumentation">,
+      HelpText<"Set the kind of module destructors emitted by "
+               "AddressSanitizer instrumentation. These destructors are "
+               "emitted to unregister instrumented global variables when "
+               "code is unloaded (e.g. via `dlclose()`).">,
       Group<f_clang_Group>,
       Values<"none,global">,
       NormalizedValuesScope<"llvm::AsanDtorKind">,
@@ -2020,16 +2045,24 @@ defm approx_func : BoolFOption<"approx-func", LangOpts<"ApproxFunc">, DefaultFal
    NegFlag<SetFalse>>;
 defm finite_math_only : BoolFOption<"finite-math-only",
   LangOpts<"FiniteMathOnly">, DefaultFalse,
-  PosFlag<SetTrue, [CC1Option], "", [cl_finite_math_only.KeyPath, ffast_math.KeyPath]>,
+  PosFlag<SetTrue, [CC1Option], "Allow floating-point optimizations that "
+          "assume arguments and results are not NaNs or +-inf. This defines "
+          "the \\_\\_FINITE\\_MATH\\_ONLY\\_\\_ preprocessor macro.",
+          [cl_finite_math_only.KeyPath, ffast_math.KeyPath]>,
   NegFlag<SetFalse>>;
 defm signed_zeros : BoolFOption<"signed-zeros",
   LangOpts<"NoSignedZero">, DefaultFalse,
   NegFlag<SetTrue, [CC1Option, FC1Option, FlangOption], "Allow optimizations that ignore the sign of floating point zeros",
             [cl_no_signed_zeros.KeyPath, funsafe_math_optimizations.KeyPath]>,
   PosFlag<SetFalse>>;
-def fhonor_nans : Flag<["-"], "fhonor-nans">, Group<f_Group>;
+def fhonor_nans : Flag<["-"], "fhonor-nans">, Group<f_Group>,
+  HelpText<"Specify that floating-point optimizations are not allowed that "
+           "assume arguments and results are not NANs.">;
 def fno_honor_nans : Flag<["-"], "fno-honor-nans">, Group<f_Group>;
-def fhonor_infinities : Flag<["-"], "fhonor-infinities">, Group<f_Group>;
+def fhonor_infinities : Flag<["-"], "fhonor-infinities">,
+  Group<f_Group>,
+  HelpText<"Specify that floating-point optimizations are not allowed that "
+           "assume arguments and results are not +-inf.">;
 def fno_honor_infinities : Flag<["-"], "fno-honor-infinities">, Group<f_Group>;
 // This option was originally misspelt "infinites" [sic].
 def : Flag<["-"], "fhonor-infinites">, Alias<fhonor_infinities>;
@@ -2080,14 +2113,25 @@ defm delete_null_pointer_checks : BoolFOption<"delete-null-pointer-checks",
   CodeGenOpts<"NullPointerIsValid">, DefaultFalse,
   NegFlag<SetTrue, [CC1Option], "Do not treat usage of null pointers as undefined behavior">,
   PosFlag<SetFalse, [], "Treat usage of null pointers as undefined behavior (default)">,
-  BothFlags<[CoreOption]>>;
+  BothFlags<[CoreOption]>>,
+  DocBrief<[{When enabled, treat null pointer dereference, creation of a reference to null,
+or passing a null pointer to a function parameter annotated with the "nonnull"
+attribute as undefined behavior. (And, thus the optimizer may assume that any
+pointer used in such a way must not have been null and optimize away the
+branches accordingly.) On by default.}]>;
 
 defm use_line_directives : BoolFOption<"use-line-directives",
   PreprocessorOutputOpts<"UseLineDirectives">, DefaultFalse,
   PosFlag<SetTrue, [CC1Option], "Use #line in preprocessed output">, NegFlag<SetFalse>>;
 defm minimize_whitespace : BoolFOption<"minimize-whitespace",
   PreprocessorOutputOpts<"MinimizeWhitespace">, DefaultFalse,
-  PosFlag<SetTrue, [CC1Option], "Minimize whitespace when emitting preprocessor output">, NegFlag<SetFalse>>;
+  PosFlag<SetTrue, [CC1Option], "Ignore the whitespace from the input file "
+          "when emitting preprocessor output. It will only contain whitespace "
+          "when necessary, e.g. to keep two minus signs from merging into to "
+          "an increment operator. Useful with the -P option to normalize "
+          "whitespace such that two files with only formatting changes are "
+          "equal.\n\nOnly valid with -E on C-like inputs and incompatible "
+          "with -traditional-cpp.">, NegFlag<SetFalse>>;
 
 def ffreestanding : Flag<["-"], "ffreestanding">, Group<f_Group>, Flags<[CC1Option]>,
   HelpText<"Assert that the compilation takes place in a freestanding environment">,
@@ -2135,7 +2179,7 @@ def fexperimental_isel : Flag<["-"], "fexperimental-isel">, Group<f_clang_Group>
   Alias<fglobal_isel>;
 def fexperimental_strict_floating_point : Flag<["-"], "fexperimental-strict-floating-point">,
   Group<f_clang_Group>, Flags<[CC1Option]>,
-  HelpText<"Enables experimental strict floating point in LLVM.">,
+  HelpText<"Enables the use of non-default rounding modes and non-default exception handling on targets that are not currently ready.">,
   MarshallingInfoFlag<LangOpts<"ExpStrictFP">>;
 def finput_charset_EQ : Joined<["-"], "finput-charset=">, Flags<[FlangOption, FC1Option]>, Group<f_Group>,
   HelpText<"Specify the default character set for source files">;
@@ -2937,7 +2981,8 @@ def fstack_protector_all : Flag<["-"], "fstack-protector-all">, Group<f_Group>,
 defm stack_clash_protection : BoolFOption<"stack-clash-protection",
   CodeGenOpts<"StackClashProtector">, DefaultFalse,
   PosFlag<SetTrue, [CC1Option], "Enable">, NegFlag<SetFalse, [], "Disable">,
-  BothFlags<[], " stack clash protection">>;
+  BothFlags<[], " stack clash protection">>,
+  DocBrief<"Instrument stack allocation to prevent stack clash attacks">;
 def fstack_protector_strong : Flag<["-"], "fstack-protector-strong">, Group<f_Group>,
   HelpText<"Enable stack protectors for some functions vulnerable to stack smashing. "
            "Compared to -fstack-protector, this uses a stronger heuristic "
@@ -3184,7 +3229,10 @@ defm split_lto_unit : BoolFOption<"split-lto-unit",
 defm force_emit_vtables : BoolFOption<"force-emit-vtables",
   CodeGenOpts<"ForceEmitVTables">, DefaultFalse,
   PosFlag<SetTrue, [CC1Option], "Emits more virtual tables to improve devirtualization">,
-  NegFlag<SetFalse>, BothFlags<[CoreOption]>>;
+  NegFlag<SetFalse>, BothFlags<[CoreOption]>>,
+  DocBrief<[{In order to improve devirtualization, forces emitting of vtables even in
+modules where it isn't necessary. It causes more inline virtual functions
+to be emitted.}]>;
 defm virtual_function_elimination : BoolFOption<"virtual-function-elimination",
   CodeGenOpts<"VirtualFunctionElimination">, DefaultFalse,
   PosFlag<SetTrue, [CC1Option], "Enables dead virtual function elimination optimization. Requires -flto=full">,
@@ -3380,7 +3428,9 @@ def : Flag<["-"], "grecord-gcc-switches">, Alias<grecord_command_line>;
 def : Flag<["-"], "gno-record-gcc-switches">, Alias<gno_record_command_line>;
 defm strict_dwarf : BoolOption<"g", "strict-dwarf",
   CodeGenOpts<"DebugStrictDwarf">, DefaultFalse,
-  PosFlag<SetTrue, [CC1Option]>, NegFlag<SetFalse>, BothFlags<[CoreOption]>>,
+  PosFlag<SetTrue, [CC1Option], "Restrict DWARF features to those defined in "
+          "the specified version, avoiding features from later versions.">,
+  NegFlag<SetFalse>, BothFlags<[CoreOption]>>,
   Group<g_flags_Group>;
 defm column_info : BoolOption<"g", "column-info",
   CodeGenOpts<"DebugColumnInfo">, DefaultTrue,
@@ -3748,7 +3798,7 @@ def mno_strict_align : Flag<["-"], "mno-strict-align">, Alias<munaligned_access>
 let Flags = [TargetSpecific] in {
 def mno_thumb : Flag<["-"], "mno-thumb">, Group<m_arm_Features_Group>;
 def mrestrict_it: Flag<["-"], "mrestrict-it">, Group<m_arm_Features_Group>,
-  HelpText<"Disallow generation of complex IT blocks.">;
+  HelpText<"Disallow generation of complex IT blocks. It is off by default.">;
 def mno_restrict_it: Flag<["-"], "mno-restrict-it">, Group<m_arm_Features_Group>,
   HelpText<"Allow generation of complex IT blocks.">;
 def marm : Flag<["-"], "marm">, Alias<mno_thumb>;
@@ -3880,7 +3930,11 @@ def mextended_const : Flag<["-"], "mextended-const">, Group<m_wasm_Features_Grou
 def mno_extended_const : Flag<["-"], "mno-extended-const">, Group<m_wasm_Features_Group>;
 def mexec_model_EQ : Joined<["-"], "mexec-model=">, Group<m_wasm_Features_Driver_Group>,
                      Values<"command,reactor">,
-                     HelpText<"Execution model (WebAssembly only)">;
+                     HelpText<"Execution model (WebAssembly only)">,
+  DocBrief<"Select between \"command\" and \"reactor\" executable models. "
+           "Commands have a main-function which scopes the lifetime of the "
+           "program. Reactors are activated and remain active until "
+           "explicitly terminated.">;
 } // let Flags = [TargetSpecific]
 
 defm amdgpu_ieee : BoolOption<"m", "amdgpu-ieee",
@@ -3910,13 +3964,17 @@ defm wavefrontsize64 : SimpleMFlag<"wavefrontsize64",
 
 defm unsafe_fp_atomics : BoolOption<"m", "unsafe-fp-atomics",
   TargetOpts<"AllowAMDGPUUnsafeFPAtomics">, DefaultFalse,
-  PosFlag<SetTrue, [CC1Option], "Enable unsafe floating point atomic instructions (AMDGPU only)">,
+  PosFlag<SetTrue, [CC1Option], "Enable generation of unsafe floating point "
+          "atomic instructions. May generate more efficient code, but may not "
+          "respect rounding and denormal modes, and may give incorrect results "
+          "for certain memory destinations. (AMDGPU only)">,
   NegFlag<SetFalse>>, Group<m_Group>;
 
 def faltivec : Flag<["-"], "faltivec">, Group<f_Group>, Flags<[NoXarchOption]>;
 def fno_altivec : Flag<["-"], "fno-altivec">, Group<f_Group>, Flags<[NoXarchOption]>;
 let Flags = [TargetSpecific] in {
-def maltivec : Flag<["-"], "maltivec">, Group<m_ppc_Features_Group>;
+def maltivec : Flag<["-"], "maltivec">, Group<m_ppc_Features_Group>,
+  HelpText<"Enable AltiVec vector initializer syntax">;
 def mno_altivec : Flag<["-"], "mno-altivec">, Group<m_ppc_Features_Group>;
 def mpcrel: Flag<["-"], "mpcrel">, Group<m_ppc_Features_Group>;
 def mno_pcrel: Flag<["-"], "mno-pcrel">, Group<m_ppc_Features_Group>;
@@ -3972,7 +4030,11 @@ def mno_mfocrf : Flag<["-"], "mno-mfocrf">, Group<m_ppc_Features_Group>;
 def mno_mfcrf : Flag<["-"], "mno-mfcrf">, Alias<mno_mfocrf>;
 def mpopcntd : Flag<["-"], "mpopcntd">, Group<m_ppc_Features_Group>;
 def mno_popcntd : Flag<["-"], "mno-popcntd">, Group<m_ppc_Features_Group>;
-def mcrbits : Flag<["-"], "mcrbits">, Group<m_ppc_Features_Group>;
+def mcrbits : Flag<["-"], "mcrbits">, Group<m_ppc_Features_Group>,
+    HelpText<"Control the CR-bit tracking feature on PowerPC. ``-mcrbits`` "
+             "(the enablement of CR-bit tracking support) is the default for "
+             "POWER8 and above, as well as for all other CPUs when "
+             "optimization is applied (-O2 and above).">;
 def mno_crbits : Flag<["-"], "mno-crbits">, Group<m_ppc_Features_Group>;
 def minvariant_function_descriptors :
   Flag<["-"], "minvariant-function-descriptors">, Group<m_ppc_Features_Group>;
@@ -3996,10 +4058,15 @@ def mprivileged : Flag<["-"], "mprivileged">,
 } // let Flags = [TargetSpecific]
 def maix_struct_return : Flag<["-"], "maix-struct-return">,
   Group<m_Group>, Flags<[CC1Option]>,
-  HelpText<"Return all structs in memory (PPC32 only)">;
+  HelpText<"Return all structs in memory (PPC32 only)">,
+  DocBrief<"Override the default ABI for 32-bit targets to return all "
+           "structs in memory, as in the Power 32-bit ABI for Linux (2011), "
+           "and on AIX and Darwin.">;
 def msvr4_struct_return : Flag<["-"], "msvr4-struct-return">,
   Group<m_Group>, Flags<[CC1Option]>,
-  HelpText<"Return small structs in registers (PPC32 only)">;
+  HelpText<"Return small structs in registers (PPC32 only)">,
+  DocBrief<"Override the default ABI for 32-bit targets to return small "
+           "structs in registers, as in the System V ABI (1995).">;
 def mxcoff_roptr : Flag<["-"], "mxcoff-roptr">, Group<m_Group>, Flags<[CC1Option,TargetSpecific]>,
   HelpText<"Place constant objects with relocatable address values in the RO data section and add -bforceimprw to the linker flags (AIX only)">;
 def mno_xcoff_roptr : Flag<["-"], "mno-xcoff-roptr">, Group<m_Group>, TargetSpecific;
@@ -5067,7 +5134,10 @@ defm ipa_cp : BooleanFFlag<"ipa-cp">,
 defm ivopts : BooleanFFlag<"ivopts">, Group<clang_ignored_gcc_optimization_f_Group>;
 defm semantic_interposition : BoolFOption<"semantic-interposition",
   LangOpts<"SemanticInterposition">, DefaultFalse,
-  PosFlag<SetTrue, [CC1Option]>, NegFlag<SetFalse>>;
+  PosFlag<SetTrue, [CC1Option]>, NegFlag<SetFalse>>,
+  DocBrief<[{Enable semantic interposition. Semantic interposition allows for the
+interposition of a symbol by another at runtime, thus preventing a range of
+inter-procedural optimisation.}]>;
 defm non_call_exceptions : BooleanFFlag<"non-call-exceptions">, Group<clang_ignored_f_Group>;
 defm peel_loops : BooleanFFlag<"peel-loops">, Group<clang_ignored_gcc_optimization_f_Group>;
 defm permissive : BooleanFFlag<"permissive">, Group<clang_ignored_f_Group>;
