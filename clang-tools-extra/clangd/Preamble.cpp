@@ -15,7 +15,6 @@
 #include "Protocol.h"
 #include "SourceCode.h"
 #include "clang-include-cleaner/Record.h"
-#include "index/CanonicalIncludes.h"
 #include "support/Logger.h"
 #include "support/Path.h"
 #include "support/ThreadsafeFS.h"
@@ -95,7 +94,6 @@ public:
   include_cleaner::PragmaIncludes takePragmaIncludes() {
     return std::move(Pragmas);
   }
-  CanonicalIncludes takeCanonicalIncludes() { return std::move(CanonIncludes); }
 
   std::optional<CapturedASTCtx> takeLife() { return std::move(CapturedCtx); }
 
@@ -141,7 +139,6 @@ public:
   }
 
   void BeforeExecute(CompilerInstance &CI) override {
-    CanonIncludes.addSystemHeadersMapping(CI.getLangOpts());
     LangOpts = &CI.getLangOpts();
     SourceMgr = &CI.getSourceManager();
     PP = &CI.getPreprocessor();
@@ -158,11 +155,6 @@ public:
     return std::make_unique<PPChainedCallbacks>(
         std::make_unique<CollectMainFileMacros>(*PP, Macros),
         collectPragmaMarksCallback(*SourceMgr, Marks));
-  }
-
-  CommentHandler *getCommentHandler() override {
-    IWYUHandler = collectIWYUHeaderMaps(&CanonIncludes);
-    return IWYUHandler.get();
   }
 
   static bool isLikelyForwardingFunction(FunctionTemplateDecl *FT) {
@@ -214,12 +206,10 @@ public:
 private:
   PathRef File;
   IncludeStructure Includes;
-  CanonicalIncludes CanonIncludes;
   include_cleaner::PragmaIncludes Pragmas;
   MainFileMacros Macros;
   std::vector<PragmaMark> Marks;
   bool IsMainFileIncludeGuarded = false;
-  std::unique_ptr<CommentHandler> IWYUHandler = nullptr;
   const clang::LangOptions *LangOpts = nullptr;
   const SourceManager *SourceMgr = nullptr;
   const Preprocessor *PP = nullptr;
@@ -686,11 +676,10 @@ buildPreamble(PathRef FileName, CompilerInvocation CI,
     Result->CompileCommand = Inputs.CompileCommand;
     Result->Diags = std::move(Diags);
     Result->Includes = CapturedInfo.takeIncludes();
-    Result->Pragmas = CapturedInfo.takePragmaIncludes();
+    Result->Pragmas = std::make_shared<const include_cleaner::PragmaIncludes>(
+        CapturedInfo.takePragmaIncludes());
     Result->Macros = CapturedInfo.takeMacros();
     Result->Marks = CapturedInfo.takeMarks();
-    Result->CanonIncludes = std::make_shared<const CanonicalIncludes>(
-        (CapturedInfo.takeCanonicalIncludes()));
     Result->StatCache = StatCache;
     Result->MainIsIncludeGuarded = CapturedInfo.isMainFileIncludeGuarded();
     if (PreambleCallback) {
@@ -703,7 +692,7 @@ buildPreamble(PathRef FileName, CompilerInvocation CI,
       // While extending the life of FileMgr and VFS, StatCache should also be
       // extended.
       Ctx->setStatCache(Result->StatCache);
-      PreambleCallback(std::move(*Ctx), Result->CanonIncludes);
+      PreambleCallback(std::move(*Ctx), Result->Pragmas);
     }
     return Result;
   }
