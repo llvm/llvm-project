@@ -970,7 +970,6 @@ DICompileUnit::getNameTableKind(StringRef Str) {
   return StringSwitch<std::optional<DebugNameTableKind>>(Str)
       .Case("Default", DebugNameTableKind::Default)
       .Case("GNU", DebugNameTableKind::GNU)
-      .Case("Apple", DebugNameTableKind::Apple)
       .Case("None", DebugNameTableKind::None)
       .Default(std::nullopt);
 }
@@ -995,8 +994,6 @@ const char *DICompileUnit::nameTableKindString(DebugNameTableKind NTK) {
     return nullptr;
   case DebugNameTableKind::GNU:
     return "GNU";
-  case DebugNameTableKind::Apple:
-    return "Apple";
   case DebugNameTableKind::None:
     return "None";
   }
