@@ -506,6 +506,11 @@ def lookupMaskedIntrinsicByUnmaskedTA : SearchIndex {
   let Key = ["UnmaskedPseudo"];
 }
 
+def lookupMaskedIntrinsicByUnmaskedTU : SearchIndex {
+  let Table = RISCVMaskedPseudosTable;
+  let Key = ["UnmaskedTUPseudo"];
+}
+
 def RISCVVLETable : GenericTable {
   let FilterClass = "RISCVVLE";
   let CppTypeName = "VLEPseudo";
@@ -4306,8 +4311,8 @@ multiclass VPatNullaryV<string intrinsic, string instruction>
       def : Pat<(vti.Vector (!cast<Intrinsic>(intrinsic)
                             (vti.Vector undef),
                             VLOpFrag)),
-                            (!cast<Instruction>(instruction#"_V_" # vti.LMul.MX)
-                            GPR:$vl, vti.Log2SEW)>;
+                            (!cast<Instruction>(instruction#"_V_" # vti.LMul.MX # "_TU")
+                            (vti.Vector (IMPLICIT_DEF)), GPR:$vl, vti.Log2SEW)>;
       def : Pat<(vti.Vector (!cast<Intrinsic>(intrinsic)
                             (vti.Vector vti.RegClass:$merge),
                             VLOpFrag)),
