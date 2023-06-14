@@ -39,6 +39,7 @@ add_clang_library(clangTidyCppCoreGuidelinesModule
   clangTidy
   clangTidyMiscModule
   clangTidyModernizeModule
+  clangTidyPerformanceModule
   clangTidyReadabilityModule
   clangTidyUtils
 
