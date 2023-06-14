@@ -21,9 +21,9 @@ namespace mpfr = __llvm_libc::testing::mpfr;
 struct LlvmLibcExpm1fExhaustiveTest : public LlvmLibcExhaustiveTest<uint32_t> {
   bool check(uint32_t start, uint32_t stop,
              mpfr::RoundingMode rounding) override {
+    mpfr::ForceRoundingMode r(rounding);
     if (!r.success)
       return true;
-    mpfr::ForceRoundingMode r(rounding);
     uint32_t bits = stop;
     bool result = true;
     do {
