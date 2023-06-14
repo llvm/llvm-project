@@ -7622,6 +7622,7 @@ cc_library(
         ":ArithValueBoundsOpInterfaceImpl",
         ":ArmNeonDialect",
         ":ArmSMETransforms",
+        ":ArmSMEDialect",
         ":ArmSVEDialect",
         ":ArmSVETransforms",
         ":AsyncDialect",
