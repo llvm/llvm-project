@@ -1136,10 +1136,26 @@ inline static Value genInvariantValue(CodegenEnv &env, ExprId exp) {
 /// inlined cloned code.
 static Value relinkBranch(CodegenEnv &env, RewriterBase &rewriter, Block *block,
                           Value e, LoopId ldx) {
-  if (Operation *def = e.getDefiningOp()) {
+  if (auto arg = dyn_cast<BlockArgument>(e)) {
+    // Direct arguments of the original linalg op must be converted
+    // into dense tensor loads. Note that we should not encounter
+    // anything else. This needs to be verified by semi-ring ops.
+    linalg::GenericOp op = env.op();
+    if (arg.getOwner()->getParentOp() == op) {
+      const TensorId tid = env.makeTensorId(arg.getArgNumber());
+      OpOperand *t = &op->getOpOperand(tid);
+      assert(!getSparseTensorType(t->get()).hasEncoding()); // dense!
+      SmallVector<Value> args;
+      Value ptr = genSubscript(env, rewriter, t, args);
+      return rewriter.create<memref::LoadOp>(op.getLoc(), ptr, args);
+    }
+  } else if (Operation *def = e.getDefiningOp()) {
+    // Handle index computation.
     if (auto indexOp = dyn_cast<linalg::IndexOp>(def))
       return env.getLoopVar(env.makeLoopId(indexOp.getDim()));
+    // When still defined in new body, recurse into operands.
     if (def->getBlock() == block) {
+      rewriter.setInsertionPoint(def);
       for (unsigned i = 0, n = def->getNumOperands(); i < n; i++) {
         rewriter.updateRootInPlace(def, [&]() {
           def->setOperand(
@@ -1195,8 +1211,10 @@ static Value genExp(CodegenEnv &env, RewriterBase &rewriter, ExprId e,
     if (ee &&
         (kind == TensorExp::Kind::kUnary || kind == TensorExp::Kind::kBinary ||
          kind == TensorExp::Kind::kBinaryBranch ||
-         kind == TensorExp::Kind::kReduce || kind == TensorExp::Kind::kSelect))
+         kind == TensorExp::Kind::kReduce || kind == TensorExp::Kind::kSelect)) {
+      OpBuilder::InsertionGuard guard(rewriter);
       ee = relinkBranch(env, rewriter, ee.getParentBlock(), ee, ldx);
+    }
   }
 
   if (kind == TensorExp::Kind::kReduce)
