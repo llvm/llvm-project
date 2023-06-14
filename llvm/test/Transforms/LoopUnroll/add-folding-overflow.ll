@@ -22,43 +22,40 @@ define void @test(i8 %start1, i8 %start2, i8 %start3, i8 %start4) {
 ; CHECK-NEXT:    call void @use(i8 [[IV3_NEXT]])
 ; CHECK-NEXT:    [[IV4_NEXT:%.*]] = add nsw i8 [[IV4]], 127
 ; CHECK-NEXT:    call void @use(i8 [[IV4_NEXT]])
-; CHECK-NEXT:    [[IV_NEXT:%.*]] = add nuw nsw i32 [[IV]], 1
-; CHECK-NEXT:    [[IV1_NEXT_1:%.*]] = add i8 [[IV1_NEXT]], 1
+; CHECK-NEXT:    [[IV1_NEXT_1:%.*]] = add i8 [[IV1]], 2
 ; CHECK-NEXT:    call void @use(i8 [[IV1_NEXT_1]])
-; CHECK-NEXT:    [[IV2_NEXT_1:%.*]] = add nuw i8 [[IV2_NEXT]], 1
+; CHECK-NEXT:    [[IV2_NEXT_1:%.*]] = add nuw i8 [[IV2]], 2
 ; CHECK-NEXT:    call void @use(i8 [[IV2_NEXT_1]])
-; CHECK-NEXT:    [[IV3_NEXT_1:%.*]] = add nsw i8 [[IV3_NEXT]], 1
+; CHECK-NEXT:    [[IV3_NEXT_1:%.*]] = add nsw i8 [[IV3]], 2
 ; CHECK-NEXT:    call void @use(i8 [[IV3_NEXT_1]])
-; CHECK-NEXT:    [[IV4_NEXT_1:%.*]] = add nsw i8 [[IV4_NEXT]], 127
+; CHECK-NEXT:    [[IV4_NEXT_1:%.*]] = add i8 [[IV4]], -2
 ; CHECK-NEXT:    call void @use(i8 [[IV4_NEXT_1]])
-; CHECK-NEXT:    [[IV_NEXT_1:%.*]] = add nuw nsw i32 [[IV_NEXT]], 1
-; CHECK-NEXT:    [[IV1_NEXT_2:%.*]] = add i8 [[IV1_NEXT_1]], 1
+; CHECK-NEXT:    [[IV1_NEXT_2:%.*]] = add i8 [[IV1]], 3
 ; CHECK-NEXT:    call void @use(i8 [[IV1_NEXT_2]])
-; CHECK-NEXT:    [[IV2_NEXT_2:%.*]] = add nuw i8 [[IV2_NEXT_1]], 1
+; CHECK-NEXT:    [[IV2_NEXT_2:%.*]] = add nuw i8 [[IV2]], 3
 ; CHECK-NEXT:    call void @use(i8 [[IV2_NEXT_2]])
-; CHECK-NEXT:    [[IV3_NEXT_2:%.*]] = add nsw i8 [[IV3_NEXT_1]], 1
+; CHECK-NEXT:    [[IV3_NEXT_2:%.*]] = add nsw i8 [[IV3]], 3
 ; CHECK-NEXT:    call void @use(i8 [[IV3_NEXT_2]])
-; CHECK-NEXT:    [[IV4_NEXT_2:%.*]] = add nsw i8 [[IV4_NEXT_1]], 127
+; CHECK-NEXT:    [[IV4_NEXT_2:%.*]] = add i8 [[IV4]], 125
 ; CHECK-NEXT:    call void @use(i8 [[IV4_NEXT_2]])
-; CHECK-NEXT:    [[IV_NEXT_2:%.*]] = add nuw nsw i32 [[IV_NEXT_1]], 1
-; CHECK-NEXT:    [[IV1_NEXT_3:%.*]] = add i8 [[IV1_NEXT_2]], 1
+; CHECK-NEXT:    [[IV1_NEXT_3:%.*]] = add i8 [[IV1]], 4
 ; CHECK-NEXT:    call void @use(i8 [[IV1_NEXT_3]])
-; CHECK-NEXT:    [[IV2_NEXT_3:%.*]] = add nuw i8 [[IV2_NEXT_2]], 1
+; CHECK-NEXT:    [[IV2_NEXT_3:%.*]] = add nuw i8 [[IV2]], 4
 ; CHECK-NEXT:    call void @use(i8 [[IV2_NEXT_3]])
-; CHECK-NEXT:    [[IV3_NEXT_3:%.*]] = add nsw i8 [[IV3_NEXT_2]], 1
+; CHECK-NEXT:    [[IV3_NEXT_3:%.*]] = add nsw i8 [[IV3]], 4
 ; CHECK-NEXT:    call void @use(i8 [[IV3_NEXT_3]])
-; CHECK-NEXT:    [[IV4_NEXT_3:%.*]] = add nsw i8 [[IV4_NEXT_2]], 127
+; CHECK-NEXT:    [[IV4_NEXT_3:%.*]] = add i8 [[IV4]], -4
 ; CHECK-NEXT:    call void @use(i8 [[IV4_NEXT_3]])
-; CHECK-NEXT:    [[IV_NEXT_3:%.*]] = add nuw nsw i32 [[IV_NEXT_2]], 1
-; CHECK-NEXT:    [[IV1_NEXT_4]] = add i8 [[IV1_NEXT_3]], 1
+; CHECK-NEXT:    [[IV_NEXT_3:%.*]] = add nuw nsw i32 [[IV]], 4
+; CHECK-NEXT:    [[IV1_NEXT_4]] = add i8 [[IV1]], 5
 ; CHECK-NEXT:    call void @use(i8 [[IV1_NEXT_4]])
-; CHECK-NEXT:    [[IV2_NEXT_4]] = add nuw i8 [[IV2_NEXT_3]], 1
+; CHECK-NEXT:    [[IV2_NEXT_4]] = add nuw i8 [[IV2]], 5
 ; CHECK-NEXT:    call void @use(i8 [[IV2_NEXT_4]])
-; CHECK-NEXT:    [[IV3_NEXT_4]] = add nsw i8 [[IV3_NEXT_3]], 1
+; CHECK-NEXT:    [[IV3_NEXT_4]] = add nsw i8 [[IV3]], 5
 ; CHECK-NEXT:    call void @use(i8 [[IV3_NEXT_4]])
-; CHECK-NEXT:    [[IV4_NEXT_4]] = add nsw i8 [[IV4_NEXT_3]], 127
+; CHECK-NEXT:    [[IV4_NEXT_4]] = add i8 [[IV4]], 123
 ; CHECK-NEXT:    call void @use(i8 [[IV4_NEXT_4]])
-; CHECK-NEXT:    [[IV_NEXT_4]] = add nuw nsw i32 [[IV_NEXT_3]], 1
+; CHECK-NEXT:    [[IV_NEXT_4]] = add nuw nsw i32 [[IV]], 5
 ; CHECK-NEXT:    [[CMP_4:%.*]] = icmp eq i32 [[IV_NEXT_3]], 1024
 ; CHECK-NEXT:    br i1 [[CMP_4]], label [[EXIT:%.*]], label [[LOOP]]
 ; CHECK:       exit:
