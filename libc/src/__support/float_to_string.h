@@ -386,8 +386,8 @@ LIBC_INLINE uint32_t mul_shift_mod_1e9(const MantissaInt mantissa,
   cpp::UInt<MID_INT_SIZE + MANT_INT_SIZE> val(large);
   // TODO: Find a better way to force __uint128_t to be UInt<128>
   cpp::UInt<MANT_INT_SIZE> wide_mant(0);
-  wide_mant[0] = mantissa & (uint64_t(-1));
-  wide_mant[1] = mantissa >> 64;
+  wide_mant[0] = static_cast<size_t>(mantissa & (uint64_t(-1)));
+  wide_mant[1] = static_cast<size_t>(mantissa >> 64);
   val = (val * wide_mant) >> shift_amount;
 
   return val.div_uint32_times_pow_2(1000000000, 0).value()[0];

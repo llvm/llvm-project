@@ -20,8 +20,8 @@ Section,Description,Assignee,Complete
 | `[alg.find] <https://wg21.link/alg.find>`_,std::find_if_not,Nikolas Klauser,|Complete|
 | `[alg.foreach] <https://wg21.link/alg.foreach>`_,std::for_each,Nikolas Klauser,|Complete|
 | `[alg.foreach] <https://wg21.link/alg.foreach>`_,std::for_each_n,Nikolas Klauser,|Complete|
-| `[alg.generate] <https://wg21.link/alg.generate>`_,std::generate,Nikolas Klauser,|In Progress|
-| `[alg.generate] <https://wg21.link/alg.generate>`_,std::generate_n,Nikolas Klauser,|In Progress|
+| `[alg.generate] <https://wg21.link/alg.generate>`_,std::generate,Nikolas Klauser,|Complete|
+| `[alg.generate] <https://wg21.link/alg.generate>`_,std::generate_n,Nikolas Klauser,|Complete|
 | `[alg.set.operations] <https://wg21.link/alg.set.operations>`_,std::includes,Nikolas Klauser,|Not Started|
 | `[alg.inclusive.scan] <https://wg21.link/alg.inclusive.scan>`_,std::inclusive_scan,Nikolas Klauser,|Not Started|
 | `[alg.merge] <https://wg21.link/alg.merge>`_,std::inplace_merge,Nikolas Klauser,|Not Started|

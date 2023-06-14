@@ -445,6 +445,7 @@ libc_support_library(
         ":__support_fputil_fenv_impl",
         ":__support_fputil_fp_bits",
         ":__support_fputil_rounding_mode",
+        ":__support_fputil_dyadic_float",
         ":__support_str_to_integer",
         ":__support_str_to_num_result",
         ":__support_uint128",
@@ -1140,6 +1141,7 @@ libc_support_library(
     hdrs = ["src/math/generic/log_range_reduction.h"],
     deps = [
         ":__support_common",
+        ":__support_uint128",
         ":__support_fputil_dyadic_float",
         ":common_constants",
     ],

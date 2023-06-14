@@ -337,11 +337,6 @@ void test_nontemplate_cast_wrappers()
   std::to_integer<int>(b);
 #endif
 
-#if TEST_STD_VER > 17
-  // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute}}
-  std::bit_cast<unsigned int>(42);
-#endif
-
 #if TEST_STD_VER > 20
   enum E { Apple, Orange } e = Apple;
   // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute}}

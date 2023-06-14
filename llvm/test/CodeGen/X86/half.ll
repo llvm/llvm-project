@@ -2043,20 +2043,18 @@ define void @pr63114() {
 ; CHECK-LIBCALL-NEXT:    movq (%rax), %rax
 ; CHECK-LIBCALL-NEXT:    movq %rax, %rcx
 ; CHECK-LIBCALL-NEXT:    movq %rax, %rdx
-; CHECK-LIBCALL-NEXT:    movq %rax, %rsi
 ; CHECK-LIBCALL-NEXT:    movw %ax, 52
 ; CHECK-LIBCALL-NEXT:    movw %ax, 20
 ; CHECK-LIBCALL-NEXT:    # kill: def $eax killed $eax killed $rax
 ; CHECK-LIBCALL-NEXT:    shrl $16, %eax
-; CHECK-LIBCALL-NEXT:    shrq $16, %rcx
-; CHECK-LIBCALL-NEXT:    shrq $32, %rdx
-; CHECK-LIBCALL-NEXT:    shrq $48, %rsi
-; CHECK-LIBCALL-NEXT:    movw %si, 60
-; CHECK-LIBCALL-NEXT:    movw %dx, 36
-; CHECK-LIBCALL-NEXT:    movw %si, 28
-; CHECK-LIBCALL-NEXT:    movw %cx, 12
-; CHECK-LIBCALL-NEXT:    movw %dx, 4
+; CHECK-LIBCALL-NEXT:    shrq $32, %rcx
+; CHECK-LIBCALL-NEXT:    shrq $48, %rdx
+; CHECK-LIBCALL-NEXT:    movw %dx, 60
+; CHECK-LIBCALL-NEXT:    movw %cx, 36
+; CHECK-LIBCALL-NEXT:    movw %dx, 28
+; CHECK-LIBCALL-NEXT:    movw %cx, 4
 ; CHECK-LIBCALL-NEXT:    movw %ax, 44
+; CHECK-LIBCALL-NEXT:    movw %ax, 12
 ; CHECK-LIBCALL-NEXT:    movw $15360, 62 # imm = 0x3C00
 ; CHECK-LIBCALL-NEXT:    movw $15360, 54 # imm = 0x3C00
 ; CHECK-LIBCALL-NEXT:    movw $15360, 46 # imm = 0x3C00
