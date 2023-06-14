@@ -1,7 +1,7 @@
 // RUN: %clang_hwasan  %s -o %t
 // RUN: %run %t 2>&1
 
-// REQUIRES: aarch64-target-arch
+// REQUIRES: pointer-tagging
 
 #include <sanitizer/hwasan_interface.h>
 #include <stdio.h>
@@ -10,7 +10,7 @@
 
 int main(int argc, char **argv) {
   const int kSize = 4096;
-  const int kTag = 74;
+  const int kTag = 47;
 
   // Get any mmaped pointer.
   void *r =
