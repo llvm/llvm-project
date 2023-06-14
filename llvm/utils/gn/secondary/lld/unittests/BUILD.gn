@@ -1,8 +1,0 @@
-group("unittests") {
-  deps = [
-    "AsLibAll:LLDAsLibAllTests",
-    "AsLibELF:LLDAsLibELFTests",
-  ]
-  testonly = true
-}
-
