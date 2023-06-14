@@ -549,9 +549,13 @@ void llvm::emitDWARF5AccelTable(
   SmallVector<unsigned, 1> CUIndex(CUs.size());
   int Count = 0;
   for (const auto &CU : enumerate(CUs)) {
-    if (CU.value()->getCUNode()->getNameTableKind() !=
-        DICompileUnit::DebugNameTableKind::Default)
+    switch (CU.value()->getCUNode()->getNameTableKind()) {
+    case DICompileUnit::DebugNameTableKind::Default:
+    case DICompileUnit::DebugNameTableKind::Apple:
+      break;
+    default:
       continue;
+    }
     CUIndex[CU.index()] = Count++;
     assert(CU.index() == CU.value()->getUniqueID());
     const DwarfCompileUnit *MainCU =
