@@ -1001,6 +1001,24 @@ void CheckHelper::CheckObjectEntity(
           parser::ToUpperCaseLetters(common::EnumToString(attr)));
     }
   }
+
+  if (derived && derived->IsVectorType()) {
+    CHECK(type);
+    std::string typeName{type->AsFortran()};
+    if (IsAssumedShape(symbol)) {
+      SayWithDeclaration(symbol,
+          "Assumed-shape entity of %s type is not supported"_err_en_US,
+          typeName);
+    } else if (IsDeferredShape(symbol)) {
+      SayWithDeclaration(symbol,
+          "Deferred-shape entity of %s type is not supported"_err_en_US,
+          typeName);
+    } else if (evaluate::IsAssumedRank(symbol)) {
+      SayWithDeclaration(symbol,
+          "Assumed Rank entity of %s type is not supported"_err_en_US,
+          typeName);
+    }
+  }
 }
 
 void CheckHelper::CheckPointerInitialization(const Symbol &symbol) {
