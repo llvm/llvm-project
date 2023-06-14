@@ -471,6 +471,36 @@ void mlir::test::TestPrintNumberOfAssociatedPayloadIROps::getEffects(
 }
 
 DiagnosedSilenceableFailure
+mlir::test::TestPrintNumberOfAssociatedPayloadIRValues::apply(
+    transform::TransformRewriter &rewriter,
+    transform::TransformResults &results, transform::TransformState &state) {
+  if (!getValueHandle())
+    emitRemark() << 0;
+  emitRemark() << llvm::range_size(state.getPayloadValues(getValueHandle()));
+  return DiagnosedSilenceableFailure::success();
+}
+
+void mlir::test::TestPrintNumberOfAssociatedPayloadIRValues::getEffects(
+    SmallVectorImpl<MemoryEffects::EffectInstance> &effects) {
+  transform::onlyReadsHandle(getValueHandle(), effects);
+}
+
+DiagnosedSilenceableFailure
+mlir::test::TestPrintNumberOfAssociatedPayloadIRParams::apply(
+    transform::TransformRewriter &rewriter,
+    transform::TransformResults &results, transform::TransformState &state) {
+  if (!getParam())
+    emitRemark() << 0;
+  emitRemark() << llvm::range_size(state.getParams(getParam()));
+  return DiagnosedSilenceableFailure::success();
+}
+
+void mlir::test::TestPrintNumberOfAssociatedPayloadIRParams::getEffects(
+    SmallVectorImpl<MemoryEffects::EffectInstance> &effects) {
+  transform::onlyReadsHandle(getParam(), effects);
+}
+
+DiagnosedSilenceableFailure
 mlir::test::TestCopyPayloadOp::apply(transform::TransformRewriter &rewriter,
                                      transform::TransformResults &results,
                                      transform::TransformState &state) {

@@ -1622,7 +1622,62 @@ transform.sequence failures(propagate) {
   test_print_number_of_associated_payload_ir_ops %0 : !transform.any_op
 }
 
+// -----
 
+// Parameter deduplication happens by value
+
+module {
+
+  transform.sequence failures(propagate) {
+  ^bb0(%0: !transform.any_op):
+    %1 = transform.param.constant 1 -> !transform.param<i64>
+    %2 = transform.param.constant 1 -> !transform.param<i64>
+    %3 = transform.param.constant 2 -> !transform.param<i64>
+    %4 = transform.merge_handles %1, %2 { deduplicate } : !transform.param<i64>
+    // expected-remark @below {{1}}
+    test_print_number_of_associated_payload_ir_params %4 : !transform.param<i64>
+
+    %5 = transform.merge_handles %1, %1 { deduplicate } : !transform.param<i64>
+    // expected-remark @below {{1}}
+    test_print_number_of_associated_payload_ir_params %5 : !transform.param<i64>
+
+    %6 = transform.merge_handles %1, %3 { deduplicate } : !transform.param<i64>
+    // expected-remark @below {{2}}
+    test_print_number_of_associated_payload_ir_params %6 : !transform.param<i64>
+
+    %7 = transform.merge_handles %1, %1, %2, %3 : !transform.param<i64>
+    // expected-remark @below {{4}}
+    test_print_number_of_associated_payload_ir_params %7 : !transform.param<i64>
+  }
+}
+
+// -----
+
+%0:3 = "test.get_two_results"() : () -> (i32, i32, f32)
+
+transform.sequence failures(propagate) {
+^bb1(%arg0: !transform.any_op):
+  %1 = transform.structured.match ops{["test.get_two_results"]} in %arg0 : (!transform.any_op) -> !transform.any_op
+  %2 = test_produce_value_handle_to_result %1, 0 : (!transform.any_op) -> !transform.any_value
+  %3 = test_produce_value_handle_to_result %1, 1 : (!transform.any_op) -> !transform.any_value
+
+  %4 = transform.merge_handles %2, %2 { deduplicate } : !transform.any_value
+  // expected-remark @below {{1}}
+  test_print_number_of_associated_payload_ir_values %4 : !transform.any_value
+
+  %5 = transform.merge_handles %2, %3 { deduplicate } : !transform.any_value
+  // expected-remark @below {{2}}
+  test_print_number_of_associated_payload_ir_values %5 : !transform.any_value
+
+  %6 = test_produce_value_handle_to_result %1, 0 : (!transform.any_op) -> !transform.any_value
+  %7 = transform.merge_handles %2, %6 { deduplicate } : !transform.any_value
+  // expected-remark @below {{1}}
+  test_print_number_of_associated_payload_ir_values %6 : !transform.any_value
+
+  %8 = transform.merge_handles %2, %2, %3, %4 : !transform.any_value
+  // expected-remark @below {{4}}
+  test_print_number_of_associated_payload_ir_values %8 : !transform.any_value
+}
 // -----
 
 // CHECK-LABEL: func @test_annotation()
