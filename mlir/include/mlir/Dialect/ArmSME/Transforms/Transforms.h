@@ -15,6 +15,11 @@ class LLVMConversionTarget;
 class LLVMTypeConverter;
 class RewritePatternSet;
 
+namespace arm_sme {
+void populateVectorTransferLoweringPatterns(LLVMTypeConverter &converter,
+                                            RewritePatternSet &patterns);
+} // namespace arm_sme
+
 /// Collect a set of patterns to lower ArmSME ops to ops that map to LLVM
 /// intrinsics.
 void populateArmSMELegalizeForLLVMExportPatterns(LLVMTypeConverter &converter,
