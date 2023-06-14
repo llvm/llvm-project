@@ -9120,7 +9120,10 @@ std::optional<VPlanPtr> LoopVectorizationPlanner::tryToBuildVPlanWithVPRecipes(
   // evolution.
   for (auto [_, Stride] : Legal->getLAI()->getSymbolicStrides()) {
     auto *StrideV = cast<SCEVUnknown>(Stride)->getValue();
-    auto *ScevStride = cast<SCEVConstant>(PSE.getSCEV(StrideV));
+    auto *ScevStride = dyn_cast<SCEVConstant>(PSE.getSCEV(StrideV));
+    // Only handle constant strides for now.
+    if (!ScevStride)
+      continue;
     Constant *CI = ConstantInt::get(Stride->getType(), ScevStride->getAPInt());
 
     auto *ConstVPV = Plan->getVPValueOrAddLiveIn(CI);
