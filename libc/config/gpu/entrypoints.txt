@@ -83,6 +83,8 @@ set(TARGET_LIBC_ENTRYPOINTS
 
 set(TARGET_LIBM_ENTRYPOINTS
     # math.h entrypoints
+    libc.src.math.fma
+    libc.src.math.fmaf
     libc.src.math.sin
     libc.src.math.round
     libc.src.math.roundf
