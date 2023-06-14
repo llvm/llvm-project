@@ -382,7 +382,7 @@ X86LegalizerInfo::X86LegalizerInfo(const X86Subtarget &STI,
                                          {v2s64, v4s64}})(Query)) ||
                (HasAVX512 && typePairInSet(SubIdx, FullIdx,
                                            {{v16s8, v64s8},
-                                            {v16s8, v64s8},
+                                            {v32s8, v64s8},
                                             {v8s16, v32s16},
                                             {v16s16, v32s16},
                                             {v4s32, v16s32},
