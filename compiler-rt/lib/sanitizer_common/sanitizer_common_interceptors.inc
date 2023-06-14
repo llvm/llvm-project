@@ -10158,6 +10158,19 @@ INTERCEPTOR(int, argp_parse, const struct argp *argp, int argc, char **argv,
 #define INIT_ARGP_PARSE
 #endif
 
+#if SANITIZER_INTERCEPT_CPUSET_GETAFFINITY
+INTERCEPTOR(int, cpuset_getaffinity, int level, int which, __int64_t id, SIZE_T cpusetsize, __sanitizer_cpuset_t *mask) {
+  void *ctx;
+  COMMON_INTERCEPTOR_ENTER(ctx, cpuset_getaffinity, level, which, id, cpusetsize, mask);
+  int res = REAL(cpuset_getaffinity)(level, which, id, cpusetsize, mask);
+  if (mask && !res) COMMON_INTERCEPTOR_WRITE_RANGE(ctx, mask, cpusetsize);
+  return res;
+}
+#define INIT_CPUSET_GETAFFINITY COMMON_INTERCEPT_FUNCTION(cpuset_getaffinity);
+#else
+#define INIT_CPUSET_GETAFFINITY
+#endif
+
 #include "sanitizer_common_interceptors_netbsd_compat.inc"
 
 namespace __sanitizer {
@@ -10476,6 +10489,7 @@ static void InitializeCommonInterceptors() {
   INIT___XUNAME;
   INIT_HEXDUMP;
   INIT_ARGP_PARSE;
+  INIT_CPUSET_GETAFFINITY;
 
   INIT___PRINTF_CHK;
 }

@@ -233,31 +233,6 @@ std::string getInstrProfSectionName(InstrProfSectKind IPSK,
   return SectName;
 }
 
-void SoftInstrProfErrors::addError(instrprof_error IE) {
-  if (IE == instrprof_error::success)
-    return;
-
-  if (FirstError == instrprof_error::success)
-    FirstError = IE;
-
-  switch (IE) {
-  case instrprof_error::hash_mismatch:
-    ++NumHashMismatches;
-    break;
-  case instrprof_error::count_mismatch:
-    ++NumCountMismatches;
-    break;
-  case instrprof_error::counter_overflow:
-    ++NumCounterOverflows;
-    break;
-  case instrprof_error::value_site_count_mismatch:
-    ++NumValueSiteCountMismatches;
-    break;
-  default:
-    llvm_unreachable("Not a soft error");
-  }
-}
-
 std::string InstrProfError::message() const {
   return getInstrProfErrString(Err, Msg);
 }

@@ -5661,7 +5661,29 @@ bool AMDGPULegalizerInfo::legalizeTrapIntrinsic(MachineInstr &MI,
 
 bool AMDGPULegalizerInfo::legalizeTrapEndpgm(
     MachineInstr &MI, MachineRegisterInfo &MRI, MachineIRBuilder &B) const {
-  B.buildInstr(AMDGPU::S_ENDPGM).addImm(0);
+  const DebugLoc &DL = MI.getDebugLoc();
+  MachineBasicBlock &BB = B.getMBB();
+  MachineFunction *MF = BB.getParent();
+
+  if (BB.succ_empty() && std::next(MI.getIterator()) == BB.end()) {
+    BuildMI(BB, BB.end(), DL, B.getTII().get(AMDGPU::S_ENDPGM))
+      .addImm(0);
+    MI.eraseFromParent();
+    return true;
+  }
+
+  // We need a block split to make the real endpgm a terminator. We also don't
+  // want to break phis in successor blocks, so we can't just delete to the
+  // end of the block.
+  BB.splitAt(MI, false /*UpdateLiveIns*/);
+  MachineBasicBlock *TrapBB = MF->CreateMachineBasicBlock();
+  MF->push_back(TrapBB);
+  BuildMI(*TrapBB, TrapBB->end(), DL, B.getTII().get(AMDGPU::S_ENDPGM))
+    .addImm(0);
+  BuildMI(BB, &MI, DL, B.getTII().get(AMDGPU::S_CBRANCH_EXECNZ))
+    .addMBB(TrapBB);
+
+  BB.addSuccessor(TrapBB);
   MI.eraseFromParent();
   return true;
 }

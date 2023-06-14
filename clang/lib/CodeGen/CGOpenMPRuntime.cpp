@@ -1918,8 +1918,7 @@ bool CGOpenMPRuntime::emitDeclareTargetVarDefinition(const VarDecl *VD,
       llvm::Constant *AddrInAS0 = Addr;
       if (Addr->getAddressSpace() != 0)
         AddrInAS0 = llvm::ConstantExpr::getAddrSpaceCast(
-            Addr, llvm::PointerType::getWithSamePointeeType(
-                      cast<llvm::PointerType>(Addr->getType()), 0));
+            Addr, llvm::PointerType::get(CGM.getLLVMContext(), 0));
       CtorCGF.EmitAnyExprToMem(Init,
                                Address(AddrInAS0, Addr->getValueType(),
                                        CGM.getContext().getDeclAlign(VD)),
@@ -1969,8 +1968,7 @@ bool CGOpenMPRuntime::emitDeclareTargetVarDefinition(const VarDecl *VD,
       llvm::Constant *AddrInAS0 = Addr;
       if (Addr->getAddressSpace() != 0)
         AddrInAS0 = llvm::ConstantExpr::getAddrSpaceCast(
-            Addr, llvm::PointerType::getWithSamePointeeType(
-                      cast<llvm::PointerType>(Addr->getType()), 0));
+            Addr, llvm::PointerType::get(CGM.getLLVMContext(), 0));
       DtorCGF.emitDestroy(Address(AddrInAS0, Addr->getValueType(),
                                   CGM.getContext().getDeclAlign(VD)),
                           ASTTy, DtorCGF.getDestroyer(ASTTy.isDestructedType()),

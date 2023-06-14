@@ -62,22 +62,38 @@ struct UpdateIndexCallbacks : public ParsingCallbacks {
   UpdateIndexCallbacks(FileIndex *FIndex,
                        ClangdServer::Callbacks *ServerCallbacks,
                        const ThreadsafeFS &TFS, AsyncTaskRunner *Tasks,
-                       bool CollectInactiveRegions)
-      : FIndex(FIndex), ServerCallbacks(ServerCallbacks), TFS(TFS),
-        Stdlib{std::make_shared<StdLibSet>()}, Tasks(Tasks),
-        CollectInactiveRegions(CollectInactiveRegions) {}
+                       bool CollectInactiveRegions,
+                       const ClangdServer::Options &Opts)
+      : FIndex(FIndex), ServerCallbacks(ServerCallbacks),
+        TFS(TFS), Stdlib{std::make_shared<StdLibSet>()}, Tasks(Tasks),
+        CollectInactiveRegions(CollectInactiveRegions), Opts(Opts) {}
 
-  void onPreambleAST(PathRef Path, llvm::StringRef Version,
-                     const CompilerInvocation &CI, ASTContext &Ctx,
-                     Preprocessor &PP,
-                     const CanonicalIncludes &CanonIncludes) override {
-    // If this preamble uses a standard library we haven't seen yet, index it.
-    if (FIndex)
-      if (auto Loc = Stdlib->add(*CI.getLangOpts(), PP.getHeaderSearchInfo()))
-        indexStdlib(CI, std::move(*Loc));
+  void onPreambleAST(
+      PathRef Path, llvm::StringRef Version, CapturedASTCtx ASTCtx,
+      const std::shared_ptr<const CanonicalIncludes> CanonIncludes) override {
 
-    if (FIndex)
-      FIndex->updatePreamble(Path, Version, Ctx, PP, CanonIncludes);
+    if (!FIndex)
+      return;
+
+    auto &PP = ASTCtx.getPreprocessor();
+    auto &CI = ASTCtx.getCompilerInvocation();
+    if (auto Loc = Stdlib->add(*CI.getLangOpts(), PP.getHeaderSearchInfo()))
+      indexStdlib(CI, std::move(*Loc));
+
+    // FIndex outlives the UpdateIndexCallbacks.
+    auto Task = [FIndex(FIndex), Path(Path.str()), Version(Version.str()),
+                 ASTCtx(std::move(ASTCtx)),
+                 CanonIncludes(CanonIncludes)]() mutable {
+      trace::Span Tracer("PreambleIndexing");
+      FIndex->updatePreamble(Path, Version, ASTCtx.getASTContext(),
+                             ASTCtx.getPreprocessor(), *CanonIncludes);
+    };
+
+    if (Opts.AsyncPreambleIndexing && Tasks) {
+      Tasks->runAsync("Preamble indexing for:" + Path + Version,
+                      std::move(Task));
+    } else
+      Task();
   }
 
   void indexStdlib(const CompilerInvocation &CI, StdLibLocation Loc) {
@@ -146,6 +162,7 @@ private:
   std::shared_ptr<StdLibSet> Stdlib;
   AsyncTaskRunner *Tasks;
   bool CollectInactiveRegions;
+  const ClangdServer::Options &Opts;
 };
 
 class DraftStoreFS : public ThreadsafeFS {
@@ -210,7 +227,7 @@ ClangdServer::ClangdServer(const GlobalCompilationDatabase &CDB,
                         std::make_unique<UpdateIndexCallbacks>(
                             DynamicIdx.get(), Callbacks, TFS,
                             IndexTasks ? &*IndexTasks : nullptr,
-                            PublishInactiveRegions));
+                            PublishInactiveRegions, Opts));
   // Adds an index to the stack, at higher priority than existing indexes.
   auto AddIndex = [&](SymbolIndex *Idx) {
     if (this->Index != nullptr) {

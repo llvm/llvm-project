@@ -162,8 +162,8 @@ public:
   /// contains only AST nodes from the #include directives at the start of the
   /// file. AST node in the current file should be observed on onMainAST call.
   virtual void onPreambleAST(PathRef Path, llvm::StringRef Version,
-                             const CompilerInvocation &CI, ASTContext &Ctx,
-                             Preprocessor &PP, const CanonicalIncludes &) {}
+                             CapturedASTCtx Ctx,
+                             const std::shared_ptr<const CanonicalIncludes>) {}
 
   /// The argument function is run under the critical section guarding against
   /// races when closing the files.

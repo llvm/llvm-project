@@ -85,6 +85,7 @@ inline constexpr bool is_integral_v = is_integral<T>::value;
 template <typename T> struct is_enum {
   static constexpr bool value = __is_enum(T);
 };
+template <typename T> inline constexpr bool is_enum_v = is_enum<T>::value;
 
 template <typename T> struct is_pointer : cpp::false_type {};
 template <typename T> struct is_pointer<T *> : cpp::true_type {};

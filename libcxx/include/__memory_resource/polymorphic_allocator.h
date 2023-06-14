@@ -207,11 +207,15 @@ operator==(const polymorphic_allocator<_Tp>& __lhs, const polymorphic_allocator<
   return *__lhs.resource() == *__rhs.resource();
 }
 
+#  if _LIBCPP_STD_VER <= 17
+
 template <class _Tp, class _Up>
 inline _LIBCPP_HIDE_FROM_ABI bool
 operator!=(const polymorphic_allocator<_Tp>& __lhs, const polymorphic_allocator<_Up>& __rhs) noexcept {
   return !(__lhs == __rhs);
 }
+
+#  endif
 
 } // namespace pmr
 

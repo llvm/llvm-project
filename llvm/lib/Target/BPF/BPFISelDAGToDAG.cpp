@@ -171,7 +171,7 @@ bool BPFDAGToDAGISel::SelectInlineAsmMemoryOperand(
   }
 
   SDLoc DL(Op);
-  SDValue AluOp = CurDAG->getTargetConstant(ISD::ADD, DL, MVT::i32);;
+  SDValue AluOp = CurDAG->getTargetConstant(ISD::ADD, DL, MVT::i32);
   OutOps.push_back(Op0);
   OutOps.push_back(Op1);
   OutOps.push_back(AluOp);

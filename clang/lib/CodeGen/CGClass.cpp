@@ -2132,8 +2132,8 @@ void CodeGenFunction::EmitCXXConstructorCall(const CXXConstructorDecl *D,
 
   if (SlotAS != ThisAS) {
     unsigned TargetThisAS = getContext().getTargetAddressSpace(ThisAS);
-    llvm::Type *NewType = llvm::PointerType::getWithSamePointeeType(
-        This.getType(), TargetThisAS);
+    llvm::Type *NewType =
+        llvm::PointerType::get(getLLVMContext(), TargetThisAS);
     ThisPtr = getTargetHooks().performAddrSpaceCast(*this, This.getPointer(),
                                                     ThisAS, SlotAS, NewType);
   }

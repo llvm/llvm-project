@@ -187,7 +187,7 @@ private:
   /// Track symbols symbols processed during and after the registration
   /// to avoid infinite loops between type conversions and global variable
   /// creation.
-  llvm::SmallSetVector<Fortran::semantics::SymbolRef, 64> seen;
+  llvm::SmallSetVector<Fortran::semantics::SymbolRef, 32> seen;
 };
 
 class DispatchTableConverter {

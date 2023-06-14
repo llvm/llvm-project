@@ -159,7 +159,7 @@ Changes to the Hexagon Backend
 Changes to the LoongArch Backend
 --------------------------------
 
-* The `lp64s` ABI is supported now and has been tested on Rust bare-matal target.
+* The ``lp64s`` ABI is supported now and has been tested on Rust bare-matal target.
 
 Changes to the MIPS Backend
 ---------------------------

@@ -127,7 +127,7 @@ define i64 @test7(i16 %x) {
 ; CHECK-LABEL: @test7(
 ; CHECK-NEXT:    [[P:%.*]] = and i16 [[X:%.*]], 15
 ; CHECK-NEXT:    [[EXT_1:%.*]] = zext i16 [[P]] to i32
-; CHECK-NEXT:    [[EXT_2:%.*]] = sext i32 [[EXT_1]] to i64
+; CHECK-NEXT:    [[EXT_2:%.*]] = zext i32 [[EXT_1]] to i64
 ; CHECK-NEXT:    ret i64 [[EXT_2]]
 ;
   %p = and i16 %x, 15

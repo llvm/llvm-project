@@ -36,17 +36,18 @@ struct suspend_never {
 
 template <typename Task, typename T, bool ThrowInPromiseConstructor,
           bool ThrowInInitialSuspend, bool ThrowInGetReturnObject,
-          bool ThrowInUnhandledException>
+          bool ThrowInUnhandledException, bool RethrowInUnhandledException>
 struct Promise;
 
 template <
     typename T, bool ThrowInTaskConstructor = false,
     bool ThrowInPromiseConstructor = false, bool ThrowInInitialSuspend = false,
-    bool ThrowInGetReturnObject = false, bool ThrowInUnhandledException = false>
+    bool ThrowInGetReturnObject = false, bool ThrowInUnhandledException = false,
+    bool RethrowInUnhandledException = false>
 struct Task {
   using promise_type =
       Promise<Task, T, ThrowInPromiseConstructor, ThrowInInitialSuspend,
-              ThrowInGetReturnObject, ThrowInUnhandledException>;
+              ThrowInGetReturnObject, ThrowInUnhandledException, RethrowInUnhandledException>;
 
   explicit Task(promise_type &p) {
     if constexpr (ThrowInTaskConstructor) {
@@ -67,13 +68,13 @@ struct Task {
 
 template <bool ThrowInTaskConstructor, bool ThrowInPromiseConstructor,
           bool ThrowInInitialSuspend, bool ThrowInGetReturnObject,
-          bool ThrowInUnhandledException>
+          bool ThrowInUnhandledException, bool RethrowInUnhandledException>
 struct Task<void, ThrowInTaskConstructor, ThrowInPromiseConstructor,
             ThrowInInitialSuspend, ThrowInGetReturnObject,
-            ThrowInUnhandledException> {
+            ThrowInUnhandledException, RethrowInUnhandledException> {
   using promise_type =
       Promise<Task, void, ThrowInPromiseConstructor, ThrowInInitialSuspend,
-              ThrowInGetReturnObject, ThrowInUnhandledException>;
+              ThrowInGetReturnObject, ThrowInUnhandledException, RethrowInUnhandledException>;
 
   explicit Task(promise_type &p) {
     if constexpr (ThrowInTaskConstructor) {
@@ -92,7 +93,7 @@ struct Task<void, ThrowInTaskConstructor, ThrowInPromiseConstructor,
 
 template <typename Task, typename T, bool ThrowInPromiseConstructor,
           bool ThrowInInitialSuspend, bool ThrowInGetReturnObject,
-          bool ThrowInUnhandledException>
+          bool ThrowInUnhandledException, bool RethrowInUnhandledException>
 struct Promise {
   Promise() {
     if constexpr (ThrowInPromiseConstructor) {
@@ -130,6 +131,8 @@ struct Promise {
   void unhandled_exception() {
     if constexpr (ThrowInUnhandledException) {
       throw 1;
+    } else if constexpr (RethrowInUnhandledException) {
+      throw;
     }
   }
 
@@ -138,9 +141,9 @@ struct Promise {
 
 template <typename Task, bool ThrowInPromiseConstructor,
           bool ThrowInInitialSuspend, bool ThrowInGetReturnObject,
-          bool ThrowInUnhandledException>
+          bool ThrowInUnhandledException, bool RethrowInUnhandledException>
 struct Promise<Task, void, ThrowInPromiseConstructor, ThrowInInitialSuspend,
-               ThrowInGetReturnObject, ThrowInUnhandledException> {
+               ThrowInGetReturnObject, ThrowInUnhandledException, RethrowInUnhandledException> {
   Promise() {
     if constexpr (ThrowInPromiseConstructor) {
       throw 1;
@@ -170,6 +173,8 @@ struct Promise<Task, void, ThrowInPromiseConstructor, ThrowInInitialSuspend,
   void unhandled_exception() {
     if constexpr (ThrowInUnhandledException) {
       throw 1;
+    } else if constexpr (RethrowInUnhandledException) {
+      throw;
     }
   }
 
@@ -266,6 +271,33 @@ Task<int, false, false, false, false, true> h_ShouldDiag(const int a,
   co_return a / b;
 }
 
+Task<int, false, false, false, false, false, true>
+i_ShouldNotDiag(const int a, const int b) {
+  co_return a / b;
+}
+
+Task<int, false, false, false, false, false, true>
+i_ShouldNotDiagNoexcept(const int a, const int b) noexcept {
+  co_return a / b;
+}
+
+Task<int, false, false, false, false, false, true>
+j_ShouldNotDiag(const int a, const int b) {
+  if (b == 0)
+    throw b;
+
+  co_return a / b;
+}
+
+Task<int, false, false, false, false, false, true>
+j_ShouldDiag(const int a, const int b) noexcept {
+  // CHECK-MESSAGES: :[[@LINE-1]]:1: warning: an exception may be thrown in function 'j_ShouldDiag' which should not throw exceptions
+  if (b == 0)
+    throw b;
+
+  co_return a / b;
+}
+
 } // namespace coreturn
 
 namespace coyield {
@@ -344,6 +376,33 @@ Task<int, false, false, false, false, true> h_ShouldNotDiag(const int a,
 Task<int, false, false, false, false, true> h_ShouldDiag(const int a,
                                                          const int b) noexcept {
   // CHECK-MESSAGES: :[[@LINE-2]]:45: warning: an exception may be thrown in function 'h_ShouldDiag' which should not throw exceptions
+  co_yield a / b;
+}
+
+Task<int, false, false, false, false, false, true>
+i_ShouldNotDiag(const int a, const int b) {
+  co_yield a / b;
+}
+
+Task<int, false, false, false, false, false, true>
+i_ShouldNotDiagNoexcept(const int a, const int b) noexcept {
+  co_yield a / b;
+}
+
+Task<int, false, false, false, false, false, true>
+j_ShouldNotDiag(const int a, const int b) {
+  if (b == 0)
+    throw b;
+
+  co_yield a / b;
+}
+
+Task<int, false, false, false, false, false, true>
+j_ShouldDiag(const int a, const int b) noexcept {
+  // CHECK-MESSAGES: :[[@LINE-1]]:1: warning: an exception may be thrown in function 'j_ShouldDiag' which should not throw exceptions
+  if (b == 0)
+    throw b;
+
   co_yield a / b;
 }
 
@@ -427,6 +486,31 @@ Task<void, false, false, false, false, true>
 h_ShouldDiag(const int a, const int b) noexcept {
   // CHECK-MESSAGES: :[[@LINE-1]]:1: warning: an exception may be thrown in function 'h_ShouldDiag' which should not throw exceptions
   co_await returnOne();
+}
+
+Task<int, false, false, false, false, false, true>
+i_ShouldNotDiag(const int a, const int b) {
+  co_await returnOne();
+}
+
+Task<int, false, false, false, false, false, true>
+i_ShouldNotDiagNoexcept(const int a, const int b) noexcept {
+  co_await returnOne();
+}
+
+Task<int, false, false, false, false, false, true>
+j_ShouldNotDiag(const int a, const int b) {
+  co_await returnOne();
+  if (b == 0)
+    throw b;
+}
+
+Task<int, false, false, false, false, false, true>
+j_ShouldDiag(const int a, const int b) noexcept {
+  // CHECK-MESSAGES: :[[@LINE-1]]:1: warning: an exception may be thrown in function 'j_ShouldDiag' which should not throw exceptions
+  co_await returnOne();
+  if (b == 0)
+    throw b;
 }
 
 } // namespace coawait
@@ -524,6 +608,37 @@ const auto h_ShouldDiag =
   co_return a / b;
 };
 
+const auto i_ShouldNotDiag =
+    [](const int a,
+       const int b) -> Task<int, false, false, false, false, false, true> {
+  co_return a / b;
+};
+
+const auto i_ShouldNotDiagNoexcept =
+    [](const int a,
+       const int b) noexcept -> Task<int, false, false, false, false, false, true> {
+  co_return a / b;
+};
+
+const auto j_ShouldNotDiag =
+    [](const int a,
+       const int b) -> Task<int, false, false, false, false, false, true> {
+  if (b == 0)
+    throw b;
+
+  co_return a / b;
+};
+
+const auto j_ShouldDiag =
+    [](const int a,
+       const int b) noexcept -> Task<int, false, false, false, false, false, true> {
+  // CHECK-MESSAGES: :[[@LINE-2]]:5: warning: an exception may be thrown in function 'operator()' which should not throw exceptions
+  if (b == 0)
+    throw b;
+
+  co_return a / b;
+};
+
 } // namespace coreturn
 
 namespace coyield {
@@ -612,6 +727,37 @@ const auto h_ShouldDiag =
     [](const int a,
        const int b) noexcept -> Task<int, false, false, false, false, true> {
   // CHECK-MESSAGES: :[[@LINE-2]]:5: warning: an exception may be thrown in function 'operator()' which should not throw exceptions
+  co_yield a / b;
+};
+
+const auto i_ShouldNotDiag =
+    [](const int a,
+       const int b) -> Task<int, false, false, false, false, false, true> {
+  co_yield a / b;
+};
+
+const auto i_ShouldNotDiagNoexcept =
+    [](const int a,
+       const int b) noexcept -> Task<int, false, false, false, false, false, true> {
+  co_yield a / b;
+};
+
+const auto j_ShouldNotDiag =
+    [](const int a,
+       const int b) -> Task<int, false, false, false, false, false, true> {
+  if (b == 0)
+    throw b;
+
+  co_yield a / b;
+};
+
+const auto j_ShouldDiag =
+    [](const int a,
+       const int b) noexcept -> Task<int, false, false, false, false, false, true> {
+  // CHECK-MESSAGES: :[[@LINE-2]]:5: warning: an exception may be thrown in function 'operator()' which should not throw exceptions
+  if (b == 0)
+    throw b;
+
   co_yield a / b;
 };
 
@@ -704,6 +850,35 @@ const auto h_ShouldDiag =
        const int b) noexcept -> Task<void, false, false, false, false, true> {
   // CHECK-MESSAGES: :[[@LINE-2]]:5: warning: an exception may be thrown in function 'operator()' which should not throw exceptions
   co_await returnOne();
+};
+
+const auto i_ShouldNotDiag =
+    [](const int a,
+       const int b) -> Task<int, false, false, false, false, false, true> {
+  co_await returnOne();
+};
+
+const auto i_ShouldNotDiagNoexcept =
+    [](const int a,
+       const int b) noexcept -> Task<int, false, false, false, false, false, true> {
+  co_await returnOne();
+};
+
+const auto j_ShouldNotDiag =
+    [](const int a,
+       const int b) -> Task<int, false, false, false, false, false, true> {
+  co_await returnOne();
+  if (b == 0)
+    throw b;
+};
+
+const auto j_ShouldDiag =
+    [](const int a,
+       const int b) noexcept -> Task<int, false, false, false, false, false, true> {
+  // CHECK-MESSAGES: :[[@LINE-2]]:5: warning: an exception may be thrown in function 'operator()' which should not throw exceptions
+  co_await returnOne();
+  if (b == 0)
+    throw b;
 };
 
 } // namespace coawait

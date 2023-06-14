@@ -12,6 +12,7 @@
 #include "src/__support/CPP/string_view.h"
 #include "src/__support/FPUtil/FEnvImpl.h"
 #include "src/__support/FPUtil/FPBits.h"
+#include "src/__support/FPUtil/rounding_mode.h"
 #include "src/__support/common.h"
 #include "src/stdio/printf_core/converter_utils.h"
 #include "src/stdio/printf_core/core_structs.h"
@@ -113,7 +114,7 @@ LIBC_INLINE int convert_float_hex_exp(Writer *writer,
 
     mantissa >>= shift_amount;
 
-    switch (fputil::get_round()) {
+    switch (fputil::quick_get_round()) {
     case FE_TONEAREST:
       // Round to nearest, if it's exactly halfway then round to even.
       if (truncated_bits > halfway_const)

@@ -2028,16 +2028,21 @@ let Constraints = "$src = $rd", Defs = [SREG] in {
 
   def ASRWLoRd : Pseudo<(outs DREGS:$rd), (ins DREGS:$src), "asrwlo\t$rd",
                         [(set i16:$rd, (AVRasrlo i16:$src)), (implicit SREG)]>;
+  let Uses = [R1] in
+  def ROLBRdR1 : Pseudo<(outs GPR8:$rd),
+                        (ins GPR8:$src),
+                        "rolb\t$rd",
+                        [(set i8:$rd, (AVRrol i8:$src)),
+                        (implicit SREG)]>,
+                 Requires<[HasNonTinyEncoding]>;
 
-  def ROLBRd : Pseudo<(outs GPR8
-                       : $rd),
-                      (ins GPR8
-                       : $src),
-                      "rolb\t$rd",
-                      [(set i8
-                        : $rd, (AVRrol i8
-                                : $src)),
-                       (implicit SREG)]>;
+  let Uses = [R17] in
+  def ROLBRdR17 : Pseudo<(outs GPR8:$rd),
+                         (ins GPR8:$src),
+                         "rolb\t$rd",
+                         [(set i8:$rd, (AVRrol i8:$src)),
+                         (implicit SREG)]>,
+                  Requires<[HasTinyEncoding]>;
 
   def RORBRd : Pseudo<(outs GPR8
                        : $rd),
