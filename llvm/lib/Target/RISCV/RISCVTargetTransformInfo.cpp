@@ -30,9 +30,9 @@ static cl::opt<unsigned> RVVRegisterWidthLMUL(
 static cl::opt<unsigned> SLPMaxVF(
     "riscv-v-slp-max-vf",
     cl::desc(
-        "Result used for getMaximumVF query which is used exclusively by "
-        "SLP vectorizer.  Defaults to 1 which disables SLP."),
-    cl::init(1), cl::Hidden);
+        "Overrides result used for getMaximumVF query which is used "
+        "exclusively by SLP vectorizer."),
+    cl::Hidden);
 
 InstructionCost RISCVTTIImpl::getLMULCost(MVT VT) {
   // TODO: Here assume reciprocal throughput is 1 for LMUL_1, it is
@@ -1744,12 +1744,19 @@ unsigned RISCVTTIImpl::getRegUsageForType(Type *Ty) {
 }
 
 unsigned RISCVTTIImpl::getMaximumVF(unsigned ElemWidth, unsigned Opcode) const {
-  // This interface is currently only used by SLP.  Returning 1 (which is the
-  // default value for SLPMaxVF) disables SLP. We currently have a cost modeling
-  // problem w/ constant materialization which causes SLP to perform majorly
-  // unprofitable transformations.
-  // TODO: Figure out constant materialization cost modeling and remove.
-  return SLPMaxVF;
+  if (SLPMaxVF.getNumOccurrences())
+    return SLPMaxVF;
+
+  // Return how many elements can fit in getRegisterBitwidth.  This is the
+  // same routine as used in LoopVectorizer.  We should probably be
+  // accounting for whether we actually have instructions with the right
+  // lane type, but we don't have enough information to do that without
+  // some additional plumbing which hasn't been justified yet.
+  TypeSize RegWidth =
+    getRegisterBitWidth(TargetTransformInfo::RGK_FixedWidthVector);
+  // If no vector registers, or absurd element widths, disable
+  // vectorization by returning 1.
+  return std::max(1UL, RegWidth.getFixedValue() / ElemWidth);
 }
 
 bool RISCVTTIImpl::isLSRCostLess(const TargetTransformInfo::LSRCost &C1,
