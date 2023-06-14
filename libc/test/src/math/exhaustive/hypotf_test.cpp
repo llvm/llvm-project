@@ -25,6 +25,8 @@ struct LlvmLibcHypotfExhaustiveTest : public LlvmLibcExhaustiveTest<uint32_t> {
     constexpr uint32_t Y_STOP = (48U + 127U) << 23;
 
     mpfr::ForceRoundingMode r(rounding);
+    if (!r.success)
+      return true;
     uint32_t xbits = start;
     bool result = true;
     do {

@@ -86,6 +86,9 @@ TEST(LlvmLibcLog1pTest, InDoubleRange) {
   auto test = [&](uint64_t start, uint64_t stop,
                   mpfr::RoundingMode rounding_mode) {
     mpfr::ForceRoundingMode __r(rounding_mode);
+    if (!__r.success)
+      return;
+
     uint64_t fails = 0;
     uint64_t count = 0;
     uint64_t cc = 0;
