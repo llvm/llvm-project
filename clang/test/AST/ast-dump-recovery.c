@@ -93,7 +93,7 @@ void test3() {
   (*__builtin_classify_type)(1);
 
   extern void ext();
-  // CHECK:     CallExpr {{.*}} 'void' contains-errors
+  // CHECK:     CallExpr {{.*}} '<dependent type>' contains-errors
   // CHECK-NEXT: |-DeclRefExpr {{.*}} 'ext'
   // CHECK-NEXT: `-RecoveryExpr {{.*}} '<dependent type>'
   ext(undef_var);
@@ -116,4 +116,13 @@ void test5_GH62711() {
   // CHECK-NEXT: | `-ImplicitCastExpr {{.*}} '<dependent type>' contains-errors
   // CHECK-NEXT: |   `-RecoveryExpr {{.*}} '<dependent type>' contains-errors
   if (__builtin_va_arg(undef, int) << 1);
+}
+
+void test6_GH50244() {
+  double array[16];
+  // CHECK:      UnaryExprOrTypeTraitExpr {{.*}} 'unsigned long' contains-errors sizeof
+  // CHECK-NEXT: `-CallExpr {{.*}} '<dependent type>' contains-errors
+  // CHECK-NEXT:   |-DeclRefExpr {{.*}} 'int ()'
+  // CHECK-NEXT:   `-RecoveryExpr {{.*}} '<dependent type>'
+  sizeof array / sizeof foo(undef);
 }

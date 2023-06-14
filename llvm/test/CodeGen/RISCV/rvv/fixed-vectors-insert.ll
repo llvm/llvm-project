@@ -39,30 +39,24 @@ define void @insertelt_v4i64(ptr %x, i64 %y) {
 define void @insertelt_v3i64(ptr %x, i64 %y) {
 ; RV32-LABEL: insertelt_v3i64:
 ; RV32:       # %bb.0:
-; RV32-NEXT:    vsetivli zero, 2, e64, m1, ta, ma
+; RV32-NEXT:    vsetivli zero, 3, e64, m2, ta, ma
 ; RV32-NEXT:    vle64.v v8, (a0)
-; RV32-NEXT:    lw a3, 16(a0)
-; RV32-NEXT:    addi a4, a0, 20
-; RV32-NEXT:    vsetivli zero, 4, e32, m1, ta, ma
-; RV32-NEXT:    vlse32.v v10, (a4), zero
-; RV32-NEXT:    vsetvli zero, zero, e32, m1, tu, ma
-; RV32-NEXT:    vmv.s.x v10, a3
-; RV32-NEXT:    vsetvli zero, zero, e64, m2, ta, ma
-; RV32-NEXT:    vslideup.vi v8, v10, 2
 ; RV32-NEXT:    vsetivli zero, 2, e32, m2, ta, ma
 ; RV32-NEXT:    vslide1down.vx v10, v8, a1
 ; RV32-NEXT:    vslide1down.vx v10, v10, a2
 ; RV32-NEXT:    vsetivli zero, 3, e64, m2, tu, ma
 ; RV32-NEXT:    vslideup.vi v8, v10, 2
-; RV32-NEXT:    sw a1, 16(a0)
-; RV32-NEXT:    sw a2, 20(a0)
-; RV32-NEXT:    vsetivli zero, 2, e64, m1, ta, ma
 ; RV32-NEXT:    vse64.v v8, (a0)
 ; RV32-NEXT:    ret
 ;
 ; RV64-LABEL: insertelt_v3i64:
 ; RV64:       # %bb.0:
-; RV64-NEXT:    sd a1, 16(a0)
+; RV64-NEXT:    vsetivli zero, 3, e64, m2, ta, ma
+; RV64-NEXT:    vle64.v v8, (a0)
+; RV64-NEXT:    vmv.s.x v10, a1
+; RV64-NEXT:    vsetvli zero, zero, e64, m2, tu, ma
+; RV64-NEXT:    vslideup.vi v8, v10, 2
+; RV64-NEXT:    vse64.v v8, (a0)
 ; RV64-NEXT:    ret
   %a = load <3 x i64>, ptr %x, align 8
   %b = insertelement <3 x i64> %a, i64 %y, i32 2

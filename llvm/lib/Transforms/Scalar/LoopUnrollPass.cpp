@@ -1477,12 +1477,6 @@ Pass *llvm::createLoopUnrollPass(int OptLevel, bool OnlyWhenForced,
       AllowPeeling == -1 ? std::nullopt : std::optional<bool>(AllowPeeling));
 }
 
-Pass *llvm::createSimpleLoopUnrollPass(int OptLevel, bool OnlyWhenForced,
-                                       bool ForgetAllSCEV) {
-  return createLoopUnrollPass(OptLevel, OnlyWhenForced, ForgetAllSCEV, -1, -1,
-                              0, 0, 0, 1);
-}
-
 PreservedAnalyses LoopFullUnrollPass::run(Loop &L, LoopAnalysisManager &AM,
                                           LoopStandardAnalysisResults &AR,
                                           LPMUpdater &Updater) {

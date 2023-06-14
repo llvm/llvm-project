@@ -391,7 +391,7 @@ static Operation *replaceForAllWithNewSignature(
       dominatedUsers.insert(user);
     }
   }
-  if (dominatedUsers.size() == 0)
+  if (dominatedUsers.empty())
     return nullptr;
 
   // Create new scf.forall op

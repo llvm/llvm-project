@@ -3596,11 +3596,9 @@ dwarf::Form DwarfDebug::getDwarfSectionOffsetForm() const {
 }
 
 const MCSymbol *DwarfDebug::getSectionLabel(const MCSection *S) {
-  auto I = SectionLabels.find(S);
-  if (I == SectionLabels.end())
-    return nullptr;
-  return I->second;
+  return SectionLabels.lookup(S);
 }
+
 void DwarfDebug::insertSectionLabel(const MCSymbol *S) {
   if (SectionLabels.insert(std::make_pair(&S->getSection(), S)).second)
     if (useSplitDwarf() || getDwarfVersion() >= 5)

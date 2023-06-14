@@ -973,8 +973,6 @@ struct ExternalAAWrapperPass : ImmutablePass {
   }
 };
 
-FunctionPass *createAAResultsWrapperPass();
-
 /// A wrapper pass around a callback which can be used to populate the
 /// AAResults in the AAResultsWrapperPass from an external AA.
 ///

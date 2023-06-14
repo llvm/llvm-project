@@ -245,7 +245,8 @@ X86LegalizerInfo::X86LegalizerInfo(const X86Subtarget &STI,
                 (Is64Bit && typePairInSet(0, 1, {{s64, s64}})(Query)));
       })
       .widenScalarToNextPow2(1, /*Min=*/16)
-      .clampScalar(1, s16, sMaxScalar);
+      .clampScalar(1, s16, sMaxScalar)
+      .scalarSameSizeAs(0, 1);
 
   // count leading zeros (LZCNT)
   getActionDefinitionsBuilder(G_CTLZ)
@@ -255,7 +256,8 @@ X86LegalizerInfo::X86LegalizerInfo(const X86Subtarget &STI,
                 (Is64Bit && typePairInSet(0, 1, {{s64, s64}})(Query)));
       })
       .widenScalarToNextPow2(1, /*Min=*/16)
-      .clampScalar(1, s16, sMaxScalar);
+      .clampScalar(1, s16, sMaxScalar)
+      .scalarSameSizeAs(0, 1);
 
   // count trailing zeros
   getActionDefinitionsBuilder({G_CTTZ_ZERO_UNDEF, G_CTTZ})
@@ -265,7 +267,8 @@ X86LegalizerInfo::X86LegalizerInfo(const X86Subtarget &STI,
                 (Is64Bit && typePairInSet(0, 1, {{s64, s64}})(Query)));
       })
       .widenScalarToNextPow2(1, /*Min=*/16)
-      .clampScalar(1, s16, sMaxScalar);
+      .clampScalar(1, s16, sMaxScalar)
+      .scalarSameSizeAs(0, 1);
 
   // pointer handling
   const std::initializer_list<LLT> PtrTypes32 = {s1, s8, s16, s32};
@@ -316,6 +319,16 @@ X86LegalizerInfo::X86LegalizerInfo(const X86Subtarget &STI,
                (HasAVX512 && typeInSet(0, {v16s32, v8s64})(Query));
       });
 
+  // fp comparison
+  getActionDefinitionsBuilder(G_FCMP)
+      .legalIf([=](const LegalityQuery &Query) {
+        return (HasSSE1 && typePairInSet(0, 1, {{s8, s32}})(Query)) ||
+               (HasSSE2 && typePairInSet(0, 1, {{s8, s64}})(Query));
+      })
+      .clampScalar(0, s8, s8)
+      .clampScalar(1, s32, HasSSE2 ? s64 : s32)
+      .widenScalarToNextPow2(1);
+
   // fp extension
   getActionDefinitionsBuilder(G_FPEXT).legalIf([=](const LegalityQuery &Query) {
     return (HasSSE2 && typePairInSet(0, 1, {{s64, s32}})(Query)) ||
@@ -347,6 +360,11 @@ X86LegalizerInfo::X86LegalizerInfo(const X86Subtarget &STI,
       .scalarize(0)
       .minScalar(0, LLT::scalar(32))
       .libcall();
+
+  getActionDefinitionsBuilder(G_FREEZE)
+    .legalFor({s8, s16, s32, s64, p0})
+    .widenScalarToNextPow2(0, /*Min=*/8)
+    .clampScalar(0, s8, sMaxScalar);
 
   setLegalizerInfo32bit();
   setLegalizerInfo64bit();
@@ -422,7 +440,6 @@ void X86LegalizerInfo::setLegalizerInfo64bit() {
   if (!Subtarget.is64Bit())
     return;
 
-  const LLT s8 = LLT::scalar(8);
   const LLT s32 = LLT::scalar(32);
   const LLT s64 = LLT::scalar(64);
   const LLT s128 = LLT::scalar(128);
@@ -446,12 +463,6 @@ void X86LegalizerInfo::setLegalizerInfo64bit() {
       .clampScalar(1, s32, s64)
       .widenScalarToNextPow2(0)
       .clampScalar(0, s32, s64)
-      .widenScalarToNextPow2(1);
-
-  getActionDefinitionsBuilder(G_FCMP)
-      .legalForCartesianProduct({s8}, {s32, s64})
-      .clampScalar(0, s8, s8)
-      .clampScalar(1, s32, s64)
       .widenScalarToNextPow2(1);
 
   // Merge/Unmerge

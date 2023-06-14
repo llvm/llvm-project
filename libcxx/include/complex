@@ -148,12 +148,12 @@ template<class T> complex<T> operator/(const complex<T>&, const T&);          //
 template<class T> complex<T> operator/(const T&, const complex<T>&);          // constexpr in C++20
 template<class T> complex<T> operator+(const complex<T>&);                    // constexpr in C++20
 template<class T> complex<T> operator-(const complex<T>&);                    // constexpr in C++20
-template<class T> bool operator==(const complex<T>&, const complex<T>&); // constexpr in C++14
-template<class T> bool operator==(const complex<T>&, const T&); // constexpr in C++14
-template<class T> bool operator==(const T&, const complex<T>&); // constexpr in C++14
-template<class T> bool operator!=(const complex<T>&, const complex<T>&); // constexpr in C++14
-template<class T> bool operator!=(const complex<T>&, const T&); // constexpr in C++14
-template<class T> bool operator!=(const T&, const complex<T>&); // constexpr in C++14
+template<class T> bool operator==(const complex<T>&, const complex<T>&);      // constexpr in C++14
+template<class T> bool operator==(const complex<T>&, const T&);               // constexpr in C++14
+template<class T> bool operator==(const T&, const complex<T>&);               // constexpr in C++14, removed in C++20
+template<class T> bool operator!=(const complex<T>&, const complex<T>&);      // constexpr in C++14, removed in C++20
+template<class T> bool operator!=(const complex<T>&, const T&);               // constexpr in C++14, removed in C++20
+template<class T> bool operator!=(const T&, const complex<T>&);               // constexpr in C++14, removed in C++20
 
 template<class T, class charT, class traits>
   basic_istream<charT, traits>&
@@ -827,6 +827,8 @@ operator==(const complex<_Tp>& __x, const _Tp& __y)
     return __x.real() == __y && __x.imag() == 0;
 }
 
+#if _LIBCPP_STD_VER <= 17
+
 template<class _Tp>
 inline _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_SINCE_CXX14
 bool
@@ -858,6 +860,8 @@ operator!=(const _Tp& __x, const complex<_Tp>& __y)
 {
     return !(__x == __y);
 }
+
+#endif
 
 // 26.3.7 values:
 

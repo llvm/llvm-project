@@ -13,9 +13,9 @@ func.func @inner_func_inlinable(%ptr : !llvm.ptr) -> i32 {
   llvm.intr.dbg.declare #variableAddr = %ptr : !llvm.ptr
   %byte = llvm.mlir.constant(43 : i8) : i8
   %true = llvm.mlir.constant(1 : i1) : i1
-  "llvm.intr.memset"(%ptr, %byte, %0, %true) : (!llvm.ptr, i8, i32, i1) -> ()
-  "llvm.intr.memmove"(%ptr, %ptr, %0, %true) : (!llvm.ptr, !llvm.ptr, i32, i1) -> ()
-  "llvm.intr.memcpy"(%ptr, %ptr, %0, %true) : (!llvm.ptr, !llvm.ptr, i32, i1) -> ()
+  "llvm.intr.memset"(%ptr, %byte, %0) <{isVolatile = true}> : (!llvm.ptr, i8, i32) -> ()
+  "llvm.intr.memmove"(%ptr, %ptr, %0) <{isVolatile = true}> : (!llvm.ptr, !llvm.ptr, i32) -> ()
+  "llvm.intr.memcpy"(%ptr, %ptr, %0) <{isVolatile = true}> : (!llvm.ptr, !llvm.ptr, i32) -> ()
   "llvm.intr.assume"(%true) : (i1) -> ()
   llvm.fence release
   %2 = llvm.atomicrmw add %ptr, %0 monotonic : !llvm.ptr, i32

@@ -161,16 +161,14 @@ func.func @ops(%arg0: i32, %arg1: f32,
 // CHECK: llvm.intr.round(%[[FLOAT]]) : (f32) -> f32
   %34 = llvm.intr.round(%arg1) : (f32) -> f32
 
-// CHECK: "llvm.intr.memcpy"(%{{.*}}, %{{.*}}, %{{.*}}, %{{.*}}) : (!llvm.ptr, !llvm.ptr, i32, i1) -> ()
-  "llvm.intr.memcpy"(%arg2, %arg3, %arg0, %arg4) : (!llvm.ptr, !llvm.ptr, i32, i1) -> ()
+// CHECK: "llvm.intr.memcpy"(%{{.*}}, %{{.*}}, %{{.*}}) <{isVolatile = false}> : (!llvm.ptr, !llvm.ptr, i32) -> ()
+  "llvm.intr.memcpy"(%arg2, %arg3, %arg0) <{isVolatile = false}> : (!llvm.ptr, !llvm.ptr, i32) -> ()
 
-// CHECK: "llvm.intr.memcpy"(%{{.*}}, %{{.*}}, %{{.*}}, %{{.*}}) : (!llvm.ptr, !llvm.ptr, i32, i1) -> ()
-  "llvm.intr.memcpy"(%arg2, %arg3, %arg0, %arg4) : (!llvm.ptr, !llvm.ptr, i32, i1) -> ()
+// CHECK: "llvm.intr.memcpy"(%{{.*}}, %{{.*}}, %{{.*}}) <{isVolatile = false}> : (!llvm.ptr, !llvm.ptr, i32) -> ()
+  "llvm.intr.memcpy"(%arg2, %arg3, %arg0) <{isVolatile = false}> : (!llvm.ptr, !llvm.ptr, i32) -> ()
 
-// CHECK: %[[SZ:.*]] = llvm.mlir.constant
-  %sz = llvm.mlir.constant(10: i64) : i64
-// CHECK: "llvm.intr.memcpy.inline"(%{{.*}}, %{{.*}}, %{{.*}}, %{{.*}}) : (!llvm.ptr, !llvm.ptr, i64, i1) -> ()
-  "llvm.intr.memcpy.inline"(%arg2, %arg3, %sz, %arg4) : (!llvm.ptr, !llvm.ptr, i64, i1) -> ()
+// CHECK: "llvm.intr.memcpy.inline"(%{{.*}}, %{{.*}}) <{isVolatile = false, len = 10 : i64}> : (!llvm.ptr, !llvm.ptr) -> ()
+  "llvm.intr.memcpy.inline"(%arg2, %arg3) <{isVolatile = false, len = 10 : i64}> : (!llvm.ptr, !llvm.ptr) -> ()
 
 // CHECK:  llvm.return
   llvm.return

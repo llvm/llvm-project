@@ -12,6 +12,7 @@
 #include "src/__support/FPUtil/PolyEval.h"
 #include "src/__support/FPUtil/multiply_add.h"
 #include "src/__support/FPUtil/nearest_integer.h"
+#include "src/__support/FPUtil/rounding_mode.h"
 #include "src/__support/common.h"
 #include "src/__support/macros/optimization.h" // LIBC_UNLIKELY
 
@@ -44,7 +45,7 @@ LLVM_LIBC_FUNCTION(float, exp2f, (float x)) {
     if (!xbits.get_sign()) {
       // x is finite
       if (x_u < 0x7f80'0000U) {
-        int rounding = fputil::get_round();
+        int rounding = fputil::quick_get_round();
         if (rounding == FE_DOWNWARD || rounding == FE_TOWARDZERO)
           return static_cast<float>(FPBits(FPBits::MAX_NORMAL));
 
@@ -62,7 +63,7 @@ LLVM_LIBC_FUNCTION(float, exp2f, (float x)) {
       // exp(nan) = nan
       if (xbits.is_nan())
         return x;
-      if (fputil::get_round() == FE_UPWARD)
+      if (fputil::fenv_is_round_up())
         return FPBits(FPBits::MIN_SUBNORMAL).get_val();
       if (x != 0.0f) {
         fputil::set_errno_if_required(ERANGE);
@@ -75,10 +76,10 @@ LLVM_LIBC_FUNCTION(float, exp2f, (float x)) {
   // Check exceptional values.
   if (LIBC_UNLIKELY((x_u & EXVAL_MASK) == EXVAL_MASK)) {
     if (LIBC_UNLIKELY(x_u == EXVAL1)) { // x = 0x1.853a6ep-9f
-      if (fputil::get_round() == FE_TONEAREST)
+      if (fputil::fenv_is_round_to_nearest())
         return 0x1.00870ap+0f;
     } else if (LIBC_UNLIKELY(x_u == EXVAL2)) { // x = -0x1.e7526ep-6f
-      if (fputil::get_round() == FE_TONEAREST)
+      if (fputil::fenv_is_round_to_nearest())
         return 0x1.f58d62p-1f;
     }
   }

@@ -558,8 +558,10 @@ define <4 x i32> @test_rem7_4i32(<4 x i32> %a) nounwind {
 ; SSE41-NEXT:    psrld $1, %xmm1
 ; SSE41-NEXT:    paddd %xmm2, %xmm1
 ; SSE41-NEXT:    psrld $2, %xmm1
-; SSE41-NEXT:    pmulld {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1
-; SSE41-NEXT:    psubd %xmm1, %xmm0
+; SSE41-NEXT:    movdqa %xmm1, %xmm2
+; SSE41-NEXT:    pslld $3, %xmm2
+; SSE41-NEXT:    psubd %xmm2, %xmm1
+; SSE41-NEXT:    paddd %xmm1, %xmm0
 ; SSE41-NEXT:    retq
 ;
 ; AVX1-LABEL: test_rem7_4i32:
@@ -574,8 +576,9 @@ define <4 x i32> @test_rem7_4i32(<4 x i32> %a) nounwind {
 ; AVX1-NEXT:    vpsrld $1, %xmm2, %xmm2
 ; AVX1-NEXT:    vpaddd %xmm1, %xmm2, %xmm1
 ; AVX1-NEXT:    vpsrld $2, %xmm1, %xmm1
-; AVX1-NEXT:    vpmulld {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1, %xmm1
-; AVX1-NEXT:    vpsubd %xmm1, %xmm0, %xmm0
+; AVX1-NEXT:    vpslld $3, %xmm1, %xmm2
+; AVX1-NEXT:    vpsubd %xmm2, %xmm1, %xmm1
+; AVX1-NEXT:    vpaddd %xmm1, %xmm0, %xmm0
 ; AVX1-NEXT:    retq
 ;
 ; AVX2-LABEL: test_rem7_4i32:
@@ -590,9 +593,9 @@ define <4 x i32> @test_rem7_4i32(<4 x i32> %a) nounwind {
 ; AVX2-NEXT:    vpsrld $1, %xmm2, %xmm2
 ; AVX2-NEXT:    vpaddd %xmm1, %xmm2, %xmm1
 ; AVX2-NEXT:    vpsrld $2, %xmm1, %xmm1
-; AVX2-NEXT:    vpbroadcastd {{.*#+}} xmm2 = [7,7,7,7]
-; AVX2-NEXT:    vpmulld %xmm2, %xmm1, %xmm1
-; AVX2-NEXT:    vpsubd %xmm1, %xmm0, %xmm0
+; AVX2-NEXT:    vpslld $3, %xmm1, %xmm2
+; AVX2-NEXT:    vpsubd %xmm2, %xmm1, %xmm1
+; AVX2-NEXT:    vpaddd %xmm1, %xmm0, %xmm0
 ; AVX2-NEXT:    retq
   %res = urem <4 x i32> %a, <i32 7, i32 7, i32 7, i32 7>
   ret <4 x i32> %res
@@ -608,8 +611,10 @@ define <8 x i16> @test_rem7_8i16(<8 x i16> %a) nounwind {
 ; SSE-NEXT:    psrlw $1, %xmm2
 ; SSE-NEXT:    paddw %xmm1, %xmm2
 ; SSE-NEXT:    psrlw $2, %xmm2
-; SSE-NEXT:    pmullw {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm2
-; SSE-NEXT:    psubw %xmm2, %xmm0
+; SSE-NEXT:    movdqa %xmm2, %xmm1
+; SSE-NEXT:    psllw $3, %xmm1
+; SSE-NEXT:    psubw %xmm1, %xmm2
+; SSE-NEXT:    paddw %xmm2, %xmm0
 ; SSE-NEXT:    retq
 ;
 ; AVX-LABEL: test_rem7_8i16:
@@ -619,8 +624,9 @@ define <8 x i16> @test_rem7_8i16(<8 x i16> %a) nounwind {
 ; AVX-NEXT:    vpsrlw $1, %xmm2, %xmm2
 ; AVX-NEXT:    vpaddw %xmm1, %xmm2, %xmm1
 ; AVX-NEXT:    vpsrlw $2, %xmm1, %xmm1
-; AVX-NEXT:    vpmullw {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1, %xmm1
-; AVX-NEXT:    vpsubw %xmm1, %xmm0, %xmm0
+; AVX-NEXT:    vpsllw $3, %xmm1, %xmm2
+; AVX-NEXT:    vpsubw %xmm2, %xmm1, %xmm1
+; AVX-NEXT:    vpaddw %xmm1, %xmm0, %xmm0
 ; AVX-NEXT:    retq
   %res = urem <8 x i16> %a, <i16 7, i16 7, i16 7, i16 7, i16 7, i16 7, i16 7, i16 7>
   ret <8 x i16> %res

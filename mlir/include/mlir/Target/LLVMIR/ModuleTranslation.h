@@ -366,10 +366,10 @@ llvm::Constant *getLLVMConstant(llvm::Type *llvmType, Attribute attr,
                                 const ModuleTranslation &moduleTranslation);
 
 /// Creates a call to an LLVM IR intrinsic function with the given arguments.
-llvm::Value *createIntrinsicCall(llvm::IRBuilderBase &builder,
-                                 llvm::Intrinsic::ID intrinsic,
-                                 ArrayRef<llvm::Value *> args = {},
-                                 ArrayRef<llvm::Type *> tys = {});
+llvm::CallInst *createIntrinsicCall(llvm::IRBuilderBase &builder,
+                                    llvm::Intrinsic::ID intrinsic,
+                                    ArrayRef<llvm::Value *> args = {},
+                                    ArrayRef<llvm::Type *> tys = {});
 } // namespace detail
 
 } // namespace LLVM

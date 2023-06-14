@@ -1,4 +1,4 @@
-//===- LowerHLFIRIntrinsics.cpp - Bufferize HLFIR  ------------------------===//
+//===- LowerHLFIRIntrinsics.cpp - Transformational intrinsics to FIR ------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -37,7 +37,23 @@ namespace {
 /// runtime calls
 template <class OP>
 class HlfirIntrinsicConversion : public mlir::OpRewritePattern<OP> {
-  using mlir::OpRewritePattern<OP>::OpRewritePattern;
+public:
+  explicit HlfirIntrinsicConversion(mlir::MLIRContext *ctx)
+      : mlir::OpRewritePattern<OP>{ctx} {
+    // required for cases where intrinsics are chained together e.g.
+    // matmul(matmul(a, b), c)
+    // because converting the inner operation then invalidates the
+    // outer operation: causing the pattern to apply recursively.
+    //
+    // This is safe because we always progress with each iteration. Circular
+    // applications of operations are not expressible in MLIR because we use
+    // an SSA form and one must become first. E.g.
+    // %a = hlfir.matmul %b %d
+    // %b = hlfir.matmul %a %d
+    // cannot be written.
+    // MSVC needs the this->
+    this->setHasBoundedRewriteRecursion(true);
+  }
 
 protected:
   struct IntrinsicArgument {

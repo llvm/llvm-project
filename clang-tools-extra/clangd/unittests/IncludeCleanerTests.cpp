@@ -7,7 +7,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "Annotations.h"
-#include "Config.h"
 #include "Diagnostics.h"
 #include "IncludeCleaner.h"
 #include "ParsedAST.h"
@@ -45,7 +44,8 @@ using ::testing::Matcher;
 using ::testing::Pointee;
 using ::testing::UnorderedElementsAre;
 
-Matcher<const Diag &> withFix(std::vector<::testing::Matcher<Fix>> FixMatcheres) {
+Matcher<const Diag &>
+withFix(std::vector<::testing::Matcher<Fix>> FixMatcheres) {
   return Field(&Diag::Fixes, testing::UnorderedElementsAreArray(FixMatcheres));
 }
 
@@ -61,7 +61,6 @@ MATCHER_P3(Fix, Range, Replacement, Message,
          arg.Edits[0].range == Range && arg.Edits[0].newText == Replacement;
 }
 MATCHER_P(FixMessage, Message, "") { return arg.Message == Message; }
-
 
 std::string guard(llvm::StringRef Code) {
   return "#pragma once\n" + Code.str();
@@ -174,11 +173,6 @@ TEST(IncludeCleaner, ComputeMissingHeaders) {
 }
 
 TEST(IncludeCleaner, GenerateMissingHeaderDiags) {
-  Config Cfg;
-  Cfg.Diagnostics.MissingIncludes = Config::IncludesPolicy::Strict;
-  Cfg.Diagnostics.Includes.IgnoreHeader = {
-      [](llvm::StringRef Header) { return Header.ends_with("buzz.h"); }};
-  WithContextValue Ctx(Config::Key, std::move(Cfg));
   Annotations MainFile(R"cpp(
 #include "a.h"
 #include "all.h"
@@ -250,8 +244,11 @@ $insert_f[[]]$insert_vector[[]]
   TU.Code = MainFile.code();
   ParsedAST AST = TU.build();
 
-  std::vector<clangd::Diag> Diags =
-      issueIncludeCleanerDiagnostics(AST, TU.Code);
+  auto Findings = computeIncludeCleanerFindings(AST);
+  Findings.UnusedIncludes.clear();
+  std::vector<clangd::Diag> Diags = issueIncludeCleanerDiagnostics(
+      AST, TU.Code, Findings,
+      {[](llvm::StringRef Header) { return Header.ends_with("buzz.h"); }});
   EXPECT_THAT(
       Diags,
       UnorderedElementsAre(
@@ -279,9 +276,11 @@ $insert_f[[]]$insert_vector[[]]
           AllOf(
               Diag(MainFile.range("vector"),
                    "No header providing \"std::vector\" is directly included"),
-              withFix({Fix(MainFile.range("insert_vector"),
-                           "#include <vector>\n", "#include <vector>"),
-                       FixMessage("add all missing includes"),})),
+              withFix({
+                  Fix(MainFile.range("insert_vector"), "#include <vector>\n",
+                      "#include <vector>"),
+                  FixMessage("add all missing includes"),
+              })),
           AllOf(Diag(MainFile.range("FOO"),
                      "No header providing \"FOO\" is directly included"),
                 withFix({Fix(MainFile.range("insert_foo"),
@@ -320,11 +319,7 @@ TEST(IncludeCleaner, IWYUPragmas) {
     // IWYU pragma: private, include "public.h"
     void foo() {}
   )cpp");
-  Config Cfg;
-  Cfg.Diagnostics.UnusedIncludes = Config::IncludesPolicy::Strict;
-  WithContextValue Ctx(Config::Key, std::move(Cfg));
   ParsedAST AST = TU.build();
-  EXPECT_THAT(AST.getDiagnostics(), llvm::ValueIs(IsEmpty()));
   IncludeCleanerFindings Findings = computeIncludeCleanerFindings(AST);
   EXPECT_THAT(Findings.UnusedIncludes, IsEmpty());
 }
@@ -347,7 +342,6 @@ TEST(IncludeCleaner, IWYUPragmaExport) {
   )cpp");
   ParsedAST AST = TU.build();
 
-  EXPECT_THAT(AST.getDiagnostics(), llvm::ValueIs(IsEmpty()));
   IncludeCleanerFindings Findings = computeIncludeCleanerFindings(AST);
   EXPECT_THAT(Findings.UnusedIncludes,
               ElementsAre(Pointee(writtenInclusion("\"foo.h\""))));
@@ -368,13 +362,10 @@ TEST(IncludeCleaner, NoDiagsForObjC) {
   )cpp";
   TU.ExtraArgs.emplace_back("-xobjective-c");
 
-  Config Cfg;
-
-  Cfg.Diagnostics.UnusedIncludes = Config::IncludesPolicy::Strict;
-  Cfg.Diagnostics.MissingIncludes = Config::IncludesPolicy::Strict;
-  WithContextValue Ctx(Config::Key, std::move(Cfg));
   ParsedAST AST = TU.build();
-  EXPECT_THAT(AST.getDiagnostics(), llvm::ValueIs(IsEmpty()));
+  IncludeCleanerFindings Findings = computeIncludeCleanerFindings(AST);
+  EXPECT_THAT(Findings.MissingIncludes, IsEmpty());
+  EXPECT_THAT(Findings.UnusedIncludes, IsEmpty());
 }
 
 TEST(IncludeCleaner, UmbrellaUsesPrivate) {
@@ -387,11 +378,7 @@ TEST(IncludeCleaner, UmbrellaUsesPrivate) {
     void foo() {}
   )cpp");
   TU.Filename = "public.h";
-  Config Cfg;
-  Cfg.Diagnostics.UnusedIncludes = Config::IncludesPolicy::Strict;
-  WithContextValue Ctx(Config::Key, std::move(Cfg));
   ParsedAST AST = TU.build();
-  EXPECT_THAT(AST.getDiagnostics(), llvm::ValueIs(IsEmpty()));
   IncludeCleanerFindings Findings = computeIncludeCleanerFindings(AST);
   EXPECT_THAT(Findings.UnusedIncludes, IsEmpty());
 }
@@ -511,11 +498,6 @@ TEST(IncludeCleaner, FirstMatchedProvider) {
 }
 
 TEST(IncludeCleaner, BatchFix) {
-  Config Cfg;
-  Cfg.Diagnostics.MissingIncludes = Config::IncludesPolicy::Strict;
-  Cfg.Diagnostics.UnusedIncludes = Config::IncludesPolicy::Strict;
-  WithContextValue Ctx(Config::Key, std::move(Cfg));
-
   TestTU TU;
   TU.Filename = "main.cpp";
   TU.AdditionalFiles["foo.h"] = guard("class Foo;");
@@ -532,7 +514,8 @@ TEST(IncludeCleaner, BatchFix) {
   )cpp";
   auto AST = TU.build();
   EXPECT_THAT(
-      issueIncludeCleanerDiagnostics(AST, TU.Code),
+      issueIncludeCleanerDiagnostics(AST, TU.Code,
+                                     computeIncludeCleanerFindings(AST)),
       UnorderedElementsAre(withFix({FixMessage("#include \"foo.h\""),
                                     FixMessage("fix all includes")}),
                            withFix({FixMessage("remove #include directive"),
@@ -546,14 +529,15 @@ TEST(IncludeCleaner, BatchFix) {
   )cpp";
   AST = TU.build();
   EXPECT_THAT(
-      issueIncludeCleanerDiagnostics(AST, TU.Code),
+      issueIncludeCleanerDiagnostics(AST, TU.Code,
+                                     computeIncludeCleanerFindings(AST)),
       UnorderedElementsAre(withFix({FixMessage("#include \"foo.h\""),
                                     FixMessage("fix all includes")}),
                            withFix({FixMessage("remove #include directive"),
                                     FixMessage("remove all unused includes"),
                                     FixMessage("fix all includes")}),
                            withFix({FixMessage("remove #include directive"),
-                                   FixMessage("remove all unused includes"),
+                                    FixMessage("remove all unused includes"),
                                     FixMessage("fix all includes")})));
 
   TU.Code = R"cpp(
@@ -564,7 +548,8 @@ TEST(IncludeCleaner, BatchFix) {
   )cpp";
   AST = TU.build();
   EXPECT_THAT(
-      issueIncludeCleanerDiagnostics(AST, TU.Code),
+      issueIncludeCleanerDiagnostics(AST, TU.Code,
+                                     computeIncludeCleanerFindings(AST)),
       UnorderedElementsAre(withFix({FixMessage("#include \"foo.h\""),
                                     FixMessage("add all missing includes"),
                                     FixMessage("fix all includes")}),

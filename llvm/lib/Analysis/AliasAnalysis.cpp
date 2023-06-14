@@ -768,10 +768,6 @@ INITIALIZE_PASS_DEPENDENCY(TypeBasedAAWrapperPass)
 INITIALIZE_PASS_END(AAResultsWrapperPass, "aa",
                     "Function Alias Analysis Results", false, true)
 
-FunctionPass *llvm::createAAResultsWrapperPass() {
-  return new AAResultsWrapperPass();
-}
-
 /// Run the wrapper pass to rebuild an aggregation over known AA passes.
 ///
 /// This is the legacy pass manager's interface to the new-style AA results

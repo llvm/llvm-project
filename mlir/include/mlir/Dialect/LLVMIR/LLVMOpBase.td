@@ -331,16 +331,16 @@ class LLVM_IntrOpBase<Dialect dialect, string opName, string enumName,
                              LLVM_IntrPatterns.structResult,
                              LLVM_IntrPatterns.result);
   string llvmEnumName = enumName;
+  list<string> declTypeList = !listconcat(
+            ListIntSubst<resultPattern, overloadedResults>.lst,
+            ListIntSubst<LLVM_IntrPatterns.operand,
+                         overloadedOperands>.lst);
+  string declTypes = [{ { }] # !interleave(declTypeList, ", ") # [{ } }];
   let llvmBuilder = [{
     llvm::Module *module = builder.GetInsertBlock()->getModule();
     llvm::Function *fn = llvm::Intrinsic::getDeclaration(
         module,
-        llvm::Intrinsic::}] # enumName # [{,
-        { }] # !interleave(!listconcat(
-            ListIntSubst<resultPattern, overloadedResults>.lst,
-            ListIntSubst<LLVM_IntrPatterns.operand,
-                         overloadedOperands>.lst), ", ") # [{
-        });
+        llvm::Intrinsic::}] # enumName # [{,}] # declTypes # [{);
     auto operands = moduleTranslation.lookupValues(opInst.getOperands());
     }] # [{
     auto *inst = builder.CreateCall(fn, operands);

@@ -44,6 +44,16 @@ enum class TestCond { EQ, NE, LT, LE, GT, GE };
 
 namespace internal {
 
+struct Location {
+  Location(const char *file, int line) : file(file), line(line) {}
+  const char *file;
+  int line;
+};
+
+TestLogger &operator<<(TestLogger &logger, Location Loc);
+
+#define LOC() __llvm_libc::testing::internal::Location(__FILE__, __LINE__)
+
 struct RunContext {
   enum class RunResult : bool { Pass, Fail };
 
@@ -57,8 +67,7 @@ private:
 
 template <typename ValType>
 bool test(RunContext *Ctx, TestCond Cond, ValType LHS, ValType RHS,
-          const char *LHSStr, const char *RHSStr, const char *File,
-          unsigned long Line);
+          const char *LHSStr, const char *RHSStr, Location Loc);
 
 } // namespace internal
 
@@ -76,7 +85,6 @@ template <typename T> struct Matcher : public MatcherBase {
 // NOTE: One should not create instances and call methods on them directly. One
 // should use the macros TEST or TEST_F to write test cases.
 class Test {
-private:
   Test *Next = nullptr;
   internal::RunContext *Ctx = nullptr;
 
@@ -102,24 +110,24 @@ protected:
   template <typename ValType,
             cpp::enable_if_t<cpp::is_integral_v<ValType>, int> = 0>
   bool test(TestCond Cond, ValType LHS, ValType RHS, const char *LHSStr,
-            const char *RHSStr, const char *File, unsigned long Line) {
-    return internal::test(Ctx, Cond, LHS, RHS, LHSStr, RHSStr, File, Line);
+            const char *RHSStr, internal::Location Loc) {
+    return internal::test(Ctx, Cond, LHS, RHS, LHSStr, RHSStr, Loc);
   }
 
   template <typename ValType,
-            cpp::enable_if_t<cpp::is_enum<ValType>::value, int> = 0>
+            cpp::enable_if_t<cpp::is_enum_v<ValType>, int> = 0>
   bool test(TestCond Cond, ValType LHS, ValType RHS, const char *LHSStr,
-            const char *RHSStr, const char *File, unsigned long Line) {
+            const char *RHSStr, internal::Location Loc) {
     return internal::test(Ctx, Cond, (long long)LHS, (long long)RHS, LHSStr,
-                          RHSStr, File, Line);
+                          RHSStr, Loc);
   }
 
   template <typename ValType,
             cpp::enable_if_t<cpp::is_pointer_v<ValType>, ValType> = nullptr>
   bool test(TestCond Cond, ValType LHS, ValType RHS, const char *LHSStr,
-            const char *RHSStr, const char *File, unsigned long Line) {
+            const char *RHSStr, internal::Location Loc) {
     return internal::test(Ctx, Cond, (unsigned long long)LHS,
-                          (unsigned long long)RHS, LHSStr, RHSStr, File, Line);
+                          (unsigned long long)RHS, LHSStr, RHSStr, Loc);
   }
 
   template <
@@ -127,34 +135,34 @@ protected:
       cpp::enable_if_t<cpp::is_same_v<ValType, __llvm_libc::cpp::string_view>,
                        int> = 0>
   bool test(TestCond Cond, ValType LHS, ValType RHS, const char *LHSStr,
-            const char *RHSStr, const char *File, unsigned long Line) {
-    return internal::test(Ctx, Cond, LHS, RHS, LHSStr, RHSStr, File, Line);
+            const char *RHSStr, internal::Location Loc) {
+    return internal::test(Ctx, Cond, LHS, RHS, LHSStr, RHSStr, Loc);
   }
 
   template <typename ValType,
             cpp::enable_if_t<cpp::is_same_v<ValType, __llvm_libc::cpp::string>,
                              int> = 0>
   bool test(TestCond Cond, ValType LHS, ValType RHS, const char *LHSStr,
-            const char *RHSStr, const char *File, unsigned long Line) {
-    return internal::test(Ctx, Cond, LHS, RHS, LHSStr, RHSStr, File, Line);
+            const char *RHSStr, internal::Location Loc) {
+    return internal::test(Ctx, Cond, LHS, RHS, LHSStr, RHSStr, Loc);
   }
 
   bool testStrEq(const char *LHS, const char *RHS, const char *LHSStr,
-                 const char *RHSStr, const char *File, unsigned long Line);
+                 const char *RHSStr, internal::Location Loc);
 
   bool testStrNe(const char *LHS, const char *RHS, const char *LHSStr,
-                 const char *RHSStr, const char *File, unsigned long Line);
+                 const char *RHSStr, internal::Location Loc);
 
   bool testMatch(bool MatchResult, MatcherBase &Matcher, const char *LHSStr,
-                 const char *RHSStr, const char *File, unsigned long Line);
+                 const char *RHSStr, internal::Location Loc);
 
   bool testProcessExits(testutils::FunctionCaller *Func, int ExitCode,
                         const char *LHSStr, const char *RHSStr,
-                        const char *File, unsigned long Line);
+                        internal::Location Loc);
 
   bool testProcessKilled(testutils::FunctionCaller *Func, int Signal,
                          const char *LHSStr, const char *RHSStr,
-                         const char *File, unsigned long Line);
+                         internal::Location Loc);
 
   template <typename Func> testutils::FunctionCaller *createCallable(Func f) {
     struct Callable : public testutils::FunctionCaller {
@@ -345,54 +353,52 @@ CString libc_make_test_file_path_func(const char *file_name);
 
 #define EXPECT_EQ(LHS, RHS)                                                    \
   this->test(__llvm_libc::testing::TestCond::EQ, (LHS), (RHS), #LHS, #RHS,     \
-             __FILE__, __LINE__)
+             LOC())
 #define ASSERT_EQ(LHS, RHS)                                                    \
   if (!EXPECT_EQ(LHS, RHS))                                                    \
   return
 
 #define EXPECT_NE(LHS, RHS)                                                    \
   this->test(__llvm_libc::testing::TestCond::NE, (LHS), (RHS), #LHS, #RHS,     \
-             __FILE__, __LINE__)
+             LOC())
 #define ASSERT_NE(LHS, RHS)                                                    \
   if (!EXPECT_NE(LHS, RHS))                                                    \
   return
 
 #define EXPECT_LT(LHS, RHS)                                                    \
   this->test(__llvm_libc::testing::TestCond::LT, (LHS), (RHS), #LHS, #RHS,     \
-             __FILE__, __LINE__)
+             LOC())
 #define ASSERT_LT(LHS, RHS)                                                    \
   if (!EXPECT_LT(LHS, RHS))                                                    \
   return
 
 #define EXPECT_LE(LHS, RHS)                                                    \
   this->test(__llvm_libc::testing::TestCond::LE, (LHS), (RHS), #LHS, #RHS,     \
-             __FILE__, __LINE__)
+             LOC())
 #define ASSERT_LE(LHS, RHS)                                                    \
   if (!EXPECT_LE(LHS, RHS))                                                    \
   return
 
 #define EXPECT_GT(LHS, RHS)                                                    \
   this->test(__llvm_libc::testing::TestCond::GT, (LHS), (RHS), #LHS, #RHS,     \
-             __FILE__, __LINE__)
+             LOC())
 #define ASSERT_GT(LHS, RHS)                                                    \
   if (!EXPECT_GT(LHS, RHS))                                                    \
   return
 
 #define EXPECT_GE(LHS, RHS)                                                    \
   this->test(__llvm_libc::testing::TestCond::GE, (LHS), (RHS), #LHS, #RHS,     \
-             __FILE__, __LINE__)
+             LOC())
 #define ASSERT_GE(LHS, RHS)                                                    \
   if (!EXPECT_GE(LHS, RHS))                                                    \
   return
 
-#define EXPECT_STREQ(LHS, RHS)                                                 \
-  this->testStrEq((LHS), (RHS), #LHS, #RHS, __FILE__, __LINE__)
+#define EXPECT_STREQ(LHS, RHS) this->testStrEq((LHS), (RHS), #LHS, #RHS, LOC())
 #define ASSERT_STREQ(LHS, RHS)                                                 \
   if (!EXPECT_STREQ(LHS, RHS))                                                 \
   return
 
-#define EXPECT_STRNE(LHS, RHS)                                                 \
-  this->testStrNe((LHS), (RHS), #LHS, #RHS, __FILE__, __LINE__)
+#define EXPECT_STRNE(LHS, RHS) this->testStrNe((LHS), (RHS), #LHS, #RHS, LOC())
 #define ASSERT_STRNE(LHS, RHS)                                                 \
   if (!EXPECT_STRNE(LHS, RHS))                                                 \
   return
@@ -413,7 +419,7 @@ CString libc_make_test_file_path_func(const char *file_name);
 
 #define EXPECT_EXITS(FUNC, EXIT)                                               \
   this->testProcessExits(__llvm_libc::testing::Test::createCallable(FUNC),     \
-                         EXIT, #FUNC, #EXIT, __FILE__, __LINE__)
+                         EXIT, #FUNC, #EXIT, LOC())
 
 #define ASSERT_EXITS(FUNC, EXIT)                                               \
   if (!EXPECT_EXITS(FUNC, EXIT))                                               \
@@ -421,7 +427,7 @@ CString libc_make_test_file_path_func(const char *file_name);
 
 #define EXPECT_DEATH(FUNC, SIG)                                                \
   this->testProcessKilled(__llvm_libc::testing::Test::createCallable(FUNC),    \
-                          SIG, #FUNC, #SIG, __FILE__, __LINE__)
+                          SIG, #FUNC, #SIG, LOC())
 
 #define ASSERT_DEATH(FUNC, EXIT)                                               \
   if (!EXPECT_DEATH(FUNC, EXIT))                                               \
@@ -437,8 +443,7 @@ CString libc_make_test_file_path_func(const char *file_name);
   [&]() -> bool {                                                              \
     auto UNIQUE_VAR(__matcher) = (MATCHER);                                    \
     return this->testMatch(UNIQUE_VAR(__matcher).match((MATCH)),               \
-                           UNIQUE_VAR(__matcher), #MATCH, #MATCHER, __FILE__,  \
-                           __LINE__);                                          \
+                           UNIQUE_VAR(__matcher), #MATCH, #MATCHER, LOC());    \
   }()
 
 #define ASSERT_THAT(MATCH, MATCHER)                                            \

@@ -1,4 +1,4 @@
-; RUN: opt -opaque-pointers=0 < %s -passes=loop-vectorize -force-vector-interleave=1 -force-vector-width=4 -S | FileCheck %s
+; RUN: opt < %s -passes=loop-vectorize -force-vector-interleave=1 -force-vector-width=4 -S | FileCheck %s
 
 target datalayout = "e-p:64:64:64-i1:8:8-i8:8:8-i16:16:16-i32:32:32-i64:64:64-f32:32:32-f64:64:64-v64:64:64-v128:128:128-a0:0:64-s0:64:64-f80:128:128-n8:16:32:64-S128"
 
@@ -10,10 +10,9 @@ define void @array_at_plus_one(i32 %n) {
 ; CHECK: [[VEC_IV_TRUNC:%.+]] = phi <4 x i32> [ <i32 0, i32 1, i32 2, i32 3>, %vector.ph ], [ [[VEC_IV_TRUNC_NEXT:%.+]], %vector.body ]
 ; CHECK: [[T1:%.+]] = add i64 %index, 0
 ; CHECK: [[T2:%.+]] = add nsw i64 [[T1]], 12
-; CHECK-NEXT: [[GEP:%.+]] = getelementptr inbounds [1024 x i32], [1024 x i32]* @array, i64 0, i64 [[T2]]
-; CHECK-NEXT: [[GEP0:%.+]] = getelementptr inbounds i32, i32* [[GEP]], i32 0
-; CHECK-NEXT: [[BC:%.+]] = bitcast i32* [[GEP0]] to <4 x i32>*
-; CHECK-NEXT: store <4 x i32> [[VEC_IV_TRUNC]], <4 x i32>* [[BC]]
+; CHECK-NEXT: [[GEP:%.+]] = getelementptr inbounds [1024 x i32], ptr @array, i64 0, i64 [[T2]]
+; CHECK-NEXT: [[GEP0:%.+]] = getelementptr inbounds i32, ptr [[GEP]], i32 0
+; CHECK-NEXT: store <4 x i32> [[VEC_IV_TRUNC]], ptr [[GEP0]]
 ; CHECK: [[VEC_IV_TRUNC_NEXT]] = add <4 x i32> [[VEC_IV_TRUNC]], <i32 4, i32 4, i32 4, i32 4>
 ; CHECK: ret void
 ;
@@ -23,9 +22,9 @@ entry:
 loop:
   %iv = phi i64 [ 0, %entry ], [ %iv.next, %loop ]
   %iv.plus.12 = add nsw i64 %iv, 12
-  %gep = getelementptr inbounds [1024 x i32], [1024 x i32]* @array, i64 0, i64 %iv.plus.12
+  %gep = getelementptr inbounds [1024 x i32], ptr @array, i64 0, i64 %iv.plus.12
   %iv.trunc = trunc i64 %iv to i32
-  store i32 %iv.trunc, i32* %gep, align 4
+  store i32 %iv.trunc, ptr %gep, align 4
   %iv.next = add i64 %iv, 1
   %lftr.wideiv = trunc i64 %iv.next to i32
   %exitcond = icmp eq i32 %lftr.wideiv, %n
