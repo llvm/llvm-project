@@ -809,7 +809,6 @@ libcxx/src/memory.cpp
 libcxx/src/mutex.cpp
 libcxx/src/mutex_destructor.cpp
 libcxx/src/new.cpp
-libcxx/src/new_handler.cpp
 libcxx/src/optional.cpp
 libcxx/src/random.cpp
 libcxx/src/random_shuffle.cpp
