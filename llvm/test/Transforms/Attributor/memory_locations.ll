@@ -712,7 +712,7 @@ define void @argmemonky_caller() {
 declare ptr @no_mem_unknown_ptr(ptr %arg) memory(none)
 
 define void @argmem_and_unknown(i1 %c, ptr %arg) memory(argmem: readwrite) {
-; TUNIT: Function Attrs: nosync memory(none)
+; TUNIT: Function Attrs: nosync memory(argmem: write)
 ; TUNIT-LABEL: define {{[^@]+}}@argmem_and_unknown
 ; TUNIT-SAME: (i1 noundef [[C:%.*]], ptr writeonly [[ARG:%.*]]) #[[ATTR10:[0-9]+]] {
 ; TUNIT-NEXT:    br i1 [[C]], label [[T:%.*]], label [[F:%.*]]
@@ -723,7 +723,7 @@ define void @argmem_and_unknown(i1 %c, ptr %arg) memory(argmem: readwrite) {
 ; TUNIT:       f:
 ; TUNIT-NEXT:    ret void
 ;
-; CGSCC: Function Attrs: nosync memory(none)
+; CGSCC: Function Attrs: nosync memory(argmem: write)
 ; CGSCC-LABEL: define {{[^@]+}}@argmem_and_unknown
 ; CGSCC-SAME: (i1 noundef [[C:%.*]], ptr writeonly [[ARG:%.*]]) #[[ATTR11:[0-9]+]] {
 ; CGSCC-NEXT:    br i1 [[C]], label [[T:%.*]], label [[F:%.*]]
@@ -753,7 +753,7 @@ f:
 ; TUNIT: attributes #[[ATTR7]] = { mustprogress nofree norecurse nosync nounwind willreturn memory(argmem: write) }
 ; TUNIT: attributes #[[ATTR8]] = { nofree nosync nounwind memory(argmem: write) }
 ; TUNIT: attributes #[[ATTR9]] = { nofree norecurse nosync nounwind memory(none) }
-; TUNIT: attributes #[[ATTR10]] = { nosync memory(none) }
+; TUNIT: attributes #[[ATTR10]] = { nosync memory(argmem: write) }
 ; TUNIT: attributes #[[ATTR11]] = { nofree nosync nounwind willreturn }
 ; TUNIT: attributes #[[ATTR12]] = { nofree nosync nounwind }
 ;.
@@ -768,7 +768,7 @@ f:
 ; CGSCC: attributes #[[ATTR8]] = { mustprogress nofree nosync nounwind willreturn memory(write) }
 ; CGSCC: attributes #[[ATTR9]] = { nofree nosync nounwind memory(argmem: write) }
 ; CGSCC: attributes #[[ATTR10]] = { nofree nosync nounwind memory(none) }
-; CGSCC: attributes #[[ATTR11]] = { nosync memory(none) }
+; CGSCC: attributes #[[ATTR11]] = { nosync memory(argmem: write) }
 ; CGSCC: attributes #[[ATTR12]] = { nounwind willreturn }
 ; CGSCC: attributes #[[ATTR13]] = { nofree nosync nounwind }
 ; CGSCC: attributes #[[ATTR14]] = { nounwind }
