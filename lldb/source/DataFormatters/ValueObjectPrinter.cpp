@@ -523,13 +523,16 @@ bool DumpValueObjectOptions::PointerDepth::CanAllowExpansion() const {
 }
 
 bool ValueObjectPrinter::ShouldPrintChildren(
-    bool is_failed_description,
     DumpValueObjectOptions::PointerDepth &curr_ptr_depth) {
   const bool is_ref = IsRef();
   const bool is_ptr = IsPtr();
   const bool is_uninit = IsUninitialized();
 
   if (is_uninit)
+    return false;
+
+  // If we have reached the maximum depth we shouldn't print any more children.
+  if (HasReachedMaximumDepth())
     return false;
 
   // if the user has specified an element count, always print children as it is
@@ -542,38 +545,37 @@ bool ValueObjectPrinter::ShouldPrintChildren(
   if (m_options.m_use_objc)
     return false;
 
-  if (is_failed_description || !HasReachedMaximumDepth()) {
-    // We will show children for all concrete types. We won't show pointer
-    // contents unless a pointer depth has been specified. We won't reference
-    // contents unless the reference is the root object (depth of zero).
+  bool print_children = true;
+  if (TypeSummaryImpl *type_summary = GetSummaryFormatter())
+    print_children = type_summary->DoesPrintChildren(m_valobj);
 
-    // Use a new temporary pointer depth in case we override the current
-    // pointer depth below...
+  // We will show children for all concrete types. We won't show pointer
+  // contents unless a pointer depth has been specified. We won't reference
+  // contents unless the reference is the root object (depth of zero).
 
-    if (is_ptr || is_ref) {
-      // We have a pointer or reference whose value is an address. Make sure
-      // that address is not NULL
-      AddressType ptr_address_type;
-      if (m_valobj->GetPointerValue(&ptr_address_type) == 0)
-        return false;
+  // Use a new temporary pointer depth in case we override the current
+  // pointer depth below...
 
-      const bool is_root_level = m_curr_depth == 0;
+  if (is_ptr || is_ref) {
+    // We have a pointer or reference whose value is an address. Make sure
+    // that address is not NULL
+    AddressType ptr_address_type;
+    if (m_valobj->GetPointerValue(&ptr_address_type) == 0)
+      return false;
 
-      if (is_ref && is_root_level) {
-        // If this is the root object (depth is zero) that we are showing and
-        // it is a reference, and no pointer depth has been supplied print out
-        // what it references. Don't do this at deeper depths otherwise we can
-        // end up with infinite recursion...
-        return true;
-      }
+    const bool is_root_level = m_curr_depth == 0;
 
-      return curr_ptr_depth.CanAllowExpansion(false, entry, m_valobj,
-                                              m_summary);
+    if (is_ref && is_root_level && print_children) {
+      // If this is the root object (depth is zero) that we are showing and
+      // it is a reference, and no pointer depth has been supplied print out
+      // what it references. Don't do this at deeper depths otherwise we can
+      // end up with infinite recursion...
+      return true;
     }
-
-    return (!entry || entry->DoesPrintChildren(m_valobj) || m_summary.empty());
+    return curr_ptr_depth.CanAllowExpansion(false, entry, m_valobj, m_summary);
   }
-  return false;
+
+  return print_children || m_summary.empty();
 }
 
 bool ValueObjectPrinter::ShouldExpandEmptyAggregates() {
@@ -610,7 +612,7 @@ void ValueObjectPrinter::PrintChildrenPreamble(bool value_printed,
 void ValueObjectPrinter::PrintChild(
     ValueObjectSP child_sp,
     const DumpValueObjectOptions::PointerDepth &curr_ptr_depth) {
-  const uint32_t consumed_depth = (!m_options.m_pointer_as_array) ? 1 : 0;
+  const uint32_t consumed_summary_depth = m_options.m_pointer_as_array ? 0 : 1;
   const bool does_consume_ptr_depth =
       ((IsPtr() && !m_options.m_pointer_as_array) || IsRef());
 
@@ -623,15 +625,18 @@ void ValueObjectPrinter::PrintChild(
       .SetHideValue(m_options.m_hide_value)
       .SetOmitSummaryDepth(child_options.m_omit_summary_depth > 1
                                ? child_options.m_omit_summary_depth -
-                                     consumed_depth
+                                     consumed_summary_depth
                                : 0)
       .SetElementCount(0);
 
   if (child_sp.get()) {
-    ValueObjectPrinter child_printer(
-        child_sp.get(), m_stream, child_options,
-        does_consume_ptr_depth ? --curr_ptr_depth : curr_ptr_depth,
-        m_curr_depth + consumed_depth, m_printed_instance_pointers);
+    auto ptr_depth = curr_ptr_depth;
+    if (does_consume_ptr_depth)
+      ptr_depth = curr_ptr_depth.Decremented();
+
+    ValueObjectPrinter child_printer(child_sp.get(), m_stream, child_options,
+                                     ptr_depth, m_curr_depth + 1,
+                                     m_printed_instance_pointers);
     child_printer.PrintValueObject();
   }
 }
@@ -803,14 +808,10 @@ bool ValueObjectPrinter::PrintChildrenOneLiner(bool hide_names) {
 
 void ValueObjectPrinter::PrintChildrenIfNeeded(bool value_printed,
                                                bool summary_printed) {
-  // This flag controls whether we tried to display a description for this
-  // object and failed if that happens, we want to display the children if any.
-  bool is_failed_description =
-      !PrintObjectDescriptionIfNeeded(value_printed, summary_printed);
+  PrintObjectDescriptionIfNeeded(value_printed, summary_printed);
 
   DumpValueObjectOptions::PointerDepth curr_ptr_depth = m_ptr_depth;
-  const bool print_children =
-      ShouldPrintChildren(is_failed_description, curr_ptr_depth);
+  const bool print_children = ShouldPrintChildren(curr_ptr_depth);
   const bool print_oneline =
       (curr_ptr_depth.CanAllowExpansion() || m_options.m_show_types ||
        !m_options.m_allow_oneliner_mode || m_options.m_flat_output ||
