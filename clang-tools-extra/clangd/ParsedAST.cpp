@@ -27,7 +27,6 @@
 #include "SourceCode.h"
 #include "TidyProvider.h"
 #include "clang-include-cleaner/Record.h"
-#include "index/CanonicalIncludes.h"
 #include "index/Symbol.h"
 #include "support/Logger.h"
 #include "support/Path.h"
@@ -655,16 +654,8 @@ ParsedAST::build(llvm::StringRef Filename, const ParseInputs &Inputs,
   PP.addPPCallbacks(
       collectPragmaMarksCallback(Clang->getSourceManager(), Marks));
 
-  // Copy over the includes from the preamble, then combine with the
-  // non-preamble includes below.
-  CanonicalIncludes CanonIncludes;
-  if (Preamble)
-    CanonIncludes = *Preamble->CanonIncludes;
-  else
-    CanonIncludes.addSystemHeadersMapping(Clang->getLangOpts());
-  std::unique_ptr<CommentHandler> IWYUHandler =
-      collectIWYUHeaderMaps(&CanonIncludes);
-  PP.addCommentHandler(IWYUHandler.get());
+  // FIXME: Attach a comment handler to take care of
+  // keep/export/no_include etc. IWYU pragmas.
 
   // Collect tokens of the main file.
   syntax::TokenCollector CollectTokens(PP);
@@ -719,8 +710,7 @@ ParsedAST::build(llvm::StringRef Filename, const ParseInputs &Inputs,
   ParsedAST Result(Filename, Inputs.Version, std::move(Preamble),
                    std::move(Clang), std::move(Action), std::move(Tokens),
                    std::move(Macros), std::move(Marks), std::move(ParsedDecls),
-                   std::move(Diags), std::move(Includes),
-                   std::move(CanonIncludes));
+                   std::move(Diags), std::move(Includes));
   llvm::move(getIncludeCleanerDiags(Result, Inputs.Contents),
              std::back_inserter(Result.Diags));
   return std::move(Result);
@@ -806,10 +796,6 @@ const IncludeStructure &ParsedAST::getIncludeStructure() const {
   return Includes;
 }
 
-const CanonicalIncludes &ParsedAST::getCanonicalIncludes() const {
-  return CanonIncludes;
-}
-
 ParsedAST::ParsedAST(PathRef TUPath, llvm::StringRef Version,
                      std::shared_ptr<const PreambleData> Preamble,
                      std::unique_ptr<CompilerInstance> Clang,
@@ -817,23 +803,23 @@ ParsedAST::ParsedAST(PathRef TUPath, llvm::StringRef Version,
                      syntax::TokenBuffer Tokens, MainFileMacros Macros,
                      std::vector<PragmaMark> Marks,
                      std::vector<Decl *> LocalTopLevelDecls,
-                     std::vector<Diag> Diags, IncludeStructure Includes,
-                     CanonicalIncludes CanonIncludes)
+                     std::vector<Diag> Diags, IncludeStructure Includes)
     : TUPath(TUPath), Version(Version), Preamble(std::move(Preamble)),
       Clang(std::move(Clang)), Action(std::move(Action)),
       Tokens(std::move(Tokens)), Macros(std::move(Macros)),
       Marks(std::move(Marks)), Diags(std::move(Diags)),
       LocalTopLevelDecls(std::move(LocalTopLevelDecls)),
-      Includes(std::move(Includes)), CanonIncludes(std::move(CanonIncludes)) {
+      Includes(std::move(Includes)) {
   Resolver = std::make_unique<HeuristicResolver>(getASTContext());
   assert(this->Clang);
   assert(this->Action);
 }
 
-const include_cleaner::PragmaIncludes *ParsedAST::getPragmaIncludes() const {
+std::shared_ptr<const include_cleaner::PragmaIncludes>
+ParsedAST::getPragmaIncludes() const {
   if (!Preamble)
     return nullptr;
-  return &Preamble->Pragmas;
+  return Preamble->Pragmas;
 }
 
 std::optional<llvm::StringRef> ParsedAST::preambleVersion() const {

@@ -23,7 +23,7 @@
 #include "SourceCode.h"
 #include "TUScheduler.h"
 #include "XRefs.h"
-#include "index/CanonicalIncludes.h"
+#include "clang-include-cleaner/Record.h"
 #include "index/FileIndex.h"
 #include "index/Merge.h"
 #include "index/StdLib.h"
@@ -53,6 +53,7 @@
 #include <string>
 #include <type_traits>
 #include <vector>
+#include <utility>
 
 namespace clang {
 namespace clangd {
@@ -69,13 +70,13 @@ struct UpdateIndexCallbacks : public ParsingCallbacks {
                        const ThreadsafeFS &TFS, AsyncTaskRunner *Tasks,
                        bool CollectInactiveRegions,
                        const ClangdServer::Options &Opts)
-      : FIndex(FIndex), ServerCallbacks(ServerCallbacks),
-        TFS(TFS), Stdlib{std::make_shared<StdLibSet>()}, Tasks(Tasks),
+      : FIndex(FIndex), ServerCallbacks(ServerCallbacks), TFS(TFS),
+        Stdlib{std::make_shared<StdLibSet>()}, Tasks(Tasks),
         CollectInactiveRegions(CollectInactiveRegions), Opts(Opts) {}
 
   void onPreambleAST(
       PathRef Path, llvm::StringRef Version, CapturedASTCtx ASTCtx,
-      const std::shared_ptr<const CanonicalIncludes> CanonIncludes) override {
+      std::shared_ptr<const include_cleaner::PragmaIncludes> PI) override {
 
     if (!FIndex)
       return;
@@ -87,11 +88,10 @@ struct UpdateIndexCallbacks : public ParsingCallbacks {
 
     // FIndex outlives the UpdateIndexCallbacks.
     auto Task = [FIndex(FIndex), Path(Path.str()), Version(Version.str()),
-                 ASTCtx(std::move(ASTCtx)),
-                 CanonIncludes(CanonIncludes)]() mutable {
+                 ASTCtx(std::move(ASTCtx)), PI(std::move(PI))]() mutable {
       trace::Span Tracer("PreambleIndexing");
       FIndex->updatePreamble(Path, Version, ASTCtx.getASTContext(),
-                             ASTCtx.getPreprocessor(), *CanonIncludes);
+                             ASTCtx.getPreprocessor(), *PI);
     };
 
     if (Opts.AsyncPreambleIndexing && Tasks) {
