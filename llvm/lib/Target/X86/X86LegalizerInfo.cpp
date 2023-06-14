@@ -370,6 +370,29 @@ X86LegalizerInfo::X86LegalizerInfo(const X86Subtarget &STI,
       .clampScalar(0, s32, sMaxScalar)
       .widenScalarToNextPow2(1);
 
+  // vector ops
+  getActionDefinitionsBuilder({G_EXTRACT, G_INSERT})
+      .legalIf([=](const LegalityQuery &Query) {
+        unsigned SubIdx = Query.Opcode == G_EXTRACT ? 0 : 1;
+        unsigned FullIdx = Query.Opcode == G_EXTRACT ? 1 : 0;
+        return (HasAVX && typePairInSet(SubIdx, FullIdx,
+                                        {{v16s8, v32s8},
+                                         {v8s16, v16s16},
+                                         {v4s32, v8s32},
+                                         {v2s64, v4s64}})(Query)) ||
+               (HasAVX512 && typePairInSet(SubIdx, FullIdx,
+                                           {{v16s8, v64s8},
+                                            {v16s8, v64s8},
+                                            {v8s16, v32s16},
+                                            {v16s16, v32s16},
+                                            {v4s32, v16s32},
+                                            {v8s32, v16s32},
+                                            {v2s64, v8s64},
+                                            {v4s64, v8s64}})(Query));
+      });
+
+  // TODO: G_CONCAT_VECTORS
+
   // todo: vectors and address spaces
   getActionDefinitionsBuilder(G_SELECT)
        .legalFor({{s8, s32}, {s16, s32}, {s32, s32}, {s64, s32},
@@ -547,14 +570,6 @@ void X86LegalizerInfo::setLegalizerInfoAVX() {
     for (auto Ty : {v8s32, v4s64})
       LegacyInfo.setAction({MemOp, Ty}, LegacyLegalizeActions::Legal);
 
-  for (auto Ty : {v32s8, v16s16, v8s32, v4s64}) {
-    LegacyInfo.setAction({G_INSERT, Ty}, LegacyLegalizeActions::Legal);
-    LegacyInfo.setAction({G_EXTRACT, 1, Ty}, LegacyLegalizeActions::Legal);
-  }
-  for (auto Ty : {v16s8, v8s16, v4s32, v2s64}) {
-    LegacyInfo.setAction({G_INSERT, 1, Ty}, LegacyLegalizeActions::Legal);
-    LegacyInfo.setAction({G_EXTRACT, Ty}, LegacyLegalizeActions::Legal);
-  }
   // Merge/Unmerge
   for (const auto &Ty :
        {v32s8, v64s8, v16s16, v32s16, v8s32, v16s32, v4s64, v8s64}) {
@@ -603,18 +618,6 @@ void X86LegalizerInfo::setLegalizerInfoAVX512() {
   if (!Subtarget.hasAVX512())
     return;
 
-  const LLT v16s8 = LLT::fixed_vector(16, 8);
-  const LLT v8s16 = LLT::fixed_vector(8, 16);
-  const LLT v4s32 = LLT::fixed_vector(4, 32);
-  const LLT v2s64 = LLT::fixed_vector(2, 64);
-
-  const LLT v32s8 = LLT::fixed_vector(32, 8);
-  const LLT v16s16 = LLT::fixed_vector(16, 16);
-  const LLT v8s32 = LLT::fixed_vector(8, 32);
-  const LLT v4s64 = LLT::fixed_vector(4, 64);
-
-  const LLT v64s8 = LLT::fixed_vector(64, 8);
-  const LLT v32s16 = LLT::fixed_vector(32, 16);
   const LLT v16s32 = LLT::fixed_vector(16, 32);
   const LLT v8s64 = LLT::fixed_vector(8, 64);
 
@@ -623,13 +626,4 @@ void X86LegalizerInfo::setLegalizerInfoAVX512() {
   for (unsigned MemOp : {G_LOAD, G_STORE})
     for (auto Ty : {v16s32, v8s64})
       LegacyInfo.setAction({MemOp, Ty}, LegacyLegalizeActions::Legal);
-
-  for (auto Ty : {v64s8, v32s16, v16s32, v8s64}) {
-    LegacyInfo.setAction({G_INSERT, Ty}, LegacyLegalizeActions::Legal);
-    LegacyInfo.setAction({G_EXTRACT, 1, Ty}, LegacyLegalizeActions::Legal);
-  }
-  for (auto Ty : {v32s8, v16s16, v8s32, v4s64, v16s8, v8s16, v4s32, v2s64}) {
-    LegacyInfo.setAction({G_INSERT, 1, Ty}, LegacyLegalizeActions::Legal);
-    LegacyInfo.setAction({G_EXTRACT, Ty}, LegacyLegalizeActions::Legal);
-  }
 }
