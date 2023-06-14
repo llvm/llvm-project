@@ -14,17 +14,19 @@
 static_assert(__has_builtin(__builtin_fma), "FMA builtins must be defined");
 static_assert(__has_builtin(__builtin_fmaf), "FMA builtins must be defined");
 
+#include "src/__support/CPP/type_traits.h"
+
 namespace __llvm_libc {
 namespace fputil {
 
 template <typename T>
 LIBC_INLINE cpp::enable_if_t<cpp::is_same_v<T, float>, T> fma(T x, T y, T z) {
-  __builtin_fmaf(x, y, z);
+  return __builtin_fmaf(x, y, z);
 }
 
 template <typename T>
 LIBC_INLINE cpp::enable_if_t<cpp::is_same_v<T, double>, T> fma(T x, T y, T z) {
-  __builtin_fma(x, y, z);
+  return __builtin_fma(x, y, z);
 }
 
 } // namespace fputil
