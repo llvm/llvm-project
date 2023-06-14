@@ -147,7 +147,7 @@ def ACCC_FirstPrivate : Clause<"firstprivate"> {
 
 // 2.9.2
 def ACCC_Gang : Clause<"gang"> {
-  let flangClass = "AccGangArgument";
+  let flangClass = "AccGangArgList";
   let isValueOptional = true;
 }
 

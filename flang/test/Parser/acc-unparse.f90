@@ -21,13 +21,58 @@ end program
 
 subroutine acc_loop()
   integer :: i, j
+  real :: a(10)
+  integer :: gangNum, gangDim, gangStatic
+
+!CHECK-LABEL: SUBROUTINE acc_loop
 
   !$acc loop collapse(force: 2)
   do i = 1, 10
     do j = 1, 10
     end do
   end do
-end subroutine
-
-!CHECK-LABEL: SUBROUTINE acc_loop
 !CHECK: !$ACC LOOP COLLAPSE(FORCE:2_4)
+
+  !$acc loop gang
+  do i = 1, 10
+    a(i) = i
+  end do
+! CHECK: !$ACC LOOP GANG
+
+  !$acc loop gang(gangNum)
+  do i = 1, 10
+    a(i) = i
+  end do
+! CHECK: !$ACC LOOP GANG(NUM:gangnum)
+
+  !$acc loop gang(num: gangNum)
+  do i = 1, 10
+    a(i) = i
+  end do
+! CHECK: !$ACC LOOP GANG(NUM:gangnum)
+
+  !$acc loop gang(dim: gangDim)
+  do i = 1, 10
+    a(i) = i
+  end do
+! CHECK: !$ACC LOOP GANG(DIM:gangdim)
+
+  !$acc loop gang(static:gangStatic)
+  do i = 1, 10
+    a(i) = i
+  end do
+! CHECK: !$ACC LOOP GANG(STATIC:gangstatic)
+
+  !$acc loop gang(static:*)
+  do i = 1, 10
+    a(i) = i
+  end do
+! CHECK: !$ACC LOOP GANG(STATIC:*)
+
+  !$acc loop gang(static:gangStatic, dim: gangDim)
+  do i = 1, 10
+    a(i) = i
+  end do
+! CHECK: !$ACC LOOP GANG(STATIC:gangstatic,DIM:gangdim)
+
+end subroutine
