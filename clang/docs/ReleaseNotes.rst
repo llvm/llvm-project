@@ -340,6 +340,8 @@ Improvements to Clang's diagnostics
   can be controlled using ``-fcaret-diagnostics-max-lines=``.
 - Clang no longer emits ``-Wunused-variable`` warnings for variables declared
   with ``__attribute__((cleanup(...)))`` to match GCC's behavior.
+- Clang now issues expected warnings for situations of comparing with NULL pointers.
+  (`#42992: <https://github.com/llvm/llvm-project/issues/42992>`_)
 
 Bug Fixes in This Version
 -------------------------
