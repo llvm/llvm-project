@@ -1756,7 +1756,7 @@ unsigned RISCVTTIImpl::getMaximumVF(unsigned ElemWidth, unsigned Opcode) const {
     getRegisterBitWidth(TargetTransformInfo::RGK_FixedWidthVector);
   // If no vector registers, or absurd element widths, disable
   // vectorization by returning 1.
-  return std::max(1UL, RegWidth.getFixedValue() / ElemWidth);
+  return std::max<unsigned>(1U, RegWidth.getFixedValue() / ElemWidth);
 }
 
 bool RISCVTTIImpl::isLSRCostLess(const TargetTransformInfo::LSRCost &C1,
