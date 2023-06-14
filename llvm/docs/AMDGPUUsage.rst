@@ -968,6 +968,8 @@ The AMDGPU backend implements the following LLVM IR intrinsics.
 
   :ref:`llvm.log <int_log>`                  Implemented for float and half (and vectors).
 
+  :ref:`llvm.exp <int_exp>`                  Implemented for float and half (and vectors).
+
   :ref:`llvm.log10 <int_log10>`              Implemented for float and half (and vectors).
 
   :ref:`llvm.exp2 <int_exp2>`                Implemented for float and half (and vectors of float or
