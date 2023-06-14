@@ -324,7 +324,6 @@ CHECK_SIMPLE_CLAUSE(DeviceResident, ACCC_device_resident)
 CHECK_SIMPLE_CLAUSE(DeviceType, ACCC_device_type)
 CHECK_SIMPLE_CLAUSE(Finalize, ACCC_finalize)
 CHECK_SIMPLE_CLAUSE(Firstprivate, ACCC_firstprivate)
-CHECK_SIMPLE_CLAUSE(Gang, ACCC_gang)
 CHECK_SIMPLE_CLAUSE(Host, ACCC_host)
 CHECK_SIMPLE_CLAUSE(If, ACCC_if)
 CHECK_SIMPLE_CLAUSE(IfPresent, ACCC_if_present)
@@ -402,6 +401,26 @@ void AccStructureChecker::Enter(const parser::AccClause::Copyout &c) {
                   .str()),
           ContextDirectiveAsFortran());
     }
+  }
+}
+
+void AccStructureChecker::Enter(const parser::AccClause::Gang &g) {
+  CheckAllowed(llvm::acc::Clause::ACCC_gang);
+
+  if (g.v) {
+    bool hasNum = false;
+    bool hasDim = false;
+    const Fortran::parser::AccGangArgList &x = *g.v;
+    for (const Fortran::parser::AccGangArg &gangArg : x.v) {
+      if (std::get_if<Fortran::parser::AccGangArg::Num>(&gangArg.u))
+        hasNum = true;
+      else if (std::get_if<Fortran::parser::AccGangArg::Dim>(&gangArg.u))
+        hasDim = true;
+    }
+
+    if (hasDim && hasNum)
+      context_.Say(GetContext().clauseSource,
+          "The num argument is not allowed when dim is specified"_err_en_US);
   }
 }
 

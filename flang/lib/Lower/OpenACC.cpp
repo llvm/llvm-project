@@ -848,25 +848,26 @@ createLoopOp(Fortran::lower::AbstractConverter &converter,
     if (const auto *gangClause =
             std::get_if<Fortran::parser::AccClause::Gang>(&clause.u)) {
       if (gangClause->v) {
-        const Fortran::parser::AccGangArgument &x = *gangClause->v;
-        if (const auto &gangNumValue =
-                std::get<std::optional<Fortran::parser::ScalarIntExpr>>(x.t)) {
-          gangNum = fir::getBase(converter.genExprValue(
-              *Fortran::semantics::GetExpr(gangNumValue.value()), stmtCtx));
-        }
-        if (const auto &gangStaticValue =
-                std::get<std::optional<Fortran::parser::AccSizeExpr>>(x.t)) {
-          const auto &expr =
-              std::get<std::optional<Fortran::parser::ScalarIntExpr>>(
-                  gangStaticValue.value().t);
-          if (expr) {
-            gangStatic = fir::getBase(converter.genExprValue(
-                *Fortran::semantics::GetExpr(*expr), stmtCtx));
-          } else {
-            // * was passed as value and will be represented as a special
-            // constant.
-            gangStatic = builder.createIntegerConstant(
-                clauseLocation, builder.getIndexType(), starCst);
+        const Fortran::parser::AccGangArgList &x = *gangClause->v;
+        for (const Fortran::parser::AccGangArg &gangArg : x.v) {
+          if (const auto *num =
+                  std::get_if<Fortran::parser::AccGangArg::Num>(&gangArg.u)) {
+            gangNum = fir::getBase(converter.genExprValue(
+                *Fortran::semantics::GetExpr(num->v), stmtCtx));
+          } else if (const auto *staticArg =
+                         std::get_if<Fortran::parser::AccGangArg::Static>(
+                             &gangArg.u)) {
+
+            const Fortran::parser::AccSizeExpr &sizeExpr = staticArg->v;
+            if (sizeExpr.v) {
+              gangStatic = fir::getBase(converter.genExprValue(
+                  *Fortran::semantics::GetExpr(*sizeExpr.v), stmtCtx));
+            } else {
+              // * was passed as value and will be represented as a special
+              // constant.
+              gangStatic = builder.createIntegerConstant(
+                  clauseLocation, builder.getIndexType(), starCst);
+            }
           }
         }
       }
