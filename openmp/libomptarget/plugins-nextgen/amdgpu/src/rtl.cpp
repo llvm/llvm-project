@@ -548,7 +548,8 @@ struct AMDGPUKernelTy : public GenericKernelTy {
   /// Create an AMDGPU kernel with a name and an execution mode.
   AMDGPUKernelTy(const char *Name, OMPTgtExecModeFlags ExecutionMode)
       : GenericKernelTy(Name, ExecutionMode),
-        GlobalTy_device_st_buf("service_thread_buf", sizeof(uint64_t)) {}
+        ServiceThreadDeviceBufferGlobal("service_thread_buf", sizeof(uint64_t)),
+        HostServiceBufferHandler(Plugin::createGlobalHandler()) {}
 
   /// Initialize the AMDGPU kernel.
   Error initImpl(GenericDeviceTy &Device, DeviceImageTy &Image) override {
@@ -628,20 +629,17 @@ struct AMDGPUKernelTy : public GenericKernelTy {
       INFO(OMP_INFOTYPE_PLUGIN_KERNEL, Device.getDeviceId(),
            "Could not read extra information for kernel %s.", getName());
 
-    needs_host_services =
+    NeedsHostServices =
         AMDImage.hasDeviceSymbol(Device, "__needs_host_services");
-    if (needs_host_services) {
+    if (NeedsHostServices) {
       // GenericGlobalHandlerTy * GHandler = Plugin::createGlobalHandler();
-      if (auto Err = rpc_buf_handler->getGlobalMetadataFromDevice(
-              Device, AMDImage, GlobalTy_device_st_buf))
+      if (auto Err = HostServiceBufferHandler->getGlobalMetadataFromDevice(
+              Device, AMDImage, ServiceThreadDeviceBufferGlobal))
         return Err;
     }
 
     return Plugin::success();
   }
-  bool needs_host_services;
-  GlobalTy GlobalTy_device_st_buf;
-  GenericGlobalHandlerTy *rpc_buf_handler = Plugin::createGlobalHandler();
 
   /// Launch the AMDGPU kernel function.
   Error launchImpl(GenericDeviceTy &GenericDevice, uint32_t NumThreads,
@@ -695,6 +693,15 @@ private:
   std::optional<utils::KernelMetaDataTy> KernelInfo;
   /// CodeGen generate WGSize
   uint16_t ConstWGSize;
+
+  /// Indicate whether this Kernel requires host services
+  bool NeedsHostServices;
+
+  /// Global for host service device thread buffer
+  GlobalTy ServiceThreadDeviceBufferGlobal;
+
+  /// Global handler for hostservices buffer
+  GenericGlobalHandlerTy *HostServiceBufferHandler;
 
   /// Lower number of threads if tripcount is low. This should produce
   /// a larger number of teams if allowed by other constraints.
@@ -3526,22 +3533,22 @@ Error AMDGPUKernelTy::launchImpl(GenericDeviceTy &GenericDevice,
   uint64_t Buffer = 0;
   AMDGPUDeviceTy &AMDGPUDevice = static_cast<AMDGPUDeviceTy &>(GenericDevice);
   AMDGPUStreamTy &Stream = AMDGPUDevice.getStream(AsyncInfoWrapper);
-  if (needs_host_services) {
-    int32_t devid = AMDGPUDevice.getDeviceId();
-    hsa_amd_memory_pool_t host_mem_pool =
+  if (NeedsHostServices) {
+    int32_t DevID = AMDGPUDevice.getDeviceId();
+    hsa_amd_memory_pool_t HostMemPool =
         HostDevice.getFineGrainedMemoryPool().get();
-    hsa_amd_memory_pool_t device_mem_pool =
+    hsa_amd_memory_pool_t DeviceMemPool =
         AMDGPUDevice.getCoarseGrainedMemoryPool()->get();
-    hsa_queue_t *hsa_queue = Stream.getHsaQueue();
-    Buffer =
-        utils::hostrpc_assign_buffer(AMDGPUDevice.getAgent(), hsa_queue, devid,
-                                     host_mem_pool, device_mem_pool);
-    GlobalTy GlobalTy_host_st_buf("service_thread_buf", sizeof(uint64_t),
-                                  &Buffer);
-    if (auto Err = rpc_buf_handler->writeGlobalToDevice(
-            AMDGPUDevice, GlobalTy_host_st_buf, GlobalTy_device_st_buf)) {
+    hsa_queue_t *HsaQueue = Stream.getHsaQueue();
+    Buffer = utils::hostrpc_assign_buffer(AMDGPUDevice.getAgent(), HsaQueue,
+                                          DevID, HostMemPool, DeviceMemPool);
+    GlobalTy ServiceThreadHostBufferGlobal("service_thread_buf",
+                                           sizeof(uint64_t), &Buffer);
+    if (auto Err = HostServiceBufferHandler->writeGlobalToDevice(
+            AMDGPUDevice, ServiceThreadHostBufferGlobal,
+            ServiceThreadDeviceBufferGlobal)) {
       DP("Missing symbol %s, continue execution anyway.\n",
-         GlobalTy_host_st_buf.getName().data());
+         ServiceThreadHostBufferGlobal.getName().data());
       consumeError(std::move(Err));
     }
     DP("Hostrpc buffer allocated at %p and service thread started\n",
@@ -3616,7 +3623,7 @@ void AMDGPUKernelTy::printAMDOneLineKernelTrace(GenericDeviceTy &GenericDevice,
           GenericDevice.getDeviceId(), getExecutionModeFlags(), ConstWGSize,
           KernelArgs.NumArgs, NumBlocks, NumThreads, 0, 0, GroupSegmentSize,
           SGPRCount, VGPRCount, SGPRSpillCount, VGPRSpillCount,
-          KernelArgs.Tripcount, needs_host_services, getName());
+          KernelArgs.Tripcount, NeedsHostServices, getName());
 }
 
 Error AMDGPUKernelTy::printLaunchInfoDetails(GenericDeviceTy &GenericDevice,
