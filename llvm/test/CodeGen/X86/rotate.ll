@@ -569,11 +569,11 @@ define void @rotr1_64_mem(ptr %Aptr) nounwind {
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    movl (%eax), %ecx
 ; X86-NEXT:    movl 4(%eax), %edx
-; X86-NEXT:    movl %ecx, %esi
-; X86-NEXT:    shldl $31, %edx, %esi
-; X86-NEXT:    shldl $31, %ecx, %edx
-; X86-NEXT:    movl %edx, (%eax)
-; X86-NEXT:    movl %esi, 4(%eax)
+; X86-NEXT:    movl %edx, %esi
+; X86-NEXT:    shldl $31, %ecx, %esi
+; X86-NEXT:    shldl $31, %edx, %ecx
+; X86-NEXT:    movl %ecx, 4(%eax)
+; X86-NEXT:    movl %esi, (%eax)
 ; X86-NEXT:    popl %esi
 ; X86-NEXT:    retl
 ;

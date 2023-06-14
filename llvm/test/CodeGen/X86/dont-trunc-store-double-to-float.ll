@@ -10,10 +10,13 @@ define void @bar() unnamed_addr {
 ; CHECK-NEXT:    movl %esp, %ebp
 ; CHECK-NEXT:    .cfi_def_cfa_register %ebp
 ; CHECK-NEXT:    andl $-8, %esp
-; CHECK-NEXT:    subl $16, %esp
+; CHECK-NEXT:    subl $24, %esp
 ; CHECK-NEXT:    movl $1074339512, {{[0-9]+}}(%esp) # imm = 0x40091EB8
-; CHECK-NEXT:    movl $1374389535, (%esp) # imm = 0x51EB851F
-; CHECK-NEXT:    movl $1078523331, {{[0-9]+}}(%esp) # imm = 0x4048F5C3
+; CHECK-NEXT:    movl $1374389535, {{[0-9]+}}(%esp) # imm = 0x51EB851F
+; CHECK-NEXT:    fldl {{[0-9]+}}(%esp)
+; CHECK-NEXT:    fstps {{[0-9]+}}(%esp)
+; CHECK-NEXT:    flds {{[0-9]+}}(%esp)
+; CHECK-NEXT:    fstps {{[0-9]+}}(%esp)
 ; CHECK-NEXT:    movl %ebp, %esp
 ; CHECK-NEXT:    popl %ebp
 ; CHECK-NEXT:    .cfi_def_cfa %esp, 4

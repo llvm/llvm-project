@@ -346,7 +346,9 @@ define <4 x float> @test24(<4 x float> %a0, <4 x float> %a1) {
 define <4 x float> @test25(<4 x float> %a0) {
 ; CHECK-LABEL: test25:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    blendps {{.*#+}} xmm0 = mem[0],xmm0[1,2],mem[3]
+; CHECK-NEXT:    xorps %xmm1, %xmm1
+; CHECK-NEXT:    blendps {{.*#+}} xmm0 = xmm1[0],xmm0[1,2],xmm1[3]
+; CHECK-NEXT:    orps {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
 ; CHECK-NEXT:    retq
   %bc1 = bitcast <4 x float> %a0 to <4 x i32>
   %bc2 = bitcast <4 x float> <float 1.0, float 1.0, float 1.0, float 1.0> to <4 x i32>

@@ -163,7 +163,7 @@ define i16 @ne_and_with_dom_abs(i16 %x) nounwind {
 ; X86-NEXT:    pushl %esi
 ; X86-NEXT:    movzwl {{[0-9]+}}(%esp), %ecx
 ; X86-NEXT:    movswl %cx, %eax
-; X86-NEXT:    sarl $15, %eax
+; X86-NEXT:    shrl $15, %eax
 ; X86-NEXT:    xorl %eax, %ecx
 ; X86-NEXT:    subl %eax, %ecx
 ; X86-NEXT:    movl %ecx, %eax

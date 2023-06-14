@@ -139,18 +139,18 @@ define <16 x i8> @demandedelts_pblendvb(<16 x i8> %a0, <16 x i8> %a1, <16 x i8> 
 ; SSE-LABEL: demandedelts_pblendvb:
 ; SSE:       # %bb.0:
 ; SSE-NEXT:    movdqa %xmm0, %xmm3
-; SSE-NEXT:    movdqa %xmm2, %xmm0
+; SSE-NEXT:    pxor %xmm4, %xmm4
+; SSE-NEXT:    movaps %xmm2, %xmm0
 ; SSE-NEXT:    pblendvb %xmm0, %xmm1, %xmm3
-; SSE-NEXT:    pxor %xmm0, %xmm0
-; SSE-NEXT:    pshufb %xmm0, %xmm3
+; SSE-NEXT:    pshufb %xmm4, %xmm3
 ; SSE-NEXT:    movdqa %xmm3, %xmm0
 ; SSE-NEXT:    retq
 ;
 ; AVX-LABEL: demandedelts_pblendvb:
 ; AVX:       # %bb.0:
+; AVX-NEXT:    vpxor %xmm3, %xmm3, %xmm3
 ; AVX-NEXT:    vpblendvb %xmm2, %xmm1, %xmm0, %xmm0
-; AVX-NEXT:    vpxor %xmm1, %xmm1, %xmm1
-; AVX-NEXT:    vpshufb %xmm1, %xmm0, %xmm0
+; AVX-NEXT:    vpshufb %xmm3, %xmm0, %xmm0
 ; AVX-NEXT:    retq
   %1 = shufflevector <16 x i8> %a0, <16 x i8> undef, <16 x i32> zeroinitializer
   %2 = shufflevector <16 x i8> %a1, <16 x i8> undef, <16 x i32> zeroinitializer

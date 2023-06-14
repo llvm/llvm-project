@@ -870,11 +870,10 @@ define i32 @zext_known_nonzero(i16 %xx) {
 define i32 @zext_maybe_zero(i16 %x) {
 ; CHECK-LABEL: zext_maybe_zero:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    testw %di, %di
+; CHECK-NEXT:    andl $65535, %edi # imm = 0xFFFF
 ; CHECK-NEXT:    je .LBB49_1
 ; CHECK-NEXT:  # %bb.2: # %cond.false
-; CHECK-NEXT:    movzwl %di, %eax
-; CHECK-NEXT:    rep bsfl %eax, %eax
+; CHECK-NEXT:    rep bsfl %edi, %eax
 ; CHECK-NEXT:    retq
 ; CHECK-NEXT:  .LBB49_1:
 ; CHECK-NEXT:    movl $32, %eax

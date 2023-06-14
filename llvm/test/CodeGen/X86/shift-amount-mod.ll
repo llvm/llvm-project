@@ -225,8 +225,8 @@ define void @modify64_shl_by_negated(ptr %valptr, i64 %shamt) nounwind {
 ; X32-NEXT:    movl %esi, %edx
 ; X32-NEXT:    xorl %esi, %esi
 ; X32-NEXT:  .LBB7_2:
-; X32-NEXT:    movl %esi, (%eax)
 ; X32-NEXT:    movl %edx, 4(%eax)
+; X32-NEXT:    movl %esi, (%eax)
 ; X32-NEXT:    popl %esi
 ; X32-NEXT:    popl %edi
 ; X32-NEXT:    retl
@@ -463,8 +463,8 @@ define void @modify64_lshr_by_negated(ptr %valptr, i64 %shamt) nounwind {
 ; X32-NEXT:    movl %esi, %edx
 ; X32-NEXT:    xorl %esi, %esi
 ; X32-NEXT:  .LBB15_2:
-; X32-NEXT:    movl %edx, (%eax)
 ; X32-NEXT:    movl %esi, 4(%eax)
+; X32-NEXT:    movl %edx, (%eax)
 ; X32-NEXT:    popl %esi
 ; X32-NEXT:    popl %edi
 ; X32-NEXT:    retl
@@ -705,8 +705,8 @@ define void @modify64_ashr_by_negated(ptr %valptr, i64 %shamt) nounwind {
 ; X32-NEXT:    movl %esi, %edx
 ; X32-NEXT:    movl %edi, %esi
 ; X32-NEXT:  .LBB23_2:
-; X32-NEXT:    movl %edx, (%eax)
 ; X32-NEXT:    movl %esi, 4(%eax)
+; X32-NEXT:    movl %edx, (%eax)
 ; X32-NEXT:    popl %esi
 ; X32-NEXT:    popl %edi
 ; X32-NEXT:    retl
@@ -782,7 +782,7 @@ define i64 @reg64_lshr_by_sub_from_negated(i64 %val, i64 %a, i64 %b) nounwind {
 ; X64-LABEL: reg64_lshr_by_sub_from_negated:
 ; X64:       # %bb.0:
 ; X64-NEXT:    movq %rdi, %rax
-; X64-NEXT:    leal (%rdx,%rsi), %ecx
+; X64-NEXT:    leal (%rsi,%rdx), %ecx
 ; X64-NEXT:    negb %cl
 ; X64-NEXT:    # kill: def $cl killed $cl killed $ecx
 ; X64-NEXT:    shrq %cl, %rax
@@ -844,7 +844,7 @@ define i64 @reg64_lshr_by_sub_of_negated(i64 %val, i64 %a, i64 %b) nounwind {
 ; X64-LABEL: reg64_lshr_by_sub_of_negated:
 ; X64:       # %bb.0:
 ; X64-NEXT:    movq %rdi, %rax
-; X64-NEXT:    leal (%rdx,%rsi), %ecx
+; X64-NEXT:    leal (%rsi,%rdx), %ecx
 ; X64-NEXT:    # kill: def $cl killed $cl killed $ecx
 ; X64-NEXT:    shrq %cl, %rax
 ; X64-NEXT:    retq
@@ -1033,7 +1033,7 @@ define i64 @reg64_lshr_by_add_of_negated_amts(i64 %val, i64 %a, i64 %b) nounwind
 ; X64-LABEL: reg64_lshr_by_add_of_negated_amts:
 ; X64:       # %bb.0:
 ; X64-NEXT:    movq %rdi, %rax
-; X64-NEXT:    leal (%rdx,%rsi), %ecx
+; X64-NEXT:    leal (%rsi,%rdx), %ecx
 ; X64-NEXT:    negb %cl
 ; X64-NEXT:    # kill: def $cl killed $cl killed $ecx
 ; X64-NEXT:    shrq %cl, %rax
@@ -1157,7 +1157,7 @@ define i64 @reg64_lshr_by_negated_unfolded_sub_b(i64 %val, i64 %a, i64 %b) nounw
 ; X64-LABEL: reg64_lshr_by_negated_unfolded_sub_b:
 ; X64:       # %bb.0:
 ; X64-NEXT:    movq %rdi, %rax
-; X64-NEXT:    leal (%rdx,%rsi), %ecx
+; X64-NEXT:    leal (%rsi,%rdx), %ecx
 ; X64-NEXT:    negb %cl
 ; X64-NEXT:    # kill: def $cl killed $cl killed $ecx
 ; X64-NEXT:    shrq %cl, %rax
@@ -1218,7 +1218,7 @@ define i64 @reg64_lshr_by_b_sub_negated_unfolded(i64 %val, i64 %a, i64 %b) nounw
 ; X64-LABEL: reg64_lshr_by_b_sub_negated_unfolded:
 ; X64:       # %bb.0:
 ; X64-NEXT:    movq %rdi, %rax
-; X64-NEXT:    leal (%rdx,%rsi), %ecx
+; X64-NEXT:    leal (%rsi,%rdx), %ecx
 ; X64-NEXT:    # kill: def $cl killed $cl killed $ecx
 ; X64-NEXT:    shrq %cl, %rax
 ; X64-NEXT:    retq
@@ -1556,9 +1556,8 @@ define i64 @reg64_lshr_by_masked_negated_unfolded_add_b(i64 %val, i64 %a, i64 %b
 define i16 @sh_trunc_sh(i64 %x) {
 ; X32-LABEL: sh_trunc_sh:
 ; X32:       # %bb.0:
-; X32-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X32-NEXT:    shrl $4, %eax
-; X32-NEXT:    andl $15, %eax
+; X32-NEXT:    movzwl {{[0-9]+}}(%esp), %eax
+; X32-NEXT:    shrl $12, %eax
 ; X32-NEXT:    # kill: def $ax killed $ax killed $eax
 ; X32-NEXT:    retl
 ;

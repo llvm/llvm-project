@@ -8,17 +8,20 @@ define i32 @fn(i32 %a0, i32 %a1) {
 ; X86-NEXT:    pushl %ebx
 ; X86-NEXT:    .cfi_def_cfa_offset 8
 ; X86-NEXT:    .cfi_offset %ebx, -8
+; X86-NEXT:    xorl %ecx, %ecx
 ; X86-NEXT:    xorl %eax, %eax
 ; X86-NEXT:    cmpl $1, {{[0-9]+}}(%esp)
 ; X86-NEXT:    sete %cl
 ; X86-NEXT:    setne %al
+; X86-NEXT:    xorl %edx, %edx
 ; X86-NEXT:    cmpl $1, {{[0-9]+}}(%esp)
 ; X86-NEXT:    sete %dl
+; X86-NEXT:    addl %ecx, %ecx
+; X86-NEXT:    addl %edx, %edx
 ; X86-NEXT:    negl %eax
-; X86-NEXT:    addb %cl, %cl
 ; X86-NEXT:    movl %eax, %ebx
+; X86-NEXT:    # kill: def $cl killed $cl killed $ecx
 ; X86-NEXT:    shll %cl, %ebx
-; X86-NEXT:    addb %dl, %dl
 ; X86-NEXT:    movl %edx, %ecx
 ; X86-NEXT:    shll %cl, %eax
 ; X86-NEXT:    .p2align 4, 0x90
@@ -33,17 +36,20 @@ define i32 @fn(i32 %a0, i32 %a1) {
 ;
 ; X64-LABEL: fn:
 ; X64:       # %bb.0: # %entry
+; X64-NEXT:    xorl %ecx, %ecx
 ; X64-NEXT:    xorl %eax, %eax
 ; X64-NEXT:    cmpl $1, %edi
 ; X64-NEXT:    sete %cl
 ; X64-NEXT:    setne %al
+; X64-NEXT:    xorl %edx, %edx
 ; X64-NEXT:    cmpl $1, %esi
 ; X64-NEXT:    sete %dl
+; X64-NEXT:    addl %ecx, %ecx
+; X64-NEXT:    addl %edx, %edx
 ; X64-NEXT:    negl %eax
-; X64-NEXT:    addb %cl, %cl
 ; X64-NEXT:    movl %eax, %esi
+; X64-NEXT:    # kill: def $cl killed $cl killed $ecx
 ; X64-NEXT:    shll %cl, %esi
-; X64-NEXT:    addb %dl, %dl
 ; X64-NEXT:    movl %edx, %ecx
 ; X64-NEXT:    shll %cl, %eax
 ; X64-NEXT:    .p2align 4, 0x90

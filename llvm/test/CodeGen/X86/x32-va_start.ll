@@ -27,11 +27,11 @@ define i32 @foo(float %a, ptr nocapture readnone %fmt, ...) nounwind {
 ; SSE-LABEL: foo:
 ; SSE:       # %bb.0: # %entry
 ; SSE-NEXT:    subl $72, %esp
-; SSE-NEXT:    movq %rsi, -{{[0-9]+}}(%esp)
-; SSE-NEXT:    movq %rdx, -{{[0-9]+}}(%esp)
-; SSE-NEXT:    movq %rcx, -{{[0-9]+}}(%esp)
-; SSE-NEXT:    movq %r8, -{{[0-9]+}}(%esp)
 ; SSE-NEXT:    movq %r9, -{{[0-9]+}}(%esp)
+; SSE-NEXT:    movq %r8, -{{[0-9]+}}(%esp)
+; SSE-NEXT:    movq %rcx, -{{[0-9]+}}(%esp)
+; SSE-NEXT:    movq %rdx, -{{[0-9]+}}(%esp)
+; SSE-NEXT:    movq %rsi, -{{[0-9]+}}(%esp)
 ; SSE-NEXT:    testb %al, %al
 ; SSE-NEXT:    je .LBB0_5
 ; SSE-NEXT:  # %bb.4: # %entry
@@ -69,11 +69,11 @@ define i32 @foo(float %a, ptr nocapture readnone %fmt, ...) nounwind {
 ;
 ; NOSSE-LABEL: foo:
 ; NOSSE:       # %bb.0: # %entry
-; NOSSE-NEXT:    movq %rsi, -{{[0-9]+}}(%esp)
-; NOSSE-NEXT:    movq %rdx, -{{[0-9]+}}(%esp)
-; NOSSE-NEXT:    movq %rcx, -{{[0-9]+}}(%esp)
-; NOSSE-NEXT:    movq %r8, -{{[0-9]+}}(%esp)
 ; NOSSE-NEXT:    movq %r9, -{{[0-9]+}}(%esp)
+; NOSSE-NEXT:    movq %r8, -{{[0-9]+}}(%esp)
+; NOSSE-NEXT:    movq %rcx, -{{[0-9]+}}(%esp)
+; NOSSE-NEXT:    movq %rdx, -{{[0-9]+}}(%esp)
+; NOSSE-NEXT:    movq %rsi, -{{[0-9]+}}(%esp)
 ; NOSSE-NEXT:    leal -{{[0-9]+}}(%rsp), %eax
 ; NOSSE-NEXT:    movl %eax, -{{[0-9]+}}(%esp)
 ; NOSSE-NEXT:    leal {{[0-9]+}}(%rsp), %eax

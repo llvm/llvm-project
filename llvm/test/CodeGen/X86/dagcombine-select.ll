@@ -7,7 +7,9 @@ define i32 @select_and1(i32 %x, i32 %y) {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    xorl %eax, %eax
 ; CHECK-NEXT:    cmpl $11, %edi
-; CHECK-NEXT:    cmovgel %esi, %eax
+; CHECK-NEXT:    setge %al
+; CHECK-NEXT:    negl %eax
+; CHECK-NEXT:    andl %esi, %eax
 ; CHECK-NEXT:    retq
   %c = icmp slt i32 %x, 11
   %s = select i1 %c, i32 0, i32 -1
@@ -20,7 +22,9 @@ define i32 @select_and2(i32 %x, i32 %y) {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    xorl %eax, %eax
 ; CHECK-NEXT:    cmpl $11, %edi
-; CHECK-NEXT:    cmovgel %esi, %eax
+; CHECK-NEXT:    setge %al
+; CHECK-NEXT:    negl %eax
+; CHECK-NEXT:    andl %esi, %eax
 ; CHECK-NEXT:    retq
   %c = icmp slt i32 %x, 11
   %s = select i1 %c, i32 0, i32 -1
@@ -33,7 +37,9 @@ define i32 @select_and3(i32 %x, i32 %y) {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    xorl %eax, %eax
 ; CHECK-NEXT:    cmpl $11, %edi
-; CHECK-NEXT:    cmovll %esi, %eax
+; CHECK-NEXT:    setl %al
+; CHECK-NEXT:    negl %eax
+; CHECK-NEXT:    andl %esi, %eax
 ; CHECK-NEXT:    retq
   %c = icmp slt i32 %x, 11
   %s = select i1 %c, i32 -1, i32 0
@@ -61,9 +67,11 @@ define <4 x i32> @select_and_v4(i32 %x, <4 x i32> %y) {
 define i32 @select_or1(i32 %x, i32 %y) {
 ; CHECK-LABEL: select_or1:
 ; CHECK:       # %bb.0:
+; CHECK-NEXT:    xorl %eax, %eax
 ; CHECK-NEXT:    cmpl $11, %edi
-; CHECK-NEXT:    movl $-1, %eax
-; CHECK-NEXT:    cmovll %esi, %eax
+; CHECK-NEXT:    setge %al
+; CHECK-NEXT:    negl %eax
+; CHECK-NEXT:    orl %esi, %eax
 ; CHECK-NEXT:    retq
   %c = icmp slt i32 %x, 11
   %s = select i1 %c, i32 0, i32 -1
@@ -74,9 +82,11 @@ define i32 @select_or1(i32 %x, i32 %y) {
 define i32 @select_or2(i32 %x, i32 %y) {
 ; CHECK-LABEL: select_or2:
 ; CHECK:       # %bb.0:
+; CHECK-NEXT:    xorl %eax, %eax
 ; CHECK-NEXT:    cmpl $11, %edi
-; CHECK-NEXT:    movl $-1, %eax
-; CHECK-NEXT:    cmovll %esi, %eax
+; CHECK-NEXT:    setge %al
+; CHECK-NEXT:    negl %eax
+; CHECK-NEXT:    orl %esi, %eax
 ; CHECK-NEXT:    retq
   %c = icmp slt i32 %x, 11
   %s = select i1 %c, i32 0, i32 -1
@@ -87,9 +97,11 @@ define i32 @select_or2(i32 %x, i32 %y) {
 define i32 @select_or3(i32 %x, i32 %y) {
 ; CHECK-LABEL: select_or3:
 ; CHECK:       # %bb.0:
+; CHECK-NEXT:    xorl %eax, %eax
 ; CHECK-NEXT:    cmpl $11, %edi
-; CHECK-NEXT:    movl $-1, %eax
-; CHECK-NEXT:    cmovgel %esi, %eax
+; CHECK-NEXT:    setl %al
+; CHECK-NEXT:    negl %eax
+; CHECK-NEXT:    orl %esi, %eax
 ; CHECK-NEXT:    retq
   %c = icmp slt i32 %x, 11
   %s = select i1 %c, i32 -1, i32 0
@@ -180,10 +192,9 @@ define i32 @urem_constant_sel_constants(i1 %cond) {
 define i32 @sel_constants_shl_constant(i1 %cond) {
 ; CHECK-LABEL: sel_constants_shl_constant:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    notb %dil
-; CHECK-NEXT:    movzbl %dil, %eax
+; CHECK-NEXT:    movl %edi, %eax
 ; CHECK-NEXT:    andl $1, %eax
-; CHECK-NEXT:    orl $2, %eax
+; CHECK-NEXT:    xorl $3, %eax
 ; CHECK-NEXT:    shll $8, %eax
 ; CHECK-NEXT:    retq
   %sel = select i1 %cond, i32 2, i32 3
@@ -194,10 +205,12 @@ define i32 @sel_constants_shl_constant(i1 %cond) {
 define i32 @shl_constant_sel_constants(i1 %cond) {
 ; CHECK-LABEL: shl_constant_sel_constants:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    notb %dil
-; CHECK-NEXT:    movzbl %dil, %eax
-; CHECK-NEXT:    andl $1, %eax
-; CHECK-NEXT:    leal 4(,%rax,4), %eax
+; CHECK-NEXT:    movl %edi, %ecx
+; CHECK-NEXT:    andb $1, %cl
+; CHECK-NEXT:    xorb $3, %cl
+; CHECK-NEXT:    movl $1, %eax
+; CHECK-NEXT:    # kill: def $cl killed $cl killed $ecx
+; CHECK-NEXT:    shll %cl, %eax
 ; CHECK-NEXT:    retq
   %sel = select i1 %cond, i32 2, i32 3
   %bo = shl i32 1, %sel
@@ -207,10 +220,12 @@ define i32 @shl_constant_sel_constants(i1 %cond) {
 define i32 @shl_constant_sel_setcc(i32 %a) {
 ; CHECK-LABEL: shl_constant_sel_setcc:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    xorl %eax, %eax
-; CHECK-NEXT:    testb $1, %dil
-; CHECK-NEXT:    sete %al
-; CHECK-NEXT:    leal 4(,%rax,4), %eax
+; CHECK-NEXT:    movl %edi, %ecx
+; CHECK-NEXT:    andb $1, %cl
+; CHECK-NEXT:    xorb $3, %cl
+; CHECK-NEXT:    movl $1, %eax
+; CHECK-NEXT:    # kill: def $cl killed $cl killed $ecx
+; CHECK-NEXT:    shll %cl, %eax
 ; CHECK-NEXT:    retq
   %m = and i32 %a, 1
   %cond = icmp ne i32 %m, 0
@@ -222,9 +237,12 @@ define i32 @shl_constant_sel_setcc(i32 %a) {
 define i32 @lshr_constant_sel_constants(i1 %cond) {
 ; CHECK-LABEL: lshr_constant_sel_constants:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    # kill: def $edi killed $edi def $rdi
-; CHECK-NEXT:    andl $1, %edi
-; CHECK-NEXT:    leal 8(,%rdi,8), %eax
+; CHECK-NEXT:    movl %edi, %ecx
+; CHECK-NEXT:    andb $1, %cl
+; CHECK-NEXT:    xorb $3, %cl
+; CHECK-NEXT:    movl $64, %eax
+; CHECK-NEXT:    # kill: def $cl killed $cl killed $ecx
+; CHECK-NEXT:    shrl %cl, %eax
 ; CHECK-NEXT:    retq
   %sel = select i1 %cond, i32 2, i32 3
   %bo = lshr i32 64, %sel
@@ -234,9 +252,12 @@ define i32 @lshr_constant_sel_constants(i1 %cond) {
 define i32 @lshr_constant_sel_setcc(i32 %a) {
 ; CHECK-LABEL: lshr_constant_sel_setcc:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    # kill: def $edi killed $edi def $rdi
-; CHECK-NEXT:    andl $1, %edi
-; CHECK-NEXT:    leal 8(,%rdi,8), %eax
+; CHECK-NEXT:    movl %edi, %ecx
+; CHECK-NEXT:    andb $1, %cl
+; CHECK-NEXT:    xorb $3, %cl
+; CHECK-NEXT:    movl $64, %eax
+; CHECK-NEXT:    # kill: def $cl killed $cl killed $ecx
+; CHECK-NEXT:    shrl %cl, %eax
 ; CHECK-NEXT:    retq
   %m = and i32 %a, 1
   %cond = icmp ne i32 %m, 0
@@ -248,10 +269,12 @@ define i32 @lshr_constant_sel_setcc(i32 %a) {
 define i32 @ashr_constant_sel_constants(i1 %cond) {
 ; CHECK-LABEL: ashr_constant_sel_constants:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    # kill: def $edi killed $edi def $rdi
-; CHECK-NEXT:    andl $1, %edi
-; CHECK-NEXT:    shll $4, %edi
-; CHECK-NEXT:    leal 16(%rdi), %eax
+; CHECK-NEXT:    movl %edi, %ecx
+; CHECK-NEXT:    andb $1, %cl
+; CHECK-NEXT:    xorb $3, %cl
+; CHECK-NEXT:    movl $128, %eax
+; CHECK-NEXT:    # kill: def $cl killed $cl killed $ecx
+; CHECK-NEXT:    shrl %cl, %eax
 ; CHECK-NEXT:    retq
   %sel = select i1 %cond, i32 2, i32 3
   %bo = ashr i32 128, %sel
@@ -261,10 +284,12 @@ define i32 @ashr_constant_sel_constants(i1 %cond) {
 define i32 @ashr_constant_sel_setcc(i32 %a) {
 ; CHECK-LABEL: ashr_constant_sel_setcc:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    # kill: def $edi killed $edi def $rdi
-; CHECK-NEXT:    andl $1, %edi
-; CHECK-NEXT:    shll $4, %edi
-; CHECK-NEXT:    leal 16(%rdi), %eax
+; CHECK-NEXT:    movl %edi, %ecx
+; CHECK-NEXT:    andb $1, %cl
+; CHECK-NEXT:    xorb $3, %cl
+; CHECK-NEXT:    movl $128, %eax
+; CHECK-NEXT:    # kill: def $cl killed $cl killed $ecx
+; CHECK-NEXT:    shrl %cl, %eax
 ; CHECK-NEXT:    retq
   %m = and i32 %a, 1
   %cond = icmp ne i32 %m, 0

@@ -1178,12 +1178,14 @@ define i32 @useLEAForPrologue(i32 %d, i32 %a, i8 %c) #3 {
 ; ENABLE:       ## %bb.0: ## %entry
 ; ENABLE-NEXT:    pushq %rbx
 ; ENABLE-NEXT:    subq $16, %rsp
-; ENABLE-NEXT:    xorl %eax, %eax
-; ENABLE-NEXT:    cmpb $0, _b(%rip)
-; ENABLE-NEXT:    movl $48, %ecx
-; ENABLE-NEXT:    cmovnel %eax, %ecx
-; ENABLE-NEXT:    movb %cl, _c(%rip)
-; ENABLE-NEXT:    je LBB14_4
+; ENABLE-NEXT:    movzbl _b(%rip), %eax
+; ENABLE-NEXT:    xorl %ecx, %ecx
+; ENABLE-NEXT:    testb %al, %al
+; ENABLE-NEXT:    movl $48, %r8d
+; ENABLE-NEXT:    cmovnel %ecx, %r8d
+; ENABLE-NEXT:    movb %r8b, _c(%rip)
+; ENABLE-NEXT:    cmpb $1, %al
+; ENABLE-NEXT:    jne LBB14_4
 ; ENABLE-NEXT:  ## %bb.1: ## %for.body.lr.ph
 ; ENABLE-NEXT:    ## InlineAsm Start
 ; ENABLE-NEXT:    nop
@@ -1213,12 +1215,14 @@ define i32 @useLEAForPrologue(i32 %d, i32 %a, i8 %c) #3 {
 ; DISABLE:       ## %bb.0: ## %entry
 ; DISABLE-NEXT:    pushq %rbx
 ; DISABLE-NEXT:    subq $16, %rsp
-; DISABLE-NEXT:    xorl %eax, %eax
-; DISABLE-NEXT:    cmpb $0, _b(%rip)
-; DISABLE-NEXT:    movl $48, %ecx
-; DISABLE-NEXT:    cmovnel %eax, %ecx
-; DISABLE-NEXT:    movb %cl, _c(%rip)
-; DISABLE-NEXT:    je LBB14_4
+; DISABLE-NEXT:    movzbl _b(%rip), %eax
+; DISABLE-NEXT:    xorl %ecx, %ecx
+; DISABLE-NEXT:    testb %al, %al
+; DISABLE-NEXT:    movl $48, %r8d
+; DISABLE-NEXT:    cmovnel %ecx, %r8d
+; DISABLE-NEXT:    movb %r8b, _c(%rip)
+; DISABLE-NEXT:    cmpb $1, %al
+; DISABLE-NEXT:    jne LBB14_4
 ; DISABLE-NEXT:  ## %bb.1: ## %for.body.lr.ph
 ; DISABLE-NEXT:    ## InlineAsm Start
 ; DISABLE-NEXT:    nop

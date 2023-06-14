@@ -336,9 +336,9 @@ entry:
 define zeroext i8 @test_mm256_mask_fpclass_ps_mask(i8 zeroext %__U, <8 x float> %__A) {
 ; X86-LABEL: test_mm256_mask_fpclass_ps_mask:
 ; X86:       # %bb.0: # %entry
-; X86-NEXT:    vfpclassps $2, %ymm0, %k0
+; X86-NEXT:    kmovb {{[0-9]+}}(%esp), %k1
+; X86-NEXT:    vfpclassps $2, %ymm0, %k0 {%k1}
 ; X86-NEXT:    kmovw %k0, %eax
-; X86-NEXT:    andb {{[0-9]+}}(%esp), %al
 ; X86-NEXT:    # kill: def $al killed $al killed $eax
 ; X86-NEXT:    vzeroupper
 ; X86-NEXT:    retl

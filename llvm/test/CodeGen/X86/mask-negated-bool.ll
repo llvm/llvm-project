@@ -27,7 +27,10 @@ define i32 @mask_negated_zext_bool2(i1 zeroext %x) {
 define <4 x i32> @mask_negated_zext_bool_vec(<4 x i1> %x) {
 ; CHECK-LABEL: mask_negated_zext_bool_vec:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    andps {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
+; CHECK-NEXT:    pxor %xmm1, %xmm1
+; CHECK-NEXT:    psubd %xmm0, %xmm1
+; CHECK-NEXT:    pand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1
+; CHECK-NEXT:    movdqa %xmm1, %xmm0
 ; CHECK-NEXT:    retq
   %ext = zext <4 x i1> %x to <4 x i32>
   %neg = sub <4 x i32> zeroinitializer, %ext
@@ -61,7 +64,10 @@ define i32 @mask_negated_sext_bool2(i1 zeroext %x) {
 define <4 x i32> @mask_negated_sext_bool_vec(<4 x i1> %x) {
 ; CHECK-LABEL: mask_negated_sext_bool_vec:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    andps {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
+; CHECK-NEXT:    pxor %xmm1, %xmm1
+; CHECK-NEXT:    psubd %xmm0, %xmm1
+; CHECK-NEXT:    pand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1
+; CHECK-NEXT:    movdqa %xmm1, %xmm0
 ; CHECK-NEXT:    retq
   %ext = sext <4 x i1> %x to <4 x i32>
   %neg = sub <4 x i32> zeroinitializer, %ext

@@ -469,9 +469,15 @@ define <16 x i8> @combine_pshufb_as_unary_unpckhwd(<16 x i8> %a0) {
 }
 
 define <8 x i16> @combine_pshufb_as_unpacklo_undef(<16 x i8> %a0) {
-; CHECK-LABEL: combine_pshufb_as_unpacklo_undef:
-; CHECK:       # %bb.0:
-; CHECK-NEXT:    retq
+; SSE-LABEL: combine_pshufb_as_unpacklo_undef:
+; SSE:       # %bb.0:
+; SSE-NEXT:    pshuflw {{.*#+}} xmm0 = xmm0[0,0,2,1,4,5,6,7]
+; SSE-NEXT:    retq
+;
+; AVX-LABEL: combine_pshufb_as_unpacklo_undef:
+; AVX:       # %bb.0:
+; AVX-NEXT:    vpshuflw {{.*#+}} xmm0 = xmm0[0,0,2,1,4,5,6,7]
+; AVX-NEXT:    retq
   %1 = call <16 x i8> @llvm.x86.ssse3.pshuf.b.128(<16 x i8> %a0, <16 x i8> <i8 undef, i8 undef, i8 0, i8 1, i8 undef, i8 undef, i8 2, i8 3, i8 undef, i8 undef, i8 4, i8 5, i8 undef, i8 undef, i8 6, i8 7>)
   %2 = bitcast <16 x i8> %1 to <8 x i16>
   %3 = shufflevector <8 x i16> %2, <8 x i16> undef, <8 x i32> <i32 0, i32 0, i32 2, i32 2, i32 4, i32 4, i32 6, i32 6>

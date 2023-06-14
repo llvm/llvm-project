@@ -174,10 +174,8 @@ define <4 x i32> @combine_vec_lshr_trunc_lshr0(<4 x i64> %x) {
 ;
 ; AVX2-FAST-ALL-LABEL: combine_vec_lshr_trunc_lshr0:
 ; AVX2-FAST-ALL:       # %bb.0:
-; AVX2-FAST-ALL-NEXT:    vpsrlq $48, %ymm0, %ymm0
-; AVX2-FAST-ALL-NEXT:    vbroadcasti128 {{.*#+}} ymm1 = [0,2,4,6,0,2,4,6]
-; AVX2-FAST-ALL-NEXT:    # ymm1 = mem[0,1,0,1]
-; AVX2-FAST-ALL-NEXT:    vpermd %ymm0, %ymm1, %ymm0
+; AVX2-FAST-ALL-NEXT:    vpshufb {{.*#+}} ymm0 = ymm0[6,7],zero,zero,ymm0[14,15],zero,zero,ymm0[u,u,u,u,u,u,u,u,22,23],zero,zero,ymm0[30,31],zero,zero,ymm0[u,u,u,u,u,u,u,u]
+; AVX2-FAST-ALL-NEXT:    vpermq {{.*#+}} ymm0 = ymm0[0,2,2,3]
 ; AVX2-FAST-ALL-NEXT:    # kill: def $xmm0 killed $xmm0 killed $ymm0
 ; AVX2-FAST-ALL-NEXT:    vzeroupper
 ; AVX2-FAST-ALL-NEXT:    retq

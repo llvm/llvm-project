@@ -120,17 +120,18 @@ define <8 x i16> @trunc_lshr_v8i32(<8 x i32> %a) nounwind {
 define <8 x i16> @trunc_lshr_v4i64_demandedelts(<4 x i64> %a0) {
 ; X86-SSE2-LABEL: trunc_lshr_v4i64_demandedelts:
 ; X86-SSE2:       # %bb.0:
-; X86-SSE2-NEXT:    pshufd {{.*#+}} xmm1 = xmm1[0,0,0,0]
-; X86-SSE2-NEXT:    movdqa {{.*#+}} xmm2 = [1,1,1,1]
-; X86-SSE2-NEXT:    pand %xmm2, %xmm1
-; X86-SSE2-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[0,0,0,0]
+; X86-SSE2-NEXT:    movdqa {{.*#+}} xmm2 = [1,0,0,0]
 ; X86-SSE2-NEXT:    pand %xmm2, %xmm0
+; X86-SSE2-NEXT:    pand %xmm2, %xmm1
+; X86-SSE2-NEXT:    pshufd {{.*#+}} xmm1 = xmm1[0,0,0,0]
+; X86-SSE2-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[0,0,0,0]
 ; X86-SSE2-NEXT:    packuswb %xmm1, %xmm0
 ; X86-SSE2-NEXT:    retl
 ;
 ; X64-SSE2-LABEL: trunc_lshr_v4i64_demandedelts:
 ; X64-SSE2:       # %bb.0:
-; X64-SSE2-NEXT:    movdqa {{.*#+}} xmm2 = [1,18446744073709551615]
+; X64-SSE2-NEXT:    movl $1, %eax
+; X64-SSE2-NEXT:    movq %rax, %xmm2
 ; X64-SSE2-NEXT:    pand %xmm2, %xmm0
 ; X64-SSE2-NEXT:    pand %xmm2, %xmm1
 ; X64-SSE2-NEXT:    pshufd {{.*#+}} xmm1 = xmm1[0,0,0,0]
@@ -140,17 +141,18 @@ define <8 x i16> @trunc_lshr_v4i64_demandedelts(<4 x i64> %a0) {
 ;
 ; X86-SSE4-LABEL: trunc_lshr_v4i64_demandedelts:
 ; X86-SSE4:       # %bb.0:
-; X86-SSE4-NEXT:    pshufd {{.*#+}} xmm1 = xmm1[0,0,0,0]
-; X86-SSE4-NEXT:    movdqa {{.*#+}} xmm2 = [1,1,1,1]
-; X86-SSE4-NEXT:    pand %xmm2, %xmm1
-; X86-SSE4-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[0,0,0,0]
+; X86-SSE4-NEXT:    movdqa {{.*#+}} xmm2 = [1,0,0,0]
 ; X86-SSE4-NEXT:    pand %xmm2, %xmm0
+; X86-SSE4-NEXT:    pand %xmm2, %xmm1
+; X86-SSE4-NEXT:    pshufd {{.*#+}} xmm1 = xmm1[0,0,0,0]
+; X86-SSE4-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[0,0,0,0]
 ; X86-SSE4-NEXT:    packusdw %xmm1, %xmm0
 ; X86-SSE4-NEXT:    retl
 ;
 ; X64-SSE4-LABEL: trunc_lshr_v4i64_demandedelts:
 ; X64-SSE4:       # %bb.0:
-; X64-SSE4-NEXT:    movdqa {{.*#+}} xmm2 = [1,18446744073709551615]
+; X64-SSE4-NEXT:    movl $1, %eax
+; X64-SSE4-NEXT:    movq %rax, %xmm2
 ; X64-SSE4-NEXT:    pand %xmm2, %xmm0
 ; X64-SSE4-NEXT:    pand %xmm2, %xmm1
 ; X64-SSE4-NEXT:    pshufd {{.*#+}} xmm1 = xmm1[0,0,0,0]

@@ -129,7 +129,7 @@ define i16 @test_i16_shl_lshr_1(i16 %a0) {
 ;
 ; X64-SHIFT-LABEL: test_i16_shl_lshr_1:
 ; X64-SHIFT:       # %bb.0:
-; X64-SHIFT-NEXT:    movzwl %di, %eax
+; X64-SHIFT-NEXT:    movl %edi, %eax
 ; X64-SHIFT-NEXT:    shrl $3, %eax
 ; X64-SHIFT-NEXT:    shll $5, %eax
 ; X64-SHIFT-NEXT:    # kill: def $ax killed $ax killed $eax

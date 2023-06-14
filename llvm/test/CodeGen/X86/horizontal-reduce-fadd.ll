@@ -99,7 +99,7 @@ define double @PR37890_v4f64(<4 x double> %a)  {
 ; AVX1-FAST-LABEL: PR37890_v4f64:
 ; AVX1-FAST:       # %bb.0:
 ; AVX1-FAST-NEXT:    vextractf128 $1, %ymm0, %xmm1
-; AVX1-FAST-NEXT:    vhaddpd %xmm0, %xmm1, %xmm0
+; AVX1-FAST-NEXT:    vaddpd %xmm1, %xmm0, %xmm0
 ; AVX1-FAST-NEXT:    vhaddpd %xmm0, %xmm0, %xmm0
 ; AVX1-FAST-NEXT:    vzeroupper
 ; AVX1-FAST-NEXT:    retq
@@ -235,7 +235,7 @@ define double @PR37890_v8f64(<8 x double> %a)  {
 ; AVX1-FAST:       # %bb.0:
 ; AVX1-FAST-NEXT:    vaddpd %ymm1, %ymm0, %ymm0
 ; AVX1-FAST-NEXT:    vextractf128 $1, %ymm0, %xmm1
-; AVX1-FAST-NEXT:    vhaddpd %xmm0, %xmm1, %xmm0
+; AVX1-FAST-NEXT:    vaddpd %xmm1, %xmm0, %xmm0
 ; AVX1-FAST-NEXT:    vhaddpd %xmm0, %xmm0, %xmm0
 ; AVX1-FAST-NEXT:    vzeroupper
 ; AVX1-FAST-NEXT:    retq

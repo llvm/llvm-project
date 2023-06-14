@@ -103,6 +103,8 @@ define void @test3(ptr %res, ptr %A, ptr %B) nounwind {
 ; X86-AVX-NEXT:    movl {{[0-9]+}}(%esp), %edx
 ; X86-AVX-NEXT:    vmovaps (%edx), %xmm0
 ; X86-AVX-NEXT:    vunpcklps {{.*#+}} xmm0 = xmm0[0],mem[0],xmm0[1],mem[1]
+; X86-AVX-NEXT:    vinsertps {{.*#+}} xmm0 = xmm0[0,1],mem[0],xmm0[3]
+; X86-AVX-NEXT:    vinsertps {{.*#+}} xmm0 = xmm0[0,1,2],mem[0]
 ; X86-AVX-NEXT:    vmovaps %xmm0, (%eax)
 ; X86-AVX-NEXT:    retl
 ;
@@ -117,6 +119,8 @@ define void @test3(ptr %res, ptr %A, ptr %B) nounwind {
 ; X64-AVX:       # %bb.0:
 ; X64-AVX-NEXT:    vmovaps (%rsi), %xmm0
 ; X64-AVX-NEXT:    vunpcklps {{.*#+}} xmm0 = xmm0[0],mem[0],xmm0[1],mem[1]
+; X64-AVX-NEXT:    vinsertps {{.*#+}} xmm0 = xmm0[0,1],mem[0],xmm0[3]
+; X64-AVX-NEXT:    vinsertps {{.*#+}} xmm0 = xmm0[0,1,2],mem[0]
 ; X64-AVX-NEXT:    vmovaps %xmm0, (%rdi)
 ; X64-AVX-NEXT:    retq
 	%tmp = load <4 x float>, ptr %B		; <<4 x float>> [#uses=2]
@@ -597,25 +601,25 @@ define  <2 x double> @test16(ptr nocapture %srcA, ptr nocapture %dst) {
 define fastcc void @test17() nounwind {
 ; X86-SSE-LABEL: test17:
 ; X86-SSE:       # %bb.0: # %entry
-; X86-SSE-NEXT:    movaps {{.*#+}} xmm0 = <u,u,32768,32768>
+; X86-SSE-NEXT:    movaps {{.*#+}} xmm0 = <u,u,4.59177481E-41,4.59177481E-41>
 ; X86-SSE-NEXT:    movaps %xmm0, (%eax)
 ; X86-SSE-NEXT:    retl
 ;
 ; X86-AVX-LABEL: test17:
 ; X86-AVX:       # %bb.0: # %entry
-; X86-AVX-NEXT:    vbroadcastss {{.*#+}} xmm0 = [32768,32768,32768,32768]
+; X86-AVX-NEXT:    vbroadcastss {{.*#+}} xmm0 = [4.59177481E-41,4.59177481E-41,4.59177481E-41,4.59177481E-41]
 ; X86-AVX-NEXT:    vmovaps %xmm0, (%eax)
 ; X86-AVX-NEXT:    retl
 ;
 ; X64-SSE-LABEL: test17:
 ; X64-SSE:       # %bb.0: # %entry
-; X64-SSE-NEXT:    movaps {{.*#+}} xmm0 = <u,u,32768,32768>
+; X64-SSE-NEXT:    movaps {{.*#+}} xmm0 = <u,u,4.59177481E-41,4.59177481E-41>
 ; X64-SSE-NEXT:    movaps %xmm0, (%rax)
 ; X64-SSE-NEXT:    retq
 ;
 ; X64-AVX-LABEL: test17:
 ; X64-AVX:       # %bb.0: # %entry
-; X64-AVX-NEXT:    vbroadcastss {{.*#+}} xmm0 = [32768,32768,32768,32768]
+; X64-AVX-NEXT:    vbroadcastss {{.*#+}} xmm0 = [4.59177481E-41,4.59177481E-41,4.59177481E-41,4.59177481E-41]
 ; X64-AVX-NEXT:    vmovaps %xmm0, (%rax)
 ; X64-AVX-NEXT:    retq
 entry:

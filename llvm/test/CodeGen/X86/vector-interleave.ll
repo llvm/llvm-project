@@ -540,12 +540,13 @@ define void @splat2_i32(ptr %s, ptr %d) {
 ; AVX1-NEXT:    vmovups 16(%rdi), %xmm1
 ; AVX1-NEXT:    vshufps {{.*#+}} xmm2 = xmm0[0,0,1,1]
 ; AVX1-NEXT:    vshufps {{.*#+}} xmm0 = xmm0[2,2,3,3]
-; AVX1-NEXT:    vshufps {{.*#+}} xmm3 = xmm1[0,0,1,1]
+; AVX1-NEXT:    vinsertf128 $1, %xmm0, %ymm2, %ymm0
+; AVX1-NEXT:    vshufps {{.*#+}} xmm2 = xmm1[0,0,1,1]
 ; AVX1-NEXT:    vshufps {{.*#+}} xmm1 = xmm1[2,2,3,3]
-; AVX1-NEXT:    vmovups %xmm1, 48(%rsi)
-; AVX1-NEXT:    vmovups %xmm3, 32(%rsi)
-; AVX1-NEXT:    vmovups %xmm0, 16(%rsi)
-; AVX1-NEXT:    vmovups %xmm2, (%rsi)
+; AVX1-NEXT:    vinsertf128 $1, %xmm1, %ymm2, %ymm1
+; AVX1-NEXT:    vmovups %ymm1, 32(%rsi)
+; AVX1-NEXT:    vmovups %ymm0, (%rsi)
+; AVX1-NEXT:    vzeroupper
 ; AVX1-NEXT:    retq
 ;
 ; AVX2-LABEL: splat2_i32:

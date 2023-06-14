@@ -82,14 +82,19 @@ define <2 x double> @test6(<2 x double> %a, <2 x double> %b, <2 x double> %c) {
 define <8 x float> @test7(float %a, <8 x float> %b, <8 x float> %c)  {
 ; X86-LABEL: test7:
 ; X86:       # %bb.0:
-; X86-NEXT:    vbroadcastss {{[0-9]+}}(%esp), %ymm2
-; X86-NEXT:    vfnmadd213ps {{.*#+}} ymm0 = -(ymm2 * ymm0) + ymm1
+; X86-NEXT:    vbroadcastss {{.*#+}} xmm2 = [-0.0E+0,-0.0E+0,-0.0E+0,-0.0E+0]
+; X86-NEXT:    vmovss {{.*#+}} xmm3 = mem[0],zero,zero,zero
+; X86-NEXT:    vxorps %xmm2, %xmm3, %xmm2
+; X86-NEXT:    vbroadcastss %xmm2, %ymm2
+; X86-NEXT:    vfmadd213ps {{.*#+}} ymm0 = (ymm2 * ymm0) + ymm1
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: test7:
 ; X64:       # %bb.0:
+; X64-NEXT:    vbroadcastss {{.*#+}} xmm3 = [-0.0E+0,-0.0E+0,-0.0E+0,-0.0E+0]
+; X64-NEXT:    vxorps %xmm3, %xmm0, %xmm0
 ; X64-NEXT:    vbroadcastss %xmm0, %ymm0
-; X64-NEXT:    vfnmadd213ps {{.*#+}} ymm0 = -(ymm1 * ymm0) + ymm2
+; X64-NEXT:    vfmadd213ps {{.*#+}} ymm0 = (ymm1 * ymm0) + ymm2
 ; X64-NEXT:    retq
   %t0 = insertelement <8 x float> undef, float %a, i32 0
   %t1 = fsub <8 x float> <float -0.0, float undef, float undef, float undef, float undef, float undef, float undef, float undef>, %t0
@@ -102,14 +107,19 @@ define <8 x float> @test7(float %a, <8 x float> %b, <8 x float> %c)  {
 define <8 x float> @test8(float %a, <8 x float> %b, <8 x float> %c)  {
 ; X86-LABEL: test8:
 ; X86:       # %bb.0:
-; X86-NEXT:    vbroadcastss {{[0-9]+}}(%esp), %ymm2
-; X86-NEXT:    vfnmadd213ps {{.*#+}} ymm0 = -(ymm2 * ymm0) + ymm1
+; X86-NEXT:    vbroadcastss {{.*#+}} xmm2 = [-0.0E+0,-0.0E+0,-0.0E+0,-0.0E+0]
+; X86-NEXT:    vmovss {{.*#+}} xmm3 = mem[0],zero,zero,zero
+; X86-NEXT:    vxorps %xmm2, %xmm3, %xmm2
+; X86-NEXT:    vbroadcastss %xmm2, %ymm2
+; X86-NEXT:    vfmadd213ps {{.*#+}} ymm0 = (ymm2 * ymm0) + ymm1
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: test8:
 ; X64:       # %bb.0:
+; X64-NEXT:    vbroadcastss {{.*#+}} xmm3 = [-0.0E+0,-0.0E+0,-0.0E+0,-0.0E+0]
+; X64-NEXT:    vxorps %xmm3, %xmm0, %xmm0
 ; X64-NEXT:    vbroadcastss %xmm0, %ymm0
-; X64-NEXT:    vfnmadd213ps {{.*#+}} ymm0 = -(ymm1 * ymm0) + ymm2
+; X64-NEXT:    vfmadd213ps {{.*#+}} ymm0 = (ymm1 * ymm0) + ymm2
 ; X64-NEXT:    retq
   %t0 = fsub float -0.0, %a
   %t1 = insertelement <8 x float> undef, float %t0, i32 0

@@ -317,21 +317,13 @@ define %S @readd(ptr nocapture readonly %this, %S %arg.b) nounwind {
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    movq %rdi, %rax
 ; CHECK-NEXT:    addq (%rsi), %rdx
-; CHECK-NEXT:    movq 8(%rsi), %rdi
-; CHECK-NEXT:    adcq $0, %rdi
-; CHECK-NEXT:    setb %r10b
-; CHECK-NEXT:    movzbl %r10b, %r10d
-; CHECK-NEXT:    addq %rcx, %rdi
-; CHECK-NEXT:    adcq 16(%rsi), %r10
-; CHECK-NEXT:    setb %cl
-; CHECK-NEXT:    movzbl %cl, %ecx
-; CHECK-NEXT:    addq %r8, %r10
-; CHECK-NEXT:    adcq 24(%rsi), %rcx
-; CHECK-NEXT:    addq %r9, %rcx
-; CHECK-NEXT:    movq %rdx, (%rax)
-; CHECK-NEXT:    movq %rdi, 8(%rax)
-; CHECK-NEXT:    movq %r10, 16(%rax)
-; CHECK-NEXT:    movq %rcx, 24(%rax)
+; CHECK-NEXT:    adcq 8(%rsi), %rcx
+; CHECK-NEXT:    adcq 16(%rsi), %r8
+; CHECK-NEXT:    adcq 24(%rsi), %r9
+; CHECK-NEXT:    movq %rdx, (%rdi)
+; CHECK-NEXT:    movq %rcx, 8(%rdi)
+; CHECK-NEXT:    movq %r8, 16(%rdi)
+; CHECK-NEXT:    movq %r9, 24(%rdi)
 ; CHECK-NEXT:    retq
 entry:
   %0 = extractvalue %S %arg.b, 0
@@ -420,15 +412,15 @@ define { i128, i1 } @saddo_carry_not_1(i128 %x) nounwind {
 define i128 @addcarry_to_subcarry(i64 %a, i64 %b) nounwind {
 ; CHECK-LABEL: addcarry_to_subcarry:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    movq %rdi, %rax
+; CHECK-NEXT:    movq %rsi, %rcx
+; CHECK-NEXT:    notq %rcx
+; CHECK-NEXT:    xorl %edx, %edx
+; CHECK-NEXT:    addq %rdi, %rcx
+; CHECK-NEXT:    setb %dl
+; CHECK-NEXT:    xorl %eax, %eax
 ; CHECK-NEXT:    cmpq %rsi, %rdi
-; CHECK-NEXT:    notq %rsi
-; CHECK-NEXT:    setae %cl
-; CHECK-NEXT:    addb $-1, %cl
-; CHECK-NEXT:    adcq $0, %rax
-; CHECK-NEXT:    setb %cl
-; CHECK-NEXT:    movzbl %cl, %edx
-; CHECK-NEXT:    addq %rsi, %rax
+; CHECK-NEXT:    setae %al
+; CHECK-NEXT:    addq %rcx, %rax
 ; CHECK-NEXT:    adcq $0, %rdx
 ; CHECK-NEXT:    retq
   %notb = xor i64 %b, -1
@@ -794,17 +786,20 @@ define { i64, i64, i1 } @addcarry_mixed_2x64(i64 %x0, i64 %x1, i64 %y0, i64 %y1)
 define i32 @add_U320_without_i128_add(ptr nocapture dereferenceable(40) %0, i64 %1, i64 %2, i64 %3, i64 %4, i64 %5) nounwind {
 ; CHECK-LABEL: add_U320_without_i128_add:
 ; CHECK:       # %bb.0:
+; CHECK-NEXT:    pushq %rbx
 ; CHECK-NEXT:    movq 16(%rdi), %rax
 ; CHECK-NEXT:    movq 24(%rdi), %r10
 ; CHECK-NEXT:    movq 32(%rdi), %r11
+; CHECK-NEXT:    addq 8(%rdi), %rdx
+; CHECK-NEXT:    movq %rax, %rbx
+; CHECK-NEXT:    adcq %rcx, %rbx
 ; CHECK-NEXT:    addq %rsi, (%rdi)
-; CHECK-NEXT:    adcq %rdx, 8(%rdi)
-; CHECK-NEXT:    movq %rax, %rdx
-; CHECK-NEXT:    adcq %rcx, %rdx
+; CHECK-NEXT:    adcq $0, %rdx
+; CHECK-NEXT:    adcq $0, %rbx
 ; CHECK-NEXT:    addq %rcx, %rax
 ; CHECK-NEXT:    movq %r10, %rcx
 ; CHECK-NEXT:    adcq %r8, %rcx
-; CHECK-NEXT:    cmpq %rax, %rdx
+; CHECK-NEXT:    cmpq %rax, %rbx
 ; CHECK-NEXT:    adcq $0, %rcx
 ; CHECK-NEXT:    leaq (%r11,%r9), %rsi
 ; CHECK-NEXT:    addq %r8, %r10
@@ -816,10 +811,12 @@ define i32 @add_U320_without_i128_add(ptr nocapture dereferenceable(40) %0, i64 
 ; CHECK-NEXT:    cmpq %rsi, %r8
 ; CHECK-NEXT:    setb %al
 ; CHECK-NEXT:    addq %r9, %r11
-; CHECK-NEXT:    movq %rdx, 16(%rdi)
+; CHECK-NEXT:    movq %rdx, 8(%rdi)
+; CHECK-NEXT:    movq %rbx, 16(%rdi)
 ; CHECK-NEXT:    movq %rcx, 24(%rdi)
 ; CHECK-NEXT:    movq %r8, 32(%rdi)
 ; CHECK-NEXT:    adcl $0, %eax
+; CHECK-NEXT:    popq %rbx
 ; CHECK-NEXT:    retq
   %7 = load i64, ptr %0, align 8
   %8 = getelementptr inbounds %struct.U320, ptr %0, i64 0, i32 0, i64 1
@@ -1326,12 +1323,14 @@ define void @add_U256_without_i128_or_recursive(ptr sret(%uint256) %0, ptr %1, p
 ; CHECK-NEXT:    movq %rdi, %rax
 ; CHECK-NEXT:    movq (%rdx), %rcx
 ; CHECK-NEXT:    movq 8(%rdx), %rdi
-; CHECK-NEXT:    addq (%rsi), %rcx
-; CHECK-NEXT:    adcq 8(%rsi), %rdi
 ; CHECK-NEXT:    movq 16(%rdx), %r8
 ; CHECK-NEXT:    movq 24(%rdx), %rdx
-; CHECK-NEXT:    adcq 16(%rsi), %r8
+; CHECK-NEXT:    addq 16(%rsi), %r8
 ; CHECK-NEXT:    adcq 24(%rsi), %rdx
+; CHECK-NEXT:    addq (%rsi), %rcx
+; CHECK-NEXT:    adcq 8(%rsi), %rdi
+; CHECK-NEXT:    adcq $0, %r8
+; CHECK-NEXT:    adcq $0, %rdx
 ; CHECK-NEXT:    movq %rcx, (%rax)
 ; CHECK-NEXT:    movq %rdi, 8(%rax)
 ; CHECK-NEXT:    movq %r8, 16(%rax)

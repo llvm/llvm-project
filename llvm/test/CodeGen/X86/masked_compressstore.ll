@@ -1290,7 +1290,7 @@ define void @compressstore_v32f32_v32i32(ptr %base, <32 x float> %V, <32 x i32> 
 ; SSE2-NEXT:    pmovmskb %xmm8, %eax
 ; SSE2-NEXT:    shll $16, %eax
 ; SSE2-NEXT:    orl %ecx, %eax
-; SSE2-NEXT:    testb $1, %al
+; SSE2-NEXT:    testb $1, %cl
 ; SSE2-NEXT:    jne LBB6_1
 ; SSE2-NEXT:  ## %bb.2: ## %else
 ; SSE2-NEXT:    testb $2, %al
@@ -1614,7 +1614,7 @@ define void @compressstore_v32f32_v32i32(ptr %base, <32 x float> %V, <32 x i32> 
 ; SSE42-NEXT:    pmovmskb %xmm8, %eax
 ; SSE42-NEXT:    shll $16, %eax
 ; SSE42-NEXT:    orl %ecx, %eax
-; SSE42-NEXT:    testb $1, %al
+; SSE42-NEXT:    testb $1, %cl
 ; SSE42-NEXT:    jne LBB6_1
 ; SSE42-NEXT:  ## %bb.2: ## %else
 ; SSE42-NEXT:    testb $2, %al
@@ -1895,7 +1895,7 @@ define void @compressstore_v32f32_v32i32(ptr %base, <32 x float> %V, <32 x i32> 
 ; AVX1-NEXT:    vpmovmskb %xmm4, %eax
 ; AVX1-NEXT:    shll $16, %eax
 ; AVX1-NEXT:    orl %ecx, %eax
-; AVX1-NEXT:    testb $1, %al
+; AVX1-NEXT:    testb $1, %cl
 ; AVX1-NEXT:    jne LBB6_1
 ; AVX1-NEXT:  ## %bb.2: ## %else
 ; AVX1-NEXT:    testb $2, %al
@@ -3400,8 +3400,9 @@ define void @compressstore_v8i16_v8i16(ptr %base, <8 x i16> %V, <8 x i16> %trigg
 ; AVX512F-NEXT:    vpcmpeqw %xmm2, %xmm1, %xmm1
 ; AVX512F-NEXT:    vpmovsxwq %xmm1, %zmm1
 ; AVX512F-NEXT:    vptestmq %zmm1, %zmm1, %k0
+; AVX512F-NEXT:    kmovw %k0, %ecx
 ; AVX512F-NEXT:    kmovw %k0, %eax
-; AVX512F-NEXT:    testb $1, %al
+; AVX512F-NEXT:    testb $1, %cl
 ; AVX512F-NEXT:    jne LBB11_1
 ; AVX512F-NEXT:  ## %bb.2: ## %else
 ; AVX512F-NEXT:    testb $2, %al
@@ -3543,8 +3544,9 @@ define void @compressstore_v8i16_v8i16(ptr %base, <8 x i16> %V, <8 x i16> %trigg
 ; AVX512VLBW-LABEL: compressstore_v8i16_v8i16:
 ; AVX512VLBW:       ## %bb.0:
 ; AVX512VLBW-NEXT:    vptestnmw %xmm1, %xmm1, %k0
+; AVX512VLBW-NEXT:    kmovd %k0, %ecx
 ; AVX512VLBW-NEXT:    kmovd %k0, %eax
-; AVX512VLBW-NEXT:    testb $1, %al
+; AVX512VLBW-NEXT:    testb $1, %cl
 ; AVX512VLBW-NEXT:    jne LBB11_1
 ; AVX512VLBW-NEXT:  ## %bb.2: ## %else
 ; AVX512VLBW-NEXT:    testb $2, %al

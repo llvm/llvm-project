@@ -112,8 +112,10 @@ define void @PR46178(ptr %0) {
 ; X86-NEXT:    vpsraw $8, %xmm0, %xmm0
 ; X86-NEXT:    vpsllw $8, %xmm1, %xmm1
 ; X86-NEXT:    vpsraw $8, %xmm1, %xmm1
-; X86-NEXT:    vpunpcklqdq {{.*#+}} ymm0 = ymm0[0],ymm1[0],ymm0[2],ymm1[2]
-; X86-NEXT:    vmovdqu %ymm0, (%eax)
+; X86-NEXT:    vpunpcklqdq {{.*#+}} xmm0 = xmm0[0],xmm1[0]
+; X86-NEXT:    vmovdqu %xmm0, (%eax)
+; X86-NEXT:    vpxor %xmm0, %xmm0, %xmm0
+; X86-NEXT:    vmovdqu %xmm0, 16(%eax)
 ; X86-NEXT:    vzeroupper
 ; X86-NEXT:    retl
 ;
@@ -123,11 +125,14 @@ define void @PR46178(ptr %0) {
 ; X64-NEXT:    vmovdqu (%rax), %ymm1
 ; X64-NEXT:    vpmovqw %ymm0, %xmm0
 ; X64-NEXT:    vpmovqw %ymm1, %xmm1
-; X64-NEXT:    vinserti128 $1, %xmm1, %ymm0, %ymm0
-; X64-NEXT:    vpsllw $8, %ymm0, %ymm0
-; X64-NEXT:    vpsraw $8, %ymm0, %ymm0
-; X64-NEXT:    vpermq {{.*#+}} ymm0 = ymm0[0,2,1,1]
-; X64-NEXT:    vmovdqu %ymm0, (%rdi)
+; X64-NEXT:    vpsllw $8, %xmm0, %xmm0
+; X64-NEXT:    vpsraw $8, %xmm0, %xmm0
+; X64-NEXT:    vpsllw $8, %xmm1, %xmm1
+; X64-NEXT:    vpsraw $8, %xmm1, %xmm1
+; X64-NEXT:    vpunpcklqdq {{.*#+}} xmm0 = xmm0[0],xmm1[0]
+; X64-NEXT:    vmovdqu %xmm0, (%rdi)
+; X64-NEXT:    vpxor %xmm0, %xmm0, %xmm0
+; X64-NEXT:    vmovdqu %xmm0, 16(%rdi)
 ; X64-NEXT:    vzeroupper
 ; X64-NEXT:    retq
   %2 = load <4 x i64>, ptr null, align 8

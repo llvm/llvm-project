@@ -394,8 +394,8 @@ define <4 x i32> @test10(<4 x i32> %a) nounwind {
 define i32 @PR17487(i1 %tobool) {
 ; X86-LABEL: PR17487:
 ; X86:       # %bb.0:
-; X86-NEXT:    movzbl {{[0-9]+}}(%esp), %ecx
-; X86-NEXT:    notb %cl
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
+; X86-NEXT:    notl %ecx
 ; X86-NEXT:    xorl %eax, %eax
 ; X86-NEXT:    testb $1, %cl
 ; X86-NEXT:    sete %al

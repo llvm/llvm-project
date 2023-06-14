@@ -231,8 +231,9 @@ define double @f7_double(double %x) {
 define float @movmsk(float %x) {
 ; CHECK-LABEL: movmsk:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    movss {{.*#+}} xmm1 = mem[0],zero,zero,zero
-; CHECK-NEXT:    andps %xmm1, %xmm0
+; CHECK-NEXT:    movmskps %xmm0, %eax
+; CHECK-NEXT:    shll $31, %eax
+; CHECK-NEXT:    movd %eax, %xmm0
 ; CHECK-NEXT:    retq
   %bc1 = bitcast float %x to i32
   %and = and i32 %bc1, 2147483648

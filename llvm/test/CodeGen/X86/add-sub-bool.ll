@@ -344,7 +344,7 @@ define i32 @test_i32_add_add_var(i32 %x, i32 %y, i32 %z, i32 %w) nounwind {
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %edx
-; X86-NEXT:    btl %ecx, %edx
+; X86-NEXT:    btl %edx, %ecx
 ; X86-NEXT:    adcl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    retl
 ;
@@ -367,7 +367,7 @@ define i32 @test_i32_add_add_commute_var(i32 %x, i32 %y, i32 %z, i32 %w) nounwin
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %edx
-; X86-NEXT:    btl %ecx, %edx
+; X86-NEXT:    btl %edx, %ecx
 ; X86-NEXT:    adcl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    retl
 ;
@@ -430,10 +430,10 @@ define i32 @test_i32_add_sub_var(i32 %x, i32 %y, i32 %z, i32 %w) nounwind {
 ; X86-LABEL: test_i32_add_sub_var:
 ; X86:       # %bb.0:
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %edx
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    subl {{[0-9]+}}(%esp), %eax
-; X86-NEXT:    btl %ecx, %edx
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %edx
+; X86-NEXT:    btl %edx, %ecx
 ; X86-NEXT:    adcl $0, %eax
 ; X86-NEXT:    retl
 ;
@@ -455,10 +455,10 @@ define i32 @test_i32_add_sub_commute_var(i32 %x, i32 %y, i32 %z, i32 %w) nounwin
 ; X86-LABEL: test_i32_add_sub_commute_var:
 ; X86:       # %bb.0:
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %edx
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    subl {{[0-9]+}}(%esp), %eax
-; X86-NEXT:    btl %ecx, %edx
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %edx
+; X86-NEXT:    btl %edx, %ecx
 ; X86-NEXT:    adcl $0, %eax
 ; X86-NEXT:    retl
 ;
@@ -480,10 +480,10 @@ define i32 @test_i32_sub_add_var(i32 %x, i32 %y, i32 %z, i32 %w) nounwind {
 ; X86-LABEL: test_i32_sub_add_var:
 ; X86:       # %bb.0:
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %edx
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    addl {{[0-9]+}}(%esp), %eax
-; X86-NEXT:    btl %ecx, %edx
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %edx
+; X86-NEXT:    btl %edx, %ecx
 ; X86-NEXT:    sbbl $0, %eax
 ; X86-NEXT:    retl
 ;
@@ -508,7 +508,7 @@ define i32 @test_i32_sub_add_commute_var(i32 %x, i32 %y, i32 %z, i32 %w) nounwin
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %edx
-; X86-NEXT:    btl %ecx, %edx
+; X86-NEXT:    btl %edx, %ecx
 ; X86-NEXT:    sbbl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    retl
 ;
@@ -559,7 +559,7 @@ define i32 @test_i32_sub_sub_var(i32 %x, i32 %y, i32 %z, i32 %w) nounwind {
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %edx
-; X86-NEXT:    btl %ecx, %edx
+; X86-NEXT:    btl %edx, %ecx
 ; X86-NEXT:    adcl $0, %eax
 ; X86-NEXT:    subl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    retl
@@ -584,7 +584,7 @@ define i32 @test_i32_sub_sub_commute_var(i32 %x, i32 %y, i32 %z, i32 %w) nounwin
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %edx
-; X86-NEXT:    btl %ecx, %edx
+; X86-NEXT:    btl %edx, %ecx
 ; X86-NEXT:    sbbl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    retl
 ;
@@ -605,10 +605,10 @@ define i32 @test_i32_sub_sum_var(i32 %x, i32 %y, i32 %z, i32 %w) nounwind {
 ; X86-LABEL: test_i32_sub_sum_var:
 ; X86:       # %bb.0:
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %edx
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    addl {{[0-9]+}}(%esp), %eax
-; X86-NEXT:    btl %ecx, %edx
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %edx
+; X86-NEXT:    btl %edx, %ecx
 ; X86-NEXT:    sbbl $0, %eax
 ; X86-NEXT:    negl %eax
 ; X86-NEXT:    retl

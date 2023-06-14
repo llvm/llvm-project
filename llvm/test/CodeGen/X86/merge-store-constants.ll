@@ -12,8 +12,10 @@ define void @big_nonzero_16_bytes(ptr nocapture %a) {
 ;
 ; X64-LABEL: big_nonzero_16_bytes:
 ; X64:       # %bb.0:
-; X64-NEXT:    vmovaps {{.*#+}} xmm0 = [1,2,3,4]
-; X64-NEXT:    vmovups %xmm0, (%rdi)
+; X64-NEXT:    movabsq $8589934593, %rax # imm = 0x200000001
+; X64-NEXT:    movq %rax, (%rdi)
+; X64-NEXT:    movabsq $17179869187, %rax # imm = 0x400000003
+; X64-NEXT:    movq %rax, 8(%rdi)
 ; X64-NEXT:    retq
   %arrayidx1 = getelementptr inbounds i32, ptr %a, i64 1
   %arrayidx2 = getelementptr inbounds i32, ptr %a, i64 2
@@ -58,9 +60,9 @@ define void @big_nonzero_32_bytes_splat(ptr nocapture %a) {
 ; X32-LABEL: big_nonzero_32_bytes_splat:
 ; X32:       # %bb.0:
 ; X32-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X32-NEXT:    vbroadcastss {{.*#+}} ymm0 = [42,42,42,42,42,42,42,42]
-; X32-NEXT:    vmovups %ymm0, (%eax)
-; X32-NEXT:    vzeroupper
+; X32-NEXT:    vbroadcastss {{.*#+}} xmm0 = [42,42,42,42]
+; X32-NEXT:    vmovups %xmm0, (%eax)
+; X32-NEXT:    vmovups %xmm0, 16(%eax)
 ; X32-NEXT:    retl
 ;
 ; X64-LABEL: big_nonzero_32_bytes_splat:

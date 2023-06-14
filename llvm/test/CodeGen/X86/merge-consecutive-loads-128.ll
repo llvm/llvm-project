@@ -1226,9 +1226,9 @@ define <4 x float> @merge_4f32_f32_X0YY(ptr %ptr0, ptr %ptr1) nounwind uwtable n
 ;
 ; AVX-LABEL: merge_4f32_f32_X0YY:
 ; AVX:       # %bb.0:
-; AVX-NEXT:    vmovss {{.*#+}} xmm0 = mem[0],zero,zero,zero
+; AVX-NEXT:    vbroadcastss (%rsi), %xmm0
 ; AVX-NEXT:    vmovss {{.*#+}} xmm1 = mem[0],zero,zero,zero
-; AVX-NEXT:    vshufps {{.*#+}} xmm0 = xmm1[0,1],xmm0[0,0]
+; AVX-NEXT:    vmovlhps {{.*#+}} xmm0 = xmm1[0],xmm0[0]
 ; AVX-NEXT:    retq
 ;
 ; X86-SSE-LABEL: merge_4f32_f32_X0YY:

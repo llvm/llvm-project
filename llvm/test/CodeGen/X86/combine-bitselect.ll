@@ -541,8 +541,11 @@ define <4 x i64> @bitselect_v4i64_broadcast_rrr(<4 x i64> %a0, <4 x i64> %a1, i6
 ; AVX2:       # %bb.0:
 ; AVX2-NEXT:    vmovq %rdi, %xmm2
 ; AVX2-NEXT:    vpbroadcastq %xmm2, %ymm2
+; AVX2-NEXT:    vpcmpeqd %xmm3, %xmm3, %xmm3
+; AVX2-NEXT:    vpxor %xmm3, %xmm2, %xmm3
+; AVX2-NEXT:    vpbroadcastq %xmm3, %ymm3
 ; AVX2-NEXT:    vpand %ymm2, %ymm0, %ymm0
-; AVX2-NEXT:    vpandn %ymm1, %ymm2, %ymm1
+; AVX2-NEXT:    vpand %ymm3, %ymm1, %ymm1
 ; AVX2-NEXT:    vpor %ymm1, %ymm0, %ymm0
 ; AVX2-NEXT:    retq
 ;
@@ -551,14 +554,20 @@ define <4 x i64> @bitselect_v4i64_broadcast_rrr(<4 x i64> %a0, <4 x i64> %a1, i6
 ; AVX512F-NEXT:    vmovq %rdi, %xmm2
 ; AVX512F-NEXT:    vpbroadcastq %xmm2, %ymm2
 ; AVX512F-NEXT:    vpand %ymm2, %ymm0, %ymm0
-; AVX512F-NEXT:    vpandn %ymm1, %ymm2, %ymm1
+; AVX512F-NEXT:    vpternlogq $15, %zmm2, %zmm2, %zmm2
+; AVX512F-NEXT:    vpbroadcastq %xmm2, %ymm2
+; AVX512F-NEXT:    vpand %ymm2, %ymm1, %ymm1
 ; AVX512F-NEXT:    vpor %ymm1, %ymm0, %ymm0
 ; AVX512F-NEXT:    retq
 ;
 ; AVX512VL-LABEL: bitselect_v4i64_broadcast_rrr:
 ; AVX512VL:       # %bb.0:
 ; AVX512VL-NEXT:    vpbroadcastq %rdi, %ymm2
-; AVX512VL-NEXT:    vpternlogq $226, %ymm1, %ymm2, %ymm0
+; AVX512VL-NEXT:    vpand %ymm2, %ymm0, %ymm0
+; AVX512VL-NEXT:    # kill: def $xmm2 killed $xmm2 killed $ymm2
+; AVX512VL-NEXT:    vpternlogq $15, %xmm2, %xmm2, %xmm2
+; AVX512VL-NEXT:    vpbroadcastq %xmm2, %ymm2
+; AVX512VL-NEXT:    vpternlogq $248, %ymm2, %ymm1, %ymm0
 ; AVX512VL-NEXT:    retq
   %1 = insertelement <4 x i64> undef, i64 %a2, i32 0
   %2 = shufflevector <4 x i64> %1, <4 x i64> undef, <4 x i32> zeroinitializer
@@ -590,25 +599,43 @@ define <4 x i64> @bitselect_v4i64_broadcast_rrm(<4 x i64> %a0, <4 x i64> %a1, pt
 ; XOP-NEXT:    vpcmov %ymm2, %ymm1, %ymm0, %ymm0
 ; XOP-NEXT:    retq
 ;
-; AVX-LABEL: bitselect_v4i64_broadcast_rrm:
-; AVX:       # %bb.0:
-; AVX-NEXT:    vbroadcastsd (%rdi), %ymm2
-; AVX-NEXT:    vandps %ymm2, %ymm0, %ymm0
-; AVX-NEXT:    vandnps %ymm1, %ymm2, %ymm1
-; AVX-NEXT:    vorps %ymm1, %ymm0, %ymm0
-; AVX-NEXT:    retq
+; AVX1-LABEL: bitselect_v4i64_broadcast_rrm:
+; AVX1:       # %bb.0:
+; AVX1-NEXT:    vbroadcastsd (%rdi), %ymm2
+; AVX1-NEXT:    vandps %ymm2, %ymm0, %ymm0
+; AVX1-NEXT:    vandnps %ymm1, %ymm2, %ymm1
+; AVX1-NEXT:    vorps %ymm1, %ymm0, %ymm0
+; AVX1-NEXT:    retq
+;
+; AVX2-LABEL: bitselect_v4i64_broadcast_rrm:
+; AVX2:       # %bb.0:
+; AVX2-NEXT:    vpbroadcastq (%rdi), %ymm2
+; AVX2-NEXT:    vpcmpeqd %xmm3, %xmm3, %xmm3
+; AVX2-NEXT:    vpxor %xmm3, %xmm2, %xmm3
+; AVX2-NEXT:    vpbroadcastq %xmm3, %ymm3
+; AVX2-NEXT:    vpand %ymm2, %ymm0, %ymm0
+; AVX2-NEXT:    vpand %ymm3, %ymm1, %ymm1
+; AVX2-NEXT:    vpor %ymm1, %ymm0, %ymm0
+; AVX2-NEXT:    retq
 ;
 ; AVX512F-LABEL: bitselect_v4i64_broadcast_rrm:
 ; AVX512F:       # %bb.0:
-; AVX512F-NEXT:    vbroadcastsd (%rdi), %ymm2
-; AVX512F-NEXT:    vandps %ymm2, %ymm0, %ymm0
-; AVX512F-NEXT:    vandnps %ymm1, %ymm2, %ymm1
-; AVX512F-NEXT:    vorps %ymm1, %ymm0, %ymm0
+; AVX512F-NEXT:    vpbroadcastq (%rdi), %ymm2
+; AVX512F-NEXT:    vpand %ymm2, %ymm0, %ymm0
+; AVX512F-NEXT:    vpternlogq $15, %zmm2, %zmm2, %zmm2
+; AVX512F-NEXT:    vpbroadcastq %xmm2, %ymm2
+; AVX512F-NEXT:    vpand %ymm2, %ymm1, %ymm1
+; AVX512F-NEXT:    vpor %ymm1, %ymm0, %ymm0
 ; AVX512F-NEXT:    retq
 ;
 ; AVX512VL-LABEL: bitselect_v4i64_broadcast_rrm:
 ; AVX512VL:       # %bb.0:
-; AVX512VL-NEXT:    vpternlogq $228, (%rdi){1to4}, %ymm1, %ymm0
+; AVX512VL-NEXT:    vpbroadcastq (%rdi), %ymm2
+; AVX512VL-NEXT:    vpand %ymm2, %ymm0, %ymm0
+; AVX512VL-NEXT:    # kill: def $xmm2 killed $xmm2 killed $ymm2
+; AVX512VL-NEXT:    vpternlogq $15, %xmm2, %xmm2, %xmm2
+; AVX512VL-NEXT:    vpbroadcastq %xmm2, %ymm2
+; AVX512VL-NEXT:    vpternlogq $248, %ymm2, %ymm1, %ymm0
 ; AVX512VL-NEXT:    retq
   %a2 = load i64, ptr %p2
   %1 = insertelement <4 x i64> undef, i64 %a2, i32 0
@@ -914,19 +941,35 @@ define <8 x i64> @bitselect_v8i64_broadcast_rrr(<8 x i64> %a0, <8 x i64> %a1, i6
 ; AVX2:       # %bb.0:
 ; AVX2-NEXT:    vmovq %rdi, %xmm4
 ; AVX2-NEXT:    vpbroadcastq %xmm4, %ymm4
+; AVX2-NEXT:    vpcmpeqd %xmm5, %xmm5, %xmm5
+; AVX2-NEXT:    vpxor %xmm5, %xmm4, %xmm5
+; AVX2-NEXT:    vpbroadcastq %xmm5, %ymm5
 ; AVX2-NEXT:    vpand %ymm4, %ymm1, %ymm1
 ; AVX2-NEXT:    vpand %ymm4, %ymm0, %ymm0
-; AVX2-NEXT:    vpandn %ymm3, %ymm4, %ymm3
+; AVX2-NEXT:    vpand %ymm5, %ymm3, %ymm3
 ; AVX2-NEXT:    vpor %ymm3, %ymm1, %ymm1
-; AVX2-NEXT:    vpandn %ymm2, %ymm4, %ymm2
+; AVX2-NEXT:    vpand %ymm5, %ymm2, %ymm2
 ; AVX2-NEXT:    vpor %ymm2, %ymm0, %ymm0
 ; AVX2-NEXT:    retq
 ;
-; AVX512-LABEL: bitselect_v8i64_broadcast_rrr:
-; AVX512:       # %bb.0:
-; AVX512-NEXT:    vpbroadcastq %rdi, %zmm2
-; AVX512-NEXT:    vpternlogq $226, %zmm1, %zmm2, %zmm0
-; AVX512-NEXT:    retq
+; AVX512F-LABEL: bitselect_v8i64_broadcast_rrr:
+; AVX512F:       # %bb.0:
+; AVX512F-NEXT:    vpbroadcastq %rdi, %zmm2
+; AVX512F-NEXT:    vpandq %zmm2, %zmm0, %zmm0
+; AVX512F-NEXT:    vpternlogq $15, %zmm2, %zmm2, %zmm2
+; AVX512F-NEXT:    vpbroadcastq %xmm2, %zmm2
+; AVX512F-NEXT:    vpternlogq $248, %zmm2, %zmm1, %zmm0
+; AVX512F-NEXT:    retq
+;
+; AVX512VL-LABEL: bitselect_v8i64_broadcast_rrr:
+; AVX512VL:       # %bb.0:
+; AVX512VL-NEXT:    vpbroadcastq %rdi, %zmm2
+; AVX512VL-NEXT:    vpandq %zmm2, %zmm0, %zmm0
+; AVX512VL-NEXT:    # kill: def $xmm2 killed $xmm2 killed $zmm2
+; AVX512VL-NEXT:    vpternlogq $15, %xmm2, %xmm2, %xmm2
+; AVX512VL-NEXT:    vpbroadcastq %xmm2, %zmm2
+; AVX512VL-NEXT:    vpternlogq $248, %zmm2, %zmm1, %zmm0
+; AVX512VL-NEXT:    retq
   %1 = insertelement <8 x i64> undef, i64 %a2, i32 0
   %2 = shufflevector <8 x i64> %1, <8 x i64> undef, <8 x i32> zeroinitializer
   %3 = xor <8 x i64> %1, <i64 -1, i64 undef, i64 undef, i64 undef, i64 undef, i64 undef, i64 undef, i64 undef>
@@ -966,21 +1009,49 @@ define <8 x i64> @bitselect_v8i64_broadcast_rrm(<8 x i64> %a0, <8 x i64> %a1, pt
 ; XOP-NEXT:    vpcmov %ymm4, %ymm3, %ymm1, %ymm1
 ; XOP-NEXT:    retq
 ;
-; AVX-LABEL: bitselect_v8i64_broadcast_rrm:
-; AVX:       # %bb.0:
-; AVX-NEXT:    vbroadcastsd (%rdi), %ymm4
-; AVX-NEXT:    vandps %ymm4, %ymm1, %ymm1
-; AVX-NEXT:    vandps %ymm4, %ymm0, %ymm0
-; AVX-NEXT:    vandnps %ymm3, %ymm4, %ymm3
-; AVX-NEXT:    vorps %ymm3, %ymm1, %ymm1
-; AVX-NEXT:    vandnps %ymm2, %ymm4, %ymm2
-; AVX-NEXT:    vorps %ymm2, %ymm0, %ymm0
-; AVX-NEXT:    retq
+; AVX1-LABEL: bitselect_v8i64_broadcast_rrm:
+; AVX1:       # %bb.0:
+; AVX1-NEXT:    vbroadcastsd (%rdi), %ymm4
+; AVX1-NEXT:    vandps %ymm4, %ymm1, %ymm1
+; AVX1-NEXT:    vandps %ymm4, %ymm0, %ymm0
+; AVX1-NEXT:    vandnps %ymm3, %ymm4, %ymm3
+; AVX1-NEXT:    vorps %ymm3, %ymm1, %ymm1
+; AVX1-NEXT:    vandnps %ymm2, %ymm4, %ymm2
+; AVX1-NEXT:    vorps %ymm2, %ymm0, %ymm0
+; AVX1-NEXT:    retq
 ;
-; AVX512-LABEL: bitselect_v8i64_broadcast_rrm:
-; AVX512:       # %bb.0:
-; AVX512-NEXT:    vpternlogq $228, (%rdi){1to8}, %zmm1, %zmm0
-; AVX512-NEXT:    retq
+; AVX2-LABEL: bitselect_v8i64_broadcast_rrm:
+; AVX2:       # %bb.0:
+; AVX2-NEXT:    vpbroadcastq (%rdi), %ymm4
+; AVX2-NEXT:    vpcmpeqd %xmm5, %xmm5, %xmm5
+; AVX2-NEXT:    vpxor %xmm5, %xmm4, %xmm5
+; AVX2-NEXT:    vpbroadcastq %xmm5, %ymm5
+; AVX2-NEXT:    vpand %ymm4, %ymm1, %ymm1
+; AVX2-NEXT:    vpand %ymm4, %ymm0, %ymm0
+; AVX2-NEXT:    vpand %ymm5, %ymm3, %ymm3
+; AVX2-NEXT:    vpor %ymm3, %ymm1, %ymm1
+; AVX2-NEXT:    vpand %ymm5, %ymm2, %ymm2
+; AVX2-NEXT:    vpor %ymm2, %ymm0, %ymm0
+; AVX2-NEXT:    retq
+;
+; AVX512F-LABEL: bitselect_v8i64_broadcast_rrm:
+; AVX512F:       # %bb.0:
+; AVX512F-NEXT:    vpbroadcastq (%rdi), %zmm2
+; AVX512F-NEXT:    vpandq %zmm2, %zmm0, %zmm0
+; AVX512F-NEXT:    vpternlogq $15, %zmm2, %zmm2, %zmm2
+; AVX512F-NEXT:    vpbroadcastq %xmm2, %zmm2
+; AVX512F-NEXT:    vpternlogq $248, %zmm2, %zmm1, %zmm0
+; AVX512F-NEXT:    retq
+;
+; AVX512VL-LABEL: bitselect_v8i64_broadcast_rrm:
+; AVX512VL:       # %bb.0:
+; AVX512VL-NEXT:    vpbroadcastq (%rdi), %zmm2
+; AVX512VL-NEXT:    vpandq %zmm2, %zmm0, %zmm0
+; AVX512VL-NEXT:    # kill: def $xmm2 killed $xmm2 killed $zmm2
+; AVX512VL-NEXT:    vpternlogq $15, %xmm2, %xmm2, %xmm2
+; AVX512VL-NEXT:    vpbroadcastq %xmm2, %zmm2
+; AVX512VL-NEXT:    vpternlogq $248, %zmm2, %zmm1, %zmm0
+; AVX512VL-NEXT:    retq
   %a2 = load i64, ptr %p2
   %1 = insertelement <8 x i64> undef, i64 %a2, i32 0
   %2 = shufflevector <8 x i64> %1, <8 x i64> undef, <8 x i32> zeroinitializer

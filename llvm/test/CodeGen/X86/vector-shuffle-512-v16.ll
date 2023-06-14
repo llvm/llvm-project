@@ -586,8 +586,8 @@ define <16 x float> @insert_sub2_4(<16 x float> %base, <4 x float> %sub1, <4 x f
 define <16 x float> @insert_sub01_8(<16 x float> %base, <4 x float> %sub1, <4 x float> %sub2, <4 x float> %sub3, <4 x float> %sub4) {
 ; ALL-LABEL: insert_sub01_8:
 ; ALL:       # %bb.0:
-; ALL-NEXT:    # kill: def $xmm1 killed $xmm1 def $ymm1
-; ALL-NEXT:    vinsertf128 $1, %xmm2, %ymm1, %ymm1
+; ALL-NEXT:    # kill: def $xmm1 killed $xmm1 def $zmm1
+; ALL-NEXT:    vinsertf32x4 $1, %xmm2, %zmm1, %zmm1
 ; ALL-NEXT:    vinsertf64x4 $1, %ymm1, %zmm0, %zmm0
 ; ALL-NEXT:    retq
   %sub12 = shufflevector <4 x float> %sub1, <4 x float> %sub2, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
@@ -600,9 +600,9 @@ define <16 x float> @insert_sub01_8(<16 x float> %base, <4 x float> %sub1, <4 x 
 define <16 x float> @insert_sub23_0(<16 x float> %base, <4 x float> %sub1, <4 x float> %sub2, <4 x float> %sub3, <4 x float> %sub4) {
 ; ALL-LABEL: insert_sub23_0:
 ; ALL:       # %bb.0:
-; ALL-NEXT:    # kill: def $xmm3 killed $xmm3 def $ymm3
-; ALL-NEXT:    vinsertf128 $1, %xmm4, %ymm3, %ymm1
-; ALL-NEXT:    vinsertf64x4 $0, %ymm1, %zmm0, %zmm0
+; ALL-NEXT:    vinsertf32x4 $2, %xmm3, %zmm0, %zmm1
+; ALL-NEXT:    vinsertf32x4 $3, %xmm4, %zmm1, %zmm1
+; ALL-NEXT:    vshuff64x2 {{.*#+}} zmm0 = zmm1[4,5,6,7],zmm0[4,5,6,7]
 ; ALL-NEXT:    retq
   %sub12 = shufflevector <4 x float> %sub1, <4 x float> %sub2, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
   %sub34 = shufflevector <4 x float> %sub3, <4 x float> %sub4, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
@@ -865,8 +865,8 @@ define void @ispc_1864(ptr %arg) {
 ; ALL-NEXT:    vbroadcastss {{.*#+}} ymm0 = [-5.0E+0,-5.0E+0,-5.0E+0,-5.0E+0,-5.0E+0,-5.0E+0,-5.0E+0,-5.0E+0]
 ; ALL-NEXT:    vmulps 32(%rdi), %ymm0, %ymm0
 ; ALL-NEXT:    vcvtps2pd %ymm0, %zmm0
-; ALL-NEXT:    vshuff64x2 {{.*#+}} zmm0 = zmm0[2,3,4,5,4,5,6,7]
-; ALL-NEXT:    vmovapd %ymm0, {{[0-9]+}}(%rsp)
+; ALL-NEXT:    vextractf32x4 $2, %zmm0, {{[0-9]+}}(%rsp)
+; ALL-NEXT:    vextractf32x4 $1, %zmm0, {{[0-9]+}}(%rsp)
 ; ALL-NEXT:    movq %rbp, %rsp
 ; ALL-NEXT:    popq %rbp
 ; ALL-NEXT:    .cfi_def_cfa %rsp, 8

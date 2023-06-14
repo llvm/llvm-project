@@ -625,10 +625,10 @@ define void @vec256_i128(ptr %in.elt.ptr, ptr %out.vec.ptr) nounwind {
 ; ALL:       # %bb.0:
 ; ALL-NEXT:    movq (%rdi), %rax
 ; ALL-NEXT:    movq 8(%rdi), %rcx
-; ALL-NEXT:    notq %rcx
 ; ALL-NEXT:    notq %rax
-; ALL-NEXT:    movq %rax, (%rsi)
+; ALL-NEXT:    notq %rcx
 ; ALL-NEXT:    movq %rcx, 8(%rsi)
+; ALL-NEXT:    movq %rax, (%rsi)
 ; ALL-NEXT:    movq %rcx, 24(%rsi)
 ; ALL-NEXT:    movq %rax, 16(%rsi)
 ; ALL-NEXT:    retq
@@ -1038,10 +1038,10 @@ define void @vec384_i128(ptr %in.elt.ptr, ptr %out.vec.ptr) nounwind {
 ; ALL:       # %bb.0:
 ; ALL-NEXT:    movq (%rdi), %rax
 ; ALL-NEXT:    movq 8(%rdi), %rcx
-; ALL-NEXT:    notq %rcx
 ; ALL-NEXT:    notq %rax
-; ALL-NEXT:    movq %rax, (%rsi)
+; ALL-NEXT:    notq %rcx
 ; ALL-NEXT:    movq %rcx, 8(%rsi)
+; ALL-NEXT:    movq %rax, (%rsi)
 ; ALL-NEXT:    movq %rcx, 24(%rsi)
 ; ALL-NEXT:    movq %rax, 16(%rsi)
 ; ALL-NEXT:    movq %rcx, 40(%rsi)
@@ -1563,10 +1563,10 @@ define void @vec512_i128(ptr %in.elt.ptr, ptr %out.vec.ptr) nounwind {
 ; ALL:       # %bb.0:
 ; ALL-NEXT:    movq (%rdi), %rax
 ; ALL-NEXT:    movq 8(%rdi), %rcx
-; ALL-NEXT:    notq %rcx
 ; ALL-NEXT:    notq %rax
-; ALL-NEXT:    movq %rax, (%rsi)
+; ALL-NEXT:    notq %rcx
 ; ALL-NEXT:    movq %rcx, 8(%rsi)
+; ALL-NEXT:    movq %rax, (%rsi)
 ; ALL-NEXT:    movq %rcx, 24(%rsi)
 ; ALL-NEXT:    movq %rax, 16(%rsi)
 ; ALL-NEXT:    movq %rcx, 40(%rsi)
@@ -1590,22 +1590,22 @@ define void @vec512_i128(ptr %in.elt.ptr, ptr %out.vec.ptr) nounwind {
 define void @vec512_i256(ptr %in.elt.ptr, ptr %out.vec.ptr) nounwind {
 ; ALL-LABEL: vec512_i256:
 ; ALL:       # %bb.0:
-; ALL-NEXT:    movq 16(%rdi), %rax
-; ALL-NEXT:    movq 24(%rdi), %rcx
+; ALL-NEXT:    movq 24(%rdi), %rax
+; ALL-NEXT:    movq 16(%rdi), %rcx
 ; ALL-NEXT:    movq (%rdi), %rdx
 ; ALL-NEXT:    movq 8(%rdi), %rdi
-; ALL-NEXT:    notq %rdi
 ; ALL-NEXT:    notq %rdx
+; ALL-NEXT:    notq %rdi
 ; ALL-NEXT:    notq %rcx
 ; ALL-NEXT:    notq %rax
-; ALL-NEXT:    movq %rax, 16(%rsi)
-; ALL-NEXT:    movq %rcx, 24(%rsi)
-; ALL-NEXT:    movq %rdx, (%rsi)
+; ALL-NEXT:    movq %rax, 24(%rsi)
+; ALL-NEXT:    movq %rcx, 16(%rsi)
 ; ALL-NEXT:    movq %rdi, 8(%rsi)
-; ALL-NEXT:    movq %rax, 48(%rsi)
-; ALL-NEXT:    movq %rcx, 56(%rsi)
-; ALL-NEXT:    movq %rdx, 32(%rsi)
+; ALL-NEXT:    movq %rdx, (%rsi)
+; ALL-NEXT:    movq %rax, 56(%rsi)
+; ALL-NEXT:    movq %rcx, 48(%rsi)
 ; ALL-NEXT:    movq %rdi, 40(%rsi)
+; ALL-NEXT:    movq %rdx, 32(%rsi)
 ; ALL-NEXT:    retq
   %in.elt.not = load i256, ptr %in.elt.ptr, align 64
   %in.elt = xor i256 %in.elt.not, -1

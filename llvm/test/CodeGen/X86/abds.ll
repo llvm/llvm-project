@@ -129,21 +129,27 @@ define i16 @abd_ext_i16(i16 %a, i16 %b) nounwind {
 define i16 @abd_ext_i16_i32(i16 %a, i32 %b) nounwind {
 ; X86-LABEL: abd_ext_i16_i32:
 ; X86:       # %bb.0:
+; X86-NEXT:    pushl %esi
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
+; X86-NEXT:    movl %ecx, %edx
+; X86-NEXT:    sarl $31, %edx
 ; X86-NEXT:    movswl {{[0-9]+}}(%esp), %eax
-; X86-NEXT:    movl %eax, %edx
-; X86-NEXT:    subl %ecx, %edx
-; X86-NEXT:    negl %edx
+; X86-NEXT:    movl %eax, %esi
+; X86-NEXT:    sarl $31, %esi
 ; X86-NEXT:    subl %ecx, %eax
-; X86-NEXT:    cmovlel %edx, %eax
+; X86-NEXT:    sbbl %edx, %esi
+; X86-NEXT:    sarl $31, %esi
+; X86-NEXT:    xorl %esi, %eax
+; X86-NEXT:    subl %esi, %eax
 ; X86-NEXT:    # kill: def $ax killed $ax killed $eax
+; X86-NEXT:    popl %esi
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: abd_ext_i16_i32:
 ; X64:       # %bb.0:
+; X64-NEXT:    # kill: def $edi killed $edi def $rdi
+; X64-NEXT:    movswq %di, %rcx
 ; X64-NEXT:    movslq %esi, %rax
-; X64-NEXT:    movswl %di, %ecx
-; X64-NEXT:    movslq %ecx, %rcx
 ; X64-NEXT:    subq %rax, %rcx
 ; X64-NEXT:    movq %rcx, %rax
 ; X64-NEXT:    negq %rax
@@ -191,13 +197,19 @@ define i16 @abd_ext_i16_undef(i16 %a, i16 %b) nounwind {
 define i32 @abd_ext_i32(i32 %a, i32 %b) nounwind {
 ; X86-LABEL: abd_ext_i32:
 ; X86:       # %bb.0:
+; X86-NEXT:    pushl %esi
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
+; X86-NEXT:    movl %ecx, %edx
+; X86-NEXT:    sarl $31, %edx
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X86-NEXT:    movl %eax, %edx
-; X86-NEXT:    subl %ecx, %edx
-; X86-NEXT:    negl %edx
+; X86-NEXT:    movl %eax, %esi
+; X86-NEXT:    sarl $31, %esi
 ; X86-NEXT:    subl %ecx, %eax
-; X86-NEXT:    cmovlel %edx, %eax
+; X86-NEXT:    sbbl %edx, %esi
+; X86-NEXT:    sarl $31, %esi
+; X86-NEXT:    xorl %esi, %eax
+; X86-NEXT:    subl %esi, %eax
+; X86-NEXT:    popl %esi
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: abd_ext_i32:
@@ -221,20 +233,26 @@ define i32 @abd_ext_i32(i32 %a, i32 %b) nounwind {
 define i32 @abd_ext_i32_i16(i32 %a, i16 %b) nounwind {
 ; X86-LABEL: abd_ext_i32_i16:
 ; X86:       # %bb.0:
+; X86-NEXT:    pushl %esi
 ; X86-NEXT:    movswl {{[0-9]+}}(%esp), %ecx
+; X86-NEXT:    movl %ecx, %edx
+; X86-NEXT:    sarl $31, %edx
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X86-NEXT:    movl %eax, %edx
-; X86-NEXT:    subl %ecx, %edx
-; X86-NEXT:    negl %edx
+; X86-NEXT:    movl %eax, %esi
+; X86-NEXT:    sarl $31, %esi
 ; X86-NEXT:    subl %ecx, %eax
-; X86-NEXT:    cmovlel %edx, %eax
+; X86-NEXT:    sbbl %edx, %esi
+; X86-NEXT:    sarl $31, %esi
+; X86-NEXT:    xorl %esi, %eax
+; X86-NEXT:    subl %esi, %eax
+; X86-NEXT:    popl %esi
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: abd_ext_i32_i16:
 ; X64:       # %bb.0:
+; X64-NEXT:    # kill: def $esi killed $esi def $rsi
 ; X64-NEXT:    movslq %edi, %rcx
-; X64-NEXT:    movswl %si, %eax
-; X64-NEXT:    cltq
+; X64-NEXT:    movswq %si, %rax
 ; X64-NEXT:    subq %rax, %rcx
 ; X64-NEXT:    movq %rcx, %rax
 ; X64-NEXT:    negq %rax
@@ -252,13 +270,19 @@ define i32 @abd_ext_i32_i16(i32 %a, i16 %b) nounwind {
 define i32 @abd_ext_i32_undef(i32 %a, i32 %b) nounwind {
 ; X86-LABEL: abd_ext_i32_undef:
 ; X86:       # %bb.0:
+; X86-NEXT:    pushl %esi
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
+; X86-NEXT:    movl %ecx, %edx
+; X86-NEXT:    sarl $31, %edx
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X86-NEXT:    movl %eax, %edx
-; X86-NEXT:    subl %ecx, %edx
-; X86-NEXT:    negl %edx
+; X86-NEXT:    movl %eax, %esi
+; X86-NEXT:    sarl $31, %esi
 ; X86-NEXT:    subl %ecx, %eax
-; X86-NEXT:    cmovlel %edx, %eax
+; X86-NEXT:    sbbl %edx, %esi
+; X86-NEXT:    sarl $31, %esi
+; X86-NEXT:    xorl %esi, %eax
+; X86-NEXT:    subl %esi, %eax
+; X86-NEXT:    popl %esi
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: abd_ext_i32_undef:

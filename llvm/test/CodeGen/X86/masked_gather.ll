@@ -139,8 +139,9 @@ define <4 x float> @gather_v4f32_ptr_v4i32(<4 x ptr> %ptr, <4 x i32> %trigger, <
 ; AVX512F:       # %bb.0:
 ; AVX512F-NEXT:    # kill: def $xmm1 killed $xmm1 def $zmm1
 ; AVX512F-NEXT:    vptestnmd %zmm1, %zmm1, %k0
+; AVX512F-NEXT:    kmovw %k0, %ecx
 ; AVX512F-NEXT:    kmovw %k0, %eax
-; AVX512F-NEXT:    testb $1, %al
+; AVX512F-NEXT:    testb $1, %cl
 ; AVX512F-NEXT:    je .LBB0_2
 ; AVX512F-NEXT:  # %bb.1: # %cond.load
 ; AVX512F-NEXT:    vmovq %xmm0, %rcx
@@ -338,8 +339,9 @@ define <4 x float> @gather_v4f32_v4i32_v4i32(ptr %base, <4 x i32> %idx, <4 x i32
 ; AVX512F-NEXT:    vpsllq $2, %ymm0, %ymm0
 ; AVX512F-NEXT:    vpaddq %ymm0, %ymm3, %ymm0
 ; AVX512F-NEXT:    vptestnmd %zmm1, %zmm1, %k0
+; AVX512F-NEXT:    kmovw %k0, %ecx
 ; AVX512F-NEXT:    kmovw %k0, %eax
-; AVX512F-NEXT:    testb $1, %al
+; AVX512F-NEXT:    testb $1, %cl
 ; AVX512F-NEXT:    je .LBB1_2
 ; AVX512F-NEXT:  # %bb.1: # %cond.load
 ; AVX512F-NEXT:    vmovq %xmm0, %rcx
@@ -533,8 +535,9 @@ define <4 x float> @gather_v4f32_v4i64_v4i32(ptr %base, <4 x i64> %idx, <4 x i32
 ; AVX512F-NEXT:    vpsllq $2, %ymm0, %ymm0
 ; AVX512F-NEXT:    vpaddq %ymm0, %ymm3, %ymm0
 ; AVX512F-NEXT:    vptestnmd %zmm1, %zmm1, %k0
+; AVX512F-NEXT:    kmovw %k0, %ecx
 ; AVX512F-NEXT:    kmovw %k0, %eax
-; AVX512F-NEXT:    testb $1, %al
+; AVX512F-NEXT:    testb $1, %cl
 ; AVX512F-NEXT:    je .LBB2_2
 ; AVX512F-NEXT:  # %bb.1: # %cond.load
 ; AVX512F-NEXT:    vmovq %xmm0, %rcx

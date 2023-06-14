@@ -822,8 +822,8 @@ define void @and64_trunc_16_sign(i64 %x) nounwind {
 ;
 ; CHECK-X86-LABEL: and64_trunc_16_sign:
 ; CHECK-X86:       # %bb.0:
-; CHECK-X86-NEXT:    movl $32768, %eax # imm = 0x8000
-; CHECK-X86-NEXT:    andl {{[0-9]+}}(%esp), %eax
+; CHECK-X86-NEXT:    movzwl {{[0-9]+}}(%esp), %eax
+; CHECK-X86-NEXT:    andl $32768, %eax # imm = 0x8000
 ; CHECK-X86-NEXT:    testw %ax, %ax
 ; CHECK-X86-NEXT:    js .LBB18_2
 ; CHECK-X86-NEXT:  # %bb.1: # %yes
@@ -867,7 +867,8 @@ define void @and64_trunc_16_sign_minsize(i64 %x) minsize nounwind {
 ;
 ; CHECK-X86-LABEL: and64_trunc_16_sign_minsize:
 ; CHECK-X86:       # %bb.0:
-; CHECK-X86-NEXT:    testw $-32768, {{[0-9]+}}(%esp) # imm = 0x8000
+; CHECK-X86-NEXT:    movzwl {{[0-9]+}}(%esp), %eax
+; CHECK-X86-NEXT:    testw $-32768, %ax # imm = 0x8000
 ; CHECK-X86-NEXT:    js .LBB19_2
 ; CHECK-X86-NEXT:  # %bb.1: # %yes
 ; CHECK-X86-NEXT:    calll bar@PLT

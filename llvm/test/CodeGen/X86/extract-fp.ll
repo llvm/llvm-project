@@ -86,8 +86,8 @@ define float @ext_frem_v4f32_constant_op0(<4 x float> %x) {
 define float @ext_maxnum_v4f32(<4 x float> %x) nounwind {
 ; CHECK-LABEL: ext_maxnum_v4f32:
 ; CHECK:       # %bb.0:
+; CHECK-NEXT:    maxps {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
 ; CHECK-NEXT:    movhlps {{.*#+}} xmm0 = xmm0[1,1]
-; CHECK-NEXT:    maxss {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
 ; CHECK-NEXT:    retq
   %v = call <4 x float> @llvm.maxnum.v4f32(<4 x float> %x, <4 x float> <float 0.0, float 1.0, float 2.0, float 3.0>)
   %r = extractelement <4 x float> %v, i32 2

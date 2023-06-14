@@ -85,11 +85,11 @@ define float @fdiv_fneg_combine(float %a0, float %a1, float %a2) #0 {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    movaps %xmm0, %xmm3
 ; CHECK-NEXT:    subss %xmm1, %xmm3
+; CHECK-NEXT:    mulss %xmm2, %xmm3
 ; CHECK-NEXT:    subss %xmm0, %xmm1
-; CHECK-NEXT:    mulss %xmm2, %xmm1
-; CHECK-NEXT:    subss %xmm2, %xmm3
-; CHECK-NEXT:    divss %xmm3, %xmm1
-; CHECK-NEXT:    movaps %xmm1, %xmm0
+; CHECK-NEXT:    addss %xmm2, %xmm1
+; CHECK-NEXT:    divss %xmm1, %xmm3
+; CHECK-NEXT:    movaps %xmm3, %xmm0
 ; CHECK-NEXT:    retq
   %sub1 = fsub fast float %a0, %a1
   %mul2 = fmul fast float %sub1, %a2

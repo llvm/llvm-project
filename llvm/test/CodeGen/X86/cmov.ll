@@ -216,7 +216,7 @@ define i32 @smin(i32 %x) {
 ; CHECK-NEXT:    testl %edi, %edi
 ; CHECK-NEXT:    notl %edi
 ; CHECK-NEXT:    movl $-1, %eax
-; CHECK-NEXT:    cmovnsl %edi, %eax
+; CHECK-NEXT:    cmovgl %edi, %eax
 ; CHECK-NEXT:    retq
   %not_x = xor i32 %x, -1
   %1 = icmp slt i32 %not_x, -1

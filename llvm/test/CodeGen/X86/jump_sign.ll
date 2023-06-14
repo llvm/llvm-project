@@ -228,11 +228,13 @@ define void @func_o() nounwind uwtable {
 ; CHECK-NEXT:    jne .LBB12_8
 ; CHECK-NEXT:  # %bb.4: # %if.end29
 ; CHECK-NEXT:    movzwl (%eax), %eax
-; CHECK-NEXT:    imull $-13107, %eax, %eax # imm = 0xCCCD
-; CHECK-NEXT:    rorw %ax
 ; CHECK-NEXT:    movzwl %ax, %eax
-; CHECK-NEXT:    cmpl $6554, %eax # imm = 0x199A
-; CHECK-NEXT:    jae .LBB12_5
+; CHECK-NEXT:    imull $52429, %eax, %ecx # imm = 0xCCCD
+; CHECK-NEXT:    shrl $18, %ecx
+; CHECK-NEXT:    andl $-2, %ecx
+; CHECK-NEXT:    leal (%ecx,%ecx,4), %ecx
+; CHECK-NEXT:    cmpw %cx, %ax
+; CHECK-NEXT:    jne .LBB12_5
 ; CHECK-NEXT:  .LBB12_8: # %if.then44
 ; CHECK-NEXT:    xorl %eax, %eax
 ; CHECK-NEXT:    testb %al, %al
@@ -388,11 +390,10 @@ define i32 @func_test1(i32 %p1) nounwind uwtable {
 ; CHECK-LABEL: func_test1:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    movl b, %eax
-; CHECK-NEXT:    xorl %ecx, %ecx
 ; CHECK-NEXT:    cmpl {{[0-9]+}}(%esp), %eax
 ; CHECK-NEXT:    setb %cl
 ; CHECK-NEXT:    movl a, %eax
-; CHECK-NEXT:    testl %eax, %ecx
+; CHECK-NEXT:    testb %al, %cl
 ; CHECK-NEXT:    je .LBB18_2
 ; CHECK-NEXT:  # %bb.1: # %if.then
 ; CHECK-NEXT:    decl %eax

@@ -178,8 +178,8 @@ define i1 @length3_eq(ptr %X, ptr %Y) nounwind {
 ; X86-NEXT:    movzwl (%ecx), %edx
 ; X86-NEXT:    xorw (%eax), %dx
 ; X86-NEXT:    movzbl 2(%ecx), %ecx
-; X86-NEXT:    xorb 2(%eax), %cl
-; X86-NEXT:    movzbl %cl, %eax
+; X86-NEXT:    movzbl 2(%eax), %eax
+; X86-NEXT:    xorl %ecx, %eax
 ; X86-NEXT:    orw %dx, %ax
 ; X86-NEXT:    setne %al
 ; X86-NEXT:    retl
@@ -303,8 +303,8 @@ define i1 @length5_eq(ptr %X, ptr %Y) nounwind {
 ; X86-NEXT:    movl (%ecx), %edx
 ; X86-NEXT:    xorl (%eax), %edx
 ; X86-NEXT:    movzbl 4(%ecx), %ecx
-; X86-NEXT:    xorb 4(%eax), %cl
-; X86-NEXT:    movzbl %cl, %eax
+; X86-NEXT:    movzbl 4(%eax), %eax
+; X86-NEXT:    xorl %ecx, %eax
 ; X86-NEXT:    orl %edx, %eax
 ; X86-NEXT:    setne %al
 ; X86-NEXT:    retl
@@ -506,8 +506,8 @@ define i1 @length9_eq(ptr %X, ptr %Y) nounwind {
 ; X86-NEXT:    xorl 4(%eax), %esi
 ; X86-NEXT:    orl %edx, %esi
 ; X86-NEXT:    movzbl 8(%ecx), %ecx
-; X86-NEXT:    xorb 8(%eax), %cl
-; X86-NEXT:    movzbl %cl, %eax
+; X86-NEXT:    movzbl 8(%eax), %eax
+; X86-NEXT:    xorl %ecx, %eax
 ; X86-NEXT:    orl %esi, %eax
 ; X86-NEXT:    sete %al
 ; X86-NEXT:    popl %esi
@@ -529,8 +529,8 @@ define i1 @length10_eq(ptr %X, ptr %Y) nounwind {
 ; X86-NEXT:    xorl 4(%eax), %esi
 ; X86-NEXT:    orl %edx, %esi
 ; X86-NEXT:    movzwl 8(%ecx), %ecx
-; X86-NEXT:    xorw 8(%eax), %cx
-; X86-NEXT:    movzwl %cx, %eax
+; X86-NEXT:    movzwl 8(%eax), %eax
+; X86-NEXT:    xorl %ecx, %eax
 ; X86-NEXT:    orl %esi, %eax
 ; X86-NEXT:    sete %al
 ; X86-NEXT:    popl %esi
@@ -637,8 +637,8 @@ define i1 @length13_eq(ptr %X, ptr %Y) nounwind {
 ; X86-NEXT:    movl 8(%edx), %esi
 ; X86-NEXT:    xorl 8(%ecx), %esi
 ; X86-NEXT:    movzbl 12(%edx), %edx
-; X86-NEXT:    xorb 12(%ecx), %dl
-; X86-NEXT:    movzbl %dl, %ecx
+; X86-NEXT:    movzbl 12(%ecx), %ecx
+; X86-NEXT:    xorl %edx, %ecx
 ; X86-NEXT:    orl %esi, %ecx
 ; X86-NEXT:    orl %eax, %ecx
 ; X86-NEXT:    sete %al
@@ -663,8 +663,8 @@ define i1 @length14_eq(ptr %X, ptr %Y) nounwind {
 ; X86-NEXT:    movl 8(%edx), %esi
 ; X86-NEXT:    xorl 8(%ecx), %esi
 ; X86-NEXT:    movzwl 12(%edx), %edx
-; X86-NEXT:    xorw 12(%ecx), %dx
-; X86-NEXT:    movzwl %dx, %ecx
+; X86-NEXT:    movzwl 12(%ecx), %ecx
+; X86-NEXT:    xorl %edx, %ecx
 ; X86-NEXT:    orl %esi, %ecx
 ; X86-NEXT:    orl %eax, %ecx
 ; X86-NEXT:    sete %al

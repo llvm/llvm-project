@@ -16,9 +16,9 @@ define void @cpuid(ptr %data) nounwind {
 ; CHECK-NEXT:    ## InlineAsm Start
 ; CHECK-NEXT:    cpuid
 ; CHECK-NEXT:    ## InlineAsm End
-; CHECK-NEXT:    movl %ebx, 8(%esi)
-; CHECK-NEXT:    movl %ecx, 12(%esi)
 ; CHECK-NEXT:    movl %edx, 16(%esi)
+; CHECK-NEXT:    movl %ecx, 12(%esi)
+; CHECK-NEXT:    movl %ebx, 8(%esi)
 ; CHECK-NEXT:    movl %eax, 4(%esi)
 ; CHECK-NEXT:    popl %esi
 ; CHECK-NEXT:    popl %ebx

@@ -13,8 +13,9 @@
 define dso_local void @redundant_stores_merging() {
 ; CHECK-LABEL: redundant_stores_merging:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    movabsq $1958505086977, %rax # imm = 0x1C800000001
+; CHECK-NEXT:    movabsq $528280977409, %rax # imm = 0x7B00000001
 ; CHECK-NEXT:    movq %rax, e+4(%rip)
+; CHECK-NEXT:    movl $456, e+8(%rip) # imm = 0x1C8
 ; CHECK-NEXT:    retq
   store i32 1, ptr getelementptr inbounds (%structTy, ptr @e, i64 0, i32 1), align 4
   store i32 123, ptr getelementptr inbounds (%structTy, ptr @e, i64 0, i32 2), align 4
@@ -26,9 +27,8 @@ define dso_local void @redundant_stores_merging() {
 define dso_local void @redundant_stores_merging_reverse() {
 ; CHECK-LABEL: redundant_stores_merging_reverse:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    movabsq $528280977409, %rax # imm = 0x7B00000001
+; CHECK-NEXT:    movabsq $1958505086977, %rax # imm = 0x1C800000001
 ; CHECK-NEXT:    movq %rax, e+4(%rip)
-; CHECK-NEXT:    movl $456, e+8(%rip) # imm = 0x1C8
 ; CHECK-NEXT:    retq
   store i32 123, ptr getelementptr inbounds (%structTy, ptr @e, i64 0, i32 2), align 4
   store i32 456, ptr getelementptr inbounds (%structTy, ptr @e, i64 0, i32 2), align 4
@@ -359,14 +359,12 @@ define dso_local void @rotate64_iterate(ptr %p) {
 define dso_local void @rotate32_consecutive(ptr %p) {
 ; CHECK-LABEL: rotate32_consecutive:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    movzwl (%rdi), %eax
-; CHECK-NEXT:    movzwl 2(%rdi), %ecx
-; CHECK-NEXT:    movzwl 4(%rdi), %edx
-; CHECK-NEXT:    movzwl 6(%rdi), %esi
-; CHECK-NEXT:    movw %cx, 84(%rdi)
-; CHECK-NEXT:    movw %ax, 86(%rdi)
-; CHECK-NEXT:    movw %si, 88(%rdi)
-; CHECK-NEXT:    movw %dx, 90(%rdi)
+; CHECK-NEXT:    movl (%rdi), %eax
+; CHECK-NEXT:    movl 4(%rdi), %ecx
+; CHECK-NEXT:    roll $16, %eax
+; CHECK-NEXT:    roll $16, %ecx
+; CHECK-NEXT:    movl %eax, 84(%rdi)
+; CHECK-NEXT:    movl %ecx, 88(%rdi)
 ; CHECK-NEXT:    retq
   %p1 = getelementptr i16, ptr %p, i64 1
   %p2 = getelementptr i16, ptr %p, i64 2
@@ -433,7 +431,12 @@ define dso_local void @trunc_i16_to_i8(i16 %x, ptr %p) {
 define dso_local void @trunc_i32_to_i8(i32 %x, ptr %p) {
 ; CHECK-LABEL: trunc_i32_to_i8:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    movl %edi, (%rsi)
+; CHECK-NEXT:    movl %edi, %eax
+; CHECK-NEXT:    movw %di, (%rsi)
+; CHECK-NEXT:    shrl $16, %edi
+; CHECK-NEXT:    shrl $24, %eax
+; CHECK-NEXT:    movb %dil, 2(%rsi)
+; CHECK-NEXT:    movb %al, 3(%rsi)
 ; CHECK-NEXT:    retq
   %t1 = trunc i32 %x to i8
   %sh1 = lshr i32 %x, 8
@@ -499,7 +502,25 @@ define dso_local void @be_i32_to_i16_order(i32 %x, ptr %p0) {
 define dso_local void @trunc_i64_to_i8(i64 %x, ptr %p) {
 ; CHECK-LABEL: trunc_i64_to_i8:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    movq %rdi, (%rsi)
+; CHECK-NEXT:    movl %edi, %eax
+; CHECK-NEXT:    movq %rdi, %rcx
+; CHECK-NEXT:    movq %rdi, %rdx
+; CHECK-NEXT:    movq %rdi, %r8
+; CHECK-NEXT:    movq %rdi, %r9
+; CHECK-NEXT:    movw %di, (%rsi)
+; CHECK-NEXT:    # kill: def $edi killed $edi killed $rdi
+; CHECK-NEXT:    shrl $16, %edi
+; CHECK-NEXT:    shrl $24, %eax
+; CHECK-NEXT:    shrq $32, %rcx
+; CHECK-NEXT:    shrq $40, %rdx
+; CHECK-NEXT:    shrq $48, %r8
+; CHECK-NEXT:    shrq $56, %r9
+; CHECK-NEXT:    movb %dil, 2(%rsi)
+; CHECK-NEXT:    movb %al, 3(%rsi)
+; CHECK-NEXT:    movb %cl, 4(%rsi)
+; CHECK-NEXT:    movb %dl, 5(%rsi)
+; CHECK-NEXT:    movb %r8b, 6(%rsi)
+; CHECK-NEXT:    movb %r9b, 7(%rsi)
 ; CHECK-NEXT:    retq
   %t1 = trunc i64 %x to i8
   %sh1 = lshr i64 %x, 8
@@ -537,7 +558,12 @@ define dso_local void @trunc_i64_to_i8(i64 %x, ptr %p) {
 define dso_local void @trunc_i64_to_i16(i64 %x, ptr %p) {
 ; CHECK-LABEL: trunc_i64_to_i16:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    movq %rdi, (%rsi)
+; CHECK-NEXT:    movq %rdi, %rax
+; CHECK-NEXT:    movl %edi, (%rsi)
+; CHECK-NEXT:    shrq $32, %rdi
+; CHECK-NEXT:    shrq $48, %rax
+; CHECK-NEXT:    movw %di, 4(%rsi)
+; CHECK-NEXT:    movw %ax, 6(%rsi)
 ; CHECK-NEXT:    retq
   %t1 = trunc i64 %x to i16
   %sh1 = lshr i64 %x, 16

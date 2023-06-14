@@ -30,11 +30,10 @@ define i32 @masked_merge0(i32 %a0, i32 %a1, i32 %a2) {
 define i16 @masked_merge1(i16 %a0, i16 %a1, i16 %a2) {
 ; NOBMI-LABEL: masked_merge1:
 ; NOBMI:       # %bb.0:
-; NOBMI-NEXT:    movl %edi, %eax
-; NOBMI-NEXT:    andl %edi, %esi
-; NOBMI-NEXT:    notl %eax
-; NOBMI-NEXT:    andl %edx, %eax
-; NOBMI-NEXT:    orl %esi, %eax
+; NOBMI-NEXT:    movl %esi, %eax
+; NOBMI-NEXT:    xorl %edx, %eax
+; NOBMI-NEXT:    andl %edi, %eax
+; NOBMI-NEXT:    xorl %edx, %eax
 ; NOBMI-NEXT:    # kill: def $ax killed $ax killed $eax
 ; NOBMI-NEXT:    retq
 ;

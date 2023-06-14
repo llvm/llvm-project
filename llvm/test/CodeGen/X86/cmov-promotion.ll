@@ -30,20 +30,19 @@ define i16 @cmov_zpromotion_8_to_16(i1 %c) {
 define i32 @cmov_zpromotion_8_to_32(i1 %c) {
 ; CMOV-LABEL: cmov_zpromotion_8_to_32:
 ; CMOV:       # %bb.0:
-; CMOV-NEXT:    testb $1, %dil
-; CMOV-NEXT:    movl $126, %ecx
-; CMOV-NEXT:    movl $255, %eax
-; CMOV-NEXT:    cmovnel %ecx, %eax
+; CMOV-NEXT:    andb $1, %dil
+; CMOV-NEXT:    decb %dil
+; CMOV-NEXT:    orb $126, %dil
+; CMOV-NEXT:    movzbl %dil, %eax
 ; CMOV-NEXT:    retq
 ;
 ; NO_CMOV-LABEL: cmov_zpromotion_8_to_32:
 ; NO_CMOV:       # %bb.0:
-; NO_CMOV-NEXT:    testb $1, {{[0-9]+}}(%esp)
-; NO_CMOV-NEXT:    movl $126, %eax
-; NO_CMOV-NEXT:    jne .LBB1_2
-; NO_CMOV-NEXT:  # %bb.1:
-; NO_CMOV-NEXT:    movl $255, %eax
-; NO_CMOV-NEXT:  .LBB1_2:
+; NO_CMOV-NEXT:    movzbl {{[0-9]+}}(%esp), %eax
+; NO_CMOV-NEXT:    andb $1, %al
+; NO_CMOV-NEXT:    decb %al
+; NO_CMOV-NEXT:    orb $126, %al
+; NO_CMOV-NEXT:    movzbl %al, %eax
 ; NO_CMOV-NEXT:    retl
   %t0 = select i1 %c, i8 12414, i8 -1
   %ret = zext i8 %t0 to i32
@@ -53,20 +52,19 @@ define i32 @cmov_zpromotion_8_to_32(i1 %c) {
 define i64 @cmov_zpromotion_8_to_64(i1 %c) {
 ; CMOV-LABEL: cmov_zpromotion_8_to_64:
 ; CMOV:       # %bb.0:
-; CMOV-NEXT:    testb $1, %dil
-; CMOV-NEXT:    movl $126, %ecx
-; CMOV-NEXT:    movl $255, %eax
-; CMOV-NEXT:    cmovneq %rcx, %rax
+; CMOV-NEXT:    andb $1, %dil
+; CMOV-NEXT:    decb %dil
+; CMOV-NEXT:    orb $126, %dil
+; CMOV-NEXT:    movzbl %dil, %eax
 ; CMOV-NEXT:    retq
 ;
 ; NO_CMOV-LABEL: cmov_zpromotion_8_to_64:
 ; NO_CMOV:       # %bb.0:
-; NO_CMOV-NEXT:    testb $1, {{[0-9]+}}(%esp)
-; NO_CMOV-NEXT:    movl $126, %eax
-; NO_CMOV-NEXT:    jne .LBB2_2
-; NO_CMOV-NEXT:  # %bb.1:
-; NO_CMOV-NEXT:    movl $255, %eax
-; NO_CMOV-NEXT:  .LBB2_2:
+; NO_CMOV-NEXT:    movzbl {{[0-9]+}}(%esp), %eax
+; NO_CMOV-NEXT:    andb $1, %al
+; NO_CMOV-NEXT:    decb %al
+; NO_CMOV-NEXT:    orb $126, %al
+; NO_CMOV-NEXT:    movzbl %al, %eax
 ; NO_CMOV-NEXT:    xorl %edx, %edx
 ; NO_CMOV-NEXT:    retl
   %t0 = select i1 %c, i8 12414, i8 -1
@@ -77,20 +75,19 @@ define i64 @cmov_zpromotion_8_to_64(i1 %c) {
 define i32 @cmov_zpromotion_16_to_32(i1 %c) {
 ; CMOV-LABEL: cmov_zpromotion_16_to_32:
 ; CMOV:       # %bb.0:
-; CMOV-NEXT:    testb $1, %dil
-; CMOV-NEXT:    movl $12414, %ecx # imm = 0x307E
-; CMOV-NEXT:    movl $65535, %eax # imm = 0xFFFF
-; CMOV-NEXT:    cmovnel %ecx, %eax
+; CMOV-NEXT:    andl $1, %edi
+; CMOV-NEXT:    decl %edi
+; CMOV-NEXT:    orl $12414, %edi # imm = 0x307E
+; CMOV-NEXT:    movzwl %di, %eax
 ; CMOV-NEXT:    retq
 ;
 ; NO_CMOV-LABEL: cmov_zpromotion_16_to_32:
 ; NO_CMOV:       # %bb.0:
-; NO_CMOV-NEXT:    testb $1, {{[0-9]+}}(%esp)
-; NO_CMOV-NEXT:    movl $12414, %eax # imm = 0x307E
-; NO_CMOV-NEXT:    jne .LBB3_2
-; NO_CMOV-NEXT:  # %bb.1:
-; NO_CMOV-NEXT:    movl $65535, %eax # imm = 0xFFFF
-; NO_CMOV-NEXT:  .LBB3_2:
+; NO_CMOV-NEXT:    movzbl {{[0-9]+}}(%esp), %eax
+; NO_CMOV-NEXT:    andl $1, %eax
+; NO_CMOV-NEXT:    decl %eax
+; NO_CMOV-NEXT:    orl $12414, %eax # imm = 0x307E
+; NO_CMOV-NEXT:    movzwl %ax, %eax
 ; NO_CMOV-NEXT:    retl
   %t0 = select i1 %c, i16 12414, i16 -1
   %ret = zext i16 %t0 to i32
@@ -100,20 +97,19 @@ define i32 @cmov_zpromotion_16_to_32(i1 %c) {
 define i64 @cmov_zpromotion_16_to_64(i1 %c) {
 ; CMOV-LABEL: cmov_zpromotion_16_to_64:
 ; CMOV:       # %bb.0:
-; CMOV-NEXT:    testb $1, %dil
-; CMOV-NEXT:    movl $12414, %ecx # imm = 0x307E
-; CMOV-NEXT:    movl $65535, %eax # imm = 0xFFFF
-; CMOV-NEXT:    cmovneq %rcx, %rax
+; CMOV-NEXT:    andl $1, %edi
+; CMOV-NEXT:    decl %edi
+; CMOV-NEXT:    orl $12414, %edi # imm = 0x307E
+; CMOV-NEXT:    movzwl %di, %eax
 ; CMOV-NEXT:    retq
 ;
 ; NO_CMOV-LABEL: cmov_zpromotion_16_to_64:
 ; NO_CMOV:       # %bb.0:
-; NO_CMOV-NEXT:    testb $1, {{[0-9]+}}(%esp)
-; NO_CMOV-NEXT:    movl $12414, %eax # imm = 0x307E
-; NO_CMOV-NEXT:    jne .LBB4_2
-; NO_CMOV-NEXT:  # %bb.1:
-; NO_CMOV-NEXT:    movl $65535, %eax # imm = 0xFFFF
-; NO_CMOV-NEXT:  .LBB4_2:
+; NO_CMOV-NEXT:    movzbl {{[0-9]+}}(%esp), %eax
+; NO_CMOV-NEXT:    andl $1, %eax
+; NO_CMOV-NEXT:    decl %eax
+; NO_CMOV-NEXT:    orl $12414, %eax # imm = 0x307E
+; NO_CMOV-NEXT:    movzwl %ax, %eax
 ; NO_CMOV-NEXT:    xorl %edx, %edx
 ; NO_CMOV-NEXT:    retl
   %t0 = select i1 %c, i16 12414, i16 -1

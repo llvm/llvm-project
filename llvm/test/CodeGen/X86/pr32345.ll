@@ -72,9 +72,9 @@ define void @foo() {
 ;
 ; X64-LABEL: foo:
 ; X64:       # %bb.0: # %bb
-; X64-NEXT:    movzbl var_27(%rip), %ecx
 ; X64-NEXT:    movzwl var_22(%rip), %eax
 ; X64-NEXT:    movq %rax, -{{[0-9]+}}(%rsp)
+; X64-NEXT:    movzbl var_27(%rip), %ecx
 ; X64-NEXT:    addb $30, %cl
 ; X64-NEXT:    shrq %cl, %rax
 ; X64-NEXT:    movb %al, (%rax)
@@ -89,10 +89,10 @@ define void @foo() {
 ; 686-NEXT:    .cfi_def_cfa_register %ebp
 ; 686-NEXT:    andl $-8, %esp
 ; 686-NEXT:    subl $8, %esp
-; 686-NEXT:    movzbl var_27, %ecx
 ; 686-NEXT:    movzwl var_22, %eax
 ; 686-NEXT:    movl %eax, (%esp)
 ; 686-NEXT:    movl $0, {{[0-9]+}}(%esp)
+; 686-NEXT:    movzbl var_27, %ecx
 ; 686-NEXT:    addb $30, %cl
 ; 686-NEXT:    xorl %edx, %edx
 ; 686-NEXT:    shrdl %cl, %edx, %eax

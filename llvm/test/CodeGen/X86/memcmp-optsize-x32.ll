@@ -106,9 +106,9 @@ define i1 @length3_eq(ptr %X, ptr %Y) nounwind optsize {
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; X86-NEXT:    movzwl (%ecx), %edx
 ; X86-NEXT:    xorw (%eax), %dx
-; X86-NEXT:    movb 2(%ecx), %cl
-; X86-NEXT:    xorb 2(%eax), %cl
-; X86-NEXT:    movzbl %cl, %eax
+; X86-NEXT:    movzbl 2(%ecx), %ecx
+; X86-NEXT:    movzbl 2(%eax), %eax
+; X86-NEXT:    xorl %ecx, %eax
 ; X86-NEXT:    orw %dx, %ax
 ; X86-NEXT:    setne %al
 ; X86-NEXT:    retl
@@ -197,9 +197,9 @@ define i1 @length5_eq(ptr %X, ptr %Y) nounwind optsize {
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; X86-NEXT:    movl (%ecx), %edx
 ; X86-NEXT:    xorl (%eax), %edx
-; X86-NEXT:    movb 4(%ecx), %cl
-; X86-NEXT:    xorb 4(%eax), %cl
-; X86-NEXT:    movzbl %cl, %eax
+; X86-NEXT:    movzbl 4(%ecx), %ecx
+; X86-NEXT:    movzbl 4(%eax), %eax
+; X86-NEXT:    xorl %ecx, %eax
 ; X86-NEXT:    orl %edx, %eax
 ; X86-NEXT:    setne %al
 ; X86-NEXT:    retl

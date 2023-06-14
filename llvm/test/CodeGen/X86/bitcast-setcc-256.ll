@@ -329,26 +329,12 @@ define void @bitcast_32i8_store(ptr %p, <32 x i8> %a0) {
 ; AVX2-NEXT:    vzeroupper
 ; AVX2-NEXT:    retq
 ;
-; AVX512F-LABEL: bitcast_32i8_store:
-; AVX512F:       # %bb.0:
-; AVX512F-NEXT:    vpxor %xmm1, %xmm1, %xmm1
-; AVX512F-NEXT:    vpcmpgtb %ymm0, %ymm1, %ymm0
-; AVX512F-NEXT:    vpmovsxbd %xmm0, %zmm1
-; AVX512F-NEXT:    vptestmd %zmm1, %zmm1, %k0
-; AVX512F-NEXT:    vextracti128 $1, %ymm0, %xmm0
-; AVX512F-NEXT:    vpmovsxbd %xmm0, %zmm0
-; AVX512F-NEXT:    vptestmd %zmm0, %zmm0, %k1
-; AVX512F-NEXT:    kmovw %k1, 2(%rdi)
-; AVX512F-NEXT:    kmovw %k0, (%rdi)
-; AVX512F-NEXT:    vzeroupper
-; AVX512F-NEXT:    retq
-;
-; AVX512BW-LABEL: bitcast_32i8_store:
-; AVX512BW:       # %bb.0:
-; AVX512BW-NEXT:    vpmovb2m %ymm0, %k0
-; AVX512BW-NEXT:    kmovd %k0, (%rdi)
-; AVX512BW-NEXT:    vzeroupper
-; AVX512BW-NEXT:    retq
+; AVX512-LABEL: bitcast_32i8_store:
+; AVX512:       # %bb.0:
+; AVX512-NEXT:    vpmovmskb %ymm0, %eax
+; AVX512-NEXT:    movl %eax, (%rdi)
+; AVX512-NEXT:    vzeroupper
+; AVX512-NEXT:    retq
   %a1 = icmp slt <32 x i8> %a0, zeroinitializer
   %a2 = bitcast <32 x i1> %a1 to i32
   store i32 %a2, ptr %p
@@ -446,23 +432,12 @@ define void @bitcast_4i64_store(ptr %p, <4 x i64> %a0) {
 ; AVX12-NEXT:    vzeroupper
 ; AVX12-NEXT:    retq
 ;
-; AVX512F-LABEL: bitcast_4i64_store:
-; AVX512F:       # %bb.0:
-; AVX512F-NEXT:    vpxor %xmm1, %xmm1, %xmm1
-; AVX512F-NEXT:    vpcmpgtq %ymm0, %ymm1, %k0
-; AVX512F-NEXT:    kmovw %k0, %eax
-; AVX512F-NEXT:    movb %al, (%rdi)
-; AVX512F-NEXT:    vzeroupper
-; AVX512F-NEXT:    retq
-;
-; AVX512BW-LABEL: bitcast_4i64_store:
-; AVX512BW:       # %bb.0:
-; AVX512BW-NEXT:    vpxor %xmm1, %xmm1, %xmm1
-; AVX512BW-NEXT:    vpcmpgtq %ymm0, %ymm1, %k0
-; AVX512BW-NEXT:    kmovd %k0, %eax
-; AVX512BW-NEXT:    movb %al, (%rdi)
-; AVX512BW-NEXT:    vzeroupper
-; AVX512BW-NEXT:    retq
+; AVX512-LABEL: bitcast_4i64_store:
+; AVX512:       # %bb.0:
+; AVX512-NEXT:    vmovmskpd %ymm0, %eax
+; AVX512-NEXT:    movb %al, (%rdi)
+; AVX512-NEXT:    vzeroupper
+; AVX512-NEXT:    retq
   %a1 = icmp slt <4 x i64> %a0, zeroinitializer
   %a2 = bitcast <4 x i1> %a1 to i4
   store i4 %a2, ptr %p

@@ -6,6 +6,7 @@ define i32 @freeze_sext(i8 %a0) nounwind {
 ; X86-LABEL: freeze_sext:
 ; X86:       # %bb.0:
 ; X86-NEXT:    movsbl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    cwtl
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: freeze_sext:
@@ -40,6 +41,7 @@ define i32 @freeze_zext(i8 %a0) nounwind {
 ; X86-LABEL: freeze_zext:
 ; X86:       # %bb.0:
 ; X86-NEXT:    movzbl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    movzwl %ax, %eax
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: freeze_zext:

@@ -5,13 +5,17 @@
 define void @PR36250() nounwind {
 ; X86-LABEL: PR36250:
 ; X86:       # %bb.0:
-; X86-NEXT:    cmpl $0, (%eax)
+; X86-NEXT:    movl (%eax), %eax
+; X86-NEXT:    leal (%eax,%eax), %ecx
+; X86-NEXT:    orl %eax, %ecx
 ; X86-NEXT:    sete (%eax)
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: PR36250:
 ; X64:       # %bb.0:
-; X64-NEXT:    cmpq $0, (%rax)
+; X64-NEXT:    movq (%rax), %rax
+; X64-NEXT:    leaq (%rax,%rax), %rcx
+; X64-NEXT:    orq %rax, %rcx
 ; X64-NEXT:    sete (%rax)
 ; X64-NEXT:    retq
    %1 = load i448, ptr undef

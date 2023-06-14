@@ -135,22 +135,22 @@ define <4 x i64> @_mul4xi32toi64a(<4 x i32>, <4 x i32>) {
 ; SSE2-LABEL: _mul4xi32toi64a:
 ; SSE2:       # %bb.0:
 ; SSE2-NEXT:    pshufd {{.*#+}} xmm3 = xmm0[2,1,3,3]
+; SSE2-NEXT:    pshufd {{.*#+}} xmm4 = xmm0[0,1,1,3]
 ; SSE2-NEXT:    pshufd {{.*#+}} xmm2 = xmm1[2,1,3,3]
 ; SSE2-NEXT:    pmuludq %xmm3, %xmm2
-; SSE2-NEXT:    pshufd {{.*#+}} xmm1 = xmm1[0,1,1,3]
-; SSE2-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[0,1,1,3]
-; SSE2-NEXT:    pmuludq %xmm1, %xmm0
+; SSE2-NEXT:    pshufd {{.*#+}} xmm0 = xmm1[0,1,1,3]
+; SSE2-NEXT:    pmuludq %xmm4, %xmm0
 ; SSE2-NEXT:    movdqa %xmm2, %xmm1
 ; SSE2-NEXT:    retq
 ;
 ; SSE42-LABEL: _mul4xi32toi64a:
 ; SSE42:       # %bb.0:
 ; SSE42-NEXT:    pshufd {{.*#+}} xmm3 = xmm0[2,1,3,3]
+; SSE42-NEXT:    pmovzxdq {{.*#+}} xmm4 = xmm0[0],zero,xmm0[1],zero
 ; SSE42-NEXT:    pshufd {{.*#+}} xmm2 = xmm1[2,1,3,3]
 ; SSE42-NEXT:    pmuludq %xmm3, %xmm2
-; SSE42-NEXT:    pmovzxdq {{.*#+}} xmm1 = xmm1[0],zero,xmm1[1],zero
-; SSE42-NEXT:    pmovzxdq {{.*#+}} xmm0 = xmm0[0],zero,xmm0[1],zero
-; SSE42-NEXT:    pmuludq %xmm1, %xmm0
+; SSE42-NEXT:    pmovzxdq {{.*#+}} xmm0 = xmm1[0],zero,xmm1[1],zero
+; SSE42-NEXT:    pmuludq %xmm4, %xmm0
 ; SSE42-NEXT:    movdqa %xmm2, %xmm1
 ; SSE42-NEXT:    retq
 ;
@@ -288,11 +288,11 @@ define <4 x i64> @_mul4xi32toi64c(<4 x i32>, <4 x i32>) {
 ; AVX2:       # %bb.0:
 ; AVX2-NEXT:    vpmovzxdq {{.*#+}} xmm2 = xmm0[0],zero,xmm0[1],zero
 ; AVX2-NEXT:    vpmovzxdq {{.*#+}} xmm3 = xmm1[0],zero,xmm1[1],zero
+; AVX2-NEXT:    vpmuludq %xmm3, %xmm2, %xmm2
 ; AVX2-NEXT:    vpshufd {{.*#+}} xmm0 = xmm0[2,2,3,3]
 ; AVX2-NEXT:    vpshufd {{.*#+}} xmm1 = xmm1[2,2,3,3]
-; AVX2-NEXT:    vinserti128 $1, %xmm1, %ymm3, %ymm1
+; AVX2-NEXT:    vpmuludq %xmm1, %xmm0, %xmm0
 ; AVX2-NEXT:    vinserti128 $1, %xmm0, %ymm2, %ymm0
-; AVX2-NEXT:    vpmuludq %ymm1, %ymm0, %ymm0
 ; AVX2-NEXT:    retq
   %lower0 = shufflevector <4 x i32> %0, <4 x i32> undef, <4 x i32> <i32 0, i32 undef, i32 1, i32 undef>
   %lower1 = shufflevector <4 x i32> %1, <4 x i32> undef, <4 x i32> <i32 0, i32 undef, i32 1, i32 undef>

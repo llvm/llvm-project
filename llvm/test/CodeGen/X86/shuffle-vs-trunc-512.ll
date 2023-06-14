@@ -166,12 +166,32 @@ define void @trunc_v16i32_to_v16i16(ptr %L, ptr %S) nounwind {
 }
 
 define void @shuffle_v16i32_to_v8i32(ptr %L, ptr %S) nounwind {
-; AVX512-LABEL: shuffle_v16i32_to_v8i32:
-; AVX512:       # %bb.0:
-; AVX512-NEXT:    vmovdqa64 (%rdi), %zmm0
-; AVX512-NEXT:    vpmovqd %zmm0, (%rsi)
-; AVX512-NEXT:    vzeroupper
-; AVX512-NEXT:    retq
+; AVX512F-LABEL: shuffle_v16i32_to_v8i32:
+; AVX512F:       # %bb.0:
+; AVX512F-NEXT:    vmovaps (%rdi), %ymm0
+; AVX512F-NEXT:    vshufps {{.*#+}} ymm0 = ymm0[0,2],mem[0,2],ymm0[4,6],mem[4,6]
+; AVX512F-NEXT:    vpermpd {{.*#+}} ymm0 = ymm0[0,2,1,3]
+; AVX512F-NEXT:    vmovaps %ymm0, (%rsi)
+; AVX512F-NEXT:    vzeroupper
+; AVX512F-NEXT:    retq
+;
+; AVX512VL-FAST-ALL-LABEL: shuffle_v16i32_to_v8i32:
+; AVX512VL-FAST-ALL:       # %bb.0:
+; AVX512VL-FAST-ALL-NEXT:    vmovaps (%rdi), %ymm0
+; AVX512VL-FAST-ALL-NEXT:    vmovaps {{.*#+}} ymm1 = [0,2,4,6,8,10,12,14]
+; AVX512VL-FAST-ALL-NEXT:    vpermi2ps 32(%rdi), %ymm0, %ymm1
+; AVX512VL-FAST-ALL-NEXT:    vmovaps %ymm1, (%rsi)
+; AVX512VL-FAST-ALL-NEXT:    vzeroupper
+; AVX512VL-FAST-ALL-NEXT:    retq
+;
+; AVX512VL-FAST-PERLANE-LABEL: shuffle_v16i32_to_v8i32:
+; AVX512VL-FAST-PERLANE:       # %bb.0:
+; AVX512VL-FAST-PERLANE-NEXT:    vmovaps (%rdi), %ymm0
+; AVX512VL-FAST-PERLANE-NEXT:    vshufps {{.*#+}} ymm0 = ymm0[0,2],mem[0,2],ymm0[4,6],mem[4,6]
+; AVX512VL-FAST-PERLANE-NEXT:    vpermpd {{.*#+}} ymm0 = ymm0[0,2,1,3]
+; AVX512VL-FAST-PERLANE-NEXT:    vmovaps %ymm0, (%rsi)
+; AVX512VL-FAST-PERLANE-NEXT:    vzeroupper
+; AVX512VL-FAST-PERLANE-NEXT:    retq
   %vec = load <16 x i32>, ptr %L
   %strided.vec = shufflevector <16 x i32> %vec, <16 x i32> undef, <8 x i32> <i32 0, i32 2, i32 4, i32 6, i32 8, i32 10, i32 12, i32 14>
   store <8 x i32> %strided.vec, ptr %S

@@ -9,11 +9,11 @@ define i32 @check_flag(i32 %flags, ...) nounwind {
 ; CHECK-LABEL: check_flag:
 ; CHECK:       ## %bb.0: ## %entry
 ; CHECK-NEXT:    subq $56, %rsp
-; CHECK-NEXT:    movq %rsi, -{{[0-9]+}}(%rsp)
-; CHECK-NEXT:    movq %rdx, -{{[0-9]+}}(%rsp)
-; CHECK-NEXT:    movq %rcx, -{{[0-9]+}}(%rsp)
-; CHECK-NEXT:    movq %r8, -{{[0-9]+}}(%rsp)
 ; CHECK-NEXT:    movq %r9, -{{[0-9]+}}(%rsp)
+; CHECK-NEXT:    movq %r8, -{{[0-9]+}}(%rsp)
+; CHECK-NEXT:    movq %rcx, -{{[0-9]+}}(%rsp)
+; CHECK-NEXT:    movq %rdx, -{{[0-9]+}}(%rsp)
+; CHECK-NEXT:    movq %rsi, -{{[0-9]+}}(%rsp)
 ; CHECK-NEXT:    testb %al, %al
 ; CHECK-NEXT:    je LBB0_4
 ; CHECK-NEXT:  ## %bb.3: ## %entry

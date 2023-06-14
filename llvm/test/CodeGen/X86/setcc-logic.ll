@@ -324,7 +324,11 @@ define i32 @vec_extract_branch(<2 x double> %x)  {
 ; CHECK-NEXT:    xorpd %xmm1, %xmm1
 ; CHECK-NEXT:    cmpltpd %xmm0, %xmm1
 ; CHECK-NEXT:    movmskpd %xmm1, %eax
-; CHECK-NEXT:    cmpl $3, %eax
+; CHECK-NEXT:    testb $2, %al
+; CHECK-NEXT:    notb %al
+; CHECK-NEXT:    sete %cl
+; CHECK-NEXT:    orb %al, %cl
+; CHECK-NEXT:    testb $1, %cl
 ; CHECK-NEXT:    jne .LBB16_2
 ; CHECK-NEXT:  # %bb.1: # %true
 ; CHECK-NEXT:    movl $42, %eax
@@ -678,18 +682,12 @@ define i1 @or_cmp_ne_i32(i32 %x, i32 %y) {
 }
 
 define i1 @or_cmp_eq_i16(i16 zeroext %x, i16 zeroext %y) {
-; NOBMI-LABEL: or_cmp_eq_i16:
-; NOBMI:       # %bb.0:
-; NOBMI-NEXT:    notl %edi
-; NOBMI-NEXT:    testl %esi, %edi
-; NOBMI-NEXT:    sete %al
-; NOBMI-NEXT:    retq
-;
-; BMI-LABEL: or_cmp_eq_i16:
-; BMI:       # %bb.0:
-; BMI-NEXT:    andnl %esi, %edi, %eax
-; BMI-NEXT:    sete %al
-; BMI-NEXT:    retq
+; CHECK-LABEL: or_cmp_eq_i16:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    orl %edi, %esi
+; CHECK-NEXT:    cmpw %si, %di
+; CHECK-NEXT:    sete %al
+; CHECK-NEXT:    retq
   %o = or i16 %x, %y
   %c = icmp eq i16 %x, %o
   ret i1 %c
@@ -698,8 +696,8 @@ define i1 @or_cmp_eq_i16(i16 zeroext %x, i16 zeroext %y) {
 define i1 @or_cmp_ne_i8(i8 zeroext %x, i8 zeroext %y) {
 ; CHECK-LABEL: or_cmp_ne_i8:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    notb %sil
-; CHECK-NEXT:    testb %dil, %sil
+; CHECK-NEXT:    orl %esi, %edi
+; CHECK-NEXT:    cmpb %dil, %sil
 ; CHECK-NEXT:    setne %al
 ; CHECK-NEXT:    retq
   %o = or i8 %x, %y

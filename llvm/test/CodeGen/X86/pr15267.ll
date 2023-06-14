@@ -7,18 +7,14 @@ define <4 x i3> @test1(ptr %in) nounwind {
 ; CHECK-NEXT:    movzwl (%rdi), %eax
 ; CHECK-NEXT:    movl %eax, %ecx
 ; CHECK-NEXT:    shrl $3, %ecx
-; CHECK-NEXT:    andl $7, %ecx
-; CHECK-NEXT:    movl %eax, %edx
-; CHECK-NEXT:    andl $7, %edx
-; CHECK-NEXT:    vmovd %edx, %xmm0
-; CHECK-NEXT:    vpinsrw $2, %ecx, %xmm0, %xmm0
+; CHECK-NEXT:    vmovd %eax, %xmm0
+; CHECK-NEXT:    vpinsrd $1, %ecx, %xmm0, %xmm0
 ; CHECK-NEXT:    movl %eax, %ecx
 ; CHECK-NEXT:    shrl $6, %ecx
-; CHECK-NEXT:    andl $7, %ecx
-; CHECK-NEXT:    vpinsrw $4, %ecx, %xmm0, %xmm0
+; CHECK-NEXT:    vpinsrd $2, %ecx, %xmm0, %xmm0
 ; CHECK-NEXT:    shrl $9, %eax
-; CHECK-NEXT:    andl $7, %eax
-; CHECK-NEXT:    vpinsrw $6, %eax, %xmm0, %xmm0
+; CHECK-NEXT:    vpinsrd $3, %eax, %xmm0, %xmm0
+; CHECK-NEXT:    vpand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
 ; CHECK-NEXT:    retq
   %ret = load <4 x i3>, ptr %in, align 1
   ret <4 x i3> %ret
@@ -50,28 +46,28 @@ define <4 x i64> @test3(ptr %in) nounwind {
 ; CHECK-LABEL: test3:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    movzbl (%rdi), %eax
+; CHECK-NEXT:    movl %eax, %ecx
+; CHECK-NEXT:    shrb $3, %cl
+; CHECK-NEXT:    movzbl %cl, %ecx
+; CHECK-NEXT:    negq %rcx
+; CHECK-NEXT:    vmovq %rcx, %xmm0
 ; CHECK-NEXT:    movzbl %al, %ecx
-; CHECK-NEXT:    shrb %al
-; CHECK-NEXT:    movzbl %al, %eax
-; CHECK-NEXT:    andl $1, %eax
-; CHECK-NEXT:    negl %eax
-; CHECK-NEXT:    movl %ecx, %edx
-; CHECK-NEXT:    andl $1, %edx
-; CHECK-NEXT:    negl %edx
-; CHECK-NEXT:    vmovd %edx, %xmm0
-; CHECK-NEXT:    vpinsrd $1, %eax, %xmm0, %xmm0
-; CHECK-NEXT:    movl %ecx, %eax
 ; CHECK-NEXT:    shrb $2, %al
 ; CHECK-NEXT:    movzbl %al, %eax
 ; CHECK-NEXT:    andl $1, %eax
-; CHECK-NEXT:    negl %eax
-; CHECK-NEXT:    vpinsrd $2, %eax, %xmm0, %xmm0
-; CHECK-NEXT:    shrb $3, %cl
+; CHECK-NEXT:    negq %rax
+; CHECK-NEXT:    vmovq %rax, %xmm1
+; CHECK-NEXT:    vpunpcklqdq {{.*#+}} xmm0 = xmm1[0],xmm0[0]
+; CHECK-NEXT:    movl %ecx, %eax
+; CHECK-NEXT:    andl $1, %eax
+; CHECK-NEXT:    negq %rax
+; CHECK-NEXT:    vmovq %rax, %xmm1
+; CHECK-NEXT:    shrb %cl
 ; CHECK-NEXT:    movzbl %cl, %eax
-; CHECK-NEXT:    negl %eax
-; CHECK-NEXT:    vpinsrd $3, %eax, %xmm0, %xmm0
-; CHECK-NEXT:    vpmovsxdq %xmm0, %xmm1
-; CHECK-NEXT:    vpshufd {{.*#+}} xmm0 = xmm0[2,2,3,3]
+; CHECK-NEXT:    andl $1, %eax
+; CHECK-NEXT:    negq %rax
+; CHECK-NEXT:    vmovq %rax, %xmm2
+; CHECK-NEXT:    vpunpcklqdq {{.*#+}} xmm1 = xmm1[0],xmm2[0]
 ; CHECK-NEXT:    vinsertf128 $1, %xmm0, %ymm1, %ymm0
 ; CHECK-NEXT:    retq
   %wide.load35 = load <4 x i1>, ptr %in, align 1

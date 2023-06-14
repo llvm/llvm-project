@@ -11,14 +11,15 @@ define void @volatile_load_2_elts() {
 ; AVX-LABEL: volatile_load_2_elts:
 ; AVX:       # %bb.0:
 ; AVX-NEXT:    vmovaps g0(%rip), %xmm0
-; AVX-NEXT:    vmovddup {{.*#+}} xmm1 = xmm0[0,0]
-; AVX-NEXT:    vxorps %xmm2, %xmm2, %xmm2
-; AVX-NEXT:    vblendps {{.*#+}} ymm1 = ymm2[0,1],ymm1[2,3],ymm2[4,5,6,7]
-; AVX-NEXT:    vinsertf128 $1, %xmm1, %ymm1, %ymm1
-; AVX-NEXT:    vperm2f128 {{.*#+}} ymm0 = zero,zero,ymm0[0,1]
-; AVX-NEXT:    vblendps {{.*#+}} ymm0 = ymm2[0,1,2,3],ymm0[4,5],ymm2[6,7]
-; AVX-NEXT:    vmovaps %ymm0, (%rax)
-; AVX-NEXT:    vmovaps %ymm1, (%rax)
+; AVX-NEXT:    vmovddup {{.*#+}} xmm0 = xmm0[0,0]
+; AVX-NEXT:    vinsertf128 $1, %xmm0, %ymm0, %ymm0
+; AVX-NEXT:    vxorpd %xmm1, %xmm1, %xmm1
+; AVX-NEXT:    vblendpd {{.*#+}} ymm2 = ymm1[0],ymm0[1],ymm1[2,3]
+; AVX-NEXT:    vinsertf128 $1, %xmm2, %ymm2, %ymm2
+; AVX-NEXT:    vshufpd {{.*#+}} ymm0 = ymm0[0,0,3,2]
+; AVX-NEXT:    vblendpd {{.*#+}} ymm0 = ymm1[0,1],ymm0[2],ymm1[3]
+; AVX-NEXT:    vmovapd %ymm0, (%rax)
+; AVX-NEXT:    vmovaps %ymm2, (%rax)
 ; AVX-NEXT:    vzeroupper
 ; AVX-NEXT:    retq
 ;

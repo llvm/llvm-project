@@ -2555,25 +2555,31 @@ entry:
 define <4 x i64> @splatshuf_zext_v4i64(<4 x i32> %x) {
 ; SSE2-LABEL: splatshuf_zext_v4i64:
 ; SSE2:       # %bb.0:
-; SSE2-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[0,0,1,1]
-; SSE2-NEXT:    pxor %xmm1, %xmm1
-; SSE2-NEXT:    punpckldq {{.*#+}} xmm0 = xmm0[0],xmm1[0],xmm0[1],xmm1[1]
-; SSE2-NEXT:    movdqa %xmm0, %xmm1
+; SSE2-NEXT:    pshufd {{.*#+}} xmm2 = xmm0[0,0,0,0]
+; SSE2-NEXT:    pxor %xmm3, %xmm3
+; SSE2-NEXT:    punpckldq {{.*#+}} xmm2 = xmm2[0],xmm3[0],xmm2[1],xmm3[1]
+; SSE2-NEXT:    pshufd {{.*#+}} xmm1 = xmm0[0,0,1,1]
+; SSE2-NEXT:    punpckldq {{.*#+}} xmm1 = xmm1[0],xmm3[0],xmm1[1],xmm3[1]
+; SSE2-NEXT:    movdqa %xmm2, %xmm0
 ; SSE2-NEXT:    retq
 ;
 ; SSSE3-LABEL: splatshuf_zext_v4i64:
 ; SSSE3:       # %bb.0:
-; SSSE3-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[0,0,1,1]
-; SSSE3-NEXT:    pxor %xmm1, %xmm1
-; SSSE3-NEXT:    punpckldq {{.*#+}} xmm0 = xmm0[0],xmm1[0],xmm0[1],xmm1[1]
-; SSSE3-NEXT:    movdqa %xmm0, %xmm1
+; SSSE3-NEXT:    pshufd {{.*#+}} xmm2 = xmm0[0,0,0,0]
+; SSSE3-NEXT:    pxor %xmm3, %xmm3
+; SSSE3-NEXT:    punpckldq {{.*#+}} xmm2 = xmm2[0],xmm3[0],xmm2[1],xmm3[1]
+; SSSE3-NEXT:    pshufd {{.*#+}} xmm1 = xmm0[0,0,1,1]
+; SSSE3-NEXT:    punpckldq {{.*#+}} xmm1 = xmm1[0],xmm3[0],xmm1[1],xmm3[1]
+; SSSE3-NEXT:    movdqa %xmm2, %xmm0
 ; SSSE3-NEXT:    retq
 ;
 ; SSE41-LABEL: splatshuf_zext_v4i64:
 ; SSE41:       # %bb.0:
+; SSE41-NEXT:    pshufd {{.*#+}} xmm1 = xmm0[0,0,0,0]
+; SSE41-NEXT:    pmovzxdq {{.*#+}} xmm2 = xmm1[0],zero,xmm1[1],zero
 ; SSE41-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[0,0,1,1]
-; SSE41-NEXT:    pmovzxdq {{.*#+}} xmm0 = xmm0[0],zero,xmm0[1],zero
-; SSE41-NEXT:    movdqa %xmm0, %xmm1
+; SSE41-NEXT:    pmovzxdq {{.*#+}} xmm1 = xmm0[0],zero,xmm0[1],zero
+; SSE41-NEXT:    movdqa %xmm2, %xmm0
 ; SSE41-NEXT:    retq
 ;
 ; AVX1-LABEL: splatshuf_zext_v4i64:
@@ -2645,25 +2651,30 @@ define <8 x i32> @splatshuf_zext_v8i32_matching_undefs(<8 x i16> %x) {
 define <8 x i32> @splatshuf_zext_v8i32_unmatched_undef(<8 x i16> %x) {
 ; SSE2-LABEL: splatshuf_zext_v8i32_unmatched_undef:
 ; SSE2:       # %bb.0:
-; SSE2-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[0,2,1,3]
-; SSE2-NEXT:    pshufhw {{.*#+}} xmm0 = xmm0[0,1,2,3,7,5,6,7]
-; SSE2-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[0,2,2,3]
-; SSE2-NEXT:    pshuflw {{.*#+}} xmm0 = xmm0[0,1,3,2,4,5,6,7]
+; SSE2-NEXT:    pshufd {{.*#+}} xmm1 = xmm0[0,2,1,3]
+; SSE2-NEXT:    pshufhw {{.*#+}} xmm1 = xmm1[0,1,2,3,7,5,6,7]
+; SSE2-NEXT:    pshufd {{.*#+}} xmm1 = xmm1[0,2,2,3]
+; SSE2-NEXT:    pshuflw {{.*#+}} xmm2 = xmm1[0,1,3,2,4,5,6,7]
 ; SSE2-NEXT:    pxor %xmm1, %xmm1
-; SSE2-NEXT:    punpcklwd {{.*#+}} xmm0 = xmm0[0],xmm1[0],xmm0[1],xmm1[1],xmm0[2],xmm1[2],xmm0[3],xmm1[3]
-; SSE2-NEXT:    movdqa %xmm0, %xmm1
+; SSE2-NEXT:    punpcklwd {{.*#+}} xmm2 = xmm2[0],xmm1[0],xmm2[1],xmm1[1],xmm2[2],xmm1[2],xmm2[3],xmm1[3]
+; SSE2-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[0,1,1,3]
+; SSE2-NEXT:    pshufhw {{.*#+}} xmm1 = xmm0[0,1,2,3,5,5,7,7]
+; SSE2-NEXT:    pand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1
+; SSE2-NEXT:    movdqa %xmm2, %xmm0
 ; SSE2-NEXT:    retq
 ;
 ; SSSE3-LABEL: splatshuf_zext_v8i32_unmatched_undef:
 ; SSSE3:       # %bb.0:
-; SSSE3-NEXT:    pshufb {{.*#+}} xmm0 = xmm0[0,1],zero,zero,xmm0[2,3],zero,zero,xmm0[6,7],zero,zero,xmm0[14,15],zero,zero
 ; SSSE3-NEXT:    movdqa %xmm0, %xmm1
+; SSSE3-NEXT:    pshufb {{.*#+}} xmm0 = xmm0[0,1],zero,zero,xmm0[2,3],zero,zero,xmm0[6,7],zero,zero,xmm0[14,15],zero,zero
+; SSSE3-NEXT:    pshufb {{.*#+}} xmm1 = xmm1[0,1],zero,zero,xmm1[u,u],zero,zero,xmm1[6,7],zero,zero,xmm1[14,15],zero,zero
 ; SSSE3-NEXT:    retq
 ;
 ; SSE41-LABEL: splatshuf_zext_v8i32_unmatched_undef:
 ; SSE41:       # %bb.0:
-; SSE41-NEXT:    pshufb {{.*#+}} xmm0 = xmm0[0,1],zero,zero,xmm0[2,3],zero,zero,xmm0[6,7],zero,zero,xmm0[14,15],zero,zero
 ; SSE41-NEXT:    movdqa %xmm0, %xmm1
+; SSE41-NEXT:    pshufb {{.*#+}} xmm0 = xmm0[0,1],zero,zero,xmm0[2,3],zero,zero,xmm0[6,7],zero,zero,xmm0[14,15],zero,zero
+; SSE41-NEXT:    pshufb {{.*#+}} xmm1 = xmm1[0,1],zero,zero,xmm1[6,7],zero,zero,xmm1[6,7],zero,zero,xmm1[14,15],zero,zero
 ; SSE41-NEXT:    retq
 ;
 ; AVX1-LABEL: splatshuf_zext_v8i32_unmatched_undef:

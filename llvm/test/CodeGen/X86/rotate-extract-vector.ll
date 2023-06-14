@@ -10,11 +10,17 @@
 ; with one of the shifts from the rotate idiom
 
 define <4 x i32> @vroll_v4i32_extract_shl(<4 x i32> %i) {
-; CHECK-LABEL: vroll_v4i32_extract_shl:
-; CHECK:       # %bb.0:
-; CHECK-NEXT:    vpslld $3, %xmm0, %xmm0
-; CHECK-NEXT:    vprold $7, %xmm0, %xmm0
-; CHECK-NEXT:    ret{{[l|q]}}
+; X86-LABEL: vroll_v4i32_extract_shl:
+; X86:       # %bb.0:
+; X86-NEXT:    vprold $10, %xmm0, %xmm0
+; X86-NEXT:    vpandd {{\.?LCPI[0-9]+_[0-9]+}}{1to4}, %xmm0, %xmm0
+; X86-NEXT:    retl
+;
+; X64-LABEL: vroll_v4i32_extract_shl:
+; X64:       # %bb.0:
+; X64-NEXT:    vprold $10, %xmm0, %xmm0
+; X64-NEXT:    vpandd {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to4}, %xmm0, %xmm0
+; X64-NEXT:    retq
   %lhs_mul = shl <4 x i32> %i, <i32 3, i32 3, i32 3, i32 3>
   %rhs_mul = shl <4 x i32> %i, <i32 10, i32 10, i32 10, i32 10>
   %lhs_shift = lshr <4 x i32> %lhs_mul, <i32 25, i32 25, i32 25, i32 25>
@@ -23,11 +29,17 @@ define <4 x i32> @vroll_v4i32_extract_shl(<4 x i32> %i) {
 }
 
 define <4 x i64> @vrolq_v4i64_extract_shrl(<4 x i64> %i) nounwind {
-; CHECK-LABEL: vrolq_v4i64_extract_shrl:
-; CHECK:       # %bb.0:
-; CHECK-NEXT:    vpsrlq $5, %ymm0, %ymm0
-; CHECK-NEXT:    vprolq $29, %ymm0, %ymm0
-; CHECK-NEXT:    ret{{[l|q]}}
+; X86-LABEL: vrolq_v4i64_extract_shrl:
+; X86:       # %bb.0:
+; X86-NEXT:    vprolq $24, %ymm0, %ymm0
+; X86-NEXT:    vpandq {{\.?LCPI[0-9]+_[0-9]+}}{1to4}, %ymm0, %ymm0
+; X86-NEXT:    retl
+;
+; X64-LABEL: vrolq_v4i64_extract_shrl:
+; X64:       # %bb.0:
+; X64-NEXT:    vprolq $24, %ymm0, %ymm0
+; X64-NEXT:    vpandq {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to4}, %ymm0, %ymm0
+; X64-NEXT:    retq
   %lhs_div = lshr <4 x i64> %i, <i64 40, i64 40, i64 40, i64 40>
   %rhs_div = lshr <4 x i64> %i, <i64 5, i64 5, i64 5, i64 5>
   %rhs_shift = shl <4 x i64> %rhs_div, <i64 29, i64 29, i64 29, i64 29>

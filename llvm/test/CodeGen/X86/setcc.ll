@@ -141,7 +141,7 @@ define zeroext i1 @t6(i32 %a) {
 define zeroext i1 @t7(i32 %0) {
 ; X86-LABEL: t7:
 ; X86:       ## %bb.0:
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    movzbl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    movl $19, %ecx
 ; X86-NEXT:    btl %eax, %ecx
 ; X86-NEXT:    setb %al

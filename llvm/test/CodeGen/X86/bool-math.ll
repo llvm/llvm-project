@@ -12,8 +12,9 @@ define i32 @sub_zext_cmp_mask_same_size_result(i32 %x) {
 ;
 ; X32-LABEL: sub_zext_cmp_mask_same_size_result:
 ; X32:       # %bb.0:
-; X32-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X32-NEXT:    andl $1, %eax
+; X32-NEXT:    movzbl {{[0-9]+}}(%esp), %eax
+; X32-NEXT:    andb $1, %al
+; X32-NEXT:    movzbl %al, %eax
 ; X32-NEXT:    orl $-28, %eax
 ; X32-NEXT:    retl
   %a = and i32 %x, 1
@@ -141,7 +142,7 @@ define i32 @low_bit_select_constants_bigger_false_same_size_result(i32 %x) {
 ;
 ; X32-LABEL: low_bit_select_constants_bigger_false_same_size_result:
 ; X32:       # %bb.0:
-; X32-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X32-NEXT:    movzbl {{[0-9]+}}(%esp), %eax
 ; X32-NEXT:    andl $1, %eax
 ; X32-NEXT:    orl $42, %eax
 ; X32-NEXT:    retl
@@ -161,7 +162,7 @@ define i64 @low_bit_select_constants_bigger_false_wider_result(i32 %x) {
 ;
 ; X32-LABEL: low_bit_select_constants_bigger_false_wider_result:
 ; X32:       # %bb.0:
-; X32-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X32-NEXT:    movzbl {{[0-9]+}}(%esp), %eax
 ; X32-NEXT:    andl $1, %eax
 ; X32-NEXT:    orl $26, %eax
 ; X32-NEXT:    xorl %edx, %edx
@@ -183,7 +184,7 @@ define i16 @low_bit_select_constants_bigger_false_narrower_result(i32 %x) {
 ;
 ; X32-LABEL: low_bit_select_constants_bigger_false_narrower_result:
 ; X32:       # %bb.0:
-; X32-NEXT:    movzwl {{[0-9]+}}(%esp), %eax
+; X32-NEXT:    movzbl {{[0-9]+}}(%esp), %eax
 ; X32-NEXT:    andl $1, %eax
 ; X32-NEXT:    orl $36, %eax
 ; X32-NEXT:    # kill: def $ax killed $ax killed $eax

@@ -52,11 +52,11 @@ define void @f_thunk(ptr %this, ...) {
 ; LINUX-NEXT:    movq %rdx, %r13
 ; LINUX-NEXT:    movq %rsi, %rbp
 ; LINUX-NEXT:    movq %rdi, %rbx
-; LINUX-NEXT:    movq %rsi, {{[0-9]+}}(%rsp)
-; LINUX-NEXT:    movq %rdx, {{[0-9]+}}(%rsp)
-; LINUX-NEXT:    movq %rcx, {{[0-9]+}}(%rsp)
-; LINUX-NEXT:    movq %r8, {{[0-9]+}}(%rsp)
 ; LINUX-NEXT:    movq %r9, {{[0-9]+}}(%rsp)
+; LINUX-NEXT:    movq %r8, {{[0-9]+}}(%rsp)
+; LINUX-NEXT:    movq %rcx, {{[0-9]+}}(%rsp)
+; LINUX-NEXT:    movq %rdx, {{[0-9]+}}(%rsp)
+; LINUX-NEXT:    movq %rsi, {{[0-9]+}}(%rsp)
 ; LINUX-NEXT:    testb %al, %al
 ; LINUX-NEXT:    je .LBB0_2
 ; LINUX-NEXT:  # %bb.1:
@@ -145,11 +145,11 @@ define void @f_thunk(ptr %this, ...) {
 ; LINUX-X32-NEXT:    movq %rdx, %r13
 ; LINUX-X32-NEXT:    movq %rsi, %rbp
 ; LINUX-X32-NEXT:    movq %rdi, %rbx
-; LINUX-X32-NEXT:    movq %rsi, {{[0-9]+}}(%esp)
-; LINUX-X32-NEXT:    movq %rdx, {{[0-9]+}}(%esp)
-; LINUX-X32-NEXT:    movq %rcx, {{[0-9]+}}(%esp)
-; LINUX-X32-NEXT:    movq %r8, {{[0-9]+}}(%esp)
 ; LINUX-X32-NEXT:    movq %r9, {{[0-9]+}}(%esp)
+; LINUX-X32-NEXT:    movq %r8, {{[0-9]+}}(%esp)
+; LINUX-X32-NEXT:    movq %rcx, {{[0-9]+}}(%esp)
+; LINUX-X32-NEXT:    movq %rdx, {{[0-9]+}}(%esp)
+; LINUX-X32-NEXT:    movq %rsi, {{[0-9]+}}(%esp)
 ; LINUX-X32-NEXT:    testb %al, %al
 ; LINUX-X32-NEXT:    je .LBB0_2
 ; LINUX-X32-NEXT:  # %bb.1:
@@ -218,9 +218,9 @@ define void @f_thunk(ptr %this, ...) {
 ; WINDOWS-NEXT:    movq %r8, %rdi
 ; WINDOWS-NEXT:    movq %rdx, %rbx
 ; WINDOWS-NEXT:    movq %rcx, %r14
-; WINDOWS-NEXT:    movq %rdx, {{[0-9]+}}(%rsp)
-; WINDOWS-NEXT:    movq %r8, {{[0-9]+}}(%rsp)
 ; WINDOWS-NEXT:    movq %r9, {{[0-9]+}}(%rsp)
+; WINDOWS-NEXT:    movq %r8, {{[0-9]+}}(%rsp)
+; WINDOWS-NEXT:    movq %rdx, {{[0-9]+}}(%rsp)
 ; WINDOWS-NEXT:    leaq {{[0-9]+}}(%rsp), %rax
 ; WINDOWS-NEXT:    movq %rax, {{[0-9]+}}(%rsp)
 ; WINDOWS-NEXT:    callq get_f

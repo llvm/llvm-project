@@ -2270,14 +2270,14 @@ define i32 @PR44139(ptr %p) {
 ; SSE:       # %bb.0:
 ; SSE-NEXT:    movl (%rdi), %eax
 ; SSE-NEXT:    pshufd {{.*#+}} xmm0 = mem[0,1,0,1]
-; SSE-NEXT:    movdqa %xmm0, 96(%rdi)
 ; SSE-NEXT:    movdqa %xmm0, 112(%rdi)
-; SSE-NEXT:    movdqa %xmm0, 64(%rdi)
+; SSE-NEXT:    movdqa %xmm0, 96(%rdi)
 ; SSE-NEXT:    movdqa %xmm0, 80(%rdi)
-; SSE-NEXT:    movdqa %xmm0, 32(%rdi)
+; SSE-NEXT:    movdqa %xmm0, 64(%rdi)
 ; SSE-NEXT:    movdqa %xmm0, 48(%rdi)
-; SSE-NEXT:    movdqa %xmm0, (%rdi)
+; SSE-NEXT:    movdqa %xmm0, 32(%rdi)
 ; SSE-NEXT:    movdqa %xmm0, 16(%rdi)
+; SSE-NEXT:    movdqa %xmm0, (%rdi)
 ; SSE-NEXT:    leal 2147483647(%rax), %ecx
 ; SSE-NEXT:    testl %eax, %eax
 ; SSE-NEXT:    cmovnsl %eax, %ecx
@@ -2293,8 +2293,8 @@ define i32 @PR44139(ptr %p) {
 ; AVX1-NEXT:    vbroadcastsd (%rdi), %ymm0
 ; AVX1-NEXT:    vpinsrq $1, (%rdi), %xmm0, %xmm1
 ; AVX1-NEXT:    vblendps {{.*#+}} ymm1 = ymm1[0,1,2,3],ymm0[4,5,6,7]
-; AVX1-NEXT:    vmovaps %ymm0, 64(%rdi)
 ; AVX1-NEXT:    vmovaps %ymm0, 96(%rdi)
+; AVX1-NEXT:    vmovaps %ymm0, 64(%rdi)
 ; AVX1-NEXT:    vmovaps %ymm0, 32(%rdi)
 ; AVX1-NEXT:    movl (%rdi), %eax
 ; AVX1-NEXT:    vmovaps %ymm1, (%rdi)
@@ -2314,8 +2314,8 @@ define i32 @PR44139(ptr %p) {
 ; AVX2-NEXT:    vpbroadcastq (%rdi), %ymm0
 ; AVX2-NEXT:    vpinsrq $1, (%rdi), %xmm0, %xmm1
 ; AVX2-NEXT:    vpblendd {{.*#+}} ymm1 = ymm1[0,1,2,3],ymm0[4,5,6,7]
-; AVX2-NEXT:    vmovdqa %ymm0, 64(%rdi)
 ; AVX2-NEXT:    vmovdqa %ymm0, 96(%rdi)
+; AVX2-NEXT:    vmovdqa %ymm0, 64(%rdi)
 ; AVX2-NEXT:    vmovdqa %ymm0, 32(%rdi)
 ; AVX2-NEXT:    movl (%rdi), %eax
 ; AVX2-NEXT:    vmovdqa %ymm1, (%rdi)
@@ -2357,8 +2357,8 @@ define i32 @PR44139(ptr %p) {
 ; X86AVX2-NEXT:    vbroadcastsd (%ecx), %ymm0
 ; X86AVX2-NEXT:    vunpcklpd {{.*#+}} xmm1 = xmm0[0],mem[0]
 ; X86AVX2-NEXT:    vblendps {{.*#+}} ymm1 = ymm1[0,1,2,3],ymm0[4,5,6,7]
-; X86AVX2-NEXT:    vmovaps %ymm0, 64(%ecx)
 ; X86AVX2-NEXT:    vmovaps %ymm0, 96(%ecx)
+; X86AVX2-NEXT:    vmovaps %ymm0, 64(%ecx)
 ; X86AVX2-NEXT:    vmovaps %ymm0, 32(%ecx)
 ; X86AVX2-NEXT:    movl (%ecx), %eax
 ; X86AVX2-NEXT:    vmovaps %ymm1, (%ecx)

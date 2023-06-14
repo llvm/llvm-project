@@ -12,14 +12,14 @@ define void @test(<1 x i64> %c64, <1 x i64> %mask1, ptr %P) {
 ; CHECK-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; CHECK-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; CHECK-NEXT:    movl %ecx, {{[0-9]+}}(%esp)
-; CHECK-NEXT:    movl %eax, (%esp)
+; CHECK-NEXT:    movl %eax, {{[0-9]+}}(%esp)
 ; CHECK-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; CHECK-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; CHECK-NEXT:    movl %ecx, {{[0-9]+}}(%esp)
-; CHECK-NEXT:    movl %eax, {{[0-9]+}}(%esp)
+; CHECK-NEXT:    movl %eax, (%esp)
 ; CHECK-NEXT:    movl {{[0-9]+}}(%esp), %edi
-; CHECK-NEXT:    movq (%esp), %mm0
-; CHECK-NEXT:    movq {{[0-9]+}}(%esp), %mm1
+; CHECK-NEXT:    movq {{[0-9]+}}(%esp), %mm0
+; CHECK-NEXT:    movq (%esp), %mm1
 ; CHECK-NEXT:    maskmovq %mm0, %mm1
 ; CHECK-NEXT:    addl $16, %esp
 ; CHECK-NEXT:    popl %edi

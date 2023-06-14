@@ -65,7 +65,7 @@ define <3 x i32> @f_29(<12 x i16> %a, <12 x i16> %b) {
 ; CHECK-NEXT:    por %xmm5, %xmm3
 ; CHECK-NEXT:    punpcklwd {{.*#+}} xmm2 = xmm2[0],xmm7[0],xmm2[1],xmm7[1],xmm2[2],xmm7[2],xmm2[3],xmm7[3]
 ; CHECK-NEXT:    movdqa %xmm3, %xmm4
-; CHECK-NEXT:    shufps {{.*#+}} xmm4 = xmm4[1,1],xmm1[1,1]
+; CHECK-NEXT:    shufps {{.*#+}} xmm4 = xmm4[1,0],xmm1[1,1]
 ; CHECK-NEXT:    movdqa %xmm0, %xmm5
 ; CHECK-NEXT:    shufps {{.*#+}} xmm5 = xmm5[1,3],xmm4[2,0]
 ; CHECK-NEXT:    pshufd {{.*#+}} xmm4 = xmm3[3,3,3,3]

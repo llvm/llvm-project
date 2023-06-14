@@ -290,27 +290,22 @@ define <8 x float> @expand14(<4 x float> %a) {
 
 ;Negative test.
 define <8 x float> @expand15(<4 x float> %a) {
-; AVX512-SLOW-LABEL: expand15:
-; AVX512-SLOW:       # %bb.0:
-; AVX512-SLOW-NEXT:    vshufps {{.*#+}} xmm0 = xmm0[0,1,1,3]
-; AVX512-SLOW-NEXT:    vpermpd {{.*#+}} ymm0 = ymm0[0,0,1,3]
-; AVX512-SLOW-NEXT:    vblendps {{.*#+}} ymm0 = mem[0,1],ymm0[2],mem[3],ymm0[4],mem[5,6,7]
-; AVX512-SLOW-NEXT:    ret{{[l|q]}}
-;
-; AVX512-FAST-LABEL: expand15:
-; AVX512-FAST:       # %bb.0:
-; AVX512-FAST-NEXT:    # kill: def $xmm0 killed $xmm0 def $ymm0
-; AVX512-FAST-NEXT:    vbroadcastf128 {{.*#+}} ymm1 = [1,0,0,0,1,0,0,0]
-; AVX512-FAST-NEXT:    # ymm1 = mem[0,1,0,1]
-; AVX512-FAST-NEXT:    vpermps %ymm0, %ymm1, %ymm0
-; AVX512-FAST-NEXT:    vblendps {{.*#+}} ymm0 = mem[0,1],ymm0[2],mem[3],ymm0[4],mem[5,6,7]
-; AVX512-FAST-NEXT:    ret{{[l|q]}}
+; AVX512-LABEL: expand15:
+; AVX512:       # %bb.0:
+; AVX512-NEXT:    # kill: def $xmm0 killed $xmm0 def $ymm0
+; AVX512-NEXT:    vmovsd {{.*#+}} xmm2 = mem[0],zero
+; AVX512-NEXT:    vmovaps {{.*#+}} ymm1 = [0,1,8,3,9,5,6,7]
+; AVX512-NEXT:    vpermi2ps %ymm0, %ymm2, %ymm1
+; AVX512-NEXT:    vmovaps %ymm1, %ymm0
+; AVX512-NEXT:    ret{{[l|q]}}
 ;
 ; AVX512F-LABEL: expand15:
 ; AVX512F:       # %bb.0:
-; AVX512F-NEXT:    vshufps {{.*#+}} xmm0 = xmm0[0,1,1,3]
-; AVX512F-NEXT:    vpermpd {{.*#+}} ymm0 = ymm0[0,0,1,3]
-; AVX512F-NEXT:    vblendps {{.*#+}} ymm0 = mem[0,1],ymm0[2],mem[3],ymm0[4],mem[5,6,7]
+; AVX512F-NEXT:    # kill: def $xmm0 killed $xmm0 def $zmm0
+; AVX512F-NEXT:    vmovaps {{.*#+}} ymm2 = [0,1,16,3,17,5,6,7]
+; AVX512F-NEXT:    vmovsd {{.*#+}} xmm1 = mem[0],zero
+; AVX512F-NEXT:    vpermt2ps %zmm0, %zmm2, %zmm1
+; AVX512F-NEXT:    vmovaps %ymm1, %ymm0
 ; AVX512F-NEXT:    ret{{[l|q]}}
    %addV = fadd <4 x float> <float 0.0,float 1.0,float 2.0,float 0.0> , <float 0.0,float 1.0,float 2.0,float 0.0>
    %res = shufflevector <4 x float> %addV, <4 x float> %a, <8 x i32> <i32 0, i32 1, i32 4, i32 0, i32 5, i32 0, i32 0, i32 0>
@@ -572,8 +567,11 @@ define void @test_demandedelts_pshufb_v32i8_v16i8(ptr %src, ptr %dst) {
 ; X86-AVX512-SLOW-NEXT:    vpbroadcastd 44(%ecx), %xmm0
 ; X86-AVX512-SLOW-NEXT:    vmovq {{.*#+}} xmm0 = xmm0[0],zero
 ; X86-AVX512-SLOW-NEXT:    vmovdqa %ymm0, 672(%eax)
-; X86-AVX512-SLOW-NEXT:    vpshufd {{.*#+}} xmm0 = mem[1,0,2,3]
-; X86-AVX512-SLOW-NEXT:    vmovq {{.*#+}} xmm0 = xmm0[0],zero
+; X86-AVX512-SLOW-NEXT:    vmovdqa 208(%ecx), %xmm0
+; X86-AVX512-SLOW-NEXT:    vpshufd {{.*#+}} xmm1 = xmm0[1,1,1,1]
+; X86-AVX512-SLOW-NEXT:    vmovq {{.*#+}} xmm1 = xmm1[0],zero
+; X86-AVX512-SLOW-NEXT:    vmovd %xmm0, %ecx
+; X86-AVX512-SLOW-NEXT:    vpinsrd $1, %ecx, %xmm1, %xmm0
 ; X86-AVX512-SLOW-NEXT:    vmovdqa %ymm0, 832(%eax)
 ; X86-AVX512-SLOW-NEXT:    vzeroupper
 ; X86-AVX512-SLOW-NEXT:    retl
@@ -583,8 +581,11 @@ define void @test_demandedelts_pshufb_v32i8_v16i8(ptr %src, ptr %dst) {
 ; X64-AVX512-SLOW-NEXT:    vpbroadcastd 44(%rdi), %xmm0
 ; X64-AVX512-SLOW-NEXT:    vmovq {{.*#+}} xmm0 = xmm0[0],zero
 ; X64-AVX512-SLOW-NEXT:    vmovdqa %ymm0, 672(%rsi)
-; X64-AVX512-SLOW-NEXT:    vpshufd {{.*#+}} xmm0 = mem[1,0,2,3]
-; X64-AVX512-SLOW-NEXT:    vmovq {{.*#+}} xmm0 = xmm0[0],zero
+; X64-AVX512-SLOW-NEXT:    vmovdqa 208(%rdi), %xmm0
+; X64-AVX512-SLOW-NEXT:    vpshufd {{.*#+}} xmm1 = xmm0[1,1,1,1]
+; X64-AVX512-SLOW-NEXT:    vmovq {{.*#+}} xmm1 = xmm1[0],zero
+; X64-AVX512-SLOW-NEXT:    vmovd %xmm0, %eax
+; X64-AVX512-SLOW-NEXT:    vpinsrd $1, %eax, %xmm1, %xmm0
 ; X64-AVX512-SLOW-NEXT:    vmovdqa %ymm0, 832(%rsi)
 ; X64-AVX512-SLOW-NEXT:    vzeroupper
 ; X64-AVX512-SLOW-NEXT:    retq
@@ -597,7 +598,9 @@ define void @test_demandedelts_pshufb_v32i8_v16i8(ptr %src, ptr %dst) {
 ; X86-AVX512-FAST-NEXT:    vmovq {{.*#+}} xmm0 = xmm0[0],zero
 ; X86-AVX512-FAST-NEXT:    vmovdqa %ymm0, 672(%eax)
 ; X86-AVX512-FAST-NEXT:    vmovdqa 208(%ecx), %xmm0
-; X86-AVX512-FAST-NEXT:    vpshufb {{.*#+}} xmm0 = xmm0[4,5,6,7,0,1,2,3],zero,zero,zero,zero,zero,zero,zero,zero
+; X86-AVX512-FAST-NEXT:    vpshufb {{.*#+}} xmm1 = xmm0[4,5,6,7,u,u,u,u],zero,zero,zero,zero,zero,zero,zero,zero
+; X86-AVX512-FAST-NEXT:    vmovd %xmm0, %ecx
+; X86-AVX512-FAST-NEXT:    vpinsrd $1, %ecx, %xmm1, %xmm0
 ; X86-AVX512-FAST-NEXT:    vmovdqa %ymm0, 832(%eax)
 ; X86-AVX512-FAST-NEXT:    vzeroupper
 ; X86-AVX512-FAST-NEXT:    retl
@@ -608,7 +611,9 @@ define void @test_demandedelts_pshufb_v32i8_v16i8(ptr %src, ptr %dst) {
 ; X64-AVX512-FAST-NEXT:    vmovq {{.*#+}} xmm0 = xmm0[0],zero
 ; X64-AVX512-FAST-NEXT:    vmovdqa %ymm0, 672(%rsi)
 ; X64-AVX512-FAST-NEXT:    vmovdqa 208(%rdi), %xmm0
-; X64-AVX512-FAST-NEXT:    vpshufb {{.*#+}} xmm0 = xmm0[4,5,6,7,0,1,2,3],zero,zero,zero,zero,zero,zero,zero,zero
+; X64-AVX512-FAST-NEXT:    vpshufb {{.*#+}} xmm1 = xmm0[4,5,6,7,u,u,u,u],zero,zero,zero,zero,zero,zero,zero,zero
+; X64-AVX512-FAST-NEXT:    vmovd %xmm0, %eax
+; X64-AVX512-FAST-NEXT:    vpinsrd $1, %eax, %xmm1, %xmm0
 ; X64-AVX512-FAST-NEXT:    vmovdqa %ymm0, 832(%rsi)
 ; X64-AVX512-FAST-NEXT:    vzeroupper
 ; X64-AVX512-FAST-NEXT:    retq
@@ -620,8 +625,11 @@ define void @test_demandedelts_pshufb_v32i8_v16i8(ptr %src, ptr %dst) {
 ; X86-AVX512F-NEXT:    vpbroadcastd 44(%ecx), %xmm0
 ; X86-AVX512F-NEXT:    vmovq {{.*#+}} xmm0 = xmm0[0],zero
 ; X86-AVX512F-NEXT:    vmovdqa %ymm0, 672(%eax)
-; X86-AVX512F-NEXT:    vpshufd {{.*#+}} xmm0 = mem[1,0,2,3]
-; X86-AVX512F-NEXT:    vmovq {{.*#+}} xmm0 = xmm0[0],zero
+; X86-AVX512F-NEXT:    vmovdqa 208(%ecx), %xmm0
+; X86-AVX512F-NEXT:    vpshufd {{.*#+}} xmm1 = xmm0[1,1,1,1]
+; X86-AVX512F-NEXT:    vmovq {{.*#+}} xmm1 = xmm1[0],zero
+; X86-AVX512F-NEXT:    vmovd %xmm0, %ecx
+; X86-AVX512F-NEXT:    vpinsrd $1, %ecx, %xmm1, %xmm0
 ; X86-AVX512F-NEXT:    vmovdqa %ymm0, 832(%eax)
 ; X86-AVX512F-NEXT:    vzeroupper
 ; X86-AVX512F-NEXT:    retl
@@ -631,8 +639,11 @@ define void @test_demandedelts_pshufb_v32i8_v16i8(ptr %src, ptr %dst) {
 ; X64-AVX512F-NEXT:    vpbroadcastd 44(%rdi), %xmm0
 ; X64-AVX512F-NEXT:    vmovq {{.*#+}} xmm0 = xmm0[0],zero
 ; X64-AVX512F-NEXT:    vmovdqa %ymm0, 672(%rsi)
-; X64-AVX512F-NEXT:    vpshufd {{.*#+}} xmm0 = mem[1,0,2,3]
-; X64-AVX512F-NEXT:    vmovq {{.*#+}} xmm0 = xmm0[0],zero
+; X64-AVX512F-NEXT:    vmovdqa 208(%rdi), %xmm0
+; X64-AVX512F-NEXT:    vpshufd {{.*#+}} xmm1 = xmm0[1,1,1,1]
+; X64-AVX512F-NEXT:    vmovq {{.*#+}} xmm1 = xmm1[0],zero
+; X64-AVX512F-NEXT:    vmovd %xmm0, %eax
+; X64-AVX512F-NEXT:    vpinsrd $1, %eax, %xmm1, %xmm0
 ; X64-AVX512F-NEXT:    vmovdqa %ymm0, 832(%rsi)
 ; X64-AVX512F-NEXT:    vzeroupper
 ; X64-AVX512F-NEXT:    retq

@@ -324,8 +324,8 @@ define void @merge_2_v4f32_align1_ntstore(ptr %a0, ptr %a1) nounwind {
 ; X86-SSE4A-NEXT:    movsd 8(%ecx), %xmm1 # xmm1 = mem[0],zero
 ; X86-SSE4A-NEXT:    movsd 16(%ecx), %xmm2 # xmm2 = mem[0],zero
 ; X86-SSE4A-NEXT:    movsd 24(%ecx), %xmm3 # xmm3 = mem[0],zero
-; X86-SSE4A-NEXT:    movntsd %xmm0, (%eax)
 ; X86-SSE4A-NEXT:    movntsd %xmm1, 8(%eax)
+; X86-SSE4A-NEXT:    movntsd %xmm0, (%eax)
 ; X86-SSE4A-NEXT:    movntsd %xmm3, 24(%eax)
 ; X86-SSE4A-NEXT:    movntsd %xmm2, 16(%eax)
 ; X86-SSE4A-NEXT:    retl
@@ -352,8 +352,8 @@ define void @merge_2_v4f32_align1_ntstore(ptr %a0, ptr %a1) nounwind {
 ; X64-SSE4A-NEXT:    movsd 8(%rdi), %xmm1 # xmm1 = mem[0],zero
 ; X64-SSE4A-NEXT:    movsd 16(%rdi), %xmm2 # xmm2 = mem[0],zero
 ; X64-SSE4A-NEXT:    movsd 24(%rdi), %xmm3 # xmm3 = mem[0],zero
-; X64-SSE4A-NEXT:    movntsd %xmm0, (%rsi)
 ; X64-SSE4A-NEXT:    movntsd %xmm1, 8(%rsi)
+; X64-SSE4A-NEXT:    movntsd %xmm0, (%rsi)
 ; X64-SSE4A-NEXT:    movntsd %xmm3, 24(%rsi)
 ; X64-SSE4A-NEXT:    movntsd %xmm2, 16(%rsi)
 ; X64-SSE4A-NEXT:    retq
@@ -435,8 +435,8 @@ define void @merge_2_v4f32_align1(ptr %a0, ptr %a1) nounwind {
 ; X86-SSE4A-NEXT:    movsd 8(%ecx), %xmm1 # xmm1 = mem[0],zero
 ; X86-SSE4A-NEXT:    movsd 16(%ecx), %xmm2 # xmm2 = mem[0],zero
 ; X86-SSE4A-NEXT:    movsd 24(%ecx), %xmm3 # xmm3 = mem[0],zero
-; X86-SSE4A-NEXT:    movntsd %xmm0, (%eax)
 ; X86-SSE4A-NEXT:    movntsd %xmm1, 8(%eax)
+; X86-SSE4A-NEXT:    movntsd %xmm0, (%eax)
 ; X86-SSE4A-NEXT:    movntsd %xmm3, 24(%eax)
 ; X86-SSE4A-NEXT:    movntsd %xmm2, 16(%eax)
 ; X86-SSE4A-NEXT:    retl
@@ -463,8 +463,8 @@ define void @merge_2_v4f32_align1(ptr %a0, ptr %a1) nounwind {
 ; X64-SSE4A-NEXT:    movsd 8(%rdi), %xmm1 # xmm1 = mem[0],zero
 ; X64-SSE4A-NEXT:    movsd 16(%rdi), %xmm2 # xmm2 = mem[0],zero
 ; X64-SSE4A-NEXT:    movsd 24(%rdi), %xmm3 # xmm3 = mem[0],zero
-; X64-SSE4A-NEXT:    movntsd %xmm0, (%rsi)
 ; X64-SSE4A-NEXT:    movntsd %xmm1, 8(%rsi)
+; X64-SSE4A-NEXT:    movntsd %xmm0, (%rsi)
 ; X64-SSE4A-NEXT:    movntsd %xmm3, 24(%rsi)
 ; X64-SSE4A-NEXT:    movntsd %xmm2, 16(%rsi)
 ; X64-SSE4A-NEXT:    retq

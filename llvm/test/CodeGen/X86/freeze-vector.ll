@@ -349,15 +349,16 @@ define void @freeze_two_frozen_buildvectors(ptr %origin0, ptr %origin1, ptr %dst
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %edx
 ; X86-NEXT:    movl (%edx), %edx
 ; X86-NEXT:    andl $15, %edx
-; X86-NEXT:    vpinsrd $1, %edx, %xmm0, %xmm0
-; X86-NEXT:    vbroadcastss {{.*#+}} xmm1 = [7,7,7,7]
-; X86-NEXT:    vpand %xmm1, %xmm0, %xmm0
-; X86-NEXT:    vmovdqa %xmm0, (%ecx)
 ; X86-NEXT:    vmovd %edx, %xmm0
-; X86-NEXT:    vpshufd {{.*#+}} xmm0 = xmm0[0,1,0,1]
+; X86-NEXT:    vpshufd {{.*#+}} xmm1 = xmm0[0,0,1,1]
 ; X86-NEXT:    vpxor %xmm2, %xmm2, %xmm2
+; X86-NEXT:    vpblendw {{.*#+}} xmm1 = xmm2[0,1],xmm1[2,3],xmm2[4,5,6,7]
+; X86-NEXT:    vpshufd {{.*#+}} xmm0 = xmm0[0,1,0,1]
+; X86-NEXT:    vbroadcastss {{.*#+}} xmm3 = [7,7,7,7]
+; X86-NEXT:    vpand %xmm3, %xmm1, %xmm1
+; X86-NEXT:    vmovdqa %xmm1, (%ecx)
 ; X86-NEXT:    vpblendw {{.*#+}} xmm0 = xmm2[0,1,2,3],xmm0[4,5],xmm2[6,7]
-; X86-NEXT:    vpand %xmm1, %xmm0, %xmm0
+; X86-NEXT:    vpand %xmm3, %xmm0, %xmm0
 ; X86-NEXT:    vmovdqa %xmm0, (%eax)
 ; X86-NEXT:    retl
 ;
@@ -365,15 +366,15 @@ define void @freeze_two_frozen_buildvectors(ptr %origin0, ptr %origin1, ptr %dst
 ; X64:       # %bb.0:
 ; X64-NEXT:    movl (%rdi), %eax
 ; X64-NEXT:    andl $15, %eax
-; X64-NEXT:    vpinsrd $1, %eax, %xmm0, %xmm0
-; X64-NEXT:    vpbroadcastd {{.*#+}} xmm1 = [7,7,7,7]
-; X64-NEXT:    vpand %xmm1, %xmm0, %xmm0
-; X64-NEXT:    vmovdqa %xmm0, (%rdx)
 ; X64-NEXT:    vmovd %eax, %xmm0
 ; X64-NEXT:    vpbroadcastd %xmm0, %xmm0
-; X64-NEXT:    vpxor %xmm2, %xmm2, %xmm2
-; X64-NEXT:    vpblendd {{.*#+}} xmm0 = xmm2[0,1],xmm0[2],xmm2[3]
-; X64-NEXT:    vpand %xmm1, %xmm0, %xmm0
+; X64-NEXT:    vpxor %xmm1, %xmm1, %xmm1
+; X64-NEXT:    vpblendd {{.*#+}} xmm2 = xmm1[0],xmm0[1],xmm1[2,3]
+; X64-NEXT:    vpbroadcastd {{.*#+}} xmm3 = [7,7,7,7]
+; X64-NEXT:    vpand %xmm3, %xmm2, %xmm2
+; X64-NEXT:    vmovdqa %xmm2, (%rdx)
+; X64-NEXT:    vpblendd {{.*#+}} xmm0 = xmm1[0,1],xmm0[2],xmm1[3]
+; X64-NEXT:    vpand %xmm3, %xmm0, %xmm0
 ; X64-NEXT:    vmovdqa %xmm0, (%rcx)
 ; X64-NEXT:    retq
   %i0.src = load i32, ptr %origin0

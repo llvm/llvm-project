@@ -86,8 +86,9 @@ define i32 @add_sext_ifpos(i32 %x) {
 ; CHECK-LABEL: add_sext_ifpos:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    # kill: def $edi killed $edi def $rdi
-; CHECK-NEXT:    shrl $31, %edi
-; CHECK-NEXT:    leal 41(%rdi), %eax
+; CHECK-NEXT:    notl %edi
+; CHECK-NEXT:    sarl $31, %edi
+; CHECK-NEXT:    leal 42(%rdi), %eax
 ; CHECK-NEXT:    retq
   %c = icmp sgt i32 %x, -1
   %e = sext i1 %c to i32

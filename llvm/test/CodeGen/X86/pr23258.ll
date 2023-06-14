@@ -22,11 +22,11 @@ define void @bar(i32, ...) nounwind {
 ; HAS-RAX-LABEL: bar:
 ; HAS-RAX:       # %bb.0:
 ; HAS-RAX-NEXT:    subq $56, %rsp
-; HAS-RAX-NEXT:    movq %rsi, -{{[0-9]+}}(%rsp)
-; HAS-RAX-NEXT:    movq %rdx, -{{[0-9]+}}(%rsp)
-; HAS-RAX-NEXT:    movq %rcx, -{{[0-9]+}}(%rsp)
-; HAS-RAX-NEXT:    movq %r8, -{{[0-9]+}}(%rsp)
 ; HAS-RAX-NEXT:    movq %r9, -{{[0-9]+}}(%rsp)
+; HAS-RAX-NEXT:    movq %r8, -{{[0-9]+}}(%rsp)
+; HAS-RAX-NEXT:    movq %rcx, -{{[0-9]+}}(%rsp)
+; HAS-RAX-NEXT:    movq %rdx, -{{[0-9]+}}(%rsp)
+; HAS-RAX-NEXT:    movq %rsi, -{{[0-9]+}}(%rsp)
 ; HAS-RAX-NEXT:    testb %al, %al
 ; HAS-RAX-NEXT:    je .LBB1_2
 ; HAS-RAX-NEXT:  # %bb.1:
@@ -39,28 +39,28 @@ define void @bar(i32, ...) nounwind {
 ; HAS-RAX-NEXT:    movaps %xmm6, {{[0-9]+}}(%rsp)
 ; HAS-RAX-NEXT:    movaps %xmm7, {{[0-9]+}}(%rsp)
 ; HAS-RAX-NEXT:  .LBB1_2:
-; HAS-RAX-NEXT:    leaq {{[0-9]+}}(%rsp), %rax
-; HAS-RAX-NEXT:    movq %rax, 8
 ; HAS-RAX-NEXT:    leaq -{{[0-9]+}}(%rsp), %rax
 ; HAS-RAX-NEXT:    movq %rax, 16
-; HAS-RAX-NEXT:    movl $8, 0
+; HAS-RAX-NEXT:    leaq {{[0-9]+}}(%rsp), %rax
+; HAS-RAX-NEXT:    movq %rax, 8
 ; HAS-RAX-NEXT:    movl $48, 4
+; HAS-RAX-NEXT:    movl $8, 0
 ; HAS-RAX-NEXT:    addq $56, %rsp
 ; HAS-RAX-NEXT:    retq
 ;
 ; NO-RAX-LABEL: bar:
 ; NO-RAX:       # %bb.0:
-; NO-RAX-NEXT:    movq %rsi, -{{[0-9]+}}(%rsp)
-; NO-RAX-NEXT:    movq %rdx, -{{[0-9]+}}(%rsp)
-; NO-RAX-NEXT:    movq %rcx, -{{[0-9]+}}(%rsp)
-; NO-RAX-NEXT:    movq %r8, -{{[0-9]+}}(%rsp)
 ; NO-RAX-NEXT:    movq %r9, -{{[0-9]+}}(%rsp)
-; NO-RAX-NEXT:    leaq {{[0-9]+}}(%rsp), %rax
-; NO-RAX-NEXT:    movq %rax, 8
+; NO-RAX-NEXT:    movq %r8, -{{[0-9]+}}(%rsp)
+; NO-RAX-NEXT:    movq %rcx, -{{[0-9]+}}(%rsp)
+; NO-RAX-NEXT:    movq %rdx, -{{[0-9]+}}(%rsp)
+; NO-RAX-NEXT:    movq %rsi, -{{[0-9]+}}(%rsp)
 ; NO-RAX-NEXT:    leaq -{{[0-9]+}}(%rsp), %rax
 ; NO-RAX-NEXT:    movq %rax, 16
-; NO-RAX-NEXT:    movl $8, 0
+; NO-RAX-NEXT:    leaq {{[0-9]+}}(%rsp), %rax
+; NO-RAX-NEXT:    movq %rax, 8
 ; NO-RAX-NEXT:    movl $48, 4
+; NO-RAX-NEXT:    movl $8, 0
 ; NO-RAX-NEXT:    retq
   call void @llvm.va_start(ptr null)
   ret void

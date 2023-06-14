@@ -38,9 +38,7 @@ define i64 @mask64(i64 %x) {
 define void @mask32_mem(ptr %ptr) {
 ; CHECK-LABEL: mask32_mem:
 ; CHECK:       ## %bb.0:
-; CHECK-NEXT:    kmovd (%rdi), %k0
-; CHECK-NEXT:    knotd %k0, %k0
-; CHECK-NEXT:    kmovd %k0, (%rdi)
+; CHECK-NEXT:    notl (%rdi)
 ; CHECK-NEXT:    retq
   %x = load i32, ptr %ptr, align 4
   %m0 = bitcast i32 %x to <32 x i1>
@@ -56,9 +54,7 @@ define void @mask32_mem(ptr %ptr) {
 define void @mask64_mem(ptr %ptr) {
 ; CHECK-LABEL: mask64_mem:
 ; CHECK:       ## %bb.0:
-; CHECK-NEXT:    kmovq (%rdi), %k0
-; CHECK-NEXT:    knotq %k0, %k0
-; CHECK-NEXT:    kmovq %k0, (%rdi)
+; CHECK-NEXT:    notq (%rdi)
 ; CHECK-NEXT:    retq
   %x = load i64, ptr %ptr, align 4
   %m0 = bitcast i64 %x to <64 x i1>

@@ -56,9 +56,11 @@ define i128 @mulhioverflow(i64 %a, i64 %b, i64 %c) nounwind {
 ; X64-NEXT:    movq %rdi, %rax
 ; X64-NEXT:    mulq %rsi
 ; X64-NEXT:    andl $1, %ecx
+; X64-NEXT:    xorl %esi, %esi
 ; X64-NEXT:    addq %rdx, %rcx
+; X64-NEXT:    setb %sil
 ; X64-NEXT:    movq %rcx, %rax
-; X64-NEXT:    xorl %edx, %edx
+; X64-NEXT:    movq %rsi, %rdx
 ; X64-NEXT:    retq
   %1 = zext i64 %a to i128
   %2 = zext i64 %b to i128

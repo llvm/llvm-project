@@ -5,7 +5,7 @@ define void @PR57402() {
 ; CHECK-LABEL: PR57402:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    notl %eax
-; CHECK-NEXT:    andl $-2, %eax
+; CHECK-NEXT:    andl $65534, %eax # imm = 0xFFFE
 ; CHECK-NEXT:    leal 1(%rax,%rax,2), %ecx
 ; CHECK-NEXT:    movswq %cx, %rsi
 ; CHECK-NEXT:    xorl %edi, %edi

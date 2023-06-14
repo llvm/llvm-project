@@ -751,10 +751,10 @@ define void @and_64r(ptr %p, i64 %v) {
 ; X32-NEXT:    fistpll {{[0-9]+}}(%esp)
 ; X32-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; X32-NEXT:    movl {{[0-9]+}}(%esp), %edx
-; X32-NEXT:    andl 16(%ebp), %edx
 ; X32-NEXT:    andl 12(%ebp), %ecx
-; X32-NEXT:    movl %ecx, (%esp)
+; X32-NEXT:    andl 16(%ebp), %edx
 ; X32-NEXT:    movl %edx, {{[0-9]+}}(%esp)
+; X32-NEXT:    movl %ecx, (%esp)
 ; X32-NEXT:    fildll (%esp)
 ; X32-NEXT:    fistpll (%eax)
 ; X32-NEXT:    movl %ebp, %esp
@@ -973,10 +973,10 @@ define void @or_64r(ptr %p, i64 %v) {
 ; X32-NEXT:    fistpll {{[0-9]+}}(%esp)
 ; X32-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; X32-NEXT:    movl {{[0-9]+}}(%esp), %edx
-; X32-NEXT:    orl 16(%ebp), %edx
 ; X32-NEXT:    orl 12(%ebp), %ecx
-; X32-NEXT:    movl %ecx, (%esp)
+; X32-NEXT:    orl 16(%ebp), %edx
 ; X32-NEXT:    movl %edx, {{[0-9]+}}(%esp)
+; X32-NEXT:    movl %ecx, (%esp)
 ; X32-NEXT:    fildll (%esp)
 ; X32-NEXT:    fistpll (%eax)
 ; X32-NEXT:    movl %ebp, %esp
@@ -1195,10 +1195,10 @@ define void @xor_64r(ptr %p, i64 %v) {
 ; X32-NEXT:    fistpll {{[0-9]+}}(%esp)
 ; X32-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; X32-NEXT:    movl {{[0-9]+}}(%esp), %edx
-; X32-NEXT:    xorl 16(%ebp), %edx
 ; X32-NEXT:    xorl 12(%ebp), %ecx
-; X32-NEXT:    movl %ecx, (%esp)
+; X32-NEXT:    xorl 16(%ebp), %edx
 ; X32-NEXT:    movl %edx, {{[0-9]+}}(%esp)
+; X32-NEXT:    movl %ecx, (%esp)
 ; X32-NEXT:    fildll (%esp)
 ; X32-NEXT:    fistpll (%eax)
 ; X32-NEXT:    movl %ebp, %esp
@@ -1603,10 +1603,10 @@ define void @not_64(ptr %p) {
 ; X32-NEXT:    fistpll {{[0-9]+}}(%esp)
 ; X32-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; X32-NEXT:    movl {{[0-9]+}}(%esp), %edx
-; X32-NEXT:    notl %edx
 ; X32-NEXT:    notl %ecx
-; X32-NEXT:    movl %ecx, (%esp)
+; X32-NEXT:    notl %edx
 ; X32-NEXT:    movl %edx, {{[0-9]+}}(%esp)
+; X32-NEXT:    movl %ecx, (%esp)
 ; X32-NEXT:    fildll (%esp)
 ; X32-NEXT:    fistpll (%eax)
 ; X32-NEXT:    movl %ebp, %esp

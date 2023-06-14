@@ -310,8 +310,10 @@ define zeroext i1 @test15(i32 %bf.load, i32 %n) {
 define i8 @signbit_i16(i16 signext %L) {
 ; CHECK-LABEL: signbit_i16:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    testw %di, %di # encoding: [0x66,0x85,0xff]
-; CHECK-NEXT:    setns %al # encoding: [0x0f,0x99,0xc0]
+; CHECK-NEXT:    movzwl %di, %eax # encoding: [0x0f,0xb7,0xc7]
+; CHECK-NEXT:    shrl $15, %eax # encoding: [0xc1,0xe8,0x0f]
+; CHECK-NEXT:    xorb $1, %al # encoding: [0x34,0x01]
+; CHECK-NEXT:    # kill: def $al killed $al killed $eax
 ; CHECK-NEXT:    retq # encoding: [0xc3]
   %lshr = lshr i16 %L, 15
   %trunc = trunc i16 %lshr to i8

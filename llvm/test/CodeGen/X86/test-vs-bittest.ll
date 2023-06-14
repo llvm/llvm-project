@@ -601,9 +601,10 @@ define i64 @is_upper_bit_clear_i64_not(i64 %x) {
 define i64 @is_lower_bit_clear_i64(i64 %x) {
 ; CHECK-LABEL: is_lower_bit_clear_i64:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    xorl %eax, %eax
-; CHECK-NEXT:    testl $134217728, %edi # imm = 0x8000000
-; CHECK-NEXT:    sete %al
+; CHECK-NEXT:    movq %rdi, %rax
+; CHECK-NEXT:    shrl $27, %eax
+; CHECK-NEXT:    andl $1, %eax
+; CHECK-NEXT:    xorq $1, %rax
 ; CHECK-NEXT:    retq
   %sh = lshr i64 %x, 27
   %m = and i64 %sh, 1

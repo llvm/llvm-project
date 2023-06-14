@@ -28,10 +28,10 @@ define i8 @main() local_unnamed_addr #0 personality ptr @__gxx_personality_v0 {
 ; CHECK:       # %bb.0: # %_ZNSt3__312basic_stringIcNS_11char_traitsIcEENS_9allocatorIcEEED2Ev.exit50
 ; CHECK-NEXT:    pushq %rax
 ; CHECK-NEXT:    .cfi_def_cfa_offset 16
-; CHECK-NEXT:    movaps {{.*#+}} xmm0 = [97,97,97,97,97,97,97,97,97,97,97,97,97,97,97,97]
-; CHECK-NEXT:    movaps %xmm0, -{{[0-9]+}}(%rsp)
 ; CHECK-NEXT:    movabsq $7016996765293437281, %rax # imm = 0x6161616161616161
 ; CHECK-NEXT:    movq %rax, -{{[0-9]+}}(%rsp)
+; CHECK-NEXT:    movaps {{.*#+}} xmm0 = [97,97,97,97,97,97,97,97,97,97,97,97,97,97,97,97]
+; CHECK-NEXT:    movaps %xmm0, -{{[0-9]+}}(%rsp)
 ; CHECK-NEXT:    movw $5632, {{[0-9]+}}(%rsp) # imm = 0x1600
 ; CHECK-NEXT:    xorps %xmm0, %xmm0
 ; CHECK-NEXT:    movaps %xmm0, -{{[0-9]+}}(%rsp)
@@ -44,13 +44,11 @@ define i8 @main() local_unnamed_addr #0 personality ptr @__gxx_personality_v0 {
 ; CHECK-NEXT:    movaps %xmm0, -{{[0-9]+}}(%rsp)
 ; CHECK-NEXT:    movq $0, -{{[0-9]+}}(%rsp)
 ; CHECK-NEXT:    movb $21, -{{[0-9]+}}(%rsp)
-; CHECK-NEXT:    movabsq $7308613581744070988, %rax # imm = 0x656D69547473614C
-; CHECK-NEXT:    movq %rax, -{{[0-9]+}}(%rsp)
 ; CHECK-NEXT:    movups .L.str.1(%rip), %xmm1
 ; CHECK-NEXT:    movaps %xmm1, -{{[0-9]+}}(%rsp)
-; CHECK-NEXT:    movb $0, -{{[0-9]+}}(%rsp)
-; CHECK-NEXT:    movq -{{[0-9]+}}(%rsp), %rax
+; CHECK-NEXT:    movabsq $7308613581744070988, %rax # imm = 0x656D69547473614C
 ; CHECK-NEXT:    movq %rax, -{{[0-9]+}}(%rsp)
+; CHECK-NEXT:    movb $0, -{{[0-9]+}}(%rsp)
 ; CHECK-NEXT:    movq -{{[0-9]+}}(%rsp), %rax
 ; CHECK-NEXT:    movq %rax, -{{[0-9]+}}(%rsp)
 ; CHECK-NEXT:    movzwl -{{[0-9]+}}(%rsp), %eax
@@ -61,6 +59,8 @@ define i8 @main() local_unnamed_addr #0 personality ptr @__gxx_personality_v0 {
 ; CHECK-NEXT:    movb %al, -{{[0-9]+}}(%rsp)
 ; CHECK-NEXT:    movl -{{[0-9]+}}(%rsp), %eax
 ; CHECK-NEXT:    movl %eax, -{{[0-9]+}}(%rsp)
+; CHECK-NEXT:    movq -{{[0-9]+}}(%rsp), %rax
+; CHECK-NEXT:    movq %rax, -{{[0-9]+}}(%rsp)
 ; CHECK-NEXT:    movaps %xmm0, -{{[0-9]+}}(%rsp)
 ; CHECK-NEXT:    movq $0, -{{[0-9]+}}(%rsp)
 ; CHECK-NEXT:    movq -{{[0-9]+}}(%rsp), %rax

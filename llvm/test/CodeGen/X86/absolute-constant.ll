@@ -10,7 +10,10 @@ target triple = "x86_64-unknown-linux-gnu"
 define void @bar(ptr %x) {
 ; CHECK-LABEL: bar:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    testb $foo, (%rdi)
+; CHECK-NEXT:    movsbl (%rdi), %eax
+; CHECK-NEXT:    movl $foo, %ecx
+; CHECK-NEXT:    movsbl %cl, %ecx
+; CHECK-NEXT:    testl %ecx, %eax
 ; CHECK-NEXT:    je .LBB0_1
 ; CHECK-NEXT:  # %bb.2: # %if.then
 ; CHECK-NEXT:    xorl %eax, %eax
@@ -20,7 +23,10 @@ define void @bar(ptr %x) {
 ;
 ; PIC-LABEL: bar:
 ; PIC:       # %bb.0: # %entry
-; PIC-NEXT:    testb $foo, (%rdi)
+; PIC-NEXT:    movsbl (%rdi), %eax
+; PIC-NEXT:    movl $foo, %ecx
+; PIC-NEXT:    movsbl %cl, %ecx
+; PIC-NEXT:    testl %ecx, %eax
 ; PIC-NEXT:    je .LBB0_1
 ; PIC-NEXT:  # %bb.2: # %if.then
 ; PIC-NEXT:    xorl %eax, %eax

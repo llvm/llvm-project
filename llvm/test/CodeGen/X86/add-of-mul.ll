@@ -26,7 +26,8 @@ define i32 @test_scalar_commuted(i32 %x) {
 define <4 x i32> @test_vector(<4 x i32> %x) {
 ; CHECK-LABEL: test_vector:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    pslld $2, %xmm0
+; CHECK-NEXT:    paddd %xmm0, %xmm0
+; CHECK-NEXT:    paddd %xmm0, %xmm0
 ; CHECK-NEXT:    retq
   %mul = mul <4 x i32> %x, <i32 3, i32 3, i32 3, i32 3>
   %add = add <4 x i32> %mul, %x

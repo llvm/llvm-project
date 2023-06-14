@@ -260,17 +260,11 @@ define void @fptosi_v2f32_v2i32(<4 x float>, ptr) nounwind {
 define <2 x double> @sitofp_v2i32_v2f64(ptr) nounwind {
 ; X86-LABEL: sitofp_v2i32_v2f64:
 ; X86:       # %bb.0:
-; X86-NEXT:    pushl %ebp
-; X86-NEXT:    movl %esp, %ebp
-; X86-NEXT:    andl $-8, %esp
-; X86-NEXT:    subl $8, %esp
-; X86-NEXT:    movl 8(%ebp), %eax
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    movq (%eax), %mm0
 ; X86-NEXT:    paddd %mm0, %mm0
-; X86-NEXT:    movq %mm0, (%esp)
-; X86-NEXT:    cvtdq2pd (%esp), %xmm0
-; X86-NEXT:    movl %ebp, %esp
-; X86-NEXT:    popl %ebp
+; X86-NEXT:    movq2dq %mm0, %xmm0
+; X86-NEXT:    cvtdq2pd %xmm0, %xmm0
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: sitofp_v2i32_v2f64:

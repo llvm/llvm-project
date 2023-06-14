@@ -5,28 +5,35 @@
 define void @_start() nounwind {
 ; FAST-SHLD-LABEL: _start:
 ; FAST-SHLD:       # %bb.0: # %Entry
-; FAST-SHLD-NEXT:    movq -40(%rsp), %rax
-; FAST-SHLD-NEXT:    movq -32(%rsp), %rcx
-; FAST-SHLD-NEXT:    movq %rcx, %rdx
-; FAST-SHLD-NEXT:    shlq $62, %rdx
-; FAST-SHLD-NEXT:    shrq $2, %rcx
-; FAST-SHLD-NEXT:    shldq $2, %rdx, %rcx
-; FAST-SHLD-NEXT:    andq $-4, %rax
-; FAST-SHLD-NEXT:    orq $1, %rax
-; FAST-SHLD-NEXT:    movq %rax, -40(%rsp)
+; FAST-SHLD-NEXT:    movl -24(%rsp), %eax
+; FAST-SHLD-NEXT:    movq -40(%rsp), %rcx
+; FAST-SHLD-NEXT:    movq -32(%rsp), %rdx
+; FAST-SHLD-NEXT:    movq %rax, %rsi
+; FAST-SHLD-NEXT:    shldq $62, %rdx, %rsi
+; FAST-SHLD-NEXT:    shrdq $2, %rdx, %rcx
+; FAST-SHLD-NEXT:    leaq 1(,%rcx,4), %rdx
+; FAST-SHLD-NEXT:    movq %rdx, -40(%rsp)
+; FAST-SHLD-NEXT:    shrdq $62, %rsi, %rcx
 ; FAST-SHLD-NEXT:    movq %rcx, -32(%rsp)
-; FAST-SHLD-NEXT:    orq $-2, -56(%rsp)
+; FAST-SHLD-NEXT:    shrq $62, %rsi
+; FAST-SHLD-NEXT:    andl $4, %eax
+; FAST-SHLD-NEXT:    orl %esi, %eax
+; FAST-SHLD-NEXT:    movb %al, -24(%rsp)
 ; FAST-SHLD-NEXT:    movq $-1, -48(%rsp)
+; FAST-SHLD-NEXT:    orq $-2, -56(%rsp)
 ; FAST-SHLD-NEXT:    retq
 ;
 ; SLOW-SHLD-LABEL: _start:
 ; SLOW-SHLD:       # %bb.0: # %Entry
 ; SLOW-SHLD-NEXT:    movq -40(%rsp), %rax
+; SLOW-SHLD-NEXT:    movzbl -24(%rsp), %ecx
+; SLOW-SHLD-NEXT:    andl $7, %ecx
+; SLOW-SHLD-NEXT:    movb %cl, -24(%rsp)
 ; SLOW-SHLD-NEXT:    andq $-4, %rax
 ; SLOW-SHLD-NEXT:    orq $1, %rax
 ; SLOW-SHLD-NEXT:    movq %rax, -40(%rsp)
-; SLOW-SHLD-NEXT:    orq $-2, -56(%rsp)
 ; SLOW-SHLD-NEXT:    movq $-1, -48(%rsp)
+; SLOW-SHLD-NEXT:    orq $-2, -56(%rsp)
 ; SLOW-SHLD-NEXT:    retq
 Entry:
   %y = alloca <3 x i129>, align 16

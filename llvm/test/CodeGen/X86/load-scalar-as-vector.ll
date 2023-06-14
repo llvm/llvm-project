@@ -365,7 +365,7 @@ define <8 x i16> @sdiv_op1_constant(ptr %p) nounwind {
 ; SSE-NEXT:    movzwl %cx, %eax
 ; SSE-NEXT:    movswl %ax, %ecx
 ; SSE-NEXT:    shrl $15, %eax
-; SSE-NEXT:    sarl $5, %ecx
+; SSE-NEXT:    shrl $5, %ecx
 ; SSE-NEXT:    addl %eax, %ecx
 ; SSE-NEXT:    movd %ecx, %xmm0
 ; SSE-NEXT:    retq
@@ -379,7 +379,7 @@ define <8 x i16> @sdiv_op1_constant(ptr %p) nounwind {
 ; AVX-NEXT:    movzwl %cx, %eax
 ; AVX-NEXT:    movswl %ax, %ecx
 ; AVX-NEXT:    shrl $15, %eax
-; AVX-NEXT:    sarl $5, %ecx
+; AVX-NEXT:    shrl $5, %ecx
 ; AVX-NEXT:    addl %eax, %ecx
 ; AVX-NEXT:    vmovd %ecx, %xmm0
 ; AVX-NEXT:    retq

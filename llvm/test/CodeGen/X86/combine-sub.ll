@@ -286,10 +286,10 @@ define void @PR52032_oneuse_constant(ptr %p) {
 ; SSE-NEXT:    movdqu (%rdi), %xmm0
 ; SSE-NEXT:    movdqu 16(%rdi), %xmm1
 ; SSE-NEXT:    pcmpeqd %xmm2, %xmm2
-; SSE-NEXT:    psubd %xmm2, %xmm1
 ; SSE-NEXT:    psubd %xmm2, %xmm0
-; SSE-NEXT:    movdqu %xmm0, (%rdi)
+; SSE-NEXT:    psubd %xmm2, %xmm1
 ; SSE-NEXT:    movdqu %xmm1, 16(%rdi)
+; SSE-NEXT:    movdqu %xmm0, (%rdi)
 ; SSE-NEXT:    retq
 ;
 ; AVX-LABEL: PR52032_oneuse_constant:
@@ -317,14 +317,14 @@ define void @PR52032(ptr %p) {
 ; SSE-NEXT:    movdqu 16(%rdi), %xmm2
 ; SSE-NEXT:    movdqu 32(%rdi), %xmm3
 ; SSE-NEXT:    movdqu 48(%rdi), %xmm4
-; SSE-NEXT:    psubd %xmm0, %xmm2
 ; SSE-NEXT:    psubd %xmm0, %xmm1
-; SSE-NEXT:    movdqu %xmm1, (%rdi)
+; SSE-NEXT:    psubd %xmm0, %xmm2
 ; SSE-NEXT:    movdqu %xmm2, 16(%rdi)
-; SSE-NEXT:    psubd %xmm0, %xmm4
+; SSE-NEXT:    movdqu %xmm1, (%rdi)
 ; SSE-NEXT:    psubd %xmm0, %xmm3
-; SSE-NEXT:    movdqu %xmm3, 32(%rdi)
+; SSE-NEXT:    psubd %xmm0, %xmm4
 ; SSE-NEXT:    movdqu %xmm4, 48(%rdi)
+; SSE-NEXT:    movdqu %xmm3, 32(%rdi)
 ; SSE-NEXT:    retq
 ;
 ; AVX-LABEL: PR52032:

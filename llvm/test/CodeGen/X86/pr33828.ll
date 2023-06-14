@@ -7,18 +7,18 @@
 define void @foo(i8 %a0) {
 ; X86-LABEL: foo:
 ; X86:       # %bb.0: # %entry
-; X86-NEXT:    movsbl var_580, %eax
-; X86-NEXT:    testl $-536870913, %eax # imm = 0xDFFFFFFF
-; X86-NEXT:    jne .LBB0_1
+; X86-NEXT:    movb $1, %al
+; X86-NEXT:    testb %al, %al
+; X86-NEXT:    je .LBB0_1
 ; X86-NEXT:  # %bb.2: # %if.end13
 ; X86-NEXT:    retl
 ; X86-NEXT:  .LBB0_1: # %if.then11
 ;
 ; X64-LABEL: foo:
 ; X64:       # %bb.0: # %entry
-; X64-NEXT:    movsbl var_580(%rip), %eax
-; X64-NEXT:    testl $-536870913, %eax # imm = 0xDFFFFFFF
-; X64-NEXT:    jne .LBB0_1
+; X64-NEXT:    movb $1, %al
+; X64-NEXT:    testb %al, %al
+; X64-NEXT:    je .LBB0_1
 ; X64-NEXT:  # %bb.2: # %if.end13
 ; X64-NEXT:    retq
 ; X64-NEXT:  .LBB0_1: # %if.then11

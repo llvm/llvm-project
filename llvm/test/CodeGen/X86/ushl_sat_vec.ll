@@ -24,6 +24,7 @@ define <2 x i64> @vec_v2i64(<2 x i64> %x, <2 x i64> %y) nounwind {
 ; X64-NEXT:    pcmpeqd %xmm5, %xmm0
 ; X64-NEXT:    pshufd {{.*#+}} xmm1 = xmm0[1,0,3,2]
 ; X64-NEXT:    pand %xmm1, %xmm0
+; X64-NEXT:    andpd %xmm0, %xmm4
 ; X64-NEXT:    pcmpeqd %xmm1, %xmm1
 ; X64-NEXT:    pxor %xmm1, %xmm0
 ; X64-NEXT:    por %xmm4, %xmm0
@@ -148,6 +149,7 @@ define <4 x i32> @vec_v4i32(<4 x i32> %x, <4 x i32> %y) nounwind {
 ; X64-NEXT:    punpcklqdq {{.*#+}} xmm5 = xmm5[0],xmm1[0]
 ; X64-NEXT:    shufps {{.*#+}} xmm5 = xmm5[0,3],xmm2[0,3]
 ; X64-NEXT:    pcmpeqd %xmm5, %xmm0
+; X64-NEXT:    pand %xmm0, %xmm6
 ; X64-NEXT:    pcmpeqd %xmm1, %xmm1
 ; X64-NEXT:    pxor %xmm1, %xmm0
 ; X64-NEXT:    por %xmm6, %xmm0
@@ -271,6 +273,7 @@ define <8 x i16> @vec_v8i16(<8 x i16> %x, <8 x i16> %y) nounwind {
 ; X64-NEXT:    pand %xmm1, %xmm3
 ; X64-NEXT:    por %xmm4, %xmm3
 ; X64-NEXT:    pcmpeqw %xmm3, %xmm0
+; X64-NEXT:    pand %xmm0, %xmm2
 ; X64-NEXT:    pcmpeqd %xmm1, %xmm1
 ; X64-NEXT:    pxor %xmm1, %xmm0
 ; X64-NEXT:    por %xmm2, %xmm0
@@ -447,6 +450,7 @@ define <16 x i8> @vec_v16i8(<16 x i8> %x, <16 x i8> %y) nounwind {
 ; X64-NEXT:    pand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1
 ; X64-NEXT:    por %xmm4, %xmm1
 ; X64-NEXT:    pcmpeqb %xmm1, %xmm0
+; X64-NEXT:    pand %xmm0, %xmm2
 ; X64-NEXT:    pcmpeqd %xmm1, %xmm1
 ; X64-NEXT:    pxor %xmm1, %xmm0
 ; X64-NEXT:    por %xmm2, %xmm0

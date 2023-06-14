@@ -64,10 +64,10 @@ define void @shuffle_v16i32_to_v8i32_1(ptr %L, ptr %S) nounwind {
 ;
 ; AVX512BWVL-FAST-ALL-LABEL: shuffle_v16i32_to_v8i32_1:
 ; AVX512BWVL-FAST-ALL:       # %bb.0:
-; AVX512BWVL-FAST-ALL-NEXT:    vmovdqa (%rdi), %ymm0
-; AVX512BWVL-FAST-ALL-NEXT:    vmovdqa {{.*#+}} ymm1 = [1,3,5,7,9,11,13,15]
-; AVX512BWVL-FAST-ALL-NEXT:    vpermi2d 32(%rdi), %ymm0, %ymm1
-; AVX512BWVL-FAST-ALL-NEXT:    vmovdqa %ymm1, (%rsi)
+; AVX512BWVL-FAST-ALL-NEXT:    vmovaps (%rdi), %ymm0
+; AVX512BWVL-FAST-ALL-NEXT:    vmovaps {{.*#+}} ymm1 = [1,3,5,7,9,11,13,15]
+; AVX512BWVL-FAST-ALL-NEXT:    vpermi2ps 32(%rdi), %ymm0, %ymm1
+; AVX512BWVL-FAST-ALL-NEXT:    vmovaps %ymm1, (%rsi)
 ; AVX512BWVL-FAST-ALL-NEXT:    vzeroupper
 ; AVX512BWVL-FAST-ALL-NEXT:    retq
 ;

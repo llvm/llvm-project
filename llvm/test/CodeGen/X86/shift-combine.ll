@@ -535,11 +535,11 @@ define i32 @or_tree_with_shifts_i32(i32 %a, i32 %b, i32 %c, i32 %d) {
 define i32 @xor_tree_with_shifts_i32(i32 %a, i32 %b, i32 %c, i32 %d) {
 ; X32-LABEL: xor_tree_with_shifts_i32:
 ; X32:       # %bb.0:
-; X32-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X32-NEXT:    movzwl {{[0-9]+}}(%esp), %eax
+; X32-NEXT:    movzwl {{[0-9]+}}(%esp), %ecx
+; X32-NEXT:    xorl {{[0-9]+}}(%esp), %ecx
 ; X32-NEXT:    xorl {{[0-9]+}}(%esp), %eax
-; X32-NEXT:    shrl $16, %eax
-; X32-NEXT:    xorl {{[0-9]+}}(%esp), %eax
-; X32-NEXT:    xorl {{[0-9]+}}(%esp), %eax
+; X32-NEXT:    xorl %ecx, %eax
 ; X32-NEXT:    retl
 ;
 ; X64-LABEL: xor_tree_with_shifts_i32:

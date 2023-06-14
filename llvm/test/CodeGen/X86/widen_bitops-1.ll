@@ -70,8 +70,91 @@ define i32 @or_i32_as_v4i8(i32 %a, i32 %b) nounwind {
 define i32 @and_i32_as_v8i4(i32 %a, i32 %b) nounwind {
 ; X86-LABEL: and_i32_as_v8i4:
 ; X86:       # %bb.0:
+; X86-NEXT:    pushl %eax
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X86-NEXT:    andl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    movl %eax, %ecx
+; X86-NEXT:    shrl $4, %ecx
+; X86-NEXT:    andl $15, %ecx
+; X86-NEXT:    movl %eax, %edx
+; X86-NEXT:    andl $15, %edx
+; X86-NEXT:    movd %edx, %xmm0
+; X86-NEXT:    pinsrw $1, %ecx, %xmm0
+; X86-NEXT:    movl %eax, %ecx
+; X86-NEXT:    shrl $8, %ecx
+; X86-NEXT:    andl $15, %ecx
+; X86-NEXT:    pinsrw $2, %ecx, %xmm0
+; X86-NEXT:    movl %eax, %ecx
+; X86-NEXT:    shrl $12, %ecx
+; X86-NEXT:    andl $15, %ecx
+; X86-NEXT:    pinsrw $3, %ecx, %xmm0
+; X86-NEXT:    movl %eax, %ecx
+; X86-NEXT:    shrl $16, %ecx
+; X86-NEXT:    andl $15, %ecx
+; X86-NEXT:    pinsrw $4, %ecx, %xmm0
+; X86-NEXT:    movl %eax, %ecx
+; X86-NEXT:    shrl $20, %ecx
+; X86-NEXT:    andl $15, %ecx
+; X86-NEXT:    pinsrw $5, %ecx, %xmm0
+; X86-NEXT:    movl %eax, %ecx
+; X86-NEXT:    shrl $24, %ecx
+; X86-NEXT:    andl $15, %ecx
+; X86-NEXT:    pinsrw $6, %ecx, %xmm0
+; X86-NEXT:    shrl $28, %eax
+; X86-NEXT:    pinsrw $7, %eax, %xmm0
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    movl %eax, %ecx
+; X86-NEXT:    shrl $4, %ecx
+; X86-NEXT:    andl $15, %ecx
+; X86-NEXT:    movl %eax, %edx
+; X86-NEXT:    andl $15, %edx
+; X86-NEXT:    movd %edx, %xmm1
+; X86-NEXT:    pinsrw $1, %ecx, %xmm1
+; X86-NEXT:    movl %eax, %ecx
+; X86-NEXT:    shrl $8, %ecx
+; X86-NEXT:    andl $15, %ecx
+; X86-NEXT:    pinsrw $2, %ecx, %xmm1
+; X86-NEXT:    movl %eax, %ecx
+; X86-NEXT:    shrl $12, %ecx
+; X86-NEXT:    andl $15, %ecx
+; X86-NEXT:    pinsrw $3, %ecx, %xmm1
+; X86-NEXT:    movl %eax, %ecx
+; X86-NEXT:    shrl $16, %ecx
+; X86-NEXT:    andl $15, %ecx
+; X86-NEXT:    pinsrw $4, %ecx, %xmm1
+; X86-NEXT:    movl %eax, %ecx
+; X86-NEXT:    shrl $20, %ecx
+; X86-NEXT:    andl $15, %ecx
+; X86-NEXT:    pinsrw $5, %ecx, %xmm1
+; X86-NEXT:    movl %eax, %ecx
+; X86-NEXT:    shrl $24, %ecx
+; X86-NEXT:    andl $15, %ecx
+; X86-NEXT:    pinsrw $6, %ecx, %xmm1
+; X86-NEXT:    shrl $28, %eax
+; X86-NEXT:    pinsrw $7, %eax, %xmm1
+; X86-NEXT:    pand %xmm0, %xmm1
+; X86-NEXT:    pextrw $0, %xmm1, %eax
+; X86-NEXT:    pextrw $1, %xmm1, %ecx
+; X86-NEXT:    shll $4, %ecx
+; X86-NEXT:    orl %eax, %ecx
+; X86-NEXT:    pextrw $2, %xmm1, %edx
+; X86-NEXT:    shll $8, %edx
+; X86-NEXT:    pextrw $3, %xmm1, %eax
+; X86-NEXT:    shll $12, %eax
+; X86-NEXT:    orl %edx, %eax
+; X86-NEXT:    orl %ecx, %eax
+; X86-NEXT:    pextrw $4, %xmm1, %ecx
+; X86-NEXT:    shll $16, %ecx
+; X86-NEXT:    pextrw $5, %xmm1, %edx
+; X86-NEXT:    shll $20, %edx
+; X86-NEXT:    orl %ecx, %edx
+; X86-NEXT:    pextrw $6, %xmm1, %ecx
+; X86-NEXT:    shll $24, %ecx
+; X86-NEXT:    orl %edx, %ecx
+; X86-NEXT:    orl %eax, %ecx
+; X86-NEXT:    pextrw $7, %xmm1, %eax
+; X86-NEXT:    shll $28, %eax
+; X86-NEXT:    orl %ecx, %eax
+; X86-NEXT:    popl %ecx
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: and_i32_as_v8i4:
@@ -89,8 +172,91 @@ define i32 @and_i32_as_v8i4(i32 %a, i32 %b) nounwind {
 define i32 @xor_i32_as_v8i4(i32 %a, i32 %b) nounwind {
 ; X86-LABEL: xor_i32_as_v8i4:
 ; X86:       # %bb.0:
+; X86-NEXT:    pushl %eax
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X86-NEXT:    xorl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    movl %eax, %ecx
+; X86-NEXT:    shrl $4, %ecx
+; X86-NEXT:    andl $15, %ecx
+; X86-NEXT:    movl %eax, %edx
+; X86-NEXT:    andl $15, %edx
+; X86-NEXT:    movd %edx, %xmm0
+; X86-NEXT:    pinsrw $1, %ecx, %xmm0
+; X86-NEXT:    movl %eax, %ecx
+; X86-NEXT:    shrl $8, %ecx
+; X86-NEXT:    andl $15, %ecx
+; X86-NEXT:    pinsrw $2, %ecx, %xmm0
+; X86-NEXT:    movl %eax, %ecx
+; X86-NEXT:    shrl $12, %ecx
+; X86-NEXT:    andl $15, %ecx
+; X86-NEXT:    pinsrw $3, %ecx, %xmm0
+; X86-NEXT:    movl %eax, %ecx
+; X86-NEXT:    shrl $16, %ecx
+; X86-NEXT:    andl $15, %ecx
+; X86-NEXT:    pinsrw $4, %ecx, %xmm0
+; X86-NEXT:    movl %eax, %ecx
+; X86-NEXT:    shrl $20, %ecx
+; X86-NEXT:    andl $15, %ecx
+; X86-NEXT:    pinsrw $5, %ecx, %xmm0
+; X86-NEXT:    movl %eax, %ecx
+; X86-NEXT:    shrl $24, %ecx
+; X86-NEXT:    andl $15, %ecx
+; X86-NEXT:    pinsrw $6, %ecx, %xmm0
+; X86-NEXT:    shrl $28, %eax
+; X86-NEXT:    pinsrw $7, %eax, %xmm0
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    movl %eax, %ecx
+; X86-NEXT:    shrl $4, %ecx
+; X86-NEXT:    andl $15, %ecx
+; X86-NEXT:    movl %eax, %edx
+; X86-NEXT:    andl $15, %edx
+; X86-NEXT:    movd %edx, %xmm1
+; X86-NEXT:    pinsrw $1, %ecx, %xmm1
+; X86-NEXT:    movl %eax, %ecx
+; X86-NEXT:    shrl $8, %ecx
+; X86-NEXT:    andl $15, %ecx
+; X86-NEXT:    pinsrw $2, %ecx, %xmm1
+; X86-NEXT:    movl %eax, %ecx
+; X86-NEXT:    shrl $12, %ecx
+; X86-NEXT:    andl $15, %ecx
+; X86-NEXT:    pinsrw $3, %ecx, %xmm1
+; X86-NEXT:    movl %eax, %ecx
+; X86-NEXT:    shrl $16, %ecx
+; X86-NEXT:    andl $15, %ecx
+; X86-NEXT:    pinsrw $4, %ecx, %xmm1
+; X86-NEXT:    movl %eax, %ecx
+; X86-NEXT:    shrl $20, %ecx
+; X86-NEXT:    andl $15, %ecx
+; X86-NEXT:    pinsrw $5, %ecx, %xmm1
+; X86-NEXT:    movl %eax, %ecx
+; X86-NEXT:    shrl $24, %ecx
+; X86-NEXT:    andl $15, %ecx
+; X86-NEXT:    pinsrw $6, %ecx, %xmm1
+; X86-NEXT:    shrl $28, %eax
+; X86-NEXT:    pinsrw $7, %eax, %xmm1
+; X86-NEXT:    pxor %xmm0, %xmm1
+; X86-NEXT:    pextrw $0, %xmm1, %eax
+; X86-NEXT:    pextrw $1, %xmm1, %ecx
+; X86-NEXT:    shll $4, %ecx
+; X86-NEXT:    orl %eax, %ecx
+; X86-NEXT:    pextrw $2, %xmm1, %edx
+; X86-NEXT:    shll $8, %edx
+; X86-NEXT:    pextrw $3, %xmm1, %eax
+; X86-NEXT:    shll $12, %eax
+; X86-NEXT:    orl %edx, %eax
+; X86-NEXT:    orl %ecx, %eax
+; X86-NEXT:    pextrw $4, %xmm1, %ecx
+; X86-NEXT:    shll $16, %ecx
+; X86-NEXT:    pextrw $5, %xmm1, %edx
+; X86-NEXT:    shll $20, %edx
+; X86-NEXT:    orl %ecx, %edx
+; X86-NEXT:    pextrw $6, %xmm1, %ecx
+; X86-NEXT:    shll $24, %ecx
+; X86-NEXT:    orl %edx, %ecx
+; X86-NEXT:    orl %eax, %ecx
+; X86-NEXT:    pextrw $7, %xmm1, %eax
+; X86-NEXT:    shll $28, %eax
+; X86-NEXT:    orl %ecx, %eax
+; X86-NEXT:    popl %ecx
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: xor_i32_as_v8i4:
@@ -108,8 +274,91 @@ define i32 @xor_i32_as_v8i4(i32 %a, i32 %b) nounwind {
 define i32 @or_i32_as_v8i4(i32 %a, i32 %b) nounwind {
 ; X86-LABEL: or_i32_as_v8i4:
 ; X86:       # %bb.0:
+; X86-NEXT:    pushl %eax
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X86-NEXT:    orl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    movl %eax, %ecx
+; X86-NEXT:    shrl $4, %ecx
+; X86-NEXT:    andl $15, %ecx
+; X86-NEXT:    movl %eax, %edx
+; X86-NEXT:    andl $15, %edx
+; X86-NEXT:    movd %edx, %xmm0
+; X86-NEXT:    pinsrw $1, %ecx, %xmm0
+; X86-NEXT:    movl %eax, %ecx
+; X86-NEXT:    shrl $8, %ecx
+; X86-NEXT:    andl $15, %ecx
+; X86-NEXT:    pinsrw $2, %ecx, %xmm0
+; X86-NEXT:    movl %eax, %ecx
+; X86-NEXT:    shrl $12, %ecx
+; X86-NEXT:    andl $15, %ecx
+; X86-NEXT:    pinsrw $3, %ecx, %xmm0
+; X86-NEXT:    movl %eax, %ecx
+; X86-NEXT:    shrl $16, %ecx
+; X86-NEXT:    andl $15, %ecx
+; X86-NEXT:    pinsrw $4, %ecx, %xmm0
+; X86-NEXT:    movl %eax, %ecx
+; X86-NEXT:    shrl $20, %ecx
+; X86-NEXT:    andl $15, %ecx
+; X86-NEXT:    pinsrw $5, %ecx, %xmm0
+; X86-NEXT:    movl %eax, %ecx
+; X86-NEXT:    shrl $24, %ecx
+; X86-NEXT:    andl $15, %ecx
+; X86-NEXT:    pinsrw $6, %ecx, %xmm0
+; X86-NEXT:    shrl $28, %eax
+; X86-NEXT:    pinsrw $7, %eax, %xmm0
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    movl %eax, %ecx
+; X86-NEXT:    shrl $4, %ecx
+; X86-NEXT:    andl $15, %ecx
+; X86-NEXT:    movl %eax, %edx
+; X86-NEXT:    andl $15, %edx
+; X86-NEXT:    movd %edx, %xmm1
+; X86-NEXT:    pinsrw $1, %ecx, %xmm1
+; X86-NEXT:    movl %eax, %ecx
+; X86-NEXT:    shrl $8, %ecx
+; X86-NEXT:    andl $15, %ecx
+; X86-NEXT:    pinsrw $2, %ecx, %xmm1
+; X86-NEXT:    movl %eax, %ecx
+; X86-NEXT:    shrl $12, %ecx
+; X86-NEXT:    andl $15, %ecx
+; X86-NEXT:    pinsrw $3, %ecx, %xmm1
+; X86-NEXT:    movl %eax, %ecx
+; X86-NEXT:    shrl $16, %ecx
+; X86-NEXT:    andl $15, %ecx
+; X86-NEXT:    pinsrw $4, %ecx, %xmm1
+; X86-NEXT:    movl %eax, %ecx
+; X86-NEXT:    shrl $20, %ecx
+; X86-NEXT:    andl $15, %ecx
+; X86-NEXT:    pinsrw $5, %ecx, %xmm1
+; X86-NEXT:    movl %eax, %ecx
+; X86-NEXT:    shrl $24, %ecx
+; X86-NEXT:    andl $15, %ecx
+; X86-NEXT:    pinsrw $6, %ecx, %xmm1
+; X86-NEXT:    shrl $28, %eax
+; X86-NEXT:    pinsrw $7, %eax, %xmm1
+; X86-NEXT:    por %xmm0, %xmm1
+; X86-NEXT:    pextrw $0, %xmm1, %eax
+; X86-NEXT:    pextrw $1, %xmm1, %ecx
+; X86-NEXT:    shll $4, %ecx
+; X86-NEXT:    orl %eax, %ecx
+; X86-NEXT:    pextrw $2, %xmm1, %edx
+; X86-NEXT:    shll $8, %edx
+; X86-NEXT:    pextrw $3, %xmm1, %eax
+; X86-NEXT:    shll $12, %eax
+; X86-NEXT:    orl %edx, %eax
+; X86-NEXT:    orl %ecx, %eax
+; X86-NEXT:    pextrw $4, %xmm1, %ecx
+; X86-NEXT:    shll $16, %ecx
+; X86-NEXT:    pextrw $5, %xmm1, %edx
+; X86-NEXT:    shll $20, %edx
+; X86-NEXT:    orl %ecx, %edx
+; X86-NEXT:    pextrw $6, %xmm1, %ecx
+; X86-NEXT:    shll $24, %ecx
+; X86-NEXT:    orl %edx, %ecx
+; X86-NEXT:    orl %eax, %ecx
+; X86-NEXT:    pextrw $7, %xmm1, %eax
+; X86-NEXT:    shll $28, %eax
+; X86-NEXT:    orl %ecx, %eax
+; X86-NEXT:    popl %ecx
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: or_i32_as_v8i4:

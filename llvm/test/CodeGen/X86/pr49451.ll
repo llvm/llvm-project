@@ -10,7 +10,7 @@ define void @func_6(i8 %uc_8, i64 %uli_10) nounwind {
 ; X86:       # %bb.0: # %entry
 ; X86-NEXT:    pushl %ebx
 ; X86-NEXT:    pushl %esi
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    movzwl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    movl $-1, %ecx
 ; X86-NEXT:    xorl %edx, %edx
 ; X86-NEXT:    xorl %ebx, %ebx
@@ -49,7 +49,6 @@ define void @func_6(i8 %uc_8, i64 %uli_10) nounwind {
 ; X64-NEXT:    leal -23090(%rax), %edi
 ; X64-NEXT:    movw %di, s_0(%rip)
 ; X64-NEXT:    incq %rax
-; X64-NEXT:    leal -23091(%rax), %edi
 ; X64-NEXT:    cmpw $73, %di
 ; X64-NEXT:    jl .LBB0_1
 ; X64-NEXT:  # %bb.4: # %for.body1703

@@ -274,11 +274,18 @@ define <8 x i16> @signbit_mask_v8i16(<8 x i16> %a, <8 x i16> %b) {
 ; AVX-NEXT:    vpand %xmm1, %xmm0, %xmm0
 ; AVX-NEXT:    retq
 ;
-; AVX512-LABEL: signbit_mask_v8i16:
-; AVX512:       # %bb.0:
-; AVX512-NEXT:    vpsraw $15, %xmm0, %xmm0
-; AVX512-NEXT:    vpand %xmm1, %xmm0, %xmm0
-; AVX512-NEXT:    retq
+; AVX512F-LABEL: signbit_mask_v8i16:
+; AVX512F:       # %bb.0:
+; AVX512F-NEXT:    vpxor %xmm2, %xmm2, %xmm2
+; AVX512F-NEXT:    vpcmpgtw %xmm0, %xmm2, %xmm0
+; AVX512F-NEXT:    vpand %xmm1, %xmm0, %xmm0
+; AVX512F-NEXT:    retq
+;
+; AVX512DQBW-LABEL: signbit_mask_v8i16:
+; AVX512DQBW:       # %bb.0:
+; AVX512DQBW-NEXT:    vpsraw $15, %xmm0, %xmm0
+; AVX512DQBW-NEXT:    vpand %xmm1, %xmm0, %xmm0
+; AVX512DQBW-NEXT:    retq
   %cond = icmp slt <8 x i16> %a, zeroinitializer
   %r = select <8 x i1> %cond, <8 x i16> %b, <8 x i16> zeroinitializer
   ret <8 x i16> %r
@@ -440,11 +447,18 @@ define <16 x i16> @signbit_mask_v16i16(<16 x i16> %a, <16 x i16> %b) {
 ; AVX2-NEXT:    vpand %ymm1, %ymm0, %ymm0
 ; AVX2-NEXT:    retq
 ;
-; AVX512-LABEL: signbit_mask_v16i16:
-; AVX512:       # %bb.0:
-; AVX512-NEXT:    vpsraw $15, %ymm0, %ymm0
-; AVX512-NEXT:    vpand %ymm1, %ymm0, %ymm0
-; AVX512-NEXT:    retq
+; AVX512F-LABEL: signbit_mask_v16i16:
+; AVX512F:       # %bb.0:
+; AVX512F-NEXT:    vpxor %xmm2, %xmm2, %xmm2
+; AVX512F-NEXT:    vpcmpgtw %ymm0, %ymm2, %ymm0
+; AVX512F-NEXT:    vpand %ymm1, %ymm0, %ymm0
+; AVX512F-NEXT:    retq
+;
+; AVX512DQBW-LABEL: signbit_mask_v16i16:
+; AVX512DQBW:       # %bb.0:
+; AVX512DQBW-NEXT:    vpsraw $15, %ymm0, %ymm0
+; AVX512DQBW-NEXT:    vpand %ymm1, %ymm0, %ymm0
+; AVX512DQBW-NEXT:    retq
   %cond = icmp slt <16 x i16> %a, zeroinitializer
   %r = select <16 x i1> %cond, <16 x i16> %b, <16 x i16> zeroinitializer
   ret <16 x i16> %r
@@ -639,11 +653,18 @@ define <8 x i16> @signbit_setmask_v8i16(<8 x i16> %a, <8 x i16> %b) {
 ; AVX-NEXT:    vpor %xmm1, %xmm0, %xmm0
 ; AVX-NEXT:    retq
 ;
-; AVX512-LABEL: signbit_setmask_v8i16:
-; AVX512:       # %bb.0:
-; AVX512-NEXT:    vpsraw $15, %xmm0, %xmm0
-; AVX512-NEXT:    vpor %xmm1, %xmm0, %xmm0
-; AVX512-NEXT:    retq
+; AVX512F-LABEL: signbit_setmask_v8i16:
+; AVX512F:       # %bb.0:
+; AVX512F-NEXT:    vpxor %xmm2, %xmm2, %xmm2
+; AVX512F-NEXT:    vpcmpgtw %xmm0, %xmm2, %xmm0
+; AVX512F-NEXT:    vpor %xmm1, %xmm0, %xmm0
+; AVX512F-NEXT:    retq
+;
+; AVX512DQBW-LABEL: signbit_setmask_v8i16:
+; AVX512DQBW:       # %bb.0:
+; AVX512DQBW-NEXT:    vpsraw $15, %xmm0, %xmm0
+; AVX512DQBW-NEXT:    vpor %xmm1, %xmm0, %xmm0
+; AVX512DQBW-NEXT:    retq
   %cond = icmp slt <8 x i16> %a, zeroinitializer
   %r = select <8 x i1> %cond, <8 x i16> <i16 -1, i16 -1, i16 -1, i16 -1, i16 -1, i16 -1, i16 -1, i16 -1>, <8 x i16> %b
   ret <8 x i16> %r
@@ -770,11 +791,18 @@ define <16 x i16> @signbit_setmask_v16i16(<16 x i16> %a, <16 x i16> %b) {
 ; AVX2-NEXT:    vpor %ymm1, %ymm0, %ymm0
 ; AVX2-NEXT:    retq
 ;
-; AVX512-LABEL: signbit_setmask_v16i16:
-; AVX512:       # %bb.0:
-; AVX512-NEXT:    vpsraw $15, %ymm0, %ymm0
-; AVX512-NEXT:    vpor %ymm1, %ymm0, %ymm0
-; AVX512-NEXT:    retq
+; AVX512F-LABEL: signbit_setmask_v16i16:
+; AVX512F:       # %bb.0:
+; AVX512F-NEXT:    vpxor %xmm2, %xmm2, %xmm2
+; AVX512F-NEXT:    vpcmpgtw %ymm0, %ymm2, %ymm0
+; AVX512F-NEXT:    vpor %ymm1, %ymm0, %ymm0
+; AVX512F-NEXT:    retq
+;
+; AVX512DQBW-LABEL: signbit_setmask_v16i16:
+; AVX512DQBW:       # %bb.0:
+; AVX512DQBW-NEXT:    vpsraw $15, %ymm0, %ymm0
+; AVX512DQBW-NEXT:    vpor %ymm1, %ymm0, %ymm0
+; AVX512DQBW-NEXT:    retq
   %cond = icmp slt <16 x i16> %a, zeroinitializer
   %r = select <16 x i1> %cond, <16 x i16> <i16 -1, i16 -1, i16 -1, i16 -1, i16 -1, i16 -1, i16 -1, i16 -1, i16 -1, i16 -1, i16 -1, i16 -1, i16 -1, i16 -1, i16 -1, i16 -1>, <16 x i16> %b
   ret <16 x i16> %r
@@ -980,11 +1008,18 @@ define <8 x i16> @not_signbit_mask_swap_v8i16(<8 x i16> %a, <8 x i16> %b) {
 ; AVX-NEXT:    vpandn %xmm1, %xmm0, %xmm0
 ; AVX-NEXT:    retq
 ;
-; AVX512-LABEL: not_signbit_mask_swap_v8i16:
-; AVX512:       # %bb.0:
-; AVX512-NEXT:    vpsraw $15, %xmm0, %xmm0
-; AVX512-NEXT:    vpandn %xmm1, %xmm0, %xmm0
-; AVX512-NEXT:    retq
+; AVX512F-LABEL: not_signbit_mask_swap_v8i16:
+; AVX512F:       # %bb.0:
+; AVX512F-NEXT:    vpxor %xmm2, %xmm2, %xmm2
+; AVX512F-NEXT:    vpcmpgtw %xmm0, %xmm2, %xmm0
+; AVX512F-NEXT:    vpandn %xmm1, %xmm0, %xmm0
+; AVX512F-NEXT:    retq
+;
+; AVX512DQBW-LABEL: not_signbit_mask_swap_v8i16:
+; AVX512DQBW:       # %bb.0:
+; AVX512DQBW-NEXT:    vpsraw $15, %xmm0, %xmm0
+; AVX512DQBW-NEXT:    vpandn %xmm1, %xmm0, %xmm0
+; AVX512DQBW-NEXT:    retq
   %cond = icmp slt <8 x i16> %a, zeroinitializer
   %r = select <8 x i1> %cond, <8 x i16> zeroinitializer, <8 x i16> %b
   ret <8 x i16> %r

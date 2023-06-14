@@ -9,11 +9,10 @@ define void @pr35443() {
 ; CHECK-LABEL: pr35443:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vpbroadcastb ac+4(%rip), %xmm0
-; CHECK-NEXT:    vpmovzxbq {{.*#+}} ymm0 = xmm0[0],zero,zero,zero,zero,zero,zero,zero,xmm0[1],zero,zero,zero,zero,zero,zero,zero,xmm0[2],zero,zero,zero,zero,zero,zero,zero,xmm0[3],zero,zero,zero,zero,zero,zero,zero
+; CHECK-NEXT:    vpmovzxbd {{.*#+}} xmm0 = xmm0[0],zero,zero,zero,xmm0[1],zero,zero,zero,xmm0[2],zero,zero,zero,xmm0[3],zero,zero,zero
 ; CHECK-NEXT:    vpxor %xmm1, %xmm1, %xmm1
-; CHECK-NEXT:    vpsubq %ymm0, %ymm1, %ymm0
-; CHECK-NEXT:    vpmovqd %ymm0, ai3+16(%rip)
-; CHECK-NEXT:    vzeroupper
+; CHECK-NEXT:    vpsubd %xmm0, %xmm1, %xmm0
+; CHECK-NEXT:    vmovdqa %xmm0, ai3+16(%rip)
 ; CHECK-NEXT:    retq
 entry:
   %wide.masked.load66 = call <4 x i8> @llvm.masked.load.v4i8.p0(ptr getelementptr inbounds ([20 x i8], ptr @ac, i64 0, i64 4), i32 1, <4 x i1> <i1 true, i1 false, i1 false, i1 false>, <4 x i8> undef)

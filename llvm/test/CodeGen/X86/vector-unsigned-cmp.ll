@@ -590,13 +590,13 @@ define void @PR54171(ptr %mask0, ptr %mask1, i64 %i) {
 ; SSE-NEXT:    pcmpgtd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1
 ; SSE-NEXT:    movdqa %xmm0, %xmm2
 ; SSE-NEXT:    pcmpgtd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm2
-; SSE-NEXT:    movdqa %xmm2, (%rdi)
-; SSE-NEXT:    movdqa %xmm1, 16(%rdi)
+; SSE-NEXT:    movdqa %xmm2, 16(%rdi)
+; SSE-NEXT:    movdqa %xmm1, (%rdi)
 ; SSE-NEXT:    movdqa %xmm0, %xmm1
 ; SSE-NEXT:    pcmpgtd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1
 ; SSE-NEXT:    pcmpgtd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
-; SSE-NEXT:    movdqa %xmm0, (%rsi)
-; SSE-NEXT:    movdqa %xmm1, 16(%rsi)
+; SSE-NEXT:    movdqa %xmm0, 16(%rsi)
+; SSE-NEXT:    movdqa %xmm1, (%rsi)
 ; SSE-NEXT:  .LBB18_2: # %if.end
 ; SSE-NEXT:    retq
 ;
@@ -609,12 +609,12 @@ define void @PR54171(ptr %mask0, ptr %mask1, i64 %i) {
 ; AVX1-NEXT:    vpshufd {{.*#+}} xmm0 = xmm0[0,0,0,0]
 ; AVX1-NEXT:    vpcmpgtd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm1
 ; AVX1-NEXT:    vpcmpgtd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm2
-; AVX1-NEXT:    vmovdqa %xmm2, (%rdi)
-; AVX1-NEXT:    vmovdqa %xmm1, 16(%rdi)
+; AVX1-NEXT:    vmovdqa %xmm2, 16(%rdi)
+; AVX1-NEXT:    vmovdqa %xmm1, (%rdi)
 ; AVX1-NEXT:    vpcmpgtd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm1
 ; AVX1-NEXT:    vpcmpgtd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
-; AVX1-NEXT:    vmovdqa %xmm0, (%rsi)
-; AVX1-NEXT:    vmovdqa %xmm1, 16(%rsi)
+; AVX1-NEXT:    vmovdqa %xmm0, 16(%rsi)
+; AVX1-NEXT:    vmovdqa %xmm1, (%rsi)
 ; AVX1-NEXT:  .LBB18_2: # %if.end
 ; AVX1-NEXT:    retq
 ;

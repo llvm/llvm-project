@@ -17,21 +17,19 @@ target triple = "x86_64-unknown-linux-gnu"
 define dso_local i32 @main() nounwind uwtable {
 ; CHECK-LABEL: main:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    movl i(%rip), %esi
-; CHECK-NEXT:    movl j(%rip), %eax
-; CHECK-NEXT:    movl %esi, %edx
-; CHECK-NEXT:    shrl $8, %edx
-; CHECK-NEXT:    movsbl %al, %ecx
-; CHECK-NEXT:    shrl $8, %eax
-; CHECK-NEXT:    cbtw
+; CHECK-NEXT:    movq i(%rip), %rdx
+; CHECK-NEXT:    movq j(%rip), %rsi
+; CHECK-NEXT:    movsbl %sil, %eax
 ; CHECK-NEXT:    idivb %dl
-; CHECK-NEXT:    movl %eax, %edx
-; CHECK-NEXT:    movl %ecx, %eax
-; CHECK-NEXT:    idivb %sil
-; CHECK-NEXT:    movzbl %dl, %ecx
+; CHECK-NEXT:    movl %eax, %ecx
+; CHECK-NEXT:    shrl $8, %edx
+; CHECK-NEXT:    shrl $8, %esi
+; CHECK-NEXT:    movsbl %sil, %eax
+; CHECK-NEXT:    idivb %dl
+; CHECK-NEXT:    movzbl %cl, %ecx
+; CHECK-NEXT:    movd %ecx, %xmm0
 ; CHECK-NEXT:    movzbl %al, %eax
-; CHECK-NEXT:    movd %eax, %xmm0
-; CHECK-NEXT:    pinsrb $1, %ecx, %xmm0
+; CHECK-NEXT:    pinsrb $1, %eax, %xmm0
 ; CHECK-NEXT:    pextrw $0, %xmm0, res(%rip)
 ; CHECK-NEXT:    xorl %eax, %eax
 ; CHECK-NEXT:    retq

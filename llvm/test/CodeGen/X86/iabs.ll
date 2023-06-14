@@ -39,7 +39,7 @@ define i16 @test_i16(i16 %a) nounwind {
 ; X86-NO-CMOV:       # %bb.0:
 ; X86-NO-CMOV-NEXT:    movzwl {{[0-9]+}}(%esp), %eax
 ; X86-NO-CMOV-NEXT:    movswl %ax, %ecx
-; X86-NO-CMOV-NEXT:    sarl $15, %ecx
+; X86-NO-CMOV-NEXT:    shrl $15, %ecx
 ; X86-NO-CMOV-NEXT:    xorl %ecx, %eax
 ; X86-NO-CMOV-NEXT:    subl %ecx, %eax
 ; X86-NO-CMOV-NEXT:    # kill: def $ax killed $ax killed $eax

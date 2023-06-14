@@ -22,7 +22,7 @@ define <16 x i64> @pluto(<16 x i64> %arg, <16 x i64> %arg1, <16 x i64> %arg2, <1
 ; CHECK-NEXT:    vmovaps 80(%rbp), %ymm11
 ; CHECK-NEXT:    vmovaps 48(%rbp), %ymm11
 ; CHECK-NEXT:    vmovaps 16(%rbp), %ymm11
-; CHECK-NEXT:    vpblendd {{.*#+}} ymm0 = ymm6[0,1,2,3,4,5],ymm2[6,7]
+; CHECK-NEXT:    vpblendd {{.*#+}} ymm0 = ymm6[0,1,2,3],ymm2[4,5,6,7]
 ; CHECK-NEXT:    vpunpcklqdq {{.*#+}} ymm1 = ymm1[0],ymm3[0],ymm1[2],ymm3[2]
 ; CHECK-NEXT:    vpermq {{.*#+}} ymm1 = ymm1[0,2,1,3]
 ; CHECK-NEXT:    vpermq {{.*#+}} ymm0 = ymm0[3,1,2,1]
