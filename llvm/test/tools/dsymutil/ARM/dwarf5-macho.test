@@ -25,22 +25,25 @@ CHECK:.debug_abbrev contents:
 CHECK-NEXT: Abbrev table for offset: 0x00000000
 
 CHECK: .debug_info contents:
-CHECK-NEXT: 0x00000000: Compile Unit: length = 0x00000064, format = DWARF32, version = 0x0005, unit_type = DW_UT_compile, abbr_offset = 0x0000, addr_size = 0x08 (next unit at 0x00000068)
-CHECK: DW_AT_ranges [DW_FORM_sec_offset] (0x[[RANGE_OFFSET:[0-9a-f]+]]
-CHECK-NEXT:                  [0x[[RANGE_OFFSET_START:[0-9a-f]+]], 0x[[RANGE_OFFSET_END:[0-9a-f]+]]))
+CHECK-NEXT: 0x00000000: Compile Unit: length = 0x00000064, format = DWARF32, version = 0x0005, unit_type = DW_UT_compile, abbr_offset = 0x0000, addr_size = 0x08 
+CHECK: DW_AT_ranges [DW_FORM_sec_offset] (0x[[RANGELIST_OFFSET:[0-9a-f]+]]
+CHECK-NEXT:                  [0x[[RANGELIST_OFFSET_START:[0-9a-f]+]], 0x[[RANGELIST_OFFSET_END:[0-9a-f]+]]))
+CHECK: 0x00000033:   DW_TAG_subprogram [2] * (0x0000000c)
+CHECK-NEXT:  DW_AT_low_pc [DW_FORM_addr]     (0x[[#%.16x,LOCLIST_LOWPC:]])
 CHECK: 0x00000050:     DW_TAG_formal_parameter [3]   (0x00000033)
-CHECK-NEXT:                   DW_AT_location [DW_FORM_sec_offset]   (0x[[LOC_OFFSET:[0-9a-f]+]]:
-CHECK-NEXT:                      [0x[[LOC_OFFSET_START:[0-9a-f]+]], 0x[[LOC_OFFSET_END:[0-9a-f]+]]): [[LOC_EXPR:.*]]
-CHECK-NEXT:                      [0x[[LOC_OFFSET_START2:[0-9a-f]+]], 0x[[LOC_OFFSET_END2:[0-9a-f]+]]): [[LOC_EXPR2:.*]])
+CHECK-NEXT:                   DW_AT_location [DW_FORM_sec_offset]   (0x[[LOC_OFFSET:[0-9a-f]+]]: 
+CHECK-NEXT:                      [0x[[#%.16x,LOCLIST_PAIR_START:]], 0x[[#%.16x,LOCLIST_PAIR_END:]]): [[LOCLIST_EXPR:.*]]
+CHECK-NEXT:                      [0x[[#%.16x,LOCLIST_PAIR_START2:]], 0x[[#%.16x,LOCLIST_PAIR_END2:]]): [[LOCLIST_EXPR2:.*]])
 
 CHECK: .debug_loclists contents:
-CHECK-NEXT: 0x00000000: locations list header: length = 0x00000024, format = DWARF32, version = 0x0005, addr_size = 0x08, seg_size = 0x00, offset_entry_count = 0x00000000
-CHECK-NEXT: 0x[[LOC_OFFSET]]:
-CHECK-NEXT:             DW_LLE_start_length    {{.*}}
-CHECK-NEXT:                       => [0x[[LOC_OFFSET_START]], 0x[[LOC_OFFSET_END]]): [[LOC_EXPR]]
-CHECK-NEXT:             DW_LLE_start_length    {{.*}}
-CHECK-NEXT:                       => [0x[[LOC_OFFSET_START2]], 0x[[LOC_OFFSET_END2]]): [[LOC_EXPR2]]
-CHECK-NEXT:             DW_LLE_end_of_list     ()
+CHECK-NEXT: locations list header: length = 0x0000001f, format = DWARF32, version = 0x0005, addr_size = 0x08, seg_size = 0x00, offset_entry_count = 0x00000000
+CHECK-NEXT: 0x[[LOC_OFFSET]]: 
+CHECK-NEXT:            DW_LLE_base_address    (0x[[#LOCLIST_LOWPC]])
+CHECK-NEXT:            DW_LLE_offset_pair     (0x[[#sub(LOCLIST_PAIR_START,LOCLIST_LOWPC)]], 0x[[#sub(LOCLIST_PAIR_END,LOCLIST_LOWPC)]])
+CHECK-NEXT:                      => [0x[[#LOCLIST_PAIR_START]], 0x[[#LOCLIST_PAIR_END]]): [[LOCLIST_EXPR]]
+CHECK-NEXT:            DW_LLE_offset_pair     (0x[[#sub(LOCLIST_PAIR_START2,LOCLIST_LOWPC)]], 0x[[#sub(LOCLIST_PAIR_END2,LOCLIST_LOWPC)]])
+CHECK-NEXT:                      => [0x[[#LOCLIST_PAIR_START2]], 0x[[#LOCLIST_PAIR_END2]]): [[LOCLIST_EXPR2]]
+CHECK-NEXT:            DW_LLE_end_of_list     ()
 
 CHECK: .debug_line contents:
 CHECK-NEXT: debug_line[0x00000000]
@@ -84,7 +87,7 @@ CHECK-NEXT: 0x00000029: "a.cpp"
 CHECK: .debug_rnglists contents:
 CHECK-NEXT: 0x00000000: range list header: length = 0x00000013, format = DWARF32, version = 0x0005, addr_size = 0x08, seg_size = 0x00, offset_entry_count = 0x00000000
 CHECK-NEXT: ranges:
-CHECK-NEXT: [[RANGE_OFFSET]]: [DW_RLE_start_length]: {{.*}}[0x[[RANGE_OFFSET_START]], 0x[[RANGE_OFFSET_END]])
+CHECK-NEXT: [[RANGELIST_OFFSET]]: [DW_RLE_start_length]: {{.*}}[0x[[RANGELIST_OFFSET_START]], 0x[[RANGELIST_OFFSET_END]])
 
 CHECK: .debug_names contents:
 CHECK-NEX:T Name Index @ 0x0 {
