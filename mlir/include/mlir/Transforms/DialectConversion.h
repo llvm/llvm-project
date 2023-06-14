@@ -695,15 +695,17 @@ public:
   /// patterns even if a failure is encountered during the rewrite step.
   bool canRecoverFromRewriteFailure() const override { return true; }
 
-  /// PatternRewriter hook for replacing the results of an operation when the
-  /// given functor returns true.
+  /// PatternRewriter hook for replacing an operation when the given functor
+  /// returns "true".
   void replaceOpWithIf(
       Operation *op, ValueRange newValues, bool *allUsesReplaced,
       llvm::unique_function<bool(OpOperand &) const> functor) override;
 
-  /// PatternRewriter hook for replacing the results of an operation.
+  /// PatternRewriter hook for replacing an operation.
   void replaceOp(Operation *op, ValueRange newValues) override;
-  using PatternRewriter::replaceOp;
+
+  /// PatternRewriter hook for replacing an operation.
+  void replaceOp(Operation *op, Operation *newOp) override;
 
   /// PatternRewriter hook for erasing a dead operation. The uses of this
   /// operation *must* be made dead by the end of the conversion process,
