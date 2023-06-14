@@ -4,7 +4,7 @@
 
 ; NOOP-LABEL: @noop_fdiv_fpmath(
 ; NOOP: %md.25ulp = fdiv float %a, %b, !fpmath !0
-define amdgpu_kernel void @noop_fdiv_fpmath(ptr addrspace(1) %out, float %a, float %b) #3 {
+define amdgpu_kernel void @noop_fdiv_fpmath(ptr addrspace(1) %out, float %a, float %b) {
   %md.25ulp = fdiv float %a, %b, !fpmath !0
   store volatile float %md.25ulp, ptr addrspace(1) %out
   ret void
@@ -337,9 +337,24 @@ define amdgpu_kernel void @fdiv_fpmath_f32_denormals(ptr addrspace(1) %out, floa
   ret void
 }
 
+; CHECK-LABEL: @rcp_fpmath_dynamic_denorm(
+; CHECK: %md.25ulp = fdiv float 1.000000e+00, %x, !fpmath !2
+define float @rcp_fpmath_dynamic_denorm(float %x) #3 {
+  %md.25ulp = fdiv float 1.0, %x, !fpmath !2
+  ret float %md.25ulp
+}
+
+; CHECK-LABEL: @rcp_dynamic_denorm(
+; CHECK: %md.25ulp = fdiv float 1.000000e+00, %x
+define float @rcp_dynamic_denorm(float %x) #3 {
+  %md.25ulp = fdiv float 1.0, %x
+  ret float %md.25ulp
+}
+
 attributes #0 = { nounwind optnone noinline }
 attributes #1 = { nounwind "denormal-fp-math-f32"="preserve-sign,preserve-sign" }
 attributes #2 = { nounwind "denormal-fp-math-f32"="ieee,ieee" }
+attributes #3 = { nounwind "denormal-fp-math-f32"="dynamic,dynamic" }
 
 !0 = !{float 2.500000e+00}
 !1 = !{float 5.000000e-01}
