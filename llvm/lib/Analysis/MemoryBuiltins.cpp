@@ -826,9 +826,7 @@ SizeOffsetType ObjectSizeOffsetVisitor::visitGlobalAlias(GlobalAlias &GA) {
 }
 
 SizeOffsetType ObjectSizeOffsetVisitor::visitGlobalVariable(GlobalVariable &GV){
-  if (GV.hasExternalWeakLinkage() ||
-      ((!GV.hasInitializer() || GV.isInterposable()) &&
-       Options.EvalMode != ObjectSizeOpts::Mode::Min))
+  if (!GV.hasDefinitiveInitializer())
     return unknown();
 
   APInt Size(IntTyBits, DL.getTypeAllocSize(GV.getValueType()));
