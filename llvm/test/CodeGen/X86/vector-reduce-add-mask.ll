@@ -255,7 +255,7 @@ define i64 @test_v16i64_v16i8(<16 x i64> %a0) {
 ;
 ; AVX1-LABEL: test_v16i64_v16i8:
 ; AVX1:       # %bb.0:
-; AVX1-NEXT:    vmovaps {{.*#+}} ymm4 = [1,1,1,1]
+; AVX1-NEXT:    vbroadcastsd {{.*#+}} ymm4 = [1,1,1,1]
 ; AVX1-NEXT:    vandps %ymm4, %ymm0, %ymm0
 ; AVX1-NEXT:    vandps %ymm4, %ymm2, %ymm2
 ; AVX1-NEXT:    vandps %ymm4, %ymm1, %ymm1
@@ -577,7 +577,7 @@ define i32 @test_v16i32_v16i8(<16 x i32> %a0) {
 ;
 ; AVX1-SLOW-LABEL: test_v16i32_v16i8:
 ; AVX1-SLOW:       # %bb.0:
-; AVX1-SLOW-NEXT:    vmovaps {{.*#+}} ymm2 = [255,255,255,255,255,255,255,255]
+; AVX1-SLOW-NEXT:    vbroadcastss {{.*#+}} ymm2 = [255,255,255,255,255,255,255,255]
 ; AVX1-SLOW-NEXT:    vandps %ymm2, %ymm0, %ymm0
 ; AVX1-SLOW-NEXT:    vandps %ymm2, %ymm1, %ymm1
 ; AVX1-SLOW-NEXT:    vextractf128 $1, %ymm1, %xmm2
@@ -595,7 +595,7 @@ define i32 @test_v16i32_v16i8(<16 x i32> %a0) {
 ;
 ; AVX1-FAST-LABEL: test_v16i32_v16i8:
 ; AVX1-FAST:       # %bb.0:
-; AVX1-FAST-NEXT:    vmovaps {{.*#+}} ymm2 = [255,255,255,255,255,255,255,255]
+; AVX1-FAST-NEXT:    vbroadcastss {{.*#+}} ymm2 = [255,255,255,255,255,255,255,255]
 ; AVX1-FAST-NEXT:    vandps %ymm2, %ymm0, %ymm0
 ; AVX1-FAST-NEXT:    vandps %ymm2, %ymm1, %ymm1
 ; AVX1-FAST-NEXT:    vextractf128 $1, %ymm1, %xmm2
@@ -694,7 +694,7 @@ define i32 @test_v32i32_v32i8(<32 x i32> %a0) {
 ;
 ; AVX1-SLOW-LABEL: test_v32i32_v32i8:
 ; AVX1-SLOW:       # %bb.0:
-; AVX1-SLOW-NEXT:    vmovaps {{.*#+}} ymm4 = [255,255,255,255,255,255,255,255]
+; AVX1-SLOW-NEXT:    vbroadcastss {{.*#+}} ymm4 = [255,255,255,255,255,255,255,255]
 ; AVX1-SLOW-NEXT:    vandps %ymm4, %ymm0, %ymm0
 ; AVX1-SLOW-NEXT:    vandps %ymm4, %ymm2, %ymm2
 ; AVX1-SLOW-NEXT:    vandps %ymm4, %ymm1, %ymm1
@@ -720,7 +720,7 @@ define i32 @test_v32i32_v32i8(<32 x i32> %a0) {
 ;
 ; AVX1-FAST-LABEL: test_v32i32_v32i8:
 ; AVX1-FAST:       # %bb.0:
-; AVX1-FAST-NEXT:    vmovaps {{.*#+}} ymm4 = [255,255,255,255,255,255,255,255]
+; AVX1-FAST-NEXT:    vbroadcastss {{.*#+}} ymm4 = [255,255,255,255,255,255,255,255]
 ; AVX1-FAST-NEXT:    vandps %ymm4, %ymm0, %ymm0
 ; AVX1-FAST-NEXT:    vandps %ymm4, %ymm2, %ymm2
 ; AVX1-FAST-NEXT:    vandps %ymm4, %ymm1, %ymm1
@@ -1222,7 +1222,7 @@ define i16 @test_v64i16_v64i8(<64 x i16> %a0) {
 ;
 ; AVX1-LABEL: test_v64i16_v64i8:
 ; AVX1:       # %bb.0:
-; AVX1-NEXT:    vmovaps {{.*#+}} ymm4 = [127,127,127,127,127,127,127,127,127,127,127,127,127,127,127,127]
+; AVX1-NEXT:    vbroadcastss {{.*#+}} ymm4 = [127,127,127,127,127,127,127,127,127,127,127,127,127,127,127,127]
 ; AVX1-NEXT:    vandps %ymm4, %ymm0, %ymm0
 ; AVX1-NEXT:    vandps %ymm4, %ymm2, %ymm2
 ; AVX1-NEXT:    vandps %ymm4, %ymm1, %ymm1

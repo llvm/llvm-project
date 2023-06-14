@@ -780,6 +780,7 @@ add_header_library(
     log_range_reduction.h
   DEPENDS
     .common_constants
+    libc.src.__support.uint128
     libc.src.__support.FPUtil.dyadic_float
 )
 

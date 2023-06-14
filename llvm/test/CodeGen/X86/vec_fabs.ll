@@ -149,7 +149,7 @@ declare <8 x float> @llvm.fabs.v8f32(<8 x float> %p)
 define <8 x double> @fabs_v8f64(<8 x double> %p) {
 ; X86-AVX-LABEL: fabs_v8f64:
 ; X86-AVX:       # %bb.0:
-; X86-AVX-NEXT:    vmovaps {{.*#+}} ymm2 = [NaN,NaN,NaN,NaN]
+; X86-AVX-NEXT:    vbroadcastsd {{.*#+}} ymm2 = [NaN,NaN,NaN,NaN]
 ; X86-AVX-NEXT:    vandps %ymm2, %ymm0, %ymm0
 ; X86-AVX-NEXT:    vandps %ymm2, %ymm1, %ymm1
 ; X86-AVX-NEXT:    retl
@@ -166,7 +166,7 @@ define <8 x double> @fabs_v8f64(<8 x double> %p) {
 ;
 ; X64-AVX-LABEL: fabs_v8f64:
 ; X64-AVX:       # %bb.0:
-; X64-AVX-NEXT:    vmovaps {{.*#+}} ymm2 = [NaN,NaN,NaN,NaN]
+; X64-AVX-NEXT:    vbroadcastsd {{.*#+}} ymm2 = [NaN,NaN,NaN,NaN]
 ; X64-AVX-NEXT:    vandps %ymm2, %ymm0, %ymm0
 ; X64-AVX-NEXT:    vandps %ymm2, %ymm1, %ymm1
 ; X64-AVX-NEXT:    retq
@@ -188,7 +188,7 @@ declare <8 x double> @llvm.fabs.v8f64(<8 x double> %p)
 define <16 x float> @fabs_v16f32(<16 x float> %p) {
 ; X86-AVX-LABEL: fabs_v16f32:
 ; X86-AVX:       # %bb.0:
-; X86-AVX-NEXT:    vmovaps {{.*#+}} ymm2 = [NaN,NaN,NaN,NaN,NaN,NaN,NaN,NaN]
+; X86-AVX-NEXT:    vbroadcastss {{.*#+}} ymm2 = [NaN,NaN,NaN,NaN,NaN,NaN,NaN,NaN]
 ; X86-AVX-NEXT:    vandps %ymm2, %ymm0, %ymm0
 ; X86-AVX-NEXT:    vandps %ymm2, %ymm1, %ymm1
 ; X86-AVX-NEXT:    retl
@@ -205,7 +205,7 @@ define <16 x float> @fabs_v16f32(<16 x float> %p) {
 ;
 ; X64-AVX-LABEL: fabs_v16f32:
 ; X64-AVX:       # %bb.0:
-; X64-AVX-NEXT:    vmovaps {{.*#+}} ymm2 = [NaN,NaN,NaN,NaN,NaN,NaN,NaN,NaN]
+; X64-AVX-NEXT:    vbroadcastss {{.*#+}} ymm2 = [NaN,NaN,NaN,NaN,NaN,NaN,NaN,NaN]
 ; X64-AVX-NEXT:    vandps %ymm2, %ymm0, %ymm0
 ; X64-AVX-NEXT:    vandps %ymm2, %ymm1, %ymm1
 ; X64-AVX-NEXT:    retq

@@ -11,10 +11,12 @@
 #include "HeuristicResolver.h"
 #include "ParsedAST.h"
 #include "SourceCode.h"
+#include "clang/AST/ASTDiagnostic.h"
 #include "clang/AST/Decl.h"
 #include "clang/AST/DeclarationName.h"
 #include "clang/AST/ExprCXX.h"
 #include "clang/AST/RecursiveASTVisitor.h"
+#include "clang/AST/Type.h"
 #include "clang/Basic/Builtins.h"
 #include "clang/Basic/SourceManager.h"
 #include "llvm/ADT/ScopeExit.h"
@@ -190,6 +192,64 @@ getDesignators(const InitListExpr *Syn) {
   return Designators;
 }
 
+// Determines if any intermediate type in desugaring QualType QT is of
+// substituted template parameter type. Ignore pointer or reference wrappers.
+bool isSugaredTemplateParameter(QualType QT) {
+  static auto PeelWrappers = [](QualType QT) {
+    // Neither `PointerType` nor `ReferenceType` is considered as sugared
+    // type. Peel it.
+    QualType Next;
+    while (!(Next = QT->getPointeeType()).isNull())
+      QT = Next;
+    return QT;
+  };
+  while (true) {
+    QualType Desugared =
+        PeelWrappers(QT->getLocallyUnqualifiedSingleStepDesugaredType());
+    if (Desugared == QT)
+      break;
+    if (Desugared->getAs<SubstTemplateTypeParmType>())
+      return true;
+    QT = Desugared;
+  }
+  return false;
+}
+
+// A simple wrapper for `clang::desugarForDiagnostic` that provides optional
+// semantic.
+std::optional<QualType> desugar(ASTContext &AST, QualType QT) {
+  bool ShouldAKA;
+  auto Desugared = clang::desugarForDiagnostic(AST, QT, ShouldAKA);
+  if (!ShouldAKA)
+    return std::nullopt;
+  return Desugared;
+}
+
+// Apply a series of heuristic methods to determine whether or not a QualType QT
+// is suitable for desugaring (e.g. getting the real name behind the using-alias
+// name). If so, return the desugared type. Otherwise, return the unchanged
+// parameter QT.
+//
+// This could be refined further. See
+// https://github.com/clangd/clangd/issues/1298.
+QualType maybeDesugar(ASTContext &AST, QualType QT) {
+  // Prefer desugared type for name that aliases the template parameters.
+  // This can prevent things like printing opaque `: type` when accessing std
+  // containers.
+  if (isSugaredTemplateParameter(QT))
+    return desugar(AST, QT).value_or(QT);
+
+  // Prefer desugared type for `decltype(expr)` specifiers.
+  if (QT->isDecltypeType())
+    return QT.getCanonicalType();
+  if (const AutoType *AT = QT->getContainedAutoType())
+    if (!AT->getDeducedType().isNull() &&
+        AT->getDeducedType()->isDecltypeType())
+      return QT.getCanonicalType();
+
+  return QT;
+}
+
 class InlayHintVisitor : public RecursiveASTVisitor<InlayHintVisitor> {
 public:
   InlayHintVisitor(std::vector<InlayHint> &Results, ParsedAST &AST,
@@ -198,8 +258,7 @@ public:
         Cfg(Cfg), RestrictRange(std::move(RestrictRange)),
         MainFileID(AST.getSourceManager().getMainFileID()),
         Resolver(AST.getHeuristicResolver()),
-        TypeHintPolicy(this->AST.getPrintingPolicy()),
-        StructuredBindingPolicy(this->AST.getPrintingPolicy()) {
+        TypeHintPolicy(this->AST.getPrintingPolicy()) {
     bool Invalid = false;
     llvm::StringRef Buf =
         AST.getSourceManager().getBufferData(MainFileID, &Invalid);
@@ -209,14 +268,8 @@ public:
     TypeHintPolicy.AnonymousTagLocations =
         false; // do not print lambda locations
 
-    // For structured bindings, print canonical types. This is important because
-    // for bindings that use the tuple_element protocol, the non-canonical types
-    // would be "tuple_element<I, A>::type".
-    // For "auto", we often prefer sugared types.
     // Not setting PrintCanonicalTypes for "auto" allows
     // SuppressDefaultTemplateArgs (set by default) to have an effect.
-    StructuredBindingPolicy = TypeHintPolicy;
-    StructuredBindingPolicy.PrintCanonicalTypes = true;
   }
 
   bool VisitTypeLoc(TypeLoc TL) {
@@ -298,8 +351,12 @@ public:
     // but show hints for the individual bindings.
     if (auto *DD = dyn_cast<DecompositionDecl>(D)) {
       for (auto *Binding : DD->bindings()) {
-        addTypeHint(Binding->getLocation(), Binding->getType(), /*Prefix=*/": ",
-                    StructuredBindingPolicy);
+        // For structured bindings, print canonical types. This is important
+        // because for bindings that use the tuple_element protocol, the
+        // non-canonical types would be "tuple_element<I, A>::type".
+        if (auto Type = Binding->getType(); !Type.isNull())
+          addTypeHint(Binding->getLocation(), Type.getCanonicalType(),
+                      /*Prefix=*/": ");
       }
       return true;
     }
@@ -663,33 +720,20 @@ private:
                  sourceLocToPosition(SM, Spelled->back().endLocation())};
   }
 
-  static bool shouldPrintCanonicalType(QualType QT) {
-    // The sugared type is more useful in some cases, and the canonical
-    // type in other cases. For now, prefer the sugared type unless
-    // we are printing `decltype(expr)`. This could be refined further
-    // (see https://github.com/clangd/clangd/issues/1298).
-    if (QT->isDecltypeType())
-      return true;
-    if (const AutoType *AT = QT->getContainedAutoType())
-      if (!AT->getDeducedType().isNull() &&
-          AT->getDeducedType()->isDecltypeType())
-        return true;
-    return false;
-  }
-
   void addTypeHint(SourceRange R, QualType T, llvm::StringRef Prefix) {
-    TypeHintPolicy.PrintCanonicalTypes = shouldPrintCanonicalType(T);
-    addTypeHint(R, T, Prefix, TypeHintPolicy);
-  }
-
-  void addTypeHint(SourceRange R, QualType T, llvm::StringRef Prefix,
-                   const PrintingPolicy &Policy) {
     if (!Cfg.InlayHints.DeducedTypes || T.isNull())
       return;
 
-    std::string TypeName = T.getAsString(Policy);
-    if (Cfg.InlayHints.TypeNameLimit == 0 ||
-        TypeName.length() < Cfg.InlayHints.TypeNameLimit)
+    // The sugared type is more useful in some cases, and the canonical
+    // type in other cases.
+    auto Desugared = maybeDesugar(AST, T);
+    std::string TypeName = Desugared.getAsString(TypeHintPolicy);
+    if (T != Desugared && !shouldPrintTypeHint(TypeName)) {
+      // If the desugared type is too long to display, fallback to the sugared
+      // type.
+      TypeName = T.getAsString(TypeHintPolicy);
+    }
+    if (shouldPrintTypeHint(TypeName))
       addInlayHint(R, HintSide::Right, InlayHintKind::Type, Prefix, TypeName,
                    /*Suffix=*/"");
   }
@@ -697,6 +741,11 @@ private:
   void addDesignatorHint(SourceRange R, llvm::StringRef Text) {
     addInlayHint(R, HintSide::Left, InlayHintKind::Designator,
                  /*Prefix=*/"", Text, /*Suffix=*/"=");
+  }
+
+  bool shouldPrintTypeHint(llvm::StringRef TypeName) const noexcept {
+    return Cfg.InlayHints.TypeNameLimit == 0 ||
+           TypeName.size() < Cfg.InlayHints.TypeNameLimit;
   }
 
   std::vector<InlayHint> &Results;
@@ -707,14 +756,7 @@ private:
   FileID MainFileID;
   StringRef MainFileBuf;
   const HeuristicResolver *Resolver;
-  // We want to suppress default template arguments, but otherwise print
-  // canonical types. Unfortunately, they're conflicting policies so we can't
-  // have both. For regular types, suppressing template arguments is more
-  // important, whereas printing canonical types is crucial for structured
-  // bindings, so we use two separate policies. (See the constructor where
-  // the policies are initialized for more details.)
   PrintingPolicy TypeHintPolicy;
-  PrintingPolicy StructuredBindingPolicy;
 };
 
 } // namespace

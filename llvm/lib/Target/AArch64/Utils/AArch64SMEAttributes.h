@@ -6,10 +6,11 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "llvm/IR/Function.h"
-
 #ifndef LLVM_LIB_TARGET_AARCH64_UTILS_AARCH64SMEATTRIBUTES_H
 #define LLVM_LIB_TARGET_AARCH64_UTILS_AARCH64SMEATTRIBUTES_H
+
+#include "llvm/IR/Function.h"
+
 namespace llvm {
 
 class Function;

@@ -19,7 +19,7 @@ namespace __llvm_libc {
 namespace printf_core {
 
 LIBC_INLINE int convert_char(Writer *writer, const FormatSection &to_conv) {
-  char c = to_conv.conv_val_raw;
+  char c = static_cast<char>(to_conv.conv_val_raw);
 
   constexpr int string_len = 1;
 

@@ -9,14 +9,14 @@ define dso_local void @funbf16(ptr readonly %src, ptr writeonly %dst) {
 ; X64-NEXT:    vmovups %xmm0, (%rsi)
 ; X64-NEXT:    vmovaps (%rdi), %xmm0
 ; X64-NEXT:    vmovaps %xmm0, (%rsi)
+; X64-NEXT:    movl (%rdi), %eax
 ; X64-NEXT:    vmovups 4(%rdi), %xmm0
-; X64-NEXT:    movq 20(%rdi), %rax
-; X64-NEXT:    movl 28(%rdi), %ecx
-; X64-NEXT:    movl (%rdi), %edx
-; X64-NEXT:    movl %edx, (%rsi)
-; X64-NEXT:    movl %ecx, 28(%rsi)
-; X64-NEXT:    movq %rax, 20(%rsi)
+; X64-NEXT:    movq 20(%rdi), %rcx
+; X64-NEXT:    movl 28(%rdi), %edx
+; X64-NEXT:    movl %edx, 28(%rsi)
+; X64-NEXT:    movq %rcx, 20(%rsi)
 ; X64-NEXT:    vmovups %xmm0, 4(%rsi)
+; X64-NEXT:    movl %eax, (%rsi)
 ; X64-NEXT:    vmovaps (%rdi), %ymm0
 ; X64-NEXT:    vmovaps %ymm0, (%rsi)
 ; X64-NEXT:    vzeroupper
@@ -39,16 +39,16 @@ define dso_local void @funbf16(ptr readonly %src, ptr writeonly %dst) {
 ; X86-NEXT:    vmovups %xmm0, (%eax)
 ; X86-NEXT:    vmovaps (%ecx), %xmm0
 ; X86-NEXT:    vmovaps %xmm0, (%eax)
+; X86-NEXT:    movl (%ecx), %edx
 ; X86-NEXT:    vmovups 4(%ecx), %xmm0
-; X86-NEXT:    movl 20(%ecx), %edx
-; X86-NEXT:    movl 24(%ecx), %esi
-; X86-NEXT:    movl 28(%ecx), %edi
-; X86-NEXT:    movl (%ecx), %ebx
-; X86-NEXT:    movl %ebx, (%eax)
-; X86-NEXT:    movl %edi, 28(%eax)
-; X86-NEXT:    movl %esi, 24(%eax)
-; X86-NEXT:    movl %edx, 20(%eax)
+; X86-NEXT:    movl 20(%ecx), %esi
+; X86-NEXT:    movl 24(%ecx), %edi
+; X86-NEXT:    movl 28(%ecx), %ebx
+; X86-NEXT:    movl %ebx, 28(%eax)
+; X86-NEXT:    movl %edi, 24(%eax)
+; X86-NEXT:    movl %esi, 20(%eax)
 ; X86-NEXT:    vmovups %xmm0, 4(%eax)
+; X86-NEXT:    movl %edx, (%eax)
 ; X86-NEXT:    vmovaps (%ecx), %ymm0
 ; X86-NEXT:    vmovaps %ymm0, (%eax)
 ; X86-NEXT:    popl %esi

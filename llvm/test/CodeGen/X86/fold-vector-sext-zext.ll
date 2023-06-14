@@ -11,12 +11,14 @@
 define <4 x i16> @test_sext_4i8_4i16() {
 ; X32-LABEL: test_sext_4i8_4i16:
 ; X32:       # %bb.0:
-; X32-NEXT:    vmovaps {{.*#+}} xmm0 = <0,65535,2,65533,u,u,u,u>
+; X32-NEXT:    vmovddup {{.*#+}} xmm0 = [0,65535,2,65533,0,65535,2,65533]
+; X32-NEXT:    # xmm0 = mem[0,0]
 ; X32-NEXT:    retl
 ;
 ; X64-LABEL: test_sext_4i8_4i16:
 ; X64:       # %bb.0:
-; X64-NEXT:    vmovaps {{.*#+}} xmm0 = <0,65535,2,65533,u,u,u,u>
+; X64-NEXT:    vmovddup {{.*#+}} xmm0 = [0,65535,2,65533,0,65535,2,65533]
+; X64-NEXT:    # xmm0 = mem[0,0]
 ; X64-NEXT:    retq
   %1 = insertelement <4 x i8> undef, i8 0, i32 0
   %2 = insertelement <4 x i8> %1, i8 -1, i32 1
@@ -29,12 +31,14 @@ define <4 x i16> @test_sext_4i8_4i16() {
 define <4 x i16> @test_sext_4i8_4i16_undef() {
 ; X32-LABEL: test_sext_4i8_4i16_undef:
 ; X32:       # %bb.0:
-; X32-NEXT:    vmovaps {{.*#+}} xmm0 = <0,65535,0,65533,u,u,u,u>
+; X32-NEXT:    vmovddup {{.*#+}} xmm0 = [0,65535,0,65533,0,65535,0,65533]
+; X32-NEXT:    # xmm0 = mem[0,0]
 ; X32-NEXT:    retl
 ;
 ; X64-LABEL: test_sext_4i8_4i16_undef:
 ; X64:       # %bb.0:
-; X64-NEXT:    vmovaps {{.*#+}} xmm0 = <0,65535,0,65533,u,u,u,u>
+; X64-NEXT:    vmovddup {{.*#+}} xmm0 = [0,65535,0,65533,0,65535,0,65533]
+; X64-NEXT:    # xmm0 = mem[0,0]
 ; X64-NEXT:    retq
   %1 = insertelement <4 x i8> undef, i8 undef, i32 0
   %2 = insertelement <4 x i8> %1, i8 -1, i32 1
@@ -207,12 +211,14 @@ define <8 x i32> @test_sext_8i8_8i32_undef() {
 define <4 x i16> @test_zext_4i8_4i16() {
 ; X32-LABEL: test_zext_4i8_4i16:
 ; X32:       # %bb.0:
-; X32-NEXT:    vmovaps {{.*#+}} xmm0 = <0,255,2,253,u,u,u,u>
+; X32-NEXT:    vmovddup {{.*#+}} xmm0 = [0,255,2,253,0,255,2,253]
+; X32-NEXT:    # xmm0 = mem[0,0]
 ; X32-NEXT:    retl
 ;
 ; X64-LABEL: test_zext_4i8_4i16:
 ; X64:       # %bb.0:
-; X64-NEXT:    vmovaps {{.*#+}} xmm0 = <0,255,2,253,u,u,u,u>
+; X64-NEXT:    vmovddup {{.*#+}} xmm0 = [0,255,2,253,0,255,2,253]
+; X64-NEXT:    # xmm0 = mem[0,0]
 ; X64-NEXT:    retq
   %1 = insertelement <4 x i8> undef, i8 0, i32 0
   %2 = insertelement <4 x i8> %1, i8 -1, i32 1
@@ -261,12 +267,14 @@ define <4 x i64> @test_zext_4i8_4i64() {
 define <4 x i16> @test_zext_4i8_4i16_undef() {
 ; X32-LABEL: test_zext_4i8_4i16_undef:
 ; X32:       # %bb.0:
-; X32-NEXT:    vmovaps {{.*#+}} xmm0 = <0,255,0,253,u,u,u,u>
+; X32-NEXT:    vmovddup {{.*#+}} xmm0 = [0,255,0,253,0,255,0,253]
+; X32-NEXT:    # xmm0 = mem[0,0]
 ; X32-NEXT:    retl
 ;
 ; X64-LABEL: test_zext_4i8_4i16_undef:
 ; X64:       # %bb.0:
-; X64-NEXT:    vmovaps {{.*#+}} xmm0 = <0,255,0,253,u,u,u,u>
+; X64-NEXT:    vmovddup {{.*#+}} xmm0 = [0,255,0,253,0,255,0,253]
+; X64-NEXT:    # xmm0 = mem[0,0]
 ; X64-NEXT:    retq
   %1 = insertelement <4 x i8> undef, i8 undef, i32 0
   %2 = insertelement <4 x i8> %1, i8 -1, i32 1

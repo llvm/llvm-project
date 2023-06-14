@@ -4,8 +4,6 @@
 ; RUN: llc < %s -mtriple=x86_64-unknown-unknown -mattr=+avx2 | FileCheck %s --check-prefixes=AVX2
 ; RUN: llc < %s -mtriple=x86_64-unknown-unknown -mcpu=x86-64-v4 | FileCheck %s --check-prefixes=AVX512
 
-; FIXME: %vector.body.preheader <251,223,u,u,u,u,u,u,u,u,u,u,u,u,u,u> constant should be <251,223,0,0,0,0,0,0,0,0,0,0,0,0,0,0>
-
 define i32 @PR63108() {
 ; SSE-LABEL: PR63108:
 ; SSE:       # %bb.0: # %entry
@@ -17,7 +15,7 @@ define i32 @PR63108() {
 ; SSE-NEXT:    jmp .LBB0_5
 ; SSE-NEXT:  .LBB0_2: # %vector.body.preheader
 ; SSE-NEXT:    pxor %xmm0, %xmm0
-; SSE-NEXT:    movdqa {{.*#+}} xmm2 = <251,223,u,u,u,u,u,u,u,u,u,u,u,u,u,u>
+; SSE-NEXT:    movdqa {{.*#+}} xmm2 = [57339,0,0,0]
 ; SSE-NEXT:    xorl %eax, %eax
 ; SSE-NEXT:    .p2align 4, 0x90
 ; SSE-NEXT:  .LBB0_3: # %vector.body
@@ -51,7 +49,7 @@ define i32 @PR63108() {
 ; AVX1-NEXT:    vmovdqa {{.*#+}} xmm0 = <251,223,u,u,u,u,u,u,u,u,u,u,u,u,u,u>
 ; AVX1-NEXT:    jmp .LBB0_5
 ; AVX1-NEXT:  .LBB0_2: # %vector.body.preheader
-; AVX1-NEXT:    vmovaps {{.*#+}} xmm0 = <251,223,u,u,u,u,u,u,u,u,u,u,u,u,u,u>
+; AVX1-NEXT:    vmovaps {{.*#+}} xmm0 = [57339,0,0,0]
 ; AVX1-NEXT:    xorl %eax, %eax
 ; AVX1-NEXT:    .p2align 4, 0x90
 ; AVX1-NEXT:  .LBB0_3: # %vector.body
@@ -88,7 +86,7 @@ define i32 @PR63108() {
 ; AVX2-NEXT:    vmovdqa {{.*#+}} xmm0 = <251,223,u,u,u,u,u,u,u,u,u,u,u,u,u,u>
 ; AVX2-NEXT:    jmp .LBB0_5
 ; AVX2-NEXT:  .LBB0_2: # %vector.body.preheader
-; AVX2-NEXT:    vmovdqa {{.*#+}} xmm0 = <251,223,u,u,u,u,u,u,u,u,u,u,u,u,u,u>
+; AVX2-NEXT:    vmovdqa {{.*#+}} xmm0 = [57339,0,0,0]
 ; AVX2-NEXT:    xorl %eax, %eax
 ; AVX2-NEXT:    .p2align 4, 0x90
 ; AVX2-NEXT:  .LBB0_3: # %vector.body
@@ -125,7 +123,7 @@ define i32 @PR63108() {
 ; AVX512-NEXT:    vmovdqa {{.*#+}} xmm0 = <251,223,u,u,u,u,u,u,u,u,u,u,u,u,u,u>
 ; AVX512-NEXT:    jmp .LBB0_5
 ; AVX512-NEXT:  .LBB0_2: # %vector.body.preheader
-; AVX512-NEXT:    vmovdqa {{.*#+}} xmm0 = <251,223,u,u,u,u,u,u,u,u,u,u,u,u,u,u>
+; AVX512-NEXT:    vmovdqa {{.*#+}} xmm0 = [57339,0,0,0]
 ; AVX512-NEXT:    xorl %eax, %eax
 ; AVX512-NEXT:    .p2align 4, 0x90
 ; AVX512-NEXT:  .LBB0_3: # %vector.body

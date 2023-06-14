@@ -647,6 +647,14 @@ class VSelectCommPredOrPassthruPatFrags<SDPatternOperator intrinsic, SDPatternOp
   ], [{
     return N->getOpcode() != ISD::VSELECT || N->getOperand(1).hasOneUse();
   }]>;
+// Similarly matches either an intrinsic, or an unpredicated operation with a select
+class VSelectUnpredOrPassthruPatFrags<SDPatternOperator intrinsic, SDPatternOperator sdnode>
+: PatFrags<(ops node:$Pg, node:$Op1, node:$Op2), [
+    (intrinsic node:$Pg, node:$Op1, node:$Op2),
+    (vselect node:$Pg, (sdnode node:$Op1, node:$Op2), node:$Op1),
+  ], [{
+    return N->getOpcode() != ISD::VSELECT || N->getOperand(1).hasOneUse();
+  }]>;
 
 //
 // Pseudo -> Instruction mappings
