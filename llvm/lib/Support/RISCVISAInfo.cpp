@@ -176,14 +176,14 @@ static bool stripExperimentalPrefix(StringRef &Ext) {
   return Ext.consume_front("experimental-");
 }
 
-// This function finds the first character that doesn't belong to a version
+// This function finds the last character that doesn't belong to a version
 // (e.g. zba1p0 is extension 'zba' of version '1p0'). So the function will
 // consume [0-9]*p[0-9]* starting from the backward. An extension name will not
 // end with a digit or the letter 'p', so this function will parse correctly.
 // NOTE: This function is NOT able to take empty strings or strings that only
 // have version numbers and no extension name. It assumes the extension name
 // will be at least more than one character.
-static size_t findFirstNonVersionCharacter(StringRef Ext) {
+static size_t findLastNonVersionCharacter(StringRef Ext) {
   assert(!Ext.empty() &&
          "Already guarded by if-statement in ::parseArchString");
 
@@ -791,7 +791,7 @@ RISCVISAInfo::parseArchString(StringRef Arch, bool EnableExperimentalExtension,
 
       StringRef Type = getExtensionType(Ext);
       StringRef Desc = getExtensionTypeDesc(Ext);
-      auto Pos = findFirstNonVersionCharacter(Ext) + 1;
+      auto Pos = findLastNonVersionCharacter(Ext) + 1;
       StringRef Name(Ext.substr(0, Pos));
       StringRef Vers(Ext.substr(Pos));
 
