@@ -23,7 +23,7 @@ namespace std { // purposefully not using versioning namespace
 
 #ifndef _LIBCPP_ABI_MICROSOFT
 
-class _LIBCPP_TYPE_VIS exception_ptr {
+class _LIBCPP_EXPORTED_FROM_ABI exception_ptr {
   void* __ptr_;
 
 public:
@@ -44,8 +44,8 @@ public:
     return !(__x == __y);
   }
 
-  friend _LIBCPP_FUNC_VIS exception_ptr current_exception() _NOEXCEPT;
-  friend _LIBCPP_FUNC_VIS void rethrow_exception(exception_ptr);
+  friend _LIBCPP_EXPORTED_FROM_ABI exception_ptr current_exception() _NOEXCEPT;
+  friend _LIBCPP_EXPORTED_FROM_ABI void rethrow_exception(exception_ptr);
 };
 
 template <class _Ep>
@@ -64,7 +64,7 @@ _LIBCPP_HIDE_FROM_ABI exception_ptr make_exception_ptr(_Ep __e) _NOEXCEPT {
 
 #else // _LIBCPP_ABI_MICROSOFT
 
-class _LIBCPP_TYPE_VIS exception_ptr {
+class _LIBCPP_EXPORTED_FROM_ABI exception_ptr {
   _LIBCPP_DIAGNOSTIC_PUSH
   _LIBCPP_CLANG_DIAGNOSTIC_IGNORED("-Wunused-private-field")
   void* __ptr1_;
@@ -81,17 +81,17 @@ public:
   explicit operator bool() const _NOEXCEPT;
 };
 
-_LIBCPP_FUNC_VIS bool operator==(const exception_ptr& __x, const exception_ptr& __y) _NOEXCEPT;
+_LIBCPP_EXPORTED_FROM_ABI bool operator==(const exception_ptr& __x, const exception_ptr& __y) _NOEXCEPT;
 
 inline _LIBCPP_HIDE_FROM_ABI bool operator!=(const exception_ptr& __x, const exception_ptr& __y) _NOEXCEPT {
   return !(__x == __y);
 }
 
-_LIBCPP_FUNC_VIS void swap(exception_ptr&, exception_ptr&) _NOEXCEPT;
+_LIBCPP_EXPORTED_FROM_ABI void swap(exception_ptr&, exception_ptr&) _NOEXCEPT;
 
-_LIBCPP_FUNC_VIS exception_ptr __copy_exception_ptr(void* __except, const void* __ptr);
-_LIBCPP_FUNC_VIS exception_ptr current_exception() _NOEXCEPT;
-_LIBCPP_NORETURN _LIBCPP_FUNC_VIS void rethrow_exception(exception_ptr);
+_LIBCPP_EXPORTED_FROM_ABI exception_ptr __copy_exception_ptr(void* __except, const void* __ptr);
+_LIBCPP_EXPORTED_FROM_ABI exception_ptr current_exception() _NOEXCEPT;
+_LIBCPP_NORETURN _LIBCPP_EXPORTED_FROM_ABI void rethrow_exception(exception_ptr);
 
 // This is a built-in template function which automagically extracts the required
 // information.

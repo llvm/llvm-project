@@ -29,7 +29,7 @@ _LIBCPP_BEGIN_NAMESPACE_FILESYSTEM
 
 _LIBCPP_AVAILABILITY_FILESYSTEM_LIBRARY_PUSH
 
-class _LIBCPP_TYPE_VIS path::iterator {
+class _LIBCPP_EXPORTED_FROM_ABI path::iterator {
 public:
   enum _ParserState : unsigned char {
     _Singular,

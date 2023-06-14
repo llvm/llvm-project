@@ -100,7 +100,7 @@ size_t __aligned_allocation_size(size_t __s, size_t __a) _NOEXCEPT
 }
 
 // 8.5, memory.resource
-class _LIBCPP_DEPCREATED_MEMORY_RESOURCE("memory_resource") _LIBCPP_TYPE_VIS memory_resource
+class _LIBCPP_DEPCREATED_MEMORY_RESOURCE("memory_resource") _LIBCPP_EXPORTED_FROM_ABI memory_resource
 {
     static const size_t __max_align = _LIBCPP_ALIGNOF(max_align_t);
 
@@ -142,16 +142,16 @@ bool operator!=(memory_resource const & __lhs,
     return !(__lhs == __rhs);
 }
 
-_LIBCPP_DEPCREATED_MEMORY_RESOURCE("new_delete_resource()") _LIBCPP_FUNC_VIS
+_LIBCPP_DEPCREATED_MEMORY_RESOURCE("new_delete_resource()") _LIBCPP_EXPORTED_FROM_ABI
 memory_resource * new_delete_resource() _NOEXCEPT;
 
-_LIBCPP_DEPCREATED_MEMORY_RESOURCE("null_memory_resource()") _LIBCPP_FUNC_VIS
+_LIBCPP_DEPCREATED_MEMORY_RESOURCE("null_memory_resource()") _LIBCPP_EXPORTED_FROM_ABI
 memory_resource * null_memory_resource() _NOEXCEPT;
 
-_LIBCPP_DEPCREATED_MEMORY_RESOURCE("get_default_resource()") _LIBCPP_FUNC_VIS
+_LIBCPP_DEPCREATED_MEMORY_RESOURCE("get_default_resource()") _LIBCPP_EXPORTED_FROM_ABI
 memory_resource * get_default_resource() _NOEXCEPT;
 
-_LIBCPP_DEPCREATED_MEMORY_RESOURCE("set_default_resource()") _LIBCPP_FUNC_VIS
+_LIBCPP_DEPCREATED_MEMORY_RESOURCE("set_default_resource()") _LIBCPP_EXPORTED_FROM_ABI
 memory_resource * set_default_resource(memory_resource * __new_res) _NOEXCEPT;
 
 // 8.6, memory.polymorphic.allocator.class
