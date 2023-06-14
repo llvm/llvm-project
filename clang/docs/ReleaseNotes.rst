@@ -342,6 +342,8 @@ Improvements to Clang's diagnostics
   with ``__attribute__((cleanup(...)))`` to match GCC's behavior.
 - Clang now issues expected warnings for situations of comparing with NULL pointers.
   (`#42992: <https://github.com/llvm/llvm-project/issues/42992>`_)
+- Clang now diagnoses unused const-qualified variable template as
+  "unused variable template" rather than "unused variable".
 
 Bug Fixes in This Version
 -------------------------
