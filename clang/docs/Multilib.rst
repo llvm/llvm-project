@@ -151,6 +151,7 @@ For a more comprehensive example see
 ``clang/test/Driver/baremetal-multilib.yaml`` in the ``llvm-project`` sources.
 
 .. code-block:: yaml
+
   # multilib.yaml
 
   # This format is experimental and is likely to change!
