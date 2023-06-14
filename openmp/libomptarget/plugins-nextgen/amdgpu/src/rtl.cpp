@@ -1713,8 +1713,6 @@ public:
     return Plugin::check(Status, "Error in hsa_amd_memory_async_copy: %s");
   }
 
-  uint64_t KernelBusyWaitTics; // initialized from AMDGPUDeviceTy
-
   /// Synchronize with the stream. The current thread waits until all operations
   /// are finalized and it performs the pending post actions (i.e., releasing
   /// intermediate buffers).
@@ -2047,9 +2045,6 @@ struct AMDGPUDeviceTy : public GenericDeviceTy, AMDGenericDeviceTy {
 
   ~AMDGPUDeviceTy() {}
 
-  uint64_t KernelBusyWaitTics;
-  uint64_t DataBusyWaitTics;
-
   virtual uint32_t getOMPXLowTripCount() const override {
     return OMPX_LowTripCount;
   }
@@ -2137,9 +2132,6 @@ struct AMDGPUDeviceTy : public GenericDeviceTy, AMDGenericDeviceTy {
     // Compute the number of queues and their size.
     const uint32_t NumQueues = std::min(OMPX_NumQueues.get(), MaxQueues);
     const uint32_t QueueSize = std::min(OMPX_QueueSize.get(), MaxQueueSize);
-
-    KernelBusyWaitTics = OMPX_StreamBusyWait;
-    DataBusyWaitTics = OMPX_StreamBusyWait;
 
     // Default-Construct each device queue (and initialize only the first) to
     // avoid unnecessary initialization overhead.
