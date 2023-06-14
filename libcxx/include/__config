@@ -539,9 +539,6 @@ typedef __char32_t char32_t;
 #      define _LIBCPP_EXPORTED_FROM_ABI __declspec(dllimport)
 #    endif
 
-#    define _LIBCPP_TYPE_VIS _LIBCPP_DLL_VIS
-#    define _LIBCPP_FUNC_VIS _LIBCPP_DLL_VIS
-#    define _LIBCPP_EXCEPTION_ABI _LIBCPP_DLL_VIS
 #    define _LIBCPP_HIDDEN
 #    define _LIBCPP_METHOD_TEMPLATE_IMPLICIT_INSTANTIATION_VIS
 #    define _LIBCPP_TEMPLATE_VIS
@@ -557,11 +554,8 @@ typedef __char32_t char32_t;
 #    endif
 
 #    define _LIBCPP_HIDDEN _LIBCPP_VISIBILITY("hidden")
-#    define _LIBCPP_FUNC_VIS _LIBCPP_VISIBILITY("default")
-#    define _LIBCPP_TYPE_VIS _LIBCPP_VISIBILITY("default")
 #    define _LIBCPP_TEMPLATE_DATA_VIS _LIBCPP_VISIBILITY("default")
 #    define _LIBCPP_EXPORTED_FROM_ABI _LIBCPP_VISIBILITY("default")
-#    define _LIBCPP_EXCEPTION_ABI _LIBCPP_VISIBILITY("default")
 #    define _LIBCPP_EXTERN_TEMPLATE_TYPE_VIS _LIBCPP_VISIBILITY("default")
 #    define _LIBCPP_CLASS_TEMPLATE_INSTANTIATION_VIS
 
@@ -705,7 +699,7 @@ _LIBCPP_BEGIN_NAMESPACE_STD _LIBCPP_END_NAMESPACE_STD
 
 #  ifdef _LIBCPP_CXX03_LANG
 #    define _LIBCPP_DECLARE_STRONG_ENUM(x)                                                                             \
-      struct _LIBCPP_TYPE_VIS x {                                                                                      \
+      struct _LIBCPP_EXPORTED_FROM_ABI x {                                                                                      \
         enum __lx
 // clang-format off
 #    define _LIBCPP_DECLARE_STRONG_ENUM_EPILOG(x)                                                                      \
@@ -902,7 +896,7 @@ _LIBCPP_BEGIN_NAMESPACE_STD _LIBCPP_END_NAMESPACE_STD
 #  endif
 
 #  ifndef _LIBCPP_HAS_NO_ASAN
-    extern "C" _LIBCPP_FUNC_VIS void
+    extern "C" _LIBCPP_EXPORTED_FROM_ABI void
     __sanitizer_annotate_contiguous_container(const void*, const void*, const void*, const void*);
 #  endif
 

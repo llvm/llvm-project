@@ -129,7 +129,7 @@ public:
 
 _LIBCPP_BEGIN_NAMESPACE_STD
 
-class _LIBCPP_TYPE_VIS condition_variable_any
+class _LIBCPP_EXPORTED_FROM_ABI condition_variable_any
 {
     condition_variable __cv_;
     shared_ptr<mutex>  __mut_;
@@ -269,8 +269,7 @@ condition_variable_any::wait_for(_Lock& __lock,
                       _VSTD::move(__pred));
 }
 
-_LIBCPP_FUNC_VIS
-void notify_all_at_thread_exit(condition_variable&, unique_lock<mutex>);
+_LIBCPP_EXPORTED_FROM_ABI void notify_all_at_thread_exit(condition_variable&, unique_lock<mutex>);
 
 _LIBCPP_END_NAMESPACE_STD
 

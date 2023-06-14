@@ -499,8 +499,7 @@ _LIBCPP_DECLARE_STRONG_ENUM(future_status)
 };
 _LIBCPP_DECLARE_STRONG_ENUM_EPILOG(future_status)
 
-_LIBCPP_FUNC_VIS
-const error_category& future_category() _NOEXCEPT;
+_LIBCPP_EXPORTED_FROM_ABI const error_category& future_category() _NOEXCEPT;
 
 inline _LIBCPP_INLINE_VISIBILITY
 error_code
@@ -516,7 +515,7 @@ make_error_condition(future_errc __e) _NOEXCEPT
     return error_condition(static_cast<int>(__e), future_category());
 }
 
-class _LIBCPP_EXCEPTION_ABI _LIBCPP_AVAILABILITY_FUTURE_ERROR future_error
+class _LIBCPP_EXPORTED_FROM_ABI _LIBCPP_AVAILABILITY_FUTURE_ERROR future_error
     : public logic_error
 {
     error_code __ec_;
@@ -544,7 +543,7 @@ void __throw_future_error(future_errc __ev)
 #endif
 }
 
-class _LIBCPP_TYPE_VIS _LIBCPP_AVAILABILITY_FUTURE __assoc_sub_state
+class _LIBCPP_EXPORTED_FROM_ABI _LIBCPP_AVAILABILITY_FUTURE __assoc_sub_state
     : public __shared_count
 {
 protected:
@@ -1220,7 +1219,7 @@ future<_Rp&>::get()
 }
 
 template <>
-class _LIBCPP_TYPE_VIS _LIBCPP_AVAILABILITY_FUTURE future<void>
+class _LIBCPP_EXPORTED_FROM_ABI _LIBCPP_AVAILABILITY_FUTURE future<void>
 {
     __assoc_sub_state* __state_;
 
@@ -1559,7 +1558,7 @@ promise<_Rp&>::set_exception_at_thread_exit(exception_ptr __p)
 // promise<void>
 
 template <>
-class _LIBCPP_TYPE_VIS _LIBCPP_AVAILABILITY_FUTURE promise<void>
+class _LIBCPP_EXPORTED_FROM_ABI _LIBCPP_AVAILABILITY_FUTURE promise<void>
 {
     __assoc_sub_state* __state_;
 
@@ -2378,7 +2377,7 @@ shared_future<_Rp&>::operator=(const shared_future& __rhs)
 }
 
 template <>
-class _LIBCPP_TYPE_VIS _LIBCPP_AVAILABILITY_FUTURE shared_future<void>
+class _LIBCPP_EXPORTED_FROM_ABI _LIBCPP_AVAILABILITY_FUTURE shared_future<void>
 {
     __assoc_sub_state* __state_;
 
