@@ -328,14 +328,15 @@ AMDGPUTargetLowering::AMDGPUTargetLowering(const TargetMachine &TM,
 
   // Library functions.  These default to Expand, but we have instructions
   // for them.
-  setOperationAction({ISD::FCEIL, ISD::FEXP2, ISD::FPOW, ISD::FABS, ISD::FFLOOR,
-                      ISD::FRINT, ISD::FTRUNC, ISD::FMINNUM, ISD::FMAXNUM},
+  setOperationAction({ISD::FCEIL, ISD::FPOW, ISD::FABS, ISD::FFLOOR, ISD::FRINT,
+                      ISD::FTRUNC, ISD::FMINNUM, ISD::FMAXNUM},
                      MVT::f32, Legal);
 
   setOperationAction(ISD::FLOG2, MVT::f32, Custom);
   setOperationAction(ISD::FROUND, {MVT::f32, MVT::f64}, Custom);
 
-  setOperationAction({ISD::FLOG, ISD::FLOG10, ISD::FEXP}, MVT::f32, Custom);
+  setOperationAction({ISD::FLOG, ISD::FLOG10, ISD::FEXP, ISD::FEXP2}, MVT::f32,
+                     Custom);
 
   setOperationAction(ISD::FNEARBYINT, {MVT::f16, MVT::f32, MVT::f64}, Custom);
 
@@ -347,7 +348,7 @@ AMDGPUTargetLowering::AMDGPUTargetLowering(const TargetMachine &TM,
     setOperationAction(ISD::IS_FPCLASS, {MVT::f16, MVT::f32, MVT::f64}, Legal);
   else {
     setOperationAction(ISD::IS_FPCLASS, {MVT::f32, MVT::f64}, Legal);
-    setOperationAction(ISD::FLOG2, MVT::f16, Custom);
+    setOperationAction({ISD::FLOG2, ISD::FEXP2}, MVT::f16, Custom);
   }
 
   setOperationAction({ISD::FLOG10, ISD::FLOG}, MVT::f16, Custom);
@@ -1315,6 +1316,8 @@ SDValue AMDGPUTargetLowering::LowerOperation(SDValue Op,
     return LowerFLOGCommon(Op, DAG);
   case ISD::FEXP:
     return lowerFEXP(Op, DAG);
+  case ISD::FEXP2:
+    return lowerFEXP2(Op, DAG);
   case ISD::SINT_TO_FP: return LowerSINT_TO_FP(Op, DAG);
   case ISD::UINT_TO_FP: return LowerUINT_TO_FP(Op, DAG);
   case ISD::FP_TO_FP16: return LowerFP_TO_FP16(Op, DAG);
@@ -1350,6 +1353,10 @@ void AMDGPUTargetLowering::ReplaceNodeResults(SDNode *N,
   case ISD::FLOG:
   case ISD::FLOG10:
     if (SDValue Lowered = LowerFLOGCommon(SDValue(N, 0), DAG))
+      Results.push_back(Lowered);
+    return;
+  case ISD::FEXP2:
+    if (SDValue Lowered = lowerFEXP2(SDValue(N, 0), DAG))
       Results.push_back(Lowered);
     return;
   default:
@@ -2679,6 +2686,54 @@ SDValue AMDGPUTargetLowering::LowerFLOGUnsafe(SDValue Src, const SDLoc &SL,
 
   return DAG.getNode(ISD::FMUL, SL, VT, Log2Operand, Log2BaseInvertedOperand,
                      Flags);
+}
+
+SDValue AMDGPUTargetLowering::lowerFEXP2(SDValue Op, SelectionDAG &DAG) const {
+  // v_exp_f32 is good enough for OpenCL, except it doesn't handle denormals.
+  // If we have to handle denormals, scale up the input and adjust the result.
+
+  SDLoc SL(Op);
+  EVT VT = Op.getValueType();
+  SDValue Src = Op.getOperand(0);
+  SDNodeFlags Flags = Op->getFlags();
+
+  if (VT == MVT::f16) {
+    // Nothing in half is a denormal when promoted to f32.
+    assert(!Subtarget->has16BitInsts());
+    SDValue Ext = DAG.getNode(ISD::FP_EXTEND, SL, MVT::f32, Src, Flags);
+    SDValue Log = DAG.getNode(AMDGPUISD::EXP, SL, MVT::f32, Ext, Flags);
+    return DAG.getNode(ISD::FP_ROUND, SL, VT, Log,
+                       DAG.getTargetConstant(0, SL, MVT::i32), Flags);
+  }
+
+  if (!needsDenormHandlingF32(DAG, Src, Flags))
+    return DAG.getNode(AMDGPUISD::EXP, SL, MVT::f32, Src, Flags);
+
+  // bool needs_scaling = x < -0x1.f80000p+6f;
+  // v_exp_f32(x + (s ? 0x1.0p+6f : 0.0f)) * (s ? 0x1.0p-64f : 1.0f);
+
+  // -nextafter(128.0, -1)
+  SDValue RangeCheckConst = DAG.getConstantFP(-0x1.f80000p+6f, SL, VT);
+
+  SDValue NeedsScaling = DAG.getSetCC(
+      SL, getSetCCResultType(DAG.getDataLayout(), *DAG.getContext(), VT), Src,
+      RangeCheckConst, ISD::SETOLT);
+
+  SDValue SixtyFour = DAG.getConstantFP(0x1.0p+6f, SL, VT);
+  SDValue Zero = DAG.getConstantFP(0.0, SL, VT);
+
+  SDValue AddOffset =
+      DAG.getNode(ISD::SELECT, SL, VT, NeedsScaling, SixtyFour, Zero);
+
+  SDValue AddInput = DAG.getNode(ISD::FADD, SL, VT, Src, AddOffset, Flags);
+  SDValue Exp2 = DAG.getNode(AMDGPUISD::EXP, SL, VT, AddInput, Flags);
+
+  SDValue TwoExpNeg64 = DAG.getConstantFP(0x1.0p-64f, SL, VT);
+  SDValue One = DAG.getConstantFP(1.0, SL, VT);
+  SDValue ResultScale =
+      DAG.getNode(ISD::SELECT, SL, VT, NeedsScaling, TwoExpNeg64, One);
+
+  return DAG.getNode(ISD::FMUL, SL, VT, Exp2, ResultScale, Flags);
 }
 
 // exp2(M_LOG2E_F * f);

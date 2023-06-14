@@ -1122,14 +1122,6 @@ AMDGPULegalizerInfo::AMDGPULegalizerInfo(const GCNSubtarget &ST_,
     .scalarize(0);
 
   // FIXME: fpow has a selection pattern that should move to custom lowering.
-  auto &Exp2Ops = getActionDefinitionsBuilder(G_FEXP2);
-  if (ST.has16BitInsts())
-    Exp2Ops.legalFor({S32, S16});
-  else
-    Exp2Ops.legalFor({S32});
-  Exp2Ops.clampScalar(0, MinScalarFPTy, S32);
-  Exp2Ops.scalarize(0);
-
   auto &ExpOps = getActionDefinitionsBuilder({G_FEXP, G_FPOW});
   if (ST.has16BitInsts())
     ExpOps.customFor({{S32}, {S16}});
@@ -1142,7 +1134,7 @@ AMDGPULegalizerInfo::AMDGPULegalizerInfo(const GCNSubtarget &ST_,
     .clampScalar(0, MinScalarFPTy, S32)
     .lower();
 
-  auto &Log2Ops = getActionDefinitionsBuilder(G_FLOG2);
+  auto &Log2Ops = getActionDefinitionsBuilder({G_FLOG2, G_FEXP2});
   Log2Ops.customFor({S32});
   if (ST.has16BitInsts())
     Log2Ops.legalFor({S16});
@@ -2019,6 +2011,8 @@ bool AMDGPULegalizerInfo::legalizeCustom(LegalizerHelper &Helper,
   case TargetOpcode::G_FLOG:
   case TargetOpcode::G_FLOG10:
     return legalizeFlogCommon(MI, B);
+  case TargetOpcode::G_FEXP2:
+    return legalizeFExp2(MI, B);
   case TargetOpcode::G_FEXP:
     return legalizeFExp(MI, B);
   case TargetOpcode::G_FPOW:
@@ -3227,6 +3221,64 @@ bool AMDGPULegalizerInfo::legalizeFlogUnsafe(MachineIRBuilder &B, Register Dst,
                                .setMIFlags(Flags);
   auto Log2BaseInvertedOperand = B.buildFConstant(Ty, Log2BaseInverted);
   B.buildFMul(Dst, Log2Operand, Log2BaseInvertedOperand, Flags);
+  return true;
+}
+
+bool AMDGPULegalizerInfo::legalizeFExp2(MachineInstr &MI,
+                                        MachineIRBuilder &B) const {
+  // v_exp_f32 is good enough for OpenCL, except it doesn't handle denormals.
+  // If we have to handle denormals, scale up the input and adjust the result.
+
+  Register Dst = MI.getOperand(0).getReg();
+  Register Src = MI.getOperand(1).getReg();
+  unsigned Flags = MI.getFlags();
+  LLT Ty = B.getMRI()->getType(Dst);
+  const LLT F16 = LLT::scalar(16);
+  const LLT F32 = LLT::scalar(32);
+
+  if (Ty == F16) {
+    // Nothing in half is a denormal when promoted to f32.
+    auto Ext = B.buildFPExt(F32, Src, Flags);
+    auto Log2 = B.buildIntrinsic(Intrinsic::amdgcn_exp2, {F32}, false)
+      .addUse(Ext.getReg(0))
+      .setMIFlags(Flags);
+    B.buildFPTrunc(Dst, Log2, Flags);
+    MI.eraseFromParent();
+    return true;
+  }
+
+  assert(Ty == F32);
+
+  if (!needsDenormHandlingF32(B.getMF(), Src, Flags)) {
+    B.buildIntrinsic(Intrinsic::amdgcn_exp2, ArrayRef<Register>{Dst}, false)
+      .addUse(Src)
+      .setMIFlags(Flags);
+    MI.eraseFromParent();
+    return true;
+  }
+
+  // bool needs_scaling = x < -0x1.f80000p+6f;
+  // v_exp_f32(x + (s ? 0x1.0p+6f : 0.0f)) * (s ? 0x1.0p-64f : 1.0f);
+
+  // -nextafter(128.0, -1)
+  auto RangeCheckConst = B.buildFConstant(Ty, -0x1.f80000p+6f);
+  auto NeedsScaling = B.buildFCmp(CmpInst::FCMP_OLT, LLT::scalar(1), Src,
+                                  RangeCheckConst, Flags);
+
+  auto SixtyFour = B.buildFConstant(Ty, 0x1.0p+6f);
+  auto Zero = B.buildFConstant(Ty, 0.0);
+  auto AddOffset = B.buildSelect(F32, NeedsScaling, SixtyFour, Zero, Flags);
+  auto AddInput = B.buildFAdd(F32, Src, AddOffset, Flags);
+
+  auto Exp2 = B.buildIntrinsic(Intrinsic::amdgcn_exp2, {Ty}, false)
+                  .addUse(AddInput.getReg(0))
+                  .setMIFlags(Flags);
+
+  auto TwoExpNeg64 = B.buildFConstant(Ty, 0x1.0p-64f);
+  auto One = B.buildFConstant(Ty, 1.0);
+  auto ResultScale = B.buildSelect(F32, NeedsScaling, TwoExpNeg64, One, Flags);
+  B.buildFMul(Dst, Exp2, ResultScale, Flags);
+  MI.eraseFromParent();
   return true;
 }
 
