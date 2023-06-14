@@ -42,17 +42,46 @@ namespace testing {
 // conditions for such cases.
 enum class TestCond { EQ, NE, LT, LE, GT, GE };
 
+struct MatcherBase {
+  virtual ~MatcherBase() {}
+  virtual void explainError() { tlog << "unknown error\n"; }
+  // Override and return true to skip `explainError` step.
+  virtual bool is_silent() const { return false; }
+};
+
+template <typename T> struct Matcher : public MatcherBase {
+  bool match(const T &t);
+};
+
 namespace internal {
 
+// A simple location object to allow consistent passing of __FILE__ and
+// __LINE__.
 struct Location {
   Location(const char *file, int line) : file(file), line(line) {}
   const char *file;
   int line;
 };
 
+// Supports writing a failing Location to tlog.
 TestLogger &operator<<(TestLogger &logger, Location Loc);
 
-#define LOC() __llvm_libc::testing::internal::Location(__FILE__, __LINE__)
+#define LIBC_TEST_LOC_()                                                       \
+  __llvm_libc::testing::internal::Location(__FILE__, __LINE__)
+
+// Object to forward custom logging after the EXPECT / ASSERT macros.
+struct Message {
+  template <typename T> Message &operator<<(T value) {
+    tlog << value;
+    return *this;
+  }
+};
+
+// A trivial object to catch the Message, this enables custom logging and
+// returning from the test function, see LIBC_TEST_SCAFFOLDING_ below.
+struct Failure {
+  void operator=(Message msg) {}
+};
 
 struct RunContext {
   enum class RunResult : bool { Pass, Fail };
@@ -70,17 +99,6 @@ bool test(RunContext *Ctx, TestCond Cond, ValType LHS, ValType RHS,
           const char *LHSStr, const char *RHSStr, Location Loc);
 
 } // namespace internal
-
-struct MatcherBase {
-  virtual ~MatcherBase() {}
-  virtual void explainError() { tlog << "unknown error\n"; }
-  // Override and return true to skip `explainError` step.
-  virtual bool is_silent() const { return false; }
-};
-
-template <typename T> struct Matcher : public MatcherBase {
-  bool match(T &t);
-};
 
 // NOTE: One should not create instances and call methods on them directly. One
 // should use the macros TEST or TEST_F to write test cases.
@@ -155,6 +173,13 @@ protected:
 
   bool testMatch(bool MatchResult, MatcherBase &Matcher, const char *LHSStr,
                  const char *RHSStr, internal::Location Loc);
+
+  template <typename MatcherT, typename ValType>
+  bool matchAndExplain(MatcherT &&Matcher, ValType Value,
+                       const char *MatcherStr, const char *ValueStr,
+                       internal::Location Loc) {
+    return testMatch(Matcher.match(Value), Matcher, ValueStr, MatcherStr, Loc);
+  }
 
   bool testProcessExits(testutils::FunctionCaller *Func, int ExitCode,
                         const char *LHSStr, const char *RHSStr,
@@ -351,106 +376,120 @@ CString libc_make_test_file_path_func(const char *file_name);
   SuiteClass##_##TestName SuiteClass##_##TestName##_Instance;                  \
   void SuiteClass##_##TestName::Run()
 
-#define EXPECT_EQ(LHS, RHS)                                                    \
-  this->test(__llvm_libc::testing::TestCond::EQ, (LHS), (RHS), #LHS, #RHS,     \
-             LOC())
-#define ASSERT_EQ(LHS, RHS)                                                    \
-  if (!EXPECT_EQ(LHS, RHS))                                                    \
-  return
+// The GNU compiler emits a warning if nested "if" statements are followed by
+// an "else" statement and braces are not used to explicitly disambiguate the
+// "else" binding.  This leads to problems with code like:
+//
+//   if (gate)
+//     ASSERT_*(condition) << "Some message";
+//
+// The "switch (0) case 0:" idiom is used to suppress this.
+#define LIBC_AMBIGUOUS_ELSE_BLOCKER_                                           \
+  switch (0)                                                                   \
+  case 0:                                                                      \
+  default:
 
-#define EXPECT_NE(LHS, RHS)                                                    \
-  this->test(__llvm_libc::testing::TestCond::NE, (LHS), (RHS), #LHS, #RHS,     \
-             LOC())
-#define ASSERT_NE(LHS, RHS)                                                    \
-  if (!EXPECT_NE(LHS, RHS))                                                    \
-  return
+// If RET_OR_EMPTY is the 'return' keyword we perform an early return which
+// corresponds to an assert. If it is empty the execution continues, this
+// corresponds to an expect.
+//
+// The 'else' clause must not be enclosed into braces so that the << operator
+// can be used to fill the Message.
+//
+// TEST is usually implemented as a function performing checking logic and
+// returning a boolean. This expression is responsible for logging the
+// diagnostic in case of failure.
+#define LIBC_TEST_SCAFFOLDING_(TEST, RET_OR_EMPTY)                             \
+  LIBC_AMBIGUOUS_ELSE_BLOCKER_                                                 \
+  if (TEST)                                                                    \
+    ;                                                                          \
+  else                                                                         \
+    RET_OR_EMPTY __llvm_libc::testing::internal::Failure() =                   \
+        __llvm_libc::testing::internal::Message()
 
-#define EXPECT_LT(LHS, RHS)                                                    \
-  this->test(__llvm_libc::testing::TestCond::LT, (LHS), (RHS), #LHS, #RHS,     \
-             LOC())
-#define ASSERT_LT(LHS, RHS)                                                    \
-  if (!EXPECT_LT(LHS, RHS))                                                    \
-  return
+#define LIBC_TEST_BINOP_(COND, LHS, RHS, RET_OR_EMPTY)                         \
+  LIBC_TEST_SCAFFOLDING_(test(__llvm_libc::testing::TestCond::COND, LHS, RHS,  \
+                              #LHS, #RHS, LIBC_TEST_LOC_()),                   \
+                         RET_OR_EMPTY)
 
-#define EXPECT_LE(LHS, RHS)                                                    \
-  this->test(__llvm_libc::testing::TestCond::LE, (LHS), (RHS), #LHS, #RHS,     \
-             LOC())
-#define ASSERT_LE(LHS, RHS)                                                    \
-  if (!EXPECT_LE(LHS, RHS))                                                    \
-  return
+////////////////////////////////////////////////////////////////////////////////
+// Binary operations corresponding to the TestCond enum.
 
-#define EXPECT_GT(LHS, RHS)                                                    \
-  this->test(__llvm_libc::testing::TestCond::GT, (LHS), (RHS), #LHS, #RHS,     \
-             LOC())
-#define ASSERT_GT(LHS, RHS)                                                    \
-  if (!EXPECT_GT(LHS, RHS))                                                    \
-  return
+#define EXPECT_EQ(LHS, RHS) LIBC_TEST_BINOP_(EQ, LHS, RHS, )
+#define ASSERT_EQ(LHS, RHS) LIBC_TEST_BINOP_(EQ, LHS, RHS, return)
 
-#define EXPECT_GE(LHS, RHS)                                                    \
-  this->test(__llvm_libc::testing::TestCond::GE, (LHS), (RHS), #LHS, #RHS,     \
-             LOC())
-#define ASSERT_GE(LHS, RHS)                                                    \
-  if (!EXPECT_GE(LHS, RHS))                                                    \
-  return
+#define EXPECT_NE(LHS, RHS) LIBC_TEST_BINOP_(NE, LHS, RHS, )
+#define ASSERT_NE(LHS, RHS) LIBC_TEST_BINOP_(NE, LHS, RHS, return)
 
-#define EXPECT_STREQ(LHS, RHS) this->testStrEq((LHS), (RHS), #LHS, #RHS, LOC())
-#define ASSERT_STREQ(LHS, RHS)                                                 \
-  if (!EXPECT_STREQ(LHS, RHS))                                                 \
-  return
+#define EXPECT_LT(LHS, RHS) LIBC_TEST_BINOP_(LT, LHS, RHS, )
+#define ASSERT_LT(LHS, RHS) LIBC_TEST_BINOP_(LT, LHS, RHS, return)
 
-#define EXPECT_STRNE(LHS, RHS) this->testStrNe((LHS), (RHS), #LHS, #RHS, LOC())
-#define ASSERT_STRNE(LHS, RHS)                                                 \
-  if (!EXPECT_STRNE(LHS, RHS))                                                 \
-  return
+#define EXPECT_LE(LHS, RHS) LIBC_TEST_BINOP_(LE, LHS, RHS, )
+#define ASSERT_LE(LHS, RHS) LIBC_TEST_BINOP_(LE, LHS, RHS, return)
 
-#define EXPECT_TRUE(VAL) EXPECT_EQ((VAL), true)
+#define EXPECT_GT(LHS, RHS) LIBC_TEST_BINOP_(GT, LHS, RHS, )
+#define ASSERT_GT(LHS, RHS) LIBC_TEST_BINOP_(GT, LHS, RHS, return)
 
-#define ASSERT_TRUE(VAL)                                                       \
-  if (!EXPECT_TRUE(VAL))                                                       \
-  return
+#define EXPECT_GE(LHS, RHS) LIBC_TEST_BINOP_(GE, LHS, RHS, )
+#define ASSERT_GE(LHS, RHS) LIBC_TEST_BINOP_(GE, LHS, RHS, return)
 
-#define EXPECT_FALSE(VAL) EXPECT_EQ((VAL), false)
+////////////////////////////////////////////////////////////////////////////////
+// Boolean checks are handled as comparison to the true / false values.
 
-#define ASSERT_FALSE(VAL)                                                      \
-  if (!EXPECT_FALSE(VAL))                                                      \
-  return
+#define EXPECT_TRUE(VAL) EXPECT_EQ(VAL, true)
+#define ASSERT_TRUE(VAL) ASSERT_EQ(VAL, true)
+
+#define EXPECT_FALSE(VAL) EXPECT_EQ(VAL, false)
+#define ASSERT_FALSE(VAL) ASSERT_EQ(VAL, false)
+
+////////////////////////////////////////////////////////////////////////////////
+// String checks.
+
+#define LIBC_TEST_STR_(TEST_FUNC, LHS, RHS, RET_OR_EMPTY)                      \
+  LIBC_TEST_SCAFFOLDING_(TEST_FUNC(LHS, RHS, #LHS, #RHS, LIBC_TEST_LOC_()),    \
+                         RET_OR_EMPTY)
+
+#define EXPECT_STREQ(LHS, RHS) LIBC_TEST_STR_(testStrEq, LHS, RHS, )
+#define ASSERT_STREQ(LHS, RHS) LIBC_TEST_STR_(testStrEq, LHS, RHS, return)
+
+#define EXPECT_STRNE(LHS, RHS) LIBC_TEST_STR_(testStrNe, LHS, RHS, )
+#define ASSERT_STRNE(LHS, RHS) LIBC_TEST_STR_(testStrNe, LHS, RHS, return)
+
+////////////////////////////////////////////////////////////////////////////////
+// Subprocess checks.
 
 #ifdef ENABLE_SUBPROCESS_TESTS
 
-#define EXPECT_EXITS(FUNC, EXIT)                                               \
-  this->testProcessExits(__llvm_libc::testing::Test::createCallable(FUNC),     \
-                         EXIT, #FUNC, #EXIT, LOC())
+#define LIBC_TEST_PROCESS_(TEST_FUNC, FUNC, VALUE, RET_OR_EMPTY)               \
+  LIBC_TEST_SCAFFOLDING_(                                                      \
+      TEST_FUNC(__llvm_libc::testing::Test::createCallable(FUNC), VALUE,       \
+                #FUNC, #VALUE, LIBC_TEST_LOC_()),                              \
+      RET_OR_EMPTY)
 
+#define EXPECT_EXITS(FUNC, EXIT)                                               \
+  LIBC_TEST_PROCESS_(testProcessExits, FUNC, EXIT, )
 #define ASSERT_EXITS(FUNC, EXIT)                                               \
-  if (!EXPECT_EXITS(FUNC, EXIT))                                               \
-  return
+  LIBC_TEST_PROCESS_(testProcessExits, FUNC, EXIT, return)
 
 #define EXPECT_DEATH(FUNC, SIG)                                                \
-  this->testProcessKilled(__llvm_libc::testing::Test::createCallable(FUNC),    \
-                          SIG, #FUNC, #SIG, LOC())
-
-#define ASSERT_DEATH(FUNC, EXIT)                                               \
-  if (!EXPECT_DEATH(FUNC, EXIT))                                               \
-  return
+  LIBC_TEST_PROCESS_(testProcessKilled, FUNC, SIG, )
+#define ASSERT_DEATH(FUNC, SIG)                                                \
+  LIBC_TEST_PROCESS_(testProcessKilled, FUNC, SIG, return)
 
 #endif // ENABLE_SUBPROCESS_TESTS
 
-#define __CAT1(a, b) a##b
-#define __CAT(a, b) __CAT1(a, b)
-#define UNIQUE_VAR(prefix) __CAT(prefix, __LINE__)
+////////////////////////////////////////////////////////////////////////////////
+// Custom matcher checks.
+
+#define LIBC_TEST_MATCH_(MATCHER, MATCH, MATCHER_STR, MATCH_STR, RET_OR_EMPTY) \
+  LIBC_TEST_SCAFFOLDING_(matchAndExplain(MATCHER, MATCH, MATCHER_STR,          \
+                                         MATCH_STR, LIBC_TEST_LOC_()),         \
+                         RET_OR_EMPTY)
 
 #define EXPECT_THAT(MATCH, MATCHER)                                            \
-  [&]() -> bool {                                                              \
-    auto UNIQUE_VAR(__matcher) = (MATCHER);                                    \
-    return this->testMatch(UNIQUE_VAR(__matcher).match((MATCH)),               \
-                           UNIQUE_VAR(__matcher), #MATCH, #MATCHER, LOC());    \
-  }()
-
+  LIBC_TEST_MATCH_(MATCHER, MATCH, #MATCHER, #MATCH, )
 #define ASSERT_THAT(MATCH, MATCHER)                                            \
-  do {                                                                         \
-    if (!EXPECT_THAT(MATCH, MATCHER))                                          \
-      return;                                                                  \
-  } while (0)
+  LIBC_TEST_MATCH_(MATCHER, MATCH, #MATCHER, #MATCH, return)
 
 #define WITH_SIGNAL(X) X
 
