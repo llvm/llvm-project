@@ -16,6 +16,7 @@ cc_library(
         "//libc:__support_cpp_string",
         "//libc:__support_cpp_string_view",
         "//libc:__support_osutil_io",
+        "//libc:__support_uint128",
         "//libc:libc_root",
     ],
 )
