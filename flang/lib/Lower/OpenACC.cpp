@@ -532,7 +532,8 @@ static mlir::Value genReductionInitValue(fir::FirOpBuilder &builder,
                                          mlir::acc::ReductionOperator op) {
   if (op != mlir::acc::ReductionOperator::AccAdd &&
       op != mlir::acc::ReductionOperator::AccMul &&
-      op != mlir::acc::ReductionOperator::AccMin)
+      op != mlir::acc::ReductionOperator::AccMin &&
+      op != mlir::acc::ReductionOperator::AccMax)
     TODO(loc, "reduction operator");
 
   // min -> largest
@@ -551,6 +552,20 @@ static mlir::Value genReductionInitValue(fir::FirOpBuilder &builder,
           builder.getFloatAttr(
               ty, llvm::APFloat::getLargest(sem, /*negative=*/false)));
     }
+    // max -> least
+  } else if (op == mlir::acc::ReductionOperator::AccMax) {
+    if (ty.isIntOrIndex())
+      return builder.create<mlir::arith::ConstantOp>(
+          loc, ty,
+          builder.getIntegerAttr(
+              ty, llvm::APInt::getSignedMinValue(ty.getIntOrFloatBitWidth())
+                      .getSExtValue()));
+    if (auto floatTy = mlir::dyn_cast_or_null<mlir::FloatType>(ty))
+      return builder.create<mlir::arith::ConstantOp>(
+          loc, ty,
+          builder.getFloatAttr(
+              ty, llvm::APFloat::getSmallest(floatTy.getFloatSemantics(),
+                                             /*negative=*/true)));
   } else {
     // 0 for +, ior, ieor
     // 1 for *
@@ -562,6 +577,7 @@ static mlir::Value genReductionInitValue(fir::FirOpBuilder &builder,
       return builder.create<mlir::arith::ConstantOp>(
           loc, ty, builder.getFloatAttr(ty, initValue));
   }
+
   TODO(loc, "reduction type");
 }
 
@@ -586,6 +602,9 @@ static mlir::Value genCombiner(fir::FirOpBuilder &builder, mlir::Location loc,
 
   if (op == mlir::acc::ReductionOperator::AccMin)
     return fir::genMin(builder, loc, {value1, value2});
+
+  if (op == mlir::acc::ReductionOperator::AccMax)
+    return fir::genMax(builder, loc, {value1, value2});
 
   TODO(loc, "reduction operator");
 }
