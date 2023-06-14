@@ -27,8 +27,8 @@ struct LlvmLibcSinfExhaustiveTest : public LlvmLibcExhaustiveTest<uint32_t> {
     do {
       FPBits xbits(bits);
       float x = float(xbits);
-      bool r = EXPECT_MPFR_MATCH(mpfr::Operation::Sin, x, __llvm_libc::sinf(x),
-                                 0.5, rounding);
+      bool r = TEST_MPFR_MATCH(mpfr::Operation::Sin, x, __llvm_libc::sinf(x),
+                               0.5, rounding);
       result &= r;
     } while (++bits < stop);
     return result;

@@ -27,8 +27,8 @@ struct LlvmLibcCosfExhaustiveTest : public LlvmLibcExhaustiveTest<uint32_t> {
     do {
       FPBits xbits(bits);
       float x = float(xbits);
-      bool r = EXPECT_MPFR_MATCH(mpfr::Operation::Cos, x, __llvm_libc::cosf(x),
-                                 0.5, rounding);
+      bool r = TEST_MPFR_MATCH(mpfr::Operation::Cos, x, __llvm_libc::cosf(x),
+                               0.5, rounding);
       result &= r;
     } while (++bits < stop);
     return result;

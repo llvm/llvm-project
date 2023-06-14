@@ -27,8 +27,8 @@ struct LlvmLibcExpm1fExhaustiveTest : public LlvmLibcExhaustiveTest<uint32_t> {
     do {
       FPBits xbits(bits);
       float x = float(xbits);
-      result &= EXPECT_MPFR_MATCH(mpfr::Operation::Expm1, x,
-                                  __llvm_libc::expm1f(x), 0.5, rounding);
+      result &= TEST_MPFR_MATCH(mpfr::Operation::Expm1, x,
+                                __llvm_libc::expm1f(x), 0.5, rounding);
     } while (bits-- > start);
     return result;
   }
