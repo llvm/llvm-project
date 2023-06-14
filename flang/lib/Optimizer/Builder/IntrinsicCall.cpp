@@ -125,7 +125,7 @@ struct VecTypeInfo {
   bool isFloat() { return isFloat32() || isFloat64(); }
 };
 
-static llvm::SmallVector<mlir::Value>
+static llvm::SmallVector<mlir::Value, 4>
 getBasesForArgs(llvm::ArrayRef<fir::ExtendedValue> args) {
   llvm::SmallVector<mlir::Value, 4> baseVec;
   for (auto arg : args)
@@ -133,7 +133,7 @@ getBasesForArgs(llvm::ArrayRef<fir::ExtendedValue> args) {
   return baseVec;
 }
 
-static llvm::SmallVector<mlir::Type>
+static llvm::SmallVector<mlir::Type, 4>
 getTypesForArgs(llvm::ArrayRef<mlir::Value> args) {
   llvm::SmallVector<mlir::Type, 4> typeVec;
   for (auto arg : args)
@@ -156,9 +156,9 @@ static VecTypeInfo getVecTypeFromFir(mlir::Value firVec) {
 }
 
 // Converts array of fir vectors to mlir vectors.
-static llvm::SmallVector<mlir::Value>
+static llvm::SmallVector<mlir::Value, 4>
 convertVecArgs(fir::FirOpBuilder &builder, mlir::Location loc,
-               VecTypeInfo vecTyInfo, llvm::SmallVector<mlir::Value> args) {
+               VecTypeInfo vecTyInfo, llvm::SmallVector<mlir::Value, 4> args) {
   llvm::SmallVector<mlir::Value, 4> newArgs;
   auto ty{vecTyInfo.toMlirVectorType(builder.getContext())};
   assert(ty && "unknown mlir vector type");
