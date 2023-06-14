@@ -4702,6 +4702,16 @@ bool Sema::CheckRISCVBuiltinFunctionCall(const TargetInfo &TI,
   case RISCVVector::BI__builtin_rvv_vasubu_vx_ta:
   case RISCVVector::BI__builtin_rvv_vasub_vv_ta:
   case RISCVVector::BI__builtin_rvv_vasub_vx_ta:
+  case RISCVVector::BI__builtin_rvv_vsmul_vv_ta:
+  case RISCVVector::BI__builtin_rvv_vsmul_vx_ta:
+  case RISCVVector::BI__builtin_rvv_vssra_vv_ta:
+  case RISCVVector::BI__builtin_rvv_vssra_vx_ta:
+  case RISCVVector::BI__builtin_rvv_vssrl_vv_ta:
+  case RISCVVector::BI__builtin_rvv_vssrl_vx_ta:
+  case RISCVVector::BI__builtin_rvv_vnclip_wv_ta:
+  case RISCVVector::BI__builtin_rvv_vnclip_wx_ta:
+  case RISCVVector::BI__builtin_rvv_vnclipu_wv_ta:
+  case RISCVVector::BI__builtin_rvv_vnclipu_wx_ta:
     return SemaBuiltinConstantArgRange(TheCall, 2, 0, 3);
   case RISCVVector::BI__builtin_rvv_vaaddu_vv_tu:
   case RISCVVector::BI__builtin_rvv_vaaddu_vx_tu:
@@ -4711,6 +4721,16 @@ bool Sema::CheckRISCVBuiltinFunctionCall(const TargetInfo &TI,
   case RISCVVector::BI__builtin_rvv_vasubu_vx_tu:
   case RISCVVector::BI__builtin_rvv_vasub_vv_tu:
   case RISCVVector::BI__builtin_rvv_vasub_vx_tu:
+  case RISCVVector::BI__builtin_rvv_vsmul_vv_tu:
+  case RISCVVector::BI__builtin_rvv_vsmul_vx_tu:
+  case RISCVVector::BI__builtin_rvv_vssra_vv_tu:
+  case RISCVVector::BI__builtin_rvv_vssra_vx_tu:
+  case RISCVVector::BI__builtin_rvv_vssrl_vv_tu:
+  case RISCVVector::BI__builtin_rvv_vssrl_vx_tu:
+  case RISCVVector::BI__builtin_rvv_vnclip_wv_tu:
+  case RISCVVector::BI__builtin_rvv_vnclip_wx_tu:
+  case RISCVVector::BI__builtin_rvv_vnclipu_wv_tu:
+  case RISCVVector::BI__builtin_rvv_vnclipu_wx_tu:
   case RISCVVector::BI__builtin_rvv_vaaddu_vv_tama:
   case RISCVVector::BI__builtin_rvv_vaaddu_vx_tama:
   case RISCVVector::BI__builtin_rvv_vaadd_vv_tama:
@@ -4719,6 +4739,16 @@ bool Sema::CheckRISCVBuiltinFunctionCall(const TargetInfo &TI,
   case RISCVVector::BI__builtin_rvv_vasubu_vx_tama:
   case RISCVVector::BI__builtin_rvv_vasub_vv_tama:
   case RISCVVector::BI__builtin_rvv_vasub_vx_tama:
+  case RISCVVector::BI__builtin_rvv_vsmul_vv_tama:
+  case RISCVVector::BI__builtin_rvv_vsmul_vx_tama:
+  case RISCVVector::BI__builtin_rvv_vssra_vv_tama:
+  case RISCVVector::BI__builtin_rvv_vssra_vx_tama:
+  case RISCVVector::BI__builtin_rvv_vssrl_vv_tama:
+  case RISCVVector::BI__builtin_rvv_vssrl_vx_tama:
+  case RISCVVector::BI__builtin_rvv_vnclip_wv_tama:
+  case RISCVVector::BI__builtin_rvv_vnclip_wx_tama:
+  case RISCVVector::BI__builtin_rvv_vnclipu_wv_tama:
+  case RISCVVector::BI__builtin_rvv_vnclipu_wx_tama:
     return SemaBuiltinConstantArgRange(TheCall, 3, 0, 3);
   case RISCVVector::BI__builtin_rvv_vaaddu_vv_tum:
   case RISCVVector::BI__builtin_rvv_vaaddu_vv_tumu:
@@ -4744,6 +4774,36 @@ bool Sema::CheckRISCVBuiltinFunctionCall(const TargetInfo &TI,
   case RISCVVector::BI__builtin_rvv_vasub_vx_tum:
   case RISCVVector::BI__builtin_rvv_vasub_vx_tumu:
   case RISCVVector::BI__builtin_rvv_vasub_vx_mu:
+  case RISCVVector::BI__builtin_rvv_vsmul_vv_mu:
+  case RISCVVector::BI__builtin_rvv_vsmul_vx_mu:
+  case RISCVVector::BI__builtin_rvv_vssra_vv_mu:
+  case RISCVVector::BI__builtin_rvv_vssra_vx_mu:
+  case RISCVVector::BI__builtin_rvv_vssrl_vv_mu:
+  case RISCVVector::BI__builtin_rvv_vssrl_vx_mu:
+  case RISCVVector::BI__builtin_rvv_vnclip_wv_mu:
+  case RISCVVector::BI__builtin_rvv_vnclip_wx_mu:
+  case RISCVVector::BI__builtin_rvv_vnclipu_wv_mu:
+  case RISCVVector::BI__builtin_rvv_vnclipu_wx_mu:
+  case RISCVVector::BI__builtin_rvv_vsmul_vv_tum:
+  case RISCVVector::BI__builtin_rvv_vsmul_vx_tum:
+  case RISCVVector::BI__builtin_rvv_vssra_vv_tum:
+  case RISCVVector::BI__builtin_rvv_vssra_vx_tum:
+  case RISCVVector::BI__builtin_rvv_vssrl_vv_tum:
+  case RISCVVector::BI__builtin_rvv_vssrl_vx_tum:
+  case RISCVVector::BI__builtin_rvv_vnclip_wv_tum:
+  case RISCVVector::BI__builtin_rvv_vnclip_wx_tum:
+  case RISCVVector::BI__builtin_rvv_vnclipu_wv_tum:
+  case RISCVVector::BI__builtin_rvv_vnclipu_wx_tum:
+  case RISCVVector::BI__builtin_rvv_vsmul_vv_tumu:
+  case RISCVVector::BI__builtin_rvv_vsmul_vx_tumu:
+  case RISCVVector::BI__builtin_rvv_vssra_vv_tumu:
+  case RISCVVector::BI__builtin_rvv_vssra_vx_tumu:
+  case RISCVVector::BI__builtin_rvv_vssrl_vv_tumu:
+  case RISCVVector::BI__builtin_rvv_vssrl_vx_tumu:
+  case RISCVVector::BI__builtin_rvv_vnclip_wv_tumu:
+  case RISCVVector::BI__builtin_rvv_vnclip_wx_tumu:
+  case RISCVVector::BI__builtin_rvv_vnclipu_wv_tumu:
+  case RISCVVector::BI__builtin_rvv_vnclipu_wx_tumu:
     return SemaBuiltinConstantArgRange(TheCall, 4, 0, 3);
   case RISCV::BI__builtin_riscv_ntl_load:
   case RISCV::BI__builtin_riscv_ntl_store:
