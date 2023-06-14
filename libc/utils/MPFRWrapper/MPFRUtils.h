@@ -339,6 +339,17 @@ template <typename T> bool round_to_long(T x, RoundingMode mode, long &result);
                  EXPECT_MPFR_MATCH_DEFAULT, GET_MPFR_DUMMY_ARG)                \
   (__VA_ARGS__)
 
+#define TEST_MPFR_MATCH_ROUNDING(op, input, match_value, ulp_tolerance,        \
+                                 rounding)                                     \
+  __llvm_libc::testing::mpfr::get_mpfr_matcher<op>(input, match_value,         \
+                                                   ulp_tolerance, rounding)    \
+      .match(match_value)
+
+#define TEST_MPFR_MATCH(...)                                                   \
+  GET_MPFR_MACRO(__VA_ARGS__, TEST_MPFR_MATCH_ROUNDING,                        \
+                 EXPECT_MPFR_MATCH_DEFAULT, GET_MPFR_DUMMY_ARG)                \
+  (__VA_ARGS__)
+
 #define EXPECT_MPFR_MATCH_ALL_ROUNDING(op, input, match_value, ulp_tolerance)  \
   {                                                                            \
     namespace mpfr = __llvm_libc::testing::mpfr;                               \
@@ -356,11 +367,11 @@ template <typename T> bool round_to_long(T x, RoundingMode mode, long &result);
                       mpfr::RoundingMode::TowardZero);                         \
   }
 
-#define EXPECT_MPFR_MATCH_ROUNDING_SILENTLY(op, input, match_value,            \
-                                            ulp_tolerance, rounding)           \
-  EXPECT_THAT(match_value,                                                     \
-              __llvm_libc::testing::mpfr::get_silent_mpfr_matcher<op>(         \
-                  input, match_value, ulp_tolerance, rounding))
+#define TEST_MPFR_MATCH_ROUNDING_SILENTLY(op, input, match_value,              \
+                                          ulp_tolerance, rounding)             \
+  __llvm_libc::testing::mpfr::get_silent_mpfr_matcher<op>(                     \
+      input, match_value, ulp_tolerance, rounding)                             \
+      .match(match_value)
 
 #define ASSERT_MPFR_MATCH_DEFAULT(op, input, match_value, ulp_tolerance)       \
   ASSERT_THAT(match_value,                                                     \

@@ -25,8 +25,8 @@ struct LlvmLibcLog1pfExhaustiveTest : public LlvmLibcExhaustiveTest<uint32_t> {
     do {
       FPBits xbits(bits);
       float x = float(xbits);
-      result &= EXPECT_MPFR_MATCH(mpfr::Operation::Log1p, x,
-                                  __llvm_libc::log1pf(x), 0.5, rounding);
+      result &= TEST_MPFR_MATCH(mpfr::Operation::Log1p, x,
+                                __llvm_libc::log1pf(x), 0.5, rounding);
     } while (bits++ < stop);
     return result;
   }

@@ -26,8 +26,8 @@ struct LlvmLibcAsinfExhaustiveTest : public LlvmLibcExhaustiveTest<uint32_t> {
     do {
       FPBits xbits(bits);
       float x = float(xbits);
-      result &= EXPECT_MPFR_MATCH(mpfr::Operation::Asin, x,
-                                  __llvm_libc::asinf(x), 0.5, rounding);
+      result &= TEST_MPFR_MATCH(mpfr::Operation::Asin, x, __llvm_libc::asinf(x),
+                                0.5, rounding);
       // if (!result) break;
     } while (bits++ < stop);
     return result;

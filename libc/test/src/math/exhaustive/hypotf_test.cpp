@@ -32,8 +32,8 @@ struct LlvmLibcHypotfExhaustiveTest : public LlvmLibcExhaustiveTest<uint32_t> {
       uint32_t ybits = Y_START;
       do {
         float y = float(FPBits(ybits));
-        result &= EXPECT_FP_EQ(__llvm_libc::fputil::hypot(x, y),
-                               __llvm_libc::hypotf(x, y));
+        result &= TEST_FP_EQ(__llvm_libc::fputil::hypot(x, y),
+                             __llvm_libc::hypotf(x, y));
         // Using MPFR will be much slower.
         // mpfr::BinaryInput<float> input{x, y};
         // EXPECT_MPFR_MATCH(mpfr::Operation::Hypot, input,
