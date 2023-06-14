@@ -1211,16 +1211,6 @@ define float @v_log2_f32_0() {
 ; CM:       ; %bb.0:
 ; CM-NEXT:    CF_END
 ; CM-NEXT:    PAD
-; GFX89-SDAG-LABEL: v_log2_f32_0:
-; GFX89-SDAG:       ; %bb.0:
-; GFX89-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX89-SDAG-NEXT:    v_log_f32_e32 v0, 0
-; GFX89-SDAG-NEXT:    s_setpc_b64 s[30:31]
-; GFX89-GISEL-LABEL: v_log2_f32_0:
-; GFX89-GISEL:       ; %bb.0:
-; GFX89-GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX89-GISEL-NEXT:    v_mov_b32_e32 v0, 0xff800000
-; GFX89-GISEL-NEXT:    s_setpc_b64 s[30:31]
   %result = call float @llvm.log2.f32(float 0.0)
   ret float %result
 }
@@ -1313,13 +1303,6 @@ define float @v_log2_f32_from_fpext_math_f16(i16 %src0.i, i16 %src1.i) {
 ; CM:       ; %bb.0:
 ; CM-NEXT:    CF_END
 ; CM-NEXT:    PAD
-; GFX89-LABEL: v_log2_f32_from_fpext_math_f16:
-; GFX89:       ; %bb.0:
-; GFX89-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX89-NEXT:    v_add_f16_e32 v0, v0, v1
-; GFX89-NEXT:    v_cvt_f32_f16_e32 v0, v0
-; GFX89-NEXT:    v_log_f32_e32 v0, v0
-; GFX89-NEXT:    s_setpc_b64 s[30:31]
   %src0 = bitcast i16 %src0.i to half
   %src1 = bitcast i16 %src1.i to half
   %fadd = fadd half %src0, %src1
@@ -1367,17 +1350,6 @@ define float @v_log2_f32_from_fpext_bf16(bfloat %src) {
 ; CM:       ; %bb.0:
 ; CM-NEXT:    CF_END
 ; CM-NEXT:    PAD
-; GFX89-SDAG-LABEL: v_log2_f32_from_fpext_bf16:
-; GFX89-SDAG:       ; %bb.0:
-; GFX89-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX89-SDAG-NEXT:    v_log_f32_e32 v0, v0
-; GFX89-SDAG-NEXT:    s_setpc_b64 s[30:31]
-; GFX89-GISEL-LABEL: v_log2_f32_from_fpext_bf16:
-; GFX89-GISEL:       ; %bb.0:
-; GFX89-GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX89-GISEL-NEXT:    v_cvt_f32_f16_e32 v0, v0
-; GFX89-GISEL-NEXT:    v_log_f32_e32 v0, v0
-; GFX89-GISEL-NEXT:    s_setpc_b64 s[30:31]
   %fpext = fpext bfloat %src to float
   %result = call float @llvm.log2.f32(float %fpext)
   ret float %result
@@ -1428,11 +1400,6 @@ define half @v_log2_f16(half %in) {
 ; CM:       ; %bb.0:
 ; CM-NEXT:    CF_END
 ; CM-NEXT:    PAD
-; GFX89-LABEL: v_log2_f16:
-; GFX89:       ; %bb.0:
-; GFX89-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX89-NEXT:    v_log_f16_e32 v0, v0
-; GFX89-NEXT:    s_setpc_b64 s[30:31]
   %result = call half @llvm.log2.f16(half %in)
   ret half %result
 }
@@ -1482,11 +1449,6 @@ define half @v_log2_fabs_f16(half %in) {
 ; CM:       ; %bb.0:
 ; CM-NEXT:    CF_END
 ; CM-NEXT:    PAD
-; GFX89-LABEL: v_log2_fabs_f16:
-; GFX89:       ; %bb.0:
-; GFX89-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX89-NEXT:    v_log_f16_e64 v0, |v0|
-; GFX89-NEXT:    s_setpc_b64 s[30:31]
   %fabs = call half @llvm.fabs.f16(half %in)
   %result = call half @llvm.log2.f16(half %fabs)
   ret half %result
@@ -1537,11 +1499,6 @@ define half @v_log2_fneg_fabs_f16(half %in) {
 ; CM:       ; %bb.0:
 ; CM-NEXT:    CF_END
 ; CM-NEXT:    PAD
-; GFX89-LABEL: v_log2_fneg_fabs_f16:
-; GFX89:       ; %bb.0:
-; GFX89-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX89-NEXT:    v_log_f16_e64 v0, -|v0|
-; GFX89-NEXT:    s_setpc_b64 s[30:31]
   %fabs = call half @llvm.fabs.f16(half %in)
   %fneg.fabs = fneg half %fabs
   %result = call half @llvm.log2.f16(half %fneg.fabs)
@@ -1593,11 +1550,6 @@ define half @v_log2_fneg_f16(half %in) {
 ; CM:       ; %bb.0:
 ; CM-NEXT:    CF_END
 ; CM-NEXT:    PAD
-; GFX89-LABEL: v_log2_fneg_f16:
-; GFX89:       ; %bb.0:
-; GFX89-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX89-NEXT:    v_log_f16_e64 v0, -v0
-; GFX89-NEXT:    s_setpc_b64 s[30:31]
   %fneg = fneg half %in
   %result = call half @llvm.log2.f16(half %fneg)
   ret half %result
@@ -1648,11 +1600,6 @@ define half @v_log2_f16_fast(half %in) {
 ; CM:       ; %bb.0:
 ; CM-NEXT:    CF_END
 ; CM-NEXT:    PAD
-; GFX89-LABEL: v_log2_f16_fast:
-; GFX89:       ; %bb.0:
-; GFX89-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX89-NEXT:    v_log_f16_e32 v0, v0
-; GFX89-NEXT:    s_setpc_b64 s[30:31]
   %result = call fast half @llvm.log2.f16(half %in)
   ret half %result
 }
