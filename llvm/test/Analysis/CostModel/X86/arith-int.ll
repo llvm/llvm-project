@@ -890,9 +890,9 @@ define i32 @and(i32 %arg) {
 define i32 @mul(i32 %arg) {
 ; SSSE3-LABEL: 'mul'
 ; SSSE3-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %I64 = mul i64 undef, undef
-; SSSE3-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %V2I64 = mul <2 x i64> undef, undef
-; SSSE3-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: %V4I64 = mul <4 x i64> undef, undef
-; SSSE3-NEXT:  Cost Model: Found an estimated cost of 32 for instruction: %V8I64 = mul <8 x i64> undef, undef
+; SSSE3-NEXT:  Cost Model: Found an estimated cost of 7 for instruction: %V2I64 = mul <2 x i64> undef, undef
+; SSSE3-NEXT:  Cost Model: Found an estimated cost of 14 for instruction: %V4I64 = mul <4 x i64> undef, undef
+; SSSE3-NEXT:  Cost Model: Found an estimated cost of 28 for instruction: %V8I64 = mul <8 x i64> undef, undef
 ; SSSE3-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %I32 = mul i32 undef, undef
 ; SSSE3-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: %V4I32 = mul <4 x i32> undef, undef
 ; SSSE3-NEXT:  Cost Model: Found an estimated cost of 12 for instruction: %V8I32 = mul <8 x i32> undef, undef

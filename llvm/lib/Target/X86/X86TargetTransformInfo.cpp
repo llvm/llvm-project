@@ -1335,7 +1335,7 @@ InstructionCost X86TTIImpl::getArithmeticInstrCost(
     { ISD::MUL,  MVT::v16i8,  {  5, 18,12,12 } }, // 2*unpack/2*pmullw/2*and/pack
     { ISD::MUL,  MVT::v8i16,  {  1,  5, 1, 1 } }, // pmullw
     { ISD::MUL,  MVT::v4i32,  {  6,  8, 7, 7 } }, // 3*pmuludq/4*shuffle
-    { ISD::MUL,  MVT::v2i64,  {  8, 10, 8, 8 } }, // 3*pmuludq/3*shift/2*add
+    { ISD::MUL,  MVT::v2i64,  {  7, 10,10,10 } }, // 3*pmuludq/3*shift/2*add
 
     { X86ISD::PMULUDQ, MVT::v2i64, { 1,  5, 1, 1 } },
 
