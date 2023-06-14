@@ -29,8 +29,7 @@ TestLogger &operator<<(TestLogger &logger, Location Loc) {
   return logger << Loc.file << ":" << Loc.line << ": FAILURE\n";
 }
 
-// When the value is UInt128, __uint128_t or wider, show its hexadecimal
-// digits.
+// When the value is UInt128, __uint128_t or wider, show its hexadecimal digits.
 template <typename T>
 cpp::enable_if_t<cpp::is_integral_v<T> && (sizeof(T) > sizeof(uint64_t)),
                  cpp::string>

@@ -24,5 +24,5 @@ TEST(LlvmLibcMempcpyTest, ZeroCount) {
   const char *src = "12345";
   char dest[10];
   void *result = __llvm_libc::mempcpy(dest, src, 0);
-  ASSERT_EQ(static_cast<char *>(result), dest + 0);
+  ASSERT_EQ(static_cast<char *>(result), dest);
 }
