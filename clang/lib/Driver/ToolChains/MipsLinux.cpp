@@ -30,7 +30,7 @@ MipsLLVMToolChain::MipsLLVMToolChain(const Driver &D,
   DetectedMultilibs Result;
   findMIPSMultilibs(D, Triple, "", Args, Result);
   Multilibs = Result.Multilibs;
-  SelectedMultilib = Result.SelectedMultilib;
+  SelectedMultilibs = Result.SelectedMultilibs;
 
   // Find out the library suffix based on the ABI.
   LibSuffix = tools::mips::getMipsABILibSuffix(Args, Triple);

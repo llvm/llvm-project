@@ -93,27 +93,18 @@ MultilibSet &MultilibSet::FilterOut(FilterCallback F) {
 
 void MultilibSet::push_back(const Multilib &M) { Multilibs.push_back(M); }
 
-MultilibSet::multilib_list
-MultilibSet::select(const Multilib::flags_list &Flags) const {
+bool MultilibSet::select(const Multilib::flags_list &Flags,
+                         llvm::SmallVector<Multilib> &Selected) const {
   llvm::StringSet<> FlagSet(expandFlags(Flags));
-  multilib_list Result;
-  llvm::copy_if(Multilibs, std::back_inserter(Result),
+  Selected.clear();
+  llvm::copy_if(Multilibs, std::back_inserter(Selected),
                 [&FlagSet](const Multilib &M) {
                   for (const std::string &F : M.flags())
                     if (!FlagSet.contains(F))
                       return false;
                   return true;
                 });
-  return Result;
-}
-
-bool MultilibSet::select(const Multilib::flags_list &Flags,
-                         Multilib &Selected) const {
-  multilib_list Result = select(Flags);
-  if (Result.empty())
-    return false;
-  Selected = Result.back();
-  return true;
+  return !Selected.empty();
 }
 
 llvm::StringSet<>

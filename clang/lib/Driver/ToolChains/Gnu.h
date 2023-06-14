@@ -23,8 +23,8 @@ struct DetectedMultilibs {
   /// The set of multilibs that the detected installation supports.
   MultilibSet Multilibs;
 
-  /// The primary multilib appropriate for the given flags.
-  Multilib SelectedMultilib;
+  /// The multilibs appropriate for the given flags.
+  llvm::SmallVector<Multilib> SelectedMultilibs;
 
   /// On Biarch systems, this corresponds to the default multilib when
   /// targeting the non-default multilib. Otherwise, it is empty.

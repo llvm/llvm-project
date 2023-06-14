@@ -116,11 +116,9 @@ public:
   const_iterator begin() const { return Multilibs.begin(); }
   const_iterator end() const { return Multilibs.end(); }
 
-  /// Select compatible variants
-  multilib_list select(const Multilib::flags_list &Flags) const;
-
-  /// Pick the best multilib in the set, \returns false if none are compatible
-  bool select(const Multilib::flags_list &Flags, Multilib &M) const;
+  /// Select compatible variants, \returns false if none are compatible
+  bool select(const Multilib::flags_list &Flags,
+              llvm::SmallVector<Multilib> &) const;
 
   unsigned size() const { return Multilibs.size(); }
 

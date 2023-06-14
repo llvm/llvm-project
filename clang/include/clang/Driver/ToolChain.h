@@ -187,7 +187,7 @@ private:
 
 protected:
   MultilibSet Multilibs;
-  Multilib SelectedMultilib;
+  llvm::SmallVector<Multilib> SelectedMultilibs;
 
   ToolChain(const Driver &D, const llvm::Triple &T,
             const llvm::opt::ArgList &Args);
@@ -283,7 +283,9 @@ public:
 
   const MultilibSet &getMultilibs() const { return Multilibs; }
 
-  const Multilib &getMultilib() const { return SelectedMultilib; }
+  const llvm::SmallVector<Multilib> &getSelectedMultilibs() const {
+    return SelectedMultilibs;
+  }
 
   /// Get flags suitable for multilib selection, based on the provided clang
   /// command line arguments. The command line arguments aren't suitable to be
