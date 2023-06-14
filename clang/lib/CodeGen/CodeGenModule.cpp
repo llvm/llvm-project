@@ -7482,13 +7482,6 @@ public:
       NoLoopCheckStatus = CodeGenModule::NxNestedOmpParallelDirective;
       // No need to continue visiting any more
       return;
-    } else if (D->getDirectiveKind() == llvm::omp::Directive::OMPD_loop) {
-      if (const auto *C = D->getSingleClause<OMPBindClause>())
-        if (C->getBindKind() == OMPC_BIND_parallel) {
-          NoLoopCheckStatus = CodeGenModule::NxNestedOmpParallelDirective;
-          // No need to continue visiting any more
-          return;
-        }
     }
     for (const Stmt *Child : D->children())
       if (Child)
@@ -8372,34 +8365,6 @@ CodeGenModule::checkTargetTeamsNest(const OMPExecutableDirective &D,
     return NxUnsupportedNestedSplitDirective;
   }
   llvm_unreachable("Unexpected OpenMP clause");
-}
-
-/// Determine if 'target teams loop' can be emitted using 'parallel for'.
-bool
-CodeGenModule::canBeParallelFor(const OMPExecutableDirective &D) {
-  NoLoopXteamErr NxStatus = NxSuccess;
-
-  OpenMPDirectiveKind DKind = D.getDirectiveKind();
-  assert(DKind == llvm::omp::Directive::OMPD_target_teams_loop &&
-      "Expected 'target teams loop' directive");
-
-  // Make sure CodeGen can handle the FOR statement
-  if (!D.hasAssociatedStmt())
-    return false;
-
-  // For our purposes, checks for valid canonical loop, presence of
-  // 'parallel', 'loop bind(parallel)', or function call in associated
-  // loop-nest.
-  std::pair<NoLoopXteamErr, bool> ForStmtStatus =
-      getNoLoopForStmtStatus(D, D.getAssociatedStmt());
-
-  // A status other than NxSuccess (non-zero) means loop cannot be parallel.
-  if ((NxStatus = ForStmtStatus.first))
-    return false;
-
-  // We don't go parallel if there's a nested function call.
-  bool HasNestedGenericCall = ForStmtStatus.second;
-  return !HasNestedGenericCall;
 }
 
 CodeGenModule::NoLoopXteamErr
