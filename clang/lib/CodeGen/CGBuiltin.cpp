@@ -17173,6 +17173,8 @@ Value *CodeGenFunction::EmitAMDGPUBuiltinExpr(unsigned BuiltinID,
     return EmitAMDGPUDispatchPtr(*this, E);
   case AMDGPU::BI__builtin_amdgcn_logf:
     return emitUnaryBuiltin(*this, E, Intrinsic::amdgcn_log);
+  case AMDGPU::BI__builtin_amdgcn_exp2f:
+    return emitUnaryBuiltin(*this, E, Intrinsic::amdgcn_exp2);
   case AMDGPU::BI__builtin_amdgcn_log_clampf:
     return emitUnaryBuiltin(*this, E, Intrinsic::amdgcn_log_clamp);
   case AMDGPU::BI__builtin_amdgcn_ldexp:

@@ -321,7 +321,7 @@ defm V_RNDNE_F32 : VOP1Inst <"v_rndne_f32", VOP_F32_F32, frint>;
 defm V_FLOOR_F32 : VOP1Inst <"v_floor_f32", VOP_F32_F32, ffloor>;
 
 let TRANS = 1, SchedRW = [WriteTrans32] in {
-defm V_EXP_F32 : VOP1Inst <"v_exp_f32", VOP_F32_F32, fexp2>;
+defm V_EXP_F32 : VOP1Inst <"v_exp_f32", VOP_F32_F32, AMDGPUexp>;
 defm V_LOG_F32 : VOP1Inst <"v_log_f32", VOP_F32_F32, AMDGPUlog>;
 defm V_RCP_F32 : VOP1Inst <"v_rcp_f32", VOP_F32_F32, AMDGPUrcp>;
 defm V_RCP_IFLAG_F32 : VOP1Inst <"v_rcp_iflag_f32", VOP_F32_F32, AMDGPUrcp_iflag>;
@@ -488,7 +488,7 @@ defm V_RCP_F16 : VOP1Inst_t16 <"v_rcp_f16", VOP_F16_F16, AMDGPUrcp>;
 defm V_SQRT_F16 : VOP1Inst_t16 <"v_sqrt_f16", VOP_F16_F16, any_amdgcn_sqrt>;
 defm V_RSQ_F16 : VOP1Inst_t16 <"v_rsq_f16", VOP_F16_F16, AMDGPUrsq>;
 defm V_LOG_F16 : VOP1Inst_t16 <"v_log_f16", VOP_F16_F16, AMDGPUlogf16>;
-defm V_EXP_F16 : VOP1Inst_t16 <"v_exp_f16", VOP_F16_F16, fexp2>;
+defm V_EXP_F16 : VOP1Inst_t16 <"v_exp_f16", VOP_F16_F16, AMDGPUexpf16>;
 defm V_SIN_F16 : VOP1Inst_t16 <"v_sin_f16", VOP_F16_F16, AMDGPUsin>;
 defm V_COS_F16 : VOP1Inst_t16 <"v_cos_f16", VOP_F16_F16, AMDGPUcos>;
 } // End TRANS = 1, SchedRW = [WriteTrans32]
