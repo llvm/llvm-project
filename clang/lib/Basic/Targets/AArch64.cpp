@@ -415,7 +415,9 @@ void AArch64TargetInfo::getTargetDefines(const LangOptions &Opts,
   if (HasCRC)
     Builder.defineMacro("__ARM_FEATURE_CRC32", "1");
 
-  if (HasRCPC)
+  if (HasRCPC3)
+    Builder.defineMacro("__ARM_FEATURE_RCPC", "3");
+  else if (HasRCPC)
     Builder.defineMacro("__ARM_FEATURE_RCPC", "1");
 
   if (HasFMV)
@@ -671,6 +673,7 @@ bool AArch64TargetInfo::hasFeature(StringRef Feature) const {
       .Case("bti", HasBTI)
       .Cases("ls64", "ls64_v", "ls64_accdata", HasLS64)
       .Case("wfxt", HasWFxT)
+      .Case("rcpc3", HasRCPC3)
       .Default(false);
 }
 
@@ -928,6 +931,8 @@ bool AArch64TargetInfo::handleTargetFeatures(std::vector<std::string> &Features,
       HasD128 = true;
     if (Feature == "+gcs")
       HasGCS = true;
+    if (Feature == "+rcpc3")
+      HasRCPC3 = true;
   }
 
   // Check features that are manually disabled by command line options.
