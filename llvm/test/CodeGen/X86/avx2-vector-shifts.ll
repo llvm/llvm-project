@@ -276,7 +276,8 @@ define <4 x i32> @srl_trunc_and_v4i64(<4 x i32> %x, <4 x i64> %y) nounwind {
 ;
 ; X86-FAST-ALL-LABEL: srl_trunc_and_v4i64:
 ; X86-FAST-ALL:       # %bb.0:
-; X86-FAST-ALL-NEXT:    vmovdqa {{.*#+}} ymm2 = <0,2,4,6,u,u,u,u>
+; X86-FAST-ALL-NEXT:    vbroadcasti128 {{.*#+}} ymm2 = [0,2,4,6,0,2,4,6]
+; X86-FAST-ALL-NEXT:    # ymm2 = mem[0,1,0,1]
 ; X86-FAST-ALL-NEXT:    vpermd %ymm1, %ymm2, %ymm1
 ; X86-FAST-ALL-NEXT:    vpbroadcastd {{.*#+}} xmm2 = [8,8,8,8]
 ; X86-FAST-ALL-NEXT:    vpand %xmm2, %xmm1, %xmm1
@@ -306,7 +307,8 @@ define <4 x i32> @srl_trunc_and_v4i64(<4 x i32> %x, <4 x i64> %y) nounwind {
 ;
 ; X64-FAST-ALL-LABEL: srl_trunc_and_v4i64:
 ; X64-FAST-ALL:       # %bb.0:
-; X64-FAST-ALL-NEXT:    vmovdqa {{.*#+}} ymm2 = <0,2,4,6,u,u,u,u>
+; X64-FAST-ALL-NEXT:    vbroadcasti128 {{.*#+}} ymm2 = [0,2,4,6,0,2,4,6]
+; X64-FAST-ALL-NEXT:    # ymm2 = mem[0,1,0,1]
 ; X64-FAST-ALL-NEXT:    vpermd %ymm1, %ymm2, %ymm1
 ; X64-FAST-ALL-NEXT:    vpbroadcastd {{.*#+}} xmm2 = [8,8,8,8]
 ; X64-FAST-ALL-NEXT:    vpand %xmm2, %xmm1, %xmm1
