@@ -75,16 +75,10 @@ define i32 @multiuse1(i32 %x) {
 
 define i32 @multiuse2(i32 %x) {
 ; CHECK-LABEL: @multiuse2(
-; CHECK-NEXT:    [[I:%.*]] = shl i32 [[X:%.*]], 1
-; CHECK-NEXT:    [[I2:%.*]] = and i32 [[I]], 12
-; CHECK-NEXT:    [[I6:%.*]] = shl i32 [[X]], 8
-; CHECK-NEXT:    [[I7:%.*]] = and i32 [[I6]], 24576
-; CHECK-NEXT:    [[I14:%.*]] = shl i32 [[X]], 8
-; CHECK-NEXT:    [[I9:%.*]] = and i32 [[I14]], 7680
-; CHECK-NEXT:    [[I10:%.*]] = or i32 [[I7]], [[I9]]
-; CHECK-NEXT:    [[I85:%.*]] = shl i32 [[X]], 1
-; CHECK-NEXT:    [[I11:%.*]] = and i32 [[I85]], 240
-; CHECK-NEXT:    [[I12:%.*]] = or i32 [[I2]], [[I11]]
+; CHECK-NEXT:    [[TMP1:%.*]] = shl i32 [[X:%.*]], 8
+; CHECK-NEXT:    [[I10:%.*]] = and i32 [[TMP1]], 32256
+; CHECK-NEXT:    [[TMP2:%.*]] = shl i32 [[X]], 1
+; CHECK-NEXT:    [[I12:%.*]] = and i32 [[TMP2]], 252
 ; CHECK-NEXT:    [[I13:%.*]] = or i32 [[I10]], [[I12]]
 ; CHECK-NEXT:    ret i32 [[I13]]
 ;
@@ -107,15 +101,10 @@ define i32 @multiuse2(i32 %x) {
 
 define i32 @multiuse3(i32 %x) {
 ; CHECK-LABEL: @multiuse3(
-; CHECK-NEXT:    [[I:%.*]] = and i32 [[X:%.*]], 96
-; CHECK-NEXT:    [[I1:%.*]] = shl nuw nsw i32 [[I]], 6
-; CHECK-NEXT:    [[I2:%.*]] = lshr exact i32 [[I]], 1
-; CHECK-NEXT:    [[I3:%.*]] = shl i32 [[X]], 6
-; CHECK-NEXT:    [[I4:%.*]] = and i32 [[I3]], 1920
-; CHECK-NEXT:    [[I5:%.*]] = or i32 [[I1]], [[I4]]
-; CHECK-NEXT:    [[I6:%.*]] = lshr i32 [[X]], 1
-; CHECK-NEXT:    [[I7:%.*]] = and i32 [[I6]], 15
-; CHECK-NEXT:    [[I8:%.*]] = or i32 [[I2]], [[I7]]
+; CHECK-NEXT:    [[TMP1:%.*]] = shl i32 [[X:%.*]], 6
+; CHECK-NEXT:    [[I5:%.*]] = and i32 [[TMP1]], 8064
+; CHECK-NEXT:    [[TMP2:%.*]] = lshr i32 [[X]], 1
+; CHECK-NEXT:    [[I8:%.*]] = and i32 [[TMP2]], 63
 ; CHECK-NEXT:    [[I9:%.*]] = or i32 [[I8]], [[I5]]
 ; CHECK-NEXT:    ret i32 [[I9]]
 ;
@@ -134,20 +123,18 @@ define i32 @multiuse3(i32 %x) {
 
 define i32 @multiuse4(i32 %x) local_unnamed_addr {
 ; CHECK-LABEL: @multiuse4(
-; CHECK-NEXT:    [[I:%.*]] = and i32 [[X:%.*]], 100663296
-; CHECK-NEXT:    [[I1:%.*]] = icmp sgt i32 [[X]], -1
+; CHECK-NEXT:    [[I1:%.*]] = icmp sgt i32 [[X:%.*]], -1
 ; CHECK-NEXT:    br i1 [[I1]], label [[IF:%.*]], label [[ELSE:%.*]]
 ; CHECK:       if:
-; CHECK-NEXT:    [[I2:%.*]] = lshr exact i32 [[I]], 22
+; CHECK-NEXT:    [[I:%.*]] = lshr i32 [[X]], 22
+; CHECK-NEXT:    [[I2:%.*]] = and i32 [[I]], 24
 ; CHECK-NEXT:    [[I3:%.*]] = lshr i32 [[X]], 22
 ; CHECK-NEXT:    [[I4:%.*]] = and i32 [[I3]], 480
 ; CHECK-NEXT:    [[I5:%.*]] = or i32 [[I4]], [[I2]]
 ; CHECK-NEXT:    br label [[END:%.*]]
 ; CHECK:       else:
-; CHECK-NEXT:    [[I6:%.*]] = lshr exact i32 [[I]], 17
-; CHECK-NEXT:    [[I7:%.*]] = lshr i32 [[X]], 17
-; CHECK-NEXT:    [[I8:%.*]] = and i32 [[I7]], 15360
-; CHECK-NEXT:    [[I9:%.*]] = or i32 [[I8]], [[I6]]
+; CHECK-NEXT:    [[TMP1:%.*]] = lshr i32 [[X]], 17
+; CHECK-NEXT:    [[I9:%.*]] = and i32 [[TMP1]], 16128
 ; CHECK-NEXT:    br label [[END]]
 ; CHECK:       end:
 ; CHECK-NEXT:    [[I10:%.*]] = phi i32 [ [[I5]], [[IF]] ], [ [[I9]], [[ELSE]] ]
