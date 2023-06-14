@@ -308,6 +308,15 @@ def int_amdgcn_log : DefaultAttrsIntrinsic<
   [llvm_anyfloat_ty], [LLVMMatchType<0>], [IntrNoMem, IntrSpeculatable]
 >;
 
+// v_exp_{f16|f32} (int_amdgcn_exp was taken by export
+// already). Performs exp2. f32 version does not handle
+// denormals. There is no reason to use this for f16 as it does
+// support denormals, and the generic exp2 intrinsic should be
+// preferred.
+def int_amdgcn_exp2 : DefaultAttrsIntrinsic<
+  [llvm_anyfloat_ty], [LLVMMatchType<0>], [IntrNoMem, IntrSpeculatable]
+>;
+
 def int_amdgcn_log_clamp : DefaultAttrsIntrinsic<
   [llvm_anyfloat_ty], [LLVMMatchType<0>], [IntrNoMem, IntrSpeculatable]
 >;
