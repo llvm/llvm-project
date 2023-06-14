@@ -128,6 +128,9 @@ public:
                                         const ExecutionContext *exe_ctx,
                                         const Address *addr, Stream &s);
 
+  static void AssertCallback(llvm::StringRef message, llvm::StringRef backtrace,
+                             llvm::StringRef prompt);
+
   void Clear();
 
   bool GetAsyncExecution();
