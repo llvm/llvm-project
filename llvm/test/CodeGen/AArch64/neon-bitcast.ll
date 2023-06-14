@@ -514,3 +514,66 @@ define <16 x i8> @test_v2f64_to_v16i8(<2 x double> %in) nounwind{
   ret <16 x i8> %val
 }
 
+define <2 x i16> @bitcast_i32_to_v2i16(i32 %word) {
+; CHECK-LE-LABEL: bitcast_i32_to_v2i16:
+; CHECK-LE:       // %bb.0:
+; CHECK-LE-NEXT:    fmov s0, w0
+; CHECK-LE-NEXT:    ushll v0.4s, v0.4h, #0
+; CHECK-LE-NEXT:    // kill: def $d0 killed $d0 killed $q0
+; CHECK-LE-NEXT:    ret
+;
+; CHECK-BE-LABEL: bitcast_i32_to_v2i16:
+; CHECK-BE:       // %bb.0:
+; CHECK-BE-NEXT:    fmov s0, w0
+; CHECK-BE-NEXT:    rev32 v0.4h, v0.4h
+; CHECK-BE-NEXT:    ushll v0.4s, v0.4h, #0
+; CHECK-BE-NEXT:    rev64 v0.2s, v0.2s
+; CHECK-BE-NEXT:    ret
+  %ret = bitcast i32 %word to <2 x i16>
+  ret <2 x i16> %ret
+}
+
+define <4 x i8> @bitcast_i32_to_v4i8(i32 %word) {
+; CHECK-LE-LABEL: bitcast_i32_to_v4i8:
+; CHECK-LE:       // %bb.0:
+; CHECK-LE-NEXT:    fmov s0, w0
+; CHECK-LE-NEXT:    zip1 v0.8b, v0.8b, v0.8b
+; CHECK-LE-NEXT:    ret
+;
+; CHECK-BE-LABEL: bitcast_i32_to_v4i8:
+; CHECK-BE:       // %bb.0:
+; CHECK-BE-NEXT:    fmov s0, w0
+; CHECK-BE-NEXT:    rev32 v0.8b, v0.8b
+; CHECK-BE-NEXT:    zip1 v0.8b, v0.8b, v0.8b
+; CHECK-BE-NEXT:    rev64 v0.8b, v0.8b
+; CHECK-BE-NEXT:    ret
+  %ret = bitcast i32 %word to <4 x i8>
+  ret <4 x i8> %ret
+}
+
+; TODO: Eliminate redundant moving back and forth between gpr and vectors
+define <2 x i8> @bitcast_i16_to_v2i8(i16 %word) {
+; CHECK-LE-LABEL: bitcast_i16_to_v2i8:
+; CHECK-LE:       // %bb.0:
+; CHECK-LE-NEXT:    fmov s0, w0
+; CHECK-LE-NEXT:    umov w8, v0.b[0]
+; CHECK-LE-NEXT:    umov w9, v0.b[1]
+; CHECK-LE-NEXT:    fmov s0, w8
+; CHECK-LE-NEXT:    mov v0.s[1], w9
+; CHECK-LE-NEXT:    // kill: def $d0 killed $d0 killed $q0
+; CHECK-LE-NEXT:    ret
+;
+; CHECK-BE-LABEL: bitcast_i16_to_v2i8:
+; CHECK-BE:       // %bb.0:
+; CHECK-BE-NEXT:    fmov s0, w0
+; CHECK-BE-NEXT:    rev16 v0.16b, v0.16b
+; CHECK-BE-NEXT:    umov w8, v0.b[0]
+; CHECK-BE-NEXT:    umov w9, v0.b[1]
+; CHECK-BE-NEXT:    fmov s0, w8
+; CHECK-BE-NEXT:    mov v0.s[1], w9
+; CHECK-BE-NEXT:    rev64 v0.2s, v0.2s
+; CHECK-BE-NEXT:    ret
+  %ret = bitcast i16 %word to <2 x i8>
+  ret <2 x i8> %ret
+}
+
