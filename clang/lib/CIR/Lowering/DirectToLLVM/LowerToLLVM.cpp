@@ -60,6 +60,34 @@ using namespace llvm;
 namespace cir {
 namespace direct {
 
+mlir::LLVM::Linkage convertLinkage(mlir::cir::GlobalLinkageKind linkage) {
+  using CIR = mlir::cir::GlobalLinkageKind;
+  using LLVM = mlir::LLVM::Linkage;
+
+  switch (linkage) {
+  case CIR::AvailableExternallyLinkage:
+    return LLVM::AvailableExternally;
+  case CIR::CommonLinkage:
+    return LLVM::Common;
+  case CIR::ExternalLinkage:
+    return LLVM::External;
+  case CIR::ExternalWeakLinkage:
+    return LLVM::ExternWeak;
+  case CIR::InternalLinkage:
+    return LLVM::Internal;
+  case CIR::LinkOnceAnyLinkage:
+    return LLVM::Linkonce;
+  case CIR::LinkOnceODRLinkage:
+    return LLVM::LinkonceODR;
+  case CIR::PrivateLinkage:
+    return LLVM::Private;
+  case CIR::WeakAnyLinkage:
+    return LLVM::Weak;
+  case CIR::WeakODRLinkage:
+    return LLVM::WeakODR;
+  };
+}
+
 class CIRPtrStrideOpLowering
     : public mlir::OpConversionPattern<mlir::cir::PtrStrideOp> {
 public:
@@ -284,12 +312,12 @@ public:
       auto llvmSrcVal = adaptor.getOperands().front();
       auto llvmDstTy = getTypeConverter()->convertType(dstTy);
       auto kind = mlir::LLVM::FCmpPredicate::une;
-      
+
       // Check if float is not equal to zero.
       auto zeroFloat = rewriter.create<mlir::LLVM::ConstantOp>(
           castOp.getLoc(), llvmSrcVal.getType(),
           mlir::FloatAttr::get(llvmSrcVal.getType(), 0.0));
-      
+
       // Extend comparison result to either bool (C++) or int (C).
       mlir::Value cmpResult = rewriter.create<mlir::LLVM::FCmpOp>(
           castOp.getLoc(), kind, llvmSrcVal, zeroFloat);
@@ -672,8 +700,9 @@ public:
       Loc = FusedLoc.getLocations()[0];
     }
     assert(Loc.isa<mlir::FileLineColLoc>() && "expected single location here");
-    auto fn =
-        rewriter.create<mlir::LLVM::LLVMFuncOp>(Loc, op.getName(), llvmFnTy);
+    auto linkage = convertLinkage(op.getLinkage());
+    auto fn = rewriter.create<mlir::LLVM::LLVMFuncOp>(Loc, op.getName(),
+                                                      llvmFnTy, linkage);
 
     rewriter.inlineRegionBefore(op.getBody(), fn.getBody(), fn.end());
     if (failed(rewriter.convertRegionTypes(&fn.getBody(), *typeConverter,
@@ -717,34 +746,6 @@ lowerConstArrayAttr(mlir::cir::ConstArrayAttr constArr,
     return convertToDenseElementsAttr(constArr, converter->convertType(type));
 
   return std::nullopt;
-}
-
-mlir::LLVM::Linkage convertLinkage(mlir::cir::GlobalLinkageKind linkage) {
-  using CIR = mlir::cir::GlobalLinkageKind;
-  using LLVM = mlir::LLVM::Linkage;
-
-  switch (linkage) {
-  case CIR::AvailableExternallyLinkage:
-    return LLVM::AvailableExternally;
-  case CIR::CommonLinkage:
-    return LLVM::Common;
-  case CIR::ExternalLinkage:
-    return LLVM::External;
-  case CIR::ExternalWeakLinkage:
-    return LLVM::ExternWeak;
-  case CIR::InternalLinkage:
-    return LLVM::Internal;
-  case CIR::LinkOnceAnyLinkage:
-    return LLVM::Linkonce;
-  case CIR::LinkOnceODRLinkage:
-    return LLVM::LinkonceODR;
-  case CIR::PrivateLinkage:
-    return LLVM::Private;
-  case CIR::WeakAnyLinkage:
-    return LLVM::Weak;
-  case CIR::WeakODRLinkage:
-    return LLVM::WeakODR;
-  };
 }
 
 class CIRGetGlobalOpLowering
