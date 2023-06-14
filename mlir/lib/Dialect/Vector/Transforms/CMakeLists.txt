@@ -44,4 +44,5 @@ add_mlir_dialect_library(MLIRVectorTransforms
   MLIRVectorDialect
   MLIRVectorInterfaces
   MLIRVectorUtils
+  MLIRArmSMEDialect
   )
