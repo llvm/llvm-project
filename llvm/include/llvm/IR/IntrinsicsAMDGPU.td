@@ -302,7 +302,7 @@ def int_amdgcn_cos : DefaultAttrsIntrinsic<
 
 // v_log_{f16|f32}, performs log2. f32 version does not handle
 // denormals. There is no reason to use this for f16 as it does
-// support denormals, and the generic log intrinsic should be
+// support denormals, and the generic log2 intrinsic should be
 // preferred.
 def int_amdgcn_log : DefaultAttrsIntrinsic<
   [llvm_anyfloat_ty], [LLVMMatchType<0>], [IntrNoMem, IntrSpeculatable]
