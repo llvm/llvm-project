@@ -1092,10 +1092,6 @@ def ConvertVectorToLLVMPass : Pass<"convert-vector-to-llvm", "ModuleOp"> {
            "bool", /*default=*/"false",
            "Enables the use of ArmSVE dialect while lowering the vector "
        "dialect.">,
-    Option<"armSME", "enable-arm-sme",
-           "bool", /*default=*/"false",
-           "Enables the use of ArmSME dialect while lowering the vector "
-       "dialect.">,
     Option<"x86Vector", "enable-x86vector",
            "bool", /*default=*/"false",
            "Enables the use of X86Vector dialect while lowering the vector "
