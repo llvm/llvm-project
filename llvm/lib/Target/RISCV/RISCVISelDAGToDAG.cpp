@@ -3291,14 +3291,21 @@ bool RISCVDAGToDAGISel::performCombineVMergeAndVOps(SDNode *N, bool IsTA) {
   const RISCV::RISCVMaskedPseudoInfo *Info =
       RISCV::lookupMaskedIntrinsicByUnmaskedTA(TrueOpc);
   if (!Info && HasTiedDest) {
-    Info = RISCV::getMaskedPseudoInfo(TrueOpc);
-    IsMasked = true;
+    Info = RISCV::lookupMaskedIntrinsicByUnmaskedTU(TrueOpc);
+    if (Info && !isImplicitDef(True->getOperand(0)))
+      // We only support the TA form of the _TU pseudos
+      return false;
+    // FIXME: Expect undef operand here?
+    if (!Info) {
+      Info = RISCV::getMaskedPseudoInfo(TrueOpc);
+      IsMasked = true;
+    }
   }
 
   if (!Info)
     return false;
 
-  if (HasTiedDest) {
+  if (HasTiedDest && !isImplicitDef(True->getOperand(0))) {
     // The vmerge instruction must be TU.
     // FIXME: This could be relaxed, but we need to handle the policy for the
     // resulting op correctly.
@@ -3387,14 +3394,14 @@ bool RISCVDAGToDAGISel::performCombineVMergeAndVOps(SDNode *N, bool IsTA) {
 
   SmallVector<SDValue, 8> Ops;
   if (IsMasked) {
-    Ops.append(True->op_begin(), True->op_begin() + TrueVLIndex);
+    Ops.push_back(False);
+    Ops.append(True->op_begin() + 1, True->op_begin() + TrueVLIndex);
     Ops.append({VL, /* SEW */ True.getOperand(TrueVLIndex + 1)});
     Ops.push_back(PolicyOp);
     Ops.append(True->op_begin() + TrueVLIndex + 3, True->op_end());
   } else {
-    if (!HasTiedDest)
-      Ops.push_back(False);
-    Ops.append(True->op_begin(), True->op_begin() + TrueVLIndex);
+    Ops.push_back(False);
+    Ops.append(True->op_begin() + HasTiedDest, True->op_begin() + TrueVLIndex);
     Ops.append({Mask, VL, /* SEW */ True.getOperand(TrueVLIndex + 1)});
     Ops.push_back(PolicyOp);
 
