@@ -450,6 +450,12 @@ public:
   Value *SimplifySelectsFeedingBinaryOp(BinaryOperator &I, Value *LHS,
                                         Value *RHS);
 
+  // (Binop1 (Binop2 (logic_shift X, C), C1), (logic_shift Y, C))
+  //    -> (logic_shift (Binop1 (Binop2 X, inv_logic_shift(C1, C)), Y), C)
+  // (Binop1 (Binop2 (logic_shift X, Amt), Mask), (logic_shift Y, Amt))
+  //    -> (BinOp (logic_shift (BinOp X, Y)), Mask)
+  Instruction *foldBinOpShiftWithShift(BinaryOperator &I);
+
   /// This tries to simplify binary operations by factorizing out common terms
   /// (e. g. "(A*B)+(A*C)" -> "A*(B+C)").
   Value *tryFactorizationFolds(BinaryOperator &I);

@@ -3,10 +3,9 @@
 
 define i8 @shl_and_and(i8 %x, i8 %y) {
 ; CHECK-LABEL: @shl_and_and(
-; CHECK-NEXT:    [[SHIFT1:%.*]] = shl i8 [[X:%.*]], 4
-; CHECK-NEXT:    [[SHIFT2:%.*]] = shl i8 [[Y:%.*]], 4
-; CHECK-NEXT:    [[BW2:%.*]] = and i8 [[SHIFT2]], 80
-; CHECK-NEXT:    [[BW1:%.*]] = and i8 [[SHIFT1]], [[BW2]]
+; CHECK-NEXT:    [[TMP1:%.*]] = and i8 [[Y:%.*]], [[X:%.*]]
+; CHECK-NEXT:    [[TMP2:%.*]] = shl i8 [[TMP1]], 4
+; CHECK-NEXT:    [[BW1:%.*]] = and i8 [[TMP2]], 80
 ; CHECK-NEXT:    ret i8 [[BW1]]
 ;
   %shift1 = shl i8 %x, 4
@@ -33,10 +32,9 @@ define i8 @shl_and_and_fail(i8 %x, i8 %y) {
 
 define i8 @shl_add_add(i8 %x, i8 %y) {
 ; CHECK-LABEL: @shl_add_add(
-; CHECK-NEXT:    [[SHIFT1:%.*]] = shl i8 [[X:%.*]], 2
-; CHECK-NEXT:    [[SHIFT2:%.*]] = shl i8 [[Y:%.*]], 2
-; CHECK-NEXT:    [[BW2:%.*]] = add i8 [[SHIFT2]], 48
-; CHECK-NEXT:    [[BW1:%.*]] = add i8 [[SHIFT1]], [[BW2]]
+; CHECK-NEXT:    [[TMP1:%.*]] = add i8 [[Y:%.*]], [[X:%.*]]
+; CHECK-NEXT:    [[TMP2:%.*]] = shl i8 [[TMP1]], 2
+; CHECK-NEXT:    [[BW1:%.*]] = add i8 [[TMP2]], 48
 ; CHECK-NEXT:    ret i8 [[BW1]]
 ;
   %shift1 = shl i8 %x, 2
@@ -78,10 +76,9 @@ define i8 @shl_and_and_fail2(i8 %x, i8 %y) {
 
 define <2 x i8> @lshr_and_or(<2 x i8> %x, <2 x i8> %y) {
 ; CHECK-LABEL: @lshr_and_or(
-; CHECK-NEXT:    [[SHIFT1:%.*]] = lshr <2 x i8> [[X:%.*]], <i8 4, i8 5>
-; CHECK-NEXT:    [[SHIFT2:%.*]] = lshr <2 x i8> [[Y:%.*]], <i8 4, i8 5>
-; CHECK-NEXT:    [[BW2:%.*]] = and <2 x i8> [[SHIFT1]], <i8 44, i8 99>
-; CHECK-NEXT:    [[BW1:%.*]] = or <2 x i8> [[SHIFT2]], [[BW2]]
+; CHECK-NEXT:    [[TMP1:%.*]] = and <2 x i8> [[X:%.*]], <i8 -64, i8 96>
+; CHECK-NEXT:    [[TMP2:%.*]] = or <2 x i8> [[TMP1]], [[Y:%.*]]
+; CHECK-NEXT:    [[BW1:%.*]] = lshr <2 x i8> [[TMP2]], <i8 4, i8 5>
 ; CHECK-NEXT:    ret <2 x i8> [[BW1]]
 ;
   %shift1 = lshr <2 x i8> %x, <i8 4, i8 5>
@@ -108,10 +105,9 @@ define <2 x i8> @lshr_and_or_fail(<2 x i8> %x, <2 x i8> %y) {
 
 define i8 @shl_and_xor(i8 %x, i8 %y) {
 ; CHECK-LABEL: @shl_and_xor(
-; CHECK-NEXT:    [[SHIFT1:%.*]] = shl i8 [[X:%.*]], 1
-; CHECK-NEXT:    [[SHIFT2:%.*]] = shl i8 [[Y:%.*]], 1
-; CHECK-NEXT:    [[BW2:%.*]] = and i8 [[SHIFT1]], 20
-; CHECK-NEXT:    [[BW1:%.*]] = xor i8 [[SHIFT2]], [[BW2]]
+; CHECK-NEXT:    [[TMP1:%.*]] = and i8 [[X:%.*]], 10
+; CHECK-NEXT:    [[TMP2:%.*]] = xor i8 [[TMP1]], [[Y:%.*]]
+; CHECK-NEXT:    [[BW1:%.*]] = shl i8 [[TMP2]], 1
 ; CHECK-NEXT:    ret i8 [[BW1]]
 ;
   %shift1 = shl i8 %x, 1
@@ -123,10 +119,9 @@ define i8 @shl_and_xor(i8 %x, i8 %y) {
 
 define i8 @shl_and_add(i8 %x, i8 %y) {
 ; CHECK-LABEL: @shl_and_add(
-; CHECK-NEXT:    [[SHIFT1:%.*]] = shl i8 [[X:%.*]], 1
-; CHECK-NEXT:    [[SHIFT2:%.*]] = shl i8 [[Y:%.*]], 1
-; CHECK-NEXT:    [[BW2:%.*]] = and i8 [[SHIFT2]], 118
-; CHECK-NEXT:    [[BW1:%.*]] = add i8 [[SHIFT1]], [[BW2]]
+; CHECK-NEXT:    [[TMP1:%.*]] = and i8 [[Y:%.*]], 59
+; CHECK-NEXT:    [[TMP2:%.*]] = add i8 [[TMP1]], [[X:%.*]]
+; CHECK-NEXT:    [[BW1:%.*]] = shl i8 [[TMP2]], 1
 ; CHECK-NEXT:    ret i8 [[BW1]]
 ;
   %shift1 = shl i8 %x, 1
@@ -153,10 +148,9 @@ define i8 @shl_xor_add_fail(i8 %x, i8 %y) {
 
 define i8 @lshr_or_and(i8 %x, i8 %y) {
 ; CHECK-LABEL: @lshr_or_and(
-; CHECK-NEXT:    [[SHIFT1:%.*]] = lshr i8 [[X:%.*]], 5
-; CHECK-NEXT:    [[SHIFT2:%.*]] = lshr i8 [[Y:%.*]], 5
-; CHECK-NEXT:    [[BW2:%.*]] = or i8 [[SHIFT1]], 6
-; CHECK-NEXT:    [[BW1:%.*]] = and i8 [[BW2]], [[SHIFT2]]
+; CHECK-NEXT:    [[TMP1:%.*]] = or i8 [[X:%.*]], -64
+; CHECK-NEXT:    [[TMP2:%.*]] = and i8 [[TMP1]], [[Y:%.*]]
+; CHECK-NEXT:    [[BW1:%.*]] = lshr i8 [[TMP2]], 5
 ; CHECK-NEXT:    ret i8 [[BW1]]
 ;
   %shift1 = lshr i8 %x, 5
@@ -168,10 +162,9 @@ define i8 @lshr_or_and(i8 %x, i8 %y) {
 
 define i8 @lshr_or_or_fail(i8 %x, i8 %y) {
 ; CHECK-LABEL: @lshr_or_or_fail(
-; CHECK-NEXT:    [[SHIFT1:%.*]] = lshr i8 [[X:%.*]], 5
-; CHECK-NEXT:    [[SHIFT2:%.*]] = lshr i8 [[Y:%.*]], 5
-; CHECK-NEXT:    [[BW2:%.*]] = or i8 [[SHIFT2]], -58
-; CHECK-NEXT:    [[BW1:%.*]] = or i8 [[SHIFT1]], [[BW2]]
+; CHECK-NEXT:    [[TMP1:%.*]] = or i8 [[Y:%.*]], [[X:%.*]]
+; CHECK-NEXT:    [[TMP2:%.*]] = lshr i8 [[TMP1]], 5
+; CHECK-NEXT:    [[BW1:%.*]] = or i8 [[TMP2]], -58
 ; CHECK-NEXT:    ret i8 [[BW1]]
 ;
   %shift1 = lshr i8 %x, 5
@@ -183,10 +176,9 @@ define i8 @lshr_or_or_fail(i8 %x, i8 %y) {
 
 define <2 x i8> @shl_xor_and(<2 x i8> %x, <2 x i8> %y) {
 ; CHECK-LABEL: @shl_xor_and(
-; CHECK-NEXT:    [[SHIFT1:%.*]] = shl <2 x i8> [[X:%.*]], <i8 2, i8 undef>
-; CHECK-NEXT:    [[SHIFT2:%.*]] = shl <2 x i8> [[Y:%.*]], <i8 2, i8 undef>
-; CHECK-NEXT:    [[BW2:%.*]] = xor <2 x i8> [[SHIFT2]], <i8 44, i8 undef>
-; CHECK-NEXT:    [[BW1:%.*]] = and <2 x i8> [[BW2]], [[SHIFT1]]
+; CHECK-NEXT:    [[TMP1:%.*]] = xor <2 x i8> [[Y:%.*]], <i8 11, i8 poison>
+; CHECK-NEXT:    [[TMP2:%.*]] = and <2 x i8> [[TMP1]], [[X:%.*]]
+; CHECK-NEXT:    [[BW1:%.*]] = shl <2 x i8> [[TMP2]], <i8 2, i8 undef>
 ; CHECK-NEXT:    ret <2 x i8> [[BW1]]
 ;
   %shift1 = shl <2 x i8> %x, <i8 2, i8 undef>
@@ -213,10 +205,9 @@ define <2 x i8> @shl_xor_and_fail(<2 x i8> %x, <2 x i8> %y) {
 
 define i8 @lshr_or_or_no_const(i8 %x, i8 %y, i8 %sh, i8 %mask) {
 ; CHECK-LABEL: @lshr_or_or_no_const(
-; CHECK-NEXT:    [[SHIFT1:%.*]] = lshr i8 [[X:%.*]], [[SH:%.*]]
-; CHECK-NEXT:    [[SHIFT2:%.*]] = lshr i8 [[Y:%.*]], [[SH]]
-; CHECK-NEXT:    [[BW2:%.*]] = or i8 [[SHIFT2]], [[MASK:%.*]]
-; CHECK-NEXT:    [[BW1:%.*]] = or i8 [[SHIFT1]], [[BW2]]
+; CHECK-NEXT:    [[TMP1:%.*]] = or i8 [[Y:%.*]], [[X:%.*]]
+; CHECK-NEXT:    [[TMP2:%.*]] = lshr i8 [[TMP1]], [[SH:%.*]]
+; CHECK-NEXT:    [[BW1:%.*]] = or i8 [[TMP2]], [[MASK:%.*]]
 ; CHECK-NEXT:    ret i8 [[BW1]]
 ;
   %shift1 = lshr i8 %x, %sh
@@ -243,10 +234,9 @@ define i8 @lshr_or_or_no_const_fail(i8 %x, i8 %y, i8 %sh, i8 %mask) {
 
 define i8 @shl_xor_xor_no_const(i8 %x, i8 %y, i8 %sh, i8 %mask) {
 ; CHECK-LABEL: @shl_xor_xor_no_const(
-; CHECK-NEXT:    [[SHIFT1:%.*]] = shl i8 [[X:%.*]], [[SH:%.*]]
-; CHECK-NEXT:    [[SHIFT2:%.*]] = shl i8 [[Y:%.*]], [[SH]]
-; CHECK-NEXT:    [[BW2:%.*]] = xor i8 [[SHIFT2]], [[MASK:%.*]]
-; CHECK-NEXT:    [[BW1:%.*]] = xor i8 [[SHIFT1]], [[BW2]]
+; CHECK-NEXT:    [[TMP1:%.*]] = xor i8 [[Y:%.*]], [[X:%.*]]
+; CHECK-NEXT:    [[TMP2:%.*]] = shl i8 [[TMP1]], [[SH:%.*]]
+; CHECK-NEXT:    [[BW1:%.*]] = xor i8 [[TMP2]], [[MASK:%.*]]
 ; CHECK-NEXT:    ret i8 [[BW1]]
 ;
   %shift1 = shl i8 %x, %sh
@@ -273,10 +263,9 @@ define i8 @shl_xor_and_no_const_fail(i8 %x, i8 %y, i8 %sh, i8 %mask) {
 
 define <2 x i8> @shl_and_and_no_const(<2 x i8> %x, <2 x i8> %y, <2 x i8> %sh, <2 x i8> %mask) {
 ; CHECK-LABEL: @shl_and_and_no_const(
-; CHECK-NEXT:    [[SHIFT1:%.*]] = shl <2 x i8> [[X:%.*]], [[SH:%.*]]
-; CHECK-NEXT:    [[SHIFT2:%.*]] = shl <2 x i8> [[Y:%.*]], [[SH]]
-; CHECK-NEXT:    [[BW2:%.*]] = and <2 x i8> [[SHIFT2]], [[MASK:%.*]]
-; CHECK-NEXT:    [[BW1:%.*]] = and <2 x i8> [[SHIFT1]], [[BW2]]
+; CHECK-NEXT:    [[TMP1:%.*]] = and <2 x i8> [[Y:%.*]], [[X:%.*]]
+; CHECK-NEXT:    [[TMP2:%.*]] = shl <2 x i8> [[TMP1]], [[SH:%.*]]
+; CHECK-NEXT:    [[BW1:%.*]] = and <2 x i8> [[TMP2]], [[MASK:%.*]]
 ; CHECK-NEXT:    ret <2 x i8> [[BW1]]
 ;
   %shift1 = shl <2 x i8> %x, %sh
@@ -288,10 +277,9 @@ define <2 x i8> @shl_and_and_no_const(<2 x i8> %x, <2 x i8> %y, <2 x i8> %sh, <2
 
 define i8 @shl_add_add_no_const(i8 %x, i8 %y, i8 %sh, i8 %mask) {
 ; CHECK-LABEL: @shl_add_add_no_const(
-; CHECK-NEXT:    [[SHIFT1:%.*]] = shl i8 [[X:%.*]], [[SH:%.*]]
-; CHECK-NEXT:    [[SHIFT2:%.*]] = shl i8 [[Y:%.*]], [[SH]]
-; CHECK-NEXT:    [[BW2:%.*]] = add i8 [[SHIFT2]], [[MASK:%.*]]
-; CHECK-NEXT:    [[BW1:%.*]] = add i8 [[SHIFT1]], [[BW2]]
+; CHECK-NEXT:    [[TMP1:%.*]] = add i8 [[Y:%.*]], [[X:%.*]]
+; CHECK-NEXT:    [[TMP2:%.*]] = shl i8 [[TMP1]], [[SH:%.*]]
+; CHECK-NEXT:    [[BW1:%.*]] = add i8 [[TMP2]], [[MASK:%.*]]
 ; CHECK-NEXT:    ret i8 [[BW1]]
 ;
   %shift1 = shl i8 %x, %sh
@@ -318,10 +306,9 @@ define i8 @lshr_add_add_no_const_fail(i8 %x, i8 %y, i8 %sh, i8 %mask) {
 
 define <2 x i8> @lshr_add_and(<2 x i8> %x, <2 x i8> %y) {
 ; CHECK-LABEL: @lshr_add_and(
-; CHECK-NEXT:    [[SHIFT1:%.*]] = lshr <2 x i8> [[X:%.*]], <i8 3, i8 4>
-; CHECK-NEXT:    [[SHIFT2:%.*]] = lshr <2 x i8> [[Y:%.*]], <i8 3, i8 4>
-; CHECK-NEXT:    [[BW2:%.*]] = add <2 x i8> [[SHIFT2]], <i8 -1, i8 1>
-; CHECK-NEXT:    [[BW1:%.*]] = and <2 x i8> [[SHIFT1]], [[BW2]]
+; CHECK-NEXT:    [[TMP1:%.*]] = add <2 x i8> [[Y:%.*]], <i8 -8, i8 16>
+; CHECK-NEXT:    [[TMP2:%.*]] = and <2 x i8> [[TMP1]], [[X:%.*]]
+; CHECK-NEXT:    [[BW1:%.*]] = lshr <2 x i8> [[TMP2]], <i8 3, i8 4>
 ; CHECK-NEXT:    ret <2 x i8> [[BW1]]
 ;
   %shift1 = lshr <2 x i8> %x, <i8 3, i8 4>
@@ -348,10 +335,9 @@ define <2 x i8> @lshr_add_or_fail_dif_masks(<2 x i8> %x, <2 x i8> %y) {
 
 define <2 x i8> @shl_or_or_good_mask(<2 x i8> %x, <2 x i8> %y) {
 ; CHECK-LABEL: @shl_or_or_good_mask(
-; CHECK-NEXT:    [[SHIFT1:%.*]] = shl <2 x i8> [[X:%.*]], <i8 1, i8 1>
-; CHECK-NEXT:    [[SHIFT2:%.*]] = shl <2 x i8> [[Y:%.*]], <i8 1, i8 1>
-; CHECK-NEXT:    [[BW2:%.*]] = or <2 x i8> [[SHIFT2]], <i8 18, i8 24>
-; CHECK-NEXT:    [[BW1:%.*]] = or <2 x i8> [[SHIFT1]], [[BW2]]
+; CHECK-NEXT:    [[TMP1:%.*]] = or <2 x i8> [[Y:%.*]], [[X:%.*]]
+; CHECK-NEXT:    [[TMP2:%.*]] = shl <2 x i8> [[TMP1]], <i8 1, i8 1>
+; CHECK-NEXT:    [[BW1:%.*]] = or <2 x i8> [[TMP2]], <i8 18, i8 24>
 ; CHECK-NEXT:    ret <2 x i8> [[BW1]]
 ;
   %shift1 = shl <2 x i8> %x, <i8 1, i8 1>
@@ -363,10 +349,9 @@ define <2 x i8> @shl_or_or_good_mask(<2 x i8> %x, <2 x i8> %y) {
 
 define <2 x i8> @shl_or_or_fail_bad_mask(<2 x i8> %x, <2 x i8> %y) {
 ; CHECK-LABEL: @shl_or_or_fail_bad_mask(
-; CHECK-NEXT:    [[SHIFT1:%.*]] = shl <2 x i8> [[X:%.*]], <i8 1, i8 1>
-; CHECK-NEXT:    [[SHIFT2:%.*]] = shl <2 x i8> [[Y:%.*]], <i8 1, i8 1>
-; CHECK-NEXT:    [[BW2:%.*]] = or <2 x i8> [[SHIFT2]], <i8 19, i8 24>
-; CHECK-NEXT:    [[BW1:%.*]] = or <2 x i8> [[SHIFT1]], [[BW2]]
+; CHECK-NEXT:    [[TMP1:%.*]] = or <2 x i8> [[Y:%.*]], [[X:%.*]]
+; CHECK-NEXT:    [[TMP2:%.*]] = shl <2 x i8> [[TMP1]], <i8 1, i8 1>
+; CHECK-NEXT:    [[BW1:%.*]] = or <2 x i8> [[TMP2]], <i8 19, i8 24>
 ; CHECK-NEXT:    ret <2 x i8> [[BW1]]
 ;
   %shift1 = shl <2 x i8> %x, <i8 1, i8 1>
@@ -378,10 +363,9 @@ define <2 x i8> @shl_or_or_fail_bad_mask(<2 x i8> %x, <2 x i8> %y) {
 
 define i8 @lshr_xor_or_good_mask(i8 %x, i8 %y) {
 ; CHECK-LABEL: @lshr_xor_or_good_mask(
-; CHECK-NEXT:    [[SHIFT1:%.*]] = lshr i8 [[X:%.*]], 4
-; CHECK-NEXT:    [[SHIFT2:%.*]] = lshr i8 [[Y:%.*]], 4
-; CHECK-NEXT:    [[BW21:%.*]] = or i8 [[SHIFT2]], 48
-; CHECK-NEXT:    [[BW1:%.*]] = or i8 [[SHIFT1]], [[BW21]]
+; CHECK-NEXT:    [[TMP1:%.*]] = or i8 [[Y:%.*]], [[X:%.*]]
+; CHECK-NEXT:    [[TMP2:%.*]] = lshr i8 [[TMP1]], 4
+; CHECK-NEXT:    [[BW1:%.*]] = or i8 [[TMP2]], 48
 ; CHECK-NEXT:    ret i8 [[BW1]]
 ;
   %shift1 = lshr i8 %x, 4
@@ -408,10 +392,9 @@ define i8 @lshr_xor_or_fail_bad_mask(i8 %x, i8 %y) {
 
 define <2 x i8> @lshr_or_xor_good_mask(<2 x i8> %x, <2 x i8> %y) {
 ; CHECK-LABEL: @lshr_or_xor_good_mask(
-; CHECK-NEXT:    [[SHIFT1:%.*]] = lshr <2 x i8> [[X:%.*]], <i8 6, i8 6>
-; CHECK-NEXT:    [[SHIFT2:%.*]] = lshr <2 x i8> [[Y:%.*]], <i8 6, i8 6>
-; CHECK-NEXT:    [[BW2:%.*]] = or <2 x i8> [[SHIFT2]], <i8 3, i8 1>
-; CHECK-NEXT:    [[BW1:%.*]] = xor <2 x i8> [[SHIFT1]], [[BW2]]
+; CHECK-NEXT:    [[TMP1:%.*]] = or <2 x i8> [[Y:%.*]], <i8 -64, i8 64>
+; CHECK-NEXT:    [[TMP2:%.*]] = xor <2 x i8> [[TMP1]], [[X:%.*]]
+; CHECK-NEXT:    [[BW1:%.*]] = lshr <2 x i8> [[TMP2]], <i8 6, i8 6>
 ; CHECK-NEXT:    ret <2 x i8> [[BW1]]
 ;
   %shift1 = lshr <2 x i8> %x, <i8 6, i8 6>
@@ -438,9 +421,9 @@ define <2 x i8> @lshr_or_xor_fail_bad_mask(<2 x i8> %x, <2 x i8> %y) {
 
 define i8 @shl_xor_xor_good_mask(i8 %x, i8 %y) {
 ; CHECK-LABEL: @shl_xor_xor_good_mask(
-; CHECK-NEXT:    [[SHIFT21:%.*]] = xor i8 [[Y:%.*]], [[X:%.*]]
-; CHECK-NEXT:    [[TMP1:%.*]] = shl i8 [[SHIFT21]], 1
-; CHECK-NEXT:    [[BW1:%.*]] = xor i8 [[TMP1]], 88
+; CHECK-NEXT:    [[TMP1:%.*]] = xor i8 [[Y:%.*]], [[X:%.*]]
+; CHECK-NEXT:    [[TMP2:%.*]] = shl i8 [[TMP1]], 1
+; CHECK-NEXT:    [[BW1:%.*]] = xor i8 [[TMP2]], 88
 ; CHECK-NEXT:    ret i8 [[BW1]]
 ;
   %shift1 = shl i8 %x, 1
@@ -452,9 +435,9 @@ define i8 @shl_xor_xor_good_mask(i8 %x, i8 %y) {
 
 define i8 @shl_xor_xor_bad_mask_distribute(i8 %x, i8 %y) {
 ; CHECK-LABEL: @shl_xor_xor_bad_mask_distribute(
-; CHECK-NEXT:    [[SHIFT21:%.*]] = xor i8 [[Y:%.*]], [[X:%.*]]
-; CHECK-NEXT:    [[TMP1:%.*]] = shl i8 [[SHIFT21]], 1
-; CHECK-NEXT:    [[BW1:%.*]] = xor i8 [[TMP1]], -68
+; CHECK-NEXT:    [[TMP1:%.*]] = xor i8 [[Y:%.*]], [[X:%.*]]
+; CHECK-NEXT:    [[TMP2:%.*]] = shl i8 [[TMP1]], 1
+; CHECK-NEXT:    [[BW1:%.*]] = xor i8 [[TMP2]], -68
 ; CHECK-NEXT:    ret i8 [[BW1]]
 ;
   %shift1 = shl i8 %x, 1
@@ -466,10 +449,9 @@ define i8 @shl_xor_xor_bad_mask_distribute(i8 %x, i8 %y) {
 
 define i8 @shl_add_and(i8 %x, i8 %y) {
 ; CHECK-LABEL: @shl_add_and(
-; CHECK-NEXT:    [[SHIFT1:%.*]] = shl i8 [[X:%.*]], 1
-; CHECK-NEXT:    [[SHIFT2:%.*]] = shl i8 [[Y:%.*]], 1
-; CHECK-NEXT:    [[BW2:%.*]] = add i8 [[SHIFT2]], 123
-; CHECK-NEXT:    [[BW1:%.*]] = and i8 [[SHIFT1]], [[BW2]]
+; CHECK-NEXT:    [[TMP1:%.*]] = add i8 [[Y:%.*]], 61
+; CHECK-NEXT:    [[TMP2:%.*]] = and i8 [[TMP1]], [[X:%.*]]
+; CHECK-NEXT:    [[BW1:%.*]] = shl i8 [[TMP2]], 1
 ; CHECK-NEXT:    ret i8 [[BW1]]
 ;
   %shift1 = shl i8 %x, 1
@@ -526,10 +508,9 @@ define i8 @lshr_add_xor_fail(i8 %x, i8 %y) {
 
 define <2 x i8> @lshr_and_add(<2 x i8> %x, <2 x i8> %y) {
 ; CHECK-LABEL: @lshr_and_add(
-; CHECK-NEXT:    [[SHIFT1:%.*]] = shl <2 x i8> [[X:%.*]], <i8 4, i8 5>
-; CHECK-NEXT:    [[SHIFT2:%.*]] = shl <2 x i8> [[Y:%.*]], <i8 4, i8 5>
-; CHECK-NEXT:    [[BW2:%.*]] = and <2 x i8> [[SHIFT1]], <i8 -67, i8 123>
-; CHECK-NEXT:    [[BW1:%.*]] = add <2 x i8> [[SHIFT2]], [[BW2]]
+; CHECK-NEXT:    [[TMP1:%.*]] = and <2 x i8> [[X:%.*]], <i8 11, i8 3>
+; CHECK-NEXT:    [[TMP2:%.*]] = add <2 x i8> [[TMP1]], [[Y:%.*]]
+; CHECK-NEXT:    [[BW1:%.*]] = shl <2 x i8> [[TMP2]], <i8 4, i8 5>
 ; CHECK-NEXT:    ret <2 x i8> [[BW1]]
 ;
   %shift1 = shl <2 x i8> %x, <i8 4, i8 5>
