@@ -4077,9 +4077,7 @@ struct AccTileExprList {
 };
 
 struct AccSizeExpr {
-  TUPLE_CLASS_BOILERPLATE(AccSizeExpr);
-  CharBlock source;
-  std::tuple<std::optional<ScalarIntExpr>> t; // if null then *
+  WRAPPER_CLASS_BOILERPLATE(AccSizeExpr, std::optional<ScalarIntExpr>);
 };
 
 struct AccSizeExprList {
@@ -4092,9 +4090,18 @@ struct AccSelfClause {
   CharBlock source;
 };
 
-struct AccGangArgument {
-  TUPLE_CLASS_BOILERPLATE(AccGangArgument);
-  std::tuple<std::optional<ScalarIntExpr>, std::optional<AccSizeExpr>> t;
+// num, dim, static
+struct AccGangArg {
+  UNION_CLASS_BOILERPLATE(AccGangArg);
+  WRAPPER_CLASS(Num, ScalarIntExpr);
+  WRAPPER_CLASS(Dim, ScalarIntExpr);
+  WRAPPER_CLASS(Static, AccSizeExpr);
+  std::variant<Num, Dim, Static> u;
+  CharBlock source;
+};
+
+struct AccGangArgList {
+  WRAPPER_CLASS_BOILERPLATE(AccGangArgList, std::list<AccGangArg>);
 };
 
 struct AccCollapseArg {
