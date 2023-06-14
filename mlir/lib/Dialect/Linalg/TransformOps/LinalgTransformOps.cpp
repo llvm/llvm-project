@@ -3036,7 +3036,7 @@ struct VectorizationPattern : public RewritePattern {
     if (!linalgOp)
       return rewriter.notifyMatchFailure(op, "expected Linalg Op");
     return vectorize(rewriter, linalgOp, /*inputVectorSizes=*/{},
-                     vectorizeNDExtract);
+                     /*scalableVecDims=*/{}, vectorizeNDExtract);
   }
 
 private:
@@ -3137,16 +3137,16 @@ DiagnosedSilenceableFailure transform::MaskedVectorizeOp::apply(
   }
 
   // TODO: Check that the correct number of vectorSizes was provided.
-
+  SmallVector<bool> scalableVecDims(vectorSizes.size(), false);
+  scalableVecDims.back() = getLastVectorSizeScalable();
   for (Operation *target : targets) {
     if (!isa<linalg::LinalgOp, tensor::PadOp>(target)) {
       return mlir::emitSilenceableFailure(target->getLoc())
              << "Unsupported Op, cannot vectorize";
     }
 
-    if (failed(linalg::vectorize(rewriter, target, vectorSizes,
-                                 getVectorizeNdExtract(),
-                                 getLastVectorSizeScalable()))) {
+    if (failed(linalg::vectorize(rewriter, target, vectorSizes, scalableVecDims,
+                                 getVectorizeNdExtract()))) {
       return mlir::emitSilenceableFailure(target->getLoc())
              << "Attempted to vectorize, but failed";
     }
