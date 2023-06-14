@@ -49,6 +49,7 @@ public:
   }
 
   MOCK_METHOD1(GetAdbClient, AdbClientUP(Status &error));
+  MOCK_METHOD0(GetPropertyPackageName, llvm::StringRef());
 };
 
 } // namespace
@@ -112,6 +113,32 @@ TEST_F(PlatformAndroidTest, DownloadModuleSliceWithZipFile) {
           .Success());
 }
 
+TEST_F(PlatformAndroidTest, DownloadModuleSliceWithZipFileAndRunAs) {
+  auto adb_client = new MockAdbClient();
+  EXPECT_CALL(*adb_client,
+              ShellToFile(StrEq("run-as 'com.example.test' "
+                                "dd if='/system/app/Test/Test.apk' "
+                                "iflag=skip_bytes,count_bytes "
+                                "skip=4096 count=3600 status=none"),
+                          _, _))
+      .Times(1)
+      .WillOnce(Return(Status()));
+
+  EXPECT_CALL(*this, GetPropertyPackageName())
+      .Times(1)
+      .WillOnce(Return(llvm::StringRef("com.example.test")));
+
+  EXPECT_CALL(*this, GetAdbClient(_))
+      .Times(1)
+      .WillOnce(Return(ByMove(AdbClientUP(adb_client))));
+
+  EXPECT_TRUE(
+      DownloadModuleSlice(
+          FileSpec("/system/app/Test/Test.apk!/lib/arm64-v8a/libtest.so"), 4096,
+          3600, FileSpec())
+          .Success());
+}
+
 TEST_F(PlatformAndroidTest, GetFileWithNormalFile) {
   auto sync_service = new MockSyncService();
   EXPECT_CALL(*sync_service, Stat(FileSpec("/data/local/tmp/test"), _, _, _))
@@ -153,6 +180,43 @@ TEST_F(PlatformAndroidTest, GetFileWithCatFallback) {
                   _, _))
       .Times(1)
       .WillOnce(Return(Status()));
+
+  EXPECT_CALL(*this, GetAdbClient(_))
+      .Times(2)
+      .WillOnce(Return(ByMove(AdbClientUP(adb_client0))))
+      .WillOnce(Return(ByMove(AdbClientUP(adb_client1))));
+
+  EXPECT_TRUE(
+      GetFile(FileSpec("/data/data/com.example.app/lib-main/libtest.so"),
+              FileSpec())
+          .Success());
+}
+
+TEST_F(PlatformAndroidTest, GetFileWithCatFallbackAndRunAs) {
+  auto sync_service = new MockSyncService();
+  EXPECT_CALL(
+      *sync_service,
+      Stat(FileSpec("/data/data/com.example.app/lib-main/libtest.so"), _, _, _))
+      .Times(1)
+      .WillOnce(DoAll(SetArgReferee<1>(0), Return(Status())));
+
+  auto adb_client0 = new MockAdbClient();
+  EXPECT_CALL(*adb_client0, GetSyncService(_))
+      .Times(1)
+      .WillOnce(Return(ByMove(SyncServiceUP(sync_service))));
+
+  auto adb_client1 = new MockAdbClient();
+  EXPECT_CALL(
+      *adb_client1,
+      ShellToFile(StrEq("run-as 'com.example.app' "
+                        "cat '/data/data/com.example.app/lib-main/libtest.so'"),
+                  _, _))
+      .Times(1)
+      .WillOnce(Return(Status()));
+
+  EXPECT_CALL(*this, GetPropertyPackageName())
+      .Times(1)
+      .WillOnce(Return(llvm::StringRef("com.example.app")));
 
   EXPECT_CALL(*this, GetAdbClient(_))
       .Times(2)
