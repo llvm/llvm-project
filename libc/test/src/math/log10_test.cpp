@@ -105,11 +105,11 @@ TEST(LlvmLibcLog10Test, InDoubleRange) {
 
       ++count;
       // ASSERT_MPFR_MATCH(mpfr::Operation::Log10, x, result, 0.5);
-      if (!TEST_MPFR_MATCH_ROUNDING_SILENTLY(mpfr::Operation::Log10, x, result,
-                                             0.5, rounding_mode)) {
+      if (!EXPECT_MPFR_MATCH_ROUNDING_SILENTLY(mpfr::Operation::Log10, x,
+                                               result, 0.5, rounding_mode)) {
         ++fails;
-        while (!TEST_MPFR_MATCH_ROUNDING_SILENTLY(mpfr::Operation::Log10, x,
-                                                  result, tol, rounding_mode)) {
+        while (!EXPECT_MPFR_MATCH_ROUNDING_SILENTLY(
+            mpfr::Operation::Log10, x, result, tol, rounding_mode)) {
           mx = x;
           mr = result;
           tol *= 2.0;

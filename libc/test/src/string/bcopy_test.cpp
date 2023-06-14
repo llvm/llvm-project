@@ -23,7 +23,7 @@ TEST(LlvmLibcBcopyTest, MoveZeroByte) {
   const char Expected[] = {'a', 'b', 'y', 'z'};
   void *const Dst = Buffer;
   __llvm_libc::bcopy(Buffer + 2, Dst, 0);
-  ASSERT_MEM_EQ(Buffer, testing::MemoryView(Expected));
+  ASSERT_MEM_EQ(Buffer, Expected);
 }
 
 TEST(LlvmLibcBcopyTest, DstAndSrcPointToSameAddress) {
@@ -31,7 +31,7 @@ TEST(LlvmLibcBcopyTest, DstAndSrcPointToSameAddress) {
   const char Expected[] = {'a', 'b'};
   void *const Dst = Buffer;
   __llvm_libc::bcopy(Buffer, Dst, 1);
-  ASSERT_MEM_EQ(Buffer, testing::MemoryView(Expected));
+  ASSERT_MEM_EQ(Buffer, Expected);
 }
 
 TEST(LlvmLibcBcopyTest, DstStartsBeforeSrc) {
@@ -41,7 +41,7 @@ TEST(LlvmLibcBcopyTest, DstStartsBeforeSrc) {
   const char Expected[] = {'z', 'b', 'c', 'c', 'z'};
   void *const Dst = Buffer + 1;
   __llvm_libc::bcopy(Buffer + 2, Dst, 2);
-  ASSERT_MEM_EQ(Buffer, testing::MemoryView(Expected));
+  ASSERT_MEM_EQ(Buffer, Expected);
 }
 
 TEST(LlvmLibcBcopyTest, DstStartsAfterSrc) {
@@ -49,7 +49,7 @@ TEST(LlvmLibcBcopyTest, DstStartsAfterSrc) {
   const char Expected[] = {'z', 'a', 'a', 'b', 'z'};
   void *const Dst = Buffer + 2;
   __llvm_libc::bcopy(Buffer + 1, Dst, 2);
-  ASSERT_MEM_EQ(Buffer, testing::MemoryView(Expected));
+  ASSERT_MEM_EQ(Buffer, Expected);
 }
 
 // e.g. `Dst` follow `src`.
@@ -61,7 +61,7 @@ TEST(LlvmLibcBcopyTest, SrcFollowDst) {
   const char Expected[] = {'z', 'b', 'b', 'z'};
   void *const Dst = Buffer + 1;
   __llvm_libc::bcopy(Buffer + 2, Dst, 1);
-  ASSERT_MEM_EQ(Buffer, testing::MemoryView(Expected));
+  ASSERT_MEM_EQ(Buffer, Expected);
 }
 
 TEST(LlvmLibcBcopyTest, DstFollowSrc) {
@@ -69,7 +69,7 @@ TEST(LlvmLibcBcopyTest, DstFollowSrc) {
   const char Expected[] = {'z', 'a', 'a', 'z'};
   void *const Dst = Buffer + 2;
   __llvm_libc::bcopy(Buffer + 1, Dst, 1);
-  ASSERT_MEM_EQ(Buffer, testing::MemoryView(Expected));
+  ASSERT_MEM_EQ(Buffer, Expected);
 }
 
 // Adapt CheckMemmove signature to bcopy.
