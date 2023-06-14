@@ -223,6 +223,11 @@ module attributes { transform.with_named_sequence } {
     transform.yield
   }
 
+  transform.named_sequence @print_dimension_size_match(%arg0: !transform.any_op {transform.readonly}) {
+    transform.test_print_remark_at_operand %arg0, "matched sizes" : !transform.any_op
+    transform.yield
+  }
+
   transform.named_sequence @match_dimension_capture(%arg0: !transform.any_op {transform.readonly}) -> !transform.any_op {
     // Capture multiple dimension values. Suppress failures so we can print them anyway after the capture.
     %0:9 = transform.match.structured failures(suppress) %arg0 
@@ -253,9 +258,25 @@ module attributes { transform.with_named_sequence } {
     transform.yield %0#0 : !transform.any_op
   }
 
+  transform.named_sequence @match_dimension_sizes(%arg0: !transform.any_op {transform.readonly}) -> (!transform.any_op) {
+    %0 = transform.match.structured failures(propagate) %arg0 : (!transform.any_op) -> !transform.any_op {
+    ^bb0(%arg1: !transform.any_op):
+      %1 = transform.match.structured.dim %arg1[all] : (!transform.any_op) -> !transform.param<i64>
+      %c2 = transform.param.constant 2 : i64 -> !transform.param<i64>
+      %c3 = transform.param.constant 3 : i64 -> !transform.param<i64>
+      %c4 = transform.param.constant 4 : i64 -> !transform.param<i64>
+      %2 = transform.merge_handles %c2, %c3, %c4 : !transform.param<i64>
+      transform.match.param.cmpi eq %1, %2 : !transform.param<i64>
+
+      transform.match.structured.yield %arg1 : !transform.any_op
+    }
+    transform.yield %0 : !transform.any_op
+  }
+
   transform.sequence failures(propagate) attributes { transform.target_tag = "transform" } {
   ^bb0(%arg0: !transform.any_op):
-    transform.foreach_match in %arg0 @match_dimension_capture -> @do_nothing : (!transform.any_op) -> !transform.any_op
+    %0 = transform.foreach_match in %arg0 @match_dimension_capture -> @do_nothing : (!transform.any_op) -> !transform.any_op
+    %1 = transform.foreach_match in %0 @match_dimension_sizes -> @print_dimension_size_match : (!transform.any_op) -> !transform.any_op
   }
 
   func.func @payload(%lhs: tensor<2x4xf32>, %rhs: tensor<4x3xf32>, %out: tensor<2x3xf32>) attributes { transform.target_tag = "start_here" } {
@@ -269,6 +290,7 @@ module attributes { transform.with_named_sequence } {
     // expected-remark @below {{dimensions except -1: 2 : i64, 3 : i64}}
     // expected-remark @below {{dimensions except 0, -2: 4 : i64}}
     // expected-remark @below {{dimensions 0, -3:}}
+    // expected-remark @below {{matched sizes}}
     linalg.generic {
       indexing_maps = [affine_map<(d0, d1, d2) -> (d0, d2)>, affine_map<(d0, d1, d2) -> (d2, d1)>, affine_map<(d0, d1, d2) -> (d0, d1)>],
       iterator_types = ["parallel", "parallel", "reduction"]
