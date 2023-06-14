@@ -18,6 +18,7 @@
 #include "flang/Lower/Support/Utils.h"
 #include "flang/Optimizer/Builder/BoxValue.h"
 #include "flang/Optimizer/Builder/FIRBuilder.h"
+#include "flang/Optimizer/Builder/IntrinsicCall.h"
 #include "flang/Optimizer/Builder/Todo.h"
 #include "flang/Parser/parse-tree.h"
 #include "flang/Semantics/expression.h"
@@ -526,27 +527,45 @@ getReductionOperator(const Fortran::parser::AccReductionOperator &op) {
   llvm_unreachable("unexpected reduction operator");
 }
 
-static mlir::Value genReductionInitValue(mlir::OpBuilder &builder,
+static mlir::Value genReductionInitValue(fir::FirOpBuilder &builder,
                                          mlir::Location loc, mlir::Type ty,
                                          mlir::acc::ReductionOperator op) {
   if (op != mlir::acc::ReductionOperator::AccAdd &&
-      op != mlir::acc::ReductionOperator::AccMul)
+      op != mlir::acc::ReductionOperator::AccMul &&
+      op != mlir::acc::ReductionOperator::AccMin)
     TODO(loc, "reduction operator");
 
-  // 0 for +, ior, ieor
-  // 1 for *
-  unsigned initValue = op == mlir::acc::ReductionOperator::AccMul ? 1 : 0;
-
-  if (ty.isIntOrIndex())
-    return builder.create<mlir::arith::ConstantOp>(
-        loc, ty, builder.getIntegerAttr(ty, initValue));
-  if (mlir::isa<mlir::FloatType>(ty))
-    return builder.create<mlir::arith::ConstantOp>(
-        loc, ty, builder.getFloatAttr(ty, initValue));
+  // min -> largest
+  if (op == mlir::acc::ReductionOperator::AccMin) {
+    if (ty.isIntOrIndex()) {
+      unsigned bits = ty.getIntOrFloatBitWidth();
+      return builder.create<mlir::arith::ConstantOp>(
+          loc, ty,
+          builder.getIntegerAttr(
+              ty, llvm::APInt::getSignedMaxValue(bits).getSExtValue()));
+    }
+    if (auto floatTy = mlir::dyn_cast_or_null<mlir::FloatType>(ty)) {
+      const llvm::fltSemantics &sem = floatTy.getFloatSemantics();
+      return builder.create<mlir::arith::ConstantOp>(
+          loc, ty,
+          builder.getFloatAttr(
+              ty, llvm::APFloat::getLargest(sem, /*negative=*/false)));
+    }
+  } else {
+    // 0 for +, ior, ieor
+    // 1 for *
+    int64_t initValue = op == mlir::acc::ReductionOperator::AccMul ? 1 : 0;
+    if (ty.isIntOrIndex())
+      return builder.create<mlir::arith::ConstantOp>(
+          loc, ty, builder.getIntegerAttr(ty, initValue));
+    if (mlir::isa<mlir::FloatType>(ty))
+      return builder.create<mlir::arith::ConstantOp>(
+          loc, ty, builder.getFloatAttr(ty, initValue));
+  }
   TODO(loc, "reduction type");
 }
 
-static mlir::Value genCombiner(mlir::OpBuilder &builder, mlir::Location loc,
+static mlir::Value genCombiner(fir::FirOpBuilder &builder, mlir::Location loc,
                                mlir::acc::ReductionOperator op, mlir::Type ty,
                                mlir::Value value1, mlir::Value value2) {
   if (op == mlir::acc::ReductionOperator::AccAdd) {
@@ -564,11 +583,15 @@ static mlir::Value genCombiner(mlir::OpBuilder &builder, mlir::Location loc,
       return builder.create<mlir::arith::MulFOp>(loc, value1, value2);
     TODO(loc, "reduction mul type");
   }
+
+  if (op == mlir::acc::ReductionOperator::AccMin)
+    return fir::genMin(builder, loc, {value1, value2});
+
   TODO(loc, "reduction operator");
 }
 
 mlir::acc::ReductionRecipeOp Fortran::lower::createOrGetReductionRecipe(
-    mlir::OpBuilder &builder, llvm::StringRef recipeName, mlir::Location loc,
+    fir::FirOpBuilder &builder, llvm::StringRef recipeName, mlir::Location loc,
     mlir::Type ty, mlir::acc::ReductionOperator op) {
   mlir::ModuleOp mod =
       builder.getBlock()->getParent()->getParentOfType<mlir::ModuleOp>();
