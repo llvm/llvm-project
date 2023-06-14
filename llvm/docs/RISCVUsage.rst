@@ -279,3 +279,6 @@ The current vendor extensions supported are:
 
 ``XSfvcp``
   LLVM implements `version 1.0.0 of the SiFive Vector Coprocessor Interface (VCIX) Software Specification <https://sifive.cdn.prismic.io/sifive/c3829e36-8552-41f0-a841-79945784241b_vcix-spec-software.pdf>`_ by SiFive.  All instructions are prefixed with `sf.vc.` as described in the specification, and the riscv-toolchain-convention document linked above.
+
+``XCVbitmanip``
+  LLVM implements `version 1.3.1 of the Core-V bit manipulation custom instructions specification <https://github.com/openhwgroup/cv32e40p/blob/62bec66b36182215e18c9cf10f723567e23878e9/docs/source/instruction_set_extensions.rst>`_ by Core-V.  All instructions are prefixed with `cv.` as described in the specification.
