@@ -1377,7 +1377,8 @@ public:
     Default = 0,
     GNU = 1,
     None = 2,
-    LastDebugNameTableKind = None
+    Apple = 3,
+    LastDebugNameTableKind = Apple
   };
 
   static std::optional<DebugEmissionKind> getEmissionKind(StringRef Str);
