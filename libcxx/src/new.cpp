@@ -7,8 +7,8 @@
 //===----------------------------------------------------------------------===//
 
 #include <__memory/aligned_alloc.h>
+#include <cstdlib>
 #include <new>
-#include <stdlib.h>
 
 namespace std
 {
@@ -52,7 +52,7 @@ operator new(std::size_t size) _THROW_BAD_ALLOC
     if (size == 0)
         size = 1;
     void* p;
-    while ((p = ::malloc(size)) == nullptr)
+    while ((p = std::malloc(size)) == nullptr)
     {
         // If malloc fails and there is a new_handler,
         // call it to try free up memory.
@@ -118,7 +118,7 @@ _LIBCPP_WEAK
 void
 operator delete(void* ptr) noexcept
 {
-    ::free(ptr);
+    std::free(ptr);
 }
 
 _LIBCPP_WEAK
