@@ -158,6 +158,7 @@
     __cpp_lib_ranges_as_rvalue                       202207L [C++23]
     __cpp_lib_ranges_chunk                           202202L [C++23]
     __cpp_lib_ranges_chunk_by                        202202L [C++23]
+    __cpp_lib_ranges_enumerate                       202302L [C++23]
     __cpp_lib_ranges_iota                            202202L [C++23]
     __cpp_lib_ranges_join_with                       202202L [C++23]
     __cpp_lib_ranges_repeat                          202207L [C++23]
@@ -769,6 +770,10 @@
 
 # ifdef __cpp_lib_ranges_chunk_by
 #   error "__cpp_lib_ranges_chunk_by should not be defined before c++23"
+# endif
+
+# ifdef __cpp_lib_ranges_enumerate
+#   error "__cpp_lib_ranges_enumerate should not be defined before c++23"
 # endif
 
 # ifdef __cpp_lib_ranges_iota
@@ -1591,6 +1596,10 @@
 
 # ifdef __cpp_lib_ranges_chunk_by
 #   error "__cpp_lib_ranges_chunk_by should not be defined before c++23"
+# endif
+
+# ifdef __cpp_lib_ranges_enumerate
+#   error "__cpp_lib_ranges_enumerate should not be defined before c++23"
 # endif
 
 # ifdef __cpp_lib_ranges_iota
@@ -2584,6 +2593,10 @@
 
 # ifdef __cpp_lib_ranges_chunk_by
 #   error "__cpp_lib_ranges_chunk_by should not be defined before c++23"
+# endif
+
+# ifdef __cpp_lib_ranges_enumerate
+#   error "__cpp_lib_ranges_enumerate should not be defined before c++23"
 # endif
 
 # ifdef __cpp_lib_ranges_iota
@@ -3856,6 +3869,10 @@
 
 # ifdef __cpp_lib_ranges_chunk_by
 #   error "__cpp_lib_ranges_chunk_by should not be defined before c++23"
+# endif
+
+# ifdef __cpp_lib_ranges_enumerate
+#   error "__cpp_lib_ranges_enumerate should not be defined before c++23"
 # endif
 
 # ifdef __cpp_lib_ranges_iota
@@ -5326,6 +5343,13 @@
 # endif
 # if __cpp_lib_ranges_chunk_by != 202202L
 #   error "__cpp_lib_ranges_chunk_by should have the value 202202L in c++23"
+# endif
+
+# ifndef __cpp_lib_ranges_enumerate
+#   error "__cpp_lib_ranges_enumerate should be defined in c++23"
+# endif
+# if __cpp_lib_ranges_enumerate != 202302L
+#   error "__cpp_lib_ranges_enumerate should have the value 202302L in c++23"
 # endif
 
 # if !defined(_LIBCPP_VERSION)
@@ -7045,6 +7069,13 @@
 # endif
 # if __cpp_lib_ranges_chunk_by != 202202L
 #   error "__cpp_lib_ranges_chunk_by should have the value 202202L in c++26"
+# endif
+
+# ifndef __cpp_lib_ranges_enumerate
+#   error "__cpp_lib_ranges_enumerate should be defined in c++26"
+# endif
+# if __cpp_lib_ranges_enumerate != 202302L
+#   error "__cpp_lib_ranges_enumerate should have the value 202302L in c++26"
 # endif
 
 # if !defined(_LIBCPP_VERSION)
