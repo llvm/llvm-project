@@ -110,6 +110,14 @@ X86LegalizerInfo::X86LegalizerInfo(const X86Subtarget &STI,
       .clampScalar(0, s8, sMaxScalar)
       .scalarize(0);
 
+  // TODO: Add all legal scalar types.
+  // TODO: Add G_UADDO/G_USUBO/G_USUBE handling
+  getActionDefinitionsBuilder(G_UADDE)
+      .legalFor({{s32, s1}})
+      .widenScalarToNextPow2(0, /*Min=*/32)
+      .clampScalar(0, s32, s32)
+      .scalarize(0);
+
   // integer multiply
   getActionDefinitionsBuilder(G_MUL)
       .legalIf([=](const LegalityQuery &Query) -> bool {
@@ -409,18 +417,12 @@ bool X86LegalizerInfo::legalizeIntrinsic(LegalizerHelper &Helper,
 void X86LegalizerInfo::setLegalizerInfo32bit() {
 
   const LLT p0 = LLT::pointer(0, TM.getPointerSizeInBits(0));
-  const LLT s1 = LLT::scalar(1);
   const LLT s8 = LLT::scalar(8);
   const LLT s16 = LLT::scalar(16);
   const LLT s32 = LLT::scalar(32);
   const LLT s64 = LLT::scalar(64);
 
   auto &LegacyInfo = getLegacyLegalizerInfo();
-
-  for (unsigned Op : {G_UADDE}) {
-    LegacyInfo.setAction({Op, s32}, LegacyLegalizeActions::Legal);
-    LegacyInfo.setAction({Op, 1, s1}, LegacyLegalizeActions::Legal);
-  }
 
   for (unsigned MemOp : {G_LOAD, G_STORE}) {
     for (auto Ty : {s8, s16, s32, p0})
