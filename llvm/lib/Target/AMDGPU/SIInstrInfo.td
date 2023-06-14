@@ -1113,19 +1113,17 @@ def SDWAVopcDst : BoolRC {
 class NamedIntOperand<ValueType Type, string Prefix, string Name = NAME,
                       string ConvertMethod = "nullptr">
     : CustomOperand<Type, 1, Name> {
-  string ImmTy = "AMDGPUOperand::ImmTy"#Name;
   let ParserMethod =
     "[this](OperandVector &Operands) -> OperandMatchResultTy { "#
-    "return parseIntWithPrefix(\""#Prefix#"\", Operands, "#ImmTy#", "#
-    ConvertMethod#"); }";
+    "return parseIntWithPrefix(\""#Prefix#"\", Operands, "#
+    "AMDGPUOperand::"#ImmTy#", "#ConvertMethod#"); }";
 }
 
 class NamedBitOperand<string Id, string Name = NAME>
     : CustomOperand<i1, 1, Name> {
-  string ImmTy = "AMDGPUOperand::ImmTy"#Name;
   let ParserMethod =
     "[this](OperandVector &Operands) -> OperandMatchResultTy { "#
-    "return parseNamedBit(\""#Id#"\", Operands, "#ImmTy#"); }";
+    "return parseNamedBit(\""#Id#"\", Operands, AMDGPUOperand::"#ImmTy#"); }";
 }
 
 class DefaultOperand<CustomOperand Op, int Value>
@@ -1136,21 +1134,21 @@ class DefaultOperand<CustomOperand Op, int Value>
 
 class SDWAOperand<string Id, string Name = NAME>
     : CustomOperand<i32, 1, Name> {
-  string ImmTy = "AMDGPUOperand::ImmTy"#Name;
   let ParserMethod =
     "[this](OperandVector &Operands) -> OperandMatchResultTy { "#
-    "return parseSDWASel(Operands, \""#Id#"\", "#ImmTy#"); }";
+    "return parseSDWASel(Operands, \""#Id#"\", AMDGPUOperand::"#ImmTy#"); }";
 }
 
 class ArrayOperand0<string Id, string Name = NAME>
   : OperandWithDefaultOps<i32, (ops (i32 0))>,
     CustomOperandProps<1, Name> {
-  string ImmTy = "AMDGPUOperand::ImmTy"#Name;
   let ParserMethod =
     "[this](OperandVector &Operands) -> OperandMatchResultTy { "#
-    "return parseOperandArrayWithPrefix(\""#Id#"\", Operands, "#ImmTy#"); }";
+    "return parseOperandArrayWithPrefix(\""#Id#"\", Operands, "#
+    "AMDGPUOperand::"#ImmTy#"); }";
 }
 
+let ImmTy = "ImmTyOffset" in
 def flat_offset : CustomOperand<i32, 1, "FlatOffset">;
 def offset : NamedIntOperand<i32, "offset", "Offset">;
 def offset0 : NamedIntOperand<i8, "offset0", "Offset0">;
@@ -1202,8 +1200,10 @@ def neg_hi0 : ArrayOperand0<"neg_hi", "NegHi">;
 def dpp8 : CustomOperand<i32, 0, "DPP8">;
 def dpp_ctrl : CustomOperand<i32, 0, "DPPCtrl">;
 
+let DefaultValue = "0xf" in {
 def row_mask : NamedIntOperand<i32, "row_mask", "DppRowMask">;
 def bank_mask : NamedIntOperand<i32, "bank_mask", "DppBankMask">;
+}
 def bound_ctrl : NamedIntOperand<i1, "bound_ctrl", "DppBoundCtrl",
     "[this] (int64_t &BC) -> bool { return convertDppBoundCtrl(BC); }">;
 def FI : NamedIntOperand<i32, "fi", "DppFI">;
