@@ -351,7 +351,7 @@ AMDGPUTargetLowering::AMDGPUTargetLowering(const TargetMachine &TM,
     setOperationAction({ISD::FLOG2, ISD::FEXP2}, MVT::f16, Custom);
   }
 
-  setOperationAction({ISD::FLOG10, ISD::FLOG}, MVT::f16, Custom);
+  setOperationAction({ISD::FLOG10, ISD::FLOG, ISD::FEXP}, MVT::f16, Custom);
 
   // FIXME: These IS_FPCLASS vector fp types are marked custom so it reaches
   // scalarization code. Can be removed when IS_FPCLASS expand isn't called by
@@ -1357,6 +1357,10 @@ void AMDGPUTargetLowering::ReplaceNodeResults(SDNode *N,
     return;
   case ISD::FEXP2:
     if (SDValue Lowered = lowerFEXP2(SDValue(N, 0), DAG))
+      Results.push_back(Lowered);
+    return;
+  case ISD::FEXP:
+    if (SDValue Lowered = lowerFEXP(SDValue(N, 0), DAG))
       Results.push_back(Lowered);
     return;
   default:
@@ -2460,12 +2464,16 @@ static bool valueIsKnownNeverF32Denorm(SDValue Src) {
   llvm_unreachable("covered opcode switch");
 }
 
+static bool allowApproxFunc(const SelectionDAG &DAG, SDNodeFlags Flags) {
+  if (Flags.hasApproximateFuncs())
+    return true;
+  auto &Options = DAG.getTarget().Options;
+  return Options.UnsafeFPMath || Options.ApproxFuncFPMath;
+}
+
 static bool needsDenormHandlingF32(const SelectionDAG &DAG, SDValue Src,
                                    SDNodeFlags Flags) {
-  return !Flags.hasApproximateFuncs() &&
-         !DAG.getTarget().Options.UnsafeFPMath &&
-         !DAG.getTarget().Options.ApproxFuncFPMath &&
-         !valueIsKnownNeverF32Denorm(Src) &&
+  return !valueIsKnownNeverF32Denorm(Src) &&
          DAG.getMachineFunction()
                  .getDenormalMode(APFloat::IEEEsingle())
                  .Input != DenormalMode::PreserveSign;
@@ -2508,7 +2516,7 @@ SDValue AMDGPUTargetLowering::getIsFinite(SelectionDAG &DAG, SDValue Src,
 std::pair<SDValue, SDValue>
 AMDGPUTargetLowering::getScaledLogInput(SelectionDAG &DAG, const SDLoc SL,
                                         SDValue Src, SDNodeFlags Flags) const {
-  if (!needsDenormHandlingF32(DAG, Src, Flags))
+  if (allowApproxFunc(DAG, Flags) || !needsDenormHandlingF32(DAG, Src, Flags))
     return {};
 
   MVT VT = MVT::f32;
@@ -2706,7 +2714,9 @@ SDValue AMDGPUTargetLowering::lowerFEXP2(SDValue Op, SelectionDAG &DAG) const {
                        DAG.getTargetConstant(0, SL, MVT::i32), Flags);
   }
 
-  if (!needsDenormHandlingF32(DAG, Src, Flags))
+  assert(VT == MVT::f32);
+
+  if (allowApproxFunc(DAG, Flags) || !needsDenormHandlingF32(DAG, Src, Flags))
     return DAG.getNode(AMDGPUISD::EXP, SL, MVT::f32, Src, Flags);
 
   // bool needs_scaling = x < -0x1.f80000p+6f;
@@ -2715,9 +2725,10 @@ SDValue AMDGPUTargetLowering::lowerFEXP2(SDValue Op, SelectionDAG &DAG) const {
   // -nextafter(128.0, -1)
   SDValue RangeCheckConst = DAG.getConstantFP(-0x1.f80000p+6f, SL, VT);
 
-  SDValue NeedsScaling = DAG.getSetCC(
-      SL, getSetCCResultType(DAG.getDataLayout(), *DAG.getContext(), VT), Src,
-      RangeCheckConst, ISD::SETOLT);
+  EVT SetCCVT = getSetCCResultType(DAG.getDataLayout(), *DAG.getContext(), VT);
+
+  SDValue NeedsScaling =
+      DAG.getSetCC(SL, SetCCVT, Src, RangeCheckConst, ISD::SETOLT);
 
   SDValue SixtyFour = DAG.getConstantFP(0x1.0p+6f, SL, VT);
   SDValue Zero = DAG.getConstantFP(0.0, SL, VT);
@@ -2736,15 +2747,143 @@ SDValue AMDGPUTargetLowering::lowerFEXP2(SDValue Op, SelectionDAG &DAG) const {
   return DAG.getNode(ISD::FMUL, SL, VT, Exp2, ResultScale, Flags);
 }
 
-// exp2(M_LOG2E_F * f);
+SDValue AMDGPUTargetLowering::lowerFEXPUnsafe(SDValue Op, const SDLoc &SL,
+                                              SelectionDAG &DAG,
+                                              SDNodeFlags Flags) const {
+  // exp2(M_LOG2E_F * f);
+  EVT VT = Op.getValueType();
+  const SDValue K = DAG.getConstantFP(numbers::log2e, SL, VT);
+  SDValue Mul = DAG.getNode(ISD::FMUL, SL, VT, Op, K, Flags);
+  return DAG.getNode(VT == MVT::f32 ? AMDGPUISD::EXP : ISD::FEXP2, SL, VT, Mul,
+                     Flags);
+}
+
 SDValue AMDGPUTargetLowering::lowerFEXP(SDValue Op, SelectionDAG &DAG) const {
   EVT VT = Op.getValueType();
   SDLoc SL(Op);
-  SDValue Src = Op.getOperand(0);
+  SDValue X = Op.getOperand(0);
+  SDNodeFlags Flags = Op->getFlags();
+  const bool IsExp10 = false; // TODO: For some reason exp10 is missing
 
-  const SDValue K = DAG.getConstantFP(numbers::log2e, SL, VT);
-  SDValue Mul = DAG.getNode(ISD::FMUL, SL, VT, Src, K, Op->getFlags());
-  return DAG.getNode(ISD::FEXP2, SL, VT, Mul, Op->getFlags());
+  if (VT.getScalarType() == MVT::f16) {
+    // v_exp_f16 (fmul x, log2e)
+    if (allowApproxFunc(DAG, Flags)) // TODO: Does this really require fast?
+      return lowerFEXPUnsafe(X, SL, DAG, Flags);
+
+    if (VT.isVector())
+      return SDValue();
+
+    // exp(f16 x) ->
+    //   fptrunc (v_exp_f32 (fmul (fpext x), log2e))
+
+    // Nothing in half is a denormal when promoted to f32.
+    SDValue Ext = DAG.getNode(ISD::FP_EXTEND, SL, MVT::f32, X, Flags);
+    SDValue Lowered = lowerFEXPUnsafe(Ext, SL, DAG, Flags);
+    return DAG.getNode(ISD::FP_ROUND, SL, VT, Lowered,
+                       DAG.getTargetConstant(0, SL, MVT::i32), Flags);
+  }
+
+  assert(VT == MVT::f32);
+
+  // TODO: Interpret allowApproxFunc as ignoring DAZ. This is currently copying
+  // library behavior. Also, is known-not-daz source sufficient?
+  if (allowApproxFunc(DAG, Flags) && !needsDenormHandlingF32(DAG, X, Flags)) {
+    assert(!IsExp10 && "todo exp10 support");
+    return lowerFEXPUnsafe(X, SL, DAG, Flags);
+  }
+
+  //    Algorithm:
+  //
+  //    e^x = 2^(x/ln(2)) = 2^(x*(64/ln(2))/64)
+  //
+  //    x*(64/ln(2)) = n + f, |f| <= 0.5, n is integer
+  //    n = 64*m + j,   0 <= j < 64
+  //
+  //    e^x = 2^((64*m + j + f)/64)
+  //        = (2^m) * (2^(j/64)) * 2^(f/64)
+  //        = (2^m) * (2^(j/64)) * e^(f*(ln(2)/64))
+  //
+  //    f = x*(64/ln(2)) - n
+  //    r = f*(ln(2)/64) = x - n*(ln(2)/64)
+  //
+  //    e^x = (2^m) * (2^(j/64)) * e^r
+  //
+  //    (2^(j/64)) is precomputed
+  //
+  //    e^r = 1 + r + (r^2)/2! + (r^3)/3! + (r^4)/4! + (r^5)/5!
+  //    e^r = 1 + q
+  //
+  //    q = r + (r^2)/2! + (r^3)/3! + (r^4)/4! + (r^5)/5!
+  //
+  //    e^x = (2^m) * ( (2^(j/64)) + q*(2^(j/64)) )
+
+  SDValue PH, PL;
+  if (Subtarget->hasFastFMAF32()) {
+    const float c_exp = numbers::log2ef;
+    const float cc_exp = 0x1.4ae0bep-26f; // c+cc are 49 bits
+    const float c_exp10 = 0x1.a934f0p+1f;
+    const float cc_exp10 = 0x1.2f346ep-24f;
+
+    SDValue C = DAG.getConstantFP(IsExp10 ? c_exp10 : c_exp, SL, VT);
+    SDValue CC = DAG.getConstantFP(IsExp10 ? cc_exp10 : cc_exp, SL, VT);
+
+    PH = DAG.getNode(ISD::FMUL, SL, VT, X, C, Flags);
+    SDValue NegPH = DAG.getNode(ISD::FNEG, SL, VT, PH, Flags);
+    SDValue FMA0 = DAG.getNode(ISD::FMA, SL, VT, X, C, NegPH, Flags);
+    PL = DAG.getNode(ISD::FMA, SL, VT, X, CC, FMA0, Flags);
+  } else {
+    const float ch_exp = 0x1.714000p+0f;
+    const float cl_exp = 0x1.47652ap-12f; // ch + cl are 36 bits
+
+    const float ch_exp10 = 0x1.a92000p+1f;
+    const float cl_exp10 = 0x1.4f0978p-11f;
+
+    SDValue CH = DAG.getConstantFP(IsExp10 ? ch_exp10 : ch_exp, SL, VT);
+    SDValue CL = DAG.getConstantFP(IsExp10 ? cl_exp10 : cl_exp, SL, VT);
+
+    SDValue XAsInt = DAG.getNode(ISD::BITCAST, SL, MVT::i32, X);
+    SDValue MaskConst = DAG.getConstant(0xfffff000, SL, MVT::i32);
+    SDValue XHAsInt = DAG.getNode(ISD::AND, SL, MVT::i32, XAsInt, MaskConst);
+    SDValue XH = DAG.getNode(ISD::BITCAST, SL, VT, XHAsInt);
+    SDValue XL = DAG.getNode(ISD::FSUB, SL, VT, X, XH, Flags);
+
+    PH = DAG.getNode(ISD::FMUL, SL, VT, XH, CH, Flags);
+
+    SDValue XLCL = DAG.getNode(ISD::FMUL, SL, VT, XL, CL, Flags);
+    SDValue Mad0 = getMad(DAG, SL, VT, XL, CH, XLCL, Flags);
+    PL = getMad(DAG, SL, VT, XH, CL, Mad0, Flags);
+  }
+
+  SDValue E = DAG.getNode(ISD::FRINT, SL, VT, PH, Flags);
+  SDValue PHSubE = DAG.getNode(ISD::FSUB, SL, VT, PH, E, Flags);
+  SDValue A = DAG.getNode(ISD::FADD, SL, VT, PHSubE, PL, Flags);
+  SDValue IntE = DAG.getNode(ISD::FP_TO_SINT, SL, MVT::i32, E);
+  SDValue Exp2 = DAG.getNode(AMDGPUISD::EXP, SL, VT, A, Flags);
+
+  SDValue R = DAG.getNode(ISD::FLDEXP, SL, VT, Exp2, IntE, Flags);
+
+  SDValue UnderflowCheckConst =
+      DAG.getConstantFP(IsExp10 ? -0x1.66d3e8p+5f : -0x1.9d1da0p+6f, SL, VT);
+
+  EVT SetCCVT = getSetCCResultType(DAG.getDataLayout(), *DAG.getContext(), VT);
+  SDValue Zero = DAG.getConstantFP(0.0, SL, VT);
+  SDValue Underflow =
+      DAG.getSetCC(SL, SetCCVT, X, UnderflowCheckConst, ISD::SETOLT);
+
+  R = DAG.getNode(ISD::SELECT, SL, VT, Underflow, Zero, R);
+  const auto &Options = getTargetMachine().Options;
+
+  if (!Flags.hasNoInfs() && !Options.NoInfsFPMath) {
+    SDValue OverflowCheckConst =
+        DAG.getConstantFP(IsExp10 ? 0x1.344136p+5f : 0x1.62e430p+6f, SL, VT);
+    SDValue Overflow =
+        DAG.getSetCC(SL, SetCCVT, X, OverflowCheckConst, ISD::SETOGT);
+    SDValue Inf =
+        DAG.getConstantFP(APFloat::getInf(APFloat::IEEEsingle()), SL, VT);
+    R = DAG.getNode(ISD::SELECT, SL, VT, Overflow, Inf, R);
+  }
+
+  return R;
 }
 
 static bool isCtlzOpc(unsigned Opc) {

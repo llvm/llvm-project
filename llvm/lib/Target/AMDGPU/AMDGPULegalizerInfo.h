@@ -87,6 +87,8 @@ public:
   bool legalizeFlogUnsafe(MachineIRBuilder &B, Register Dst, Register Src,
                           double Log2BaseInverted, unsigned Flags) const;
   bool legalizeFExp2(MachineInstr &MI, MachineIRBuilder &B) const;
+  bool legalizeFExpUnsafe(MachineIRBuilder &B, Register Dst, Register Src,
+                          unsigned Flags) const;
   bool legalizeFExp(MachineInstr &MI, MachineIRBuilder &B) const;
   bool legalizeFPow(MachineInstr &MI, MachineIRBuilder &B) const;
   bool legalizeFFloor(MachineInstr &MI, MachineRegisterInfo &MRI,

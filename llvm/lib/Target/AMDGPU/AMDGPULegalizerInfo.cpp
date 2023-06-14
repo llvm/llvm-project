@@ -1122,7 +1122,7 @@ AMDGPULegalizerInfo::AMDGPULegalizerInfo(const GCNSubtarget &ST_,
     .scalarize(0);
 
   // FIXME: fpow has a selection pattern that should move to custom lowering.
-  auto &ExpOps = getActionDefinitionsBuilder({G_FEXP, G_FPOW});
+  auto &ExpOps = getActionDefinitionsBuilder(G_FPOW);
   if (ST.has16BitInsts())
     ExpOps.customFor({{S32}, {S16}});
   else
@@ -1143,7 +1143,7 @@ AMDGPULegalizerInfo::AMDGPULegalizerInfo(const GCNSubtarget &ST_,
   Log2Ops.scalarize(0)
     .lower();
 
-  auto &LogOps = getActionDefinitionsBuilder({G_FLOG, G_FLOG10});
+  auto &LogOps = getActionDefinitionsBuilder({G_FLOG, G_FLOG10, G_FEXP});
   LogOps.customFor({S32, S16});
   LogOps.clampScalar(0, MinScalarFPTy, S32)
         .scalarize(0);
@@ -3010,12 +3010,16 @@ static bool valueIsKnownNeverF32Denorm(const MachineRegisterInfo &MRI,
   return false;
 }
 
+static bool allowApproxFunc(const MachineFunction &MF, unsigned Flags) {
+  if (Flags & MachineInstr::FmAfn)
+    return true;
+  const auto &Options = MF.getTarget().Options;
+  return Options.UnsafeFPMath || Options.ApproxFuncFPMath;
+}
+
 static bool needsDenormHandlingF32(const MachineFunction &MF, Register Src,
                                    unsigned Flags) {
-  return (Flags & MachineInstr::FmAfn) == 0 &&
-         !MF.getTarget().Options.UnsafeFPMath &&
-         !MF.getTarget().Options.ApproxFuncFPMath &&
-         !valueIsKnownNeverF32Denorm(MF.getRegInfo(), Src) &&
+  return !valueIsKnownNeverF32Denorm(MF.getRegInfo(), Src) &&
          MF.getDenormalMode(APFloat::IEEEsingle()).Input !=
              DenormalMode::PreserveSign;
 }
@@ -3023,7 +3027,8 @@ static bool needsDenormHandlingF32(const MachineFunction &MF, Register Src,
 std::pair<Register, Register>
 AMDGPULegalizerInfo::getScaledLogInput(MachineIRBuilder &B, Register Src,
                                        unsigned Flags) const {
-  if (!needsDenormHandlingF32(B.getMF(), Src, Flags))
+  if (allowApproxFunc(B.getMF(), Flags) ||
+      !needsDenormHandlingF32(B.getMF(), Src, Flags))
     return {};
 
   const LLT F32 = LLT::scalar(32);
@@ -3249,7 +3254,8 @@ bool AMDGPULegalizerInfo::legalizeFExp2(MachineInstr &MI,
 
   assert(Ty == F32);
 
-  if (!needsDenormHandlingF32(B.getMF(), Src, Flags)) {
+  if (allowApproxFunc(B.getMF(), Flags) ||
+      !needsDenormHandlingF32(B.getMF(), Src, Flags)) {
     B.buildIntrinsic(Intrinsic::amdgcn_exp2, ArrayRef<Register>{Dst}, false)
       .addUse(Src)
       .setMIFlags(Flags);
@@ -3282,16 +3288,160 @@ bool AMDGPULegalizerInfo::legalizeFExp2(MachineInstr &MI,
   return true;
 }
 
+bool AMDGPULegalizerInfo::legalizeFExpUnsafe(MachineIRBuilder &B, Register Dst,
+                                             Register Src,
+                                             unsigned Flags) const {
+  LLT Ty = B.getMRI()->getType(Dst);
+  auto K = B.buildFConstant(Ty, numbers::log2e);
+  auto Mul = B.buildFMul(Ty, Src, K, Flags);
+
+  if (Ty == LLT::scalar(32)) {
+    B.buildIntrinsic(Intrinsic::amdgcn_exp2, ArrayRef<Register>{Dst}, false)
+      .addUse(Mul.getReg(0))
+      .setMIFlags(Flags);
+  } else {
+    B.buildFExp2(Dst, Mul.getReg(0), Flags);
+  }
+
+  return true;
+}
+
 bool AMDGPULegalizerInfo::legalizeFExp(MachineInstr &MI,
                                        MachineIRBuilder &B) const {
   Register Dst = MI.getOperand(0).getReg();
-  Register Src = MI.getOperand(1).getReg();
+  Register X = MI.getOperand(1).getReg();
   unsigned Flags = MI.getFlags();
-  LLT Ty = B.getMRI()->getType(Dst);
+  MachineFunction &MF = B.getMF();
+  MachineRegisterInfo &MRI = *B.getMRI();
+  LLT Ty = MRI.getType(Dst);
+  const LLT F16 = LLT::scalar(16);
+  const LLT F32 = LLT::scalar(32);
+  const bool IsExp10 = false; // TODO: For some reason exp10 is missing
 
-  auto K = B.buildFConstant(Ty, numbers::log2e);
-  auto Mul = B.buildFMul(Ty, Src, K, Flags);
-  B.buildFExp2(Dst, Mul, Flags);
+  if (Ty == F16) {
+    // v_exp_f16 (fmul x, log2e)
+    if (allowApproxFunc(MF, Flags)) {
+      // TODO: Does this really require fast?
+      legalizeFExpUnsafe(B, Dst, X, Flags);
+      MI.eraseFromParent();
+      return true;
+    }
+
+    // exp(f16 x) ->
+    //   fptrunc (v_exp_f32 (fmul (fpext x), log2e))
+
+    // Nothing in half is a denormal when promoted to f32.
+    auto Ext = B.buildFPExt(F32, X, Flags);
+    Register Lowered = MRI.createGenericVirtualRegister(F32);
+    legalizeFExpUnsafe(B, Lowered, Ext.getReg(0), Flags);
+    B.buildFPTrunc(Dst, Lowered, Flags);
+    MI.eraseFromParent();
+    return true;
+  }
+
+  assert(Ty == F32);
+
+  // TODO: Interpret allowApproxFunc as ignoring DAZ. This is currently copying
+  // library behavior. Also, is known-not-daz source sufficient?
+  if (allowApproxFunc(MF, Flags) && !needsDenormHandlingF32(MF, X, Flags)) {
+    legalizeFExpUnsafe(B, Dst, X, Flags);
+    MI.eraseFromParent();
+    return true;
+  }
+
+  //    Algorithm:
+  //
+  //    e^x = 2^(x/ln(2)) = 2^(x*(64/ln(2))/64)
+  //
+  //    x*(64/ln(2)) = n + f, |f| <= 0.5, n is integer
+  //    n = 64*m + j,   0 <= j < 64
+  //
+  //    e^x = 2^((64*m + j + f)/64)
+  //        = (2^m) * (2^(j/64)) * 2^(f/64)
+  //        = (2^m) * (2^(j/64)) * e^(f*(ln(2)/64))
+  //
+  //    f = x*(64/ln(2)) - n
+  //    r = f*(ln(2)/64) = x - n*(ln(2)/64)
+  //
+  //    e^x = (2^m) * (2^(j/64)) * e^r
+  //
+  //    (2^(j/64)) is precomputed
+  //
+  //    e^r = 1 + r + (r^2)/2! + (r^3)/3! + (r^4)/4! + (r^5)/5!
+  //    e^r = 1 + q
+  //
+  //    q = r + (r^2)/2! + (r^3)/3! + (r^4)/4! + (r^5)/5!
+  //
+  //    e^x = (2^m) * ( (2^(j/64)) + q*(2^(j/64)) )
+
+  Register PH, PL;
+
+  if (ST.hasFastFMAF32()) {
+    const float c_exp = numbers::log2ef;
+    const float cc_exp = 0x1.4ae0bep-26f; // c+cc are 49 bits
+    const float c_exp10 = 0x1.a934f0p+1f;
+    const float cc_exp10 = 0x1.2f346ep-24f;
+
+    auto C = B.buildFConstant(Ty, IsExp10 ? c_exp10 : c_exp);
+    PH = B.buildFMul(Ty, X, C, Flags).getReg(0);
+    auto NegPH = B.buildFNeg(Ty, PH, Flags);
+    auto FMA0 = B.buildFMA(Ty, X, C, NegPH, Flags);
+
+    auto CC = B.buildFConstant(Ty, IsExp10 ? cc_exp10 : cc_exp);
+    PL = B.buildFMA(Ty, X, CC, FMA0, Flags).getReg(0);
+  } else {
+    const float ch_exp = 0x1.714000p+0f;
+    const float cl_exp = 0x1.47652ap-12f; // ch + cl are 36 bits
+
+    const float ch_exp10 = 0x1.a92000p+1f;
+    const float cl_exp10 = 0x1.4f0978p-11f;
+
+    auto MaskConst = B.buildConstant(Ty, 0xfffff000);
+    auto XH = B.buildAnd(Ty, X, MaskConst);
+    auto XL = B.buildFSub(Ty, X, XH, Flags);
+
+    auto CH = B.buildFConstant(Ty, IsExp10 ? ch_exp10 : ch_exp);
+    PH = B.buildFMul(Ty, XH, CH, Flags).getReg(0);
+
+    auto CL = B.buildFConstant(Ty, IsExp10 ? cl_exp10 : cl_exp);
+    auto XLCL = B.buildFMul(Ty, XL, CL, Flags);
+
+    Register Mad0 =
+        getMad(B, Ty, XL.getReg(0), CH.getReg(0), XLCL.getReg(0), Flags);
+    PL = getMad(B, Ty, XH.getReg(0), CL.getReg(0), Mad0, Flags);
+  }
+
+  auto E = B.buildFRint(Ty, PH, Flags);
+  auto PHSubE = B.buildFSub(Ty, PH, E, Flags);
+  auto A = B.buildFAdd(Ty, PHSubE, PL, Flags);
+  auto IntE = B.buildFPTOSI(LLT::scalar(32), E);
+
+  auto Exp2 = B.buildIntrinsic(Intrinsic::amdgcn_exp2, {Ty}, false)
+                  .addUse(A.getReg(0))
+                  .setMIFlags(Flags);
+  auto R = B.buildFLdexp(Ty, Exp2, IntE, Flags);
+
+  auto UnderflowCheckConst =
+      B.buildFConstant(Ty, IsExp10 ? -0x1.66d3e8p+5f : -0x1.9d1da0p+6f);
+  auto Zero = B.buildFConstant(Ty, 0.0);
+  auto Underflow =
+      B.buildFCmp(CmpInst::FCMP_OLT, LLT::scalar(1), X, UnderflowCheckConst);
+
+  R = B.buildSelect(Ty, Underflow, Zero, R);
+
+  const auto &Options = MF.getTarget().Options;
+
+  if (!(Flags & MachineInstr::FmNoInfs) && !Options.NoInfsFPMath) {
+    auto OverflowCheckConst =
+        B.buildFConstant(Ty, IsExp10 ? 0x1.344136p+5f : 0x1.62e430p+6f);
+
+    auto Overflow =
+        B.buildFCmp(CmpInst::FCMP_OGT, LLT::scalar(1), X, OverflowCheckConst);
+    auto Inf = B.buildFConstant(Ty, APFloat::getInf(APFloat::IEEEsingle()));
+    R = B.buildSelect(Ty, Overflow, Inf, R, Flags);
+  }
+
+  B.buildCopy(Dst, R);
   MI.eraseFromParent();
   return true;
 }

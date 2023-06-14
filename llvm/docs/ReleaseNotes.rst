@@ -155,8 +155,8 @@ Changes to the AMDGPU Backend
   accurately. Use llvm.amdgcn.log.f32 to access the old behavior for
   llvm.log2.f32.
 
-* llvm.exp2.f32 is now lowered accurately. Use llvm.amdgcn.exp2.f32 to
-  access the old behavior for llvm.exp2.f32.
+* llvm.exp2.f32 and llvm.exp.f32 are now lowered accurately. Use
+  llvm.amdgcn.exp2.f32 to access the old behavior for llvm.exp2.f32.
 
 Changes to the ARM Backend
 --------------------------
