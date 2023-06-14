@@ -338,6 +338,12 @@ void RVVType::initShortStr() {
     ShortStr += "x" + utostr(NF);
 }
 
+static VectorTypeModifier getTupleVTM(unsigned NF) {
+  assert(2 <= NF && NF <= 8 && "2 <= NF <= 8");
+  return static_cast<VectorTypeModifier>(
+      static_cast<uint8_t>(VectorTypeModifier::Tuple2) + (NF - 2));
+}
+
 void RVVType::applyBasicType() {
   switch (BT) {
   case BasicType::Int8:
@@ -559,9 +565,7 @@ PrototypeDescriptor::parsePrototypeDescriptor(
         llvm_unreachable("Invalid NF value!");
         return std::nullopt;
       }
-      assert(2 <= NF && NF <= 8 && "2 <= NF <= 8");
-      VTM = static_cast<VectorTypeModifier>(
-          static_cast<uint8_t>(VectorTypeModifier::Tuple2) + (NF - 2));
+      VTM = getTupleVTM(NF);
     } else {
       llvm_unreachable("Illegal complex type transformers!");
     }
@@ -951,13 +955,22 @@ llvm::SmallVector<PrototypeDescriptor> RVVIntrinsic::computeBuiltinTypes(
       if (NF == 1) {
         NewPrototype.insert(NewPrototype.begin() + 1, NewPrototype[0]);
       } else if (NF > 1) {
-        // Convert
-        // (void, op0 address, op1 address, ...)
-        // to
-        // (void, op0 address, op1 address, ..., maskedoff0, maskedoff1, ...)
-        PrototypeDescriptor MaskoffType = NewPrototype[1];
-        MaskoffType.TM &= ~static_cast<uint8_t>(TypeModifier::Pointer);
-        NewPrototype.insert(NewPrototype.begin() + NF + 1, NF, MaskoffType);
+        if (IsTuple) {
+          PrototypeDescriptor BasePtrOperand = Prototype[1];
+          PrototypeDescriptor MaskoffType = PrototypeDescriptor(
+              static_cast<uint8_t>(BaseTypeModifier::Vector),
+              static_cast<uint8_t>(getTupleVTM(NF)),
+              BasePtrOperand.TM & ~static_cast<uint8_t>(TypeModifier::Pointer));
+          NewPrototype.insert(NewPrototype.begin() + 1, MaskoffType);
+        } else {
+          // Convert
+          // (void, op0 address, op1 address, ...)
+          // to
+          // (void, op0 address, op1 address, ..., maskedoff0, maskedoff1, ...)
+          PrototypeDescriptor MaskoffType = NewPrototype[1];
+          MaskoffType.TM &= ~static_cast<uint8_t>(TypeModifier::Pointer);
+          NewPrototype.insert(NewPrototype.begin() + NF + 1, NF, MaskoffType);
+        }
       }
     }
     if (HasMaskedOffOperand && NF > 1) {
@@ -981,14 +994,23 @@ llvm::SmallVector<PrototypeDescriptor> RVVIntrinsic::computeBuiltinTypes(
       if (PolicyAttrs.isTUPolicy() && HasPassthruOp)
         NewPrototype.insert(NewPrototype.begin(), NewPrototype[0]);
     } else if (PolicyAttrs.isTUPolicy() && HasPassthruOp) {
-      // NF > 1 cases for segment load operations.
-      // Convert
-      // (void, op0 address, op1 address, ...)
-      // to
-      // (void, op0 address, op1 address, maskedoff0, maskedoff1, ...)
-      PrototypeDescriptor MaskoffType = Prototype[1];
-      MaskoffType.TM &= ~static_cast<uint8_t>(TypeModifier::Pointer);
-      NewPrototype.insert(NewPrototype.begin() + NF + 1, NF, MaskoffType);
+      if (IsTuple) {
+        PrototypeDescriptor BasePtrOperand = Prototype[0];
+        PrototypeDescriptor MaskoffType = PrototypeDescriptor(
+            static_cast<uint8_t>(BaseTypeModifier::Vector),
+            static_cast<uint8_t>(getTupleVTM(NF)),
+            BasePtrOperand.TM & ~static_cast<uint8_t>(TypeModifier::Pointer));
+        NewPrototype.insert(NewPrototype.begin(), MaskoffType);
+      } else {
+        // NF > 1 cases for segment load operations.
+        // Convert
+        // (void, op0 address, op1 address, ...)
+        // to
+        // (void, op0 address, op1 address, maskedoff0, maskedoff1, ...)
+        PrototypeDescriptor MaskoffType = Prototype[1];
+        MaskoffType.TM &= ~static_cast<uint8_t>(TypeModifier::Pointer);
+        NewPrototype.insert(NewPrototype.begin() + NF + 1, NF, MaskoffType);
+      }
     }
  }
 
