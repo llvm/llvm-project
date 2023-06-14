@@ -78,6 +78,12 @@ public:
   /// initializing the loop emitter (e.g., to fill a dense output with zeros).
   using OutputUpdater = function_ref<Value(OpBuilder &builder, Location loc,
                                            Value memref, Value tensor)>;
+
+  /// Optional callback function to set the bound for the synthetic tensor,
+  /// which essentially is the dense loop bound.
+  using SynTensorBoundSetter =
+      function_ref<Value(OpBuilder &builder, Location loc, Level lvl)>;
+
   // Map from [tid, dim] to a list of dependent [tid, dim] for affine expression
   // index on sparse tensors.
   // E.g., for affine index (d0 + d1), it depends on two [tid, dim] that defines
@@ -114,7 +120,8 @@ public:
   /// Starts a loop emitting session by generating all the buffers needed
   /// for iterating over the tensors.
   void initializeLoopEmit(OpBuilder &builder, Location loc,
-                          OutputUpdater updater = nullptr);
+                          OutputUpdater updater = nullptr,
+                          SynTensorBoundSetter synSetter = nullptr);
 
   /// Generates code to compute an affine expression whose variables are
   /// `LoopId`s (i.e., `a.cast<AffineDimExpr>().getPosition()` is a valid
