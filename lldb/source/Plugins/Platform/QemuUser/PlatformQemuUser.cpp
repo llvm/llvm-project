@@ -191,8 +191,8 @@ lldb::ProcessSP PlatformQemuUser::DebugProcess(ProcessLaunchInfo &launch_info,
   launch_info.SetArguments(args, true);
 
   Environment emulator_env = Host::GetEnvironment();
-  if (ConstString sysroot = GetSDKRootDirectory())
-    emulator_env["QEMU_LD_PREFIX"] = sysroot.GetStringRef().str();
+  if (const std::string &sysroot = GetSDKRootDirectory(); !sysroot.empty())
+    emulator_env["QEMU_LD_PREFIX"] = sysroot;
   for (const auto &KV : GetGlobalProperties().GetEmulatorEnvVars())
     emulator_env[KV.first()] = KV.second;
   launch_info.GetEnvironment() = ComputeLaunchEnvironment(
