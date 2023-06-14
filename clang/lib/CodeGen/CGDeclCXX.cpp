@@ -137,7 +137,7 @@ static void EmitDeclDestroy(CodeGenFunction &CGF, const VarDecl &D,
     }
   // Otherwise, the standard logic requires a helper function.
   } else {
-    Addr = Addr.getElementBitCast(CGF.ConvertTypeForMem(Type));
+    Addr = Addr.withElementType(CGF.ConvertTypeForMem(Type));
     Func = CodeGenFunction(CGM)
            .generateDestroyHelper(Addr, Type, CGF.getDestroyer(DtorKind),
                                   CGF.needsEHCleanup(DtorKind), &D);
