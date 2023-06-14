@@ -137,7 +137,7 @@ define void @alloc_v8f64(ptr %st_ptr) #0 {
 ; CHECK-NEXT:    str x30, [sp, #64] // 8-byte Folded Spill
 ; CHECK-NEXT:    mov x20, sp
 ; CHECK-NEXT:    bl def
-; CHECK-NEXT:    mov x8, #4
+; CHECK-NEXT:    mov x8, #4 // =0x4
 ; CHECK-NEXT:    ptrue p0.d, vl2
 ; CHECK-NEXT:    ld2d { z0.d, z1.d }, p0/z, [x20]
 ; CHECK-NEXT:    ld2d { z2.d, z3.d }, p0/z, [x20, x8, lsl #3]
