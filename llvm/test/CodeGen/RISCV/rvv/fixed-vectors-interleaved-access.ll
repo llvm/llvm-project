@@ -10,7 +10,7 @@
 define {<3 x i32>, <3 x i32>} @load_factor2_v3(ptr %ptr) {
 ; CHECK-LABEL: load_factor2_v3:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetivli zero, 8, e32, m2, ta, ma
+; CHECK-NEXT:    vsetivli zero, 6, e32, m2, ta, ma
 ; CHECK-NEXT:    vle32.v v10, (a0)
 ; CHECK-NEXT:    vsetivli zero, 4, e32, m1, ta, ma
 ; CHECK-NEXT:    vid.v v8

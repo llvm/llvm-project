@@ -85,6 +85,8 @@ public:
 
   uint8_t getIORegisterOffset() const { return hasMemMappedGPR() ? 0x20 : 0x0; }
 
+  bool enableSubRegLiveness() const override { return true; }
+
   /// Gets the ELF architecture for the e_flags field
   /// of an ELF object file.
   unsigned getELFArch() const {

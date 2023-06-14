@@ -98,8 +98,6 @@ struct RandomIRBuilder {
   Instruction *newSink(BasicBlock &BB, ArrayRef<Instruction *> Insts, Value *V);
   Value *findPointer(BasicBlock &BB, ArrayRef<Instruction *> Insts,
                      ArrayRef<Value *> Srcs, fuzzerop::SourcePred Pred);
-  Type *chooseType(LLVMContext &Context, ArrayRef<Value *> Srcs,
-                   fuzzerop::SourcePred Pred);
   /// Return a uniformly choosen type from \c AllowedTypes
   Type *randomType();
   Function *createFunctionDeclaration(Module &M, uint64_t ArgNum);

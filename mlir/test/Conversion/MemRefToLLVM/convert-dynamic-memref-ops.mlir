@@ -212,20 +212,11 @@ func.func @prefetch(%A : memref<?x?xf32>, %i : index, %j : index) {
 // CHECK-NEXT:  %[[offI:.*]] = llvm.mul %[[I]], %[[st0]] : i64
 // CHECK-NEXT:  %[[off1:.*]] = llvm.add %[[offI]], %[[J]] : i64
 // CHECK-NEXT:  %[[addr:.*]] = llvm.getelementptr %[[ptr]][%[[off1]]] : (!llvm.ptr, i64) -> !llvm.ptr, f32
-// CHECK-NEXT:  [[C1:%.*]] = llvm.mlir.constant(1 : i32) : i32
-// CHECK-NEXT:  [[C3:%.*]] = llvm.mlir.constant(3 : i32) : i32
-// CHECK-NEXT:  [[C1_1:%.*]] = llvm.mlir.constant(1 : i32) : i32
-// CHECK-NEXT:  "llvm.intr.prefetch"(%[[addr]], [[C1]], [[C3]], [[C1_1]]) : (!llvm.ptr, i32, i32, i32) -> ()
+// CHECK-NEXT:  "llvm.intr.prefetch"(%[[addr]]) <{cache = 1 : i32, hint = 3 : i32, rw = 1 : i32}> : (!llvm.ptr) -> ()
   memref.prefetch %A[%i, %j], write, locality<3>, data : memref<?x?xf32>
-// CHECK:  [[C0:%.*]] = llvm.mlir.constant(0 : i32) : i32
-// CHECK:  [[C0_1:%.*]] = llvm.mlir.constant(0 : i32) : i32
-// CHECK:  [[C1_2:%.*]] = llvm.mlir.constant(1 : i32) : i32
-// CHECK:  "llvm.intr.prefetch"(%{{.*}}, [[C0]], [[C0_1]], [[C1_2]]) : (!llvm.ptr, i32, i32, i32) -> ()
+// CHECK:  "llvm.intr.prefetch"(%{{.*}}) <{cache = 1 : i32, hint = 0 : i32, rw = 0 : i32}> : (!llvm.ptr) -> ()
   memref.prefetch %A[%i, %j], read, locality<0>, data : memref<?x?xf32>
-// CHECK:  [[C0_2:%.*]] = llvm.mlir.constant(0 : i32) : i32
-// CHECK:  [[C2:%.*]] = llvm.mlir.constant(2 : i32) : i32
-// CHECK:  [[C0_3:%.*]] = llvm.mlir.constant(0 : i32) : i32
-// CHECK:  "llvm.intr.prefetch"(%{{.*}}, [[C0_2]], [[C2]], [[C0_3]]) : (!llvm.ptr, i32, i32, i32) -> ()
+// CHECK:  "llvm.intr.prefetch"(%{{.*}}) <{cache = 0 : i32, hint = 2 : i32, rw = 0 : i32}> : (!llvm.ptr) -> ()
   memref.prefetch %A[%i, %j], read, locality<2>, instr : memref<?x?xf32>
   return
 }
@@ -307,14 +298,13 @@ module attributes { dlti.dl_spec = #dlti.dl_spec<
 // CHECK: [[RESULT_ALIGN_GEP:%.*]] = llvm.getelementptr [[RESULT_DESC]][1]
 // CHECK: llvm.store [[RESULT_ALIGN]], [[RESULT_ALIGN_GEP]] : !llvm.ptr
 
-// Memcpy remaniing values
+// Memcpy remaining values
 
 // CHECK: [[SOURCE_OFFSET_GEP:%.*]] = llvm.getelementptr [[SOURCE_DESC]][2]
 // CHECK: [[RESULT_OFFSET_GEP:%.*]] = llvm.getelementptr [[RESULT_DESC]][2]
 // CHECK: [[SIZEOF_TWO_RESULT_PTRS:%.*]] = llvm.mlir.constant(16 : index) : i64
 // CHECK: [[COPY_SIZE:%.*]] = llvm.sub [[DESC_ALLOC_SIZE]], [[SIZEOF_TWO_RESULT_PTRS]]
-// CHECK: [[FALSE:%.*]] = llvm.mlir.constant(false) : i1
-// CHECK: "llvm.intr.memcpy"([[RESULT_OFFSET_GEP]], [[SOURCE_OFFSET_GEP]], [[COPY_SIZE]], [[FALSE]])
+// CHECK: "llvm.intr.memcpy"([[RESULT_OFFSET_GEP]], [[SOURCE_OFFSET_GEP]], [[COPY_SIZE]]) <{isVolatile = false}>
 
 // -----
 
@@ -674,8 +664,7 @@ func.func @realloc_dynamic(%in: memref<?xf32>, %d: index) -> memref<?xf32>{
 // CHECK:           %[[src_size:.*]] = llvm.mul %[[src_dim]], %[[dst_es]]
 // CHECK:           %[[new_buffer_raw:.*]] = llvm.call @malloc(%[[dst_size]])
 // CHECK:           %[[old_buffer_aligned:.*]] = llvm.extractvalue %[[descriptor]][1]
-// CHECK:           %[[volatile:.*]] = llvm.mlir.constant(false) : i1
-// CHECK:           "llvm.intr.memcpy"(%[[new_buffer_raw]], %[[old_buffer_aligned]], %[[src_size]], %[[volatile]])
+// CHECK:           "llvm.intr.memcpy"(%[[new_buffer_raw]], %[[old_buffer_aligned]], %[[src_size]]) <{isVolatile = false}>
 // CHECK:           %[[old_buffer_unaligned:.*]] = llvm.extractvalue %[[descriptor]][0]
 // CHECK:           llvm.call @free(%[[old_buffer_unaligned]])
 // CHECK:           %[[descriptor_update1:.*]] = llvm.insertvalue %[[new_buffer_raw]], %[[descriptor]][0]
@@ -721,8 +710,7 @@ func.func @realloc_dynamic_alignment(%in: memref<?xf32>, %d: index) -> memref<?x
 // CHECK:           %[[new_buffer_aligned_int:.*]] = llvm.sub %[[ptr_alignment_m1]], %[[padding]]
 // CHECK:           %[[new_buffer_aligned:.*]] = llvm.inttoptr %[[new_buffer_aligned_int]] : i64 to !llvm.ptr
 // CHECK:           %[[old_buffer_aligned:.*]] = llvm.extractvalue %[[descriptor]][1]
-// CHECK:           %[[volatile:.*]] = llvm.mlir.constant(false) : i1
-// CHECK:           "llvm.intr.memcpy"(%[[new_buffer_aligned]], %[[old_buffer_aligned]], %[[src_size]], %[[volatile]])
+// CHECK:           "llvm.intr.memcpy"(%[[new_buffer_aligned]], %[[old_buffer_aligned]], %[[src_size]]) <{isVolatile = false}>
 // CHECK:           %[[old_buffer_unaligned:.*]] = llvm.extractvalue %[[descriptor]][0]
 // CHECK:           llvm.call @free(%[[old_buffer_unaligned]])
 // CHECK:           %[[descriptor_update1:.*]] = llvm.insertvalue %[[new_buffer_raw]], %[[descriptor]][0]
@@ -752,8 +740,7 @@ func.func @realloc_dynamic_alignment(%in: memref<?xf32>, %d: index) -> memref<?x
 // ALIGNED-ALLOC:           %[[adjust_dst_size:.*]] = llvm.sub %[[size_alignment_m1]], %[[padding]]
 // ALIGNED-ALLOC:           %[[new_buffer_raw:.*]] = llvm.call @aligned_alloc(%[[alignment]], %[[adjust_dst_size]])
 // ALIGNED-ALLOC:           %[[old_buffer_aligned:.*]] = llvm.extractvalue %[[descriptor]][1]
-// ALIGNED-ALLOC:           %[[volatile:.*]] = llvm.mlir.constant(false) : i1
-// ALIGNED-ALLOC:           "llvm.intr.memcpy"(%[[new_buffer_raw]], %[[old_buffer_aligned]], %[[src_size]], %[[volatile]])
+// ALIGNED-ALLOC:           "llvm.intr.memcpy"(%[[new_buffer_raw]], %[[old_buffer_aligned]], %[[src_size]]) <{isVolatile = false}>
 // ALIGNED-ALLOC:           %[[old_buffer_unaligned:.*]] = llvm.extractvalue %[[descriptor]][0]
 // ALIGNED-ALLOC:           llvm.call @free(%[[old_buffer_unaligned]])
 // ALIGNED-ALLOC:           %[[descriptor_update1:.*]] = llvm.insertvalue %[[new_buffer_raw]], %[[descriptor]][0]

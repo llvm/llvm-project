@@ -10,6 +10,7 @@
 #define LLVM_LIBC_TEST_ERRNOSETTERMATCHER_H
 
 #include "src/__support/FPUtil/FPBits.h"
+#include "src/__support/FPUtil/fpbits_str.h"
 #include "src/__support/StringUtil/error_to_string.h"
 #include "src/__support/macros/properties/architectures.h"
 #include "src/errno/libc_errno.h"
@@ -44,24 +45,20 @@ public:
   void explainError() override {
     if (ActualReturn != ExpectedReturn) {
       if constexpr (cpp::is_floating_point_v<T>) {
-        __llvm_libc::testing::tlog
-            << "Expected return value to be: "
-            << __llvm_libc::fputil::FPBits<T>(ExpectedReturn).str() << '\n';
-        __llvm_libc::testing::tlog
-            << "                    But got: "
-            << __llvm_libc::fputil::FPBits<T>(ActualReturn).str() << '\n';
+        tlog << "Expected return value to be: "
+             << str(fputil::FPBits<T>(ExpectedReturn)) << '\n';
+        tlog << "                    But got: "
+             << str(fputil::FPBits<T>(ActualReturn)) << '\n';
       } else {
-        __llvm_libc::testing::tlog << "Expected return value to be "
-                                   << ExpectedReturn << " but got "
-                                   << ActualReturn << ".\n";
+        tlog << "Expected return value to be " << ExpectedReturn << " but got "
+             << ActualReturn << ".\n";
       }
     }
 
     if constexpr (!ignore_errno()) {
       if (ActualErrno != ExpectedErrno) {
-        __llvm_libc::testing::tlog
-            << "Expected errno to be \"" << get_error_string(ExpectedErrno)
-            << "\" but got \"" << get_error_string(ActualErrno) << "\".\n";
+        tlog << "Expected errno to be \"" << get_error_string(ExpectedErrno)
+             << "\" but got \"" << get_error_string(ActualErrno) << "\".\n";
       }
     }
   }

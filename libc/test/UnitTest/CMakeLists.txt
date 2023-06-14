@@ -108,8 +108,8 @@ add_unittest_framework_library(
     LibcTest
     libc.test.UnitTest.string_utils
     libc.src.__support.FPUtil.fp_bits
+    libc.src.__support.FPUtil.fpbits_str
     libc.src.__support.FPUtil.fenv_impl
-    libc.test.UnitTest.string_utils
 )
 
 add_unittest_framework_library(

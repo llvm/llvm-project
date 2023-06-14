@@ -28,10 +28,10 @@
 #ifndef LLVM_ADT_GENERICCYCLEINFO_H
 #define LLVM_ADT_GENERICCYCLEINFO_H
 
+#include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/GenericSSAContext.h"
 #include "llvm/ADT/GraphTraits.h"
 #include "llvm/ADT/SetVector.h"
-#include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/raw_ostream.h"
 
@@ -64,7 +64,7 @@ private:
   /// Basic blocks that are contained in the cycle, including entry blocks,
   /// and including blocks that are part of a child cycle.
   using BlockSetVectorT = SetVector<BlockT *, SmallVector<BlockT *, 8>,
-                                    SmallPtrSet<const BlockT *, 8>>;
+                                    DenseSet<const BlockT *>, 8>;
   BlockSetVectorT Blocks;
 
   /// Depth of the cycle in the tree. The root "cycle" is at depth 0.

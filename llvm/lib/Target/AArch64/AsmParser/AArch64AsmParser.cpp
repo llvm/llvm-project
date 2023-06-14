@@ -4128,13 +4128,13 @@ AArch64AsmParser::tryParseVectorIndex(OperandVector &Operands) {
     const MCConstantExpr *MCE = dyn_cast<MCConstantExpr>(ImmVal);
     if (!MCE) {
       TokError("immediate value expected for vector index");
-      return MatchOperand_ParseFail;;
+      return MatchOperand_ParseFail;
     }
 
     SMLoc E = getLoc();
 
     if (parseToken(AsmToken::RBrac, "']' expected"))
-      return MatchOperand_ParseFail;;
+      return MatchOperand_ParseFail;
 
     Operands.push_back(AArch64Operand::CreateVectorIndex(MCE->getValue(), SIdx,
                                                          E, getContext()));

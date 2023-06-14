@@ -315,11 +315,16 @@ StorageLocation *maybeInitializeOptionalValueMember(QualType Q,
     auto &ValueLoc = ValuePtr->getPointeeLoc();
     if (Env.getValue(ValueLoc) == nullptr) {
       // The property was previously set, but the value has been lost. This can
-      // happen, for example, because of an environment merge (where the two
-      // environments mapped the property to different values, which resulted in
-      // them both being discarded), or when two blocks in the CFG, with neither
-      // a dominator of the other, visit the same optional value, or even when a
-      // block is revisited during testing to collect per-statement state.
+      // happen in various situations, for example:
+      // - Because of an environment merge (where the two environments mapped
+      //   the property to different values, which resulted in them both being
+      //   discarded).
+      // - When two blocks in the CFG, with neither a dominator of the other,
+      //   visit the same optional value. (FIXME: This is something we can and
+      //   should fix -- see also the lengthy FIXME below.)
+      // - Or even when a block is revisited during testing to collect
+      //   per-statement state.
+      //
       // FIXME: This situation means that the optional contents are not shared
       // between branches and the like. Practically, this lack of sharing
       // reduces the precision of the model when the contents are relevant to
@@ -340,6 +345,51 @@ StorageLocation *maybeInitializeOptionalValueMember(QualType Q,
   auto &ValueLoc = Env.createStorageLocation(Ty);
   Env.setValue(ValueLoc, *ValueVal);
   auto &ValuePtr = Env.create<PointerValue>(ValueLoc);
+  // FIXME:
+  // The change we make to the `value` property below may become visible to
+  // other blocks that aren't successors of the current block and therefore
+  // don't see the change we made above mapping `ValueLoc` to `ValueVal`. For
+  // example:
+  //
+  //   void target(optional<int> oo, bool b) {
+  //     // `oo` is associated with a `StructValue` here, which we will call
+  //     // `OptionalVal`.
+  //
+  //     // The `has_value` property is set on `OptionalVal` (but not the
+  //     // `value` property yet).
+  //     if (!oo.has_value()) return;
+  //
+  //     if (b) {
+  //       // Let's assume we transfer the `if` branch first.
+  //       //
+  //       // This causes us to call `maybeInitializeOptionalValueMember()`,
+  //       // which causes us to set the `value` property on `OptionalVal`
+  //       // (which had not been set until this point). This `value` property
+  //       // refers to a `PointerValue`, which in turn refers to a
+  //       // StorageLocation` that is associated to an `IntegerValue`.
+  //       oo.value();
+  //     } else {
+  //       // Let's assume we transfer the `else` branch after the `if` branch.
+  //       //
+  //       // We see the `value` property that the `if` branch set on
+  //       // `OptionalVal`, but in the environment for this block, the
+  //       // `StorageLocation` in the `PointerValue` is not associated with any
+  //       // `Value`.
+  //       oo.value();
+  //     }
+  //   }
+  //
+  // This situation is currently "saved" by the code above that checks whether
+  // the `value` property is already set, and if, the `ValueLoc` is not
+  // associated with a `ValueVal`, creates a new `ValueVal`.
+  //
+  // However, what we should really do is to make sure that the change to the
+  // `value` property does not "leak" to other blocks that are not successors
+  // of this block. To do this, instead of simply setting the `value` property
+  // on the existing `OptionalVal`, we should create a new `Value` for the
+  // optional, set the property on that, and associate the storage location that
+  // is currently associated with the existing `OptionalVal` with the newly
+  // created `Value` instead.
   OptionalVal.setProperty("value", ValuePtr);
   return &ValueLoc;
 }

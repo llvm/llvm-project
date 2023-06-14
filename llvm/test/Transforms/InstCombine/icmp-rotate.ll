@@ -211,9 +211,9 @@ define i1 @wrong_pred(i8 %x, i8 %y, i8 %z) {
 ; negative test - rotate amounts mismatch
 define i1 @amounts_mismatch(i8 %x, i8 %y, i8 %z, i8 %w) {
 ; CHECK-LABEL: @amounts_mismatch(
-; CHECK-NEXT:    [[F:%.*]] = tail call i8 @llvm.fshl.i8(i8 [[X:%.*]], i8 [[X]], i8 [[Z:%.*]])
-; CHECK-NEXT:    [[F2:%.*]] = tail call i8 @llvm.fshl.i8(i8 [[Y:%.*]], i8 [[Y]], i8 [[W:%.*]])
-; CHECK-NEXT:    [[R:%.*]] = icmp eq i8 [[F]], [[F2]]
+; CHECK-NEXT:    [[TMP1:%.*]] = sub i8 [[Z:%.*]], [[W:%.*]]
+; CHECK-NEXT:    [[TMP2:%.*]] = call i8 @llvm.fshl.i8(i8 [[X:%.*]], i8 [[X]], i8 [[TMP1]])
+; CHECK-NEXT:    [[R:%.*]] = icmp eq i8 [[TMP2]], [[Y:%.*]]
 ; CHECK-NEXT:    ret i1 [[R]]
 ;
   %f = tail call i8 @llvm.fshl.i8(i8 %x, i8 %x, i8 %z)

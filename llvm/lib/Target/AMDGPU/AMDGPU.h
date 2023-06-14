@@ -105,10 +105,6 @@ FunctionPass *createAMDGPUConditionalDiscardPass();
 void initializeAMDGPUConditionalDiscardPass(PassRegistry &);
 extern char &AMDGPUConditionalDiscardID;
 
-ModulePass *createAMDGPULowerIntrinsicsPass();
-void initializeAMDGPULowerIntrinsicsPass(PassRegistry &);
-extern char &AMDGPULowerIntrinsicsID;
-
 ModulePass *createAMDGPUCtorDtorLoweringLegacyPass();
 void initializeAMDGPUCtorDtorLoweringLegacyPass(PassRegistry &);
 extern char &AMDGPUCtorDtorLoweringLegacyPassID;

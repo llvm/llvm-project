@@ -2057,8 +2057,13 @@ static bool IsStructurallyEquivalent(StructuralEquivalenceContext &Context,
   if (!IsStructurallyEquivalent(D1->getIdentifier(), D2->getIdentifier()))
     return false;
 
-  if (!IsStructurallyEquivalent(D1->getClassInterface()->getIdentifier(),
-                                D2->getClassInterface()->getIdentifier()))
+  const ObjCInterfaceDecl *Intf1 = D1->getClassInterface(),
+                          *Intf2 = D2->getClassInterface();
+  if ((!Intf1 || !Intf2) && (Intf1 != Intf2))
+    return false;
+
+  if (Intf1 &&
+      !IsStructurallyEquivalent(Intf1->getIdentifier(), Intf2->getIdentifier()))
     return false;
 
   // Compare protocols.
@@ -2077,7 +2082,8 @@ static bool IsStructurallyEquivalent(StructuralEquivalenceContext &Context,
     return false;
 
   // Compare ivars.
-  QualType D2Type = Context.ToCtx.getObjCInterfaceType(D2->getClassInterface());
+  QualType D2Type =
+      Intf2 ? Context.ToCtx.getObjCInterfaceType(Intf2) : QualType();
   ObjCCategoryDecl::ivar_iterator Ivar2 = D2->ivar_begin(),
                                   Ivar2End = D2->ivar_end();
   for (ObjCCategoryDecl::ivar_iterator Ivar1 = D1->ivar_begin(),

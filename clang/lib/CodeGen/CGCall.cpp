@@ -5130,9 +5130,8 @@ RValue CodeGenFunction::EmitCall(const CGFunctionInfo &CallInfo,
           I->copyInto(*this, AI);
         } else {
           // Skip the extra memcpy call.
-          auto *T = llvm::PointerType::getWithSamePointeeType(
-              cast<llvm::PointerType>(V->getType()),
-              CGM.getDataLayout().getAllocaAddrSpace());
+          auto *T = llvm::PointerType::get(
+              CGM.getLLVMContext(), CGM.getDataLayout().getAllocaAddrSpace());
 
           llvm::Value *Val = getTargetHooks().performAddrSpaceCast(
               *this, V, LangAS::Default, CGM.getASTAllocaAddressSpace(), T,

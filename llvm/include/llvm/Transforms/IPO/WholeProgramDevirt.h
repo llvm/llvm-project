@@ -28,7 +28,6 @@ class Module;
 
 template <typename T> class ArrayRef;
 template <typename T> class MutableArrayRef;
-class Function;
 class GlobalVariable;
 class ModuleSummaryIndex;
 struct ValueInfo;

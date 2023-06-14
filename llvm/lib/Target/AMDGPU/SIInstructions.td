@@ -95,6 +95,16 @@ defm V_INTERP_MOV_F32 : VINTRP_m <
 //===----------------------------------------------------------------------===//
 // Pseudo Instructions
 //===----------------------------------------------------------------------===//
+
+// Insert a branch to an endpgm block to use as a fallback trap.
+def ENDPGM_TRAP : SPseudoInstSI<
+  (outs), (ins),
+  [(AMDGPUendpgm_trap)],
+  "ENDPGM_TRAP"> {
+  let hasSideEffects = 1;
+  let usesCustomInserter = 1;
+}
+
 def ATOMIC_FENCE : SPseudoInstSI<
   (outs), (ins i32imm:$ordering, i32imm:$scope),
   [(atomic_fence (i32 timm:$ordering), (i32 timm:$scope))],

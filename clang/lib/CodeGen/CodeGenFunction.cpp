@@ -2499,7 +2499,7 @@ Address CodeGenFunction::EmitFieldAnnotations(const FieldDecl *D,
   auto *PTy = dyn_cast<llvm::PointerType>(VTy);
   unsigned AS = PTy ? PTy->getAddressSpace() : 0;
   llvm::PointerType *IntrinTy =
-      llvm::PointerType::getWithSamePointeeType(CGM.Int8PtrTy, AS);
+      llvm::PointerType::get(CGM.getLLVMContext(), AS);
   llvm::Function *F = CGM.getIntrinsic(llvm::Intrinsic::ptr_annotation,
                                        {IntrinTy, CGM.ConstGlobalsPtrTy});
 

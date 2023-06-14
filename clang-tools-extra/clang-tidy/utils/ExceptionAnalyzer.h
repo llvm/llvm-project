@@ -132,6 +132,7 @@ public:
 private:
   ExceptionInfo
   throwsException(const FunctionDecl *Func,
+                  const ExceptionInfo::Throwables &Caught,
                   llvm::SmallSet<const FunctionDecl *, 32> &CallStack);
   ExceptionInfo
   throwsException(const Stmt *St, const ExceptionInfo::Throwables &Caught,

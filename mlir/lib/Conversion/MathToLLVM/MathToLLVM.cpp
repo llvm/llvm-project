@@ -77,12 +77,10 @@ struct IntOpWithFlagLowering : public ConvertOpToLLVMPattern<MathOp> {
 
     auto loc = op.getLoc();
     auto resultType = op.getResult().getType();
-    auto boolZero = rewriter.getBoolAttr(false);
 
     if (!isa<LLVM::LLVMArrayType>(operandType)) {
-      LLVM::ConstantOp zero = rewriter.create<LLVM::ConstantOp>(loc, boolZero);
       rewriter.replaceOpWithNewOp<LLVMOp>(op, resultType, adaptor.getOperand(),
-                                          zero);
+                                          false);
       return success();
     }
 
@@ -93,10 +91,8 @@ struct IntOpWithFlagLowering : public ConvertOpToLLVMPattern<MathOp> {
     return LLVM::detail::handleMultidimensionalVectors(
         op.getOperation(), adaptor.getOperands(), *this->getTypeConverter(),
         [&](Type llvm1DVectorTy, ValueRange operands) {
-          LLVM::ConstantOp zero =
-              rewriter.create<LLVM::ConstantOp>(loc, boolZero);
           return rewriter.create<LLVMOp>(loc, llvm1DVectorTy, operands[0],
-                                         zero);
+                                         false);
         },
         rewriter);
   }
@@ -105,7 +101,8 @@ struct IntOpWithFlagLowering : public ConvertOpToLLVMPattern<MathOp> {
 using CountLeadingZerosOpLowering =
     IntOpWithFlagLowering<math::CountLeadingZerosOp, LLVM::CountLeadingZerosOp>;
 using CountTrailingZerosOpLowering =
-    IntOpWithFlagLowering<math::CountTrailingZerosOp, LLVM::CountTrailingZerosOp>;
+    IntOpWithFlagLowering<math::CountTrailingZerosOp,
+                          LLVM::CountTrailingZerosOp>;
 using AbsIOpLowering = IntOpWithFlagLowering<math::AbsIOp, LLVM::AbsOp>;
 
 // A `expm1` is converted into `exp - 1`.

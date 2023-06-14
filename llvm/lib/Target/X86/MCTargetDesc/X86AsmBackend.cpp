@@ -144,7 +144,7 @@ public:
       // jumps, and (unfused) conditional jumps with nops.  Both the
       // instructions aligned and the alignment method (nop vs prefix) may
       // change in the future.
-      AlignBoundary = assumeAligned(32);;
+      AlignBoundary = assumeAligned(32);
       AlignBranchType.addKind(X86::AlignBranchFused);
       AlignBranchType.addKind(X86::AlignBranchJcc);
       AlignBranchType.addKind(X86::AlignBranchJmp);

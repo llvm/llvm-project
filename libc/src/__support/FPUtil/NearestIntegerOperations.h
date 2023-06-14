@@ -11,6 +11,7 @@
 
 #include "FEnvImpl.h"
 #include "FPBits.h"
+#include "rounding_mode.h"
 
 #include "src/__support/CPP/type_traits.h"
 #include "src/__support/common.h"
@@ -162,7 +163,7 @@ LIBC_INLINE T round_using_current_rounding_mode(T x) {
 
   bool is_neg = bits.get_sign();
   int exponent = bits.get_exponent();
-  int rounding_mode = get_round();
+  int rounding_mode = quick_get_round();
 
   // If the exponent is greater than the most negative mantissa
   // exponent, then x is already an integer.
