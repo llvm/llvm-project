@@ -136,6 +136,26 @@ static bool isMaskRegOp(const MachineInstr &MI) {
   return Log2SEW == 0;
 }
 
+/// Return true if the inactive elements in the result are entirely undefined.
+/// Note that this is different from "agnostic" as defined by the vector
+/// specification.  Agnostic requires each lane to either be undisturbed, or
+/// take the value -1; no other value is allowed.
+static bool hasUndefinedMergeOp(const MachineInstr &MI,
+                                const MachineRegisterInfo &MRI) {
+
+  unsigned UseOpIdx;
+  if (!MI.isRegTiedToUseOperand(0, &UseOpIdx))
+    // If there is no passthrough operand, then the pass through
+    // lanes are undefined.
+    return true;
+
+  // If the tied operand is an IMPLICIT_DEF, the pass through lanes
+  // are undefined.
+  const MachineOperand &UseMO = MI.getOperand(UseOpIdx);
+  MachineInstr *UseMI = MRI.getVRegDef(UseMO.getReg());
+  return UseMI && UseMI->isImplicitDef();
+}
+
 /// Which subfields of VL or VTYPE have values we need to preserve?
 struct DemandedFields {
   // Some unknown property of VL is used.  If demanded, must preserve entire
@@ -315,14 +335,13 @@ DemandedFields getDemanded(const MachineInstr &MI,
     Res.LMUL = false;
     Res.SEWLMULRatio = false;
     Res.VLAny = false;
-    // For vmv.s.x and vfmv.s.f, if writing to an implicit_def operand, we don't
+    // For vmv.s.x and vfmv.s.f, if the merge operand is *undefined*, we don't
     // need to preserve any other bits and are thus compatible with any larger,
     // etype and can disregard policy bits.  Warning: It's tempting to try doing
     // this for any tail agnostic operation, but we can't as TA requires
     // tail lanes to either be the original value or -1.  We are writing
     // unknown bits to the lanes here.
-    auto *VRegDef = MRI->getVRegDef(MI.getOperand(1).getReg());
-    if (VRegDef && VRegDef->isImplicitDef()) {
+    if (hasUndefinedMergeOp(MI, *MRI)) {
       Res.SEW = DemandedFields::SEWGreaterThanOrEqual;
       Res.TailPolicy = false;
     }
@@ -691,9 +710,9 @@ static VSETVLIInfo computeInfoForInstr(const MachineInstr &MI, uint64_t TSFlags,
                                        const MachineRegisterInfo *MRI) {
   VSETVLIInfo InstrInfo;
 
-  bool TailAgnostic, MaskAgnostic;
-  unsigned UseOpIdx;
-  if (MI.isRegTiedToUseOperand(0, &UseOpIdx)) {
+  bool TailAgnostic = true;
+  bool MaskAgnostic = true;
+  if (!hasUndefinedMergeOp(MI, *MRI)) {
     // Start with undisturbed.
     TailAgnostic = false;
     MaskAgnostic = false;
@@ -708,14 +727,6 @@ static VSETVLIInfo computeInfoForInstr(const MachineInstr &MI, uint64_t TSFlags,
       MaskAgnostic = Policy & RISCVII::MASK_AGNOSTIC;
     }
 
-    // If the tied operand is an IMPLICIT_DEF we can use TailAgnostic and
-    // MaskAgnostic.
-    const MachineOperand &UseMO = MI.getOperand(UseOpIdx);
-    MachineInstr *UseMI = MRI->getVRegDef(UseMO.getReg());
-    if (UseMI && UseMI->isImplicitDef()) {
-      TailAgnostic = true;
-      MaskAgnostic = true;
-    }
     // Some pseudo instructions force a tail agnostic policy despite having a
     // tied def.
     if (RISCVII::doesForceTailAgnostic(TSFlags))
@@ -723,12 +734,6 @@ static VSETVLIInfo computeInfoForInstr(const MachineInstr &MI, uint64_t TSFlags,
 
     if (!RISCVII::usesMaskPolicy(TSFlags))
       MaskAgnostic = true;
-  } else {
-    // If there is no tied operand,, there shouldn't be a policy operand.
-    assert(!RISCVII::hasVecPolicyOp(TSFlags) && "Unexpected policy operand");
-    // No tied operand use agnostic policies.
-    TailAgnostic = true;
-    MaskAgnostic = true;
   }
 
   RISCVII::VLMUL VLMul = RISCVII::getLMul(TSFlags);
@@ -890,23 +895,20 @@ bool RISCVInsertVSETVLI::needVSETVLI(const MachineInstr &MI,
 
   DemandedFields Used = getDemanded(MI, MRI);
 
-  // A slidedown/slideup with an IMPLICIT_DEF merge op can freely clobber
+  // A slidedown/slideup with an *undefined* merge op can freely clobber
   // elements not copied from the source vector (e.g. masked off, tail, or
   // slideup's prefix). Notes:
   // * We can't modify SEW here since the slide amount is in units of SEW.
   // * VL=1 is special only because we have existing support for zero vs
   //   non-zero VL.  We could generalize this if we had a VL > C predicate.
   // * The LMUL1 restriction is for machines whose latency may depend on VL.
-  // * As above, this is only legal for IMPLICIT_DEF, not TA.
+  // * As above, this is only legal for tail "undefined" not "agnostic".
   if (isVSlideInstr(MI) && Require.hasAVLImm() && Require.getAVLImm() == 1 &&
-      isLMUL1OrSmaller(CurInfo.getVLMUL())) {
-    auto *VRegDef = MRI->getVRegDef(MI.getOperand(1).getReg());
-    if (VRegDef && VRegDef->isImplicitDef()) {
-      Used.VLAny = false;
-      Used.VLZeroness = true;
-      Used.LMUL = false;
-      Used.TailPolicy = false;
-    }
+      isLMUL1OrSmaller(CurInfo.getVLMUL()) && hasUndefinedMergeOp(MI, *MRI)) {
+    Used.VLAny = false;
+    Used.VLZeroness = true;
+    Used.LMUL = false;
+    Used.TailPolicy = false;
   }
 
   if (CurInfo.isCompatible(Used, Require, *MRI))
