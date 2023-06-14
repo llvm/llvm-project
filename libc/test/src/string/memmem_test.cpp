@@ -31,21 +31,21 @@ TEST(LlvmLibcMemmemTest, EmptyNeedleReturnsHaystack) {
   char h[] = {'a', 'b', 'c'};
   char *n = nullptr;
   void *result = __llvm_libc::memmem(h, sizeof(h), n, 0);
-  ASSERT_EQ(static_cast<char *>(result), h + 0);
+  ASSERT_EQ(static_cast<char *>(result), h);
 }
 
 TEST(LlvmLibcMemmemTest, ExactMatchReturnsHaystack) {
   char h[] = {'a', 'b', 'c'};
   char n[] = {'a', 'b', 'c'};
   void *result = __llvm_libc::memmem(h, sizeof(h), n, sizeof(n));
-  ASSERT_EQ(static_cast<char *>(result), h + 0);
+  ASSERT_EQ(static_cast<char *>(result), h);
 }
 
 TEST(LlvmLibcMemmemTest, ReturnFirstMatchOfNeedle) {
   char h[] = {'a', 'a', 'b', 'c'};
   char n[] = {'a'};
   void *result = __llvm_libc::memmem(h, sizeof(h), n, sizeof(n));
-  ASSERT_EQ(static_cast<char *>(result), h + 0);
+  ASSERT_EQ(static_cast<char *>(result), h);
 }
 
 TEST(LlvmLibcMemmemTest, ReturnFirstExactMatchOfNeedle) {
@@ -102,7 +102,7 @@ TEST(LlvmLibcMemmemTest, ReturnMatchOfSpecifiedNeedleLength) {
     char h[] = {'a', 'b', 'c'};
     char n[] = {'x', 'y', 'z'};
     void *result = __llvm_libc::memmem(h, sizeof(h), n, 0);
-    ASSERT_EQ(static_cast<char *>(result), h + 0);
+    ASSERT_EQ(static_cast<char *>(result), h);
   }
   {
     char h[] = {'a', 'b', 'c'};

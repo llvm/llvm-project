@@ -356,11 +356,11 @@ template <typename T> bool round_to_long(T x, RoundingMode mode, long &result);
                       mpfr::RoundingMode::TowardZero);                         \
   }
 
-#define TEST_MPFR_MATCH_ROUNDING_SILENTLY(op, input, match_value,              \
-                                          ulp_tolerance, rounding)             \
-  __llvm_libc::testing::mpfr::get_silent_mpfr_matcher<op>(                     \
-      input, match_value, ulp_tolerance, rounding)                             \
-      .match(match_value)
+#define EXPECT_MPFR_MATCH_ROUNDING_SILENTLY(op, input, match_value,            \
+                                            ulp_tolerance, rounding)           \
+  EXPECT_THAT(match_value,                                                     \
+              __llvm_libc::testing::mpfr::get_silent_mpfr_matcher<op>(         \
+                  input, match_value, ulp_tolerance, rounding))
 
 #define ASSERT_MPFR_MATCH_DEFAULT(op, input, match_value, ulp_tolerance)       \
   ASSERT_THAT(match_value,                                                     \
