@@ -36,7 +36,7 @@ Features
   external linkers. All you have to do is to construct object files
   and command line arguments just like you would do to invoke an
   external linker and then call the linker's main function,
-  ``lld::lldMain``, from your code.
+  ``lld::elf::link``, from your code.
 
 - It is small. We are using LLVM libObject library to read from object
   files, so it is not a completely fair comparison, but as of February

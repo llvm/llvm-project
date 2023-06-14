@@ -2469,13 +2469,3 @@ function(setup_host_tool tool_name setting_name exe_var_name target_var_name)
     add_custom_target(${target_var_name} DEPENDS ${exe_name})
   endif()
 endfunction()
-
-# Adds the unittests folder if gtest is available.
-function(llvm_add_unittests tests_added)
-  if (EXISTS ${LLVM_THIRD_PARTY_DIR}/unittest/googletest/include/gtest/gtest.h)
-    add_subdirectory(unittests)
-    set(${tests_added} ON PARENT_SCOPE)
-  else()
-    message(WARNING "gtest not found, unittests will not be available")
-  endif()
-endfunction()
