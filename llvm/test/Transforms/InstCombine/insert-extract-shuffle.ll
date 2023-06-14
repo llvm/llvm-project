@@ -267,7 +267,7 @@ define <4 x i32> @extractelt_insertion(<2 x i32> %x, i32 %y) {
 ; CHECK-LABEL: @extractelt_insertion(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[TMP0:%.*]] = shufflevector <2 x i32> [[X:%.*]], <2 x i32> poison, <4 x i32> <i32 0, i32 1, i32 poison, i32 poison>
-; CHECK-NEXT:    [[B:%.*]] = shufflevector <4 x i32> <i32 0, i32 0, i32 0, i32 poison>, <4 x i32> [[TMP0]], <4 x i32> <i32 0, i32 1, i32 2, i32 5>
+; CHECK-NEXT:    [[B:%.*]] = shufflevector <4 x i32> <i32 0, i32 poison, i32 poison, i32 poison>, <4 x i32> [[TMP0]], <4 x i32> <i32 0, i32 0, i32 0, i32 5>
 ; CHECK-NEXT:    [[C:%.*]] = add i32 [[Y:%.*]], 3
 ; CHECK-NEXT:    [[D:%.*]] = extractelement <4 x i32> [[TMP0]], i32 [[C]]
 ; CHECK-NEXT:    [[E:%.*]] = icmp eq i32 [[D]], 0
@@ -788,4 +788,19 @@ define <4 x float> @splat_constant(<4 x float> %x) {
   %splat3 = shufflevector <4 x float> %ins3, <4 x float> undef, <4 x i32> <i32 3, i32 3, i32 3, i32 3>
   %r = fadd <4 x float> %ins3, %splat3
   ret <4 x float> %r
+}
+
+define <4 x i32> @infloop_D151807(<4 x float> %arg) {
+; CHECK-LABEL: @infloop_D151807(
+; CHECK-NEXT:    [[I:%.*]] = shufflevector <4 x float> [[ARG:%.*]], <4 x float> poison, <2 x i32> <i32 2, i32 poison>
+; CHECK-NEXT:    [[I1:%.*]] = bitcast <2 x float> [[I]] to <2 x i32>
+; CHECK-NEXT:    [[TMP1:%.*]] = shufflevector <2 x i32> [[I1]], <2 x i32> poison, <4 x i32> <i32 0, i32 poison, i32 poison, i32 poison>
+; CHECK-NEXT:    [[I4:%.*]] = shufflevector <4 x i32> <i32 0, i32 poison, i32 poison, i32 poison>, <4 x i32> [[TMP1]], <4 x i32> <i32 4, i32 0, i32 0, i32 0>
+; CHECK-NEXT:    ret <4 x i32> [[I4]]
+;
+  %i = shufflevector <4 x float> %arg, <4 x float> poison, <2 x i32> <i32 2, i32 poison>
+  %i1 = bitcast <2 x float> %i to <2 x i32>
+  %i3 = extractelement <2 x i32> %i1, i64 0
+  %i4 = insertelement <4 x i32> zeroinitializer, i32 %i3, i64 0
+  ret <4 x i32> %i4
 }
