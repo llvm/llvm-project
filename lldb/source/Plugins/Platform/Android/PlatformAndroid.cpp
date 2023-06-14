@@ -29,9 +29,35 @@ using namespace std::chrono;
 
 LLDB_PLUGIN_DEFINE(PlatformAndroid)
 
-static uint32_t g_initialize_count = 0;
-static const unsigned int g_android_default_cache_size =
+namespace {
+
+#define LLDB_PROPERTIES_android
+#include "PlatformAndroidProperties.inc"
+
+enum {
+#define LLDB_PROPERTIES_android
+#include "PlatformAndroidPropertiesEnum.inc"
+};
+
+class PluginProperties : public Properties {
+public:
+  PluginProperties() {
+    m_collection_sp = std::make_shared<OptionValueProperties>(
+        ConstString(PlatformAndroid::GetPluginNameStatic(false)));
+    m_collection_sp->Initialize(g_android_properties);
+  }
+};
+
+static PluginProperties &GetGlobalProperties() {
+  static PluginProperties g_settings;
+  return g_settings;
+}
+
+uint32_t g_initialize_count = 0;
+const unsigned int g_android_default_cache_size =
     2048; // Fits inside 4k adb packet.
+
+} // end of anonymous namespace
 
 void PlatformAndroid::Initialize() {
   PlatformLinux::Initialize();
@@ -45,7 +71,7 @@ void PlatformAndroid::Initialize() {
     PluginManager::RegisterPlugin(
         PlatformAndroid::GetPluginNameStatic(false),
         PlatformAndroid::GetPluginDescriptionStatic(false),
-        PlatformAndroid::CreateInstance);
+        PlatformAndroid::CreateInstance, PlatformAndroid::DebuggerInitialize);
   }
 }
 
@@ -128,6 +154,16 @@ PlatformSP PlatformAndroid::CreateInstance(bool force, const ArchSpec *arch) {
   return PlatformSP();
 }
 
+void PlatformAndroid::DebuggerInitialize(Debugger &debugger) {
+  if (!PluginManager::GetSettingForPlatformPlugin(
+          debugger, ConstString(GetPluginNameStatic(false)))) {
+    PluginManager::CreateSettingForPlatformPlugin(
+        debugger, GetGlobalProperties().GetValueProperties(),
+        "Properties for the Android platform plugin.",
+        /*is_global_property=*/true);
+  }
+}
+
 PlatformAndroid::PlatformAndroid(bool is_host)
     : PlatformLinux(is_host), m_sdk_version(0) {}
 
@@ -206,7 +242,8 @@ Status PlatformAndroid::GetFile(const FileSpec &source,
     return error;
 
   char cmd[PATH_MAX];
-  snprintf(cmd, sizeof(cmd), "cat '%s'", source_file.c_str());
+  snprintf(cmd, sizeof(cmd), "%scat '%s'", GetRunAs().c_str(),
+           source_file.c_str());
 
   return adb->ShellToFile(cmd, minutes(1), destination);
 }
@@ -260,9 +297,9 @@ Status PlatformAndroid::DownloadModuleSlice(const FileSpec &src_file_spec,
   // Use 'shell dd' to download the file slice with the offset and size.
   char cmd[PATH_MAX];
   snprintf(cmd, sizeof(cmd),
-           "dd if='%s' iflag=skip_bytes,count_bytes "
+           "%sdd if='%s' iflag=skip_bytes,count_bytes "
            "skip=%" PRIu64 " count=%" PRIu64 " status=none",
-           source_file.c_str(), src_offset, src_size);
+           GetRunAs().c_str(), source_file.c_str(), src_offset, src_size);
 
   return adb->ShellToFile(cmd, minutes(1), dst_file_spec);
 }
@@ -408,6 +445,27 @@ PlatformAndroid::AdbClientUP PlatformAndroid::GetAdbClient(Status &error) {
   else
     error = Status("Failed to create AdbClient");
   return adb;
+}
+
+llvm::StringRef PlatformAndroid::GetPropertyPackageName() {
+  return GetGlobalProperties().GetPropertyAtIndexAs<llvm::StringRef>(
+      ePropertyPlatformPackageName, "");
+}
+
+std::string PlatformAndroid::GetRunAs() {
+  llvm::StringRef run_as = GetPropertyPackageName();
+  if (!run_as.empty()) {
+    // When LLDB fails to pull file from a package directory due to security
+    // constraint, user needs to set the package name to
+    // 'platform.plugin.remote-android.package-name' property in order to run
+    // shell commands as the package user using 'run-as' (e.g. to get file with
+    // 'cat' and 'dd').
+    // https://cs.android.com/android/platform/superproject/+/master:
+    // system/core/run-as/run-as.cpp;l=39-61;
+    // drc=4a77a84a55522a3b122f9c63ef0d0b8a6a131627
+    return std::string("run-as '") + run_as.str() + "' ";
+  }
+  return run_as.str();
 }
 
 AdbClient::SyncService *PlatformAndroid::GetSyncService(Status &error) {
