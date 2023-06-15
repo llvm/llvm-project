@@ -2,6 +2,7 @@
 ; RUN: llc -march=amdgcn -verify-machineinstrs < %s | FileCheck -check-prefixes=SICI,SI %s
 ; RUN: llc -march=amdgcn -mcpu=bonaire -verify-machineinstrs < %s | FileCheck -check-prefixes=SICI,CI %s
 ; RUN: llc -march=amdgcn -mcpu=tonga -verify-machineinstrs < %s | FileCheck -check-prefixes=VI %s
+; RUN: llc -march=amdgcn -mcpu=gfx1100 -verify-machineinstrs < %s | FileCheck -check-prefixes=GFX11 %s
 
 declare half @llvm.nearbyint.f16(half) #0
 declare float @llvm.nearbyint.f32(float) #0
@@ -48,6 +49,18 @@ define amdgpu_kernel void @fnearbyint_f16(ptr addrspace(1) %out, half %in) #1 {
 ; VI-NEXT:    v_mov_b32_e32 v1, s1
 ; VI-NEXT:    flat_store_short v[0:1], v2
 ; VI-NEXT:    s_endpgm
+;
+; GFX11-LABEL: fnearbyint_f16:
+; GFX11:       ; %bb.0:
+; GFX11-NEXT:    s_clause 0x1
+; GFX11-NEXT:    s_load_b32 s2, s[0:1], 0x2c
+; GFX11-NEXT:    s_load_b64 s[0:1], s[0:1], 0x24
+; GFX11-NEXT:    v_mov_b32_e32 v0, 0
+; GFX11-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX11-NEXT:    v_rndne_f16_e32 v1, s2
+; GFX11-NEXT:    global_store_b16 v0, v1, s[0:1]
+; GFX11-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
+; GFX11-NEXT:    s_endpgm
   %1 = call half @llvm.nearbyint.f16(half %in)
   store half %1, ptr addrspace(1) %out
   ret void
@@ -75,6 +88,18 @@ define amdgpu_kernel void @fnearbyint_f32(ptr addrspace(1) %out, float %in) #1 {
 ; VI-NEXT:    v_mov_b32_e32 v1, s1
 ; VI-NEXT:    flat_store_dword v[0:1], v2
 ; VI-NEXT:    s_endpgm
+;
+; GFX11-LABEL: fnearbyint_f32:
+; GFX11:       ; %bb.0: ; %entry
+; GFX11-NEXT:    s_clause 0x1
+; GFX11-NEXT:    s_load_b32 s2, s[0:1], 0x2c
+; GFX11-NEXT:    s_load_b64 s[0:1], s[0:1], 0x24
+; GFX11-NEXT:    v_mov_b32_e32 v0, 0
+; GFX11-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX11-NEXT:    v_rndne_f32_e32 v1, s2
+; GFX11-NEXT:    global_store_b32 v0, v1, s[0:1]
+; GFX11-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
+; GFX11-NEXT:    s_endpgm
 entry:
   %0 = call float @llvm.nearbyint.f32(float %in)
   store float %0, ptr addrspace(1) %out
@@ -105,6 +130,17 @@ define amdgpu_kernel void @fnearbyint_v2f32(ptr addrspace(1) %out, <2 x float> %
 ; VI-NEXT:    v_mov_b32_e32 v2, s0
 ; VI-NEXT:    flat_store_dwordx2 v[2:3], v[0:1]
 ; VI-NEXT:    s_endpgm
+;
+; GFX11-LABEL: fnearbyint_v2f32:
+; GFX11:       ; %bb.0: ; %entry
+; GFX11-NEXT:    s_load_b128 s[0:3], s[0:1], 0x24
+; GFX11-NEXT:    v_mov_b32_e32 v2, 0
+; GFX11-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX11-NEXT:    v_rndne_f32_e32 v1, s3
+; GFX11-NEXT:    v_rndne_f32_e32 v0, s2
+; GFX11-NEXT:    global_store_b64 v2, v[0:1], s[0:1]
+; GFX11-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
+; GFX11-NEXT:    s_endpgm
 entry:
   %0 = call <2 x float> @llvm.nearbyint.v2f32(<2 x float> %in)
   store <2 x float> %0, ptr addrspace(1) %out
@@ -139,6 +175,21 @@ define amdgpu_kernel void @fnearbyint_v4f32(ptr addrspace(1) %out, <4 x float> %
 ; VI-NEXT:    v_mov_b32_e32 v4, s0
 ; VI-NEXT:    flat_store_dwordx4 v[4:5], v[0:3]
 ; VI-NEXT:    s_endpgm
+;
+; GFX11-LABEL: fnearbyint_v4f32:
+; GFX11:       ; %bb.0: ; %entry
+; GFX11-NEXT:    s_clause 0x1
+; GFX11-NEXT:    s_load_b128 s[4:7], s[0:1], 0x34
+; GFX11-NEXT:    s_load_b64 s[0:1], s[0:1], 0x24
+; GFX11-NEXT:    v_mov_b32_e32 v4, 0
+; GFX11-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX11-NEXT:    v_rndne_f32_e32 v3, s7
+; GFX11-NEXT:    v_rndne_f32_e32 v2, s6
+; GFX11-NEXT:    v_rndne_f32_e32 v1, s5
+; GFX11-NEXT:    v_rndne_f32_e32 v0, s4
+; GFX11-NEXT:    global_store_b128 v4, v[0:3], s[0:1]
+; GFX11-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
+; GFX11-NEXT:    s_endpgm
 entry:
   %0 = call <4 x float> @llvm.nearbyint.v4f32(<4 x float> %in)
   store <4 x float> %0, ptr addrspace(1) %out
@@ -189,6 +240,16 @@ define amdgpu_kernel void @nearbyint_f64(ptr addrspace(1) %out, double %in) {
 ; VI-NEXT:    v_mov_b32_e32 v3, s1
 ; VI-NEXT:    flat_store_dwordx2 v[2:3], v[0:1]
 ; VI-NEXT:    s_endpgm
+;
+; GFX11-LABEL: nearbyint_f64:
+; GFX11:       ; %bb.0: ; %entry
+; GFX11-NEXT:    s_load_b128 s[0:3], s[0:1], 0x24
+; GFX11-NEXT:    v_mov_b32_e32 v2, 0
+; GFX11-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX11-NEXT:    v_rndne_f64_e32 v[0:1], s[2:3]
+; GFX11-NEXT:    global_store_b64 v2, v[0:1], s[0:1]
+; GFX11-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
+; GFX11-NEXT:    s_endpgm
 entry:
   %0 = call double @llvm.nearbyint.f64(double %in)
   store double %0, ptr addrspace(1) %out
@@ -251,6 +312,19 @@ define amdgpu_kernel void @nearbyint_v2f64(ptr addrspace(1) %out, <2 x double> %
 ; VI-NEXT:    v_mov_b32_e32 v4, s0
 ; VI-NEXT:    flat_store_dwordx4 v[4:5], v[0:3]
 ; VI-NEXT:    s_endpgm
+;
+; GFX11-LABEL: nearbyint_v2f64:
+; GFX11:       ; %bb.0: ; %entry
+; GFX11-NEXT:    s_clause 0x1
+; GFX11-NEXT:    s_load_b128 s[4:7], s[0:1], 0x34
+; GFX11-NEXT:    s_load_b64 s[0:1], s[0:1], 0x24
+; GFX11-NEXT:    v_mov_b32_e32 v4, 0
+; GFX11-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX11-NEXT:    v_rndne_f64_e32 v[2:3], s[6:7]
+; GFX11-NEXT:    v_rndne_f64_e32 v[0:1], s[4:5]
+; GFX11-NEXT:    global_store_b128 v4, v[0:3], s[0:1]
+; GFX11-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
+; GFX11-NEXT:    s_endpgm
 entry:
   %0 = call <2 x double> @llvm.nearbyint.v2f64(<2 x double> %in)
   store <2 x double> %0, ptr addrspace(1) %out
@@ -341,6 +415,23 @@ define amdgpu_kernel void @nearbyint_v4f64(ptr addrspace(1) %out, <4 x double> %
 ; VI-NEXT:    flat_store_dwordx4 v[10:11], v[4:7]
 ; VI-NEXT:    flat_store_dwordx4 v[8:9], v[0:3]
 ; VI-NEXT:    s_endpgm
+;
+; GFX11-LABEL: nearbyint_v4f64:
+; GFX11:       ; %bb.0: ; %entry
+; GFX11-NEXT:    s_clause 0x1
+; GFX11-NEXT:    s_load_b256 s[4:11], s[0:1], 0x44
+; GFX11-NEXT:    s_load_b64 s[0:1], s[0:1], 0x24
+; GFX11-NEXT:    v_mov_b32_e32 v8, 0
+; GFX11-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX11-NEXT:    v_rndne_f64_e32 v[6:7], s[10:11]
+; GFX11-NEXT:    v_rndne_f64_e32 v[4:5], s[8:9]
+; GFX11-NEXT:    v_rndne_f64_e32 v[2:3], s[6:7]
+; GFX11-NEXT:    v_rndne_f64_e32 v[0:1], s[4:5]
+; GFX11-NEXT:    s_clause 0x1
+; GFX11-NEXT:    global_store_b128 v8, v[4:7], s[0:1] offset:16
+; GFX11-NEXT:    global_store_b128 v8, v[0:3], s[0:1]
+; GFX11-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
+; GFX11-NEXT:    s_endpgm
 entry:
   %0 = call <4 x double> @llvm.nearbyint.v4f64(<4 x double> %in)
   store <4 x double> %0, ptr addrspace(1) %out
