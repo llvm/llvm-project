@@ -1319,9 +1319,9 @@ ModuleMap::canonicalizeModuleMapPath(SmallVectorImpl<char> &Path) {
   }
 
   FileManager &FM = SourceMgr.getFileManager();
-  auto DirEntry = FM.getDirectory(Dir.empty() ? "." : Dir);
+  auto DirEntry = FM.getDirectoryRef(Dir.empty() ? "." : Dir);
   if (!DirEntry)
-    return DirEntry.getError();
+    return llvm::errorToErrorCode(DirEntry.takeError());
 
   // Canonicalize the directory.
   StringRef CanonicalDir = FM.getCanonicalName(*DirEntry);
