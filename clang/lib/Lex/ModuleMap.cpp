@@ -700,13 +700,12 @@ ModuleMap::findResolvedModulesForHeader(const FileEntry *File) const {
   return It->second;
 }
 
-bool ModuleMap::isHeaderInUnavailableModule(const FileEntry *Header) const {
+bool ModuleMap::isHeaderInUnavailableModule(FileEntryRef Header) const {
   return isHeaderUnavailableInModule(Header, nullptr);
 }
 
-bool
-ModuleMap::isHeaderUnavailableInModule(const FileEntry *Header,
-                                       const Module *RequestingModule) const {
+bool ModuleMap::isHeaderUnavailableInModule(
+    FileEntryRef Header, const Module *RequestingModule) const {
   resolveHeaderDirectives(Header);
   HeadersMap::const_iterator Known = Headers.find(Header);
   if (Known != Headers.end()) {
@@ -734,8 +733,8 @@ ModuleMap::isHeaderUnavailableInModule(const FileEntry *Header,
     return true;
   }
 
-  const DirectoryEntry *Dir = Header->getDir();
-  SmallVector<const DirectoryEntry *, 2> SkippedDirs;
+  OptionalDirectoryEntryRef Dir = Header.getDir();
+  SmallVector<DirectoryEntryRef, 2> SkippedDirs;
   StringRef DirName = Dir->getName();
 
   auto IsUnavailable = [&](const Module *M) {
@@ -746,8 +745,7 @@ ModuleMap::isHeaderUnavailableInModule(const FileEntry *Header,
   // Keep walking up the directory hierarchy, looking for a directory with
   // an umbrella header.
   do {
-    llvm::DenseMap<const DirectoryEntry *, Module *>::const_iterator KnownDir
-      = UmbrellaDirs.find(Dir);
+    auto KnownDir = UmbrellaDirs.find(*Dir);
     if (KnownDir != UmbrellaDirs.end()) {
       Module *Found = KnownDir->second;
       if (IsUnavailable(Found))
@@ -761,11 +759,11 @@ ModuleMap::isHeaderUnavailableInModule(const FileEntry *Header,
         UmbrellaModule = UmbrellaModule->Parent;
 
       if (UmbrellaModule->InferSubmodules) {
-        for (const DirectoryEntry *SkippedDir : llvm::reverse(SkippedDirs)) {
+        for (DirectoryEntryRef SkippedDir : llvm::reverse(SkippedDirs)) {
           // Find or create the module that corresponds to this directory name.
           SmallString<32> NameBuf;
           StringRef Name = sanitizeFilenameAsIdentifier(
-              llvm::sys::path::stem(SkippedDir->getName()), NameBuf);
+              llvm::sys::path::stem(SkippedDir.getName()), NameBuf);
           Found = lookupModuleQualified(Name, Found);
           if (!Found)
             return false;
@@ -776,7 +774,7 @@ ModuleMap::isHeaderUnavailableInModule(const FileEntry *Header,
         // Infer a submodule with the same name as this header file.
         SmallString<32> NameBuf;
         StringRef Name = sanitizeFilenameAsIdentifier(
-                           llvm::sys::path::stem(Header->getName()),
+                           llvm::sys::path::stem(Header.getName()),
                            NameBuf);
         Found = lookupModuleQualified(Name, Found);
         if (!Found)
@@ -786,7 +784,7 @@ ModuleMap::isHeaderUnavailableInModule(const FileEntry *Header,
       return IsUnavailable(Found);
     }
 
-    SkippedDirs.push_back(Dir);
+    SkippedDirs.push_back(*Dir);
 
     // Retrieve our parent path.
     DirName = llvm::sys::path::parent_path(DirName);
@@ -794,10 +792,7 @@ ModuleMap::isHeaderUnavailableInModule(const FileEntry *Header,
       break;
 
     // Resolve the parent path to a directory entry.
-    if (auto DirEntry = SourceMgr.getFileManager().getDirectory(DirName))
-      Dir = *DirEntry;
-    else
-      Dir = nullptr;
+    Dir = SourceMgr.getFileManager().getOptionalDirectoryRef(DirName);
   } while (Dir);
 
   return false;
