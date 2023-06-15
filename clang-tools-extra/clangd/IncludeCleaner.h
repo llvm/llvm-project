@@ -75,11 +75,6 @@ include_cleaner::Includes
 convertIncludes(const SourceManager &SM,
                 const llvm::ArrayRef<Inclusion> Includes);
 
-/// Determines the header spelling of an include-cleaner header
-/// representation. The spelling contains the ""<> characters.
-std::string spellHeader(ParsedAST &AST, const FileEntry *MainFile,
-                        include_cleaner::Header Provider);
-
 std::vector<include_cleaner::SymbolReference>
 collectMacroReferences(ParsedAST &AST);
 

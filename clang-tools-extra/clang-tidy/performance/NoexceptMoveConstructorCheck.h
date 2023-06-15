@@ -21,6 +21,9 @@ namespace clang::tidy::performance {
 /// Move constructors of all the types used with STL containers, for example,
 /// need to be declared `noexcept`. Otherwise STL will choose copy constructors
 /// instead. The same is valid for move assignment operations.
+///
+/// For the user-facing documentation see:
+/// https://clang.llvm.org/extra/clang-tidy/checks/performance/noexcept-move-constructor.html
 class NoexceptMoveConstructorCheck : public ClangTidyCheck {
 public:
   NoexceptMoveConstructorCheck(StringRef Name, ClangTidyContext *Context)
@@ -30,6 +33,9 @@ public:
   }
   void registerMatchers(ast_matchers::MatchFinder *Finder) override;
   void check(const ast_matchers::MatchFinder::MatchResult &Result) override;
+  std::optional<TraversalKind> getCheckTraversalKind() const override {
+    return TK_IgnoreUnlessSpelledInSource;
+  }
 
 private:
   utils::ExceptionSpecAnalyzer SpecAnalyzer;

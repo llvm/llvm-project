@@ -127,10 +127,8 @@ public:
     return llvm::cast<llvm::Constant>(Address::getPointer());
   }
 
-  ConstantAddress getElementBitCast(llvm::Type *ElemTy) const {
-    llvm::Constant *BitCast = llvm::ConstantExpr::getBitCast(
-        getPointer(), ElemTy->getPointerTo(getAddressSpace()));
-    return ConstantAddress(BitCast, ElemTy, getAlignment());
+  ConstantAddress withElementType(llvm::Type *ElemTy) const {
+    return ConstantAddress(getPointer(), ElemTy, getAlignment());
   }
 
   static bool isaImpl(Address addr) {

@@ -47,7 +47,7 @@ let Uses = [MODE, M0, EXEC] in {
 multiclass V_INTERP_P1_F32_m : VINTRP_m <
   0x00000000,
   (outs VINTRPDst:$vdst),
-  (ins VGPR_32:$vsrc, Attr:$attr, AttrChan:$attrchan),
+  (ins VGPR_32:$vsrc, InterpAttr:$attr, InterpAttrChan:$attrchan),
   "v_interp_p1_f32$vdst, $vsrc, $attr$attrchan",
   [(set f32:$vdst, (int_amdgcn_interp_p1 f32:$vsrc,
                    (i32 timm:$attrchan), (i32 timm:$attr), M0))]
@@ -73,7 +73,8 @@ let DisableEncoding = "$src0", Constraints = "$src0 = $vdst" in {
 defm V_INTERP_P2_F32 : VINTRP_m <
   0x00000001,
   (outs VINTRPDst:$vdst),
-  (ins VGPR_32:$src0, VGPR_32:$vsrc, Attr:$attr, AttrChan:$attrchan),
+  (ins VGPR_32:$src0, VGPR_32:$vsrc, InterpAttr:$attr,
+       InterpAttrChan:$attrchan),
   "v_interp_p2_f32$vdst, $vsrc, $attr$attrchan",
   [(set f32:$vdst, (int_amdgcn_interp_p2 f32:$src0, f32:$vsrc,
                    (i32 timm:$attrchan), (i32 timm:$attr), M0))]>;
@@ -83,7 +84,7 @@ defm V_INTERP_P2_F32 : VINTRP_m <
 defm V_INTERP_MOV_F32 : VINTRP_m <
   0x00000002,
   (outs VINTRPDst:$vdst),
-  (ins InterpSlot:$vsrc, Attr:$attr, AttrChan:$attrchan),
+  (ins InterpSlot:$vsrc, InterpAttr:$attr, InterpAttrChan:$attrchan),
   "v_interp_mov_f32$vdst, $vsrc, $attr$attrchan",
   [(set f32:$vdst, (int_amdgcn_interp_mov (i32 timm:$vsrc),
                    (i32 timm:$attrchan), (i32 timm:$attr), M0))]>;

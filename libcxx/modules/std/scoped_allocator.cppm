@@ -17,8 +17,5 @@ export namespace std {
 
   // [scoped.adaptor.operators], scoped allocator operators
   using std::operator==;
-#if 1 // P1614
-  using std::operator!=;
-#endif
 
 } // namespace std

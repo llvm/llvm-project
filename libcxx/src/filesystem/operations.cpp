@@ -1550,8 +1550,13 @@ path __temp_directory_path(error_code* ec) {
   for (auto& ep : env_paths)
     if ((ret = getenv(ep)))
       break;
-  if (ret == nullptr)
+  if (ret == nullptr) {
+#if defined(__ANDROID__)
+    ret = "/data/local/tmp";
+#else
     ret = "/tmp";
+#endif
+  }
 
   path p(ret);
 #endif

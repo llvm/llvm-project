@@ -151,8 +151,7 @@ note: candidate function not viable: requires single argument 'x', but 2 argumen
         value = frame.EvaluateExpression("struct Redef { float y; };", top_level_opts)
         self.assertFalse(value.GetError().Success())
         self.assertIn(
-            """
-error: <user expression 9>:1:8: redefinition of 'Redef'
+            """error: <user expression 9>:1:8: redefinition of 'Redef'
     1 | struct Redef { float y; };
       |        ^
 <user expression 8>:1:8: previous definition is here

@@ -10864,8 +10864,8 @@ static void DiagnoseBadConversion(Sema &S, OverloadCandidate *Cand,
   if (FromExpr && isa<InitListExpr>(FromExpr)) {
     S.Diag(Fn->getLocation(), diag::note_ovl_candidate_bad_list_argument)
         << (unsigned)FnKindPair.first << (unsigned)FnKindPair.second << FnDesc
-        << (FromExpr ? FromExpr->getSourceRange() : SourceRange()) << FromTy
-        << ToTy << (unsigned)isObjectArgument << I + 1
+        << FromExpr->getSourceRange() << FromTy << ToTy
+        << (unsigned)isObjectArgument << I + 1
         << (Conv.Bad.Kind == BadConversionSequence::too_few_initializers ? 1
             : Conv.Bad.Kind == BadConversionSequence::too_many_initializers
                 ? 2

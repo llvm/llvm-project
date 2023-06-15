@@ -264,6 +264,7 @@ clang_tidy_library(
         ":lib",
         ":misc",
         ":modernize",
+        ":performance",
         ":readability",
         ":utils",
     ],

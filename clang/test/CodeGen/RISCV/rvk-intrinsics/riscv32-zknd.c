@@ -10,7 +10,7 @@
 // RV32ZKND-NEXT:    store i32 [[RS2:%.*]], ptr [[RS2_ADDR]], align 4
 // RV32ZKND-NEXT:    [[TMP0:%.*]] = load i32, ptr [[RS1_ADDR]], align 4
 // RV32ZKND-NEXT:    [[TMP1:%.*]] = load i32, ptr [[RS2_ADDR]], align 4
-// RV32ZKND-NEXT:    [[TMP2:%.*]] = call i32 @llvm.riscv.aes32dsi(i32 [[TMP0]], i32 [[TMP1]], i8 3)
+// RV32ZKND-NEXT:    [[TMP2:%.*]] = call i32 @llvm.riscv.aes32dsi(i32 [[TMP0]], i32 [[TMP1]], i32 3)
 // RV32ZKND-NEXT:    ret i32 [[TMP2]]
 //
 int aes32dsi(int rs1, int rs2) {
@@ -25,7 +25,7 @@ int aes32dsi(int rs1, int rs2) {
 // RV32ZKND-NEXT:    store i32 [[RS2:%.*]], ptr [[RS2_ADDR]], align 4
 // RV32ZKND-NEXT:    [[TMP0:%.*]] = load i32, ptr [[RS1_ADDR]], align 4
 // RV32ZKND-NEXT:    [[TMP1:%.*]] = load i32, ptr [[RS2_ADDR]], align 4
-// RV32ZKND-NEXT:    [[TMP2:%.*]] = call i32 @llvm.riscv.aes32dsmi(i32 [[TMP0]], i32 [[TMP1]], i8 3)
+// RV32ZKND-NEXT:    [[TMP2:%.*]] = call i32 @llvm.riscv.aes32dsmi(i32 [[TMP0]], i32 [[TMP1]], i32 3)
 // RV32ZKND-NEXT:    ret i32 [[TMP2]]
 //
 int aes32dsmi(int rs1, int rs2) {

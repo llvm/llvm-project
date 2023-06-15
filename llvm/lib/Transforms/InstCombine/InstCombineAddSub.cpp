@@ -1383,6 +1383,9 @@ Instruction *InstCombinerImpl::visitAdd(BinaryOperator &I) {
   if (Instruction *X = foldNoWrapAdd(I, Builder))
     return X;
 
+  if (Instruction *R = foldBinOpShiftWithShift(I))
+    return R;
+
   Value *LHS = I.getOperand(0), *RHS = I.getOperand(1);
   Type *Ty = I.getType();
   if (Ty->isIntOrIntVectorTy(1))

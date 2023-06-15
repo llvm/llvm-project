@@ -286,6 +286,10 @@ public:
     return false;
   }
 
+  bool addrspacesMayAlias(unsigned AS0, unsigned AS1) const {
+    return true;
+  }
+
   unsigned getFlatAddressSpace() {
     // Return an invalid address space.
     return -1;

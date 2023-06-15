@@ -30,9 +30,6 @@ class MachineDominatorTree;
 class MachineRegisterInfo;
 class TargetRegisterInfo;
 
-} // namespace llvm
-
-namespace llvm {
 namespace rdf {
 namespace detail {
 
@@ -53,8 +50,7 @@ template <> struct hash<llvm::rdf::detail::NodeRef> {
 
 } // namespace std
 
-namespace llvm {
-namespace rdf {
+namespace llvm::rdf {
 
 struct Liveness {
 public:
@@ -159,8 +155,6 @@ private:
 
 raw_ostream &operator<<(raw_ostream &OS, const Print<Liveness::RefMap> &P);
 
-} // end namespace rdf
-
-} // end namespace llvm
+} // end namespace llvm::rdf
 
 #endif // LLVM_CODEGEN_RDFLIVENESS_H

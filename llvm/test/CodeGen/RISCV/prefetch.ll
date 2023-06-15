@@ -3,17 +3,75 @@
 ; RUN:   | FileCheck -check-prefix=RV32I %s
 ; RUN: llc -mtriple=riscv64 -verify-machineinstrs < %s \
 ; RUN:   | FileCheck -check-prefix=RV64I %s
+; RUN: llc -mtriple=riscv32 -mattr=+zicbop -verify-machineinstrs < %s \
+; RUN:   | FileCheck -check-prefix=RV32ZICBOP %s
+; RUN: llc -mtriple=riscv64 -mattr=zicbop -verify-machineinstrs < %s \
+; RUN:   | FileCheck -check-prefix=RV64ZICBOP %s
 
 declare void @llvm.prefetch(ptr, i32, i32, i32)
 
-define void @test_prefetch(ptr %a) nounwind {
-; RV32I-LABEL: test_prefetch:
+define void @test_prefetch_read(ptr %a) nounwind {
+; RV32I-LABEL: test_prefetch_read:
 ; RV32I:       # %bb.0:
 ; RV32I-NEXT:    ret
 ;
-; RV64I-LABEL: test_prefetch:
+; RV64I-LABEL: test_prefetch_read:
 ; RV64I:       # %bb.0:
 ; RV64I-NEXT:    ret
+;
+; RV32ZICBOP-LABEL: test_prefetch_read:
+; RV32ZICBOP:       # %bb.0:
+; RV32ZICBOP-NEXT:    prefetch.r 0(a0)
+; RV32ZICBOP-NEXT:    ret
+;
+; RV64ZICBOP-LABEL: test_prefetch_read:
+; RV64ZICBOP:       # %bb.0:
+; RV64ZICBOP-NEXT:    prefetch.r 0(a0)
+; RV64ZICBOP-NEXT:    ret
   call void @llvm.prefetch(ptr %a, i32 0, i32 2, i32 1)
+  ret void
+}
+
+define void @test_prefetch_write(ptr %a) nounwind {
+; RV32I-LABEL: test_prefetch_write:
+; RV32I:       # %bb.0:
+; RV32I-NEXT:    ret
+;
+; RV64I-LABEL: test_prefetch_write:
+; RV64I:       # %bb.0:
+; RV64I-NEXT:    ret
+;
+; RV32ZICBOP-LABEL: test_prefetch_write:
+; RV32ZICBOP:       # %bb.0:
+; RV32ZICBOP-NEXT:    prefetch.w 0(a0)
+; RV32ZICBOP-NEXT:    ret
+;
+; RV64ZICBOP-LABEL: test_prefetch_write:
+; RV64ZICBOP:       # %bb.0:
+; RV64ZICBOP-NEXT:    prefetch.w 0(a0)
+; RV64ZICBOP-NEXT:    ret
+  call void @llvm.prefetch(ptr %a, i32 1, i32 2, i32 1)
+  ret void
+}
+
+define void @test_prefetch_instruction(ptr %a) nounwind {
+; RV32I-LABEL: test_prefetch_instruction:
+; RV32I:       # %bb.0:
+; RV32I-NEXT:    ret
+;
+; RV64I-LABEL: test_prefetch_instruction:
+; RV64I:       # %bb.0:
+; RV64I-NEXT:    ret
+;
+; RV32ZICBOP-LABEL: test_prefetch_instruction:
+; RV32ZICBOP:       # %bb.0:
+; RV32ZICBOP-NEXT:    prefetch.i 0(a0)
+; RV32ZICBOP-NEXT:    ret
+;
+; RV64ZICBOP-LABEL: test_prefetch_instruction:
+; RV64ZICBOP:       # %bb.0:
+; RV64ZICBOP-NEXT:    prefetch.i 0(a0)
+; RV64ZICBOP-NEXT:    ret
+  call void @llvm.prefetch(ptr %a, i32 0, i32 2, i32 0)
   ret void
 }

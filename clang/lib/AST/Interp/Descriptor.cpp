@@ -274,6 +274,8 @@ QualType Descriptor::getType() const {
     return E->getType();
   if (auto *D = asValueDecl())
     return D->getType();
+  if (auto *T = dyn_cast<TypeDecl>(asDecl()))
+    return QualType(T->getTypeForDecl(), 0);
   llvm_unreachable("Invalid descriptor type");
 }
 

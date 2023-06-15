@@ -728,7 +728,7 @@ define void @udiv_constantsplat_v8i32(ptr %a)  #0 {
 ; CHECK-LABEL: udiv_constantsplat_v8i32:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ldp q0, q1, [x0]
-; CHECK-NEXT:    mov w8, #8969
+; CHECK-NEXT:    mov w8, #8969 // =0x2309
 ; CHECK-NEXT:    ptrue p0.s, vl4
 ; CHECK-NEXT:    movk w8, #22765, lsl #16
 ; CHECK-NEXT:    mov z2.s, w8

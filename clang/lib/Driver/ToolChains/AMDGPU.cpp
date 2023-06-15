@@ -432,12 +432,13 @@ void RocmInstallationDetector::detectDeviceLibrary() {
 void RocmInstallationDetector::detectHIPRuntime() {
   SmallVector<Candidate, 4> HIPSearchDirs;
   if (!HIPPathArg.empty())
-    HIPSearchDirs.emplace_back(HIPPathArg.str(), /*StrictChecking=*/true);
+    HIPSearchDirs.emplace_back(HIPPathArg.str());
   else if (std::optional<std::string> HIPPathEnv =
                llvm::sys::Process::GetEnv("HIP_PATH")) {
     if (!HIPPathEnv->empty())
       HIPSearchDirs.emplace_back(std::move(*HIPPathEnv));
-  } else
+  }
+  if (HIPSearchDirs.empty())
     HIPSearchDirs.append(getInstallationPathCandidates());
   auto &FS = D.getVFS();
 

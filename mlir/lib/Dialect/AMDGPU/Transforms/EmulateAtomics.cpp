@@ -139,7 +139,7 @@ LogicalResult RawBufferAtomicByCasPattern<AtomicOp, ArithOp>::matchAndRewrite(
       loc, arith::CmpIPredicate::eq, atomicResForCompare, prevLoadForCompare);
   rewriter.create<cf::CondBranchOp>(loc, canLeave, afterAtomic, ValueRange{},
                                     loopBlock, atomicRes);
-  rewriter.replaceOp(atomicOp, {});
+  rewriter.eraseOp(atomicOp);
   return success();
 }
 

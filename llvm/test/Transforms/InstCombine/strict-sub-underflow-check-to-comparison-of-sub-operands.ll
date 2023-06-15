@@ -11,7 +11,7 @@ define i1 @t0(i8 %base, i8 %offset) {
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[CMP]])
 ; CHECK-NEXT:    [[ADJUSTED:%.*]] = sub i8 [[BASE:%.*]], [[OFFSET]]
 ; CHECK-NEXT:    call void @use8(i8 [[ADJUSTED]])
-; CHECK-NEXT:    [[RES:%.*]] = icmp uge i8 [[BASE]], [[OFFSET]]
+; CHECK-NEXT:    [[RES:%.*]] = icmp ule i8 [[OFFSET]], [[BASE]]
 ; CHECK-NEXT:    ret i1 [[RES]]
 ;
   %cmp = icmp slt i8 %offset, 0
@@ -28,7 +28,7 @@ define i1 @t1(i8 %base, i8 %offset) {
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[CMP]])
 ; CHECK-NEXT:    [[ADJUSTED:%.*]] = sub i8 [[BASE:%.*]], [[OFFSET]]
 ; CHECK-NEXT:    call void @use8(i8 [[ADJUSTED]])
-; CHECK-NEXT:    [[RES:%.*]] = icmp ult i8 [[BASE]], [[OFFSET]]
+; CHECK-NEXT:    [[RES:%.*]] = icmp ugt i8 [[OFFSET]], [[BASE]]
 ; CHECK-NEXT:    ret i1 [[RES]]
 ;
   %cmp = icmp slt i8 %offset, 0

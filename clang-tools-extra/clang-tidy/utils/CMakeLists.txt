@@ -37,5 +37,6 @@ clang_target_link_libraries(clangTidyUtils
   clangBasic
   clangLex
   clangSema
+  clangTooling
   clangTransformer
   )

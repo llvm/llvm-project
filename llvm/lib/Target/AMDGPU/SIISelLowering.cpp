@@ -2700,7 +2700,17 @@ bool SITargetLowering::CanLowerReturn(
 
   SmallVector<CCValAssign, 16> RVLocs;
   CCState CCInfo(CallConv, IsVarArg, MF, RVLocs, Context);
-  return CCInfo.CheckReturn(Outs, CCAssignFnForReturn(CallConv, IsVarArg));
+  if (!CCInfo.CheckReturn(Outs, CCAssignFnForReturn(CallConv, IsVarArg)))
+    return false;
+
+  // We must use the stack if return would require unavailable registers.
+  unsigned MaxNumVGPRs = Subtarget->getMaxNumVGPRs(MF);
+  unsigned TotalNumVGPRs = AMDGPU::VGPR_32RegClass.getNumRegs();
+  for (unsigned i = MaxNumVGPRs; i < TotalNumVGPRs; ++i)
+    if (CCInfo.isAllocated(AMDGPU::VGPR_32RegClass.getRegister(i)))
+      return false;
+
+  return true;
 }
 
 SDValue
@@ -10449,6 +10459,8 @@ bool SITargetLowering::isCanonicalized(SelectionDAG &DAG, SDValue Op,
   case AMDGPUISD::RSQ_CLAMP:
   case AMDGPUISD::RCP_LEGACY:
   case AMDGPUISD::RCP_IFLAG:
+  case AMDGPUISD::LOG:
+  case AMDGPUISD::EXP:
   case AMDGPUISD::DIV_SCALE:
   case AMDGPUISD::DIV_FMAS:
   case AMDGPUISD::DIV_FIXUP:
@@ -10555,6 +10567,8 @@ bool SITargetLowering::isCanonicalized(SelectionDAG &DAG, SDValue Op,
     case Intrinsic::amdgcn_rcp_legacy:
     case Intrinsic::amdgcn_rsq_legacy:
     case Intrinsic::amdgcn_trig_preop:
+    case Intrinsic::amdgcn_log:
+    case Intrinsic::amdgcn_exp2:
       return true;
     default:
       break;
@@ -10646,6 +10660,8 @@ bool SITargetLowering::isCanonicalized(Register Reg, MachineFunction &MF,
     case Intrinsic::amdgcn_fmed3:
     case Intrinsic::amdgcn_sin:
     case Intrinsic::amdgcn_cos:
+    case Intrinsic::amdgcn_log:
+    case Intrinsic::amdgcn_exp2:
     case Intrinsic::amdgcn_log_clamp:
     case Intrinsic::amdgcn_rcp:
     case Intrinsic::amdgcn_rcp_legacy:

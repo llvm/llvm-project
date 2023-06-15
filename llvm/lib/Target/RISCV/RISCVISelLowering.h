@@ -129,6 +129,10 @@ enum NodeType : unsigned {
   ZIP,
   UNZIP,
   // Vector Extension
+  // VMV_V_V_VL matches the semantics of vmv.v.v but includes an extra operand
+  // for the VL value to be used for the operation. The first operand is
+  // passthru operand.
+  VMV_V_V_VL,
   // VMV_V_X_VL matches the semantics of vmv.v.x but includes an extra operand
   // for the VL value to be used for the operation. The first operand is
   // passthru operand.

@@ -718,10 +718,7 @@ const AbstractAttribute &AbstractAttribute::lookup(TypeID typeID,
 AbstractAttribute *AbstractAttribute::lookupMutable(TypeID typeID,
                                                     MLIRContext *context) {
   auto &impl = context->getImpl();
-  auto it = impl.registeredAttributes.find(typeID);
-  if (it == impl.registeredAttributes.end())
-    return nullptr;
-  return it->second;
+  return impl.registeredAttributes.lookup(typeID);
 }
 
 //===----------------------------------------------------------------------===//
@@ -930,10 +927,7 @@ const AbstractType &AbstractType::lookup(TypeID typeID, MLIRContext *context) {
 
 AbstractType *AbstractType::lookupMutable(TypeID typeID, MLIRContext *context) {
   auto &impl = context->getImpl();
-  auto it = impl.registeredTypes.find(typeID);
-  if (it == impl.registeredTypes.end())
-    return nullptr;
-  return it->second;
+  return impl.registeredTypes.lookup(typeID);
 }
 
 //===----------------------------------------------------------------------===//

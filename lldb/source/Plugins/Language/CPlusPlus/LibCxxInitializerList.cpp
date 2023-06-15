@@ -62,7 +62,7 @@ lldb_private::formatters::LibcxxInitializerListSyntheticFrontEnd::
 size_t lldb_private::formatters::LibcxxInitializerListSyntheticFrontEnd::
     CalculateNumChildren() {
   m_num_elements = 0;
-  ValueObjectSP size_sp(m_backend.GetChildMemberWithName("__size_", true));
+  ValueObjectSP size_sp(m_backend.GetChildMemberWithName("__size_"));
   if (size_sp)
     m_num_elements = size_sp->GetValueAsUnsigned(0);
   return m_num_elements;
@@ -93,7 +93,7 @@ bool lldb_private::formatters::LibcxxInitializerListSyntheticFrontEnd::
   if (std::optional<uint64_t> size = m_element_type.GetByteSize(nullptr)) {
     m_element_size = *size;
     // Store raw pointers or end up with a circular dependency.
-    m_start = m_backend.GetChildMemberWithName("__begin_", true).get();
+    m_start = m_backend.GetChildMemberWithName("__begin_").get();
   }
 
   return false;

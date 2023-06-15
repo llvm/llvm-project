@@ -91,8 +91,7 @@ protected:
   bool PrintObjectDescriptionIfNeeded(bool value_printed, bool summary_printed);
 
   bool
-  ShouldPrintChildren(bool is_failed_description,
-                      DumpValueObjectOptions::PointerDepth &curr_ptr_depth);
+  ShouldPrintChildren(DumpValueObjectOptions::PointerDepth &curr_ptr_depth);
 
   bool ShouldExpandEmptyAggregates();
 

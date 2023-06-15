@@ -16,7 +16,6 @@
 #include "lldb/DataFormatters/StringPrinter.h"
 #include "lldb/DataFormatters/TypeSummary.h"
 #include "lldb/DataFormatters/VectorIterator.h"
-#include "lldb/Target/ProcessStructReader.h"
 #include "lldb/Target/SectionLoadList.h"
 #include "lldb/Target/Target.h"
 #include "lldb/Utility/ConstString.h"
@@ -38,7 +37,7 @@ using namespace lldb_private::formatters;
 lldb::ValueObjectSP lldb_private::formatters::GetChildMemberWithName(
     ValueObject &obj, llvm::ArrayRef<ConstString> alternative_names) {
   for (ConstString name : alternative_names) {
-    lldb::ValueObjectSP child_sp = obj.GetChildMemberWithName(name, true);
+    lldb::ValueObjectSP child_sp = obj.GetChildMemberWithName(name);
 
     if (child_sp)
       return child_sp;
@@ -50,12 +49,12 @@ lldb::ValueObjectSP
 lldb_private::formatters::GetFirstValueOfLibCXXCompressedPair(
     ValueObject &pair) {
   ValueObjectSP value;
-  ValueObjectSP first_child = pair.GetChildAtIndex(0, true);
+  ValueObjectSP first_child = pair.GetChildAtIndex(0);
   if (first_child)
-    value = first_child->GetChildMemberWithName("__value_", true);
+    value = first_child->GetChildMemberWithName("__value_");
   if (!value) {
     // pre-r300140 member name
-    value = pair.GetChildMemberWithName("__first_", true);
+    value = pair.GetChildMemberWithName("__first_");
   }
   return value;
 }
@@ -65,14 +64,14 @@ lldb_private::formatters::GetSecondValueOfLibCXXCompressedPair(
     ValueObject &pair) {
   ValueObjectSP value;
   if (pair.GetNumChildren() > 1) {
-    ValueObjectSP second_child = pair.GetChildAtIndex(1, true);
+    ValueObjectSP second_child = pair.GetChildAtIndex(1);
     if (second_child) {
-      value = second_child->GetChildMemberWithName("__value_", true);
+      value = second_child->GetChildMemberWithName("__value_");
     }
   }
   if (!value) {
     // pre-r300140 member name
-    value = pair.GetChildMemberWithName("__second_", true);
+    value = pair.GetChildMemberWithName("__second_");
   }
   return value;
 }
@@ -85,8 +84,7 @@ bool lldb_private::formatters::LibcxxOptionalSummaryProvider(
 
   // An optional either contains a value or not, the member __engaged_ is
   // a bool flag, it is true if the optional has a value and false otherwise.
-  ValueObjectSP engaged_sp(
-      valobj_sp->GetChildMemberWithName("__engaged_", true));
+  ValueObjectSP engaged_sp(valobj_sp->GetChildMemberWithName("__engaged_"));
 
   if (!engaged_sp)
     return false;
@@ -152,7 +150,7 @@ bool lldb_private::formatters::LibcxxSmartPointerSummaryProvider(
   ValueObjectSP valobj_sp(valobj.GetNonSyntheticValue());
   if (!valobj_sp)
     return false;
-  ValueObjectSP ptr_sp(valobj_sp->GetChildMemberWithName("__ptr_", true));
+  ValueObjectSP ptr_sp(valobj_sp->GetChildMemberWithName("__ptr_"));
   ValueObjectSP count_sp(
       valobj_sp->GetChildAtNamePath({"__cntrl_", "__shared_owners_"}));
   ValueObjectSP weakcount_sp(
@@ -195,7 +193,7 @@ bool lldb_private::formatters::LibcxxUniquePointerSummaryProvider(
   if (!valobj_sp)
     return false;
 
-  ValueObjectSP ptr_sp(valobj_sp->GetChildMemberWithName("__ptr_", true));
+  ValueObjectSP ptr_sp(valobj_sp->GetChildMemberWithName("__ptr_"));
   if (!ptr_sp)
     return false;
 
@@ -298,7 +296,7 @@ bool lldb_private::formatters::LibCxxMapIteratorSyntheticFrontEnd::Update() {
                          nullptr)
                      .get();
     if (m_pair_ptr) {
-      auto __i_(valobj_sp->GetChildMemberWithName("__i_", true));
+      auto __i_(valobj_sp->GetChildMemberWithName("__i_"));
       if (!__i_) {
         m_pair_ptr = nullptr;
         return false;
@@ -365,7 +363,7 @@ bool lldb_private::formatters::LibCxxMapIteratorSyntheticFrontEnd::Update() {
             "pair", extractor, valobj_sp->GetExecutionContextRef(),
             tree_node_type);
         if (pair_sp)
-          m_pair_sp = pair_sp->GetChildAtIndex(4, true);
+          m_pair_sp = pair_sp->GetChildAtIndex(4);
       }
     }
   }
@@ -382,9 +380,9 @@ lldb::ValueObjectSP
 lldb_private::formatters::LibCxxMapIteratorSyntheticFrontEnd::GetChildAtIndex(
     size_t idx) {
   if (m_pair_ptr)
-    return m_pair_ptr->GetChildAtIndex(idx, true);
+    return m_pair_ptr->GetChildAtIndex(idx);
   if (m_pair_sp)
-    return m_pair_sp->GetChildAtIndex(idx, true);
+    return m_pair_sp->GetChildAtIndex(idx);
   return lldb::ValueObjectSP();
 }
 
@@ -457,7 +455,7 @@ bool lldb_private::formatters::LibCxxUnorderedMapIteratorSyntheticFrontEnd::
           .get();
 
   if (m_iter_ptr) {
-    auto iter_child(valobj_sp->GetChildMemberWithName("__i_", true));
+    auto iter_child(valobj_sp->GetChildMemberWithName("__i_"));
     if (!iter_child) {
       m_iter_ptr = nullptr;
       return false;
@@ -525,7 +523,7 @@ bool lldb_private::formatters::LibCxxUnorderedMapIteratorSyntheticFrontEnd::
     auto pair_sp = CreateValueObjectFromData(
         "pair", extractor, valobj_sp->GetExecutionContextRef(), tree_node_type);
     if (pair_sp)
-      m_pair_sp = pair_sp->GetChildAtIndex(2, true);
+      m_pair_sp = pair_sp->GetChildAtIndex(2);
   }
 
   return false;
@@ -539,7 +537,7 @@ size_t lldb_private::formatters::LibCxxUnorderedMapIteratorSyntheticFrontEnd::
 lldb::ValueObjectSP lldb_private::formatters::
     LibCxxUnorderedMapIteratorSyntheticFrontEnd::GetChildAtIndex(size_t idx) {
   if (m_pair_sp)
-    return m_pair_sp->GetChildAtIndex(idx, true);
+    return m_pair_sp->GetChildAtIndex(idx);
   return lldb::ValueObjectSP();
 }
 
@@ -604,10 +602,10 @@ lldb_private::formatters::LibcxxSharedPtrSyntheticFrontEnd::GetChildAtIndex(
     return lldb::ValueObjectSP();
 
   if (idx == 0)
-    return valobj_sp->GetChildMemberWithName("__ptr_", true);
+    return valobj_sp->GetChildMemberWithName("__ptr_");
 
   if (idx == 1) {
-    if (auto ptr_sp = valobj_sp->GetChildMemberWithName("__ptr_", true)) {
+    if (auto ptr_sp = valobj_sp->GetChildMemberWithName("__ptr_")) {
       Status status;
       auto value_sp = ptr_sp->Dereference(status);
       if (status.Success()) {
@@ -632,8 +630,7 @@ bool lldb_private::formatters::LibcxxSharedPtrSyntheticFrontEnd::Update() {
   if (!target_sp)
     return false;
 
-  lldb::ValueObjectSP cntrl_sp(
-      valobj_sp->GetChildMemberWithName("__cntrl_", true));
+  lldb::ValueObjectSP cntrl_sp(valobj_sp->GetChildMemberWithName("__cntrl_"));
 
   m_cntrl = cntrl_sp.get(); // need to store the raw pointer to avoid a circular
                             // dependency
@@ -716,7 +713,7 @@ bool lldb_private::formatters::LibcxxUniquePtrSyntheticFrontEnd::Update() {
   if (!valobj_sp)
     return false;
 
-  ValueObjectSP ptr_sp(valobj_sp->GetChildMemberWithName("__ptr_", true));
+  ValueObjectSP ptr_sp(valobj_sp->GetChildMemberWithName("__ptr_"));
   if (!ptr_sp)
     return false;
 
@@ -771,25 +768,22 @@ enum class StringLayout { CSD, DSC };
 // TODO: Support big-endian architectures.
 static std::optional<std::pair<uint64_t, ValueObjectSP>>
 ExtractLibcxxStringInfo(ValueObject &valobj) {
-  ValueObjectSP valobj_r_sp =
-      valobj.GetChildMemberWithName("__r_", /*can_create=*/true);
+  ValueObjectSP valobj_r_sp = valobj.GetChildMemberWithName("__r_");
   if (!valobj_r_sp || !valobj_r_sp->GetError().Success())
     return {};
 
   // __r_ is a compressed_pair of the actual data and the allocator. The data we
   // want is in the first base class.
-  ValueObjectSP valobj_r_base_sp =
-      valobj_r_sp->GetChildAtIndex(0, /*can_create=*/true);
+  ValueObjectSP valobj_r_base_sp = valobj_r_sp->GetChildAtIndex(0);
   if (!valobj_r_base_sp)
     return {};
 
   ValueObjectSP valobj_rep_sp =
-      valobj_r_base_sp->GetChildMemberWithName("__value_", /*can_create=*/true);
+      valobj_r_base_sp->GetChildMemberWithName("__value_");
   if (!valobj_rep_sp)
     return {};
 
-  ValueObjectSP l = valobj_rep_sp->GetChildMemberWithName("__l",
-                                                          /*can_create=*/true);
+  ValueObjectSP l = valobj_rep_sp->GetChildMemberWithName("__l");
   if (!l)
     return {};
 
@@ -804,13 +798,12 @@ ExtractLibcxxStringInfo(ValueObject &valobj) {
   uint64_t size;
   uint64_t size_mode_value = 0;
 
-  ValueObjectSP short_sp =
-      valobj_rep_sp->GetChildMemberWithName("__s", /*can_create=*/true);
+  ValueObjectSP short_sp = valobj_rep_sp->GetChildMemberWithName("__s");
   if (!short_sp)
     return {};
 
-  ValueObjectSP is_long = short_sp->GetChildMemberWithName("__is_long_", true);
-  ValueObjectSP size_sp = short_sp->GetChildMemberWithName("__size_", true);
+  ValueObjectSP is_long = short_sp->GetChildMemberWithName("__is_long_");
+  ValueObjectSP size_sp = short_sp->GetChildMemberWithName("__size_");
   if (!size_sp)
     return {};
 
@@ -826,8 +819,7 @@ ExtractLibcxxStringInfo(ValueObject &valobj) {
   }
 
   if (short_mode) {
-    ValueObjectSP location_sp =
-        short_sp->GetChildMemberWithName("__data_", true);
+    ValueObjectSP location_sp = short_sp->GetChildMemberWithName("__data_");
     if (using_bitmasks)
       size = (layout == StringLayout::DSC) ? size_mode_value
                                            : ((size_mode_value >> 1) % 256);
@@ -846,12 +838,9 @@ ExtractLibcxxStringInfo(ValueObject &valobj) {
   }
 
   // we can use the layout_decider object as the data pointer
-  ValueObjectSP location_sp =
-      l->GetChildMemberWithName("__data_", /*can_create=*/true);
-  ValueObjectSP size_vo =
-      l->GetChildMemberWithName("__size_", /*can_create=*/true);
-  ValueObjectSP capacity_vo =
-      l->GetChildMemberWithName("__cap_", /*can_create=*/true);
+  ValueObjectSP location_sp = l->GetChildMemberWithName("__data_");
+  ValueObjectSP size_vo = l->GetChildMemberWithName("__size_");
+  ValueObjectSP capacity_vo = l->GetChildMemberWithName("__cap_");
   if (!size_vo || !location_sp || !capacity_vo)
     return {};
   size = size_vo->GetValueAsUnsigned(LLDB_INVALID_OFFSET);

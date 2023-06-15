@@ -618,6 +618,12 @@ void XCOFFObjectWriter::recordRelocation(MCAssembler &Asm,
   assert(SectionMap.contains(SymASec) &&
          "Expected containing csect to exist in map.");
 
+  assert((Fixup.getOffset() <=
+          MaxRawDataSize - Layout.getFragmentOffset(Fragment)) &&
+         "Fragment offset + fixup offset is overflowed.");
+  uint32_t FixupOffsetInCsect =
+      Layout.getFragmentOffset(Fragment) + Fixup.getOffset();
+
   const uint32_t Index = getIndex(SymA, SymASec);
   if (Type == XCOFF::RelocationType::R_POS ||
       Type == XCOFF::RelocationType::R_TLS)
@@ -656,23 +662,18 @@ void XCOFFObjectWriter::recordRelocation(MCAssembler &Asm,
 
     // The address of the branch instruction should be the sum of section
     // address, fragment offset and Fixup offset.
-    uint64_t BRInstrAddress = SectionMap[ParentSec]->Address +
-                              Layout.getFragmentOffset(Fragment) +
-                              Fixup.getOffset();
+    uint64_t BRInstrAddress =
+        SectionMap[ParentSec]->Address + FixupOffsetInCsect;
     // The FixedValue should be the difference between SymA csect address and BR
     // instr address plus any constant value.
     FixedValue =
         SectionMap[SymASec]->Address - BRInstrAddress + Target.getConstant();
-  } else if (Type == XCOFF::RelocationType::R_REF)
-    // The FixedValue should always be 0 since it specifies a nonrelocating
-    // reference.
+  } else if (Type == XCOFF::RelocationType::R_REF) {
+    // The FixedValue and FixupOffsetInCsect should always be 0 since it
+    // specifies a nonrelocating reference.
     FixedValue = 0;
-
-  assert((Fixup.getOffset() <=
-          MaxRawDataSize - Layout.getFragmentOffset(Fragment)) &&
-         "Fragment offset + fixup offset is overflowed.");
-  uint32_t FixupOffsetInCsect =
-      Layout.getFragmentOffset(Fragment) + Fixup.getOffset();
+    FixupOffsetInCsect = 0;
+  }
 
   XCOFFRelocation Reloc = {Index, FixupOffsetInCsect, SignAndSize, Type};
   MCSectionXCOFF *RelocationSec = cast<MCSectionXCOFF>(Fragment->getParent());

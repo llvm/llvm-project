@@ -495,7 +495,7 @@ public:
 
     c->ntools = ntools;
     auto *t = reinterpret_cast<build_tool_version *>(&c[1]);
-    t->tool = TOOL_LD;
+    t->tool = TOOL_LLD;
     t->version = encodeVersion(VersionTuple(
         LLVM_VERSION_MAJOR, LLVM_VERSION_MINOR, LLVM_VERSION_PATCH));
   }

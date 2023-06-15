@@ -7,6 +7,7 @@
 
 // UNSUPPORTED: c++03, c++11, c++14, c++17
 // UNSUPPORTED: no-localization
+// UNSUPPORTED: GCC-ALWAYS_INLINE-FIXME
 
 // XFAIL: LIBCXX-FREEBSD-FIXME
 
@@ -15,8 +16,6 @@
 
 // TODO FMT Investigate Windows issues.
 // UNSUPPORTED: msvc, target={{.+}}-windows-gnu
-// TODO FMT It seems GCC uses too much memory in the CI and fails.
-// UNSUPPORTED: gcc-12
 
 // REQUIRES: locale.fr_FR.UTF-8
 // REQUIRES: locale.ja_JP.UTF-8

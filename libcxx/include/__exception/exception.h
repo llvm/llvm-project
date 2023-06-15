@@ -69,7 +69,7 @@ public:
 // On all other platforms, we define our own std::exception and std::bad_exception types
 // regardless of whether exceptions are turned on as a language feature.
 
-class _LIBCPP_EXCEPTION_ABI exception {
+class _LIBCPP_EXPORTED_FROM_ABI exception {
 public:
   _LIBCPP_HIDE_FROM_ABI exception() _NOEXCEPT {}
   _LIBCPP_HIDE_FROM_ABI exception(const exception&) _NOEXCEPT = default;
@@ -78,7 +78,7 @@ public:
   virtual const char* what() const _NOEXCEPT;
 };
 
-class _LIBCPP_EXCEPTION_ABI bad_exception : public exception {
+class _LIBCPP_EXPORTED_FROM_ABI bad_exception : public exception {
 public:
   _LIBCPP_HIDE_FROM_ABI bad_exception() _NOEXCEPT {}
   ~bad_exception() _NOEXCEPT override;

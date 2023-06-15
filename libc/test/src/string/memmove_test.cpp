@@ -24,7 +24,7 @@ TEST(LlvmLibcMemmoveTest, MoveZeroByte) {
   void *const Dst = Buffer;
   void *const Ret = __llvm_libc::memmove(Dst, Buffer + 2, 0);
   EXPECT_EQ(Ret, Dst);
-  ASSERT_MEM_EQ(Buffer, Expected);
+  ASSERT_MEM_EQ(Buffer, testing::MemoryView(Expected));
 }
 
 TEST(LlvmLibcMemmoveTest, DstAndSrcPointToSameAddress) {
@@ -33,7 +33,7 @@ TEST(LlvmLibcMemmoveTest, DstAndSrcPointToSameAddress) {
   void *const Dst = Buffer;
   void *const Ret = __llvm_libc::memmove(Dst, Buffer, 1);
   EXPECT_EQ(Ret, Dst);
-  ASSERT_MEM_EQ(Buffer, Expected);
+  ASSERT_MEM_EQ(Buffer, testing::MemoryView(Expected));
 }
 
 TEST(LlvmLibcMemmoveTest, DstStartsBeforeSrc) {
@@ -44,7 +44,7 @@ TEST(LlvmLibcMemmoveTest, DstStartsBeforeSrc) {
   void *const Dst = Buffer + 1;
   void *const Ret = __llvm_libc::memmove(Dst, Buffer + 2, 2);
   EXPECT_EQ(Ret, Dst);
-  ASSERT_MEM_EQ(Buffer, Expected);
+  ASSERT_MEM_EQ(Buffer, testing::MemoryView(Expected));
 }
 
 TEST(LlvmLibcMemmoveTest, DstStartsAfterSrc) {
@@ -53,7 +53,7 @@ TEST(LlvmLibcMemmoveTest, DstStartsAfterSrc) {
   void *const Dst = Buffer + 2;
   void *const Ret = __llvm_libc::memmove(Dst, Buffer + 1, 2);
   EXPECT_EQ(Ret, Dst);
-  ASSERT_MEM_EQ(Buffer, Expected);
+  ASSERT_MEM_EQ(Buffer, testing::MemoryView(Expected));
 }
 
 // e.g. `Dst` follow `src`.
@@ -66,7 +66,7 @@ TEST(LlvmLibcMemmoveTest, SrcFollowDst) {
   void *const Dst = Buffer + 1;
   void *const Ret = __llvm_libc::memmove(Dst, Buffer + 2, 1);
   EXPECT_EQ(Ret, Dst);
-  ASSERT_MEM_EQ(Buffer, Expected);
+  ASSERT_MEM_EQ(Buffer, testing::MemoryView(Expected));
 }
 
 TEST(LlvmLibcMemmoveTest, DstFollowSrc) {
@@ -75,7 +75,7 @@ TEST(LlvmLibcMemmoveTest, DstFollowSrc) {
   void *const Dst = Buffer + 2;
   void *const Ret = __llvm_libc::memmove(Dst, Buffer + 1, 1);
   EXPECT_EQ(Ret, Dst);
-  ASSERT_MEM_EQ(Buffer, Expected);
+  ASSERT_MEM_EQ(Buffer, testing::MemoryView(Expected));
 }
 
 // Adapt CheckMemmove signature to op implementation signatures.

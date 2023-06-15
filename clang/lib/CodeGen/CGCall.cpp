@@ -1637,9 +1637,8 @@ CodeGenTypes::GetFunctionType(const CGFunctionInfo &FI) {
     if (retAI.getInAllocaSRet()) {
       // sret things on win32 aren't void, they return the sret pointer.
       QualType ret = FI.getReturnType();
-      llvm::Type *ty = ConvertType(ret);
       unsigned addressSpace = CGM.getTypes().getTargetAddressSpace(ret);
-      resultType = llvm::PointerType::get(ty, addressSpace);
+      resultType = llvm::PointerType::get(getLLVMContext(), addressSpace);
     } else {
       resultType = llvm::Type::getVoidTy(getLLVMContext());
     }
@@ -1661,17 +1660,17 @@ CodeGenTypes::GetFunctionType(const CGFunctionInfo &FI) {
   // Add type for sret argument.
   if (IRFunctionArgs.hasSRetArg()) {
     QualType Ret = FI.getReturnType();
-    llvm::Type *Ty = ConvertType(Ret);
     unsigned AddressSpace = CGM.getTypes().getTargetAddressSpace(Ret);
     ArgTypes[IRFunctionArgs.getSRetArgNo()] =
-        llvm::PointerType::get(Ty, AddressSpace);
+        llvm::PointerType::get(getLLVMContext(), AddressSpace);
   }
 
   // Add type for inalloca argument.
   if (IRFunctionArgs.hasInallocaArg()) {
     auto ArgStruct = FI.getArgStruct();
     assert(ArgStruct);
-    ArgTypes[IRFunctionArgs.getInallocaArgNo()] = ArgStruct->getPointerTo();
+    ArgTypes[IRFunctionArgs.getInallocaArgNo()] =
+        llvm::PointerType::getUnqual(getLLVMContext());
   }
 
   // Add in all of the required arguments.
@@ -1695,20 +1694,17 @@ CodeGenTypes::GetFunctionType(const CGFunctionInfo &FI) {
       assert(NumIRArgs == 0);
       break;
 
-    case ABIArgInfo::Indirect: {
+    case ABIArgInfo::Indirect:
       assert(NumIRArgs == 1);
       // indirect arguments are always on the stack, which is alloca addr space.
-      llvm::Type *LTy = ConvertTypeForMem(it->type);
-      ArgTypes[FirstIRArg] = LTy->getPointerTo(
-          CGM.getDataLayout().getAllocaAddrSpace());
+      ArgTypes[FirstIRArg] = llvm::PointerType::get(
+          getLLVMContext(), CGM.getDataLayout().getAllocaAddrSpace());
       break;
-    }
-    case ABIArgInfo::IndirectAliased: {
+    case ABIArgInfo::IndirectAliased:
       assert(NumIRArgs == 1);
-      llvm::Type *LTy = ConvertTypeForMem(it->type);
-      ArgTypes[FirstIRArg] = LTy->getPointerTo(ArgInfo.getIndirectAddrSpace());
+      ArgTypes[FirstIRArg] = llvm::PointerType::get(
+          getLLVMContext(), ArgInfo.getIndirectAddrSpace());
       break;
-    }
     case ABIArgInfo::Extend:
     case ABIArgInfo::Direct: {
       // Fast-isel and the optimizer generally like scalar values better than
@@ -2861,12 +2857,9 @@ void CodeGenFunction::EmitFunctionProlog(const CGFunctionInfo &FI,
   // If we're using inalloca, all the memory arguments are GEPs off of the last
   // parameter, which is a pointer to the complete memory area.
   Address ArgStruct = Address::invalid();
-  if (IRFunctionArgs.hasInallocaArg()) {
+  if (IRFunctionArgs.hasInallocaArg())
     ArgStruct = Address(Fn->getArg(IRFunctionArgs.getInallocaArgNo()),
                         FI.getArgStruct(), FI.getArgStructAlignment());
-
-    assert(ArgStruct.getType() == FI.getArgStruct()->getPointerTo());
-  }
 
   // Name the struct return parameter.
   if (IRFunctionArgs.hasSRetArg()) {
@@ -3933,8 +3926,8 @@ static AggValueSlot createPlaceholderSlot(CodeGenFunction &CGF,
   // FIXME: Generate IR in one pass, rather than going back and fixing up these
   // placeholders.
   llvm::Type *IRTy = CGF.ConvertTypeForMem(Ty);
-  llvm::Type *IRPtrTy = IRTy->getPointerTo();
-  llvm::Value *Placeholder = llvm::PoisonValue::get(IRPtrTy->getPointerTo());
+  llvm::Type *IRPtrTy = llvm::PointerType::getUnqual(CGF.getLLVMContext());
+  llvm::Value *Placeholder = llvm::PoisonValue::get(IRPtrTy);
 
   // FIXME: When we generate this IR in one pass, we shouldn't need
   // this win32-specific alignment hack.
@@ -5331,35 +5324,6 @@ RValue CodeGenFunction::EmitCall(const CGFunctionInfo &CallInfo,
   // If we're using inalloca, set up that argument.
   if (ArgMemory.isValid()) {
     llvm::Value *Arg = ArgMemory.getPointer();
-    if (CallInfo.isVariadic()) {
-      // When passing non-POD arguments by value to variadic functions, we will
-      // end up with a variadic prototype and an inalloca call site.  In such
-      // cases, we can't do any parameter mismatch checks.  Give up and bitcast
-      // the callee.
-      unsigned CalleeAS = CalleePtr->getType()->getPointerAddressSpace();
-      CalleePtr =
-          Builder.CreateBitCast(CalleePtr, IRFuncTy->getPointerTo(CalleeAS));
-    } else {
-      llvm::Type *LastParamTy =
-          IRFuncTy->getParamType(IRFuncTy->getNumParams() - 1);
-      if (Arg->getType() != LastParamTy) {
-#ifndef NDEBUG
-        // Assert that these structs have equivalent element types.
-        llvm::StructType *FullTy = CallInfo.getArgStruct();
-        if (!LastParamTy->isOpaquePointerTy()) {
-          llvm::StructType *DeclaredTy = cast<llvm::StructType>(
-              LastParamTy->getNonOpaquePointerElementType());
-          assert(DeclaredTy->getNumElements() == FullTy->getNumElements());
-          for (auto DI = DeclaredTy->element_begin(),
-                    DE = DeclaredTy->element_end(),
-                    FI = FullTy->element_begin();
-               DI != DE; ++DI, ++FI)
-            assert(*DI == *FI);
-        }
-#endif
-        Arg = Builder.CreateBitCast(Arg, LastParamTy);
-      }
-    }
     assert(IRFunctionArgs.hasInallocaArg());
     IRCallArgs[IRFunctionArgs.getInallocaArgNo()] = Arg;
   }

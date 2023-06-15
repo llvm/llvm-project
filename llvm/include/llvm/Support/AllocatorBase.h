@@ -19,6 +19,12 @@
 #ifndef LLVM_SUPPORT_ALLOCATORBASE_H
 #define LLVM_SUPPORT_ALLOCATORBASE_H
 
+#ifdef _MSC_VER
+#define LLVM_ALLOCATORHOLDER_EMPTYBASE __declspec(empty_bases)
+#else
+#define LLVM_ALLOCATORHOLDER_EMPTYBASE
+#endif // _MSC_VER
+
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/MemAlloc.h"
 #include <type_traits>

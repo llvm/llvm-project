@@ -1014,7 +1014,7 @@ mlir::LogicalResult fir::SequenceType::verify(
   // DIMENSION attribute can only be applied to an intrinsic or record type
   if (eleTy.isa<BoxType, BoxCharType, BoxProcType, ShapeType, ShapeShiftType,
                 ShiftType, SliceType, FieldType, LenType, HeapType, PointerType,
-                ReferenceType, TypeDescType, fir::VectorType, SequenceType>())
+                ReferenceType, TypeDescType, SequenceType>())
     return emitError() << "cannot build an array of this element type: "
                        << eleTy << '\n';
   return mlir::success();

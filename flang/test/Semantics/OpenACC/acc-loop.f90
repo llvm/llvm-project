@@ -257,4 +257,10 @@ program openacc_loop_validity
       a(i) = 3.14
     end do
   end do
+
+  !ERROR: The num argument is not allowed when dim is specified
+  !$acc loop gang(1, dim: 2)
+  do i = 1, N
+  end do
+
 end program openacc_loop_validity

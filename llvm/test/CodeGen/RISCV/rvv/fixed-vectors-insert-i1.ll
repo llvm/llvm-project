@@ -20,14 +20,14 @@ define <1 x i1> @insertelt_idx_v1i1(<1 x i1> %x, i1 %elt, i32 zeroext %idx) noun
 ; CHECK-LABEL: insertelt_idx_v1i1:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 1, e8, mf8, ta, ma
-; CHECK-NEXT:    vmv.s.x v8, a0
-; CHECK-NEXT:    vmv.v.i v9, 0
-; CHECK-NEXT:    vmerge.vim v9, v9, 1, v0
+; CHECK-NEXT:    vmv.v.i v8, 0
+; CHECK-NEXT:    vmerge.vim v8, v8, 1, v0
+; CHECK-NEXT:    vmv.s.x v9, a0
 ; CHECK-NEXT:    addi a0, a1, 1
 ; CHECK-NEXT:    vsetvli zero, a0, e8, mf8, tu, ma
-; CHECK-NEXT:    vslideup.vx v9, v8, a1
+; CHECK-NEXT:    vslideup.vx v8, v9, a1
 ; CHECK-NEXT:    vsetivli zero, 1, e8, mf8, ta, ma
-; CHECK-NEXT:    vand.vi v8, v9, 1
+; CHECK-NEXT:    vand.vi v8, v8, 1
 ; CHECK-NEXT:    vmsne.vi v0, v8, 0
 ; CHECK-NEXT:    ret
   %y = insertelement <1 x i1> %x, i1 %elt, i32 %idx
@@ -38,11 +38,11 @@ define <2 x i1> @insertelt_v2i1(<2 x i1> %x, i1 %elt) nounwind {
 ; CHECK-LABEL: insertelt_v2i1:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 2, e8, mf8, ta, ma
-; CHECK-NEXT:    vmv.s.x v8, a0
-; CHECK-NEXT:    vmv.v.i v9, 0
-; CHECK-NEXT:    vmerge.vim v9, v9, 1, v0
-; CHECK-NEXT:    vslideup.vi v9, v8, 1
-; CHECK-NEXT:    vand.vi v8, v9, 1
+; CHECK-NEXT:    vmv.v.i v8, 0
+; CHECK-NEXT:    vmerge.vim v8, v8, 1, v0
+; CHECK-NEXT:    vmv.s.x v9, a0
+; CHECK-NEXT:    vslideup.vi v8, v9, 1
+; CHECK-NEXT:    vand.vi v8, v8, 1
 ; CHECK-NEXT:    vmsne.vi v0, v8, 0
 ; CHECK-NEXT:    ret
   %y = insertelement <2 x i1> %x, i1 %elt, i64 1
@@ -53,14 +53,14 @@ define <2 x i1> @insertelt_idx_v2i1(<2 x i1> %x, i1 %elt, i32 zeroext %idx) noun
 ; CHECK-LABEL: insertelt_idx_v2i1:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 2, e8, mf8, ta, ma
-; CHECK-NEXT:    vmv.s.x v8, a0
-; CHECK-NEXT:    vmv.v.i v9, 0
-; CHECK-NEXT:    vmerge.vim v9, v9, 1, v0
+; CHECK-NEXT:    vmv.v.i v8, 0
+; CHECK-NEXT:    vmerge.vim v8, v8, 1, v0
+; CHECK-NEXT:    vmv.s.x v9, a0
 ; CHECK-NEXT:    addi a0, a1, 1
 ; CHECK-NEXT:    vsetvli zero, a0, e8, mf8, tu, ma
-; CHECK-NEXT:    vslideup.vx v9, v8, a1
+; CHECK-NEXT:    vslideup.vx v8, v9, a1
 ; CHECK-NEXT:    vsetivli zero, 2, e8, mf8, ta, ma
-; CHECK-NEXT:    vand.vi v8, v9, 1
+; CHECK-NEXT:    vand.vi v8, v8, 1
 ; CHECK-NEXT:    vmsne.vi v0, v8, 0
 ; CHECK-NEXT:    ret
   %y = insertelement <2 x i1> %x, i1 %elt, i32 %idx
@@ -71,13 +71,13 @@ define <8 x i1> @insertelt_v8i1(<8 x i1> %x, i1 %elt) nounwind {
 ; CHECK-LABEL: insertelt_v8i1:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 8, e8, mf2, ta, ma
-; CHECK-NEXT:    vmv.s.x v8, a0
-; CHECK-NEXT:    vmv.v.i v9, 0
-; CHECK-NEXT:    vmerge.vim v9, v9, 1, v0
+; CHECK-NEXT:    vmv.v.i v8, 0
+; CHECK-NEXT:    vmerge.vim v8, v8, 1, v0
+; CHECK-NEXT:    vmv.s.x v9, a0
 ; CHECK-NEXT:    vsetivli zero, 2, e8, mf2, tu, ma
-; CHECK-NEXT:    vslideup.vi v9, v8, 1
+; CHECK-NEXT:    vslideup.vi v8, v9, 1
 ; CHECK-NEXT:    vsetivli zero, 8, e8, mf2, ta, ma
-; CHECK-NEXT:    vand.vi v8, v9, 1
+; CHECK-NEXT:    vand.vi v8, v8, 1
 ; CHECK-NEXT:    vmsne.vi v0, v8, 0
 ; CHECK-NEXT:    ret
   %y = insertelement <8 x i1> %x, i1 %elt, i64 1
@@ -88,14 +88,14 @@ define <8 x i1> @insertelt_idx_v8i1(<8 x i1> %x, i1 %elt, i32 zeroext %idx) noun
 ; CHECK-LABEL: insertelt_idx_v8i1:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 8, e8, mf2, ta, ma
-; CHECK-NEXT:    vmv.s.x v8, a0
-; CHECK-NEXT:    vmv.v.i v9, 0
-; CHECK-NEXT:    vmerge.vim v9, v9, 1, v0
+; CHECK-NEXT:    vmv.v.i v8, 0
+; CHECK-NEXT:    vmerge.vim v8, v8, 1, v0
+; CHECK-NEXT:    vmv.s.x v9, a0
 ; CHECK-NEXT:    addi a0, a1, 1
 ; CHECK-NEXT:    vsetvli zero, a0, e8, mf2, tu, ma
-; CHECK-NEXT:    vslideup.vx v9, v8, a1
+; CHECK-NEXT:    vslideup.vx v8, v9, a1
 ; CHECK-NEXT:    vsetivli zero, 8, e8, mf2, ta, ma
-; CHECK-NEXT:    vand.vi v8, v9, 1
+; CHECK-NEXT:    vand.vi v8, v8, 1
 ; CHECK-NEXT:    vmsne.vi v0, v8, 0
 ; CHECK-NEXT:    ret
   %y = insertelement <8 x i1> %x, i1 %elt, i32 %idx

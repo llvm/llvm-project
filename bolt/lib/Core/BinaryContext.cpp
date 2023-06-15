@@ -1975,7 +1975,9 @@ void BinaryContext::deregisterUnusedSections() {
   ErrorOr<BinarySection &> AbsSection = getUniqueSectionByName("<absolute>");
   for (auto SI = Sections.begin(); SI != Sections.end();) {
     BinarySection *Section = *SI;
-    if (Section->hasSectionRef() || Section->getOutputSize() ||
+    // We check getOutputData() instead of getOutputSize() because sometimes
+    // zero-sized .text.cold sections are allocated.
+    if (Section->hasSectionRef() || Section->getOutputData() ||
         (AbsSection && Section == &AbsSection.get())) {
       ++SI;
       continue;
@@ -2100,8 +2102,9 @@ const Relocation *BinaryContext::getRelocationAt(uint64_t Address) const {
   return Section->getRelocationAt(Address - Section->getAddress());
 }
 
-const Relocation *BinaryContext::getDynamicRelocationAt(uint64_t Address) {
-  ErrorOr<BinarySection &> Section = getSectionForAddress(Address);
+const Relocation *
+BinaryContext::getDynamicRelocationAt(uint64_t Address) const {
+  ErrorOr<const BinarySection &> Section = getSectionForAddress(Address);
   if (!Section)
     return nullptr;
 

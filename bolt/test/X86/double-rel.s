@@ -25,6 +25,10 @@ _start:
 ## VAR value is 0x80000. Using relocations, llvm-bolt should correctly
 ## symbolize the instruction operands.
 
+  movq $0x80000, 0x80000
+# CHECK-BOLT:    movq $0x80000, 0x80000
+# CHECK-OBJDUMP: movq $0x80000, 0x80000
+
   movq $VAR, 0x80000
 # CHECK-BOLT:    movq $VAR, 0x80000
 # CHECK-OBJDUMP: movq $0x80000, 0x80000

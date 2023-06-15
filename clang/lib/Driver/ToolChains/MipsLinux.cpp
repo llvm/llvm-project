@@ -30,7 +30,7 @@ MipsLLVMToolChain::MipsLLVMToolChain(const Driver &D,
   DetectedMultilibs Result;
   findMIPSMultilibs(D, Triple, "", Args, Result);
   Multilibs = Result.Multilibs;
-  SelectedMultilib = Result.SelectedMultilib;
+  SelectedMultilibs = Result.SelectedMultilibs;
 
   // Find out the library suffix based on the ABI.
   LibSuffix = tools::mips::getMipsABILibSuffix(Args, Triple);
@@ -56,7 +56,7 @@ void MipsLLVMToolChain::AddClangSystemIncludeArgs(
 
   const auto &Callback = Multilibs.includeDirsCallback();
   if (Callback) {
-    for (const auto &Path : Callback(SelectedMultilib))
+    for (const auto &Path : Callback(SelectedMultilibs.back()))
       addExternCSystemIncludeIfExists(DriverArgs, CC1Args,
                                       D.getInstalledDir() + Path);
   }
@@ -68,11 +68,11 @@ Tool *MipsLLVMToolChain::buildLinker() const {
 
 std::string MipsLLVMToolChain::computeSysRoot() const {
   if (!getDriver().SysRoot.empty())
-    return getDriver().SysRoot + SelectedMultilib.osSuffix();
+    return getDriver().SysRoot + SelectedMultilibs.back().osSuffix();
 
   const std::string InstalledDir(getDriver().getInstalledDir());
   std::string SysRootPath =
-      InstalledDir + "/../sysroot" + SelectedMultilib.osSuffix();
+      InstalledDir + "/../sysroot" + SelectedMultilibs.back().osSuffix();
   if (llvm::sys::fs::exists(SysRootPath))
     return SysRootPath;
 
@@ -96,7 +96,7 @@ void MipsLLVMToolChain::addLibCxxIncludePaths(
     const llvm::opt::ArgList &DriverArgs,
     llvm::opt::ArgStringList &CC1Args) const {
   if (const auto &Callback = Multilibs.includeDirsCallback()) {
-    for (std::string Path : Callback(SelectedMultilib)) {
+    for (std::string Path : Callback(SelectedMultilibs.back())) {
       Path = getDriver().getInstalledDir() + Path + "/c++/v1";
       if (llvm::sys::fs::exists(Path)) {
         addSystemInclude(DriverArgs, CC1Args, Path);
@@ -122,7 +122,7 @@ std::string MipsLLVMToolChain::getCompilerRT(const ArgList &Args,
                                              StringRef Component,
                                              FileType Type) const {
   SmallString<128> Path(getDriver().ResourceDir);
-  llvm::sys::path::append(Path, SelectedMultilib.osSuffix(), "lib" + LibSuffix,
+  llvm::sys::path::append(Path, SelectedMultilibs.back().osSuffix(), "lib" + LibSuffix,
                           getOS());
   const char *Suffix;
   switch (Type) {

@@ -35,8 +35,11 @@ ${PROGNAME} [options] <BUILDER>
 Environment variables
 CC                  The C compiler to use, this value is used by CMake. This
                     variable is optional.
+
 CXX                 The C++ compiler to use, this value is used by CMake. This
                     variable is optional.
+
+CMAKE               The CMake binary to use. This variable is optional.
 
 CLANG_FORMAT        The clang-format binary to use when generating the format
                     ignore list.
@@ -89,8 +92,24 @@ INSTALL_DIR="${BUILD_DIR}/install"
 # version will generally work with the Clang shipped in Xcode (e.g. if Clang
 # knows about -std=c++20, the CMake bundled in Xcode will probably know about
 # that flag too).
-if xcrun --find ninja &>/dev/null; then NINJA="$(xcrun --find ninja)"; else NINJA="ninja"; fi
-if xcrun --find cmake &>/dev/null; then CMAKE="$(xcrun --find cmake)"; else CMAKE="cmake"; fi
+if xcrun --find ninja &>/dev/null; then
+    NINJA="$(xcrun --find ninja)"
+elif which ninja &>/dev/null; then
+    # The current implementation of modules needs the absolute path to the ninja
+    # binary.
+    # TODO MODULES Is this still needed when CMake has libc++ module support?
+    NINJA="$(which ninja)"
+else
+    NINJA="ninja"
+fi
+
+if [ -z "${CMAKE}" ]; then
+    if xcrun --find cmake &>/dev/null; then
+        CMAKE="$(xcrun --find cmake)"
+    else
+        CMAKE="cmake"
+    fi
+fi
 
 function clean() {
     rm -rf "${BUILD_DIR}"
@@ -178,8 +197,8 @@ check-format)
     fi
     ${GIT_CLANG_FORMAT} \
         --diff \
-        --extensions ',h,hpp,c,cpp,inc,ipp' HEAD~1 \
-        -- $(find libcxx/{benchmarks,include,src}/ -type f | grep -vf libcxx/utils/data/ignore_format.txt) \
+        --extensions ',h,hpp,c,cpp,cppm,inc,ipp' HEAD~1 \
+        -- $(find libcxx/{benchmarks,include,modules,src}/ -type f | grep -vf libcxx/utils/data/ignore_format.txt) \
         | tee ${BUILD_DIR}/clang-format.patch
     # Check if the diff is empty, fail otherwise.
     ! grep -q '^--- a' ${BUILD_DIR}/clang-format.patch
@@ -379,6 +398,9 @@ generic-with_llvm_unwinder)
     generate-cmake -DLIBCXXABI_USE_LLVM_UNWINDER=ON
     check-runtimes
 ;;
+#
+# Module builds
+#
 generic-modules)
     clean
     generate-cmake -C "${MONOREPO_ROOT}/libcxx/cmake/caches/Generic-modules.cmake"
@@ -388,6 +410,12 @@ generic-modules)
 generic-modules-lsv)
     clean
     generate-cmake -C "${MONOREPO_ROOT}/libcxx/cmake/caches/Generic-modules-lsv.cmake"
+    check-runtimes
+    check-abi-list
+;;
+generic-module-std-cxx23)
+    clean
+    generate-cmake -C "${MONOREPO_ROOT}/libcxx/cmake/caches/Generic-module-std-cxx23.cmake"
     check-runtimes
     check-abi-list
 ;;

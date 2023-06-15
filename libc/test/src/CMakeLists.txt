@@ -1,7 +1,7 @@
 function(add_fp_unittest name)
   cmake_parse_arguments(
     "MATH_UNITTEST"
-    "NEED_MPFR;HERMETIC_TEST_ONLY" # Optional arguments
+    "NEED_MPFR;UNIT_TEST_ONLY;HERMETIC_TEST_ONLY" # Optional arguments
     "" # Single value arguments
     "LINK_LIBRARIES" # Multi-value arguments
     ${ARGN}
@@ -16,6 +16,8 @@ function(add_fp_unittest name)
 
   if(MATH_UNITTEST_HERMETIC_TEST_ONLY)
     set(test_type HERMETIC_TEST_ONLY)
+  elseif(MATH_UNITTEST_UNIT_TEST_ONLY)
+    set(test_type UNIT_TEST_ONLY)
   endif()
   if(MATH_UNITTEST_NEED_MPFR)
     if(MATH_UNITTEST_HERMETIC_TEST_ONLY)
@@ -26,7 +28,7 @@ function(add_fp_unittest name)
   endif()
   list(APPEND MATH_UNITTEST_LINK_LIBRARIES LibcFPTestHelpers)
 
-  add_libc_unittest(
+  add_libc_test(
     ${name}
     ${test_type}
     LINK_LIBRARIES "${MATH_UNITTEST_LINK_LIBRARIES}"

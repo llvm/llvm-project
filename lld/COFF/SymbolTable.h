@@ -28,7 +28,6 @@ class COFFLinkerContext;
 class Defined;
 class DefinedAbsolute;
 class DefinedRegular;
-class DefinedRelative;
 class LazyArchive;
 class SectionChunk;
 class Symbol;

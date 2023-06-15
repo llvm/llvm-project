@@ -24,3 +24,12 @@ func.func @add_ancestors_to_worklist() {
   }) {hoist_eligible_ops}: () -> ()
   return
 }
+
+// -----
+
+// There are no patterns in this test that apply to "test.symbol". This test is
+// to ensure that symbols are not getting removed due to being "trivially dead"
+// as part of a greedy rewrite. Symbols are never trivially dead.
+
+// CHECK: "test.symbol"() <{sym_name = "foo"}>
+"test.symbol"() <{sym_name = "foo"}> : () -> ()

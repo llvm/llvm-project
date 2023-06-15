@@ -761,8 +761,7 @@ void Environment::setValueStrict(const Expr &E, Value &Val) {
 }
 
 Value *Environment::getValue(const StorageLocation &Loc) const {
-  auto It = LocToVal.find(&Loc);
-  return It == LocToVal.end() ? nullptr : It->second;
+  return LocToVal.lookup(&Loc);
 }
 
 Value *Environment::getValue(const ValueDecl &D) const {

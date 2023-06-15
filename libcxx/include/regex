@@ -1020,7 +1020,7 @@ enum error_type
 
 } // namespace regex_constants
 
-class _LIBCPP_EXCEPTION_ABI regex_error
+class _LIBCPP_EXPORTED_FROM_ABI regex_error
     : public runtime_error
 {
     regex_constants::error_type __code_;
@@ -1245,7 +1245,7 @@ regex_traits<_CharT>::__transform_primary(_ForwardIterator __f,
 
 // lookup_collatename is very FreeBSD-specific
 
-_LIBCPP_FUNC_VIS string __get_collation_name(const char* __s);
+_LIBCPP_EXPORTED_FROM_ABI string __get_collation_name(const char* __s);
 
 template <class _CharT>
 template <class _ForwardIterator>
@@ -1308,8 +1308,7 @@ regex_traits<_CharT>::__lookup_collatename(_ForwardIterator __f,
 
 // lookup_classname
 
-regex_traits<char>::char_class_type _LIBCPP_FUNC_VIS
-__get_classname(const char* __s, bool __icase);
+regex_traits<char>::char_class_type _LIBCPP_EXPORTED_FROM_ABI __get_classname(const char* __s, bool __icase);
 
 template <class _CharT>
 template <class _ForwardIterator>
@@ -2225,9 +2224,9 @@ public:
     void __exec(__state&) const override;
 };
 
-template <> _LIBCPP_FUNC_VIS void __match_any_but_newline<char>::__exec(__state&) const;
+template <> _LIBCPP_EXPORTED_FROM_ABI void __match_any_but_newline<char>::__exec(__state&) const;
 #ifndef _LIBCPP_HAS_NO_WIDE_CHARACTERS
-template <> _LIBCPP_FUNC_VIS void __match_any_but_newline<wchar_t>::__exec(__state&) const;
+template <> _LIBCPP_EXPORTED_FROM_ABI void __match_any_but_newline<wchar_t>::__exec(__state&) const;
 #endif
 
 // __match_char

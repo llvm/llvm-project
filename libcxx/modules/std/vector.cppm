@@ -17,16 +17,7 @@ export namespace std {
   using std::vector;
 
   using std::operator==;
-#if 0 // P1614
   using std::operator<=>;
-#else
-  /* These should be removed after https://reviews.llvm.org/D132268 lands. */
-  using std::operator!=;
-  using std::operator<;
-  using std::operator>;
-  using std::operator<=;
-  using std::operator>=;
-#endif
 
   using std::swap;
 

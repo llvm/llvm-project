@@ -14844,7 +14844,7 @@ void Sema::DiagnoseAlwaysNonNullPointer(Expr *E,
 
   bool IsAddressOf = false;
 
-  if (UnaryOperator *UO = dyn_cast<UnaryOperator>(E)) {
+  if (auto *UO = dyn_cast<UnaryOperator>(E->IgnoreParens())) {
     if (UO->getOpcode() != UO_AddrOf)
       return;
     IsAddressOf = true;
@@ -18536,6 +18536,10 @@ bool Sema::BuiltinWasmTableCopy(CallExpr *TheCall) {
 /// and enforce_tcb_leaf attributes.
 void Sema::CheckTCBEnforcement(const SourceLocation CallExprLoc,
                                const NamedDecl *Callee) {
+  // This warning does not make sense in code that has no runtime behavior.
+  if (isUnevaluatedContext())
+    return;
+
   const NamedDecl *Caller = getCurFunctionOrMethodDecl();
 
   if (!Caller || !Caller->hasAttr<EnforceTCBAttr>())

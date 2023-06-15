@@ -106,7 +106,7 @@ def TEST_TestType : DialectType<Test_Dialect,
 // Test Symbols
 //===----------------------------------------------------------------------===//
 
-def SymbolOp : TEST_Op<"symbol", [Symbol]> {
+def SymbolOp : TEST_Op<"symbol", [NoMemoryEffect, Symbol]> {
   let summary =  "operation which defines a new symbol";
   let arguments = (ins StrAttr:$sym_name,
                        OptionalAttr<StrAttr>:$sym_visibility);

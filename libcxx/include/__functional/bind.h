@@ -62,16 +62,16 @@ template <int _Np> struct __ph {};
 //
 // In practice, since placeholders are empty, `extern const` is almost impossible
 // to distinguish from `inline constexpr` from a usage stand point.
-_LIBCPP_FUNC_VIS extern const __ph<1>   _1;
-_LIBCPP_FUNC_VIS extern const __ph<2>   _2;
-_LIBCPP_FUNC_VIS extern const __ph<3>   _3;
-_LIBCPP_FUNC_VIS extern const __ph<4>   _4;
-_LIBCPP_FUNC_VIS extern const __ph<5>   _5;
-_LIBCPP_FUNC_VIS extern const __ph<6>   _6;
-_LIBCPP_FUNC_VIS extern const __ph<7>   _7;
-_LIBCPP_FUNC_VIS extern const __ph<8>   _8;
-_LIBCPP_FUNC_VIS extern const __ph<9>   _9;
-_LIBCPP_FUNC_VIS extern const __ph<10> _10;
+_LIBCPP_EXPORTED_FROM_ABI extern const __ph<1>   _1;
+_LIBCPP_EXPORTED_FROM_ABI extern const __ph<2>   _2;
+_LIBCPP_EXPORTED_FROM_ABI extern const __ph<3>   _3;
+_LIBCPP_EXPORTED_FROM_ABI extern const __ph<4>   _4;
+_LIBCPP_EXPORTED_FROM_ABI extern const __ph<5>   _5;
+_LIBCPP_EXPORTED_FROM_ABI extern const __ph<6>   _6;
+_LIBCPP_EXPORTED_FROM_ABI extern const __ph<7>   _7;
+_LIBCPP_EXPORTED_FROM_ABI extern const __ph<8>   _8;
+_LIBCPP_EXPORTED_FROM_ABI extern const __ph<9>   _9;
+_LIBCPP_EXPORTED_FROM_ABI extern const __ph<10> _10;
 
 } // namespace placeholders
 

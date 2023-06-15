@@ -46,6 +46,7 @@ class DirectoryEntry {
   StringRef Name; // Name of the directory.
 
 public:
+  LLVM_DEPRECATED("Use DirectoryEntryRef::getName() instead.", "")
   StringRef getName() const { return Name; }
 };
 

@@ -118,9 +118,7 @@ define <vscale x 2 x i64> @mul_nxv2i64_x(<vscale x 2 x i64> %x, <vscale x 2 x i6
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    ptrue p0.d
 ; CHECK-NEXT:    cmpgt p0.d, p0/z, z2.d, #0
-; CHECK-NEXT:    mov z2.d, #1 // =0x1
-; CHECK-NEXT:    sel z1.d, p0, z1.d, z2.d
-; CHECK-NEXT:    mul z0.d, z1.d, z0.d
+; CHECK-NEXT:    mul z0.d, p0/m, z0.d, z1.d
 ; CHECK-NEXT:    ret
 entry:
   %c = icmp sgt <vscale x 2 x i64> %n, zeroinitializer
@@ -134,9 +132,7 @@ define <vscale x 4 x i32> @mul_nxv4i32_x(<vscale x 4 x i32> %x, <vscale x 4 x i3
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    ptrue p0.s
 ; CHECK-NEXT:    cmpgt p0.s, p0/z, z2.s, #0
-; CHECK-NEXT:    mov z2.s, #1 // =0x1
-; CHECK-NEXT:    sel z1.s, p0, z1.s, z2.s
-; CHECK-NEXT:    mul z0.s, z1.s, z0.s
+; CHECK-NEXT:    mul z0.s, p0/m, z0.s, z1.s
 ; CHECK-NEXT:    ret
 entry:
   %c = icmp sgt <vscale x 4 x i32> %n, zeroinitializer
@@ -150,9 +146,7 @@ define <vscale x 8 x i16> @mul_nxv8i16_x(<vscale x 8 x i16> %x, <vscale x 8 x i1
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    ptrue p0.h
 ; CHECK-NEXT:    cmpgt p0.h, p0/z, z2.h, #0
-; CHECK-NEXT:    mov z2.h, #1 // =0x1
-; CHECK-NEXT:    sel z1.h, p0, z1.h, z2.h
-; CHECK-NEXT:    mul z0.h, z1.h, z0.h
+; CHECK-NEXT:    mul z0.h, p0/m, z0.h, z1.h
 ; CHECK-NEXT:    ret
 entry:
   %c = icmp sgt <vscale x 8 x i16> %n, zeroinitializer
@@ -166,9 +160,7 @@ define <vscale x 16 x i8> @mul_nxv16i8_x(<vscale x 16 x i8> %x, <vscale x 16 x i
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    ptrue p0.b
 ; CHECK-NEXT:    cmpgt p0.b, p0/z, z2.b, #0
-; CHECK-NEXT:    mov z2.b, #1 // =0x1
-; CHECK-NEXT:    sel z1.b, p0, z1.b, z2.b
-; CHECK-NEXT:    mul z0.b, z1.b, z0.b
+; CHECK-NEXT:    mul z0.b, p0/m, z0.b, z1.b
 ; CHECK-NEXT:    ret
 entry:
   %c = icmp sgt <vscale x 16 x i8> %n, zeroinitializer
@@ -182,9 +174,7 @@ define <vscale x 2 x i64> @and_nxv2i64_x(<vscale x 2 x i64> %x, <vscale x 2 x i6
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    ptrue p0.d
 ; CHECK-NEXT:    cmpgt p0.d, p0/z, z2.d, #0
-; CHECK-NEXT:    mov z2.d, #-1 // =0xffffffffffffffff
-; CHECK-NEXT:    sel z1.d, p0, z1.d, z2.d
-; CHECK-NEXT:    and z0.d, z1.d, z0.d
+; CHECK-NEXT:    and z0.d, p0/m, z0.d, z1.d
 ; CHECK-NEXT:    ret
 entry:
   %c = icmp sgt <vscale x 2 x i64> %n, zeroinitializer
@@ -198,9 +188,7 @@ define <vscale x 4 x i32> @and_nxv4i32_x(<vscale x 4 x i32> %x, <vscale x 4 x i3
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    ptrue p0.s
 ; CHECK-NEXT:    cmpgt p0.s, p0/z, z2.s, #0
-; CHECK-NEXT:    mov z2.s, #-1 // =0xffffffffffffffff
-; CHECK-NEXT:    sel z1.s, p0, z1.s, z2.s
-; CHECK-NEXT:    and z0.d, z1.d, z0.d
+; CHECK-NEXT:    and z0.s, p0/m, z0.s, z1.s
 ; CHECK-NEXT:    ret
 entry:
   %c = icmp sgt <vscale x 4 x i32> %n, zeroinitializer
@@ -214,9 +202,7 @@ define <vscale x 8 x i16> @and_nxv8i16_x(<vscale x 8 x i16> %x, <vscale x 8 x i1
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    ptrue p0.h
 ; CHECK-NEXT:    cmpgt p0.h, p0/z, z2.h, #0
-; CHECK-NEXT:    mov z2.h, #-1 // =0xffffffffffffffff
-; CHECK-NEXT:    sel z1.h, p0, z1.h, z2.h
-; CHECK-NEXT:    and z0.d, z1.d, z0.d
+; CHECK-NEXT:    and z0.h, p0/m, z0.h, z1.h
 ; CHECK-NEXT:    ret
 entry:
   %c = icmp sgt <vscale x 8 x i16> %n, zeroinitializer
@@ -230,9 +216,7 @@ define <vscale x 16 x i8> @and_nxv16i8_x(<vscale x 16 x i8> %x, <vscale x 16 x i
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    ptrue p0.b
 ; CHECK-NEXT:    cmpgt p0.b, p0/z, z2.b, #0
-; CHECK-NEXT:    mov z2.b, #-1 // =0xffffffffffffffff
-; CHECK-NEXT:    sel z1.b, p0, z1.b, z2.b
-; CHECK-NEXT:    and z0.d, z1.d, z0.d
+; CHECK-NEXT:    and z0.b, p0/m, z0.b, z1.b
 ; CHECK-NEXT:    ret
 entry:
   %c = icmp sgt <vscale x 16 x i8> %n, zeroinitializer
@@ -246,9 +230,7 @@ define <vscale x 2 x i64> @or_nxv2i64_x(<vscale x 2 x i64> %x, <vscale x 2 x i64
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    ptrue p0.d
 ; CHECK-NEXT:    cmpgt p0.d, p0/z, z2.d, #0
-; CHECK-NEXT:    mov z2.d, #0 // =0x0
-; CHECK-NEXT:    sel z1.d, p0, z1.d, z2.d
-; CHECK-NEXT:    orr z0.d, z1.d, z0.d
+; CHECK-NEXT:    orr z0.d, p0/m, z0.d, z1.d
 ; CHECK-NEXT:    ret
 entry:
   %c = icmp sgt <vscale x 2 x i64> %n, zeroinitializer
@@ -262,9 +244,7 @@ define <vscale x 4 x i32> @or_nxv4i32_x(<vscale x 4 x i32> %x, <vscale x 4 x i32
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    ptrue p0.s
 ; CHECK-NEXT:    cmpgt p0.s, p0/z, z2.s, #0
-; CHECK-NEXT:    mov z2.s, #0 // =0x0
-; CHECK-NEXT:    sel z1.s, p0, z1.s, z2.s
-; CHECK-NEXT:    orr z0.d, z1.d, z0.d
+; CHECK-NEXT:    orr z0.s, p0/m, z0.s, z1.s
 ; CHECK-NEXT:    ret
 entry:
   %c = icmp sgt <vscale x 4 x i32> %n, zeroinitializer
@@ -278,9 +258,7 @@ define <vscale x 8 x i16> @or_nxv8i16_x(<vscale x 8 x i16> %x, <vscale x 8 x i16
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    ptrue p0.h
 ; CHECK-NEXT:    cmpgt p0.h, p0/z, z2.h, #0
-; CHECK-NEXT:    mov z2.h, #0 // =0x0
-; CHECK-NEXT:    sel z1.h, p0, z1.h, z2.h
-; CHECK-NEXT:    orr z0.d, z1.d, z0.d
+; CHECK-NEXT:    orr z0.h, p0/m, z0.h, z1.h
 ; CHECK-NEXT:    ret
 entry:
   %c = icmp sgt <vscale x 8 x i16> %n, zeroinitializer
@@ -294,9 +272,7 @@ define <vscale x 16 x i8> @or_nxv16i8_x(<vscale x 16 x i8> %x, <vscale x 16 x i8
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    ptrue p0.b
 ; CHECK-NEXT:    cmpgt p0.b, p0/z, z2.b, #0
-; CHECK-NEXT:    mov z2.b, #0 // =0x0
-; CHECK-NEXT:    sel z1.b, p0, z1.b, z2.b
-; CHECK-NEXT:    orr z0.d, z1.d, z0.d
+; CHECK-NEXT:    orr z0.b, p0/m, z0.b, z1.b
 ; CHECK-NEXT:    ret
 entry:
   %c = icmp sgt <vscale x 16 x i8> %n, zeroinitializer
@@ -310,9 +286,7 @@ define <vscale x 2 x i64> @xor_nxv2i64_x(<vscale x 2 x i64> %x, <vscale x 2 x i6
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    ptrue p0.d
 ; CHECK-NEXT:    cmpgt p0.d, p0/z, z2.d, #0
-; CHECK-NEXT:    mov z2.d, #0 // =0x0
-; CHECK-NEXT:    sel z1.d, p0, z1.d, z2.d
-; CHECK-NEXT:    eor z0.d, z1.d, z0.d
+; CHECK-NEXT:    eor z0.d, p0/m, z0.d, z1.d
 ; CHECK-NEXT:    ret
 entry:
   %c = icmp sgt <vscale x 2 x i64> %n, zeroinitializer
@@ -326,9 +300,7 @@ define <vscale x 4 x i32> @xor_nxv4i32_x(<vscale x 4 x i32> %x, <vscale x 4 x i3
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    ptrue p0.s
 ; CHECK-NEXT:    cmpgt p0.s, p0/z, z2.s, #0
-; CHECK-NEXT:    mov z2.s, #0 // =0x0
-; CHECK-NEXT:    sel z1.s, p0, z1.s, z2.s
-; CHECK-NEXT:    eor z0.d, z1.d, z0.d
+; CHECK-NEXT:    eor z0.s, p0/m, z0.s, z1.s
 ; CHECK-NEXT:    ret
 entry:
   %c = icmp sgt <vscale x 4 x i32> %n, zeroinitializer
@@ -342,9 +314,7 @@ define <vscale x 8 x i16> @xor_nxv8i16_x(<vscale x 8 x i16> %x, <vscale x 8 x i1
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    ptrue p0.h
 ; CHECK-NEXT:    cmpgt p0.h, p0/z, z2.h, #0
-; CHECK-NEXT:    mov z2.h, #0 // =0x0
-; CHECK-NEXT:    sel z1.h, p0, z1.h, z2.h
-; CHECK-NEXT:    eor z0.d, z1.d, z0.d
+; CHECK-NEXT:    eor z0.h, p0/m, z0.h, z1.h
 ; CHECK-NEXT:    ret
 entry:
   %c = icmp sgt <vscale x 8 x i16> %n, zeroinitializer
@@ -358,9 +328,7 @@ define <vscale x 16 x i8> @xor_nxv16i8_x(<vscale x 16 x i8> %x, <vscale x 16 x i
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    ptrue p0.b
 ; CHECK-NEXT:    cmpgt p0.b, p0/z, z2.b, #0
-; CHECK-NEXT:    mov z2.b, #0 // =0x0
-; CHECK-NEXT:    sel z1.b, p0, z1.b, z2.b
-; CHECK-NEXT:    eor z0.d, z1.d, z0.d
+; CHECK-NEXT:    eor z0.b, p0/m, z0.b, z1.b
 ; CHECK-NEXT:    ret
 entry:
   %c = icmp sgt <vscale x 16 x i8> %n, zeroinitializer
@@ -374,9 +342,8 @@ define <vscale x 2 x i64> @shl_nxv2i64_x(<vscale x 2 x i64> %x, <vscale x 2 x i6
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    ptrue p0.d
 ; CHECK-NEXT:    cmpgt p1.d, p0/z, z2.d, #0
-; CHECK-NEXT:    mov z2.d, #0 // =0x0
-; CHECK-NEXT:    sel z1.d, p1, z1.d, z2.d
-; CHECK-NEXT:    lsl z0.d, p0/m, z0.d, z1.d
+; CHECK-NEXT:    lslr z1.d, p0/m, z1.d, z0.d
+; CHECK-NEXT:    mov z0.d, p1/m, z1.d
 ; CHECK-NEXT:    ret
 entry:
   %c = icmp sgt <vscale x 2 x i64> %n, zeroinitializer
@@ -390,9 +357,8 @@ define <vscale x 4 x i32> @shl_nxv4i32_x(<vscale x 4 x i32> %x, <vscale x 4 x i3
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    ptrue p0.s
 ; CHECK-NEXT:    cmpgt p1.s, p0/z, z2.s, #0
-; CHECK-NEXT:    mov z2.s, #0 // =0x0
-; CHECK-NEXT:    sel z1.s, p1, z1.s, z2.s
-; CHECK-NEXT:    lsl z0.s, p0/m, z0.s, z1.s
+; CHECK-NEXT:    lslr z1.s, p0/m, z1.s, z0.s
+; CHECK-NEXT:    mov z0.s, p1/m, z1.s
 ; CHECK-NEXT:    ret
 entry:
   %c = icmp sgt <vscale x 4 x i32> %n, zeroinitializer
@@ -406,9 +372,8 @@ define <vscale x 8 x i16> @shl_nxv8i16_x(<vscale x 8 x i16> %x, <vscale x 8 x i1
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    ptrue p0.h
 ; CHECK-NEXT:    cmpgt p1.h, p0/z, z2.h, #0
-; CHECK-NEXT:    mov z2.h, #0 // =0x0
-; CHECK-NEXT:    sel z1.h, p1, z1.h, z2.h
-; CHECK-NEXT:    lsl z0.h, p0/m, z0.h, z1.h
+; CHECK-NEXT:    lslr z1.h, p0/m, z1.h, z0.h
+; CHECK-NEXT:    mov z0.h, p1/m, z1.h
 ; CHECK-NEXT:    ret
 entry:
   %c = icmp sgt <vscale x 8 x i16> %n, zeroinitializer
@@ -422,9 +387,8 @@ define <vscale x 16 x i8> @shl_nxv16i8_x(<vscale x 16 x i8> %x, <vscale x 16 x i
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    ptrue p0.b
 ; CHECK-NEXT:    cmpgt p1.b, p0/z, z2.b, #0
-; CHECK-NEXT:    mov z2.b, #0 // =0x0
-; CHECK-NEXT:    sel z1.b, p1, z1.b, z2.b
-; CHECK-NEXT:    lsl z0.b, p0/m, z0.b, z1.b
+; CHECK-NEXT:    lslr z1.b, p0/m, z1.b, z0.b
+; CHECK-NEXT:    mov z0.b, p1/m, z1.b
 ; CHECK-NEXT:    ret
 entry:
   %c = icmp sgt <vscale x 16 x i8> %n, zeroinitializer
@@ -438,9 +402,8 @@ define <vscale x 2 x i64> @ashr_nxv2i64_x(<vscale x 2 x i64> %x, <vscale x 2 x i
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    ptrue p0.d
 ; CHECK-NEXT:    cmpgt p1.d, p0/z, z2.d, #0
-; CHECK-NEXT:    mov z2.d, #0 // =0x0
-; CHECK-NEXT:    sel z1.d, p1, z1.d, z2.d
-; CHECK-NEXT:    asr z0.d, p0/m, z0.d, z1.d
+; CHECK-NEXT:    asrr z1.d, p0/m, z1.d, z0.d
+; CHECK-NEXT:    mov z0.d, p1/m, z1.d
 ; CHECK-NEXT:    ret
 entry:
   %c = icmp sgt <vscale x 2 x i64> %n, zeroinitializer
@@ -454,9 +417,8 @@ define <vscale x 4 x i32> @ashr_nxv4i32_x(<vscale x 4 x i32> %x, <vscale x 4 x i
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    ptrue p0.s
 ; CHECK-NEXT:    cmpgt p1.s, p0/z, z2.s, #0
-; CHECK-NEXT:    mov z2.s, #0 // =0x0
-; CHECK-NEXT:    sel z1.s, p1, z1.s, z2.s
-; CHECK-NEXT:    asr z0.s, p0/m, z0.s, z1.s
+; CHECK-NEXT:    asrr z1.s, p0/m, z1.s, z0.s
+; CHECK-NEXT:    mov z0.s, p1/m, z1.s
 ; CHECK-NEXT:    ret
 entry:
   %c = icmp sgt <vscale x 4 x i32> %n, zeroinitializer
@@ -470,9 +432,8 @@ define <vscale x 8 x i16> @ashr_nxv8i16_x(<vscale x 8 x i16> %x, <vscale x 8 x i
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    ptrue p0.h
 ; CHECK-NEXT:    cmpgt p1.h, p0/z, z2.h, #0
-; CHECK-NEXT:    mov z2.h, #0 // =0x0
-; CHECK-NEXT:    sel z1.h, p1, z1.h, z2.h
-; CHECK-NEXT:    asr z0.h, p0/m, z0.h, z1.h
+; CHECK-NEXT:    asrr z1.h, p0/m, z1.h, z0.h
+; CHECK-NEXT:    mov z0.h, p1/m, z1.h
 ; CHECK-NEXT:    ret
 entry:
   %c = icmp sgt <vscale x 8 x i16> %n, zeroinitializer
@@ -486,9 +447,8 @@ define <vscale x 16 x i8> @ashr_nxv16i8_x(<vscale x 16 x i8> %x, <vscale x 16 x 
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    ptrue p0.b
 ; CHECK-NEXT:    cmpgt p1.b, p0/z, z2.b, #0
-; CHECK-NEXT:    mov z2.b, #0 // =0x0
-; CHECK-NEXT:    sel z1.b, p1, z1.b, z2.b
-; CHECK-NEXT:    asr z0.b, p0/m, z0.b, z1.b
+; CHECK-NEXT:    asrr z1.b, p0/m, z1.b, z0.b
+; CHECK-NEXT:    mov z0.b, p1/m, z1.b
 ; CHECK-NEXT:    ret
 entry:
   %c = icmp sgt <vscale x 16 x i8> %n, zeroinitializer
@@ -502,9 +462,8 @@ define <vscale x 2 x i64> @lshr_nxv2i64_x(<vscale x 2 x i64> %x, <vscale x 2 x i
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    ptrue p0.d
 ; CHECK-NEXT:    cmpgt p1.d, p0/z, z2.d, #0
-; CHECK-NEXT:    mov z2.d, #0 // =0x0
-; CHECK-NEXT:    sel z1.d, p1, z1.d, z2.d
-; CHECK-NEXT:    lsr z0.d, p0/m, z0.d, z1.d
+; CHECK-NEXT:    lsrr z1.d, p0/m, z1.d, z0.d
+; CHECK-NEXT:    mov z0.d, p1/m, z1.d
 ; CHECK-NEXT:    ret
 entry:
   %c = icmp sgt <vscale x 2 x i64> %n, zeroinitializer
@@ -518,9 +477,8 @@ define <vscale x 4 x i32> @lshr_nxv4i32_x(<vscale x 4 x i32> %x, <vscale x 4 x i
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    ptrue p0.s
 ; CHECK-NEXT:    cmpgt p1.s, p0/z, z2.s, #0
-; CHECK-NEXT:    mov z2.s, #0 // =0x0
-; CHECK-NEXT:    sel z1.s, p1, z1.s, z2.s
-; CHECK-NEXT:    lsr z0.s, p0/m, z0.s, z1.s
+; CHECK-NEXT:    lsrr z1.s, p0/m, z1.s, z0.s
+; CHECK-NEXT:    mov z0.s, p1/m, z1.s
 ; CHECK-NEXT:    ret
 entry:
   %c = icmp sgt <vscale x 4 x i32> %n, zeroinitializer
@@ -534,9 +492,8 @@ define <vscale x 8 x i16> @lshr_nxv8i16_x(<vscale x 8 x i16> %x, <vscale x 8 x i
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    ptrue p0.h
 ; CHECK-NEXT:    cmpgt p1.h, p0/z, z2.h, #0
-; CHECK-NEXT:    mov z2.h, #0 // =0x0
-; CHECK-NEXT:    sel z1.h, p1, z1.h, z2.h
-; CHECK-NEXT:    lsr z0.h, p0/m, z0.h, z1.h
+; CHECK-NEXT:    lsrr z1.h, p0/m, z1.h, z0.h
+; CHECK-NEXT:    mov z0.h, p1/m, z1.h
 ; CHECK-NEXT:    ret
 entry:
   %c = icmp sgt <vscale x 8 x i16> %n, zeroinitializer
@@ -550,9 +507,8 @@ define <vscale x 16 x i8> @lshr_nxv16i8_x(<vscale x 16 x i8> %x, <vscale x 16 x 
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    ptrue p0.b
 ; CHECK-NEXT:    cmpgt p1.b, p0/z, z2.b, #0
-; CHECK-NEXT:    mov z2.b, #0 // =0x0
-; CHECK-NEXT:    sel z1.b, p1, z1.b, z2.b
-; CHECK-NEXT:    lsr z0.b, p0/m, z0.b, z1.b
+; CHECK-NEXT:    lsrr z1.b, p0/m, z1.b, z0.b
+; CHECK-NEXT:    mov z0.b, p1/m, z1.b
 ; CHECK-NEXT:    ret
 entry:
   %c = icmp sgt <vscale x 16 x i8> %n, zeroinitializer
@@ -688,13 +644,10 @@ entry:
 define <vscale x 4 x float> @fadd_nxv4f32_x(<vscale x 4 x float> %x, <vscale x 4 x float> %y, <vscale x 4 x float> %n) {
 ; CHECK-LABEL: fadd_nxv4f32_x:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    mov w8, #-2147483648 // =0x80000000
 ; CHECK-NEXT:    ptrue p0.s
 ; CHECK-NEXT:    fcmle p1.s, p0/z, z2.s, #0.0
 ; CHECK-NEXT:    not p0.b, p0/z, p1.b
-; CHECK-NEXT:    mov z2.s, w8
-; CHECK-NEXT:    sel z1.s, p0, z1.s, z2.s
-; CHECK-NEXT:    fadd z0.s, z1.s, z0.s
+; CHECK-NEXT:    fadd z0.s, p0/m, z0.s, z1.s
 ; CHECK-NEXT:    ret
 entry:
   %c = fcmp ugt <vscale x 4 x float> %n, zeroinitializer
@@ -706,13 +659,10 @@ entry:
 define <vscale x 8 x half> @fadd_nxv8f16_x(<vscale x 8 x half> %x, <vscale x 8 x half> %y, <vscale x 8 x half> %n) {
 ; CHECK-LABEL: fadd_nxv8f16_x:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    mov w8, #32768 // =0x8000
 ; CHECK-NEXT:    ptrue p0.h
 ; CHECK-NEXT:    fcmle p1.h, p0/z, z2.h, #0.0
 ; CHECK-NEXT:    not p0.b, p0/z, p1.b
-; CHECK-NEXT:    mov z2.h, w8
-; CHECK-NEXT:    sel z1.h, p0, z1.h, z2.h
-; CHECK-NEXT:    fadd z0.h, z1.h, z0.h
+; CHECK-NEXT:    fadd z0.h, p0/m, z0.h, z1.h
 ; CHECK-NEXT:    ret
 entry:
   %c = fcmp ugt <vscale x 8 x half> %n, zeroinitializer
@@ -724,13 +674,10 @@ entry:
 define <vscale x 2 x double> @fadd_nxv2f64_x(<vscale x 2 x double> %x, <vscale x 2 x double> %y, <vscale x 2 x double> %n) {
 ; CHECK-LABEL: fadd_nxv2f64_x:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    mov x8, #-9223372036854775808 // =0x8000000000000000
 ; CHECK-NEXT:    ptrue p0.d
 ; CHECK-NEXT:    fcmle p1.d, p0/z, z2.d, #0.0
 ; CHECK-NEXT:    not p0.b, p0/z, p1.b
-; CHECK-NEXT:    mov z2.d, x8
-; CHECK-NEXT:    sel z1.d, p0, z1.d, z2.d
-; CHECK-NEXT:    fadd z0.d, z1.d, z0.d
+; CHECK-NEXT:    fadd z0.d, p0/m, z0.d, z1.d
 ; CHECK-NEXT:    ret
 entry:
   %c = fcmp ugt <vscale x 2 x double> %n, zeroinitializer
@@ -789,10 +736,8 @@ define <vscale x 4 x float> @fmul_nxv4f32_x(<vscale x 4 x float> %x, <vscale x 4
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    ptrue p0.s
 ; CHECK-NEXT:    fcmle p1.s, p0/z, z2.s, #0.0
-; CHECK-NEXT:    fmov z2.s, #1.00000000
 ; CHECK-NEXT:    not p0.b, p0/z, p1.b
-; CHECK-NEXT:    sel z1.s, p0, z1.s, z2.s
-; CHECK-NEXT:    fmul z0.s, z1.s, z0.s
+; CHECK-NEXT:    fmul z0.s, p0/m, z0.s, z1.s
 ; CHECK-NEXT:    ret
 entry:
   %c = fcmp ugt <vscale x 4 x float> %n, zeroinitializer
@@ -806,10 +751,8 @@ define <vscale x 8 x half> @fmul_nxv8f16_x(<vscale x 8 x half> %x, <vscale x 8 x
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    ptrue p0.h
 ; CHECK-NEXT:    fcmle p1.h, p0/z, z2.h, #0.0
-; CHECK-NEXT:    fmov z2.h, #1.00000000
 ; CHECK-NEXT:    not p0.b, p0/z, p1.b
-; CHECK-NEXT:    sel z1.h, p0, z1.h, z2.h
-; CHECK-NEXT:    fmul z0.h, z1.h, z0.h
+; CHECK-NEXT:    fmul z0.h, p0/m, z0.h, z1.h
 ; CHECK-NEXT:    ret
 entry:
   %c = fcmp ugt <vscale x 8 x half> %n, zeroinitializer
@@ -823,10 +766,8 @@ define <vscale x 2 x double> @fmul_nxv2f64_x(<vscale x 2 x double> %x, <vscale x
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    ptrue p0.d
 ; CHECK-NEXT:    fcmle p1.d, p0/z, z2.d, #0.0
-; CHECK-NEXT:    fmov z2.d, #1.00000000
 ; CHECK-NEXT:    not p0.b, p0/z, p1.b
-; CHECK-NEXT:    sel z1.d, p0, z1.d, z2.d
-; CHECK-NEXT:    fmul z0.d, z1.d, z0.d
+; CHECK-NEXT:    fmul z0.d, p0/m, z0.d, z1.d
 ; CHECK-NEXT:    ret
 entry:
   %c = fcmp ugt <vscale x 2 x double> %n, zeroinitializer
@@ -840,10 +781,9 @@ define <vscale x 4 x float> @fdiv_nxv4f32_x(<vscale x 4 x float> %x, <vscale x 4
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    ptrue p0.s
 ; CHECK-NEXT:    fcmle p1.s, p0/z, z2.s, #0.0
-; CHECK-NEXT:    fmov z2.s, #1.00000000
+; CHECK-NEXT:    fdivr z1.s, p0/m, z1.s, z0.s
 ; CHECK-NEXT:    not p1.b, p0/z, p1.b
-; CHECK-NEXT:    sel z1.s, p1, z1.s, z2.s
-; CHECK-NEXT:    fdiv z0.s, p0/m, z0.s, z1.s
+; CHECK-NEXT:    mov z0.s, p1/m, z1.s
 ; CHECK-NEXT:    ret
 entry:
   %c = fcmp ugt <vscale x 4 x float> %n, zeroinitializer
@@ -857,10 +797,9 @@ define <vscale x 8 x half> @fdiv_nxv8f16_x(<vscale x 8 x half> %x, <vscale x 8 x
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    ptrue p0.h
 ; CHECK-NEXT:    fcmle p1.h, p0/z, z2.h, #0.0
-; CHECK-NEXT:    fmov z2.h, #1.00000000
+; CHECK-NEXT:    fdivr z1.h, p0/m, z1.h, z0.h
 ; CHECK-NEXT:    not p1.b, p0/z, p1.b
-; CHECK-NEXT:    sel z1.h, p1, z1.h, z2.h
-; CHECK-NEXT:    fdiv z0.h, p0/m, z0.h, z1.h
+; CHECK-NEXT:    mov z0.h, p1/m, z1.h
 ; CHECK-NEXT:    ret
 entry:
   %c = fcmp ugt <vscale x 8 x half> %n, zeroinitializer
@@ -874,10 +813,9 @@ define <vscale x 2 x double> @fdiv_nxv2f64_x(<vscale x 2 x double> %x, <vscale x
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    ptrue p0.d
 ; CHECK-NEXT:    fcmle p1.d, p0/z, z2.d, #0.0
-; CHECK-NEXT:    fmov z2.d, #1.00000000
+; CHECK-NEXT:    fdivr z1.d, p0/m, z1.d, z0.d
 ; CHECK-NEXT:    not p1.b, p0/z, p1.b
-; CHECK-NEXT:    sel z1.d, p1, z1.d, z2.d
-; CHECK-NEXT:    fdiv z0.d, p0/m, z0.d, z1.d
+; CHECK-NEXT:    mov z0.d, p1/m, z1.d
 ; CHECK-NEXT:    ret
 entry:
   %c = fcmp ugt <vscale x 2 x double> %n, zeroinitializer
@@ -889,14 +827,10 @@ entry:
 define <vscale x 4 x float> @fma_nxv4f32_x(<vscale x 4 x float> %x, <vscale x 4 x float> %y, <vscale x 4 x float> %z, <vscale x 4 x float> %n) {
 ; CHECK-LABEL: fma_nxv4f32_x:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    mov w8, #-2147483648 // =0x80000000
 ; CHECK-NEXT:    ptrue p0.s
 ; CHECK-NEXT:    fcmle p1.s, p0/z, z3.s, #0.0
-; CHECK-NEXT:    fmul z1.s, z1.s, z2.s
 ; CHECK-NEXT:    not p0.b, p0/z, p1.b
-; CHECK-NEXT:    mov z2.s, w8
-; CHECK-NEXT:    sel z1.s, p0, z1.s, z2.s
-; CHECK-NEXT:    fadd z0.s, z1.s, z0.s
+; CHECK-NEXT:    fmla z0.s, p0/m, z1.s, z2.s
 ; CHECK-NEXT:    ret
 entry:
   %c = fcmp ugt <vscale x 4 x float> %n, zeroinitializer
@@ -909,14 +843,10 @@ entry:
 define <vscale x 8 x half> @fma_nxv8f16_x(<vscale x 8 x half> %x, <vscale x 8 x half> %y, <vscale x 8 x half> %z, <vscale x 8 x half> %n) {
 ; CHECK-LABEL: fma_nxv8f16_x:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    mov w8, #32768 // =0x8000
 ; CHECK-NEXT:    ptrue p0.h
 ; CHECK-NEXT:    fcmle p1.h, p0/z, z3.h, #0.0
-; CHECK-NEXT:    fmul z1.h, z1.h, z2.h
 ; CHECK-NEXT:    not p0.b, p0/z, p1.b
-; CHECK-NEXT:    mov z2.h, w8
-; CHECK-NEXT:    sel z1.h, p0, z1.h, z2.h
-; CHECK-NEXT:    fadd z0.h, z1.h, z0.h
+; CHECK-NEXT:    fmla z0.h, p0/m, z1.h, z2.h
 ; CHECK-NEXT:    ret
 entry:
   %c = fcmp ugt <vscale x 8 x half> %n, zeroinitializer
@@ -929,14 +859,10 @@ entry:
 define <vscale x 2 x double> @fma_nxv2f64_x(<vscale x 2 x double> %x, <vscale x 2 x double> %y, <vscale x 2 x double> %z, <vscale x 2 x double> %n) {
 ; CHECK-LABEL: fma_nxv2f64_x:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    mov x8, #-9223372036854775808 // =0x8000000000000000
 ; CHECK-NEXT:    ptrue p0.d
 ; CHECK-NEXT:    fcmle p1.d, p0/z, z3.d, #0.0
-; CHECK-NEXT:    fmul z1.d, z1.d, z2.d
 ; CHECK-NEXT:    not p0.b, p0/z, p1.b
-; CHECK-NEXT:    mov z2.d, x8
-; CHECK-NEXT:    sel z1.d, p0, z1.d, z2.d
-; CHECK-NEXT:    fadd z0.d, z1.d, z0.d
+; CHECK-NEXT:    fmla z0.d, p0/m, z1.d, z2.d
 ; CHECK-NEXT:    ret
 entry:
   %c = fcmp ugt <vscale x 2 x double> %n, zeroinitializer
@@ -1071,9 +997,8 @@ define <vscale x 2 x i64> @mul_nxv2i64_y(<vscale x 2 x i64> %x, <vscale x 2 x i6
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    ptrue p0.d
 ; CHECK-NEXT:    cmpgt p0.d, p0/z, z2.d, #0
-; CHECK-NEXT:    mov z2.d, #1 // =0x1
-; CHECK-NEXT:    sel z0.d, p0, z0.d, z2.d
-; CHECK-NEXT:    mul z0.d, z0.d, z1.d
+; CHECK-NEXT:    mul z1.d, p0/m, z1.d, z0.d
+; CHECK-NEXT:    mov z0.d, z1.d
 ; CHECK-NEXT:    ret
 entry:
   %c = icmp sgt <vscale x 2 x i64> %n, zeroinitializer
@@ -1087,9 +1012,8 @@ define <vscale x 4 x i32> @mul_nxv4i32_y(<vscale x 4 x i32> %x, <vscale x 4 x i3
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    ptrue p0.s
 ; CHECK-NEXT:    cmpgt p0.s, p0/z, z2.s, #0
-; CHECK-NEXT:    mov z2.s, #1 // =0x1
-; CHECK-NEXT:    sel z0.s, p0, z0.s, z2.s
-; CHECK-NEXT:    mul z0.s, z0.s, z1.s
+; CHECK-NEXT:    mul z1.s, p0/m, z1.s, z0.s
+; CHECK-NEXT:    mov z0.d, z1.d
 ; CHECK-NEXT:    ret
 entry:
   %c = icmp sgt <vscale x 4 x i32> %n, zeroinitializer
@@ -1103,9 +1027,8 @@ define <vscale x 8 x i16> @mul_nxv8i16_y(<vscale x 8 x i16> %x, <vscale x 8 x i1
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    ptrue p0.h
 ; CHECK-NEXT:    cmpgt p0.h, p0/z, z2.h, #0
-; CHECK-NEXT:    mov z2.h, #1 // =0x1
-; CHECK-NEXT:    sel z0.h, p0, z0.h, z2.h
-; CHECK-NEXT:    mul z0.h, z0.h, z1.h
+; CHECK-NEXT:    mul z1.h, p0/m, z1.h, z0.h
+; CHECK-NEXT:    mov z0.d, z1.d
 ; CHECK-NEXT:    ret
 entry:
   %c = icmp sgt <vscale x 8 x i16> %n, zeroinitializer
@@ -1119,9 +1042,8 @@ define <vscale x 16 x i8> @mul_nxv16i8_y(<vscale x 16 x i8> %x, <vscale x 16 x i
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    ptrue p0.b
 ; CHECK-NEXT:    cmpgt p0.b, p0/z, z2.b, #0
-; CHECK-NEXT:    mov z2.b, #1 // =0x1
-; CHECK-NEXT:    sel z0.b, p0, z0.b, z2.b
-; CHECK-NEXT:    mul z0.b, z0.b, z1.b
+; CHECK-NEXT:    mul z1.b, p0/m, z1.b, z0.b
+; CHECK-NEXT:    mov z0.d, z1.d
 ; CHECK-NEXT:    ret
 entry:
   %c = icmp sgt <vscale x 16 x i8> %n, zeroinitializer
@@ -1135,9 +1057,8 @@ define <vscale x 2 x i64> @and_nxv2i64_y(<vscale x 2 x i64> %x, <vscale x 2 x i6
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    ptrue p0.d
 ; CHECK-NEXT:    cmpgt p0.d, p0/z, z2.d, #0
-; CHECK-NEXT:    mov z2.d, #-1 // =0xffffffffffffffff
-; CHECK-NEXT:    sel z0.d, p0, z0.d, z2.d
-; CHECK-NEXT:    and z0.d, z0.d, z1.d
+; CHECK-NEXT:    and z1.d, p0/m, z1.d, z0.d
+; CHECK-NEXT:    mov z0.d, z1.d
 ; CHECK-NEXT:    ret
 entry:
   %c = icmp sgt <vscale x 2 x i64> %n, zeroinitializer
@@ -1151,9 +1072,8 @@ define <vscale x 4 x i32> @and_nxv4i32_y(<vscale x 4 x i32> %x, <vscale x 4 x i3
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    ptrue p0.s
 ; CHECK-NEXT:    cmpgt p0.s, p0/z, z2.s, #0
-; CHECK-NEXT:    mov z2.s, #-1 // =0xffffffffffffffff
-; CHECK-NEXT:    sel z0.s, p0, z0.s, z2.s
-; CHECK-NEXT:    and z0.d, z0.d, z1.d
+; CHECK-NEXT:    and z1.s, p0/m, z1.s, z0.s
+; CHECK-NEXT:    mov z0.d, z1.d
 ; CHECK-NEXT:    ret
 entry:
   %c = icmp sgt <vscale x 4 x i32> %n, zeroinitializer
@@ -1167,9 +1087,8 @@ define <vscale x 8 x i16> @and_nxv8i16_y(<vscale x 8 x i16> %x, <vscale x 8 x i1
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    ptrue p0.h
 ; CHECK-NEXT:    cmpgt p0.h, p0/z, z2.h, #0
-; CHECK-NEXT:    mov z2.h, #-1 // =0xffffffffffffffff
-; CHECK-NEXT:    sel z0.h, p0, z0.h, z2.h
-; CHECK-NEXT:    and z0.d, z0.d, z1.d
+; CHECK-NEXT:    and z1.h, p0/m, z1.h, z0.h
+; CHECK-NEXT:    mov z0.d, z1.d
 ; CHECK-NEXT:    ret
 entry:
   %c = icmp sgt <vscale x 8 x i16> %n, zeroinitializer
@@ -1183,9 +1102,8 @@ define <vscale x 16 x i8> @and_nxv16i8_y(<vscale x 16 x i8> %x, <vscale x 16 x i
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    ptrue p0.b
 ; CHECK-NEXT:    cmpgt p0.b, p0/z, z2.b, #0
-; CHECK-NEXT:    mov z2.b, #-1 // =0xffffffffffffffff
-; CHECK-NEXT:    sel z0.b, p0, z0.b, z2.b
-; CHECK-NEXT:    and z0.d, z0.d, z1.d
+; CHECK-NEXT:    and z1.b, p0/m, z1.b, z0.b
+; CHECK-NEXT:    mov z0.d, z1.d
 ; CHECK-NEXT:    ret
 entry:
   %c = icmp sgt <vscale x 16 x i8> %n, zeroinitializer
@@ -1199,9 +1117,8 @@ define <vscale x 2 x i64> @or_nxv2i64_y(<vscale x 2 x i64> %x, <vscale x 2 x i64
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    ptrue p0.d
 ; CHECK-NEXT:    cmpgt p0.d, p0/z, z2.d, #0
-; CHECK-NEXT:    mov z2.d, #0 // =0x0
-; CHECK-NEXT:    sel z0.d, p0, z0.d, z2.d
-; CHECK-NEXT:    orr z0.d, z0.d, z1.d
+; CHECK-NEXT:    orr z1.d, p0/m, z1.d, z0.d
+; CHECK-NEXT:    mov z0.d, z1.d
 ; CHECK-NEXT:    ret
 entry:
   %c = icmp sgt <vscale x 2 x i64> %n, zeroinitializer
@@ -1215,9 +1132,8 @@ define <vscale x 4 x i32> @or_nxv4i32_y(<vscale x 4 x i32> %x, <vscale x 4 x i32
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    ptrue p0.s
 ; CHECK-NEXT:    cmpgt p0.s, p0/z, z2.s, #0
-; CHECK-NEXT:    mov z2.s, #0 // =0x0
-; CHECK-NEXT:    sel z0.s, p0, z0.s, z2.s
-; CHECK-NEXT:    orr z0.d, z0.d, z1.d
+; CHECK-NEXT:    orr z1.s, p0/m, z1.s, z0.s
+; CHECK-NEXT:    mov z0.d, z1.d
 ; CHECK-NEXT:    ret
 entry:
   %c = icmp sgt <vscale x 4 x i32> %n, zeroinitializer
@@ -1231,9 +1147,8 @@ define <vscale x 8 x i16> @or_nxv8i16_y(<vscale x 8 x i16> %x, <vscale x 8 x i16
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    ptrue p0.h
 ; CHECK-NEXT:    cmpgt p0.h, p0/z, z2.h, #0
-; CHECK-NEXT:    mov z2.h, #0 // =0x0
-; CHECK-NEXT:    sel z0.h, p0, z0.h, z2.h
-; CHECK-NEXT:    orr z0.d, z0.d, z1.d
+; CHECK-NEXT:    orr z1.h, p0/m, z1.h, z0.h
+; CHECK-NEXT:    mov z0.d, z1.d
 ; CHECK-NEXT:    ret
 entry:
   %c = icmp sgt <vscale x 8 x i16> %n, zeroinitializer
@@ -1247,9 +1162,8 @@ define <vscale x 16 x i8> @or_nxv16i8_y(<vscale x 16 x i8> %x, <vscale x 16 x i8
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    ptrue p0.b
 ; CHECK-NEXT:    cmpgt p0.b, p0/z, z2.b, #0
-; CHECK-NEXT:    mov z2.b, #0 // =0x0
-; CHECK-NEXT:    sel z0.b, p0, z0.b, z2.b
-; CHECK-NEXT:    orr z0.d, z0.d, z1.d
+; CHECK-NEXT:    orr z1.b, p0/m, z1.b, z0.b
+; CHECK-NEXT:    mov z0.d, z1.d
 ; CHECK-NEXT:    ret
 entry:
   %c = icmp sgt <vscale x 16 x i8> %n, zeroinitializer
@@ -1263,9 +1177,8 @@ define <vscale x 2 x i64> @xor_nxv2i64_y(<vscale x 2 x i64> %x, <vscale x 2 x i6
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    ptrue p0.d
 ; CHECK-NEXT:    cmpgt p0.d, p0/z, z2.d, #0
-; CHECK-NEXT:    mov z2.d, #0 // =0x0
-; CHECK-NEXT:    sel z0.d, p0, z0.d, z2.d
-; CHECK-NEXT:    eor z0.d, z0.d, z1.d
+; CHECK-NEXT:    eor z1.d, p0/m, z1.d, z0.d
+; CHECK-NEXT:    mov z0.d, z1.d
 ; CHECK-NEXT:    ret
 entry:
   %c = icmp sgt <vscale x 2 x i64> %n, zeroinitializer
@@ -1279,9 +1192,8 @@ define <vscale x 4 x i32> @xor_nxv4i32_y(<vscale x 4 x i32> %x, <vscale x 4 x i3
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    ptrue p0.s
 ; CHECK-NEXT:    cmpgt p0.s, p0/z, z2.s, #0
-; CHECK-NEXT:    mov z2.s, #0 // =0x0
-; CHECK-NEXT:    sel z0.s, p0, z0.s, z2.s
-; CHECK-NEXT:    eor z0.d, z0.d, z1.d
+; CHECK-NEXT:    eor z1.s, p0/m, z1.s, z0.s
+; CHECK-NEXT:    mov z0.d, z1.d
 ; CHECK-NEXT:    ret
 entry:
   %c = icmp sgt <vscale x 4 x i32> %n, zeroinitializer
@@ -1295,9 +1207,8 @@ define <vscale x 8 x i16> @xor_nxv8i16_y(<vscale x 8 x i16> %x, <vscale x 8 x i1
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    ptrue p0.h
 ; CHECK-NEXT:    cmpgt p0.h, p0/z, z2.h, #0
-; CHECK-NEXT:    mov z2.h, #0 // =0x0
-; CHECK-NEXT:    sel z0.h, p0, z0.h, z2.h
-; CHECK-NEXT:    eor z0.d, z0.d, z1.d
+; CHECK-NEXT:    eor z1.h, p0/m, z1.h, z0.h
+; CHECK-NEXT:    mov z0.d, z1.d
 ; CHECK-NEXT:    ret
 entry:
   %c = icmp sgt <vscale x 8 x i16> %n, zeroinitializer
@@ -1311,9 +1222,8 @@ define <vscale x 16 x i8> @xor_nxv16i8_y(<vscale x 16 x i8> %x, <vscale x 16 x i
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    ptrue p0.b
 ; CHECK-NEXT:    cmpgt p0.b, p0/z, z2.b, #0
-; CHECK-NEXT:    mov z2.b, #0 // =0x0
-; CHECK-NEXT:    sel z0.b, p0, z0.b, z2.b
-; CHECK-NEXT:    eor z0.d, z0.d, z1.d
+; CHECK-NEXT:    eor z1.b, p0/m, z1.b, z0.b
+; CHECK-NEXT:    mov z0.d, z1.d
 ; CHECK-NEXT:    ret
 entry:
   %c = icmp sgt <vscale x 16 x i8> %n, zeroinitializer
@@ -1633,13 +1543,11 @@ entry:
 define <vscale x 4 x float> @fadd_nxv4f32_y(<vscale x 4 x float> %x, <vscale x 4 x float> %y, <vscale x 4 x float> %n) {
 ; CHECK-LABEL: fadd_nxv4f32_y:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    mov w8, #-2147483648 // =0x80000000
 ; CHECK-NEXT:    ptrue p0.s
 ; CHECK-NEXT:    fcmle p1.s, p0/z, z2.s, #0.0
 ; CHECK-NEXT:    not p0.b, p0/z, p1.b
-; CHECK-NEXT:    mov z2.s, w8
-; CHECK-NEXT:    sel z0.s, p0, z0.s, z2.s
-; CHECK-NEXT:    fadd z0.s, z0.s, z1.s
+; CHECK-NEXT:    fadd z1.s, p0/m, z1.s, z0.s
+; CHECK-NEXT:    mov z0.d, z1.d
 ; CHECK-NEXT:    ret
 entry:
   %c = fcmp ugt <vscale x 4 x float> %n, zeroinitializer
@@ -1651,13 +1559,11 @@ entry:
 define <vscale x 8 x half> @fadd_nxv8f16_y(<vscale x 8 x half> %x, <vscale x 8 x half> %y, <vscale x 8 x half> %n) {
 ; CHECK-LABEL: fadd_nxv8f16_y:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    mov w8, #32768 // =0x8000
 ; CHECK-NEXT:    ptrue p0.h
 ; CHECK-NEXT:    fcmle p1.h, p0/z, z2.h, #0.0
 ; CHECK-NEXT:    not p0.b, p0/z, p1.b
-; CHECK-NEXT:    mov z2.h, w8
-; CHECK-NEXT:    sel z0.h, p0, z0.h, z2.h
-; CHECK-NEXT:    fadd z0.h, z0.h, z1.h
+; CHECK-NEXT:    fadd z1.h, p0/m, z1.h, z0.h
+; CHECK-NEXT:    mov z0.d, z1.d
 ; CHECK-NEXT:    ret
 entry:
   %c = fcmp ugt <vscale x 8 x half> %n, zeroinitializer
@@ -1669,13 +1575,11 @@ entry:
 define <vscale x 2 x double> @fadd_nxv2f64_y(<vscale x 2 x double> %x, <vscale x 2 x double> %y, <vscale x 2 x double> %n) {
 ; CHECK-LABEL: fadd_nxv2f64_y:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    mov x8, #-9223372036854775808 // =0x8000000000000000
 ; CHECK-NEXT:    ptrue p0.d
 ; CHECK-NEXT:    fcmle p1.d, p0/z, z2.d, #0.0
 ; CHECK-NEXT:    not p0.b, p0/z, p1.b
-; CHECK-NEXT:    mov z2.d, x8
-; CHECK-NEXT:    sel z0.d, p0, z0.d, z2.d
-; CHECK-NEXT:    fadd z0.d, z0.d, z1.d
+; CHECK-NEXT:    fadd z1.d, p0/m, z1.d, z0.d
+; CHECK-NEXT:    mov z0.d, z1.d
 ; CHECK-NEXT:    ret
 entry:
   %c = fcmp ugt <vscale x 2 x double> %n, zeroinitializer
@@ -1737,10 +1641,9 @@ define <vscale x 4 x float> @fmul_nxv4f32_y(<vscale x 4 x float> %x, <vscale x 4
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    ptrue p0.s
 ; CHECK-NEXT:    fcmle p1.s, p0/z, z2.s, #0.0
-; CHECK-NEXT:    fmov z2.s, #1.00000000
 ; CHECK-NEXT:    not p0.b, p0/z, p1.b
-; CHECK-NEXT:    sel z0.s, p0, z0.s, z2.s
-; CHECK-NEXT:    fmul z0.s, z0.s, z1.s
+; CHECK-NEXT:    fmul z1.s, p0/m, z1.s, z0.s
+; CHECK-NEXT:    mov z0.d, z1.d
 ; CHECK-NEXT:    ret
 entry:
   %c = fcmp ugt <vscale x 4 x float> %n, zeroinitializer
@@ -1754,10 +1657,9 @@ define <vscale x 8 x half> @fmul_nxv8f16_y(<vscale x 8 x half> %x, <vscale x 8 x
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    ptrue p0.h
 ; CHECK-NEXT:    fcmle p1.h, p0/z, z2.h, #0.0
-; CHECK-NEXT:    fmov z2.h, #1.00000000
 ; CHECK-NEXT:    not p0.b, p0/z, p1.b
-; CHECK-NEXT:    sel z0.h, p0, z0.h, z2.h
-; CHECK-NEXT:    fmul z0.h, z0.h, z1.h
+; CHECK-NEXT:    fmul z1.h, p0/m, z1.h, z0.h
+; CHECK-NEXT:    mov z0.d, z1.d
 ; CHECK-NEXT:    ret
 entry:
   %c = fcmp ugt <vscale x 8 x half> %n, zeroinitializer
@@ -1771,10 +1673,9 @@ define <vscale x 2 x double> @fmul_nxv2f64_y(<vscale x 2 x double> %x, <vscale x
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    ptrue p0.d
 ; CHECK-NEXT:    fcmle p1.d, p0/z, z2.d, #0.0
-; CHECK-NEXT:    fmov z2.d, #1.00000000
 ; CHECK-NEXT:    not p0.b, p0/z, p1.b
-; CHECK-NEXT:    sel z0.d, p0, z0.d, z2.d
-; CHECK-NEXT:    fmul z0.d, z0.d, z1.d
+; CHECK-NEXT:    fmul z1.d, p0/m, z1.d, z0.d
+; CHECK-NEXT:    mov z0.d, z1.d
 ; CHECK-NEXT:    ret
 entry:
   %c = fcmp ugt <vscale x 2 x double> %n, zeroinitializer

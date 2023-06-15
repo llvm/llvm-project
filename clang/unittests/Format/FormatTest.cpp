@@ -25728,6 +25728,15 @@ TEST_F(FormatTest, InsertNewlineAtEOF) {
   verifyFormat("int i;\n", "int i;", Style);
 }
 
+TEST_F(FormatTest, KeepEmptyLinesAtEOF) {
+  FormatStyle Style = getLLVMStyle();
+  Style.KeepEmptyLinesAtEOF = true;
+
+  const StringRef Code{"int i;\n\n"};
+  verifyFormat(Code, Code, Style);
+  verifyFormat(Code, "int i;\n\n\n", Style);
+}
+
 TEST_F(FormatTest, SpaceAfterUDL) {
   verifyFormat("auto c = (4s).count();");
   verifyFormat("auto x = 5s .count() == 5;");

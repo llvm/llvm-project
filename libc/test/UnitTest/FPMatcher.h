@@ -77,6 +77,11 @@ template <TestCond C, typename T> FPMatcher<T, C> getMatcher(T expectedValue) {
       __llvm_libc::testing::getMatcher<__llvm_libc::testing::TestCond::EQ>(    \
           expected))
 
+#define TEST_FP_EQ(expected, actual)                                           \
+  __llvm_libc::testing::getMatcher<__llvm_libc::testing::TestCond::EQ>(        \
+      expected)                                                                \
+      .match(actual)
+
 #define EXPECT_FP_IS_NAN(actual) EXPECT_TRUE((actual) != (actual))
 
 #define ASSERT_FP_EQ(expected, actual)                                         \
@@ -159,13 +164,17 @@ template <TestCond C, typename T> FPMatcher<T, C> getMatcher(T expectedValue) {
   do {                                                                         \
     using namespace __llvm_libc::fputil::testing;                              \
     ForceRoundingMode __r1(RoundingMode::Nearest);                             \
-    EXPECT_FP_EQ((expected), (actual));                                        \
+    if (__r1.success)                                                          \
+      EXPECT_FP_EQ((expected), (actual));                                      \
     ForceRoundingMode __r2(RoundingMode::Upward);                              \
-    EXPECT_FP_EQ((expected), (actual));                                        \
+    if (__r2.success)                                                          \
+      EXPECT_FP_EQ((expected), (actual));                                      \
     ForceRoundingMode __r3(RoundingMode::Downward);                            \
-    EXPECT_FP_EQ((expected), (actual));                                        \
+    if (__r3.success)                                                          \
+      EXPECT_FP_EQ((expected), (actual));                                      \
     ForceRoundingMode __r4(RoundingMode::TowardZero);                          \
-    EXPECT_FP_EQ((expected), (actual));                                        \
+    if (__r4.success)                                                          \
+      EXPECT_FP_EQ((expected), (actual));                                      \
   } while (0)
 
 #endif // LLVM_LIBC_UTILS_UNITTEST_FPMATCHER_H

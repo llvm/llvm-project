@@ -385,17 +385,20 @@ static APInt trimTrailingZerosInVector(InstCombiner &IC, Value *UseV,
   APInt DemandedElts = APInt::getAllOnes(VWidth);
 
   for (int i = VWidth - 1; i > 0; --i) {
-    APInt DemandOneElt = APInt::getOneBitSet(VWidth, i);
-    KnownFPClass KnownFPClass =
-        computeKnownFPClass(UseV, DemandOneElt, IC.getDataLayout(),
-                            /*InterestedClasses=*/fcAllFlags,
-                            /*Depth=*/0, &IC.getTargetLibraryInfo(),
-                            &IC.getAssumptionCache(), I,
-                            &IC.getDominatorTree());
-    if (KnownFPClass.KnownFPClasses != fcPosZero)
+    auto *Elt = findScalarElement(UseV, i);
+    if (!Elt)
       break;
+
+    if (auto *ConstElt = dyn_cast<Constant>(Elt)) {
+      if (!ConstElt->isNullValue() && !isa<UndefValue>(Elt))
+        break;
+    } else {
+      break;
+    }
+
     DemandedElts.clearBit(i);
   }
+
   return DemandedElts;
 }
 
@@ -445,6 +448,54 @@ GCNTTIImpl::instCombineIntrinsic(InstCombiner &IC, IntrinsicInst &II) const {
       Type *Ty = II.getType();
       auto *QNaN = ConstantFP::get(Ty, APFloat::getQNaN(Ty->getFltSemantics()));
       return IC.replaceInstUsesWith(II, QNaN);
+    }
+
+    break;
+  }
+  case Intrinsic::amdgcn_log:
+  case Intrinsic::amdgcn_exp2: {
+    const bool IsLog = IID == Intrinsic::amdgcn_log;
+    const bool IsExp = IID == Intrinsic::amdgcn_exp2;
+    Value *Src = II.getArgOperand(0);
+    Type *Ty = II.getType();
+
+    if (isa<PoisonValue>(Src))
+      return IC.replaceInstUsesWith(II, Src);
+
+    if (IC.getSimplifyQuery().isUndefValue(Src))
+      return IC.replaceInstUsesWith(II, ConstantFP::getNaN(Ty));
+
+    if (ConstantFP *C = dyn_cast<ConstantFP>(Src)) {
+      if (C->isInfinity()) {
+        // exp2(+inf) -> +inf
+        // log2(+inf) -> +inf
+        if (!C->isNegative())
+          return IC.replaceInstUsesWith(II, C);
+
+        // exp2(-inf) -> 0
+        if (IsExp && C->isNegative())
+          return IC.replaceInstUsesWith(II, ConstantFP::getZero(Ty));
+      }
+
+      if (II.isStrictFP())
+        break;
+
+      if (C->isNaN()) {
+        Constant *Quieted = ConstantFP::get(Ty, C->getValue().makeQuiet());
+        return IC.replaceInstUsesWith(II, Quieted);
+      }
+
+      // f32 instruction doesn't handle denormals, f16 does.
+      if (C->isZero() || (C->getValue().isDenormal() && Ty->isFloatTy())) {
+        Constant *FoldedValue = IsLog ? ConstantFP::getInfinity(Ty, true)
+                                      : ConstantFP::get(Ty, 1.0);
+        return IC.replaceInstUsesWith(II, FoldedValue);
+      }
+
+      if (IsLog && C->isNegative())
+        return IC.replaceInstUsesWith(II, ConstantFP::getNaN(Ty));
+
+      // TODO: Full constant folding matching hardware behavior.
     }
 
     break;

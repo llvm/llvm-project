@@ -1094,9 +1094,9 @@ SymbolAssignment *ScriptParser::readSymbolAssignment(StringRef name) {
       case '-':
         return sub(lhs, e());
       case '<':
-        return lhs.getValue() << e().getValue();
+        return lhs.getValue() << e().getValue() % 64;
       case '>':
-        return lhs.getValue() >> e().getValue();
+        return lhs.getValue() >> e().getValue() % 64;
       case '&':
         return lhs.getValue() & e().getValue();
       case '|':
@@ -1147,9 +1147,9 @@ Expr ScriptParser::combine(StringRef op, Expr l, Expr r) {
     };
   }
   if (op == "<<")
-    return [=] { return l().getValue() << r().getValue(); };
+    return [=] { return l().getValue() << r().getValue() % 64; };
   if (op == ">>")
-    return [=] { return l().getValue() >> r().getValue(); };
+    return [=] { return l().getValue() >> r().getValue() % 64; };
   if (op == "<")
     return [=] { return l().getValue() < r().getValue(); };
   if (op == ">")

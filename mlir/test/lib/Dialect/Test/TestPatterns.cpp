@@ -200,7 +200,7 @@ struct HoistEligibleOps : public OpRewritePattern<test::OneRegionOp> {
 };
 
 struct TestPatternDriver
-    : public PassWrapper<TestPatternDriver, OperationPass<func::FuncOp>> {
+    : public PassWrapper<TestPatternDriver, OperationPass<>> {
   MLIR_DEFINE_EXPLICIT_INTERNAL_INLINE_TYPE_ID(TestPatternDriver)
 
   TestPatternDriver() = default;
@@ -601,7 +601,7 @@ struct TestCreateBlock : public RewritePattern {
     Location loc = op->getLoc();
     rewriter.createBlock(&region, region.end(), {i32Type, i32Type}, {loc, loc});
     rewriter.create<TerminatorOp>(loc);
-    rewriter.replaceOp(op, {});
+    rewriter.eraseOp(op);
     return success();
   }
 };
@@ -621,7 +621,7 @@ struct TestCreateIllegalBlock : public RewritePattern {
     // Create an illegal op to ensure the conversion fails.
     rewriter.create<ILLegalOpF>(loc, i32Type);
     rewriter.create<TerminatorOp>(loc);
-    rewriter.replaceOp(op, {});
+    rewriter.eraseOp(op);
     return success();
   }
 };
@@ -793,8 +793,8 @@ struct TestNonRootReplacement : public RewritePattern {
     auto illegalOp = rewriter.create<ILLegalOpF>(op->getLoc(), resultType);
     auto legalOp = rewriter.create<LegalOpB>(op->getLoc(), resultType);
 
-    rewriter.replaceOp(illegalOp, {legalOp});
-    rewriter.replaceOp(op, {illegalOp});
+    rewriter.replaceOp(illegalOp, legalOp);
+    rewriter.replaceOp(op, illegalOp);
     return success();
   }
 };
@@ -911,7 +911,7 @@ struct TestTypeConverter : public TypeConverter {
 };
 
 struct TestLegalizePatternDriver
-    : public PassWrapper<TestLegalizePatternDriver, OperationPass<ModuleOp>> {
+    : public PassWrapper<TestLegalizePatternDriver, OperationPass<>> {
   MLIR_DEFINE_EXPLICIT_INTERNAL_INLINE_TYPE_ID(TestLegalizePatternDriver)
 
   StringRef getArgument() const final { return "test-legalize-patterns"; }
@@ -1122,7 +1122,7 @@ struct TestRemapValueInRegion
 };
 
 struct TestRemappedValue
-    : public mlir::PassWrapper<TestRemappedValue, OperationPass<func::FuncOp>> {
+    : public mlir::PassWrapper<TestRemappedValue, OperationPass<>> {
   MLIR_DEFINE_EXPLICIT_INTERNAL_INLINE_TYPE_ID(TestRemappedValue)
 
   StringRef getArgument() const final { return "test-remapped-value"; }
@@ -1182,8 +1182,7 @@ struct RemoveTestDialectOps : public RewritePattern {
 };
 
 struct TestUnknownRootOpDriver
-    : public mlir::PassWrapper<TestUnknownRootOpDriver,
-                               OperationPass<func::FuncOp>> {
+    : public mlir::PassWrapper<TestUnknownRootOpDriver, OperationPass<>> {
   MLIR_DEFINE_EXPLICIT_INTERNAL_INLINE_TYPE_ID(TestUnknownRootOpDriver)
 
   StringRef getArgument() const final {
@@ -1233,8 +1232,7 @@ struct RewriteDynamicOp : public RewritePattern {
 };
 
 struct TestRewriteDynamicOpDriver
-    : public PassWrapper<TestRewriteDynamicOpDriver,
-                         OperationPass<func::FuncOp>> {
+    : public PassWrapper<TestRewriteDynamicOpDriver, OperationPass<>> {
   MLIR_DEFINE_EXPLICIT_INTERNAL_INLINE_TYPE_ID(TestRewriteDynamicOpDriver)
 
   void getDependentDialects(DialectRegistry &registry) const override {
@@ -1358,7 +1356,7 @@ struct TestTypeConversionAnotherProducer
 };
 
 struct TestTypeConversionDriver
-    : public PassWrapper<TestTypeConversionDriver, OperationPass<ModuleOp>> {
+    : public PassWrapper<TestTypeConversionDriver, OperationPass<>> {
   MLIR_DEFINE_EXPLICIT_INTERNAL_INLINE_TYPE_ID(TestTypeConversionDriver)
 
   void getDependentDialects(DialectRegistry &registry) const override {
@@ -1495,8 +1493,7 @@ struct ForwardOperandPattern : public OpConversionPattern<TestTypeChangerOp> {
 };
 
 struct TestTargetMaterializationWithNoUses
-    : public PassWrapper<TestTargetMaterializationWithNoUses,
-                         OperationPass<ModuleOp>> {
+    : public PassWrapper<TestTargetMaterializationWithNoUses, OperationPass<>> {
   MLIR_DEFINE_EXPLICIT_INTERNAL_INLINE_TYPE_ID(
       TestTargetMaterializationWithNoUses)
 
@@ -1604,8 +1601,7 @@ struct TestMergeSingleBlockOps
 };
 
 struct TestMergeBlocksPatternDriver
-    : public PassWrapper<TestMergeBlocksPatternDriver,
-                         OperationPass<ModuleOp>> {
+    : public PassWrapper<TestMergeBlocksPatternDriver, OperationPass<>> {
   MLIR_DEFINE_EXPLICIT_INTERNAL_INLINE_TYPE_ID(TestMergeBlocksPatternDriver)
 
   StringRef getArgument() const final { return "test-merge-blocks"; }

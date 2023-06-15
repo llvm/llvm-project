@@ -252,18 +252,6 @@ LogicalResult normalizeMemRef(memref::AllocOp *op);
 MemRefType normalizeMemRefType(MemRefType memrefType,
                                unsigned numSymbolicOperands);
 
-/// Creates and inserts into 'builder' a new AffineApplyOp, with the number of
-/// its results equal to the number of operands, as a composition
-/// of all other AffineApplyOps reachable from input parameter 'operands'. If
-/// different operands were drawing results from multiple affine apply ops,
-/// these will also be collected into a single (multi-result) affine apply op.
-/// The final results of the composed AffineApplyOp are returned in output
-/// parameter 'results'. Returns the affine apply op created.
-Operation *createComposedAffineApplyOp(OpBuilder &builder, Location loc,
-                                       ArrayRef<Value> operands,
-                                       ArrayRef<Operation *> affineApplyOps,
-                                       SmallVectorImpl<Value> *results);
-
 /// Given an operation, inserts one or more single result affine apply
 /// operations, results of which are exclusively used by this operation.
 /// The operands of these newly created affine apply ops are

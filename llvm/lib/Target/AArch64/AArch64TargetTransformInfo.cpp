@@ -1898,7 +1898,7 @@ InstructionCost AArch64TTIImpl::getCastInstrCost(unsigned Opcode, Type *Dst,
         continue;
       // Use provided Src type for I and other casts that have the same source
       // type.
-      if (Op == I || Cast->getSrcTy() == Cast->getSrcTy())
+      if (Op == I || cast<CastInst>(I)->getSrcTy() == Cast->getSrcTy())
         SrcTys.push_back(Src);
       else
         SrcTys.push_back(Cast->getSrcTy());
@@ -1913,7 +1913,8 @@ InstructionCost AArch64TTIImpl::getCastInstrCost(unsigned Opcode, Type *Dst,
       // version of the widening instruction.
       if (auto *Cast = dyn_cast<CastInst>(SingleUser->getOperand(1)))
         if (I->getOpcode() == unsigned(Cast->getOpcode()) &&
-            (Src == Cast->getSrcTy() || Cast->getSrcTy() == Cast->getSrcTy()))
+            (Src == Cast->getSrcTy() ||
+             cast<CastInst>(I)->getSrcTy() == Cast->getSrcTy()))
           return 0;
     }
   }
