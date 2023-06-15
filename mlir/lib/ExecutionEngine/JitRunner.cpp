@@ -185,65 +185,15 @@ compileAndExecute(Options &options, Operation *module, StringRef entryPoint,
   if (auto clOptLevel = getCommandLineOptLevel(options))
     jitCodeGenOptLevel = static_cast<llvm::CodeGenOpt::Level>(*clOptLevel);
 
-  // If shared library implements custom mlir-runner library init and destroy
-  // functions, we'll use them to register the library with the execution
-  // engine. Otherwise we'll pass library directly to the execution engine.
-  SmallVector<SmallString<256>, 4> libPaths;
-
-  // Use absolute library path so that gdb can find the symbol table.
-  transform(
-      options.clSharedLibs, std::back_inserter(libPaths),
-      [](std::string libPath) {
-        SmallString<256> absPath(libPath.begin(), libPath.end());
-        cantFail(llvm::errorCodeToError(llvm::sys::fs::make_absolute(absPath)));
-        return absPath;
-      });
-
-  // Libraries that we'll pass to the ExecutionEngine for loading.
-  SmallVector<StringRef, 4> executionEngineLibs;
-
-  using MlirRunnerInitFn = void (*)(llvm::StringMap<void *> &);
-  using MlirRunnerDestroyFn = void (*)();
-
-  llvm::StringMap<void *> exportSymbols;
-  SmallVector<MlirRunnerDestroyFn> destroyFns;
-
-  // Handle libraries that do support mlir-runner init/destroy callbacks.
-  for (auto &libPath : libPaths) {
-    auto lib = llvm::sys::DynamicLibrary::getPermanentLibrary(libPath.c_str());
-    void *initSym = lib.getAddressOfSymbol("__mlir_runner_init");
-    void *destroySim = lib.getAddressOfSymbol("__mlir_runner_destroy");
-
-    // Library does not support mlir runner, load it with ExecutionEngine.
-    if (!initSym || !destroySim) {
-      executionEngineLibs.push_back(libPath);
-      continue;
-    }
-
-    auto initFn = reinterpret_cast<MlirRunnerInitFn>(initSym);
-    initFn(exportSymbols);
-
-    auto destroyFn = reinterpret_cast<MlirRunnerDestroyFn>(destroySim);
-    destroyFns.push_back(destroyFn);
-  }
-
-  // Build a runtime symbol map from the config and exported symbols.
-  auto runtimeSymbolMap = [&](llvm::orc::MangleAndInterner interner) {
-    auto symbolMap = config.runtimeSymbolMap ? config.runtimeSymbolMap(interner)
-                                             : llvm::orc::SymbolMap();
-    for (auto &exportSymbol : exportSymbols)
-      symbolMap[interner(exportSymbol.getKey())] =
-          { llvm::orc::ExecutorAddr::fromPtr(exportSymbol.getValue()),
-            llvm::JITSymbolFlags::Exported };
-    return symbolMap;
-  };
+  SmallVector<StringRef, 4> sharedLibs(options.clSharedLibs.begin(),
+                                       options.clSharedLibs.end());
 
   mlir::ExecutionEngineOptions engineOptions;
   engineOptions.llvmModuleBuilder = config.llvmModuleBuilder;
   if (config.transformer)
     engineOptions.transformer = config.transformer;
   engineOptions.jitCodeGenOptLevel = jitCodeGenOptLevel;
-  engineOptions.sharedLibPaths = executionEngineLibs;
+  engineOptions.sharedLibPaths = sharedLibs;
   engineOptions.enableObjectDump = true;
   auto expectedEngine =
       mlir::ExecutionEngine::create(module, engineOptions, std::move(tm));
@@ -251,7 +201,6 @@ compileAndExecute(Options &options, Operation *module, StringRef entryPoint,
     return expectedEngine.takeError();
 
   auto engine = std::move(*expectedEngine);
-  engine->registerSymbols(runtimeSymbolMap);
 
   auto expectedFPtr = engine->lookupPacked(entryPoint);
   if (!expectedFPtr)
@@ -264,10 +213,6 @@ compileAndExecute(Options &options, Operation *module, StringRef entryPoint,
 
   void (*fptr)(void **) = *expectedFPtr;
   (*fptr)(args);
-
-  // Run all dynamic library destroy callbacks to prepare for the shutdown.
-  for (MlirRunnerDestroyFn destroy : destroyFns)
-    destroy();
 
   return Error::success();
 }
