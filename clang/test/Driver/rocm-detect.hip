@@ -2,8 +2,6 @@
 // REQUIRES: amdgpu-registered-target
 // UNSUPPORTED: system-windows
 
-// XFAIL: *
-
 // Make sure the appropriate device specific library is available.
 
 // We don't include every target in the test directory, so just pick a valid
@@ -129,12 +127,16 @@
 
 // COMMON: "-triple" "amdgcn-amd-amdhsa"
 
-// ROCM-ENV: ROCm installation search path: {{.*}}/Inputs/rocm
+// ROCM-ENV: ROCm installation search path: [[ROCM_PATH:.*/Inputs/rocm]]
+
+// HIP-PATH: "-mlink-builtin-bitcode" "[[ROCM_PATH]]/amdgcn/bitcode/oclc_isa_version_1010.bc"
+// HIP-PATH: "-idirafter" "[[HIP_PATH:.*/myhip]]/include"
+// HIP-PATH: "-L[[HIP_PATH]]/lib" {{.*}}"-lamdhip64"
 
 // ROCM-PATH: ROCm installation search path: [[ROCM_PATH:.*/Inputs/rocm]]
 // ROCM-PATH: "-mlink-builtin-bitcode" "[[ROCM_PATH]]/amdgcn/bitcode/oclc_isa_version_1010.bc"
 // ROCM-PATH: "-idirafter" "[[ROCM_PATH]]/include"
-// ROCM-PATH: "-L[[ROCM_PATH]]/lib" "-lamdhip64"
+// ROCM-PATH: "-L[[ROCM_PATH]]/lib" {{.*}}"-lamdhip64"
 
 // ROCM-REL: ROCm installation search path: {{.*}}/opt/rocm
 // ROCM-REL: ROCm installation search path: {{.*}}/opt/rocm-3.10.0
