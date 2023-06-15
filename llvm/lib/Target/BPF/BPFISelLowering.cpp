@@ -485,6 +485,8 @@ SDValue BPFTargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
   Chain = DAG.getNode(BPFISD::CALL, CLI.DL, NodeTys, Ops);
   InGlue = Chain.getValue(1);
 
+  DAG.addNoMergeSiteInfo(Chain.getNode(), CLI.NoMerge);
+
   // Create the CALLSEQ_END node.
   Chain = DAG.getCALLSEQ_END(Chain, NumBytes, 0, InGlue, CLI.DL);
   InGlue = Chain.getValue(1);
