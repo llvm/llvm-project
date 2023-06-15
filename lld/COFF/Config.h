@@ -28,7 +28,6 @@ using llvm::COFF::IMAGE_FILE_MACHINE_UNKNOWN;
 using llvm::COFF::WindowsSubsystem;
 using llvm::StringRef;
 class DefinedAbsolute;
-class DefinedRelative;
 class StringChunk;
 class Symbol;
 class InputFile;

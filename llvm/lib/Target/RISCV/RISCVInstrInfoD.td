@@ -85,6 +85,11 @@ defvar DFINX   = [DF,    DF_INX, DF_IN32X];
 defvar FDINX   = [FD,    FD_INX, FD_IN32X];
 defvar XDINX   = [XD,    XD_INX, XD_IN32X];
 
+// Lists without the IN32X classes that aren't needed for some RV64-only 
+// instructions.
+defvar DXINXRV64  = [DX,    DX_INX];
+defvar XDINXRV64  = [XD,    XD_INX];
+
 //===----------------------------------------------------------------------===//
 // Instructions
 //===----------------------------------------------------------------------===//
@@ -160,20 +165,20 @@ defm FCVT_D_W : FPUnaryOp_r_m<0b1101001, 0b00000, 0b000, DXINX, "fcvt.d.w">,
 defm FCVT_D_WU : FPUnaryOp_r_m<0b1101001, 0b00001, 0b000, DXINX, "fcvt.d.wu">,
                  Sched<[WriteFCvtI32ToF64, ReadFCvtI32ToF64]>;
 
-defm FCVT_L_D : FPUnaryOp_r_frm_m<0b1100001, 0b00010, XDINX, "fcvt.l.d", [IsRV64]>,
+defm FCVT_L_D : FPUnaryOp_r_frm_m<0b1100001, 0b00010, XDINXRV64, "fcvt.l.d", [IsRV64]>,
                 Sched<[WriteFCvtF64ToI64, ReadFCvtF64ToI64]>;
 
-defm FCVT_LU_D : FPUnaryOp_r_frm_m<0b1100001, 0b00011, XDINX, "fcvt.lu.d", [IsRV64]>,
+defm FCVT_LU_D : FPUnaryOp_r_frm_m<0b1100001, 0b00011, XDINXRV64, "fcvt.lu.d", [IsRV64]>,
                  Sched<[WriteFCvtF64ToI64, ReadFCvtF64ToI64]>;
 
 let Predicates = [HasStdExtD, IsRV64], mayRaiseFPException = 0 in
 def FMV_X_D : FPUnaryOp_r<0b1110001, 0b00000, 0b000, GPR, FPR64, "fmv.x.d">,
               Sched<[WriteFMovF64ToI64, ReadFMovF64ToI64]>;
 
-defm FCVT_D_L : FPUnaryOp_r_frm_m<0b1101001, 0b00010, DXINX, "fcvt.d.l", [IsRV64]>,
+defm FCVT_D_L : FPUnaryOp_r_frm_m<0b1101001, 0b00010, DXINXRV64, "fcvt.d.l", [IsRV64]>,
                 Sched<[WriteFCvtI64ToF64, ReadFCvtI64ToF64]>;
 
-defm FCVT_D_LU : FPUnaryOp_r_frm_m<0b1101001, 0b00011, DXINX, "fcvt.d.lu", [IsRV64]>,
+defm FCVT_D_LU : FPUnaryOp_r_frm_m<0b1101001, 0b00011, DXINXRV64, "fcvt.d.lu", [IsRV64]>,
                  Sched<[WriteFCvtI64ToF64, ReadFCvtI64ToF64]>;
 
 let Predicates = [HasStdExtD, IsRV64], mayRaiseFPException = 0 in

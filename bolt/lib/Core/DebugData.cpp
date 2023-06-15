@@ -1635,15 +1635,6 @@ void DwarfLineTable::emitCU(MCStreamer *MCOS, MCDwarfLineTableParams Params,
            "cannot combine raw data with new line entries");
     MCOS->emitLabel(getLabel());
     MCOS->emitBytes(RawData);
-
-    // Emit fake relocation for RuntimeDyld to always allocate the section.
-    //
-    // FIXME: remove this once RuntimeDyld stops skipping allocatable sections
-    //        without relocations.
-    MCOS->emitRelocDirective(
-        *MCConstantExpr::create(0, *BC.Ctx), "BFD_RELOC_NONE",
-        MCSymbolRefExpr::create(getLabel(), *BC.Ctx), SMLoc(), *BC.STI);
-
     return;
   }
 
@@ -1725,12 +1716,8 @@ void DwarfLineTable::emit(BinaryContext &BC, MCStreamer &Streamer) {
 
   // Still need to write the section out for the ExecutionEngine, and temp in
   // memory object we are constructing.
-  if (LineStr) {
+  if (LineStr)
     LineStr->emitSection(&Streamer);
-    SmallString<0> Data = LineStr->getFinalizedData();
-    BC.registerOrUpdateNoteSection(".debug_line_str", copyByteArray(Data.str()),
-                                   Data.size());
-  }
 }
 
 } // namespace bolt

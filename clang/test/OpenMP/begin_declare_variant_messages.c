@@ -1,6 +1,10 @@
-// RUN: %clang_cc1 -triple=x86_64-pc-win32 -verify -fopenmp -x c -std=c99 -fms-extensions -Wno-pragma-pack %s
+// RUN: %clang_cc1 -triple=x86_64-pc-win32 -verify=expected,omp51 -fopenmp -x c -std=c99 -fms-extensions -Wno-pragma-pack %s
 
-// RUN: %clang_cc1 -triple=x86_64-pc-win32 -verify -fopenmp-simd -x c -std=c99 -fms-extensions -Wno-pragma-pack %s
+// RUN: %clang_cc1 -triple=x86_64-pc-win32 -verify=expected,omp51 -fopenmp-simd -x c -std=c99 -fms-extensions -Wno-pragma-pack %s
+
+// RUN: %clang_cc1 -triple=x86_64-pc-win32 -verify=expected,omp50 -fopenmp -fopenmp-version=50 -x c -std=c99 -fms-extensions -Wno-pragma-pack %s
+
+// RUN: %clang_cc1 -triple=x86_64-pc-win32 -verify=expected,omp50 -fopenmp-simd -fopenmp-version=50 -x c -std=c99 -fms-extensions -Wno-pragma-pack %s
 
 
 #pragma omp begin // expected-error {{expected an OpenMP directive}}
@@ -11,7 +15,7 @@
 #pragma omp end declare variant // expected-error {{'#pragma omp end declare variant' with no matching '#pragma omp begin declare variant'}}
 #pragma omp variant begin // expected-error {{expected an OpenMP directive}}
 #pragma omp declare variant end // expected-error {{function declaration is expected after 'declare variant' directive}}
-#pragma omp begin declare variant // expected-error {{expected 'match' clause on 'omp declare variant' directive}}
+#pragma omp begin declare variant // omp50-error {{expected 'match' clause on 'omp declare variant' directive}} omp51-error {{expected 'match', 'adjust_args', or 'append_args' clause on 'omp declare variant' directive}}
 #pragma omp end declare variant
 // TODO: Issue an error message
 #pragma omp end declare variant // expected-error {{'#pragma omp end declare variant' with no matching '#pragma omp begin declare variant'}}
@@ -22,9 +26,9 @@
 int foo(void);
 const int var;
 
-#pragma omp begin declare variant // expected-error {{expected 'match' clause on 'omp declare variant' directive}}
+#pragma omp begin declare variant // omp50-error {{expected 'match' clause on 'omp declare variant' directive}} omp51-error {{expected 'match', 'adjust_args', or 'append_args' clause on 'omp declare variant' directive}}
 #pragma omp end declare variant
-#pragma omp begin declare variant xxx // expected-error {{expected 'match' clause on 'omp declare variant' directive}}
+#pragma omp begin declare variant xxx // omp50-error {{expected 'match' clause on 'omp declare variant' directive}} omp51-error {{expected 'match', 'adjust_args', or 'append_args' clause on 'omp declare variant' directive}}
 #pragma omp end declare variant
 #pragma omp begin declare variant match // expected-error {{expected '(' after 'match'}}
 #pragma omp end declare variant

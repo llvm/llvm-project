@@ -279,6 +279,7 @@ void AMDGPU::fillAMDGPUFeatureMap(StringRef GPU, const Triple &T,
       Features["gfx10-3-insts"] = true;
       Features["gfx11-insts"] = true;
       Features["atomic-fadd-rtn-insts"] = true;
+      Features["image-insts"] = true;
       break;
     case GK_GFX1036:
     case GK_GFX1035:
@@ -301,6 +302,7 @@ void AMDGPU::fillAMDGPUFeatureMap(StringRef GPU, const Triple &T,
       Features["gfx9-insts"] = true;
       Features["gfx10-insts"] = true;
       Features["gfx10-3-insts"] = true;
+      Features["image-insts"] = true;
       Features["s-memrealtime"] = true;
       Features["s-memtime-inst"] = true;
       break;
@@ -322,6 +324,7 @@ void AMDGPU::fillAMDGPUFeatureMap(StringRef GPU, const Triple &T,
       Features["gfx8-insts"] = true;
       Features["gfx9-insts"] = true;
       Features["gfx10-insts"] = true;
+      Features["image-insts"] = true;
       Features["s-memrealtime"] = true;
       Features["s-memtime-inst"] = true;
       break;
@@ -333,7 +336,27 @@ void AMDGPU::fillAMDGPUFeatureMap(StringRef GPU, const Triple &T,
       Features["atomic-ds-pk-add-16-insts"] = true;
       Features["atomic-flat-pk-add-16-insts"] = true;
       Features["atomic-global-pk-add-bf16-inst"] = true;
-      [[fallthrough]];
+      Features["gfx90a-insts"] = true;
+      Features["atomic-buffer-global-pk-add-f16-insts"] = true;
+      Features["atomic-fadd-rtn-insts"] = true;
+      Features["dot3-insts"] = true;
+      Features["dot4-insts"] = true;
+      Features["dot5-insts"] = true;
+      Features["dot6-insts"] = true;
+      Features["mai-insts"] = true;
+      Features["dl-insts"] = true;
+      Features["dot1-insts"] = true;
+      Features["dot2-insts"] = true;
+      Features["dot7-insts"] = true;
+      Features["dot10-insts"] = true;
+      Features["gfx9-insts"] = true;
+      Features["gfx8-insts"] = true;
+      Features["16-bit-insts"] = true;
+      Features["dpp"] = true;
+      Features["s-memrealtime"] = true;
+      Features["ci-insts"] = true;
+      Features["s-memtime-inst"] = true;
+      break;
     case GK_GFX90A:
       Features["gfx90a-insts"] = true;
       Features["atomic-buffer-global-pk-add-f16-insts"] = true;
@@ -381,6 +404,7 @@ void AMDGPU::fillAMDGPUFeatureMap(StringRef GPU, const Triple &T,
     case GK_GFX602:
     case GK_GFX601:
     case GK_GFX600:
+      Features["image-insts"] = true;
       Features["s-memtime-inst"] = true;
       break;
     case GK_NONE:

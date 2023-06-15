@@ -376,10 +376,15 @@ bool MCObjectStreamer::changeSectionImpl(MCSection *Section,
 
   int64_t IntSubsection = 0;
   if (Subsection &&
-      !Subsection->evaluateAsAbsolute(IntSubsection, getAssemblerPtr()))
-    report_fatal_error("Cannot evaluate subsection number");
-  if (IntSubsection < 0 || IntSubsection > 8192)
-    report_fatal_error("Subsection number out of range");
+      !Subsection->evaluateAsAbsolute(IntSubsection, getAssemblerPtr())) {
+    getContext().reportError(Subsection->getLoc(),
+                             "cannot evaluate subsection number");
+  }
+  if (!isUInt<31>(IntSubsection)) {
+    getContext().reportError(Subsection->getLoc(),
+                             "subsection number must be within [0,2147483647]");
+  }
+
   CurSubsectionIdx = unsigned(IntSubsection);
   CurInsertionPoint =
       Section->getSubsectionInsertionPoint(CurSubsectionIdx);

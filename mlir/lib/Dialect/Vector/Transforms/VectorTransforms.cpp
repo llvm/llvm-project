@@ -885,6 +885,66 @@ private:
   std::function<bool(BitCastOp)> controlFn;
 };
 
+/// Reorders elementwise(broadcast) to broadcast(elementwise). Ex:
+/// ```
+/// %a = vector.broadcast %arg1 : index to vector<1x4xindex>
+/// %b = vector.broadcast %arg2 : index to vector<1x4xindex>
+/// %r = arith.addi %a, %b : vector<1x4xindex>
+/// ```
+/// Gets converted to:
+/// ```
+/// %r = arith.addi %arg0, %arg1 : index
+/// %b = vector.broadcast %r : index to vector<1x4xindex>
+/// ```
+struct ReorderElementwiseOpsOnBroadcast final
+    : public OpTraitRewritePattern<OpTrait::Elementwise> {
+  using OpTraitRewritePattern::OpTraitRewritePattern;
+  LogicalResult matchAndRewrite(Operation *op,
+                                PatternRewriter &rewriter) const override {
+    if (op->getNumResults() != 1)
+      return failure();
+    if (!llvm::isa<ShapedType>(op->getResults()[0].getType()))
+      return failure();
+    if (!OpTrait::hasElementwiseMappableTraits(op))
+      return failure();
+
+    // Get the type of the first operand
+    auto firstBcast = op->getOperand(0).getDefiningOp<vector::BroadcastOp>();
+    if (!firstBcast)
+      return failure();
+    auto firstOpType = firstBcast.getOperand().getType();
+
+    // Make sure that operands are "broadcast"ed from identical (scalar or
+    // vector) types. That indicates that it's safe to skip the broadcasting of
+    // operands.
+    if (!llvm::all_of(op->getOperands(), [&firstOpType](Value val) {
+          auto bcast = val.getDefiningOp<vector::BroadcastOp>();
+          return (bcast && (bcast.getOperand().getType() == firstOpType));
+        })) {
+      return failure();
+    }
+
+    // Collect the source values
+    SmallVector<Value> srcValues;
+    srcValues.reserve(op->getNumOperands());
+
+    for (Value operand : op->getOperands()) {
+      srcValues.push_back(
+          operand.getDefiningOp<vector::BroadcastOp>().getOperand());
+    }
+
+    Operation *elementwiseOp =
+        rewriter.create(op->getLoc(), op->getName().getIdentifier(), srcValues,
+                        firstOpType, op->getAttrs());
+
+    auto vectorType = op->getResultTypes()[0];
+    rewriter.replaceOpWithNewOp<vector::BroadcastOp>(
+        op, vectorType, elementwiseOp->getResults());
+
+    return success();
+  }
+};
+
 // Helper that returns a vector comparison that constructs a mask:
 //     mask = [0,1,..,n-1] + [o,o,..,o] < [b,b,..,b]
 //
@@ -1309,6 +1369,12 @@ void mlir::vector::
     populateVectorTransferCollapseInnerMostContiguousDimsPatterns(
         RewritePatternSet &patterns, PatternBenefit benefit) {
   patterns.add<DropInnerMostUnitDims>(patterns.getContext(), benefit);
+}
+
+void mlir::vector::populateSinkVectorBroadcastPatterns(
+    RewritePatternSet &patterns, PatternBenefit benefit) {
+  patterns.add<ReorderElementwiseOpsOnBroadcast>(patterns.getContext(),
+                                                 benefit);
 }
 
 //===----------------------------------------------------------------------===//

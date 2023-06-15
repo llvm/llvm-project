@@ -61,7 +61,7 @@ class VOP3Interp<string OpName, VOPProfile P, list<dag> pattern = []> :
 def VOP3_INTERP : VOPProfile<[f32, f32, i32, untyped]> {
   let Src0Mod = FPVRegInputMods;
   let Ins64 = (ins Src0Mod:$src0_modifiers, VRegSrc_32:$src0,
-                   Attr:$attr, AttrChan:$attrchan,
+                   InterpAttr:$attr, InterpAttrChan:$attrchan,
                    clampmod0:$clamp, omod0:$omod);
 
   let Asm64 = "$vdst, $src0_modifiers, $attr$attrchan$clamp$omod";
@@ -69,7 +69,7 @@ def VOP3_INTERP : VOPProfile<[f32, f32, i32, untyped]> {
 
 def VOP3_INTERP_MOV : VOPProfile<[f32, i32, i32, untyped]> {
   let Ins64 = (ins InterpSlot:$src0,
-                   Attr:$attr, AttrChan:$attrchan,
+                   InterpAttr:$attr, InterpAttrChan:$attrchan,
                    clampmod0:$clamp, omod0:$omod);
 
   let Asm64 = "$vdst, $src0, $attr$attrchan$clamp$omod";
@@ -90,16 +90,16 @@ class getInterp16Ins <bit HasSrc2, bit HasOMod,
   dag ret = !if(HasSrc2,
                 !if(HasOMod,
                     (ins Src0Mod:$src0_modifiers, VRegSrc_32:$src0,
-                         Attr:$attr, AttrChan:$attrchan,
+                         InterpAttr:$attr, InterpAttrChan:$attrchan,
                          Src2Mod:$src2_modifiers, VRegSrc_32:$src2,
                          highmod:$high, clampmod0:$clamp, omod0:$omod),
                     (ins Src0Mod:$src0_modifiers, VRegSrc_32:$src0,
-                         Attr:$attr, AttrChan:$attrchan,
+                         InterpAttr:$attr, InterpAttrChan:$attrchan,
                          Src2Mod:$src2_modifiers, VRegSrc_32:$src2,
                          highmod:$high, clampmod0:$clamp)
                 ),
                 (ins Src0Mod:$src0_modifiers, VRegSrc_32:$src0,
-                     Attr:$attr, AttrChan:$attrchan,
+                     InterpAttr:$attr, InterpAttrChan:$attrchan,
                      highmod:$high, clampmod0:$clamp, omod0:$omod)
             );
 }

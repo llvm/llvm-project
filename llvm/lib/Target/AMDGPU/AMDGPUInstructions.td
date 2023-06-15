@@ -150,7 +150,7 @@ class CustomOperandProps<bit optional = 0, string name = NAME> {
 class CustomOperand<ValueType type, bit optional = 0, string name = NAME>
   : Operand<type>, CustomOperandProps<optional, name>;
 
-class ImmOperand<ValueType type, string name, bit optional = 0,
+class ImmOperand<ValueType type, string name = NAME, bit optional = 0,
                  string printer = "print"#name>
     : CustomOperand<type, optional, name> {
   let ImmTy = "ImmTyNone";

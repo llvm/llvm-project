@@ -35,8 +35,8 @@ public:
 
   void emitBinary(BinaryContext &BC, MCStreamer &Streamer) final;
 
-  void link(BinaryContext &BC, StringRef ToolPath, RuntimeDyld &RTDyld,
-            std::function<void(RuntimeDyld &)> OnLoad) final;
+  void link(BinaryContext &BC, StringRef ToolPath, BOLTLinker &Linker,
+            BOLTLinker::SectionsMapper MapSections) override;
 
 private:
   std::string buildTables(BinaryContext &BC);

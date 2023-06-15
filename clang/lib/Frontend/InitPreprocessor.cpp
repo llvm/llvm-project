@@ -583,8 +583,11 @@ static void InitializeStandardPredefinedMacros(const TargetInfo &TI,
     Builder.defineMacro("__HIP_MEMORY_SCOPE_WORKGROUP", "3");
     Builder.defineMacro("__HIP_MEMORY_SCOPE_AGENT", "4");
     Builder.defineMacro("__HIP_MEMORY_SCOPE_SYSTEM", "5");
-    if (LangOpts.CUDAIsDevice)
+    if (LangOpts.CUDAIsDevice) {
       Builder.defineMacro("__HIP_DEVICE_COMPILE__");
+      if (!TI.hasHIPImageSupport())
+        Builder.defineMacro("__HIP_NO_IMAGE_SUPPORT", "1");
+    }
     if (LangOpts.GPUDefaultStream ==
         LangOptions::GPUDefaultStreamKind::PerThread)
       Builder.defineMacro("HIP_API_PER_THREAD_DEFAULT_STREAM");
@@ -1250,16 +1253,15 @@ static void InitializePredefinedMacros(const TargetInfo &TI,
     case 45:
       Builder.defineMacro("_OPENMP", "201511");
       break;
-    case 51:
-      Builder.defineMacro("_OPENMP", "202011");
+    case 50:
+      Builder.defineMacro("_OPENMP", "201811");
       break;
     case 52:
       Builder.defineMacro("_OPENMP", "202111");
       break;
-    case 50:
-    default:
-      // Default version is OpenMP 5.0
-      Builder.defineMacro("_OPENMP", "201811");
+    default: // case 51:
+      // Default version is OpenMP 5.1
+      Builder.defineMacro("_OPENMP", "202011");
       break;
     }
   }
