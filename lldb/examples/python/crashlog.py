@@ -306,6 +306,8 @@ class CrashLog(symbolication.Symbolicator):
             if self.show_symbol_progress():
                 with print_lock:
                     print("Getting symbols for %s %s..." % (uuid_str, self.path))
+            # Keep track of unresolved source paths.
+            unavailable_source_paths = set()
             if os.path.exists(self.dsymForUUIDBinary):
                 dsym_for_uuid_command = "%s %s" % (self.dsymForUUIDBinary, uuid_str)
                 s = subprocess.check_output(dsym_for_uuid_command, shell=True)
@@ -335,6 +337,12 @@ class CrashLog(symbolication.Symbolicator):
                                     plist["DBGSymbolRichExecutable"]
                                 )
                                 self.resolved_path = self.path
+                            if "DBGSourcePathRemapping" in plist:
+                                path_remapping = plist["DBGSourcePathRemapping"]
+                                for _, value in path_remapping.items():
+                                    source_path = os.path.expanduser(value)
+                                    if not os.path.exists(source_path):
+                                        unavailable_source_paths.add(source_path)
             if not self.resolved_path and os.path.exists(self.path):
                 if not self.find_matching_slice():
                     return False
@@ -373,6 +381,12 @@ class CrashLog(symbolication.Symbolicator):
             ):
                 with print_lock:
                     print("Resolved symbols for %s %s..." % (uuid_str, self.path))
+                    if len(unavailable_source_paths):
+                        for source_path in unavailable_source_paths:
+                            print(
+                                "Could not access remapped source path for %s %s"
+                                % (uuid_str, source_path)
+                            )
                 return True
             else:
                 self.unavailable = True
