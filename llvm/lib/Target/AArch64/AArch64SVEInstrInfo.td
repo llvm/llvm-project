@@ -399,16 +399,8 @@ def AArch64bic : PatFrags<(ops node:$op1, node:$op2),
 
 def AArch64subr : PatFrag<(ops node:$op1, node:$op2),
                           (sub node:$op2, node:$op1)>;
-def AArch64add_m1 : PatFrags<(ops node:$pred, node:$op1, node:$op2),
-                             [(int_aarch64_sve_add node:$pred, node:$op1, node:$op2),
-                              (add node:$op1, (vselect node:$pred, node:$op2, (SVEDup0)))]>;
-def AArch64sub_m1 : PatFrags<(ops node:$pred, node:$op1, node:$op2),
-                             [(int_aarch64_sve_sub node:$pred, node:$op1, node:$op2),
-                              (sub node:$op1, (vselect node:$pred, node:$op2, (SVEDup0)))]>;
 def AArch64mla_m1 : PatFrags<(ops node:$pred, node:$op1, node:$op2, node:$op3),
                              [(int_aarch64_sve_mla node:$pred, node:$op1, node:$op2, node:$op3),
-                              // add(a, select(mask, mul(b, c), splat(0))) -> mla(a, mask, b, c)
-                              (add node:$op1, (vselect node:$pred, (AArch64mul_p_oneuse (SVEAllActive), node:$op2, node:$op3), (SVEDup0))),
                               // select(mask, add(a, mul(b, c)), a) -> mla(a, mask, b, c)
                               (vselect node:$pred, (add node:$op1, (AArch64mul_p_oneuse (SVEAllActive), node:$op2, node:$op3)), node:$op1)]>;
 // pattern for generating pseudo for MLA_ZPmZZ/MAD_ZPmZZ
@@ -417,8 +409,6 @@ def AArch64mla_p : PatFrags<(ops node:$pred, node:$op1, node:$op2, node:$op3),
                              (add node:$op1, (AArch64mul_p_oneuse node:$pred, node:$op2, node:$op3))]>;
 def AArch64mls_m1 : PatFrags<(ops node:$pred, node:$op1, node:$op2, node:$op3),
                              [(int_aarch64_sve_mls node:$pred, node:$op1, node:$op2, node:$op3),
-                              // sub(a, select(mask, mul(b, c), splat(0))) -> mls(a, mask, b, c)
-                              (sub node:$op1, (vselect node:$pred, (AArch64mul_p_oneuse (SVEAllActive), node:$op2, node:$op3), (SVEDup0))),
                               // select(mask, sub(a, mul(b, c)), a) -> mls(a, mask, b, c)
                               (vselect node:$pred, (sub node:$op1, (AArch64mul_p_oneuse (SVEAllActive), node:$op2, node:$op3)), node:$op1)]>;
 def AArch64mls_p : PatFrags<(ops node:$pred, node:$op1, node:$op2, node:$op3),
@@ -428,21 +418,21 @@ def AArch64eor3 : PatFrags<(ops node:$op1, node:$op2, node:$op3),
                            [(int_aarch64_sve_eor3 node:$op1, node:$op2, node:$op3),
                             (xor node:$op1, (xor node:$op2, node:$op3))]>;
 
-class fma_patfrags<SDPatternOperator intrinsic, SDPatternOperator add_zero, SDPatternOperator add_negzero>
+class fma_patfrags<SDPatternOperator intrinsic, SDPatternOperator add>
     : PatFrags<(ops node:$pred, node:$op1, node:$op2, node:$op3),
                [(intrinsic node:$pred, node:$op1, node:$op2, node:$op3),
-                (add_zero (SVEAllActive), node:$op1, (vselect node:$pred, (AArch64fmul_p_oneuse (SVEAllActive), node:$op2, node:$op3), (SVEDup0))),
-                (add_negzero (SVEAllActive), node:$op1, (vselect node:$pred, (AArch64fmul_p_oneuse (SVEAllActive), node:$op2, node:$op3), (SVEDupNeg0)))],
-               [{
-  if ((N->getOpcode() != AArch64ISD::FADD_PRED) &&
-      (N->getOpcode() != AArch64ISD::FSUB_PRED))
-    return true;  // it's the intrinsic
-  return N->getFlags().hasAllowContract();
+                (vselect node:$pred, (add (SVEAllActive), node:$op1, (AArch64fmul_p_oneuse (SVEAllActive), node:$op2, node:$op3)), node:$op1)],
+[{
+  if (N->getOpcode() == ISD::VSELECT)
+    return N->getOperand(1)->getFlags().hasAllowContract();
+  return true;  // it's the intrinsic
 }]>;
 
-def AArch64fmla_m1 : fma_patfrags<int_aarch64_sve_fmla, AArch64fadd_p_nsz, AArch64fadd_p>;
-def AArch64fmls_m1 : fma_patfrags<int_aarch64_sve_fmls, AArch64fsub_p, AArch64fsub_p_nsz>;
+def AArch64fmla_m1 : fma_patfrags<int_aarch64_sve_fmla, AArch64fadd_p>;
+def AArch64fmls_m1 : fma_patfrags<int_aarch64_sve_fmls, AArch64fsub_p>;
 
+def AArch64add_m1 : VSelectUnpredOrPassthruPatFrags<int_aarch64_sve_add, add>;
+def AArch64sub_m1 : VSelectUnpredOrPassthruPatFrags<int_aarch64_sve_sub, sub>;
 def AArch64mul_m1 : VSelectCommPredOrPassthruPatFrags<int_aarch64_sve_mul, AArch64mul_p>;
 def AArch64and_m1 : VSelectUnpredOrPassthruPatFrags<int_aarch64_sve_and, and>;
 def AArch64orr_m1 : VSelectUnpredOrPassthruPatFrags<int_aarch64_sve_orr, or>;
