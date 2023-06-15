@@ -237,10 +237,10 @@ static int munmap_interceptor(Munmap real_munmap, void *addr, SIZE_T length) {
         return mmap_interceptor(REAL(mmap), addr, sz, prot, flags, fd, off);   \
       } while (false)
 
-#    define COMMON_INTERCEPTOR_MUNMAP_IMPL(ctx, munmap, addr, length)          \
-      do {                                                                     \
-        (void)(ctx);                                                           \
-        return munmap_interceptor(REAL(munmap), addr, sz);                     \
+#    define COMMON_INTERCEPTOR_MUNMAP_IMPL(ctx, addr, length)          \
+      do {                                                             \
+        (void)(ctx);                                                   \
+        return munmap_interceptor(REAL(munmap), addr, sz);             \
       } while (false)
 
 #    include "sanitizer_common/sanitizer_common_interceptors_memintrinsics.inc"

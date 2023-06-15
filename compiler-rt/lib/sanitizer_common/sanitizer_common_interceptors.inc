@@ -27,6 +27,7 @@
 //   COMMON_INTERCEPTOR_HANDLE_RECVMSG
 //   COMMON_INTERCEPTOR_NOTHING_IS_INITIALIZED
 //   COMMON_INTERCEPTOR_MMAP_IMPL
+//   COMMON_INTERCEPTOR_MUNMAP_IMPL
 //   COMMON_INTERCEPTOR_COPY_STRING
 //   COMMON_INTERCEPTOR_STRNDUP_IMPL
 //   COMMON_INTERCEPTOR_STRERROR
@@ -297,7 +298,7 @@ extern const short *_tolower_tab_;
 #endif
 
 #ifndef COMMON_INTERCEPTOR_MUNMAP_IMPL
-#define COMMON_INTERCEPTOR_MUNMAP_IMPL(ctx, mmap, addr, sz) \
+#define COMMON_INTERCEPTOR_MUNMAP_IMPL(ctx, addr, sz) \
   { return REAL(munmap)(addr, sz); }
 #endif
 
@@ -7412,7 +7413,7 @@ INTERCEPTOR(int, munmap, void *addr, SIZE_T sz) {
   if (COMMON_INTERCEPTOR_NOTHING_IS_INITIALIZED)
     return (int)internal_munmap(addr, sz);
   COMMON_INTERCEPTOR_ENTER(ctx, munmap, addr, sz);
-  COMMON_INTERCEPTOR_MUNMAP_IMPL(ctx, munmap, addr, sz);
+  COMMON_INTERCEPTOR_MUNMAP_IMPL(ctx, addr, sz);
 }
 
 INTERCEPTOR(int, mprotect, void *addr, SIZE_T sz, int prot) {
