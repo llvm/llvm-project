@@ -63,6 +63,8 @@ X86LegalizerInfo::X86LegalizerInfo(const X86Subtarget &STI,
   const LLT v16s32 = LLT::fixed_vector(16, 32);
   const LLT v8s64 = LLT::fixed_vector(8, 64);
 
+  // todo: AVX512 bool vector predicate types
+
   // implicit/constants
   getActionDefinitionsBuilder(G_IMPLICIT_DEF)
       .legalIf([=](const LegalityQuery &Query) -> bool {
@@ -391,7 +393,24 @@ X86LegalizerInfo::X86LegalizerInfo(const X86Subtarget &STI,
                                             {v4s64, v8s64}})(Query));
       });
 
-  // TODO: G_CONCAT_VECTORS
+  // todo: only permit dst types up to max legal vector register size?
+  getActionDefinitionsBuilder(G_CONCAT_VECTORS)
+      .legalIf([=](const LegalityQuery &Query) {
+        return (HasSSE1 && typePairInSet(1, 0,
+                                         {{v16s8, v32s8},
+                                          {v8s16, v16s16},
+                                          {v4s32, v8s32},
+                                          {v2s64, v4s64}})(Query)) ||
+               (HasAVX && typePairInSet(1, 0,
+                                        {{v16s8, v64s8},
+                                         {v32s8, v64s8},
+                                         {v8s16, v32s16},
+                                         {v16s16, v32s16},
+                                         {v4s32, v16s32},
+                                         {v8s32, v16s32},
+                                         {v2s64, v8s64},
+                                         {v4s64, v8s64}})(Query));
+      });
 
   // todo: vectors and address spaces
   getActionDefinitionsBuilder(G_SELECT)
@@ -508,7 +527,6 @@ void X86LegalizerInfo::setLegalizerInfoSSE1() {
 
   // Merge/Unmerge
   for (const auto &Ty : {v4s32, v2s64}) {
-    LegacyInfo.setAction({G_CONCAT_VECTORS, Ty}, LegacyLegalizeActions::Legal);
     LegacyInfo.setAction({G_UNMERGE_VALUES, 1, Ty},
                          LegacyLegalizeActions::Legal);
   }
@@ -535,13 +553,10 @@ void X86LegalizerInfo::setLegalizerInfoSSE2() {
   // Merge/Unmerge
   for (const auto &Ty :
        {v16s8, v32s8, v8s16, v16s16, v4s32, v8s32, v2s64, v4s64}) {
-    LegacyInfo.setAction({G_CONCAT_VECTORS, Ty}, LegacyLegalizeActions::Legal);
     LegacyInfo.setAction({G_UNMERGE_VALUES, 1, Ty},
                          LegacyLegalizeActions::Legal);
   }
   for (const auto &Ty : {v16s8, v8s16, v4s32, v2s64}) {
-    LegacyInfo.setAction({G_CONCAT_VECTORS, 1, Ty},
-                         LegacyLegalizeActions::Legal);
     LegacyInfo.setAction({G_UNMERGE_VALUES, Ty}, LegacyLegalizeActions::Legal);
   }
 }
@@ -573,14 +588,11 @@ void X86LegalizerInfo::setLegalizerInfoAVX() {
   // Merge/Unmerge
   for (const auto &Ty :
        {v32s8, v64s8, v16s16, v32s16, v8s32, v16s32, v4s64, v8s64}) {
-    LegacyInfo.setAction({G_CONCAT_VECTORS, Ty}, LegacyLegalizeActions::Legal);
     LegacyInfo.setAction({G_UNMERGE_VALUES, 1, Ty},
                          LegacyLegalizeActions::Legal);
   }
   for (const auto &Ty :
        {v16s8, v32s8, v8s16, v16s16, v4s32, v8s32, v2s64, v4s64}) {
-    LegacyInfo.setAction({G_CONCAT_VECTORS, 1, Ty},
-                         LegacyLegalizeActions::Legal);
     LegacyInfo.setAction({G_UNMERGE_VALUES, Ty}, LegacyLegalizeActions::Legal);
   }
 }
@@ -603,13 +615,10 @@ void X86LegalizerInfo::setLegalizerInfoAVX2() {
 
   // Merge/Unmerge
   for (const auto &Ty : {v64s8, v32s16, v16s32, v8s64}) {
-    LegacyInfo.setAction({G_CONCAT_VECTORS, Ty}, LegacyLegalizeActions::Legal);
     LegacyInfo.setAction({G_UNMERGE_VALUES, 1, Ty},
                          LegacyLegalizeActions::Legal);
   }
   for (const auto &Ty : {v32s8, v16s16, v8s32, v4s64}) {
-    LegacyInfo.setAction({G_CONCAT_VECTORS, 1, Ty},
-                         LegacyLegalizeActions::Legal);
     LegacyInfo.setAction({G_UNMERGE_VALUES, Ty}, LegacyLegalizeActions::Legal);
   }
 }
