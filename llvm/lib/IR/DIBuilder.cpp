@@ -35,7 +35,7 @@ DIBuilder::DIBuilder(Module &m, bool AllowUnresolvedNodes, DICompileUnit *CU)
     if (const auto &GVs = CUNode->getGlobalVariables())
       AllGVs.assign(GVs.begin(), GVs.end());
     if (const auto &IMs = CUNode->getImportedEntities())
-      ImportedModules.assign(IMs.begin(), IMs.end());
+      AllImportedModules.assign(IMs.begin(), IMs.end());
     if (const auto &MNs = CUNode->getMacros())
       AllMacrosPerParent.insert({nullptr, {MNs.begin(), MNs.end()}});
   }
@@ -93,10 +93,10 @@ void DIBuilder::finalize() {
   if (!AllGVs.empty())
     CUNode->replaceGlobalVariables(MDTuple::get(VMContext, AllGVs));
 
-  if (!ImportedModules.empty())
+  if (!AllImportedModules.empty())
     CUNode->replaceImportedEntities(MDTuple::get(
-        VMContext, SmallVector<Metadata *, 16>(ImportedModules.begin(),
-                                               ImportedModules.end())));
+        VMContext, SmallVector<Metadata *, 16>(AllImportedModules.begin(),
+                                               AllImportedModules.end())));
 
   for (const auto &I : AllMacrosPerParent) {
     // DIMacroNode's with nullptr parent are DICompileUnit direct children.
@@ -160,7 +160,7 @@ static DIImportedEntity *
 createImportedModule(LLVMContext &C, dwarf::Tag Tag, DIScope *Context,
                      Metadata *NS, DIFile *File, unsigned Line, StringRef Name,
                      DINodeArray Elements,
-                     SmallVectorImpl<TrackingMDNodeRef> &ImportedModules) {
+                     SmallVectorImpl<TrackingMDNodeRef> &AllImportedModules) {
   if (Line)
     assert(File && "Source location has line number but no file");
   unsigned EntitiesCount = C.pImpl->DIImportedEntitys.size();
@@ -169,7 +169,7 @@ createImportedModule(LLVMContext &C, dwarf::Tag Tag, DIScope *Context,
   if (EntitiesCount < C.pImpl->DIImportedEntitys.size())
     // A new Imported Entity was just added to the context.
     // Add it to the Imported Modules list.
-    ImportedModules.emplace_back(M);
+    AllImportedModules.emplace_back(M);
   return M;
 }
 
@@ -179,7 +179,7 @@ DIImportedEntity *DIBuilder::createImportedModule(DIScope *Context,
                                                   DINodeArray Elements) {
   return ::createImportedModule(VMContext, dwarf::DW_TAG_imported_module,
                                 Context, NS, File, Line, StringRef(), Elements,
-                                getImportTrackingVector(Context));
+                                AllImportedModules);
 }
 
 DIImportedEntity *DIBuilder::createImportedModule(DIScope *Context,
@@ -188,7 +188,7 @@ DIImportedEntity *DIBuilder::createImportedModule(DIScope *Context,
                                                   DINodeArray Elements) {
   return ::createImportedModule(VMContext, dwarf::DW_TAG_imported_module,
                                 Context, NS, File, Line, StringRef(), Elements,
-                                getImportTrackingVector(Context));
+                                AllImportedModules);
 }
 
 DIImportedEntity *DIBuilder::createImportedModule(DIScope *Context, DIModule *M,
@@ -196,7 +196,7 @@ DIImportedEntity *DIBuilder::createImportedModule(DIScope *Context, DIModule *M,
                                                   DINodeArray Elements) {
   return ::createImportedModule(VMContext, dwarf::DW_TAG_imported_module,
                                 Context, M, File, Line, StringRef(), Elements,
-                                getImportTrackingVector(Context));
+                                AllImportedModules);
 }
 
 DIImportedEntity *
@@ -207,7 +207,7 @@ DIBuilder::createImportedDeclaration(DIScope *Context, DINode *Decl,
   // types that have one.
   return ::createImportedModule(VMContext, dwarf::DW_TAG_imported_declaration,
                                 Context, Decl, File, Line, Name, Elements,
-                                getImportTrackingVector(Context));
+                                AllImportedModules);
 }
 
 DIFile *DIBuilder::createFile(StringRef Filename, StringRef Directory,
