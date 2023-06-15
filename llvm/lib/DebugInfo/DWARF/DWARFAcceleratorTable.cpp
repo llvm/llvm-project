@@ -333,19 +333,22 @@ AppleAcceleratorTable::equal_range(StringRef Key) const {
     return EmptyRange;
 
   std::optional<uint32_t> StrOffset = readStringOffsetAt(DataOffset);
-  // Valid input and still have strings in this hash.
-  while (StrOffset && *StrOffset) {
-    std::optional<StringRef> MaybeStr = readStringFromStrSection(*StrOffset);
-    std::optional<uint32_t> NumEntries = this->readU32FromAccel(DataOffset);
-    if (!MaybeStr || !NumEntries)
-      return EmptyRange;
+
+  // Invalid input or no more strings in this hash.
+  if (!StrOffset || *StrOffset == 0)
+    return EmptyRange;
+
+  std::optional<StringRef> MaybeStr = readStringFromStrSection(*StrOffset);
+  std::optional<uint32_t> NumEntries = this->readU32FromAccel(DataOffset);
+  if (!MaybeStr || !NumEntries)
+    return EmptyRange;
+  if (Key == *MaybeStr) {
     uint64_t EndOffset = DataOffset + *NumEntries * getHashDataEntryLength();
-    if (Key == *MaybeStr)
-      return make_range({*this, DataOffset}, ValueIterator{*this, EndOffset});
-    DataOffset = EndOffset;
-    StrOffset = readStringOffsetAt(DataOffset);
+    return make_range({*this, DataOffset}, ValueIterator{*this, EndOffset});
   }
 
+  // FIXME: this shouldn't return, we haven't checked all the colliding strings
+  // in the bucket!
   return EmptyRange;
 }
 
