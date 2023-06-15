@@ -190,6 +190,7 @@ CUresult launch_kernel(CUmodule binary, CUstream stream,
           // Wait until the memory allocation is complete.
           while (cuStreamQuery(memory_stream) == CUDA_ERROR_NOT_READY)
             ;
+          buffer->data[0] = static_cast<uintptr_t>(dev_ptr);
         };
         rpc_recv_and_send(port, malloc_handler, data);
       },

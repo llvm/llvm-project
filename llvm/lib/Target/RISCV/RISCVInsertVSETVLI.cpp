@@ -85,6 +85,17 @@ static bool isScalarMoveInstr(const MachineInstr &MI) {
   }
 }
 
+static bool isScalarSplatInstr(const MachineInstr &MI) {
+  switch (getRVVMCOpcode(MI.getOpcode())) {
+  default:
+    return false;
+  case RISCV::VMV_V_I:
+  case RISCV::VMV_V_X:
+  case RISCV::VFMV_V_F:
+    return true;
+  }
+}
+
 static bool isVSlideInstr(const MachineInstr &MI) {
   switch (getRVVMCOpcode(MI.getOpcode())) {
   default:
@@ -908,6 +919,20 @@ bool RISCVInsertVSETVLI::needVSETVLI(const MachineInstr &MI,
     Used.VLAny = false;
     Used.VLZeroness = true;
     Used.LMUL = false;
+    Used.TailPolicy = false;
+  }
+
+  // A tail undefined vmv.v.i/x or vfmv.v.f with VL=1 can be treated in the same
+  // semantically as vmv.s.x.  This is particularly useful since we don't have an
+  // immediate form of vmv.s.x, and thus frequently use vmv.v.i in it's place.
+  // Since a splat is non-constant time in LMUL, we do need to be careful to not
+  // increase the number of active vector registers (unlike for vmv.s.x.)
+  if (isScalarSplatInstr(MI) && Require.hasAVLImm() && Require.getAVLImm() == 1 &&
+      isLMUL1OrSmaller(CurInfo.getVLMUL()) && hasUndefinedMergeOp(MI, *MRI)) {
+    Used.LMUL = false;
+    Used.SEWLMULRatio = false;
+    Used.VLAny = false;
+    Used.SEW = DemandedFields::SEWGreaterThanOrEqual;
     Used.TailPolicy = false;
   }
 
