@@ -66,8 +66,8 @@ rules of thumb:
 
 * Soft assertions.  LLDB provides ``lldb_assert()`` as a soft
   alternative to cover the middle ground of situations that indicate a
-  recoverable bug in LLDB.  In a Debug configuration ``lldb_assert()``
-  behaves like ``assert()``. In a Release configuration it will print a
+  recoverable bug in LLDB.  When asserts are enabled ``lldbassert()``
+  behaves like ``assert()``. When asserts are disabled, it will print a
   warning and encourage the user to file a bug report, similar to
   LLVM's crash handler, and then return execution. Use these sparingly
   and only if error handling is not otherwise feasible.  Specifically,

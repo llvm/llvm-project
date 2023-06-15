@@ -25,9 +25,6 @@ void lldb_private::lldb_assert(bool expression, const char *expr_text,
   if (LLVM_LIKELY(expression))
     return;
 
-  // If asserts are enabled abort here.
-  assert(false && "lldb_assert failed");
-
 #if LLVM_SUPPORT_XCODE_SIGNPOSTS
   if (__builtin_available(macos 10.12, iOS 10, tvOS 10, watchOS 3, *)) {
     os_log_fault(OS_LOG_DEFAULT,
@@ -36,9 +33,8 @@ void lldb_private::lldb_assert(bool expression, const char *expr_text,
   }
 #endif
 
-  // In a release configuration it will print a warning and encourage the user
-  // to file a bug report, similar to LLVM’s crash handler, and then return
-  // execution.
+  // Print a warning and encourage the user to file a bug report, similar to
+  // LLVM’s crash handler, and then return execution.
   errs() << format("Assertion failed: (%s), function %s, file %s, line %u\n",
                    expr_text, func, file, line);
   errs() << "backtrace leading to the failure:\n";
