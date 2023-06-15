@@ -90,6 +90,9 @@ set(TARGET_LIBC_ENTRYPOINTS
     libc.src.stdio.stdin
     libc.src.stdio.stdout
     libc.src.stdio.stderr
+
+    # gpu/rpc.h entrypoints
+    libc.src.gpu.rpc_reset
 )
 
 set(TARGET_LIBM_ENTRYPOINTS

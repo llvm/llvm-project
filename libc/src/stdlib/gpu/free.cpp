@@ -13,7 +13,7 @@
 namespace __llvm_libc {
 
 LLVM_LIBC_FUNCTION(void, free, (void *ptr)) {
-  rpc::Client::Port port = rpc::client.open<rpc::FREE>();
+  rpc::Client::Port port = rpc::client.open<RPC_FREE>();
   port.send([=](rpc::Buffer *buffer) {
     buffer->data[0] = reinterpret_cast<uintptr_t>(ptr);
   });
