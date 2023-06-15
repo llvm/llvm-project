@@ -10,6 +10,7 @@
 #define TEST_SUPPORT_CHECK_ASSERTION_H
 
 #include <cassert>
+#include <csignal>
 #include <cstdarg>
 #include <cstddef>
 #include <cstdio>
@@ -257,9 +258,14 @@ void std::__libcpp_verbose_abort(char const* format, ...) {
   std::exit(DeathTest::RK_Terminate);
 }
 
+[[noreturn]] inline void abort_handler(int) {
+  std::exit(DeathTest::RK_Terminate);
+}
+
 template <class Func>
 inline bool ExpectDeath(const char* stmt, Func&& func, AssertionInfoMatcher Matcher) {
   std::set_terminate(terminate_handler);
+  std::signal(SIGABRT, abort_handler);
   DeathTest DT(Matcher);
   DeathTest::ResultKind RK = DT.Run(func);
   auto OnFailure = [&](const char* msg) {

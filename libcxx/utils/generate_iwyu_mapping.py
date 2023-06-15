@@ -65,6 +65,8 @@ def generate_map(include):
             continue
         elif i == "__node_handle":
             public = ["map", "set", "unordered_map", "unordered_set"]
+        elif i == "__overridable_function":
+            continue
         elif i == "__pstl_algorithm":
             continue
         elif i == "__pstl_config_site.in":
