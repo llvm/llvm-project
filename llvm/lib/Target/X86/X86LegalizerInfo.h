@@ -33,14 +33,6 @@ public:
 
   bool legalizeIntrinsic(LegalizerHelper &Helper,
                          MachineInstr &MI) const override;
-
-private:
-  void setLegalizerInfo32bit();
-  void setLegalizerInfo64bit();
-  void setLegalizerInfoSSE1();
-  void setLegalizerInfoSSE2();
-  void setLegalizerInfoAVX();
-  void setLegalizerInfoAVX2();
 };
 } // namespace llvm
 #endif

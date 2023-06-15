@@ -84,6 +84,41 @@ X86LegalizerInfo::X86LegalizerInfo(const X86Subtarget &STI,
       .widenScalarToNextPow2(0, /*Min=*/8)
       .clampScalar(0, s8, sMaxScalar);
 
+  // merge/unmerge
+  for (unsigned Op : {G_MERGE_VALUES, G_UNMERGE_VALUES}) {
+    unsigned BigTyIdx = Op == G_MERGE_VALUES ? 0 : 1;
+    unsigned LitTyIdx = Op == G_MERGE_VALUES ? 1 : 0;
+    getActionDefinitionsBuilder(Op)
+        .widenScalarToNextPow2(LitTyIdx, /*Min=*/8)
+        .widenScalarToNextPow2(BigTyIdx, /*Min=*/16)
+        .clampScalar(LitTyIdx, s8, Is64Bit ? s64 : s32)
+        .clampScalar(BigTyIdx, s32, Is64Bit ? s128 : s64)
+        .legalIf([=](const LegalityQuery &Q) {
+          switch (Q.Types[BigTyIdx].getSizeInBits()) {
+          case 16:
+          case 32:
+          case 64:
+          case 128:
+          case 256:
+          case 512:
+            break;
+          default:
+            return false;
+          }
+          switch (Q.Types[LitTyIdx].getSizeInBits()) {
+          case 8:
+          case 16:
+          case 32:
+          case 64:
+          case 128:
+          case 256:
+            return true;
+          default:
+            return false;
+          }
+        });
+  }
+
   // integer addition/subtraction
   getActionDefinitionsBuilder({G_ADD, G_SUB})
       .legalIf([=](const LegalityQuery &Query) -> bool {
@@ -484,161 +519,11 @@ X86LegalizerInfo::X86LegalizerInfo(const X86Subtarget &STI,
     .widenScalarToNextPow2(0, /*Min=*/8)
     .clampScalar(0, s8, sMaxScalar);
 
-  setLegalizerInfo32bit();
-  setLegalizerInfo64bit();
-  setLegalizerInfoSSE1();
-  setLegalizerInfoSSE2();
-  setLegalizerInfoAVX();
-  setLegalizerInfoAVX2();
-
-  auto &LegacyInfo = getLegacyLegalizerInfo();
-  LegacyInfo.computeTables();
+  getLegacyLegalizerInfo().computeTables();
   verify(*STI.getInstrInfo());
 }
 
 bool X86LegalizerInfo::legalizeIntrinsic(LegalizerHelper &Helper,
                                          MachineInstr &MI) const {
   return true;
-}
-
-void X86LegalizerInfo::setLegalizerInfo32bit() {
-
-  const LLT s8 = LLT::scalar(8);
-  const LLT s16 = LLT::scalar(16);
-  const LLT s32 = LLT::scalar(32);
-  const LLT s64 = LLT::scalar(64);
-
-  auto &LegacyInfo = getLegacyLegalizerInfo();
-
-  // Merge/Unmerge
-  for (const auto &Ty : {s16, s32, s64}) {
-    LegacyInfo.setAction({G_MERGE_VALUES, Ty}, LegacyLegalizeActions::Legal);
-    LegacyInfo.setAction({G_UNMERGE_VALUES, 1, Ty},
-                         LegacyLegalizeActions::Legal);
-  }
-  for (const auto &Ty : {s8, s16, s32}) {
-    LegacyInfo.setAction({G_MERGE_VALUES, 1, Ty}, LegacyLegalizeActions::Legal);
-    LegacyInfo.setAction({G_UNMERGE_VALUES, Ty}, LegacyLegalizeActions::Legal);
-  }
-}
-
-void X86LegalizerInfo::setLegalizerInfo64bit() {
-
-  if (!Subtarget.is64Bit())
-    return;
-
-  const LLT s128 = LLT::scalar(128);
-
-  auto &LegacyInfo = getLegacyLegalizerInfo();
-
-  // Merge/Unmerge
-  LegacyInfo.setAction({G_MERGE_VALUES, s128}, LegacyLegalizeActions::Legal);
-  LegacyInfo.setAction({G_UNMERGE_VALUES, 1, s128},
-                       LegacyLegalizeActions::Legal);
-  LegacyInfo.setAction({G_MERGE_VALUES, 1, s128}, LegacyLegalizeActions::Legal);
-  LegacyInfo.setAction({G_UNMERGE_VALUES, s128}, LegacyLegalizeActions::Legal);
-}
-
-void X86LegalizerInfo::setLegalizerInfoSSE1() {
-  if (!Subtarget.hasSSE1())
-    return;
-
-  const LLT s64 = LLT::scalar(64);
-  const LLT v4s32 = LLT::fixed_vector(4, 32);
-  const LLT v2s64 = LLT::fixed_vector(2, 64);
-
-  auto &LegacyInfo = getLegacyLegalizerInfo();
-
-  // Merge/Unmerge
-  for (const auto &Ty : {v4s32, v2s64}) {
-    LegacyInfo.setAction({G_UNMERGE_VALUES, 1, Ty},
-                         LegacyLegalizeActions::Legal);
-  }
-  LegacyInfo.setAction({G_MERGE_VALUES, 1, s64}, LegacyLegalizeActions::Legal);
-  LegacyInfo.setAction({G_UNMERGE_VALUES, s64}, LegacyLegalizeActions::Legal);
-}
-
-void X86LegalizerInfo::setLegalizerInfoSSE2() {
-  if (!Subtarget.hasSSE2())
-    return;
-
-  const LLT v16s8 = LLT::fixed_vector(16, 8);
-  const LLT v8s16 = LLT::fixed_vector(8, 16);
-  const LLT v4s32 = LLT::fixed_vector(4, 32);
-  const LLT v2s64 = LLT::fixed_vector(2, 64);
-
-  const LLT v32s8 = LLT::fixed_vector(32, 8);
-  const LLT v16s16 = LLT::fixed_vector(16, 16);
-  const LLT v8s32 = LLT::fixed_vector(8, 32);
-  const LLT v4s64 = LLT::fixed_vector(4, 64);
-
-  auto &LegacyInfo = getLegacyLegalizerInfo();
-
-  // Merge/Unmerge
-  for (const auto &Ty :
-       {v16s8, v32s8, v8s16, v16s16, v4s32, v8s32, v2s64, v4s64}) {
-    LegacyInfo.setAction({G_UNMERGE_VALUES, 1, Ty},
-                         LegacyLegalizeActions::Legal);
-  }
-  for (const auto &Ty : {v16s8, v8s16, v4s32, v2s64}) {
-    LegacyInfo.setAction({G_UNMERGE_VALUES, Ty}, LegacyLegalizeActions::Legal);
-  }
-}
-
-void X86LegalizerInfo::setLegalizerInfoAVX() {
-  if (!Subtarget.hasAVX())
-    return;
-
-  const LLT v16s8 = LLT::fixed_vector(16, 8);
-  const LLT v8s16 = LLT::fixed_vector(8, 16);
-  const LLT v4s32 = LLT::fixed_vector(4, 32);
-  const LLT v2s64 = LLT::fixed_vector(2, 64);
-
-  const LLT v32s8 = LLT::fixed_vector(32, 8);
-  const LLT v64s8 = LLT::fixed_vector(64, 8);
-  const LLT v16s16 = LLT::fixed_vector(16, 16);
-  const LLT v32s16 = LLT::fixed_vector(32, 16);
-  const LLT v8s32 = LLT::fixed_vector(8, 32);
-  const LLT v16s32 = LLT::fixed_vector(16, 32);
-  const LLT v4s64 = LLT::fixed_vector(4, 64);
-  const LLT v8s64 = LLT::fixed_vector(8, 64);
-
-  auto &LegacyInfo = getLegacyLegalizerInfo();
-
-  // Merge/Unmerge
-  for (const auto &Ty :
-       {v32s8, v64s8, v16s16, v32s16, v8s32, v16s32, v4s64, v8s64}) {
-    LegacyInfo.setAction({G_UNMERGE_VALUES, 1, Ty},
-                         LegacyLegalizeActions::Legal);
-  }
-  for (const auto &Ty :
-       {v16s8, v32s8, v8s16, v16s16, v4s32, v8s32, v2s64, v4s64}) {
-    LegacyInfo.setAction({G_UNMERGE_VALUES, Ty}, LegacyLegalizeActions::Legal);
-  }
-}
-
-void X86LegalizerInfo::setLegalizerInfoAVX2() {
-  if (!Subtarget.hasAVX2())
-    return;
-
-  const LLT v32s8 = LLT::fixed_vector(32, 8);
-  const LLT v16s16 = LLT::fixed_vector(16, 16);
-  const LLT v8s32 = LLT::fixed_vector(8, 32);
-  const LLT v4s64 = LLT::fixed_vector(4, 64);
-
-  const LLT v64s8 = LLT::fixed_vector(64, 8);
-  const LLT v32s16 = LLT::fixed_vector(32, 16);
-  const LLT v16s32 = LLT::fixed_vector(16, 32);
-  const LLT v8s64 = LLT::fixed_vector(8, 64);
-
-  auto &LegacyInfo = getLegacyLegalizerInfo();
-
-  // Merge/Unmerge
-  for (const auto &Ty : {v64s8, v32s16, v16s32, v8s64}) {
-    LegacyInfo.setAction({G_UNMERGE_VALUES, 1, Ty},
-                         LegacyLegalizeActions::Legal);
-  }
-  for (const auto &Ty : {v32s8, v16s16, v8s32, v4s64}) {
-    LegacyInfo.setAction({G_UNMERGE_VALUES, Ty}, LegacyLegalizeActions::Legal);
-  }
 }
