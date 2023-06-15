@@ -45,6 +45,7 @@ X86LegalizerInfo::X86LegalizerInfo(const X86Subtarget &STI,
   const LLT s16 = LLT::scalar(16);
   const LLT s32 = LLT::scalar(32);
   const LLT s64 = LLT::scalar(64);
+  const LLT s80 = LLT::scalar(80);
   const LLT s128 = LLT::scalar(128);
   const LLT sMaxScalar = Subtarget.is64Bit() ? s64 : s32;
 
@@ -292,6 +293,53 @@ X86LegalizerInfo::X86LegalizerInfo(const X86Subtarget &STI,
 
   getActionDefinitionsBuilder({G_FRAME_INDEX, G_GLOBAL_VALUE}).legalFor({p0});
 
+  // load/store
+  for (unsigned Op : {G_LOAD, G_STORE}) {
+    auto &Action = getActionDefinitionsBuilder(Op);
+    Action.legalForTypesWithMemDesc({{s8, p0, s1, 1},
+                                     {s8, p0, s8, 1},
+                                     {s16, p0, s8, 1},
+                                     {s16, p0, s16, 1},
+                                     {s32, p0, s8, 1},
+                                     {s32, p0, s16, 1},
+                                     {s32, p0, s32, 1},
+                                     {s80, p0, s80, 1},
+                                     {p0, p0, p0, 1}});
+    if (Is64Bit)
+      Action.legalForTypesWithMemDesc({{s64, p0, s8, 1},
+                                       {s64, p0, s16, 1},
+                                       {s64, p0, s32, 1},
+                                       {s64, p0, s64, 1}});
+    if (HasSSE1)
+      Action.legalForTypesWithMemDesc({{v16s8, p0, v16s8, 1},
+                                       {v8s16, p0, v8s16, 1},
+                                       {v4s32, p0, v4s32, 1},
+                                       {v2s64, p0, v2s64, 1}});
+    if (HasAVX)
+      Action.legalForTypesWithMemDesc({{v32s8, p0, v32s8, 1},
+                                       {v16s16, p0, v16s16, 1},
+                                       {v8s32, p0, v8s32, 1},
+                                       {v4s64, p0, v4s64, 1}});
+    if (HasAVX512)
+      Action.legalForTypesWithMemDesc({{v64s8, p0, v64s8, 1},
+                                       {v32s16, p0, v32s16, 1},
+                                       {v16s32, p0, v16s32, 1},
+                                       {v8s64, p0, v8s64, 1}});
+    Action.widenScalarToNextPow2(0, /*Min=*/8).clampScalar(0, s8, sMaxScalar);
+  }
+
+  for (unsigned Op : {G_SEXTLOAD, G_ZEXTLOAD}) {
+    auto &Action = getActionDefinitionsBuilder(Op);
+    Action.legalForTypesWithMemDesc({{s16, p0, s8, 1},
+                                     {s32, p0, s8, 1},
+                                     {s32, p0, s16, 1}});
+    if (Is64Bit)
+      Action.legalForTypesWithMemDesc({{s64, p0, s8, 1},
+                                       {s64, p0, s16, 1},
+                                       {s64, p0, s32, 1}});
+    // TODO - SSE41/AVX2/AVX512F/AVX512BW vector extensions
+  }
+
   // sext, zext, and anyext
   getActionDefinitionsBuilder({G_SEXT, G_ZEXT, G_ANYEXT})
       .legalIf([=](const LegalityQuery &Query) {
@@ -442,13 +490,8 @@ X86LegalizerInfo::X86LegalizerInfo(const X86Subtarget &STI,
   setLegalizerInfoSSE2();
   setLegalizerInfoAVX();
   setLegalizerInfoAVX2();
-  setLegalizerInfoAVX512();
 
   auto &LegacyInfo = getLegacyLegalizerInfo();
-  for (unsigned MemOp : {G_LOAD, G_STORE})
-    LegacyInfo.setLegalizeScalarToDifferentSizeStrategy(
-        MemOp, 0, LegacyLegalizerInfo::narrowToSmallerAndWidenToSmallest);
-
   LegacyInfo.computeTables();
   verify(*STI.getInstrInfo());
 }
@@ -460,21 +503,12 @@ bool X86LegalizerInfo::legalizeIntrinsic(LegalizerHelper &Helper,
 
 void X86LegalizerInfo::setLegalizerInfo32bit() {
 
-  const LLT p0 = LLT::pointer(0, TM.getPointerSizeInBits(0));
   const LLT s8 = LLT::scalar(8);
   const LLT s16 = LLT::scalar(16);
   const LLT s32 = LLT::scalar(32);
   const LLT s64 = LLT::scalar(64);
 
   auto &LegacyInfo = getLegacyLegalizerInfo();
-
-  for (unsigned MemOp : {G_LOAD, G_STORE}) {
-    for (auto Ty : {s8, s16, s32, p0})
-      LegacyInfo.setAction({MemOp, Ty}, LegacyLegalizeActions::Legal);
-
-    // And everything's fine in addrspace 0.
-    LegacyInfo.setAction({MemOp, 1, p0}, LegacyLegalizeActions::Legal);
-  }
 
   // Merge/Unmerge
   for (const auto &Ty : {s16, s32, s64}) {
@@ -493,13 +527,9 @@ void X86LegalizerInfo::setLegalizerInfo64bit() {
   if (!Subtarget.is64Bit())
     return;
 
-  const LLT s64 = LLT::scalar(64);
   const LLT s128 = LLT::scalar(128);
 
   auto &LegacyInfo = getLegacyLegalizerInfo();
-
-  for (unsigned MemOp : {G_LOAD, G_STORE})
-    LegacyInfo.setAction({MemOp, s64}, LegacyLegalizeActions::Legal);
 
   // Merge/Unmerge
   LegacyInfo.setAction({G_MERGE_VALUES, s128}, LegacyLegalizeActions::Legal);
@@ -518,10 +548,6 @@ void X86LegalizerInfo::setLegalizerInfoSSE1() {
   const LLT v2s64 = LLT::fixed_vector(2, 64);
 
   auto &LegacyInfo = getLegacyLegalizerInfo();
-
-  for (unsigned MemOp : {G_LOAD, G_STORE})
-    for (auto Ty : {v4s32, v2s64})
-      LegacyInfo.setAction({MemOp, Ty}, LegacyLegalizeActions::Legal);
 
   // Merge/Unmerge
   for (const auto &Ty : {v4s32, v2s64}) {
@@ -579,10 +605,6 @@ void X86LegalizerInfo::setLegalizerInfoAVX() {
 
   auto &LegacyInfo = getLegacyLegalizerInfo();
 
-  for (unsigned MemOp : {G_LOAD, G_STORE})
-    for (auto Ty : {v8s32, v4s64})
-      LegacyInfo.setAction({MemOp, Ty}, LegacyLegalizeActions::Legal);
-
   // Merge/Unmerge
   for (const auto &Ty :
        {v32s8, v64s8, v16s16, v32s16, v8s32, v16s32, v4s64, v8s64}) {
@@ -619,18 +641,4 @@ void X86LegalizerInfo::setLegalizerInfoAVX2() {
   for (const auto &Ty : {v32s8, v16s16, v8s32, v4s64}) {
     LegacyInfo.setAction({G_UNMERGE_VALUES, Ty}, LegacyLegalizeActions::Legal);
   }
-}
-
-void X86LegalizerInfo::setLegalizerInfoAVX512() {
-  if (!Subtarget.hasAVX512())
-    return;
-
-  const LLT v16s32 = LLT::fixed_vector(16, 32);
-  const LLT v8s64 = LLT::fixed_vector(8, 64);
-
-  auto &LegacyInfo = getLegacyLegalizerInfo();
-
-  for (unsigned MemOp : {G_LOAD, G_STORE})
-    for (auto Ty : {v16s32, v8s64})
-      LegacyInfo.setAction({MemOp, Ty}, LegacyLegalizeActions::Legal);
 }
