@@ -350,6 +350,9 @@ Improvements to Clang's diagnostics
 - Clang no longer diagnoses a read of an empty structure as use of an
   uninitialized variable.
   (`#26842: <https://github.com/llvm/llvm-project/issues/26842>`_)
+- The Fix-It emitted for unused labels used to expand to the next line, which caused
+  visual oddities now that Clang shows more than one line of code snippet. This has
+  been fixed and the Fix-It now only spans to the end of the ``:``.
 
 Bug Fixes in This Version
 -------------------------

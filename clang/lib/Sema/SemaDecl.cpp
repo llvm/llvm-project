@@ -2096,7 +2096,7 @@ static void GenerateFixForUnusedDecl(const NamedDecl *D, ASTContext &Ctx,
   if (isa<LabelDecl>(D)) {
     SourceLocation AfterColon = Lexer::findLocationAfterToken(
         D->getEndLoc(), tok::colon, Ctx.getSourceManager(), Ctx.getLangOpts(),
-        true);
+        /*SkipTrailingWhitespaceAndNewline=*/false);
     if (AfterColon.isInvalid())
       return;
     Hint = FixItHint::CreateRemoval(
