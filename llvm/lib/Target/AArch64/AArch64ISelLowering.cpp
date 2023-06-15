@@ -15673,6 +15673,11 @@ bool AArch64TargetLowering::shouldFoldConstantShiftPairToMask(
   return true;
 }
 
+bool AArch64TargetLowering::shouldFoldSelectWithIdentityConstant(
+    unsigned BinOpcode, EVT VT) const {
+  return VT.isScalableVector() && isTypeLegal(VT);
+}
+
 bool AArch64TargetLowering::shouldConvertConstantLoadToIntImm(const APInt &Imm,
                                                               Type *Ty) const {
   assert(Ty->isIntegerTy());
