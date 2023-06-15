@@ -1666,12 +1666,9 @@ CodeGenTypes::GetFunctionType(const CGFunctionInfo &FI) {
   }
 
   // Add type for inalloca argument.
-  if (IRFunctionArgs.hasInallocaArg()) {
-    auto ArgStruct = FI.getArgStruct();
-    assert(ArgStruct);
+  if (IRFunctionArgs.hasInallocaArg())
     ArgTypes[IRFunctionArgs.getInallocaArgNo()] =
         llvm::PointerType::getUnqual(getLLVMContext());
-  }
 
   // Add in all of the required arguments.
   unsigned ArgNo = 0;
