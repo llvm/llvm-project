@@ -40,13 +40,31 @@ using namespace clang;
 
 #define DEBUG_LOGGING 0
 
+static bool recordIsNotEmpty(const RecordDecl *RD) {
+  // We consider a record decl to be empty if it contains only unnamed bit-
+  // fields, zero-width fields, and fields of empty record type.
+  for (const auto *FD : RD->fields()) {
+    if (FD->isUnnamedBitfield())
+      continue;
+    if (FD->isZeroSize(FD->getASTContext()))
+      continue;
+    // The only case remaining to check is for a field declaration of record
+    // type and whether that record itself is empty.
+    if (const auto *FieldRD = FD->getType()->getAsRecordDecl();
+        !FieldRD || recordIsNotEmpty(FieldRD))
+      return true;
+  }
+  return false;
+}
+
 static bool isTrackedVar(const VarDecl *vd, const DeclContext *dc) {
   if (vd->isLocalVarDecl() && !vd->hasGlobalStorage() &&
-      !vd->isExceptionVariable() && !vd->isInitCapture() &&
-      !vd->isImplicit() && vd->getDeclContext() == dc) {
+      !vd->isExceptionVariable() && !vd->isInitCapture() && !vd->isImplicit() &&
+      vd->getDeclContext() == dc) {
     QualType ty = vd->getType();
-    return ty->isScalarType() || ty->isVectorType() || ty->isRecordType() ||
-           ty->isRVVType();
+    if (const auto *RD = ty->getAsRecordDecl())
+      return recordIsNotEmpty(RD);
+    return ty->isScalarType() || ty->isVectorType() || ty->isRVVType();
   }
   return false;
 }
