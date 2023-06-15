@@ -8,6 +8,7 @@
 
 #include "mlir/Interfaces/SideEffectInterfaces.h"
 
+#include "mlir/IR/SymbolTable.h"
 #include "llvm/ADT/SmallPtrSet.h"
 
 using namespace mlir;
@@ -151,6 +152,8 @@ mlir::hasEffect<MemoryEffects::Write, MemoryEffects::Free>(Operation *, Value);
 
 bool mlir::wouldOpBeTriviallyDead(Operation *op) {
   if (op->mightHaveTrait<OpTrait::IsTerminator>())
+    return false;
+  if (isa<SymbolOpInterface>(op))
     return false;
   return wouldOpBeTriviallyDeadImpl(op);
 }
