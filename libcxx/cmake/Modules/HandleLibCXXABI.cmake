@@ -143,10 +143,6 @@ elseif ("${LIBCXX_CXX_ABI}" STREQUAL "system-libcxxabi")
 
 # Link against a system-provided libcxxrt
 elseif ("${LIBCXX_CXX_ABI}" STREQUAL "libcxxrt")
-  # libcxxrt does not provide aligned new and delete operators
-  # TODO: We're keeping this for backwards compatibility, but this doesn't belong here.
-  set(LIBCXX_ENABLE_NEW_DELETE_DEFINITIONS ON)
-
   if(NOT LIBCXX_CXX_ABI_INCLUDE_PATHS)
     message(STATUS "LIBCXX_CXX_ABI_INCLUDE_PATHS not set, using /usr/include/c++/v1")
     set(LIBCXX_CXX_ABI_INCLUDE_PATHS "/usr/include/c++/v1")
