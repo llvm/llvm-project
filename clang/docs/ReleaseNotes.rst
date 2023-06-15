@@ -347,6 +347,9 @@ Improvements to Clang's diagnostics
 - When diagnosing a constant expression where an enum without a fixed underlying
   type is set to a value outside the range of the enum's values, clang will now
   print the name of the enum in question.
+- Clang no longer diagnoses a read of an empty structure as use of an
+  uninitialized variable.
+  (`#26842: <https://github.com/llvm/llvm-project/issues/26842>`_)
 
 Bug Fixes in This Version
 -------------------------
