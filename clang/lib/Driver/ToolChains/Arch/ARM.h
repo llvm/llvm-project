@@ -37,7 +37,9 @@ void appendBE8LinkFlag(const llvm::opt::ArgList &Args,
 enum class ReadTPMode {
   Invalid,
   Soft,
-  Cp15,
+  TPIDRURW,
+  TPIDRURO,
+  TPIDRPRW,
 };
 
 enum class FloatABI {
