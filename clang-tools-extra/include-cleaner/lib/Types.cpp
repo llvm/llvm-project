@@ -15,6 +15,17 @@
 
 namespace clang::include_cleaner {
 
+std::string Symbol::name() const {
+  switch (kind()) {
+  case include_cleaner::Symbol::Macro:
+    return macro().Name->getName().str();
+  case include_cleaner::Symbol::Declaration:
+    return llvm::dyn_cast<NamedDecl>(&declaration())
+        ->getQualifiedNameAsString();
+  }
+  llvm_unreachable("Unknown symbol kind");
+}
+
 llvm::raw_ostream &operator<<(llvm::raw_ostream &OS, const Symbol &S) {
   switch (S.kind()) {
   case Symbol::Declaration:
