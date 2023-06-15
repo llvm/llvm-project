@@ -26,7 +26,7 @@ using namespace LegalityPredicates;
 
 X86LegalizerInfo::X86LegalizerInfo(const X86Subtarget &STI,
                                    const X86TargetMachine &TM)
-    : Subtarget(STI), TM(TM) {
+    : Subtarget(STI) {
 
   bool Is64Bit = Subtarget.is64Bit();
   bool HasSSE1 = Subtarget.hasSSE1();
