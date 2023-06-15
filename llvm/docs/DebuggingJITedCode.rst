@@ -10,7 +10,7 @@ quite painful.  Debuggers generally read debug information from object files on
 disk, but for JITed code there is no such file to look for.
 
 In order to hand over the necessary debug info, `GDB established an
-interface <https://sourceware.org/gdb/current/onlinedocs/gdb/JIT-Interface.html>`_
+interface <https://sourceware.org/gdb/onlinedocs/gdb/JIT-Interface.html>`_
 for registering JITed code with debuggers. LLDB implements it in the
 JITLoaderGDB plugin.  On the JIT side, LLVM MCJIT does implement the interface
 for ELF object files.
