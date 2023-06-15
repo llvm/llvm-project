@@ -1211,7 +1211,39 @@ void IRLinker::prepareCompileUnitsForImport() {
     // size inefficient.
     CU->replaceGlobalVariables(nullptr);
 
-    CU->replaceImportedEntities(nullptr);
+    // Imported entities only need to be mapped in if they have local
+    // scope, as those might correspond to an imported entity inside a
+    // function being imported (any locally scoped imported entities that
+    // don't end up referenced by an imported function will not be emitted
+    // into the object). Imported entities not in a local scope
+    // (e.g. on the namespace) only need to be emitted by the originating
+    // module. Create a list of the locally scoped imported entities, and
+    // replace the source CUs imported entity list with the new list, so
+    // only those are mapped in.
+    // FIXME: Locally-scoped imported entities could be moved to the
+    // functions they are local to instead of listing them on the CU, and
+    // we would naturally only link in those needed by function importing.
+    SmallVector<TrackingMDNodeRef, 4> AllImportedModules;
+    bool ReplaceImportedEntities = false;
+    for (auto *IE : CU->getImportedEntities()) {
+      DIScope *Scope = IE->getScope();
+      assert(Scope && "Invalid Scope encoding!");
+      if (isa<DILocalScope>(Scope))
+        AllImportedModules.emplace_back(IE);
+      else
+        ReplaceImportedEntities = true;
+    }
+    if (ReplaceImportedEntities) {
+      if (!AllImportedModules.empty())
+        CU->replaceImportedEntities(MDTuple::get(
+            CU->getContext(),
+            SmallVector<Metadata *, 16>(AllImportedModules.begin(),
+                                        AllImportedModules.end())));
+      else
+        // If there were no local scope imported entities, we can map
+        // the whole list to nullptr.
+        CU->replaceImportedEntities(nullptr);
+    }
   }
 }
 

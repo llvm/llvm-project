@@ -245,10 +245,10 @@ public:
   DIE *createTypeDIE(const DIScope *Context, DIE &ContextDIE, const DIType *Ty);
 
   /// Find existing DIE or create new DIE for the given type.
-  virtual DIE *getOrCreateTypeDIE(const MDNode *TyNode);
+  DIE *getOrCreateTypeDIE(const MDNode *TyNode);
 
   /// Get context owner's DIE.
-  virtual DIE *getOrCreateContextDIE(const DIScope *Context);
+  DIE *getOrCreateContextDIE(const DIScope *Context);
 
   /// Construct DIEs for types that contain vtables.
   void constructContainingTypeDIEs();
