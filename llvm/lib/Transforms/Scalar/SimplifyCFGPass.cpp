@@ -358,11 +358,6 @@ PreservedAnalyses SimplifyCFGPass::run(Function &F,
   DominatorTree *DT = nullptr;
   if (RequireAndPreserveDomTree)
     DT = &AM.getResult<DominatorTreeAnalysis>(F);
-  if (F.hasFnAttribute(Attribute::OptForFuzzing)) {
-    Options.setSimplifyCondBranch(false).setFoldTwoEntryPHINode(false);
-  } else {
-    Options.setSimplifyCondBranch(true).setFoldTwoEntryPHINode(true);
-  }
   if (!simplifyFunctionCFG(F, TTI, DT, Options))
     return PreservedAnalyses::all();
   PreservedAnalyses PA;
@@ -395,13 +390,6 @@ struct CFGSimplifyPass : public FunctionPass {
     DominatorTree *DT = nullptr;
     if (RequireAndPreserveDomTree)
       DT = &getAnalysis<DominatorTreeWrapperPass>().getDomTree();
-    if (F.hasFnAttribute(Attribute::OptForFuzzing)) {
-      Options.setSimplifyCondBranch(false)
-             .setFoldTwoEntryPHINode(false);
-    } else {
-      Options.setSimplifyCondBranch(true)
-             .setFoldTwoEntryPHINode(true);
-    }
 
     auto &TTI = getAnalysis<TargetTransformInfoWrapperPass>().getTTI(F);
     return simplifyFunctionCFG(F, TTI, DT, Options);
