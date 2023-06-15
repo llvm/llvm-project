@@ -692,70 +692,6 @@ class PVString<int nf, bit signed> {
           !eq(nf, 8): !if(signed, "PvPvPvPvPvPvPvPv", "PUvPUvPUvPUvPUvPUvPUvPUv"));
 }
 
-multiclass RVVIndexedSegLoad<string op> {
-  foreach type = TypeList in {
-    foreach eew_info = EEWList in {
-      defvar eew = eew_info[0];
-      defvar eew_type = eew_info[1];
-      foreach nf = NFList in {
-        let Name = op # nf # "ei" # eew # "_v",
-            IRName = op # nf,
-            MaskedIRName = op # nf # "_mask",
-            NF = nf,
-            ManualCodegen = [{
-    {
-      ResultType = ConvertType(E->getArg(0)->getType()->getPointeeType());
-      SmallVector<llvm::Value*, 12> Operands;
-
-      // Please refer to comment under 'defvar NFList' in this file
-      if ((IsMasked && (PolicyAttrs & RVV_VTA) && (PolicyAttrs & RVV_VMA)) ||
-          (!IsMasked && PolicyAttrs & RVV_VTA))
-        Operands.append(NF, llvm::PoisonValue::get(ResultType));
-      else {
-        if (IsMasked)
-          Operands.append(Ops.begin() + NF + 1, Ops.begin() + 2 * NF + 1);
-        else // Unmasked
-          Operands.append(Ops.begin() + NF, Ops.begin() + 2 * NF);
-      }
-      unsigned PtrOperandIdx = IsMasked ?
-        ((PolicyAttrs & RVV_VTA) && (PolicyAttrs & RVV_VMA)) ? NF + 1 : 2 * NF + 1 :
-        (PolicyAttrs & RVV_VTA) ? NF : 2 * NF;
-      Value *PtrOperand = Ops[PtrOperandIdx];
-      Value *IndexOperand = Ops[PtrOperandIdx + 1];
-      Value *VLOperand = Ops[PtrOperandIdx + 2];
-      Operands.push_back(PtrOperand);
-      Operands.push_back(IndexOperand);
-      if (IsMasked)
-        Operands.push_back(Ops[NF]);
-      Operands.push_back(VLOperand);
-      if (IsMasked)
-        Operands.push_back(ConstantInt::get(Ops.back()->getType(), PolicyAttrs));
-      IntrinsicTypes = {ResultType, IndexOperand->getType(), Ops.back()->getType()};
-
-      llvm::Function *F = CGM.getIntrinsic(ID, IntrinsicTypes);
-      llvm::Value *LoadValue = Builder.CreateCall(F, Operands, "");
-      clang::CharUnits Align =
-          CGM.getNaturalPointeeTypeAlignment(E->getArg(0)->getType());
-      llvm::Value *V;
-      for (unsigned I = 0; I < NF; ++I) {
-        llvm::Value *Val = Builder.CreateExtractValue(LoadValue, {I});
-        V = Builder.CreateStore(Val, Address(Ops[I], Val->getType(), Align));
-      }
-      return V;
-    }
-    }] in {
-          defvar PV = PVString<nf, /*signed=*/true>.S;
-          defvar PUV = PVString<nf, /*signed=*/false>.S;
-          def : RVVBuiltin<"v", "0" # PV # "PCe" # eew_type # "Uv", type>;
-          if !not(IsFloat<type>.val) then {
-            def : RVVBuiltin<"Uv", "0" # PUV # "PCUe" # eew_type # "Uv", type>;
-          }
-        }
-      }
-    }
-  }
-}
-
 class VString<int nf, bit signed> {
   string S = !cond(!eq(nf, 2): !if(signed, "vv", "UvUv"),
                    !eq(nf, 3): !if(signed, "vvv", "UvUvUv"),
@@ -1207,12 +1143,6 @@ defm vle16ff: RVVVLEFFBuiltin<["s","x"]>;
 defm vle32ff: RVVVLEFFBuiltin<["i", "f"]>;
 defm vle64ff: RVVVLEFFBuiltin<["l", "d"]>;
 
-// 7.8 Vector Load/Store Segment Instructions
-let UnMaskedPolicyScheme = HasPassthruOperand in {
-defm : RVVIndexedSegLoad<"vluxseg">;
-defm : RVVIndexedSegLoad<"vloxseg">;
-}
-
 multiclass RVVUnitStridedSegLoadTuple<string op> {
   foreach type = TypeList in {
     defvar eew = !cond(!eq(type, "c") : "8",
@@ -1515,8 +1445,7 @@ multiclass RVVIndexedSegLoadTuple<string op> {
       defvar eew = eew_info[0];
       defvar eew_type = eew_info[1];
       foreach nf = NFList in {
-        let Name = op # nf # "ei" # eew # "_v_tuple",
-            OverloadedName = op # nf # "ei" # eew # "_tuple",
+        let Name = op # nf # "ei" # eew # "_v",
             IRName = op # nf,
             MaskedIRName = op # nf # "_mask",
             NF = nf,
@@ -1621,6 +1550,7 @@ multiclass RVVIndexedSegStoreTuple<string op> {
   }
 }
 
+// 7.8 Vector Load/Store Segment Instructions
 let UnMaskedPolicyScheme = HasPassthruOperand,
     IsTuple = true in {
   defm : RVVUnitStridedSegLoadTuple<"vlseg">;
