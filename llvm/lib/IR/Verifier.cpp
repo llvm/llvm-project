@@ -1383,9 +1383,11 @@ void Verifier::visitDISubprogram(const DISubprogram &N) {
     auto *Node = dyn_cast<MDTuple>(RawNode);
     CheckDI(Node, "invalid retained nodes list", &N, RawNode);
     for (Metadata *Op : Node->operands()) {
-      CheckDI(Op && (isa<DILocalVariable>(Op) || isa<DILabel>(Op)),
-              "invalid retained nodes, expected DILocalVariable or DILabel", &N,
-              Node, Op);
+      CheckDI(Op && (isa<DILocalVariable>(Op) || isa<DILabel>(Op) ||
+                     isa<DIImportedEntity>(Op)),
+              "invalid retained nodes, expected DILocalVariable, DILabel or "
+              "DIImportedEntity",
+              &N, Node, Op);
     }
   }
   CheckDI(!hasConflictingReferenceFlags(N.getFlags()),
