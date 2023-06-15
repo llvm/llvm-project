@@ -8,7 +8,7 @@ target_include_directories(nvptx_loader PRIVATE ${LLVM_INCLUDE_DIRS})
 target_link_libraries(nvptx_loader
   PRIVATE
   gpu_loader
-  rpc_server
+  llvmlibc_rpc_server
   CUDA::cuda_driver
   LLVMObject
   LLVMSupport
