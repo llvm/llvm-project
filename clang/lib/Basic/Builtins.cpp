@@ -151,7 +151,7 @@ void Builtin::Context::initializeBuiltins(IdentifierTable &Table,
       unsigned ID = NameIt->second->getBuiltinID();
       if (ID != Builtin::NotBuiltin && isPredefinedLibFunction(ID) &&
           isInStdNamespace(ID) == InStdNamespace) {
-        Table.get(Name).setBuiltinID(Builtin::NotBuiltin);
+        NameIt->second->clearBuiltinID();
       }
     }
   }
