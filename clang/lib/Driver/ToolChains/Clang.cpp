@@ -3381,7 +3381,7 @@ static void RenderSSPOptions(const Driver &D, const ToolChain &TC,
         }
       }
       CmdArgs.push_back("-target-feature");
-      CmdArgs.push_back("+read-tp-hard");
+      CmdArgs.push_back("+read-tp-tpidruro");
     }
     if (EffectiveTriple.isAArch64() && Value != "sysreg" && Value != "global") {
       D.Diag(diag::err_drv_invalid_value_with_suggestion)

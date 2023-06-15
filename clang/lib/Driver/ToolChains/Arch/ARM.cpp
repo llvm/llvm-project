@@ -184,11 +184,16 @@ arm::ReadTPMode arm::getReadTPMode(const Driver &D, const ArgList &Args,
   if (Arg *A = Args.getLastArg(options::OPT_mtp_mode_EQ)) {
     arm::ReadTPMode ThreadPointer =
         llvm::StringSwitch<arm::ReadTPMode>(A->getValue())
-            .Case("cp15", ReadTPMode::Cp15)
+            .Case("cp15", ReadTPMode::TPIDRURO)
+            .Case("tpidrurw", ReadTPMode::TPIDRURW)
+            .Case("tpidruro", ReadTPMode::TPIDRURO)
+            .Case("tpidrprw", ReadTPMode::TPIDRPRW)
             .Case("soft", ReadTPMode::Soft)
             .Default(ReadTPMode::Invalid);
-    if (ThreadPointer == ReadTPMode::Cp15 && !isHardTPSupported(Triple) &&
-        !ForAS) {
+    if ((ThreadPointer == ReadTPMode::TPIDRURW ||
+         ThreadPointer == ReadTPMode::TPIDRURO ||
+         ThreadPointer == ReadTPMode::TPIDRPRW) &&
+        !isHardTPSupported(Triple) && !ForAS) {
       D.Diag(diag::err_target_unsupported_tp_hard) << Triple.getArchName();
       return ReadTPMode::Invalid;
     }
@@ -521,8 +526,12 @@ llvm::ARM::FPUKind arm::getARMTargetFeatures(const Driver &D,
     }
   }
 
-  if (getReadTPMode(D, Args, Triple, ForAS) == ReadTPMode::Cp15)
-    Features.push_back("+read-tp-hard");
+  if (getReadTPMode(D, Args, Triple, ForAS) == ReadTPMode::TPIDRURW)
+    Features.push_back("+read-tp-tpidrurw");
+  if (getReadTPMode(D, Args, Triple, ForAS) == ReadTPMode::TPIDRURO)
+    Features.push_back("+read-tp-tpidruro");
+  if (getReadTPMode(D, Args, Triple, ForAS) == ReadTPMode::TPIDRPRW)
+    Features.push_back("+read-tp-tpidrprw");
 
   const Arg *ArchArg = Args.getLastArg(options::OPT_march_EQ);
   const Arg *CPUArg = Args.getLastArg(options::OPT_mcpu_EQ);
