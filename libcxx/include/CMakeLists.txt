@@ -91,6 +91,7 @@ set(files
   __algorithm/pstl_for_each.h
   __algorithm/pstl_frontend_dispatch.h
   __algorithm/pstl_generate.h
+  __algorithm/pstl_is_partitioned.h
   __algorithm/pstl_merge.h
   __algorithm/pstl_replace.h
   __algorithm/pstl_stable_sort.h

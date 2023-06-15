@@ -901,8 +901,7 @@ M68kAsmParser::parseRegOrMoveMask(OperandVector &Operands) {
     }
 
     MCRegister LastRegister = FirstRegister;
-    if (getLexer().is(AsmToken::Minus)) {
-      getLexer().Lex();
+    if (parseOptionalToken(AsmToken::Minus)) {
       Result = parseRegister(LastRegister);
       if (Result != llvm::MatchOperand_Success) {
         Error(getLexer().getLoc(), "expected end register");
@@ -949,11 +948,8 @@ M68kAsmParser::parseRegOrMoveMask(OperandVector &Operands) {
       MemOp.RegMask |= NewMaskBits;
     }
 
-    if (getLexer().isNot(AsmToken::Slash)) {
+    if (!parseOptionalToken(AsmToken::Slash))
       break;
-    }
-
-    getLexer().Lex();
   }
 
   Operands.push_back(

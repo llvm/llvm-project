@@ -566,11 +566,8 @@ bool LoongArchAsmParser::classifySymbolRef(const MCExpr *Expr,
 
 OperandMatchResultTy
 LoongArchAsmParser::parseRegister(OperandVector &Operands) {
-  if (getLexer().getTok().isNot(AsmToken::Dollar))
+  if (!parseOptionalToken(AsmToken::Dollar))
     return MatchOperand_NoMatch;
-
-  // Eat the $ prefix.
-  getLexer().Lex();
   if (getLexer().getKind() != AsmToken::Identifier)
     return MatchOperand_NoMatch;
 
@@ -691,8 +688,7 @@ LoongArchAsmParser::parseAtomicMemOp(OperandVector &Operands) {
 
   // If there is a next operand and it is 0, ignore it. Otherwise print a
   // diagnostic message.
-  if (getLexer().is(AsmToken::Comma)) {
-    getLexer().Lex(); // Consume comma token.
+  if (parseOptionalToken(AsmToken::Comma)) {
     int64_t ImmVal;
     SMLoc ImmStart = getLoc();
     if (getParser().parseIntToken(ImmVal, "expected optional integer offset"))

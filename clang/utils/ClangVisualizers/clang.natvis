@@ -757,6 +757,7 @@ For later versions of Visual Studio, no setup is required-->
     </DisplayString>
     <DisplayString Condition="ExtraKindOrNumArgs == CXXLiteralOperatorName">C++ Literal operator</DisplayString>
     <DisplayString Condition="ExtraKindOrNumArgs == CXXUsingDirective">C++ Using directive</DisplayString>
+    <DisplayString Condition="ExtraKindOrNumArgs == ObjCMultiArgSelector">Objective-C MultiArg selector</DisplayString>
     <DisplayString>{(clang::detail::DeclarationNameExtra::ExtraKind)ExtraKindOrNumArgs,en}{"  ",sb}{*this,view(cpp)}</DisplayString>
     <Expand>
       <ExpandedItem Condition="ExtraKindOrNumArgs == CXXDeductionGuideName">(CXXDeductionGuideNameExtra *)this</ExpandedItem>
@@ -912,10 +913,10 @@ For later versions of Visual Studio, no setup is required-->
     </Expand>
   </Type>
   <Type Name="clang::ExplicitSpecifier">
-    <DisplayString Condition="((ExplicitSpec.Value&gt;1) &amp; 3) == ExplicitSpecKind::ResolvedTrue" IncludeView="cpp">{"explicit ",sb}</DisplayString>
-    <DisplayString Condition="((ExplicitSpec.Value&gt;1) &amp; 3) == ExplicitSpecKind::ResolvedFalse" IncludeView="cpp"></DisplayString>
-    <DisplayString Condition="((ExplicitSpec.Value&gt;1) &amp; 3) == ExplicitSpecKind::Unresolved" IncludeView="cpp">explicit({ExplicitSpec,view(ptr)na})</DisplayString>
-    <DisplayString Condition="(ExplicitSpec.Value&amp;~7) == 0">{ExplicitSpec,view(int)en}</DisplayString>
+    <DisplayString Condition="((*(uintptr_t *)ExplicitSpec.Value.Data&gt;&gt;1)&amp;3) == ExplicitSpecKind::ResolvedTrue" IncludeView="cpp">{"explicit ",sb}</DisplayString>
+    <DisplayString Condition="((*(uintptr_t *)ExplicitSpec.Value.Data&gt;&gt;1)&amp;3) == ExplicitSpecKind::ResolvedFalse" IncludeView="cpp"></DisplayString>
+    <DisplayString Condition="((*(uintptr_t *)ExplicitSpec.Value.Data&gt;&gt;1)&amp;3) == ExplicitSpecKind::Unresolved" IncludeView="cpp">explicit({ExplicitSpec,view(ptr)na})</DisplayString>
+    <DisplayString Condition="((*(uintptr_t *)ExplicitSpec.Value.Data)&amp;~7) == 0">{ExplicitSpec,view(int)en}</DisplayString>
     <DisplayString>{ExplicitSpec,view(int)en} : {ExplicitSpec,view(ptr)na}</DisplayString>
   </Type>
   <Type Name="clang::CXXDeductionGuideDecl">
