@@ -1253,16 +1253,15 @@ static void InitializePredefinedMacros(const TargetInfo &TI,
     case 45:
       Builder.defineMacro("_OPENMP", "201511");
       break;
-    case 51:
-      Builder.defineMacro("_OPENMP", "202011");
+    case 50:
+      Builder.defineMacro("_OPENMP", "201811");
       break;
     case 52:
       Builder.defineMacro("_OPENMP", "202111");
       break;
-    case 50:
-    default:
-      // Default version is OpenMP 5.0
-      Builder.defineMacro("_OPENMP", "201811");
+    default: // case 51:
+      // Default version is OpenMP 5.1
+      Builder.defineMacro("_OPENMP", "202011");
       break;
     }
   }

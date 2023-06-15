@@ -1,8 +1,8 @@
 // RUN: %clang_cc1 -fsyntax-only -fopenmp -fopenmp-version=45 -verify=expected,omp45 -triple x86_64-unknown-unknown %s -Wuninitialized
-// RUN: %clang_cc1 -fsyntax-only -fopenmp -fopenmp-version=50 -verify=expected,omp50 -triple x86_64-unknown-unknown %s -Wuninitialized
+// RUN: %clang_cc1 -fsyntax-only -fopenmp -verify=expected,omp51 -triple x86_64-unknown-unknown %s -Wuninitialized
 
 // RUN: %clang_cc1 -fsyntax-only -fopenmp-simd -fopenmp-version=45 -verify=expected,omp45 -triple x86_64-unknown-unknown %s -Wuninitialized
-// RUN: %clang_cc1 -fsyntax-only -fopenmp-simd -fopenmp-version=50 -verify=expected,omp50 -triple x86_64-unknown-unknown %s -Wuninitialized
+// RUN: %clang_cc1 -fsyntax-only -fopenmp-simd -verify=expected,omp51 -triple x86_64-unknown-unknown %s -Wuninitialized
 
 void xxx(int argc) {
   int x; // expected-note {{initialize the variable 'x' to silence this warning}}
@@ -406,7 +406,7 @@ void test_nontemporal(void) {
 #pragma omp parallel master taskloop simd nontemporal(int)
   for (i = 0; i < 16; ++i)
     ;
-// omp45-error@+1 {{unexpected OpenMP clause 'nontemporal' in directive '#pragma omp parallel master taskloop simd'}} omp50-error@+1 {{expected variable name}}
+// omp45-error@+1 {{unexpected OpenMP clause 'nontemporal' in directive '#pragma omp parallel master taskloop simd'}} omp51-error@+1 {{expected variable name}}
 #pragma omp parallel master taskloop simd nontemporal(0)
   for (i = 0; i < 16; ++i)
     ;
@@ -436,8 +436,8 @@ void test_nontemporal(void) {
   for (i = 0; i < 16; ++i)
     ;
 
-// omp50-note@+2 {{defined as nontemporal}}
-// omp45-error@+1 2 {{unexpected OpenMP clause 'nontemporal' in directive '#pragma omp parallel master taskloop simd'}} omp50-error@+1 {{a variable cannot appear in more than one nontemporal clause}}
+// omp51-note@+2 {{defined as nontemporal}}
+// omp45-error@+1 2 {{unexpected OpenMP clause 'nontemporal' in directive '#pragma omp parallel master taskloop simd'}} omp51-error@+1 {{a variable cannot appear in more than one nontemporal clause}}
 #pragma omp parallel master taskloop simd nontemporal(x) nontemporal(x)
   for (i = 0; i < 16; ++i)
     ;
