@@ -15,6 +15,7 @@
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/STLFunctionalExtras.h"
+#include "llvm/ADT/SetVector.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/Statistic.h"
@@ -53,6 +54,7 @@
 #include <deque>
 #include <iterator>
 #include <limits>
+#include <map>
 #include <optional>
 #include <string>
 #include <tuple>
@@ -463,6 +465,9 @@ class MetadataLoader::MetadataLoaderImpl {
   bool NeedUpgradeToDIGlobalVariableExpression = false;
   bool NeedDeclareExpressionUpgrade = false;
 
+  /// Map DILocalScope to the enclosing DISubprogram, if any.
+  DenseMap<DILocalScope *, DISubprogram *> ParentSubprogram;
+
   /// True if metadata is being parsed for a module being ThinLTO imported.
   bool IsImporting = false;
 
@@ -519,6 +524,84 @@ class MetadataLoader::MetadataLoaderImpl {
         } else
           GV.addMetadata(LLVMContext::MD_dbg, *MD);
     }
+  }
+
+  DISubprogram *findEnclosingSubprogram(DILocalScope *S) {
+    if (!S)
+      return nullptr;
+    if (auto *SP = ParentSubprogram[S]) {
+      return SP;
+    }
+
+    DILocalScope *InitialScope = S;
+    DenseSet<DILocalScope *> Visited;
+    while (S && !isa<DISubprogram>(S)) {
+      S = dyn_cast_or_null<DILocalScope>(S->getScope());
+      if (Visited.contains(S))
+        break;
+      Visited.insert(S);
+    }
+    ParentSubprogram[InitialScope] = llvm::dyn_cast_or_null<DISubprogram>(S);
+
+    return ParentSubprogram[InitialScope];
+  }
+
+  /// Move local imports from DICompileUnit's 'imports' field to
+  /// DISubprogram's retainedNodes.
+  void upgradeCULocals() {
+    if (NamedMDNode *CUNodes = TheModule.getNamedMetadata("llvm.dbg.cu")) {
+      for (unsigned I = 0, E = CUNodes->getNumOperands(); I != E; ++I) {
+        auto *CU = dyn_cast<DICompileUnit>(CUNodes->getOperand(I));
+        if (!CU)
+          continue;
+
+        if (auto *RawImported = CU->getRawImportedEntities()) {
+          // Collect a set of imported entities to be moved.
+          SetVector<Metadata *> EntitiesToRemove;
+          for (Metadata *Op : CU->getImportedEntities()->operands()) {
+            auto *IE = cast<DIImportedEntity>(Op);
+            if (auto *S = dyn_cast_or_null<DILocalScope>(IE->getScope())) {
+              EntitiesToRemove.insert(IE);
+            }
+          }
+
+          if (!EntitiesToRemove.empty()) {
+            // Make a new list of CU's 'imports'.
+            SmallVector<Metadata *> NewImports;
+            for (Metadata *Op : CU->getImportedEntities()->operands()) {
+              if (!EntitiesToRemove.contains(cast<DIImportedEntity>(Op))) {
+                NewImports.push_back(Op);
+              }
+            }
+
+            // Find DISubprogram corresponding to each entity.
+            std::map<DISubprogram *, SmallVector<Metadata *>> SPToEntities;
+            for (auto *I : EntitiesToRemove) {
+              auto *Entity = cast<DIImportedEntity>(I);
+              if (auto *SP = findEnclosingSubprogram(
+                      cast<DILocalScope>(Entity->getScope()))) {
+                SPToEntities[SP].push_back(Entity);
+              }
+            }
+
+            // Update DISubprograms' retainedNodes.
+            for (auto I = SPToEntities.begin(); I != SPToEntities.end(); ++I) {
+              auto *SP = I->first;
+              auto RetainedNodes = SP->getRetainedNodes();
+              SmallVector<Metadata *> MDs(RetainedNodes.begin(),
+                                          RetainedNodes.end());
+              MDs.append(I->second);
+              SP->replaceRetainedNodes(MDNode::get(Context, MDs));
+            }
+
+            // Remove entities with local scope from CU.
+            CU->replaceImportedEntities(MDTuple::get(Context, NewImports));
+          }
+        }
+      }
+    }
+
+    ParentSubprogram.clear();
   }
 
   /// Remove a leading DW_OP_deref from DIExpressions in a dbg.declare that
@@ -625,6 +708,7 @@ class MetadataLoader::MetadataLoaderImpl {
   void upgradeDebugInfo() {
     upgradeCUSubprograms();
     upgradeCUVariables();
+    upgradeCULocals();
   }
 
   void callMDTypeCallback(Metadata **Val, unsigned TypeID);
