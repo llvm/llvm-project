@@ -1374,6 +1374,8 @@ add_entrypoint_object(
     .explogxf
     libc.src.__support.FPUtil.fp_bits
     libc.src.__support.FPUtil.rounding_mode
+    libc.src.__support.FPUtil.multiply_add
+    libc.src.__support.FPUtil.polyeval
     libc.src.__support.macros.optimization
   COMPILE_OPTIONS
     -O3

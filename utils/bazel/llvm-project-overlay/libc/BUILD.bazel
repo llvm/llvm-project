@@ -81,7 +81,10 @@ libc_support_library(
 libc_support_library(
     name = "__support_macros_properties_cpu_features",
     hdrs = ["src/__support/macros/properties/cpu_features.h"],
-    deps = [":libc_root"],
+    deps = [
+        "__support_macros_properties_architectures",
+        ":libc_root",
+    ],
 )
 
 libc_support_library(
