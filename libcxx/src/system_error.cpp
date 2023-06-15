@@ -16,8 +16,9 @@
 #include <cstdio>
 #include <cstdlib>
 #include <cstring>
-#include <string>
+#include <optional>
 #include <string.h>
+#include <string>
 #include <system_error>
 
 #include "include/config_elast.h"
@@ -26,7 +27,79 @@
 #include <android/api-level.h>
 #endif
 
+#if defined(_LIBCPP_WIN32API)
+#  include <windows.h>
+#  include <winerror.h>
+#endif
+
 _LIBCPP_BEGIN_NAMESPACE_STD
+
+#if defined(_LIBCPP_WIN32API)
+
+namespace {
+std::optional<errc> __win_err_to_errc(int err) {
+  constexpr struct {
+    int win;
+    errc errc;
+  } win_error_mapping[] = {
+      {ERROR_ACCESS_DENIED, errc::permission_denied},
+      {ERROR_ALREADY_EXISTS, errc::file_exists},
+      {ERROR_BAD_NETPATH, errc::no_such_file_or_directory},
+      {ERROR_BAD_PATHNAME, errc::no_such_file_or_directory},
+      {ERROR_BAD_UNIT, errc::no_such_device},
+      {ERROR_BROKEN_PIPE, errc::broken_pipe},
+      {ERROR_BUFFER_OVERFLOW, errc::filename_too_long},
+      {ERROR_BUSY, errc::device_or_resource_busy},
+      {ERROR_BUSY_DRIVE, errc::device_or_resource_busy},
+      {ERROR_CANNOT_MAKE, errc::permission_denied},
+      {ERROR_CANTOPEN, errc::io_error},
+      {ERROR_CANTREAD, errc::io_error},
+      {ERROR_CANTWRITE, errc::io_error},
+      {ERROR_CURRENT_DIRECTORY, errc::permission_denied},
+      {ERROR_DEV_NOT_EXIST, errc::no_such_device},
+      {ERROR_DEVICE_IN_USE, errc::device_or_resource_busy},
+      {ERROR_DIR_NOT_EMPTY, errc::directory_not_empty},
+      {ERROR_DIRECTORY, errc::invalid_argument},
+      {ERROR_DISK_FULL, errc::no_space_on_device},
+      {ERROR_FILE_EXISTS, errc::file_exists},
+      {ERROR_FILE_NOT_FOUND, errc::no_such_file_or_directory},
+      {ERROR_HANDLE_DISK_FULL, errc::no_space_on_device},
+      {ERROR_INVALID_ACCESS, errc::permission_denied},
+      {ERROR_INVALID_DRIVE, errc::no_such_device},
+      {ERROR_INVALID_FUNCTION, errc::function_not_supported},
+      {ERROR_INVALID_HANDLE, errc::invalid_argument},
+      {ERROR_INVALID_NAME, errc::no_such_file_or_directory},
+      {ERROR_INVALID_PARAMETER, errc::invalid_argument},
+      {ERROR_LOCK_VIOLATION, errc::no_lock_available},
+      {ERROR_LOCKED, errc::no_lock_available},
+      {ERROR_NEGATIVE_SEEK, errc::invalid_argument},
+      {ERROR_NOACCESS, errc::permission_denied},
+      {ERROR_NOT_ENOUGH_MEMORY, errc::not_enough_memory},
+      {ERROR_NOT_READY, errc::resource_unavailable_try_again},
+      {ERROR_NOT_SAME_DEVICE, errc::cross_device_link},
+      {ERROR_NOT_SUPPORTED, errc::not_supported},
+      {ERROR_OPEN_FAILED, errc::io_error},
+      {ERROR_OPEN_FILES, errc::device_or_resource_busy},
+      {ERROR_OPERATION_ABORTED, errc::operation_canceled},
+      {ERROR_OUTOFMEMORY, errc::not_enough_memory},
+      {ERROR_PATH_NOT_FOUND, errc::no_such_file_or_directory},
+      {ERROR_READ_FAULT, errc::io_error},
+      {ERROR_REPARSE_TAG_INVALID, errc::invalid_argument},
+      {ERROR_RETRY, errc::resource_unavailable_try_again},
+      {ERROR_SEEK, errc::io_error},
+      {ERROR_SHARING_VIOLATION, errc::permission_denied},
+      {ERROR_TOO_MANY_OPEN_FILES, errc::too_many_files_open},
+      {ERROR_WRITE_FAULT, errc::io_error},
+      {ERROR_WRITE_PROTECT, errc::permission_denied},
+  };
+
+  for (const auto& pair : win_error_mapping)
+    if (pair.win == err)
+      return pair.errc;
+  return {};
+}
+} // namespace
+#endif
 
 // class error_category
 
@@ -189,21 +262,54 @@ __system_error_category::name() const noexcept
 string
 __system_error_category::message(int ev) const
 {
-#ifdef _LIBCPP_ELAST
+#ifdef _LIBCPP_WIN32API
+    std::string result;
+    char* str               = nullptr;
+    unsigned long num_chars = FormatMessageA(
+        FORMAT_MESSAGE_ALLOCATE_BUFFER | FORMAT_MESSAGE_FROM_SYSTEM | FORMAT_MESSAGE_IGNORE_INSERTS,
+        nullptr,
+        ev,
+        0,
+        reinterpret_cast<char*>(&str),
+        0,
+        nullptr);
+    auto is_whitespace = [](char ch) { return ch == '\n' || ch == '\r' || ch == ' '; };
+    while (num_chars > 0 && is_whitespace(str[num_chars - 1]))
+      --num_chars;
+
+    if (num_chars)
+      result = std::string(str, num_chars);
+    else
+      result = "Unknown error";
+
+    LocalFree(str);
+    return result;
+#else
+#  ifdef _LIBCPP_ELAST
     if (ev > _LIBCPP_ELAST)
       return string("unspecified system_category error");
-#endif // _LIBCPP_ELAST
+#  endif // _LIBCPP_ELAST
     return __do_message::message(ev);
+#endif
 }
 
 error_condition
 __system_error_category::default_error_condition(int ev) const noexcept
 {
-#ifdef _LIBCPP_ELAST
+#ifdef _LIBCPP_WIN32API
+    // Remap windows error codes to generic error codes if possible.
+    if (ev == 0)
+      return error_condition(0, generic_category());
+    if (auto maybe_errc = __win_err_to_errc(ev))
+      return error_condition(static_cast<int>(maybe_errc.value()), generic_category());
+    return error_condition(ev, system_category());
+#else
+#  ifdef _LIBCPP_ELAST
     if (ev > _LIBCPP_ELAST)
       return error_condition(ev, system_category());
-#endif // _LIBCPP_ELAST
+#  endif // _LIBCPP_ELAST
     return error_condition(ev, generic_category());
+#endif
 }
 
 const error_category&
@@ -287,7 +393,7 @@ void
 __throw_system_error(int ev, const char* what_arg)
 {
 #ifndef _LIBCPP_HAS_NO_EXCEPTIONS
-    throw system_error(error_code(ev, system_category()), what_arg);
+    throw system_error(error_code(ev, generic_category()), what_arg);
 #else
     (void)ev;
     (void)what_arg;

@@ -167,8 +167,12 @@ static void test_with_ec_dne() {
     file_status st = status(p, status_ec);
     file_status sym_st = symlink_status(p, sym_status_ec);
     std::error_code ec = GetTestEC(2);
-    auto CheckEC = [&](std::error_code const& other_ec) {
-      bool res = ec == other_ec;
+    auto CheckEC                  = [&](std::error_code const& other_ec) {
+      // We compare the canonicalized error_conditions for this case, because
+      // directory_entry may construct its own generic_category error when a
+      // file doesn't exist, instead of directly returning a system_category
+      // error.
+      bool res = ec.default_error_condition() == other_ec.default_error_condition();
       ec = GetTestEC(2);
       return res;
     };

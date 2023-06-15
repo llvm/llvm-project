@@ -39,8 +39,14 @@ int main(int, char**)
 {
     const std::error_category& e_cat1 = std::system_category();
     std::error_condition e_cond = e_cat1.default_error_condition(5);
+#ifdef _WIN32
+    // Windows error 5 is ERROR_ACCESS_DENIED, which maps to generic code permission_denied.
+    assert(e_cond.value() == static_cast<int>(std::errc::permission_denied));
+#else
     assert(e_cond.value() == 5);
+#endif
     assert(e_cond.category() == std::generic_category());
+
     e_cond = e_cat1.default_error_condition(5000);
     assert(e_cond.value() == 5000);
     assert(e_cond.category() == std::system_category());

@@ -22,6 +22,7 @@
 #include <__filesystem/path.h>
 #include <__filesystem/perms.h>
 #include <__system_error/errc.h>
+#include <__system_error/error_category.h>
 #include <__system_error/error_code.h>
 #include <__utility/move.h>
 #include <__utility/unreachable.h>
@@ -325,15 +326,7 @@ private:
 
   _LIBCPP_INLINE_VISIBILITY
   static bool __is_dne_error(error_code const& __ec) {
-    if (!__ec)
-      return true;
-    switch (static_cast<errc>(__ec.value())) {
-    case errc::no_such_file_or_directory:
-    case errc::not_a_directory:
-      return true;
-    default:
-      return false;
-    }
+    return !__ec || __ec == errc::no_such_file_or_directory || __ec == errc::not_a_directory;
   }
 
   _LIBCPP_INLINE_VISIBILITY

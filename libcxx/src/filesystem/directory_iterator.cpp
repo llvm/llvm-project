@@ -48,11 +48,10 @@ public:
     }
     __stream_ = ::FindFirstFileW((root / "*").c_str(), &__data_);
     if (__stream_ == INVALID_HANDLE_VALUE) {
-      ec = detail::make_windows_error(GetLastError());
+      ec = detail::get_last_error();
       const bool ignore_permission_denied =
           bool(opts & directory_options::skip_permission_denied);
-      if (ignore_permission_denied &&
-          ec.value() == static_cast<int>(errc::permission_denied))
+      if (ignore_permission_denied && ec == errc::permission_denied)
         ec.clear();
       return;
     }
@@ -95,7 +94,7 @@ private:
   error_code close() noexcept {
     error_code ec;
     if (!::FindClose(__stream_))
-      ec = detail::make_windows_error(GetLastError());
+      ec = detail::get_last_error();
     __stream_ = INVALID_HANDLE_VALUE;
     return ec;
   }
@@ -125,7 +124,7 @@ public:
       ec = detail::capture_errno();
       const bool allow_eacces =
           bool(opts & directory_options::skip_permission_denied);
-      if (allow_eacces && ec.value() == EACCES)
+      if (allow_eacces && ec == errc::permission_denied)
         ec.clear();
       return;
     }
@@ -326,7 +325,7 @@ bool recursive_directory_iterator::__try_recursion(error_code* ec) {
   if (m_ec) {
     const bool allow_eacess =
         bool(__imp_->__options_ & directory_options::skip_permission_denied);
-    if (m_ec.value() == EACCES && allow_eacess) {
+    if (m_ec == errc::permission_denied && allow_eacess) {
       if (ec)
         ec->clear();
     } else {

@@ -41,6 +41,8 @@ private:
   static string __init(const error_code&, string);
 };
 
+// __ev is expected to be an error in the generic_category domain (e.g. from
+// errno, or std::errc::*), not system_category (e.g. from windows syscalls).
 _LIBCPP_NORETURN _LIBCPP_EXPORTED_FROM_ABI void __throw_system_error(int __ev, const char* __what_arg);
 
 _LIBCPP_END_NAMESPACE_STD
