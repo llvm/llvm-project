@@ -42,7 +42,6 @@ private:
   void setLegalizerInfoSSE2();
   void setLegalizerInfoAVX();
   void setLegalizerInfoAVX2();
-  void setLegalizerInfoAVX512();
 };
 } // namespace llvm
 #endif
