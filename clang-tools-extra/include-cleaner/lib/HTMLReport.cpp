@@ -521,7 +521,7 @@ void writeHTMLReport(FileID File, const include_cleaner::Includes &Includes,
     walkAST(*Root, [&](SourceLocation Loc, const NamedDecl &D, RefType T) {
       if(!SM.isWrittenInMainFile(SM.getSpellingLoc(Loc)))
         return;
-      R.addRef(SymbolReference{Loc, D, T});
+      R.addRef(SymbolReference{D, Loc, T});
     });
   for (const SymbolReference &Ref : MacroRefs) {
     if (!SM.isWrittenInMainFile(SM.getSpellingLoc(Ref.RefLocation)))
