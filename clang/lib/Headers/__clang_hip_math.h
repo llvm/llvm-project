@@ -1334,8 +1334,7 @@ float min(float __x, float __y) { return __builtin_fminf(__x, __y); }
 __DEVICE__
 double min(double __x, double __y) { return __builtin_fmin(__x, __y); }
 
-#ifndef __OPENMP_AMDGCN__
-#if !defined(__HIPCC_RTC__)
+#if !defined(__HIPCC_RTC__) && !defined(__OPENMP_AMDGCN__)
 __host__ inline static int min(int __arg1, int __arg2) {
   return std::min(__arg1, __arg2);
 }
@@ -1345,7 +1344,6 @@ __host__ inline static int max(int __arg1, int __arg2) {
 }
 #endif // !defined(__HIPCC_RTC__) && !defined(__OPENMP_AMDGCN__)
 #endif
-#endif // defined(__cplusplus)
 
 #pragma pop_macro("__DEVICE_NOCE__")
 #pragma pop_macro("__DEVICE__")
