@@ -141,7 +141,9 @@ void DAGTypeLegalizer::PromoteIntegerResult(SDNode *N, unsigned ResNo) {
                          Res = PromoteIntRes_EXTEND_VECTOR_INREG(N); break;
 
   case ISD::SIGN_EXTEND:
+  case ISD::VP_SIGN_EXTEND:
   case ISD::ZERO_EXTEND:
+  case ISD::VP_ZERO_EXTEND:
   case ISD::ANY_EXTEND:  Res = PromoteIntRes_INT_EXTEND(N); break;
 
   case ISD::VP_FP_TO_SINT:
@@ -760,8 +762,8 @@ SDValue DAGTypeLegalizer::PromoteIntRes_INT_EXTEND(SDNode *N) {
     assert(Res.getValueType().bitsLE(NVT) && "Extension doesn't make sense!");
 
     // If the result and operand types are the same after promotion, simplify
-    // to an in-register extension.
-    if (NVT == Res.getValueType()) {
+    // to an in-register extension. Unless this is a VP_*_EXTEND.
+    if (NVT == Res.getValueType() && N->getNumOperands() == 1) {
       // The high bits are not guaranteed to be anything.  Insert an extend.
       if (N->getOpcode() == ISD::SIGN_EXTEND)
         return DAG.getNode(ISD::SIGN_EXTEND_INREG, dl, NVT, Res,
@@ -774,6 +776,12 @@ SDValue DAGTypeLegalizer::PromoteIntRes_INT_EXTEND(SDNode *N) {
   }
 
   // Otherwise, just extend the original operand all the way to the larger type.
+  if (N->getNumOperands() != 1) {
+    assert(N->getNumOperands() == 3 && "Unexpected number of operands!");
+    assert(N->isVPOpcode() && "Expected VP opcode");
+    return DAG.getNode(N->getOpcode(), dl, NVT, N->getOperand(0),
+                       N->getOperand(1), N->getOperand(2));
+  }
   return DAG.getNode(N->getOpcode(), dl, NVT, N->getOperand(0));
 }
 
@@ -1663,6 +1671,7 @@ bool DAGTypeLegalizer::PromoteIntegerOperand(SDNode *N, unsigned OpNo) {
   case ISD::VP_SETCC:
   case ISD::SETCC:        Res = PromoteIntOp_SETCC(N, OpNo); break;
   case ISD::SIGN_EXTEND:  Res = PromoteIntOp_SIGN_EXTEND(N); break;
+  case ISD::VP_SIGN_EXTEND: Res = PromoteIntOp_VP_SIGN_EXTEND(N); break;
   case ISD::VP_SINT_TO_FP:
   case ISD::SINT_TO_FP:   Res = PromoteIntOp_SINT_TO_FP(N); break;
   case ISD::STRICT_SINT_TO_FP: Res = PromoteIntOp_STRICT_SINT_TO_FP(N); break;
@@ -1684,6 +1693,7 @@ bool DAGTypeLegalizer::PromoteIntegerOperand(SDNode *N, unsigned OpNo) {
   case ISD::UINT_TO_FP:   Res = PromoteIntOp_UINT_TO_FP(N); break;
   case ISD::STRICT_UINT_TO_FP:  Res = PromoteIntOp_STRICT_UINT_TO_FP(N); break;
   case ISD::ZERO_EXTEND:  Res = PromoteIntOp_ZERO_EXTEND(N); break;
+  case ISD::VP_ZERO_EXTEND: Res = PromoteIntOp_VP_ZERO_EXTEND(N); break;
   case ISD::EXTRACT_SUBVECTOR: Res = PromoteIntOp_EXTRACT_SUBVECTOR(N); break;
   case ISD::INSERT_SUBVECTOR: Res = PromoteIntOp_INSERT_SUBVECTOR(N); break;
 
@@ -2013,6 +2023,23 @@ SDValue DAGTypeLegalizer::PromoteIntOp_SIGN_EXTEND(SDNode *N) {
                      Op, DAG.getValueType(N->getOperand(0).getValueType()));
 }
 
+SDValue DAGTypeLegalizer::PromoteIntOp_VP_SIGN_EXTEND(SDNode *N) {
+  SDLoc dl(N);
+  EVT VT = N->getValueType(0);
+  SDValue Op = GetPromotedInteger(N->getOperand(0));
+  // FIXME: There is no VP_ANY_EXTEND yet.
+  Op = DAG.getNode(ISD::VP_ZERO_EXTEND, dl, VT, Op, N->getOperand(1),
+                   N->getOperand(2));
+  unsigned Diff =
+      VT.getScalarSizeInBits() - N->getOperand(0).getScalarValueSizeInBits();
+  SDValue ShAmt = DAG.getShiftAmountConstant(Diff, VT, dl);
+  // FIXME: There is no VP_SIGN_EXTEND_INREG so use a pair of shifts.
+  SDValue Shl = DAG.getNode(ISD::VP_SHL, dl, VT, Op, ShAmt, N->getOperand(1),
+                            N->getOperand(2));
+  return DAG.getNode(ISD::VP_ASHR, dl, VT, Shl, ShAmt, N->getOperand(1),
+                     N->getOperand(2));
+}
+
 SDValue DAGTypeLegalizer::PromoteIntOp_SINT_TO_FP(SDNode *N) {
   if (N->getOpcode() == ISD::VP_SINT_TO_FP)
     return SDValue(DAG.UpdateNodeOperands(N,
@@ -2162,6 +2189,19 @@ SDValue DAGTypeLegalizer::PromoteIntOp_ZERO_EXTEND(SDNode *N) {
   SDValue Op = GetPromotedInteger(N->getOperand(0));
   Op = DAG.getNode(ISD::ANY_EXTEND, dl, N->getValueType(0), Op);
   return DAG.getZeroExtendInReg(Op, dl, N->getOperand(0).getValueType());
+}
+
+SDValue DAGTypeLegalizer::PromoteIntOp_VP_ZERO_EXTEND(SDNode *N) {
+  SDLoc dl(N);
+  EVT VT = N->getValueType(0);
+  SDValue Op = GetPromotedInteger(N->getOperand(0));
+  // FIXME: There is no VP_ANY_EXTEND yet.
+  Op = DAG.getNode(ISD::VP_ZERO_EXTEND, dl, VT, Op, N->getOperand(1),
+                   N->getOperand(2));
+  APInt Imm = APInt::getLowBitsSet(VT.getScalarSizeInBits(),
+                                   N->getOperand(0).getScalarValueSizeInBits());
+  return DAG.getNode(ISD::VP_AND, dl, VT, Op, DAG.getConstant(Imm, dl, VT),
+                     N->getOperand(1), N->getOperand(2));
 }
 
 SDValue DAGTypeLegalizer::PromoteIntOp_ADDSUBO_CARRY(SDNode *N, unsigned OpNo) {
