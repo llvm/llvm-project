@@ -32,7 +32,6 @@ namespace detail {
 struct AffineExprStorage;
 struct AffineBinaryOpExprStorage;
 struct AffineDimExprStorage;
-struct AffineSymbolExprStorage;
 struct AffineConstantExprStorage;
 
 } // namespace detail
