@@ -2,6 +2,39 @@
 ; RUN: llc -mtriple=x86_64-linux-gnu -global-isel -global-isel-abort=2 -verify-machineinstrs < %s -o - | FileCheck %s --check-prefix=X64
 ; RUN: llc -mtriple=i386-linux-gnu   -global-isel -global-isel-abort=2 -verify-machineinstrs < %s -o - | FileCheck %s --check-prefix=X86
 
+define i128 @test_add_i128(i128 %arg1, i128 %arg2) nounwind {
+; X64-LABEL: test_add_i128:
+; X64:       # %bb.0:
+; X64-NEXT:    movq %rdi, %rax
+; X64-NEXT:    addq %rdx, %rax
+; X64-NEXT:    adcq %rcx, %rsi
+; X64-NEXT:    movq %rsi, %rdx
+; X64-NEXT:    retq
+;
+; X86-LABEL: test_add_i128:
+; X86:       # %bb.0:
+; X86-NEXT:    pushl %edi
+; X86-NEXT:    pushl %esi
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %edx
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %esi
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %edi
+; X86-NEXT:    addl {{[0-9]+}}(%esp), %esi
+; X86-NEXT:    adcl {{[0-9]+}}(%esp), %edi
+; X86-NEXT:    adcl {{[0-9]+}}(%esp), %ecx
+; X86-NEXT:    adcl {{[0-9]+}}(%esp), %edx
+; X86-NEXT:    movl %ecx, 8(%eax)
+; X86-NEXT:    movl %edi, 4(%eax)
+; X86-NEXT:    movl %esi, (%eax)
+; X86-NEXT:    movl %edx, 12(%eax)
+; X86-NEXT:    popl %esi
+; X86-NEXT:    popl %edi
+; X86-NEXT:    retl $4
+  %ret = add i128 %arg1, %arg2
+  ret i128 %ret
+}
+
 define i64 @test_add_i64(i64 %arg1, i64 %arg2) {
 ; X64-LABEL: test_add_i64:
 ; X64:       # %bb.0:
