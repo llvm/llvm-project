@@ -14148,8 +14148,33 @@ RISCVTargetLowering::EmitInstrWithCustomInserter(MachineInstr &MI,
   }
 }
 
+// Returns the index to the rounding mode immediate value if any, otherwise the
+// function will return None.
+static std::optional<unsigned> getRoundModeIdx(const MachineInstr &MI) {
+  uint64_t TSFlags = MI.getDesc().TSFlags;
+  if (!RISCVII::hasRoundModeOp(TSFlags))
+    return std::nullopt;
+
+  // The operand order
+  // -------------------------------------
+  // | n-1 (if any)   | n-2  | n-3 | n-4 |
+  // | policy         | sew  | vl  | rm  |
+  // -------------------------------------
+  return MI.getNumExplicitOperands() - RISCVII::hasVecPolicyOp(TSFlags) - 3;
+}
+
 void RISCVTargetLowering::AdjustInstrPostInstrSelection(MachineInstr &MI,
                                                         SDNode *Node) const {
+  // Add FRM dependency to vector floating-point instructions with dynamic
+  // rounding mode.
+  if (auto RoundModeIdx = getRoundModeIdx(MI)) {
+    unsigned FRMImm = MI.getOperand(*RoundModeIdx).getImm();
+    if (FRMImm == RISCVFPRndMode::DYN && !MI.readsRegister(RISCV::FRM)) {
+      MI.addOperand(MachineOperand::CreateReg(RISCV::FRM, /*isDef*/ false,
+                                              /*isImp*/ true));
+    }
+  }
+
   // Add FRM dependency to any instructions with dynamic rounding mode.
   unsigned Opc = MI.getOpcode();
   auto Idx = RISCV::getNamedOperandIdx(Opc, RISCV::OpName::frm);
