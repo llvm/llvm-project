@@ -90,7 +90,7 @@ class BinarySection {
   uint64_t OutputFileOffset{0};    // File offset in the rewritten binary file.
   StringRef OutputContents;        // Rewritten section contents.
   const uint64_t SectionNumber;    // Order in which the section was created.
-  unsigned SectionID{-1u};         // Unique ID used for address mapping.
+  std::string SectionID;           // Unique ID used for address mapping.
                                    // Set by ExecutableFileMemoryManager.
   uint32_t Index{0};               // Section index in the output file.
   mutable bool IsReordered{false}; // Have the contents been reordered?
@@ -430,18 +430,18 @@ public:
   }
   uint64_t getOutputAddress() const { return OutputAddress; }
   uint64_t getOutputFileOffset() const { return OutputFileOffset; }
-  unsigned getSectionID() const {
+  StringRef getSectionID() const {
     assert(hasValidSectionID() && "trying to use uninitialized section id");
     return SectionID;
   }
-  bool hasValidSectionID() const { return SectionID != -1u; }
+  bool hasValidSectionID() const { return !SectionID.empty(); }
   bool hasValidIndex() { return Index != 0; }
   uint32_t getIndex() const { return Index; }
 
   // mutation
   void setOutputAddress(uint64_t Address) { OutputAddress = Address; }
   void setOutputFileOffset(uint64_t Offset) { OutputFileOffset = Offset; }
-  void setSectionID(unsigned ID) {
+  void setSectionID(StringRef ID) {
     assert(!hasValidSectionID() && "trying to set section id twice");
     SectionID = ID;
   }
