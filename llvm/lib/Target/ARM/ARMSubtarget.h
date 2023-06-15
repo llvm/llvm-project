@@ -402,6 +402,10 @@ public:
 
   bool isTargetHardFloat() const;
 
+  bool isReadTPSoft() const {
+    return !(isReadTPTPIDRURW() || isReadTPTPIDRURO() || isReadTPTPIDRPRW());
+  }
+
   bool isTargetAndroid() const { return TargetTriple.isAndroid(); }
 
   bool isXRaySupported() const override;
