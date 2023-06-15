@@ -370,10 +370,9 @@ collectMacroReferences(ParsedAST &AST) {
       continue;
     if (auto DefLoc = Macro->Info->getDefinitionLoc(); DefLoc.isValid())
       Macros.push_back(
-          {Tok.location(),
-           include_cleaner::Macro{/*Name=*/PP.getIdentifierInfo(Tok.text(SM)),
+          {include_cleaner::Macro{/*Name=*/PP.getIdentifierInfo(Tok.text(SM)),
                                   DefLoc},
-           include_cleaner::RefType::Explicit});
+           Tok.location(), include_cleaner::RefType::Explicit});
   }
   return Macros;
 }
