@@ -187,43 +187,43 @@ public:
       }
     };
 
+    if (!feOptions.ClangIRDisablePasses) {
+      // Handle source manager properly given that lifetime analysis
+      // might emit warnings and remarks.
+      auto &clangSourceMgr = C.getSourceManager();
+      FileID MainFileID = clangSourceMgr.getMainFileID();
+
+      std::unique_ptr<llvm::MemoryBuffer> FileBuf =
+          llvm::MemoryBuffer::getMemBuffer(
+              clangSourceMgr.getBufferOrFake(MainFileID));
+
+      llvm::SourceMgr mlirSourceMgr;
+      mlirSourceMgr.AddNewSourceBuffer(std::move(FileBuf), llvm::SMLoc());
+
+      if (feOptions.ClangIRVerifyDiags) {
+        mlir::SourceMgrDiagnosticVerifierHandler sourceMgrHandler(
+            mlirSourceMgr, mlirCtx.get());
+        mlirCtx->printOpOnDiagnostic(false);
+        setupCIRPipelineAndExecute();
+
+        // Verify the diagnostic handler to make sure that each of the
+        // diagnostics matched.
+        if (sourceMgrHandler.verify().failed()) {
+          // FIXME: we fail ungracefully, there's probably a better way
+          // to communicate non-zero return so tests can actually fail.
+          llvm::sys::RunInterruptHandlers();
+          exit(1);
+        }
+      } else {
+        mlir::SourceMgrDiagnosticHandler sourceMgrHandler(mlirSourceMgr,
+                                                          mlirCtx.get());
+        setupCIRPipelineAndExecute();
+      }
+    }
+
     switch (action) {
     case CIRGenAction::OutputType::EmitCIR:
       if (outputStream && mlirMod) {
-        if (!feOptions.ClangIRDisablePasses) {
-          // Handle source manager properly given that lifetime analysis
-          // might emit warnings and remarks.
-          auto &clangSourceMgr = C.getSourceManager();
-          FileID MainFileID = clangSourceMgr.getMainFileID();
-
-          std::unique_ptr<llvm::MemoryBuffer> FileBuf =
-              llvm::MemoryBuffer::getMemBuffer(
-                  clangSourceMgr.getBufferOrFake(MainFileID));
-
-          llvm::SourceMgr mlirSourceMgr;
-          mlirSourceMgr.AddNewSourceBuffer(std::move(FileBuf), llvm::SMLoc());
-
-          if (feOptions.ClangIRVerifyDiags) {
-            mlir::SourceMgrDiagnosticVerifierHandler sourceMgrHandler(
-                mlirSourceMgr, mlirCtx.get());
-            mlirCtx->printOpOnDiagnostic(false);
-            setupCIRPipelineAndExecute();
-
-            // Verify the diagnostic handler to make sure that each of the
-            // diagnostics matched.
-            if (sourceMgrHandler.verify().failed()) {
-              // FIXME: we fail ungracefully, there's probably a better way
-              // to communicate non-zero return so tests can actually fail.
-              llvm::sys::RunInterruptHandlers();
-              exit(1);
-            }
-          } else {
-            mlir::SourceMgrDiagnosticHandler sourceMgrHandler(mlirSourceMgr,
-                                                              mlirCtx.get());
-            setupCIRPipelineAndExecute();
-          }
-        }
-
         // Emit remaining defaulted C++ methods
         if (!feOptions.ClangIRDisableEmitCXXDefault)
           gen->buildDefaultMethods();
