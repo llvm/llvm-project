@@ -18,7 +18,7 @@ define void @testLeftBad8x8(<8 x i8> %src1, <8 x i8> %src2, ptr %dest) nounwind 
 ; CHECK-LABEL: testLeftBad8x8:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    movi.8b v2, #165
-; CHECK-NEXT:    shl.8b v1, v1, #1
+; CHECK-NEXT:    add.8b v1, v1, v1
 ; CHECK-NEXT:    and.8b v0, v0, v2
 ; CHECK-NEXT:    orr.8b v0, v0, v1
 ; CHECK-NEXT:    str d0, [x0]
@@ -76,7 +76,7 @@ define void @testLeftBad16x8(<16 x i8> %src1, <16 x i8> %src2, ptr %dest) nounwi
 ; CHECK-LABEL: testLeftBad16x8:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    movi.16b v2, #165
-; CHECK-NEXT:    shl.16b v1, v1, #1
+; CHECK-NEXT:    add.16b v1, v1, v1
 ; CHECK-NEXT:    and.16b v0, v0, v2
 ; CHECK-NEXT:    orr.16b v0, v0, v1
 ; CHECK-NEXT:    str q0, [x0]
