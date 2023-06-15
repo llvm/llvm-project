@@ -40,7 +40,7 @@ namespace __adl_only {
 void make_error_code() = delete;
 } // namespace __adl_only
 
-class _LIBCPP_TYPE_VIS error_code {
+class _LIBCPP_EXPORTED_FROM_ABI error_code {
   int __val_;
   const error_category* __cat_;
 

@@ -189,13 +189,16 @@ void BinaryEmitter::emitAll(StringRef OrgSecPrefix) {
 
   if (opts::UpdateDebugSections && BC.isELF()) {
     // Force the emission of debug line info into allocatable section to ensure
-    // RuntimeDyld will process it without ProcessAllSections flag.
+    // JITLink will process it.
     //
     // NB: on MachO all sections are required for execution, hence no need
     //     to change flags/attributes.
     MCSectionELF *ELFDwarfLineSection =
         static_cast<MCSectionELF *>(BC.MOFI->getDwarfLineSection());
     ELFDwarfLineSection->setFlags(ELF::SHF_ALLOC);
+    MCSectionELF *ELFDwarfLineStrSection =
+        static_cast<MCSectionELF *>(BC.MOFI->getDwarfLineStrSection());
+    ELFDwarfLineStrSection->setFlags(ELF::SHF_ALLOC);
   }
 
   if (RuntimeLibrary *RtLibrary = BC.getRuntimeLibrary())

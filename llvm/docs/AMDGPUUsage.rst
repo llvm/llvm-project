@@ -945,6 +945,19 @@ The AMDGPU backend implements the following LLVM IR intrinsics.
 
 *This section is WIP.*
 
+.. table:: AMDGPU LLVM IR Intrinsics
+  :name: amdgpu-llvm-ir-intrinsics-table
+
+  =========================================  ==========================================================
+  LLVM Intrinsic                             Description
+  =========================================  ==========================================================
+  llvm.amdgcn.log                            Provides direct access to v_log_f32 and v_log_f16
+                                             (on targets with half support). Peforms log2 function.
+
+  llvm.amdgcn.exp2                           Provides direct access to v_exp_f32 and v_exp_f16
+                                             (on targets with half support). Performs exp2 function.
+  =========================================  ==========================================================
+
 .. TODO::
 
    List AMDGPU intrinsics.

@@ -94,9 +94,6 @@ export namespace std {
   using std::swap;
 
   using std::operator==;
-#if 1 // P1614
-  using std::operator!=;
-#endif
 
   // [func.wrap.move], move only wrapper
   // using std::move_only_function;

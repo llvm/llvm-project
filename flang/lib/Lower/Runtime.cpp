@@ -8,6 +8,7 @@
 
 #include "flang/Lower/Runtime.h"
 #include "flang/Lower/Bridge.h"
+#include "flang/Lower/OpenMP.h"
 #include "flang/Lower/StatementContext.h"
 #include "flang/Optimizer/Builder/FIRBuilder.h"
 #include "flang/Optimizer/Builder/Runtime/RTBuilder.h"
@@ -20,6 +21,7 @@
 #include "flang/Runtime/stop.h"
 #include "flang/Runtime/time-intrinsic.h"
 #include "flang/Semantics/tools.h"
+#include "mlir/Dialect/OpenMP/OpenMPDialect.h"
 #include "llvm/Support/Debug.h"
 #include <optional>
 
@@ -30,9 +32,14 @@ using namespace Fortran::runtime;
 /// Runtime calls that do not return to the caller indicate this condition by
 /// terminating the current basic block with an unreachable op.
 static void genUnreachable(fir::FirOpBuilder &builder, mlir::Location loc) {
-  builder.create<fir::UnreachableOp>(loc);
-  mlir::Block *newBlock =
-      builder.getBlock()->splitBlock(builder.getInsertionPoint());
+  mlir::Block *curBlock = builder.getBlock();
+  mlir::Operation *parentOp = curBlock->getParentOp();
+  if (parentOp->getDialect()->getNamespace() ==
+      mlir::omp::OpenMPDialect::getDialectNamespace())
+    Fortran::lower::genOpenMPTerminator(builder, parentOp, loc);
+  else
+    builder.create<fir::UnreachableOp>(loc);
+  mlir::Block *newBlock = curBlock->splitBlock(builder.getInsertionPoint());
   builder.setInsertionPointToStart(newBlock);
 }
 
@@ -106,7 +113,13 @@ void Fortran::lower::genStopStatement(
   }
 
   builder.create<fir::CallOp>(loc, callee, operands);
-  genUnreachable(builder, loc);
+  auto blockIsUnterminated = [&builder]() {
+    mlir::Block *currentBlock = builder.getBlock();
+    return currentBlock->empty() ||
+           !currentBlock->back().hasTrait<mlir::OpTrait::IsTerminator>();
+  };
+  if (blockIsUnterminated())
+    genUnreachable(builder, loc);
 }
 
 void Fortran::lower::genFailImageStatement(

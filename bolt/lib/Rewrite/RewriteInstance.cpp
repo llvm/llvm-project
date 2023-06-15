@@ -26,6 +26,7 @@
 #include "bolt/Rewrite/BinaryPassManager.h"
 #include "bolt/Rewrite/DWARFRewriter.h"
 #include "bolt/Rewrite/ExecutableFileMemoryManager.h"
+#include "bolt/Rewrite/JITLinkLinker.h"
 #include "bolt/RuntimeLibs/HugifyRuntimeLibrary.h"
 #include "bolt/RuntimeLibs/InstrumentationRuntimeLibrary.h"
 #include "bolt/Utils/CommandLineOpts.h"
@@ -33,7 +34,6 @@
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/DebugInfo/DWARF/DWARFContext.h"
 #include "llvm/DebugInfo/DWARF/DWARFDebugFrame.h"
-#include "llvm/ExecutionEngine/RuntimeDyld.h"
 #include "llvm/IR/Function.h"
 #include "llvm/MC/MCAsmBackend.h"
 #include "llvm/MC/MCAsmInfo.h"
@@ -3299,69 +3299,6 @@ void RewriteInstance::runOptimizationPasses() {
   BinaryFunctionPassManager::runAllPasses(*BC);
 }
 
-namespace {
-
-class BOLTSymbolResolver : public JITSymbolResolver {
-  BinaryContext &BC;
-
-public:
-  BOLTSymbolResolver(BinaryContext &BC) : BC(BC) {}
-
-  // We are responsible for all symbols
-  Expected<LookupSet> getResponsibilitySet(const LookupSet &Symbols) override {
-    return Symbols;
-  }
-
-  // Some of our symbols may resolve to zero and this should not be an error
-  bool allowsZeroSymbols() override { return true; }
-
-  /// Resolves the address of each symbol requested
-  void lookup(const LookupSet &Symbols,
-              OnResolvedFunction OnResolved) override {
-    JITSymbolResolver::LookupResult AllResults;
-
-    if (BC.EFMM->ObjectsLoaded) {
-      for (const StringRef &Symbol : Symbols) {
-        std::string SymName = Symbol.str();
-        LLVM_DEBUG(dbgs() << "BOLT: looking for " << SymName << "\n");
-        // Resolve to a PLT entry if possible
-        if (const BinaryData *I = BC.getPLTBinaryDataByName(SymName)) {
-          AllResults[Symbol] =
-              JITEvaluatedSymbol(I->getAddress(), JITSymbolFlags());
-          continue;
-        }
-        OnResolved(make_error<StringError>(
-            "Symbol not found required by runtime: " + Symbol,
-            inconvertibleErrorCode()));
-        return;
-      }
-      OnResolved(std::move(AllResults));
-      return;
-    }
-
-    for (const StringRef &Symbol : Symbols) {
-      std::string SymName = Symbol.str();
-      LLVM_DEBUG(dbgs() << "BOLT: looking for " << SymName << "\n");
-
-      if (BinaryData *I = BC.getBinaryDataByName(SymName)) {
-        uint64_t Address = I->isMoved() && !I->isJumpTable()
-                               ? I->getOutputAddress()
-                               : I->getAddress();
-        LLVM_DEBUG(dbgs() << "Resolved to address 0x"
-                          << Twine::utohexstr(Address) << "\n");
-        AllResults[Symbol] = JITEvaluatedSymbol(Address, JITSymbolFlags());
-        continue;
-      }
-      LLVM_DEBUG(dbgs() << "Resolved to address 0x0\n");
-      AllResults[Symbol] = JITEvaluatedSymbol(0, JITSymbolFlags());
-    }
-
-    OnResolved(std::move(AllResults));
-  }
-};
-
-} // anonymous namespace
-
 void RewriteInstance::preregisterSections() {
   // Preregister sections before emission to set their order in the output.
   const unsigned ROFlags = BinarySection::getFlags(/*IsReadOnly*/ true,
@@ -3435,38 +3372,17 @@ void RewriteInstance::emitAndLink() {
   // Get output object as ObjectFile.
   std::unique_ptr<MemoryBuffer> ObjectMemBuffer =
       MemoryBuffer::getMemBuffer(BOS->str(), "in-memory object file", false);
-  std::unique_ptr<object::ObjectFile> Obj = cantFail(
-      object::ObjectFile::createObjectFile(ObjectMemBuffer->getMemBufferRef()),
-      "error creating in-memory object");
 
-  BOLTSymbolResolver Resolver = BOLTSymbolResolver(*BC);
+  auto EFMM = std::make_unique<ExecutableFileMemoryManager>(*BC);
+  EFMM->setNewSecPrefix(getNewSecPrefix());
+  EFMM->setOrgSecPrefix(getOrgSecPrefix());
+
+  Linker = std::make_unique<JITLinkLinker>(*BC, std::move(EFMM));
+  Linker->loadObject(ObjectMemBuffer->getMemBufferRef(),
+                     [this](auto MapSection) { mapFileSections(MapSection); });
 
   MCAsmLayout FinalLayout(
       static_cast<MCObjectStreamer *>(Streamer.get())->getAssembler());
-
-  // Disable stubs because RuntimeDyld may try to increase the size of
-  // sections accounting for stubs. We need those sections to match the
-  // same size seen in the input binary, in case this section is a copy
-  // of the original one seen in the binary.
-  BC->EFMM.reset(new ExecutableFileMemoryManager(*BC, /*AllowStubs=*/false));
-  BC->EFMM->setNewSecPrefix(getNewSecPrefix());
-  BC->EFMM->setOrgSecPrefix(getOrgSecPrefix());
-
-  RTDyld.reset(new decltype(RTDyld)::element_type(*BC->EFMM, Resolver));
-  RTDyld->setProcessAllSections(false);
-  RTDyld->loadObject(*Obj);
-
-  // Assign addresses to all sections. If key corresponds to the object
-  // created by ourselves, call our regular mapping function. If we are
-  // loading additional objects as part of runtime libraries for
-  // instrumentation, treat them as extra sections.
-  mapFileSections(*RTDyld);
-
-  RTDyld->finalizeWithMemoryManagerLocking();
-  if (RTDyld->hasError()) {
-    errs() << "BOLT-ERROR: RTDyld failed: " << RTDyld->getErrorString() << "\n";
-    exit(1);
-  }
 
   // Update output addresses based on the new section map and
   // layout. Only do this for the object created by ourselves.
@@ -3476,9 +3392,9 @@ void RewriteInstance::emitAndLink() {
     DebugInfoRewriter->updateLineTableOffsets(FinalLayout);
 
   if (RuntimeLibrary *RtLibrary = BC->getRuntimeLibrary())
-    RtLibrary->link(*BC, ToolPath, *RTDyld, [this](RuntimeDyld &R) {
+    RtLibrary->link(*BC, ToolPath, *Linker, [this](auto MapSection) {
       // Map newly registered sections.
-      this->mapAllocatableSections(*RTDyld);
+      this->mapAllocatableSections(MapSection);
     });
 
   // Once the code is emitted, we can rename function sections to actual
@@ -3874,7 +3790,7 @@ void RewriteInstance::updateLKMarkers() {
            << '\n';
 }
 
-void RewriteInstance::mapFileSections(RuntimeDyld &RTDyld) {
+void RewriteInstance::mapFileSections(BOLTLinker::SectionMapper MapSection) {
   BC->deregisterUnusedSections();
 
   // If no new .eh_frame was written, remove relocated original .eh_frame.
@@ -3884,19 +3800,18 @@ void RewriteInstance::mapFileSections(RuntimeDyld &RTDyld) {
     BinarySection *NewEHFrameSection =
         getSection(getNewSecPrefix() + getEHFrameSectionName());
     if (!NewEHFrameSection || !NewEHFrameSection->isFinalized()) {
-      // RTDyld will still have to process relocations for the section, hence
+      // JITLink will still have to process relocations for the section, hence
       // we need to assign it the address that wouldn't result in relocation
       // processing failure.
-      RTDyld.reassignSectionAddress(RelocatedEHFrameSection->getSectionID(),
-                                    NextAvailableAddress);
+      MapSection(*RelocatedEHFrameSection, NextAvailableAddress);
       BC->deregisterSection(*RelocatedEHFrameSection);
     }
   }
 
-  mapCodeSections(RTDyld);
+  mapCodeSections(MapSection);
 
   // Map the rest of the sections.
-  mapAllocatableSections(RTDyld);
+  mapAllocatableSections(MapSection);
 }
 
 std::vector<BinarySection *> RewriteInstance::getCodeSections() {
@@ -3925,7 +3840,7 @@ std::vector<BinarySection *> RewriteInstance::getCodeSections() {
   return CodeSections;
 }
 
-void RewriteInstance::mapCodeSections(RuntimeDyld &RTDyld) {
+void RewriteInstance::mapCodeSections(BOLTLinker::SectionMapper MapSection) {
   if (BC->HasRelocations) {
     // Map sections for functions with pre-assigned addresses.
     for (BinaryFunction *InjectedFunction : BC->getInjectedBinaryFunctions()) {
@@ -3937,8 +3852,7 @@ void RewriteInstance::mapCodeSections(RuntimeDyld &RTDyld) {
           InjectedFunction->getCodeSection();
       assert(FunctionSection && "function should have section");
       FunctionSection->setOutputAddress(OutputAddress);
-      RTDyld.reassignSectionAddress(FunctionSection->getSectionID(),
-                                    OutputAddress);
+      MapSection(*FunctionSection, OutputAddress);
       InjectedFunction->setImageAddress(FunctionSection->getAllocAddress());
       InjectedFunction->setImageSize(FunctionSection->getOutputSize());
     }
@@ -4014,8 +3928,7 @@ void RewriteInstance::mapCodeSections(RuntimeDyld &RTDyld) {
           dbgs() << "BOLT: mapping " << Section->getName() << " at 0x"
                  << Twine::utohexstr(Section->getAllocAddress()) << " to 0x"
                  << Twine::utohexstr(Section->getOutputAddress()) << '\n');
-      RTDyld.reassignSectionAddress(Section->getSectionID(),
-                                    Section->getOutputAddress());
+      MapSection(*Section, Section->getOutputAddress());
       Section->setOutputFileOffset(
           getFileOffsetForAddress(Section->getOutputAddress()));
     }
@@ -4045,8 +3958,7 @@ void RewriteInstance::mapCodeSections(RuntimeDyld &RTDyld) {
                       << Twine::utohexstr(FuncSection->getAllocAddress())
                       << " to 0x" << Twine::utohexstr(Function.getAddress())
                       << '\n');
-    RTDyld.reassignSectionAddress(FuncSection->getSectionID(),
-                                  Function.getAddress());
+    MapSection(*FuncSection, Function.getAddress());
     Function.setImageAddress(FuncSection->getAllocAddress());
     Function.setImageSize(FuncSection->getOutputSize());
     if (Function.getImageSize() > Function.getMaxSize()) {
@@ -4064,7 +3976,7 @@ void RewriteInstance::mapCodeSections(RuntimeDyld &RTDyld) {
         LLVM_DEBUG(dbgs() << "BOLT-DEBUG: mapping JT " << Section.getName()
                           << " to 0x" << Twine::utohexstr(JT->getAddress())
                           << '\n');
-        RTDyld.reassignSectionAddress(Section.getSectionID(), JT->getAddress());
+        MapSection(Section, JT->getAddress());
       }
     }
 
@@ -4100,7 +4012,7 @@ void RewriteInstance::mapCodeSections(RuntimeDyld &RTDyld) {
         dbgs() << formatv(
             "BOLT: mapping cold fragment {0:x+} to {1:x+} with size {2:x+}\n",
             FF.getImageAddress(), FF.getAddress(), FF.getImageSize()));
-    RTDyld.reassignSectionAddress(ColdSection->getSectionID(), FF.getAddress());
+    MapSection(*ColdSection, FF.getAddress());
 
     if (TooLarge)
       BC->deregisterSection(*ColdSection);
@@ -4130,7 +4042,8 @@ void RewriteInstance::mapCodeSections(RuntimeDyld &RTDyld) {
   }
 }
 
-void RewriteInstance::mapAllocatableSections(RuntimeDyld &RTDyld) {
+void RewriteInstance::mapAllocatableSections(
+    BOLTLinker::SectionMapper MapSection) {
   // Allocate read-only sections first, then writable sections.
   enum : uint8_t { ST_READONLY, ST_READWRITE };
   for (uint8_t SType = ST_READONLY; SType <= ST_READWRITE; ++SType) {
@@ -4164,8 +4077,7 @@ void RewriteInstance::mapAllocatableSections(RuntimeDyld &RTDyld) {
         });
         Section.setOutputAddress(Section.getAddress());
         Section.setOutputFileOffset(Section.getInputFileOffset());
-        RTDyld.reassignSectionAddress(Section.getSectionID(),
-                                      Section.getAddress());
+        MapSection(Section, Section.getAddress());
       } else {
         NextAvailableAddress =
             alignTo(NextAvailableAddress, Section.getAlignment());
@@ -4178,8 +4090,7 @@ void RewriteInstance::mapAllocatableSections(RuntimeDyld &RTDyld) {
                  << '\n';
         });
 
-        RTDyld.reassignSectionAddress(Section.getSectionID(),
-                                      NextAvailableAddress);
+        MapSection(Section, NextAvailableAddress);
         Section.setOutputAddress(NextAvailableAddress);
         Section.setOutputFileOffset(
             getFileOffsetForAddress(NextAvailableAddress));
@@ -5992,9 +5903,9 @@ void RewriteInstance::writeEHFrameHeader() {
 }
 
 uint64_t RewriteInstance::getNewValueForSymbol(const StringRef Name) {
-  uint64_t Value = RTDyld->getSymbol(Name).getAddress();
-  if (Value != 0)
-    return Value;
+  auto Value = Linker->lookupSymbol(Name);
+  if (Value)
+    return *Value;
 
   // Return the original value if we haven't emitted the symbol.
   BinaryData *BD = BC->getBinaryDataByName(Name);

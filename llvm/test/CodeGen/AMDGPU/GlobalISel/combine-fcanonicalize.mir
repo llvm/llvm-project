@@ -328,3 +328,43 @@ body: |
     %11:_(<2 x s16>) = G_FMINNUM_IEEE %qnan_undef_fcan, %14
     $vgpr0 = COPY %11(<2 x s16>)
 ...
+
+---
+name: test_fcanonicalize_log
+tracksRegLiveness: true
+legalized: true
+body: |
+  bb.0:
+    liveins: $vgpr0
+
+    ; CHECK-LABEL: name: test_fcanonicalize_log
+    ; CHECK: liveins: $vgpr0
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr0
+    ; CHECK-NEXT: [[INT:%[0-9]+]]:_(s32) = G_INTRINSIC intrinsic(@llvm.amdgcn.log), [[COPY]](s32)
+    ; CHECK-NEXT: $vgpr0 = COPY [[INT]](s32)
+    %0:_(s32) = COPY $vgpr0
+    %1:_(s32) = G_INTRINSIC intrinsic(@llvm.amdgcn.log), %0
+    %2:_(s32) = G_FCANONICALIZE %1
+    $vgpr0 = COPY %2(s32)
+...
+
+---
+name: test_fcanonicalize_exp2
+tracksRegLiveness: true
+legalized: true
+body: |
+  bb.0:
+    liveins: $vgpr0
+
+    ; CHECK-LABEL: name: test_fcanonicalize_exp2
+    ; CHECK: liveins: $vgpr0
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr0
+    ; CHECK-NEXT: [[INT:%[0-9]+]]:_(s32) = G_INTRINSIC intrinsic(@llvm.amdgcn.exp2), [[COPY]](s32)
+    ; CHECK-NEXT: $vgpr0 = COPY [[INT]](s32)
+    %0:_(s32) = COPY $vgpr0
+    %1:_(s32) = G_INTRINSIC intrinsic(@llvm.amdgcn.exp2), %0
+    %2:_(s32) = G_FCANONICALIZE %1
+    $vgpr0 = COPY %2(s32)
+...

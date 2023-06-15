@@ -1831,6 +1831,37 @@ static bool foldICmpWithDominatingICmp(CmpInst *Cmp,
   return true;
 }
 
+/// Many architectures use the same instruction for both subtract and cmp. Try
+/// to swap cmp operands to match subtract operations to allow for CSE.
+static bool swapICmpOperandsToExposeCSEOpportunities(CmpInst *Cmp) {
+  Value *Op0 = Cmp->getOperand(0);
+  Value *Op1 = Cmp->getOperand(1);
+  if (!Op0->getType()->isIntegerTy() || isa<Constant>(Op0) ||
+      isa<Constant>(Op1))
+    return false;
+
+  // If a subtract already has the same operands as a compare, swapping would be
+  // bad. If a subtract has the same operands as a compare but in reverse order,
+  // then swapping is good.
+  int GoodToSwap = 0;
+  unsigned NumInspected = 0;
+  for (const User *U : Op0->users()) {
+    // Avoid walking many users.
+    if (++NumInspected > 128)
+      return false;
+    if (match(U, m_Sub(m_Specific(Op1), m_Specific(Op0))))
+      GoodToSwap++;
+    else if (match(U, m_Sub(m_Specific(Op0), m_Specific(Op1))))
+      GoodToSwap--;
+  }
+
+  if (GoodToSwap > 0) {
+    Cmp->swapOperands();
+    return true;
+  }
+  return false;
+}
+
 bool CodeGenPrepare::optimizeCmp(CmpInst *Cmp, ModifyDT &ModifiedDT) {
   if (sinkCmpExpression(Cmp, *TLI))
     return true;
@@ -1842,6 +1873,9 @@ bool CodeGenPrepare::optimizeCmp(CmpInst *Cmp, ModifyDT &ModifiedDT) {
     return true;
 
   if (foldICmpWithDominatingICmp(Cmp, *TLI))
+    return true;
+
+  if (swapICmpOperandsToExposeCSEOpportunities(Cmp))
     return true;
 
   return false;

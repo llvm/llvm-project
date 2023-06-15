@@ -316,6 +316,8 @@ bool isOpTriviallyDead(Operation *op);
 /// Return true if the given operation would be dead if unused, and has no side
 /// effects on memory that would prevent erasing. This is equivalent to checking
 /// `isOpTriviallyDead` if `op` was unused.
+///
+/// Note: Terminators and symbols are never considered to be trivially dead.
 bool wouldOpBeTriviallyDead(Operation *op);
 
 /// Returns true if the given operation is free of memory effects.

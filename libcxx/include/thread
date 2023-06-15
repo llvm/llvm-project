@@ -135,13 +135,13 @@ _LIBCPP_PUSH_MACROS
 _LIBCPP_BEGIN_NAMESPACE_STD
 
 template <class _Tp> class __thread_specific_ptr;
-class _LIBCPP_TYPE_VIS __thread_struct;
+class _LIBCPP_EXPORTED_FROM_ABI __thread_struct;
 class _LIBCPP_HIDDEN __thread_struct_imp;
 class __assoc_sub_state;
 
-_LIBCPP_FUNC_VIS __thread_specific_ptr<__thread_struct>& __thread_local_data();
+_LIBCPP_EXPORTED_FROM_ABI __thread_specific_ptr<__thread_struct>& __thread_local_data();
 
-class _LIBCPP_TYPE_VIS __thread_struct
+class _LIBCPP_EXPORTED_FROM_ABI __thread_struct
 {
     __thread_struct_imp* __p_;
 
@@ -164,7 +164,7 @@ class __thread_specific_ptr
      // and only with _Tp == __thread_struct.
     static_assert((is_same<_Tp, __thread_struct>::value), "");
     __thread_specific_ptr();
-    friend _LIBCPP_FUNC_VIS __thread_specific_ptr<__thread_struct>& __thread_local_data();
+    friend _LIBCPP_EXPORTED_FROM_ABI __thread_specific_ptr<__thread_struct>& __thread_local_data();
 
     __thread_specific_ptr(const __thread_specific_ptr&);
     __thread_specific_ptr& operator=(const __thread_specific_ptr&);
@@ -276,7 +276,7 @@ struct _LIBCPP_TEMPLATE_VIS formatter<__thread_id, _CharT> {
 };
 #endif // _LIBCPP_STD_VER >= 23
 
-class _LIBCPP_TYPE_VIS thread
+class _LIBCPP_EXPORTED_FROM_ABI thread
 {
     __libcpp_thread_t __t_;
 
@@ -413,7 +413,7 @@ void swap(thread& __x, thread& __y) _NOEXCEPT {__x.swap(__y);}
 namespace this_thread
 {
 
-_LIBCPP_FUNC_VIS void sleep_for(const chrono::nanoseconds& __ns);
+_LIBCPP_EXPORTED_FROM_ABI void sleep_for(const chrono::nanoseconds& __ns);
 
 template <class _Rep, class _Period>
 _LIBCPP_HIDE_FROM_ABI void

@@ -690,6 +690,8 @@ include "AArch64SystemOperands.td"
 foreach i = 1-3 in
 def FeatureUseEL#i#ForTP : SubtargetFeature<"tpidr-el"#i, "UseEL"#i#"ForTP",
   "true", "Permit use of TPIDR_EL"#i#" for the TLS base">;
+def FeatureUseROEL0ForTP : SubtargetFeature<"tpidrro-el0", "UseROEL0ForTP",
+  "true", "Permit use of TPIDRRO_EL0 for the TLS base">;
 
 //===----------------------------------------------------------------------===//
 // Control codegen mitigation against Straight Line Speculation vulnerability.

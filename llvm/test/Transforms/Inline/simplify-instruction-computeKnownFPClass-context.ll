@@ -60,9 +60,9 @@ define internal i1 @simplify_fcmp_ord_frem_callee(double %a, double %b) {
   ret i1 %cmp
 }
 
-define i1 @simplify_fcmp_ord_fmul_caller(double nofpclass(zero nan) %i0, double nofpclass(zero nan) %i1) {
+define i1 @simplify_fcmp_ord_fmul_caller(double nofpclass(zero nan inf) %i0, double nofpclass(zero nan inf) %i1) {
 ; CHECK-LABEL: define i1 @simplify_fcmp_ord_fmul_caller
-; CHECK-SAME: (double nofpclass(nan zero) [[I0:%.*]], double nofpclass(nan zero) [[I1:%.*]]) {
+; CHECK-SAME: (double nofpclass(nan inf zero) [[I0:%.*]], double nofpclass(nan inf zero) [[I1:%.*]]) {
 ; CHECK-NEXT:    [[SUB_DOUBLE_SUB_I:%.*]] = fmul double [[I0]], [[I1]]
 ; CHECK-NEXT:    ret i1 true
 ;

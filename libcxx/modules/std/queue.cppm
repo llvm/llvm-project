@@ -16,15 +16,12 @@ export namespace std {
   using std::queue;
 
   using std::operator==;
-#if 0 // P1614
-  using std::operator<=>;
-#else
   using std::operator!=;
   using std::operator<;
   using std::operator>;
   using std::operator<=;
   using std::operator>=;
-#endif
+  using std::operator<=>;
 
   using std::swap;
   using std::uses_allocator;

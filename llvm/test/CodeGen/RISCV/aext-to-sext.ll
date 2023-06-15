@@ -11,7 +11,7 @@
 define void @quux(i32 signext %arg, i32 signext %arg1) nounwind {
 ; RV64I-LABEL: quux:
 ; RV64I:       # %bb.0: # %bb
-; RV64I-NEXT:    beq a0, a1, .LBB0_4
+; RV64I-NEXT:    beq a1, a0, .LBB0_4
 ; RV64I-NEXT:  # %bb.1: # %bb2.preheader
 ; RV64I-NEXT:    addi sp, sp, -16
 ; RV64I-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill

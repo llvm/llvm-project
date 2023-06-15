@@ -2879,10 +2879,9 @@ void ASTWriter::WriteSubmodules(Module *WritingModule) {
 
     // Emit the top headers.
     {
-      auto TopHeaders = Mod->getTopHeaders(PP->getFileManager());
       RecordData::value_type Record[] = {SUBMODULE_TOPHEADER};
-      for (auto *H : TopHeaders) {
-        SmallString<128> HeaderName(H->getName());
+      for (FileEntryRef H : Mod->getTopHeaders(PP->getFileManager())) {
+        SmallString<128> HeaderName(H.getName());
         PreparePathForOutput(HeaderName);
         Stream.EmitRecordWithBlob(TopHeaderAbbrev, Record, HeaderName);
       }

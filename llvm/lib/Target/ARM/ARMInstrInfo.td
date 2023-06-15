@@ -5903,8 +5903,12 @@ let isCall = 1,
 }
 
 // Reading thread pointer from coprocessor register
+def : ARMPat<(ARMthread_pointer), (MRC 15, 0, 13, 0, 2)>,
+      Requires<[IsARM, IsReadTPTPIDRURW]>;
 def : ARMPat<(ARMthread_pointer), (MRC 15, 0, 13, 0, 3)>,
-      Requires<[IsARM, IsReadTPHard]>;
+      Requires<[IsARM, IsReadTPTPIDRURO]>;
+def : ARMPat<(ARMthread_pointer), (MRC 15, 0, 13, 0, 4)>,
+      Requires<[IsARM, IsReadTPTPIDRPRW]>;
 
 //===----------------------------------------------------------------------===//
 // SJLJ Exception handling intrinsics
