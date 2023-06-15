@@ -18,6 +18,7 @@
 namespace mlir {
 class Value;
 class Operation;
+class Location;
 } // namespace mlir
 
 namespace fir {
@@ -41,6 +42,10 @@ namespace pft {
 struct Evaluation;
 struct Variable;
 } // namespace pft
+
+// Generate the OpenMP terminator for Operation at Location.
+void genOpenMPTerminator(fir::FirOpBuilder &, mlir::Operation *,
+                         mlir::Location);
 
 void genOpenMPConstruct(AbstractConverter &, pft::Evaluation &,
                         const parser::OpenMPConstruct &);
