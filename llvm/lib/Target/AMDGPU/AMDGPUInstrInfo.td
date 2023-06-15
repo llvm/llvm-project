@@ -118,6 +118,9 @@ def AMDGPUrcp_impl : SDNode<"AMDGPUISD::RCP", SDTFPUnaryOp>;
 // v_log_f32, which is log2
 def AMDGPUlog_impl : SDNode<"AMDGPUISD::LOG", SDTFPUnaryOp>;
 
+// v_exp_f32, which is exp2
+def AMDGPUexp_impl : SDNode<"AMDGPUISD::EXP", SDTFPUnaryOp>;
+
 // out = 1.0 / sqrt(a)
 def AMDGPUrsq_impl : SDNode<"AMDGPUISD::RSQ", SDTFPUnaryOp>;
 
@@ -394,6 +397,11 @@ def AMDGPUlog : PatFrags<(ops node:$src), [(int_amdgcn_log node:$src),
 def AMDGPUlogf16 : PatFrags<(ops node:$src), [(int_amdgcn_log node:$src),
                                               (flog2 node:$src)]>;
 
+def AMDGPUexp : PatFrags<(ops node:$src), [(int_amdgcn_exp2 node:$src),
+                                           (AMDGPUexp_impl node:$src),
+                                           (fexp2 node:$src)]>; // FIXME: Remove me
+def AMDGPUexpf16 : PatFrags<(ops node:$src), [(int_amdgcn_exp2 node:$src),
+                                              (fexp2 node:$src)]>;
 
 def AMDGPUfp_class : PatFrags<(ops node:$src0, node:$src1),
   [(int_amdgcn_class node:$src0, node:$src1),
