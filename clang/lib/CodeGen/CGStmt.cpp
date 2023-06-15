@@ -114,8 +114,9 @@ CodeGenFunction::EmitBigJumpLoopStartingIndex(const ForStmt &FStmt) {
   if (CGM.isXteamRedKernel(&FStmt)) {
     // Cache the thread specific initial loop iteration value and the number of
     // teams
+    llvm::Value *NumTeams = RT.getGPUNumBlocks(*this);
     CGM.updateXteamRedKernel(&FStmt, Builder.CreateIntCast(Iv, Int64Ty, false),
-                             RT.getGPUNumBlocks(*this));
+                             NumTeams);
   }
   // Set the initial value of the loop iteration
   Builder.CreateStore(Iv, IvAddr);
