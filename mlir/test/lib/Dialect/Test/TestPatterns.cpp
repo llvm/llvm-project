@@ -200,7 +200,7 @@ struct HoistEligibleOps : public OpRewritePattern<test::OneRegionOp> {
 };
 
 struct TestPatternDriver
-    : public PassWrapper<TestPatternDriver, OperationPass<func::FuncOp>> {
+    : public PassWrapper<TestPatternDriver, OperationPass<ModuleOp>> {
   MLIR_DEFINE_EXPLICIT_INTERNAL_INLINE_TYPE_ID(TestPatternDriver)
 
   TestPatternDriver() = default;
@@ -1233,8 +1233,7 @@ struct RewriteDynamicOp : public RewritePattern {
 };
 
 struct TestRewriteDynamicOpDriver
-    : public PassWrapper<TestRewriteDynamicOpDriver,
-                         OperationPass<func::FuncOp>> {
+    : public PassWrapper<TestRewriteDynamicOpDriver, OperationPass<>> {
   MLIR_DEFINE_EXPLICIT_INTERNAL_INLINE_TYPE_ID(TestRewriteDynamicOpDriver)
 
   void getDependentDialects(DialectRegistry &registry) const override {
