@@ -63,6 +63,11 @@ public:
   /// Classifies an expression.
   std::optional<PrimType> classify(QualType T) const;
 
+  const CXXMethodDecl *
+  getOverridingFunction(const CXXRecordDecl *DynamicDecl,
+                        const CXXRecordDecl *StaticDecl,
+                        const CXXMethodDecl *InitialFunction) const;
+
 private:
   /// Runs a function.
   bool Run(State &Parent, Function *Func, APValue &Result);

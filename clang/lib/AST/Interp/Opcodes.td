@@ -181,6 +181,11 @@ def Call : Opcode {
   let Types = [];
 }
 
+def CallVirt : Opcode {
+  let Args = [ArgFunction];
+  let Types = [];
+}
+
 def CallBI : Opcode {
   let Args = [ArgFunction];
   let Types = [];
