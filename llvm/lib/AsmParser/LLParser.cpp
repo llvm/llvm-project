@@ -794,29 +794,31 @@ bool LLParser::parseNamedMetadata() {
     return true;
 
   NamedMDNode *NMD = M->getOrInsertNamedMetadata(Name);
-
-  if (Lex.getKind() == lltok::rbrace) {
-    Lex.Lex();
-    return false;
-  }
-
-  do {
-    MDNode *N = nullptr;
-    // Parse uniqued MDNodes inline as a special case.
-#define HANDLE_MDNODE_LEAF_UNIQUED(CLASS)                                      \
-  if (Lex.getKind() == lltok::MetadataVar && Lex.getStrVal() == #CLASS) {      \
-    if (parse##CLASS(N, /*IsDistinct=*/false))                                 \
-      return true;                                                             \
-    NMD->addOperand(N);                                                        \
-    continue;                                                                  \
-  }
-#include "llvm/IR/Metadata.def"
-    // Parse all other MDNodes as an MDNodeID.
-    if (parseToken(lltok::exclaim, "Expected '!' here") || parseMDNodeID(N)) {
-      return true;
-    }
-    NMD->addOperand(N);
-  } while (EatIfPresent(lltok::comma));
+  if (Lex.getKind() != lltok::rbrace)
+    do {
+      MDNode *N = nullptr;
+      // parse DIExpressions inline as a special case. They are still MDNodes,
+      // so they can still appear in named metadata. Remove this logic if they
+      // become plain Metadata.
+      if (Lex.getKind() == lltok::MetadataVar &&
+          Lex.getStrVal() == "DIExpression") {
+        if (parseDIExpression(N, /*IsDistinct=*/false))
+          return true;
+      } else if (Lex.getKind() == lltok::MetadataVar &&
+                 Lex.getStrVal() == "DIExpr") {
+        if (parseDIExpr(N, /*IsDistinct=*/false))
+          return true;
+        // DIArgLists should only appear inline in a function, as they may
+        // contain LocalAsMetadata arguments which require a function context.
+      } else if (Lex.getKind() == lltok::MetadataVar &&
+                 Lex.getStrVal() == "DIArgList") {
+        return tokError("found DIArgList outside of function");
+      } else if (parseToken(lltok::exclaim, "Expected '!' here") ||
+                 parseMDNodeID(N)) {
+        return true;
+      }
+      NMD->addOperand(N);
+    } while (EatIfPresent(lltok::comma));
 
   return parseToken(lltok::rbrace, "expected end of metadata node");
 }
@@ -836,10 +838,9 @@ bool LLParser::parseStandaloneMetadata() {
   if (Lex.getKind() == lltok::Type)
     return tokError("unexpected type in metadata definition");
 
-  auto DistinctLoc = Lex.getLoc();
   bool IsDistinct = EatIfPresent(lltok::kw_distinct);
   if (Lex.getKind() == lltok::MetadataVar) {
-    if (parseSpecializedMDNode(Init, IsDistinct, DistinctLoc))
+    if (parseSpecializedMDNode(Init, IsDistinct))
       return true;
   } else if (parseToken(lltok::exclaim, "Expected '!' here") ||
              parseMDTuple(Init, IsDistinct))
@@ -4858,25 +4859,12 @@ bool LLParser::parseMDField(StringRef Name, FieldTy &Result) {
   return parseMDField(Loc, Name, Result);
 }
 
-bool LLParser::parseSpecializedMDNode(MDNode *&N, bool IsDistinct,
-                                      LocTy DistinctLoc) {
+bool LLParser::parseSpecializedMDNode(MDNode *&N, bool IsDistinct) {
   assert(Lex.getKind() == lltok::MetadataVar && "Expected metadata type name");
 
-#define HANDLE_SPECIALIZED_MDNODE_LEAF_UNIQUABLE(CLASS)                        \
+#define HANDLE_SPECIALIZED_MDNODE_LEAF(CLASS)                                  \
   if (Lex.getStrVal() == #CLASS)                                               \
     return parse##CLASS(N, IsDistinct);
-#define HANDLE_SPECIALIZED_MDNODE_LEAF_UNIQUED(CLASS)                          \
-  if (Lex.getStrVal() == #CLASS) {                                             \
-    if (IsDistinct)                                                            \
-      return error(DistinctLoc, "'distinct' not allowed for !" #CLASS);        \
-    return parse##CLASS(N, IsDistinct);                                        \
-  }
-#define HANDLE_SPECIALIZED_MDNODE_LEAF_DISTINCT(CLASS)                         \
-  if (Lex.getStrVal() == #CLASS) {                                             \
-    if (!IsDistinct)                                                           \
-      return error(DistinctLoc, "missing 'distinct', required for !" #CLASS);  \
-    return parse##CLASS(N, IsDistinct);                                        \
-  }
 #include "llvm/IR/Metadata.def"
 
   return tokError("expected metadata type");
@@ -5243,6 +5231,9 @@ bool LLParser::parseDIFile(MDNode *&Result, bool IsDistinct) {
 ///                      globals: !4, imports: !5, macros: !6, dwoId: 0x0abcd,
 ///                      sysroot: "/", sdk: "MacOSX.sdk")
 bool LLParser::parseDICompileUnit(MDNode *&Result, bool IsDistinct) {
+  if (!IsDistinct)
+    return Lex.Error("missing 'distinct', required for !DICompileUnit");
+
 #define VISIT_MD_FIELDS(OPTIONAL, REQUIRED)                                    \
   REQUIRED(language, DwarfLangField, );                                        \
   REQUIRED(file, MDField, (/* AllowNull */ false));                            \
@@ -5569,7 +5560,6 @@ bool LLParser::parseDILabel(MDNode *&Result, bool IsDistinct) {
 /// parseDIExpression:
 ///   ::= !DIExpression(0, 7, -1)
 bool LLParser::parseDIExpression(MDNode *&Result, bool IsDistinct) {
-  assert(!IsDistinct && "DIExpression must not be distinct");
   assert(Lex.getKind() == lltok::MetadataVar && "Expected metadata type name");
   Lex.Lex();
 
@@ -5611,7 +5601,7 @@ bool LLParser::parseDIExpression(MDNode *&Result, bool IsDistinct) {
   if (parseToken(lltok::rparen, "expected ')' here"))
     return true;
 
-  Result = DIExpression::get(Context, Elements);
+  Result = GET_OR_DISTINCT(DIExpression, (Context, Elements));
   return false;
 }
 
@@ -5622,7 +5612,6 @@ bool LLParser::parseDIArgList(MDNode *&Result, bool IsDistinct) {
 ///   ::= !DIArgList(i32 7, i64 %0)
 bool LLParser::parseDIArgList(MDNode *&Result, bool IsDistinct,
                               PerFunctionState *PFS) {
-  assert(!IsDistinct && "DIArgList must not be distinct");
   assert(PFS && "Expected valid function state");
   assert(Lex.getKind() == lltok::MetadataVar && "Expected metadata type name");
   Lex.Lex();
@@ -5647,6 +5636,9 @@ bool LLParser::parseDIArgList(MDNode *&Result, bool IsDistinct,
 }
 
 bool LLParser::parseDIExpr(MDNode *&Result, bool IsDistinct) {
+  if (IsDistinct)
+    return Lex.Error("'distinct' not allowed for !DIExpr");
+
   assert(Lex.getKind() == lltok::MetadataVar && "Expected metadata type name");
   Lex.Lex();
 
@@ -5765,6 +5757,8 @@ bool LLParser::parseDIExpr(MDNode *&Result, bool IsDistinct) {
 }
 
 bool LLParser::parseDIFragment(MDNode *&Result, bool IsDistinct) {
+  if (!IsDistinct)
+    return Lex.Error("missing 'distinct', required for !DIFragment");
 #define VISIT_MD_FIELDS(OPTIONAL, REQUIRED)
   PARSE_MD_FIELDS();
 #undef VISIT_MD_FIELDS
@@ -5832,6 +5826,8 @@ bool LLParser::parseDIImportedEntity(MDNode *&Result, bool IsDistinct) {
 /// parseDILifetime:
 ///   ::= !DILifetime(object: !0, location: !1, argObjects: {...})
 bool LLParser::parseDILifetime(MDNode *&Result, bool IsDistinct) {
+  if (!IsDistinct)
+    return Lex.Error("missing 'distinct', required for !DILifetime");
 #define VISIT_MD_FIELDS(OPTIONAL, REQUIRED)                                    \
   REQUIRED(object, MDField, );                                                 \
   REQUIRED(location, MDField, );                                               \

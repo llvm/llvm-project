@@ -1254,11 +1254,10 @@ void SlotTracker::CreateFunctionSlot(const Value *V) {
 void SlotTracker::CreateMetadataSlot(const MDNode *N) {
   assert(N && "Can't insert a null Value into SlotTracker!");
 
-  // Don't make slots for uniqued nodes. We just print them inline everywhere.
-#define HANDLE_MDNODE_LEAF_UNIQUED(CLASS)                                      \
-  if (isa<CLASS>(N))                                                           \
+  // Don't make slots for DIExpressions or DIArgLists. We just print them inline
+  // everywhere.
+  if (isa<DIExpression>(N) || isa<DIExpr>(N) || isa<DIArgList>(N))
     return;
-#include "llvm/IR/Metadata.def"
 
   unsigned DestSlot = mdnNext;
   if (!mdnMap.insert(std::make_pair(N, DestSlot)).second)
@@ -2370,7 +2369,10 @@ static void writeDIExpression(raw_ostream &Out, const DIExpression *N,
 }
 
 static void writeDIArgList(raw_ostream &Out, const DIArgList *N,
-                           AsmWriterContext &WriterCtx) {
+                           AsmWriterContext &WriterCtx,
+                           bool FromValue = false) {
+  assert(FromValue &&
+         "Unexpected DIArgList metadata outside of value argument");
   Out << "!DIArgList(";
   FieldSeparator FS;
   MDFieldPrinter Printer(Out, WriterCtx);
@@ -2589,16 +2591,20 @@ static void WriteAsOperandInternal(raw_ostream &Out, const Value *V,
 static void WriteAsOperandInternal(raw_ostream &Out, const Metadata *MD,
                                    AsmWriterContext &WriterCtx,
                                    bool FromValue) {
-  assert((FromValue || !(isa<LocalAsMetadata>(MD) || isa<DIArgList>(MD))) &&
-         "Unexpected function-local metadata outside of value argument");
-
-  // Write uniqued MDNodes inline when used as a value.
-#define HANDLE_MDNODE_LEAF_UNIQUED(CLASS)                                      \
-  if (const CLASS *N = dyn_cast<CLASS>(MD)) {                                  \
-    write##CLASS(Out, N, WriterCtx);                                           \
-    return;                                                                    \
+  // Write DIExpressions and DIArgLists inline when used as a value. Improves
+  // readability of debug info intrinsics.
+  if (const DIExpression *Expr = dyn_cast<DIExpression>(MD)) {
+    writeDIExpression(Out, Expr, WriterCtx);
+    return;
   }
-#include "llvm/IR/Metadata.def"
+  if (const DIExpr *Expr = dyn_cast<DIExpr>(MD)) {
+    writeDIExpr(Out, Expr, WriterCtx);
+    return;
+  }
+  if (const DIArgList *ArgList = dyn_cast<DIArgList>(MD)) {
+    writeDIArgList(Out, ArgList, WriterCtx, FromValue);
+    return;
+  }
 
   if (const MDNode *N = dyn_cast<MDNode>(MD)) {
     std::unique_ptr<SlotTracker> MachineStorage;
@@ -2630,6 +2636,9 @@ static void WriteAsOperandInternal(raw_ostream &Out, const Metadata *MD,
 
   auto *V = cast<ValueAsMetadata>(MD);
   assert(WriterCtx.TypePrinter && "TypePrinter required for metadata values");
+  assert((FromValue || !isa<LocalAsMetadata>(V)) &&
+         "Unexpected function-local metadata outside of value argument");
+
   WriterCtx.TypePrinter->print(V->getValue()->getType(), Out);
   Out << ' ';
   WriteAsOperandInternal(Out, V->getValue(), WriterCtx);
@@ -3591,17 +3600,19 @@ void AssemblyWriter::printNamedMDNode(const NamedMDNode *NMD) {
     if (i)
       Out << ", ";
 
-    // Write UNIQUED nodes inline.
+    // Write DIExpressions inline.
     // FIXME: Ban DIExpressions in NamedMDNodes, they will serve no purpose.
     MDNode *Op = NMD->getOperand(i);
     assert(!isa<DIArgList>(Op) &&
            "DIArgLists should not appear in NamedMDNodes");
-#define HANDLE_MDNODE_LEAF_UNIQUED(CLASS)                                      \
-  if (auto *N = dyn_cast<CLASS>(Op)) {                                         \
-    write##CLASS(Out, N, WriterCtx);                                           \
-    continue;                                                                  \
-  }
-#include "llvm/IR/Metadata.def"
+    if (auto *Expr = dyn_cast<DIExpression>(Op)) {
+      writeDIExpression(Out, Expr, AsmWriterContext::getEmpty());
+      continue;
+    }
+    if (auto *Expr = dyn_cast<DIExpr>(Op)) {
+      writeDIExpr(Out, Expr, WriterCtx);
+      continue;
+    }
 
     int Slot = Machine.getMetadataSlot(Op);
     if (Slot == -1)
@@ -4901,7 +4912,7 @@ static void printMetadataImplRec(raw_ostream &ROS, const Metadata &MD,
   WriteAsOperandInternal(OS, &MD, WriterCtx, /* FromValue */ true);
 
   auto *N = dyn_cast<MDNode>(&MD);
-  if (!N || isa<DIExpression>(MD) || isa<DIArgList>(MD))
+  if (!N || isa<DIExpression>(MD) || isa<DIExpr>(MD) || isa<DIArgList>(MD))
     return;
 
   OS << " = ";
@@ -4969,15 +4980,9 @@ static void printMetadataImpl(raw_ostream &ROS, const Metadata &MD,
   WriteAsOperandInternal(OS, &MD, *WriterCtx, /* FromValue */ true);
 
   auto *N = dyn_cast<MDNode>(&MD);
-  if (OnlyAsOperand || !N) {
+  if (OnlyAsOperand || !N || isa<DIExpression>(MD) || isa<DIExpr>(MD) ||
+      isa<DIArgList>(MD))
     return;
-  }
-  // Uniqued MDNodes are always treated as if OnlyAsOperand, as they are
-  // printed inline.
-#define HANDLE_MDNODE_LEAF_UNIQUED(CLASS)                                      \
-  if (isa<CLASS>(MD))                                                          \
-    return;
-#include "llvm/IR/Metadata.def"
 
   OS << " = ";
   WriteMDNodeBodyInternal(OS, N, *WriterCtx);
