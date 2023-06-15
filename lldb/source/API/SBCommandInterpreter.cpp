@@ -155,11 +155,12 @@ bool SBCommandInterpreter::InterruptCommand() {
 const char *SBCommandInterpreter::GetIOHandlerControlSequence(char ch) {
   LLDB_INSTRUMENT_VA(this, ch);
 
-  return (IsValid()
-              ? m_opaque_ptr->GetDebugger()
-                    .GetTopIOHandlerControlSequence(ch)
-                    .GetCString()
-              : nullptr);
+  if (!IsValid())
+    return nullptr;
+
+  return ConstString(
+             m_opaque_ptr->GetDebugger().GetTopIOHandlerControlSequence(ch))
+      .GetCString();
 }
 
 lldb::ReturnStatus

@@ -619,17 +619,8 @@ static void AttemptToFoldSymbolOffsetDifference(
 
   const MCFragment *FA = SA.getFragment();
   const MCFragment *FB = SB.getFragment();
-  // If both symbols are in the same fragment, return the difference of their
-  // offsets
-  if (FA == FB && !SA.isVariable() && !SA.isUnset() && !SB.isVariable() &&
-      !SB.isUnset()) {
-    Addend += SA.getOffset() - SB.getOffset();
-    return FinalizeFolding();
-  }
-
   const MCSection &SecA = *FA->getParent();
   const MCSection &SecB = *FB->getParent();
-
   if ((&SecA != &SecB) && !Addrs)
     return;
 
@@ -654,11 +645,12 @@ static void AttemptToFoldSymbolOffsetDifference(
     // this is important when the Subtarget is changed and a new MCDataFragment
     // is created in the case of foo: instr; .arch_extension ext; instr .if . -
     // foo.
-    if (SA.isVariable() || SA.isUnset() || SB.isVariable() || SB.isUnset() ||
-        FA->getKind() != MCFragment::FT_Data ||
-        FB->getKind() != MCFragment::FT_Data ||
+    if (FA != FB && (!isa<MCDataFragment>(FA) || !isa<MCDataFragment>(FA)))
+      return;
+    if (SA.isVariable() || SB.isVariable() ||
         FA->getSubsectionNumber() != FB->getSubsectionNumber())
       return;
+
     // Try to find a constant displacement from FA to FB, add the displacement
     // between the offset in FA of SA and the offset in FB of SB.
     int64_t Displacement = SA.getOffset() - SB.getOffset();

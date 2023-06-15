@@ -578,6 +578,23 @@ entry:
   ret <vscale x 1 x double> %2
 }
 
+; This used to fail the machine verifier due to the vsetvli being removed
+; while the add was still using it.
+define i64 @bad_removal(<2 x i64> %arg) {
+; CHECK-LABEL: bad_removal:
+; CHECK:       # %bb.0: # %bb
+; CHECK-NEXT:    vsetivli zero, 16, e64, m1, ta, ma
+; CHECK-NEXT:    vmv.x.s a0, v8
+; CHECK-NEXT:    vsetivli a1, 16, e64, m1, ta, ma
+; CHECK-NEXT:    add a0, a0, a1
+; CHECK-NEXT:    ret
+bb:
+  %tmp = extractelement <2 x i64> %arg, i64 0
+  %tmp1 = call i64 @llvm.riscv.vsetvli.i64(i64 16, i64 3, i64 0)
+  %tmp2 = add i64 %tmp, %tmp1
+  ret i64 %tmp2
+}
+
 declare <vscale x 1 x i64> @llvm.riscv.vadd.mask.nxv1i64.nxv1i64(
   <vscale x 1 x i64>,
   <vscale x 1 x i64>,
