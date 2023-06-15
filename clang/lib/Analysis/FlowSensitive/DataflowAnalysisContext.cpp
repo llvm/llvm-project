@@ -15,6 +15,7 @@
 #include "clang/Analysis/FlowSensitive/DataflowAnalysisContext.h"
 #include "clang/AST/ExprCXX.h"
 #include "clang/Analysis/FlowSensitive/DebugSupport.h"
+#include "clang/Analysis/FlowSensitive/Formula.h"
 #include "clang/Analysis/FlowSensitive/Logger.h"
 #include "clang/Analysis/FlowSensitive/Value.h"
 #include "llvm/ADT/SetOperations.h"
@@ -23,9 +24,12 @@
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/Path.h"
+#include "llvm/Support/raw_ostream.h"
 #include <cassert>
 #include <memory>
+#include <string>
 #include <utility>
+#include <vector>
 
 static llvm::cl::opt<std::string> DataflowLog(
     "dataflow-log", llvm::cl::Hidden, llvm::cl::ValueOptional,
@@ -129,7 +133,10 @@ Solver::Result
 DataflowAnalysisContext::querySolver(llvm::SetVector<BoolValue *> Constraints) {
   Constraints.insert(&arena().makeLiteral(true));
   Constraints.insert(&arena().makeNot(arena().makeLiteral(false)));
-  return S->solve(Constraints.getArrayRef());
+  std::vector<const Formula *> Formulas;
+  for (const BoolValue *Constraint : Constraints)
+    Formulas.push_back(&arena().getFormula(*Constraint));
+  return S->solve(Formulas);
 }
 
 bool DataflowAnalysisContext::flowConditionImplies(AtomicBoolValue &Token,
@@ -191,15 +198,21 @@ void DataflowAnalysisContext::addTransitiveFlowConditionConstraints(
 
 void DataflowAnalysisContext::dumpFlowCondition(AtomicBoolValue &Token,
                                                 llvm::raw_ostream &OS) {
+  // TODO: accumulate formulas directly instead
   llvm::SetVector<BoolValue *> Constraints;
   Constraints.insert(&Token);
   llvm::DenseSet<AtomicBoolValue *> VisitedTokens;
   addTransitiveFlowConditionConstraints(Token, Constraints, VisitedTokens);
 
-  llvm::DenseMap<const AtomicBoolValue *, std::string> AtomNames = {
-      {&arena().makeLiteral(false), "False"},
-      {&arena().makeLiteral(true), "True"}};
-  OS << debugString(Constraints.getArrayRef(), AtomNames);
+  // TODO: have formulas know about true/false directly instead
+  Atom True = arena().getFormula(arena().makeLiteral(true)).getAtom();
+  Atom False = arena().getFormula(arena().makeLiteral(false)).getAtom();
+  Formula::AtomNames Names = {{False, "false"}, {True, "true"}};
+
+  for (const auto *Constraint : Constraints) {
+    arena().getFormula(*Constraint).print(OS, &Names);
+    OS << "\n";
+  }
 }
 
 const ControlFlowContext *
