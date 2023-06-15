@@ -48,7 +48,7 @@ CompilerType RegisterTypeBuilderClang::GetRegisterType(
   // See if we have made this type before and can reuse it.
   CompilerType fields_type =
       type_system->GetTypeForIdentifier<clang::CXXRecordDecl>(
-          ConstString(register_type_name.c_str()));
+          register_type_name);
 
   if (!fields_type) {
     // In most ABI, a change of field type means a change in storage unit.
