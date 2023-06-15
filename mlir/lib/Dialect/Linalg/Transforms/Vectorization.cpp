@@ -2750,10 +2750,16 @@ struct Conv1DGenerator
     const Type dstType =
         cast<ShapedType>(val.getType()).cloneWith(std::nullopt, dstElementType);
 
-    if (isa<FloatType>(dstElementType) && srcWidth < dstWidth)
+    if (isa<IntegerType>(srcElementType) && isa<FloatType>(dstElementType)) {
+      return rewriter.create<arith::SIToFPOp>(loc, dstType, val);
+    }
+
+    if (isa<FloatType>(srcElementType) && isa<FloatType>(dstElementType) &&
+        srcWidth < dstWidth)
       return rewriter.create<arith::ExtFOp>(loc, dstType, val);
 
-    if (isa<IntegerType>(dstElementType) && srcWidth < dstWidth)
+    if (isa<IntegerType>(srcElementType) && isa<IntegerType>(dstElementType) &&
+        srcWidth < dstWidth)
       return rewriter.create<arith::ExtSIOp>(loc, dstType, val);
 
     assert(false && "unhandled promotion case");
