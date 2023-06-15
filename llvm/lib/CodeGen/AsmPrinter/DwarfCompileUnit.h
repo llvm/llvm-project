@@ -61,6 +61,11 @@ class DwarfCompileUnit final : public DwarfUnit {
   /// The start of the unit macro info within macro section.
   MCSymbol *MacroLabelBegin;
 
+  using ImportedEntityList = SmallVector<const MDNode *, 8>;
+  using ImportedEntityMap = DenseMap<const MDNode *, ImportedEntityList>;
+
+  ImportedEntityMap ImportedEntities;
+
   /// GlobalNames - A map of globally visible named entities for this unit.
   StringMap<const DIE *> GlobalNames;
 
@@ -74,20 +79,7 @@ class DwarfCompileUnit final : public DwarfUnit {
   // ranges/locs.
   const MCSymbol *BaseAddress = nullptr;
 
-  using MDNodeSetVector =
-      SetVector<const MDNode *, SmallVector<const MDNode *, 4>,
-                SmallPtrSet<const MDNode *, 4>>;
-
-  // List of entities (either static locals, types or imports) that
-  // belong to subprograms within this CU.
-  MDNodeSetVector DeferredLocalDecls;
-
-  // List of concrete lexical block scopes belong to subprograms within this CU.
-  DenseMap<const DILocalScope *, DIE *> LexicalBlockDIEs;
-
-  // List of abstract local scopes (either DISubprogram or DILexicalBlock).
-  DenseMap<const DILocalScope *, DIE *> AbstractLocalScopeDIEs;
-
+  DenseMap<const MDNode *, DIE *> AbstractSPDies;
   DenseMap<const DINode *, std::unique_ptr<DbgEntity>> AbstractEntities;
 
   /// DWO ID for correlating skeleton and split units.
@@ -102,10 +94,10 @@ class DwarfCompileUnit final : public DwarfUnit {
 
   bool isDwoUnit() const override;
 
-  DenseMap<const DILocalScope *, DIE *> &getAbstractScopeDIEs() {
+  DenseMap<const MDNode *, DIE *> &getAbstractSPDies() {
     if (isDwoUnit() && !DD->shareAcrossDWOCUs())
-      return AbstractLocalScopeDIEs;
-    return DU->getAbstractScopeDIEs();
+      return AbstractSPDies;
+    return DU->getAbstractSPDies();
   }
 
   DenseMap<const DINode *, std::unique_ptr<DbgEntity>> &getAbstractEntities() {
@@ -183,6 +175,17 @@ public:
 
   unsigned getOrCreateSourceID(const DIFile *File) override;
 
+  void addImportedEntity(const DIImportedEntity* IE) {
+    DIScope *Scope = IE->getScope();
+    assert(Scope && "Invalid Scope encoding!");
+    if (!isa<DILocalScope>(Scope))
+      // No need to add imported enities that are not local declaration.
+      return;
+
+    auto *LocalScope = cast<DILocalScope>(Scope)->getNonLexicalBlockFileScope();
+    ImportedEntities[LocalScope].push_back(IE);
+  }
+
   /// addRange - Add an address range to the list of ranges for this unit.
   void addRange(RangeSpan Range);
 
@@ -214,11 +217,6 @@ public:
   /// attach DW_AT_low_pc/DW_AT_high_pc labels.
   DIE *constructLexicalScopeDIE(LexicalScope *Scope);
 
-  /// Get a DIE for the given DILexicalBlock.
-  /// Note that this function assumes that the DIE has been already created
-  /// and it's an error, if it hasn't.
-  DIE *getLexicalBlockDIE(const DILexicalBlock *LB);
-
   /// constructVariableDIE - Construct a DIE for the given DbgVariable.
   DIE *constructVariableDIE(DbgVariable &DV, bool Abstract = false);
 
@@ -229,10 +227,6 @@ public:
   DIE *constructLabelDIE(DbgLabel &DL, const LexicalScope &Scope);
 
   void createBaseTypeDIEs();
-
-  /// Construct a DIE for a given scope.
-  /// This instance of 'getOrCreateContextDIE()' can handle DILocalScope.
-  DIE *getOrCreateContextDIE(const DIScope *Ty) override;
 
   /// Construct a DIE for this subprogram scope.
   DIE &constructSubprogramScopeDIE(const DISubprogram *Sub,
@@ -272,9 +266,8 @@ public:
   void constructCallSiteParmEntryDIEs(DIE &CallSiteDIE,
                                       SmallVector<DbgCallSiteParam, 4> &Params);
 
-  /// Get or create a DIE for an imported entity.
-  DIE *getOrCreateImportedEntityDIE(const DIImportedEntity *IE);
-  DIE *constructImportedEntityDIE(const DIImportedEntity *IE);
+  /// Construct import_module DIE.
+  DIE *constructImportedEntityDIE(const DIImportedEntity *Module);
 
   void finishSubprogramDefinition(const DISubprogram *SP);
   void finishEntityDefinition(const DbgEntity *Entity);
@@ -371,8 +364,6 @@ public:
   bool hasDwarfPubSections() const;
 
   void addBaseTypeRef(DIEValueList &Die, int64_t Idx);
-
-  MDNodeSetVector &getDeferredLocalDecls() { return DeferredLocalDecls; }
 };
 
 } // end namespace llvm
