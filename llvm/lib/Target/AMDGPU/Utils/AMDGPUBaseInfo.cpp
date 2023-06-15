@@ -628,6 +628,11 @@ ComponentProps::ComponentProps(const MCInstrDesc &OpDesc) {
   assert(TiedIdx == -1 || TiedIdx == Component::DST);
   HasSrc2Acc = TiedIdx != -1;
 
+  if (OpDesc.TSFlags & SIInstrFlags::VOP3) {
+    SrcOperandsNum = 3;
+    return;
+  }
+
   SrcOperandsNum = OpDesc.getNumOperands() - OpDesc.getNumDefs();
   assert(SrcOperandsNum <= Component::MAX_SRC_NUM);
 

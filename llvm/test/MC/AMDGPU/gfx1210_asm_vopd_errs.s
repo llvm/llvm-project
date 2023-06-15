@@ -207,3 +207,32 @@ v_dual_mov_b64 v[2:3], 100 :: v_dual_ashrrev_i32 v4, v7, v6
 // GFX12: :[[@LINE-1]]:{{[0-9]+}}: error: invalid operand for instruction
 // GFX12-NEXT:{{^}}v_dual_mov_b64 v[2:3], 100 :: v_dual_ashrrev_i32 v4, v7, v6
 // GFX12-NEXT:{{^}}                       ^
+
+//===----------------------------------------------------------------------===//
+// Check that we properly detect bank conflicts if instruction is derived from
+// VOP3.
+//===----------------------------------------------------------------------===//
+v_dual_fma_f32 v1, v4, v2, v3 :: v_dual_fma_f32 v3, v8, v7, v6
+// GFX12: :[[@LINE-1]]:{{[0-9]+}}: error: src0 operands must use different VGPR banks
+// GFX12-NEXT:{{^}}v_dual_fma_f32 v1, v4, v2, v3 :: v_dual_fma_f32 v3, v8, v7, v6
+// GFX12-NEXT:{{^}}                                                    ^
+
+v_dual_fma_f32 v1, v4, v2, v3 :: v_dual_fma_f32 v3, v5, v6, v8
+// GFX12: :[[@LINE-1]]:{{[0-9]+}}: error: src1 operands must use different VGPR banks
+// GFX12-NEXT:{{^}}v_dual_fma_f32 v1, v4, v2, v3 :: v_dual_fma_f32 v3, v5, v6, v8
+// GFX12-NEXT:{{^}}                                                        ^
+
+v_dual_fma_f32 v1, v4, v2, v3 :: v_dual_fma_f32 v3, v5, v8, v7
+// GFX12: :[[@LINE-1]]:{{[0-9]+}}: error: src2 operands must use different VGPR banks
+// GFX12-NEXT:{{^}}v_dual_fma_f32 v1, v4, v2, v3 :: v_dual_fma_f32 v3, v5, v8, v7
+// GFX12-NEXT:{{^}}                                                            ^
+
+v_dual_fma_f32 v1, v4, v2, v3 :: v_dual_fmac_f32 v7, v5, v8
+// GFX12: :[[@LINE-1]]:{{[0-9]+}}: error: src2 operands must use different VGPR banks
+// GFX12-NEXT:{{^}}v_dual_fma_f32 v1, v4, v2, v3 :: v_dual_fmac_f32 v7, v5, v8
+// GFX12-NEXT:{{^}}                           ^
+
+v_dual_fmac_f32 v7, v5, v8 :: v_dual_fma_f32 v1, v4, v2, v3
+// GFX12: :[[@LINE-1]]:{{[0-9]+}}: error: src2 operands must use different VGPR banks
+// GFX12-NEXT:{{^}}v_dual_fmac_f32 v7, v5, v8 :: v_dual_fma_f32 v1, v4, v2, v3
+// GFX12-NEXT:{{^}}                                                         ^

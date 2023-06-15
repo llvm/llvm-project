@@ -2144,13 +2144,15 @@ class getAsm32 <bit HasDst, int NumSrcArgs, ValueType DstVT = i32> {
                !if(!eq(NumSrcArgs, 3), src0#src1#src2, "");
 }
 
-class getAsmVOPDPart <int NumSrcArgs, string XorY> {
+class getAsmVOPDPart <int NumSrcArgs, string XorY, bit HasVOPD3Src2> {
   string dst = "$vdst" # XorY;
   string src0 = ", $src0" # XorY;
   string src1 = ", $vsrc1" # XorY;
+  string src2 = ", $vsrc2" # XorY;
   string ret = dst #
                !if(!ge(NumSrcArgs, 1), src0, "") #
-               !if(!ge(NumSrcArgs, 2), src1, "");
+               !if(!ge(NumSrcArgs, 2), src1, "") #
+               !if(HasVOPD3Src2, src2, "");
 }
 
 // Returns the assembly string for the inputs and outputs of a VOP3P
@@ -2577,8 +2579,13 @@ class VOPProfile <list<ValueType> _ArgVT, bit _EnableClamp = 0> {
   field dag InsVOPDXDeferred = (ins !if(!eq(Src0VT.Size, 32), VSrc_f32_Deferred, VSrc_f16_Deferred):$src0X, VGPR_32:$vsrc1X);
   field dag InsVOPDY = (ins Src0RC32:$src0Y, Src1RC32:$vsrc1Y);
   field dag InsVOPDYDeferred = (ins !if(!eq(Src1VT.Size, 32), VSrc_f32_Deferred, VSrc_f16_Deferred):$src0Y, VGPR_32:$vsrc1Y);
-  field dag InsVOPD3X = !con((ins Src0RCVOPD3:$src0X), !if(HasSrc1, (ins Src1RC32:$vsrc1X), (ins)));
-  field dag InsVOPD3Y = !con((ins Src0RCVOPD3:$src0Y), !if(HasSrc1, (ins Src1RC32:$vsrc1Y), (ins)));
+  field bit HasVOPD3Src2 = !empty(Ins32); // VOP3 does not have Ins32.
+  field dag InsVOPD3X = !con((ins Src0RCVOPD3:$src0X),
+                             !if(HasSrc1, (ins Src1RC32:$vsrc1X), (ins)),
+                             !if(HasVOPD3Src2, (ins Src1RC32:$vsrc2X), (ins)));
+  field dag InsVOPD3Y = !con((ins Src0RCVOPD3:$src0Y),
+                             !if(HasSrc1, (ins Src1RC32:$vsrc1Y), (ins)),
+                             !if(HasVOPD3Src2, (ins Src1RC32:$vsrc2Y), (ins)));
 
 
   field string Asm32 = getAsm32<HasDst, NumSrcArgs, DstVT>.ret;
@@ -2604,8 +2611,8 @@ class VOPProfile <list<ValueType> _ArgVT, bit _EnableClamp = 0> {
   field string AsmVOP3DPP8 = getAsmVOP3DPP8<AsmVOP3Base>.ret;
   field string AsmSDWA = getAsmSDWA<HasDst, NumSrcArgs, DstVT>.ret;
   field string AsmSDWA9 = getAsmSDWA9<HasDst, HasSDWAOMod, NumSrcArgs, DstVT>.ret;
-  field string AsmVOPDX = getAsmVOPDPart<NumSrcArgs, "X">.ret;
-  field string AsmVOPDY = getAsmVOPDPart<NumSrcArgs, "Y">.ret;
+  field string AsmVOPDX = getAsmVOPDPart<NumSrcArgs, "X", HasVOPD3Src2>.ret;
+  field string AsmVOPDY = getAsmVOPDPart<NumSrcArgs, "Y", HasVOPD3Src2>.ret;
   field string TieRegDPP = "$old";
 }
 

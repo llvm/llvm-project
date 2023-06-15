@@ -252,14 +252,17 @@ foreach Gen = [GFX11GenD, GFX12GenD, GFX1210GenD] in {
   }
 }
 
-defvar VOPD3XPseudosExtra = ["V_ADD_U32_e32", "V_LSHLREV_B32_e32", "V_SUB_U32_e32",
+defvar VOPD3XPseudosExtra = ["V_ADD_U32_e32", "V_LSHLREV_B32_e32", "V_FMA_F32_e64", "V_SUB_U32_e32",
                              "V_LSHRREV_B32_e32", "V_ASHRREV_I32_e32", "V_MOV_B64_e32"];
 defvar VOPD3XPseudosGFX1210 = !listconcat(
                                 !filter(x, VOPDXPseudosGFX12, !and(!eq(!find(x, "FMAAK"), -1),
                                                                    !eq(!find(x, "FMAMK"), -1))),
                                 VOPD3XPseudosExtra);
-defvar VOPD3YPseudosGFX1210 = !filter(x, VOPDYPseudosGFX1210, !and(!eq(!find(x, "FMAAK"), -1),
-                                                                   !eq(!find(x, "FMAMK"), -1)));
+defvar VOPD3YPseudosExtra = ["V_FMA_F32_e64"];
+defvar VOPD3YPseudosGFX1210 = !listconcat(
+                                !filter(x, VOPDYPseudosGFX1210, !and(!eq(!find(x, "FMAAK"), -1),
+                                                                     !eq(!find(x, "FMAMK"), -1))),
+                                VOPD3YPseudosExtra);
 
 def GFX1210GenD3 : GFXGenD<GFX12_10Gen, VOPD3XPseudosGFX1210, VOPD3YPseudosGFX1210>;
 
