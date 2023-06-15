@@ -507,7 +507,7 @@ void DwarfDebug::addSubprogramNames(const DICompileUnit &CU,
   // well into the name table. Only do that if we are going to actually emit
   // that name.
   if (SP->getLinkageName() != "" && SP->getName() != SP->getLinkageName() &&
-      (useAllLinkageNames() || InfoHolder.getAbstractSPDies().lookup(SP)))
+      (useAllLinkageNames() || InfoHolder.getAbstractScopeDIEs().lookup(SP)))
     addAccelName(CU, SP->getLinkageName(), Die);
 
   // If this is an Objective-C selector name add it to the ObjC accelerator
@@ -1105,9 +1105,6 @@ DwarfDebug::getOrCreateDwarfCompileUnit(const DICompileUnit *DIUnit) {
   DwarfCompileUnit &NewCU = *OwnedUnit;
   InfoHolder.addUnit(std::move(OwnedUnit));
 
-  for (auto *IE : DIUnit->getImportedEntities())
-    NewCU.addImportedEntity(IE);
-
   // LTO with assembly output shares a single line table amongst multiple CUs.
   // To avoid the compilation directory being ambiguous, let the line table
   // explicitly describe the directory of all files, never relying on the
@@ -1128,14 +1125,6 @@ DwarfDebug::getOrCreateDwarfCompileUnit(const DICompileUnit *DIUnit) {
   CUMap.insert({DIUnit, &NewCU});
   CUDieMap.insert({&NewCU.getUnitDie(), &NewCU});
   return NewCU;
-}
-
-void DwarfDebug::constructAndAddImportedEntityDIE(DwarfCompileUnit &TheCU,
-                                                  const DIImportedEntity *N) {
-  if (isa<DILocalScope>(N->getScope()))
-    return;
-  if (DIE *D = TheCU.getOrCreateContextDIE(N->getScope()))
-    D->addChild(TheCU.constructImportedEntityDIE(N));
 }
 
 /// Sort and unique GVEs by comparing their fragment offset.
@@ -1215,16 +1204,8 @@ void DwarfDebug::beginModule(Module *M) {
   DebugLocs.setSym(Asm->createTempSymbol("loclists_table_base"));
 
   for (DICompileUnit *CUNode : M->debug_compile_units()) {
-    // FIXME: Move local imported entities into a list attached to the
-    // subprogram, then this search won't be needed and a
-    // getImportedEntities().empty() test should go below with the rest.
-    bool HasNonLocalImportedEntities = llvm::any_of(
-        CUNode->getImportedEntities(), [](const DIImportedEntity *IE) {
-          return !isa<DILocalScope>(IE->getScope());
-        });
-
-    if (!HasNonLocalImportedEntities && CUNode->getEnumTypes().empty() &&
-        CUNode->getRetainedTypes().empty() &&
+    if (CUNode->getImportedEntities().empty() &&
+        CUNode->getEnumTypes().empty() && CUNode->getRetainedTypes().empty() &&
         CUNode->getGlobalVariables().empty() && CUNode->getMacros().empty())
       continue;
 
@@ -1442,8 +1423,17 @@ void DwarfDebug::endModule() {
     DwarfCompileUnit *CU = &*P.second;
 
     // Emit imported entities.
-    for (auto *IE : CUNode->getImportedEntities())
-      constructAndAddImportedEntityDIE(*CU, IE);
+    for (auto *IE : CUNode->getImportedEntities()) {
+      assert(!isa_and_nonnull<DILocalScope>(IE->getScope()) &&
+             "Unexpected function-local entity in 'imports' CU field.");
+      CU->getOrCreateImportedEntityDIE(IE);
+    }
+    for (const auto *D : CU->getDeferredLocalDecls()) {
+      if (auto *IE = dyn_cast<DIImportedEntity>(D))
+        CU->getOrCreateImportedEntityDIE(IE);
+      else
+        llvm_unreachable("Unexpected local retained node!");
+    }
 
     // Emit base types.
     CU->createBaseTypeDIEs();
@@ -1520,16 +1510,6 @@ void DwarfDebug::endModule() {
   // FIXME: AbstractVariables.clear();
 }
 
-void DwarfDebug::ensureAbstractEntityIsCreated(DwarfCompileUnit &CU,
-                                               const DINode *Node,
-                                               const MDNode *ScopeNode) {
-  if (CU.getExistingAbstractEntity(Node))
-    return;
-
-  CU.createAbstractEntity(Node, LScopes.getOrCreateAbstractScope(
-                                       cast<DILocalScope>(ScopeNode)));
-}
-
 void DwarfDebug::ensureAbstractEntityIsCreatedIfScoped(DwarfCompileUnit &CU,
     const DINode *Node, const MDNode *ScopeNode) {
   if (CU.getExistingAbstractEntity(Node))
@@ -1538,6 +1518,21 @@ void DwarfDebug::ensureAbstractEntityIsCreatedIfScoped(DwarfCompileUnit &CU,
   if (LexicalScope *Scope =
           LScopes.findAbstractScope(cast_or_null<DILocalScope>(ScopeNode)))
     CU.createAbstractEntity(Node, Scope);
+}
+
+static const DILocalScope *getRetainedNodeScope(const MDNode *N) {
+  const DIScope *S;
+  if (const auto *LV = dyn_cast<DILocalVariable>(N))
+    S = LV->getScope();
+  else if (const auto *L = dyn_cast<DILabel>(N))
+    S = L->getScope();
+  else if (const auto *IE = dyn_cast<DIImportedEntity>(N))
+    S = IE->getScope();
+  else
+    llvm_unreachable("Unexpected retained node!");
+
+  // Ensure the scope is not a DILexicalBlockFile.
+  return cast<DILocalScope>(S)->getNonLexicalBlockFileScope();
 }
 
 // Collect variable information from side table maintained by MF.
@@ -1984,19 +1979,18 @@ void DwarfDebug::collectEntityInfo(DwarfCompileUnit &TheCU,
     createConcreteEntity(TheCU, *Scope, Label, IL.second, Sym);
   }
 
-  // Collect info for variables/labels that were optimized out.
+  // Collect info for retained nodes.
   for (const DINode *DN : SP->getRetainedNodes()) {
-    if (!Processed.insert(InlinedEntity(DN, nullptr)).second)
-      continue;
-    LexicalScope *Scope = nullptr;
-    if (auto *DV = dyn_cast<DILocalVariable>(DN)) {
-      Scope = LScopes.findLexicalScope(DV->getScope());
-    } else if (auto *DL = dyn_cast<DILabel>(DN)) {
-      Scope = LScopes.findLexicalScope(DL->getScope());
+    const auto *LS = getRetainedNodeScope(DN);
+    if (isa<DILocalVariable>(DN) || isa<DILabel>(DN)) {
+      if (!Processed.insert(InlinedEntity(DN, nullptr)).second)
+        continue;
+      LexicalScope *LexS = LScopes.findLexicalScope(LS);
+      if (LexS)
+        createConcreteEntity(TheCU, *LexS, DN, nullptr);
+    } else {
+      LocalDeclsPerLS[LS].insert(DN);
     }
-
-    if (Scope)
-      createConcreteEntity(TheCU, *Scope, DN, nullptr);
   }
 }
 
@@ -2311,27 +2305,28 @@ void DwarfDebug::endFunctionImpl(const MachineFunction *MF) {
   }
 
 #ifndef NDEBUG
-  size_t NumAbstractScopes = LScopes.getAbstractScopesList().size();
+  size_t NumAbstractSubprograms = LScopes.getAbstractScopesList().size();
 #endif
-  // Construct abstract scopes.
   for (LexicalScope *AScope : LScopes.getAbstractScopesList()) {
     const auto *SP = cast<DISubprogram>(AScope->getScopeNode());
     for (const DINode *DN : SP->getRetainedNodes()) {
-      if (!Processed.insert(InlinedEntity(DN, nullptr)).second)
-        continue;
-
-      const MDNode *Scope = nullptr;
-      if (auto *DV = dyn_cast<DILocalVariable>(DN))
-        Scope = DV->getScope();
-      else if (auto *DL = dyn_cast<DILabel>(DN))
-        Scope = DL->getScope();
-      else
-        llvm_unreachable("Unexpected DI type!");
-
-      // Collect info for variables/labels that were optimized out.
-      ensureAbstractEntityIsCreated(TheCU, DN, Scope);
-      assert(LScopes.getAbstractScopesList().size() == NumAbstractScopes
-             && "ensureAbstractEntityIsCreated inserted abstract scopes");
+      const auto *LS = getRetainedNodeScope(DN);
+      // Ensure LexicalScope is created for the scope of this node.
+      auto *LexS = LScopes.getOrCreateAbstractScope(LS);
+      assert(LexS && "Expected the LexicalScope to be created.");
+      if (isa<DILocalVariable>(DN) || isa<DILabel>(DN)) {
+        // Collect info for variables/labels that were optimized out.
+        if (!Processed.insert(InlinedEntity(DN, nullptr)).second ||
+            TheCU.getExistingAbstractEntity(DN))
+          continue;
+        TheCU.createAbstractEntity(DN, LexS);
+      } else {
+        // Remember the node if this is a local declarations.
+        LocalDeclsPerLS[LS].insert(DN);
+      }
+      assert(
+          LScopes.getAbstractScopesList().size() == NumAbstractSubprograms &&
+          "getOrCreateAbstractScope() inserted an abstract subprogram scope");
     }
     constructAbstractSubprogramScopeDIE(TheCU, AScope);
   }
@@ -2352,6 +2347,7 @@ void DwarfDebug::endFunctionImpl(const MachineFunction *MF) {
   // can be used cross-function)
   InfoHolder.getScopeVariables().clear();
   InfoHolder.getScopeLabels().clear();
+  LocalDeclsPerLS.clear();
   PrevLabel = nullptr;
   CurFn = nullptr;
 }
