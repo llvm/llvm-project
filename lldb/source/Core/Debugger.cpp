@@ -1129,7 +1129,7 @@ void Debugger::PrintAsync(const char *s, size_t len, bool is_stdout) {
   }
 }
 
-ConstString Debugger::GetTopIOHandlerControlSequence(char ch) {
+llvm::StringRef Debugger::GetTopIOHandlerControlSequence(char ch) {
   return m_io_handler_stack.GetTopIOHandlerControlSequence(ch);
 }
 
