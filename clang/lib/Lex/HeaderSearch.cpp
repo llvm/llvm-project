@@ -1751,12 +1751,12 @@ HeaderSearch::loadModuleMapFileImpl(FileEntryRef File, bool IsSystem,
 }
 
 OptionalFileEntryRef
-HeaderSearch::lookupModuleMapFile(const DirectoryEntry *Dir, bool IsFramework) {
+HeaderSearch::lookupModuleMapFile(DirectoryEntryRef Dir, bool IsFramework) {
   if (!HSOpts->ImplicitModuleMaps)
     return std::nullopt;
   // For frameworks, the preferred spelling is Modules/module.modulemap, but
   // module.map at the framework root is also accepted.
-  SmallString<128> ModuleMapFileName(Dir->getName());
+  SmallString<128> ModuleMapFileName(Dir.getName());
   if (IsFramework)
     llvm::sys::path::append(ModuleMapFileName, "Modules");
   llvm::sys::path::append(ModuleMapFileName, "module.modulemap");
@@ -1764,7 +1764,7 @@ HeaderSearch::lookupModuleMapFile(const DirectoryEntry *Dir, bool IsFramework) {
     return *F;
 
   // Continue to allow module.map
-  ModuleMapFileName = Dir->getName();
+  ModuleMapFileName = Dir.getName();
   llvm::sys::path::append(ModuleMapFileName, "module.map");
   if (auto F = FileMgr.getOptionalFileRef(ModuleMapFileName))
     return *F;
@@ -1772,7 +1772,7 @@ HeaderSearch::lookupModuleMapFile(const DirectoryEntry *Dir, bool IsFramework) {
   // For frameworks, allow to have a private module map with a preferred
   // spelling when a public module map is absent.
   if (IsFramework) {
-    ModuleMapFileName = Dir->getName();
+    ModuleMapFileName = Dir.getName();
     llvm::sys::path::append(ModuleMapFileName, "Modules",
                             "module.private.modulemap");
     if (auto F = FileMgr.getOptionalFileRef(ModuleMapFileName))
