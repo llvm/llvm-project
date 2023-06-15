@@ -8,14 +8,10 @@
 //===----------------------------------------------------------------------===//
 
 module;
-#if __has_include(<stop_token>) // D145183 contains a patch for this header
-#  error "include this header unconditionally and uncomment the exported symbols"
-#  include <stop_token>
-#endif
+#include <stop_token>
 
 export module std:stop_token;
 export namespace std {
-#if 0
   // [stoptoken], class stop_­token
   using std::stop_token;
 
@@ -28,5 +24,4 @@ export namespace std {
 
   // [stopcallback], class template stop_­callback
   using std::stop_callback;
-#endif
 } // namespace std

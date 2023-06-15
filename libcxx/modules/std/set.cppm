@@ -16,15 +16,7 @@ export namespace std {
   using std::set;
 
   using std::operator==;
-#if 0 // P1614
   using std::operator<=>;
-#else
-  using std::operator!=;
-  using std::operator<;
-  using std::operator>;
-  using std::operator<=;
-  using std::operator>=;
-#endif
 
   using std::swap;
 
