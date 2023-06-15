@@ -97,3 +97,10 @@ static GPUFile StdErr(0UL, File::ModeFlags(File::OpenMode::APPEND));
 File *stderr = &StdErr;
 
 } // namespace __llvm_libc
+
+// Provide the external defintitions of the standard IO streams.
+extern "C" {
+FILE *stdin = reinterpret_cast<FILE *>(&__llvm_libc::StdIn);
+FILE *stderr = reinterpret_cast<FILE *>(&__llvm_libc::StdErr);
+FILE *stdout = reinterpret_cast<FILE *>(&__llvm_libc::StdOut);
+}
