@@ -67,6 +67,7 @@ struct Symbol {
 
   const Decl &declaration() const { return *std::get<Declaration>(Storage); }
   struct Macro macro() const { return std::get<Macro>(Storage); }
+  std::string name() const;
 
 private:
   // Order must match Kind enum!
