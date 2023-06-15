@@ -56,8 +56,19 @@ set(TARGET_LIBC_ENTRYPOINTS
 
     # stdlib.h entrypoints
     libc.src.stdlib.abs
+    libc.src.stdlib.atoi
+    libc.src.stdlib.atof
+    libc.src.stdlib.atol
+    libc.src.stdlib.atoll
     libc.src.stdlib.labs
     libc.src.stdlib.llabs
+    libc.src.stdlib.strtod
+    libc.src.stdlib.strtof
+    libc.src.stdlib.strtol
+    libc.src.stdlib.strtold
+    libc.src.stdlib.strtoll
+    libc.src.stdlib.strtoul
+    libc.src.stdlib.strtoull
 
     # stdlib.h entrypoints
     libc.src.stdlib._Exit
