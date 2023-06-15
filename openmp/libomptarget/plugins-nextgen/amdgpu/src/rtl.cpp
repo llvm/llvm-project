@@ -710,6 +710,10 @@ private:
       uint64_t LoopTripCount, uint32_t ThreadLimitClause[3]) const override {
     uint32_t NumThreads = BlockSize;
 
+    // If there is an override already, do nothing
+    if (NumThreads != GenericDevice.getDefaultNumThreads())
+      return std::make_pair(false, NumThreads);
+
     // If tripcount not set or not low, do nothing.
     if ((LoopTripCount == 0) || (LoopTripCount > GenericDevice.getOMPXLowTripCount()))
       return std::make_pair(false, NumThreads);
@@ -794,8 +798,7 @@ private:
 
       // Honor OMP_NUM_TEAMS environment variable for BigJumpLoop kernel type.
       int32_t NumTeamsEnvVar = GenericDevice.getOMPNumTeams();
-      if (isBigJumpLoopMode() && NumTeamsEnvVar > 0 &&
-          NumTeamsEnvVar <= GenericDevice.getBlockLimit())
+      if (NumTeamsEnvVar > 0 && NumTeamsEnvVar <= GenericDevice.getBlockLimit())
         NumGroups = std::min(static_cast<uint64_t>(NumTeamsEnvVar), NumGroups);
       // Honor num_teams clause but lower it if tripcount dictates to
       else if (NumTeamsClause[0] > 0 &&
@@ -817,8 +820,13 @@ private:
 
     if (isXTeamReductionsMode()) {
       uint64_t NumGroups = 0;
-      if (NumTeamsClause[0] > 0 &&
-          NumTeamsClause[0] <= GenericDevice.getBlockLimit()) {
+      // Honor OMP_NUM_TEAMS environment variable for XteamReduction kernel
+      // type.
+      int32_t NumTeamsEnvVar = GenericDevice.getOMPNumTeams();
+      if (NumTeamsEnvVar > 0 && NumTeamsEnvVar <= GenericDevice.getBlockLimit())
+        NumGroups = NumTeamsEnvVar;
+      else if (NumTeamsClause[0] > 0 &&
+               NumTeamsClause[0] <= GenericDevice.getBlockLimit()) {
         NumGroups = NumTeamsClause[0];
       } else {
         // If num_teams clause is not specified, we allow a max of 2*CU teams
