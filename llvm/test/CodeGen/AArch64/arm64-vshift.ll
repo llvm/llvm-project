@@ -2106,7 +2106,7 @@ define <8 x i16> @neon.ushl8_noext_constant_shift(ptr %A) nounwind {
 ; CHECK-LABEL: neon.ushl8_noext_constant_shift:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ldr q0, [x0]
-; CHECK-NEXT:    shl.8h v0, v0, #1
+; CHECK-NEXT:    add.8h v0, v0, v0
 ; CHECK-NEXT:    ret
   %tmp1 = load <8 x i16>, ptr %A
   %tmp3 = call <8 x i16> @llvm.aarch64.neon.ushl.v8i16(<8 x i16> %tmp1, <8 x i16> <i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1>)
@@ -2146,7 +2146,7 @@ define <4 x i32> @neon.ushll4s_constant_fold() nounwind {
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    adrp x8, .LCPI160_0
 ; CHECK-NEXT:    ldr q0, [x8, :lo12:.LCPI160_0]
-; CHECK-NEXT:    shl.4s v0, v0, #1
+; CHECK-NEXT:    add.4s v0, v0, v0
 ; CHECK-NEXT:    ret
   %tmp3 = call <4 x i32> @llvm.aarch64.neon.ushl.v4i32(<4 x i32> <i32 0, i32 1, i32 2, i32 3>, <4 x i32> <i32 1, i32 1, i32 1, i32 1>)
   ret <4 x i32> %tmp3
@@ -2227,7 +2227,7 @@ define <16 x i8> @neon.sshl16b_constant_shift(ptr %A) nounwind {
 ; CHECK-LABEL: neon.sshl16b_constant_shift:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ldr q0, [x0]
-; CHECK-NEXT:    shl.16b v0, v0, #1
+; CHECK-NEXT:    add.16b v0, v0, v0
 ; CHECK-NEXT:    ret
   %tmp1 = load <16 x i8>, ptr %A
   %tmp2 = call <16 x i8> @llvm.aarch64.neon.sshl.v16i8(<16 x i8> %tmp1, <16 x i8> <i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1>)
@@ -2326,7 +2326,7 @@ define <4 x i32> @neon.sshl4s_no_fold(ptr %A) nounwind {
 ; CHECK-LABEL: neon.sshl4s_no_fold:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ldr q0, [x0]
-; CHECK-NEXT:    shl.4s v0, v0, #1
+; CHECK-NEXT:    add.4s v0, v0, v0
 ; CHECK-NEXT:    ret
   %tmp1 = load <4 x i32>, ptr %A
   %tmp3 = call <4 x i32> @llvm.aarch64.neon.sshl.v4i32(<4 x i32> %tmp1, <4 x i32> <i32 1, i32 1, i32 1, i32 1>)
@@ -2395,7 +2395,7 @@ define <2 x i64> @neon.sshl2d_constant_fold() nounwind {
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    adrp x8, .LCPI179_0
 ; CHECK-NEXT:    ldr q0, [x8, :lo12:.LCPI179_0]
-; CHECK-NEXT:    shl.2d v0, v0, #1
+; CHECK-NEXT:    add.2d v0, v0, v0
 ; CHECK-NEXT:    ret
   %tmp3 = call <2 x i64> @llvm.aarch64.neon.sshl.v2i64(<2 x i64> <i64 99, i64 1000>, <2 x i64> <i64 1, i64 1>)
   ret <2 x i64> %tmp3
@@ -3191,7 +3191,7 @@ define <8 x i8> @shl_orr8b(ptr %A, ptr %B) nounwind {
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ldr d0, [x0]
 ; CHECK-NEXT:    ldr d1, [x1]
-; CHECK-NEXT:    shl.8b v0, v0, #1
+; CHECK-NEXT:    add.8b v0, v0, v0
 ; CHECK-NEXT:    orr.8b v0, v0, v1
 ; CHECK-NEXT:    ret
   %tmp1 = load <8 x i8>, ptr %A
@@ -3206,7 +3206,7 @@ define <4 x i16> @shl_orr4h(ptr %A, ptr %B) nounwind {
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ldr d0, [x0]
 ; CHECK-NEXT:    ldr d1, [x1]
-; CHECK-NEXT:    shl.4h v0, v0, #1
+; CHECK-NEXT:    add.4h v0, v0, v0
 ; CHECK-NEXT:    orr.8b v0, v0, v1
 ; CHECK-NEXT:    ret
   %tmp1 = load <4 x i16>, ptr %A
@@ -3221,7 +3221,7 @@ define <2 x i32> @shl_orr2s(ptr %A, ptr %B) nounwind {
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ldr d0, [x0]
 ; CHECK-NEXT:    ldr d1, [x1]
-; CHECK-NEXT:    shl.2s v0, v0, #1
+; CHECK-NEXT:    add.2s v0, v0, v0
 ; CHECK-NEXT:    orr.8b v0, v0, v1
 ; CHECK-NEXT:    ret
   %tmp1 = load <2 x i32>, ptr %A
@@ -3236,7 +3236,7 @@ define <16 x i8> @shl_orr16b(ptr %A, ptr %B) nounwind {
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ldr q0, [x0]
 ; CHECK-NEXT:    ldr q1, [x1]
-; CHECK-NEXT:    shl.16b v0, v0, #1
+; CHECK-NEXT:    add.16b v0, v0, v0
 ; CHECK-NEXT:    orr.16b v0, v0, v1
 ; CHECK-NEXT:    ret
   %tmp1 = load <16 x i8>, ptr %A
@@ -3251,7 +3251,7 @@ define <8 x i16> @shl_orr8h(ptr %A, ptr %B) nounwind {
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ldr q0, [x0]
 ; CHECK-NEXT:    ldr q1, [x1]
-; CHECK-NEXT:    shl.8h v0, v0, #1
+; CHECK-NEXT:    add.8h v0, v0, v0
 ; CHECK-NEXT:    orr.16b v0, v0, v1
 ; CHECK-NEXT:    ret
   %tmp1 = load <8 x i16>, ptr %A
@@ -3266,7 +3266,7 @@ define <4 x i32> @shl_orr4s(ptr %A, ptr %B) nounwind {
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ldr q0, [x0]
 ; CHECK-NEXT:    ldr q1, [x1]
-; CHECK-NEXT:    shl.4s v0, v0, #1
+; CHECK-NEXT:    add.4s v0, v0, v0
 ; CHECK-NEXT:    orr.16b v0, v0, v1
 ; CHECK-NEXT:    ret
   %tmp1 = load <4 x i32>, ptr %A
@@ -3281,7 +3281,7 @@ define <2 x i64> @shl_orr2d(ptr %A, ptr %B) nounwind {
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ldr q0, [x0]
 ; CHECK-NEXT:    ldr q1, [x1]
-; CHECK-NEXT:    shl.2d v0, v0, #1
+; CHECK-NEXT:    add.2d v0, v0, v0
 ; CHECK-NEXT:    orr.16b v0, v0, v1
 ; CHECK-NEXT:    ret
   %tmp1 = load <2 x i64>, ptr %A
