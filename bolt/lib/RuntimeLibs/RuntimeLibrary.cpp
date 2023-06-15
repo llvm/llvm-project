@@ -11,11 +11,12 @@
 //===----------------------------------------------------------------------===//
 
 #include "bolt/RuntimeLibs/RuntimeLibrary.h"
+#include "bolt/Core/Linker.h"
 #include "bolt/RuntimeLibs/RuntimeLibraryVariables.inc"
 #include "bolt/Utils/Utils.h"
 #include "llvm/BinaryFormat/Magic.h"
-#include "llvm/ExecutionEngine/RuntimeDyld.h"
 #include "llvm/Object/Archive.h"
+#include "llvm/Object/ObjectFile.h"
 #include "llvm/Support/Path.h"
 
 #define DEBUG_TYPE "bolt-rtlib"
@@ -44,7 +45,8 @@ std::string RuntimeLibrary::getLibPath(StringRef ToolPath,
   return std::string(LibPath.str());
 }
 
-void RuntimeLibrary::loadLibrary(StringRef LibPath, RuntimeDyld &RTDyld) {
+void RuntimeLibrary::loadLibrary(StringRef LibPath, BOLTLinker &Linker,
+                                 BOLTLinker::SectionsMapper MapSections) {
   ErrorOr<std::unique_ptr<MemoryBuffer>> MaybeBuf =
       MemoryBuffer::getFile(LibPath, false, false);
   check_error(MaybeBuf.getError(), LibPath);
@@ -57,7 +59,7 @@ void RuntimeLibrary::loadLibrary(StringRef LibPath, RuntimeDyld &RTDyld) {
     for (const object::Archive::Child &C : Archive.children(Err)) {
       std::unique_ptr<object::Binary> Bin = cantFail(C.getAsBinary());
       if (object::ObjectFile *Obj = dyn_cast<object::ObjectFile>(&*Bin))
-        RTDyld.loadObject(*Obj);
+        Linker.loadObject(Obj->getMemoryBufferRef(), MapSections);
     }
     check_error(std::move(Err), B->getBufferIdentifier());
   } else if (Magic == file_magic::elf_relocatable ||
@@ -65,7 +67,7 @@ void RuntimeLibrary::loadLibrary(StringRef LibPath, RuntimeDyld &RTDyld) {
     std::unique_ptr<object::ObjectFile> Obj = cantFail(
         object::ObjectFile::createObjectFile(B.get()->getMemBufferRef()),
         "error creating in-memory object");
-    RTDyld.loadObject(*Obj);
+    Linker.loadObject(Obj->getMemoryBufferRef(), MapSections);
   } else {
     errs() << "BOLT-ERROR: unrecognized library format: " << LibPath << "\n";
     exit(1);
