@@ -8375,6 +8375,16 @@ static void handleAvailableOnlyInDefaultEvalMethod(Sema &S, Decl *D,
   handleSimpleAttribute<AvailableOnlyInDefaultEvalMethodAttr>(S, D, AL);
 }
 
+static void handleNoMergeAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
+  auto *VDecl = dyn_cast<VarDecl>(D);
+  if (VDecl && !VDecl->isFunctionPointerType()) {
+    S.Diag(AL.getLoc(), diag::warn_attribute_ignored_non_function_pointer)
+        << AL << VDecl;
+    return;
+  }
+  D->addAttr(NoMergeAttr::Create(S.Context, AL));
+}
+
 static void handleSYCLKernelAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
   // The 'sycl_kernel' attribute applies only to function templates.
   const auto *FD = cast<FunctionDecl>(D);
@@ -9254,6 +9264,9 @@ ProcessDeclAttribute(Sema &S, Scope *scope, Decl *D, const ParsedAttr &AL,
     break;
   case ParsedAttr::AT_FunctionReturnThunks:
     handleFunctionReturnThunksAttr(S, D, AL);
+    break;
+  case ParsedAttr::AT_NoMerge:
+    handleNoMergeAttr(S, D, AL);
     break;
 
   case ParsedAttr::AT_AvailableOnlyInDefaultEvalMethod:
