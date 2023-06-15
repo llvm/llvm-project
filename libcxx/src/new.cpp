@@ -10,23 +10,6 @@
 #include <new>
 #include <stdlib.h>
 
-#include "include/atomic_support.h"
-
-#if defined(_LIBCPP_ABI_MICROSOFT)
-#   if !defined(_LIBCPP_ABI_VCRUNTIME)
-#       include "support/runtime/new_handler_fallback.ipp"
-#   endif
-#elif defined(LIBCXX_BUILDING_LIBCXXABI)
-#   include <cxxabi.h>
-#elif defined(LIBCXXRT)
-#   include <cxxabi.h>
-#   include "support/runtime/new_handler_fallback.ipp"
-#elif defined(__GLIBCXX__)
-    // nothing to do
-#else
-#   include "support/runtime/new_handler_fallback.ipp"
-#endif
-
 namespace std
 {
 

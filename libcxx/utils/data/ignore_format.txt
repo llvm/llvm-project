@@ -809,6 +809,7 @@ libcxx/src/memory.cpp
 libcxx/src/mutex.cpp
 libcxx/src/mutex_destructor.cpp
 libcxx/src/new.cpp
+libcxx/src/new_handler.cpp
 libcxx/src/optional.cpp
 libcxx/src/random.cpp
 libcxx/src/random_shuffle.cpp
@@ -830,7 +831,6 @@ libcxx/src/support/runtime/exception_pointer_cxxabi.ipp
 libcxx/src/support/runtime/exception_pointer_glibcxx.ipp
 libcxx/src/support/runtime/exception_pointer_msvc.ipp
 libcxx/src/support/runtime/exception_pointer_unimplemented.ipp
-libcxx/src/support/runtime/new_handler_fallback.ipp
 libcxx/src/support/runtime/stdexcept_default.ipp
 libcxx/src/support/runtime/stdexcept_vcruntime.ipp
 libcxx/src/support/win32/locale_win32.cpp
