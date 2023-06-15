@@ -290,6 +290,8 @@ X86LegalizerInfo::X86LegalizerInfo(const X86Subtarget &STI,
       .widenScalarToNextPow2(1, /*Min*/ 32)
       .clampScalar(1, s32, sMaxScalar);
 
+  getActionDefinitionsBuilder({G_FRAME_INDEX, G_GLOBAL_VALUE}).legalFor({p0});
+
   // sext, zext, and anyext
   getActionDefinitionsBuilder({G_SEXT, G_ZEXT, G_ANYEXT})
       .legalIf([=](const LegalityQuery &Query) {
@@ -473,10 +475,6 @@ void X86LegalizerInfo::setLegalizerInfo32bit() {
     // And everything's fine in addrspace 0.
     LegacyInfo.setAction({MemOp, 1, p0}, LegacyLegalizeActions::Legal);
   }
-
-  // Pointer-handling
-  LegacyInfo.setAction({G_FRAME_INDEX, p0}, LegacyLegalizeActions::Legal);
-  LegacyInfo.setAction({G_GLOBAL_VALUE, p0}, LegacyLegalizeActions::Legal);
 
   // Merge/Unmerge
   for (const auto &Ty : {s16, s32, s64}) {
