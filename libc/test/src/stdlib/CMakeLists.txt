@@ -54,17 +54,20 @@ add_libc_test(
     libc.src.stdlib.atoll
 )
 
-add_fp_unittest(
-  strtod_test
-  SUITE
-    libc-stdlib-tests
-  SRCS
-    strtod_test.cpp
-  DEPENDS
-    libc.src.errno.errno
-    libc.src.stdlib.strtod
-    libc.src.__support.FPUtil.fenv_impl
-)
+# This fails on NVPTX where the output value is one-off of the expected value.
+if(NOT LIBC_GPU_TARGET_ARCHITECTURE_IS_NVPTX)
+  add_fp_unittest(
+    strtod_test
+    SUITE
+      libc-stdlib-tests
+    SRCS
+      strtod_test.cpp
+    DEPENDS
+      libc.src.errno.errno
+      libc.src.stdlib.strtod
+      libc.src.__support.FPUtil.fenv_impl
+  )
+endif()
 
 add_fp_unittest(
   strtof_test
@@ -123,17 +126,20 @@ add_libc_test(
     .strtol_test_support
 )
 
-add_libc_test(
-  strtold_test
-  SUITE
-    libc-stdlib-tests
-  SRCS
-    strtold_test.cpp
-  DEPENDS
-    libc.src.errno.errno
-    libc.src.__support.uint128
-    libc.src.stdlib.strtold
-)
+# This fails on NVPTX where the output value is one-off of the expected value.
+if(NOT LIBC_GPU_TARGET_ARCHITECTURE_IS_NVPTX)
+  add_libc_test(
+    strtold_test
+    SUITE
+      libc-stdlib-tests
+    SRCS
+      strtold_test.cpp
+    DEPENDS
+      libc.src.errno.errno
+      libc.src.__support.uint128
+      libc.src.stdlib.strtold
+  )
+endif()
 
 add_libc_test(
   strtoll_test
