@@ -1311,87 +1311,91 @@ static bool DeserializeAllCompilerFlags(swift::CompilerInvocation &invocation,
           return false;
         };
 
-        // Discover, rewrite, and unique compiler plugin paths.
-        for (auto path : extended_validation_info.getPluginSearchPaths()) {
-          // System plugins shipping with the compiler.
-          // Rewrite them to go through an ABI-compatible swift-plugin-server.
-          if (known_plugin_search_paths.insert(path).second) {
-            if (known_external_plugin_search_paths.insert(path).second) {
-              std::string server = get_plugin_server(
-                  path, [&]() { return GetPluginServer(path); });
-              if (server.empty())
-                continue;
-              if (exists(path))
-                plugin_search_options.emplace_back(
-                    swift::PluginSearchOption::ExternalPluginPath{path.str(),
-                                                                  server});
+        for (auto &opt : extended_validation_info.getPluginSearchOptions()) {
+          if (opt.first == "-plugin-path") {
+            StringRef path = opt.second;
+            // System plugins shipping with the compiler.
+            // Rewrite them to go through an ABI-compatible swift-plugin-server.
+            if (known_plugin_search_paths.insert(path).second) {
+              if (known_external_plugin_search_paths.insert(path).second) {
+                std::string server = get_plugin_server(
+                    path, [&]() { return GetPluginServer(path); });
+                if (server.empty())
+                  continue;
+                if (exists(path))
+                  plugin_search_options.emplace_back(
+                      swift::PluginSearchOption::ExternalPluginPath{path.str(),
+                                                                    server});
+              }
             }
-          }
-        }
-        for (auto path :
-             extended_validation_info.getExternalPluginSearchPaths()) {
-          // Sandboxed system plugins shipping with some compiler.
-          // Keep the original plugin server path, it needs to be ABI
-          // compatible with the version of SwiftSyntax used by the plugin.
-          auto plugin_server = path.split('#');
-          llvm::StringRef plugin = plugin_server.first;
-          std::string server = get_plugin_server(
-              plugin, [&]() { return plugin_server.second.str(); });
-          if (server.empty())
             continue;
-          if (known_external_plugin_search_paths.insert(plugin).second)
-            if (exists(plugin))
-              plugin_search_options.emplace_back(
-                  swift::PluginSearchOption::ExternalPluginPath{plugin.str(),
-                                                                server});
+          }
+          if (opt.first == "-external-plugin-path") {
+            // Sandboxed system plugins shipping with some compiler.
+            // Keep the original plugin server path, it needs to be ABI
+            // compatible with the version of SwiftSyntax used by the plugin.
+            auto plugin_server = opt.second.split('#');
+            llvm::StringRef plugin = plugin_server.first;
+            std::string server = get_plugin_server(
+                plugin, [&]() { return plugin_server.second.str(); });
+            if (server.empty())
+              continue;
+            if (known_external_plugin_search_paths.insert(plugin).second)
+              if (exists(plugin))
+                plugin_search_options.emplace_back(
+                    swift::PluginSearchOption::ExternalPluginPath{plugin.str(),
+                                                                  server});
+            continue;
+          }
+          if (opt.first == "-load-plugin-library") {
+            // Compiler plugin libraries.
+            StringRef dylib = opt.second;
+            if (known_compiler_plugin_library_paths.insert(dylib).second)
+              if (exists(dylib)) {
+                // We never want to directly load any plugins, since a crash in
+                // the plugin would bring down LLDB. Here, we assume that the
+                // correct plugin server for a direct compiler plugin is the one
+                // from the SDK the compiler was building for. This is just a
+                // heuristic.
+                // This works because the Swift compiler enforces
+                // '-load-plugin-library' dylibs to be named
+                // libModuleName.[dylib|so|dll] just like
+                // '-external-plugin-path'.
+                llvm::SmallString<0> dir(dylib);
+                llvm::sys::path::remove_filename(dir);
+                std::string server = get_plugin_server(dir, [&]() {
+                  return GetPluginServerForSDK(invocation.getSDKPath());
+                });
+                if (server.empty())
+                  continue;
+
+                plugin_search_options.emplace_back(
+                    swift::PluginSearchOption::ExternalPluginPath{
+                        dir.str().str(), server});
+              }
+            continue;
+          }
+          if (opt.first == "-load-plugin-executable") {
+            // Compiler plugin executables.
+            auto plugin_modules = opt.second.split('#');
+            llvm::StringRef plugin = plugin_modules.first;
+            llvm::StringRef modules_list = plugin_modules.second;
+            llvm::SmallVector<llvm::StringRef, 0> modules;
+            modules_list.split(modules, ",");
+            std::vector<std::string> modules_vec;
+            for (auto m : modules)
+              modules_vec.push_back(m.str());
+            if (known_compiler_plugin_executable_paths.insert(opt.second)
+                    .second)
+              if (exists(plugin))
+                plugin_search_options.emplace_back(
+                    swift::PluginSearchOption::LoadPluginExecutable{
+                        plugin.str(), modules_vec});
+            continue;
+          }
+          llvm_unreachable("unhandled plugin search option kind");
         }
 
-        for (auto dylib :
-             extended_validation_info.getCompilerPluginLibraryPaths()) {
-          // Compiler plugin libraries.
-          if (known_compiler_plugin_library_paths.insert(dylib).second)
-            if (exists(dylib)) {
-              // We never want to directly load any plugins, since a crash in
-              // the plugin would bring down LLDB. Here, we assume that the
-              // correct plugin server for a direct compiler plugin is the one
-              // from the SDK the compiler was building for. This is just a
-              // heuristic.
-              llvm::SmallString<0> dir(dylib);
-              llvm::sys::path::remove_filename(dir);
-              std::string server = get_plugin_server(dir, [&]() {
-                return GetPluginServerForSDK(invocation.getSDKPath());
-              });
-              if (server.empty())
-                continue;
-
-              // FIXME: The Swift compiler expects external plugins
-              // to be named libModuleName.[dylib|so|dll]. This
-              // means this our translation attempts only work for
-              // macro libraries following this convention. cf.
-              // PluginLoader::lookupExternalLibraryPluginByModuleName().
-              plugin_search_options.emplace_back(
-                  swift::PluginSearchOption::ExternalPluginPath{dir.str().str(),
-                                                                server});
-            }
-        }
-
-        for (auto path :
-             extended_validation_info.getCompilerPluginExecutablePaths()) {
-          // Compiler plugin executables.
-          auto plugin_modules = path.split('#');
-          llvm::StringRef plugin = plugin_modules.first;
-          llvm::StringRef modules_list = plugin_modules.second;
-          llvm::SmallVector<llvm::StringRef, 0> modules;
-          modules_list.split(modules, ",");
-          std::vector<std::string> modules_vec;
-          for (auto m : modules)
-            modules_vec.push_back(m.str());
-          if (known_compiler_plugin_executable_paths.insert(path).second)
-            if (exists(plugin))
-              plugin_search_options.emplace_back(
-                  swift::PluginSearchOption::LoadPluginExecutable{plugin.str(),
-                                                                  modules_vec});
-        }
         return true;
       };
 
