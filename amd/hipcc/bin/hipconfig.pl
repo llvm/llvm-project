@@ -64,19 +64,16 @@ GetOptions(
 );
 
 if ($HIP_COMPILER eq "clang") {
-    $HIP_CLANG_VERSION = "";
+    $HIP_CLANG_INCLUDE = "";
     if($isWindows) {
-        $HIP_CLANG_VERSION = `\"$HIP_CLANG_PATH/clang++\" --version`;
+        $HIP_CLANG_INCLUDE = `\"$HIP_CLANG_PATH/clang++\" --print-resource-dir`;
     } else {
-        $HIP_CLANG_VERSION = `$HIP_CLANG_PATH/clang++ --version`;
+        $HIP_CLANG_INCLUDE = `$HIP_CLANG_PATH/clang++ --print-resource-dir`;
     }
-    $HIP_CLANG_VERSION=~/.*clang version (\S+).*/;
-    $HIP_CLANG_VERSION=$1;
 
     $CPP_CONFIG = " -D__HIP_PLATFORM_HCC__= -D__HIP_PLATFORM_AMD__=";
 
     $HIP_PATH_INCLUDE = $HIP_PATH."/include";
-    $HIP_CLANG_INCLUDE = $HIP_CLANG_PATH."/../lib/clang/".$HIP_CLANG_VERSION;
     if($isWindows) {
         $CPP_CONFIG .= " -I\"$HIP_PATH_INCLUDE\" -I\"$HIP_CLANG_INCLUDE\"";
     } else {

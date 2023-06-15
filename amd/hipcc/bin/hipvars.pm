@@ -83,8 +83,8 @@ if (-e "$HIP_PATH/bin/rocm_agent_enumerator") {
 }
 $CUDA_PATH=$ENV{'CUDA_PATH'} // '/usr/local/cuda';
 
-# Windows has a different structure, all binaries are inside hip/bin
-if ($isWindows) {
+# Windows/Distro's have a different structure, all binaries are with hipcc
+if (-e "$HIP_PATH/bin/clang" or -e "$HIP_PATH/bin/clang.exe") {
     $HIP_CLANG_PATH=$ENV{'HIP_CLANG_PATH'} // "$HIP_PATH/bin";
 } else {
     $HIP_CLANG_PATH=$ENV{'HIP_CLANG_PATH'} // "$ROCM_PATH/llvm/bin";
