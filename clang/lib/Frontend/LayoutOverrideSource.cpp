@@ -152,22 +152,6 @@ LayoutOverrideSource::LayoutOverrideSource(StringRef Filename) {
       }
     }
 
-    // Check for the base offsets.
-    Pos = LineStr.find("BaseOffsets: [");
-    if (Pos != StringRef::npos) {
-      LineStr = LineStr.substr(Pos + strlen("BaseOffsets: ["));
-      while (!LineStr.empty() && isDigit(LineStr[0])) {
-        unsigned long long Offset = 0;
-        if (parseUnsigned(LineStr, Offset))
-          CurrentLayout.BaseOffsets.push_back(CharUnits::fromQuantity(Offset));
-
-        // Skip over this offset, the following comma, and any spaces.
-        LineStr = LineStr.substr(1);
-        while (!LineStr.empty() && isWhitespace(LineStr[0]))
-          LineStr = LineStr.substr(1);
-      }
-    }
-
     // Check for the virtual base offsets.
     Pos = LineStr.find("VBaseOffsets: [");
     if (Pos != StringRef::npos) {
@@ -176,6 +160,23 @@ LayoutOverrideSource::LayoutOverrideSource(StringRef Filename) {
         unsigned long long Offset = 0;
         if (parseUnsigned(LineStr, Offset))
           CurrentLayout.VBaseOffsets.push_back(CharUnits::fromQuantity(Offset));
+
+        // Skip over this offset, the following comma, and any spaces.
+        LineStr = LineStr.substr(1);
+        while (!LineStr.empty() && isWhitespace(LineStr[0]))
+          LineStr = LineStr.substr(1);
+      }
+      continue;
+    }
+
+    // Check for the base offsets.
+    Pos = LineStr.find("BaseOffsets: [");
+    if (Pos != StringRef::npos) {
+      LineStr = LineStr.substr(Pos + strlen("BaseOffsets: ["));
+      while (!LineStr.empty() && isDigit(LineStr[0])) {
+        unsigned long long Offset = 0;
+        if (parseUnsigned(LineStr, Offset))
+          CurrentLayout.BaseOffsets.push_back(CharUnits::fromQuantity(Offset));
 
         // Skip over this offset, the following comma, and any spaces.
         LineStr = LineStr.substr(1);
