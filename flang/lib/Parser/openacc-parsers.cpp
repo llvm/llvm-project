@@ -66,11 +66,24 @@ TYPE_PARSER(construct<AccTileExpr>(scalarIntConstantExpr) ||
         "*" >> construct<std::optional<ScalarIntConstantExpr>>()))
 TYPE_PARSER(construct<AccTileExprList>(nonemptyList(Parser<AccTileExpr>{})))
 
-// 2.9 (1607) gang-arg is:
-//   [[num:]int-expr][[,]static:size-expr]
-TYPE_PARSER(construct<AccGangArgument>(
-    maybe(("NUM:"_tok >> scalarIntExpr || scalarIntExpr)),
-    maybe(", STATIC:" >> Parser<AccSizeExpr>{})))
+// 2.9 gang-arg is one of :
+//   [num:]int-expr
+//   dim:int-expr
+//   static:size-expr
+TYPE_PARSER(construct<AccGangArg>(construct<AccGangArg::Static>(
+                "STATIC: " >> Parser<AccSizeExpr>{})) ||
+    construct<AccGangArg>(
+        construct<AccGangArg::Dim>("DIM: " >> scalarIntExpr)) ||
+    construct<AccGangArg>(
+        construct<AccGangArg::Num>(maybe("NUM: "_tok) >> scalarIntExpr)))
+
+// 2.9 gang-arg-list
+TYPE_PARSER(
+    construct<AccGangArgList>(many(maybe(","_tok) >> Parser<AccGangArg>{})))
+
+// 2.9.1 collapse
+TYPE_PARSER(construct<AccCollapseArg>(
+    "FORCE:"_tok >> pure(true) || pure(false), scalarIntConstantExpr))
 
 // 2.5.13 Reduction
 // Operator for reduction
@@ -228,10 +241,19 @@ TYPE_CONTEXT_PARSER("OpenACC construct"_en_US,
             construct<OpenACCConstruct>(Parser<OpenACCWaitConstruct>{}),
             construct<OpenACCConstruct>(Parser<OpenACCAtomicConstruct>{})))
 
-TYPE_PARSER(startAccLine >> sourced(construct<AccEndCombinedDirective>(sourced(
-                                "END"_tok >> Parser<AccCombinedDirective>{}))))
+TYPE_PARSER(startAccLine >>
+    sourced(construct<AccEndCombinedDirective>(sourced("END"_tok >>
+        construct<AccCombinedDirective>("KERNELS"_tok >> maybe("LOOP"_tok) >>
+                pure(llvm::acc::Directive::ACCD_kernels_loop) ||
+            "PARALLEL"_tok >> maybe("LOOP"_tok) >>
+                pure(llvm::acc::Directive::ACCD_parallel_loop) ||
+            "SERIAL"_tok >> maybe("LOOP"_tok) >>
+                pure(llvm::acc::Directive::ACCD_serial_loop))))))
 
 TYPE_PARSER(construct<OpenACCCombinedConstruct>(
-    sourced(Parser<AccBeginCombinedDirective>{} / endAccLine)))
+    sourced(Parser<AccBeginCombinedDirective>{} / endAccLine),
+    withMessage("A DO loop must follow the combined construct"_err_en_US,
+        Parser<DoConstruct>{}),
+    maybe(Parser<AccEndCombinedDirective>{} / endAccLine)))
 
 } // namespace Fortran::parser

@@ -1816,11 +1816,11 @@ void DAGCombiner::Run(CombineLevel AtLevel) {
     // Add any operands of the new node which have not yet been combined to the
     // worklist as well. Because the worklist uniques things already, this
     // won't repeatedly process the same operand.
-    CombinedNodes.insert(N);
     for (const SDValue &ChildN : N->op_values())
       if (!CombinedNodes.count(ChildN.getNode()))
         AddToWorklist(ChildN.getNode());
 
+    CombinedNodes.insert(N);
     SDValue RV = combine(N);
 
     if (!RV.getNode())
@@ -1854,10 +1854,8 @@ void DAGCombiner::Run(CombineLevel AtLevel) {
     // out), because re-visiting the EntryToken and its users will not uncover
     // any additional opportunities, but there may be a large number of such
     // users, potentially causing compile time explosion.
-    if (RV.getOpcode() != ISD::EntryToken) {
-      AddToWorklist(RV.getNode());
-      AddUsersToWorklist(RV.getNode());
-    }
+    if (RV.getOpcode() != ISD::EntryToken)
+      AddToWorklistWithUsers(RV.getNode());
 
     // Finally, if the node is now dead, remove it from the graph.  The node
     // may not be dead if the replacement process recursively simplified to
@@ -2017,7 +2015,9 @@ SDValue DAGCombiner::visit(SDNode *N) {
   case ISD::VECREDUCE_UMAX:
   case ISD::VECREDUCE_UMIN:
   case ISD::VECREDUCE_FMAX:
-  case ISD::VECREDUCE_FMIN:     return visitVECREDUCE(N);
+  case ISD::VECREDUCE_FMIN:
+  case ISD::VECREDUCE_FMAXIMUM:
+  case ISD::VECREDUCE_FMINIMUM:     return visitVECREDUCE(N);
 #define BEGIN_REGISTER_VP_SDNODE(SDOPC, ...) case ISD::SDOPC:
 #include "llvm/IR/VPIntrinsics.def"
     return visitVPOp(N);
@@ -5636,7 +5636,7 @@ SDValue DAGCombiner::visitIMINMAX(SDNode *N) {
     if (SDValue S = PerformUMinFpToSatCombine(N0, N1, N0, N1, ISD::SETULT, DAG))
       return S;
 
-  // Fold and(vecreduce(x), vecreduce(y)) -> vecreduce(and(x, y))
+  // Fold min/max(vecreduce(x), vecreduce(y)) -> vecreduce(min/max(x, y))
   auto ReductionOpcode = [](unsigned Opcode) {
     switch (Opcode) {
     case ISD::SMIN:

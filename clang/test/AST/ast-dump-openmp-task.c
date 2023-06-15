@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -triple x86_64-unknown-unknown -fopenmp -fopenmp-version=50 -ast-dump %s | FileCheck --match-full-lines -implicit-check-not=openmp_structured_block %s
+// RUN: %clang_cc1 -triple x86_64-unknown-unknown -fopenmp -ast-dump %s | FileCheck --match-full-lines -implicit-check-not=openmp_structured_block %s
 
 typedef unsigned long omp_event_handle_t;
 void test(void) {

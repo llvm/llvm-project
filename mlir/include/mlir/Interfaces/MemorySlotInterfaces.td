@@ -104,15 +104,31 @@ def PromotableMemOpInterface : OpInterface<"PromotableMemOpInterface"> {
       (ins "const ::mlir::MemorySlot &":$slot)
     >,
     InterfaceMethod<[{
-        Gets the value stored to the provided memory slot, or returns a null
-        value if this operation does not store to this slot. An operation
-        storing a value to a slot must always be able to provide the value it
-        stores. This method is only called on operations that use the slot.
+        Gets whether this operation stores to the specified slot.
 
         No IR mutation is allowed in this method.
       }],
-      "::mlir::Value", "getStored",
+      "bool", "storesTo",
       (ins "const ::mlir::MemorySlot &":$slot)
+    >,
+    InterfaceMethod<[{
+        Gets the value stored to the provided memory slot, or returns a null
+        value if this operation does not store to this slot. An operation
+        storing a value to a slot must always be able to provide the value it
+        stores. This method is only called once per slot promotion, and only
+        on operations that store to the slot according to the `storesTo` method.
+        The returned value must dominate all operations dominated by the storing
+        operation.
+
+        If IR must be mutated to extract a concrete value being stored, mutation
+        must happen through the provided rewriter. The rewriter is located
+        immediately after the memory operation on call. No IR deletion is
+        allowed in this method. IR mutations must not introduce new uses of the
+        memory slot. Existing control flow must not be modified.
+      }],
+      "::mlir::Value", "getStored",
+      (ins "const ::mlir::MemorySlot &":$slot,
+           "::mlir::RewriterBase &":$rewriter)
     >,
     InterfaceMethod<[{
         Checks that this operation can be promoted to no longer use the provided

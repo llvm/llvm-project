@@ -156,6 +156,12 @@ static BasicType ParseBasicType(char c) {
   }
 }
 
+static VectorTypeModifier getTupleVTM(unsigned NF) {
+  assert(2 <= NF && NF <= 8 && "2 <= NF <= 8");
+  return static_cast<VectorTypeModifier>(
+      static_cast<uint8_t>(VectorTypeModifier::Tuple2) + (NF - 2));
+}
+
 void emitCodeGenSwitchBody(const RVVIntrinsic *RVVI, raw_ostream &OS) {
   if (!RVVI->getIRName().empty())
     OS << "  ID = Intrinsic::riscv_" + RVVI->getIRName() + ";\n";
@@ -364,15 +370,19 @@ void RVVEmitter::createHeader(raw_ostream &OS) {
                                 TypeModifier::UnsignedInteger));
         printType(*UT);
       }
-      // FIXME: Expand more type declaration
-      if (I == 'i' && Log2LMUL == 0) { // vint32m1x2_t
+      for (int NF = 2; NF <= 8; ++NF) {
         auto TupleT = TypeCache.computeType(
             BT, Log2LMUL,
-            PrototypeDescriptor(BaseTypeModifier::Vector,
-                                VectorTypeModifier::Tuple2,
+            PrototypeDescriptor(BaseTypeModifier::Vector, getTupleVTM(NF),
                                 TypeModifier::SignedInteger));
+        auto TupleUT = TypeCache.computeType(
+            BT, Log2LMUL,
+            PrototypeDescriptor(BaseTypeModifier::Vector, getTupleVTM(NF),
+                                TypeModifier::UnsignedInteger));
         if (TupleT)
           printType(*TupleT);
+        if (TupleUT)
+          printType(*TupleUT);
       }
     }
   }
@@ -383,6 +393,14 @@ void RVVEmitter::createHeader(raw_ostream &OS) {
       auto T = TypeCache.computeType(BT, Log2LMUL, PrototypeDescriptor::Vector);
       if (T)
         printType(*T);
+      for (int NF = 2; NF <= 8; ++NF) {
+        auto TupleT = TypeCache.computeType(
+            BT, Log2LMUL,
+            PrototypeDescriptor(BaseTypeModifier::Vector, getTupleVTM(NF),
+                                TypeModifier::Float));
+        if (TupleT)
+          printType(*TupleT);
+      }
     }
   }
 

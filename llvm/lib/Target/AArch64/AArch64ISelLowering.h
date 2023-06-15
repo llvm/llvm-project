@@ -695,6 +695,9 @@ public:
   bool shouldFoldConstantShiftPairToMask(const SDNode *N,
                                          CombineLevel Level) const override;
 
+  bool shouldFoldSelectWithIdentityConstant(unsigned BinOpcode,
+                                            EVT VT) const override;
+
   /// Returns true if it is beneficial to convert a load of a constant
   /// to just the constant itself.
   bool shouldConvertConstantLoadToIntImm(const APInt &Imm,

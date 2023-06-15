@@ -105,14 +105,15 @@ bool SCCPSolver::tryToReplaceWithConstant(Value *V) {
 
 /// Try to use \p Inst's value range from \p Solver to infer the NUW flag.
 static bool refineInstruction(SCCPSolver &Solver,
+                              const SmallPtrSetImpl<Value *> &InsertedValues,
                               Instruction &Inst) {
   if (!isa<OverflowingBinaryOperator>(Inst))
     return false;
 
-  auto GetRange = [&Solver](Value *Op) {
+  auto GetRange = [&Solver, &InsertedValues](Value *Op) {
     if (auto *Const = dyn_cast<ConstantInt>(Op))
       return ConstantRange(Const->getValue());
-    if (isa<Constant>(Op)) {
+    if (isa<Constant>(Op) || InsertedValues.contains(Op)) {
       unsigned Bitwidth = Op->getType()->getScalarSizeInBits();
       return ConstantRange::getFull(Bitwidth);
     }
@@ -145,6 +146,7 @@ static bool refineInstruction(SCCPSolver &Solver,
 
 /// Try to replace signed instructions with their unsigned equivalent.
 static bool replaceSignedInst(SCCPSolver &Solver,
+                              SmallPtrSetImpl<Value *> &InsertedValues,
                               Instruction &Inst) {
   // Determine if a signed value is known to be >= 0.
   auto isNonNegative = [&Solver](Value *V) {
@@ -166,7 +168,7 @@ static bool replaceSignedInst(SCCPSolver &Solver,
   case Instruction::SExt: {
     // If the source value is not negative, this is a zext.
     Value *Op0 = Inst.getOperand(0);
-    if (!isNonNegative(Op0))
+    if (InsertedValues.count(Op0) || !isNonNegative(Op0))
       return false;
     NewInst = new ZExtInst(Op0, Inst.getType(), "", &Inst);
     break;
@@ -174,7 +176,7 @@ static bool replaceSignedInst(SCCPSolver &Solver,
   case Instruction::AShr: {
     // If the shifted value is not negative, this is a logical shift right.
     Value *Op0 = Inst.getOperand(0);
-    if (!isNonNegative(Op0))
+    if (InsertedValues.count(Op0) || !isNonNegative(Op0))
       return false;
     NewInst = BinaryOperator::CreateLShr(Op0, Inst.getOperand(1), "", &Inst);
     break;
@@ -183,7 +185,8 @@ static bool replaceSignedInst(SCCPSolver &Solver,
   case Instruction::SRem: {
     // If both operands are not negative, this is the same as udiv/urem.
     Value *Op0 = Inst.getOperand(0), *Op1 = Inst.getOperand(1);
-    if (!isNonNegative(Op0) || !isNonNegative(Op1))
+    if (InsertedValues.count(Op0) || InsertedValues.count(Op1) ||
+        !isNonNegative(Op0) || !isNonNegative(Op1))
       return false;
     auto NewOpcode = Inst.getOpcode() == Instruction::SDiv ? Instruction::UDiv
                                                            : Instruction::URem;
@@ -197,13 +200,15 @@ static bool replaceSignedInst(SCCPSolver &Solver,
   // Wire up the new instruction and update state.
   assert(NewInst && "Expected replacement instruction");
   NewInst->takeName(&Inst);
+  InsertedValues.insert(NewInst);
   Inst.replaceAllUsesWith(NewInst);
-  Solver.moveLatticeValue(&Inst, NewInst);
+  Solver.removeLatticeValueFor(&Inst);
   Inst.eraseFromParent();
   return true;
 }
 
 bool SCCPSolver::simplifyInstsInBlock(BasicBlock &BB,
+                                      SmallPtrSetImpl<Value *> &InsertedValues,
                                       Statistic &InstRemovedStat,
                                       Statistic &InstReplacedStat) {
   bool MadeChanges = false;
@@ -216,10 +221,10 @@ bool SCCPSolver::simplifyInstsInBlock(BasicBlock &BB,
 
       MadeChanges = true;
       ++InstRemovedStat;
-    } else if (replaceSignedInst(*this, Inst)) {
+    } else if (replaceSignedInst(*this, InsertedValues, Inst)) {
       MadeChanges = true;
       ++InstReplacedStat;
-    } else if (refineInstruction(*this, Inst)) {
+    } else if (refineInstruction(*this, InsertedValues, Inst)) {
       MadeChanges = true;
     }
   }
@@ -726,11 +731,7 @@ public:
     return StructValues;
   }
 
-  void moveLatticeValue(Value *From, Value *To) {
-    assert(ValueState.count(From) && "From is not existed in ValueState");
-    ValueState[To] = ValueState[From];
-    ValueState.erase(From);
-  }
+  void removeLatticeValueFor(Value *V) { ValueState.erase(V); }
 
   /// Invalidate the Lattice Value of \p Call and its users after specializing
   /// the call. Then recompute it.
@@ -2034,8 +2035,8 @@ SCCPSolver::getStructLatticeValueFor(Value *V) const {
   return Visitor->getStructLatticeValueFor(V);
 }
 
-void SCCPSolver::moveLatticeValue(Value *From, Value *To) {
-  return Visitor->moveLatticeValue(From, To);
+void SCCPSolver::removeLatticeValueFor(Value *V) {
+  return Visitor->removeLatticeValueFor(V);
 }
 
 void SCCPSolver::resetLatticeValueFor(CallBase *Call) {

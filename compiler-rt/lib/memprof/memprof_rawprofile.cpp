@@ -5,6 +5,7 @@
 #include "memprof_rawprofile.h"
 #include "profile/MemProfData.inc"
 #include "sanitizer_common/sanitizer_allocator_internal.h"
+#include "sanitizer_common/sanitizer_array_ref.h"
 #include "sanitizer_common/sanitizer_common.h"
 #include "sanitizer_common/sanitizer_linux.h"
 #include "sanitizer_common/sanitizer_procmaps.h"

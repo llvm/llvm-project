@@ -39,11 +39,9 @@ def FPR16INX : RegisterOperand<GPRF16> {
 }
 
 def ZfhExt             : ExtInfo<0, [HasStdExtZfh]>;
-def Zfh64Ext           : ExtInfo<0, [HasStdExtZfh,             IsRV64]>;
 def ZfhminExt          : ExtInfo<0, [HasStdExtZfhOrZfhmin]>;
 def ZhinxExt           : ExtInfo<1, [HasStdExtZhinx]>;
 def ZhinxminExt        : ExtInfo<1, [HasStdExtZhinxOrZhinxmin]>;
-def Zhinx64Ext         : ExtInfo<1, [HasStdExtZhinx,           IsRV64]>;
 
 def ZfhminDExt         : ExtInfo<0, [HasStdExtZfhOrZfhmin,     HasStdExtD]>;
 def ZhinxminZdinxExt   : ExtInfo<1, [HasStdExtZhinxOrZhinxmin, HasStdExtZdinx, IsRV64]>;
@@ -58,10 +56,6 @@ def XH          : ExtInfo_rr<ZfhExt,             GPR,        FPR16>;
 def XH_INX      : ExtInfo_rr<ZhinxExt,           GPR,        FPR16INX>;
 def HX          : ExtInfo_rr<ZfhExt,             FPR16,      GPR>;
 def HX_INX      : ExtInfo_rr<ZhinxExt,           FPR16INX,   GPR>;
-def XH_64       : ExtInfo_rr<Zfh64Ext,           GPR,        FPR16>;
-def HX_64       : ExtInfo_rr<Zfh64Ext,           FPR16,      GPR>;
-def XH_INX_64   : ExtInfo_rr<Zhinx64Ext,         GPR,        FPR16INX>;
-def HX_INX_64   : ExtInfo_rr<Zhinx64Ext,         FPR16INX,   GPR>;
 def HFmin       : ExtInfo_rr<ZfhminExt,          FPR16,      FPR32>;
 def HF_INXmin   : ExtInfo_rr<ZhinxminExt,        FPR16INX,   FPR32INX>;
 def HF_INX      : ExtInfo_rr<ZhinxExt,           FPR16INX,   FPR32INX>;
@@ -79,8 +73,6 @@ defvar HINX     = [H,     H_INX];
 defvar HHINX    = [HH,    HH_INX];
 defvar XHINX    = [XH,    XH_INX];
 defvar HXINX    = [HX,    HX_INX];
-defvar XHIN64X  = [XH_64, XH_INX_64];
-defvar HXIN64X  = [HX_64, HX_INX_64];
 defvar HFINXmin = [HFmin, HF_INXmin];
 defvar FHINXmin = [FHmin, FH_INXmin];
 defvar DHINXmin = [DHmin, DH_INXmin, DH_INX32min];
@@ -171,16 +163,16 @@ let mayRaiseFPException = 0 in
 defm FCLASS_H : FPUnaryOp_r_m<0b1110010, 0b00000, 0b001, XHINX, "fclass.h">,
                 Sched<[WriteFClass16, ReadFClass16]>;
 
-defm FCVT_L_H  : FPUnaryOp_r_frm_m<0b1100010, 0b00010, XHIN64X, "fcvt.l.h">,
+defm FCVT_L_H  : FPUnaryOp_r_frm_m<0b1100010, 0b00010, XHINX, "fcvt.l.h", [IsRV64]>,
                  Sched<[WriteFCvtF16ToI64, ReadFCvtF16ToI64]>;
 
-defm FCVT_LU_H  : FPUnaryOp_r_frm_m<0b1100010, 0b00011, XHIN64X, "fcvt.lu.h">,
+defm FCVT_LU_H  : FPUnaryOp_r_frm_m<0b1100010, 0b00011, XHINX, "fcvt.lu.h", [IsRV64]>,
                   Sched<[WriteFCvtF16ToI64, ReadFCvtF16ToI64]>;
 
-defm FCVT_H_L : FPUnaryOp_r_frm_m<0b1101010, 0b00010, HXIN64X, "fcvt.h.l">,
+defm FCVT_H_L : FPUnaryOp_r_frm_m<0b1101010, 0b00010, HXINX, "fcvt.h.l", [IsRV64]>,
                 Sched<[WriteFCvtI64ToF16, ReadFCvtI64ToF16]>;
 
-defm FCVT_H_LU : FPUnaryOp_r_frm_m<0b1101010, 0b00011, HXIN64X, "fcvt.h.lu">,
+defm FCVT_H_LU : FPUnaryOp_r_frm_m<0b1101010, 0b00011, HXINX, "fcvt.h.lu", [IsRV64]>,
                  Sched<[WriteFCvtI64ToF16, ReadFCvtI64ToF16]>;
 
 defm FCVT_H_D : FPUnaryOp_r_frm_m<0b0100010, 0b00001, HDINXmin, "fcvt.h.d">,

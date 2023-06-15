@@ -1306,6 +1306,13 @@ public:
 
   Options *GetOptions() override { return &m_options; }
 
+  void
+  HandleArgumentCompletion(CompletionRequest &request,
+                           OptionElementVector &opt_element_vector) override {
+    CommandCompletions::InvokeCommonCompletionCallbacks(
+        GetCommandInterpreter(), lldb::eDiskFileCompletion, request, nullptr);
+  }
+
   class CommandOptions : public Options {
   public:
     CommandOptions() = default;
@@ -1354,6 +1361,7 @@ protected:
     if (process_sp) {
       if (command.GetArgumentCount() == 1) {
         FileSpec output_file(command.GetArgumentAtIndex(0));
+        FileSystem::Instance().Resolve(output_file);
         SaveCoreStyle corefile_style = m_options.m_requested_save_core_style;
         Status error =
             PluginManager::SaveCore(process_sp, output_file, corefile_style,

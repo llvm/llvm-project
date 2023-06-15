@@ -92,6 +92,7 @@ static bool runSCCP(Function &F, const DataLayout &DL,
   // delete their contents now.  Note that we cannot actually delete the blocks,
   // as we cannot modify the CFG of the function.
 
+  SmallPtrSet<Value *, 32> InsertedValues;
   SmallVector<BasicBlock *, 8> BlocksToErase;
   for (BasicBlock &BB : F) {
     if (!Solver.isBlockExecutable(&BB)) {
@@ -102,8 +103,8 @@ static bool runSCCP(Function &F, const DataLayout &DL,
       continue;
     }
 
-    MadeChanges |=
-        Solver.simplifyInstsInBlock(BB, NumInstRemoved, NumInstReplaced);
+    MadeChanges |= Solver.simplifyInstsInBlock(BB, InsertedValues,
+                                               NumInstRemoved, NumInstReplaced);
   }
 
   // Remove unreachable blocks and non-feasible edges.

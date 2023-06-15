@@ -675,19 +675,15 @@ llvm::Type *CodeGenTypes::ConvertType(QualType T) {
   case Type::RValueReference: {
     const ReferenceType *RTy = cast<ReferenceType>(Ty);
     QualType ETy = RTy->getPointeeType();
-    llvm::Type *PointeeType = ConvertTypeForMem(ETy);
     unsigned AS = getTargetAddressSpace(ETy);
-    ResultType = llvm::PointerType::get(PointeeType, AS);
+    ResultType = llvm::PointerType::get(getLLVMContext(), AS);
     break;
   }
   case Type::Pointer: {
     const PointerType *PTy = cast<PointerType>(Ty);
     QualType ETy = PTy->getPointeeType();
-    llvm::Type *PointeeType = ConvertTypeForMem(ETy);
-    if (PointeeType->isVoidTy())
-      PointeeType = llvm::Type::getInt8Ty(getLLVMContext());
     unsigned AS = getTargetAddressSpace(ETy);
-    ResultType = llvm::PointerType::get(PointeeType, AS);
+    ResultType = llvm::PointerType::get(getLLVMContext(), AS);
     break;
   }
 
@@ -764,15 +760,9 @@ llvm::Type *CodeGenTypes::ConvertType(QualType T) {
     break;
   }
 
-  case Type::ObjCObjectPointer: {
-    // Protocol qualifications do not influence the LLVM type, we just return a
-    // pointer to the underlying interface type. We don't need to worry about
-    // recursive conversion.
-    llvm::Type *T =
-      ConvertTypeForMem(cast<ObjCObjectPointerType>(Ty)->getPointeeType());
-    ResultType = T->getPointerTo();
+  case Type::ObjCObjectPointer:
+    ResultType = llvm::PointerType::getUnqual(getLLVMContext());
     break;
-  }
 
   case Type::Enum: {
     const EnumDecl *ED = cast<EnumType>(Ty)->getDecl();
@@ -786,18 +776,15 @@ llvm::Type *CodeGenTypes::ConvertType(QualType T) {
   }
 
   case Type::BlockPointer: {
-    const QualType FTy = cast<BlockPointerType>(Ty)->getPointeeType();
-    llvm::Type *PointeeType = CGM.getLangOpts().OpenCL
-                                  ? CGM.getGenericBlockLiteralType()
-                                  : ConvertTypeForMem(FTy);
     // Block pointers lower to function type. For function type,
     // getTargetAddressSpace() returns default address space for
     // function pointer i.e. program address space. Therefore, for block
     // pointers, it is important to pass the pointee AST address space when
     // calling getTargetAddressSpace(), to ensure that we get the LLVM IR
     // address space for data pointers and not function pointers.
+    const QualType FTy = cast<BlockPointerType>(Ty)->getPointeeType();
     unsigned AS = Context.getTargetAddressSpace(FTy.getAddressSpace());
-    ResultType = llvm::PointerType::get(PointeeType, AS);
+    ResultType = llvm::PointerType::get(getLLVMContext(), AS);
     break;
   }
 

@@ -2727,7 +2727,17 @@ bool SITargetLowering::CanLowerReturn(
 
   SmallVector<CCValAssign, 16> RVLocs;
   CCState CCInfo(CallConv, IsVarArg, MF, RVLocs, Context);
-  return CCInfo.CheckReturn(Outs, CCAssignFnForReturn(CallConv, IsVarArg));
+  if (!CCInfo.CheckReturn(Outs, CCAssignFnForReturn(CallConv, IsVarArg)))
+    return false;
+
+  // We must use the stack if return would require unavailable registers.
+  unsigned MaxNumVGPRs = Subtarget->getMaxNumVGPRs(MF);
+  unsigned TotalNumVGPRs = AMDGPU::VGPR_32RegClass.getNumRegs();
+  for (unsigned i = MaxNumVGPRs; i < TotalNumVGPRs; ++i)
+    if (CCInfo.isAllocated(AMDGPU::VGPR_32RegClass.getRegister(i)))
+      return false;
+
+  return true;
 }
 
 SDValue
@@ -10604,6 +10614,7 @@ bool SITargetLowering::isCanonicalized(SelectionDAG &DAG, SDValue Op,
     case Intrinsic::amdgcn_rcp_legacy:
     case Intrinsic::amdgcn_rsq_legacy:
     case Intrinsic::amdgcn_trig_preop:
+    case Intrinsic::amdgcn_log:
       return true;
     default:
       break;

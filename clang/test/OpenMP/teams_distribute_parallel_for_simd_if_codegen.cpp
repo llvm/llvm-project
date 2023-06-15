@@ -2,30 +2,30 @@
 // RUN: %clang_cc1 -verify -fopenmp -fopenmp-version=45 -fopenmp-targets=powerpc64le-ibm-linux-gnu -x c++ -triple x86_64-unknown-unknown -emit-llvm %s -o - | FileCheck %s --check-prefix=CHECK1
 // RUN: %clang_cc1 -fopenmp -fopenmp-version=45 -fopenmp-targets=powerpc64le-ibm-linux-gnu -x c++ -std=c++11 -triple x86_64-unknown-unknown -emit-pch -o %t %s
 // RUN: %clang_cc1 -fopenmp -fopenmp-version=45 -fopenmp-targets=powerpc64le-ibm-linux-gnu -x c++ -triple x86_64-unknown-unknown -std=c++11 -include-pch %t -verify %s -emit-llvm -o - | FileCheck %s --check-prefix=CHECK1
-// RUN: %clang_cc1 -verify -fopenmp -fopenmp-version=50 -DOMP5 -fopenmp-targets=powerpc64le-ibm-linux-gnu -x c++ -triple x86_64-unknown-unknown -emit-llvm %s -o - | FileCheck %s --check-prefix=CHECK3
-// RUN: %clang_cc1 -fopenmp -fopenmp-version=50 -DOMP5 -fopenmp-targets=powerpc64le-ibm-linux-gnu -x c++ -std=c++11 -triple x86_64-unknown-unknown -emit-pch -o %t %s
-// RUN: %clang_cc1 -fopenmp -fopenmp-version=50 -DOMP5 -fopenmp-targets=powerpc64le-ibm-linux-gnu -x c++ -triple x86_64-unknown-unknown -std=c++11 -include-pch %t -verify %s -emit-llvm -o - | FileCheck %s --check-prefix=CHECK3
+// RUN: %clang_cc1 -verify -fopenmp -DOMP5 -fopenmp-targets=powerpc64le-ibm-linux-gnu -x c++ -triple x86_64-unknown-unknown -emit-llvm %s -o - | FileCheck %s --check-prefix=CHECK3
+// RUN: %clang_cc1 -fopenmp -DOMP5 -fopenmp-targets=powerpc64le-ibm-linux-gnu -x c++ -std=c++11 -triple x86_64-unknown-unknown -emit-pch -o %t %s
+// RUN: %clang_cc1 -fopenmp -DOMP5 -fopenmp-targets=powerpc64le-ibm-linux-gnu -x c++ -triple x86_64-unknown-unknown -std=c++11 -include-pch %t -verify %s -emit-llvm -o - | FileCheck %s --check-prefix=CHECK3
 
 // RUN: %clang_cc1 -verify -fopenmp-simd -fopenmp-version=45 -fopenmp-targets=powerpc64le-ibm-linux-gnu -x c++ -triple x86_64-unknown-unknown -emit-llvm %s -o - | FileCheck %s --check-prefix=CHECK5
 // RUN: %clang_cc1 -fopenmp-simd -fopenmp-version=45 -fopenmp-targets=powerpc64le-ibm-linux-gnu -x c++ -std=c++11 -triple x86_64-unknown-unknown -emit-pch -o %t %s
 // RUN: %clang_cc1 -fopenmp-simd -fopenmp-version=45 -fopenmp-targets=powerpc64le-ibm-linux-gnu -x c++ -triple x86_64-unknown-unknown -std=c++11 -include-pch %t -verify %s -emit-llvm -o - | FileCheck %s --check-prefix=CHECK5
-// RUN: %clang_cc1 -verify -fopenmp-simd -fopenmp-version=50 -DOMP5 -fopenmp-targets=powerpc64le-ibm-linux-gnu -x c++ -triple x86_64-unknown-unknown -emit-llvm %s -o - | FileCheck %s --check-prefix=CHECK7
-// RUN: %clang_cc1 -fopenmp-simd -fopenmp-version=50 -DOMP5 -fopenmp-targets=powerpc64le-ibm-linux-gnu -x c++ -std=c++11 -triple x86_64-unknown-unknown -emit-pch -o %t %s
-// RUN: %clang_cc1 -fopenmp-simd -fopenmp-version=50 -DOMP5 -fopenmp-targets=powerpc64le-ibm-linux-gnu -x c++ -triple x86_64-unknown-unknown -std=c++11 -include-pch %t -verify %s -emit-llvm -o - | FileCheck %s --check-prefix=CHECK7
+// RUN: %clang_cc1 -verify -fopenmp-simd -DOMP5 -fopenmp-targets=powerpc64le-ibm-linux-gnu -x c++ -triple x86_64-unknown-unknown -emit-llvm %s -o - | FileCheck %s --check-prefix=CHECK7
+// RUN: %clang_cc1 -fopenmp-simd -DOMP5 -fopenmp-targets=powerpc64le-ibm-linux-gnu -x c++ -std=c++11 -triple x86_64-unknown-unknown -emit-pch -o %t %s
+// RUN: %clang_cc1 -fopenmp-simd -DOMP5 -fopenmp-targets=powerpc64le-ibm-linux-gnu -x c++ -triple x86_64-unknown-unknown -std=c++11 -include-pch %t -verify %s -emit-llvm -o - | FileCheck %s --check-prefix=CHECK7
 
 // RUN: %clang_cc1 -verify -fopenmp -fopenmp-version=45 -fopenmp-targets=powerpc64le-ibm-linux-gnu -x c++ -triple aarch64-unknown-unknown -emit-llvm %s -o - | FileCheck %s --check-prefix=CHECK9
 // RUN: %clang_cc1 -fopenmp -fopenmp-version=45 -fopenmp-targets=powerpc64le-ibm-linux-gnu -x c++ -std=c++11 -triple aarch64-unknown-unknown -emit-pch -o %t %s
 // RUN: %clang_cc1 -fopenmp -fopenmp-version=45 -fopenmp-targets=powerpc64le-ibm-linux-gnu -x c++ -triple aarch64-unknown-unknown -std=c++11 -include-pch %t -verify %s -emit-llvm -o - | FileCheck %s --check-prefix=CHECK9
-// RUN: %clang_cc1 -verify -fopenmp -fopenmp-version=50 -DOMP5 -fopenmp-targets=powerpc64le-ibm-linux-gnu -x c++ -triple aarch64-unknown-unknown -emit-llvm %s -o - | FileCheck %s --check-prefix=CHECK11
-// RUN: %clang_cc1 -fopenmp -fopenmp-version=50 -DOMP5 -fopenmp-targets=powerpc64le-ibm-linux-gnu -x c++ -std=c++11 -triple aarch64-unknown-unknown -emit-pch -o %t %s
-// RUN: %clang_cc1 -fopenmp -fopenmp-version=50 -DOMP5 -fopenmp-targets=powerpc64le-ibm-linux-gnu -x c++ -triple aarch64-unknown-unknown -std=c++11 -include-pch %t -verify %s -emit-llvm -o - | FileCheck %s --check-prefix=CHECK11
+// RUN: %clang_cc1 -verify -fopenmp -DOMP5 -fopenmp-targets=powerpc64le-ibm-linux-gnu -x c++ -triple aarch64-unknown-unknown -emit-llvm %s -o - | FileCheck %s --check-prefix=CHECK11
+// RUN: %clang_cc1 -fopenmp -DOMP5 -fopenmp-targets=powerpc64le-ibm-linux-gnu -x c++ -std=c++11 -triple aarch64-unknown-unknown -emit-pch -o %t %s
+// RUN: %clang_cc1 -fopenmp -DOMP5 -fopenmp-targets=powerpc64le-ibm-linux-gnu -x c++ -triple aarch64-unknown-unknown -std=c++11 -include-pch %t -verify %s -emit-llvm -o - | FileCheck %s --check-prefix=CHECK11
 
 // RUN: %clang_cc1 -verify -fopenmp-simd -fopenmp-version=45 -fopenmp-targets=powerpc64le-ibm-linux-gnu -x c++ -triple aarch64-unknown-unknown -emit-llvm %s -o - | FileCheck %s --check-prefix=CHECK13
 // RUN: %clang_cc1 -fopenmp-simd -fopenmp-version=45 -fopenmp-targets=powerpc64le-ibm-linux-gnu -x c++ -std=c++11 -triple aarch64-unknown-unknown -emit-pch -o %t %s
 // RUN: %clang_cc1 -fopenmp-simd -fopenmp-version=45 -fopenmp-targets=powerpc64le-ibm-linux-gnu -x c++ -triple aarch64-unknown-unknown -std=c++11 -include-pch %t -verify %s -emit-llvm -o - | FileCheck %s --check-prefix=CHECK13
-// RUN: %clang_cc1 -verify -fopenmp-simd -fopenmp-version=50 -DOMP5 -fopenmp-targets=powerpc64le-ibm-linux-gnu -x c++ -triple aarch64-unknown-unknown -emit-llvm %s -o - | FileCheck %s --check-prefix=CHECK15
-// RUN: %clang_cc1 -fopenmp-simd -fopenmp-version=50 -DOMP5 -fopenmp-targets=powerpc64le-ibm-linux-gnu -x c++ -std=c++11 -triple aarch64-unknown-unknown -emit-pch -o %t %s
-// RUN: %clang_cc1 -fopenmp-simd -fopenmp-version=50 -DOMP5 -fopenmp-targets=powerpc64le-ibm-linux-gnu -x c++ -triple aarch64-unknown-unknown -std=c++11 -include-pch %t -verify %s -emit-llvm -o - | FileCheck %s --check-prefix=CHECK15
+// RUN: %clang_cc1 -verify -fopenmp-simd -DOMP5 -fopenmp-targets=powerpc64le-ibm-linux-gnu -x c++ -triple aarch64-unknown-unknown -emit-llvm %s -o - | FileCheck %s --check-prefix=CHECK15
+// RUN: %clang_cc1 -fopenmp-simd -DOMP5 -fopenmp-targets=powerpc64le-ibm-linux-gnu -x c++ -std=c++11 -triple aarch64-unknown-unknown -emit-pch -o %t %s
+// RUN: %clang_cc1 -fopenmp-simd -DOMP5 -fopenmp-targets=powerpc64le-ibm-linux-gnu -x c++ -triple aarch64-unknown-unknown -std=c++11 -include-pch %t -verify %s -emit-llvm -o - | FileCheck %s --check-prefix=CHECK15
 // expected-no-diagnostics
 #ifndef HEADER
 #define HEADER

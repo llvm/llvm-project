@@ -2100,8 +2100,9 @@ const Relocation *BinaryContext::getRelocationAt(uint64_t Address) const {
   return Section->getRelocationAt(Address - Section->getAddress());
 }
 
-const Relocation *BinaryContext::getDynamicRelocationAt(uint64_t Address) {
-  ErrorOr<BinarySection &> Section = getSectionForAddress(Address);
+const Relocation *
+BinaryContext::getDynamicRelocationAt(uint64_t Address) const {
+  ErrorOr<const BinarySection &> Section = getSectionForAddress(Address);
   if (!Section)
     return nullptr;
 

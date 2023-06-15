@@ -24,7 +24,6 @@ class ASTConsumer;
 namespace lldb_private {
 
 class ClangExpressionDeclMap;
-class RecordingMemoryManager;
 
 // ClangExpressionHelper
 class ClangExpressionHelper

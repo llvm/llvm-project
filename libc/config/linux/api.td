@@ -87,6 +87,7 @@ def StdlibAPI : PublicAPI<"stdlib.h"> {
     "size_t",
     "__bsearchcompare_t",
     "__qsortcompare_t",
+    "__qsortrcompare_t",
     "__atexithandler_t",
   ];
 }

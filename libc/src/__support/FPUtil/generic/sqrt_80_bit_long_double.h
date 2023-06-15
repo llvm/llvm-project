@@ -101,7 +101,7 @@ LIBC_INLINE long double sqrt(long double x) {
     }
 
     // We compute one more iteration in order to round correctly.
-    bool lsb = y & 1; // Least significant bit
+    bool lsb = static_cast<bool>(y & 1); // Least significant bit
     bool rb = false;  // Round bit
     r <<= 2;
     UIntType tmp = (y << 2) + 1;

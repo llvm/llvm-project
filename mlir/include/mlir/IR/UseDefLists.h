@@ -22,8 +22,6 @@ namespace mlir {
 class Operation;
 template <typename OperandType>
 class ValueUseIterator;
-template <typename OperandType>
-class FilteredValueUseIterator;
 template <typename UseIteratorT, typename OperandType>
 class ValueUserIterator;
 

@@ -1377,7 +1377,8 @@ public:
     Default = 0,
     GNU = 1,
     None = 2,
-    LastDebugNameTableKind = None
+    Apple = 3,
+    LastDebugNameTableKind = Apple
   };
 
   static std::optional<DebugEmissionKind> getEmissionKind(StringRef Str);
@@ -1855,6 +1856,9 @@ public:
 
   void replaceRawLinkageName(MDString *LinkageName) {
     replaceOperandWith(3, LinkageName);
+  }
+  void replaceRetainedNodes(DINodeArray N) {
+    replaceOperandWith(7, N.get());
   }
 
   /// Check if this subprogram describes the given function.

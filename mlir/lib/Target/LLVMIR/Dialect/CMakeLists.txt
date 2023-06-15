@@ -1,4 +1,5 @@
 add_subdirectory(ArmNeon)
+add_subdirectory(ArmSME)
 add_subdirectory(ArmSVE)
 add_subdirectory(AMX)
 add_subdirectory(Builtin)

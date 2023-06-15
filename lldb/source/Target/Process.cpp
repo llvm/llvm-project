@@ -5688,6 +5688,24 @@ lldb::addr_t Process::GetHighmemDataAddressMask() {
   return GetDataAddressMask();
 }
 
+addr_t Process::FixCodeAddress(addr_t addr) {
+  if (ABISP abi_sp = GetABI())
+    addr = abi_sp->FixCodeAddress(addr);
+  return addr;
+}
+
+addr_t Process::FixDataAddress(addr_t addr) {
+  if (ABISP abi_sp = GetABI())
+    addr = abi_sp->FixDataAddress(addr);
+  return addr;
+}
+
+addr_t Process::FixAnyAddress(addr_t addr) {
+  if (ABISP abi_sp = GetABI())
+    addr = abi_sp->FixAnyAddress(addr);
+  return addr;
+}
+
 void Process::DidExec() {
   Log *log = GetLog(LLDBLog::Process);
   LLDB_LOGF(log, "Process::%s()", __FUNCTION__);

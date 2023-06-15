@@ -262,12 +262,12 @@ void RewriterBase::replaceOpWithinBlock(Operation *op, ValueRange newValues,
 
 /// This method replaces the results of the operation with the specified list of
 /// values. The number of provided values must match the number of results of
-/// the operation.
+/// the operation. The replaced op is erased.
 void RewriterBase::replaceOp(Operation *op, ValueRange newValues) {
   assert(op->getNumResults() == newValues.size() &&
          "incorrect # of replacement values");
 
-  // Notify the listener that we're about to remove this op.
+  // Notify the listener that we're about to replace this op.
   if (auto *rewriteListener = dyn_cast_if_present<Listener>(listener))
     rewriteListener->notifyOperationReplaced(op, newValues);
 
@@ -275,9 +275,28 @@ void RewriterBase::replaceOp(Operation *op, ValueRange newValues) {
   for (auto it : llvm::zip(op->getResults(), newValues))
     replaceAllUsesWith(std::get<0>(it), std::get<1>(it));
 
+  // Erase the op.
+  eraseOp(op);
+}
+
+/// This method replaces the results of the operation with the specified new op
+/// (replacement). The number of results of the two operations must match. The
+/// replaced op is erased.
+void RewriterBase::replaceOp(Operation *op, Operation *newOp) {
+  assert(op && newOp && "expected non-null op");
+  assert(op->getNumResults() == newOp->getNumResults() &&
+         "ops have different number of results");
+
+  // Notify the listener that we're about to replace this op.
   if (auto *rewriteListener = dyn_cast_if_present<Listener>(listener))
-    rewriteListener->notifyOperationRemoved(op);
-  op->erase();
+    rewriteListener->notifyOperationReplaced(op, newOp);
+
+  // Replace results one-by-one. Also notifies the listener of modifications.
+  for (auto it : llvm::zip(op->getResults(), newOp->getResults()))
+    replaceAllUsesWith(std::get<0>(it), std::get<1>(it));
+
+  // Erase the old op.
+  eraseOp(op);
 }
 
 /// This method erases an operation that is known to have no uses. The uses of
@@ -362,17 +381,6 @@ void RewriterBase::mergeBlocks(Block *source, Block *dest,
 /// block into a new block, and return it.
 Block *RewriterBase::splitBlock(Block *block, Block::iterator before) {
   return block->splitBlock(before);
-}
-
-/// 'op' and 'newOp' are known to have the same number of results, replace the
-/// uses of op with uses of newOp
-void RewriterBase::replaceOpWithResultsOfAnotherOp(Operation *op,
-                                                   Operation *newOp) {
-  assert(op->getNumResults() == newOp->getNumResults() &&
-         "replacement op doesn't match results of original op");
-  if (op->getNumResults() == 1)
-    return replaceOp(op, newOp->getResult(0));
-  return replaceOp(op, newOp->getResults());
 }
 
 /// Move the blocks that belong to "region" before the given position in

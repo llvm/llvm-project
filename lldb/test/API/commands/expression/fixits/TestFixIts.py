@@ -154,7 +154,6 @@ class ExprCommandWithFixits(TestBase):
         multiple_runs_options.SetRetriesWithFixIts(0)
         value = frame.EvaluateExpression(two_runs_expr, multiple_runs_options)
         errmsg = value.GetError().GetCString()
-        self.assertIn("expression failed to parse", errmsg)
         self.assertIn("using declaration resolved to type without 'typename'", errmsg)
         self.assertIn("fixed expression suggested:", errmsg)
         self.assertIn("using typename T::TypeDef", errmsg)
@@ -166,7 +165,6 @@ class ExprCommandWithFixits(TestBase):
         multiple_runs_options.SetRetriesWithFixIts(1)
         value = frame.EvaluateExpression(two_runs_expr, multiple_runs_options)
         errmsg = value.GetError().GetCString()
-        self.assertIn("expression failed to parse", errmsg)
         self.assertIn("fixed expression suggested:", errmsg)
         # Both our fixed expressions should be in the suggested expression.
         self.assertIn("using typename T::TypeDef", errmsg)

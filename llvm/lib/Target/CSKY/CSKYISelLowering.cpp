@@ -117,7 +117,8 @@ CSKYTargetLowering::CSKYTargetLowering(const TargetMachine &TM,
   };
 
   ISD::NodeType FPOpToExpand[] = {ISD::FSIN, ISD::FCOS, ISD::FSINCOS,
-                                  ISD::FPOW, ISD::FREM, ISD::FCOPYSIGN};
+                                  ISD::FPOW, ISD::FREM, ISD::FCOPYSIGN,
+                                  ISD::FP16_TO_FP, ISD::FP_TO_FP16};
 
   if (STI.useHardFloat()) {
 
@@ -136,10 +137,14 @@ CSKYTargetLowering::CSKYTargetLowering(const TargetMachine &TM,
 
     if (STI.hasFPUv2SingleFloat() || STI.hasFPUv3SingleFloat()) {
       setOperationAction(ISD::ConstantFP, MVT::f32, Legal);
+      setLoadExtAction(ISD::EXTLOAD, MVT::f32, MVT::f16, Expand);
+      setTruncStoreAction(MVT::f32, MVT::f16, Expand);
     }
     if (STI.hasFPUv2DoubleFloat() || STI.hasFPUv3DoubleFloat()) {
       setLoadExtAction(ISD::EXTLOAD, MVT::f64, MVT::f32, Expand);
       setTruncStoreAction(MVT::f64, MVT::f32, Expand);
+      setLoadExtAction(ISD::EXTLOAD, MVT::f64, MVT::f16, Expand);
+      setTruncStoreAction(MVT::f64, MVT::f16, Expand);
     }
   }
 

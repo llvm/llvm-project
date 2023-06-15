@@ -249,10 +249,7 @@ APIRecord *APISet::findRecordForUSR(StringRef USR) const {
   if (USR.empty())
     return nullptr;
 
-  auto It = USRBasedLookupTable.find(USR);
-  if (It != USRBasedLookupTable.end())
-    return It->second;
-  return nullptr;
+  return USRBasedLookupTable.lookup(USR);
 }
 
 StringRef APISet::recordUSR(const Decl *D) {

@@ -57,10 +57,10 @@ MIR_FUNC_RE = re.compile(
     r"\n"
     r"^ *name: *(?P<func>[A-Za-z0-9_.-]+)$"
     r".*?"
-    r"^ *fixedStack: *(\[\])? *\n"
+    r"(?:^ *fixedStack: *(\[\])? *\n"
     r"(?P<fixedStack>.*?)\n?"
     r"^ *stack:"
-    r".*?"
+    r".*?)?"
     r"^ *body: *\|\n"
     r"(?P<body>.*?)\n"
     r"^\.\.\.$",

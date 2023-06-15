@@ -299,6 +299,7 @@ LogicalResult promoteSubviewsPrecondition(Operation *op,
 /// Return success if the operation can be vectorized.
 LogicalResult vectorizeOpPrecondition(Operation *op,
                                       ArrayRef<int64_t> inputVectorSizes = {},
+                                      ArrayRef<bool> inputScalableVecDims = {},
                                       bool vectorizeNDExtract = false);
 
 //===----------------------------------------------------------------------===//
@@ -592,8 +593,8 @@ LogicalResult deallocateGPUPrivateMemory(OpBuilder &, Value /*buffer*/);
 /// dynamic shapes.
 LogicalResult vectorize(RewriterBase &rewriter, Operation *op,
                         ArrayRef<int64_t> inputVectorSizes = {},
-                        bool vectorizeNDExtract = false,
-                        bool lastVectorSizeScalable = false);
+                        ArrayRef<bool> inputScalableVecDims = {},
+                        bool vectorizeNDExtract = false);
 
 /// Emit a suitable vector form for a Copy op with fully static shape.
 LogicalResult vectorizeCopy(RewriterBase &builder, memref::CopyOp copyOp);

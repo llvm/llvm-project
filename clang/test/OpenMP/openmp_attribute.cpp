@@ -1,9 +1,9 @@
-// RUN: %clang_cc1 -fopenmp -fopenmp-version=51 -fsyntax-only -verify -DSUPPORTED=1 %s
-// RUN: %clang_cc1 -fopenmp -fopenmp-version=51 -fsyntax-only -verify -DSUPPORTED=1 -x c -std=c2x %s
+// RUN: %clang_cc1 -fopenmp -fsyntax-only -verify -DSUPPORTED=1 %s
+// RUN: %clang_cc1 -fopenmp -fsyntax-only -verify -DSUPPORTED=1 -x c -std=c2x %s
 // RUN: %clang_cc1 -fsyntax-only -verify -DSUPPORTED=0 %s
 // RUN: %clang_cc1 -fsyntax-only -verify -DSUPPORTED=0 -x c -std=c2x %s
-// RUN: %clang_cc1 -fopenmp -fopenmp-version=50 -fsyntax-only -verify -DSUPPORTED=1 %s
-// RUN: %clang_cc1 -fopenmp -fopenmp-version=50 -fsyntax-only -verify -DSUPPORTED=1 -x c -std=c2x %s
+// RUN: %clang_cc1 -fopenmp -fsyntax-only -verify -DSUPPORTED=1 %s
+// RUN: %clang_cc1 -fopenmp -fsyntax-only -verify -DSUPPORTED=1 -x c -std=c2x %s
 // expected-no-diagnostics
 
 #ifndef SUPPORTED

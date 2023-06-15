@@ -449,6 +449,40 @@ GCNTTIImpl::instCombineIntrinsic(InstCombiner &IC, IntrinsicInst &II) const {
 
     break;
   }
+  case Intrinsic::amdgcn_log: {
+    Value *Src = II.getArgOperand(0);
+    Type *Ty = II.getType();
+
+    if (isa<PoisonValue>(Src))
+      return IC.replaceInstUsesWith(II, Src);
+
+    if (IC.getSimplifyQuery().isUndefValue(Src))
+      return IC.replaceInstUsesWith(II, ConstantFP::getNaN(Ty));
+
+    if (ConstantFP *C = dyn_cast<ConstantFP>(Src)) {
+      if (C->isInfinity() && !C->isNegative())
+        return IC.replaceInstUsesWith(II, C);
+
+      if (II.isStrictFP())
+        break;
+
+      if (C->isNaN()) {
+        Constant *Quieted = ConstantFP::get(Ty, C->getValue().makeQuiet());
+        return IC.replaceInstUsesWith(II, Quieted);
+      }
+
+      // f32 instruction doesn't handle denormals, f16 does.
+      if (C->isZero() || (C->getValue().isDenormal() && Ty->isFloatTy()))
+        return IC.replaceInstUsesWith(II, ConstantFP::getInfinity(Ty, true));
+
+      if (C->isNegative())
+        return IC.replaceInstUsesWith(II, ConstantFP::getNaN(Ty));
+
+      // TODO: Full constant folding matching hardware behavior.
+    }
+
+    break;
+  }
   case Intrinsic::amdgcn_frexp_mant:
   case Intrinsic::amdgcn_frexp_exp: {
     Value *Src = II.getArgOperand(0);

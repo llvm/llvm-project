@@ -1228,6 +1228,10 @@ AArch64TargetLowering::AArch64TargetLowering(const TargetMachine &TM,
     setOperationAction(ISD::BITCAST, MVT::i8, Custom);
     setOperationAction(ISD::BITCAST, MVT::i16, Custom);
 
+    setOperationAction(ISD::BITCAST, MVT::v2i8, Custom);
+    setOperationAction(ISD::BITCAST, MVT::v2i16, Custom);
+    setOperationAction(ISD::BITCAST, MVT::v4i8, Custom);
+
     setLoadExtAction(ISD::EXTLOAD,  MVT::v4i16, MVT::v4i8, Custom);
     setLoadExtAction(ISD::SEXTLOAD, MVT::v4i16, MVT::v4i8, Custom);
     setLoadExtAction(ISD::ZEXTLOAD, MVT::v4i16, MVT::v4i8, Custom);
@@ -14090,6 +14094,8 @@ bool AArch64TargetLowering::isExtFreeImpl(const Instruction *Ext) const {
       // 8-bit sized types have a scaling factor of 1, thus a shift amount of 0.
       // Get the shift amount based on the scaling factor:
       // log2(sizeof(IdxTy)) - log2(8).
+      if (IdxTy->isScalableTy())
+        return false;
       uint64_t ShiftAmt =
           llvm::countr_zero(DL.getTypeStoreSizeInBits(IdxTy).getFixedValue()) -
           3;
@@ -15474,6 +15480,11 @@ bool AArch64TargetLowering::shouldFoldConstantShiftPairToMask(
   }
 
   return true;
+}
+
+bool AArch64TargetLowering::shouldFoldSelectWithIdentityConstant(
+    unsigned BinOpcode, EVT VT) const {
+  return VT.isScalableVector() && isTypeLegal(VT);
 }
 
 bool AArch64TargetLowering::shouldConvertConstantLoadToIntImm(const APInt &Imm,
@@ -22391,6 +22402,152 @@ static SDValue performDupLane128Combine(SDNode *N, SelectionDAG &DAG) {
   return DAG.getNode(ISD::BITCAST, DL, VT, NewDuplane128);
 }
 
+// Try to combine mull with uzp1.
+static SDValue tryCombineMULLWithUZP1(SDNode *N,
+                                      TargetLowering::DAGCombinerInfo &DCI,
+                                      SelectionDAG &DAG) {
+  if (DCI.isBeforeLegalizeOps())
+    return SDValue();
+
+  SDValue LHS = N->getOperand(0);
+  SDValue RHS = N->getOperand(1);
+
+  SDValue ExtractHigh;
+  SDValue ExtractLow;
+  SDValue TruncHigh;
+  SDValue TruncLow;
+  SDLoc DL(N);
+
+  // Check the operands are trunc and extract_high.
+  if (isEssentiallyExtractHighSubvector(LHS) &&
+      RHS.getOpcode() == ISD::TRUNCATE) {
+    TruncHigh = RHS;
+    if (LHS.getOpcode() == ISD::BITCAST)
+      ExtractHigh = LHS.getOperand(0);
+    else
+      ExtractHigh = LHS;
+  } else if (isEssentiallyExtractHighSubvector(RHS) &&
+             LHS.getOpcode() == ISD::TRUNCATE) {
+    TruncHigh = LHS;
+    if (LHS.getOpcode() == ISD::BITCAST)
+      ExtractHigh = RHS.getOperand(0);
+    else
+      ExtractHigh = RHS;
+  } else
+    return SDValue();
+
+  // If the truncate's operand is BUILD_VECTOR with DUP, do not combine the op
+  // with uzp1.
+  // You can see the regressions on test/CodeGen/AArch64/aarch64-smull.ll
+  SDValue TruncHighOp = TruncHigh.getOperand(0);
+  EVT TruncHighOpVT = TruncHighOp.getValueType();
+  if (TruncHighOp.getOpcode() == AArch64ISD::DUP ||
+      DAG.isSplatValue(TruncHighOp, false))
+    return SDValue();
+
+  // Check there is other extract_high with same source vector.
+  // For example,
+  //
+  //    t18: v4i16 = extract_subvector t2, Constant:i64<0>
+  //    t12: v4i16 = truncate t11
+  //  t31: v4i32 = AArch64ISD::SMULL t18, t12
+  //    t23: v4i16 = extract_subvector t2, Constant:i64<4>
+  //    t16: v4i16 = truncate t15
+  //  t30: v4i32 = AArch64ISD::SMULL t23, t1
+  //
+  // This dagcombine assumes the two extract_high uses same source vector in
+  // order to detect the pair of the mull. If they have different source vector,
+  // this code will not work.
+  bool HasFoundMULLow = true;
+  SDValue ExtractHighSrcVec = ExtractHigh.getOperand(0);
+  if (ExtractHighSrcVec->use_size() != 2)
+    HasFoundMULLow = false;
+
+  // Find ExtractLow.
+  for (SDNode *User : ExtractHighSrcVec.getNode()->uses()) {
+    if (User == ExtractHigh.getNode())
+      continue;
+
+    if (User->getOpcode() != ISD::EXTRACT_SUBVECTOR ||
+        !isNullConstant(User->getOperand(1))) {
+      HasFoundMULLow = false;
+      break;
+    }
+
+    ExtractLow.setNode(User);
+  }
+
+  if (!ExtractLow || !ExtractLow->hasOneUse())
+    HasFoundMULLow = false;
+
+  // Check ExtractLow's user.
+  if (HasFoundMULLow) {
+    SDNode *ExtractLowUser = *ExtractLow.getNode()->use_begin();
+    if (ExtractLowUser->getOpcode() != N->getOpcode())
+      HasFoundMULLow = false;
+
+    if (ExtractLowUser->getOperand(0) == ExtractLow) {
+      if (ExtractLowUser->getOperand(1).getOpcode() == ISD::TRUNCATE)
+        TruncLow = ExtractLowUser->getOperand(1);
+      else
+        HasFoundMULLow = false;
+    } else {
+      if (ExtractLowUser->getOperand(0).getOpcode() == ISD::TRUNCATE)
+        TruncLow = ExtractLowUser->getOperand(0);
+      else
+        HasFoundMULLow = false;
+    }
+  }
+
+  // If the truncate's operand is BUILD_VECTOR with DUP, do not combine the op
+  // with uzp1.
+  // You can see the regressions on test/CodeGen/AArch64/aarch64-smull.ll
+  EVT TruncHighVT = TruncHigh.getValueType();
+  EVT UZP1VT = TruncHighVT.getDoubleNumVectorElementsVT(*DAG.getContext());
+  SDValue TruncLowOp =
+      HasFoundMULLow ? TruncLow.getOperand(0) : DAG.getUNDEF(UZP1VT);
+  EVT TruncLowOpVT = TruncLowOp.getValueType();
+  if (HasFoundMULLow && (TruncLowOp.getOpcode() == AArch64ISD::DUP ||
+                         DAG.isSplatValue(TruncLowOp, false)))
+    return SDValue();
+
+  // Create uzp1, extract_high and extract_low.
+  if (TruncHighOpVT != UZP1VT)
+    TruncHighOp = DAG.getNode(ISD::BITCAST, DL, UZP1VT, TruncHighOp);
+  if (TruncLowOpVT != UZP1VT)
+    TruncLowOp = DAG.getNode(ISD::BITCAST, DL, UZP1VT, TruncLowOp);
+
+  SDValue UZP1 =
+      DAG.getNode(AArch64ISD::UZP1, DL, UZP1VT, TruncLowOp, TruncHighOp);
+  SDValue HighIdxCst =
+      DAG.getConstant(TruncHighVT.getVectorNumElements(), DL, MVT::i64);
+  SDValue NewTruncHigh =
+      DAG.getNode(ISD::EXTRACT_SUBVECTOR, DL, TruncHighVT, UZP1, HighIdxCst);
+  DAG.ReplaceAllUsesWith(TruncHigh, NewTruncHigh);
+
+  if (HasFoundMULLow) {
+    EVT TruncLowVT = TruncLow.getValueType();
+    SDValue NewTruncLow = DAG.getNode(ISD::EXTRACT_SUBVECTOR, DL, TruncLowVT,
+                                      UZP1, ExtractLow.getOperand(1));
+    DAG.ReplaceAllUsesWith(TruncLow, NewTruncLow);
+  }
+
+  return SDValue(N, 0);
+}
+
+static SDValue performMULLCombine(SDNode *N,
+                                  TargetLowering::DAGCombinerInfo &DCI,
+                                  SelectionDAG &DAG) {
+  if (SDValue Val =
+          tryCombineLongOpWithDup(Intrinsic::not_intrinsic, N, DCI, DAG))
+    return Val;
+
+  if (SDValue Val = tryCombineMULLWithUZP1(N, DCI, DAG))
+    return Val;
+
+  return SDValue();
+}
+
 SDValue AArch64TargetLowering::PerformDAGCombine(SDNode *N,
                                                  DAGCombinerInfo &DCI) const {
   SelectionDAG &DAG = DCI.DAG;
@@ -22535,7 +22692,7 @@ SDValue AArch64TargetLowering::PerformDAGCombine(SDNode *N,
   case AArch64ISD::SMULL:
   case AArch64ISD::UMULL:
   case AArch64ISD::PMULL:
-    return tryCombineLongOpWithDup(Intrinsic::not_intrinsic, N, DCI, DAG);
+    return performMULLCombine(N, DCI, DAG);
   case ISD::INTRINSIC_VOID:
   case ISD::INTRINSIC_W_CHAIN:
     switch (cast<ConstantSDNode>(N->getOperand(1))->getZExtValue()) {
@@ -22873,12 +23030,44 @@ static void replaceBoolVectorBitcast(SDNode *N,
     Results.push_back(DAG.getZExtOrTrunc(VectorBits, DL, VT));
 }
 
+static void CustomNonLegalBITCASTResults(SDNode *N,
+                                         SmallVectorImpl<SDValue> &Results,
+                                         SelectionDAG &DAG, EVT ExtendVT,
+                                         EVT CastVT) {
+  SDLoc DL(N);
+  SDValue Op = N->getOperand(0);
+  EVT VT = N->getValueType(0);
+
+  // Use SCALAR_TO_VECTOR for lane zero
+  SDValue Vec = DAG.getNode(ISD::SCALAR_TO_VECTOR, DL, ExtendVT, Op);
+  SDValue CastVal = DAG.getNode(ISD::BITCAST, DL, CastVT, Vec);
+  SDValue IdxZero = DAG.getVectorIdxConstant(0, DL);
+  Results.push_back(
+      DAG.getNode(ISD::EXTRACT_SUBVECTOR, DL, VT, CastVal, IdxZero));
+  return;
+}
+
 void AArch64TargetLowering::ReplaceBITCASTResults(
     SDNode *N, SmallVectorImpl<SDValue> &Results, SelectionDAG &DAG) const {
   SDLoc DL(N);
   SDValue Op = N->getOperand(0);
   EVT VT = N->getValueType(0);
   EVT SrcVT = Op.getValueType();
+
+  if (VT == MVT::v2i16 && SrcVT == MVT::i32) {
+    CustomNonLegalBITCASTResults(N, Results, DAG, MVT::v2i32, MVT::v4i16);
+    return;
+  }
+
+  if (VT == MVT::v4i8 && SrcVT == MVT::i32) {
+    CustomNonLegalBITCASTResults(N, Results, DAG, MVT::v2i32, MVT::v8i8);
+    return;
+  }
+
+  if (VT == MVT::v2i8 && SrcVT == MVT::i16) {
+    CustomNonLegalBITCASTResults(N, Results, DAG, MVT::v4i16, MVT::v8i8);
+    return;
+  }
 
   if (VT.isScalableVector() && !isTypeLegal(VT) && isTypeLegal(SrcVT)) {
     assert(!VT.isFloatingPoint() && SrcVT.isFloatingPoint() &&

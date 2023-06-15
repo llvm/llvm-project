@@ -34,7 +34,7 @@ public:
   size_t CalculateNumChildren() override { return m_backend.GetNumChildren(); }
 
   lldb::ValueObjectSP GetChildAtIndex(size_t idx) override {
-    return m_backend.GetChildAtIndex(idx, true);
+    return m_backend.GetChildAtIndex(idx);
   }
 
   size_t GetIndexOfChildWithName(ConstString name) override {

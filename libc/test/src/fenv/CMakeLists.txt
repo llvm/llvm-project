@@ -94,6 +94,7 @@ if (NOT (LLVM_USE_SANITIZER OR (${LIBC_TARGET_OS} STREQUAL "windows")
   # and MacOS.
   add_fp_unittest(
     enabled_exceptions_test
+    UNIT_TEST_ONLY
     SUITE
       libc_fenv_unittests
     SRCS
@@ -110,6 +111,7 @@ if (NOT (LLVM_USE_SANITIZER OR (${LIBC_TARGET_OS} STREQUAL "windows")
 
   add_fp_unittest(
     feholdexcept_test
+    UNIT_TEST_ONLY
     SUITE
       libc_fenv_unittests
     SRCS

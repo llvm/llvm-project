@@ -84,6 +84,21 @@ template <size_t alignment, typename T> static T *assume_aligned(T *ptr) {
   return reinterpret_cast<T *>(__builtin_assume_aligned(ptr, alignment));
 }
 
+// Returns true iff memory regions [p1, p1 + size] and [p2, p2 + size] are
+// disjoint.
+LIBC_INLINE bool is_disjoint(const void *p1, const void *p2, size_t size) {
+  const char *a = static_cast<const char *>(p1);
+  const char *b = static_cast<const char *>(p2);
+  if (a > b) {
+    // Swap a and b, this compiles down to conditionnal move for aarch64, x86
+    // and RISCV with zbb extension.
+    const char *tmp = a;
+    a = b;
+    b = tmp;
+  }
+  return a + size <= b;
+}
+
 #if LIBC_HAS_BUILTIN(__builtin_memcpy_inline)
 #define LLVM_LIBC_HAS_BUILTIN_MEMCPY_INLINE
 #endif

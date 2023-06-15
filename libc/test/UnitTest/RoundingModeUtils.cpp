@@ -7,6 +7,8 @@
 //===----------------------------------------------------------------------===//
 
 #include "RoundingModeUtils.h"
+#include "src/__support/FPUtil/FEnvImpl.h"
+#include "src/__support/FPUtil/rounding_mode.h"
 
 #include <fenv.h>
 
@@ -34,15 +36,19 @@ int get_fe_rounding(RoundingMode mode) {
 }
 
 ForceRoundingMode::ForceRoundingMode(RoundingMode mode) {
-  old_rounding_mode = fegetround();
+  old_rounding_mode = quick_get_round();
   rounding_mode = get_fe_rounding(mode);
-  if (old_rounding_mode != rounding_mode)
-    fesetround(rounding_mode);
+  if (old_rounding_mode != rounding_mode) {
+    int status = set_round(rounding_mode);
+    success = (status == 0);
+  } else {
+    success = true;
+  }
 }
 
 ForceRoundingMode::~ForceRoundingMode() {
   if (old_rounding_mode != rounding_mode)
-    fesetround(old_rounding_mode);
+    set_round(old_rounding_mode);
 }
 
 } // namespace testing

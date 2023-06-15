@@ -23,6 +23,7 @@
 #include "mlir/Support/LogicalResult.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/TypeSwitch.h"
+#include "llvm/Support/ErrorHandling.h"
 
 using namespace mlir;
 
@@ -160,7 +161,12 @@ bool memref::LoadOp::loadsFrom(const MemorySlot &slot) {
   return getMemRef() == slot.ptr;
 }
 
-Value memref::LoadOp::getStored(const MemorySlot &slot) { return {}; }
+bool memref::LoadOp::storesTo(const MemorySlot &slot) { return false; }
+
+Value memref::LoadOp::getStored(const MemorySlot &slot,
+                                RewriterBase &rewriter) {
+  llvm_unreachable("getStored should not be called on LoadOp");
+}
 
 bool memref::LoadOp::canUsesBeRemoved(
     const MemorySlot &slot, const SmallPtrSetImpl<OpOperand *> &blockingUses,
@@ -222,9 +228,12 @@ DeletionKind memref::LoadOp::rewire(const DestructurableMemorySlot &slot,
 
 bool memref::StoreOp::loadsFrom(const MemorySlot &slot) { return false; }
 
-Value memref::StoreOp::getStored(const MemorySlot &slot) {
-  if (getMemRef() != slot.ptr)
-    return {};
+bool memref::StoreOp::storesTo(const MemorySlot &slot) {
+  return getMemRef() == slot.ptr;
+}
+
+Value memref::StoreOp::getStored(const MemorySlot &slot,
+                                 RewriterBase &rewriter) {
   return getValue();
 }
 

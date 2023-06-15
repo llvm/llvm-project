@@ -115,9 +115,7 @@ class ExtInfo_rr<ExtInfo ext, DAGOperand rdty, DAGOperand rs1ty> {
 }
 
 def FExt       : ExtInfo<0, [HasStdExtF]>;
-def F64Ext     : ExtInfo<0, [HasStdExtF, IsRV64]>;
 def ZfinxExt   : ExtInfo<1, [HasStdExtZfinx]>;
-def Zfinx64Ext : ExtInfo<1, [HasStdExtZfinx, IsRV64]>;
 
 def F      : ExtInfo_r<FExt,     FPR32>;
 def F_INX  : ExtInfo_r<ZfinxExt, FPR32INX>;
@@ -126,19 +124,13 @@ def FF        : ExtInfo_rr<FExt,       FPR32,    FPR32>;
 def FF_INX    : ExtInfo_rr<ZfinxExt,   FPR32INX, FPR32INX>;
 def FX        : ExtInfo_rr<FExt,       FPR32,    GPR>;
 def FX_INX    : ExtInfo_rr<ZfinxExt,   FPR32INX, GPR>;
-def FX_64     : ExtInfo_rr<F64Ext,     FPR32,    GPR>;
-def FX_INX_64 : ExtInfo_rr<Zfinx64Ext, FPR32INX, GPR>;
 def XF        : ExtInfo_rr<FExt,       GPR,      FPR32>;
-def XF_64     : ExtInfo_rr<F64Ext,     GPR,      FPR32>;
 def XF_INX    : ExtInfo_rr<ZfinxExt,   GPR,      FPR32INX>;
-def XF_INX_64 : ExtInfo_rr<Zfinx64Ext, GPR,      FPR32INX>;
 
 defvar FINX    = [F,     F_INX];
 defvar FFINX   = [FF,    FF_INX];
 defvar FXINX   = [FX,    FX_INX];
 defvar XFINX   = [XF,    XF_INX];
-defvar XFIN64X = [XF_64, XF_INX_64];
-defvar FXIN64X = [FX_64, FX_INX_64];
 
 // Floating-point rounding mode
 
@@ -246,9 +238,11 @@ class FPUnaryOp_r_frm<bits<7> funct7, bits<5> rs2val, DAGOperand rdty,
   let rs2 = rs2val;
 }
 multiclass FPUnaryOp_r_frm_m<bits<7> funct7, bits<5> rs2val,
-                             list<ExtInfo_rr> Exts, string opcodestr> {
+                             list<ExtInfo_rr> Exts, string opcodestr,
+                             list<Predicate> ExtraPreds = []> {
   foreach Ext = Exts in
-    let Predicates = Ext.Predicates, DecoderNamespace = Ext.Space in
+    let Predicates = !listconcat(Ext.Predicates, ExtraPreds),
+        DecoderNamespace = Ext.Space in
     def Ext.Suffix : FPUnaryOp_r_frm<funct7, rs2val, Ext.RdTy, Ext.Rs1Ty,
                                      opcodestr>;
 }
@@ -356,16 +350,16 @@ let Predicates = [HasStdExtF], mayRaiseFPException = 0 in
 def FMV_W_X : FPUnaryOp_r<0b1111000, 0b00000, 0b000, FPR32, GPR, "fmv.w.x">,
               Sched<[WriteFMovI32ToF32, ReadFMovI32ToF32]>;
 
-defm FCVT_L_S  : FPUnaryOp_r_frm_m<0b1100000, 0b00010, XFIN64X, "fcvt.l.s">,
+defm FCVT_L_S  : FPUnaryOp_r_frm_m<0b1100000, 0b00010, XFINX, "fcvt.l.s", [IsRV64]>,
                  Sched<[WriteFCvtF32ToI64, ReadFCvtF32ToI64]>;
 
-defm FCVT_LU_S  : FPUnaryOp_r_frm_m<0b1100000, 0b00011, XFIN64X, "fcvt.lu.s">,
+defm FCVT_LU_S  : FPUnaryOp_r_frm_m<0b1100000, 0b00011, XFINX, "fcvt.lu.s", [IsRV64]>,
                   Sched<[WriteFCvtF32ToI64, ReadFCvtF32ToI64]>;
 
-defm FCVT_S_L : FPUnaryOp_r_frm_m<0b1101000, 0b00010, FXIN64X, "fcvt.s.l">,
+defm FCVT_S_L : FPUnaryOp_r_frm_m<0b1101000, 0b00010, FXINX, "fcvt.s.l", [IsRV64]>,
                 Sched<[WriteFCvtI64ToF32, ReadFCvtI64ToF32]>;
 
-defm FCVT_S_LU : FPUnaryOp_r_frm_m<0b1101000, 0b00011, FXIN64X, "fcvt.s.lu">,
+defm FCVT_S_LU : FPUnaryOp_r_frm_m<0b1101000, 0b00011, FXINX, "fcvt.s.lu", [IsRV64]>,
                  Sched<[WriteFCvtI64ToF32, ReadFCvtI64ToF32]>;
 
 //===----------------------------------------------------------------------===//

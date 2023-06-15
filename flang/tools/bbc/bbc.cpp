@@ -421,6 +421,8 @@ int main(int argc, char **argv) {
     semanticsContext.targetCharacteristics().DisableType(
         Fortran::common::TypeCategory::Real, /*kind=*/10);
   }
+  if (targetTriple.isPPC())
+    semanticsContext.targetCharacteristics().set_isPPC(true);
 
   return mlir::failed(convertFortranSourceToMLIR(
       inputFilename, options, programPrefix, semanticsContext, passPipe));

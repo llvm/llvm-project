@@ -107,8 +107,9 @@ public:
 /// funky memory allocation and hashing things to make it extremely efficient,
 /// storing the string data *after* the value in the map.
 template <typename ValueTy, typename AllocatorTy = MallocAllocator>
-class StringMap : public StringMapImpl,
-                  private detail::AllocatorHolder<AllocatorTy> {
+class LLVM_ALLOCATORHOLDER_EMPTYBASE StringMap
+    : public StringMapImpl,
+      private detail::AllocatorHolder<AllocatorTy> {
   using AllocTy = detail::AllocatorHolder<AllocatorTy>;
 
 public:

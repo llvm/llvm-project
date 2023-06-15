@@ -130,6 +130,10 @@ template <> struct FPBits<long double> {
     return bits & MASK;
   }
 
+  LIBC_INLINE long double get_val() const {
+    return cpp::bit_cast<long double>(bits);
+  }
+
   LIBC_INLINE int get_exponent() const {
     if (get_unbiased_exponent() == 0)
       return int(1) - EXPONENT_BIAS;

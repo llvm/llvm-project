@@ -172,12 +172,13 @@ private:
   /// Computes the reaching definition for all the operations that require
   /// promotion. `reachingDef` is the value the slot should contain at the
   /// beginning of the block. This method returns the reached definition at the
-  /// end of the block.
+  /// end of the block. This method must only be called at most once per block.
   Value computeReachingDefInBlock(Block *block, Value reachingDef);
 
   /// Computes the reaching definition for all the operations that require
   /// promotion. `reachingDef` corresponds to the initial value the
   /// slot will contain before any write, typically a poison value.
+  /// This method must only be called at most once per region.
   void computeReachingDefInRegion(Region *region, Value reachingDef);
 
   /// Removes the blocking uses of the slot, in topological order.
@@ -326,7 +327,7 @@ SmallPtrSet<Block *, 16> MemorySlotPromotionAnalyzer::computeSlotLiveIn(
 
         // If we store to the slot, further loads will see that value.
         // Because we did not meet any load before, the value is not live-in.
-        if (memOp.getStored(slot))
+        if (memOp.storesTo(slot))
           break;
       }
     }
@@ -365,7 +366,7 @@ void MemorySlotPromotionAnalyzer::computeMergePoints(
   SmallPtrSet<Block *, 16> definingBlocks;
   for (Operation *user : slot.ptr.getUsers())
     if (auto storeOp = dyn_cast<PromotableMemOpInterface>(user))
-      if (storeOp.getStored(slot))
+      if (storeOp.storesTo(slot))
         definingBlocks.insert(user->getBlock());
 
   idfCalculator.setDefiningBlocks(definingBlocks);
@@ -416,13 +417,21 @@ MemorySlotPromotionAnalyzer::computeInfo() {
 
 Value MemorySlotPromoter::computeReachingDefInBlock(Block *block,
                                                     Value reachingDef) {
-  for (Operation &op : block->getOperations()) {
+  SmallVector<Operation *> blockOps;
+  for (Operation &op : block->getOperations())
+    blockOps.push_back(&op);
+  for (Operation *op : blockOps) {
     if (auto memOp = dyn_cast<PromotableMemOpInterface>(op)) {
       if (info.userToBlockingUses.contains(memOp))
         reachingDefs.insert({memOp, reachingDef});
 
-      if (Value stored = memOp.getStored(slot))
+      if (memOp.storesTo(slot)) {
+        rewriter.setInsertionPointAfter(memOp);
+        Value stored = memOp.getStored(slot, rewriter);
+        assert(stored && "a memory operation storing to a slot must provide a "
+                         "new definition of the slot");
         reachingDef = stored;
+      }
     }
   }
 

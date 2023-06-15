@@ -12,11 +12,11 @@ endif()
 set(SANITIZER_UNITTESTS
   sanitizer_addrhashmap_test.cpp
   sanitizer_allocator_test.cpp
+  sanitizer_array_ref_test.cpp
   sanitizer_atomic_test.cpp
   sanitizer_bitvector_test.cpp
   sanitizer_bvgraph_test.cpp
   sanitizer_chained_origin_depot_test.cpp
-  sanitizer_common_range_test.cpp
   sanitizer_common_test.cpp
   sanitizer_deadlock_detector_test.cpp
   sanitizer_dense_map_test.cpp
@@ -38,6 +38,7 @@ set(SANITIZER_UNITTESTS
   sanitizer_printf_test.cpp
   sanitizer_procmaps_test.cpp
   sanitizer_procmaps_mac_test.cpp
+  sanitizer_range_test.cpp
   sanitizer_ring_buffer_test.cpp
   sanitizer_quarantine_test.cpp
   sanitizer_stack_store_test.cpp

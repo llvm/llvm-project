@@ -23,8 +23,8 @@ define amdgpu_kernel void @ne_t(float %x) {
 ; GCN:       ; %bb.0:
 ; GCN-NEXT:    s_load_dword s0, s[0:1], 0x24
 ; GCN-NEXT:    s_waitcnt lgkmcnt(0)
-; GCN-NEXT:    v_cmp_lt_f32_e64 s[0:1], s0, 1.0
-; GCN-NEXT:    v_cndmask_b32_e64 v0, 4.0, 2.0, s[0:1]
+; GCN-NEXT:    v_cmp_nlt_f32_e64 s[0:1], s0, 1.0
+; GCN-NEXT:    v_cndmask_b32_e64 v0, 2.0, 4.0, s[0:1]
 ; GCN-NEXT:    flat_store_dword v[0:1], v0
 ; GCN-NEXT:    s_endpgm
   %c1 = fcmp olt float %x, 1.0
@@ -40,8 +40,8 @@ define amdgpu_kernel void @eq_f(float %x) {
 ; GCN:       ; %bb.0:
 ; GCN-NEXT:    s_load_dword s0, s[0:1], 0x24
 ; GCN-NEXT:    s_waitcnt lgkmcnt(0)
-; GCN-NEXT:    v_cmp_lt_f32_e64 s[0:1], s0, 1.0
-; GCN-NEXT:    v_cndmask_b32_e64 v0, 4.0, 2.0, s[0:1]
+; GCN-NEXT:    v_cmp_nlt_f32_e64 s[0:1], s0, 1.0
+; GCN-NEXT:    v_cndmask_b32_e64 v0, 2.0, 4.0, s[0:1]
 ; GCN-NEXT:    flat_store_dword v[0:1], v0
 ; GCN-NEXT:    s_endpgm
   %c1 = fcmp olt float %x, 1.0

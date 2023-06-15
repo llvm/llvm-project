@@ -1,9 +1,9 @@
-// RUN: %clang_cc1 -verify -fopenmp -fopenmp-version=51 -fsyntax-only %s -Wuninitialized
-// RUN: %clang_cc1 -verify -fopenmp -fopenmp-version=51 -std=c++11 -fsyntax-only %s -Wuninitialized
+// RUN: %clang_cc1 -verify -fopenmp -fsyntax-only %s -Wuninitialized
+// RUN: %clang_cc1 -verify -fopenmp -std=c++11 -fsyntax-only %s -Wuninitialized
 // RUN: %clang_cc1 -verify=expected,omp52 -fopenmp -fopenmp-version=52 -fsyntax-only %s -Wuninitialized
 // RUN: %clang_cc1 -verify=expected,omp52 -fopenmp -fopenmp-version=52 -std=c++11 -fsyntax-only %s -Wuninitialized
-// RUN: %clang_cc1 -verify -fopenmp-simd -fopenmp-version=51 -fsyntax-only %s -Wuninitialized
-// RUN: %clang_cc1 -verify -fopenmp-simd -fopenmp-version=51 -std=c++11 -fsyntax-only %s -Wuninitialized
+// RUN: %clang_cc1 -verify -fopenmp-simd -fsyntax-only %s -Wuninitialized
+// RUN: %clang_cc1 -verify -fopenmp-simd -std=c++11 -fsyntax-only %s -Wuninitialized
 // RUN: %clang_cc1 -verify=expected,omp52 -fopenmp-simd -fopenmp-version=52 -fsyntax-only %s -Wuninitialized
 // RUN: %clang_cc1 -verify=expected,omp52 -fopenmp-simd -fopenmp-version=52 -std=c++11 -fsyntax-only %s -Wuninitialized
 

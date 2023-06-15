@@ -73,8 +73,8 @@ entry:
 ; NOVNDS-NEXT: .ref __llvm_prf_names[RO]
 ; NOVNDS-NOT:  .ref __llvm_prf_vnds
 
-; NOVNDS-OBJ: 00000008 R_REF  __llvm_prf_data
-; NOVNDS-OBJ: 00000008 R_REF  __llvm_prf_names
+; NOVNDS-OBJ: 00000000 R_REF  __llvm_prf_data
+; NOVNDS-OBJ: 00000000 R_REF  __llvm_prf_names
 ; NOVNDS-OBJ-NOT: R_REF  __llvm_prf_vnds
 
 ;--- with-vnds.ll
@@ -115,8 +115,8 @@ entry:
 
 ; WITHVNDS-OBJ:      RELOCATION RECORDS FOR [.data]:
 ; WITHVNDS-OBJ-NEXT: OFFSET   TYPE                     VALUE
-; WITHVNDS-OBJ-NEXT: 00000008 R_REF                    __llvm_prf_data
-; WITHVNDS-OBJ-NEXT: 00000008 R_REF                    __llvm_prf_names
-; WITHVNDS-OBJ-NEXT: 00000008 R_REF                    __llvm_prf_vnds
+; WITHVNDS-OBJ-NEXT: 00000000 R_REF                    __llvm_prf_data
+; WITHVNDS-OBJ-NEXT: 00000000 R_REF                    __llvm_prf_names
+; WITHVNDS-OBJ-NEXT: 00000000 R_REF                    __llvm_prf_vnds
 ; WITHVNDS-OBJ-NEXT: 00000100 R_POS                    .main
 ; WITHVNDS-OBJ-NEXT: 00000104 R_POS                    TOC

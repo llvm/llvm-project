@@ -47,7 +47,6 @@ class NamedAttrList;
 class Operation;
 struct OperationState;
 class OpAsmParser;
-class OpAsmParserResult;
 class OpAsmPrinter;
 class OperandRange;
 class OperandRangeRange;

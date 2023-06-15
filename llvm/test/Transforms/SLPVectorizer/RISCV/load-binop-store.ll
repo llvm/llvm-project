@@ -13,14 +13,9 @@ define void @vec_add(ptr %dest, ptr %p) {
 ;
 ; DEFAULT-LABEL: @vec_add(
 ; DEFAULT-NEXT:  entry:
-; DEFAULT-NEXT:    [[E0:%.*]] = load i16, ptr [[P:%.*]], align 4
-; DEFAULT-NEXT:    [[INC:%.*]] = getelementptr inbounds i16, ptr [[P]], i64 1
-; DEFAULT-NEXT:    [[E1:%.*]] = load i16, ptr [[INC]], align 2
-; DEFAULT-NEXT:    [[A0:%.*]] = add i16 [[E0]], 1
-; DEFAULT-NEXT:    [[A1:%.*]] = add i16 [[E1]], 1
-; DEFAULT-NEXT:    store i16 [[A0]], ptr [[DEST:%.*]], align 4
-; DEFAULT-NEXT:    [[INC2:%.*]] = getelementptr inbounds i16, ptr [[DEST]], i64 1
-; DEFAULT-NEXT:    store i16 [[A1]], ptr [[INC2]], align 2
+; DEFAULT-NEXT:    [[TMP0:%.*]] = load <2 x i16>, ptr [[P:%.*]], align 4
+; DEFAULT-NEXT:    [[TMP1:%.*]] = add <2 x i16> [[TMP0]], <i16 1, i16 1>
+; DEFAULT-NEXT:    store <2 x i16> [[TMP1]], ptr [[DEST:%.*]], align 4
 ; DEFAULT-NEXT:    ret void
 ;
 entry:
@@ -47,14 +42,9 @@ define void @vec_sub(ptr %dest, ptr %p) {
 ;
 ; DEFAULT-LABEL: @vec_sub(
 ; DEFAULT-NEXT:  entry:
-; DEFAULT-NEXT:    [[E0:%.*]] = load i16, ptr [[P:%.*]], align 4
-; DEFAULT-NEXT:    [[INC:%.*]] = getelementptr inbounds i16, ptr [[P]], i64 1
-; DEFAULT-NEXT:    [[E1:%.*]] = load i16, ptr [[INC]], align 2
-; DEFAULT-NEXT:    [[A0:%.*]] = sub i16 [[E0]], 17
-; DEFAULT-NEXT:    [[A1:%.*]] = sub i16 [[E1]], 17
-; DEFAULT-NEXT:    store i16 [[A0]], ptr [[DEST:%.*]], align 4
-; DEFAULT-NEXT:    [[INC2:%.*]] = getelementptr inbounds i16, ptr [[DEST]], i64 1
-; DEFAULT-NEXT:    store i16 [[A1]], ptr [[INC2]], align 2
+; DEFAULT-NEXT:    [[TMP0:%.*]] = load <2 x i16>, ptr [[P:%.*]], align 4
+; DEFAULT-NEXT:    [[TMP1:%.*]] = sub <2 x i16> [[TMP0]], <i16 17, i16 17>
+; DEFAULT-NEXT:    store <2 x i16> [[TMP1]], ptr [[DEST:%.*]], align 4
 ; DEFAULT-NEXT:    ret void
 ;
 entry:
@@ -81,14 +71,9 @@ define void @vec_rsub(ptr %dest, ptr %p) {
 ;
 ; DEFAULT-LABEL: @vec_rsub(
 ; DEFAULT-NEXT:  entry:
-; DEFAULT-NEXT:    [[E0:%.*]] = load i16, ptr [[P:%.*]], align 4
-; DEFAULT-NEXT:    [[INC:%.*]] = getelementptr inbounds i16, ptr [[P]], i64 1
-; DEFAULT-NEXT:    [[E1:%.*]] = load i16, ptr [[INC]], align 2
-; DEFAULT-NEXT:    [[A0:%.*]] = sub i16 29, [[E0]]
-; DEFAULT-NEXT:    [[A1:%.*]] = sub i16 29, [[E1]]
-; DEFAULT-NEXT:    store i16 [[A0]], ptr [[DEST:%.*]], align 4
-; DEFAULT-NEXT:    [[INC2:%.*]] = getelementptr inbounds i16, ptr [[DEST]], i64 1
-; DEFAULT-NEXT:    store i16 [[A1]], ptr [[INC2]], align 2
+; DEFAULT-NEXT:    [[TMP0:%.*]] = load <2 x i16>, ptr [[P:%.*]], align 4
+; DEFAULT-NEXT:    [[TMP1:%.*]] = sub <2 x i16> <i16 29, i16 29>, [[TMP0]]
+; DEFAULT-NEXT:    store <2 x i16> [[TMP1]], ptr [[DEST:%.*]], align 4
 ; DEFAULT-NEXT:    ret void
 ;
 entry:
@@ -115,14 +100,9 @@ define void @vec_mul(ptr %dest, ptr %p) {
 ;
 ; DEFAULT-LABEL: @vec_mul(
 ; DEFAULT-NEXT:  entry:
-; DEFAULT-NEXT:    [[E0:%.*]] = load i16, ptr [[P:%.*]], align 4
-; DEFAULT-NEXT:    [[INC:%.*]] = getelementptr inbounds i16, ptr [[P]], i64 1
-; DEFAULT-NEXT:    [[E1:%.*]] = load i16, ptr [[INC]], align 2
-; DEFAULT-NEXT:    [[A0:%.*]] = mul i16 [[E0]], 7
-; DEFAULT-NEXT:    [[A1:%.*]] = mul i16 [[E1]], 7
-; DEFAULT-NEXT:    store i16 [[A0]], ptr [[DEST:%.*]], align 4
-; DEFAULT-NEXT:    [[INC2:%.*]] = getelementptr inbounds i16, ptr [[DEST]], i64 1
-; DEFAULT-NEXT:    store i16 [[A1]], ptr [[INC2]], align 2
+; DEFAULT-NEXT:    [[TMP0:%.*]] = load <2 x i16>, ptr [[P:%.*]], align 4
+; DEFAULT-NEXT:    [[TMP1:%.*]] = mul <2 x i16> [[TMP0]], <i16 7, i16 7>
+; DEFAULT-NEXT:    store <2 x i16> [[TMP1]], ptr [[DEST:%.*]], align 4
 ; DEFAULT-NEXT:    ret void
 ;
 entry:
@@ -149,14 +129,9 @@ define void @vec_sdiv(ptr %dest, ptr %p) {
 ;
 ; DEFAULT-LABEL: @vec_sdiv(
 ; DEFAULT-NEXT:  entry:
-; DEFAULT-NEXT:    [[E0:%.*]] = load i16, ptr [[P:%.*]], align 4
-; DEFAULT-NEXT:    [[INC:%.*]] = getelementptr inbounds i16, ptr [[P]], i64 1
-; DEFAULT-NEXT:    [[E1:%.*]] = load i16, ptr [[INC]], align 2
-; DEFAULT-NEXT:    [[A0:%.*]] = sdiv i16 [[E0]], 7
-; DEFAULT-NEXT:    [[A1:%.*]] = sdiv i16 [[E1]], 7
-; DEFAULT-NEXT:    store i16 [[A0]], ptr [[DEST:%.*]], align 4
-; DEFAULT-NEXT:    [[INC2:%.*]] = getelementptr inbounds i16, ptr [[DEST]], i64 1
-; DEFAULT-NEXT:    store i16 [[A1]], ptr [[INC2]], align 2
+; DEFAULT-NEXT:    [[TMP0:%.*]] = load <2 x i16>, ptr [[P:%.*]], align 4
+; DEFAULT-NEXT:    [[TMP1:%.*]] = sdiv <2 x i16> [[TMP0]], <i16 7, i16 7>
+; DEFAULT-NEXT:    store <2 x i16> [[TMP1]], ptr [[DEST:%.*]], align 4
 ; DEFAULT-NEXT:    ret void
 ;
 entry:
@@ -184,17 +159,10 @@ define void @vec_and(ptr %dest, ptr %p, ptr %q) {
 ;
 ; DEFAULT-LABEL: @vec_and(
 ; DEFAULT-NEXT:  entry:
-; DEFAULT-NEXT:    [[E0:%.*]] = load i16, ptr [[P:%.*]], align 4
-; DEFAULT-NEXT:    [[INC:%.*]] = getelementptr inbounds i16, ptr [[P]], i64 1
-; DEFAULT-NEXT:    [[E1:%.*]] = load i16, ptr [[INC]], align 2
-; DEFAULT-NEXT:    [[F0:%.*]] = load i16, ptr [[Q:%.*]], align 4
-; DEFAULT-NEXT:    [[INQ:%.*]] = getelementptr inbounds i16, ptr [[Q]], i64 1
-; DEFAULT-NEXT:    [[F1:%.*]] = load i16, ptr [[INQ]], align 2
-; DEFAULT-NEXT:    [[A0:%.*]] = and i16 [[E0]], [[F0]]
-; DEFAULT-NEXT:    [[A1:%.*]] = and i16 [[E1]], [[F1]]
-; DEFAULT-NEXT:    store i16 [[A0]], ptr [[DEST:%.*]], align 4
-; DEFAULT-NEXT:    [[INC2:%.*]] = getelementptr inbounds i16, ptr [[DEST]], i64 1
-; DEFAULT-NEXT:    store i16 [[A1]], ptr [[INC2]], align 2
+; DEFAULT-NEXT:    [[TMP0:%.*]] = load <2 x i16>, ptr [[P:%.*]], align 4
+; DEFAULT-NEXT:    [[TMP1:%.*]] = load <2 x i16>, ptr [[Q:%.*]], align 4
+; DEFAULT-NEXT:    [[TMP2:%.*]] = and <2 x i16> [[TMP0]], [[TMP1]]
+; DEFAULT-NEXT:    store <2 x i16> [[TMP2]], ptr [[DEST:%.*]], align 4
 ; DEFAULT-NEXT:    ret void
 ;
 entry:
@@ -226,17 +194,10 @@ define void @vec_or(ptr %dest, ptr %p, ptr %q) {
 ;
 ; DEFAULT-LABEL: @vec_or(
 ; DEFAULT-NEXT:  entry:
-; DEFAULT-NEXT:    [[E0:%.*]] = load i16, ptr [[P:%.*]], align 4
-; DEFAULT-NEXT:    [[INC:%.*]] = getelementptr inbounds i16, ptr [[P]], i64 1
-; DEFAULT-NEXT:    [[E1:%.*]] = load i16, ptr [[INC]], align 2
-; DEFAULT-NEXT:    [[F0:%.*]] = load i16, ptr [[Q:%.*]], align 4
-; DEFAULT-NEXT:    [[INQ:%.*]] = getelementptr inbounds i16, ptr [[Q]], i64 1
-; DEFAULT-NEXT:    [[F1:%.*]] = load i16, ptr [[INQ]], align 2
-; DEFAULT-NEXT:    [[A0:%.*]] = or i16 [[E0]], [[F0]]
-; DEFAULT-NEXT:    [[A1:%.*]] = or i16 [[E1]], [[F1]]
-; DEFAULT-NEXT:    store i16 [[A0]], ptr [[DEST:%.*]], align 4
-; DEFAULT-NEXT:    [[INC2:%.*]] = getelementptr inbounds i16, ptr [[DEST]], i64 1
-; DEFAULT-NEXT:    store i16 [[A1]], ptr [[INC2]], align 2
+; DEFAULT-NEXT:    [[TMP0:%.*]] = load <2 x i16>, ptr [[P:%.*]], align 4
+; DEFAULT-NEXT:    [[TMP1:%.*]] = load <2 x i16>, ptr [[Q:%.*]], align 4
+; DEFAULT-NEXT:    [[TMP2:%.*]] = or <2 x i16> [[TMP0]], [[TMP1]]
+; DEFAULT-NEXT:    store <2 x i16> [[TMP2]], ptr [[DEST:%.*]], align 4
 ; DEFAULT-NEXT:    ret void
 ;
 entry:
@@ -268,17 +229,10 @@ define void @vec_sll(ptr %dest, ptr %p, ptr %q) {
 ;
 ; DEFAULT-LABEL: @vec_sll(
 ; DEFAULT-NEXT:  entry:
-; DEFAULT-NEXT:    [[E0:%.*]] = load i16, ptr [[P:%.*]], align 4
-; DEFAULT-NEXT:    [[INC:%.*]] = getelementptr inbounds i16, ptr [[P]], i64 1
-; DEFAULT-NEXT:    [[E1:%.*]] = load i16, ptr [[INC]], align 2
-; DEFAULT-NEXT:    [[F0:%.*]] = load i16, ptr [[Q:%.*]], align 4
-; DEFAULT-NEXT:    [[INQ:%.*]] = getelementptr inbounds i16, ptr [[Q]], i64 1
-; DEFAULT-NEXT:    [[F1:%.*]] = load i16, ptr [[INQ]], align 2
-; DEFAULT-NEXT:    [[A0:%.*]] = shl i16 [[E0]], [[F0]]
-; DEFAULT-NEXT:    [[A1:%.*]] = shl i16 [[E1]], [[F1]]
-; DEFAULT-NEXT:    store i16 [[A0]], ptr [[DEST:%.*]], align 4
-; DEFAULT-NEXT:    [[INC2:%.*]] = getelementptr inbounds i16, ptr [[DEST]], i64 1
-; DEFAULT-NEXT:    store i16 [[A1]], ptr [[INC2]], align 2
+; DEFAULT-NEXT:    [[TMP0:%.*]] = load <2 x i16>, ptr [[P:%.*]], align 4
+; DEFAULT-NEXT:    [[TMP1:%.*]] = load <2 x i16>, ptr [[Q:%.*]], align 4
+; DEFAULT-NEXT:    [[TMP2:%.*]] = shl <2 x i16> [[TMP0]], [[TMP1]]
+; DEFAULT-NEXT:    store <2 x i16> [[TMP2]], ptr [[DEST:%.*]], align 4
 ; DEFAULT-NEXT:    ret void
 ;
 entry:
@@ -311,17 +265,10 @@ define void @vec_smin(ptr %dest, ptr %p, ptr %q) {
 ;
 ; DEFAULT-LABEL: @vec_smin(
 ; DEFAULT-NEXT:  entry:
-; DEFAULT-NEXT:    [[E0:%.*]] = load i16, ptr [[P:%.*]], align 4
-; DEFAULT-NEXT:    [[INC:%.*]] = getelementptr inbounds i16, ptr [[P]], i64 1
-; DEFAULT-NEXT:    [[E1:%.*]] = load i16, ptr [[INC]], align 2
-; DEFAULT-NEXT:    [[F0:%.*]] = load i16, ptr [[Q:%.*]], align 4
-; DEFAULT-NEXT:    [[INQ:%.*]] = getelementptr inbounds i16, ptr [[Q]], i64 1
-; DEFAULT-NEXT:    [[F1:%.*]] = load i16, ptr [[INQ]], align 2
-; DEFAULT-NEXT:    [[A0:%.*]] = tail call i16 @llvm.smin.i16(i16 [[E0]], i16 [[F0]])
-; DEFAULT-NEXT:    [[A1:%.*]] = tail call i16 @llvm.smin.i16(i16 [[E1]], i16 [[F1]])
-; DEFAULT-NEXT:    store i16 [[A0]], ptr [[DEST:%.*]], align 4
-; DEFAULT-NEXT:    [[INC2:%.*]] = getelementptr inbounds i16, ptr [[DEST]], i64 1
-; DEFAULT-NEXT:    store i16 [[A1]], ptr [[INC2]], align 2
+; DEFAULT-NEXT:    [[TMP0:%.*]] = load <2 x i16>, ptr [[P:%.*]], align 4
+; DEFAULT-NEXT:    [[TMP1:%.*]] = load <2 x i16>, ptr [[Q:%.*]], align 4
+; DEFAULT-NEXT:    [[TMP2:%.*]] = call <2 x i16> @llvm.smin.v2i16(<2 x i16> [[TMP0]], <2 x i16> [[TMP1]])
+; DEFAULT-NEXT:    store <2 x i16> [[TMP2]], ptr [[DEST:%.*]], align 4
 ; DEFAULT-NEXT:    ret void
 ;
 entry:
@@ -354,17 +301,10 @@ define void @vec_umax(ptr %dest, ptr %p, ptr %q) {
 ;
 ; DEFAULT-LABEL: @vec_umax(
 ; DEFAULT-NEXT:  entry:
-; DEFAULT-NEXT:    [[E0:%.*]] = load i16, ptr [[P:%.*]], align 4
-; DEFAULT-NEXT:    [[INC:%.*]] = getelementptr inbounds i16, ptr [[P]], i64 1
-; DEFAULT-NEXT:    [[E1:%.*]] = load i16, ptr [[INC]], align 2
-; DEFAULT-NEXT:    [[F0:%.*]] = load i16, ptr [[Q:%.*]], align 4
-; DEFAULT-NEXT:    [[INQ:%.*]] = getelementptr inbounds i16, ptr [[Q]], i64 1
-; DEFAULT-NEXT:    [[F1:%.*]] = load i16, ptr [[INQ]], align 2
-; DEFAULT-NEXT:    [[A0:%.*]] = tail call i16 @llvm.umax.i16(i16 [[E0]], i16 [[F0]])
-; DEFAULT-NEXT:    [[A1:%.*]] = tail call i16 @llvm.umax.i16(i16 [[E1]], i16 [[F1]])
-; DEFAULT-NEXT:    store i16 [[A0]], ptr [[DEST:%.*]], align 4
-; DEFAULT-NEXT:    [[INC2:%.*]] = getelementptr inbounds i16, ptr [[DEST]], i64 1
-; DEFAULT-NEXT:    store i16 [[A1]], ptr [[INC2]], align 2
+; DEFAULT-NEXT:    [[TMP0:%.*]] = load <2 x i16>, ptr [[P:%.*]], align 4
+; DEFAULT-NEXT:    [[TMP1:%.*]] = load <2 x i16>, ptr [[Q:%.*]], align 4
+; DEFAULT-NEXT:    [[TMP2:%.*]] = call <2 x i16> @llvm.umax.v2i16(<2 x i16> [[TMP0]], <2 x i16> [[TMP1]])
+; DEFAULT-NEXT:    store <2 x i16> [[TMP2]], ptr [[DEST:%.*]], align 4
 ; DEFAULT-NEXT:    ret void
 ;
 entry:

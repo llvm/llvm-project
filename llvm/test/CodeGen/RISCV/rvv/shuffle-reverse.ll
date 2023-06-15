@@ -631,7 +631,7 @@ define <32 x half> @v16f16_2(<16 x half> %a) {
 ; CHECK-NEXT:    vle16.v v12, (a0)
 ; CHECK-NEXT:    vmv.v.i v16, 0
 ; CHECK-NEXT:    vsetivli zero, 16, e16, m4, tu, ma
-; CHECK-NEXT:    vslideup.vi v16, v8, 0
+; CHECK-NEXT:    vmv.v.v v16, v8
 ; CHECK-NEXT:    vsetvli zero, a1, e16, m4, ta, ma
 ; CHECK-NEXT:    vrgather.vv v8, v16, v12
 ; CHECK-NEXT:    ret

@@ -536,7 +536,7 @@ define void @truncstore_v2i8_v2i1(<2 x i8> %x, ptr %z) {
 ; CHECK-NEXT:    vsetivli zero, 8, e8, mf2, ta, ma
 ; CHECK-NEXT:    vmv.v.i v9, 0
 ; CHECK-NEXT:    vsetivli zero, 2, e8, mf2, tu, ma
-; CHECK-NEXT:    vslideup.vi v9, v8, 0
+; CHECK-NEXT:    vmv.v.v v9, v8
 ; CHECK-NEXT:    vsetivli zero, 8, e8, mf2, ta, ma
 ; CHECK-NEXT:    vmsne.vi v8, v9, 0
 ; CHECK-NEXT:    vsm.v v8, (a0)

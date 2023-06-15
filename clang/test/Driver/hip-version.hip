@@ -5,8 +5,17 @@
 // RUN: %clang -v --rocm-path=%S/Inputs/rocm 2>&1 \
 // RUN:   | FileCheck -check-prefixes=FOUND %s
 
+// RUN: env ROCM_PATH=%S/Inputs/rocm %clang -v 2>&1 \
+// RUN:   | FileCheck -check-prefixes=FOUND %s
+
 // RUN: %clang -v --rocm-path=%S/Inputs/rocm 2>&1 \
 // RUN:   --target=amdgcn-amd-amdhsa \
+// RUN:   | FileCheck -check-prefixes=FOUND %s
+
+// RUN: %clang -v --hip-path=%S/Inputs/rocm 2>&1 \
+// RUN:   | FileCheck -check-prefixes=FOUND %s
+
+// RUN: env HIP_PATH=%S/Inputs/rocm %clang -v 2>&1 \
 // RUN:   | FileCheck -check-prefixes=FOUND %s
 
 // RUN: rm -rf %t/Inputs
@@ -22,6 +31,11 @@
 // When --rocm-path is set and .hipVersion is not found, use default version
 
 // RUN: %clang -v --rocm-path=%S 2>&1 \
+// RUN:   | FileCheck -check-prefixes=DEFAULT %s
+
+// When --hip-path is set and .hipVersion is not found, use default version
+
+// RUN: %clang -v --hip-path=%S 2>&1 \
 // RUN:   | FileCheck -check-prefixes=DEFAULT %s
 
 // RUN: %clang -v --rocm-path=%S 2>&1 \

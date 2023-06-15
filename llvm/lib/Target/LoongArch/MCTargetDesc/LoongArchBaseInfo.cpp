@@ -73,7 +73,7 @@ ABI computeTargetABI(const Triple &TT, StringRef ABIName) {
     break;
   }
 
-  if (!ABIName.empty() && ArgProvidedABI != TripleABI)
+  if (!ABIName.empty() && TT.hasEnvironment() && ArgProvidedABI != TripleABI)
     errs() << "warning: triple-implied ABI conflicts with provided target-abi '"
            << ABIName << "', using target-abi\n";
 

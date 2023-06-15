@@ -38,13 +38,9 @@
 #include <utility>
 #include <vector>
 
-using namespace llvm;
-using namespace rdf;
-
 // Printing functions. Have them here first, so that the rest of the code
 // can use them.
-namespace llvm {
-namespace rdf {
+namespace llvm::rdf {
 
 raw_ostream &operator<<(raw_ostream &OS, const Print<RegisterRef> &P) {
   P.G.getPRI().print(OS, P.Obj);
@@ -52,6 +48,8 @@ raw_ostream &operator<<(raw_ostream &OS, const Print<RegisterRef> &P) {
 }
 
 raw_ostream &operator<<(raw_ostream &OS, const Print<NodeId> &P) {
+  if (P.Obj == 0)
+    return OS << "null";
   auto NA = P.G.addr<NodeBase *>(P.Obj);
   uint16_t Attrs = NA.Addr->getAttrs();
   uint16_t Kind = NodeAttrs::kind(Attrs);
@@ -328,9 +326,6 @@ raw_ostream &operator<<(raw_ostream &OS,
   }
   return OS;
 }
-
-} // end namespace rdf
-} // end namespace llvm
 
 // Node allocation functions.
 //
@@ -805,8 +800,7 @@ Node DataFlowGraph::cloneNode(const Node B) {
 
 // Allocation routines for specific node types/kinds.
 
-rdf::Use DataFlowGraph::newUse(Instr Owner, MachineOperand &Op,
-                               uint16_t Flags) {
+Use DataFlowGraph::newUse(Instr Owner, MachineOperand &Op, uint16_t Flags) {
   Use UA = newNode(NodeAttrs::Ref | NodeAttrs::Use | Flags);
   UA.Addr->setRegRef(&Op, *this);
   return UA;
@@ -861,8 +855,43 @@ Func DataFlowGraph::newFunc(MachineFunction *MF) {
 }
 
 // Build the data flow graph.
-void DataFlowGraph::build(unsigned Options) {
+void DataFlowGraph::build(const Config &config) {
   reset();
+  BuildCfg = config;
+  MachineRegisterInfo &MRI = MF.getRegInfo();
+  ReservedRegs = MRI.getReservedRegs();
+  bool SkipReserved = BuildCfg.Options & BuildOptions::OmitReserved;
+
+  auto Insert = [](auto &Set, auto &&Range) {
+    Set.insert(Range.begin(), Range.end());
+  };
+
+  if (BuildCfg.TrackRegs.empty()) {
+    std::set<RegisterId> BaseSet;
+    if (BuildCfg.Classes.empty()) {
+      // Insert every register.
+      for (unsigned R = 0, E = getPRI().getTRI().getNumRegs(); R != E; ++R)
+        BaseSet.insert(R);
+    } else {
+      for (const TargetRegisterClass *RC : BuildCfg.Classes) {
+        for (MCPhysReg R : *RC)
+          BaseSet.insert(R);
+      }
+    }
+    for (RegisterId R : BaseSet) {
+      if (SkipReserved && ReservedRegs[R])
+        continue;
+      Insert(TrackedUnits, getPRI().getUnits(RegisterRef(R)));
+    }
+  } else {
+    // Track set in Config overrides everything.
+    for (unsigned R : BuildCfg.TrackRegs) {
+      if (SkipReserved && ReservedRegs[R])
+        continue;
+      Insert(TrackedUnits, getPRI().getUnits(RegisterRef(R)));
+    }
+  }
+
   TheFunc = newFunc(&MF);
 
   if (MF.empty())
@@ -881,15 +910,7 @@ void DataFlowGraph::build(unsigned Options) {
   Block EA = TheFunc.Addr->getEntryBlock(*this);
   NodeList Blocks = TheFunc.Addr->members(*this);
 
-  // Collect information about block references.
-  RegisterSet AllRefs(getPRI());
-  for (Block BA : Blocks)
-    for (Instr IA : BA.Addr->members(*this))
-      for (Ref RA : IA.Addr->members(*this))
-        AllRefs.insert(RA.Addr->getRegRef(*this));
-
   // Collect function live-ins and entry block live-ins.
-  MachineRegisterInfo &MRI = MF.getRegInfo();
   MachineBasicBlock &EntryB = *EA.Addr->getCode();
   assert(EntryB.pred_empty() && "Function entry block has predecessors");
   for (std::pair<unsigned, unsigned> P : MRI.liveins())
@@ -901,6 +922,8 @@ void DataFlowGraph::build(unsigned Options) {
 
   // Add function-entry phi nodes for the live-in registers.
   for (RegisterRef RR : LiveIns.refs()) {
+    if (RR.isReg() && !isTracked(RR)) // isReg is likely guaranteed
+      continue;
     Phi PA = newPhi(EA);
     uint16_t PhiFlags = NodeAttrs::PhiRef | NodeAttrs::Preserving;
     Def DA = newDef(PA, RR, PhiFlags);
@@ -926,6 +949,8 @@ void DataFlowGraph::build(unsigned Options) {
 
       // Build phi nodes for each live-in.
       for (RegisterRef RR : EHRegs.refs()) {
+        if (RR.isReg() && !isTracked(RR))
+          continue;
         Phi PA = newPhi(BA);
         uint16_t PhiFlags = NodeAttrs::PhiRef | NodeAttrs::Preserving;
         // Add def:
@@ -946,14 +971,14 @@ void DataFlowGraph::build(unsigned Options) {
   for (Block BA : Blocks)
     recordDefsForDF(PhiM, BA);
   for (Block BA : Blocks)
-    buildPhis(PhiM, AllRefs, BA);
+    buildPhis(PhiM, BA);
 
   // Link all the refs. This will recursively traverse the dominator tree.
   DefStackMap DM;
   linkBlockRefs(DM, EA);
 
   // Finally, remove all unused phi nodes.
-  if (!(Options & BuildOptions::KeepDeadPhis))
+  if (!(BuildCfg.Options & BuildOptions::KeepDeadPhis))
     removeUnusedPhis();
 }
 
@@ -1037,6 +1062,8 @@ void DataFlowGraph::pushClobbers(Instr IA, DefStackMap &DefM) {
     DefM[RR.Reg].push(DA);
     Defined.insert(RR.Reg);
     for (RegisterId A : getPRI().getAliasSet(RR.Reg)) {
+      if (RegisterRef::isRegId(A) && !isTracked(RegisterRef(A)))
+        continue;
       // Check that we don't push the same def twice.
       assert(A != RR.Reg);
       if (!Defined.count(A))
@@ -1092,6 +1119,8 @@ void DataFlowGraph::pushDefs(Instr IA, DefStackMap &DefM) {
     // The def stack traversal in linkNodeUp will check the exact aliasing.
     DefM[RR.Reg].push(DA);
     for (RegisterId A : getPRI().getAliasSet(RR.Reg)) {
+      if (RegisterRef::isRegId(A) && !isTracked(RegisterRef(A)))
+        continue;
       // Check that we don't push the same def twice.
       assert(A != RR.Reg);
       DefM[A].push(DA);
@@ -1120,6 +1149,8 @@ NodeList DataFlowGraph::getRelatedRefs(Instr IA, Ref RA) const {
 void DataFlowGraph::reset() {
   Memory.clear();
   BlockNodes.clear();
+  TrackedUnits.clear();
+  ReservedRegs.clear();
   TheFunc = Func();
 }
 
@@ -1132,7 +1163,7 @@ void DataFlowGraph::reset() {
 Ref DataFlowGraph::getNextRelated(Instr IA, Ref RA) const {
   assert(IA.Id != 0 && RA.Id != 0);
 
-  auto Related = [this, RA](Ref TA) -> bool {
+  auto IsRelated = [this, RA](Ref TA) -> bool {
     if (TA.Addr->getKind() != RA.Addr->getKind())
       return false;
     if (!getPRI().equal_to(TA.Addr->getRegRef(*this),
@@ -1141,24 +1172,26 @@ Ref DataFlowGraph::getNextRelated(Instr IA, Ref RA) const {
     }
     return true;
   };
-  auto RelatedStmt = [&Related, RA](Ref TA) -> bool {
-    return Related(TA) && &RA.Addr->getOp() == &TA.Addr->getOp();
-  };
-  auto RelatedPhi = [&Related, RA](Ref TA) -> bool {
-    if (!Related(TA))
+
+  RegisterRef RR = RA.Addr->getRegRef(*this);
+  if (IA.Addr->getKind() == NodeAttrs::Stmt) {
+    auto Cond = [&IsRelated, RA](Ref TA) -> bool {
+      return IsRelated(TA) && &RA.Addr->getOp() == &TA.Addr->getOp();
+    };
+    return RA.Addr->getNextRef(RR, Cond, true, *this);
+  }
+
+  assert(IA.Addr->getKind() == NodeAttrs::Phi);
+  auto Cond = [&IsRelated, RA](Ref TA) -> bool {
+    if (!IsRelated(TA))
       return false;
     if (TA.Addr->getKind() != NodeAttrs::Use)
       return true;
     // For phi uses, compare predecessor blocks.
-    const NodeAddr<const PhiUseNode *> TUA = TA;
-    const NodeAddr<const PhiUseNode *> RUA = RA;
-    return TUA.Addr->getPredecessor() == RUA.Addr->getPredecessor();
+    return PhiUse(TA).Addr->getPredecessor() ==
+           PhiUse(RA).Addr->getPredecessor();
   };
-
-  RegisterRef RR = RA.Addr->getRegRef(*this);
-  if (IA.Addr->getKind() == NodeAttrs::Stmt)
-    return RA.Addr->getNextRef(RR, RelatedStmt, true, *this);
-  return RA.Addr->getNextRef(RR, RelatedPhi, true, *this);
+  return RA.Addr->getNextRef(RR, Cond, true, *this);
 }
 
 // Find the next node related to RA in IA that satisfies condition P.
@@ -1205,17 +1238,6 @@ Ref DataFlowGraph::getNextShadow(Instr IA, Ref RA, bool Create) {
   NA.Addr->setFlags(Flags | NodeAttrs::Shadow);
   IA.Addr->addMemberAfter(Loc.first, NA, *this);
   return NA;
-}
-
-// Get the next shadow node in IA corresponding to RA. Return null-address
-// if such a node does not exist.
-Ref DataFlowGraph::getNextShadow(Instr IA, Ref RA) const {
-  assert(IA.Id != 0 && RA.Id != 0);
-  uint16_t Flags = RA.Addr->getFlags() | NodeAttrs::Shadow;
-  auto IsShadow = [Flags](Ref TA) -> bool {
-    return TA.Addr->getFlags() == Flags;
-  };
-  return locateNextRef(IA, RA, IsShadow).second;
 }
 
 // Create a new statement node in the block node BA that corresponds to
@@ -1267,7 +1289,7 @@ void DataFlowGraph::buildStmt(Block BA, MachineInstr &In) {
     if (!Op.isReg() || !Op.isDef() || Op.isImplicit())
       continue;
     Register R = Op.getReg();
-    if (!R || !R.isPhysical())
+    if (!R || !R.isPhysical() || !isTracked(RegisterRef(R)))
       continue;
     uint16_t Flags = NodeAttrs::None;
     if (TOI.isPreserving(In, OpN)) {
@@ -1299,9 +1321,12 @@ void DataFlowGraph::buildStmt(Block BA, MachineInstr &In) {
     SA.Addr->addMember(DA, *this);
     // Record all clobbered registers in DoneDefs.
     const uint32_t *RM = Op.getRegMask();
-    for (unsigned i = 1, e = TRI.getNumRegs(); i != e; ++i)
+    for (unsigned i = 1, e = TRI.getNumRegs(); i != e; ++i) {
+      if (!isTracked(RegisterRef(i)))
+        continue;
       if (!(RM[i / 32] & (1u << (i % 32))))
         DoneClobbers.set(i);
+    }
   }
 
   // Process implicit defs, skipping those that have already been added
@@ -1311,7 +1336,7 @@ void DataFlowGraph::buildStmt(Block BA, MachineInstr &In) {
     if (!Op.isReg() || !Op.isDef() || !Op.isImplicit())
       continue;
     Register R = Op.getReg();
-    if (!R || !R.isPhysical() || DoneDefs.test(R))
+    if (!R || !R.isPhysical() || !isTracked(RegisterRef(R)) || DoneDefs.test(R))
       continue;
     RegisterRef RR = makeRegRef(Op);
     uint16_t Flags = NodeAttrs::None;
@@ -1340,7 +1365,7 @@ void DataFlowGraph::buildStmt(Block BA, MachineInstr &In) {
     if (!Op.isReg() || !Op.isUse())
       continue;
     Register R = Op.getReg();
-    if (!R || !R.isPhysical())
+    if (!R || !R.isPhysical() || !isTracked(RegisterRef(R)))
       continue;
     uint16_t Flags = NodeAttrs::None;
     if (Op.isUndef())
@@ -1370,9 +1395,13 @@ void DataFlowGraph::recordDefsForDF(BlockRefsMap &PhiM, Block BA) {
   // This is done to make sure that each defined reference gets only one
   // phi node, even if it is defined multiple times.
   RegisterAggr Defs(getPRI());
-  for (Instr IA : BA.Addr->members(*this))
-    for (Ref RA : IA.Addr->members_if(IsDef, *this))
-      Defs.insert(RA.Addr->getRegRef(*this));
+  for (Instr IA : BA.Addr->members(*this)) {
+    for (Ref RA : IA.Addr->members_if(IsDef, *this)) {
+      RegisterRef RR = RA.Addr->getRegRef(*this);
+      if (RR.isReg() && isTracked(RR))
+        Defs.insert(RR);
+    }
+  }
 
   // Calculate the iterated dominance frontier of BB.
   const MachineDominanceFrontier::DomSetType &DF = DFLoc->second;
@@ -1393,8 +1422,7 @@ void DataFlowGraph::recordDefsForDF(BlockRefsMap &PhiM, Block BA) {
 
 // Given the locations of phi nodes in the map PhiM, create the phi nodes
 // that are located in the block node BA.
-void DataFlowGraph::buildPhis(BlockRefsMap &PhiM, RegisterSet &AllRefs,
-                              Block BA) {
+void DataFlowGraph::buildPhis(BlockRefsMap &PhiM, Block BA) {
   // Check if this blocks has any DF defs, i.e. if there are any defs
   // that this block is in the iterated dominance frontier of.
   auto HasDF = PhiM.find(BA.Id);
@@ -1596,8 +1624,7 @@ void DataFlowGraph::linkBlockRefs(DefStackMap &DefM, Block BA) {
     if (NA.Addr->getKind() != NodeAttrs::Use)
       return false;
     assert(NA.Addr->getFlags() & NodeAttrs::PhiRef);
-    PhiUse PUA = NA;
-    return PUA.Addr->getPredecessor() == BA.Id;
+    return PhiUse(NA).Addr->getPredecessor() == BA.Id;
   };
 
   RegisterAggr EHLiveIns = getLandingPadLiveIns();
@@ -1744,3 +1771,29 @@ void DataFlowGraph::unlinkDefDF(Def DA) {
     RDA.Addr->setReachedUse(ReachedUses.front().Id);
   }
 }
+
+bool DataFlowGraph::isTracked(RegisterRef RR) const {
+  return !disjoint(getPRI().getUnits(RR), TrackedUnits);
+}
+
+bool DataFlowGraph::hasUntrackedRef(Stmt S, bool IgnoreReserved) const {
+  SmallVector<MachineOperand *> Ops;
+
+  for (Ref R : S.Addr->members(*this)) {
+    Ops.push_back(&R.Addr->getOp());
+    RegisterRef RR = R.Addr->getRegRef(*this);
+    if (IgnoreReserved && RR.isReg() && ReservedRegs[RR.idx()])
+      continue;
+    if (!isTracked(RR))
+      return true;
+  }
+  for (const MachineOperand &Op : S.Addr->getCode()->operands()) {
+    if (!Op.isReg() && !Op.isRegMask())
+      continue;
+    if (llvm::find(Ops, &Op) == Ops.end())
+      return true;
+  }
+  return false;
+}
+
+} // end namespace llvm::rdf

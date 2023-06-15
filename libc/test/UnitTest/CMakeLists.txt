@@ -110,6 +110,7 @@ add_unittest_framework_library(
     libc.src.__support.FPUtil.fp_bits
     libc.src.__support.FPUtil.fpbits_str
     libc.src.__support.FPUtil.fenv_impl
+    libc.src.__support.FPUtil.rounding_mode
 )
 
 add_unittest_framework_library(

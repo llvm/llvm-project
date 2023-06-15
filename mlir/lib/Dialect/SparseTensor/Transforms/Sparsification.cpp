@@ -832,6 +832,21 @@ static void genBuffers(CodegenEnv &env, OpBuilder &builder) {
   Location loc = op.getLoc();
   assert(op.getNumOperands() == op.getNumDpsInputs() + 1);
 
+  SmallVector<Range, 4> loopRange =
+      llvm::cast<linalg::LinalgOp>(op.getOperation())
+          .createLoopRanges(builder, loc);
+
+  assert(loopRange.size() == env.merger().getStartingFilterLoopId());
+  SmallVector<Range, 4> sortedRange;
+  for (unsigned i = 0, e = env.topSortSize(); i < e; i++) {
+    LoopId ldx = env.topSortAt(i);
+    // FIXME: Gets rid of filter loops since we have a better algorithm to deal
+    // with affine index expression.
+    if (ldx < env.merger().getStartingFilterLoopId()) {
+      sortedRange.push_back(loopRange[ldx]);
+    }
+  }
+
   env.emitter().initializeLoopEmit(
       builder, loc,
       /// Generates buffer for the output tensor.
@@ -865,6 +880,16 @@ static void genBuffers(CodegenEnv &env, OpBuilder &builder) {
                                          ValueRange{init});
         }
         return init;
+      },
+      [&sortedRange, &env](OpBuilder &b, Location loc, Level l) {
+        assert(l < env.topSortSize());
+        // FIXME: Remove filter loop since we have a better algorithm to
+        // deal with affine index expression.
+        if (l >= env.merger().getStartingFilterLoopId())
+          return Value();
+
+        return mlir::getValueOrCreateConstantIndexOp(b, loc,
+                                                     sortedRange[l].size);
       });
 }
 
@@ -1306,12 +1331,11 @@ static bool isParallelFor(CodegenEnv &env, bool isOuter, bool isSparse) {
   llvm_unreachable("unexpected parallelization strategy");
 }
 
-/// Generates a for-loop on a single index.
-static Operation *genFor(CodegenEnv &env, OpBuilder &builder, bool isOuter,
-                         bool isInner, LoopId ldx,
-                         ArrayRef<TensorLevel> tidLvls) {
+/// Whether or not the current loop being generated should be parallized (if
+/// possible) according to the configuration.
+static bool shouldTryParallize(CodegenEnv &env, LoopId ldx, bool isOuter,
+                               ArrayRef<TensorLevel> tidLvls) {
   linalg::GenericOp op = env.op();
-  Location loc = op.getLoc();
   auto iteratorTypes = op.getIteratorTypesArray();
   bool isSparse = llvm::any_of(tidLvls, [ldx, &env](TensorLevel tidLvl) {
     // Queries the DLT based on the tensor id and loop idx, as requested by
@@ -1321,38 +1345,44 @@ static Operation *genFor(CodegenEnv &env, OpBuilder &builder, bool isOuter,
     return isCompressedDLT(dlt) || isSingletonDLT(dlt);
   });
 
-  bool isParallel = isParallelFor(env, isOuter, isSparse);
+  return isParallelFor(env, isOuter, isSparse);
+}
 
+/// Generates a "filter loop" on the given tid level to locate a coordinate that
+/// is of the same value as evaluated by the affine expression in its matching
+/// indexing map.
+static Operation *genFilterLoop(CodegenEnv &env, OpBuilder &builder, LoopId ldx,
+                                TensorLevel tidLvl) {
+  linalg::GenericOp op = env.op();
+  Location loc = op.getLoc();
   Operation *loop = *env.genLoopBoundary([&](MutableArrayRef<Value> reduc) {
-    if (env.merger().isFilterLoop(ldx)) {
-      const auto [tid, lvl] = env.unpackTensorLevel(tidLvls.front());
-      // tids/lvls must only have one value because filter loops only
-      // corresponding to the one and only sparse tensor level.
-      assert(isSparse && tidLvls.size() == 1);
-      OpOperand *t = &op->getOpOperand(tid);
-      auto enc = getSparseTensorEncoding(t->get().getType());
-      // Retrieves the affine expression for the filter loop.
-      // FIXME: `toOrigDim` is deprecated.
-      AffineExpr a =
-          op.getMatchingIndexingMap(t).getResult(toOrigDim(enc, lvl));
-      return env.emitter().enterFilterLoopOverTensorAtLvl(builder, loc, tid,
-                                                          lvl, a, reduc);
-    }
-    return env.emitter().enterLoopOverTensorAtLvl(builder, loc, tidLvls, reduc,
-                                                  isParallel);
+    assert(env.merger().isFilterLoop(ldx));
+    const auto [tid, lvl] = env.unpackTensorLevel(tidLvl);
+    // tids/lvls must only have one value because filter loops only
+    // corresponding to the one and only sparse tensor level.
+    OpOperand *t = &op->getOpOperand(tid);
+    auto enc = getSparseTensorEncoding(t->get().getType());
+    // Retrieves the affine expression for the filter loop.
+    // FIXME: `toOrigDim` is deprecated.
+    AffineExpr a = op.getMatchingIndexingMap(t).getResult(toOrigDim(enc, lvl));
+    return env.emitter().enterFilterLoopOverTensorAtLvl(builder, loc, tid, lvl,
+                                                        a, reduc);
   });
-  assert(loop);
   return loop;
 }
 
-/// Emit a while-loop for co-iteration over multiple indices.
-static Operation *genWhile(CodegenEnv &env, OpBuilder &builder, LoopId idx,
-                           bool needsUniv, ArrayRef<TensorLevel> tidLvls) {
+/// Emit a loop to coiterate over the list of tensor levels. The generated loop
+/// can either be a for loop or while loop depending on whether there is at most
+/// one sparse level in the list.
+static Operation *genCoIteration(CodegenEnv &env, OpBuilder &builder,
+                                 LoopId idx, ArrayRef<TensorLevel> tidLvls,
+                                 bool tryParallel, bool needsUniv) {
   Operation *loop = *env.genLoopBoundary([&](MutableArrayRef<Value> reduc) {
     // Construct the while-loop with a parameter for each
     // index.
     return env.emitter().enterCoIterationOverTensorsAtLvls(
-        builder, env.op().getLoc(), tidLvls, needsUniv, reduc);
+        builder, env.op().getLoc(), tidLvls, reduc, tryParallel,
+        /*genDedup=*/true, needsUniv);
   });
   assert(loop);
   return loop;
@@ -1361,15 +1391,15 @@ static Operation *genWhile(CodegenEnv &env, OpBuilder &builder, LoopId idx,
 /// Generates a for-loop or a while-loop, depending on whether it implements
 /// singleton iteration or co-iteration over the given conjunction.
 static Operation *genLoop(CodegenEnv &env, OpBuilder &builder, LoopOrd at,
-                          bool needsUniv, ArrayRef<TensorLevel> tidLvls,
-                          bool isFor) {
-  const LoopId idx = env.topSortAt(at);
-  if (isFor) {
-    bool isOuter = at == 0;
-    bool isInner = at == env.topSortSize() - 1;
-    return genFor(env, builder, isOuter, isInner, idx, tidLvls);
+                          bool needsUniv, ArrayRef<TensorLevel> tidLvls) {
+  const LoopId ldx = env.topSortAt(at);
+  if (env.merger().isFilterLoop(ldx)) {
+    assert(tidLvls.size() == 1);
+    return genFilterLoop(env, builder, ldx, tidLvls.front());
   }
-  return genWhile(env, builder, idx, needsUniv, tidLvls);
+
+  bool tryParallel = shouldTryParallize(env, ldx, at == 0, tidLvls);
+  return genCoIteration(env, builder, ldx, tidLvls, tryParallel, needsUniv);
 }
 
 /// Generates the induction structure for a while-loop.
@@ -1589,7 +1619,9 @@ static bool translateBitsToTidLvlPairs(
             // iterate based on the level of output tensor.  E.g., this
             // could be a synthetic tensor (for invariants and sparse
             // output tensor).
-            if (env.isReduc() && env.merger().getSynTensorID() == tid) {
+            auto itType = env.op().getIteratorTypesArray()[ldx];
+            if (linalg::isReductionIterator(itType) &&
+                env.merger().getSynTensorID() == tid) {
               // Coiterating with an invariant, and this is a reduction loop
               // e.g., out = prod(in[i][j] op invariant);
               // In this case, we can not infer the loop bound from output
@@ -1664,7 +1696,14 @@ static bool translateBitsToTidLvlPairs(
     tidLvls.push_back(env.makeTensorLevel(outTid, *outLvl));
   }
 
-  assert(numloopCond > 0);
+  if (numloopCond == 0) {
+    // Corner cases where the loop bound is defined by a *unused* operand, in
+    // this case, we just generate a dense "fake" loop by iterating over the
+    // synthetic tensor.
+    tidLvls.push_back(env.makeTensorLevel(env.merger().getSynTensorID(),
+                                          env.emitter().getCurrentDepth()));
+    numloopCond++;
+  }
   // If we just need to one loop conditions and the conditions is not imposed on
   // non-unique level, the loop can be generated by a for loop.
   return numloopCond == 1 && !hasNonUnique;
@@ -1684,7 +1723,7 @@ static std::pair<Operation *, bool> startLoop(CodegenEnv &env,
                                                  tidLvls, affineTidLvls);
 
   // Emit the for/while-loop control.
-  Operation *loop = genLoop(env, builder, at, needsUniv, tidLvls, isSingleCond);
+  Operation *loop = genLoop(env, builder, at, needsUniv, tidLvls);
   Location loc = env.op().getLoc();
   for (auto [tidLvl, exp] : affineTidLvls) {
     env.emitter().genDenseAffineAddress(builder, loc, tidLvl, exp);
