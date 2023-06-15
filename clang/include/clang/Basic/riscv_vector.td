@@ -702,50 +702,6 @@ class VString<int nf, bit signed> {
                    !eq(nf, 8): !if(signed, "vvvvvvvv", "UvUvUvUvUvUvUvUv"));
 }
 
-multiclass RVVIndexedSegStore<string op> {
-  foreach type = TypeList in {
-    foreach eew_info = EEWList in {
-      defvar eew = eew_info[0];
-      defvar eew_type = eew_info[1];
-      foreach nf = NFList in {
-        let Name = op # nf # "ei" # eew # "_v",
-            IRName = op # nf,
-            MaskedIRName = op # nf # "_mask",
-            NF = nf,
-            HasMaskedOffOperand = false,
-            MaskedPolicyScheme = NonePolicy,
-            ManualCodegen = [{
-    {
-      if (IsMasked) {
-        // Builtin: (mask, ptr, index, val0, val1, ..., vl)
-        // Intrinsic: (val0, val1, ..., ptr, index, mask, vl)
-        std::rotate(Ops.begin(), Ops.begin() + 3, Ops.end() - 1);
-        std::rotate(Ops.begin() + NF, Ops.begin() + NF + 1, Ops.begin() + NF + 3);
-        IntrinsicTypes = {Ops[0]->getType(),
-                          Ops[NF + 1]->getType(), Ops[NF + 3]->getType()};
-        assert(Ops.size() == NF + 4);
-      } else {
-        // Builtin: (ptr, index, val0, val1, ..., vl)
-        // Intrinsic: (val0, val1, ..., ptr, index, vl)
-        std::rotate(Ops.begin(), Ops.begin() + 2, Ops.end() - 1);
-        IntrinsicTypes = {Ops[0]->getType(),
-                          Ops[NF + 1]->getType(), Ops[NF + 2]->getType()};
-        assert(Ops.size() == NF + 3);
-      }
-    }
-            }] in {
-          defvar V = VString<nf, /*signed=*/true>.S;
-          defvar UV = VString<nf, /*signed=*/false>.S;
-          def : RVVBuiltin<"v", "0Pe" # eew_type # "Uv" # V, type>;
-          if !not(IsFloat<type>.val) then {
-            def : RVVBuiltin<"Uv", "0PUe" # eew_type # "Uv" # UV, type>;
-          }
-        }
-      }
-    }
-  }
-}
-
 multiclass RVVPseudoUnaryBuiltin<string IR, string type_range> {
   let Name = NAME,
       IRName = IR,
@@ -1504,8 +1460,7 @@ multiclass RVVIndexedSegStoreTuple<string op> {
       defvar eew = eew_info[0];
       defvar eew_type = eew_info[1];
       foreach nf = NFList in {
-        let Name = op # nf # "ei" # eew # "_v_tuple",
-            OverloadedName = op # nf # "ei" # eew # "_tuple",
+        let Name = op # nf # "ei" # eew # "_v",
             IRName = op # nf,
             MaskedIRName = op # nf # "_mask",
             NF = nf,
@@ -1567,13 +1522,6 @@ defm : RVVUnitStridedSegStoreTuple<"vsseg">;
 defm : RVVStridedSegStoreTuple<"vssseg">;
 defm : RVVIndexedSegStoreTuple<"vsuxseg">;
 defm : RVVIndexedSegStoreTuple<"vsoxseg">;
-}
-
-
-let UnMaskedPolicyScheme = NonePolicy,
-    MaskedPolicyScheme = NonePolicy in {
-defm : RVVIndexedSegStore<"vsuxseg">;
-defm : RVVIndexedSegStore<"vsoxseg">;
 }
 
 // 12. Vector Integer Arithmetic Instructions
