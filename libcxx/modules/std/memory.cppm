@@ -131,7 +131,6 @@ export namespace std {
 
   using std::swap;
 
-  using std::operator!=;
   using std::operator<;
   using std::operator>;
   using std::operator<=;

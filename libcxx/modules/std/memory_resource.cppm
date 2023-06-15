@@ -16,9 +16,6 @@ export namespace std::pmr {
   using std::pmr::memory_resource;
 
   using std::pmr::operator==;
-#if 1 // P1614
-  using std::operator!=;
-#endif
 
   // [mem.poly.allocator.class], class template polymorphic_allocator
   using std::pmr::polymorphic_allocator;
