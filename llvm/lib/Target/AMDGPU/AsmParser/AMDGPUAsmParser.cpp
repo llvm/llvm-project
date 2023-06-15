@@ -146,7 +146,7 @@ public:
     ImmTySendMsg,
     ImmTyInterpSlot,
     ImmTyInterpAttr,
-    ImmTyAttrChan,
+    ImmTyInterpAttrChan,
     ImmTyOpSel,
     ImmTyOpSelHi,
     ImmTyNegLo,
@@ -392,7 +392,7 @@ public:
   bool isSDWADstUnused() const { return isImmTy(ImmTySDWADstUnused); }
   bool isInterpSlot() const { return isImmTy(ImmTyInterpSlot); }
   bool isInterpAttr() const { return isImmTy(ImmTyInterpAttr); }
-  bool isAttrChan() const { return isImmTy(ImmTyAttrChan); }
+  bool isInterpAttrChan() const { return isImmTy(ImmTyInterpAttrChan); }
   bool isOpSel() const { return isImmTy(ImmTyOpSel); }
   bool isOpSelHi() const { return isImmTy(ImmTyOpSelHi); }
   bool isNegLo() const { return isImmTy(ImmTyNegLo); }
@@ -1068,7 +1068,7 @@ public:
     case ImmTySendMsg: OS << "SendMsg"; break;
     case ImmTyInterpSlot: OS << "InterpSlot"; break;
     case ImmTyInterpAttr: OS << "InterpAttr"; break;
-    case ImmTyAttrChan: OS << "AttrChan"; break;
+    case ImmTyInterpAttrChan: OS << "InterpAttrChan"; break;
     case ImmTyOpSel: OS << "OpSel"; break;
     case ImmTyOpSelHi: OS << "OpSelHi"; break;
     case ImmTyNegLo: OS << "NegLo"; break;
@@ -7075,8 +7075,8 @@ OperandMatchResultTy AMDGPUAsmParser::parseInterpAttr(OperandVector &Operands) {
 
   Operands.push_back(AMDGPUOperand::CreateImm(this, Attr, S,
                                               AMDGPUOperand::ImmTyInterpAttr));
-  Operands.push_back(AMDGPUOperand::CreateImm(this, AttrChan, SChan,
-                                              AMDGPUOperand::ImmTyAttrChan));
+  Operands.push_back(AMDGPUOperand::CreateImm(
+      this, AttrChan, SChan, AMDGPUOperand::ImmTyInterpAttrChan));
   return MatchOperand_Success;
 }
 
@@ -8090,9 +8090,8 @@ void AMDGPUAsmParser::cvtVOP3Interp(MCInst &Inst, const OperandVector &Operands)
     AMDGPUOperand &Op = ((AMDGPUOperand &)*Operands[I]);
     if (isRegOrImmWithInputMods(Desc, Inst.getNumOperands())) {
       Op.addRegOrImmWithFPInputModsOperands(Inst, 2);
-    } else if (Op.isInterpSlot() ||
-               Op.isInterpAttr() ||
-               Op.isAttrChan()) {
+    } else if (Op.isInterpSlot() || Op.isInterpAttr() ||
+               Op.isInterpAttrChan()) {
       Inst.addOperand(MCOperand::createImm(Op.getImm()));
     } else if (Op.isImmModifier()) {
       OptionalIdx[Op.getImmTy()] = I;
@@ -9100,10 +9099,10 @@ unsigned AMDGPUAsmParser::validateTargetOperandClass(MCParsedAsmOperand &Op,
     return Operand.isVReg32OrOff() ? Match_Success : Match_InvalidOperand;
   case MCK_InterpSlot:
     return Operand.isInterpSlot() ? Match_Success : Match_InvalidOperand;
-  case MCK_Attr:
+  case MCK_InterpAttr:
     return Operand.isInterpAttr() ? Match_Success : Match_InvalidOperand;
-  case MCK_AttrChan:
-    return Operand.isAttrChan() ? Match_Success : Match_InvalidOperand;
+  case MCK_InterpAttrChan:
+    return Operand.isInterpAttrChan() ? Match_Success : Match_InvalidOperand;
   case MCK_SReg_64:
   case MCK_SReg_64_XEXEC:
     // Null is defined as a 32-bit register but
