@@ -88,11 +88,11 @@ extern void setGlobalOmptKernelProfile(int DeviceId, int Enable);
 extern uint64_t getSystemTimestampInNs();
 
 /// Search for FuncName inside the ompt_device_callbacks object and assign to
-/// FuncPtr while std::lock_guard Mtx.
+/// FuncPtr.
+/// IMPORTANT: This function assumes that the *caller* holds the respective lock
+/// for FuncPtr.
 template <typename FT>
-void ensureFuncPtrLoaded(const std::string &FuncName, FT *FuncPtr,
-                         std::mutex &Mtx) {
-  std::lock_guard L(Mtx);
+void ensureFuncPtrLoaded(const std::string &FuncName, FT *FuncPtr) {
   if (!(*FuncPtr)) {
     auto libomptarget_dyn_lib = ompt_device_callbacks.get_parent_dyn_lib();
     if (libomptarget_dyn_lib == nullptr || !libomptarget_dyn_lib->isValid())
@@ -112,9 +112,10 @@ OMPT_API_ROUTINE ompt_set_result_t ompt_set_trace_ompt(ompt_device_t *device,
   DP("Executing ompt_set_trace_ompt\n");
 
   // TODO handle device
+  std::unique_lock<std::mutex> L(set_trace_mutex);
+  ompt_device_callbacks.set_trace_ompt(device, enable, etype);
   ensureFuncPtrLoaded<libomptarget_ompt_set_trace_ompt_t>(
-      "libomptarget_ompt_set_trace_ompt", &ompt_set_trace_ompt_fn,
-      set_trace_mutex);
+      "libomptarget_ompt_set_trace_ompt", &ompt_set_trace_ompt_fn);
   assert(ompt_set_trace_ompt_fn && "libomptarget_ompt_set_trace_ompt loaded");
   return ompt_set_trace_ompt_fn(device, enable, etype);
 }
@@ -145,10 +146,11 @@ ompt_start_trace(ompt_device_t *device, ompt_callback_buffer_request_t request,
     }
 
     // libomptarget specific
+    ensureFuncPtrLoaded<libomptarget_ompt_start_trace_t>(
+        "libomptarget_ompt_start_trace", &ompt_start_trace_fn);
+    assert(ompt_start_trace_fn && "libomptarget_ompt_start_trace loaded");
   }
-  ensureFuncPtrLoaded<libomptarget_ompt_start_trace_t>(
-      "libomptarget_ompt_start_trace", &ompt_start_trace_fn, start_trace_mutex);
-  assert(ompt_start_trace_fn && "libomptarget_ompt_start_trace loaded");
+
   return ompt_start_trace_fn(request, complete);
 }
 
@@ -156,8 +158,9 @@ OMPT_API_ROUTINE int ompt_flush_trace(ompt_device_t *device) {
   DP("OMPT: Executing ompt_flush_trace\n");
 
   // TODO handle device
+  std::unique_lock<std::mutex> L(flush_trace_mutex);
   ensureFuncPtrLoaded<libomptarget_ompt_flush_trace_t>(
-      "libomptarget_ompt_flush_trace", &ompt_flush_trace_fn, flush_trace_mutex);
+      "libomptarget_ompt_flush_trace", &ompt_flush_trace_fn);
   assert(ompt_start_trace_fn && "libomptarget_ompt_flush_trace loaded");
   return ompt_flush_trace_fn(device);
 }
@@ -174,10 +177,11 @@ OMPT_API_ROUTINE int ompt_stop_trace(ompt_device_t *device) {
     setOmptAsyncCopyProfile(/*Enable=*/false);
     // Disable queue dispatch profiling
     setGlobalOmptKernelProfile(0, /*Enable=*/0);
+    ensureFuncPtrLoaded<libomptarget_ompt_stop_trace_t>(
+        "libomptarget_ompt_stop_trace", &ompt_stop_trace_fn);
+    assert(ompt_stop_trace_fn && "libomptarget_ompt_stop_trace loaded");
   }
-  ensureFuncPtrLoaded<libomptarget_ompt_stop_trace_t>(
-      "libomptarget_ompt_stop_trace", &ompt_stop_trace_fn, stop_trace_mutex);
-  assert(ompt_stop_trace_fn && "libomptarget_ompt_stop_trace loaded");
+
   return ompt_stop_trace_fn(device);
 }
 
@@ -204,9 +208,10 @@ ompt_advance_buffer_cursor(ompt_device_t *device, ompt_buffer_t *buffer,
   // function pointer. The actual libomptarget function does not need
   // to be synchronized since it must be working on logically disjoint
   // buffers.
+  std::unique_lock<std::mutex> L(advance_buffer_cursor_mutex);
   ensureFuncPtrLoaded<libomptarget_ompt_advance_buffer_cursor_t>(
-      "libomptarget_ompt_advance_buffer_cursor", &ompt_advance_buffer_cursor_fn,
-      advance_buffer_cursor_mutex);
+      "libomptarget_ompt_advance_buffer_cursor",
+      &ompt_advance_buffer_cursor_fn);
   assert(ompt_advance_buffer_cursor_fn &&
          "libomptarget_ompt_advance_buffer_cursor loaded");
   return ompt_advance_buffer_cursor_fn(device, buffer, size, current, next);
@@ -214,10 +219,9 @@ ompt_advance_buffer_cursor(ompt_device_t *device, ompt_buffer_t *buffer,
 
 OMPT_API_ROUTINE ompt_record_t
 ompt_get_record_type(ompt_buffer_t *buffer, ompt_buffer_cursor_t current) {
-
+  std::unique_lock<std::mutex> L(get_record_type_mutex);
   ensureFuncPtrLoaded<libomptarget_ompt_get_record_type_t>(
-      "libomptarget_ompt_get_record_type", &ompt_get_record_type_fn,
-      get_record_type_mutex);
+      "libomptarget_ompt_get_record_type", &ompt_get_record_type_fn);
   assert(ompt_get_record_type_fn && "libomptarget_ompt_get_record_type loaded");
   return ompt_get_record_type_fn(buffer, current);
 }
@@ -248,9 +252,9 @@ std::mutex ompt_set_timestamp_mtx;
 
 /// Set timestamps in trace records.
 void setOmptTimestamp(uint64_t StartTime, uint64_t EndTime) {
+  std::unique_lock<std::mutex> L(ompt_set_timestamp_mtx);
   ensureFuncPtrLoaded<libomptarget_ompt_set_timestamp_t>(
-      "libomptarget_ompt_set_timestamp", &ompt_set_timestamp_fn,
-      ompt_set_timestamp_mtx);
+      "libomptarget_ompt_set_timestamp", &ompt_set_timestamp_fn);
   // No need to hold a lock
   ompt_set_timestamp_fn(StartTime, EndTime);
 }
@@ -267,9 +271,9 @@ std::mutex granted_teams_mtx;
 
 /// Set granted number of teams in trace records.
 void setOmptGrantedNumTeams(uint64_t NumTeams) {
+  std::unique_lock<std::mutex> L(granted_teams_mtx);
   ensureFuncPtrLoaded<libomptarget_ompt_set_granted_teams_t>(
-      "libomptarget_ompt_set_granted_teams", &ompt_set_granted_teams_fn,
-      granted_teams_mtx);
+      "libomptarget_ompt_set_granted_teams", &ompt_set_granted_teams_fn);
   // No need to hold a lock
   ompt_set_granted_teams_fn(NumTeams);
 }
