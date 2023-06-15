@@ -24,7 +24,7 @@ _LIBCPP_BEGIN_NAMESPACE_STD
 namespace chrono
 {
 
-class _LIBCPP_TYPE_VIS system_clock
+class _LIBCPP_EXPORTED_FROM_ABI system_clock
 {
 public:
     typedef microseconds                     duration;

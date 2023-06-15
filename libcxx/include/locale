@@ -247,7 +247,7 @@ _LIBCPP_BEGIN_NAMESPACE_STD
 #else
 #  define _LIBCPP_GET_C_LOCALE __cloc()
    // Get the C locale object
-   _LIBCPP_FUNC_VIS locale_t __cloc();
+   _LIBCPP_EXPORTED_FROM_ABI  locale_t __cloc();
 #define __cloc_defined
 #endif
 
@@ -379,7 +379,7 @@ __scan_keyword(_InputIterator& __b, _InputIterator __e,
     return __kb;
 }
 
-struct _LIBCPP_TYPE_VIS __num_get_base
+struct _LIBCPP_EXPORTED_FROM_ABI __num_get_base
 {
     static const int __num_get_buf_sz = 40;
 
@@ -387,8 +387,7 @@ struct _LIBCPP_TYPE_VIS __num_get_base
     static const char __src[33];
 };
 
-_LIBCPP_FUNC_VIS
-void __check_grouping(const string& __grouping, unsigned* __g, unsigned* __g_end,
+_LIBCPP_EXPORTED_FROM_ABI void __check_grouping(const string& __grouping, unsigned* __g, unsigned* __g_end,
                       ios_base::iostate& __err);
 
 template <class _CharT>
@@ -1128,7 +1127,7 @@ extern template class _LIBCPP_EXTERN_TEMPLATE_TYPE_VIS num_get<char>;
 extern template class _LIBCPP_EXTERN_TEMPLATE_TYPE_VIS num_get<wchar_t>;
 #endif
 
-struct _LIBCPP_TYPE_VIS __num_put_base
+struct _LIBCPP_EXPORTED_FROM_ABI __num_put_base
 {
 protected:
     static void __format_int(char* __fmt, const char* __len, bool __signd,
@@ -1683,7 +1682,7 @@ __get_up_to_n_digits(_InputIterator& __b, _InputIterator __e,
     return __r;
 }
 
-class _LIBCPP_TYPE_VIS time_base
+class _LIBCPP_EXPORTED_FROM_ABI time_base
 {
 public:
     enum dateorder {no_order, dmy, mdy, ymd, ydm};
@@ -1707,22 +1706,22 @@ protected:
     ~__time_get_c_storage() {}
 };
 
-template <> _LIBCPP_FUNC_VIS const string* __time_get_c_storage<char>::__weeks() const;
-template <> _LIBCPP_FUNC_VIS const string* __time_get_c_storage<char>::__months() const;
-template <> _LIBCPP_FUNC_VIS const string* __time_get_c_storage<char>::__am_pm() const;
-template <> _LIBCPP_FUNC_VIS const string& __time_get_c_storage<char>::__c() const;
-template <> _LIBCPP_FUNC_VIS const string& __time_get_c_storage<char>::__r() const;
-template <> _LIBCPP_FUNC_VIS const string& __time_get_c_storage<char>::__x() const;
-template <> _LIBCPP_FUNC_VIS const string& __time_get_c_storage<char>::__X() const;
+template <> _LIBCPP_EXPORTED_FROM_ABI const string* __time_get_c_storage<char>::__weeks() const;
+template <> _LIBCPP_EXPORTED_FROM_ABI const string* __time_get_c_storage<char>::__months() const;
+template <> _LIBCPP_EXPORTED_FROM_ABI const string* __time_get_c_storage<char>::__am_pm() const;
+template <> _LIBCPP_EXPORTED_FROM_ABI const string& __time_get_c_storage<char>::__c() const;
+template <> _LIBCPP_EXPORTED_FROM_ABI const string& __time_get_c_storage<char>::__r() const;
+template <> _LIBCPP_EXPORTED_FROM_ABI const string& __time_get_c_storage<char>::__x() const;
+template <> _LIBCPP_EXPORTED_FROM_ABI const string& __time_get_c_storage<char>::__X() const;
 
 #ifndef _LIBCPP_HAS_NO_WIDE_CHARACTERS
-template <> _LIBCPP_FUNC_VIS const wstring* __time_get_c_storage<wchar_t>::__weeks() const;
-template <> _LIBCPP_FUNC_VIS const wstring* __time_get_c_storage<wchar_t>::__months() const;
-template <> _LIBCPP_FUNC_VIS const wstring* __time_get_c_storage<wchar_t>::__am_pm() const;
-template <> _LIBCPP_FUNC_VIS const wstring& __time_get_c_storage<wchar_t>::__c() const;
-template <> _LIBCPP_FUNC_VIS const wstring& __time_get_c_storage<wchar_t>::__r() const;
-template <> _LIBCPP_FUNC_VIS const wstring& __time_get_c_storage<wchar_t>::__x() const;
-template <> _LIBCPP_FUNC_VIS const wstring& __time_get_c_storage<wchar_t>::__X() const;
+template <> _LIBCPP_EXPORTED_FROM_ABI const wstring* __time_get_c_storage<wchar_t>::__weeks() const;
+template <> _LIBCPP_EXPORTED_FROM_ABI const wstring* __time_get_c_storage<wchar_t>::__months() const;
+template <> _LIBCPP_EXPORTED_FROM_ABI const wstring* __time_get_c_storage<wchar_t>::__am_pm() const;
+template <> _LIBCPP_EXPORTED_FROM_ABI const wstring& __time_get_c_storage<wchar_t>::__c() const;
+template <> _LIBCPP_EXPORTED_FROM_ABI const wstring& __time_get_c_storage<wchar_t>::__r() const;
+template <> _LIBCPP_EXPORTED_FROM_ABI const wstring& __time_get_c_storage<wchar_t>::__x() const;
+template <> _LIBCPP_EXPORTED_FROM_ABI const wstring& __time_get_c_storage<wchar_t>::__X() const;
 #endif
 
 template <class _CharT, class _InputIterator = istreambuf_iterator<_CharT> >
@@ -2339,7 +2338,7 @@ extern template class _LIBCPP_EXTERN_TEMPLATE_TYPE_VIS time_get<char>;
 extern template class _LIBCPP_EXTERN_TEMPLATE_TYPE_VIS time_get<wchar_t>;
 #endif
 
-class _LIBCPP_TYPE_VIS __time_get
+class _LIBCPP_EXPORTED_FROM_ABI __time_get
 {
 protected:
     locale_t __loc_;
@@ -2377,16 +2376,16 @@ private:
 };
 
 #define _LIBCPP_TIME_GET_STORAGE_EXPLICIT_INSTANTIATION(_CharT) \
-template <> _LIBCPP_FUNC_VIS time_base::dateorder __time_get_storage<_CharT>::__do_date_order() const; \
-template <> _LIBCPP_FUNC_VIS __time_get_storage<_CharT>::__time_get_storage(const char*); \
-template <> _LIBCPP_FUNC_VIS __time_get_storage<_CharT>::__time_get_storage(const string&); \
-template <> _LIBCPP_FUNC_VIS void __time_get_storage<_CharT>::init(const ctype<_CharT>&); \
-template <> _LIBCPP_FUNC_VIS __time_get_storage<_CharT>::string_type __time_get_storage<_CharT>::__analyze(char, const ctype<_CharT>&); \
-extern template _LIBCPP_FUNC_VIS time_base::dateorder __time_get_storage<_CharT>::__do_date_order() const; \
-extern template _LIBCPP_FUNC_VIS __time_get_storage<_CharT>::__time_get_storage(const char*); \
-extern template _LIBCPP_FUNC_VIS __time_get_storage<_CharT>::__time_get_storage(const string&); \
-extern template _LIBCPP_FUNC_VIS void __time_get_storage<_CharT>::init(const ctype<_CharT>&); \
-extern template _LIBCPP_FUNC_VIS __time_get_storage<_CharT>::string_type __time_get_storage<_CharT>::__analyze(char, const ctype<_CharT>&); \
+template <> _LIBCPP_EXPORTED_FROM_ABI time_base::dateorder __time_get_storage<_CharT>::__do_date_order() const; \
+template <> _LIBCPP_EXPORTED_FROM_ABI __time_get_storage<_CharT>::__time_get_storage(const char*); \
+template <> _LIBCPP_EXPORTED_FROM_ABI __time_get_storage<_CharT>::__time_get_storage(const string&); \
+template <> _LIBCPP_EXPORTED_FROM_ABI void __time_get_storage<_CharT>::init(const ctype<_CharT>&); \
+template <> _LIBCPP_EXPORTED_FROM_ABI __time_get_storage<_CharT>::string_type __time_get_storage<_CharT>::__analyze(char, const ctype<_CharT>&); \
+extern template _LIBCPP_EXPORTED_FROM_ABI time_base::dateorder __time_get_storage<_CharT>::__do_date_order() const; \
+extern template _LIBCPP_EXPORTED_FROM_ABI __time_get_storage<_CharT>::__time_get_storage(const char*); \
+extern template _LIBCPP_EXPORTED_FROM_ABI __time_get_storage<_CharT>::__time_get_storage(const string&); \
+extern template _LIBCPP_EXPORTED_FROM_ABI void __time_get_storage<_CharT>::init(const ctype<_CharT>&); \
+extern template _LIBCPP_EXPORTED_FROM_ABI __time_get_storage<_CharT>::string_type __time_get_storage<_CharT>::__analyze(char, const ctype<_CharT>&); \
 /**/
 
 _LIBCPP_TIME_GET_STORAGE_EXPLICIT_INSTANTIATION(char)
@@ -2434,7 +2433,7 @@ extern template class _LIBCPP_EXTERN_TEMPLATE_TYPE_VIS time_get_byname<char>;
 extern template class _LIBCPP_EXTERN_TEMPLATE_TYPE_VIS time_get_byname<wchar_t>;
 #endif
 
-class _LIBCPP_TYPE_VIS __time_put
+class _LIBCPP_EXPORTED_FROM_ABI __time_put
 {
     locale_t __loc_;
 protected:
@@ -2574,7 +2573,7 @@ extern template class _LIBCPP_EXTERN_TEMPLATE_TYPE_VIS time_put_byname<wchar_t>;
 
 // money_base
 
-class _LIBCPP_TYPE_VIS money_base
+class _LIBCPP_EXPORTED_FROM_ABI money_base
 {
 public:
     enum part {none, space, symbol, sign, value};
@@ -2688,14 +2687,14 @@ private:
     void init(const char*);
 };
 
-template<> _LIBCPP_FUNC_VIS void moneypunct_byname<char, false>::init(const char*);
-template<> _LIBCPP_FUNC_VIS void moneypunct_byname<char, true>::init(const char*);
+template<> _LIBCPP_EXPORTED_FROM_ABI void moneypunct_byname<char, false>::init(const char*);
+template<> _LIBCPP_EXPORTED_FROM_ABI void moneypunct_byname<char, true>::init(const char*);
 extern template class _LIBCPP_EXTERN_TEMPLATE_TYPE_VIS moneypunct_byname<char, false>;
 extern template class _LIBCPP_EXTERN_TEMPLATE_TYPE_VIS moneypunct_byname<char, true>;
 
 #ifndef _LIBCPP_HAS_NO_WIDE_CHARACTERS
-template<> _LIBCPP_FUNC_VIS void moneypunct_byname<wchar_t, false>::init(const char*);
-template<> _LIBCPP_FUNC_VIS void moneypunct_byname<wchar_t, true>::init(const char*);
+template<> _LIBCPP_EXPORTED_FROM_ABI void moneypunct_byname<wchar_t, false>::init(const char*);
+template<> _LIBCPP_EXPORTED_FROM_ABI void moneypunct_byname<wchar_t, true>::init(const char*);
 extern template class _LIBCPP_EXTERN_TEMPLATE_TYPE_VIS moneypunct_byname<wchar_t, false>;
 extern template class _LIBCPP_EXTERN_TEMPLATE_TYPE_VIS moneypunct_byname<wchar_t, true>;
 #endif
@@ -2812,7 +2811,7 @@ template <class _CharT, class _InputIterator>
 locale::id
 money_get<_CharT, _InputIterator>::id;
 
-_LIBCPP_FUNC_VIS void __do_nothing(void*);
+_LIBCPP_EXPORTED_FROM_ABI void __do_nothing(void*);
 
 template <class _Tp>
 _LIBCPP_HIDE_FROM_ABI
@@ -3459,7 +3458,7 @@ extern template class _LIBCPP_EXTERN_TEMPLATE_TYPE_VIS money_put<wchar_t>;
 
 // messages
 
-class _LIBCPP_TYPE_VIS messages_base
+class _LIBCPP_EXPORTED_FROM_ABI messages_base
 {
 public:
     typedef ptrdiff_t catalog;

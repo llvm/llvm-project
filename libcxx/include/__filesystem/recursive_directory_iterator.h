@@ -99,8 +99,8 @@ public:
     return __increment(&__ec);
   }
 
-  _LIBCPP_FUNC_VIS directory_options options() const;
-  _LIBCPP_FUNC_VIS int depth() const;
+  _LIBCPP_EXPORTED_FROM_ABI directory_options options() const;
+  _LIBCPP_EXPORTED_FROM_ABI int depth() const;
 
   _LIBCPP_INLINE_VISIBILITY
   void pop() { __pop(); }
@@ -115,24 +115,12 @@ public:
   void disable_recursion_pending() { __rec_ = false; }
 
 private:
-  _LIBCPP_FUNC_VIS
-  recursive_directory_iterator(const path& __p, directory_options __opt,
-                               error_code* __ec);
-
-  _LIBCPP_FUNC_VIS
-  const directory_entry& __dereference() const;
-
-  _LIBCPP_FUNC_VIS
-  bool __try_recursion(error_code* __ec);
-
-  _LIBCPP_FUNC_VIS
-  void __advance(error_code* __ec = nullptr);
-
-  _LIBCPP_FUNC_VIS
-  recursive_directory_iterator& __increment(error_code* __ec = nullptr);
-
-  _LIBCPP_FUNC_VIS
-  void __pop(error_code* __ec = nullptr);
+  _LIBCPP_EXPORTED_FROM_ABI recursive_directory_iterator(const path& __p, directory_options __opt, error_code* __ec);
+  _LIBCPP_EXPORTED_FROM_ABI const directory_entry& __dereference() const;
+  _LIBCPP_EXPORTED_FROM_ABI bool __try_recursion(error_code* __ec);
+  _LIBCPP_EXPORTED_FROM_ABI void __advance(error_code* __ec = nullptr);
+  _LIBCPP_EXPORTED_FROM_ABI recursive_directory_iterator& __increment(error_code* __ec = nullptr);
+  _LIBCPP_EXPORTED_FROM_ABI void __pop(error_code* __ec = nullptr);
 
   inline _LIBCPP_INLINE_VISIBILITY friend bool
   operator==(const recursive_directory_iterator&,
