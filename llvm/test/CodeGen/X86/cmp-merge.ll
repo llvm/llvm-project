@@ -84,3 +84,74 @@ define void @gt_first(i32 %0, i32 %1) {
 9:
   ret void
 }
+
+define void @cmp_sub_same_order(i32 %x, i32 %y, ptr %p) {
+; X86-LABEL: cmp_sub_same_order:
+; X86:       # %bb.0: # %entry
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    subl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    jge .LBB2_2
+; X86-NEXT:  # %bb.1: # %cond.true
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
+; X86-NEXT:    movl %eax, (%ecx)
+; X86-NEXT:  .LBB2_2: # %cond.end
+; X86-NEXT:    retl
+;
+; X64-LABEL: cmp_sub_same_order:
+; X64:       # %bb.0: # %entry
+; X64-NEXT:    subl %esi, %edi
+; X64-NEXT:    jge .LBB2_2
+; X64-NEXT:  # %bb.1: # %cond.true
+; X64-NEXT:    movl %edi, (%rdx)
+; X64-NEXT:  .LBB2_2: # %cond.end
+; X64-NEXT:    retq
+entry:
+  %cmp = icmp slt i32 %x, %y
+  br i1 %cmp, label %cond.true, label %cond.end
+
+cond.true:
+  %sub = sub nsw i32 %x, %y
+  store i32 %sub, ptr %p
+  br label %cond.end
+
+cond.end:
+  ret void
+}
+
+define void @cmp_sub_different_order(i32 %x, i32 %y, ptr %p) {
+; X86-LABEL: cmp_sub_different_order:
+; X86:       # %bb.0: # %entry
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
+; X86-NEXT:    cmpl %ecx, %eax
+; X86-NEXT:    jle .LBB3_2
+; X86-NEXT:  # %bb.1: # %cond.true
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %edx
+; X86-NEXT:    subl %eax, %ecx
+; X86-NEXT:    movl %ecx, (%edx)
+; X86-NEXT:  .LBB3_2: # %cond.end
+; X86-NEXT:    retl
+;
+; X64-LABEL: cmp_sub_different_order:
+; X64:       # %bb.0: # %entry
+; X64-NEXT:    cmpl %edi, %esi
+; X64-NEXT:    jle .LBB3_2
+; X64-NEXT:  # %bb.1: # %cond.true
+; X64-NEXT:    subl %esi, %edi
+; X64-NEXT:    movl %edi, (%rdx)
+; X64-NEXT:  .LBB3_2: # %cond.end
+; X64-NEXT:    retq
+entry:
+  %cmp = icmp sgt i32 %y, %x
+  br i1 %cmp, label %cond.true, label %cond.end
+
+cond.true:
+  %sub = sub nsw i32 %x, %y
+  store i32 %sub, ptr %p
+  br label %cond.end
+
+cond.end:
+  ret void
+}
+
+declare void @use(i32)
