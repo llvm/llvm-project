@@ -268,6 +268,9 @@ Changes in existing checks
   <clang-tidy/checks/bugprone/incorrect-roundings>` check by adding support for
   other floating point representations in float constant like ``0.5L``.
 
+- Improved the performance of the :doc:`bugprone-reserved-identifier
+  <clang-tidy/checks/bugprone/reserved-identifier>` check through optimizations.
+
 - Deprecated check-local options `HeaderFileExtensions` and `ImplementationFileExtensions`
   in :doc:`bugprone-suspicious-include
   <clang-tidy/checks/bugprone/suspicious-include>` check.
@@ -322,6 +325,9 @@ Changes in existing checks
   <clang-tidy/checks/llvm/header-guard>` check.
   Global options of the same name should be used instead.
 
+- Improved the performance of the :doc:`misc-confusable-identifiers
+  <clang-tidy/checks/misc/confusable-identifiers>` check through optimizations.
+
 - Deprecated check-local options `HeaderFileExtensions`
   in :doc:`misc-definitions-in-headers
   <clang-tidy/checks/misc/definitions-in-headers>` check.
@@ -344,6 +350,10 @@ Changes in existing checks
   <clang-tidy/checks/modernize/concat-nested-namespaces>` to fix incorrect fixes when
   using macro between namespace declarations, to fix false positive when using namespace
   with attributes and to support nested inline namespace introduced in c++20.
+
+- Fixed an issue in `modernize-loop-convert
+  <clang-tidy/checks/modernize/modernize-loop-convert>` generating wrong code
+  when using structured bindings.
 
 - In :doc:`modernize-use-default-member-init
   <clang-tidy/checks/modernize/use-default-member-init>` count template
@@ -408,6 +418,9 @@ Changes in existing checks
   <clang-tidy/checks/readability/identifier-naming>` when specifying an empty
   string for ``Prefix`` or ``Suffix`` options could result in the style not
   being used.
+
+- Improved the performance of the :doc:`readability-identifier-naming
+  <clang-tidy/checks/readability/identifier-naming>` check through optimizations.
 
 - Fixed a false positive in :doc:`readability-implicit-bool-conversion
   <clang-tidy/checks/readability/implicit-bool-conversion>` check warning would

@@ -111,7 +111,7 @@ define <32 x i8> @masked_load_v32i8(ptr %src, <32 x i1> %mask) #0 {
 ; CHECK-NEXT:    ptrue p0.b, vl16
 ; CHECK-NEXT:    strb w10, [sp, #8]
 ; CHECK-NEXT:    strb w8, [sp, #7]
-; CHECK-NEXT:    mov w8, #16
+; CHECK-NEXT:    mov w8, #16 // =0x10
 ; CHECK-NEXT:    strb w4, [sp, #3]
 ; CHECK-NEXT:    strb w3, [sp, #2]
 ; CHECK-NEXT:    strb w2, [sp, #1]
@@ -194,7 +194,7 @@ define <16 x half> @masked_load_v16f16(ptr %src, <16 x i1> %mask) #0 {
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    // kill: def $q0 killed $q0 def $z0
 ; CHECK-NEXT:    uunpklo z1.h, z0.b
-; CHECK-NEXT:    mov x8, #8
+; CHECK-NEXT:    mov x8, #8 // =0x8
 ; CHECK-NEXT:    ext z0.b, z0.b, z0.b, #8
 ; CHECK-NEXT:    lsl z1.h, z1.h, #15
 ; CHECK-NEXT:    uunpklo z0.h, z0.b
@@ -272,7 +272,7 @@ define <8 x float> @masked_load_v8f32(ptr %src, <8 x i1> %mask) #0 {
 ; CHECK-NEXT:    fmov w9, s0
 ; CHECK-NEXT:    strh w10, [sp, #12]
 ; CHECK-NEXT:    strh w8, [sp, #10]
-; CHECK-NEXT:    mov x8, #4
+; CHECK-NEXT:    mov x8, #4 // =0x4
 ; CHECK-NEXT:    strh w9, [sp, #8]
 ; CHECK-NEXT:    ldp d0, d1, [sp]
 ; CHECK-NEXT:    uunpklo z0.s, z0.h
@@ -313,7 +313,7 @@ define <4 x double> @masked_load_v4f64(ptr %src, <4 x i1> %mask) #0 {
 ; CHECK-LABEL: masked_load_v4f64:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    // kill: def $d0 killed $d0 def $z0
-; CHECK-NEXT:    mov x8, #2
+; CHECK-NEXT:    mov x8, #2 // =0x2
 ; CHECK-NEXT:    ptrue p0.d, vl2
 ; CHECK-NEXT:    uunpklo z0.s, z0.h
 ; CHECK-NEXT:    uunpklo z1.d, z0.s

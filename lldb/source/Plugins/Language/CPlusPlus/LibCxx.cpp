@@ -16,7 +16,6 @@
 #include "lldb/DataFormatters/StringPrinter.h"
 #include "lldb/DataFormatters/TypeSummary.h"
 #include "lldb/DataFormatters/VectorIterator.h"
-#include "lldb/Target/ProcessStructReader.h"
 #include "lldb/Target/SectionLoadList.h"
 #include "lldb/Target/Target.h"
 #include "lldb/Utility/ConstString.h"
@@ -50,7 +49,7 @@ lldb::ValueObjectSP
 lldb_private::formatters::GetFirstValueOfLibCXXCompressedPair(
     ValueObject &pair) {
   ValueObjectSP value;
-  ValueObjectSP first_child = pair.GetChildAtIndex(0, true);
+  ValueObjectSP first_child = pair.GetChildAtIndex(0);
   if (first_child)
     value = first_child->GetChildMemberWithName("__value_");
   if (!value) {
@@ -65,7 +64,7 @@ lldb_private::formatters::GetSecondValueOfLibCXXCompressedPair(
     ValueObject &pair) {
   ValueObjectSP value;
   if (pair.GetNumChildren() > 1) {
-    ValueObjectSP second_child = pair.GetChildAtIndex(1, true);
+    ValueObjectSP second_child = pair.GetChildAtIndex(1);
     if (second_child) {
       value = second_child->GetChildMemberWithName("__value_");
     }
@@ -364,7 +363,7 @@ bool lldb_private::formatters::LibCxxMapIteratorSyntheticFrontEnd::Update() {
             "pair", extractor, valobj_sp->GetExecutionContextRef(),
             tree_node_type);
         if (pair_sp)
-          m_pair_sp = pair_sp->GetChildAtIndex(4, true);
+          m_pair_sp = pair_sp->GetChildAtIndex(4);
       }
     }
   }
@@ -381,9 +380,9 @@ lldb::ValueObjectSP
 lldb_private::formatters::LibCxxMapIteratorSyntheticFrontEnd::GetChildAtIndex(
     size_t idx) {
   if (m_pair_ptr)
-    return m_pair_ptr->GetChildAtIndex(idx, true);
+    return m_pair_ptr->GetChildAtIndex(idx);
   if (m_pair_sp)
-    return m_pair_sp->GetChildAtIndex(idx, true);
+    return m_pair_sp->GetChildAtIndex(idx);
   return lldb::ValueObjectSP();
 }
 
@@ -524,7 +523,7 @@ bool lldb_private::formatters::LibCxxUnorderedMapIteratorSyntheticFrontEnd::
     auto pair_sp = CreateValueObjectFromData(
         "pair", extractor, valobj_sp->GetExecutionContextRef(), tree_node_type);
     if (pair_sp)
-      m_pair_sp = pair_sp->GetChildAtIndex(2, true);
+      m_pair_sp = pair_sp->GetChildAtIndex(2);
   }
 
   return false;
@@ -538,7 +537,7 @@ size_t lldb_private::formatters::LibCxxUnorderedMapIteratorSyntheticFrontEnd::
 lldb::ValueObjectSP lldb_private::formatters::
     LibCxxUnorderedMapIteratorSyntheticFrontEnd::GetChildAtIndex(size_t idx) {
   if (m_pair_sp)
-    return m_pair_sp->GetChildAtIndex(idx, true);
+    return m_pair_sp->GetChildAtIndex(idx);
   return lldb::ValueObjectSP();
 }
 
@@ -775,8 +774,7 @@ ExtractLibcxxStringInfo(ValueObject &valobj) {
 
   // __r_ is a compressed_pair of the actual data and the allocator. The data we
   // want is in the first base class.
-  ValueObjectSP valobj_r_base_sp =
-      valobj_r_sp->GetChildAtIndex(0, /*can_create=*/true);
+  ValueObjectSP valobj_r_base_sp = valobj_r_sp->GetChildAtIndex(0);
   if (!valobj_r_base_sp)
     return {};
 

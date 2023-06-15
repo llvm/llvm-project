@@ -103,6 +103,7 @@ Design Documents
    CodeOwners
    InternalsManual
    DriverInternals
+   Multilib
    OffloadingDesign
    PCHInternals
    ItaniumMangleAbiTags

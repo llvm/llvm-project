@@ -350,6 +350,13 @@ Improvements to Clang's diagnostics
   can be controlled using ``-fcaret-diagnostics-max-lines=``.
 - Clang no longer emits ``-Wunused-variable`` warnings for variables declared
   with ``__attribute__((cleanup(...)))`` to match GCC's behavior.
+- Clang now issues expected warnings for situations of comparing with NULL pointers.
+  (`#42992: <https://github.com/llvm/llvm-project/issues/42992>`_)
+- Clang now diagnoses unused const-qualified variable template as
+  "unused variable template" rather than "unused variable".
+- When diagnosing a constant expression where an enum without a fixed underlying
+  type is set to a value outside the range of the enum's values, clang will now
+  print the name of the enum in question.
 
 Bug Fixes in This Version
 -------------------------

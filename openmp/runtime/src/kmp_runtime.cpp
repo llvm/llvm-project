@@ -1153,6 +1153,9 @@ void __kmp_serialized_parallel(ident_t *loc, kmp_int32 global_tid) {
   // Reset for next parallel region
   this_thr->th.th_set_proc_bind = proc_bind_default;
 
+  // Reset num_threads for next parallel region
+  this_thr->th.th_set_nproc = 0;
+
 #if OMPT_SUPPORT
   ompt_data_t ompt_parallel_data = ompt_data_none;
   void *codeptr = OMPT_LOAD_RETURN_ADDRESS(global_tid);

@@ -533,32 +533,48 @@ void LoopConvertCheck::doConversion(
     const ValueDecl *MaybeContainer, const UsageResult &Usages,
     const DeclStmt *AliasDecl, bool AliasUseRequired, bool AliasFromForInit,
     const ForStmt *Loop, RangeDescriptor Descriptor) {
-  std::string VarName;
+  std::string VarNameOrStructuredBinding;
   bool VarNameFromAlias = (Usages.size() == 1) && AliasDecl;
   bool AliasVarIsRef = false;
   bool CanCopy = true;
   std::vector<FixItHint> FixIts;
   if (VarNameFromAlias) {
     const auto *AliasVar = cast<VarDecl>(AliasDecl->getSingleDecl());
-    VarName = AliasVar->getName().str();
 
-    // Use the type of the alias if it's not the same
-    QualType AliasVarType = AliasVar->getType();
-    assert(!AliasVarType.isNull() && "Type in VarDecl is null");
-    if (AliasVarType->isReferenceType()) {
-      AliasVarType = AliasVarType.getNonReferenceType();
-      AliasVarIsRef = true;
+    // Handle structured bindings
+    if (const auto *AliasDecompositionDecl =
+            dyn_cast<DecompositionDecl>(AliasDecl->getSingleDecl())) {
+      VarNameOrStructuredBinding = "[";
+
+      assert(!AliasDecompositionDecl->bindings().empty() && "No bindings");
+      for (const BindingDecl *Binding : AliasDecompositionDecl->bindings()) {
+        VarNameOrStructuredBinding += Binding->getName().str() + ", ";
+      }
+
+      VarNameOrStructuredBinding.erase(VarNameOrStructuredBinding.size() - 2,
+                                       2);
+      VarNameOrStructuredBinding += "]";
+    } else {
+      VarNameOrStructuredBinding = AliasVar->getName().str();
+
+      // Use the type of the alias if it's not the same
+      QualType AliasVarType = AliasVar->getType();
+      assert(!AliasVarType.isNull() && "Type in VarDecl is null");
+      if (AliasVarType->isReferenceType()) {
+        AliasVarType = AliasVarType.getNonReferenceType();
+        AliasVarIsRef = true;
+      }
+      if (Descriptor.ElemType.isNull() ||
+          !Context->hasSameUnqualifiedType(AliasVarType, Descriptor.ElemType))
+        Descriptor.ElemType = AliasVarType;
     }
-    if (Descriptor.ElemType.isNull() ||
-        !Context->hasSameUnqualifiedType(AliasVarType, Descriptor.ElemType))
-      Descriptor.ElemType = AliasVarType;
 
     // We keep along the entire DeclStmt to keep the correct range here.
     SourceRange ReplaceRange = AliasDecl->getSourceRange();
 
     std::string ReplacementText;
     if (AliasUseRequired) {
-      ReplacementText = VarName;
+      ReplacementText = VarNameOrStructuredBinding;
     } else if (AliasFromForInit) {
       // FIXME: Clang includes the location of the ';' but only for DeclStmt's
       // in a for loop's init clause. Need to put this ';' back while removing
@@ -577,7 +593,7 @@ void LoopConvertCheck::doConversion(
     VariableNamer Namer(&TUInfo->getGeneratedDecls(),
                         &TUInfo->getParentFinder().getStmtToParentStmtMap(),
                         Loop, IndexVar, MaybeContainer, Context, NamingStyle);
-    VarName = Namer.createIndexName();
+    VarNameOrStructuredBinding = Namer.createIndexName();
     // First, replace all usages of the array subscript expression with our new
     // variable.
     for (const auto &Usage : Usages) {
@@ -586,8 +602,9 @@ void LoopConvertCheck::doConversion(
       if (Usage.Expression) {
         // If this is an access to a member through the arrow operator, after
         // the replacement it must be accessed through the '.' operator.
-        ReplaceText = Usage.Kind == Usage::UK_MemberThroughArrow ? VarName + "."
-                                                                 : VarName;
+        ReplaceText = Usage.Kind == Usage::UK_MemberThroughArrow
+                          ? VarNameOrStructuredBinding + "."
+                          : VarNameOrStructuredBinding;
         auto Parents = Context->getParents(*Usage.Expression);
         if (Parents.size() == 1) {
           if (const auto *Paren = Parents[0].get<ParenExpr>()) {
@@ -611,8 +628,9 @@ void LoopConvertCheck::doConversion(
         // The Usage expression is only null in case of lambda captures (which
         // are VarDecl). If the index is captured by value, add '&' to capture
         // by reference instead.
-        ReplaceText =
-            Usage.Kind == Usage::UK_CaptureByCopy ? "&" + VarName : VarName;
+        ReplaceText = Usage.Kind == Usage::UK_CaptureByCopy
+                          ? "&" + VarNameOrStructuredBinding
+                          : VarNameOrStructuredBinding;
       }
       TUInfo->getReplacedVars().insert(std::make_pair(Loop, IndexVar));
       FixIts.push_back(FixItHint::CreateReplacement(
@@ -654,7 +672,7 @@ void LoopConvertCheck::doConversion(
   llvm::raw_svector_ostream Output(Range);
   Output << '(';
   Type.print(Output, getLangOpts());
-  Output << ' ' << VarName << " : ";
+  Output << ' ' << VarNameOrStructuredBinding << " : ";
   if (Descriptor.NeedsReverseCall)
     Output << getReverseFunction() << '(';
   if (Descriptor.ContainerNeedsDereference)
@@ -674,7 +692,8 @@ void LoopConvertCheck::doConversion(
       FixIts.push_back(*Insertion);
   }
   diag(Loop->getForLoc(), "use range-based for loop instead") << FixIts;
-  TUInfo->getGeneratedDecls().insert(make_pair(Loop, VarName));
+  TUInfo->getGeneratedDecls().insert(
+      make_pair(Loop, VarNameOrStructuredBinding));
 }
 
 /// Returns a string which refers to the container iterated over.
@@ -688,7 +707,7 @@ StringRef LoopConvertCheck::getContainerString(ASTContext *Context,
   } else {
     // For CXXOperatorCallExpr such as vector_ptr->size() we want the class
     // object vector_ptr, but for vector[2] we need the whole expression.
-    if (const auto* E = dyn_cast<CXXOperatorCallExpr>(ContainerExpr))
+    if (const auto *E = dyn_cast<CXXOperatorCallExpr>(ContainerExpr))
       if (E->getOperator() != OO_Subscript)
         ContainerExpr = E->getArg(0);
     ContainerString =

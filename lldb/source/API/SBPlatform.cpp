@@ -488,7 +488,7 @@ uint32_t SBPlatform::GetOSUpdateVersion() {
 void SBPlatform::SetSDKRoot(const char *sysroot) {
   LLDB_INSTRUMENT_VA(this, sysroot);
   if (PlatformSP platform_sp = GetSP())
-    platform_sp->SetSDKRootDirectory(ConstString(sysroot));
+    platform_sp->SetSDKRootDirectory(sysroot);
 }
 
 SBError SBPlatform::Get(SBFileSpec &src, SBFileSpec &dst) {

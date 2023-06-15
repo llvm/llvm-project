@@ -11397,11 +11397,20 @@ bool BoUpSLP::BlockScheduling::extendSchedulingRegion(Value *V,
   }
   // Search up and down at the same time, because we don't know if the new
   // instruction is above or below the existing scheduling region.
+  // Ignore debug info (and other "AssumeLike" intrinsics) so that's not counted
+  // against the budget. Otherwise debug info could affect codegen.
   BasicBlock::reverse_iterator UpIter =
       ++ScheduleStart->getIterator().getReverse();
   BasicBlock::reverse_iterator UpperEnd = BB->rend();
   BasicBlock::iterator DownIter = ScheduleEnd->getIterator();
   BasicBlock::iterator LowerEnd = BB->end();
+  auto IsAssumeLikeIntr = [](const Instruction &I) {
+    if (auto *II = dyn_cast<IntrinsicInst>(&I))
+      return II->isAssumeLikeIntrinsic();
+    return false;
+  };
+  UpIter = std::find_if_not(UpIter, UpperEnd, IsAssumeLikeIntr);
+  DownIter = std::find_if_not(DownIter, LowerEnd, IsAssumeLikeIntr);
   while (UpIter != UpperEnd && DownIter != LowerEnd && &*UpIter != I &&
          &*DownIter != I) {
     if (++ScheduleRegionSize > ScheduleRegionSizeLimit) {
@@ -11411,6 +11420,9 @@ bool BoUpSLP::BlockScheduling::extendSchedulingRegion(Value *V,
 
     ++UpIter;
     ++DownIter;
+
+    UpIter = std::find_if_not(UpIter, UpperEnd, IsAssumeLikeIntr);
+    DownIter = std::find_if_not(DownIter, LowerEnd, IsAssumeLikeIntr);
   }
   if (DownIter == LowerEnd || (UpIter != UpperEnd && &*UpIter == I)) {
     assert(I->getParent() == ScheduleStart->getParent() &&

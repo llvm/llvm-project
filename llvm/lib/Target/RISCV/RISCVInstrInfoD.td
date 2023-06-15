@@ -55,7 +55,6 @@ def FPR64IN32X : RegisterOperand<GPRPF64> {
 }
 
 def DExt       : ExtInfo<0, [HasStdExtD]>;
-def D64Ext     : ExtInfo<0, [HasStdExtD, IsRV64]>;
 def ZdinxExt   : ExtInfo<1, [HasStdExtZdinx, IsRV64]>;
 def Zdinx32Ext : ExtInfo<2, [HasStdExtZdinx, IsRV32]>;
 
@@ -72,14 +71,12 @@ def DF_IN32X : ExtInfo_rr<Zdinx32Ext, FPR64IN32X, FPR32INX>;
 def DX       : ExtInfo_rr<DExt,       FPR64,      GPR>;
 def DX_INX   : ExtInfo_rr<ZdinxExt,   FPR64INX,   GPR>;
 def DX_IN32X : ExtInfo_rr<Zdinx32Ext, FPR64IN32X, GPR>;
-def DX_64    : ExtInfo_rr<D64Ext,     FPR64,      GPR>;
 def FD       : ExtInfo_rr<DExt,       FPR32,      FPR64>;
 def FD_INX   : ExtInfo_rr<ZdinxExt,   FPR32INX,   FPR64INX>;
 def FD_IN32X : ExtInfo_rr<Zdinx32Ext, FPR32INX,   FPR64IN32X>;
 def XD       : ExtInfo_rr<DExt,       GPR,        FPR64>;
 def XD_INX   : ExtInfo_rr<ZdinxExt,   GPR,        FPR64INX>;
 def XD_IN32X : ExtInfo_rr<Zdinx32Ext, GPR,        FPR64IN32X>;
-def XD_64    : ExtInfo_rr<D64Ext,     GPR,        FPR64>;
 
 defvar DINX    = [D,     D_INX,  D_IN32X];
 defvar DDINX   = [DD,    DD_INX, DD_IN32X];
@@ -87,8 +84,6 @@ defvar DXINX   = [DX,    DX_INX, DX_IN32X];
 defvar DFINX   = [DF,    DF_INX, DF_IN32X];
 defvar FDINX   = [FD,    FD_INX, FD_IN32X];
 defvar XDINX   = [XD,    XD_INX, XD_IN32X];
-defvar DXIN64X = [DX_64, DX_INX];
-defvar XDIN64X = [XD_64, XD_INX];
 
 //===----------------------------------------------------------------------===//
 // Instructions
@@ -165,20 +160,20 @@ defm FCVT_D_W : FPUnaryOp_r_m<0b1101001, 0b00000, 0b000, DXINX, "fcvt.d.w">,
 defm FCVT_D_WU : FPUnaryOp_r_m<0b1101001, 0b00001, 0b000, DXINX, "fcvt.d.wu">,
                  Sched<[WriteFCvtI32ToF64, ReadFCvtI32ToF64]>;
 
-defm FCVT_L_D : FPUnaryOp_r_frm_m<0b1100001, 0b00010, XDIN64X, "fcvt.l.d">,
+defm FCVT_L_D : FPUnaryOp_r_frm_m<0b1100001, 0b00010, XDINX, "fcvt.l.d", [IsRV64]>,
                 Sched<[WriteFCvtF64ToI64, ReadFCvtF64ToI64]>;
 
-defm FCVT_LU_D : FPUnaryOp_r_frm_m<0b1100001, 0b00011, XDIN64X, "fcvt.lu.d">,
+defm FCVT_LU_D : FPUnaryOp_r_frm_m<0b1100001, 0b00011, XDINX, "fcvt.lu.d", [IsRV64]>,
                  Sched<[WriteFCvtF64ToI64, ReadFCvtF64ToI64]>;
 
 let Predicates = [HasStdExtD, IsRV64], mayRaiseFPException = 0 in
 def FMV_X_D : FPUnaryOp_r<0b1110001, 0b00000, 0b000, GPR, FPR64, "fmv.x.d">,
               Sched<[WriteFMovF64ToI64, ReadFMovF64ToI64]>;
 
-defm FCVT_D_L : FPUnaryOp_r_frm_m<0b1101001, 0b00010, DXIN64X, "fcvt.d.l">,
+defm FCVT_D_L : FPUnaryOp_r_frm_m<0b1101001, 0b00010, DXINX, "fcvt.d.l", [IsRV64]>,
                 Sched<[WriteFCvtI64ToF64, ReadFCvtI64ToF64]>;
 
-defm FCVT_D_LU : FPUnaryOp_r_frm_m<0b1101001, 0b00011, DXIN64X, "fcvt.d.lu">,
+defm FCVT_D_LU : FPUnaryOp_r_frm_m<0b1101001, 0b00011, DXINX, "fcvt.d.lu", [IsRV64]>,
                  Sched<[WriteFCvtI64ToF64, ReadFCvtI64ToF64]>;
 
 let Predicates = [HasStdExtD, IsRV64], mayRaiseFPException = 0 in

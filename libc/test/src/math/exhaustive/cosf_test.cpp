@@ -22,13 +22,15 @@ struct LlvmLibcCosfExhaustiveTest : public LlvmLibcExhaustiveTest<uint32_t> {
   bool check(uint32_t start, uint32_t stop,
              mpfr::RoundingMode rounding) override {
     mpfr::ForceRoundingMode r(rounding);
+    if (!r.success)
+      return true;
     uint32_t bits = start;
     bool result = true;
     do {
       FPBits xbits(bits);
       float x = float(xbits);
-      bool r = EXPECT_MPFR_MATCH(mpfr::Operation::Cos, x, __llvm_libc::cosf(x),
-                                 0.5, rounding);
+      bool r = TEST_MPFR_MATCH(mpfr::Operation::Cos, x, __llvm_libc::cosf(x),
+                               0.5, rounding);
       result &= r;
     } while (++bits < stop);
     return result;

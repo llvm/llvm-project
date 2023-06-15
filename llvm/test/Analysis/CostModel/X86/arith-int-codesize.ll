@@ -776,9 +776,9 @@ define i32 @and(i32 %arg) {
 define i32 @mul(i32 %arg) {
 ; SSE2-LABEL: 'mul'
 ; SSE2-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %I64 = mul i64 undef, undef
-; SSE2-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %V2I64 = mul <2 x i64> undef, undef
-; SSE2-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: %V4I64 = mul <4 x i64> undef, undef
-; SSE2-NEXT:  Cost Model: Found an estimated cost of 32 for instruction: %V8I64 = mul <8 x i64> undef, undef
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 10 for instruction: %V2I64 = mul <2 x i64> undef, undef
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 20 for instruction: %V4I64 = mul <4 x i64> undef, undef
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 40 for instruction: %V8I64 = mul <8 x i64> undef, undef
 ; SSE2-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %I32 = mul i32 undef, undef
 ; SSE2-NEXT:  Cost Model: Found an estimated cost of 7 for instruction: %V4I32 = mul <4 x i32> undef, undef
 ; SSE2-NEXT:  Cost Model: Found an estimated cost of 14 for instruction: %V8I32 = mul <8 x i32> undef, undef

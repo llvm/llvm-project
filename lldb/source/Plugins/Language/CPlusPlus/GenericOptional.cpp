@@ -94,7 +94,7 @@ ValueObjectSP GenericOptionalFrontend::GetChildAtIndex(size_t _idx) {
     // at the parent itself. We can obtain the parent through __engaged_.
     val_sp = m_backend.GetChildMemberWithName("__engaged_")
                  ->GetParent()
-                 ->GetChildAtIndex(0, true)
+                 ->GetChildAtIndex(0)
                  ->GetChildMemberWithName("__val_");
   else if (m_stdlib == StdLib::LibStdcpp) {
     val_sp = m_backend.GetChildMemberWithName("_M_payload")

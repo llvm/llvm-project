@@ -601,7 +601,7 @@ struct TestCreateBlock : public RewritePattern {
     Location loc = op->getLoc();
     rewriter.createBlock(&region, region.end(), {i32Type, i32Type}, {loc, loc});
     rewriter.create<TerminatorOp>(loc);
-    rewriter.replaceOp(op, {});
+    rewriter.eraseOp(op);
     return success();
   }
 };
@@ -621,7 +621,7 @@ struct TestCreateIllegalBlock : public RewritePattern {
     // Create an illegal op to ensure the conversion fails.
     rewriter.create<ILLegalOpF>(loc, i32Type);
     rewriter.create<TerminatorOp>(loc);
-    rewriter.replaceOp(op, {});
+    rewriter.eraseOp(op);
     return success();
   }
 };
@@ -793,8 +793,8 @@ struct TestNonRootReplacement : public RewritePattern {
     auto illegalOp = rewriter.create<ILLegalOpF>(op->getLoc(), resultType);
     auto legalOp = rewriter.create<LegalOpB>(op->getLoc(), resultType);
 
-    rewriter.replaceOp(illegalOp, {legalOp});
-    rewriter.replaceOp(op, {illegalOp});
+    rewriter.replaceOp(illegalOp, legalOp);
+    rewriter.replaceOp(op, illegalOp);
     return success();
   }
 };

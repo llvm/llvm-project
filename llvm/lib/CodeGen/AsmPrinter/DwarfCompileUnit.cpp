@@ -1575,6 +1575,8 @@ bool DwarfCompileUnit::hasDwarfPubSections() const {
     // generated for things like Gold's gdb_index generation.
   case DICompileUnit::DebugNameTableKind::GNU:
     return true;
+  case DICompileUnit::DebugNameTableKind::Apple:
+    return false;
   case DICompileUnit::DebugNameTableKind::Default:
     return DD->tuneForGDB() && !includeMinimalInlineScopes() &&
            !CUNode->isDebugDirectivesOnly() &&

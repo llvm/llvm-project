@@ -314,12 +314,17 @@ Fuchsia::Fuchsia(const Driver &D, const llvm::Triple &Triple,
 
   Multilibs.setFilePathsCallback(FilePaths);
 
-  if (Multilibs.select(Flags, SelectedMultilib))
-    if (!SelectedMultilib.isDefault())
+  if (Multilibs.select(Flags, SelectedMultilibs)) {
+    // Ensure that -print-multi-directory only outputs one multilib directory.
+    Multilib LastSelected = SelectedMultilibs.back();
+    SelectedMultilibs = {LastSelected};
+
+    if (!SelectedMultilibs.back().isDefault())
       if (const auto &PathsCallback = Multilibs.filePathsCallback())
-        for (const auto &Path : PathsCallback(SelectedMultilib))
+        for (const auto &Path : PathsCallback(SelectedMultilibs.back()))
           // Prepend the multilib path to ensure it takes the precedence.
           getFilePaths().insert(getFilePaths().begin(), Path);
+  }
 }
 
 std::string Fuchsia::ComputeEffectiveClangTriple(const ArgList &Args,

@@ -51,7 +51,7 @@ Section,Description,Dependencies,Assignee,Complete
 | `variant <https://reviews.llvm.org/D131372>`_",None,Kent Ross,|Complete|
 "| `[template.bitset] <https://wg21.link/template.bitset>`_
 | `[bitset.members] <https://wg21.link/bitset.members>`_","| remove ops `bitset <https://reviews.llvm.org/D152611>`_",None,Hristo Hristov,|Complete|
-| `[memory.syn] <https://wg21.link/memory.syn>`_,|,None,Unassigned,|Not Started|
+| `[memory.syn] <https://wg21.link/memory.syn>`_,|,None,Unassigned,|Complete|
 | `[allocator.globals] <https://wg21.link/allocator.globals>`_,| remove ops `allocator <https://reviews.llvm.org/D152612>`_,None,Hristo Hristov,|Complete|
 | `[unique.ptr.special] <https://wg21.link/unique.ptr.special>`_,| `unique_ptr <https://reviews.llvm.org/D130838>`_,[comparisons.three.way],Adrian Vogelsgesang,|Complete|
 | `[util.smartptr.shared.cmp] <https://wg21.link/util.smartptr.shared.cmp>`_,| `shared_ptr <https://reviews.llvm.org/D130852>`_,[comparisons.three.way],Adrian Vogelsgesang,|Complete|
@@ -106,7 +106,7 @@ Section,Description,Dependencies,Assignee,Complete
 | `[queue.ops] <https://wg21.link/queue.ops>`_,| `queue <https://reviews.llvm.org/D146066>`_,None,Hristo Hristov,|Complete|
 | `[stack.ops] <https://wg21.link/stack.ops>`_,| `stack <https://reviews.llvm.org/D146094>`_,None,Hristo Hristov,|Complete|
 - `5.8 Clause 23: Iterators library <https://wg21.link/p1614r2#clause-23-iterators-library>`_,,,,
-| `[iterator.synopsis] <https://wg21.link/iterator.synopsis>`_,|,None,Unassigned,|Not Started|
+| `[iterator.synopsis] <https://wg21.link/iterator.synopsis>`_,|,None,Unassigned,|Complete|
 | `[reverse.iter.cmp] <https://wg21.link/reverse.iter.cmp>`_,| `reverse_iterator <https://reviews.llvm.org/D113695>`_,None,Mikhail Maltsev,|Complete|
 "| `[move.iterator] <https://wg21.link/move.iterator>`_
 | `[move.iter.op.comp] <https://wg21.link/move.iter.op.comp>`_",| `move_iterator <https://reviews.llvm.org/D117656>`_,None,Arthur O'Dwyer,|Complete|

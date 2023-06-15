@@ -1228,6 +1228,10 @@ AArch64TargetLowering::AArch64TargetLowering(const TargetMachine &TM,
     setOperationAction(ISD::BITCAST, MVT::i8, Custom);
     setOperationAction(ISD::BITCAST, MVT::i16, Custom);
 
+    setOperationAction(ISD::BITCAST, MVT::v2i8, Custom);
+    setOperationAction(ISD::BITCAST, MVT::v2i16, Custom);
+    setOperationAction(ISD::BITCAST, MVT::v4i8, Custom);
+
     setLoadExtAction(ISD::EXTLOAD,  MVT::v4i16, MVT::v4i8, Custom);
     setLoadExtAction(ISD::SEXTLOAD, MVT::v4i16, MVT::v4i8, Custom);
     setLoadExtAction(ISD::ZEXTLOAD, MVT::v4i16, MVT::v4i8, Custom);
@@ -23019,12 +23023,44 @@ static void replaceBoolVectorBitcast(SDNode *N,
     Results.push_back(DAG.getZExtOrTrunc(VectorBits, DL, VT));
 }
 
+static void CustomNonLegalBITCASTResults(SDNode *N,
+                                         SmallVectorImpl<SDValue> &Results,
+                                         SelectionDAG &DAG, EVT ExtendVT,
+                                         EVT CastVT) {
+  SDLoc DL(N);
+  SDValue Op = N->getOperand(0);
+  EVT VT = N->getValueType(0);
+
+  // Use SCALAR_TO_VECTOR for lane zero
+  SDValue Vec = DAG.getNode(ISD::SCALAR_TO_VECTOR, DL, ExtendVT, Op);
+  SDValue CastVal = DAG.getNode(ISD::BITCAST, DL, CastVT, Vec);
+  SDValue IdxZero = DAG.getVectorIdxConstant(0, DL);
+  Results.push_back(
+      DAG.getNode(ISD::EXTRACT_SUBVECTOR, DL, VT, CastVal, IdxZero));
+  return;
+}
+
 void AArch64TargetLowering::ReplaceBITCASTResults(
     SDNode *N, SmallVectorImpl<SDValue> &Results, SelectionDAG &DAG) const {
   SDLoc DL(N);
   SDValue Op = N->getOperand(0);
   EVT VT = N->getValueType(0);
   EVT SrcVT = Op.getValueType();
+
+  if (VT == MVT::v2i16 && SrcVT == MVT::i32) {
+    CustomNonLegalBITCASTResults(N, Results, DAG, MVT::v2i32, MVT::v4i16);
+    return;
+  }
+
+  if (VT == MVT::v4i8 && SrcVT == MVT::i32) {
+    CustomNonLegalBITCASTResults(N, Results, DAG, MVT::v2i32, MVT::v8i8);
+    return;
+  }
+
+  if (VT == MVT::v2i8 && SrcVT == MVT::i16) {
+    CustomNonLegalBITCASTResults(N, Results, DAG, MVT::v4i16, MVT::v8i8);
+    return;
+  }
 
   if (VT.isScalableVector() && !isTypeLegal(VT) && isTypeLegal(SrcVT)) {
     assert(!VT.isFloatingPoint() && SrcVT.isFloatingPoint() &&

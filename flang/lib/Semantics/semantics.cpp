@@ -479,9 +479,9 @@ void SemanticsContext::UseFortranBuiltinsModule() {
   }
 }
 
-void SemanticsContext::UsePPCFortranBuiltinTypesModule() {
+void SemanticsContext::UsePPCBuiltinTypesModule() {
   if (ppcBuiltinTypesScope_ == nullptr) {
-    ppcBuiltinTypesScope_ = GetBuiltinModule("__fortran_ppc_types");
+    ppcBuiltinTypesScope_ = GetBuiltinModule("__ppc_types");
   }
 }
 
@@ -493,9 +493,9 @@ const Scope &SemanticsContext::GetCUDABuiltinsScope() {
   return **cudaBuiltinsScope_;
 }
 
-void SemanticsContext::UsePPCFortranBuiltinsModule() {
+void SemanticsContext::UsePPCBuiltinsModule() {
   if (ppcBuiltinsScope_ == nullptr) {
-    ppcBuiltinsScope_ = GetBuiltinModule("__fortran_ppc_intrinsics");
+    ppcBuiltinsScope_ = GetBuiltinModule("__ppc_intrinsics");
   }
 }
 
@@ -515,21 +515,21 @@ bool Semantics::Perform() {
                     .statement.v.source == "__fortran_builtins" ||
             std::get<parser::Statement<parser::ModuleStmt>>(
                 frontModule->value().t)
-                    .statement.v.source == "__fortran_ppc_types")) {
+                    .statement.v.source == "__ppc_types")) {
       // Don't try to read the builtins module when we're actually building it.
     } else if (frontModule &&
         std::get<parser::Statement<parser::ModuleStmt>>(frontModule->value().t)
                 .statement.v.source == "__fortran_ppc_intrinsics") {
       // The derived type definition for the vectors is needed.
-      context_.UsePPCFortranBuiltinTypesModule();
+      context_.UsePPCBuiltinTypesModule();
     } else {
       context_.UseFortranBuiltinsModule();
       llvm::Triple targetTriple{llvm::Triple(
           llvm::Triple::normalize(llvm::sys::getDefaultTargetTriple()))};
-      // Only use __Fortran_PPC_intrinsics module when targetting PowerPC arch
+      // Only use __ppc_intrinsics module when targetting PowerPC arch
       if (context_.targetCharacteristics().isPPC()) {
-        context_.UsePPCFortranBuiltinTypesModule();
-        context_.UsePPCFortranBuiltinsModule();
+        context_.UsePPCBuiltinTypesModule();
+        context_.UsePPCBuiltinsModule();
       }
     }
   }

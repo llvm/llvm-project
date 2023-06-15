@@ -681,7 +681,7 @@ static bool collectSingleShuffleElements(Value *V, Value *LHS, Value *RHS,
 /// If we have insertion into a vector that is wider than the vector that we
 /// are extracting from, try to widen the source vector to allow a single
 /// shufflevector to replace one or more insert/extract pairs.
-static void replaceExtractElements(InsertElementInst *InsElt,
+static bool replaceExtractElements(InsertElementInst *InsElt,
                                    ExtractElementInst *ExtElt,
                                    InstCombinerImpl &IC) {
   auto *InsVecType = cast<FixedVectorType>(InsElt->getType());
@@ -692,7 +692,7 @@ static void replaceExtractElements(InsertElementInst *InsElt,
   // The inserted-to vector must be wider than the extracted-from vector.
   if (InsVecType->getElementType() != ExtVecType->getElementType() ||
       NumExtElts >= NumInsElts)
-    return;
+    return false;
 
   // Create a shuffle mask to widen the extended-from vector using poison
   // values. The mask selects all of the values of the original vector followed
@@ -720,7 +720,7 @@ static void replaceExtractElements(InsertElementInst *InsElt,
   // that will delete our widening shuffle. This would trigger another attempt
   // here to create that shuffle, and we spin forever.
   if (InsertionBlock != InsElt->getParent())
-    return;
+    return false;
 
   // TODO: This restriction matches the check in visitInsertElementInst() and
   // prevents an infinite loop caused by not turning the extract/insert pair
@@ -728,7 +728,7 @@ static void replaceExtractElements(InsertElementInst *InsElt,
   // folds for shufflevectors because we're afraid to generate shuffle masks
   // that the backend can't handle.
   if (InsElt->hasOneUse() && isa<InsertElementInst>(InsElt->user_back()))
-    return;
+    return false;
 
   auto *WideVec = new ShuffleVectorInst(ExtVecOp, ExtendMask);
 
@@ -754,6 +754,8 @@ static void replaceExtractElements(InsertElementInst *InsElt,
     // extracts directly, because they may still be used by the calling code.
     IC.addToWorklist(OldExt);
   }
+
+  return true;
 }
 
 /// We are building a shuffle to create V, which is a sequence of insertelement,
@@ -768,7 +770,7 @@ using ShuffleOps = std::pair<Value *, Value *>;
 
 static ShuffleOps collectShuffleElements(Value *V, SmallVectorImpl<int> &Mask,
                                          Value *PermittedRHS,
-                                         InstCombinerImpl &IC) {
+                                         InstCombinerImpl &IC, bool &Rerun) {
   assert(V->getType()->isVectorTy() && "Invalid shuffle!");
   unsigned NumElts = cast<FixedVectorType>(V->getType())->getNumElements();
 
@@ -799,13 +801,14 @@ static ShuffleOps collectShuffleElements(Value *V, SmallVectorImpl<int> &Mask,
         // otherwise we'd end up with a shuffle of three inputs.
         if (EI->getOperand(0) == PermittedRHS || PermittedRHS == nullptr) {
           Value *RHS = EI->getOperand(0);
-          ShuffleOps LR = collectShuffleElements(VecOp, Mask, RHS, IC);
+          ShuffleOps LR = collectShuffleElements(VecOp, Mask, RHS, IC, Rerun);
           assert(LR.second == nullptr || LR.second == RHS);
 
           if (LR.first->getType() != RHS->getType()) {
             // Although we are giving up for now, see if we can create extracts
             // that match the inserts for another round of combining.
-            replaceExtractElements(IEI, EI, IC);
+            if (replaceExtractElements(IEI, EI, IC))
+              Rerun = true;
 
             // We tried our best, but we can't find anything compatible with RHS
             // further up the chain. Return a trivial shuffle.
@@ -1685,16 +1688,22 @@ Instruction *InstCombinerImpl::visitInsertElementInst(InsertElementInst &IE) {
 
     // Try to form a shuffle from a chain of extract-insert ops.
     if (isShuffleRootCandidate(IE)) {
-      SmallVector<int, 16> Mask;
-      ShuffleOps LR = collectShuffleElements(&IE, Mask, nullptr, *this);
+      bool Rerun = true;
+      while (Rerun) {
+        Rerun = false;
 
-      // The proposed shuffle may be trivial, in which case we shouldn't
-      // perform the combine.
-      if (LR.first != &IE && LR.second != &IE) {
-        // We now have a shuffle of LHS, RHS, Mask.
-        if (LR.second == nullptr)
-          LR.second = UndefValue::get(LR.first->getType());
-        return new ShuffleVectorInst(LR.first, LR.second, Mask);
+        SmallVector<int, 16> Mask;
+        ShuffleOps LR =
+            collectShuffleElements(&IE, Mask, nullptr, *this, Rerun);
+
+        // The proposed shuffle may be trivial, in which case we shouldn't
+        // perform the combine.
+        if (LR.first != &IE && LR.second != &IE) {
+          // We now have a shuffle of LHS, RHS, Mask.
+          if (LR.second == nullptr)
+            LR.second = UndefValue::get(LR.first->getType());
+          return new ShuffleVectorInst(LR.first, LR.second, Mask);
+        }
       }
     }
   }

@@ -21,13 +21,15 @@ struct LlvmLibcAsinfExhaustiveTest : public LlvmLibcExhaustiveTest<uint32_t> {
   bool check(uint32_t start, uint32_t stop,
              mpfr::RoundingMode rounding) override {
     mpfr::ForceRoundingMode r(rounding);
+    if (!r.success)
+      return true;
     uint32_t bits = start;
     bool result = true;
     do {
       FPBits xbits(bits);
       float x = float(xbits);
-      result &= EXPECT_MPFR_MATCH(mpfr::Operation::Asin, x,
-                                  __llvm_libc::asinf(x), 0.5, rounding);
+      result &= TEST_MPFR_MATCH(mpfr::Operation::Asin, x, __llvm_libc::asinf(x),
+                                0.5, rounding);
       // if (!result) break;
     } while (bits++ < stop);
     return result;

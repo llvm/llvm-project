@@ -538,9 +538,9 @@ bool Merger::isSingleCondition(TensorId t, ExprId e) const {
   case TensorExp::Kind::kCIm:
   case TensorExp::Kind::kCRe:
   case TensorExp::Kind::kBitCast:
+  case TensorExp::Kind::kUnary:
     return isSingleCondition(t, expr.children.e0);
   case TensorExp::Kind::kBinaryBranch:
-  case TensorExp::Kind::kUnary:
   case TensorExp::Kind::kSelect:
     return false;
   // Binary operations.
@@ -559,6 +559,7 @@ bool Merger::isSingleCondition(TensorId t, ExprId e) const {
   case TensorExp::Kind::kMulC:
   case TensorExp::Kind::kMulI:
   case TensorExp::Kind::kAndI:
+  case TensorExp::Kind::kReduce:
     if (isSingleCondition(t, expr.children.e0))
       return isSingleCondition(t, expr.children.e1) ||
              isInvariant(expr.children.e1);
@@ -576,7 +577,6 @@ bool Merger::isSingleCondition(TensorId t, ExprId e) const {
   case TensorExp::Kind::kOrI:
   case TensorExp::Kind::kXorI:
   case TensorExp::Kind::kBinary:
-  case TensorExp::Kind::kReduce:
     return false;
   }
   llvm_unreachable("unexpected kind");
@@ -783,6 +783,7 @@ void Merger::dumpExp(ExprId e) const {
     llvm::dbgs() << " " << kindToOpSymbol(expr.kind) << " ";
     dumpExp(expr.children.e1);
     llvm::dbgs() << ")";
+    break;
   }
 }
 
@@ -917,11 +918,11 @@ LatSetId Merger::buildLattices(ExprId e, LoopId i) {
       UnaryOp unop = cast<UnaryOp>(expr.op);
       const LatSetId child0 = buildLattices(e0, i);
       Region &absentRegion = unop.getAbsentRegion();
-
       if (absentRegion.empty()) {
         // Simple mapping over existing values.
         return mapSet(kind, child0, Value(), unop);
-      } // Use a disjunction with `unop` on the left and the absent value as an
+      }
+      // Use a disjunction with `unop` on the left and the absent value as an
       // invariant on the right.
       Block &absentBlock = absentRegion.front();
       YieldOp absentYield = cast<YieldOp>(absentBlock.getTerminator());

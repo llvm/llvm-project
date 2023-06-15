@@ -333,11 +333,20 @@ static void callback(uintptr_t Base, size_t Size, void *Arg) {
 // block is a boundary for. It must only be seen once by the callback function.
 TEST(ScudoWrappersCTest, MallocIterateBoundary) {
   const size_t PageSize = sysconf(_SC_PAGESIZE);
+#if SCUDO_ANDROID
+  // Android uses a 16 byte alignment for both 32 bit and 64 bit.
+  const size_t BlockDelta = 16U;
+#else
   const size_t BlockDelta = FIRST_32_SECOND_64(8U, 16U);
+#endif
   const size_t SpecialSize = PageSize - BlockDelta;
 
   // We aren't guaranteed that any size class is exactly a page wide. So we need
-  // to keep making allocations until we succeed.
+  // to keep making allocations until we get an allocation that starts exactly
+  // on a page boundary. The BlockDelta value is expected to be the number of
+  // bytes to subtract from a returned pointer to get to the actual start of
+  // the pointer in the size class. In practice, this means BlockDelta should
+  // be set to the minimum alignment in bytes for the allocation.
   //
   // With a 16-byte block alignment and 4096-byte page size, each allocation has
   // a probability of (1 - (16/4096)) of failing to meet the alignment

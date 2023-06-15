@@ -2147,6 +2147,8 @@ template <class ELFT> void Writer<ELFT>::finalizeSections() {
   // of finalizing other sections.
   for (OutputSection *sec : outputSections)
     sec->finalize();
+
+  script->checkMemoryRegions();
 }
 
 // Ensure data sections are not mixed with executable sections when

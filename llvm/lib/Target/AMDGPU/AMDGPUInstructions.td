@@ -123,21 +123,27 @@ def FMA : Predicate<"Subtarget->hasFMA()">;
 
 def InstFlag : OperandWithDefaultOps <i32, (ops (i32 0))>;
 
-class CustomOperandClass<string name, bit optional, string parserMethod>
+class CustomOperandClass<string name, bit optional, string parserMethod,
+                         string defaultMethod>
     : AsmOperandClass {
   let Name = name;
   let PredicateMethod = "is"#name;
   let ParserMethod = parserMethod;
   let RenderMethod = "addImmOperands";
   let IsOptional = optional;
-  let DefaultMethod = "default"#name;
+  let DefaultMethod = defaultMethod;
 }
 
 class CustomOperandProps<bit optional = 0, string name = NAME> {
+  string ImmTy = "ImmTy"#name;
   string ParserMethod = "parse"#name;
+  string DefaultValue = "0";
+  string DefaultMethod = "[this]() { return "#
+    "AMDGPUOperand::CreateImm(this, "#DefaultValue#", SMLoc(), "#
+    "AMDGPUOperand::"#ImmTy#"); }";
   string PrintMethod = "print"#name;
   AsmOperandClass ParserMatchClass =
-    CustomOperandClass<name, optional, ParserMethod>;
+    CustomOperandClass<name, optional, ParserMethod, DefaultMethod>;
   string OperandType = "OPERAND_IMMEDIATE";
 }
 
@@ -147,6 +153,7 @@ class CustomOperand<ValueType type, bit optional = 0, string name = NAME>
 class ImmOperand<ValueType type, string name, bit optional = 0,
                  string printer = "print"#name>
     : CustomOperand<type, optional, name> {
+  let ImmTy = "ImmTyNone";
   let ParserMethod = "";
   let PrintMethod = printer;
 }
