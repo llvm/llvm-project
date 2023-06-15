@@ -329,6 +329,58 @@ static bool matchSumOfMultOfArgs(linalg::GenericOp op) {
   return false;
 }
 
+// Helper to detect c = c \spy (a * b)
+static bool matchSumReductionOfMulUnary(linalg::GenericOp op) {
+  auto yieldOp = cast<linalg::YieldOp>(op.getRegion().front().getTerminator());
+  auto def = yieldOp.getOperand(0).getDefiningOp<sparse_tensor::ReduceOp>();
+  if (!def)
+    return false;
+  Value s_out = op.getBlock()->getArguments()[2];
+  for (auto *use : s_out.getUsers()) {
+    if (!(isa<sparse_tensor::ReduceOp>(use) ||
+          isa<sparse_tensor::UnaryOp>(use)))
+      return false;
+    // The sparse matrix should be specified as the pattern in the two
+    // operators.
+    if (s_out != use->getOperand(0))
+      return false;
+
+    // the above logic makes sure the pattern involves reduction and unary,
+    // i.e.,
+    // %1 = sparse_tensor.unary
+    // %2 = sparse_tensor.reduce
+    // we need to make sure %1 produces A*B and %2 uses summation as the
+    // reduction operator.
+    if (isa<sparse_tensor::ReduceOp>(use)) {
+      auto reduceSpOp = cast<sparse_tensor::ReduceOp>(use);
+      auto yieldSpOp = cast<sparse_tensor::YieldOp>(
+          reduceSpOp.getRegion().front().getTerminator());
+      auto *reduce = yieldSpOp.getOperand(0).getDefiningOp();
+      if (!isa_and_nonnull<arith::AddFOp>(reduce) &&
+          !isa_and_nonnull<arith::AddIOp>(reduce))
+        return false;
+    }
+    if (isa<sparse_tensor::UnaryOp>(use)) {
+      auto unarySpOp = cast<sparse_tensor::UnaryOp>(use);
+      auto yieldSpOp = cast<sparse_tensor::YieldOp>(
+          unarySpOp.getRegion(0).front().getTerminator());
+      auto *unary = yieldSpOp.getOperand(0).getDefiningOp();
+      if (!isa_and_nonnull<arith::MulIOp>(unary) &&
+          !isa_and_nonnull<arith::MulFOp>(unary))
+        return false;
+
+      // we also need to make sure the unary operation is used by the reduction
+      // operation.
+      for (auto *useUnary : unarySpOp->getUsers()) {
+        if (!isa<sparse_tensor::ReduceOp>(useUnary)) {
+          return false;
+        }
+      }
+    }
+  }
+  return true;
+}
+
 /// Test for sorted COO with suitable data and coordinates types.
 static bool isAdmissibleCOO(SparseTensorType &aTp) {
   return aTp.isCompressedLvl(0) && aTp.isOrderedLvl(0) && !aTp.isUniqueLvl(0) &&
@@ -627,6 +679,130 @@ static LogicalResult rewriteSpMM(PatternRewriter &rewriter,
   return success();
 }
 
+// TODO: identify alpha and beta and pass them to the CUDA calls
+/// Match and rewrite SDDMM kernel.
+static LogicalResult rewriteSDDMM(PatternRewriter &rewriter,
+                                  linalg::GenericOp op, bool enableRT) {
+
+  // For now, this pass reuses C and copies the result non-zero elements to
+  // overwrite C's.
+  // As an ad hoc solution, this pass also assumes the linalg takes a,b,c as
+  // input argument, and c as the output. It recognizes this pattern and rewrite
+  // it.
+
+  Location loc = op.getLoc();
+  Value a = op.getOperand(0);
+  Value b = op.getOperand(1);
+  Value c = op.getOperand(2);
+
+  SmallVector<Value> tokens;
+
+  // Only admissible sparse matrix format and dense matrices.
+  bool isCOO = false;
+  SparseTensorType aTp = getSparseTensorType(a);
+  SparseTensorType bTp = getSparseTensorType(b);
+  SparseTensorType cTp = getSparseTensorType(c);
+
+  if (!areAdmissibleTypes(cTp, bTp, aTp, enableRT, false, isCOO))
+    return failure();
+
+  // cusparse currently does not support COO in its SDDMM kernel.
+  if (isCOO) {
+    return failure();
+  }
+
+  // The SDDMM does the in-place operation.
+  // Start sparse kernel and copy data from host to device.
+  //   a : bufA           -> matA
+  //   b : bufB           -> matA
+  //   c : memR/memC/memV -> rowC,colC,valC
+  Value nseC = rewriter.create<NumberOfEntriesOp>(loc, c);
+  Value szm = linalg::createOrFoldDimOp(rewriter, loc, a, 0);
+  Value szk = linalg::createOrFoldDimOp(rewriter, loc, a, 1);
+  Value szn = linalg::createOrFoldDimOp(rewriter, loc, b, 1);
+  Value bufA = genTensorToMemref(rewriter, loc, a);
+  Value matA = genAllocCopy(rewriter, loc, bufA, tokens);
+  Value bufB = genTensorToMemref(rewriter, loc, b);
+  Value matB = genAllocCopy(rewriter, loc, bufB, tokens);
+  Value memR = genFirstPosOrCrds(rewriter, loc, c, isCOO, enableRT);
+  Value memC = genSecondCrds(rewriter, loc, c, isCOO, enableRT);
+  Value memV = genToValues(rewriter, loc, c);
+  Value rowC = genAllocCopy(rewriter, loc, memR, tokens);
+  Value colC = memC ? genAllocCopy(rewriter, loc, memC, tokens) : Value();
+  Value valC = genAllocCopy(rewriter, loc, memV, tokens);
+  genBlockingWait(rewriter, loc, tokens);
+  tokens.clear();
+
+  // Create sparse environment and sparse matrix/dense matrix handles.
+  Type indexTp = rewriter.getIndexType();
+  Type envHandleTp = rewriter.getType<gpu::SparseEnvHandleType>();
+  Type dnMatHandleTp = rewriter.getType<gpu::SparseDnTensorHandleType>();
+  Type spMatHandleTp = rewriter.getType<gpu::SparseSpMatHandleType>();
+  Type tokenTp = rewriter.getType<gpu::AsyncTokenType>();
+  Value token = genFirstWait(rewriter, loc);
+  auto env =
+      rewriter.create<gpu::CreateSparseEnvOp>(loc, envHandleTp, tokenTp, token);
+  Value handle = env.getResult(0);
+  token = env.getAsyncToken();
+
+  auto dmatA = rewriter.create<gpu::CreateDnTensorOp>(
+      loc, dnMatHandleTp, tokenTp, token, handle, matA,
+      SmallVector<Value>{szm, szk});
+  Value dnA = dmatA.getResult(0);
+  token = dmatA.getAsyncToken();
+  auto dmatB = rewriter.create<gpu::CreateDnTensorOp>(
+      loc, dnMatHandleTp, tokenTp, token, handle, matB,
+      SmallVector<Value>{szk, szn});
+  Value dnB = dmatB.getResult(0);
+  token = dmatB.getAsyncToken();
+
+  Operation *spGenC =
+      genSpMat(rewriter, loc, spMatHandleTp, tokenTp, token, szm, szn, nseC,
+               rowC, colC, valC, isCOO, enableRT);
+  Value spMatC = spGenC->getResult(0);
+  token = spGenC->getResult(1);
+
+  auto dnCType = llvm::cast<ShapedType>(c.getType()).getElementType();
+  // Precompute buffersize for SDDMM.
+  auto bufferComp = rewriter.create<gpu::SDDMMBufferSizeOp>(
+      loc, indexTp, tokenTp, token, handle, dnA, dnB, spMatC, dnCType);
+  Value bufferSz = bufferComp.getResult(0);
+  token = bufferComp.getAsyncToken();
+  auto buf = genAllocBuffer(rewriter, loc, bufferSz, token);
+  Value buffer = buf.getResult(0);
+  token = buf.getAsyncToken();
+
+  // Perform the SDDMM.
+  auto sddmmComp = rewriter.create<gpu::SDDMMOp>(
+      loc, tokenTp, token, handle, dnA, dnB, spMatC, dnCType, buffer);
+  token = sddmmComp.getAsyncToken();
+
+  // Copy data back to host and free all the resoures.
+  token = rewriter.create<gpu::DestroyDnTensorOp>(loc, tokenTp, token, dnA)
+              .getAsyncToken();
+  token = rewriter.create<gpu::DestroyDnTensorOp>(loc, tokenTp, token, dnB)
+              .getAsyncToken();
+  token = rewriter.create<gpu::DestroySpMatOp>(loc, tokenTp, token, spMatC)
+              .getAsyncToken();
+  token = rewriter.create<gpu::DestroySparseEnvOp>(loc, tokenTp, token, handle)
+              .getAsyncToken();
+  token = genDeallocMemRef(rewriter, loc, buffer, token);
+  token = genDeallocMemRef(rewriter, loc, matA, token);
+  token = genDeallocMemRef(rewriter, loc, matB, token);
+  token = genDeallocMemRef(rewriter, loc, rowC, token);
+  if (colC)
+    token = genDeallocMemRef(rewriter, loc, colC, token);
+  token = genCopyMemRef(rewriter, loc, memV, valC, token);
+  token = genDeallocMemRef(rewriter, loc, valC, token);
+  tokens.push_back(token);
+  genBlockingWait(rewriter, loc, tokens);
+  tokens.clear();
+
+  rewriter.replaceOpWithNewOp<sparse_tensor::LoadOp>(op, c);
+
+  return success();
+}
+
 //===----------------------------------------------------------------------===//
 // Rewriting rules for direct code generation.
 //===----------------------------------------------------------------------===//
@@ -776,6 +952,18 @@ struct LinalgOpRewriter : public OpRewritePattern<linalg::GenericOp> {
         // TODO: maybe add transposed {i, j} in future
         maps == infer({{i, k}, {k, j}, {i, j}}) && matchSumOfMultOfArgs(op)) {
       return rewriteSpMM(rewriter, op, enableRT);
+    }
+
+    // Recognize a SDDMM kernel.
+    if (numLoops == 3 && numTensors == 3 &&
+        linalg::isParallelIterator(iteratorTypes[0]) &&
+        linalg::isParallelIterator(iteratorTypes[1]) &&
+        linalg::isReductionIterator(iteratorTypes[2]) &&
+        // TODO: add transposed {i, k}, {k, j}
+        // TODO: maybe add transposed {i, j} in future
+        maps == infer({{i, k}, {k, j}, {i, j}}) &&
+        matchSumReductionOfMulUnary(op)) {
+      return rewriteSDDMM(rewriter, op, enableRT);
     }
 
     return failure();
