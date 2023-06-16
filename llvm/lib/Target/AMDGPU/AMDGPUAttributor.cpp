@@ -684,10 +684,6 @@ struct AAAMDSizeRangeAttribute
                           StringRef AttrName)
       : Base(IRP, 32), AttrName(AttrName) {}
 
-  /// See AbstractAttribute::getState(...).
-  IntegerRangeState &getState() override { return *this; }
-  const IntegerRangeState &getState() const override { return *this; }
-
   /// See AbstractAttribute::trackStatistics()
   void trackStatistics() const override {}
 
