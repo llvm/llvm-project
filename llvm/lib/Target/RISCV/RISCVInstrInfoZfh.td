@@ -38,45 +38,38 @@ def FPR16INX : RegisterOperand<GPRF16> {
   let DecoderMethod = "DecodeGPRRegisterClass";
 }
 
-def ZfhExt             : ExtInfo<0, [HasStdExtZfh]>;
-def ZfhminExt          : ExtInfo<0, [HasStdExtZfhOrZfhmin]>;
-def ZhinxExt           : ExtInfo<1, [HasStdExtZhinx]>;
-def ZhinxminExt        : ExtInfo<1, [HasStdExtZhinxOrZhinxmin]>;
+def ZfhExt     : ExtInfo<"", "", [HasStdExtZfh],
+                         FPR16, FPR32, ?, FPR16>;
+def ZfhminExt  : ExtInfo<"", "", [HasStdExtZfhOrZfhmin],
+                         FPR16, FPR32, ?, FPR16>;
+def ZfhDExt    : ExtInfo<"", "", [HasStdExtZfh, HasStdExtD],
+                         ?, FPR32, FPR64, FPR16>;
+def ZfhminDExt : ExtInfo<"", "", [HasStdExtZfhOrZfhmin, HasStdExtD],
+                         ?, FPR32, FPR64, FPR16>;
 
-def ZfhminDExt         : ExtInfo<0, [HasStdExtZfhOrZfhmin,     HasStdExtD]>;
-def ZhinxminZdinxExt   : ExtInfo<1, [HasStdExtZhinxOrZhinxmin, HasStdExtZdinx, IsRV64]>;
-def ZhinxminZdinx32Ext : ExtInfo<2, [HasStdExtZhinxOrZhinxmin, HasStdExtZdinx, IsRV32]>;
+def ZhinxExt            : ExtInfo<"_INX", "RVZfinx",
+                                  [HasStdExtZhinx],
+                                  FPR16INX, FPR32INX, ?, FPR16INX>;
+def ZhinxminExt         : ExtInfo<"_INX", "RVZfinx",
+                                  [HasStdExtZhinxOrZhinxmin],
+                                  FPR16INX, FPR32INX, ?, FPR16INX>;
+def ZhinxZdinxExt       : ExtInfo<"_INX", "RVZfinx",
+                                  [HasStdExtZhinx, HasStdExtZdinx, IsRV64],
+                                  ?, FPR32INX, FPR64INX, FPR16INX>;
+def ZhinxminZdinxExt    : ExtInfo<"_INX", "RVZfinx",
+                                  [HasStdExtZhinxOrZhinxmin, HasStdExtZdinx, IsRV64],
+                                  ?, FPR32INX, FPR64INX, FPR16INX>;
+def ZhinxZdinx32Ext     : ExtInfo<"_IN32X", "RV32Zdinx",
+                                  [HasStdExtZhinx, HasStdExtZdinx, IsRV32],
+                                  ?, FPR32INX, FPR64IN32X, FPR16INX >;
+def ZhinxminZdinx32Ext  : ExtInfo<"_IN32X", "RV32Zdinx",
+                                  [HasStdExtZhinxOrZhinxmin, HasStdExtZdinx, IsRV32],
+                                  ?, FPR32INX, FPR64IN32X, FPR16INX>;
 
-def H     : ExtInfo_r<ZfhExt,     FPR16>;
-def H_INX : ExtInfo_r<ZhinxExt, FPR16INX>;
-
-def HH          : ExtInfo_rr<ZfhExt,             FPR16,      FPR16>;
-def HH_INX      : ExtInfo_rr<ZhinxExt,           FPR16INX,   FPR16INX>;
-def XH          : ExtInfo_rr<ZfhExt,             GPR,        FPR16>;
-def XH_INX      : ExtInfo_rr<ZhinxExt,           GPR,        FPR16INX>;
-def HX          : ExtInfo_rr<ZfhExt,             FPR16,      GPR>;
-def HX_INX      : ExtInfo_rr<ZhinxExt,           FPR16INX,   GPR>;
-def HFmin       : ExtInfo_rr<ZfhminExt,          FPR16,      FPR32>;
-def HF_INXmin   : ExtInfo_rr<ZhinxminExt,        FPR16INX,   FPR32INX>;
-def HF_INX      : ExtInfo_rr<ZhinxExt,           FPR16INX,   FPR32INX>;
-def FHmin       : ExtInfo_rr<ZfhminExt,          FPR32,      FPR16>;
-def FH_INXmin   : ExtInfo_rr<ZhinxminExt,        FPR32INX,   FPR16INX>;
-def FH_INX      : ExtInfo_rr<ZhinxExt,           FPR32INX,   FPR16INX>;
-def DHmin       : ExtInfo_rr<ZfhminDExt,         FPR64,      FPR16>;
-def DH_INXmin   : ExtInfo_rr<ZhinxminZdinxExt,   FPR64INX,   FPR16INX>;
-def DH_INX32min : ExtInfo_rr<ZhinxminZdinx32Ext, FPR64IN32X, FPR16INX>;
-def HDmin       : ExtInfo_rr<ZfhminDExt,         FPR16,      FPR64>;
-def HD_INXmin   : ExtInfo_rr<ZhinxminZdinxExt,   FPR16INX,   FPR64INX>;
-def HD_INX32min : ExtInfo_rr<ZhinxminZdinx32Ext, FPR16INX,   FPR64IN32X>;
-
-defvar HINX     = [H,     H_INX];
-defvar HHINX    = [HH,    HH_INX];
-defvar XHINX    = [XH,    XH_INX];
-defvar HXINX    = [HX,    HX_INX];
-defvar HFINXmin = [HFmin, HF_INXmin];
-defvar FHINXmin = [FHmin, FH_INXmin];
-defvar DHINXmin = [DHmin, DH_INXmin, DH_INX32min];
-defvar HDINXmin = [HDmin, HD_INXmin, HD_INX32min];
+defvar ZfhExts = [ZfhExt, ZhinxExt];
+defvar ZfhminExts = [ZfhminExt, ZhinxminExt];
+defvar ZfhDExts = [ZfhDExt, ZhinxZdinxExt, ZhinxZdinx32Ext];
+defvar ZfhminDExts = [ZfhminDExt, ZhinxminZdinxExt, ZhinxminZdinx32Ext];
 
 //===----------------------------------------------------------------------===//
 // Instructions
@@ -91,57 +84,68 @@ def FLH : FPLoad_r<0b001, "flh", FPR16, WriteFLD16>;
 def FSH : FPStore_r<0b001, "fsh", FPR16, WriteFST16>;
 } // Predicates = [HasHalfFPLoadStoreMove]
 
-let SchedRW = [WriteFMA16, ReadFMA16, ReadFMA16, ReadFMA16] in {
-defm FMADD_H  : FPFMA_rrr_frm_m<OPC_MADD,  0b10, "fmadd.h",  HINX>;
-defm FMSUB_H  : FPFMA_rrr_frm_m<OPC_MSUB,  0b10, "fmsub.h",  HINX>;
-defm FNMSUB_H : FPFMA_rrr_frm_m<OPC_NMSUB, 0b10, "fnmsub.h", HINX>;
-defm FNMADD_H : FPFMA_rrr_frm_m<OPC_NMADD, 0b10, "fnmadd.h", HINX>;
-}
+foreach Ext = ZfhExts in {
+  let SchedRW = [WriteFMA16, ReadFMA16, ReadFMA16, ReadFMA16] in {
+    defm FMADD_H  : FPFMA_rrr_frm_m<OPC_MADD,  0b10, "fmadd.h",  Ext>;
+    defm FMSUB_H  : FPFMA_rrr_frm_m<OPC_MSUB,  0b10, "fmsub.h",  Ext>;
+    defm FNMSUB_H : FPFMA_rrr_frm_m<OPC_NMSUB, 0b10, "fnmsub.h", Ext>;
+    defm FNMADD_H : FPFMA_rrr_frm_m<OPC_NMADD, 0b10, "fnmadd.h", Ext>;
+  }
 
-let SchedRW = [WriteFAdd16, ReadFAdd16, ReadFAdd16] in {
-defm FADD_H : FPALU_rr_frm_m<0b0000010, "fadd.h", HINX, /*Commutable*/1>;
-defm FSUB_H : FPALU_rr_frm_m<0b0000110, "fsub.h", HINX>;
-}
-let SchedRW = [WriteFMul16, ReadFMul16, ReadFMul16] in
-defm FMUL_H : FPALU_rr_frm_m<0b0001010, "fmul.h", HINX, /*Commutable*/1>;
+  let SchedRW = [WriteFAdd16, ReadFAdd16, ReadFAdd16] in {
+    defm FADD_H : FPALU_rr_frm_m<0b0000010, "fadd.h", Ext, /*Commutable*/1>;
+    defm FSUB_H : FPALU_rr_frm_m<0b0000110, "fsub.h", Ext>;
+  }
+  let SchedRW = [WriteFMul16, ReadFMul16, ReadFMul16] in
+  defm FMUL_H : FPALU_rr_frm_m<0b0001010, "fmul.h", Ext, /*Commutable*/1>;
 
-let SchedRW = [WriteFDiv16, ReadFDiv16, ReadFDiv16] in
-defm FDIV_H : FPALU_rr_frm_m<0b0001110, "fdiv.h", HINX>;
+  let SchedRW = [WriteFDiv16, ReadFDiv16, ReadFDiv16] in
+  defm FDIV_H : FPALU_rr_frm_m<0b0001110, "fdiv.h", Ext>;
 
-defm FSQRT_H : FPUnaryOp_r_frm_m<0b0101110, 0b00000, HHINX, "fsqrt.h">,
-               Sched<[WriteFSqrt16, ReadFSqrt16]>;
+  defm FSQRT_H : FPUnaryOp_r_frm_m<0b0101110, 0b00000, Ext, Ext.PrimaryTy,
+                                   Ext.PrimaryTy, "fsqrt.h">,
+                 Sched<[WriteFSqrt16, ReadFSqrt16]>;
 
-let SchedRW = [WriteFSGNJ16, ReadFSGNJ16, ReadFSGNJ16],
-    mayRaiseFPException = 0 in {
-defm FSGNJ_H  : FPALU_rr_m<0b0010010, 0b000, "fsgnj.h",  HINX>;
-defm FSGNJN_H : FPALU_rr_m<0b0010010, 0b001, "fsgnjn.h", HINX>;
-defm FSGNJX_H : FPALU_rr_m<0b0010010, 0b010, "fsgnjx.h", HINX>;
-}
+  let SchedRW = [WriteFSGNJ16, ReadFSGNJ16, ReadFSGNJ16],
+      mayRaiseFPException = 0 in {
+    defm FSGNJ_H  : FPALU_rr_m<0b0010010, 0b000, "fsgnj.h",  Ext>;
+    defm FSGNJN_H : FPALU_rr_m<0b0010010, 0b001, "fsgnjn.h", Ext>;
+    defm FSGNJX_H : FPALU_rr_m<0b0010010, 0b010, "fsgnjx.h", Ext>;
+  }
 
-let SchedRW = [WriteFMinMax16, ReadFMinMax16, ReadFMinMax16] in {
-defm FMIN_H   : FPALU_rr_m<0b0010110, 0b000, "fmin.h", HINX, /*Commutable*/1>;
-defm FMAX_H   : FPALU_rr_m<0b0010110, 0b001, "fmax.h", HINX, /*Commutable*/1>;
-}
+  let SchedRW = [WriteFMinMax16, ReadFMinMax16, ReadFMinMax16] in {
+    defm FMIN_H   : FPALU_rr_m<0b0010110, 0b000, "fmin.h", Ext, /*Commutable*/1>;
+    defm FMAX_H   : FPALU_rr_m<0b0010110, 0b001, "fmax.h", Ext, /*Commutable*/1>;
+  }
 
-let IsSignExtendingOpW = 1 in
-defm FCVT_W_H : FPUnaryOp_r_frm_m<0b1100010, 0b00000, XHINX, "fcvt.w.h">,
-                Sched<[WriteFCvtF16ToI32, ReadFCvtF16ToI32]>;
+  let IsSignExtendingOpW = 1 in
+  defm FCVT_W_H : FPUnaryOp_r_frm_m<0b1100010, 0b00000, Ext, GPR, Ext.PrimaryTy,
+                                    "fcvt.w.h">,
+                  Sched<[WriteFCvtF16ToI32, ReadFCvtF16ToI32]>;
 
-let IsSignExtendingOpW = 1 in
-defm FCVT_WU_H : FPUnaryOp_r_frm_m<0b1100010, 0b00001, XHINX, "fcvt.wu.h">,
-                 Sched<[WriteFCvtF16ToI32, ReadFCvtF16ToI32]>;
+  let IsSignExtendingOpW = 1 in
+  defm FCVT_WU_H : FPUnaryOp_r_frm_m<0b1100010, 0b00001, Ext, GPR, Ext.PrimaryTy,
+                                     "fcvt.wu.h">,
+                   Sched<[WriteFCvtF16ToI32, ReadFCvtF16ToI32]>;
 
-defm FCVT_H_W : FPUnaryOp_r_frm_m<0b1101010, 0b00000, HXINX, "fcvt.h.w">,
-                Sched<[WriteFCvtI32ToF16, ReadFCvtI32ToF16]>;
+  defm FCVT_H_W : FPUnaryOp_r_frm_m<0b1101010, 0b00000, Ext, Ext.PrimaryTy, GPR,
+                                    "fcvt.h.w">,
+                  Sched<[WriteFCvtI32ToF16, ReadFCvtI32ToF16]>;
 
-defm FCVT_H_WU : FPUnaryOp_r_frm_m<0b1101010, 0b00001, HXINX, "fcvt.h.wu">,
-                 Sched<[WriteFCvtI32ToF16, ReadFCvtI32ToF16]>;
+  defm FCVT_H_WU : FPUnaryOp_r_frm_m<0b1101010, 0b00001, Ext, Ext.PrimaryTy, GPR,
+                                     "fcvt.h.wu">,
+                   Sched<[WriteFCvtI32ToF16, ReadFCvtI32ToF16]>;
+} // foreach Ext = ZfhExts
 
-defm FCVT_H_S : FPUnaryOp_r_frm_m<0b0100010, 0b00000, HFINXmin, "fcvt.h.s">,
-                Sched<[WriteFCvtF32ToF16, ReadFCvtF32ToF16]>;
+foreach Ext = ZfhminExts in {
+  defm FCVT_H_S : FPUnaryOp_r_frm_m<0b0100010, 0b00000, Ext, Ext.PrimaryTy,
+                                    Ext.F32Ty, "fcvt.h.s">,
+                  Sched<[WriteFCvtF32ToF16, ReadFCvtF32ToF16]>;
 
-defm FCVT_S_H : FPUnaryOp_r_m<0b0100000, 0b00010, 0b000, FHINXmin, "fcvt.s.h">,
-               Sched<[WriteFCvtF16ToF32, ReadFCvtF16ToF32]>;
+  defm FCVT_S_H : FPUnaryOp_r_m<0b0100000, 0b00010, 0b000, Ext, Ext.F32Ty,
+                                Ext.PrimaryTy, "fcvt.s.h">,
+                 Sched<[WriteFCvtF16ToF32, ReadFCvtF16ToF32]>;
+} // foreach Ext = ZfhminExts
 
 let Predicates = [HasHalfFPLoadStoreMove] in {
 let mayRaiseFPException = 0, IsSignExtendingOpW = 1 in
@@ -153,33 +157,44 @@ def FMV_H_X : FPUnaryOp_r<0b1111010, 0b00000, 0b000, FPR16, GPR, "fmv.h.x">,
               Sched<[WriteFMovI16ToF16, ReadFMovI16ToF16]>;
 } // Predicates = [HasHalfFPLoadStoreMove]
 
-let SchedRW = [WriteFCmp16, ReadFCmp16, ReadFCmp16] in {
-defm FEQ_H : FPCmp_rr_m<0b1010010, 0b010, "feq.h", HINX, /*Commutable*/1>;
-defm FLT_H : FPCmp_rr_m<0b1010010, 0b001, "flt.h", HINX>;
-defm FLE_H : FPCmp_rr_m<0b1010010, 0b000, "fle.h", HINX>;
-}
+foreach Ext = ZfhExts in {
+  let SchedRW = [WriteFCmp16, ReadFCmp16, ReadFCmp16] in {
+    defm FEQ_H : FPCmp_rr_m<0b1010010, 0b010, "feq.h", Ext, /*Commutable*/1>;
+    defm FLT_H : FPCmp_rr_m<0b1010010, 0b001, "flt.h", Ext>;
+    defm FLE_H : FPCmp_rr_m<0b1010010, 0b000, "fle.h", Ext>;
+  }
 
-let mayRaiseFPException = 0 in
-defm FCLASS_H : FPUnaryOp_r_m<0b1110010, 0b00000, 0b001, XHINX, "fclass.h">,
-                Sched<[WriteFClass16, ReadFClass16]>;
+  let mayRaiseFPException = 0 in
+  defm FCLASS_H : FPUnaryOp_r_m<0b1110010, 0b00000, 0b001, Ext, GPR, Ext.PrimaryTy,
+                                "fclass.h">,
+                  Sched<[WriteFClass16, ReadFClass16]>;
 
-defm FCVT_L_H  : FPUnaryOp_r_frm_m<0b1100010, 0b00010, XHINX, "fcvt.l.h", [IsRV64]>,
-                 Sched<[WriteFCvtF16ToI64, ReadFCvtF16ToI64]>;
+  defm FCVT_L_H  : FPUnaryOp_r_frm_m<0b1100010, 0b00010, Ext, GPR, Ext.PrimaryTy,
+                                     "fcvt.l.h", [IsRV64]>,
+                   Sched<[WriteFCvtF16ToI64, ReadFCvtF16ToI64]>;
 
-defm FCVT_LU_H  : FPUnaryOp_r_frm_m<0b1100010, 0b00011, XHINX, "fcvt.lu.h", [IsRV64]>,
-                  Sched<[WriteFCvtF16ToI64, ReadFCvtF16ToI64]>;
+  defm FCVT_LU_H  : FPUnaryOp_r_frm_m<0b1100010, 0b00011, Ext, GPR, Ext.PrimaryTy,
+                                      "fcvt.lu.h", [IsRV64]>,
+                    Sched<[WriteFCvtF16ToI64, ReadFCvtF16ToI64]>;
 
-defm FCVT_H_L : FPUnaryOp_r_frm_m<0b1101010, 0b00010, HXINX, "fcvt.h.l", [IsRV64]>,
-                Sched<[WriteFCvtI64ToF16, ReadFCvtI64ToF16]>;
+  defm FCVT_H_L : FPUnaryOp_r_frm_m<0b1101010, 0b00010, Ext, Ext.PrimaryTy, GPR,
+                                    "fcvt.h.l", [IsRV64]>,
+                  Sched<[WriteFCvtI64ToF16, ReadFCvtI64ToF16]>;
 
-defm FCVT_H_LU : FPUnaryOp_r_frm_m<0b1101010, 0b00011, HXINX, "fcvt.h.lu", [IsRV64]>,
-                 Sched<[WriteFCvtI64ToF16, ReadFCvtI64ToF16]>;
+  defm FCVT_H_LU : FPUnaryOp_r_frm_m<0b1101010, 0b00011, Ext, Ext.PrimaryTy, GPR,
+                                     "fcvt.h.lu", [IsRV64]>,
+                   Sched<[WriteFCvtI64ToF16, ReadFCvtI64ToF16]>;
+} // foreach Ext = ZfhExts
 
-defm FCVT_H_D : FPUnaryOp_r_frm_m<0b0100010, 0b00001, HDINXmin, "fcvt.h.d">,
-                Sched<[WriteFCvtF64ToF16, ReadFCvtF64ToF16]>;
+foreach Ext = ZfhminDExts in {
+  defm FCVT_H_D : FPUnaryOp_r_frm_m<0b0100010, 0b00001, Ext, Ext.F16Ty,
+                                   Ext.F64Ty, "fcvt.h.d">,
+                  Sched<[WriteFCvtF64ToF16, ReadFCvtF64ToF16]>;
 
-defm FCVT_D_H : FPUnaryOp_r_m<0b0100001, 0b00010, 0b000, DHINXmin, "fcvt.d.h">,
-                Sched<[WriteFCvtF16ToF64, ReadFCvtF16ToF64]>;
+  defm FCVT_D_H : FPUnaryOp_r_m<0b0100001, 0b00010, 0b000, Ext, Ext.F64Ty,
+                                Ext.F16Ty, "fcvt.d.h">,
+                  Sched<[WriteFCvtF16ToF64, ReadFCvtF16ToF64]>;
+} // foreach Ext = ZfhminDExts
 
 //===----------------------------------------------------------------------===//
 // Assembler Pseudo Instructions (User-Level ISA, Version 2.2, Chapter 20)
@@ -330,20 +345,24 @@ def : Pat<(fneg (any_fma_nsz FPR16INX:$rs1, FPR16INX:$rs2, FPR16INX:$rs3)),
 // The ratified 20191213 ISA spec defines fmin and fmax in a way that matches
 // LLVM's fminnum and fmaxnum
 // <https://github.com/riscv/riscv-isa-manual/commit/cd20cee7efd9bac7c5aa127ec3b451749d2b3cce>.
-defm : PatFprFpr_m<fminnum, FMIN_H, HINX>;
-defm : PatFprFpr_m<fmaxnum, FMAX_H, HINX>;
+foreach Ext = ZfhExts in {
+  defm : PatFprFpr_m<fminnum, FMIN_H, Ext>;
+  defm : PatFprFpr_m<fmaxnum, FMAX_H, Ext>;
+}
 
 /// Setcc
 // FIXME: SETEQ/SETLT/SETLE imply nonans, can we pick better instructions for
 // strict versions of those.
 
 // Match non-signaling FEQ_D
-defm : PatSetCC_m<any_fsetcc,    SETEQ,  FEQ_H,            HINX>;
-defm : PatSetCC_m<any_fsetcc,    SETOEQ, FEQ_H,            HINX>;
-defm : PatSetCC_m<strict_fsetcc, SETLT,  PseudoQuietFLT_H, HINX>;
-defm : PatSetCC_m<strict_fsetcc, SETOLT, PseudoQuietFLT_H, HINX>;
-defm : PatSetCC_m<strict_fsetcc, SETLE,  PseudoQuietFLE_H, HINX>;
-defm : PatSetCC_m<strict_fsetcc, SETOLE, PseudoQuietFLE_H, HINX>;
+foreach Ext = ZfhExts in {
+  defm : PatSetCC_m<any_fsetcc,    SETEQ,  FEQ_H,            Ext>;
+  defm : PatSetCC_m<any_fsetcc,    SETOEQ, FEQ_H,            Ext>;
+  defm : PatSetCC_m<strict_fsetcc, SETLT,  PseudoQuietFLT_H, Ext>;
+  defm : PatSetCC_m<strict_fsetcc, SETOLT, PseudoQuietFLT_H, Ext>;
+  defm : PatSetCC_m<strict_fsetcc, SETLE,  PseudoQuietFLE_H, Ext>;
+  defm : PatSetCC_m<strict_fsetcc, SETOLE, PseudoQuietFLE_H, Ext>;
+}
 
 let Predicates = [HasStdExtZfh] in {
 // Match signaling FEQ_H
@@ -375,10 +394,12 @@ def : Pat<(strict_fsetccs FPR16INX:$rs1, FPR16INX:$rs1, SETOEQ),
           (FLE_H_INX $rs1, $rs1)>;
 } // Predicates = [HasStdExtZhinx]
 
-defm : PatSetCC_m<any_fsetccs, SETLT,  FLT_H, HINX>;
-defm : PatSetCC_m<any_fsetccs, SETOLT, FLT_H, HINX>;
-defm : PatSetCC_m<any_fsetccs, SETLE,  FLE_H, HINX>;
-defm : PatSetCC_m<any_fsetccs, SETOLE, FLE_H, HINX>;
+foreach Ext = ZfhExts in {
+  defm : PatSetCC_m<any_fsetccs, SETLT,  FLT_H, Ext>;
+  defm : PatSetCC_m<any_fsetccs, SETOLT, FLT_H, Ext>;
+  defm : PatSetCC_m<any_fsetccs, SETLE,  FLE_H, Ext>;
+  defm : PatSetCC_m<any_fsetccs, SETOLE, FLE_H, Ext>;
+}
 
 let Predicates = [HasStdExtZfh] in {
 defm Select_FPR16 : SelectCC_GPR_rrirr<FPR16>;
