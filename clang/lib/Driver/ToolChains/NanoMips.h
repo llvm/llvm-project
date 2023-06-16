@@ -17,6 +17,17 @@ namespace clang {
 namespace driver {
 namespace toolchains {
 
+class LLVM_LIBRARY_VISIBILITY NanoMipsLinker : public tools::gnutools::Linker {
+public:
+  NanoMipsLinker( const ToolChain &TC) : Linker(TC) { }
+
+  void ConstructJob(Compilation &C, const JobAction &JA,
+                    const InputInfo &Output, const InputInfoList &Inputs,
+                    const llvm::opt::ArgList &TCArgs,
+                    const char *LinkingOutput) const override;
+
+};
+
 class LLVM_LIBRARY_VISIBILITY NanoMips : public Generic_ELF {
  public:
   NanoMips(const Driver &D, const llvm::Triple &Triple,
@@ -25,10 +36,24 @@ class LLVM_LIBRARY_VISIBILITY NanoMips : public Generic_ELF {
   void
     AddClangSystemIncludeArgs(const llvm::opt::ArgList &DriverArgs,
                               llvm::opt::ArgStringList &CC1Args) const override;
+
+  Tool *buildLinker() const override {
+    return new NanoMipsLinker(*this);
+  }
+
+  UnwindLibType GetUnwindLibType(const llvm::opt::ArgList &Args) const override {
+    return ToolChain::UNW_None;
+  }
+
+  bool HasNativeLLVMSupport() const override {
+    // Not strictly true, but necessary for LTO.
+    return true;
+  }
+
 };
 
-}
-}
-}
+} // toolchains
+} // driver
+} // clang
 
 #endif

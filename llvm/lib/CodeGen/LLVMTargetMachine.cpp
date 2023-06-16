@@ -180,14 +180,15 @@ Expected<std::unique_ptr<MCStreamer>> LLVMTargetMachine::createMCStreamer(
     // Create the code emitter for the target if it exists.  If not, .o file
     // emission fails.
     MCCodeEmitter *MCE = getTarget().createMCCodeEmitter(MII, MRI, Context);
-    if (!MCE)
-      return make_error<StringError>("createMCCodeEmitter failed",
-                                     inconvertibleErrorCode());
     MCAsmBackend *MAB =
         getTarget().createMCAsmBackend(STI, MRI, Options.MCOptions);
-    if (!MAB)
+    if (!MAB) {
+      if (!MCE)
+        return make_error<StringError>("createMCCodeEmitter failed",
+                                       inconvertibleErrorCode());
       return make_error<StringError>("createMCAsmBackend failed",
                                      inconvertibleErrorCode());
+    }
 
     Triple T(getTargetTriple().str());
     AsmStreamer.reset(getTarget().createMCObjectStreamer(
