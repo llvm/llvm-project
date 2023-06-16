@@ -42,9 +42,9 @@ l2:
 // ERR: :[[#@LINE+1]]:13: error: cannot evaluate subsection number
 .subsection l2
 
-// ERR: <unknown>:0: error: subsection number must be within [0,2147483647]
+// ERR: <unknown>:0: error: subsection number -1 is not within [0,2147483647]
 .subsection 0-1
 .subsection 2147483647
-// ERR: <unknown>:0: error: subsection number must be within [0,2147483647]
+// ERR: <unknown>:0: error: subsection number 2147483648 is not within [0,2147483647]
 .subsection 2147483648
 .endif
