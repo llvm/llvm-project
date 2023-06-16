@@ -1,13 +1,13 @@
 ; This test checks to ensure that if a DWARF v5 and DWARF v4 object file is used to
 ; generate a dsym, dsymutil correctly outputs the debug information, by keeping
-; the DWARF v5 and DWARF v4 debug info distinct, and that all the section headers 
+; the DWARF v5 and DWARF v4 debug info distinct, and that all the section headers
 ; have the correct format.
 
 ; 1.o was produced with the source file:
 
 ; a.cpp
 ; __attribute__((section("1,__text_foo"))) void foo() {}
-; 
+;
 ; int foo2(int a) {
 ;     return a+5;
 ; }
@@ -21,7 +21,7 @@
 
 ; b.cpp
 ; __attribute__((section("1,__text_foo2"))) void foo2() {}
-; 
+;
 ; int bar(int x) {
 ;     int y = x + 2;
 ;     return y;
@@ -39,19 +39,19 @@ CHECK:.debug_abbrev contents:
 CHECK-NEXT: Abbrev table for offset: 0x00000000
 
 CHECK: .debug_info contents:
-CHECK-NEXT: 0x00000000: Compile Unit: length = 0x0000007d, format = DWARF32, version = 0x0005, unit_type = DW_UT_compile, abbr_offset = 0x0000, addr_size = 0x08 (next unit at 0x00000081)
+CHECK: 0x00000000: Compile Unit: length = 0x00000064, format = DWARF32, version = 0x0005, unit_type = DW_UT_compile, abbr_offset = 0x0000, addr_size = 0x08 (next unit at 0x00000068)
 CHECK: DW_AT_ranges [DW_FORM_sec_offset] (0x[[RANGELIST_OFFSET:[0-9a-f]+]]
 CHECK-NEXT:                  [0x[[RANGELIST_OFFSET_START:[0-9a-f]+]], 0x[[RANGELIST_OFFSET_END:[0-9a-f]+]]))
-CHECK: 0x00000050:     DW_TAG_formal_parameter [3]   (0x00000033)
-CHECK-NEXT:                   DW_AT_location [DW_FORM_sec_offset]   (0x[[LOCLIST_OFFSET:[0-9a-f]+]]: 
+CHECK: DW_TAG_formal_parameter [3]   (0x00000033)
+CHECK-NEXT:                   DW_AT_location [DW_FORM_sec_offset]   (0x[[LOCLIST_OFFSET:[0-9a-f]+]]:
 CHECK-NEXT:                      [0x[[LOCLIST_OFFSET_START:[0-9a-f]+]], 0x[[LOCLIST_OFFSET_END:[0-9a-f]+]]): [[LOCLIST_EXPR:.*]]
 CHECK-NEXT:                      [0x[[LOCLIST_OFFSET_START2:[0-9a-f]+]], 0x[[LOCLIST_OFFSET_END2:[0-9a-f]+]]): [[LOCLIST_EXPR2:.*]])
 
-CHECK: 0x00000081: Compile Unit: length = 0x00000072, format = DWARF32, version = 0x0004, abbr_offset = 0x0000, addr_size = 0x08 (next unit at 0x000000f7)
+CHECK: 0x00000068: Compile Unit: length = 0x00000072, format = DWARF32, version = 0x0004, abbr_offset = 0x0000, addr_size = 0x08 (next unit at 0x000000de)
 CHECK:              DW_AT_ranges [DW_FORM_sec_offset] (0x00000000
 CHECK-NEXT:                 [0x00000000000200[[RANGE_OFFSET_START:[0-9a-f][0-9a-f]]], 0x00000000000200[[RANGE_OFFSET_END:[0-9a-f][0-9a-f]]]))
-CHECK:0x000000d0:     DW_TAG_formal_parameter [3]   (0x000000b3)
-CHECK-NEXT:                  DW_AT_location [DW_FORM_sec_offset]   (0x[[LOC_OFFSET:[0-9a-f]+]]: 
+CHECK: DW_TAG_formal_parameter [3] (0x0000009a)
+CHECK-NEXT:                  DW_AT_location [DW_FORM_sec_offset]   (0x[[LOC_OFFSET:[0-9a-f]+]]:
 CHECK-NEXT:                     [0x00000000000200[[LOC_OFFSET_START:[0-9a-f][0-9a-f]]], 0x00000000000200[[LOC_OFFSET_END:[0-9a-f][0-9a-f]]]): [[LOC_EXPR:.*]]
 CHECK-NEXT:                     [0x00000000000200[[LOC_OFFSET_START2:[0-9a-f][0-9a-f]]], 0x00000000000200[[LOC_OFFSET_END2:[0-9a-f][0-9a-f]]]): [[LOC_EXPR2:.*]])
 
@@ -62,7 +62,7 @@ CHECK-NEXT:            (0x0000000000000004, 0x0000000000000008): [[LOC_EXPR2:.*]
 
 CHECK: .debug_loclists contents:
 CHECK-NEXT: 0x00000000: locations list header: length = 0x00000024, format = DWARF32, version = 0x0005, addr_size = 0x08, seg_size = 0x00, offset_entry_count = 0x00000000
-CHECK-NEXT: 0x[[LOCLIST_OFFSET]]: 
+CHECK-NEXT: 0x[[LOCLIST_OFFSET]]:
 CHECK-NEXT:             DW_LLE_start_length    {{.*}}
 CHECK-NEXT:                       => [0x[[LOCLIST_OFFSET_START]], 0x[[LOCLIST_OFFSET_END]]): [[LOCLIST_EXPR]]
 CHECK-NEXT:             DW_LLE_start_length    {{.*}}
@@ -72,7 +72,7 @@ CHECK-NEXT:             DW_LLE_end_of_list     ()
 CHECK: .debug_line contents:
 CHECK-NEXT: debug_line[0x00000000]
 CHECK-NEXT: Line table prologue:
-CHECK-NEXT:     total_length: 0x00000050
+CHECK-NEXT:     total_length: 0x00000048
 CHECK-NEXT:           format: DWARF32
 CHECK-NEXT:          version: 5
 CHECK-NEXT:     address_size: 8
@@ -101,7 +101,7 @@ CHECK-NEXT: file_names[  0]:
 CHECK-NEXT:            name:  .debug_line_str[0x00000029] = "a.cpp"
 CHECK-NEXT:       dir_index: 0
 
-CHECK: debug_line[0x00000054]
+CHECK: debug_line[0x0000004c]
 CHECK-NEXT: Line table prologue:
 CHECK-NEXT:     total_length: 0x0000003b
 CHECK-NEXT:           format: DWARF32
@@ -148,14 +148,14 @@ CHECK-NEXT: [[RANGELIST_OFFSET]]: [DW_RLE_start_length]: {{.*}}[0x[[RANGELIST_OF
 CHECK: .debug_names contents:
 CHECK-NEXT: Name Index @ 0x0 {
 CHECK-NEXT:   Header {
-CHECK-NEXT:     Length: 0xD4
+CHECK-NEXT:     Length: 0xBC
 CHECK-NEXT:     Format: DWARF32
 CHECK-NEXT:     Version: 5
 CHECK-NEXT:     CU count: 2
 CHECK-NEXT:     Local TU count: 0
 CHECK-NEXT:     Foreign TU count: 0
-CHECK-NEXT:     Bucket count: 6
-CHECK-NEXT:     Name count: 6
+CHECK-NEXT:     Bucket count: 5
+CHECK-NEXT:     Name count: 5
 CHECK-NEXT:     Abbreviations table size: 0x11
 CHECK-NEXT:     Augmentation: 'LLVM0700'
 CHECK-NEXT:   }
