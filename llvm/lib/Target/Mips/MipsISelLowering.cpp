@@ -1046,8 +1046,26 @@ static SDValue attemptOrToIns(SDValue &And, SDValue &Right, SDNode *N,
   if (!(CN = dyn_cast<ConstantSDNode>(And.getOperand(1))))
     return SDValue();
   unsigned Mask0 = ~CN->getZExtValue();
-  if (!isShiftedMask(Mask0, SMPos0, SMSize0))
-    return SDValue();
+
+  KnownBits KnownMaskBits = DAG.computeKnownBits(And.getOperand(1));
+  APInt maxValue = KnownMaskBits.getMaxValue();
+  unsigned int MaxNumOfActiveBitsInMask = maxValue.getActiveBits();
+
+  // If the mask value fits into 16 bits, trim the leading ones.
+  // Leading ones were made after negating zero expanded 16 bit value.
+  // This enables the function isShiftedMask() to recognize 16 bit masks as
+  // valid.
+  // TODO: Support the case when there are two two consecutive OR instructions
+  // and two masks whose value fits in 16 bits.
+  if (MaxNumOfActiveBitsInMask <= 16) {
+    uint16_t Mask0_16 = Mask0;
+    if (!isShiftedMask(Mask0_16, SMPos0, SMSize0))
+      return SDValue();
+  } else if (MaxNumOfActiveBitsInMask <= 32) {
+    uint32_t Mask0_32 = Mask0;
+    if (!isShiftedMask(Mask0_32, SMPos0, SMSize0))
+      return SDValue();
+  }
 
   SDLoc DL(N);
   EVT ValTy = N->getValueType(0);
