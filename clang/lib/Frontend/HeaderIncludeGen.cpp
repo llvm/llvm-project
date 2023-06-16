@@ -49,6 +49,18 @@ public:
 
   void FileSkipped(const FileEntryRef &SkippedFile, const Token &FilenameTok,
                    SrcMgr::CharacteristicKind FileType) override;
+
+private:
+  bool ShouldShowHeader(SrcMgr::CharacteristicKind HeaderType) {
+    if (!DepOpts.IncludeSystemHeaders && isSystem(HeaderType))
+      return false;
+
+    // Show the current header if we are (a) past the predefines, or (b) showing
+    // all headers and in the predefines at a depth past the initial file and
+    // command line buffers.
+    return (HasProcessedPredefines ||
+            (ShowAllHeaders && CurrentIncludeDepth > 2));
+  }
 };
 
 /// A callback for emitting header usage information to a file in JSON. Each
@@ -211,29 +223,22 @@ void HeaderIncludesCallback::FileChanged(SourceLocation Loc,
     }
 
     return;
-  } else
+  } else {
+    return;
+  }
+
+  if (!ShouldShowHeader(NewFileType))
     return;
 
-  // Show the header if we are (a) past the predefines, or (b) showing all
-  // headers and in the predefines at a depth past the initial file and command
-  // line buffers.
-  bool ShowHeader = (HasProcessedPredefines ||
-                     (ShowAllHeaders && CurrentIncludeDepth > 2));
   unsigned IncludeDepth = CurrentIncludeDepth;
   if (!HasProcessedPredefines)
     --IncludeDepth; // Ignore indent from <built-in>.
   else if (!DepOpts.ShowIncludesPretendHeader.empty())
     ++IncludeDepth; // Pretend inclusion by ShowIncludesPretendHeader.
 
-  if (!DepOpts.IncludeSystemHeaders && isSystem(NewFileType))
-    ShowHeader = false;
-
-  // Dump the header include information we are past the predefines buffer or
-  // are showing all headers and this isn't the magic implicit <command line>
-  // header.
   // FIXME: Identify headers in a more robust way than comparing their name to
   // "<command line>" and "<built-in>" in a bunch of places.
-  if (ShowHeader && Reason == PPCallbacks::EnterFile &&
+  if (Reason == PPCallbacks::EnterFile &&
       UserLoc.getFilename() != StringRef("<command line>")) {
     PrintHeaderInfo(OutputFile, UserLoc.getFilename(), ShowDepth, IncludeDepth,
                     MSStyle);
@@ -246,7 +251,7 @@ void HeaderIncludesCallback::FileSkipped(const FileEntryRef &SkippedFile, const
   if (!DepOpts.ShowSkippedHeaderIncludes)
     return;
 
-  if (!DepOpts.IncludeSystemHeaders && isSystem(FileType))
+  if (!ShouldShowHeader(FileType))
     return;
 
   PrintHeaderInfo(OutputFile, SkippedFile.getName(), ShowDepth,
