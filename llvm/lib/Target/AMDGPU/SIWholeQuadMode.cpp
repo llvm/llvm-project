@@ -1136,7 +1136,7 @@ MachineBasicBlock::iterator SIWholeQuadMode::prepareInsertion(
     return PreferLast ? Last : First;
 
   LiveRange &LR =
-      LIS->getRegUnit(*MCRegUnitIterator(MCRegister::from(AMDGPU::SCC), TRI));
+      LIS->getRegUnit(*TRI->regunits(MCRegister::from(AMDGPU::SCC)).begin());
   auto MBBE = MBB.end();
   SlotIndex FirstIdx = First != MBBE ? LIS->getInstructionIndex(*First)
                                      : LIS->getMBBEndIdx(&MBB);

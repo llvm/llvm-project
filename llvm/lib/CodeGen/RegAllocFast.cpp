@@ -554,7 +554,7 @@ void RegAllocFast::reloadAtBegin(MachineBasicBlock &MBB) {
     if (PhysReg == 0)
       continue;
 
-    MCRegister FirstUnit = *MCRegUnitIterator(PhysReg, TRI);
+    MCRegister FirstUnit = *TRI->regunits(PhysReg).begin();
     if (RegUnitStates[FirstUnit] == regLiveIn)
       continue;
 
@@ -624,7 +624,7 @@ bool RegAllocFast::displacePhysReg(MachineInstr &MI, MCPhysReg PhysReg) {
 void RegAllocFast::freePhysReg(MCPhysReg PhysReg) {
   LLVM_DEBUG(dbgs() << "Freeing " << printReg(PhysReg, TRI) << ':');
 
-  MCRegister FirstUnit = *MCRegUnitIterator(PhysReg, TRI);
+  MCRegister FirstUnit = *TRI->regunits(PhysReg).begin();
   switch (unsigned VirtReg = RegUnitStates[FirstUnit]) {
   case regFree:
     LLVM_DEBUG(dbgs() << '\n');
