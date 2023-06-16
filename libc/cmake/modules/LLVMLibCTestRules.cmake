@@ -725,6 +725,7 @@ function(add_libc_hermetic_test test_name)
     COMMAND ${test_cmd}
     COMMAND_EXPAND_LISTS
     COMMENT "Running hermetic test ${fq_target_name}"
+    ${LIBC_HERMETIC_TEST_JOB_POOL}
   )
 
   add_dependencies(${HERMETIC_TEST_SUITE} ${fq_target_name})
