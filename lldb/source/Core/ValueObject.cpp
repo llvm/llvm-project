@@ -1955,6 +1955,37 @@ void ValueObject::GetExpressionPath(Stream &s,
 
   ValueObject *parent = GetParent();
 
+  /*
+   * The following branch handles the case when the parent of this value-object
+   * is a pointer to an array.
+   *
+   * We want its children be printed like this:
+   *
+   *   (*foo)[0]
+   *   (*foo)[1]
+   *   (*foo)[2]
+   *   ...
+   *
+   * instead of like this:
+   *
+   *   foo->[0]
+   *   foo->[1]
+   *   foo->[2]
+   *   ...
+   */
+  if (parent) {
+    lldb_private::CompilerType parentType = parent->GetCompilerType();
+    const bool parentTypeIsPointer = parentType.IsPointerType();
+    const bool pointeeOfParentTypeIsArray = parentType.GetPointeeType().IsArrayType();
+    if (parentTypeIsPointer && pointeeOfParentTypeIsArray) {
+      s.PutCString("(*");
+      parent->GetExpressionPath(s, epformat);
+      s.PutCString(")");
+      s.PutCString(GetName().GetCString());
+      return;
+    }
+  }
+
   if (parent)
     parent->GetExpressionPath(s, epformat);
 
