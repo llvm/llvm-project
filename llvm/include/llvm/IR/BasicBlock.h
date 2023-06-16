@@ -251,10 +251,7 @@ public:
 
   /// Unlink this basic block from its current function and insert it into
   /// the function that \p MovePos lives in, right before \p MovePos.
-  inline void moveBefore(BasicBlock *MovePos) {
-    moveBefore(MovePos->getIterator());
-  }
-  void moveBefore(SymbolTableList<BasicBlock>::iterator MovePos);
+  void moveBefore(BasicBlock *MovePos);
 
   /// Unlink this basic block from its current function and insert it
   /// right after \p MovePos in the function \p MovePos lives in.
