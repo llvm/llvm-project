@@ -102,17 +102,8 @@ std::string DWARFAbbreviationDeclarationSet::getCodeRange() const {
   return Buffer;
 }
 
-DWARFDebugAbbrev::DWARFDebugAbbrev() { clear(); }
-
-void DWARFDebugAbbrev::clear() {
-  AbbrDeclSets.clear();
-  PrevAbbrOffsetPos = AbbrDeclSets.end();
-}
-
-void DWARFDebugAbbrev::extract(DataExtractor Data) {
-  clear();
-  this->Data = Data;
-}
+DWARFDebugAbbrev::DWARFDebugAbbrev(DataExtractor Data)
+    : AbbrDeclSets(), PrevAbbrOffsetPos(AbbrDeclSets.end()), Data(Data) {}
 
 void DWARFDebugAbbrev::parse() const {
   if (!Data)
