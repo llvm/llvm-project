@@ -159,6 +159,11 @@ size_t __scudo_get_ring_buffer_size(void);
 #define M_MEMTAG_TUNING_UAF 1
 #endif
 
+// Print internal stats to the log.
+#ifndef M_LOG_STATS
+#define M_LOG_STATS -205
+#endif
+
 } // extern "C"
 
 #endif // SCUDO_INTERFACE_H_
