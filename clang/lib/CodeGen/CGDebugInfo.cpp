@@ -4847,7 +4847,7 @@ llvm::DILocalVariable *CGDebugInfo::EmitDef(const VarDecl *VD,
   // FIXME: This was previously hard-coded, but we should be deriving this from
   // the blocks somehow. Can this differ between the referrer alloca block ref
   // and the block ref pointed to by __forwarding?
-  unsigned BlockAddressSpace = 0;
+  LangAS BlockAddressSpace = LangAS::Default;
 
   llvm::DINode::DIFlags Flags = llvm::DINode::FlagZero;
   if (Unwritten)
@@ -4857,8 +4857,9 @@ llvm::DILocalVariable *CGDebugInfo::EmitDef(const VarDecl *VD,
   StringRef Name = VD->getName();
 
   llvm::Type *VDMemTy = CGM.getTypes().ConvertTypeForMem(VD->getType());
-  llvm::Type *BlockPtrTy =
-      llvm::Type::getInt8PtrTy(CGM.getLLVMContext(), BlockAddressSpace);
+  llvm::Type *BlockPtrTy = llvm::Type::getInt8PtrTy(
+      CGM.getLLVMContext(),
+      CGM.getContext().getTargetAddressSpace(BlockAddressSpace));
 
   llvm::DIExprBuilder ExprBuilder(CGM.getLLVMContext());
   ExprBuilder.append<llvm::DIOp::Referrer>(Storage->getType());
@@ -4886,7 +4887,7 @@ llvm::DILocalVariable *CGDebugInfo::EmitDef(const VarDecl *VD,
       // offset to __forwarding field
       ExprBuilder.append<llvm::DIOp::Constant>(llvm::ConstantInt::get(
           Int64Ty,
-          ToChars(CGM.getTarget().getPointerWidth(LangAS::Default))));
+          ToChars(CGM.getTarget().getPointerWidth(BlockAddressSpace))));
       ExprBuilder.append<llvm::DIOp::ByteOffset>(BlockPtrTy);
       // follow __forwarding field
       ExprBuilder.append<llvm::DIOp::Deref>(BlockPtrTy);
@@ -5511,7 +5512,6 @@ static bool ReferencesAnonymousEntity(ArrayRef<TemplateArgument> Args) {
     return false;
   });
 }
-
 namespace {
 struct ReconstitutableType : public RecursiveASTVisitor<ReconstitutableType> {
   bool Reconstitutable = true;
@@ -6094,7 +6094,6 @@ void CGDebugInfo::EmitGlobalAlias(const llvm::GlobalValue *GV,
 
 void CGDebugInfo::AddStringLiteralDebugInfo(llvm::GlobalVariable *GV,
                                             const StringLiteral *S) {
-
   // FIXME: Implement for heterogeneous debug info
   if (CGM.getCodeGenOpts().HeterogeneousDwarf)
     return;

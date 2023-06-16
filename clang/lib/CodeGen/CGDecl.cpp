@@ -2522,9 +2522,10 @@ void CodeGenFunction::EmitParmDecl(const VarDecl &D, ParamValue Arg,
       UseIndirectDebugAddress = !ArgInfo.getIndirectByVal();
     if (UseIndirectDebugAddress) {
       auto PtrTy = getContext().getPointerType(Ty);
-      DebugPtr = CreateMemTemp(PtrTy, getContext().getTypeAlignInChars(PtrTy),
-                                D.getName() + ".indirect_addr");
-      EmitStoreOfScalar(V, DebugPtr, /* Volatile */ false, PtrTy);
+      Address StackHomedPtr =
+          CreateMemTemp(PtrTy, getContext().getTypeAlignInChars(PtrTy),
+                        D.getName() + ".indirect_addr", &DebugPtr);
+      EmitStoreOfScalar(V, StackHomedPtr, /* Volatile */ false, PtrTy);
     }
 
     auto SrcLangAS = getLangOpts().OpenCL ? LangAS::opencl_private : AllocaAS;

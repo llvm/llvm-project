@@ -40,6 +40,7 @@ void DebugLocStream::finalizeEntry() {
 DebugLocStream::ListBuilder::~ListBuilder() {
   if (!Locs.finalizeList(Asm))
     return;
+  (void)MI;
   V.setDebugLocListIndex(ListIndex);
   if (TagOffset)
     V.setDebugLocListTagOffset(*TagOffset);

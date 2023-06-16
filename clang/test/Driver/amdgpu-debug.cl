@@ -6,13 +6,11 @@
 // CHECK-SIMPLE: "-cc1"
 // CHECK-SIMPLE-NOT: "-disable-O0-optnone"
 // CHECK-SIMPLE-NOT: "-debug-info-kind=line-tables-only"
-// CHECK-SIMPLE-NOT: "-disable-dwarf-locations"
 // CHECK-SIMPLE-DAG: "-mllvm" "-amdgpu-spill-cfi-saved-regs"
 // CHECK-SIMPLE-DAG: "-gheterogeneous-dwarf"
 // CHECK-SIMPLE-DAG: "-debugger-tuning=gdb"
 // CHECK-SIMPLE-NOT: "-disable-O0-optnone"
 // CHECK-SIMPLE-NOT: "-debug-info-kind=line-tables-only"
-// CHECK-SIMPLE-NOT: "-disable-dwarf-locations"
 
 // Check that -gheterogeneous-dwarf is not enabled for AMDGCN when debug information is not enabled
 // RUN: %clang -### -target amdgcn-amd-amdhsa -x cl -c -emit-llvm %s 2>&1 | FileCheck -check-prefix=CHECK-NO-G %s

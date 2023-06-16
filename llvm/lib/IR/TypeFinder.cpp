@@ -180,7 +180,7 @@ void TypeFinder::incorporateMDNode(const MDNode *V) {
   // nodes specifically here.
   if (const auto *E = dyn_cast<DIExpr>(V)) {
     for (auto &&Op : E->builder())
-      visit(
+      std::visit(
           makeVisitor(
 #define HANDLE_OP0(NAME) [](DIOp::NAME) {},
 #include "llvm/IR/DIExprOps.def"

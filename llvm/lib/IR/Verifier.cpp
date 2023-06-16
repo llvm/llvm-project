@@ -1000,13 +1000,13 @@ void Verifier::visitMDNode(const MDNode &MD, AreDebugLocsAllowed AllowLocs) {
       break;
     case Metadata::DIExpressionKind:
       CheckDI(V == DEBUG_METADATA_VERSION,
-               "MDNode incompatible with Debug Info Version", &MD, V);
+              "MDNode incompatible with Debug Info Version", &MD, V);
       break;
     case Metadata::DIExprKind:
     case Metadata::DIFragmentKind:
     case Metadata::DILifetimeKind:
       CheckDI(V == DEBUG_METADATA_VERSION_HETEROGENEOUS_DWARF,
-               "MDNode incompatible with Debug Info Version", &MD, V);
+              "MDNode incompatible with Debug Info Version", &MD, V);
       break;
     }
   }
@@ -1388,10 +1388,10 @@ void Verifier::visitDICompileUnit(const DICompileUnit &N) {
     CheckDI(isa<MDTuple>(Array), "invalid retained type list", &N, Array);
     for (Metadata *Op : N.getRetainedTypes()->operands()) {
       CheckDI(Op && (isa<DIType>(Op) ||
-                      (isa<DISubprogram>(Op) &&
-                       !cast<DISubprogram>(Op)->isDefinition()) ||
-                      isa<DILifetime>(Op)),
-               "invalid retained type", &N, Op);
+                     (isa<DISubprogram>(Op) &&
+                      !cast<DISubprogram>(Op)->isDefinition()) ||
+                     isa<DILifetime>(Op)),
+              "invalid retained type", &N, Op);
     }
   }
   if (auto *Array = N.getRawGlobalVariables()) {
@@ -1675,11 +1675,11 @@ void Verifier::visitDILifetime(const DILifetime &N) {
     NumArgs++;
   }
   for (DIOp::Variant Op : cast<DIExpr>(Loc)->builder()) {
-    if (auto *A = Op.getIf<DIOp::Arg>()) {
+    if (auto *A = std::get_if<DIOp::Arg>(&Op)) {
       CheckDI(A->getIndex() < NumArgs,
-               "debug location expression cannot reference an out-of-bounds "
-               "argObjects index",
-               &N);
+              "debug location expression cannot reference an out-of-bounds "
+              "argObjects index",
+              &N);
     }
   }
 }
@@ -6323,8 +6323,8 @@ void Verifier::visitConstrainedFPIntrinsic(ConstrainedFPIntrinsic &FPI) {
 void Verifier::visitDbgIntrinsic(StringRef Kind, DbgVariableIntrinsic &DII) {
   if (DebugInfoVersion)
     CheckDI(*DebugInfoVersion == DEBUG_METADATA_VERSION,
-             "debug intrinsic incompatible with Debug Info Version", &DII,
-             *DebugInfoVersion);
+            "debug intrinsic incompatible with Debug Info Version", &DII,
+            *DebugInfoVersion);
   auto *MD = DII.getRawLocation();
   CheckDI(isa<ValueAsMetadata>(MD) || isa<DIArgList>(MD) ||
               (isa<MDNode>(MD) && !cast<MDNode>(MD)->getNumOperands()),
@@ -6466,17 +6466,17 @@ void Verifier::visitDbgDefKillIntrinsic(StringRef Kind,
                                         DbgDefKillIntrinsic &DDI) {
   if (DebugInfoVersion)
     CheckDI(*DebugInfoVersion == DEBUG_METADATA_VERSION_HETEROGENEOUS_DWARF,
-             "debug intrinsic incompatible with Debug Info Version", &DDI,
-             *DebugInfoVersion);
+            "debug intrinsic incompatible with Debug Info Version", &DDI,
+            *DebugInfoVersion);
   CheckDI(isa<DILifetime>(DDI.getRawLifetime()),
-           "invalid llvm.dbg." + Kind + " intrinsic lifetime", &DDI,
-           DDI.getRawLifetime());
+          "invalid llvm.dbg." + Kind + " intrinsic lifetime", &DDI,
+          DDI.getRawLifetime());
   if (DbgDefInst *D = dyn_cast<DbgDefInst>(&DDI)) {
     CheckDI(isa<ValueAsMetadata>(D->getRawReferrer()),
-             "invalid llvm.dbg.def intrinsic referrer", D, D->getRawReferrer());
+            "invalid llvm.dbg.def intrinsic referrer", D, D->getRawReferrer());
     CheckDI(DefinedDebugLifetimes.insert(D->getLifetime()).second,
-             "invalid llvm.dbg.def refers to an already-defined lifetime",
-             D->getLifetime());
+            "invalid llvm.dbg.def refers to an already-defined lifetime",
+            D->getLifetime());
   }
 }
 

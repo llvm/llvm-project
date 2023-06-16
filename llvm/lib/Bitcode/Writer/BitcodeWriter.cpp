@@ -2122,7 +2122,7 @@ void ModuleBitcodeWriter::writeDIExpr(const DIExpr *N,
   Record.push_back(Version);
   for (auto &Op : N->builder()) {
     Record.push_back(DIOp::getBitcodeID(Op));
-    visit(makeVisitor(
+    std::visit(makeVisitor(
 #define HANDLE_OP0(NAME) [](DIOp::NAME) {},
 #include "llvm/IR/DIExprOps.def"
 #undef HANDLE_OP0

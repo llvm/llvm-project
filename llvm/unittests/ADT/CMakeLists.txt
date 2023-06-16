@@ -46,7 +46,6 @@ add_llvm_unittest(ADTTests
   IntervalMapTest.cpp
   IntervalTreeTest.cpp
   IntrusiveRefCntPtrTest.cpp
-  IntrusiveVariantTest.cpp
   IteratorTest.cpp
   MappedIteratorTest.cpp
   MapVectorTest.cpp

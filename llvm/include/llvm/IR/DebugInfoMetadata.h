@@ -16,7 +16,6 @@
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/BitmaskEnum.h"
 #include "llvm/ADT/Hashing.h"
-#include "llvm/ADT/IntrusiveVariant.h"
 #include "llvm/ADT/PointerUnion.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallVector.h"
@@ -27,6 +26,7 @@
 #include "llvm/IR/Metadata.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/CommandLine.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/Discriminator.h"
 #include <cassert>
 #include <climits>
@@ -35,6 +35,7 @@
 #include <iterator>
 #include <optional>
 #include <vector>
+#include <variant>
 
 // Helper macros for defining get() overrides.
 #define DEFINE_MDNODE_GET_UNPACK_IMPL(...) __VA_ARGS__
@@ -3145,7 +3146,6 @@ namespace DIOp {
 // These are the concrete alternatives that a DIOp::Variant encapsulates.
 #define HANDLE_OP0(NAME)                                                       \
   class NAME {                                                                 \
-    DECLARE_INTRUSIVE_ALTERNATIVE                                              \
   public:                                                                      \
     explicit NAME() {}                                                         \
     bool operator==(const NAME &O) const { return true; }                      \
@@ -3155,7 +3155,6 @@ namespace DIOp {
   };
 #define HANDLE_OP1(NAME, TYPE1, NAME1)                                         \
   class NAME {                                                                 \
-    DECLARE_INTRUSIVE_ALTERNATIVE                                              \
     TYPE1 NAME1;                                                               \
                                                                                \
   public:                                                                      \
@@ -3169,7 +3168,6 @@ namespace DIOp {
   };
 #define HANDLE_OP2(NAME, TYPE1, NAME1, TYPE2, NAME2)                           \
   class NAME {                                                                 \
-    DECLARE_INTRUSIVE_ALTERNATIVE                                              \
     TYPE1 NAME1;                                                               \
     TYPE2 NAME2;                                                               \
                                                                                \
@@ -3186,10 +3184,12 @@ namespace DIOp {
     TYPE2 get##NAME2() const { return NAME2; }                                 \
     void set##NAME2(TYPE2 NAME2) { this->NAME2 = NAME2; }                      \
   };
+LLVM_PACKED_START
 #include "llvm/IR/DIExprOps.def"
+LLVM_PACKED_END
 
 /// Container for a runtime-variant DIOp
-using Variant = IntrusiveVariant<
+using Variant = std::variant<
 #define HANDLE_OP_NAME(NAME) NAME
 #define SEPARATOR ,
 #include "llvm/IR/DIExprOps.def"
@@ -3229,20 +3229,25 @@ DEFINE_BC_ID(PushLane, 21u)
 unsigned getBitcodeID(const Variant &V);
 
 // The sizeof of `Op` is the size of the largest union variant, which
-// is essentially defined as:
+// should essentially be defined as a packed struct equivalent to:
 //
-//    uint8_t Kind;
+//    uint8_t Index; // Internal to std::variant, but we expect this to be
+//                   // the smallest available integral type which
+//                   // can represent our set of alternatives.
 //    uint32_t I;
 //    void* P;
 //
-// For 64-bit targets, try to catch issues where the struct is not packed
-// into two 64-bit words.
+// Note that there is no public interface which lets a pointer to the members
+// of the alternative types escape, and so we can safely pack them. This
+// means huge performance benefits (smaller memory footprint and more
+// cache-friendly traversal).
+//
+// This static_assert tries to catch issues where the struct is not packed into
+// at most two 64-bit words, as we would expect it to be.
 //
 // FIXME: If we can constrain `I` further to <= 16 bits we should also
 // fit in two 32-bit words on 32-bit targets.
-static_assert(sizeof(uintptr_t) != 64 ||
-                  sizeof(Variant) == 2 * sizeof(uintptr_t),
-              "oversized DIOp");
+static_assert(sizeof(DIOp::Variant) <= 16);
 
 } // namespace DIOp
 
@@ -3289,6 +3294,7 @@ public:
   public:
     Iterator() = delete;
     Iterator(const Iterator &) = default;
+    Iterator &operator=(const Iterator &) = default;
     bool operator==(const Iterator &R) const { return R.Op == Op; }
     DIOp::Variant &operator*() const { return *Op; }
     friend iterator_facade_base::difference_type operator-(Iterator LHS,
@@ -3315,7 +3321,7 @@ public:
   Iterator insert(Iterator I, ArgsT &&...Args) {
     // FIXME: SmallVector doesn't define an ::emplace(iterator, ...)
     return Elements.insert(
-        I.Op, DIOp::Variant{in_place_type<T>, std::forward<ArgsT>(Args)...});
+        I.Op, DIOp::Variant{std::in_place_type<T>, std::forward<ArgsT>(Args)...});
   }
 
   template <typename RangeTy> Iterator insert(Iterator I, RangeTy &&R) {
@@ -3338,7 +3344,7 @@ public:
   /// DIOp is constructed in-place by forwarding the provided arguments Args.
   template <typename T, typename... ArgsT>
   DIExprBuilder &append(ArgsT &&...Args) {
-    Elements.emplace_back(in_place_type<T>, std::forward<ArgsT>(Args)...);
+    Elements.emplace_back(std::in_place_type<T>, std::forward<ArgsT>(Args)...);
     return *this;
   }
 
@@ -3348,7 +3354,8 @@ public:
   /// Returns true if the expression being built contains DIOp of type T,
   /// false otherwise.
   template <typename T> bool contains() const {
-    return any_of(Elements, std::mem_fn(&DIOp::Variant::holdsAlternative<T>));
+    return any_of(Elements,
+                  [](auto &&E) { return std::holds_alternative<T>(E); });
   }
 
   /// Update the expression to reflect the removal of one level of indirection

@@ -2032,11 +2032,11 @@ DIExpression *DIExpression::appendExt(const DIExpression *Expr,
 }
 
 StringRef DIOp::getAsmName(const Variant &V) {
-  return visit(makeVisitor([](auto &&Op) { return Op.getAsmName(); }), V);
+  return std::visit(makeVisitor([](auto &&Op) { return Op.getAsmName(); }), V);
 }
 
 unsigned DIOp::getBitcodeID(const Variant &V) {
-  return visit(makeVisitor([](auto &&Op) { return Op.getBitcodeID(); }), V);
+  return std::visit(makeVisitor([](auto &&Op) { return Op.getBitcodeID(); }), V);
 }
 
 namespace llvm {
@@ -2085,13 +2085,13 @@ DIExpr *DIExprBuilder::intoExpr() {
 
 DIExprBuilder &DIExprBuilder::removeReferrerIndirection(Type *PointeeType) {
   for (auto &&I = begin(); I != end(); ++I) {
-    if (auto *ReferrerOp = I->getIf<DIOp::Referrer>()) {
+    if (auto *ReferrerOp = std::get_if<DIOp::Referrer>(&*I)) {
       auto *ResultType = ReferrerOp->getResultType();
       assert(ResultType->isPointerTy() &&
              "Expected pointer type for translated alloca");
       ReferrerOp->setResultType(PointeeType);
       ++I;
-      if (I != end() && I->holdsAlternative<DIOp::Deref>())
+      if (I != end() && std::holds_alternative<DIOp::Deref>(*I))
         I = erase(I) - 1;
       else
         I = insert<DIOp::AddrOf>(I, ResultType->getPointerAddressSpace());

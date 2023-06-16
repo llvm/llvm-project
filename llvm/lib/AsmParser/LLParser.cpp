@@ -4335,8 +4335,6 @@ struct DwarfCCField : public MDUnsignedField {
 };
 
 struct DwarfMSpaceField : public MDUnsignedField {
-  static const auto NullOpt = dwarf::DW_MSPACE_LLVM_hi_user + 1;
-
   dwarf::MemorySpace val() const {
     return static_cast<dwarf::MemorySpace>(Val);
   }

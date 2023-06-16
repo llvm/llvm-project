@@ -1,8 +1,6 @@
 // REQUIRES: amdgpu-registered-target
 // RUN: %clang_cc1 -O0 -debug-info-kind=limited -gheterogeneous-dwarf -triple amdgcn-amd-amdhsa -x hip -emit-llvm -fcuda-is-device -o - %s | FileCheck %s
 
-// XFAIL: *
-
 // Notes:
 // * There is no test involving transparent_union, as this isn't supported in
 // C++, and so is not supported in HIP.
@@ -172,7 +170,10 @@ __device__ void Test_Func_StructTrivialCopyNoMove(StructTrivialCopyNoMove) {}
 // CHECK: call void @llvm.dbg.def(metadata !{{[0-9]+}}, metadata ptr addrspace(5) %[[#ALLOCA]]),
 __global__ void Test_Kern_StructTrivialCopyNoMove(StructTrivialCopyNoMove) {}
 // CHECK: define dso_local void @_Z28Test_Func_StructNoCopyNoMove18StructNoCopyNoMove(ptr addrspace(5) noundef %[[#ARG:]])
-// CHECK: call void @llvm.dbg.def(metadata !{{[0-9]+}}, metadata ptr addrspace(5) %[[#ARG]]),
+// CHECK: %[[INDIRECT_ADDR:.+]] = alloca ptr, align 8, addrspace(5)
+// CHECK: %[[INDIRECT_ADDR_ASCAST:.+]] = addrspacecast ptr addrspace(5) %[[INDIRECT_ADDR]] to ptr
+// CHECK: store ptr addrspace(5) %[[#ARG]], ptr %[[INDIRECT_ADDR_ASCAST]], align 8
+// CHECK: call void @llvm.dbg.def(metadata !{{[0-9]+}}, metadata ptr addrspace(5) %[[INDIRECT_ADDR]]),
 __device__ void Test_Func_StructNoCopyNoMove(StructNoCopyNoMove) {}
 // CHECK: define dso_local amdgpu_kernel void @_Z28Test_Kern_StructNoCopyNoMove18StructNoCopyNoMove(i8 %.coerce)
 // CHECK: %[[#ALLOCA:]] = alloca %struct.StructNoCopyNoMove, align 1, addrspace(5)

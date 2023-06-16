@@ -14,27 +14,23 @@
 // DEFAULT: {{.*}}clang{{.*}}"-triple" "amdgcn-amd-amdhsa"
 // DEFAULT-NOT: "-disable-O0-optnone"
 // DEFAULT-NOT: "-debug-info-kind=line-tables-only"
-// DEFAULT-NOT: "-disable-dwarf-locations"
 // DEFAULT-DAG: "-debug-info-kind=constructor"
 // DEFAULT-DAG: "-debugger-tuning=gdb"
 // DEFAULT-DAG: "-mllvm" "-amdgpu-spill-cfi-saved-regs"
 // DEFAULT-DAG: "-gheterogeneous-dwarf"
 // DEFAULT-NOT: "-disable-O0-optnone"
 // DEFAULT-NOT: "-debug-info-kind=line-tables-only"
-// DEFAULT-NOT: "-disable-dwarf-locations"
 // DEFAULT-LABEL: clang-offload-bundler
 // DEFAULT: {{.*}}clang{{.*}}"-triple" "x86_64-unknown-linux-gnu"
 // DEFAULT-NOT: "-disable-O0-optnone"
 // DEFAULT-NOT: "-debug-info-kind=line-tables-only"
 // DEFAULT-NOT: "-amdgpu-spill-cfi-saved-regs"
-// DEFAULT-NOT: "-disable-dwarf-locations"
 // DEFAULT-NOT: "-gheterogeneous-dwarf"
 // DEFAULT-DAG: "-debug-info-kind=constructor"
 // DEFAULT-DAG: "-debugger-tuning=gdb"
 // DEFAULT-NOT: "-disable-O0-optnone"
 // DEFAULT-NOT: "-debug-info-kind=line-tables-only"
 // DEFAULT-NOT: "-amdgpu-spill-cfi-saved-regs"
-// DEFAULT-NOT: "-disable-dwarf-locations"
 // DEFAULT-NOT: "-gheterogeneous-dwarf"
 
 // RUN: %clang -### -target x86_64-unknown-linux-gnu -nogpulib -g \
@@ -43,5 +39,4 @@
 
 // RDC: {{.*}}lld{{.*}} "-plugin-opt=mcpu=gfx900"
 // RDC-SAME: "-plugin-opt=-amdgpu-spill-cfi-saved-regs"
-// RDC-NOT: "-plugin-opt=-disable-dwarf-locations"
 // RDC-NOT: "-plugin-opt=-gheterogeneous-dwarf"

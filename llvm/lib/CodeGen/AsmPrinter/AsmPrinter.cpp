@@ -1125,6 +1125,9 @@ static void emitKill(const MachineInstr *MI, AsmPrinter &AP) {
   AP.OutStreamer->addBlankLine();
 }
 
+/// emitDebugValueComment - This method handles the target-independent form
+/// of DBG_VALUE, returning true if it was able to do so.  A false return
+/// means the target will need to handle MI in EmitInstruction.
 static bool emitDebugValueComment(const MachineInstr *MI, AsmPrinter &AP) {
   // This code handles only the 4-operand target-independent form.
   if (MI->isNonListDebugValue() && MI->getNumOperands() != 4)

@@ -412,7 +412,7 @@ getDWARFMemorySpaceAtPosition(ArrayRef<uint64_t> Records, size_t Position) {
     return error("MemorySpace value is too large");
 
   return {static_cast<dwarf::MemorySpace>(Record)};
-};
+}
 
 class MetadataLoader::MetadataLoaderImpl {
   BitcodeReaderMetadataList MetadataList;
@@ -652,7 +652,7 @@ class MetadataLoader::MetadataLoaderImpl {
         if (auto *DDI = dyn_cast<DbgDeclareInst>(&I))
           if (auto *DIExpr = DDI->getExpression())
             if (DIExpr->startsWithDeref() &&
-                dyn_cast_or_null<Argument>(DDI->getAddress())) {
+                isa_and_nonnull<Argument>(DDI->getAddress())) {
               SmallVector<uint64_t, 8> Ops;
               Ops.append(std::next(DIExpr->elements_begin()),
                          DIExpr->elements_end());
@@ -661,7 +661,7 @@ class MetadataLoader::MetadataLoaderImpl {
   }
 
   /// Upgrade the expression from previous versions.
-  Error upgradeDIExpression(uint64_t FromVersion, bool &IsDistinct,
+  Error upgradeDIExpression(uint64_t FromVersion,
                             MutableArrayRef<uint64_t> &Expr,
                             SmallVectorImpl<uint64_t> &Buffer) {
     auto N = Expr.size();
@@ -710,7 +710,7 @@ class MetadataLoader::MetadataLoaderImpl {
         // If the expression is malformed, make sure we don't
         // copy more elements than we should.
         HistoricSize = std::min(SubExpr.size(), HistoricSize);
-        ArrayRef<uint64_t> Args = SubExpr.slice(1, HistoricSize-1);
+        ArrayRef<uint64_t> Args = SubExpr.slice(1, HistoricSize - 1);
 
         switch (SubExpr.front()) {
         case dwarf::DW_OP_plus:
@@ -735,9 +735,6 @@ class MetadataLoader::MetadataLoaderImpl {
       [[fallthrough]];
     }
     case 3:
-      IsDistinct = false;
-      LLVM_FALLTHROUGH;
-    case 4:
       // Up-to-date!
       break;
     }
@@ -1548,8 +1545,9 @@ Error MetadataLoader::MetadataLoaderImpl::parseOneMetadata(
       return error("Invalid record");
 
     IsDistinct = Record[0];
-    DINode::DIFlags Flags = (Record.size() > 6) ?
-                    static_cast<DINode::DIFlags>(Record[6]) : DINode::FlagZero;
+    DINode::DIFlags Flags = (Record.size() > 6)
+                                ? static_cast<DINode::DIFlags>(Record[6])
+                                : DINode::FlagZero;
 
     MetadataList.assignValue(
         GET_OR_DISTINCT(DIBasicType,
@@ -1869,24 +1867,24 @@ Error MetadataLoader::MetadataLoaderImpl::parseOneMetadata(
     DISubprogram *SP = GET_OR_DISTINCT(
         DISubprogram,
         (Context,
-         getDITypeRefOrNull(Record[1]),                     // scope
-         getMDString(Record[2]),                            // name
-         getMDString(Record[3]),                            // linkageName
-         getMDOrNull(Record[4]),                            // file
-         Record[5],                                         // line
-         getMDOrNull(Record[6]),                            // type
-         Record[7 + OffsetA],                               // scopeLine
-         getDITypeRefOrNull(Record[8 + OffsetA]),           // containingType
-         Record[10 + OffsetA],                              // virtualIndex
-         HasThisAdj ? Record[16 + OffsetB] : 0,             // thisAdjustment
-         Flags,                                             // flags
-         SPFlags,                                           // SPFlags
-         HasUnit ? CUorFn : nullptr,                        // unit
-         getMDOrNull(Record[13 + OffsetB]),                 // templateParams
-         getMDOrNull(Record[14 + OffsetB]),                 // declaration
-         getMDOrNull(Record[15 + OffsetB]),                 // retainedNodes
+         getDITypeRefOrNull(Record[1]),           // scope
+         getMDString(Record[2]),                  // name
+         getMDString(Record[3]),                  // linkageName
+         getMDOrNull(Record[4]),                  // file
+         Record[5],                               // line
+         getMDOrNull(Record[6]),                  // type
+         Record[7 + OffsetA],                     // scopeLine
+         getDITypeRefOrNull(Record[8 + OffsetA]), // containingType
+         Record[10 + OffsetA],                    // virtualIndex
+         HasThisAdj ? Record[16 + OffsetB] : 0,   // thisAdjustment
+         Flags,                                   // flags
+         SPFlags,                                 // SPFlags
+         HasUnit ? CUorFn : nullptr,              // unit
+         getMDOrNull(Record[13 + OffsetB]),       // templateParams
+         getMDOrNull(Record[14 + OffsetB]),       // declaration
+         getMDOrNull(Record[15 + OffsetB]),       // retainedNodes
          HasThrownTypes ? getMDOrNull(Record[17 + OffsetB])
-                        : nullptr,                          // thrownTypes
+                        : nullptr, // thrownTypes
          HasAnnotations ? getMDOrNull(Record[18 + OffsetB])
                         : nullptr, // annotations
          HasTargetFuncName ? getMDString(Record[19 + OffsetB])
@@ -2187,11 +2185,8 @@ Error MetadataLoader::MetadataLoaderImpl::parseOneMetadata(
     auto Elts = MutableArrayRef<uint64_t>(Record).slice(1);
 
     SmallVector<uint64_t, 6> Buffer;
-    if (Error Err = upgradeDIExpression(Version, IsDistinct, Elts, Buffer))
+    if (Error Err = upgradeDIExpression(Version, Elts, Buffer))
       return Err;
-
-    if (IsDistinct)
-      return error("Invalid record");
 
     MetadataList.assignValue(DIExpression::get(Context, Elts), NextMetadataNo);
     NextMetadataNo++;

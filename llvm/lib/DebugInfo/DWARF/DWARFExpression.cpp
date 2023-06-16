@@ -293,7 +293,7 @@ bool DWARFExpression::prettyPrintRegisterOp(DWARFUnit *U, raw_ostream &OS,
   auto RegName = DumpOpts.GetNameForDWARFReg(DwarfRegNum, DumpOpts.IsEH);
   if (!RegName.empty()) {
     if ((Opcode >= DW_OP_breg0 && Opcode <= DW_OP_breg31) ||
-        Opcode == DW_OP_bregx)
+        Opcode == DW_OP_bregx || Opcode == DW_OP_LLVM_aspace_bregx)
       OS << ' ' << RegName << format("%+" PRId64, Operands[OpNum]);
     else
       OS << ' ' << RegName.data();

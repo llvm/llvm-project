@@ -702,7 +702,7 @@ const MDNode *ValueEnumerator::enumerateMetadataImpl(unsigned F, const Metadata 
 
   if (auto *E = dyn_cast<DIExpr>(MD))
     for (auto &&Op : E->builder())
-      visit(makeVisitor(
+      std::visit(makeVisitor(
 #define HANDLE_OP0(NAME) [](DIOp::NAME) {},
 #include "llvm/IR/DIExprOps.def"
                 [&](DIOp::Referrer R) { EnumerateType(R.getResultType()); },

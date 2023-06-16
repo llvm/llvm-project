@@ -148,9 +148,9 @@ TEST_F(DIExprAsmWriterTest, PushLane) {
 
 TEST_F(DIExprAsmWriterTest, MultipleOps) {
   Builder.insert(Builder.begin(),
-                 {DIOp::Variant{in_place_type<DIOp::Referrer>, Int32Ty},
-                  DIOp::Variant{in_place_type<DIOp::Referrer>, Int64Ty},
-                  DIOp::Variant{in_place_type<DIOp::Add>}});
+                 {DIOp::Variant{std::in_place_type<DIOp::Referrer>, Int32Ty},
+                  DIOp::Variant{std::in_place_type<DIOp::Referrer>, Int64Ty},
+                  DIOp::Variant{std::in_place_type<DIOp::Add>}});
   Builder.intoExpr()->print(OS);
   EXPECT_EQ("!DIExpr(DIOpReferrer(i32), DIOpReferrer(i64), DIOpAdd())",
             OS.str());

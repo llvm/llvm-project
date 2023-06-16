@@ -2396,7 +2396,7 @@ static void writeDIExpr(raw_ostream &Out, const DIExpr *N,
   Out << "!DIExpr(";
   for (auto &&Op : N->builder()) {
     Out << FS << DIOp::getAsmName(Op) << '(';
-    visit(makeVisitor(
+    std::visit(makeVisitor(
 #define HANDLE_OP0(NAME) [](DIOp::NAME) {},
 #include "llvm/IR/DIExprOps.def"
 #undef HANDLE_OP0
