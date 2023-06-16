@@ -511,6 +511,8 @@ Bug Fixes in This Version
 - CallExpr built for C error-recovery now is always type-dependent. Fixes a
   crash when we encounter a unresolved TypoExpr during diagnostic emission.
   (`#50244 <https://github.com/llvm/llvm-project/issues/50244>_`).
+- Apply ``-fmacro-prefix-map`` to anonymous tags in template arguments
+  (`#63219 <https://github.com/llvm/llvm-project/issues/63219>`_).
 
 Bug Fixes to Compiler Builtins
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
