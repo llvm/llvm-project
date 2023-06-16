@@ -581,7 +581,7 @@ void RISCVDAGToDAGISel::selectVSETVLI(SDNode *Node) {
 
   SDValue VLOperand;
   unsigned Opcode = RISCV::PseudoVSETVLI;
-  if (VLMax) {
+  if (VLMax || isAllOnesConstant(Node->getOperand(1))) {
     VLOperand = CurDAG->getRegister(RISCV::X0, XLenVT);
     Opcode = RISCV::PseudoVSETVLIX0;
   } else {
