@@ -300,6 +300,11 @@ MCPlusBuilder *createMCPlusBuilder(const Triple::ArchType Arch,
     return createAArch64MCPlusBuilder(Analysis, Info, RegInfo);
 #endif
 
+#ifdef RISCV_AVAILABLE
+  if (Arch == Triple::riscv64)
+    return createRISCVMCPlusBuilder(Analysis, Info, RegInfo);
+#endif
+
   llvm_unreachable("architecture unsupported by MCPlusBuilder");
 }
 
@@ -1042,7 +1047,9 @@ void RewriteInstance::discoverFileObjects() {
     section_iterator Section =
         cantFail(Symbol.getSection(), "cannot get symbol section");
     if (Section == InputFile->section_end()) {
-      // Could be an absolute symbol. Could record for pretty printing.
+      // Could be an absolute symbol. Used on RISC-V for __global_pointer$ so we
+      // need to record it to handle relocations against it. For other instances
+      // of absolute symbols, we record for pretty printing.
       LLVM_DEBUG(if (opts::Verbosity > 1) {
         dbgs() << "BOLT-INFO: absolute sym " << UniqueName << "\n";
       });
@@ -1464,6 +1471,50 @@ void RewriteInstance::disassemblePLTSectionAArch64(BinarySection &Section) {
   }
 }
 
+void RewriteInstance::disassemblePLTSectionRISCV(BinarySection &Section) {
+  const uint64_t SectionAddress = Section.getAddress();
+  const uint64_t SectionSize = Section.getSize();
+  StringRef PLTContents = Section.getContents();
+  ArrayRef<uint8_t> PLTData(
+      reinterpret_cast<const uint8_t *>(PLTContents.data()), SectionSize);
+
+  auto disassembleInstruction = [&](uint64_t InstrOffset, MCInst &Instruction,
+                                    uint64_t &InstrSize) {
+    const uint64_t InstrAddr = SectionAddress + InstrOffset;
+    if (!BC->DisAsm->getInstruction(Instruction, InstrSize,
+                                    PLTData.slice(InstrOffset), InstrAddr,
+                                    nulls())) {
+      errs() << "BOLT-ERROR: unable to disassemble instruction in PLT section "
+             << Section.getName() << " at offset 0x"
+             << Twine::utohexstr(InstrOffset) << '\n';
+      exit(1);
+    }
+  };
+
+  // Skip the first special entry since no relocation points to it.
+  uint64_t InstrOffset = 32;
+
+  while (InstrOffset < SectionSize) {
+    InstructionListType Instructions;
+    MCInst Instruction;
+    const uint64_t EntryOffset = InstrOffset;
+    const uint64_t EntrySize = 16;
+    uint64_t InstrSize;
+
+    while (InstrOffset < EntryOffset + EntrySize) {
+      disassembleInstruction(InstrOffset, Instruction, InstrSize);
+      Instructions.emplace_back(Instruction);
+      InstrOffset += InstrSize;
+    }
+
+    const uint64_t EntryAddress = SectionAddress + EntryOffset;
+    const uint64_t TargetAddress = BC->MIB->analyzePLTEntry(
+        Instruction, Instructions.begin(), Instructions.end(), EntryAddress);
+
+    createPLTBinaryFunction(TargetAddress, EntryAddress, EntrySize);
+  }
+}
+
 void RewriteInstance::disassemblePLTSectionX86(BinarySection &Section,
                                                uint64_t EntrySize) {
   const uint64_t SectionAddress = Section.getAddress();
@@ -1523,6 +1574,8 @@ void RewriteInstance::disassemblePLT() {
   auto analyzeOnePLTSection = [&](BinarySection &Section, uint64_t EntrySize) {
     if (BC->isAArch64())
       return disassemblePLTSectionAArch64(Section);
+    if (BC->isRISCV())
+      return disassemblePLTSectionRISCV(Section);
     return disassemblePLTSectionX86(Section, EntrySize);
   };
 
@@ -1990,7 +2043,7 @@ bool RewriteInstance::analyzeRelocation(
     // Section symbols are marked as ST_Debug.
     IsSectionRelocation = (cantFail(Symbol.getType()) == SymbolRef::ST_Debug);
     // Check for PLT entry registered with symbol name
-    if (!SymbolAddress && IsAArch64) {
+    if (!SymbolAddress && (IsAArch64 || BC->isRISCV())) {
       const BinaryData *BD = BC->getPLTBinaryDataByName(SymbolName);
       SymbolAddress = BD ? BD->getAddress() : 0;
     }
@@ -2053,7 +2106,7 @@ bool RewriteInstance::analyzeRelocation(
     if (SkipVerification)
       return true;
 
-    if (IsAArch64)
+    if (IsAArch64 || BC->isRISCV())
       return true;
 
     if (SymbolName == "__hot_start" || SymbolName == "__hot_end")
@@ -2107,7 +2160,11 @@ void RewriteInstance::processDynamicRelocations() {
     if (!DynamicRelSectionOrErr)
       report_error("unable to find section corresponding to DT_RELA",
                    DynamicRelSectionOrErr.getError());
-    if (DynamicRelSectionOrErr->getSize() != DynamicRelocationsSize)
+    auto DynamicRelSectionSize = DynamicRelSectionOrErr->getSize();
+    // On RISC-V DT_RELASZ seems to include both .rela.dyn and .rela.plt
+    if (DynamicRelocationsSize == DynamicRelSectionSize + PLTRelocationsSize)
+      DynamicRelocationsSize = DynamicRelSectionSize;
+    if (DynamicRelSectionSize != DynamicRelocationsSize)
       report_error("section size mismatch for DT_RELASZ",
                    errc::executable_format_error);
     readDynamicRelocations(DynamicRelSectionOrErr->getSectionRef(),
@@ -2598,6 +2655,14 @@ void RewriteInstance::handleRelocation(const SectionRef &RelocatedSection,
       Expected<StringRef> SectionName = Section->getName();
       if (SectionName && !SectionName->empty())
         ReferencedSection = BC->getUniqueSectionByName(*SectionName);
+    } else if (ReferencedSymbol &&
+               (cantFail(Symbol.getFlags()) & SymbolRef::SF_Absolute)) {
+      // This might be a relocation for an ABS symbols like __global_pointer$ on
+      // RISC-V
+      ContainingBF->addRelocation(Rel.getOffset(), ReferencedSymbol,
+                                  Rel.getType(), 0,
+                                  cantFail(Symbol.getValue()));
+      return;
     }
   }
 
@@ -2607,7 +2672,7 @@ void RewriteInstance::handleRelocation(const SectionRef &RelocatedSection,
   const bool IsToCode = ReferencedSection && ReferencedSection->isText();
 
   // Special handling of PC-relative relocations.
-  if (!IsAArch64 && Relocation::isPCRelative(RType)) {
+  if (!IsAArch64 && !BC->isRISCV() && Relocation::isPCRelative(RType)) {
     if (!IsFromCode && IsToCode) {
       // PC-relative relocations from data to code are tricky since the
       // original information is typically lost after linking, even with
@@ -2640,7 +2705,7 @@ void RewriteInstance::handleRelocation(const SectionRef &RelocatedSection,
   }
 
   bool ForceRelocation = BC->forceSymbolRelocations(SymbolName);
-  if (BC->isAArch64() && Relocation::isGOT(RType))
+  if ((BC->isAArch64() || BC->isRISCV()) && Relocation::isGOT(RType))
     ForceRelocation = true;
 
   if (!ReferencedSection && !ForceRelocation) {
@@ -2788,7 +2853,7 @@ void RewriteInstance::handleRelocation(const SectionRef &RelocatedSection,
       // These are mostly local data symbols but undefined symbols
       // in relocation sections can get through here too, from .plt.
       assert(
-          (IsAArch64 || IsSectionRelocation ||
+          (IsAArch64 || BC->isRISCV() || IsSectionRelocation ||
            BC->getSectionNameForAddress(SymbolAddress)->startswith(".plt")) &&
           "known symbols should not resolve to anonymous locals");
 
