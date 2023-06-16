@@ -185,10 +185,10 @@ static void getAArch64MultilibFlags(const Driver &D,
                                        UnifiedFeatures.end());
   std::vector<std::string> MArch;
   for (const auto &Ext : AArch64::Extensions)
-    if (FeatureSet.find(Ext.Feature) != FeatureSet.end())
+    if (FeatureSet.contains(Ext.Feature))
       MArch.push_back(Ext.Name.str());
   for (const auto &Ext : AArch64::Extensions)
-    if (FeatureSet.find(Ext.NegFeature) != FeatureSet.end())
+    if (FeatureSet.contains(Ext.NegFeature))
       MArch.push_back(("no" + Ext.Name).str());
   MArch.insert(MArch.begin(), ("-march=" + Triple.getArchName()).str());
   Result.push_back(llvm::join(MArch, "+"));
@@ -206,10 +206,10 @@ static void getARMMultilibFlags(const Driver &D,
                                        UnifiedFeatures.end());
   std::vector<std::string> MArch;
   for (const auto &Ext : ARM::ARCHExtNames)
-    if (FeatureSet.find(Ext.Feature) != FeatureSet.end())
+    if (FeatureSet.contains(Ext.Feature))
       MArch.push_back(Ext.Name.str());
   for (const auto &Ext : ARM::ARCHExtNames)
-    if (FeatureSet.find(Ext.NegFeature) != FeatureSet.end())
+    if (FeatureSet.contains(Ext.NegFeature))
       MArch.push_back(("no" + Ext.Name).str());
   MArch.insert(MArch.begin(), ("-march=" + Triple.getArchName()).str());
   Result.push_back(llvm::join(MArch, "+"));
