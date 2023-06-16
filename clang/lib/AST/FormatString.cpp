@@ -351,10 +351,12 @@ ArgType::matchesType(ASTContext &C, QualType argTy) const {
     case AnyCharTy: {
       if (const auto *ETy = argTy->getAs<EnumType>()) {
         // If the enum is incomplete we know nothing about the underlying type.
-        // Assume that it's 'int'.
+        // Assume that it's 'int'. Do not use the underlying type for a scoped
+        // enumeration.
         if (!ETy->getDecl()->isComplete())
           return NoMatch;
-        argTy = ETy->getDecl()->getIntegerType();
+        if (ETy->isUnscopedEnumerationType())
+          argTy = ETy->getDecl()->getIntegerType();
       }
 
       if (const auto *BT = argTy->getAs<BuiltinType>()) {
@@ -391,10 +393,11 @@ ArgType::matchesType(ASTContext &C, QualType argTy) const {
     case SpecificTy: {
       if (const EnumType *ETy = argTy->getAs<EnumType>()) {
         // If the enum is incomplete we know nothing about the underlying type.
-        // Assume that it's 'int'.
+        // Assume that it's 'int'. Do not use the underlying type for a scoped
+        // enumeration as that needs an exact match.
         if (!ETy->getDecl()->isComplete())
           argTy = C.IntTy;
-        else
+        else if (ETy->isUnscopedEnumerationType())
           argTy = ETy->getDecl()->getIntegerType();
       }
       argTy = C.getCanonicalType(argTy).getUnqualifiedType();
