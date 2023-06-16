@@ -452,10 +452,11 @@ extern "C" void mlirAsyncRuntimePrintCurrentThreadId() {
 }
 
 //===----------------------------------------------------------------------===//
-// MLIR Runner (JitRunner) dynamic library integration.
+// MLIR ExecutionEngine dynamic library integration.
 //===----------------------------------------------------------------------===//
 
-// Export symbols for the MLIR runner integration. All other symbols are hidden.
+// Export symbols for the MLIR ExecutionEngine integration. All other symbols
+// are hidden.
 #ifdef _WIN32
 #define API __declspec(dllexport)
 #else
