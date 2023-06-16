@@ -27,7 +27,8 @@ enum class ArmStreaming { Default = 0, Locally = 1 };
 
 /// Pass to enable Armv9 Streaming SVE mode.
 std::unique_ptr<Pass>
-createEnableArmStreamingPass(const ArmStreaming mode = ArmStreaming::Default);
+createEnableArmStreamingPass(const ArmStreaming mode = ArmStreaming::Default,
+                             const bool enableZA = false);
 
 //===----------------------------------------------------------------------===//
 // Registration
