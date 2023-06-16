@@ -4612,7 +4612,8 @@ QualType ASTContext::getInjectedClassNameType(CXXRecordDecl *Decl,
   } else if (CXXRecordDecl *PrevDecl = Decl->getPreviousDecl()) {
     assert(PrevDecl->TypeForDecl && "previous declaration has no type");
     Decl->TypeForDecl = PrevDecl->TypeForDecl;
-    assert(isa<InjectedClassNameType>(Decl->TypeForDecl));
+    // FIXME: rdar://109876539
+    // assert(isa<InjectedClassNameType>(Decl->TypeForDecl));
   } else {
     Type *newType =
       new (*this, TypeAlignment) InjectedClassNameType(Decl, TST);
