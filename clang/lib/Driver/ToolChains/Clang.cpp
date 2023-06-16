@@ -2001,6 +2001,16 @@ void Clang::AddMIPSTargetArgs(const ArgList &Args,
       }
     }
   }
+
+  // NanoMips does not support SmallData, so force it to 0, since the default is
+  // 8 for Mips architectures.
+  if (Triple.isNanoMips()) {
+    CmdArgs.push_back("-msmall-data-limit");
+    CmdArgs.push_back("0");
+
+    CmdArgs.push_back("-mllvm");
+    CmdArgs.push_back("-mips-ssection-threshold=0");
+  }
 }
 
 void Clang::AddPPCTargetArgs(const ArgList &Args,
