@@ -633,6 +633,12 @@ public:
     return false;
   }
 
+  /// Returns true if First/Second is a AUIPC/JALR call pair.
+  virtual bool isRISCVCall(const MCInst &First, const MCInst &Second) const {
+    llvm_unreachable("not implemented");
+    return false;
+  }
+
   /// If non-zero, this is used to fill the executable space with instructions
   /// that will trap. Defaults to 0.
   virtual unsigned getTrapFillValue() const { return 0; }
@@ -2031,6 +2037,10 @@ MCPlusBuilder *createX86MCPlusBuilder(const MCInstrAnalysis *,
 MCPlusBuilder *createAArch64MCPlusBuilder(const MCInstrAnalysis *,
                                           const MCInstrInfo *,
                                           const MCRegisterInfo *);
+
+MCPlusBuilder *createRISCVMCPlusBuilder(const MCInstrAnalysis *,
+                                        const MCInstrInfo *,
+                                        const MCRegisterInfo *);
 
 } // namespace bolt
 } // namespace llvm
