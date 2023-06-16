@@ -197,6 +197,22 @@ def NVVM_MBarrierInitSharedOp : NVVM_Op<"mbarrier.init.shared">,
   let assemblyFormat = "$addr `,` $count attr-dict `:` type(operands)";
 }
 
+def NVVM_MBarrierInvalOp : NVVM_Op<"mbarrier.inval">,
+  Arguments<(ins LLVM_i64ptr_any:$addr)> {
+  string llvmBuilder = [{
+      createIntrinsicCall(builder, llvm::Intrinsic::nvvm_mbarrier_inval, {$addr});
+  }];
+  let assemblyFormat = "$addr attr-dict `:` type(operands)";
+}
+
+def NVVM_MBarrierInvalSharedOp : NVVM_Op<"mbarrier.inval.shared">,
+  Arguments<(ins LLVM_i64ptr_shared:$addr)> {
+  string llvmBuilder = [{
+      createIntrinsicCall(builder, llvm::Intrinsic::nvvm_mbarrier_inval_shared, {$addr});
+  }];
+  let assemblyFormat = "$addr attr-dict `:` type(operands)";
+}
+
 //===----------------------------------------------------------------------===//
 // NVVM synchronization op definitions
 //===----------------------------------------------------------------------===//

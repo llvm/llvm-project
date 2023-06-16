@@ -353,3 +353,17 @@ llvm.func private @mbarrier_init_shared(%barrier: !llvm.ptr<3>) {
   nvvm.mbarrier.init.shared %barrier, %count : !llvm.ptr<3>, i32
   llvm.return
 }
+
+
+llvm.func private @mbarrier_inval_generic(%barrier: !llvm.ptr) {
+  // CHECK:   nvvm.mbarrier.inval %{{.*}} : !llvm.ptr
+  nvvm.mbarrier.inval %barrier : !llvm.ptr
+  llvm.return
+}
+
+
+llvm.func private @mbarrier_inval_shared(%barrier: !llvm.ptr<3>) {
+  // CHECK:   nvvm.mbarrier.inval.shared %{{.*}} : !llvm.ptr<3>
+  nvvm.mbarrier.inval.shared %barrier : !llvm.ptr<3>
+  llvm.return
+}
