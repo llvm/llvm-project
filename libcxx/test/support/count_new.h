@@ -11,6 +11,7 @@
 
 #include <algorithm>
 #include <cassert>
+#include <cerrno>
 #include <cstdlib>
 #include <new>
 #include <type_traits>
