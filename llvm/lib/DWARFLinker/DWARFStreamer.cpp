@@ -496,7 +496,7 @@ void DwarfStreamer::emitDwarfDebugRngListsTableFragment(
     RngListsSectionSize += AddressSize;
 
     // Emit length of the range.
-    RngListsSectionSize += MS->emitSLEB128IntValue(Range.end() - Range.start());
+    RngListsSectionSize += MS->emitULEB128IntValue(Range.end() - Range.start());
   }
 
   // Emit the terminator entry.
