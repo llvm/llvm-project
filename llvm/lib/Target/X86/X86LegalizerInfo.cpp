@@ -148,12 +148,15 @@ X86LegalizerInfo::X86LegalizerInfo(const X86Subtarget &STI,
       .clampScalar(0, s8, sMaxScalar)
       .scalarize(0);
 
-  // TODO: Add all legal scalar types.
   // TODO: Add G_UADDO/G_USUBO/G_USUBE handling
   getActionDefinitionsBuilder(G_UADDE)
-      .legalFor({{s32, s1}})
+      .legalIf([=](const LegalityQuery &Query) -> bool {
+        return typePairInSet(0, 1, {{s8, s1}, {s16, s1}, {s32, s1}})(Query) ||
+               (Is64Bit && typePairInSet(0, 1, {{s64, s1}})(Query));
+      })
       .widenScalarToNextPow2(0, /*Min=*/32)
-      .clampScalar(0, s32, s32)
+      .clampScalar(0, s8, sMaxScalar)
+      .clampScalar(1, s1, s1)
       .scalarize(0);
 
   // integer multiply

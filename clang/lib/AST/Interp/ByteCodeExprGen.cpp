@@ -895,6 +895,43 @@ bool ByteCodeExprGen<Emitter>::VisitTypeTraitExpr(const TypeTraitExpr *E) {
   return this->emitConstBool(E->getValue(), E);
 }
 
+template <class Emitter>
+bool ByteCodeExprGen<Emitter>::VisitLambdaExpr(const LambdaExpr *E) {
+  // XXX We assume here that a pointer-to-initialize is on the stack.
+
+  const Record *R = P.getOrCreateRecord(E->getLambdaClass());
+
+  auto *CaptureInitIt = E->capture_init_begin();
+  // Initialize all fields (which represent lambda captures) of the
+  // record with their initializers.
+  for (const Record::Field &F : R->fields()) {
+    const Expr *Init = *CaptureInitIt;
+    ++CaptureInitIt;
+
+    if (std::optional<PrimType> T = classify(Init)) {
+      if (!this->visit(Init))
+        return false;
+
+      if (!this->emitSetField(*T, F.Offset, E))
+        return false;
+    } else {
+      if (!this->emitDupPtr(E))
+        return false;
+
+      if (!this->emitGetPtrField(F.Offset, E))
+        return false;
+
+      if (!this->visitInitializer(Init))
+        return false;
+
+      if (!this->emitPopPtr(E))
+        return false;
+    }
+  }
+
+  return true;
+}
+
 template <class Emitter> bool ByteCodeExprGen<Emitter>::discard(const Expr *E) {
   if (E->containsErrors())
     return false;
@@ -1483,6 +1520,8 @@ bool ByteCodeExprGen<Emitter>::visitRecordInitializer(const Expr *Initializer) {
                  dyn_cast<AbstractConditionalOperator>(Initializer)) {
     return this->visitConditional(
         ACO, [this](const Expr *E) { return this->visitRecordInitializer(E); });
+  } else if (const auto *LE = dyn_cast<LambdaExpr>(Initializer)) {
+    return this->VisitLambdaExpr(LE);
   }
 
   return false;
@@ -1978,6 +2017,16 @@ bool ByteCodeExprGen<Emitter>::VisitDeclRefExpr(const DeclRefExpr *E) {
         return this->emitGetParamPtr(It->second, E);
       return this->emitGetPtrParam(It->second, E);
     }
+  }
+
+  // Handle lambda captures.
+  if (auto It = this->LambdaCaptures.find(D);
+      It != this->LambdaCaptures.end()) {
+    auto [Offset, IsReference] = It->second;
+
+    if (IsReference)
+      return this->emitGetThisFieldPtr(Offset, E);
+    return this->emitGetPtrThisField(Offset, E);
   }
 
   return false;

@@ -9,7 +9,7 @@ list(INSERT CMAKE_MODULE_PATH 0 "${BOLT_SOURCE_DIR}/cmake/modules")
 
 # Determine default set of targets to build -- the intersection of
 # those BOLT supports and those LLVM is targeting.
-set(BOLT_TARGETS_TO_BUILD_all "AArch64;X86")
+set(BOLT_TARGETS_TO_BUILD_all "AArch64;X86;RISCV")
 set(BOLT_TARGETS_TO_BUILD_default)
 foreach (tgt ${BOLT_TARGETS_TO_BUILD_all})
   if (tgt IN_LIST LLVM_TARGETS_TO_BUILD)

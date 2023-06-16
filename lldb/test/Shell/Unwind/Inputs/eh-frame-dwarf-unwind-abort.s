@@ -22,4 +22,3 @@ asm_main:
 	.globl  g_hard_abort
 g_hard_abort:
 	.byte   1
-	.size   g_hard_abort, 1

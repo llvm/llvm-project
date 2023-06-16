@@ -45,7 +45,7 @@ void walkUsed(llvm::ArrayRef<Decl *> ASTRoots,
         return;
       // FIXME: Most of the work done here is repetitive. It might be useful to
       // have a cache/batching.
-      SymbolReference SymRef{Loc, ND, RT};
+      SymbolReference SymRef{ND, Loc, RT};
       return CB(SymRef, headersForSymbol(ND, SM, PI));
     });
   }

@@ -228,16 +228,16 @@ public:
       return nullptr;
     if (CI->second.DefRegs.size() != 1)
       return nullptr;
-    MCRegUnitIterator RUI(CI->second.DefRegs[0], &TRI);
-    return findCopyForUnit(*RUI, TRI, true);
+    MCRegUnit RU = *TRI.regunits(CI->second.DefRegs[0]).begin();
+    return findCopyForUnit(RU, TRI, true);
   }
 
   MachineInstr *findAvailBackwardCopy(MachineInstr &I, MCRegister Reg,
                                       const TargetRegisterInfo &TRI,
                                       const TargetInstrInfo &TII,
                                       bool UseCopyInstr) {
-    MCRegUnitIterator RUI(Reg, &TRI);
-    MachineInstr *AvailCopy = findCopyDefViaUnit(*RUI, TRI);
+    MCRegUnit RU = *TRI.regunits(Reg).begin();
+    MachineInstr *AvailCopy = findCopyDefViaUnit(RU, TRI);
 
     if (!AvailCopy)
       return nullptr;
@@ -265,9 +265,9 @@ public:
                               const TargetInstrInfo &TII, bool UseCopyInstr) {
     // We check the first RegUnit here, since we'll only be interested in the
     // copy if it copies the entire register anyway.
-    MCRegUnitIterator RUI(Reg, &TRI);
+    MCRegUnit RU = *TRI.regunits(Reg).begin();
     MachineInstr *AvailCopy =
-        findCopyForUnit(*RUI, TRI, /*MustBeAvailable=*/true);
+        findCopyForUnit(RU, TRI, /*MustBeAvailable=*/true);
 
     if (!AvailCopy)
       return nullptr;
@@ -297,8 +297,8 @@ public:
                                       const TargetRegisterInfo &TRI,
                                       const TargetInstrInfo &TII,
                                       bool UseCopyInstr) {
-    MCRegUnitIterator RUI(Reg, &TRI);
-    auto CI = Copies.find(*RUI);
+    MCRegUnit RU = *TRI.regunits(Reg).begin();
+    auto CI = Copies.find(RU);
     if (CI == Copies.end() || !CI->second.Avail)
       return nullptr;
 
@@ -326,8 +326,8 @@ public:
   // Find last COPY that uses Reg.
   MachineInstr *findLastSeenUseInCopy(MCRegister Reg,
                                       const TargetRegisterInfo &TRI) {
-    MCRegUnitIterator RUI(Reg, &TRI);
-    auto CI = Copies.find(*RUI);
+    MCRegUnit RU = *TRI.regunits(Reg).begin();
+    auto CI = Copies.find(RU);
     if (CI == Copies.end())
       return nullptr;
     return CI->second.LastSeenUseInCopy;

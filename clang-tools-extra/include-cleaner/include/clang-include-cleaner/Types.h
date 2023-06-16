@@ -95,10 +95,10 @@ llvm::raw_ostream &operator<<(llvm::raw_ostream &, RefType);
 
 /// Indicates that a piece of code refers to a symbol.
 struct SymbolReference {
-  /// The point in the code that refers to the symbol.
-  SourceLocation RefLocation;
   /// The symbol referred to.
   Symbol Target;
+  /// The point in the code that refers to the symbol.
+  SourceLocation RefLocation;
   /// Relation type between the reference location and the target.
   RefType RT;
 };

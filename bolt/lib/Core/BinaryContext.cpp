@@ -128,6 +128,11 @@ BinaryContext::createBinaryContext(const ObjectFile *File, bool IsPIC,
     ArchName = "aarch64";
     FeaturesStr = "+all";
     break;
+  case llvm::Triple::riscv64:
+    ArchName = "riscv64";
+    // RV64GC
+    FeaturesStr = "+m,+a,+f,+d,+zicsr,+zifencei,+c";
+    break;
   default:
     return createStringError(std::errc::not_supported,
                              "BOLT-ERROR: Unrecognized machine in ELF file");
