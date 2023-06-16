@@ -1998,7 +1998,7 @@ TypeInfo ASTContext::getTypeInfoImpl(const Type *T) const {
       Align = 16;
     else if (VT->getVectorKind() == VectorType::RVVFixedLengthDataVector)
       // Adjust the alignment for fixed-length RVV vectors.
-      Align = 64;
+      Align = std::min<unsigned>(64, Width);
     break;
   }
 
