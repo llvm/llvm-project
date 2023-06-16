@@ -201,6 +201,21 @@ public:
       const VarDecl *ThreadIDVar, OpenMPDirectiveKind InnermostKind,
       const RegionCodeGenTy &CodeGen) override;
 
+  /// Emits inlined function for the specified OpenMP approx
+  //  directive.
+  /// \a D. This outlined function has type void(*)(kmp_int32 *ThreadID,
+  /// kmp_int32 BoundID, struct context_vars*).
+  /// \param CGF Reference to current CodeGenFunction.
+  /// \param D OpenMP directive.
+  /// \param ThreadIDVar Variable for thread id in the current OpenMP region.
+  /// \param InnermostKind Kind of innermost directive (for simple directives it
+  /// is a directive itself, for combined - its innermost directive).
+  /// \param CodeGen Code generation sequence for the \a D directive.
+  llvm::Function *emitApproxOutlinedFunction(
+      CodeGenFunction &CGF, const OMPExecutableDirective &D,
+      const VarDecl *ThreadIDVar, OpenMPDirectiveKind InnermostKind,
+      const RegionCodeGenTy &CodeGen) override;
+
   /// Emits inlined function for the specified OpenMP teams
   //  directive.
   /// \a D. This outlined function has type void(*)(kmp_int32 *ThreadID,
@@ -241,6 +256,23 @@ public:
   /// any,
   ///                   or nullptr.
   void emitParallelCall(CodeGenFunction &CGF, SourceLocation Loc,
+                        llvm::Function *OutlinedFn,
+                        ArrayRef<llvm::Value *> CapturedVars,
+                        const Expr *IfCond, llvm::Value *NumThreads) override;
+
+  /// Emits code for approx or serial call of the \a OutlinedFn with
+  /// variables captured in a record which address is stored in \a
+  /// CapturedStruct.
+  /// \param OutlinedFn Outlined function to be run in approx threads. Type of
+  /// this function is void(*)(kmp_int32 *, kmp_int32, struct context_vars*).
+  /// \param CapturedVars A pointer to the record with the references to
+  /// variables used in \a OutlinedFn function.
+  /// \param IfCond Condition in the associated 'if' clause, if it was
+  /// specified, nullptr otherwise.
+  /// \param NumThreads The value corresponding to the num_threads clause, if
+  /// any,
+  ///                   or nullptr.
+  void emitApproxCall(CodeGenFunction &CGF, SourceLocation Loc,
                         llvm::Function *OutlinedFn,
                         ArrayRef<llvm::Value *> CapturedVars,
                         const Expr *IfCond, llvm::Value *NumThreads) override;

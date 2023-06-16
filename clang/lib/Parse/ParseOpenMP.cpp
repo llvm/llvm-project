@@ -150,6 +150,7 @@ static OpenMPDirectiveKindExWrapper parseOpenMPDirectiveKind(Parser &P) {
       {OMPD_target_enter, OMPD_data, OMPD_target_enter_data},
       {OMPD_target_exit, OMPD_data, OMPD_target_exit_data},
       {OMPD_for, OMPD_simd, OMPD_for_simd},
+      {OMPD_approx, OMPD_for, OMPD_approx_for},
       {OMPD_parallel, OMPD_for, OMPD_parallel_for},
       {OMPD_parallel_for, OMPD_simd, OMPD_parallel_for_simd},
       {OMPD_parallel, OMPD_loop, OMPD_parallel_loop},
@@ -2366,6 +2367,7 @@ Parser::DeclGroupPtrTy Parser::ParseOpenMPDeclarativeDirectiveWithExtDecl(
   case OMPD_unknown:
     Diag(Tok, diag::err_omp_unknown_directive);
     break;
+  case OMPD_approx:
   case OMPD_parallel:
   case OMPD_simd:
   case OMPD_tile:
@@ -2386,6 +2388,7 @@ Parser::DeclGroupPtrTy Parser::ParseOpenMPDeclarativeDirectiveWithExtDecl(
   case OMPD_master:
   case OMPD_ordered:
   case OMPD_critical:
+  case OMPD_approx_for:
   case OMPD_parallel_for:
   case OMPD_parallel_for_simd:
   case OMPD_parallel_sections:
@@ -2780,6 +2783,7 @@ StmtResult Parser::ParseOpenMPDeclarativeOrExecutableDirective(
     HasAssociatedStatement = false;
     // Fall through for further analysis.
     [[fallthrough]];
+  case OMPD_approx:
   case OMPD_parallel:
   case OMPD_simd:
   case OMPD_tile:
@@ -2791,6 +2795,7 @@ StmtResult Parser::ParseOpenMPDeclarativeOrExecutableDirective(
   case OMPD_section:
   case OMPD_master:
   case OMPD_critical:
+  case OMPD_approx_for:
   case OMPD_parallel_for:
   case OMPD_parallel_for_simd:
   case OMPD_parallel_sections:

@@ -194,6 +194,7 @@ OPENMP_ADJUST_ARGS_KIND(need_device_ptr)
 OPENMP_BIND_KIND(teams)
 OPENMP_BIND_KIND(parallel)
 OPENMP_BIND_KIND(thread)
+OPENMP_BIND_KIND(approx)
 
 // Modifiers for the 'grainsize' clause.
 OPENMP_GRAINSIZE_MODIFIER(strict)

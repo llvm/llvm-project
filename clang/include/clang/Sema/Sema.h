@@ -11374,6 +11374,12 @@ public:
                                           Stmt *AStmt,
                                           SourceLocation StartLoc,
                                           SourceLocation EndLoc);
+  /// Called on well-formed '\#pragma omp approx' after parsing
+  /// of the  associated statement.
+  StmtResult ActOnOpenMPApproxDirective(ArrayRef<OMPClause *> Clauses,
+                                          Stmt *AStmt,
+                                          SourceLocation StartLoc,
+                                          SourceLocation EndLoc);
   using VarsWithInheritedDSAType =
       llvm::SmallDenseMap<const ValueDecl *, const Expr *, 4>;
   /// Called on well-formed '\#pragma omp simd' after parsing
@@ -11428,6 +11434,12 @@ public:
                                           ArrayRef<OMPClause *> Clauses,
                                           Stmt *AStmt, SourceLocation StartLoc,
                                           SourceLocation EndLoc);
+  /// Called on well-formed '\#pragma omp approx for' after parsing
+  /// of the  associated statement.
+  StmtResult ActOnOpenMPApproxForDirective(
+      ArrayRef<OMPClause *> Clauses, Stmt *AStmt, SourceLocation StartLoc,
+      SourceLocation EndLoc, VarsWithInheritedDSAType &VarsWithImplicitDSA);
+  /// Called on well-formed '\#pragma omp parallel for simd' after
   /// Called on well-formed '\#pragma omp parallel for' after parsing
   /// of the  associated statement.
   StmtResult ActOnOpenMPParallelForDirective(

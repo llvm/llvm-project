@@ -678,6 +678,84 @@ public:
   }
 };
 
+/// This represents '#pragma omp approx' directive.
+///
+/// \code
+/// #pragma omp approx private(a,b) reduction(+: c,d)
+/// \endcode
+/// In this example directive '#pragma omp approx' has clauses 'private'
+/// with the variables 'a' and 'b' and 'reduction' with operator '+' and
+/// variables 'c' and 'd'.
+///
+class OMPApproxDirective : public OMPExecutableDirective {
+  friend class ASTStmtReader;
+  friend class OMPExecutableDirective;
+  /// true if the construct has inner cancel directive.
+  bool HasCancel = false;
+
+  /// Build directive with the given start and end location.
+  ///
+  /// \param StartLoc Starting location of the directive (directive keyword).
+  /// \param EndLoc Ending Location of the directive.
+  ///
+  OMPApproxDirective(SourceLocation StartLoc, SourceLocation EndLoc)
+      : OMPExecutableDirective(OMPApproxDirectiveClass,
+                               llvm::omp::OMPD_approx, StartLoc, EndLoc) {}
+
+  /// Build an empty directive.
+  ///
+  explicit OMPApproxDirective()
+      : OMPExecutableDirective(OMPApproxDirectiveClass,
+                               llvm::omp::OMPD_approx, SourceLocation(),
+                               SourceLocation()) {}
+
+  /// Sets special task reduction descriptor.
+  void setTaskReductionRefExpr(Expr *E) { Data->getChildren()[0] = E; }
+
+  /// Set cancel state.
+  void setHasCancel(bool Has) { HasCancel = Has; }
+
+public:
+  /// Creates directive with a list of \a Clauses.
+  ///
+  /// \param C AST context.
+  /// \param StartLoc Starting location of the directive kind.
+  /// \param EndLoc Ending Location of the directive.
+  /// \param Clauses List of clauses.
+  /// \param AssociatedStmt Statement associated with the directive.
+  /// \param TaskRedRef Task reduction special reference expression to handle
+  /// taskgroup descriptor.
+  /// \param HasCancel true if this directive has inner cancel directive.
+  ///
+  static OMPApproxDirective *
+  Create(const ASTContext &C, SourceLocation StartLoc, SourceLocation EndLoc,
+         ArrayRef<OMPClause *> Clauses, Stmt *AssociatedStmt, Expr *TaskRedRef,
+         bool HasCancel);
+
+  /// Creates an empty directive with the place for \a N clauses.
+  ///
+  /// \param C AST context.
+  /// \param NumClauses Number of clauses.
+  ///
+  static OMPApproxDirective *CreateEmpty(const ASTContext &C,
+                                           unsigned NumClauses, EmptyShell);
+
+  /// Returns special task reduction reference expression.
+  Expr *getTaskReductionRefExpr() {
+    return cast_or_null<Expr>(Data->getChildren()[0]);
+  }
+  const Expr *getTaskReductionRefExpr() const {
+    return const_cast<OMPApproxDirective *>(this)->getTaskReductionRefExpr();
+  }
+
+  /// Return true if current directive has inner cancel directive.
+  bool hasCancel() const { return HasCancel; }
+
+  static bool classof(const Stmt *T) {
+    return T->getStmtClass() == OMPApproxDirectiveClass;
+  }
+};
+
 /// The base class for all loop-based directives, including loop transformation
 /// directives.
 class OMPLoopBasedDirective : public OMPExecutableDirective {
@@ -1520,6 +1598,7 @@ public:
     return T->getStmtClass() == OMPSimdDirectiveClass ||
            T->getStmtClass() == OMPForDirectiveClass ||
            T->getStmtClass() == OMPForSimdDirectiveClass ||
+           T->getStmtClass() == OMPApproxForDirectiveClass ||
            T->getStmtClass() == OMPParallelForDirectiveClass ||
            T->getStmtClass() == OMPParallelForSimdDirectiveClass ||
            T->getStmtClass() == OMPTaskLoopDirectiveClass ||
@@ -2176,6 +2255,102 @@ public:
 
   static bool classof(const Stmt *T) {
     return T->getStmtClass() == OMPParallelForDirectiveClass;
+  }
+};
+
+/// This represents '#pragma omp approx for' directive.
+///
+/// \code
+/// #pragma omp approx for private(a,b) reduction(+:c,d)
+/// \endcode
+/// In this example directive '#pragma omp approx for' has clauses 'private'
+/// with the variables 'a' and 'b' and 'reduction' with operator '+' and
+/// variables 'c' and 'd'.
+///
+class OMPApproxForDirective : public OMPLoopDirective {
+  friend class ASTStmtReader;
+  friend class OMPExecutableDirective;
+
+  /// true if current region has inner cancel directive.
+  bool HasCancel = false;
+
+  /// Build directive with the given start and end location.
+  ///
+  /// \param StartLoc Starting location of the directive kind.
+  /// \param EndLoc Ending location of the directive.
+  /// \param CollapsedNum Number of collapsed nested loops.
+  ///
+  OMPApproxForDirective(SourceLocation StartLoc, SourceLocation EndLoc,
+                          unsigned CollapsedNum)
+      : OMPLoopDirective(OMPApproxForDirectiveClass,
+                         llvm::omp::OMPD_approx_for, StartLoc, EndLoc,
+                         CollapsedNum) {}
+
+  /// Build an empty directive.
+  ///
+  /// \param CollapsedNum Number of collapsed nested loops.
+  ///
+  explicit OMPApproxForDirective(unsigned CollapsedNum)
+      : OMPLoopDirective(OMPApproxForDirectiveClass,
+                         llvm::omp::OMPD_approx_for, SourceLocation(),
+                         SourceLocation(), CollapsedNum) {}
+
+  /// Sets special task reduction descriptor.
+  void setTaskReductionRefExpr(Expr *E) {
+    Data->getChildren()[numLoopChildren(getLoopsNumber(),
+                                        llvm::omp::OMPD_approx_for)] = E;
+  }
+
+  /// Set cancel state.
+  void setHasCancel(bool Has) { HasCancel = Has; }
+
+public:
+  /// Creates directive with a list of \a Clauses.
+  ///
+  /// \param C AST context.
+  /// \param StartLoc Starting location of the directive kind.
+  /// \param EndLoc Ending Location of the directive.
+  /// \param CollapsedNum Number of collapsed loops.
+  /// \param Clauses List of clauses.
+  /// \param AssociatedStmt Statement, associated with the directive.
+  /// \param Exprs Helper expressions for CodeGen.
+  /// \param TaskRedRef Task reduction special reference expression to handle
+  /// taskgroup descriptor.
+  /// \param HasCancel true if current directive has inner cancel directive.
+  ///
+  static OMPApproxForDirective *
+  Create(const ASTContext &C, SourceLocation StartLoc, SourceLocation EndLoc,
+         unsigned CollapsedNum, ArrayRef<OMPClause *> Clauses,
+         Stmt *AssociatedStmt, const HelperExprs &Exprs, Expr *TaskRedRef,
+         bool HasCancel);
+
+  /// Creates an empty directive with the place
+  /// for \a NumClauses clauses.
+  ///
+  /// \param C AST context.
+  /// \param CollapsedNum Number of collapsed nested loops.
+  /// \param NumClauses Number of clauses.
+  ///
+  static OMPApproxForDirective *CreateEmpty(const ASTContext &C,
+                                              unsigned NumClauses,
+                                              unsigned CollapsedNum,
+                                              EmptyShell);
+
+  /// Returns special task reduction reference expression.
+  Expr *getTaskReductionRefExpr() {
+    return cast_or_null<Expr>(Data->getChildren()[numLoopChildren(
+        getLoopsNumber(), llvm::omp::OMPD_approx_for)]);
+  }
+  const Expr *getTaskReductionRefExpr() const {
+    return const_cast<OMPApproxForDirective *>(this)
+        ->getTaskReductionRefExpr();
+  }
+
+  /// Return true if current directive has inner cancel directive.
+  bool hasCancel() const { return HasCancel; }
+
+  static bool classof(const Stmt *T) {
+    return T->getStmtClass() == OMPApproxForDirectiveClass;
   }
 };
 

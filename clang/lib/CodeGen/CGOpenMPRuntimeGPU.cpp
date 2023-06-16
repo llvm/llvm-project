@@ -904,6 +904,26 @@ void CGOpenMPRuntimeGPU::emitNumTeamsClause(CodeGenFunction &CGF,
                                               const Expr *ThreadLimit,
                                               SourceLocation Loc) {}
 
+llvm::Function *CGOpenMPRuntimeGPU::emitApproxOutlinedFunction(
+    CodeGenFunction &CGF, const OMPExecutableDirective &D,
+    const VarDecl *ThreadIDVar, OpenMPDirectiveKind InnermostKind,
+    const RegionCodeGenTy &CodeGen) {
+  // Emit target region as a standalone region.
+  bool PrevIsInTTDRegion = IsInTTDRegion;
+  IsInTTDRegion = false;
+  auto *OutlinedFun =
+      cast<llvm::Function>(CGOpenMPRuntime::emitApproxOutlinedFunction(
+          CGF, D, ThreadIDVar, InnermostKind, CodeGen));
+  IsInTTDRegion = PrevIsInTTDRegion;
+  if (getExecutionMode() != CGOpenMPRuntimeGPU::EM_SPMD) {
+    llvm::Function *WrapperFun =
+        createParallelDataSharingWrapper(OutlinedFun, D);
+    WrapperFunctionsMap[OutlinedFun] = WrapperFun;
+  }
+
+  return OutlinedFun;
+}
+
 llvm::Function *CGOpenMPRuntimeGPU::emitParallelOutlinedFunction(
     CodeGenFunction &CGF, const OMPExecutableDirective &D,
     const VarDecl *ThreadIDVar, OpenMPDirectiveKind InnermostKind,
@@ -1164,6 +1184,86 @@ void CGOpenMPRuntimeGPU::emitTeamsCall(CodeGenFunction &CGF,
   OutlinedFnArgs.push_back(ZeroAddr.getPointer());
   OutlinedFnArgs.append(CapturedVars.begin(), CapturedVars.end());
   emitOutlinedFunctionCall(CGF, Loc, OutlinedFn, OutlinedFnArgs);
+}
+
+void CGOpenMPRuntimeGPU::emitApproxCall(CodeGenFunction &CGF,
+                                          SourceLocation Loc,
+                                          llvm::Function *OutlinedFn,
+                                          ArrayRef<llvm::Value *> CapturedVars,
+                                          const Expr *IfCond,
+                                          llvm::Value *NumThreads) {
+  if (!CGF.HaveInsertPoint())
+    return;
+
+  auto &&ParallelGen = [this, Loc, OutlinedFn, CapturedVars, IfCond,
+                        NumThreads](CodeGenFunction &CGF,
+                                    PrePostActionTy &Action) {
+    CGBuilderTy &Bld = CGF.Builder;
+    llvm::Value *NumThreadsVal = NumThreads;
+    llvm::Function *WFn = WrapperFunctionsMap[OutlinedFn];
+    llvm::Value *ID = llvm::ConstantPointerNull::get(CGM.Int8PtrTy);
+    if (WFn)
+      ID = Bld.CreateBitOrPointerCast(WFn, CGM.Int8PtrTy);
+    llvm::Value *FnPtr = Bld.CreateBitOrPointerCast(OutlinedFn, CGM.Int8PtrTy);
+
+    // Create a private scope that will globalize the arguments
+    // passed from the outside of the target region.
+    // TODO: Is that needed?
+    CodeGenFunction::OMPPrivateScope PrivateArgScope(CGF);
+
+    Address CapturedVarsAddrs = CGF.CreateDefaultAlignTempAlloca(
+        llvm::ArrayType::get(CGM.VoidPtrTy, CapturedVars.size()),
+        "captured_vars_addrs");
+    // There's something to share.
+    if (!CapturedVars.empty()) {
+      // Prepare for parallel region. Indicate the outlined function.
+      ASTContext &Ctx = CGF.getContext();
+      unsigned Idx = 0;
+      for (llvm::Value *V : CapturedVars) {
+        Address Dst = Bld.CreateConstArrayGEP(CapturedVarsAddrs, Idx);
+        llvm::Value *PtrV;
+        if (V->getType()->isIntegerTy())
+          PtrV = Bld.CreateIntToPtr(V, CGF.VoidPtrTy);
+        else
+          PtrV = Bld.CreatePointerBitCastOrAddrSpaceCast(V, CGF.VoidPtrTy);
+        CGF.EmitStoreOfScalar(PtrV, Dst, /*Volatile=*/false,
+                              Ctx.getPointerType(Ctx.VoidPtrTy));
+        ++Idx;
+      }
+    }
+
+    llvm::Value *IfCondVal = nullptr;
+    if (IfCond)
+      IfCondVal = Bld.CreateIntCast(CGF.EvaluateExprAsBool(IfCond), CGF.Int32Ty,
+                                    /* isSigned */ false);
+    else
+      IfCondVal = llvm::ConstantInt::get(CGF.Int32Ty, 1);
+
+    if (!NumThreadsVal)
+      NumThreadsVal = llvm::ConstantInt::get(CGF.Int32Ty, -1);
+    else
+      NumThreadsVal = Bld.CreateZExtOrTrunc(NumThreadsVal, CGF.Int32Ty),
+
+      assert(IfCondVal && "Expected a value");
+    llvm::Value *RTLoc = emitUpdateLocation(CGF, Loc);
+    llvm::Value *Args[] = {
+        RTLoc,
+        getThreadID(CGF, Loc),
+        IfCondVal,
+        NumThreadsVal,
+        llvm::ConstantInt::get(CGF.Int32Ty, -1),
+        FnPtr,
+        ID,
+        Bld.CreateBitOrPointerCast(CapturedVarsAddrs.getPointer(),
+                                   CGF.VoidPtrPtrTy),
+        llvm::ConstantInt::get(CGM.SizeTy, CapturedVars.size())};
+    CGF.EmitRuntimeCall(OMPBuilder.getOrCreateRuntimeFunction(
+                            CGM.getModule(), OMPRTL___kmpc_parallel_51),
+                        Args);
+  };
+
+  RegionCodeGenTy RCG(ParallelGen);
+  RCG(CGF);
 }
 
 void CGOpenMPRuntimeGPU::emitParallelCall(CodeGenFunction &CGF,

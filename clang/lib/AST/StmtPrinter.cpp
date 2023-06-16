@@ -735,6 +735,11 @@ void StmtPrinter::VisitOMPMetaDirective(OMPMetaDirective *Node) {
   PrintOMPExecutableDirective(Node);
 }
 
+void StmtPrinter::VisitOMPApproxDirective(OMPApproxDirective *Node) {
+  Indent() << "#pragma omp approx";
+  PrintOMPExecutableDirective(Node);
+}
+
 void StmtPrinter::VisitOMPParallelDirective(OMPParallelDirective *Node) {
   Indent() << "#pragma omp parallel";
   PrintOMPExecutableDirective(Node);
@@ -792,6 +797,11 @@ void StmtPrinter::VisitOMPCriticalDirective(OMPCriticalDirective *Node) {
     Node->getDirectiveName().printName(OS, Policy);
     OS << ")";
   }
+  PrintOMPExecutableDirective(Node);
+}
+
+void StmtPrinter::VisitOMPApproxForDirective(OMPApproxForDirective *Node) {
+  Indent() << "#pragma omp approx for";
   PrintOMPExecutableDirective(Node);
 }
 

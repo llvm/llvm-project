@@ -573,7 +573,8 @@ bool clang::isOpenMPLoopDirective(OpenMPDirectiveKind DKind) {
          DKind == OMPD_target_teams_distribute_simd || DKind == OMPD_tile ||
          DKind == OMPD_unroll || DKind == OMPD_loop ||
          DKind == OMPD_teams_loop || DKind == OMPD_target_teams_loop ||
-         DKind == OMPD_parallel_loop || DKind == OMPD_target_parallel_loop;
+         DKind == OMPD_parallel_loop || DKind == OMPD_target_parallel_loop || 
+         DKind == OMPD_approx_for;
 }
 
 bool clang::isOpenMPWorksharingDirective(OpenMPDirectiveKind DKind) {
@@ -588,7 +589,8 @@ bool clang::isOpenMPWorksharingDirective(OpenMPDirectiveKind DKind) {
          DKind == OMPD_teams_distribute_parallel_for_simd ||
          DKind == OMPD_teams_distribute_parallel_for ||
          DKind == OMPD_target_teams_distribute_parallel_for ||
-         DKind == OMPD_target_teams_distribute_parallel_for_simd;
+         DKind == OMPD_target_teams_distribute_parallel_for_simd ||
+         DKind == OMPD_approx_for;
 }
 
 bool clang::isOpenMPTaskLoopDirective(OpenMPDirectiveKind DKind) {
@@ -599,6 +601,10 @@ bool clang::isOpenMPTaskLoopDirective(OpenMPDirectiveKind DKind) {
          DKind == OMPD_parallel_masked_taskloop ||
          DKind == OMPD_parallel_masked_taskloop_simd ||
          DKind == OMPD_parallel_master_taskloop_simd;
+}
+
+bool clang::isOpenMPApproxDirective(OpenMPDirectiveKind DKind) {
+  return DKind == OMPD_approx || DKind == OMPD_approx_for;
 }
 
 bool clang::isOpenMPParallelDirective(OpenMPDirectiveKind DKind) {
@@ -690,7 +696,8 @@ bool clang::isOpenMPDistributeDirective(OpenMPDirectiveKind Kind) {
 bool clang::isOpenMPGenericLoopDirective(OpenMPDirectiveKind Kind) {
   return Kind == OMPD_loop || Kind == OMPD_teams_loop ||
          Kind == OMPD_target_teams_loop || Kind == OMPD_parallel_loop ||
-         Kind == OMPD_target_parallel_loop;
+         Kind == OMPD_target_parallel_loop ||
+         Kind == OMPD_approx_for;
 }
 
 bool clang::isOpenMPPrivate(OpenMPClauseKind Kind) {
@@ -734,6 +741,10 @@ void clang::getOpenMPCaptureRegions(
     OpenMPDirectiveKind DKind) {
   assert(unsigned(DKind) < llvm::omp::Directive_enumSize);
   switch (DKind) {
+  case OMPD_approx:
+  case OMPD_approx_for:
+    CaptureRegions.push_back(OMPD_approx);
+    break;
   case OMPD_metadirective:
     CaptureRegions.push_back(OMPD_metadirective);
     break;

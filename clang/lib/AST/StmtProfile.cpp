@@ -949,6 +949,10 @@ void StmtProfiler::VisitOMPMetaDirective(const OMPMetaDirective *S) {
   VisitOMPExecutableDirective(S);
 }
 
+void StmtProfiler::VisitOMPApproxDirective(const OMPApproxDirective *S) {
+  VisitOMPExecutableDirective(S);
+}
+
 void StmtProfiler::VisitOMPParallelDirective(const OMPParallelDirective *S) {
   VisitOMPExecutableDirective(S);
 }
@@ -997,6 +1001,10 @@ void StmtProfiler::VisitOMPMasterDirective(const OMPMasterDirective *S) {
 void StmtProfiler::VisitOMPCriticalDirective(const OMPCriticalDirective *S) {
   VisitOMPExecutableDirective(S);
   VisitName(S->getDirectiveName().getName());
+}
+
+void StmtProfiler::VisitOMPApproxForDirective(const OMPApproxForDirective *S) {
+  VisitOMPLoopDirective(S);
 }
 
 void

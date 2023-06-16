@@ -1219,7 +1219,8 @@ public:
 };
 
 bool isImplicitTaskingRegion(OpenMPDirectiveKind DKind) {
-  return isOpenMPParallelDirective(DKind) || isOpenMPTeamsDirective(DKind);
+  return isOpenMPParallelDirective(DKind) || isOpenMPTeamsDirective(DKind) ||
+         isOpenMPApproxDirective(DKind);
 }
 
 bool isImplicitOrExplicitTaskingRegion(OpenMPDirectiveKind DKind) {
@@ -1362,6 +1363,8 @@ DSAStackTy::DSAVarData DSAStackTy::getDSA(const_iterator &Iter,
     //  variables are shared.
     DVar.ImplicitDSALoc = Iter->DefaultAttrLoc;
     if ((isOpenMPParallelDirective(DVar.DKind) &&
+         !isOpenMPTaskLoopDirective(DVar.DKind)) ||
+         (isOpenMPApproxDirective(DVar.DKind) &&
          !isOpenMPTaskLoopDirective(DVar.DKind)) ||
         isOpenMPTeamsDirective(DVar.DKind)) {
       DVar.CKind = OMPC_shared;
@@ -1568,7 +1571,8 @@ void DSAStackTy::addTaskgroupReductionData(const ValueDecl *D, SourceRange SR,
   assert(ReductionData.ReductionRange.isInvalid() &&
          (getTopOfStack().Directive == OMPD_taskgroup ||
           ((isOpenMPParallelDirective(getTopOfStack().Directive) ||
-            isOpenMPWorksharingDirective(getTopOfStack().Directive)) &&
+            isOpenMPWorksharingDirective(getTopOfStack().Directive) ||
+            isOpenMPApproxDirective(getTopOfStack().Directive)) &&
            !isOpenMPSimdDirective(getTopOfStack().Directive))) &&
          "Additional reduction info may be specified only once for reduction "
          "items.");
@@ -1593,7 +1597,8 @@ void DSAStackTy::addTaskgroupReductionData(const ValueDecl *D, SourceRange SR,
   assert(ReductionData.ReductionRange.isInvalid() &&
          (getTopOfStack().Directive == OMPD_taskgroup ||
           ((isOpenMPParallelDirective(getTopOfStack().Directive) ||
-            isOpenMPWorksharingDirective(getTopOfStack().Directive)) &&
+            isOpenMPWorksharingDirective(getTopOfStack().Directive) ||
+            isOpenMPApproxDirective(getTopOfStack().Directive)) &&
            !isOpenMPSimdDirective(getTopOfStack().Directive))) &&
          "Additional reduction info may be specified only once for reduction "
          "items.");
@@ -4165,6 +4170,8 @@ static void handleDeclareVariantConstructTrait(DSAStackTy *Stack,
     Traits.emplace_back(llvm::omp::TraitProperty::construct_teams_teams);
   if (isOpenMPParallelDirective(DKind))
     Traits.emplace_back(llvm::omp::TraitProperty::construct_parallel_parallel);
+  if (isOpenMPApproxDirective(DKind))
+    Traits.emplace_back(llvm::omp::TraitProperty::construct_approx_approx);
   if (isOpenMPWorksharingDirective(DKind))
     Traits.emplace_back(llvm::omp::TraitProperty::construct_for_for);
   if (isOpenMPSimdDirective(DKind))
@@ -4174,6 +4181,8 @@ static void handleDeclareVariantConstructTrait(DSAStackTy *Stack,
 
 void Sema::ActOnOpenMPRegionStart(OpenMPDirectiveKind DKind, Scope *CurScope) {
   switch (DKind) {
+  case OMPD_approx:
+  case OMPD_approx_for:
   case OMPD_parallel:
   case OMPD_parallel_for:
   case OMPD_parallel_for_simd:
@@ -4937,7 +4946,7 @@ StmtResult Sema::ActOnOpenMPRegionEnd(StmtResult S,
         }
       }
     }
-    if (ThisCaptureRegion == OMPD_parallel) {
+    if (ThisCaptureRegion == OMPD_parallel || ThisCaptureRegion == OMPD_approx) {
       // Capture temp arrays for inscan reductions and locals in aligned
       // clauses.
       for (OMPClause *C : Clauses) {
@@ -4968,7 +4977,8 @@ static bool checkCancelRegion(Sema &SemaRef, OpenMPDirectiveKind CurrentRegion,
     return false;
 
   if (CancelRegion == OMPD_parallel || CancelRegion == OMPD_for ||
-      CancelRegion == OMPD_sections || CancelRegion == OMPD_taskgroup)
+      CancelRegion == OMPD_sections || CancelRegion == OMPD_taskgroup ||
+      CancelRegion == OMPD_approx)
     return false;
 
   SemaRef.Diag(StartLoc, diag::err_omp_wrong_cancel_region)
@@ -4998,7 +5008,7 @@ static bool checkNestingOfRegions(Sema &SemaRef, const DSAStackTy *Stack,
     } Recommend = NoRecommend;
     if (SemaRef.LangOpts.OpenMP >= 51 && Stack->isParentOrderConcurrent() &&
         CurrentRegion != OMPD_simd && CurrentRegion != OMPD_loop &&
-        CurrentRegion != OMPD_parallel &&
+        CurrentRegion != OMPD_parallel && CurrentRegion != OMPD_approx &&
         !isOpenMPCombinedParallelADirective(CurrentRegion)) {
       SemaRef.Diag(StartLoc, diag::err_omp_prohibited_region_order)
           << getOpenMPDirectiveName(CurrentRegion);
@@ -5072,6 +5082,7 @@ static bool checkNestingOfRegions(Sema &SemaRef, const DSAStackTy *Stack,
           !((CancelRegion == OMPD_parallel &&
              (ParentRegion == OMPD_parallel ||
               ParentRegion == OMPD_target_parallel)) ||
+            (CancelRegion == OMPD_approx && ParentRegion == OMPD_approx) ||
             (CancelRegion == OMPD_for &&
              (ParentRegion == OMPD_for || ParentRegion == OMPD_parallel_for ||
               ParentRegion == OMPD_target_parallel_for ||
@@ -5137,6 +5148,7 @@ static bool checkNestingOfRegions(Sema &SemaRef, const DSAStackTy *Stack,
           ParentRegion == OMPD_critical || ParentRegion == OMPD_ordered;
     } else if (isOpenMPWorksharingDirective(CurrentRegion) &&
                !isOpenMPParallelDirective(CurrentRegion) &&
+               !isOpenMPApproxDirective(CurrentRegion) &&
                !isOpenMPTeamsDirective(CurrentRegion)) {
       // OpenMP 5.1 [2.22, Nesting of Regions]
       // A loop region that binds to a parallel region or a worksharing region
@@ -5201,6 +5213,7 @@ static bool checkNestingOfRegions(Sema &SemaRef, const DSAStackTy *Stack,
       //
       // As an extension, we permit atomic within teams as well.
       NestingProhibited = !isOpenMPParallelDirective(CurrentRegion) &&
+                          !isOpenMPApproxDirective(CurrentRegion) && 
                           !isOpenMPDistributeDirective(CurrentRegion) &&
                           CurrentRegion != OMPD_loop &&
                           !(SemaRef.getLangOpts().OpenMPExtensions &&
@@ -6278,6 +6291,11 @@ StmtResult Sema::ActOnOpenMPExecutableDirective(
 
   llvm::SmallVector<OpenMPDirectiveKind, 4> AllowedNameModifiers;
   switch (Kind) {
+  case OMPD_approx:
+    Res = ActOnOpenMPApproxDirective(ClausesWithImplicit, AStmt, StartLoc,
+                                       EndLoc);
+    AllowedNameModifiers.push_back(OMPD_approx);
+    break;
   case OMPD_parallel:
     Res = ActOnOpenMPParallelDirective(ClausesWithImplicit, AStmt, StartLoc,
                                        EndLoc);
@@ -6332,6 +6350,10 @@ StmtResult Sema::ActOnOpenMPExecutableDirective(
   case OMPD_critical:
     Res = ActOnOpenMPCriticalDirective(DirName, ClausesWithImplicit, AStmt,
                                        StartLoc, EndLoc);
+    break;
+  case OMPD_approx_for:
+    Res = ActOnOpenMPApproxForDirective(ClausesWithImplicit, AStmt, StartLoc,
+                                          EndLoc, VarsWithInheritedDSA);
     break;
   case OMPD_parallel_for:
     Res = ActOnOpenMPParallelForDirective(ClausesWithImplicit, AStmt, StartLoc,
@@ -7751,6 +7773,28 @@ StmtResult Sema::ActOnOpenMPParallelDirective(ArrayRef<OMPClause *> Clauses,
   setFunctionHasBranchProtectedScope();
 
   return OMPParallelDirective::Create(Context, StartLoc, EndLoc, Clauses, AStmt,
+                                      DSAStack->getTaskgroupReductionRef(),
+                                      DSAStack->isCancelRegion());
+}
+
+StmtResult Sema::ActOnOpenMPApproxDirective(ArrayRef<OMPClause *> Clauses,
+                                              Stmt *AStmt,
+                                              SourceLocation StartLoc,
+                                              SourceLocation EndLoc) {
+  if (!AStmt)
+    return StmtError();
+
+  auto *CS = cast<CapturedStmt>(AStmt);
+  // 1.2.2 OpenMP Language Terminology
+  // Structured block - An executable statement with a single entry at the
+  // top and a single exit at the bottom.
+  // The point of exit cannot be a branch out of the structured block.
+  // longjmp() and throw() must not violate the entry/exit criteria.
+  CS->getCapturedDecl()->setNothrow();
+
+  setFunctionHasBranchProtectedScope();
+
+  return OMPApproxDirective::Create(Context, StartLoc, EndLoc, Clauses, AStmt,
                                       DSAStack->getTaskgroupReductionRef(),
                                       DSAStack->isCancelRegion());
 }
@@ -10877,6 +10921,50 @@ StmtResult Sema::ActOnOpenMPCriticalDirective(
   if (!Pair.first && DirName.getName() && !DependentHint)
     DSAStack->addCriticalWithHint(Dir, Hint);
   return Dir;
+}
+
+StmtResult Sema::ActOnOpenMPApproxForDirective(
+    ArrayRef<OMPClause *> Clauses, Stmt *AStmt, SourceLocation StartLoc,
+    SourceLocation EndLoc, VarsWithInheritedDSAType &VarsWithImplicitDSA) {
+  if (!AStmt)
+    return StmtError();
+
+  auto *CS = cast<CapturedStmt>(AStmt);
+  // 1.2.2 OpenMP Language Terminology
+  // Structured block - An executable statement with a single entry at the
+  // top and a single exit at the bottom.
+  // The point of exit cannot be a branch out of the structured block.
+  // longjmp() and throw() must not violate the entry/exit criteria.
+  CS->getCapturedDecl()->setNothrow();
+
+  OMPLoopBasedDirective::HelperExprs B;
+  // In presence of clause 'collapse' or 'ordered' with number of loops, it will
+  // define the nested loops number.
+  unsigned NestedLoopCount =
+      checkOpenMPLoop(OMPD_approx_for, getCollapseNumberExpr(Clauses),
+                      getOrderedNumberExpr(Clauses), AStmt, *this, *DSAStack,
+                      VarsWithImplicitDSA, B);
+  if (NestedLoopCount == 0)
+    return StmtError();
+
+  assert((CurContext->isDependentContext() || B.builtAll()) &&
+         "omp approx for loop exprs were not built");
+
+  if (!CurContext->isDependentContext()) {
+    // Finalize the clauses that need pre-built expressions for CodeGen.
+    for (OMPClause *C : Clauses) {
+      if (auto *LC = dyn_cast<OMPLinearClause>(C))
+        if (FinishOpenMPLinearClause(*LC, cast<DeclRefExpr>(B.IterationVarRef),
+                                     B.NumIterations, *this, CurScope,
+                                     DSAStack))
+          return StmtError();
+    }
+  }
+
+  setFunctionHasBranchProtectedScope();
+  return OMPApproxForDirective::Create(
+      Context, StartLoc, EndLoc, NestedLoopCount, Clauses, AStmt, B,
+      DSAStack->getTaskgroupReductionRef(), DSAStack->isCancelRegion());
 }
 
 StmtResult Sema::ActOnOpenMPParallelForDirective(
@@ -14464,6 +14552,7 @@ StmtResult Sema::ActOnOpenMPTargetTeamsDistributeDirective(
       Context, StartLoc, EndLoc, NestedLoopCount, Clauses, AStmt, B);
 }
 
+// #TODO
 StmtResult Sema::ActOnOpenMPTargetTeamsDistributeParallelForDirective(
     ArrayRef<OMPClause *> Clauses, Stmt *AStmt, SourceLocation StartLoc,
     SourceLocation EndLoc, VarsWithInheritedDSAType &VarsWithImplicitDSA) {
@@ -15430,6 +15519,8 @@ static OpenMPDirectiveKind getOpenMPCaptureRegionForClause(
         CaptureRegion = OMPD_teams;
       break;
     case OMPD_cancel:
+    case OMPD_approx:
+    case OMPD_approx_for:
     case OMPD_parallel:
     case OMPD_parallel_master:
     case OMPD_parallel_masked:
@@ -15508,6 +15599,8 @@ static OpenMPDirectiveKind getOpenMPCaptureRegionForClause(
     case OMPD_target_teams_distribute_parallel_for_simd:
       CaptureRegion = OMPD_teams;
       break;
+    case OMPD_approx:
+    case OMPD_approx_for:
     case OMPD_parallel:
     case OMPD_parallel_master:
     case OMPD_parallel_masked:
@@ -15624,6 +15717,8 @@ static OpenMPDirectiveKind getOpenMPCaptureRegionForClause(
     case OMPD_target_exit_data:
     case OMPD_target_update:
     case OMPD_cancel:
+    case OMPD_approx:
+    case OMPD_approx_for:
     case OMPD_parallel:
     case OMPD_parallel_master:
     case OMPD_parallel_masked:
@@ -15716,6 +15811,8 @@ static OpenMPDirectiveKind getOpenMPCaptureRegionForClause(
     case OMPD_target_enter_data:
     case OMPD_target_exit_data:
     case OMPD_target_update:
+    case OMPD_approx:
+    case OMPD_approx_for:
     case OMPD_cancel:
     case OMPD_parallel:
     case OMPD_parallel_master:
@@ -15774,6 +15871,7 @@ static OpenMPDirectiveKind getOpenMPCaptureRegionForClause(
     break;
   case OMPC_schedule:
     switch (DKind) {
+    case OMPD_approx_for:
     case OMPD_parallel_for:
     case OMPD_parallel_for_simd:
     case OMPD_distribute_parallel_for:
@@ -15814,6 +15912,7 @@ static OpenMPDirectiveKind getOpenMPCaptureRegionForClause(
     case OMPD_target_simd:
     case OMPD_target_parallel:
     case OMPD_cancel:
+    case OMPD_approx:
     case OMPD_parallel:
     case OMPD_parallel_master:
     case OMPD_parallel_masked:
@@ -15882,6 +15981,7 @@ static OpenMPDirectiveKind getOpenMPCaptureRegionForClause(
     case OMPD_distribute_simd:
       // Do not capture dist_schedule-clause expressions.
       break;
+    case OMPD_approx_for:
     case OMPD_parallel_for:
     case OMPD_parallel_for_simd:
     case OMPD_target_parallel_for_simd:
@@ -15906,6 +16006,7 @@ static OpenMPDirectiveKind getOpenMPCaptureRegionForClause(
     case OMPD_target_simd:
     case OMPD_target_parallel:
     case OMPD_cancel:
+    case OMPD_approx:
     case OMPD_parallel:
     case OMPD_parallel_master:
     case OMPD_parallel_masked:
@@ -16019,6 +16120,8 @@ static OpenMPDirectiveKind getOpenMPCaptureRegionForClause(
     case OMPD_parallel_master_taskloop_simd:
     case OMPD_parallel_masked_taskloop_simd:
     case OMPD_cancel:
+    case OMPD_approx:
+    case OMPD_approx_for:
     case OMPD_parallel:
     case OMPD_parallel_master:
     case OMPD_parallel_masked:
@@ -16111,6 +16214,8 @@ static OpenMPDirectiveKind getOpenMPCaptureRegionForClause(
     case OMPD_distribute_parallel_for:
     case OMPD_distribute_parallel_for_simd:
     case OMPD_cancel:
+    case OMPD_approx:
+    case OMPD_approx_for:
     case OMPD_parallel:
     case OMPD_parallel_master:
     case OMPD_parallel_masked:
@@ -18243,11 +18348,13 @@ OMPClause *Sema::ActOnOpenMPFirstprivateClause(ArrayRef<Expr *> VarList,
       if ((isOpenMPWorksharingDirective(CurrDir) ||
            isOpenMPDistributeDirective(CurrDir)) &&
           !isOpenMPParallelDirective(CurrDir) &&
+          !isOpenMPApproxDirective(CurrDir) &&
           !isOpenMPTeamsDirective(CurrDir)) {
         DVar = DSAStack->getImplicitDSA(D, true);
         if (DVar.CKind != OMPC_shared &&
             (isOpenMPParallelDirective(DVar.DKind) ||
              isOpenMPTeamsDirective(DVar.DKind) ||
+             isOpenMPApproxDirective(DVar.DKind) ||
              DVar.DKind == OMPD_unknown)) {
           Diag(ELoc, diag::err_omp_required_access)
               << getOpenMPClauseName(OMPC_firstprivate)
@@ -18276,12 +18383,14 @@ OMPClause *Sema::ActOnOpenMPFirstprivateClause(ArrayRef<Expr *> VarList,
             [](OpenMPDirectiveKind K) {
               return isOpenMPParallelDirective(K) ||
                      isOpenMPWorksharingDirective(K) ||
+                     isOpenMPApproxDirective(K) ||
                      isOpenMPTeamsDirective(K);
             },
             /*FromParent=*/true);
         if (DVar.CKind == OMPC_reduction &&
             (isOpenMPParallelDirective(DVar.DKind) ||
              isOpenMPWorksharingDirective(DVar.DKind) ||
+             isOpenMPApproxDirective(DVar.DKind) ||
              isOpenMPTeamsDirective(DVar.DKind))) {
           Diag(ELoc, diag::err_omp_parallel_reduction_in_task_firstprivate)
               << getOpenMPDirectiveName(DVar.DKind);
@@ -18521,6 +18630,7 @@ OMPClause *Sema::ActOnOpenMPLastprivateClause(
     DSAStackTy::DSAVarData TopDVar = DVar;
     if (isOpenMPWorksharingDirective(CurrDir) &&
         !isOpenMPParallelDirective(CurrDir) &&
+        !isOpenMPApproxDirective(CurrDir) &&
         !isOpenMPTeamsDirective(CurrDir)) {
       DVar = DSAStack->getImplicitDSA(D, true);
       if (DVar.CKind != OMPC_shared) {
@@ -19322,6 +19432,7 @@ static bool actOnOMPReductionKindClause(
       //  worksharing regions arising from the worksharing construct bind.
       if (isOpenMPWorksharingDirective(CurrDir) &&
           !isOpenMPParallelDirective(CurrDir) &&
+          !isOpenMPApproxDirective(CurrDir) &&
           !isOpenMPTeamsDirective(CurrDir)) {
         DVar = Stack->getImplicitDSA(D, true);
         if (DVar.CKind != OMPC_shared) {
@@ -19801,7 +19912,8 @@ static bool actOnOMPReductionKindClause(
     if (Modifier == OMPC_REDUCTION_task &&
         (CurrDir == OMPD_taskgroup ||
          ((isOpenMPParallelDirective(CurrDir) ||
-           isOpenMPWorksharingDirective(CurrDir)) &&
+           isOpenMPWorksharingDirective(CurrDir) || 
+           isOpenMPApproxDirective(CurrDir)) &&
           !isOpenMPSimdDirective(CurrDir)))) {
       if (DeclareReductionRef.isUsable())
         Stack->addTaskgroupReductionData(D, ReductionIdRange,
@@ -19838,6 +19950,7 @@ OMPClause *Sema::ActOnOpenMPReductionClause(
       (DSAStack->getCurrentDirective() != OMPD_for &&
        DSAStack->getCurrentDirective() != OMPD_for_simd &&
        DSAStack->getCurrentDirective() != OMPD_simd &&
+       DSAStack->getCurrentDirective() != OMPD_approx_for &&
        DSAStack->getCurrentDirective() != OMPD_parallel_for &&
        DSAStack->getCurrentDirective() != OMPD_parallel_for_simd)) {
     Diag(ModifierLoc, diag::err_omp_wrong_inscan_reduction);

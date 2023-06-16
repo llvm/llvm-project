@@ -2948,6 +2948,9 @@ RecursiveASTVisitor<Derived>::TraverseOMPLoopDirective(OMPLoopDirective *S) {
 DEF_TRAVERSE_STMT(OMPMetaDirective,
                   { TRY_TO(TraverseOMPExecutableDirective(S)); })
 
+DEF_TRAVERSE_STMT(OMPApproxDirective,
+                  { TRY_TO(TraverseOMPExecutableDirective(S)); })
+
 DEF_TRAVERSE_STMT(OMPParallelDirective,
                   { TRY_TO(TraverseOMPExecutableDirective(S)); })
 
@@ -2982,6 +2985,9 @@ DEF_TRAVERSE_STMT(OMPCriticalDirective, {
   TRY_TO(TraverseDeclarationNameInfo(S->getDirectiveName()));
   TRY_TO(TraverseOMPExecutableDirective(S));
 })
+
+DEF_TRAVERSE_STMT(OMPApproxForDirective,
+                  { TRY_TO(TraverseOMPExecutableDirective(S)); })
 
 DEF_TRAVERSE_STMT(OMPParallelForDirective,
                   { TRY_TO(TraverseOMPExecutableDirective(S)); })

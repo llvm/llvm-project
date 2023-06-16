@@ -2110,3 +2110,41 @@ def OMP_Metadirective : Directive<"metadirective"> {
 def OMP_Unknown : Directive<"unknown"> {
   let isDefault = true;
 }
+
+def OMP_Approx : Directive<"approx"> {
+  let allowedClauses = [
+    VersionedClause<OMPC_Private>,
+    VersionedClause<OMPC_FirstPrivate>,
+    VersionedClause<OMPC_Shared>,
+    VersionedClause<OMPC_Reduction>,
+    VersionedClause<OMPC_Copyin>,
+    VersionedClause<OMPC_Allocate>
+  ];
+  let allowedOnceClauses = [
+    VersionedClause<OMPC_Default>,
+    VersionedClause<OMPC_If>,
+    VersionedClause<OMPC_NumThreads>,
+    VersionedClause<OMPC_ProcBind>,
+  ];
+}
+
+def OMP_ApproxFor : Directive<"approx for"> {
+  let allowedClauses = [
+    VersionedClause<OMPC_If>,
+    VersionedClause<OMPC_NumThreads>,
+    VersionedClause<OMPC_Default>,
+    VersionedClause<OMPC_ProcBind>,
+    VersionedClause<OMPC_Private>,
+    VersionedClause<OMPC_FirstPrivate>,
+    VersionedClause<OMPC_Shared>,
+    VersionedClause<OMPC_Reduction>,
+    VersionedClause<OMPC_Copyin>,
+    VersionedClause<OMPC_LastPrivate>,
+    VersionedClause<OMPC_Collapse>,
+    VersionedClause<OMPC_Schedule>,
+    VersionedClause<OMPC_Ordered>,
+    VersionedClause<OMPC_Linear>,
+    VersionedClause<OMPC_Allocate>,
+    VersionedClause<OMPC_Order, 50>
+  ];
+}

@@ -2257,6 +2257,13 @@ void ASTStmtWriter::VisitOMPParallelDirective(OMPParallelDirective *D) {
   Code = serialization::STMT_OMP_PARALLEL_DIRECTIVE;
 }
 
+void ASTStmtWriter::VisitOMPApproxDirective(OMPApproxDirective *D) {
+  VisitStmt(D);
+  VisitOMPExecutableDirective(D);
+  Record.writeBool(D->hasCancel());
+  Code = serialization::STMT_OMP_APPROX_DIRECTIVE;
+}
+
 void ASTStmtWriter::VisitOMPSimdDirective(OMPSimdDirective *D) {
   VisitOMPLoopDirective(D);
   Code = serialization::STMT_OMP_SIMD_DIRECTIVE;
@@ -2320,6 +2327,12 @@ void ASTStmtWriter::VisitOMPCriticalDirective(OMPCriticalDirective *D) {
   VisitOMPExecutableDirective(D);
   Record.AddDeclarationNameInfo(D->getDirectiveName());
   Code = serialization::STMT_OMP_CRITICAL_DIRECTIVE;
+}
+
+void ASTStmtWriter::VisitOMPApproxForDirective(OMPApproxForDirective *D) {
+  VisitOMPLoopDirective(D);
+  Record.writeBool(D->hasCancel());
+  Code = serialization::STMT_OMP_APPROX_FOR_DIRECTIVE;
 }
 
 void ASTStmtWriter::VisitOMPParallelForDirective(OMPParallelForDirective *D) {

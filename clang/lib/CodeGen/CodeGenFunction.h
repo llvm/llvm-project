@@ -3508,6 +3508,7 @@ public:
                           const CapturedStmt *CS,
                           OMPPrivateScope &Scope);
   void EmitOMPMetaDirective(const OMPMetaDirective &S);
+  void EmitOMPApproxDirective(const OMPApproxDirective &S);
   void EmitOMPParallelDirective(const OMPParallelDirective &S);
   void EmitOMPSimdDirective(const OMPSimdDirective &S);
   void EmitOMPTileDirective(const OMPTileDirective &S);
@@ -3520,6 +3521,7 @@ public:
   void EmitOMPMasterDirective(const OMPMasterDirective &S);
   void EmitOMPMaskedDirective(const OMPMaskedDirective &S);
   void EmitOMPCriticalDirective(const OMPCriticalDirective &S);
+  void EmitOMPApproxForDirective(const OMPApproxForDirective &S);
   void EmitOMPParallelForDirective(const OMPParallelForDirective &S);
   void EmitOMPParallelForSimdDirective(const OMPParallelForSimdDirective &S);
   void EmitOMPParallelSectionsDirective(const OMPParallelSectionsDirective &S);

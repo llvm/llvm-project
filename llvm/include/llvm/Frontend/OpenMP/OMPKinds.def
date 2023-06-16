@@ -1090,6 +1090,7 @@ __OMP_CANCEL_KIND(parallel, 1)
 __OMP_CANCEL_KIND(for, 2)
 __OMP_CANCEL_KIND(sections, 3)
 __OMP_CANCEL_KIND(taskgroup, 4)
+__OMP_CANCEL_KIND(approx, 1)
 
 #undef __OMP_CANCEL_KIND
 #undef OMP_CANCEL_KIND
@@ -1180,6 +1181,7 @@ __OMP_TRAIT_SET(construct)
 __OMP_TRAIT_SELECTOR_AND_PROPERTY(construct, target)
 __OMP_TRAIT_SELECTOR_AND_PROPERTY(construct, teams)
 __OMP_TRAIT_SELECTOR_AND_PROPERTY(construct, parallel)
+__OMP_TRAIT_SELECTOR_AND_PROPERTY(construct, approx)
 __OMP_TRAIT_SELECTOR_AND_PROPERTY(construct, for)
 __OMP_TRAIT_SELECTOR_AND_PROPERTY(construct, simd)
 

@@ -254,6 +254,12 @@ bool isOpenMPTaskLoopDirective(OpenMPDirectiveKind DKind);
 /// parallel', otherwise - false.
 bool isOpenMPParallelDirective(OpenMPDirectiveKind DKind);
 
+/// Checks if the specified directive is a approx-kind directive.
+/// \param DKind Specified directive.
+/// \return true - the directive is a approx-like directive like 'omp
+/// approx', otherwise - false.
+bool isOpenMPApproxDirective(OpenMPDirectiveKind DKind);
+
 /// Checks if the specified directive is a target code offload directive.
 /// \param DKind Specified directive.
 /// \return true - the directive is a target code offload directive like
@@ -349,6 +355,13 @@ void getOpenMPCaptureRegions(
 /// \return true - if the above condition is met for this directive
 /// otherwise - false.
 bool isOpenMPCombinedParallelADirective(OpenMPDirectiveKind DKind);
+
+/// Checks if the specified directive is a combined construct for which
+/// the first construct is a approx construct.
+/// \param DKind Specified directive.
+/// \return true - if the above condition is met for this directive
+/// otherwise - false.
+bool isOpenMPCombinedApproxADirective(OpenMPDirectiveKind DKind);
 }
 
 #endif

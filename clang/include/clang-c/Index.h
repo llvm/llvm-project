@@ -2136,6 +2136,14 @@ enum CXCursorKind {
    */
   CXCursor_OMPErrorDirective = 305,
 
+  /** OpenMP approx directive.
+   */
+  CXCursor_OMPApproxDirective = 306,
+
+  /** OpenMP approx for directive.
+   */
+  CXCursor_OMPApproxForDirective = 307,
+
   CXCursor_LastStmt = CXCursor_OMPErrorDirective,
 
   /**

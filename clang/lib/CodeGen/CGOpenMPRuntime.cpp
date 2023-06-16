@@ -1219,6 +1219,29 @@ struct PushAndPopStackRAII {
 };
 } // namespace
 
+static llvm::Function *emitApproximatedOutlinedFunction(
+    CodeGenModule &CGM, const OMPExecutableDirective &D, const CapturedStmt *CS,
+    const VarDecl *ThreadIDVar, OpenMPDirectiveKind InnermostKind,
+    const StringRef OutlinedHelperName, const RegionCodeGenTy &CodeGen) {
+  assert(ThreadIDVar->getType()->isPointerType() &&
+         "thread id variable must be of type kmp_int32 *");
+  CodeGenFunction CGF(CGM, true);
+  bool HasCancel = false;
+  if (const auto *OPD = dyn_cast<OMPApproxDirective>(&D))
+    HasCancel = OPD->hasCancel();
+  else if (const auto *OPFD = dyn_cast<OMPApproxForDirective>(&D))
+    HasCancel = OPFD->hasCancel();
+
+  // TODO: Temporarily inform the OpenMPIRBuilder, if any, about the new
+  //       approx region to make cancellation barriers work properly.
+  llvm::OpenMPIRBuilder &OMPBuilder = CGM.getOpenMPRuntime().getOMPBuilder();
+  PushAndPopStackRAII PSR(&OMPBuilder, CGF, HasCancel, InnermostKind);
+  CGOpenMPOutlinedRegionInfo CGInfo(*CS, ThreadIDVar, CodeGen, InnermostKind,
+                                    HasCancel, OutlinedHelperName);
+  CodeGenFunction::CGCapturedStmtRAII CapInfoRAII(CGF, &CGInfo);
+  return CGF.GenerateOpenMPCapturedStmtFunction(*CS, D.getBeginLoc());
+}
+
 static llvm::Function *emitParallelOrTeamsOutlinedFunction(
     CodeGenModule &CGM, const OMPExecutableDirective &D, const CapturedStmt *CS,
     const VarDecl *ThreadIDVar, OpenMPDirectiveKind InnermostKind,
@@ -1268,6 +1291,16 @@ std::string CGOpenMPRuntime::getOutlinedHelperName(CodeGenFunction &CGF) const {
 std::string CGOpenMPRuntime::getReductionFuncName(StringRef Name) const {
   std::string Suffix = getName({"omp", "reduction", "reduction_func"});
   return (Name + Suffix).str();
+}
+
+llvm::Function *CGOpenMPRuntime::emitApproxOutlinedFunction(
+    CodeGenFunction &CGF, const OMPExecutableDirective &D,
+    const VarDecl *ThreadIDVar, OpenMPDirectiveKind InnermostKind,
+    const RegionCodeGenTy &CodeGen) {
+  const CapturedStmt *CS = D.getCapturedStmt(OMPD_approx);
+  return emitApproximatedOutlinedFunction(
+      CGM, D, CS, ThreadIDVar, InnermostKind, getOutlinedHelperName(CGF),
+      CodeGen);
 }
 
 llvm::Function *CGOpenMPRuntime::emitParallelOutlinedFunction(
@@ -2043,6 +2076,78 @@ void CGOpenMPRuntime::emitIfClause(CodeGenFunction &CGF, const Expr *Cond,
   CGF.EmitBranch(ContBlock);
   // Emit the continuation block for code after the if.
   CGF.EmitBlock(ContBlock, /*IsFinished=*/true);
+}
+
+void CGOpenMPRuntime::emitApproxCall(CodeGenFunction &CGF, SourceLocation Loc,
+                                       llvm::Function *OutlinedFn,
+                                       ArrayRef<llvm::Value *> CapturedVars,
+                                       const Expr *IfCond,
+                                       llvm::Value *NumThreads) {
+  if (!CGF.HaveInsertPoint())
+    return;
+  llvm::Value *RTLoc = emitUpdateLocation(CGF, Loc);
+  auto &M = CGM.getModule();
+  auto &&ThenGen = [&M, OutlinedFn, CapturedVars, RTLoc,
+                    this](CodeGenFunction &CGF, PrePostActionTy &) {
+    // Build call __kmpc_fork_call(loc, n, microtask, var1, .., varn);
+    CGOpenMPRuntime &RT = CGF.CGM.getOpenMPRuntime();
+    llvm::Value *Args[] = {
+        RTLoc,
+        CGF.Builder.getInt32(CapturedVars.size()), // Number of captured vars
+        CGF.Builder.CreateBitCast(OutlinedFn, RT.getKmpc_MicroPointerTy())};
+    llvm::SmallVector<llvm::Value *, 16> RealArgs;
+    RealArgs.append(std::begin(Args), std::end(Args));
+    RealArgs.append(CapturedVars.begin(), CapturedVars.end());
+
+    llvm::FunctionCallee RTLFn =
+        OMPBuilder.getOrCreateRuntimeFunction(M, OMPRTL___kmpc_fork_call);
+    CGF.EmitRuntimeCall(RTLFn, RealArgs);
+  };
+  auto &&ElseGen = [&M, OutlinedFn, CapturedVars, RTLoc, Loc,
+                    this](CodeGenFunction &CGF, PrePostActionTy &) {
+    CGOpenMPRuntime &RT = CGF.CGM.getOpenMPRuntime();
+    llvm::Value *ThreadID = RT.getThreadID(CGF, Loc);
+    // Build calls:
+    // __kmpc_serialized_parallel(&Loc, GTid);
+    llvm::Value *Args[] = {RTLoc, ThreadID};
+    CGF.EmitRuntimeCall(OMPBuilder.getOrCreateRuntimeFunction(
+                            M, OMPRTL___kmpc_serialized_parallel),
+                        Args);
+
+    // OutlinedFn(&GTid, &zero_bound, CapturedStruct);
+    Address ThreadIDAddr = RT.emitThreadIDAddress(CGF, Loc);
+    Address ZeroAddrBound =
+        CGF.CreateDefaultAlignTempAlloca(CGF.Int32Ty,
+                                         /*Name=*/".bound.zero.addr");
+    CGF.Builder.CreateStore(CGF.Builder.getInt32(/*C*/ 0), ZeroAddrBound);
+    llvm::SmallVector<llvm::Value *, 16> OutlinedFnArgs;
+    // ThreadId for serialized parallels is 0.
+    OutlinedFnArgs.push_back(ThreadIDAddr.getPointer());
+    OutlinedFnArgs.push_back(ZeroAddrBound.getPointer());
+    OutlinedFnArgs.append(CapturedVars.begin(), CapturedVars.end());
+
+    // Ensure we do not inline the function. This is trivially true for the ones
+    // passed to __kmpc_fork_call but the ones called in serialized regions
+    // could be inlined. This is not a perfect but it is closer to the invariant
+    // we want, namely, every data environment starts with a new function.
+    // TODO: We should pass the if condition to the runtime function and do the
+    //       handling there. Much cleaner code.
+    OutlinedFn->removeFnAttr(llvm::Attribute::AlwaysInline);
+    OutlinedFn->addFnAttr(llvm::Attribute::NoInline);
+    RT.emitOutlinedFunctionCall(CGF, Loc, OutlinedFn, OutlinedFnArgs);
+
+    // __kmpc_end_serialized_parallel(&Loc, GTid);
+    llvm::Value *EndArgs[] = {RT.emitUpdateLocation(CGF, Loc), ThreadID};
+    CGF.EmitRuntimeCall(OMPBuilder.getOrCreateRuntimeFunction(
+                            M, OMPRTL___kmpc_end_serialized_parallel),
+                        EndArgs);
+  };
+  if (IfCond) {
+    emitIfClause(CGF, IfCond, ThenGen, ElseGen);
+  } else {
+    RegionCodeGenTy ThenRCG(ThenGen);
+    ThenRCG(CGF);
+  }
 }
 
 void CGOpenMPRuntime::emitParallelCall(CodeGenFunction &CGF, SourceLocation Loc,
@@ -5868,7 +5973,7 @@ enum RTCancelKind {
 
 static RTCancelKind getCancellationKind(OpenMPDirectiveKind CancelRegion) {
   RTCancelKind CancelKind = CancelNoreq;
-  if (CancelRegion == OMPD_parallel)
+  if (CancelRegion == OMPD_parallel || CancelRegion == OMPD_approx)
     CancelKind = CancelParallel;
   else if (CancelRegion == OMPD_for)
     CancelKind = CancelLoop;
@@ -5910,7 +6015,7 @@ void CGOpenMPRuntime::emitCancellationPointCall(
       llvm::Value *Cmp = CGF.Builder.CreateIsNotNull(Result);
       CGF.Builder.CreateCondBr(Cmp, ExitBB, ContBB);
       CGF.EmitBlock(ExitBB);
-      if (CancelRegion == OMPD_parallel)
+      if (CancelRegion == OMPD_parallel || CancelRegion == OMPD_approx)
         emitBarrierCall(CGF, Loc, OMPD_unknown, /*EmitChecks=*/false);
       // exit from construct;
       CodeGenFunction::JumpDest CancelDest =
@@ -5949,7 +6054,7 @@ void CGOpenMPRuntime::emitCancelCall(CodeGenFunction &CGF, SourceLocation Loc,
       llvm::Value *Cmp = CGF.Builder.CreateIsNotNull(Result);
       CGF.Builder.CreateCondBr(Cmp, ExitBB, ContBB);
       CGF.EmitBlock(ExitBB);
-      if (CancelRegion == OMPD_parallel)
+      if (CancelRegion == OMPD_parallel || CancelRegion == OMPD_approx)
         RT.emitBarrierCall(CGF, Loc, OMPD_unknown, /*EmitChecks=*/false);
       // exit from construct;
       CodeGenFunction::JumpDest CancelDest =
@@ -6181,6 +6286,7 @@ const Expr *CGOpenMPRuntime::getNumTeamsExprForTargetDirective(
         return nullptr;
       }
       if (isOpenMPParallelDirective(NestedDir->getDirectiveKind()) ||
+          isOpenMPApproxDirective(NestedDir->getDirectiveKind()) ||
           isOpenMPSimdDirective(NestedDir->getDirectiveKind())) {
         DefaultVal = 1;
         return nullptr;
@@ -6214,8 +6320,10 @@ const Expr *CGOpenMPRuntime::getNumTeamsExprForTargetDirective(
   case OMPD_target_simd:
     DefaultVal = 1;
     return nullptr;
+  case OMPD_approx:
   case OMPD_parallel:
   case OMPD_for:
+  case OMPD_approx_for:
   case OMPD_parallel_for:
   case OMPD_parallel_master:
   case OMPD_parallel_sections:
@@ -6325,7 +6433,8 @@ static llvm::Value *getNumThreads(CodeGenFunction &CGF, const CapturedStmt *CS,
   const Stmt *Child = CGOpenMPRuntime::getSingleCompoundChild(
       CGF.getContext(), CS->getCapturedStmt());
   if (const auto *Dir = dyn_cast_or_null<OMPExecutableDirective>(Child)) {
-    if (isOpenMPParallelDirective(Dir->getDirectiveKind())) {
+    if (isOpenMPParallelDirective(Dir->getDirectiveKind()) || 
+        isOpenMPApproxDirective(Dir->getDirectiveKind())) {
       llvm::Value *NumThreads = nullptr;
       llvm::Value *CondVal = nullptr;
       // Handle if clause. If if clause present, the number of threads is
@@ -6336,7 +6445,8 @@ static llvm::Value *getNumThreads(CodeGenFunction &CGF, const CapturedStmt *CS,
         const OMPIfClause *IfClause = nullptr;
         for (const auto *C : Dir->getClausesOfKind<OMPIfClause>()) {
           if (C->getNameModifier() == OMPD_unknown ||
-              C->getNameModifier() == OMPD_parallel) {
+              C->getNameModifier() == OMPD_parallel ||
+              C->getNameModifier() == OMPD_approx) {
             IfClause = C;
             break;
           }
@@ -6467,8 +6577,10 @@ const Expr *CGOpenMPRuntime::getNumThreadsExprForTargetDirective(
   case OMPD_target_simd:
     DefaultVal = 1;
     return nullptr;
+  case OMPD_approx:
   case OMPD_parallel:
   case OMPD_for:
+  case OMPD_approx_for:
   case OMPD_parallel_for:
   case OMPD_parallel_master:
   case OMPD_parallel_sections:
@@ -6647,7 +6759,8 @@ llvm::Value *CGOpenMPRuntime::emitNumThreadsForTargetDirective(
       const OMPIfClause *IfClause = nullptr;
       for (const auto *C : D.getClausesOfKind<OMPIfClause>()) {
         if (C->getNameModifier() == OMPD_unknown ||
-            C->getNameModifier() == OMPD_parallel) {
+            C->getNameModifier() == OMPD_parallel ||
+            C->getNameModifier() == OMPD_approx) {
           IfClause = C;
           break;
         }
@@ -6694,8 +6807,10 @@ llvm::Value *CGOpenMPRuntime::emitNumThreadsForTargetDirective(
   case OMPD_target_teams_distribute_simd:
   case OMPD_target_simd:
     return Bld.getInt32(1);
+  case OMPD_approx:
   case OMPD_parallel:
   case OMPD_for:
+  case OMPD_approx_for:
   case OMPD_parallel_for:
   case OMPD_parallel_master:
   case OMPD_parallel_sections:
@@ -9306,8 +9421,10 @@ getNestedDistributeDirective(ASTContext &Ctx, const OMPExecutableDirective &D) {
     case OMPD_target_teams_distribute_simd:
     case OMPD_target_teams_distribute_parallel_for:
     case OMPD_target_teams_distribute_parallel_for_simd:
+    case OMPD_approx:
     case OMPD_parallel:
     case OMPD_for:
+    case OMPD_approx_for:
     case OMPD_parallel_for:
     case OMPD_parallel_master:
     case OMPD_parallel_sections:
@@ -10141,8 +10258,10 @@ void CGOpenMPRuntime::scanForTargetRegionsFunctions(const Stmt *S,
               CGM, ParentName,
               cast<OMPTargetTeamsDistributeParallelForSimdDirective>(E));
       break;
+    case OMPD_approx:
     case OMPD_parallel:
     case OMPD_for:
+    case OMPD_approx_for:
     case OMPD_parallel_for:
     case OMPD_parallel_master:
     case OMPD_parallel_sections:
@@ -10816,8 +10935,10 @@ void CGOpenMPRuntime::emitTargetDataStandAloneCall(
       RTLFn = HasNowait ? OMPRTL___tgt_target_data_update_nowait_mapper
                         : OMPRTL___tgt_target_data_update_mapper;
       break;
+    case OMPD_approx:
     case OMPD_parallel:
     case OMPD_for:
+    case OMPD_approx_for:
     case OMPD_parallel_for:
     case OMPD_parallel_master:
     case OMPD_parallel_sections:
@@ -12342,6 +12463,13 @@ void CGOpenMPRuntime::emitLastprivateConditionalFinalUpdate(
   CGF.EmitStoreOfScalar(Res, PrivLVal);
 }
 
+llvm::Function *CGOpenMPSIMDRuntime::emitApproxOutlinedFunction(
+    CodeGenFunction &CGF, const OMPExecutableDirective &D,
+    const VarDecl *ThreadIDVar, OpenMPDirectiveKind InnermostKind,
+    const RegionCodeGenTy &CodeGen) {
+  llvm_unreachable("Not supported in SIMD-only mode");
+}
+
 llvm::Function *CGOpenMPSIMDRuntime::emitParallelOutlinedFunction(
     CodeGenFunction &CGF, const OMPExecutableDirective &D,
     const VarDecl *ThreadIDVar, OpenMPDirectiveKind InnermostKind,
@@ -12361,6 +12489,15 @@ llvm::Function *CGOpenMPSIMDRuntime::emitTaskOutlinedFunction(
     const VarDecl *PartIDVar, const VarDecl *TaskTVar,
     OpenMPDirectiveKind InnermostKind, const RegionCodeGenTy &CodeGen,
     bool Tied, unsigned &NumberOfParts) {
+  llvm_unreachable("Not supported in SIMD-only mode");
+}
+
+void CGOpenMPSIMDRuntime::emitApproxCall(CodeGenFunction &CGF,
+                                           SourceLocation Loc,
+                                           llvm::Function *OutlinedFn,
+                                           ArrayRef<llvm::Value *> CapturedVars,
+                                           const Expr *IfCond,
+                                           llvm::Value *NumThreads) {
   llvm_unreachable("Not supported in SIMD-only mode");
 }
 

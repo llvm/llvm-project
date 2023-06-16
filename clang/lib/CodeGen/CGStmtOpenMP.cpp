@@ -1300,6 +1300,9 @@ void CodeGenFunction::EmitOMPReductionClauseInit(
         *this, D.getBeginLoc(), TaskLHSs, TaskRHSs, Data);
     const Expr *TaskRedRef = nullptr;
     switch (D.getDirectiveKind()) {
+    case OMPD_approx:
+      TaskRedRef = cast<OMPApproxDirective>(D).getTaskReductionRefExpr();
+      break;
     case OMPD_parallel:
       TaskRedRef = cast<OMPParallelDirective>(D).getTaskReductionRefExpr();
       break;
@@ -1309,6 +1312,9 @@ void CodeGenFunction::EmitOMPReductionClauseInit(
     case OMPD_sections:
       TaskRedRef = cast<OMPSectionsDirective>(D).getTaskReductionRefExpr();
       break;
+    case OMPD_approx_for:
+      TaskRedRef = cast<OMPApproxForDirective>(D).getTaskReductionRefExpr();
+      break;      
     case OMPD_parallel_for:
       TaskRedRef = cast<OMPParallelForDirective>(D).getTaskReductionRefExpr();
       break;
@@ -1537,6 +1543,49 @@ checkForLastprivateConditionalUpdate(CodeGenFunction &CGF,
   }
   CGF.CGM.getOpenMPRuntime().checkAndEmitSharedLastprivateConditional(
       CGF, S, PrivateDecls);
+}
+
+static void emitCommonOMPApproxDirective(
+    CodeGenFunction &CGF, const OMPExecutableDirective &S,
+    OpenMPDirectiveKind InnermostKind, const RegionCodeGenTy &CodeGen,
+    const CodeGenBoundParametersTy &CodeGenBoundParameters) {
+  const CapturedStmt *CS = S.getCapturedStmt(OMPD_approx);
+  llvm::Value *NumThreads = nullptr;
+  llvm::Function *OutlinedFn =
+      CGF.CGM.getOpenMPRuntime().emitApproxOutlinedFunction(
+          CGF, S, *CS->getCapturedDecl()->param_begin(), InnermostKind,
+          CodeGen);
+  if (const auto *NumThreadsClause = S.getSingleClause<OMPNumThreadsClause>()) {
+    CodeGenFunction::RunCleanupsScope NumThreadsScope(CGF);
+    NumThreads = CGF.EmitScalarExpr(NumThreadsClause->getNumThreads(),
+                                    /*IgnoreResultAssign=*/true);
+    CGF.CGM.getOpenMPRuntime().emitNumThreadsClause(
+        CGF, NumThreads, NumThreadsClause->getBeginLoc());
+  }
+  if (const auto *ProcBindClause = S.getSingleClause<OMPProcBindClause>()) {
+    CodeGenFunction::RunCleanupsScope ProcBindScope(CGF);
+    CGF.CGM.getOpenMPRuntime().emitProcBindClause(
+        CGF, ProcBindClause->getProcBindKind(), ProcBindClause->getBeginLoc());
+  }
+  const Expr *IfCond = nullptr;
+  for (const auto *C : S.getClausesOfKind<OMPIfClause>()) {
+    if (C->getNameModifier() == OMPD_unknown ||
+        C->getNameModifier() == OMPD_approx) {
+      IfCond = C->getCondition();
+      break;
+    }
+  }
+
+  OMPParallelScope Scope(CGF, S);
+  llvm::SmallVector<llvm::Value *, 16> CapturedVars;
+  // Combining 'distribute' with 'for' requires sharing each 'distribute' chunk
+  // lower and upper bounds with the pragma 'for' chunking mechanism.
+  // The following lambda takes care of appending the lower and upper bound
+  // parameters when necessary
+  CodeGenBoundParameters(CGF, S, CapturedVars);
+  CGF.GenerateOpenMPCapturedVars(*CS, CapturedVars);
+  CGF.CGM.getOpenMPRuntime().emitApproxCall(CGF, S.getBeginLoc(), OutlinedFn,
+                                              CapturedVars, IfCond, NumThreads);
 }
 
 static void emitCommonOMPParallelDirective(
@@ -1803,6 +1852,88 @@ void CodeGenFunction::EmitOMPParallelDirective(const OMPParallelDirective &S) {
     auto LPCRegion =
         CGOpenMPRuntime::LastprivateConditionalRAII::disable(*this, S);
     emitCommonOMPParallelDirective(*this, S, OMPD_parallel, CodeGen,
+                                   emitEmptyBoundParameters);
+    emitPostUpdateForReductionClause(*this, S,
+                                     [](CodeGenFunction &) { return nullptr; });
+  }
+  // Check for outer lastprivate conditional update.
+  checkForLastprivateConditionalUpdate(*this, S);
+}
+
+void CodeGenFunction::EmitOMPApproxDirective(const OMPApproxDirective &S) {
+  if (CGM.getLangOpts().OpenMPIRBuilder) {
+    llvm::OpenMPIRBuilder &OMPBuilder = CGM.getOpenMPRuntime().getOMPBuilder();
+    // Check if we have any if clause associated with the directive.
+    llvm::Value *IfCond = nullptr;
+    if (const auto *C = S.getSingleClause<OMPIfClause>())
+      IfCond = EmitScalarExpr(C->getCondition(),
+                              /*IgnoreResultAssign=*/true);
+
+    llvm::Value *NumThreads = nullptr;
+    if (const auto *NumThreadsClause = S.getSingleClause<OMPNumThreadsClause>())
+      NumThreads = EmitScalarExpr(NumThreadsClause->getNumThreads(),
+                                  /*IgnoreResultAssign=*/true);
+
+    ProcBindKind ProcBind = OMP_PROC_BIND_default;
+    if (const auto *ProcBindClause = S.getSingleClause<OMPProcBindClause>())
+      ProcBind = ProcBindClause->getProcBindKind();
+
+    using InsertPointTy = llvm::OpenMPIRBuilder::InsertPointTy;
+
+    // The cleanup callback that finalizes all variabels at the given location,
+    // thus calls destructors etc.
+    auto FiniCB = [this](InsertPointTy IP) {
+      OMPBuilderCBHelpers::FinalizeOMPRegion(*this, IP);
+    };
+
+    // Privatization callback that performs appropriate action for
+    // shared/private/firstprivate/lastprivate/copyin/... variables.
+    //
+    // TODO: This defaults to shared right now.
+    auto PrivCB = [](InsertPointTy AllocaIP, InsertPointTy CodeGenIP,
+                     llvm::Value &, llvm::Value &Val, llvm::Value *&ReplVal) {
+      // The next line is appropriate only for variables (Val) with the
+      // data-sharing attribute "shared".
+      ReplVal = &Val;
+
+      return CodeGenIP;
+    };
+
+    const CapturedStmt *CS = S.getCapturedStmt(OMPD_approx);
+    const Stmt *ParallelRegionBodyStmt = CS->getCapturedStmt();
+
+    auto BodyGenCB = [&, this](InsertPointTy AllocaIP,
+                               InsertPointTy CodeGenIP) {
+      OMPBuilderCBHelpers::EmitOMPOutlinedRegionBody(
+          *this, ParallelRegionBodyStmt, AllocaIP, CodeGenIP, "approx");
+    };
+
+    CGCapturedStmtInfo CGSI(*CS, CR_OpenMP);
+    CodeGenFunction::CGCapturedStmtRAII CapInfoRAII(*this, &CGSI);
+    llvm::OpenMPIRBuilder::InsertPointTy AllocaIP(
+        AllocaInsertPt->getParent(), AllocaInsertPt->getIterator());
+    Builder.restoreIP(
+        OMPBuilder.createParallel(Builder, AllocaIP, BodyGenCB, PrivCB, FiniCB,
+                                  IfCond, NumThreads, ProcBind, S.hasCancel()));
+    return;
+  }
+
+  // Emit approx region as a standalone region.
+  auto &&CodeGen = [&S](CodeGenFunction &CGF, PrePostActionTy &Action) {
+    Action.Enter(CGF);
+    OMPPrivateScope PrivateScope(CGF);
+    emitOMPCopyinClause(CGF, S);
+    (void)CGF.EmitOMPFirstprivateClause(S, PrivateScope);
+    CGF.EmitOMPPrivateClause(S, PrivateScope);
+    CGF.EmitOMPReductionClauseInit(S, PrivateScope);
+    (void)PrivateScope.Privatize();
+    CGF.EmitStmt(S.getCapturedStmt(OMPD_approx)->getCapturedStmt());
+    CGF.EmitOMPReductionClauseFinal(S, /*ReductionKind=*/OMPD_approx);
+  };
+  {
+    auto LPCRegion =
+        CGOpenMPRuntime::LastprivateConditionalRAII::disable(*this, S);
+    emitCommonOMPApproxDirective(*this, S, OMPD_approx, CodeGen,
                                    emitEmptyBoundParameters);
     emitPostUpdateForReductionClause(*this, S,
                                      [](CodeGenFunction &) { return nullptr; });
@@ -4421,6 +4552,40 @@ void CodeGenFunction::EmitOMPParallelForDirective(
     auto LPCRegion =
         CGOpenMPRuntime::LastprivateConditionalRAII::disable(*this, S);
     emitCommonOMPParallelDirective(*this, S, OMPD_for, CodeGen,
+                                   emitEmptyBoundParameters);
+    if (IsInscan)
+      emitScanBasedDirectiveFinals(*this, S, NumIteratorsGen);
+  }
+  // Check for outer lastprivate conditional update.
+  checkForLastprivateConditionalUpdate(*this, S);
+}
+
+void CodeGenFunction::EmitOMPApproxForDirective(
+    const OMPApproxForDirective &S) {
+  // Emit directive as a combined directive that consists of two implicit
+  // directives: 'approx' with 'for' directive.
+  auto &&CodeGen = [&S](CodeGenFunction &CGF, PrePostActionTy &Action) {
+    Action.Enter(CGF);
+    emitOMPCopyinClause(CGF, S);
+    (void)emitWorksharingDirective(CGF, S, S.hasCancel());
+  };
+  {
+    const auto &&NumIteratorsGen = [&S](CodeGenFunction &CGF) {
+      CodeGenFunction::OMPLocalDeclMapRAII Scope(CGF);
+      CGCapturedStmtInfo CGSI(CR_OpenMP);
+      CodeGenFunction::CGCapturedStmtRAII CapInfoRAII(CGF, &CGSI);
+      OMPLoopScope LoopScope(CGF, S);
+      return CGF.EmitScalarExpr(S.getNumIterations());
+    };
+    bool IsInscan = llvm::any_of(S.getClausesOfKind<OMPReductionClause>(),
+                     [](const OMPReductionClause *C) {
+                       return C->getModifier() == OMPC_REDUCTION_inscan;
+                     });
+    if (IsInscan)
+      emitScanBasedDirectiveDecls(*this, S, NumIteratorsGen);
+    auto LPCRegion =
+        CGOpenMPRuntime::LastprivateConditionalRAII::disable(*this, S);
+    emitCommonOMPApproxDirective(*this, S, OMPD_for, CodeGen,
                                    emitEmptyBoundParameters);
     if (IsInscan)
       emitScanBasedDirectiveFinals(*this, S, NumIteratorsGen);

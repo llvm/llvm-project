@@ -2352,6 +2352,12 @@ void ASTStmtReader::VisitOMPParallelDirective(OMPParallelDirective *D) {
   D->setHasCancel(Record.readBool());
 }
 
+void ASTStmtReader::VisitOMPApproxDirective(OMPApproxDirective *D) {
+  VisitStmt(D);
+  VisitOMPExecutableDirective(D);
+  D->setHasCancel(Record.readBool());
+}
+
 void ASTStmtReader::VisitOMPSimdDirective(OMPSimdDirective *D) {
   VisitOMPLoopDirective(D);
 }
@@ -2405,6 +2411,11 @@ void ASTStmtReader::VisitOMPCriticalDirective(OMPCriticalDirective *D) {
   VisitStmt(D);
   VisitOMPExecutableDirective(D);
   D->DirName = Record.readDeclarationNameInfo();
+}
+
+void ASTStmtReader::VisitOMPApproxForDirective(OMPApproxForDirective *D) {
+  VisitOMPLoopDirective(D);
+  D->setHasCancel(Record.readBool());
 }
 
 void ASTStmtReader::VisitOMPParallelForDirective(OMPParallelForDirective *D) {
@@ -3303,6 +3314,13 @@ Stmt *ASTReader::ReadStmtFromStream(ModuleFile &F) {
                                           Empty);
       break;
 
+    case STMT_OMP_APPROX_DIRECTIVE:
+      S =
+        OMPApproxDirective::CreateEmpty(Context,
+                                          Record[ASTStmtReader::NumStmtFields],
+                                          Empty);
+      break;
+
     case STMT_OMP_SIMD_DIRECTIVE: {
       unsigned CollapsedNum = Record[ASTStmtReader::NumStmtFields];
       unsigned NumClauses = Record[ASTStmtReader::NumStmtFields + 1];
@@ -3368,6 +3386,14 @@ Stmt *ASTReader::ReadStmtFromStream(ModuleFile &F) {
       unsigned CollapsedNum = Record[ASTStmtReader::NumStmtFields];
       unsigned NumClauses = Record[ASTStmtReader::NumStmtFields + 1];
       S = OMPParallelForDirective::CreateEmpty(Context, NumClauses,
+                                               CollapsedNum, Empty);
+      break;
+    }
+
+    case STMT_OMP_APPROX_FOR_DIRECTIVE: {
+      unsigned CollapsedNum = Record[ASTStmtReader::NumStmtFields];
+      unsigned NumClauses = Record[ASTStmtReader::NumStmtFields + 1];
+      S = OMPApproxForDirective::CreateEmpty(Context, NumClauses,
                                                CollapsedNum, Empty);
       break;
     }

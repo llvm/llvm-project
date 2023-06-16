@@ -1460,6 +1460,8 @@ CanThrowResult Sema::canThrow(const Stmt *S) {
   case Stmt::OMPMaskedTaskLoopSimdDirectiveClass:
   case Stmt::OMPOrderedDirectiveClass:
   case Stmt::OMPCanonicalLoopClass:
+  case Stmt::OMPApproxDirectiveClass:
+  case Stmt::OMPApproxForDirectiveClass:
   case Stmt::OMPParallelDirectiveClass:
   case Stmt::OMPParallelForDirectiveClass:
   case Stmt::OMPParallelForSimdDirectiveClass:

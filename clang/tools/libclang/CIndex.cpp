@@ -2145,6 +2145,7 @@ public:
   void VisitOMPExecutableDirective(const OMPExecutableDirective *D);
   void VisitOMPLoopBasedDirective(const OMPLoopBasedDirective *D);
   void VisitOMPLoopDirective(const OMPLoopDirective *D);
+  void VisitOMPApproxDirective(const OMPApproxDirective *D);
   void VisitOMPParallelDirective(const OMPParallelDirective *D);
   void VisitOMPSimdDirective(const OMPSimdDirective *D);
   void
@@ -2158,6 +2159,7 @@ public:
   void VisitOMPSingleDirective(const OMPSingleDirective *D);
   void VisitOMPMasterDirective(const OMPMasterDirective *D);
   void VisitOMPCriticalDirective(const OMPCriticalDirective *D);
+  void VisitOMPApproxForDirective(const OMPApproxForDirective *D);
   void VisitOMPParallelForDirective(const OMPParallelForDirective *D);
   void VisitOMPParallelForSimdDirective(const OMPParallelForSimdDirective *D);
   void VisitOMPParallelMasterDirective(const OMPParallelMasterDirective *D);
@@ -3040,6 +3042,10 @@ void EnqueueVisitor::VisitOMPLoopDirective(const OMPLoopDirective *D) {
   VisitOMPLoopBasedDirective(D);
 }
 
+void EnqueueVisitor::VisitOMPApproxDirective(const OMPApproxDirective *D) {
+  VisitOMPExecutableDirective(D);
+}
+
 void EnqueueVisitor::VisitOMPParallelDirective(const OMPParallelDirective *D) {
   VisitOMPExecutableDirective(D);
 }
@@ -3088,6 +3094,11 @@ void EnqueueVisitor::VisitOMPMasterDirective(const OMPMasterDirective *D) {
 void EnqueueVisitor::VisitOMPCriticalDirective(const OMPCriticalDirective *D) {
   VisitOMPExecutableDirective(D);
   AddDeclarationNameInfo(D);
+}
+
+void EnqueueVisitor::VisitOMPApproxForDirective(
+    const OMPApproxForDirective *D) {
+  VisitOMPLoopDirective(D);
 }
 
 void EnqueueVisitor::VisitOMPParallelForDirective(
@@ -5867,6 +5878,8 @@ CXString clang_getCursorKindSpelling(enum CXCursorKind Kind) {
     return cxstring::createRef("OMPCanonicalLoop");
   case CXCursor_OMPMetaDirective:
     return cxstring::createRef("OMPMetaDirective");
+  case CXCursor_OMPApproxDirective:
+    return cxstring::createRef("OMPApproxDirective");
   case CXCursor_OMPParallelDirective:
     return cxstring::createRef("OMPParallelDirective");
   case CXCursor_OMPSimdDirective:
@@ -5889,6 +5902,8 @@ CXString clang_getCursorKindSpelling(enum CXCursorKind Kind) {
     return cxstring::createRef("OMPMasterDirective");
   case CXCursor_OMPCriticalDirective:
     return cxstring::createRef("OMPCriticalDirective");
+  case CXCursor_OMPApproxForDirective:
+    return cxstring::createRef("OMPApproxForDirective");
   case CXCursor_OMPParallelForDirective:
     return cxstring::createRef("OMPParallelForDirective");
   case CXCursor_OMPParallelForSimdDirective:
