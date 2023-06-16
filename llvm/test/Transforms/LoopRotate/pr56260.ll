@@ -14,18 +14,17 @@ define void @main() {
 ; CHECK:       L0.preheader:
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp slt i32 0, 0
 ; CHECK-NEXT:    [[INC:%.*]] = zext i1 [[CMP]] to i32
-; CHECK-NEXT:    [[SPEC_SELECT1:%.*]] = add nsw i32 0, [[INC]]
-; CHECK-NEXT:    [[TOBOOL3_NOT2:%.*]] = icmp eq i32 [[SPEC_SELECT1]], 0
-; CHECK-NEXT:    br i1 [[TOBOOL3_NOT2]], label [[L0_PREHEADER_LOOPEXIT]], label [[L1_PREHEADER_LR_PH:%.*]]
+; CHECK-NEXT:    [[TOBOOL3_NOT1:%.*]] = icmp eq i32 [[INC]], 0
+; CHECK-NEXT:    br i1 [[TOBOOL3_NOT1]], label [[L0_PREHEADER_LOOPEXIT]], label [[L1_PREHEADER_LR_PH:%.*]]
 ; CHECK:       L1.preheader.lr.ph:
 ; CHECK-NEXT:    br label [[L1_PREHEADER:%.*]]
 ; CHECK:       L1.preheader:
-; CHECK-NEXT:    [[SPEC_SELECT4:%.*]] = phi i32 [ [[SPEC_SELECT1]], [[L1_PREHEADER_LR_PH]] ], [ [[SPEC_SELECT:%.*]], [[L0_LATCH:%.*]] ]
-; CHECK-NEXT:    [[K_03:%.*]] = phi i32 [ 0, [[L1_PREHEADER_LR_PH]] ], [ [[SPEC_SELECT4]], [[L0_LATCH]] ]
-; CHECK-NEXT:    [[TOBOOL8_NOT:%.*]] = icmp eq i32 [[K_03]], 0
+; CHECK-NEXT:    [[SPEC_SELECT3:%.*]] = phi i32 [ [[INC]], [[L1_PREHEADER_LR_PH]] ], [ [[SPEC_SELECT:%.*]], [[L0_LATCH:%.*]] ]
+; CHECK-NEXT:    [[K_02:%.*]] = phi i32 [ 0, [[L1_PREHEADER_LR_PH]] ], [ [[SPEC_SELECT3]], [[L0_LATCH]] ]
+; CHECK-NEXT:    [[TOBOOL8_NOT:%.*]] = icmp eq i32 [[K_02]], 0
 ; CHECK-NEXT:    br label [[L0_LATCH]]
 ; CHECK:       L0.latch:
-; CHECK-NEXT:    [[SPEC_SELECT]] = add nsw i32 [[SPEC_SELECT4]], [[INC]]
+; CHECK-NEXT:    [[SPEC_SELECT]] = add nsw i32 [[SPEC_SELECT3]], [[INC]]
 ; CHECK-NEXT:    [[TOBOOL3_NOT:%.*]] = icmp eq i32 [[SPEC_SELECT]], 0
 ; CHECK-NEXT:    br i1 [[TOBOOL3_NOT]], label [[L0_L0_PREHEADER_LOOPEXIT_CRIT_EDGE:%.*]], label [[L1_PREHEADER]]
 ;
