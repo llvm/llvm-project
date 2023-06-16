@@ -555,3 +555,30 @@ unwind:
   landingpad ptr cleanup
   resume ptr null
 }
+
+; This should not fold to false because fmul 0 * inf = nan
+define i1 @issue63316(i64 %arg) {
+; CHECK-LABEL: @issue63316(
+; CHECK-NEXT:    [[SITOFP:%.*]] = sitofp i64 [[ARG:%.*]] to float
+; CHECK-NEXT:    [[FMUL:%.*]] = fmul float [[SITOFP]], 0x7FF0000000000000
+; CHECK-NEXT:    [[FCMP:%.*]] = fcmp uno float [[FMUL]], 0.000000e+00
+; CHECK-NEXT:    ret i1 [[FCMP]]
+;
+  %sitofp = sitofp i64 %arg to float
+  %fmul = fmul float %sitofp, 0x7FF0000000000000
+  %fcmp = fcmp uno float %fmul, 0.000000e+00
+  ret i1 %fcmp
+}
+
+define i1 @issue63316_commute(i64 %arg) {
+; CHECK-LABEL: @issue63316_commute(
+; CHECK-NEXT:    [[SITOFP:%.*]] = sitofp i64 [[ARG:%.*]] to float
+; CHECK-NEXT:    [[FMUL:%.*]] = fmul float 0x7FF0000000000000, [[SITOFP]]
+; CHECK-NEXT:    [[FCMP:%.*]] = fcmp uno float [[FMUL]], 0.000000e+00
+; CHECK-NEXT:    ret i1 [[FCMP]]
+;
+  %sitofp = sitofp i64 %arg to float
+  %fmul = fmul float 0x7FF0000000000000, %sitofp
+  %fcmp = fcmp uno float %fmul, 0.000000e+00
+  ret i1 %fcmp
+}

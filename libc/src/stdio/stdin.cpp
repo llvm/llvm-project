@@ -10,6 +10,4 @@
 
 #include <stdio.h>
 
-extern "C" {
-FILE *stdin = reinterpret_cast<FILE *>(__llvm_libc::stdin);
-}
+extern "C" FILE *stdin;
