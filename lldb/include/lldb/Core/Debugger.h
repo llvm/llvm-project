@@ -232,7 +232,7 @@ public:
 
   void PrintAsync(const char *s, size_t len, bool is_stdout);
 
-  ConstString GetTopIOHandlerControlSequence(char ch);
+  llvm::StringRef GetTopIOHandlerControlSequence(char ch);
 
   const char *GetIOHandlerCommandPrefix();
 

@@ -174,10 +174,10 @@ BenchmarkRunner::getRunnableConfiguration(
                                    LoopBodySizeForSnippet);
     if (Error E = Snippet.takeError())
       return std::move(E);
-    const ExecutableFunction EF(State.createTargetMachine(),
-                                getObjectFromBuffer(*Snippet));
-    const auto FnBytes = EF.getFunctionBytes();
-    llvm::append_range(InstrBenchmark.AssembledSnippet, FnBytes);
+
+    if (auto Err = getBenchmarkFunctionBytes(*Snippet,
+                                             InstrBenchmark.AssembledSnippet))
+      return std::move(Err);
   }
 
   // Assemble NumRepetitions instructions repetitions of the snippet for

@@ -10,7 +10,7 @@
 // CHECK-NEXT:  Lines executed:84.21% of 38
 // CHECK-NEXT:  Creating 'test.cpp.gcov'
 // CHECK-EMPTY:
-// CHECK-NEXT:  File './test.h'
+// CHECK-NEXT:  File 'test.h'
 // CHECK-NEXT:  Lines executed:100.00% of 1
 // CHECK-NEXT:  Creating 'test.h.gcov'
 // CHECK-EMPTY:
@@ -32,7 +32,7 @@
 // C-NEXT:        -:    9:
 // C-NEXT:8589934592:   10:
 
-//      H:        -:    0:Source:./test.h
+//      H:        -:    0:Source:test.h
 // H-NEXT:        -:    0:Graph:{{.*}}gcov-fake-4.2.gcno
 // H-NEXT:        -:    0:Data:{{.*}}gcov-fake-4.2.gcda
 // H-NEXT:        -:    0:Runs:2

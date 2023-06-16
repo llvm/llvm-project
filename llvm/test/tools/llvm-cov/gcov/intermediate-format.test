@@ -31,7 +31,7 @@ RUN: cmp test.cpp.gcov saved.cpp.gcov
   OUT-B-NEXT:Taken at least once:86.67% of 15
   OUT-B-NEXT:No calls
    OUT-EMPTY:
-    OUT-NEXT:File './test.h'
+    OUT-NEXT:File 'test.h'
     OUT-NEXT:Lines executed:100.00% of 1
   OUT-B-NEXT:No branches
   OUT-B-NEXT:No calls
@@ -50,6 +50,6 @@ RUN: cmp test.cpp.gcov saved.cpp.gcov
        I:lcount:33,3
 I-B-NEXT:branch:33,taken
 I-B-NEXT:branch:33,taken
-       I:file:./test.h
+       I:file:test.h
   I-NEXT:function:2,1,_ZN1AC2Ev
   I-NEXT:lcount:2,1

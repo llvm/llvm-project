@@ -1562,9 +1562,8 @@ static void computeLiveOuts(MachineFunction &MF, RegPressureTracker &RPTracker,
       if (Reg.isVirtual())
         Uses.insert(Reg);
       else if (MRI.isAllocatable(Reg))
-        for (MCRegUnitIterator Units(Reg.asMCReg(), TRI); Units.isValid();
-             ++Units)
-          Uses.insert(*Units);
+        for (MCRegUnit Unit : TRI->regunits(Reg.asMCReg()))
+          Uses.insert(Unit);
     }
   }
   for (SUnit *SU : NS)
@@ -1576,11 +1575,10 @@ static void computeLiveOuts(MachineFunction &MF, RegPressureTracker &RPTracker,
             LiveOutRegs.push_back(RegisterMaskPair(Reg,
                                                    LaneBitmask::getNone()));
         } else if (MRI.isAllocatable(Reg)) {
-          for (MCRegUnitIterator Units(Reg.asMCReg(), TRI); Units.isValid();
-               ++Units)
-            if (!Uses.count(*Units))
-              LiveOutRegs.push_back(RegisterMaskPair(*Units,
-                                                     LaneBitmask::getNone()));
+          for (MCRegUnit Unit : TRI->regunits(Reg.asMCReg()))
+            if (!Uses.count(Unit))
+              LiveOutRegs.push_back(
+                  RegisterMaskPair(Unit, LaneBitmask::getNone()));
         }
       }
   RPTracker.addLiveRegs(LiveOutRegs);

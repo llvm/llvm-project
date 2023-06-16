@@ -1444,7 +1444,11 @@ void RISCVInsertVSETVLI::doLocalPostpass(MachineBasicBlock &MBB) {
           MI.setDesc(NextMI->getDesc());
         }
         MI.getOperand(2).setImm(NextMI->getOperand(2).getImm());
-        ToDelete.push_back(NextMI);
+        // Don't delete a vsetvli if its result might be used.
+        Register NextVRefDef = NextMI->getOperand(0).getReg();
+        if (NextVRefDef == RISCV::X0 ||
+            (NextVRefDef.isVirtual() && MRI->use_nodbg_empty(NextVRefDef)))
+          ToDelete.push_back(NextMI);
         // fallthrough
       }
     }
