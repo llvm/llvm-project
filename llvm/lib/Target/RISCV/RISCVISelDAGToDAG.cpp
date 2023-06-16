@@ -3177,8 +3177,7 @@ bool RISCVDAGToDAGISel::doPeepholeMaskedRVV(SDNode *N) {
 
   // Retrieve the tail policy operand index, if any.
   std::optional<unsigned> TailPolicyOpIdx;
-  const RISCVInstrInfo &TII = *Subtarget->getInstrInfo();
-  const MCInstrDesc &MaskedMCID = TII.get(N->getMachineOpcode());
+  const MCInstrDesc &MaskedMCID = TII->get(N->getMachineOpcode());
 
   bool UseTUPseudo = false;
   if (RISCVII::hasVecPolicyOp(MaskedMCID.TSFlags)) {
@@ -3203,7 +3202,7 @@ bool RISCVDAGToDAGISel::doPeepholeMaskedRVV(SDNode *N) {
   // If this instruction is tail agnostic, the unmasked instruction should not
   // have a tied destination.
 #ifndef NDEBUG
-  const MCInstrDesc &MCID = TII.get(Opc);
+  const MCInstrDesc &MCID = TII->get(Opc);
   bool HasTiedDest = RISCVII::isFirstDefTiedToFirstUse(MCID);
   assert((UseTUPseudo == HasTiedDest) && "Unexpected pseudo to transform to");
 #endif
