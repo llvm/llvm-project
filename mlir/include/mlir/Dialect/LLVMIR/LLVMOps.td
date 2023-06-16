@@ -1321,6 +1321,7 @@ def LLVM_GlobalOp : LLVM_Op<"mlir.global",
     DefaultValuedAttr<ConfinedAttr<I32Attr, [IntNonNegative]>, "0">:$addr_space,
     OptionalAttr<UnnamedAddr>:$unnamed_addr,
     OptionalAttr<StrAttr>:$section,
+    OptionalAttr<SymbolRefAttr>:$comdat,
     DefaultValuedAttr<Visibility, "mlir::LLVM::Visibility::Default">:$visibility_
   );
   let summary = "LLVM dialect global.";
@@ -1429,6 +1430,7 @@ def LLVM_GlobalOp : LLVM_Op<"mlir.global",
       CArg<"unsigned", "0">:$addrSpace,
       CArg<"bool", "false">:$dsoLocal,
       CArg<"bool", "false">:$thread_local_,
+      CArg<"SymbolRefAttr", "{}">:$comdat,
       CArg<"ArrayRef<NamedAttribute>", "{}">:$attrs)>
   ];
 
@@ -1518,6 +1520,55 @@ def LLVM_GlobalDtorsOp : LLVM_Op<"mlir.global_dtors", [
   }];
   let assemblyFormat = "attr-dict";
   let hasVerifier = 1;
+}
+
+def LLVM_ComdatSelectorOp : LLVM_Op<"comdat_selector", [Symbol]> {
+  let arguments = (ins
+    SymbolNameAttr:$sym_name,
+    Comdat:$comdat
+  );
+
+  let summary = "LLVM dialect comdat selector declaration";
+
+  let description = [{
+    Provides access to object file COMDAT section/group functionality.
+
+    Examples:
+    ```mlir
+    llvm.comdat @__llvm_comdat {
+      llvm.comdat_selector @any any
+    }
+    llvm.mlir.global internal constant @has_any_comdat(1 : i64) comdat(@__llvm_comdat::@any) : i64
+    ```
+  }];
+  let assemblyFormat = "$sym_name $comdat attr-dict";
+}
+
+def LLVM_ComdatOp : LLVM_Op<"comdat", [NoTerminator, NoRegionArguments, SymbolTable, Symbol]> {
+  let arguments = (ins
+    SymbolNameAttr:$sym_name
+  );
+  let summary = "LLVM dialect comdat region";
+
+  let description = [{
+    Provides access to object file COMDAT section/group functionality.
+
+    Examples:
+    ```mlir
+    llvm.comdat @__llvm_comdat {
+      llvm.comdat_selector @any any
+    }
+    llvm.mlir.global internal constant @has_any_comdat(1 : i64) comdat(@__llvm_comdat::@any) : i64
+    ```
+  }];
+  let regions = (region SizedRegion<1>:$body);
+
+
+  let skipDefaultBuilders = 1;
+  let builders = [OpBuilder<(ins "StringRef":$symName)>];
+
+  let assemblyFormat = "$sym_name $body attr-dict";
+  let hasRegionVerifier = 1;
 }
 
 def LLVM_LLVMFuncOp : LLVM_Op<"func", [
