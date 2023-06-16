@@ -92,9 +92,7 @@ public:
     return true;
   }
   bool supportsEfficientVectorElementLoadStore() { return false; }
-  bool hasBranchDivergence() {
-    return false;
-  }
+  bool hasBranchDivergence(const Function *F = nullptr) { return false; }
   bool enableAggressiveInterleaving(bool LoopHasReductions) {
     return false;
   }

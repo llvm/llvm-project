@@ -259,8 +259,8 @@ BranchProbability TargetTransformInfo::getPredictableBranchThreshold() const {
              : TTIImpl->getPredictableBranchThreshold();
 }
 
-bool TargetTransformInfo::hasBranchDivergence() const {
-  return TTIImpl->hasBranchDivergence();
+bool TargetTransformInfo::hasBranchDivergence(const Function *F) const {
+  return TTIImpl->hasBranchDivergence(F);
 }
 
 bool TargetTransformInfo::isSourceOfDivergence(const Value *V) const {
