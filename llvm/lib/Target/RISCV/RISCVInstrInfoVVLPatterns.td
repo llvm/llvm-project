@@ -2423,7 +2423,7 @@ foreach vti = AllIntegerVectors in {
                                              GPR:$rs2, (vti.Mask true_mask),
                                              VLOpFrag)),
               (!cast<Instruction>("PseudoVSLIDE1UP_VX_"#vti.LMul.MX#"_TU")
-                  vti.RegClass:$rd, vti.RegClass:$rs1, GPR:$rs2, GPR:$vl, vti.Log2SEW)>;
+                  vti.RegClass:$rd, vti.RegClass:$rs1, GPR:$rs2, GPR:$vl, vti.Log2SEW, TU_MU)>;
     def : Pat<(vti.Vector (riscv_slide1down_vl (vti.Vector undef),
                                                (vti.Vector vti.RegClass:$rs1),
                                                GPR:$rs2, (vti.Mask true_mask),
@@ -2435,7 +2435,7 @@ foreach vti = AllIntegerVectors in {
                                                GPR:$rs2, (vti.Mask true_mask),
                                                VLOpFrag)),
               (!cast<Instruction>("PseudoVSLIDE1DOWN_VX_"#vti.LMul.MX#"_TU")
-                  vti.RegClass:$rd, vti.RegClass:$rs1, GPR:$rs2, GPR:$vl, vti.Log2SEW)>;
+                  vti.RegClass:$rd, vti.RegClass:$rs1, GPR:$rs2, GPR:$vl, vti.Log2SEW, TU_MU)>;
   }
 }
 
@@ -2452,7 +2452,7 @@ foreach vti = AllFloatVectors in {
                                             vti.Scalar:$rs2, (vti.Mask true_mask),
                                             VLOpFrag)),
             (!cast<Instruction>("PseudoVFSLIDE1UP_V"#vti.ScalarSuffix#"_"#vti.LMul.MX#"_TU")
-                vti.RegClass:$rd, vti.RegClass:$rs1, vti.ScalarRegClass:$rs2, GPR:$vl, vti.Log2SEW)>;
+                vti.RegClass:$rd, vti.RegClass:$rs1, vti.ScalarRegClass:$rs2, GPR:$vl, vti.Log2SEW, TU_MU)>;
   def : Pat<(vti.Vector (riscv_fslide1down_vl (vti.Vector undef),
                                               (vti.Vector vti.RegClass:$rs1),
                                               vti.Scalar:$rs2, (vti.Mask true_mask),
@@ -2464,7 +2464,7 @@ foreach vti = AllFloatVectors in {
                                               vti.Scalar:$rs2, (vti.Mask true_mask),
                                               VLOpFrag)),
             (!cast<Instruction>("PseudoVFSLIDE1DOWN_V"#vti.ScalarSuffix#"_"#vti.LMul.MX#"_TU")
-                vti.RegClass:$rd, vti.RegClass:$rs1, vti.ScalarRegClass:$rs2, GPR:$vl, vti.Log2SEW)>;
+                vti.RegClass:$rd, vti.RegClass:$rs1, vti.ScalarRegClass:$rs2, GPR:$vl, vti.Log2SEW, TU_MU)>;
   }
 }
 
