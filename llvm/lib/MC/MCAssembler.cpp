@@ -1110,17 +1110,16 @@ bool MCAssembler::relaxDwarfCallFrameFragment(MCAsmLayout &Layout,
     return WasRelaxed;
 
   MCContext &Context = Layout.getAssembler().getContext();
-  int64_t Value;
-  bool Abs = DF.getAddrDelta().evaluateAsAbsolute(Value, Layout);
-  assert(Abs && "CFA with invalid expression");
-  (void)Abs;
-
+  uint64_t OldSize = DF.getContents().size();
+  int64_t AddrDelta;
+  bool Abs = DF.getAddrDelta().evaluateKnownAbsolute(AddrDelta, Layout);
+  assert(Abs && "We created call frame with an invalid expression");
+  (void) Abs;
   SmallVectorImpl<char> &Data = DF.getContents();
-  uint64_t OldSize = Data.size();
   Data.clear();
   DF.getFixups().clear();
 
-  MCDwarfFrameEmitter::encodeAdvanceLoc(Context, Value, Data);
+  MCDwarfFrameEmitter::encodeAdvanceLoc(Context, AddrDelta, Data);
   return OldSize != Data.size();
 }
 
