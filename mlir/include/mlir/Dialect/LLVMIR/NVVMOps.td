@@ -213,6 +213,38 @@ def NVVM_MBarrierInvalSharedOp : NVVM_Op<"mbarrier.inval.shared">,
   let assemblyFormat = "$addr attr-dict `:` type(operands)";
 }
 
+def NVVM_MBarrierArriveOp : NVVM_Op<"mbarrier.arrive">,
+  Arguments<(ins LLVM_i64ptr_any:$addr)> {
+  string llvmBuilder = [{
+      createIntrinsicCall(builder, llvm::Intrinsic::nvvm_mbarrier_arrive, {$addr});
+  }];
+  let assemblyFormat = "$addr attr-dict `:` type(operands)";
+}
+
+def NVVM_MBarrierArriveSharedOp : NVVM_Op<"mbarrier.arrive.shared">,
+  Arguments<(ins LLVM_i64ptr_shared:$addr)> {
+  string llvmBuilder = [{
+      createIntrinsicCall(builder, llvm::Intrinsic::nvvm_mbarrier_arrive_shared, {$addr});
+  }];
+  let assemblyFormat = "$addr attr-dict `:` type(operands)";
+}
+
+def NVVM_MBarrierArriveNocompleteOp : NVVM_Op<"mbarrier.arrive.nocomplete">,
+  Arguments<(ins LLVM_i64ptr_any:$addr, I32:$count)> {
+  string llvmBuilder = [{
+      createIntrinsicCall(builder, llvm::Intrinsic::nvvm_mbarrier_arrive_noComplete, {$addr, $count});
+  }];
+  let assemblyFormat = "$addr `,` $count attr-dict `:` type(operands)";
+}
+
+def NVVM_MBarrierArriveNocompleteSharedOp : NVVM_Op<"mbarrier.arrive.nocomplete.shared">,
+  Arguments<(ins LLVM_i64ptr_shared:$addr, I32:$count)> {
+  string llvmBuilder = [{
+      createIntrinsicCall(builder, llvm::Intrinsic::nvvm_mbarrier_arrive_noComplete_shared, {$addr, $count});
+  }];
+  let assemblyFormat = "$addr `,` $count attr-dict `:` type(operands)";
+}
+
 //===----------------------------------------------------------------------===//
 // NVVM synchronization op definitions
 //===----------------------------------------------------------------------===//

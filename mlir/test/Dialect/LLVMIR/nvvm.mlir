@@ -339,6 +339,7 @@ llvm.func @redux_sync(%value : i32, %offset : i32) -> i32 {
 func.func private @expected_llvm_func() attributes { nvvm.kernel }
 
 // -----
+
 llvm.func private @mbarrier_init_generic(%barrier: !llvm.ptr) {
   %count = nvvm.read.ptx.sreg.ntid.x : i32
   // CHECK:   nvvm.mbarrier.init %{{.*}}, %{{.*}} : !llvm.ptr, i32
@@ -365,5 +366,31 @@ llvm.func private @mbarrier_inval_generic(%barrier: !llvm.ptr) {
 llvm.func private @mbarrier_inval_shared(%barrier: !llvm.ptr<3>) {
   // CHECK:   nvvm.mbarrier.inval.shared %{{.*}} : !llvm.ptr<3>
   nvvm.mbarrier.inval.shared %barrier : !llvm.ptr<3>
+  llvm.return
+}
+
+llvm.func private @mbarrier_arrive(%barrier: !llvm.ptr) {
+  // CHECK:   nvvm.mbarrier.arrive %{{.*}} : !llvm.ptr
+  nvvm.mbarrier.arrive %barrier : !llvm.ptr
+  llvm.return
+}
+
+llvm.func private @mbarrier_arrive_shared(%barrier: !llvm.ptr<3>) {
+  // CHECK:   nvvm.mbarrier.arrive.shared %{{.*}} : !llvm.ptr<3>
+  nvvm.mbarrier.arrive.shared %barrier : !llvm.ptr<3>
+  llvm.return
+}
+
+llvm.func private @mbarrier_arrive_nocomplete(%barrier: !llvm.ptr) {
+  %count = nvvm.read.ptx.sreg.ntid.x : i32
+  // CHECK:   nvvm.mbarrier.arrive.nocomplete %{{.*}} : !llvm.ptr
+  nvvm.mbarrier.arrive.nocomplete %barrier, %count : !llvm.ptr, i32
+  llvm.return
+}
+
+llvm.func private @mbarrier_arrive_nocomplete_shared(%barrier: !llvm.ptr<3>) {
+  %count = nvvm.read.ptx.sreg.ntid.x : i32
+  // CHECK:   nvvm.mbarrier.arrive.nocomplete.shared %{{.*}} : !llvm.ptr<3>
+  nvvm.mbarrier.arrive.nocomplete.shared %barrier, %count : !llvm.ptr<3>, i32
   llvm.return
 }
