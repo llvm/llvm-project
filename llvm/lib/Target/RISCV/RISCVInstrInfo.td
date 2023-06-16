@@ -1453,8 +1453,9 @@ multiclass SelectCC_GPR_rrirr<DAGOperand valty> {
 let Predicates = [NoShortForwardBranchOpt] in
 defm Select_GPR : SelectCC_GPR_rrirr<GPR>;
 
-class SelectCompressOpt<CondCode Cond>: Pat<(riscv_selectcc_frag:$select GPR:$lhs, simm12_no6:$Constant, Cond,
-                                                  GPR:$truev, GPR:$falsev),
+class SelectCompressOpt<CondCode Cond>
+    : Pat<(riscv_selectcc_frag:$select GPR:$lhs, simm12_no6:$Constant, Cond,
+                                       GPR:$truev, GPR:$falsev),
     (Select_GPR_Using_CC_GPR (ADDI GPR:$lhs, (NegImm simm12:$Constant)), X0,
                           (IntCCtoRISCVCC $select), GPR:$truev, GPR:$falsev)>;
 
@@ -1476,8 +1477,9 @@ multiclass BccPat<CondCode Cond, RVInstB Inst> {
             (Inst GPR:$rs1, X0, simm13_lsb0:$imm12)>;
 }
 
-class BrccCompessOpt<CondCode Cond, RVInstB Inst> : Pat<(riscv_brcc GPR:$lhs, simm12_no6:$Constant, Cond, bb:$place),
-                              (Inst (ADDI GPR:$lhs, (NegImm simm12:$Constant)), X0, bb:$place)>;
+class BrccCompressOpt<CondCode Cond, RVInstB Inst>
+    : Pat<(riscv_brcc GPR:$lhs, simm12_no6:$Constant, Cond, bb:$place),
+          (Inst (ADDI GPR:$lhs, (NegImm simm12:$Constant)), X0, bb:$place)>;
 
 defm : BccPat<SETEQ, BEQ>;
 defm : BccPat<SETNE, BNE>;
@@ -1487,8 +1489,8 @@ defm : BccPat<SETULT, BLTU>;
 defm : BccPat<SETUGE, BGEU>;
 
 let Predicates = [HasStdExtC, OptForMinSize] in {
-  def : BrccCompessOpt<SETEQ, BEQ>;
-  def : BrccCompessOpt<SETNE, BNE>;
+  def : BrccCompressOpt<SETEQ, BEQ>;
+  def : BrccCompressOpt<SETNE, BNE>;
 }
 
 class LongBccPseudo : Pseudo<(outs),
