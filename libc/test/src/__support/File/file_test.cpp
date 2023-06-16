@@ -33,13 +33,12 @@ class StringFile : public File {
                                 size_t len);
   static ErrorOr<long> str_seek(__llvm_libc::File *f, long offset, int whence);
   static int str_close(__llvm_libc::File *f) { return 0; }
-  static int str_flush(__llvm_libc::File *f) { return 0; }
 
 public:
   explicit StringFile(char *buffer, size_t buflen, int bufmode, bool owned,
                       ModeFlags modeflags)
       : __llvm_libc::File(&str_write, &str_read, &str_seek, &str_close,
-                          &str_flush, &__llvm_libc::cleanup_file<StringFile>,
+                          &__llvm_libc::cleanup_file<StringFile>,
                           reinterpret_cast<uint8_t *>(buffer), buflen, bufmode,
                           owned, modeflags),
         pos(0), eof_marker(0), write_append(false) {
