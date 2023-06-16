@@ -91,7 +91,7 @@ class VPatBinarySDNode_VV<SDPatternOperator vop,
                      (result_type (IMPLICIT_DEF)),
                      op_reg_class:$rs1,
                      op_reg_class:$rs2,
-                     avl, log2sew)>;
+                     avl, log2sew, TA_MA)>;
 
 class VPatBinarySDNode_XI<SDPatternOperator vop,
                           string instruction_name,
@@ -115,7 +115,7 @@ class VPatBinarySDNode_XI<SDPatternOperator vop,
                      (result_type (IMPLICIT_DEF)),
                      vop_reg_class:$rs1,
                      xop_kind:$rs2,
-                     avl, log2sew)>;
+                     avl, log2sew, TA_MA)>;
 
 multiclass VPatBinarySDNode_VV_VX<SDPatternOperator vop, string instruction_name,
                                   list<VTypeInfo> vtilist = AllIntegerVectors,
@@ -166,7 +166,7 @@ class VPatBinarySDNode_VF<SDPatternOperator vop,
                      (result_type (IMPLICIT_DEF)),
                      vop_reg_class:$rs1,
                      (xop_type xop_kind:$rs2),
-                     avl, log2sew)>;
+                     avl, log2sew, TA_MA)>;
 
 multiclass VPatBinaryFPSDNode_VV_VF<SDPatternOperator vop, string instruction_name,
                                     bit isSEWAware = 0> {
@@ -196,7 +196,7 @@ multiclass VPatBinaryFPSDNode_R_VF<SDPatternOperator vop, string instruction_nam
                            (fvti.Vector (IMPLICIT_DEF)),
                            fvti.RegClass:$rs1,
                            (fvti.Scalar fvti.ScalarRegClass:$rs2),
-                           fvti.AVL, fvti.Log2SEW)>;
+                           fvti.AVL, fvti.Log2SEW, TA_MA)>;
 }
 
 multiclass VPatIntegerSetCCSDNode_VV<string instruction_name,
