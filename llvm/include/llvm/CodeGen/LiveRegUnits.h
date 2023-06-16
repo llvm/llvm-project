@@ -84,8 +84,8 @@ public:
 
   /// Adds register units covered by physical register \p Reg.
   void addReg(MCPhysReg Reg) {
-    for (MCRegUnitIterator Unit(Reg, TRI); Unit.isValid(); ++Unit)
-      Units.set(*Unit);
+    for (MCRegUnit Unit : TRI->regunits(Reg))
+      Units.set(Unit);
   }
 
   /// Adds register units covered by physical register \p Reg that are
@@ -100,8 +100,8 @@ public:
 
   /// Removes all register units covered by physical register \p Reg.
   void removeReg(MCPhysReg Reg) {
-    for (MCRegUnitIterator Unit(Reg, TRI); Unit.isValid(); ++Unit)
-      Units.reset(*Unit);
+    for (MCRegUnit Unit : TRI->regunits(Reg))
+      Units.reset(Unit);
   }
 
   /// Removes register units not preserved by the regmask \p RegMask.
@@ -114,8 +114,8 @@ public:
 
   /// Returns true if no part of physical register \p Reg is live.
   bool available(MCPhysReg Reg) const {
-    for (MCRegUnitIterator Unit(Reg, TRI); Unit.isValid(); ++Unit) {
-      if (Units.test(*Unit))
+    for (MCRegUnit Unit : TRI->regunits(Reg)) {
+      if (Units.test(Unit))
         return false;
     }
     return true;

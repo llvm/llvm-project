@@ -735,8 +735,8 @@ static void updatePhysDepsDownwards(const MachineInstr *UseMI,
     // Identify dependencies.
     if (!MO.readsReg())
       continue;
-    for (MCRegUnitIterator Units(Reg, TRI); Units.isValid(); ++Units) {
-      SparseSet<LiveRegUnit>::iterator I = RegUnits.find(*Units);
+    for (MCRegUnit Unit : TRI->regunits(Reg)) {
+      SparseSet<LiveRegUnit>::iterator I = RegUnits.find(Unit);
       if (I == RegUnits.end())
         continue;
       Deps.push_back(DataDep(I->MI, I->Op, MO.getOperandNo()));
@@ -747,15 +747,14 @@ static void updatePhysDepsDownwards(const MachineInstr *UseMI,
   // Update RegUnits to reflect live registers after UseMI.
   // First kills.
   for (MCRegister Kill : Kills)
-    for (MCRegUnitIterator Units(Kill, TRI); Units.isValid(); ++Units)
-      RegUnits.erase(*Units);
+    for (MCRegUnit Unit : TRI->regunits(Kill))
+      RegUnits.erase(Unit);
 
   // Second, live defs.
   for (unsigned DefOp : LiveDefOps) {
-    for (MCRegUnitIterator Units(UseMI->getOperand(DefOp).getReg().asMCReg(),
-                                 TRI);
-         Units.isValid(); ++Units) {
-      LiveRegUnit &LRU = RegUnits[*Units];
+    for (MCRegUnit Unit :
+         TRI->regunits(UseMI->getOperand(DefOp).getReg().asMCReg())) {
+      LiveRegUnit &LRU = RegUnits[Unit];
       LRU.MI = UseMI;
       LRU.Op = DefOp;
     }
@@ -922,9 +921,8 @@ static unsigned updatePhysDepsUpwards(const MachineInstr &MI, unsigned Height,
       continue;
     // This is a def of Reg. Remove corresponding entries from RegUnits, and
     // update MI Height to consider the physreg dependencies.
-    for (MCRegUnitIterator Units(Reg.asMCReg(), TRI); Units.isValid();
-         ++Units) {
-      SparseSet<LiveRegUnit>::iterator I = RegUnits.find(*Units);
+    for (MCRegUnit Unit : TRI->regunits(Reg.asMCReg())) {
+      SparseSet<LiveRegUnit>::iterator I = RegUnits.find(Unit);
       if (I == RegUnits.end())
         continue;
       unsigned DepHeight = I->Cycle;
@@ -943,8 +941,8 @@ static unsigned updatePhysDepsUpwards(const MachineInstr &MI, unsigned Height,
   // Now we know the height of MI. Update any regunits read.
   for (size_t I = 0, E = ReadOps.size(); I != E; ++I) {
     MCRegister Reg = MI.getOperand(ReadOps[I]).getReg().asMCReg();
-    for (MCRegUnitIterator Units(Reg, TRI); Units.isValid(); ++Units) {
-      LiveRegUnit &LRU = RegUnits[*Units];
+    for (MCRegUnit Unit : TRI->regunits(Reg)) {
+      LiveRegUnit &LRU = RegUnits[Unit];
       // Set the height to the highest reader of the unit.
       if (LRU.Cycle <= Height && LRU.MI != &MI) {
         LRU.Cycle = Height;
