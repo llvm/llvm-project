@@ -426,6 +426,7 @@ mgpuSpMM(void *h, int32_t ma, int32_t mb, void *a, void *b, void *c,
                                         CUSPARSE_SPMM_ALG_DEFAULT, buf))
 }
 
+// TODO: add support to passing alpha and beta as arguments
 extern "C" MLIR_CUDA_WRAPPERS_EXPORT intptr_t
 mgpuSDDMMBufferSize(void *h, int32_t ma, int32_t mb, void *a, void *b, void *c,
                     int32_t ctp, CUstream /*stream*/) {
