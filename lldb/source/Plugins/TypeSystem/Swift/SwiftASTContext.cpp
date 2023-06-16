@@ -1220,7 +1220,7 @@ static bool DeserializeAllCompilerFlags(swift::CompilerInvocation &invocation,
                        getFrameworkSearchPaths(), framework_search_paths,
                        .Path);
 
-  std::vector<swift::PluginSearchOption::Value> plugin_search_options;
+  std::vector<swift::PluginSearchOption> plugin_search_options;
   llvm::StringSet<> known_plugin_search_paths;
   llvm::StringSet<> known_external_plugin_search_paths;
   llvm::StringSet<> known_compiler_plugin_library_paths;
@@ -1312,7 +1312,8 @@ static bool DeserializeAllCompilerFlags(swift::CompilerInvocation &invocation,
         };
 
         for (auto &opt : extended_validation_info.getPluginSearchOptions()) {
-          if (opt.first == "-plugin-path") {
+          switch (opt.first) {
+          case swift::PluginSearchOption::Kind::PluginPath: {
             StringRef path = opt.second;
             // System plugins shipping with the compiler.
             // Rewrite them to go through an ABI-compatible swift-plugin-server.
@@ -1330,7 +1331,7 @@ static bool DeserializeAllCompilerFlags(swift::CompilerInvocation &invocation,
             }
             continue;
           }
-          if (opt.first == "-external-plugin-path") {
+          case swift::PluginSearchOption::Kind::ExternalPluginPath: {
             // Sandboxed system plugins shipping with some compiler.
             // Keep the original plugin server path, it needs to be ABI
             // compatible with the version of SwiftSyntax used by the plugin.
@@ -1347,7 +1348,7 @@ static bool DeserializeAllCompilerFlags(swift::CompilerInvocation &invocation,
                                                                   server});
             continue;
           }
-          if (opt.first == "-load-plugin-library") {
+          case swift::PluginSearchOption::Kind::LoadPluginLibrary: {
             // Compiler plugin libraries.
             StringRef dylib = opt.second;
             if (known_compiler_plugin_library_paths.insert(dylib).second)
@@ -1375,7 +1376,7 @@ static bool DeserializeAllCompilerFlags(swift::CompilerInvocation &invocation,
               }
             continue;
           }
-          if (opt.first == "-load-plugin-executable") {
+          case swift::PluginSearchOption::Kind::LoadPluginExecutable: {
             // Compiler plugin executables.
             auto plugin_modules = opt.second.split('#');
             llvm::StringRef plugin = plugin_modules.first;
@@ -1392,6 +1393,7 @@ static bool DeserializeAllCompilerFlags(swift::CompilerInvocation &invocation,
                     swift::PluginSearchOption::LoadPluginExecutable{
                         plugin.str(), modules_vec});
             continue;
+          }
           }
           llvm_unreachable("unhandled plugin search option kind");
         }
@@ -2022,7 +2024,7 @@ static void ProcessModule(
     ModuleSP module_sp, std::string m_description,
     bool discover_implicit_search_paths, bool use_all_compiler_flags,
     Target &target, llvm::Triple triple,
-    std::vector<swift::PluginSearchOption::Value> &plugin_search_options,
+    std::vector<swift::PluginSearchOption> &plugin_search_options,
     std::vector<std::string> &module_search_paths,
     std::vector<std::pair<std::string, bool>> &framework_search_paths,
     std::vector<std::string> &extra_clang_args) {
@@ -2168,7 +2170,7 @@ lldb::TypeSystemSP SwiftASTContext::CreateInstance(
 
   LLDB_SCOPED_TIMER();
   std::string m_description = "SwiftASTContextForExpressions";
-  std::vector<swift::PluginSearchOption::Value> plugin_search_options;
+  std::vector<swift::PluginSearchOption> plugin_search_options;
   std::vector<std::string> module_search_paths;
   std::vector<std::pair<std::string, bool>> framework_search_paths;
   TargetSP target_sp = typeref_typesystem.GetTargetWP().lock();
@@ -4634,7 +4636,7 @@ void SwiftASTContextForExpressions::ModulesDidLoad(ModuleList &module_list) {
   bool use_all_compiler_flags = target_sp->GetUseAllCompilerFlags();
   unsigned num_images = module_list.GetSize();
   for (size_t mi = 0; mi != num_images; ++mi) {
-    std::vector<swift::PluginSearchOption::Value> plugin_search_options;
+    std::vector<swift::PluginSearchOption> plugin_search_options;
     std::vector<std::string> module_search_paths;
     std::vector<std::pair<std::string, bool>> framework_search_paths;
     std::vector<std::string> extra_clang_args;
