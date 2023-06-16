@@ -22,16 +22,15 @@ std::unique_ptr<AppleDWARFIndex> AppleDWARFIndex::Create(
     Module &module, DWARFDataExtractor apple_names,
     DWARFDataExtractor apple_namespaces, DWARFDataExtractor apple_types,
     DWARFDataExtractor apple_objc, DWARFDataExtractor debug_str) {
-  auto apple_names_table_up = std::make_unique<DWARFMappedHash::MemoryTable>(
-      apple_names, debug_str, ".apple_names");
-  if (!apple_names_table_up->IsValid())
-    apple_names_table_up.reset();
+
+  llvm::DataExtractor llvm_debug_str = debug_str.GetAsLLVM();
+
+  auto apple_names_table_up = std::make_unique<llvm::AppleAcceleratorTable>(
+      apple_names.GetAsLLVMDWARF(), llvm_debug_str);
 
   auto apple_namespaces_table_up =
-      std::make_unique<DWARFMappedHash::MemoryTable>(
-          apple_namespaces, debug_str, ".apple_namespaces");
-  if (!apple_namespaces_table_up->IsValid())
-    apple_namespaces_table_up.reset();
+      std::make_unique<llvm::AppleAcceleratorTable>(
+          apple_namespaces.GetAsLLVMDWARF(), llvm_debug_str);
 
   auto apple_types_table_up = std::make_unique<DWARFMappedHash::MemoryTable>(
       apple_types, debug_str, ".apple_types");
@@ -43,6 +42,16 @@ std::unique_ptr<AppleDWARFIndex> AppleDWARFIndex::Create(
   if (!apple_objc_table_up->IsValid())
     apple_objc_table_up.reset();
 
+  auto extract_and_check = [](auto &TablePtr) {
+    if (auto E = TablePtr->extract()) {
+      llvm::consumeError(std::move(E));
+      TablePtr.reset();
+    }
+  };
+
+  extract_and_check(apple_names_table_up);
+  extract_and_check(apple_namespaces_table_up);
+
   if (apple_names_table_up || apple_namespaces_table_up ||
       apple_types_table_up || apple_objc_table_up)
     return std::make_unique<AppleDWARFIndex>(
@@ -53,13 +62,23 @@ std::unique_ptr<AppleDWARFIndex> AppleDWARFIndex::Create(
   return nullptr;
 }
 
+void AppleDWARFIndex::SearchFor(const llvm::AppleAcceleratorTable &table,
+                                llvm::StringRef name,
+                                llvm::function_ref<bool(DWARFDIE die)> callback,
+                                std::optional<dw_tag_t> search_for_tag,
+                                std::optional<uint32_t> search_for_qualhash) {
+  assert(!search_for_tag && !search_for_qualhash && "not yet implemented");
+  auto converted_cb = DIERefCallback(callback, name);
+  for (const auto &entry : table.equal_range(name))
+    if (!converted_cb(entry))
+      break;
+}
+
 void AppleDWARFIndex::GetGlobalVariables(
     ConstString basename, llvm::function_ref<bool(DWARFDIE die)> callback) {
   if (!m_apple_names_up)
     return;
-  m_apple_names_up->FindByName(
-      basename.GetStringRef(),
-      DIERefCallback(callback, basename.GetStringRef()));
+  SearchFor(*m_apple_names_up, basename, callback);
 }
 
 void AppleDWARFIndex::GetGlobalVariables(
@@ -68,11 +87,13 @@ void AppleDWARFIndex::GetGlobalVariables(
   if (!m_apple_names_up)
     return;
 
-  DWARFMappedHash::DIEInfoArray hash_data;
-  m_apple_names_up->AppendAllDIEsThatMatchingRegex(regex, hash_data);
-  // This is not really the DIE name.
-  DWARFMappedHash::ExtractDIEArray(hash_data,
-                                   DIERefCallback(callback, regex.GetText()));
+  DIERefCallbackImpl converted_cb = DIERefCallback(callback, regex.GetText());
+
+  for (const auto &entry : m_apple_names_up->entries())
+    if (std::optional<llvm::StringRef> name = entry.readName();
+        name && Mangled(*name).NameMatches(regex))
+      if (!converted_cb(entry.BaseEntry))
+        return;
 }
 
 void AppleDWARFIndex::GetGlobalVariables(
@@ -81,11 +102,18 @@ void AppleDWARFIndex::GetGlobalVariables(
     return;
 
   const DWARFUnit &non_skeleton_cu = cu.GetNonSkeletonUnit();
-  DWARFMappedHash::DIEInfoArray hash_data;
-  m_apple_names_up->AppendAllDIEsInRange(non_skeleton_cu.GetOffset(),
-                                         non_skeleton_cu.GetNextUnitOffset(),
-                                         hash_data);
-  DWARFMappedHash::ExtractDIEArray(hash_data, DIERefCallback(callback));
+  dw_offset_t lower_bound = non_skeleton_cu.GetOffset();
+  dw_offset_t upper_bound = non_skeleton_cu.GetNextUnitOffset();
+  auto is_in_range = [lower_bound, upper_bound](std::optional<uint32_t> val) {
+    return val.has_value() && *val >= lower_bound && *val < upper_bound;
+  };
+
+  DIERefCallbackImpl converted_cb = DIERefCallback(callback);
+  for (auto entry : m_apple_names_up->entries()) {
+    if (is_in_range(entry.BaseEntry.getDIESectionOffset()))
+      if (!converted_cb(entry.BaseEntry))
+        return;
+  }
 }
 
 void AppleDWARFIndex::GetObjCMethods(
@@ -174,31 +202,30 @@ void AppleDWARFIndex::GetNamespaces(
     ConstString name, llvm::function_ref<bool(DWARFDIE die)> callback) {
   if (!m_apple_namespaces_up)
     return;
-  m_apple_namespaces_up->FindByName(
-      name.GetStringRef(), DIERefCallback(callback, name.GetStringRef()));
+  SearchFor(*m_apple_namespaces_up, name, callback);
 }
 
 void AppleDWARFIndex::GetFunctions(
     const Module::LookupInfo &lookup_info, SymbolFileDWARF &dwarf,
     const CompilerDeclContext &parent_decl_ctx,
     llvm::function_ref<bool(DWARFDIE die)> callback) {
+  if (!m_apple_names_up)
+    return;
+
   ConstString name = lookup_info.GetLookupName();
-  m_apple_names_up->FindByName(name.GetStringRef(), [&](DIERef die_ref) {
-    return ProcessFunctionDIE(lookup_info, die_ref, dwarf, parent_decl_ctx,
-                              callback);
-  });
+  for (const auto &entry : m_apple_names_up->equal_range(name)) {
+    DIERef die_ref(std::nullopt, DIERef::Section::DebugInfo,
+                   *entry.getDIESectionOffset());
+    if (!ProcessFunctionDIE(lookup_info, die_ref, dwarf, parent_decl_ctx,
+                            callback))
+      return;
+  }
 }
 
 void AppleDWARFIndex::GetFunctions(
     const RegularExpression &regex,
     llvm::function_ref<bool(DWARFDIE die)> callback) {
-  if (!m_apple_names_up)
-    return;
-
-  DWARFMappedHash::DIEInfoArray hash_data;
-  m_apple_names_up->AppendAllDIEsThatMatchingRegex(regex, hash_data);
-  DWARFMappedHash::ExtractDIEArray(hash_data,
-                                   DIERefCallback(callback, regex.GetText()));
+  return GetGlobalVariables(regex, callback);
 }
 
 void AppleDWARFIndex::Dump(Stream &s) {
