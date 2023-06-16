@@ -77,9 +77,6 @@ Changes to LLVM infrastructure
   legacy inliner pass. Backend stack coloring should handle cases alloca
   merging initially set out to handle.
 
-* InstructionSimplify APIs now require instructions be inserted into a
-  parent function.
-
 Changes to building LLVM
 ------------------------
 
