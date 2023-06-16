@@ -65,32 +65,30 @@ NSDictionary_Additionals::GetAdditionalSynthetics() {
 
 static CompilerType GetLLDBNSPairType(TargetSP target_sp) {
   CompilerType compiler_type;
-
   TypeSystemClangSP scratch_ts_sp =
       ScratchTypeSystemClang::GetForTarget(*target_sp);
 
-  if (scratch_ts_sp) {
-    ConstString g_lldb_autogen_nspair("__lldb_autogen_nspair");
+  if (!scratch_ts_sp)
+    return compiler_type;
 
-    compiler_type = scratch_ts_sp->GetTypeForIdentifier<clang::CXXRecordDecl>(
-        g_lldb_autogen_nspair);
+  static constexpr llvm::StringLiteral g_lldb_autogen_nspair("__lldb_autogen_nspair");
 
-    if (!compiler_type) {
-      compiler_type = scratch_ts_sp->CreateRecordType(
-          nullptr, OptionalClangModuleID(), lldb::eAccessPublic,
-          g_lldb_autogen_nspair.GetCString(), clang::TTK_Struct,
-          lldb::eLanguageTypeC);
+  compiler_type = scratch_ts_sp->GetTypeForIdentifier<clang::CXXRecordDecl>(g_lldb_autogen_nspair);
 
-      if (compiler_type) {
-        TypeSystemClang::StartTagDeclarationDefinition(compiler_type);
-        CompilerType id_compiler_type =
-            scratch_ts_sp->GetBasicType(eBasicTypeObjCID);
-        TypeSystemClang::AddFieldToRecordType(
-            compiler_type, "key", id_compiler_type, lldb::eAccessPublic, 0);
-        TypeSystemClang::AddFieldToRecordType(
-            compiler_type, "value", id_compiler_type, lldb::eAccessPublic, 0);
-        TypeSystemClang::CompleteTagDeclarationDefinition(compiler_type);
-      }
+  if (!compiler_type) {
+    compiler_type = scratch_ts_sp->CreateRecordType(
+        nullptr, OptionalClangModuleID(), lldb::eAccessPublic,
+        g_lldb_autogen_nspair, clang::TTK_Struct, lldb::eLanguageTypeC);
+
+    if (compiler_type) {
+      TypeSystemClang::StartTagDeclarationDefinition(compiler_type);
+      CompilerType id_compiler_type =
+          scratch_ts_sp->GetBasicType(eBasicTypeObjCID);
+      TypeSystemClang::AddFieldToRecordType(
+          compiler_type, "key", id_compiler_type, lldb::eAccessPublic, 0);
+      TypeSystemClang::AddFieldToRecordType(
+          compiler_type, "value", id_compiler_type, lldb::eAccessPublic, 0);
+      TypeSystemClang::CompleteTagDeclarationDefinition(compiler_type);
     }
   }
   return compiler_type;
