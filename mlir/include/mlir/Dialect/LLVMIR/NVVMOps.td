@@ -19,6 +19,8 @@ include "mlir/Interfaces/SideEffectInterfaces.td"
 
 def LLVM_i8Ptr_global : LLVM_IntPtrBase<8, 1>;
 def LLVM_i8Ptr_shared : LLVM_IntPtrBase<8, 3>;
+def LLVM_i64ptr_any : LLVM_IntPtrBase<64>;
+def LLVM_i64ptr_shared : LLVM_IntPtrBase<64, 3>;
 
 //===----------------------------------------------------------------------===//
 // NVVM dialect definitions
@@ -171,6 +173,28 @@ def NVVM_ReduxOp :
   let assemblyFormat = [{
     $kind $val `,` $mask_and_clamp  attr-dict `:` type($val) `->` type($res)
    }];   
+}
+
+//===----------------------------------------------------------------------===//
+// NVVM Split arrive/wait barrier
+//===----------------------------------------------------------------------===//
+
+/// mbarrier.init instruction with generic pointer type
+def NVVM_MBarrierInitOp : NVVM_Op<"mbarrier.init">,
+  Arguments<(ins LLVM_i64ptr_any:$addr, I32:$count)> {
+  string llvmBuilder = [{
+      createIntrinsicCall(builder, llvm::Intrinsic::nvvm_mbarrier_init, {$addr, $count});
+  }];
+  let assemblyFormat = "$addr `,` $count attr-dict `:` type(operands)";
+}
+
+/// mbarrier.init instruction with shared pointer type
+def NVVM_MBarrierInitSharedOp : NVVM_Op<"mbarrier.init.shared">,
+  Arguments<(ins LLVM_i64ptr_shared:$addr, I32:$count)> {
+  string llvmBuilder = [{
+      createIntrinsicCall(builder, llvm::Intrinsic::nvvm_mbarrier_init_shared, {$addr, $count});
+  }];
+  let assemblyFormat = "$addr `,` $count attr-dict `:` type(operands)";
 }
 
 //===----------------------------------------------------------------------===//
