@@ -326,6 +326,34 @@ join:
   ret <vscale x 16 x i1> %pg
 }
 
+define void @phi_insert_point(<vscale x 4 x i1> %arg, ptr %p) {
+; CHECK-LABEL: define void @phi_insert_point
+; CHECK-SAME: (<vscale x 4 x i1> [[ARG:%.*]], ptr [[P:%.*]]) {
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    br label [[FOR_BODY:%.*]]
+; CHECK:       for.body:
+; CHECK-NEXT:    [[CONVERT:%.*]] = phi <vscale x 4 x i1> [ [[ARG]], [[ENTRY:%.*]] ], [ zeroinitializer, [[FOR_BODY]] ]
+; CHECK-NEXT:    [[IDX:%.*]] = phi i64 [ 0, [[ENTRY]] ], [ [[IDX_NEXT:%.*]], [[FOR_BODY]] ]
+; CHECK-NEXT:    [[IDX_EXT:%.*]] = ashr i64 [[IDX]], 1
+; CHECK-NEXT:    store <vscale x 4 x i1> [[CONVERT]], ptr [[P]], align 1
+; CHECK-NEXT:    [[IDX_NEXT]] = or i64 [[IDX_EXT]], 1
+; CHECK-NEXT:    br label [[FOR_BODY]]
+;
+entry:
+  %init = call <vscale x 16 x i1> @llvm.aarch64.sve.convert.to.svbool.nxv4i1(<vscale x 4 x i1> %arg)
+  br label %for.body
+
+for.body:
+  %phi = phi <vscale x 16 x i1> [ %init, %entry ], [ %phi.next, %for.body ]
+  %idx = phi i64 [ 0, %entry ], [ %idx.next, %for.body ]
+  %idx.ext = ashr i64 %idx, 1
+  %convert = call <vscale x 4 x i1> @llvm.aarch64.sve.convert.from.svbool.nxv4i1(<vscale x 16 x i1> %phi)
+  store <vscale x 4 x i1> %convert, ptr %p
+  %idx.next = or i64 %idx.ext, 1
+  %phi.next = call <vscale x 16 x i1> @llvm.aarch64.sve.convert.to.svbool.nxv4i1(<vscale x 4 x i1> zeroinitializer)
+  br label %for.body
+}
+
 declare <vscale x 16 x i1> @llvm.aarch64.sve.convert.to.svbool.nxv8i1(<vscale x 8 x i1>)
 declare <vscale x 16 x i1> @llvm.aarch64.sve.convert.to.svbool.nxv4i1(<vscale x 4 x i1>)
 declare <vscale x 16 x i1> @llvm.aarch64.sve.convert.to.svbool.nxv2i1(<vscale x 2 x i1>)
