@@ -142,5 +142,7 @@ class TestCase(TestBase):
     def test_void_result(self):
         """Test dwim-print does not surface an error message for void expressions."""
         self.build()
-        lldbutil.run_to_source_breakpoint(self, "// break here", lldb.SBFileSpec("main.c"))
+        lldbutil.run_to_source_breakpoint(
+            self, "// break here", lldb.SBFileSpec("main.c")
+        )
         self.expect("dwim-print (void)15", matching=False, patterns=["(?i)error"])
