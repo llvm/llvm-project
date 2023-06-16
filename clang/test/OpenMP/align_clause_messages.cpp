@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -fopenmp -fopenmp-version=51 %s -verify
+// RUN: %clang_cc1 -fopenmp %s -verify
 
 int foobar() {
   return 1;

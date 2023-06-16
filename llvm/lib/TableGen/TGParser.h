@@ -19,124 +19,122 @@
 #include <map>
 
 namespace llvm {
-  class SourceMgr;
-  class Twine;
-  struct ForeachLoop;
-  struct MultiClass;
-  struct SubClassReference;
-  struct SubMultiClassReference;
+class SourceMgr;
+class Twine;
+struct ForeachLoop;
+struct MultiClass;
+struct SubClassReference;
+struct SubMultiClassReference;
 
-  struct LetRecord {
-    StringInit *Name;
-    std::vector<unsigned> Bits;
-    Init *Value;
-    SMLoc Loc;
-    LetRecord(StringInit *N, ArrayRef<unsigned> B, Init *V, SMLoc L)
-      : Name(N), Bits(B), Value(V), Loc(L) {
-    }
-  };
+struct LetRecord {
+  StringInit *Name;
+  std::vector<unsigned> Bits;
+  Init *Value;
+  SMLoc Loc;
+  LetRecord(StringInit *N, ArrayRef<unsigned> B, Init *V, SMLoc L)
+      : Name(N), Bits(B), Value(V), Loc(L) {}
+};
 
-  /// RecordsEntry - Holds exactly one of a Record, ForeachLoop, or
-  /// AssertionInfo.
-  struct RecordsEntry {
-    std::unique_ptr<Record> Rec;
-    std::unique_ptr<ForeachLoop> Loop;
-    std::unique_ptr<Record::AssertionInfo> Assertion;
+/// RecordsEntry - Holds exactly one of a Record, ForeachLoop, or
+/// AssertionInfo.
+struct RecordsEntry {
+  std::unique_ptr<Record> Rec;
+  std::unique_ptr<ForeachLoop> Loop;
+  std::unique_ptr<Record::AssertionInfo> Assertion;
 
-    void dump() const;
+  void dump() const;
 
-    RecordsEntry() = default;
-    RecordsEntry(std::unique_ptr<Record> Rec) : Rec(std::move(Rec)) {}
-    RecordsEntry(std::unique_ptr<ForeachLoop> Loop)
-        : Loop(std::move(Loop)) {}
-    RecordsEntry(std::unique_ptr<Record::AssertionInfo> Assertion)
-        : Assertion(std::move(Assertion)) {}
-  };
+  RecordsEntry() = default;
+  RecordsEntry(std::unique_ptr<Record> Rec) : Rec(std::move(Rec)) {}
+  RecordsEntry(std::unique_ptr<ForeachLoop> Loop) : Loop(std::move(Loop)) {}
+  RecordsEntry(std::unique_ptr<Record::AssertionInfo> Assertion)
+      : Assertion(std::move(Assertion)) {}
+};
 
-  /// ForeachLoop - Record the iteration state associated with a for loop.
-  /// This is used to instantiate items in the loop body.
-  ///
-  /// IterVar is allowed to be null, in which case no iteration variable is
-  /// defined in the loop at all. (This happens when a ForeachLoop is
-  /// constructed by desugaring an if statement.)
-  struct ForeachLoop {
-    SMLoc Loc;
-    VarInit *IterVar;
-    Init *ListValue;
-    std::vector<RecordsEntry> Entries;
+/// ForeachLoop - Record the iteration state associated with a for loop.
+/// This is used to instantiate items in the loop body.
+///
+/// IterVar is allowed to be null, in which case no iteration variable is
+/// defined in the loop at all. (This happens when a ForeachLoop is
+/// constructed by desugaring an if statement.)
+struct ForeachLoop {
+  SMLoc Loc;
+  VarInit *IterVar;
+  Init *ListValue;
+  std::vector<RecordsEntry> Entries;
 
-    void dump() const;
+  void dump() const;
 
-    ForeachLoop(SMLoc Loc, VarInit *IVar, Init *LValue)
+  ForeachLoop(SMLoc Loc, VarInit *IVar, Init *LValue)
       : Loc(Loc), IterVar(IVar), ListValue(LValue) {}
-  };
+};
 
-  struct DefsetRecord {
-    SMLoc Loc;
-    RecTy *EltTy = nullptr;
-    SmallVector<Init *, 16> Elements;
-  };
+struct DefsetRecord {
+  SMLoc Loc;
+  RecTy *EltTy = nullptr;
+  SmallVector<Init *, 16> Elements;
+};
 
-  struct MultiClass {
-    Record Rec; // Placeholder for template args and Name.
-    std::vector<RecordsEntry> Entries;
+struct MultiClass {
+  Record Rec; // Placeholder for template args and Name.
+  std::vector<RecordsEntry> Entries;
 
-    void dump() const;
+  void dump() const;
 
-    MultiClass(StringRef Name, SMLoc Loc, RecordKeeper &Records)
-        : Rec(Name, Loc, Records) {}
-  };
+  MultiClass(StringRef Name, SMLoc Loc, RecordKeeper &Records)
+      : Rec(Name, Loc, Records) {}
+};
 
-  class TGVarScope {
-  public:
-    enum ScopeKind { SK_Local, SK_Record, SK_ForeachLoop, SK_MultiClass };
+class TGVarScope {
+public:
+  enum ScopeKind { SK_Local, SK_Record, SK_ForeachLoop, SK_MultiClass };
 
-  private:
-    ScopeKind Kind;
-    std::unique_ptr<TGVarScope> Parent;
-    // A scope to hold variable definitions from defvar.
-    std::map<std::string, Init *, std::less<>> Vars;
-    Record *CurRec = nullptr;
-    ForeachLoop *CurLoop = nullptr;
-    MultiClass *CurMultiClass = nullptr;
+private:
+  ScopeKind Kind;
+  std::unique_ptr<TGVarScope> Parent;
+  // A scope to hold variable definitions from defvar.
+  std::map<std::string, Init *, std::less<>> Vars;
+  Record *CurRec = nullptr;
+  ForeachLoop *CurLoop = nullptr;
+  MultiClass *CurMultiClass = nullptr;
 
-  public:
-    TGVarScope(std::unique_ptr<TGVarScope> Parent)
-        : Kind(SK_Local), Parent(std::move(Parent)) {}
-    TGVarScope(std::unique_ptr<TGVarScope> Parent, Record *Rec)
-        : Kind(SK_Record), Parent(std::move(Parent)), CurRec(Rec) {}
-    TGVarScope(std::unique_ptr<TGVarScope> Parent, ForeachLoop *Loop)
-        : Kind(SK_ForeachLoop), Parent(std::move(Parent)), CurLoop(Loop) {}
-    TGVarScope(std::unique_ptr<TGVarScope> Parent, MultiClass *Multiclass)
-        : Kind(SK_MultiClass), Parent(std::move(Parent)),
-          CurMultiClass(Multiclass) {}
+public:
+  TGVarScope(std::unique_ptr<TGVarScope> Parent)
+      : Kind(SK_Local), Parent(std::move(Parent)) {}
+  TGVarScope(std::unique_ptr<TGVarScope> Parent, Record *Rec)
+      : Kind(SK_Record), Parent(std::move(Parent)), CurRec(Rec) {}
+  TGVarScope(std::unique_ptr<TGVarScope> Parent, ForeachLoop *Loop)
+      : Kind(SK_ForeachLoop), Parent(std::move(Parent)), CurLoop(Loop) {}
+  TGVarScope(std::unique_ptr<TGVarScope> Parent, MultiClass *Multiclass)
+      : Kind(SK_MultiClass), Parent(std::move(Parent)),
+        CurMultiClass(Multiclass) {}
 
-    std::unique_ptr<TGVarScope> extractParent() {
-      // This is expected to be called just before we are destructed, so
-      // it doesn't much matter what state we leave 'parent' in.
-      return std::move(Parent);
-    }
+  std::unique_ptr<TGVarScope> extractParent() {
+    // This is expected to be called just before we are destructed, so
+    // it doesn't much matter what state we leave 'parent' in.
+    return std::move(Parent);
+  }
 
-    Init *getVar(RecordKeeper &Records, MultiClass *ParsingMultiClass,
-                 StringInit *Name, SMRange NameLoc,
-                 bool TrackReferenceLocs) const;
+  Init *getVar(RecordKeeper &Records, MultiClass *ParsingMultiClass,
+               StringInit *Name, SMRange NameLoc,
+               bool TrackReferenceLocs) const;
 
-    bool varAlreadyDefined(StringRef Name) const {
-      // When we check whether a variable is already defined, for the purpose of
-      // reporting an error on redefinition, we don't look up to the parent
-      // scope, because it's all right to shadow an outer definition with an
-      // inner one.
-      return Vars.find(Name) != Vars.end();
-    }
+  bool varAlreadyDefined(StringRef Name) const {
+    // When we check whether a variable is already defined, for the purpose of
+    // reporting an error on redefinition, we don't look up to the parent
+    // scope, because it's all right to shadow an outer definition with an
+    // inner one.
+    return Vars.find(Name) != Vars.end();
+  }
 
-    void addVar(StringRef Name, Init *I) {
-      bool Ins = Vars.insert(std::make_pair(std::string(Name), I)).second;
-      (void)Ins;
-      assert(Ins && "Local variable already exists");
-    }
+  void addVar(StringRef Name, Init *I) {
+    bool Ins = Vars.insert(std::make_pair(std::string(Name), I)).second;
+    (void)Ins;
+    assert(Ins && "Local variable already exists");
+  }
 
-    bool isOutermost() const { return Parent == nullptr; }
-  };
+  bool isOutermost() const { return Parent == nullptr; }
+};
 
 class TGParser {
   TGLexer Lex;

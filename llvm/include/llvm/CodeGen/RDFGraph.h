@@ -225,6 +225,7 @@
 #define LLVM_CODEGEN_RDFGRAPH_H
 
 #include "RDFRegisters.h"
+#include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/MC/LaneBitmask.h"
 #include "llvm/Support/Allocator.h"
@@ -336,6 +337,7 @@ struct BuildOptions {
   enum : unsigned {
     None = 0x00,
     KeepDeadPhis = 0x01, // Do not remove dead phis during build.
+    OmitReserved = 0x02, // Do not track reserved registers.
   };
 };
 
@@ -374,11 +376,13 @@ struct StmtNode;
 struct BlockNode;
 struct FuncNode;
 
+// Use these short names with rdf:: qualification to avoid conflicts with
+// preexisting names. Do not use 'using namespace rdf'.
 using Node = NodeAddr<NodeBase *>;
 
 using Ref = NodeAddr<RefNode *>;
 using Def = NodeAddr<DefNode *>;
-using Use = NodeAddr<UseNode *>;
+using Use = NodeAddr<UseNode *>; // This may conflict with llvm::Use.
 using PhiUse = NodeAddr<PhiUseNode *>;
 
 using Code = NodeAddr<CodeNode *>;
@@ -662,6 +666,19 @@ struct DataFlowGraph {
                 const MachineDominanceFrontier &mdf,
                 const TargetOperandInfo &toi);
 
+  struct Config {
+    Config() = default;
+    Config(unsigned Opts) : Options(Opts) {}
+    Config(ArrayRef<const TargetRegisterClass *> RCs) : Classes(RCs) {}
+    Config(ArrayRef<MCPhysReg> Track) : TrackRegs(Track.begin(), Track.end()) {}
+    Config(ArrayRef<RegisterId> Track)
+        : TrackRegs(Track.begin(), Track.end()) {}
+
+    unsigned Options = BuildOptions::None;
+    SmallVector<const TargetRegisterClass *> Classes;
+    std::set<RegisterId> TrackRegs;
+  };
+
   NodeBase *ptr(NodeId N) const;
   template <typename T> T ptr(NodeId N) const { //
     return static_cast<T>(ptr(N));
@@ -754,7 +771,9 @@ struct DataFlowGraph {
   // Map: Register (physical or virtual) -> DefStack
   using DefStackMap = std::unordered_map<RegisterId, DefStack>;
 
-  void build(unsigned Options = BuildOptions::None);
+  void build(const Config &config);
+  void build() { build(Config()); }
+
   void pushAllDefs(Instr IA, DefStackMap &DM);
   void markBlock(NodeId B, DefStackMap &DefM);
   void releaseBlock(NodeId B, DefStackMap &DefM);
@@ -774,7 +793,6 @@ struct DataFlowGraph {
 
   Ref getNextRelated(Instr IA, Ref RA) const;
   Ref getNextShadow(Instr IA, Ref RA, bool Create);
-  Ref getNextShadow(Instr IA, Ref RA) const;
 
   NodeList getRelatedRefs(Instr IA, Ref RA) const;
 
@@ -791,6 +809,9 @@ struct DataFlowGraph {
     if (RemoveFromOwner)
       removeFromOwner(DA);
   }
+
+  bool isTracked(RegisterRef RR) const;
+  bool hasUntrackedRef(Stmt S, bool IgnoreReserved = true) const;
 
   // Some useful filters.
   template <uint16_t Kind> static bool IsRef(const Node BA) {
@@ -845,7 +866,7 @@ private:
 
   void buildStmt(Block BA, MachineInstr &In);
   void recordDefsForDF(BlockRefsMap &PhiM, Block BA);
-  void buildPhis(BlockRefsMap &PhiM, RegisterSet &AllRefs, Block BA);
+  void buildPhis(BlockRefsMap &PhiM, Block BA);
   void removeUnusedPhis();
 
   void pushClobbers(Instr IA, DefStackMap &DM);
@@ -881,6 +902,10 @@ private:
   std::map<MachineBasicBlock *, Block> BlockNodes;
   // Lane mask map.
   LaneMaskIndex LMI;
+
+  Config BuildCfg;
+  std::set<unsigned> TrackedUnits;
+  BitVector ReservedRegs;
 }; // struct DataFlowGraph
 
 template <typename Predicate>
@@ -965,7 +990,6 @@ raw_ostream &operator<<(raw_ostream &OS,
                         const Print<DataFlowGraph::DefStack> &P);
 
 } // end namespace rdf
-
 } // end namespace llvm
 
 #endif // LLVM_CODEGEN_RDFGRAPH_H

@@ -318,9 +318,14 @@ class DwarfDebug : public DebugHandlerBase {
 
   /// This is a collection of subprogram MDNodes that are processed to
   /// create DIEs.
-  SetVector<const DISubprogram *, SmallVector<const DISubprogram *, 16>,
-            SmallPtrSet<const DISubprogram *, 16>>
-      ProcessedSPNodes;
+  SmallSetVector<const DISubprogram *, 16> ProcessedSPNodes;
+
+  /// Map function-local imported entities to their parent local scope
+  /// (either DILexicalBlock or DISubprogram) for a processed function
+  /// (including inlined subprograms).
+  using MDNodeSet = SetVector<const MDNode *, SmallVector<const MDNode *, 2>,
+                              SmallPtrSet<const MDNode *, 2>>;
+  DenseMap<const DILocalScope *, MDNodeSet> LocalDeclsPerLS;
 
   /// If nonnull, stores the current machine function we're processing.
   const MachineFunction *CurFn = nullptr;
@@ -456,9 +461,6 @@ private:
 
   using InlinedEntity = DbgValueHistoryMap::InlinedEntity;
 
-  void ensureAbstractEntityIsCreated(DwarfCompileUnit &CU,
-                                     const DINode *Node,
-                                     const MDNode *Scope);
   void ensureAbstractEntityIsCreatedIfScoped(DwarfCompileUnit &CU,
                                              const DINode *Node,
                                              const MDNode *Scope);
@@ -597,10 +599,6 @@ private:
   DwarfCompileUnit &getOrCreateDwarfCompileUnit(const DICompileUnit *DIUnit);
   void finishUnitAttributes(const DICompileUnit *DIUnit,
                             DwarfCompileUnit &NewCU);
-
-  /// Construct imported_module or imported_declaration DIE.
-  void constructAndAddImportedEntityDIE(DwarfCompileUnit &TheCU,
-                                        const DIImportedEntity *N);
 
   /// Register a source line with debug info. Returns the unique
   /// label that was emitted and which provides correspondence to the
@@ -840,6 +838,10 @@ public:
   /// If the \p File has an MD5 checksum, return it as an MD5Result
   /// allocated in the MCContext.
   std::optional<MD5::MD5Result> getMD5AsBytes(const DIFile *File) const;
+
+  MDNodeSet &getLocalDeclsForScope(const DILocalScope *S) {
+    return LocalDeclsPerLS[S];
+  }
 };
 
 } // end namespace llvm

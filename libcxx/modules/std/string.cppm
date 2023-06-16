@@ -71,10 +71,15 @@ export namespace std {
   // [basic.string.hash], hash support
   using std::hash;
 
+  // TODO MODULES is this a bug?
+#if 1
+  using std::operator""s;
+#else
   inline namespace literals {
     inline namespace string_literals {
       // [basic.string.literals], suffix for basic_string literals
       using std::literals::string_literals::operator""s;
     } // namespace string_literals
   }   // namespace literals
+#endif
 } // namespace std

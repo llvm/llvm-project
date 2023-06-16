@@ -200,6 +200,8 @@ public:
   /// Returns the type of the innermost field.
   QualType getType() const { return getFieldDesc()->getType(); }
 
+  Pointer getDeclPtr() const { return Pointer(Pointee); }
+
   /// Returns the element size of the innermost field.
   size_t elemSize() const {
     if (Base == RootPtrMark)

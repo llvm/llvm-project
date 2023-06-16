@@ -108,15 +108,11 @@ private:
              const directory_iterator& __rhs) noexcept;
 
   // construct the dir_stream
-  _LIBCPP_FUNC_VIS
-  directory_iterator(const path&, error_code*,
-                     directory_options = directory_options::none);
+  _LIBCPP_EXPORTED_FROM_ABI directory_iterator(const path&, error_code*, directory_options = directory_options::none);
 
-  _LIBCPP_FUNC_VIS
-  directory_iterator& __increment(error_code* __ec = nullptr);
+  _LIBCPP_EXPORTED_FROM_ABI directory_iterator& __increment(error_code* __ec = nullptr);
 
-  _LIBCPP_FUNC_VIS
-  const directory_entry& __dereference() const;
+  _LIBCPP_EXPORTED_FROM_ABI const directory_entry& __dereference() const;
 
 private:
   shared_ptr<__dir_stream> __imp_;

@@ -11,6 +11,7 @@
 #include "Floating.h"
 #include "Opcode.h"
 #include "Program.h"
+#include "clang/AST/ASTLambda.h"
 #include "clang/AST/DeclCXX.h"
 #include <type_traits>
 
@@ -42,11 +43,29 @@ ByteCodeEmitter::compileFunc(const FunctionDecl *FuncDecl) {
   // the 'this' pointer. This parameter is pop()ed from the
   // InterpStack when calling the function.
   bool HasThisPointer = false;
-  if (const auto *MD = dyn_cast<CXXMethodDecl>(FuncDecl);
-      MD && MD->isInstance()) {
-    HasThisPointer = true;
-    ParamTypes.push_back(PT_Ptr);
-    ParamOffset += align(primSize(PT_Ptr));
+  if (const auto *MD = dyn_cast<CXXMethodDecl>(FuncDecl)) {
+    if (MD->isInstance()) {
+      HasThisPointer = true;
+      ParamTypes.push_back(PT_Ptr);
+      ParamOffset += align(primSize(PT_Ptr));
+    }
+
+    // Set up lambda capture to closure record field mapping.
+    if (isLambdaCallOperator(MD)) {
+      const Record *R = P.getOrCreateRecord(MD->getParent());
+      llvm::DenseMap<const ValueDecl *, FieldDecl *> LC;
+      FieldDecl *LTC;
+
+      MD->getParent()->getCaptureFields(LC, LTC);
+
+      for (auto Cap : LC) {
+        unsigned Offset = R->getField(Cap.second)->Offset;
+        this->LambdaCaptures[Cap.first] = {
+            Offset, Cap.second->getType()->isReferenceType()};
+      }
+      // FIXME: LambdaThisCapture
+      (void)LTC;
+    }
   }
 
   // Assign descriptors to all parameters.

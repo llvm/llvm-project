@@ -250,7 +250,8 @@ define <2 x i64> @abd_ext_v2i64(<2 x i64> %a, <2 x i64> %b) nounwind {
 ;
 ; AVX1-LABEL: abd_ext_v2i64:
 ; AVX1:       # %bb.0:
-; AVX1-NEXT:    vmovdqa {{.*#+}} xmm2 = [9223372036854775808,9223372036854775808]
+; AVX1-NEXT:    vmovddup {{.*#+}} xmm2 = [9223372036854775808,9223372036854775808]
+; AVX1-NEXT:    # xmm2 = mem[0,0]
 ; AVX1-NEXT:    vpxor %xmm2, %xmm1, %xmm3
 ; AVX1-NEXT:    vpxor %xmm2, %xmm0, %xmm2
 ; AVX1-NEXT:    vpcmpgtq %xmm3, %xmm2, %xmm2
@@ -261,7 +262,7 @@ define <2 x i64> @abd_ext_v2i64(<2 x i64> %a, <2 x i64> %b) nounwind {
 ;
 ; AVX2-LABEL: abd_ext_v2i64:
 ; AVX2:       # %bb.0:
-; AVX2-NEXT:    vmovdqa {{.*#+}} xmm2 = [9223372036854775808,9223372036854775808]
+; AVX2-NEXT:    vpbroadcastq {{.*#+}} xmm2 = [9223372036854775808,9223372036854775808]
 ; AVX2-NEXT:    vpxor %xmm2, %xmm1, %xmm3
 ; AVX2-NEXT:    vpxor %xmm2, %xmm0, %xmm2
 ; AVX2-NEXT:    vpcmpgtq %xmm3, %xmm2, %xmm2
@@ -327,7 +328,8 @@ define <2 x i64> @abd_ext_v2i64_undef(<2 x i64> %a, <2 x i64> %b) nounwind {
 ;
 ; AVX1-LABEL: abd_ext_v2i64_undef:
 ; AVX1:       # %bb.0:
-; AVX1-NEXT:    vmovdqa {{.*#+}} xmm2 = [9223372036854775808,9223372036854775808]
+; AVX1-NEXT:    vmovddup {{.*#+}} xmm2 = [9223372036854775808,9223372036854775808]
+; AVX1-NEXT:    # xmm2 = mem[0,0]
 ; AVX1-NEXT:    vpxor %xmm2, %xmm1, %xmm3
 ; AVX1-NEXT:    vpxor %xmm2, %xmm0, %xmm2
 ; AVX1-NEXT:    vpcmpgtq %xmm3, %xmm2, %xmm2
@@ -338,7 +340,7 @@ define <2 x i64> @abd_ext_v2i64_undef(<2 x i64> %a, <2 x i64> %b) nounwind {
 ;
 ; AVX2-LABEL: abd_ext_v2i64_undef:
 ; AVX2:       # %bb.0:
-; AVX2-NEXT:    vmovdqa {{.*#+}} xmm2 = [9223372036854775808,9223372036854775808]
+; AVX2-NEXT:    vpbroadcastq {{.*#+}} xmm2 = [9223372036854775808,9223372036854775808]
 ; AVX2-NEXT:    vpxor %xmm2, %xmm1, %xmm3
 ; AVX2-NEXT:    vpxor %xmm2, %xmm0, %xmm2
 ; AVX2-NEXT:    vpcmpgtq %xmm3, %xmm2, %xmm2
@@ -497,7 +499,8 @@ define <2 x i64> @abd_minmax_v2i64(<2 x i64> %a, <2 x i64> %b) nounwind {
 ;
 ; AVX1-LABEL: abd_minmax_v2i64:
 ; AVX1:       # %bb.0:
-; AVX1-NEXT:    vmovdqa {{.*#+}} xmm2 = [9223372036854775808,9223372036854775808]
+; AVX1-NEXT:    vmovddup {{.*#+}} xmm2 = [9223372036854775808,9223372036854775808]
+; AVX1-NEXT:    # xmm2 = mem[0,0]
 ; AVX1-NEXT:    vpxor %xmm2, %xmm1, %xmm3
 ; AVX1-NEXT:    vpxor %xmm2, %xmm0, %xmm2
 ; AVX1-NEXT:    vpcmpgtq %xmm3, %xmm2, %xmm2
@@ -508,7 +511,7 @@ define <2 x i64> @abd_minmax_v2i64(<2 x i64> %a, <2 x i64> %b) nounwind {
 ;
 ; AVX2-LABEL: abd_minmax_v2i64:
 ; AVX2:       # %bb.0:
-; AVX2-NEXT:    vmovdqa {{.*#+}} xmm2 = [9223372036854775808,9223372036854775808]
+; AVX2-NEXT:    vpbroadcastq {{.*#+}} xmm2 = [9223372036854775808,9223372036854775808]
 ; AVX2-NEXT:    vpxor %xmm2, %xmm1, %xmm3
 ; AVX2-NEXT:    vpxor %xmm2, %xmm0, %xmm2
 ; AVX2-NEXT:    vpcmpgtq %xmm3, %xmm2, %xmm2
@@ -664,7 +667,8 @@ define <2 x i64> @abd_cmp_v2i64(<2 x i64> %a, <2 x i64> %b) nounwind {
 ;
 ; AVX1-LABEL: abd_cmp_v2i64:
 ; AVX1:       # %bb.0:
-; AVX1-NEXT:    vmovdqa {{.*#+}} xmm2 = [9223372036854775808,9223372036854775808]
+; AVX1-NEXT:    vmovddup {{.*#+}} xmm2 = [9223372036854775808,9223372036854775808]
+; AVX1-NEXT:    # xmm2 = mem[0,0]
 ; AVX1-NEXT:    vpxor %xmm2, %xmm1, %xmm3
 ; AVX1-NEXT:    vpxor %xmm2, %xmm0, %xmm2
 ; AVX1-NEXT:    vpcmpgtq %xmm3, %xmm2, %xmm2
@@ -675,7 +679,7 @@ define <2 x i64> @abd_cmp_v2i64(<2 x i64> %a, <2 x i64> %b) nounwind {
 ;
 ; AVX2-LABEL: abd_cmp_v2i64:
 ; AVX2:       # %bb.0:
-; AVX2-NEXT:    vmovdqa {{.*#+}} xmm2 = [9223372036854775808,9223372036854775808]
+; AVX2-NEXT:    vpbroadcastq {{.*#+}} xmm2 = [9223372036854775808,9223372036854775808]
 ; AVX2-NEXT:    vpxor %xmm2, %xmm1, %xmm3
 ; AVX2-NEXT:    vpxor %xmm2, %xmm0, %xmm2
 ; AVX2-NEXT:    vpcmpgtq %xmm3, %xmm2, %xmm2
@@ -745,7 +749,8 @@ define <2 x i64> @abd_cmp_v2i64_multiuse_cmp(<2 x i64> %a, <2 x i64> %b) nounwin
 ;
 ; AVX1-LABEL: abd_cmp_v2i64_multiuse_cmp:
 ; AVX1:       # %bb.0:
-; AVX1-NEXT:    vmovdqa {{.*#+}} xmm2 = [9223372036854775808,9223372036854775808]
+; AVX1-NEXT:    vmovddup {{.*#+}} xmm2 = [9223372036854775808,9223372036854775808]
+; AVX1-NEXT:    # xmm2 = mem[0,0]
 ; AVX1-NEXT:    vpxor %xmm2, %xmm1, %xmm3
 ; AVX1-NEXT:    vpxor %xmm2, %xmm0, %xmm2
 ; AVX1-NEXT:    vpcmpgtq %xmm3, %xmm2, %xmm2
@@ -757,7 +762,7 @@ define <2 x i64> @abd_cmp_v2i64_multiuse_cmp(<2 x i64> %a, <2 x i64> %b) nounwin
 ;
 ; AVX2-LABEL: abd_cmp_v2i64_multiuse_cmp:
 ; AVX2:       # %bb.0:
-; AVX2-NEXT:    vmovdqa {{.*#+}} xmm2 = [9223372036854775808,9223372036854775808]
+; AVX2-NEXT:    vpbroadcastq {{.*#+}} xmm2 = [9223372036854775808,9223372036854775808]
 ; AVX2-NEXT:    vpxor %xmm2, %xmm1, %xmm3
 ; AVX2-NEXT:    vpxor %xmm2, %xmm0, %xmm2
 ; AVX2-NEXT:    vpcmpgtq %xmm3, %xmm2, %xmm2

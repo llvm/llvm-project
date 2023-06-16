@@ -21,6 +21,9 @@ using LL_UInt320 = __llvm_libc::cpp::UInt<320>;
 using LL_UInt512 = __llvm_libc::cpp::UInt<512>;
 using LL_UInt1024 = __llvm_libc::cpp::UInt<1024>;
 
+using LL_Int128 = __llvm_libc::cpp::Int<128>;
+using LL_Int192 = __llvm_libc::cpp::Int<192>;
+
 TEST(LlvmLibcUIntClassTest, BasicInit) {
   LL_UInt128 empty;
   LL_UInt128 half_val(12345);
@@ -560,3 +563,75 @@ TEST(LlvmLibcUIntClassTest, DivUInt32TimesPow2Tests) {
   TEST_QUICK_DIV_UINT32_POW2(1000000000, 75);
   TEST_QUICK_DIV_UINT32_POW2(1000000000, 101);
 }
+
+TEST(LlvmLibcUIntClassTest, ComparisonInt128Tests) {
+  LL_Int128 a(123);
+  LL_Int128 b(0);
+  LL_Int128 c(-1);
+
+  ASSERT_TRUE(a == a);
+  ASSERT_TRUE(b == b);
+  ASSERT_TRUE(c == c);
+
+  ASSERT_TRUE(a != b);
+  ASSERT_TRUE(a != c);
+  ASSERT_TRUE(b != a);
+  ASSERT_TRUE(b != c);
+  ASSERT_TRUE(c != a);
+  ASSERT_TRUE(c != b);
+
+  ASSERT_TRUE(a > b);
+  ASSERT_TRUE(a >= b);
+  ASSERT_TRUE(a > c);
+  ASSERT_TRUE(a >= c);
+  ASSERT_TRUE(b > c);
+  ASSERT_TRUE(b >= c);
+
+  ASSERT_TRUE(b < a);
+  ASSERT_TRUE(b <= a);
+  ASSERT_TRUE(c < a);
+  ASSERT_TRUE(c <= a);
+  ASSERT_TRUE(c < b);
+  ASSERT_TRUE(c <= b);
+}
+
+TEST(LlvmLibcUIntClassTest, BasicArithmeticInt128Tests) {
+  LL_Int128 a(123);
+  LL_Int128 b(0);
+  LL_Int128 c(-3);
+
+  ASSERT_EQ(a * a, LL_Int128(123 * 123));
+  ASSERT_EQ(a * c, LL_Int128(-369));
+  ASSERT_EQ(c * a, LL_Int128(-369));
+  ASSERT_EQ(c * c, LL_Int128(9));
+  ASSERT_EQ(a * b, b);
+  ASSERT_EQ(b * a, b);
+  ASSERT_EQ(b * c, b);
+  ASSERT_EQ(c * b, b);
+}
+
+#ifdef __SIZEOF_INT128__
+
+TEST(LlvmLibcUIntClassTest, ConstructorFromUInt128Tests) {
+  __uint128_t a = (__uint128_t(123) << 64) + 1;
+  __int128_t b = -static_cast<__int128_t>(a);
+  LL_Int128 c(a);
+  LL_Int128 d(b);
+
+  LL_Int192 e(a);
+  LL_Int192 f(b);
+
+  ASSERT_EQ(static_cast<int>(c), 1);
+  ASSERT_EQ(static_cast<int>(c >> 64), 123);
+  ASSERT_EQ(static_cast<uint64_t>(d), static_cast<uint64_t>(b));
+  ASSERT_EQ(static_cast<uint64_t>(d >> 64), static_cast<uint64_t>(b >> 64));
+  ASSERT_EQ(c + d, LL_Int128(a + b));
+
+  ASSERT_EQ(static_cast<int>(e), 1);
+  ASSERT_EQ(static_cast<int>(e >> 64), 123);
+  ASSERT_EQ(static_cast<uint64_t>(f), static_cast<uint64_t>(b));
+  ASSERT_EQ(static_cast<uint64_t>(f >> 64), static_cast<uint64_t>(b >> 64));
+  ASSERT_EQ(LL_UInt192(e + f), LL_UInt192(a + b));
+}
+
+#endif // __SIZEOF_INT128__

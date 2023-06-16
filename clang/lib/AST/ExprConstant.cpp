@@ -13708,12 +13708,13 @@ bool IntExprEvaluator::VisitCastExpr(const CastExpr *E) {
           Info.Ctx.getDiagnostics().Report(
               E->getExprLoc(), diag::warn_constexpr_unscoped_enum_out_of_range)
               << llvm::toString(Result.getInt(), 10) << Min.getSExtValue()
-              << Max.getSExtValue();
+              << Max.getSExtValue() << ED;
         else if (!ED->getNumNegativeBits() && ConstexprVar &&
                  Max.ult(Result.getInt().getZExtValue()))
-          Info.Ctx.getDiagnostics().Report(E->getExprLoc(),
-                                       diag::warn_constexpr_unscoped_enum_out_of_range)
-	    << llvm::toString(Result.getInt(),10) << Min.getZExtValue() << Max.getZExtValue();
+          Info.Ctx.getDiagnostics().Report(
+              E->getExprLoc(), diag::warn_constexpr_unscoped_enum_out_of_range)
+              << llvm::toString(Result.getInt(), 10) << Min.getZExtValue()
+              << Max.getZExtValue() << ED;
       }
     }
 

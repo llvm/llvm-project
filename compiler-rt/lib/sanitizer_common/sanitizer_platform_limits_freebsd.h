@@ -715,6 +715,13 @@ extern unsigned struct_cap_rights_sz;
 
 extern unsigned struct_fstab_sz;
 extern unsigned struct_StringList_sz;
+
+struct __sanitizer_cpuset {
+  long __bits[(256 + (sizeof(long) * 8) - 1) / (sizeof(long) * 8)];
+};
+
+typedef struct __sanitizer_cpuset __sanitizer_cpuset_t;
+extern unsigned struct_cpuset_sz;
 }  // namespace __sanitizer
 
 #  define CHECK_TYPE_SIZE(TYPE) \

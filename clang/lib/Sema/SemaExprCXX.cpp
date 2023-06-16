@@ -976,6 +976,19 @@ bool Sema::CheckCXXThrowOperand(SourceLocation ThrowLoc,
     Ty = Ptr->getPointeeType();
     isPointer = true;
   }
+
+  // Cannot throw WebAssembly reference type.
+  if (Ty.isWebAssemblyReferenceType()) {
+    Diag(ThrowLoc, diag::err_wasm_reftype_tc) << 0 << E->getSourceRange();
+    return true;
+  }
+
+  // Cannot throw WebAssembly table.
+  if (isPointer && Ty.isWebAssemblyReferenceType()) {
+    Diag(ThrowLoc, diag::err_wasm_table_art) << 2 << E->getSourceRange();
+    return true;
+  }
+
   if (!isPointer || !Ty->isVoidType()) {
     if (RequireCompleteType(ThrowLoc, Ty,
                             isPointer ? diag::err_throw_incomplete_ptr
@@ -6576,6 +6589,13 @@ QualType Sema::CXXCheckConditionalOperands(ExprResult &Cond, ExprResult &LHS,
 
   if (IsSizelessVectorConditional)
     return CheckSizelessVectorConditionalTypes(Cond, LHS, RHS, QuestionLoc);
+
+  // WebAssembly tables are not allowed as conditional LHS or RHS.
+  if (LTy->isWebAssemblyTableType() || RTy->isWebAssemblyTableType()) {
+    Diag(QuestionLoc, diag::err_wasm_table_conditional_expression)
+        << LHS.get()->getSourceRange() << RHS.get()->getSourceRange();
+    return QualType();
+  }
 
   // C++11 [expr.cond]p3
   //   Otherwise, if the second and third operand have different types, and

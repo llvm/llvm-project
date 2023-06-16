@@ -792,8 +792,7 @@ public:
   /// we won't know until all lvalue-to-rvalue and discarded value conversions
   /// have been applied to all subexpressions of the enclosing full expression.
   /// This is cleared at the end of each full expression.
-  using MaybeODRUseExprSet = llvm::SetVector<Expr *, SmallVector<Expr *, 4>,
-                                             llvm::SmallPtrSet<Expr *, 4>>;
+  using MaybeODRUseExprSet = llvm::SmallSetVector<Expr *, 4>;
   MaybeODRUseExprSet MaybeODRUseExprs;
 
   std::unique_ptr<sema::FunctionScopeInfo> CachedFunctionScope;
@@ -1158,9 +1157,6 @@ public:
 
   /// The C++ "type_info" declaration, which is defined in \<typeinfo>.
   RecordDecl *CXXTypeInfoDecl;
-
-  /// The MSVC "_GUID" struct, which is defined in MSVC header files.
-  RecordDecl *MSVCGuidDecl;
 
   /// The C++ "std::source_location::__impl" struct, defined in
   /// \<source_location>.
@@ -6994,9 +6990,6 @@ public:
         IdentifierLoc(IdLoc), CCLoc(ColonColonLoc) {
     }
   };
-
-  bool isNonTypeNestedNameSpecifier(Scope *S, CXXScopeSpec &SS,
-                                    NestedNameSpecInfo &IdInfo);
 
   bool BuildCXXNestedNameSpecifier(Scope *S,
                                    NestedNameSpecInfo &IdInfo,
@@ -13654,6 +13647,12 @@ private:
   // WebAssembly builtin handling.
   bool BuiltinWasmRefNullExtern(CallExpr *TheCall);
   bool BuiltinWasmRefNullFunc(CallExpr *TheCall);
+  bool BuiltinWasmTableGet(CallExpr *TheCall);
+  bool BuiltinWasmTableSet(CallExpr *TheCall);
+  bool BuiltinWasmTableSize(CallExpr *TheCall);
+  bool BuiltinWasmTableGrow(CallExpr *TheCall);
+  bool BuiltinWasmTableFill(CallExpr *TheCall);
+  bool BuiltinWasmTableCopy(CallExpr *TheCall);
 
 public:
   enum FormatStringType {

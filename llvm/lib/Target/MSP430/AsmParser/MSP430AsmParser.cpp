@@ -363,8 +363,7 @@ bool MSP430AsmParser::parseJccInstruction(ParseInstructionInfo &Info,
   }
 
   // Skip optional '$' sign.
-  if (getLexer().getKind() == AsmToken::Dollar)
-    getLexer().Lex(); // Eat '$'
+  (void)parseOptionalToken(AsmToken::Dollar);
 
   const MCExpr *Val;
   SMLoc ExprLoc = getLexer().getLoc();
@@ -411,11 +410,8 @@ bool MSP430AsmParser::ParseInstruction(ParseInstructionInfo &Info,
     return true;
 
   // Parse second operand if any
-  if (getLexer().is(AsmToken::Comma)) {
-    getLexer().Lex(); // Eat ','
-    if (ParseOperand(Operands))
-      return true;
-  }
+  if (parseOptionalToken(AsmToken::Comma) && ParseOperand(Operands))
+    return true;
 
   if (getLexer().isNot(AsmToken::EndOfStatement)) {
     SMLoc Loc = getLexer().getLoc();
@@ -474,15 +470,13 @@ bool MSP430AsmParser::ParseOperand(OperandVector &Operands) {
         MCRegister RegNo = MSP430::PC;
         SMLoc EndLoc = getParser().getTok().getLoc();
         // Try (rN)
-        if (getLexer().getKind() == AsmToken::LParen) {
-          getLexer().Lex(); // Eat '('
+        if (parseOptionalToken(AsmToken::LParen)) {
           SMLoc RegStartLoc;
           if (parseRegister(RegNo, RegStartLoc, EndLoc))
             return true;
-          if (getLexer().getKind() != AsmToken::RParen)
-            return true;
           EndLoc = getParser().getTok().getEndLoc();
-          getLexer().Lex(); // Eat ')'
+          if (!parseOptionalToken(AsmToken::RParen))
+            return true;
         }
         Operands.push_back(MSP430Operand::CreateMem(RegNo, Val, StartLoc,
           EndLoc));
@@ -511,9 +505,8 @@ bool MSP430AsmParser::ParseOperand(OperandVector &Operands) {
       SMLoc RegStartLoc, EndLoc;
       if (parseRegister(RegNo, RegStartLoc, EndLoc))
         return true;
-      if (getLexer().getKind() == AsmToken::Plus) {
+      if (parseOptionalToken(AsmToken::Plus)) {
         Operands.push_back(MSP430Operand::CreatePostIndReg(RegNo, StartLoc, EndLoc));
-        getLexer().Lex(); // Eat '+'
         return false;
       }
       if (Operands.size() > 1) // Emulate @rd in destination position as 0(rd)

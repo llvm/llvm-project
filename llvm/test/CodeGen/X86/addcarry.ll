@@ -742,38 +742,32 @@ define { i64, i64, i1 } @addcarry_mixed_2x64(i64 %x0, i64 %x1, i64 %y0, i64 %y1)
 define i32 @add_U320_without_i128_add(ptr nocapture dereferenceable(40) %0, i64 %1, i64 %2, i64 %3, i64 %4, i64 %5) nounwind {
 ; CHECK-LABEL: add_U320_without_i128_add:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    pushq %r14
-; CHECK-NEXT:    pushq %rbx
 ; CHECK-NEXT:    movq 16(%rdi), %rax
-; CHECK-NEXT:    leaq (%rax,%rcx), %r10
+; CHECK-NEXT:    movq 24(%rdi), %r10
+; CHECK-NEXT:    movq 32(%rdi), %r11
 ; CHECK-NEXT:    addq %rsi, (%rdi)
 ; CHECK-NEXT:    adcq %rdx, 8(%rdi)
 ; CHECK-NEXT:    movq %rax, %rdx
 ; CHECK-NEXT:    adcq %rcx, %rdx
-; CHECK-NEXT:    movq 24(%rdi), %rsi
-; CHECK-NEXT:    leaq (%r8,%rsi), %r11
-; CHECK-NEXT:    xorl %ebx, %ebx
-; CHECK-NEXT:    cmpq %r10, %rdx
-; CHECK-NEXT:    setb %bl
 ; CHECK-NEXT:    addq %rcx, %rax
-; CHECK-NEXT:    adcq %r11, %rbx
-; CHECK-NEXT:    movq 32(%rdi), %rcx
-; CHECK-NEXT:    leaq (%r9,%rcx), %r10
-; CHECK-NEXT:    xorl %r14d, %r14d
-; CHECK-NEXT:    cmpq %r11, %rbx
-; CHECK-NEXT:    setb %r14b
-; CHECK-NEXT:    addq %rsi, %r8
-; CHECK-NEXT:    adcq %r10, %r14
+; CHECK-NEXT:    movq %r10, %rcx
+; CHECK-NEXT:    adcq %r8, %rcx
+; CHECK-NEXT:    cmpq %rax, %rdx
+; CHECK-NEXT:    adcq $0, %rcx
+; CHECK-NEXT:    leaq (%r11,%r9), %rsi
+; CHECK-NEXT:    addq %r8, %r10
+; CHECK-NEXT:    movq %r11, %r8
+; CHECK-NEXT:    adcq %r9, %r8
+; CHECK-NEXT:    cmpq %r10, %rcx
+; CHECK-NEXT:    adcq $0, %r8
 ; CHECK-NEXT:    xorl %eax, %eax
-; CHECK-NEXT:    cmpq %r10, %r14
+; CHECK-NEXT:    cmpq %rsi, %r8
 ; CHECK-NEXT:    setb %al
-; CHECK-NEXT:    addq %rcx, %r9
+; CHECK-NEXT:    addq %r9, %r11
 ; CHECK-NEXT:    movq %rdx, 16(%rdi)
-; CHECK-NEXT:    movq %rbx, 24(%rdi)
-; CHECK-NEXT:    movq %r14, 32(%rdi)
+; CHECK-NEXT:    movq %rcx, 24(%rdi)
+; CHECK-NEXT:    movq %r8, 32(%rdi)
 ; CHECK-NEXT:    adcl $0, %eax
-; CHECK-NEXT:    popq %rbx
-; CHECK-NEXT:    popq %r14
 ; CHECK-NEXT:    retq
   %7 = load i64, ptr %0, align 8
   %8 = getelementptr inbounds %struct.U320, ptr %0, i64 0, i32 0, i64 1

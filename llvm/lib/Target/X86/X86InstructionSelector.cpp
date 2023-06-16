@@ -1081,9 +1081,33 @@ bool X86InstructionSelector::selectUadde(MachineInstr &I,
   Register CarryInReg = I.getOperand(4).getReg();
 
   const LLT DstTy = MRI.getType(DstReg);
+  assert(DstTy.isScalar() && "G_UADDE only supported for scalar types");
 
-  if (DstTy != LLT::scalar(32))
-    return false;
+  // TODO: Handle immediate argument variants?
+  unsigned OpADC, OpADD;
+  switch (DstTy.getSizeInBits()) {
+  case 8:
+    OpADC = X86::ADC8rr;
+    OpADD = X86::ADD8rr;
+    break;
+  case 16:
+    OpADC = X86::ADC16rr;
+    OpADD = X86::ADD16rr;
+    break;
+  case 32:
+    OpADC = X86::ADC32rr;
+    OpADD = X86::ADD32rr;
+    break;
+  case 64:
+    OpADC = X86::ADC64rr;
+    OpADD = X86::ADD64rr;
+    break;
+  default:
+    llvm_unreachable("Can't select G_UADDE, unsupported type.");
+  }
+
+  const RegisterBank &DstRB = *RBI.getRegBank(DstReg, MRI, TRI);
+  const TargetRegisterClass *DstRC = getRegClass(DstTy, DstRB);
 
   // find CarryIn def instruction.
   MachineInstr *Def = MRI.getVRegDef(CarryInReg);
@@ -1092,23 +1116,23 @@ bool X86InstructionSelector::selectUadde(MachineInstr &I,
     Def = MRI.getVRegDef(CarryInReg);
   }
 
-  unsigned Opcode;
+  unsigned Opcode = 0;
   if (Def->getOpcode() == TargetOpcode::G_UADDE) {
     // carry set by prev ADD.
 
     BuildMI(*I.getParent(), I, I.getDebugLoc(), TII.get(X86::COPY), X86::EFLAGS)
         .addReg(CarryInReg);
 
-    if (!RBI.constrainGenericRegister(CarryInReg, X86::GR32RegClass, MRI))
+    if (!RBI.constrainGenericRegister(CarryInReg, *DstRC, MRI))
       return false;
 
-    Opcode = X86::ADC32rr;
+    Opcode = OpADC;
   } else if (auto val = getIConstantVRegVal(CarryInReg, MRI)) {
     // carry is constant, support only 0.
     if (*val != 0)
       return false;
 
-    Opcode = X86::ADD32rr;
+    Opcode = OpADD;
   } else
     return false;
 
@@ -1121,7 +1145,7 @@ bool X86InstructionSelector::selectUadde(MachineInstr &I,
       .addReg(X86::EFLAGS);
 
   if (!constrainSelectedInstRegOperands(AddInst, TII, TRI, RBI) ||
-      !RBI.constrainGenericRegister(CarryOutReg, X86::GR32RegClass, MRI))
+      !RBI.constrainGenericRegister(CarryOutReg, *DstRC, MRI))
     return false;
 
   I.eraseFromParent();

@@ -11,7 +11,7 @@ static_library("Rewrite") {
     "//bolt/lib/Utils",
     "//llvm/lib/DWP",
     "//llvm/lib/DebugInfo/DWARF",
-    "//llvm/lib/ExecutionEngine",
+    "//llvm/lib/ExecutionEngine/JITLink",
     "//llvm/lib/MC",
     "//llvm/lib/Object",
     "//llvm/lib/Support",
@@ -23,6 +23,7 @@ static_library("Rewrite") {
     "BoltDiff.cpp",
     "DWARFRewriter.cpp",
     "ExecutableFileMemoryManager.cpp",
+    "JITLinkLinker.cpp",
     "MachORewriteInstance.cpp",
     "RewriteInstance.cpp",
   ]

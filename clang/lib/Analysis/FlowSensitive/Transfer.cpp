@@ -400,7 +400,8 @@ public:
       Env.setValue(Loc, NullPointerVal);
       break;
     }
-    case CK_FunctionToPointerDecay: {
+    case CK_FunctionToPointerDecay:
+    case CK_BuiltinFnToFnPtr: {
       StorageLocation *PointeeLoc =
           Env.getStorageLocation(*SubExpr, SkipPast::Reference);
       if (PointeeLoc == nullptr)

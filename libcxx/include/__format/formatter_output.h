@@ -65,7 +65,7 @@ _LIBCPP_HIDE_FROM_ABI constexpr char __hex_to_upper(char __c) {
   return __c;
 }
 
-struct _LIBCPP_TYPE_VIS __padding_size_result {
+struct _LIBCPP_EXPORTED_FROM_ABI __padding_size_result {
   size_t __before_;
   size_t __after_;
 };

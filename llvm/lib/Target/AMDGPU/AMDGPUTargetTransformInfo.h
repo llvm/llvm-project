@@ -55,6 +55,8 @@ public:
 
   void getPeelingPreferences(Loop *L, ScalarEvolution &SE,
                              TTI::PeelingPreferences &PP);
+
+  int64_t getMaxInlineSizeThreshold() const;
 };
 
 class GCNTTIImpl final : public BasicTTIImplBase<GCNTTIImpl> {
@@ -132,6 +134,8 @@ public:
                                    unsigned AddrSpace) const;
   bool isLegalToVectorizeStoreChain(unsigned ChainSizeInBytes, Align Alignment,
                                     unsigned AddrSpace) const;
+
+  int64_t getMaxInlineSizeThreshold() const;
   Type *getMemcpyLoopLoweringType(
       LLVMContext & Context, Value * Length, unsigned SrcAddrSpace,
       unsigned DestAddrSpace, unsigned SrcAlign, unsigned DestAlign,
@@ -188,6 +192,10 @@ public:
          ToAS == AMDGPUAS::CONSTANT_ADDRESS_32BIT))
       return true;
     return false;
+  }
+
+  bool addrspacesMayAlias(unsigned AS0, unsigned AS1) const {
+    return AMDGPU::addrspacesMayAlias(AS0, AS1);
   }
 
   unsigned getFlatAddressSpace() const {

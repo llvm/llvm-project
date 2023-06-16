@@ -1443,6 +1443,7 @@ static lldb::SectionType GetSectionType(uint32_t flags,
   static ConstString g_sect_name_dwarf_debug_frame("__debug_frame");
   static ConstString g_sect_name_dwarf_debug_info("__debug_info");
   static ConstString g_sect_name_dwarf_debug_line("__debug_line");
+  static ConstString g_sect_name_dwarf_debug_line_str("__debug_line_str");
   static ConstString g_sect_name_dwarf_debug_loc("__debug_loc");
   static ConstString g_sect_name_dwarf_debug_loclists("__debug_loclists");
   static ConstString g_sect_name_dwarf_debug_macinfo("__debug_macinfo");
@@ -1472,6 +1473,8 @@ static lldb::SectionType GetSectionType(uint32_t flags,
     return eSectionTypeDWARFDebugInfo;
   if (section_name == g_sect_name_dwarf_debug_line)
     return eSectionTypeDWARFDebugLine;
+  if (section_name == g_sect_name_dwarf_debug_line_str)
+    return eSectionTypeDWARFDebugLineStr;
   if (section_name == g_sect_name_dwarf_debug_loc)
     return eSectionTypeDWARFDebugLoc;
   if (section_name == g_sect_name_dwarf_debug_loclists)

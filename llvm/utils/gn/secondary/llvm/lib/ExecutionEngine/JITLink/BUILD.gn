@@ -11,6 +11,7 @@ static_library("JITLink") {
     ":COFFOptions",
     "//llvm/lib/BinaryFormat",
     "//llvm/lib/ExecutionEngine/Orc/Shared",
+    "//llvm/lib/ExecutionEngine/Orc/TargetProcess",
     "//llvm/lib/Object",
     "//llvm/lib/Option",
     "//llvm/lib/Support",

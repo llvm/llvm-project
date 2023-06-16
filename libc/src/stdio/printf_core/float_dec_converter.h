@@ -13,6 +13,7 @@
 #include "src/__support/FPUtil/FEnvImpl.h"
 #include "src/__support/FPUtil/FPBits.h"
 #include "src/__support/FPUtil/FloatProperties.h"
+#include "src/__support/FPUtil/rounding_mode.h"
 #include "src/__support/UInt.h"
 #include "src/__support/UInt128.h"
 #include "src/__support/common.h"
@@ -33,9 +34,10 @@ namespace printf_core {
 using MantissaInt = fputil::FPBits<long double>::UIntType;
 
 // Returns true if value is divisible by 2^p.
-LIBC_INLINE constexpr bool multiple_of_power_of_2(const uint64_t value,
-                                                  const uint32_t p) {
-  return (value & ((uint64_t(1) << p) - 1)) == 0;
+template <typename T>
+LIBC_INLINE constexpr cpp::enable_if_t<cpp::is_integral_v<T>, bool>
+multiple_of_power_of_2(T value, uint32_t p) {
+  return (value & ((T(1) << p) - 1)) == 0;
 }
 
 constexpr size_t BLOCK_SIZE = 9;
@@ -600,7 +602,7 @@ LIBC_INLINE int convert_float_decimal_typed(Writer *writer,
             (requiredTwos < 60 &&
              multiple_of_power_of_2(float_bits.get_explicit_mantissa(),
                                     static_cast<uint32_t>(requiredTwos)));
-        switch (fputil::get_round()) {
+        switch (fputil::quick_get_round()) {
         case FE_TONEAREST:
           // Round to nearest, if it's exactly halfway then round to even.
           if (last_digit != 5) {
@@ -774,7 +776,7 @@ LIBC_INLINE int convert_float_dec_exp_typed(Writer *writer,
       (requiredTwos < 60 &&
        multiple_of_power_of_2(float_bits.get_explicit_mantissa(),
                               static_cast<uint32_t>(requiredTwos)));
-  switch (fputil::get_round()) {
+  switch (fputil::quick_get_round()) {
   case FE_TONEAREST:
     // Round to nearest, if it's exactly halfway then round to even.
     if (last_digit != 5) {
@@ -1022,7 +1024,7 @@ LIBC_INLINE int convert_float_dec_auto_typed(Writer *writer,
       (requiredTwos < 60 &&
        multiple_of_power_of_2(float_bits.get_explicit_mantissa(),
                               static_cast<uint32_t>(requiredTwos)));
-  switch (fputil::get_round()) {
+  switch (fputil::quick_get_round()) {
   case FE_TONEAREST:
     // Round to nearest, if it's exactly halfway then round to even.
     if (last_digit != 5) {
@@ -1147,7 +1149,8 @@ LIBC_INLINE int convert_float_decimal(Writer *writer,
                                                       float_bits);
     }
   } else {
-    fputil::FPBits<double>::UIntType float_raw = to_conv.conv_val_raw;
+    fputil::FPBits<double>::UIntType float_raw =
+        static_cast<fputil::FPBits<double>::UIntType>(to_conv.conv_val_raw);
     fputil::FPBits<double> float_bits(float_raw);
     if (!float_bits.is_inf_or_nan()) {
       return convert_float_decimal_typed<double>(writer, to_conv, float_bits);
@@ -1167,7 +1170,8 @@ LIBC_INLINE int convert_float_dec_exp(Writer *writer,
                                                       float_bits);
     }
   } else {
-    fputil::FPBits<double>::UIntType float_raw = to_conv.conv_val_raw;
+    fputil::FPBits<double>::UIntType float_raw =
+        static_cast<fputil::FPBits<double>::UIntType>(to_conv.conv_val_raw);
     fputil::FPBits<double> float_bits(float_raw);
     if (!float_bits.is_inf_or_nan()) {
       return convert_float_dec_exp_typed<double>(writer, to_conv, float_bits);
@@ -1187,7 +1191,8 @@ LIBC_INLINE int convert_float_dec_auto(Writer *writer,
                                                        float_bits);
     }
   } else {
-    fputil::FPBits<double>::UIntType float_raw = to_conv.conv_val_raw;
+    fputil::FPBits<double>::UIntType float_raw =
+        static_cast<fputil::FPBits<double>::UIntType>(to_conv.conv_val_raw);
     fputil::FPBits<double> float_bits(float_raw);
     if (!float_bits.is_inf_or_nan()) {
       return convert_float_dec_auto_typed<double>(writer, to_conv, float_bits);

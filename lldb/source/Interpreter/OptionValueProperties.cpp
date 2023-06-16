@@ -88,8 +88,8 @@ OptionValueProperties::GetSubValue(const ExecutionContext *exe_ctx,
         value_sp->GetSubValue(exe_ctx, sub_name.drop_front(), error);
     if (!return_val_sp) {
       if (Properties::IsSettingExperimental(sub_name.drop_front())) {
-        size_t experimental_len =
-            strlen(Properties::GetExperimentalSettingsName());
+        const size_t experimental_len =
+            Properties::GetExperimentalSettingsName().size();
         if (sub_name[experimental_len + 1] == '.')
           return_val_sp = value_sp->GetSubValue(
               exe_ctx, sub_name.drop_front(experimental_len + 2), error);

@@ -137,6 +137,10 @@ void populateVectorTransferFullPartialPatterns(
 void populateVectorTransferCollapseInnerMostContiguousDimsPatterns(
     RewritePatternSet &patterns, PatternBenefit benefit = 1);
 
+/// Patterns that remove redundant vector broadcasts.
+void populateSinkVectorBroadcastPatterns(RewritePatternSet &patterns,
+                                          PatternBenefit benefit = 1);
+
 /// Populate `patterns` with the following patterns.
 ///
 /// [DecomposeDifferentRankInsertStridedSlice]

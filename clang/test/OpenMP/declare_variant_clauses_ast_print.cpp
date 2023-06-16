@@ -1,36 +1,36 @@
-//RUN: %clang_cc1 -triple x86_64-pc-linux-gnu -fopenmp -fopenmp-version=51 \
+//RUN: %clang_cc1 -triple x86_64-pc-linux-gnu -fopenmp \
 //RUN:   -x c++ -std=c++14 -fexceptions -fcxx-exceptions                   \
 //RUN:   -Wno-source-uses-openmp -Wno-openmp-clauses                       \
 //RUN:   -fsyntax-only -verify -o - %s
 
-//RUN: %clang_cc1 -triple x86_64-pc-windows-msvc -fopenmp -fopenmp-version=51 \
+//RUN: %clang_cc1 -triple x86_64-pc-windows-msvc -fopenmp \
 //RUN:   -x c++ -std=c++14 -fexceptions -fcxx-exceptions                      \
 //RUN:   -Wno-source-uses-openmp -Wno-openmp-clauses                          \
 //RUN:   -fsyntax-only -verify -o - %s
 
-//RUN: %clang_cc1 -triple x86_64-pc-linux-gnu -fopenmp -fopenmp-version=51 \
+//RUN: %clang_cc1 -triple x86_64-pc-linux-gnu -fopenmp \
 //RUN:   -x c++ -std=c++14 -fexceptions -fcxx-exceptions                   \
 //RUN:   -Wno-source-uses-openmp -Wno-openmp-clauses                       \
 //RUN:   -emit-pch -o %t %s
 
 // expected-no-diagnostics
 
-//RUN: %clang_cc1 -triple x86_64-pc-linux-gnu -fopenmp -fopenmp-version=51 \
+//RUN: %clang_cc1 -triple x86_64-pc-linux-gnu -fopenmp \
 //RUN:   -x c++ -std=c++14 -fexceptions -fcxx-exceptions                   \
 //RUN:   -Wno-source-uses-openmp -Wno-openmp-clauses                       \
 //RUN:   -ast-print %s | FileCheck %s --check-prefix=PRINT
 
-//RUN: %clang_cc1 -triple x86_64-pc-linux-gnu -fopenmp -fopenmp-version=51 \
+//RUN: %clang_cc1 -triple x86_64-pc-linux-gnu -fopenmp \
 //RUN:   -x c++ -std=c++14 -fexceptions -fcxx-exceptions                   \
 //RUN:   -Wno-source-uses-openmp -Wno-openmp-clauses                       \
 //RUN:   -ast-dump %s | FileCheck %s --check-prefix=DUMP
 
-//RUN: %clang_cc1 -triple x86_64-pc-linux-gnu -fopenmp -fopenmp-version=51 \
+//RUN: %clang_cc1 -triple x86_64-pc-linux-gnu -fopenmp \
 //RUN:   -x c++ -std=c++14 -fexceptions -fcxx-exceptions                   \
 //RUN:   -Wno-source-uses-openmp -Wno-openmp-clauses                       \
 //RUN:   -include-pch %t -ast-print %s | FileCheck %s --check-prefix=PRINT
 
-//RUN: %clang_cc1 -triple x86_64-pc-linux-gnu -fopenmp -fopenmp-version=51 \
+//RUN: %clang_cc1 -triple x86_64-pc-linux-gnu -fopenmp \
 //RUN:   -x c++ -std=c++14 -fexceptions -fcxx-exceptions                   \
 //RUN:   -Wno-source-uses-openmp -Wno-openmp-clauses                       \
 //RUN:   -include-pch %t -ast-dump-all %s | FileCheck %s --check-prefix=DUMP

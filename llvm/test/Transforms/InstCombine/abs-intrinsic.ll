@@ -455,7 +455,7 @@ cond.end:
 define i32 @sub_abs_lt(i32 %x, i32 %y) {
 ; CHECK-LABEL: @sub_abs_lt(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[CMP:%.*]] = icmp sgt i32 [[Y:%.*]], [[X:%.*]]
+; CHECK-NEXT:    [[CMP:%.*]] = icmp slt i32 [[X:%.*]], [[Y:%.*]]
 ; CHECK-NEXT:    br i1 [[CMP]], label [[COND_TRUE:%.*]], label [[COND_END:%.*]]
 ; CHECK:       cond.true:
 ; CHECK-NEXT:    [[SUB_NEG:%.*]] = sub i32 [[Y]], [[X]]
@@ -481,7 +481,7 @@ cond.end:
 define i32 @sub_abs_lt_min_not_poison(i32 %x, i32 %y) {
 ; CHECK-LABEL: @sub_abs_lt_min_not_poison(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[CMP:%.*]] = icmp sgt i32 [[Y:%.*]], [[X:%.*]]
+; CHECK-NEXT:    [[CMP:%.*]] = icmp slt i32 [[X:%.*]], [[Y:%.*]]
 ; CHECK-NEXT:    br i1 [[CMP]], label [[COND_TRUE:%.*]], label [[COND_END:%.*]]
 ; CHECK:       cond.true:
 ; CHECK-NEXT:    [[SUB_NEG:%.*]] = sub i32 [[Y]], [[X]]

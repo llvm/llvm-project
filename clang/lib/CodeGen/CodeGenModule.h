@@ -590,8 +590,6 @@ private:
   MetadataTypeMap VirtualMetadataIdMap;
   MetadataTypeMap GeneralizedMetadataIdMap;
 
-  llvm::DenseMap<const llvm::Constant *, llvm::GlobalVariable *> RTTIProxyMap;
-
   // Helps squashing blocks of TopLevelStmtDecl into a single llvm::Function
   // when used with -fincremental-extensions.
   std::pair<std::unique_ptr<CodeGenFunction>, const TopLevelStmtDecl *>
@@ -1502,9 +1500,6 @@ public:
   /// including C itself, that does not have any bases.
   std::vector<const CXXRecordDecl *>
   getMostBaseClasses(const CXXRecordDecl *RD);
-
-  llvm::GlobalVariable *
-  GetOrCreateRTTIProxyGlobalVariable(llvm::Constant *Addr);
 
   /// Get the declaration of std::terminate for the platform.
   llvm::FunctionCallee getTerminateFn();

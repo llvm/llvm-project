@@ -117,6 +117,23 @@ define amdgpu_ps void @struct_tbuffer_store_insert_zeros_at_beginning(<4 x i32> 
   ret void
 }
 
+define amdgpu_ps void @struct_tbuffer_store_insert_undefs(<4 x i32> inreg %a, float %vdata1, i32 %b) {
+; GCN-LABEL: @struct_tbuffer_store_insert_undefs(
+; GCN-NEXT:    [[TMP1:%.*]] = insertelement <2 x float> <float poison, float 1.000000e+00>, float [[VDATA1:%.*]], i64 0
+; GCN-NEXT:    call void @llvm.amdgcn.struct.tbuffer.store.v2f32(<2 x float> [[TMP1]], <4 x i32> [[A:%.*]], i32 [[B:%.*]], i32 0, i32 42, i32 0, i32 15)
+; GCN-NEXT:    ret void
+;
+; GFX12-LABEL: @struct_tbuffer_store_insert_undefs(
+; GFX12-NEXT:    [[TMP1:%.*]] = insertelement <2 x float> <float poison, float 1.000000e+00>, float [[VDATA1:%.*]], i64 0
+; GFX12-NEXT:    call void @llvm.amdgcn.struct.tbuffer.store.v2f32(<2 x float> [[TMP1]], <4 x i32> [[A:%.*]], i32 [[B:%.*]], i32 0, i32 42, i32 0, i32 15)
+; GFX12-NEXT:    ret void
+;
+  %newvdata1 = insertelement <4 x float> poison, float %vdata1, i32 0
+  %newvdata2 = insertelement <4 x float> %newvdata1, float 1.0, i32 1
+  call void @llvm.amdgcn.struct.tbuffer.store.v4f32(<4 x float> %newvdata2, <4 x i32> %a, i32 %b, i32 0, i32 42, i32 0, i32 15)
+  ret void
+}
+
 define amdgpu_ps void @image_store_1d_store_shufflevector_same(<8 x i32> inreg %rsrc, <4 x float> %vdata1, i32 %s) #0 {
 ; GCN-LABEL: @image_store_1d_store_shufflevector_same(
 ; GCN-NEXT:    [[DATA:%.*]] = shufflevector <4 x float> [[VDATA1:%.*]], <4 x float> poison, <4 x i32> zeroinitializer
@@ -185,23 +202,6 @@ define amdgpu_ps void @struct_tbuffer_store_insert(<4 x i32> inreg %a, float %vd
   %newvdata3 = insertelement <4 x float> %newvdata2, float 2.0, i32 2
   %newvdata4 = insertelement <4 x float> %newvdata3, float %vdata1, i32 3
   call void @llvm.amdgcn.struct.tbuffer.store.v4f32(<4 x float> %newvdata4, <4 x i32> %a, i32 %b, i32 0, i32 42, i32 0, i32 15)
-  ret void
-}
-
-define amdgpu_ps void @struct_tbuffer_store_insert_undefs(<4 x i32> inreg %a, float %vdata1, i32 %b) {
-; GCN-LABEL: @struct_tbuffer_store_insert_undefs(
-; GCN-NEXT:    [[NEWVDATA2:%.*]] = insertelement <4 x float> <float poison, float 1.000000e+00, float undef, float undef>, float [[VDATA1:%.*]], i64 0
-; GCN-NEXT:    call void @llvm.amdgcn.struct.tbuffer.store.v4f32(<4 x float> [[NEWVDATA2]], <4 x i32> [[A:%.*]], i32 [[B:%.*]], i32 0, i32 42, i32 0, i32 15)
-; GCN-NEXT:    ret void
-;
-; GFX12-LABEL: @struct_tbuffer_store_insert_undefs(
-; GFX12-NEXT:    [[TMP1:%.*]] = insertelement <2 x float> <float poison, float 1.000000e+00>, float [[VDATA1:%.*]], i64 0
-; GFX12-NEXT:    call void @llvm.amdgcn.struct.tbuffer.store.v2f32(<2 x float> [[TMP1]], <4 x i32> [[A:%.*]], i32 [[B:%.*]], i32 0, i32 42, i32 0, i32 15)
-; GFX12-NEXT:    ret void
-;
-  %newvdata1 = insertelement <4 x float> undef, float %vdata1, i32 0
-  %newvdata2 = insertelement <4 x float> %newvdata1, float 1.0, i32 1
-  call void @llvm.amdgcn.struct.tbuffer.store.v4f32(<4 x float> %newvdata2, <4 x i32> %a, i32 %b, i32 0, i32 42, i32 0, i32 15)
   ret void
 }
 

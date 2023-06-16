@@ -13,8 +13,8 @@
 #include "bolt/RuntimeLibs/InstrumentationRuntimeLibrary.h"
 #include "bolt/Core/BinaryFunction.h"
 #include "bolt/Core/JumpTable.h"
+#include "bolt/Core/Linker.h"
 #include "bolt/Utils/CommandLineOpts.h"
-#include "llvm/ExecutionEngine/RuntimeDyld.h"
 #include "llvm/MC/MCStreamer.h"
 #include "llvm/Support/Alignment.h"
 #include "llvm/Support/CommandLine.h"
@@ -191,28 +191,22 @@ void InstrumentationRuntimeLibrary::emitBinary(BinaryContext &BC,
 }
 
 void InstrumentationRuntimeLibrary::link(
-    BinaryContext &BC, StringRef ToolPath, RuntimeDyld &RTDyld,
-    std::function<void(RuntimeDyld &)> OnLoad) {
+    BinaryContext &BC, StringRef ToolPath, BOLTLinker &Linker,
+    BOLTLinker::SectionsMapper MapSections) {
   std::string LibPath = getLibPath(ToolPath, opts::RuntimeInstrumentationLib);
-  loadLibrary(LibPath, RTDyld);
-  OnLoad(RTDyld);
-  RTDyld.finalizeWithMemoryManagerLocking();
-  if (RTDyld.hasError()) {
-    outs() << "BOLT-ERROR: RTDyld failed: " << RTDyld.getErrorString() << "\n";
-    exit(1);
-  }
+  loadLibrary(LibPath, Linker, MapSections);
 
   if (BC.isMachO())
     return;
 
-  RuntimeFiniAddress = RTDyld.getSymbol("__bolt_instr_fini").getAddress();
+  RuntimeFiniAddress = Linker.lookupSymbol("__bolt_instr_fini").value_or(0);
   if (!RuntimeFiniAddress) {
     errs() << "BOLT-ERROR: instrumentation library does not define "
               "__bolt_instr_fini: "
            << LibPath << "\n";
     exit(1);
   }
-  RuntimeStartAddress = RTDyld.getSymbol("__bolt_instr_start").getAddress();
+  RuntimeStartAddress = Linker.lookupSymbol("__bolt_instr_start").value_or(0);
   if (!RuntimeStartAddress) {
     errs() << "BOLT-ERROR: instrumentation library does not define "
               "__bolt_instr_start: "
@@ -224,7 +218,7 @@ void InstrumentationRuntimeLibrary::link(
          << Twine::utohexstr(RuntimeFiniAddress) << "\n";
   outs() << "BOLT-INFO: clear procedure is 0x"
          << Twine::utohexstr(
-                RTDyld.getSymbol("__bolt_instr_clear_counters").getAddress())
+                Linker.lookupSymbol("__bolt_instr_clear_counters").value_or(0))
          << "\n";
 
   emitTablesAsELFNote(BC);

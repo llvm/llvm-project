@@ -27,6 +27,15 @@
 
 using namespace mlir;
 
+void Fortran::lower::genOpenMPTerminator(fir::FirOpBuilder &builder,
+                                         Operation *op, mlir::Location loc) {
+  if (mlir::isa<omp::WsLoopOp, omp::ReductionDeclareOp, omp::AtomicUpdateOp,
+                omp::SimdLoopOp>(op))
+    builder.create<omp::YieldOp>(loc);
+  else
+    builder.create<omp::TerminatorOp>(loc);
+}
+
 int64_t Fortran::lower::getCollapseValue(
     const Fortran::parser::OmpClauseList &clauseList) {
   for (const auto &clause : clauseList.v) {

@@ -638,7 +638,7 @@ public:
 
   /// Try to find a module map file in the given directory, returning
   /// \c nullopt if none is found.
-  OptionalFileEntryRef lookupModuleMapFile(const DirectoryEntry *Dir,
+  OptionalFileEntryRef lookupModuleMapFile(DirectoryEntryRef Dir,
                                            bool IsFramework);
 
   /// Determine whether there is a module map that may map the header

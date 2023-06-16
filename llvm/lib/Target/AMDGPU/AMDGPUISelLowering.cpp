@@ -18,6 +18,7 @@
 #include "AMDGPUMachineFunction.h"
 #include "SIMachineFunctionInfo.h"
 #include "llvm/CodeGen/Analysis.h"
+#include "llvm/CodeGen/GlobalISel/GISelKnownBits.h"
 #include "llvm/CodeGen/MachineFrameInfo.h"
 #include "llvm/IR/DiagnosticInfo.h"
 #include "llvm/IR/IntrinsicsAMDGPU.h"
@@ -1306,9 +1307,9 @@ SDValue AMDGPUTargetLowering::LowerOperation(SDValue Op,
   case ISD::FROUND: return LowerFROUND(Op, DAG);
   case ISD::FFLOOR: return LowerFFLOOR(Op, DAG);
   case ISD::FLOG:
-    return LowerFLOG(Op, DAG, numbers::ln2f);
+    return LowerFLOG(Op, DAG, numbers::ln2);
   case ISD::FLOG10:
-    return LowerFLOG(Op, DAG, numbers::ln2f / numbers::ln10f);
+    return LowerFLOG(Op, DAG, numbers::ln2 / numbers::ln10);
   case ISD::FEXP:
     return lowerFEXP(Op, DAG);
   case ISD::SINT_TO_FP: return LowerSINT_TO_FP(Op, DAG);
@@ -4662,6 +4663,7 @@ const char* AMDGPUTargetLowering::getTargetNodeName(unsigned Opcode) const {
   NODE_NAME_CASE(RET_GLUE)
   NODE_NAME_CASE(RETURN_TO_EPILOG)
   NODE_NAME_CASE(ENDPGM)
+  NODE_NAME_CASE(ENDPGM_TRAP)
   NODE_NAME_CASE(DWORDADDR)
   NODE_NAME_CASE(FRACT)
   NODE_NAME_CASE(SETCC)
@@ -4695,6 +4697,8 @@ const char* AMDGPUTargetLowering::getTargetNodeName(unsigned Opcode) const {
   NODE_NAME_CASE(RSQ)
   NODE_NAME_CASE(RCP_LEGACY)
   NODE_NAME_CASE(RCP_IFLAG)
+  NODE_NAME_CASE(LOG)
+  NODE_NAME_CASE(EXP)
   NODE_NAME_CASE(FMUL_LEGACY)
   NODE_NAME_CASE(RSQ_CLAMP)
   NODE_NAME_CASE(FP_CLASS)
@@ -4979,6 +4983,29 @@ void AMDGPUTargetLowering::computeKnownBitsForTargetNode(
     Known.Zero.setLowBits(Log2(Alignment));
     break;
   }
+  case AMDGPUISD::SMIN3:
+  case AMDGPUISD::SMAX3:
+  case AMDGPUISD::SMED3:
+  case AMDGPUISD::UMIN3:
+  case AMDGPUISD::UMAX3:
+  case AMDGPUISD::UMED3: {
+    KnownBits Known2 = DAG.computeKnownBits(Op.getOperand(2), Depth + 1);
+    if (Known2.isUnknown())
+      break;
+
+    KnownBits Known1 = DAG.computeKnownBits(Op.getOperand(1), Depth + 1);
+    if (Known1.isUnknown())
+      break;
+
+    KnownBits Known0 = DAG.computeKnownBits(Op.getOperand(0), Depth + 1);
+    if (Known0.isUnknown())
+      break;
+
+    // TODO: Handle LeadZero/LeadOne from UMIN/UMAX handling.
+    Known.Zero = Known0.Zero & Known1.Zero & Known2.Zero;
+    Known.One = Known0.One & Known1.One & Known2.One;
+    break;
+  }
   case ISD::INTRINSIC_WO_CHAIN: {
     unsigned IID = cast<ConstantSDNode>(Op.getOperand(0))->getZExtValue();
     switch (IID) {
@@ -5033,6 +5060,26 @@ unsigned AMDGPUTargetLowering::ComputeNumSignBitsForTargetNode(
     return 16;
   case AMDGPUISD::FP_TO_FP16:
     return 16;
+  case AMDGPUISD::SMIN3:
+  case AMDGPUISD::SMAX3:
+  case AMDGPUISD::SMED3:
+  case AMDGPUISD::UMIN3:
+  case AMDGPUISD::UMAX3:
+  case AMDGPUISD::UMED3: {
+    unsigned Tmp2 = DAG.ComputeNumSignBits(Op.getOperand(2), Depth + 1);
+    if (Tmp2 == 1)
+      return 1; // Early out.
+
+    unsigned Tmp1 = DAG.ComputeNumSignBits(Op.getOperand(1), Depth + 1);
+    if (Tmp1 == 1)
+      return 1; // Early out.
+
+    unsigned Tmp0 = DAG.ComputeNumSignBits(Op.getOperand(0), Depth + 1);
+    if (Tmp0 == 1)
+      return 1; // Early out.
+
+    return std::min(Tmp0, std::min(Tmp1, Tmp2));
+  }
   default:
     return 1;
   }
@@ -5056,6 +5103,20 @@ unsigned AMDGPUTargetLowering::computeNumSignBitsForTargetInstr(
     return 24;
   case AMDGPU::G_AMDGPU_BUFFER_LOAD_USHORT:
     return 16;
+  case AMDGPU::G_AMDGPU_SMED3:
+  case AMDGPU::G_AMDGPU_UMED3: {
+    auto [Dst, Src0, Src1, Src2] = MI->getFirst4Regs();
+    unsigned Tmp2 = Analysis.computeNumSignBits(Src2, DemandedElts, Depth + 1);
+    if (Tmp2 == 1)
+      return 1;
+    unsigned Tmp1 = Analysis.computeNumSignBits(Src1, DemandedElts, Depth + 1);
+    if (Tmp1 == 1)
+      return 1;
+    unsigned Tmp0 = Analysis.computeNumSignBits(Src0, DemandedElts, Depth + 1);
+    if (Tmp0 == 1)
+      return 1;
+    return std::min(Tmp0, std::min(Tmp1, Tmp2));
+  }
   default:
     return 1;
   }

@@ -11,6 +11,7 @@
 #include "src/__support/FPUtil/FEnvImpl.h"
 #include "src/__support/FPUtil/FPBits.h"
 #include "src/__support/FPUtil/multiply_add.h"
+#include "src/__support/FPUtil/rounding_mode.h"
 #include "src/__support/common.h"
 #include "src/__support/macros/optimization.h"            // LIBC_UNLIKELY
 #include "src/__support/macros/properties/cpu_features.h" // LIBC_TARGET_CPU_HAS_FMA
@@ -159,7 +160,7 @@ LLVM_LIBC_FUNCTION(void, sincosf, (float x, float *sinp, float *cosp)) {
       uint32_t s = EXCEPT_OUTPUTS_SIN[i][0]; // FE_TOWARDZERO
       uint32_t c = EXCEPT_OUTPUTS_COS[i][0]; // FE_TOWARDZERO
       bool x_sign = x < 0;
-      switch (fputil::get_round()) {
+      switch (fputil::quick_get_round()) {
       case FE_UPWARD:
         s += x_sign ? EXCEPT_OUTPUTS_SIN[i][2] : EXCEPT_OUTPUTS_SIN[i][1];
         c += EXCEPT_OUTPUTS_COS[i][1];

@@ -19,15 +19,15 @@
 
 _LIBCPP_BEGIN_NAMESPACE_STD
 
-struct _LIBCPP_TYPE_VIS defer_lock_t {
+struct _LIBCPP_EXPORTED_FROM_ABI defer_lock_t {
   explicit defer_lock_t() = default;
 };
 
-struct _LIBCPP_TYPE_VIS try_to_lock_t {
+struct _LIBCPP_EXPORTED_FROM_ABI try_to_lock_t {
   explicit try_to_lock_t() = default;
 };
 
-struct _LIBCPP_TYPE_VIS adopt_lock_t {
+struct _LIBCPP_EXPORTED_FROM_ABI adopt_lock_t {
   explicit adopt_lock_t() = default;
 };
 

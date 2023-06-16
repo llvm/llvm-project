@@ -194,7 +194,8 @@ protected:
   const AVRSubtarget &Subtarget;
 
 private:
-  MachineBasicBlock *insertShift(MachineInstr &MI, MachineBasicBlock *BB) const;
+  MachineBasicBlock *insertShift(MachineInstr &MI, MachineBasicBlock *BB,
+                                 bool Tiny) const;
   MachineBasicBlock *insertWideShift(MachineInstr &MI,
                                      MachineBasicBlock *BB) const;
   MachineBasicBlock *insertMul(MachineInstr &MI, MachineBasicBlock *BB) const;

@@ -79,7 +79,7 @@ public:
     size_t count() const noexcept;                     // constexpr since C++23
     constexpr size_t size() const noexcept;            // constexpr since C++23
     bool operator==(const bitset& rhs) const noexcept; // constexpr since C++23
-    bool operator!=(const bitset& rhs) const noexcept; // constexpr since C++23
+    bool operator!=(const bitset& rhs) const noexcept; // removed in C++20
     bool test(size_t pos) const;                       // constexpr since C++23
     bool all() const noexcept;                         // constexpr since C++23
     bool any() const noexcept;                         // constexpr since C++23
@@ -761,8 +761,10 @@ public:
     _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR size_t size() const _NOEXCEPT {return _Size;}
     _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_SINCE_CXX23
     bool operator==(const bitset& __rhs) const _NOEXCEPT;
-    _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_SINCE_CXX23
+#if _LIBCPP_STD_VER <= 17
+    _LIBCPP_INLINE_VISIBILITY
     bool operator!=(const bitset& __rhs) const _NOEXCEPT;
+#endif
     _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX23
     bool test(size_t __pos) const;
     _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_SINCE_CXX23
@@ -1041,14 +1043,18 @@ bitset<_Size>::operator==(const bitset& __rhs) const _NOEXCEPT
     return _VSTD::equal(base::__make_iter(0), base::__make_iter(_Size), __rhs.__make_iter(0));
 }
 
+#if _LIBCPP_STD_VER <= 17
+
 template <size_t _Size>
 inline
-_LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX23
+_LIBCPP_HIDE_FROM_ABI
 bool
 bitset<_Size>::operator!=(const bitset& __rhs) const _NOEXCEPT
 {
     return !(*this == __rhs);
 }
+
+#endif
 
 template <size_t _Size>
 _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX23

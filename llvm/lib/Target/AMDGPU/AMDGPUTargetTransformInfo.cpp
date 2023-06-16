@@ -267,6 +267,10 @@ void AMDGPUTTIImpl::getPeelingPreferences(Loop *L, ScalarEvolution &SE,
   BaseT::getPeelingPreferences(L, SE, PP);
 }
 
+int64_t AMDGPUTTIImpl::getMaxInlineSizeThreshold() const {
+  return 1024;
+}
+
 const FeatureBitset GCNTTIImpl::InlineFeatureIgnoreList = {
     // Codegen control options which don't matter.
     AMDGPU::FeatureEnableLoadStoreOpt, AMDGPU::FeatureEnableSIScheduler,
@@ -393,6 +397,10 @@ bool GCNTTIImpl::isLegalToVectorizeStoreChain(unsigned ChainSizeInBytes,
                                               Align Alignment,
                                               unsigned AddrSpace) const {
   return isLegalToVectorizeMemChain(ChainSizeInBytes, Alignment, AddrSpace);
+}
+
+int64_t GCNTTIImpl::getMaxInlineSizeThreshold() const {
+  return 1024;
 }
 
 // FIXME: Really we would like to issue multiple 128-bit loads and stores per

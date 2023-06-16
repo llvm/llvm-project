@@ -179,6 +179,14 @@ public:
     return hasVInstructions() ? MaxInterleaveFactor : 1;
   }
 
+  // Returns VLEN divided by DLEN. Where DLEN is the datapath width of the
+  // vector hardware implementation which may be less than VLEN.
+  unsigned getDLenFactor() const {
+    if (DLenFactor2)
+      return 2;
+    return 1;
+  }
+
 protected:
   // GlobalISel related APIs.
   std::unique_ptr<CallLowering> CallLoweringInfo;

@@ -391,7 +391,7 @@ static Operation *replaceForAllWithNewSignature(
       dominatedUsers.insert(user);
     }
   }
-  if (dominatedUsers.size() == 0)
+  if (dominatedUsers.empty())
     return nullptr;
 
   // Create new scf.forall op
@@ -3036,7 +3036,7 @@ struct VectorizationPattern : public RewritePattern {
     if (!linalgOp)
       return rewriter.notifyMatchFailure(op, "expected Linalg Op");
     return vectorize(rewriter, linalgOp, /*inputVectorSizes=*/{},
-                     vectorizeNDExtract);
+                     /*scalableVecDims=*/{}, vectorizeNDExtract);
   }
 
 private:
@@ -3065,6 +3065,8 @@ transform::VectorizeOp::applyToOne(Operation *target,
 
   if (!getDisableMultiReductionToContractPatterns())
     vector::populateVectorReductionToContractPatterns(patterns);
+
+  vector::populateSinkVectorBroadcastPatterns(patterns);
 
   patterns.add<linalg::LinalgCopyVTRForwardingPattern,
                linalg::LinalgCopyVTWForwardingPattern>(ctx,
@@ -3137,16 +3139,16 @@ DiagnosedSilenceableFailure transform::MaskedVectorizeOp::apply(
   }
 
   // TODO: Check that the correct number of vectorSizes was provided.
-
+  SmallVector<bool> scalableVecDims(vectorSizes.size(), false);
+  scalableVecDims.back() = getLastVectorSizeScalable();
   for (Operation *target : targets) {
     if (!isa<linalg::LinalgOp, tensor::PadOp>(target)) {
       return mlir::emitSilenceableFailure(target->getLoc())
              << "Unsupported Op, cannot vectorize";
     }
 
-    if (failed(linalg::vectorize(rewriter, target, vectorSizes,
-                                 getVectorizeNdExtract(),
-                                 getLastVectorSizeScalable()))) {
+    if (failed(linalg::vectorize(rewriter, target, vectorSizes, scalableVecDims,
+                                 getVectorizeNdExtract()))) {
       return mlir::emitSilenceableFailure(target->getLoc())
              << "Attempted to vectorize, but failed";
     }

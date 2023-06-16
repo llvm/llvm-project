@@ -487,11 +487,11 @@ public:
 
   /// Determine whether the given header is part of a module
   /// marked 'unavailable'.
-  bool isHeaderInUnavailableModule(const FileEntry *Header) const;
+  bool isHeaderInUnavailableModule(FileEntryRef Header) const;
 
   /// Determine whether the given header is unavailable as part
   /// of the specified module.
-  bool isHeaderUnavailableInModule(const FileEntry *Header,
+  bool isHeaderUnavailableInModule(FileEntryRef Header,
                                    const Module *RequestingModule) const;
 
   /// Retrieve a module with the given name.

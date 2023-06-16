@@ -1893,9 +1893,21 @@ ABIArgInfo X86_32ABIInfo::classifyArgumentType(QualType Ty,
     llvm::IntegerType *PaddingType = NeedsPadding ? Int32 : nullptr;
 
     // Pass over-aligned aggregates on Windows indirectly. This behavior was
-    // added in MSVC 2015.
-    if (IsWin32StructABI && TI.isAlignRequired() && TI.Align > 32)
-      return getIndirectResult(Ty, /*ByVal=*/false, State);
+    // added in MSVC 2015. Use the required alignment from the record layout,
+    // since that may be less than the regular type alignment, and types with
+    // required alignment of less than 4 bytes are not passed indirectly.
+    if (IsWin32StructABI) {
+      unsigned AlignInBits = 0;
+      if (RT) {
+        const ASTRecordLayout &Layout =
+          getContext().getASTRecordLayout(RT->getDecl());
+        AlignInBits = getContext().toBits(Layout.getRequiredAlignment());
+      } else if (TI.isAlignRequired()) {
+        AlignInBits = TI.Align;
+      }
+      if (AlignInBits > 32)
+        return getIndirectResult(Ty, /*ByVal=*/false, State);
+    }
 
     // Expand small (<= 128-bit) record types when we know that the stack layout
     // of those arguments will match the struct. This is important because the
@@ -9198,7 +9210,7 @@ private:
     // Single value types.
     auto *PtrTy = llvm::dyn_cast<llvm::PointerType>(Ty);
     if (PtrTy && PtrTy->getAddressSpace() == FromAS)
-      return llvm::PointerType::getWithSamePointeeType(PtrTy, ToAS);
+      return llvm::PointerType::get(Ty->getContext(), ToAS);
     return Ty;
   }
 
@@ -9595,8 +9607,8 @@ llvm::Constant *AMDGPUTargetCodeGenInfo::getNullPointer(
     return llvm::ConstantPointerNull::get(PT);
 
   auto &Ctx = CGM.getContext();
-  auto NPT = llvm::PointerType::getWithSamePointeeType(
-      PT, Ctx.getTargetAddressSpace(LangAS::opencl_generic));
+  auto NPT = llvm::PointerType::get(
+      PT->getContext(), Ctx.getTargetAddressSpace(LangAS::opencl_generic));
   return llvm::ConstantExpr::getAddrSpaceCast(
       llvm::ConstantPointerNull::get(NPT), PT);
 }
@@ -10578,7 +10590,7 @@ ABIArgInfo SPIRVABIInfo::classifyKernelArgumentType(QualType Ty) const {
     auto GlobalAS = getContext().getTargetAddressSpace(LangAS::cuda_device);
     auto *PtrTy = llvm::dyn_cast<llvm::PointerType>(LTy);
     if (PtrTy && PtrTy->getAddressSpace() == DefaultAS) {
-      LTy = llvm::PointerType::getWithSamePointeeType(PtrTy, GlobalAS);
+      LTy = llvm::PointerType::get(PtrTy->getContext(), GlobalAS);
       return ABIArgInfo::getDirect(LTy, 0, nullptr, false);
     }
 

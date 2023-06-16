@@ -1090,7 +1090,7 @@ multiclass CUBE_Common <bits<11> inst> {
 } // End mayLoad = 0, mayStore = 0, hasSideEffects = 0
 
 class EXP_IEEE_Common <bits<11> inst> : R600_1OP_Helper <
-  inst, "EXP_IEEE", fexp2
+  inst, "EXP_IEEE", AMDGPUexp
 > {
   let Itinerary = TransALU;
 }
@@ -1124,7 +1124,7 @@ class LOG_CLAMPED_Common <bits<11> inst> : R600_1OP <
 >;
 
 class LOG_IEEE_Common <bits<11> inst> : R600_1OP_Helper <
-  inst, "LOG_IEEE", flog2
+  inst, "LOG_IEEE", AMDGPUlog
 > {
   let Itinerary = TransALU;
 }

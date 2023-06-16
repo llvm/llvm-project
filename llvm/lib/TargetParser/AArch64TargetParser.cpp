@@ -12,7 +12,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/TargetParser/AArch64TargetParser.h"
-#include "llvm/ADT/StringSwitch.h"
 #include "llvm/TargetParser/ARMTargetParserCommon.h"
 #include "llvm/TargetParser/Triple.h"
 #include <cctype>

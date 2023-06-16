@@ -30,7 +30,7 @@
 
 _LIBCPP_BEGIN_NAMESPACE_FILESYSTEM
 
-class _LIBCPP_AVAILABILITY_FILESYSTEM_LIBRARY _LIBCPP_EXCEPTION_ABI filesystem_error : public system_error {
+class _LIBCPP_AVAILABILITY_FILESYSTEM_LIBRARY _LIBCPP_EXPORTED_FROM_ABI filesystem_error : public system_error {
 public:
   _LIBCPP_INLINE_VISIBILITY
   filesystem_error(const string& __what, error_code __ec)

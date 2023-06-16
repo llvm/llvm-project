@@ -73,6 +73,7 @@ PreservedAnalyses KCFIPass::run(Function &F, FunctionAnalysisManager &AM) {
   IntegerType *Int32Ty = Type::getInt32Ty(Ctx);
   MDNode *VeryUnlikelyWeights =
       MDBuilder(Ctx).createBranchWeights(1, (1U << 20) - 1);
+  Triple T(M.getTargetTriple());
 
   for (CallInst *CI : KCFICalls) {
     // Get the expected hash value.
@@ -93,8 +94,18 @@ PreservedAnalyses KCFIPass::run(Function &F, FunctionAnalysisManager &AM) {
 
     // Emit a check and trap if the target hash doesn't match.
     IRBuilder<> Builder(Call);
-    Value *HashPtr = Builder.CreateConstInBoundsGEP1_32(
-        Int32Ty, Call->getCalledOperand(), -1);
+    Value *FuncPtr = Call->getCalledOperand();
+    // ARM uses the least significant bit of the function pointer to select
+    // between ARM and Thumb modes for the callee. Instructions are always
+    // at least 16-bit aligned, so clear the LSB before we compute the hash
+    // location.
+    if (T.isARM() || T.isThumb()) {
+      FuncPtr = Builder.CreateIntToPtr(
+          Builder.CreateAnd(Builder.CreatePtrToInt(FuncPtr, Int32Ty),
+                            ConstantInt::get(Int32Ty, -2)),
+          FuncPtr->getType());
+    }
+    Value *HashPtr = Builder.CreateConstInBoundsGEP1_32(Int32Ty, FuncPtr, -1);
     Value *Test = Builder.CreateICmpNE(Builder.CreateLoad(Int32Ty, HashPtr),
                                        ConstantInt::get(Int32Ty, ExpectedHash));
     Instruction *ThenTerm =

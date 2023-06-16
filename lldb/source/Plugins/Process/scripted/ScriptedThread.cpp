@@ -341,7 +341,7 @@ std::shared_ptr<DynamicRegisterInfo> ScriptedThread::GetDynamicRegisterInfo() {
           LLVM_PRETTY_FUNCTION, "Failed to get scripted thread registers info.",
           error, LLDBLog::Thread);
 
-    m_register_info_sp = std::make_shared<DynamicRegisterInfo>(
+    m_register_info_sp = DynamicRegisterInfo::Create(
         *reg_info, m_scripted_process.GetTarget().GetArchitecture());
   }
 

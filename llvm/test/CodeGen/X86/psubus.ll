@@ -131,7 +131,7 @@ define <4 x i32> @ashr_xor_and_custom(<4 x i32> %x) nounwind {
 ;
 ; AVX1-LABEL: ashr_xor_and_custom:
 ; AVX1:       # %bb.0:
-; AVX1-NEXT:    vmovdqa {{.*#+}} xmm1 = [2147483648,2147483648,2147483648,2147483648]
+; AVX1-NEXT:    vbroadcastss {{.*#+}} xmm1 = [2147483648,2147483648,2147483648,2147483648]
 ; AVX1-NEXT:    vpmaxud %xmm1, %xmm0, %xmm0
 ; AVX1-NEXT:    vpsubd %xmm1, %xmm0, %xmm0
 ; AVX1-NEXT:    retq
@@ -172,7 +172,7 @@ define <4 x i32> @ashr_add_and_custom(<4 x i32> %x) nounwind {
 ;
 ; AVX1-LABEL: ashr_add_and_custom:
 ; AVX1:       # %bb.0:
-; AVX1-NEXT:    vmovdqa {{.*#+}} xmm1 = [2147483648,2147483648,2147483648,2147483648]
+; AVX1-NEXT:    vbroadcastss {{.*#+}} xmm1 = [2147483648,2147483648,2147483648,2147483648]
 ; AVX1-NEXT:    vpmaxud %xmm1, %xmm0, %xmm0
 ; AVX1-NEXT:    vpsubd %xmm1, %xmm0, %xmm0
 ; AVX1-NEXT:    retq
@@ -215,7 +215,7 @@ define <4 x i32> @usubsat_custom(<4 x i32> %x) nounwind {
 ;
 ; AVX1-LABEL: usubsat_custom:
 ; AVX1:       # %bb.0:
-; AVX1-NEXT:    vmovdqa {{.*#+}} xmm1 = <2147483648,2147483648,2147483648,u>
+; AVX1-NEXT:    vbroadcastss {{.*#+}} xmm1 = [2147483648,2147483648,2147483648,2147483648]
 ; AVX1-NEXT:    vpmaxud %xmm1, %xmm0, %xmm0
 ; AVX1-NEXT:    vpsubd %xmm1, %xmm0, %xmm0
 ; AVX1-NEXT:    retq
@@ -391,7 +391,7 @@ define <16 x i16> @test7(<16 x i16> %x) nounwind {
 ; AVX1-LABEL: test7:
 ; AVX1:       # %bb.0: # %vector.ph
 ; AVX1-NEXT:    vextractf128 $1, %ymm0, %xmm1
-; AVX1-NEXT:    vmovdqa {{.*#+}} xmm2 = [32768,32768,32768,32768,32768,32768,32768,32768]
+; AVX1-NEXT:    vbroadcastss {{.*#+}} xmm2 = [32768,32768,32768,32768,32768,32768,32768,32768]
 ; AVX1-NEXT:    vpsubusw %xmm2, %xmm1, %xmm1
 ; AVX1-NEXT:    vpsubusw %xmm2, %xmm0, %xmm0
 ; AVX1-NEXT:    vinsertf128 $1, %xmm1, %ymm0, %ymm0
@@ -424,7 +424,7 @@ define <16 x i16> @ashr_xor_and_v16i16(<16 x i16> %x) nounwind {
 ; AVX1-LABEL: ashr_xor_and_v16i16:
 ; AVX1:       # %bb.0:
 ; AVX1-NEXT:    vextractf128 $1, %ymm0, %xmm1
-; AVX1-NEXT:    vmovdqa {{.*#+}} xmm2 = [32768,32768,32768,32768,32768,32768,32768,32768]
+; AVX1-NEXT:    vbroadcastss {{.*#+}} xmm2 = [32768,32768,32768,32768,32768,32768,32768,32768]
 ; AVX1-NEXT:    vpsubusw %xmm2, %xmm1, %xmm1
 ; AVX1-NEXT:    vpsubusw %xmm2, %xmm0, %xmm0
 ; AVX1-NEXT:    vinsertf128 $1, %xmm1, %ymm0, %ymm0
@@ -456,7 +456,7 @@ define <16 x i16> @ashr_add_and_v16i16(<16 x i16> %x) nounwind {
 ; AVX1-LABEL: ashr_add_and_v16i16:
 ; AVX1:       # %bb.0:
 ; AVX1-NEXT:    vextractf128 $1, %ymm0, %xmm1
-; AVX1-NEXT:    vmovdqa {{.*#+}} xmm2 = [32768,32768,32768,32768,32768,32768,32768,32768]
+; AVX1-NEXT:    vbroadcastss {{.*#+}} xmm2 = [32768,32768,32768,32768,32768,32768,32768,32768]
 ; AVX1-NEXT:    vpsubusw %xmm2, %xmm1, %xmm1
 ; AVX1-NEXT:    vpsubusw %xmm2, %xmm0, %xmm0
 ; AVX1-NEXT:    vinsertf128 $1, %xmm1, %ymm0, %ymm0
@@ -488,7 +488,7 @@ define <16 x i16> @test8(<16 x i16> %x) nounwind {
 ; AVX1-LABEL: test8:
 ; AVX1:       # %bb.0: # %vector.ph
 ; AVX1-NEXT:    vextractf128 $1, %ymm0, %xmm1
-; AVX1-NEXT:    vmovdqa {{.*#+}} xmm2 = [32767,32767,32767,32767,32767,32767,32767,32767]
+; AVX1-NEXT:    vbroadcastss {{.*#+}} xmm2 = [32767,32767,32767,32767,32767,32767,32767,32767]
 ; AVX1-NEXT:    vpsubusw %xmm2, %xmm1, %xmm1
 ; AVX1-NEXT:    vpsubusw %xmm2, %xmm0, %xmm0
 ; AVX1-NEXT:    vinsertf128 $1, %xmm1, %ymm0, %ymm0
@@ -594,7 +594,7 @@ define <32 x i8> @test10(<32 x i8> %x) nounwind {
 ; AVX1-LABEL: test10:
 ; AVX1:       # %bb.0: # %vector.ph
 ; AVX1-NEXT:    vextractf128 $1, %ymm0, %xmm1
-; AVX1-NEXT:    vmovdqa {{.*#+}} xmm2 = [128,128,128,128,128,128,128,128,128,128,128,128,128,128,128,128]
+; AVX1-NEXT:    vbroadcastss {{.*#+}} xmm2 = [128,128,128,128,128,128,128,128,128,128,128,128,128,128,128,128]
 ; AVX1-NEXT:    vpsubusb %xmm2, %xmm1, %xmm1
 ; AVX1-NEXT:    vpsubusb %xmm2, %xmm0, %xmm0
 ; AVX1-NEXT:    vinsertf128 $1, %xmm1, %ymm0, %ymm0
@@ -627,7 +627,7 @@ define <32 x i8> @test11(<32 x i8> %x) nounwind {
 ; AVX1-LABEL: test11:
 ; AVX1:       # %bb.0: # %vector.ph
 ; AVX1-NEXT:    vextractf128 $1, %ymm0, %xmm1
-; AVX1-NEXT:    vmovdqa {{.*#+}} xmm2 = [127,127,127,127,127,127,127,127,127,127,127,127,127,127,127,127]
+; AVX1-NEXT:    vbroadcastss {{.*#+}} xmm2 = [127,127,127,127,127,127,127,127,127,127,127,127,127,127,127,127]
 ; AVX1-NEXT:    vpsubusb %xmm2, %xmm1, %xmm1
 ; AVX1-NEXT:    vpsubusb %xmm2, %xmm0, %xmm0
 ; AVX1-NEXT:    vinsertf128 $1, %xmm1, %ymm0, %ymm0
@@ -803,7 +803,7 @@ define <8 x i16> @test13(<8 x i16> %x, <8 x i32> %y) nounwind {
 ; AVX1-LABEL: test13:
 ; AVX1:       # %bb.0: # %vector.ph
 ; AVX1-NEXT:    vextractf128 $1, %ymm1, %xmm2
-; AVX1-NEXT:    vmovdqa {{.*#+}} xmm3 = [65535,65535,65535,65535]
+; AVX1-NEXT:    vbroadcastss {{.*#+}} xmm3 = [65535,65535,65535,65535]
 ; AVX1-NEXT:    vpminud %xmm3, %xmm2, %xmm2
 ; AVX1-NEXT:    vpminud %xmm3, %xmm1, %xmm1
 ; AVX1-NEXT:    vpackusdw %xmm2, %xmm1, %xmm1
@@ -948,7 +948,7 @@ define <16 x i8> @test14(<16 x i8> %x, <16 x i32> %y) nounwind {
 ; AVX1-NEXT:    vpxor %xmm7, %xmm3, %xmm3
 ; AVX1-NEXT:    vpackssdw %xmm3, %xmm4, %xmm3
 ; AVX1-NEXT:    vpacksswb %xmm5, %xmm3, %xmm3
-; AVX1-NEXT:    vmovaps {{.*#+}} ymm4 = [255,255,255,255,255,255,255,255]
+; AVX1-NEXT:    vbroadcastss {{.*#+}} ymm4 = [255,255,255,255,255,255,255,255]
 ; AVX1-NEXT:    vandps %ymm4, %ymm2, %ymm2
 ; AVX1-NEXT:    vextractf128 $1, %ymm2, %xmm5
 ; AVX1-NEXT:    vpackusdw %xmm5, %xmm2, %xmm2
@@ -1069,7 +1069,7 @@ define <8 x i16> @test15(<8 x i16> %x, <8 x i32> %y) nounwind {
 ; AVX1-LABEL: test15:
 ; AVX1:       # %bb.0: # %vector.ph
 ; AVX1-NEXT:    vextractf128 $1, %ymm1, %xmm2
-; AVX1-NEXT:    vmovdqa {{.*#+}} xmm3 = [65535,65535,65535,65535]
+; AVX1-NEXT:    vbroadcastss {{.*#+}} xmm3 = [65535,65535,65535,65535]
 ; AVX1-NEXT:    vpminud %xmm3, %xmm2, %xmm2
 ; AVX1-NEXT:    vpminud %xmm3, %xmm1, %xmm1
 ; AVX1-NEXT:    vpackusdw %xmm2, %xmm1, %xmm1
@@ -1592,7 +1592,7 @@ define <8 x i16> @psubus_8i32_max(<8 x i16> %x, <8 x i32> %y) nounwind {
 ; AVX1-LABEL: psubus_8i32_max:
 ; AVX1:       # %bb.0: # %vector.ph
 ; AVX1-NEXT:    vextractf128 $1, %ymm1, %xmm2
-; AVX1-NEXT:    vmovdqa {{.*#+}} xmm3 = [65535,65535,65535,65535]
+; AVX1-NEXT:    vbroadcastss {{.*#+}} xmm3 = [65535,65535,65535,65535]
 ; AVX1-NEXT:    vpminud %xmm3, %xmm2, %xmm2
 ; AVX1-NEXT:    vpminud %xmm3, %xmm1, %xmm1
 ; AVX1-NEXT:    vpackusdw %xmm2, %xmm1, %xmm1
@@ -1742,11 +1742,14 @@ define <8 x i16> @psubus_8i64_max(<8 x i16> %x, <8 x i64> %y) nounwind {
 ; AVX1-LABEL: psubus_8i64_max:
 ; AVX1:       # %bb.0: # %vector.ph
 ; AVX1-NEXT:    vextractf128 $1, %ymm2, %xmm3
-; AVX1-NEXT:    vmovdqa {{.*#+}} xmm4 = [9223372036854775808,9223372036854775808]
+; AVX1-NEXT:    vmovddup {{.*#+}} xmm4 = [9223372036854775808,9223372036854775808]
+; AVX1-NEXT:    # xmm4 = mem[0,0]
 ; AVX1-NEXT:    vpxor %xmm4, %xmm3, %xmm5
-; AVX1-NEXT:    vmovdqa {{.*#+}} xmm6 = [9223372036854841343,9223372036854841343]
+; AVX1-NEXT:    vmovddup {{.*#+}} xmm6 = [9223372036854841343,9223372036854841343]
+; AVX1-NEXT:    # xmm6 = mem[0,0]
 ; AVX1-NEXT:    vpcmpgtq %xmm5, %xmm6, %xmm5
-; AVX1-NEXT:    vmovapd {{.*#+}} xmm7 = [65535,65535]
+; AVX1-NEXT:    vmovddup {{.*#+}} xmm7 = [65535,65535]
+; AVX1-NEXT:    # xmm7 = mem[0,0]
 ; AVX1-NEXT:    vblendvpd %xmm5, %xmm3, %xmm7, %xmm3
 ; AVX1-NEXT:    vpxor %xmm4, %xmm2, %xmm5
 ; AVX1-NEXT:    vpcmpgtq %xmm5, %xmm6, %xmm5
@@ -1803,65 +1806,65 @@ define <16 x i16> @psubus_16i32_max(<16 x i16> %x, <16 x i32> %y) nounwind {
 ; SSE2OR3-LABEL: psubus_16i32_max:
 ; SSE2OR3:       # %bb.0: # %vector.ph
 ; SSE2OR3-NEXT:    movdqa {{.*#+}} xmm7 = [2147483648,2147483648,2147483648,2147483648]
-; SSE2OR3-NEXT:    movdqa %xmm3, %xmm8
+; SSE2OR3-NEXT:    movdqa %xmm5, %xmm8
 ; SSE2OR3-NEXT:    pxor %xmm7, %xmm8
 ; SSE2OR3-NEXT:    movdqa {{.*#+}} xmm6 = [2147549183,2147549183,2147549183,2147549183]
 ; SSE2OR3-NEXT:    movdqa %xmm6, %xmm9
 ; SSE2OR3-NEXT:    pcmpgtd %xmm8, %xmm9
 ; SSE2OR3-NEXT:    pcmpeqd %xmm8, %xmm8
+; SSE2OR3-NEXT:    pand %xmm9, %xmm5
+; SSE2OR3-NEXT:    pxor %xmm8, %xmm9
+; SSE2OR3-NEXT:    por %xmm5, %xmm9
+; SSE2OR3-NEXT:    pslld $16, %xmm9
+; SSE2OR3-NEXT:    psrad $16, %xmm9
+; SSE2OR3-NEXT:    movdqa %xmm4, %xmm10
+; SSE2OR3-NEXT:    pxor %xmm7, %xmm10
+; SSE2OR3-NEXT:    movdqa %xmm6, %xmm5
+; SSE2OR3-NEXT:    pcmpgtd %xmm10, %xmm5
+; SSE2OR3-NEXT:    pand %xmm5, %xmm4
+; SSE2OR3-NEXT:    pxor %xmm8, %xmm5
+; SSE2OR3-NEXT:    por %xmm4, %xmm5
+; SSE2OR3-NEXT:    pslld $16, %xmm5
+; SSE2OR3-NEXT:    psrad $16, %xmm5
+; SSE2OR3-NEXT:    packssdw %xmm9, %xmm5
+; SSE2OR3-NEXT:    movdqa %xmm3, %xmm4
+; SSE2OR3-NEXT:    pxor %xmm7, %xmm4
+; SSE2OR3-NEXT:    movdqa %xmm6, %xmm9
+; SSE2OR3-NEXT:    pcmpgtd %xmm4, %xmm9
 ; SSE2OR3-NEXT:    pand %xmm9, %xmm3
 ; SSE2OR3-NEXT:    pxor %xmm8, %xmm9
 ; SSE2OR3-NEXT:    por %xmm3, %xmm9
 ; SSE2OR3-NEXT:    pslld $16, %xmm9
 ; SSE2OR3-NEXT:    psrad $16, %xmm9
-; SSE2OR3-NEXT:    movdqa %xmm2, %xmm3
-; SSE2OR3-NEXT:    pxor %xmm7, %xmm3
-; SSE2OR3-NEXT:    movdqa %xmm6, %xmm10
-; SSE2OR3-NEXT:    pcmpgtd %xmm3, %xmm10
-; SSE2OR3-NEXT:    pand %xmm10, %xmm2
-; SSE2OR3-NEXT:    pxor %xmm8, %xmm10
-; SSE2OR3-NEXT:    por %xmm2, %xmm10
-; SSE2OR3-NEXT:    pslld $16, %xmm10
-; SSE2OR3-NEXT:    psrad $16, %xmm10
-; SSE2OR3-NEXT:    packssdw %xmm9, %xmm10
-; SSE2OR3-NEXT:    psubusw %xmm10, %xmm0
-; SSE2OR3-NEXT:    movdqa %xmm5, %xmm2
-; SSE2OR3-NEXT:    pxor %xmm7, %xmm2
-; SSE2OR3-NEXT:    movdqa %xmm6, %xmm3
-; SSE2OR3-NEXT:    pcmpgtd %xmm2, %xmm3
-; SSE2OR3-NEXT:    pand %xmm3, %xmm5
-; SSE2OR3-NEXT:    pxor %xmm8, %xmm3
-; SSE2OR3-NEXT:    por %xmm5, %xmm3
-; SSE2OR3-NEXT:    pslld $16, %xmm3
-; SSE2OR3-NEXT:    psrad $16, %xmm3
-; SSE2OR3-NEXT:    pxor %xmm4, %xmm7
+; SSE2OR3-NEXT:    pxor %xmm2, %xmm7
 ; SSE2OR3-NEXT:    pcmpgtd %xmm7, %xmm6
 ; SSE2OR3-NEXT:    pxor %xmm6, %xmm8
-; SSE2OR3-NEXT:    pand %xmm4, %xmm6
+; SSE2OR3-NEXT:    pand %xmm2, %xmm6
 ; SSE2OR3-NEXT:    por %xmm8, %xmm6
 ; SSE2OR3-NEXT:    pslld $16, %xmm6
 ; SSE2OR3-NEXT:    psrad $16, %xmm6
-; SSE2OR3-NEXT:    packssdw %xmm3, %xmm6
-; SSE2OR3-NEXT:    psubusw %xmm6, %xmm1
+; SSE2OR3-NEXT:    packssdw %xmm9, %xmm6
+; SSE2OR3-NEXT:    psubusw %xmm6, %xmm0
+; SSE2OR3-NEXT:    psubusw %xmm5, %xmm1
 ; SSE2OR3-NEXT:    retq
 ;
 ; SSE41-LABEL: psubus_16i32_max:
 ; SSE41:       # %bb.0: # %vector.ph
 ; SSE41-NEXT:    movdqa {{.*#+}} xmm6 = [65535,65535,65535,65535]
+; SSE41-NEXT:    pminud %xmm6, %xmm5
+; SSE41-NEXT:    pminud %xmm6, %xmm4
+; SSE41-NEXT:    packusdw %xmm5, %xmm4
 ; SSE41-NEXT:    pminud %xmm6, %xmm3
 ; SSE41-NEXT:    pminud %xmm6, %xmm2
 ; SSE41-NEXT:    packusdw %xmm3, %xmm2
 ; SSE41-NEXT:    psubusw %xmm2, %xmm0
-; SSE41-NEXT:    pminud %xmm6, %xmm5
-; SSE41-NEXT:    pminud %xmm6, %xmm4
-; SSE41-NEXT:    packusdw %xmm5, %xmm4
 ; SSE41-NEXT:    psubusw %xmm4, %xmm1
 ; SSE41-NEXT:    retq
 ;
 ; AVX1-LABEL: psubus_16i32_max:
 ; AVX1:       # %bb.0: # %vector.ph
 ; AVX1-NEXT:    vextractf128 $1, %ymm2, %xmm3
-; AVX1-NEXT:    vmovdqa {{.*#+}} xmm4 = [65535,65535,65535,65535]
+; AVX1-NEXT:    vbroadcastss {{.*#+}} xmm4 = [65535,65535,65535,65535]
 ; AVX1-NEXT:    vpminud %xmm4, %xmm3, %xmm3
 ; AVX1-NEXT:    vpminud %xmm4, %xmm2, %xmm2
 ; AVX1-NEXT:    vpackusdw %xmm3, %xmm2, %xmm2
@@ -1961,7 +1964,7 @@ define <8 x i16> @psubus_i16_i32_max_swapped(<8 x i16> %x, <8 x i32> %y) nounwin
 ; AVX1-LABEL: psubus_i16_i32_max_swapped:
 ; AVX1:       # %bb.0: # %vector.ph
 ; AVX1-NEXT:    vextractf128 $1, %ymm1, %xmm2
-; AVX1-NEXT:    vmovdqa {{.*#+}} xmm3 = [65535,65535,65535,65535]
+; AVX1-NEXT:    vbroadcastss {{.*#+}} xmm3 = [65535,65535,65535,65535]
 ; AVX1-NEXT:    vpminud %xmm3, %xmm2, %xmm2
 ; AVX1-NEXT:    vpminud %xmm3, %xmm1, %xmm1
 ; AVX1-NEXT:    vpackusdw %xmm2, %xmm1, %xmm1
@@ -2056,7 +2059,7 @@ define <8 x i16> @psubus_i16_i32_min(<8 x i16> %x, <8 x i32> %y) nounwind {
 ; AVX1-LABEL: psubus_i16_i32_min:
 ; AVX1:       # %bb.0: # %vector.ph
 ; AVX1-NEXT:    vextractf128 $1, %ymm1, %xmm2
-; AVX1-NEXT:    vmovdqa {{.*#+}} xmm3 = [65535,65535,65535,65535]
+; AVX1-NEXT:    vbroadcastss {{.*#+}} xmm3 = [65535,65535,65535,65535]
 ; AVX1-NEXT:    vpminud %xmm3, %xmm2, %xmm2
 ; AVX1-NEXT:    vpminud %xmm3, %xmm1, %xmm1
 ; AVX1-NEXT:    vpackusdw %xmm2, %xmm1, %xmm1
@@ -2302,7 +2305,7 @@ define <32 x i8> @test23(<32 x i8> %x) {
 ; AVX1-LABEL: test23:
 ; AVX1:       # %bb.0: # %entry
 ; AVX1-NEXT:    vextractf128 $1, %ymm0, %xmm1
-; AVX1-NEXT:    vmovdqa {{.*#+}} xmm2 = [70,70,70,70,70,70,70,70,70,70,70,70,70,70,70,70]
+; AVX1-NEXT:    vbroadcastss {{.*#+}} xmm2 = [70,70,70,70,70,70,70,70,70,70,70,70,70,70,70,70]
 ; AVX1-NEXT:    vpsubusb %xmm2, %xmm1, %xmm1
 ; AVX1-NEXT:    vpsubusb %xmm2, %xmm0, %xmm0
 ; AVX1-NEXT:    vinsertf128 $1, %xmm1, %ymm0, %ymm0
@@ -2366,7 +2369,7 @@ define <16 x i16> @test25(<16 x i16> %x) {
 ; AVX1-LABEL: test25:
 ; AVX1:       # %bb.0: # %entry
 ; AVX1-NEXT:    vextractf128 $1, %ymm0, %xmm1
-; AVX1-NEXT:    vmovdqa {{.*#+}} xmm2 = [5000,5000,5000,5000,5000,5000,5000,5000]
+; AVX1-NEXT:    vbroadcastss {{.*#+}} xmm2 = [5000,5000,5000,5000,5000,5000,5000,5000]
 ; AVX1-NEXT:    vpsubusw %xmm2, %xmm1, %xmm1
 ; AVX1-NEXT:    vpsubusw %xmm2, %xmm0, %xmm0
 ; AVX1-NEXT:    vinsertf128 $1, %xmm1, %ymm0, %ymm0
@@ -2432,7 +2435,7 @@ define <64 x i8> @test27(<64 x i8> %x) {
 ; AVX1-LABEL: test27:
 ; AVX1:       # %bb.0: # %entry
 ; AVX1-NEXT:    vextractf128 $1, %ymm0, %xmm2
-; AVX1-NEXT:    vmovdqa {{.*#+}} xmm3 = [154,154,154,154,154,154,154,154,154,154,154,154,154,154,154,154]
+; AVX1-NEXT:    vbroadcastss {{.*#+}} xmm3 = [154,154,154,154,154,154,154,154,154,154,154,154,154,154,154,154]
 ; AVX1-NEXT:    vpsubusb %xmm3, %xmm2, %xmm2
 ; AVX1-NEXT:    vpsubusb %xmm3, %xmm0, %xmm0
 ; AVX1-NEXT:    vinsertf128 $1, %xmm2, %ymm0, %ymm0
@@ -2444,7 +2447,7 @@ define <64 x i8> @test27(<64 x i8> %x) {
 ;
 ; AVX2-LABEL: test27:
 ; AVX2:       # %bb.0: # %entry
-; AVX2-NEXT:    vmovdqa {{.*#+}} ymm2 = [154,154,154,154,154,154,154,154,154,154,154,154,154,154,154,154,154,154,154,154,154,154,154,154,154,154,154,154,154,154,154,154]
+; AVX2-NEXT:    vpbroadcastb {{.*#+}} ymm2 = [154,154,154,154,154,154,154,154,154,154,154,154,154,154,154,154,154,154,154,154,154,154,154,154,154,154,154,154,154,154,154,154]
 ; AVX2-NEXT:    vpsubusb %ymm2, %ymm0, %ymm0
 ; AVX2-NEXT:    vpsubusb %ymm2, %ymm1, %ymm1
 ; AVX2-NEXT:    retq
@@ -2645,7 +2648,7 @@ define <8 x i16> @test32(<8 x i16> %a0, <8 x i32> %a1) {
 ; AVX1-LABEL: test32:
 ; AVX1:       # %bb.0:
 ; AVX1-NEXT:    vextractf128 $1, %ymm1, %xmm2
-; AVX1-NEXT:    vmovdqa {{.*#+}} xmm3 = [65535,65535,65535,65535]
+; AVX1-NEXT:    vbroadcastss {{.*#+}} xmm3 = [65535,65535,65535,65535]
 ; AVX1-NEXT:    vpminud %xmm3, %xmm2, %xmm2
 ; AVX1-NEXT:    vpminud %xmm3, %xmm1, %xmm1
 ; AVX1-NEXT:    vpackusdw %xmm2, %xmm1, %xmm1
@@ -2799,11 +2802,14 @@ define <8 x i32> @test33(<8 x i32> %a0, <8 x i64> %a1) {
 ; AVX1-LABEL: test33:
 ; AVX1:       # %bb.0:
 ; AVX1-NEXT:    vextractf128 $1, %ymm2, %xmm3
-; AVX1-NEXT:    vmovdqa {{.*#+}} xmm4 = [9223372036854775808,9223372036854775808]
+; AVX1-NEXT:    vmovddup {{.*#+}} xmm4 = [9223372036854775808,9223372036854775808]
+; AVX1-NEXT:    # xmm4 = mem[0,0]
 ; AVX1-NEXT:    vpxor %xmm4, %xmm3, %xmm5
-; AVX1-NEXT:    vmovdqa {{.*#+}} xmm6 = [9223372041149743103,9223372041149743103]
+; AVX1-NEXT:    vmovddup {{.*#+}} xmm6 = [9223372041149743103,9223372041149743103]
+; AVX1-NEXT:    # xmm6 = mem[0,0]
 ; AVX1-NEXT:    vpcmpgtq %xmm5, %xmm6, %xmm5
-; AVX1-NEXT:    vmovapd {{.*#+}} xmm7 = [4294967295,4294967295]
+; AVX1-NEXT:    vmovddup {{.*#+}} xmm7 = [4294967295,4294967295]
+; AVX1-NEXT:    # xmm7 = mem[0,0]
 ; AVX1-NEXT:    vblendvpd %xmm5, %xmm3, %xmm7, %xmm3
 ; AVX1-NEXT:    vpxor %xmm4, %xmm2, %xmm5
 ; AVX1-NEXT:    vpcmpgtq %xmm5, %xmm6, %xmm5
@@ -3023,11 +3029,14 @@ define <8 x i32> @test34(<8 x i32> %a0, <8 x i64> %a1) {
 ; AVX1:       # %bb.0:
 ; AVX1-NEXT:    vandps {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %ymm0, %ymm0
 ; AVX1-NEXT:    vextractf128 $1, %ymm2, %xmm3
-; AVX1-NEXT:    vmovdqa {{.*#+}} xmm4 = [9223372036854775808,9223372036854775808]
+; AVX1-NEXT:    vmovddup {{.*#+}} xmm4 = [9223372036854775808,9223372036854775808]
+; AVX1-NEXT:    # xmm4 = mem[0,0]
 ; AVX1-NEXT:    vpxor %xmm4, %xmm3, %xmm5
-; AVX1-NEXT:    vmovdqa {{.*#+}} xmm6 = [9223372041149743103,9223372041149743103]
+; AVX1-NEXT:    vmovddup {{.*#+}} xmm6 = [9223372041149743103,9223372041149743103]
+; AVX1-NEXT:    # xmm6 = mem[0,0]
 ; AVX1-NEXT:    vpcmpgtq %xmm5, %xmm6, %xmm5
-; AVX1-NEXT:    vmovapd {{.*#+}} xmm7 = [4294967295,4294967295]
+; AVX1-NEXT:    vmovddup {{.*#+}} xmm7 = [4294967295,4294967295]
+; AVX1-NEXT:    # xmm7 = mem[0,0]
 ; AVX1-NEXT:    vblendvpd %xmm5, %xmm3, %xmm7, %xmm3
 ; AVX1-NEXT:    vpxor %xmm4, %xmm2, %xmm5
 ; AVX1-NEXT:    vpcmpgtq %xmm5, %xmm6, %xmm5

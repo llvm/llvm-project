@@ -18,6 +18,7 @@
 #include "Selection.h"
 #include "SourceCode.h"
 #include "clang-include-cleaner/Analysis.h"
+#include "clang-include-cleaner/IncludeSpeller.h"
 #include "clang-include-cleaner/Types.h"
 #include "index/SymbolCollector.h"
 #include "support/Logger.h"
@@ -1223,7 +1224,9 @@ void maybeAddSymbolProviders(ParsedAST &AST, HoverInfo &HI,
     // on local variables, etc.
     return;
 
-  HI.Provider = spellHeader(AST, SM.getFileEntryForID(SM.getMainFileID()), H);
+  HI.Provider = include_cleaner::spellHeader(
+      {H, AST.getPreprocessor().getHeaderSearchInfo(),
+       SM.getFileEntryForID(SM.getMainFileID())});
 }
 
 // FIXME: similar functions are present in FindHeaders.cpp (symbolName)

@@ -1183,6 +1183,7 @@ lldb::SBError SBProcess::SaveCore(const char *file_name,
   }
 
   FileSpec core_file(file_name);
+  FileSystem::Instance().Resolve(core_file);
   error.ref() = PluginManager::SaveCore(process_sp, core_file, core_style,
                                         flavor);
 

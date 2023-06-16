@@ -27,6 +27,7 @@
 //   COMMON_INTERCEPTOR_HANDLE_RECVMSG
 //   COMMON_INTERCEPTOR_NOTHING_IS_INITIALIZED
 //   COMMON_INTERCEPTOR_MMAP_IMPL
+//   COMMON_INTERCEPTOR_MUNMAP_IMPL
 //   COMMON_INTERCEPTOR_COPY_STRING
 //   COMMON_INTERCEPTOR_STRNDUP_IMPL
 //   COMMON_INTERCEPTOR_STRERROR
@@ -294,6 +295,11 @@ extern const short *_tolower_tab_;
 #define COMMON_INTERCEPTOR_MMAP_IMPL(ctx, mmap, addr, sz, prot, flags, fd, \
                                      off)                                  \
   { return REAL(mmap)(addr, sz, prot, flags, fd, off); }
+#endif
+
+#ifndef COMMON_INTERCEPTOR_MUNMAP_IMPL
+#define COMMON_INTERCEPTOR_MUNMAP_IMPL(ctx, addr, sz) \
+  { return REAL(munmap)(addr, sz); }
 #endif
 
 #ifndef COMMON_INTERCEPTOR_COPY_STRING
@@ -7402,6 +7408,14 @@ INTERCEPTOR(void *, mmap, void *addr, SIZE_T sz, int prot, int flags, int fd,
   COMMON_INTERCEPTOR_MMAP_IMPL(ctx, mmap, addr, sz, prot, flags, fd, off);
 }
 
+INTERCEPTOR(int, munmap, void *addr, SIZE_T sz) {
+  void *ctx;
+  if (COMMON_INTERCEPTOR_NOTHING_IS_INITIALIZED)
+    return (int)internal_munmap(addr, sz);
+  COMMON_INTERCEPTOR_ENTER(ctx, munmap, addr, sz);
+  COMMON_INTERCEPTOR_MUNMAP_IMPL(ctx, addr, sz);
+}
+
 INTERCEPTOR(int, mprotect, void *addr, SIZE_T sz, int prot) {
   void *ctx;
   if (common_flags()->detect_write_exec)
@@ -7414,6 +7428,7 @@ INTERCEPTOR(int, mprotect, void *addr, SIZE_T sz, int prot) {
 }
 #define INIT_MMAP                                                              \
   COMMON_INTERCEPT_FUNCTION(mmap);                                             \
+  COMMON_INTERCEPT_FUNCTION(munmap);                                           \
   COMMON_INTERCEPT_FUNCTION(mprotect);
 #else
 #define INIT_MMAP
@@ -10158,6 +10173,19 @@ INTERCEPTOR(int, argp_parse, const struct argp *argp, int argc, char **argv,
 #define INIT_ARGP_PARSE
 #endif
 
+#if SANITIZER_INTERCEPT_CPUSET_GETAFFINITY
+INTERCEPTOR(int, cpuset_getaffinity, int level, int which, __int64_t id, SIZE_T cpusetsize, __sanitizer_cpuset_t *mask) {
+  void *ctx;
+  COMMON_INTERCEPTOR_ENTER(ctx, cpuset_getaffinity, level, which, id, cpusetsize, mask);
+  int res = REAL(cpuset_getaffinity)(level, which, id, cpusetsize, mask);
+  if (mask && !res) COMMON_INTERCEPTOR_WRITE_RANGE(ctx, mask, cpusetsize);
+  return res;
+}
+#define INIT_CPUSET_GETAFFINITY COMMON_INTERCEPT_FUNCTION(cpuset_getaffinity);
+#else
+#define INIT_CPUSET_GETAFFINITY
+#endif
+
 #include "sanitizer_common_interceptors_netbsd_compat.inc"
 
 namespace __sanitizer {
@@ -10476,6 +10504,7 @@ static void InitializeCommonInterceptors() {
   INIT___XUNAME;
   INIT_HEXDUMP;
   INIT_ARGP_PARSE;
+  INIT_CPUSET_GETAFFINITY;
 
   INIT___PRINTF_CHK;
 }

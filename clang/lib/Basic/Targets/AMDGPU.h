@@ -46,6 +46,9 @@ class LLVM_LIBRARY_VISIBILITY AMDGPUTargetInfo final : public TargetInfo {
   /// Whether to use cumode or WGP mode. True for cumode. False for WGP mode.
   bool CUMode;
 
+  /// Whether having image instructions.
+  bool HasImage = false;
+
   /// Target ID is device name followed by optional feature name postfixed
   /// by plus or minus sign delimitted by colon, e.g. gfx908:xnack+:sramecc-.
   /// If the target ID contains feature+, map it to true.
@@ -449,6 +452,8 @@ public:
         CUMode = true;
       else if (F == "-cumode")
         CUMode = false;
+      else if (F == "+image-insts")
+        HasImage = true;
       bool IsOn = F.front() == '+';
       StringRef Name = StringRef(F).drop_front();
       if (!llvm::is_contained(TargetIDFeatures, Name))
@@ -469,6 +474,8 @@ public:
     return getCanonicalTargetID(getArchNameAMDGCN(GPUKind),
                                 OffloadArchFeatures);
   }
+
+  bool hasHIPImageSupport() const override { return HasImage; }
 };
 
 } // namespace targets

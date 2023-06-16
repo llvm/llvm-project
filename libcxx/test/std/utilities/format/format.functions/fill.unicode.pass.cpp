@@ -7,7 +7,7 @@
 
 // UNSUPPORTED: c++03, c++11, c++14, c++17
 // UNSUPPORTED: libcpp-has-no-incomplete-format
-// TODO FMT Evaluate gcc-12 status
+// UNSUPPORTED: GCC-ALWAYS_INLINE-FIXME
 
 // This version runs the test when the platform has Unicode support.
 // UNSUPPORTED: libcpp-has-no-unicode

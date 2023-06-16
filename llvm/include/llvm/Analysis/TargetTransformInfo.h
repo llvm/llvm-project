@@ -356,6 +356,10 @@ public:
   /// source/destination type and alignment and the number of bytes copied.
   InstructionCost getMemcpyCost(const Instruction *I) const;
 
+  /// Returns the maximum memset / memcpy size in bytes that still makes it
+  /// profitable to inline the call.
+  uint64_t getMaxMemIntrinsicInlineSizeThreshold() const;
+
   /// \return The estimated number of case clusters when lowering \p 'SI'.
   /// \p JTSize Set a jump table size only when \p SI is suitable for a jump
   /// table.
@@ -414,6 +418,9 @@ public:
   /// Query the target whether the specified address space cast from FromAS to
   /// ToAS is valid.
   bool isValidAddrSpaceCast(unsigned FromAS, unsigned ToAS) const;
+
+  /// Return false if a \p AS0 address cannot possibly alias a \p AS1 address.
+  bool addrspacesMayAlias(unsigned AS0, unsigned AS1) const;
 
   /// Returns the address space ID for a target's 'flat' address space. Note
   /// this is not necessarily the same as addrspace(0), which LLVM sometimes
@@ -1673,6 +1680,7 @@ public:
   virtual unsigned adjustInliningThreshold(const CallBase *CB) = 0;
   virtual int getInlinerVectorBonusPercent() const = 0;
   virtual InstructionCost getMemcpyCost(const Instruction *I) = 0;
+  virtual uint64_t getMaxMemIntrinsicInlineSizeThreshold() const = 0;
   virtual unsigned
   getEstimatedNumberOfCaseClusters(const SwitchInst &SI, unsigned &JTSize,
                                    ProfileSummaryInfo *PSI,
@@ -1685,6 +1693,7 @@ public:
   virtual bool isSourceOfDivergence(const Value *V) = 0;
   virtual bool isAlwaysUniform(const Value *V) = 0;
   virtual bool isValidAddrSpaceCast(unsigned FromAS, unsigned ToAS) const = 0;
+  virtual bool addrspacesMayAlias(unsigned AS0, unsigned AS1) const = 0;
   virtual unsigned getFlatAddressSpace() = 0;
   virtual bool collectFlatAddressOperands(SmallVectorImpl<int> &OpIndexes,
                                           Intrinsic::ID IID) const = 0;
@@ -2044,6 +2053,11 @@ public:
   InstructionCost getMemcpyCost(const Instruction *I) override {
     return Impl.getMemcpyCost(I);
   }
+
+  uint64_t getMaxMemIntrinsicInlineSizeThreshold() const override {
+    return Impl.getMaxMemIntrinsicInlineSizeThreshold();
+  }
+
   InstructionCost getInstructionCost(const User *U,
                                      ArrayRef<const Value *> Operands,
                                      TargetCostKind CostKind) override {
@@ -2063,6 +2077,10 @@ public:
 
   bool isValidAddrSpaceCast(unsigned FromAS, unsigned ToAS) const override {
     return Impl.isValidAddrSpaceCast(FromAS, ToAS);
+  }
+
+  bool addrspacesMayAlias(unsigned AS0, unsigned AS1) const override {
+    return Impl.addrspacesMayAlias(AS0, AS1);
   }
 
   unsigned getFlatAddressSpace() override { return Impl.getFlatAddressSpace(); }

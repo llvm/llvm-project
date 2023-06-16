@@ -549,68 +549,13 @@ define void @splat_zero_v2i32(ptr %p) {
 
 ; Not a power of two and requires more than two scalar stores.
 define void @splat_zero_v7i16(ptr %p) {
-; LMULMAX8-RV32-LABEL: splat_zero_v7i16:
-; LMULMAX8-RV32:       # %bb.0:
-; LMULMAX8-RV32-NEXT:    sh zero, 12(a0)
-; LMULMAX8-RV32-NEXT:    vsetivli zero, 4, e16, mf2, ta, ma
-; LMULMAX8-RV32-NEXT:    vmv.v.i v8, 0
-; LMULMAX8-RV32-NEXT:    vse16.v v8, (a0)
-; LMULMAX8-RV32-NEXT:    vsetivli zero, 8, e16, m1, ta, ma
-; LMULMAX8-RV32-NEXT:    vmv.v.i v8, 0
-; LMULMAX8-RV32-NEXT:    vsetivli zero, 1, e32, m1, ta, ma
-; LMULMAX8-RV32-NEXT:    vslidedown.vi v8, v8, 2
-; LMULMAX8-RV32-NEXT:    addi a0, a0, 8
-; LMULMAX8-RV32-NEXT:    vse32.v v8, (a0)
-; LMULMAX8-RV32-NEXT:    ret
-;
-; LMULMAX2-RV32-LABEL: splat_zero_v7i16:
-; LMULMAX2-RV32:       # %bb.0:
-; LMULMAX2-RV32-NEXT:    sh zero, 12(a0)
-; LMULMAX2-RV32-NEXT:    vsetivli zero, 4, e16, mf2, ta, ma
-; LMULMAX2-RV32-NEXT:    vmv.v.i v8, 0
-; LMULMAX2-RV32-NEXT:    vse16.v v8, (a0)
-; LMULMAX2-RV32-NEXT:    vsetivli zero, 8, e16, m1, ta, ma
-; LMULMAX2-RV32-NEXT:    vmv.v.i v8, 0
-; LMULMAX2-RV32-NEXT:    vsetivli zero, 1, e32, m1, ta, ma
-; LMULMAX2-RV32-NEXT:    vslidedown.vi v8, v8, 2
-; LMULMAX2-RV32-NEXT:    addi a0, a0, 8
-; LMULMAX2-RV32-NEXT:    vse32.v v8, (a0)
-; LMULMAX2-RV32-NEXT:    ret
-;
-; LMULMAX1-RV32-LABEL: splat_zero_v7i16:
-; LMULMAX1-RV32:       # %bb.0:
-; LMULMAX1-RV32-NEXT:    sh zero, 12(a0)
-; LMULMAX1-RV32-NEXT:    vsetivli zero, 4, e16, mf2, ta, ma
-; LMULMAX1-RV32-NEXT:    vmv.v.i v8, 0
-; LMULMAX1-RV32-NEXT:    vse16.v v8, (a0)
-; LMULMAX1-RV32-NEXT:    vsetivli zero, 8, e16, m1, ta, ma
-; LMULMAX1-RV32-NEXT:    vmv.v.i v8, 0
-; LMULMAX1-RV32-NEXT:    vsetivli zero, 1, e32, m1, ta, ma
-; LMULMAX1-RV32-NEXT:    vslidedown.vi v8, v8, 2
-; LMULMAX1-RV32-NEXT:    addi a0, a0, 8
-; LMULMAX1-RV32-NEXT:    vse32.v v8, (a0)
-; LMULMAX1-RV32-NEXT:    ret
-;
-; LMULMAX8-RV64-LABEL: splat_zero_v7i16:
-; LMULMAX8-RV64:       # %bb.0:
-; LMULMAX8-RV64-NEXT:    sh zero, 12(a0)
-; LMULMAX8-RV64-NEXT:    sw zero, 8(a0)
-; LMULMAX8-RV64-NEXT:    sd zero, 0(a0)
-; LMULMAX8-RV64-NEXT:    ret
-;
-; LMULMAX2-RV64-LABEL: splat_zero_v7i16:
-; LMULMAX2-RV64:       # %bb.0:
-; LMULMAX2-RV64-NEXT:    sh zero, 12(a0)
-; LMULMAX2-RV64-NEXT:    sw zero, 8(a0)
-; LMULMAX2-RV64-NEXT:    sd zero, 0(a0)
-; LMULMAX2-RV64-NEXT:    ret
-;
-; LMULMAX1-RV64-LABEL: splat_zero_v7i16:
-; LMULMAX1-RV64:       # %bb.0:
-; LMULMAX1-RV64-NEXT:    sh zero, 12(a0)
-; LMULMAX1-RV64-NEXT:    sw zero, 8(a0)
-; LMULMAX1-RV64-NEXT:    sd zero, 0(a0)
-; LMULMAX1-RV64-NEXT:    ret
+; CHECK-LABEL: splat_zero_v7i16:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetivli zero, 8, e16, m1, ta, ma
+; CHECK-NEXT:    vmv.v.i v8, 0
+; CHECK-NEXT:    vsetivli zero, 7, e16, m1, ta, ma
+; CHECK-NEXT:    vse16.v v8, (a0)
+; CHECK-NEXT:    ret
   store <7 x i16> zeroinitializer, ptr %p
   ret void
 }

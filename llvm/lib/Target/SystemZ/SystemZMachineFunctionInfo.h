@@ -27,6 +27,9 @@ struct GPRRegs {
 class SystemZMachineFunctionInfo : public MachineFunctionInfo {
   virtual void anchor();
 
+  /// Size of expected parameter area for current function. (Fixed args only).
+  unsigned SizeOfFnParams;
+
   SystemZ::GPRRegs SpillGPRRegs;
   SystemZ::GPRRegs RestoreGPRRegs;
   Register VarArgsFirstGPR;
@@ -38,13 +41,19 @@ class SystemZMachineFunctionInfo : public MachineFunctionInfo {
 
 public:
   SystemZMachineFunctionInfo(const Function &F, const TargetSubtargetInfo *STI)
-      : VarArgsFirstGPR(0), VarArgsFirstFPR(0), VarArgsFrameIndex(0),
-        RegSaveFrameIndex(0), FramePointerSaveIndex(0), NumLocalDynamics(0) {}
+      : SizeOfFnParams(0), VarArgsFirstGPR(0), VarArgsFirstFPR(0),
+        VarArgsFrameIndex(0), RegSaveFrameIndex(0), FramePointerSaveIndex(0),
+        NumLocalDynamics(0) {}
 
   MachineFunctionInfo *
   clone(BumpPtrAllocator &Allocator, MachineFunction &DestMF,
         const DenseMap<MachineBasicBlock *, MachineBasicBlock *> &Src2DstMBB)
       const override;
+
+  // z/OS: Get and set the size of the expected parameter area for the
+  // current function. (ie. Size of param area in caller).
+  unsigned getSizeOfFnParams() const { return SizeOfFnParams; }
+  void setSizeOfFnParams(unsigned Size) { SizeOfFnParams = Size; }
 
   // Get and set the first and last call-saved GPR that should be saved by
   // this function and the SP offset for the STMG.  These are 0 if no GPRs

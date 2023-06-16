@@ -23,51 +23,55 @@ namespace __llvm_libc {
 // compiler match for us.
 namespace __internal {
 
-template <typename T> LIBC_INLINE int correct_zero(T val, int bits) {
+template <typename T> LIBC_INLINE int constexpr correct_zero(T val, int bits) {
   if (val == T(0))
     return sizeof(T(0)) * 8;
   else
     return bits;
 }
 
-template <typename T> LIBC_INLINE int clz(T val);
+template <typename T> LIBC_INLINE constexpr int clz(T val);
 template <> LIBC_INLINE int clz<unsigned int>(unsigned int val) {
   return __builtin_clz(val);
 }
-template <> LIBC_INLINE int clz<unsigned long int>(unsigned long int val) {
+template <>
+LIBC_INLINE constexpr int clz<unsigned long int>(unsigned long int val) {
   return __builtin_clzl(val);
 }
 template <>
-LIBC_INLINE int clz<unsigned long long int>(unsigned long long int val) {
+LIBC_INLINE constexpr int
+clz<unsigned long long int>(unsigned long long int val) {
   return __builtin_clzll(val);
 }
 
-template <typename T> LIBC_INLINE int ctz(T val);
+template <typename T> LIBC_INLINE constexpr int ctz(T val);
 template <> LIBC_INLINE int ctz<unsigned int>(unsigned int val) {
   return __builtin_ctz(val);
 }
-template <> LIBC_INLINE int ctz<unsigned long int>(unsigned long int val) {
+template <>
+LIBC_INLINE constexpr int ctz<unsigned long int>(unsigned long int val) {
   return __builtin_ctzl(val);
 }
 template <>
-LIBC_INLINE int ctz<unsigned long long int>(unsigned long long int val) {
+LIBC_INLINE constexpr int
+ctz<unsigned long long int>(unsigned long long int val) {
   return __builtin_ctzll(val);
 }
 } // namespace __internal
 
-template <typename T> LIBC_INLINE int safe_ctz(T val) {
+template <typename T> LIBC_INLINE constexpr int safe_ctz(T val) {
   return __internal::correct_zero(val, __internal::ctz(val));
 }
 
-template <typename T> LIBC_INLINE int unsafe_ctz(T val) {
+template <typename T> LIBC_INLINE constexpr int unsafe_ctz(T val) {
   return __internal::ctz(val);
 }
 
-template <typename T> LIBC_INLINE int safe_clz(T val) {
+template <typename T> LIBC_INLINE constexpr int safe_clz(T val) {
   return __internal::correct_zero(val, __internal::clz(val));
 }
 
-template <typename T> LIBC_INLINE int unsafe_clz(T val) {
+template <typename T> LIBC_INLINE constexpr int unsafe_clz(T val) {
   return __internal::clz(val);
 }
 

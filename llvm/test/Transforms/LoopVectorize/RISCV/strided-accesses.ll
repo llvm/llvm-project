@@ -233,7 +233,7 @@ define void @single_stride_int_scaled(ptr %p, i64 %stride) {
 ; NOSTRIDED:       vector.body:
 ; NOSTRIDED-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
 ; NOSTRIDED-NEXT:    [[TMP5:%.*]] = add i64 [[INDEX]], 0
-; NOSTRIDED-NEXT:    [[TMP6:%.*]] = mul nuw nsw i64 [[TMP5]], [[STRIDE]]
+; NOSTRIDED-NEXT:    [[TMP6:%.*]] = mul nuw nsw i64 [[TMP5]], 1
 ; NOSTRIDED-NEXT:    [[TMP7:%.*]] = getelementptr i32, ptr [[P:%.*]], i64 [[TMP6]]
 ; NOSTRIDED-NEXT:    [[TMP8:%.*]] = getelementptr i32, ptr [[TMP7]], i32 0
 ; NOSTRIDED-NEXT:    [[WIDE_LOAD:%.*]] = load <vscale x 4 x i32>, ptr [[TMP8]], align 4
@@ -317,19 +317,17 @@ define void @single_stride_int_iv(ptr %p, i64 %stride) {
 ; NOSTRIDED-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; NOSTRIDED:       vector.body:
 ; NOSTRIDED-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
-; NOSTRIDED-NEXT:    [[OFFSET_IDX:%.*]] = mul i64 [[INDEX]], [[STRIDE]]
-; NOSTRIDED-NEXT:    [[TMP5:%.*]] = mul i64 0, [[STRIDE]]
-; NOSTRIDED-NEXT:    [[TMP6:%.*]] = add i64 [[OFFSET_IDX]], [[TMP5]]
-; NOSTRIDED-NEXT:    [[TMP7:%.*]] = getelementptr i32, ptr [[P:%.*]], i64 [[TMP6]]
-; NOSTRIDED-NEXT:    [[TMP8:%.*]] = getelementptr i32, ptr [[TMP7]], i32 0
-; NOSTRIDED-NEXT:    [[WIDE_LOAD:%.*]] = load <vscale x 4 x i32>, ptr [[TMP8]], align 4
-; NOSTRIDED-NEXT:    [[TMP9:%.*]] = add <vscale x 4 x i32> [[WIDE_LOAD]], shufflevector (<vscale x 4 x i32> insertelement (<vscale x 4 x i32> poison, i32 1, i64 0), <vscale x 4 x i32> poison, <vscale x 4 x i32> zeroinitializer)
-; NOSTRIDED-NEXT:    store <vscale x 4 x i32> [[TMP9]], ptr [[TMP8]], align 4
-; NOSTRIDED-NEXT:    [[TMP10:%.*]] = call i64 @llvm.vscale.i64()
-; NOSTRIDED-NEXT:    [[TMP11:%.*]] = mul i64 [[TMP10]], 4
-; NOSTRIDED-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], [[TMP11]]
-; NOSTRIDED-NEXT:    [[TMP12:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
-; NOSTRIDED-NEXT:    br i1 [[TMP12]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP10:![0-9]+]]
+; NOSTRIDED-NEXT:    [[TMP5:%.*]] = add i64 [[INDEX]], 0
+; NOSTRIDED-NEXT:    [[TMP6:%.*]] = getelementptr i32, ptr [[P:%.*]], i64 [[TMP5]]
+; NOSTRIDED-NEXT:    [[TMP7:%.*]] = getelementptr i32, ptr [[TMP6]], i32 0
+; NOSTRIDED-NEXT:    [[WIDE_LOAD:%.*]] = load <vscale x 4 x i32>, ptr [[TMP7]], align 4
+; NOSTRIDED-NEXT:    [[TMP8:%.*]] = add <vscale x 4 x i32> [[WIDE_LOAD]], shufflevector (<vscale x 4 x i32> insertelement (<vscale x 4 x i32> poison, i32 1, i64 0), <vscale x 4 x i32> poison, <vscale x 4 x i32> zeroinitializer)
+; NOSTRIDED-NEXT:    store <vscale x 4 x i32> [[TMP8]], ptr [[TMP7]], align 4
+; NOSTRIDED-NEXT:    [[TMP9:%.*]] = call i64 @llvm.vscale.i64()
+; NOSTRIDED-NEXT:    [[TMP10:%.*]] = mul i64 [[TMP9]], 4
+; NOSTRIDED-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], [[TMP10]]
+; NOSTRIDED-NEXT:    [[TMP11:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
+; NOSTRIDED-NEXT:    br i1 [[TMP11]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP10:![0-9]+]]
 ; NOSTRIDED:       middle.block:
 ; NOSTRIDED-NEXT:    [[CMP_N:%.*]] = icmp eq i64 1024, [[N_VEC]]
 ; NOSTRIDED-NEXT:    br i1 [[CMP_N]], label [[EXIT:%.*]], label [[SCALAR_PH]]
@@ -452,7 +450,7 @@ define void @double_stride_int_scaled(ptr %p, ptr %p2, i64 %stride) {
 ; NOSTRIDED:       vector.body:
 ; NOSTRIDED-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
 ; NOSTRIDED-NEXT:    [[TMP9:%.*]] = add i64 [[INDEX]], 0
-; NOSTRIDED-NEXT:    [[TMP10:%.*]] = mul nuw nsw i64 [[TMP9]], [[STRIDE]]
+; NOSTRIDED-NEXT:    [[TMP10:%.*]] = mul nuw nsw i64 [[TMP9]], 1
 ; NOSTRIDED-NEXT:    [[TMP11:%.*]] = getelementptr i32, ptr [[P]], i64 [[TMP10]]
 ; NOSTRIDED-NEXT:    [[TMP12:%.*]] = getelementptr i32, ptr [[TMP11]], i32 0
 ; NOSTRIDED-NEXT:    [[WIDE_LOAD:%.*]] = load <vscale x 4 x i32>, ptr [[TMP12]], align 4
@@ -601,19 +599,17 @@ define void @double_stride_int_iv(ptr %p, ptr %p2, i64 %stride) {
 ; NOSTRIDED-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; NOSTRIDED:       vector.body:
 ; NOSTRIDED-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
-; NOSTRIDED-NEXT:    [[OFFSET_IDX:%.*]] = mul i64 [[INDEX]], [[STRIDE]]
-; NOSTRIDED-NEXT:    [[TMP5:%.*]] = mul i64 0, [[STRIDE]]
-; NOSTRIDED-NEXT:    [[TMP6:%.*]] = add i64 [[OFFSET_IDX]], [[TMP5]]
-; NOSTRIDED-NEXT:    [[TMP7:%.*]] = getelementptr i32, ptr [[P:%.*]], i64 [[TMP6]]
-; NOSTRIDED-NEXT:    [[TMP8:%.*]] = getelementptr i32, ptr [[TMP7]], i32 0
-; NOSTRIDED-NEXT:    [[WIDE_LOAD:%.*]] = load <vscale x 4 x i32>, ptr [[TMP8]], align 4
-; NOSTRIDED-NEXT:    [[TMP9:%.*]] = add <vscale x 4 x i32> [[WIDE_LOAD]], shufflevector (<vscale x 4 x i32> insertelement (<vscale x 4 x i32> poison, i32 1, i64 0), <vscale x 4 x i32> poison, <vscale x 4 x i32> zeroinitializer)
-; NOSTRIDED-NEXT:    store <vscale x 4 x i32> [[TMP9]], ptr [[TMP8]], align 4
-; NOSTRIDED-NEXT:    [[TMP10:%.*]] = call i64 @llvm.vscale.i64()
-; NOSTRIDED-NEXT:    [[TMP11:%.*]] = mul i64 [[TMP10]], 4
-; NOSTRIDED-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], [[TMP11]]
-; NOSTRIDED-NEXT:    [[TMP12:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
-; NOSTRIDED-NEXT:    br i1 [[TMP12]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP14:![0-9]+]]
+; NOSTRIDED-NEXT:    [[TMP5:%.*]] = add i64 [[INDEX]], 0
+; NOSTRIDED-NEXT:    [[TMP6:%.*]] = getelementptr i32, ptr [[P:%.*]], i64 [[TMP5]]
+; NOSTRIDED-NEXT:    [[TMP7:%.*]] = getelementptr i32, ptr [[TMP6]], i32 0
+; NOSTRIDED-NEXT:    [[WIDE_LOAD:%.*]] = load <vscale x 4 x i32>, ptr [[TMP7]], align 4
+; NOSTRIDED-NEXT:    [[TMP8:%.*]] = add <vscale x 4 x i32> [[WIDE_LOAD]], shufflevector (<vscale x 4 x i32> insertelement (<vscale x 4 x i32> poison, i32 1, i64 0), <vscale x 4 x i32> poison, <vscale x 4 x i32> zeroinitializer)
+; NOSTRIDED-NEXT:    store <vscale x 4 x i32> [[TMP8]], ptr [[TMP7]], align 4
+; NOSTRIDED-NEXT:    [[TMP9:%.*]] = call i64 @llvm.vscale.i64()
+; NOSTRIDED-NEXT:    [[TMP10:%.*]] = mul i64 [[TMP9]], 4
+; NOSTRIDED-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], [[TMP10]]
+; NOSTRIDED-NEXT:    [[TMP11:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
+; NOSTRIDED-NEXT:    br i1 [[TMP11]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP14:![0-9]+]]
 ; NOSTRIDED:       middle.block:
 ; NOSTRIDED-NEXT:    [[CMP_N:%.*]] = icmp eq i64 1024, [[N_VEC]]
 ; NOSTRIDED-NEXT:    br i1 [[CMP_N]], label [[EXIT:%.*]], label [[SCALAR_PH]]

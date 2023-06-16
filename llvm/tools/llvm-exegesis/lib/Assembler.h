@@ -121,6 +121,10 @@ struct ExecutableFunction {
   StringRef FunctionBytes;
 };
 
+// Copies benchmark function's bytes from benchmark object.
+Error getBenchmarkFunctionBytes(const StringRef InputData,
+                                std::vector<uint8_t> &Bytes);
+
 // Creates a void(int8*) MachineFunction.
 MachineFunction &createVoidVoidPtrMachineFunction(StringRef FunctionID,
                                                   Module *Module,

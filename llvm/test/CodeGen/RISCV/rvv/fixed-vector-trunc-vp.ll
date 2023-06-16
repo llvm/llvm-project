@@ -512,3 +512,13 @@ define <32 x i32> @vtrunc_v32i32_v32i64(<32 x i64> %a, <32 x i1> %m, i32 zeroext
   %v = call <32 x i32> @llvm.vp.trunc.v32i32.v32i64(<32 x i64> %a, <32 x i1> %m, i32 %vl)
   ret <32 x i32> %v
 }
+
+declare <2 x i7> @llvm.vp.trunc.v2i7.v2i8(<2 x i8>, <2 x i1>, i32)
+
+define <2 x i7> @vtrunc_v2i7_v2i8(<2 x i8> %a, <2 x i1> %m, i32 zeroext %vl) {
+; CHECK-LABEL: vtrunc_v2i7_v2i8:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    ret
+  %v = call <2 x i7> @llvm.vp.trunc.v2i7.v2i8(<2 x i8> %a, <2 x i1> %m, i32 %vl)
+  ret <2 x i7> %v
+}

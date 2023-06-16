@@ -555,6 +555,11 @@ def FeatureStdExtZvkn
                        "This extension is shorthand for the following set of "
                        "other extensions: Zvkned, Zvknhb, Zvbb, Zvbc, and Zvkt.">;
 
+def FeatureStdExtZvknc
+    : SubtargetFeature<"experimental-zvknc", "HasStdExtZvknc", "true",
+                       "This extension is shorthand for the following set of "
+                       "other extensions: Zvkn and Zvbc.">;
+
 def FeatureStdExtZvkned
     : SubtargetFeature<"experimental-zvkned", "HasStdExtZvkned", "true",
                        "'Zvkned' (Vector AES Encryption & Decryption (Single Round))">;
@@ -583,6 +588,11 @@ def FeatureStdExtZvks
     : SubtargetFeature<"experimental-zvks", "HasStdExtZvks", "true",
                        "This extension is shorthand for the following set of "
                        "other extensions: Zvksed, Zvksh, Zvbb, Zvbc, and Zvkt.">;
+
+def FeatureStdExtZvksc
+    : SubtargetFeature<"experimental-zvksc", "HasStdExtZvksc", "true",
+                       "This extension is shorthand for the following set of "
+                       "other extensions: Zvks and Zvbc.">;
 
 def FeatureStdExtZvksed
     : SubtargetFeature<"experimental-zvksed", "HasStdExtZvksed", "true",
@@ -794,6 +804,13 @@ def TuneNoOptimizedZeroStrideLoad
    : SubtargetFeature<"no-optimized-zero-stride-load", "HasOptimizedZeroStrideLoad",
                       "false", "Hasn't optimized (perform fewer memory operations)"
                       "zero-stride vector load">;
+
+// Some vector hardware implementations do not process all VLEN bits in parallel
+// and instead split over multiple cycles. DLEN refers to the datapath width
+// that can be done in parallel.
+def TuneDLenFactor2
+   : SubtargetFeature<"dlen-factor-2", "DLenFactor2", "true",
+                      "Vector unit DLEN(data path width) is half of VLEN">;
 
 def TuneLUIADDIFusion
     : SubtargetFeature<"lui-addi-fusion", "HasLUIADDIFusion",

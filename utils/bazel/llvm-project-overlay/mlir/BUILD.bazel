@@ -1683,6 +1683,21 @@ cc_library(
 # ArmSME dialect.
 ##---------------------------------------------------------------------------##
 
+td_library(
+    name = "ArmSMETdFiles",
+    srcs = [
+        "include/mlir/Dialect/ArmSME/IR/ArmSME.td",
+    ],
+    includes = ["include"],
+    deps = [
+        ":ArithOpsTdFiles",
+        ":FuncTdFiles",
+        ":LLVMOpsTdFiles",
+        ":OpBaseTdFiles",
+        ":SideEffectInterfacesTdFiles",
+    ],
+)
+
 gentbl_cc_library(
     name = "ArmSMETransformsPassIncGen",
     strip_include_prefix = "include",
@@ -1698,15 +1713,86 @@ gentbl_cc_library(
     deps = [":PassBaseTdFiles"],
 )
 
+gentbl_cc_library(
+    name = "ArmSMEIncGen",
+    strip_include_prefix = "include",
+    tbl_outs = [
+        (
+            ["-gen-op-decls"],
+            "include/mlir/Dialect/ArmSME/IR/ArmSME.h.inc",
+        ),
+        (
+            ["-gen-op-defs"],
+            "include/mlir/Dialect/ArmSME/IR/ArmSME.cpp.inc",
+        ),
+        (
+            ["-gen-typedef-decls"],
+            "include/mlir/Dialect/ArmSME/IR/ArmSMETypes.h.inc",
+        ),
+        (
+            ["-gen-typedef-defs"],
+            "include/mlir/Dialect/ArmSME/IR/ArmSMETypes.cpp.inc",
+        ),
+        (
+            [
+                "-gen-dialect-decls",
+                "-dialect=arm_sme",
+            ],
+            "include/mlir/Dialect/ArmSME/IR/ArmSMEDialect.h.inc",
+        ),
+        (
+            [
+                "-gen-dialect-defs",
+                "-dialect=arm_sme",
+            ],
+            "include/mlir/Dialect/ArmSME/IR/ArmSMEDialect.cpp.inc",
+        ),
+    ],
+    tblgen = ":mlir-tblgen",
+    td_file = "include/mlir/Dialect/ArmSME/IR/ArmSME.td",
+    deps = [":ArmSMETdFiles"],
+)
+
+gentbl_cc_library(
+    name = "ArmSMEConversionIncGen",
+    strip_include_prefix = "include",
+    tbl_outs = [
+        (
+            ["-gen-llvmir-conversions"],
+            "include/mlir/Dialect/ArmSME/IR/ArmSMEConversions.inc",
+        ),
+    ],
+    tblgen = ":mlir-tblgen",
+    td_file = "include/mlir/Dialect/ArmSME/IR/ArmSME.td",
+    deps = [":ArmSMETdFiles"],
+)
+
+cc_library(
+    name = "ArmSMEDialect",
+    srcs = ["lib/Dialect/ArmSME/IR/ArmSME.cpp"],
+    hdrs = ["include/mlir/Dialect/ArmSME/IR/ArmSME.h"],
+    includes = ["include"],
+    deps = [
+        ":ArmSMEIncGen",
+        ":IR",
+        ":LLVMDialect",
+        ":SideEffectInterfaces",
+        "//llvm:Core",
+        "//llvm:Support",
+    ],
+)
+
 cc_library(
     name = "ArmSMETransforms",
     srcs = glob(["lib/Dialect/ArmSME/Transforms/*.cpp"]),
     hdrs = glob(["include/mlir/Dialect/ArmSME/Transforms/*.h"]),
     includes = ["include"],
     deps = [
+        ":ArmSMEDialect",
         ":ArmSMETransformsPassIncGen",
         ":FuncDialect",
         ":FuncIncGen",
+        ":LLVMCommonConversion",
         ":Pass",
     ],
 )
@@ -3658,6 +3744,27 @@ cc_library(
         ":SideEffectInterfaces",
         ":Support",
         "//llvm:Support",
+    ],
+)
+
+cc_library(
+    name = "FuncExtensions",
+    srcs = glob(["lib/Dialect/Func/Extensions/*.cpp"]),
+    hdrs = glob(["include/mlir/Dialect/Func/Extensions/*.h"]),
+    includes = ["include"],
+    deps = [
+        ":ControlFlowDialect",
+        ":FuncDialect",
+        ":IR",
+        ":InferTypeOpInterface",
+    ],
+)
+
+cc_library(
+    name = "AllExtensions",
+    hdrs = ["include/mlir/InitAllExtensions.h"],
+    deps = [
+        ":FuncExtensions",
     ],
 )
 
@@ -7114,6 +7221,21 @@ cc_library(
 )
 
 cc_library(
+    name = "ArmSMEToLLVMIRTranslation",
+    srcs = glob(["lib/Target/LLVMIR/Dialect/ArmSME/*.cpp"]),
+    hdrs = glob(["include/mlir/Target/LLVMIR/Dialect/ArmSME/*.h"]),
+    includes = ["include"],
+    deps = [
+        ":ArmSMEConversionIncGen",
+        ":ArmSMEDialect",
+        ":IR",
+        ":ToLLVMIRTranslation",
+        "//llvm:Core",
+        "//llvm:Support",
+    ],
+)
+
+cc_library(
     name = "ArmSVEToLLVMIRTranslation",
     srcs = glob(["lib/Target/LLVMIR/Dialect/ArmSVE/*.cpp"]),
     hdrs = glob(["include/mlir/Target/LLVMIR/Dialect/ArmSVE/*.h"]),
@@ -7277,6 +7399,7 @@ cc_library(
     deps = [
         ":AMXToLLVMIRTranslation",
         ":ArmNeonToLLVMIRTranslation",
+        ":ArmSMEToLLVMIRTranslation",
         ":ArmSVEToLLVMIRTranslation",
         ":BuiltinToLLVMIRTranslation",
         ":GPUToLLVMIRTranslation",
@@ -7499,6 +7622,7 @@ cc_library(
         ":ArithTransforms",
         ":ArithValueBoundsOpInterfaceImpl",
         ":ArmNeonDialect",
+        ":ArmSMEDialect",
         ":ArmSMETransforms",
         ":ArmSVEDialect",
         ":ArmSVETransforms",
@@ -7629,6 +7753,7 @@ cc_binary(
     srcs = ["tools/mlir-opt/mlir-opt.cpp"],
     local_defines = ["MLIR_INCLUDE_TESTS"],
     deps = [
+        ":AllExtensions",
         ":AllPassesAndDialects",
         ":Analysis",
         ":IR",
@@ -9519,6 +9644,8 @@ cc_library(
         ":ArithDialect",
         ":ArithUtils",
         ":ArmNeonDialect",
+        ":ArmSMEDialect",
+        ":ArmSMETransforms",
         ":ArmSVEDialect",
         ":ArmSVETransforms",
         ":ConversionPassIncGen",
@@ -9844,11 +9971,13 @@ cc_library(
     ],
     deps = [
         ":ArithDialect",
+        ":ArithUtils",
         ":ConversionPassIncGen",
         ":FuncDialect",
         ":IR",
         ":Pass",
         ":TensorDialect",
+        ":TensorUtils",
         ":TosaDialect",
         ":Transforms",
     ],

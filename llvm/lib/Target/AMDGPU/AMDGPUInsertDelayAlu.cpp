@@ -368,11 +368,11 @@ public:
             // ignore this operand.
             if (MI.getOpcode() == AMDGPU::V_WRITELANE_B32 && Op.isTied())
               continue;
-            for (MCRegUnitIterator UI(Op.getReg(), TRI); UI.isValid(); ++UI) {
-              auto It = State.find(*UI);
+            for (MCRegUnit Unit : TRI->regunits(Op.getReg())) {
+              auto It = State.find(Unit);
               if (It != State.end()) {
                 Delay.merge(It->second);
-                State.erase(*UI);
+                State.erase(Unit);
               }
             }
           }
@@ -389,8 +389,8 @@ public:
         for (const auto &Op : MI.defs()) {
           unsigned Latency = SchedModel.computeOperandLatency(
               &MI, Op.getOperandNo(), nullptr, 0);
-          for (MCRegUnitIterator UI(Op.getReg(), TRI); UI.isValid(); ++UI)
-            State[*UI] = DelayInfo(Type, Latency);
+          for (MCRegUnit Unit : TRI->regunits(Op.getReg()))
+            State[Unit] = DelayInfo(Type, Latency);
         }
       }
 

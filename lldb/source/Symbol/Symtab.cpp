@@ -80,8 +80,7 @@ size_t Symtab::GetNumSymbols() const {
 }
 
 void Symtab::SectionFileAddressesChanged() {
-  auto &name_to_index = GetNameToSymbolIndexMap(lldb::eFunctionNameTypeNone);
-  name_to_index.Clear();
+  m_file_addr_to_index.Clear();
   m_file_addr_to_index_computed = false;
 }
 

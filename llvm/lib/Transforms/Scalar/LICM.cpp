@@ -360,12 +360,6 @@ INITIALIZE_PASS_END(LegacyLICMPass, "licm", "Loop Invariant Code Motion", false,
                     false)
 
 Pass *llvm::createLICMPass() { return new LegacyLICMPass(); }
-Pass *llvm::createLICMPass(unsigned LicmMssaOptCap,
-                           unsigned LicmMssaNoAccForPromotionCap,
-                           bool LicmAllowSpeculation) {
-  return new LegacyLICMPass(LicmMssaOptCap, LicmMssaNoAccForPromotionCap,
-                            LicmAllowSpeculation);
-}
 
 llvm::SinkAndHoistLICMFlags::SinkAndHoistLICMFlags(bool IsSink, Loop &L,
                                                    MemorySSA &MSSA)
@@ -1718,6 +1712,8 @@ static bool sink(Instruction &I, LoopInfo *LI, DominatorTree *DT,
     // The PHI must be trivially replaceable.
     Instruction *New = sinkThroughTriviallyReplaceablePHI(
         PN, &I, LI, SunkCopies, SafetyInfo, CurLoop, MSSAU);
+    // As we sink the instruction out of the BB, drop its debug location.
+    New->dropLocation();
     PN->replaceAllUsesWith(New);
     eraseInstruction(*PN, *SafetyInfo, MSSAU);
     Changed = true;

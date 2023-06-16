@@ -276,6 +276,11 @@ bool llvm::TargetTransformInfo::isValidAddrSpaceCast(unsigned FromAS,
   return TTIImpl->isValidAddrSpaceCast(FromAS, ToAS);
 }
 
+bool llvm::TargetTransformInfo::addrspacesMayAlias(unsigned FromAS,
+                                                   unsigned ToAS) const {
+  return TTIImpl->addrspacesMayAlias(FromAS, ToAS);
+}
+
 unsigned TargetTransformInfo::getFlatAddressSpace() const {
   return TTIImpl->getFlatAddressSpace();
 }
@@ -1033,6 +1038,10 @@ InstructionCost TargetTransformInfo::getMemcpyCost(const Instruction *I) const {
   InstructionCost Cost = TTIImpl->getMemcpyCost(I);
   assert(Cost >= 0 && "TTI should not produce negative costs!");
   return Cost;
+}
+
+uint64_t TargetTransformInfo::getMaxMemIntrinsicInlineSizeThreshold() const {
+  return TTIImpl->getMaxMemIntrinsicInlineSizeThreshold();
 }
 
 InstructionCost TargetTransformInfo::getArithmeticReductionCost(

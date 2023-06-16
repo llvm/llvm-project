@@ -1816,11 +1816,11 @@ void DAGCombiner::Run(CombineLevel AtLevel) {
     // Add any operands of the new node which have not yet been combined to the
     // worklist as well. Because the worklist uniques things already, this
     // won't repeatedly process the same operand.
-    CombinedNodes.insert(N);
     for (const SDValue &ChildN : N->op_values())
       if (!CombinedNodes.count(ChildN.getNode()))
         AddToWorklist(ChildN.getNode());
 
+    CombinedNodes.insert(N);
     SDValue RV = combine(N);
 
     if (!RV.getNode())
@@ -1854,10 +1854,8 @@ void DAGCombiner::Run(CombineLevel AtLevel) {
     // out), because re-visiting the EntryToken and its users will not uncover
     // any additional opportunities, but there may be a large number of such
     // users, potentially causing compile time explosion.
-    if (RV.getOpcode() != ISD::EntryToken) {
-      AddToWorklist(RV.getNode());
-      AddUsersToWorklist(RV.getNode());
-    }
+    if (RV.getOpcode() != ISD::EntryToken)
+      AddToWorklistWithUsers(RV.getNode());
 
     // Finally, if the node is now dead, remove it from the graph.  The node
     // may not be dead if the replacement process recursively simplified to
@@ -2017,7 +2015,9 @@ SDValue DAGCombiner::visit(SDNode *N) {
   case ISD::VECREDUCE_UMAX:
   case ISD::VECREDUCE_UMIN:
   case ISD::VECREDUCE_FMAX:
-  case ISD::VECREDUCE_FMIN:     return visitVECREDUCE(N);
+  case ISD::VECREDUCE_FMIN:
+  case ISD::VECREDUCE_FMAXIMUM:
+  case ISD::VECREDUCE_FMINIMUM:     return visitVECREDUCE(N);
 #define BEGIN_REGISTER_VP_SDNODE(SDOPC, ...) case ISD::SDOPC:
 #include "llvm/IR/VPIntrinsics.def"
     return visitVPOp(N);
@@ -5636,7 +5636,7 @@ SDValue DAGCombiner::visitIMINMAX(SDNode *N) {
     if (SDValue S = PerformUMinFpToSatCombine(N0, N1, N0, N1, ISD::SETULT, DAG))
       return S;
 
-  // Fold and(vecreduce(x), vecreduce(y)) -> vecreduce(and(x, y))
+  // Fold min/max(vecreduce(x), vecreduce(y)) -> vecreduce(min/max(x, y))
   auto ReductionOpcode = [](unsigned Opcode) {
     switch (Opcode) {
     case ISD::SMIN:
@@ -12236,57 +12236,6 @@ SDValue DAGCombiner::visitSETCC(SDNode *N) {
   ISD::CondCode Cond = cast<CondCodeSDNode>(N->getOperand(2))->get();
   EVT VT = N->getValueType(0);
 
-  //   SETCC(FREEZE(X), CONST, Cond)
-  // =>
-  //   FREEZE(SETCC(X, CONST, Cond))
-  // This is correct if FREEZE(X) has one use and SETCC(FREEZE(X), CONST, Cond)
-  // isn't equivalent to true or false.
-  // For example, SETCC(FREEZE(X), -128, SETULT) cannot be folded to
-  // FREEZE(SETCC(X, -128, SETULT)) because X can be poison.
-  //
-  // This transformation is beneficial because visitBRCOND can fold
-  // BRCOND(FREEZE(X)) to BRCOND(X).
-
-  // Conservatively optimize integer comparisons only.
-  if (PreferSetCC) {
-    // Do this only when SETCC is going to be used by BRCOND.
-
-    SDValue N0 = N->getOperand(0), N1 = N->getOperand(1);
-    ConstantSDNode *N0C = dyn_cast<ConstantSDNode>(N0);
-    ConstantSDNode *N1C = dyn_cast<ConstantSDNode>(N1);
-    bool Updated = false;
-
-    // Is 'X Cond C' always true or false?
-    auto IsAlwaysTrueOrFalse = [](ISD::CondCode Cond, ConstantSDNode *C) {
-      bool False = (Cond == ISD::SETULT && C->isZero()) ||
-                   (Cond == ISD::SETLT  && C->isMinSignedValue()) ||
-                   (Cond == ISD::SETUGT && C->isAllOnes()) ||
-                   (Cond == ISD::SETGT  && C->isMaxSignedValue());
-      bool True =  (Cond == ISD::SETULE && C->isAllOnes()) ||
-                   (Cond == ISD::SETLE  && C->isMaxSignedValue()) ||
-                   (Cond == ISD::SETUGE && C->isZero()) ||
-                   (Cond == ISD::SETGE  && C->isMinSignedValue());
-      return True || False;
-    };
-
-    if (N0->getOpcode() == ISD::FREEZE && N0.hasOneUse() && N1C) {
-      if (!IsAlwaysTrueOrFalse(Cond, N1C)) {
-        N0 = N0->getOperand(0);
-        Updated = true;
-      }
-    }
-    if (N1->getOpcode() == ISD::FREEZE && N1.hasOneUse() && N0C) {
-      if (!IsAlwaysTrueOrFalse(ISD::getSetCCSwappedOperands(Cond),
-                               N0C)) {
-        N1 = N1->getOperand(0);
-        Updated = true;
-      }
-    }
-
-    if (Updated)
-      return DAG.getFreeze(DAG.getSetCC(SDLoc(N), VT, N0, N1, Cond));
-  }
-
   SDValue Combined = SimplifySetCC(VT, N->getOperand(0), N->getOperand(1), Cond,
                                    SDLoc(N), !PreferSetCC);
 
@@ -14127,7 +14076,7 @@ SDValue DAGCombiner::visitSIGN_EXTEND_INREG(SDNode *N) {
     SDValue N00 = N0.getOperand(0);
     if (N00.getScalarValueSizeInBits() == ExtVTBits &&
         (!LegalOperations || TLI.isOperationLegal(ISD::SIGN_EXTEND, VT)))
-      return DAG.getNode(ISD::SIGN_EXTEND, SDLoc(N), VT, N00, N1);
+      return DAG.getNode(ISD::SIGN_EXTEND, SDLoc(N), VT, N00);
   }
 
   // fold (sext_in_reg x) -> (zext_in_reg x) if the sign bit is known zero.
@@ -17345,6 +17294,55 @@ SDValue DAGCombiner::visitBRCOND(SDNode *N) {
                        N1->getOperand(0), N2);
   }
 
+  // Variant of the previous fold where there is a SETCC in between:
+  //   BRCOND(SETCC(FREEZE(X), CONST, Cond))
+  // =>
+  //   BRCOND(FREEZE(SETCC(X, CONST, Cond)))
+  // =>
+  //   BRCOND(SETCC(X, CONST, Cond))
+  // This is correct if FREEZE(X) has one use and SETCC(FREEZE(X), CONST, Cond)
+  // isn't equivalent to true or false.
+  // For example, SETCC(FREEZE(X), -128, SETULT) cannot be folded to
+  // FREEZE(SETCC(X, -128, SETULT)) because X can be poison.
+  if (N1->getOpcode() == ISD::SETCC && N1.hasOneUse()) {
+    SDValue S0 = N1->getOperand(0), S1 = N1->getOperand(1);
+    ISD::CondCode Cond = cast<CondCodeSDNode>(N1->getOperand(2))->get();
+    ConstantSDNode *S0C = dyn_cast<ConstantSDNode>(S0);
+    ConstantSDNode *S1C = dyn_cast<ConstantSDNode>(S1);
+    bool Updated = false;
+
+    // Is 'X Cond C' always true or false?
+    auto IsAlwaysTrueOrFalse = [](ISD::CondCode Cond, ConstantSDNode *C) {
+      bool False = (Cond == ISD::SETULT && C->isZero()) ||
+                   (Cond == ISD::SETLT && C->isMinSignedValue()) ||
+                   (Cond == ISD::SETUGT && C->isAllOnes()) ||
+                   (Cond == ISD::SETGT && C->isMaxSignedValue());
+      bool True = (Cond == ISD::SETULE && C->isAllOnes()) ||
+                  (Cond == ISD::SETLE && C->isMaxSignedValue()) ||
+                  (Cond == ISD::SETUGE && C->isZero()) ||
+                  (Cond == ISD::SETGE && C->isMinSignedValue());
+      return True || False;
+    };
+
+    if (S0->getOpcode() == ISD::FREEZE && S0.hasOneUse() && S1C) {
+      if (!IsAlwaysTrueOrFalse(Cond, S1C)) {
+        S0 = S0->getOperand(0);
+        Updated = true;
+      }
+    }
+    if (S1->getOpcode() == ISD::FREEZE && S1.hasOneUse() && S0C) {
+      if (!IsAlwaysTrueOrFalse(ISD::getSetCCSwappedOperands(Cond), S0C)) {
+        S1 = S1->getOperand(0);
+        Updated = true;
+      }
+    }
+
+    if (Updated)
+      return DAG.getNode(
+          ISD::BRCOND, SDLoc(N), MVT::Other, Chain,
+          DAG.getSetCC(SDLoc(N1), N1->getValueType(0), S0, S1, Cond), N2);
+  }
+
   // If N is a constant we could fold this into a fallthrough or unconditional
   // branch. However that doesn't happen very often in normal code, because
   // Instcombine/SimplifyCFG should have handled the available opportunities.
@@ -18924,6 +18922,11 @@ ShrinkLoadReplaceStoreWithStore(const std::pair<unsigned, unsigned> &MaskInfo,
     UseTruncStore = true;
   else
     return SDValue();
+
+  // Can't do this for indexed stores.
+  if (St->isIndexed())
+    return SDValue();
+
   // Check that the target doesn't think this is a bad idea.
   if (St->getMemOperand() &&
       !TLI.allowsMemoryAccess(*DAG.getContext(), DAG.getDataLayout(), VT,

@@ -9,7 +9,6 @@ target datalayout = "e-m:o-p270:32:32-p271:32:32-p272:64:64-i64:64-f80:128-n8:16
 ; CHECK-NEXT: Creating reproducer for   %c.2 = icmp eq ptr %a, null
 ; CHECK-NEXT:   found external input ptr %a
 ; CHECK-NEXT:   Materializing assumption   %c.1 = icmp eq ptr %a, null
-; CHECK-NEXT: ---
 
 define i1 @test_ptr_null_constant(ptr %a) {
 ; CHECK-LABEL: define i1 @"{{.+}}test_ptr_null_constantrepro"(ptr %a) {

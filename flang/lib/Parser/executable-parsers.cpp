@@ -52,8 +52,7 @@ constexpr auto executableConstruct{first(
     construct<ExecutableConstruct>(indirect(forallConstruct)),
     construct<ExecutableConstruct>(indirect(ompEndLoopDirective)),
     construct<ExecutableConstruct>(indirect(openmpConstruct)),
-    construct<ExecutableConstruct>(indirect(accEndCombinedDirective)),
-    construct<ExecutableConstruct>(indirect(openaccConstruct)),
+    construct<ExecutableConstruct>(indirect(Parser<OpenACCConstruct>{})),
     construct<ExecutableConstruct>(indirect(compilerDirective)),
     construct<ExecutableConstruct>(indirect(Parser<CUFKernelDoConstruct>{})))};
 

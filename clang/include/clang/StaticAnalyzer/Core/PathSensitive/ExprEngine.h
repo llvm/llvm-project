@@ -239,11 +239,6 @@ public:
     return {blockPtr, currStmtIdx};
   }
 
-  void GenerateAutoTransition(ExplodedNode *N);
-  void enqueueEndOfPath(ExplodedNodeSet &S);
-  void GenerateCallExitNode(ExplodedNode *N);
-
-
   /// Dump graph to the specified filename.
   /// If filename is empty, generate a temporary one.
   /// \return The filename the graph is written into.

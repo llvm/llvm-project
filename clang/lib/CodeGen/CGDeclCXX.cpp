@@ -137,7 +137,7 @@ static void EmitDeclDestroy(CodeGenFunction &CGF, const VarDecl &D,
     }
   // Otherwise, the standard logic requires a helper function.
   } else {
-    Addr = Addr.getElementBitCast(CGF.ConvertTypeForMem(Type));
+    Addr = Addr.withElementType(CGF.ConvertTypeForMem(Type));
     Func = CodeGenFunction(CGM)
            .generateDestroyHelper(Addr, Type, CGF.getDestroyer(DtorKind),
                                   CGF.needsEHCleanup(DtorKind), &D);
@@ -199,8 +199,8 @@ void CodeGenFunction::EmitCXXGlobalVarDeclInit(const VarDecl &D,
   unsigned ActualAddrSpace = GV->getAddressSpace();
   llvm::Constant *DeclPtr = GV;
   if (ActualAddrSpace != ExpectedAddrSpace) {
-    llvm::PointerType *PTy = llvm::PointerType::getWithSamePointeeType(
-        GV->getType(), ExpectedAddrSpace);
+    llvm::PointerType *PTy =
+        llvm::PointerType::get(getLLVMContext(), ExpectedAddrSpace);
     DeclPtr = llvm::ConstantExpr::getAddrSpaceCast(DeclPtr, PTy);
   }
 

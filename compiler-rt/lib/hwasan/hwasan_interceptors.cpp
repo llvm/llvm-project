@@ -184,8 +184,9 @@ static void *mmap_interceptor(Mmap real_mmap, void *addr, SIZE_T length,
   }
   SIZE_T rounded_length = RoundUpTo(length, GetPageSize());
   void *end_addr = (char *)addr + (rounded_length - 1);
-  if (addr && (!MemIsApp(reinterpret_cast<uptr>(addr)) ||
-               !MemIsApp(reinterpret_cast<uptr>(end_addr)))) {
+  if (addr && length &&
+      (!MemIsApp(reinterpret_cast<uptr>(addr)) ||
+       !MemIsApp(reinterpret_cast<uptr>(end_addr)))) {
     // User requested an address that is incompatible with HWASan's
     // memory layout. Use a different address if allowed, else fail.
     if (flags & map_fixed) {
@@ -196,19 +197,37 @@ static void *mmap_interceptor(Mmap real_mmap, void *addr, SIZE_T length,
     }
   }
   void *res = real_mmap(addr, length, prot, flags, fd, offset);
-  if (res != (void *)-1) {
-    void *end_res = (char *)res + (rounded_length - 1);
-    if (!MemIsApp(reinterpret_cast<uptr>(res)) ||
-        !MemIsApp(reinterpret_cast<uptr>(end_res))) {
+  if (length && res != (void *)-1) {
+    uptr beg = reinterpret_cast<uptr>(res);
+    DCHECK(IsAligned(beg, GetPageSize()));
+    if (!MemIsApp(beg) || !MemIsApp(beg + rounded_length - 1)) {
       // Application has attempted to map more memory than is supported by
       // HWASan. Act as if we ran out of memory.
       internal_munmap(res, length);
       errno = errno_ENOMEM;
       return (void *)-1;
     }
+    __hwasan::TagMemoryAligned(beg, rounded_length, 0);
   }
 
   return res;
+}
+
+template <class Munmap>
+static int munmap_interceptor(Munmap real_munmap, void *addr, SIZE_T length) {
+  // We should not tag if munmap fail, but it's to late to tag after
+  // real_munmap, as the pages could be mmaped by another thread.
+  uptr beg = reinterpret_cast<uptr>(addr);
+  if (length && IsAligned(beg, GetPageSize())) {
+    SIZE_T rounded_length = RoundUpTo(length, GetPageSize());
+    // Protect from unmapping the shadow.
+    if (!MemIsApp(beg) || !MemIsApp(beg + rounded_length - 1)) {
+      errno = errno_EINVAL;
+      return -1;
+    }
+    __hwasan::TagMemoryAligned(beg, rounded_length, 0);
+  }
+  return real_munmap(addr, length);
 }
 
 #    define COMMON_INTERCEPTOR_MMAP_IMPL(ctx, mmap, addr, length, prot, flags, \
@@ -216,6 +235,12 @@ static void *mmap_interceptor(Mmap real_mmap, void *addr, SIZE_T length,
       do {                                                                     \
         (void)(ctx);                                                           \
         return mmap_interceptor(REAL(mmap), addr, sz, prot, flags, fd, off);   \
+      } while (false)
+
+#    define COMMON_INTERCEPTOR_MUNMAP_IMPL(ctx, addr, length)          \
+      do {                                                             \
+        (void)(ctx);                                                   \
+        return munmap_interceptor(REAL(munmap), addr, sz);             \
       } while (false)
 
 #    include "sanitizer_common/sanitizer_common_interceptors_memintrinsics.inc"

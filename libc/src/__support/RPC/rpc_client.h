@@ -11,6 +11,8 @@
 
 #include "rpc.h"
 
+#include <gpu/rpc.h>
+
 namespace __llvm_libc {
 namespace rpc {
 

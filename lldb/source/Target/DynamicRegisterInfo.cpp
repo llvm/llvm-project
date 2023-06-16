@@ -20,10 +20,17 @@
 using namespace lldb;
 using namespace lldb_private;
 
-DynamicRegisterInfo::DynamicRegisterInfo(
-    const lldb_private::StructuredData::Dictionary &dict,
-    const lldb_private::ArchSpec &arch) {
-  SetRegisterInfo(dict, arch);
+std::unique_ptr<DynamicRegisterInfo>
+DynamicRegisterInfo::Create(const StructuredData::Dictionary &dict,
+                            const ArchSpec &arch) {
+  auto dyn_reg_info = std::make_unique<DynamicRegisterInfo>();
+  if (!dyn_reg_info)
+    return nullptr;
+
+  if (dyn_reg_info->SetRegisterInfo(dict, arch) == 0)
+    return nullptr;
+
+  return dyn_reg_info;
 }
 
 DynamicRegisterInfo::DynamicRegisterInfo(DynamicRegisterInfo &&info) {
@@ -238,17 +245,20 @@ DynamicRegisterInfo::SetRegisterInfo(const StructuredData::Dictionary &dict,
     std::vector<uint32_t> invalidate_regs;
     memset(&reg_info, 0, sizeof(reg_info));
 
-    ConstString name_val;
-    ConstString alt_name_val;
-    if (!reg_info_dict->GetValueForKeyAsString("name", name_val, nullptr)) {
+    llvm::StringRef name_val;
+    if (!reg_info_dict->GetValueForKeyAsString("name", name_val)) {
       Clear();
       printf("error: registers must have valid names and offsets\n");
       reg_info_dict->DumpToStdout();
       return 0;
     }
-    reg_info.name = name_val.GetCString();
-    reg_info_dict->GetValueForKeyAsString("alt-name", alt_name_val, nullptr);
-    reg_info.alt_name = alt_name_val.GetCString();
+    reg_info.name = ConstString(name_val).GetCString();
+
+    llvm::StringRef alt_name_val;
+    if (reg_info_dict->GetValueForKeyAsString("alt-name", alt_name_val))
+      reg_info.alt_name = ConstString(alt_name_val).GetCString();
+    else
+      reg_info.alt_name = nullptr;
 
     llvm::Expected<uint32_t> byte_offset =
         ByteOffsetFromRegInfoDict(i, *reg_info_dict, byte_order);

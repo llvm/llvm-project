@@ -19,6 +19,9 @@
 //
 //===----------------------------------------------------------------------===//
 
+#ifndef LLVM_LIB_TARGET_AMDGPU_AMDGPUUNIFYDIVERGENTEXITNODES_H
+#define LLVM_LIB_TARGET_AMDGPU_AMDGPUUNIFYDIVERGENTEXITNODES_H
+
 #include "AMDGPU.h"
 
 namespace llvm {
@@ -29,3 +32,5 @@ public:
 };
 
 } // end namespace llvm
+
+#endif // LLVM_LIB_TARGET_AMDGPU_AMDGPUUNIFYDIVERGENTEXITNODES_H

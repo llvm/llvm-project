@@ -7520,7 +7520,7 @@ LegalizerHelper::lowerVectorReduction(MachineInstr &MI) {
     Observer.changedInstr(MI);
     return Legalized;
   }
-  return UnableToLegalize;;
+  return UnableToLegalize;
 }
 
 static bool shouldLowerMemFuncForSize(const MachineFunction &MF) {

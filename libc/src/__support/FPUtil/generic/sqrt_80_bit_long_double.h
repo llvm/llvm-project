@@ -12,6 +12,7 @@
 #include "src/__support/FPUtil/FEnvImpl.h"
 #include "src/__support/FPUtil/FPBits.h"
 #include "src/__support/FPUtil/PlatformDefs.h"
+#include "src/__support/FPUtil/rounding_mode.h"
 #include "src/__support/UInt128.h"
 #include "src/__support/builtin_wrappers.h"
 #include "src/__support/common.h"
@@ -100,7 +101,7 @@ LIBC_INLINE long double sqrt(long double x) {
     }
 
     // We compute one more iteration in order to round correctly.
-    bool lsb = y & 1; // Least significant bit
+    bool lsb = static_cast<bool>(y & 1); // Least significant bit
     bool rb = false;  // Round bit
     r <<= 2;
     UIntType tmp = (y << 2) + 1;
@@ -114,7 +115,7 @@ LIBC_INLINE long double sqrt(long double x) {
     y |= (static_cast<UIntType>(x_exp)
           << (MantissaWidth<long double>::VALUE + 1));
 
-    switch (get_round()) {
+    switch (quick_get_round()) {
     case FE_TONEAREST:
       // Round to nearest, ties to even
       if (rb && (lsb || (r != 0)))

@@ -255,7 +255,8 @@ public:
 
     if (Loc == MainFileLoc && Reason == PPCallbacks::EnterFile) {
       IsMainFileEntered = true;
-      DataConsumer.enteredMainFile(SM.getFileEntryForID(SM.getMainFileID()));
+      DataConsumer.enteredMainFile(
+          *SM.getFileEntryRefForID(SM.getMainFileID()));
     }
   }
 
@@ -350,8 +351,8 @@ public:
     PreprocessorOptions &PPOpts = CI.getPreprocessorOpts();
 
     if (!PPOpts.ImplicitPCHInclude.empty()) {
-      auto File = CI.getFileManager().getFile(PPOpts.ImplicitPCHInclude);
-      if (File)
+      if (auto File =
+              CI.getFileManager().getOptionalFileRef(PPOpts.ImplicitPCHInclude))
         DataConsumer->importedPCH(*File);
     }
 
@@ -694,17 +695,18 @@ static CXErrorCode clang_indexTranslationUnit_Impl(
 
   ASTUnit::ConcurrencyCheck Check(*Unit);
 
-  if (const FileEntry *PCHFile = Unit->getPCHFile())
-    DataConsumer.importedPCH(PCHFile);
+  if (OptionalFileEntryRef PCHFile = Unit->getPCHFile())
+    DataConsumer.importedPCH(*PCHFile);
 
   FileManager &FileMgr = Unit->getFileManager();
 
   if (Unit->getOriginalSourceFileName().empty())
-    DataConsumer.enteredMainFile(nullptr);
-  else if (auto MainFile = FileMgr.getFile(Unit->getOriginalSourceFileName()))
+    DataConsumer.enteredMainFile(std::nullopt);
+  else if (auto MainFile =
+               FileMgr.getFileRef(Unit->getOriginalSourceFileName()))
     DataConsumer.enteredMainFile(*MainFile);
   else
-    DataConsumer.enteredMainFile(nullptr);
+    DataConsumer.enteredMainFile(std::nullopt);
 
   DataConsumer.setASTContext(Unit->getASTContext());
   DataConsumer.startedTranslationUnit();

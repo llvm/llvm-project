@@ -386,6 +386,9 @@ enum NodeType : unsigned {
   // A uniform kernel return that terminates the wavefront.
   ENDPGM,
 
+  // s_endpgm, but we may want to insert it in the middle of the block.
+  ENDPGM_TRAP,
+
   // Return to a shader part's epilog code.
   RETURN_TO_EPILOG,
 
@@ -443,6 +446,13 @@ enum NodeType : unsigned {
   RSQ,
   RCP_LEGACY,
   RCP_IFLAG,
+
+  // log2, no denormal handling for f32.
+  LOG,
+
+  // exp2, no denormal handling for f32.
+  EXP,
+
   FMUL_LEGACY,
   RSQ_CLAMP,
   FP_CLASS,

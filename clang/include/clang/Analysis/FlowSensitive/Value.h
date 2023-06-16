@@ -63,8 +63,7 @@ public:
   /// Returns the value of the synthetic property with the given `Name` or null
   /// if the property isn't assigned a value.
   Value *getProperty(llvm::StringRef Name) const {
-    auto It = Properties.find(Name);
-    return It == Properties.end() ? nullptr : It->second;
+    return Properties.lookup(Name);
   }
 
   /// Assigns `Val` as the value of the synthetic property with the given
@@ -302,12 +301,7 @@ public:
 
   /// Returns the child value that is assigned for `D` or null if the child is
   /// not initialized.
-  Value *getChild(const ValueDecl &D) const {
-    auto It = Children.find(&D);
-    if (It == Children.end())
-      return nullptr;
-    return It->second;
-  }
+  Value *getChild(const ValueDecl &D) const { return Children.lookup(&D); }
 
   /// Assigns `Val` as the child value for `D`.
   void setChild(const ValueDecl &D, Value &Val) { Children[&D] = &Val; }

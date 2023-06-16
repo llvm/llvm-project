@@ -1,6 +1,10 @@
-; RUN: llc -mtriple=armeb-linux-gnueabihf -O2 -mattr=+read-tp-hard %s -o - | FileCheck %s -check-prefix=CHECK-HARD
+; RUN: llc -mtriple=armeb-linux-gnueabihf -O2 -mattr=+read-tp-tpidrurw %s -o - | FileCheck %s -check-prefix=CHECK-TPIDRURW
+; RUN: llc -mtriple=armeb-linux-gnueabihf -O2 -mattr=+read-tp-tpidruro %s -o - | FileCheck %s -check-prefix=CHECK-TPIDRURO
+; RUN: llc -mtriple=armeb-linux-gnueabihf -O2 -mattr=+read-tp-tpidrprw %s -o - | FileCheck %s -check-prefix=CHECK-TPIDRPRW
 ; RUN: llc -mtriple=armeb-linux-gnueabihf -O2 %s -o - | FileCheck %s -check-prefix=CHECK-SOFT
-; RUN: llc -mtriple=thumbv7-linux-gnueabihf -O2 -mattr=+read-tp-hard %s -o - | FileCheck %s -check-prefix=CHECK-HARD
+; RUN: llc -mtriple=thumbv7-linux-gnueabihf -O2 -mattr=+read-tp-tpidrurw %s -o - | FileCheck %s -check-prefix=CHECK-TPIDRURW
+; RUN: llc -mtriple=thumbv7-linux-gnueabihf -O2 -mattr=+read-tp-tpidruro %s -o - | FileCheck %s -check-prefix=CHECK-TPIDRURO
+; RUN: llc -mtriple=thumbv7-linux-gnueabihf -O2 -mattr=+read-tp-tpidrprw %s -o - | FileCheck %s -check-prefix=CHECK-TPIDRPRW
 ; RUN: llc -mtriple=thumbv7-linux-gnueabihf -O2 %s -o - | FileCheck %s -check-prefix=CHECK-SOFT
 
 
@@ -20,5 +24,7 @@ entry:
 
 
 ; CHECK-LABEL: foo:
-; CHECK-HARD:    mrc	p15, #0, {{r[0-9]+}}, c13, c0, #3
-; CHECK-SOFT:    bl	__aeabi_read_tp
+; CHECK-TPIDRURW:     mrc	p15, #0, {{r[0-9]+}}, c13, c0, #2
+; CHECK-TPIDRURO:     mrc	p15, #0, {{r[0-9]+}}, c13, c0, #3
+; CHECK-TPIDRPRW:     mrc	p15, #0, {{r[0-9]+}}, c13, c0, #4
+; CHECK-SOFT:         bl	__aeabi_read_tp

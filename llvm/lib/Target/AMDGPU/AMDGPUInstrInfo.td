@@ -39,6 +39,7 @@ def AMDGPUFmasOp : SDTypeProfile<1, 4,
   [SDTCisFP<0>, SDTCisSameAs<0, 1>, SDTCisSameAs<0, 2>, SDTCisSameAs<0, 3>, SDTCisInt<4>]
 >;
 
+def ImmOp : SDTypeProfile<0, 1, [SDTCisInt<0>]>;
 def AMDGPUKillSDT : SDTypeProfile<0, 1, [SDTCisInt<0>]>;
 
 def AMDGPUIfOp : SDTypeProfile<1, 2,
@@ -113,6 +114,12 @@ def AMDGPUfract_impl : SDNode<"AMDGPUISD::FRACT", SDTFPUnaryOp>;
 
 // out = 1.0 / a
 def AMDGPUrcp_impl : SDNode<"AMDGPUISD::RCP", SDTFPUnaryOp>;
+
+// v_log_f32, which is log2
+def AMDGPUlog_impl : SDNode<"AMDGPUISD::LOG", SDTFPUnaryOp>;
+
+// v_exp_f32, which is exp2
+def AMDGPUexp_impl : SDNode<"AMDGPUISD::EXP", SDTFPUnaryOp>;
 
 // out = 1.0 / sqrt(a)
 def AMDGPUrsq_impl : SDNode<"AMDGPUISD::RSQ", SDTFPUnaryOp>;
@@ -362,6 +369,8 @@ def IL_brcond      : SDNode<"AMDGPUISD::BRANCH_COND", SDTIL_BRCond, [SDNPHasChai
 //===----------------------------------------------------------------------===//
 def AMDGPUendpgm : SDNode<"AMDGPUISD::ENDPGM", SDTNone,
     [SDNPHasChain, SDNPOptInGlue]>;
+def AMDGPUendpgm_trap : SDNode<"AMDGPUISD::ENDPGM_TRAP", SDTNone,
+    [SDNPHasChain]>;
 
 def AMDGPUreturn_to_epilog : SDNode<"AMDGPUISD::RETURN_TO_EPILOG", SDTNone,
     [SDNPHasChain, SDNPOptInGlue, SDNPVariadic]>;
@@ -392,6 +401,17 @@ def AMDGPUcos : PatFrags<(ops node:$src), [(int_amdgcn_cos node:$src),
                                            (AMDGPUcos_impl node:$src)]>;
 def AMDGPUfract : PatFrags<(ops node:$src), [(int_amdgcn_fract node:$src),
                                              (AMDGPUfract_impl node:$src)]>;
+def AMDGPUlog : PatFrags<(ops node:$src), [(int_amdgcn_log node:$src),
+                                           (AMDGPUlog_impl node:$src),
+                                           (flog2 node:$src)]>;
+def AMDGPUlogf16 : PatFrags<(ops node:$src), [(int_amdgcn_log node:$src),
+                                              (flog2 node:$src)]>;
+
+def AMDGPUexp : PatFrags<(ops node:$src), [(int_amdgcn_exp2 node:$src),
+                                           (AMDGPUexp_impl node:$src),
+                                           (fexp2 node:$src)]>; // FIXME: Remove me
+def AMDGPUexpf16 : PatFrags<(ops node:$src), [(int_amdgcn_exp2 node:$src),
+                                              (fexp2 node:$src)]>;
 
 def AMDGPUfp_class : PatFrags<(ops node:$src0, node:$src1),
   [(int_amdgcn_class node:$src0, node:$src1),

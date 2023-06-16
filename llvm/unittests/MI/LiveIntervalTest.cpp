@@ -180,8 +180,8 @@ static bool checkRegUnitInterference(LiveIntervals &LIS,
     return false;
   CoalescerPair CP(VirtReg.reg(), PhysReg, TRI);
 
-  for (MCRegUnitIterator Units(PhysReg, &TRI); Units.isValid(); ++Units) {
-    const LiveRange &UnitRange = LIS.getRegUnit(*Units);
+  for (MCRegUnit Unit : TRI.regunits(PhysReg)) {
+    const LiveRange &UnitRange = LIS.getRegUnit(Unit);
     if (VirtReg.overlaps(UnitRange, CP, *LIS.getSlotIndexes()))
       return true;
   }

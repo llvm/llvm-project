@@ -60,17 +60,17 @@ inline_memset_aligned_access_64bit(Ptr dst, uint8_t value, size_t count) {
 [[maybe_unused]] LIBC_INLINE static void
 inline_memset_x86(Ptr dst, uint8_t value, size_t count) {
 #if defined(__AVX512F__)
-  using uint128_t = uint8x16_t;
-  using uint256_t = uint8x32_t;
-  using uint512_t = uint8x64_t;
+  using uint128_t = generic_v128;
+  using uint256_t = generic_v256;
+  using uint512_t = generic_v512;
 #elif defined(__AVX__)
-  using uint128_t = uint8x16_t;
-  using uint256_t = uint8x32_t;
-  using uint512_t = cpp::array<uint8x32_t, 2>;
+  using uint128_t = generic_v128;
+  using uint256_t = generic_v256;
+  using uint512_t = cpp::array<generic_v256, 2>;
 #elif defined(__SSE2__)
-  using uint128_t = uint8x16_t;
-  using uint256_t = cpp::array<uint8x16_t, 2>;
-  using uint512_t = cpp::array<uint8x16_t, 4>;
+  using uint128_t = generic_v128;
+  using uint256_t = cpp::array<generic_v128, 2>;
+  using uint512_t = cpp::array<generic_v128, 4>;
 #else
   using uint128_t = cpp::array<uint64_t, 2>;
   using uint256_t = cpp::array<uint64_t, 4>;
@@ -106,9 +106,9 @@ inline_memset_x86(Ptr dst, uint8_t value, size_t count) {
 [[maybe_unused]] LIBC_INLINE static void
 inline_memset_aarch64(Ptr dst, uint8_t value, size_t count) {
   static_assert(aarch64::kNeon, "aarch64 supports vector types");
-  using uint128_t = uint8x16_t;
-  using uint256_t = uint8x32_t;
-  using uint512_t = uint8x64_t;
+  using uint128_t = generic_v128;
+  using uint256_t = generic_v256;
+  using uint512_t = generic_v512;
   if (count == 0)
     return;
   if (count <= 3) {
