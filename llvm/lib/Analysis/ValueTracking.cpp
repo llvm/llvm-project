@@ -4760,28 +4760,35 @@ void computeKnownFPClass(const Value *V, const APInt &DemandedElts,
     if ((InterestedClasses & fcNan) != fcNan)
       break;
 
+    // fcSubnormal is only needed in case of DAZ.
+    const FPClassTest NeedForNan = fcNan | fcInf | fcZero | fcSubnormal;
+
     KnownFPClass KnownLHS, KnownRHS;
-    computeKnownFPClass(Op->getOperand(1), DemandedElts,
-                        fcNan | fcInf | fcZero | fcSubnormal, KnownRHS,
+    computeKnownFPClass(Op->getOperand(1), DemandedElts, NeedForNan, KnownRHS,
                         Depth + 1, Q);
-    if (KnownRHS.isKnownNeverNaN() &&
-        (KnownRHS.isKnownNeverInfinity() || KnownRHS.isKnownNeverZero())) {
-      computeKnownFPClass(Op->getOperand(0), DemandedElts,
-                          fcNan | fcInf | fcZero, KnownLHS, Depth + 1, Q);
-      if (!KnownLHS.isKnownNeverNaN())
-        break;
+    if (!KnownRHS.isKnownNeverNaN())
+      break;
 
-      const Function *F = cast<Instruction>(Op)->getFunction();
+    computeKnownFPClass(Op->getOperand(0), DemandedElts, NeedForNan, KnownLHS,
+                        Depth + 1, Q);
+    if (!KnownLHS.isKnownNeverNaN())
+      break;
 
-      // If neither side can be zero (or nan) fmul never produces NaN.
-      // TODO: Check operand combinations.
-      // e.g. fmul nofpclass(inf nan zero), nofpclass(nan) -> nofpclass(nan)
-      if ((KnownLHS.isKnownNeverInfinity() ||
-           (F && KnownLHS.isKnownNeverLogicalZero(*F, Op->getType()))) &&
-          (KnownRHS.isKnownNeverInfinity() ||
-           (F && KnownRHS.isKnownNeverLogicalZero(*F, Op->getType()))))
-        Known.knownNot(fcNan);
+    // If 0 * +/-inf produces NaN.
+    if (KnownLHS.isKnownNeverInfinity() && KnownRHS.isKnownNeverInfinity()) {
+      Known.knownNot(fcNan);
+      break;
     }
+
+    const Function *F = cast<Instruction>(Op)->getFunction();
+    if (!F)
+      break;
+
+    if ((KnownRHS.isKnownNeverInfinity() ||
+         KnownLHS.isKnownNeverLogicalZero(*F, Op->getType())) &&
+        (KnownLHS.isKnownNeverInfinity() ||
+         KnownRHS.isKnownNeverLogicalZero(*F, Op->getType())))
+      Known.knownNot(fcNan);
 
     break;
   }
