@@ -266,7 +266,7 @@ define amdgpu_ps void @s_buffer_loadx3_imm(<4 x i32> inreg %desc) {
 ;
 ; GFX12-LABEL: s_buffer_loadx3_imm:
 ; GFX12:       ; %bb.0: ; %main_body
-; GFX12-NEXT:    s_buffer_load_b128 s[0:3], s[0:3], 0x40
+; GFX12-NEXT:    s_buffer_load_b96 s[0:2], s[0:3], 0x40
 ; GFX12-NEXT:    s_wait_kmcnt 0x0
 ; GFX12-NEXT:    v_mov_b32_e32 v0, s0
 ; GFX12-NEXT:    v_mov_b32_e32 v1, s1
@@ -316,7 +316,7 @@ define amdgpu_ps void @s_buffer_loadx3_index(<4 x i32> inreg %desc, i32 inreg %i
 ;
 ; GFX12-LABEL: s_buffer_loadx3_index:
 ; GFX12:       ; %bb.0: ; %main_body
-; GFX12-NEXT:    s_buffer_load_b128 s[0:3], s[0:3], s4 offset:0x0
+; GFX12-NEXT:    s_buffer_load_b96 s[0:2], s[0:3], s4 offset:0x0
 ; GFX12-NEXT:    s_wait_kmcnt 0x0
 ; GFX12-NEXT:    v_mov_b32_e32 v0, s0
 ; GFX12-NEXT:    v_mov_b32_e32 v1, s1

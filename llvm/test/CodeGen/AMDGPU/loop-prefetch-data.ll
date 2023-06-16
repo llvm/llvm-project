@@ -238,15 +238,12 @@ for.end:                                          ; preds = %for.body, %entry
 define amdgpu_kernel void @copy_local(ptr addrspace(3) nocapture %d, ptr addrspace(3) nocapture readonly %s, i32 %n) {
 ; GCNES0-LABEL: copy_local:
 ; GCNES0:       ; %bb.0: ; %entry
-; GCNES0-NEXT:    s_load_b32 s2, s[0:1], 0x2c
+; GCNES0-NEXT:    s_load_b96 s[0:2], s[0:1], 0x24
 ; GCNES0-NEXT:    s_wait_kmcnt 0x0
 ; GCNES0-NEXT:    s_cmp_eq_u32 s2, 0
-; GCNES0-NEXT:    s_cbranch_scc1 .LBB3_3
-; GCNES0-NEXT:  ; %bb.1: ; %for.body.preheader
-; GCNES0-NEXT:    s_load_b64 s[0:1], s[0:1], 0x24
-; GCNES0-NEXT:  .LBB3_2: ; %for.body
+; GCNES0-NEXT:    s_cbranch_scc1 .LBB3_2
+; GCNES0-NEXT:  .LBB3_1: ; %for.body
 ; GCNES0-NEXT:    ; =>This Inner Loop Header: Depth=1
-; GCNES0-NEXT:    s_wait_kmcnt 0x0
 ; GCNES0-NEXT:    v_mov_b32_e32 v2, s1
 ; GCNES0-NEXT:    v_mov_b32_e32 v4, s0
 ; GCNES0-NEXT:    s_add_co_i32 s2, s2, -1
@@ -259,22 +256,19 @@ define amdgpu_kernel void @copy_local(ptr addrspace(3) nocapture %d, ptr addrspa
 ; GCNES0-NEXT:    ds_store_2addr_b32 v4, v0, v1 offset0:2 offset1:3
 ; GCNES0-NEXT:    s_wait_dscnt 0x1
 ; GCNES0-NEXT:    ds_store_2addr_b32 v4, v2, v3 offset1:1
-; GCNES0-NEXT:    s_cbranch_scc1 .LBB3_2
-; GCNES0-NEXT:  .LBB3_3: ; %for.end
+; GCNES0-NEXT:    s_cbranch_scc1 .LBB3_1
+; GCNES0-NEXT:  .LBB3_2: ; %for.end
 ; GCNES0-NEXT:    s_endpgm
 ;
 ; GCNES2-LABEL: copy_local:
 ; GCNES2:       ; %bb.0: ; %entry
 ; GCNES2-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_SCHED_MODE, 0, 2), 2
-; GCNES2-NEXT:    s_load_b32 s2, s[0:1], 0x2c
+; GCNES2-NEXT:    s_load_b96 s[0:2], s[0:1], 0x24
 ; GCNES2-NEXT:    s_wait_kmcnt 0x0
 ; GCNES2-NEXT:    s_cmp_eq_u32 s2, 0
-; GCNES2-NEXT:    s_cbranch_scc1 .LBB3_3
-; GCNES2-NEXT:  ; %bb.1: ; %for.body.preheader
-; GCNES2-NEXT:    s_load_b64 s[0:1], s[0:1], 0x24
-; GCNES2-NEXT:  .LBB3_2: ; %for.body
+; GCNES2-NEXT:    s_cbranch_scc1 .LBB3_2
+; GCNES2-NEXT:  .LBB3_1: ; %for.body
 ; GCNES2-NEXT:    ; =>This Inner Loop Header: Depth=1
-; GCNES2-NEXT:    s_wait_kmcnt 0x0
 ; GCNES2-NEXT:    s_wait_alu 0xffe3
 ; GCNES2-NEXT:    v_mov_b32_e32 v2, s1
 ; GCNES2-NEXT:    v_mov_b32_e32 v4, s0
@@ -291,8 +285,8 @@ define amdgpu_kernel void @copy_local(ptr addrspace(3) nocapture %d, ptr addrspa
 ; GCNES2-NEXT:    ds_store_2addr_b32 v4, v0, v1 offset0:2 offset1:3
 ; GCNES2-NEXT:    s_wait_dscnt 0x1
 ; GCNES2-NEXT:    ds_store_2addr_b32 v4, v2, v3 offset1:1
-; GCNES2-NEXT:    s_cbranch_scc1 .LBB3_2
-; GCNES2-NEXT:  .LBB3_3: ; %for.end
+; GCNES2-NEXT:    s_cbranch_scc1 .LBB3_1
+; GCNES2-NEXT:  .LBB3_2: ; %for.end
 ; GCNES2-NEXT:    s_endpgm
 entry:
   %cmp6.not = icmp eq i32 %n, 0

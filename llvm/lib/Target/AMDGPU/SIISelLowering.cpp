@@ -7209,7 +7209,8 @@ SDValue SITargetLowering::lowerSBuffer(EVT VT, SDLoc DL, SDValue Rsrc,
     }
 
     // Widen vec3 load to vec4.
-    if (VT.isVector() && VT.getVectorNumElements() == 3) {
+    if (VT.isVector() && VT.getVectorNumElements() == 3 &&
+        !Subtarget->hasScalarDwordx3Loads()) {
       EVT WidenedVT =
           EVT::getVectorVT(*DAG.getContext(), VT.getVectorElementType(), 4);
       auto WidenedOp = DAG.getMemIntrinsicNode(
@@ -9423,7 +9424,8 @@ SDValue SITargetLowering::LowerLOAD(SDValue Op, SelectionDAG &DAG) const {
   if (AS == AMDGPUAS::CONSTANT_ADDRESS ||
       AS == AMDGPUAS::CONSTANT_ADDRESS_32BIT) {
     if (!Op->isDivergent() && Alignment >= Align(4) && NumElements < 32) {
-      if (MemVT.isPow2VectorType())
+      if (MemVT.isPow2VectorType() ||
+          (Subtarget->hasScalarDwordx3Loads() && NumElements == 3))
         return SDValue();
       return WidenOrSplitVectorLoad(Op, DAG);
     }
@@ -9439,7 +9441,8 @@ SDValue SITargetLowering::LowerLOAD(SDValue Op, SelectionDAG &DAG) const {
     if (Subtarget->getScalarizeGlobalBehavior() && !Op->isDivergent() &&
         Load->isSimple() && isMemOpHasNoClobberedMemOperand(Load) &&
         Alignment >= Align(4) && NumElements < 32) {
-      if (MemVT.isPow2VectorType())
+      if (MemVT.isPow2VectorType() ||
+          (Subtarget->hasScalarDwordx3Loads() && NumElements == 3))
         return SDValue();
       return WidenOrSplitVectorLoad(Op, DAG);
     }
