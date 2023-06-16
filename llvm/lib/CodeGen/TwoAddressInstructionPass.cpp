@@ -1532,8 +1532,8 @@ TwoAddressInstructionPass::processTiedPairs(MachineInstr *MI,
           S.addSegment(LiveRange::Segment(LastCopyIdx, endIdx, VNI));
         }
       } else {
-        for (MCRegUnitIterator Unit(RegA, TRI); Unit.isValid(); ++Unit) {
-          if (LiveRange *LR = LIS->getCachedRegUnit(*Unit)) {
+        for (MCRegUnit Unit : TRI->regunits(RegA)) {
+          if (LiveRange *LR = LIS->getCachedRegUnit(Unit)) {
             VNInfo *VNI =
                 LR->getNextValue(LastCopyIdx, LIS->getVNInfoAllocator());
             LR->addSegment(LiveRange::Segment(LastCopyIdx, endIdx, VNI));

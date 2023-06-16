@@ -590,8 +590,8 @@ int GCNHazardRecognizer::getWaitStatesSinceSetReg(IsHazardFn IsHazard,
 
 static void addRegUnits(const SIRegisterInfo &TRI, BitVector &BV,
                         MCRegister Reg) {
-  for (MCRegUnitIterator RUI(Reg, &TRI); RUI.isValid(); ++RUI)
-    BV.set(*RUI);
+  for (MCRegUnit Unit : TRI.regunits(Reg))
+    BV.set(Unit);
 }
 
 static void addRegsToSet(const SIRegisterInfo &TRI,

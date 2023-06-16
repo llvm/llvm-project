@@ -96,13 +96,13 @@ void RegScavenger::enterBasicBlockEnd(MachineBasicBlock &MBB) {
 }
 
 void RegScavenger::addRegUnits(BitVector &BV, MCRegister Reg) {
-  for (MCRegUnitIterator RUI(Reg, TRI); RUI.isValid(); ++RUI)
-    BV.set(*RUI);
+  for (MCRegUnit Unit : TRI->regunits(Reg))
+    BV.set(Unit);
 }
 
 void RegScavenger::removeRegUnits(BitVector &BV, MCRegister Reg) {
-  for (MCRegUnitIterator RUI(Reg, TRI); RUI.isValid(); ++RUI)
-    BV.reset(*RUI);
+  for (MCRegUnit Unit : TRI->regunits(Reg))
+    BV.reset(Unit);
 }
 
 void RegScavenger::determineKillsAndDefs() {

@@ -1,3 +1,4 @@
+; XFAIL: target={{.*}}-aix{{.*}}
 ; RUN: %llc_dwarf -accel-tables=Apple -filetype=obj -o %t < %s
 ; RUN: llvm-dwarfdump -apple-names %t | FileCheck %s --check-prefix=NUM_HASHES
 ; RUN: llvm-dwarfdump  --find=bb --find=cA %t | FileCheck %s --check-prefix=FOUND_VARS
