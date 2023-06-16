@@ -74,7 +74,7 @@ class ShellEnvironment(object):
         if os.path.isabs(newdir):
             self.cwd = newdir
         else:
-            self.cwd = os.path.abspath(os.path.join(self.cwd, newdir))
+            self.cwd = os.path.realpath(os.path.join(self.cwd, newdir))
 
 
 class TimeoutHelper(object):
@@ -427,7 +427,7 @@ def executeBuiltinMkdir(cmd, cmd_shenv):
         dir = to_unicode(dir) if kIsWindows else to_bytes(dir)
         cwd = to_unicode(cwd) if kIsWindows else to_bytes(cwd)
         if not os.path.isabs(dir):
-            dir = os.path.abspath(os.path.join(cwd, dir))
+            dir = os.path.realpath(os.path.join(cwd, dir))
         if parent:
             lit.util.mkdir_p(dir)
         else:
@@ -473,7 +473,7 @@ def executeBuiltinRm(cmd, cmd_shenv):
         path = to_unicode(path) if kIsWindows else to_bytes(path)
         cwd = to_unicode(cwd) if kIsWindows else to_bytes(cwd)
         if not os.path.isabs(path):
-            path = os.path.abspath(os.path.join(cwd, path))
+            path = os.path.realpath(os.path.join(cwd, path))
         if force and not os.path.exists(path):
             continue
         try:
