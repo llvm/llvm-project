@@ -313,8 +313,8 @@
 #  endif   // __BYTE_ORDER__
 
 #  ifdef __FreeBSD__
-#    include <sys/endian.h>
 #    include <osreldate.h>
+#    include <sys/endian.h>
 #    if _BYTE_ORDER == _LITTLE_ENDIAN
 #      define _LIBCPP_LITTLE_ENDIAN
 #    else // _BYTE_ORDER == _LITTLE_ENDIAN
@@ -681,7 +681,7 @@ _LIBCPP_BEGIN_NAMESPACE_STD _LIBCPP_END_NAMESPACE_STD
 #    define _LIBCPP_PREFERRED_OVERLOAD __attribute__((__enable_if__(true, "")))
 #  endif
 
-#if !defined(__SIZEOF_INT128__) || defined(_MSC_VER)
+#  if !defined(__SIZEOF_INT128__) || defined(_MSC_VER)
 #    define _LIBCPP_HAS_NO_INT128
 #  endif
 
@@ -699,7 +699,7 @@ _LIBCPP_BEGIN_NAMESPACE_STD _LIBCPP_END_NAMESPACE_STD
 
 #  ifdef _LIBCPP_CXX03_LANG
 #    define _LIBCPP_DECLARE_STRONG_ENUM(x)                                                                             \
-      struct _LIBCPP_EXPORTED_FROM_ABI x {                                                                                      \
+      struct _LIBCPP_EXPORTED_FROM_ABI x {                                                                             \
         enum __lx
 // clang-format off
 #    define _LIBCPP_DECLARE_STRONG_ENUM_EPILOG(x)                                                                      \
@@ -807,11 +807,11 @@ _LIBCPP_BEGIN_NAMESPACE_STD _LIBCPP_END_NAMESPACE_STD
 #    define _LIBCPP_DEPRECATED_IN_CXX20
 #  endif
 
-#if _LIBCPP_STD_VER >= 23
-#  define _LIBCPP_DEPRECATED_IN_CXX23 _LIBCPP_DEPRECATED
-#else
-#  define _LIBCPP_DEPRECATED_IN_CXX23
-#endif
+#  if _LIBCPP_STD_VER >= 23
+#    define _LIBCPP_DEPRECATED_IN_CXX23 _LIBCPP_DEPRECATED
+#  else
+#    define _LIBCPP_DEPRECATED_IN_CXX23
+#  endif
 
 #  if !defined(_LIBCPP_HAS_NO_CHAR8_T)
 #    define _LIBCPP_DEPRECATED_WITH_CHAR8_T _LIBCPP_DEPRECATED
@@ -1275,20 +1275,20 @@ _LIBCPP_BEGIN_NAMESPACE_STD _LIBCPP_END_NAMESPACE_STD
 #  endif
 
 // TODO: Make this a proper configuration option
-#define _PSTL_PAR_BACKEND_SERIAL
+#  define _PSTL_PAR_BACKEND_SERIAL
 
-#define _PSTL_PRAGMA(x) _Pragma(#    x)
+#  define _PSTL_PRAGMA(x) _Pragma(#x)
 
 // Enable SIMD for compilers that support OpenMP 4.0
-#if (defined(_OPENMP) && _OPENMP >= 201307)
+#  if (defined(_OPENMP) && _OPENMP >= 201307)
 
-#  define _PSTL_UDR_PRESENT
-#  define _PSTL_PRAGMA_SIMD _PSTL_PRAGMA(omp simd)
-#  define _PSTL_PRAGMA_DECLARE_SIMD _PSTL_PRAGMA(omp declare simd)
-#  define _PSTL_PRAGMA_SIMD_REDUCTION(PRM) _PSTL_PRAGMA(omp simd reduction(PRM))
-#  define _PSTL_PRAGMA_SIMD_SCAN(PRM) _PSTL_PRAGMA(omp simd reduction(inscan, PRM))
-#  define _PSTL_PRAGMA_SIMD_INCLUSIVE_SCAN(PRM) _PSTL_PRAGMA(omp scan inclusive(PRM))
-#  define _PSTL_PRAGMA_SIMD_EXCLUSIVE_SCAN(PRM) _PSTL_PRAGMA(omp scan exclusive(PRM))
+#    define _PSTL_UDR_PRESENT
+#    define _PSTL_PRAGMA_SIMD _PSTL_PRAGMA(omp simd)
+#    define _PSTL_PRAGMA_DECLARE_SIMD _PSTL_PRAGMA(omp declare simd)
+#    define _PSTL_PRAGMA_SIMD_REDUCTION(PRM) _PSTL_PRAGMA(omp simd reduction(PRM))
+#    define _PSTL_PRAGMA_SIMD_SCAN(PRM) _PSTL_PRAGMA(omp simd reduction(inscan, PRM))
+#    define _PSTL_PRAGMA_SIMD_INCLUSIVE_SCAN(PRM) _PSTL_PRAGMA(omp scan inclusive(PRM))
+#    define _PSTL_PRAGMA_SIMD_EXCLUSIVE_SCAN(PRM) _PSTL_PRAGMA(omp scan exclusive(PRM))
 
 // Declaration of reduction functor, where
 // NAME - the name of the functor
@@ -1297,22 +1297,22 @@ _LIBCPP_BEGIN_NAMESPACE_STD _LIBCPP_END_NAMESPACE_STD
 // omp_out - refers to the final value of the combiner operator
 // omp_priv - refers to the private copy of the initial value
 // omp_orig - refers to the original variable to be reduced
-#  define _PSTL_PRAGMA_DECLARE_REDUCTION(NAME, OP)                                                                     \
-    _PSTL_PRAGMA(omp declare reduction(NAME:OP : omp_out(omp_in)) initializer(omp_priv = omp_orig))
+#    define _PSTL_PRAGMA_DECLARE_REDUCTION(NAME, OP)                                                                   \
+      _PSTL_PRAGMA(omp declare reduction(NAME:OP : omp_out(omp_in)) initializer(omp_priv = omp_orig))
 
-#else // (defined(_OPENMP) && _OPENMP >= 201307)
+#  else // (defined(_OPENMP) && _OPENMP >= 201307)
 
-#  define _PSTL_PRAGMA_SIMD
-#  define _PSTL_PRAGMA_DECLARE_SIMD
-#  define _PSTL_PRAGMA_SIMD_REDUCTION(PRM)
-#  define _PSTL_PRAGMA_SIMD_SCAN(PRM)
-#  define _PSTL_PRAGMA_SIMD_INCLUSIVE_SCAN(PRM)
-#  define _PSTL_PRAGMA_SIMD_EXCLUSIVE_SCAN(PRM)
-#  define _PSTL_PRAGMA_DECLARE_REDUCTION(NAME, OP)
+#    define _PSTL_PRAGMA_SIMD
+#    define _PSTL_PRAGMA_DECLARE_SIMD
+#    define _PSTL_PRAGMA_SIMD_REDUCTION(PRM)
+#    define _PSTL_PRAGMA_SIMD_SCAN(PRM)
+#    define _PSTL_PRAGMA_SIMD_INCLUSIVE_SCAN(PRM)
+#    define _PSTL_PRAGMA_SIMD_EXCLUSIVE_SCAN(PRM)
+#    define _PSTL_PRAGMA_DECLARE_REDUCTION(NAME, OP)
 
-#endif // (defined(_OPENMP) && _OPENMP >= 201307)
+#  endif // (defined(_OPENMP) && _OPENMP >= 201307)
 
-#define _PSTL_USE_NONTEMPORAL_STORES_IF_ALLOWED
+#  define _PSTL_USE_NONTEMPORAL_STORES_IF_ALLOWED
 
 #endif // __cplusplus
 
