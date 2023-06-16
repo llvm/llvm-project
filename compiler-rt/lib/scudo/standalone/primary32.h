@@ -154,7 +154,7 @@ public:
       // if `populateFreeList` succeeded, we are supposed to get free blocks.
       DCHECK_NE(B, nullptr);
     }
-    Sci->Stats.PoppedBlocks += B->getCount();
+    Sci->FreeListInfo.PoppedBlocks += B->getCount();
     return B;
   }
 
@@ -175,7 +175,7 @@ public:
       if (Size == 1 && !populateFreeList(C, ClassId, Sci))
         return;
       pushBlocksImpl(C, ClassId, Sci, Array, Size);
-      Sci->Stats.PushedBlocks += Size;
+      Sci->FreeListInfo.PushedBlocks += Size;
       return;
     }
 
@@ -201,7 +201,7 @@ public:
     ScopedLock L(Sci->Mutex);
     pushBlocksImpl(C, ClassId, Sci, Array, Size, SameGroup);
 
-    Sci->Stats.PushedBlocks += Size;
+    Sci->FreeListInfo.PushedBlocks += Size;
     if (ClassId != SizeClassMap::BatchClassId)
       releaseToOSMaybe(Sci, ClassId);
   }
@@ -267,8 +267,8 @@ public:
       SizeClassInfo *Sci = getSizeClassInfo(I);
       ScopedLock L(Sci->Mutex);
       TotalMapped += Sci->AllocatedUser;
-      PoppedBlocks += Sci->Stats.PoppedBlocks;
-      PushedBlocks += Sci->Stats.PushedBlocks;
+      PoppedBlocks += Sci->FreeListInfo.PoppedBlocks;
+      PushedBlocks += Sci->FreeListInfo.PushedBlocks;
     }
     Str->append("Stats: SizeClassAllocator32: %zuM mapped in %zu allocations; "
                 "remains %zu\n",
@@ -322,11 +322,6 @@ private:
   static const u32 MaxNumBatches = SCUDO_ANDROID ? 4U : 8U;
   typedef FlatByteMap<NumRegions> ByteMap;
 
-  struct SizeClassStats {
-    uptr PoppedBlocks;
-    uptr PushedBlocks;
-  };
-
   struct ReleaseToOsInfo {
     uptr BytesInFreeListAtLastCheckpoint;
     uptr RangesReleased;
@@ -334,12 +329,17 @@ private:
     u64 LastReleaseAtNs;
   };
 
+  struct BlocksInfo {
+    SinglyLinkedList<BatchGroup> BlockList = {};
+    uptr PoppedBlocks = 0;
+    uptr PushedBlocks = 0;
+  };
+
   struct alignas(SCUDO_CACHE_LINE_SIZE) SizeClassInfo {
     HybridMutex Mutex;
-    SinglyLinkedList<BatchGroup> FreeList GUARDED_BY(Mutex);
+    BlocksInfo FreeListInfo GUARDED_BY(Mutex);
     uptr CurrentRegion GUARDED_BY(Mutex);
     uptr CurrentRegionAllocated GUARDED_BY(Mutex);
-    SizeClassStats Stats GUARDED_BY(Mutex);
     u32 RandState;
     uptr AllocatedUser GUARDED_BY(Mutex);
     // Lowest & highest region index allocated for this size class, to avoid
@@ -416,13 +416,13 @@ private:
 
   // Push the blocks to their batch group. The layout will be like,
   //
-  // FreeList - > BG -> BG -> BG
-  //              |     |     |
-  //              v     v     v
-  //              TB    TB    TB
-  //              |
-  //              v
-  //              TB
+  // FreeListInfo.BlockList - > BG -> BG -> BG
+  //                            |     |     |
+  //                            v     v     v
+  //                            TB    TB    TB
+  //                            |
+  //                            v
+  //                            TB
   //
   // Each BlockGroup(BG) will associate with unique group id and the free blocks
   // are managed by a list of TransferBatch(TB). To reduce the time of inserting
@@ -533,13 +533,13 @@ private:
       BG->PushedBlocks += Size;
     };
 
-    BatchGroup *Cur = Sci->FreeList.front();
+    BatchGroup *Cur = Sci->FreeListInfo.BlockList.front();
 
     if (ClassId == SizeClassMap::BatchClassId) {
       if (Cur == nullptr) {
         // Don't need to classify BatchClassId.
         Cur = CreateGroup(/*CompactPtrGroupBase=*/0);
-        Sci->FreeList.push_front(Cur);
+        Sci->FreeListInfo.BlockList.push_front(Cur);
       }
       InsertBlocks(Cur, Array, Size);
       return;
@@ -559,9 +559,9 @@ private:
         compactPtrGroupBase(Array[0]) != Cur->CompactPtrGroupBase) {
       Cur = CreateGroup(compactPtrGroupBase(Array[0]));
       if (Prev == nullptr)
-        Sci->FreeList.push_front(Cur);
+        Sci->FreeListInfo.BlockList.push_front(Cur);
       else
-        Sci->FreeList.insert(Prev, Cur);
+        Sci->FreeListInfo.BlockList.insert(Prev, Cur);
     }
 
     // All the blocks are from the same group, just push without checking group
@@ -592,7 +592,7 @@ private:
             compactPtrGroupBase(Array[I]) != Cur->CompactPtrGroupBase) {
           Cur = CreateGroup(compactPtrGroupBase(Array[I]));
           DCHECK_NE(Prev, nullptr);
-          Sci->FreeList.insert(Prev, Cur);
+          Sci->FreeListInfo.BlockList.insert(Prev, Cur);
         }
 
         Count = 1;
@@ -610,10 +610,11 @@ private:
   // The region mutex needs to be held while calling this method.
   TransferBatch *popBatchImpl(CacheT *C, uptr ClassId, SizeClassInfo *Sci)
       REQUIRES(Sci->Mutex) {
-    if (Sci->FreeList.empty())
+    if (Sci->FreeListInfo.BlockList.empty())
       return nullptr;
 
-    SinglyLinkedList<TransferBatch> &Batches = Sci->FreeList.front()->Batches;
+    SinglyLinkedList<TransferBatch> &Batches =
+        Sci->FreeListInfo.BlockList.front()->Batches;
     DCHECK(!Batches.empty());
 
     TransferBatch *B = Batches.front();
@@ -622,8 +623,8 @@ private:
     DCHECK_GT(B->getCount(), 0U);
 
     if (Batches.empty()) {
-      BatchGroup *BG = Sci->FreeList.front();
-      Sci->FreeList.pop_front();
+      BatchGroup *BG = Sci->FreeListInfo.BlockList.front();
+      Sci->FreeListInfo.BlockList.pop_front();
 
       // We don't keep BatchGroup with zero blocks to avoid empty-checking while
       // allocating. Note that block used by constructing BatchGroup is recorded
@@ -728,13 +729,15 @@ private:
       REQUIRES(Sci->Mutex) {
     if (Sci->AllocatedUser == 0)
       return;
-    const uptr InUse = Sci->Stats.PoppedBlocks - Sci->Stats.PushedBlocks;
+    const uptr InUse =
+        Sci->FreeListInfo.PoppedBlocks - Sci->FreeListInfo.PushedBlocks;
     const uptr AvailableChunks = Sci->AllocatedUser / getSizeByClassId(ClassId);
     Str->append("  %02zu (%6zu): mapped: %6zuK popped: %7zu pushed: %7zu "
                 "inuse: %6zu avail: %6zu rss: %6zuK releases: %6zu\n",
                 ClassId, getSizeByClassId(ClassId), Sci->AllocatedUser >> 10,
-                Sci->Stats.PoppedBlocks, Sci->Stats.PushedBlocks, InUse,
-                AvailableChunks, Rss >> 10, Sci->ReleaseInfo.RangesReleased);
+                Sci->FreeListInfo.PoppedBlocks, Sci->FreeListInfo.PushedBlocks,
+                InUse, AvailableChunks, Rss >> 10,
+                Sci->ReleaseInfo.RangesReleased);
   }
 
   NOINLINE uptr releaseToOSMaybe(SizeClassInfo *Sci, uptr ClassId,
@@ -743,10 +746,11 @@ private:
     const uptr BlockSize = getSizeByClassId(ClassId);
     const uptr PageSize = getPageSizeCached();
 
-    DCHECK_GE(Sci->Stats.PoppedBlocks, Sci->Stats.PushedBlocks);
+    DCHECK_GE(Sci->FreeListInfo.PoppedBlocks, Sci->FreeListInfo.PushedBlocks);
     const uptr BytesInFreeList =
         Sci->AllocatedUser -
-        (Sci->Stats.PoppedBlocks - Sci->Stats.PushedBlocks) * BlockSize;
+        (Sci->FreeListInfo.PoppedBlocks - Sci->FreeListInfo.PushedBlocks) *
+            BlockSize;
 
     if (UNLIKELY(BytesInFreeList == 0))
       return 0;
@@ -823,7 +827,7 @@ private:
     auto DecompactPtr = [](CompactPtrT CompactPtr) {
       return reinterpret_cast<uptr>(CompactPtr);
     };
-    for (BatchGroup &BG : Sci->FreeList) {
+    for (BatchGroup &BG : Sci->FreeListInfo.BlockList) {
       const uptr GroupBase = decompactGroupBase(BG.CompactPtrGroupBase);
       // The `GroupSize` may not be divided by `BlockSize`, which means there is
       // an unused space at the end of Region. Exclude that space to avoid

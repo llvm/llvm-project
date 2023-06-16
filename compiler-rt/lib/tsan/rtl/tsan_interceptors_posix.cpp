@@ -2505,9 +2505,9 @@ static void HandleRecvmsg(ThreadState *thr, uptr pc,
                             off);                                           \
   } while (false)
 
-#define COMMON_INTERCEPTOR_MUNMAP_IMPL(ctx, mmap, addr, sz)   \
-  do {                                                        \
-    return munmap_interceptor(thr, pc, REAL(mmap), addr, sz); \
+#define COMMON_INTERCEPTOR_MUNMAP_IMPL(ctx, addr, sz)           \
+  do {                                                          \
+    return munmap_interceptor(thr, pc, REAL(munmap), addr, sz); \
   } while (false)
 
 #if !SANITIZER_APPLE

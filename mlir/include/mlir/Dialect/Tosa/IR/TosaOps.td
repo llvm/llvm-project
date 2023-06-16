@@ -1717,26 +1717,27 @@ def Tosa_CastOp: Tosa_Op<"cast", [Pure,
 
   let description = [{
     Performs a set of permissible cast operations
-        Mode                    Input   Output
-        ---------------------------------------
-        signed 8 to bool        int8    Boolean
-        signed 16 to bool       int16   Boolean
-        signed 32 to bool       int32   Boolean
-        bool to 8               Boolean int8
-        bool to 16              Boolean int16
-        bool to 32              Boolean int32
-        signed 8 to signed 16   int8    int16
-        signed 8 to signed 32   int8    int32
-        signed 16 to signed 8   int16   int8
-        signed 16 to signed 32  int16   int32
-        signed 32 to signed 8   int32   int8
-        signed 32 to signed 16  int32   int16
-        float to signed 8       float   int8
-        float to signed 16      float   int16
-        signed 8 to float       int8    float
-        signed 16 to float      int16   float
-        float 32 to float 64    float32 float64
-        float 64 to float 32    float64 float32
+
+    | Mode                     | Input   | Output  |
+    |--------------------------|---------|---------|
+    | signed 8 to bool         | int8    | Boolean | 
+    | signed 16 to bool        | int16   | Boolean | 
+    | signed 32 to bool        | int32   | Boolean | 
+    | bool to 8                | Boolean | int8    |
+    | bool to 16               | Boolean | int16   |
+    | bool to 32               | Boolean | int32   |
+    | signed 8 to signed 16    | int8    | int16   |
+    | signed 8 to signed 32    | int8    | int32   |
+    | signed 16 to signed 8    | int16   | int8    |
+    | signed 16 to signed 32   | int16   | int32   |
+    | signed 32 to signed 8    | int32   | int8    |
+    | signed 32 to signed 16   | int32   | int16   |
+    | float to signed 8        | float   | int8    |
+    | float to signed 16       | float   | int16   |
+    | signed 8 to float        | int8    | float   |
+    | signed 16 to float       | int16   | float   |
+    | float 32 to float 64     | float32 | float64 | 
+    | float 64 to float 32     | float64 | float32 | 
   }];
 
   let arguments = (ins

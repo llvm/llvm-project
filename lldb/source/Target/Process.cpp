@@ -5688,6 +5688,34 @@ lldb::addr_t Process::GetHighmemDataAddressMask() {
   return GetDataAddressMask();
 }
 
+void Process::SetCodeAddressMask(lldb::addr_t code_address_mask) {
+  Log *log = GetLog(LLDBLog::Process);
+  LLDB_LOGF(log, "Setting Process code address mask to 0x%" PRIx64,
+            code_address_mask);
+  m_code_address_mask = code_address_mask;
+}
+
+void Process::SetDataAddressMask(lldb::addr_t data_address_mask) {
+  Log *log = GetLog(LLDBLog::Process);
+  LLDB_LOGF(log, "Setting Process data address mask to 0x%" PRIx64,
+            data_address_mask);
+  m_data_address_mask = data_address_mask;
+}
+
+void Process::SetHighmemCodeAddressMask(lldb::addr_t code_address_mask) {
+  Log *log = GetLog(LLDBLog::Process);
+  LLDB_LOGF(log, "Setting Process highmem code address mask to 0x%" PRIx64,
+            code_address_mask);
+  m_highmem_code_address_mask = code_address_mask;
+}
+
+void Process::SetHighmemDataAddressMask(lldb::addr_t data_address_mask) {
+  Log *log = GetLog(LLDBLog::Process);
+  LLDB_LOGF(log, "Setting Process highmem data address mask to 0x%" PRIx64,
+            data_address_mask);
+  m_highmem_data_address_mask = data_address_mask;
+}
+
 addr_t Process::FixCodeAddress(addr_t addr) {
   if (ABISP abi_sp = GetABI())
     addr = abi_sp->FixCodeAddress(addr);

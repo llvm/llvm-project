@@ -1287,8 +1287,8 @@ void PEI::insertZeroCallUsedRegs(MachineFunction &MF) {
         MCRegister Reg = MO.getReg();
 
         // This picks up sibling registers (e.q. %al -> %ah).
-        for (MCRegUnitIterator Unit(Reg, &TRI); Unit.isValid(); ++Unit)
-          RegsToZero.reset(*Unit);
+        for (MCRegUnit Unit : TRI.regunits(Reg))
+          RegsToZero.reset(Unit);
 
         for (MCPhysReg SReg : TRI.sub_and_superregs_inclusive(Reg))
           RegsToZero.reset(SReg);
