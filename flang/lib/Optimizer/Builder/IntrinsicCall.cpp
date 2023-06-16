@@ -20,6 +20,7 @@
 #include "flang/Optimizer/Builder/Complex.h"
 #include "flang/Optimizer/Builder/FIRBuilder.h"
 #include "flang/Optimizer/Builder/MutableBox.h"
+#include "flang/Optimizer/Builder/PPCIntrinsicCall.h"
 #include "flang/Optimizer/Builder/Runtime/Allocatable.h"
 #include "flang/Optimizer/Builder/Runtime/Character.h"
 #include "flang/Optimizer/Builder/Runtime/Command.h"
@@ -89,88 +90,6 @@ static bool isStaticallyPresent(const fir::ExtendedValue &exv) {
   return !isStaticallyAbsent(exv);
 }
 
-//===----------------------------------------------------------------------===//
-// Helper functions for argument handling in vector intrinsics.
-//===----------------------------------------------------------------------===//
-static mlir::Type getConvertedElementType(mlir::MLIRContext *context,
-                                          mlir::Type eleTy) {
-  if (eleTy.isa<mlir::IntegerType>() && !eleTy.isSignlessInteger()) {
-    const auto intTy{eleTy.dyn_cast<mlir::IntegerType>()};
-    auto newEleTy{mlir::IntegerType::get(context, intTy.getWidth())};
-    return newEleTy;
-  }
-  return eleTy;
-}
-
-// Wrapper struct to encapsulate information for a vector type. Preserves
-// sign of eleTy if eleTy is signed/unsigned integer. Helps with vector type
-// conversions.
-struct VecTypeInfo {
-  mlir::Type eleTy;
-  uint64_t len;
-
-  mlir::Type toFirVectorType() { return fir::VectorType::get(len, eleTy); }
-
-  // We need a builder to do the signless element conversion.
-  mlir::Type toMlirVectorType(mlir::MLIRContext *context) {
-    // Will convert to eleTy to signless int if eleTy is signed/unsigned int.
-    auto convEleTy{getConvertedElementType(context, eleTy)};
-    return mlir::VectorType::get(len, convEleTy);
-  }
-
-  bool isFloat32() { return mlir::isa<mlir::Float32Type>(eleTy); }
-
-  bool isFloat64() { return mlir::isa<mlir::Float64Type>(eleTy); }
-
-  bool isFloat() { return isFloat32() || isFloat64(); }
-};
-
-static llvm::SmallVector<mlir::Value, 4>
-getBasesForArgs(llvm::ArrayRef<fir::ExtendedValue> args) {
-  llvm::SmallVector<mlir::Value, 4> baseVec;
-  for (auto arg : args)
-    baseVec.push_back(getBase(arg));
-  return baseVec;
-}
-
-static llvm::SmallVector<mlir::Type, 4>
-getTypesForArgs(llvm::ArrayRef<mlir::Value> args) {
-  llvm::SmallVector<mlir::Type, 4> typeVec;
-  for (auto arg : args)
-    typeVec.push_back(arg.getType());
-  return typeVec;
-}
-
-// Returns a VecTypeInfo with element type and length of given fir vector type.
-// Preserves signness of fir vector type if element type of integer.
-static VecTypeInfo getVecTypeFromFirType(mlir::Type firTy) {
-  assert(firTy.isa<fir::VectorType>());
-  VecTypeInfo vecTyInfo;
-  vecTyInfo.eleTy = firTy.dyn_cast<fir::VectorType>().getEleTy();
-  vecTyInfo.len = firTy.dyn_cast<fir::VectorType>().getLen();
-  return vecTyInfo;
-}
-
-static VecTypeInfo getVecTypeFromFir(mlir::Value firVec) {
-  return getVecTypeFromFirType(firVec.getType());
-}
-
-// Converts array of fir vectors to mlir vectors.
-static llvm::SmallVector<mlir::Value, 4>
-convertVecArgs(fir::FirOpBuilder &builder, mlir::Location loc,
-               VecTypeInfo vecTyInfo, llvm::SmallVector<mlir::Value, 4> args) {
-  llvm::SmallVector<mlir::Value, 4> newArgs;
-  auto ty{vecTyInfo.toMlirVectorType(builder.getContext())};
-  assert(ty && "unknown mlir vector type");
-  for (size_t i = 0; i < args.size(); i++)
-    newArgs.push_back(builder.createConvert(loc, ty, args[i]));
-  return newArgs;
-}
-
-constexpr auto asValue = fir::LowerIntrinsicArgAs::Value;
-constexpr auto asAddr = fir::LowerIntrinsicArgAs::Addr;
-constexpr auto asBox = fir::LowerIntrinsicArgAs::Box;
-constexpr auto asInquired = fir::LowerIntrinsicArgAs::Inquired;
 using I = IntrinsicLibrary;
 
 /// Flag to indicate that an intrinsic argument has to be handled as
@@ -600,38 +519,6 @@ static constexpr IntrinsicHandler handlers[]{
      /*isElemental=*/true},
 };
 
-// PPC specific intrinsic handlers.
-static constexpr IntrinsicHandler ppcHandlers[]{
-    {"__ppc_mtfsf",
-     &I::genMtfsf<false>,
-     {{{"mask", asValue}, {"r", asValue}}},
-     /*isElemental=*/false},
-    {"__ppc_mtfsfi",
-     &I::genMtfsf<true>,
-     {{{"bf", asValue}, {"i", asValue}}},
-     /*isElemental=*/false},
-    {"__ppc_vec_add",
-     &I::genVecAddAndMulSubXor<VecOp::Add>,
-     {{{"arg1", asValue}, {"arg2", asValue}}},
-     /*isElemental=*/true},
-    {"__ppc_vec_and",
-     &I::genVecAddAndMulSubXor<VecOp::And>,
-     {{{"arg1", asValue}, {"arg2", asValue}}},
-     /*isElemental=*/true},
-    {"__ppc_vec_mul",
-     &I::genVecAddAndMulSubXor<VecOp::Mul>,
-     {{{"arg1", asValue}, {"arg2", asValue}}},
-     /*isElemental=*/true},
-    {"__ppc_vec_sub",
-     &I::genVecAddAndMulSubXor<VecOp::Sub>,
-     {{{"arg1", asValue}, {"arg2", asValue}}},
-     /*isElemental=*/true},
-    {"__ppc_vec_xor",
-     &I::genVecAddAndMulSubXor<VecOp::Xor>,
-     {{{"arg1", asValue}, {"arg2", asValue}}},
-     /*isElemental=*/true},
-};
-
 static const IntrinsicHandler *findIntrinsicHandler(llvm::StringRef name) {
   auto compare = [](const IntrinsicHandler &handler, llvm::StringRef name) {
     return name.compare(handler.name) > 0;
@@ -639,15 +526,6 @@ static const IntrinsicHandler *findIntrinsicHandler(llvm::StringRef name) {
   auto result = llvm::lower_bound(handlers, name, compare);
   return result != std::end(handlers) && result->name == name ? result
                                                               : nullptr;
-}
-
-static const IntrinsicHandler *findPPCIntrinsicHandler(llvm::StringRef name) {
-  auto compare = [](const IntrinsicHandler &ppcHandler, llvm::StringRef name) {
-    return name.compare(ppcHandler.name) > 0;
-  };
-  auto result = llvm::lower_bound(ppcHandlers, name, compare);
-  return result != std::end(ppcHandlers) && result->name == name ? result
-                                                                 : nullptr;
 }
 
 /// To make fir output more readable for debug, one can outline all intrinsic
@@ -679,10 +557,10 @@ static llvm::cl::opt<bool>
                                       "dialect to lower complex operations"),
                        llvm::cl::init(false));
 
-static mlir::Value genLibCall(fir::FirOpBuilder &builder, mlir::Location loc,
-                              llvm::StringRef libFuncName,
-                              mlir::FunctionType libFuncType,
-                              llvm::ArrayRef<mlir::Value> args) {
+mlir::Value genLibCall(fir::FirOpBuilder &builder, mlir::Location loc,
+                       llvm::StringRef libFuncName,
+                       mlir::FunctionType libFuncType,
+                       llvm::ArrayRef<mlir::Value> args) {
   LLVM_DEBUG(llvm::dbgs() << "Generating '" << libFuncName
                           << "' call with type ";
              libFuncType.dump(); llvm::dbgs() << "\n");
@@ -738,9 +616,11 @@ static mlir::Value genLibCall(fir::FirOpBuilder &builder, mlir::Location loc,
   return libCall.getResult(0);
 }
 
-static mlir::Value genLibSplitComplexArgsCall(
-    fir::FirOpBuilder &builder, mlir::Location loc, llvm::StringRef libFuncName,
-    mlir::FunctionType libFuncType, llvm::ArrayRef<mlir::Value> args) {
+mlir::Value genLibSplitComplexArgsCall(fir::FirOpBuilder &builder,
+                                       mlir::Location loc,
+                                       llvm::StringRef libFuncName,
+                                       mlir::FunctionType libFuncType,
+                                       llvm::ArrayRef<mlir::Value> args) {
   assert(args.size() == 2 && "Incorrect #args to genLibSplitComplexArgsCall");
 
   auto getSplitComplexArgsType = [&builder, &args]() -> mlir::FunctionType {
@@ -787,10 +667,10 @@ static mlir::Value genLibSplitComplexArgsCall(
 }
 
 template <typename T>
-static mlir::Value genMathOp(fir::FirOpBuilder &builder, mlir::Location loc,
-                             llvm::StringRef mathLibFuncName,
-                             mlir::FunctionType mathLibFuncType,
-                             llvm::ArrayRef<mlir::Value> args) {
+mlir::Value genMathOp(fir::FirOpBuilder &builder, mlir::Location loc,
+                      llvm::StringRef mathLibFuncName,
+                      mlir::FunctionType mathLibFuncType,
+                      llvm::ArrayRef<mlir::Value> args) {
   // TODO: we have to annotate the math operations with flags
   //       that will allow to define FP accuracy/exception
   //       behavior per operation, so that after early multi-module
@@ -829,11 +709,10 @@ static mlir::Value genMathOp(fir::FirOpBuilder &builder, mlir::Location loc,
 }
 
 template <typename T>
-static mlir::Value genComplexMathOp(fir::FirOpBuilder &builder,
-                                    mlir::Location loc,
-                                    llvm::StringRef mathLibFuncName,
-                                    mlir::FunctionType mathLibFuncType,
-                                    llvm::ArrayRef<mlir::Value> args) {
+mlir::Value genComplexMathOp(fir::FirOpBuilder &builder, mlir::Location loc,
+                             llvm::StringRef mathLibFuncName,
+                             mlir::FunctionType mathLibFuncType,
+                             llvm::ArrayRef<mlir::Value> args) {
   mlir::Value result;
   if (disableMlirComplex ||
       (mathRuntimeVersion == preciseVersion && !mathLibFuncName.empty())) {
@@ -1136,64 +1015,6 @@ static constexpr MathOperation mathOperations[] = {
      genComplexMathOp<mlir::complex::TanhOp>},
 };
 
-static constexpr MathOperation ppcMathOperations[] = {
-    // fcfi is just another name for fcfid, there is no llvm.ppc.fcfi.
-    {"__ppc_fcfi", "llvm.ppc.fcfid", genFuncType<Ty::Real<8>, Ty::Real<8>>,
-     genLibCall},
-    {"__ppc_fcfid", "llvm.ppc.fcfid", genFuncType<Ty::Real<8>, Ty::Real<8>>,
-     genLibCall},
-    {"__ppc_fcfud", "llvm.ppc.fcfud", genFuncType<Ty::Real<8>, Ty::Real<8>>,
-     genLibCall},
-    {"__ppc_fctid", "llvm.ppc.fctid", genFuncType<Ty::Real<8>, Ty::Real<8>>,
-     genLibCall},
-    {"__ppc_fctidz", "llvm.ppc.fctidz", genFuncType<Ty::Real<8>, Ty::Real<8>>,
-     genLibCall},
-    {"__ppc_fctiw", "llvm.ppc.fctiw", genFuncType<Ty::Real<8>, Ty::Real<8>>,
-     genLibCall},
-    {"__ppc_fctiwz", "llvm.ppc.fctiwz", genFuncType<Ty::Real<8>, Ty::Real<8>>,
-     genLibCall},
-    {"__ppc_fctudz", "llvm.ppc.fctudz", genFuncType<Ty::Real<8>, Ty::Real<8>>,
-     genLibCall},
-    {"__ppc_fctuwz", "llvm.ppc.fctuwz", genFuncType<Ty::Real<8>, Ty::Real<8>>,
-     genLibCall},
-    {"__ppc_fmadd", "llvm.fma.f32",
-     genFuncType<Ty::Real<4>, Ty::Real<4>, Ty::Real<4>, Ty::Real<4>>,
-     genMathOp<mlir::math::FmaOp>},
-    {"__ppc_fmadd", "llvm.fma.f64",
-     genFuncType<Ty::Real<8>, Ty::Real<8>, Ty::Real<8>, Ty::Real<8>>,
-     genMathOp<mlir::math::FmaOp>},
-    {"__ppc_fmsub", "llvm.ppc.fmsubs",
-     genFuncType<Ty::Real<4>, Ty::Real<4>, Ty::Real<4>, Ty::Real<4>>,
-     genLibCall},
-    {"__ppc_fmsub", "llvm.ppc.fmsub",
-     genFuncType<Ty::Real<8>, Ty::Real<8>, Ty::Real<8>, Ty::Real<8>>,
-     genLibCall},
-    {"__ppc_fnabs", "llvm.ppc.fnabss", genFuncType<Ty::Real<4>, Ty::Real<4>>,
-     genLibCall},
-    {"__ppc_fnabs", "llvm.ppc.fnabs", genFuncType<Ty::Real<8>, Ty::Real<8>>,
-     genLibCall},
-    {"__ppc_fnmadd", "llvm.ppc.fnmadds",
-     genFuncType<Ty::Real<4>, Ty::Real<4>, Ty::Real<4>, Ty::Real<4>>,
-     genLibCall},
-    {"__ppc_fnmadd", "llvm.ppc.fnmadd",
-     genFuncType<Ty::Real<8>, Ty::Real<8>, Ty::Real<8>, Ty::Real<8>>,
-     genLibCall},
-    {"__ppc_fnmsub", "llvm.ppc.fnmsub.f32",
-     genFuncType<Ty::Real<4>, Ty::Real<4>, Ty::Real<4>, Ty::Real<4>>,
-     genLibCall},
-    {"__ppc_fnmsub", "llvm.ppc.fnmsub.f64",
-     genFuncType<Ty::Real<8>, Ty::Real<8>, Ty::Real<8>, Ty::Real<8>>,
-     genLibCall},
-    {"__ppc_fre", "llvm.ppc.fre", genFuncType<Ty::Real<8>, Ty::Real<8>>,
-     genLibCall},
-    {"__ppc_fres", "llvm.ppc.fres", genFuncType<Ty::Real<4>, Ty::Real<4>>,
-     genLibCall},
-    {"__ppc_frsqrte", "llvm.ppc.frsqrte", genFuncType<Ty::Real<8>, Ty::Real<8>>,
-     genLibCall},
-    {"__ppc_frsqrtes", "llvm.ppc.frsqrtes",
-     genFuncType<Ty::Real<4>, Ty::Real<4>>, genLibCall},
-};
-
 // This helper class computes a "distance" between two function types.
 // The distance measures how many narrowing conversions of actual arguments
 // and result of "from" must be made in order to use "to" instead of "from".
@@ -1338,10 +1159,6 @@ using RtMap = Fortran::common::StaticMultimapView<MathOperation>;
 static constexpr RtMap mathOps(mathOperations);
 static_assert(mathOps.Verify() && "map must be sorted");
 
-// PPC
-static constexpr RtMap ppcMathOps(ppcMathOperations);
-static_assert(ppcMathOps.Verify() && "map must be sorted");
-
 /// Look for a MathOperation entry specifying how to lower a mathematical
 /// operation defined by \p name with its result' and operands' types
 /// specified in the form of a FunctionType \p funcType.
@@ -1363,7 +1180,7 @@ searchMathOperation(fir::FirOpBuilder &builder, llvm::StringRef name,
 
   // Search ppcMathOps only if targetting PowerPC arch
   if (fir::getTargetTriple(mod).isPPC() && range.first == range.second) {
-    range = ppcMathOps.equal_range(name);
+    range = checkPPCMathOperationsRange(name);
   }
   for (auto iter = range.first; iter != range.second && iter; ++iter) {
     const auto &impl = *iter;
@@ -4604,73 +4421,6 @@ mlir::Value IntrinsicLibrary::genTrailz(mlir::Type resultType,
   return builder.createConvert(loc, resultType, result);
 }
 
-// VEC_ADD, VEC_AND, VEC_SUB, VEC_MUL, VEC_XOR
-template <VecOp vop>
-fir::ExtendedValue IntrinsicLibrary::genVecAddAndMulSubXor(
-    mlir::Type resultType, llvm::ArrayRef<fir::ExtendedValue> args) {
-  assert(args.size() == 2);
-  auto argBases{getBasesForArgs(args)};
-  auto argsTy{getTypesForArgs(argBases)};
-  assert(argsTy[0].isa<fir::VectorType>() && argsTy[1].isa<fir::VectorType>());
-
-  auto vecTyInfo{getVecTypeFromFir(argBases[0])};
-
-  const auto isInteger{vecTyInfo.eleTy.isa<mlir::IntegerType>()};
-  const auto isFloat{vecTyInfo.eleTy.isa<mlir::FloatType>()};
-  assert((isInteger || isFloat) && "unknown vector type");
-
-  auto vargs{convertVecArgs(builder, loc, vecTyInfo, argBases)};
-
-  mlir::Value r{nullptr};
-  switch (vop) {
-  case VecOp::Add:
-    if (isInteger)
-      r = builder.create<mlir::arith::AddIOp>(loc, vargs[0], vargs[1]);
-    else if (isFloat)
-      r = builder.create<mlir::arith::AddFOp>(loc, vargs[0], vargs[1]);
-    break;
-  case VecOp::Mul:
-    if (isInteger)
-      r = builder.create<mlir::arith::MulIOp>(loc, vargs[0], vargs[1]);
-    else if (isFloat)
-      r = builder.create<mlir::arith::MulFOp>(loc, vargs[0], vargs[1]);
-    break;
-  case VecOp::Sub:
-    if (isInteger)
-      r = builder.create<mlir::arith::SubIOp>(loc, vargs[0], vargs[1]);
-    else if (isFloat)
-      r = builder.create<mlir::arith::SubFOp>(loc, vargs[0], vargs[1]);
-    break;
-  case VecOp::And:
-  case VecOp::Xor: {
-    mlir::Value arg1{nullptr};
-    mlir::Value arg2{nullptr};
-    if (isInteger) {
-      arg1 = vargs[0];
-      arg2 = vargs[1];
-    } else if (isFloat) {
-      // bitcast the arguments to integer
-      auto wd{vecTyInfo.eleTy.dyn_cast<mlir::FloatType>().getWidth()};
-      auto ftype{builder.getIntegerType(wd)};
-      auto bcVecTy{mlir::VectorType::get(vecTyInfo.len, ftype)};
-      arg1 = builder.create<mlir::vector::BitCastOp>(loc, bcVecTy, vargs[0]);
-      arg2 = builder.create<mlir::vector::BitCastOp>(loc, bcVecTy, vargs[1]);
-    }
-    if (vop == VecOp::And)
-      r = builder.create<mlir::arith::AndIOp>(loc, arg1, arg2);
-    else if (vop == VecOp::Xor)
-      r = builder.create<mlir::arith::XOrIOp>(loc, arg1, arg2);
-
-    if (isFloat)
-      r = builder.create<mlir::vector::BitCastOp>(loc, vargs[0].getType(), r);
-
-    break;
-  }
-  }
-
-  return builder.createConvert(loc, argsTy[0], r);
-}
-
 static bool hasDefaultLowerBound(const fir::ExtendedValue &exv) {
   return exv.match(
       [](const fir::ArrayBoxValue &arr) { return arr.getLBounds().empty(); },
@@ -5374,33 +5124,6 @@ mlir::Value IntrinsicLibrary::genExtremum(mlir::Type,
     result = builder.create<mlir::arith::SelectOp>(loc, mask, result, arg);
   }
   return result;
-}
-
-//===----------------------------------------------------------------------===//
-// PowerPC specific intrinsic handlers.
-//===----------------------------------------------------------------------===//
-template <bool isImm>
-void IntrinsicLibrary::genMtfsf(llvm::ArrayRef<fir::ExtendedValue> args) {
-  assert(args.size() == 2);
-  llvm::SmallVector<mlir::Value> scalarArgs;
-  for (const fir::ExtendedValue &arg : args)
-    if (arg.getUnboxed())
-      scalarArgs.emplace_back(fir::getBase(arg));
-    else
-      mlir::emitError(loc, "nonscalar intrinsic argument");
-
-  mlir::FunctionType libFuncType;
-  mlir::func::FuncOp funcOp;
-  if (isImm) {
-    libFuncType = genFuncType<Ty::Void, Ty::Integer<4>, Ty::Integer<4>>(
-        builder.getContext(), builder);
-    funcOp = builder.addNamedFunction(loc, "llvm.ppc.mtfsfi", libFuncType);
-  } else {
-    libFuncType = genFuncType<Ty::Void, Ty::Integer<4>, Ty::Real<8>>(
-        builder.getContext(), builder);
-    funcOp = builder.addNamedFunction(loc, "llvm.ppc.mtfsf", libFuncType);
-  }
-  builder.create<fir::CallOp>(loc, funcOp, scalarArgs);
 }
 
 //===----------------------------------------------------------------------===//

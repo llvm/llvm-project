@@ -2195,13 +2195,12 @@ static llvm::Value *EmitTypeidFromVTable(CodeGenFunction &CGF, const Expr *E,
 }
 
 llvm::Value *CodeGenFunction::EmitCXXTypeidExpr(const CXXTypeidExpr *E) {
-  llvm::Type *StdTypeInfoPtrTy =
-    ConvertType(E->getType())->getPointerTo();
+  llvm::Type *PtrTy = llvm::PointerType::getUnqual(getLLVMContext());
 
   if (E->isTypeOperand()) {
     llvm::Constant *TypeInfo =
         CGM.GetAddrOfRTTIDescriptor(E->getTypeOperand(getContext()));
-    return Builder.CreateBitCast(TypeInfo, StdTypeInfoPtrTy);
+    return TypeInfo;
   }
 
   // C++ [expr.typeid]p2:
@@ -2211,12 +2210,10 @@ llvm::Value *CodeGenFunction::EmitCXXTypeidExpr(const CXXTypeidExpr *E) {
   //   type) to which the glvalue refers.
   // If the operand is already most derived object, no need to look up vtable.
   if (E->isPotentiallyEvaluated() && !E->isMostDerived(getContext()))
-    return EmitTypeidFromVTable(*this, E->getExprOperand(),
-                                StdTypeInfoPtrTy);
+    return EmitTypeidFromVTable(*this, E->getExprOperand(), PtrTy);
 
   QualType OperandTy = E->getExprOperand()->getType();
-  return Builder.CreateBitCast(CGM.GetAddrOfRTTIDescriptor(OperandTy),
-                               StdTypeInfoPtrTy);
+  return CGM.GetAddrOfRTTIDescriptor(OperandTy);
 }
 
 static llvm::Value *EmitDynamicCastToNull(CodeGenFunction &CGF,

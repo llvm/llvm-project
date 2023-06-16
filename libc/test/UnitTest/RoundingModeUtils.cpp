@@ -20,19 +20,14 @@ int get_fe_rounding(RoundingMode mode) {
   switch (mode) {
   case RoundingMode::Upward:
     return FE_UPWARD;
-    break;
   case RoundingMode::Downward:
     return FE_DOWNWARD;
-    break;
   case RoundingMode::TowardZero:
     return FE_TOWARDZERO;
-    break;
   case RoundingMode::Nearest:
     return FE_TONEAREST;
-    break;
-  default:
-    __builtin_unreachable();
   }
+  __builtin_unreachable();
 }
 
 ForceRoundingMode::ForceRoundingMode(RoundingMode mode) {
