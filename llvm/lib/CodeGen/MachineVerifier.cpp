@@ -2440,12 +2440,11 @@ void MachineVerifier::checkLiveness(const MachineOperand *MO, unsigned MONum) {
       SlotIndex UseIdx = LiveInts->getInstructionIndex(*MI);
       // Check the cached regunit intervals.
       if (Reg.isPhysical() && !isReserved(Reg)) {
-        for (MCRegUnitIterator Units(Reg.asMCReg(), TRI); Units.isValid();
-             ++Units) {
-          if (MRI->isReservedRegUnit(*Units))
+        for (MCRegUnit Unit : TRI->regunits(Reg.asMCReg())) {
+          if (MRI->isReservedRegUnit(Unit))
             continue;
-          if (const LiveRange *LR = LiveInts->getCachedRegUnit(*Units))
-            checkLivenessAtUse(MO, MONum, UseIdx, *LR, *Units);
+          if (const LiveRange *LR = LiveInts->getCachedRegUnit(Unit))
+            checkLivenessAtUse(MO, MONum, UseIdx, *LR, Unit);
         }
       }
 

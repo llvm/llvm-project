@@ -454,14 +454,13 @@ void SIWholeQuadMode::markOperand(const MachineInstr &MI,
     // Handle physical registers that we need to track; this is mostly relevant
     // for VCC, which can appear as the (implicit) input of a uniform branch,
     // e.g. when a loop counter is stored in a VGPR.
-    for (MCRegUnitIterator RegUnit(Reg.asMCReg(), TRI); RegUnit.isValid();
-         ++RegUnit) {
-      LiveRange &LR = LIS->getRegUnit(*RegUnit);
+    for (MCRegUnit Unit : TRI->regunits(Reg.asMCReg())) {
+      LiveRange &LR = LIS->getRegUnit(Unit);
       const VNInfo *Value = LR.Query(LIS->getInstructionIndex(MI)).valueIn();
       if (!Value)
         continue;
 
-      markDefs(MI, LR, *RegUnit, AMDGPU::NoSubRegister, Flag, Worklist);
+      markDefs(MI, LR, Unit, AMDGPU::NoSubRegister, Flag, Worklist);
     }
   }
 }

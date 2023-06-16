@@ -709,8 +709,8 @@ static void interpretValues(const MachineInstr *CurMI,
         for (auto &FwdReg : ForwardedRegWorklist)
           if (TRI.regsOverlap(FwdReg.first, MO.getReg()))
             Defs.insert(FwdReg.first);
-        for (MCRegUnitIterator Units(MO.getReg(), &TRI); Units.isValid(); ++Units)
-          NewClobberedRegUnits.insert(*Units);
+        for (MCRegUnit Unit : TRI.regunits(MO.getReg()))
+          NewClobberedRegUnits.insert(Unit);
       }
     }
   };
