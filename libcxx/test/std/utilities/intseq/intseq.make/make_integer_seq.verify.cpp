@@ -16,5 +16,16 @@
 // This test hangs during recursive template instantiation with libstdc++
 // UNSUPPORTED: stdlib=libstdc++
 
-#define _LIBCPP_TESTING_FALLBACK_MAKE_INTEGER_SEQUENCE
-#include "make_integer_seq.fail.cpp"
+#include <utility>
+
+#include "test_macros.h"
+
+typedef std::make_integer_sequence<int, -3> MakeSeqT;
+
+// std::make_integer_sequence is implemented using a compiler builtin if available.
+// this builtin has different diagnostic messages than the fallback implementation.
+#if TEST_HAS_BUILTIN(__make_integer_seq)
+MakeSeqT i; // expected-error@*:* {{integer sequences must have non-negative sequence length}}
+#else
+MakeSeqT i; // expected-error-re@*:* {{{{(static_assert|static assertion)}} failed{{.*}}std::make_integer_sequence must have a non-negative sequence length}}
+#endif
