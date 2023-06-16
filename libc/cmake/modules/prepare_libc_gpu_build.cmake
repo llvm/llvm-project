@@ -74,8 +74,7 @@ endif()
 # Optionally set up a job pool to limit the number of GPU tests run in parallel.
 # This is sometimes necessary as running too many tests in parallel can cause
 # the GPU or driver to run out of resources.
-set(LIBC_GPU_TEST_JOBS "" CACHE STRING "Number of jobs to run in parallel for "
-                                       "GPU tests")
+set(LIBC_GPU_TEST_JOBS "" CACHE STRING "Number of jobs to use for GPU tests")
 if(LIBC_GPU_TEST_JOBS)
   set_property(GLOBAL PROPERTY JOB_POOLS LIBC_GPU_TEST_POOL=${LIBC_GPU_TEST_JOBS})
   set(LIBC_HERMETIC_TEST_JOB_POOL JOB_POOL LIBC_GPU_TEST_POOL)
