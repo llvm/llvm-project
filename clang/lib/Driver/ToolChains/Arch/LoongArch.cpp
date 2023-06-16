@@ -139,4 +139,10 @@ void loongarch::getLoongArchTargetFeatures(const Driver &D,
   // or the alias -m[no-]strict-align.
   AddTargetFeature(Args, Features, options::OPT_munaligned_access,
                    options::OPT_mno_unaligned_access, "ual");
+
+  // Accept but warn about these TargetSpecific options.
+  if (Arg *A = Args.getLastArgNoClaim(options::OPT_mabi_EQ))
+    A->ignoreTargetSpecific();
+  if (Arg *A = Args.getLastArgNoClaim(options::OPT_mfpu_EQ))
+    A->ignoreTargetSpecific();
 }
