@@ -9,7 +9,6 @@
 // UNSUPPORTED: armv7, armv7l, thumbv7, armv8l
 // The same issue also occurs on a riscv32 host.
 // XFAIL: riscv32, nanomips
->>>>>>> 2c4958ebdae8 (Disable sanitize-coverage-old-pm.c for nanoMIPS)
 
 int x[10];
 
