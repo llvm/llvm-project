@@ -9,10 +9,9 @@ define i1 @test1(i32 %arg1, i32 %arg2) {
 ; CHECK-LABEL: test1:
 ; CHECK:       ; %bb.0:
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; CHECK-NEXT:    v_min_i32_e32 v0, v0, v1
 ; CHECK-NEXT:    v_cmp_gt_i32_e32 vcc_lo, 0x3e8, v0
-; CHECK-NEXT:    v_cmp_gt_i32_e64 s0, 0x3e8, v1
-; CHECK-NEXT:    s_or_b32 s0, vcc_lo, s0
-; CHECK-NEXT:    v_cndmask_b32_e64 v0, 0, 1, s0
+; CHECK-NEXT:    v_cndmask_b32_e64 v0, 0, 1, vcc_lo
 ; CHECK-NEXT:    s_setpc_b64 s[30:31]
   %cmp1 = icmp slt i32 %arg1, 1000
   %cmp2 = icmp slt i32 %arg2, 1000
@@ -24,10 +23,9 @@ define i1 @test2(i32 %arg1, i32 %arg2) {
 ; CHECK-LABEL: test2:
 ; CHECK:       ; %bb.0:
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; CHECK-NEXT:    v_min_u32_e32 v0, v0, v1
 ; CHECK-NEXT:    v_cmp_gt_u32_e32 vcc_lo, 0x3e8, v0
-; CHECK-NEXT:    v_cmp_gt_u32_e64 s0, 0x3e8, v1
-; CHECK-NEXT:    s_or_b32 s0, vcc_lo, s0
-; CHECK-NEXT:    v_cndmask_b32_e64 v0, 0, 1, s0
+; CHECK-NEXT:    v_cndmask_b32_e64 v0, 0, 1, vcc_lo
 ; CHECK-NEXT:    s_setpc_b64 s[30:31]
   %cmp1 = icmp ult i32 %arg1, 1000
   %cmp2 = icmp ult i32 %arg2, 1000
@@ -39,10 +37,9 @@ define i1 @test3(i32 %arg1, i32 %arg2) {
 ; CHECK-LABEL: test3:
 ; CHECK:       ; %bb.0:
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; CHECK-NEXT:    v_min_i32_e32 v0, v0, v1
 ; CHECK-NEXT:    v_cmp_gt_i32_e32 vcc_lo, 0x3e9, v0
-; CHECK-NEXT:    v_cmp_gt_i32_e64 s0, 0x3e9, v1
-; CHECK-NEXT:    s_or_b32 s0, vcc_lo, s0
-; CHECK-NEXT:    v_cndmask_b32_e64 v0, 0, 1, s0
+; CHECK-NEXT:    v_cndmask_b32_e64 v0, 0, 1, vcc_lo
 ; CHECK-NEXT:    s_setpc_b64 s[30:31]
   %cmp1 = icmp sle i32 %arg1, 1000
   %cmp2 = icmp sle i32 %arg2, 1000
@@ -54,10 +51,9 @@ define i1 @test4(i32 %arg1, i32 %arg2) {
 ; CHECK-LABEL: test4:
 ; CHECK:       ; %bb.0:
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; CHECK-NEXT:    v_min_u32_e32 v0, v0, v1
 ; CHECK-NEXT:    v_cmp_gt_u32_e32 vcc_lo, 0x3e9, v0
-; CHECK-NEXT:    v_cmp_gt_u32_e64 s0, 0x3e9, v1
-; CHECK-NEXT:    s_or_b32 s0, vcc_lo, s0
-; CHECK-NEXT:    v_cndmask_b32_e64 v0, 0, 1, s0
+; CHECK-NEXT:    v_cndmask_b32_e64 v0, 0, 1, vcc_lo
 ; CHECK-NEXT:    s_setpc_b64 s[30:31]
   %cmp1 = icmp ule i32 %arg1, 1000
   %cmp2 = icmp ule i32 %arg2, 1000
@@ -69,10 +65,9 @@ define i1 @test5(i32 %arg1, i32 %arg2) {
 ; CHECK-LABEL: test5:
 ; CHECK:       ; %bb.0:
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; CHECK-NEXT:    v_max_i32_e32 v0, v0, v1
 ; CHECK-NEXT:    v_cmp_lt_i32_e32 vcc_lo, 0x3e8, v0
-; CHECK-NEXT:    v_cmp_lt_i32_e64 s0, 0x3e8, v1
-; CHECK-NEXT:    s_or_b32 s0, vcc_lo, s0
-; CHECK-NEXT:    v_cndmask_b32_e64 v0, 0, 1, s0
+; CHECK-NEXT:    v_cndmask_b32_e64 v0, 0, 1, vcc_lo
 ; CHECK-NEXT:    s_setpc_b64 s[30:31]
   %cmp1 = icmp sgt i32 %arg1, 1000
   %cmp2 = icmp sgt i32 %arg2, 1000
@@ -84,10 +79,9 @@ define i1 @test6(i32 %arg1, i32 %arg2) {
 ; CHECK-LABEL: test6:
 ; CHECK:       ; %bb.0:
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; CHECK-NEXT:    v_max_u32_e32 v0, v0, v1
 ; CHECK-NEXT:    v_cmp_lt_u32_e32 vcc_lo, 0x3e8, v0
-; CHECK-NEXT:    v_cmp_lt_u32_e64 s0, 0x3e8, v1
-; CHECK-NEXT:    s_or_b32 s0, vcc_lo, s0
-; CHECK-NEXT:    v_cndmask_b32_e64 v0, 0, 1, s0
+; CHECK-NEXT:    v_cndmask_b32_e64 v0, 0, 1, vcc_lo
 ; CHECK-NEXT:    s_setpc_b64 s[30:31]
   %cmp1 = icmp ugt i32 %arg1, 1000
   %cmp2 = icmp ugt i32 %arg2, 1000
@@ -99,10 +93,9 @@ define i1 @test7(i32 %arg1, i32 %arg2) {
 ; CHECK-LABEL: test7:
 ; CHECK:       ; %bb.0:
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; CHECK-NEXT:    v_max_i32_e32 v0, v0, v1
 ; CHECK-NEXT:    v_cmp_lt_i32_e32 vcc_lo, 0x3e7, v0
-; CHECK-NEXT:    v_cmp_lt_i32_e64 s0, 0x3e7, v1
-; CHECK-NEXT:    s_or_b32 s0, vcc_lo, s0
-; CHECK-NEXT:    v_cndmask_b32_e64 v0, 0, 1, s0
+; CHECK-NEXT:    v_cndmask_b32_e64 v0, 0, 1, vcc_lo
 ; CHECK-NEXT:    s_setpc_b64 s[30:31]
   %cmp1 = icmp sge i32 %arg1, 1000
   %cmp2 = icmp sge i32 %arg2, 1000
@@ -114,10 +107,9 @@ define i1 @test8(i32 %arg1, i32 %arg2) {
 ; CHECK-LABEL: test8:
 ; CHECK:       ; %bb.0:
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; CHECK-NEXT:    v_max_u32_e32 v0, v0, v1
 ; CHECK-NEXT:    v_cmp_lt_u32_e32 vcc_lo, 0x3e7, v0
-; CHECK-NEXT:    v_cmp_lt_u32_e64 s0, 0x3e7, v1
-; CHECK-NEXT:    s_or_b32 s0, vcc_lo, s0
-; CHECK-NEXT:    v_cndmask_b32_e64 v0, 0, 1, s0
+; CHECK-NEXT:    v_cndmask_b32_e64 v0, 0, 1, vcc_lo
 ; CHECK-NEXT:    s_setpc_b64 s[30:31]
   %cmp1 = icmp uge i32 %arg1, 1000
   %cmp2 = icmp uge i32 %arg2, 1000
@@ -129,10 +121,9 @@ define i1 @test9(i32 %arg1, i32 %arg2, i32 %arg3) {
 ; CHECK-LABEL: test9:
 ; CHECK:       ; %bb.0:
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; CHECK-NEXT:    v_min_i32_e32 v0, v0, v1
 ; CHECK-NEXT:    v_cmp_lt_i32_e32 vcc_lo, v0, v2
-; CHECK-NEXT:    v_cmp_lt_i32_e64 s0, v1, v2
-; CHECK-NEXT:    s_or_b32 s0, vcc_lo, s0
-; CHECK-NEXT:    v_cndmask_b32_e64 v0, 0, 1, s0
+; CHECK-NEXT:    v_cndmask_b32_e64 v0, 0, 1, vcc_lo
 ; CHECK-NEXT:    s_setpc_b64 s[30:31]
   %cmp1 = icmp slt i32 %arg1, %arg3
   %cmp2 = icmp slt i32 %arg2, %arg3
@@ -144,10 +135,9 @@ define i1 @test10(i32 %arg1, i32 %arg2, i32 %arg3) {
 ; CHECK-LABEL: test10:
 ; CHECK:       ; %bb.0:
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; CHECK-NEXT:    v_min_u32_e32 v0, v0, v1
 ; CHECK-NEXT:    v_cmp_lt_u32_e32 vcc_lo, v0, v2
-; CHECK-NEXT:    v_cmp_lt_u32_e64 s0, v1, v2
-; CHECK-NEXT:    s_or_b32 s0, vcc_lo, s0
-; CHECK-NEXT:    v_cndmask_b32_e64 v0, 0, 1, s0
+; CHECK-NEXT:    v_cndmask_b32_e64 v0, 0, 1, vcc_lo
 ; CHECK-NEXT:    s_setpc_b64 s[30:31]
   %cmp1 = icmp ult i32 %arg1, %arg3
   %cmp2 = icmp ult i32 %arg2, %arg3
@@ -159,10 +149,9 @@ define i1 @test11(i32 %arg1, i32 %arg2, i32 %arg3) {
 ; CHECK-LABEL: test11:
 ; CHECK:       ; %bb.0:
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; CHECK-NEXT:    v_min_i32_e32 v0, v0, v1
 ; CHECK-NEXT:    v_cmp_le_i32_e32 vcc_lo, v0, v2
-; CHECK-NEXT:    v_cmp_le_i32_e64 s0, v1, v2
-; CHECK-NEXT:    s_or_b32 s0, vcc_lo, s0
-; CHECK-NEXT:    v_cndmask_b32_e64 v0, 0, 1, s0
+; CHECK-NEXT:    v_cndmask_b32_e64 v0, 0, 1, vcc_lo
 ; CHECK-NEXT:    s_setpc_b64 s[30:31]
   %cmp1 = icmp sle i32 %arg1, %arg3
   %cmp2 = icmp sle i32 %arg2, %arg3
@@ -174,10 +163,9 @@ define i1 @test12(i32 %arg1, i32 %arg2, i32 %arg3) {
 ; CHECK-LABEL: test12:
 ; CHECK:       ; %bb.0:
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; CHECK-NEXT:    v_min_u32_e32 v0, v0, v1
 ; CHECK-NEXT:    v_cmp_le_u32_e32 vcc_lo, v0, v2
-; CHECK-NEXT:    v_cmp_le_u32_e64 s0, v1, v2
-; CHECK-NEXT:    s_or_b32 s0, vcc_lo, s0
-; CHECK-NEXT:    v_cndmask_b32_e64 v0, 0, 1, s0
+; CHECK-NEXT:    v_cndmask_b32_e64 v0, 0, 1, vcc_lo
 ; CHECK-NEXT:    s_setpc_b64 s[30:31]
   %cmp1 = icmp ule i32 %arg1, %arg3
   %cmp2 = icmp ule i32 %arg2, %arg3
@@ -189,10 +177,9 @@ define i1 @test13(i32 %arg1, i32 %arg2, i32 %arg3) {
 ; CHECK-LABEL: test13:
 ; CHECK:       ; %bb.0:
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; CHECK-NEXT:    v_max_i32_e32 v0, v0, v1
 ; CHECK-NEXT:    v_cmp_gt_i32_e32 vcc_lo, v0, v2
-; CHECK-NEXT:    v_cmp_gt_i32_e64 s0, v1, v2
-; CHECK-NEXT:    s_or_b32 s0, vcc_lo, s0
-; CHECK-NEXT:    v_cndmask_b32_e64 v0, 0, 1, s0
+; CHECK-NEXT:    v_cndmask_b32_e64 v0, 0, 1, vcc_lo
 ; CHECK-NEXT:    s_setpc_b64 s[30:31]
   %cmp1 = icmp sgt i32 %arg1, %arg3
   %cmp2 = icmp sgt i32 %arg2, %arg3
@@ -204,10 +191,9 @@ define i1 @test14(i32 %arg1, i32 %arg2, i32 %arg3) {
 ; CHECK-LABEL: test14:
 ; CHECK:       ; %bb.0:
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; CHECK-NEXT:    v_max_u32_e32 v0, v0, v1
 ; CHECK-NEXT:    v_cmp_gt_u32_e32 vcc_lo, v0, v2
-; CHECK-NEXT:    v_cmp_gt_u32_e64 s0, v1, v2
-; CHECK-NEXT:    s_or_b32 s0, vcc_lo, s0
-; CHECK-NEXT:    v_cndmask_b32_e64 v0, 0, 1, s0
+; CHECK-NEXT:    v_cndmask_b32_e64 v0, 0, 1, vcc_lo
 ; CHECK-NEXT:    s_setpc_b64 s[30:31]
   %cmp1 = icmp ugt i32 %arg1, %arg3
   %cmp2 = icmp ugt i32 %arg2, %arg3
@@ -219,10 +205,9 @@ define i1 @test15(i32 %arg1, i32 %arg2, i32 %arg3) {
 ; CHECK-LABEL: test15:
 ; CHECK:       ; %bb.0:
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; CHECK-NEXT:    v_max_i32_e32 v0, v0, v1
 ; CHECK-NEXT:    v_cmp_ge_i32_e32 vcc_lo, v0, v2
-; CHECK-NEXT:    v_cmp_ge_i32_e64 s0, v1, v2
-; CHECK-NEXT:    s_or_b32 s0, vcc_lo, s0
-; CHECK-NEXT:    v_cndmask_b32_e64 v0, 0, 1, s0
+; CHECK-NEXT:    v_cndmask_b32_e64 v0, 0, 1, vcc_lo
 ; CHECK-NEXT:    s_setpc_b64 s[30:31]
   %cmp1 = icmp sge i32 %arg1, %arg3
   %cmp2 = icmp sge i32 %arg2, %arg3
@@ -234,10 +219,9 @@ define i1 @test16(i32 %arg1, i32 %arg2, i32 %arg3) {
 ; CHECK-LABEL: test16:
 ; CHECK:       ; %bb.0:
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; CHECK-NEXT:    v_max_u32_e32 v0, v0, v1
 ; CHECK-NEXT:    v_cmp_ge_u32_e32 vcc_lo, v0, v2
-; CHECK-NEXT:    v_cmp_ge_u32_e64 s0, v1, v2
-; CHECK-NEXT:    s_or_b32 s0, vcc_lo, s0
-; CHECK-NEXT:    v_cndmask_b32_e64 v0, 0, 1, s0
+; CHECK-NEXT:    v_cndmask_b32_e64 v0, 0, 1, vcc_lo
 ; CHECK-NEXT:    s_setpc_b64 s[30:31]
   %cmp1 = icmp uge i32 %arg1, %arg3
   %cmp2 = icmp uge i32 %arg2, %arg3
@@ -249,10 +233,9 @@ define i1 @test17(i32 %arg1, i32 %arg2) {
 ; CHECK-LABEL: test17:
 ; CHECK:       ; %bb.0:
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; CHECK-NEXT:    v_max_i32_e32 v0, v0, v1
 ; CHECK-NEXT:    v_cmp_gt_i32_e32 vcc_lo, 0x3e8, v0
-; CHECK-NEXT:    v_cmp_gt_i32_e64 s0, 0x3e8, v1
-; CHECK-NEXT:    s_and_b32 s0, vcc_lo, s0
-; CHECK-NEXT:    v_cndmask_b32_e64 v0, 0, 1, s0
+; CHECK-NEXT:    v_cndmask_b32_e64 v0, 0, 1, vcc_lo
 ; CHECK-NEXT:    s_setpc_b64 s[30:31]
   %cmp1 = icmp slt i32 %arg1, 1000
   %cmp2 = icmp slt i32 %arg2, 1000
@@ -264,10 +247,9 @@ define i1 @test18(i32 %arg1, i32 %arg2) {
 ; CHECK-LABEL: test18:
 ; CHECK:       ; %bb.0:
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; CHECK-NEXT:    v_max_u32_e32 v0, v0, v1
 ; CHECK-NEXT:    v_cmp_gt_u32_e32 vcc_lo, 0x3e8, v0
-; CHECK-NEXT:    v_cmp_gt_u32_e64 s0, 0x3e8, v1
-; CHECK-NEXT:    s_and_b32 s0, vcc_lo, s0
-; CHECK-NEXT:    v_cndmask_b32_e64 v0, 0, 1, s0
+; CHECK-NEXT:    v_cndmask_b32_e64 v0, 0, 1, vcc_lo
 ; CHECK-NEXT:    s_setpc_b64 s[30:31]
   %cmp1 = icmp ult i32 %arg1, 1000
   %cmp2 = icmp ult i32 %arg2, 1000
@@ -279,10 +261,9 @@ define i1 @test19(i32 %arg1, i32 %arg2) {
 ; CHECK-LABEL: test19:
 ; CHECK:       ; %bb.0:
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; CHECK-NEXT:    v_max_i32_e32 v0, v0, v1
 ; CHECK-NEXT:    v_cmp_gt_i32_e32 vcc_lo, 0x3e9, v0
-; CHECK-NEXT:    v_cmp_gt_i32_e64 s0, 0x3e9, v1
-; CHECK-NEXT:    s_and_b32 s0, vcc_lo, s0
-; CHECK-NEXT:    v_cndmask_b32_e64 v0, 0, 1, s0
+; CHECK-NEXT:    v_cndmask_b32_e64 v0, 0, 1, vcc_lo
 ; CHECK-NEXT:    s_setpc_b64 s[30:31]
   %cmp1 = icmp sle i32 %arg1, 1000
   %cmp2 = icmp sle i32 %arg2, 1000
@@ -294,10 +275,9 @@ define i1 @test20(i32 %arg1, i32 %arg2) {
 ; CHECK-LABEL: test20:
 ; CHECK:       ; %bb.0:
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; CHECK-NEXT:    v_max_u32_e32 v0, v0, v1
 ; CHECK-NEXT:    v_cmp_gt_u32_e32 vcc_lo, 0x3e9, v0
-; CHECK-NEXT:    v_cmp_gt_u32_e64 s0, 0x3e9, v1
-; CHECK-NEXT:    s_and_b32 s0, vcc_lo, s0
-; CHECK-NEXT:    v_cndmask_b32_e64 v0, 0, 1, s0
+; CHECK-NEXT:    v_cndmask_b32_e64 v0, 0, 1, vcc_lo
 ; CHECK-NEXT:    s_setpc_b64 s[30:31]
   %cmp1 = icmp ule i32 %arg1, 1000
   %cmp2 = icmp ule i32 %arg2, 1000
@@ -309,10 +289,9 @@ define i1 @test21(i32 %arg1, i32 %arg2) {
 ; CHECK-LABEL: test21:
 ; CHECK:       ; %bb.0:
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; CHECK-NEXT:    v_min_i32_e32 v0, v0, v1
 ; CHECK-NEXT:    v_cmp_lt_i32_e32 vcc_lo, 0x3e8, v0
-; CHECK-NEXT:    v_cmp_lt_i32_e64 s0, 0x3e8, v1
-; CHECK-NEXT:    s_and_b32 s0, vcc_lo, s0
-; CHECK-NEXT:    v_cndmask_b32_e64 v0, 0, 1, s0
+; CHECK-NEXT:    v_cndmask_b32_e64 v0, 0, 1, vcc_lo
 ; CHECK-NEXT:    s_setpc_b64 s[30:31]
   %cmp1 = icmp sgt i32 %arg1, 1000
   %cmp2 = icmp sgt i32 %arg2, 1000
@@ -324,10 +303,9 @@ define i1 @test22(i32 %arg1, i32 %arg2) {
 ; CHECK-LABEL: test22:
 ; CHECK:       ; %bb.0:
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; CHECK-NEXT:    v_min_u32_e32 v0, v0, v1
 ; CHECK-NEXT:    v_cmp_lt_u32_e32 vcc_lo, 0x3e8, v0
-; CHECK-NEXT:    v_cmp_lt_u32_e64 s0, 0x3e8, v1
-; CHECK-NEXT:    s_and_b32 s0, vcc_lo, s0
-; CHECK-NEXT:    v_cndmask_b32_e64 v0, 0, 1, s0
+; CHECK-NEXT:    v_cndmask_b32_e64 v0, 0, 1, vcc_lo
 ; CHECK-NEXT:    s_setpc_b64 s[30:31]
   %cmp1 = icmp ugt i32 %arg1, 1000
   %cmp2 = icmp ugt i32 %arg2, 1000
@@ -339,10 +317,9 @@ define i1 @test23(i32 %arg1, i32 %arg2) {
 ; CHECK-LABEL: test23:
 ; CHECK:       ; %bb.0:
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; CHECK-NEXT:    v_min_i32_e32 v0, v0, v1
 ; CHECK-NEXT:    v_cmp_lt_i32_e32 vcc_lo, 0x3e7, v0
-; CHECK-NEXT:    v_cmp_lt_i32_e64 s0, 0x3e7, v1
-; CHECK-NEXT:    s_and_b32 s0, vcc_lo, s0
-; CHECK-NEXT:    v_cndmask_b32_e64 v0, 0, 1, s0
+; CHECK-NEXT:    v_cndmask_b32_e64 v0, 0, 1, vcc_lo
 ; CHECK-NEXT:    s_setpc_b64 s[30:31]
   %cmp1 = icmp sge i32 %arg1, 1000
   %cmp2 = icmp sge i32 %arg2, 1000
@@ -354,10 +331,9 @@ define i1 @test24(i32 %arg1, i32 %arg2) {
 ; CHECK-LABEL: test24:
 ; CHECK:       ; %bb.0:
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; CHECK-NEXT:    v_min_u32_e32 v0, v0, v1
 ; CHECK-NEXT:    v_cmp_lt_u32_e32 vcc_lo, 0x3e7, v0
-; CHECK-NEXT:    v_cmp_lt_u32_e64 s0, 0x3e7, v1
-; CHECK-NEXT:    s_and_b32 s0, vcc_lo, s0
-; CHECK-NEXT:    v_cndmask_b32_e64 v0, 0, 1, s0
+; CHECK-NEXT:    v_cndmask_b32_e64 v0, 0, 1, vcc_lo
 ; CHECK-NEXT:    s_setpc_b64 s[30:31]
   %cmp1 = icmp uge i32 %arg1, 1000
   %cmp2 = icmp uge i32 %arg2, 1000
@@ -369,10 +345,9 @@ define i1 @test25(i32 %arg1, i32 %arg2, i32 %arg3) {
 ; CHECK-LABEL: test25:
 ; CHECK:       ; %bb.0:
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; CHECK-NEXT:    v_max_i32_e32 v0, v0, v1
 ; CHECK-NEXT:    v_cmp_lt_i32_e32 vcc_lo, v0, v2
-; CHECK-NEXT:    v_cmp_lt_i32_e64 s0, v1, v2
-; CHECK-NEXT:    s_and_b32 s0, vcc_lo, s0
-; CHECK-NEXT:    v_cndmask_b32_e64 v0, 0, 1, s0
+; CHECK-NEXT:    v_cndmask_b32_e64 v0, 0, 1, vcc_lo
 ; CHECK-NEXT:    s_setpc_b64 s[30:31]
   %cmp1 = icmp slt i32 %arg1, %arg3
   %cmp2 = icmp slt i32 %arg2, %arg3
@@ -384,10 +359,9 @@ define i1 @test26(i32 %arg1, i32 %arg2, i32 %arg3) {
 ; CHECK-LABEL: test26:
 ; CHECK:       ; %bb.0:
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; CHECK-NEXT:    v_max_u32_e32 v0, v0, v1
 ; CHECK-NEXT:    v_cmp_lt_u32_e32 vcc_lo, v0, v2
-; CHECK-NEXT:    v_cmp_lt_u32_e64 s0, v1, v2
-; CHECK-NEXT:    s_and_b32 s0, vcc_lo, s0
-; CHECK-NEXT:    v_cndmask_b32_e64 v0, 0, 1, s0
+; CHECK-NEXT:    v_cndmask_b32_e64 v0, 0, 1, vcc_lo
 ; CHECK-NEXT:    s_setpc_b64 s[30:31]
   %cmp1 = icmp ult i32 %arg1, %arg3
   %cmp2 = icmp ult i32 %arg2, %arg3
@@ -399,10 +373,9 @@ define i1 @test27(i32 %arg1, i32 %arg2, i32 %arg3) {
 ; CHECK-LABEL: test27:
 ; CHECK:       ; %bb.0:
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; CHECK-NEXT:    v_max_i32_e32 v0, v0, v1
 ; CHECK-NEXT:    v_cmp_le_i32_e32 vcc_lo, v0, v2
-; CHECK-NEXT:    v_cmp_le_i32_e64 s0, v1, v2
-; CHECK-NEXT:    s_and_b32 s0, vcc_lo, s0
-; CHECK-NEXT:    v_cndmask_b32_e64 v0, 0, 1, s0
+; CHECK-NEXT:    v_cndmask_b32_e64 v0, 0, 1, vcc_lo
 ; CHECK-NEXT:    s_setpc_b64 s[30:31]
   %cmp1 = icmp sle i32 %arg1, %arg3
   %cmp2 = icmp sle i32 %arg2, %arg3
@@ -414,10 +387,9 @@ define i1 @test28(i32 %arg1, i32 %arg2, i32 %arg3) {
 ; CHECK-LABEL: test28:
 ; CHECK:       ; %bb.0:
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; CHECK-NEXT:    v_max_u32_e32 v0, v0, v1
 ; CHECK-NEXT:    v_cmp_le_u32_e32 vcc_lo, v0, v2
-; CHECK-NEXT:    v_cmp_le_u32_e64 s0, v1, v2
-; CHECK-NEXT:    s_and_b32 s0, vcc_lo, s0
-; CHECK-NEXT:    v_cndmask_b32_e64 v0, 0, 1, s0
+; CHECK-NEXT:    v_cndmask_b32_e64 v0, 0, 1, vcc_lo
 ; CHECK-NEXT:    s_setpc_b64 s[30:31]
   %cmp1 = icmp ule i32 %arg1, %arg3
   %cmp2 = icmp ule i32 %arg2, %arg3
@@ -429,10 +401,9 @@ define i1 @test29(i32 %arg1, i32 %arg2, i32 %arg3) {
 ; CHECK-LABEL: test29:
 ; CHECK:       ; %bb.0:
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; CHECK-NEXT:    v_min_i32_e32 v0, v0, v1
 ; CHECK-NEXT:    v_cmp_gt_i32_e32 vcc_lo, v0, v2
-; CHECK-NEXT:    v_cmp_gt_i32_e64 s0, v1, v2
-; CHECK-NEXT:    s_and_b32 s0, vcc_lo, s0
-; CHECK-NEXT:    v_cndmask_b32_e64 v0, 0, 1, s0
+; CHECK-NEXT:    v_cndmask_b32_e64 v0, 0, 1, vcc_lo
 ; CHECK-NEXT:    s_setpc_b64 s[30:31]
   %cmp1 = icmp sgt i32 %arg1, %arg3
   %cmp2 = icmp sgt i32 %arg2, %arg3
@@ -444,10 +415,9 @@ define i1 @test30(i32 %arg1, i32 %arg2, i32 %arg3) {
 ; CHECK-LABEL: test30:
 ; CHECK:       ; %bb.0:
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; CHECK-NEXT:    v_min_u32_e32 v0, v0, v1
 ; CHECK-NEXT:    v_cmp_gt_u32_e32 vcc_lo, v0, v2
-; CHECK-NEXT:    v_cmp_gt_u32_e64 s0, v1, v2
-; CHECK-NEXT:    s_and_b32 s0, vcc_lo, s0
-; CHECK-NEXT:    v_cndmask_b32_e64 v0, 0, 1, s0
+; CHECK-NEXT:    v_cndmask_b32_e64 v0, 0, 1, vcc_lo
 ; CHECK-NEXT:    s_setpc_b64 s[30:31]
   %cmp1 = icmp ugt i32 %arg1, %arg3
   %cmp2 = icmp ugt i32 %arg2, %arg3
@@ -459,10 +429,9 @@ define i1 @test31(i32 %arg1, i32 %arg2, i32 %arg3) {
 ; CHECK-LABEL: test31:
 ; CHECK:       ; %bb.0:
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; CHECK-NEXT:    v_min_i32_e32 v0, v0, v1
 ; CHECK-NEXT:    v_cmp_ge_i32_e32 vcc_lo, v0, v2
-; CHECK-NEXT:    v_cmp_ge_i32_e64 s0, v1, v2
-; CHECK-NEXT:    s_and_b32 s0, vcc_lo, s0
-; CHECK-NEXT:    v_cndmask_b32_e64 v0, 0, 1, s0
+; CHECK-NEXT:    v_cndmask_b32_e64 v0, 0, 1, vcc_lo
 ; CHECK-NEXT:    s_setpc_b64 s[30:31]
   %cmp1 = icmp sge i32 %arg1, %arg3
   %cmp2 = icmp sge i32 %arg2, %arg3
@@ -474,10 +443,9 @@ define i1 @test32(i32 %arg1, i32 %arg2, i32 %arg3) {
 ; CHECK-LABEL: test32:
 ; CHECK:       ; %bb.0:
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; CHECK-NEXT:    v_min_u32_e32 v0, v0, v1
 ; CHECK-NEXT:    v_cmp_ge_u32_e32 vcc_lo, v0, v2
-; CHECK-NEXT:    v_cmp_ge_u32_e64 s0, v1, v2
-; CHECK-NEXT:    s_and_b32 s0, vcc_lo, s0
-; CHECK-NEXT:    v_cndmask_b32_e64 v0, 0, 1, s0
+; CHECK-NEXT:    v_cndmask_b32_e64 v0, 0, 1, vcc_lo
 ; CHECK-NEXT:    s_setpc_b64 s[30:31]
   %cmp1 = icmp uge i32 %arg1, %arg3
   %cmp2 = icmp uge i32 %arg2, %arg3
@@ -489,10 +457,9 @@ define i1 @test33(i32 %arg1, i32 %arg2) {
 ; CHECK-LABEL: test33:
 ; CHECK:       ; %bb.0:
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; CHECK-NEXT:    v_cmp_lt_i32_e32 vcc_lo, v0, v1
-; CHECK-NEXT:    v_cmp_gt_i32_e64 s0, 0x3e8, v0
-; CHECK-NEXT:    s_or_b32 s0, vcc_lo, s0
-; CHECK-NEXT:    v_cndmask_b32_e64 v0, 0, 1, s0
+; CHECK-NEXT:    v_max_i32_e32 v1, 0x3e8, v1
+; CHECK-NEXT:    v_cmp_gt_i32_e32 vcc_lo, v1, v0
+; CHECK-NEXT:    v_cndmask_b32_e64 v0, 0, 1, vcc_lo
 ; CHECK-NEXT:    s_setpc_b64 s[30:31]
   %cmp1 = icmp slt i32 %arg1, %arg2
   %cmp2 = icmp slt i32 %arg1, 1000
@@ -504,13 +471,11 @@ define amdgpu_gfx void @test34(i32 inreg %arg1, i32 inreg %arg2) {
 ; CHECK-LABEL: test34:
 ; CHECK:       ; %bb.0:
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; CHECK-NEXT:    s_cmpk_lt_i32 s4, 0x3e9
+; CHECK-NEXT:    s_min_i32 s0, s4, s5
 ; CHECK-NEXT:    v_mov_b32_e32 v0, 0
-; CHECK-NEXT:    s_cselect_b32 s0, -1, 0
-; CHECK-NEXT:    s_cmpk_lt_i32 s5, 0x3e9
+; CHECK-NEXT:    s_cmpk_lt_i32 s0, 0x3e9
 ; CHECK-NEXT:    v_mov_b32_e32 v1, 0
-; CHECK-NEXT:    s_cselect_b32 s1, -1, 0
-; CHECK-NEXT:    s_or_b32 s0, s0, s1
+; CHECK-NEXT:    s_cselect_b32 s0, -1, 0
 ; CHECK-NEXT:    v_cndmask_b32_e64 v2, 0, 1, s0
 ; CHECK-NEXT:    global_store_b8 v[0:1], v2, off dlc
 ; CHECK-NEXT:    s_waitcnt_vscnt null, 0x0
@@ -526,13 +491,11 @@ define amdgpu_gfx void @test35(i32 inreg %arg1, i32 inreg %arg2) {
 ; CHECK-LABEL: test35:
 ; CHECK:       ; %bb.0:
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; CHECK-NEXT:    s_cmpk_gt_i32 s4, 0x3e8
+; CHECK-NEXT:    s_max_i32 s0, s4, s5
 ; CHECK-NEXT:    v_mov_b32_e32 v0, 0
-; CHECK-NEXT:    s_cselect_b32 s0, -1, 0
-; CHECK-NEXT:    s_cmpk_gt_i32 s5, 0x3e8
+; CHECK-NEXT:    s_cmpk_gt_i32 s0, 0x3e8
 ; CHECK-NEXT:    v_mov_b32_e32 v1, 0
-; CHECK-NEXT:    s_cselect_b32 s1, -1, 0
-; CHECK-NEXT:    s_or_b32 s0, s0, s1
+; CHECK-NEXT:    s_cselect_b32 s0, -1, 0
 ; CHECK-NEXT:    v_cndmask_b32_e64 v2, 0, 1, s0
 ; CHECK-NEXT:    global_store_b8 v[0:1], v2, off dlc
 ; CHECK-NEXT:    s_waitcnt_vscnt null, 0x0
@@ -548,13 +511,11 @@ define amdgpu_gfx void @test36(i32 inreg %arg1, i32 inreg %arg2, i32 inreg %arg3
 ; CHECK-LABEL: test36:
 ; CHECK:       ; %bb.0:
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; CHECK-NEXT:    s_cmp_lt_u32 s4, s6
+; CHECK-NEXT:    s_min_u32 s0, s4, s5
 ; CHECK-NEXT:    v_mov_b32_e32 v0, 0
-; CHECK-NEXT:    s_cselect_b32 s0, -1, 0
-; CHECK-NEXT:    s_cmp_lt_u32 s5, s6
+; CHECK-NEXT:    s_cmp_lt_u32 s0, s6
 ; CHECK-NEXT:    v_mov_b32_e32 v1, 0
-; CHECK-NEXT:    s_cselect_b32 s1, -1, 0
-; CHECK-NEXT:    s_or_b32 s0, s0, s1
+; CHECK-NEXT:    s_cselect_b32 s0, -1, 0
 ; CHECK-NEXT:    v_cndmask_b32_e64 v2, 0, 1, s0
 ; CHECK-NEXT:    global_store_b8 v[0:1], v2, off dlc
 ; CHECK-NEXT:    s_waitcnt_vscnt null, 0x0
@@ -570,13 +531,11 @@ define amdgpu_gfx void @test37(i32 inreg %arg1, i32 inreg %arg2, i32 inreg %arg3
 ; CHECK-LABEL: test37:
 ; CHECK:       ; %bb.0:
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; CHECK-NEXT:    s_cmp_ge_i32 s4, s6
+; CHECK-NEXT:    s_max_i32 s0, s4, s5
 ; CHECK-NEXT:    v_mov_b32_e32 v0, 0
-; CHECK-NEXT:    s_cselect_b32 s0, -1, 0
-; CHECK-NEXT:    s_cmp_ge_i32 s5, s6
+; CHECK-NEXT:    s_cmp_ge_i32 s0, s6
 ; CHECK-NEXT:    v_mov_b32_e32 v1, 0
-; CHECK-NEXT:    s_cselect_b32 s1, -1, 0
-; CHECK-NEXT:    s_or_b32 s0, s0, s1
+; CHECK-NEXT:    s_cselect_b32 s0, -1, 0
 ; CHECK-NEXT:    v_cndmask_b32_e64 v2, 0, 1, s0
 ; CHECK-NEXT:    global_store_b8 v[0:1], v2, off dlc
 ; CHECK-NEXT:    s_waitcnt_vscnt null, 0x0
@@ -592,13 +551,11 @@ define amdgpu_gfx void @test38(i32 inreg %arg1, i32 inreg %arg2) {
 ; CHECK-LABEL: test38:
 ; CHECK:       ; %bb.0:
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; CHECK-NEXT:    s_cmpk_lt_u32 s4, 0x3e9
+; CHECK-NEXT:    s_max_u32 s0, s4, s5
 ; CHECK-NEXT:    v_mov_b32_e32 v0, 0
-; CHECK-NEXT:    s_cselect_b32 s0, -1, 0
-; CHECK-NEXT:    s_cmpk_lt_u32 s5, 0x3e9
+; CHECK-NEXT:    s_cmpk_lt_u32 s0, 0x3e9
 ; CHECK-NEXT:    v_mov_b32_e32 v1, 0
-; CHECK-NEXT:    s_cselect_b32 s1, -1, 0
-; CHECK-NEXT:    s_and_b32 s0, s0, s1
+; CHECK-NEXT:    s_cselect_b32 s0, -1, 0
 ; CHECK-NEXT:    v_cndmask_b32_e64 v2, 0, 1, s0
 ; CHECK-NEXT:    global_store_b8 v[0:1], v2, off dlc
 ; CHECK-NEXT:    s_waitcnt_vscnt null, 0x0
@@ -614,13 +571,11 @@ define amdgpu_gfx void @test39(i32 inreg %arg1, i32 inreg %arg2) {
 ; CHECK-LABEL: test39:
 ; CHECK:       ; %bb.0:
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; CHECK-NEXT:    s_cmpk_gt_i32 s4, 0x3e7
+; CHECK-NEXT:    s_min_i32 s0, s4, s5
 ; CHECK-NEXT:    v_mov_b32_e32 v0, 0
-; CHECK-NEXT:    s_cselect_b32 s0, -1, 0
-; CHECK-NEXT:    s_cmpk_gt_i32 s5, 0x3e7
+; CHECK-NEXT:    s_cmpk_gt_i32 s0, 0x3e7
 ; CHECK-NEXT:    v_mov_b32_e32 v1, 0
-; CHECK-NEXT:    s_cselect_b32 s1, -1, 0
-; CHECK-NEXT:    s_and_b32 s0, s0, s1
+; CHECK-NEXT:    s_cselect_b32 s0, -1, 0
 ; CHECK-NEXT:    v_cndmask_b32_e64 v2, 0, 1, s0
 ; CHECK-NEXT:    global_store_b8 v[0:1], v2, off dlc
 ; CHECK-NEXT:    s_waitcnt_vscnt null, 0x0
@@ -636,13 +591,11 @@ define amdgpu_gfx void @test40(i32 inreg %arg1, i32 inreg %arg2, i32 inreg %arg3
 ; CHECK-LABEL: test40:
 ; CHECK:       ; %bb.0:
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; CHECK-NEXT:    s_cmp_le_i32 s4, s6
+; CHECK-NEXT:    s_max_i32 s0, s4, s5
 ; CHECK-NEXT:    v_mov_b32_e32 v0, 0
-; CHECK-NEXT:    s_cselect_b32 s0, -1, 0
-; CHECK-NEXT:    s_cmp_le_i32 s5, s6
+; CHECK-NEXT:    s_cmp_le_i32 s0, s6
 ; CHECK-NEXT:    v_mov_b32_e32 v1, 0
-; CHECK-NEXT:    s_cselect_b32 s1, -1, 0
-; CHECK-NEXT:    s_and_b32 s0, s0, s1
+; CHECK-NEXT:    s_cselect_b32 s0, -1, 0
 ; CHECK-NEXT:    v_cndmask_b32_e64 v2, 0, 1, s0
 ; CHECK-NEXT:    global_store_b8 v[0:1], v2, off dlc
 ; CHECK-NEXT:    s_waitcnt_vscnt null, 0x0
@@ -658,13 +611,11 @@ define amdgpu_gfx void @test41(i32 inreg %arg1, i32 inreg %arg2, i32 inreg %arg3
 ; CHECK-LABEL: test41:
 ; CHECK:       ; %bb.0:
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; CHECK-NEXT:    s_cmp_ge_u32 s4, s6
+; CHECK-NEXT:    s_min_u32 s0, s4, s5
 ; CHECK-NEXT:    v_mov_b32_e32 v0, 0
-; CHECK-NEXT:    s_cselect_b32 s0, -1, 0
-; CHECK-NEXT:    s_cmp_ge_u32 s5, s6
+; CHECK-NEXT:    s_cmp_ge_u32 s0, s6
 ; CHECK-NEXT:    v_mov_b32_e32 v1, 0
-; CHECK-NEXT:    s_cselect_b32 s1, -1, 0
-; CHECK-NEXT:    s_and_b32 s0, s0, s1
+; CHECK-NEXT:    s_cselect_b32 s0, -1, 0
 ; CHECK-NEXT:    v_cndmask_b32_e64 v2, 0, 1, s0
 ; CHECK-NEXT:    global_store_b8 v[0:1], v2, off dlc
 ; CHECK-NEXT:    s_waitcnt_vscnt null, 0x0
@@ -680,10 +631,9 @@ define i1 @test42(i32 %arg1, i32 %arg2, i32 %arg3) {
 ; CHECK-LABEL: test42:
 ; CHECK:       ; %bb.0:
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; CHECK-NEXT:    v_cmp_lt_u32_e32 vcc_lo, v2, v0
-; CHECK-NEXT:    v_cmp_lt_u32_e64 s0, v2, v1
-; CHECK-NEXT:    s_and_b32 s0, vcc_lo, s0
-; CHECK-NEXT:    v_cndmask_b32_e64 v0, 0, 1, s0
+; CHECK-NEXT:    v_min_u32_e32 v0, v0, v1
+; CHECK-NEXT:    v_cmp_gt_u32_e32 vcc_lo, v0, v2
+; CHECK-NEXT:    v_cndmask_b32_e64 v0, 0, 1, vcc_lo
 ; CHECK-NEXT:    s_setpc_b64 s[30:31]
   %cmp1 = icmp ult i32 %arg3, %arg1
   %cmp2 = icmp ult i32 %arg3, %arg2
@@ -695,10 +645,9 @@ define i1 @test43(i32 %arg1, i32 %arg2, i32 %arg3) {
 ; CHECK-LABEL: test43:
 ; CHECK:       ; %bb.0:
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; CHECK-NEXT:    v_cmp_lt_u32_e32 vcc_lo, v2, v0
-; CHECK-NEXT:    v_cmp_lt_u32_e64 s0, v2, v1
-; CHECK-NEXT:    s_or_b32 s0, vcc_lo, s0
-; CHECK-NEXT:    v_cndmask_b32_e64 v0, 0, 1, s0
+; CHECK-NEXT:    v_max_u32_e32 v0, v0, v1
+; CHECK-NEXT:    v_cmp_gt_u32_e32 vcc_lo, v0, v2
+; CHECK-NEXT:    v_cndmask_b32_e64 v0, 0, 1, vcc_lo
 ; CHECK-NEXT:    s_setpc_b64 s[30:31]
   %cmp1 = icmp ult i32 %arg3, %arg1
   %cmp2 = icmp ult i32 %arg3, %arg2
@@ -710,10 +659,9 @@ define i1 @test44(i32 %arg1, i32 %arg2, i32 %arg3) {
 ; CHECK-LABEL: test44:
 ; CHECK:       ; %bb.0:
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; CHECK-NEXT:    v_cmp_gt_u32_e32 vcc_lo, v2, v0
-; CHECK-NEXT:    v_cmp_gt_u32_e64 s0, v2, v1
-; CHECK-NEXT:    s_and_b32 s0, vcc_lo, s0
-; CHECK-NEXT:    v_cndmask_b32_e64 v0, 0, 1, s0
+; CHECK-NEXT:    v_max_u32_e32 v0, v0, v1
+; CHECK-NEXT:    v_cmp_lt_u32_e32 vcc_lo, v0, v2
+; CHECK-NEXT:    v_cndmask_b32_e64 v0, 0, 1, vcc_lo
 ; CHECK-NEXT:    s_setpc_b64 s[30:31]
   %cmp1 = icmp ugt i32 %arg3, %arg1
   %cmp2 = icmp ugt i32 %arg3, %arg2
@@ -725,10 +673,9 @@ define i1 @test45(i32 %arg1, i32 %arg2, i32 %arg3) {
 ; CHECK-LABEL: test45:
 ; CHECK:       ; %bb.0:
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; CHECK-NEXT:    v_cmp_gt_u32_e32 vcc_lo, v2, v0
-; CHECK-NEXT:    v_cmp_gt_u32_e64 s0, v2, v1
-; CHECK-NEXT:    s_or_b32 s0, vcc_lo, s0
-; CHECK-NEXT:    v_cndmask_b32_e64 v0, 0, 1, s0
+; CHECK-NEXT:    v_min_u32_e32 v0, v0, v1
+; CHECK-NEXT:    v_cmp_lt_u32_e32 vcc_lo, v0, v2
+; CHECK-NEXT:    v_cndmask_b32_e64 v0, 0, 1, vcc_lo
 ; CHECK-NEXT:    s_setpc_b64 s[30:31]
   %cmp1 = icmp ugt i32 %arg3, %arg1
   %cmp2 = icmp ugt i32 %arg3, %arg2
@@ -740,10 +687,9 @@ define i1 @test46(i32 %arg1, i32 %arg2, i32 %arg3) {
 ; CHECK-LABEL: test46:
 ; CHECK:       ; %bb.0:
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; CHECK-NEXT:    v_cmp_lt_i32_e32 vcc_lo, v2, v0
-; CHECK-NEXT:    v_cmp_gt_i32_e64 s0, v1, v2
-; CHECK-NEXT:    s_or_b32 s0, vcc_lo, s0
-; CHECK-NEXT:    v_cndmask_b32_e64 v0, 0, 1, s0
+; CHECK-NEXT:    v_max_i32_e32 v0, v0, v1
+; CHECK-NEXT:    v_cmp_gt_i32_e32 vcc_lo, v0, v2
+; CHECK-NEXT:    v_cndmask_b32_e64 v0, 0, 1, vcc_lo
 ; CHECK-NEXT:    s_setpc_b64 s[30:31]
   %cmp1 = icmp slt i32 %arg3, %arg1
   %cmp2 = icmp sgt i32 %arg2, %arg3
@@ -755,10 +701,9 @@ define i1 @test47(i32 %arg1, i32 %arg2, i32 %arg3) {
 ; CHECK-LABEL: test47:
 ; CHECK:       ; %bb.0:
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; CHECK-NEXT:    v_max_i32_e32 v0, v0, v1
 ; CHECK-NEXT:    v_cmp_gt_i32_e32 vcc_lo, v0, v2
-; CHECK-NEXT:    v_cmp_lt_i32_e64 s0, v2, v1
-; CHECK-NEXT:    s_or_b32 s0, vcc_lo, s0
-; CHECK-NEXT:    v_cndmask_b32_e64 v0, 0, 1, s0
+; CHECK-NEXT:    v_cndmask_b32_e64 v0, 0, 1, vcc_lo
 ; CHECK-NEXT:    s_setpc_b64 s[30:31]
   %cmp1 = icmp sgt i32 %arg1, %arg3
   %cmp2 = icmp slt i32 %arg3, %arg2
@@ -770,10 +715,9 @@ define i1 @test48(i32 %arg1, i32 %arg2, i32 %arg3) {
 ; CHECK-LABEL: test48:
 ; CHECK:       ; %bb.0:
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; CHECK-NEXT:    v_min_i32_e32 v0, v0, v1
 ; CHECK-NEXT:    v_cmp_lt_i32_e32 vcc_lo, v0, v2
-; CHECK-NEXT:    v_cmp_gt_i32_e64 s0, v2, v1
-; CHECK-NEXT:    s_or_b32 s0, vcc_lo, s0
-; CHECK-NEXT:    v_cndmask_b32_e64 v0, 0, 1, s0
+; CHECK-NEXT:    v_cndmask_b32_e64 v0, 0, 1, vcc_lo
 ; CHECK-NEXT:    s_setpc_b64 s[30:31]
   %cmp1 = icmp slt i32 %arg1, %arg3
   %cmp2 = icmp sgt i32 %arg3, %arg2
@@ -785,10 +729,9 @@ define i1 @test49(i32 %arg1, i32 %arg2, i32 %arg3) {
 ; CHECK-LABEL: test49:
 ; CHECK:       ; %bb.0:
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; CHECK-NEXT:    v_cmp_gt_i32_e32 vcc_lo, v2, v0
-; CHECK-NEXT:    v_cmp_lt_i32_e64 s0, v1, v2
-; CHECK-NEXT:    s_or_b32 s0, vcc_lo, s0
-; CHECK-NEXT:    v_cndmask_b32_e64 v0, 0, 1, s0
+; CHECK-NEXT:    v_min_i32_e32 v0, v0, v1
+; CHECK-NEXT:    v_cmp_lt_i32_e32 vcc_lo, v0, v2
+; CHECK-NEXT:    v_cndmask_b32_e64 v0, 0, 1, vcc_lo
 ; CHECK-NEXT:    s_setpc_b64 s[30:31]
   %cmp1 = icmp sgt i32 %arg3, %arg1
   %cmp2 = icmp slt i32 %arg2, %arg3
@@ -800,10 +743,9 @@ define i1 @test50(i32 %arg1, i32 %arg2, i32 %arg3) {
 ; CHECK-LABEL: test50:
 ; CHECK:       ; %bb.0:
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; CHECK-NEXT:    v_cmp_lt_i32_e32 vcc_lo, v2, v0
-; CHECK-NEXT:    v_cmp_gt_i32_e64 s0, v1, v2
-; CHECK-NEXT:    s_and_b32 s0, vcc_lo, s0
-; CHECK-NEXT:    v_cndmask_b32_e64 v0, 0, 1, s0
+; CHECK-NEXT:    v_min_i32_e32 v0, v0, v1
+; CHECK-NEXT:    v_cmp_gt_i32_e32 vcc_lo, v0, v2
+; CHECK-NEXT:    v_cndmask_b32_e64 v0, 0, 1, vcc_lo
 ; CHECK-NEXT:    s_setpc_b64 s[30:31]
   %cmp1 = icmp slt i32 %arg3, %arg1
   %cmp2 = icmp sgt i32 %arg2, %arg3
@@ -815,10 +757,9 @@ define i1 @test51(i32 %arg1, i32 %arg2, i32 %arg3) {
 ; CHECK-LABEL: test51:
 ; CHECK:       ; %bb.0:
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; CHECK-NEXT:    v_min_i32_e32 v0, v0, v1
 ; CHECK-NEXT:    v_cmp_gt_i32_e32 vcc_lo, v0, v2
-; CHECK-NEXT:    v_cmp_lt_i32_e64 s0, v2, v1
-; CHECK-NEXT:    s_and_b32 s0, vcc_lo, s0
-; CHECK-NEXT:    v_cndmask_b32_e64 v0, 0, 1, s0
+; CHECK-NEXT:    v_cndmask_b32_e64 v0, 0, 1, vcc_lo
 ; CHECK-NEXT:    s_setpc_b64 s[30:31]
   %cmp1 = icmp sgt i32 %arg1, %arg3
   %cmp2 = icmp slt i32 %arg3, %arg2
@@ -830,10 +771,9 @@ define i1 @test52(i32 %arg1, i32 %arg2, i32 %arg3) {
 ; CHECK-LABEL: test52:
 ; CHECK:       ; %bb.0:
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; CHECK-NEXT:    v_max_i32_e32 v0, v0, v1
 ; CHECK-NEXT:    v_cmp_lt_i32_e32 vcc_lo, v0, v2
-; CHECK-NEXT:    v_cmp_gt_i32_e64 s0, v2, v1
-; CHECK-NEXT:    s_and_b32 s0, vcc_lo, s0
-; CHECK-NEXT:    v_cndmask_b32_e64 v0, 0, 1, s0
+; CHECK-NEXT:    v_cndmask_b32_e64 v0, 0, 1, vcc_lo
 ; CHECK-NEXT:    s_setpc_b64 s[30:31]
   %cmp1 = icmp slt i32 %arg1, %arg3
   %cmp2 = icmp sgt i32 %arg3, %arg2
@@ -845,10 +785,9 @@ define i1 @test53(i32 %arg1, i32 %arg2, i32 %arg3) {
 ; CHECK-LABEL: test53:
 ; CHECK:       ; %bb.0:
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; CHECK-NEXT:    v_cmp_gt_i32_e32 vcc_lo, v2, v0
-; CHECK-NEXT:    v_cmp_lt_i32_e64 s0, v1, v2
-; CHECK-NEXT:    s_and_b32 s0, vcc_lo, s0
-; CHECK-NEXT:    v_cndmask_b32_e64 v0, 0, 1, s0
+; CHECK-NEXT:    v_max_i32_e32 v0, v0, v1
+; CHECK-NEXT:    v_cmp_lt_i32_e32 vcc_lo, v0, v2
+; CHECK-NEXT:    v_cndmask_b32_e64 v0, 0, 1, vcc_lo
 ; CHECK-NEXT:    s_setpc_b64 s[30:31]
   %cmp1 = icmp sgt i32 %arg3, %arg1
   %cmp2 = icmp slt i32 %arg2, %arg3
