@@ -337,3 +337,19 @@ llvm.func @redux_sync(%value : i32, %offset : i32) -> i32 {
 
 // expected-error@below {{attribute attached to unexpected op}}
 func.func private @expected_llvm_func() attributes { nvvm.kernel }
+
+// -----
+llvm.func private @mbarrier_init_generic(%barrier: !llvm.ptr) {
+  %count = nvvm.read.ptx.sreg.ntid.x : i32
+  // CHECK:   nvvm.mbarrier.init %{{.*}}, %{{.*}} : !llvm.ptr, i32
+  nvvm.mbarrier.init %barrier, %count : !llvm.ptr, i32
+  llvm.return
+}
+
+
+llvm.func private @mbarrier_init_shared(%barrier: !llvm.ptr<3>) {
+  %count = nvvm.read.ptx.sreg.ntid.x : i32
+  // CHECK:   nvvm.mbarrier.init.shared %{{.*}}, %{{.*}} : !llvm.ptr<3>, i32
+  nvvm.mbarrier.init.shared %barrier, %count : !llvm.ptr<3>, i32
+  llvm.return
+}
