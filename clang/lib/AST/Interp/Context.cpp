@@ -134,13 +134,13 @@ std::optional<PrimType> Context::classify(QualType T) const {
   if (T->isReferenceType() || T->isPointerType())
     return PT_Ptr;
 
-  if (auto *AT = dyn_cast<AtomicType>(T))
+  if (const auto *AT = dyn_cast<AtomicType>(T))
     return classify(AT->getValueType());
 
-  if (auto *DT = dyn_cast<DecltypeType>(T))
+  if (const auto *DT = dyn_cast<DecltypeType>(T))
     return classify(DT->getUnderlyingType());
 
-  if (auto *DT = dyn_cast<MemberPointerType>(T))
+  if (const auto *DT = dyn_cast<MemberPointerType>(T))
     return classify(DT->getPointeeType());
 
   return {};
