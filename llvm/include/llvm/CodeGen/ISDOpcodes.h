@@ -872,6 +872,7 @@ enum NodeType {
   ///  2 Round to +inf
   ///  3 Round to -inf
   ///  4 Round to nearest, ties to zero
+  ///  Other values are target dependent.
   /// Result is rounding mode and chain. Input is a chain.
   GET_ROUNDING,
 
