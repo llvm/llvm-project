@@ -659,7 +659,7 @@ HoverInfo getHoverContents(const NamedDecl *D, const PrintingPolicy &PP,
     HI.Type = printType(TAT->getTemplatedDecl()->getUnderlyingType(), Ctx, PP);
 
   // Fill in value with evaluated initializer if possible.
-  if (const auto *Var = dyn_cast<VarDecl>(D)) {
+  if (const auto *Var = dyn_cast<VarDecl>(D); Var && !Var->isInvalidDecl()) {
     if (const Expr *Init = Var->getInit())
       HI.Value = printExprValue(Init, Ctx);
   } else if (const auto *ECD = dyn_cast<EnumConstantDecl>(D)) {

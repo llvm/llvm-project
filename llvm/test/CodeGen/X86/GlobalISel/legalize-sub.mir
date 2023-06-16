@@ -5,11 +5,11 @@
 # RUN: llc -O0 -mtriple=i386-linux-gnu -run-pass=legalizer -global-isel-abort=2 -pass-remarks-missed='gisel*'  %s 2>%t -o - | FileCheck %s --check-prefixes=CHECK,X32
 # RUN: FileCheck -check-prefix=ERR32  %s < %t
 
-# ERR64: remark: <unknown>:0:0: unable to legalize instruction: %11:_(s64), %12:_(s1) = G_USUBE %6:_, %8:_, %10:_ (in function: test_sub_i128)
+# ERR64: remark: <unknown>:0:0: unable to legalize instruction: %9:_(s64), %10:_(s1) = G_USUBO %5:_, %7:_ (in function: test_sub_i128)
 
-# ERR32: remark: <unknown>:0:0: unable to legalize instruction: %13:_(s32), %14:_(s1) = G_USUBE %8:_, %10:_, %12:_ (in function: test_sub_i42)
-# ERR32: remark: <unknown>:0:0: unable to legalize instruction: %9:_(s32), %10:_(s1) = G_USUBE %4:_, %6:_, %8:_ (in function: test_sub_i64)
-# ERR32: remark: <unknown>:0:0: unable to legalize instruction: %19:_(s32), %20:_(s1) = G_USUBE %8:_, %12:_, %18:_ (in function: test_sub_i128)
+# ERR32: remark: <unknown>:0:0: unable to legalize instruction: %11:_(s32), %12:_(s1) = G_USUBO %7:_, %9:_ (in function: test_sub_i42)
+# ERR32: remark: <unknown>:0:0: unable to legalize instruction: %7:_(s32), %8:_(s1) = G_USUBO %3:_, %5:_ (in function: test_sub_i64)
+# ERR32: remark: <unknown>:0:0: unable to legalize instruction: %13:_(s32), %14:_(s1) = G_USUBO %5:_, %9:_ (in function: test_sub_i128)
 
 --- |
 
