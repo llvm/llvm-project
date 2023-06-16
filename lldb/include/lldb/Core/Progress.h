@@ -9,11 +9,9 @@
 #ifndef LLDB_CORE_PROGRESS_H
 #define LLDB_CORE_PROGRESS_H
 
-#include "lldb/Host/HostThread.h"
 #include "lldb/Utility/ConstString.h"
 #include "lldb/lldb-types.h"
 #include <atomic>
-#include <future>
 #include <mutex>
 #include <optional>
 
@@ -94,26 +92,24 @@ public:
   void Increment(uint64_t amount = 1, std::string update = {});
 
 private:
-  void SendPeriodicReports(std::shared_future<void> done);
-  void ReportProgress(std::string update);
+  void ReportProgress(std::string update = {});
   static std::atomic<uint64_t> g_id;
   /// The title of the progress activity.
   std::string m_title;
+  std::mutex m_mutex;
   /// A unique integer identifier for progress reporting.
   const uint64_t m_id;
   /// How much work ([0...m_total]) that has been completed.
-  std::atomic<uint64_t> m_completed;
+  uint64_t m_completed;
   /// Total amount of work, UINT64_MAX for non deterministic progress.
   const uint64_t m_total;
   /// The optional debugger ID to report progress to. If this has no value then
   /// all debuggers will receive this event.
   std::optional<lldb::user_id_t> m_debugger_id;
-
-  std::mutex m_update_mutex;
-  std::string m_update;
-
-  std::promise<void> m_stop_reporting_thread;
-  HostThread m_reporting_thread;
+  /// Set to true when progress has been reported where m_completed == m_total
+  /// to ensure that we don't send progress updates after progress has
+  /// completed.
+  bool m_complete = false;
 };
 
 } // namespace lldb_private
