@@ -3,7 +3,7 @@
 # RUN: llc -mtriple=i386-linux-gnu -mattr=+lzcnt -run-pass=legalizer -global-isel-abort=2 -pass-remarks-missed='gisel*'  %s 2>%t -o - | FileCheck %s --check-prefixes=CHECK,X86
 # RUN: FileCheck -check-prefix=ERR32  %s < %t
 
-# ERR32: remark: <unknown>:0:0: unable to legalize instruction: %14:_(s32), %15:_(s1) = G_USUBE %9:_, %11:_, %13:_ (in function: test_ctlz35)
+# ERR32: remark: <unknown>:0:0: unable to legalize instruction: %12:_(s32), %13:_(s1) = G_USUBO %8:_, %10:_ (in function: test_ctlz35)
 # ERR32: remark: <unknown>:0:0: unable to legalize instruction: %10:_(s64) = G_CTLZ_ZERO_UNDEF %4:_(s32) (in function: test_ctlz64)
 
 # test count leading zeros for s16, s32, and s64
