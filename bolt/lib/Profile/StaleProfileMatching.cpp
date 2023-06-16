@@ -445,14 +445,8 @@ void matchWeightsByHashes(const BinaryFunction::BasicBlockOrderType &BlockOrder,
       const uint64_t SrcIndex = YamlBB.Index;
       const uint64_t DstIndex = YamlSI.Index;
 
-      const FlowBlock *MatchedSrcBlock =
-          MatchedBlocks.find(SrcIndex) != MatchedBlocks.end()
-              ? MatchedBlocks[SrcIndex]
-              : nullptr;
-      const FlowBlock *MatchedDstBlock =
-          MatchedBlocks.find(DstIndex) != MatchedBlocks.end()
-              ? MatchedBlocks[DstIndex]
-              : nullptr;
+      const FlowBlock *MatchedSrcBlock = MatchedBlocks.lookup(SrcIndex);
+      const FlowBlock *MatchedDstBlock = MatchedBlocks.lookup(DstIndex);
 
       if (MatchedSrcBlock != nullptr && MatchedDstBlock != nullptr) {
         // Find a jump between the two blocks
