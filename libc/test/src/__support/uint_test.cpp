@@ -25,7 +25,6 @@ using LL_Int128 = __llvm_libc::cpp::Int<128>;
 using LL_Int192 = __llvm_libc::cpp::Int<192>;
 
 TEST(LlvmLibcUIntClassTest, BasicInit) {
-  LL_UInt128 empty;
   LL_UInt128 half_val(12345);
   LL_UInt128 full_val({12345, 67890});
   ASSERT_TRUE(half_val != full_val);
