@@ -81,6 +81,8 @@ Changes to the AMDGPU Backend
 
 * Implemented `llvm.stacksave` and `llvm.stackrestore` intrinsics.
 
+* Implemented :ref:`llvm.get.rounding <int_get_rounding>`
+
 Changes to the ARM Backend
 --------------------------
 
