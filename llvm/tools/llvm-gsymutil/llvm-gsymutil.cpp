@@ -172,7 +172,7 @@ static void parseArgs(int argc, char **argv) {
   for (const llvm::opt::Arg *A : Args.filtered(OPT_address_EQ)) {
     StringRef S{A->getValue()};
     if (!llvm::to_integer(S, LookupAddresses.emplace_back(), 0)) {
-      llvm::errs() << ToolName << ": for the --segment-size option: '" << S
+      llvm::errs() << ToolName << ": for the --address option: '" << S
                    << "' value invalid for uint argument!\n";
       std::exit(1);
     }

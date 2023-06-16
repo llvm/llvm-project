@@ -468,10 +468,11 @@ extern "C" void mlirAsyncRuntimePrintCurrentThreadId() {
 // The bug is fixed in VS2019 16.1. Separating the declaration and definition is
 // a work around for older versions of Visual Studio.
 // NOLINTNEXTLINE(*-identifier-naming): externally called.
-extern "C" API void __mlir_runner_init(llvm::StringMap<void *> &exportSymbols);
+extern "C" API void
+__mlir_execution_engine_init(llvm::StringMap<void *> &exportSymbols);
 
 // NOLINTNEXTLINE(*-identifier-naming): externally called.
-void __mlir_runner_init(llvm::StringMap<void *> &exportSymbols) {
+void __mlir_execution_engine_init(llvm::StringMap<void *> &exportSymbols) {
   auto exportSymbol = [&](llvm::StringRef name, auto ptr) {
     assert(exportSymbols.count(name) == 0 && "symbol already exists");
     exportSymbols[name] = reinterpret_cast<void *>(ptr);
@@ -526,7 +527,9 @@ void __mlir_runner_init(llvm::StringMap<void *> &exportSymbols) {
 }
 
 // NOLINTNEXTLINE(*-identifier-naming): externally called.
-extern "C" API void __mlir_runner_destroy() { resetDefaultAsyncRuntime(); }
+extern "C" API void __mlir_execution_engine_destroy() {
+  resetDefaultAsyncRuntime();
+}
 
 } // namespace runtime
 } // namespace mlir

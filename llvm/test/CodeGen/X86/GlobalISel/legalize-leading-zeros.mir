@@ -3,7 +3,6 @@
 # RUN: llc -mtriple=i386-linux-gnu -mattr=+lzcnt -run-pass=legalizer -global-isel-abort=2 -pass-remarks-missed='gisel*'  %s 2>%t -o - | FileCheck %s --check-prefixes=CHECK,X86
 # RUN: FileCheck -check-prefix=ERR32  %s < %t
 
-# ERR32: remark: <unknown>:0:0: unable to legalize instruction: %12:_(s32), %13:_(s1) = G_USUBO %8:_, %10:_ (in function: test_ctlz35)
 # ERR32: remark: <unknown>:0:0: unable to legalize instruction: %10:_(s64) = G_CTLZ_ZERO_UNDEF %4:_(s32) (in function: test_ctlz64)
 
 # test count leading zeros for s16, s32, and s64
@@ -30,16 +29,29 @@ body:             |
     ; X86: [[COPY:%[0-9]+]]:_(s64) = COPY $rdx
     ; X86-NEXT: [[TRUNC:%[0-9]+]]:_(s35) = G_TRUNC [[COPY]](s64)
     ; X86-NEXT: [[ZEXT:%[0-9]+]]:_(s64) = G_ZEXT [[TRUNC]](s35)
-    ; X86-NEXT: [[CTLZ:%[0-9]+]]:_(s64) = G_CTLZ [[ZEXT]](s64)
-    ; X86-NEXT: [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 29
-    ; X86-NEXT: [[UV:%[0-9]+]]:_(s32), [[UV1:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[CTLZ]](s64)
-    ; X86-NEXT: [[UV2:%[0-9]+]]:_(s32), [[UV3:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[C]](s64)
-    ; X86-NEXT: [[USUBO:%[0-9]+]]:_(s32), [[USUBO1:%[0-9]+]]:_(s1) = G_USUBO [[UV]], [[UV2]]
-    ; X86-NEXT: [[USUBE:%[0-9]+]]:_(s32), [[USUBE1:%[0-9]+]]:_(s1) = G_USUBE [[UV1]], [[UV3]], [[USUBO1]]
-    ; X86-NEXT: [[MV:%[0-9]+]]:_(s64) = G_MERGE_VALUES [[USUBO]](s32), [[USUBE]](s32)
-    ; X86-NEXT: [[TRUNC1:%[0-9]+]]:_(s35) = G_TRUNC [[MV]](s64)
-    ; X86-NEXT: [[ZEXT1:%[0-9]+]]:_(s64) = G_ZEXT [[TRUNC1]](s35)
-    ; X86-NEXT: RET 0, implicit [[ZEXT1]](s64)
+    ; X86-NEXT: [[UV:%[0-9]+]]:_(s32), [[UV1:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[ZEXT]](s64)
+    ; X86-NEXT: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 0
+    ; X86-NEXT: [[ICMP:%[0-9]+]]:_(s1) = G_ICMP intpred(eq), [[UV1]](s32), [[C]]
+    ; X86-NEXT: [[CTLZ:%[0-9]+]]:_(s64) = G_CTLZ [[UV]](s32)
+    ; X86-NEXT: [[C1:%[0-9]+]]:_(s64) = G_CONSTANT i64 32
+    ; X86-NEXT: [[ADD:%[0-9]+]]:_(s64) = G_ADD [[CTLZ]], [[C1]]
+    ; X86-NEXT: [[CTLZ_ZERO_UNDEF:%[0-9]+]]:_(s64) = G_CTLZ_ZERO_UNDEF [[UV1]](s32)
+    ; X86-NEXT: [[UV2:%[0-9]+]]:_(s32), [[UV3:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[ADD]](s64)
+    ; X86-NEXT: [[UV4:%[0-9]+]]:_(s32), [[UV5:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[CTLZ_ZERO_UNDEF]](s64)
+    ; X86-NEXT: [[ZEXT1:%[0-9]+]]:_(s32) = G_ZEXT [[ICMP]](s1)
+    ; X86-NEXT: [[SELECT:%[0-9]+]]:_(s32) = G_SELECT [[ZEXT1]](s32), [[UV2]], [[UV4]]
+    ; X86-NEXT: [[SELECT1:%[0-9]+]]:_(s32) = G_SELECT [[ZEXT1]](s32), [[UV3]], [[UV5]]
+    ; X86-NEXT: [[MV:%[0-9]+]]:_(s64) = G_MERGE_VALUES [[SELECT]](s32), [[SELECT1]](s32)
+    ; X86-NEXT: [[C2:%[0-9]+]]:_(s32) = G_CONSTANT i32 29
+    ; X86-NEXT: [[MV1:%[0-9]+]]:_(s64) = G_MERGE_VALUES [[C2]](s32), [[C]](s32)
+    ; X86-NEXT: [[UV6:%[0-9]+]]:_(s32), [[UV7:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[MV]](s64)
+    ; X86-NEXT: [[UV8:%[0-9]+]]:_(s32), [[UV9:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[MV1]](s64)
+    ; X86-NEXT: [[USUBO:%[0-9]+]]:_(s32), [[USUBO1:%[0-9]+]]:_(s1) = G_USUBO [[UV6]], [[UV8]]
+    ; X86-NEXT: [[USUBE:%[0-9]+]]:_(s32), [[USUBE1:%[0-9]+]]:_(s1) = G_USUBE [[UV7]], [[UV9]], [[USUBO1]]
+    ; X86-NEXT: [[MV2:%[0-9]+]]:_(s64) = G_MERGE_VALUES [[USUBO]](s32), [[USUBE]](s32)
+    ; X86-NEXT: [[TRUNC1:%[0-9]+]]:_(s35) = G_TRUNC [[MV2]](s64)
+    ; X86-NEXT: [[ZEXT2:%[0-9]+]]:_(s64) = G_ZEXT [[TRUNC1]](s35)
+    ; X86-NEXT: RET 0, implicit [[ZEXT2]](s64)
     %0(s64) = COPY $rdx
     %1:_(s35) = G_TRUNC %0(s64)
     %2:_(s35) = G_CTLZ %1
