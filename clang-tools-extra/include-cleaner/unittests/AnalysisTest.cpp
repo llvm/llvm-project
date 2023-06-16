@@ -182,13 +182,14 @@ TEST_F(WalkUsedTest, MacroRefs) {
   Symbol Answer2 =
       Macro{&Idents.get("ANSWER"), SM.getComposedLoc(HdrID, Hdr.point())};
   EXPECT_THAT(
-      offsetToProviders(AST, SM,
-                        {SymbolReference{SM.getComposedLoc(SM.getMainFileID(),
-                                                           Code.point("1")),
-                                         Answer1, RefType::Explicit},
-                         SymbolReference{SM.getComposedLoc(SM.getMainFileID(),
-                                                           Code.point("2")),
-                                         Answer2, RefType::Explicit}}),
+      offsetToProviders(
+          AST, SM,
+          {SymbolReference{
+               Answer1, SM.getComposedLoc(SM.getMainFileID(), Code.point("1")),
+               RefType::Explicit},
+           SymbolReference{
+               Answer2, SM.getComposedLoc(SM.getMainFileID(), Code.point("2")),
+               RefType::Explicit}}),
       UnorderedElementsAre(
           Pair(Code.point("1"), UnorderedElementsAre(HdrFile)),
           Pair(Code.point("2"), UnorderedElementsAre(HdrFile)),
