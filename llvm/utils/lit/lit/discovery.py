@@ -56,8 +56,7 @@ def getTestSuite(item, litConfig, cache):
         # configuration to load instead.
         config_map = litConfig.params.get("config_map")
         if config_map:
-            cfgpath = os.path.realpath(cfgpath)
-            target = config_map.get(os.path.normcase(cfgpath))
+            target = config_map.get(os.path.normcase(os.path.abspath(cfgpath)))
             if target:
                 cfgpath = target
 
@@ -67,16 +66,16 @@ def getTestSuite(item, litConfig, cache):
 
         cfg = TestingConfig.fromdefaults(litConfig)
         cfg.load_from_path(cfgpath, litConfig)
-        source_root = os.path.realpath(cfg.test_source_root or path)
-        exec_root = os.path.realpath(cfg.test_exec_root or path)
+        source_root = os.path.abspath(cfg.test_source_root or path)
+        exec_root = os.path.abspath(cfg.test_exec_root or path)
         return Test.TestSuite(cfg.name, source_root, exec_root, cfg), ()
 
     def search(path):
         # Check for an already instantiated test suite.
-        real_path = os.path.realpath(path)
-        res = cache.get(real_path)
+        full_path = os.path.normcase(os.path.abspath(path))
+        res = cache.get(full_path)
         if res is None:
-            cache[real_path] = res = search1(path)
+            cache[full_path] = res = search1(path)
         return res
 
     # Canonicalize the path.

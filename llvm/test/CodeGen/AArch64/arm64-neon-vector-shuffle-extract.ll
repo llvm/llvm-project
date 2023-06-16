@@ -4,8 +4,8 @@
 define void @test(ptr %p1, ptr %p2) {
 ; CHECK-LABEL: test:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov w8, #3
-; CHECK-NEXT:    mov w9, #1
+; CHECK-NEXT:    mov w8, #3 // =0x3
+; CHECK-NEXT:    mov w9, #1 // =0x1
 ; CHECK-NEXT:    str w8, [x0]
 ; CHECK-NEXT:    str w9, [x1]
 ; CHECK-NEXT:    ret

@@ -222,7 +222,7 @@ bool PreISelIntrinsicLowering::expandMemIntrinsicUses(Function &F) const {
             LookupLibInfo(*ParentFunc).has(LibFunc_memmove))
           break;
 
-        if (expandMemMoveAsLoop(Memmove)) {
+        if (expandMemMoveAsLoop(Memmove, TTI)) {
           Changed = true;
           Memmove->eraseFromParent();
         }

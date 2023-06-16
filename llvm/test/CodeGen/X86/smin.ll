@@ -659,8 +659,8 @@ define i16 @test_signbits_i16(i16 %a, i16 %b) nounwind {
 ; X64:       # %bb.0:
 ; X64-NEXT:    movswl %si, %eax
 ; X64-NEXT:    movswl %di, %ecx
-; X64-NEXT:    sarl $15, %ecx
-; X64-NEXT:    sarl $8, %eax
+; X64-NEXT:    shrl $15, %ecx
+; X64-NEXT:    shrl $8, %eax
 ; X64-NEXT:    cmpw %ax, %cx
 ; X64-NEXT:    cmovll %ecx, %eax
 ; X64-NEXT:    # kill: def $ax killed $ax killed $eax
@@ -670,7 +670,7 @@ define i16 @test_signbits_i16(i16 %a, i16 %b) nounwind {
 ; X86:       # %bb.0:
 ; X86-NEXT:    movsbl {{[0-9]+}}(%esp), %ecx
 ; X86-NEXT:    movswl {{[0-9]+}}(%esp), %eax
-; X86-NEXT:    sarl $15, %eax
+; X86-NEXT:    shrl $15, %eax
 ; X86-NEXT:    cmpw %cx, %ax
 ; X86-NEXT:    cmovgel %ecx, %eax
 ; X86-NEXT:    # kill: def $ax killed $ax killed $eax

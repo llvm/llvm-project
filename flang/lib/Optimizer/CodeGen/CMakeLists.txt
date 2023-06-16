@@ -27,6 +27,7 @@ add_flang_library(FIRCodeGen
   MLIRBuiltinToLLVMIRTranslation
   MLIRLLVMToLLVMIRTranslation
   MLIRTargetLLVMIRExport
+  MLIRVectorToLLVM
 
   LINK_COMPONENTS
   AsmParser

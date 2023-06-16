@@ -51,6 +51,8 @@ bool CopyPropagation::interpretAsCopy(const MachineInstr *MI, EqualityMap &EM) {
       if (TRI.getMinimalPhysRegClass(DstR.Reg) !=
           TRI.getMinimalPhysRegClass(SrcR.Reg))
         return false;
+      if (!DFG.isTracked(SrcR) || !DFG.isTracked(DstR))
+        return false;
       EM.insert(std::make_pair(DstR, SrcR));
       return true;
     }

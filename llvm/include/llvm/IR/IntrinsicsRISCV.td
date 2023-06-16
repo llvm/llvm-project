@@ -1511,7 +1511,7 @@ class ScalarCryptoGprIntrinsicAny
 
 class ScalarCryptoByteSelect32
     : DefaultAttrsIntrinsic<[llvm_i32_ty],
-                            [llvm_i32_ty, llvm_i32_ty, llvm_i8_ty],
+                            [llvm_i32_ty, llvm_i32_ty, llvm_i32_ty],
                             [IntrNoMem, IntrSpeculatable,
                              ImmArg<ArgIndex<2>>]>;
 
@@ -1532,7 +1532,7 @@ class ScalarCryptoGprIntrinsic64
 
 class ScalarCryptoByteSelectAny
     : DefaultAttrsIntrinsic<[llvm_anyint_ty],
-                            [LLVMMatchType<0>, LLVMMatchType<0>, llvm_i8_ty],
+                            [LLVMMatchType<0>, LLVMMatchType<0>, llvm_i32_ty],
                             [IntrNoMem, IntrSpeculatable, ImmArg<ArgIndex<2>>]>;
 
 // Zknd

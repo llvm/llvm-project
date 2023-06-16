@@ -339,6 +339,9 @@ public:
   // Describe memory region usage.
   void printMemoryUsage(raw_ostream &os);
 
+  // Verify memory/lma overflows.
+  void checkMemoryRegions() const;
+
   // SECTIONS command list.
   SmallVector<SectionCommand *, 0> sectionCommands;
 

@@ -2155,6 +2155,9 @@ Instruction *InstCombinerImpl::visitAnd(BinaryOperator &I) {
   if (Value *V = SimplifyBSwap(I, Builder))
     return replaceInstUsesWith(I, V);
 
+  if (Instruction *R = foldBinOpShiftWithShift(I))
+    return R;
+
   Value *Op0 = I.getOperand(0), *Op1 = I.getOperand(1);
 
   Value *X, *Y;
@@ -3201,6 +3204,9 @@ Instruction *InstCombinerImpl::visitOr(BinaryOperator &I) {
 
   if (Instruction *Concat = matchOrConcat(I, Builder))
     return replaceInstUsesWith(I, Concat);
+
+  if (Instruction *R = foldBinOpShiftWithShift(I))
+    return R;
 
   Value *X, *Y;
   const APInt *CV;
@@ -4273,6 +4279,9 @@ Instruction *InstCombinerImpl::visitXor(BinaryOperator &I) {
     return replaceInstUsesWith(I, V);
 
   if (Instruction *R = foldNot(I))
+    return R;
+
+  if (Instruction *R = foldBinOpShiftWithShift(I))
     return R;
 
   // Fold (X & M) ^ (Y & ~M) -> (X & M) | (Y & ~M)

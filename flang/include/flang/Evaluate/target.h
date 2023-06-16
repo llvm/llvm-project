@@ -91,11 +91,15 @@ public:
     return *this;
   }
 
+  bool isPPC() const { return isPPC_; }
+  void set_isPPC(bool isPPC = false);
+
 private:
   static constexpr int maxKind{32};
   std::uint8_t byteSize_[common::TypeCategory_enumSize][maxKind]{};
   std::uint8_t align_[common::TypeCategory_enumSize][maxKind]{};
   bool isBigEndian_{false};
+  bool isPPC_{false};
   bool areSubnormalsFlushedToZero_{false};
   Rounding roundingMode_{defaultRounding};
   std::size_t procedurePointerByteSize_{8};

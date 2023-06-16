@@ -1140,3 +1140,16 @@ define <2 x i1> @isnot_pow2nor0_wrong_pred3_ctpop_commute_vec(<2 x i8> %x) {
   %r = or <2 x i1> %cmp, %notzero
   ret <2 x i1> %r
 }
+
+define i1 @is_pow2_fail_pr63327(i32 %x) {
+; CHECK-LABEL: @is_pow2_fail_pr63327(
+; CHECK-NEXT:    [[NX:%.*]] = sub i32 0, [[X:%.*]]
+; CHECK-NEXT:    [[X_AND_NX:%.*]] = and i32 [[NX]], [[X]]
+; CHECK-NEXT:    [[R:%.*]] = icmp sge i32 [[X_AND_NX]], [[X]]
+; CHECK-NEXT:    ret i1 [[R]]
+;
+  %nx = sub i32 0, %x
+  %x_and_nx = and i32 %x, %nx
+  %r = icmp sge i32 %x_and_nx, %x
+  ret i1 %r
+}

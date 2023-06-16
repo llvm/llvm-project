@@ -245,10 +245,10 @@ _LIBCPP_BEGIN_NAMESPACE_STD
 
 typedef ptrdiff_t streamsize;
 
-class _LIBCPP_TYPE_VIS ios_base
+class _LIBCPP_EXPORTED_FROM_ABI ios_base
 {
 public:
-    class _LIBCPP_EXCEPTION_ABI failure;
+    class _LIBCPP_EXPORTED_FROM_ABI failure;
 
     typedef unsigned int fmtflags;
     static const fmtflags boolalpha   = 0x0001;
@@ -295,7 +295,7 @@ public:
     typedef _VSTD::streampos streampos;
 #endif
 
-    class _LIBCPP_TYPE_VIS Init;
+    class _LIBCPP_EXPORTED_FROM_ABI Init;
 
     // 27.5.2.2 fmtflags state:
     _LIBCPP_INLINE_VISIBILITY fmtflags flags() const;
@@ -424,8 +424,7 @@ template <>
 struct _LIBCPP_TEMPLATE_VIS is_error_code_enum<io_errc::__lx> : public true_type { };
 #endif
 
-_LIBCPP_FUNC_VIS
-const error_category& iostream_category() _NOEXCEPT;
+_LIBCPP_EXPORTED_FROM_ABI const error_category& iostream_category() _NOEXCEPT;
 
 inline _LIBCPP_INLINE_VISIBILITY
 error_code
@@ -441,7 +440,7 @@ make_error_condition(io_errc __e) _NOEXCEPT
     return error_condition(static_cast<int>(__e), iostream_category());
 }
 
-class _LIBCPP_EXCEPTION_ABI ios_base::failure
+class _LIBCPP_EXPORTED_FROM_ABI ios_base::failure
     : public system_error
 {
 public:
@@ -460,7 +459,7 @@ void __throw_failure(char const* __msg) {
 #endif
 }
 
-class _LIBCPP_TYPE_VIS ios_base::Init
+class _LIBCPP_EXPORTED_FROM_ABI ios_base::Init
 {
 public:
     Init();

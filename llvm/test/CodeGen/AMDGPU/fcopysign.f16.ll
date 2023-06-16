@@ -2,6 +2,7 @@
 ; RUN: llc -march=amdgcn -mcpu=tahiti < %s | FileCheck -enable-var-scope --check-prefixes=SI %s
 ; RUN: llc -march=amdgcn -mcpu=tonga < %s | FileCheck -enable-var-scope --check-prefixes=VI %s
 ; RUN: llc -march=amdgcn -mcpu=gfx900 < %s | FileCheck -enable-var-scope --check-prefixes=GFX9 %s
+; RUN: llc -march=amdgcn -mcpu=gfx1100 < %s | FileCheck -enable-var-scope --check-prefixes=GFX11 %s
 
 declare half @llvm.copysign.f16(half, half) #0
 declare float @llvm.copysign.f32(float, float) #0
@@ -56,6 +57,21 @@ define amdgpu_kernel void @s_copysign_f16(ptr addrspace(1) %arg_out, half %mag, 
 ; GFX9-NEXT:    v_bfi_b32 v1, s0, v1, v2
 ; GFX9-NEXT:    global_store_short v0, v1, s[2:3]
 ; GFX9-NEXT:    s_endpgm
+;
+; GFX11-LABEL: s_copysign_f16:
+; GFX11:       ; %bb.0:
+; GFX11-NEXT:    s_clause 0x1
+; GFX11-NEXT:    s_load_b32 s2, s[0:1], 0x2c
+; GFX11-NEXT:    s_load_b64 s[0:1], s[0:1], 0x24
+; GFX11-NEXT:    v_mov_b32_e32 v1, 0
+; GFX11-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX11-NEXT:    s_lshr_b32 s3, s2, 16
+; GFX11-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(VALU_DEP_1)
+; GFX11-NEXT:    v_mov_b32_e32 v0, s3
+; GFX11-NEXT:    v_bfi_b32 v0, 0x7fff, s2, v0
+; GFX11-NEXT:    global_store_b16 v1, v0, s[0:1]
+; GFX11-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
+; GFX11-NEXT:    s_endpgm
   %out = call half @llvm.copysign.f16(half %mag, half %sign)
   store half %out, ptr addrspace(1) %arg_out
   ret void
@@ -96,6 +112,19 @@ define amdgpu_kernel void @s_test_copysign_f16_0(ptr addrspace(1) %out, half %ma
 ; GFX9-NEXT:    v_mov_b32_e32 v1, s0
 ; GFX9-NEXT:    global_store_short v0, v1, s[2:3]
 ; GFX9-NEXT:    s_endpgm
+;
+; GFX11-LABEL: s_test_copysign_f16_0:
+; GFX11:       ; %bb.0:
+; GFX11-NEXT:    s_clause 0x1
+; GFX11-NEXT:    s_load_b32 s2, s[0:1], 0x2c
+; GFX11-NEXT:    s_load_b64 s[0:1], s[0:1], 0x24
+; GFX11-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX11-NEXT:    s_and_b32 s2, s2, 0x7fff
+; GFX11-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
+; GFX11-NEXT:    v_dual_mov_b32 v0, 0 :: v_dual_mov_b32 v1, s2
+; GFX11-NEXT:    global_store_b16 v0, v1, s[0:1]
+; GFX11-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
+; GFX11-NEXT:    s_endpgm
   %result = call half @llvm.copysign.f16(half %mag, half 0.0)
   store half %result, ptr addrspace(1) %out, align 4
   ret void
@@ -136,6 +165,19 @@ define amdgpu_kernel void @s_test_copysign_f16_1(ptr addrspace(1) %out, half %ma
 ; GFX9-NEXT:    v_mov_b32_e32 v1, s0
 ; GFX9-NEXT:    global_store_short v0, v1, s[2:3]
 ; GFX9-NEXT:    s_endpgm
+;
+; GFX11-LABEL: s_test_copysign_f16_1:
+; GFX11:       ; %bb.0:
+; GFX11-NEXT:    s_clause 0x1
+; GFX11-NEXT:    s_load_b32 s2, s[0:1], 0x2c
+; GFX11-NEXT:    s_load_b64 s[0:1], s[0:1], 0x24
+; GFX11-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX11-NEXT:    s_and_b32 s2, s2, 0x7fff
+; GFX11-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
+; GFX11-NEXT:    v_dual_mov_b32 v0, 0 :: v_dual_mov_b32 v1, s2
+; GFX11-NEXT:    global_store_b16 v0, v1, s[0:1]
+; GFX11-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
+; GFX11-NEXT:    s_endpgm
   %result = call half @llvm.copysign.f16(half %mag, half 1.0)
   store half %result, ptr addrspace(1) %out, align 4
   ret void
@@ -176,6 +218,19 @@ define amdgpu_kernel void @s_test_copysign_f16_10.0(ptr addrspace(1) %out, half 
 ; GFX9-NEXT:    v_mov_b32_e32 v1, s0
 ; GFX9-NEXT:    global_store_short v0, v1, s[2:3]
 ; GFX9-NEXT:    s_endpgm
+;
+; GFX11-LABEL: s_test_copysign_f16_10.0:
+; GFX11:       ; %bb.0:
+; GFX11-NEXT:    s_clause 0x1
+; GFX11-NEXT:    s_load_b32 s2, s[0:1], 0x2c
+; GFX11-NEXT:    s_load_b64 s[0:1], s[0:1], 0x24
+; GFX11-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX11-NEXT:    s_and_b32 s2, s2, 0x7fff
+; GFX11-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
+; GFX11-NEXT:    v_dual_mov_b32 v0, 0 :: v_dual_mov_b32 v1, s2
+; GFX11-NEXT:    global_store_b16 v0, v1, s[0:1]
+; GFX11-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
+; GFX11-NEXT:    s_endpgm
   %result = call half @llvm.copysign.f16(half %mag, half 10.0)
   store half %result, ptr addrspace(1) %out, align 4
   ret void
@@ -216,6 +271,19 @@ define amdgpu_kernel void @s_test_copysign_f16_neg1(ptr addrspace(1) %out, half 
 ; GFX9-NEXT:    v_mov_b32_e32 v1, s0
 ; GFX9-NEXT:    global_store_short v0, v1, s[2:3]
 ; GFX9-NEXT:    s_endpgm
+;
+; GFX11-LABEL: s_test_copysign_f16_neg1:
+; GFX11:       ; %bb.0:
+; GFX11-NEXT:    s_clause 0x1
+; GFX11-NEXT:    s_load_b32 s2, s[0:1], 0x2c
+; GFX11-NEXT:    s_load_b64 s[0:1], s[0:1], 0x24
+; GFX11-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX11-NEXT:    s_bitset1_b32 s2, 15
+; GFX11-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
+; GFX11-NEXT:    v_dual_mov_b32 v0, 0 :: v_dual_mov_b32 v1, s2
+; GFX11-NEXT:    global_store_b16 v0, v1, s[0:1]
+; GFX11-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
+; GFX11-NEXT:    s_endpgm
   %result = call half @llvm.copysign.f16(half %mag, half -1.0)
   store half %result, ptr addrspace(1) %out, align 4
   ret void
@@ -256,6 +324,19 @@ define amdgpu_kernel void @s_test_copysign_f16_neg10(ptr addrspace(1) %out, half
 ; GFX9-NEXT:    v_mov_b32_e32 v1, s0
 ; GFX9-NEXT:    global_store_short v0, v1, s[2:3]
 ; GFX9-NEXT:    s_endpgm
+;
+; GFX11-LABEL: s_test_copysign_f16_neg10:
+; GFX11:       ; %bb.0:
+; GFX11-NEXT:    s_clause 0x1
+; GFX11-NEXT:    s_load_b32 s2, s[0:1], 0x2c
+; GFX11-NEXT:    s_load_b64 s[0:1], s[0:1], 0x24
+; GFX11-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX11-NEXT:    s_bitset1_b32 s2, 15
+; GFX11-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
+; GFX11-NEXT:    v_dual_mov_b32 v0, 0 :: v_dual_mov_b32 v1, s2
+; GFX11-NEXT:    global_store_b16 v0, v1, s[0:1]
+; GFX11-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
+; GFX11-NEXT:    s_endpgm
   %result = call half @llvm.copysign.f16(half %mag, half -10.0)
   store half %result, ptr addrspace(1) %out, align 4
   ret void
@@ -298,6 +379,18 @@ define amdgpu_kernel void @s_test_copysign_f16_0_mag(ptr addrspace(1) %out, half
 ; GFX9-NEXT:    v_and_b32_e32 v1, s4, v1
 ; GFX9-NEXT:    global_store_short v0, v1, s[2:3]
 ; GFX9-NEXT:    s_endpgm
+;
+; GFX11-LABEL: s_test_copysign_f16_0_mag:
+; GFX11:       ; %bb.0:
+; GFX11-NEXT:    s_clause 0x1
+; GFX11-NEXT:    s_load_b32 s2, s[0:1], 0x2c
+; GFX11-NEXT:    s_load_b64 s[0:1], s[0:1], 0x24
+; GFX11-NEXT:    v_mov_b32_e32 v0, 0
+; GFX11-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX11-NEXT:    v_and_b32_e64 v1, 0xffff8000, s2
+; GFX11-NEXT:    global_store_b16 v0, v1, s[0:1]
+; GFX11-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
+; GFX11-NEXT:    s_endpgm
   %result = call half @llvm.copysign.f16(half 0.0, half %sign)
   store half %result, ptr addrspace(1) %out, align 4
   ret void
@@ -343,6 +436,20 @@ define amdgpu_kernel void @s_test_copysign_f16_1_mag(ptr addrspace(1) %out, half
 ; GFX9-NEXT:    v_or_b32_e32 v1, 0x3c00, v1
 ; GFX9-NEXT:    global_store_short v0, v1, s[2:3]
 ; GFX9-NEXT:    s_endpgm
+;
+; GFX11-LABEL: s_test_copysign_f16_1_mag:
+; GFX11:       ; %bb.0:
+; GFX11-NEXT:    s_clause 0x1
+; GFX11-NEXT:    s_load_b32 s2, s[0:1], 0x2c
+; GFX11-NEXT:    s_load_b64 s[0:1], s[0:1], 0x24
+; GFX11-NEXT:    v_mov_b32_e32 v1, 0
+; GFX11-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX11-NEXT:    v_and_b32_e64 v0, 0xffff8000, s2
+; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX11-NEXT:    v_or_b32_e32 v0, 0x3c00, v0
+; GFX11-NEXT:    global_store_b16 v1, v0, s[0:1]
+; GFX11-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
+; GFX11-NEXT:    s_endpgm
   %result = call half @llvm.copysign.f16(half 1.0, half %sign)
   store half %result, ptr addrspace(1) %out, align 4
   ret void
@@ -388,6 +495,20 @@ define amdgpu_kernel void @s_test_copysign_f16_10_mag(ptr addrspace(1) %out, hal
 ; GFX9-NEXT:    v_or_b32_e32 v1, 0x4900, v1
 ; GFX9-NEXT:    global_store_short v0, v1, s[2:3]
 ; GFX9-NEXT:    s_endpgm
+;
+; GFX11-LABEL: s_test_copysign_f16_10_mag:
+; GFX11:       ; %bb.0:
+; GFX11-NEXT:    s_clause 0x1
+; GFX11-NEXT:    s_load_b32 s2, s[0:1], 0x2c
+; GFX11-NEXT:    s_load_b64 s[0:1], s[0:1], 0x24
+; GFX11-NEXT:    v_mov_b32_e32 v1, 0
+; GFX11-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX11-NEXT:    v_and_b32_e64 v0, 0xffff8000, s2
+; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX11-NEXT:    v_or_b32_e32 v0, 0x4900, v0
+; GFX11-NEXT:    global_store_b16 v1, v0, s[0:1]
+; GFX11-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
+; GFX11-NEXT:    s_endpgm
   %result = call half @llvm.copysign.f16(half 10.0, half %sign)
   store half %result, ptr addrspace(1) %out, align 4
   ret void
@@ -432,6 +553,20 @@ define amdgpu_kernel void @s_test_copysign_f16_neg1_mag(ptr addrspace(1) %out, h
 ; GFX9-NEXT:    v_or_b32_e32 v1, 0x3c00, v1
 ; GFX9-NEXT:    global_store_short v0, v1, s[2:3]
 ; GFX9-NEXT:    s_endpgm
+;
+; GFX11-LABEL: s_test_copysign_f16_neg1_mag:
+; GFX11:       ; %bb.0:
+; GFX11-NEXT:    s_clause 0x1
+; GFX11-NEXT:    s_load_b32 s2, s[0:1], 0x2c
+; GFX11-NEXT:    s_load_b64 s[0:1], s[0:1], 0x24
+; GFX11-NEXT:    v_mov_b32_e32 v1, 0
+; GFX11-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX11-NEXT:    v_and_b32_e64 v0, 0xffff8000, s2
+; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX11-NEXT:    v_or_b32_e32 v0, 0x3c00, v0
+; GFX11-NEXT:    global_store_b16 v1, v0, s[0:1]
+; GFX11-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
+; GFX11-NEXT:    s_endpgm
   %result = call half @llvm.copysign.f16(half -1.0, half %sign)
   store half %result, ptr addrspace(1) %out, align 4
   ret void
@@ -477,6 +612,20 @@ define amdgpu_kernel void @s_test_copysign_f16_neg10_mag(ptr addrspace(1) %out, 
 ; GFX9-NEXT:    v_or_b32_e32 v1, 0x4900, v1
 ; GFX9-NEXT:    global_store_short v0, v1, s[2:3]
 ; GFX9-NEXT:    s_endpgm
+;
+; GFX11-LABEL: s_test_copysign_f16_neg10_mag:
+; GFX11:       ; %bb.0:
+; GFX11-NEXT:    s_clause 0x1
+; GFX11-NEXT:    s_load_b32 s2, s[0:1], 0x2c
+; GFX11-NEXT:    s_load_b64 s[0:1], s[0:1], 0x24
+; GFX11-NEXT:    v_mov_b32_e32 v1, 0
+; GFX11-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX11-NEXT:    v_and_b32_e64 v0, 0xffff8000, s2
+; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX11-NEXT:    v_or_b32_e32 v0, 0x4900, v0
+; GFX11-NEXT:    global_store_b16 v1, v0, s[0:1]
+; GFX11-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
+; GFX11-NEXT:    s_endpgm
   %result = call half @llvm.copysign.f16(half -10.0, half %sign)
   store half %result, ptr addrspace(1) %out, align 4
   ret void
@@ -505,6 +654,13 @@ define half @v_copysign_f16(half %mag, half %sign) {
 ; GFX9-NEXT:    s_movk_i32 s4, 0x7fff
 ; GFX9-NEXT:    v_bfi_b32 v0, s4, v0, v1
 ; GFX9-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX11-LABEL: v_copysign_f16:
+; GFX11:       ; %bb.0:
+; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
+; GFX11-NEXT:    v_bfi_b32 v0, 0x7fff, v0, v1
+; GFX11-NEXT:    s_setpc_b64 s[30:31]
   %result = call half @llvm.copysign.f16(half %mag, half %sign)
   ret half %result
 }
@@ -528,6 +684,13 @@ define half @v_test_copysign_f16_0(half %mag) {
 ; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX9-NEXT:    v_and_b32_e32 v0, 0x7fff, v0
 ; GFX9-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX11-LABEL: v_test_copysign_f16_0:
+; GFX11:       ; %bb.0:
+; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
+; GFX11-NEXT:    v_and_b32_e32 v0, 0x7fff, v0
+; GFX11-NEXT:    s_setpc_b64 s[30:31]
   %result = call half @llvm.copysign.f16(half %mag, half 0.0)
   ret half %result
 }
@@ -551,6 +714,13 @@ define half @v_test_copysign_f16_1(half %mag) {
 ; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX9-NEXT:    v_and_b32_e32 v0, 0x7fff, v0
 ; GFX9-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX11-LABEL: v_test_copysign_f16_1:
+; GFX11:       ; %bb.0:
+; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
+; GFX11-NEXT:    v_and_b32_e32 v0, 0x7fff, v0
+; GFX11-NEXT:    s_setpc_b64 s[30:31]
   %result = call half @llvm.copysign.f16(half %mag, half 1.0)
   ret half %result
 }
@@ -574,6 +744,13 @@ define half @v_test_copysign_f16_10(half %mag) {
 ; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX9-NEXT:    v_and_b32_e32 v0, 0x7fff, v0
 ; GFX9-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX11-LABEL: v_test_copysign_f16_10:
+; GFX11:       ; %bb.0:
+; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
+; GFX11-NEXT:    v_and_b32_e32 v0, 0x7fff, v0
+; GFX11-NEXT:    s_setpc_b64 s[30:31]
   %result = call half @llvm.copysign.f16(half %mag, half 10.0)
   ret half %result
 }
@@ -597,6 +774,13 @@ define half @v_test_copysign_f16_neg1(half %mag) {
 ; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX9-NEXT:    v_or_b32_e32 v0, 0x8000, v0
 ; GFX9-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX11-LABEL: v_test_copysign_f16_neg1:
+; GFX11:       ; %bb.0:
+; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
+; GFX11-NEXT:    v_or_b32_e32 v0, 0x8000, v0
+; GFX11-NEXT:    s_setpc_b64 s[30:31]
   %result = call half @llvm.copysign.f16(half %mag, half -1.0)
   ret half %result
 }
@@ -620,6 +804,13 @@ define half @v_test_copysign_f16_neg10(half %mag) {
 ; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX9-NEXT:    v_or_b32_e32 v0, 0x8000, v0
 ; GFX9-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX11-LABEL: v_test_copysign_f16_neg10:
+; GFX11:       ; %bb.0:
+; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
+; GFX11-NEXT:    v_or_b32_e32 v0, 0x8000, v0
+; GFX11-NEXT:    s_setpc_b64 s[30:31]
   %result = call half @llvm.copysign.f16(half %mag, half -10.0)
   ret half %result
 }
@@ -693,6 +884,25 @@ define amdgpu_kernel void @v_copysign_out_f32_mag_f16_sign_f32(ptr addrspace(1) 
 ; GFX9-NEXT:    v_bfi_b32 v0, s0, v1, v0
 ; GFX9-NEXT:    global_store_dword v2, v0, s[4:5]
 ; GFX9-NEXT:    s_endpgm
+;
+; GFX11-LABEL: v_copysign_out_f32_mag_f16_sign_f32:
+; GFX11:       ; %bb.0:
+; GFX11-NEXT:    s_clause 0x1
+; GFX11-NEXT:    s_load_b128 s[4:7], s[0:1], 0x24
+; GFX11-NEXT:    s_load_b64 s[0:1], s[0:1], 0x34
+; GFX11-NEXT:    v_dual_mov_b32 v2, 0 :: v_dual_lshlrev_b32 v1, 1, v0
+; GFX11-NEXT:    v_lshlrev_b32_e32 v0, 2, v0
+; GFX11-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX11-NEXT:    global_load_u16 v1, v1, s[6:7]
+; GFX11-NEXT:    global_load_b32 v0, v0, s[0:1]
+; GFX11-NEXT:    s_waitcnt vmcnt(1)
+; GFX11-NEXT:    v_cvt_f32_f16_e32 v1, v1
+; GFX11-NEXT:    s_waitcnt vmcnt(0)
+; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX11-NEXT:    v_bfi_b32 v0, 0x7fffffff, v1, v0
+; GFX11-NEXT:    global_store_b32 v2, v0, s[4:5]
+; GFX11-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
+; GFX11-NEXT:    s_endpgm
   %tid = call i32 @llvm.amdgcn.workitem.id.x()
   %arg_mag_gep = getelementptr half, ptr addrspace(1) %arg_mag, i32 %tid
   %mag = load half, ptr addrspace(1) %arg_mag_gep
@@ -774,6 +984,25 @@ define amdgpu_kernel void @v_copysign_out_f64_mag_f16_sign_f64(ptr addrspace(1) 
 ; GFX9-NEXT:    v_bfi_b32 v3, s0, v3, v1
 ; GFX9-NEXT:    global_store_dwordx2 v0, v[2:3], s[4:5]
 ; GFX9-NEXT:    s_endpgm
+;
+; GFX11-LABEL: v_copysign_out_f64_mag_f16_sign_f64:
+; GFX11:       ; %bb.0:
+; GFX11-NEXT:    s_load_b128 s[4:7], s[0:1], 0x24
+; GFX11-NEXT:    v_lshlrev_b32_e32 v1, 1, v0
+; GFX11-NEXT:    s_load_b64 s[0:1], s[0:1], 0x34
+; GFX11-NEXT:    v_lshlrev_b32_e32 v0, 3, v0
+; GFX11-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX11-NEXT:    global_load_u16 v2, v1, s[6:7]
+; GFX11-NEXT:    global_load_b64 v[0:1], v0, s[0:1]
+; GFX11-NEXT:    s_waitcnt vmcnt(0)
+; GFX11-NEXT:    v_cvt_f32_f16_e32 v0, v2
+; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_1) | instid1(VALU_DEP_2)
+; GFX11-NEXT:    v_cvt_f64_f32_e32 v[2:3], v0
+; GFX11-NEXT:    v_mov_b32_e32 v0, 0
+; GFX11-NEXT:    v_bfi_b32 v3, 0x7fffffff, v3, v1
+; GFX11-NEXT:    global_store_b64 v0, v[2:3], s[4:5]
+; GFX11-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
+; GFX11-NEXT:    s_endpgm
   %tid = call i32 @llvm.amdgcn.workitem.id.x()
   %arg_mag_gep = getelementptr half, ptr addrspace(1) %arg_mag, i32 %tid
   %mag = load half, ptr addrspace(1) %arg_mag_gep
@@ -853,6 +1082,25 @@ define amdgpu_kernel void @v_copysign_out_f32_mag_f32_sign_f16(ptr addrspace(1) 
 ; GFX9-NEXT:    v_bfi_b32 v0, s0, v0, v1
 ; GFX9-NEXT:    global_store_dword v2, v0, s[4:5]
 ; GFX9-NEXT:    s_endpgm
+;
+; GFX11-LABEL: v_copysign_out_f32_mag_f32_sign_f16:
+; GFX11:       ; %bb.0:
+; GFX11-NEXT:    s_clause 0x1
+; GFX11-NEXT:    s_load_b64 s[4:5], s[0:1], 0x34
+; GFX11-NEXT:    s_load_b128 s[0:3], s[0:1], 0x24
+; GFX11-NEXT:    v_dual_mov_b32 v2, 0 :: v_dual_lshlrev_b32 v1, 1, v0
+; GFX11-NEXT:    v_lshlrev_b32_e32 v0, 2, v0
+; GFX11-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX11-NEXT:    global_load_u16 v1, v1, s[4:5]
+; GFX11-NEXT:    global_load_b32 v0, v0, s[2:3]
+; GFX11-NEXT:    s_waitcnt vmcnt(1)
+; GFX11-NEXT:    v_lshlrev_b32_e32 v1, 16, v1
+; GFX11-NEXT:    s_waitcnt vmcnt(0)
+; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX11-NEXT:    v_bfi_b32 v0, 0x7fffffff, v0, v1
+; GFX11-NEXT:    global_store_b32 v2, v0, s[0:1]
+; GFX11-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
+; GFX11-NEXT:    s_endpgm
   %tid = call i32 @llvm.amdgcn.workitem.id.x()
   %arg_mag_gep = getelementptr float, ptr addrspace(1) %arg_mag, i32 %tid
   %mag = load float, ptr addrspace(1) %arg_mag_gep
@@ -934,6 +1182,25 @@ define amdgpu_kernel void @v_copysign_out_f64_mag_f64_sign_f16(ptr addrspace(1) 
 ; GFX9-NEXT:    v_bfi_b32 v1, s0, v1, v2
 ; GFX9-NEXT:    global_store_dwordx2 v3, v[0:1], s[4:5]
 ; GFX9-NEXT:    s_endpgm
+;
+; GFX11-LABEL: v_copysign_out_f64_mag_f64_sign_f16:
+; GFX11:       ; %bb.0:
+; GFX11-NEXT:    s_clause 0x1
+; GFX11-NEXT:    s_load_b64 s[4:5], s[0:1], 0x34
+; GFX11-NEXT:    s_load_b128 s[0:3], s[0:1], 0x24
+; GFX11-NEXT:    v_lshlrev_b32_e32 v1, 1, v0
+; GFX11-NEXT:    v_dual_mov_b32 v3, 0 :: v_dual_lshlrev_b32 v0, 3, v0
+; GFX11-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX11-NEXT:    global_load_u16 v2, v1, s[4:5]
+; GFX11-NEXT:    global_load_b64 v[0:1], v0, s[2:3]
+; GFX11-NEXT:    s_waitcnt vmcnt(1)
+; GFX11-NEXT:    v_lshlrev_b32_e32 v2, 16, v2
+; GFX11-NEXT:    s_waitcnt vmcnt(0)
+; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX11-NEXT:    v_bfi_b32 v1, 0x7fffffff, v1, v2
+; GFX11-NEXT:    global_store_b64 v3, v[0:1], s[0:1]
+; GFX11-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
+; GFX11-NEXT:    s_endpgm
   %tid = call i32 @llvm.amdgcn.workitem.id.x()
   %arg_mag_gep = getelementptr double, ptr addrspace(1) %arg_mag, i32 %tid
   %mag = load double, ptr addrspace(1) %arg_mag_gep
@@ -1015,6 +1282,25 @@ define amdgpu_kernel void @v_copysign_out_f16_mag_f16_sign_f32(ptr addrspace(1) 
 ; GFX9-NEXT:    v_bfi_b32 v0, s0, v0, v1
 ; GFX9-NEXT:    global_store_short v2, v0, s[4:5]
 ; GFX9-NEXT:    s_endpgm
+;
+; GFX11-LABEL: v_copysign_out_f16_mag_f16_sign_f32:
+; GFX11:       ; %bb.0:
+; GFX11-NEXT:    s_clause 0x1
+; GFX11-NEXT:    s_load_b64 s[4:5], s[0:1], 0x34
+; GFX11-NEXT:    s_load_b128 s[0:3], s[0:1], 0x24
+; GFX11-NEXT:    v_dual_mov_b32 v2, 0 :: v_dual_lshlrev_b32 v1, 2, v0
+; GFX11-NEXT:    v_lshlrev_b32_e32 v0, 1, v0
+; GFX11-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX11-NEXT:    global_load_b32 v1, v1, s[4:5]
+; GFX11-NEXT:    global_load_u16 v0, v0, s[2:3]
+; GFX11-NEXT:    s_waitcnt vmcnt(1)
+; GFX11-NEXT:    v_lshrrev_b32_e32 v1, 16, v1
+; GFX11-NEXT:    s_waitcnt vmcnt(0)
+; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX11-NEXT:    v_bfi_b32 v0, 0x7fff, v0, v1
+; GFX11-NEXT:    global_store_b16 v2, v0, s[0:1]
+; GFX11-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
+; GFX11-NEXT:    s_endpgm
   %tid = call i32 @llvm.amdgcn.workitem.id.x()
   %arg_mag_gep = getelementptr half, ptr addrspace(1) %arg_mag, i32 %tid
   %mag = load half, ptr addrspace(1) %arg_mag_gep
@@ -1093,6 +1379,25 @@ define amdgpu_kernel void @v_copysign_out_f16_mag_f16_sign_f64(ptr addrspace(1) 
 ; GFX9-NEXT:    v_bfi_b32 v1, s0, v2, v1
 ; GFX9-NEXT:    global_store_short v0, v1, s[4:5]
 ; GFX9-NEXT:    s_endpgm
+;
+; GFX11-LABEL: v_copysign_out_f16_mag_f16_sign_f64:
+; GFX11:       ; %bb.0:
+; GFX11-NEXT:    s_clause 0x1
+; GFX11-NEXT:    s_load_b64 s[4:5], s[0:1], 0x34
+; GFX11-NEXT:    s_load_b128 s[0:3], s[0:1], 0x24
+; GFX11-NEXT:    v_lshlrev_b32_e32 v0, 3, v0
+; GFX11-NEXT:    v_mov_b32_e32 v2, 0
+; GFX11-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX11-NEXT:    global_load_b64 v[0:1], v0, s[4:5]
+; GFX11-NEXT:    global_load_u16 v0, v2, s[2:3]
+; GFX11-NEXT:    s_waitcnt vmcnt(1)
+; GFX11-NEXT:    v_lshrrev_b32_e32 v1, 16, v1
+; GFX11-NEXT:    s_waitcnt vmcnt(0)
+; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX11-NEXT:    v_bfi_b32 v0, 0x7fff, v0, v1
+; GFX11-NEXT:    global_store_b16 v2, v0, s[0:1]
+; GFX11-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
+; GFX11-NEXT:    s_endpgm
   %tid = call i32 @llvm.amdgcn.workitem.id.x()
   %arg_mag_gep = getelementptr half, ptr addrspace(1) %arg_mag, i32 %tid
   %mag = load half, ptr addrspace(1) %arg_mag
@@ -1176,6 +1481,25 @@ define amdgpu_kernel void @v_copysign_out_f16_mag_f32_sign_f16(ptr addrspace(1) 
 ; GFX9-NEXT:    v_bfi_b32 v0, s0, v1, v0
 ; GFX9-NEXT:    global_store_short v2, v0, s[4:5]
 ; GFX9-NEXT:    s_endpgm
+;
+; GFX11-LABEL: v_copysign_out_f16_mag_f32_sign_f16:
+; GFX11:       ; %bb.0:
+; GFX11-NEXT:    s_clause 0x1
+; GFX11-NEXT:    s_load_b128 s[4:7], s[0:1], 0x24
+; GFX11-NEXT:    s_load_b64 s[0:1], s[0:1], 0x34
+; GFX11-NEXT:    v_dual_mov_b32 v2, 0 :: v_dual_lshlrev_b32 v1, 2, v0
+; GFX11-NEXT:    v_lshlrev_b32_e32 v0, 1, v0
+; GFX11-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX11-NEXT:    global_load_b32 v1, v1, s[6:7]
+; GFX11-NEXT:    global_load_u16 v0, v0, s[0:1]
+; GFX11-NEXT:    s_waitcnt vmcnt(1)
+; GFX11-NEXT:    v_cvt_f16_f32_e32 v1, v1
+; GFX11-NEXT:    s_waitcnt vmcnt(0)
+; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX11-NEXT:    v_bfi_b32 v0, 0x7fff, v1, v0
+; GFX11-NEXT:    global_store_b16 v2, v0, s[4:5]
+; GFX11-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
+; GFX11-NEXT:    s_endpgm
   %tid = call i32 @llvm.amdgcn.workitem.id.x()
   %arg_mag_gep = getelementptr float, ptr addrspace(1) %arg_mag, i32 %tid
   %mag = load float, ptr addrspace(1) %arg_mag_gep
@@ -1372,6 +1696,75 @@ define amdgpu_kernel void @s_copysign_out_f16_mag_f64_sign_f16(ptr addrspace(1) 
 ; GFX9-NEXT:    v_bfi_b32 v1, s0, v1, v2
 ; GFX9-NEXT:    global_store_short v0, v1, s[4:5]
 ; GFX9-NEXT:    s_endpgm
+;
+; GFX11-LABEL: s_copysign_out_f16_mag_f64_sign_f16:
+; GFX11:       ; %bb.0:
+; GFX11-NEXT:    s_clause 0x1
+; GFX11-NEXT:    s_load_b128 s[4:7], s[0:1], 0x24
+; GFX11-NEXT:    s_load_b32 s0, s[0:1], 0x34
+; GFX11-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX11-NEXT:    s_and_b32 s1, s7, 0x1ff
+; GFX11-NEXT:    s_lshr_b32 s2, s7, 8
+; GFX11-NEXT:    s_or_b32 s1, s1, s6
+; GFX11-NEXT:    s_and_b32 s2, s2, 0xffe
+; GFX11-NEXT:    s_cmp_lg_u32 s1, 0
+; GFX11-NEXT:    s_cselect_b32 s1, -1, 0
+; GFX11-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(SKIP_1) | instid1(SALU_CYCLE_1)
+; GFX11-NEXT:    v_cndmask_b32_e64 v0, 0, 1, s1
+; GFX11-NEXT:    s_bfe_u32 s1, s7, 0xb0014
+; GFX11-NEXT:    s_sub_i32 s3, 0x3f1, s1
+; GFX11-NEXT:    s_addk_i32 s1, 0xfc10
+; GFX11-NEXT:    v_med3_i32 v1, s3, 0, 13
+; GFX11-NEXT:    v_readfirstlane_b32 s3, v0
+; GFX11-NEXT:    s_lshl_b32 s8, s1, 12
+; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_2)
+; GFX11-NEXT:    v_readfirstlane_b32 s6, v1
+; GFX11-NEXT:    s_or_b32 s2, s2, s3
+; GFX11-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(SKIP_1) | instid1(VALU_DEP_1)
+; GFX11-NEXT:    s_or_b32 s3, s2, 0x1000
+; GFX11-NEXT:    s_or_b32 s8, s2, s8
+; GFX11-NEXT:    s_lshr_b32 s6, s3, s6
+; GFX11-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(SKIP_1) | instid1(VALU_DEP_2)
+; GFX11-NEXT:    v_lshlrev_b32_e64 v0, v1, s6
+; GFX11-NEXT:    v_mov_b32_e32 v1, 0
+; GFX11-NEXT:    v_cmp_ne_u32_e32 vcc_lo, s3, v0
+; GFX11-NEXT:    v_cndmask_b32_e64 v0, 0, 1, vcc_lo
+; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
+; GFX11-NEXT:    v_readfirstlane_b32 s3, v0
+; GFX11-NEXT:    s_or_b32 s3, s6, s3
+; GFX11-NEXT:    s_cmp_lt_i32 s1, 1
+; GFX11-NEXT:    s_cselect_b32 s3, s3, s8
+; GFX11-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(SALU_CYCLE_1)
+; GFX11-NEXT:    s_and_b32 s6, s3, 7
+; GFX11-NEXT:    s_cmp_gt_i32 s6, 5
+; GFX11-NEXT:    s_cselect_b32 s8, -1, 0
+; GFX11-NEXT:    s_cmp_eq_u32 s6, 3
+; GFX11-NEXT:    s_cselect_b32 s6, -1, 0
+; GFX11-NEXT:    s_lshr_b32 s3, s3, 2
+; GFX11-NEXT:    s_or_b32 s6, s6, s8
+; GFX11-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
+; GFX11-NEXT:    s_cmp_lg_u32 s6, 0
+; GFX11-NEXT:    s_addc_u32 s3, s3, 0
+; GFX11-NEXT:    s_cmp_lt_i32 s1, 31
+; GFX11-NEXT:    s_cselect_b32 s3, s3, 0x7c00
+; GFX11-NEXT:    s_cmp_lg_u32 s2, 0
+; GFX11-NEXT:    s_cselect_b32 s2, -1, 0
+; GFX11-NEXT:    s_cmpk_eq_i32 s1, 0x40f
+; GFX11-NEXT:    v_cndmask_b32_e64 v0, 0, 1, s2
+; GFX11-NEXT:    s_cselect_b32 vcc_lo, -1, 0
+; GFX11-NEXT:    s_lshr_b32 s1, s7, 16
+; GFX11-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(VALU_DEP_1)
+; GFX11-NEXT:    s_and_b32 s1, s1, 0x8000
+; GFX11-NEXT:    v_lshlrev_b32_e32 v0, 9, v0
+; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
+; GFX11-NEXT:    v_or_b32_e32 v0, 0x7c00, v0
+; GFX11-NEXT:    v_cndmask_b32_e32 v0, s3, v0, vcc_lo
+; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
+; GFX11-NEXT:    v_or_b32_e32 v0, s1, v0
+; GFX11-NEXT:    v_bfi_b32 v0, 0x7fff, v0, s0
+; GFX11-NEXT:    global_store_b16 v1, v0, s[4:5]
+; GFX11-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
+; GFX11-NEXT:    s_endpgm
   %mag.trunc = fptrunc double %mag to half
   %result = call half @llvm.copysign.f16(half %mag.trunc, half %sign)
   store half %result, ptr addrspace(1) %arg_out
@@ -1441,6 +1834,26 @@ define amdgpu_kernel void @s_copysign_v2f16(ptr addrspace(1) %arg_out, <2 x half
 ; GFX9-NEXT:    v_lshl_or_b32 v1, v2, 16, v1
 ; GFX9-NEXT:    global_store_dword v0, v1, s[0:1]
 ; GFX9-NEXT:    s_endpgm
+;
+; GFX11-LABEL: s_copysign_v2f16:
+; GFX11:       ; %bb.0:
+; GFX11-NEXT:    s_load_b128 s[0:3], s[0:1], 0x24
+; GFX11-NEXT:    v_mov_b32_e32 v2, 0
+; GFX11-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX11-NEXT:    v_mov_b32_e32 v0, s3
+; GFX11-NEXT:    s_lshr_b32 s3, s3, 16
+; GFX11-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(VALU_DEP_2)
+; GFX11-NEXT:    v_mov_b32_e32 v1, s3
+; GFX11-NEXT:    v_bfi_b32 v0, 0x7fff, s2, v0
+; GFX11-NEXT:    s_lshr_b32 s2, s2, 16
+; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instid1(SALU_CYCLE_1)
+; GFX11-NEXT:    v_bfi_b32 v1, 0x7fff, s2, v1
+; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_1)
+; GFX11-NEXT:    v_and_b32_e32 v0, 0xffff, v0
+; GFX11-NEXT:    v_lshl_or_b32 v0, v1, 16, v0
+; GFX11-NEXT:    global_store_b32 v2, v0, s[0:1]
+; GFX11-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
+; GFX11-NEXT:    s_endpgm
   %out = call <2 x half> @llvm.copysign.v2f16(<2 x half> %arg_mag, <2 x half> %arg_sign)
   store <2 x half> %out, ptr addrspace(1) %arg_out
   ret void
@@ -1527,6 +1940,31 @@ define amdgpu_kernel void @s_copysign_v3f16(ptr addrspace(1) %arg_out, <3 x half
 ; GFX9-NEXT:    global_store_short v0, v2, s[2:3] offset:4
 ; GFX9-NEXT:    global_store_dword v0, v1, s[2:3]
 ; GFX9-NEXT:    s_endpgm
+;
+; GFX11-LABEL: s_copysign_v3f16:
+; GFX11:       ; %bb.0:
+; GFX11-NEXT:    s_clause 0x1
+; GFX11-NEXT:    s_load_b128 s[4:7], s[0:1], 0x2c
+; GFX11-NEXT:    s_load_b64 s[0:1], s[0:1], 0x24
+; GFX11-NEXT:    v_mov_b32_e32 v3, 0
+; GFX11-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX11-NEXT:    s_lshr_b32 s2, s6, 16
+; GFX11-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(SKIP_2) | instid1(VALU_DEP_2)
+; GFX11-NEXT:    v_dual_mov_b32 v0, s6 :: v_dual_mov_b32 v1, s2
+; GFX11-NEXT:    s_lshr_b32 s2, s4, 16
+; GFX11-NEXT:    v_mov_b32_e32 v2, s7
+; GFX11-NEXT:    v_bfi_b32 v0, 0x7fff, s4, v0
+; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_3) | instskip(NEXT) | instid1(VALU_DEP_3)
+; GFX11-NEXT:    v_bfi_b32 v1, 0x7fff, s2, v1
+; GFX11-NEXT:    v_bfi_b32 v2, 0x7fff, s5, v2
+; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_3) | instskip(NEXT) | instid1(VALU_DEP_1)
+; GFX11-NEXT:    v_and_b32_e32 v0, 0xffff, v0
+; GFX11-NEXT:    v_lshl_or_b32 v0, v1, 16, v0
+; GFX11-NEXT:    s_clause 0x1
+; GFX11-NEXT:    global_store_b16 v3, v2, s[0:1] offset:4
+; GFX11-NEXT:    global_store_b32 v3, v0, s[0:1]
+; GFX11-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
+; GFX11-NEXT:    s_endpgm
   %out = call <3 x half> @llvm.copysign.v3f16(<3 x half> %arg_mag, <3 x half> %arg_sign)
   store <3 x half> %out, ptr addrspace(1) %arg_out
   ret void
@@ -1628,6 +2066,33 @@ define amdgpu_kernel void @s_copysign_v4f16(ptr addrspace(1) %arg_out, <4 x half
 ; GFX9-NEXT:    v_lshl_or_b32 v0, v3, 16, v0
 ; GFX9-NEXT:    global_store_dwordx2 v2, v[0:1], s[2:3]
 ; GFX9-NEXT:    s_endpgm
+;
+; GFX11-LABEL: s_copysign_v4f16:
+; GFX11:       ; %bb.0:
+; GFX11-NEXT:    s_clause 0x1
+; GFX11-NEXT:    s_load_b128 s[4:7], s[0:1], 0x2c
+; GFX11-NEXT:    s_load_b64 s[0:1], s[0:1], 0x24
+; GFX11-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX11-NEXT:    v_dual_mov_b32 v5, 0 :: v_dual_mov_b32 v0, s7
+; GFX11-NEXT:    v_mov_b32_e32 v1, s6
+; GFX11-NEXT:    s_lshr_b32 s2, s7, 16
+; GFX11-NEXT:    s_lshr_b32 s6, s6, 16
+; GFX11-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
+; GFX11-NEXT:    v_dual_mov_b32 v2, s2 :: v_dual_mov_b32 v3, s6
+; GFX11-NEXT:    v_bfi_b32 v0, 0x7fff, s5, v0
+; GFX11-NEXT:    v_bfi_b32 v1, 0x7fff, s4, v1
+; GFX11-NEXT:    s_lshr_b32 s3, s5, 16
+; GFX11-NEXT:    s_lshr_b32 s2, s4, 16
+; GFX11-NEXT:    v_bfi_b32 v2, 0x7fff, s3, v2
+; GFX11-NEXT:    v_bfi_b32 v3, 0x7fff, s2, v3
+; GFX11-NEXT:    v_and_b32_e32 v0, 0xffff, v0
+; GFX11-NEXT:    v_and_b32_e32 v4, 0xffff, v1
+; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_2)
+; GFX11-NEXT:    v_lshl_or_b32 v1, v2, 16, v0
+; GFX11-NEXT:    v_lshl_or_b32 v0, v3, 16, v4
+; GFX11-NEXT:    global_store_b64 v5, v[0:1], s[0:1]
+; GFX11-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
+; GFX11-NEXT:    s_endpgm
   %out = call <4 x half> @llvm.copysign.v4f16(<4 x half> %arg_mag, <4 x half> %arg_sign)
   store <4 x half> %out, ptr addrspace(1) %arg_out
   ret void

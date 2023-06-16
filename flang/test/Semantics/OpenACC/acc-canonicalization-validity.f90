@@ -24,27 +24,6 @@ program openacc_clause_validity
   do
   end do
 
-  !ERROR: A DO loop must follow the PARALLEL LOOP directive
-  !$acc parallel loop
-  i = 1
-
-  !ERROR: A DO loop must follow the KERNELS LOOP directive
-  !$acc kernels loop
-  i = 1
-
-  !ERROR: A DO loop must follow the SERIAL LOOP directive
-  !$acc serial loop
-  i = 1
-
-  !ERROR: The END PARALLEL LOOP directive must follow the DO loop associated with the loop construct
-  !$acc end parallel loop
-
-  !ERROR: The END KERNELS LOOP directive must follow the DO loop associated with the loop construct
-  !$acc end kernels loop
-
-  !ERROR: The END SERIAL LOOP directive must follow the DO loop associated with the loop construct
-  !$acc end serial loop
-
   !$acc parallel loop
   do i = 1, N
     a(i) = 3.14

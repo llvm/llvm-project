@@ -137,6 +137,13 @@ public:
   /// Checks if the function is a destructor.
   bool isDestructor() const { return isa<CXXDestructorDecl>(F); }
 
+  /// Returns the parent record decl, if any.
+  const CXXRecordDecl *getParentDecl() const {
+    if (const auto *MD = dyn_cast<CXXMethodDecl>(F))
+      return MD->getParent();
+    return nullptr;
+  }
+
   /// Checks if the function is fully done compiling.
   bool isFullyCompiled() const { return IsFullyCompiled; }
 

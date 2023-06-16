@@ -6,7 +6,7 @@ target triple = "aarch64-unknown-linux-gnu"
 define void @build_vector_7_inc1_v4i1(ptr %a) #0 {
 ; CHECK-LABEL: build_vector_7_inc1_v4i1:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov w8, #5
+; CHECK-NEXT:    mov w8, #5 // =0x5
 ; CHECK-NEXT:    strb w8, [x0]
 ; CHECK-NEXT:    ret
   store <4 x i1> <i1 true, i1 false, i1 true, i1 false>, ptr %a, align 1
@@ -55,7 +55,7 @@ define void @build_vector_0_dec3_v8i32(ptr %a) #0 {
 define void @build_vector_minus2_dec32_v4i64(ptr %a) #0 {
 ; CHECK-LABEL: build_vector_minus2_dec32_v4i64:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov x8, #-32
+; CHECK-NEXT:    mov x8, #-32 // =0xffffffffffffffe0
 ; CHECK-NEXT:    mov z0.d, #-66 // =0xffffffffffffffbe
 ; CHECK-NEXT:    mov z2.d, #-2 // =0xfffffffffffffffe
 ; CHECK-NEXT:    index z1.d, #0, x8

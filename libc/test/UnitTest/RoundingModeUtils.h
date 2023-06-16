@@ -23,6 +23,7 @@ struct ForceRoundingMode {
 
   int old_rounding_mode;
   int rounding_mode;
+  bool success;
 };
 
 template <RoundingMode R> struct ForceRoundingModeTest : ForceRoundingMode {

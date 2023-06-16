@@ -79,7 +79,7 @@ namespace std  // purposefully not using versioning namespace
 
 #if defined(_LIBCPP_ABI_MICROSOFT)
 
-class _LIBCPP_EXCEPTION_ABI type_info
+class _LIBCPP_EXPORTED_FROM_ABI type_info
 {
     type_info& operator=(const type_info&);
     type_info(const type_info&);
@@ -299,7 +299,7 @@ struct __type_info_implementations {
      __impl;
 };
 
-class _LIBCPP_EXCEPTION_ABI type_info
+class _LIBCPP_EXPORTED_FROM_ABI type_info
 {
   type_info& operator=(const type_info&);
   type_info(const type_info&);
@@ -354,7 +354,7 @@ public:
 };
 #endif // defined(_LIBCPP_ABI_MICROSOFT)
 
-class _LIBCPP_EXCEPTION_ABI bad_cast
+class _LIBCPP_EXPORTED_FROM_ABI bad_cast
     : public exception
 {
  public:
@@ -364,7 +364,7 @@ class _LIBCPP_EXCEPTION_ABI bad_cast
   const char* what() const _NOEXCEPT override;
 };
 
-class _LIBCPP_EXCEPTION_ABI bad_typeid
+class _LIBCPP_EXPORTED_FROM_ABI bad_typeid
     : public exception
 {
  public:

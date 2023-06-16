@@ -133,6 +133,13 @@ Changes to the AMDGPU Backend
   improves the interaction between AMDGPU buffer operations and the LLVM memory
   model, and so the non `.ptr` intrinsics are deprecated.
 
+* Added llvm.amdgcn.log.f32 intrinsic. This provides direct access to
+  v_log_f32.
+
+* Added llvm.amdgcn.exp2.f32 intrinsic. This provides direct access to
+  v_exp_f32.
+
+
 Changes to the ARM Backend
 --------------------------
 

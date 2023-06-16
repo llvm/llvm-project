@@ -89,6 +89,8 @@ public:
     return M ? M->getSource(F, PC) : F->getSource(PC);
   }
 
+  Context &getContext() const { return Ctx; }
+
 private:
   /// AST Walker state.
   State &Parent;

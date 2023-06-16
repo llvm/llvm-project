@@ -515,15 +515,10 @@ public:
   }
 
   /// Returns the minimum ABI-required alignment for the specified type.
-  /// FIXME: Deprecate this function once migration to Align is over.
-  LLVM_DEPRECATED("use getABITypeAlign instead", "getABITypeAlign")
-  uint64_t getABITypeAlignment(Type *Ty) const;
-
-  /// Returns the minimum ABI-required alignment for the specified type.
   Align getABITypeAlign(Type *Ty) const;
 
   /// Helper function to return `Alignment` if it's set or the result of
-  /// `getABITypeAlignment(Ty)`, in any case the result is a valid alignment.
+  /// `getABITypeAlign(Ty)`, in any case the result is a valid alignment.
   inline Align getValueOrABITypeAlignment(MaybeAlign Alignment,
                                           Type *Ty) const {
     return Alignment ? *Alignment : getABITypeAlign(Ty);

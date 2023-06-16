@@ -1107,6 +1107,9 @@ void CompilerInvocation::setSemanticsOpts(
   semanticsContext->targetCharacteristics()
       .set_compilerOptionsString(allCompilerInvocOpts)
       .set_compilerVersionString(version);
+
+  if (targetTriple.isPPC())
+    semanticsContext->targetCharacteristics().set_isPPC(true);
 }
 
 /// Set \p loweringOptions controlling lowering behavior based

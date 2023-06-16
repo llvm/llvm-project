@@ -1033,13 +1033,11 @@ define <8 x i32> @umull_and_v8i32(<8 x i16> %src1, <8 x i32> %src2) {
 ; CHECK-LABEL: umull_and_v8i32:
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    movi v3.2d, #0x0000ff000000ff
-; CHECK-NEXT:    ext v4.16b, v0.16b, v0.16b, #8
 ; CHECK-NEXT:    and v2.16b, v2.16b, v3.16b
 ; CHECK-NEXT:    and v1.16b, v1.16b, v3.16b
-; CHECK-NEXT:    xtn v1.4h, v1.4s
-; CHECK-NEXT:    xtn v2.4h, v2.4s
-; CHECK-NEXT:    umull v0.4s, v0.4h, v1.4h
-; CHECK-NEXT:    umull v1.4s, v4.4h, v2.4h
+; CHECK-NEXT:    uzp1 v2.8h, v1.8h, v2.8h
+; CHECK-NEXT:    umull2 v1.4s, v0.8h, v2.8h
+; CHECK-NEXT:    umull v0.4s, v0.4h, v2.4h
 ; CHECK-NEXT:    ret
 entry:
   %in1 = zext <8 x i16> %src1 to <8 x i32>
@@ -1084,13 +1082,11 @@ define <4 x i64> @umull_and_v4i64(<4 x i32> %src1, <4 x i64> %src2) {
 ; CHECK-LABEL: umull_and_v4i64:
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    movi v3.2d, #0x000000000000ff
-; CHECK-NEXT:    ext v4.16b, v0.16b, v0.16b, #8
 ; CHECK-NEXT:    and v2.16b, v2.16b, v3.16b
 ; CHECK-NEXT:    and v1.16b, v1.16b, v3.16b
-; CHECK-NEXT:    xtn v1.2s, v1.2d
-; CHECK-NEXT:    xtn v2.2s, v2.2d
-; CHECK-NEXT:    umull v0.2d, v0.2s, v1.2s
-; CHECK-NEXT:    umull v1.2d, v4.2s, v2.2s
+; CHECK-NEXT:    uzp1 v2.4s, v1.4s, v2.4s
+; CHECK-NEXT:    umull2 v1.2d, v0.4s, v2.4s
+; CHECK-NEXT:    umull v0.2d, v0.2s, v2.2s
 ; CHECK-NEXT:    ret
 entry:
   %in1 = zext <4 x i32> %src1 to <4 x i64>
@@ -1115,3 +1111,227 @@ entry:
   %out = mul nsw <4 x i64> %in1, %broadcast.splat
   ret <4 x i64> %out
 }
+
+define void @pmlsl2_v8i16_uzp1(<16 x i8> %0, <8 x i16> %1, ptr %2, ptr %3) {
+; CHECK-LABEL: pmlsl2_v8i16_uzp1:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    ldr q2, [x1, #16]
+; CHECK-NEXT:    uzp1 v2.16b, v0.16b, v2.16b
+; CHECK-NEXT:    pmull2 v0.8h, v0.16b, v2.16b
+; CHECK-NEXT:    sub v0.8h, v1.8h, v0.8h
+; CHECK-NEXT:    str q0, [x0]
+; CHECK-NEXT:    ret
+  %5 = getelementptr inbounds i32, ptr %3, i64 4
+  %6 = load <8 x i16>, ptr %5, align 4
+  %7 = trunc <8 x i16> %6 to <8 x i8>
+  %8 = shufflevector <16 x i8> %0, <16 x i8> poison, <8 x i32> <i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>
+  %9 = tail call <8 x i16> @llvm.aarch64.neon.pmull.v8i16(<8 x i8> %8, <8 x i8> %7)
+  %10 = sub <8 x i16> %1, %9
+  store <8 x i16> %10, ptr %2, align 16
+  ret void
+}
+
+define void @smlsl2_v8i16_uzp1(<16 x i8> %0, <8 x i16> %1, ptr %2, ptr %3) {
+; CHECK-LABEL: smlsl2_v8i16_uzp1:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    ldr q2, [x1, #16]
+; CHECK-NEXT:    uzp1 v2.16b, v0.16b, v2.16b
+; CHECK-NEXT:    smlsl2 v1.8h, v0.16b, v2.16b
+; CHECK-NEXT:    str q1, [x0]
+; CHECK-NEXT:    ret
+  %5 = getelementptr inbounds i32, ptr %3, i64 4
+  %6 = load <8 x i16>, ptr %5, align 4
+  %7 = trunc <8 x i16> %6 to <8 x i8>
+  %8 = shufflevector <16 x i8> %0, <16 x i8> poison, <8 x i32> <i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>
+  %9 = tail call <8 x i16> @llvm.aarch64.neon.smull.v8i16(<8 x i8> %8, <8 x i8> %7)
+  %10 = sub <8 x i16> %1, %9
+  store <8 x i16> %10, ptr %2, align 16
+  ret void
+}
+
+define void @umlsl2_v8i16_uzp1(<16 x i8> %0, <8 x i16> %1, ptr %2, ptr %3) {
+; CHECK-LABEL: umlsl2_v8i16_uzp1:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    ldr q2, [x1, #16]
+; CHECK-NEXT:    uzp1 v2.16b, v0.16b, v2.16b
+; CHECK-NEXT:    umlsl2 v1.8h, v0.16b, v2.16b
+; CHECK-NEXT:    str q1, [x0]
+; CHECK-NEXT:    ret
+  %5 = getelementptr inbounds i32, ptr %3, i64 4
+  %6 = load <8 x i16>, ptr %5, align 4
+  %7 = trunc <8 x i16> %6 to <8 x i8>
+  %8 = shufflevector <16 x i8> %0, <16 x i8> poison, <8 x i32> <i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>
+  %9 = tail call <8 x i16> @llvm.aarch64.neon.umull.v8i16(<8 x i8> %8, <8 x i8> %7)
+  %10 = sub <8 x i16> %1, %9
+  store <8 x i16> %10, ptr %2, align 16
+  ret void
+}
+
+define void @smlsl2_v4i32_uzp1(<8 x i16> %0, <4 x i32> %1, ptr %2, ptr %3) {
+; CHECK-LABEL: smlsl2_v4i32_uzp1:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    ldr q2, [x1, #16]
+; CHECK-NEXT:    uzp1 v2.8h, v0.8h, v2.8h
+; CHECK-NEXT:    smlsl2 v1.4s, v0.8h, v2.8h
+; CHECK-NEXT:    str q1, [x0]
+; CHECK-NEXT:    ret
+  %5 = getelementptr inbounds i32, ptr %3, i64 4
+  %6 = load <4 x i32>, ptr %5, align 4
+  %7 = trunc <4 x i32> %6 to <4 x i16>
+  %8 = shufflevector <8 x i16> %0, <8 x i16> poison, <4 x i32> <i32 4, i32 5, i32 6, i32 7>
+  %9 = tail call <4 x i32> @llvm.aarch64.neon.smull.v4i32(<4 x i16> %8, <4 x i16> %7)
+  %10 = sub <4 x i32> %1, %9
+  store <4 x i32> %10, ptr %2, align 16
+  ret void
+}
+
+define void @umlsl2_v4i32_uzp1(<8 x i16> %0, <4 x i32> %1, ptr %2, ptr %3) {
+; CHECK-LABEL: umlsl2_v4i32_uzp1:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    ldr q2, [x1, #16]
+; CHECK-NEXT:    uzp1 v2.8h, v0.8h, v2.8h
+; CHECK-NEXT:    umlsl2 v1.4s, v0.8h, v2.8h
+; CHECK-NEXT:    str q1, [x0]
+; CHECK-NEXT:    ret
+  %5 = getelementptr inbounds i32, ptr %3, i64 4
+  %6 = load <4 x i32>, ptr %5, align 4
+  %7 = trunc <4 x i32> %6 to <4 x i16>
+  %8 = shufflevector <8 x i16> %0, <8 x i16> poison, <4 x i32> <i32 4, i32 5, i32 6, i32 7>
+  %9 = tail call <4 x i32> @llvm.aarch64.neon.umull.v4i32(<4 x i16> %8, <4 x i16> %7)
+  %10 = sub <4 x i32> %1, %9
+  store <4 x i32> %10, ptr %2, align 16
+  ret void
+}
+
+define void @pmlsl_pmlsl2_v8i16_uzp1(<16 x i8> %0, <8 x i16> %1, ptr %2, ptr %3, i32 %4) {
+; CHECK-LABEL: pmlsl_pmlsl2_v8i16_uzp1:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    ldp q2, q3, [x1]
+; CHECK-NEXT:    uzp1 v2.16b, v2.16b, v3.16b
+; CHECK-NEXT:    pmull v3.8h, v0.8b, v2.8b
+; CHECK-NEXT:    pmull2 v0.8h, v0.16b, v2.16b
+; CHECK-NEXT:    add v0.8h, v3.8h, v0.8h
+; CHECK-NEXT:    sub v0.8h, v1.8h, v0.8h
+; CHECK-NEXT:    str q0, [x0]
+; CHECK-NEXT:    ret
+entry:
+  %5 = load <8 x i16>, ptr %3, align 4
+  %6 = trunc <8 x i16> %5 to <8 x i8>
+  %7 = getelementptr inbounds i32, ptr %3, i64 4
+  %8 = load <8 x i16>, ptr %7, align 4
+  %9 = trunc <8 x i16> %8 to <8 x i8>
+  %10 = shufflevector <16 x i8> %0, <16 x i8> poison, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
+  %11 = tail call <8 x i16> @llvm.aarch64.neon.pmull.v8i16(<8 x i8> %10, <8 x i8> %6)
+  %12 = shufflevector <16 x i8> %0, <16 x i8> poison, <8 x i32> <i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>
+  %13 = tail call <8 x i16> @llvm.aarch64.neon.pmull.v8i16(<8 x i8> %12, <8 x i8> %9)
+  %14 = add <8 x i16> %11, %13
+  %15 = sub <8 x i16> %1, %14
+  store <8 x i16> %15, ptr %2, align 16
+  ret void
+}
+
+define void @smlsl_smlsl2_v8i16_uzp1(<16 x i8> %0, <8 x i16> %1, ptr %2, ptr %3, i32 %4) {
+; CHECK-LABEL: smlsl_smlsl2_v8i16_uzp1:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    ldp q2, q3, [x1]
+; CHECK-NEXT:    uzp1 v2.16b, v2.16b, v3.16b
+; CHECK-NEXT:    smlsl v1.8h, v0.8b, v2.8b
+; CHECK-NEXT:    smlsl2 v1.8h, v0.16b, v2.16b
+; CHECK-NEXT:    str q1, [x0]
+; CHECK-NEXT:    ret
+entry:
+  %5 = load <8 x i16>, ptr %3, align 4
+  %6 = trunc <8 x i16> %5 to <8 x i8>
+  %7 = getelementptr inbounds i32, ptr %3, i64 4
+  %8 = load <8 x i16>, ptr %7, align 4
+  %9 = trunc <8 x i16> %8 to <8 x i8>
+  %10 = shufflevector <16 x i8> %0, <16 x i8> poison, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
+  %11 = tail call <8 x i16> @llvm.aarch64.neon.smull.v8i16(<8 x i8> %10, <8 x i8> %6)
+  %12 = shufflevector <16 x i8> %0, <16 x i8> poison, <8 x i32> <i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>
+  %13 = tail call <8 x i16> @llvm.aarch64.neon.smull.v8i16(<8 x i8> %12, <8 x i8> %9)
+  %14 = add <8 x i16> %11, %13
+  %15 = sub <8 x i16> %1, %14
+  store <8 x i16> %15, ptr %2, align 16
+  ret void
+}
+
+define void @umlsl_umlsl2_v8i16_uzp1(<16 x i8> %0, <8 x i16> %1, ptr %2, ptr %3, i32 %4) {
+; CHECK-LABEL: umlsl_umlsl2_v8i16_uzp1:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    ldp q2, q3, [x1]
+; CHECK-NEXT:    uzp1 v2.16b, v2.16b, v3.16b
+; CHECK-NEXT:    umlsl v1.8h, v0.8b, v2.8b
+; CHECK-NEXT:    umlsl2 v1.8h, v0.16b, v2.16b
+; CHECK-NEXT:    str q1, [x0]
+; CHECK-NEXT:    ret
+entry:
+  %5 = load <8 x i16>, ptr %3, align 4
+  %6 = trunc <8 x i16> %5 to <8 x i8>
+  %7 = getelementptr inbounds i32, ptr %3, i64 4
+  %8 = load <8 x i16>, ptr %7, align 4
+  %9 = trunc <8 x i16> %8 to <8 x i8>
+  %10 = shufflevector <16 x i8> %0, <16 x i8> poison, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
+  %11 = tail call <8 x i16> @llvm.aarch64.neon.umull.v8i16(<8 x i8> %10, <8 x i8> %6)
+  %12 = shufflevector <16 x i8> %0, <16 x i8> poison, <8 x i32> <i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>
+  %13 = tail call <8 x i16> @llvm.aarch64.neon.umull.v8i16(<8 x i8> %12, <8 x i8> %9)
+  %14 = add <8 x i16> %11, %13
+  %15 = sub <8 x i16> %1, %14
+  store <8 x i16> %15, ptr %2, align 16
+  ret void
+}
+
+define void @smlsl_smlsl2_v4i32_uzp1(<8 x i16> %0, <4 x i32> %1, ptr %2, ptr %3, i32 %4) {
+; CHECK-LABEL: smlsl_smlsl2_v4i32_uzp1:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    ldp q2, q3, [x1]
+; CHECK-NEXT:    uzp1 v2.8h, v2.8h, v3.8h
+; CHECK-NEXT:    smlsl v1.4s, v0.4h, v2.4h
+; CHECK-NEXT:    smlsl2 v1.4s, v0.8h, v2.8h
+; CHECK-NEXT:    str q1, [x0]
+; CHECK-NEXT:    ret
+entry:
+  %5 = load <4 x i32>, ptr %3, align 4
+  %6 = trunc <4 x i32> %5 to <4 x i16>
+  %7 = getelementptr inbounds i32, ptr %3, i64 4
+  %8 = load <4 x i32>, ptr %7, align 4
+  %9 = trunc <4 x i32> %8 to <4 x i16>
+  %10 = shufflevector <8 x i16> %0, <8 x i16> poison, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
+  %11 = tail call <4 x i32> @llvm.aarch64.neon.smull.v4i32(<4 x i16> %10, <4 x i16> %6)
+  %12 = shufflevector <8 x i16> %0, <8 x i16> poison, <4 x i32> <i32 4, i32 5, i32 6, i32 7>
+  %13 = tail call <4 x i32> @llvm.aarch64.neon.smull.v4i32(<4 x i16> %12, <4 x i16> %9)
+  %14 = add <4 x i32> %11, %13
+  %15 = sub <4 x i32> %1, %14
+  store <4 x i32> %15, ptr %2, align 16
+  ret void
+}
+
+define void @umlsl_umlsl2_v4i32_uzp1(<8 x i16> %0, <4 x i32> %1, ptr %2, ptr %3, i32 %4) {
+; CHECK-LABEL: umlsl_umlsl2_v4i32_uzp1:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    ldp q2, q3, [x1]
+; CHECK-NEXT:    uzp1 v2.8h, v2.8h, v3.8h
+; CHECK-NEXT:    umlsl v1.4s, v0.4h, v2.4h
+; CHECK-NEXT:    umlsl2 v1.4s, v0.8h, v2.8h
+; CHECK-NEXT:    str q1, [x0]
+; CHECK-NEXT:    ret
+entry:
+  %5 = load <4 x i32>, ptr %3, align 4
+  %6 = trunc <4 x i32> %5 to <4 x i16>
+  %7 = getelementptr inbounds i32, ptr %3, i64 4
+  %8 = load <4 x i32>, ptr %7, align 4
+  %9 = trunc <4 x i32> %8 to <4 x i16>
+  %10 = shufflevector <8 x i16> %0, <8 x i16> poison, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
+  %11 = tail call <4 x i32> @llvm.aarch64.neon.umull.v4i32(<4 x i16> %10, <4 x i16> %6)
+  %12 = shufflevector <8 x i16> %0, <8 x i16> poison, <4 x i32> <i32 4, i32 5, i32 6, i32 7>
+  %13 = tail call <4 x i32> @llvm.aarch64.neon.umull.v4i32(<4 x i16> %12, <4 x i16> %9)
+  %14 = add <4 x i32> %11, %13
+  %15 = sub <4 x i32> %1, %14
+  store <4 x i32> %15, ptr %2, align 16
+  ret void
+}
+
+declare <8 x i16> @llvm.aarch64.neon.pmull.v8i16(<8 x i8>, <8 x i8>)
+declare <8 x i16> @llvm.aarch64.neon.smull.v8i16(<8 x i8>, <8 x i8>)
+declare <8 x i16> @llvm.aarch64.neon.umull.v8i16(<8 x i8>, <8 x i8>)
+declare <4 x i32> @llvm.aarch64.neon.smull.v4i32(<4 x i16>, <4 x i16>)
+declare <4 x i32> @llvm.aarch64.neon.umull.v4i32(<4 x i16>, <4 x i16>)

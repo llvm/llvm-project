@@ -80,7 +80,7 @@ public:
   READ_FEATURE(AccEndAtomic)
   READ_FEATURE(AccEndBlockDirective)
   READ_FEATURE(AccEndCombinedDirective)
-  READ_FEATURE(AccGangArgument)
+  READ_FEATURE(AccGangArg)
   READ_FEATURE(AccObject)
   READ_FEATURE(AccObjectList)
   READ_FEATURE(AccObjectListWithModifier)

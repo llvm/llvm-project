@@ -31,20 +31,20 @@ void test_transpose_template1() {
 
 void test_transpose_template2(MyMatrix<double, 7, 6> &M) {
   // CHECK-LABEL: define{{.*}} void @_Z24test_transpose_template2R8MyMatrixIdLj7ELj6EE(
-  // CHECK:         call void @_Z9transposeIdLj7ELj6EE8MyMatrixIT_XT1_EXT0_EERKS0_IS1_XT0_EXT1_EE(ptr sret(%struct.MyMatrix.2) align 8 %ref.tmp1, ptr noundef nonnull align 8 dereferenceable(336) %0)
-  // CHECK-NEXT:    call void @_Z9transposeIdLj6ELj7EE8MyMatrixIT_XT1_EXT0_EERKS0_IS1_XT0_EXT1_EE(ptr sret(%struct.MyMatrix.1) align 8 %ref.tmp, ptr noundef nonnull align 8 dereferenceable(336) %ref.tmp1)
-  // CHECK-NEXT:    call void @_Z9transposeIdLj7ELj6EE8MyMatrixIT_XT1_EXT0_EERKS0_IS1_XT0_EXT1_EE(ptr sret(%struct.MyMatrix.2) align 8 %M2_t, ptr noundef nonnull align 8 dereferenceable(336) %ref.tmp)
+  // CHECK:         call void @_Z9transposeIdLj7ELj6EE8MyMatrixIT_XT1_EXT0_EERKS0_IS1_XT0_EXT1_EE(ptr sret(%struct.MyMatrix.1) align 8 %ref.tmp1, ptr noundef nonnull align 8 dereferenceable(336) %0)
+  // CHECK-NEXT:    call void @_Z9transposeIdLj6ELj7EE8MyMatrixIT_XT1_EXT0_EERKS0_IS1_XT0_EXT1_EE(ptr sret(%struct.MyMatrix.2) align 8 %ref.tmp, ptr noundef nonnull align 8 dereferenceable(336) %ref.tmp1)
+  // CHECK-NEXT:    call void @_Z9transposeIdLj7ELj6EE8MyMatrixIT_XT1_EXT0_EERKS0_IS1_XT0_EXT1_EE(ptr sret(%struct.MyMatrix.1) align 8 %M2_t, ptr noundef nonnull align 8 dereferenceable(336) %ref.tmp)
 
   // CHECK-LABEL: define linkonce_odr void @_Z9transposeIdLj7ELj6EE8MyMatrixIT_XT1_EXT0_EERKS0_IS1_XT0_EXT1_EE(
   // CHECK:         [[M:%.*]] = load <42 x double>, ptr {{.*}}, align 8
   // CHECK-NEXT:    [[M_T:%.*]] = call <42 x double> @llvm.matrix.transpose.v42f64(<42 x double> [[M]], i32 7, i32 6)
-  // CHECK-NEXT:    [[RES_ADDR:%.*]] = getelementptr inbounds %struct.MyMatrix.2, ptr %agg.result, i32 0, i32 0
+  // CHECK-NEXT:    [[RES_ADDR:%.*]] = getelementptr inbounds %struct.MyMatrix.1, ptr %agg.result, i32 0, i32 0
   // CHECK-NEXT:    store <42 x double> [[M_T]], ptr [[RES_ADDR]], align 8
 
   // CHECK-LABEL: define linkonce_odr void @_Z9transposeIdLj6ELj7EE8MyMatrixIT_XT1_EXT0_EERKS0_IS1_XT0_EXT1_EE(
   // CHECK:         [[M:%.*]] = load <42 x double>, ptr {{.*}}, align 8
   // CHECK-NEXT:    [[M_T:%.*]] = call <42 x double> @llvm.matrix.transpose.v42f64(<42 x double> [[M]], i32 6, i32 7)
-  // CHECK-NEXT:    [[RES_ADDR:%.*]] = getelementptr inbounds %struct.MyMatrix.1, ptr %agg.result, i32 0, i32 0
+  // CHECK-NEXT:    [[RES_ADDR:%.*]] = getelementptr inbounds %struct.MyMatrix.2, ptr %agg.result, i32 0, i32 0
   // CHECK-NEXT:    store <42 x double> [[M_T]], ptr [[RES_ADDR]], align 8
 
   MyMatrix<double, 6, 7> M2_t = transpose(transpose(transpose(M)));

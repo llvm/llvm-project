@@ -148,6 +148,7 @@ cxx_sources = [
   "mutex.cpp",
   "mutex_destructor.cpp",
   "new.cpp",
+  "new_handler.cpp",
   "optional.cpp",
   "random.cpp",
   "random_shuffle.cpp",

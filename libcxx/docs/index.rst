@@ -39,6 +39,7 @@ Getting Started with libc++
    BuildingLibcxx
    TestingLibcxx
    Contributing
+   Modules
    ReleaseProcedure
    Status/Cxx14
    Status/Cxx17
@@ -47,6 +48,7 @@ Getting Started with libc++
    Status/Cxx2c
    Status/Format
    Status/Parallelism
+   Status/PSTL
    Status/Ranges
    Status/Spaceship
    Status/Zip

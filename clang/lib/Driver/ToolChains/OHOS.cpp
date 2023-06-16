@@ -50,7 +50,7 @@ static bool findOHOSMuslMultilibs(const Multilib::flags_list &Flags,
       Multilib("/a7_hard_neon-vfpv4", {}, {},
                {"-mcpu=cortex-a7", "-mfloat-abi=hard", "-mfpu=neon-vfpv4"}));
 
-  if (Multilibs.select(Flags, Result.SelectedMultilib)) {
+  if (Multilibs.select(Flags, Result.SelectedMultilibs)) {
     Result.Multilibs = Multilibs;
     return true;
   }
@@ -136,7 +136,10 @@ OHOS::OHOS(const Driver &D, const llvm::Triple &Triple, const ArgList &Args)
   DetectedMultilibs Result;
   findOHOSMultilibs(D, *this, Triple, "", Args, Result);
   Multilibs = Result.Multilibs;
-  SelectedMultilib = Result.SelectedMultilib;
+  SelectedMultilibs = Result.SelectedMultilibs;
+  if (!SelectedMultilibs.empty()) {
+    SelectedMultilib = SelectedMultilibs.back();
+  }
 
   getFilePaths().clear();
   for (const auto &CandidateLibPath : getArchSpecificLibPaths())

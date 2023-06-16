@@ -216,7 +216,7 @@ _LIBCPP_BEGIN_NAMESPACE_STD
 
 #ifndef _LIBCPP_HAS_NO_THREADS
 
-class _LIBCPP_TYPE_VIS recursive_mutex
+class _LIBCPP_EXPORTED_FROM_ABI recursive_mutex
 {
     __libcpp_recursive_mutex_t __m_;
 
@@ -237,7 +237,7 @@ public:
     native_handle_type native_handle() {return &__m_;}
 };
 
-class _LIBCPP_TYPE_VIS timed_mutex
+class _LIBCPP_EXPORTED_FROM_ABI timed_mutex
 {
     mutex              __m_;
     condition_variable __cv_;
@@ -279,7 +279,7 @@ timed_mutex::try_lock_until(const chrono::time_point<_Clock, _Duration>& __t)
     return false;
 }
 
-class _LIBCPP_TYPE_VIS recursive_timed_mutex
+class _LIBCPP_EXPORTED_FROM_ABI recursive_timed_mutex
 {
     mutex              __m_;
     condition_variable __cv_;
@@ -658,8 +658,7 @@ __call_once_proxy(void* __vp)
     (*__p)();
 }
 
-_LIBCPP_FUNC_VIS void __call_once(volatile once_flag::_State_type&, void*,
-                                  void (*)(void*));
+_LIBCPP_EXPORTED_FROM_ABI void __call_once(volatile once_flag::_State_type&, void*, void (*)(void*));
 
 #ifndef _LIBCPP_CXX03_LANG
 

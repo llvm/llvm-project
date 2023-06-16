@@ -446,6 +446,13 @@ enum NodeType : unsigned {
   RSQ,
   RCP_LEGACY,
   RCP_IFLAG,
+
+  // log2, no denormal handling for f32.
+  LOG,
+
+  // exp2, no denormal handling for f32.
+  EXP,
+
   FMUL_LEGACY,
   RSQ_CLAMP,
   FP_CLASS,

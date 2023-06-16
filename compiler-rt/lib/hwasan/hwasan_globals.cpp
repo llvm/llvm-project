@@ -13,6 +13,8 @@
 
 #include "hwasan_globals.h"
 
+#include "sanitizer_common/sanitizer_array_ref.h"
+
 namespace __hwasan {
 
 enum { NT_LLVM_HWASAN_GLOBALS = 3 };

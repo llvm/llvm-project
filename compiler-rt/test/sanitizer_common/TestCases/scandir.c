@@ -1,4 +1,4 @@
-// REQUIRES (linux && !android) || freebsd
+// REQUIRES: (linux && !android) || freebsd
 
 // RUN: rm -rf %t-dir
 // RUN: mkdir -p %t-dir

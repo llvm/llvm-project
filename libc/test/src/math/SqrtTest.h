@@ -41,15 +41,15 @@ public:
     for (UIntType mant = 1; mant < HIDDEN_BIT; mant <<= 1) {
       FPBits denormal(T(0.0));
       denormal.set_mantissa(mant);
-
-      test_all_rounding_modes(func, T(denormal));
+      T x = T(denormal);
+      EXPECT_MPFR_MATCH_ALL_ROUNDING(mpfr::Operation::Sqrt, x, func(x), 0.5);
     }
 
     constexpr UIntType COUNT = 200'001;
     constexpr UIntType STEP = HIDDEN_BIT / COUNT;
     for (UIntType i = 0, v = 0; i <= COUNT; ++i, v += STEP) {
       T x = __llvm_libc::cpp::bit_cast<T>(v);
-      test_all_rounding_modes(func, x);
+      EXPECT_MPFR_MATCH_ALL_ROUNDING(mpfr::Operation::Sqrt, x, func(x), 0.5);
     }
   }
 
@@ -61,26 +61,8 @@ public:
       if (isnan(x) || (x < 0)) {
         continue;
       }
-      test_all_rounding_modes(func, x);
+      EXPECT_MPFR_MATCH_ALL_ROUNDING(mpfr::Operation::Sqrt, x, func(x), 0.5);
     }
-  }
-
-  void test_all_rounding_modes(SqrtFunc func, T x) {
-    mpfr::ForceRoundingMode r1(mpfr::RoundingMode::Nearest);
-    EXPECT_MPFR_MATCH(mpfr::Operation::Sqrt, x, func(x), 0.5,
-                      mpfr::RoundingMode::Nearest);
-
-    mpfr::ForceRoundingMode r2(mpfr::RoundingMode::Upward);
-    EXPECT_MPFR_MATCH(mpfr::Operation::Sqrt, x, func(x), 0.5,
-                      mpfr::RoundingMode::Upward);
-
-    mpfr::ForceRoundingMode r3(mpfr::RoundingMode::Downward);
-    EXPECT_MPFR_MATCH(mpfr::Operation::Sqrt, x, func(x), 0.5,
-                      mpfr::RoundingMode::Downward);
-
-    mpfr::ForceRoundingMode r4(mpfr::RoundingMode::TowardZero);
-    EXPECT_MPFR_MATCH(mpfr::Operation::Sqrt, x, func(x), 0.5,
-                      mpfr::RoundingMode::TowardZero);
   }
 };
 

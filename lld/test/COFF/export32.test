@@ -26,7 +26,7 @@
 
 # CHECK2:      Export Table:
 # CHECK2-NEXT: DLL name: export32.test.tmp.dll
-# CHECK2-NEXT: Ordinal base: 1
+# CHECK2-NEXT: Ordinal base: 5
 # CHECK2-NEXT: Ordinal      RVA  Name
 # CHECK2-NEXT:       5   0x1008  exportfn1
 # CHECK2-NEXT:       6   0x1010  exportfn2
@@ -38,7 +38,7 @@
 
 # CHECK3:      Export Table:
 # CHECK3-NEXT: DLL name: export32.test.tmp.dll
-# CHECK3-NEXT: Ordinal base: 1
+# CHECK3-NEXT: Ordinal base: 5
 # CHECK3-NEXT: Ordinal      RVA  Name
 # CHECK3-NEXT:       5   0x1008
 # CHECK3-NEXT:       6   0x1010  exportfn2
@@ -66,7 +66,7 @@
 
 # CHECK5:      Export Table:
 # CHECK5-NEXT: DLL name: export32.test.tmp.dll
-# CHECK5-NEXT: Ordinal base: 1
+# CHECK5-NEXT: Ordinal base: 2
 # CHECK5-NEXT: Ordinal      RVA  Name
 # CHECK5-NEXT:       2   0x1010  fn2
 # CHECK5-NEXT:       3   0x1008  exportfn1

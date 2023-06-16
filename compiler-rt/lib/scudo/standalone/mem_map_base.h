@@ -41,7 +41,7 @@ public:
   // want to remap them with different accessibility.
   bool remap(uptr Addr, uptr Size, const char *Name, uptr Flags = 0) {
     DCHECK(isAllocated());
-    DCHECK((Addr >= getBase()) || (Addr + Size <= getBase() + getCapacity()));
+    DCHECK((Addr >= getBase()) && (Addr + Size <= getBase() + getCapacity()));
     return invokeImpl(&Derived::remapImpl, Addr, Size, Name, Flags);
   }
 
@@ -49,7 +49,7 @@ public:
   // pages as no read/write permission.
   void setMemoryPermission(uptr Addr, uptr Size, uptr Flags) {
     DCHECK(isAllocated());
-    DCHECK((Addr >= getBase()) || (Addr + Size <= getBase() + getCapacity()));
+    DCHECK((Addr >= getBase()) && (Addr + Size <= getBase() + getCapacity()));
     return static_cast<Derived *>(this)->setMemoryPermissionImpl(Addr, Size,
                                                                  Flags);
   }
@@ -59,14 +59,14 @@ public:
   // virtual pages may lead to undefined behavior.
   void releasePagesToOS(uptr From, uptr Size) {
     DCHECK(isAllocated());
-    DCHECK((From >= getBase()) || (From + Size <= getBase() + getCapacity()));
+    DCHECK((From >= getBase()) && (From + Size <= getBase() + getCapacity()));
     invokeImpl(&Derived::releasePagesToOSImpl, From, Size);
   }
   // This is similar to the above one except that any subsequent access to the
   // released pages will return with zero-filled pages.
   void releaseAndZeroPagesToOS(uptr From, uptr Size) {
     DCHECK(isAllocated());
-    DCHECK((From >= getBase()) || (From + Size <= getBase() + getCapacity()));
+    DCHECK((From >= getBase()) && (From + Size <= getBase() + getCapacity()));
     invokeImpl(&Derived::releaseAndZeroPagesToOSImpl, From, Size);
   }
 
@@ -109,7 +109,7 @@ public:
   // the reserved pages is managed by each implementation.
   MemMapT dispatch(uptr Addr, uptr Size) {
     DCHECK(isCreated());
-    DCHECK((Addr >= getBase()) || (Addr + Size <= getBase() + getCapacity()));
+    DCHECK((Addr >= getBase()) && (Addr + Size <= getBase() + getCapacity()));
     return invokeImpl(&Derived::dispatchImpl, Addr, Size);
   }
 

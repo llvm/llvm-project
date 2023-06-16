@@ -53,7 +53,7 @@ _LIBCPP_BEGIN_NAMESPACE_STD
 
 _LIBCPP_DIAGNOSTIC_PUSH
 _LIBCPP_CLANG_DIAGNOSTIC_IGNORED("-Wweak-vtables")
-class _LIBCPP_EXCEPTION_ABI bad_function_call
+class _LIBCPP_EXPORTED_FROM_ABI bad_function_call
     : public exception
 {
 public:
@@ -1058,8 +1058,10 @@ public:
     // deleted overloads close possible hole in the type system
     template<class _R2, class... _ArgTypes2>
       bool operator==(const function<_R2(_ArgTypes2...)>&) const = delete;
+#if _LIBCPP_STD_VER <= 17
     template<class _R2, class... _ArgTypes2>
       bool operator!=(const function<_R2(_ArgTypes2...)>&) const = delete;
+#endif
 public:
     // function invocation:
     _LIBCPP_HIDE_FROM_ABI _Rp operator()(_ArgTypes...) const;
@@ -1198,6 +1200,8 @@ inline _LIBCPP_INLINE_VISIBILITY
 bool
 operator==(const function<_Rp(_ArgTypes...)>& __f, nullptr_t) _NOEXCEPT {return !__f;}
 
+#if _LIBCPP_STD_VER <= 17
+
 template <class _Rp, class... _ArgTypes>
 inline _LIBCPP_INLINE_VISIBILITY
 bool
@@ -1212,6 +1216,8 @@ template <class _Rp, class... _ArgTypes>
 inline _LIBCPP_INLINE_VISIBILITY
 bool
 operator!=(nullptr_t, const function<_Rp(_ArgTypes...)>& __f) _NOEXCEPT {return (bool)__f;}
+
+#endif // _LIBCPP_STD_VER <= 17
 
 template <class _Rp, class... _ArgTypes>
 inline _LIBCPP_INLINE_VISIBILITY

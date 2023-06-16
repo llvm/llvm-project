@@ -9,6 +9,8 @@
 #ifndef LLDB_UTILITY_LLDBASSERT_H
 #define LLDB_UTILITY_LLDBASSERT_H
 
+#include "llvm/ADT/StringRef.h"
+
 #ifndef NDEBUG
 #define lldbassert(x) assert(x)
 #else
@@ -29,6 +31,12 @@
 namespace lldb_private {
 void lldb_assert(bool expression, const char *expr_text, const char *func,
                  const char *file, unsigned int line);
+
+typedef void (*LLDBAssertCallback)(llvm::StringRef message,
+                                   llvm::StringRef backtrace,
+                                   llvm::StringRef prompt);
+
+void SetLLDBAssertCallback(LLDBAssertCallback callback);
 } // namespace lldb_private
 
 #endif // LLDB_UTILITY_LLDBASSERT_H

@@ -146,6 +146,27 @@ steps:
           limit: 2
     timeout_in_minutes: 120
 
+  - label: "C++23 Module std"
+    command: "libcxx/utils/ci/run-buildbot generic-module-std-cxx23"
+    artifact_paths:
+      - "**/test-results.xml"
+      - "**/*.abilist"
+    env:
+        # Note modules require and absolute path for clang-scan-deps
+        # https://github.com/llvm/llvm-project/issues/61006
+        CC: "/usr/lib/llvm-${LLVM_HEAD_VERSION}/bin/clang"
+        CXX: "/usr/lib/llvm-${LLVM_HEAD_VERSION}/bin/clang++"
+        CMAKE: "/opt/bin/cmake"
+        ENABLE_CLANG_TIDY: "On"
+    agents:
+      queue: "libcxx-builders"
+      os: "linux"
+    retry:
+      automatic:
+        - exit_status: -1  # Agent was lost
+          limit: 2
+    timeout_in_minutes: 120
+
   - label: "C++11"
     command: "libcxx/utils/ci/run-buildbot generic-cxx11"
     artifact_paths:

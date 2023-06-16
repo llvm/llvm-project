@@ -1,7 +1,7 @@
-// RUN: %clang_cc1 -std=c++11 -fopenmp-version=51 -verify \
+// RUN: %clang_cc1 -std=c++11 -verify \
 // RUN:  -fopenmp -ferror-limit 200 %s -Wuninitialized
 
-// RUN: %clang_cc1 -std=c++11 -fopenmp-version=51 -verify \
+// RUN: %clang_cc1 -std=c++11 -verify \
 // RUN:  -fopenmp-simd -ferror-limit 200 %s -Wuninitialized
 
 struct ST {

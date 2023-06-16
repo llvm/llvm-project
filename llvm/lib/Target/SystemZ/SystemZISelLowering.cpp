@@ -1505,6 +1505,7 @@ SDValue SystemZTargetLowering::LowerFormalArguments(
   SmallVector<CCValAssign, 16> ArgLocs;
   SystemZCCState CCInfo(CallConv, IsVarArg, MF, ArgLocs, *DAG.getContext());
   CCInfo.AnalyzeFormalArguments(Ins, CC_SystemZ);
+  FuncInfo->setSizeOfFnParams(CCInfo.getStackSize());
 
   unsigned NumFixedGPRs = 0;
   unsigned NumFixedFPRs = 0;

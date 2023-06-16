@@ -28,6 +28,7 @@ if (MLIR_INCLUDE_INTEGRATION_TESTS)
   option(MLIR_RUN_X86VECTOR_TESTS "Run X86Vector tests.")
   option(MLIR_RUN_CUDA_TENSOR_CORE_TESTS "Run CUDA Tensor core WMMA tests.")
   option(MLIR_RUN_CUDA_SM80_TESTS "Run CUDA A100 tests.")
+  option(MLIR_RUN_CUDA_SM80_LT_TESTS "Run CUDA A100 structured sparsity tests.")
   option(MLIR_RUN_ARM_SVE_TESTS "Run Arm SVE tests.")
   option(MLIR_RUN_ARM_SME_TESTS "Run Arm SME tests.")
 
@@ -35,6 +36,18 @@ if (MLIR_INCLUDE_INTEGRATION_TESTS)
   # The native target may not be enabled when cross compiling, raise an error.
   if(NOT MLIR_ENABLE_EXECUTION_ENGINE)
     message(FATAL_ERROR "MLIR_INCLUDE_INTEGRATION_TESTS requires a native target")
+  endif()
+
+  # When the Integration tests are requested via the MLIR_INCLUDE_INTEGRATION_TESTS 
+  # configuration flag, we automatically include sm80 tests when build for 
+  # cuSparse when the configuration flag MLIR_ENABLE_CUDA_CUSPARSE is set and 
+  # include sm80 lt tests when the MLIR_ENABLE_CUDA_CUSPARSELT is set in 
+  # addition to those.
+  if (MLIR_ENABLE_CUDA_CUSPARSE)
+    set(MLIR_RUN_CUDA_SM80_TESTS ON)
+    if (MLIR_ENABLE_CUDA_CUSPARSELT)
+      set(MLIR_RUN_CUDA_SM80_LT_TESTS ON)
+    endif()
   endif()
 
 endif()
@@ -55,6 +68,7 @@ llvm_canonicalize_cmake_booleans(
   MLIR_RUN_ARM_SVE_TESTS
   MLIR_RUN_ARM_SME_TESTS
   MLIR_RUN_CUDA_SM80_TESTS
+  MLIR_RUN_CUDA_SM80_LT_TESTS
   )
 
 configure_lit_site_cfg(

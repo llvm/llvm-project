@@ -559,17 +559,17 @@ define void @f13(ptr %dest, <4 x ptr> %ptr, <4 x i32> %i,
 ; CHECK-NEXT:    [[DEST_I1:%.*]] = getelementptr ptr, ptr [[DEST:%.*]], i32 1
 ; CHECK-NEXT:    [[DEST_I2:%.*]] = getelementptr ptr, ptr [[DEST]], i32 2
 ; CHECK-NEXT:    [[DEST_I3:%.*]] = getelementptr ptr, ptr [[DEST]], i32 3
-; CHECK-NEXT:    [[I_I0:%.*]] = extractelement <4 x i32> [[I:%.*]], i64 0
 ; CHECK-NEXT:    [[PTR_I0:%.*]] = extractelement <4 x ptr> [[PTR:%.*]], i64 0
+; CHECK-NEXT:    [[I_I0:%.*]] = extractelement <4 x i32> [[I:%.*]], i64 0
 ; CHECK-NEXT:    [[VAL_I0:%.*]] = getelementptr inbounds [4 x float], ptr [[PTR_I0]], i32 0, i32 [[I_I0]]
-; CHECK-NEXT:    [[I_I1:%.*]] = extractelement <4 x i32> [[I]], i64 1
 ; CHECK-NEXT:    [[PTR_I1:%.*]] = extractelement <4 x ptr> [[PTR]], i64 1
+; CHECK-NEXT:    [[I_I1:%.*]] = extractelement <4 x i32> [[I]], i64 1
 ; CHECK-NEXT:    [[VAL_I1:%.*]] = getelementptr inbounds [4 x float], ptr [[PTR_I1]], i32 1, i32 [[I_I1]]
-; CHECK-NEXT:    [[I_I2:%.*]] = extractelement <4 x i32> [[I]], i64 2
 ; CHECK-NEXT:    [[PTR_I2:%.*]] = extractelement <4 x ptr> [[PTR]], i64 2
+; CHECK-NEXT:    [[I_I2:%.*]] = extractelement <4 x i32> [[I]], i64 2
 ; CHECK-NEXT:    [[VAL_I2:%.*]] = getelementptr inbounds [4 x float], ptr [[PTR_I2]], i32 2, i32 [[I_I2]]
-; CHECK-NEXT:    [[I_I3:%.*]] = extractelement <4 x i32> [[I]], i64 3
 ; CHECK-NEXT:    [[PTR_I3:%.*]] = extractelement <4 x ptr> [[PTR]], i64 3
+; CHECK-NEXT:    [[I_I3:%.*]] = extractelement <4 x i32> [[I]], i64 3
 ; CHECK-NEXT:    [[VAL_I3:%.*]] = getelementptr inbounds [4 x float], ptr [[PTR_I3]], i32 3, i32 [[I_I3]]
 ; CHECK-NEXT:    store ptr [[VAL_I0]], ptr [[DEST]], align 32
 ; CHECK-NEXT:    store ptr [[VAL_I1]], ptr [[DEST_I1]], align 8

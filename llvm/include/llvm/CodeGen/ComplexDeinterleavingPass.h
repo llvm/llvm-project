@@ -38,7 +38,9 @@ enum class ComplexDeinterleavingOperation {
   // The following 'operations' are used to represent internal states. Backends
   // are not expected to try and support these in any capacity.
   Deinterleave,
-  Symmetric
+  Symmetric,
+  ReductionPHI,
+  ReductionOperation,
 };
 
 enum class ComplexDeinterleavingRotation {

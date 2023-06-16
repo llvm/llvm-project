@@ -141,7 +141,7 @@ private:
 
 _LIBCPP_BEGIN_NAMESPACE_STD
 
-class _LIBCPP_DEPRECATED _LIBCPP_TYPE_VIS strstreambuf
+class _LIBCPP_DEPRECATED _LIBCPP_EXPORTED_FROM_ABI strstreambuf
     : public streambuf
 {
 public:
@@ -237,7 +237,7 @@ strstreambuf::operator=(strstreambuf&& __rhs)
 
 #endif // _LIBCPP_CXX03_LANG
 
-class _LIBCPP_DEPRECATED _LIBCPP_TYPE_VIS istrstream
+class _LIBCPP_DEPRECATED _LIBCPP_EXPORTED_FROM_ABI istrstream
     : public istream
 {
 public:
@@ -290,7 +290,7 @@ private:
     strstreambuf __sb_;
 };
 
-class _LIBCPP_DEPRECATED _LIBCPP_TYPE_VIS ostrstream
+class _LIBCPP_DEPRECATED _LIBCPP_EXPORTED_FROM_ABI ostrstream
     : public ostream
 {
 public:
@@ -343,7 +343,7 @@ private:
     strstreambuf __sb_; // exposition only
 };
 
-class _LIBCPP_DEPRECATED _LIBCPP_TYPE_VIS strstream
+class _LIBCPP_DEPRECATED _LIBCPP_EXPORTED_FROM_ABI strstream
     : public iostream
 {
 public:

@@ -469,7 +469,8 @@ public:
   /// Returns a unique id for this ValueObject.
   lldb::user_id_t GetID() const { return m_id.GetID(); }
 
-  virtual lldb::ValueObjectSP GetChildAtIndex(size_t idx, bool can_create);
+  virtual lldb::ValueObjectSP GetChildAtIndex(size_t idx,
+                                              bool can_create = true);
 
   // this will always create the children if necessary
   lldb::ValueObjectSP GetChildAtIndexPath(llvm::ArrayRef<size_t> idxs,
@@ -487,7 +488,7 @@ public:
                      ConstString *name_of_error = nullptr);
 
   virtual lldb::ValueObjectSP GetChildMemberWithName(llvm::StringRef name,
-                                                     bool can_create);
+                                                     bool can_create = true);
 
   virtual size_t GetIndexOfChildWithName(llvm::StringRef name);
 

@@ -27,22 +27,12 @@ private:
   /// Keep a reference to the X86Subtarget around so that we can
   /// make the right decision when generating code for different targets.
   const X86Subtarget &Subtarget;
-  const X86TargetMachine &TM;
 
 public:
   X86LegalizerInfo(const X86Subtarget &STI, const X86TargetMachine &TM);
 
   bool legalizeIntrinsic(LegalizerHelper &Helper,
                          MachineInstr &MI) const override;
-
-private:
-  void setLegalizerInfo32bit();
-  void setLegalizerInfo64bit();
-  void setLegalizerInfoSSE1();
-  void setLegalizerInfoSSE2();
-  void setLegalizerInfoAVX();
-  void setLegalizerInfoAVX2();
-  void setLegalizerInfoAVX512();
 };
 } // namespace llvm
 #endif

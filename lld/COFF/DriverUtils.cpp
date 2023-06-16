@@ -549,6 +549,8 @@ void LinkerDriver::createSideBySideManifest() {
 // Used for parsing /export arguments.
 Export LinkerDriver::parseExport(StringRef arg) {
   Export e;
+  e.source = ExportSource::Export;
+
   StringRef rest;
   std::tie(e.name, rest) = arg.split(",");
   if (e.name.empty())
@@ -641,6 +643,19 @@ static StringRef killAt(StringRef sym, bool prefix) {
   return sym;
 }
 
+static StringRef exportSourceName(ExportSource s) {
+  switch (s) {
+  case ExportSource::Directives:
+    return "source file (directives)";
+  case ExportSource::Export:
+    return "/export";
+  case ExportSource::ModuleDefinition:
+    return "/def";
+  default:
+    llvm_unreachable("unknown ExportSource");
+  }
+}
+
 // Performs error checking on all /export arguments.
 // It also sets ordinals.
 void LinkerDriver::fixupExports() {
@@ -671,19 +686,36 @@ void LinkerDriver::fixupExports() {
   }
 
   // Uniquefy by name.
-  DenseMap<StringRef, Export *> map(ctx.config.exports.size());
+  DenseMap<StringRef, std::pair<Export *, unsigned>> map(
+      ctx.config.exports.size());
   std::vector<Export> v;
   for (Export &e : ctx.config.exports) {
-    auto pair = map.insert(std::make_pair(e.exportName, &e));
+    auto pair = map.insert(std::make_pair(e.exportName, std::make_pair(&e, 0)));
     bool inserted = pair.second;
     if (inserted) {
+      pair.first->second.second = v.size();
       v.push_back(e);
       continue;
     }
-    Export *existing = pair.first->second;
+    Export *existing = pair.first->second.first;
     if (e == *existing || e.name != existing->name)
       continue;
-    warn("duplicate /export option: " + e.name);
+    // If the existing export comes from .OBJ directives, we are allowed to
+    // overwrite it with /DEF: or /EXPORT without any warning, as MSVC link.exe
+    // does.
+    if (existing->source == ExportSource::Directives) {
+      *existing = e;
+      v[pair.first->second.second] = e;
+      continue;
+    }
+    if (existing->source == e.source) {
+      warn(Twine("duplicate ") + exportSourceName(existing->source) +
+           " option: " + e.name);
+    } else {
+      warn("duplicate export: " + e.name +
+           Twine(" first seen in " + exportSourceName(existing->source) +
+                 Twine(", now in " + exportSourceName(e.source))));
+    }
   }
   ctx.config.exports = std::move(v);
 

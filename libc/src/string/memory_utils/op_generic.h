@@ -331,11 +331,13 @@ template <typename T> LIBC_INLINE static T load_be(CPtr ptr, size_t offset) {
 
 // Equality: returns true iff values at locations (p1 + offset) and (p2 +
 // offset) compare equal.
-template <typename T> static bool eq(CPtr p1, CPtr p2, size_t offset);
+template <typename T>
+LIBC_INLINE static bool eq(CPtr p1, CPtr p2, size_t offset);
 
 // Not equals: returns non-zero iff values at locations (p1 + offset) and (p2 +
 // offset) differ.
-template <typename T> static uint32_t neq(CPtr p1, CPtr p2, size_t offset);
+template <typename T>
+LIBC_INLINE static uint32_t neq(CPtr p1, CPtr p2, size_t offset);
 
 // Lexicographic comparison:
 // - returns 0 iff values at locations (p1 + offset) and (p2 + offset) compare
@@ -345,7 +347,7 @@ template <typename T> static uint32_t neq(CPtr p1, CPtr p2, size_t offset);
 // - returns a positive value if value at location (p1 + offset) is
 //   lexicographically greater than value at (p2 + offset).
 template <typename T>
-static MemcmpReturnType cmp(CPtr p1, CPtr p2, size_t offset);
+LIBC_INLINE static MemcmpReturnType cmp(CPtr p1, CPtr p2, size_t offset);
 
 // Lexicographic comparison of non-equal values:
 // - returns a negative value if value at location (p1 + offset) is
@@ -353,7 +355,7 @@ static MemcmpReturnType cmp(CPtr p1, CPtr p2, size_t offset);
 // - returns a positive value if value at location (p1 + offset) is
 //   lexicographically greater than value at (p2 + offset).
 template <typename T>
-static MemcmpReturnType cmp_neq(CPtr p1, CPtr p2, size_t offset);
+LIBC_INLINE static MemcmpReturnType cmp_neq(CPtr p1, CPtr p2, size_t offset);
 
 ///////////////////////////////////////////////////////////////////////////////
 // Memcmp implementation

@@ -35,6 +35,7 @@ set(LIBCXX_SOURCES
   mutex.cpp
   mutex_destructor.cpp
   new.cpp
+  new_handler.cpp
   optional.cpp
   random_shuffle.cpp
   ryu/d2fixed.cpp
@@ -52,7 +53,6 @@ set(LIBCXX_SOURCES
   support/runtime/exception_pointer_glibcxx.ipp
   support/runtime/exception_pointer_msvc.ipp
   support/runtime/exception_pointer_unimplemented.ipp
-  support/runtime/new_handler_fallback.ipp
   support/runtime/stdexcept_default.ipp
   support/runtime/stdexcept_vcruntime.ipp
   system_error.cpp

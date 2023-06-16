@@ -54,7 +54,8 @@ define <2 x float> @cvt_v2u32_v2f32(<2 x i32> %src) {
 ; CHECK-LABEL: cvt_v2u32_v2f32:
 ; CHECK:       ## %bb.0:
 ; CHECK-NEXT:    vpmovzxdq {{.*#+}} xmm0 = xmm0[0],zero,xmm0[1],zero
-; CHECK-NEXT:    vmovdqa {{.*#+}} xmm1 = [4.503599627370496E+15,4.503599627370496E+15]
+; CHECK-NEXT:    vmovddup {{.*#+}} xmm1 = [4.503599627370496E+15,4.503599627370496E+15]
+; CHECK-NEXT:    ## xmm1 = mem[0,0]
 ; CHECK-NEXT:    vpor %xmm1, %xmm0, %xmm0
 ; CHECK-NEXT:    vsubpd %xmm1, %xmm0, %xmm0
 ; CHECK-NEXT:    vcvtpd2ps %xmm0, %xmm0

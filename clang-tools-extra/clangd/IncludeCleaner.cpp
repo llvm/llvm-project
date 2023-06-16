@@ -144,17 +144,6 @@ llvm::StringRef getResolvedPath(const include_cleaner::Header &SymProvider) {
   llvm_unreachable("Unknown header kind");
 }
 
-std::string getSymbolName(const include_cleaner::Symbol &Sym) {
-  switch (Sym.kind()) {
-  case include_cleaner::Symbol::Macro:
-    return Sym.macro().Name->getName().str();
-  case include_cleaner::Symbol::Declaration:
-    return llvm::dyn_cast<NamedDecl>(&Sym.declaration())
-        ->getQualifiedNameAsString();
-  }
-  llvm_unreachable("Unknown symbol kind");
-}
-
 std::vector<Diag> generateMissingIncludeDiagnostics(
     ParsedAST &AST, llvm::ArrayRef<MissingIncludeDiagInfo> MissingIncludes,
     llvm::StringRef Code, HeaderFilter IgnoreHeaders) {
@@ -182,8 +171,9 @@ std::vector<Diag> generateMissingIncludeDiagnostics(
       continue;
     }
 
-    std::string Spelling =
-        spellHeader(AST, MainFile, SymbolWithMissingInclude.Providers.front());
+    std::string Spelling = include_cleaner::spellHeader(
+        {SymbolWithMissingInclude.Providers.front(),
+         AST.getPreprocessor().getHeaderSearchInfo(), MainFile});
 
     llvm::StringRef HeaderRef{Spelling};
     bool Angled = HeaderRef.starts_with("<");
@@ -199,7 +189,7 @@ std::vector<Diag> generateMissingIncludeDiagnostics(
     Diag &D = Result.emplace_back();
     D.Message =
         llvm::formatv("No header providing \"{0}\" is directly included",
-                      getSymbolName(SymbolWithMissingInclude.Symbol));
+                      SymbolWithMissingInclude.Symbol.name());
     D.Name = "missing-includes";
     D.Source = Diag::DiagSource::Clangd;
     D.File = AST.tuPath();
@@ -410,22 +400,6 @@ convertIncludes(const SourceManager &SM,
     ConvertedIncludes.add(std::move(TransformedInc));
   }
   return ConvertedIncludes;
-}
-
-std::string spellHeader(ParsedAST &AST, const FileEntry *MainFile,
-                        include_cleaner::Header Provider) {
-  if (Provider.kind() == include_cleaner::Header::Physical) {
-    if (auto CanonicalPath =
-            getCanonicalPath(Provider.physical()->getLastRef(),
-                             AST.getSourceManager().getFileManager())) {
-      std::string SpelledHeader =
-          llvm::cantFail(URI::includeSpelling(URI::create(*CanonicalPath)));
-      if (!SpelledHeader.empty())
-        return SpelledHeader;
-    }
-  }
-  return include_cleaner::spellHeader(
-      {Provider, AST.getPreprocessor().getHeaderSearchInfo(), MainFile});
 }
 
 IncludeCleanerFindings computeIncludeCleanerFindings(ParsedAST &AST) {

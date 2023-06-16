@@ -202,6 +202,7 @@ add_gen_header(
     .llvm-libc-types.size_t
     .llvm-libc-types.__bsearchcompare_t
     .llvm-libc-types.__qsortcompare_t
+    .llvm-libc-types.__qsortrcompare_t
     .llvm-libc-types.__atexithandler_t
 )
 
@@ -486,6 +487,19 @@ add_gen_header(
     .llvm-libc-types.wint_t
     .llvm-libc-types.wchar_t
 )
+
+if(LIBC_TARGET_ARCHITECTURE_IS_GPU)
+  file(MAKE_DIRECTORY "gpu")
+
+  add_gen_header(
+    gpu_rpc
+    DEF_FILE gpu/rpc.h.def
+    GEN_HDR gpu/rpc.h
+    DEPENDS
+      .llvm_libc_common_h
+      .llvm-libc-types.rpc_opcodes_t
+  )
+endif()
 
 if(NOT LLVM_LIBC_FULL_BUILD)
   # We don't install headers in non-fullbuild mode.

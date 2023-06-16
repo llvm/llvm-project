@@ -23,9 +23,6 @@ export namespace std {
   using std::operator/;
 
   using std::operator==;
-#if 1 // P1614
-  using std::operator!=;
-#endif
   using std::operator>>;
   using std::operator<<;
 

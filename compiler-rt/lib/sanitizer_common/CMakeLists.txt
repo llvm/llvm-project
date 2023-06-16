@@ -3,7 +3,6 @@
 
 set(SANITIZER_SOURCES_NOTERMINATION
   sanitizer_allocator.cpp
-  sanitizer_common_range.cpp
   sanitizer_common.cpp
   sanitizer_deadlock_detector1.cpp
   sanitizer_deadlock_detector2.cpp
@@ -32,6 +31,7 @@ set(SANITIZER_SOURCES_NOTERMINATION
   sanitizer_procmaps_linux.cpp
   sanitizer_procmaps_mac.cpp
   sanitizer_procmaps_solaris.cpp
+  sanitizer_range.cpp
   sanitizer_solaris.cpp
   sanitizer_stoptheworld_fuchsia.cpp
   sanitizer_stoptheworld_mac.cpp
@@ -114,6 +114,7 @@ set(SANITIZER_IMPL_HEADERS
   sanitizer_allocator_secondary.h
   sanitizer_allocator_size_class_map.h
   sanitizer_allocator_stats.h
+  sanitizer_array_ref.h
   sanitizer_asm.h
   sanitizer_atomic.h
   sanitizer_atomic_clang.h
@@ -173,6 +174,7 @@ set(SANITIZER_IMPL_HEADERS
   sanitizer_procmaps.h
   sanitizer_ptrauth.h
   sanitizer_quarantine.h
+  sanitizer_range.h
   sanitizer_redefine_builtins.h
   sanitizer_report_decorator.h
   sanitizer_ring_buffer.h
