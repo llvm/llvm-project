@@ -662,6 +662,7 @@ static std::optional<Instruction *> processPhiNode(InstCombiner &IC,
   }
 
   // Create the new Phi
+  IC.Builder.SetInsertPoint(PN);
   PHINode *NPN = IC.Builder.CreatePHI(RequiredType, PN->getNumIncomingValues());
   Worklist.push_back(PN);
 
