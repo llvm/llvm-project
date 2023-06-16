@@ -284,7 +284,7 @@ TEST_F(FormatTest, RemovesEmptyLines) {
 
   // ...but do keep inlining and removing empty lines for non-block extern "C"
   // functions.
-  verifyFormat("extern \"C\" int f() { return 42; }", getGoogleStyle());
+  verifyGoogleFormat("extern \"C\" int f() { return 42; }");
   EXPECT_EQ("extern \"C\" int f() {\n"
             "  int i = 42;\n"
             "  return i;\n"
@@ -8175,23 +8175,20 @@ TEST_F(FormatTest, BreaksFunctionDeclarations) {
                "                            TemplateIt *stop) {}");
 
   // 2) break after return type.
-  verifyFormat(
+  verifyGoogleFormat(
       "Aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\n"
-      "bbbbbbbbbbbbbb(Cccccccccccccc cccccccccccccccccccccccccc);",
-      getGoogleStyle());
+      "bbbbbbbbbbbbbb(Cccccccccccccc cccccccccccccccccccccccccc);");
 
   // 3) break after (.
-  verifyFormat(
+  verifyGoogleFormat(
       "Aaaaaaaaaaaaaaaaaaaaaaaa bbbbbbbbbbbbbbbbbb(\n"
-      "    Cccccccccccccccccccccccccccccc cccccccccccccccccccccccccccccccc);",
-      getGoogleStyle());
+      "    Cccccccccccccccccccccccccccccc cccccccccccccccccccccccccccccccc);");
 
   // 4) break before after nested name specifiers.
-  verifyFormat(
+  verifyGoogleFormat(
       "Aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\n"
       "SomeClasssssssssssssssssssssssssssssssssssssss::\n"
-      "    bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb(Cccccccccccccc cccccccccc);",
-      getGoogleStyle());
+      "    bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb(Cccccccccccccc cccccccccc);");
 
   // However, there are exceptions, if a sufficient amount of lines can be
   // saved.
@@ -8202,12 +8199,11 @@ TEST_F(FormatTest, BreaksFunctionDeclarations) {
                "                                  Cccccccccccccc cccccccccc,\n"
                "                                  Cccccccccccccc cccccccccc,\n"
                "                                  Cccccccccccccc cccccccccc);");
-  verifyFormat(
+  verifyGoogleFormat(
       "Aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\n"
       "bbbbbbbbbbb(Cccccccccccccc cccccccccc, Cccccccccccccc cccccccccc,\n"
       "            Cccccccccccccc cccccccccc, Cccccccccccccc cccccccccc,\n"
-      "            Cccccccccccccc cccccccccc, Cccccccccccccc cccccccccc);",
-      getGoogleStyle());
+      "            Cccccccccccccc cccccccccc, Cccccccccccccc cccccccccc);");
   verifyFormat(
       "Aaaaaaaaaa bbbbbbbbbbbbbbbbbbbbbbbbbbbbbb(Cccccccccccccc cccccccccc,\n"
       "                                          Cccccccccccccc cccccccccc,\n"
@@ -9999,7 +9995,7 @@ TEST_F(FormatTest, ReturnTypeBreakingStyle) {
                "        ABSL_GUARDED_BY(mutex2);",
                getGoogleStyleWithColumns(40));
   // * typedefs
-  verifyFormat("typedef ATTR(X) char x;", getGoogleStyle());
+  verifyGoogleFormat("typedef ATTR(X) char x;");
 
   Style = getGNUStyle();
 
@@ -10782,9 +10778,9 @@ TEST_F(FormatTest, UnderstandsUnaryOperators) {
   verifyFormat("a-- > b;");
   verifyFormat("b ? -a : c;");
   verifyFormat("n * sizeof char16;");
-  verifyFormat("n * alignof char16;", getGoogleStyle());
+  verifyGoogleFormat("n * alignof char16;");
   verifyFormat("sizeof(char);");
-  verifyFormat("alignof(char);", getGoogleStyle());
+  verifyGoogleFormat("alignof(char);");
 
   verifyFormat("return -1;");
   verifyFormat("throw -1;");
@@ -10926,9 +10922,8 @@ TEST_F(FormatTest, UnderstandsFunctionRefQualification) {
   verifyFormat("void Fn(T const &) const &;");
   verifyFormat("void Fn(T const volatile &&) const volatile &&;");
   verifyFormat("void Fn(T const volatile &&) const volatile && noexcept;");
-  verifyFormat("template <typename T>\n"
-               "void F(T) && = delete;",
-               getGoogleStyle());
+  verifyGoogleFormat("template <typename T>\n"
+                     "void F(T) && = delete;");
   verifyFormat("template <typename T> void operator=(T) &;");
   verifyFormat("template <typename T> void operator=(T) const &;");
   verifyFormat("template <typename T> void operator=(T) & noexcept;");
@@ -11955,7 +11950,7 @@ TEST_F(FormatTest, FormatsCasts) {
   verifyFormat("case (my_int)ONE:");
   verifyFormat("auto x = (X)this;");
   // Casts in Obj-C style calls used to not be recognized as such.
-  verifyFormat("int a = [(type*)[((type*)val) arg] arg];", getGoogleStyle());
+  verifyGoogleFormat("int a = [(type*)[((type*)val) arg] arg];");
 
   // FIXME: single value wrapped with paren will be treated as cast.
   verifyFormat("void f(int i = (kValue)*kMask) {}");
@@ -11992,7 +11987,7 @@ TEST_F(FormatTest, FormatsCasts) {
   verifyFormat("void f(SmallVector<int>) = 0;");
   verifyFormat("void f(int i = (kA * kB) & kMask) {}");
   verifyFormat("int a = sizeof(int) * b;");
-  verifyFormat("int a = alignof(int) * b;", getGoogleStyle());
+  verifyGoogleFormat("int a = alignof(int) * b;");
   verifyFormat("template <> void f<int>(int i) SOME_ANNOTATION;");
   verifyFormat("f(\"%\" SOME_MACRO(ll) \"d\");");
   verifyFormat("aaaaa &operator=(const aaaaa &) LLVM_DELETED_FUNCTION;");
@@ -12002,7 +11997,7 @@ TEST_F(FormatTest, FormatsCasts) {
   verifyFormat("virtual void foo(char &) const;");
   verifyFormat("virtual void foo(int *a, char *) const;");
   verifyFormat("int a = sizeof(int *) + b;");
-  verifyFormat("int a = alignof(int *) + b;", getGoogleStyle());
+  verifyGoogleFormat("int a = alignof(int *) + b;");
   verifyFormat("bool b = f(g<int>) && c;");
   verifyFormat("typedef void (*f)(int i) func;");
   verifyFormat("void operator++(int) noexcept;");
@@ -12145,9 +12140,9 @@ TEST_F(FormatTest, BreaksLongDeclarations) {
       Indented);
 
   // FIXME: Without the comment, this breaks after "(".
-  verifyFormat("LoooooooooooooooooooooooooooooooooooooooongType  // break\n"
-               "    (*LoooooooooooooooooooooooooooongFunctionTypeVarialbe)();",
-               getGoogleStyle());
+  verifyGoogleFormat(
+      "LoooooooooooooooooooooooooooooooooooooooongType  // break\n"
+      "    (*LoooooooooooooooooooooooooooongFunctionTypeVarialbe)();");
 
   verifyFormat("int *someFunction(int LoooooooooooooooooooongParam1,\n"
                "                  int LoooooooooooooooooooongParam2) {}");
@@ -13822,14 +13817,13 @@ TEST_F(FormatTest, PullTrivialFunctionDefinitionsIntoSingleLine) {
 
   verifyFormat("void f() {}", getLLVMStyleWithColumns(11));
   verifyFormat("void f() {\n}", getLLVMStyleWithColumns(10));
-  verifyFormat("class C {\n"
-               "  C()\n"
-               "      : iiiiiiii(nullptr),\n"
-               "        kkkkkkk(nullptr),\n"
-               "        mmmmmmm(nullptr),\n"
-               "        nnnnnnn(nullptr) {}\n"
-               "};",
-               getGoogleStyle());
+  verifyGoogleFormat("class C {\n"
+                     "  C()\n"
+                     "      : iiiiiiii(nullptr),\n"
+                     "        kkkkkkk(nullptr),\n"
+                     "        mmmmmmm(nullptr),\n"
+                     "        nnnnnnn(nullptr) {}\n"
+                     "};");
 
   FormatStyle NoColumnLimit = getLLVMStyleWithColumns(0);
   EXPECT_EQ("A() : b(0) {}", format("A():b(0){}", NoColumnLimit));
@@ -23123,7 +23117,7 @@ TEST_F(FormatTest, UTF8CharacterLiteralCpp11) {
 }
 
 TEST_F(FormatTest, DoNotFormatLikelyXml) {
-  verifyFormat("<!-- ;> -->", getGoogleStyle());
+  verifyGoogleFormat("<!-- ;> -->");
   verifyNoChange(" <!-- >; -->", getGoogleStyle());
 }
 
@@ -23158,16 +23152,16 @@ TEST_F(FormatTest, StructuredBindings) {
   // Make sure we don't mistake structured bindings for lambdas.
   FormatStyle PointerMiddle = getLLVMStyle();
   PointerMiddle.PointerAlignment = FormatStyle::PAS_Middle;
-  verifyFormat("auto [a1, b]{A * i};", getGoogleStyle());
+  verifyGoogleFormat("auto [a1, b]{A * i};");
   verifyFormat("auto [a2, b]{A * i};", getLLVMStyle());
   verifyFormat("auto [a3, b]{A * i};", PointerMiddle);
-  verifyFormat("auto const [a1, b]{A * i};", getGoogleStyle());
+  verifyGoogleFormat("auto const [a1, b]{A * i};");
   verifyFormat("auto const [a2, b]{A * i};", getLLVMStyle());
   verifyFormat("auto const [a3, b]{A * i};", PointerMiddle);
-  verifyFormat("auto const& [a1, b]{A * i};", getGoogleStyle());
+  verifyGoogleFormat("auto const& [a1, b]{A * i};");
   verifyFormat("auto const &[a2, b]{A * i};", getLLVMStyle());
   verifyFormat("auto const & [a3, b]{A * i};", PointerMiddle);
-  verifyFormat("auto const&& [a1, b]{A * i};", getGoogleStyle());
+  verifyGoogleFormat("auto const&& [a1, b]{A * i};");
   verifyFormat("auto const &&[a2, b]{A * i};", getLLVMStyle());
   verifyFormat("auto const && [a3, b]{A * i};", PointerMiddle);
 
