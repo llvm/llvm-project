@@ -134,9 +134,9 @@ private:
                       RefType RT = RefType::Explicit) {
     if (MI.isBuiltinMacro())
       return; // __FILE__ is not a reference.
-    Recorded.MacroReferences.push_back(SymbolReference{
-        Tok.getLocation(),
-        Macro{Tok.getIdentifierInfo(), MI.getDefinitionLoc()}, RT});
+    Recorded.MacroReferences.push_back(
+        SymbolReference{Macro{Tok.getIdentifierInfo(), MI.getDefinitionLoc()},
+                        Tok.getLocation(), RT});
   }
 
   bool Active = false;

@@ -33,6 +33,8 @@ def EnableArmStreaming
 						   "Streaming mode is internal to the function, callee "
 						   "manages PSTATE.SM on entry/exit.")
           )}]>,
+    Option<"enableZA", "enable-za", "bool", /*default=*/"false",
+           "Enable ZA storage array.">,
   ];
   let dependentDialects = ["func::FuncDialect"];
 }
