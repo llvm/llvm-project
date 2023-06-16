@@ -273,14 +273,15 @@ bool RISCVAsmBackend::relaxDwarfLineAddr(MCDwarfLineAddrFragment &DF,
 bool RISCVAsmBackend::relaxDwarfCFA(MCDwarfCallFrameFragment &DF,
                                     MCAsmLayout &Layout,
                                     bool &WasRelaxed) const {
-
   const MCExpr &AddrDelta = DF.getAddrDelta();
   SmallVectorImpl<char> &Data = DF.getContents();
   SmallVectorImpl<MCFixup> &Fixups = DF.getFixups();
   size_t OldSize = Data.size();
 
   int64_t Value;
-  bool IsAbsolute = AddrDelta.evaluateKnownAbsolute(Value, Layout);
+  if (AddrDelta.evaluateAsAbsolute(Value, Layout.getAssembler()))
+    return false;
+  bool IsAbsolute = AddrDelta.evaluateAsAbsolute(Value, Layout);
   assert(IsAbsolute && "CFA with invalid expression");
   (void)IsAbsolute;
 
