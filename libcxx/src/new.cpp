@@ -7,8 +7,8 @@
 //===----------------------------------------------------------------------===//
 
 #include <__memory/aligned_alloc.h>
+#include <cstdlib>
 #include <new>
-#include <stdlib.h>
 
 namespace std
 {
@@ -37,6 +37,10 @@ __throw_bad_alloc()
     !defined(_LIBCPP_ABI_VCRUNTIME) &&      \
     !defined(_LIBCPP_DISABLE_NEW_DELETE_DEFINITIONS)
 
+// The code below is copied as-is into libc++abi's libcxxabi/src/stdlib_new_delete.cpp
+// file. The version in this file is the canonical one.
+
+// ------------------ BEGIN COPY ------------------
 // Implement all new and delete operators as weak definitions
 // in this shared library, so that they can be overridden by programs
 // that define non-weak copies of the functions.
@@ -48,7 +52,7 @@ operator new(std::size_t size) _THROW_BAD_ALLOC
     if (size == 0)
         size = 1;
     void* p;
-    while ((p = ::malloc(size)) == nullptr)
+    while ((p = std::malloc(size)) == nullptr)
     {
         // If malloc fails and there is a new_handler,
         // call it to try free up memory.
@@ -114,7 +118,7 @@ _LIBCPP_WEAK
 void
 operator delete(void* ptr) noexcept
 {
-    ::free(ptr);
+    std::free(ptr);
 }
 
 _LIBCPP_WEAK
@@ -274,4 +278,6 @@ operator delete[] (void* ptr, size_t, std::align_val_t alignment) noexcept
 }
 
 #endif // !_LIBCPP_HAS_NO_LIBRARY_ALIGNED_ALLOCATION
+// ------------------ END COPY ------------------
+
 #endif // !__GLIBCXX__ && !_LIBCPP_ABI_VCRUNTIME && !_LIBCPP_DISABLE_NEW_DELETE_DEFINITIONS

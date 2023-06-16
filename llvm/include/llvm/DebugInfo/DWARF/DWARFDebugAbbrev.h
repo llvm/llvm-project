@@ -64,14 +64,13 @@ class DWARFDebugAbbrev {
   mutable std::optional<DataExtractor> Data;
 
 public:
-  DWARFDebugAbbrev();
+  DWARFDebugAbbrev(DataExtractor Data);
 
   const DWARFAbbreviationDeclarationSet *
   getAbbreviationDeclarationSet(uint64_t CUAbbrOffset) const;
 
   void dump(raw_ostream &OS) const;
   void parse() const;
-  void extract(DataExtractor Data);
 
   DWARFAbbreviationDeclarationSetMap::const_iterator begin() const {
     parse();
@@ -81,9 +80,6 @@ public:
   DWARFAbbreviationDeclarationSetMap::const_iterator end() const {
     return AbbrDeclSets.end();
   }
-
-private:
-  void clear();
 };
 
 } // end namespace llvm

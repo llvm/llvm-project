@@ -55,7 +55,7 @@ class TargetAPITestCase(TestBase):
         self.build()
         self.get_description()
 
-    @expectedFailureAll(oslist=["windows"], bugnumber='llvm.org/pr21765')
+    @expectedFailureAll(oslist=["windows"], bugnumber="llvm.org/pr21765")
     def test_resolve_symbol_context_with_address(self):
         """Exercise SBTarget.ResolveSymbolContextForAddress() API."""
         self.build()

@@ -799,8 +799,8 @@ protected:
     }
 
     // Get the plugin for the process.
-    auto plugin_sp = process_sp->GetStructuredDataPlugin(
-        ConstString(GetDarwinLogTypeName()));
+    auto plugin_sp =
+        process_sp->GetStructuredDataPlugin(GetDarwinLogTypeName());
     if (!plugin_sp || (plugin_sp->GetPluginName() !=
                        StructuredDataDarwinLog::GetStaticPluginName())) {
       result.AppendError("failed to get StructuredDataPlugin for "
@@ -871,8 +871,8 @@ protected:
       stream.PutCString("Enabled: not applicable "
                         "(requires process)\n");
     } else {
-      auto plugin_sp = process_sp->GetStructuredDataPlugin(
-          ConstString(GetDarwinLogTypeName()));
+      auto plugin_sp =
+          process_sp->GetStructuredDataPlugin(GetDarwinLogTypeName());
       stream.Printf("Availability: %s\n",
                     plugin_sp ? "available" : "unavailable");
       llvm::StringRef plugin_name = StructuredDataDarwinLog::GetStaticPluginName();
@@ -1490,8 +1490,7 @@ bool StructuredDataDarwinLog::InitCompletionHookCallback(
   LLDB_LOGF(log, "StructuredDataDarwinLog::%s() call is for process uid %d",
             __FUNCTION__, process_sp->GetUniqueID());
 
-  auto plugin_sp =
-      process_sp->GetStructuredDataPlugin(ConstString(GetDarwinLogTypeName()));
+  auto plugin_sp = process_sp->GetStructuredDataPlugin(GetDarwinLogTypeName());
   if (!plugin_sp) {
     LLDB_LOG(log, "warning: no plugin for feature {0} in process uid {1}",
              GetDarwinLogTypeName(), process_sp->GetUniqueID());

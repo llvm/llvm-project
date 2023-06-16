@@ -305,15 +305,14 @@ std::optional<dwarf::Tag> AppleAcceleratorTable::Entry::getTag() const {
   return std::nullopt;
 }
 
-AppleAcceleratorTable::ValueIterator::ValueIterator(
+AppleAcceleratorTable::SameNameIterator::SameNameIterator(
     const AppleAcceleratorTable &AccelTable, uint64_t DataOffset)
-    : Current(AccelTable), Offset(DataOffset) {
-}
+    : Current(AccelTable), Offset(DataOffset) {}
 
-iterator_range<AppleAcceleratorTable::ValueIterator>
+iterator_range<AppleAcceleratorTable::SameNameIterator>
 AppleAcceleratorTable::equal_range(StringRef Key) const {
   const auto EmptyRange =
-      make_range(ValueIterator(*this, 0), ValueIterator(*this, 0));
+      make_range(SameNameIterator(*this, 0), SameNameIterator(*this, 0));
   if (!IsValid)
     return EmptyRange;
 
@@ -341,7 +340,8 @@ AppleAcceleratorTable::equal_range(StringRef Key) const {
       return EmptyRange;
     uint64_t EndOffset = DataOffset + *NumEntries * getHashDataEntryLength();
     if (Key == *MaybeStr)
-      return make_range({*this, DataOffset}, ValueIterator{*this, EndOffset});
+      return make_range({*this, DataOffset},
+                        SameNameIterator{*this, EndOffset});
     DataOffset = EndOffset;
     StrOffset = readStringOffsetAt(DataOffset);
   }

@@ -22,6 +22,7 @@
 
 #include "gtest/gtest.h"
 #include <functional>
+#include <optional>
 #include <string>
 #include <vector>
 
@@ -3720,6 +3721,34 @@ TEST(Hover, ForwardStructNoCrash) {
   auto HI = getHover(AST, T.point(), format::getLLVMStyle(), nullptr);
   ASSERT_TRUE(HI);
   EXPECT_EQ(*HI->Value, "&bar");
+}
+
+TEST(Hover, FunctionParameterDefaulValueNotEvaluatedOnInvalidDecls) {
+  struct {
+    const char *const Code;
+    const std::optional<std::string> HoverValue;
+  } Cases[] = {
+      {R"cpp(
+        // error-ok testing behavior on invalid decl
+        class Foo {};
+        void foo(Foo p^aram = nullptr);
+        )cpp",
+       std::nullopt},
+      {R"cpp(
+        class Foo {};
+        void foo(Foo *p^aram = nullptr);
+        )cpp",
+       "nullptr"},
+  };
+
+  for (const auto &C : Cases) {
+    Annotations T(C.Code);
+    TestTU TU = TestTU::withCode(T.code());
+    auto AST = TU.build();
+    auto HI = getHover(AST, T.point(), format::getLLVMStyle(), nullptr);
+    ASSERT_TRUE(HI);
+    ASSERT_EQ(HI->Value, C.HoverValue);
+  }
 }
 
 TEST(Hover, DisableShowAKA) {
