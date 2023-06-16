@@ -135,7 +135,7 @@ def warn_eagerly_load_for_standard_cplusplus_modules : Warning<
   InGroup<DiagGroup<"eager-load-cxx-named-modules">>;
 
 def warn_reading_std_cxx_module_by_implicit_paths : Warning<
-  "it is deprecated to read module '%0' implcitly; it is going to be removed in clang18; "
+  "it is deprecated to read module '%0' implicitly; it is going to be removed in clang 18; "
   "consider to specify the dependencies explicitly">,
   InGroup<DiagGroup<"read-modules-implicitly">>;
 } // let CategoryName
