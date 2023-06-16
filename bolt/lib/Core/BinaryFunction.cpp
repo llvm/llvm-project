@@ -1323,7 +1323,7 @@ bool BinaryFunction::disassemble() {
         if (BC.isAArch64())
           handleAArch64IndirectCall(Instruction, Offset);
       }
-    } else if (BC.isAArch64()) {
+    } else if (BC.isAArch64() || BC.isRISCV()) {
       // Check if there's a relocation associated with this instruction.
       bool UsedReloc = false;
       for (auto Itr = Relocations.lower_bound(Offset),
@@ -1343,7 +1343,7 @@ bool BinaryFunction::disassemble() {
         UsedReloc = true;
       }
 
-      if (MIB->hasPCRelOperand(Instruction) && !UsedReloc)
+      if (!BC.isRISCV() && MIB->hasPCRelOperand(Instruction) && !UsedReloc)
         handlePCRelOperand(Instruction, AbsoluteInstrAddr, Size);
     }
 

@@ -840,6 +840,7 @@ bool SetField(InterpState &S, CodePtr OpPC, uint32_t I) {
   const Pointer &Field = Obj.atField(I);
   if (!CheckStore(S, OpPC, Field))
     return false;
+  Field.initialize();
   Field.deref<T>() = Value;
   return true;
 }

@@ -143,3 +143,157 @@ llvm.func @only_byte_aligned_integers_memset() -> i10 {
   %2 = llvm.load %1 {alignment = 4 : i64} : !llvm.ptr -> i10
   llvm.return %2 : i10
 }
+
+// -----
+
+// CHECK-LABEL: llvm.func @basic_memcpy
+// CHECK-SAME: (%[[SOURCE:.*]]: !llvm.ptr)
+llvm.func @basic_memcpy(%source: !llvm.ptr) -> i32 {
+  %0 = llvm.mlir.constant(1 : i32) : i32
+  %1 = llvm.alloca %0 x i32 : (i32) -> !llvm.ptr
+  %is_volatile = llvm.mlir.constant(false) : i1
+  %memcpy_len = llvm.mlir.constant(4 : i32) : i32
+  "llvm.intr.memcpy"(%1, %source, %memcpy_len) <{isVolatile = false}> : (!llvm.ptr, !llvm.ptr, i32) -> ()
+  // CHECK-NOT: "llvm.intr.memcpy"
+  // CHECK: %[[LOADED:.*]] = llvm.load %[[SOURCE]] : !llvm.ptr -> i32
+  // CHECK-NOT: "llvm.intr.memcpy"
+  %2 = llvm.load %1 : !llvm.ptr -> i32
+  // CHECK: llvm.return %[[LOADED]] : i32
+  llvm.return %2 : i32
+}
+
+// -----
+
+// CHECK-LABEL: llvm.func @basic_memcpy_dest
+// CHECK-SAME: (%[[DESTINATION:.*]]: !llvm.ptr)
+llvm.func @basic_memcpy_dest(%destination: !llvm.ptr) -> i32 {
+  %0 = llvm.mlir.constant(1 : i32) : i32
+  // CHECK: %[[DATA:.*]] = llvm.mlir.constant(42 : i32) : i32
+  %data = llvm.mlir.constant(42 : i32) : i32
+  %is_volatile = llvm.mlir.constant(false) : i1
+  %memcpy_len = llvm.mlir.constant(4 : i32) : i32
+
+  %1 = llvm.alloca %0 x i32 : (i32) -> !llvm.ptr
+  llvm.store %data, %1 : i32, !llvm.ptr
+  "llvm.intr.memcpy"(%destination, %1, %memcpy_len) <{isVolatile = false}> : (!llvm.ptr, !llvm.ptr, i32) -> ()
+  // CHECK-NOT: "llvm.intr.memcpy"
+  // CHECK: llvm.store %[[DATA]], %[[DESTINATION]] : i32, !llvm.ptr
+  // CHECK-NOT: "llvm.intr.memcpy"
+
+  %2 = llvm.load %1 : !llvm.ptr -> i32
+  // CHECK: llvm.return %[[DATA]] : i32
+  llvm.return %2 : i32
+}
+
+// -----
+
+// CHECK-LABEL: llvm.func @double_memcpy
+llvm.func @double_memcpy() -> i32 {
+  %0 = llvm.mlir.constant(1 : i32) : i32
+  // CHECK-NEXT: %[[DATA:.*]] = llvm.mlir.constant(42 : i32) : i32
+  %data = llvm.mlir.constant(42 : i32) : i32
+  %is_volatile = llvm.mlir.constant(false) : i1
+  %memcpy_len = llvm.mlir.constant(4 : i32) : i32
+
+  %1 = llvm.alloca %0 x i32 : (i32) -> !llvm.ptr
+  %2 = llvm.alloca %0 x i32 : (i32) -> !llvm.ptr
+  llvm.store %data, %1 : i32, !llvm.ptr
+  "llvm.intr.memcpy"(%2, %1, %memcpy_len) <{isVolatile = false}> : (!llvm.ptr, !llvm.ptr, i32) -> ()
+
+  %res = llvm.load %2 : !llvm.ptr -> i32
+  // CHECK-NEXT: llvm.return %[[DATA]] : i32
+  llvm.return %res : i32
+}
+
+// -----
+
+// CHECK-LABEL: llvm.func @ignore_self_memcpy
+llvm.func @ignore_self_memcpy() -> i32 {
+  // CHECK-DAG: %[[ALLOCA_LEN:.*]] = llvm.mlir.constant(1 : i32) : i32
+  %0 = llvm.mlir.constant(1 : i32) : i32
+  %is_volatile = llvm.mlir.constant(false) : i1
+  %memcpy_len = llvm.mlir.constant(4 : i32) : i32
+
+  // CHECK-DAG: %[[ALLOCA:.*]] = llvm.alloca %[[ALLOCA_LEN]] x i32
+  %1 = llvm.alloca %0 x i32 : (i32) -> !llvm.ptr
+  // CHECK: "llvm.intr.memcpy"(%[[ALLOCA]], %[[ALLOCA]]
+  "llvm.intr.memcpy"(%1, %1, %memcpy_len) <{isVolatile = false}> : (!llvm.ptr, !llvm.ptr, i32) -> ()
+
+  %res = llvm.load %1 : !llvm.ptr -> i32
+  llvm.return %res : i32
+}
+
+// -----
+
+// CHECK-LABEL: llvm.func @ignore_partial_memcpy
+// CHECK-SAME: (%[[SOURCE:.*]]: !llvm.ptr)
+llvm.func @ignore_partial_memcpy(%source: !llvm.ptr) -> i32 {
+  // CHECK-DAG: %[[ALLOCA_LEN:.*]] = llvm.mlir.constant(1 : i32) : i32
+  %0 = llvm.mlir.constant(1 : i32) : i32
+  %is_volatile = llvm.mlir.constant(false) : i1
+  // CHECK-DAG: %[[MEMCPY_LEN:.*]] = llvm.mlir.constant(2 : i32) : i32
+  %memcpy_len = llvm.mlir.constant(2 : i32) : i32
+
+  // CHECK-DAG: %[[ALLOCA:.*]] = llvm.alloca %[[ALLOCA_LEN]] x i32
+  %1 = llvm.alloca %0 x i32 : (i32) -> !llvm.ptr
+  // CHECK: "llvm.intr.memcpy"(%[[ALLOCA]], %[[SOURCE]], %[[MEMCPY_LEN]]) <{isVolatile = false}>
+  "llvm.intr.memcpy"(%1, %source, %memcpy_len) <{isVolatile = false}> : (!llvm.ptr, !llvm.ptr, i32) -> ()
+
+  %res = llvm.load %1 : !llvm.ptr -> i32
+  llvm.return %res : i32
+}
+
+// -----
+
+// CHECK-LABEL: llvm.func @ignore_volatile_memcpy
+// CHECK-SAME: (%[[SOURCE:.*]]: !llvm.ptr)
+llvm.func @ignore_volatile_memcpy(%source: !llvm.ptr) -> i32 {
+  // CHECK-DAG: %[[ALLOCA_LEN:.*]] = llvm.mlir.constant(1 : i32) : i32
+  // CHECK-DAG: %[[MEMCPY_LEN:.*]] = llvm.mlir.constant(4 : i32) : i32
+  %0 = llvm.mlir.constant(1 : i32) : i32
+  %is_volatile = llvm.mlir.constant(false) : i1
+  %memcpy_len = llvm.mlir.constant(4 : i32) : i32
+
+  // CHECK-DAG: %[[ALLOCA:.*]] = llvm.alloca %[[ALLOCA_LEN]] x i32
+  %1 = llvm.alloca %0 x i32 : (i32) -> !llvm.ptr
+  // CHECK: "llvm.intr.memcpy"(%[[ALLOCA]], %[[SOURCE]], %[[MEMCPY_LEN]]) <{isVolatile = true}>
+  "llvm.intr.memcpy"(%1, %source, %memcpy_len) <{isVolatile = true}> : (!llvm.ptr, !llvm.ptr, i32) -> ()
+
+  %res = llvm.load %1 : !llvm.ptr -> i32
+  llvm.return %res : i32
+}
+
+// -----
+
+// CHECK-LABEL: llvm.func @basic_memmove
+// CHECK-SAME: (%[[SOURCE:.*]]: !llvm.ptr)
+llvm.func @basic_memmove(%source: !llvm.ptr) -> i32 {
+  %0 = llvm.mlir.constant(1 : i32) : i32
+  %1 = llvm.alloca %0 x i32 : (i32) -> !llvm.ptr
+  %is_volatile = llvm.mlir.constant(false) : i1
+  %memmove_len = llvm.mlir.constant(4 : i32) : i32
+  "llvm.intr.memmove"(%1, %source, %memmove_len) <{isVolatile = false}> : (!llvm.ptr, !llvm.ptr, i32) -> ()
+  // CHECK-NOT: "llvm.intr.memmove"
+  // CHECK: %[[LOADED:.*]] = llvm.load %[[SOURCE]] : !llvm.ptr -> i32
+  // CHECK-NOT: "llvm.intr.memmove"
+  %2 = llvm.load %1 : !llvm.ptr -> i32
+  // CHECK: llvm.return %[[LOADED]] : i32
+  llvm.return %2 : i32
+}
+
+// -----
+
+// CHECK-LABEL: llvm.func @basic_memcpy_inline
+// CHECK-SAME: (%[[SOURCE:.*]]: !llvm.ptr)
+llvm.func @basic_memcpy_inline(%source: !llvm.ptr) -> i32 {
+  %0 = llvm.mlir.constant(1 : i32) : i32
+  %1 = llvm.alloca %0 x i32 : (i32) -> !llvm.ptr
+  %is_volatile = llvm.mlir.constant(false) : i1
+  "llvm.intr.memcpy.inline"(%1, %source) <{isVolatile = false, len = 4 : i32}> : (!llvm.ptr, !llvm.ptr) -> ()
+  // CHECK-NOT: "llvm.intr.memcpy.inline"
+  // CHECK: %[[LOADED:.*]] = llvm.load %[[SOURCE]] : !llvm.ptr -> i32
+  // CHECK-NOT: "llvm.intr.memcpy.inline"
+  %2 = llvm.load %1 : !llvm.ptr -> i32
+  // CHECK: llvm.return %[[LOADED]] : i32
+  llvm.return %2 : i32
+}
