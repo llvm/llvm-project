@@ -161,8 +161,8 @@ std::set<RegisterId> PhysicalRegisterInfo::getUnits(RegisterRef RR) const {
     while (C != 0) {
       unsigned T = llvm::countr_zero(C);
       unsigned CR = 32 * I + T; // Clobbered reg
-      for (MCRegUnitIterator U(CR, &TRI); U.isValid(); ++U)
-        Units.insert(*U);
+      for (MCRegUnit U : TRI.regunits(CR))
+        Units.insert(U);
       C &= ~(1u << T);
     }
   }
