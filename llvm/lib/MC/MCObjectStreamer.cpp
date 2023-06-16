@@ -379,7 +379,8 @@ bool MCObjectStreamer::changeSectionImpl(MCSection *Section,
   }
   if (!isUInt<31>(IntSubsection)) {
     getContext().reportError(Subsection->getLoc(),
-                             "subsection number must be within [0,2147483647]");
+                             "subsection number " + Twine(IntSubsection) +
+                                 " is not within [0,2147483647]");
   }
 
   CurSubsectionIdx = unsigned(IntSubsection);
