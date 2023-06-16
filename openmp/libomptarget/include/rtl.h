@@ -200,7 +200,8 @@ struct RTLsTy {
   // Return whether the current system supports omp_get_target_memory_space
   bool SystemSupportManagedMemory();
 
-  std::vector<std::string> archsAPU = {"gfx940"};
+  // enable OMPX_APU_MAPS for gfx90a, gfx940, and gfx942
+  std::vector<std::string> archsAPU = {"gfx90a", "gfx940", "gfx942"};
   bool IsAPUSystem();
   void disableAPUMapsForUSM(int64_t RequiresFlags);
 
