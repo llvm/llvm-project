@@ -211,6 +211,16 @@ add_libc_test(
     libc.src.stdio.puts
 )
 
+add_libc_test(
+  fputs_test
+  SUITE
+    libc_stdio_unittests
+  SRCS
+    fputs_test.cpp
+  DEPENDS
+    libc.src.stdio.fputs
+)
+
 add_libc_unittest(
   putc_test
   SUITE

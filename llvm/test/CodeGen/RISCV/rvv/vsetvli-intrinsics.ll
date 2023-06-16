@@ -126,3 +126,12 @@ define <vscale x 4 x i32> @repeated_vsetvli(iXLen %avl, <vscale x 4 x i32>* %ptr
   %x = call <vscale x 4 x i32> @llvm.riscv.vle.nxv4i32.iXLen(<vscale x 4 x i32> undef, <vscale x 4 x i32>* %ptr, iXLen %vl1)
   ret <vscale x 4 x i32> %x
 }
+
+define iXLen @test_vsetvli_negone_e8m1(iXLen %avl) nounwind {
+; CHECK-LABEL: test_vsetvli_negone_e8m1:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetvli a0, zero, e8, m1, ta, ma
+; CHECK-NEXT:    ret
+  %vl = call iXLen @llvm.riscv.vsetvli.iXLen(iXLen -1, iXLen 0, iXLen 0)
+  ret iXLen %vl
+}

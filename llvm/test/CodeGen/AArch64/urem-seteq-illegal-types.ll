@@ -78,7 +78,7 @@ define <3 x i1> @test_urem_vec(<3 x i11> %X) nounwind {
 ; CHECK-NEXT:    mul v0.4h, v0.4h, v2.4h
 ; CHECK-NEXT:    ldr d2, [x8, :lo12:.LCPI4_2]
 ; CHECK-NEXT:    adrp x8, .LCPI4_3
-; CHECK-NEXT:    shl v3.4h, v0.4h, #1
+; CHECK-NEXT:    add v3.4h, v0.4h, v0.4h
 ; CHECK-NEXT:    bic v0.4h, #248, lsl #8
 ; CHECK-NEXT:    ushl v0.4h, v0.4h, v1.4h
 ; CHECK-NEXT:    ushl v1.4h, v3.4h, v2.4h

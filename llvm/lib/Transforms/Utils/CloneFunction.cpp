@@ -470,8 +470,9 @@ void PruningFunctionCloner::CloneBlock(
 
   // Nope, clone it now.
   BasicBlock *NewBB;
-  Twine NewName(BB->hasName() ? Twine(BB->getName()) + NameSuffix : "");
-  BBEntry = NewBB = BasicBlock::Create(BB->getContext(), NewName, NewFunc);
+  BBEntry = NewBB = BasicBlock::Create(BB->getContext());
+  if (BB->hasName())
+    NewBB->setName(BB->getName() + NameSuffix);
 
   // It is only legal to clone a function if a block address within that
   // function is never referenced outside of the function.  Given that, we
@@ -497,7 +498,6 @@ void PruningFunctionCloner::CloneBlock(
        ++II) {
 
     Instruction *NewInst = cloneInstruction(II);
-    NewInst->insertInto(NewBB, NewBB->end());
 
     if (HostFuncIsStrictFP) {
       // All function calls in the inlined function must get 'strictfp'
@@ -516,6 +516,8 @@ void PruningFunctionCloner::CloneBlock(
       // If we can simplify this instruction to some other value, simply add
       // a mapping to that value rather than inserting a new instruction into
       // the basic block.
+      //
+      // FIXME: simplifyInstruction should know the context of the new function.
       if (Value *V =
               simplifyInstruction(NewInst, BB->getModule()->getDataLayout())) {
         // On the off-chance that this simplifies to an instruction in the old
@@ -526,7 +528,7 @@ void PruningFunctionCloner::CloneBlock(
 
         if (!NewInst->mayHaveSideEffects()) {
           VMap[&*II] = V;
-          NewInst->eraseFromParent();
+          NewInst->deleteValue();
           continue;
         }
       }
@@ -535,6 +537,7 @@ void PruningFunctionCloner::CloneBlock(
     if (II->hasName())
       NewInst->setName(II->getName() + NameSuffix);
     VMap[&*II] = NewInst; // Add instruction map to value.
+    NewInst->insertInto(NewBB, NewBB->end());
     if (isa<CallInst>(II) && !II->isDebugOrPseudoInst()) {
       hasCalls = true;
       hasMemProfMetadata |= II->hasMetadata(LLVMContext::MD_memprof);
@@ -682,8 +685,8 @@ void llvm::CloneAndPruneIntoFromInst(Function *NewFunc, const Function *OldFunc,
     if (!NewBB)
       continue; // Dead block.
 
-    // Move the new block to preserve the order in the original function.
-    NewBB->moveBefore(NewFunc->end());
+    // Add the new block to the new function.
+    NewFunc->insert(NewFunc->end(), NewBB);
 
     // Handle PHI nodes specially, as we have to remove references to dead
     // blocks.

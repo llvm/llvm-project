@@ -11,6 +11,7 @@ add_flang_library(FIRBuilder
   IntrinsicCall.cpp
   LowLevelIntrinsics.cpp
   MutableBox.cpp
+  PPCIntrinsicCall.cpp
   Runtime/Allocatable.cpp
   Runtime/ArrayConstructor.cpp
   Runtime/Assign.cpp

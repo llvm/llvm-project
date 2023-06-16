@@ -159,9 +159,8 @@ public:
   /// preserving information like the alignment and address space.
   Address CreateElementBitCast(Address Addr, llvm::Type *Ty,
                                const llvm::Twine &Name = "") {
-    auto *PtrTy = Ty->getPointerTo(Addr.getAddressSpace());
-    return Address(CreateBitCast(Addr.getPointer(), PtrTy, Name), Ty,
-                   Addr.getAlignment(), Addr.isKnownNonNull());
+    return Address(Addr.getPointer(), Ty, Addr.getAlignment(),
+                   Addr.isKnownNonNull());
   }
 
   using CGBuilderBaseTy::CreatePointerBitCastOrAddrSpaceCast;

@@ -14,11 +14,12 @@
 
 #include <algorithm>
 #include <cassert>
+#include <cstddef>
 #include <execution>
 #include <iterator>
 
 int main(int, char**) {
-  int call_count = 0;
+  std::size_t call_count = 0;
   int a[]        = {1, 2, 3, 4, 5, 6, 7, 8};
   assert(std::is_partitioned(std::execution::seq, std::begin(a), std::end(a), [&](int i) {
     ++call_count;
