@@ -1788,13 +1788,14 @@ cc_library(
     hdrs = glob(["include/mlir/Dialect/ArmSME/Transforms/*.h"]),
     includes = ["include"],
     deps = [
+        ":ArmSMEDialect",
         ":ArmSMETransformsPassIncGen",
         ":FuncDialect",
         ":FuncIncGen",
+        ":LLVMCommonConversion",
         ":Pass",
     ],
 )
-
 
 ##---------------------------------------------------------------------------##
 # ArmSVE dialect.
@@ -7621,8 +7622,8 @@ cc_library(
         ":ArithTransforms",
         ":ArithValueBoundsOpInterfaceImpl",
         ":ArmNeonDialect",
-        ":ArmSMETransforms",
         ":ArmSMEDialect",
+        ":ArmSMETransforms",
         ":ArmSVEDialect",
         ":ArmSVETransforms",
         ":AsyncDialect",
@@ -9643,6 +9644,8 @@ cc_library(
         ":ArithDialect",
         ":ArithUtils",
         ":ArmNeonDialect",
+        ":ArmSMEDialect",
+        ":ArmSMETransforms",
         ":ArmSVEDialect",
         ":ArmSVETransforms",
         ":ConversionPassIncGen",
