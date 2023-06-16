@@ -1081,9 +1081,12 @@ std::optional<int64_t> DwarfLinkerForBinary::AddressManager<
     std::optional<DWARFFormValue> AddrValue = DIE.find(dwarf::DW_AT_low_pc);
     if (std::optional<uint64_t> AddrOffsetSectionBase =
             DIE.getDwarfUnit()->getAddrOffsetSectionBase()) {
-      uint64_t StartOffset = *AddrOffsetSectionBase + AddrValue->getRawUValue();
-      uint64_t EndOffset =
-          StartOffset + DIE.getDwarfUnit()->getAddressByteSize();
+      // Addrx is a index into the debug_addr section, not an offset, so we need
+      // to multiply by byte size.
+      const uint64_t ByteSize = DIE.getDwarfUnit()->getAddressByteSize();
+      const uint64_t StartOffset =
+          *AddrOffsetSectionBase + (AddrValue->getRawUValue() * ByteSize);
+      const uint64_t EndOffset = StartOffset + ByteSize;
       return hasValidRelocationAt(ValidDebugAddrRelocs, StartOffset, EndOffset);
     }
 
