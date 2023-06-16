@@ -701,6 +701,9 @@ void toolchains::MinGW::addClangTargetOptions(
           << A->getSpelling() << GuardArgs;
     }
   }
+
+  if (Arg *A = DriverArgs.getLastArgNoClaim(options::OPT_mthreads))
+    A->ignoreTargetSpecific();
 }
 
 void toolchains::MinGW::AddClangCXXStdlibIncludeArgs(
