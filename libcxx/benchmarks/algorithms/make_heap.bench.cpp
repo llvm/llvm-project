@@ -16,14 +16,13 @@ struct MakeHeap {
   size_t Quantity;
 
   void run(benchmark::State& state) const {
-    runOpOnCopies<ValueType>(
-        state, Quantity, Order(), BatchSize::CountElements,
-        [](auto& Copy) { std::make_heap(Copy.begin(), Copy.end()); });
+    runOpOnCopies<ValueType>(state, Quantity, Order(), BatchSize::CountElements, [](auto& Copy) {
+      std::make_heap(Copy.begin(), Copy.end());
+    });
   }
 
   std::string name() const {
-    return "BM_MakeHeap" + ValueType::name() + Order::name() + "_" +
-           std::to_string(Quantity);
+    return "BM_MakeHeap" + ValueType::name() + Order::name() + "_" + std::to_string(Quantity);
   };
 };
 } // namespace

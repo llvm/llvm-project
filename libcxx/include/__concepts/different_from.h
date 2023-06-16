@@ -21,7 +21,7 @@ _LIBCPP_BEGIN_NAMESPACE_STD
 
 #if _LIBCPP_STD_VER >= 20
 
-template<class _Tp, class _Up>
+template <class _Tp, class _Up>
 concept __different_from = !same_as<remove_cvref_t<_Tp>, remove_cvref_t<_Up>>;
 
 #endif // _LIBCPP_STD_VER >= 20

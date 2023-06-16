@@ -23,12 +23,8 @@ _LIBCPP_BEGIN_NAMESPACE_STD
 
 // [concept.convertible]
 
-template<class _From, class _To>
-concept convertible_to =
-  is_convertible_v<_From, _To> &&
-  requires {
-    static_cast<_To>(std::declval<_From>());
-  };
+template <class _From, class _To>
+concept convertible_to = is_convertible_v<_From, _To> && requires { static_cast<_To>(std::declval<_From>()); };
 
 #endif // _LIBCPP_STD_VER >= 20
 
