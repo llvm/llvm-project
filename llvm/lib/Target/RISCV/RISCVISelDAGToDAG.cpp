@@ -3160,6 +3160,11 @@ static bool usesAllOnesMask(SDNode *N, unsigned MaskOpIdx) {
          IsVMSet(MaskSetter.getMachineOpcode());
 }
 
+static bool isImplicitDef(SDValue V) {
+  return V.isMachineOpcode() &&
+         V.getMachineOpcode() == TargetOpcode::IMPLICIT_DEF;
+}
+
 // Optimize masked RVV pseudo instructions with a known all-ones mask to their
 // corresponding "unmasked" pseudo versions. The mask we're interested in will
 // take the form of a V0 physical register operand, with a glued
@@ -3186,8 +3191,7 @@ bool RISCVDAGToDAGISel::doPeepholeMaskedRVV(SDNode *N) {
     if (I->UnmaskedTUPseudo == I->UnmaskedPseudo) {
       UseTUPseudo = true;
     } else {
-      if (!(N->getConstantOperandVal(*TailPolicyOpIdx) &
-            RISCVII::TAIL_AGNOSTIC)) {
+      if (!isImplicitDef(N->getOperand(0))) {
         // Keep the true-masked instruction when there is no unmasked TU
         // instruction
         if (I->UnmaskedTUPseudo == I->MaskedPseudo)
@@ -3230,11 +3234,6 @@ bool RISCVDAGToDAGISel::doPeepholeMaskedRVV(SDNode *N) {
   ReplaceUses(N, Result);
 
   return true;
-}
-
-static bool isImplicitDef(SDValue V) {
-  return V.isMachineOpcode() &&
-         V.getMachineOpcode() == TargetOpcode::IMPLICIT_DEF;
 }
 
 // Try to fold away VMERGE_VVM instructions. We handle these cases:
