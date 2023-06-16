@@ -39,8 +39,7 @@ public:
 template <>
 struct std::tuple_size<Dummy3> {};
 
-int main(int, char**)
-{
+void f() {
   // Test that tuple_size<const T> is not incomplete when tuple_size<T>::value
   // is well-formed but not a constant expression.
   {
@@ -59,6 +58,4 @@ int main(int, char**)
     // expected-error@*:* 1 {{no member named 'value'}}
     (void)std::tuple_size<const Dummy3>::value; // expected-note {{here}}
   }
-
-  return 0;
 }

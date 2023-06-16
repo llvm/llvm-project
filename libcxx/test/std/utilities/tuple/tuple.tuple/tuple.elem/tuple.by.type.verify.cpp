@@ -33,10 +33,7 @@ void test_bad_return_type() {
     upint p = std::get<upint>(t); // expected-error{{deleted copy constructor}}
 }
 
-int main(int, char**)
-{
+void f() {
     test_bad_index();
     test_bad_return_type();
-
-  return 0;
 }

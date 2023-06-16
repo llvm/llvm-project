@@ -17,11 +17,9 @@
 
 #include <fstream>
 
-int main(int, char**)
-{
-  std::basic_fstream<char, std::char_traits<wchar_t> > f;
-//  expected-error-re@ios:* {{{{(static_assert|static assertion)}} failed{{.*}}traits_type::char_type must be the same type as CharT}}
-//  expected-error-re@streambuf:* {{{{(static_assert|static assertion)}} failed{{.*}}traits_type::char_type must be the same type as CharT}}
+std::basic_fstream<char, std::char_traits<wchar_t> > f;
+// expected-error-re@ios:* {{{{(static_assert|static assertion)}} failed{{.*}}traits_type::char_type must be the same type as CharT}}
+// expected-error-re@streambuf:* {{{{(static_assert|static assertion)}} failed{{.*}}traits_type::char_type must be the same type as CharT}}
 
 // expected-error@fstream:* {{only virtual member functions can be marked 'override'}}
 // expected-error@fstream:* {{only virtual member functions can be marked 'override'}}
@@ -39,6 +37,3 @@ int main(int, char**)
 // exception specifications for types which are already invalid for one reason or another.
 // For now we tolerate this diagnostic.
 // expected-error@ostream:* 0-1 {{exception specification of overriding function is more lax than base version}}
-
-  return 0;
-}
