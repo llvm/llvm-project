@@ -23,7 +23,7 @@ _LIBCPP_BEGIN_NAMESPACE_STD
 
 // [concept.object]
 
-template<class _Tp>
+template <class _Tp>
 concept semiregular = copyable<_Tp> && default_initializable<_Tp>;
 
 #endif // _LIBCPP_STD_VER >= 20
