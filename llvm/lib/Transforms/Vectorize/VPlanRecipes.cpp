@@ -828,10 +828,15 @@ void VPWidenGEPRecipe::execute(VPTransformState &State) {
     //       required. We would add the scalarization decision to
     //       collectLoopScalars() and teach getVectorValue() to broadcast
     //       the lane-zero scalar value.
-    auto *Clone = State.Builder.Insert(GEP->clone());
-    setFlags(Clone);
+    SmallVector<Value *> Ops;
+    for (unsigned I = 0, E = getNumOperands(); I != E; I++)
+      Ops.push_back(State.get(getOperand(I), VPIteration(0, 0)));
+
+    auto *NewGEP =
+        State.Builder.CreateGEP(GEP->getSourceElementType(), Ops[0],
+                                ArrayRef(Ops).drop_front(), "", isInBounds());
     for (unsigned Part = 0; Part < State.UF; ++Part) {
-      Value *EntryPart = State.Builder.CreateVectorSplat(State.VF, Clone);
+      Value *EntryPart = State.Builder.CreateVectorSplat(State.VF, NewGEP);
       State.set(this, EntryPart, Part);
       State.addMetadata(EntryPart, GEP);
     }
