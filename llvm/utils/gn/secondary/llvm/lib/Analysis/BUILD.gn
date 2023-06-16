@@ -81,7 +81,6 @@ static_library("Analysis") {
     "LoopPass.cpp",
     "LoopUnrollAnalyzer.cpp",
     "MLInlineAdvisor.cpp",
-    "MemDepPrinter.cpp",
     "MemDerefPrinter.cpp",
     "MemoryBuiltins.cpp",
     "MemoryDependenceAnalysis.cpp",

@@ -5,4 +5,5 @@ target_link_libraries(amdhsa_loader
   PRIVATE
   hsa-runtime64::hsa-runtime64
   gpu_loader
+  rpc_server
 )

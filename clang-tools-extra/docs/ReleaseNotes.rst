@@ -181,6 +181,16 @@ New checks
 
   Finds uses of ``std::endl`` on streams and replaces them with ``'\n'``.
 
+- New :doc:`performance-noexcept-destructor
+  <clang-tidy/checks/performance/noexcept-destructor>` check.
+
+  Finds user declared destructors which are not ``noexcept``.
+
+- New :doc:`performance-noexcept-swap
+  <clang-tidy/checks/performance/noexcept-swap>` check.
+
+  Finds user declared swap functions which are not ``noexcept``.
+
 - New :doc:`readability-avoid-unconditional-preprocessor-if
   <clang-tidy/checks/readability/avoid-unconditional-preprocessor-if>` check.
 
@@ -204,6 +214,21 @@ New check aliases
 - New alias :doc:`cert-msc33-c
   <clang-tidy/checks/cert/msc33-c>` to :doc:`bugprone-unsafe-functions
   <clang-tidy/checks/bugprone/unsafe-functions>` was added.
+
+- New alias :doc:`cppcoreguidelines-noexcept-destructor
+  <clang-tidy/checks/cppcoreguidelines/noexcept-destructor>` to
+  :doc`performance-noexcept-destructor
+  <clang-tidy/checks/performance/noexcept-destructor>` was added.
+
+- New alias :doc:`cppcoreguidelines-noexcept-move-operations
+  <clang-tidy/checks/cppcoreguidelines/noexcept-move-operations>` to
+  :doc`performance-noexcept-move-constructor
+  <clang-tidy/checks/performance/noexcept-move-constructor>` was added.
+
+- New alias :doc:`cppcoreguidelines-noexcept-swap
+  <clang-tidy/checks/cppcoreguidelines/noexcept-swap>` to
+  :doc`performance-noexcept-swap
+  <clang-tidy/checks/performance/noexcept-swap>` was added.
 
 - New alias :doc:`cppcoreguidelines-use-default-member-init
   <clang-tidy/checks/cppcoreguidelines/use-default-member-init>` to
@@ -242,6 +267,9 @@ Changes in existing checks
 - Improved :doc:`bugprone-incorrect-roundings
   <clang-tidy/checks/bugprone/incorrect-roundings>` check by adding support for
   other floating point representations in float constant like ``0.5L``.
+
+- Improved the performance of the :doc:`bugprone-reserved-identifier
+  <clang-tidy/checks/bugprone/reserved-identifier>` check through optimizations.
 
 - Deprecated check-local options `HeaderFileExtensions` and `ImplementationFileExtensions`
   in :doc:`bugprone-suspicious-include
@@ -297,6 +325,9 @@ Changes in existing checks
   <clang-tidy/checks/llvm/header-guard>` check.
   Global options of the same name should be used instead.
 
+- Improved the performance of the :doc:`misc-confusable-identifiers
+  <clang-tidy/checks/misc/confusable-identifiers>` check through optimizations.
+
 - Deprecated check-local options `HeaderFileExtensions`
   in :doc:`misc-definitions-in-headers
   <clang-tidy/checks/misc/definitions-in-headers>` check.
@@ -320,10 +351,18 @@ Changes in existing checks
   using macro between namespace declarations, to fix false positive when using namespace
   with attributes and to support nested inline namespace introduced in c++20.
 
+- Fixed an issue in `modernize-loop-convert
+  <clang-tidy/checks/modernize/modernize-loop-convert>` generating wrong code
+  when using structured bindings.
+
 - In :doc:`modernize-use-default-member-init
   <clang-tidy/checks/modernize/use-default-member-init>` count template
   constructors toward hand written constructors so that they are skipped if more
   than one exists.
+
+- Fixed crash in :doc:`modernize-use-default-member-init
+  <clang-tidy/checks/modernize/use-default-member-init>` with array members which
+  are value initialized.
 
 - Fixed false positive in :doc:`modernize-use-equals-default
   <clang-tidy/checks/modernize/use-equals-default>` check for special member
@@ -380,6 +419,9 @@ Changes in existing checks
   string for ``Prefix`` or ``Suffix`` options could result in the style not
   being used.
 
+- Improved the performance of the :doc:`readability-identifier-naming
+  <clang-tidy/checks/readability/identifier-naming>` check through optimizations.
+
 - Fixed a false positive in :doc:`readability-implicit-bool-conversion
   <clang-tidy/checks/readability/implicit-bool-conversion>` check warning would
   be unnecessarily emitted for explicit cast using direct list initialization.
@@ -395,6 +437,10 @@ Changes in existing checks
 - Fixed a false positive in :doc:`readability-misleading-indentation
   <clang-tidy/checks/readability/misleading-indentation>` check when warning would
   be unnecessarily emitted for template dependent ``if constexpr``.
+
+- Fixed a false positive in :doc:`readability-named-parameter
+  <clang-tidy/checks/readability/named-parameter>` for defaulted out-of-line
+  special member functions.
 
 - Fixed incorrect fixes in :doc:`readability-redundant-declaration
   <clang-tidy/checks/readability/redundant-declaration>` check when linkage

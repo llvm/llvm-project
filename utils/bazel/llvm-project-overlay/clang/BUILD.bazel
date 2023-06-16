@@ -1691,7 +1691,7 @@ genrule(
     outs = [hdr.replace("lib/Headers/", "staging/include/") for hdr in builtin_headers],
     cmd = """
        for src in $(SRCS); do
-         relsrc=$${src/*"$(WORKSPACE_ROOT)"\\/clang\\/lib\\/Headers}
+         relsrc=$${src#*"$(WORKSPACE_ROOT)"/clang/lib/Headers}
          target=$(@D)/staging/include/$$relsrc
          mkdir -p $$(dirname $$target)
          cp $$src $$target

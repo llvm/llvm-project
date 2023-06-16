@@ -73,8 +73,9 @@ public:
       : MCPlusBuilder(Analysis, Info, RegInfo) {}
 
   std::unique_ptr<MCSymbolizer>
-  createTargetSymbolizer(BinaryFunction &Function) const override {
-    return std::make_unique<X86MCSymbolizer>(Function);
+  createTargetSymbolizer(BinaryFunction &Function,
+                         bool CreateNewSymbols) const override {
+    return std::make_unique<X86MCSymbolizer>(Function, CreateNewSymbols);
   }
 
   bool isBranch(const MCInst &Inst) const override {
@@ -317,8 +318,8 @@ public:
     return false;
   }
 
-  bool isUnsupportedBranch(unsigned Opcode) const override {
-    switch (Opcode) {
+  bool isUnsupportedBranch(const MCInst &Inst) const override {
+    switch (Inst.getOpcode()) {
     default:
       return false;
     case X86::LOOP:
@@ -1859,8 +1860,7 @@ public:
       }
 
       // Handle conditional branches and ignore indirect branches
-      if (!isUnsupportedBranch(I->getOpcode()) &&
-          getCondCode(*I) == X86::COND_INVALID) {
+      if (!isUnsupportedBranch(*I) && getCondCode(*I) == X86::COND_INVALID) {
         // Indirect branch
         return false;
       }
@@ -2462,6 +2462,8 @@ public:
     //
     // Only the following limited expression types are supported:
     //   Symbol + Addend
+    //   Symbol + Constant + Addend
+    //   Const + Addend
     //   Symbol
     uint64_t Addend = 0;
     MCSymbol *Symbol = nullptr;
@@ -2471,11 +2473,25 @@ public:
       assert(BinaryExpr->getOpcode() == MCBinaryExpr::Add &&
              "unexpected binary expression");
       const MCExpr *LHS = BinaryExpr->getLHS();
-      assert(LHS->getKind() == MCExpr::SymbolRef && "unexpected LHS");
-      Symbol = const_cast<MCSymbol *>(this->getTargetSymbol(LHS));
+      if (LHS->getKind() == MCExpr::Constant) {
+        Addend = cast<MCConstantExpr>(LHS)->getValue();
+      } else if (LHS->getKind() == MCExpr::Binary) {
+        const auto *LHSBinaryExpr = cast<MCBinaryExpr>(LHS);
+        assert(LHSBinaryExpr->getOpcode() == MCBinaryExpr::Add &&
+               "unexpected binary expression");
+        const MCExpr *LLHS = LHSBinaryExpr->getLHS();
+        assert(LLHS->getKind() == MCExpr::SymbolRef && "unexpected LLHS");
+        Symbol = const_cast<MCSymbol *>(this->getTargetSymbol(LLHS));
+        const MCExpr *RLHS = LHSBinaryExpr->getRHS();
+        assert(RLHS->getKind() == MCExpr::Constant && "unexpected RLHS");
+        Addend = cast<MCConstantExpr>(RLHS)->getValue();
+      } else {
+        assert(LHS->getKind() == MCExpr::SymbolRef && "unexpected LHS");
+        Symbol = const_cast<MCSymbol *>(this->getTargetSymbol(LHS));
+      }
       const MCExpr *RHS = BinaryExpr->getRHS();
       assert(RHS->getKind() == MCExpr::Constant && "unexpected RHS");
-      Addend = cast<MCConstantExpr>(RHS)->getValue();
+      Addend += cast<MCConstantExpr>(RHS)->getValue();
     } else {
       assert(ValueExpr->getKind() == MCExpr::SymbolRef && "unexpected value");
       Symbol = const_cast<MCSymbol *>(this->getTargetSymbol(ValueExpr));

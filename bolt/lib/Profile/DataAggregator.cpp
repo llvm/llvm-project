@@ -624,6 +624,12 @@ void DataAggregator::processProfile(BinaryContext &BC) {
       BF.markProfiled(Flags);
   }
 
+  for (auto &FuncBranches : NamesToBranches)
+    llvm::stable_sort(FuncBranches.second.Data);
+
+  for (auto &MemEvents : NamesToMemEvents)
+    llvm::stable_sort(MemEvents.second.Data);
+
   // Release intermediate storage.
   clear(BranchLBRs);
   clear(FallthroughLBRs);

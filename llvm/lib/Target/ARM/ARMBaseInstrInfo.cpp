@@ -4939,7 +4939,7 @@ void ARMBaseInstrInfo::expandLoadStackGuardBase(MachineBasicBlock::iterator MI,
   unsigned int Offset = 0;
 
   if (LoadImmOpc == ARM::MRC || LoadImmOpc == ARM::t2MRC) {
-    assert(Subtarget.isReadTPHard() &&
+    assert(!Subtarget.isReadTPSoft() &&
            "TLS stack protector requires hardware TLS register");
 
     BuildMI(MBB, MI, DL, get(LoadImmOpc), Reg)

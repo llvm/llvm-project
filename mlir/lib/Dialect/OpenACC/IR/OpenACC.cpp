@@ -635,37 +635,72 @@ void acc::HostDataOp::getCanonicalizationPatterns(RewritePatternSet &results,
 //===----------------------------------------------------------------------===//
 
 static ParseResult
-parseGangClause(OpAsmParser &parser,
-                std::optional<OpAsmParser::UnresolvedOperand> &gangNum,
-                Type &gangNumType,
-                std::optional<OpAsmParser::UnresolvedOperand> &gangStatic,
-                Type &gangStaticType, UnitAttr &hasGang) {
+parseGangValue(OpAsmParser &parser, llvm::StringRef keyword,
+               std::optional<OpAsmParser::UnresolvedOperand> &value,
+               Type &valueType, bool &needComa, bool &newValue) {
+  if (succeeded(parser.parseOptionalKeyword(keyword))) {
+    if (parser.parseEqual())
+      return failure();
+    value = OpAsmParser::UnresolvedOperand{};
+    if (parser.parseOperand(*value) || parser.parseColonType(valueType))
+      return failure();
+    needComa = true;
+    newValue = true;
+  }
+  return success();
+}
+
+static ParseResult parseGangClause(
+    OpAsmParser &parser, std::optional<OpAsmParser::UnresolvedOperand> &gangNum,
+    Type &gangNumType, std::optional<OpAsmParser::UnresolvedOperand> &gangDim,
+    Type &gangDimType,
+    std::optional<OpAsmParser::UnresolvedOperand> &gangStatic,
+    Type &gangStaticType, UnitAttr &hasGang) {
   hasGang = UnitAttr::get(parser.getBuilder().getContext());
+  gangNum = std::nullopt;
+  gangDim = std::nullopt;
+  gangStatic = std::nullopt;
+  bool needComa = false;
+
   // optional gang operands
   if (succeeded(parser.parseOptionalLParen())) {
-    if (succeeded(parser.parseOptionalKeyword(LoopOp::getGangNumKeyword()))) {
-      if (parser.parseEqual())
+    while (true) {
+      bool newValue = false;
+      bool needValue = false;
+      if (needComa) {
+        if (succeeded(parser.parseOptionalComma()))
+          needValue = true; // expect a new value after comma.
+        else
+          break;
+      }
+
+      if (failed(parseGangValue(parser, LoopOp::getGangNumKeyword(), gangNum,
+                                gangNumType, needComa, newValue)))
         return failure();
-      gangNum = OpAsmParser::UnresolvedOperand{};
-      if (parser.parseOperand(*gangNum) || parser.parseColonType(gangNumType))
+      if (failed(parseGangValue(parser, LoopOp::getGangDimKeyword(), gangDim,
+                                gangDimType, needComa, newValue)))
         return failure();
-    } else {
-      gangNum = std::nullopt;
+      if (failed(parseGangValue(parser, LoopOp::getGangStaticKeyword(),
+                                gangStatic, gangStaticType, needComa,
+                                newValue)))
+        return failure();
+
+      if (!newValue && needValue) {
+        parser.emitError(parser.getCurrentLocation(),
+                         "new value expected after comma");
+        return failure();
+      }
+
+      if (!newValue)
+        break;
     }
-    // FIXME: Comma should require subsequent operands.
-    (void)parser.parseOptionalComma();
-    if (succeeded(
-            parser.parseOptionalKeyword(LoopOp::getGangStaticKeyword()))) {
-      gangStatic = OpAsmParser::UnresolvedOperand{};
-      if (parser.parseEqual())
-        return failure();
-      gangStatic = OpAsmParser::UnresolvedOperand{};
-      if (parser.parseOperand(*gangStatic) ||
-          parser.parseColonType(gangStaticType))
-        return failure();
+
+    if (!gangNum && !gangDim && !gangStatic) {
+      parser.emitError(parser.getCurrentLocation(),
+                       "expect at least one of num, dim or static values");
+      return failure();
     }
-    // FIXME: Why allow optional last commas?
-    (void)parser.parseOptionalComma();
+
     if (failed(parser.parseRParen()))
       return failure();
   }
@@ -673,13 +708,19 @@ parseGangClause(OpAsmParser &parser,
 }
 
 void printGangClause(OpAsmPrinter &p, Operation *op, Value gangNum,
-                     Type gangNumType, Value gangStatic, Type gangStaticType,
-                     UnitAttr hasGang) {
-  if (gangNum || gangStatic) {
+                     Type gangNumType, Value gangDim, Type gangDimType,
+                     Value gangStatic, Type gangStaticType, UnitAttr hasGang) {
+  if (gangNum || gangStatic || gangDim) {
     p << "(";
     if (gangNum) {
       p << LoopOp::getGangNumKeyword() << "=" << gangNum << " : "
         << gangNumType;
+      if (gangStatic || gangDim)
+        p << ", ";
+    }
+    if (gangDim) {
+      p << LoopOp::getGangDimKeyword() << "=" << gangDim << " : "
+        << gangDimType;
       if (gangStatic)
         p << ", ";
     }

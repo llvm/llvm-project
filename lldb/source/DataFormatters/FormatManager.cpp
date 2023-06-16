@@ -476,7 +476,7 @@ bool FormatManager::ShouldPrintAsOneLiner(ValueObject &valobj) {
 
   for (size_t idx = 0; idx < valobj.GetNumChildren(); idx++) {
     bool is_synth_val = false;
-    ValueObjectSP child_sp(valobj.GetChildAtIndex(idx, true));
+    ValueObjectSP child_sp(valobj.GetChildAtIndex(idx));
     // something is wrong here - bail out
     if (!child_sp)
       return false;

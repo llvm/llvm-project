@@ -79,7 +79,7 @@ public:
   // don't find the name will not be treated as errors.  Also, if you decide to
   // keep the settings just move them into the containing properties, and we
   // will auto-forward the experimental settings to the real one.
-  static const char *GetExperimentalSettingsName();
+  static llvm::StringRef GetExperimentalSettingsName();
 
   static bool IsSettingExperimental(llvm::StringRef setting);
 

@@ -20,34 +20,34 @@
 // clang-format off
 
 void f() {
-  std::format("{::}", std::make_tuple(0)); // expected-error-re{{call to consteval function '{{.*}}' is not a constant expression}}
+  TEST_IGNORE_NODISCARD std::format("{::}", std::make_tuple(0)); // expected-error-re{{call to consteval function '{{.*}}' is not a constant expression}}
   // expected-note@*:* {{non-constexpr function '__throw_format_error' cannot be used in a constant expression}}
 
-  std::format("{::^}", std::make_tuple(0)); // expected-error-re{{call to consteval function '{{.*}}' is not a constant expression}}
+  TEST_IGNORE_NODISCARD std::format("{::^}", std::make_tuple(0)); // expected-error-re{{call to consteval function '{{.*}}' is not a constant expression}}
   // expected-note@*:* {{non-constexpr function '__throw_format_error' cannot be used in a constant expression}}
 
-  std::format("{:+}", std::make_pair(0, 0)); // expected-error-re{{call to consteval function '{{.*}}' is not a constant expression}}
+  TEST_IGNORE_NODISCARD std::format("{:+}", std::make_pair(0, 0)); // expected-error-re{{call to consteval function '{{.*}}' is not a constant expression}}
   // expected-note@*:* {{non-constexpr function '__throw_format_error' cannot be used in a constant expression}}
 
-  std::format("{:m}", std::make_tuple(0)); // expected-error-re{{call to consteval function '{{.*}}' is not a constant expression}}
+  TEST_IGNORE_NODISCARD std::format("{:m}", std::make_tuple(0)); // expected-error-re{{call to consteval function '{{.*}}' is not a constant expression}}
   // expected-note@*:* {{non-constexpr function '__throw_format_error' cannot be used in a constant expression}}
 
-  std::format("{:m}", std::make_tuple(0, 0, 0)); // expected-error-re{{call to consteval function '{{.*}}' is not a constant expression}}
+  TEST_IGNORE_NODISCARD std::format("{:m}", std::make_tuple(0, 0, 0)); // expected-error-re{{call to consteval function '{{.*}}' is not a constant expression}}
   // expected-note@*:* {{non-constexpr function '__throw_format_error' cannot be used in a constant expression}}
 #ifndef TEST_HAS_NO_WIDE_CHARACTERS
-  std::format(L"{::}", std::make_tuple(0)); // expected-error-re{{call to consteval function '{{.*}}' is not a constant expression}}
+  TEST_IGNORE_NODISCARD std::format(L"{::}", std::make_tuple(0)); // expected-error-re{{call to consteval function '{{.*}}' is not a constant expression}}
   // expected-note@*:* {{non-constexpr function '__throw_format_error' cannot be used in a constant expression}}
 
-  std::format(L"{::^}", std::make_tuple(0)); // expected-error-re{{call to consteval function '{{.*}}' is not a constant expression}}
+  TEST_IGNORE_NODISCARD std::format(L"{::^}", std::make_tuple(0)); // expected-error-re{{call to consteval function '{{.*}}' is not a constant expression}}
   // expected-note@*:* {{non-constexpr function '__throw_format_error' cannot be used in a constant expression}}
 
-  std::format(L"{:+}", std::make_pair(0, 0)); // expected-error-re{{call to consteval function '{{.*}}' is not a constant expression}}
+  TEST_IGNORE_NODISCARD std::format(L"{:+}", std::make_pair(0, 0)); // expected-error-re{{call to consteval function '{{.*}}' is not a constant expression}}
   // expected-note@*:* {{non-constexpr function '__throw_format_error' cannot be used in a constant expression}}
 
-  std::format(L"{:m}", std::make_tuple(0)); // expected-error-re{{call to consteval function '{{.*}}' is not a constant expression}}
+  TEST_IGNORE_NODISCARD std::format(L"{:m}", std::make_tuple(0)); // expected-error-re{{call to consteval function '{{.*}}' is not a constant expression}}
   // expected-note@*:* {{non-constexpr function '__throw_format_error' cannot be used in a constant expression}}
 
-  std::format(L"{:m}", std::make_tuple(0, 0, 0)); // expected-error-re{{call to consteval function '{{.*}}' is not a constant expression}}
+  TEST_IGNORE_NODISCARD std::format(L"{:m}", std::make_tuple(0, 0, 0)); // expected-error-re{{call to consteval function '{{.*}}' is not a constant expression}}
   // expected-note@*:* {{non-constexpr function '__throw_format_error' cannot be used in a constant expression}}
 #endif
 }

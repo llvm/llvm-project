@@ -59,7 +59,6 @@ using namespace object;
 namespace bolt {
 
 class BinaryFunction;
-class ExecutableFileMemoryManager;
 
 /// Information on loadable part of the file.
 struct SegmentInfo {
@@ -312,10 +311,6 @@ public:
   using FilteredBinaryDataConstIterator =
       FilterIterator<binary_data_const_iterator>;
   using FilteredBinaryDataIterator = FilterIterator<binary_data_iterator>;
-
-  /// Memory manager for sections and segments. Used to communicate with ORC
-  /// among other things.
-  std::shared_ptr<ExecutableFileMemoryManager> EFMM;
 
   StringRef getFilename() const { return Filename; }
   void setFilename(StringRef Name) { Filename = std::string(Name); }
@@ -1165,7 +1160,7 @@ public:
 
   /// Return a dynamic relocation registered at a given \p Address, or nullptr
   /// if there is no dynamic relocation at such address.
-  const Relocation *getDynamicRelocationAt(uint64_t Address);
+  const Relocation *getDynamicRelocationAt(uint64_t Address) const;
 
   /// Remove registered relocation at a given \p Address.
   bool removeRelocationAt(uint64_t Address);

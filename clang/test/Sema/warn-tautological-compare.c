@@ -93,3 +93,8 @@ void test_conditional_operator(void) {
   x = array ? 1 : 0; // expected-warning {{address of array}}
   x = &x ? 1 : 0;    // expected-warning {{address of 'x'}}
 }
+
+void test4(void) {
+  int *a = (void *) 0;
+  int b = (&a) == ((void *) 0); // expected-warning {{comparison of address of 'a' equal to a null pointer is always false}}
+}

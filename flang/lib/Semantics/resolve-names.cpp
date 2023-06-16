@@ -4849,6 +4849,13 @@ int DeclarationVisitor::GetVectorElementKind(
 }
 
 bool DeclarationVisitor::Pre(const parser::VectorTypeSpec &) {
+  // PowerPC vector types are allowed only on Power architectures.
+  if (!currScope().context().targetCharacteristics().isPPC()) {
+    Say(currStmtSource().value(),
+        "Vector type is only supported for PowerPC"_err_en_US);
+    isVectorType_ = false;
+    return false;
+  }
   isVectorType_ = true;
   return true;
 }
@@ -4910,13 +4917,13 @@ void DeclarationVisitor::Post(const parser::VectorTypeSpec &x) {
 
   auto ppcBuiltinTypesScope = currScope().context().GetPPCBuiltinTypesScope();
   if (!ppcBuiltinTypesScope) {
-    common::die("INTERNAL: The __fortran_ppc_types module was not found ");
+    common::die("INTERNAL: The __ppc_types module was not found ");
   }
 
   auto iter{ppcBuiltinTypesScope->find(
       semantics::SourceName{typeName.data(), typeName.size()})};
   if (iter == ppcBuiltinTypesScope->cend()) {
-    common::die("INTERNAL: The __fortran_ppc_types module does not define "
+    common::die("INTERNAL: The __ppc_types module does not define "
                 "the type '%s'",
         typeName.data());
   }
@@ -4934,7 +4941,7 @@ void DeclarationVisitor::Post(const parser::VectorTypeSpec &x) {
       extant{ppcBuiltinTypesScope->FindInstantiatedDerivedType(
           vectorDerivedType, DeclTypeSpec::Category::TypeDerived)}) {
     // This derived type and parameter expressions (if any) are already present
-    // in the __fortran_ppc_intrinsics scope.
+    // in the __ppc_intrinsics scope.
     SetDeclTypeSpec(*extant);
   } else {
     DeclTypeSpec &type{ppcBuiltinTypesScope->MakeDerivedType(

@@ -203,9 +203,8 @@ Sema::Sema(Preprocessor &pp, ASTContext &ctxt, ASTConsumer &consumer,
       VisContext(nullptr), PragmaAttributeCurrentTargetDecl(nullptr),
       IsBuildingRecoveryCallExpr(false), LateTemplateParser(nullptr),
       LateTemplateParserCleanup(nullptr), OpaqueParser(nullptr), IdResolver(pp),
-      StdInitializerList(nullptr),
-      StdCoroutineTraitsCache(nullptr), CXXTypeInfoDecl(nullptr),
-      MSVCGuidDecl(nullptr), StdSourceLocationImplDecl(nullptr),
+      StdInitializerList(nullptr), StdCoroutineTraitsCache(nullptr),
+      CXXTypeInfoDecl(nullptr), StdSourceLocationImplDecl(nullptr),
       NSNumberDecl(nullptr), NSValueDecl(nullptr), NSStringDecl(nullptr),
       StringWithUTF8StringMethod(nullptr),
       ValueWithBytesObjCTypeMethod(nullptr), NSArrayDecl(nullptr),
@@ -1381,6 +1380,9 @@ void Sema::ActOnEndOfTranslationUnit() {
         if (DiagD->isReferenced()) {
           Diag(DiagD->getLocation(), diag::warn_unneeded_internal_decl)
               << /*variable*/ 1 << DiagD;
+        } else if (DiagD->getDescribedVarTemplate()) {
+          Diag(DiagD->getLocation(), diag::warn_unused_template)
+              << /*variable*/ 1 << DiagD;
         } else if (DiagD->getType().isConstQualified()) {
           const SourceManager &SM = SourceMgr;
           if (SM.getMainFileID() != SM.getFileID(DiagD->getLocation()) ||
@@ -1388,11 +1390,7 @@ void Sema::ActOnEndOfTranslationUnit() {
             Diag(DiagD->getLocation(), diag::warn_unused_const_variable)
                 << DiagD;
         } else {
-          if (DiagD->getDescribedVarTemplate())
-            Diag(DiagD->getLocation(), diag::warn_unused_template)
-                << /*variable*/ 1 << DiagD;
-          else
-            Diag(DiagD->getLocation(), diag::warn_unused_variable) << DiagD;
+          Diag(DiagD->getLocation(), diag::warn_unused_variable) << DiagD;
         }
       }
     }

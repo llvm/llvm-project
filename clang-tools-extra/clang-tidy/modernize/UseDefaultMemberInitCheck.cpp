@@ -206,7 +206,7 @@ void UseDefaultMemberInitCheck::registerMatchers(MatchFinder *Finder) {
 
   auto Init =
       anyOf(initListExpr(anyOf(allOf(initCountIs(1), hasInit(0, InitBase)),
-                               initCountIs(0))),
+                               initCountIs(0), hasType(arrayType()))),
             InitBase);
 
   Finder->addMatcher(
@@ -267,20 +267,30 @@ void UseDefaultMemberInitCheck::checkDefaultInit(
   CharSourceRange InitRange =
       CharSourceRange::getCharRange(LParenEnd, Init->getRParenLoc());
 
-  bool ValueInit = isa<ImplicitValueInitExpr>(Init->getInit());
-  bool CanAssign = UseAssignment && (!ValueInit || !Init->getInit()->getType()->isEnumeralType());
+  const Expr *InitExpression = Init->getInit();
+  const QualType InitType = InitExpression->getType();
+
+  const bool ValueInit =
+      isa<ImplicitValueInitExpr>(InitExpression) && !isa<ArrayType>(InitType);
+  const bool CanAssign =
+      UseAssignment && (!ValueInit || !InitType->isEnumeralType());
+  const bool NeedsBraces = !CanAssign || isa<ArrayType>(InitType);
 
   auto Diag =
       diag(Field->getLocation(), "use default member initializer for %0")
-      << Field
-      << FixItHint::CreateInsertion(FieldEnd, CanAssign ? " = " : "{")
-      << FixItHint::CreateInsertionFromRange(FieldEnd, InitRange);
+      << Field;
+
+  if (CanAssign)
+    Diag << FixItHint::CreateInsertion(FieldEnd, " = ");
+  if (NeedsBraces)
+    Diag << FixItHint::CreateInsertion(FieldEnd, "{");
 
   if (CanAssign && ValueInit)
-    Diag << FixItHint::CreateInsertion(
-        FieldEnd, getValueOfValueInit(Init->getInit()->getType()));
+    Diag << FixItHint::CreateInsertion(FieldEnd, getValueOfValueInit(InitType));
+  else
+    Diag << FixItHint::CreateInsertionFromRange(FieldEnd, InitRange);
 
-  if (!CanAssign)
+  if (NeedsBraces)
     Diag << FixItHint::CreateInsertion(FieldEnd, "}");
 
   Diag << FixItHint::CreateRemoval(Init->getSourceRange());
@@ -294,8 +304,7 @@ void UseDefaultMemberInitCheck::checkExistingInit(
     return;
 
   diag(Init->getSourceLocation(), "member initializer for %0 is redundant")
-      << Field
-      << FixItHint::CreateRemoval(Init->getSourceRange());
+      << Field << FixItHint::CreateRemoval(Init->getSourceRange());
 }
 
 } // namespace clang::tidy::modernize

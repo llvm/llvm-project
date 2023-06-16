@@ -276,6 +276,11 @@ bool llvm::TargetTransformInfo::isValidAddrSpaceCast(unsigned FromAS,
   return TTIImpl->isValidAddrSpaceCast(FromAS, ToAS);
 }
 
+bool llvm::TargetTransformInfo::addrspacesMayAlias(unsigned FromAS,
+                                                   unsigned ToAS) const {
+  return TTIImpl->addrspacesMayAlias(FromAS, ToAS);
+}
+
 unsigned TargetTransformInfo::getFlatAddressSpace() const {
   return TTIImpl->getFlatAddressSpace();
 }

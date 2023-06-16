@@ -1074,20 +1074,24 @@ bool LoopIdiomRecognize::processLoopStridedStore(
   Value *NumBytes =
       Expander.expandCodeFor(NumBytesS, IntIdxTy, Preheader->getTerminator());
 
+  if (!SplatValue && !isLibFuncEmittable(M, TLI, LibFunc_memset_pattern16))
+    return Changed;
+
+  AAMDNodes AATags = TheStore->getAAMetadata();
+  for (Instruction *Store : Stores)
+    AATags = AATags.merge(Store->getAAMetadata());
+  if (auto CI = dyn_cast<ConstantInt>(NumBytes))
+    AATags = AATags.extendTo(CI->getZExtValue());
+  else
+    AATags = AATags.extendTo(-1);
+
   CallInst *NewCall;
   if (SplatValue) {
-    AAMDNodes AATags = TheStore->getAAMetadata();
-    for (Instruction *Store : Stores)
-      AATags = AATags.merge(Store->getAAMetadata());
-    if (auto CI = dyn_cast<ConstantInt>(NumBytes))
-      AATags = AATags.extendTo(CI->getZExtValue());
-    else
-      AATags = AATags.extendTo(-1);
-
     NewCall = Builder.CreateMemSet(
         BasePtr, SplatValue, NumBytes, MaybeAlign(StoreAlignment),
         /*isVolatile=*/false, AATags.TBAA, AATags.Scope, AATags.NoAlias);
-  } else if (isLibFuncEmittable(M, TLI, LibFunc_memset_pattern16)) {
+  } else {
+    assert (isLibFuncEmittable(M, TLI, LibFunc_memset_pattern16));
     // Everything is emitted in default address space
     Type *Int8PtrTy = DestInt8PtrTy;
 
@@ -1105,8 +1109,17 @@ bool LoopIdiomRecognize::processLoopStridedStore(
     GV->setAlignment(Align(16));
     Value *PatternPtr = ConstantExpr::getBitCast(GV, Int8PtrTy);
     NewCall = Builder.CreateCall(MSP, {BasePtr, PatternPtr, NumBytes});
-  } else
-    return Changed;
+    
+    // Set the TBAA info if present.
+    if (AATags.TBAA)
+      NewCall->setMetadata(LLVMContext::MD_tbaa, AATags.TBAA);
+
+    if (AATags.Scope)
+      NewCall->setMetadata(LLVMContext::MD_alias_scope, AATags.Scope);
+
+    if (AATags.NoAlias)
+      NewCall->setMetadata(LLVMContext::MD_noalias, AATags.NoAlias);
+  } 
 
   NewCall->setDebugLoc(TheStore->getDebugLoc());
 

@@ -28,6 +28,7 @@
 #include "llvm/IR/Intrinsics.h"
 #include "llvm/IR/IntrinsicsAArch64.h"
 #include "llvm/IR/IntrinsicsARM.h"
+#include "llvm/IR/IntrinsicsRISCV.h"
 #include "llvm/IR/IntrinsicsWebAssembly.h"
 #include "llvm/IR/IntrinsicsX86.h"
 #include "llvm/IR/LLVMContext.h"
@@ -1123,6 +1124,47 @@ static bool UpgradeIntrinsicFunction1(Function *F, Function *&NewFn) {
       NewFn = Intrinsic::getDeclaration(
           F->getParent(), Intrinsic::ptr_annotation,
           {F->arg_begin()->getType(), F->getArg(1)->getType()});
+      return true;
+    }
+    break;
+
+  case 'r':
+    if (Name == "riscv.aes32dsi" &&
+        !F->getFunctionType()->getParamType(2)->isIntegerTy(32)) {
+      rename(F);
+      NewFn = Intrinsic::getDeclaration(F->getParent(), Intrinsic::riscv_aes32dsi);
+      return true;
+    }
+    if (Name == "riscv.aes32dsmi" &&
+        !F->getFunctionType()->getParamType(2)->isIntegerTy(32)) {
+      rename(F);
+      NewFn = Intrinsic::getDeclaration(F->getParent(), Intrinsic::riscv_aes32dsmi);
+      return true;
+    }
+    if (Name == "riscv.aes32esi" &&
+        !F->getFunctionType()->getParamType(2)->isIntegerTy(32)) {
+      rename(F);
+      NewFn = Intrinsic::getDeclaration(F->getParent(), Intrinsic::riscv_aes32esi);
+      return true;
+    }
+    if (Name == "riscv.aes32esmi" &&
+        !F->getFunctionType()->getParamType(2)->isIntegerTy(32)) {
+      rename(F);
+      NewFn = Intrinsic::getDeclaration(F->getParent(), Intrinsic::riscv_aes32esmi);
+      return true;
+    }
+    if (Name.startswith("riscv.sm4ks") &&
+        !F->getFunctionType()->getParamType(2)->isIntegerTy(32)) {
+      rename(F);
+      NewFn = Intrinsic::getDeclaration(F->getParent(), Intrinsic::riscv_sm4ks,
+                                        F->getReturnType());
+      return true;
+    }
+    if (Name.startswith("riscv.sm4ed") &&
+        !F->getFunctionType()->getParamType(2)->isIntegerTy(32)) {
+      rename(F);
+      NewFn = Intrinsic::getDeclaration(F->getParent(), Intrinsic::riscv_sm4ed,
+                                        F->getReturnType());
       return true;
     }
     break;
@@ -4235,6 +4277,24 @@ void llvm::UpgradeIntrinsicCall(CallBase *CI, Function *NewFn) {
     CI->replaceAllUsesWith(NewCall);
     CI->eraseFromParent();
     return;
+
+  case Intrinsic::riscv_aes32dsi:
+  case Intrinsic::riscv_aes32dsmi:
+  case Intrinsic::riscv_aes32esi:
+  case Intrinsic::riscv_aes32esmi:
+  case Intrinsic::riscv_sm4ks:
+  case Intrinsic::riscv_sm4ed: {
+    // The last argument to these intrinsics used to be i8 and changed to i32.
+    Value *Arg2 = CI->getArgOperand(2);
+    if (Arg2->getType()->isIntegerTy(32))
+      return;
+
+    Arg2 = ConstantInt::get(Type::getInt32Ty(C), cast<ConstantInt>(Arg2)->getZExtValue());
+
+    NewCall = Builder.CreateCall(NewFn, {CI->getArgOperand(0),
+                                 CI->getArgOperand(1), Arg2});
+    break;
+  }
 
   case Intrinsic::x86_xop_vfrcz_ss:
   case Intrinsic::x86_xop_vfrcz_sd:

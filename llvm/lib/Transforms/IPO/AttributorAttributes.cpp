@@ -607,10 +607,12 @@ static void followUsesInMBEC(AAType &AA, Attributor &A, StateType &S,
   for (const Use &U : AA.getIRPosition().getAssociatedValue().uses())
     Uses.insert(&U);
 
-  MustBeExecutedContextExplorer &Explorer =
+  MustBeExecutedContextExplorer *Explorer =
       A.getInfoCache().getMustBeExecutedContextExplorer();
+  if (!Explorer)
+    return;
 
-  followUsesInContext<AAType>(AA, A, Explorer, &CtxI, Uses, S);
+  followUsesInContext<AAType>(AA, A, *Explorer, &CtxI, Uses, S);
 
   if (S.isAtFixpoint())
     return;
@@ -655,7 +657,7 @@ static void followUsesInMBEC(AAType &AA, Attributor &A, StateType &S,
   //    }
   // }
 
-  Explorer.checkForAllContext(&CtxI, Pred);
+  Explorer->checkForAllContext(&CtxI, Pred);
   for (const BranchInst *Br : BrInsts) {
     StateType ParentState;
 
@@ -667,7 +669,7 @@ static void followUsesInMBEC(AAType &AA, Attributor &A, StateType &S,
       StateType ChildState;
 
       size_t BeforeSize = Uses.size();
-      followUsesInContext(AA, A, Explorer, &BB->front(), Uses, ChildState);
+      followUsesInContext(AA, A, *Explorer, &BB->front(), Uses, ChildState);
 
       // Erase uses which only appear in the child.
       for (auto It = Uses.begin() + BeforeSize; It != Uses.end();)
@@ -7022,7 +7024,7 @@ ChangeStatus AAHeapToStackFunction::updateImpl(Attributor &A) {
   const auto &LivenessAA =
       A.getAAFor<AAIsDead>(*this, IRPosition::function(*F), DepClassTy::NONE);
 
-  MustBeExecutedContextExplorer &Explorer =
+  MustBeExecutedContextExplorer *Explorer =
       A.getInfoCache().getMustBeExecutedContextExplorer();
 
   bool StackIsAccessibleByOtherThreads =
@@ -7148,7 +7150,7 @@ ChangeStatus AAHeapToStackFunction::updateImpl(Attributor &A) {
       return false;
     }
     Instruction *CtxI = isa<InvokeInst>(AI.CB) ? AI.CB : AI.CB->getNextNode();
-    if (!Explorer.findInContextOf(UniqueFree, CtxI)) {
+    if (!Explorer || !Explorer->findInContextOf(UniqueFree, CtxI)) {
       LLVM_DEBUG(
           dbgs()
           << "[H2S] unique free call might not be executed with the allocation "
@@ -8747,6 +8749,8 @@ protected:
     if (!Accesses)
       Accesses = new (Allocator) AccessSet();
     Changed |= Accesses->insert(AccessInfo{I, Ptr, AK}).second;
+    if (MLK == NO_UNKOWN_MEM)
+      MLK = NO_LOCATIONS;
     State.removeAssumedBits(MLK);
   }
 
@@ -8822,7 +8826,7 @@ void AAMemoryLocationImpl::categorizePtrValue(
     assert(MLK != NO_LOCATIONS && "No location specified!");
     LLVM_DEBUG(dbgs() << "[AAMemoryLocation] Ptr value can be categorized: "
                       << Obj << " -> " << getMemoryLocationsAsStr(MLK) << "\n");
-    updateStateAndAccessesMap(getState(), MLK, &I, &Obj, Changed,
+    updateStateAndAccessesMap(State, MLK, &I, &Obj, Changed,
                               getAccessKindFromInst(&I));
 
     return true;

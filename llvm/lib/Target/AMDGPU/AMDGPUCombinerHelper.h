@@ -12,6 +12,9 @@
 ///
 //===----------------------------------------------------------------------===//
 
+#ifndef LLVM_LIB_TARGET_AMDGPU_AMDGPUCOMBINERHELPER_H
+#define LLVM_LIB_TARGET_AMDGPU_AMDGPUCOMBINERHELPER_H
+
 #include "llvm/CodeGen/GlobalISel/Combiner.h"
 #include "llvm/CodeGen/GlobalISel/CombinerHelper.h"
 
@@ -29,3 +32,5 @@ public:
   void applyExpandPromotedF16FMed3(MachineInstr &MI, Register Src0,
                                    Register Src1, Register Src2);
 };
+
+#endif // LLVM_LIB_TARGET_AMDGPU_AMDGPUCOMBINERHELPER_H

@@ -248,7 +248,31 @@
     recursive_directory_iterator begin(recursive_directory_iterator iter) noexcept;
     recursive_directory_iterator end(recursive_directory_iterator) noexcept;
 
-    class file_status;
+  class file_status {
+  public:
+    // [fs.file.status.cons], constructors and destructor
+    file_status() noexcept : file_status(file_type::none) {}
+    explicit file_status(file_type ft,
+                         perms prms = perms::unknown) noexcept;
+    file_status(const file_status&) noexcept = default;
+    file_status(file_status&&) noexcept = default;
+    ~file_status();
+
+    // assignments
+    file_status& operator=(const file_status&) noexcept = default;
+    file_status& operator=(file_status&&) noexcept = default;
+
+    // [fs.file.status.mods], modifiers
+    void       type(file_type ft) noexcept;
+    void       permissions(perms prms) noexcept;
+
+    // [fs.file.status.obs], observers
+    file_type  type() const noexcept;
+    perms      permissions() const noexcept;
+
+    friend bool operator==(const file_status& lhs, const file_status& rhs) noexcept
+      { return lhs.type() == rhs.type() && lhs.permissions() == rhs.permissions(); } // C++20
+  };
 
     struct space_info
     {

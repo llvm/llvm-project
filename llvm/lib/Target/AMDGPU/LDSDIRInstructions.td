@@ -53,14 +53,14 @@ class VDSDIRe<bits<2> op, bit is_direct> : Enc32 {
 class LDSDIR_getIns<bit direct> {
   dag ret = !if(direct,
     (ins wait_vdst:$waitvdst),
-    (ins Attr:$attr, AttrChan:$attrchan, wait_vdst:$waitvdst)
+    (ins InterpAttr:$attr, InterpAttrChan:$attrchan, wait_vdst:$waitvdst)
   );
 }
 
 class VDSDIR_getIns<bit direct> {
   dag ret = !if(direct,
     (ins wait_va_vdst:$waitvdst, wait_vm_vsrc:$waitvsrc),
-    (ins Attr:$attr, AttrChan:$attrchan, wait_va_vdst:$waitvdst, wait_vm_vsrc:$waitvsrc)
+    (ins InterpAttr:$attr, InterpAttrChan:$attrchan, wait_va_vdst:$waitvdst, wait_vm_vsrc:$waitvsrc)
   );
 }
 

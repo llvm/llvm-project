@@ -278,12 +278,12 @@ static cl::opt<bool> OptVGPRLiveRange(
 static cl::opt<bool>
     EnableAtomicOptimizations("amdgpu-atomic-optimizations",
                               cl::desc("Enable atomic optimizations"),
-                              cl::init(false), cl::Hidden);
+                              cl::init(true), cl::Hidden);
 
 static cl::opt<ScanOptions> AMDGPUAtomicOptimizerStrategy(
     "amdgpu-atomic-optimizer-strategy",
     cl::desc("Select DPP or Iterative strategy for scan"),
-    cl::init(ScanOptions::DPP),
+    cl::init(ScanOptions::Iterative),
     cl::values(clEnumValN(ScanOptions::DPP, "DPP",
                           "Use DPP operations for scan"),
                clEnumValN(ScanOptions::Iterative, "Iterative",

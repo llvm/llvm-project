@@ -76,7 +76,7 @@ lldb::ValueObjectSP GetCapturedThisValueObject(StackFrame *frame) {
   assert(frame);
 
   if (auto thisValSP = frame->FindVariable(ConstString("this")))
-    if (auto thisThisValSP = thisValSP->GetChildMemberWithName("this", true))
+    if (auto thisThisValSP = thisValSP->GetChildMemberWithName("this"))
       return thisThisValSP;
 
   return nullptr;
@@ -1106,7 +1106,7 @@ bool ClangExpressionDeclMap::LookupLocalVariable(
     auto find_capture = [](ConstString varname,
                            StackFrame *frame) -> ValueObjectSP {
       if (auto lambda = ClangExpressionUtil::GetLambdaValueObject(frame)) {
-        if (auto capture = lambda->GetChildMemberWithName(varname, true)) {
+        if (auto capture = lambda->GetChildMemberWithName(varname)) {
           return capture;
         }
       }

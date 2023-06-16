@@ -1,6 +1,7 @@
 add_library(gpu_loader OBJECT Main.cpp)
 target_include_directories(gpu_loader PUBLIC
   ${CMAKE_CURRENT_SOURCE_DIR}
+  ${LIBC_SOURCE_DIR}/include
   ${LIBC_SOURCE_DIR}
 )
 

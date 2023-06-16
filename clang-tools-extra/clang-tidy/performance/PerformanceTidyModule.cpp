@@ -20,7 +20,9 @@
 #include "MoveConstructorInitCheck.h"
 #include "NoAutomaticMoveCheck.h"
 #include "NoIntToPtrCheck.h"
+#include "NoexceptDestructorCheck.h"
 #include "NoexceptMoveConstructorCheck.h"
+#include "NoexceptSwapCheck.h"
 #include "TriviallyDestructibleCheck.h"
 #include "TypePromotionInMathFnCheck.h"
 #include "UnnecessaryCopyInitialization.h"
@@ -52,8 +54,12 @@ public:
     CheckFactories.registerCheck<NoAutomaticMoveCheck>(
         "performance-no-automatic-move");
     CheckFactories.registerCheck<NoIntToPtrCheck>("performance-no-int-to-ptr");
+    CheckFactories.registerCheck<NoexceptDestructorCheck>(
+        "performance-noexcept-destructor");
     CheckFactories.registerCheck<NoexceptMoveConstructorCheck>(
         "performance-noexcept-move-constructor");
+    CheckFactories.registerCheck<NoexceptSwapCheck>(
+        "performance-noexcept-swap");
     CheckFactories.registerCheck<TriviallyDestructibleCheck>(
         "performance-trivially-destructible");
     CheckFactories.registerCheck<TypePromotionInMathFnCheck>(

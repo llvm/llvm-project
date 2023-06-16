@@ -52,7 +52,7 @@ public:
   FILE *Fopen(const char *path, const char *mode);
 
   /// Wraps ::open in a platform-independent way.
-  int Open(const char *path, int flags, int mode);
+  int Open(const char *path, int flags, int mode = 0600);
 
   llvm::Expected<std::unique_ptr<File>>
   Open(const FileSpec &file_spec, File::OpenOptions options,

@@ -194,6 +194,10 @@ public:
     return false;
   }
 
+  bool addrspacesMayAlias(unsigned AS0, unsigned AS1) const {
+    return AMDGPU::addrspacesMayAlias(AS0, AS1);
+  }
+
   unsigned getFlatAddressSpace() const {
     // Don't bother running InferAddressSpaces pass on graphics shaders which
     // don't use flat addressing.

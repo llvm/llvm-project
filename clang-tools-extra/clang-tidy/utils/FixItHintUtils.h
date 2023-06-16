@@ -44,6 +44,9 @@ addQualifierToVarDecl(const VarDecl &Var, const ASTContext &Context,
                       DeclSpec::TQ Qualifier,
                       QualifierTarget CT = QualifierTarget::Pointee,
                       QualifierPolicy CP = QualifierPolicy::Left);
+
+// \brief Format a pointer to an expression
+std::string formatDereference(const Expr &ExprNode, const ASTContext &Context);
 } // namespace clang::tidy::utils::fixit
 
 #endif // LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_UTILS_FIXITHINTUTILS_H

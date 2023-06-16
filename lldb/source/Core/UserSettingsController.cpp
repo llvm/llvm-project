@@ -107,7 +107,10 @@ Properties::GetSubProperty(const ExecutionContext *exe_ctx,
   return lldb::OptionValuePropertiesSP();
 }
 
-const char *Properties::GetExperimentalSettingsName() { return "experimental"; }
+llvm::StringRef Properties::GetExperimentalSettingsName() {
+  static constexpr llvm::StringLiteral g_experimental("experimental");
+  return g_experimental;
+}
 
 bool Properties::IsSettingExperimental(llvm::StringRef setting) {
   if (setting.empty())

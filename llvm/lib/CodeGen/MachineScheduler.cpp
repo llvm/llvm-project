@@ -1010,13 +1010,13 @@ LLVM_DUMP_METHOD void ScheduleDAGMI::dumpScheduleTraceTopDown() const {
                    SchedModel.getWriteProcResEnd(SC)));
 
     if (MISchedSortResourcesInTrace)
-      llvm::sort(ResourcesIt.begin(), ResourcesIt.end(),
-                 [](const MCWriteProcResEntry &LHS,
-                    const MCWriteProcResEntry &RHS) -> bool {
-                   return LHS.StartAtCycle < RHS.StartAtCycle ||
-                          (LHS.StartAtCycle == RHS.StartAtCycle &&
-                           LHS.Cycles < RHS.Cycles);
-                 });
+      llvm::stable_sort(ResourcesIt,
+                        [](const MCWriteProcResEntry &LHS,
+                           const MCWriteProcResEntry &RHS) -> bool {
+                          return LHS.StartAtCycle < RHS.StartAtCycle ||
+                                 (LHS.StartAtCycle == RHS.StartAtCycle &&
+                                  LHS.Cycles < RHS.Cycles);
+                        });
     for (const MCWriteProcResEntry &PI : ResourcesIt) {
       C = FirstCycle;
       const std::string ResName =
@@ -1090,13 +1090,13 @@ LLVM_DUMP_METHOD void ScheduleDAGMI::dumpScheduleTraceBottomUp() const {
                    SchedModel.getWriteProcResEnd(SC)));
 
     if (MISchedSortResourcesInTrace)
-      llvm::sort(ResourcesIt.begin(), ResourcesIt.end(),
-                 [](const MCWriteProcResEntry &LHS,
-                    const MCWriteProcResEntry &RHS) -> bool {
-                   return LHS.StartAtCycle < RHS.StartAtCycle ||
-                          (LHS.StartAtCycle == RHS.StartAtCycle &&
-                           LHS.Cycles < RHS.Cycles);
-                 });
+      llvm::stable_sort(ResourcesIt,
+                        [](const MCWriteProcResEntry &LHS,
+                           const MCWriteProcResEntry &RHS) -> bool {
+                          return LHS.StartAtCycle < RHS.StartAtCycle ||
+                                 (LHS.StartAtCycle == RHS.StartAtCycle &&
+                                  LHS.Cycles < RHS.Cycles);
+                        });
     for (const MCWriteProcResEntry &PI : ResourcesIt) {
       C = FirstCycle;
       const std::string ResName =

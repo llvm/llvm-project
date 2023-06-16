@@ -863,6 +863,20 @@ TEST_F(TargetDeclTest, DependentExprs) {
       )cpp";
   EXPECT_DECLS("CXXDependentScopeMemberExpr",
                "template <typename T> T convert() const");
+
+  Code = R"cpp(
+        template <typename T>
+        struct Waldo {
+          void find();
+        };
+        template <typename T>
+        using Wally = Waldo<T>;
+        template <typename T>
+        void foo(Wally<T> w) {
+          w.[[find]]();
+        }
+  )cpp";
+  EXPECT_DECLS("CXXDependentScopeMemberExpr", "void find()");
 }
 
 TEST_F(TargetDeclTest, DependentTypes) {

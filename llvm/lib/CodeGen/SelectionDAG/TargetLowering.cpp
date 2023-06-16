@@ -4085,8 +4085,12 @@ static SDValue simplifySetCCWithCTPOP(const TargetLowering &TLI, EVT VT,
     ISD::CondCode InvCond = ISD::getSetCCInverse(Cond, CTVT);
     SDValue Add = DAG.getNode(ISD::ADD, dl, CTVT, CTOp, NegOne);
     SDValue And = DAG.getNode(ISD::AND, dl, CTVT, CTOp, Add);
-    SDValue LHS = DAG.getSetCC(dl, VT, CTOp, Zero, InvCond);
     SDValue RHS = DAG.getSetCC(dl, VT, And, Zero, Cond);
+    // Its not uncommon for known-never-zero X to exist in (ctpop X) eq/ne 1, so
+    // check before the emit a potentially unnecessary op.
+    if (DAG.isKnownNeverZero(CTOp))
+      return RHS;
+    SDValue LHS = DAG.getSetCC(dl, VT, CTOp, Zero, InvCond);
     unsigned LogicOpcode = Cond == ISD::SETEQ ? ISD::AND : ISD::OR;
     return DAG.getNode(LogicOpcode, dl, VT, LHS, RHS);
   }

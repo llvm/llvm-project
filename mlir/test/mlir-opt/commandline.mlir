@@ -6,6 +6,7 @@
 // CHECK-SAME: amx
 // CHECK-SAME: arith
 // CHECK-SAME: arm_neon
+// CHECK-SAME: arm_sme
 // CHECK-SAME: arm_sve
 // CHECK-SAME: async
 // CHECK-SAME: bufferization

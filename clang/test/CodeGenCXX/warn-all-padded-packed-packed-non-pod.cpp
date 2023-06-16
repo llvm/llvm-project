@@ -184,6 +184,6 @@ struct S30_use { // abi15-warning {{packed attribute is unnecessary for 'S30_use
 static_assert(sizeof(S30_use) == 3, "");
 
 // The warnings are emitted when the layout of the structs is computed, so we have to use them.
-void f(S1*, S2*, S3*, S4*, S5*, S6*, S7*, S8*, S9*, S10*, S11*, S12*, S13*,
-       S14*, S15*, S16*, S17*, S18*, S19*, S20*, S21*, S22*, S23*, S24*, S25*,
-       S26*, S27*, S28*, S29*){}
+void f(S1, S2, S3, S4, S5, S6, S7, S8, S9, S10, S11, S12, S13,
+       S14, S15, S16, S17, S18, S19, S20, S21, S22, S23, S24, S25,
+       S26, S27, S28, S29){}

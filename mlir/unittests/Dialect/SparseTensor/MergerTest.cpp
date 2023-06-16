@@ -34,7 +34,9 @@ namespace {
   DO(subi, TensorExp::Kind::kSubI)                                             \
   DO(andi, TensorExp::Kind::kAndI)                                             \
   DO(xori, TensorExp::Kind::kXorI)                                             \
-  DO(ori, TensorExp::Kind::kOrI)
+  DO(ori, TensorExp::Kind::kOrI)                                               \
+  DO(cmpf, TensorExp::Kind::kCmpF)                                             \
+  DO(cmpi, TensorExp::Kind::kCmpI)
 
 // TODO: Disjunctive binary operations that need special handling are not
 // included, e.g., Division are not tested (for now) as it need a constant
@@ -109,6 +111,7 @@ struct Pattern {
   /// Constructors.
   /// Rather than using these, please use the readable helper constructor
   /// functions below to make tests more readable.
+  Pattern() : kind(TensorExp::Kind::kSynZero) {}
   Pattern(TensorId tid) : kind(TensorExp::Kind::kTensor), tid(tid) {}
   Pattern(TensorExp::Kind kind, PatternRef e0, PatternRef e1)
       : kind(kind), children(e0, e1) {
@@ -122,6 +125,7 @@ struct Pattern {
 ///
 
 static Pattern tensorPattern(TensorId tid) { return Pattern(tid); }
+static Pattern synZeroPattern() { return Pattern(); }
 
 #define IMPL_BINOP_PATTERN(OP, KIND)                                           \
   LLVM_ATTRIBUTE_UNUSED static Pattern OP##Pattern(PatternRef e0,              \
@@ -232,6 +236,9 @@ protected:
     // Leaf.
     case TensorExp::Kind::kTensor:
       return tensorExp.tensor == pattern.tid;
+    case TensorExp::Kind::kSynZero:
+      // Already checked kind equivalence @L233
+      return true;
     case TensorExp::Kind::kInvariant:
       llvm_unreachable("invariant not handled yet");
     case TensorExp::Kind::kLoopVar:
@@ -289,6 +296,8 @@ protected:
     case TensorExp::Kind::kAndI:
     case TensorExp::Kind::kOrI:
     case TensorExp::Kind::kXorI:
+    case TensorExp::Kind::kCmpF:
+    case TensorExp::Kind::kCmpI:
     case TensorExp::Kind::kShrS:
     case TensorExp::Kind::kShrU:
     case TensorExp::Kind::kShlI:
@@ -751,6 +760,79 @@ FOREVERY_COMMON_DISJ_BINOP(IMPL_MERGER_TEST_OPTIMIZED_DISJ)
   }
 
 FOREVERY_COMMON_CONJ_BINOP(IMPL_MERGER_TEST_OPTIMIZED_CONJ)
+
+/// Vector element-wise comparison (disjunction) of 2 vectors. i.e.;
+///   a(i) = b(i) + c(i)
+/// which should form the 3 lattice points
+/// {
+///   lat( i_00 i_01 / (tensor_0 cmp tensor_1) )
+///   lat( i_00 / tensor_0 cmp 0 )
+///   lat( i_01 / 0 cmp tensor_1 )
+/// }
+/// and after optimization, the lattice points do not change (as there is no
+/// duplicated point and all input vectors are sparse vector).
+/// {
+///   lat( i_00 i_01 / (tensor_0 cmp tensor_1) )
+///   lat( i_00 / tensor_0 cmp 0 )
+///   lat( i_01 / 0 cmp tensor_1 )
+/// }
+TEST_F(MergerTest3T1L, vector_cmp) {
+  const auto e = cmpiExpr(tensor(0), tensor(1));
+  const auto l0 = lid(0);
+  const auto t0 = tid(0);
+  const auto t1 = tid(1);
+  PatternRef zero = synZeroPattern();
+  PatternRef p0 = tensorPattern(t0);
+  PatternRef p1 = tensorPattern(t1);
+  auto s = merger.buildLattices(e, l0);
+  expectLatPoint(s, 0, cmpiPattern(p0, p1), loopsToBits({{l0, t0}, {l0, t1}}));
+  expectLatPointWithinRange(s, 1, 2, cmpiPattern(p0, zero),
+                            loopsToBits({{l0, t0}}));
+  expectLatPointWithinRange(s, 1, 2, cmpiPattern(zero, p1),
+                            loopsToBits({{l0, t1}}));
+  s = merger.optimizeSet(s);
+  expectLatPoint(s, 0, cmpiPattern(p0, p1), loopsToBits({{l0, t0}, {l0, t1}}));
+  expectLatPointWithinRange(s, 1, 2, cmpiPattern(p0, zero),
+                            loopsToBits({{l0, t0}}));
+  expectLatPointWithinRange(s, 1, 2, cmpiPattern(zero, p1),
+                            loopsToBits({{l0, t1}}));
+}
+
+/// Vector element-wise comparsion (disjunction) of 2 vectors, i.e.;
+///   a(i) = b(i) cmp c(i)
+/// which should form the 3 lattice points
+/// {
+///   lat( i_00 i_01 / (sparse_tensor_0 cmp dense_tensor_1) )
+///   lat( i_00 / sparse_tensor_0 cmp 0)
+///   lat( i_01 / 0 cmp dense_tensor_1 )
+/// }
+/// which should be optimized to
+/// {
+///   lat( i_00 i_01 / (sparse_tensor_0 cmp dense_tensor_1) ) (not singleton)
+///   lat( i_01 / 0 cmp dense_tensor_0 ) ()
+/// }
+///
+/// lat( i_00 / sparse_tensor_0 ) should be opted out as it only has dense diff
+/// with lat( i_00 i_01 / (sparse_tensor_0 cmp dense_tensor_1) ).
+TEST_F(MergerTest3T1LD, vector_cmp) {
+  const auto e = cmpiExpr(tensor(0), tensor(1));
+  const auto l0 = lid(0);
+  const auto t0 = tid(0);
+  const auto t1 = tid(1);
+  PatternRef zero = synZeroPattern();
+  PatternRef p0 = tensorPattern(t0);
+  PatternRef p1 = tensorPattern(t1);
+  auto s = merger.buildLattices(e, l0);
+  expectLatPoint(s, 0, cmpiPattern(p0, p1), loopsToBits({{l0, t0}, {l0, t1}}));
+  expectLatPointWithinRange(s, 1, 2, cmpiPattern(p0, zero),
+                            loopsToBits({{l0, t0}}));
+  expectLatPointWithinRange(s, 1, 2, cmpiPattern(zero, p1),
+                            loopsToBits({{l0, t1}}));
+  s = merger.optimizeSet(s);
+  expectLatPoint(s, 0, cmpiPattern(p0, p1), loopsToBits({{l0, t0}, {l0, t1}}));
+  expectLatPointWithinRange(s, 1, 2, cmpiPattern(zero, p1),
+                            loopsToBits({{l0, t1}}));
+}
 
 #undef IMPL_MERGER_TEST_OPTIMIZED_CONJ
 

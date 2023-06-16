@@ -250,7 +250,7 @@ define <8 x i16> @combine_trunc_v8i32_v8i16(<8 x i16> %a0, <8 x i32> %a1) {
 ; AVX1-LABEL: combine_trunc_v8i32_v8i16:
 ; AVX1:       # %bb.0:
 ; AVX1-NEXT:    vextractf128 $1, %ymm1, %xmm2
-; AVX1-NEXT:    vmovdqa {{.*#+}} xmm3 = [65535,65535,65535,65535]
+; AVX1-NEXT:    vbroadcastss {{.*#+}} xmm3 = [65535,65535,65535,65535]
 ; AVX1-NEXT:    vpminud %xmm3, %xmm2, %xmm2
 ; AVX1-NEXT:    vpminud %xmm3, %xmm1, %xmm1
 ; AVX1-NEXT:    vpackusdw %xmm2, %xmm1, %xmm1

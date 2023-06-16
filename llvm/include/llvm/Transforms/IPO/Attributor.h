@@ -1164,24 +1164,26 @@ constexpr bool AnalysisGetter::HasLegacyWrapper<
 /// instance down in the abstract attributes.
 struct InformationCache {
   InformationCache(const Module &M, AnalysisGetter &AG,
-                   BumpPtrAllocator &Allocator, SetVector<Function *> *CGSCC)
-      : DL(M.getDataLayout()), Allocator(Allocator),
-        Explorer(
-            /* ExploreInterBlock */ true, /* ExploreCFGForward */ true,
-            /* ExploreCFGBackward */ true,
-            /* LIGetter */
-            [&](const Function &F) { return AG.getAnalysis<LoopAnalysis>(F); },
-            /* DTGetter */
-            [&](const Function &F) {
-              return AG.getAnalysis<DominatorTreeAnalysis>(F);
-            },
-            /* PDTGetter */
-            [&](const Function &F) {
-              return AG.getAnalysis<PostDominatorTreeAnalysis>(F);
-            }),
-        AG(AG), TargetTriple(M.getTargetTriple()) {
+                   BumpPtrAllocator &Allocator, SetVector<Function *> *CGSCC,
+                   bool UseExplorer = true)
+      : DL(M.getDataLayout()), Allocator(Allocator), AG(AG),
+        TargetTriple(M.getTargetTriple()) {
     if (CGSCC)
       initializeModuleSlice(*CGSCC);
+    if (UseExplorer)
+      Explorer = new (Allocator) MustBeExecutedContextExplorer(
+          /* ExploreInterBlock */ true, /* ExploreCFGForward */ true,
+          /* ExploreCFGBackward */ true,
+          /* LIGetter */
+          [&](const Function &F) { return AG.getAnalysis<LoopAnalysis>(F); },
+          /* DTGetter */
+          [&](const Function &F) {
+            return AG.getAnalysis<DominatorTreeAnalysis>(F);
+          },
+          /* PDTGetter */
+          [&](const Function &F) {
+            return AG.getAnalysis<PostDominatorTreeAnalysis>(F);
+          });
   }
 
   ~InformationCache() {
@@ -1193,6 +1195,8 @@ struct InformationCache {
     using AA::InstExclusionSetTy;
     for (auto *BES : BESets)
       BES->~InstExclusionSetTy();
+    if (Explorer)
+      Explorer->~MustBeExecutedContextExplorer();
   }
 
   /// Apply \p CB to all uses of \p F. If \p LookThroughConstantExprUses is
@@ -1275,7 +1279,7 @@ struct InformationCache {
   }
 
   /// Return MustBeExecutedContextExplorer
-  MustBeExecutedContextExplorer &getMustBeExecutedContextExplorer() {
+  MustBeExecutedContextExplorer *getMustBeExecutedContextExplorer() {
     return Explorer;
   }
 
@@ -1381,7 +1385,7 @@ private:
   BumpPtrAllocator &Allocator;
 
   /// MustBeExecutedContextExplorer
-  MustBeExecutedContextExplorer Explorer;
+  MustBeExecutedContextExplorer *Explorer = nullptr;
 
   /// A map with knowledge retained in `llvm.assume` instructions.
   RetainedKnowledgeMap KnowledgeMap;

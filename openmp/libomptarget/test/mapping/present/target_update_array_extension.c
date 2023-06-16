@@ -3,7 +3,7 @@
 // --------------------------------------------------
 
 // RUN: %libomptarget-compile-generic \
-// RUN:   -fopenmp-version=51 -DCLAUSE=to -DEXTENDS=BEFORE
+// RUN:   -DCLAUSE=to -DEXTENDS=BEFORE
 // RUN: %libomptarget-run-fail-generic 2>&1 \
 // RUN: | %fcheck-generic
 
@@ -12,7 +12,7 @@
 // --------------------------------------------------
 
 // RUN: %libomptarget-compile-generic \
-// RUN:   -fopenmp-version=51 -DCLAUSE=from -DEXTENDS=BEFORE
+// RUN:   -DCLAUSE=from -DEXTENDS=BEFORE
 // RUN: %libomptarget-run-fail-generic 2>&1 \
 // RUN: | %fcheck-generic
 
@@ -21,7 +21,7 @@
 // --------------------------------------------------
 
 // RUN: %libomptarget-compile-generic \
-// RUN:   -fopenmp-version=51 -DCLAUSE=to -DEXTENDS=AFTER
+// RUN:   -DCLAUSE=to -DEXTENDS=AFTER
 // RUN: %libomptarget-run-fail-generic 2>&1 \
 // RUN: | %fcheck-generic
 
@@ -30,7 +30,7 @@
 // --------------------------------------------------
 
 // RUN: %libomptarget-compile-generic \
-// RUN:   -fopenmp-version=51 -DCLAUSE=from -DEXTENDS=AFTER
+// RUN:   -DCLAUSE=from -DEXTENDS=AFTER
 // RUN: %libomptarget-run-fail-generic 2>&1 \
 // RUN: | %fcheck-generic
 

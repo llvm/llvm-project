@@ -13,12 +13,8 @@ define void @simple_copy(ptr %dest, ptr %p) {
 ;
 ; DEFAULT-LABEL: @simple_copy(
 ; DEFAULT-NEXT:  entry:
-; DEFAULT-NEXT:    [[E0:%.*]] = load i16, ptr [[P:%.*]], align 4
-; DEFAULT-NEXT:    [[INC:%.*]] = getelementptr inbounds i16, ptr [[P]], i64 1
-; DEFAULT-NEXT:    [[E1:%.*]] = load i16, ptr [[INC]], align 2
-; DEFAULT-NEXT:    store i16 [[E0]], ptr [[DEST:%.*]], align 4
-; DEFAULT-NEXT:    [[INC2:%.*]] = getelementptr inbounds i16, ptr [[DEST]], i64 1
-; DEFAULT-NEXT:    store i16 [[E1]], ptr [[INC2]], align 2
+; DEFAULT-NEXT:    [[TMP0:%.*]] = load <2 x i16>, ptr [[P:%.*]], align 4
+; DEFAULT-NEXT:    store <2 x i16> [[TMP0]], ptr [[DEST:%.*]], align 4
 ; DEFAULT-NEXT:    ret void
 ;
 entry:
@@ -42,14 +38,9 @@ define void @vec_add(ptr %dest, ptr %p) {
 ;
 ; DEFAULT-LABEL: @vec_add(
 ; DEFAULT-NEXT:  entry:
-; DEFAULT-NEXT:    [[E0:%.*]] = load i16, ptr [[P:%.*]], align 4
-; DEFAULT-NEXT:    [[INC:%.*]] = getelementptr inbounds i16, ptr [[P]], i64 1
-; DEFAULT-NEXT:    [[E1:%.*]] = load i16, ptr [[INC]], align 2
-; DEFAULT-NEXT:    [[A0:%.*]] = add i16 [[E0]], 1
-; DEFAULT-NEXT:    [[A1:%.*]] = add i16 [[E1]], 1
-; DEFAULT-NEXT:    store i16 [[A0]], ptr [[DEST:%.*]], align 4
-; DEFAULT-NEXT:    [[INC2:%.*]] = getelementptr inbounds i16, ptr [[DEST]], i64 1
-; DEFAULT-NEXT:    store i16 [[A1]], ptr [[INC2]], align 2
+; DEFAULT-NEXT:    [[TMP0:%.*]] = load <2 x i16>, ptr [[P:%.*]], align 4
+; DEFAULT-NEXT:    [[TMP1:%.*]] = add <2 x i16> [[TMP0]], <i16 1, i16 1>
+; DEFAULT-NEXT:    store <2 x i16> [[TMP1]], ptr [[DEST:%.*]], align 4
 ; DEFAULT-NEXT:    ret void
 ;
 entry:
@@ -171,13 +162,7 @@ define void @splat_store_i32_zero(ptr %dest) {
 ;
 ; DEFAULT-LABEL: @splat_store_i32_zero(
 ; DEFAULT-NEXT:  entry:
-; DEFAULT-NEXT:    store i32 0, ptr [[DEST:%.*]], align 4
-; DEFAULT-NEXT:    [[INC1:%.*]] = getelementptr inbounds i32, ptr [[DEST]], i64 1
-; DEFAULT-NEXT:    store i32 0, ptr [[INC1]], align 2
-; DEFAULT-NEXT:    [[INC2:%.*]] = getelementptr inbounds i32, ptr [[DEST]], i64 2
-; DEFAULT-NEXT:    store i32 0, ptr [[INC2]], align 2
-; DEFAULT-NEXT:    [[INC3:%.*]] = getelementptr inbounds i32, ptr [[DEST]], i64 3
-; DEFAULT-NEXT:    store i32 0, ptr [[INC3]], align 2
+; DEFAULT-NEXT:    store <4 x i32> zeroinitializer, ptr [[DEST:%.*]], align 4
 ; DEFAULT-NEXT:    ret void
 ;
 entry:
@@ -199,13 +184,7 @@ define void @splat_store_i32_one(ptr %dest) {
 ;
 ; DEFAULT-LABEL: @splat_store_i32_one(
 ; DEFAULT-NEXT:  entry:
-; DEFAULT-NEXT:    store i32 1, ptr [[DEST:%.*]], align 4
-; DEFAULT-NEXT:    [[INC1:%.*]] = getelementptr inbounds i32, ptr [[DEST]], i64 1
-; DEFAULT-NEXT:    store i32 1, ptr [[INC1]], align 2
-; DEFAULT-NEXT:    [[INC2:%.*]] = getelementptr inbounds i32, ptr [[DEST]], i64 2
-; DEFAULT-NEXT:    store i32 1, ptr [[INC2]], align 2
-; DEFAULT-NEXT:    [[INC3:%.*]] = getelementptr inbounds i32, ptr [[DEST]], i64 3
-; DEFAULT-NEXT:    store i32 1, ptr [[INC3]], align 2
+; DEFAULT-NEXT:    store <4 x i32> <i32 1, i32 1, i32 1, i32 1>, ptr [[DEST:%.*]], align 4
 ; DEFAULT-NEXT:    ret void
 ;
 entry:

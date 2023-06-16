@@ -125,10 +125,10 @@ namespace std  // purposefully not using versioning namespace
 {
 
 #if !defined(_LIBCPP_ABI_VCRUNTIME)
-struct _LIBCPP_TYPE_VIS nothrow_t { explicit nothrow_t() = default; };
-extern _LIBCPP_FUNC_VIS const nothrow_t nothrow;
+struct _LIBCPP_EXPORTED_FROM_ABI nothrow_t { explicit nothrow_t() = default; };
+extern _LIBCPP_EXPORTED_FROM_ABI const nothrow_t nothrow;
 
-class _LIBCPP_EXCEPTION_ABI bad_alloc
+class _LIBCPP_EXPORTED_FROM_ABI bad_alloc
     : public exception
 {
 public:
@@ -137,7 +137,7 @@ public:
     const char* what() const _NOEXCEPT override;
 };
 
-class _LIBCPP_EXCEPTION_ABI bad_array_new_length
+class _LIBCPP_EXPORTED_FROM_ABI bad_array_new_length
     : public bad_alloc
 {
 public:
@@ -147,8 +147,8 @@ public:
 };
 
 typedef void (*new_handler)();
-_LIBCPP_FUNC_VIS new_handler set_new_handler(new_handler) _NOEXCEPT;
-_LIBCPP_FUNC_VIS new_handler get_new_handler() _NOEXCEPT;
+_LIBCPP_EXPORTED_FROM_ABI new_handler set_new_handler(new_handler) _NOEXCEPT;
+_LIBCPP_EXPORTED_FROM_ABI new_handler get_new_handler() _NOEXCEPT;
 
 #elif defined(_HAS_EXCEPTIONS) && _HAS_EXCEPTIONS == 0 // !_LIBCPP_ABI_VCRUNTIME
 
@@ -170,7 +170,7 @@ public:
 };
 #endif // defined(_LIBCPP_ABI_VCRUNTIME) && defined(_HAS_EXCEPTIONS) && _HAS_EXCEPTIONS == 0
 
-_LIBCPP_NORETURN _LIBCPP_FUNC_VIS void __throw_bad_alloc();  // not in C++ spec
+_LIBCPP_NORETURN _LIBCPP_EXPORTED_FROM_ABI void __throw_bad_alloc();  // not in C++ spec
 
 _LIBCPP_NORETURN inline _LIBCPP_INLINE_VISIBILITY
 void __throw_bad_array_new_length()

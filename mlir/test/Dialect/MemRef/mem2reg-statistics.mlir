@@ -1,3 +1,4 @@
+// REQUIRES: asserts
 // RUN: mlir-opt %s --pass-pipeline='builtin.module(func.func(mem2reg))' --split-input-file --mlir-pass-statistics 2>&1 >/dev/null | FileCheck %s
 
 // CHECK: Mem2Reg

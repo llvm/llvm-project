@@ -6,8 +6,10 @@
 //
 //===----------------------------------------------------------------------===//
 
-// <queue>
 // UNSUPPORTED: c++03, c++11, c++14
+// UNSUPPORTED: GCC-ALWAYS_INLINE-FIXME
+
+// <queue>
 
 // template<class Compare, class Container>
 // priority_queue(Compare, Container)

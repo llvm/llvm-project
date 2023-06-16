@@ -3,8 +3,6 @@
 // bionic/netdb.cpp is not implemented.
 // UNSUPPORTED: android
 
-// REQUIRES: linux || freebsd
-
 #include <inttypes.h>
 #include <netdb.h>
 #include <stdint.h>

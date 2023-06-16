@@ -215,9 +215,9 @@ public:
   void UseFortranBuiltinsModule();
   const Scope *GetBuiltinsScope() const { return builtinsScope_; }
 
-  void UsePPCFortranBuiltinTypesModule();
+  void UsePPCBuiltinTypesModule();
   const Scope &GetCUDABuiltinsScope();
-  void UsePPCFortranBuiltinsModule();
+  void UsePPCBuiltinsModule();
   Scope *GetPPCBuiltinTypesScope() { return ppcBuiltinTypesScope_; }
   const Scope *GetPPCBuiltinsScope() const { return ppcBuiltinsScope_; }
 

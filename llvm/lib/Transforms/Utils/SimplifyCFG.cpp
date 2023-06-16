@@ -6984,7 +6984,8 @@ bool SimplifyCFGOpt::simplifyCondBranch(BranchInst *BI, IRBuilder<> &Builder) {
       "Tautological conditional branch should have been eliminated already.");
 
   BasicBlock *BB = BI->getParent();
-  if (!Options.SimplifyCondBranch)
+  if (!Options.SimplifyCondBranch ||
+      BI->getFunction()->hasFnAttribute(Attribute::OptForFuzzing))
     return false;
 
   // Conditional branch
@@ -7275,7 +7276,8 @@ bool SimplifyCFGOpt::simplifyOnce(BasicBlock *BB) {
 
   IRBuilder<> Builder(BB);
 
-  if (Options.FoldTwoEntryPHINode) {
+  if (Options.FoldTwoEntryPHINode &&
+      !BB->getParent()->hasFnAttribute(Attribute::OptForFuzzing)) {
     // If there is a trivial two-entry PHI node in this basic block, and we can
     // eliminate it, do so now.
     if (auto *PN = dyn_cast<PHINode>(BB->begin()))

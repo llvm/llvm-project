@@ -231,7 +231,7 @@ void AddLambdaCaptureDecls(StreamString &stream, StackFrame *frame,
   if (auto thisValSP = ClangExpressionUtil::GetLambdaValueObject(frame)) {
     uint32_t numChildren = thisValSP->GetNumChildren();
     for (uint32_t i = 0; i < numChildren; ++i) {
-      auto childVal = thisValSP->GetChildAtIndex(i, true);
+      auto childVal = thisValSP->GetChildAtIndex(i);
       ConstString childName(childVal ? childVal->GetName() : ConstString(""));
 
       if (!childName.IsEmpty() && verifier.hasToken(childName.GetStringRef()) &&

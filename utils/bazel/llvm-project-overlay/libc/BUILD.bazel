@@ -445,6 +445,7 @@ libc_support_library(
         ":__support_fputil_fenv_impl",
         ":__support_fputil_fp_bits",
         ":__support_fputil_rounding_mode",
+        ":__support_fputil_dyadic_float",
         ":__support_str_to_integer",
         ":__support_str_to_num_result",
         ":__support_uint128",
@@ -1140,6 +1141,7 @@ libc_support_library(
     hdrs = ["src/math/generic/log_range_reduction.h"],
     deps = [
         ":__support_common",
+        ":__support_uint128",
         ":__support_fputil_dyadic_float",
         ":common_constants",
     ],
@@ -1859,12 +1861,32 @@ libc_function(
     ],
 )
 
+libc_support_library(
+    name = "qsort_util",
+    hdrs = ["src/stdlib/qsort_util.h"],
+    deps = [
+        ":__support_common",
+        ":__support_macros_attributes",
+    ],
+)
+
 libc_function(
     name = "qsort",
     srcs = ["src/stdlib/qsort.cpp"],
     hdrs = ["src/stdlib/qsort.h"],
     deps = [
         ":__support_common",
+        ":qsort_util",
+    ],
+)
+
+libc_function(
+    name = "qsort_r",
+    srcs = ["src/stdlib/qsort_r.cpp"],
+    hdrs = ["src/stdlib/qsort_r.h"],
+    deps = [
+        ":__support_common",
+        ":qsort_util",
     ],
 )
 
