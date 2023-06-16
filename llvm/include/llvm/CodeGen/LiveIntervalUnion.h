@@ -174,8 +174,6 @@ public:
 
   public:
     Array() = default;
-    Array &operator=(const Array &other) = delete;
-    Array(const Array &other) = delete;
     ~Array() { clear(); }
 
     // Initialize the array to have Size entries.
