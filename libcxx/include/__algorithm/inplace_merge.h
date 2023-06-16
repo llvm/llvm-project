@@ -24,7 +24,7 @@
 #include <__iterator/iterator_traits.h>
 #include <__iterator/reverse_iterator.h>
 #include <__memory/destruct_n.h>
-#include <__memory/temporary_buffer.h>
+#include <__memory/uninitialized_buffer.h>
 #include <__memory/unique_ptr.h>
 #include <__utility/pair.h>
 #include <new>
@@ -225,13 +225,16 @@ __inplace_merge(_BidirectionalIterator __first, _BidirectionalIterator __middle,
     difference_type __len1 = _IterOps<_AlgPolicy>::distance(__first, __middle);
     difference_type __len2 = _IterOps<_AlgPolicy>::distance(__middle, __last);
     difference_type __buf_size = _VSTD::min(__len1, __len2);
-// TODO: Remove the use of std::get_temporary_buffer
-_LIBCPP_SUPPRESS_DEPRECATED_PUSH
-    pair<value_type*, ptrdiff_t> __buf = _VSTD::get_temporary_buffer<value_type>(__buf_size);
-_LIBCPP_SUPPRESS_DEPRECATED_POP
-    unique_ptr<value_type, __return_temporary_buffer> __h(__buf.first);
+    auto __buf = std::__make_uninitialized_buffer<value_type[]>(nothrow, __buf_size);
     return std::__inplace_merge<_AlgPolicy>(
-        std::move(__first), std::move(__middle), std::move(__last), __comp, __len1, __len2, __buf.first, __buf.second);
+        std::move(__first),
+        std::move(__middle),
+        std::move(__last),
+        __comp,
+        __len1,
+        __len2,
+        __buf.get(),
+        __buf ? __buf_size : 0);
 }
 
 template <class _BidirectionalIterator, class _Compare>

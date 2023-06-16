@@ -45,17 +45,22 @@ We define two kinds of macros: **code defined** and **build defined** macros.
      specific operations. e.g., ``LIBC_INLINE``, ``LIBC_NO_LOOP_UNROLL``,
      ``LIBC_LIKELY``, ``LIBC_INLINE_ASM``.
 
-Inline functions defined in header files
+Inline functions and variables defined in header files
 ========================================
 
-When defining functions inline in header files, we follow certain rules:
+When defining functions and variables inline in header files, we follow certain
+rules:
 
 #. The functions should not be given file-static linkage. There can be class
    static methods defined inline however.
-#. Instead of using the ``inline`` keyword, they should be tagged with the
-   ``LIBC_INLINE`` macro defined in ``src/__support/common.h``. For example:
+#. Instead of using the ``inline`` keyword, functions should be tagged with the
+   ``LIBC_INLINE`` macro and variables should be tagged with the
+   ``LIBC_INLINE_VAR`` macro defined in ``src/__support/macros/attributes.h``.
+   For example:
 
    .. code-block:: c++
+
+     LIBC_INLINE_VAR constexpr bool foo = true;
 
      LIBC_INLINE ReturnType function_defined_inline(ArgType arg) {
        ...

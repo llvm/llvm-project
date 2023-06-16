@@ -214,27 +214,29 @@ public:
   };
 
   /// An iterator for Entries all having the same string as key.
-  class ValueIterator {
+  class SameNameIterator
+      : public iterator_facade_base<SameNameIterator, std::forward_iterator_tag,
+                                    Entry> {
     Entry Current;
     uint64_t Offset = 0;
 
-    void Next() { Offset += Current.Table.getHashDataEntryLength(); }
-
   public:
     /// Construct a new iterator for the entries at \p DataOffset.
-    ValueIterator(const AppleAcceleratorTable &AccelTable, uint64_t DataOffset);
+    SameNameIterator(const AppleAcceleratorTable &AccelTable,
+                     uint64_t DataOffset);
 
     const Entry &operator*() {
       uint64_t OffsetCopy = Offset;
       Current.extract(&OffsetCopy);
       return Current;
     }
-    ValueIterator &operator++() { Next(); return *this; }
-    friend bool operator==(const ValueIterator &A, const ValueIterator &B) {
-      return A.Offset == B.Offset;
+    SameNameIterator &operator++() {
+      Offset += Current.Table.getHashDataEntryLength();
+      return *this;
     }
-    friend bool operator!=(const ValueIterator &A, const ValueIterator &B) {
-      return !(A == B);
+    friend bool operator==(const SameNameIterator &A,
+                           const SameNameIterator &B) {
+      return A.Offset == B.Offset;
     }
   };
 
@@ -268,7 +270,7 @@ public:
   void dump(raw_ostream &OS) const override;
 
   /// Look up all entries in the accelerator table matching \c Key.
-  iterator_range<ValueIterator> equal_range(StringRef Key) const;
+  iterator_range<SameNameIterator> equal_range(StringRef Key) const;
 };
 
 /// .debug_names section consists of one or more units. Each unit starts with a

@@ -7,7 +7,7 @@
 // RUN:     -o %t/a.pcm
 // RUN: %clang_cc1 -std=c++20 %t/user.cpp -fmodule-file=a=%t/a.pcm -verify -fsyntax-only
 // RUN: %clang_cc1 -std=c++20 %t/user.cpp -fmodule-file=a=%t/a.pcm -verify -fsyntax-only \
-// RUN:     -Wno-read-modules-implicitly -DNO_DIAG 
+// RUN:     -Wno-read-modules-implicitly -DNO_DIAG
 // RUN: %clang_cc1 -std=c++20 %t/user.cpp -fmodule-file=a=%t/a.pcm -fmodule-file=b=%t/b.pcm \
 // RUN:     -DNO_DIAG -verify -fsyntax-only
 //
@@ -35,7 +35,7 @@ export int a() {
     return b() + 43;
 }
 
-// CHECK: it is deprecated to read module 'b' implcitly;
+// CHECK: it is deprecated to read module 'b' implicitly;
 
 // CHECK-CORRECT-NOT: warning
 // CHECK-CORRECT-NOT: error
@@ -47,7 +47,7 @@ export int a() {
 #ifdef NO_DIAG
 // expected-no-diagnostics
 #else
- // expected-warning@+2 {{it is deprecated to read module 'b' implcitly;}}
+ // expected-warning@+2 {{it is deprecated to read module 'b' implicitly;}}
 #endif
 import a;
 int use() {
