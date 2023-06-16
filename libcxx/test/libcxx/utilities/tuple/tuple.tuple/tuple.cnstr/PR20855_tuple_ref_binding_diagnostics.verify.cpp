@@ -10,7 +10,7 @@
 
 // <tuple>
 
-// See llvm.org/PR20855
+// See https://llvm.org/PR20855
 
 #include <tuple>
 #include <string>
@@ -39,7 +39,7 @@ template <class ...Args>
 void F(typename CannotDeduce<std::tuple<Args...>>::type const&) {}
 
 
-int main(int, char**) {
+void f() {
 #if TEST_HAS_BUILTIN_IDENTIFIER(__reference_binds_to_temporary)
   // Test that we emit our diagnostic from the library.
   // expected-error@tuple:* 8 {{Attempted construction of reference element binds to a temporary whose lifetime has ended}}
@@ -77,6 +77,4 @@ int main(int, char**) {
 #error force failure
 // expected-error@-1 {{force failure}}
 #endif
-
-  return 0;
 }

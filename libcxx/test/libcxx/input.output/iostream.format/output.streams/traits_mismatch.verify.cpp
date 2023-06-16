@@ -16,17 +16,10 @@
 // UNSUPPORTED: no-wide-characters
 
 #include <ostream>
-#include <type_traits>
-#include <cassert>
+#include <string>
 
 struct test_ostream
     : public std::basic_ostream<char, std::char_traits<wchar_t> > {};
 
-
-int main(int, char**)
-{
-//  expected-error-re@ios:* {{{{(static_assert|static assertion)}} failed{{.*}}traits_type::char_type must be the same type as CharT}}
-//  expected-error@ostream:* {{only virtual member functions can be marked 'override'}}
-
-  return 0;
-}
+// expected-error-re@ios:* {{{{(static_assert|static assertion)}} failed{{.*}}traits_type::char_type must be the same type as CharT}}
+// expected-error@ostream:* {{only virtual member functions can be marked 'override'}}

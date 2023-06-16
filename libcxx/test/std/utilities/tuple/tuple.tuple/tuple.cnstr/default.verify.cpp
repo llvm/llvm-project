@@ -43,7 +43,3 @@ std::tuple<Explicit, Implicit, Implicit> test12() { return {}; } // expected-err
 std::tuple<Explicit, Implicit, Explicit> test13() { return {}; } // expected-error 1 {{chosen constructor is explicit in copy-initialization}}
 std::tuple<Explicit, Explicit, Implicit> test14() { return {}; } // expected-error 1 {{chosen constructor is explicit in copy-initialization}}
 std::tuple<Explicit, Explicit, Explicit> test15() { return {}; } // expected-error 1 {{chosen constructor is explicit in copy-initialization}}
-
-int main(int, char**) {
-    return 0;
-}
