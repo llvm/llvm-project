@@ -1376,21 +1376,11 @@ public:
   lldb::addr_t GetHighmemCodeAddressMask();
   lldb::addr_t GetHighmemDataAddressMask();
 
-  void SetCodeAddressMask(lldb::addr_t code_address_mask) {
-    m_code_address_mask = code_address_mask;
-  }
+  void SetCodeAddressMask(lldb::addr_t code_address_mask);
+  void SetDataAddressMask(lldb::addr_t data_address_mask);
 
-  void SetDataAddressMask(lldb::addr_t data_address_mask) {
-    m_data_address_mask = data_address_mask;
-  }
-
-  void SetHighmemCodeAddressMask(lldb::addr_t code_address_mask) {
-    m_highmem_code_address_mask = code_address_mask;
-  }
-
-  void SetHighmemDataAddressMask(lldb::addr_t data_address_mask) {
-    m_highmem_data_address_mask = data_address_mask;
-  }
+  void SetHighmemCodeAddressMask(lldb::addr_t code_address_mask);
+  void SetHighmemDataAddressMask(lldb::addr_t data_address_mask);
 
   /// Some targets might use bits in a code address to indicate a mode switch,
   /// ARM uses bit zero to signify a code address is thumb, so any ARM ABI
