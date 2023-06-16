@@ -148,8 +148,8 @@ X86LegalizerInfo::X86LegalizerInfo(const X86Subtarget &STI,
       .clampScalar(0, s8, sMaxScalar)
       .scalarize(0);
 
-  // TODO: Add G_UADDO/G_USUBO/G_USUBE handling
-  getActionDefinitionsBuilder(G_UADDE)
+  // TODO: Add G_UADDO/G_USUBO handling
+  getActionDefinitionsBuilder({G_UADDE, G_USUBE})
       .legalIf([=](const LegalityQuery &Query) -> bool {
         return typePairInSet(0, 1, {{s8, s1}, {s16, s1}, {s32, s1}})(Query) ||
                (Is64Bit && typePairInSet(0, 1, {{s64, s1}})(Query));
