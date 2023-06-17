@@ -25,6 +25,7 @@
 #include "clang/Sema/Initialization.h"
 #include "clang/Sema/SemaInternal.h"
 #include "llvm/ADT/SmallVector.h"
+#include "llvm/ADT/StringExtras.h"
 #include <set>
 using namespace clang;
 
