@@ -361,6 +361,10 @@ def GpuToLLVMConversionPass : Pass<"gpu-to-llvm", "ModuleOp"> {
   }];
 
   let options = [
+    Option<"hostBarePtrCallConv", "use-bare-pointers-for-host", "bool",
+           /*default=*/"false",
+           "Use bare pointers to pass memref arguments to host functions. "
+           "All memrefs must have static shape.">,
     Option<"kernelBarePtrCallConv", "use-bare-pointers-for-kernels", "bool",
            /*default=*/"false",
              "Use bare pointers to pass memref arguments to kernels. "
