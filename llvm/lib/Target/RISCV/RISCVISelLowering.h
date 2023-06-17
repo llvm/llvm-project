@@ -294,6 +294,12 @@ enum NodeType : unsigned {
   VFWADD_W_VL,
   VFWSUB_W_VL,
 
+  // Widening ternary operations with a mask as the fourth operand and VL as the
+  // fifth operand.
+  VWMACC_VL,
+  VWMACCU_VL,
+  VWMACCSU_VL,
+
   // Narrowing logical shift right.
   // Operands are (source, shift, passthru, mask, vl)
   VNSRL_VL,
