@@ -19,6 +19,7 @@
 define void @foo(i32 %x) !dbg !3 {
 bb0:
   %cmp = icmp eq i32 %x, 0
+; CHECK-IL-LABEL: void @foo(i32 %x) !dbg ![[#]] {
 ; CHECK-IL: call void @llvm.pseudoprobe(i64 [[#GUID:]], i64 1, i32 0, i64 -1), !dbg ![[#FAKELINE:]]
 ; CHECK-MIR: PSEUDO_PROBE [[#GUID:]], 1, 0, 0
 ; CHECK-ASM: .pseudoprobe	[[#GUID:]] 1 0 0 foo
@@ -51,6 +52,7 @@ declare void @bar(i32 %x)
 
 define internal void @foo2(ptr %f) !dbg !4 {
 entry:
+; CHECK-IL-LABEL: void @foo2(ptr %f) !dbg ![[#]] {
 ; CHECK-IL: call void @llvm.pseudoprobe(i64 [[#GUID2:]], i64 1, i32 0, i64 -1)
 ; CHECK-MIR: PSEUDO_PROBE [[#GUID2:]], 1, 0, 0
 ; CHECK-ASM: .pseudoprobe	[[#GUID2:]] 1 0 0 foo2

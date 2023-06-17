@@ -350,24 +350,6 @@ void SampleProfileProber::instrumentOneFunc(Function &F, TargetMachine *TM) {
   auto *NMD = M->getNamedMetadata(PseudoProbeDescMetadataName);
   assert(NMD && "llvm.pseudo_probe_desc should be pre-created");
   NMD->addOperand(MD);
-
-  // Preserve a comdat group to hold all probes materialized later. This
-  // allows that when the function is considered dead and removed, the
-  // materialized probes are disposed too.
-  // Imported functions are defined in another module. They do not need
-  // the following handling since same care will be taken for them in their
-  // original module. The pseudo probes inserted into an imported functions
-  // above will naturally not be emitted since the imported function is free
-  // from object emission. However they will be emitted together with the
-  // inliner functions that the imported function is inlined into. We are not
-  // creating a comdat group for an import function since it's useless anyway.
-  if (!F.isDeclarationForLinker()) {
-    if (TM) {
-      auto Triple = TM->getTargetTriple();
-      if (Triple.supportsCOMDAT() && TM->getFunctionSections())
-        getOrCreateFunctionComdat(F, Triple);
-    }
-  }
 }
 
 PreservedAnalyses SampleProfileProbePass::run(Module &M,
