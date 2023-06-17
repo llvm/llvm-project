@@ -74,6 +74,8 @@ Changes to the AMDGPU Backend
 
 * Implemented the ``llvm.get.fpenv`` and ``llvm.set.fpenv`` intrinsics.
 
+* Implemented :ref:`llvm.get.rounding <int_get_rounding>` and :ref:`llvm.set.rounding <int_set_rounding>`
+
 Changes to the ARM Backend
 --------------------------
 * FEAT_F32MM is no longer activated by default when using `+sve` on v8.6-A or greater. The feature is still available and can be used by adding `+f32mm` to the command line options.
@@ -133,7 +135,7 @@ Changes to the C API
   functions for accessing the values in a blockaddress constant.
 
 * Added ``LLVMConstStringInContext2`` function, which better matches the C++
-  API by using ``size_t`` for string length. Deprecated ``LLVMConstStringInContext``. 
+  API by using ``size_t`` for string length. Deprecated ``LLVMConstStringInContext``.
 
 * Added the following functions for accessing a function's prefix data:
 
