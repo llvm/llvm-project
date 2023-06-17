@@ -1808,12 +1808,15 @@ cc_library(
 cc_library(
     name = "codegen",
     srcs = glob([
-        "lib/CodeGen/*.cpp",
-        "lib/CodeGen/*.h",
+        "lib/CodeGen/**/*.cpp",
+        "lib/CodeGen/**/*.h",
     ]),
     hdrs = glob(["include/clang/CodeGen/*.h"]),
     copts = ["$(STACK_FRAME_UNLIMITED)"],
-    includes = ["include"],
+    includes = [
+        "include",
+        "lib/CodeGen",
+    ],
     deps = [
         ":analysis",
         ":ast",
