@@ -10,6 +10,7 @@
 #define LLVM_DEBUGINFO_DWARF_DWARFCONTEXT_H
 
 #include "llvm/ADT/SmallVector.h"
+#include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringMap.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/DebugInfo/DIContext.h"

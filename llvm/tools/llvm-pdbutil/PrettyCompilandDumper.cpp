@@ -11,6 +11,7 @@
 #include "PrettyFunctionDumper.h"
 #include "llvm-pdbutil.h"
 
+#include "llvm/ADT/StringExtras.h"
 #include "llvm/DebugInfo/PDB/IPDBEnumChildren.h"
 #include "llvm/DebugInfo/PDB/IPDBLineNumber.h"
 #include "llvm/DebugInfo/PDB/IPDBSession.h"

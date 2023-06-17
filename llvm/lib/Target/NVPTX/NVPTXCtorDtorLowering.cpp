@@ -12,6 +12,7 @@
 
 #include "NVPTXCtorDtorLowering.h"
 #include "NVPTX.h"
+#include "llvm/ADT/StringExtras.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/GlobalVariable.h"

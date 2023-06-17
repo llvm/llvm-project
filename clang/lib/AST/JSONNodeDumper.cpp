@@ -3,6 +3,7 @@
 #include "clang/Basic/SourceManager.h"
 #include "clang/Basic/Specifiers.h"
 #include "clang/Lex/Lexer.h"
+#include "llvm/ADT/StringExtras.h"
 #include <optional>
 
 using namespace clang;
