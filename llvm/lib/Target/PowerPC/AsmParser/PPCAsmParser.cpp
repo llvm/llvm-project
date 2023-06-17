@@ -1548,24 +1548,20 @@ bool PPCAsmParser::ParseOperand(OperandVector &Operands) {
   if (const MCSymbolRefExpr *Ref = dyn_cast<MCSymbolRefExpr>(EVal))
     TLSCall = Ref->getSymbol().getName() == "__tls_get_addr";
 
-  if (TLSCall && getLexer().is(AsmToken::LParen)) {
+  if (TLSCall && parseOptionalToken(AsmToken::LParen)) {
     const MCExpr *TLSSym;
-
-    Parser.Lex(); // Eat the '('.
     S = Parser.getTok().getLoc();
     if (ParseExpression(TLSSym))
       return Error(S, "invalid TLS call expression");
-    if (getLexer().isNot(AsmToken::RParen))
-      return Error(Parser.getTok().getLoc(), "missing ')'");
+    if (parseToken(AsmToken::RParen, "expected ')'"))
+      return true;
     E = Parser.getTok().getLoc();
-    Parser.Lex(); // Eat the ')'.
 
     Operands.push_back(PPCOperand::CreateFromMCExpr(TLSSym, S, E, isPPC64()));
   }
 
   // Otherwise, check for D-form memory operands
-  if (!TLSCall && getLexer().is(AsmToken::LParen)) {
-    Parser.Lex(); // Eat the '('.
+  if (!TLSCall && parseOptionalToken(AsmToken::LParen)) {
     S = Parser.getTok().getLoc();
 
     int64_t IntVal;
