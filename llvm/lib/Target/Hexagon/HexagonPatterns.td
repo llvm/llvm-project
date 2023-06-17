@@ -845,8 +845,31 @@ def: Pat<(i32 (zext (i1 (setne I32:$Rs, anyimm:$s8)))),
 
 def: Pat<(i1 (seteq I1:$Ps, (i1 -1))), (I1:$Ps)>;
 def: Pat<(i1 (setne I1:$Ps, (i1 -1))), (C2_not I1:$Ps)>;
-def: Pat<(i1 (seteq I1:$Ps, I1:$Pt)),  (C2_xor I1:$Ps, (C2_not I1:$Pt))>;
+def: Pat<(i1 (seteq I1:$Ps, I1:$Pt)),  (C2_not (C2_xor I1:$Ps, I1:$Pt))>;
 def: Pat<(i1 (setne I1:$Ps, I1:$Pt)),  (C2_xor I1:$Ps, I1:$Pt)>;
+
+multiclass BoolE_pat<PatFrag OpPred, ValueType ResTy> {
+  def: Pat<(ResTy (seteq OpPred:$Ps, OpPred:$Pt)), (C2_not (C2_xor $Ps, $Pt))>;
+  def: Pat<(ResTy (setne OpPred:$Ps, OpPred:$Pt)), (C2_xor $Ps, $Pt)>;
+}
+
+defm: BoolE_pat<I1,   i1>;
+defm: BoolE_pat<V2I1, v2i1>;
+defm: BoolE_pat<V4I1, v4i1>;
+defm: BoolE_pat<V8I1, v8i1>;
+
+multiclass BoolL_pat<PatFrag OpPred, ValueType ResTy> {
+  // Signed "true" == -1
+  def: Pat<(ResTy (setlt  OpPred:$Ps, OpPred:$Pt)), (C2_andn $Ps, $Pt)>;
+  def: Pat<(ResTy (setle  OpPred:$Ps, OpPred:$Pt)), (C2_orn  $Ps, $Pt)>;
+  def: Pat<(ResTy (setult OpPred:$Ps, OpPred:$Pt)), (C2_andn $Pt, $Ps)>;
+  def: Pat<(ResTy (setule OpPred:$Ps, OpPred:$Pt)), (C2_orn  $Pt, $Ps)>;
+}
+
+defm: BoolL_pat<I1,   i1>;
+defm: BoolL_pat<V2I1, v2i1>;
+defm: BoolL_pat<V4I1, v4i1>;
+defm: BoolL_pat<V8I1, v8i1>;
 
 // Floating-point comparisons with checks for ordered/unordered status.
 
