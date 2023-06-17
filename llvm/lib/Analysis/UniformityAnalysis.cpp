@@ -118,7 +118,12 @@ llvm::UniformityInfo UniformityInfoAnalysis::run(Function &F,
   auto &DT = FAM.getResult<DominatorTreeAnalysis>(F);
   auto &TTI = FAM.getResult<TargetIRAnalysis>(F);
   auto &CI = FAM.getResult<CycleAnalysis>(F);
-  return UniformityInfo{F, DT, CI, &TTI};
+  UniformityInfo UI{F, DT, CI, &TTI};
+  // Skip computation if we can assume everything is uniform.
+  if (TTI.hasBranchDivergence())
+    UI.compute();
+
+  return UI;
 }
 
 AnalysisKey UniformityInfoAnalysis::Key;
@@ -168,6 +173,11 @@ bool UniformityInfoWrapperPass::runOnFunction(Function &F) {
   m_function = &F;
   m_uniformityInfo =
       UniformityInfo{F, domTree, cycleInfo, &targetTransformInfo};
+
+  // Skip computation if we can assume everything is uniform.
+  if (targetTransformInfo.hasBranchDivergence())
+    m_uniformityInfo.compute();
+
   return false;
 }
 

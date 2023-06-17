@@ -570,7 +570,7 @@ constructor or destructor) should not be added to the code base, and should be
 removed wherever possible.
 
 Globals in different source files are initialized in `arbitrary order
-<https://yosefk.com/c++fqa/ctors.html#fqa-10.12>`, making the code more
+<https://yosefk.com/c++fqa/ctors.html#fqa-10.12>`_, making the code more
 difficult to reason about.
 
 Static constructors have negative impact on launch time of programs that use
