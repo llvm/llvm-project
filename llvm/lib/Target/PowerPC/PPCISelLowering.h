@@ -332,11 +332,11 @@ namespace llvm {
     /// finds the offset of "sym" relative to the thread pointer.
     LD_GOT_TPREL_L,
 
-    /// G8RC = ADD_TLS G8RReg, Symbol - Used by the initial-exec TLS
-    /// model, produces an ADD instruction that adds the contents of
-    /// G8RReg to the thread pointer.  Symbol contains a relocation
-    /// sym\@tls which is to be replaced by the thread pointer and
-    /// identifies to the linker that the instruction is part of a
+    /// G8RC = ADD_TLS G8RReg, Symbol - Can be used by the initial-exec
+    /// and local-exec TLS models, produces an ADD instruction that adds
+    /// the contents of G8RReg to the thread pointer.  Symbol contains a
+    /// relocation sym\@tls which is to be replaced by the thread pointer
+    /// and identifies to the linker that the instruction is part of a
     /// TLS sequence.
     ADD_TLS,
 
