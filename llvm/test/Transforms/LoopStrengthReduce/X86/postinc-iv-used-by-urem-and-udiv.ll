@@ -5,6 +5,7 @@ target datalayout = "e-m:o-p270:32:32-p271:32:32-p272:64:64-i64:64-f80:128-n8:16
 target triple = "x86_64-apple-macosx"
 
 declare void @use(i64)
+declare void @use.i32(i32)
 
 define i32 @test_pr38847() {
 ; CHECK-LABEL: define i32 @test_pr38847() {
@@ -39,6 +40,52 @@ exit:
   %sext = sext i8 %iv.next to i32
   %rem = urem i32 %sext, 9
   ret i32 %rem
+}
+
+define i64 @test_pr58039() {
+; CHECK-LABEL: define i64 @test_pr58039() {
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    br label [[LOOP:%.*]]
+; CHECK:       loop:
+; CHECK-NEXT:    [[LSR_IV:%.*]] = phi i64 [ [[LSR_IV_NEXT:%.*]], [[LOOP]] ], [ 83, [[ENTRY:%.*]] ]
+; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ 0, [[ENTRY]] ], [ [[IV_NEXT:%.*]], [[LOOP]] ]
+; CHECK-NEXT:    [[TMP2:%.*]] = trunc i64 [[IV]] to i32
+; CHECK-NEXT:    call void @use.i32(i32 [[TMP2]])
+; CHECK-NEXT:    [[IV_NEXT]] = add nuw nsw i64 [[IV]], 1
+; CHECK-NEXT:    [[LSR_IV_NEXT]] = add nuw nsw i64 [[LSR_IV]], 4294967295
+; CHECK-NEXT:    br i1 false, label [[LOOP]], label [[EXIT:%.*]]
+; CHECK:       exit:
+; CHECK-NEXT:    [[TMP0:%.*]] = udiv i64 [[LSR_IV_NEXT]], 12
+; CHECK-NEXT:    [[TMP1:%.*]] = mul nuw nsw i64 [[TMP0]], 12
+; CHECK-NEXT:    [[TMP2:%.*]] = add nuw nsw i64 [[TMP1]], 4294967221
+; CHECK-NEXT:    [[TMP3:%.*]] = add i64 [[TMP2]], [[IV_NEXT]]
+; CHECK-NEXT:    [[TMP:%.*]] = trunc i64 [[TMP3]] to i32
+; CHECK-NEXT:    [[CMP3:%.*]] = icmp ult i32 [[TMP]], 32
+; CHECK-NEXT:    [[SPEC_SELECT:%.*]] = select i1 [[CMP3]], i64 0, i64 [[IV_NEXT]]
+; CHECK-NEXT:    ret i64 [[SPEC_SELECT]]
+;
+entry:
+  br label %loop
+
+loop:
+  %iv = phi i64 [ 0, %entry ], [ %iv.next, %loop ]
+  %iv1 = phi i32 [ -74, %entry ], [ %iv1.next, %loop ]
+  %iv2 = phi i32 [ 83, %entry ], [ %iv2.next, %loop ]
+  %iv3 = phi i32 [ 0, %entry ], [ %iv3.next, %loop ]
+  call void @use.i32(i32 %iv3)
+  %iv.next = add nuw nsw i64 %iv, 1
+  %iv1.next = add nuw nsw i32 %iv1, 1
+  %iv2.next = add nsw i32 %iv2, -1
+  %iv3.next = add nuw nsw i32 %iv3, 1
+  br i1 false, label %loop, label %exit
+
+exit:
+  %i2 = udiv i32 %iv2.next, 12
+  %i5 = mul nuw nsw i32 %i2, 12
+  %i6 = add i32 %iv1, %i5
+  %cmp3 = icmp ult i32 %i6, 32
+  %spec.select = select i1 %cmp3, i64 0, i64 %iv.next
+  ret i64 %spec.select
 }
 
 define i32 @test_pr62852() {

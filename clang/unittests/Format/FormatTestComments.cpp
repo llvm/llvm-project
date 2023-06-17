@@ -554,9 +554,8 @@ TEST_F(FormatTestComments, SplitsLongCxxComments) {
             "          // one line",
             format("if (true) // A comment that doesn't fit on one line   ",
                    getLLVMStyleWithColumns(30)));
-  EXPECT_EQ("//    Don't_touch_leading_whitespace",
-            format("//    Don't_touch_leading_whitespace",
-                   getLLVMStyleWithColumns(20)));
+  verifyNoChange("//    Don't_touch_leading_whitespace",
+                 getLLVMStyleWithColumns(20));
   EXPECT_EQ("// Add leading\n"
             "// whitespace",
             format("//Add leading whitespace", getLLVMStyleWithColumns(20)));
@@ -571,7 +570,7 @@ TEST_F(FormatTestComments, SplitsLongCxxComments) {
             "// limit",
             format("//Even if it makes the line exceed the column limit",
                    getLLVMStyleWithColumns(51)));
-  EXPECT_EQ("//--But not here", format("//--But not here", getLLVMStyle()));
+  verifyFormat("//--But not here", getLLVMStyle());
   EXPECT_EQ("/// line 1\n"
             "// add leading whitespace",
             format("/// line 1\n"
@@ -614,9 +613,8 @@ TEST_F(FormatTestComments, SplitsLongCxxComments) {
                    "    int bbbbbbbbbb, // xxxxxxx yyyyyyyyyy\n"
                    "    int c, int d, int e) {}",
                    getLLVMStyleWithColumns(40)));
-  EXPECT_EQ("//\t aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
-            format("//\t aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
-                   getLLVMStyleWithColumns(20)));
+  verifyFormat("//\t aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+               getLLVMStyleWithColumns(20));
   EXPECT_EQ(
       "#define XXX // a b c d\n"
       "            // e f g h",
@@ -1065,7 +1063,7 @@ TEST_F(FormatTestComments, KeepsLevelOfCommentBeforePPDirective) {
                        "  #define KV(value) #value, value\n"
                        "  // clang-format on\n"
                        "}");
-  EXPECT_EQ(Code, format(Code));
+  verifyNoChange(Code);
 }
 
 TEST_F(FormatTestComments, SplitsLongLinesInComments) {
@@ -1228,9 +1226,8 @@ TEST_F(FormatTestComments, SplitsLongLinesInComments) {
 
   // This reproduces a crashing bug where both adaptStartOfLine and
   // getCommentSplit were trying to wrap after the "/**".
-  EXPECT_EQ("/** multilineblockcommentwithnowrapopportunity */",
-            format("/** multilineblockcommentwithnowrapopportunity */",
-                   getLLVMStyleWithColumns(20)));
+  verifyFormat("/** multilineblockcommentwithnowrapopportunity */",
+               getLLVMStyleWithColumns(20));
 
   EXPECT_EQ("/*\n"
             "\n"
@@ -1651,8 +1648,7 @@ TEST_F(FormatTestComments, ReflowsComments) {
                                         getLLVMStyleWithColumns(20)));
 
   // Don't shrink leading whitespace.
-  EXPECT_EQ("int i; ///           a",
-            format("int i; ///           a", getLLVMStyleWithColumns(20)));
+  verifyNoChange("int i; ///           a", getLLVMStyleWithColumns(20));
 
   // Shrink trailing whitespace if there is no postfix and reflow.
   EXPECT_EQ("// long long long\n"
@@ -2363,7 +2359,7 @@ TEST_F(FormatTestComments, BlockComments) {
             format("#define A\n"
                    "/* */someCall(parameter);",
                    getLLVMStyleWithColumns(15)));
-  EXPECT_EQ("/*\n**\n*/", format("/*\n**\n*/"));
+  verifyNoChange("/*\n**\n*/");
   EXPECT_EQ("/*\n"
             " *\n"
             " * aaaaaa\n"
@@ -3523,7 +3519,7 @@ TEST_F(FormatTestComments, SpaceAtLineCommentBegin) {
             format(NoTextInComment, Style));
 
   Style.SpacesInLineCommentPrefix.Minimum = 0;
-  EXPECT_EQ("//#comment", format("//#comment", Style));
+  verifyFormat("//#comment", Style);
   EXPECT_EQ("//\n"
             "\n"
             "void foo() { //\n"

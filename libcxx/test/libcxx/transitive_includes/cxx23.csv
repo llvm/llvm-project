@@ -538,6 +538,7 @@ stack version
 stdexcept iosfwd
 stop_token atomic
 stop_token cstddef
+stop_token cstdint
 stop_token limits
 stop_token thread
 stop_token version
@@ -587,6 +588,7 @@ thread cstddef
 thread cstdint
 thread cstdlib
 thread ctime
+thread initializer_list
 thread iosfwd
 thread limits
 thread locale

@@ -5,9 +5,12 @@
 ; RUN: llc %t -function-sections -filetype=asm -o %t1
 ; RUN: FileCheck %s < %t1 --check-prefix=CHECK-ASM
 ; RUN: llc %t -function-sections -filetype=obj -o %t2
-; RUN: llvm-objdump --section-headers  %t2 | FileCheck %s --check-prefix=CHECK-OBJ
+; RUN: llvm-readelf -S -g %t2 | FileCheck %s --check-prefix=CHECK-SEC
 ; RUN: llvm-mc %t1 -filetype=obj -o %t3
-; RUN: llvm-objdump --section-headers  %t3 | FileCheck %s --check-prefix=CHECK-OBJ
+; RUN: llvm-readelf -S -g %t3 | FileCheck %s --check-prefix=CHECK-SEC
+
+; RUN: llc %t -function-sections -unique-section-names=0 -filetype=obj -o %t4
+; RUN: llvm-readelf -S %t4 | FileCheck %s --check-prefix=CHECK-SEC2
 
 ;; Check the generation of pseudoprobe intrinsic call.
 
@@ -64,6 +67,13 @@ entry:
   ret void
 }
 
+$foo3 = comdat any
+
+define void @foo3(i32 %x) comdat {
+entry:
+  ret void
+}
+
 ; CHECK-IL: Function Attrs: nocallback nofree nosync nounwind willreturn memory(inaccessiblemem: readwrite)
 ; CHECK-IL-NEXT: declare void @llvm.pseudoprobe(i64, i64, i32, i64)
 
@@ -92,9 +102,43 @@ entry:
 ; CHECK-ASM-NEXT: .byte 4
 ; CHECK-ASM-NEXT: .ascii	"foo2"
 
-; CHECK-OBJ-COUNT-2: .pseudo_probe_desc
-; CHECK-OBJ: .pseudo_probe
-; CHECK-OBJ-NOT: .rela.pseudo_probe
+; CHECK-SEC:       [Nr] Name               Type     {{.*}} ES Flg Lk Inf Al
+; CHECK-SEC:       [ 3] .text.foo          PROGBITS {{.*}} 00  AX  0   0 16
+; CHECK-SEC:       [ 5] .text.foo2         PROGBITS {{.*}} 00  AX  0   0 16
+; CHECK-SEC:       [ 8] .text.foo3         PROGBITS {{.*}} 00  AXG 0   0 16
+; CHECK-SEC-COUNT-3:    .pseudo_probe_desc PROGBITS
+; CHECK-SEC:            .pseudo_probe      PROGBITS {{.*}} 00   L  3   0  1
+; CHECK-SEC-NEXT:       .pseudo_probe      PROGBITS {{.*}} 00   L  5   0  1
+; CHECK-SEC-NEXT:       .pseudo_probe      PROGBITS {{.*}} 00   LG 8   0  1
+; CHECK-SEC-NOT:   .rela.pseudo_probe
+
+; CHECK-SEC:       COMDAT group section [    7] `.group' [foo3] contains 2 sections:
+; CHECK-SEC-NEXT:     [Index]    Name
+; CHECK-SEC-NEXT:     [    8]   .text.foo3
+; CHECK-SEC-NEXT:     [   21]   .pseudo_probe
+; CHECK-SEC-EMPTY:
+; CHECK-SEC-NEXT:  COMDAT group section [   10] `.group' [.pseudo_probe_desc_foo] contains 1 sections:
+; CHECK-SEC-NEXT:     [Index]    Name
+; CHECK-SEC-NEXT:     [   11]   .pseudo_probe_desc
+; CHECK-SEC-EMPTY:
+; CHECK-SEC-NEXT:  COMDAT group section [   12] `.group' [.pseudo_probe_desc_foo2] contains 1 sections:
+; CHECK-SEC-NEXT:     [Index]    Name
+; CHECK-SEC-NEXT:     [   13]   .pseudo_probe_desc
+; CHECK-SEC-EMPTY:
+; CHECK-SEC-NEXT:  COMDAT group section [   14] `.group' [.pseudo_probe_desc_foo3] contains 1 sections:
+; CHECK-SEC-NEXT:     [Index]    Name
+; CHECK-SEC-NEXT:     [   15]   .pseudo_probe_desc
+
+
+; CHECK-SEC2:      [Nr] Name               Type     {{.*}} ES Flg Lk Inf Al
+; CHECK-SEC2:      [ 3] .text              PROGBITS {{.*}} 00  AX  0   0 16
+; CHECK-SEC2:      [ 5] .text              PROGBITS {{.*}} 00  AX  0   0 16
+; CHECK-SEC2:      [ 8] .text              PROGBITS {{.*}} 00  AXG 0   0 16
+; CHECK-SEC2-COUNT-3:   .pseudo_probe_desc PROGBITS
+; CHECK-SEC2:           .pseudo_probe      PROGBITS {{.*}} 00   L  3   0  1
+; CHECK-SEC2-NEXT:      .pseudo_probe      PROGBITS {{.*}} 00   L  5   0  1
+; CHECK-SEC2-NEXT:      .pseudo_probe      PROGBITS {{.*}} 00   LG 8   0  1
+; CHECK-SEC2-NOT:  .rela.pseudo_probe
 
 !llvm.dbg.cu = !{!0}
 !llvm.module.flags = !{!9, !10}

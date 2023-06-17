@@ -406,6 +406,150 @@ protected:
                                      CodeGen::CodeGenModule &CGM) const;
 };
 
+std::unique_ptr<TargetCodeGenInfo>
+createDefaultTargetCodeGenInfo(CodeGenModule &CGM);
+
+enum class AArch64ABIKind {
+  AAPCS = 0,
+  DarwinPCS,
+  Win64,
+};
+
+std::unique_ptr<TargetCodeGenInfo>
+createAArch64TargetCodeGenInfo(CodeGenModule &CGM, AArch64ABIKind Kind);
+
+std::unique_ptr<TargetCodeGenInfo>
+createWindowsAArch64TargetCodeGenInfo(CodeGenModule &CGM, AArch64ABIKind K);
+
+std::unique_ptr<TargetCodeGenInfo>
+createAMDGPUTargetCodeGenInfo(CodeGenModule &CGM);
+
+std::unique_ptr<TargetCodeGenInfo>
+createARCTargetCodeGenInfo(CodeGenModule &CGM);
+
+enum class ARMABIKind {
+  APCS = 0,
+  AAPCS = 1,
+  AAPCS_VFP = 2,
+  AAPCS16_VFP = 3,
+};
+
+std::unique_ptr<TargetCodeGenInfo>
+createARMTargetCodeGenInfo(CodeGenModule &CGM, ARMABIKind Kind);
+
+std::unique_ptr<TargetCodeGenInfo>
+createWindowsARMTargetCodeGenInfo(CodeGenModule &CGM, ARMABIKind K);
+
+std::unique_ptr<TargetCodeGenInfo>
+createAVRTargetCodeGenInfo(CodeGenModule &CGM, unsigned NPR, unsigned NRR);
+
+std::unique_ptr<TargetCodeGenInfo>
+createBPFTargetCodeGenInfo(CodeGenModule &CGM);
+
+std::unique_ptr<TargetCodeGenInfo>
+createCSKYTargetCodeGenInfo(CodeGenModule &CGM, unsigned FLen);
+
+std::unique_ptr<TargetCodeGenInfo>
+createHexagonTargetCodeGenInfo(CodeGenModule &CGM);
+
+std::unique_ptr<TargetCodeGenInfo>
+createLanaiTargetCodeGenInfo(CodeGenModule &CGM);
+
+std::unique_ptr<TargetCodeGenInfo>
+createLoongArchTargetCodeGenInfo(CodeGenModule &CGM, unsigned GRLen,
+                                 unsigned FLen);
+
+std::unique_ptr<TargetCodeGenInfo>
+createM68kTargetCodeGenInfo(CodeGenModule &CGM);
+
+std::unique_ptr<TargetCodeGenInfo>
+createMIPSTargetCodeGenInfo(CodeGenModule &CGM, bool IsOS32);
+
+std::unique_ptr<TargetCodeGenInfo>
+createMSP430TargetCodeGenInfo(CodeGenModule &CGM);
+
+std::unique_ptr<TargetCodeGenInfo>
+createNVPTXTargetCodeGenInfo(CodeGenModule &CGM);
+
+std::unique_ptr<TargetCodeGenInfo>
+createPNaClTargetCodeGenInfo(CodeGenModule &CGM);
+
+enum class PPC64_SVR4_ABIKind {
+  ELFv1 = 0,
+  ELFv2,
+};
+
+std::unique_ptr<TargetCodeGenInfo>
+createAIXTargetCodeGenInfo(CodeGenModule &CGM, bool Is64Bit);
+
+std::unique_ptr<TargetCodeGenInfo>
+createPPC32TargetCodeGenInfo(CodeGenModule &CGM, bool SoftFloatABI);
+
+std::unique_ptr<TargetCodeGenInfo>
+createPPC64TargetCodeGenInfo(CodeGenModule &CGM);
+
+std::unique_ptr<TargetCodeGenInfo>
+createPPC64_SVR4_TargetCodeGenInfo(CodeGenModule &CGM, PPC64_SVR4_ABIKind Kind,
+                                   bool SoftFloatABI);
+
+std::unique_ptr<TargetCodeGenInfo>
+createRISCVTargetCodeGenInfo(CodeGenModule &CGM, unsigned XLen, unsigned FLen);
+
+std::unique_ptr<TargetCodeGenInfo>
+createCommonSPIRTargetCodeGenInfo(CodeGenModule &CGM);
+
+std::unique_ptr<TargetCodeGenInfo>
+createSPIRVTargetCodeGenInfo(CodeGenModule &CGM);
+
+std::unique_ptr<TargetCodeGenInfo>
+createSparcV8TargetCodeGenInfo(CodeGenModule &CGM);
+
+std::unique_ptr<TargetCodeGenInfo>
+createSparcV9TargetCodeGenInfo(CodeGenModule &CGM);
+
+std::unique_ptr<TargetCodeGenInfo>
+createSystemZTargetCodeGenInfo(CodeGenModule &CGM, bool HasVector,
+                               bool SoftFloatABI);
+
+std::unique_ptr<TargetCodeGenInfo>
+createTCETargetCodeGenInfo(CodeGenModule &CGM);
+
+std::unique_ptr<TargetCodeGenInfo>
+createVETargetCodeGenInfo(CodeGenModule &CGM);
+
+enum class WebAssemblyABIKind {
+  MVP = 0,
+  ExperimentalMV = 1,
+};
+
+std::unique_ptr<TargetCodeGenInfo>
+createWebAssemblyTargetCodeGenInfo(CodeGenModule &CGM, WebAssemblyABIKind K);
+
+/// The AVX ABI level for X86 targets.
+enum class X86AVXABILevel {
+  None,
+  AVX,
+  AVX512,
+};
+
+std::unique_ptr<TargetCodeGenInfo> createX86_32TargetCodeGenInfo(
+    CodeGenModule &CGM, bool DarwinVectorABI, bool Win32StructABI,
+    unsigned NumRegisterParameters, bool SoftFloatABI);
+
+std::unique_ptr<TargetCodeGenInfo>
+createWinX86_32TargetCodeGenInfo(CodeGenModule &CGM, bool DarwinVectorABI,
+                                 bool Win32StructABI,
+                                 unsigned NumRegisterParameters);
+
+std::unique_ptr<TargetCodeGenInfo>
+createX86_64TargetCodeGenInfo(CodeGenModule &CGM, X86AVXABILevel AVXLevel);
+
+std::unique_ptr<TargetCodeGenInfo>
+createWinX86_64TargetCodeGenInfo(CodeGenModule &CGM, X86AVXABILevel AVXLevel);
+
+std::unique_ptr<TargetCodeGenInfo>
+createXCoreTargetCodeGenInfo(CodeGenModule &CGM);
+
 } // namespace CodeGen
 } // namespace clang
 

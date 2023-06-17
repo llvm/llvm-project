@@ -120,6 +120,11 @@ protected:
                   Style);
   }
 
+  void _verifyNoChange(const char *File, int Line, llvm::StringRef Code,
+                       const std::optional<FormatStyle> &Style = {}) {
+    _verifyFormat(File, Line, Code, Code, Style);
+  }
+
   /// \brief Verify that clang-format does not crash on the given input.
   void verifyNoCrash(llvm::StringRef Code,
                      const std::optional<FormatStyle> &Style = {}) {
@@ -135,6 +140,7 @@ protected:
   _verifyIndependentOfContext(__FILE__, __LINE__, __VA_ARGS__)
 #define verifyIncompleteFormat(...)                                            \
   _verifyIncompleteFormat(__FILE__, __LINE__, __VA_ARGS__)
+#define verifyNoChange(...) _verifyNoChange(__FILE__, __LINE__, __VA_ARGS__)
 #define verifyFormat(...) _verifyFormat(__FILE__, __LINE__, __VA_ARGS__)
 #define verifyGoogleFormat(Code) verifyFormat(Code, getGoogleStyle())
 
