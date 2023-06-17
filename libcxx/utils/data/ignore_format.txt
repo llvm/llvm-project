@@ -621,8 +621,11 @@ libcxx/include/__support/win32/locale_win32.h
 libcxx/include/__support/xlocale/__nop_locale_mgmt.h
 libcxx/include/__system_error/errc.h
 libcxx/include/thread
+libcxx/include/__thread/formatter.h
 libcxx/include/__threading_support
 libcxx/include/__thread/poll_with_backoff.h
+libcxx/include/__thread/this_thread.h
+libcxx/include/__thread/thread.h
 libcxx/include/__thread/timed_backoff_policy.h
 libcxx/include/__tree
 libcxx/include/tuple

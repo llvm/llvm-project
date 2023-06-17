@@ -1532,7 +1532,10 @@ module std [system] {
     export *
 
     module __thread {
+      module formatter            { private header "__thread/formatter.h" }
       module poll_with_backoff    { private header "__thread/poll_with_backoff.h" }
+      module this_thread          { private header "__thread/this_thread.h" }
+      module thread               { private header "__thread/thread.h" }
       module timed_backoff_policy { private header "__thread/timed_backoff_policy.h" }
     }
   }
