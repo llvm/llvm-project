@@ -118,5 +118,6 @@ class TestVarPath(TestBase):
         # in type with synthetic children. This used to cause a crash.
         if not self.isAArch64Windows():
             v = frame.GetValueForVariablePath("pt_sp->not_valid_child")
-            self.assertTrue(v.GetError().Fail(),
-            "Make sure we don't find 'pt_sp->not_valid_child'")
+            self.assertTrue(
+                v.GetError().Fail(), "Make sure we don't find 'pt_sp->not_valid_child'"
+            )

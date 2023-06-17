@@ -5689,30 +5689,28 @@ lldb::addr_t Process::GetHighmemDataAddressMask() {
 }
 
 void Process::SetCodeAddressMask(lldb::addr_t code_address_mask) {
-  Log *log = GetLog(LLDBLog::Process);
-  LLDB_LOGF(log, "Setting Process code address mask to 0x%" PRIx64,
-            code_address_mask);
+  LLDB_LOG(GetLog(LLDBLog::Process),
+           "Setting Process code address mask to {0:x}", code_address_mask);
   m_code_address_mask = code_address_mask;
 }
 
 void Process::SetDataAddressMask(lldb::addr_t data_address_mask) {
-  Log *log = GetLog(LLDBLog::Process);
-  LLDB_LOGF(log, "Setting Process data address mask to 0x%" PRIx64,
-            data_address_mask);
+  LLDB_LOG(GetLog(LLDBLog::Process),
+           "Setting Process data address mask to {0:x}", data_address_mask);
   m_data_address_mask = data_address_mask;
 }
 
 void Process::SetHighmemCodeAddressMask(lldb::addr_t code_address_mask) {
-  Log *log = GetLog(LLDBLog::Process);
-  LLDB_LOGF(log, "Setting Process highmem code address mask to 0x%" PRIx64,
-            code_address_mask);
+  LLDB_LOG(GetLog(LLDBLog::Process),
+           "Setting Process highmem code address mask to {0:x}",
+           code_address_mask);
   m_highmem_code_address_mask = code_address_mask;
 }
 
 void Process::SetHighmemDataAddressMask(lldb::addr_t data_address_mask) {
-  Log *log = GetLog(LLDBLog::Process);
-  LLDB_LOGF(log, "Setting Process highmem data address mask to 0x%" PRIx64,
-            data_address_mask);
+  LLDB_LOG(GetLog(LLDBLog::Process),
+           "Setting Process highmem data address mask to {0:x}",
+           data_address_mask);
   m_highmem_data_address_mask = data_address_mask;
 }
 

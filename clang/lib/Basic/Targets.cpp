@@ -42,6 +42,7 @@
 #include "Targets/X86.h"
 #include "Targets/XCore.h"
 #include "clang/Basic/Diagnostic.h"
+#include "clang/Basic/DiagnosticFrontend.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/TargetParser/Triple.h"
 
@@ -816,6 +817,13 @@ TargetInfo::CreateTargetInfo(DiagnosticsEngine &Diags,
 
   // Compute the default target features, we need the target to handle this
   // because features may have dependencies on one another.
+  llvm::erase_if(Opts->FeaturesAsWritten, [&](StringRef Name) {
+    if (Target->isReadOnlyFeature(Name.substr(1))) {
+      Diags.Report(diag::warn_fe_backend_readonly_feature_flag) << Name;
+      return true;
+    }
+    return false;
+  });
   if (!Target->initFeatureMap(Opts->FeatureMap, Diags, Opts->CPU,
                               Opts->FeaturesAsWritten))
     return nullptr;

@@ -2139,6 +2139,18 @@ void clang::checkUnsafeBufferUsage(const Decl *D,
                                    UnsafeBufferUsageHandler &Handler,
                                    bool EmitSuggestions) {
   assert(D && D->getBody());
+  
+  // Do not emit fixit suggestions for functions declared in an
+  // extern "C" block.
+  if (const auto *FD = dyn_cast<FunctionDecl>(D)) {
+      for (FunctionDecl *FReDecl : FD->redecls()) {
+      if (FReDecl->isExternC()) {
+        EmitSuggestions = false;
+        break;
+      }
+    }
+  }
+  
   WarningGadgetSets UnsafeOps;
   FixableGadgetSets FixablesForAllVars;
 

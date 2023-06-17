@@ -281,7 +281,7 @@ def main(argv):
     try:
         for file in args:
             if file != "-" and not os.path.isabs(file):
-                file = os.path.abspath(os.path.join(os.getcwd(), file))
+                file = os.path.realpath(os.path.join(os.getcwd(), file))
 
             if flags.recursive_diff:
                 if file == "-":

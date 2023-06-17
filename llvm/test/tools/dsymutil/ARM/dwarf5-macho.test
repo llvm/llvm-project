@@ -6,7 +6,7 @@
 
 ; a.cpp
 ; __attribute__((section("1,__text_foo"))) void foo() {}
-; 
+;
 ; int foo2(int a) {
 ;     return a+5;
 ; }
@@ -25,17 +25,17 @@ CHECK:.debug_abbrev contents:
 CHECK-NEXT: Abbrev table for offset: 0x00000000
 
 CHECK: .debug_info contents:
-CHECK-NEXT: 0x00000000: Compile Unit: length = 0x0000007d, format = DWARF32, version = 0x0005, unit_type = DW_UT_compile, abbr_offset = 0x0000, addr_size = 0x08 (next unit at 0x00000081)
+CHECK-NEXT: 0x00000000: Compile Unit: length = 0x00000064, format = DWARF32, version = 0x0005, unit_type = DW_UT_compile, abbr_offset = 0x0000, addr_size = 0x08 (next unit at 0x00000068)
 CHECK: DW_AT_ranges [DW_FORM_sec_offset] (0x[[RANGE_OFFSET:[0-9a-f]+]]
 CHECK-NEXT:                  [0x[[RANGE_OFFSET_START:[0-9a-f]+]], 0x[[RANGE_OFFSET_END:[0-9a-f]+]]))
 CHECK: 0x00000050:     DW_TAG_formal_parameter [3]   (0x00000033)
-CHECK-NEXT:                   DW_AT_location [DW_FORM_sec_offset]   (0x[[LOC_OFFSET:[0-9a-f]+]]: 
+CHECK-NEXT:                   DW_AT_location [DW_FORM_sec_offset]   (0x[[LOC_OFFSET:[0-9a-f]+]]:
 CHECK-NEXT:                      [0x[[LOC_OFFSET_START:[0-9a-f]+]], 0x[[LOC_OFFSET_END:[0-9a-f]+]]): [[LOC_EXPR:.*]]
 CHECK-NEXT:                      [0x[[LOC_OFFSET_START2:[0-9a-f]+]], 0x[[LOC_OFFSET_END2:[0-9a-f]+]]): [[LOC_EXPR2:.*]])
 
 CHECK: .debug_loclists contents:
 CHECK-NEXT: 0x00000000: locations list header: length = 0x00000024, format = DWARF32, version = 0x0005, addr_size = 0x08, seg_size = 0x00, offset_entry_count = 0x00000000
-CHECK-NEXT: 0x[[LOC_OFFSET]]: 
+CHECK-NEXT: 0x[[LOC_OFFSET]]:
 CHECK-NEXT:             DW_LLE_start_length    {{.*}}
 CHECK-NEXT:                       => [0x[[LOC_OFFSET_START]], 0x[[LOC_OFFSET_END]]): [[LOC_EXPR]]
 CHECK-NEXT:             DW_LLE_start_length    {{.*}}
@@ -45,7 +45,7 @@ CHECK-NEXT:             DW_LLE_end_of_list     ()
 CHECK: .debug_line contents:
 CHECK-NEXT: debug_line[0x00000000]
 CHECK-NEXT: Line table prologue:
-CHECK-NEXT:     total_length: 0x00000050
+CHECK-NEXT:     total_length: 0x00000048
 CHECK-NEXT:           format: DWARF32
 CHECK-NEXT:          version: 5
 CHECK-NEXT:     address_size: 8
@@ -87,17 +87,16 @@ CHECK-NEXT: ranges:
 CHECK-NEXT: [[RANGE_OFFSET]]: [DW_RLE_start_length]: {{.*}}[0x[[RANGE_OFFSET_START]], 0x[[RANGE_OFFSET_END]])
 
 CHECK: .debug_names contents:
-CHECK-NEXT: Name Index @ 0x0 {
-CHECK-NEXT:   Header {
-CHECK-NEXT:     Length: 0x94
-CHECK-NEXT:     Format: DWARF32
-CHECK-NEXT:     Version: 5
-CHECK-NEXT:     CU count: 1
-CHECK-NEXT:     Local TU count: 0
-CHECK-NEXT:     Foreign TU count: 0
-CHECK-NEXT:     Bucket count: 4
-CHECK-NEXT:     Name count: 4
-CHECK-NEXT:     Abbreviations table size: 0xD
-CHECK-NEXT:     Augmentation: 'LLVM0700'
-CHECK-NEXT:   }
-
+CHECK-NEX:T Name Index @ 0x0 {
+CHECK-NEX:T   Header {
+CHECK-NEX:T     Length: 0x7C
+CHECK-NEX:T     Format: DWARF32
+CHECK-NEX:T     Version: 5
+CHECK-NEX:T     CU count: 1
+CHECK-NEX:T     Local TU count: 0
+CHECK-NEX:T     Foreign TU count: 0
+CHECK-NEX:T     Bucket count: 3
+CHECK-NEX:T     Name count: 3
+CHECK-NEX:T     Abbreviations table size: 0xD
+CHECK-NEX:T     Augmentation: 'LLVM0700'
+CHECK-NEX:T   }

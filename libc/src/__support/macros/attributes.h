@@ -20,6 +20,7 @@
 #include "properties/architectures.h"
 
 #define LIBC_INLINE inline
+#define LIBC_INLINE_VAR inline
 #define LIBC_INLINE_ASM __asm__ __volatile__
 #define LIBC_UNUSED __attribute__((unused))
 

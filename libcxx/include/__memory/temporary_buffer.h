@@ -74,14 +74,6 @@ void return_temporary_buffer(_Tp* __p) _NOEXCEPT
   _VSTD::__libcpp_deallocate_unsized((void*)__p, _LIBCPP_ALIGNOF(_Tp));
 }
 
-struct __return_temporary_buffer
-{
-_LIBCPP_SUPPRESS_DEPRECATED_PUSH
-    template <class _Tp>
-    _LIBCPP_INLINE_VISIBILITY void operator()(_Tp* __p) const {_VSTD::return_temporary_buffer(__p);}
-_LIBCPP_SUPPRESS_DEPRECATED_POP
-};
-
 _LIBCPP_END_NAMESPACE_STD
 
 #endif // _LIBCPP___MEMORY_TEMPORARY_BUFFER_H
