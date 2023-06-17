@@ -28,6 +28,8 @@ __cpp_lib_array_constexpr                               201811L <array> <iterato
 __cpp_lib_as_const                                      201510L <utility>
 __cpp_lib_associative_heterogeneous_erasure             202110L <map> <set> <unordered_map>
                                                                 <unordered_set>
+__cpp_lib_associative_heterogeneous_insertion           202306L <map> <set> <unordered_map>
+                                                                <unordered_set>
 __cpp_lib_assume_aligned                                201811L <memory>
 __cpp_lib_atomic_flag_test                              201907L <atomic>
 __cpp_lib_atomic_float                                  201711L <atomic>
@@ -38,10 +40,13 @@ __cpp_lib_atomic_shared_ptr                             201711L <atomic>
 __cpp_lib_atomic_value_initialization                   201911L <atomic> <memory>
 __cpp_lib_atomic_wait                                   201907L <atomic>
 __cpp_lib_barrier                                       201907L <barrier>
-__cpp_lib_bind_back                                     202202L <functional>
-__cpp_lib_bind_front                                    201907L <functional>
+__cpp_lib_bind_back                                     202306L <functional>
+                                                        202202L // C++23
+__cpp_lib_bind_front                                    202306L <functional>
+                                                        201907L // C++20
 __cpp_lib_bit_cast                                      201806L <bit>
 __cpp_lib_bitops                                        201907L <bit>
+__cpp_lib_bitset                                        202306L <bitset>
 __cpp_lib_bool_constant                                 201505L <type_traits>
 __cpp_lib_bounded_array_traits                          201902L <type_traits>
 __cpp_lib_boyer_moore_searcher                          201603L <functional>
@@ -72,6 +77,7 @@ __cpp_lib_constexpr_tuple                               201811L <tuple>
 __cpp_lib_constexpr_typeinfo                            202106L <typeinfo>
 __cpp_lib_constexpr_utility                             201811L <utility>
 __cpp_lib_constexpr_vector                              201907L <vector>
+__cpp_lib_copyable_function                             202306L <functional>
 __cpp_lib_coroutine                                     201902L <coroutine>
 __cpp_lib_destroying_delete                             201806L <new>
 __cpp_lib_enable_shared_from_this                       201603L <memory>
@@ -88,11 +94,14 @@ __cpp_lib_format                                        202106L <format>
 __cpp_lib_format_ranges                                 202207L <format>
 __cpp_lib_formatters                                    202302L <stacktrace> <thread>
 __cpp_lib_forward_like                                  202207L <utility>
+__cpp_lib_fstream_native_handle                         202306L <fstream>
+__cpp_lib_function_ref                                  202306L <functional>
 __cpp_lib_gcd_lcm                                       201606L <numeric>
 __cpp_lib_generic_associative_lookup                    201304L <map> <set>
 __cpp_lib_generic_unordered_lookup                      201811L <unordered_map> <unordered_set>
 __cpp_lib_hardware_interference_size                    201703L <new>
 __cpp_lib_has_unique_object_representations             201606L <type_traits>
+__cpp_lib_hazard_pointer                                202306L <hazard_pointer>
 __cpp_lib_hypot                                         201603L <cmath>
 __cpp_lib_incomplete_container_elements                 201505L <forward_list> <list> <vector>
 __cpp_lib_int_pow2                                      202002L <bit>
@@ -155,7 +164,9 @@ __cpp_lib_ranges_to_container                           202202L <deque> <forward
                                                                 <set> <stack> <string>
                                                                 <unordered_map> <unordered_set> <vector>
 __cpp_lib_ranges_zip                                    202110L <ranges> <tuple> <utility>
+__cpp_lib_ratio                                         202306L <ratio>
 __cpp_lib_raw_memory_algorithms                         201606L <memory>
+__cpp_lib_rcu                                           202306L <rcu>
 __cpp_lib_reference_from_temporary                      202202L <type_traits>
 __cpp_lib_remove_cvref                                  201711L <type_traits>
 __cpp_lib_result_of_sfinae                              201210L <functional> <type_traits>
@@ -170,10 +181,12 @@ __cpp_lib_shared_ptr_weak_type                          201606L <memory>
 __cpp_lib_shared_timed_mutex                            201402L <shared_mutex>
 __cpp_lib_shift                                         201806L <algorithm>
 __cpp_lib_smart_ptr_for_overwrite                       202002L <memory>
+__cpp_lib_smart_ptr_owner_equality                      202306L <memory>
 __cpp_lib_source_location                               201907L <source_location>
 __cpp_lib_span                                          202002L <span>
 __cpp_lib_spanstream                                    202106L <spanstream>
 __cpp_lib_ssize                                         201902L <iterator>
+__cpp_lib_sstream_from_string_view                      202306L <sstream>
 __cpp_lib_stacktrace                                    202011L <stacktrace>
 __cpp_lib_starts_ends_with                              201711L <string> <string_view>
 __cpp_lib_stdatomic_h                                   202011L <stdatomic.h>
@@ -182,11 +195,14 @@ __cpp_lib_string_resize_and_overwrite                   202110L <string>
 __cpp_lib_string_udls                                   201304L <string>
 __cpp_lib_string_view                                   201803L <string> <string_view>
                                                         201606L // C++17
+__cpp_lib_submdspan                                     202306L <mdspan>
 __cpp_lib_syncbuf                                       201803L <syncstream>
+__cpp_lib_text_encoding                                 202306L <text_encoding>
 __cpp_lib_three_way_comparison                          201907L <compare>
 __cpp_lib_to_address                                    201711L <memory>
 __cpp_lib_to_array                                      201907L <array>
 __cpp_lib_to_chars                                      201611L <charconv>
+__cpp_lib_to_string                                     202306L <string>
 __cpp_lib_to_underlying                                 202102L <utility>
 __cpp_lib_transformation_trait_aliases                  201304L <type_traits>
 __cpp_lib_transparent_operators                         201510L <functional> <memory>
@@ -201,6 +217,7 @@ __cpp_lib_unreachable                                   202202L <utility>
 __cpp_lib_unwrap_ref                                    201811L <functional>
 __cpp_lib_variant                                       202102L <variant>
 __cpp_lib_void_t                                        201411L <type_traits>
+__cpp_lib_within_lifetime                               202306L <type_traits>
 
 */
 
@@ -423,12 +440,29 @@ __cpp_lib_void_t                                        201411L <type_traits>
 # define __cpp_lib_stdatomic_h                          202011L
 # define __cpp_lib_string_contains                      202011L
 # define __cpp_lib_string_resize_and_overwrite          202110L
+// # define __cpp_lib_to_string                            202306L
 # define __cpp_lib_to_underlying                        202102L
 # define __cpp_lib_unreachable                          202202L
 #endif
 
 #if _LIBCPP_STD_VER >= 26
-
+// # define __cpp_lib_associative_heterogeneous_insertion  202306L
+# undef  __cpp_lib_bind_back
+// # define __cpp_lib_bind_back                            202306L
+# undef  __cpp_lib_bind_front
+# define __cpp_lib_bind_front                           202306L
+// # define __cpp_lib_bitset                               202306L
+// # define __cpp_lib_copyable_function                    202306L
+// # define __cpp_lib_fstream_native_handle                202306L
+// # define __cpp_lib_function_ref                         202306L
+// # define __cpp_lib_hazard_pointer                       202306L
+// # define __cpp_lib_ratio                                202306L
+// # define __cpp_lib_rcu                                  202306L
+// # define __cpp_lib_smart_ptr_owner_equality             202306L
+// # define __cpp_lib_sstream_from_string_view             202306L
+// # define __cpp_lib_submdspan                            202306L
+// # define __cpp_lib_text_encoding                        202306L
+// # define __cpp_lib_within_lifetime                      202306L
 #endif
 
 // clang-format on

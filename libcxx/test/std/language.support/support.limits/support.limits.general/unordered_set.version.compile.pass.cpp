@@ -15,14 +15,15 @@
 
 // Test the feature test macros defined by <unordered_set>
 
-/*  Constant                                       Value
-    __cpp_lib_allocator_traits_is_always_equal     201411L [C++17]
-    __cpp_lib_associative_heterogeneous_erasure    202110L [C++23]
-    __cpp_lib_erase_if                             202002L [C++20]
-    __cpp_lib_generic_unordered_lookup             201811L [C++20]
-    __cpp_lib_node_extract                         201606L [C++17]
-    __cpp_lib_nonmember_container_access           201411L [C++17]
-    __cpp_lib_ranges_to_container                  202202L [C++23]
+/*  Constant                                         Value
+    __cpp_lib_allocator_traits_is_always_equal       201411L [C++17]
+    __cpp_lib_associative_heterogeneous_erasure      202110L [C++23]
+    __cpp_lib_associative_heterogeneous_insertion    202306L [C++26]
+    __cpp_lib_erase_if                               202002L [C++20]
+    __cpp_lib_generic_unordered_lookup               201811L [C++20]
+    __cpp_lib_node_extract                           201606L [C++17]
+    __cpp_lib_nonmember_container_access             201411L [C++17]
+    __cpp_lib_ranges_to_container                    202202L [C++23]
 */
 
 #include <unordered_set>
@@ -36,6 +37,10 @@
 
 # ifdef __cpp_lib_associative_heterogeneous_erasure
 #   error "__cpp_lib_associative_heterogeneous_erasure should not be defined before c++23"
+# endif
+
+# ifdef __cpp_lib_associative_heterogeneous_insertion
+#   error "__cpp_lib_associative_heterogeneous_insertion should not be defined before c++26"
 # endif
 
 # ifdef __cpp_lib_erase_if
@@ -66,6 +71,10 @@
 
 # ifdef __cpp_lib_associative_heterogeneous_erasure
 #   error "__cpp_lib_associative_heterogeneous_erasure should not be defined before c++23"
+# endif
+
+# ifdef __cpp_lib_associative_heterogeneous_insertion
+#   error "__cpp_lib_associative_heterogeneous_insertion should not be defined before c++26"
 # endif
 
 # ifdef __cpp_lib_erase_if
@@ -99,6 +108,10 @@
 
 # ifdef __cpp_lib_associative_heterogeneous_erasure
 #   error "__cpp_lib_associative_heterogeneous_erasure should not be defined before c++23"
+# endif
+
+# ifdef __cpp_lib_associative_heterogeneous_insertion
+#   error "__cpp_lib_associative_heterogeneous_insertion should not be defined before c++26"
 # endif
 
 # ifdef __cpp_lib_erase_if
@@ -138,6 +151,10 @@
 
 # ifdef __cpp_lib_associative_heterogeneous_erasure
 #   error "__cpp_lib_associative_heterogeneous_erasure should not be defined before c++23"
+# endif
+
+# ifdef __cpp_lib_associative_heterogeneous_insertion
+#   error "__cpp_lib_associative_heterogeneous_insertion should not be defined before c++26"
 # endif
 
 # ifndef __cpp_lib_erase_if
@@ -192,6 +209,10 @@
 #   ifdef __cpp_lib_associative_heterogeneous_erasure
 #     error "__cpp_lib_associative_heterogeneous_erasure should not be defined because it is unimplemented in libc++!"
 #   endif
+# endif
+
+# ifdef __cpp_lib_associative_heterogeneous_insertion
+#   error "__cpp_lib_associative_heterogeneous_insertion should not be defined before c++26"
 # endif
 
 # ifndef __cpp_lib_erase_if
@@ -254,6 +275,19 @@
 # else // _LIBCPP_VERSION
 #   ifdef __cpp_lib_associative_heterogeneous_erasure
 #     error "__cpp_lib_associative_heterogeneous_erasure should not be defined because it is unimplemented in libc++!"
+#   endif
+# endif
+
+# if !defined(_LIBCPP_VERSION)
+#   ifndef __cpp_lib_associative_heterogeneous_insertion
+#     error "__cpp_lib_associative_heterogeneous_insertion should be defined in c++26"
+#   endif
+#   if __cpp_lib_associative_heterogeneous_insertion != 202306L
+#     error "__cpp_lib_associative_heterogeneous_insertion should have the value 202306L in c++26"
+#   endif
+# else // _LIBCPP_VERSION
+#   ifdef __cpp_lib_associative_heterogeneous_insertion
+#     error "__cpp_lib_associative_heterogeneous_insertion should not be defined because it is unimplemented in libc++!"
 #   endif
 # endif
 

@@ -87,7 +87,11 @@ feature_test_macros = [
         },
         {
             "name": "__cpp_lib_allocate_at_least",
-            "values": {"c++23": 202106},
+            "values": {
+                          "c++23": 202106,
+                          # Note LWG3887 Version macro for allocate_at_least
+                          #"c++26": 202302, # P2652R2 Disallow User Specialization of allocator_traits
+                      },
             "headers": ["memory"],
         },
         {
@@ -130,6 +134,12 @@ feature_test_macros = [
         {
             "name": "__cpp_lib_associative_heterogeneous_erasure",
             "values": {"c++23": 202110},
+            "headers": ["map", "set", "unordered_map", "unordered_set"],
+            "unimplemented": True,
+        },
+        {
+            "name": "__cpp_lib_associative_heterogeneous_insertion",
+            "values": {"c++26": 202306}, # P2363R5 Extending associative containers with the remaining heterogeneous overloads
             "headers": ["map", "set", "unordered_map", "unordered_set"],
             "unimplemented": True,
         },
@@ -192,13 +202,19 @@ feature_test_macros = [
         },
         {
             "name": "__cpp_lib_bind_back",
-            "values": {"c++23": 202202},
+            "values": {
+                          "c++23": 202202,
+                          "c++26": 202306, # P2714R1 Bind front and back to NTTP callables
+                      },
             "headers": ["functional"],
             "unimplemented": True,
         },
         {
             "name": "__cpp_lib_bind_front",
-            "values": {"c++20": 201907},
+            "values": {
+                          "c++20": 201907,
+                          "c++26": 202306, # P2714R1 Bind front and back to NTTP callables
+                      },
             "headers": ["functional"],
         },
         {
@@ -210,6 +226,12 @@ feature_test_macros = [
             "name": "__cpp_lib_bitops",
             "values": {"c++20": 201907},
             "headers": ["bit"],
+            "unimplemented": True,
+        },
+        {
+            "name": "__cpp_lib_bitset",
+            "values": {"c++26": 202306}, # P2697R1 Interfacing bitset with string_view
+            "headers": ["bitset"],
             "unimplemented": True,
         },
         {
@@ -255,7 +277,10 @@ feature_test_macros = [
         },
         {
             "name": "__cpp_lib_chrono",
-            "values": {"c++17": 201611},
+            "values": {
+                          "c++17": 201611,
+                          #"c++26": 202306, # P2592R3 Hashing support for std::chrono value classes
+                      },
             "headers": ["chrono"],
         },
         {
@@ -280,7 +305,10 @@ feature_test_macros = [
         },
         {
             "name": "__cpp_lib_constexpr_algorithms",
-            "values": {"c++20": 201806},
+            "values": {
+                          "c++20": 201806,
+                          #"c++26": 202306, # P2562R1 constexpr Stable Sorting
+                      },
             "headers": ["algorithm", "utility"],
         },
         {
@@ -360,6 +388,12 @@ feature_test_macros = [
             "headers": ["vector"],
         },
         {
+            "name": "__cpp_lib_copyable_function",
+            "values": {"c++26": 202306}, # P2548R6 copyable_function
+            "headers": ["functional"],
+            "unimplemented": True,
+        },
+        {
             "name": "__cpp_lib_coroutine",
             "values": {"c++20": 201902},
             "headers": ["coroutine"],
@@ -428,6 +462,10 @@ feature_test_macros = [
                 "c++20": 202106,
                 # "c++23": 202207, Not implemented P2419R2 Clarify handling of encodings in localized formatting of chrono types
             },
+            # Note these three papers are adopted at the June 2023 meeting and have sequential numbering
+            # 202304 P2510R3 Formatting pointers
+            # 202305 P2757R3 Type-checking format args
+            # 202306 P2637R3 Member Visit
             "headers": ["format"],
             "unimplemented": True,
         },
@@ -446,6 +484,18 @@ feature_test_macros = [
             "name": "__cpp_lib_forward_like",
             "values": {"c++23": 202207},
             "headers": ["utility"],
+        },
+        {
+            "name": "__cpp_lib_fstream_native_handle",
+            "values": {"c++26": 202306}, # P1759R6 Native handles and file streams
+            "headers": ["fstream"],
+            "unimplemented": True,
+        },
+        {
+            "name": "__cpp_lib_function_ref",
+            "values": {"c++26": 202306}, # P0792R14 function_ref: a type-erased callable reference
+            "headers": ["functional"],
+            "unimplemented": True,
         },
         {
             "name": "__cpp_lib_gcd_lcm",
@@ -473,6 +523,12 @@ feature_test_macros = [
             "name": "__cpp_lib_has_unique_object_representations",
             "values": {"c++17": 201606},
             "headers": ["type_traits"],
+        },
+        {
+            "name": "__cpp_lib_hazard_pointer",
+            "values": {"c++26": 202306},  # P2530R3 Hazard Pointers for C++26
+            "headers": ["hazard_pointer"],# TODO verify this entry since the paper was underspecified.
+            "unimplemented": True,
         },
         {
             "name": "__cpp_lib_hypot",
@@ -679,7 +735,10 @@ feature_test_macros = [
         },
         {
             "name": "__cpp_lib_not_fn",
-            "values": {"c++17": 201603},
+            "values": {
+                          "c++17": 201603,
+                          #"c++26": 202306, # P2714R1 Bind front and back to NTTP callables
+                      },
             "headers": ["functional"],
         },
         {
@@ -786,9 +845,21 @@ feature_test_macros = [
             "unimplemented": True,
         },
         {
+            "name": "__cpp_lib_ratio",
+            "values": {"c++26": 202306}, # P2734R0 Adding the new SI prefixes
+            "headers": ["ratio"],
+            "unimplemented": True,
+        },
+        {
             "name": "__cpp_lib_raw_memory_algorithms",
             "values": {"c++17": 201606},
             "headers": ["memory"],
+        },
+        {
+            "name": "__cpp_lib_rcu",
+            "values": {"c++26": 202306}, # P2545R4 Read-Copy Update (RCU)
+            "headers": ["rcu"],          # TODO verify this entry since the paper was underspecified.
+            "unimplemented": True,
         },
         {
             "name": "__cpp_lib_reference_from_temporary",
@@ -864,6 +935,12 @@ feature_test_macros = [
             "unimplemented": True,
         },
         {
+            "name": "__cpp_lib_smart_ptr_owner_equality",
+            "values": {"c++26": 202306}, # P1901R2 Enabling the Use of weak_ptr as Keys in Unordered Associative Containers
+            "headers": ["memory"],
+            "unimplemented": True,
+        },
+        {
             "name": "__cpp_lib_source_location",
             "values": {"c++20": 201907},
             "headers": ["source_location"],
@@ -885,6 +962,12 @@ feature_test_macros = [
             "name": "__cpp_lib_ssize",
             "values": {"c++20": 201902},
             "headers": ["iterator"],
+        },
+        {
+            "name": "__cpp_lib_sstream_from_string_view",
+            "values": {"c++26": 202306},  # P2495R3 Interfacing stringstreams with string_view
+            "headers": ["sstream"],
+            "unimplemented": True,
         },
         {
             "name": "__cpp_lib_stacktrace",
@@ -923,9 +1006,21 @@ feature_test_macros = [
             "headers": ["string", "string_view"],
         },
         {
+            "name": "__cpp_lib_submdspan",
+            "values": {"c++26": 202306}, # P2630R4 submdspan
+            "headers": ["mdspan"],
+            "unimplemented": True,
+        },
+        {
             "name": "__cpp_lib_syncbuf",
             "values": {"c++20": 201803},
             "headers": ["syncstream"],
+            "unimplemented": True,
+        },
+        {
+            "name": "__cpp_lib_text_encoding",
+            "values": {"c++26": 202306}, # P1885R12 Naming Text Encodings to Demystify Them
+            "headers": ["text_encoding"],
             "unimplemented": True,
         },
         {
@@ -946,8 +1041,17 @@ feature_test_macros = [
         },
         {
             "name": "__cpp_lib_to_chars",
-            "values": {"c++17": 201611},
+            "values": {
+                         "c++17": 201611,
+                         #"c++26: 202306, # P2497R0 Testing for success or failure of <charconv> functions
+                      },
             "headers": ["charconv"],
+            "unimplemented": True,
+        },
+        {
+            "name": "__cpp_lib_to_string",
+            "values": {"c++23": 202306}, # P2587R3 to_string or not to_string
+            "headers": ["string"],
             "unimplemented": True,
         },
         {
@@ -1015,6 +1119,12 @@ feature_test_macros = [
             "values": {"c++17": 201411},
             "headers": ["type_traits"],
         },
+        {
+            "name": "__cpp_lib_within_lifetime",
+            "values": {"c++26": 202306}, # P2641R4 Checking if a union alternative is active
+            "headers": ["type_traits"],
+            "unimplemented": True,
+        },
     ]
 ]
 
@@ -1048,6 +1158,7 @@ assert all(
 lit_markup = {
     "barrier": ["UNSUPPORTED: no-threads"],
     "filesystem": ["UNSUPPORTED: no-filesystem"],
+    "fstream": ["UNSUPPORTED: no-localization"],
     "iomanip": ["UNSUPPORTED: no-localization"],
     "ios": ["UNSUPPORTED: no-localization"],
     "iostream": ["UNSUPPORTED: no-localization"],
@@ -1059,6 +1170,7 @@ lit_markup = {
     "regex": ["UNSUPPORTED: no-localization"],
     "semaphore": ["UNSUPPORTED: no-threads"],
     "shared_mutex": ["UNSUPPORTED: no-threads"],
+    "sstream": ["UNSUPPORTED: no-localization"],
     "stdatomic.h": ["UNSUPPORTED: no-threads"],
     "stop_token": ["UNSUPPORTED: no-threads"],
     "thread": ["UNSUPPORTED: no-threads"],
