@@ -271,8 +271,8 @@ __attribute__((flatten, always_inline)) void _xteam_reduction(
     xwave_lds[wave_num] = val;
 
   // Binary reduce all wave values into wave_lds[0]
-   ompx::synchronize::threadsAligned();
   for (unsigned int offset = _NW / 2; offset > 0; offset >>= 1) {
+    ompx::synchronize::threadsAligned();
     if (omp_thread_num < offset)
       (*_rf_lds)(&(xwave_lds[omp_thread_num]),
                  &(xwave_lds[omp_thread_num + offset]));
@@ -290,7 +290,7 @@ __attribute__((flatten, always_inline)) void _xteam_reduction(
 
   // This sync needed so all threads from last team see the shared volatile
   // value td (teams done counter) so they know they are in the last team.
-   ompx::synchronize::threadsAligned();
+  ompx::synchronize::threadsAligned();
 
   // If td counter reaches NumTeams-1, this is the last team.
   // The team number of this last team is nondeterministic.
@@ -312,8 +312,8 @@ __attribute__((flatten, always_inline)) void _xteam_reduction(
       xwave_lds[wave_num] = val;
 
     // Binary reduce all wave values into wave_lds[0]
-     ompx::synchronize::threadsAligned();
     for (unsigned int offset = _NW / 2; offset > 0; offset >>= 1) {
+      ompx::synchronize::threadsAligned();
       if (omp_thread_num < offset)
         (*_rf_lds)(&(xwave_lds[omp_thread_num]),
                    &(xwave_lds[omp_thread_num + offset]));
