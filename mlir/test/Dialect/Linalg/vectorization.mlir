@@ -1719,3 +1719,35 @@ transform.sequence failures(propagate) {
   %1 = get_closest_isolated_parent %0 : (!transform.any_op) -> !transform.any_op
   %2 = transform.structured.vectorize %1  { vectorize_padding } : (!transform.any_op) -> !transform.any_op
 }
+
+// -----
+
+func.func @zero_dim_tensor(%input: tensor<f32>, %output: tensor<f32>) -> tensor<f32>
+{
+  %0 = linalg.generic { indexing_maps = [ affine_map<() -> ()>, affine_map<() -> ()> ],
+                        iterator_types = [] }
+                        ins(%input : tensor<f32>)
+                        outs(%output : tensor<f32>) {
+    ^bb0(%arg0: f32, %arg1: f32):
+      %2 = arith.addf %arg0, %arg1 : f32
+      linalg.yield %2 : f32
+    } -> tensor<f32>
+  return %0 : tensor<f32>
+}
+
+transform.sequence failures(propagate) {
+^bb1(%arg1: !transform.any_op):
+  %3 = transform.structured.match ops{["linalg.generic"]} in %arg1 : (!transform.any_op) -> !transform.any_op
+  %4 = get_closest_isolated_parent %3 : (!transform.any_op) -> !transform.any_op
+  %5 = transform.structured.vectorize %4 : (!transform.any_op) -> !transform.any_op
+}
+
+// CHECK-LABEL: func @zero_dim_tensor
+//       CHECK:     vector.transfer_read {{.*}} : tensor<f32>, vector<f32>
+//       CHECK:     vector.extractelement
+//       CHECK:     vector.transfer_read {{.*}} : tensor<f32>, vector<f32>
+//       CHECK:     vector.extractelement
+//       CHECK:     arith.addf {{.*}} : f32
+//       CHECK:     vector.broadcast %{{.*}} : f32 to vector<f32>
+//       CHECK:     vector.transfer_write {{.*}} : vector<f32>, tensor<f32>
+

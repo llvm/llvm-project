@@ -8,6 +8,22 @@
 
 #include <stdint.h>
 
+typedef __rvv_int8mf8_t vint8mf8_t;
+typedef __rvv_uint8mf8_t vuint8mf8_t;
+
+typedef __rvv_int8mf4_t vint8mf4_t;
+typedef __rvv_uint8mf4_t vuint8mf4_t;
+typedef __rvv_int16mf4_t vint16mf4_t;
+typedef __rvv_uint16mf4_t vuint16mf4_t;
+
+typedef __rvv_int8mf2_t vint8mf2_t;
+typedef __rvv_uint8mf2_t vuint8mf2_t;
+typedef __rvv_int16mf2_t vint16mf2_t;
+typedef __rvv_uint16mf2_t vuint16mf2_t;
+typedef __rvv_int32mf2_t vint32mf2_t;
+typedef __rvv_uint32mf2_t vuint32mf2_t;
+typedef __rvv_float32mf2_t vfloat32mf2_t;
+
 typedef __rvv_int8m1_t vint8m1_t;
 typedef __rvv_uint8m1_t vuint8m1_t;
 typedef __rvv_int16m1_t vint16m1_t;
@@ -53,6 +69,26 @@ typedef __rvv_float32m8_t vfloat32m8_t;
 typedef __rvv_float64m8_t vfloat64m8_t;
 
 // Define valid fixed-width RVV types
+typedef vint8mf8_t fixed_int8mf8_t __attribute__((riscv_rvv_vector_bits(__riscv_v_fixed_vlen / 8)));
+
+typedef vuint8mf8_t fixed_uint8mf8_t __attribute__((riscv_rvv_vector_bits(__riscv_v_fixed_vlen / 8)));
+
+typedef vint8mf4_t fixed_int8mf4_t __attribute__((riscv_rvv_vector_bits(__riscv_v_fixed_vlen / 4)));
+typedef vint16mf4_t fixed_int16mf4_t __attribute__((riscv_rvv_vector_bits(__riscv_v_fixed_vlen / 4)));
+
+typedef vuint8mf4_t fixed_uint8mf4_t __attribute__((riscv_rvv_vector_bits(__riscv_v_fixed_vlen / 4)));
+typedef vuint16mf4_t fixed_uint16mf4_t __attribute__((riscv_rvv_vector_bits(__riscv_v_fixed_vlen / 4)));
+
+typedef vint8mf2_t fixed_int8mf2_t __attribute__((riscv_rvv_vector_bits(__riscv_v_fixed_vlen / 2)));
+typedef vint16mf2_t fixed_int16mf2_t __attribute__((riscv_rvv_vector_bits(__riscv_v_fixed_vlen / 2)));
+typedef vint32mf2_t fixed_int32mf2_t __attribute__((riscv_rvv_vector_bits(__riscv_v_fixed_vlen / 2)));
+
+typedef vuint8mf2_t fixed_uint8mf2_t __attribute__((riscv_rvv_vector_bits(__riscv_v_fixed_vlen / 2)));
+typedef vuint16mf2_t fixed_uint16mf2_t __attribute__((riscv_rvv_vector_bits(__riscv_v_fixed_vlen / 2)));
+typedef vuint32mf2_t fixed_uint32mf2_t __attribute__((riscv_rvv_vector_bits(__riscv_v_fixed_vlen / 2)));
+
+typedef vfloat32mf2_t fixed_float32mf2_t __attribute__((riscv_rvv_vector_bits(__riscv_v_fixed_vlen / 2)));
+
 typedef vint8m1_t fixed_int8m1_t __attribute__((riscv_rvv_vector_bits(__riscv_v_fixed_vlen)));
 typedef vint16m1_t fixed_int16m1_t __attribute__((riscv_rvv_vector_bits(__riscv_v_fixed_vlen)));
 typedef vint32m1_t fixed_int32m1_t __attribute__((riscv_rvv_vector_bits(__riscv_v_fixed_vlen)));
@@ -409,6 +445,22 @@ void f() {
   fixed_uint64m8_t local_arr_u64m8[3];
   fixed_float32m8_t local_arr_f32m8[3];
   fixed_float64m8_t local_arr_f64m8[3];
+
+  fixed_int8mf2_t local_arr_i8mf2[3];
+  fixed_int16mf2_t local_arr_i16mf2[3];
+  fixed_int32mf2_t local_arr_i32mf2[3];
+  fixed_uint8mf2_t local_arr_u8mf2[3];
+  fixed_uint16mf2_t local_arr_u16mf2[3];
+  fixed_uint32mf2_t local_arr_u32mf2[3];
+  fixed_float32mf2_t local_arr_f32mf2[3];
+
+  fixed_int8mf4_t local_arr_i8mf4[3];
+  fixed_int16mf4_t local_arr_i16mf4[3];
+  fixed_uint8mf4_t local_arr_u8mf4[3];
+  fixed_uint16mf4_t local_arr_u16mf4[3];
+
+  fixed_int8mf8_t local_arr_i8mf8[3];
+  fixed_uint8mf8_t local_arr_u8mf8[3];
 }
 
 //===----------------------------------------------------------------------===//
@@ -1487,6 +1539,19 @@ void f() {
 // CHECK-64-NEXT: %local_arr_u64m8 = alloca [3 x <8 x i64>], align 8
 // CHECK-64-NEXT: %local_arr_f32m8 = alloca [3 x <16 x float>], align 8
 // CHECK-64-NEXT: %local_arr_f64m8 = alloca [3 x <8 x double>], align 8
+// CHECK-64-NEXT: %local_arr_i8mf2 = alloca [3 x <4 x i8>], align 4
+// CHECK-64-NEXT: %local_arr_i16mf2 = alloca [3 x <2 x i16>], align 4
+// CHECK-64-NEXT: %local_arr_i32mf2 = alloca [3 x <1 x i32>], align 4
+// CHECK-64-NEXT: %local_arr_u8mf2 = alloca [3 x <4 x i8>], align 4
+// CHECK-64-NEXT: %local_arr_u16mf2 = alloca [3 x <2 x i16>], align 4
+// CHECK-64-NEXT: %local_arr_u32mf2 = alloca [3 x <1 x i32>], align 4
+// CHECK-64-NEXT: %local_arr_f32mf2 = alloca [3 x <1 x float>], align 4
+// CHECK-64-NEXT: %local_arr_i8mf4 = alloca [3 x <2 x i8>], align 2
+// CHECK-64-NEXT: %local_arr_i16mf4 = alloca [3 x <1 x i16>], align 2
+// CHECK-64-NEXT: %local_arr_u8mf4 = alloca [3 x <2 x i8>], align 2
+// CHECK-64-NEXT: %local_arr_u16mf4 = alloca [3 x <1 x i16>], align 2
+// CHECK-64-NEXT: %local_arr_i8mf8 = alloca [3 x <1 x i8>], align 1
+// CHECK-64-NEXT: %local_arr_u8mf8 = alloca [3 x <1 x i8>], align 1
 
 // CHECK-128:      %local_arr_i8 = alloca [3 x <16 x i8>], align 8
 // CHECK-128-NEXT: %local_arr_i16 = alloca [3 x <8 x i16>], align 8
@@ -1528,6 +1593,19 @@ void f() {
 // CHECK-128-NEXT: %local_arr_u64m8 = alloca [3 x <16 x i64>], align 8
 // CHECK-128-NEXT: %local_arr_f32m8 = alloca [3 x <32 x float>], align 8
 // CHECK-128-NEXT: %local_arr_f64m8 = alloca [3 x <16 x double>], align 8
+// CHECK-128-NEXT: %local_arr_i8mf2 = alloca [3 x <8 x i8>], align 8
+// CHECK-128-NEXT: %local_arr_i16mf2 = alloca [3 x <4 x i16>], align 8
+// CHECK-128-NEXT: %local_arr_i32mf2 = alloca [3 x <2 x i32>], align 8
+// CHECK-128-NEXT: %local_arr_u8mf2 = alloca [3 x <8 x i8>], align 8
+// CHECK-128-NEXT: %local_arr_u16mf2 = alloca [3 x <4 x i16>], align 8
+// CHECK-128-NEXT: %local_arr_u32mf2 = alloca [3 x <2 x i32>], align 8
+// CHECK-128-NEXT: %local_arr_f32mf2 = alloca [3 x <2 x float>], align 8
+// CHECK-128-NEXT: %local_arr_i8mf4 = alloca [3 x <4 x i8>], align 4
+// CHECK-128-NEXT: %local_arr_i16mf4 = alloca [3 x <2 x i16>], align 4
+// CHECK-128-NEXT: %local_arr_u8mf4 = alloca [3 x <4 x i8>], align 4
+// CHECK-128-NEXT: %local_arr_u16mf4 = alloca [3 x <2 x i16>], align 4
+// CHECK-128-NEXT: %local_arr_i8mf8 = alloca [3 x <2 x i8>], align 2
+// CHECK-128-NEXT: %local_arr_u8mf8 = alloca [3 x <2 x i8>], align 2
 
 // CHECK-256:      %local_arr_i8 = alloca [3 x <32 x i8>], align 8
 // CHECK-256-NEXT: %local_arr_i16 = alloca [3 x <16 x i16>], align 8
@@ -1569,6 +1647,19 @@ void f() {
 // CHECK-256-NEXT: %local_arr_u64m8 = alloca [3 x <32 x i64>], align 8
 // CHECK-256-NEXT: %local_arr_f32m8 = alloca [3 x <64 x float>], align 8
 // CHECK-256-NEXT: %local_arr_f64m8 = alloca [3 x <32 x double>], align 8
+// CHECK-256-NEXT: %local_arr_i8mf2 = alloca [3 x <16 x i8>], align 8
+// CHECK-256-NEXT: %local_arr_i16mf2 = alloca [3 x <8 x i16>], align 8
+// CHECK-256-NEXT: %local_arr_i32mf2 = alloca [3 x <4 x i32>], align 8
+// CHECK-256-NEXT: %local_arr_u8mf2 = alloca [3 x <16 x i8>], align 8
+// CHECK-256-NEXT: %local_arr_u16mf2 = alloca [3 x <8 x i16>], align 8
+// CHECK-256-NEXT: %local_arr_u32mf2 = alloca [3 x <4 x i32>], align 8
+// CHECK-256-NEXT: %local_arr_f32mf2 = alloca [3 x <4 x float>], align 8
+// CHECK-256-NEXT: %local_arr_i8mf4 = alloca [3 x <8 x i8>], align 8
+// CHECK-256-NEXT: %local_arr_i16mf4 = alloca [3 x <4 x i16>], align 8
+// CHECK-256-NEXT: %local_arr_u8mf4 = alloca [3 x <8 x i8>], align 8
+// CHECK-256-NEXT: %local_arr_u16mf4 = alloca [3 x <4 x i16>], align 8
+// CHECK-256-NEXT: %local_arr_i8mf8 = alloca [3 x <4 x i8>], align 4
+// CHECK-256-NEXT: %local_arr_u8mf8 = alloca [3 x <4 x i8>], align 4
 
 // CHECK-512:      %local_arr_i8 = alloca [3 x <64 x i8>], align 8
 // CHECK-512-NEXT: %local_arr_i16 = alloca [3 x <32 x i16>], align 8
@@ -1610,6 +1701,19 @@ void f() {
 // CHECK-512-NEXT: %local_arr_u64m8 = alloca [3 x <64 x i64>], align 8
 // CHECK-512-NEXT: %local_arr_f32m8 = alloca [3 x <128 x float>], align 8
 // CHECK-512-NEXT: %local_arr_f64m8 = alloca [3 x <64 x double>], align 8
+// CHECK-512-NEXT: %local_arr_i8mf2 = alloca [3 x <32 x i8>], align 8
+// CHECK-512-NEXT: %local_arr_i16mf2 = alloca [3 x <16 x i16>], align 8
+// CHECK-512-NEXT: %local_arr_i32mf2 = alloca [3 x <8 x i32>], align 8
+// CHECK-512-NEXT: %local_arr_u8mf2 = alloca [3 x <32 x i8>], align 8
+// CHECK-512-NEXT: %local_arr_u16mf2 = alloca [3 x <16 x i16>], align 8
+// CHECK-512-NEXT: %local_arr_u32mf2 = alloca [3 x <8 x i32>], align 8
+// CHECK-512-NEXT: %local_arr_f32mf2 = alloca [3 x <8 x float>], align 8
+// CHECK-512-NEXT: %local_arr_i8mf4 = alloca [3 x <16 x i8>], align 8
+// CHECK-512-NEXT: %local_arr_i16mf4 = alloca [3 x <8 x i16>], align 8
+// CHECK-512-NEXT: %local_arr_u8mf4 = alloca [3 x <16 x i8>], align 8
+// CHECK-512-NEXT: %local_arr_u16mf4 = alloca [3 x <8 x i16>], align 8
+// CHECK-512-NEXT: %local_arr_i8mf8 = alloca [3 x <8 x i8>], align 8
+// CHECK-512-NEXT: %local_arr_u8mf8 = alloca [3 x <8 x i8>], align 8
 
 // CHECK-1024:       %local_arr_i8 = alloca [3 x <128 x i8>], align 8
 // CHECK-1024-NEXT:  %local_arr_i16 = alloca [3 x <64 x i16>], align 8
@@ -1651,3 +1755,16 @@ void f() {
 // CHECK-1024-NEXT:  %local_arr_u64m8 = alloca [3 x <128 x i64>], align 8
 // CHECK-1024-NEXT:  %local_arr_f32m8 = alloca [3 x <256 x float>], align 8
 // CHECK-1024-NEXT:  %local_arr_f64m8 = alloca [3 x <128 x double>], align 8
+// CHECK-1024-NEXT: %local_arr_i8mf2 = alloca [3 x <64 x i8>], align 8
+// CHECK-1024-NEXT: %local_arr_i16mf2 = alloca [3 x <32 x i16>], align 8
+// CHECK-1024-NEXT: %local_arr_i32mf2 = alloca [3 x <16 x i32>], align 8
+// CHECK-1024-NEXT: %local_arr_u8mf2 = alloca [3 x <64 x i8>], align 8
+// CHECK-1024-NEXT: %local_arr_u16mf2 = alloca [3 x <32 x i16>], align 8
+// CHECK-1024-NEXT: %local_arr_u32mf2 = alloca [3 x <16 x i32>], align 8
+// CHECK-1024-NEXT: %local_arr_f32mf2 = alloca [3 x <16 x float>], align 8
+// CHECK-1024-NEXT: %local_arr_i8mf4 = alloca [3 x <32 x i8>], align 8
+// CHECK-1024-NEXT: %local_arr_i16mf4 = alloca [3 x <16 x i16>], align 8
+// CHECK-1024-NEXT: %local_arr_u8mf4 = alloca [3 x <32 x i8>], align 8
+// CHECK-1024-NEXT: %local_arr_u16mf4 = alloca [3 x <16 x i16>], align 8
+// CHECK-1024-NEXT: %local_arr_i8mf8 = alloca [3 x <16 x i8>], align 8
+// CHECK-1024-NEXT: %local_arr_u8mf8 = alloca [3 x <16 x i8>], align 8

@@ -1139,8 +1139,6 @@ GenericUniformityInfo<ContextT>::GenericUniformityInfo(
     const TargetTransformInfo *TTI)
     : F(&Func) {
   DA.reset(new ImplT{Func, DT, CI, TTI});
-  DA->initialize();
-  DA->compute();
 }
 
 template <typename ContextT>

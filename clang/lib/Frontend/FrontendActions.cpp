@@ -458,6 +458,8 @@ private:
       return;
     }
 
+    assert(NamedCtx && "NamedCtx cannot be null");
+
     if (const auto *Decl = dyn_cast<ParmVarDecl>(NamedTemplate)) {
       OS << "unnamed function parameter " << Decl->getFunctionScopeIndex()
          << " ";
