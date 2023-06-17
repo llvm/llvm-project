@@ -1305,11 +1305,11 @@ instCombineSVEVectorFAdd(InstCombiner &IC, IntrinsicInst &II) {
                                             Intrinsic::aarch64_sve_fmad>(IC, II,
                                                                          false))
     return FMAD;
-  if (auto FMLA_U =
+  if (auto FMLA =
           instCombineSVEVectorFuseMulAddSub<Intrinsic::aarch64_sve_fmul_u,
-                                            Intrinsic::aarch64_sve_fmla_u>(
-              IC, II, true))
-    return FMLA_U;
+                                            Intrinsic::aarch64_sve_fmla>(IC, II,
+                                                                         true))
+    return FMLA;
   return instCombineSVEVectorBinOp(IC, II);
 }
 
@@ -1345,11 +1345,11 @@ instCombineSVEVectorFSub(InstCombiner &IC, IntrinsicInst &II) {
                                             Intrinsic::aarch64_sve_fnmsb>(
               IC, II, false))
     return FMSB;
-  if (auto FMLS_U =
+  if (auto FMLS =
           instCombineSVEVectorFuseMulAddSub<Intrinsic::aarch64_sve_fmul_u,
-                                            Intrinsic::aarch64_sve_fmls_u>(
-              IC, II, true))
-    return FMLS_U;
+                                            Intrinsic::aarch64_sve_fmls>(IC, II,
+                                                                         true))
+    return FMLS;
   return instCombineSVEVectorBinOp(IC, II);
 }
 
