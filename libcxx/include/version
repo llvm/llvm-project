@@ -456,7 +456,7 @@ __cpp_lib_within_lifetime                               202306L <type_traits>
 // # define __cpp_lib_fstream_native_handle                202306L
 // # define __cpp_lib_function_ref                         202306L
 // # define __cpp_lib_hazard_pointer                       202306L
-// # define __cpp_lib_ratio                                202306L
+# define __cpp_lib_ratio                                202306L
 // # define __cpp_lib_rcu                                  202306L
 // # define __cpp_lib_smart_ptr_owner_equality             202306L
 // # define __cpp_lib_sstream_from_string_view             202306L
