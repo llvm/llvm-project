@@ -12,6 +12,7 @@
 
 #include "llvm/Transforms/Utils/ModuleUtils.h"
 #include "llvm/Analysis/VectorUtils.h"
+#include "llvm/ADT/SmallString.h"
 #include "llvm/IR/DerivedTypes.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/IRBuilder.h"
@@ -19,6 +20,7 @@
 #include "llvm/IR/Module.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Support/xxhash.h"
+
 using namespace llvm;
 
 #define DEBUG_TYPE "moduleutils"
