@@ -12,5 +12,16 @@ module;
 
 export module std:iosfwd;
 export namespace std {
-  // All symbols are exported by other modules.
+  using std::streampos;
+#ifndef _LIBCPP_HAS_NO_WIDE_CHARACTERS
+  using std::wstreampos;
+#endif
+  using std::u16streampos;
+  using std::u32streampos;
+  using std::u8streampos;
+
+  using std::istreambuf_iterator;
+  using std::ostreambuf_iterator;
+
+  using std::fpos;
 } // namespace std

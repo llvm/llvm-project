@@ -16,7 +16,7 @@
 #include <__iterator/distance.h>
 #include <__iterator/iterator_traits.h>
 #include <__memory/destruct_n.h>
-#include <__memory/temporary_buffer.h>
+#include <__memory/uninitialized_buffer.h>
 #include <__memory/unique_ptr.h>
 #include <__utility/move.h>
 #include <__utility/pair.h>
@@ -29,7 +29,7 @@
 _LIBCPP_BEGIN_NAMESPACE_STD
 
 template <class _AlgPolicy, class _Predicate, class _ForwardIterator, class _Distance, class _Pair>
-_LIBCPP_HIDE_FROM_ABI _ForwardIterator
+_LIBCPP_HIDDEN _ForwardIterator
 __stable_partition_impl(_ForwardIterator __first, _ForwardIterator __last, _Predicate __pred,
                    _Distance __len, _Pair __p, forward_iterator_tag __fit)
 {
@@ -122,7 +122,10 @@ _LIBCPP_HIDE_FROM_ABI _ForwardIterator
 __stable_partition_impl(_ForwardIterator __first, _ForwardIterator __last, _Predicate __pred,
                    forward_iterator_tag)
 {
-    const unsigned __alloc_limit = 3;  // might want to make this a function of trivial assignment
+    typedef typename iterator_traits<_ForwardIterator>::difference_type difference_type;
+    typedef typename iterator_traits<_ForwardIterator>::value_type value_type;
+
+    const difference_type __alloc_limit = 3;  // might want to make this a function of trivial assignment
     // Either prove all true and return __first or point to first false
     while (true)
     {
@@ -134,21 +137,19 @@ __stable_partition_impl(_ForwardIterator __first, _ForwardIterator __last, _Pred
     }
     // We now have a reduced range [__first, __last)
     // *__first is known to be false
-    typedef typename iterator_traits<_ForwardIterator>::difference_type difference_type;
-    typedef typename iterator_traits<_ForwardIterator>::value_type value_type;
     difference_type __len = _IterOps<_AlgPolicy>::distance(__first, __last);
-    pair<value_type*, ptrdiff_t> __p(0, 0);
-    unique_ptr<value_type, __return_temporary_buffer> __h;
+
+    __uninitialized_buffer_t<value_type[]> __buf;
     if (__len >= __alloc_limit)
-    {
-// TODO: Remove the use of std::get_temporary_buffer
-_LIBCPP_SUPPRESS_DEPRECATED_PUSH
-        __p = _VSTD::get_temporary_buffer<value_type>(__len);
-_LIBCPP_SUPPRESS_DEPRECATED_POP
-        __h.reset(__p.first);
-    }
+        __buf = std::__make_uninitialized_buffer<value_type[]>(nothrow, __len);
+
     return std::__stable_partition_impl<_AlgPolicy, _Predicate&>(
-        std::move(__first), std::move(__last), __pred, __len, __p, forward_iterator_tag());
+        std::move(__first),
+        std::move(__last),
+        __pred,
+        __len,
+        std::make_pair(__buf.get(), __buf ? __len : 0),
+        forward_iterator_tag());
 }
 
 template <class _AlgPolicy, class _Predicate, class _BidirectionalIterator, class _Distance, class _Pair>
@@ -291,18 +292,17 @@ __stable_partition_impl(_BidirectionalIterator __first, _BidirectionalIterator _
     // *__last is known to be true
     // __len >= 2
     difference_type __len = _IterOps<_AlgPolicy>::distance(__first, __last) + 1;
-    pair<value_type*, ptrdiff_t> __p(0, 0);
-    unique_ptr<value_type, __return_temporary_buffer> __h;
+    __uninitialized_buffer_t<value_type[]> __buf;
     if (__len >= __alloc_limit)
-    {
-// TODO: Remove the use of std::get_temporary_buffer
-_LIBCPP_SUPPRESS_DEPRECATED_PUSH
-        __p = _VSTD::get_temporary_buffer<value_type>(__len);
-_LIBCPP_SUPPRESS_DEPRECATED_POP
-        __h.reset(__p.first);
-    }
+        __buf = std::__make_uninitialized_buffer<value_type[]>(nothrow, __len);
+
     return std::__stable_partition_impl<_AlgPolicy, _Predicate&>(
-        std::move(__first), std::move(__last), __pred, __len, __p, bidirectional_iterator_tag());
+        std::move(__first),
+        std::move(__last),
+        __pred,
+        __len,
+        std::make_pair(__buf.get(), __buf ? __len : 0),
+        bidirectional_iterator_tag());
 }
 
 template <class _AlgPolicy, class _Predicate, class _ForwardIterator, class _IterCategory>

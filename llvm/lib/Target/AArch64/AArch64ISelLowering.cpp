@@ -14655,7 +14655,6 @@ bool AArch64TargetLowering::optimizeExtendOrTruncateConversion(
         return false;
 
       DstTy = TruncDstType;
-      DstWidth = TruncDstType->getElementType()->getScalarSizeInBits();
     }
 
     return createTblShuffleForZExt(ZExt, DstTy, Subtarget->isLittleEndian());

@@ -85,6 +85,17 @@ static bool isScalarMoveInstr(const MachineInstr &MI) {
   }
 }
 
+static bool isScalarSplatInstr(const MachineInstr &MI) {
+  switch (getRVVMCOpcode(MI.getOpcode())) {
+  default:
+    return false;
+  case RISCV::VMV_V_I:
+  case RISCV::VMV_V_X:
+  case RISCV::VFMV_V_F:
+    return true;
+  }
+}
+
 static bool isVSlideInstr(const MachineInstr &MI) {
   switch (getRVVMCOpcode(MI.getOpcode())) {
   default:
@@ -911,6 +922,20 @@ bool RISCVInsertVSETVLI::needVSETVLI(const MachineInstr &MI,
     Used.TailPolicy = false;
   }
 
+  // A tail undefined vmv.v.i/x or vfmv.v.f with VL=1 can be treated in the same
+  // semantically as vmv.s.x.  This is particularly useful since we don't have an
+  // immediate form of vmv.s.x, and thus frequently use vmv.v.i in it's place.
+  // Since a splat is non-constant time in LMUL, we do need to be careful to not
+  // increase the number of active vector registers (unlike for vmv.s.x.)
+  if (isScalarSplatInstr(MI) && Require.hasAVLImm() && Require.getAVLImm() == 1 &&
+      isLMUL1OrSmaller(CurInfo.getVLMUL()) && hasUndefinedMergeOp(MI, *MRI)) {
+    Used.LMUL = false;
+    Used.SEWLMULRatio = false;
+    Used.VLAny = false;
+    Used.SEW = DemandedFields::SEWGreaterThanOrEqual;
+    Used.TailPolicy = false;
+  }
+
   if (CurInfo.isCompatible(Used, Require, *MRI))
     return false;
 
@@ -1419,7 +1444,11 @@ void RISCVInsertVSETVLI::doLocalPostpass(MachineBasicBlock &MBB) {
           MI.setDesc(NextMI->getDesc());
         }
         MI.getOperand(2).setImm(NextMI->getOperand(2).getImm());
-        ToDelete.push_back(NextMI);
+        // Don't delete a vsetvli if its result might be used.
+        Register NextVRefDef = NextMI->getOperand(0).getReg();
+        if (NextVRefDef == RISCV::X0 ||
+            (NextVRefDef.isVirtual() && MRI->use_nodbg_empty(NextVRefDef)))
+          ToDelete.push_back(NextMI);
         // fallthrough
       }
     }

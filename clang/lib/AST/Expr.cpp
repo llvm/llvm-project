@@ -786,7 +786,21 @@ std::string PredefinedExpr::ComputeName(IdentKind IK, const Decl *CurrentDecl) {
         Out << "static ";
     }
 
+    class PrettyCallbacks final : public PrintingCallbacks {
+    public:
+      PrettyCallbacks(const LangOptions &LO) : LO(LO) {}
+      std::string remapPath(StringRef Path) const override {
+        SmallString<128> p(Path);
+        LO.remapPathPrefix(p);
+        return std::string(p);
+      }
+
+    private:
+      const LangOptions &LO;
+    };
     PrintingPolicy Policy(Context.getLangOpts());
+    PrettyCallbacks PrettyCB(Context.getLangOpts());
+    Policy.Callbacks = &PrettyCB;
     std::string Proto;
     llvm::raw_string_ostream POut(Proto);
 

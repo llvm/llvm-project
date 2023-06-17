@@ -279,6 +279,9 @@ private:
   /// is the expected .plt \p Section entry function size.
   void disassemblePLTSectionX86(BinarySection &Section, uint64_t EntrySize);
 
+  /// Disassemble riscv-specific .plt \p Section auxiliary function
+  void disassemblePLTSectionRISCV(BinarySection &Section);
+
   /// ELF-specific part. TODO: refactor into new class.
 #define ELF_FUNCTION(TYPE, FUNC)                                               \
   template <typename ELFT> TYPE FUNC(object::ELFObjectFile<ELFT> *Obj);        \
@@ -536,6 +539,9 @@ private:
   const PLTSectionInfo AArch64_PLTSections[3] = {
       {".plt"}, {".iplt"}, {nullptr}};
 
+  /// RISCV PLT sections.
+  const PLTSectionInfo RISCV_PLTSections[3] = {{".plt"}, {nullptr}};
+
   /// Return PLT information for a section with \p SectionName or nullptr
   /// if the section is not PLT.
   const PLTSectionInfo *getPLTSectionInfo(StringRef SectionName) {
@@ -548,6 +554,9 @@ private:
       break;
     case Triple::aarch64:
       PLTSI = AArch64_PLTSections;
+      break;
+    case Triple::riscv64:
+      PLTSI = RISCV_PLTSections;
       break;
     }
     for (; PLTSI && PLTSI->Name; ++PLTSI)

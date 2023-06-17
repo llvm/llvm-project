@@ -24,7 +24,7 @@ _LIBCPP_BEGIN_NAMESPACE_FILESYSTEM
 
 _LIBCPP_AVAILABILITY_FILESYSTEM_LIBRARY_PUSH
 
-struct _LIBCPP_TYPE_VIS space_info {
+struct _LIBCPP_EXPORTED_FROM_ABI space_info {
   uintmax_t capacity;
   uintmax_t free;
   uintmax_t available;

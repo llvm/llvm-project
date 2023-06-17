@@ -525,8 +525,8 @@ define amdgpu_kernel void @v_mul64_masked_before_and_in_branch(ptr addrspace(1) 
 ; GFX11-NEXT:  ; %bb.1: ; %else
 ; GFX11-NEXT:    v_mad_u64_u32 v[2:3], null, v2, v0, 0
 ; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
-; GFX11-NEXT:    v_dual_mov_b32 v0, v2 :: v_dual_add_nc_u32 v3, v3, v1
-; GFX11-NEXT:    v_mov_b32_e32 v1, v3
+; GFX11-NEXT:    v_add_nc_u32_e32 v3, v3, v1
+; GFX11-NEXT:    v_dual_mov_b32 v0, v2 :: v_dual_mov_b32 v1, v3
 ; GFX11-NEXT:  ; %bb.2: ; %Flow
 ; GFX11-NEXT:    s_and_not1_saveexec_b32 s0, s0
 ; GFX11-NEXT:  ; %bb.3: ; %if

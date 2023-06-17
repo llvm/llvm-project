@@ -722,6 +722,8 @@ public:
            TheTriple->getArch() == llvm::Triple::x86_64;
   }
 
+  bool isRISCV() const { return TheTriple->getArch() == llvm::Triple::riscv64; }
+
   // AArch64-specific functions to check if symbol is used to delimit
   // code/data in .text. Code is marked by $x, data by $d.
   MarkerSymType getMarkerType(const SymbolRef &Symbol) const;
@@ -840,13 +842,11 @@ public:
   /// Return BinaryData for the given \p Name or nullptr if no
   /// global symbol with that name exists.
   const BinaryData *getBinaryDataByName(StringRef Name) const {
-    auto Itr = GlobalSymbols.find(Name);
-    return Itr != GlobalSymbols.end() ? Itr->second : nullptr;
+    return GlobalSymbols.lookup(Name);
   }
 
   BinaryData *getBinaryDataByName(StringRef Name) {
-    auto Itr = GlobalSymbols.find(Name);
-    return Itr != GlobalSymbols.end() ? Itr->second : nullptr;
+    return GlobalSymbols.lookup(Name);
   }
 
   /// Return registered PLT entry BinaryData with the given \p Name

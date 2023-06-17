@@ -7020,6 +7020,20 @@ defm SCVTF: SIMDVectorRShiftToFP<0, 0b11100, "scvtf",
 defm RSHRN   : SIMDVectorRShiftNarrowBHS<0, 0b10001, "rshrn",
                           BinOpFrag<(trunc (AArch64roundingvlshr node:$LHS, node:$RHS))>>;
 defm SHL     : SIMDVectorLShiftBHSD<0, 0b01010, "shl", AArch64vshl>;
+
+// X << 1 ==> X + X
+class SHLToADDPat<ValueType ty, RegisterClass regtype>
+  : Pat<(ty (AArch64vshl (ty regtype:$Rn), (i32 1))),
+            (!cast<Instruction>("ADD"#ty) regtype:$Rn, regtype:$Rn)>;
+
+def : SHLToADDPat<v16i8, FPR128>;
+def : SHLToADDPat<v8i16, FPR128>;
+def : SHLToADDPat<v4i32, FPR128>;
+def : SHLToADDPat<v2i64, FPR128>;
+def : SHLToADDPat<v8i8,  FPR64>;
+def : SHLToADDPat<v4i16, FPR64>;
+def : SHLToADDPat<v2i32, FPR64>;
+
 defm SHRN    : SIMDVectorRShiftNarrowBHS<0, 0b10000, "shrn",
                           BinOpFrag<(trunc (AArch64vashr node:$LHS, node:$RHS))>>;
 defm SLI     : SIMDVectorLShiftBHSDTied<1, 0b01010, "sli", AArch64vsli>;

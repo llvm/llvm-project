@@ -12,7 +12,9 @@
 
 #include "mlir/Conversion/TosaToTensor/TosaToTensor.h"
 #include "mlir/Dialect/Arith/IR/Arith.h"
+#include "mlir/Dialect/Arith/Utils/Utils.h"
 #include "mlir/Dialect/Tensor/IR/Tensor.h"
+#include "mlir/Dialect/Tensor/Utils/Utils.h"
 #include "mlir/Dialect/Tosa/IR/TosaOps.h"
 #include "mlir/IR/PatternMatch.h"
 #include "mlir/Transforms/DialectConversion.h"
@@ -355,56 +357,56 @@ struct ConcatConverter : public OpConversionPattern<tosa::ConcatOp> {
   LogicalResult
   matchAndRewrite(tosa::ConcatOp op, OpAdaptor adaptor,
                   ConversionPatternRewriter &rewriter) const override {
-    auto inputType = cast<ShapedType>(op.getOperand(0).getType());
     auto resultType = dyn_cast<RankedTensorType>(op.getType());
 
     Location loc = op.getLoc();
     int axis = op.getAxis();
     Value axisValue = rewriter.createOrFold<arith::ConstantOp>(
         loc, rewriter.getIndexAttr(axis));
-    int rank = resultType.getRank();
-    SmallVector<Value, 3> offsets, sizes, strides;
-    sizes.reserve(rank);
-    strides.resize(rank, rewriter.create<arith::ConstantIndexOp>(loc, 1));
-    offsets.resize(rank, rewriter.create<arith::ConstantIndexOp>(loc, 0));
+    int64_t rank = resultType.getRank();
 
+    SmallVector<OpFoldResult> strides(rank, rewriter.getIndexAttr(1));
+    SmallVector<OpFoldResult> offsets(rank, rewriter.getIndexAttr(0));
+    SmallVector<OpFoldResult> sizes = tensor::createDimValues(
+        rewriter, op.getLoc(), adaptor.getOperands()[0]);
+
+    // Pre-compute the offsets along the axis dimension.
+    // The axisOffsets will be of size rank + 1, where the last value
+    // will hold the total size of the tensor along the 'axis' dimension.
+    SmallVector<OpFoldResult> axisOffsets;
+    axisOffsets.push_back(rewriter.getIndexAttr(0));
+    axisOffsets.push_back(sizes[axis]);
+
+    for (auto arg : adaptor.getOperands().drop_front()) {
+      auto size = rewriter.createOrFold<tensor::DimOp>(loc, arg, axisValue);
+      auto currentOffset =
+          getValueOrCreateConstantIndexOp(rewriter, loc, axisOffsets.back());
+      auto total =
+          rewriter.createOrFold<arith::AddIOp>(loc, currentOffset, size);
+      axisOffsets.push_back(getAsOpFoldResult(total));
+    }
+    sizes[axis] = axisOffsets.back();
+
+    // Compute the dynamic sizes of the tensor.empty operation.
+    // This is based off of the specified result type of the tosa.concat
+    // operation, since we don't want to change the result type of the operation
+    // during the conversion.
     SmallVector<Value> dynDims;
-    for (int i = 0; i < rank; ++i) {
-      sizes.push_back(rewriter.createOrFold<tensor::DimOp>(
-          loc, adaptor.getOperands()[0], i));
-      if (inputType.isDynamicDim(i)) {
+    for (int64_t i = 0; i < rank; ++i) {
+      if (resultType.isDynamicDim(i)) {
         dynDims.push_back(
-            rewriter.create<tensor::DimOp>(loc, op.getOperand(0), i));
+            getValueOrCreateConstantIndexOp(rewriter, loc, sizes[i]));
       }
     }
 
-    Value resultDimSize = sizes[axis];
-    for (auto arg : adaptor.getOperands().drop_front()) {
-      auto size = rewriter.createOrFold<tensor::DimOp>(loc, arg, axisValue);
-      resultDimSize =
-          rewriter.createOrFold<arith::AddIOp>(loc, resultDimSize, size);
-    }
-    sizes[axis] = resultDimSize;
-
-    Value emptyTensor = rewriter.create<tensor::EmptyOp>(
+    Value result = rewriter.create<tensor::EmptyOp>(
         loc, resultType.getShape(), resultType.getElementType(), dynDims);
 
-    auto toOpFoldResult = [](Value v) -> OpFoldResult {
-      auto op = v.getDefiningOp<arith::ConstantIndexOp>();
-      if (!op)
-        return v;
-      return op.getValue();
-    };
-    Value result = emptyTensor;
-    for (auto arg : adaptor.getOperands()) {
-      sizes[axis] = rewriter.createOrFold<tensor::DimOp>(loc, arg, axisValue);
+    for (auto [arg, offset] : llvm::zip(adaptor.getOperands(), axisOffsets)) {
+      auto sizes = tensor::createDimValues(rewriter, op.getLoc(), arg);
+      offsets[axis] = offset;
       result = rewriter.createOrFold<tensor::InsertSliceOp>(
-          loc, arg, result,
-          llvm::to_vector(llvm::map_range(offsets, toOpFoldResult)),
-          llvm::to_vector(llvm::map_range(sizes, toOpFoldResult)),
-          llvm::to_vector(llvm::map_range(strides, toOpFoldResult)));
-      offsets[axis] =
-          rewriter.createOrFold<arith::AddIOp>(loc, offsets[axis], sizes[axis]);
+          loc, arg, result, offsets, sizes, strides);
     }
     rewriter.replaceOp(op, result);
     return success();

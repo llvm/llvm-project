@@ -20,10 +20,17 @@
 using namespace lldb;
 using namespace lldb_private;
 
-DynamicRegisterInfo::DynamicRegisterInfo(
-    const lldb_private::StructuredData::Dictionary &dict,
-    const lldb_private::ArchSpec &arch) {
-  SetRegisterInfo(dict, arch);
+std::unique_ptr<DynamicRegisterInfo>
+DynamicRegisterInfo::Create(const StructuredData::Dictionary &dict,
+                            const ArchSpec &arch) {
+  auto dyn_reg_info = std::make_unique<DynamicRegisterInfo>();
+  if (!dyn_reg_info)
+    return nullptr;
+
+  if (dyn_reg_info->SetRegisterInfo(dict, arch) == 0)
+    return nullptr;
+
+  return dyn_reg_info;
 }
 
 DynamicRegisterInfo::DynamicRegisterInfo(DynamicRegisterInfo &&info) {

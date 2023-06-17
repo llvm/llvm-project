@@ -91,8 +91,8 @@ X86LegalizerInfo::X86LegalizerInfo(const X86Subtarget &STI,
     getActionDefinitionsBuilder(Op)
         .widenScalarToNextPow2(LitTyIdx, /*Min=*/8)
         .widenScalarToNextPow2(BigTyIdx, /*Min=*/16)
-        .clampScalar(LitTyIdx, s8, Is64Bit ? s64 : s32)
-        .clampScalar(BigTyIdx, s32, Is64Bit ? s128 : s64)
+        .minScalar(LitTyIdx, s8)
+        .minScalar(BigTyIdx, s32)
         .legalIf([=](const LegalityQuery &Q) {
           switch (Q.Types[BigTyIdx].getSizeInBits()) {
           case 16:
@@ -148,12 +148,14 @@ X86LegalizerInfo::X86LegalizerInfo(const X86Subtarget &STI,
       .clampScalar(0, s8, sMaxScalar)
       .scalarize(0);
 
-  // TODO: Add all legal scalar types.
-  // TODO: Add G_UADDO/G_USUBO/G_USUBE handling
-  getActionDefinitionsBuilder(G_UADDE)
-      .legalFor({{s32, s1}})
+  getActionDefinitionsBuilder({G_UADDE, G_UADDO, G_USUBE, G_USUBO})
+      .legalIf([=](const LegalityQuery &Query) -> bool {
+        return typePairInSet(0, 1, {{s8, s1}, {s16, s1}, {s32, s1}})(Query) ||
+               (Is64Bit && typePairInSet(0, 1, {{s64, s1}})(Query));
+      })
       .widenScalarToNextPow2(0, /*Min=*/32)
-      .clampScalar(0, s32, s32)
+      .clampScalar(0, s8, sMaxScalar)
+      .clampScalar(1, s1, s1)
       .scalarize(0);
 
   // integer multiply

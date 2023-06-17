@@ -27,6 +27,7 @@
 #include "llvm/MC/MCInstrInfo.h"
 #include "llvm/Support/Alignment.h"
 #include "llvm/Support/MemoryBuffer.h"
+#include "llvm/Support/raw_ostream.h"
 
 namespace llvm {
 namespace exegesis {
@@ -321,6 +322,39 @@ ExecutableFunction::ExecutableFunction(
          "function is not properly aligned");
   FunctionBytes =
       StringRef(reinterpret_cast<const char *>(FunctionAddress), CodeSize);
+}
+
+Error getBenchmarkFunctionBytes(const StringRef InputData,
+                                std::vector<uint8_t> &Bytes) {
+  const auto Holder = getObjectFromBuffer(InputData);
+  const auto *Obj = Holder.getBinary();
+  // See RuntimeDyldImpl::loadObjectImpl(Obj) for much more complete
+  // implementation.
+
+  // Find the only function in the object file.
+  SmallVector<object::SymbolRef, 1> Functions;
+  for (auto &Sym : Obj->symbols()) {
+    auto SymType = Sym.getType();
+    if (SymType && *SymType == object::SymbolRef::Type::ST_Function)
+      Functions.push_back(Sym);
+  }
+  if (Functions.size() != 1)
+    return make_error<Failure>("Exactly one function expected");
+
+  // Find the containing section - it is assumed to contain only this function.
+  auto SectionOrErr = Functions.front().getSection();
+  if (!SectionOrErr || *SectionOrErr == Obj->section_end())
+    return make_error<Failure>("Section not found");
+
+  auto Address = Functions.front().getAddress();
+  if (!Address || *Address != SectionOrErr.get()->getAddress())
+    return make_error<Failure>("Unexpected layout");
+
+  auto ContentsOrErr = SectionOrErr.get()->getContents();
+  if (!ContentsOrErr)
+    return ContentsOrErr.takeError();
+  Bytes.assign(ContentsOrErr->begin(), ContentsOrErr->end());
+  return Error::success();
 }
 
 } // namespace exegesis

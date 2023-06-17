@@ -85,8 +85,20 @@ func.func @test_abs_dyn(%arg0: tensor<2x?xf32>) -> tensor<2x?xf32> {
   %0 = "tosa.abs"(%arg0) : (tensor<2x?xf32>) -> tensor<2x?xf32>
   return %0 : tensor<2x?xf32>
 }
+
 // -----
 
+#SparseVector = #sparse_tensor.encoding<{ lvlTypes = [ "compressed" ] }>
+
+// CHECK-LABEL: @test_encoding_passthrough
+func.func @test_encoding_passthrough(%arg0: tensor<2xi8, #SparseVector>) -> tensor<2xi8, #SparseVector> {
+  // CHECK: linalg.generic
+  // CHECK: sparse_tensor
+  %0 = "tosa.abs"(%arg0) : (tensor<2xi8, #SparseVector>) -> tensor<2xi8, #SparseVector>
+  return %0 : tensor<2xi8, #SparseVector>
+}
+
+// -----
 
 // CHECK: #[[$MAP0:.*]] = affine_map<(d0) -> ()>
 // CHECK: #[[$MAP1:.*]] = affine_map<(d0) -> (d0)>

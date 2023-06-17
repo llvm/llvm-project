@@ -41,9 +41,9 @@
 
 _LIBCPP_BEGIN_NAMESPACE_STD
 
-struct _LIBCPP_TYPE_VIS __c_node;
+struct _LIBCPP_EXPORTED_FROM_ABI __c_node;
 
-struct _LIBCPP_TYPE_VIS __i_node
+struct _LIBCPP_EXPORTED_FROM_ABI __i_node
 {
     void* __i_;
     __i_node* __next_;
@@ -58,7 +58,7 @@ struct _LIBCPP_TYPE_VIS __i_node
     ~__i_node();
 };
 
-struct _LIBCPP_TYPE_VIS __c_node
+struct _LIBCPP_EXPORTED_FROM_ABI __c_node
 {
     void* __c_;
     __c_node* __next_;
@@ -136,7 +136,7 @@ _C_node<_Cont>::__subscriptable(const void* __i, ptrdiff_t __n) const
     return __cp->__subscriptable(__j, __n);
 }
 
-class _LIBCPP_TYPE_VIS __libcpp_db
+class _LIBCPP_EXPORTED_FROM_ABI __libcpp_db
 {
     __c_node** __cbeg_;
     __c_node** __cend_;
@@ -202,11 +202,11 @@ private:
     _LIBCPP_HIDDEN
     __i_node* __find_iterator(const void* __i) const;
 
-    friend _LIBCPP_FUNC_VIS __libcpp_db* __get_db();
+    friend _LIBCPP_EXPORTED_FROM_ABI __libcpp_db* __get_db();
 };
 
-_LIBCPP_FUNC_VIS __libcpp_db* __get_db();
-_LIBCPP_FUNC_VIS const __libcpp_db* __get_const_db();
+_LIBCPP_EXPORTED_FROM_ABI __libcpp_db* __get_db();
+_LIBCPP_EXPORTED_FROM_ABI const __libcpp_db* __get_const_db();
 
 _LIBCPP_END_NAMESPACE_STD
 

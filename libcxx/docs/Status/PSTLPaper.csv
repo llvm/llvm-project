@@ -27,7 +27,7 @@ Section,Description,Assignee,Complete
 | `[alg.merge] <https://wg21.link/alg.merge>`_,std::inplace_merge,Nikolas Klauser,|Not Started|
 | `[alg.heap.operations] <https://wg21.link/alg.heap.operations>`_,std::is_heap,Nikolas Klauser,|Not Started|
 | `[alg.heap.operations] <https://wg21.link/alg.heap.operations>`_,std::is_heap_until,Nikolas Klauser,|Not Started|
-| `[alg.partitions] <https://wg21.link/alg.partitions>`_,std::is_partitioned,Nikolas Klauser,|Not Started|
+| `[alg.partitions] <https://wg21.link/alg.partitions>`_,std::is_partitioned,Nikolas Klauser,|Complete|
 | `[alg.sort] <https://wg21.link/alg.sort>`_,std::is_sorted,Nikolas Klauser,|Not Started|
 | `[alg.sort] <https://wg21.link/alg.sort>`_,std::is_sorted_until,Nikolas Klauser,|Not Started|
 | `[alg.lex.comparison] <https://wg21.link/alg.lex.comparison>`_,std::lexicographical_compare,Nikolas Klauser,|Not Started|

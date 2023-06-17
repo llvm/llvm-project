@@ -93,6 +93,8 @@ public:
   bool VisitMaterializeTemporaryExpr(const MaterializeTemporaryExpr *E);
   bool VisitCompoundLiteralExpr(const CompoundLiteralExpr *E);
   bool VisitTypeTraitExpr(const TypeTraitExpr *E);
+  bool VisitLambdaExpr(const LambdaExpr *E);
+  bool VisitPredefinedExpr(const PredefinedExpr *E);
 
 protected:
   bool visitExpr(const Expr *E) override;

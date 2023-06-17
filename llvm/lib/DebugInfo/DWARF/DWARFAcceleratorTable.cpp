@@ -305,15 +305,14 @@ std::optional<dwarf::Tag> AppleAcceleratorTable::Entry::getTag() const {
   return std::nullopt;
 }
 
-AppleAcceleratorTable::ValueIterator::ValueIterator(
+AppleAcceleratorTable::SameNameIterator::SameNameIterator(
     const AppleAcceleratorTable &AccelTable, uint64_t DataOffset)
-    : Current(AccelTable), Offset(DataOffset) {
-}
+    : Current(AccelTable), Offset(DataOffset) {}
 
-iterator_range<AppleAcceleratorTable::ValueIterator>
+iterator_range<AppleAcceleratorTable::SameNameIterator>
 AppleAcceleratorTable::equal_range(StringRef Key) const {
   const auto EmptyRange =
-      make_range(ValueIterator(*this, 0), ValueIterator(*this, 0));
+      make_range(SameNameIterator(*this, 0), SameNameIterator(*this, 0));
   if (!IsValid)
     return EmptyRange;
 
@@ -333,22 +332,20 @@ AppleAcceleratorTable::equal_range(StringRef Key) const {
     return EmptyRange;
 
   std::optional<uint32_t> StrOffset = readStringOffsetAt(DataOffset);
-
-  // Invalid input or no more strings in this hash.
-  if (!StrOffset || *StrOffset == 0)
-    return EmptyRange;
-
-  std::optional<StringRef> MaybeStr = readStringFromStrSection(*StrOffset);
-  std::optional<uint32_t> NumEntries = this->readU32FromAccel(DataOffset);
-  if (!MaybeStr || !NumEntries)
-    return EmptyRange;
-  if (Key == *MaybeStr) {
+  // Valid input and still have strings in this hash.
+  while (StrOffset && *StrOffset) {
+    std::optional<StringRef> MaybeStr = readStringFromStrSection(*StrOffset);
+    std::optional<uint32_t> NumEntries = this->readU32FromAccel(DataOffset);
+    if (!MaybeStr || !NumEntries)
+      return EmptyRange;
     uint64_t EndOffset = DataOffset + *NumEntries * getHashDataEntryLength();
-    return make_range({*this, DataOffset}, ValueIterator{*this, EndOffset});
+    if (Key == *MaybeStr)
+      return make_range({*this, DataOffset},
+                        SameNameIterator{*this, EndOffset});
+    DataOffset = EndOffset;
+    StrOffset = readStringOffsetAt(DataOffset);
   }
 
-  // FIXME: this shouldn't return, we haven't checked all the colliding strings
-  // in the bucket!
   return EmptyRange;
 }
 

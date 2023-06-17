@@ -528,7 +528,7 @@ void LoopEmitter::categorizeLoopCondition(
         makeLoopCondKind(isSparse, isSlice, isAffine, isUnRedu));
   }
 
-  std::sort(spConds.begin(), spConds.end(), [](auto lhs, auto rhs) {
+  std::stable_sort(spConds.begin(), spConds.end(), [](auto lhs, auto rhs) {
     // AffineUnRed > Affine > Slice > Trivial
     return static_cast<uint8_t>(lhs.second) > static_cast<uint8_t>(rhs.second);
   });

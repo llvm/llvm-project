@@ -263,9 +263,8 @@ bool SSAIfConv::InstrDependenciesAllowIfConv(MachineInstr *I) {
 
     // Remember clobbered regunits.
     if (MO.isDef() && Reg.isPhysical())
-      for (MCRegUnitIterator Units(Reg.asMCReg(), TRI); Units.isValid();
-           ++Units)
-        ClobberedRegUnits.set(*Units);
+      for (MCRegUnit Unit : TRI->regunits(Reg.asMCReg()))
+        ClobberedRegUnits.set(Unit);
 
     if (!MO.readsReg() || !Reg.isVirtual())
       continue;
@@ -394,19 +393,17 @@ bool SSAIfConv::findInsertionPoint() {
         continue;
       // I clobbers Reg, so it isn't live before I.
       if (MO.isDef())
-        for (MCRegUnitIterator Units(Reg.asMCReg(), TRI); Units.isValid();
-             ++Units)
-          LiveRegUnits.erase(*Units);
+        for (MCRegUnit Unit : TRI->regunits(Reg.asMCReg()))
+          LiveRegUnits.erase(Unit);
       // Unless I reads Reg.
       if (MO.readsReg())
         Reads.push_back(Reg.asMCReg());
     }
     // Anything read by I is live before I.
     while (!Reads.empty())
-      for (MCRegUnitIterator Units(Reads.pop_back_val(), TRI); Units.isValid();
-           ++Units)
-        if (ClobberedRegUnits.test(*Units))
-          LiveRegUnits.insert(*Units);
+      for (MCRegUnit Unit : TRI->regunits(Reads.pop_back_val()))
+        if (ClobberedRegUnits.test(Unit))
+          LiveRegUnits.insert(Unit);
 
     // We can't insert before a terminator.
     if (I != FirstTerm && I->isTerminator())

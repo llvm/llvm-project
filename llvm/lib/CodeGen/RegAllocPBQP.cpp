@@ -634,8 +634,8 @@ void RegAllocPBQP::initializeGraph(PBQPRAGraph &G, VirtRegMap &VRM,
 
       // vregLI overlaps fixed regunit interference.
       bool Interference = false;
-      for (MCRegUnitIterator Units(PReg, &TRI); Units.isValid(); ++Units) {
-        if (VRegLI.overlaps(LIS.getRegUnit(*Units))) {
+      for (MCRegUnit Unit : TRI.regunits(PReg)) {
+        if (VRegLI.overlaps(LIS.getRegUnit(Unit))) {
           Interference = true;
           break;
         }

@@ -1837,7 +1837,7 @@ static bool swapICmpOperandsToExposeCSEOpportunities(CmpInst *Cmp) {
   Value *Op0 = Cmp->getOperand(0);
   Value *Op1 = Cmp->getOperand(1);
   if (!Op0->getType()->isIntegerTy() || isa<Constant>(Op0) ||
-      isa<Constant>(Op1))
+      isa<Constant>(Op1) || Op0 == Op1)
     return false;
 
   // If a subtract already has the same operands as a compare, swapping would be

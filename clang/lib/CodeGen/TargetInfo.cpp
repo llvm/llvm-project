@@ -402,7 +402,7 @@ static Address emitVoidPtrVAArg(CodeGenFunction &CGF, Address VAListAddr,
   llvm::Type *DirectTy = CGF.ConvertTypeForMem(ValueTy), *ElementTy = DirectTy;
   if (IsIndirect) {
     unsigned AllocaAS = CGF.CGM.getDataLayout().getAllocaAddrSpace();
-    DirectTy = DirectTy->getPointerTo(AllocaAS);
+    DirectTy = llvm::PointerType::get(CGF.getLLVMContext(), AllocaAS);
   }
 
   Address Addr = emitVoidPtrDirectVAArg(CGF, VAListAddr, DirectTy, DirectSize,
@@ -2054,7 +2054,7 @@ X86_32ABIInfo::addFieldToArgStruct(SmallVector<llvm::Type *, 6> &FrameFields,
   Info = ABIArgInfo::getInAlloca(FrameFields.size(), IsIndirect);
   llvm::Type *LLTy = CGT.ConvertTypeForMem(Type);
   if (IsIndirect)
-    LLTy = LLTy->getPointerTo(0);
+    LLTy = llvm::PointerType::getUnqual(getVMContext());
   FrameFields.push_back(LLTy);
   StackOffset += IsIndirect ? WordSize : getContext().getTypeSizeInChars(Type);
 
@@ -4863,7 +4863,8 @@ Address PPC32_SVR4_ABIInfo::EmitVAArg(CodeGenFunction &CGF, Address VAList,
   Builder.CreateCondBr(CC, UsingRegs, UsingOverflow);
 
   llvm::Type *DirectTy = CGF.ConvertType(Ty), *ElementTy = DirectTy;
-  if (isIndirect) DirectTy = DirectTy->getPointerTo(0);
+  if (isIndirect)
+    DirectTy = llvm::PointerType::getUnqual(CGF.getLLVMContext());
 
   // Case 1: consume registers.
   Address RegAddr = Address::invalid();

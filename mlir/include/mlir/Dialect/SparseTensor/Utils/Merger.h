@@ -45,7 +45,7 @@ struct TensorExp final {
   // The `y`, `v`, and `op` parameters either must or must not be
   // `kInvalidId`/`nullptr`, depending on the value of the `k` parameter;
   // however, they have uniform C++ types regardless of the value of `k`.
-  TensorExp(Kind k, unsigned x, ExprId y, Value v, Operation *op);
+  TensorExp(Kind k, unsigned x, ExprId y, Value v, Operation *op, Attribute a);
 
   /// Tensor expression kind.
   Kind kind;
@@ -71,6 +71,10 @@ struct TensorExp final {
   /// kBinaryBranch, this holds the YieldOp for the left or right half
   /// to be merged into a nested scf loop.
   Operation *op;
+
+  /// An optional attribute that is required to determine the semantics of the
+  /// operations. E.g., CmpPredicateAttr for CmpI/CmpF operations.
+  Attribute attr;
 };
 
 /// Tensor expression kind.
@@ -79,6 +83,10 @@ struct TensorExp final {
 /// That is, its argument is a `LoopId` identifying the loop-variable
 /// in question, and its value will be the current iteration's value
 /// of that loop-variable.  See the `LoopId` documentation for more details.
+///
+/// The `kSynZero` leaf kind is for representing a synthetic zero value, which
+/// can be introduced when sparsifying operations like `arith::cmp` to generate
+/// `arith::cmp %lhs, %syn_zero` when the rhs operand is absent.
 //
 // TODO: Modify this definition so that the numeric values already encode
 // the `ExpArity` (while extending the notion of "arity" to include not
@@ -89,6 +97,7 @@ struct TensorExp final {
 enum class TensorExp::Kind {
   // Leaf.
   kTensor = 0,
+  kSynZero,
   kInvariant,
   kLoopVar,
   // Unary operations.
@@ -143,6 +152,8 @@ enum class TensorExp::Kind {
   kAndI,
   kOrI,
   kXorI,
+  kCmpI,
+  kCmpF,
   kShrS, // signed
   kShrU, // unsigned
   kShlI,
@@ -246,13 +257,16 @@ public:
   ExprId addLoopVarExp(LoopId i);
   /// Constructs a new invariant expression, and returns its identifier.
   ExprId addInvariantExp(Value v);
+  /// Constructs a new synthetic zero expression.
+  ExprId addSynZeroExp();
   /// Constructs a new unary or binary expression, and returns its identifier.
   ExprId addExp(TensorExp::Kind k, ExprId e0, ExprId e1 = detail::kInvalidId,
-                Operation *op = nullptr);
+                Operation *op = nullptr, Attribute attr = nullptr);
   /// Constructs a new sesquinary expression, and returns its identifier.
   /// Currently no sesquinary `Kind` allows specifying the `op`, but we
   /// allow it anyways because `mapSet` is designed to allow it.
-  ExprId addExp(TensorExp::Kind k, ExprId e, Value v, Operation *op = nullptr);
+  ExprId addExp(TensorExp::Kind k, ExprId e, Value v, Operation *op = nullptr,
+                Attribute attr = nullptr);
 
   /// Constructs a new iteration lattice point, and returns its identifier.
   LatPointId addLat(TensorId t, LoopId i, ExprId e);
@@ -265,32 +279,41 @@ public:
   /// of `LoopId` (effectively constructing a larger "intersection" of those
   /// loops) with a newly constructed tensor (sub)expression of given kind.
   /// Returns the identifier of the new lattice point.
-  LatPointId conjLat(TensorExp::Kind kind, LatPointId p0, LatPointId p1,
+  LatPointId conjLat(ExprId e, LatPointId p0, LatPointId p1,
                      Operation *op = nullptr);
 
   /// Conjunctive merge of two lattice sets: `(s0 /\_op s1)`.
   /// Returns the identifier of the new set.
-  LatSetId conjSet(TensorExp::Kind kind, LatSetId s0, LatSetId s1,
-                   Operation *op = nullptr);
+  LatSetId conjSet(ExprId e, LatSetId s0, LatSetId s1, Operation *op = nullptr);
 
   /// Disjunctive merge of two lattice sets: `(s0 /\_op s1, s0, s1)`.
   /// Returns the identifier of the new set.
-  LatSetId disjSet(TensorExp::Kind kind, LatSetId s0, LatSetId s1,
-                   Operation *op = nullptr);
+  LatSetId disjSet(ExprId e, LatSetId s0, LatSetId s1, Operation *op = nullptr);
+
+  /// Disjunctive merge of two lattice sets and also set one of the operand to
+  /// zero: `(s0 /\_op s1 (e0 op e1), s0 (0 op e0), s1 (e1 op 0))`.
+  /// Returns the identifier of the new set.
+  LatSetId disjSetWithZero(ExprId e, LatSetId s0, LatSetId s1);
 
   /// Disjunctive merge of two lattice sets with custom handling of the
   /// overlap, left, and right regions.  Any region may be left missing
   /// in the output.  Returns the identifier of the new set.
-  LatSetId combiSet(TensorExp::Kind kind, LatSetId s0, LatSetId s1,
-                    Operation *orig, bool includeLeft, TensorExp::Kind ltrans,
-                    Operation *opleft, bool includeRight,
-                    TensorExp::Kind rtrans, Operation *opright);
+  LatSetId combiSet(ExprId e, LatSetId s0, LatSetId s1, Operation *orig,
+                    bool includeLeft, TensorExp::Kind ltrans, Operation *opleft,
+                    bool includeRight, TensorExp::Kind rtrans,
+                    Operation *opright);
 
   /// Maps the unary operator over the lattice set of the operand, i.e. each
   /// lattice point on an expression E is simply copied over, but with OP E
   /// as new expression. Returns the identifier of the new set.
   LatSetId mapSet(TensorExp::Kind kind, LatSetId s, Value v = Value(),
                   Operation *op = nullptr);
+
+  /// Maps the binary operator to the same operation but with one of its operand
+  /// set to zero, i.e. each lattice point on an expression E is simply copied
+  /// over, but with `OP 0 E` (if lhsZero == true) or `OP E 0` (if lhsZero ==
+  /// false) as new expression. Returns the identifier of the new set.
+  LatSetId mapBinWithSynZeroSet(ExprId e, LatSetId s, bool lhsZero);
 
   /// Optimizes the iteration lattice points in the given set. This
   /// method should be called right before code generation to avoid

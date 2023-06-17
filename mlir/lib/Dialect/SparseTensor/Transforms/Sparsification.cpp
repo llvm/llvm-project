@@ -1136,10 +1136,26 @@ inline static Value genInvariantValue(CodegenEnv &env, ExprId exp) {
 /// inlined cloned code.
 static Value relinkBranch(CodegenEnv &env, RewriterBase &rewriter, Block *block,
                           Value e, LoopId ldx) {
-  if (Operation *def = e.getDefiningOp()) {
+  if (auto arg = dyn_cast<BlockArgument>(e)) {
+    // Direct arguments of the original linalg op must be converted
+    // into dense tensor loads. Note that we should not encounter
+    // anything else. This needs to be verified by semi-ring ops.
+    linalg::GenericOp op = env.op();
+    if (arg.getOwner()->getParentOp() == op) {
+      const TensorId tid = env.makeTensorId(arg.getArgNumber());
+      OpOperand *t = &op->getOpOperand(tid);
+      assert(!getSparseTensorType(t->get()).hasEncoding()); // dense!
+      SmallVector<Value> args;
+      Value ptr = genSubscript(env, rewriter, t, args);
+      return rewriter.create<memref::LoadOp>(op.getLoc(), ptr, args);
+    }
+  } else if (Operation *def = e.getDefiningOp()) {
+    // Handle index computation.
     if (auto indexOp = dyn_cast<linalg::IndexOp>(def))
       return env.getLoopVar(env.makeLoopId(indexOp.getDim()));
+    // When still defined in new body, recurse into operands.
     if (def->getBlock() == block) {
+      rewriter.setInsertionPoint(def);
       for (unsigned i = 0, n = def->getNumOperands(); i < n; i++) {
         rewriter.updateRootInPlace(def, [&]() {
           def->setOperand(
@@ -1154,11 +1170,11 @@ static Value relinkBranch(CodegenEnv &env, RewriterBase &rewriter, Block *block,
 /// Recursively generates tensor expression.
 static Value genExp(CodegenEnv &env, RewriterBase &rewriter, ExprId e,
                     LoopId ldx) {
-  linalg::GenericOp op = env.op();
-  Location loc = op.getLoc();
-
   if (e == ::mlir::sparse_tensor::detail::kInvalidId)
     return Value();
+
+  linalg::GenericOp op = env.op();
+  Location loc = op.getLoc();
   const TensorExp &exp = env.exp(e);
   const auto kind = exp.kind;
   if (kind == TensorExp::Kind::kTensor)
@@ -1171,8 +1187,22 @@ static Value genExp(CodegenEnv &env, RewriterBase &rewriter, ExprId e,
   if (kind == TensorExp::Kind::kReduce)
     env.startCustomReduc(e); // enter custom
 
-  Value v0 = genExp(env, rewriter, exp.children.e0, ldx);
-  Value v1 = genExp(env, rewriter, exp.children.e1, ldx);
+  Value v0, v1;
+  // If either lhs/rhs is a synthetic zero, we infer the type for the zero value
+  // based on the type of the other operand.
+  if (exp.children.e0 != ::mlir::sparse_tensor::detail::kInvalidId &&
+      env.exp(exp.children.e0).kind == TensorExp::Kind::kSynZero) {
+    v1 = genExp(env, rewriter, exp.children.e1, ldx);
+    v0 = constantZero(rewriter, loc, v1.getType());
+  } else if (exp.children.e1 != ::mlir::sparse_tensor::detail::kInvalidId &&
+             env.exp(exp.children.e1).kind == TensorExp::Kind::kSynZero) {
+    v0 = genExp(env, rewriter, exp.children.e0, ldx);
+    v1 = constantZero(rewriter, loc, v0.getType());
+  } else {
+    v0 = genExp(env, rewriter, exp.children.e0, ldx);
+    v1 = genExp(env, rewriter, exp.children.e1, ldx);
+  }
+
   Value ee;
   if (kind == TensorExp::Kind::kReduce && (!v0 || !v1)) {
     // custom reduce did not receive a value
@@ -1181,8 +1211,10 @@ static Value genExp(CodegenEnv &env, RewriterBase &rewriter, ExprId e,
     if (ee &&
         (kind == TensorExp::Kind::kUnary || kind == TensorExp::Kind::kBinary ||
          kind == TensorExp::Kind::kBinaryBranch ||
-         kind == TensorExp::Kind::kReduce || kind == TensorExp::Kind::kSelect))
+         kind == TensorExp::Kind::kReduce || kind == TensorExp::Kind::kSelect)) {
+      OpBuilder::InsertionGuard guard(rewriter);
       ee = relinkBranch(env, rewriter, ee.getParentBlock(), ee, ldx);
+    }
   }
 
   if (kind == TensorExp::Kind::kReduce)
@@ -1248,7 +1280,8 @@ static void genInvariants(CodegenEnv &env, OpBuilder &builder, ExprId exp,
         env.merger().clearExprValue(exp);
     }
   } else if (env.exp(exp).kind != TensorExp::Kind::kInvariant &&
-             env.exp(exp).kind != TensorExp::Kind::kLoopVar) {
+             env.exp(exp).kind != TensorExp::Kind::kLoopVar &&
+             env.exp(exp).kind != TensorExp::Kind::kSynZero) {
     // Traverse into the binary operations. Note that we only hoist
     // tensor loads, since subsequent MLIR/LLVM passes know how to
     // deal with all other kinds of derived loop invariants.

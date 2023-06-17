@@ -1347,10 +1347,14 @@ void Sema::ActOnEndOfTranslationUnit() {
           DiagD = FD;
         if (DiagD->isDeleted())
           continue; // Deleted functions are supposed to be unused.
+        SourceRange DiagRange = DiagD->getLocation();
+        if (const ASTTemplateArgumentListInfo *ASTTAL =
+                DiagD->getTemplateSpecializationArgsAsWritten())
+          DiagRange.setEnd(ASTTAL->RAngleLoc);
         if (DiagD->isReferenced()) {
           if (isa<CXXMethodDecl>(DiagD))
             Diag(DiagD->getLocation(), diag::warn_unneeded_member_function)
-                << DiagD;
+                << DiagD << DiagRange;
           else {
             if (FD->getStorageClass() == SC_Static &&
                 !FD->isInlineSpecified() &&
@@ -1358,39 +1362,46 @@ void Sema::ActOnEndOfTranslationUnit() {
                    SourceMgr.getExpansionLoc(FD->getLocation())))
               Diag(DiagD->getLocation(),
                    diag::warn_unneeded_static_internal_decl)
-                  << DiagD;
+                  << DiagD << DiagRange;
             else
               Diag(DiagD->getLocation(), diag::warn_unneeded_internal_decl)
-                  << /*function*/ 0 << DiagD;
+                  << /*function*/ 0 << DiagD << DiagRange;
           }
         } else {
           if (FD->getDescribedFunctionTemplate())
             Diag(DiagD->getLocation(), diag::warn_unused_template)
-                << /*function*/ 0 << DiagD;
+                << /*function*/ 0 << DiagD << DiagRange;
           else
             Diag(DiagD->getLocation(), isa<CXXMethodDecl>(DiagD)
                                            ? diag::warn_unused_member_function
                                            : diag::warn_unused_function)
-                << DiagD;
+                << DiagD << DiagRange;
         }
       } else {
         const VarDecl *DiagD = cast<VarDecl>(*I)->getDefinition();
         if (!DiagD)
           DiagD = cast<VarDecl>(*I);
+        SourceRange DiagRange = DiagD->getLocation();
+        if (const auto *VTSD = dyn_cast<VarTemplateSpecializationDecl>(DiagD)) {
+          if (const ASTTemplateArgumentListInfo *ASTTAL =
+                  VTSD->getTemplateArgsInfo())
+            DiagRange.setEnd(ASTTAL->RAngleLoc);
+        }
         if (DiagD->isReferenced()) {
           Diag(DiagD->getLocation(), diag::warn_unneeded_internal_decl)
-              << /*variable*/ 1 << DiagD;
+              << /*variable*/ 1 << DiagD << DiagRange;
         } else if (DiagD->getDescribedVarTemplate()) {
           Diag(DiagD->getLocation(), diag::warn_unused_template)
-              << /*variable*/ 1 << DiagD;
+              << /*variable*/ 1 << DiagD << DiagRange;
         } else if (DiagD->getType().isConstQualified()) {
           const SourceManager &SM = SourceMgr;
           if (SM.getMainFileID() != SM.getFileID(DiagD->getLocation()) ||
               !PP.getLangOpts().IsHeaderFile)
             Diag(DiagD->getLocation(), diag::warn_unused_const_variable)
-                << DiagD;
+                << DiagD << DiagRange;
         } else {
-          Diag(DiagD->getLocation(), diag::warn_unused_variable) << DiagD;
+          Diag(DiagD->getLocation(), diag::warn_unused_variable)
+              << DiagD << DiagRange;
         }
       }
     }

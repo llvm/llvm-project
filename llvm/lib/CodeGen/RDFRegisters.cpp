@@ -88,8 +88,8 @@ PhysicalRegisterInfo::PhysicalRegisterInfo(const TargetRegisterInfo &tri,
     for (unsigned I = 1, E = TRI.getNumRegs(); I != E; ++I) {
       if (!(MB[I / 32] & (1u << (I % 32))))
         continue;
-      for (MCRegUnitIterator U(MCRegister::from(I), &TRI); U.isValid(); ++U)
-        PU.set(*U);
+      for (MCRegUnit Unit : TRI.regunits(MCRegister::from(I)))
+        PU.set(Unit);
     }
     MaskInfos[M].Units = PU.flip();
   }
@@ -161,8 +161,8 @@ std::set<RegisterId> PhysicalRegisterInfo::getUnits(RegisterRef RR) const {
     while (C != 0) {
       unsigned T = llvm::countr_zero(C);
       unsigned CR = 32 * I + T; // Clobbered reg
-      for (MCRegUnitIterator U(CR, &TRI); U.isValid(); ++U)
-        Units.insert(*U);
+      for (MCRegUnit U : TRI.regunits(CR))
+        Units.insert(U);
       C &= ~(1u << T);
     }
   }
