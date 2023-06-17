@@ -39,6 +39,7 @@ static_library("CodeGen") {
     "//llvm/lib/Transforms/Scalar",
     "//llvm/lib/Transforms/Utils",
   ]
+  include_dirs = [ "." ]
   sources = [
     "ABIInfo.cpp",
     "ABIInfoImpl.cpp",
