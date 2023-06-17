@@ -661,7 +661,7 @@ void (B2::*convertMultipleFuncToB2(void (Multiple::*mp)()))() {
   return static_cast<void (B2::*)()>(mp);
 // FIXME: We should return ptr instead of i32 here.  The ptrtoint cast prevents
 // LLVM from optimizing away the branch.  This is likely a bug in
-// lib/CodeGen/TargetInfo.cpp with how we classify memptr types for returns.
+// lib/CodeGen/Targets/X86.cpp with how we classify memptr types for returns.
 //
 // CHECK: define dso_local i32 @"?convertMultipleFuncToB2@@YAP8B2@@AEXXZP8Multiple@@AEXXZ@Z"{{.*}} {
 // CHECK:   store
