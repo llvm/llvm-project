@@ -86,8 +86,9 @@ class VPatBinarySDNode_VV<SDPatternOperator vop,
                      (op_type op_reg_class:$rs2))),
         (!cast<Instruction>(
                      !if(isSEWAware,
-                         instruction_name#"_VV_"# vlmul.MX#"_E"#!shl(1, log2sew),
-                         instruction_name#"_VV_"# vlmul.MX))
+                         instruction_name#"_VV_"# vlmul.MX#"_E"#!shl(1, log2sew)#"_TU",
+                         instruction_name#"_VV_"# vlmul.MX#"_TU"))
+                     (result_type (IMPLICIT_DEF)),
                      op_reg_class:$rs1,
                      op_reg_class:$rs2,
                      avl, log2sew)>;
@@ -109,8 +110,9 @@ class VPatBinarySDNode_XI<SDPatternOperator vop,
                      (vop_type (SplatPatKind xop_kind:$rs2)))),
         (!cast<Instruction>(
                      !if(isSEWAware,
-                         instruction_name#_#suffix#_# vlmul.MX#"_E"#!shl(1, log2sew),
-                         instruction_name#_#suffix#_# vlmul.MX))
+                         instruction_name#_#suffix#_# vlmul.MX#"_E"#!shl(1, log2sew)#"_TU",
+                         instruction_name#_#suffix#_# vlmul.MX#"_TU"))
+                     (result_type (IMPLICIT_DEF)),
                      vop_reg_class:$rs1,
                      xop_kind:$rs2,
                      avl, log2sew)>;
@@ -159,8 +161,9 @@ class VPatBinarySDNode_VF<SDPatternOperator vop,
                           (vop_type (SplatFPOp xop_kind:$rs2)))),
         (!cast<Instruction>(
                      !if(isSEWAware,
-                         instruction_name#"_"#vlmul.MX#"_E"#!shl(1, log2sew),
-                         instruction_name#"_"#vlmul.MX))
+                         instruction_name#"_"#vlmul.MX#"_E"#!shl(1, log2sew)#"_TU",
+                         instruction_name#"_"#vlmul.MX#"_TU"))
+                     (result_type (IMPLICIT_DEF)),
                      vop_reg_class:$rs1,
                      (xop_type xop_kind:$rs2),
                      avl, log2sew)>;
@@ -188,8 +191,9 @@ multiclass VPatBinaryFPSDNode_R_VF<SDPatternOperator vop, string instruction_nam
                                 (fvti.Vector fvti.RegClass:$rs1))),
               (!cast<Instruction>(
                            !if(isSEWAware,
-                             instruction_name#"_V"#fvti.ScalarSuffix#"_"#fvti.LMul.MX#"_E"#fvti.SEW,
-                             instruction_name#"_V"#fvti.ScalarSuffix#"_"#fvti.LMul.MX))
+                             instruction_name#"_V"#fvti.ScalarSuffix#"_"#fvti.LMul.MX#"_E"#fvti.SEW#"_TU",
+                             instruction_name#"_V"#fvti.ScalarSuffix#"_"#fvti.LMul.MX#"_TU"))
+                           (fvti.Vector (IMPLICIT_DEF)),
                            fvti.RegClass:$rs1,
                            (fvti.Scalar fvti.ScalarRegClass:$rs2),
                            fvti.AVL, fvti.Log2SEW)>;
