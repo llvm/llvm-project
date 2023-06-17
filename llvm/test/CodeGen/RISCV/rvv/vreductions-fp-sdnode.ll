@@ -588,11 +588,11 @@ declare float @llvm.vector.reduce.fmin.nxv32f32(<vscale x 32 x float>)
 define float @vreduce_fmin_nxv32f32(<vscale x 32 x float> %v) {
 ; CHECK-LABEL: vreduce_fmin_nxv32f32:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    lui a0, 523264
-; CHECK-NEXT:    vsetvli a1, zero, e32, m8, ta, ma
-; CHECK-NEXT:    vmv.s.x v24, a0
+; CHECK-NEXT:    vsetvli a0, zero, e32, m8, ta, ma
 ; CHECK-NEXT:    vfmin.vv v8, v8, v16
-; CHECK-NEXT:    vfredmin.vs v8, v8, v24
+; CHECK-NEXT:    lui a0, 523264
+; CHECK-NEXT:    vmv.s.x v16, a0
+; CHECK-NEXT:    vfredmin.vs v8, v8, v16
 ; CHECK-NEXT:    vfmv.f.s fa0, v8
 ; CHECK-NEXT:    ret
   %red = call float @llvm.vector.reduce.fmin.nxv32f32(<vscale x 32 x float> %v)
@@ -768,11 +768,11 @@ declare half @llvm.vector.reduce.fmax.nxv64f16(<vscale x 64 x half>)
 define half @vreduce_fmax_nxv64f16(<vscale x 64 x half> %v) {
 ; CHECK-LABEL: vreduce_fmax_nxv64f16:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    li a0, -512
-; CHECK-NEXT:    vsetvli a1, zero, e16, m8, ta, ma
-; CHECK-NEXT:    vmv.s.x v24, a0
+; CHECK-NEXT:    vsetvli a0, zero, e16, m8, ta, ma
 ; CHECK-NEXT:    vfmax.vv v8, v8, v16
-; CHECK-NEXT:    vfredmax.vs v8, v8, v24
+; CHECK-NEXT:    li a0, -512
+; CHECK-NEXT:    vmv.s.x v16, a0
+; CHECK-NEXT:    vfredmax.vs v8, v8, v16
 ; CHECK-NEXT:    vfmv.f.s fa0, v8
 ; CHECK-NEXT:    ret
   %red = call half @llvm.vector.reduce.fmax.nxv64f16(<vscale x 64 x half> %v)
@@ -856,11 +856,11 @@ declare float @llvm.vector.reduce.fmax.nxv32f32(<vscale x 32 x float>)
 define float @vreduce_fmax_nxv32f32(<vscale x 32 x float> %v) {
 ; CHECK-LABEL: vreduce_fmax_nxv32f32:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    lui a0, 1047552
-; CHECK-NEXT:    vsetvli a1, zero, e32, m8, ta, ma
-; CHECK-NEXT:    vmv.s.x v24, a0
+; CHECK-NEXT:    vsetvli a0, zero, e32, m8, ta, ma
 ; CHECK-NEXT:    vfmax.vv v8, v8, v16
-; CHECK-NEXT:    vfredmax.vs v8, v8, v24
+; CHECK-NEXT:    lui a0, 1047552
+; CHECK-NEXT:    vmv.s.x v16, a0
+; CHECK-NEXT:    vfredmax.vs v8, v8, v16
 ; CHECK-NEXT:    vfmv.f.s fa0, v8
 ; CHECK-NEXT:    ret
   %red = call float @llvm.vector.reduce.fmax.nxv32f32(<vscale x 32 x float> %v)
