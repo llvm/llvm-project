@@ -562,6 +562,20 @@ def: Pat<(v4i8 (trunc V4I16:$Rs)),
 def: Pat<(v2i16 (trunc V2I32:$Rs)),
          (A2_combine_ll (HiReg $Rs), (LoReg $Rs))>;
 
+// Truncate to vNi1
+def: Pat<(v2i1 (trunc V2I32:$Rs)),
+         (A4_vcmpweqi (A2_andp V2I32:$Rs, (A2_combineii (i32 1), (i32 1))),
+                      (i32 1))>;
+def: Pat<(v4i1 (trunc V4I16:$Rs)),
+         (A4_vcmpheqi (Combinew (A2_andir (HiReg $Rs), (i32 0x00010001)),
+                                (A2_andir (LoReg $Rs), (i32 0x00010001))),
+                      (i32 1))>;
+def: Pat<(v8i1 (trunc V8I8:$Rs)),
+         (A4_vcmpbeqi (Combinew (A2_andir (HiReg $Rs), (i32 0x01010101)),
+                                (A2_andir (LoReg $Rs), (i32 0x01010101))),
+                      (i32 1))>;
+
+
 // Saturation:
 // Note: saturation assumes the same signed-ness for the input and the
 // output.
