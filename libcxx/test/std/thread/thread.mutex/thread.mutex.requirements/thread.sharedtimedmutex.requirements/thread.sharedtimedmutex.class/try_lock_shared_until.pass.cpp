@@ -24,6 +24,7 @@
 
 #include <atomic>
 #include <cassert>
+#include <chrono>
 #include <cstdlib>
 #include <shared_mutex>
 #include <vector>

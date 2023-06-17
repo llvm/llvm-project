@@ -482,8 +482,7 @@ define double @select_icmp_slt_one(i32 signext %a) {
 define double @select_icmp_sgt_zero(i32 signext %a) {
 ; CHECK-LABEL: select_icmp_sgt_zero:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    sgtz a0, a0
-; CHECK-NEXT:    xori a0, a0, 1
+; CHECK-NEXT:    slti a0, a0, 1
 ; CHECK-NEXT:    fcvt.d.w fa0, a0
 ; CHECK-NEXT:    ret
 ;
@@ -491,8 +490,7 @@ define double @select_icmp_sgt_zero(i32 signext %a) {
 ; RV32ZDINX:       # %bb.0:
 ; RV32ZDINX-NEXT:    addi sp, sp, -16
 ; RV32ZDINX-NEXT:    .cfi_def_cfa_offset 16
-; RV32ZDINX-NEXT:    sgtz a0, a0
-; RV32ZDINX-NEXT:    xori a0, a0, 1
+; RV32ZDINX-NEXT:    slti a0, a0, 1
 ; RV32ZDINX-NEXT:    fcvt.d.w a0, a0
 ; RV32ZDINX-NEXT:    sw a0, 8(sp)
 ; RV32ZDINX-NEXT:    sw a1, 12(sp)
@@ -503,8 +501,7 @@ define double @select_icmp_sgt_zero(i32 signext %a) {
 ;
 ; RV64ZDINX-LABEL: select_icmp_sgt_zero:
 ; RV64ZDINX:       # %bb.0:
-; RV64ZDINX-NEXT:    sgtz a0, a0
-; RV64ZDINX-NEXT:    xori a0, a0, 1
+; RV64ZDINX-NEXT:    slti a0, a0, 1
 ; RV64ZDINX-NEXT:    fcvt.d.w a0, a0
 ; RV64ZDINX-NEXT:    ret
   %1 = icmp sgt i32 %a, 0

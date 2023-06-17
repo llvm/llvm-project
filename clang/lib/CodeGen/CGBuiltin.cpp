@@ -17520,40 +17520,33 @@ Value *CodeGenFunction::EmitAMDGPUBuiltinExpr(unsigned BuiltinID,
   case AMDGPU::BI__builtin_amdgcn_atomic_inc64:
   case AMDGPU::BI__builtin_amdgcn_atomic_dec32:
   case AMDGPU::BI__builtin_amdgcn_atomic_dec64: {
-    unsigned BuiltinAtomicOp;
-    llvm::Type *ResultType = ConvertType(E->getType());
-
+    llvm::AtomicRMWInst::BinOp BinOp;
     switch (BuiltinID) {
     case AMDGPU::BI__builtin_amdgcn_atomic_inc32:
     case AMDGPU::BI__builtin_amdgcn_atomic_inc64:
-      BuiltinAtomicOp = Intrinsic::amdgcn_atomic_inc;
+      BinOp = llvm::AtomicRMWInst::UIncWrap;
       break;
     case AMDGPU::BI__builtin_amdgcn_atomic_dec32:
     case AMDGPU::BI__builtin_amdgcn_atomic_dec64:
-      BuiltinAtomicOp = Intrinsic::amdgcn_atomic_dec;
+      BinOp = llvm::AtomicRMWInst::UDecWrap;
       break;
     }
 
     Value *Ptr = EmitScalarExpr(E->getArg(0));
     Value *Val = EmitScalarExpr(E->getArg(1));
 
-    llvm::Function *F =
-        CGM.getIntrinsic(BuiltinAtomicOp, {ResultType, Ptr->getType()});
-
     ProcessOrderScopeAMDGCN(EmitScalarExpr(E->getArg(2)),
                             EmitScalarExpr(E->getArg(3)), AO, SSID);
 
-    // llvm.amdgcn.atomic.inc and llvm.amdgcn.atomic.dec expects ordering and
-    // scope as unsigned values
-    Value *MemOrder = Builder.getInt32(static_cast<int>(AO));
-    Value *MemScope = Builder.getInt32(static_cast<int>(SSID));
-
     QualType PtrTy = E->getArg(0)->IgnoreImpCasts()->getType();
     bool Volatile =
-      PtrTy->castAs<PointerType>()->getPointeeType().isVolatileQualified();
-    Value *IsVolatile = Builder.getInt1(static_cast<bool>(Volatile));
+        PtrTy->castAs<PointerType>()->getPointeeType().isVolatileQualified();
 
-    return Builder.CreateCall(F, {Ptr, Val, MemOrder, MemScope, IsVolatile});
+    llvm::AtomicRMWInst *RMW =
+        Builder.CreateAtomicRMW(BinOp, Ptr, Val, AO, SSID);
+    if (Volatile)
+      RMW->setVolatile(true);
+    return RMW;
   }
   case AMDGPU::BI__builtin_amdgcn_s_sendmsg_rtn:
   case AMDGPU::BI__builtin_amdgcn_s_sendmsg_rtnl: {
