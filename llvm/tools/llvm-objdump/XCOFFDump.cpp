@@ -14,6 +14,7 @@
 #include "XCOFFDump.h"
 
 #include "llvm-objdump.h"
+#include "llvm/ADT/StringExtras.h"
 #include "llvm/Demangle/Demangle.h"
 #include "llvm/MC/MCInstPrinter.h"
 #include "llvm/MC/MCSubtargetInfo.h"
