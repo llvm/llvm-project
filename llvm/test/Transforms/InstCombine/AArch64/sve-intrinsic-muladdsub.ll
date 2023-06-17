@@ -14,11 +14,10 @@ define <vscale x 8 x half> @combine_fmuladd_1(<vscale x 8 x i1> %p, <vscale x 8 
   ret <vscale x 8 x half> %2
 }
 
-; TODO: Test highlights an invalid combine!
 ; fadd(a, fmul_u(b, c)) -> fmla(a, b, c)
 define <vscale x 8 x half> @combine_fmuladd_2(<vscale x 8 x i1> %p, <vscale x 8 x half> %a, <vscale x 8 x half> %b, <vscale x 8 x half> %c) #0 {
 ; CHECK-LABEL: @combine_fmuladd_2(
-; CHECK-NEXT:    [[TMP1:%.*]] = call fast <vscale x 8 x half> @llvm.aarch64.sve.fmla.u.nxv8f16(<vscale x 8 x i1> [[P:%.*]], <vscale x 8 x half> [[A:%.*]], <vscale x 8 x half> [[B:%.*]], <vscale x 8 x half> [[C:%.*]])
+; CHECK-NEXT:    [[TMP1:%.*]] = call fast <vscale x 8 x half> @llvm.aarch64.sve.fmla.nxv8f16(<vscale x 8 x i1> [[P:%.*]], <vscale x 8 x half> [[A:%.*]], <vscale x 8 x half> [[B:%.*]], <vscale x 8 x half> [[C:%.*]])
 ; CHECK-NEXT:    ret <vscale x 8 x half> [[TMP1]]
 ;
   %1 = tail call fast <vscale x 8 x half> @llvm.aarch64.sve.fmul.u.nxv8f16(<vscale x 8 x i1> %p, <vscale x 8 x half> %b, <vscale x 8 x half> %c)
@@ -109,11 +108,9 @@ define <vscale x 8 x half> @combine_fmulsub_1(<vscale x 8 x i1> %p, <vscale x 8 
   ret <vscale x 8 x half> %2
 }
 
-; TODO: Test highlights an invalid combine!
-; fsub(a, fmul_u(b, c)) -> fmls(a, b, c)
 define <vscale x 8 x half> @combine_fmulsub_2(<vscale x 8 x i1> %p, <vscale x 8 x half> %a, <vscale x 8 x half> %b, <vscale x 8 x half> %c) #0 {
 ; CHECK-LABEL: @combine_fmulsub_2(
-; CHECK-NEXT:    [[TMP1:%.*]] = call fast <vscale x 8 x half> @llvm.aarch64.sve.fmls.u.nxv8f16(<vscale x 8 x i1> [[P:%.*]], <vscale x 8 x half> [[A:%.*]], <vscale x 8 x half> [[B:%.*]], <vscale x 8 x half> [[C:%.*]])
+; CHECK-NEXT:    [[TMP1:%.*]] = call fast <vscale x 8 x half> @llvm.aarch64.sve.fmls.nxv8f16(<vscale x 8 x i1> [[P:%.*]], <vscale x 8 x half> [[A:%.*]], <vscale x 8 x half> [[B:%.*]], <vscale x 8 x half> [[C:%.*]])
 ; CHECK-NEXT:    ret <vscale x 8 x half> [[TMP1]]
 ;
   %1 = tail call fast <vscale x 8 x half> @llvm.aarch64.sve.fmul.u.nxv8f16(<vscale x 8 x i1> %p, <vscale x 8 x half> %b, <vscale x 8 x half> %c)
