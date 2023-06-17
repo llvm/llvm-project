@@ -847,7 +847,6 @@ feature_test_macros = [
             "name": "__cpp_lib_ratio",
             "values": {"c++26": 202306}, # P2734R0 Adding the new SI prefixes
             "headers": ["ratio"],
-            "unimplemented": True,
         },
         {
             "name": "__cpp_lib_raw_memory_algorithms",
