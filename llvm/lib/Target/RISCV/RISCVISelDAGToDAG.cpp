@@ -3181,11 +3181,11 @@ bool RISCVDAGToDAGISel::doPeepholeMaskedRVV(SDNode *N) {
 
   bool UseTUPseudo = false;
   if (RISCVII::hasVecPolicyOp(MaskedMCID.TSFlags)) {
+    TailPolicyOpIdx = getVecPolicyOpIdx(N, MaskedMCID);
     // Some operations are their own TU.
     if (I->UnmaskedTUPseudo == I->UnmaskedPseudo) {
       UseTUPseudo = true;
     } else {
-      TailPolicyOpIdx = getVecPolicyOpIdx(N, MaskedMCID);
       if (!(N->getConstantOperandVal(*TailPolicyOpIdx) &
             RISCVII::TAIL_AGNOSTIC)) {
         // Keep the true-masked instruction when there is no unmasked TU
@@ -3198,11 +3198,11 @@ bool RISCVDAGToDAGISel::doPeepholeMaskedRVV(SDNode *N) {
   }
 
   unsigned Opc = UseTUPseudo ? I->UnmaskedTUPseudo : I->UnmaskedPseudo;
+  const MCInstrDesc &MCID = TII->get(Opc);
 
   // If this instruction is tail agnostic, the unmasked instruction should not
   // have a tied destination.
 #ifndef NDEBUG
-  const MCInstrDesc &MCID = TII->get(Opc);
   bool HasTiedDest = RISCVII::isFirstDefTiedToFirstUse(MCID);
   assert((UseTUPseudo == HasTiedDest) && "Unexpected pseudo to transform to");
 #endif
@@ -3210,9 +3210,11 @@ bool RISCVDAGToDAGISel::doPeepholeMaskedRVV(SDNode *N) {
   SmallVector<SDValue, 8> Ops;
   // Skip the merge operand at index 0 if !UseTUPseudo.
   for (unsigned I = !UseTUPseudo, E = N->getNumOperands(); I != E; I++) {
-    // Skip the mask, the policy, and the Glue.
+    // Skip the mask, the policy (if the unmasked doesn't have a policy op), and
+    // the Glue.
     SDValue Op = N->getOperand(I);
-    if (I == MaskOpIdx || I == TailPolicyOpIdx ||
+    if (I == MaskOpIdx ||
+        (I == TailPolicyOpIdx && !RISCVII::hasVecPolicyOp(MCID.TSFlags)) ||
         Op.getValueType() == MVT::Glue)
       continue;
     Ops.push_back(Op);
