@@ -46,12 +46,6 @@ class Arith_BinaryOp<string mnemonic, list<Trait> traits = []> :
   let assemblyFormat = "$lhs `,` $rhs attr-dict `:` type($result)";
 }
 
-// Base class for ternary arithmetic operations.
-class Arith_TernaryOp<string mnemonic, list<Trait> traits = []> :
-    Arith_ArithOp<mnemonic, traits # [Pure]> {
-  let assemblyFormat = "$a `,` $b `,` $c attr-dict `:` type($result)";
-}
-
 // Base class for integer binary operations.
 class Arith_IntBinaryOp<string mnemonic, list<Trait> traits = []> :
     Arith_BinaryOp<mnemonic, traits #
