@@ -4138,32 +4138,6 @@ void LSRInstance::GenerateScales(LSRUse &LU, unsigned LUIdx, Formula Base) {
   }
 }
 
-/// Extend/Truncate \p Expr to \p ToTy for use \p LU. If \p LU uses any post-inc
-/// loops, first de-normalize \p Expr, then perform the extension/truncate and
-/// normalize again, as the normalized form can result in folds that are not
-/// valid in the post-inc use contexts.
-static const SCEV *getAnyExtendConsideringPostIncUses(LSRUse &LU,
-                                                      const SCEV *Expr,
-                                                      Type *ToTy,
-                                                      ScalarEvolution &SE) {
-  PostIncLoopSet *Loops = nullptr;
-  for (auto &LF : LU.Fixups) {
-    if (!LF.PostIncLoops.empty()) {
-      assert((!Loops || *Loops == LF.PostIncLoops) &&
-             "different post-inc loops used");
-      Loops = &LF.PostIncLoops;
-    }
-  }
-
-  if (Loops) {
-    auto *DenormExpr = denormalizeForPostIncUse(Expr, *Loops, SE);
-    const SCEV *NewDenormExpr = SE.getAnyExtendExpr(DenormExpr, ToTy);
-    return normalizeForPostIncUse(NewDenormExpr, *Loops, SE);
-  }
-
-  return SE.getAnyExtendExpr(Expr, ToTy);
-}
-
 /// Generate reuse formulae from different IV types.
 void LSRInstance::GenerateTruncates(LSRUse &LU, unsigned LUIdx, Formula Base) {
   // Don't bother truncating symbolic values.
@@ -4192,16 +4166,14 @@ void LSRInstance::GenerateTruncates(LSRUse &LU, unsigned LUIdx, Formula Base) {
       // initial node (maybe due to depth limitations), but it can do them while
       // taking ext.
       if (F.ScaledReg) {
-        const SCEV *NewScaledReg =
-            getAnyExtendConsideringPostIncUses(LU, F.ScaledReg, SrcTy, SE);
+        const SCEV *NewScaledReg = SE.getAnyExtendExpr(F.ScaledReg, SrcTy);
         if (NewScaledReg->isZero())
          continue;
         F.ScaledReg = NewScaledReg;
       }
       bool HasZeroBaseReg = false;
       for (const SCEV *&BaseReg : F.BaseRegs) {
-        const SCEV *NewBaseReg =
-            getAnyExtendConsideringPostIncUses(LU, BaseReg, SrcTy, SE);
+        const SCEV *NewBaseReg = SE.getAnyExtendExpr(BaseReg, SrcTy);
         if (NewBaseReg->isZero()) {
           HasZeroBaseReg = true;
           break;
