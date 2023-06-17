@@ -625,6 +625,12 @@ static void AttemptToFoldSymbolOffsetDifference(
     return;
 
   if (Layout) {
+    // If both symbols are in the same fragment, return the difference of their
+    // offsets. canGetFragmentOffset(FA) may be false.
+    if (FA == FB && !SA.isVariable() && !SB.isVariable()) {
+      Addend += SA.getOffset() - SB.getOffset();
+      return FinalizeFolding();
+    }
     // One of the symbol involved is part of a fragment being laid out. Quit now
     // to avoid a self loop.
     if (!Layout->canGetFragmentOffset(FA) || !Layout->canGetFragmentOffset(FB))
