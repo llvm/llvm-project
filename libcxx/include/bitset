@@ -40,15 +40,25 @@ public:
     constexpr bitset() noexcept;
     constexpr bitset(unsigned long long val) noexcept;
     template <class charT>
-        explicit bitset(const charT* str,
-                        typename basic_string<charT>::size_type n = basic_string<charT>::npos,
-                        charT zero = charT('0'), charT one = charT('1')); // constexpr since C++23
+        constexpr explicit bitset(const charT* str,
+            typename basic_string<charT>::size_type n = basic_string<charT>::npos,
+            charT zero = charT('0'), charT one = charT('1'));                                // until C++26, constexpr since C++23
+    template <class charT>
+        constexpr explicit bitset(const charT* str,
+            typename basic_string_view<charT>::size_type n = basic_string_view<charT>::npos,
+            charT zero = charT('0'), charT one = charT('1'));                                // since C++26
+    template<class charT, class traits>
+        explicit bitset(
+            const basic_string_view<charT,traits>& str,
+            typename basic_string_view<charT,traits>::size_type pos = 0,
+            typename basic_string_view<charT,traits>::size_type n = basic_string_view<charT,traits>::npos,
+            charT zero = charT('0'), charT one = charT('1'));                                // since C++26
     template<class charT, class traits, class Allocator>
-        explicit bitset(const basic_string<charT,traits,Allocator>& str,
-                        typename basic_string<charT,traits,Allocator>::size_type pos = 0,
-                        typename basic_string<charT,traits,Allocator>::size_type n =
-                                 basic_string<charT,traits,Allocator>::npos,
-                        charT zero = charT('0'), charT one = charT('1')); // constexpr since C++23
+        constexpr explicit bitset(
+            const basic_string<charT,traits,Allocator>& str,
+            typename basic_string<charT,traits,Allocator>::size_type pos = 0,
+            typename basic_string<charT,traits,Allocator>::size_type n = basic_string<charT,traits,Allocator>::npos,
+            charT zero = charT('0'), charT one = charT('1'));                                // constexpr since C++23
 
     // 23.3.5.2 bitset operations:
     bitset& operator&=(const bitset& rhs) noexcept; // constexpr since C++23
@@ -696,13 +706,32 @@ public:
     template <class _CharT, class = __enable_if_t<_IsCharLikeType<_CharT>::value> >
     _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX23 explicit bitset(
         const _CharT* __str,
+#  if _LIBCPP_STD_VER >= 26
+        typename basic_string_view<_CharT>::size_type __n = basic_string_view<_CharT>::npos,
+#  else
         typename basic_string<_CharT>::size_type __n = basic_string<_CharT>::npos,
-        _CharT __zero                                = _CharT('0'),
-        _CharT __one                                 = _CharT('1')) {
+#  endif
+        _CharT __zero = _CharT('0'),
+        _CharT __one  = _CharT('1')) {
 
         size_t __rlen = std::min(__n, char_traits<_CharT>::length(__str));
         __init_from_string_view(basic_string_view<_CharT>(__str, __rlen), __zero, __one);
     }
+#if _LIBCPP_STD_VER >= 26
+    template <class _CharT, class _Traits>
+    _LIBCPP_HIDE_FROM_ABI constexpr explicit bitset(
+        basic_string_view<_CharT, _Traits> __str,
+        typename basic_string_view<_CharT, _Traits>::size_type __pos = 0,
+        typename basic_string_view<_CharT, _Traits>::size_type __n   = basic_string_view<_CharT, _Traits>::npos,
+        _CharT __zero                                                = _CharT('0'),
+        _CharT __one                                                 = _CharT('1')) {
+        if (__pos > __str.size())
+            __throw_out_of_range("bitset string pos out of range");
+
+        size_t __rlen = std::min(__n, __str.size() - __pos);
+        __init_from_string_view(basic_string_view<_CharT, _Traits>(__str.data() + __pos, __rlen), __zero, __one);
+    }
+#endif
     template <class _CharT, class _Traits, class _Allocator>
     _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX23 explicit bitset(
         const basic_string<_CharT, _Traits, _Allocator>& __str,
