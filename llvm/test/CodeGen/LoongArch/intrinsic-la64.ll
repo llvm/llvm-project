@@ -121,6 +121,17 @@ entry:
   ret i64 %0
 }
 
+;; Check that csrwr is emitted even if the return value of the intrinsic is not used.
+;; FIXME: currently csrwr is not emitted.
+define void @csrwr_d_noret(i64 %a) {
+; CHECK-LABEL: csrwr_d_noret:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    ret
+entry:
+  %0 = tail call i64 @llvm.loongarch.csrwr.d(i64 %a, i32 1)
+  ret void
+}
+
 define i64 @csrxchg_d(i64 %a, i64 %b) {
 ; CHECK-LABEL: csrxchg_d:
 ; CHECK:       # %bb.0: # %entry
@@ -129,6 +140,17 @@ define i64 @csrxchg_d(i64 %a, i64 %b) {
 entry:
   %0 = tail call i64 @llvm.loongarch.csrxchg.d(i64 %a, i64 %b, i32 1)
   ret i64 %0
+}
+
+;; Check that csrxchg is emitted even if the return value of the intrinsic is not used.
+;; FIXME: currently csrxchg is not emitted.
+define void @csrxchg_d_noret(i64 %a, i64 %b) {
+; CHECK-LABEL: csrxchg_d_noret:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    ret
+entry:
+  %0 = tail call i64 @llvm.loongarch.csrxchg.d(i64 %a, i64 %b, i32 1)
+  ret void
 }
 
 define i64 @iocsrrd_d(i32 %a) {
