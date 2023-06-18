@@ -95,6 +95,12 @@ public:
                    isKnownNonNull());
   }
 
+  /// Return address with different element type, but same pointer and
+  /// alignment.
+  Address withElementType(llvm::Type *ElemTy) const {
+    return Address(getPointer(), ElemTy, getAlignment(), isKnownNonNull());
+  }
+
   /// Whether the pointer is known not to be null.
   KnownNonNull_t isKnownNonNull() const {
     assert(isValid());
