@@ -378,6 +378,10 @@ Changes in existing checks
   `IgnoreTemplateInstantiations` option to optionally ignore virtual function
   overrides that are part of template instantiations.
 
+- Improved :doc:`performance-move-const-arg
+  <clang-tidy/checks/performance/move-const-arg>` check to warn when move
+  special member functions are not available.
+
 - Improved :doc:`performance-no-automatic-move
   <clang-tidy/checks/performance/no-automatic-move>`: warn on ``const &&``
   constructors.
