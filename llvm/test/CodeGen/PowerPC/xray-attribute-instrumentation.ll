@@ -4,18 +4,18 @@
 define i32 @foo() nounwind noinline uwtable "function-instrument"="xray-always" {
 ; CHECK-LABEL: foo:
 ; CHECK-NEXT:  .Lfunc_begin0:
-; CHECK-LABEL: .Ltmp0:
-; CHECK:              b .Ltmp1
+; CHECK:       .Ltmp[[#l:]]:
+; CHECK-NEXT:         b .Ltmp[[#l+1]]
 ; CHECK-NEXT:         nop
 ; CHECK-NEXT:         std 0, -8(1)
 ; CHECK-NEXT:         mflr 0
 ; CHECK-NEXT:         bl __xray_FunctionEntry
 ; CHECK-NEXT:         nop
 ; CHECK-NEXT:         mtlr 0
-; CHECK-LABEL: .Ltmp1:
+; CHECK-NEXT:  .Ltmp[[#l+1]]:
   ret i32 0
-; CHECK-LABEL: .Ltmp2:
-; CHECK:              blr
+; CHECK:       .Ltmp[[#l+2]]:
+; CHECK-NEXT:         blr
 ; CHECK-NEXT:         nop
 ; CHECK-NEXT:         std 0, -8(1)
 ; CHECK-NEXT:         mflr 0
@@ -25,16 +25,16 @@ define i32 @foo() nounwind noinline uwtable "function-instrument"="xray-always" 
 }
 ; CHECK-LABEL: xray_instr_map,"ao",@progbits,foo{{$}}
 ; CHECK:      .Lxray_sleds_start0:
-; CHECK-NEXT: .Ltmp3:
-; CHECK-NEXT:         .quad   .Ltmp0-.Ltmp3
-; CHECK-NEXT:         .quad   .Lfunc_begin0-(.Ltmp3+8)
+; CHECK-NEXT: [[TMP:.Ltmp[0-9]+]]:
+; CHECK-NEXT:         .quad   .Ltmp[[#l]]-[[TMP]]
+; CHECK-NEXT:         .quad   .Lfunc_begin0-([[TMP]]+8)
 ; CHECK-NEXT:         .byte   0x00
 ; CHECK-NEXT:         .byte   0x01
 ; CHECK-NEXT:         .byte   0x02
 ; CHECK-NEXT:         .space  13
-; CHECK-NEXT: .Ltmp4:
-; CHECK-NEXT:         .quad   .Ltmp2-.Ltmp4
-; CHECK-NEXT:         .quad   .Lfunc_begin0-(.Ltmp4+8)
+; CHECK-NEXT: [[TMP:.Ltmp[0-9]+]]:
+; CHECK-NEXT:         .quad   .Ltmp[[#l+2]]-[[TMP]]
+; CHECK-NEXT:         .quad   .Lfunc_begin0-([[TMP]]+8)
 ; CHECK-NEXT:         .byte   0x01
 ; CHECK-NEXT:         .byte   0x01
 ; CHECK-NEXT:         .byte   0x02

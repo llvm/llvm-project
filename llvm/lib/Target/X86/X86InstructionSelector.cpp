@@ -1728,9 +1728,7 @@ bool X86InstructionSelector::selectDivRem(MachineInstr &I,
   // won't generate explicit references to the GR8_NOREX registers. If
   // the allocator and/or the backend get enhanced to be more robust in
   // that regard, this can be, and should be, removed.
-  if ((I.getOpcode() == Instruction::SRem ||
-       I.getOpcode() == Instruction::URem) &&
-      OpEntry.DivRemResultReg == X86::AH && STI.is64Bit()) {
+  if (OpEntry.DivRemResultReg == X86::AH && STI.is64Bit()) {
     Register SourceSuperReg = MRI.createVirtualRegister(&X86::GR16RegClass);
     Register ResultSuperReg = MRI.createVirtualRegister(&X86::GR16RegClass);
     BuildMI(*I.getParent(), I, I.getDebugLoc(), TII.get(Copy), SourceSuperReg)
