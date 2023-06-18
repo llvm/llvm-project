@@ -3535,6 +3535,7 @@ Mask value Data class          Macro
 0x0080     Positive subnormal  __FPCLASS_POSSUBNORMAL
 0x0100     Positive normal     __FPCLASS_POSNORMAL
 0x0200     Positive infinity   __FPCLASS_POSINF
+========== =================== ======================
 
 For convenience preprocessor defines macros for these values. The function
 returns 1 if ``expr`` falls into one of the specified data classes, 0 otherwise.
