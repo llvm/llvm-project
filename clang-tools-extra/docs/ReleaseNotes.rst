@@ -325,6 +325,10 @@ Changes in existing checks
   <clang-tidy/checks/llvm/header-guard>` check.
   Global options of the same name should be used instead.
 
+- Fix false positive in :doc:`llvmlibc-inline-function-decl
+  <clang-tidy/checks/llvmlibc/inline-function-decl>` when using templated
+  function with separate declarations and definitions.
+
 - Improved the performance of the :doc:`misc-confusable-identifiers
   <clang-tidy/checks/misc/confusable-identifiers>` check through optimizations.
 
