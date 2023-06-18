@@ -226,7 +226,6 @@ feature_test_macros = [
             "name": "__cpp_lib_bitops",
             "values": {"c++20": 201907},
             "headers": ["bit"],
-            "unimplemented": True,
         },
         {
             "name": "__cpp_lib_bitset",
