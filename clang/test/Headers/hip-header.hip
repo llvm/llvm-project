@@ -82,7 +82,7 @@ __device__ void test_numeric_type() {
 // instead of fma(_Float16, _Float16, _Float16).
 
 // CXX14-LABEL: define{{.*}}@_Z8test_fma
-// CXX14: call {{.*}}@__ocml_fma_f16
+// CXX14: call contract half @llvm.fma.f16
 __device__ double test_fma(_Float16 h, int i) {
   return fma(h, h, i);
 }

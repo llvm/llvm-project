@@ -426,6 +426,10 @@ def ConvertGpuOpsToNVVMOps : Pass<"convert-gpu-to-nvvm", "gpu::GPUModuleOp"> {
            "Bitwidth of the index type, 0 to use size of machine word">,
     Option<"hasRedux", "has-redux", "bool", /*default=*/"false",
            "Target gpu supports redux">,
+    Option<"useBarePtrCallConv", "use-bare-ptr-memref-call-conv", "bool",
+           /*default=*/"false",
+           "Replace memref arguments in GPU functions with bare pointers. "
+           "All memrefs must have static shape.">,
     Option<"useOpaquePointers", "use-opaque-pointers", "bool",
                    /*default=*/"true", "Generate LLVM IR using opaque pointers "
                    "instead of typed pointers">,
