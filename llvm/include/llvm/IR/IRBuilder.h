@@ -2528,6 +2528,8 @@ public:
                                          unsigned Index, unsigned FieldIndex,
                                          MDNode *DbgInfo);
 
+  Value *createIsFPClass(Value *FPNum, unsigned Test);
+
 private:
   /// Helper function that creates an assume intrinsic call that
   /// represents an alignment assumption on the provided pointer \p PtrValue
