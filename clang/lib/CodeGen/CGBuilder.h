@@ -155,10 +155,8 @@ public:
                             Addr.isKnownNonNull());
   }
 
-  /// Cast the element type of the given address to a different type,
-  /// preserving information like the alignment and address space.
-  Address CreateElementBitCast(Address Addr, llvm::Type *Ty,
-                               const llvm::Twine &Name = "") {
+  /// This method is to be deprecated. Use `Address::withElementType` instead.
+  Address CreateElementBitCast(Address Addr, llvm::Type *Ty) {
     return Address(Addr.getPointer(), Ty, Addr.getAlignment(),
                    Addr.isKnownNonNull());
   }

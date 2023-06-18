@@ -1858,8 +1858,7 @@ llvm::Function *CodeGenFunction::generateBuiltinOSLogHelperFunction(
 
     Address Arg = GetAddrOfLocalVar(Args[I]);
     Address Addr = Builder.CreateConstByteGEP(BufAddr, Offset, "argData");
-    Addr =
-        Builder.CreateElementBitCast(Addr, Arg.getElementType(), "argDataCast");
+    Addr = Addr.withElementType(Arg.getElementType());
     Builder.CreateStore(Builder.CreateLoad(Arg), Addr);
     Offset += Size;
     ++I;
