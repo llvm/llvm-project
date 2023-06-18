@@ -101,17 +101,11 @@
 #   error "__cpp_lib_bit_cast should have the value 201806L in c++20"
 # endif
 
-# if !defined(_LIBCPP_VERSION)
-#   ifndef __cpp_lib_bitops
-#     error "__cpp_lib_bitops should be defined in c++20"
-#   endif
-#   if __cpp_lib_bitops != 201907L
-#     error "__cpp_lib_bitops should have the value 201907L in c++20"
-#   endif
-# else // _LIBCPP_VERSION
-#   ifdef __cpp_lib_bitops
-#     error "__cpp_lib_bitops should not be defined because it is unimplemented in libc++!"
-#   endif
+# ifndef __cpp_lib_bitops
+#   error "__cpp_lib_bitops should be defined in c++20"
+# endif
+# if __cpp_lib_bitops != 201907L
+#   error "__cpp_lib_bitops should have the value 201907L in c++20"
 # endif
 
 # ifdef __cpp_lib_byteswap
@@ -141,17 +135,11 @@
 #   error "__cpp_lib_bit_cast should have the value 201806L in c++23"
 # endif
 
-# if !defined(_LIBCPP_VERSION)
-#   ifndef __cpp_lib_bitops
-#     error "__cpp_lib_bitops should be defined in c++23"
-#   endif
-#   if __cpp_lib_bitops != 201907L
-#     error "__cpp_lib_bitops should have the value 201907L in c++23"
-#   endif
-# else // _LIBCPP_VERSION
-#   ifdef __cpp_lib_bitops
-#     error "__cpp_lib_bitops should not be defined because it is unimplemented in libc++!"
-#   endif
+# ifndef __cpp_lib_bitops
+#   error "__cpp_lib_bitops should be defined in c++23"
+# endif
+# if __cpp_lib_bitops != 201907L
+#   error "__cpp_lib_bitops should have the value 201907L in c++23"
 # endif
 
 # ifndef __cpp_lib_byteswap
@@ -184,17 +172,11 @@
 #   error "__cpp_lib_bit_cast should have the value 201806L in c++26"
 # endif
 
-# if !defined(_LIBCPP_VERSION)
-#   ifndef __cpp_lib_bitops
-#     error "__cpp_lib_bitops should be defined in c++26"
-#   endif
-#   if __cpp_lib_bitops != 201907L
-#     error "__cpp_lib_bitops should have the value 201907L in c++26"
-#   endif
-# else // _LIBCPP_VERSION
-#   ifdef __cpp_lib_bitops
-#     error "__cpp_lib_bitops should not be defined because it is unimplemented in libc++!"
-#   endif
+# ifndef __cpp_lib_bitops
+#   error "__cpp_lib_bitops should be defined in c++26"
+# endif
+# if __cpp_lib_bitops != 201907L
+#   error "__cpp_lib_bitops should have the value 201907L in c++26"
 # endif
 
 # ifndef __cpp_lib_byteswap
