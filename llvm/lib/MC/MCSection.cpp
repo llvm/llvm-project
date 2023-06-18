@@ -116,6 +116,8 @@ void MCSection::flushPendingLabels() {
     MCFragment *F = new MCDataFragment();
     getFragmentList().insert(CurInsertionPoint, F);
     F->setParent(this);
+    if (CurInsertionPoint != begin())
+      F->setAtom(std::prev(CurInsertionPoint)->getAtom());
     flushPendingLabels(F, 0, Label.Subsection);
   }
 }
