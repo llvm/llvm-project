@@ -10,7 +10,7 @@
 #define LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_PERFORMANCE_NOEXCEPTDESTRUCTORCHECK_H
 
 #include "../ClangTidyCheck.h"
-#include "../utils/ExceptionSpecAnalyzer.h"
+#include "NoexceptFunctionBaseCheck.h"
 
 namespace clang::tidy::performance {
 
@@ -20,21 +20,17 @@ namespace clang::tidy::performance {
 ///
 /// For the user-facing documentation see:
 /// https://clang.llvm.org/extra/clang-tidy/checks/performance/noexcept-destructor.html
-class NoexceptDestructorCheck : public ClangTidyCheck {
+class NoexceptDestructorCheck : public NoexceptFunctionBaseCheck {
 public:
-  NoexceptDestructorCheck(StringRef Name, ClangTidyContext *Context)
-      : ClangTidyCheck(Name, Context) {}
+  using NoexceptFunctionBaseCheck::NoexceptFunctionBaseCheck;
+
   void registerMatchers(ast_matchers::MatchFinder *Finder) override;
-  bool isLanguageVersionSupported(const LangOptions &LangOpts) const override {
-    return LangOpts.CPlusPlus11 && LangOpts.CXXExceptions;
-  }
-  void check(const ast_matchers::MatchFinder::MatchResult &Result) override;
-  std::optional<TraversalKind> getCheckTraversalKind() const override {
-    return TK_IgnoreUnlessSpelledInSource;
-  }
 
 private:
-  utils::ExceptionSpecAnalyzer SpecAnalyzer;
+  DiagnosticBuilder
+  reportMissingNoexcept(const FunctionDecl *FuncDecl) final override;
+  void reportNoexceptEvaluatedToFalse(const FunctionDecl *FuncDecl,
+                                      const Expr *NoexceptExpr) final override;
 };
 
 } // namespace clang::tidy::performance
