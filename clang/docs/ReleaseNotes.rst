@@ -226,6 +226,8 @@ Non-comprehensive list of changes in this release
   This fixes (`#58951 <https://github.com/llvm/llvm-project/issues/58951>`_).
 - Clang now supports the `NO_COLOR <https://no-color.org/>`_ environment
   variable as a way to disable color diagnostics.
+- Clang now supports ``__builtin_isfpclass``, which checks if the specified
+  floating-point value falls into any of the specified data classes.
 
 New Compiler Flags
 ------------------

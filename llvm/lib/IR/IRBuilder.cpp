@@ -1383,6 +1383,14 @@ Value *IRBuilderBase::CreatePreserveStructAccessIndex(
   return Fn;
 }
 
+Value *IRBuilderBase::createIsFPClass(Value *FPNum, unsigned Test) {
+  ConstantInt *TestV = getInt32(Test);
+  Module *M = BB->getParent()->getParent();
+  Function *FnIsFPClass =
+      Intrinsic::getDeclaration(M, Intrinsic::is_fpclass, {FPNum->getType()});
+  return CreateCall(FnIsFPClass, {FPNum, TestV});
+}
+
 CallInst *IRBuilderBase::CreateAlignmentAssumptionHelper(const DataLayout &DL,
                                                          Value *PtrValue,
                                                          Value *AlignValue,

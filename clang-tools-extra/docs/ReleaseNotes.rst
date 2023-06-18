@@ -325,6 +325,10 @@ Changes in existing checks
   <clang-tidy/checks/llvm/header-guard>` check.
   Global options of the same name should be used instead.
 
+- Fix false positive in :doc:`llvmlibc-inline-function-decl
+  <clang-tidy/checks/llvmlibc/inline-function-decl>` when using templated
+  function with separate declarations and definitions.
+
 - Improved the performance of the :doc:`misc-confusable-identifiers
   <clang-tidy/checks/misc/confusable-identifiers>` check through optimizations.
 
@@ -373,6 +377,10 @@ Changes in existing checks
   <clang-tidy/checks/modernize/use-override>` check with new
   `IgnoreTemplateInstantiations` option to optionally ignore virtual function
   overrides that are part of template instantiations.
+
+- Improved :doc:`performance-move-const-arg
+  <clang-tidy/checks/performance/move-const-arg>` check to warn when move
+  special member functions are not available.
 
 - Improved :doc:`performance-no-automatic-move
   <clang-tidy/checks/performance/no-automatic-move>`: warn on ``const &&``

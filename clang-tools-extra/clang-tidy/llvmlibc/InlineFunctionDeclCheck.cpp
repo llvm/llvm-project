@@ -8,6 +8,7 @@
 
 #include "InlineFunctionDeclCheck.h"
 #include "../utils/FileExtensionsUtils.h"
+#include "../utils/LexerUtils.h"
 #include "clang/AST/ASTContext.h"
 #include "clang/ASTMatchers/ASTMatchFinder.h"
 
@@ -16,6 +17,27 @@
 using namespace clang::ast_matchers;
 
 namespace clang::tidy::llvm_libc {
+
+namespace {
+
+const TemplateParameterList *
+getLastTemplateParameterList(const FunctionDecl *FuncDecl) {
+  const TemplateParameterList *ReturnList =
+      FuncDecl->getDescribedTemplateParams();
+
+  if (!ReturnList) {
+    const unsigned NumberOfTemplateParameterLists =
+        FuncDecl->getNumTemplateParameterLists();
+
+    if (NumberOfTemplateParameterLists > 0)
+      ReturnList = FuncDecl->getTemplateParameterList(
+          NumberOfTemplateParameterLists - 1);
+  }
+
+  return ReturnList;
+}
+
+} // namespace
 
 InlineFunctionDeclCheck::InlineFunctionDeclCheck(StringRef Name,
                                                  ClangTidyContext *Context)
@@ -34,16 +56,28 @@ void InlineFunctionDeclCheck::check(const MatchFinder::MatchResult &Result) {
     return;
 
   SourceLocation SrcBegin = FuncDecl->getBeginLoc();
+
+  // If we have a template parameter list, we need to skip that because the
+  // LIBC_INLINE macro must be placed after that.
+  if (const TemplateParameterList *TemplateParams =
+          getLastTemplateParameterList(FuncDecl)) {
+    SrcBegin = TemplateParams->getRAngleLoc();
+    std::optional<Token> NextToken =
+        utils::lexer::findNextTokenSkippingComments(
+            SrcBegin, *Result.SourceManager, Result.Context->getLangOpts());
+    if (NextToken)
+      SrcBegin = NextToken->getLocation();
+  }
+
   // Consider functions only in header files.
   if (!utils::isSpellingLocInHeaderFile(SrcBegin, *Result.SourceManager,
                                         HeaderFileExtensions))
     return;
 
   // Ignore lambda functions as they are internal and implicit.
-  if (const auto *MethodDecl = dyn_cast<CXXMethodDecl>(FuncDecl)) {
+  if (const auto *MethodDecl = dyn_cast<CXXMethodDecl>(FuncDecl))
     if (MethodDecl->getParent()->isLambda())
       return;
-  }
 
   // Check if decl starts with LIBC_INLINE
   auto Loc = FullSourceLoc(Result.SourceManager->getFileLoc(SrcBegin),
