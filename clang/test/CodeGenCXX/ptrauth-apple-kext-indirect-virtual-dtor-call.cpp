@@ -1,6 +1,6 @@
-// RUN: %clang_cc1 -no-opaque-pointers -triple arm64-apple-ios -std=c++98 -fptrauth-calls -fapple-kext -fno-rtti -disable-O0-optnone -emit-llvm -o - %s | FileCheck %s
+// RUN: %clang_cc1 -triple arm64-apple-ios -std=c++98 -fptrauth-calls -fapple-kext -fno-rtti -disable-O0-optnone -emit-llvm -o - %s | FileCheck %s
 
-// CHECK: @_ZTV5TemplIiE = internal unnamed_addr constant { [7 x i8*] } { [7 x i8*] [i8* null, i8* null, i8* bitcast ({ i8*, i32, i64, i64 }* @_ZN5TemplIiED1Ev.ptrauth to i8*), i8* bitcast ({ i8*, i32, i64, i64 }* @_ZN5TemplIiED0Ev.ptrauth to i8*), i8* bitcast ({ i8*, i32, i64, i64 }* @_ZN5TemplIiE1fEv.ptrauth to i8*), i8* bitcast ({ i8*, i32, i64, i64 }* @_ZN5TemplIiE1gEv.ptrauth to i8*), i8* null] }
+// CHECK: @_ZTV5TemplIiE = internal unnamed_addr constant { [7 x ptr] } { [7 x ptr] [ptr null, ptr null, ptr @_ZN5TemplIiED1Ev.ptrauth, ptr @_ZN5TemplIiED0Ev.ptrauth, ptr @_ZN5TemplIiE1fEv.ptrauth, ptr @_ZN5TemplIiE1gEv.ptrauth, ptr null] }
 
 struct B1 {
   virtual ~B1();
@@ -12,13 +12,13 @@ void DELETE(B1 *pb1) {
   pb1->B1::~B1();
 }
 // CHECK-LABEL: define void @_ZN2B1D0Ev
-// CHECK: [[T1:%.*]] = load %struct.B1* (%struct.B1*)*, %struct.B1* (%struct.B1*)** getelementptr inbounds (%struct.B1* (%struct.B1*)*, %struct.B1* (%struct.B1*)** bitcast ({ [5 x i8*] }* @_ZTV2B1 to %struct.B1* (%struct.B1*)**), i64 2)
-// CHECK-NEXT: [[B1:%.*]] = call i64 @llvm.ptrauth.blend(i64 ptrtoint (%struct.B1* (%struct.B1*)** getelementptr inbounds (%struct.B1* (%struct.B1*)*, %struct.B1* (%struct.B1*)** bitcast ({ [5 x i8*] }* @_ZTV2B1 to %struct.B1* (%struct.B1*)**), i64 2) to i64), i64 14635)
-// CHECK-NEXT: call noundef %struct.B1* [[T1]](%struct.B1* noundef nonnull align 8 dereferenceable(8) [[T2:%.*]]) [ "ptrauth"(i32 0, i64 [[B1]]) ]
+// CHECK: [[T1:%.*]] = load ptr, ptr getelementptr inbounds (ptr, ptr @_ZTV2B1, i64 2)
+// CHECK-NEXT: [[B1:%.*]] = call i64 @llvm.ptrauth.blend(i64 ptrtoint (ptr getelementptr inbounds (ptr, ptr @_ZTV2B1, i64 2) to i64), i64 14635)
+// CHECK-NEXT: call noundef ptr [[T1]](ptr noundef nonnull align 8 dereferenceable(8) [[T2:%.*]]) [ "ptrauth"(i32 0, i64 [[B1]]) ]
 // CHECK-LABEL: define void @_Z6DELETEP2B1
-// CHECK: [[T3:%.*]] = load %struct.B1* (%struct.B1*)*, %struct.B1* (%struct.B1*)** getelementptr inbounds (%struct.B1* (%struct.B1*)*, %struct.B1* (%struct.B1*)** bitcast ({ [5 x i8*] }* @_ZTV2B1 to %struct.B1* (%struct.B1*)**), i64 2)
-// CHECK-NEXT: [[B3:%.*]] = call i64 @llvm.ptrauth.blend(i64 ptrtoint (%struct.B1* (%struct.B1*)** getelementptr inbounds (%struct.B1* (%struct.B1*)*, %struct.B1* (%struct.B1*)** bitcast ({ [5 x i8*] }* @_ZTV2B1 to %struct.B1* (%struct.B1*)**), i64 2) to i64), i64 14635)
-// CHECK-NEXT:  call noundef %struct.B1* [[T3]](%struct.B1* noundef nonnull align 8 dereferenceable(8) [[T4:%.*]]) [ "ptrauth"(i32 0, i64 [[B3]])
+// CHECK: [[T3:%.*]] = load ptr, ptr getelementptr inbounds (ptr, ptr @_ZTV2B1, i64 2)
+// CHECK-NEXT: [[B3:%.*]] = call i64 @llvm.ptrauth.blend(i64 ptrtoint (ptr getelementptr inbounds (ptr, ptr @_ZTV2B1, i64 2) to i64), i64 14635)
+// CHECK-NEXT:  call noundef ptr [[T3]](ptr noundef nonnull align 8 dereferenceable(8) [[T4:%.*]]) [ "ptrauth"(i32 0, i64 [[B3]])
 
 template<class T>
 struct Templ {
@@ -44,7 +44,7 @@ void f(SubTempl<int>* t) {
   t->Templ::~Templ();
 }
 
-// CHECK: getelementptr inbounds (%struct.Templ* (%struct.Templ*)*, %struct.Templ* (%struct.Templ*)** bitcast ({ [7 x i8*] }* @_ZTV5TemplIiE to %struct.Templ* (%struct.Templ*)**), i64 2)
-// CHECK: declare void @_ZN5TemplIiED0Ev(%struct.Templ* noundef nonnull align 8 dereferenceable(8))
-// CHECK: define internal void @_ZN5TemplIiE1fEv(%struct.Templ* noundef nonnull align 8 dereferenceable(8) %this)
-// CHECK: define internal void @_ZN5TemplIiE1gEv(%struct.Templ* noundef nonnull align 8 dereferenceable(8) %this)
+// CHECK: getelementptr inbounds (ptr, ptr @_ZTV5TemplIiE, i64 2)
+// CHECK: declare void @_ZN5TemplIiED0Ev(ptr noundef nonnull align 8 dereferenceable(8))
+// CHECK: define internal void @_ZN5TemplIiE1fEv(ptr noundef nonnull align 8 dereferenceable(8) %this)
+// CHECK: define internal void @_ZN5TemplIiE1gEv(ptr noundef nonnull align 8 dereferenceable(8) %this)
