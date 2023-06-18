@@ -978,10 +978,22 @@ def: Pat<(vselect (pnot V2I1:$Pu), V2I32:$Rs, V2I32:$Rt),
 
 
 // From LegalizeDAG.cpp: (Pu ? Pv : Pw) <=> (Pu & Pv) | (!Pu & Pw).
-def: Pat<(select I1:$Pu, I1:$Pv, I1:$Pw),
-         (C2_or (C2_and  I1:$Pu, I1:$Pv),
-                (C2_andn I1:$Pw, I1:$Pu))>;
+def: Pat<(select I1:$Pu, I1:$Ps, I1:$Pt),
+         (C4_or_andn (C2_and $Ps, $Pu), $Pt, $Pu)>;
 
+def: Pat<(vselect V2I1:$Pu, V2I1:$Ps, V2I1:$Pt),
+         (C4_or_andn (C2_and $Ps, $Pu), $Pt, $Pu)>;
+def: Pat<(vselect V4I1:$Pu, V4I1:$Ps, V4I1:$Pt),
+         (C4_or_andn (C2_and $Ps, $Pu), $Pt, $Pu)>;
+def: Pat<(vselect V8I1:$Pu, V8I1:$Ps, V8I1:$Pt),
+         (C4_or_andn (C2_and $Ps, $Pu), $Pt, $Pu)>;
+
+def: Pat<(select I1:$Pu, V2I1:$Ps, V2I1:$Pt),
+         (C2_tfrrp (C2_mux $Pu, (C2_tfrpr $Ps), (C2_tfrpr $Pt)))>;
+def: Pat<(select I1:$Pu, V4I1:$Ps, V4I1:$Pt),
+         (C2_tfrrp (C2_mux $Pu, (C2_tfrpr $Ps), (C2_tfrpr $Pt)))>;
+def: Pat<(select I1:$Pu, V8I1:$Ps, V8I1:$Pt),
+         (C2_tfrrp (C2_mux $Pu, (C2_tfrpr $Ps), (C2_tfrpr $Pt)))>;
 
 def IsPosHalf : PatLeaf<(i32 IntRegs:$a), [{
   return isPositiveHalfWord(N);
