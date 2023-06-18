@@ -17,4 +17,4 @@ void *malloc(size_t size);
 
 } // namespace __llvm_libc
 
-#endif // LLVM_LIBC_SRC_STDLIB_LDIV_H
+#endif // LLVM_LIBC_SRC_STDLIB_MALLOC_H
