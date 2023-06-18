@@ -111,8 +111,8 @@ RUN bash /tmp/install-cmake.sh --prefix=/usr --exclude-subdir --skip-license
 RUN rm /tmp/install-cmake.sh
 
 # Install a newer CMake for modules
-# TODO Remove the duplicated installation when all runtimes can be build with CMake 3.26.
-RUN wget https://github.com/Kitware/CMake/releases/download/v3.26.1/cmake-3.26.1-linux-x86_64.sh -O /tmp/install-cmake.sh
+# TODO Remove the duplicated installation when all runtimes can be build with CMake 3.27.
+RUN wget https://github.com/Kitware/CMake/releases/download/v3.27.0-rc2/cmake-3.27.0-rc2-linux-x86_64.sh -O /tmp/install-cmake.sh
 RUN bash /tmp/install-cmake.sh --prefix=/opt --exclude-subdir --skip-license
 RUN rm /tmp/install-cmake.sh
 
