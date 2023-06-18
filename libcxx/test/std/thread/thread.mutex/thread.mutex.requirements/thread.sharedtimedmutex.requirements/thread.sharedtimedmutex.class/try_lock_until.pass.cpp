@@ -24,6 +24,7 @@
 #include <thread>
 #include <cstdlib>
 #include <cassert>
+#include <chrono>
 
 #include "make_test_thread.h"
 #include "test_macros.h"
