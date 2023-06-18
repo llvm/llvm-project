@@ -651,6 +651,19 @@ Unless specified otherwise operation(±0) = ±0 and operation(±infinity) = ±in
                                              exceptions.
  T __builtin_elementwise_trunc(T x)          return the integral value nearest to but no larger in            floating point types
                                              magnitude than x
+
+  T __builtin_elementwise_nearbyint(T x)     round x to the nearest  integer value in floating point format,      floating point types
+                                             rounding according to the current rounding direction.
+                                             May not raise the inexact floating-point exception. This is
+                                             treated the same as ``__builtin_elementwise_rint`` unless
+                                             :ref:`FENV_ACCESS is enabled <floating-point-environment>`.
+
+ T __builtin_elementwise_rint(T x)           round x to the nearest  integer value in floating point format,      floating point types
+                                             rounding according to the current rounding
+                                             direction. May raise floating-point exceptions. This is treated
+                                             the same as ``__builtin_elementwise_nearbyint`` unless
+                                             :ref:`FENV_ACCESS is enabled <floating-point-environment>`.
+
  T __builtin_elementwise_canonicalize(T x)   return the platform specific canonical encoding                  floating point types
                                              of a floating-point number
  T __builtin_elementwise_copysign(T x, T y)  return the magnitude of x with the sign of y.                    floating point types
