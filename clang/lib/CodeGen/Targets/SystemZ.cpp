@@ -302,8 +302,7 @@ Address SystemZABIInfo::EmitVAArg(CodeGenFunction &CGF, Address VAListAddr,
     Address OverflowArgArea =
         Address(CGF.Builder.CreateLoad(OverflowArgAreaPtr, "overflow_arg_area"),
                 CGF.Int8Ty, TyInfo.Align);
-    Address MemAddr =
-        CGF.Builder.CreateElementBitCast(OverflowArgArea, DirectTy, "mem_addr");
+    Address MemAddr = OverflowArgArea.withElementType(DirectTy);
 
     // Update overflow_arg_area_ptr pointer
     llvm::Value *NewOverflowArgArea = CGF.Builder.CreateGEP(
@@ -360,8 +359,7 @@ Address SystemZABIInfo::EmitVAArg(CodeGenFunction &CGF, Address VAListAddr,
   Address RawRegAddr(
       CGF.Builder.CreateGEP(CGF.Int8Ty, RegSaveArea, RegOffset, "raw_reg_addr"),
       CGF.Int8Ty, PaddedSize);
-  Address RegAddr =
-      CGF.Builder.CreateElementBitCast(RawRegAddr, DirectTy, "reg_addr");
+  Address RegAddr = RawRegAddr.withElementType(DirectTy);
 
   // Update the register count
   llvm::Value *One = llvm::ConstantInt::get(IndexTy, 1);
@@ -381,8 +379,7 @@ Address SystemZABIInfo::EmitVAArg(CodeGenFunction &CGF, Address VAListAddr,
               CGF.Int8Ty, PaddedSize);
   Address RawMemAddr =
       CGF.Builder.CreateConstByteGEP(OverflowArgArea, Padding, "raw_mem_addr");
-  Address MemAddr =
-    CGF.Builder.CreateElementBitCast(RawMemAddr, DirectTy, "mem_addr");
+  Address MemAddr = RawMemAddr.withElementType(DirectTy);
 
   // Update overflow_arg_area_ptr pointer
   llvm::Value *NewOverflowArgArea =
