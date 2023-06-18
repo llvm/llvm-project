@@ -795,6 +795,18 @@ static void InitializePredefinedMacros(const TargetInfo &TI,
   Builder.defineMacro("__OPENCL_MEMORY_SCOPE_ALL_SVM_DEVICES", "3");
   Builder.defineMacro("__OPENCL_MEMORY_SCOPE_SUB_GROUP", "4");
 
+  // Define macros for floating-point data classes, used in __builtin_isfpclass.
+  Builder.defineMacro("__FPCLASS_SNAN", "0x0001");
+  Builder.defineMacro("__FPCLASS_QNAN", "0x0002");
+  Builder.defineMacro("__FPCLASS_NEGINF", "0x0004");
+  Builder.defineMacro("__FPCLASS_NEGNORMAL", "0x0008");
+  Builder.defineMacro("__FPCLASS_NEGSUBNORMAL", "0x0010");
+  Builder.defineMacro("__FPCLASS_NEGZERO", "0x0020");
+  Builder.defineMacro("__FPCLASS_POSZERO", "0x0040");
+  Builder.defineMacro("__FPCLASS_POSSUBNORMAL", "0x0080");
+  Builder.defineMacro("__FPCLASS_POSNORMAL", "0x0100");
+  Builder.defineMacro("__FPCLASS_POSINF", "0x0200");
+
   // Support for #pragma redefine_extname (Sun compatibility)
   Builder.defineMacro("__PRAGMA_REDEFINE_EXTNAME", "1");
 

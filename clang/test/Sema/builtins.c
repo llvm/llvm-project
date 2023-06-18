@@ -378,3 +378,14 @@ void test_builtin_complex(void) {
 }
 
 _Complex double builtin_complex_static_init = __builtin_complex(1.0, 2.0);
+
+int test_is_fpclass(float x, int mask) {
+  int x1 = __builtin_isfpclass(x, 1024); // expected-error {{argument value 1024 is outside the valid range [0, 1023]}}
+  int x2 = __builtin_isfpclass(3, 3); // expected-error{{floating point classification requires argument of floating point type (passed in 'int')}}
+  int x3 = __builtin_isfpclass(x, 3, x); // expected-error{{too many arguments to function call, expected 2, have 3}}
+  int x4 = __builtin_isfpclass(x); // expected-error{{too few arguments to function call, expected 2, have 1}}
+  int x5 = __builtin_isfpclass(x, mask); // expected-error{{argument to '__builtin_isfpclass' must be a constant integer}}
+  int x6 = __builtin_isfpclass(x, -1); // expected-error{{argument value -1 is outside the valid range [0, 1023]}}
+  float _Complex c = x;
+  int x7 = __builtin_isfpclass(c, 3); // expected-error{{floating point classification requires argument of floating point type (passed in '_Complex float')}}
+}

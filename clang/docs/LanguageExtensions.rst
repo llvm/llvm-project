@@ -3489,6 +3489,68 @@ Query for this feature with ``__has_builtin(__builtin_add_overflow)``, etc.
 Floating point builtins
 ---------------------------------------
 
+``__builtin_isfpclass``
+-----------------------
+
+``__builtin_isfpclass`` is used to test if the specified floating-point value
+falls into one of the specified floating-point classes.
+
+**Syntax**:
+
+.. code-block:: c++
+
+    int __builtin_isfpclass(fp_type expr, int mask)
+
+``fp_type`` is a floating-point type supported by the target. ``mask`` is an
+integer constant expression, where each bit represents floating-point class to
+test. The function returns boolean value.
+
+**Example of use**:
+
+.. code-block:: c++
+
+  if (__builtin_isfpclass(x, 448)) {
+     // `x` is positive finite value
+	 ...
+  }
+
+**Description**:
+
+The ``__builtin_isfpclass()`` builtin is a generalization of functions ``isnan``,
+``isinf``, ``isfinite`` and some others defined by the C standard. It tests if
+the floating-point value, specified by the first argument, falls into any of data
+classes, specified by the second argument. The later is a bitmask, in which each
+data class is represented by a bit using the encoding:
+
+========== =================== ======================
+Mask value Data class          Macro
+========== =================== ======================
+0x0001     Signaling NaN       __FPCLASS_SNAN
+0x0002     Quiet NaN           __FPCLASS_QNAN
+0x0004     Negative infinity   __FPCLASS_NEGINF
+0x0008     Negative normal     __FPCLASS_NEGNORMAL
+0x0010     Negative subnormal  __FPCLASS_NEGSUBNORMAL
+0x0020     Negative zero       __FPCLASS_NEGZERO
+0x0040     Positive zero       __FPCLASS_POSZERO
+0x0080     Positive subnormal  __FPCLASS_POSSUBNORMAL
+0x0100     Positive normal     __FPCLASS_POSNORMAL
+0x0200     Positive infinity   __FPCLASS_POSINF
+
+For convenience preprocessor defines macros for these values. The function
+returns 1 if ``expr`` falls into one of the specified data classes, 0 otherwise.
+
+In the example above the mask value 448 (0x1C0) contains the bits selecting
+positive zero, positive subnormal and positive normal classes.
+``__builtin_isfpclass(x, 448)`` would return true only if ``x`` if of any of
+these data classes. Using suitable mask value, the function can implement any of
+the standard classification functions, for example, ``__builtin_isfpclass(x, 3)``
+is identical to ``isnan``,``__builtin_isfpclass(x, 504)`` - to ``isfinite``
+and so on.
+
+This function never raises floating-point exceptions and does not canonicalize
+its input. The floating-point argument is not promoted, its data class is
+determined based on its representation in its actual semantic type.
+
 ``__builtin_canonicalize``
 --------------------------
 
