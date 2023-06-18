@@ -5999,12 +5999,10 @@ uint64_t RewriteInstance::getFileOffsetForAddress(uint64_t Address) const {
 }
 
 bool RewriteInstance::willOverwriteSection(StringRef SectionName) {
-  for (const char *const &OverwriteName : SectionsToOverwrite)
-    if (SectionName == OverwriteName)
-      return true;
-  for (std::string &OverwriteName : DebugSectionsToOverwrite)
-    if (SectionName == OverwriteName)
-      return true;
+  if (llvm::is_contained(SectionsToOverwrite, SectionName))
+    return true;
+  if (llvm::is_contained(DebugSectionsToOverwrite, SectionName))
+    return true;
 
   ErrorOr<BinarySection &> Section = BC->getUniqueSectionByName(SectionName);
   return Section && Section->isAllocatable() && Section->isFinalized();
