@@ -290,12 +290,8 @@ public:
     assert(!RD->isExternallyVisible() && "RD must not be visible!");
     assert(RD->getLambdaManglingNumber() == 0 &&
            "RD must not have a mangling number!");
-    llvm::DenseMap<const CXXRecordDecl *, unsigned>::iterator Result =
-        LambdaIds.find(RD);
     // The lambda should exist, but return 0 in case it doesn't.
-    if (Result == LambdaIds.end())
-      return 0;
-    return Result->second;
+    return LambdaIds.lookup(RD);
   }
 
   /// Return a character sequence that is (somewhat) unique to the TU suitable

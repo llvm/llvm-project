@@ -107,7 +107,7 @@ WebAssemblyDebugValueManager::getSinkableDebugValues(
   SmallDenseMap<DebugVariable, SmallVector<MachineInstr *, 2>>
       SeenDbgVarToDbgValues;
   for (auto *DV : DbgValuesInBetween) {
-    if (std::find(DbgValues.begin(), DbgValues.end(), DV) == DbgValues.end()) {
+    if (!llvm::is_contained(DbgValues, DV)) {
       DebugVariable Var(DV->getDebugVariable(), DV->getDebugExpression(),
                         DV->getDebugLoc()->getInlinedAt());
       SeenDbgVarToDbgValues[Var].push_back(DV);
@@ -220,7 +220,7 @@ bool WebAssemblyDebugValueManager::isInsertSamePlace(
   for (MachineBasicBlock::iterator MI = std::next(Def->getIterator()),
                                    ME = Insert;
        MI != ME; ++MI) {
-    if (std::find(DbgValues.begin(), DbgValues.end(), MI) == DbgValues.end()) {
+    if (!llvm::is_contained(DbgValues, MI)) {
       return false;
     }
   }

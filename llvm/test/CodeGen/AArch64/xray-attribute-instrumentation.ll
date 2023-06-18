@@ -5,25 +5,13 @@ define i32 @foo() nounwind noinline uwtable "function-instrument"="xray-always" 
 ; CHECK-LABEL: foo:
 ; CHECK-LABEL: Lxray_sled_0:
 ; CHECK-NEXT:  b  #32
-; CHECK-NEXT:  nop
-; CHECK-NEXT:  nop
-; CHECK-NEXT:  nop
-; CHECK-NEXT:  nop
-; CHECK-NEXT:  nop
-; CHECK-NEXT:  nop
-; CHECK-NEXT:  nop
-; CHECK-LABEL: Ltmp0:
+; CHECK-COUNT-7:  nop
+; CHECK-NEXT:  Ltmp[[#]]:
   ret i32 0
 ; CHECK-LABEL: Lxray_sled_1:
 ; CHECK-NEXT:  b  #32
-; CHECK-NEXT:  nop
-; CHECK-NEXT:  nop
-; CHECK-NEXT:  nop
-; CHECK-NEXT:  nop
-; CHECK-NEXT:  nop
-; CHECK-NEXT:  nop
-; CHECK-NEXT:  nop
-; CHECK-LABEL: Ltmp1:
+; CHECK-COUNT-7:  nop
+; CHECK-NEXT:  Ltmp[[#]]:
 ; CHECK-NEXT:  ret
 }
 
@@ -43,25 +31,13 @@ define i32 @bar() nounwind noinline uwtable "function-instrument"="xray-never" "
 ; CHECK-LABEL: bar:
 ; CHECK-LABEL: Lxray_sled_2:
 ; CHECK-NEXT:  b  #32
-; CHECK-NEXT:  nop
-; CHECK-NEXT:  nop
-; CHECK-NEXT:  nop
-; CHECK-NEXT:  nop
-; CHECK-NEXT:  nop
-; CHECK-NEXT:  nop
-; CHECK-NEXT:  nop
-; CHECK-LABEL: Ltmp4:
+; CHECK-COUNT-7:  nop
+; CHECK-NEXT:  Ltmp[[#]]:
   ret i32 0
 ; CHECK-LABEL: Lxray_sled_3:
 ; CHECK-NEXT:  b  #32
-; CHECK-NEXT:  nop
-; CHECK-NEXT:  nop
-; CHECK-NEXT:  nop
-; CHECK-NEXT:  nop
-; CHECK-NEXT:  nop
-; CHECK-NEXT:  nop
-; CHECK-NEXT:  nop
-; CHECK-LABEL: Ltmp5:
+; CHECK-COUNT-7:  nop
+; CHECK-NEXT:  Ltmp[[#]]:
 ; CHECK-NEXT:  ret
 }
 
@@ -81,25 +57,13 @@ define i32 @instrumented() nounwind noinline uwtable "xray-instruction-threshold
 ; CHECK-LABEL: instrumented:
 ; CHECK-LABEL: Lxray_sled_4:
 ; CHECK-NEXT:  b  #32
-; CHECK-NEXT:  nop
-; CHECK-NEXT:  nop
-; CHECK-NEXT:  nop
-; CHECK-NEXT:  nop
-; CHECK-NEXT:  nop
-; CHECK-NEXT:  nop
-; CHECK-NEXT:  nop
-; CHECK-LABEL: Ltmp8:
+; CHECK-COUNT-7:  nop
+; CHECK-NEXT:  Ltmp[[#]]:
   ret i32 0
 ; CHECK-LABEL: Lxray_sled_5:
 ; CHECK-NEXT:  b  #32
-; CHECK-NEXT:  nop
-; CHECK-NEXT:  nop
-; CHECK-NEXT:  nop
-; CHECK-NEXT:  nop
-; CHECK-NEXT:  nop
-; CHECK-NEXT:  nop
-; CHECK-NEXT:  nop
-; CHECK-LABEL: Ltmp9:
+; CHECK-COUNT-7:  nop
+; CHECK-NEXT:  Ltmp[[#]]:
 ; CHECK-NEXT:  ret
 }
 
