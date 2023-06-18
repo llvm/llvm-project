@@ -236,7 +236,7 @@ Address HexagonABIInfo::EmitVAArgForHexagon(CodeGenFunction &CGF,
   // FIXME: Need to handle alignment
   llvm::Type *BP = CGF.Int8PtrTy;
   CGBuilderTy &Builder = CGF.Builder;
-  Address VAListAddrAsBPP = Builder.CreateElementBitCast(VAListAddr, BP, "ap");
+  Address VAListAddrAsBPP = VAListAddr.withElementType(BP);
   llvm::Value *Addr = Builder.CreateLoad(VAListAddrAsBPP, "ap.cur");
   // Handle address alignment for type alignment > 32 bits
   uint64_t TyAlign = CGF.getContext().getTypeAlign(Ty) / 8;
