@@ -12155,6 +12155,16 @@ bool IntExprEvaluator::VisitBuiltinCallExpr(const CallExpr *E,
            Success(Val.isNormal() ? 1 : 0, E);
   }
 
+  case Builtin::BI__builtin_isfpclass: {
+    APSInt MaskVal;
+    if (!EvaluateInteger(E->getArg(1), MaskVal, Info))
+      return false;
+    unsigned Test = static_cast<llvm::FPClassTest>(MaskVal.getZExtValue());
+    APFloat Val(0.0);
+    return EvaluateFloat(E->getArg(0), Val, Info) &&
+           Success((Val.classify() & Test) ? 1 : 0, E);
+  }
+
   case Builtin::BI__builtin_parity:
   case Builtin::BI__builtin_parityl:
   case Builtin::BI__builtin_parityll: {

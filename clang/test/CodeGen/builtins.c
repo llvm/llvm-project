@@ -63,6 +63,7 @@ int main(void) {
   P(isinf, (1.));
   P(isinf_sign, (1.));
   P(isnan, (1.));
+  P(isfpclass, (1., 1));
 
   // Bitwise & Numeric Functions
 
