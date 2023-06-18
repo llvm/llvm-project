@@ -727,8 +727,8 @@ static bool tryEmitARCCopyWeakInit(CodeGenFunction &CGF,
       // Handle a formal type change to avoid asserting.
       auto srcAddr = srcLV.getAddress(CGF);
       if (needsCast) {
-        srcAddr = CGF.Builder.CreateElementBitCast(
-            srcAddr, destLV.getAddress(CGF).getElementType());
+        srcAddr =
+            srcAddr.withElementType(destLV.getAddress(CGF).getElementType());
       }
 
       // If it was an l-value, use objc_copyWeak.
@@ -1173,7 +1173,7 @@ static Address createUnnamedGlobalForMemcpyFrom(CodeGenModule &CGM,
                                                 llvm::Constant *Constant,
                                                 CharUnits Align) {
   Address SrcPtr = CGM.createUnnamedGlobalFrom(D, Constant, Align);
-  return Builder.CreateElementBitCast(SrcPtr, CGM.Int8Ty);
+  return SrcPtr.withElementType(CGM.Int8Ty);
 }
 
 static void emitStoresForConstant(CodeGenModule &CGM, const VarDecl &D,
@@ -1207,7 +1207,7 @@ static void emitStoresForConstant(CodeGenModule &CGM, const VarDecl &D,
     bool valueAlreadyCorrect =
         constant->isNullValue() || isa<llvm::UndefValue>(constant);
     if (!valueAlreadyCorrect) {
-      Loc = Builder.CreateElementBitCast(Loc, Ty);
+      Loc = Loc.withElementType(Ty);
       emitStoresForInitAfterBZero(CGM, constant, Loc, isVolatile, Builder,
                                   IsAutoInit);
     }
@@ -1790,7 +1790,7 @@ void CodeGenFunction::emitZeroOrPatternForAutoVarInit(QualType type,
       SizeVal = Builder.CreateNUWMul(SizeVal, CGM.getSize(EltSize));
     llvm::Value *BaseSizeInChars =
         llvm::ConstantInt::get(IntPtrTy, EltSize.getQuantity());
-    Address Begin = Builder.CreateElementBitCast(Loc, Int8Ty, "vla.begin");
+    Address Begin = Loc.withElementType(Int8Ty);
     llvm::Value *End = Builder.CreateInBoundsGEP(
         Begin.getElementType(), Begin.getPointer(), SizeVal, "vla.end");
     llvm::BasicBlock *OriginBB = Builder.GetInsertBlock();
@@ -1921,7 +1921,7 @@ void CodeGenFunction::EmitAutoVarInit(const AutoVarEmission &emission) {
     return EmitStoreThroughLValue(RValue::get(constant), lv, true);
   }
 
-  emitStoresForConstant(CGM, D, Builder.CreateElementBitCast(Loc, CGM.Int8Ty),
+  emitStoresForConstant(CGM, D, Loc.withElementType(CGM.Int8Ty),
                         type.isVolatileQualified(), Builder, constant,
                         /*IsAutoInit=*/false);
 }
@@ -2482,10 +2482,8 @@ void CodeGenFunction::EmitParmDecl(const VarDecl &D, ParamValue Arg,
 
   // If we already have a pointer to the argument, reuse the input pointer.
   if (Arg.isIndirect()) {
-    // If we have a prettier pointer type at this point, bitcast to that.
     DeclPtr = Arg.getIndirectAddress();
-    DeclPtr = Builder.CreateElementBitCast(DeclPtr, ConvertTypeForMem(Ty),
-                                           D.getName());
+    DeclPtr = DeclPtr.withElementType(ConvertTypeForMem(Ty));
     // Indirect argument is in alloca address space, which may be different
     // from the default address space.
     auto AllocaAS = CGM.getASTAllocaAddressSpace();

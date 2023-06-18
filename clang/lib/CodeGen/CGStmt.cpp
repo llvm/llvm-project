@@ -2193,9 +2193,9 @@ std::pair<llvm::Value*, llvm::Type *> CodeGenFunction::EmitAsmInputLValue(
         getTargetHooks().isScalarizableAsmOperand(*this, Ty)) {
       Ty = llvm::IntegerType::get(getLLVMContext(), Size);
 
-      return {Builder.CreateLoad(Builder.CreateElementBitCast(
-                  InputValue.getAddress(*this), Ty)),
-              nullptr};
+      return {
+          Builder.CreateLoad(InputValue.getAddress(*this).withElementType(Ty)),
+          nullptr};
     }
   }
 
@@ -2395,8 +2395,7 @@ EmitAsmStores(CodeGenFunction &CGF, const AsmStmt &S,
     // ResultTypeRequiresCast.size() elements of RegResults.
     if ((i < ResultTypeRequiresCast.size()) && ResultTypeRequiresCast[i]) {
       unsigned Size = CGF.getContext().getTypeSize(ResultRegQualTys[i]);
-      Address A =
-          Builder.CreateElementBitCast(Dest.getAddress(CGF), ResultRegTypes[i]);
+      Address A = Dest.getAddress(CGF).withElementType(ResultRegTypes[i]);
       if (CGF.getTargetHooks().isScalarizableAsmOperand(CGF, TruncTy)) {
         Builder.CreateStore(Tmp, A);
         continue;
@@ -2576,8 +2575,7 @@ void CodeGenFunction::EmitAsmStmt(const AsmStmt &S) {
       // Otherwise there will be a mis-match if the matrix is also an
       // input-argument which is represented as vector.
       if (isa<MatrixType>(OutExpr->getType().getCanonicalType()))
-        DestAddr = Builder.CreateElementBitCast(
-            DestAddr, ConvertType(OutExpr->getType()));
+        DestAddr = DestAddr.withElementType(ConvertType(OutExpr->getType()));
 
       ArgTypes.push_back(DestAddr.getType());
       ArgElemTypes.push_back(DestAddr.getElementType());
