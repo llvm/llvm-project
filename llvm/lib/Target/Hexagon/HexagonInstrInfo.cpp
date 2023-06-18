@@ -2219,15 +2219,11 @@ bool HexagonInstrInfo::isDependent(const MachineInstr &ProdMI,
       if (RegA == RegB)
         return true;
 
-      if (RegA.isPhysical())
-        for (MCPhysReg SubReg : HRI.subregs(RegA))
-          if (RegB == SubReg)
-            return true;
+      if (RegA.isPhysical() && llvm::is_contained(HRI.subregs(RegA), RegB))
+        return true;
 
-      if (RegB.isPhysical())
-        for (MCPhysReg SubReg : HRI.subregs(RegB))
-          if (RegA == SubReg)
-            return true;
+      if (RegB.isPhysical() && llvm::is_contained(HRI.subregs(RegB), RegA))
+        return true;
     }
 
   return false;

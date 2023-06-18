@@ -121,16 +121,16 @@ Section,Description,Dependencies,Assignee,Complete
 | `[istreambuf.iterator.ops] <https://wg21.link/istreambuf.iterator.ops>`_",| remove ops `istreambuf_iterator <https://reviews.llvm.org/D119620>`_,None,Konstantin Varlamov,|Complete|
 - `5.9 Clause 24: Ranges library <https://wg21.link/p1614r2#clause-24-ranges-library>`_,,,,
 | `[range.iota.iterator] <https://wg21.link/range.iota.iterator>`_,| `ranges::iota_view::iterator <https://reviews.llvm.org/D110774>`_,[concepts.cmp],Arthur O'Dwyer,|Complete|
-| `[range.iota.sentinel] <https://wg21.link/range.iota.sentinel>`_,| remove ops `iota_view::sentinel`,None,Unassigned,|Not Started|
-| `[range.filter.iterator] <https://wg21.link/range.filter.iterator>`_,| remove ops `filter_view::iterator`,None,Unassigned,|Not Started|
-| `[range.filter.sentinel] <https://wg21.link/range.filter.sentinel>`_,| remove ops `filter_view::sentinel`,None,Unassigned,|Not Started|
+| `[range.iota.sentinel] <https://wg21.link/range.iota.sentinel>`_,| remove ops `iota_view::sentinel <https://reviews.llvm.org/D107396>`_,None,Zoe Carver,|Complete|
+| `[range.filter.iterator] <https://wg21.link/range.filter.iterator>`_,| remove ops `filter_view::iterator <https://reviews.llvm.org/D109086>`_,None,Louis Dionne,|Complete|
+| `[range.filter.sentinel] <https://wg21.link/range.filter.sentinel>`_,| remove ops `filter_view::sentinel <https://reviews.llvm.org/D109086>`_,None,Louis Dionne,|Complete|
 | `[range.transform.iterator] <https://wg21.link/range.transform.iterator>`_,| `ranges::transform_view::iterator <https://reviews.llvm.org/D110774>`_,[concepts.cmp],Arthur O'Dwyer,|Complete|
-| `[range.transform.sentinel] <https://wg21.link/range.transform.sentinel>`_,| remove ops `transform_view::sentinel`,None,Unassigned,|Not Started|
-| `[range.take.sentinel] <https://wg21.link/range.take.sentinel>`_,| remove ops `take_view::sentinel`,None,Unassigned,|Not Started|
-| `[range.join.iterator] <https://wg21.link/range.join.iterator>`_,| remove ops `join_view::iterator`,None,Unassigned,|Not Started|
-| `[range.join.sentinel] <https://wg21.link/range.join.sentinel>`_,| remove ops `join_view::sentinel`,None,Unassigned,|Not Started|
-| `[range.split.outer] <https://wg21.link/range.split.outer>`_,| remove ops `split_view::outer_iterator`,None,Unassigned,|Not Started|
-| `[range.split.inner] <https://wg21.link/range.split.inner>`_,| remove ops `split_view::inner_iterator`,None,Unassigned,|Not Started|
+| `[range.transform.sentinel] <https://wg21.link/range.transform.sentinel>`_,| remove ops `transform_view::sentinel <https://reviews.llvm.org/D103056>`_,None,Zoe Carver,|Complete|
+| `[range.take.sentinel] <https://wg21.link/range.take.sentinel>`_,| remove ops `take_view::sentinel <https://reviews.llvm.org/D123600>`_,None,Konstantin Varlamov,|Complete|
+| `[range.join.iterator] <https://wg21.link/range.join.iterator>`_,| remove ops `join_view::iterator <https://reviews.llvm.org/D107671>`_,None,Zoe Carver,|Complete|
+| `[range.join.sentinel] <https://wg21.link/range.join.sentinel>`_,| remove ops `join_view::sentinel <https://reviews.llvm.org/D107671>`_,None,Zoe Carver,|Complete|
+| `[range.split.outer] <https://wg21.link/range.split.outer>`_,| remove ops `split_view::outer_iterator <https://reviews.llvm.org/D142063>`_,None,Hui Xie,|Complete|
+| `[range.split.inner] <https://wg21.link/range.split.inner>`_,| remove ops `split_view::inner_iterator <https://reviews.llvm.org/D142063>`_,None,Hui Xie,|Complete|
 - `5.10 Clause 25: Algorithms library <https://wg21.link/p1614r2#clause-25-algorithms-library>`_,,,,
 "| `[algorithm.syn] <https://wg21.link/algorithm.syn>`_
 | `[alg.three.way] <https://wg21.link/alg.three.way>`_",| `lexicographical_compare_three_way <https://reviews.llvm.org/D131395>`_,[comparisons.three.way],Adrian Vogelsgesang,|Complete|
