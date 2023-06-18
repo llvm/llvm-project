@@ -1659,10 +1659,7 @@ void CXXRecordDecl::setLambdaNumbering(LambdaNumbering Numbering) {
 
 unsigned CXXRecordDecl::getDeviceLambdaManglingNumber() const {
   assert(isLambda() && "Not a lambda closure type!");
-  auto I = getASTContext().DeviceLambdaManglingNumbers.find(this);
-  if (I != getASTContext().DeviceLambdaManglingNumbers.end())
-    return I->second;
-  return 0;
+  return getASTContext().DeviceLambdaManglingNumbers.lookup(this);
 }
 
 static CanQualType GetConversionType(ASTContext &Context, NamedDecl *Conv) {
