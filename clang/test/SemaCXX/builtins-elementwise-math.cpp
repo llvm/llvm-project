@@ -108,3 +108,17 @@ void test_builtin_elementwise_log2() {
   static_assert(!is_const<decltype(__builtin_elementwise_log2(a))>::value);
   static_assert(!is_const<decltype(__builtin_elementwise_log2(b))>::value);
 }
+
+void test_builtin_elementwise_rint() {
+  const float a = 42.5;
+  float b = 42.3;
+  static_assert(!is_const<decltype(__builtin_elementwise_rint(a))>::value);
+  static_assert(!is_const<decltype(__builtin_elementwise_rint(b))>::value);
+}
+
+void test_builtin_elementwise_nearbyint() {
+  const float a = 42.5;
+  float b = 42.3;
+  static_assert(!is_const<decltype(__builtin_elementwise_nearbyint(a))>::value);
+  static_assert(!is_const<decltype(__builtin_elementwise_nearbyint(b))>::value);
+}
