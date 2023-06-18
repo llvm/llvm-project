@@ -301,6 +301,10 @@ GCNTTIImpl::GCNTTIImpl(const AMDGPUTargetMachine *TM, const Function &F)
   HasFP64FP16Denormals = Mode.allFP64FP16Denormals();
 }
 
+bool GCNTTIImpl::hasBranchDivergence(const Function *F) const {
+  return true;
+}
+
 unsigned GCNTTIImpl::getNumberOfRegisters(unsigned RCID) const {
   // NB: RCID is not an RCID. In fact it is 0 or 1 for scalar or vector
   // registers. See getRegisterClassForType for the implementation.

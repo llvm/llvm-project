@@ -25,10 +25,12 @@ extern template class GenericUniformityInfo<MachineSSAContext>;
 using MachineUniformityInfo = GenericUniformityInfo<MachineSSAContext>;
 
 /// \brief Compute uniformity information for a Machine IR function.
-MachineUniformityInfo
-computeMachineUniformityInfo(MachineFunction &F,
-                             const MachineCycleInfo &cycleInfo,
-                             const MachineDomTree &domTree);
+///
+/// If \p HasBranchDivergence is false, produces a dummy result which assumes
+/// everything is uniform.
+MachineUniformityInfo computeMachineUniformityInfo(
+    MachineFunction &F, const MachineCycleInfo &cycleInfo,
+    const MachineDomTree &domTree, bool HasBranchDivergence);
 
 } // namespace llvm
 

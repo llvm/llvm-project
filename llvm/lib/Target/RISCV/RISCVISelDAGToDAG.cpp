@@ -3160,6 +3160,11 @@ static bool usesAllOnesMask(SDNode *N, unsigned MaskOpIdx) {
          IsVMSet(MaskSetter.getMachineOpcode());
 }
 
+static bool isImplicitDef(SDValue V) {
+  return V.isMachineOpcode() &&
+         V.getMachineOpcode() == TargetOpcode::IMPLICIT_DEF;
+}
+
 // Optimize masked RVV pseudo instructions with a known all-ones mask to their
 // corresponding "unmasked" pseudo versions. The mask we're interested in will
 // take the form of a V0 physical register operand, with a glued
@@ -3177,18 +3182,16 @@ bool RISCVDAGToDAGISel::doPeepholeMaskedRVV(SDNode *N) {
 
   // Retrieve the tail policy operand index, if any.
   std::optional<unsigned> TailPolicyOpIdx;
-  const RISCVInstrInfo &TII = *Subtarget->getInstrInfo();
-  const MCInstrDesc &MaskedMCID = TII.get(N->getMachineOpcode());
+  const MCInstrDesc &MaskedMCID = TII->get(N->getMachineOpcode());
 
   bool UseTUPseudo = false;
   if (RISCVII::hasVecPolicyOp(MaskedMCID.TSFlags)) {
+    TailPolicyOpIdx = getVecPolicyOpIdx(N, MaskedMCID);
     // Some operations are their own TU.
     if (I->UnmaskedTUPseudo == I->UnmaskedPseudo) {
       UseTUPseudo = true;
     } else {
-      TailPolicyOpIdx = getVecPolicyOpIdx(N, MaskedMCID);
-      if (!(N->getConstantOperandVal(*TailPolicyOpIdx) &
-            RISCVII::TAIL_AGNOSTIC)) {
+      if (!isImplicitDef(N->getOperand(0))) {
         // Keep the true-masked instruction when there is no unmasked TU
         // instruction
         if (I->UnmaskedTUPseudo == I->MaskedPseudo)
@@ -3199,11 +3202,11 @@ bool RISCVDAGToDAGISel::doPeepholeMaskedRVV(SDNode *N) {
   }
 
   unsigned Opc = UseTUPseudo ? I->UnmaskedTUPseudo : I->UnmaskedPseudo;
+  const MCInstrDesc &MCID = TII->get(Opc);
 
   // If this instruction is tail agnostic, the unmasked instruction should not
   // have a tied destination.
 #ifndef NDEBUG
-  const MCInstrDesc &MCID = TII.get(Opc);
   bool HasTiedDest = RISCVII::isFirstDefTiedToFirstUse(MCID);
   assert((UseTUPseudo == HasTiedDest) && "Unexpected pseudo to transform to");
 #endif
@@ -3211,9 +3214,11 @@ bool RISCVDAGToDAGISel::doPeepholeMaskedRVV(SDNode *N) {
   SmallVector<SDValue, 8> Ops;
   // Skip the merge operand at index 0 if !UseTUPseudo.
   for (unsigned I = !UseTUPseudo, E = N->getNumOperands(); I != E; I++) {
-    // Skip the mask, the policy, and the Glue.
+    // Skip the mask, the policy (if the unmasked doesn't have a policy op), and
+    // the Glue.
     SDValue Op = N->getOperand(I);
-    if (I == MaskOpIdx || I == TailPolicyOpIdx ||
+    if (I == MaskOpIdx ||
+        (I == TailPolicyOpIdx && !RISCVII::hasVecPolicyOp(MCID.TSFlags)) ||
         Op.getValueType() == MVT::Glue)
       continue;
     Ops.push_back(Op);
@@ -3229,11 +3234,6 @@ bool RISCVDAGToDAGISel::doPeepholeMaskedRVV(SDNode *N) {
   ReplaceUses(N, Result);
 
   return true;
-}
-
-static bool isImplicitDef(SDValue V) {
-  return V.isMachineOpcode() &&
-         V.getMachineOpcode() == TargetOpcode::IMPLICIT_DEF;
 }
 
 // Try to fold away VMERGE_VVM instructions. We handle these cases:

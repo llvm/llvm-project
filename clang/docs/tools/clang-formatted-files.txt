@@ -378,6 +378,8 @@ clang/lib/Basic/Targets/VE.h
 clang/lib/Basic/Targets/WebAssembly.cpp
 clang/lib/Basic/Targets/WebAssembly.h
 clang/lib/Basic/Targets/XCore.cpp
+clang/lib/CodeGen/ABIInfoImpl.cpp
+clang/lib/CodeGen/ABIInfoImpl.h
 clang/lib/CodeGen/CGCUDARuntime.cpp
 clang/lib/CodeGen/CGLoopInfo.cpp
 clang/lib/CodeGen/CGLoopInfo.h

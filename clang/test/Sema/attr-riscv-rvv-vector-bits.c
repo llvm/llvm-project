@@ -403,25 +403,25 @@ _Static_assert(sizeof(fixed_float64m8_t) == VECTOR_SIZE * 8, "");
 
 #define VECTOR_ALIGN 8
 
-_Static_assert(__alignof__(fixed_int8mf8_t) == VECTOR_ALIGN, "");
+_Static_assert(__alignof__(fixed_int8mf8_t) == (sizeof(fixed_int8mf8_t) < VECTOR_ALIGN ? sizeof(fixed_int8mf8_t) : VECTOR_ALIGN), "");
 
-_Static_assert(__alignof__(fixed_uint8mf8_t) == VECTOR_ALIGN, "");
+_Static_assert(__alignof__(fixed_uint8mf8_t) == (sizeof(fixed_uint8mf8_t) < VECTOR_ALIGN ? sizeof(fixed_int8mf8_t) : VECTOR_ALIGN), "");
 
-_Static_assert(__alignof__(fixed_int8mf4_t) == VECTOR_ALIGN, "");
-_Static_assert(__alignof__(fixed_int16mf4_t) == VECTOR_ALIGN, "");
+_Static_assert(__alignof__(fixed_int8mf4_t) == (sizeof(fixed_int8mf4_t) < VECTOR_ALIGN ? sizeof(fixed_int8mf4_t) : VECTOR_ALIGN), "");
+_Static_assert(__alignof__(fixed_int16mf4_t) == (sizeof(fixed_int16mf4_t) < VECTOR_ALIGN ? sizeof(fixed_int16mf4_t) : VECTOR_ALIGN), "");
 
-_Static_assert(__alignof__(fixed_uint8mf4_t) == VECTOR_ALIGN, "");
-_Static_assert(__alignof__(fixed_uint16mf4_t) == VECTOR_ALIGN, "");
+_Static_assert(__alignof__(fixed_uint8mf4_t) == (sizeof(fixed_uint8mf4_t) < VECTOR_ALIGN ? sizeof(fixed_uint8mf4_t) : VECTOR_ALIGN), "");
+_Static_assert(__alignof__(fixed_uint16mf4_t) == (sizeof(fixed_uint16mf4_t) < VECTOR_ALIGN ? sizeof(fixed_uint16mf4_t) : VECTOR_ALIGN), "");
 
-_Static_assert(__alignof__(fixed_int8mf2_t) == VECTOR_ALIGN, "");
-_Static_assert(__alignof__(fixed_int16mf2_t) == VECTOR_ALIGN, "");
-_Static_assert(__alignof__(fixed_int32mf2_t) == VECTOR_ALIGN, "");
+_Static_assert(__alignof__(fixed_int8mf2_t) == (sizeof(fixed_int8mf2_t) < VECTOR_ALIGN ? sizeof(fixed_int8mf2_t) : VECTOR_ALIGN), "");
+_Static_assert(__alignof__(fixed_int16mf2_t) == (sizeof(fixed_int16mf2_t) < VECTOR_ALIGN ? sizeof(fixed_int16mf2_t) : VECTOR_ALIGN), "");
+_Static_assert(__alignof__(fixed_int32mf2_t) == (sizeof(fixed_int32mf2_t) < VECTOR_ALIGN ? sizeof(fixed_int32mf2_t) : VECTOR_ALIGN), "");
 
-_Static_assert(__alignof__(fixed_uint8mf2_t) == VECTOR_ALIGN, "");
-_Static_assert(__alignof__(fixed_uint16mf2_t) == VECTOR_ALIGN, "");
-_Static_assert(__alignof__(fixed_uint32mf2_t) == VECTOR_ALIGN, "");
+_Static_assert(__alignof__(fixed_uint8mf2_t) == (sizeof(fixed_uint8mf2_t) < VECTOR_ALIGN ? sizeof(fixed_uint8mf2_t) : VECTOR_ALIGN), "");
+_Static_assert(__alignof__(fixed_uint16mf2_t) == (sizeof(fixed_uint16mf2_t) < VECTOR_ALIGN ? sizeof(fixed_uint16mf2_t) : VECTOR_ALIGN), "");
+_Static_assert(__alignof__(fixed_uint32mf2_t) == (sizeof(fixed_uint32mf2_t) < VECTOR_ALIGN ? sizeof(fixed_uint32mf2_t) : VECTOR_ALIGN), "");
 
-_Static_assert(__alignof__(fixed_float32mf2_t) == VECTOR_ALIGN, "");
+_Static_assert(__alignof__(fixed_float32mf2_t) == (sizeof(fixed_float32mf2_t) < VECTOR_ALIGN ? sizeof(fixed_float32mf2_t) : VECTOR_ALIGN), "");
 
 _Static_assert(__alignof__(fixed_int8m1_t) == VECTOR_ALIGN, "");
 _Static_assert(__alignof__(fixed_int16m1_t) == VECTOR_ALIGN, "");

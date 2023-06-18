@@ -26,6 +26,7 @@
 #include "llvm/MC/MCValue.h"
 #include "llvm/MC/TargetRegistry.h"
 #include "llvm/Support/ErrorHandling.h"
+#include "llvm/Support/MathExtras.h"
 #include "llvm/TargetParser/Triple.h"
 using namespace llvm;
 
@@ -155,7 +156,7 @@ static uint64_t adjustFixupValue(const MCFixup &Fixup, const MCValue &Target,
   default:
     llvm_unreachable("Unknown fixup kind!");
   case AArch64::fixup_aarch64_pcrel_adr_imm21:
-    if (SignedValue > 2097151 || SignedValue < -2097152)
+    if (!isInt<21>(SignedValue))
       Ctx.reportError(Fixup.getLoc(), "fixup value out of range");
     return AdrImmBits(Value & 0x1fffffULL);
   case AArch64::fixup_aarch64_pcrel_adrp_imm21:
@@ -168,8 +169,8 @@ static uint64_t adjustFixupValue(const MCFixup &Fixup, const MCValue &Target,
     return AdrImmBits((Value & 0x1fffff000ULL) >> 12);
   case AArch64::fixup_aarch64_ldr_pcrel_imm19:
   case AArch64::fixup_aarch64_pcrel_branch19:
-    // Signed 21-bit immediate
-    if (SignedValue > 2097151 || SignedValue < -2097152)
+    // Signed 19-bit immediate which gets multiplied by 4
+    if (!isInt<21>(SignedValue))
       Ctx.reportError(Fixup.getLoc(), "fixup value out of range");
     if (Value & 0x3)
       Ctx.reportError(Fixup.getLoc(), "fixup not sufficiently aligned");

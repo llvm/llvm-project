@@ -248,15 +248,13 @@ define float @select_icmp_slt_one(i32 signext %a) {
 define float @select_icmp_sgt_zero(i32 signext %a) {
 ; CHECK-LABEL: select_icmp_sgt_zero:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    sgtz a0, a0
-; CHECK-NEXT:    xori a0, a0, 1
+; CHECK-NEXT:    slti a0, a0, 1
 ; CHECK-NEXT:    fcvt.s.w fa0, a0
 ; CHECK-NEXT:    ret
 ;
 ; CHECKZFINX-LABEL: select_icmp_sgt_zero:
 ; CHECKZFINX:       # %bb.0:
-; CHECKZFINX-NEXT:    sgtz a0, a0
-; CHECKZFINX-NEXT:    xori a0, a0, 1
+; CHECKZFINX-NEXT:    slti a0, a0, 1
 ; CHECKZFINX-NEXT:    fcvt.s.w a0, a0
 ; CHECKZFINX-NEXT:    ret
   %1 = icmp sgt i32 %a, 0
