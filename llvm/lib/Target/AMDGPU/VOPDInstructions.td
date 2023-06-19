@@ -276,7 +276,7 @@ foreach Gen = [GFX1210GenD3] in {
       defvar xAsmName = getRenamed<XasVC.VOPDName, Gen>.ret;
       defvar yAsmName = getRenamed<YasVC.VOPDName, Gen>.ret;
       defvar OpName = "V_DUAL_" # !substr(x,2) # "_X_" # !substr(y,2) # "_e96" # Gen.Suffix;
-      defvar asm = xAsmName #" "# xInst.Pfl.AsmVOPDX #" :: "# yAsmName #" "# yInst.Pfl.AsmVOPDY;
+      defvar asm = xAsmName # xInst.Pfl.AsmVOPDX #" :: "# yAsmName #" "# yInst.Pfl.AsmVOPDY;
       defvar ins = !con(xInst.Pfl.InsVOPD3X, yInst.Pfl.InsVOPD3Y);
       defvar outs = (outs xInst.Pfl.DstRC:$vdstX, yInst.Pfl.DstRC:$vdstY);
       def OpName : VOPD3<outs, ins, asm, xInst, yInst, XasVC, YasVC, Gen>;
