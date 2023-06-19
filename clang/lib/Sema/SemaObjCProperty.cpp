@@ -1363,10 +1363,9 @@ Decl *Sema::ActOnPropertyImplDecl(Scope *S,
     if (!Context.hasSameType(PropertyIvarType, IvarType)) {
       if (isa<ObjCObjectPointerType>(PropertyIvarType)
           && isa<ObjCObjectPointerType>(IvarType))
-        compat =
-          Context.canAssignObjCInterfaces(
-                                  PropertyIvarType->getAs<ObjCObjectPointerType>(),
-                                  IvarType->getAs<ObjCObjectPointerType>());
+        compat = Context.canAssignObjCInterfaces(
+            PropertyIvarType->castAs<ObjCObjectPointerType>(),
+            IvarType->castAs<ObjCObjectPointerType>());
       else {
         compat = (CheckAssignmentConstraints(PropertyIvarLoc, PropertyIvarType,
                                              IvarType)
