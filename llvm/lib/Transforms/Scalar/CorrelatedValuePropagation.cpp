@@ -763,7 +763,13 @@ static bool expandUDivOrURem(BinaryOperator *Instr, const ConstantRange &XCR,
 
   IRBuilder<> B(Instr);
   Value *ExpandedOp;
-  if (IsRem) {
+  if (XCR.icmp(ICmpInst::ICMP_UGE, YCR)) {
+    // If X is between Y and 2*Y the result is known.
+    if (IsRem)
+      ExpandedOp = B.CreateNUWSub(X, Y);
+    else
+      ExpandedOp = ConstantInt::get(Instr->getType(), 1);
+  } else if (IsRem) {
     // NOTE: this transformation introduces two uses of X,
     //       but it may be undef so we must freeze it first.
     Value *FrozenX = X;
