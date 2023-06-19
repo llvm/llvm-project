@@ -68,6 +68,197 @@ LIBC_INLINE void lambda() {
   [](){};
 }
 
+namespace issue_62746 {
+
+void goodSimpleFunction();
+void badSimpleFunction();
+void badSimpleFunctionWrongLocation();
+
+LIBC_INLINE void goodSimpleFunction() {}
+
+inline void badSimpleFunction() {}
+// CHECK-MESSAGES: :[[@LINE-1]]:1: warning: 'badSimpleFunction' must be tagged with the LIBC_INLINE macro; the macro should be placed at the beginning of the declaration [llvmlibc-inline-function-decl]
+
+void LIBC_INLINE badSimpleFunctionWrongLocation() {}
+// CHECK-MESSAGES: :[[@LINE-1]]:1: warning: 'badSimpleFunctionWrongLocation' must be tagged with the LIBC_INLINE macro; the macro should be placed at the beginning of the declaration [llvmlibc-inline-function-decl]
+
+template <typename T>
+void goodTemplateFunction();
+template <typename T>
+void badTemplateFunction();
+template <typename T>
+void badTemplateFunctionWrongLocation();
+
+template <typename T> LIBC_INLINE void goodTemplateFunction() {}
+
+template <typename T> inline void badTemplateFunction() {}
+// CHECK-MESSAGES: :[[@LINE-1]]:23: warning: 'badTemplateFunction' must be tagged with the LIBC_INLINE macro; the macro should be placed at the beginning of the declaration [llvmlibc-inline-function-decl]
+
+template <typename T> void LIBC_INLINE badTemplateFunctionWrongLocation() {}
+// CHECK-MESSAGES: :[[@LINE-1]]:23: warning: 'badTemplateFunctionWrongLocation' must be tagged with the LIBC_INLINE macro; the macro should be placed at the beginning of the declaration [llvmlibc-inline-function-decl]
+
+template <typename... Ts>
+void goodVariadicFunction();
+template <typename... Ts>
+void badVariadicFunction();
+template <typename... Ts>
+void badVariadicFunctionWrongLocation();
+
+template <typename... Ts> LIBC_INLINE void goodVariadicFunction() {}
+
+template <typename... Ts> inline void badVariadicFunction() {}
+// CHECK-MESSAGES: :[[@LINE-1]]:27: warning: 'badVariadicFunction' must be tagged with the LIBC_INLINE macro; the macro should be placed at the beginning of the declaration [llvmlibc-inline-function-decl]
+
+template <typename... Ts> void LIBC_INLINE badVariadicFunctionWrongLocation() {}
+// CHECK-MESSAGES: :[[@LINE-1]]:27: warning: 'badVariadicFunctionWrongLocation' must be tagged with the LIBC_INLINE macro; the macro should be placed at the beginning of the declaration [llvmlibc-inline-function-decl]
+
+struct NoTemplate {
+  void goodNoTemplate();
+  void badNoTemplate();
+  void badNoTemplateWrongLocation();
+
+  template <typename T>
+  void goodNestedTemplate();
+  template <typename T>
+  void badNestedTemplate();
+  template <typename T>
+  void badNestedTemplateWrongLocation();
+
+  template <typename... Ts>
+  void goodVariadicTemplate();
+  template <typename... Ts>
+  void badVariadicTemplate();
+  template <typename... Ts>
+  void badVariadicTemplateWrongLocation();
+
+};
+
+LIBC_INLINE void NoTemplate::goodNoTemplate() {}
+
+inline void NoTemplate::badNoTemplate() {}
+// CHECK-MESSAGES: :[[@LINE-1]]:1: warning: 'badNoTemplate' must be tagged with the LIBC_INLINE macro; the macro should be placed at the beginning of the declaration [llvmlibc-inline-function-decl]
+
+void LIBC_INLINE NoTemplate::badNoTemplateWrongLocation() {}
+// CHECK-MESSAGES: :[[@LINE-1]]:1: warning: 'badNoTemplateWrongLocation' must be tagged with the LIBC_INLINE macro; the macro should be placed at the beginning of the declaration [llvmlibc-inline-function-decl]
+
+template <typename T> LIBC_INLINE void NoTemplate::goodNestedTemplate() {}
+
+template <typename T> inline void NoTemplate::badNestedTemplate() {}
+// CHECK-MESSAGES: :[[@LINE-1]]:23: warning: 'badNestedTemplate' must be tagged with the LIBC_INLINE macro; the macro should be placed at the beginning of the declaration [llvmlibc-inline-function-decl]
+
+template <typename T> void LIBC_INLINE NoTemplate::badNestedTemplateWrongLocation() {}
+// CHECK-MESSAGES: :[[@LINE-1]]:23: warning: 'badNestedTemplateWrongLocation' must be tagged with the LIBC_INLINE macro; the macro should be placed at the beginning of the declaration [llvmlibc-inline-function-decl]
+
+template <typename... Ts> LIBC_INLINE void NoTemplate::goodVariadicTemplate() {}
+
+template <typename... Ts> void inline NoTemplate::badVariadicTemplate() {}
+// CHECK-MESSAGES: :[[@LINE-1]]:27: warning: 'badVariadicTemplate' must be tagged with the LIBC_INLINE macro; the macro should be placed at the beginning of the declaration [llvmlibc-inline-function-decl]
+
+template <typename... Ts> void LIBC_INLINE NoTemplate::badVariadicTemplateWrongLocation() {}
+// CHECK-MESSAGES: :[[@LINE-1]]:27: warning: 'badVariadicTemplateWrongLocation' must be tagged with the LIBC_INLINE macro; the macro should be placed at the beginning of the declaration [llvmlibc-inline-function-decl]
+
+template <typename T>
+struct SimpleTemplate {
+  void goodSimpleTemplate();
+  void badSimpleTemplate();
+  void badSimpleTemplateWrongLocation();
+
+  template <typename U>
+  void goodNestedTemplate();
+  template <typename U>
+  void badNestedTemplate();
+  template <typename U>
+  void badNestedTemplateWrongLocation();
+
+  template <typename... Ts>
+  void goodNestedVariadicTemplate();
+  template <typename... Ts>
+  void badNestedVariadicTemplate();
+  template <typename... Ts>
+  void badNestedVariadicTemplateWrongLocation();
+};
+
+template <typename T> LIBC_INLINE void SimpleTemplate<T>::goodSimpleTemplate() {}
+
+template <typename T> inline void SimpleTemplate<T>::badSimpleTemplate() {}
+// CHECK-MESSAGES: :[[@LINE-1]]:23: warning: 'badSimpleTemplate' must be tagged with the LIBC_INLINE macro; the macro should be placed at the beginning of the declaration [llvmlibc-inline-function-decl]
+
+template <typename T> void LIBC_INLINE SimpleTemplate<T>::badSimpleTemplateWrongLocation() {}
+// CHECK-MESSAGES: :[[@LINE-1]]:23: warning: 'badSimpleTemplateWrongLocation' must be tagged with the LIBC_INLINE macro; the macro should be placed at the beginning of the declaration [llvmlibc-inline-function-decl]
+
+template <typename T> template <typename U> LIBC_INLINE void SimpleTemplate<T>::goodNestedTemplate() {}
+
+template <typename T> template <typename U> inline void SimpleTemplate<T>::badNestedTemplate() {}
+// CHECK-MESSAGES: :[[@LINE-1]]:45: warning: 'badNestedTemplate' must be tagged with the LIBC_INLINE macro; the macro should be placed at the beginning of the declaration [llvmlibc-inline-function-decl]
+
+template <typename T> template <typename U> void LIBC_INLINE SimpleTemplate<T>::badNestedTemplateWrongLocation() {}
+// CHECK-MESSAGES: :[[@LINE-1]]:45: warning: 'badNestedTemplateWrongLocation' must be tagged with the LIBC_INLINE macro; the macro should be placed at the beginning of the declaration [llvmlibc-inline-function-decl]
+
+template <typename T> template <typename... Ts> LIBC_INLINE void SimpleTemplate<T>::goodNestedVariadicTemplate() {}
+
+template <typename T> template <typename... Ts> inline void SimpleTemplate<T>::badNestedVariadicTemplate() {}
+// CHECK-MESSAGES: :[[@LINE-1]]:49: warning: 'badNestedVariadicTemplate' must be tagged with the LIBC_INLINE macro; the macro should be placed at the beginning of the declaration [llvmlibc-inline-function-decl]
+
+template <typename T> template <typename... Ts> void LIBC_INLINE SimpleTemplate<T>::badNestedVariadicTemplateWrongLocation() {}
+// CHECK-MESSAGES: :[[@LINE-1]]:49: warning: 'badNestedVariadicTemplateWrongLocation' must be tagged with the LIBC_INLINE macro; the macro should be placed at the beginning of the declaration [llvmlibc-inline-function-decl]
+
+template <typename... Ts>
+struct VariadicTemplate {
+  void goodVariadicTemplate();
+  void badVariadicTemplate();
+  void badVariadicTemplateWrongLocation();
+
+  template <typename U>
+  void goodNestedTemplate();
+  template <typename U>
+  void badNestedTemplate();
+  template <typename U>
+  void badNestedTemplateWrongLocation();
+
+  template <typename... Us>
+  void goodNestedVariadicTemplate();
+  template <typename... Us>
+  void badNestedVariadicTemplate();
+  template <typename... Us>
+  void badNestedVariadicTemplateWrongLocation();
+};
+
+template <typename... Ts> LIBC_INLINE void VariadicTemplate<Ts...>::goodVariadicTemplate() {}
+
+template <typename... Ts> inline void VariadicTemplate<Ts...>::badVariadicTemplate() {}
+// CHECK-MESSAGES: :[[@LINE-1]]:27: warning: 'badVariadicTemplate' must be tagged with the LIBC_INLINE macro; the macro should be placed at the beginning of the declaration [llvmlibc-inline-function-decl]
+
+template <typename... Ts> void LIBC_INLINE VariadicTemplate<Ts...>::badVariadicTemplateWrongLocation() {}
+// CHECK-MESSAGES: :[[@LINE-1]]:27: warning: 'badVariadicTemplateWrongLocation' must be tagged with the LIBC_INLINE macro; the macro should be placed at the beginning of the declaration [llvmlibc-inline-function-decl]
+
+template <typename... Ts> template <typename U> LIBC_INLINE void VariadicTemplate<Ts...>::goodNestedTemplate() {}
+
+template <typename... Ts> template <typename U> inline void VariadicTemplate<Ts...>::badNestedTemplate() {}
+// CHECK-MESSAGES: :[[@LINE-1]]:49: warning: 'badNestedTemplate' must be tagged with the LIBC_INLINE macro; the macro should be placed at the beginning of the declaration [llvmlibc-inline-function-decl]
+
+template <typename... Ts> template <typename U> void LIBC_INLINE VariadicTemplate<Ts...>::badNestedTemplateWrongLocation() {}
+// CHECK-MESSAGES: :[[@LINE-1]]:49: warning: 'badNestedTemplateWrongLocation' must be tagged with the LIBC_INLINE macro; the macro should be placed at the beginning of the declaration [llvmlibc-inline-function-decl]
+
+template <typename... Ts> template <typename... Us> LIBC_INLINE void VariadicTemplate<Ts...>::goodNestedVariadicTemplate() {}
+
+template <typename... Ts> template <typename... Us> inline void VariadicTemplate<Ts...>::badNestedVariadicTemplate() {}
+// CHECK-MESSAGES: :[[@LINE-1]]:53: warning: 'badNestedVariadicTemplate' must be tagged with the LIBC_INLINE macro; the macro should be placed at the beginning of the declaration [llvmlibc-inline-function-decl]
+
+template <typename... Ts> template <typename... Us> void LIBC_INLINE VariadicTemplate<Ts...>::badNestedVariadicTemplateWrongLocation() {}
+// CHECK-MESSAGES: :[[@LINE-1]]:53: warning: 'badNestedVariadicTemplateWrongLocation' must be tagged with the LIBC_INLINE macro; the macro should be placed at the beginning of the declaration [llvmlibc-inline-function-decl]
+
+template <typename T>
+void goodWeirdFormatting();
+template <typename T>
+void badWeirdFormatting();
+
+template <typename T>LIBC_INLINE void goodWeirdFormatting() {}
+
+template <typename T>void LIBC_INLINE badWeirdFormatting() {}
+// CHECK-MESSAGES: :[[@LINE-1]]:22: warning: 'badWeirdFormatting' must be tagged with the LIBC_INLINE macro; the macro should be placed at the beginning of the declaration [llvmlibc-inline-function-decl]
+
+} // namespace issue_62746
+
 } // namespace __llvm_libc
 
 #endif // LLVM_CLANG_TOOLS_EXTRA_TEST_CLANG_TIDY_CHECKERS_LLVMLIBC_INLINEFUNCTIONDECL_H
