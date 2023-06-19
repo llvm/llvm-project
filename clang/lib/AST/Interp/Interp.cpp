@@ -296,12 +296,10 @@ bool CheckInit(InterpState &S, CodePtr OpPC, const Pointer &Ptr) {
 
 bool CheckCallable(InterpState &S, CodePtr OpPC, const Function *F) {
 
-  if (F->isVirtual()) {
-    if (!S.getLangOpts().CPlusPlus20) {
-      const SourceLocation &Loc = S.Current->getLocation(OpPC);
-      S.CCEDiag(Loc, diag::note_constexpr_virtual_call);
-      return false;
-    }
+  if (F->isVirtual() && !S.getLangOpts().CPlusPlus20) {
+    const SourceLocation &Loc = S.Current->getLocation(OpPC);
+    S.CCEDiag(Loc, diag::note_constexpr_virtual_call);
+    return false;
   }
 
   if (!F->isConstexpr()) {
