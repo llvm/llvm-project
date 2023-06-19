@@ -222,6 +222,34 @@ Cost InstCostVisitor::estimateBranchInst(BranchInst &I) {
   return estimateBasicBlocks(WorkList, KnownConstants, Solver, BFI, TTI);
 }
 
+Constant *InstCostVisitor::visitFreezeInst(FreezeInst &I) {
+  if (isGuaranteedNotToBeUndefOrPoison(LastVisited->second))
+    return LastVisited->second;
+  return nullptr;
+}
+
+Constant *InstCostVisitor::visitCallBase(CallBase &I) {
+  Function *F = I.getCalledFunction();
+  if (!F || !canConstantFoldCallTo(&I, F))
+    return nullptr;
+
+  SmallVector<Constant *, 8> Operands;
+  Operands.reserve(I.getNumOperands());
+
+  for (unsigned Idx = 0, E = I.getNumOperands() - 1; Idx != E; ++Idx) {
+    Value *V = I.getOperand(Idx);
+    auto *C = dyn_cast<Constant>(V);
+    if (!C)
+      C = findConstantFor(V, KnownConstants);
+    if (!C)
+      return nullptr;
+    Operands.push_back(C);
+  }
+
+  auto Ops = ArrayRef(Operands.begin(), Operands.end());
+  return ConstantFoldCall(&I, F, Ops);
+}
+
 Constant *InstCostVisitor::visitLoadInst(LoadInst &I) {
   if (isa<ConstantPointerNull>(LastVisited->second))
     return nullptr;

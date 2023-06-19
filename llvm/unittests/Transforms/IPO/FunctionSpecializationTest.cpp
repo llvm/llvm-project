@@ -227,13 +227,21 @@ TEST_F(FunctionSpecializationTest, Misc) {
   const char *ModuleString = R"(
     @g = constant [2 x i32] zeroinitializer, align 4
 
-    define i32 @foo(i8 %a, i1 %cond, ptr %b) {
+    declare i32 @llvm.smax.i32(i32, i32)
+    declare i32 @bar(i32)
+
+    define i32 @foo(i8 %a, i1 %cond, ptr %b, i32 %c) {
       %cmp = icmp eq i8 %a, 10
       %ext = zext i1 %cmp to i32
       %sel = select i1 %cond, i32 %ext, i32 1
       %gep = getelementptr i32, ptr %b, i32 %sel
       %ld = load i32, ptr %gep
-      ret i32 %ld
+      %fr = freeze i32 %ld
+      %smax = call i32 @llvm.smax.i32(i32 %fr, i32 1)
+      %call = call i32 @bar(i32 %smax)
+      %fr2 = freeze i32 %c
+      %add = add i32 %call, %fr2
+      ret i32 %add
     }
   )";
 
@@ -245,6 +253,7 @@ TEST_F(FunctionSpecializationTest, Misc) {
   GlobalVariable *GV = M.getGlobalVariable("g");
   Constant *One = ConstantInt::get(IntegerType::getInt8Ty(M.getContext()), 1);
   Constant *True = ConstantInt::getTrue(M.getContext());
+  Constant *Undef = UndefValue::get(IntegerType::getInt32Ty(M.getContext()));
 
   auto BlockIter = F->front().begin();
   Instruction &Icmp = *BlockIter++;
@@ -252,6 +261,8 @@ TEST_F(FunctionSpecializationTest, Misc) {
   Instruction &Select = *BlockIter++;
   Instruction &Gep = *BlockIter++;
   Instruction &Load = *BlockIter++;
+  Instruction &Freeze = *BlockIter++;
+  Instruction &Smax = *BlockIter++;
 
   // icmp + zext
   Cost Ref = getInstCost(Icmp) + getInstCost(Zext);
@@ -265,9 +276,13 @@ TEST_F(FunctionSpecializationTest, Misc) {
   EXPECT_EQ(Bonus, Ref);
   EXPECT_TRUE(Bonus > 0);
 
-  // gep + load
-  Ref = getInstCost(Gep) + getInstCost(Load);
+  // gep + load + freeze + smax
+  Ref = getInstCost(Gep) + getInstCost(Load) + getInstCost(Freeze) +
+        getInstCost(Smax);
   Bonus = Specializer.getSpecializationBonus(F->getArg(2), GV, Visitor);
   EXPECT_EQ(Bonus, Ref);
   EXPECT_TRUE(Bonus > 0);
+
+  Bonus = Specializer.getSpecializationBonus(F->getArg(3), Undef, Visitor);
+  EXPECT_TRUE(Bonus == 0);
 }
