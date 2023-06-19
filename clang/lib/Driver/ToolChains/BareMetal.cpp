@@ -23,6 +23,8 @@
 #include "llvm/Support/VirtualFileSystem.h"
 #include "llvm/Support/raw_ostream.h"
 
+#include <sstream>
+
 using namespace llvm::opt;
 using namespace clang;
 using namespace clang::driver;
@@ -158,20 +160,26 @@ static bool isRISCVBareMetal(const llvm::Triple &Triple) {
   return Triple.getEnvironmentName() == "elf";
 }
 
-static bool findMultilibsFromYAML(const ToolChain &TC, const Driver &D,
+static void findMultilibsFromYAML(const ToolChain &TC, const Driver &D,
                                   StringRef MultilibPath, const ArgList &Args,
                                   DetectedMultilibs &Result) {
   llvm::ErrorOr<std::unique_ptr<llvm::MemoryBuffer>> MB =
       D.getVFS().getBufferForFile(MultilibPath);
   if (!MB)
-    return false;
+    return;
   Multilib::flags_list Flags = TC.getMultilibFlags(Args);
   llvm::ErrorOr<MultilibSet> ErrorOrMultilibSet =
       MultilibSet::parseYaml(*MB.get());
   if (ErrorOrMultilibSet.getError())
-    return false;
+    return;
   Result.Multilibs = ErrorOrMultilibSet.get();
-  return Result.Multilibs.select(Flags, Result.SelectedMultilibs);
+  if (Result.Multilibs.select(Flags, Result.SelectedMultilibs))
+    return;
+  D.Diag(clang::diag::err_drv_no_matching_multilib) << llvm::join(Flags, " ");
+  std::stringstream ss;
+  for (const Multilib &Multilib : Result.Multilibs)
+    ss << "\n" << llvm::join(Multilib.flags(), " ");
+  D.Diag(clang::diag::note_drv_available_multilibs) << ss.str();
 }
 
 static constexpr llvm::StringLiteral MultilibFilename = "multilib.yaml";
