@@ -87,9 +87,9 @@ struct __fn {
             class _Proj                                                               = identity,
             indirect_equivalence_relation<projected<iterator_t<_Range>, _Proj>> _Comp = ranges::equal_to>
     requires indirectly_copyable<iterator_t<_Range>, _OutIter> &&
-      (forward_iterator<iterator_t<_Range>> ||
-       (input_iterator<_OutIter> && same_as<range_value_t<_Range>, iter_value_t<_OutIter>>) ||
-       indirectly_copyable_storable<iterator_t<_Range>, _OutIter>)
+             (forward_iterator<iterator_t<_Range>> ||
+              (input_iterator<_OutIter> && same_as<range_value_t<_Range>, iter_value_t<_OutIter>>) ||
+              indirectly_copyable_storable<iterator_t<_Range>, _OutIter>)
   _LIBCPP_HIDE_FROM_ABI constexpr unique_copy_result<borrowed_iterator_t<_Range>, _OutIter>
   operator()(_Range&& __range, _OutIter __result, _Comp __comp = {}, _Proj __proj = {}) const {
     auto __ret = std::__unique_copy<_RangeAlgPolicy>(

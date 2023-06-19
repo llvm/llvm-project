@@ -12,6 +12,7 @@ declare half @llvm.vector.reduce.fmaximum.v11f16(<11 x half> %a)
 declare float @llvm.vector.reduce.fmaximum.v3f32(<3 x float> %a)
 declare fp128 @llvm.vector.reduce.fmaximum.v2f128(<2 x fp128> %a)
 declare float @llvm.vector.reduce.fmaximum.v16f32(<16 x float> %a)
+declare double @llvm.vector.reduce.fmaximum.v2f64(<2 x double> %a)
 
 define half @test_v1f16(<1 x half> %a) nounwind {
 ; CHECK-LABEL: test_v1f16:
@@ -221,4 +222,14 @@ define float @test_v16f32(<16 x float> %a) nounwind {
 ; CHECK-NEXT:    ret
   %b = call float @llvm.vector.reduce.fmaximum.v16f32(<16 x float> %a)
   ret float %b
+}
+
+define double @test_v2f64(<2 x double> %a) nounwind {
+; CHECK-LABEL: test_v2f64:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    mov d1, v0.d[1]
+; CHECK-NEXT:    fmax d0, d0, d1
+; CHECK-NEXT:    ret
+  %b = call double @llvm.vector.reduce.fmaximum.v2f64(<2 x double> %a)
+  ret double %b
 }

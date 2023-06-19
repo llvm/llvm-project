@@ -1267,6 +1267,16 @@ static void __kmp_std_print_max_tdgs(kmp_str_buf_t *buffer, char const *name,
                                      void *data) {
   __kmp_stg_print_int(buffer, name, __kmp_max_tdgs);
 } // __kmp_std_print_max_tdgs
+
+static void __kmp_stg_parse_tdg_dot(char const *name, char const *value,
+                                   void *data) {
+  __kmp_stg_parse_bool(name, value, &__kmp_tdg_dot);
+} // __kmp_stg_parse_tdg_dot
+
+static void __kmp_stg_print_tdg_dot(kmp_str_buf_t *buffer, char const *name,
+                                   void *data) {
+  __kmp_stg_print_bool(buffer, name, __kmp_tdg_dot);
+} // __kmp_stg_print_tdg_dot
 #endif
 
 static void __kmp_stg_parse_num_hidden_helper_threads(char const *name,
@@ -5624,6 +5634,7 @@ static kmp_setting_t __kmp_stg_table[] = {
 #if OMPX_TASKGRAPH
     {"KMP_MAX_TDGS", __kmp_stg_parse_max_tdgs, __kmp_std_print_max_tdgs, NULL,
      0, 0},
+    {"KMP_TDG_DOT", __kmp_stg_parse_tdg_dot, __kmp_stg_print_tdg_dot, NULL, 0, 0},
 #endif
 
 #if OMPT_SUPPORT

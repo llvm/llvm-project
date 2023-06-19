@@ -158,8 +158,7 @@ def NVGPU_MmaSyncOp : NVGPU_MmaSyncOp<"mma.sync"> {
                        AnyVector:$matrixB,
                        AnyVector:$matrixC,
                        I64ArrayAttr:$mmaShape,
-                       OptionalAttr<UnitAttr>:$tf32Enabled
-                       );
+                       OptionalAttr<UnitAttr>:$tf32Enabled);
 
   let results = (outs AnyVector:$res);
 
@@ -167,7 +166,12 @@ def NVGPU_MmaSyncOp : NVGPU_MmaSyncOp<"mma.sync"> {
     OpBuilder<(ins "Value":$matrixA,
                    "Value":$matrixB,
                    "Value":$matrixC,
-                   "ArrayAttr":$mmaShape)>
+                   "ArrayAttr":$mmaShape)>,
+    OpBuilder<(ins "Value":$matrixA,
+                   "Value":$matrixB,
+                   "Value":$matrixC,
+                   "ArrayRef<int64_t>":$mmaShape,
+                   CArg<"bool", "false">:$tf32Enabled)>
   ];
 
   let assemblyFormat = [{

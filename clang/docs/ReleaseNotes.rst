@@ -228,6 +228,10 @@ Non-comprehensive list of changes in this release
   variable as a way to disable color diagnostics.
 - Clang now supports ``__builtin_isfpclass``, which checks if the specified
   floating-point value falls into any of the specified data classes.
+- Added ``__builtin_elementwise_round`` for  builtin for floating
+  point types. This allows access to ``llvm.round`` for
+  arbitrary floating-point and vector of floating-point types.
+
 
 New Compiler Flags
 ------------------

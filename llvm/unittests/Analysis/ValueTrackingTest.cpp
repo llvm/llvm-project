@@ -1791,6 +1791,105 @@ TEST_F(ComputeKnownFPClassTest, CannotBeOrderedLessThanZero) {
           .cannotBeOrderedLessThanZero());
 }
 
+TEST_F(ComputeKnownFPClassTest, FCmpToClassTest_OrdNan) {
+  parseAssembly("define i1 @test(double %arg) {\n"
+                "  %A = fcmp ord double %arg, 0x7FF8000000000000"
+                "  %A2 = fcmp uno double %arg, 0x7FF8000000000000"
+                "  %A3 = fcmp oeq double %arg, 0x7FF8000000000000"
+                "  %A4 = fcmp ueq double %arg, 0x7FF8000000000000"
+                "  ret i1 %A\n"
+                "}\n");
+
+  auto [OrdVal, OrdClass] = fcmpToClassTest(
+      CmpInst::FCMP_ORD, *A->getFunction(), A->getOperand(0), A->getOperand(1));
+  EXPECT_EQ(A->getOperand(0), OrdVal);
+  EXPECT_EQ(fcNone, OrdClass);
+
+  auto [UnordVal, UnordClass] =
+      fcmpToClassTest(CmpInst::FCMP_UNO, *A2->getFunction(), A2->getOperand(0),
+                      A2->getOperand(1));
+  EXPECT_EQ(A2->getOperand(0), UnordVal);
+  EXPECT_EQ(fcAllFlags, UnordClass);
+
+  auto [OeqVal, OeqClass] =
+      fcmpToClassTest(CmpInst::FCMP_OEQ, *A3->getFunction(), A3->getOperand(0),
+                      A3->getOperand(1));
+  EXPECT_EQ(A3->getOperand(0), OeqVal);
+  EXPECT_EQ(fcNone, OeqClass);
+
+  auto [UeqVal, UeqClass] =
+      fcmpToClassTest(CmpInst::FCMP_UEQ, *A3->getFunction(), A3->getOperand(0),
+                      A3->getOperand(1));
+  EXPECT_EQ(A3->getOperand(0), UeqVal);
+  EXPECT_EQ(fcAllFlags, UeqClass);
+}
+
+TEST_F(ComputeKnownFPClassTest, FCmpToClassTest_NInf) {
+  parseAssembly("define i1 @test(double %arg) {\n"
+                "  %A = fcmp olt double %arg, 0xFFF0000000000000"
+                "  %A2 = fcmp uge double %arg, 0xFFF0000000000000"
+                "  %A3 = fcmp ogt double %arg, 0xFFF0000000000000"
+                "  %A4 = fcmp ule double %arg, 0xFFF0000000000000"
+                "  ret i1 %A\n"
+                "}\n");
+
+  auto [OltVal, OltClass] = fcmpToClassTest(
+      CmpInst::FCMP_OLT, *A->getFunction(), A->getOperand(0), A->getOperand(1));
+  EXPECT_EQ(A->getOperand(0), OltVal);
+  EXPECT_EQ(fcNone, OltClass);
+
+  auto [UgeVal, UgeClass] =
+      fcmpToClassTest(CmpInst::FCMP_UGE, *A2->getFunction(), A2->getOperand(0),
+                      A2->getOperand(1));
+  EXPECT_EQ(A2->getOperand(0), UgeVal);
+  EXPECT_EQ(fcAllFlags, UgeClass);
+
+  auto [OgtVal, OgtClass] =
+      fcmpToClassTest(CmpInst::FCMP_OGT, *A3->getFunction(), A3->getOperand(0),
+                      A3->getOperand(1));
+  EXPECT_EQ(nullptr, OgtVal);
+  EXPECT_EQ(fcNone, OgtClass);
+
+  auto [UleVal, UleClass] =
+      fcmpToClassTest(CmpInst::FCMP_ULE, *A4->getFunction(), A4->getOperand(0),
+                      A4->getOperand(1));
+  EXPECT_EQ(nullptr, UleVal);
+  EXPECT_EQ(fcNone, UleClass);
+}
+
+TEST_F(ComputeKnownFPClassTest, FCmpToClassTest_PInf) {
+  parseAssembly("define i1 @test(double %arg) {\n"
+                "  %A = fcmp ogt double %arg, 0x7FF0000000000000"
+                "  %A2 = fcmp ule double %arg, 0x7FF0000000000000"
+                "  %A3 = fcmp ole double %arg, 0x7FF0000000000000"
+                "  %A4 = fcmp ugt double %arg, 0x7FF0000000000000"
+                "  ret i1 %A\n"
+                "}\n");
+
+  auto [OgtVal, OgtClass] = fcmpToClassTest(
+      CmpInst::FCMP_OGT, *A->getFunction(), A->getOperand(0), A->getOperand(1));
+  EXPECT_EQ(A->getOperand(0), OgtVal);
+  EXPECT_EQ(fcNone, OgtClass);
+
+  auto [UleVal, UleClass] =
+      fcmpToClassTest(CmpInst::FCMP_ULE, *A2->getFunction(), A2->getOperand(0),
+                      A2->getOperand(1));
+  EXPECT_EQ(A2->getOperand(0), UleVal);
+  EXPECT_EQ(fcAllFlags, UleClass);
+
+  auto [OleVal, OleClass] =
+      fcmpToClassTest(CmpInst::FCMP_OLE, *A3->getFunction(), A3->getOperand(0),
+                      A3->getOperand(1));
+  EXPECT_EQ(nullptr, OleVal);
+  EXPECT_EQ(fcNone, OleClass);
+
+  auto [UgtVal, UgtClass] =
+      fcmpToClassTest(CmpInst::FCMP_UGT, *A4->getFunction(), A4->getOperand(0),
+                      A4->getOperand(1));
+  EXPECT_EQ(nullptr, UgtVal);
+  EXPECT_EQ(fcNone, UgtClass);
+}
+
 TEST_F(ValueTrackingTest, isNonZeroRecurrence) {
   parseAssembly(R"(
     define i1 @test(i8 %n, i8 %r) {

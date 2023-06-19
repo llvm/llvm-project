@@ -1,5 +1,4 @@
-// RUN: not llvm-mc -arch=amdgcn -mcpu=gfx900 -show-encoding %s | FileCheck %s
-// RUN: not llvm-mc -arch=amdgcn -mcpu=gfx900 -show-encoding 2>&1 %s | FileCheck -check-prefix=ERR --implicit-check-not=error %s
+// RUN: llvm-mc -arch=amdgcn -mcpu=gfx900 -show-encoding %s | FileCheck %s
 
 v_interp_p1_f32_e64 v5, v2, attr0.x
 // CHECK: [0x05,0x00,0x70,0xd2,0x00,0x04,0x02,0x00]
@@ -11240,10 +11239,10 @@ v_ldexp_f16_e64 v5, v1, -1
 // CHECK: [0x05,0x00,0x33,0xd1,0x01,0x83,0x01,0x00]
 
 v_ldexp_f16_e64 v5, v1, 0.5
-// ERR: [[@LINE-1]]:25: error: literal operands are not supported
+// CHECK: [0x05,0x00,0x33,0xd1,0x01,0xe1,0x01,0x00]
 
 v_ldexp_f16_e64 v5, v1, -4.0
-// ERR: [[@LINE-1]]:25: error: literal operands are not supported
+// CHECK: [0x05,0x00,0x33,0xd1,0x01,0xef,0x01,0x00]
 
 v_ldexp_f16_e64 v5, v1, src_vccz
 // CHECK: [0x05,0x00,0x33,0xd1,0x01,0xf7,0x01,0x00]

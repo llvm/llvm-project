@@ -1423,3 +1423,16 @@ func.func @invalid_target_ext_constant() {
   // expected-error@+1 {{only zero-initializer allowed for target extension types}}
   %0 = llvm.mlir.constant(42 : index) : !llvm.target<"spirv.Event">
 }
+
+// -----
+
+llvm.comdat @__llvm_comdat {
+  // expected-error@+1 {{only comdat selector symbols can appear in a comdat region}}
+  llvm.return
+}
+
+// -----
+
+llvm.mlir.global @not_comdat(0 : i32) : i32
+// expected-error@+1 {{expected comdat symbol}}
+llvm.mlir.global @invalid_comdat_use(0 : i32) comdat(@not_comdat) : i32

@@ -59,7 +59,7 @@ class BinarySection {
 
   // Relocations associated with this section. Relocation offsets are
   // wrt. to the original section address and size.
-  using RelocationSetType = std::set<Relocation, std::less<>>;
+  using RelocationSetType = std::multiset<Relocation, std::less<>>;
   RelocationSetType Relocations;
 
   // Dynamic relocations associated with this section. Relocation offsets are
@@ -345,7 +345,8 @@ public:
   bool removeRelocationAt(uint64_t Offset) {
     auto Itr = Relocations.find(Offset);
     if (Itr != Relocations.end()) {
-      Relocations.erase(Itr);
+      auto End = Relocations.upper_bound(Offset);
+      Relocations.erase(Itr, End);
       return true;
     }
     return false;

@@ -10808,10 +10808,10 @@ cc_library(
     deps = [
         ":ArithDialect",
         ":DialectUtils",
-        ":FuncDialect",
         ":IR",
         ":MathDialect",
         ":MathPassIncGen",
+        ":Pass",
         ":SCFDialect",
         ":Transforms",
         ":VectorDialect",

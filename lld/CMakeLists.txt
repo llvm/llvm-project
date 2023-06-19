@@ -191,6 +191,8 @@ add_subdirectory(Common)
 add_subdirectory(tools/lld)
 
 if (LLVM_INCLUDE_TESTS)
+  add_custom_target(LLDUnitTests)
+  llvm_add_unittests(LLD_UNITTESTS_ADDED)
   add_subdirectory(test)
 endif()
 

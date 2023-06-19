@@ -84,6 +84,12 @@ public:
   /// will be a value that represents the true boolean literal.
   BoolValue &makeEquals(BoolValue &LHS, BoolValue &RHS);
 
+  /// Returns a symbolic integer value that models an integer literal equal to
+  /// `Value`. These literals are the same every time.
+  /// Integer literals are not typed; the type is determined by the `Expr` that
+  /// an integer literal is associated with.
+  IntegerValue &makeIntLiteral(llvm::APInt Value);
+
   /// Returns a symbolic boolean value that models a boolean literal equal to
   /// `Value`. These literals are the same every time.
   AtomicBoolValue &makeLiteral(bool Value) const {
@@ -103,8 +109,9 @@ private:
   std::vector<std::unique_ptr<StorageLocation>> Locs;
   std::vector<std::unique_ptr<Value>> Vals;
 
-  // Indices that are used to avoid recreating the same composite boolean
-  // values.
+  // Indices that are used to avoid recreating the same integer literals and
+  // composite boolean values.
+  llvm::DenseMap<llvm::APInt, IntegerValue *> IntegerLiterals;
   llvm::DenseMap<std::pair<BoolValue *, BoolValue *>, ConjunctionValue *>
       ConjunctionVals;
   llvm::DenseMap<std::pair<BoolValue *, BoolValue *>, DisjunctionValue *>

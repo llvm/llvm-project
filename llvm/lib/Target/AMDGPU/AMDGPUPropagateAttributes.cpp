@@ -53,12 +53,6 @@ static constexpr const FeatureBitset TargetFeatures = {
   AMDGPU::FeatureWavefrontSize64
 };
 
-// Attributes to propagate.
-// TODO: Support conservative min/max merging instead of cloning.
-static constexpr const char *AttributeNames[] = {"amdgpu-waves-per-eu"};
-
-static constexpr unsigned NumAttr = std::size(AttributeNames);
-
 class AMDGPUPropagateAttributes {
 
   class FnProperties {
@@ -68,30 +62,20 @@ class AMDGPUPropagateAttributes {
   public:
     explicit FnProperties(const TargetMachine &TM, const Function &F) {
       Features = TM.getSubtargetImpl(F)->getFeatureBits();
-
-      for (unsigned I = 0; I < NumAttr; ++I)
-        if (F.hasFnAttribute(AttributeNames[I]))
-          Attributes[I] = F.getFnAttribute(AttributeNames[I]);
     }
 
     bool operator == (const FnProperties &Other) const {
       if ((Features & TargetFeatures) != (Other.Features & TargetFeatures))
         return false;
-      for (unsigned I = 0; I < NumAttr; ++I)
-        if (Attributes[I] != Other.Attributes[I])
-          return false;
       return true;
     }
 
     FnProperties adjustToCaller(const FnProperties &CallerProps) const {
       FnProperties New((Features & ~TargetFeatures) | CallerProps.Features);
-      for (unsigned I = 0; I < NumAttr; ++I)
-        New.Attributes[I] = CallerProps.Attributes[I];
       return New;
     }
 
     FeatureBitset Features;
-    std::optional<Attribute> Attributes[NumAttr];
   };
 
   class Clone {
@@ -125,10 +109,6 @@ class AMDGPUPropagateAttributes {
 
   // Set new function's features in place.
   void setFeatures(Function &F, const FeatureBitset &NewFeatures);
-
-  // Set new function's attributes in place.
-  void setAttributes(Function &F,
-                     const ArrayRef<std::optional<Attribute>> NewAttrs);
 
   std::string getFeatureString(const FeatureBitset &Features) const;
 
@@ -274,7 +254,6 @@ bool AMDGPUPropagateAttributes::process() {
             // we rely on a second pass running on Module, which is allowed
             // to clone.
             setFeatures(F, NewProps.Features);
-            setAttributes(F, NewProps.Attributes);
             NewRoots.insert(&F);
             Changed = true;
             break;
@@ -317,7 +296,6 @@ AMDGPUPropagateAttributes::cloneWithProperties(Function &F,
   ValueToValueMapTy dummy;
   Function *NewF = CloneFunction(&F, dummy);
   setFeatures(*NewF, NewProps.Features);
-  setAttributes(*NewF, NewProps.Attributes);
   NewF->setVisibility(GlobalValue::DefaultVisibility);
   NewF->setLinkage(GlobalValue::InternalLinkage);
 
@@ -342,18 +320,6 @@ void AMDGPUPropagateAttributes::setFeatures(Function &F,
 
   F.removeFnAttr("target-features");
   F.addFnAttr("target-features", NewFeatureStr);
-}
-
-void AMDGPUPropagateAttributes::setAttributes(
-    Function &F, const ArrayRef<std::optional<Attribute>> NewAttrs) {
-  LLVM_DEBUG(dbgs() << "Set attributes on " << F.getName() << ":\n");
-  for (unsigned I = 0; I < NumAttr; ++I) {
-    F.removeFnAttr(AttributeNames[I]);
-    if (NewAttrs[I]) {
-      LLVM_DEBUG(dbgs() << '\t' << NewAttrs[I]->getAsString() << '\n');
-      F.addFnAttr(*NewAttrs[I]);
-    }
-  }
 }
 
 std::string
