@@ -1152,17 +1152,17 @@ void DWARFLinker::DIECloner::cloneExpression(
 
   uint64_t OpOffset = 0;
   for (auto &Op : Expression) {
-    auto Description = Op.getDescription();
+    auto Desc = Op.getDescription();
     // DW_OP_const_type is variable-length and has 3
-    // operands. DWARFExpression thus far only supports 2.
-    auto Op0 = Description.Op[0];
-    auto Op1 = Description.Op[1];
-    if ((Op0 == Encoding::BaseTypeRef && Op1 != Encoding::SizeNA) ||
-        (Op1 == Encoding::BaseTypeRef && Op0 != Encoding::Size1))
+    // operands. Thus far we only support 2.
+    if ((Desc.Op.size() == 2 && Desc.Op[0] == Encoding::BaseTypeRef) ||
+        (Desc.Op.size() == 2 && Desc.Op[1] == Encoding::BaseTypeRef &&
+         Desc.Op[0] != Encoding::Size1))
       Linker.reportWarning("Unsupported DW_OP encoding.", File);
 
-    if ((Op0 == Encoding::BaseTypeRef && Op1 == Encoding::SizeNA) ||
-        (Op1 == Encoding::BaseTypeRef && Op0 == Encoding::Size1)) {
+    if ((Desc.Op.size() == 1 && Desc.Op[0] == Encoding::BaseTypeRef) ||
+        (Desc.Op.size() == 2 && Desc.Op[1] == Encoding::BaseTypeRef &&
+         Desc.Op[0] == Encoding::Size1)) {
       // This code assumes that the other non-typeref operand fits into 1 byte.
       assert(OpOffset < Op.getEndOffset());
       uint32_t ULEBsize = Op.getEndOffset() - OpOffset - 1;
@@ -1171,7 +1171,7 @@ void DWARFLinker::DIECloner::cloneExpression(
       // Copy over the operation.
       OutputBuffer.push_back(Op.getCode());
       uint64_t RefOffset;
-      if (Op1 == Encoding::SizeNA) {
+      if (Desc.Op.size() == 1) {
         RefOffset = Op.getRawOperand(0);
       } else {
         OutputBuffer.push_back(Op.getRawOperand(0));
