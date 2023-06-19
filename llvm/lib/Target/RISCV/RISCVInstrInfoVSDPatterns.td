@@ -733,6 +733,27 @@ defm : VPatWidenBinarySDNode_VV_VX_WV_WX<sub, sext_oneuse, "PseudoVWSUB">;
 defm : VPatWidenBinarySDNode_VV_VX_WV_WX<sub, zext_oneuse, "PseudoVWSUBU">;
 defm : VPatWidenBinarySDNode_VV_VX_WV_WX<sub, anyext_oneuse, "PseudoVWSUBU">;
 
+// shl (ext v, splat 1) is a special case of widening add.
+foreach vtiToWti = AllWidenableIntVectors in {
+  defvar vti = vtiToWti.Vti;
+  defvar wti = vtiToWti.Wti;
+  let Predicates = !listconcat(GetVTypePredicates<vti>.Predicates,
+                               GetVTypePredicates<wti>.Predicates) in {
+    def : Pat<(shl (wti.Vector (sext_oneuse (vti.Vector vti.RegClass:$rs1))),
+                   (wti.Vector (riscv_vmv_v_x_vl (wti.Vector undef), 1, (XLenVT srcvalue)))),
+              (!cast<Instruction>("PseudoVWADD_VV_"#vti.LMul.MX)
+                  vti.RegClass:$rs1, vti.RegClass:$rs1, vti.AVL, vti.Log2SEW)>;
+    def : Pat<(shl (wti.Vector (zext_oneuse (vti.Vector vti.RegClass:$rs1))),
+                   (wti.Vector (riscv_vmv_v_x_vl (wti.Vector undef), 1, (XLenVT srcvalue)))),
+              (!cast<Instruction>("PseudoVWADDU_VV_"#vti.LMul.MX)
+                  vti.RegClass:$rs1, vti.RegClass:$rs1, vti.AVL, vti.Log2SEW)>;
+    def : Pat<(shl (wti.Vector (anyext_oneuse (vti.Vector vti.RegClass:$rs1))),
+                   (wti.Vector (riscv_vmv_v_x_vl (wti.Vector undef), 1, (XLenVT srcvalue)))),
+              (!cast<Instruction>("PseudoVWADDU_VV_"#vti.LMul.MX)
+                  vti.RegClass:$rs1, vti.RegClass:$rs1, vti.AVL, vti.Log2SEW)>;
+  }
+}
+
 // 11.3. Vector Integer Extension
 defm : VPatExtendSDNode_V<[zext, anyext], "PseudoVZEXT", "VF2",
                           AllFractionableVF2IntVectors>;
