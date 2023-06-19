@@ -10,7 +10,6 @@ import os, pathlib
 
 lit_header_restrictions = {
     "barrier": "// UNSUPPORTED: no-threads, c++03, c++11, c++14, c++17",
-    "stop_token": "// UNSUPPORTED: no-threads, c++03, c++11, c++14, c++17",
     "clocale": "// UNSUPPORTED: no-localization",
     "codecvt": "// UNSUPPORTED: no-localization",
     "coroutine": "// UNSUPPORTED: c++03, c++11, c++14, c++17",
@@ -52,6 +51,7 @@ lit_header_restrictions = {
     "shared_mutex": "// UNSUPPORTED: no-threads, c++03, c++11",
     "sstream": "// UNSUPPORTED: no-localization",
     "stdatomic.h": "// UNSUPPORTED: no-threads, c++03, c++11, c++14, c++17, c++20",
+    "stop_token": "// UNSUPPORTED: no-threads, c++03, c++11, c++14, c++17",
     "streambuf": "// UNSUPPORTED: no-localization",
     "strstream": "// UNSUPPORTED: no-localization",
     "thread": "// UNSUPPORTED: no-threads, c++03",
