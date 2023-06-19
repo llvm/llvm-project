@@ -1931,3 +1931,111 @@ bb6:                                              ; preds = %start, %bb3, %bb4, 
   %.sroa.0.0 = phi i32 [ 0, %bb1 ], [ 2222, %bb5 ], [ 1111, %bb4 ], [ 4444, %bb3 ], [ 3333, %start ]
   ret i32 %.sroa.0.0
 }
+
+define i8 @linearmap_inc_nsw(i32 %c) {
+; CHECK-LABEL: @linearmap_inc_nsw(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[SWITCH_TABLEIDX:%.*]] = sub i32 [[C:%.*]], 10
+; CHECK-NEXT:    [[TMP0:%.*]] = icmp ult i32 [[SWITCH_TABLEIDX]], 4
+; CHECK-NEXT:    [[SWITCH_IDX_CAST:%.*]] = trunc i32 [[SWITCH_TABLEIDX]] to i8
+; CHECK-NEXT:    [[SWITCH_IDX_MULT:%.*]] = mul i8 [[SWITCH_IDX_CAST]], 31
+; CHECK-NEXT:    [[SWITCH_OFFSET:%.*]] = add i8 [[SWITCH_IDX_MULT]], 31
+; CHECK-NEXT:    [[X:%.*]] = select i1 [[TMP0]], i8 [[SWITCH_OFFSET]], i8 3
+; CHECK-NEXT:    ret i8 [[X]]
+;
+entry:
+  switch i32 %c, label %sw.default [
+  i32 10, label %return
+  i32 11, label %sw.bb1
+  i32 12, label %sw.bb2
+  i32 13, label %sw.bb3
+  ]
+sw.bb1: br label %return
+sw.bb2: br label %return
+sw.bb3: br label %return
+sw.default: br label %return
+return:
+  %x = phi i8 [ 3, %sw.default ], [ 124, %sw.bb3 ], [ 93, %sw.bb2 ], [ 62, %sw.bb1 ], [ 31, %entry ]
+  ret i8 %x
+}
+
+define i8 @linearmap_inc_wrapped(i32 %c) {
+; CHECK-LABEL: @linearmap_inc_wrapped(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[SWITCH_TABLEIDX:%.*]] = sub i32 [[C:%.*]], 10
+; CHECK-NEXT:    [[TMP0:%.*]] = icmp ult i32 [[SWITCH_TABLEIDX]], 4
+; CHECK-NEXT:    [[SWITCH_IDX_CAST:%.*]] = trunc i32 [[SWITCH_TABLEIDX]] to i8
+; CHECK-NEXT:    [[SWITCH_IDX_MULT:%.*]] = mul i8 [[SWITCH_IDX_CAST]], 32
+; CHECK-NEXT:    [[SWITCH_OFFSET:%.*]] = add i8 [[SWITCH_IDX_MULT]], 32
+; CHECK-NEXT:    [[X:%.*]] = select i1 [[TMP0]], i8 [[SWITCH_OFFSET]], i8 3
+; CHECK-NEXT:    ret i8 [[X]]
+;
+entry:
+  switch i32 %c, label %sw.default [
+  i32 10, label %return
+  i32 11, label %sw.bb1
+  i32 12, label %sw.bb2
+  i32 13, label %sw.bb3
+  ]
+sw.bb1: br label %return
+sw.bb2: br label %return
+sw.bb3: br label %return
+sw.default: br label %return
+return:
+  %x = phi i8 [ 3, %sw.default ], [ -128, %sw.bb3 ], [ 96, %sw.bb2 ], [ 64, %sw.bb1 ], [ 32, %entry ]
+  ret i8 %x
+}
+
+define i8 @linearmap_dec_nsw(i32 %c) {
+; CHECK-LABEL: @linearmap_dec_nsw(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[SWITCH_TABLEIDX:%.*]] = sub i32 [[C:%.*]], 10
+; CHECK-NEXT:    [[TMP0:%.*]] = icmp ult i32 [[SWITCH_TABLEIDX]], 4
+; CHECK-NEXT:    [[SWITCH_IDX_CAST:%.*]] = trunc i32 [[SWITCH_TABLEIDX]] to i8
+; CHECK-NEXT:    [[SWITCH_IDX_MULT:%.*]] = mul i8 [[SWITCH_IDX_CAST]], -32
+; CHECK-NEXT:    [[SWITCH_OFFSET:%.*]] = add i8 [[SWITCH_IDX_MULT]], -32
+; CHECK-NEXT:    [[X:%.*]] = select i1 [[TMP0]], i8 [[SWITCH_OFFSET]], i8 3
+; CHECK-NEXT:    ret i8 [[X]]
+;
+entry:
+  switch i32 %c, label %sw.default [
+  i32 10, label %return
+  i32 11, label %sw.bb1
+  i32 12, label %sw.bb2
+  i32 13, label %sw.bb3
+  ]
+sw.bb1: br label %return
+sw.bb2: br label %return
+sw.bb3: br label %return
+sw.default: br label %return
+return:
+  %x = phi i8 [ 3, %sw.default ], [ -128, %sw.bb3 ], [ -96, %sw.bb2 ], [ -64, %sw.bb1 ], [ -32, %entry ]
+  ret i8 %x
+}
+
+define i8 @linearmap_dec_wrapped(i32 %c) {
+; CHECK-LABEL: @linearmap_dec_wrapped(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[SWITCH_TABLEIDX:%.*]] = sub i32 [[C:%.*]], 10
+; CHECK-NEXT:    [[TMP0:%.*]] = icmp ult i32 [[SWITCH_TABLEIDX]], 4
+; CHECK-NEXT:    [[SWITCH_IDX_CAST:%.*]] = trunc i32 [[SWITCH_TABLEIDX]] to i8
+; CHECK-NEXT:    [[SWITCH_IDX_MULT:%.*]] = mul i8 [[SWITCH_IDX_CAST]], -33
+; CHECK-NEXT:    [[SWITCH_OFFSET:%.*]] = add i8 [[SWITCH_IDX_MULT]], -33
+; CHECK-NEXT:    [[X:%.*]] = select i1 [[TMP0]], i8 [[SWITCH_OFFSET]], i8 3
+; CHECK-NEXT:    ret i8 [[X]]
+;
+entry:
+  switch i32 %c, label %sw.default [
+  i32 10, label %return
+  i32 11, label %sw.bb1
+  i32 12, label %sw.bb2
+  i32 13, label %sw.bb3
+  ]
+sw.bb1: br label %return
+sw.bb2: br label %return
+sw.bb3: br label %return
+sw.default: br label %return
+return:
+  %x = phi i8 [ 3, %sw.default ], [ 124, %sw.bb3 ], [ -99, %sw.bb2 ], [ -66, %sw.bb1 ], [ -33, %entry ]
+  ret i8 %x
+}
