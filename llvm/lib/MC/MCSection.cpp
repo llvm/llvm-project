@@ -113,11 +113,13 @@ void MCSection::flushPendingLabels() {
     PendingLabel& Label = PendingLabels[0];
     iterator CurInsertionPoint =
       this->getSubsectionInsertionPoint(Label.Subsection);
+    const MCSymbol *Atom = nullptr;
+    if (CurInsertionPoint != begin())
+      Atom = std::prev(CurInsertionPoint)->getAtom();
     MCFragment *F = new MCDataFragment();
     getFragmentList().insert(CurInsertionPoint, F);
     F->setParent(this);
-    if (CurInsertionPoint != begin())
-      F->setAtom(std::prev(CurInsertionPoint)->getAtom());
+    F->setAtom(Atom);
     flushPendingLabels(F, 0, Label.Subsection);
   }
 }
