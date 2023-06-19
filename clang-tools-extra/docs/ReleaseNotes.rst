@@ -271,6 +271,10 @@ Changes in existing checks
 - Improved the performance of the :doc:`bugprone-reserved-identifier
   <clang-tidy/checks/bugprone/reserved-identifier>` check through optimizations.
 
+- Improved the :doc:`bugprone-reserved-identifier
+  <clang-tidy/checks/bugprone/reserved-identifier>` check by enhancing the
+  `AllowedIdentifiers` option to support regular expressions.
+
 - Deprecated check-local options `HeaderFileExtensions` and `ImplementationFileExtensions`
   in :doc:`bugprone-suspicious-include
   <clang-tidy/checks/bugprone/suspicious-include>` check.
