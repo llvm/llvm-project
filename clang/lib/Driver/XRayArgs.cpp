@@ -74,7 +74,7 @@ XRayArgs::XRayArgs(const ToolChain &TC, const ArgList &Args) {
         << XRayInstrument->getSpelling() << A->getSpelling();
 
   if (!Args.hasFlag(options::OPT_fxray_link_deps,
-                    options::OPT_fnoxray_link_deps, true))
+                    options::OPT_fno_xray_link_deps, true))
     XRayRT = false;
 
   auto Bundles =
