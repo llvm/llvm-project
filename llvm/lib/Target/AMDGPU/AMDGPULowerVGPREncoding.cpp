@@ -210,13 +210,11 @@ bool AMDGPULowerVGPREncoding::runOnMachineInstr(MachineInstr &MI) {
   // For VOPD instructions MSB of a corresponding Y component operand VGPR
   // address is supposed to match X operand, otherwise VOPD shall not be
   // combined.
-
-  // TODO-GFX12: there will be vsrc2X and vsrc2Y in VOPD3 used for FMA.
   const unsigned VOPDOpsX[4] = { AMDGPU::OpName::src0X, AMDGPU::OpName::vsrc1X,
-                                 AMDGPU::OpName::OPERAND_LAST,
+                                 AMDGPU::OpName::vsrc2X,
                                  AMDGPU::OpName::vdstX };
   const unsigned VOPDOpsY[4] = { AMDGPU::OpName::src0Y, AMDGPU::OpName::vsrc1Y,
-                                 AMDGPU::OpName::OPERAND_LAST,
+                                 AMDGPU::OpName::vsrc2Y,
                                  AMDGPU::OpName::vdstY };
 
   unsigned TSFlags = MI.getDesc().TSFlags;
