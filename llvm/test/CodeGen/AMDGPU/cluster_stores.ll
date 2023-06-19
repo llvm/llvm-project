@@ -113,7 +113,6 @@ define amdgpu_kernel void @cluster_load_cluster_store(ptr noalias %lb, ptr noali
 ; GFX11-NEXT:    flat_store_b32 v[0:1], v4 offset:16
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(3)
 ; GFX11-NEXT:    flat_store_b32 v[0:1], v5 offset:24
-; GFX11-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-NEXT:    s_endpgm
 bb:
   %ld0 = load i32, ptr %lb
@@ -243,7 +242,6 @@ define amdgpu_kernel void @cluster_load_valu_cluster_store(ptr noalias %lb, ptr 
 ; GFX11-NEXT:    flat_store_b32 v[0:1], v4 offset:16
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(3)
 ; GFX11-NEXT:    flat_store_b32 v[0:1], v5 offset:24
-; GFX11-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-NEXT:    s_endpgm
 bb:
   %ld0 = load i32, ptr %lb

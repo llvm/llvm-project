@@ -86,19 +86,20 @@ struct RegisterEncoding {
 };
 
 enum WaitEventType {
-  VMEM_ACCESS,       // vector-memory read & write
-  VMEM_READ_ACCESS,  // vector-memory read
-  VMEM_WRITE_ACCESS, // vector-memory write
-  LDS_ACCESS,        // lds read & write
-  GDS_ACCESS,        // gds read & write
-  SQ_MESSAGE,        // send message
-  SMEM_ACCESS,       // scalar-memory read & write
-  EXP_GPR_LOCK,      // export holding on its data src
-  GDS_GPR_LOCK,      // GDS holding on its data and addr src
-  EXP_POS_ACCESS,    // write to export position
-  EXP_PARAM_ACCESS,  // write to export parameter
-  VMW_GPR_LOCK,      // vector-memory write holding on its data src
-  EXP_LDS_ACCESS,    // read by ldsdir counting as export
+  VMEM_ACCESS,          // vector-memory read & write
+  VMEM_READ_ACCESS,     // vector-memory read
+  VMEM_WRITE_ACCESS,    // vector-memory write that is not scratch
+  SCRATCH_WRITE_ACCESS, // vector-memory write that may be scratch
+  LDS_ACCESS,           // lds read & write
+  GDS_ACCESS,           // gds read & write
+  SQ_MESSAGE,           // send message
+  SMEM_ACCESS,          // scalar-memory read & write
+  EXP_GPR_LOCK,         // export holding on its data src
+  GDS_GPR_LOCK,         // GDS holding on its data and addr src
+  EXP_POS_ACCESS,       // write to export position
+  EXP_PARAM_ACCESS,     // write to export parameter
+  VMW_GPR_LOCK,         // vector-memory write holding on its data src
+  EXP_LDS_ACCESS,       // read by ldsdir counting as export
   NUM_WAIT_EVENTS,
 };
 
@@ -108,7 +109,7 @@ static const unsigned WaitEventMaskForInst[NUM_INST_CNTS] = {
         (1 << SQ_MESSAGE),
     (1 << EXP_GPR_LOCK) | (1 << GDS_GPR_LOCK) | (1 << VMW_GPR_LOCK) |
         (1 << EXP_PARAM_ACCESS) | (1 << EXP_POS_ACCESS) | (1 << EXP_LDS_ACCESS),
-    (1 << VMEM_WRITE_ACCESS)};
+    (1 << VMEM_WRITE_ACCESS) | (1 << SCRATCH_WRITE_ACCESS)};
 
 // The mapping is:
 //  0                .. SQ_MAX_PGM_VGPRS-1               real VGPRs
@@ -458,13 +459,19 @@ public:
     assert(SIInstrInfo::isVMEM(Inst) || SIInstrInfo::isFLAT(Inst));
     if (!ST->hasVscnt())
       return VMEM_ACCESS;
-    if (Inst.mayStore() && !SIInstrInfo::isAtomicRet(Inst))
+    if (Inst.mayStore() && !SIInstrInfo::isAtomicRet(Inst)) {
+      // FLAT and SCRATCH instructions may access scratch. Other VMEM
+      // instructions do not.
+      if (SIInstrInfo::isFLAT(Inst) && mayAccessScratchThroughFlat(Inst))
+        return SCRATCH_WRITE_ACCESS;
       return VMEM_WRITE_ACCESS;
+    }
     return VMEM_READ_ACCESS;
   }
 
   bool mayAccessVMEMThroughFlat(const MachineInstr &MI) const;
   bool mayAccessLDSThroughFlat(const MachineInstr &MI) const;
+  bool mayAccessScratchThroughFlat(const MachineInstr &MI) const;
   bool generateWaitcntInstBefore(MachineInstr &MI,
                                  WaitcntBrackets &ScoreBrackets,
                                  MachineInstr *OldWaitcntInstr,
@@ -1036,11 +1043,13 @@ bool SIInsertWaitcnts::generateWaitcntInstBefore(MachineInstr &MI,
   }
   // Identify S_ENDPGM instructions which may have to wait for outstanding VMEM
   // stores. In this case it can be useful to send a message to explicitly
-  // release all VGPRs before the stores have completed.
+  // release all VGPRs before the stores have completed, but it is only safe to
+  // do this if there are no outstanding scratch stores.
   else if (MI.getOpcode() == AMDGPU::S_ENDPGM ||
            MI.getOpcode() == AMDGPU::S_ENDPGM_SAVED) {
     if (ST->getGeneration() >= AMDGPUSubtarget::GFX11 &&
-        ScoreBrackets.getScoreRange(VS_CNT) != 0)
+        ScoreBrackets.getScoreRange(VS_CNT) != 0 &&
+        !ScoreBrackets.hasPendingEvent(SCRATCH_WRITE_ACCESS))
       ReleaseVGPRInsts.insert(&MI);
   }
   // Resolve vm waits before gs-done.
@@ -1394,6 +1403,32 @@ bool SIInsertWaitcnts::mayAccessLDSThroughFlat(const MachineInstr &MI) const {
   }
 
   return false;
+}
+
+// This is a flat memory operation. Check to see if it has memory tokens for
+// either scratch or FLAT.
+bool SIInsertWaitcnts::mayAccessScratchThroughFlat(
+    const MachineInstr &MI) const {
+  assert(TII->isFLAT(MI));
+
+  // SCRATCH instructions always access scratch.
+  if (TII->isFLATScratch(MI))
+    return true;
+
+  // GLOBAL instructions never access scratch.
+  if (TII->isFLATGlobal(MI))
+    return false;
+
+  // If there are no memory operands then conservatively assume the flat
+  // operation may access scratch.
+  if (MI.memoperands_empty())
+    return true;
+
+  // See if any memory operand specifies an address space that involves scratch.
+  return any_of(MI.memoperands(), [](const MachineMemOperand *Memop) {
+    unsigned AS = Memop->getAddrSpace();
+    return AS == AMDGPUAS::PRIVATE_ADDRESS || AS == AMDGPUAS::FLAT_ADDRESS;
+  });
 }
 
 void SIInsertWaitcnts::updateEventWaitcntAfter(MachineInstr &Inst,
