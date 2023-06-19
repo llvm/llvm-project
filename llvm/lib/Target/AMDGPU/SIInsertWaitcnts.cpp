@@ -57,8 +57,6 @@ namespace {
 // associated with the operand.  Used for determining whether
 // s_waitcnt instruction needs to be emitted.
 
-#define CNT_MASK(t) (1u << (t))
-
 enum InstCounterType { VM_CNT = 0, LGKM_CNT, EXP_CNT, VS_CNT, NUM_INST_CNTS };
 } // namespace
 
