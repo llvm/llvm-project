@@ -349,9 +349,7 @@ define i8 @known_uge(i8 noundef %x) {
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[CMP_X_UPPER]])
 ; CHECK-NEXT:    [[CMP_X_LOWER:%.*]] = icmp uge i8 [[X]], 3
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[CMP_X_LOWER]])
-; CHECK-NEXT:    [[REM_UREM:%.*]] = sub nuw i8 [[X]], 3
-; CHECK-NEXT:    [[REM_CMP:%.*]] = icmp ult i8 [[X]], 3
-; CHECK-NEXT:    [[REM:%.*]] = select i1 [[REM_CMP]], i8 [[X]], i8 [[REM_UREM]]
+; CHECK-NEXT:    [[REM:%.*]] = sub nuw i8 [[X]], 3
 ; CHECK-NEXT:    ret i8 [[REM]]
 ;
   %cmp.x.upper = icmp ult i8 %x, 6
