@@ -3084,6 +3084,16 @@ static int order_main(int argc, const char *argv[]) {
   return 0;
 }
 
+typedef int (*llvm_profdata_subcommand)(int, const char *[]);
+
+static std::tuple<StringRef, llvm_profdata_subcommand>
+    llvm_profdata_subcommands[] = {
+        {"merge", merge_main},
+        {"show", show_main},
+        {"order", order_main},
+        {"overlap", overlap_main},
+};
+
 int llvm_profdata_main(int argc, char **argvNonConst,
                        const llvm::ToolContext &) {
   const char **argv = const_cast<const char **>(argvNonConst);
@@ -3091,16 +3101,11 @@ int llvm_profdata_main(int argc, char **argvNonConst,
 
   StringRef ProgName(sys::path::filename(argv[0]));
   if (argc > 1) {
-    int (*func)(int, const char *[]) = nullptr;
 
-    if (strcmp(argv[1], "merge") == 0)
-      func = merge_main;
-    else if (strcmp(argv[1], "show") == 0)
-      func = show_main;
-    else if (strcmp(argv[1], "overlap") == 0)
-      func = overlap_main;
-    else if (strcmp(argv[1], "order") == 0)
-      func = order_main;
+    llvm_profdata_subcommand func = nullptr;
+    for (auto [subcmd_name, subcmd_action] : llvm_profdata_subcommands)
+      if (subcmd_name == argv[1])
+        func = subcmd_action;
 
     if (func) {
       std::string Invocation(ProgName.str() + " " + argv[1]);
@@ -3115,7 +3120,11 @@ int llvm_profdata_main(int argc, char **argvNonConst,
              << "USAGE: " << ProgName << " <command> [args...]\n"
              << "USAGE: " << ProgName << " <command> -help\n\n"
              << "See each individual command --help for more details.\n"
-             << "Available commands: merge, show, overlap\n";
+             << "Available commands: "
+             << join(map_range(llvm_profdata_subcommands,
+                               [](auto const &KV) { return std::get<0>(KV); }),
+                     ", ")
+             << "\n";
       return 0;
     }
 
@@ -3131,6 +3140,10 @@ int llvm_profdata_main(int argc, char **argvNonConst,
   else
     errs() << ProgName << ": Unknown command!\n";
 
-  errs() << "USAGE: " << ProgName << " <merge|show|overlap|order> [args...]\n";
+  errs() << "USAGE: " << ProgName << " <"
+         << join(map_range(llvm_profdata_subcommands,
+                           [](auto const &KV) { return std::get<0>(KV); }),
+                 "|")
+         << "> [args...]\n";
   return 1;
 }
