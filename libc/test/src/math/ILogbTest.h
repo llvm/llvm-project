@@ -79,7 +79,8 @@ public:
     using UIntType = typename FPBits::UIntType;
     constexpr UIntType COUNT = 10'001;
     constexpr UIntType STEP =
-        (FPBits::MAX_SUBNORMAL - FPBits::MIN_SUBNORMAL) / COUNT;
+        (UIntType(FPBits::MAX_SUBNORMAL) - UIntType(FPBits::MIN_SUBNORMAL)) /
+        COUNT;
     for (UIntType v = FPBits::MIN_SUBNORMAL; v <= FPBits::MAX_SUBNORMAL;
          v += STEP) {
       T x = T(FPBits(v));
@@ -97,7 +98,8 @@ public:
     using FPBits = __llvm_libc::fputil::FPBits<T>;
     using UIntType = typename FPBits::UIntType;
     constexpr UIntType COUNT = 10'001;
-    constexpr UIntType STEP = (FPBits::MAX_NORMAL - FPBits::MIN_NORMAL) / COUNT;
+    constexpr UIntType STEP =
+        (UIntType(FPBits::MAX_NORMAL) - UIntType(FPBits::MIN_NORMAL)) / COUNT;
     for (UIntType v = FPBits::MIN_NORMAL; v <= FPBits::MAX_NORMAL; v += STEP) {
       T x = T(FPBits(v));
       if (isnan(x) || isinf(x) || x == 0.0)
