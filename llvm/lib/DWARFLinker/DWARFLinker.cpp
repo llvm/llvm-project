@@ -1169,6 +1169,7 @@ void DWARFLinker::DIECloner::cloneExpression(
       assert(ULEBsize <= 16);
 
       // Copy over the operation.
+      assert(!Op.getSubCode() && "SubOps not yet supported");
       OutputBuffer.push_back(Op.getCode());
       uint64_t RefOffset;
       if (Desc.Op.size() == 1) {

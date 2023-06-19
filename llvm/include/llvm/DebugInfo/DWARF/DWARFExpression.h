@@ -42,6 +42,9 @@ public:
       SizeRefAddr = 6,
       SizeBlock = 7, ///< Preceding operand contains block size
       BaseTypeRef = 8,
+      /// The operand is a ULEB128 encoded SubOpcode. This is only valid
+      /// for the first operand of an operation.
+      SizeSubOpLEB = 9,
       WasmLocationArg = 30,
       SignBit = 0x80,
       SignedSize1 = SignBit | Size1,
@@ -83,6 +86,7 @@ public:
   public:
     const Description &getDescription() const { return Desc; }
     uint8_t getCode() const { return Opcode; }
+    std::optional<unsigned> getSubCode() const;
     uint64_t getNumOperands() const { return Operands.size(); }
     ArrayRef<uint64_t> getRawOperands() const { return Operands; };
     uint64_t getRawOperand(unsigned Idx) const { return Operands[Idx]; }
