@@ -33,6 +33,7 @@
                                                   201707L [C++20]
     __cpp_lib_shared_ptr_weak_type                201606L [C++17]
     __cpp_lib_smart_ptr_for_overwrite             202002L [C++20]
+    __cpp_lib_smart_ptr_owner_equality            202306L [C++26]
     __cpp_lib_to_address                          201711L [C++20]
     __cpp_lib_transparent_operators               201210L [C++14]
                                                   201510L [C++17]
@@ -101,6 +102,10 @@
 
 # ifdef __cpp_lib_smart_ptr_for_overwrite
 #   error "__cpp_lib_smart_ptr_for_overwrite should not be defined before c++20"
+# endif
+
+# ifdef __cpp_lib_smart_ptr_owner_equality
+#   error "__cpp_lib_smart_ptr_owner_equality should not be defined before c++26"
 # endif
 
 # ifdef __cpp_lib_to_address
@@ -174,6 +179,10 @@
 
 # ifdef __cpp_lib_smart_ptr_for_overwrite
 #   error "__cpp_lib_smart_ptr_for_overwrite should not be defined before c++20"
+# endif
+
+# ifdef __cpp_lib_smart_ptr_owner_equality
+#   error "__cpp_lib_smart_ptr_owner_equality should not be defined before c++26"
 # endif
 
 # ifdef __cpp_lib_to_address
@@ -268,6 +277,10 @@
 
 # ifdef __cpp_lib_smart_ptr_for_overwrite
 #   error "__cpp_lib_smart_ptr_for_overwrite should not be defined before c++20"
+# endif
+
+# ifdef __cpp_lib_smart_ptr_owner_equality
+#   error "__cpp_lib_smart_ptr_owner_equality should not be defined before c++26"
 # endif
 
 # ifdef __cpp_lib_to_address
@@ -386,6 +399,10 @@
 #   ifdef __cpp_lib_smart_ptr_for_overwrite
 #     error "__cpp_lib_smart_ptr_for_overwrite should not be defined because it is unimplemented in libc++!"
 #   endif
+# endif
+
+# ifdef __cpp_lib_smart_ptr_owner_equality
+#   error "__cpp_lib_smart_ptr_owner_equality should not be defined before c++26"
 # endif
 
 # ifndef __cpp_lib_to_address
@@ -521,6 +538,10 @@
 #   endif
 # endif
 
+# ifdef __cpp_lib_smart_ptr_owner_equality
+#   error "__cpp_lib_smart_ptr_owner_equality should not be defined before c++26"
+# endif
+
 # ifndef __cpp_lib_to_address
 #   error "__cpp_lib_to_address should be defined in c++23"
 # endif
@@ -651,6 +672,19 @@
 # else // _LIBCPP_VERSION
 #   ifdef __cpp_lib_smart_ptr_for_overwrite
 #     error "__cpp_lib_smart_ptr_for_overwrite should not be defined because it is unimplemented in libc++!"
+#   endif
+# endif
+
+# if !defined(_LIBCPP_VERSION)
+#   ifndef __cpp_lib_smart_ptr_owner_equality
+#     error "__cpp_lib_smart_ptr_owner_equality should be defined in c++26"
+#   endif
+#   if __cpp_lib_smart_ptr_owner_equality != 202306L
+#     error "__cpp_lib_smart_ptr_owner_equality should have the value 202306L in c++26"
+#   endif
+# else // _LIBCPP_VERSION
+#   ifdef __cpp_lib_smart_ptr_owner_equality
+#     error "__cpp_lib_smart_ptr_owner_equality should not be defined because it is unimplemented in libc++!"
 #   endif
 # endif
 

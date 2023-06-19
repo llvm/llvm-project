@@ -863,9 +863,18 @@ def :  divergent_i64_BinOp <xor, V_XOR_B32_e64>;
 // 16-Bit Operand Instructions
 //===----------------------------------------------------------------------===//
 
-def LDEXP_F16_VOPProfile_True16 : VOPProfile_True16<VOP_F16_F16_I16> {
-  // The ldexp.f16 intrinsic expects a i32 src1 operand, though the hardware
-  // encoding treats src1 as an f16
+// The ldexp.f16 intrinsic expects a integer src1 operand, though the hardware
+// encoding treats src1 as an f16
+def LDEXP_F16_VOPProfile : VOPProfile <[f16, f16, f16, untyped]> {
+  let Src1Mod = Int32InputMods;
+  let Src1ModDPP = IntVRegInputMods;
+  let Src1ModVOP3DPP = IntVRegInputMods;
+  // SDWA sext is the only modifier allowed.
+  let HasSrc1IntMods = 1;
+  let HasSrc1FloatMods = 0;
+  let Src1ModSDWA = Int16SDWAInputMods;
+}
+def LDEXP_F16_VOPProfile_True16 : VOPProfile_True16<VOP_F16_F16_F16> {
   let Src1RC32 = RegisterOperand<VGPR_32_Lo128>;
   let Src1DPP = VGPR_32_Lo128;
   let Src1ModDPP = IntT16VRegInputMods;
@@ -874,9 +883,9 @@ def LDEXP_F16_VOPProfile_True16 : VOPProfile_True16<VOP_F16_F16_I16> {
 let isReMaterializable = 1 in {
 let FPDPRounding = 1 in {
   let SubtargetPredicate = NotHasTrue16BitInsts, OtherPredicates = [Has16BitInsts]  in
-    defm V_LDEXP_F16 : VOP2Inst <"v_ldexp_f16", VOP_F16_F16_I16, any_fldexp>;
+    defm V_LDEXP_F16 : VOP2Inst <"v_ldexp_f16", LDEXP_F16_VOPProfile>;
   let SubtargetPredicate = HasTrue16BitInsts in
-    defm V_LDEXP_F16_t16 : VOP2Inst <"v_ldexp_f16_t16", LDEXP_F16_VOPProfile_True16, any_fldexp>;
+    defm V_LDEXP_F16_t16 : VOP2Inst <"v_ldexp_f16_t16", LDEXP_F16_VOPProfile_True16>;
 } // End FPDPRounding = 1
 // FIXME VOP3 Only instructions. NFC using VOPProfile_True16 for these until a planned change to use a new register class for VOP3 encoded True16 instuctions
 defm V_LSHLREV_B16 : VOP2Inst_e64_t16 <"v_lshlrev_b16", VOP_I16_I16_I16, clshl_rev_16>;
@@ -898,6 +907,21 @@ defm V_MIN_U16 : VOP2Inst_e64_t16 <"v_min_u16", VOP_I16_I16_I16, umin>;
 defm V_MIN_I16 : VOP2Inst_e64_t16 <"v_min_i16", VOP_I16_I16_I16, smin>;
 } // End isCommutable = 1
 } // End isReMaterializable = 1
+
+class LDEXP_F16_Pat <SDPatternOperator op, VOP_Pseudo inst, VOPProfile P = inst.Pfl> : GCNPat <
+  (P.DstVT (op (P.Src0VT (VOP3Mods0 P.Src0VT:$src0, i32:$src0_modifiers, i1:$clamp, i32:$omod)),
+               (i16 (VOP3Mods0 P.Src1VT:$src1, i32:$src1_modifiers)))),
+  (inst $src0_modifiers, $src0,
+        $src1_modifiers, $src1,
+        $clamp, /* clamp */
+        $omod /* omod */)
+>;
+
+let OtherPredicates = [NotHasTrue16BitInsts] in
+def : LDEXP_F16_Pat<any_fldexp, V_LDEXP_F16_e64>;
+
+let OtherPredicates = [HasTrue16BitInsts] in
+def : LDEXP_F16_Pat<any_fldexp, V_LDEXP_F16_t16_e64>;
 
 let SubtargetPredicate = isGFX11Plus in {
   let isCommutable = 1 in {

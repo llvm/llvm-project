@@ -1065,7 +1065,7 @@ def ConvertVectorToSCF : Pass<"convert-vector-to-scf"> {
 // VectorToLLVM
 //===----------------------------------------------------------------------===//
 
-def ConvertVectorToLLVMPass : Pass<"convert-vector-to-llvm", "ModuleOp"> {
+def ConvertVectorToLLVMPass : Pass<"convert-vector-to-llvm"> {
   let summary = "Lower the operations from the vector dialect into the LLVM "
                 "dialect";
   let description = [{
