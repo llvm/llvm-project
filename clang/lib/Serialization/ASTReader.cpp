@@ -6983,6 +6983,10 @@ QualType ASTReader::GetType(TypeID ID) {
   if (Index < NUM_PREDEF_TYPE_IDS) {
     QualType T;
     switch ((PredefinedTypeIDs)Index) {
+    case PREDEF_TYPE_LAST_ID:
+      // We should never use this one.
+      llvm_unreachable("Invalid predefined type");
+      break;
     case PREDEF_TYPE_NULL_ID:
       return QualType();
     case PREDEF_TYPE_VOID_ID:
