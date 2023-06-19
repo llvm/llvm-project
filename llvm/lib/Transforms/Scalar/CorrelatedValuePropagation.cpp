@@ -766,7 +766,9 @@ static bool expandUDivOrURem(BinaryOperator *Instr, const ConstantRange &XCR,
   if (IsRem) {
     // NOTE: this transformation introduces two uses of X,
     //       but it may be undef so we must freeze it first.
-    Value *FrozenX = B.CreateFreeze(X, X->getName() + ".frozen");
+    Value *FrozenX = X;
+    if (!isGuaranteedNotToBeUndefOrPoison(X))
+      FrozenX = B.CreateFreeze(X, X->getName() + ".frozen");
     auto *AdjX = B.CreateNUWSub(FrozenX, Y, Instr->getName() + ".urem");
     auto *Cmp =
         B.CreateICmp(ICmpInst::ICMP_ULT, FrozenX, Y, Instr->getName() + ".cmp");
