@@ -2,7 +2,9 @@
 
 transform.sequence failures(propagate) {
 ^bb1(%module_op: !transform.any_op):
-  transform.apply_patterns to %module_op {
+  %func_op = transform.structured.match ops{["func.func"]} in %module_op
+      : (!transform.any_op) -> !transform.any_op
+  transform.apply_patterns to %func_op {
     transform.apply_patterns.tensor.fold_tensor_empty
   } : !transform.any_op
 }
@@ -66,7 +68,9 @@ func.func @rank_reducing_empty_tensor_extract(%sz : index, %idx : index) -> tens
 
 transform.sequence failures(propagate) {
 ^bb1(%module_op: !transform.any_op):
-  transform.apply_patterns to %module_op {
+  %func_op = transform.structured.match ops{["func.func"]} in %module_op
+      : (!transform.any_op) -> !transform.any_op
+  transform.apply_patterns to %func_op {
     transform.apply_patterns.tensor.fold_tensor_empty
         {fold_single_use_only = true}
   } : !transform.any_op

@@ -2,7 +2,9 @@
 
 transform.sequence failures(propagate) {
 ^bb1(%module_op: !transform.any_op):
-  transform.apply_patterns to %module_op {
+  %func_op = transform.structured.match ops{["func.func"]} in %module_op
+      : (!transform.any_op) -> !transform.any_op
+  transform.apply_patterns to %func_op {
     transform.apply_patterns.vector.fold_tensor_slice_into_transfer
   } : !transform.any_op
 }
