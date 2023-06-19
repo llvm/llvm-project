@@ -331,12 +331,10 @@ define i1 @icmp_after_expansion(i8 noundef %x) {
 ; CHECK-LABEL: @icmp_after_expansion(
 ; CHECK-NEXT:    [[CMP_X_UPPER:%.*]] = icmp ult i8 [[X:%.*]], 6
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[CMP_X_UPPER]])
-; CHECK-NEXT:    [[X_FROZEN:%.*]] = freeze i8 [[X]]
-; CHECK-NEXT:    [[REM_UREM:%.*]] = sub nuw i8 [[X_FROZEN]], 3
-; CHECK-NEXT:    [[REM_CMP:%.*]] = icmp ult i8 [[X_FROZEN]], 3
-; CHECK-NEXT:    [[REM:%.*]] = select i1 [[REM_CMP]], i8 [[X_FROZEN]], i8 [[REM_UREM]]
-; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i8 [[REM]], 3
-; CHECK-NEXT:    ret i1 [[CMP]]
+; CHECK-NEXT:    [[REM_UREM:%.*]] = sub nuw i8 [[X]], 3
+; CHECK-NEXT:    [[REM_CMP:%.*]] = icmp ult i8 [[X]], 3
+; CHECK-NEXT:    [[REM:%.*]] = select i1 [[REM_CMP]], i8 [[X]], i8 [[REM_UREM]]
+; CHECK-NEXT:    ret i1 false
 ;
   %cmp.x.upper = icmp ult i8 %x, 6
   call void @llvm.assume(i1 %cmp.x.upper)
