@@ -5467,6 +5467,39 @@ static kmp_tdg_info_t *__kmp_find_tdg(kmp_int32 tdg_id) {
   return res;
 }
 
+// __kmp_print_tdg_dot: prints the TDG to a dot file
+// tdg:    ID of the TDG
+void __kmp_print_tdg_dot(kmp_tdg_info_t *tdg) {
+  kmp_int32 tdg_id = tdg->tdg_id;
+  KA_TRACE(10, ("__kmp_print_tdg_dot(enter): T#%d tdg_id=%d \n", gtid, tdg_id));
+
+  char file_name[20];
+  sprintf(file_name, "tdg_%d.dot", tdg_id);
+  kmp_safe_raii_file_t tdg_file(file_name, "w");
+
+  kmp_int32 num_tasks = KMP_ATOMIC_LD_RLX(&tdg->num_tasks);
+  fprintf(tdg_file,
+          "digraph TDG {\n"
+          "   compound=true\n"
+          "   subgraph cluster {\n"
+          "      label=TDG_%d\n",
+          tdg_id);
+  for (kmp_int32 i = 0; i < num_tasks; i++) {
+    fprintf(tdg_file, "      %d[style=bold]\n", i);
+  }
+  fprintf(tdg_file, "   }\n");
+  for (kmp_int32 i = 0; i < num_tasks; i++) {
+    kmp_int32 nsuccessors = tdg->record_map[i].nsuccessors;
+    kmp_int32 *successors = tdg->record_map[i].successors;
+    if (nsuccessors > 0) {
+      for (kmp_int32 j = 0; j < nsuccessors; j++)
+        fprintf(tdg_file, "   %d -> %d \n", i, successors[j]);
+    }
+  }
+  fprintf(tdg_file, "}");
+  KA_TRACE(10, ("__kmp_print_tdg_dot(exit): T#%d tdg_id=%d \n", gtid, tdg_id));
+}
+
 // __kmp_start_record: launch the execution of a previous
 // recorded TDG
 // gtid:   Global Thread ID
@@ -5636,6 +5669,9 @@ void __kmp_end_record(kmp_int32 gtid, kmp_tdg_info_t *tdg) {
                       this_record_map[i].npredecessors);
   }
   KMP_ATOMIC_ST_RLX(&__kmp_tdg_task_id, 0);
+
+  if (__kmp_tdg_dot)
+    __kmp_print_tdg_dot(tdg);
 }
 
 // __kmpc_end_record_task: wrapper around __kmp_end_record to mark

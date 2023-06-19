@@ -78,12 +78,16 @@ static lldb_private::RegisterInfo g_register_infos_pauth[] = {
 static lldb_private::RegisterInfo g_register_infos_mte[] = {
     DEFINE_EXTENSION_REG(mte_ctrl)};
 
+static lldb_private::RegisterInfo g_register_infos_tls[] = {
+    DEFINE_EXTENSION_REG(tpidr)};
+
 // Number of register sets provided by this context.
 enum {
   k_num_gpr_registers = gpr_w28 - gpr_x0 + 1,
   k_num_fpr_registers = fpu_fpcr - fpu_v0 + 1,
   k_num_sve_registers = sve_ffr - sve_vg + 1,
   k_num_mte_register = 1,
+  k_num_tls_register = 1,
   k_num_pauth_register = 2,
   k_num_register_sets_default = 2,
   k_num_register_sets = 3
@@ -189,6 +193,9 @@ static const lldb_private::RegisterSet g_reg_set_pauth_arm64 = {
 static const lldb_private::RegisterSet g_reg_set_mte_arm64 = {
     "MTE Control Register", "mte", k_num_mte_register, nullptr};
 
+static const lldb_private::RegisterSet g_reg_set_tls_arm64 = {
+    "Thread Local Storage Registers", "tls", k_num_tls_register, nullptr};
+
 RegisterInfoPOSIX_arm64::RegisterInfoPOSIX_arm64(
     const lldb_private::ArchSpec &target_arch, lldb_private::Flags opt_regsets)
     : lldb_private::RegisterInfoAndSetInterface(target_arch),
@@ -228,6 +235,10 @@ RegisterInfoPOSIX_arm64::RegisterInfoPOSIX_arm64(
 
       if (m_opt_regsets.AllSet(eRegsetMaskMTE))
         AddRegSetMTE();
+
+      // tpidr is always present, but in future there will be others so this is
+      // done as a dynamic set.
+      AddRegSetTLS();
 
       m_register_info_count = m_dynamic_reg_infos.size();
       m_register_info_p = m_dynamic_reg_infos.data();
@@ -310,6 +321,21 @@ void RegisterInfoPOSIX_arm64::AddRegSetMTE() {
       std::make_pair(mte_regnum, mte_regnum + 1);
   m_dynamic_reg_sets.push_back(g_reg_set_mte_arm64);
   m_dynamic_reg_sets.back().registers = m_mte_regnum_collection.data();
+}
+
+void RegisterInfoPOSIX_arm64::AddRegSetTLS() {
+  uint32_t tls_regnum = m_dynamic_reg_infos.size();
+  m_tls_regnum_collection.push_back(tls_regnum);
+  m_dynamic_reg_infos.push_back(g_register_infos_tls[0]);
+  m_dynamic_reg_infos[tls_regnum].byte_offset =
+      m_dynamic_reg_infos[tls_regnum - 1].byte_offset +
+      m_dynamic_reg_infos[tls_regnum - 1].byte_size;
+  m_dynamic_reg_infos[tls_regnum].kinds[lldb::eRegisterKindLLDB] = tls_regnum;
+
+  m_per_regset_regnum_range[m_register_set_count] =
+      std::make_pair(tls_regnum, tls_regnum + 1);
+  m_dynamic_reg_sets.push_back(g_reg_set_tls_arm64);
+  m_dynamic_reg_sets.back().registers = m_tls_regnum_collection.data();
 }
 
 uint32_t RegisterInfoPOSIX_arm64::ConfigureVectorLength(uint32_t sve_vq) {
@@ -403,6 +429,10 @@ bool RegisterInfoPOSIX_arm64::IsMTEReg(unsigned reg) const {
   return llvm::is_contained(m_mte_regnum_collection, reg);
 }
 
+bool RegisterInfoPOSIX_arm64::IsTLSReg(unsigned reg) const {
+  return llvm::is_contained(m_tls_regnum_collection, reg);
+}
+
 uint32_t RegisterInfoPOSIX_arm64::GetRegNumSVEZ0() const { return sve_z0; }
 
 uint32_t RegisterInfoPOSIX_arm64::GetRegNumSVEFFR() const { return sve_ffr; }
@@ -419,4 +449,8 @@ uint32_t RegisterInfoPOSIX_arm64::GetPAuthOffset() const {
 
 uint32_t RegisterInfoPOSIX_arm64::GetMTEOffset() const {
   return m_register_info_p[m_mte_regnum_collection[0]].byte_offset;
+}
+
+uint32_t RegisterInfoPOSIX_arm64::GetTLSOffset() const {
+  return m_register_info_p[m_tls_regnum_collection[0]].byte_offset;
 }

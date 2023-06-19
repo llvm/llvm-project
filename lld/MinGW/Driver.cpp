@@ -157,11 +157,17 @@ searchLibrary(StringRef name, ArrayRef<StringRef> searchPaths, bool bStatic) {
   return "";
 }
 
+namespace lld {
+namespace coff {
+bool link(ArrayRef<const char *> argsArr, llvm::raw_ostream &stdoutOS,
+          llvm::raw_ostream &stderrOS, bool exitEarly, bool disableOutput);
+}
+
+namespace mingw {
 // Convert Unix-ish command line arguments to Windows-ish ones and
 // then call coff::link.
-bool mingw::link(ArrayRef<const char *> argsArr, llvm::raw_ostream &stdoutOS,
-                 llvm::raw_ostream &stderrOS, bool exitEarly,
-                 bool disableOutput) {
+bool link(ArrayRef<const char *> argsArr, llvm::raw_ostream &stdoutOS,
+          llvm::raw_ostream &stderrOS, bool exitEarly, bool disableOutput) {
   auto *ctx = new CommonLinkerContext;
   ctx->e.initialize(stdoutOS, stderrOS, exitEarly, disableOutput);
 
@@ -482,3 +488,5 @@ bool mingw::link(ArrayRef<const char *> argsArr, llvm::raw_ostream &stdoutOS,
 
   return coff::link(vec, stdoutOS, stderrOS, exitEarly, disableOutput);
 }
+} // namespace mingw
+} // namespace lld

@@ -13,7 +13,7 @@
 // struct piecewise_construct_t { explicit piecewise_construct_t() = default; };
 // constexpr piecewise_construct_t piecewise_construct = piecewise_construct_t();
 
-// This test checks for LWG 2510.
+// This test checks for https://wg21.link/LWG2510.
 
 #include <utility>
 
