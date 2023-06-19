@@ -182,7 +182,7 @@
 "`3712 <https://wg21.link/LWG3712>`__","``chunk_view`` and ``slide_view`` should not be ``default_initializable``","July 2022","","","|ranges|"
 "`3713 <https://wg21.link/LWG3713>`__","Sorted with respect to comparator (only)","July 2022","",""
 "`3715 <https://wg21.link/LWG3715>`__","``view_interface::empty`` is overconstrained","July 2022","","","|ranges|"
-"`3719 <https://wg21.link/LWG3719>`__","Directory iterators should be usable with default sentinel","July 2022","","","|ranges|"
+"`3719 <https://wg21.link/LWG3719>`__","Directory iterators should be usable with default sentinel","July 2022","|Complete|","17.0","|ranges|"
 "`3721 <https://wg21.link/LWG3721>`__","Allow an ``arg-id`` with a value of zero for ``width`` in ``std-format-spec``","July 2022","|Complete|","16.0","|format|"
 "`3724 <https://wg21.link/LWG3724>`__","``decay-copy`` should be constrained","July 2022","|Complete|","14.0"
 "","","","","",""

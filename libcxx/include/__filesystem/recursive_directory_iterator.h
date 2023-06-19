@@ -15,6 +15,7 @@
 #include <__filesystem/directory_entry.h>
 #include <__filesystem/directory_options.h>
 #include <__filesystem/path.h>
+#include <__iterator/default_sentinel.h>
 #include <__iterator/iterator_traits.h>
 #include <__memory/shared_ptr.h>
 #include <__ranges/enable_borrowed_range.h>
@@ -113,6 +114,14 @@ public:
 
   _LIBCPP_INLINE_VISIBILITY
   void disable_recursion_pending() { __rec_ = false; }
+
+#  if _LIBCPP_STD_VER >= 20
+
+  _LIBCPP_HIDE_FROM_ABI bool operator==(default_sentinel_t) const noexcept {
+    return *this == recursive_directory_iterator();
+  }
+
+#  endif
 
 private:
   _LIBCPP_EXPORTED_FROM_ABI recursive_directory_iterator(const path& __p, directory_options __opt, error_code* __ec);
