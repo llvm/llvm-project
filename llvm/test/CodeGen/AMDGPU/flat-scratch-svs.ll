@@ -67,7 +67,6 @@ define amdgpu_kernel void @soff1_voff1(i32 %soff) {
 ; GFX11-SDAG-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-SDAG-NEXT:    scratch_store_b8 v0, v3, off dlc
 ; GFX11-SDAG-NEXT:    s_waitcnt_vscnt null, 0x0
-; GFX11-SDAG-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-SDAG-NEXT:    s_endpgm
 ;
 ; GFX11-GISEL-LABEL: soff1_voff1:
@@ -86,7 +85,6 @@ define amdgpu_kernel void @soff1_voff1(i32 %soff) {
 ; GFX11-GISEL-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-GISEL-NEXT:    scratch_store_b8 v0, v3, off dlc
 ; GFX11-GISEL-NEXT:    s_waitcnt_vscnt null, 0x0
-; GFX11-GISEL-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-GISEL-NEXT:    s_endpgm
 bb:
   %soff1 = mul i32 %soff, 1
@@ -164,7 +162,6 @@ define amdgpu_kernel void @soff1_voff2(i32 %soff) {
 ; GFX11-SDAG-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-SDAG-NEXT:    scratch_store_b8 v0, v3, off dlc
 ; GFX11-SDAG-NEXT:    s_waitcnt_vscnt null, 0x0
-; GFX11-SDAG-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-SDAG-NEXT:    s_endpgm
 ;
 ; GFX11-GISEL-LABEL: soff1_voff2:
@@ -184,7 +181,6 @@ define amdgpu_kernel void @soff1_voff2(i32 %soff) {
 ; GFX11-GISEL-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-GISEL-NEXT:    scratch_store_b8 v0, v3, off dlc
 ; GFX11-GISEL-NEXT:    s_waitcnt_vscnt null, 0x0
-; GFX11-GISEL-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-GISEL-NEXT:    s_endpgm
 bb:
   %soff1 = mul i32 %soff, 1
@@ -262,7 +258,6 @@ define amdgpu_kernel void @soff1_voff4(i32 %soff) {
 ; GFX11-SDAG-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-SDAG-NEXT:    scratch_store_b8 v0, v3, off dlc
 ; GFX11-SDAG-NEXT:    s_waitcnt_vscnt null, 0x0
-; GFX11-SDAG-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-SDAG-NEXT:    s_endpgm
 ;
 ; GFX11-GISEL-LABEL: soff1_voff4:
@@ -282,7 +277,6 @@ define amdgpu_kernel void @soff1_voff4(i32 %soff) {
 ; GFX11-GISEL-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-GISEL-NEXT:    scratch_store_b8 v0, v3, off dlc
 ; GFX11-GISEL-NEXT:    s_waitcnt_vscnt null, 0x0
-; GFX11-GISEL-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-GISEL-NEXT:    s_endpgm
 bb:
   %soff1 = mul i32 %soff, 1
@@ -361,7 +355,6 @@ define amdgpu_kernel void @soff2_voff1(i32 %soff) {
 ; GFX11-SDAG-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-SDAG-NEXT:    scratch_store_b8 v0, v3, off dlc
 ; GFX11-SDAG-NEXT:    s_waitcnt_vscnt null, 0x0
-; GFX11-SDAG-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-SDAG-NEXT:    s_endpgm
 ;
 ; GFX11-GISEL-LABEL: soff2_voff1:
@@ -381,7 +374,6 @@ define amdgpu_kernel void @soff2_voff1(i32 %soff) {
 ; GFX11-GISEL-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-GISEL-NEXT:    scratch_store_b8 v0, v3, off dlc
 ; GFX11-GISEL-NEXT:    s_waitcnt_vscnt null, 0x0
-; GFX11-GISEL-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-GISEL-NEXT:    s_endpgm
 bb:
   %soff2 = mul i32 %soff, 2
@@ -463,7 +455,6 @@ define amdgpu_kernel void @soff2_voff2(i32 %soff) {
 ; GFX11-SDAG-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-SDAG-NEXT:    scratch_store_b8 v0, v3, off dlc
 ; GFX11-SDAG-NEXT:    s_waitcnt_vscnt null, 0x0
-; GFX11-SDAG-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-SDAG-NEXT:    s_endpgm
 ;
 ; GFX11-GISEL-LABEL: soff2_voff2:
@@ -485,7 +476,6 @@ define amdgpu_kernel void @soff2_voff2(i32 %soff) {
 ; GFX11-GISEL-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-GISEL-NEXT:    scratch_store_b8 v0, v3, off dlc
 ; GFX11-GISEL-NEXT:    s_waitcnt_vscnt null, 0x0
-; GFX11-GISEL-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-GISEL-NEXT:    s_endpgm
 bb:
   %soff2 = mul i32 %soff, 2
@@ -567,7 +557,6 @@ define amdgpu_kernel void @soff2_voff4(i32 %soff) {
 ; GFX11-SDAG-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-SDAG-NEXT:    scratch_store_b8 v0, v3, off dlc
 ; GFX11-SDAG-NEXT:    s_waitcnt_vscnt null, 0x0
-; GFX11-SDAG-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-SDAG-NEXT:    s_endpgm
 ;
 ; GFX11-GISEL-LABEL: soff2_voff4:
@@ -589,7 +578,6 @@ define amdgpu_kernel void @soff2_voff4(i32 %soff) {
 ; GFX11-GISEL-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-GISEL-NEXT:    scratch_store_b8 v0, v3, off dlc
 ; GFX11-GISEL-NEXT:    s_waitcnt_vscnt null, 0x0
-; GFX11-GISEL-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-GISEL-NEXT:    s_endpgm
 bb:
   %soff2 = mul i32 %soff, 2
@@ -668,7 +656,6 @@ define amdgpu_kernel void @soff4_voff1(i32 %soff) {
 ; GFX11-SDAG-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-SDAG-NEXT:    scratch_store_b8 v0, v3, off dlc
 ; GFX11-SDAG-NEXT:    s_waitcnt_vscnt null, 0x0
-; GFX11-SDAG-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-SDAG-NEXT:    s_endpgm
 ;
 ; GFX11-GISEL-LABEL: soff4_voff1:
@@ -688,7 +675,6 @@ define amdgpu_kernel void @soff4_voff1(i32 %soff) {
 ; GFX11-GISEL-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-GISEL-NEXT:    scratch_store_b8 v0, v3, off dlc
 ; GFX11-GISEL-NEXT:    s_waitcnt_vscnt null, 0x0
-; GFX11-GISEL-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-GISEL-NEXT:    s_endpgm
 bb:
   %soff4 = mul i32 %soff, 4
@@ -770,7 +756,6 @@ define amdgpu_kernel void @soff4_voff2(i32 %soff) {
 ; GFX11-SDAG-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-SDAG-NEXT:    scratch_store_b8 v0, v3, off dlc
 ; GFX11-SDAG-NEXT:    s_waitcnt_vscnt null, 0x0
-; GFX11-SDAG-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-SDAG-NEXT:    s_endpgm
 ;
 ; GFX11-GISEL-LABEL: soff4_voff2:
@@ -792,7 +777,6 @@ define amdgpu_kernel void @soff4_voff2(i32 %soff) {
 ; GFX11-GISEL-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-GISEL-NEXT:    scratch_store_b8 v0, v3, off dlc
 ; GFX11-GISEL-NEXT:    s_waitcnt_vscnt null, 0x0
-; GFX11-GISEL-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-GISEL-NEXT:    s_endpgm
 bb:
   %soff4 = mul i32 %soff, 4
@@ -874,7 +858,6 @@ define amdgpu_kernel void @soff4_voff4(i32 %soff) {
 ; GFX11-SDAG-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-SDAG-NEXT:    scratch_store_b8 v0, v3, off dlc
 ; GFX11-SDAG-NEXT:    s_waitcnt_vscnt null, 0x0
-; GFX11-SDAG-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-SDAG-NEXT:    s_endpgm
 ;
 ; GFX11-GISEL-LABEL: soff4_voff4:
@@ -896,7 +879,6 @@ define amdgpu_kernel void @soff4_voff4(i32 %soff) {
 ; GFX11-GISEL-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-GISEL-NEXT:    scratch_store_b8 v0, v3, off dlc
 ; GFX11-GISEL-NEXT:    s_waitcnt_vscnt null, 0x0
-; GFX11-GISEL-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-GISEL-NEXT:    s_endpgm
 bb:
   %soff4 = mul i32 %soff, 4

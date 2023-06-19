@@ -23,7 +23,6 @@ define amdgpu_ps void @test_scratch_load_i8_zext_v(ptr addrspace(5) %in, ptr %ou
 ; GFX11-NEXT:    scratch_load_u8 v0, v0, off
 ; GFX11-NEXT:    s_waitcnt vmcnt(0)
 ; GFX11-NEXT:    flat_store_b32 v[1:2], v0
-; GFX11-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-NEXT:    s_endpgm
   %gep = getelementptr inbounds i8, ptr addrspace(5) %in, i32 1
   %load = load i8, ptr addrspace(5) %gep, align 4
@@ -51,7 +50,6 @@ define amdgpu_ps void @test_scratch_load_i8_sext_v(ptr addrspace(5) %in, ptr %ou
 ; GFX11-NEXT:    scratch_load_i8 v0, v0, off
 ; GFX11-NEXT:    s_waitcnt vmcnt(0)
 ; GFX11-NEXT:    flat_store_b32 v[1:2], v0
-; GFX11-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-NEXT:    s_endpgm
   %gep = getelementptr inbounds i8, ptr addrspace(5) %in, i32 1
   %load = load i8, ptr addrspace(5) %gep, align 4
@@ -79,7 +77,6 @@ define amdgpu_ps void @test_scratch_load_i16_zext_v(ptr addrspace(5) %in, ptr %o
 ; GFX11-NEXT:    scratch_load_u16 v0, v0, off
 ; GFX11-NEXT:    s_waitcnt vmcnt(0)
 ; GFX11-NEXT:    flat_store_b32 v[1:2], v0
-; GFX11-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-NEXT:    s_endpgm
   %gep = getelementptr inbounds i16, ptr addrspace(5) %in, i32 1
   %load = load i16, ptr addrspace(5) %gep, align 4
@@ -107,7 +104,6 @@ define amdgpu_ps void @test_scratch_load_i16_sext_v(ptr addrspace(5) %in, ptr %o
 ; GFX11-NEXT:    scratch_load_i16 v0, v0, off
 ; GFX11-NEXT:    s_waitcnt vmcnt(0)
 ; GFX11-NEXT:    flat_store_b32 v[1:2], v0
-; GFX11-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-NEXT:    s_endpgm
   %gep = getelementptr inbounds i16, ptr addrspace(5) %in, i32 1
   %load = load i16, ptr addrspace(5) %gep, align 4
@@ -136,7 +132,6 @@ define amdgpu_ps void @test_scratch_load_i8_zext_to_d16_lo_v(ptr addrspace(5) %i
 ; GFX11-NEXT:    scratch_load_d16_u8 v3, v0, off
 ; GFX11-NEXT:    s_waitcnt vmcnt(0)
 ; GFX11-NEXT:    flat_store_b32 v[1:2], v3
-; GFX11-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-NEXT:    s_endpgm
 bb:
   %gep = getelementptr i8, ptr addrspace(5) %in, i64 1
@@ -167,7 +162,6 @@ define amdgpu_ps void @test_scratch_load_i8_sext_to_d16_lo_v(ptr addrspace(5) %i
 ; GFX11-NEXT:    scratch_load_d16_i8 v3, v0, off
 ; GFX11-NEXT:    s_waitcnt vmcnt(0)
 ; GFX11-NEXT:    flat_store_b32 v[1:2], v3
-; GFX11-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-NEXT:    s_endpgm
 bb:
   %gep = getelementptr i8, ptr addrspace(5) %in, i64 1
@@ -198,7 +192,6 @@ define amdgpu_ps void @test_scratch_load_i16_to_d16_lo_v(ptr addrspace(5) %in, p
 ; GFX11-NEXT:    scratch_load_d16_b16 v3, v0, off
 ; GFX11-NEXT:    s_waitcnt vmcnt(0)
 ; GFX11-NEXT:    flat_store_b32 v[1:2], v3
-; GFX11-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-NEXT:    s_endpgm
 bb:
   %gep = getelementptr i16, ptr addrspace(5) %in, i64 1
@@ -229,7 +222,6 @@ define amdgpu_ps void @test_scratch_load_i8_zext_to_d16_hi_v(ptr addrspace(5) %i
 ; GFX11-NEXT:    scratch_load_d16_hi_u8 v3, v0, off
 ; GFX11-NEXT:    s_waitcnt vmcnt(0)
 ; GFX11-NEXT:    flat_store_b32 v[1:2], v3
-; GFX11-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-NEXT:    s_endpgm
 bb:
   %gep = getelementptr i8, ptr addrspace(5) %in, i64 1
@@ -260,7 +252,6 @@ define amdgpu_ps void @test_scratch_load_i8_sext_to_d16_hi_v(ptr addrspace(5) %i
 ; GFX11-NEXT:    scratch_load_d16_hi_i8 v3, v0, off
 ; GFX11-NEXT:    s_waitcnt vmcnt(0)
 ; GFX11-NEXT:    flat_store_b32 v[1:2], v3
-; GFX11-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-NEXT:    s_endpgm
 bb:
   %gep = getelementptr i8, ptr addrspace(5) %in, i64 1
@@ -291,7 +282,6 @@ define amdgpu_ps void @test_scratch_load_i16_to_d16_hi_v(ptr addrspace(5) %in, p
 ; GFX11-NEXT:    scratch_load_d16_hi_b16 v3, v0, off
 ; GFX11-NEXT:    s_waitcnt vmcnt(0)
 ; GFX11-NEXT:    flat_store_b32 v[1:2], v3
-; GFX11-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-NEXT:    s_endpgm
 bb:
   %gep = getelementptr i16, ptr addrspace(5) %in, i64 1
@@ -320,7 +310,6 @@ define amdgpu_ps void @test_scratch_store_b8_from_d16_hi_v(ptr %in, ptr addrspac
 ; GFX11-NEXT:    v_add_nc_u32_e32 v1, 4, v2
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; GFX11-NEXT:    scratch_store_d16_hi_b8 v1, v0, off
-; GFX11-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-NEXT:    s_endpgm
 bb:
   %load = load <4 x i8>, ptr %in
@@ -349,7 +338,6 @@ define amdgpu_ps void @test_scratch_store_b16_from_d16_hi_v(ptr %in, ptr addrspa
 ; GFX11-NEXT:    v_add_nc_u32_e32 v1, 2, v2
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; GFX11-NEXT:    scratch_store_d16_hi_b16 v1, v0, off
-; GFX11-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-NEXT:    s_endpgm
 bb:
   %load = load <2 x i16>, ptr %in
@@ -383,7 +371,6 @@ define amdgpu_ps void @test_scratch_load_i8_zext_s(ptr addrspace(5) inreg %in, p
 ; GFX11-NEXT:    scratch_load_u8 v2, off, s0
 ; GFX11-NEXT:    s_waitcnt vmcnt(0)
 ; GFX11-NEXT:    flat_store_b32 v[0:1], v2
-; GFX11-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-NEXT:    s_endpgm
   %gep = getelementptr inbounds i8, ptr addrspace(5) %in, i32 1
   %load = load i8, ptr addrspace(5) %gep, align 4
@@ -411,7 +398,6 @@ define amdgpu_ps void @test_scratch_load_i8_sext_s(ptr addrspace(5) inreg %in, p
 ; GFX11-NEXT:    scratch_load_i8 v2, off, s0
 ; GFX11-NEXT:    s_waitcnt vmcnt(0)
 ; GFX11-NEXT:    flat_store_b32 v[0:1], v2
-; GFX11-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-NEXT:    s_endpgm
   %gep = getelementptr inbounds i8, ptr addrspace(5) %in, i32 1
   %load = load i8, ptr addrspace(5) %gep, align 4
@@ -439,7 +425,6 @@ define amdgpu_ps void @test_scratch_load_i16_zext_s(ptr addrspace(5) inreg %in, 
 ; GFX11-NEXT:    scratch_load_u16 v2, off, s0
 ; GFX11-NEXT:    s_waitcnt vmcnt(0)
 ; GFX11-NEXT:    flat_store_b32 v[0:1], v2
-; GFX11-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-NEXT:    s_endpgm
   %gep = getelementptr inbounds i16, ptr addrspace(5) %in, i32 1
   %load = load i16, ptr addrspace(5) %gep, align 4
@@ -467,7 +452,6 @@ define amdgpu_ps void @test_scratch_load_i16_sext_s(ptr addrspace(5) inreg %in, 
 ; GFX11-NEXT:    scratch_load_i16 v2, off, s0
 ; GFX11-NEXT:    s_waitcnt vmcnt(0)
 ; GFX11-NEXT:    flat_store_b32 v[0:1], v2
-; GFX11-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-NEXT:    s_endpgm
   %gep = getelementptr inbounds i16, ptr addrspace(5) %in, i32 1
   %load = load i16, ptr addrspace(5) %gep, align 4
@@ -497,7 +481,6 @@ define amdgpu_ps void @test_scratch_load_i8_zext_to_d16_lo_s(ptr addrspace(5) in
 ; GFX11-NEXT:    scratch_load_d16_u8 v2, off, s0
 ; GFX11-NEXT:    s_waitcnt vmcnt(0)
 ; GFX11-NEXT:    flat_store_b32 v[0:1], v2
-; GFX11-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-NEXT:    s_endpgm
 bb:
   %gep = getelementptr i8, ptr addrspace(5) %in, i64 1
@@ -529,7 +512,6 @@ define amdgpu_ps void @test_scratch_load_i8_sext_to_d16_lo_s(ptr addrspace(5) in
 ; GFX11-NEXT:    scratch_load_d16_i8 v2, off, s0
 ; GFX11-NEXT:    s_waitcnt vmcnt(0)
 ; GFX11-NEXT:    flat_store_b32 v[0:1], v2
-; GFX11-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-NEXT:    s_endpgm
 bb:
   %gep = getelementptr i8, ptr addrspace(5) %in, i64 1
@@ -561,7 +543,6 @@ define amdgpu_ps void @test_scratch_load_i16_to_d16_lo_s(ptr addrspace(5) inreg 
 ; GFX11-NEXT:    scratch_load_d16_b16 v2, off, s0
 ; GFX11-NEXT:    s_waitcnt vmcnt(0)
 ; GFX11-NEXT:    flat_store_b32 v[0:1], v2
-; GFX11-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-NEXT:    s_endpgm
 bb:
   %gep = getelementptr i16, ptr addrspace(5) %in, i64 1
@@ -593,7 +574,6 @@ define amdgpu_ps void @test_scratch_load_i8_zext_to_d16_hi_s(ptr addrspace(5) in
 ; GFX11-NEXT:    scratch_load_d16_hi_u8 v2, off, s0
 ; GFX11-NEXT:    s_waitcnt vmcnt(0)
 ; GFX11-NEXT:    flat_store_b32 v[0:1], v2
-; GFX11-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-NEXT:    s_endpgm
 bb:
   %gep = getelementptr i8, ptr addrspace(5) %in, i64 1
@@ -625,7 +605,6 @@ define amdgpu_ps void @test_scratch_load_i8_sext_to_d16_hi_s(ptr addrspace(5) in
 ; GFX11-NEXT:    scratch_load_d16_hi_i8 v2, off, s0
 ; GFX11-NEXT:    s_waitcnt vmcnt(0)
 ; GFX11-NEXT:    flat_store_b32 v[0:1], v2
-; GFX11-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-NEXT:    s_endpgm
 bb:
   %gep = getelementptr i8, ptr addrspace(5) %in, i64 1
@@ -657,7 +636,6 @@ define amdgpu_ps void @test_scratch_load_i16_to_d16_hi_s(ptr addrspace(5) inreg 
 ; GFX11-NEXT:    scratch_load_d16_hi_b16 v2, off, s0
 ; GFX11-NEXT:    s_waitcnt vmcnt(0)
 ; GFX11-NEXT:    flat_store_b32 v[0:1], v2
-; GFX11-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-NEXT:    s_endpgm
 bb:
   %gep = getelementptr i16, ptr addrspace(5) %in, i64 1
@@ -686,7 +664,6 @@ define amdgpu_ps void @test_scratch_store_b8_from_d16_hi_s(ptr %in, ptr addrspac
 ; GFX11-NEXT:    s_add_i32 s0, s0, 4
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; GFX11-NEXT:    scratch_store_d16_hi_b8 off, v0, s0
-; GFX11-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-NEXT:    s_endpgm
 bb:
   %load = load <4 x i8>, ptr %in
@@ -715,7 +692,6 @@ define amdgpu_ps void @test_scratch_store_b16_from_d16_hi_s(ptr %in, ptr addrspa
 ; GFX11-NEXT:    s_add_i32 s0, s0, 2
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; GFX11-NEXT:    scratch_store_d16_hi_b16 off, v0, s0
-; GFX11-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-NEXT:    s_endpgm
 bb:
   %load = load <2 x i16>, ptr %in
@@ -752,7 +728,6 @@ define amdgpu_ps void @test_scratch_load_i8_zext_svs(ptr addrspace(5) inreg %in,
 ; GFX11-NEXT:    scratch_load_u8 v0, v0, off
 ; GFX11-NEXT:    s_waitcnt vmcnt(0)
 ; GFX11-NEXT:    flat_store_b32 v[1:2], v0
-; GFX11-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-NEXT:    s_endpgm
   %voffset4 = mul i32 %voffset, 4
   %gep0 = getelementptr inbounds i8, ptr addrspace(5) %in, i32 %voffset4
@@ -785,7 +760,6 @@ define amdgpu_ps void @test_scratch_load_i8_sext_svs(ptr addrspace(5) inreg %in,
 ; GFX11-NEXT:    scratch_load_i8 v0, v0, off
 ; GFX11-NEXT:    s_waitcnt vmcnt(0)
 ; GFX11-NEXT:    flat_store_b32 v[1:2], v0
-; GFX11-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-NEXT:    s_endpgm
   %voffset4 = mul i32 %voffset, 4
   %gep0 = getelementptr inbounds i8, ptr addrspace(5) %in, i32 %voffset4
@@ -818,7 +792,6 @@ define amdgpu_ps void @test_scratch_load_i16_zext_svs(ptr addrspace(5) inreg %in
 ; GFX11-NEXT:    scratch_load_u16 v0, v0, off
 ; GFX11-NEXT:    s_waitcnt vmcnt(0)
 ; GFX11-NEXT:    flat_store_b32 v[1:2], v0
-; GFX11-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-NEXT:    s_endpgm
   %voffset4 = mul i32 %voffset, 4
   %gep0 = getelementptr inbounds i8, ptr addrspace(5) %in, i32 %voffset4
@@ -851,7 +824,6 @@ define amdgpu_ps void @test_scratch_load_i16_sext_svs(ptr addrspace(5) inreg %in
 ; GFX11-NEXT:    scratch_load_i16 v0, v0, off
 ; GFX11-NEXT:    s_waitcnt vmcnt(0)
 ; GFX11-NEXT:    flat_store_b32 v[1:2], v0
-; GFX11-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-NEXT:    s_endpgm
   %voffset4 = mul i32 %voffset, 4
   %gep0 = getelementptr inbounds i8, ptr addrspace(5) %in, i32 %voffset4
@@ -885,7 +857,6 @@ define amdgpu_ps void @test_scratch_load_i8_zext_to_d16_lo_svs(ptr addrspace(5) 
 ; GFX11-NEXT:    scratch_load_d16_u8 v3, v0, off
 ; GFX11-NEXT:    s_waitcnt vmcnt(0)
 ; GFX11-NEXT:    flat_store_b32 v[1:2], v3
-; GFX11-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-NEXT:    s_endpgm
 bb:
   %voffset4 = mul i32 %voffset, 4
@@ -921,7 +892,6 @@ define amdgpu_ps void @test_scratch_load_i8_sext_to_d16_lo_svs(ptr addrspace(5) 
 ; GFX11-NEXT:    scratch_load_d16_i8 v3, v0, off
 ; GFX11-NEXT:    s_waitcnt vmcnt(0)
 ; GFX11-NEXT:    flat_store_b32 v[1:2], v3
-; GFX11-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-NEXT:    s_endpgm
 bb:
   %voffset4 = mul i32 %voffset, 4
@@ -957,7 +927,6 @@ define amdgpu_ps void @test_scratch_load_i16_to_d16_lo_svs(ptr addrspace(5) inre
 ; GFX11-NEXT:    scratch_load_d16_b16 v3, v0, off
 ; GFX11-NEXT:    s_waitcnt vmcnt(0)
 ; GFX11-NEXT:    flat_store_b32 v[1:2], v3
-; GFX11-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-NEXT:    s_endpgm
 bb:
   %voffset4 = mul i32 %voffset, 4
@@ -993,7 +962,6 @@ define amdgpu_ps void @test_scratch_load_i8_zext_to_d16_hi_svs(ptr addrspace(5) 
 ; GFX11-NEXT:    scratch_load_d16_hi_u8 v3, v0, off
 ; GFX11-NEXT:    s_waitcnt vmcnt(0)
 ; GFX11-NEXT:    flat_store_b32 v[1:2], v3
-; GFX11-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-NEXT:    s_endpgm
 bb:
   %voffset4 = mul i32 %voffset, 4
@@ -1029,7 +997,6 @@ define amdgpu_ps void @test_scratch_load_i8_sext_to_d16_hi_svs(ptr addrspace(5) 
 ; GFX11-NEXT:    scratch_load_d16_hi_i8 v3, v0, off
 ; GFX11-NEXT:    s_waitcnt vmcnt(0)
 ; GFX11-NEXT:    flat_store_b32 v[1:2], v3
-; GFX11-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-NEXT:    s_endpgm
 bb:
   %voffset4 = mul i32 %voffset, 4
@@ -1065,7 +1032,6 @@ define amdgpu_ps void @test_scratch_load_i16_to_d16_hi_svs(ptr addrspace(5) inre
 ; GFX11-NEXT:    scratch_load_d16_hi_b16 v3, v0, off
 ; GFX11-NEXT:    s_waitcnt vmcnt(0)
 ; GFX11-NEXT:    flat_store_b32 v[1:2], v3
-; GFX11-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-NEXT:    s_endpgm
 bb:
   %voffset4 = mul i32 %voffset, 4
@@ -1099,7 +1065,6 @@ define amdgpu_ps void @test_scratch_store_b8_from_d16_hi_svs(ptr %in, ptr addrsp
 ; GFX11-NEXT:    v_add3_u32 v1, s0, v1, 4
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; GFX11-NEXT:    scratch_store_d16_hi_b8 v1, v0, off
-; GFX11-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-NEXT:    s_endpgm
 bb:
   %load = load <4 x i8>, ptr %in
@@ -1133,7 +1098,6 @@ define amdgpu_ps void @test_scratch_store_b16_from_d16_hi_svs(ptr %in, ptr addrs
 ; GFX11-NEXT:    v_add3_u32 v1, s0, v1, 2
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; GFX11-NEXT:    scratch_store_d16_hi_b16 v1, v0, off
-; GFX11-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-NEXT:    s_endpgm
 bb:
   %load = load <2 x i16>, ptr %in
