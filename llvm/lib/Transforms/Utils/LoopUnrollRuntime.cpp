@@ -457,7 +457,7 @@ static bool canProfitablyUnrollMultiExitLoop(
   // call.
   return (OtherExits.size() == 1 &&
           (UnrollRuntimeOtherExitPredictable ||
-           OtherExits[0]->getTerminatingDeoptimizeCall()));
+           OtherExits[0]->getPostdominatingDeoptimizeCall()));
   // TODO: These can be fine-tuned further to consider code size or deopt states
   // that are captured by the deoptimize exit block.
   // Also, we can extend this to support more cases, if we actually
