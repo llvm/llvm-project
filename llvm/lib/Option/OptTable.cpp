@@ -513,7 +513,7 @@ InputArgList OptTable::parseArgs(int Argc, char *const *Argv,
   if (MAC)
     ErrorFn((Twine(Args.getArgString(MAI)) + ": missing argument").str());
 
-  // For each unknwon option, call ErrorFn with a formatted error message. The
+  // For each unknown option, call ErrorFn with a formatted error message. The
   // message includes a suggested alternative option spelling if available.
   std::string Nearest;
   for (const opt::Arg *A : Args.filtered(Unknown)) {
