@@ -116,9 +116,9 @@ CSKYTargetLowering::CSKYTargetLowering(const TargetMachine &TM,
       ISD::SETUGE, ISD::SETULT, ISD::SETULE,
   };
 
-  ISD::NodeType FPOpToExpand[] = {ISD::FSIN, ISD::FCOS, ISD::FSINCOS,
-                                  ISD::FPOW, ISD::FREM, ISD::FCOPYSIGN,
-                                  ISD::FP16_TO_FP, ISD::FP_TO_FP16};
+  ISD::NodeType FPOpToExpand[] = {
+      ISD::FSIN, ISD::FCOS,      ISD::FSINCOS,    ISD::FPOW,
+      ISD::FREM, ISD::FCOPYSIGN, ISD::FP16_TO_FP, ISD::FP_TO_FP16};
 
   if (STI.useHardFloat()) {
 
