@@ -115,7 +115,7 @@ public:
   Expected<ObjectRef> store(ArrayRef<ObjectRef> Refs,
                                ArrayRef<char> Data) final;
   CASID getID(ObjectRef Ref) const final;
-  Optional<ObjectRef> getReference(const CASID &ID) const final;
+  std::optional<ObjectRef> getReference(const CASID &ID) const final;
   Expected<std::optional<ObjectHandle>> loadIfExists(ObjectRef Ref) final;
   Error validate(const CASID &ID) final {
     // Not supported yet. Always return success.
@@ -132,7 +132,7 @@ public:
   // For sending file path through grpc.
   Expected<ObjectRef>
   storeFromOpenFileImpl(sys::fs::file_t FD,
-                        Optional<sys::fs::file_status> Status) override;
+                        std::optional<sys::fs::file_status> Status) override;
 
 private:
   InMemoryIndexValueT &indexHash(ArrayRef<uint8_t> Hash) const {
@@ -214,8 +214,8 @@ class GRPCActionCache : public ActionCache {
 public:
   GRPCActionCache(StringRef Path, Error &Err);
 
-  Expected<Optional<CASID>> getImpl(ArrayRef<uint8_t> ResolvedKey,
-                                    bool Globally) const final;
+  Expected<std::optional<CASID>> getImpl(ArrayRef<uint8_t> ResolvedKey,
+                                         bool Globally) const final;
   Error putImpl(ArrayRef<uint8_t> ResolvedKey, const CASID &Result,
                 bool Globally) final;
 
@@ -295,7 +295,7 @@ CASID GRPCRelayCAS::getID(ObjectRef Ref) const {
   return getID(asInMemoryIndexValue(Ref));
 }
 
-Optional<ObjectRef> GRPCRelayCAS::getReference(const CASID &ID) const {
+std::optional<ObjectRef> GRPCRelayCAS::getReference(const CASID &ID) const {
   assert(ID.getContext().getHashSchemaIdentifier() ==
              getContext().getHashSchemaIdentifier() &&
          "Expected ID from same hash schema");
@@ -361,7 +361,7 @@ ArrayRef<char> GRPCRelayCAS::getData(ObjectHandle Handle,
 
 Expected<ObjectRef>
 GRPCRelayCAS::storeFromOpenFileImpl(sys::fs::file_t FD,
-                                    Optional<sys::fs::file_status> FS) {
+                                    std::optional<sys::fs::file_status> FS) {
   std::error_code EC;
   sys::fs::mapped_file_region Map(FD, sys::fs::mapped_file_region::readonly,
                                   FS->getSize(),
@@ -371,7 +371,7 @@ GRPCRelayCAS::storeFromOpenFileImpl(sys::fs::file_t FD,
 
   ArrayRef<char> Data(Map.data(), Map.size());
   SmallString<128> Path;
-  Optional<std::string> Response;
+  std::optional<std::string> Response;
   if (sys::fs::getRealPathFromHandle(FD, Path)) {
     if (auto Err = CASDB->saveFileSync(Path.str().str()).moveInto(Response))
       return std::move(Err);
@@ -398,7 +398,7 @@ GRPCActionCache::GRPCActionCache(StringRef Path, Error &Err)
   KVDB = std::move(*Cache);
 }
 
-Expected<Optional<CASID>>
+Expected<std::optional<CASID>>
 GRPCActionCache::getImpl(ArrayRef<uint8_t> ResolvedKey,
                          bool /*Globally*/) const {
   auto Response = KVDB->getValueSync(ResolvedKey);
