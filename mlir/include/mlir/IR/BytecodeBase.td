@@ -92,6 +92,11 @@ def Blob :
   WithBuilder<"$_args",
   WithPrinter<"$_writer.writeOwnedBlob($_getter)",
   WithType   <"ArrayRef<char>">>>>;
+def Bool :
+  WithParser <"succeeded($_reader.readBool($_var))",
+  WithBuilder<"$_args",
+  WithPrinter<"$_writer.writeOwnedBool($_getter)",
+  WithType   <"bool">>>>;
 class KnownWidthAPInt<string s> :
   WithParser <"succeeded(readAPIntWithKnownWidth($_reader, " # s # ", $_var))",
   WithBuilder<"$_args",
@@ -125,6 +130,7 @@ class Array<Bytecode t> {
 //   for the list print/parsing.
 class List<Bytecode t> : WithGetter<"$_member", t>;
 def SignedVarIntList : List<SignedVarInt>;
+def BoolList : List<Bool>;
 
 // Define dialect attribute or type.
 class DialectAttrOrType<dag d> {

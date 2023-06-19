@@ -396,6 +396,8 @@ public:
         reinterpret_cast<const uint8_t *>(blob.data()), blob.size()));
   }
 
+  void writeOwnedBool(bool value) override { emitter.emitByte(value); }
+
   int64_t getBytecodeVersion() const override { return bytecodeVersion; }
 
 private:
