@@ -494,6 +494,7 @@ static StringRef getObjCMethodName(StringRef In) {
 void DwarfDebug::addSubprogramNames(const DICompileUnit &CU,
                                     const DISubprogram *SP, DIE &Die) {
   if (getAccelTableKind() != AccelTableKind::Apple &&
+      CU.getNameTableKind() != DICompileUnit::DebugNameTableKind::Apple &&
       CU.getNameTableKind() == DICompileUnit::DebugNameTableKind::None)
     return;
 
@@ -3538,6 +3539,7 @@ void DwarfDebug::addAccelNameImpl(const DICompileUnit &CU,
     return;
 
   if (getAccelTableKind() != AccelTableKind::Apple &&
+      CU.getNameTableKind() != DICompileUnit::DebugNameTableKind::Apple &&
       CU.getNameTableKind() != DICompileUnit::DebugNameTableKind::Default)
     return;
 
