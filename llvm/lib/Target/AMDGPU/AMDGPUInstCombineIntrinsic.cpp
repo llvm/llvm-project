@@ -412,7 +412,7 @@ static APInt defaultComponentBroadcast(Value *V) {
 
   for (int I = VWidth - 1; I > 0; --I) {
     auto *Elt = findScalarElement(V, I);
-    if (Elt != FirstComponent && !isa<UndefValue>(Elt))
+    if (!Elt || (Elt != FirstComponent && !isa<UndefValue>(Elt)))
       break;
     DemandedElts.clearBit(I);
   }
