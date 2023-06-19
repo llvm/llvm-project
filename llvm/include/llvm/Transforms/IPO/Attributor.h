@@ -821,6 +821,42 @@ struct IRPosition {
         "There is no attribute index for a floating or invalid position!");
   }
 
+  /// Return the attributes associated with this function or call site scope.
+  AttributeList getAttrList() const {
+    if (auto *CB = dyn_cast<CallBase>(&getAnchorValue()))
+      return CB->getAttributes();
+    return getAssociatedFunction()->getAttributes();
+  }
+
+  /// Update the attributes associated with this function or call site scope.
+  void setAttrList(const AttributeList &AttrList) const {
+    if (auto *CB = dyn_cast<CallBase>(&getAnchorValue()))
+      return CB->setAttributes(AttrList);
+    return getAssociatedFunction()->setAttributes(AttrList);
+  }
+
+  /// Return the number of arguments associated with this function or call site
+  /// scope.
+  unsigned getNumArgs() const {
+    assert((getPositionKind() == IRP_CALL_SITE ||
+            getPositionKind() == IRP_FUNCTION) &&
+           "Only valid for function/call site positions!");
+    if (auto *CB = dyn_cast<CallBase>(&getAnchorValue()))
+      return CB->arg_size();
+    return getAssociatedFunction()->arg_size();
+  }
+
+  /// Return theargument \p ArgNo associated with this function or call site
+  /// scope.
+  Value *getArg(unsigned ArgNo) const {
+    assert((getPositionKind() == IRP_CALL_SITE ||
+            getPositionKind() == IRP_FUNCTION) &&
+           "Only valid for function/call site positions!");
+    if (auto *CB = dyn_cast<CallBase>(&getAnchorValue()))
+      return CB->getArgOperand(ArgNo);
+    return getAssociatedFunction()->getArg(ArgNo);
+  }
+
   /// Return the associated position kind.
   Kind getPositionKind() const {
     char EncodingBits = getEncodingBits();
@@ -872,21 +908,19 @@ struct IRPosition {
     if (getPositionKind() == IRP_INVALID || getPositionKind() == IRP_FLOAT)
       return;
 
-    AttributeList AttrList;
-    auto *CB = dyn_cast<CallBase>(&getAnchorValue());
-    if (CB)
-      AttrList = CB->getAttributes();
-    else
-      AttrList = getAssociatedFunction()->getAttributes();
+    AttributeList AttrList = getAttrList();
 
+    bool Changed = false;
+    unsigned Idx = getAttrIdx();
     LLVMContext &Ctx = getAnchorValue().getContext();
-    for (Attribute::AttrKind AK : AKs)
-      AttrList = AttrList.removeAttributeAtIndex(Ctx, getAttrIdx(), AK);
-
-    if (CB)
-      CB->setAttributes(AttrList);
-    else
-      getAssociatedFunction()->setAttributes(AttrList);
+    for (Attribute::AttrKind AK : AKs) {
+      if (!AttrList.hasAttributeAtIndex(Idx, AK))
+        continue;
+      Changed = true;
+      AttrList = AttrList.removeAttributeAtIndex(Ctx, Idx, AK);
+    }
+    if (Changed)
+      setAttrList(AttrList);
   }
 
   bool isAnyCallSitePosition() const {
