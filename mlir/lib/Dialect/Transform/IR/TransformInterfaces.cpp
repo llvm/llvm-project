@@ -1562,7 +1562,24 @@ LogicalResult transform::detail::mapPossibleTopLevelTransformOpBlockArguments(
              << " were provided to the interpreter";
     }
 
-    targets.push_back(state.getTopLevel());
+    // Top-level transforms can be used for matching. If no concrete operation
+    // type is specified, the block argument is mapped to the top-level op.
+    // Otherwise, it is mapped to all ops of the specified type within the
+    // top-level op (including the top-level op itself). Once an op is added as
+    // a target, its descendants are not explored any further.
+    BlockArgument bbArg = region.front().getArgument(0);
+    if (auto bbArgType = dyn_cast<transform::OperationType>(bbArg.getType())) {
+      state.getTopLevel()->walk<WalkOrder::PreOrder>([&](Operation *op) {
+        if (op->getName().getStringRef() == bbArgType.getOperationName()) {
+          targets.push_back(op);
+          return WalkResult::skip();
+        }
+        return WalkResult::advance();
+      });
+    } else {
+      targets.push_back(state.getTopLevel());
+    }
+
     for (unsigned i = 0, e = state.getNumTopLevelMappings(); i < e; ++i)
       extraMappings.push_back(llvm::to_vector(state.getTopLevelMapping(i)));
   }

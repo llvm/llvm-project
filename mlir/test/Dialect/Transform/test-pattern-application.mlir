@@ -155,3 +155,22 @@ transform.sequence failures(propagate) {
   } : !transform.any_op
   transform.test_print_remark_at_operand %0, "op was replaced" : !transform.any_op
 }
+
+// -----
+
+// expected-note @below{{target payload op}}
+module {
+  func.func @invalid_pattern_application_to_transform_ir() {
+    return
+  }
+
+  module {
+    transform.sequence failures(propagate) {
+    ^bb1(%arg1: !transform.any_op):
+      // expected-error @below {{cannot apply transform to itself (or one of its ancestors)}}
+      transform.apply_patterns to %arg1 {
+        transform.apply_patterns.canonicalization
+      } : !transform.any_op
+    }
+  }
+}
