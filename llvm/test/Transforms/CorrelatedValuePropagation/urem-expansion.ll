@@ -342,3 +342,22 @@ define i1 @icmp_after_expansion(i8 noundef %x) {
   %cmp = icmp eq i8 %rem, 3
   ret i1 %cmp
 }
+
+define i8 @known_uge(i8 noundef %x) {
+; CHECK-LABEL: @known_uge(
+; CHECK-NEXT:    [[CMP_X_UPPER:%.*]] = icmp ult i8 [[X:%.*]], 6
+; CHECK-NEXT:    call void @llvm.assume(i1 [[CMP_X_UPPER]])
+; CHECK-NEXT:    [[CMP_X_LOWER:%.*]] = icmp uge i8 [[X]], 3
+; CHECK-NEXT:    call void @llvm.assume(i1 [[CMP_X_LOWER]])
+; CHECK-NEXT:    [[REM_UREM:%.*]] = sub nuw i8 [[X]], 3
+; CHECK-NEXT:    [[REM_CMP:%.*]] = icmp ult i8 [[X]], 3
+; CHECK-NEXT:    [[REM:%.*]] = select i1 [[REM_CMP]], i8 [[X]], i8 [[REM_UREM]]
+; CHECK-NEXT:    ret i8 [[REM]]
+;
+  %cmp.x.upper = icmp ult i8 %x, 6
+  call void @llvm.assume(i1 %cmp.x.upper)
+  %cmp.x.lower = icmp uge i8 %x, 3
+  call void @llvm.assume(i1 %cmp.x.lower)
+  %rem = urem i8 %x, 3
+  ret i8 %rem
+}
