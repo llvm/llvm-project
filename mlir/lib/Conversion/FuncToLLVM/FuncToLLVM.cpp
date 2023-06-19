@@ -208,6 +208,8 @@ static void wrapExternalFunction(OpBuilder &builder, Location loc,
       wrapperType, LLVM::Linkage::External, /*dsoLocal*/ false,
       /*cconv*/ LLVM::CConv::C, attributes);
 
+  // The wrapper that we synthetize here should only be visible in this module.
+  newFuncOp.setLinkage(LLVM::Linkage::Private);
   builder.setInsertionPointToStart(newFuncOp.addEntryBlock());
 
   // Get a ValueRange containing arguments.
