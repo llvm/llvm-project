@@ -681,26 +681,24 @@ private:
 private:
   const ComponentKind Kind;
   const ComponentProps PrevComp;
+  const unsigned Opcode;
 
 public:
   // Create layout for COMPONENT_X or SINGLE component.
-  ComponentLayout(ComponentKind Kind) : Kind(Kind) {
+  ComponentLayout(ComponentKind Kind, unsigned Opc) : Kind(Kind), Opcode(Opc) {
     assert(Kind == ComponentKind::SINGLE || Kind == ComponentKind::COMPONENT_X);
   }
 
   // Create layout for COMPONENT_Y which depends on COMPONENT_X layout.
-  ComponentLayout(const ComponentProps &OpXProps)
-      : Kind(ComponentKind::COMPONENT_Y), PrevComp(OpXProps) {}
+  ComponentLayout(const ComponentProps &OpXProps, unsigned Opc)
+      : Kind(ComponentKind::COMPONENT_Y), PrevComp(OpXProps), Opcode(Opc) {}
 
 public:
   // Return the index of dst operand in MCInst operands.
   unsigned getIndexOfDstInMCOperands() const { return MC_DST_IDX[Kind]; }
 
   // Return the index of the specified src operand in MCInst operands.
-  unsigned getIndexOfSrcInMCOperands(unsigned CompSrcIdx) const {
-    assert(CompSrcIdx < Component::MAX_SRC_NUM);
-    return FIRST_MC_SRC_IDX[Kind] + getPrevCompSrcNum() + CompSrcIdx;
-  }
+  unsigned getIndexOfSrcInMCOperands(unsigned CompSrcIdx) const;
 
   // Return the index of dst operand in the parsed operands array.
   unsigned getIndexOfDstInParsedOperands() const {
@@ -728,11 +726,11 @@ public:
   // Create ComponentInfo for COMPONENT_X or SINGLE component.
   ComponentInfo(const MCInstrDesc &OpDesc,
                 ComponentKind Kind = ComponentKind::SINGLE)
-      : ComponentLayout(Kind), ComponentProps(OpDesc) {}
+      : ComponentLayout(Kind, OpDesc.getOpcode()), ComponentProps(OpDesc) {}
 
   // Create ComponentInfo for COMPONENT_Y which depends on COMPONENT_X layout.
   ComponentInfo(const MCInstrDesc &OpDesc, const ComponentProps &OpXProps)
-      : ComponentLayout(OpXProps), ComponentProps(OpDesc) {}
+      : ComponentLayout(OpXProps, OpDesc.getOpcode()), ComponentProps(OpDesc) {}
 
   // Map component operand index to parsed operand index.
   // Return 0 if the specified operand does not exist.

@@ -619,6 +619,22 @@ std::pair<unsigned, unsigned> getVOPDComponents(unsigned VOPDOpcode) {
 
 namespace VOPD {
 
+unsigned ComponentLayout::getIndexOfSrcInMCOperands(unsigned CompSrcIdx) const {
+  assert(CompSrcIdx < Component::MAX_SRC_NUM);
+
+  const unsigned Ops[] = {OpName::src0, OpName::src1, OpName::src2};
+  if (Kind == SINGLE && Opcode != AMDGPU::V_FMAAK_F32 &&
+      Opcode != AMDGPU::V_FMAMK_F32) {
+    // FMAAK/FMAMK do not have $src2. However, for VOP2 the following method
+    // will work because it does not have modifiers.
+    return getNamedOperandIdx(Opcode, Ops[CompSrcIdx]);
+  }
+
+  // TODO-GFX1210: This method will not work for VOP3 components in a whole
+  // VOPD3 instruction too when neg source modifiers will be added.
+  return FIRST_MC_SRC_IDX[Kind] + getPrevCompSrcNum() + CompSrcIdx;
+}
+
 ComponentProps::ComponentProps(const MCInstrDesc &OpDesc) {
   assert(OpDesc.getNumDefs() == Component::DST_NUM);
 

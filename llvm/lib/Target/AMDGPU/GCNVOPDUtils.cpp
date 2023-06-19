@@ -85,13 +85,13 @@ bool llvm::checkVOPDRegConstraints(const SIInstrInfo &TII,
   for (auto CompIdx : VOPD::COMPONENTS) {
     const MachineInstr &MI = (CompIdx == VOPD::X) ? FirstMI : SecondMI;
 
-    const MachineOperand &Src0 = MI.getOperand(VOPD::Component::SRC0);
+    const MachineOperand &Src0 = *TII.getNamedOperand(MI, AMDGPU::OpName::src0);
     if (Src0.isReg()) {
       if (!TRI->isVectorRegister(MRI, Src0.getReg())) {
         if (!is_contained(UniqueScalarRegs, Src0.getReg()))
           UniqueScalarRegs.push_back(Src0.getReg());
       }
-    } else if (!TII.isInlineConstant(MI, VOPD::Component::SRC0)) {
+    } else if (!TII.isInlineConstant(Src0)) {
       if (IsVOPD3)
         return false;
       addLiteral(Src0);
@@ -121,6 +121,11 @@ bool llvm::checkVOPDRegConstraints(const SIInstrInfo &TII,
 
   if (InstInfo.hasInvalidOperand(getVRegIdx, *TRI, SkipSrc, AllowSameVGPR,
                                  IsVOPD3))
+    return false;
+
+  // TODO-GFX1210: Neg modifier can be supported for VOPD3.
+  if (IsVOPD3 &&
+      (TII.hasAnyModifiersSet(FirstMI) || TII.hasAnyModifiersSet(SecondMI)))
     return false;
 
   LLVM_DEBUG(dbgs() << "VOPD Reg Constraints Passed\n\tX: " << FirstMI
