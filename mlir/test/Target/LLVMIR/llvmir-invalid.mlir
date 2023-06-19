@@ -242,3 +242,14 @@ llvm.func @stepvector_intr_wrong_type() -> vector<7xf32> {
   %0 = llvm.intr.experimental.stepvector : vector<7xf32>
   llvm.return %0 : vector<7xf32>
 }
+
+// -----
+
+llvm.comdat @__llvm_comdat {
+  llvm.comdat_selector @foo any
+}
+
+llvm.comdat @__llvm_comdat_1 {
+  // expected-error @below{{comdat selection symbols must be unique even in different comdat regions}}
+  llvm.comdat_selector @foo any
+}
