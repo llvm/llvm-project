@@ -89,7 +89,6 @@ unittest("SupportTests") {
     "TimerTest.cpp",
     "ToolOutputFileTest.cpp",
     "TrailingObjectsTest.cpp",
-    "TrigramIndexTest.cpp",
     "TypeNameTest.cpp",
     "TypeSizeTest.cpp",
     "TypeTraitsTest.cpp",
