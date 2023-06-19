@@ -239,9 +239,8 @@ define void @benign_overflow(ptr %p, i64 %o) {
   ret void
 }
 
-; FIXME: This is a miscompile
 ; CHECK-LABEL: pr63266
-; CHECK: NoAlias:	i8* %gep2, i8* %offset16
+; CHECK: MayAlias:	i8* %gep2, i8* %offset16
 define void @pr63266(i1 %c, ptr %base) {
 entry:
   %offset16 = getelementptr inbounds i8, ptr %base, i64 16
