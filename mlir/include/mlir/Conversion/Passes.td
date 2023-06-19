@@ -361,10 +361,6 @@ def GpuToLLVMConversionPass : Pass<"gpu-to-llvm", "ModuleOp"> {
   }];
 
   let options = [
-    Option<"hostBarePtrCallConv", "use-bare-pointers-for-host", "bool",
-           /*default=*/"false",
-           "Use bare pointers to pass memref arguments to host functions. "
-           "All memrefs must have static shape.">,
     Option<"kernelBarePtrCallConv", "use-bare-pointers-for-kernels", "bool",
            /*default=*/"false",
              "Use bare pointers to pass memref arguments to kernels. "
@@ -426,10 +422,6 @@ def ConvertGpuOpsToNVVMOps : Pass<"convert-gpu-to-nvvm", "gpu::GPUModuleOp"> {
            "Bitwidth of the index type, 0 to use size of machine word">,
     Option<"hasRedux", "has-redux", "bool", /*default=*/"false",
            "Target gpu supports redux">,
-    Option<"useBarePtrCallConv", "use-bare-ptr-memref-call-conv", "bool",
-           /*default=*/"false",
-           "Replace memref arguments in GPU functions with bare pointers. "
-           "All memrefs must have static shape.">,
     Option<"useOpaquePointers", "use-opaque-pointers", "bool",
                    /*default=*/"true", "Generate LLVM IR using opaque pointers "
                    "instead of typed pointers">,
@@ -1065,7 +1057,7 @@ def ConvertVectorToSCF : Pass<"convert-vector-to-scf"> {
 // VectorToLLVM
 //===----------------------------------------------------------------------===//
 
-def ConvertVectorToLLVMPass : Pass<"convert-vector-to-llvm", "ModuleOp"> {
+def ConvertVectorToLLVMPass : Pass<"convert-vector-to-llvm"> {
   let summary = "Lower the operations from the vector dialect into the LLVM "
                 "dialect";
   let description = [{
@@ -1099,10 +1091,6 @@ def ConvertVectorToLLVMPass : Pass<"convert-vector-to-llvm", "ModuleOp"> {
     Option<"armSVE", "enable-arm-sve",
            "bool", /*default=*/"false",
            "Enables the use of ArmSVE dialect while lowering the vector "
-       "dialect.">,
-    Option<"armSME", "enable-arm-sme",
-           "bool", /*default=*/"false",
-           "Enables the use of ArmSME dialect while lowering the vector "
        "dialect.">,
     Option<"x86Vector", "enable-x86vector",
            "bool", /*default=*/"false",
