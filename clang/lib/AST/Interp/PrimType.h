@@ -13,6 +13,7 @@
 #ifndef LLVM_CLANG_AST_INTERP_TYPE_H
 #define LLVM_CLANG_AST_INTERP_TYPE_H
 
+#include "llvm/Support/raw_ostream.h"
 #include <climits>
 #include <cstddef>
 #include <cstdint>
@@ -41,6 +42,11 @@ enum PrimType : unsigned {
   PT_Ptr,
   PT_FnPtr,
 };
+
+enum class CastKind : uint8_t {
+  Reinterpret,
+};
+llvm::raw_ostream &operator<<(llvm::raw_ostream &OS, interp::CastKind CK);
 
 constexpr bool isIntegralType(PrimType T) { return T <= PT_Uint64; }
 
