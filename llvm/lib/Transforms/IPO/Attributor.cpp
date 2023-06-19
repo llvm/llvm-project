@@ -96,11 +96,6 @@ static cl::opt<unsigned, true> MaxInitializationChainLengthX(
     cl::location(MaxInitializationChainLength), cl::init(1024));
 unsigned llvm::MaxInitializationChainLength;
 
-static cl::opt<bool> VerifyMaxFixpointIterations(
-    "attributor-max-iterations-verify", cl::Hidden,
-    cl::desc("Verify that max-iterations is a tight bound for a fixpoint"),
-    cl::init(false));
-
 static cl::opt<bool> AnnotateDeclarationCallSites(
     "attributor-annotate-decl-cs", cl::Hidden,
     cl::desc("Annotate call sites of function declarations."), cl::init(false));
@@ -2069,8 +2064,7 @@ void Attributor::runTillFixpoint() {
                     QueryAAsAwaitingUpdate.end());
     QueryAAsAwaitingUpdate.clear();
 
-  } while (!Worklist.empty() &&
-           (IterationCounter++ < MaxIterations || VerifyMaxFixpointIterations));
+  } while (!Worklist.empty() && (IterationCounter++ < MaxIterations));
 
   if (IterationCounter > MaxIterations && !Functions.empty()) {
     auto Remark = [&](OptimizationRemarkMissed ORM) {
@@ -2113,13 +2107,6 @@ void Attributor::runTillFixpoint() {
       dbgs() << "\n[Attributor] Finalized " << Visited.size()
              << " abstract attributes.\n";
   });
-
-  if (VerifyMaxFixpointIterations && IterationCounter != MaxIterations) {
-    errs() << "\n[Attributor] Fixpoint iteration done after: "
-           << IterationCounter << "/" << MaxIterations << " iterations\n";
-    llvm_unreachable("The fixpoint was not reached with exactly the number of "
-                     "specified iterations!");
-  }
 }
 
 void Attributor::registerForUpdate(AbstractAttribute &AA) {
