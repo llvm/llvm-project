@@ -238,7 +238,6 @@ define amdgpu_kernel void @test_kern_stack_and_call() local_unnamed_addr #0 {
 ; GFX1100-NEXT:    s_add_u32 s16, s16, ex@rel32@lo+4
 ; GFX1100-NEXT:    s_addc_u32 s17, s17, ex@rel32@hi+12
 ; GFX1100-NEXT:    s_swappc_b64 s[30:31], s[16:17]
-; GFX1100-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX1100-NEXT:    s_endpgm
 
 entry:
@@ -517,7 +516,6 @@ define amdgpu_kernel void @test_force_fp_kern_stack_and_call() local_unnamed_add
 ; GFX1100-NEXT:    s_add_u32 s16, s16, ex@rel32@lo+4
 ; GFX1100-NEXT:    s_addc_u32 s17, s17, ex@rel32@hi+12
 ; GFX1100-NEXT:    s_swappc_b64 s[30:31], s[16:17]
-; GFX1100-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX1100-NEXT:    s_endpgm
 entry:
   %x = alloca i32, align 4, addrspace(5)
