@@ -71,7 +71,6 @@ public:
     constexpr span(const span& other) noexcept = default;
     template <class OtherElementType, size_t OtherExtent>
         constexpr explicit(Extent != dynamic_extent) span(const span<OtherElementType, OtherExtent>& s) noexcept;
-    ~span() noexcept = default;
     constexpr span& operator=(const span& other) noexcept = default;
 
     // [span.sub], span subviews
@@ -277,9 +276,6 @@ public:
           _LIBCPP_ASSERT_UNCATEGORIZED(_Extent == __other.size(), "size mismatch in span's constructor (other span)");
         }
 
-
-//  ~span() noexcept = default;
-
     template <size_t _Count>
     _LIBCPP_INLINE_VISIBILITY
     constexpr span<element_type, _Count> first() const noexcept
@@ -447,8 +443,6 @@ public:
     _LIBCPP_INLINE_VISIBILITY
         constexpr span(const span<_OtherElementType, _OtherExtent>& __other)  noexcept
         : __data_{__other.data()}, __size_{__other.size()} {}
-
-//    ~span() noexcept = default;
 
     template <size_t _Count>
     _LIBCPP_INLINE_VISIBILITY
