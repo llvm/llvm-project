@@ -2535,6 +2535,7 @@ typedef struct kmp_tdg_info {
   kmp_int32 rec_num_taskred;
 } kmp_tdg_info_t;
 
+extern int __kmp_tdg_dot;
 extern kmp_int32 __kmp_max_tdgs;
 extern kmp_tdg_info_t **__kmp_global_tdgs;
 extern kmp_int32 __kmp_curr_tdg_idx;
