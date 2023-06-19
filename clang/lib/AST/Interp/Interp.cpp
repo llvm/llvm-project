@@ -127,7 +127,7 @@ bool CheckExtern(InterpState &S, CodePtr OpPC, const Pointer &Ptr) {
     return true;
 
   if (!S.checkingPotentialConstantExpression()) {
-    auto *VD = Ptr.getDeclDesc()->asValueDecl();
+    const auto *VD = Ptr.getDeclDesc()->asValueDecl();
     const SourceInfo &Loc = S.Current->getSource(OpPC);
     S.FFDiag(Loc, diag::note_constexpr_ltor_non_constexpr, 1) << VD;
     S.Note(VD->getLocation(), diag::note_declared_at);
@@ -314,9 +314,9 @@ bool CheckCallable(InterpState &S, CodePtr OpPC, const Function *F) {
 
       // If this function is not constexpr because it is an inherited
       // non-constexpr constructor, diagnose that directly.
-      auto *CD = dyn_cast<CXXConstructorDecl>(DiagDecl);
+      const auto *CD = dyn_cast<CXXConstructorDecl>(DiagDecl);
       if (CD && CD->isInheritingConstructor()) {
-        auto *Inherited = CD->getInheritedConstructor().getConstructor();
+        const auto *Inherited = CD->getInheritedConstructor().getConstructor();
         if (!Inherited->isConstexpr())
           DiagDecl = CD = Inherited;
       }
@@ -358,7 +358,7 @@ bool CheckThis(InterpState &S, CodePtr OpPC, const Pointer &This) {
   const SourceInfo &Loc = S.Current->getSource(OpPC);
 
   bool IsImplicit = false;
-  if (auto *E = dyn_cast_if_present<CXXThisExpr>(Loc.asExpr()))
+  if (const auto *E = dyn_cast_if_present<CXXThisExpr>(Loc.asExpr()))
     IsImplicit = E->isImplicit();
 
   if (S.getLangOpts().CPlusPlus11)
@@ -402,7 +402,7 @@ static bool CheckArrayInitialized(InterpState &S, CodePtr OpPC,
       Pointer ElemPtr = BasePtr.atIndex(I).narrow();
       Result &= CheckFieldsInitialized(S, OpPC, ElemPtr, R);
     }
-  } else if (auto *ElemCAT = dyn_cast<ConstantArrayType>(ElemType)) {
+  } else if (const auto *ElemCAT = dyn_cast<ConstantArrayType>(ElemType)) {
     for (size_t I = 0; I != NumElems; ++I) {
       Pointer ElemPtr = BasePtr.atIndex(I).narrow();
       Result &= CheckArrayInitialized(S, OpPC, ElemPtr, ElemCAT);
