@@ -35,10 +35,3 @@ std::tuple<ExplicitCopy> non_const_explicity_copy_test() {
     return {std::allocator_arg, std::allocator<int>{}, e};
     // expected-error@-1 {{chosen constructor is explicit in copy-initialization}}
 }
-int main(int, char**)
-{
-    const_explicit_copy_test();
-    non_const_explicity_copy_test();
-
-  return 0;
-}

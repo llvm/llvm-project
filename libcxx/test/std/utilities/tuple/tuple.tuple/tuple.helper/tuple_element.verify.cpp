@@ -19,15 +19,8 @@
 // UNSUPPORTED: c++03
 
 #include <tuple>
-#include <type_traits>
 
-int main(int, char**)
-{
-    using T =  std::tuple<int, long, void*>;
-    using E1 = typename std::tuple_element<1, T &>::type; // expected-error{{undefined template}}
-    using E2 = typename std::tuple_element<3, T>::type;
-    using E3 = typename std::tuple_element<4, T const>::type;
-        // expected-error-re@*:* 2 {{{{(static_assert|static assertion)}} failed}}
-
-  return 0;
-}
+using T =  std::tuple<int, long, void*>;
+using E1 = typename std::tuple_element<1, T &>::type; // expected-error{{undefined template}}
+using E2 = typename std::tuple_element<3, T>::type;
+using E3 = typename std::tuple_element<4, T const>::type; // expected-error-re@*:* 2 {{{{(static_assert|static assertion)}} failed}}
