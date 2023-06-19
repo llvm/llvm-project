@@ -203,10 +203,16 @@ if (libcxx_enable_debug_mode) {
 }
 if (libcxx_enable_filesystem) {
   cxx_sources += [
+    "filesystem/directory_entry.cpp",
     "filesystem/directory_iterator.cpp",
-    "filesystem/filesystem_common.h",
+    "filesystem/file_descriptor.h",
+    "filesystem/filesystem_clock.cpp",
+    "filesystem/filesystem_error.cpp",
     "filesystem/operations.cpp",
+    "filesystem/path.cpp",
+    "filesystem/path_parser.h",
     "filesystem/posix_compat.h",
+    "filesystem/time_utils.h",
   ]
   if (libcxx_use_compiler_rt) {
     cxx_sources += [ "filesystem/int128_builtins.cpp" ]
