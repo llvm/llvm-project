@@ -22,7 +22,7 @@ define i32 @foo() nounwind noinline uwtable "function-instrument"="xray-always" 
 ; CHECK-LINUX:         .xword .Lxray_sled_0
 ; CHECK-LINUX-LABEL: Lxray_sleds_end0:
 
-; CHECK-MACOS-LABEL: .section __DATA,xray_instr_map{{$}}
+; CHECK-MACOS-LABEL: .section __DATA,xray_instr_map,regular,live_support{{$}}
 ; CHECK-MACOS-LABEL: Lxray_sleds_start0:
 ; CHECK-MACOS:         .quad Lxray_sled_0
 ; CHECK-MACOS-LABEL: Lxray_sleds_end0:

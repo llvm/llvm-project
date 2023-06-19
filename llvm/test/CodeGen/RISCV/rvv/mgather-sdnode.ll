@@ -549,10 +549,8 @@ define <vscale x 8 x i16> @mgather_baseidx_zext_nxv8i8_nxv8i16(ptr %base, <vscal
 define <vscale x 8 x i16> @mgather_baseidx_nxv8i16(ptr %base, <vscale x 8 x i16> %idxs, <vscale x 8 x i1> %m, <vscale x 8 x i16> %passthru) {
 ; RV32-LABEL: mgather_baseidx_nxv8i16:
 ; RV32:       # %bb.0:
-; RV32-NEXT:    vsetvli a1, zero, e32, m4, ta, ma
-; RV32-NEXT:    vsext.vf2 v12, v8
-; RV32-NEXT:    vadd.vv v12, v12, v12
-; RV32-NEXT:    vsetvli zero, zero, e16, m2, ta, mu
+; RV32-NEXT:    vsetvli a1, zero, e16, m2, ta, mu
+; RV32-NEXT:    vwadd.vv v12, v8, v8
 ; RV32-NEXT:    vluxei32.v v10, (a0), v12, v0.t
 ; RV32-NEXT:    vmv.v.v v8, v10
 ; RV32-NEXT:    ret
@@ -1510,10 +1508,8 @@ define <vscale x 8 x half> @mgather_baseidx_zext_nxv8i8_nxv8f16(ptr %base, <vsca
 define <vscale x 8 x half> @mgather_baseidx_nxv8f16(ptr %base, <vscale x 8 x i16> %idxs, <vscale x 8 x i1> %m, <vscale x 8 x half> %passthru) {
 ; RV32-LABEL: mgather_baseidx_nxv8f16:
 ; RV32:       # %bb.0:
-; RV32-NEXT:    vsetvli a1, zero, e32, m4, ta, ma
-; RV32-NEXT:    vsext.vf2 v12, v8
-; RV32-NEXT:    vadd.vv v12, v12, v12
-; RV32-NEXT:    vsetvli zero, zero, e16, m2, ta, mu
+; RV32-NEXT:    vsetvli a1, zero, e16, m2, ta, mu
+; RV32-NEXT:    vwadd.vv v12, v8, v8
 ; RV32-NEXT:    vluxei32.v v10, (a0), v12, v0.t
 ; RV32-NEXT:    vmv.v.v v8, v10
 ; RV32-NEXT:    ret

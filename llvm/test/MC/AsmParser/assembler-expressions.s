@@ -4,7 +4,7 @@
 .data
 
 # OBJDATA: Contents of section .data
-# OBJDATA-NEXT: 0000 aa01aa05 06ff
+# OBJDATA-NEXT: 0000 aa01aa05 06000000 08ff
 
 foo1:
 # ASM-ERR: :[[#@LINE+1]]:5: error: expected absolute expression
@@ -30,6 +30,16 @@ foo3:
    .byte 6
 .else
    .byte 7
+.endif
+
+foo4:
+.byte 0
+.space 2
+# ASM-ERR: :[[#@LINE+1]]:5: error: expected absolute expression
+.if . - foo4 == 3
+    .byte 8
+.else
+    .byte 9
 .endif
 
 .byte 0xff
