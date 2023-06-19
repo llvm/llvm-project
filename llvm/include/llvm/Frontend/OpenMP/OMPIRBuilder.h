@@ -1478,6 +1478,25 @@ public:
   /// Computes the size of type in bytes.
   Value *getSizeInBytes(Value *BasePtr);
 
+  // Emit a branch from the current block to the Target block only if
+  // the current block has a terminator.
+  void emitBranch(BasicBlock *Target);
+
+  // If BB has no use then delete it and return. Else place BB after the current
+  // block, if possible, or else at the end of the function. Also add a branch
+  // from current block to BB if current block does not have a terminator.
+  void emitBlock(BasicBlock *BB, Function *CurFn, bool IsFinished = false);
+
+  /// Emits code for OpenMP 'if' clause using specified \a BodyGenCallbackTy
+  /// Here is the logic:
+  /// if (Cond) {
+  ///   ThenGen();
+  /// } else {
+  ///   ElseGen();
+  /// }
+  void emitIfClause(Value *Cond, BodyGenCallbackTy ThenGen,
+                    BodyGenCallbackTy ElseGen, InsertPointTy AllocaIP = {});
+
   /// Create the global variable holding the offload mappings information.
   GlobalVariable *createOffloadMaptypes(SmallVectorImpl<uint64_t> &Mappings,
                                         std::string VarName);
@@ -1987,29 +2006,41 @@ public:
                                          StringRef EntryFnName,
                                          StringRef EntryFnIDName,
                                          int32_t NumTeams, int32_t NumThreads);
+  /// Type of BodyGen to use for region codegen
+  ///
+  /// Priv: If device pointer privatization is required, emit the body of the
+  /// region here. It will have to be duplicated: with and without
+  /// privatization.
+  /// DupNoPriv: If we need device pointer privatization, we need
+  /// to emit the body of the region with no privatization in the 'else' branch
+  /// of the conditional.
+  /// NoPriv: If we don't require privatization of device
+  /// pointers, we emit the body in between the runtime calls. This avoids
+  /// duplicating the body code.
+  enum BodyGenTy { Priv, DupNoPriv, NoPriv };
 
   /// Generator for '#omp target data'
   ///
   /// \param Loc The location where the target data construct was encountered.
+  /// \param AllocaIP The insertion points to be used for alloca instructions.
   /// \param CodeGenIP The insertion point at which the target directive code
   /// should be placed.
-  /// \param MapTypeFlags BitVector storing the mapType flags for the
-  /// mapOperands.
-  /// \param MapNames Names for the mapOperands.
-  /// \param MapperAllocas Pointers to the AllocInsts for the map clause.
   /// \param IsBegin If true then emits begin mapper call otherwise emits
   /// end mapper call.
   /// \param DeviceID Stores the DeviceID from the device clause.
   /// \param IfCond Value which corresponds to the if clause condition.
-  /// \param ProcessMapOpCB Callback that generates code for the map clause.
-  /// \param BodyGenCB Callback that will generate the region code.
+  /// \param Info Stores all information realted to the Target Data directive.
+  /// \param GenMapInfoCB Callback that populates the MapInfos and returns.
+  /// \param BodyGenCB Optional Callback to generate the region code.
   OpenMPIRBuilder::InsertPointTy createTargetData(
-      const LocationDescription &Loc, OpenMPIRBuilder::InsertPointTy CodeGenIP,
-      SmallVectorImpl<uint64_t> &MapTypeFlags,
-      SmallVectorImpl<Constant *> &MapNames,
-      struct MapperAllocas &MapperAllocas, bool IsBegin, int64_t DeviceID,
-      Value *IfCond, BodyGenCallbackTy ProcessMapOpCB,
-      BodyGenCallbackTy BodyGenCB = {});
+      const LocationDescription &Loc, InsertPointTy AllocaIP,
+      InsertPointTy CodeGenIP, Value *DeviceID, Value *IfCond,
+      TargetDataInfo &Info,
+      function_ref<MapInfosTy &(InsertPointTy CodeGenIP)> GenMapInfoCB,
+      omp::RuntimeFunction *MapperFunc = nullptr,
+      function_ref<InsertPointTy(InsertPointTy CodeGenIP,
+                                 BodyGenTy BodyGenType)>
+          BodyGenCB = nullptr);
 
   using TargetBodyGenCallbackTy = function_ref<InsertPointTy(
       InsertPointTy AllocaIP, InsertPointTy CodeGenIP)>;
