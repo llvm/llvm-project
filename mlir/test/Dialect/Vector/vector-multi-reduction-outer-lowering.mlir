@@ -189,10 +189,8 @@ func.func @vector_multi_reduction_to_scalar(%arg0: vector<2x3xf32>, %acc: f32) -
 //       CHECK:   return %{{.+}}
 
 transform.sequence failures(propagate) {
-^bb1(%module_op: !transform.any_op):
-  %func_op = transform.structured.match ops{["func.func"]} in %module_op
-      : (!transform.any_op) -> !transform.any_op
+^bb1(%func_op: !transform.op<"func.func">):
   transform.apply_patterns to %func_op {
     transform.apply_patterns.vector.lower_multi_reduction lowering_strategy = "innerparallel"
-  } : !transform.any_op
+  } : !transform.op<"func.func">
 }

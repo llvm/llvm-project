@@ -83,10 +83,8 @@ func.func @transfer_write_and_vector_rank_reducing_to_0d(
 //       CHECK:   vector.transfer_write %[[SHCAST]], %[[SUBVIEW]]{{.*}} : vector<f32>, memref<f32>
 
 transform.sequence failures(propagate) {
-^bb1(%module_op: !transform.any_op):
-  %func_op = transform.structured.match ops{["func.func"]} in %module_op
-      : (!transform.any_op) -> !transform.any_op
+^bb1(%func_op: !transform.op<"func.func">):
   transform.apply_patterns to %func_op {
     transform.apply_patterns.vector.rank_reducing_subview_patterns
-  } : !transform.any_op
+  } : !transform.op<"func.func">
 }

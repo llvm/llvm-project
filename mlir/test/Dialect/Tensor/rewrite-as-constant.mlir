@@ -1,12 +1,10 @@
 // RUN: mlir-opt -split-input-file -test-transform-dialect-interpreter %s | FileCheck %s
 
 transform.sequence failures(propagate) {
-^bb1(%module_op: !transform.any_op):
-  %func_op = transform.structured.match ops{["func.func"]} in %module_op
-      : (!transform.any_op) -> !transform.any_op
+^bb1(%func_op: !transform.op<"func.func">):
   transform.apply_patterns to %func_op {
     transform.apply_patterns.tensor.rewrite_as_constant
-  } : !transform.any_op
+  } : !transform.op<"func.func">
 }
 
 // CHECK-LABEL: func @tensor_generate_constant(

@@ -768,6 +768,26 @@ def SequenceOp : TransformDialectOp<"sequence",
     dialect. Operand omission is only allowed for sequences not contained in
     another sequence.
 
+    The type of the block argument must match the type of the operand. If the
+    sequence is a top-level transform (without an operand), it can be used for
+    matching operations if the specified type within the top-level container
+    payload IR (including the container op itself). E.g.:
+
+    ```mlir
+    transform.sequence failures(propagate) {
+    ^bb1(%arg1: !transform.any_op):
+      // %arg1 is mapped to the top-level container of the payload IR, which is
+      // typically a module
+    }
+
+    transform.sequence failures(propagate) {
+    ^bb1(%arg1: !transform.op<"func.func>"):
+      // %arg1 is mapped to all "func.func" ops within and including the
+      // top-level container of the payload IR. Nested operations that have the
+      // specified op type are not included.
+    }
+    ```
+
     The body of the sequence terminates with an implicit or explicit
     `transform.yield` op. The operands of the terminator are returned as the
     results of the sequence op.
