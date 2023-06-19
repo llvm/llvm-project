@@ -1,12 +1,10 @@
 // RUN: mlir-opt -split-input-file -test-transform-dialect-interpreter %s | FileCheck %s
 
 transform.sequence failures(propagate) {
-^bb1(%module_op: !transform.any_op):
-  %func_op = transform.structured.match ops{["func.func"]} in %module_op
-      : (!transform.any_op) -> !transform.any_op
+^bb1(%func_op: !transform.op<"func.func">):
   transform.apply_patterns to %func_op {
     transform.apply_patterns.tensor.fold_tensor_empty
-  } : !transform.any_op
+  } : !transform.op<"func.func">
 }
 
 // CHECK: #[[$MAP:.+]] = affine_map<()[s0] -> (s0 floordiv 28)>
@@ -67,13 +65,11 @@ func.func @rank_reducing_empty_tensor_extract(%sz : index, %idx : index) -> tens
 // -----
 
 transform.sequence failures(propagate) {
-^bb1(%module_op: !transform.any_op):
-  %func_op = transform.structured.match ops{["func.func"]} in %module_op
-      : (!transform.any_op) -> !transform.any_op
+^bb1(%func_op: !transform.op<"func.func">):
   transform.apply_patterns to %func_op {
     transform.apply_patterns.tensor.fold_tensor_empty
         {fold_single_use_only = true}
-  } : !transform.any_op
+  } : !transform.op<"func.func">
 }
 
 func.func @double_use_of_tensor_empty(%arg0: index, %arg1: index)

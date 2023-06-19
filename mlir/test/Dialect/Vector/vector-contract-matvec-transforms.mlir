@@ -209,10 +209,8 @@ func.func @redpar_vecmattrans2x2(%arg0: memref<vector<2x2xf32>>, %arg1: memref<v
 }
 
 transform.sequence failures(propagate) {
-^bb1(%module_op: !transform.any_op):
-  %func_op = transform.structured.match ops{["func.func"]} in %module_op
-      : (!transform.any_op) -> !transform.any_op
+^bb1(%func_op: !transform.op<"func.func">):
   transform.apply_patterns to %func_op {
     transform.apply_patterns.vector.lower_contraction lowering_strategy = "outerproduct"
-  } : !transform.any_op
+  } : !transform.op<"func.func">
 }
