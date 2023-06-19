@@ -134,7 +134,6 @@ define amdgpu_ps void @struct_tbuffer_store_insert_undefs(<4 x i32> inreg %a, fl
   ret void
 }
 
-; TODO-GFX12: Detect identical elements in %data.
 define amdgpu_ps void @image_store_1d_store_shufflevector_same(<8 x i32> inreg %rsrc, <4 x float> %vdata1, i32 %s) #0 {
 ; GCN-LABEL: @image_store_1d_store_shufflevector_same(
 ; GCN-NEXT:    [[DATA:%.*]] = shufflevector <4 x float> [[VDATA1:%.*]], <4 x float> poison, <4 x i32> zeroinitializer
@@ -142,8 +141,8 @@ define amdgpu_ps void @image_store_1d_store_shufflevector_same(<8 x i32> inreg %
 ; GCN-NEXT:    ret void
 ;
 ; GFX12-LABEL: @image_store_1d_store_shufflevector_same(
-; GFX12-NEXT:    [[DATA:%.*]] = shufflevector <4 x float> [[VDATA1:%.*]], <4 x float> poison, <4 x i32> zeroinitializer
-; GFX12-NEXT:    call void @llvm.amdgcn.image.store.1d.v4f32.i32(<4 x float> [[DATA]], i32 15, i32 [[S:%.*]], <8 x i32> [[RSRC:%.*]], i32 0, i32 0)
+; GFX12-NEXT:    [[TMP1:%.*]] = extractelement <4 x float> [[VDATA1:%.*]], i64 0
+; GFX12-NEXT:    call void @llvm.amdgcn.image.store.1d.f32.i32(float [[TMP1]], i32 1, i32 [[S:%.*]], <8 x i32> [[RSRC:%.*]], i32 0, i32 0)
 ; GFX12-NEXT:    ret void
 ;
   %data = shufflevector <4 x float> %vdata1, <4 x float> poison, <4 x i32> <i32 0, i32 0, i32 0, i32 0>

@@ -410,10 +410,22 @@ static APInt defaultComponentBroadcast(Value *V) {
   APInt DemandedElts = APInt::getAllOnes(VWidth);
   Value *FirstComponent = findScalarElement(V, 0);
 
+  SmallVector<int> ShuffleMask;
+  if (auto *SVI = dyn_cast<ShuffleVectorInst>(V))
+    SVI->getShuffleMask(ShuffleMask);
+
   for (int I = VWidth - 1; I > 0; --I) {
-    auto *Elt = findScalarElement(V, I);
-    if (!Elt || (Elt != FirstComponent && !isa<UndefValue>(Elt)))
-      break;
+    if (ShuffleMask.empty()) {
+      auto *Elt = findScalarElement(V, I);
+      if (!Elt || (Elt != FirstComponent && !isa<UndefValue>(Elt)))
+        break;
+    } else {
+      // Detect identical elements in the shufflevector result, even though
+      // findScalarElement cannot tell us what that element is.
+      if (ShuffleMask[I] != ShuffleMask[0] &&
+          ShuffleMask[I] != PoisonMaskElem)
+        break;
+    }
     DemandedElts.clearBit(I);
   }
 
