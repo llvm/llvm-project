@@ -143,6 +143,8 @@ private:
   Cost estimateBranchInst(BranchInst &I);
 
   Constant *visitInstruction(Instruction &I) { return nullptr; }
+  Constant *visitFreezeInst(FreezeInst &I);
+  Constant *visitCallBase(CallBase &I);
   Constant *visitLoadInst(LoadInst &I);
   Constant *visitGetElementPtrInst(GetElementPtrInst &I);
   Constant *visitSelectInst(SelectInst &I);

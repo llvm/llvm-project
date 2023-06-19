@@ -448,6 +448,12 @@ public:
     return DACtx->arena().create<T>(std::forward<Args>(args)...);
   }
 
+  /// Returns a symbolic integer value that models an integer literal equal to
+  /// `Value`
+  IntegerValue &getIntLiteralValue(llvm::APInt Value) const {
+    return DACtx->arena().makeIntLiteral(Value);
+  }
+
   /// Returns a symbolic boolean value that models a boolean literal equal to
   /// `Value`
   AtomicBoolValue &getBoolLiteralValue(bool Value) const {

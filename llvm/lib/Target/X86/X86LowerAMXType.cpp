@@ -709,7 +709,7 @@ class X86LowerAMXCast {
 
 public:
   X86LowerAMXCast(Function &F) : Func(F), DT(nullptr) {}
-  void combineCastStore(IntrinsicInst *Cast, StoreInst *ST);
+  bool combineCastStore(IntrinsicInst *Cast, StoreInst *ST);
   bool combineLoadCast(IntrinsicInst *Cast, LoadInst *LD);
   bool combineLdSt(SmallVectorImpl<Instruction *> &Casts);
   bool combineAMXcast(TargetLibraryInfo *TLI);
@@ -922,12 +922,12 @@ bool X86LowerAMXCast::optimizeAMXCastFromPhi(
 // -->
 // call void @llvm.x86.tilestored64.internal(i16 %row, i16 %col, i8* %p,
 //                                           i64 64, x86_amx %42)
-void X86LowerAMXCast::combineCastStore(IntrinsicInst *Cast, StoreInst *ST) {
+bool X86LowerAMXCast::combineCastStore(IntrinsicInst *Cast, StoreInst *ST) {
   Value *Tile = Cast->getOperand(0);
   // TODO: If it is cast intrinsic or phi node, we can propagate the
   // shape information through def-use chain.
   if (!isAMXIntrinsic(Tile))
-    return;
+    return false;
   auto *II = cast<IntrinsicInst>(Tile);
   // Tile is output from AMX intrinsic. The first operand of the
   // intrinsic is row, the second operand of the intrinsic is column.
@@ -942,6 +942,7 @@ void X86LowerAMXCast::combineCastStore(IntrinsicInst *Cast, StoreInst *ST) {
   std::array<Value *, 5> Args = {Row, Col, I8Ptr, Stride, Tile};
   Builder.CreateIntrinsic(Intrinsic::x86_tilestored64_internal, std::nullopt,
                           Args);
+  return true;
 }
 
 // %65 = load <256 x i32>, <256 x i32>* %p, align 64
@@ -1006,9 +1007,10 @@ bool X86LowerAMXCast::combineLdSt(SmallVectorImpl<Instruction *> &Casts) {
         StoreInst *Store = dyn_cast<StoreInst>(U);
         if (!Store)
           continue;
-        combineCastStore(cast<IntrinsicInst>(Cast), Store);
-        DeadStores.push_back(Store);
-        Change = true;
+        if (combineCastStore(cast<IntrinsicInst>(Cast), Store)) {
+          DeadStores.push_back(Store);
+          Change = true;
+        }
       }
       for (auto *Store : DeadStores)
         Store->eraseFromParent();

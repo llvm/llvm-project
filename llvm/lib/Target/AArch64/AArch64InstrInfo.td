@@ -8517,6 +8517,25 @@ def : Pat<(any_fadd (vector_extract (v8f16 FPR128:$Rn), (i64 0)),
                     (vector_extract (v8f16 FPR128:$Rn), (i64 1))),
           (f16 (FADDPv2i16p (EXTRACT_SUBREG FPR128:$Rn, dsub)))>;
 
+// Prefer using the bottom lanes of addp Rn, Rn compared to
+// addp extractlow(Rn), extracthigh(Rn)
+def : Pat<(AArch64addp (v2i32 (extract_subvector (v4i32 FPR128:$Rn), (i64 0))),
+                       (v2i32 (extract_subvector (v4i32 FPR128:$Rn), (i64 2)))),
+          (v2i32 (EXTRACT_SUBREG (ADDPv4i32 $Rn, $Rn), dsub))>;
+def : Pat<(AArch64addp (v4i16 (extract_subvector (v8i16 FPR128:$Rn), (i64 0))),
+                       (v4i16 (extract_subvector (v8i16 FPR128:$Rn), (i64 4)))),
+          (v4i16 (EXTRACT_SUBREG (ADDPv8i16 $Rn, $Rn), dsub))>;
+def : Pat<(AArch64addp (v8i8 (extract_subvector (v16i8 FPR128:$Rn), (i64 0))),
+                       (v8i8 (extract_subvector (v16i8 FPR128:$Rn), (i64 8)))),
+          (v8i8 (EXTRACT_SUBREG (ADDPv16i8 $Rn, $Rn), dsub))>;
+
+def : Pat<(AArch64faddp (v2f32 (extract_subvector (v4f32 FPR128:$Rn), (i64 0))),
+                        (v2f32 (extract_subvector (v4f32 FPR128:$Rn), (i64 2)))),
+          (v2f32 (EXTRACT_SUBREG (FADDPv4f32 $Rn, $Rn), dsub))>;
+def : Pat<(AArch64faddp (v4f16 (extract_subvector (v8f16 FPR128:$Rn), (i64 0))),
+                        (v4f16 (extract_subvector (v8f16 FPR128:$Rn), (i64 4)))),
+          (v4f16 (EXTRACT_SUBREG (FADDPv8f16 $Rn, $Rn), dsub))>;
+
 // Scalar 64-bit shifts in FPR64 registers.
 def : Pat<(i64 (int_aarch64_neon_sshl (i64 FPR64:$Rn), (i64 FPR64:$Rm))),
           (SSHLv1i64 FPR64:$Rn, FPR64:$Rm)>;
