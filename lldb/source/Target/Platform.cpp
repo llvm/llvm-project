@@ -1630,7 +1630,7 @@ Status Platform::DownloadModuleSlice(const FileSpec &src_file_spec,
     return error;
   }
 
-  std::vector<char> buffer(1024);
+  std::vector<char> buffer(512 * 1024);
   auto offset = src_offset;
   uint64_t total_bytes_read = 0;
   while (total_bytes_read < src_size) {
