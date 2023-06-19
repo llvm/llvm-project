@@ -1963,7 +1963,7 @@ def GPU_SpMVOp : GPU_Op<"spmv", [GPU_AsyncOpInterface]> {
   }];
 }
 
-def GPU_SpMMBufferSizeOp : GPU_Op<"spmm_buffer_size", [GPU_AsyncOpInterface]> {
+def GPU_SpMMBufferSizeOp : GPU_Op<"spmm_buffer_size", [GPU_AsyncOpInterface, AttrSizedResultSegments]> {
   let summary = "Precompute buffersize for SpMM operation";
   let description = [{
     The `gpu.spmm_buffer_size` operation returns the buffer size required
@@ -1994,8 +1994,7 @@ def GPU_SpMMBufferSizeOp : GPU_Op<"spmm_buffer_size", [GPU_AsyncOpInterface]> {
                        GPU_SparseDnTensorHandle:$dnmatB,
                        GPU_SparseDnTensorHandle:$dnmatC,
                        TypeAttr:$computeType);
-  let results = (outs Res<AnyTypeOf<[Index, TupleOf<[Index, Index,
-                                                     Index]>]>>:$bufferSzs,
+  let results = (outs Variadic<Index>:$bufferSzs,
                       Optional<GPU_AsyncToken>:$asyncToken);
 
   let builders = [OpBuilder<(ins

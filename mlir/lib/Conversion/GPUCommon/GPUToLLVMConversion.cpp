@@ -1746,18 +1746,31 @@ LogicalResult ConvertSpMMBufferSizeOpToGpuRuntimeCallPattern::matchAndRewrite(
         rewriter, loc, getCuSparseLtDataTypeFrom(adaptor.getComputeType()));
     auto three = rewriter.create<LLVM::ConstantOp>(loc, getIndexType(),
                                                    rewriter.getIndexAttr(3));
-    bufferSize = rewriter.create<LLVM::AllocaOp>(loc, llvmInt64PointerType,
-                                                 llvmInt64Type, three);
-    bufferSize =
-        rewriter.create<LLVM::BitcastOp>(loc, llvmPointerType, bufferSize);
-
+    auto bufferSize = rewriter.create<LLVM::AllocaOp>(loc, llvmInt64PointerType,
+                                                      llvmInt64Type, three);
     createCuSparseLtSpMMBufferSizeBuilder
         .create(loc, rewriter,
                 {bufferSize, adaptor.getEnv(), modeA, modeB,
                  adaptor.getSpmatA(), adaptor.getDnmatB(), adaptor.getDnmatC(),
                  computeType, stream})
         .getResult();
-    rewriter.replaceOp(op, {bufferSize, stream});
+
+    auto bufferSizePtr1 = rewriter.create<LLVM::GEPOp>(
+        loc, llvmInt64PointerType, llvmInt64PointerType, bufferSize,
+        ValueRange{rewriter.create<LLVM::ConstantOp>(
+            loc, getIndexType(), rewriter.getIndexAttr(1))});
+    auto bufferSizePtr2 = rewriter.create<LLVM::GEPOp>(
+        loc, llvmInt64PointerType, llvmInt64PointerType, bufferSize,
+        ValueRange{rewriter.create<LLVM::ConstantOp>(
+            loc, getIndexType(), rewriter.getIndexAttr(2))});
+    auto bufferSize0 =
+        rewriter.create<LLVM::LoadOp>(loc, llvmInt64Type, bufferSize);
+    auto bufferSize1 =
+        rewriter.create<LLVM::LoadOp>(loc, llvmInt64Type, bufferSizePtr1);
+    auto bufferSize2 =
+        rewriter.create<LLVM::LoadOp>(loc, llvmInt64Type, bufferSizePtr2);
+
+    rewriter.replaceOp(op, {bufferSize0, bufferSize1, bufferSize2, stream});
   } else {
     auto computeType = genConstInt32From(
         rewriter, loc, getCuSparseDataTypeFrom(adaptor.getComputeType()));
