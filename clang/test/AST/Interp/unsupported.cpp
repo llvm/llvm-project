@@ -47,3 +47,11 @@ namespace Asm {
     return 0;
   }
 }
+
+namespace Casts {
+  constexpr int a = reinterpret_cast<int>(12); // expected-error {{must be initialized by a constant expression}} \
+                                               // expected-note {{reinterpret_cast is not allowed}} \
+                                               // ref-error {{must be initialized by a constant expression}} \
+                                               // ref-note {{reinterpret_cast is not allowed}}
+
+}
