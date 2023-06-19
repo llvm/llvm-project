@@ -85,6 +85,8 @@
 
 #include <csignal>
 
+LLD_HAS_DRIVER(elf)
+
 using namespace llvm;
 using namespace llvm::opt;
 using namespace llvm::sys;
@@ -614,13 +616,14 @@ static amd_comgr_status_t linkWithLLD(llvm::ArrayRef<const char *> Args,
                                       llvm::raw_ostream &LogE) {
   ArgStringList LLDArgs(llvm::iterator_range<ArrayRef<const char *>::iterator>(
       Args.begin(), Args.end()));
-  LLDArgs.insert(LLDArgs.begin(), "lld");
+  LLDArgs.insert(LLDArgs.begin(), "ld.lld");
   LLDArgs.push_back("--threads=1");
 
   ArrayRef<const char *> ArgRefs = llvm::ArrayRef(LLDArgs);
-  bool LLDRet = lld::elf::link(ArgRefs, LogS, LogE, false, false);
+  lld::Result LLDRet =
+      lld::lldMain(ArgRefs, LogS, LogE, {{lld::Gnu, &lld::elf::link}});
   lld::CommonLinkerContext::destroy();
-  if (!LLDRet) {
+  if (LLDRet.retCode || !LLDRet.canRunAgain) {
     return AMD_COMGR_STATUS_ERROR;
   }
   return AMD_COMGR_STATUS_SUCCESS;
