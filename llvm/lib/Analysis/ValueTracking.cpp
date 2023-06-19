@@ -4012,6 +4012,14 @@ std::pair<Value *, FPClassTest> llvm::fcmpToClassTest(FCmpInst::Predicate Pred,
   if (!match(RHS, m_APFloat(ConstRHS)))
     return {nullptr, fcNone};
 
+  // fcmp ord x, zero|normal|subnormal|inf -> ~fcNan
+  if (Pred == FCmpInst::FCMP_ORD && !ConstRHS->isNaN())
+    return {LHS, ~fcNan};
+
+  // fcmp uno x, zero|normal|subnormal|inf -> fcNan
+  if (Pred == FCmpInst::FCMP_UNO && !ConstRHS->isNaN())
+    return {LHS, fcNan};
+
   if (ConstRHS->isZero()) {
     // Compares with fcNone are only exactly equal to fcZero if input denormals
     // are not flushed.
@@ -4118,8 +4126,14 @@ std::pair<Value *, FPClassTest> llvm::fcmpToClassTest(FCmpInst::Predicate Pred,
     }
     case FCmpInst::FCMP_OLT:
     case FCmpInst::FCMP_UGE: {
-      if (ConstRHS->isNegative()) // TODO
-        return {nullptr, fcNone};
+      if (ConstRHS->isNegative()) {
+        // No value is ordered and less than negative infinity.
+        // All values are unordered with or at least negative infinity.
+        // fcmp olt x, -inf -> false
+        // fcmp uge x, -inf -> true
+        Mask = fcNone;
+        break;
+      }
 
       // fcmp olt fabs(x), +inf -> fcFinite
       // fcmp uge fabs(x), +inf -> ~fcFinite
@@ -4142,6 +4156,15 @@ std::pair<Value *, FPClassTest> llvm::fcmpToClassTest(FCmpInst::Predicate Pred,
       Mask = fcPosInf;
       if (IsFabs)
         Mask |= fcNegInf;
+      break;
+    }
+    case FCmpInst::FCMP_OGT:
+    case FCmpInst::FCMP_ULE: {
+      if (ConstRHS->isNegative())
+        return {nullptr, fcNone};
+
+      // No value is ordered and greater than infinity.
+      Mask = fcNone;
       break;
     }
     default:
@@ -4176,6 +4199,10 @@ std::pair<Value *, FPClassTest> llvm::fcmpToClassTest(FCmpInst::Predicate Pred,
     default:
       return {nullptr, fcNone};
     }
+  } else if (ConstRHS->isNaN()) {
+    // fcmp o__ x, nan -> false
+    // fcmp u__ x, nan -> true
+    Mask = fcNone;
   } else
     return {nullptr, fcNone};
 
