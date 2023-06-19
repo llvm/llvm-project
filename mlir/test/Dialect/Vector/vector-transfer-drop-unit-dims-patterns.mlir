@@ -1,4 +1,4 @@
-// RUN: mlir-opt %s --test-transform-dialect-interpreter --split-input-file | FileCheck %s
+// RUN: mlir-opt %s --test-transform-dialect-interpreter | FileCheck %s
 
 func.func @transfer_read_rank_reducing(
       %arg : memref<1x1x3x2xi8, strided<[6, 6, 2, 1], offset: ?>>) -> vector<3x2xi8> {
@@ -8,21 +8,11 @@ func.func @transfer_read_rank_reducing(
       memref<1x1x3x2xi8, strided<[6, 6, 2, 1], offset: ?>>, vector<3x2xi8>
     return %v : vector<3x2xi8>
 }
-
 // CHECK-LABEL: func @transfer_read_rank_reducing
 //  CHECK-SAME:     %[[ARG:.+]]: memref<1x1x3x2xi8
 //       CHECK:   %[[SUBVIEW:.+]] = memref.subview %[[ARG]][0, 0, 0, 0] [1, 1, 3, 2] [1, 1, 1, 1]
 //  CHECK-SAME:     memref<1x1x3x2xi8, {{.*}}> to memref<3x2xi8, {{.*}}>
 //       CHECK:   vector.transfer_read %[[SUBVIEW]]
-
-transform.sequence failures(propagate) {
-^bb1(%module_op: !transform.any_op):
-  transform.apply_patterns to %module_op {
-    transform.apply_patterns.vector.rank_reducing_subview_patterns
-  } : !transform.any_op
-}
-
-// -----
 
 func.func @transfer_write_rank_reducing(%arg : memref<1x1x3x2xi8, strided<[6, 6, 2, 1], offset: ?>>, %vec : vector<3x2xi8>) {
     %c0 = arith.constant 0 : index
@@ -30,21 +20,11 @@ func.func @transfer_write_rank_reducing(%arg : memref<1x1x3x2xi8, strided<[6, 6,
       vector<3x2xi8>, memref<1x1x3x2xi8, strided<[6, 6, 2, 1], offset: ?>>
     return
 }
-
 // CHECK-LABEL: func @transfer_write_rank_reducing
 //  CHECK-SAME:     %[[ARG:.+]]: memref<1x1x3x2xi8
 //       CHECK:   %[[SUBVIEW:.+]] = memref.subview %[[ARG]][0, 0, 0, 0] [1, 1, 3, 2] [1, 1, 1, 1]
 //  CHECK-SAME:     memref<1x1x3x2xi8, {{.*}}> to memref<3x2xi8, {{.*}}>
 //       CHECK:   vector.transfer_write %{{.*}}, %[[SUBVIEW]]
-
-transform.sequence failures(propagate) {
-^bb1(%module_op: !transform.any_op):
-  transform.apply_patterns to %module_op {
-    transform.apply_patterns.vector.rank_reducing_subview_patterns
-  } : !transform.any_op
-}
-
-// -----
 
 func.func @transfer_read_and_vector_rank_reducing(
       %arg : memref<1x1x3x2x1xf32>) -> vector<3x2x1xf32> {
@@ -54,21 +34,11 @@ func.func @transfer_read_and_vector_rank_reducing(
       memref<1x1x3x2x1xf32>, vector<3x2x1xf32>
     return %v : vector<3x2x1xf32>
 }
-
 // CHECK-LABEL: func @transfer_read_and_vector_rank_reducing
 //  CHECK-SAME:     %[[ARG:.+]]: memref<1x1x3x2x1xf32>
 //       CHECK:   %[[SUBVIEW:.+]] = memref.subview %[[ARG]][0, 0, 0, 0, 0] [1, 1, 3, 2, 1] [1, 1, 1, 1, 1]
 //  CHECK-SAME:     memref<1x1x3x2x1xf32> to memref<3x2xf32>
 //       CHECK:   vector.transfer_read %[[SUBVIEW]]{{.*}} {in_bounds = [true, true]} : memref<3x2xf32>, vector<3x2xf32>
-
-transform.sequence failures(propagate) {
-^bb1(%module_op: !transform.any_op):
-  transform.apply_patterns to %module_op {
-    transform.apply_patterns.vector.rank_reducing_subview_patterns
-  } : !transform.any_op
-}
-
-// -----
 
 func.func @transfer_write_and_vector_rank_reducing(
       %arg : memref<1x1x3x2x1xf32>,
@@ -78,21 +48,11 @@ func.func @transfer_write_and_vector_rank_reducing(
       vector<3x2x1xf32>, memref<1x1x3x2x1xf32>
     return
 }
-
 // CHECK-LABEL: func @transfer_write_and_vector_rank_reducing
 //  CHECK-SAME:     %[[ARG:.+]]: memref<1x1x3x2x1xf32>
 //       CHECK:   %[[SUBVIEW:.+]] = memref.subview %[[ARG]][0, 0, 0, 0, 0] [1, 1, 3, 2, 1] [1, 1, 1, 1, 1]
 //  CHECK-SAME:     memref<1x1x3x2x1xf32> to memref<3x2xf32>
 //       CHECK:   vector.transfer_write %{{.*}}, %[[SUBVIEW]]{{.*}} {in_bounds = [true, true]} : vector<3x2xf32>, memref<3x2xf32>
-
-transform.sequence failures(propagate) {
-^bb1(%module_op: !transform.any_op):
-  transform.apply_patterns to %module_op {
-    transform.apply_patterns.vector.rank_reducing_subview_patterns
-  } : !transform.any_op
-}
-
-// -----
 
 func.func @transfer_read_and_vector_rank_reducing_to_0d(
       %arg : memref<1x1x1x1x1xf32>) -> vector<1x1x1xf32> {
@@ -102,21 +62,11 @@ func.func @transfer_read_and_vector_rank_reducing_to_0d(
       memref<1x1x1x1x1xf32>, vector<1x1x1xf32>
     return %v : vector<1x1x1xf32>
 }
-
 // CHECK-LABEL: func @transfer_read_and_vector_rank_reducing_to_0d
 //  CHECK-SAME:     %[[MEMREF:.+]]: memref<1x1x1x1x1xf32>
 //       CHECK:   %[[SUBVIEW:.+]] = memref.subview %[[MEMREF]][0, 0, 0, 0, 0] [1, 1, 1, 1, 1] [1, 1, 1, 1, 1] : memref<1x1x1x1x1xf32> to memref<f32>
 //       CHECK:   %[[READ:.+]] = vector.transfer_read %[[SUBVIEW]]{{.*}} : memref<f32>, vector<f32>
 //       CHECK:   vector.shape_cast %[[READ]] : vector<f32> to vector<1x1x1xf32>
-
-transform.sequence failures(propagate) {
-^bb1(%module_op: !transform.any_op):
-  transform.apply_patterns to %module_op {
-    transform.apply_patterns.vector.rank_reducing_subview_patterns
-  } : !transform.any_op
-}
-
-// -----
 
 func.func @transfer_write_and_vector_rank_reducing_to_0d(
       %arg : memref<1x1x1x1x1xf32>,
@@ -126,7 +76,6 @@ func.func @transfer_write_and_vector_rank_reducing_to_0d(
       vector<1x1x1xf32>, memref<1x1x1x1x1xf32>
     return
 }
-
 // CHECK-LABEL: func @transfer_write_and_vector_rank_reducing_to_0d
 //  CHECK-SAME:     %[[MEMREF:.+]]: memref<1x1x1x1x1xf32>, %[[VECTOR:.+]]: vector<1x1x1xf32>
 //       CHECK:   %[[SUBVIEW:.+]] = memref.subview %[[MEMREF]][0, 0, 0, 0, 0] [1, 1, 1, 1, 1] [1, 1, 1, 1, 1] : memref<1x1x1x1x1xf32> to memref<f32>
@@ -135,7 +84,9 @@ func.func @transfer_write_and_vector_rank_reducing_to_0d(
 
 transform.sequence failures(propagate) {
 ^bb1(%module_op: !transform.any_op):
-  transform.apply_patterns to %module_op {
+  %func_op = transform.structured.match ops{["func.func"]} in %module_op
+      : (!transform.any_op) -> !transform.any_op
+  transform.apply_patterns to %func_op {
     transform.apply_patterns.vector.rank_reducing_subview_patterns
   } : !transform.any_op
 }
