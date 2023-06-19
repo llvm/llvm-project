@@ -83,6 +83,7 @@ private:
   bool m_fpu_is_valid;
   bool m_sve_buffer_is_valid;
   bool m_mte_ctrl_is_valid;
+  bool m_tls_tpidr_is_valid;
 
   bool m_sve_header_is_valid;
   bool m_pac_mask_is_valid;
@@ -107,6 +108,8 @@ private:
 
   uint64_t m_mte_ctrl_reg;
 
+  uint64_t m_tls_tpidr_reg;
+
   bool IsGPR(unsigned reg) const;
 
   bool IsFPR(unsigned reg) const;
@@ -125,9 +128,14 @@ private:
 
   Status WriteMTEControl();
 
+  Status ReadTLSTPIDR();
+
+  Status WriteTLSTPIDR();
+
   bool IsSVE(unsigned reg) const;
   bool IsPAuth(unsigned reg) const;
   bool IsMTE(unsigned reg) const;
+  bool IsTLS(unsigned reg) const;
 
   uint64_t GetSVERegVG() { return m_sve_header.vl / 8; }
 
@@ -139,6 +147,8 @@ private:
 
   void *GetMTEControl() { return &m_mte_ctrl_reg; }
 
+  void *GetTLSTPIDR() { return &m_tls_tpidr_reg; }
+
   void *GetSVEBuffer() { return m_sve_ptrace_payload.data(); };
 
   size_t GetSVEHeaderSize() { return sizeof(m_sve_header); }
@@ -148,6 +158,8 @@ private:
   size_t GetSVEBufferSize() { return m_sve_ptrace_payload.size(); }
 
   size_t GetMTEControlSize() { return sizeof(m_mte_ctrl_reg); }
+
+  size_t GetTLSTPIDRSize() { return sizeof(m_tls_tpidr_reg); }
 
   llvm::Error ReadHardwareDebugInfo() override;
 
