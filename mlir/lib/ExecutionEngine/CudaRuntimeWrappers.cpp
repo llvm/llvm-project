@@ -556,9 +556,10 @@ mgpuCuSparseLtSpMMBufferSize(void *bs, void *h, int32_t ma, int32_t mb, void *a,
   auto matA = reinterpret_cast<cusparseLtSpMatHandleAndData *>(a);
   auto matB = reinterpret_cast<cusparseLtDnMatHandleAndData *>(b);
   auto matC = reinterpret_cast<cusparseLtDnMatHandleAndData *>(c);
-  auto workspace_size = reinterpret_cast<size_t *>(bs);
-  auto compressed_size = &(reinterpret_cast<size_t *>(bs)[1]);
-  auto compressed_buffer_size = &(reinterpret_cast<size_t *>(bs)[2]);
+  auto workspace_size = reinterpret_cast<int64_t *>(bs);
+  auto compressed_size = &(reinterpret_cast<int64_t *>(bs)[1]);
+  auto compressed_buffer_size = &(reinterpret_cast<int64_t *>(bs)[2]);
+  size_t workspace_size_, compressed_size_, compressed_buffer_size_;
   auto cTp = static_cast<cusparseComputeType>(ctp);
 
   cusparseOperation_t modeA = static_cast<cusparseOperation_t>(ma);
@@ -577,15 +578,14 @@ mgpuCuSparseLtSpMMBufferSize(void *bs, void *h, int32_t ma, int32_t mb, void *a,
       handle, &(matA->plan), &(matA->matmul), &(matA->alg_sel)))
 
   CUSPARSE_REPORT_IF_ERROR(
-      cusparseLtMatmulGetWorkspace(handle, &(matA->plan), workspace_size))
+      cusparseLtMatmulGetWorkspace(handle, &(matA->plan), &workspace_size_))
   CUSPARSE_REPORT_IF_ERROR(cusparseLtSpMMACompressedSize(
-      handle, &(matA->plan), compressed_size, compressed_buffer_size))
-
+      handle, &(matA->plan), &compressed_size_, &compressed_buffer_size_))
   // avoid zero-alloc
-  *workspace_size = (*workspace_size == 0 ? 1 : *workspace_size);
-  *compressed_size = (*compressed_size == 0 ? 1 : *compressed_size);
+  *workspace_size = (workspace_size_ == 0 ? 1 : workspace_size_);
+  *compressed_size = (compressed_size_ == 0 ? 1 : compressed_size_);
   *compressed_buffer_size =
-      (*compressed_buffer_size == 0 ? 1 : *compressed_buffer_size);
+      (compressed_buffer_size_ == 0 ? 1 : compressed_buffer_size_);
 }
 
 extern "C" MLIR_CUDA_WRAPPERS_EXPORT void
