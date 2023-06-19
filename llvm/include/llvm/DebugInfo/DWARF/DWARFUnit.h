@@ -355,6 +355,15 @@ public:
     return AddrOffsetSectionBase;
   }
 
+  /// Returns offset to the indexed address value inside .debug_addr section.
+  std::optional<uint64_t> getIndexedAddressOffset(uint64_t Index) {
+    if (std::optional<uint64_t> AddrOffsetSectionBase =
+            getAddrOffsetSectionBase())
+      return *AddrOffsetSectionBase + Index * getAddressByteSize();
+
+    return std::nullopt;
+  }
+
   /// Recursively update address to Die map.
   void updateAddressDieMap(DWARFDie Die);
 
