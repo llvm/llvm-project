@@ -31,10 +31,9 @@ _LIBCPP_BEGIN_NAMESPACE_STD
 namespace ranges {
 namespace __adjacent_find {
 struct __fn {
-
   template <class _Iter, class _Sent, class _Proj, class _Pred>
-  _LIBCPP_HIDE_FROM_ABI constexpr static
-  _Iter __adjacent_find_impl(_Iter __first, _Sent __last, _Pred& __pred, _Proj& __proj) {
+  _LIBCPP_HIDE_FROM_ABI constexpr static _Iter
+  __adjacent_find_impl(_Iter __first, _Sent __last, _Pred& __pred, _Proj& __proj) {
     if (__first == __last)
       return __first;
 
@@ -47,27 +46,28 @@ struct __fn {
     return __i;
   }
 
-  template <forward_iterator _Iter, sentinel_for<_Iter> _Sent,
-            class _Proj = identity,
+  template <forward_iterator _Iter,
+            sentinel_for<_Iter> _Sent,
+            class _Proj                                                                       = identity,
             indirect_binary_predicate<projected<_Iter, _Proj>, projected<_Iter, _Proj>> _Pred = ranges::equal_to>
-  _LIBCPP_NODISCARD_EXT _LIBCPP_HIDE_FROM_ABI constexpr
-  _Iter operator()(_Iter __first, _Sent __last, _Pred __pred = {}, _Proj __proj = {}) const {
+  _LIBCPP_NODISCARD_EXT _LIBCPP_HIDE_FROM_ABI constexpr _Iter
+  operator()(_Iter __first, _Sent __last, _Pred __pred = {}, _Proj __proj = {}) const {
     return __adjacent_find_impl(std::move(__first), std::move(__last), __pred, __proj);
   }
 
   template <forward_range _Range,
             class _Proj = identity,
-            indirect_binary_predicate<projected<iterator_t<_Range>, _Proj>,
-                                      projected<iterator_t<_Range>, _Proj>> _Pred = ranges::equal_to>
-  _LIBCPP_NODISCARD_EXT _LIBCPP_HIDE_FROM_ABI constexpr
-  borrowed_iterator_t<_Range> operator()(_Range&& __range, _Pred __pred = {}, _Proj __proj = {}) const {
+            indirect_binary_predicate<projected<iterator_t<_Range>, _Proj>, projected<iterator_t<_Range>, _Proj>>
+                _Pred = ranges::equal_to>
+  _LIBCPP_NODISCARD_EXT _LIBCPP_HIDE_FROM_ABI constexpr borrowed_iterator_t<_Range>
+  operator()(_Range&& __range, _Pred __pred = {}, _Proj __proj = {}) const {
     return __adjacent_find_impl(ranges::begin(__range), ranges::end(__range), __pred, __proj);
   }
 };
 } // namespace __adjacent_find
 
 inline namespace __cpo {
-  inline constexpr auto adjacent_find = __adjacent_find::__fn{};
+inline constexpr auto adjacent_find = __adjacent_find::__fn{};
 } // namespace __cpo
 } // namespace ranges
 

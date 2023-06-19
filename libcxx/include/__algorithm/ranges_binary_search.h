@@ -31,28 +31,33 @@ _LIBCPP_BEGIN_NAMESPACE_STD
 namespace ranges {
 namespace __binary_search {
 struct __fn {
-  template <forward_iterator _Iter, sentinel_for<_Iter> _Sent, class _Type, class _Proj = identity,
+  template <forward_iterator _Iter,
+            sentinel_for<_Iter> _Sent,
+            class _Type,
+            class _Proj                                                             = identity,
             indirect_strict_weak_order<const _Type*, projected<_Iter, _Proj>> _Comp = ranges::less>
-  _LIBCPP_NODISCARD_EXT _LIBCPP_HIDE_FROM_ABI constexpr
-  bool operator()(_Iter __first, _Sent __last, const _Type& __value, _Comp __comp = {}, _Proj __proj = {}) const {
+  _LIBCPP_NODISCARD_EXT _LIBCPP_HIDE_FROM_ABI constexpr bool
+  operator()(_Iter __first, _Sent __last, const _Type& __value, _Comp __comp = {}, _Proj __proj = {}) const {
     auto __ret = std::__lower_bound<_RangeAlgPolicy>(__first, __last, __value, __comp, __proj);
     return __ret != __last && !std::invoke(__comp, __value, std::invoke(__proj, *__ret));
   }
 
-  template <forward_range _Range, class _Type, class _Proj = identity,
+  template <forward_range _Range,
+            class _Type,
+            class _Proj                                                                          = identity,
             indirect_strict_weak_order<const _Type*, projected<iterator_t<_Range>, _Proj>> _Comp = ranges::less>
-  _LIBCPP_NODISCARD_EXT _LIBCPP_HIDE_FROM_ABI constexpr
-  bool operator()(_Range&& __r, const _Type& __value, _Comp __comp = {}, _Proj __proj = {}) const {
+  _LIBCPP_NODISCARD_EXT _LIBCPP_HIDE_FROM_ABI constexpr bool
+  operator()(_Range&& __r, const _Type& __value, _Comp __comp = {}, _Proj __proj = {}) const {
     auto __first = ranges::begin(__r);
-    auto __last = ranges::end(__r);
-    auto __ret = std::__lower_bound<_RangeAlgPolicy>(__first, __last, __value, __comp, __proj);
+    auto __last  = ranges::end(__r);
+    auto __ret   = std::__lower_bound<_RangeAlgPolicy>(__first, __last, __value, __comp, __proj);
     return __ret != __last && !std::invoke(__comp, __value, std::invoke(__proj, *__ret));
   }
 };
 } // namespace __binary_search
 
 inline namespace __cpo {
-  inline constexpr auto binary_search = __binary_search::__fn{};
+inline constexpr auto binary_search = __binary_search::__fn{};
 } // namespace __cpo
 } // namespace ranges
 
