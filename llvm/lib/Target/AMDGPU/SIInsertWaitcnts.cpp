@@ -386,6 +386,10 @@ private:
   bool ForceEmitZeroWaitcnts;
   bool ForceEmitWaitcnt[NUM_INST_CNTS];
 
+  // S_ENDPGM instructions before which we should insert a DEALLOC_VGPRS
+  // message.
+  DenseSet<MachineInstr *> ReleaseVGPRInsts;
+
 public:
   static char ID;
 
@@ -1031,6 +1035,15 @@ bool SIInsertWaitcnts::generateWaitcntInstBefore(MachineInstr &MI,
       MI.getOpcode() == AMDGPU::S_SETPC_B64_return ||
       (MI.isReturn() && MI.isCall() && !callWaitsOnFunctionEntry(MI))) {
     Wait = Wait.combined(allZeroWaitcnt());
+  }
+  // Identify S_ENDPGM instructions which may have to wait for outstanding VMEM
+  // stores. In this case it can be useful to send a message to explicitly
+  // release all VGPRs before the stores have completed.
+  else if (MI.getOpcode() == AMDGPU::S_ENDPGM ||
+           MI.getOpcode() == AMDGPU::S_ENDPGM_SAVED) {
+    if (ST->getGeneration() >= AMDGPUSubtarget::GFX11 &&
+        ScoreBrackets.getScoreRange(VS_CNT) != 0)
+      ReleaseVGPRInsts.insert(&MI);
   }
   // Resolve vm waits before gs-done.
   else if ((MI.getOpcode() == AMDGPU::S_SENDMSG ||
@@ -1929,6 +1942,15 @@ bool SIInsertWaitcnts::runOnMachineFunction(MachineFunction &MF) {
       }
     }
   }
+
+  // Insert DEALLOC_VGPR messages before previously identified S_ENDPGM
+  // instructions.
+  for (MachineInstr *MI : ReleaseVGPRInsts) {
+    BuildMI(*MI->getParent(), MI, DebugLoc(), TII->get(AMDGPU::S_SENDMSG))
+        .addImm(AMDGPU::SendMsg::ID_DEALLOC_VGPRS_GFX11Plus);
+    Modified = true;
+  }
+  ReleaseVGPRInsts.clear();
 
   return Modified;
 }
