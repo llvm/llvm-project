@@ -733,4 +733,9 @@ def err_drv_loongarch_invalid_mfpu_EQ : Error<
 
 def err_drv_expand_response_file : Error<
   "failed to expand response file: %0">;
+
+def err_drv_no_matching_multilib : Error<
+  "no multilib found matching flags: %0">;
+def note_drv_available_multilibs : Note<
+  "available multilibs are:%0">;
 }
