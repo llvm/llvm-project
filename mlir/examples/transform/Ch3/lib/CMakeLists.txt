@@ -1,13 +1,10 @@
-add_mlir_library(
+# Outside examples, this should be `add_mlir_library`.
+add_mlir_example_library(
   # Library called MyExtension.
   MyExtensionCh3
 
   # Built from the following source files.
   MyExtension.cpp
-
-  # Do not make this part of the main library distribution.
-  # Needed for the example only.
-  EXCLUDE_FROM_LIBMLIR
 
   # Make includes visible without top-level path.
   ADDITIONAL_HEADER_DIRS
@@ -18,7 +15,7 @@ add_mlir_library(
   MyExtensionCh3IncGen
 
   # Link in the transform dialect, an all generated dialects.
-  LINK_LIBS PUBLIC
+  LINK_LIBS PRIVATE
   MLIRTransformDialect
   MLIRFuncDialect
   MLIRSCFDialect
