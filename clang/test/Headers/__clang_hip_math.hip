@@ -1155,17 +1155,14 @@ extern "C" __device__ int test_ilogb(double x) {
 
 // DEFAULT-LABEL: @test___finitef(
 // DEFAULT-NEXT:  entry:
-// DEFAULT-NEXT:    [[CALL_I:%.*]] = tail call i32 @__ocml_isfinite_f32(float noundef [[X:%.*]]) #[[ATTR14]]
-// DEFAULT-NEXT:    [[TOBOOL_I:%.*]] = icmp ne i32 [[CALL_I]], 0
-// DEFAULT-NEXT:    [[CONV:%.*]] = zext i1 [[TOBOOL_I]] to i32
+// DEFAULT-NEXT:    [[TMP0:%.*]] = tail call contract float @llvm.fabs.f32(float [[X:%.*]]) #[[ATTR17:[0-9]+]]
+// DEFAULT-NEXT:    [[CMPINF_I:%.*]] = fcmp contract one float [[TMP0]], 0x7FF0000000000000
+// DEFAULT-NEXT:    [[CONV:%.*]] = zext i1 [[CMPINF_I]] to i32
 // DEFAULT-NEXT:    ret i32 [[CONV]]
 //
 // FINITEONLY-LABEL: @test___finitef(
 // FINITEONLY-NEXT:  entry:
-// FINITEONLY-NEXT:    [[CALL_I:%.*]] = tail call i32 @__ocml_isfinite_f32(float noundef nofpclass(nan inf) [[X:%.*]]) #[[ATTR14]]
-// FINITEONLY-NEXT:    [[TOBOOL_I:%.*]] = icmp ne i32 [[CALL_I]], 0
-// FINITEONLY-NEXT:    [[CONV:%.*]] = zext i1 [[TOBOOL_I]] to i32
-// FINITEONLY-NEXT:    ret i32 [[CONV]]
+// FINITEONLY-NEXT:    ret i32 1
 //
 extern "C" __device__ BOOL_TYPE test___finitef(float x) {
   return __finitef(x);
@@ -1173,17 +1170,14 @@ extern "C" __device__ BOOL_TYPE test___finitef(float x) {
 
 // DEFAULT-LABEL: @test___finite(
 // DEFAULT-NEXT:  entry:
-// DEFAULT-NEXT:    [[CALL_I:%.*]] = tail call i32 @__ocml_isfinite_f64(double noundef [[X:%.*]]) #[[ATTR14]]
-// DEFAULT-NEXT:    [[TOBOOL_I:%.*]] = icmp ne i32 [[CALL_I]], 0
-// DEFAULT-NEXT:    [[CONV:%.*]] = zext i1 [[TOBOOL_I]] to i32
+// DEFAULT-NEXT:    [[TMP0:%.*]] = tail call contract double @llvm.fabs.f64(double [[X:%.*]]) #[[ATTR17]]
+// DEFAULT-NEXT:    [[CMPINF_I:%.*]] = fcmp contract one double [[TMP0]], 0x7FF0000000000000
+// DEFAULT-NEXT:    [[CONV:%.*]] = zext i1 [[CMPINF_I]] to i32
 // DEFAULT-NEXT:    ret i32 [[CONV]]
 //
 // FINITEONLY-LABEL: @test___finite(
 // FINITEONLY-NEXT:  entry:
-// FINITEONLY-NEXT:    [[CALL_I:%.*]] = tail call i32 @__ocml_isfinite_f64(double noundef nofpclass(nan inf) [[X:%.*]]) #[[ATTR14]]
-// FINITEONLY-NEXT:    [[TOBOOL_I:%.*]] = icmp ne i32 [[CALL_I]], 0
-// FINITEONLY-NEXT:    [[CONV:%.*]] = zext i1 [[TOBOOL_I]] to i32
-// FINITEONLY-NEXT:    ret i32 [[CONV]]
+// FINITEONLY-NEXT:    ret i32 1
 //
 extern "C" __device__ BOOL_TYPE test___finite(double x) {
   return __finite(x);
@@ -1191,7 +1185,7 @@ extern "C" __device__ BOOL_TYPE test___finite(double x) {
 
 // DEFAULT-LABEL: @test___isinff(
 // DEFAULT-NEXT:  entry:
-// DEFAULT-NEXT:    [[TMP0:%.*]] = tail call contract float @llvm.fabs.f32(float [[X:%.*]]) #[[ATTR17:[0-9]+]]
+// DEFAULT-NEXT:    [[TMP0:%.*]] = tail call contract float @llvm.fabs.f32(float [[X:%.*]]) #[[ATTR17]]
 // DEFAULT-NEXT:    [[CMPINF_I:%.*]] = fcmp contract oeq float [[TMP0]], 0x7FF0000000000000
 // DEFAULT-NEXT:    [[CONV:%.*]] = zext i1 [[CMPINF_I]] to i32
 // DEFAULT-NEXT:    ret i32 [[CONV]]

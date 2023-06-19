@@ -96,6 +96,15 @@ void MmaSyncOp::build(::mlir::OpBuilder &odsBuilder,
         mmaShape, UnitAttr());
 }
 
+void MmaSyncOp::build(::mlir::OpBuilder &odsBuilder,
+                      ::mlir::OperationState &odsState, Value matrixA,
+                      Value matrixB, Value matrixC, ArrayRef<int64_t> mmaShape,
+                      bool tf32Enabled) {
+  build(odsBuilder, odsState, matrixC.getType(), matrixA, matrixB, matrixC,
+        odsBuilder.getI64ArrayAttr(mmaShape),
+        tf32Enabled ? odsBuilder.getUnitAttr() : UnitAttr());
+}
+
 /// Performs verification for MmaSyncOp and MmaSparseSyncOp.
 static LogicalResult verifyMmaSyncOp(Operation *op,
                                      TypedValue<VectorType> matrixA,

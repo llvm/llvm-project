@@ -10,29 +10,6 @@
 #include <cstdlib>
 #include <new>
 
-namespace std
-{
-
-#ifndef __GLIBCXX__
-const nothrow_t nothrow{};
-#endif
-
-#ifndef LIBSTDCXX
-
-void
-__throw_bad_alloc()
-{
-#ifndef _LIBCPP_HAS_NO_EXCEPTIONS
-    throw bad_alloc();
-#else
-    _VSTD::abort();
-#endif
-}
-
-#endif // !LIBSTDCXX
-
-}  // std
-
 #if !defined(__GLIBCXX__) &&                                                   \
     !defined(_LIBCPP_ABI_VCRUNTIME) &&      \
     !defined(_LIBCPP_DISABLE_NEW_DELETE_DEFINITIONS)

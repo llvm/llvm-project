@@ -290,7 +290,7 @@ __DEVICE__
 int ilogbf(float __x) { return __ocml_ilogb_f32(__x); }
 
 __DEVICE__
-__RETURN_TYPE __finitef(float __x) { return __ocml_isfinite_f32(__x); }
+__RETURN_TYPE __finitef(float __x) { return __builtin_isfinite(__x); }
 
 __DEVICE__
 __RETURN_TYPE __isinff(float __x) { return __builtin_isinf(__x); }
@@ -672,7 +672,7 @@ float __frcp_rn(float __x) { return 1.0f / __x; }
 #endif
 
 __DEVICE__
-float __frsqrt_rn(float __x) { return __llvm_amdgcn_rsq_f32(__x); }
+float __frsqrt_rn(float __x) { return __builtin_amdgcn_rsqf(__x); }
 
 #if defined OCML_BASIC_ROUNDED_OPERATIONS
 __DEVICE__
@@ -842,7 +842,7 @@ __DEVICE__
 int ilogb(double __x) { return __ocml_ilogb_f64(__x); }
 
 __DEVICE__
-__RETURN_TYPE __finite(double __x) { return __ocml_isfinite_f64(__x); }
+__RETURN_TYPE __finite(double __x) { return __builtin_isfinite(__x); }
 
 __DEVICE__
 __RETURN_TYPE __isinf(double __x) { return __builtin_isinf(__x); }
