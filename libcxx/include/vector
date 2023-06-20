@@ -312,6 +312,7 @@ template<class T, class charT> requires is-vector-bool-reference<T> // Since C++
 #include <__algorithm/rotate.h>
 #include <__algorithm/unwrap_iter.h>
 #include <__assert> // all public C++ headers provide the assertion handler
+#include <__availability>
 #include <__bit_reference>
 #include <__concepts/same_as.h>
 #include <__config>
@@ -3563,7 +3564,7 @@ _LIBCPP_END_NAMESPACE_STD
 _LIBCPP_BEGIN_NAMESPACE_STD
 namespace pmr {
 template <class _ValueT>
-using vector = std::vector<_ValueT, polymorphic_allocator<_ValueT>>;
+using vector _LIBCPP_AVAILABILITY_PMR = std::vector<_ValueT, polymorphic_allocator<_ValueT>>;
 } // namespace pmr
 _LIBCPP_END_NAMESPACE_STD
 #endif

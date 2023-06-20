@@ -864,11 +864,6 @@ struct Waitcnt {
     return VsCnt != ~0u;
   }
 
-  bool dominates(const Waitcnt &Other) const {
-    return VmCnt <= Other.VmCnt && ExpCnt <= Other.ExpCnt &&
-           LgkmCnt <= Other.LgkmCnt && VsCnt <= Other.VsCnt;
-  }
-
   Waitcnt combined(const Waitcnt &Other) const {
     return Waitcnt(std::min(VmCnt, Other.VmCnt), std::min(ExpCnt, Other.ExpCnt),
                    std::min(LgkmCnt, Other.LgkmCnt),

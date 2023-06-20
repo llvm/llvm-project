@@ -4368,8 +4368,7 @@ static bool isExtendedBUILD_VECTOR(SDNode *N, SelectionDAG &DAG,
 }
 
 static SDValue skipExtensionForVectorMULL(SDNode *N, SelectionDAG &DAG) {
-  if (N->getOpcode() == ISD::SIGN_EXTEND ||
-      N->getOpcode() == ISD::ZERO_EXTEND || N->getOpcode() == ISD::ANY_EXTEND)
+  if (ISD::isExtOpcode(N->getOpcode()))
     return addRequiredExtensionForVectorMULL(N->getOperand(0), DAG,
                                              N->getOperand(0)->getValueType(0),
                                              N->getValueType(0),
@@ -18156,8 +18155,7 @@ static SDValue performTruncateCombine(SDNode *N,
 // Check an node is an extend or shift operand
 static bool isExtendOrShiftOperand(SDValue N) {
   unsigned Opcode = N.getOpcode();
-  if (Opcode == ISD::SIGN_EXTEND || Opcode == ISD::SIGN_EXTEND_INREG ||
-      Opcode == ISD::ZERO_EXTEND || Opcode == ISD::ANY_EXTEND) {
+  if (ISD::isExtOpcode(Opcode) || Opcode == ISD::SIGN_EXTEND_INREG) {
     EVT SrcVT;
     if (Opcode == ISD::SIGN_EXTEND_INREG)
       SrcVT = cast<VTSDNode>(N.getOperand(1))->getVT();
@@ -25575,8 +25573,7 @@ Value *AArch64TargetLowering::createComplexDeinterleavingIR(
 
 bool AArch64TargetLowering::preferScalarizeSplat(SDNode *N) const {
   unsigned Opc = N->getOpcode();
-  if (Opc == ISD::ZERO_EXTEND || Opc == ISD::SIGN_EXTEND ||
-      Opc == ISD::ANY_EXTEND) {
+  if (ISD::isExtOpcode(Opc)) {
     if (any_of(N->uses(),
                [&](SDNode *Use) { return Use->getOpcode() == ISD::MUL; }))
       return false;

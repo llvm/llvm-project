@@ -31659,8 +31659,8 @@ static SDValue LowerShift(SDValue Op, const X86Subtarget &Subtarget,
            "Constant build vector expected");
 
     if (VT == MVT::v16i8 && Subtarget.hasInt256()) {
-      R = Opc == ISD::SRA ? DAG.getSExtOrTrunc(R, dl, ExVT)
-                          : DAG.getZExtOrTrunc(R, dl, ExVT);
+      bool IsSigned = Opc == ISD::SRA;
+      R = DAG.getExtOrTrunc(IsSigned, R, dl, ExVT);
       R = DAG.getNode(ISD::MUL, dl, ExVT, R, Amt);
       R = DAG.getNode(X86ISD::VSRLI, dl, ExVT, R, Cst8);
       return DAG.getZExtOrTrunc(R, dl, VT);
