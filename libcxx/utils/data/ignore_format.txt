@@ -149,7 +149,6 @@ libcxx/include/__compare/three_way_comparable.h
 libcxx/include/__compare/weak_order.h
 libcxx/include/complex
 libcxx/include/condition_variable
-libcxx/include/__config
 libcxx/include/__coroutine/coroutine_handle.h
 libcxx/include/__coroutine/coroutine_traits.h
 libcxx/include/__coroutine/noop_coroutine_handle.h

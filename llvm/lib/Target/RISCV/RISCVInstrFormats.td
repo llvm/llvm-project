@@ -214,6 +214,9 @@ class RVInst<dag outs, dag ins, string opcodestr, string argstr,
   // in bits 63:31. Used by the SExtWRemoval pass.
   bit IsSignExtendingOpW = 0;
   let TSFlags{18} = IsSignExtendingOpW;
+
+  bit HasRoundModeOp = 0;
+  let TSFlags{19} =  HasRoundModeOp;
 }
 
 // Pseudo instructions

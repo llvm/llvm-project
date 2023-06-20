@@ -12,14 +12,15 @@ define dso_local void @test(ptr nocapture noundef %var_99) {
 ; CHECK-NEXT:    addi a1, a1, %lo(.L__const.test.var_45)
 ; CHECK-NEXT:    vsetivli zero, 2, e8, m4, ta, ma
 ; CHECK-NEXT:    vle8.v v8, (a1)
+; CHECK-NEXT:    li a1, 1
+; CHECK-NEXT:    vmul.vx v12, v8, a1
 ; CHECK-NEXT:    lui a1, %hi(.L__const.test.var_101)
 ; CHECK-NEXT:    addi a1, a1, %lo(.L__const.test.var_101)
-; CHECK-NEXT:    vle8.v v12, (a1)
-; CHECK-NEXT:    li a1, 1
-; CHECK-NEXT:    vmul.vx v16, v8, a1
-; CHECK-NEXT:    vmv.x.s a1, v16
+; CHECK-NEXT:    vle8.v v16, (a1)
+; CHECK-NEXT:    vmv.x.s a1, v12
+; CHECK-NEXT:    csrwi vxrm, 0
 ; CHECK-NEXT:    vmsleu.vx v0, v8, a1
-; CHECK-NEXT:    vssra.vv v8, v12, v8
+; CHECK-NEXT:    vssra.vv v8, v16, v8
 ; CHECK-NEXT:    vmerge.vvm v8, v8, v8, v0
 ; CHECK-NEXT:    vse8.v v8, (a0)
 ; CHECK-NEXT:    ret
@@ -29,7 +30,7 @@ entry:
   %2 = tail call <vscale x 32 x i8> @llvm.riscv.vle.nxv32i8.i64(<vscale x 32 x i8> undef, ptr nonnull @__const.test.var_101, i64 2)
   %3 = tail call i64 @llvm.riscv.vsetvli.i64(i64 32, i64 0, i64 2)
   %4 = tail call i8 @llvm.riscv.vmv.x.s.nxv32i8(<vscale x 32 x i8> %1)
-  %5 = tail call <vscale x 32 x i8> @llvm.riscv.vssra.nxv32i8.nxv32i8.i64(<vscale x 32 x i8> undef, <vscale x 32 x i8> %2, <vscale x 32 x i8> %0, i64 2)
+  %5 = tail call <vscale x 32 x i8> @llvm.riscv.vssra.nxv32i8.nxv32i8.i64(<vscale x 32 x i8> undef, <vscale x 32 x i8> %2, <vscale x 32 x i8> %0, i64 0, i64 2)
   %6 = tail call <vscale x 32 x i1> @llvm.riscv.vmsleu.nxv32i8.i8.i64(<vscale x 32 x i8> %0, i8 %4, i64 2)
   %7 = tail call <vscale x 32 x i8> @llvm.riscv.vmerge.nxv32i8.nxv32i8.i64(<vscale x 32 x i8> poison, <vscale x 32 x i8> %5, <vscale x 32 x i8> %5, <vscale x 32 x i1> %6, i64 2)
   tail call void @llvm.riscv.vse.nxv32i8.i64(<vscale x 32 x i8> %7, ptr %var_99, i64 2)
@@ -40,7 +41,7 @@ declare <vscale x 32 x i8> @llvm.riscv.vle.nxv32i8.i64(<vscale x 32 x i8>, ptr n
 declare <vscale x 32 x i8> @llvm.riscv.vmul.nxv32i8.i8.i64(<vscale x 32 x i8>, <vscale x 32 x i8>, i8, i64) #2
 declare i64 @llvm.riscv.vsetvli.i64(i64, i64 immarg, i64 immarg) #3
 declare i8 @llvm.riscv.vmv.x.s.nxv32i8(<vscale x 32 x i8>) #2
-declare <vscale x 32 x i8> @llvm.riscv.vssra.nxv32i8.nxv32i8.i64(<vscale x 32 x i8>, <vscale x 32 x i8>, <vscale x 32 x i8>, i64) #3
+declare <vscale x 32 x i8> @llvm.riscv.vssra.nxv32i8.nxv32i8.i64(<vscale x 32 x i8>, <vscale x 32 x i8>, <vscale x 32 x i8>, i64, i64) #3
 declare <vscale x 32 x i1> @llvm.riscv.vmsleu.nxv32i8.i8.i64(<vscale x 32 x i8>, i8, i64) #2
 declare <vscale x 32 x i8> @llvm.riscv.vmerge.nxv32i8.nxv32i8.i64(<vscale x 32 x i8>, <vscale x 32 x i8>, <vscale x 32 x i8>, <vscale x 32 x i1>, i64) #2
 declare void @llvm.riscv.vse.nxv32i8.i64(<vscale x 32 x i8>, ptr nocapture, i64) #4
