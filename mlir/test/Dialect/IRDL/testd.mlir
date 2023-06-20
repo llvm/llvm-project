@@ -198,3 +198,39 @@ func.func @failedConstraintVars() {
   "testd.constraint_vars"() : () -> (i64, i32)
   return
 }
+
+// -----
+
+//===----------------------------------------------------------------------===//
+// Constraint attributes
+//===----------------------------------------------------------------------===//
+
+func.func @succeededAttrs() {
+  // CHECK: "testd.attrs"() {attr1 = i32, attr2 = i64} : () -> ()
+  "testd.attrs"() {attr1 = i32, attr2 = i64} : () -> ()
+  return
+}
+
+// -----
+
+func.func @failedAttrsMissingAttr() {
+  // expected-error@+1 {{attribute "attr2" is expected but not provided}}
+  "testd.attrs"() {attr1 = i32} : () -> ()
+  return
+}
+
+// -----
+
+func.func @failedAttrsConstraint() {
+  // expected-error@+1 {{expected 'i32' but got 'i64'}}
+  "testd.attrs"() {attr1 = i64, attr2 = i64} : () -> ()
+  return
+}
+
+// -----
+
+func.func @failedAttrsConstraint2() {
+  // expected-error@+1 {{expected 'i64' but got 'i32'}}
+  "testd.attrs"() {attr1 = i32, attr2 = i32} : () -> ()
+  return
+}

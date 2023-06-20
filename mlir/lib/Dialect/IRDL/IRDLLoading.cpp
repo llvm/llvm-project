@@ -13,8 +13,10 @@
 #include "mlir/Dialect/IRDL/IRDLLoading.h"
 #include "mlir/Dialect/IRDL/IR/IRDL.h"
 #include "mlir/Dialect/IRDL/IR/IRDLInterfaces.h"
+#include "mlir/IR/Attributes.h"
 #include "mlir/IR/BuiltinOps.h"
 #include "mlir/IR/ExtensibleDialect.h"
+#include "mlir/IR/OperationSupport.h"
 #include "mlir/Support/LogicalResult.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallPtrSet.h"
@@ -52,8 +54,8 @@ irdlAttrOrTypeVerifier(function_ref<InFlightDiagnostic()> emitError,
 /// with IRDL.
 static LogicalResult
 irdlOpVerifier(Operation *op, ArrayRef<std::unique_ptr<Constraint>> constraints,
-               ArrayRef<size_t> operandConstrs,
-               ArrayRef<size_t> resultConstrs) {
+               ArrayRef<size_t> operandConstrs, ArrayRef<size_t> resultConstrs,
+               const DenseMap<StringAttr, size_t> &attributeConstrs) {
   /// Check that we have the right number of operands.
   unsigned numOperands = op->getNumOperands();
   size_t numExpectedOperands = operandConstrs.size();
@@ -68,9 +70,25 @@ irdlOpVerifier(Operation *op, ArrayRef<std::unique_ptr<Constraint>> constraints,
     return op->emitOpError()
            << numExpectedResults << " results expected, but got " << numResults;
 
-  auto emitError = [op]() { return op->emitError(); };
+  auto emitError = [op] { return op->emitError(); };
 
   ConstraintVerifier verifier(constraints);
+
+  /// Сheck that we have all needed attributes passed
+  /// and they satisfy the constraints.
+  DictionaryAttr actualAttrs = op->getAttrDictionary();
+
+  for (auto [name, constraint] : attributeConstrs) {
+    /// First, check if the attribute actually passed.
+    std::optional<NamedAttribute> actual = actualAttrs.getNamed(name);
+    if (!actual.has_value())
+      return op->emitOpError()
+             << "attribute " << name << " is expected but not provided";
+
+    /// Then, check if the attribute value satisfies the constraint.
+    if (failed(verifier.verify({emitError}, actual->getValue(), constraint)))
+      return failure();
+  }
 
   /// Check that all operands satisfy the constraints.
   for (auto [i, operandType] : enumerate(op->getOperandTypes()))
@@ -147,6 +165,23 @@ static WalkResult loadOperation(
     }
   }
 
+  // Gather which constraint slots correspond to attributes constraints
+  DenseMap<StringAttr, size_t> attributesContraints;
+  auto attributesOp = op.getOp<AttributesOp>();
+  if (attributesOp.has_value()) {
+    const Operation::operand_range values = attributesOp->getAttributeValues();
+    const ArrayAttr names = attributesOp->getAttributeValueNames();
+
+    for (const auto &[name, value] : llvm::zip(names, values)) {
+      for (auto [i, constr] : enumerate(constrToValue)) {
+        if (constr == value) {
+          attributesContraints[name.cast<StringAttr>()] = i;
+          break;
+        }
+      }
+    }
+  }
+
   // IRDL does not support defining custom parsers or printers.
   auto parser = [](OpAsmParser &parser, OperationState &result) {
     return failure();
@@ -158,9 +193,10 @@ static WalkResult loadOperation(
   auto verifier =
       [constraints{std::move(constraints)},
        operandConstraints{std::move(operandConstraints)},
-       resultConstraints{std::move(resultConstraints)}](Operation *op) {
+       resultConstraints{std::move(resultConstraints)},
+       attributesContraints{std::move(attributesContraints)}](Operation *op) {
         return irdlOpVerifier(op, constraints, operandConstraints,
-                              resultConstraints);
+                              resultConstraints, attributesContraints);
       };
 
   // IRDL does not support defining regions.
