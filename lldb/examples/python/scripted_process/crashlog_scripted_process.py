@@ -1,4 +1,4 @@
-import os,json,struct,signal,uuid
+import os, json, struct, signal, uuid, tempfile
 
 from typing import Any, Dict
 
@@ -11,7 +11,13 @@ from lldb.macosx.crashlog import CrashLog,CrashLogParser
 class CrashLogScriptedProcess(ScriptedProcess):
     def set_crashlog(self, crashlog):
         self.crashlog = crashlog
-        self.pid = self.crashlog.process_id
+        if self.crashlog.process_id:
+            if type(self.crashlog.process_id) is int:
+                self.pid = self.crashlog.process_id
+            elif type(self.crashlog.process_id) is str:
+                self.pid = int(self.crashlog.process_id, 0)
+            else:
+                self.pid = super().get_process_id()
         self.addr_mask = self.crashlog.addr_mask
         self.crashed_thread_idx = self.crashlog.crashed_thread_idx
         self.loaded_images = []
@@ -32,16 +38,17 @@ class CrashLogScriptedProcess(ScriptedProcess):
                         for image in self.crashlog.find_images_with_identifier(ident):
                             image.resolve = True
 
-        for image in self.crashlog.images:
-            if image not in self.loaded_images:
-                if image.uuid == uuid.UUID(int=0):
-                    continue
-                err = image.add_module(self.target)
-                if err:
-                    # Append to SBCommandReturnObject
-                    print(err)
-                else:
-                    self.loaded_images.append(image)
+        with tempfile.TemporaryDirectory() as obj_dir:
+            for image in self.crashlog.images:
+                if image not in self.loaded_images:
+                    if image.uuid == uuid.UUID(int=0):
+                        continue
+                    err = image.add_module(self.target, obj_dir)
+                    if err:
+                        # Append to SBCommandReturnObject
+                        print(err)
+                    else:
+                        self.loaded_images.append(image)
 
         for thread in self.crashlog.threads:
             if hasattr(thread, 'app_specific_backtrace') and thread.app_specific_backtrace:

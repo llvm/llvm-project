@@ -1,0 +1,140 @@
+Process:               multithread-test [22511]
+Path:                  /Users/USER/*/multithread-test
+Identifier:            multithread-test
+Version:               ???
+Code Type:             ARM-64 (Native)
+Parent Process:        zsh [59146]
+Responsible:           Terminal [1640]
+User ID:               501
+
+Date/Time:             2022-07-28 11:10:19.4194 -0700
+OS Version:            macOS 13.0 ()
+Report Version:        12
+Anonymous UUID:        CDC11418-EDBF-2A49-0D83-8B441A5004B0
+
+Sleep/Wake UUID:       7B2A0D73-8966-4B8D-98E9-CC6EC1B44967
+
+Time Awake Since Boot: 110000 seconds
+Time Since Wake:       214 seconds
+
+System Integrity Protection: disabled
+
+Crashed Thread:        2
+
+Exception Type:        EXC_BAD_ACCESS (SIGSEGV)
+Exception Codes:       KERN_INVALID_ADDRESS at 0x0000000000000000
+Exception Codes:       0x0000000000000001, 0x0000000000000000
+
+Termination Reason:    Namespace SIGNAL, Code 11 Segmentation fault: 11
+Terminating Process:   exc handler [22511]
+
+VM Region Info: 0 is not in any region.  Bytes before following region: 4310450176
+      REGION TYPE                    START - END         [ VSIZE] PRT/MAX SHRMOD  REGION DETAIL
+      UNUSED SPACE AT START
+--->  
+      __TEXT                      100ec4000-100ec8000    [   16K] r-x/r-x SM=COW  ...tithread-test
+
+Thread 0::  Dispatch queue: com.apple.main-thread
+0   libsystem_kernel.dylib        	       0x19cc40b84 __ulock_wait + 8
+1   libsystem_pthread.dylib       	       0x19cc80394 _pthread_join + 444
+2   libc++.1.dylib                	       0x19cbd8274 std::__1::thread::join() + 36
+3   multithread-test              	       0x100ec5b3c main + 160 (multithread-test.cpp:31)
+4   dyld                          	       0x2230f8da8 start + 2376
+
+Thread 1:
+0   libsystem_kernel.dylib        	       0x19cc42c9c __write_nocancel + 8
+1   libsystem_c.dylib             	       0x19cb719a8 __swrite + 24
+2   libsystem_c.dylib             	       0x19cb50ac8 _swrite + 108
+3   libsystem_c.dylib             	       0x19cb4ec2c __sflush + 232
+4   libsystem_c.dylib             	       0x19cb42f20 __sfvwrite + 792
+5   libsystem_c.dylib             	       0x19cb61f64 fwrite + 152
+6   libc++.1.dylib                	       0x19cbed084 std::__1::__stdoutbuf<char>::overflow(int) + 96
+7   libc++.1.dylib                	       0x19cbe06b4 std::__1::ostreambuf_iterator<char, std::__1::char_traits<char> >::operator=(char) + 96
+8   libc++.1.dylib                	       0x19cbe0798 std::__1::basic_ostream<char, std::__1::char_traits<char> >::put(char) + 200
+9   multithread-test              	       0x100ec5a54 std::__1::basic_ostream<char, std::__1::char_traits<char> >& std::__1::endl<char, std::__1::char_traits<char> >(std::__1::basic_ostream<char, std::__1::char_traits<char> >&) + 64 (ostream:994)
+10  multithread-test              	       0x100ec5a08 std::__1::basic_ostream<char, std::__1::char_traits<char> >::operator<<(std::__1::basic_ostream<char, std::__1::char_traits<char> >& (*)(std::__1::basic_ostream<char, std::__1::char_traits<char> >&)) + 32 (ostream:189)
+11  multithread-test              	       0x100ec5958 call_and_wait(int&) + 48 (multithread-test.cpp:14)
+12  multithread-test              	       0x100ec7684 decltype(static_cast<void (*>(fp)(static_cast<std::__1::reference_wrapper<int>>(fp0))) std::__1::__invoke<void (*)(int&), std::__1::reference_wrapper<int> >(void (*&&)(int&), std::__1::reference_wrapper<int>&&) + 48 (type_traits:3918)
+13  multithread-test              	       0x100ec7608 void std::__1::__thread_execute<std::__1::unique_ptr<std::__1::__thread_struct, std::__1::default_delete<std::__1::__thread_struct> >, void (*)(int&), std::__1::reference_wrapper<int>, 2ul>(std::__1::tuple<std::__1::unique_ptr<std::__1::__thread_struct, std::__1::default_delete<std::__1::__thread_struct> >, void (*)(int&), std::__1::reference_wrapper<int> >&, std::__1::__tuple_indices<2ul>) + 56 (thread:287)
+14  multithread-test              	       0x100ec6d58 void* std::__1::__thread_proxy<std::__1::tuple<std::__1::unique_ptr<std::__1::__thread_struct, std::__1::default_delete<std::__1::__thread_struct> >, void (*)(int&), std::__1::reference_wrapper<int> > >(void*) + 84 (thread:298)
+15  libsystem_pthread.dylib       	       0x19cc7e06c _pthread_start + 148
+16  libsystem_pthread.dylib       	       0x19cc78e2c thread_start + 8
+
+Thread 2 Crashed:
+0   multithread-test              	       0x100ec58f4 bar(int) + 20 (multithread-test.cpp:7)
+1   multithread-test              	       0x100ec591c foo(int) + 24 (multithread-test.cpp:11)
+2   multithread-test              	       0x100ec5a88 compute_pow(int&) + 28 (multithread-test.cpp:20)
+3   multithread-test              	       0x100ec7684 decltype(static_cast<void (*>(fp)(static_cast<std::__1::reference_wrapper<int>>(fp0))) std::__1::__invoke<void (*)(int&), std::__1::reference_wrapper<int> >(void (*&&)(int&), std::__1::reference_wrapper<int>&&) + 48 (type_traits:3918)
+4   multithread-test              	       0x100ec7608 void std::__1::__thread_execute<std::__1::unique_ptr<std::__1::__thread_struct, std::__1::default_delete<std::__1::__thread_struct> >, void (*)(int&), std::__1::reference_wrapper<int>, 2ul>(std::__1::tuple<std::__1::unique_ptr<std::__1::__thread_struct, std::__1::default_delete<std::__1::__thread_struct> >, void (*)(int&), std::__1::reference_wrapper<int> >&, std::__1::__tuple_indices<2ul>) + 56 (thread:287)
+5   multithread-test              	       0x100ec6d58 void* std::__1::__thread_proxy<std::__1::tuple<std::__1::unique_ptr<std::__1::__thread_struct, std::__1::default_delete<std::__1::__thread_struct> >, void (*)(int&), std::__1::reference_wrapper<int> > >(void*) + 84 (thread:298)
+6   libsystem_pthread.dylib       	       0x19cc7e06c _pthread_start + 148
+7   libsystem_pthread.dylib       	       0x19cc78e2c thread_start + 8
+
+
+Thread 2 crashed with ARM Thread State (64-bit):
+    x0: 0x000000000000002a   x1: 0x0000600001d291b0   x2: 0x000000019cbbf000   x3: 0x0000000000000000
+    x4: 0x00000000000030a0   x5: 0x00000000190008ff   x6: 0x0000000000000000   x7: 0x0000000000000000
+    x8: 0x0000000000000001   x9: 0x0000000000000000  x10: 0xfffffffe634277cf  x11: 0x0000010000000102
+   x12: 0x0000010000000102  x13: 0x0000010000000100  x14: 0x0000010000000000  x15: 0x0000000000000001
+   x16: 0x000000019cc78ea8  x17: 0x00000001fd0a7698  x18: 0x0000000000000000  x19: 0x000000016f04f000
+   x20: 0x0000000000000000  x21: 0x0000000000000000  x22: 0x0000000000000000  x23: 0x0000000000000000
+   x24: 0x0000000000000000  x25: 0x0000000000000000  x26: 0x0000000000000000  x27: 0x0000000000000000
+   x28: 0x0000000000000000   fp: 0x000000016f04ef00   lr: 0x0000000100ec591c
+    sp: 0x000000016f04eee0   pc: 0x0000000100ec58f4 cpsr: 0x80001000
+   far: 0x0000000000000000  esr: 0x92000046 (Data Abort) byte write Translation fault
+
+Binary Images:
+       0x19cc3e000 -        0x19cc76feb libsystem_kernel.dylib (*) <b8898079-5424-3e89-92b0-33022c3be1bb> /usr/lib/system/libsystem_kernel.dylib
+       0x19cc77000 -        0x19cc83ffb libsystem_pthread.dylib (*) <ffd36328-45f2-31c5-9240-9f76f26a1a2b> /usr/lib/system/libsystem_pthread.dylib
+       0x19cbbf000 -        0x19cc25ff3 libc++.1.dylib (*) <da619b87-2723-3731-919a-bb3467eab9e1> /usr/lib/libc++.1.dylib
+       0x100ec4000 -        0x100ec7fff multithread-test (*) <ab9b94f9-6cdf-3b8e-b140-fae3cb13d327> /Users/USER/*/multithread-test
+       0x2230f3000 -        0x22317be4b dyld (*) <e81312a0-f3e5-3c60-8c25-4599b62b8b4a> /usr/lib/dyld
+       0x19cb3e000 -        0x19cbbefff libsystem_c.dylib (*) <b8f1c3ed-9048-34a6-8070-6c18d4ade541> /usr/lib/system/libsystem_c.dylib
+               0x0 - 0xffffffffffffffff ??? (*) <00000000-0000-0000-0000-000000000000> ???
+            0x3039 -             0x3420 bogus.dylib (*) <11111111-2222-3333-4444-555555555555> /usr/lib/system/bogus.dylib
+
+External Modification Summary:
+  Calls made by other processes targeting this process:
+    task_for_pid: 0
+    thread_create: 0
+    thread_set_state: 0
+  Calls made by this process:
+    task_for_pid: 0
+    thread_create: 0
+    thread_set_state: 0
+  Calls made by all processes on this machine:
+    task_for_pid: 23
+    thread_create: 0
+    thread_set_state: 812
+
+VM Region Summary:
+ReadOnly portion of Libraries: Total=762.9M resident=0K(0%) swapped_out_or_unallocated=762.9M(100%)
+Writable regions: Total=538.2M written=0K(0%) resident=0K(0%) swapped_out=0K(0%) unallocated=538.2M(100%)
+
+                                VIRTUAL   REGION 
+REGION TYPE                        SIZE    COUNT (non-coalesced) 
+===========                     =======  ======= 
+Kernel Alloc Once                   32K        1 
+MALLOC                           145.2M       12 
+MALLOC guard page                   96K        5 
+MALLOC_NANO (reserved)           384.0M        1         reserved VM address space (unallocated)
+STACK GUARD                       56.0M        3 
+Stack                             9264K        3 
+__AUTH                              46K       11 
+__AUTH_CONST                        70K       38 
+__DATA                             169K       36 
+__DATA_CONST                       187K       40 
+__DATA_DIRTY                        78K       22 
+__LINKEDIT                       758.0M        2 
+__OBJC_CONST                        11K        5 
+__OBJC_RO                         64.7M        1 
+__OBJC_RW                         1971K        1 
+__TEXT                            5076K       42 
+dyld private memory                256K        1 
+shared memory                       64K        3 
+===========                     =======  ======= 
+TOTAL                              1.4G      227 
+TOTAL, minus reserved VM space     1.0G      227 
+
+
+
