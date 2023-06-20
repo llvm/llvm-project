@@ -24,7 +24,7 @@ public:
   AppleDWARFIndex(Module &module,
                   std::unique_ptr<llvm::AppleAcceleratorTable> apple_names,
                   std::unique_ptr<llvm::AppleAcceleratorTable> apple_namespaces,
-                  std::unique_ptr<DWARFMappedHash::MemoryTable> apple_types,
+                  std::unique_ptr<llvm::AppleAcceleratorTable> apple_types,
                   std::unique_ptr<DWARFMappedHash::MemoryTable> apple_objc)
       : DWARFIndex(module), m_apple_names_up(std::move(apple_names)),
         m_apple_namespaces_up(std::move(apple_namespaces)),
@@ -65,7 +65,7 @@ public:
 private:
   std::unique_ptr<llvm::AppleAcceleratorTable> m_apple_names_up;
   std::unique_ptr<llvm::AppleAcceleratorTable> m_apple_namespaces_up;
-  std::unique_ptr<DWARFMappedHash::MemoryTable> m_apple_types_up;
+  std::unique_ptr<llvm::AppleAcceleratorTable> m_apple_types_up;
   std::unique_ptr<DWARFMappedHash::MemoryTable> m_apple_objc_up;
 
   /// Search for entries whose name is `name` in `table`, calling `callback` for
