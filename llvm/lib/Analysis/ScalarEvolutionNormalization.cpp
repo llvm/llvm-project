@@ -97,6 +97,8 @@ NormalizeDenormalizeRewriter::visitAddRecExpr(const SCEVAddRecExpr *AR) {
 const SCEV *llvm::normalizeForPostIncUse(const SCEV *S,
                                          const PostIncLoopSet &Loops,
                                          ScalarEvolution &SE) {
+  if (Loops.empty())
+    return S;
   auto Pred = [&](const SCEVAddRecExpr *AR) {
     return Loops.count(AR->getLoop());
   };
@@ -111,6 +113,8 @@ const SCEV *llvm::normalizeForPostIncUseIf(const SCEV *S, NormalizePredTy Pred,
 const SCEV *llvm::denormalizeForPostIncUse(const SCEV *S,
                                            const PostIncLoopSet &Loops,
                                            ScalarEvolution &SE) {
+  if (Loops.empty())
+    return S;
   auto Pred = [&](const SCEVAddRecExpr *AR) {
     return Loops.count(AR->getLoop());
   };

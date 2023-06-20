@@ -1064,6 +1064,101 @@ The AMDGPU backend supports the following LLVM IR attributes.
 
      ======================================= ==========================================================
 
+Calling Conventions
+-------------------
+
+The AMDGPU backend supports the following calling conventions:
+
+  .. table:: AMDGPU Calling Conventions
+     :name: amdgpu-cc
+
+     =============================== ==========================================================
+     Calling Convention              Description
+     =============================== ==========================================================
+     ``ccc``                         The C calling convention. Used by default.
+                                     See :ref:`amdgpu-amdhsa-function-call-convention-non-kernel-functions`
+                                     for more details.
+
+     ``fastcc``                      The fast calling convention. Mostly the same as the ``ccc``.
+
+     ``coldcc``                      The cold calling convention. Mostly the same as the ``ccc``.
+
+     ``amdgpu_cs``                   Used for Mesa/AMDPAL compute shaders.
+                                     ..TODO::
+                                     Describe.
+
+     ``amdgpu_cs_chain``             Similar to ``amdgpu_cs``, with differences described below.
+
+                                     Functions with this calling convention cannot be called directly. They must
+                                     instead be launched via the ``llvm.amdgcn.cs.chain`` intrinsic.
+
+                                     Arguments are passed in SGPRs, starting at s0, if they have the ``inreg``
+                                     attribute, and in VGPRs otherwise, starting at v8. Using more SGPRs or VGPRs
+                                     than available in the subtarget is not allowed.  On subtargets that use
+                                     a scratch buffer descriptor (as opposed to ``scratch_{load,store}_*`` instructions),
+                                     the scratch buffer descriptor is passed in s[48:51]. This limits the
+                                     SGPR / ``inreg`` arguments to the equivalent of 48 dwords; using more
+                                     than that is not allowed.
+
+                                     The return type must be void.
+                                     Varargs, sret, byval, byref, inalloca, preallocated are not supported.
+
+                                     Values in scalar registers as well as v0-v7 are not preserved. Values in
+                                     VGPRs starting at v8 are not preserved for the active lanes, but must be
+                                     saved by the callee for inactive lanes when using WWM.
+
+                                     Wave scratch is "empty" at function boundaries. There is no stack pointer input
+                                     or output value, but functions are free to use scratch starting from an initial
+                                     stack pointer. Calls to ``amdgpu_gfx`` functions are allowed and behave like they
+                                     do in ``amdgpu_cs`` functions.
+
+                                     All counters (``lgkmcnt``, ``vmcnt``, ``storecnt``, etc.) are presumed in an
+                                     unknown state at function entry.
+
+                                     A function may have multiple exits (e.g. one chain exit and one plain ``ret void``
+                                     for when the wave ends), but all ``llvm.amdgcn.cs.chain`` exits must be in
+                                     uniform control flow.
+
+     ``amdgpu_cs_chain_preserve``    Same as ``amdgpu_cs_chain``, but active lanes for VGPRs starting at v8 are preserved.
+
+     ``amdgpu_es``                   Used for AMDPAL shader stage before geometry shader if geometry is in
+                                     use. So either the domain (= tessellation evaluation) shader if
+                                     tessellation is in use, or otherwise the vertex shader.
+                                     ..TODO::
+                                     Describe.
+
+     ``amdgpu_gfx``                  Used for AMD graphics targets. Functions with this calling convention
+                                     cannot be used as entry points.
+                                     ..TODO::
+                                     Describe.
+
+     ``amdgpu_gs``                   Used for Mesa/AMDPAL geometry shaders.
+                                     ..TODO::
+                                     Describe.
+
+     ``amdgpu_hs``                   Used for Mesa/AMDPAL hull shaders (= tessellation control shaders).
+                                     ..TODO::
+                                     Describe.
+
+     ``amdgpu_kernel``               See :ref:`amdgpu-amdhsa-function-call-convention-kernel-functions`
+
+     ``amdgpu_ls``                   Used for AMDPAL vertex shader if tessellation is in use.
+                                     ..TODO::
+                                     Describe.
+
+     ``amdgpu_ps``                   Used for Mesa/AMDPAL pixel shaders.
+                                     ..TODO::
+                                     Describe.
+
+     ``amdgpu_vs``                   Used for Mesa/AMDPAL last shader stage before rasterization (vertex
+                                     shader if tessellation and geometry are not in use, or otherwise
+                                     copy shader if one is needed).
+                                     ..TODO::
+                                     Describe.
+
+     =============================== ==========================================================
+
+
 .. _amdgpu-elf-code-object:
 
 ELF Code Object

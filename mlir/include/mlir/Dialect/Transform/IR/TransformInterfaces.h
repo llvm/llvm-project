@@ -18,11 +18,11 @@
 #include "mlir/Support/LogicalResult.h"
 
 namespace mlir {
-
 namespace transform {
 
 class TransformOpInterface;
 class TransformResults;
+class TransformRewriter;
 class TransformState;
 
 using Param = Attribute;
@@ -856,8 +856,7 @@ class TrackingListener : public RewriterBase::Listener,
                          public TransformState::Extension {
 public:
   /// Create a new TrackingListener for usage in the specified transform op.
-  explicit TrackingListener(TransformState &state, TransformOpInterface op)
-      : TransformState::Extension(state), transformOp(op) {}
+  TrackingListener(TransformState &state, TransformOpInterface op);
 
 protected:
   /// Return a replacement payload op for the given op, which is going to be
@@ -937,6 +936,9 @@ private:
 
   /// The transform op in which this TrackingListener is used.
   TransformOpInterface transformOp;
+
+  /// The handles that are consumed by the transform op.
+  DenseSet<Value> consumedHandles;
 };
 
 /// A specialized listener that keeps track of cases in which no replacement
@@ -966,6 +968,28 @@ private:
 
   /// The number of errors that have been encountered.
   int64_t errorCounter = 0;
+};
+
+/// This is a special rewriter to be used in transform op implementations,
+/// providing additional helper functions to update the transform state, etc.
+// TODO: Helper functions will be added in a subsequent change.
+class TransformRewriter : public RewriterBase {
+protected:
+  friend class TransformState;
+
+  /// Create a new TransformRewriter.
+  explicit TransformRewriter(MLIRContext *ctx,
+                             ErrorCheckingTrackingListener *listener);
+
+public:
+  /// Return "true" if the tracking listener had failures.
+  bool hasTrackingFailures() const;
+
+  /// Silence all tracking failures that have been encountered so far.
+  void silenceTrackingFailure();
+
+private:
+  ErrorCheckingTrackingListener *const listener;
 };
 
 /// This trait is supposed to be attached to Transform dialect operations that
@@ -1064,7 +1088,8 @@ public:
   ///   5. If any `applyToOne` return silenceableFailure, the transformation is
   ///      considered silenceable.
   ///   6. Otherwise the transformation is considered successful.
-  DiagnosedSilenceableFailure apply(TransformResults &transformResults,
+  DiagnosedSilenceableFailure apply(transform::TransformRewriter &rewriter,
+                                    TransformResults &transformResults,
                                     TransformState &state);
 
   /// Checks that the op matches the expectations of this trait.
@@ -1213,6 +1238,15 @@ public:
   }
 };
 
+/// `TrackingListener` failures are reported only for ops that have this trait.
+/// The purpose of this trait is to give users more time to update their custom
+/// transform ops to use the provided `TransformRewriter` for all IR
+/// modifications. This trait will eventually be removed, and failures will be
+/// reported for all transform ops.
+template <typename OpTy>
+class ReportTrackingListenerFailuresOpTrait
+    : public OpTrait::TraitBase<OpTy, ReportTrackingListenerFailuresOpTrait> {};
+
 /// A single result of applying a transform op with `ApplyEachOpTrait` to a
 /// single payload operation.
 using ApplyToEachResult = MappedValue;
@@ -1307,14 +1341,14 @@ void setApplyToOneResults(Operation *transformOp,
 ///   `targets` contains operations of the same class and a silenceable failure
 ///   is reported if it does not.
 template <typename TransformOpTy, typename Range>
-DiagnosedSilenceableFailure
-applyTransformToEach(TransformOpTy transformOp, Range &&targets,
-                     SmallVectorImpl<ApplyToEachResultList> &results,
-                     TransformState &state) {
+DiagnosedSilenceableFailure applyTransformToEach(
+    TransformOpTy transformOp, TransformRewriter &rewriter, Range &&targets,
+    SmallVectorImpl<ApplyToEachResultList> &results, TransformState &state) {
   using OpTy = typename llvm::function_traits<
-      decltype(&TransformOpTy::applyToOne)>::template arg_t<0>;
+      decltype(&TransformOpTy::applyToOne)>::template arg_t<1>;
   static_assert(std::is_convertible<OpTy, Operation *>::value,
                 "expected transform function to take an operation");
+  OpBuilder::InsertionGuard g(rewriter);
 
   SmallVector<Diagnostic> silenceableStack;
   unsigned expectedNumResults = transformOp->getNumResults();
@@ -1331,8 +1365,9 @@ applyTransformToEach(TransformOpTy transformOp, Range &&targets,
     ApplyToEachResultList partialResults;
     partialResults.reserve(expectedNumResults);
     Location specificOpLoc = specificOp->getLoc();
+    rewriter.setInsertionPoint(specificOp);
     DiagnosedSilenceableFailure res =
-        transformOp.applyToOne(specificOp, partialResults, state);
+        transformOp.applyToOne(rewriter, specificOp, partialResults, state);
     if (res.isDefiniteFailure())
       return DiagnosedSilenceableFailure::definiteFailure();
 
@@ -1367,7 +1402,8 @@ LogicalResult checkNestedConsumption(Location loc,
 template <typename OpTy>
 mlir::DiagnosedSilenceableFailure
 mlir::transform::TransformEachOpTrait<OpTy>::apply(
-    TransformResults &transformResults, TransformState &state) {
+    TransformRewriter &rewriter, TransformResults &transformResults,
+    TransformState &state) {
   Value handle = this->getOperation()->getOperand(0);
   auto targets = state.getPayloadOps(handle);
 
@@ -1403,7 +1439,7 @@ mlir::transform::TransformEachOpTrait<OpTy>::apply(
   // corresponding results entry.
   SmallVector<ApplyToEachResultList, 1> results;
   DiagnosedSilenceableFailure result = detail::applyTransformToEach(
-      cast<OpTy>(this->getOperation()), targets, results, state);
+      cast<OpTy>(this->getOperation()), rewriter, targets, results, state);
 
   // Step 3. Propagate the definite failure if any and bail out.
   if (result.isDefiniteFailure())

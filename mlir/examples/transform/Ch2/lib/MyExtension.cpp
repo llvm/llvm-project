@@ -74,17 +74,17 @@ static void updateCallee(mlir::func::CallOp call, llvm::StringRef newTarget) {
 // This operation returns a tri-state result that can be one of:
 // - success when the transformation succeeded;
 // - definite failure when the transformation failed in such a way that
-// following
-//   transformations are impossible or undesirable, typically it could have left
-//   payload IR in an invalid state; it is expected that a diagnostic is emitted
-//   immediately before returning the definite error;
+//   following transformations are impossible or undesirable, typically it could
+//   have left payload IR in an invalid state; it is expected that a diagnostic
+//   is emitted immediately before returning the definite error;
 // - silenceable failure when the transformation failed but following
-// transformations
-//   are still applicable, typically this means a precondition for the
-//   transformation is not satisfied and the payload IR has not been modified.
-// The silenceable failure additionally carries a Diagnostic that can be emitted
-// to the user.
+//   transformations are still applicable, typically this means a precondition
+//   for the transformation is not satisfied and the payload IR has not been
+//   modified. The silenceable failure additionally carries a Diagnostic that
+//   can be emitted to the user.
 ::mlir::DiagnosedSilenceableFailure mlir::transform::ChangeCallTargetOp::apply(
+    // The rewriter that should be used when modifying IR.
+    ::mlir::transform::TransformRewriter &rewriter,
     // The list of payload IR entities that will be associated with the
     // transform IR values defined by this transform operation. In this case, it
     // can remain empty as there are no results.

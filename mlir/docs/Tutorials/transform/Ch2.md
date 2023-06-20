@@ -189,8 +189,13 @@ def ChangeCallTargetOp : Op<Transform_Dialect, "my.change_call_target",
 }
 ```
 
-To finalize the definition of the transform operation, we need to implement the interface methods. The `TransformOpInterface` currently requires only one method – `apply` – that performs the actual transformation. It is a good practice to limit the body of the method to manipulation of the Transform dialect constructs and have the actual transformation implemented as a standalone function so it can be used from other places in the code.
-
+To finalize the definition of the transform operation, we need to implement the
+interface methods. The `TransformOpInterface` currently requires only one method
+– `apply` – that performs the actual transformation. It is a good practice to
+limit the body of the method to manipulation of the Transform dialect constructs
+and have the actual transformation implemented as a standalone function so it
+can be used from other places in the code. Similar to rewrite patterns, all IR
+must be modified with the provided rewriter.
 
 ```c++
 // In MyExtension.cpp
@@ -198,30 +203,32 @@ To finalize the definition of the transform operation, we need to implement the 
 // Implementation of our transform dialect operation.
 // This operation returns a tri-state result that can be one of:
 // - success when the transformation succeeded;
-// - definite failure when the transformation failed in such a way that following 
-//   transformations are impossible or undesirable, typically it could have left payload 
-//   IR in an invalid state; it is expected that a diagnostic is emitted immediately 
-//   before returning the definite error;
-// - silenceable failure when the transformation failed but following transformations 
-//   are still applicable, typically this means a precondition for the transformation is 
-//   not satisfied and the payload IR has not been modified.
-// The silenceable failure additionally carries a Diagnostic that can be emitted to the 
-// user.
-::mlir::DiagnosedSilenceableFailure ChangeCallTargetOp::apply(
-    // The list of payload IR entities that will be associated with the transform IR 
-    // values defined by this transform operation. In this case, it can remain empty as 
-    // there are no results.
+// - definite failure when the transformation failed in such a way that
+//   following transformations are impossible or undesirable, typically it could
+//   have left payload IR in an invalid state; it is expected that a diagnostic
+//   is emitted immediately before returning the definite error;
+// - silenceable failure when the transformation failed but following
+//   transformations are still applicable, typically this means a precondition
+//   for the transformation is not satisfied and the payload IR has not been
+//   modified. The silenceable failure additionally carries a Diagnostic that
+//   can be emitted to the user.
+::mlir::DiagnosedSilenceableFailure mlir::transform::ChangeCallTargetOp::apply(
+    // The rewriter that should be used when modifying IR.
+    ::mlir::transform::TransformRewriter &rewriter,
+    // The list of payload IR entities that will be associated with the
+    // transform IR values defined by this transform operation. In this case, it
+    // can remain empty as there are no results.
     ::mlir::transform::TransformResults &results,
-    // The transform application state. This object can be used to query the current 
-    // associations between transform IR values and payload IR entities. It can also 
-    // carry additional user-defined state.
+    // The transform application state. This object can be used to query the
+    // current associations between transform IR values and payload IR entities.
+    // It can also carry additional user-defined state.
     ::mlir::transform::TransformState &state) {
 
-  // First, we need to obtain the list of payload operations that are associated with 
+  // First, we need to obtain the list of payload operations that are associated with
   // the operand handle.
   auto payload = state.getPayloadOps(getCall());
-  
-  // Then, we iterate over the list of operands and call the actual IR-mutating 
+
+  // Then, we iterate over the list of operands and call the actual IR-mutating
   // function. We also check the preconditions here.
   for (Operation *payloadOp : payload) {
     auto call = dyn_cast<::mlir::func::CallOp>(payloadOp);
@@ -231,7 +238,7 @@ To finalize the definition of the transform operation, we need to implement the 
       diag.attachNote(payloadOp->getLoc()) << "offending payload";
       return diag;
     }
-    
+
     updateCallee(call, getNewTarget());
   }
 
