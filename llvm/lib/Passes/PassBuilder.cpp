@@ -776,8 +776,8 @@ Expected<SimplifyCFGOptions> parseSimplifyCFGOptions(StringRef Params) {
     std::tie(ParamName, Params) = Params.split(';');
 
     bool Enable = !ParamName.consume_front("no-");
-    if (ParamName == "fold-two-entry-phi") {
-      Result.setFoldTwoEntryPHINode(Enable);
+    if (ParamName == "speculate-blocks") {
+      Result.speculateBlocks(Enable);
     } else if (ParamName == "simplify-cond-branch") {
       Result.setSimplifyCondBranch(Enable);
     } else if (ParamName == "forward-switch-cond") {
