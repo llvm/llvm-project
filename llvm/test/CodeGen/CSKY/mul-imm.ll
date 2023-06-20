@@ -8,8 +8,8 @@
 define i32 @mul_i32_4097(i32 %x) {
 ; CHECK-LABEL: mul_i32_4097:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    movi32 a1, 4097
-; CHECK-NEXT:    mult16 a0, a1
+; CHECK-NEXT:    lsli16 a1, a0, 12
+; CHECK-NEXT:    addu16 a0, a1
 ; CHECK-NEXT:    rts16
 ;
 ; GENERIC-LABEL: mul_i32_4097:
@@ -17,16 +17,8 @@ define i32 @mul_i32_4097(i32 %x) {
 ; GENERIC-NEXT:    .cfi_def_cfa_offset 0
 ; GENERIC-NEXT:    subi16 sp, sp, 4
 ; GENERIC-NEXT:    .cfi_def_cfa_offset 4
-; GENERIC-NEXT:    movi16 a1, 0
-; GENERIC-NEXT:    lsli16 a2, a1, 24
-; GENERIC-NEXT:    lsli16 a1, a1, 16
-; GENERIC-NEXT:    or16 a1, a2
-; GENERIC-NEXT:    movi16 a2, 16
-; GENERIC-NEXT:    lsli16 a2, a2, 8
-; GENERIC-NEXT:    or16 a2, a1
-; GENERIC-NEXT:    movi16 a1, 1
-; GENERIC-NEXT:    or16 a1, a2
-; GENERIC-NEXT:    mult16 a0, a1
+; GENERIC-NEXT:    lsli16 a1, a0, 12
+; GENERIC-NEXT:    addu16 a0, a1, a0
 ; GENERIC-NEXT:    addi16 sp, sp, 4
 ; GENERIC-NEXT:    rts16
 entry:
@@ -37,8 +29,8 @@ entry:
 define i32 @mul_i32_4095(i32 %x) {
 ; CHECK-LABEL: mul_i32_4095:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    movi32 a1, 4095
-; CHECK-NEXT:    mult16 a0, a1
+; CHECK-NEXT:    lsli16 a1, a0, 12
+; CHECK-NEXT:    subu16 a0, a1, a0
 ; CHECK-NEXT:    rts16
 ;
 ; GENERIC-LABEL: mul_i32_4095:
@@ -46,16 +38,8 @@ define i32 @mul_i32_4095(i32 %x) {
 ; GENERIC-NEXT:    .cfi_def_cfa_offset 0
 ; GENERIC-NEXT:    subi16 sp, sp, 4
 ; GENERIC-NEXT:    .cfi_def_cfa_offset 4
-; GENERIC-NEXT:    movi16 a1, 0
-; GENERIC-NEXT:    lsli16 a2, a1, 24
-; GENERIC-NEXT:    lsli16 a1, a1, 16
-; GENERIC-NEXT:    or16 a1, a2
-; GENERIC-NEXT:    movi16 a2, 15
-; GENERIC-NEXT:    lsli16 a2, a2, 8
-; GENERIC-NEXT:    or16 a2, a1
-; GENERIC-NEXT:    movi16 a1, 255
-; GENERIC-NEXT:    or16 a1, a2
-; GENERIC-NEXT:    mult16 a0, a1
+; GENERIC-NEXT:    lsli16 a1, a0, 12
+; GENERIC-NEXT:    subu16 a0, a1, a0
 ; GENERIC-NEXT:    addi16 sp, sp, 4
 ; GENERIC-NEXT:    rts16
 entry:
@@ -66,9 +50,8 @@ entry:
 define i32 @mul_i32_minus_4095(i32 %x) {
 ; CHECK-LABEL: mul_i32_minus_4095:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    movih32 a1, 65535
-; CHECK-NEXT:    ori32 a1, a1, 61441
-; CHECK-NEXT:    mult16 a0, a1
+; CHECK-NEXT:    lsli16 a1, a0, 12
+; CHECK-NEXT:    subu16 a0, a1
 ; CHECK-NEXT:    rts16
 ;
 ; GENERIC-LABEL: mul_i32_minus_4095:
@@ -76,16 +59,8 @@ define i32 @mul_i32_minus_4095(i32 %x) {
 ; GENERIC-NEXT:    .cfi_def_cfa_offset 0
 ; GENERIC-NEXT:    subi16 sp, sp, 4
 ; GENERIC-NEXT:    .cfi_def_cfa_offset 4
-; GENERIC-NEXT:    movi16 a1, 255
-; GENERIC-NEXT:    lsli16 a2, a1, 24
-; GENERIC-NEXT:    lsli16 a1, a1, 16
-; GENERIC-NEXT:    or16 a1, a2
-; GENERIC-NEXT:    movi16 a2, 240
-; GENERIC-NEXT:    lsli16 a2, a2, 8
-; GENERIC-NEXT:    or16 a2, a1
-; GENERIC-NEXT:    movi16 a1, 1
-; GENERIC-NEXT:    or16 a1, a2
-; GENERIC-NEXT:    mult16 a0, a1
+; GENERIC-NEXT:    lsli16 a1, a0, 12
+; GENERIC-NEXT:    subu16 a0, a0, a1
 ; GENERIC-NEXT:    addi16 sp, sp, 4
 ; GENERIC-NEXT:    rts16
 entry:
@@ -96,8 +71,8 @@ entry:
 define i16 @mul_i16_4097(i16 %x) {
 ; CHECK-LABEL: mul_i16_4097:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    movi32 a1, 4097
-; CHECK-NEXT:    mult16 a0, a1
+; CHECK-NEXT:    lsli16 a1, a0, 12
+; CHECK-NEXT:    addu16 a0, a1
 ; CHECK-NEXT:    rts16
 ;
 ; GENERIC-LABEL: mul_i16_4097:
@@ -105,16 +80,8 @@ define i16 @mul_i16_4097(i16 %x) {
 ; GENERIC-NEXT:    .cfi_def_cfa_offset 0
 ; GENERIC-NEXT:    subi16 sp, sp, 4
 ; GENERIC-NEXT:    .cfi_def_cfa_offset 4
-; GENERIC-NEXT:    movi16 a1, 0
-; GENERIC-NEXT:    lsli16 a2, a1, 24
-; GENERIC-NEXT:    lsli16 a1, a1, 16
-; GENERIC-NEXT:    or16 a1, a2
-; GENERIC-NEXT:    movi16 a2, 16
-; GENERIC-NEXT:    lsli16 a2, a2, 8
-; GENERIC-NEXT:    or16 a2, a1
-; GENERIC-NEXT:    movi16 a1, 1
-; GENERIC-NEXT:    or16 a1, a2
-; GENERIC-NEXT:    mult16 a0, a1
+; GENERIC-NEXT:    lsli16 a1, a0, 12
+; GENERIC-NEXT:    addu16 a0, a1, a0
 ; GENERIC-NEXT:    addi16 sp, sp, 4
 ; GENERIC-NEXT:    rts16
 entry:
@@ -125,8 +92,8 @@ entry:
 define i16 @mul_i16_4095(i16 %x) {
 ; CHECK-LABEL: mul_i16_4095:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    movi32 a1, 4095
-; CHECK-NEXT:    mult16 a0, a1
+; CHECK-NEXT:    lsli16 a1, a0, 12
+; CHECK-NEXT:    subu16 a0, a1, a0
 ; CHECK-NEXT:    rts16
 ;
 ; GENERIC-LABEL: mul_i16_4095:
@@ -134,16 +101,8 @@ define i16 @mul_i16_4095(i16 %x) {
 ; GENERIC-NEXT:    .cfi_def_cfa_offset 0
 ; GENERIC-NEXT:    subi16 sp, sp, 4
 ; GENERIC-NEXT:    .cfi_def_cfa_offset 4
-; GENERIC-NEXT:    movi16 a1, 0
-; GENERIC-NEXT:    lsli16 a2, a1, 24
-; GENERIC-NEXT:    lsli16 a1, a1, 16
-; GENERIC-NEXT:    or16 a1, a2
-; GENERIC-NEXT:    movi16 a2, 15
-; GENERIC-NEXT:    lsli16 a2, a2, 8
-; GENERIC-NEXT:    or16 a2, a1
-; GENERIC-NEXT:    movi16 a1, 255
-; GENERIC-NEXT:    or16 a1, a2
-; GENERIC-NEXT:    mult16 a0, a1
+; GENERIC-NEXT:    lsli16 a1, a0, 12
+; GENERIC-NEXT:    subu16 a0, a1, a0
 ; GENERIC-NEXT:    addi16 sp, sp, 4
 ; GENERIC-NEXT:    rts16
 entry:
@@ -154,9 +113,8 @@ entry:
 define i16 @mul_i16_minus_4095(i16 %x) {
 ; CHECK-LABEL: mul_i16_minus_4095:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    movih32 a1, 65535
-; CHECK-NEXT:    ori32 a1, a1, 61441
-; CHECK-NEXT:    mult16 a0, a1
+; CHECK-NEXT:    lsli16 a1, a0, 12
+; CHECK-NEXT:    subu16 a0, a1
 ; CHECK-NEXT:    rts16
 ;
 ; GENERIC-LABEL: mul_i16_minus_4095:
@@ -164,16 +122,8 @@ define i16 @mul_i16_minus_4095(i16 %x) {
 ; GENERIC-NEXT:    .cfi_def_cfa_offset 0
 ; GENERIC-NEXT:    subi16 sp, sp, 4
 ; GENERIC-NEXT:    .cfi_def_cfa_offset 4
-; GENERIC-NEXT:    movi16 a1, 255
-; GENERIC-NEXT:    lsli16 a2, a1, 24
-; GENERIC-NEXT:    lsli16 a1, a1, 16
-; GENERIC-NEXT:    or16 a1, a2
-; GENERIC-NEXT:    movi16 a2, 240
-; GENERIC-NEXT:    lsli16 a2, a2, 8
-; GENERIC-NEXT:    or16 a2, a1
-; GENERIC-NEXT:    movi16 a1, 1
-; GENERIC-NEXT:    or16 a1, a2
-; GENERIC-NEXT:    mult16 a0, a1
+; GENERIC-NEXT:    lsli16 a1, a0, 12
+; GENERIC-NEXT:    subu16 a0, a0, a1
 ; GENERIC-NEXT:    addi16 sp, sp, 4
 ; GENERIC-NEXT:    rts16
 entry:
@@ -184,8 +134,8 @@ entry:
 define i8 @mul_i8_65(i8 %x) {
 ; CHECK-LABEL: mul_i8_65:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    movi16 a1, 65
-; CHECK-NEXT:    mult16 a0, a1
+; CHECK-NEXT:    lsli16 a1, a0, 6
+; CHECK-NEXT:    addu16 a0, a1
 ; CHECK-NEXT:    rts16
 ;
 ; GENERIC-LABEL: mul_i8_65:
@@ -193,8 +143,8 @@ define i8 @mul_i8_65(i8 %x) {
 ; GENERIC-NEXT:    .cfi_def_cfa_offset 0
 ; GENERIC-NEXT:    subi16 sp, sp, 4
 ; GENERIC-NEXT:    .cfi_def_cfa_offset 4
-; GENERIC-NEXT:    movi16 a1, 65
-; GENERIC-NEXT:    mult16 a0, a1
+; GENERIC-NEXT:    lsli16 a1, a0, 6
+; GENERIC-NEXT:    addu16 a0, a1, a0
 ; GENERIC-NEXT:    addi16 sp, sp, 4
 ; GENERIC-NEXT:    rts16
 entry:
@@ -205,8 +155,8 @@ entry:
 define i8 @mul_i8_63(i8 %x) {
 ; CHECK-LABEL: mul_i8_63:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    movi16 a1, 63
-; CHECK-NEXT:    mult16 a0, a1
+; CHECK-NEXT:    lsli16 a1, a0, 6
+; CHECK-NEXT:    subu16 a0, a1, a0
 ; CHECK-NEXT:    rts16
 ;
 ; GENERIC-LABEL: mul_i8_63:
@@ -214,8 +164,8 @@ define i8 @mul_i8_63(i8 %x) {
 ; GENERIC-NEXT:    .cfi_def_cfa_offset 0
 ; GENERIC-NEXT:    subi16 sp, sp, 4
 ; GENERIC-NEXT:    .cfi_def_cfa_offset 4
-; GENERIC-NEXT:    movi16 a1, 63
-; GENERIC-NEXT:    mult16 a0, a1
+; GENERIC-NEXT:    lsli16 a1, a0, 6
+; GENERIC-NEXT:    subu16 a0, a1, a0
 ; GENERIC-NEXT:    addi16 sp, sp, 4
 ; GENERIC-NEXT:    rts16
 entry:
@@ -226,9 +176,8 @@ entry:
 define i8 @mul_i8_minus_63(i8 %x) {
 ; CHECK-LABEL: mul_i8_minus_63:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    movih32 a1, 65535
-; CHECK-NEXT:    ori32 a1, a1, 65473
-; CHECK-NEXT:    mult16 a0, a1
+; CHECK-NEXT:    lsli16 a1, a0, 6
+; CHECK-NEXT:    subu16 a0, a1
 ; CHECK-NEXT:    rts16
 ;
 ; GENERIC-LABEL: mul_i8_minus_63:
@@ -236,15 +185,8 @@ define i8 @mul_i8_minus_63(i8 %x) {
 ; GENERIC-NEXT:    .cfi_def_cfa_offset 0
 ; GENERIC-NEXT:    subi16 sp, sp, 4
 ; GENERIC-NEXT:    .cfi_def_cfa_offset 4
-; GENERIC-NEXT:    movi16 a1, 255
-; GENERIC-NEXT:    lsli16 a2, a1, 24
-; GENERIC-NEXT:    lsli16 a3, a1, 16
-; GENERIC-NEXT:    or16 a3, a2
-; GENERIC-NEXT:    lsli16 a1, a1, 8
-; GENERIC-NEXT:    or16 a1, a3
-; GENERIC-NEXT:    movi16 a2, 193
-; GENERIC-NEXT:    or16 a2, a1
-; GENERIC-NEXT:    mult16 a0, a2
+; GENERIC-NEXT:    lsli16 a1, a0, 6
+; GENERIC-NEXT:    subu16 a0, a0, a1
 ; GENERIC-NEXT:    addi16 sp, sp, 4
 ; GENERIC-NEXT:    rts16
 entry:
@@ -265,15 +207,10 @@ define i32 @mul_i32_minus_4097(i32 %x) {
 ; GENERIC-NEXT:    .cfi_def_cfa_offset 0
 ; GENERIC-NEXT:    subi16 sp, sp, 4
 ; GENERIC-NEXT:    .cfi_def_cfa_offset 4
-; GENERIC-NEXT:    movi16 a1, 255
-; GENERIC-NEXT:    lsli16 a2, a1, 24
-; GENERIC-NEXT:    lsli16 a3, a1, 16
-; GENERIC-NEXT:    or16 a3, a2
-; GENERIC-NEXT:    movi16 a2, 239
-; GENERIC-NEXT:    lsli16 a2, a2, 8
-; GENERIC-NEXT:    or16 a2, a3
-; GENERIC-NEXT:    or16 a2, a1
-; GENERIC-NEXT:    mult16 a0, a2
+; GENERIC-NEXT:    lsli16 a1, a0, 12
+; GENERIC-NEXT:    addu16 a0, a1, a0
+; GENERIC-NEXT:    movi16 a1, 0
+; GENERIC-NEXT:    subu16 a0, a1, a0
 ; GENERIC-NEXT:    addi16 sp, sp, 4
 ; GENERIC-NEXT:    rts16
 entry:
@@ -294,15 +231,10 @@ define i16 @mul_i16_minus_4097(i16 %x) {
 ; GENERIC-NEXT:    .cfi_def_cfa_offset 0
 ; GENERIC-NEXT:    subi16 sp, sp, 4
 ; GENERIC-NEXT:    .cfi_def_cfa_offset 4
-; GENERIC-NEXT:    movi16 a1, 255
-; GENERIC-NEXT:    lsli16 a2, a1, 24
-; GENERIC-NEXT:    lsli16 a3, a1, 16
-; GENERIC-NEXT:    or16 a3, a2
-; GENERIC-NEXT:    movi16 a2, 239
-; GENERIC-NEXT:    lsli16 a2, a2, 8
-; GENERIC-NEXT:    or16 a2, a3
-; GENERIC-NEXT:    or16 a2, a1
-; GENERIC-NEXT:    mult16 a0, a2
+; GENERIC-NEXT:    lsli16 a1, a0, 12
+; GENERIC-NEXT:    addu16 a0, a1, a0
+; GENERIC-NEXT:    movi16 a1, 0
+; GENERIC-NEXT:    subu16 a0, a1, a0
 ; GENERIC-NEXT:    addi16 sp, sp, 4
 ; GENERIC-NEXT:    rts16
 entry:
@@ -323,15 +255,10 @@ define i8 @mul_i8_minus_65(i8 %x) {
 ; GENERIC-NEXT:    .cfi_def_cfa_offset 0
 ; GENERIC-NEXT:    subi16 sp, sp, 4
 ; GENERIC-NEXT:    .cfi_def_cfa_offset 4
-; GENERIC-NEXT:    movi16 a1, 255
-; GENERIC-NEXT:    lsli16 a2, a1, 24
-; GENERIC-NEXT:    lsli16 a3, a1, 16
-; GENERIC-NEXT:    or16 a3, a2
-; GENERIC-NEXT:    lsli16 a1, a1, 8
-; GENERIC-NEXT:    or16 a1, a3
-; GENERIC-NEXT:    movi16 a2, 191
-; GENERIC-NEXT:    or16 a2, a1
-; GENERIC-NEXT:    mult16 a0, a2
+; GENERIC-NEXT:    lsli16 a1, a0, 6
+; GENERIC-NEXT:    addu16 a0, a1, a0
+; GENERIC-NEXT:    movi16 a1, 0
+; GENERIC-NEXT:    subu16 a0, a1, a0
 ; GENERIC-NEXT:    addi16 sp, sp, 4
 ; GENERIC-NEXT:    rts16
 entry:
