@@ -38,6 +38,7 @@
     __cpp_lib_type_identity                        201806L [C++20]
     __cpp_lib_type_trait_variable_templates        201510L [C++17]
     __cpp_lib_void_t                               201411L [C++17]
+    __cpp_lib_within_lifetime                      202306L [C++26]
 */
 
 #include <type_traits>
@@ -131,6 +132,10 @@
 
 # ifdef __cpp_lib_void_t
 #   error "__cpp_lib_void_t should not be defined before c++17"
+# endif
+
+# ifdef __cpp_lib_within_lifetime
+#   error "__cpp_lib_within_lifetime should not be defined before c++26"
 # endif
 
 #elif TEST_STD_VER == 14
@@ -236,6 +241,10 @@
 
 # ifdef __cpp_lib_void_t
 #   error "__cpp_lib_void_t should not be defined before c++17"
+# endif
+
+# ifdef __cpp_lib_within_lifetime
+#   error "__cpp_lib_within_lifetime should not be defined before c++26"
 # endif
 
 #elif TEST_STD_VER == 17
@@ -365,6 +374,10 @@
 # endif
 # if __cpp_lib_void_t != 201411L
 #   error "__cpp_lib_void_t should have the value 201411L in c++17"
+# endif
+
+# ifdef __cpp_lib_within_lifetime
+#   error "__cpp_lib_within_lifetime should not be defined before c++26"
 # endif
 
 #elif TEST_STD_VER == 20
@@ -527,6 +540,10 @@
 # endif
 # if __cpp_lib_void_t != 201411L
 #   error "__cpp_lib_void_t should have the value 201411L in c++20"
+# endif
+
+# ifdef __cpp_lib_within_lifetime
+#   error "__cpp_lib_within_lifetime should not be defined before c++26"
 # endif
 
 #elif TEST_STD_VER == 23
@@ -703,6 +720,10 @@
 #   error "__cpp_lib_void_t should have the value 201411L in c++23"
 # endif
 
+# ifdef __cpp_lib_within_lifetime
+#   error "__cpp_lib_within_lifetime should not be defined before c++26"
+# endif
+
 #elif TEST_STD_VER > 23
 
 # ifndef __cpp_lib_bool_constant
@@ -875,6 +896,19 @@
 # endif
 # if __cpp_lib_void_t != 201411L
 #   error "__cpp_lib_void_t should have the value 201411L in c++26"
+# endif
+
+# if !defined(_LIBCPP_VERSION)
+#   ifndef __cpp_lib_within_lifetime
+#     error "__cpp_lib_within_lifetime should be defined in c++26"
+#   endif
+#   if __cpp_lib_within_lifetime != 202306L
+#     error "__cpp_lib_within_lifetime should have the value 202306L in c++26"
+#   endif
+# else // _LIBCPP_VERSION
+#   ifdef __cpp_lib_within_lifetime
+#     error "__cpp_lib_within_lifetime should not be defined because it is unimplemented in libc++!"
+#   endif
 # endif
 
 #endif // TEST_STD_VER > 23

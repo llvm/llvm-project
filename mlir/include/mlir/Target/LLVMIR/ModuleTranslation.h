@@ -274,6 +274,7 @@ private:
   LogicalResult convertOperation(Operation &op, llvm::IRBuilderBase &builder);
   LogicalResult convertFunctionSignatures();
   LogicalResult convertFunctions();
+  LogicalResult convertComdats();
   LogicalResult convertGlobals();
   LogicalResult convertOneFunction(LLVMFuncOp func);
 

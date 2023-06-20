@@ -3194,6 +3194,9 @@ RValue CodeGenFunction::EmitBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
   case Builtin::BI__builtin_elementwise_roundeven:
     return RValue::get(emitUnaryBuiltin(*this, E, llvm::Intrinsic::roundeven,
                                         "elt.roundeven"));
+  case Builtin::BI__builtin_elementwise_round:
+    return RValue::get(emitUnaryBuiltin(*this, E, llvm::Intrinsic::round,
+                                        "elt.round"));
   case Builtin::BI__builtin_elementwise_sin:
     return RValue::get(
         emitUnaryBuiltin(*this, E, llvm::Intrinsic::sin, "elt.sin"));

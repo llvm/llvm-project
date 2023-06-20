@@ -48,9 +48,15 @@ const Environment *StmtToEnvMap::getEnvironment(const Stmt &S) const {
 
 static BoolValue &evaluateBooleanEquality(const Expr &LHS, const Expr &RHS,
                                           Environment &Env) {
-  if (auto *LHSValue = dyn_cast_or_null<BoolValue>(Env.getValueStrict(LHS)))
-    if (auto *RHSValue = dyn_cast_or_null<BoolValue>(Env.getValueStrict(RHS)))
-      return Env.makeIff(*LHSValue, *RHSValue);
+  Value *LHSValue = Env.getValueStrict(LHS);
+  Value *RHSValue = Env.getValueStrict(RHS);
+
+  if (LHSValue == RHSValue)
+    return Env.getBoolLiteralValue(true);
+
+  if (auto *LHSBool = dyn_cast_or_null<BoolValue>(LHSValue))
+    if (auto *RHSBool = dyn_cast_or_null<BoolValue>(RHSValue))
+      return Env.makeIff(*LHSBool, *RHSBool);
 
   return Env.makeAtomicBoolValue();
 }
@@ -774,6 +780,10 @@ public:
 
   void VisitCXXBoolLiteralExpr(const CXXBoolLiteralExpr *S) {
     Env.setValueStrict(*S, Env.getBoolLiteralValue(S->getValue()));
+  }
+
+  void VisitIntegerLiteral(const IntegerLiteral *S) {
+    Env.setValueStrict(*S, Env.getIntLiteralValue(S->getValue()));
   }
 
   void VisitParenExpr(const ParenExpr *S) {

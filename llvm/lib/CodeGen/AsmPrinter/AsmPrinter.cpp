@@ -4016,11 +4016,13 @@ void AsmPrinter::emitXRayTable() {
           "xray_fn_idx", ELF::SHT_PROGBITS, Flags | ELF::SHF_WRITE, 0,
           GroupName, F.hasComdat(), MCSection::NonUniqueID, LinkedToSym);
   } else if (MF->getSubtarget().getTargetTriple().isOSBinFormatMachO()) {
-    InstMap = OutContext.getMachOSection("__DATA", "xray_instr_map", 0,
+    InstMap = OutContext.getMachOSection("__DATA", "xray_instr_map",
+                                         MachO::S_ATTR_LIVE_SUPPORT,
                                          SectionKind::getReadOnlyWithRel());
     if (TM.Options.XRayFunctionIndex)
       FnSledIndex = OutContext.getMachOSection(
-          "__DATA", "xray_fn_idx", 0, SectionKind::getReadOnlyWithRel());
+          "__DATA", "xray_fn_idx", MachO::S_ATTR_LIVE_SUPPORT,
+          SectionKind::getReadOnlyWithRel());
   } else {
     llvm_unreachable("Unsupported target");
   }

@@ -228,7 +228,6 @@ private:
         llvm::raw_string_ostream ss(buf);
         interleaveComma(op->getResultTypes(), ss);
         os << truncateString(ss.str()) << ")";
-        os << ")";
       }
 
       // Print attributes.

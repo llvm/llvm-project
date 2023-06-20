@@ -1172,9 +1172,16 @@ bool CodeGenVTables::isVTableExternal(const CXXRecordDecl *RD) {
   if (!keyFunction)
     return false;
 
+  const FunctionDecl *Def;
   // Otherwise, if we don't have a definition of the key function, the
   // vtable must be defined somewhere else.
-  return !keyFunction->hasBody();
+  if (!keyFunction->hasBody(Def))
+    return true;
+
+  assert(Def && "The body of the key function is not assigned to Def?");
+  // If the non-inline key function comes from another module unit, the vtable
+  // must be defined there.
+  return Def->isInAnotherModuleUnit() && !Def->isInlineSpecified();
 }
 
 /// Given that we're currently at the end of the translation unit, and

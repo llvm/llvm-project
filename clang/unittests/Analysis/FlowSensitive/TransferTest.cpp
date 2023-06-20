@@ -811,6 +811,31 @@ TEST(TransferTest, BinaryOperatorAssign) {
       });
 }
 
+TEST(TransferTest, BinaryOperatorAssignIntegerLiteral) {
+  std::string Code = R"(
+    void target() {
+      int Foo = 1;
+      // [[before]]
+      Foo = 2;
+      // [[after]]
+    }
+  )";
+  runDataflow(
+      Code,
+      [](const llvm::StringMap<DataflowAnalysisState<NoopLattice>> &Results,
+         ASTContext &ASTCtx) {
+        const Environment &Before =
+            getEnvironmentAtAnnotation(Results, "before");
+        const Environment &After = getEnvironmentAtAnnotation(Results, "after");
+
+        const auto &ValBefore =
+            getValueForDecl<IntegerValue>(ASTCtx, Before, "Foo");
+        const auto &ValAfter =
+            getValueForDecl<IntegerValue>(ASTCtx, After, "Foo");
+        EXPECT_NE(&ValBefore, &ValAfter);
+      });
+}
+
 TEST(TransferTest, VarDeclInitAssign) {
   std::string Code = R"(
     void target() {
@@ -3438,6 +3463,24 @@ TEST(TransferTest, BooleanInequality) {
 
         auto &BarValElse = *cast<BoolValue>(EnvElse.getValue(*BarDecl));
         EXPECT_TRUE(EnvElse.flowConditionImplies(BarValElse));
+      });
+}
+
+TEST(TransferTest, IntegerLiteralEquality) {
+  std::string Code = R"(
+    void target() {
+      bool equal = (42 == 42);
+      // [[p]]
+    }
+  )";
+  runDataflow(
+      Code,
+      [](const llvm::StringMap<DataflowAnalysisState<NoopLattice>> &Results,
+         ASTContext &ASTCtx) {
+        const Environment &Env = getEnvironmentAtAnnotation(Results, "p");
+
+        auto &Equal = getValueForDecl<BoolValue>(ASTCtx, Env, "equal");
+        EXPECT_TRUE(Env.flowConditionImplies(Equal));
       });
 }
 

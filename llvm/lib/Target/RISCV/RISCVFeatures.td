@@ -752,6 +752,14 @@ def HasVendorXSfvcp : Predicate<"Subtarget->hasVendorXSfvcp()">,
                                 AssemblerPredicate<(all_of FeatureVendorXSfvcp),
                                 "'XSfvcp' (SiFive Custom Vector Coprocessor Interface Instructions)">;
 
+
+def FeatureVendorXCVbitmanip
+    : SubtargetFeature<"xcvbitmanip", "HasVendorXCVbitmanip", "true",
+                       "'XCVbitmanip' (Bit Manipulation)">;
+def HasVendorXCVbitmanip : Predicate<"Subtarget->hasVendorXCVbitmanip()">,
+                                AssemblerPredicate<(all_of FeatureVendorXCVbitmanip),
+                                "'XCVbitmanip' (Bit Manipulation)">;
+
 //===----------------------------------------------------------------------===//
 // LLVM specific features and extensions
 //===----------------------------------------------------------------------===//

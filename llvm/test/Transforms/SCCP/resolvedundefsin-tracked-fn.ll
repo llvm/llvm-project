@@ -9,7 +9,7 @@
 
 define i32 @test1_m(i32 %h) {
 ; CHECK-LABEL: define {{[^@]+}}@test1_m
-; CHECK-SAME: (i32 [[H:%.*]])
+; CHECK-SAME: (i32 [[H:%.*]]) {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[CONV:%.*]] = trunc i32 [[H]] to i8
 ; CHECK-NEXT:    [[CALL:%.*]] = call i32 @test1_k(i8 [[CONV]], i32 0)
@@ -34,7 +34,7 @@ declare void @use.1(i1)
 
 define internal i32 @test1_k(i8 %h, i32 %i) {
 ; CHECK-LABEL: define {{[^@]+}}@test1_k
-; CHECK-SAME: (i8 [[H:%.*]], i32 [[I:%.*]])
+; CHECK-SAME: (i8 [[H:%.*]], i32 [[I:%.*]]) {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[TMP0:%.*]] = load i32, ptr @e, align 4
 ; CHECK-NEXT:    [[CONV:%.*]] = sext i32 [[TMP0]] to i64
@@ -56,7 +56,7 @@ entry:
 
 define internal i1 @test1_g(ptr %h, i32 %i) #0 {
 ; CHECK-LABEL: define {{[^@]+}}@test1_g
-; CHECK-SAME: (ptr [[H:%.*]], i32 [[I:%.*]])
+; CHECK-SAME: (ptr [[H:%.*]], i32 [[I:%.*]]) {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[TOBOOL:%.*]] = icmp ne i32 [[I]], 0
 ; CHECK-NEXT:    br i1 [[TOBOOL]], label [[LAND_RHS:%.*]], label [[LAND_END:%.*]]
@@ -86,7 +86,7 @@ declare i32 @test1_j(...)
 
 define i32 @test2_m(i32 %h) #0 {
 ; CHECK-LABEL: define {{[^@]+}}@test2_m
-; CHECK-SAME: (i32 [[H:%.*]])
+; CHECK-SAME: (i32 [[H:%.*]]) {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[CONV:%.*]] = trunc i32 [[H]] to i8
 ; CHECK-NEXT:    [[CALL:%.*]] = call i32 @test2_k(i8 [[CONV]], i32 0)
@@ -111,7 +111,7 @@ entry:
 ;       resolve the unknown values there first.
 define internal i32 @test2_k(i8 %h, i32 %i) {
 ; CHECK-LABEL: define {{[^@]+}}@test2_k
-; CHECK-SAME: (i8 [[H:%.*]], i32 [[I:%.*]])
+; CHECK-SAME: (i8 [[H:%.*]], i32 [[I:%.*]]) {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[TMP0:%.*]] = load i32, ptr @e, align 4
 ; CHECK-NEXT:    [[CONV:%.*]] = sext i32 [[TMP0]] to i64
@@ -134,7 +134,7 @@ entry:
 
 define internal i1 @test2_g(ptr %h, i32 %i) {
 ; CHECK-LABEL: define {{[^@]+}}@test2_g
-; CHECK-SAME: (ptr [[H:%.*]], i32 [[I:%.*]])
+; CHECK-SAME: (ptr [[H:%.*]], i32 [[I:%.*]]) {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    br label [[LAND_RHS:%.*]]
 ; CHECK:       land.rhs:
@@ -165,7 +165,7 @@ declare i32 @test2_j(...)
 ; Same as test_2*, but with a PHI node depending on a tracked  call result.
 define i32 @test3_m(i32 %h) #0 {
 ; CHECK-LABEL: define {{[^@]+}}@test3_m
-; CHECK-SAME: (i32 [[H:%.*]])
+; CHECK-SAME: (i32 [[H:%.*]]) {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[CONV:%.*]] = trunc i32 [[H]] to i8
 ; CHECK-NEXT:    [[CALL:%.*]] = call i32 @test3_k(i8 [[CONV]], i32 0)
@@ -188,7 +188,7 @@ entry:
 
 define internal i32 @test3_k(i8 %h, i32 %i) {
 ; CHECK-LABEL: define {{[^@]+}}@test3_k
-; CHECK-SAME: (i8 [[H:%.*]], i32 [[I:%.*]])
+; CHECK-SAME: (i8 [[H:%.*]], i32 [[I:%.*]]) {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[TMP0:%.*]] = load i32, ptr @e, align 4
 ; CHECK-NEXT:    [[CONV:%.*]] = sext i32 [[TMP0]] to i64
@@ -221,7 +221,7 @@ exit:
 
 define internal i1 @test3_g(ptr %h, i32 %i) {
 ; CHECK-LABEL: define {{[^@]+}}@test3_g
-; CHECK-SAME: (ptr [[H:%.*]], i32 [[I:%.*]])
+; CHECK-SAME: (ptr [[H:%.*]], i32 [[I:%.*]]) {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[TOBOOL:%.*]] = icmp ne i32 [[I]], 0
 ; CHECK-NEXT:    br i1 [[TOBOOL]], label [[LAND_RHS:%.*]], label [[LAND_END:%.*]]
@@ -257,7 +257,7 @@ declare void @use.16(ptr)
 declare void @use.8(ptr)
 
 define void @test4_a() {
-; CHECK-LABEL: define {{[^@]+}}@test4_a()
+; CHECK-LABEL: define {{[^@]+}}@test4_a() {
 ; CHECK-NEXT:  bb:
 ; CHECK-NEXT:    [[TMP:%.*]] = call ptr @test4_c(ptr null)
 ; CHECK-NEXT:    call void @test4_b(ptr null)
@@ -271,7 +271,7 @@ bb:
 
 define internal void @test4_b(ptr %arg) {
 ; CHECK-LABEL: define {{[^@]+}}@test4_b
-; CHECK-SAME: (ptr [[ARG:%.*]])
+; CHECK-SAME: (ptr [[ARG:%.*]]) {
 ; CHECK-NEXT:  bb:
 ; CHECK-NEXT:    [[SEL:%.*]] = select i1 false, ptr null, ptr null
 ; CHECK-NEXT:    call void @use.16(ptr null)
@@ -287,7 +287,7 @@ bb:
 
 define internal ptr @test4_c(ptr %arg) {
 ; CHECK-LABEL: define {{[^@]+}}@test4_c
-; CHECK-SAME: (ptr [[ARG:%.*]])
+; CHECK-SAME: (ptr [[ARG:%.*]]) {
 ; CHECK-NEXT:  bb1:
 ; CHECK-NEXT:    [[TMP:%.*]] = and i1 undef, undef
 ; CHECK-NEXT:    br i1 [[TMP]], label [[BB3:%.*]], label [[BB2:%.*]]
@@ -310,7 +310,7 @@ bb3:                                              ; preds = %bb1
 ; TODO: Same as test4, but with a select instead of a bitcast.
 
 define void @test5_a() {
-; CHECK-LABEL: define {{[^@]+}}@test5_a()
+; CHECK-LABEL: define {{[^@]+}}@test5_a() {
 ; CHECK-NEXT:  bb:
 ; CHECK-NEXT:    [[TMP:%.*]] = call ptr @test5_c(ptr null)
 ; CHECK-NEXT:    call void @test5_b(ptr null)
@@ -324,7 +324,7 @@ bb:
 
 define internal void @test5_b(ptr %arg) {
 ; CHECK-LABEL: define {{[^@]+}}@test5_b
-; CHECK-SAME: (ptr [[ARG:%.*]])
+; CHECK-SAME: (ptr [[ARG:%.*]]) {
 ; CHECK-NEXT:  bb:
 ; CHECK-NEXT:    [[SEL:%.*]] = select i1 false, ptr null, ptr null
 ; CHECK-NEXT:    call void @use.8(ptr [[SEL]])
@@ -338,7 +338,7 @@ bb:
 
 define internal ptr @test5_c(ptr %arg) {
 ; CHECK-LABEL: define {{[^@]+}}@test5_c
-; CHECK-SAME: (ptr [[ARG:%.*]])
+; CHECK-SAME: (ptr [[ARG:%.*]]) {
 ; CHECK-NEXT:  bb1:
 ; CHECK-NEXT:    [[TMP:%.*]] = and i1 undef, undef
 ; CHECK-NEXT:    br i1 [[TMP]], label [[BB3:%.*]], label [[BB2:%.*]]
@@ -365,7 +365,7 @@ bb3:                                              ; preds = %bb1
 @maxposslen = external dso_local local_unnamed_addr global i32, align 4
 
 define void @test3() {
-; CHECK-LABEL: define {{[^@]+}}@test3()
+; CHECK-LABEL: define {{[^@]+}}@test3() {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    br label [[IF_END16:%.*]]
 ; CHECK:       if.end16:

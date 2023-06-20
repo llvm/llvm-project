@@ -2177,11 +2177,17 @@ bool HexagonInstrInfo::isConstExtended(const MachineInstr &MI) const {
   // have 'isExtended' flag set.
   assert(MO.isImm() && "Extendable operand must be Immediate type");
 
-  int MinValue = getMinValue(MI);
-  int MaxValue = getMaxValue(MI);
-  int ImmValue = MO.getImm();
-
-  return (ImmValue < MinValue || ImmValue > MaxValue);
+  int64_t Value = MO.getImm();
+  if ((F >> HexagonII::ExtentSignedPos) & HexagonII::ExtentSignedMask) {
+    int32_t SValue = Value;
+    int32_t MinValue = getMinValue(MI);
+    int32_t MaxValue = getMaxValue(MI);
+    return SValue < MinValue || SValue > MaxValue;
+  }
+  uint32_t UValue = Value;
+  uint32_t MinValue = getMinValue(MI);
+  uint32_t MaxValue = getMaxValue(MI);
+  return UValue < MinValue || UValue > MaxValue;
 }
 
 bool HexagonInstrInfo::isDeallocRet(const MachineInstr &MI) const {

@@ -239,6 +239,22 @@ DiagnosedSilenceableFailure
 transform::ApplyPatternsOp::applyToOne(Operation *target,
                                        ApplyToEachResultList &results,
                                        transform::TransformState &state) {
+  // Make sure that this transform is not applied to itself. Modifying the
+  // transform IR while it is being interpreted is generally dangerous. Even
+  // more so for the ApplyPatternsOp because the GreedyPatternRewriteDriver
+  // performs many additional simplifications such as dead code elimination.
+  Operation *transformAncestor = getOperation();
+  while (transformAncestor) {
+    if (transformAncestor == target) {
+      DiagnosedDefiniteFailure diag =
+          emitDefiniteFailure()
+          << "cannot apply transform to itself (or one of its ancestors)";
+      diag.attachNote(target->getLoc()) << "target payload op";
+      return diag;
+    }
+    transformAncestor = transformAncestor->getParentOp();
+  }
+
   // Gather all specified patterns.
   MLIRContext *ctx = target->getContext();
   RewritePatternSet patterns(ctx);
