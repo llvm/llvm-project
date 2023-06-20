@@ -98,9 +98,13 @@ cl::opt<bool> PrintDAGs("misched-print-dags", cl::Hidden,
 cl::opt<bool> MISchedDumpReservedCycles(
     "misched-dump-reserved-cycles", cl::Hidden, cl::init(false),
     cl::desc("Dump resource usage at schedule boundary."));
+cl::opt<bool> MischedDetailResourceBooking(
+    "misched-detail-resource-booking", cl::Hidden, cl::init(false),
+    cl::desc("Show details of invoking getNextResoufceCycle."));
 #else
 const bool ViewMISchedDAGs = false;
 const bool PrintDAGs = false;
+const bool MischedDetailResourceBooking = false;
 #ifdef LLVM_ENABLE_DUMP
 const bool MISchedDumpReservedCycles = false;
 #endif // LLVM_ENABLE_DUMP
@@ -2314,7 +2318,11 @@ unsigned SchedBoundary::getNextResourceCycleByInstance(unsigned InstanceIdx,
 std::pair<unsigned, unsigned>
 SchedBoundary::getNextResourceCycle(const MCSchedClassDesc *SC, unsigned PIdx,
                                     unsigned Cycles, unsigned StartAtCycle) {
-
+  if (MischedDetailResourceBooking) {
+    LLVM_DEBUG(dbgs() << "  Resource booking (@" << CurrCycle << "c): \n");
+    LLVM_DEBUG(dumpReservedCycles());
+    LLVM_DEBUG(dbgs() << "  getNextResourceCycle (@" << CurrCycle << "c): \n");
+  }
   unsigned MinNextUnreserved = InvalidCycle;
   unsigned InstanceIdx = 0;
   unsigned StartIndex = ReservedCyclesIndex[PIdx];
@@ -2355,11 +2363,19 @@ SchedBoundary::getNextResourceCycle(const MCSchedClassDesc *SC, unsigned PIdx,
        ++I) {
     unsigned NextUnreserved =
         getNextResourceCycleByInstance(I, Cycles, StartAtCycle);
+    if (MischedDetailResourceBooking)
+      LLVM_DEBUG(dbgs() << "    Instance " << I - StartIndex << " available @"
+                        << NextUnreserved << "c\n");
     if (MinNextUnreserved > NextUnreserved) {
       InstanceIdx = I;
       MinNextUnreserved = NextUnreserved;
     }
   }
+  if (MischedDetailResourceBooking)
+    LLVM_DEBUG(dbgs() << "    selecting " << SchedModel->getResourceName(PIdx)
+                      << "[" << InstanceIdx - StartIndex << "]"
+                      << " available @" << MinNextUnreserved << "c"
+                      << "\n");
   return std::make_pair(MinNextUnreserved, InstanceIdx);
 }
 
