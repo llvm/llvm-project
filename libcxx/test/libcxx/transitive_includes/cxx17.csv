@@ -266,6 +266,8 @@ experimental/regex regex
 experimental/set experimental/memory_resource
 experimental/set set
 experimental/simd cstddef
+experimental/simd cstdint
+experimental/simd limits
 experimental/string experimental/memory_resource
 experimental/string string
 experimental/type_traits initializer_list
