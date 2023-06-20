@@ -147,12 +147,11 @@ public:
       MCSymbolXCOFF *TCSym =
           cast<MCSectionXCOFF>(Streamer.getCurrentSectionOnly())
               ->getQualNameSymbol();
-      // If the variant kind is VK_PPC_AIX_TLSGDM the entry represents the
-      // region handle for the symbol, we add the relocation specifier @m.
-      // If the variant kind is VK_PPC_AIX_TLSGD the entry represents the
-      // variable offset for the symbol, we add the relocation specifier @gd.
+      // On AIX, we have a region handle (symbol@m) and the variable offset
+      // (symbol@{gd|le}) for TLS variables, depending on the TLS model.
       if (Kind == MCSymbolRefExpr::VariantKind::VK_PPC_AIX_TLSGD ||
-          Kind == MCSymbolRefExpr::VariantKind::VK_PPC_AIX_TLSGDM)
+          Kind == MCSymbolRefExpr::VariantKind::VK_PPC_AIX_TLSGDM ||
+          Kind == MCSymbolRefExpr::VariantKind::VK_PPC_AIX_TLSLE)
         OS << "\t.tc " << TCSym->getName() << "," << XSym->getName() << "@"
            << MCSymbolRefExpr::getVariantKindName(Kind) << '\n';
       else

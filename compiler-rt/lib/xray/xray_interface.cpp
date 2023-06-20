@@ -426,8 +426,8 @@ int __xray_set_customevent_handler(void (*entry)(void *, size_t))
   return 0;
 }
 
-int __xray_set_typedevent_handler(void (*entry)(
-    uint16_t, const void *, size_t)) XRAY_NEVER_INSTRUMENT {
+int __xray_set_typedevent_handler(void (*entry)(size_t, const void *,
+                                                size_t)) XRAY_NEVER_INSTRUMENT {
   if (atomic_load(&XRayInitialized,
                                memory_order_acquire)) {
     atomic_store(&__xray::XRayPatchedTypedEvent,
