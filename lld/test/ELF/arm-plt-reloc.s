@@ -6,20 +6,6 @@
 // RUN: ld.lld -shared %t1 %t2 -o %t3
 // RUN: llvm-objdump --no-print-imm-hex --triple=armv7a-none-linux-gnueabi -d --no-show-raw-insn %t3 | FileCheck --check-prefix=DSO %s
 // RUN: llvm-readobj -S -r %t3 | FileCheck -check-prefix=DSOREL %s
-
-// RUN: llvm-mc -filetype=obj -triple=armv7aeb-none-linux-gnueabi %p/Inputs/arm-plt-reloc.s -o %t1.be
-// RUN: llvm-mc -filetype=obj -triple=armv7aeb-none-linux-gnueabi %s -o %t2.be
-// RUN: ld.lld %t1.be %t2.be -o %t.be
-// RUN: llvm-objdump --no-print-imm-hex --triple=armv7aeb-none-linux-gnueabi -d --no-show-raw-insn %t.be | FileCheck %s
-// RUN: ld.lld -shared %t1.be %t2.be -o %t3.be
-// RUN: llvm-objdump --no-print-imm-hex --triple=armv7aeb-none-linux-gnueabi -d --no-show-raw-insn %t3.be | FileCheck --check-prefix=DSO %s
-// RUN: llvm-readobj -S -r %t3.be | FileCheck -check-prefix=DSOREL %s
-
-// RUN: ld.lld --be8 %t1.be %t2.be -o %t.be
-// RUN: llvm-objdump --no-print-imm-hex --triple=armv7aeb-none-linux-gnueabi -d --no-show-raw-insn %t.be | FileCheck %s
-// RUN: ld.lld --be8 -shared %t1.be %t2.be -o %t3.be
-// RUN: llvm-objdump --no-print-imm-hex --triple=armv7aeb-none-linux-gnueabi -d --no-show-raw-insn %t3.be | FileCheck --check-prefix=DSO %s
-// RUN: llvm-readobj -S -r %t3.be | FileCheck -check-prefix=DSOREL %s
 //
 // Test PLT entry generation
  .syntax unified
@@ -128,13 +114,6 @@ _start:
 // RUN: llvm-objdump --no-print-imm-hex --triple=armv7a-none-linux-gnueabi -d --no-show-raw-insn %t4 | FileCheck --check-prefix=CHECKHIGH %s
 // RUN: llvm-readobj -S -r %t4 | FileCheck --check-prefix=DSORELHIGH %s
 
-// RUN: ld.lld --hash-style=sysv --script %t.script -shared %t1.be %t2.be -o %t4.be
-// RUN: llvm-objdump --no-print-imm-hex --triple=armv7aeb-none-linux-gnueabi -d --no-show-raw-insn %t4.be | FileCheck --check-prefix=CHECKHIGH %s
-// RUN: llvm-readobj -S -r %t4.be | FileCheck --check-prefix=DSORELHIGH %s
-// RUN: ld.lld --be8 --hash-style=sysv --script %t.script -shared %t1.be %t2.be -o %t4.be
-// RUN: llvm-objdump --no-print-imm-hex --triple=armv7aeb-none-linux-gnueabi -d --no-show-raw-insn %t4.be | FileCheck --check-prefix=CHECKHIGH %s
-// RUN: llvm-readobj -S -r %t4.be | FileCheck --check-prefix=DSORELHIGH %s
-
 // CHECKHIGH: Disassembly of section .text:
 // CHECKHIGH-EMPTY:
 // CHECKHIGH-NEXT: <func1>:
@@ -203,13 +182,6 @@ _start:
 // RUN: llvm-objdump --no-print-imm-hex --triple=armv7a-none-linux-gnueabi -d --no-show-raw-insn %t5 | FileCheck --check-prefix=CHECKLONG %s
 // RUN: llvm-readobj -S -r %t5 | FileCheck --check-prefix=DSORELLONG %s
 
-// RUN: ld.lld --hash-style=sysv --script %t2.script -shared %t1.be %t2.be -o %t5.be
-// RUN: llvm-objdump --no-print-imm-hex --triple=armv7aeb-none-linux-gnueabi -d --no-show-raw-insn %t5.be | FileCheck --check-prefix=CHECKLONG-EB %s
-// RUN: llvm-readobj -S -r %t5.be | FileCheck --check-prefix=DSORELLONG %s
-// RUN: ld.lld --be8 --hash-style=sysv --script %t2.script -shared %t1.be %t2.be -o %t5.be
-// RUN: llvm-objdump --no-print-imm-hex --triple=armv7aeb-none-linux-gnueabi -d --no-show-raw-insn %t5.be | FileCheck --check-prefix=CHECKLONG-EB %s
-// RUN: llvm-readobj -S -r %t5.be | FileCheck --check-prefix=DSORELLONG %s
-
 // CHECKLONG: Disassembly of section .text:
 // CHECKLONG-EMPTY:
 // CHECKLONG-NEXT: <func1>:
@@ -254,50 +226,6 @@ _start:
 // CHECKLONG: <$d>:
 // CHECKLONG-NEXT:     204c:       c8 f0 10 11     .word   0x1110f0c8
 
-// CHECKLONG-EB: Disassembly of section .text:
-// CHECKLONG-EB-EMPTY:
-// CHECKLONG-EB-NEXT: <func1>:
-// CHECKLONG-EB-NEXT:     1000:       bx      lr
-// CHECKLONG-EB: <func2>:
-// CHECKLONG-EB-NEXT:                 bx      lr
-// CHECKLONG-EB: <func3>:
-// CHECKLONG-EB-NEXT:                 bx      lr
-// CHECKLONG-EB: <_start>:
-// CHECKLONG-EB-NEXT:                 b       0x2020
-// CHECKLONG-EB-NEXT:                 bl      0x2030
-// CHECKLONG-EB-NEXT:                 beq     0x2040
-// CHECKLONG-EB-EMPTY:
-// CHECKLONG-EB-NEXT: Disassembly of section .plt:
-// CHECKLONG-EB-EMPTY:
-// CHECKLONG-EB-NEXT: <$a>:
-// CHECKLONG-EB-NEXT:     2000:       str     lr, [sp, #-4]!
-// CHECKLONG-EB-NEXT:                 ldr     lr, [pc, #4]
-// CHECKLONG-EB-NEXT:                 add     lr, pc, lr
-// CHECKLONG-EB-NEXT:                 ldr     pc, [lr, #8]!
-// CHECKLONG-EB: <$d>:
-// CHECKLONG-EB-NEXT:                 11 10 f0 f0     .word   0x1110f0f0
-// CHECKLONG-EB-NEXT:                 d4 d4 d4 d4     .word   0xd4d4d4d4
-// CHECKLONG-EB-NEXT:                 d4 d4 d4 d4     .word   0xd4d4d4d4
-// CHECKLONG-EB-NEXT:                 d4 d4 d4 d4     .word   0xd4d4d4d4
-// CHECKLONG-EB: <$a>:
-// CHECKLONG-EB-NEXT:     2020:       ldr     r12, [pc, #4]
-// CHECKLONG-EB-NEXT:                 add     r12, r12, pc
-// CHECKLONG-EB-NEXT:                 ldr     pc, [r12]
-// CHECKLONG-EB: <$d>:
-// CHECKLONG-EB-NEXT:                 11 10 f0 e0     .word   0x1110f0e0
-// CHECKLONG-EB: <$a>:
-// CHECKLONG-EB-NEXT:     2030:       ldr     r12, [pc, #4]
-// CHECKLONG-EB-NEXT:                 add     r12, r12, pc
-// CHECKLONG-EB-NEXT:                 ldr     pc, [r12]
-// CHECKLONG-EB: <$d>:
-// CHECKLONG-EB-NEXT:                 11 10 f0 d4     .word   0x1110f0d4
-// CHECKLONG-EB: <$a>:
-// CHECKLONG-EB-NEXT:     2040:       ldr     r12, [pc, #4]
-// CHECKLONG-EB-NEXT:                 add     r12, r12, pc
-// CHECKLONG-EB-NEXT:                 ldr     pc, [r12]
-// CHECKLONG-EB: <$d>:
-// CHECKLONG-EB-NEXT:                11 10 f0 c8     .word   0x1110f0c8
-
 // DSORELLONG: Name: .got.plt
 // DSORELLONG-NEXT:     Type: SHT_PROGBITS
 // DSORELLONG-NEXT:     Flags [
@@ -322,13 +250,6 @@ _start:
 // RUN: ld.lld --hash-style=sysv --script %t3.script -shared %t1 %t2 -o %t6
 // RUN: llvm-objdump --no-print-imm-hex --triple=armv7a-none-linux-gnueabi -d --no-show-raw-insn %t6 | FileCheck --check-prefix=CHECKMIX %s
 // RUN: llvm-readobj -S -r %t6 | FileCheck --check-prefix=DSORELMIX %s
-
-// RUN: ld.lld --hash-style=sysv --script %t3.script -shared %t1.be %t2.be -o %t6.be
-// RUN: llvm-objdump --no-print-imm-hex --triple=armv7aeb-none-linux-gnueabi -d --no-show-raw-insn %t6.be | FileCheck --check-prefix=CHECKMIX-EB %s
-// RUN: llvm-readobj -S -r %t6.be | FileCheck --check-prefix=DSORELMIX %s
-// RUN: ld.lld --be8 --hash-style=sysv --script %t3.script -shared %t1.be %t2.be -o %t6.be
-// RUN: llvm-objdump --no-print-imm-hex --triple=armv7a-none-linux-gnueabi -d --no-show-raw-insn %t6.be | FileCheck --check-prefix=CHECKMIX-EB %s
-// RUN: llvm-readobj -S -r %t6.be | FileCheck --check-prefix=DSORELMIX %s
 
 // CHECKMIX: Disassembly of section .text:
 // CHECKMIX-EMPTY:
@@ -374,50 +295,6 @@ _start:
 // CHECKMIX: <$d>:
 // CHECKMIX-NEXT:     204c:     d4 d4 d4 d4     .word   0xd4d4d4d4
 
-// CHECKMIX-EB: Disassembly of section .text:
-// CHECKMIX-EB-EMPTY:
-// CHECKMIX-EB-NEXT: <func1>:
-// CHECKMIX-EB-NEXT:     1000:       bx      lr
-// CHECKMIX-EB: <func2>:
-// CHECKMIX-EB-NEXT:                 bx      lr
-// CHECKMIX-EB: <func3>:
-// CHECKMIX-EB-NEXT:                 bx      lr
-// CHECKMIX-EB: <_start>:
-// CHECKMIX-EB-NEXT:                 b       0x2020
-// CHECKMIX-EB-NEXT:                 bl      0x2030
-// CHECKMIX-EB-NEXT:                 beq     0x2040
-// CHECKMIX-EB-EMPTY:
-// CHECKMIX-EB-NEXT: Disassembly of section .plt:
-// CHECKMIX-EB-EMPTY:
-// CHECKMIX-EB-NEXT: <$a>:
-// CHECKMIX-EB-NEXT:     2000:       str     lr, [sp, #-4]!
-// CHECKMIX-EB-NEXT:                 ldr     lr, [pc, #4]
-// CHECKMIX-EB-NEXT:                 add     lr, pc, lr
-// CHECKMIX-EB-NEXT:                 ldr     pc, [lr, #8]!
-// CHECKMIX-EB: <$d>:
-// CHECKMIX-EB-NEXT:                 08 00 00 10     .word   0x08000010
-// CHECKMIX-EB-NEXT:                 d4 d4 d4 d4     .word   0xd4d4d4d4
-// CHECKMIX-EB-NEXT:                 d4 d4 d4 d4     .word   0xd4d4d4d4
-// CHECKMIX-EB-NEXT:                 d4 d4 d4 d4     .word   0xd4d4d4d4
-// CHECKMIX-EB: <$a>:
-// CHECKMIX-EB-NEXT:     2020:       ldr     r12, [pc, #4]
-// CHECKMIX-EB-NEXT:                 add     r12, r12, pc
-// CHECKMIX-EB-NEXT:                 ldr     pc, [r12]
-// CHECKMIX-EB: <$d>:
-// CHECKMIX-EB-NEXT:                 08 00 00 00     .word   0x08000000
-// CHECKMIX-EB: <$a>:
-// CHECKMIX-EB-NEXT:     2030:       add     r12, pc, #133169152
-// CHECKMIX-EB-NEXT:                 add     r12, r12, #1044480
-// CHECKMIX-EB-NEXT:                 ldr     pc, [r12, #4088]!
-// CHECKMIX-EB: <$d>:
-// CHECKMIX-EB-NEXT:                 d4 d4 d4 d4     .word   0xd4d4d4d4
-// CHECKMIX-EB: <$a>:
-// CHECKMIX-EB-NEXT:     2040:       add     r12, pc, #133169152
-// CHECKMIX-EB-NEXT:                 add     r12, r12, #1044480
-// CHECKMIX-EB-NEXT:                 ldr     pc, [r12, #4076]!
-// CHECKMIX-EB: <$d>:
-// CHECKMIX-EB-NEXT:                 d4 d4 d4 d4     .word   0xd4d4d4d4
-
 // DSORELMIX:    Name: .got.plt
 // DSORELMIX-NEXT:     Type: SHT_PROGBITS
 // DSORELMIX-NEXT:     Flags [
@@ -429,4 +306,60 @@ _start:
 // DSORELMIX-NEXT:     0x800202C R_ARM_JUMP_SLOT func1
 // DSORELMIX-NEXT:     0x8002030 R_ARM_JUMP_SLOT func2
 // DSORELMIX-NEXT:     0x8002034 R_ARM_JUMP_SLOT func3
+
+// RUN: llvm-mc -filetype=obj -triple=armv7aeb-none-linux-gnueabi -mcpu=cortex-a8 %p/Inputs/arm-plt-reloc.s -o %t1
+// RUN: llvm-mc -filetype=obj -triple=armv7aeb-none-linux-gnueabi -mcpu=cortex-a8 %s -o %t2
+// RUN: ld.lld %t1 %t2 -o %t
+// RUN: llvm-objdump --no-print-imm-hex --triple=armv7aeb-none-linux-gnueabi -d --no-show-raw-insn %t | FileCheck %s
+// RUN: ld.lld -shared %t1 %t2 -o %t3
+// RUN: llvm-objdump --no-print-imm-hex --triple=armv7aeb-none-linux-gnueabi -d --no-show-raw-insn %t3 | FileCheck --check-prefix=DSO %s
+// RUN: llvm-readobj -S -r %t3 | FileCheck -check-prefix=DSOREL %s
+
+// RUN: ld.lld --hash-style=sysv --script %t2.script -shared %t1 %t2 -o %t5
+// RUN: llvm-objdump --no-print-imm-hex --triple=armv7aeb-none-linux-gnueabi -d --no-show-raw-insn %t5 | FileCheck --check-prefix=CHECKLONG-EB %s
+// RUN: llvm-readobj -S -r %t5 | FileCheck --check-prefix=DSORELLONG %s
+
+// CHECKLONG-EB: Disassembly of section .text:
+// CHECKLONG-EB-EMPTY:
+// CHECKLONG-EB-NEXT: <func1>:
+// CHECKLONG-EB-NEXT:     1000:       bx      lr
+// CHECKLONG-EB: <func2>:
+// CHECKLONG-EB-NEXT:     1004:       bx      lr
+// CHECKLONG-EB: <func3>:
+// CHECKLONG-EB-NEXT:     1008:       bx      lr
+// CHECKLONG-EB: <_start>:
+// CHECKLONG-EB-NEXT:     100c:       b       0x2020
+// CHECKLONG-EB-NEXT:     1010:       bl      0x2030
+// CHECKLONG-EB-NEXT:     1014:       beq     0x2040
+// CHECKLONG-EB-EMPTY:
+// CHECKLONG-EB-NEXT: Disassembly of section .plt:
+// CHECKLONG-EB-EMPTY:
+// CHECKLONG-EB-NEXT: <$a>:
+// CHECKLONG-EB-NEXT:     2000:       str     lr, [sp, #-4]!
+// CHECKLONG-EB-NEXT:     2004:       ldr     lr, [pc, #4]
+// CHECKLONG-EB-NEXT:     2008:       add     lr, pc, lr
+// CHECKLONG-EB-NEXT:     200c:       ldr     pc, [lr, #8]!
+// CHECKLONG-EB: <$d>:
+// CHECKLONG-EB-NEXT:     2010:	      11 10 f0 f0     .word   0x1110f0f0
+// CHECKLONG-EB-NEXT:     2014:       d4 d4 d4 d4     .word   0xd4d4d4d4
+// CHECKLONG-EB-NEXT:     2018:       d4 d4 d4 d4     .word   0xd4d4d4d4
+// CHECKLONG-EB-NEXT:     201c:       d4 d4 d4 d4     .word   0xd4d4d4d4
+// CHECKLONG-EB: <$a>:
+// CHECKLONG-EB-NEXT:     2020:       ldr     r12, [pc, #4]
+// CHECKLONG-EB-NEXT:     2024:       add     r12, r12, pc
+// CHECKLONG-EB-NEXT:     2028:       ldr     pc, [r12]
+// CHECKLONG-EB: <$d>:
+// CHECKLONG-EB-NEXT:     202c:       11 10 f0 e0     .word   0x1110f0e0
+// CHECKLONG-EB: <$a>:
+// CHECKLONG-EB-NEXT:     2030:       ldr     r12, [pc, #4]
+// CHECKLONG-EB-NEXT:     2034:       add     r12, r12, pc
+// CHECKLONG-EB-NEXT:     2038:       ldr     pc, [r12]
+// CHECKLONG-EB: <$d>:
+// CHECKLONG-EB-NEXT:     203c:       11 10 f0 d4     .word 0x1110f0d4
+// CHECKLONG-EB: <$a>:
+// CHECKLONG-EB-NEXT:     2040:       ldr     r12, [pc, #4]
+// CHECKLONG-EB-NEXT:     2044:       add     r12, r12, pc
+// CHECKLONG-EB-NEXT:     2048:       ldr     pc, [r12]
+// CHECKLONG-EB: <$d>:
+// CHECKLONG-EB-NEXT:     204c:       11 10 f0 c8     .word   0x1110f0c8
 

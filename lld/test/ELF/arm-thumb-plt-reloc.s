@@ -15,12 +15,6 @@
 // RUN: llvm-objdump --no-print-imm-hex --triple=thumbv7aeb-none-linux-gnueabi -d %t.so | FileCheck --check-prefix=DSO %s
 // RUN: llvm-readobj -S -r %t.so | FileCheck -check-prefix=DSOREL %s
 
-// RUN: ld.lld --be8 %t1 %t2 -o %t
-// RUN: llvm-objdump --no-print-imm-hex --triple=thumbv7aeb-none-linux-gnueabi -d %t | FileCheck %s
-// RUN: ld.lld --be8 -shared %t1 %t2 -o %t.so
-// RUN: llvm-objdump --no-print-imm-hex --triple=thumbv7aeb-none-linux-gnueabi -d %t.so | FileCheck --check-prefix=DSO %s
-// RUN: llvm-readobj -S -r %t.so | FileCheck -check-prefix=DSOREL %s
-
 // Test PLT entry generation
  .syntax unified
  .text

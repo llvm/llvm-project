@@ -7798,8 +7798,9 @@ SDValue RISCVTargetLowering::lowerVECTOR_INTERLEAVE(SDValue Op,
 
     // Then perform the interleave
     //   v[0]   v[n]   v[1] v[n+1]   v[2] v[n+2]   v[3] v[n+3] ...
+    SDValue TrueMask = getAllOnesMask(IdxVT, VL, DL, DAG);
     Interleaved = DAG.getNode(RISCVISD::VRGATHEREI16_VV_VL, DL, ConcatVT,
-                              Concat, Idx, DAG.getUNDEF(ConcatVT), OddMask, VL);
+                              Concat, Idx, DAG.getUNDEF(ConcatVT), TrueMask, VL);
   }
 
   // Extract the two halves from the interleaved result

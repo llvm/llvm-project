@@ -358,20 +358,6 @@ private:
   static constexpr array<__format::__arg_t, sizeof...(_Args)> __types_{
       __format::__determine_arg_t<_Context, remove_cvref_t<_Args>>()...};
 
-  // TODO FMT remove this work-around when the AIX ICE has been resolved.
-#    if defined(_AIX) && defined(_LIBCPP_CLANG_VER) && _LIBCPP_CLANG_VER < 1400
-  template <class _Tp>
-  static constexpr __format::__compile_time_handle<_CharT> __get_handle() {
-    __format::__compile_time_handle<_CharT> __handle;
-    if (__format::__determine_arg_t<_Context, _Tp>() == __format::__arg_t::__handle)
-      __handle.template __enable<_Tp>();
-
-    return __handle;
-  }
-
-  static constexpr array<__format::__compile_time_handle<_CharT>, sizeof...(_Args)> __handles_{
-      __get_handle<_Args>()...};
-#    else
   static constexpr array<__format::__compile_time_handle<_CharT>, sizeof...(_Args)> __handles_{[] {
     using _Tp = remove_cvref_t<_Args>;
     __format::__compile_time_handle<_CharT> __handle;
@@ -380,7 +366,6 @@ private:
 
     return __handle;
   }()...};
-#    endif
 };
 
 template <class... _Args>
