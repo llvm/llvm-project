@@ -40,6 +40,7 @@
 # include <unistd.h>
 # include <sys/stat.h>
 # include <sys/statvfs.h>
+# include <sys/time.h>
 #endif
 #include <stdlib.h>
 #include <time.h>
