@@ -62,7 +62,7 @@
 //                          "OptionEnumValues(g_sort_option_enumeration)">;
 ////////////////////////////////////////////////////////////////////////////////
 // Field: completion_type
-// Default value: CommandCompletions::eNoCompletion (no tab completion)
+// Default value: lldb::CompletionType:eNoCompletion (no tab completion)
 // Set by:
 //  - `Completion`: Gives the option a single completion kind.
 //                  Example: def foo : Option<"foo", "f">,
