@@ -214,6 +214,10 @@ public:
     return true;
   }
   bool VisitVarDecl(VarDecl *VD) {
+    // Ignore the parameter decl itself (its children were handled elsewhere),
+    // as they don't contribute to the main-file #include.
+    if (llvm::isa<ParmVarDecl>(VD))
+      return true;
     // Mark declaration from definition as it needs type-checking.
     if (VD->isThisDeclarationADefinition())
       report(VD->getLocation(), VD);
