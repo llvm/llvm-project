@@ -50,7 +50,7 @@ define amdgpu_kernel void @fract_f64(ptr addrspace(1) %out, ptr addrspace(1) %sr
 ; GCN: buffer_store_dwordx2 [[FRACT]]
 define amdgpu_kernel void @fract_f64_neg(ptr addrspace(1) %out, ptr addrspace(1) %src) #1 {
   %x = load double, ptr addrspace(1) %src
-  %neg.x = fsub double -0.0, %x
+  %neg.x = fneg double %x
   %floor.neg.x = call double @llvm.floor.f64(double %neg.x)
   %fract = fsub double %neg.x, %floor.neg.x
   store double %fract, ptr addrspace(1) %out
@@ -76,7 +76,7 @@ define amdgpu_kernel void @fract_f64_neg(ptr addrspace(1) %out, ptr addrspace(1)
 define amdgpu_kernel void @fract_f64_neg_abs(ptr addrspace(1) %out, ptr addrspace(1) %src) #1 {
   %x = load double, ptr addrspace(1) %src
   %abs.x = call double @llvm.fabs.f64(double %x)
-  %neg.abs.x = fsub double -0.0, %abs.x
+  %neg.abs.x = fneg double %abs.x
   %floor.neg.abs.x = call double @llvm.floor.f64(double %neg.abs.x)
   %fract = fsub double %neg.abs.x, %floor.neg.abs.x
   store double %fract, ptr addrspace(1) %out
