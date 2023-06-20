@@ -9,9 +9,6 @@
 // RUN: ld.lld %t.be.o %t256.be.o -o %t.be
 // RUN: llvm-objdump -s %t.be | FileCheck %s --check-prefixes=CHECK,BE
 
-// RUN: ld.lld --be8 %t.be.o %t256.be.o -o %t.be8
-// RUN: llvm-objdump -s %t.be8 | FileCheck %s --check-prefixes=CHECK,BE
-
 .globl _start
 _start:
 .section .R_ARM_ABS, "ax","progbits"

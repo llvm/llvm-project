@@ -10,8 +10,6 @@
 // Check that relocatable link maintains SHF_LINK_ORDER for big endian
 // RUN: ld.lld -r %t %tcantunwind -o %t4
 // RUN: llvm-readobj -S %t4 | FileCheck %s
-// RUN: ld.lld --be8 -r %t %tcantunwind -o %t4
-// RUN: llvm-readobj -S %t4 | FileCheck %s
 
 // Each assembler created .ARM.exidx section has the SHF_LINK_ORDER flag set
 // with the sh_link containing the section index of the executable section

@@ -12,9 +12,6 @@
 // RUN: ld.lld --no-rosegment --script %t.script %t -o %t2
 // RUN: llvm-objdump --no-print-imm-hex -d %t2 --start-address=0x94 --stop-address=0xbc | FileCheck --check-prefix=CHECK1 %s
 // RUN: llvm-objdump --no-print-imm-hex -d %t2 --start-address=0x20000bc --stop-address=0x20000de | FileCheck --check-prefix=CHECK2 %s
-// RUN: ld.lld --be8 --no-rosegment --script %t.script %t -o %t2
-// RUN: llvm-objdump --no-print-imm-hex -d %t2 --start-address=0x94 --stop-address=0xbc | FileCheck --check-prefix=CHECK1 %s
-// RUN: llvm-objdump --no-print-imm-hex -d %t2 --start-address=0x20000bc --stop-address=0x20000de | FileCheck --check-prefix=CHECK2 %s
 
 // Test that range extension thunks can handle location expressions within
 // a Section Description
