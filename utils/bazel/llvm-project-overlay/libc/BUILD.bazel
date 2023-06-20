@@ -1200,6 +1200,7 @@ libc_math_function(
         ":__support_fputil_polyeval",
         ":__support_fputil_rounding_mode",
         ":__support_macros_optimization",
+        ":__support_macros_properties_cpu_features",
         ":explogxf",
     ],
 )
