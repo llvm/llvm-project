@@ -489,16 +489,14 @@ DWARFLinker::getVariableRelocAdjustment(AddressesMap &RelocMgr,
     } break;
     case dwarf::DW_OP_constx:
     case dwarf::DW_OP_addrx: {
-      if (std::optional<uint64_t> AddrOffsetSectionBase =
-              DIE.getDwarfUnit()->getAddrOffsetSectionBase()) {
-        uint64_t StartOffset = *AddrOffsetSectionBase + Op.getRawOperand(0);
-        uint64_t EndOffset =
-            StartOffset + DIE.getDwarfUnit()->getAddressByteSize();
-
+      if (std::optional<uint64_t> AddressOffset =
+              DIE.getDwarfUnit()->getIndexedAddressOffset(
+                  Op.getRawOperand(0))) {
         // Check relocation for the address.
         if (std::optional<int64_t> RelocAdjustment =
-                RelocMgr.getExprOpAddressRelocAdjustment(*U, Op, StartOffset,
-                                                         EndOffset))
+                RelocMgr.getExprOpAddressRelocAdjustment(
+                    *U, Op, *AddressOffset,
+                    *AddressOffset + DIE.getDwarfUnit()->getAddressByteSize()))
           return *RelocAdjustment;
       }
     } break;
