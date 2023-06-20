@@ -633,11 +633,8 @@ LoongArchTargetLowering::lowerINTRINSIC_W_CHAIN(SDValue Op,
     unsigned Imm = cast<ConstantSDNode>(Op.getOperand(2))->getZExtValue();
     return !isUInt<14>(Imm)
                ? emitIntrinsicWithChainErrorMessage(Op, ErrorMsgOOR, DAG)
-               : DAG.getMergeValues(
-                     {DAG.getNode(LoongArchISD::CSRRD, DL, GRLenVT, Chain,
-                                  DAG.getConstant(Imm, DL, GRLenVT)),
-                      Chain},
-                     DL);
+               : DAG.getNode(LoongArchISD::CSRRD, DL, {GRLenVT, MVT::Other},
+                             {Chain, DAG.getConstant(Imm, DL, GRLenVT)});
   }
   case Intrinsic::loongarch_csrwr_w:
   case Intrinsic::loongarch_csrwr_d: {
@@ -658,29 +655,22 @@ LoongArchTargetLowering::lowerINTRINSIC_W_CHAIN(SDValue Op,
                               DAG.getConstant(Imm, DL, GRLenVT)});
   }
   case Intrinsic::loongarch_iocsrrd_d: {
-    return DAG.getMergeValues(
-        {DAG.getNode(
-             LoongArchISD::IOCSRRD_D, DL, GRLenVT, Chain,
-             DAG.getNode(ISD::ANY_EXTEND, DL, MVT::i64, Op.getOperand(2))),
-         Chain},
-        DL);
+    return DAG.getNode(
+        LoongArchISD::IOCSRRD_D, DL, {GRLenVT, MVT::Other},
+        {Chain, DAG.getNode(ISD::ANY_EXTEND, DL, MVT::i64, Op.getOperand(2))});
   }
 #define IOCSRRD_CASE(NAME, NODE)                                               \
   case Intrinsic::loongarch_##NAME: {                                          \
-    return DAG.getMergeValues({DAG.getNode(LoongArchISD::NODE, DL, GRLenVT,    \
-                                           Chain, Op.getOperand(2)),           \
-                               Chain},                                         \
-                              DL);                                             \
+    return DAG.getNode(LoongArchISD::NODE, DL, {GRLenVT, MVT::Other},          \
+                       {Chain, Op.getOperand(2)});                             \
   }
     IOCSRRD_CASE(iocsrrd_b, IOCSRRD_B);
     IOCSRRD_CASE(iocsrrd_h, IOCSRRD_H);
     IOCSRRD_CASE(iocsrrd_w, IOCSRRD_W);
 #undef IOCSRRD_CASE
   case Intrinsic::loongarch_cpucfg: {
-    return DAG.getMergeValues({DAG.getNode(LoongArchISD::CPUCFG, DL, GRLenVT,
-                                           Chain, Op.getOperand(2)),
-                               Chain},
-                              DL);
+    return DAG.getNode(LoongArchISD::CPUCFG, DL, {GRLenVT, MVT::Other},
+                       {Chain, Op.getOperand(2)});
   }
   case Intrinsic::loongarch_lddir_d: {
     unsigned Imm = cast<ConstantSDNode>(Op.getOperand(3))->getZExtValue();
@@ -694,11 +684,8 @@ LoongArchTargetLowering::lowerINTRINSIC_W_CHAIN(SDValue Op,
     unsigned Imm = cast<ConstantSDNode>(Op.getOperand(2))->getZExtValue();
     return !isUInt<2>(Imm)
                ? emitIntrinsicWithChainErrorMessage(Op, ErrorMsgOOR, DAG)
-               : DAG.getMergeValues(
-                     {DAG.getNode(LoongArchISD::MOVFCSR2GR, DL, VT,
-                                  DAG.getConstant(Imm, DL, GRLenVT)),
-                      Chain},
-                     DL);
+               : DAG.getNode(LoongArchISD::MOVFCSR2GR, DL, {VT, MVT::Other},
+                             {Chain, DAG.getConstant(Imm, DL, GRLenVT)});
   }
   }
 }
@@ -1121,22 +1108,22 @@ void LoongArchTargetLowering::ReplaceNodeResults(
                                                      ErrorMsgOOR);
         return;
       }
+      SDValue MOVFCSR2GRResults = DAG.getNode(
+          LoongArchISD::MOVFCSR2GR, SDLoc(N), {MVT::i64, MVT::Other},
+          {Chain, DAG.getConstant(Imm, DL, GRLenVT)});
       Results.push_back(
-          DAG.getNode(ISD::TRUNCATE, DL, VT,
-                      DAG.getNode(LoongArchISD::MOVFCSR2GR, SDLoc(N), MVT::i64,
-                                  DAG.getConstant(Imm, DL, GRLenVT))));
-      Results.push_back(Chain);
+          DAG.getNode(ISD::TRUNCATE, DL, VT, MOVFCSR2GRResults.getValue(0)));
+      Results.push_back(MOVFCSR2GRResults.getValue(1));
       break;
     }
 #define CRC_CASE_EXT_BINARYOP(NAME, NODE)                                      \
   case Intrinsic::loongarch_##NAME: {                                          \
-    Results.push_back(DAG.getNode(                                             \
-        ISD::TRUNCATE, DL, VT,                                                 \
-        DAG.getNode(                                                           \
-            LoongArchISD::NODE, DL, MVT::i64,                                  \
-            DAG.getNode(ISD::ANY_EXTEND, DL, MVT::i64, Op2),                   \
-            DAG.getNode(ISD::ANY_EXTEND, DL, MVT::i64, N->getOperand(3)))));   \
-    Results.push_back(Chain);                                                  \
+    SDValue NODE = DAG.getNode(                                                \
+        LoongArchISD::NODE, DL, {MVT::i64, MVT::Other},                        \
+        {Chain, DAG.getNode(ISD::ANY_EXTEND, DL, MVT::i64, Op2),               \
+         DAG.getNode(ISD::ANY_EXTEND, DL, MVT::i64, N->getOperand(3))});       \
+    Results.push_back(DAG.getNode(ISD::TRUNCATE, DL, VT, NODE.getValue(0)));   \
+    Results.push_back(NODE.getValue(1));                                       \
     break;                                                                     \
   }
       CRC_CASE_EXT_BINARYOP(crc_w_b_w, CRC_W_B_W)
@@ -1149,12 +1136,12 @@ void LoongArchTargetLowering::ReplaceNodeResults(
 
 #define CRC_CASE_EXT_UNARYOP(NAME, NODE)                                       \
   case Intrinsic::loongarch_##NAME: {                                          \
-    Results.push_back(                                                         \
-        DAG.getNode(ISD::TRUNCATE, DL, VT,                                     \
-                    DAG.getNode(LoongArchISD::NODE, DL, MVT::i64, Op2,         \
-                                DAG.getNode(ISD::ANY_EXTEND, DL, MVT::i64,     \
-                                            N->getOperand(3)))));              \
-    Results.push_back(Chain);                                                  \
+    SDValue NODE = DAG.getNode(                                                \
+        LoongArchISD::NODE, DL, {MVT::i64, MVT::Other},                        \
+        {Chain, Op2,                                                           \
+         DAG.getNode(ISD::ANY_EXTEND, DL, MVT::i64, N->getOperand(3))});       \
+    Results.push_back(DAG.getNode(ISD::TRUNCATE, DL, VT, NODE.getValue(0)));   \
+    Results.push_back(NODE.getValue(1));                                                  \
     break;                                                                     \
   }
       CRC_CASE_EXT_UNARYOP(crc_w_d_w, CRC_W_D_W)
@@ -1179,11 +1166,12 @@ void LoongArchTargetLowering::ReplaceNodeResults(
                                                      ErrorMsgOOR);
         return;
       }
+      SDValue CSRRDResults =
+          DAG.getNode(LoongArchISD::CSRRD, DL, {GRLenVT, MVT::Other},
+                      {Chain, DAG.getConstant(Imm, DL, GRLenVT)});
       Results.push_back(
-          DAG.getNode(ISD::TRUNCATE, DL, VT,
-                      DAG.getNode(LoongArchISD::CSRRD, DL, GRLenVT, Chain,
-                                  DAG.getConstant(Imm, DL, GRLenVT))));
-      Results.push_back(Chain);
+          DAG.getNode(ISD::TRUNCATE, DL, VT, CSRRDResults.getValue(0)));
+      Results.push_back(CSRRDResults.getValue(1));
       break;
     }
     case Intrinsic::loongarch_csrwr_w: {
@@ -1221,11 +1209,12 @@ void LoongArchTargetLowering::ReplaceNodeResults(
     }
 #define IOCSRRD_CASE(NAME, NODE)                                               \
   case Intrinsic::loongarch_##NAME: {                                          \
-    Results.push_back(DAG.getNode(                                             \
-        ISD::TRUNCATE, DL, VT,                                                 \
-        DAG.getNode(LoongArchISD::NODE, DL, MVT::i64, Chain,                   \
-                    DAG.getNode(ISD::ANY_EXTEND, DL, MVT::i64, Op2))));        \
-    Results.push_back(Chain);                                                  \
+    SDValue IOCSRRDResults =                                                   \
+        DAG.getNode(LoongArchISD::NODE, DL, {MVT::i64, MVT::Other},            \
+                    {Chain, DAG.getNode(ISD::ANY_EXTEND, DL, MVT::i64, Op2)}); \
+    Results.push_back(                                                         \
+        DAG.getNode(ISD::TRUNCATE, DL, VT, IOCSRRDResults.getValue(0)));       \
+    Results.push_back(IOCSRRDResults.getValue(1));                             \
     break;                                                                     \
   }
       IOCSRRD_CASE(iocsrrd_b, IOCSRRD_B);
@@ -1233,11 +1222,12 @@ void LoongArchTargetLowering::ReplaceNodeResults(
       IOCSRRD_CASE(iocsrrd_w, IOCSRRD_W);
 #undef IOCSRRD_CASE
     case Intrinsic::loongarch_cpucfg: {
-      Results.push_back(DAG.getNode(
-          ISD::TRUNCATE, DL, VT,
-          DAG.getNode(LoongArchISD::CPUCFG, DL, GRLenVT, Chain,
-                      DAG.getNode(ISD::ANY_EXTEND, DL, MVT::i64, Op2))));
-      Results.push_back(Chain);
+      SDValue CPUCFGResults =
+          DAG.getNode(LoongArchISD::CPUCFG, DL, {GRLenVT, MVT::Other},
+                      {Chain, DAG.getNode(ISD::ANY_EXTEND, DL, MVT::i64, Op2)});
+      Results.push_back(
+          DAG.getNode(ISD::TRUNCATE, DL, VT, CPUCFGResults.getValue(0)));
+      Results.push_back(CPUCFGResults.getValue(1));
       break;
     }
     case Intrinsic::loongarch_lddir_d: {
