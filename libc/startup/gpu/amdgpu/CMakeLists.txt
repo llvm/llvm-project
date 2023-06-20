@@ -26,7 +26,4 @@ target_link_libraries(
   "--target=${LIBC_GPU_TARGET_TRIPLE}"
   "-flto"
   "-Wl,-mllvm,-amdgpu-lower-global-ctor-dtor=0"
-  # FIXME: This pass causes builds to take ~10x longer. Disable until the
-  # performance problems have been addressed.
-  "-Wl,-mllvm,-amdgpu-atomic-optimizations=0"
 )
