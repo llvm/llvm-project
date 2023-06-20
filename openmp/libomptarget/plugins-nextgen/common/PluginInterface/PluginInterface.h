@@ -28,6 +28,10 @@
 #include "Utilities.h"
 #include "omptarget.h"
 
+#ifdef OMPT_SUPPORT
+#include "omp-tools.h"
+#endif
+
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/Frontend/OpenMP/OMPConstants.h"
 #include "llvm/Frontend/OpenMP/OMPGridValues.h"
@@ -854,6 +858,16 @@ protected:
   /// A pointer to an RPC server instance attached to this device if present.
   /// This is used to run the RPC server during task synchronization.
   RPCHandleTy *RPCHandle;
+
+#ifdef OMPT_SUPPORT
+  /// OMPT callback functions
+#define defineOmptCallback(Name, Type, Code) Name##_t Name##_fn = nullptr;
+  FOREACH_OMPT_DEVICE_EVENT(defineOmptCallback)
+#undef defineOmptCallback
+
+  /// Internal representation for OMPT device (initialize & finalize)
+  std::atomic<bool> OmptInitialized;
+#endif
 };
 
 /// Class implementing common functionalities of offload plugins. Each plugin
