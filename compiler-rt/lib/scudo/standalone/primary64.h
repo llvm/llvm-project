@@ -155,10 +155,8 @@ public:
     {
       ScopedLock L(Region->FLLock);
       TransferBatch *B = popBatchImpl(C, ClassId, Region);
-      if (LIKELY(B)) {
-        Region->FreeListInfo.PoppedBlocks += B->getCount();
+      if (LIKELY(B))
         return B;
-      }
     }
 
     bool PrintStats = false;
@@ -174,10 +172,8 @@ public:
       {
         ScopedLock FL(Region->FLLock);
         TransferBatch *B = popBatchImpl(C, ClassId, Region);
-        if (LIKELY(B)) {
-          Region->FreeListInfo.PoppedBlocks += B->getCount();
+        if (LIKELY(B))
           return B;
-        }
       }
 
       const bool RegionIsExhausted = Region->Exhausted;
@@ -229,7 +225,6 @@ public:
               Size == 1U && Region->FreeListInfo.BlockList.empty();
           if (!NeedToRefill) {
             pushBlocksImpl(C, SizeClassMap::BatchClassId, Region, Array, Size);
-            Region->FreeListInfo.PushedBlocks += Size;
             return;
           }
         }
@@ -274,7 +269,6 @@ public:
     {
       ScopedLock L(Region->FLLock);
       pushBlocksImpl(C, ClassId, Region, Array, Size, SameGroup);
-      Region->FreeListInfo.PushedBlocks += Size;
     }
 
     // Only non-BatchClass will be here, try to release the pages in the region.
@@ -677,6 +671,7 @@ private:
       BG->PushedBlocks += Size;
     };
 
+    Region->FreeListInfo.PushedBlocks += Size;
     BatchGroup *Cur = Region->FreeListInfo.BlockList.front();
 
     if (ClassId == SizeClassMap::BatchClassId) {
@@ -779,6 +774,8 @@ private:
         C->deallocate(SizeClassMap::BatchClassId, BG);
     }
 
+    Region->FreeListInfo.PoppedBlocks += B->getCount();
+
     return B;
   }
 
@@ -860,6 +857,12 @@ private:
       pushBlocksImpl(C, ClassId, Region, ShuffleArray, NumberOfBlocks,
                      /*SameGroup=*/true);
     }
+
+    // Note that `PushedBlocks` and `PoppedBlocks` are supposed to only record
+    // the requests from `PushBlocks` and `PopBatch` which are external
+    // interfaces. `populateFreeListAndPopBatch` is the internal interface so we
+    // should set the values back to avoid incorrectly setting the stats.
+    Region->FreeListInfo.PushedBlocks -= NumberOfBlocks;
 
     const uptr AllocatedUser = Size * NumberOfBlocks;
     C->getStats().add(StatFree, AllocatedUser);
