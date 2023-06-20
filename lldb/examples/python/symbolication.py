@@ -395,7 +395,7 @@ class Image:
             return "error: no section infos"
 
     def add_module(self, target, obj_dir=None):
-        '''Add the Image described in this object to "target" and load the sections if "load" is True.'''
+        """Add the Image described in this object to "target" and load the sections if "load" is True."""
         if target:
             # Try and find using UUID only first so that paths need not match
             # up
@@ -420,11 +420,13 @@ class Image:
                         "symbols": list(),
                     }
                     for section in self.section_infos:
-                        data['sections'].append({
-                            'name' : section.name,
-                            'size': section.end_addr - section.start_addr
-                            })
-                    data['symbols'] = list(self.symbols.values())
+                        data["sections"].append(
+                            {
+                                "name": section.name,
+                                "size": section.end_addr - section.start_addr,
+                            }
+                        )
+                    data["symbols"] = list(self.symbols.values())
                     obj_file = os.path.join(obj_dir, name)
                     with open(obj_file, "w") as f:
                         f.write(json.dumps(data, indent=4))
