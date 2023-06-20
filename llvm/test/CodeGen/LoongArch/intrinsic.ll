@@ -69,6 +69,17 @@ entry:
   ret i32 %res
 }
 
+;; TODO: Optimize out `movfcsr2gr` without data-dependency.
+define void @movfcsr2gr_noret() nounwind {
+; CHECK-LABEL: movfcsr2gr_noret:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    movfcsr2gr $a0, $fcsr1
+; CHECK-NEXT:    ret
+entry:
+  %res = call i32 @llvm.loongarch.movfcsr2gr(i32 1)
+  ret void
+}
+
 define void @syscall() nounwind {
 ; CHECK-LABEL: syscall:
 ; CHECK:       # %bb.0: # %entry
@@ -87,6 +98,15 @@ define i32 @csrrd_w() {
 entry:
   %0 = tail call i32 @llvm.loongarch.csrrd.w(i32 1)
   ret i32 %0
+}
+
+define void @csrrd_w_noret() {
+; CHECK-LABEL: csrrd_w_noret:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    ret
+entry:
+  %0 = tail call i32 @llvm.loongarch.csrrd.w(i32 1)
+  ret void
 }
 
 define i32 @csrwr_w(i32 signext %a) {
@@ -161,6 +181,33 @@ entry:
   ret i32 %0
 }
 
+define void @iocsrrd_b_noret(i32 %a) {
+; CHECK-LABEL: iocsrrd_b_noret:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    ret
+entry:
+  %0 = tail call i32 @llvm.loongarch.iocsrrd.b(i32 %a)
+  ret void
+}
+
+define void @iocsrrd_h_noret(i32 %a) {
+; CHECK-LABEL: iocsrrd_h_noret:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    ret
+entry:
+  %0 = tail call i32 @llvm.loongarch.iocsrrd.h(i32 %a)
+  ret void
+}
+
+define void @iocsrrd_w_noret(i32 %a) {
+; CHECK-LABEL: iocsrrd_w_noret:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    ret
+entry:
+  %0 = tail call i32 @llvm.loongarch.iocsrrd.w(i32 %a)
+  ret void
+}
+
 define void @iocsrwr_b(i32 %a, i32 %b) {
 ; CHECK-LABEL: iocsrwr_b:
 ; CHECK:       # %bb.0: # %entry
@@ -199,4 +246,13 @@ define i32 @cpucfg(i32 %a) {
 entry:
   %0 = tail call i32 @llvm.loongarch.cpucfg(i32 %a)
   ret i32 %0
+}
+
+define void @cpucfg_noret(i32 %a) {
+; CHECK-LABEL: cpucfg_noret:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    ret
+entry:
+  %0 = tail call i32 @llvm.loongarch.cpucfg(i32 %a)
+  ret void
 }
