@@ -15,7 +15,6 @@ define amdgpu_kernel void @flat_atomic_cond_sub_no_rtn_u32(ptr %addr, i32 %in) {
 ; GFX12-SDAG-NEXT:    v_dual_mov_b32 v0, s2 :: v_dual_mov_b32 v1, s3
 ; GFX12-SDAG-NEXT:    v_mov_b32_e32 v2, s0
 ; GFX12-SDAG-NEXT:    flat_atomic_cond_sub_u32 v[0:1], v2 offset:-16
-; GFX12-SDAG-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX12-SDAG-NEXT:    s_endpgm
 ;
 ; GFX12-GISEL-LABEL: flat_atomic_cond_sub_no_rtn_u32:
@@ -27,7 +26,6 @@ define amdgpu_kernel void @flat_atomic_cond_sub_no_rtn_u32(ptr %addr, i32 %in) {
 ; GFX12-GISEL-NEXT:    v_mov_b32_e32 v2, s2
 ; GFX12-GISEL-NEXT:    v_dual_mov_b32 v0, s0 :: v_dual_mov_b32 v1, s1
 ; GFX12-GISEL-NEXT:    flat_atomic_cond_sub_u32 v[0:1], v2 offset:-16
-; GFX12-GISEL-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX12-GISEL-NEXT:    s_endpgm
 entry:
   %gep = getelementptr i32, ptr %addr, i32 -4
@@ -49,7 +47,6 @@ define amdgpu_kernel void @flat_atomic_cond_sub_rtn_u32(ptr %addr, i32 %in, ptr 
 ; GFX12-SDAG-NEXT:    v_dual_mov_b32 v0, s0 :: v_dual_mov_b32 v1, s1
 ; GFX12-SDAG-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX12-SDAG-NEXT:    flat_store_b32 v[0:1], v2
-; GFX12-SDAG-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX12-SDAG-NEXT:    s_endpgm
 ;
 ; GFX12-GISEL-LABEL: flat_atomic_cond_sub_rtn_u32:
@@ -65,7 +62,6 @@ define amdgpu_kernel void @flat_atomic_cond_sub_rtn_u32(ptr %addr, i32 %in, ptr 
 ; GFX12-GISEL-NEXT:    v_dual_mov_b32 v0, s0 :: v_dual_mov_b32 v1, s1
 ; GFX12-GISEL-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX12-GISEL-NEXT:    flat_store_b32 v[0:1], v2
-; GFX12-GISEL-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX12-GISEL-NEXT:    s_endpgm
 entry:
   %gep = getelementptr i32, ptr %addr, i32 4

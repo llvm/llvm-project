@@ -1,4 +1,5 @@
-; RUN: %llc_dwarf -O0 -filetype=obj < %s              \
+; REQUIERES: system-linux
+; RUN: %llc_dwarf -mtriple=x86_64-linux -O0 -filetype=obj < %s              \
 ; RUN:  | llvm-dwarfdump --show-children --name=foo - \
 ; RUN:  | FileCheck --implicit-check-not "{{DW_TAG|NULL}}" %s
 

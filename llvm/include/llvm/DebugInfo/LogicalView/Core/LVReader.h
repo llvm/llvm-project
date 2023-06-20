@@ -228,10 +228,8 @@ public:
 #undef LV_CREATE_OBJECT
 
   // Operations creation.
-  LVOperation *createOperation(LVSmall OpCode, LVUnsigned Operand1,
-                               LVUnsigned Operand2) {
-    return new (AllocatedOperation.Allocate())
-        LVOperation(OpCode, Operand1, Operand2);
+  LVOperation *createOperation(LVSmall OpCode, ArrayRef<LVUnsigned> Operands) {
+    return new (AllocatedOperation.Allocate()) LVOperation(OpCode, Operands);
   }
 
   StringRef getFilename(LVObject *Object, size_t Index) const;
@@ -263,7 +261,8 @@ public:
   Error doPrint();
   Error doLoad();
 
-  virtual std::string getRegisterName(LVSmall Opcode, uint64_t Operands[2]) {
+  virtual std::string getRegisterName(LVSmall Opcode,
+                                      ArrayRef<uint64_t> Operands) {
     llvm_unreachable("Invalid instance reader.");
     return {};
   }

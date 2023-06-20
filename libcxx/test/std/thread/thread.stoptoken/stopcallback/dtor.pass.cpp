@@ -163,4 +163,6 @@ int main(int, char**) {
     ss.request_stop(); // the callbacks deletes itself. if the destructor blocks, it would be deadlock
     assert(holder.callback_ == nullptr);
   }
+
+  return 0;
 }

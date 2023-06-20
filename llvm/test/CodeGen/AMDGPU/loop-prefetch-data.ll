@@ -29,7 +29,6 @@ define amdgpu_kernel void @copy_flat(ptr nocapture %d, ptr nocapture readonly %s
 ; GCN-NEXT:    flat_store_b128 v[4:5], v[0:3]
 ; GCN-NEXT:    s_cbranch_scc1 .LBB0_2
 ; GCN-NEXT:  .LBB0_3: ; %for.end
-; GCN-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GCN-NEXT:    s_endpgm
 entry:
   %cmp6.not = icmp eq i32 %n, 0
