@@ -733,6 +733,7 @@ def SMEUnsupported : AArch64Unsupported {
 
 include "AArch64SchedA53.td"
 include "AArch64SchedA55.td"
+include "AArch64SchedA510.td"
 include "AArch64SchedA57.td"
 include "AArch64SchedCyclone.td"
 include "AArch64SchedFalkor.td"
@@ -1347,7 +1348,7 @@ def : ProcessorModel<"cortex-a53", CortexA53Model, ProcessorFeatures.A53,
                      [TuneA53]>;
 def : ProcessorModel<"cortex-a55", CortexA55Model, ProcessorFeatures.A55,
                      [TuneA55]>;
-def : ProcessorModel<"cortex-a510", CortexA55Model, ProcessorFeatures.A510,
+def : ProcessorModel<"cortex-a510", CortexA510Model, ProcessorFeatures.A510,
                      [TuneA510]>;
 def : ProcessorModel<"cortex-a57", CortexA57Model, ProcessorFeatures.A53,
                      [TuneA57]>;
