@@ -135,19 +135,6 @@ public:
     bool FindByName(llvm::StringRef name,
                     llvm::function_ref<bool(DIERef ref)> callback);
 
-    void FindByNameAndTag(llvm::StringRef name, const dw_tag_t tag,
-                          llvm::function_ref<bool(DIERef ref)> callback);
-
-    void FindByNameAndTagAndQualifiedNameHash(
-        llvm::StringRef name, const dw_tag_t tag,
-        const uint32_t qualified_name_hash,
-        llvm::function_ref<bool(DIERef ref)> callback);
-
-    void
-    FindCompleteObjCClassByName(llvm::StringRef name,
-                                llvm::function_ref<bool(DIERef ref)> callback,
-                                bool must_be_implementation);
-
   protected:
     void FindByName(llvm::StringRef name, DIEInfoArray &die_info_array);
 
@@ -164,25 +151,6 @@ public:
                               llvm::function_ref<bool(DIERef ref)> callback);
 
 protected:
-  static void ExtractDIEArray(const DIEInfoArray &die_info_array,
-                              const dw_tag_t tag,
-                              llvm::function_ref<bool(DIERef ref)> callback);
-
-  static void ExtractDIEArray(const DIEInfoArray &die_info_array,
-                              const dw_tag_t tag,
-                              const uint32_t qualified_name_hash,
-                              llvm::function_ref<bool(DIERef ref)> callback);
-
-  static void
-  ExtractClassOrStructDIEArray(const DIEInfoArray &die_info_array,
-                               bool return_implementation_only_if_available,
-                               llvm::function_ref<bool(DIERef ref)> callback);
-
-  static void
-  ExtractTypesFromDIEArray(const DIEInfoArray &die_info_array,
-                           uint32_t type_flag_mask, uint32_t type_flag_value,
-                           llvm::function_ref<bool(DIERef ref)> callback);
-
   static const char *GetAtomTypeName(uint16_t atom);
 };
 
