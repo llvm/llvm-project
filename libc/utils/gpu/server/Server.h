@@ -23,15 +23,18 @@ const uint64_t RPC_MAXIMUM_PORT_COUNT = 64;
 /// status codes.
 typedef enum {
   RPC_STATUS_SUCCESS = 0x0,
+  RPC_STATUS_CONTINUE = 0x1,
   RPC_STATUS_ERROR = 0x1000,
   RPC_STATUS_OUT_OF_RANGE = 0x1001,
   RPC_STATUS_UNHANDLED_OPCODE = 0x1002,
+  RPC_STATUS_INVALID_LANE_SIZE = 0x1003,
 } rpc_status_t;
 
 /// A struct containing an opaque handle to an RPC port. This is what allows the
 /// server to communicate with the client.
 typedef struct rpc_port_s {
   uint64_t handle;
+  uint32_t lane_size;
 } rpc_port_t;
 
 /// A fixed-size buffer containing the payload sent from the client.

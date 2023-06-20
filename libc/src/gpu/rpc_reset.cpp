@@ -18,8 +18,7 @@ namespace __llvm_libc {
 // shared buffer.
 LLVM_LIBC_FUNCTION(void, rpc_reset,
                    (unsigned int num_ports, void *rpc_shared_buffer)) {
-  __llvm_libc::rpc::client.reset(num_ports, __llvm_libc::gpu::get_lane_size(),
-                                 rpc_shared_buffer);
+  __llvm_libc::rpc::client.reset(num_ports, rpc_shared_buffer);
 }
 
 } // namespace __llvm_libc
