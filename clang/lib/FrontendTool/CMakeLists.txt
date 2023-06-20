@@ -16,8 +16,10 @@ if(CLANG_ENABLE_CIR)
   list(APPEND link_libs
     clangCIRFrontendAction
     MLIRIR
+    MLIRPass
     )
   include_directories(${LLVM_MAIN_SRC_DIR}/../mlir/include)
+  include_directories(${CMAKE_BINARY_DIR}/tools/mlir/include)
 endif()
 
 if(CLANG_ENABLE_ARCMT)
