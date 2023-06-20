@@ -5207,6 +5207,11 @@ SDValue DAGCombiner::visitABD(SDNode *N) {
   if (N0.isUndef() || N1.isUndef())
     return DAG.getConstant(0, DL, VT);
 
+  // fold (abds x, y) -> (abdu x, y) iff both args are known positive
+  if (Opcode == ISD::ABDS && hasOperation(ISD::ABDU, VT) &&
+      DAG.SignBitIsZero(N0) && DAG.SignBitIsZero(N1))
+    return DAG.getNode(ISD::ABDU, DL, VT, N1, N0);
+
   return SDValue();
 }
 
