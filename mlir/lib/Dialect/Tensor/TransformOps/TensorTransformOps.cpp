@@ -123,7 +123,8 @@ void transform::ApplyRewriteTensorOpsAsConstantPatternsOp::populatePatterns(
 //===----------------------------------------------------------------------===//
 
 DiagnosedSilenceableFailure transform::MakeLoopIndependentOp::applyToOne(
-    Operation *target, transform::ApplyToEachResultList &results,
+    transform::TransformRewriter &rewriter, Operation *target,
+    transform::ApplyToEachResultList &results,
     transform::TransformState &state) {
   // Gather IVs.
   SmallVector<Value> ivs;
@@ -141,7 +142,6 @@ DiagnosedSilenceableFailure transform::MakeLoopIndependentOp::applyToOne(
   }
 
   // Rewrite IR.
-  IRRewriter rewriter(target->getContext());
   FailureOr<Value> replacement = failure();
   if (auto padOp = dyn_cast<tensor::PadOp>(target)) {
     replacement = tensor::buildIndependentOp(rewriter, padOp, ivs);

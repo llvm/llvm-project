@@ -8,6 +8,7 @@
 
 #include "mlir/Dialect/Transform/IR/TransformInterfaces.h"
 
+#include "mlir/Dialect/Transform/IR/TransformDialect.h"
 #include "mlir/Dialect/Transform/IR/TransformTypes.h"
 #include "mlir/IR/Diagnostics.h"
 #include "mlir/IR/Operation.h"
@@ -896,12 +897,41 @@ transform::TransformState::applyTransform(TransformOpInterface transform) {
     return diag;
   }
 
+  // Prepare rewriter and listener.
+  transform::ErrorCheckingTrackingListener trackingListener(*this, transform);
+  transform::TransformRewriter rewriter(transform->getContext(),
+                                        &trackingListener);
+
   // Compute the result but do not short-circuit the silenceable failure case as
   // we still want the handles to propagate properly so the "suppress" mode can
   // proceed on a best effort basis.
   transform::TransformResults results(transform->getNumResults());
-  DiagnosedSilenceableFailure result(transform.apply(results, *this));
+  DiagnosedSilenceableFailure result(transform.apply(rewriter, results, *this));
   compactOpHandles();
+
+  // Error handling: fail if transform or listener failed.
+  DiagnosedSilenceableFailure trackingFailure =
+      trackingListener.checkAndResetError();
+  if (!transform->hasTrait<ReportTrackingListenerFailuresOpTrait>() ||
+      transform->hasAttr(
+          transform::TransformDialect::kSilenceTrackingFailuresAttrName)) {
+    // Only report failures for ReportTrackingListenerFailuresOpTrait ops. Also
+    // do not report failures if the above mentioned attribute is set.
+    if (trackingFailure.isSilenceableFailure())
+      (void)trackingFailure.silence();
+    trackingFailure = DiagnosedSilenceableFailure::success();
+  }
+  if (!trackingFailure.succeeded()) {
+    if (result.succeeded()) {
+      result = std::move(trackingFailure);
+    } else {
+      // Transform op errors have precedence, report those first.
+      if (result.isSilenceableFailure())
+        result.attachNote() << "tracking listener also failed: "
+                            << trackingFailure.getMessage();
+      (void)trackingFailure.silence();
+    }
+  }
   if (result.isDefiniteFailure())
     return result;
 
@@ -1161,6 +1191,16 @@ bool transform::TransformResults::isSet(unsigned resultNumber) const {
 // TrackingListener
 //===----------------------------------------------------------------------===//
 
+transform::TrackingListener::TrackingListener(TransformState &state,
+                                              TransformOpInterface op)
+    : TransformState::Extension(state), transformOp(op) {
+  if (op) {
+    for (OpOperand *opOperand : transformOp.getConsumedHandleOpOperands()) {
+      consumedHandles.insert(opOperand->get());
+    }
+  }
+}
+
 Operation *transform::TrackingListener::getCommonDefiningOp(ValueRange values) {
   Operation *defOp = nullptr;
   for (Value v : values) {
@@ -1267,15 +1307,34 @@ void transform::TrackingListener::notifyOperationReplaced(
     // Op is not tracked.
     return;
   }
+
+  // Helper function to check if the current transform op consumes any handle
+  // that is mapped to `op`.
+  //
+  // Note: If a handle was consumed, there shouldn't be any alive users, so it
+  // is not really necessary to check for consumed handles. However, in case
+  // there are indeed alive handles that were consumed (which is undefined
+  // behavior) and a replacement op could not be found, we want to fail with a
+  // nicer error message: "op uses a handle invalidated..." instead of "could
+  // not find replacement op". This nicer error is produced later.
+  auto handleWasConsumed = [&] {
+    return llvm::any_of(opHandles,
+                        [&](Value h) { return consumedHandles.contains(h); });
+  };
+
+  // Helper function to check if the handle is alive.
   auto hasAliveUser = [&]() {
-    for (Value v : opHandles)
+    for (Value v : opHandles) {
       for (Operation *user : v.getUsers())
-        if (!happensBefore(user, transformOp))
+        if (user != transformOp && !happensBefore(user, transformOp))
           return true;
+    }
     return false;
   };
-  if (!hasAliveUser()) {
-    // The op is tracked but the corresponding handles are dead.
+
+  if (!hasAliveUser() || handleWasConsumed()) {
+    // The op is tracked but the corresponding handles are dead or were
+    // consumed. Drop the op form the mapping.
     (void)replacePayloadOp(op, nullptr);
     return;
   }
@@ -1324,6 +1383,28 @@ void transform::ErrorCheckingTrackingListener::notifyPayloadReplacementNotFound(
         << "[" << errorCounter << "] replacement value " << index;
 
   ++errorCounter;
+}
+
+//===----------------------------------------------------------------------===//
+// TransformRewriter
+//===----------------------------------------------------------------------===//
+
+transform::TransformRewriter::TransformRewriter(
+    MLIRContext *ctx, ErrorCheckingTrackingListener *listener)
+    : RewriterBase(ctx), listener(listener) {
+  setListener(listener);
+}
+
+bool transform::TransformRewriter::hasTrackingFailures() const {
+  return listener->failed();
+}
+
+/// Silence all tracking failures that have been encountered so far.
+void transform::TransformRewriter::silenceTrackingFailure() {
+  if (hasTrackingFailures()) {
+    DiagnosedSilenceableFailure status = listener->checkAndResetError();
+    (void)status.silence();
+  }
 }
 
 //===----------------------------------------------------------------------===//

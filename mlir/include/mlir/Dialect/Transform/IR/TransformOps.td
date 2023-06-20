@@ -129,7 +129,8 @@ def AnnotateOp : TransformDialectOp<"annotate",
 
 def ApplyPatternsOp : TransformDialectOp<"apply_patterns",
     [TransformOpInterface, TransformEachOpTrait,
-     DeclareOpInterfaceMethods<MemoryEffectsOpInterface>]
+     DeclareOpInterfaceMethods<MemoryEffectsOpInterface>,
+     ReportTrackingListenerFailuresOpTrait]
         # GraphRegionNoTerminator.traits> {
   let summary = "Greedily applies patterns to the body of the targeted op";
   let description = [{
@@ -149,8 +150,8 @@ def ApplyPatternsOp : TransformDialectOp<"apply_patterns",
     considered "payload op replacements". Furthermore, only if the replacement
     values are defined by the same op and that op has the same type as the
     original op, the mapping is updated. Otherwise, this transform fails
-    silently unless `fail_on_payload_replacement_not_found` is set to "false".
-    More details can be found at the documentation site of `TrackingListener`.
+    silently. More details can be found at the documentation site of
+    `TrackingListener`.
 
     This transform also fails silently if the pattern application did not
     converge within the default number of iterations/rewrites of the greedy
@@ -158,8 +159,7 @@ def ApplyPatternsOp : TransformDialectOp<"apply_patterns",
   }];
 
   let arguments = (ins
-    TransformHandleTypeInterface:$target,
-    DefaultValuedAttr<BoolAttr, "true">:$fail_on_payload_replacement_not_found);
+    TransformHandleTypeInterface:$target);
   let results = (outs);
   let regions = (region MaxSizedRegion<1>:$region);
 
@@ -171,12 +171,12 @@ def ApplyPatternsOp : TransformDialectOp<"apply_patterns",
     OpBuilder<(ins
         "Value":$target,
         CArg<"function_ref<void(OpBuilder &, Location)>", "nullptr">:
-            $bodyBuilder,
-        CArg<"bool", "true">:$failOnPayloadReplacementNotFound)>,
+            $bodyBuilder)>,
   ];
 
   let extraClassDeclaration = [{
     ::mlir::DiagnosedSilenceableFailure applyToOne(
+      ::mlir::transform::TransformRewriter &rewriter,
       ::mlir::Operation *target,
       ::mlir::transform::ApplyToEachResultList &results,
       ::mlir::transform::TransformState &state);
@@ -222,6 +222,7 @@ def ApplyRegisteredPassOp : TransformDialectOp<"apply_registered_pass",
 
   let extraClassDeclaration = [{
     ::mlir::DiagnosedSilenceableFailure applyToOne(
+      ::mlir::transform::TransformRewriter &rewriter, 
       ::mlir::Operation *target,
       ::mlir::transform::ApplyToEachResultList &results,
       ::mlir::transform::TransformState &state);
@@ -238,6 +239,7 @@ def CastOp : TransformDialectOp<"cast",
 
   let extraClassDeclaration = [{
     ::mlir::DiagnosedSilenceableFailure applyToOne(
+      ::mlir::transform::TransformRewriter &rewriter,
       ::mlir::Operation *target,
       ::mlir::transform::ApplyToEachResultList &results,
       ::mlir::transform::TransformState &state);
