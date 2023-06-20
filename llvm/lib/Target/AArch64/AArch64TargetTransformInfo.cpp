@@ -2694,6 +2694,11 @@ InstructionCost AArch64TTIImpl::getCmpSelInstrCost(unsigned Opcode, Type *ValTy,
 
     static const TypeConversionCostTblEntry
     VectorSelectTbl[] = {
+      { ISD::SELECT, MVT::v2i1, MVT::v2f32, 2 },
+      { ISD::SELECT, MVT::v2i1, MVT::v2f64, 2 },
+      { ISD::SELECT, MVT::v4i1, MVT::v4f32, 2 },
+      { ISD::SELECT, MVT::v4i1, MVT::v4f16, 2 },
+      { ISD::SELECT, MVT::v8i1, MVT::v8f16, 2 },
       { ISD::SELECT, MVT::v16i1, MVT::v16i16, 16 },
       { ISD::SELECT, MVT::v8i1, MVT::v8i32, 8 },
       { ISD::SELECT, MVT::v16i1, MVT::v16i32, 16 },
