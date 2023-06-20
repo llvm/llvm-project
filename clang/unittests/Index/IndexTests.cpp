@@ -392,6 +392,20 @@ TEST(IndexTest, EnumBase) {
             Contains(AllOf(QName("MyTypedef"), HasRole(SymbolRole::Reference),
                            WrittenAt(Position(4, 16))))));
 }
+
+TEST(IndexTest, NonTypeTemplateParameter) {
+  std::string Code = R"cpp(
+    enum class Foobar { foo };
+    template <Foobar f>
+    constexpr void func() {}
+  )cpp";
+  auto Index = std::make_shared<Indexer>();
+  tooling::runToolOnCode(std::make_unique<IndexAction>(Index), Code);
+  EXPECT_THAT(Index->Symbols,
+              Contains(AllOf(QName("Foobar"), HasRole(SymbolRole::Reference),
+                             WrittenAt(Position(3, 15)))));
+}
+
 } // namespace
 } // namespace index
 } // namespace clang

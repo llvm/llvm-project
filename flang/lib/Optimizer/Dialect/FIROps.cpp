@@ -928,9 +928,12 @@ mlir::OpFoldResult fir::ConvertOp::fold(FoldAdaptor adaptor) {
   return {};
 }
 
+bool fir::ConvertOp::isInteger(mlir::Type ty) {
+  return ty.isa<mlir::IntegerType, mlir::IndexType, fir::IntegerType>();
+}
+
 bool fir::ConvertOp::isIntegerCompatible(mlir::Type ty) {
-  return ty.isa<mlir::IntegerType, mlir::IndexType, fir::IntegerType,
-                fir::LogicalType>();
+  return isInteger(ty) || mlir::isa<fir::LogicalType>(ty);
 }
 
 bool fir::ConvertOp::isFloatCompatible(mlir::Type ty) {
@@ -1001,8 +1004,8 @@ bool fir::ConvertOp::canBeConverted(mlir::Type inType, mlir::Type outType) {
     return true;
   return (isPointerCompatible(inType) && isPointerCompatible(outType)) ||
          (isIntegerCompatible(inType) && isIntegerCompatible(outType)) ||
-         (isIntegerCompatible(inType) && isFloatCompatible(outType)) ||
-         (isFloatCompatible(inType) && isIntegerCompatible(outType)) ||
+         (isInteger(inType) && isFloatCompatible(outType)) ||
+         (isFloatCompatible(inType) && isInteger(outType)) ||
          (isFloatCompatible(inType) && isFloatCompatible(outType)) ||
          (isIntegerCompatible(inType) && isPointerCompatible(outType)) ||
          (isPointerCompatible(inType) && isIntegerCompatible(outType)) ||

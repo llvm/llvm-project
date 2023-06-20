@@ -1704,7 +1704,6 @@ define amdgpu_kernel void @flat_atomic_inc_ret_i32(ptr %out, ptr %ptr) #0 {
 ; GFX11-NEXT:    v_dual_mov_b32 v0, s0 :: v_dual_mov_b32 v1, s1
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; GFX11-NEXT:    flat_store_b32 v[0:1], v2
-; GFX11-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-NEXT:    s_endpgm
 ;
 ; GFX12-LABEL: flat_atomic_inc_ret_i32:
@@ -1717,7 +1716,6 @@ define amdgpu_kernel void @flat_atomic_inc_ret_i32(ptr %out, ptr %ptr) #0 {
 ; GFX12-NEXT:    v_dual_mov_b32 v0, s0 :: v_dual_mov_b32 v1, s1
 ; GFX12-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX12-NEXT:    flat_store_b32 v[0:1], v2
-; GFX12-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX12-NEXT:    s_endpgm
   %result = call i32 @llvm.amdgcn.atomic.inc.i32.p0(ptr %ptr, i32 42, i32 0, i32 0, i1 false)
   store i32 %result, ptr %out
@@ -1797,7 +1795,6 @@ define amdgpu_kernel void @flat_atomic_inc_ret_i32_offset(ptr %out, ptr %ptr) #0
 ; GFX11-NEXT:    v_dual_mov_b32 v0, s0 :: v_dual_mov_b32 v1, s1
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; GFX11-NEXT:    flat_store_b32 v[0:1], v2
-; GFX11-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-NEXT:    s_endpgm
 ;
 ; GFX12-LABEL: flat_atomic_inc_ret_i32_offset:
@@ -1810,7 +1807,6 @@ define amdgpu_kernel void @flat_atomic_inc_ret_i32_offset(ptr %out, ptr %ptr) #0
 ; GFX12-NEXT:    v_dual_mov_b32 v0, s0 :: v_dual_mov_b32 v1, s1
 ; GFX12-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX12-NEXT:    flat_store_b32 v[0:1], v2
-; GFX12-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX12-NEXT:    s_endpgm
   %gep = getelementptr i32, ptr %ptr, i32 4
   %result = call i32 @llvm.amdgcn.atomic.inc.i32.p0(ptr %gep, i32 42, i32 0, i32 0, i1 false)
@@ -1836,7 +1832,6 @@ define amdgpu_kernel void @flat_atomic_inc_noret_i32(ptr %ptr) nounwind {
 ; GFX11-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX11-NEXT:    v_dual_mov_b32 v0, s0 :: v_dual_mov_b32 v1, s1
 ; GFX11-NEXT:    flat_atomic_inc_u32 v[0:1], v2
-; GFX11-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-NEXT:    s_endpgm
 ;
 ; GFX12-LABEL: flat_atomic_inc_noret_i32:
@@ -1846,7 +1841,6 @@ define amdgpu_kernel void @flat_atomic_inc_noret_i32(ptr %ptr) nounwind {
 ; GFX12-NEXT:    s_wait_kmcnt 0x0
 ; GFX12-NEXT:    v_dual_mov_b32 v0, s0 :: v_dual_mov_b32 v1, s1
 ; GFX12-NEXT:    flat_atomic_inc_u32 v[0:1], v2
-; GFX12-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX12-NEXT:    s_endpgm
   %result = call i32 @llvm.amdgcn.atomic.inc.i32.p0(ptr %ptr, i32 42, i32 0, i32 0, i1 false)
   ret void
@@ -1906,7 +1900,6 @@ define amdgpu_kernel void @flat_atomic_inc_noret_i32_offset(ptr %ptr) nounwind {
 ; GFX11-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX11-NEXT:    v_dual_mov_b32 v0, s0 :: v_dual_mov_b32 v1, s1
 ; GFX11-NEXT:    flat_atomic_inc_u32 v[0:1], v2 offset:16
-; GFX11-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-NEXT:    s_endpgm
 ;
 ; GFX12-LABEL: flat_atomic_inc_noret_i32_offset:
@@ -1916,7 +1909,6 @@ define amdgpu_kernel void @flat_atomic_inc_noret_i32_offset(ptr %ptr) nounwind {
 ; GFX12-NEXT:    s_wait_kmcnt 0x0
 ; GFX12-NEXT:    v_dual_mov_b32 v0, s0 :: v_dual_mov_b32 v1, s1
 ; GFX12-NEXT:    flat_atomic_inc_u32 v[0:1], v2 offset:16
-; GFX12-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX12-NEXT:    s_endpgm
   %gep = getelementptr i32, ptr %ptr, i32 4
   %result = call i32 @llvm.amdgcn.atomic.inc.i32.p0(ptr %gep, i32 42, i32 0, i32 0, i1 false)
@@ -2022,7 +2014,6 @@ define amdgpu_kernel void @flat_atomic_inc_ret_i32_offset_addr64(ptr %out, ptr %
 ; GFX11-NEXT:    v_add_co_ci_u32_e32 v1, vcc_lo, 0, v1, vcc_lo
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; GFX11-NEXT:    flat_store_b32 v[0:1], v3
-; GFX11-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-NEXT:    s_endpgm
 ;
 ; GFX12-LABEL: flat_atomic_inc_ret_i32_offset_addr64:
@@ -2041,7 +2032,6 @@ define amdgpu_kernel void @flat_atomic_inc_ret_i32_offset_addr64(ptr %out, ptr %
 ; GFX12-NEXT:    v_add_co_ci_u32_e32 v1, vcc_lo, 0, v1, vcc_lo
 ; GFX12-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX12-NEXT:    flat_store_b32 v[0:1], v3
-; GFX12-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX12-NEXT:    s_endpgm
   %id = call i32 @llvm.amdgcn.workitem.id.x()
   %gep.tid = getelementptr i32, ptr %ptr, i32 %id
@@ -2122,7 +2112,6 @@ define amdgpu_kernel void @flat_atomic_inc_noret_i32_offset_addr64(ptr %ptr) #0 
 ; GFX11-NEXT:    v_add_co_ci_u32_e32 v1, vcc_lo, 0, v1, vcc_lo
 ; GFX11-NEXT:    v_mov_b32_e32 v2, 42
 ; GFX11-NEXT:    flat_atomic_inc_u32 v[0:1], v2 offset:20
-; GFX11-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-NEXT:    s_endpgm
 ;
 ; GFX12-LABEL: flat_atomic_inc_noret_i32_offset_addr64:
@@ -2136,7 +2125,6 @@ define amdgpu_kernel void @flat_atomic_inc_noret_i32_offset_addr64(ptr %ptr) #0 
 ; GFX12-NEXT:    v_add_co_ci_u32_e32 v1, vcc_lo, 0, v1, vcc_lo
 ; GFX12-NEXT:    v_mov_b32_e32 v2, 42
 ; GFX12-NEXT:    flat_atomic_inc_u32 v[0:1], v2 offset:20
-; GFX12-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX12-NEXT:    s_endpgm
   %id = call i32 @llvm.amdgcn.workitem.id.x()
   %gep.tid = getelementptr i32, ptr %ptr, i32 %id
@@ -2332,7 +2320,6 @@ define amdgpu_kernel void @flat_atomic_inc_ret_i64(ptr %out, ptr %ptr) #0 {
 ; GFX11-NEXT:    v_dual_mov_b32 v3, s1 :: v_dual_mov_b32 v2, s0
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; GFX11-NEXT:    flat_store_b64 v[2:3], v[0:1]
-; GFX11-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-NEXT:    s_endpgm
 ;
 ; GFX12-LABEL: flat_atomic_inc_ret_i64:
@@ -2346,7 +2333,6 @@ define amdgpu_kernel void @flat_atomic_inc_ret_i64(ptr %out, ptr %ptr) #0 {
 ; GFX12-NEXT:    v_dual_mov_b32 v3, s1 :: v_dual_mov_b32 v2, s0
 ; GFX12-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX12-NEXT:    flat_store_b64 v[2:3], v[0:1]
-; GFX12-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX12-NEXT:    s_endpgm
   %result = call i64 @llvm.amdgcn.atomic.inc.i64.p0(ptr %ptr, i64 42, i32 0, i32 0, i1 false)
   store i64 %result, ptr %out
@@ -2441,7 +2427,6 @@ define amdgpu_kernel void @flat_atomic_inc_ret_i64_offset(ptr %out, ptr %ptr) #0
 ; GFX11-NEXT:    v_dual_mov_b32 v3, s1 :: v_dual_mov_b32 v2, s0
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; GFX11-NEXT:    flat_store_b64 v[2:3], v[0:1]
-; GFX11-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-NEXT:    s_endpgm
 ;
 ; GFX12-LABEL: flat_atomic_inc_ret_i64_offset:
@@ -2455,7 +2440,6 @@ define amdgpu_kernel void @flat_atomic_inc_ret_i64_offset(ptr %out, ptr %ptr) #0
 ; GFX12-NEXT:    v_dual_mov_b32 v3, s1 :: v_dual_mov_b32 v2, s0
 ; GFX12-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX12-NEXT:    flat_store_b64 v[2:3], v[0:1]
-; GFX12-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX12-NEXT:    s_endpgm
   %gep = getelementptr i64, ptr %ptr, i32 4
   %result = call i64 @llvm.amdgcn.atomic.inc.i64.p0(ptr %gep, i64 42, i32 0, i32 0, i1 false)
@@ -2483,7 +2467,6 @@ define amdgpu_kernel void @flat_atomic_inc_noret_i64(ptr %ptr) nounwind {
 ; GFX11-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX11-NEXT:    v_dual_mov_b32 v3, s1 :: v_dual_mov_b32 v2, s0
 ; GFX11-NEXT:    flat_atomic_inc_u64 v[2:3], v[0:1]
-; GFX11-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-NEXT:    s_endpgm
 ;
 ; GFX12-LABEL: flat_atomic_inc_noret_i64:
@@ -2494,7 +2477,6 @@ define amdgpu_kernel void @flat_atomic_inc_noret_i64(ptr %ptr) nounwind {
 ; GFX12-NEXT:    s_wait_kmcnt 0x0
 ; GFX12-NEXT:    v_dual_mov_b32 v3, s1 :: v_dual_mov_b32 v2, s0
 ; GFX12-NEXT:    flat_atomic_inc_u64 v[2:3], v[0:1]
-; GFX12-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX12-NEXT:    s_endpgm
   %result = call i64 @llvm.amdgcn.atomic.inc.i64.p0(ptr %ptr, i64 42, i32 0, i32 0, i1 false)
   ret void
@@ -2559,7 +2541,6 @@ define amdgpu_kernel void @flat_atomic_inc_noret_i64_offset(ptr %ptr) nounwind {
 ; GFX11-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX11-NEXT:    v_dual_mov_b32 v3, s1 :: v_dual_mov_b32 v2, s0
 ; GFX11-NEXT:    flat_atomic_inc_u64 v[2:3], v[0:1] offset:32
-; GFX11-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-NEXT:    s_endpgm
 ;
 ; GFX12-LABEL: flat_atomic_inc_noret_i64_offset:
@@ -2570,7 +2551,6 @@ define amdgpu_kernel void @flat_atomic_inc_noret_i64_offset(ptr %ptr) nounwind {
 ; GFX12-NEXT:    s_wait_kmcnt 0x0
 ; GFX12-NEXT:    v_dual_mov_b32 v3, s1 :: v_dual_mov_b32 v2, s0
 ; GFX12-NEXT:    flat_atomic_inc_u64 v[2:3], v[0:1] offset:32
-; GFX12-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX12-NEXT:    s_endpgm
   %gep = getelementptr i64, ptr %ptr, i32 4
   %result = call i64 @llvm.amdgcn.atomic.inc.i64.p0(ptr %gep, i64 42, i32 0, i32 0, i1 false)
@@ -2688,7 +2668,6 @@ define amdgpu_kernel void @flat_atomic_inc_ret_i64_offset_addr64(ptr %out, ptr %
 ; GFX11-NEXT:    v_add_co_ci_u32_e32 v3, vcc_lo, 0, v3, vcc_lo
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; GFX11-NEXT:    flat_store_b64 v[2:3], v[0:1]
-; GFX11-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-NEXT:    s_endpgm
 ;
 ; GFX12-LABEL: flat_atomic_inc_ret_i64_offset_addr64:
@@ -2709,7 +2688,6 @@ define amdgpu_kernel void @flat_atomic_inc_ret_i64_offset_addr64(ptr %out, ptr %
 ; GFX12-NEXT:    v_add_co_ci_u32_e32 v3, vcc_lo, 0, v3, vcc_lo
 ; GFX12-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX12-NEXT:    flat_store_b64 v[2:3], v[0:1]
-; GFX12-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX12-NEXT:    s_endpgm
   %id = call i32 @llvm.amdgcn.workitem.id.x()
   %gep.tid = getelementptr i64, ptr %ptr, i32 %id
@@ -2795,7 +2773,6 @@ define amdgpu_kernel void @flat_atomic_inc_noret_i64_offset_addr64(ptr %ptr) #0 
 ; GFX11-NEXT:    v_add_co_u32 v0, vcc_lo, v0, v4
 ; GFX11-NEXT:    v_add_co_ci_u32_e32 v1, vcc_lo, 0, v1, vcc_lo
 ; GFX11-NEXT:    flat_atomic_inc_u64 v[0:1], v[2:3] offset:40
-; GFX11-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-NEXT:    s_endpgm
 ;
 ; GFX12-LABEL: flat_atomic_inc_noret_i64_offset_addr64:
@@ -2810,7 +2787,6 @@ define amdgpu_kernel void @flat_atomic_inc_noret_i64_offset_addr64(ptr %ptr) #0 
 ; GFX12-NEXT:    v_add_co_u32 v0, vcc_lo, v0, v4
 ; GFX12-NEXT:    v_add_co_ci_u32_e32 v1, vcc_lo, 0, v1, vcc_lo
 ; GFX12-NEXT:    flat_atomic_inc_u64 v[0:1], v[2:3] offset:40
-; GFX12-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX12-NEXT:    s_endpgm
   %id = call i32 @llvm.amdgcn.workitem.id.x()
   %gep.tid = getelementptr i64, ptr %ptr, i32 %id

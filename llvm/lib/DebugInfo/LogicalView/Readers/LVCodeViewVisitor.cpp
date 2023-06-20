@@ -1065,7 +1065,7 @@ Error LVSymbolVisitor::visitKnownRecord(
 
     uint64_t Operand1 = DefRangeFramePointerRelFullScope.Offset;
     Symbol->addLocation(Attr, 0, 0, 0, 0);
-    Symbol->addLocationOperands(LVSmall(Attr), Operand1, /*Operand2=*/0);
+    Symbol->addLocationOperands(LVSmall(Attr), {Operand1});
   }
 
   return Error::success();
@@ -1103,7 +1103,7 @@ Error LVSymbolVisitor::visitKnownRecord(
         Reader->linearAddress(Range.ISectStart, Range.OffsetStart);
 
     Symbol->addLocation(Attr, Address, Address + Range.Range, 0, 0);
-    Symbol->addLocationOperands(LVSmall(Attr), Operand1, /*Operand2=*/0);
+    Symbol->addLocationOperands(LVSmall(Attr), {Operand1});
   }
 
   return Error::success();
@@ -1142,7 +1142,7 @@ Error LVSymbolVisitor::visitKnownRecord(
         Reader->linearAddress(Range.ISectStart, Range.OffsetStart);
 
     Symbol->addLocation(Attr, Address, Address + Range.Range, 0, 0);
-    Symbol->addLocationOperands(LVSmall(Attr), Operand1, Operand2);
+    Symbol->addLocationOperands(LVSmall(Attr), {Operand1, Operand2});
   }
 
   return Error::success();
@@ -1177,7 +1177,7 @@ Error LVSymbolVisitor::visitKnownRecord(CVSymbol &Record,
         Reader->linearAddress(Range.ISectStart, Range.OffsetStart);
 
     Symbol->addLocation(Attr, Address, Address + Range.Range, 0, 0);
-    Symbol->addLocationOperands(LVSmall(Attr), Operand1, /*Operand2=*/0);
+    Symbol->addLocationOperands(LVSmall(Attr), {Operand1});
   }
 
   return Error::success();
@@ -1215,7 +1215,7 @@ Error LVSymbolVisitor::visitKnownRecord(
         Reader->linearAddress(Range.ISectStart, Range.OffsetStart);
 
     Symbol->addLocation(Attr, Address, Address + Range.Range, 0, 0);
-    Symbol->addLocationOperands(LVSmall(Attr), Operand1, /*Operand2=*/0);
+    Symbol->addLocationOperands(LVSmall(Attr), {Operand1});
   }
 
   return Error::success();
@@ -1258,7 +1258,7 @@ Error LVSymbolVisitor::visitKnownRecord(CVSymbol &Record,
         Reader->linearAddress(Range.ISectStart, Range.OffsetStart);
 
     Symbol->addLocation(Attr, Address, Address + Range.Range, 0, 0);
-    Symbol->addLocationOperands(LVSmall(Attr), Operand1, /*Operand2=*/0);
+    Symbol->addLocationOperands(LVSmall(Attr), {Operand1, /*Operand2=*/0});
   }
 
   return Error::success();
@@ -1299,7 +1299,7 @@ Error LVSymbolVisitor::visitKnownRecord(CVSymbol &Record,
         Reader->linearAddress(Range.ISectStart, Range.OffsetStart);
 
     Symbol->addLocation(Attr, Address, Address + Range.Range, 0, 0);
-    Symbol->addLocationOperands(LVSmall(Attr), Operand1, /*Operand2=*/0);
+    Symbol->addLocationOperands(LVSmall(Attr), {Operand1, /*Operand2=*/0});
   }
 
   return Error::success();

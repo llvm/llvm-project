@@ -24,7 +24,7 @@ struct _Not : _BoolConstant<!_Pred::value> {};
 #if _LIBCPP_STD_VER >= 17
 template <class _Tp>
 struct negation : _Not<_Tp> {};
-template<class _Tp>
+template <class _Tp>
 inline constexpr bool negation_v = !_Tp::value;
 #endif // _LIBCPP_STD_VER >= 17
 

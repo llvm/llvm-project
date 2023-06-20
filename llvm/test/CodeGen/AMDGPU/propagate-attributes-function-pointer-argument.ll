@@ -37,4 +37,4 @@ define private void @g() #1 {
 }
 
 attributes #0 = { noinline }
-attributes #1 = { noinline "amdgpu-waves-per-eu"="1,10" }
+attributes #1 = { noinline "target-features"="+wavefrontsize32" }

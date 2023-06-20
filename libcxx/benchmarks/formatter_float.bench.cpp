@@ -107,8 +107,8 @@ enum class DisplayTypeE {
   General,
 };
 struct AllDisplayTypes : EnumValuesAsTuple<AllDisplayTypes, DisplayTypeE, 5> {
-  static constexpr const char* Names[] = {"DisplayDefault", "DisplayHex", "DisplayScientific", "DisplayFixed",
-                                          "DisplayGeneral"};
+  static constexpr const char* Names[] = {
+      "DisplayDefault", "DisplayHex", "DisplayScientific", "DisplayFixed", "DisplayGeneral"};
 };
 
 template <DisplayTypeE E>
@@ -142,8 +142,8 @@ struct DisplayType<DisplayTypeE::General> {
 // *** Alignment ***
 enum class AlignmentE { None, Left, Center, Right, ZeroPadding };
 struct AllAlignments : EnumValuesAsTuple<AllAlignments, AlignmentE, 5> {
-  static constexpr const char* Names[] = {"AlignNone", "AlignmentLeft", "AlignmentCenter", "AlignmentRight",
-                                          "ZeroPadding"};
+  static constexpr const char* Names[] = {
+      "AlignNone", "AlignmentLeft", "AlignmentCenter", "AlignmentRight", "ZeroPadding"};
 };
 
 template <AlignmentE E>
@@ -244,7 +244,12 @@ int main(int argc, char** argv) {
   if (benchmark::ReportUnrecognizedArguments(argc, argv))
     return 1;
 
-  makeCartesianProductBenchmark<FloatingPoint, AllLocalizations, AllDisplayTypes, AllTypes, AllValues, AllAlignments,
+  makeCartesianProductBenchmark<FloatingPoint,
+                                AllLocalizations,
+                                AllDisplayTypes,
+                                AllTypes,
+                                AllValues,
+                                AllAlignments,
                                 AllPrecisions>();
 
   benchmark::RunSpecifiedBenchmarks();

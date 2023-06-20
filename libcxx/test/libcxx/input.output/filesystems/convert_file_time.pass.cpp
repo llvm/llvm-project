@@ -12,7 +12,7 @@
 
 // typedef TrivialClock file_time_type;
 
-// ADDITIONAL_COMPILE_FLAGS: -I %S/../../../../src/filesystem -Wno-macro-redefined
+// ADDITIONAL_COMPILE_FLAGS: -I %S/../../../../src -Wno-macro-redefined
 
 #include <cassert>
 #include <chrono>
@@ -22,7 +22,7 @@
 #include <string>
 #include <type_traits>
 
-#include "filesystem_common.h"
+#include "filesystem/time_utils.h"
 
 #ifndef __SIZEOF_INT128__
 #define TEST_HAS_NO_INT128_T

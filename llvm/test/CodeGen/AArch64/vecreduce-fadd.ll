@@ -227,7 +227,7 @@ define float @add_S_init_42(<4 x float> %bin.rdx)  {
 ; CHECK-LABEL: add_S_init_42:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    faddp v0.4s, v0.4s, v0.4s
-; CHECK-NEXT:    mov w8, #1109917696
+; CHECK-NEXT:    mov w8, #1109917696 // =0x42280000
 ; CHECK-NEXT:    fmov s1, w8
 ; CHECK-NEXT:    faddp s0, v0.2s
 ; CHECK-NEXT:    fadd s0, s0, s1

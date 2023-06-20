@@ -1910,8 +1910,19 @@ def : Pat<(add i64:$in, (PPChi tblockaddress:$g, 0)),
           (ADDIS8 $in, tblockaddress:$g)>;
 
 // AIX 64-bit small code model TLS access.
+// This is used for global dynamic accesses when loading the region handle and
+// variable offset, and also for local-exec accesses to load the offset of a
+// TLS variable from the TOC, prior to adding it to r13.
 def : Pat<(i64 (PPCtoc_entry tglobaltlsaddr:$disp, i64:$reg)),
           (i64 (LDtoc tglobaltlsaddr:$disp, i64:$reg))>;
+
+// The following pattern matches 64-bit local-exec TLS accesses on AIX.
+// PPCaddTls is used in local-exec accesses in order to:
+//   - Get the address of a variable (adding the variable offset to the thread
+//     pointer in r13).
+//   - Create an opportunity to optimize the user of the loaded address.
+def : Pat<(PPCaddTls i64:$in, i64:$addr),
+          (ADD8TLS $in, $addr)>;
 
 // 64-bits atomic loads and stores
 def : Pat<(atomic_load_64 DSForm:$src), (LD  memrix:$src)>;

@@ -1610,13 +1610,35 @@ AddressOfOp::verifySymbolUses(SymbolTableCollection &symbolTable) {
 }
 
 //===----------------------------------------------------------------------===//
+// Verifier for LLVM::ComdatOp.
+//===----------------------------------------------------------------------===//
+
+void ComdatOp::build(OpBuilder &builder, OperationState &result,
+                     StringRef symName) {
+  result.addAttribute(getSymNameAttrName(result.name),
+                      builder.getStringAttr(symName));
+  Region *body = result.addRegion();
+  body->emplaceBlock();
+}
+
+LogicalResult ComdatOp::verifyRegions() {
+  Region &body = getBody();
+  for (Operation &op : body.getOps())
+    if (!isa<ComdatSelectorOp>(op))
+      return op.emitError(
+          "only comdat selector symbols can appear in a comdat region");
+
+  return success();
+}
+
+//===----------------------------------------------------------------------===//
 // Builder, printer and verifier for LLVM::GlobalOp.
 //===----------------------------------------------------------------------===//
 
 void GlobalOp::build(OpBuilder &builder, OperationState &result, Type type,
                      bool isConstant, Linkage linkage, StringRef name,
                      Attribute value, uint64_t alignment, unsigned addrSpace,
-                     bool dsoLocal, bool threadLocal,
+                     bool dsoLocal, bool threadLocal, SymbolRefAttr comdat,
                      ArrayRef<NamedAttribute> attrs) {
   result.addAttribute(getSymNameAttrName(result.name),
                       builder.getStringAttr(name));
@@ -1632,6 +1654,8 @@ void GlobalOp::build(OpBuilder &builder, OperationState &result, Type type,
   if (threadLocal)
     result.addAttribute(getThreadLocal_AttrName(result.name),
                         builder.getUnitAttr());
+  if (comdat)
+    result.addAttribute(getComdatAttrName(result.name), comdat);
 
   // Only add an alignment attribute if the "alignment" input
   // is different from 0. The value must also be a power of two, but
@@ -1668,6 +1692,9 @@ void GlobalOp::print(OpAsmPrinter &p) {
   if (auto value = getValueOrNull())
     p.printAttribute(value);
   p << ')';
+  if (auto comdat = getComdat())
+    p << " comdat(" << *comdat << ')';
+
   // Note that the alignment attribute is printed using the
   // default syntax here, even though it is an inherent attribute
   // (as defined in https://mlir.llvm.org/docs/LangRef/#attributes)
@@ -1676,7 +1703,7 @@ void GlobalOp::print(OpAsmPrinter &p) {
                            getGlobalTypeAttrName(), getConstantAttrName(),
                            getValueAttrName(), getLinkageAttrName(),
                            getUnnamedAddrAttrName(), getThreadLocal_AttrName(),
-                           getVisibility_AttrName()});
+                           getVisibility_AttrName(), getComdatAttrName()});
 
   // Print the trailing type unless it's a string global.
   if (llvm::dyn_cast_or_null<StringAttr>(getValueOrNull()))
@@ -1736,6 +1763,18 @@ static RetTy parseOptionalLLVMKeyword(OpAsmParser &parser,
   return static_cast<RetTy>(index);
 }
 
+static LogicalResult verifyComdat(Operation *op,
+                                  std::optional<SymbolRefAttr> attr) {
+  if (!attr)
+    return success();
+
+  auto *comdatSelector = SymbolTable::lookupNearestSymbolFrom(op, *attr);
+  if (!isa_and_nonnull<ComdatSelectorOp>(comdatSelector))
+    return op->emitError() << "expected comdat symbol";
+
+  return success();
+}
+
 // operation ::= `llvm.mlir.global` linkage? `constant`? `@` identifier
 //               `(` attribute? `)` align? attribute-list? (`:` type)? region?
 // align     ::= `align` `=` UINT64
@@ -1782,6 +1821,15 @@ ParseResult GlobalOp::parse(OpAsmParser &parser, OperationState &result) {
                               result.attributes) ||
         parser.parseRParen())
       return failure();
+  }
+
+  if (succeeded(parser.parseOptionalKeyword("comdat"))) {
+    SymbolRefAttr comdat;
+    if (parser.parseLParen() || parser.parseAttribute(comdat) ||
+        parser.parseRParen())
+      return failure();
+
+    result.addAttribute(getComdatAttrName(result.name), comdat);
   }
 
   SmallVector<Type, 1> types;
@@ -1881,6 +1929,9 @@ LogicalResult GlobalOp::verify() {
                            << "' linkage";
     }
   }
+
+  if (failed(verifyComdat(*this, getComdat())))
+    return failure();
 
   std::optional<uint64_t> alignAttr = getAlignment();
   if (alignAttr.has_value()) {

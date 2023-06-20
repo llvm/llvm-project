@@ -15,7 +15,7 @@
 // explicit(see-below) constexpr pair();
 
 // This test checks the conditional explicitness of std::pair's default
-// constructor as introduced by the resolution of LWG 2510.
+// constructor as introduced by the resolution of https://wg21.link/LWG2510.
 
 #include <utility>
 

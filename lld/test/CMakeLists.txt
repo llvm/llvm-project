@@ -14,12 +14,23 @@ configure_lit_site_cfg(
   ${CMAKE_CURRENT_BINARY_DIR}/lit.site.cfg.py
   MAIN_CONFIG
   ${CMAKE_CURRENT_SOURCE_DIR}/lit.cfg.py
-  )
+)
+configure_lit_site_cfg(
+  ${CMAKE_CURRENT_SOURCE_DIR}/Unit/lit.site.cfg.py.in
+  ${CMAKE_CURRENT_BINARY_DIR}/Unit/lit.site.cfg.py
+  MAIN_CONFIG
+  ${CMAKE_CURRENT_SOURCE_DIR}/Unit/lit.cfg.py
+  PATHS
+  "SHLIBDIR"
+  "LLD_BINARY_DIR"
+  "LLD_SOURCE_DIR"
+)
 
 set(LLD_TEST_DEPS lld)
 if (NOT LLD_BUILT_STANDALONE)
   list(APPEND LLD_TEST_DEPS
     FileCheck
+    LLDUnitTests
     count
     dsymutil
     llc
@@ -60,6 +71,7 @@ add_lit_testsuite(check-lld "Running lld test suite"
   ${CMAKE_CURRENT_BINARY_DIR}
   DEPENDS ${LLD_TEST_DEPS}
   )
+set_target_properties(check-lld PROPERTIES FOLDER "lld tests")
 
 add_custom_target(lld-test-depends DEPENDS ${LLD_TEST_DEPS})
 set_target_properties(lld-test-depends PROPERTIES FOLDER "lld tests")
@@ -67,8 +79,6 @@ set_target_properties(lld-test-depends PROPERTIES FOLDER "lld tests")
 add_lit_testsuites(LLD ${CMAKE_CURRENT_SOURCE_DIR}
   DEPENDS ${LLD_TEST_DEPS}
   )
-
-set_target_properties(check-lld PROPERTIES FOLDER "lld tests")
 
 # Add a legacy target spelling: lld-test
 add_custom_target(lld-test)

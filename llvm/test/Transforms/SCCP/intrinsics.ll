@@ -122,3 +122,17 @@ exit:
   %p_umax = call i8 @llvm.umax.i8(i8 %p, i8 1)
   ret i8 %p_umax
 }
+
+define <4 x i32> @pr63380(<4 x i32> %input) {
+; CHECK-LABEL: @pr63380(
+; CHECK-NEXT:    [[CTLZ_1:%.*]] = call <4 x i32> @llvm.ctlz.v4i32(<4 x i32> [[INPUT:%.*]], i1 false)
+; CHECK-NEXT:    [[CTLZ_2:%.*]] = call <4 x i32> @llvm.ctlz.v4i32(<4 x i32> [[CTLZ_1]], i1 true)
+; CHECK-NEXT:    ret <4 x i32> <i32 27, i32 27, i32 27, i32 27>
+;
+  %ctlz.1 = call <4 x i32> @llvm.ctlz.v4i32(<4 x i32> %input, i1 false)
+  %ctlz.2 = call <4 x i32> @llvm.ctlz.v4i32(<4 x i32> %ctlz.1, i1 true)
+  %ctlz.3 = call <4 x i32> @llvm.ctlz.v4i32(<4 x i32> %ctlz.2, i1 true)
+  ret <4 x i32> %ctlz.3
+}
+
+declare <4 x i32> @llvm.ctlz.v4i32(<4 x i32>, i1 immarg)

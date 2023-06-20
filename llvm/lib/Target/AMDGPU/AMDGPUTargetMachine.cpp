@@ -415,7 +415,6 @@ extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializeAMDGPUTarget() {
   initializeAMDGPURewriteUndefForPHIPass(*PR);
   initializeAMDGPUUnifyMetadataPass(*PR);
   initializeSIAnnotateControlFlowPass(*PR);
-  initializeAMDGPUReleaseVGPRsPass(*PR);
   initializeAMDGPUInsertDelayAluPass(*PR);
   initializeAMDGPULowerVGPREncodingPass(*PR);
   initializeSIInsertHardClausesPass(*PR);
@@ -1451,9 +1450,6 @@ void GCNPassConfig::addPreEmitPass() {
   // Here we add a stand-alone hazard recognizer pass which can handle all
   // cases.
   addPass(&PostRAHazardRecognizerID);
-
-  if (getOptLevel() > CodeGenOpt::Less)
-    addPass(&AMDGPUReleaseVGPRsID);
 
   addPass(&AMDGPULowerVGPREncodingID);
 

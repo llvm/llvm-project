@@ -188,13 +188,13 @@ Section,Description,Dependencies,Assignee,Complete
 "| `[fs.class.directory.entry] <https://wg21.link/fs.class.directory.entry>`_
 | `[fs.dir.entry.obs] <https://wg21.link/fs.dir.entry.obs>`_",| `filesystem::directory_entry <https://reviews.llvm.org/D130860>`_,None,Adrian Vogelsgesang,|Complete|
 - `5.15 Clause 30: Regular expressions library <https://wg21.link/p1614r2#clause-30-regular-expressions-library>`_,,,,
-| `[re.syn] <https://wg21.link/re.syn>`_,|,None,Mark de Wever,|In Progress|
+| `[re.syn] <https://wg21.link/re.syn>`_,|,None,Mark de Wever,|Complete|
 | `[re.submatch.op] <https://wg21.link/re.submatch.op>`_,| `sub_match <https://reviews.llvm.org/D132310>`_,None,Mark de Wever,|Complete|
-| `[re.results.nonmember] <https://wg21.link/re.results.nonmember>`_,| remove ops `match_results`,None,Mark de Wever,|In Progress|
+| `[re.results.nonmember] <https://wg21.link/re.results.nonmember>`_,| remove ops `match_results`,None,Mark de Wever,|Complete|
 "| `[re.regiter] <https://wg21.link/re.regiter>`_,
-| `[re.regiter.comp] <https://wg21.link/re.regiter.comp>`_",| remove ops `regex_iterator`,None,Mark de Wever,|In Progress|
+| `[re.regiter.comp] <https://wg21.link/re.regiter.comp>`_",| remove ops `regex_iterator`,None,Mark de Wever,|Complete|
 "| `[re.tokiter] <https://wg21.link/re.tokiter>`_
-| `[re.tokiter.comp] <https://wg21.link/re.tokiter.comp>`_",| remove ops `regex_token_iterator`,None,Mark de Wever,|In Progress|
+| `[re.tokiter.comp] <https://wg21.link/re.tokiter.comp>`_",| remove ops `regex_token_iterator`,None,Mark de Wever,|Complete|
 - `5.16 Clause 31: Atomic operations library <https://wg21.link/p1614r2#clause-31-atomic-operations-library>`_,,,,
 - `5.17 Clause 32: Thread support library <https://wg21.link/p1614r2#clause-32-thread-support-library>`_,,,,
 | `[thread.thread.id] <https://wg21.link/thread.thread.id>`_,| `thread::id <https://reviews.llvm.org/D131362>`_,None,Adrian Vogelsgesang,|Complete|

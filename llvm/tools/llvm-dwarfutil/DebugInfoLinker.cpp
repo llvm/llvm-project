@@ -377,8 +377,7 @@ Error linkDebugInfoImpl(object::ObjectFile &File, const Options &Options,
 
           if (Options.AccelTableKind == DwarfUtilAccelKind::None)
             AccelTableNamesToDelete.push_back(Sec.Name);
-          else if (std::find(AccelTables.begin(), AccelTables.end(),
-                             *SrcAccelTableKind) == AccelTables.end())
+          else if (!llvm::is_contained(AccelTables, *SrcAccelTableKind))
             AccelTableNamesToReplace.push_back(Sec.Name);
         } else if (!knownByDWARFUtil(Sec.Name)) {
           assert(!SrcAccelTableKind);

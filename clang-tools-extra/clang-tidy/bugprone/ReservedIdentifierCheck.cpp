@@ -39,18 +39,35 @@ static int getMessageSelectIndex(StringRef Tag) {
   return 0;
 }
 
+llvm::SmallVector<llvm::Regex>
+ReservedIdentifierCheck::parseAllowedIdentifiers() const {
+  llvm::SmallVector<llvm::Regex> AllowedIdentifiers;
+  AllowedIdentifiers.reserve(AllowedIdentifiersRaw.size());
+
+  for (const auto &Identifier : AllowedIdentifiersRaw) {
+    AllowedIdentifiers.emplace_back(Identifier.str());
+    if (!AllowedIdentifiers.back().isValid()) {
+      configurationDiag("Invalid allowed identifier regex '%0'") << Identifier;
+      AllowedIdentifiers.pop_back();
+    }
+  }
+
+  return AllowedIdentifiers;
+}
+
 ReservedIdentifierCheck::ReservedIdentifierCheck(StringRef Name,
                                                  ClangTidyContext *Context)
     : RenamerClangTidyCheck(Name, Context),
       Invert(Options.get("Invert", false)),
-      AllowedIdentifiers(utils::options::parseStringList(
-          Options.get("AllowedIdentifiers", ""))) {}
+      AllowedIdentifiersRaw(utils::options::parseStringList(
+          Options.get("AllowedIdentifiers", ""))),
+      AllowedIdentifiers(parseAllowedIdentifiers()) {}
 
 void ReservedIdentifierCheck::storeOptions(ClangTidyOptions::OptionMap &Opts) {
   RenamerClangTidyCheck::storeOptions(Opts);
   Options.store(Opts, "Invert", Invert);
   Options.store(Opts, "AllowedIdentifiers",
-                utils::options::serializeStringList(AllowedIdentifiers));
+                utils::options::serializeStringList(AllowedIdentifiersRaw));
 }
 
 static std::string collapseConsecutive(StringRef Str, char C) {
@@ -108,11 +125,14 @@ static std::string getNonReservedFixup(std::string Name) {
 static std::optional<RenamerClangTidyCheck::FailureInfo>
 getFailureInfoImpl(StringRef Name, bool IsInGlobalNamespace,
                    const LangOptions &LangOpts, bool Invert,
-                   ArrayRef<StringRef> AllowedIdentifiers) {
+                   ArrayRef<llvm::Regex> AllowedIdentifiers) {
   assert(!Name.empty());
-  if (llvm::is_contained(AllowedIdentifiers, Name))
-    return std::nullopt;
 
+  if (llvm::any_of(AllowedIdentifiers, [&](const llvm::Regex &Regex) {
+        return Regex.match(Name);
+      })) {
+    return std::nullopt;
+  }
   // TODO: Check for names identical to language keywords, and other names
   // specifically reserved by language standards, e.g. C++ 'zombie names' and C
   // future library directions

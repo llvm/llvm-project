@@ -543,7 +543,7 @@ template <class BidirectionalIterator, class Allocator>
     operator==(const match_results<BidirectionalIterator, Allocator>& m1,
                const match_results<BidirectionalIterator, Allocator>& m2);
 
-template <class BidirectionalIterator, class Allocator>
+template <class BidirectionalIterator, class Allocator>                    // Removed in C++20
     bool
     operator!=(const match_results<BidirectionalIterator, Allocator>& m1,
                const match_results<BidirectionalIterator, Allocator>& m2);
@@ -710,7 +710,7 @@ public:
     regex_iterator& operator=(const regex_iterator&);
 
     bool operator==(const regex_iterator&) const;
-    bool operator!=(const regex_iterator&) const;
+    bool operator!=(const regex_iterator&) const;                                // Removed in C++20
 
     const value_type& operator*() const;
     const value_type* operator->() const;
@@ -768,7 +768,7 @@ public:
     regex_token_iterator& operator=(const regex_token_iterator&);
 
     bool operator==(const regex_token_iterator&) const;
-    bool operator!=(const regex_token_iterator&) const;
+    bool operator!=(const regex_token_iterator&) const;                  // Removed in C++20
 
     const value_type& operator*() const;
     const value_type* operator->() const;
@@ -5816,6 +5816,7 @@ operator==(const match_results<_BidirectionalIterator, _Allocator>& __x,
            __x.__suffix_ == __y.__suffix_;
 }
 
+#if _LIBCPP_STD_VER < 20
 template <class _BidirectionalIterator, class _Allocator>
 inline _LIBCPP_INLINE_VISIBILITY
 bool
@@ -5824,6 +5825,7 @@ operator!=(const match_results<_BidirectionalIterator, _Allocator>& __x,
 {
     return !(__x == __y);
 }
+#endif
 
 template <class _BidirectionalIterator, class _Allocator>
 inline _LIBCPP_INLINE_VISIBILITY
@@ -6427,8 +6429,10 @@ public:
 #endif
 
     bool operator==(const regex_iterator& __x) const;
+#if _LIBCPP_STD_VER < 20
     _LIBCPP_INLINE_VISIBILITY
     bool operator!=(const regex_iterator& __x) const {return !(*this == __x);}
+#endif
 
     _LIBCPP_INLINE_VISIBILITY
     reference operator*() const {return  __match_;}
@@ -6606,7 +6610,9 @@ public:
 
     bool operator==(const regex_token_iterator& __x) const;
     _LIBCPP_INLINE_VISIBILITY
+#if _LIBCPP_STD_VER < 20
     bool operator!=(const regex_token_iterator& __x) const {return !(*this == __x);}
+#endif
 
     _LIBCPP_INLINE_VISIBILITY
     const value_type& operator*() const {return *__result_;}

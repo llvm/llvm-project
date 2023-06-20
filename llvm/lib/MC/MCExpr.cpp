@@ -327,6 +327,8 @@ StringRef MCSymbolRefExpr::getVariantKindName(VariantKind Kind) {
     return "gd";
   case VK_PPC_AIX_TLSGDM:
     return "m";
+  case VK_PPC_AIX_TLSLE:
+    return "le";
   case VK_PPC_GOT_TLSLD: return "got@tlsld";
   case VK_PPC_GOT_TLSLD_LO: return "got@tlsld@l";
   case VK_PPC_GOT_TLSLD_HI: return "got@tlsld@h";
@@ -651,8 +653,6 @@ static void AttemptToFoldSymbolOffsetDifference(
     // this is important when the Subtarget is changed and a new MCDataFragment
     // is created in the case of foo: instr; .arch_extension ext; instr .if . -
     // foo.
-    if (FA != FB && (!isa<MCDataFragment>(FA) || !isa<MCDataFragment>(FA)))
-      return;
     if (SA.isVariable() || SB.isVariable() ||
         FA->getSubsectionNumber() != FB->getSubsectionNumber())
       return;
@@ -660,15 +660,30 @@ static void AttemptToFoldSymbolOffsetDifference(
     // Try to find a constant displacement from FA to FB, add the displacement
     // between the offset in FA of SA and the offset in FB of SB.
     int64_t Displacement = SA.getOffset() - SB.getOffset();
+    bool Found = false;
     for (auto FI = FB->getIterator(), FE = SecA.end(); FI != FE; ++FI) {
+      auto DF = dyn_cast<MCDataFragment>(FI);
       if (&*FI == FA) {
-        Addend += Displacement;
-        return FinalizeFolding();
+        Found = true;
+        break;
       }
 
-      if (FI->getKind() != MCFragment::FT_Data)
+      int64_t Num;
+      if (DF) {
+        Displacement += DF->getContents().size();
+      } else if (auto *FF = dyn_cast<MCFillFragment>(FI);
+                 FF && FF->getNumValues().evaluateAsAbsolute(Num)) {
+        Displacement += Num * FF->getValueSize();
+      } else {
         return;
-      Displacement += cast<MCDataFragment>(FI)->getContents().size();
+      }
+    }
+    // If FA is found or if FA is a dummy fragment not in the fragment list,
+    // (which means SA is a pending label (see flushPendingLabels)), we can
+    // resolve the difference.
+    if (Found || isa<MCDummyFragment>(FA)) {
+      Addend += Displacement;
+      FinalizeFolding();
     }
   }
 }
