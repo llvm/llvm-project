@@ -16,6 +16,9 @@
 #include "mlir/IR/FunctionImplementation.h"
 #include "mlir/IR/PatternMatch.h"
 #include "mlir/Interfaces/ControlFlowInterfaces.h"
+#include "mlir/Pass/Pass.h"
+#include "mlir/Pass/PassManager.h"
+#include "mlir/Pass/PassRegistry.h"
 #include "mlir/Transforms/GreedyPatternRewriteDriver.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/ScopeExit.h"
@@ -46,6 +49,26 @@ static void printForeachMatchSymbols(OpAsmPrinter &printer, Operation *op,
 static ParseResult parseForeachMatchSymbols(OpAsmParser &parser,
                                             ArrayAttr &matchers,
                                             ArrayAttr &actions);
+
+/// Helper function to check if the given transform op is contained in (or
+/// equal to) the given payload target op. In that case, an error is returned.
+/// Transforming transform IR that is currently executing is generally unsafe.
+static DiagnosedSilenceableFailure
+ensurePayloadIsSeparateFromTransform(transform::TransformOpInterface transform,
+                                     Operation *payload) {
+  Operation *transformAncestor = transform.getOperation();
+  while (transformAncestor) {
+    if (transformAncestor == payload) {
+      DiagnosedDefiniteFailure diag =
+          transform.emitDefiniteFailure()
+          << "cannot apply transform to itself (or one of its ancestors)";
+      diag.attachNote(payload->getLoc()) << "target payload op";
+      return diag;
+    }
+    transformAncestor = transformAncestor->getParentOp();
+  }
+  return DiagnosedSilenceableFailure::success();
+}
 
 #define GET_OP_CLASSES
 #include "mlir/Dialect/Transform/IR/TransformOps.cpp.inc"
@@ -243,17 +266,10 @@ transform::ApplyPatternsOp::applyToOne(Operation *target,
   // transform IR while it is being interpreted is generally dangerous. Even
   // more so for the ApplyPatternsOp because the GreedyPatternRewriteDriver
   // performs many additional simplifications such as dead code elimination.
-  Operation *transformAncestor = getOperation();
-  while (transformAncestor) {
-    if (transformAncestor == target) {
-      DiagnosedDefiniteFailure diag =
-          emitDefiniteFailure()
-          << "cannot apply transform to itself (or one of its ancestors)";
-      diag.attachNote(target->getLoc()) << "target payload op";
-      return diag;
-    }
-    transformAncestor = transformAncestor->getParentOp();
-  }
+  DiagnosedSilenceableFailure payloadCheck =
+      ensurePayloadIsSeparateFromTransform(*this, target);
+  if (!payloadCheck.succeeded())
+    return payloadCheck;
 
   // Gather all specified patterns.
   MLIRContext *ctx = target->getContext();
@@ -355,6 +371,48 @@ void transform::ApplyCanonicalizationPatternsOp::populatePatterns(
     dialect->getCanonicalizationPatterns(patterns);
   for (RegisteredOperationName op : ctx->getRegisteredOperations())
     op.getCanonicalizationPatterns(patterns, ctx);
+}
+
+//===----------------------------------------------------------------------===//
+// ApplyRegisteredPassOp
+//===----------------------------------------------------------------------===//
+
+DiagnosedSilenceableFailure
+transform::ApplyRegisteredPassOp::applyToOne(Operation *target,
+                                             ApplyToEachResultList &results,
+                                             transform::TransformState &state) {
+  // Make sure that this transform is not applied to itself. Modifying the
+  // transform IR while it is being interpreted is generally dangerous. Even
+  // more so when applying passes because they may perform a wide range of IR
+  // modifications.
+  DiagnosedSilenceableFailure payloadCheck =
+      ensurePayloadIsSeparateFromTransform(*this, target);
+  if (!payloadCheck.succeeded())
+    return payloadCheck;
+
+  // Get pass from registry.
+  const PassInfo *passInfo = Pass::lookupPassInfo(getPassName());
+  if (!passInfo) {
+    return emitDefiniteFailure() << "unknown pass: " << getPassName();
+  }
+
+  // Create pass manager with a single pass and run it.
+  PassManager pm(getContext());
+  if (failed(passInfo->addToPipeline(pm, getOptions(), [&](const Twine &msg) {
+        emitError(msg);
+        return failure();
+      }))) {
+    return emitDefiniteFailure()
+           << "failed to add pass to pipeline: " << getPassName();
+  }
+  if (failed(pm.run(target))) {
+    auto diag = emitSilenceableError() << "pass pipeline failed";
+    diag.attachNote(target->getLoc()) << "target op";
+    return diag;
+  }
+
+  results.push_back(target);
+  return DiagnosedSilenceableFailure::success();
 }
 
 //===----------------------------------------------------------------------===//

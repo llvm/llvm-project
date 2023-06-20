@@ -194,6 +194,40 @@ def ApplyCanonicalizationPatternsOp
   let assemblyFormat = "attr-dict";
 }
 
+def ApplyRegisteredPassOp : TransformDialectOp<"apply_registered_pass",
+    [TransformOpInterface, TransformEachOpTrait,
+     FunctionalStyleTransformOpTrait, MemoryEffectsOpInterface]> {
+  let summary = "Applies the specified registered pass";
+  let description = [{
+    This transform applies the specified pass to the targeted ops. The name of
+    the pass is specified as a string attribute, as set during pass
+    registration. Optionally, pass options may be specified as a string
+    attribute. The pass options syntax is identical to the one used with
+    "mlir-opt".
+
+    This transform consumes the target handle and produces a new handle that is
+    mapped to the same op. Passes are not allowed to remove/modify the operation
+    that they operate on, so the target op is guaranteed to still exist. The
+    target handle is invalidated because a pass may arbitrarily modify the body
+    of targeted ops.
+  }];
+
+  let arguments = (ins TransformHandleTypeInterface:$target,
+                       StrAttr:$pass_name,
+                       DefaultValuedAttr<StrAttr, "\"\"">:$options);
+  let results = (outs TransformHandleTypeInterface:$result);
+  let assemblyFormat = [{
+    $pass_name `to` $target attr-dict `:` functional-type(operands, results)
+  }];
+
+  let extraClassDeclaration = [{
+    ::mlir::DiagnosedSilenceableFailure applyToOne(
+      ::mlir::Operation *target,
+      ::mlir::transform::ApplyToEachResultList &results,
+      ::mlir::transform::TransformState &state);
+  }];
+}
+
 def CastOp : TransformDialectOp<"cast",
     [TransformOpInterface, TransformEachOpTrait,
      DeclareOpInterfaceMethods<CastOpInterface>,
