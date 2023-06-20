@@ -589,6 +589,31 @@ def Linkage : DialectAttr<
           "::mlir::LLVM::LinkageAttr::get($_builder.getContext(), $0)";
 }
 
+
+//===----------------------------------------------------------------------===//
+// Comdat
+//===----------------------------------------------------------------------===//
+
+def ComdatAny
+    : LLVM_EnumAttrCase<"Any", "any", "Any", 0>;
+def ComdatExactMatch
+    : LLVM_EnumAttrCase<"ExactMatch", "exactmatch", "ExactMatch", 1>;
+def ComdatLargest
+    : LLVM_EnumAttrCase<"Largest", "largest", "Largest", 2>;
+def ComdatNoDeduplicate
+    : LLVM_EnumAttrCase<"NoDeduplicate", "nodeduplicate", "NoDeduplicate", 3>;
+def ComdatSameSize
+    : LLVM_EnumAttrCase<"SameSize", "samesize", "SameSize", 4>;
+
+def Comdat : LLVM_EnumAttr<
+  "Comdat",
+  "::llvm::Comdat::SelectionKind",
+  "LLVM Comdat Types",
+  [ComdatAny, ComdatExactMatch, ComdatLargest,
+   ComdatNoDeduplicate, ComdatSameSize]> {
+  let cppNamespace = "::mlir::LLVM::comdat";
+}
+
 //===----------------------------------------------------------------------===//
 // UnnamedAddr
 //===----------------------------------------------------------------------===//

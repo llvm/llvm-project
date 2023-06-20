@@ -188,6 +188,35 @@ define amdgpu_ps void @struct_tbuffer_store_insert(<4 x i32> inreg %a, float %vd
   ret void
 }
 
+define amdgpu_ps void @struct_tbuffer_store_argument(<4 x i32> inreg %a, <4 x float> %vdata4, i32 %b) {
+; GCN-LABEL: @struct_tbuffer_store_argument(
+; GCN-NEXT:    call void @llvm.amdgcn.struct.tbuffer.store.v4f32(<4 x float> [[VDATA4:%.*]], <4 x i32> [[A:%.*]], i32 [[B:%.*]], i32 0, i32 42, i32 0, i32 15)
+; GCN-NEXT:    ret void
+;
+; GFX12-LABEL: @struct_tbuffer_store_argument(
+; GFX12-NEXT:    call void @llvm.amdgcn.struct.tbuffer.store.v4f32(<4 x float> [[VDATA4:%.*]], <4 x i32> [[A:%.*]], i32 [[B:%.*]], i32 0, i32 42, i32 0, i32 15)
+; GFX12-NEXT:    ret void
+;
+  call void @llvm.amdgcn.struct.tbuffer.store.v4f32(<4 x float> %vdata4, <4 x i32> %a, i32 %b, i32 0, i32 42, i32 0, i32 15)
+  ret void
+}
+
+define amdgpu_ps void @struct_tbuffer_store_argument_insert_first(<4 x i32> inreg %a, <4 x float> %vdata4, float %vdata1, i32 %b) {
+; GCN-LABEL: @struct_tbuffer_store_argument_insert_first(
+; GCN-NEXT:    [[NEWVDATA4:%.*]] = insertelement <4 x float> [[VDATA4:%.*]], float [[VDATA1:%.*]], i64 0
+; GCN-NEXT:    call void @llvm.amdgcn.struct.tbuffer.store.v4f32(<4 x float> [[NEWVDATA4]], <4 x i32> [[A:%.*]], i32 [[B:%.*]], i32 0, i32 42, i32 0, i32 15)
+; GCN-NEXT:    ret void
+;
+; GFX12-LABEL: @struct_tbuffer_store_argument_insert_first(
+; GFX12-NEXT:    [[NEWVDATA4:%.*]] = insertelement <4 x float> [[VDATA4:%.*]], float [[VDATA1:%.*]], i64 0
+; GFX12-NEXT:    call void @llvm.amdgcn.struct.tbuffer.store.v4f32(<4 x float> [[NEWVDATA4]], <4 x i32> [[A:%.*]], i32 [[B:%.*]], i32 0, i32 42, i32 0, i32 15)
+; GFX12-NEXT:    ret void
+;
+  %newvdata4 = insertelement <4 x float> %vdata4, float %vdata1, i32 0
+  call void @llvm.amdgcn.struct.tbuffer.store.v4f32(<4 x float> %newvdata4, <4 x i32> %a, i32 %b, i32 0, i32 42, i32 0, i32 15)
+  ret void
+}
+
 define amdgpu_ps void @struct_tbuffer_store_insert_undefs(<4 x i32> inreg %a, float %vdata1, i32 %b) {
 ; GCN-LABEL: @struct_tbuffer_store_insert_undefs(
 ; GCN-NEXT:    [[TMP1:%.*]] = insertelement <2 x float> <float poison, float 1.000000e+00>, float [[VDATA1:%.*]], i64 0

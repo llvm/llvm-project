@@ -2606,6 +2606,7 @@ def fir_ConvertOp : fir_OneResultOp<"convert", [NoMemoryEffect]> {
   let hasVerifier = 1;
 
   let extraClassDeclaration = [{
+    static bool isInteger(mlir::Type ty);
     static bool isIntegerCompatible(mlir::Type ty);
     static bool isFloatCompatible(mlir::Type ty);
     static bool isPointerCompatible(mlir::Type ty);

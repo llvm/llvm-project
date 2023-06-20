@@ -36,19 +36,18 @@ using copy_result = in_out_result<_InIter, _OutIter>;
 
 namespace __copy {
 struct __fn {
-
   template <input_iterator _InIter, sentinel_for<_InIter> _Sent, weakly_incrementable _OutIter>
     requires indirectly_copyable<_InIter, _OutIter>
-  _LIBCPP_HIDE_FROM_ABI constexpr
-  copy_result<_InIter, _OutIter> operator()(_InIter __first, _Sent __last, _OutIter __result) const {
+  _LIBCPP_HIDE_FROM_ABI constexpr copy_result<_InIter, _OutIter>
+  operator()(_InIter __first, _Sent __last, _OutIter __result) const {
     auto __ret = std::__copy<_RangeAlgPolicy>(std::move(__first), std::move(__last), std::move(__result));
     return {std::move(__ret.first), std::move(__ret.second)};
   }
 
   template <input_range _Range, weakly_incrementable _OutIter>
     requires indirectly_copyable<iterator_t<_Range>, _OutIter>
-  _LIBCPP_HIDE_FROM_ABI constexpr
-  copy_result<borrowed_iterator_t<_Range>, _OutIter> operator()(_Range&& __r, _OutIter __result) const {
+  _LIBCPP_HIDE_FROM_ABI constexpr copy_result<borrowed_iterator_t<_Range>, _OutIter>
+  operator()(_Range&& __r, _OutIter __result) const {
     auto __ret = std::__copy<_RangeAlgPolicy>(ranges::begin(__r), ranges::end(__r), std::move(__result));
     return {std::move(__ret.first), std::move(__ret.second)};
   }
@@ -56,7 +55,7 @@ struct __fn {
 } // namespace __copy
 
 inline namespace __cpo {
-  inline constexpr auto copy = __copy::__fn{};
+inline constexpr auto copy = __copy::__fn{};
 } // namespace __cpo
 } // namespace ranges
 

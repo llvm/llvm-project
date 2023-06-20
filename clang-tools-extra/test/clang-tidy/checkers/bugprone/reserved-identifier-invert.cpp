@@ -1,7 +1,7 @@
 // RUN: %check_clang_tidy %s bugprone-reserved-identifier %t -- \
 // RUN:   -config='{CheckOptions: [ \
 // RUN:     {key: bugprone-reserved-identifier.Invert, value: true}, \
-// RUN:     {key: bugprone-reserved-identifier.AllowedIdentifiers, value: std;reference_wrapper;ref;cref;type;get}, \
+// RUN:     {key: bugprone-reserved-identifier.AllowedIdentifiers, value: "std;reference_wrapper;^c?ref;type;get"}, \
 // RUN:   ]}' -- \
 // RUN:   -I%S/Inputs/reserved-identifier \
 // RUN:   -isystem %S/Inputs/reserved-identifier/system

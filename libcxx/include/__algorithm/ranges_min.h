@@ -30,38 +30,41 @@
 #if _LIBCPP_STD_VER >= 20
 
 _LIBCPP_PUSH_MACROS
-#include <__undef_macros>
+#  include <__undef_macros>
 
 _LIBCPP_BEGIN_NAMESPACE_STD
 
 namespace ranges {
 namespace __min {
 struct __fn {
-  template <class _Tp, class _Proj = identity,
+  template <class _Tp,
+            class _Proj                                                    = identity,
             indirect_strict_weak_order<projected<const _Tp*, _Proj>> _Comp = ranges::less>
-  _LIBCPP_NODISCARD_EXT _LIBCPP_HIDE_FROM_ABI constexpr
-  const _Tp& operator()(_LIBCPP_LIFETIMEBOUND const _Tp& __a,
-                        _LIBCPP_LIFETIMEBOUND const _Tp& __b,
-                        _Comp __comp = {},
-                        _Proj __proj = {}) const {
+  _LIBCPP_NODISCARD_EXT _LIBCPP_HIDE_FROM_ABI constexpr const _Tp&
+  operator()(_LIBCPP_LIFETIMEBOUND const _Tp& __a,
+             _LIBCPP_LIFETIMEBOUND const _Tp& __b,
+             _Comp __comp = {},
+             _Proj __proj = {}) const {
     return std::invoke(__comp, std::invoke(__proj, __b), std::invoke(__proj, __a)) ? __b : __a;
   }
 
-  template <copyable _Tp, class _Proj = identity,
+  template <copyable _Tp,
+            class _Proj                                                    = identity,
             indirect_strict_weak_order<projected<const _Tp*, _Proj>> _Comp = ranges::less>
-  _LIBCPP_NODISCARD_EXT _LIBCPP_HIDE_FROM_ABI constexpr
-  _Tp operator()(initializer_list<_Tp> __il, _Comp __comp = {}, _Proj __proj = {}) const {
+  _LIBCPP_NODISCARD_EXT _LIBCPP_HIDE_FROM_ABI constexpr _Tp
+  operator()(initializer_list<_Tp> __il, _Comp __comp = {}, _Proj __proj = {}) const {
     _LIBCPP_ASSERT(__il.begin() != __il.end(), "initializer_list must contain at least one element");
     return *ranges::__min_element_impl(__il.begin(), __il.end(), __comp, __proj);
   }
 
-  template <input_range _Rp, class _Proj = identity,
+  template <input_range _Rp,
+            class _Proj                                                         = identity,
             indirect_strict_weak_order<projected<iterator_t<_Rp>, _Proj>> _Comp = ranges::less>
     requires indirectly_copyable_storable<iterator_t<_Rp>, range_value_t<_Rp>*>
-  _LIBCPP_NODISCARD_EXT _LIBCPP_HIDE_FROM_ABI constexpr
-  range_value_t<_Rp> operator()(_Rp&& __r, _Comp __comp = {}, _Proj __proj = {}) const {
+  _LIBCPP_NODISCARD_EXT _LIBCPP_HIDE_FROM_ABI constexpr range_value_t<_Rp>
+  operator()(_Rp&& __r, _Comp __comp = {}, _Proj __proj = {}) const {
     auto __first = ranges::begin(__r);
-    auto __last = ranges::end(__r);
+    auto __last  = ranges::end(__r);
     _LIBCPP_ASSERT(__first != __last, "range must contain at least one element");
     if constexpr (forward_range<_Rp> && !__is_cheap_to_copy<range_value_t<_Rp>>) {
       return *ranges::__min_element_impl(__first, __last, __comp, __proj);
@@ -78,7 +81,7 @@ struct __fn {
 } // namespace __min
 
 inline namespace __cpo {
-  inline constexpr auto min = __min::__fn{};
+inline constexpr auto min = __min::__fn{};
 } // namespace __cpo
 } // namespace ranges
 

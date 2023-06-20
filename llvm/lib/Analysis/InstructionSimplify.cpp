@@ -3682,6 +3682,36 @@ static Value *simplifyICmpWithDominatingAssume(CmpInst::Predicate Predicate,
   return nullptr;
 }
 
+static Value *simplifyICmpWithIntrinsicOnLHS(CmpInst::Predicate Pred,
+                                             Value *LHS, Value *RHS) {
+  auto *II = dyn_cast<IntrinsicInst>(LHS);
+  if (!II)
+    return nullptr;
+
+  switch (II->getIntrinsicID()) {
+  case Intrinsic::uadd_sat:
+    // uadd.sat(X, Y) uge X, uadd.sat(X, Y) uge Y
+    if (II->getArgOperand(0) == RHS || II->getArgOperand(1) == RHS) {
+      if (Pred == ICmpInst::ICMP_UGE)
+        return ConstantInt::getTrue(getCompareTy(II));
+      if (Pred == ICmpInst::ICMP_ULT)
+        return ConstantInt::getFalse(getCompareTy(II));
+    }
+    return nullptr;
+  case Intrinsic::usub_sat:
+    // usub.sat(X, Y) ule X
+    if (II->getArgOperand(0) == RHS) {
+      if (Pred == ICmpInst::ICMP_ULE)
+        return ConstantInt::getTrue(getCompareTy(II));
+      if (Pred == ICmpInst::ICMP_UGT)
+        return ConstantInt::getFalse(getCompareTy(II));
+    }
+    return nullptr;
+  default:
+    return nullptr;
+  }
+}
+
 /// Given operands for an ICmpInst, see if we can fold the result.
 /// If not, this returns null.
 static Value *simplifyICmpInst(unsigned Predicate, Value *LHS, Value *RHS,
@@ -3944,6 +3974,12 @@ static Value *simplifyICmpInst(unsigned Predicate, Value *LHS, Value *RHS,
     return V;
 
   if (Value *V = simplifyICmpWithMinMax(Pred, LHS, RHS, Q, MaxRecurse))
+    return V;
+
+  if (Value *V = simplifyICmpWithIntrinsicOnLHS(Pred, LHS, RHS))
+    return V;
+  if (Value *V = simplifyICmpWithIntrinsicOnLHS(
+          ICmpInst::getSwappedPredicate(Pred), RHS, LHS))
     return V;
 
   if (Value *V = simplifyICmpWithDominatingAssume(Pred, LHS, RHS, Q))

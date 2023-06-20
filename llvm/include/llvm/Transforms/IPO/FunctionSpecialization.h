@@ -143,6 +143,8 @@ private:
   Cost estimateBranchInst(BranchInst &I);
 
   Constant *visitInstruction(Instruction &I) { return nullptr; }
+  Constant *visitFreezeInst(FreezeInst &I);
+  Constant *visitCallBase(CallBase &I);
   Constant *visitLoadInst(LoadInst &I);
   Constant *visitGetElementPtrInst(GetElementPtrInst &I);
   Constant *visitSelectInst(SelectInst &I);
@@ -204,19 +206,15 @@ private:
   /// is a function argument.
   Constant *getConstantStackValue(CallInst *Call, Value *Val);
 
-  /// Iterate over the argument tracked functions see if there
-  /// are any new constant values for the call instruction via
-  /// stack variables.
-  void promoteConstantStackValues();
+  /// See if there are any new constant values for the callers of \p F via
+  /// stack variables and promote them to global variables.
+  void promoteConstantStackValues(Function *F);
 
   /// Clean up fully specialized functions.
   void removeDeadFunctions();
 
   /// Remove any ssa_copy intrinsics that may have been introduced.
   void cleanUpSSA();
-
-  // Compute the code metrics for function \p F.
-  CodeMetrics &analyzeFunction(Function *F);
 
   /// @brief  Find potential specialization opportunities.
   /// @param F Function to specialize
@@ -235,9 +233,6 @@ private:
   /// @param S Which specialization to create
   /// @return The new, cloned function
   Function *createSpecialization(Function *F, const SpecSig &S);
-
-  /// Compute and return the cost of specializing function \p F.
-  Cost getSpecializationCost(Function *F);
 
   /// Determine if it is possible to specialise the function for constant values
   /// of the formal parameter \p A.

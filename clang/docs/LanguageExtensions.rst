@@ -645,6 +645,10 @@ Unless specified otherwise operation(±0) = ±0 and operation(±infinity) = ±in
                                              rounding halfway cases to even (that is, to the nearest value
                                              that is an even integer), regardless of the current rounding
                                              direction.
+ T __builtin_elementwise_round(T x)          round x to the nearest  integer value in floating point format,      floating point types
+                                             rounding halfway cases away from zero, regardless of the
+                                             current rounding direction. May raise floating-point
+                                             exceptions.
  T __builtin_elementwise_trunc(T x)          return the integral value nearest to but no larger in            floating point types
                                              magnitude than x
  T __builtin_elementwise_canonicalize(T x)   return the platform specific canonical encoding                  floating point types

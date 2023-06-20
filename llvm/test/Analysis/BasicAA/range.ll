@@ -239,6 +239,26 @@ define void @benign_overflow(ptr %p, i64 %o) {
   ret void
 }
 
+; FIXME: This is a miscompile
+; CHECK-LABEL: pr63266
+; CHECK: NoAlias:	i8* %gep2, i8* %offset16
+define void @pr63266(i1 %c, ptr %base) {
+entry:
+  %offset16 = getelementptr inbounds i8, ptr %base, i64 16
+  %gep1 = getelementptr i8, ptr %base, i64 -9223372036854775792
+  br i1 %c, label %if, label %join
+
+if:
+  br label %join
+
+join:
+  %phi = phi i64 [ -9223372036854775808, %if ], [ 0, %entry ]
+  %gep2 = getelementptr i8, ptr %gep1, i64 %phi
+  store i8 0, ptr %gep2
+  load i8, ptr %offset16
+  ret void
+}
+
 declare void @llvm.assume(i1)
 
 

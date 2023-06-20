@@ -817,39 +817,48 @@ uint64_t Relocation::getRelative() {
 
 size_t Relocation::emit(MCStreamer *Streamer) const {
   const size_t Size = getSizeForType(Type);
+  const auto *Value = createExpr(Streamer);
+  Streamer->emitValue(Value, Size);
+  return Size;
+}
+
+const MCExpr *Relocation::createExpr(MCStreamer *Streamer) const {
   MCContext &Ctx = Streamer->getContext();
+  const MCExpr *Value = nullptr;
+
+  if (Symbol && Addend) {
+    Value = MCBinaryExpr::createAdd(MCSymbolRefExpr::create(Symbol, Ctx),
+                                    MCConstantExpr::create(Addend, Ctx), Ctx);
+  } else if (Symbol) {
+    Value = MCSymbolRefExpr::create(Symbol, Ctx);
+  } else {
+    Value = MCConstantExpr::create(Addend, Ctx);
+  }
+
   if (isPCRelative(Type)) {
     MCSymbol *TempLabel = Ctx.createNamedTempSymbol();
     Streamer->emitLabel(TempLabel);
-    const MCExpr *Value = nullptr;
-    if (Symbol) {
-      Value = MCSymbolRefExpr::create(Symbol, Ctx);
-      if (Addend) {
-        Value = MCBinaryExpr::createAdd(
-            Value, MCConstantExpr::create(Addend, Ctx), Ctx);
-      }
-    } else {
-      Value = MCConstantExpr::create(Addend, Ctx);
-    }
     Value = MCBinaryExpr::createSub(
         Value, MCSymbolRefExpr::create(TempLabel, Ctx), Ctx);
-    Streamer->emitValue(Value, Size);
-
-    return Size;
   }
 
-  if (Symbol && Addend) {
-    auto Value =
-        MCBinaryExpr::createAdd(MCSymbolRefExpr::create(Symbol, Ctx),
-                                MCConstantExpr::create(Addend, Ctx), Ctx);
-    Streamer->emitValue(Value, Size);
-  } else if (Symbol) {
-    Streamer->emitSymbolValue(Symbol, Size);
-  } else {
-    Streamer->emitIntValue(Addend, Size);
+  return Value;
+}
+
+const MCExpr *Relocation::createExpr(MCStreamer *Streamer,
+                                     const MCExpr *RetainedValue) const {
+  const auto *Value = createExpr(Streamer);
+
+  if (RetainedValue) {
+    Value = MCBinaryExpr::create(getComposeOpcodeFor(Type), RetainedValue,
+                                 Value, Streamer->getContext());
   }
 
-  return Size;
+  return Value;
+}
+
+MCBinaryExpr::Opcode Relocation::getComposeOpcodeFor(uint64_t Type) {
+  llvm_unreachable("not implemented");
 }
 
 #define ELF_RELOC(name, value) #name,

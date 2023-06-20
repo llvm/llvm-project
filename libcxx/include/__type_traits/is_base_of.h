@@ -19,8 +19,7 @@
 _LIBCPP_BEGIN_NAMESPACE_STD
 
 template <class _Bp, class _Dp>
-struct _LIBCPP_TEMPLATE_VIS is_base_of
-    : public integral_constant<bool, __is_base_of(_Bp, _Dp)> {};
+struct _LIBCPP_TEMPLATE_VIS is_base_of : public integral_constant<bool, __is_base_of(_Bp, _Dp)> {};
 
 #if _LIBCPP_STD_VER >= 17
 template <class _Bp, class _Dp>

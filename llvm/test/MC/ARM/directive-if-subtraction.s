@@ -1,5 +1,5 @@
 // RUN: llvm-mc -triple armv7a-linux-gnueabihf %s -filetype=obj -o /dev/null 2>&1 | FileCheck --check-prefix=OBJ --allow-empty %s
-// RUN: not llvm-mc -triple armv7a-linux-gnueabihf %s -o /dev/null 2>&1 | FileCheck --check-prefix=ASM %s
+// RUN: not llvm-mc -triple armv7a-linux-gnueabihf %s -o /dev/null 2>&1 | FileCheck --check-prefix=ASM %s --implicit-check-not=error:
 // RUN: llvm-mc -triple armv7a-linux-gnueabihf %s -filetype=obj -o - | llvm-objdump -d - | FileCheck --check-prefix=DISASM %s
 
 nop
@@ -32,7 +32,6 @@ orr r1, r1, #2
       .space 4
       nop
 .if . - 9997b == 4
-// ARM-ERR:[[@LINE-1]]:5: error: expected absolute expression
 .endif
 
 9997:

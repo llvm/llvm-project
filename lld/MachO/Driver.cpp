@@ -1367,9 +1367,10 @@ static void handleExplicitExports() {
   }
 }
 
-bool macho::link(ArrayRef<const char *> argsArr, llvm::raw_ostream &stdoutOS,
-                 llvm::raw_ostream &stderrOS, bool exitEarly,
-                 bool disableOutput) {
+namespace lld {
+namespace macho {
+bool link(ArrayRef<const char *> argsArr, llvm::raw_ostream &stdoutOS,
+          llvm::raw_ostream &stderrOS, bool exitEarly, bool disableOutput) {
   // This driver-specific context will be freed later by lldMain().
   auto *ctx = new CommonLinkerContext;
 
@@ -1968,3 +1969,5 @@ bool macho::link(ArrayRef<const char *> argsArr, llvm::raw_ostream &stdoutOS,
 
   return errorCount() == 0;
 }
+} // namespace macho
+} // namespace lld

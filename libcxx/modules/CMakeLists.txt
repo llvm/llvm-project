@@ -56,6 +56,7 @@ set(LIBCXX_SOURCES_MODULE_STD
   std/functional.cppm
   std/future.cppm
   std/generator.cppm
+  std/hazard_pointer.cppm
   std/initializer_list.cppm
   std/iomanip.cppm
   std/ios.cppm
@@ -83,6 +84,7 @@ set(LIBCXX_SOURCES_MODULE_STD
   std/random.cppm
   std/ranges.cppm
   std/ratio.cppm
+  std/rcu.cppm
   std/regex.cppm
   std/scoped_allocator.cppm
   std/semaphore.cppm
@@ -104,6 +106,7 @@ set(LIBCXX_SOURCES_MODULE_STD
   std/strstream.cppm
   std/syncstream.cppm
   std/system_error.cppm
+  std/text_encoding.cppm
   std/thread.cppm
   std/tuple.cppm
   std/type_traits.cppm

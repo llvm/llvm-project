@@ -64,9 +64,6 @@ export namespace std {
   // [re.submatch.op], sub_match non-member operators
   using std::operator==;
   using std::operator<=>;
-#  if 1 // P1614
-  using std::operator!=;
-#  endif
 
   using std::operator<<;
 

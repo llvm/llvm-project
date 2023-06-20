@@ -283,6 +283,33 @@ ExecutionEngine::create(Operation *m, const ExecutionEngineOptions &options,
         return absPath;
       });
 
+  // If shared library implements custom execution layer library init and
+  // destroy functions, we'll use them to register the library. Otherwise, load
+  // the library as JITDyLib below.
+  llvm::StringMap<void *> exportSymbols;
+  SmallVector<LibraryDestroyFn> destroyFns;
+  SmallVector<StringRef> jitDyLibPaths;
+
+  for (auto &libPath : sharedLibPaths) {
+    auto lib = llvm::sys::DynamicLibrary::getPermanentLibrary(
+        libPath.str().str().c_str());
+    void *initSym = lib.getAddressOfSymbol(kLibraryInitFnName);
+    void *destroySim = lib.getAddressOfSymbol(kLibraryDestroyFnName);
+
+    // Library does not provide call backs, rely on symbol visiblity.
+    if (!initSym || !destroySim) {
+      jitDyLibPaths.push_back(libPath);
+      continue;
+    }
+
+    auto initFn = reinterpret_cast<LibraryInitFn>(initSym);
+    initFn(exportSymbols);
+
+    auto destroyFn = reinterpret_cast<LibraryDestroyFn>(destroySim);
+    destroyFns.push_back(destroyFn);
+  }
+  engine->destroyFns = std::move(destroyFns);
+
   // Callback to create the object layer with symbol resolution to current
   // process and dynamically linked libraries.
   auto objectLinkingLayerCreator = [&](ExecutionSession &session,
@@ -308,7 +335,7 @@ ExecutionEngine::create(Operation *m, const ExecutionEngineOptions &options,
     }
 
     // Resolve symbols from shared libraries.
-    for (auto &libPath : sharedLibPaths) {
+    for (auto &libPath : jitDyLibPaths) {
       auto mb = llvm::MemoryBuffer::getFile(libPath);
       if (!mb) {
         errs() << "Failed to create MemoryBuffer for: " << libPath
@@ -317,7 +344,7 @@ ExecutionEngine::create(Operation *m, const ExecutionEngineOptions &options,
       }
       auto &jd = session.createBareJITDylib(std::string(libPath));
       auto loaded = DynamicLibrarySearchGenerator::Load(
-          libPath.str().str().c_str(), dataLayout.getGlobalPrefix());
+          libPath.str().c_str(), dataLayout.getGlobalPrefix());
       if (!loaded) {
         errs() << "Could not load " << libPath << ":\n  " << loaded.takeError()
                << "\n";
@@ -361,31 +388,6 @@ ExecutionEngine::create(Operation *m, const ExecutionEngineOptions &options,
   mainJD.addGenerator(
       cantFail(DynamicLibrarySearchGenerator::GetForCurrentProcess(
           dataLayout.getGlobalPrefix())));
-
-  // If shared library implements custom execution layer library init and
-  // destroy functions, we'll use them to register the library.
-
-  llvm::StringMap<void *> exportSymbols;
-  SmallVector<LibraryDestroyFn> destroyFns;
-
-  for (auto &libPath : sharedLibPaths) {
-    auto lib = llvm::sys::DynamicLibrary::getPermanentLibrary(
-        libPath.str().str().c_str());
-    void *initSym = lib.getAddressOfSymbol(kLibraryInitFnName);
-    void *destroySim = lib.getAddressOfSymbol(kLibraryDestroyFnName);
-
-    // Library does not provide call backs, rely on symbol visiblity.
-    if (!initSym || !destroySim) {
-      continue;
-    }
-
-    auto initFn = reinterpret_cast<LibraryInitFn>(initSym);
-    initFn(exportSymbols);
-
-    auto destroyFn = reinterpret_cast<LibraryDestroyFn>(destroySim);
-    destroyFns.push_back(destroyFn);
-  }
-  engine->destroyFns = std::move(destroyFns);
 
   // Build a runtime symbol map from the exported symbols and register them.
   auto runtimeSymbolMap = [&](llvm::orc::MangleAndInterner interner) {
