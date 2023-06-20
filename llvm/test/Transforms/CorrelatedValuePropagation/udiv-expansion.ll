@@ -298,3 +298,19 @@ define i8 @large.divisor.with.overflow.v2.unbound.x(i8 %x) {
   %div = udiv i8 %x, 128
   ret i8 %div
 }
+
+define i8 @known_uge(i8 noundef %x) {
+; CHECK-LABEL: @known_uge(
+; CHECK-NEXT:    [[CMP_X_UPPER:%.*]] = icmp ult i8 [[X:%.*]], 6
+; CHECK-NEXT:    call void @llvm.assume(i1 [[CMP_X_UPPER]])
+; CHECK-NEXT:    [[CMP_X_LOWER:%.*]] = icmp uge i8 [[X]], 3
+; CHECK-NEXT:    call void @llvm.assume(i1 [[CMP_X_LOWER]])
+; CHECK-NEXT:    ret i8 1
+;
+  %cmp.x.upper = icmp ult i8 %x, 6
+  call void @llvm.assume(i1 %cmp.x.upper)
+  %cmp.x.lower = icmp uge i8 %x, 3
+  call void @llvm.assume(i1 %cmp.x.lower)
+  %div = udiv i8 %x, 3
+  ret i8 %div
+}

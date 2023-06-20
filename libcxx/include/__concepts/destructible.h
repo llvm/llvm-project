@@ -22,7 +22,7 @@ _LIBCPP_BEGIN_NAMESPACE_STD
 
 // [concept.destructible]
 
-template<class _Tp>
+template <class _Tp>
 concept destructible = is_nothrow_destructible_v<_Tp>;
 
 #endif // _LIBCPP_STD_VER >= 20

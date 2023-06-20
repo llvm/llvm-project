@@ -159,7 +159,6 @@ define amdgpu_kernel void @global_atomic_csub_sgpr_base_offset_nortn(ptr addrspa
 ; GFX11-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX11-NEXT:    v_dual_mov_b32 v1, 0x1000 :: v_dual_mov_b32 v0, s2
 ; GFX11-NEXT:    global_atomic_csub_u32 v0, v1, v0, s[0:1] glc
-; GFX11-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-NEXT:    s_endpgm
   %gep = getelementptr i32, ptr addrspace(1) %ptr, i64 1024
   %ret = call i32 @llvm.amdgcn.global.atomic.csub.p1(ptr addrspace(1) %gep, i32 %data)
