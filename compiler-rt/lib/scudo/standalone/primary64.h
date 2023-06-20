@@ -160,31 +160,28 @@ public:
     }
 
     bool PrintStats = false;
+    TransferBatch *B = nullptr;
 
     while (true) {
       // When two threads compete for `Region->MMLock`, we only want one of them
-      // to call populateFreeList(). To avoid both of them doing that, always
-      // check the freelist before mapping new pages.
+      // does the populateFreeListAndPopBatch(). To avoid both of them doing
+      // that, always check the freelist before mapping new pages.
       //
       // TODO(chiahungduan): Use a condition variable so that we don't need to
       // hold `Region->MMLock` here.
       ScopedLock ML(Region->MMLock);
       {
         ScopedLock FL(Region->FLLock);
-        TransferBatch *B = popBatchImpl(C, ClassId, Region);
+        B = popBatchImpl(C, ClassId, Region);
         if (LIKELY(B))
           return B;
       }
 
       const bool RegionIsExhausted = Region->Exhausted;
-      if (!RegionIsExhausted) {
-        // TODO: Make sure the one who does populateFreeList() gets one Batch
-        // here.
-        populateFreeList(C, ClassId, Region);
-      }
+      if (!RegionIsExhausted)
+        B = populateFreeListAndPopBatch(C, ClassId, Region);
       PrintStats = !RegionIsExhausted && Region->Exhausted;
-      if (Region->Exhausted)
-        break;
+      break;
     }
 
     // Note that `getStats()` requires locking each region so we can't call it
@@ -198,7 +195,7 @@ public:
       Str.output();
     }
 
-    return nullptr;
+    return B;
   }
 
   // Push the array of free blocks to the designated batch group.
@@ -214,22 +211,32 @@ public:
       // cause a recursive allocation). However, The number of free blocks may
       // be less than two. Therefore, populate the freelist before inserting the
       // blocks.
+      TransferBatch *B = nullptr;
       while (true) {
         // TODO(chiahungduan): Move the lock right before the call of
-        // populateFreeList() by using a condition variable. See more details in
-        // the comment of popBatch().
+        // populateFreeListAndPopBatch() by using condition variable. See more
+        // details in the comment of popBatch().
         ScopedLock L(Region->MMLock);
         {
           ScopedLock L(Region->FLLock);
-          const bool NeedToRefill =
-              Size == 1U && Region->FreeListInfo.BlockList.empty();
-          if (!NeedToRefill) {
+          const bool NeedToRefill = Size == 1U &&
+                                    Region->FreeListInfo.BlockList.empty() &&
+                                    B == nullptr;
+          if (UNLIKELY(!NeedToRefill)) {
+            if (UNLIKELY(B)) {
+              pushBlocksImpl(C, SizeClassMap::BatchClassId, Region,
+                             B->getRawArray(), B->getCount());
+              CHECK(!Region->FreeListInfo.BlockList.empty());
+            }
             pushBlocksImpl(C, SizeClassMap::BatchClassId, Region, Array, Size);
             return;
           }
         }
 
-        if (UNLIKELY(!populateFreeList(C, SizeClassMap::BatchClassId, Region)))
+        // Note that this batch will be pushed again and it's only used to
+        // ensure we have enough blocks to construct batch group.
+        B = populateFreeListAndPopBatch(C, SizeClassMap::BatchClassId, Region);
+        if (!B)
           break;
       }
 
@@ -779,7 +786,9 @@ private:
     return B;
   }
 
-  NOINLINE bool populateFreeList(CacheT *C, uptr ClassId, RegionInfo *Region)
+  // Refill the freelist and return one batch.
+  NOINLINE TransferBatch *populateFreeListAndPopBatch(CacheT *C, uptr ClassId,
+                                                      RegionInfo *Region)
       REQUIRES(Region->MMLock) EXCLUDES(Region->FLLock) {
     const uptr Size = getSizeByClassId(ClassId);
     const u16 MaxCount = TransferBatch::getMaxCached(Size);
@@ -796,7 +805,7 @@ private:
       const uptr RegionBase = RegionBeg - getRegionBaseByClassId(ClassId);
       if (UNLIKELY(RegionBase + MappedUser + MapSize > RegionSize)) {
         Region->Exhausted = true;
-        return false;
+        return nullptr;
       }
       // TODO: Consider allocating MemMap in init().
       if (!Region->MemMapInfo.MemMap.isAllocated()) {
@@ -810,7 +819,7 @@ private:
               MAP_ALLOWNOMEM | MAP_RESIZABLE |
                   (useMemoryTagging<Config>(Options.load()) ? MAP_MEMTAG
                                                             : 0)))) {
-        return false;
+        return nullptr;
       }
       Region->MemMapInfo.MappedUser += MapSize;
       C->getStats().add(StatMapped, MapSize);
@@ -858,6 +867,9 @@ private:
                      /*SameGroup=*/true);
     }
 
+    TransferBatch *B = popBatchImpl(C, ClassId, Region);
+    DCHECK_NE(B, nullptr);
+
     // Note that `PushedBlocks` and `PoppedBlocks` are supposed to only record
     // the requests from `PushBlocks` and `PopBatch` which are external
     // interfaces. `populateFreeListAndPopBatch` is the internal interface so we
@@ -868,7 +880,7 @@ private:
     C->getStats().add(StatFree, AllocatedUser);
     Region->MemMapInfo.AllocatedUser += AllocatedUser;
 
-    return true;
+    return B;
   }
 
   void getStats(ScopedString *Str, uptr ClassId, RegionInfo *Region, uptr Rss)
