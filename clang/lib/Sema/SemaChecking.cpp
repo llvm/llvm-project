@@ -8404,14 +8404,15 @@ bool Sema::SemaBuiltinUnorderedCompare(CallExpr *TheCall) {
 
 /// SemaBuiltinSemaBuiltinFPClassification - Handle functions like
 /// __builtin_isnan and friends.  This is declared to take (...), so we have
-/// to check everything. We expect the last argument to be a floating point
-/// value.
+/// to check everything.
 bool Sema::SemaBuiltinFPClassification(CallExpr *TheCall, unsigned NumArgs) {
   if (checkArgCount(*this, TheCall, NumArgs))
     return true;
 
+  bool IsFPClass = NumArgs == 2;
+
   // Find out position of floating-point argument.
-  unsigned FPArgNo = (NumArgs == 2) ? 0 : NumArgs - 1;
+  unsigned FPArgNo = IsFPClass ? 0 : NumArgs - 1;
 
   // We can count on all parameters preceding the floating-point just being int.
   // Try all of those.
@@ -8442,17 +8443,36 @@ bool Sema::SemaBuiltinFPClassification(CallExpr *TheCall, unsigned NumArgs) {
     OrigArg = DefaultFunctionArrayLvalueConversion(OrigArg).get();
   TheCall->setArg(FPArgNo, OrigArg);
 
+  QualType VectorResultTy;
+  QualType ElementTy = OrigArg->getType();
+  // TODO: When all classification function are implemented with is_fpclass,
+  // vector argument can be supported in all of them.
+  if (ElementTy->isVectorType() && IsFPClass) {
+    VectorResultTy = GetSignedVectorType(ElementTy);
+    ElementTy = ElementTy->getAs<VectorType>()->getElementType();
+  }
+
   // This operation requires a non-_Complex floating-point number.
-  if (!OrigArg->getType()->isRealFloatingType())
+  if (!ElementTy->isRealFloatingType())
     return Diag(OrigArg->getBeginLoc(),
                 diag::err_typecheck_call_invalid_unary_fp)
            << OrigArg->getType() << OrigArg->getSourceRange();
 
   // __builtin_isfpclass has integer parameter that specify test mask. It is
   // passed in (...), so it should be analyzed completely here.
-  if (NumArgs == 2)
+  if (IsFPClass)
     if (SemaBuiltinConstantArgRange(TheCall, 1, 0, llvm::fcAllFlags))
       return true;
+
+  // TODO: enable this code to all classification functions.
+  if (IsFPClass) {
+    QualType ResultTy;
+    if (!VectorResultTy.isNull())
+      ResultTy = VectorResultTy;
+    else
+      ResultTy = Context.IntTy;
+    TheCall->setType(ResultTy);
+  }
 
   return false;
 }

@@ -3516,18 +3516,15 @@ Floating point builtins
 ``__builtin_isfpclass``
 -----------------------
 
-``__builtin_isfpclass`` is used to test if the specified floating-point value
-falls into one of the specified floating-point classes.
+``__builtin_isfpclass`` is used to test if the specified floating-point values
+fall into one of the specified floating-point classes.
 
 **Syntax**:
 
 .. code-block:: c++
 
     int __builtin_isfpclass(fp_type expr, int mask)
-
-``fp_type`` is a floating-point type supported by the target. ``mask`` is an
-integer constant expression, where each bit represents floating-point class to
-test. The function returns boolean value.
+    int_vector __builtin_isfpclass(fp_vector expr, int mask)
 
 **Example of use**:
 
@@ -3543,8 +3540,9 @@ test. The function returns boolean value.
 The ``__builtin_isfpclass()`` builtin is a generalization of functions ``isnan``,
 ``isinf``, ``isfinite`` and some others defined by the C standard. It tests if
 the floating-point value, specified by the first argument, falls into any of data
-classes, specified by the second argument. The later is a bitmask, in which each
-data class is represented by a bit using the encoding:
+classes, specified by the second argument. The latter is an integer constant
+bitmask expression, in which each data class is represented by a bit
+using the encoding:
 
 ========== =================== ======================
 Mask value Data class          Macro
@@ -3571,6 +3569,14 @@ these data classes. Using suitable mask value, the function can implement any of
 the standard classification functions, for example, ``__builtin_isfpclass(x, 3)``
 is identical to ``isnan``,``__builtin_isfpclass(x, 504)`` - to ``isfinite``
 and so on.
+
+If the first argument is a vector, the function is equivalent to the set of
+scalar calls of ``__builtin_isfpclass`` applied to the input elementwise.
+
+The result of ``__builtin_isfpclass`` is a boolean value, if the first argument
+is a scalar, or an integer vector with the same element count as the first
+argument. The element type in this vector has the same bit length as the
+element of the the first argument type.
 
 This function never raises floating-point exceptions and does not canonicalize
 its input. The floating-point argument is not promoted, its data class is
