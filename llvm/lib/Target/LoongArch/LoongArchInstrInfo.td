@@ -82,14 +82,14 @@ def loongarch_crc_w_w_w
     : SDNode<"LoongArchISD::CRC_W_W_W", SDT_LoongArchIntBinOpW, [SDNPHasChain]>;
 def loongarch_crc_w_d_w
     : SDNode<"LoongArchISD::CRC_W_D_W", SDT_LoongArchIntBinOpW, [SDNPHasChain]>;
-def loongarch_crcc_w_b_w
-    : SDNode<"LoongArchISD::CRCC_W_B_W", SDT_LoongArchIntBinOpW, [SDNPHasChain]>;
-def loongarch_crcc_w_h_w
-    : SDNode<"LoongArchISD::CRCC_W_H_W", SDT_LoongArchIntBinOpW, [SDNPHasChain]>;
-def loongarch_crcc_w_w_w
-    : SDNode<"LoongArchISD::CRCC_W_W_W", SDT_LoongArchIntBinOpW, [SDNPHasChain]>;
-def loongarch_crcc_w_d_w
-    : SDNode<"LoongArchISD::CRCC_W_D_W", SDT_LoongArchIntBinOpW, [SDNPHasChain]>;
+def loongarch_crcc_w_b_w : SDNode<"LoongArchISD::CRCC_W_B_W",
+                                  SDT_LoongArchIntBinOpW, [SDNPHasChain]>;
+def loongarch_crcc_w_h_w : SDNode<"LoongArchISD::CRCC_W_H_W",
+                                  SDT_LoongArchIntBinOpW, [SDNPHasChain]>;
+def loongarch_crcc_w_w_w : SDNode<"LoongArchISD::CRCC_W_W_W",
+                                  SDT_LoongArchIntBinOpW, [SDNPHasChain]>;
+def loongarch_crcc_w_d_w : SDNode<"LoongArchISD::CRCC_W_D_W",
+                                  SDT_LoongArchIntBinOpW, [SDNPHasChain]>;
 def loongarch_bstrins
     : SDNode<"LoongArchISD::BSTRINS", SDT_LoongArchBStrIns>;
 def loongarch_bstrpick
@@ -106,10 +106,11 @@ def loongarch_ibar : SDNode<"LoongArchISD::IBAR", SDT_LoongArchVI,
                              [SDNPHasChain, SDNPSideEffect]>;
 def loongarch_break : SDNode<"LoongArchISD::BREAK", SDT_LoongArchVI,
                               [SDNPHasChain, SDNPSideEffect]>;
-def loongarch_movfcsr2gr : SDNode<"LoongArchISD::MOVFCSR2GR", SDT_LoongArchMovfcsr2gr,
-                                  [SDNPHasChain]>;
-def loongarch_movgr2fcsr : SDNode<"LoongArchISD::MOVGR2FCSR", SDT_LoongArchMovgr2fcsr,
-                                   [SDNPHasChain, SDNPSideEffect]>;
+def loongarch_movfcsr2gr : SDNode<"LoongArchISD::MOVFCSR2GR",
+                                  SDT_LoongArchMovfcsr2gr, [SDNPHasChain]>;
+def loongarch_movgr2fcsr : SDNode<"LoongArchISD::MOVGR2FCSR",
+                                  SDT_LoongArchMovgr2fcsr,
+                                  [SDNPHasChain, SDNPSideEffect]>;
 def loongarch_syscall : SDNode<"LoongArchISD::SYSCALL", SDT_LoongArchVI,
                                 [SDNPHasChain, SDNPSideEffect]>;
 def loongarch_csrrd : SDNode<"LoongArchISD::CSRRD", SDT_LoongArchCsrrd,
