@@ -5713,6 +5713,8 @@ bool DeclarationVisitor::Pre(const parser::BasedPointerStmt &x) {
       Say(pointerName.source, "Cray pointer '%s' must have type %s"_err_en_US,
           pointerName.source, pointerType.AsFortran());
     }
+    // pmk: change parse tree to use DimensionStmt::Declaration in BasedPointerStmt, then change this
+    // routine to a Post()
     if (ResolveName(pointeeName)) {
       Symbol &pointee{*pointeeName.symbol};
       if (pointee.has<UseDetails>()) {
