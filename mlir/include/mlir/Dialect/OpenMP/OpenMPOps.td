@@ -978,8 +978,8 @@ def Target_DataOp: OpenMP_Op<"target_data", [AttrSizedOperandSegments]>{
 
   let arguments = (ins Optional<I1>:$if_expr,
                        Optional<AnyInteger>:$device,
-                       Variadic<AnyType>:$use_device_ptr,
-                       Variadic<AnyType>:$use_device_addr,
+                       Variadic<OpenMP_PointerLikeType>:$use_device_ptr,
+                       Variadic<OpenMP_PointerLikeType>:$use_device_addr,
                        Variadic<OpenMP_PointerLikeType>:$map_operands,
                        I64ArrayAttr:$map_types);
 
@@ -987,10 +987,10 @@ def Target_DataOp: OpenMP_Op<"target_data", [AttrSizedOperandSegments]>{
 
   let assemblyFormat = [{
     oilist(`if` `(` $if_expr `:` type($if_expr) `)`
-    | `device` `(` $device `:` type($device) `)`
-    | `use_device_ptr` `(` $use_device_ptr `:` type($use_device_ptr) `)`
-    | `use_device_addr` `(` $use_device_addr `:` type($use_device_addr) `)`)
+    | `device` `(` $device `:` type($device) `)`)
     `map` `(` custom<MapClause>($map_operands, type($map_operands), $map_types) `)`
+    oilist(`use_device_ptr` `(` $use_device_ptr `:` type($use_device_ptr) `)`
+    | `use_device_addr` `(` $use_device_addr `:` type($use_device_addr) `)`)
     $region attr-dict
   }];
 
