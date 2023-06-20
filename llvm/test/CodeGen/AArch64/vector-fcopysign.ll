@@ -462,9 +462,8 @@ define <8 x half> @test_copysign_v8f16_v8f32(<8 x half> %a, <8 x float> %b) #0 {
 ;
 ; FP16-LABEL: test_copysign_v8f16_v8f32:
 ; FP16:       ; %bb.0:
-; FP16-NEXT:    fcvtn v2.4h, v2.4s
 ; FP16-NEXT:    fcvtn v1.4h, v1.4s
-; FP16-NEXT:    mov.d v1[1], v2[0]
+; FP16-NEXT:    fcvtn2 v1.8h, v2.4s
 ; FP16-NEXT:    mvni.8h v2, #128, lsl #8
 ; FP16-NEXT:    bif.16b v0, v1, v2
 ; FP16-NEXT:    ret
