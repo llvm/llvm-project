@@ -397,6 +397,9 @@ public:
   /// Assigns `Val` as the value of `Loc` in the environment.
   void setValue(const StorageLocation &Loc, Value &Val);
 
+  /// Clears any association between `Loc` and a value in the environment.
+  void clearValue(const StorageLocation &Loc);
+
   /// Assigns `Val` as the value of the prvalue `E` in the environment.
   ///
   /// If `E` is not yet associated with a storage location, associates it with
