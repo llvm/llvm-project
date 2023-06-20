@@ -14,7 +14,7 @@
   printf("after calling the custom logging...\n");
 }
 
-static void myprinter(uint16_t type, const void *ptr, size_t size) {
+static void myprinter(size_t type, const void *ptr, size_t size) {
   assert(type == 42);
   printf("%.*s\n", static_cast<int>(size), static_cast<const char*>(ptr));
 }
