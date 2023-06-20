@@ -394,8 +394,8 @@ class Image:
         else:
             return "error: no section infos"
 
-    def add_module(self, target):
-        """Add the Image described in this object to "target" and load the sections if "load" is True."""
+    def add_module(self, target, obj_dir=None):
+        '''Add the Image described in this object to "target" and load the sections if "load" is True.'''
         if target:
             # Try and find using UUID only first so that paths need not match
             # up
@@ -411,7 +411,7 @@ class Image:
                     )
             if not self.module and self.section_infos:
                 name = os.path.basename(self.path)
-                with tempfile.NamedTemporaryFile(suffix="." + name) as tf:
+                if obj_dir and os.path.isdir(obj_dir):
                     data = {
                         "triple": target.triple,
                         "uuid": uuid_str,
@@ -420,16 +420,20 @@ class Image:
                         "symbols": list(),
                     }
                     for section in self.section_infos:
-                        data["sections"].append(
-                            {
-                                "name": section.name,
-                                "size": section.end_addr - section.start_addr,
-                            }
-                        )
-                    data["symbols"] = list(self.symbols.values())
-                    with open(tf.name, "w") as f:
+                        data['sections'].append({
+                            'name' : section.name,
+                            'size': section.end_addr - section.start_addr
+                            })
+                    data['symbols'] = list(self.symbols.values())
+                    obj_file = os.path.join(obj_dir, name)
+                    with open(obj_file, "w") as f:
                         f.write(json.dumps(data, indent=4))
-                    self.module = target.AddModule(tf.name, None, uuid_str)
+                    self.module = target.AddModule(obj_file, None, uuid_str)
+                    if self.module:
+                        # If we were able to add the module with inlined
+                        # symbols, we should mark it as available so load_module
+                        # does not exit early.
+                        self.unavailable = False
             if not self.module and not self.unavailable:
                 return 'error: unable to get module for (%s) "%s"' % (
                     self.arch,
