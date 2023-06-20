@@ -1126,11 +1126,13 @@ struct AAPointerInfoImpl
     };
 
     // TODO: Use inter-procedural reachability and dominance.
-    const auto *NoRecurseAA = A.getAAFor<AANoRecurse>(
-        QueryingAA, IRPosition::function(Scope), DepClassTy::OPTIONAL);
+    bool IsKnownNoRecurse;
+    AA::hasAssumedIRAttr<Attribute::NoRecurse>(
+        A, *this, IRPosition::function(Scope), DepClassTy::OPTIONAL,
+        IsKnownNoRecurse);
 
     const bool UseDominanceReasoning =
-        FindInterferingWrites && NoRecurseAA && NoRecurseAA->isKnownNoRecurse();
+        FindInterferingWrites && IsKnownNoRecurse;
     const DominatorTree *DT =
         InfoCache.getAnalysisResultForFunction<DominatorTreeAnalysis>(Scope);
 
@@ -1161,9 +1163,10 @@ struct AAPointerInfoImpl
       // If the alloca containing function is not recursive the alloca
       // must be dead in the callee.
       const Function *AIFn = AI->getFunction();
-      const auto *NoRecurseAA = A.getAAFor<AANoRecurse>(
-          *this, IRPosition::function(*AIFn), DepClassTy::OPTIONAL);
-      if (NoRecurseAA && NoRecurseAA->isAssumedNoRecurse()) {
+      bool IsKnownNoRecurse;
+      if (AA::hasAssumedIRAttr<Attribute::NoRecurse>(
+              A, *this, IRPosition::function(*AIFn), DepClassTy::OPTIONAL,
+              IsKnownNoRecurse)) {
         IsLiveInCalleeCB = [AIFn](const Function &Fn) { return AIFn != &Fn; };
       }
     } else if (auto *GV = dyn_cast<GlobalValue>(&getAssociatedValue())) {
@@ -1947,10 +1950,9 @@ struct AAPointerInfoCallSiteArgument final : AAPointerInfoFloating {
         return indicatePessimisticFixpoint();
     }
 
-    const auto *NoCaptureAA =
-        A.getAAFor<AANoCapture>(*this, getIRPosition(), DepClassTy::OPTIONAL);
-
-    if (!NoCaptureAA || !NoCaptureAA->isAssumedNoCapture())
+    bool IsKnownNoCapture;
+    if (!AA::hasAssumedIRAttr<Attribute::NoCapture>(
+            A, *this, getIRPosition(), DepClassTy::OPTIONAL, IsKnownNoCapture))
       return indicatePessimisticFixpoint();
 
     bool IsKnown = false;
@@ -2002,9 +2004,10 @@ struct AANoUnwindImpl : AANoUnwind {
         return true;
 
       if (const auto *CB = dyn_cast<CallBase>(&I)) {
-        const auto *NoUnwindAA = A.getAAFor<AANoUnwind>(
-            *this, IRPosition::callsite_function(*CB), DepClassTy::REQUIRED);
-        return NoUnwindAA && NoUnwindAA->isAssumedNoUnwind();
+        bool IsKnown;
+        return AA::hasAssumedIRAttr<Attribute::NoUnwind>(
+            A, *this, IRPosition::callsite_function(*CB), DepClassTy::REQUIRED,
+            IsKnown);
       }
       return false;
     };
@@ -2047,10 +2050,11 @@ struct AANoUnwindCallSite final : AANoUnwindImpl {
     //       redirecting requests to the callee argument.
     Function *F = getAssociatedFunction();
     const IRPosition &FnPos = IRPosition::function(*F);
-    auto *FnAA = A.getAAFor<AANoUnwind>(*this, FnPos, DepClassTy::REQUIRED);
-    if (!FnAA)
-      return indicatePessimisticFixpoint();
-    return clampStateAndIndicateChange(getState(), FnAA->getState());
+    bool IsKnown;
+    if (AA::hasAssumedIRAttr<Attribute::NoUnwind>(
+            A, *this, FnPos, DepClassTy::REQUIRED, IsKnown))
+      return ChangeStatus::UNCHANGED;
+    return indicatePessimisticFixpoint();
   }
 
   /// See AbstractAttribute::trackStatistics()
@@ -2437,10 +2441,11 @@ struct AANoSyncCallSite final : AANoSyncImpl {
     //       redirecting requests to the callee argument.
     Function *F = getAssociatedFunction();
     const IRPosition &FnPos = IRPosition::function(*F);
-    auto *FnAA = A.getAAFor<AANoSync>(*this, FnPos, DepClassTy::REQUIRED);
-    if (!FnAA)
-      return indicatePessimisticFixpoint();
-    return clampStateAndIndicateChange(getState(), FnAA->getState());
+    bool IsKnownNoSycn;
+    if (AA::hasAssumedIRAttr<Attribute::NoSync>(
+            A, *this, FnPos, DepClassTy::REQUIRED, IsKnownNoSycn))
+      return ChangeStatus::UNCHANGED;
+    return indicatePessimisticFixpoint();
   }
 
   /// See AbstractAttribute::trackStatistics()
@@ -2457,13 +2462,10 @@ struct AANoFreeImpl : public AANoFree {
   /// See AbstractAttribute::updateImpl(...).
   ChangeStatus updateImpl(Attributor &A) override {
     auto CheckForNoFree = [&](Instruction &I) {
-      const auto &CB = cast<CallBase>(I);
-      if (CB.hasFnAttr(Attribute::NoFree))
-        return true;
-
-      const auto *NoFreeAA = A.getAAFor<AANoFree>(
-          *this, IRPosition::callsite_function(CB), DepClassTy::REQUIRED);
-      return NoFreeAA && NoFreeAA->isAssumedNoFree();
+      bool IsKnown;
+      return AA::hasAssumedIRAttr<Attribute::NoFree>(
+          A, *this, IRPosition::callsite_function(cast<CallBase>(I)),
+          DepClassTy::REQUIRED, IsKnown);
     };
 
     bool UsedAssumedInformation = false;
@@ -2508,10 +2510,11 @@ struct AANoFreeCallSite final : AANoFreeImpl {
     //       redirecting requests to the callee argument.
     Function *F = getAssociatedFunction();
     const IRPosition &FnPos = IRPosition::function(*F);
-    auto *FnAA = A.getAAFor<AANoFree>(*this, FnPos, DepClassTy::REQUIRED);
-    if (!FnAA)
-      return indicatePessimisticFixpoint();
-    return clampStateAndIndicateChange(getState(), FnAA->getState());
+    bool IsKnown;
+    if (AA::hasAssumedIRAttr<Attribute::NoFree>(A, *this, FnPos,
+                                                DepClassTy::REQUIRED, IsKnown))
+      return ChangeStatus::UNCHANGED;
+    return indicatePessimisticFixpoint();
   }
 
   /// See AbstractAttribute::trackStatistics()
@@ -2530,9 +2533,10 @@ struct AANoFreeFloating : AANoFreeImpl {
   ChangeStatus updateImpl(Attributor &A) override {
     const IRPosition &IRP = getIRPosition();
 
-    const auto *NoFreeAA = A.getAAFor<AANoFree>(
-        *this, IRPosition::function_scope(IRP), DepClassTy::OPTIONAL);
-    if (NoFreeAA && NoFreeAA->isAssumedNoFree())
+    bool IsKnown;
+    if (AA::hasAssumedIRAttr<Attribute::NoFree>(A, *this,
+                                                IRPosition::function_scope(IRP),
+                                                DepClassTy::OPTIONAL, IsKnown))
       return ChangeStatus::UNCHANGED;
 
     Value &AssociatedValue = getIRPosition().getAssociatedValue();
@@ -2545,10 +2549,10 @@ struct AANoFreeFloating : AANoFreeImpl {
           return true;
         unsigned ArgNo = CB->getArgOperandNo(&U);
 
-        const auto *NoFreeArg = A.getAAFor<AANoFree>(
-            *this, IRPosition::callsite_argument(*CB, ArgNo),
-            DepClassTy::REQUIRED);
-        return NoFreeArg && NoFreeArg->isAssumedNoFree();
+        bool IsKnown;
+        return AA::hasAssumedIRAttr<Attribute::NoFree>(
+            A, *this, IRPosition::callsite_argument(*CB, ArgNo),
+            DepClassTy::REQUIRED, IsKnown);
       }
 
       if (isa<GetElementPtrInst>(UserI) || isa<BitCastInst>(UserI) ||
@@ -2594,10 +2598,11 @@ struct AANoFreeCallSiteArgument final : AANoFreeFloating {
     if (!Arg)
       return indicatePessimisticFixpoint();
     const IRPosition &ArgPos = IRPosition::argument(*Arg);
-    auto *ArgAA = A.getAAFor<AANoFree>(*this, ArgPos, DepClassTy::REQUIRED);
-    if (!ArgAA)
-      return indicatePessimisticFixpoint();
-    return clampStateAndIndicateChange(getState(), ArgAA->getState());
+    bool IsKnown;
+    if (AA::hasAssumedIRAttr<Attribute::NoFree>(A, *this, ArgPos,
+                                                DepClassTy::REQUIRED, IsKnown))
+      return ChangeStatus::UNCHANGED;
+    return indicatePessimisticFixpoint();
   }
 
   /// See AbstractAttribute::trackStatistics()
@@ -2898,18 +2903,20 @@ struct AAMustProgressFunction final : AAMustProgressImpl {
 
   /// See AbstractAttribute::updateImpl(...).
   ChangeStatus updateImpl(Attributor &A) override {
-    const auto *WillReturnAA =
-        A.getAAFor<AAWillReturn>(*this, getIRPosition(), DepClassTy::OPTIONAL);
-    if (WillReturnAA && WillReturnAA->isKnownWillReturn())
-      return indicateOptimisticFixpoint();
-    if (WillReturnAA && WillReturnAA->isAssumedWillReturn())
+    bool IsKnown;
+    if (AA::hasAssumedIRAttr<Attribute::WillReturn>(
+            A, *this, getIRPosition(), DepClassTy::OPTIONAL, IsKnown)) {
+      if (IsKnown)
+        return indicateOptimisticFixpoint();
       return ChangeStatus::UNCHANGED;
+    }
 
     auto CheckForMustProgress = [&](AbstractCallSite ACS) {
       IRPosition IPos = IRPosition::callsite_function(*ACS.getInstruction());
-      const auto *MustProgressAA =
-          A.getAAFor<AAMustProgress>(*this, IPos, DepClassTy::OPTIONAL);
-      return MustProgressAA && MustProgressAA->isAssumedMustProgress();
+      bool IsKnownMustProgress;
+      return AA::hasAssumedIRAttr<Attribute::MustProgress>(
+          A, *this, IPos, DepClassTy::REQUIRED, IsKnownMustProgress,
+          /* IgnoreSubsumingPositions */ true);
     };
 
     bool AllCallSitesKnown = true;
@@ -2939,11 +2946,11 @@ struct AAMustProgressCallSite final : AAMustProgressImpl {
     //       sense to specialize attributes for call sites arguments instead of
     //       redirecting requests to the callee argument.
     const IRPosition &FnPos = IRPosition::function(*getAnchorScope());
-    const auto *FnAA =
-        A.getAAFor<AAMustProgress>(*this, FnPos, DepClassTy::OPTIONAL);
-    if (!FnAA)
+    bool IsKnownMustProgress;
+    if (!AA::hasAssumedIRAttr<Attribute::MustProgress>(
+            A, *this, FnPos, DepClassTy::REQUIRED, IsKnownMustProgress))
       return indicatePessimisticFixpoint();
-    return clampStateAndIndicateChange(getState(), FnAA->getState());
+    return ChangeStatus::UNCHANGED;
   }
 
   /// See AbstractAttribute::trackStatistics()
@@ -2974,10 +2981,13 @@ struct AANoRecurseFunction final : AANoRecurseImpl {
 
     // If all live call sites are known to be no-recurse, we are as well.
     auto CallSitePred = [&](AbstractCallSite ACS) {
-      const auto *NoRecurseAA = A.getAAFor<AANoRecurse>(
-          *this, IRPosition::function(*ACS.getInstruction()->getFunction()),
-          DepClassTy::NONE);
-      return NoRecurseAA && NoRecurseAA->isKnownNoRecurse();
+      bool IsKnownNoRecurse;
+      if (!AA::hasAssumedIRAttr<Attribute::NoRecurse>(
+              A, *this,
+              IRPosition::function(*ACS.getInstruction()->getFunction()),
+              DepClassTy::NONE, IsKnownNoRecurse))
+        return false;
+      return IsKnownNoRecurse;
     };
     bool UsedAssumedInformation = false;
     if (A.checkForAllCallSites(CallSitePred, *this, true,
@@ -3024,10 +3034,11 @@ struct AANoRecurseCallSite final : AANoRecurseImpl {
     //       redirecting requests to the callee argument.
     Function *F = getAssociatedFunction();
     const IRPosition &FnPos = IRPosition::function(*F);
-    auto *FnAA = A.getAAFor<AANoRecurse>(*this, FnPos, DepClassTy::REQUIRED);
-    if (!FnAA)
+    bool IsKnownNoRecurse;
+    if (!AA::hasAssumedIRAttr<Attribute::NoRecurse>(
+            A, *this, FnPos, DepClassTy::REQUIRED, IsKnownNoRecurse))
       return indicatePessimisticFixpoint();
-    return clampStateAndIndicateChange(getState(), FnAA->getState());
+    return ChangeStatus::UNCHANGED;
   }
 
   /// See AbstractAttribute::trackStatistics()
@@ -3488,15 +3499,17 @@ struct AAWillReturnImpl : public AAWillReturn {
 
     auto CheckForWillReturn = [&](Instruction &I) {
       IRPosition IPos = IRPosition::callsite_function(cast<CallBase>(I));
-      const auto *WillReturnAA =
-          A.getAAFor<AAWillReturn>(*this, IPos, DepClassTy::REQUIRED);
-      if (WillReturnAA && WillReturnAA->isKnownWillReturn())
-        return true;
-      if (!WillReturnAA || !WillReturnAA->isAssumedWillReturn())
+      bool IsKnown;
+      if (AA::hasAssumedIRAttr<Attribute::WillReturn>(
+              A, *this, IPos, DepClassTy::REQUIRED, IsKnown)) {
+        if (IsKnown)
+          return true;
+      } else {
         return false;
-      const auto *NoRecurseAA =
-          A.getAAFor<AANoRecurse>(*this, IPos, DepClassTy::REQUIRED);
-      return NoRecurseAA && NoRecurseAA->isAssumedNoRecurse();
+      }
+      bool IsKnownNoRecurse;
+      return AA::hasAssumedIRAttr<Attribute::NoRecurse>(
+          A, *this, IPos, DepClassTy::REQUIRED, IsKnownNoRecurse);
     };
 
     bool UsedAssumedInformation = false;
@@ -3554,10 +3567,11 @@ struct AAWillReturnCallSite final : AAWillReturnImpl {
     //       redirecting requests to the callee argument.
     Function *F = getAssociatedFunction();
     const IRPosition &FnPos = IRPosition::function(*F);
-    auto *FnAA = A.getAAFor<AAWillReturn>(*this, FnPos, DepClassTy::REQUIRED);
-    if (!FnAA)
-      return indicatePessimisticFixpoint();
-    return clampStateAndIndicateChange(getState(), FnAA->getState());
+    bool IsKnown;
+    if (AA::hasAssumedIRAttr<Attribute::WillReturn>(
+            A, *this, FnPos, DepClassTy::REQUIRED, IsKnown))
+      return ChangeStatus::UNCHANGED;
+    return indicatePessimisticFixpoint();
   }
 
   /// See AbstractAttribute::trackStatistics()
@@ -3921,9 +3935,11 @@ struct AANoAliasFloating final : AANoAliasImpl {
                                    Val->getType()->getPointerAddressSpace()))
       indicateOptimisticFixpoint();
     else if (Val != &getAssociatedValue()) {
-      const auto *ValNoAliasAA = A.getAAFor<AANoAlias>(
-          *this, IRPosition::value(*Val), DepClassTy::OPTIONAL);
-      if (ValNoAliasAA && ValNoAliasAA->isKnownNoAlias())
+      bool IsKnownNoAlias;
+      AA::hasAssumedIRAttr<Attribute::NoAlias>(
+          A, *this, IRPosition::value(*Val), DepClassTy::OPTIONAL,
+          IsKnownNoAlias);
+      if (IsKnownNoAlias)
         indicateOptimisticFixpoint();
     }
   }
@@ -3962,10 +3978,10 @@ struct AANoAliasArgument final
     // function, otherwise we give up for now.
 
     // If the function is no-sync, no-alias cannot break synchronization.
-    const auto *NoSyncAA =
-        A.getAAFor<AANoSync>(*this, IRPosition::function_scope(getIRPosition()),
-                             DepClassTy::OPTIONAL);
-    if (NoSyncAA && NoSyncAA->isAssumedNoSync())
+    bool IsKnownNoSycn;
+    if (AA::hasAssumedIRAttr<Attribute::NoSync>(
+            A, *this, IRPosition::function_scope(getIRPosition()),
+            DepClassTy::OPTIONAL, IsKnownNoSycn))
       return Base::updateImpl(A);
 
     // If the argument is read-only, no-alias cannot break synchronization.
@@ -4106,11 +4122,10 @@ struct AANoAliasCallSiteArgument final : AANoAliasImpl {
 
             unsigned ArgNo = CB->getArgOperandNo(&U);
 
-            const auto *NoCaptureAA = A.getAAFor<AANoCapture>(
-                *this, IRPosition::callsite_argument(*CB, ArgNo),
-                DepClassTy::OPTIONAL);
-
-            if (NoCaptureAA && NoCaptureAA->isAssumedNoCapture())
+            bool IsKnownNoCapture;
+            if (AA::hasAssumedIRAttr<Attribute::NoCapture>(
+                    A, *this, IRPosition::callsite_argument(*CB, ArgNo),
+                    DepClassTy::OPTIONAL, IsKnownNoCapture))
               return true;
           }
         }
@@ -4218,9 +4233,9 @@ struct AANoAliasReturned final : AANoAliasImpl {
         return false;
 
       const IRPosition &RVPos = IRPosition::value(RV);
-      const auto *NoAliasAA =
-          A.getAAFor<AANoAlias>(*this, RVPos, DepClassTy::REQUIRED);
-      if (!NoAliasAA || !NoAliasAA->isAssumedNoAlias())
+      bool IsKnownNoAlias;
+      if (!AA::hasAssumedIRAttr<Attribute::NoAlias>(
+              A, *this, RVPos, DepClassTy::REQUIRED, IsKnownNoAlias))
         return false;
 
       const auto *NoCaptureAA =
@@ -4259,10 +4274,11 @@ struct AANoAliasCallSiteReturned final : AANoAliasImpl {
     //       redirecting requests to the callee argument.
     Function *F = getAssociatedFunction();
     const IRPosition &FnPos = IRPosition::returned(*F);
-    auto *FnAA = A.getAAFor<AANoAlias>(*this, FnPos, DepClassTy::REQUIRED);
-    if (!FnAA)
+    bool IsKnownNoAlias;
+    if (!AA::hasAssumedIRAttr<Attribute::NoAlias>(
+            A, *this, FnPos, DepClassTy::REQUIRED, IsKnownNoAlias))
       return indicatePessimisticFixpoint();
-    return clampStateAndIndicateChange(getState(), FnAA->getState());
+    return ChangeStatus::UNCHANGED;
   }
 
   /// See AbstractAttribute::trackStatistics()
@@ -5783,9 +5799,10 @@ struct AAInstanceInfoImpl : public AAInstanceInfo {
     if (!Scope)
       return indicateOptimisticFixpoint();
 
-    auto *NoRecurseAA = A.getAAFor<AANoRecurse>(
-        *this, IRPosition::function(*Scope), DepClassTy::OPTIONAL);
-    if (NoRecurseAA && NoRecurseAA->isAssumedNoRecurse())
+    bool IsKnownNoRecurse;
+    if (AA::hasAssumedIRAttr<Attribute::NoRecurse>(
+            A, *this, IRPosition::function(*Scope), DepClassTy::OPTIONAL,
+            IsKnownNoRecurse))
       return Changed;
 
     auto UsePred = [&](const Use &U, bool &Follow) {
@@ -6137,9 +6154,9 @@ ChangeStatus AANoCaptureImpl::updateImpl(Attributor &A) {
     return true;
   };
 
-  const auto *NoUnwindAA =
-      A.getAAFor<AANoUnwind>(*this, FnPos, DepClassTy::OPTIONAL);
-  if (NoUnwindAA && NoUnwindAA->isAssumedNoUnwind()) {
+  bool IsKnownNoUnwind;
+  if (AA::hasAssumedIRAttr<Attribute::NoUnwind>(
+          A, *this, FnPos, DepClassTy::OPTIONAL, IsKnownNoUnwind)) {
     bool IsVoidTy = F->getReturnType()->isVoidTy();
     const AAReturnedValues *RVAA =
         IsVoidTy ? nullptr
@@ -6150,8 +6167,7 @@ ChangeStatus AANoCaptureImpl::updateImpl(Attributor &A) {
       T.addKnownBits(NOT_CAPTURED_IN_RET);
       if (T.isKnown(NOT_CAPTURED_IN_MEM))
         return ChangeStatus::UNCHANGED;
-      if (NoUnwindAA->isKnownNoUnwind() &&
-          (IsVoidTy || RVAA->getState().isAtFixpoint())) {
+      if (IsKnownNoUnwind && (IsVoidTy || RVAA->getState().isAtFixpoint())) {
         addKnownBits(NOT_CAPTURED_IN_RET);
         if (isKnown(NOT_CAPTURED_IN_MEM))
           return indicateOptimisticFixpoint();
@@ -7151,9 +7167,9 @@ ChangeStatus AAHeapToStackFunction::updateImpl(Attributor &A) {
     // doesn't apply as the pointer could be shared and needs to be places in
     // "shareable" memory.
     if (!StackIsAccessibleByOtherThreads) {
-      auto *NoSyncAA =
-          A.getAAFor<AANoSync>(*this, getIRPosition(), DepClassTy::OPTIONAL);
-      if (!NoSyncAA || !NoSyncAA->isAssumedNoSync()) {
+      bool IsKnownNoSycn;
+      if (!AA::hasAssumedIRAttr<Attribute::NoSync>(
+              A, *this, getIRPosition(), DepClassTy::OPTIONAL, IsKnownNoSycn)) {
         LLVM_DEBUG(
             dbgs() << "[H2S] found an escaping use, stack is not accessible by "
                       "other threads and function is not nosync:\n");
@@ -7234,22 +7250,21 @@ ChangeStatus AAHeapToStackFunction::updateImpl(Attributor &A) {
         }
 
         unsigned ArgNo = CB->getArgOperandNo(&U);
+        auto CBIRP = IRPosition::callsite_argument(*CB, ArgNo);
 
-        const auto *NoCaptureAA = A.getAAFor<AANoCapture>(
-            *this, IRPosition::callsite_argument(*CB, ArgNo),
-            DepClassTy::OPTIONAL);
+        bool IsKnownNoCapture;
+        bool IsAssumedNoCapture = AA::hasAssumedIRAttr<Attribute::NoCapture>(
+            A, *this, CBIRP, DepClassTy::OPTIONAL, IsKnownNoCapture);
 
         // If a call site argument use is nofree, we are fine.
-        const auto *ArgNoFreeAA = A.getAAFor<AANoFree>(
-            *this, IRPosition::callsite_argument(*CB, ArgNo),
-            DepClassTy::OPTIONAL);
+        bool IsKnownNoFree;
+        bool IsAssumedNoFree = AA::hasAssumedIRAttr<Attribute::NoFree>(
+            A, *this, CBIRP, DepClassTy::OPTIONAL, IsKnownNoFree);
 
-        bool MaybeCaptured = !NoCaptureAA || !NoCaptureAA->isAssumedNoCapture();
-        bool MaybeFreed = !ArgNoFreeAA || !ArgNoFreeAA->isAssumedNoFree();
-        if (MaybeCaptured ||
+        if (!IsAssumedNoCapture ||
             (AI.LibraryFunctionId != LibFunc___kmpc_alloc_shared &&
-             MaybeFreed)) {
-          AI.HasPotentiallyFreeingUnknownUses |= MaybeFreed;
+             !IsAssumedNoFree)) {
+          AI.HasPotentiallyFreeingUnknownUses |= !IsAssumedNoFree;
 
           // Emit a missed remark if this is missed OpenMP globalization.
           auto Remark = [&](OptimizationRemarkMissed ORM) {
@@ -7920,8 +7935,9 @@ struct AAPrivatizablePtrCallSiteArgument final
       return indicatePessimisticFixpoint();
     }
 
-    auto *NoAliasAA = A.getAAFor<AANoAlias>(*this, IRP, DepClassTy::REQUIRED);
-    if (!NoAliasAA || !NoAliasAA->isAssumedNoAlias()) {
+    bool IsKnownNoAlias;
+    if (!AA::hasAssumedIRAttr<Attribute::NoAlias>(
+            A, *this, IRP, DepClassTy::REQUIRED, IsKnownNoAlias)) {
       LLVM_DEBUG(dbgs() << "[AAPrivatizablePtr] pointer might alias!\n");
       return indicatePessimisticFixpoint();
     }

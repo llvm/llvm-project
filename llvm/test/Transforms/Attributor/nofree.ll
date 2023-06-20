@@ -258,7 +258,7 @@ define float @call_floor2(float %a) #0 {
 ; CHECK: Function Attrs: mustprogress nofree noinline norecurse nosync nounwind willreturn memory(none) uwtable
 ; CHECK-LABEL: define {{[^@]+}}@call_floor2
 ; CHECK-SAME: (float [[A:%.*]]) #[[ATTR3]] {
-; CHECK-NEXT:    [[C:%.*]] = tail call nofpclass(sub) float @llvm.floor.f32(float [[A]]) #[[ATTR11:[0-9]+]]
+; CHECK-NEXT:    [[C:%.*]] = tail call nofpclass(sub) float @llvm.floor.f32(float [[A]])
 ; CHECK-NEXT:    ret float [[C]]
 ;
   %c = tail call float @llvm.floor.f32(float %a)
@@ -355,7 +355,7 @@ define void @nonnull_assume_pos(ptr %arg1, ptr %arg2, ptr %arg3, ptr %arg4) {
 ;
 ; CHECK-LABEL: define {{[^@]+}}@nonnull_assume_pos
 ; CHECK-SAME: (ptr nofree [[ARG1:%.*]], ptr [[ARG2:%.*]], ptr nofree [[ARG3:%.*]], ptr [[ARG4:%.*]]) {
-; CHECK-NEXT:    call void @llvm.assume(i1 noundef true) #[[ATTR11]] [ "nofree"(ptr [[ARG1]]), "nofree"(ptr [[ARG3]]) ]
+; CHECK-NEXT:    call void @llvm.assume(i1 noundef true) [ "nofree"(ptr [[ARG1]]), "nofree"(ptr [[ARG3]]) ]
 ; CHECK-NEXT:    call void @unknown(ptr nofree [[ARG1]], ptr [[ARG2]], ptr nofree [[ARG3]], ptr [[ARG4]])
 ; CHECK-NEXT:    ret void
 ;
@@ -446,7 +446,6 @@ attributes #2 = { nobuiltin nounwind }
 ; TUNIT: attributes #[[ATTR8:[0-9]+]] = { nobuiltin nofree nounwind }
 ; TUNIT: attributes #[[ATTR9:[0-9]+]] = { nocallback nofree nosync nounwind willreturn memory(inaccessiblemem: readwrite) }
 ; TUNIT: attributes #[[ATTR10:[0-9]+]] = { nounwind willreturn }
-; TUNIT: attributes #[[ATTR11]] = { willreturn }
 ;.
 ; CGSCC: attributes #[[ATTR0]] = { nounwind }
 ; CGSCC: attributes #[[ATTR1]] = { noinline nounwind uwtable }
@@ -459,5 +458,4 @@ attributes #2 = { nobuiltin nounwind }
 ; CGSCC: attributes #[[ATTR8:[0-9]+]] = { nobuiltin nofree nounwind }
 ; CGSCC: attributes #[[ATTR9:[0-9]+]] = { nocallback nofree nosync nounwind willreturn memory(inaccessiblemem: readwrite) }
 ; CGSCC: attributes #[[ATTR10:[0-9]+]] = { nounwind willreturn }
-; CGSCC: attributes #[[ATTR11]] = { willreturn }
 ;.

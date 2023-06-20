@@ -40,7 +40,7 @@ define dso_local i16 @foo(i16 %a) {
 ; TUNIT-NEXT:    [[CALL:%.*]] = call i16 bitcast (i16 (i16, i16)* @bar to i16 (i16)*)(i16 [[A]])
 ; TUNIT-NEXT:    ret i16 [[CALL]]
 ;
-; CGSCC: Function Attrs: nofree nosync nounwind
+; CGSCC: Function Attrs: nosync nounwind
 ; CGSCC-LABEL: define {{[^@]+}}@foo
 ; CGSCC-SAME: (i16 [[A:%.*]]) #[[ATTR0:[0-9]+]] {
 ; CGSCC-NEXT:    [[CALL:%.*]] = call i16 bitcast (i16 (i16, i16)* @bar to i16 (i16)*)(i16 [[A]])
@@ -66,7 +66,7 @@ define dso_local i16 @foo2(i16 %a) {
 ; TUNIT-NEXT:    [[CALL:%.*]] = call i16 bitcast (i16 (i16, i16)* @bar2 to i16 (i16)*)(i16 [[A]])
 ; TUNIT-NEXT:    ret i16 [[CALL]]
 ;
-; CGSCC: Function Attrs: nofree nosync nounwind
+; CGSCC: Function Attrs: nosync nounwind
 ; CGSCC-LABEL: define {{[^@]+}}@foo2
 ; CGSCC-SAME: (i16 [[A:%.*]]) #[[ATTR0]] {
 ; CGSCC-NEXT:    [[CALL:%.*]] = call i16 bitcast (i16 (i16, i16)* @bar2 to i16 (i16)*)(i16 [[A]])
@@ -101,10 +101,10 @@ define dso_local i16 @vararg_tests(i16 %a) {
 ; TUNIT-NEXT:    [[ADD:%.*]] = add i16 7, [[CALL2]]
 ; TUNIT-NEXT:    ret i16 [[ADD]]
 ;
-; CGSCC: Function Attrs: nofree nosync nounwind
+; CGSCC: Function Attrs: nosync nounwind
 ; CGSCC-LABEL: define {{[^@]+}}@vararg_tests
 ; CGSCC-SAME: (i16 [[A:%.*]]) #[[ATTR0]] {
-; CGSCC-NEXT:    [[CALL1:%.*]] = call i16 (i16, ...) @vararg_prop(i16 noundef 7, i16 noundef 8, i16 [[A]]) #[[ATTR2:[0-9]+]]
+; CGSCC-NEXT:    [[CALL1:%.*]] = call i16 (i16, ...) @vararg_prop(i16 noundef 7, i16 noundef 8, i16 [[A]])
 ; CGSCC-NEXT:    [[CALL2:%.*]] = call i16 bitcast (i16 (i16, i16, ...)* @vararg_no_prop to i16 (i16)*)(i16 7)
 ; CGSCC-NEXT:    [[ADD:%.*]] = add i16 [[CALL1]], [[CALL2]]
 ; CGSCC-NEXT:    ret i16 [[ADD]]
@@ -137,7 +137,6 @@ define internal i16 @vararg_no_prop(i16 %p1, i16 %p2, ...) {
 ; TUNIT: attributes #[[ATTR0]] = { norecurse }
 ; TUNIT: attributes #[[ATTR1]] = { mustprogress nofree norecurse nosync nounwind willreturn memory(none) }
 ;.
-; CGSCC: attributes #[[ATTR0]] = { nofree nosync nounwind }
+; CGSCC: attributes #[[ATTR0]] = { nosync nounwind }
 ; CGSCC: attributes #[[ATTR1]] = { mustprogress nofree norecurse nosync nounwind willreturn memory(none) }
-; CGSCC: attributes #[[ATTR2]] = { willreturn }
 ;.

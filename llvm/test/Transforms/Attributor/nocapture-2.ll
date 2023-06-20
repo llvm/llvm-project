@@ -723,7 +723,7 @@ define i32* @not_captured_by_readonly_call_not_returned_either1(i32* %b, i32* re
 ; CGSCC-LABEL: define {{[^@]+}}@not_captured_by_readonly_call_not_returned_either1
 ; CGSCC-SAME: (i32* nocapture readonly [[B:%.*]], i32* readonly returned [[R:%.*]]) #[[ATTR9:[0-9]+]] {
 ; CGSCC-NEXT:  entry:
-; CGSCC-NEXT:    [[CALL:%.*]] = call i32* @readonly_unknown(i32* readonly [[B]], i32* readonly [[R]]) #[[ATTR12:[0-9]+]]
+; CGSCC-NEXT:    [[CALL:%.*]] = call i32* @readonly_unknown(i32* readonly [[B]], i32* readonly [[R]]) #[[ATTR11]]
 ; CGSCC-NEXT:    ret i32* [[CALL]]
 ;
 entry:
@@ -744,7 +744,7 @@ define i32* @not_captured_by_readonly_call_not_returned_either2(i32* %b, i32* %r
 ; CGSCC-LABEL: define {{[^@]+}}@not_captured_by_readonly_call_not_returned_either2
 ; CGSCC-SAME: (i32* readonly [[B:%.*]], i32* readonly [[R:%.*]]) #[[ATTR9]] {
 ; CGSCC-NEXT:  entry:
-; CGSCC-NEXT:    [[CALL:%.*]] = call i32* @readonly_unknown_r1a(i32* readonly [[B]], i32* readonly [[R]]) #[[ATTR12]]
+; CGSCC-NEXT:    [[CALL:%.*]] = call i32* @readonly_unknown_r1a(i32* readonly [[B]], i32* readonly [[R]]) #[[ATTR11]]
 ; CGSCC-NEXT:    ret i32* [[CALL]]
 ;
 entry:
@@ -765,7 +765,7 @@ define i32* @not_captured_by_readonly_call_not_returned_either3(i32* %b, i32* %r
 ; CGSCC-LABEL: define {{[^@]+}}@not_captured_by_readonly_call_not_returned_either3
 ; CGSCC-SAME: (i32* nocapture readonly [[B:%.*]], i32* readonly [[R:%.*]]) #[[ATTR9]] {
 ; CGSCC-NEXT:  entry:
-; CGSCC-NEXT:    [[CALL:%.*]] = call i32* @readonly_unknown_r1b(i32* nocapture readonly [[B]], i32* readonly [[R]]) #[[ATTR12]]
+; CGSCC-NEXT:    [[CALL:%.*]] = call i32* @readonly_unknown_r1b(i32* nocapture readonly [[B]], i32* readonly [[R]]) #[[ATTR11]]
 ; CGSCC-NEXT:    ret i32* [[CALL]]
 ;
 entry:
@@ -850,6 +850,5 @@ attributes #0 = { noinline nounwind uwtable }
 ; CGSCC: attributes #[[ATTR8]] = { noinline nounwind memory(read) uwtable }
 ; CGSCC: attributes #[[ATTR9]] = { nounwind memory(read) }
 ; CGSCC: attributes #[[ATTR10]] = { nofree nosync nounwind }
-; CGSCC: attributes #[[ATTR11]] = { nounwind willreturn }
-; CGSCC: attributes #[[ATTR12]] = { nounwind }
+; CGSCC: attributes #[[ATTR11]] = { nounwind }
 ;.

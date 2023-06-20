@@ -344,7 +344,7 @@ define i32 @memcpy_volatile(ptr %ptr1, ptr %ptr2) {
 ; CHECK: Function Attrs: mustprogress nofree norecurse nounwind willreturn memory(argmem: readwrite)
 ; CHECK-LABEL: define {{[^@]+}}@memcpy_volatile
 ; CHECK-SAME: (ptr nocapture nofree writeonly [[PTR1:%.*]], ptr nocapture nofree readonly [[PTR2:%.*]]) #[[ATTR12:[0-9]+]] {
-; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i32(ptr noalias nocapture nofree writeonly [[PTR1]], ptr noalias nocapture nofree readonly [[PTR2]], i32 noundef 8, i1 noundef true) #[[ATTR20:[0-9]+]]
+; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i32(ptr noalias nocapture nofree writeonly [[PTR1]], ptr noalias nocapture nofree readonly [[PTR2]], i32 noundef 8, i1 noundef true)
 ; CHECK-NEXT:    ret i32 4
 ;
   call void @llvm.memcpy.p0.p0.i32(ptr %ptr1, ptr %ptr2, i32 8, i1 true)
@@ -359,7 +359,7 @@ define i32 @memset_non_volatile(ptr %ptr1, i8 %val) {
 ; CHECK: Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn memory(argmem: write)
 ; CHECK-LABEL: define {{[^@]+}}@memset_non_volatile
 ; CHECK-SAME: (ptr nocapture nofree writeonly [[PTR1:%.*]], i8 [[VAL:%.*]]) #[[ATTR13:[0-9]+]] {
-; CHECK-NEXT:    call void @llvm.memset.p0.i32(ptr nocapture nofree writeonly [[PTR1]], i8 [[VAL]], i32 noundef 8, i1 noundef false) #[[ATTR20]]
+; CHECK-NEXT:    call void @llvm.memset.p0.i32(ptr nocapture nofree writeonly [[PTR1]], i8 [[VAL]], i32 noundef 8, i1 noundef false)
 ; CHECK-NEXT:    ret i32 4
 ;
   call void @llvm.memset.p0.i32(ptr %ptr1, i8 %val, i32 8, i1 false)
@@ -428,7 +428,7 @@ define float @cos_test2(float %x) {
 ; CHECK: Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn memory(none)
 ; CHECK-LABEL: define {{[^@]+}}@cos_test2
 ; CHECK-SAME: (float [[X:%.*]]) #[[ATTR18]] {
-; CHECK-NEXT:    [[C:%.*]] = call nofpclass(inf) float @llvm.cos.f32(float [[X]]) #[[ATTR20]]
+; CHECK-NEXT:    [[C:%.*]] = call nofpclass(inf) float @llvm.cos.f32(float [[X]])
 ; CHECK-NEXT:    ret float [[C]]
 ;
   %c = call float @llvm.cos.f32(float %x)
@@ -455,5 +455,4 @@ define float @cos_test2(float %x) {
 ; CHECK: attributes #[[ATTR17:[0-9]+]] = { nocallback nofree nosync nounwind speculatable willreturn memory(none) }
 ; CHECK: attributes #[[ATTR18]] = { mustprogress nofree norecurse nosync nounwind willreturn memory(none) }
 ; CHECK: attributes #[[ATTR19]] = { nofree nounwind }
-; CHECK: attributes #[[ATTR20]] = { willreturn }
 ;.

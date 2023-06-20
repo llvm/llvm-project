@@ -16,7 +16,7 @@ define dso_local ptr @internal_only(i32 %arg) {
 ; CHECK-SAME: (i32 [[ARG:%.*]]) #[[ATTR0:[0-9]+]] {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[CONV:%.*]] = sext i32 [[ARG]] to i64
-; CHECK-NEXT:    [[CALL:%.*]] = call noalias ptr @malloc(i64 [[CONV]])
+; CHECK-NEXT:    [[CALL:%.*]] = call ptr @malloc(i64 [[CONV]])
 ; CHECK-NEXT:    ret ptr [[CALL]]
 ;
 entry:
@@ -39,7 +39,7 @@ define dso_local ptr @internal_only_rec(i32 %arg) {
 ; CHECK-NEXT:    br label [[RETURN:%.*]]
 ; CHECK:       if.end:
 ; CHECK-NEXT:    [[CONV:%.*]] = sext i32 [[ARG]] to i64
-; CHECK-NEXT:    [[CALL1:%.*]] = call noalias ptr @malloc(i64 [[CONV]])
+; CHECK-NEXT:    [[CALL1:%.*]] = call ptr @malloc(i64 [[CONV]])
 ; CHECK-NEXT:    br label [[RETURN]]
 ; CHECK:       return:
 ; CHECK-NEXT:    [[RETVAL_0:%.*]] = phi ptr [ [[CALL]], [[IF_THEN]] ], [ [[CALL1]], [[IF_END]] ]
@@ -66,12 +66,19 @@ return:                                           ; preds = %if.end, %if.then
 }
 
 define dso_local ptr @internal_only_rec_static_helper(i32 %arg) {
-; CHECK: Function Attrs: memory(inaccessiblemem: readwrite)
-; CHECK-LABEL: define {{[^@]+}}@internal_only_rec_static_helper
-; CHECK-SAME: (i32 [[ARG:%.*]]) #[[ATTR0]] {
-; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[CALL:%.*]] = call noalias ptr @internal_only_rec_static(i32 [[ARG]])
-; CHECK-NEXT:    ret ptr [[CALL]]
+; TUNIT: Function Attrs: memory(inaccessiblemem: readwrite)
+; TUNIT-LABEL: define {{[^@]+}}@internal_only_rec_static_helper
+; TUNIT-SAME: (i32 [[ARG:%.*]]) #[[ATTR0]] {
+; TUNIT-NEXT:  entry:
+; TUNIT-NEXT:    [[CALL:%.*]] = call noalias ptr @internal_only_rec_static(i32 [[ARG]])
+; TUNIT-NEXT:    ret ptr [[CALL]]
+;
+; CGSCC: Function Attrs: memory(inaccessiblemem: readwrite)
+; CGSCC-LABEL: define {{[^@]+}}@internal_only_rec_static_helper
+; CGSCC-SAME: (i32 [[ARG:%.*]]) #[[ATTR0]] {
+; CGSCC-NEXT:  entry:
+; CGSCC-NEXT:    [[CALL:%.*]] = call ptr @internal_only_rec_static(i32 [[ARG]])
+; CGSCC-NEXT:    ret ptr [[CALL]]
 ;
 entry:
   %call = call ptr @internal_only_rec_static(i32 %arg)
@@ -79,24 +86,43 @@ entry:
 }
 
 define internal ptr @internal_only_rec_static(i32 %arg) {
-; CHECK: Function Attrs: memory(inaccessiblemem: readwrite)
-; CHECK-LABEL: define {{[^@]+}}@internal_only_rec_static
-; CHECK-SAME: (i32 [[ARG:%.*]]) #[[ATTR0]] {
-; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[REM:%.*]] = srem i32 [[ARG]], 2
-; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i32 [[REM]], 1
-; CHECK-NEXT:    br i1 [[CMP]], label [[IF_THEN:%.*]], label [[IF_END:%.*]]
-; CHECK:       if.then:
-; CHECK-NEXT:    [[DIV:%.*]] = sdiv i32 [[ARG]], 2
-; CHECK-NEXT:    [[CALL:%.*]] = call noalias ptr @internal_only_rec(i32 [[DIV]])
-; CHECK-NEXT:    br label [[RETURN:%.*]]
-; CHECK:       if.end:
-; CHECK-NEXT:    [[CONV:%.*]] = sext i32 [[ARG]] to i64
-; CHECK-NEXT:    [[CALL1:%.*]] = call noalias ptr @malloc(i64 [[CONV]])
-; CHECK-NEXT:    br label [[RETURN]]
-; CHECK:       return:
-; CHECK-NEXT:    [[RETVAL_0:%.*]] = phi ptr [ [[CALL]], [[IF_THEN]] ], [ [[CALL1]], [[IF_END]] ]
-; CHECK-NEXT:    ret ptr [[RETVAL_0]]
+; TUNIT: Function Attrs: memory(inaccessiblemem: readwrite)
+; TUNIT-LABEL: define {{[^@]+}}@internal_only_rec_static
+; TUNIT-SAME: (i32 [[ARG:%.*]]) #[[ATTR0]] {
+; TUNIT-NEXT:  entry:
+; TUNIT-NEXT:    [[REM:%.*]] = srem i32 [[ARG]], 2
+; TUNIT-NEXT:    [[CMP:%.*]] = icmp eq i32 [[REM]], 1
+; TUNIT-NEXT:    br i1 [[CMP]], label [[IF_THEN:%.*]], label [[IF_END:%.*]]
+; TUNIT:       if.then:
+; TUNIT-NEXT:    [[DIV:%.*]] = sdiv i32 [[ARG]], 2
+; TUNIT-NEXT:    [[CALL:%.*]] = call noalias ptr @internal_only_rec(i32 [[DIV]])
+; TUNIT-NEXT:    br label [[RETURN:%.*]]
+; TUNIT:       if.end:
+; TUNIT-NEXT:    [[CONV:%.*]] = sext i32 [[ARG]] to i64
+; TUNIT-NEXT:    [[CALL1:%.*]] = call ptr @malloc(i64 [[CONV]])
+; TUNIT-NEXT:    br label [[RETURN]]
+; TUNIT:       return:
+; TUNIT-NEXT:    [[RETVAL_0:%.*]] = phi ptr [ [[CALL]], [[IF_THEN]] ], [ [[CALL1]], [[IF_END]] ]
+; TUNIT-NEXT:    ret ptr [[RETVAL_0]]
+;
+; CGSCC: Function Attrs: memory(inaccessiblemem: readwrite)
+; CGSCC-LABEL: define {{[^@]+}}@internal_only_rec_static
+; CGSCC-SAME: (i32 [[ARG:%.*]]) #[[ATTR0]] {
+; CGSCC-NEXT:  entry:
+; CGSCC-NEXT:    [[REM:%.*]] = srem i32 [[ARG]], 2
+; CGSCC-NEXT:    [[CMP:%.*]] = icmp eq i32 [[REM]], 1
+; CGSCC-NEXT:    br i1 [[CMP]], label [[IF_THEN:%.*]], label [[IF_END:%.*]]
+; CGSCC:       if.then:
+; CGSCC-NEXT:    [[DIV:%.*]] = sdiv i32 [[ARG]], 2
+; CGSCC-NEXT:    [[CALL:%.*]] = call ptr @internal_only_rec(i32 [[DIV]])
+; CGSCC-NEXT:    br label [[RETURN:%.*]]
+; CGSCC:       if.end:
+; CGSCC-NEXT:    [[CONV:%.*]] = sext i32 [[ARG]] to i64
+; CGSCC-NEXT:    [[CALL1:%.*]] = call ptr @malloc(i64 [[CONV]])
+; CGSCC-NEXT:    br label [[RETURN]]
+; CGSCC:       return:
+; CGSCC-NEXT:    [[RETVAL_0:%.*]] = phi ptr [ [[CALL]], [[IF_THEN]] ], [ [[CALL1]], [[IF_END]] ]
+; CGSCC-NEXT:    ret ptr [[RETVAL_0]]
 ;
 entry:
   %rem = srem i32 %arg, 2
@@ -120,11 +146,17 @@ return:                                           ; preds = %if.end, %if.then
 
 define dso_local ptr @internal_only_rec_static_helper_malloc_noescape(i32 %arg) {
 ; FIXME: This is actually inaccessiblememonly because the malloced memory does not escape
-; CHECK-LABEL: define {{[^@]+}}@internal_only_rec_static_helper_malloc_noescape
-; CHECK-SAME: (i32 [[ARG:%.*]]) {
-; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[CALL:%.*]] = call noalias ptr @internal_only_rec_static_malloc_noescape(i32 [[ARG]])
-; CHECK-NEXT:    ret ptr [[CALL]]
+; TUNIT-LABEL: define {{[^@]+}}@internal_only_rec_static_helper_malloc_noescape
+; TUNIT-SAME: (i32 [[ARG:%.*]]) {
+; TUNIT-NEXT:  entry:
+; TUNIT-NEXT:    [[CALL:%.*]] = call noalias ptr @internal_only_rec_static_malloc_noescape(i32 [[ARG]])
+; TUNIT-NEXT:    ret ptr [[CALL]]
+;
+; CGSCC-LABEL: define {{[^@]+}}@internal_only_rec_static_helper_malloc_noescape
+; CGSCC-SAME: (i32 [[ARG:%.*]]) {
+; CGSCC-NEXT:  entry:
+; CGSCC-NEXT:    [[CALL:%.*]] = call ptr @internal_only_rec_static_malloc_noescape(i32 [[ARG]])
+; CGSCC-NEXT:    ret ptr [[CALL]]
 ;
 entry:
   %call = call ptr @internal_only_rec_static_malloc_noescape(i32 %arg)
@@ -133,23 +165,41 @@ entry:
 
 define internal ptr @internal_only_rec_static_malloc_noescape(i32 %arg) {
 ; FIXME: This is actually inaccessiblememonly because the malloced memory does not escape
-; CHECK-LABEL: define {{[^@]+}}@internal_only_rec_static_malloc_noescape
-; CHECK-SAME: (i32 [[ARG:%.*]]) {
-; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[REM:%.*]] = srem i32 [[ARG]], 2
-; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i32 [[REM]], 1
-; CHECK-NEXT:    br i1 [[CMP]], label [[IF_THEN:%.*]], label [[IF_END:%.*]]
-; CHECK:       if.then:
-; CHECK-NEXT:    [[DIV:%.*]] = sdiv i32 [[ARG]], 2
-; CHECK-NEXT:    [[CALL:%.*]] = call noalias ptr @internal_only_rec(i32 [[DIV]])
-; CHECK-NEXT:    br label [[RETURN:%.*]]
-; CHECK:       if.end:
-; CHECK-NEXT:    [[CONV:%.*]] = sext i32 [[ARG]] to i64
-; CHECK-NEXT:    [[CALL1:%.*]] = call noalias ptr @malloc(i64 [[CONV]])
-; CHECK-NEXT:    br label [[RETURN]]
-; CHECK:       return:
-; CHECK-NEXT:    [[RETVAL_0:%.*]] = phi ptr [ [[CALL]], [[IF_THEN]] ], [ null, [[IF_END]] ]
-; CHECK-NEXT:    ret ptr [[RETVAL_0]]
+; TUNIT-LABEL: define {{[^@]+}}@internal_only_rec_static_malloc_noescape
+; TUNIT-SAME: (i32 [[ARG:%.*]]) {
+; TUNIT-NEXT:  entry:
+; TUNIT-NEXT:    [[REM:%.*]] = srem i32 [[ARG]], 2
+; TUNIT-NEXT:    [[CMP:%.*]] = icmp eq i32 [[REM]], 1
+; TUNIT-NEXT:    br i1 [[CMP]], label [[IF_THEN:%.*]], label [[IF_END:%.*]]
+; TUNIT:       if.then:
+; TUNIT-NEXT:    [[DIV:%.*]] = sdiv i32 [[ARG]], 2
+; TUNIT-NEXT:    [[CALL:%.*]] = call noalias ptr @internal_only_rec(i32 [[DIV]])
+; TUNIT-NEXT:    br label [[RETURN:%.*]]
+; TUNIT:       if.end:
+; TUNIT-NEXT:    [[CONV:%.*]] = sext i32 [[ARG]] to i64
+; TUNIT-NEXT:    [[CALL1:%.*]] = call noalias ptr @malloc(i64 [[CONV]])
+; TUNIT-NEXT:    br label [[RETURN]]
+; TUNIT:       return:
+; TUNIT-NEXT:    [[RETVAL_0:%.*]] = phi ptr [ [[CALL]], [[IF_THEN]] ], [ null, [[IF_END]] ]
+; TUNIT-NEXT:    ret ptr [[RETVAL_0]]
+;
+; CGSCC-LABEL: define {{[^@]+}}@internal_only_rec_static_malloc_noescape
+; CGSCC-SAME: (i32 [[ARG:%.*]]) {
+; CGSCC-NEXT:  entry:
+; CGSCC-NEXT:    [[REM:%.*]] = srem i32 [[ARG]], 2
+; CGSCC-NEXT:    [[CMP:%.*]] = icmp eq i32 [[REM]], 1
+; CGSCC-NEXT:    br i1 [[CMP]], label [[IF_THEN:%.*]], label [[IF_END:%.*]]
+; CGSCC:       if.then:
+; CGSCC-NEXT:    [[DIV:%.*]] = sdiv i32 [[ARG]], 2
+; CGSCC-NEXT:    [[CALL:%.*]] = call ptr @internal_only_rec(i32 [[DIV]])
+; CGSCC-NEXT:    br label [[RETURN:%.*]]
+; CGSCC:       if.end:
+; CGSCC-NEXT:    [[CONV:%.*]] = sext i32 [[ARG]] to i64
+; CGSCC-NEXT:    [[CALL1:%.*]] = call noalias ptr @malloc(i64 [[CONV]])
+; CGSCC-NEXT:    br label [[RETURN]]
+; CGSCC:       return:
+; CGSCC-NEXT:    [[RETVAL_0:%.*]] = phi ptr [ [[CALL]], [[IF_THEN]] ], [ null, [[IF_END]] ]
+; CGSCC-NEXT:    ret ptr [[RETVAL_0]]
 ;
 entry:
   %rem = srem i32 %arg, 2
@@ -179,7 +229,7 @@ define dso_local ptr @internal_argmem_only_read(ptr %arg) {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[TMP:%.*]] = load i32, ptr [[ARG]], align 4
 ; CHECK-NEXT:    [[CONV:%.*]] = sext i32 [[TMP]] to i64
-; CHECK-NEXT:    [[CALL:%.*]] = call noalias ptr @malloc(i64 [[CONV]])
+; CHECK-NEXT:    [[CALL:%.*]] = call ptr @malloc(i64 [[CONV]])
 ; CHECK-NEXT:    ret ptr [[CALL]]
 ;
 entry:
@@ -195,7 +245,7 @@ define dso_local ptr @internal_argmem_only_write(ptr %arg) {
 ; CHECK-SAME: (ptr nocapture nofree noundef nonnull writeonly align 4 dereferenceable(4) [[ARG:%.*]]) #[[ATTR1]] {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    store i32 10, ptr [[ARG]], align 4
-; CHECK-NEXT:    [[CALL:%.*]] = call noalias dereferenceable_or_null(10) ptr @malloc(i64 noundef 10)
+; CHECK-NEXT:    [[CALL:%.*]] = call dereferenceable_or_null(10) ptr @malloc(i64 noundef 10)
 ; CHECK-NEXT:    ret ptr [[CALL]]
 ;
 entry:
@@ -216,7 +266,7 @@ define dso_local ptr @internal_argmem_only_rec(ptr %arg) {
 ; CGSCC-LABEL: define {{[^@]+}}@internal_argmem_only_rec
 ; CGSCC-SAME: (ptr nocapture nofree noundef nonnull align 4 dereferenceable(4) [[ARG:%.*]]) #[[ATTR1]] {
 ; CGSCC-NEXT:  entry:
-; CGSCC-NEXT:    [[CALL:%.*]] = call noalias ptr @internal_argmem_only_rec_1(ptr nocapture nofree noundef nonnull align 4 dereferenceable(4) [[ARG]])
+; CGSCC-NEXT:    [[CALL:%.*]] = call ptr @internal_argmem_only_rec_1(ptr nocapture nofree noundef nonnull align 4 dereferenceable(4) [[ARG]])
 ; CGSCC-NEXT:    ret ptr [[CALL]]
 ;
 entry:
@@ -245,7 +295,7 @@ define internal ptr @internal_argmem_only_rec_1(ptr %arg) {
 ; CHECK:       if.end3:
 ; CHECK-NEXT:    [[TMP2:%.*]] = load i32, ptr [[ARG]], align 4
 ; CHECK-NEXT:    [[CONV:%.*]] = sext i32 [[TMP2]] to i64
-; CHECK-NEXT:    [[CALL4:%.*]] = call noalias ptr @malloc(i64 [[CONV]])
+; CHECK-NEXT:    [[CALL4:%.*]] = call ptr @malloc(i64 [[CONV]])
 ; CHECK-NEXT:    br label [[RETURN]]
 ; CHECK:       return:
 ; CHECK-NEXT:    [[RETVAL_0:%.*]] = phi ptr [ null, [[IF_THEN]] ], [ [[CALL]], [[IF_THEN2]] ], [ [[CALL4]], [[IF_END3]] ]
@@ -564,7 +614,7 @@ define i8 @readnone_caller(i1 %c) {
 ; CGSCC-LABEL: define {{[^@]+}}@readnone_caller
 ; CGSCC-SAME: (i1 noundef [[C:%.*]]) #[[ATTR10:[0-9]+]] {
 ; CGSCC-NEXT:    [[A:%.*]] = alloca i8, align 1
-; CGSCC-NEXT:    [[R:%.*]] = call i8 @recursive_not_readnone_internal(ptr noalias nocapture nofree noundef nonnull writeonly dereferenceable(1) [[A]], i1 noundef [[C]]) #[[ATTR14:[0-9]+]]
+; CGSCC-NEXT:    [[R:%.*]] = call i8 @recursive_not_readnone_internal(ptr noalias nocapture nofree noundef nonnull writeonly dereferenceable(1) [[A]], i1 noundef [[C]]) #[[ATTR12]]
 ; CGSCC-NEXT:    ret i8 [[R]]
 ;
   %a = alloca i8
@@ -618,7 +668,7 @@ define i8 @readnone_caller2(i1 %c) {
 ; CGSCC: Function Attrs: nofree nosync nounwind memory(none)
 ; CGSCC-LABEL: define {{[^@]+}}@readnone_caller2
 ; CGSCC-SAME: (i1 noundef [[C:%.*]]) #[[ATTR10]] {
-; CGSCC-NEXT:    [[R:%.*]] = call i8 @recursive_readnone_internal2(ptr undef, i1 noundef [[C]]) #[[ATTR14]]
+; CGSCC-NEXT:    [[R:%.*]] = call i8 @recursive_readnone_internal2(ptr undef, i1 noundef [[C]]) #[[ATTR12]]
 ; CGSCC-NEXT:    ret i8 [[R]]
 ;
   %r = call i8 @recursive_readnone_internal2(ptr undef, i1 %c)
@@ -673,7 +723,7 @@ define i8 @readnone_caller3(i1 %c) {
 ; CGSCC-LABEL: define {{[^@]+}}@readnone_caller3
 ; CGSCC-SAME: (i1 noundef [[C:%.*]]) #[[ATTR10]] {
 ; CGSCC-NEXT:    [[ALLOC:%.*]] = alloca i8, align 1
-; CGSCC-NEXT:    [[R:%.*]] = call i8 @recursive_not_readnone_internal3(ptr noalias nocapture nofree noundef nonnull writeonly dereferenceable(1) [[ALLOC]], i1 noundef [[C]]) #[[ATTR14]]
+; CGSCC-NEXT:    [[R:%.*]] = call i8 @recursive_not_readnone_internal3(ptr noalias nocapture nofree noundef nonnull writeonly dereferenceable(1) [[ALLOC]], i1 noundef [[C]]) #[[ATTR12]]
 ; CGSCC-NEXT:    ret i8 [[R]]
 ;
   %alloc = alloca i8
@@ -769,7 +819,6 @@ f:
 ; CGSCC: attributes #[[ATTR9]] = { nofree nosync nounwind memory(argmem: write) }
 ; CGSCC: attributes #[[ATTR10]] = { nofree nosync nounwind memory(none) }
 ; CGSCC: attributes #[[ATTR11]] = { nosync memory(argmem: write) }
-; CGSCC: attributes #[[ATTR12]] = { nounwind willreturn }
+; CGSCC: attributes #[[ATTR12]] = { nounwind }
 ; CGSCC: attributes #[[ATTR13]] = { nofree nosync nounwind }
-; CGSCC: attributes #[[ATTR14]] = { nounwind }
 ;.

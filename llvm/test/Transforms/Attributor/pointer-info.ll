@@ -59,5 +59,5 @@ define void @bar(ptr noundef byval(%struct.test.a) align 8 %dev) {
 ;.
 ; CGSCC: attributes #[[ATTR0]] = { mustprogress nofree nosync nounwind willreturn memory(none) }
 ; CGSCC: attributes #[[ATTR1]] = { mustprogress nofree norecurse nosync nounwind willreturn memory(argmem: write) }
-; CGSCC: attributes #[[ATTR2]] = { nounwind willreturn }
+; CGSCC: attributes #[[ATTR2]] = { nounwind }
 ;.

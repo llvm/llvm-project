@@ -41,7 +41,7 @@ define dso_local void @func(ptr nocapture %a, ptr %b, i32 %N) local_unnamed_addr
 ; CGSCC-NEXT:    store ptr [[A]], ptr [[A_ADDR]], align 8
 ; CGSCC-NEXT:    store ptr [[B]], ptr [[B_ADDR]], align 8
 ; CGSCC-NEXT:    store i32 199, ptr [[N_ADDR]], align 4
-; CGSCC-NEXT:    call void (ptr, i32, ptr, ...) @__kmpc_fork_call(ptr noundef nonnull align 8 dereferenceable(24) @[[GLOB2]], i32 noundef 3, ptr noundef @.omp_outlined., ptr nofree noundef nonnull readonly align 4 dereferenceable(4) [[N_ADDR]], ptr nofree noundef nonnull readonly align 8 dereferenceable(8) [[A_ADDR]], ptr nofree noundef nonnull readonly align 8 dereferenceable(8) [[B_ADDR]])
+; CGSCC-NEXT:    call void (ptr, i32, ptr, ...) @__kmpc_fork_call(ptr noundef nonnull align 8 dereferenceable(24) @[[GLOB2]], i32 noundef 3, ptr noundef @.omp_outlined., ptr noalias nofree noundef nonnull readonly align 4 dereferenceable(4) [[N_ADDR]], ptr noalias nofree noundef nonnull readonly align 8 dereferenceable(8) [[A_ADDR]], ptr noalias nofree noundef nonnull readonly align 8 dereferenceable(8) [[B_ADDR]])
 ; CGSCC-NEXT:    ret void
 ;
 entry:
