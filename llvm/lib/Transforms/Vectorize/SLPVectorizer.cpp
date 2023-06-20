@@ -12767,9 +12767,6 @@ class HorizontalReduction {
         return Builder.CreateSelect(Cmp, LHS, RHS, Name);
       }
       return Builder.CreateBinaryIntrinsic(Intrinsic::umin, LHS, RHS);
-    // TODO: Add support for these recurrences.  
-    case RecurKind::FMaximum:
-    case RecurKind::FMinimum:
     default:
       llvm_unreachable("Unknown reduction operation.");
     }
@@ -13814,9 +13811,6 @@ private:
       });
       break;
     }
-    // TODO: Add support for these recurrences.  
-    case RecurKind::FMaximum:
-    case RecurKind::FMinimum:
     default:
       llvm_unreachable("Expected arithmetic or min/max reduction operation");
     }
@@ -13886,9 +13880,6 @@ private:
     case RecurKind::FMulAdd:
     case RecurKind::SelectICmp:
     case RecurKind::SelectFCmp:
-    // TODO: Add support for these recurrences.  
-    case RecurKind::FMaximum:
-    case RecurKind::FMinimum:
     case RecurKind::None:
       llvm_unreachable("Unexpected reduction kind for repeated scalar.");
     }
@@ -13978,9 +13969,6 @@ private:
     case RecurKind::FMulAdd:
     case RecurKind::SelectICmp:
     case RecurKind::SelectFCmp:
-    // TODO: Add support for these recurrences.  
-    case RecurKind::FMaximum:
-    case RecurKind::FMinimum:
     case RecurKind::None:
       llvm_unreachable("Unexpected reduction kind for reused scalars.");
     }
