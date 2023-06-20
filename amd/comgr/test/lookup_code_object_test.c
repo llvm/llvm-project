@@ -34,8 +34,15 @@ void buildFatBinary(const char *Input, const char *InputPath,
   checkError(Status, "amd_comgr_action_info_set_option_list");
   Status = amd_comgr_create_data_set(&DataFatBin);
   checkError(Status, "amd_comgr_create_data_set");
+
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wdeprecated-declarations"
+
   Status = amd_comgr_do_action(AMD_COMGR_ACTION_COMPILE_SOURCE_TO_FATBIN,
                                DataAction, DataSetIn, DataFatBin);
+
+#pragma GCC diagnostic pop
+
   checkError(Status, "amd_comgr_do_action");
   amd_comgr_data_t FatBinData;
   Status = amd_comgr_action_data_get_data(
