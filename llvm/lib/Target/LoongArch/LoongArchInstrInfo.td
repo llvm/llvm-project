@@ -1201,6 +1201,8 @@ def : Pat<(setle GPR:$rj, GPR:$rk), (XORI (SLT GPR:$rk, GPR:$rj), 1)>;
 
 /// Select
 
+def : Pat<(select GPR:$cond, GPR:$t, 0), (MASKEQZ GPR:$t, GPR:$cond)>;
+def : Pat<(select GPR:$cond, 0, GPR:$f), (MASKNEZ GPR:$f, GPR:$cond)>;
 def : Pat<(select GPR:$cond, GPR:$t, GPR:$f),
           (OR (MASKEQZ GPR:$t, GPR:$cond), (MASKNEZ GPR:$f, GPR:$cond))>;
 
