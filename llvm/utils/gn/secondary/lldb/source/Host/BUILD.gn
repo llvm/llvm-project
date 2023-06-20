@@ -46,6 +46,7 @@ static_library("Host") {
     "common/ThreadLauncher.cpp",
     "common/UDPSocket.cpp",
     "common/XML.cpp",
+    "common/ZipFileResolver.cpp",
   ]
 
   if (lldb_enable_libedit) {
