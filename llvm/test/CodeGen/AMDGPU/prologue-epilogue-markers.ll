@@ -10,21 +10,18 @@ define hidden void @_Z9base_casev() #0 !dbg !6 {
 ; CHECK-LABEL: _Z9base_casev:
 ; CHECK:       .Lfunc_begin0:
 ; CHECK-NEXT:    .file 0 "dir" "file.cpp"
-; CHECK-NEXT:    .loc 0 5 0 ; file.cpp:5:0
 ; CHECK-NEXT:    .cfi_sections .debug_frame
 ; CHECK-NEXT:    .cfi_startproc
 ; CHECK-NEXT:  ; %bb.0: ; %entry
-; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; CHECK-NEXT:  .Ltmp0:
 ; CHECK-NEXT:    .loc 0 7 3 prologue_end ; file.cpp:7:3
+; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; CHECK-NEXT:    s_setpc_b64 s[30:31]
-; CHECK-NEXT:  .Ltmp1:
+; CHECK-NEXT:  .Ltmp0:
 
 ; DWARFLINE:		file format elf64-amdgpu
 ; DWARFLINE:		.debug_line contents
 ; DWARFLINE:		Address            Line   Column File   ISA Discriminator OpIndex Flags
-; DWARFLINE:		0x0000000000000000      5      0      0   0             0       0  is_stmt
-; DWARFLINE-NEXT:	0x0000000000000004      7      3      0   0             0       0  is_stmt prologue_end
+; DWARFLINE:     	0x0000000000000000      7      3      0   0             0       0  is_stmt prologue_end
 ; DWARFLINE-NEXT:	0x0000000000000008      7      3      0   0             0       0  is_stmt end_sequence
 
 entry:

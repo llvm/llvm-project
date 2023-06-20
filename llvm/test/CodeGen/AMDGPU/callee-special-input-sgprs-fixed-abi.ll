@@ -107,8 +107,8 @@ define amdgpu_kernel void @kern_indirect_use_dispatch_id() #1 {
 }
 
 ; GCN-LABEL: {{^}}use_workgroup_id_x:
-; GCN: s_waitcnt
 ; GCN: ; use s12
+; GCN: s_waitcnt
 define hidden void @use_workgroup_id_x() #1 {
   %val = call i32 @llvm.amdgcn.workgroup.id.x()
   call void asm sideeffect "; use $0", "s"(i32 %val)
@@ -116,9 +116,9 @@ define hidden void @use_workgroup_id_x() #1 {
 }
 
 ; GCN-LABEL: {{^}}use_stack_workgroup_id_x:
-; GCN: s_waitcnt
 ; GCN-NOT: s32
 ; GCN: buffer_store_dword v0, off, s[0:3], s32{{$}}
+; GCN: s_waitcnt
 ; GCN: ; use s12
 ; GCN: s_setpc_b64
 define hidden void @use_stack_workgroup_id_x() #1 {
@@ -130,8 +130,8 @@ define hidden void @use_stack_workgroup_id_x() #1 {
 }
 
 ; GCN-LABEL: {{^}}use_workgroup_id_y:
-; GCN: s_waitcnt
 ; GCN: ; use s13
+; GCN: s_waitcnt
 define hidden void @use_workgroup_id_y() #1 {
   %val = call i32 @llvm.amdgcn.workgroup.id.y()
   call void asm sideeffect "; use $0", "s"(i32 %val)
@@ -139,8 +139,8 @@ define hidden void @use_workgroup_id_y() #1 {
 }
 
 ; GCN-LABEL: {{^}}use_workgroup_id_z:
-; GCN: s_waitcnt
 ; GCN: ; use s14
+; GCN: s_waitcnt
 define hidden void @use_workgroup_id_z() #1 {
   %val = call i32 @llvm.amdgcn.workgroup.id.z()
   call void asm sideeffect "; use $0", "s"(i32 %val)

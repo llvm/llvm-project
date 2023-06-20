@@ -11,7 +11,6 @@ declare i32 @llvm.get.rounding()
 define i32 @func_rounding() {
 ; GFX678-LABEL: func_rounding:
 ; GFX678:       ; %bb.0:
-; GFX678-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX678-NEXT:    s_getreg_b32 s4, hwreg(HW_REG_MODE, 0, 4)
 ; GFX678-NEXT:    s_lshl_b32 s6, s4, 2
 ; GFX678-NEXT:    s_mov_b32 s4, 0xeb24da71
@@ -22,11 +21,11 @@ define i32 @func_rounding() {
 ; GFX678-NEXT:    s_cmp_lt_u32 s4, 4
 ; GFX678-NEXT:    s_cselect_b32 s4, s4, s5
 ; GFX678-NEXT:    v_mov_b32_e32 v0, s4
+; GFX678-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX678-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX9-LABEL: func_rounding:
 ; GFX9:       ; %bb.0:
-; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX9-NEXT:    s_getreg_b32 s4, hwreg(HW_REG_MODE, 0, 4)
 ; GFX9-NEXT:    s_lshl_b32 s6, s4, 2
 ; GFX9-NEXT:    s_mov_b32 s4, 0xeb24da71
@@ -37,11 +36,11 @@ define i32 @func_rounding() {
 ; GFX9-NEXT:    s_cmp_lt_u32 s4, 4
 ; GFX9-NEXT:    s_cselect_b32 s4, s4, s5
 ; GFX9-NEXT:    v_mov_b32_e32 v0, s4
+; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX9-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX10-LABEL: func_rounding:
 ; GFX10:       ; %bb.0:
-; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX10-NEXT:    s_getreg_b32 s4, hwreg(HW_REG_MODE, 0, 4)
 ; GFX10-NEXT:    s_lshl_b32 s6, s4, 2
 ; GFX10-NEXT:    s_mov_b32 s4, 0xeb24da71
@@ -52,11 +51,11 @@ define i32 @func_rounding() {
 ; GFX10-NEXT:    s_cmp_lt_u32 s4, 4
 ; GFX10-NEXT:    s_cselect_b32 s4, s4, s5
 ; GFX10-NEXT:    v_mov_b32_e32 v0, s4
+; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX10-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX11-LABEL: func_rounding:
 ; GFX11:       ; %bb.0:
-; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX11-NEXT:    s_getreg_b32 s0, hwreg(HW_REG_MODE, 0, 4)
 ; GFX11-NEXT:    s_lshl_b32 s2, s0, 2
 ; GFX11-NEXT:    s_mov_b32 s0, 0xeb24da71
@@ -67,6 +66,7 @@ define i32 @func_rounding() {
 ; GFX11-NEXT:    s_cmp_lt_u32 s0, 4
 ; GFX11-NEXT:    s_cselect_b32 s0, s0, s1
 ; GFX11-NEXT:    v_mov_b32_e32 v0, s0
+; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX11-NEXT:    s_setpc_b64 s[30:31]
   %rounding = call i32 @llvm.get.rounding()
   ret i32 %rounding

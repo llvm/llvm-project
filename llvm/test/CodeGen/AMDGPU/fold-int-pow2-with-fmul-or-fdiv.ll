@@ -69,8 +69,8 @@ define <4 x float> @fmul_pow2_4xfloat(<4 x i32> %i) {
 define <4 x float> @fmul_pow2_ldexp_4xfloat(<4 x i32> %i) {
 ; VI-LABEL: fmul_pow2_ldexp_4xfloat:
 ; VI:       ; %bb.0:
-; VI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; VI-NEXT:    s_mov_b32 s4, 0x41100000
+; VI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; VI-NEXT:    v_ldexp_f32 v0, s4, v0
 ; VI-NEXT:    v_ldexp_f32 v1, s4, v1
 ; VI-NEXT:    v_ldexp_f32 v2, s4, v2
@@ -150,8 +150,8 @@ declare <8 x half> @llvm.ldexp.v8f16.v8i16(<8 x half>, <8 x i16>)
 define <8 x half> @fmul_pow2_8xhalf(<8 x i16> %i) {
 ; VI-LABEL: fmul_pow2_8xhalf:
 ; VI:       ; %bb.0:
-; VI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; VI-NEXT:    v_mov_b32_e32 v5, 1
+; VI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; VI-NEXT:    v_lshlrev_b16_e64 v4, v3, 1
 ; VI-NEXT:    v_lshlrev_b16_sdwa v3, v3, v5 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:DWORD
 ; VI-NEXT:    v_lshlrev_b16_e64 v6, v2, 1
@@ -250,8 +250,8 @@ define <8 x half> @fmul_pow2_8xhalf(<8 x i16> %i) {
 define <8 x half> @fmul_pow2_ldexp_8xhalf(<8 x i16> %i) {
 ; VI-LABEL: fmul_pow2_ldexp_8xhalf:
 ; VI:       ; %bb.0:
-; VI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; VI-NEXT:    v_mov_b32_e32 v5, 0x7000
+; VI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; VI-NEXT:    v_ldexp_f16_e32 v4, 0x7000, v3
 ; VI-NEXT:    v_ldexp_f16_sdwa v3, v5, v3 dst_sel:WORD_1 dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:WORD_1
 ; VI-NEXT:    v_ldexp_f16_e32 v6, 0x7000, v2
@@ -268,8 +268,8 @@ define <8 x half> @fmul_pow2_ldexp_8xhalf(<8 x i16> %i) {
 ;
 ; GFX10-LABEL: fmul_pow2_ldexp_8xhalf:
 ; GFX10:       ; %bb.0:
-; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX10-NEXT:    v_mov_b32_e32 v4, 0x7000
+; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX10-NEXT:    v_ldexp_f16_e32 v5, 0x7000, v3
 ; GFX10-NEXT:    v_ldexp_f16_e32 v6, 0x7000, v2
 ; GFX10-NEXT:    v_ldexp_f16_e32 v7, 0x7000, v1
@@ -313,8 +313,8 @@ define <8 x half> @fmul_pow2_ldexp_8xhalf(<8 x i16> %i) {
 define <8 x half> @fdiv_pow2_8xhalf(<8 x i16> %i) {
 ; VI-LABEL: fdiv_pow2_8xhalf:
 ; VI:       ; %bb.0:
-; VI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; VI-NEXT:    v_mov_b32_e32 v4, 10
+; VI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; VI-NEXT:    v_lshlrev_b16_sdwa v5, v4, v3 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:WORD_1
 ; VI-NEXT:    v_mov_b32_e32 v6, 0x7000
 ; VI-NEXT:    v_lshlrev_b16_e32 v3, 10, v3
@@ -1748,8 +1748,8 @@ define <2 x half> @fmul_pow_shl_cnt_vec_fail_to_large(<2 x i16> %cnt) nounwind {
 ; CHECK-FMA-NEXT:    retq
 ; VI-LABEL: fmul_pow_shl_cnt_vec_fail_to_large:
 ; VI:       ; %bb.0:
-; VI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; VI-NEXT:    v_mov_b32_e32 v1, 2
+; VI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; VI-NEXT:    v_lshlrev_b16_sdwa v1, v0, v1 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:DWORD
 ; VI-NEXT:    v_lshlrev_b16_e64 v0, v0, 2
 ; VI-NEXT:    v_cvt_f16_u16_e32 v0, v0

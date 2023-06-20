@@ -545,8 +545,9 @@ define <16 x i32> @v_uaddsat_v16i32(<16 x i32> %lhs, <16 x i32> %rhs) {
 ;
 ; GFX10-LABEL: v_uaddsat_v16i32:
 ; GFX10:       ; %bb.0:
-; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX10-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX10-NEXT:    buffer_load_dword v31, off, s[0:3], s32
+; GFX10-NEXT:    s_waitcnt vmcnt(1) expcnt(0)
 ; GFX10-NEXT:    v_add_nc_u32_e64 v0, v0, v16 clamp
 ; GFX10-NEXT:    v_add_nc_u32_e64 v1, v1, v17 clamp
 ; GFX10-NEXT:    v_add_nc_u32_e64 v2, v2, v18 clamp

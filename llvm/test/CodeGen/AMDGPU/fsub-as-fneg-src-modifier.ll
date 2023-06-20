@@ -1044,8 +1044,8 @@ define i1 @no_fold_f32_fsub_into_fneg_modifier_class_issnan_dynamic(float %v0) #
 define i1 @no_fold_f32_fsub_into_fneg_modifier_class_isdenormal_ieee(float %v0) #0 {
 ; SDAG-LABEL: no_fold_f32_fsub_into_fneg_modifier_class_isdenormal_ieee:
 ; SDAG:       ; %bb.0:
-; SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; SDAG-NEXT:    v_mov_b32_e32 v1, 0x90
+; SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; SDAG-NEXT:    v_cmp_class_f32_e64 s[4:5], -v0, v1
 ; SDAG-NEXT:    v_cndmask_b32_e64 v0, 0, 1, s[4:5]
 ; SDAG-NEXT:    s_setpc_b64 s[30:31]
@@ -1215,8 +1215,8 @@ define i1 @no_fold_f16_fsub_into_fneg_modifier_class_var_daz(half %v0, i32 %test
 define i1 @no_fold_f64_fsub_into_fneg_modifier_class_daz(double %v0) #1 {
 ; SDAG-LABEL: no_fold_f64_fsub_into_fneg_modifier_class_daz:
 ; SDAG:       ; %bb.0:
-; SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; SDAG-NEXT:    v_mov_b32_e32 v2, 0x90
+; SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; SDAG-NEXT:    v_cmp_class_f64_e64 s[4:5], -v[0:1], v2
 ; SDAG-NEXT:    v_cndmask_b32_e64 v0, 0, 1, s[4:5]
 ; SDAG-NEXT:    s_setpc_b64 s[30:31]
@@ -1283,8 +1283,9 @@ define amdgpu_gfx float @fold_f32_fsub_into_fneg_modifier_interp_daz(float %v0, 
 define amdgpu_gfx float @fold_f16_fsub_into_fneg_modifier_interp_daz(float %v0, i32 inreg %m0) #1 {
 ; SDAG-LABEL: fold_f16_fsub_into_fneg_modifier_interp_daz:
 ; SDAG:       ; %bb.0:
-; SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; SDAG-NEXT:    s_waitcnt lgkmcnt(0)
 ; SDAG-NEXT:    s_mov_b32 m0, s4
+; SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0)
 ; SDAG-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_MODE, 2, 2), 3
 ; SDAG-NEXT:    v_interp_p1ll_f16 v0, -v0, attr2.y
 ; SDAG-NEXT:    s_setpc_b64 s[30:31]

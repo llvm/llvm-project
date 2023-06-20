@@ -335,15 +335,15 @@ define i32 @divergent_vec_i16_LL(i16 %a, i16 %b) {
 ;
 ; GFX9-LABEL: divergent_vec_i16_LL:
 ; GFX9:       ; %bb.0:
-; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX9-NEXT:    s_mov_b32 s4, 0x5040100
+; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX9-NEXT:    v_perm_b32 v0, v1, v0, s4
 ; GFX9-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX906-LABEL: divergent_vec_i16_LL:
 ; GFX906:       ; %bb.0:
-; GFX906-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX906-NEXT:    s_mov_b32 s4, 0x5040100
+; GFX906-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX906-NEXT:    v_perm_b32 v0, v1, v0, s4
 ; GFX906-NEXT:    s_setpc_b64 s[30:31]
 ;
@@ -417,22 +417,22 @@ define amdgpu_kernel void @uniform_vec_i16_LH(ptr addrspace(1) %out, i16 %a, i32
 define i32 @divergent_vec_i16_LH(i16 %a, i32 %b) {
 ; GCN-LABEL: divergent_vec_i16_LH:
 ; GCN:       ; %bb.0:
-; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GCN-NEXT:    s_mov_b32 s4, 0xffff
+; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GCN-NEXT:    v_bfi_b32 v0, s4, v0, v1
 ; GCN-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX9-LABEL: divergent_vec_i16_LH:
 ; GFX9:       ; %bb.0:
-; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX9-NEXT:    s_mov_b32 s4, 0xffff
+; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX9-NEXT:    v_bfi_b32 v0, s4, v0, v1
 ; GFX9-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX906-LABEL: divergent_vec_i16_LH:
 ; GFX906:       ; %bb.0:
-; GFX906-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX906-NEXT:    s_mov_b32 s4, 0xffff
+; GFX906-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX906-NEXT:    v_bfi_b32 v0, s4, v0, v1
 ; GFX906-NEXT:    s_setpc_b64 s[30:31]
 ;
@@ -516,15 +516,15 @@ define i32 @divergent_vec_i16_HH(i32 %a, i32 %b) {
 ;
 ; GFX9-LABEL: divergent_vec_i16_HH:
 ; GFX9:       ; %bb.0:
-; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX9-NEXT:    s_mov_b32 s4, 0x7060302
+; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX9-NEXT:    v_perm_b32 v0, v1, v0, s4
 ; GFX9-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX906-LABEL: divergent_vec_i16_HH:
 ; GFX906:       ; %bb.0:
-; GFX906-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX906-NEXT:    s_mov_b32 s4, 0x7060302
+; GFX906-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX906-NEXT:    v_perm_b32 v0, v1, v0, s4
 ; GFX906-NEXT:    s_setpc_b64 s[30:31]
 ;
@@ -623,15 +623,15 @@ define float @divergent_vec_f16_LL(half %a, half %b) {
 ;
 ; GFX9-LABEL: divergent_vec_f16_LL:
 ; GFX9:       ; %bb.0:
-; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX9-NEXT:    s_mov_b32 s4, 0x5040100
+; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX9-NEXT:    v_perm_b32 v0, v1, v0, s4
 ; GFX9-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX906-LABEL: divergent_vec_f16_LL:
 ; GFX906:       ; %bb.0:
-; GFX906-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX906-NEXT:    s_mov_b32 s4, 0x5040100
+; GFX906-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX906-NEXT:    v_perm_b32 v0, v1, v0, s4
 ; GFX906-NEXT:    s_setpc_b64 s[30:31]
 ;
@@ -649,8 +649,8 @@ define float @divergent_vec_f16_LL(half %a, half %b) {
 define <2 x i16> @build_vec_v2i16_undeflo_divergent(ptr addrspace(3) %in) #0 {
 ; GCN-LABEL: build_vec_v2i16_undeflo_divergent:
 ; GCN:       ; %bb.0: ; %entry
-; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GCN-NEXT:    s_mov_b32 m0, -1
+; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GCN-NEXT:    ds_read_u16 v0, v0
 ; GCN-NEXT:    s_waitcnt lgkmcnt(0)
 ; GCN-NEXT:    s_setpc_b64 s[30:31]

@@ -46,7 +46,7 @@ define void @f0() {
 ;
 ; GCN-LABEL: f0:
 ; GCN:       ; %bb.0:
-; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GCN-NEXT:    s_waitcnt lgkmcnt(0)
 ; GCN-NEXT:    s_mov_b32 s4, s15
 ; GCN-NEXT:    s_ashr_i32 s5, s15, 31
 ; GCN-NEXT:    s_getpc_b64 s[6:7]
@@ -63,7 +63,7 @@ define void @f0() {
 ; GCN-NEXT:    s_waitcnt lgkmcnt(0)
 ; GCN-NEXT:    v_add_f32_e32 v1, v1, v1
 ; GCN-NEXT:    ds_write_b32 v0, v1
-; GCN-NEXT:    s_waitcnt lgkmcnt(0)
+; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GCN-NEXT:    s_setpc_b64 s[30:31]
   %ld = load float, ptr addrspace(3) @v0
   %mul = fmul float %ld, 2.
@@ -87,7 +87,7 @@ define void @f1() {
 ;
 ; GCN-LABEL: f1:
 ; GCN:       ; %bb.0:
-; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GCN-NEXT:    s_waitcnt lgkmcnt(0)
 ; GCN-NEXT:    s_mov_b32 s4, s15
 ; GCN-NEXT:    s_ashr_i32 s5, s15, 31
 ; GCN-NEXT:    s_getpc_b64 s[6:7]
@@ -104,7 +104,7 @@ define void @f1() {
 ; GCN-NEXT:    s_waitcnt lgkmcnt(0)
 ; GCN-NEXT:    v_mul_lo_u32 v1, v1, 3
 ; GCN-NEXT:    ds_write_b16 v0, v1
-; GCN-NEXT:    s_waitcnt lgkmcnt(0)
+; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GCN-NEXT:    s_setpc_b64 s[30:31]
   %ld = load i16, ptr addrspace(3) @v1
   %mul = mul i16 %ld, 3
@@ -128,7 +128,7 @@ define void @f2() {
 ;
 ; GCN-LABEL: f2:
 ; GCN:       ; %bb.0:
-; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GCN-NEXT:    s_waitcnt lgkmcnt(0)
 ; GCN-NEXT:    s_mov_b32 s4, s15
 ; GCN-NEXT:    s_ashr_i32 s5, s15, 31
 ; GCN-NEXT:    s_getpc_b64 s[6:7]
@@ -145,7 +145,7 @@ define void @f2() {
 ; GCN-NEXT:    s_waitcnt lgkmcnt(0)
 ; GCN-NEXT:    v_lshl_b64 v[0:1], v[0:1], 2
 ; GCN-NEXT:    ds_write_b64 v2, v[0:1]
-; GCN-NEXT:    s_waitcnt lgkmcnt(0)
+; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GCN-NEXT:    s_setpc_b64 s[30:31]
   %ld = load i64, ptr addrspace(3) @v2
   %mul = mul i64 %ld, 4
@@ -169,7 +169,7 @@ define void @f3() {
 ;
 ; GCN-LABEL: f3:
 ; GCN:       ; %bb.0:
-; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GCN-NEXT:    s_waitcnt lgkmcnt(0)
 ; GCN-NEXT:    s_mov_b32 s4, s15
 ; GCN-NEXT:    s_ashr_i32 s5, s15, 31
 ; GCN-NEXT:    s_getpc_b64 s[6:7]
@@ -186,7 +186,7 @@ define void @f3() {
 ; GCN-NEXT:    s_waitcnt lgkmcnt(0)
 ; GCN-NEXT:    v_mul_lo_u32 v1, v1, 5
 ; GCN-NEXT:    ds_write_b8 v0, v1
-; GCN-NEXT:    s_waitcnt lgkmcnt(0)
+; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GCN-NEXT:    s_setpc_b64 s[30:31]
   %ld = load i8, ptr addrspace(3) @v3
   %mul = mul i8 %ld, 5

@@ -1042,9 +1042,9 @@ define double @v_roundeven_f64(double %x) {
 ;
 ; SDAG_GFX6-LABEL: v_roundeven_f64:
 ; SDAG_GFX6:       ; %bb.0:
-; SDAG_GFX6-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; SDAG_GFX6-NEXT:    s_brev_b32 s4, -2
 ; SDAG_GFX6-NEXT:    v_mov_b32_e32 v2, 0x43300000
+; SDAG_GFX6-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; SDAG_GFX6-NEXT:    v_bfi_b32 v3, s4, v2, v1
 ; SDAG_GFX6-NEXT:    v_mov_b32_e32 v2, 0
 ; SDAG_GFX6-NEXT:    v_add_f64 v[4:5], v[0:1], v[2:3]
@@ -1222,9 +1222,9 @@ define <2 x double> @v_roundeven_v2f64(<2 x double> %x) {
 ;
 ; SDAG_GFX6-LABEL: v_roundeven_v2f64:
 ; SDAG_GFX6:       ; %bb.0:
-; SDAG_GFX6-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; SDAG_GFX6-NEXT:    s_brev_b32 s6, -2
 ; SDAG_GFX6-NEXT:    v_mov_b32_e32 v8, 0x43300000
+; SDAG_GFX6-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; SDAG_GFX6-NEXT:    v_bfi_b32 v5, s6, v8, v1
 ; SDAG_GFX6-NEXT:    v_mov_b32_e32 v4, 0
 ; SDAG_GFX6-NEXT:    v_add_f64 v[6:7], v[0:1], v[4:5]

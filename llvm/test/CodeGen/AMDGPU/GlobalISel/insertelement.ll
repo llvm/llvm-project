@@ -685,7 +685,6 @@ entry:
 define void @dyn_insertelement_v8f64_const_s_v_v(double %val, i32 %idx) {
 ; GPRIDX-LABEL: dyn_insertelement_v8f64_const_s_v_v:
 ; GPRIDX:       ; %bb.0: ; %entry
-; GPRIDX-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GPRIDX-NEXT:    s_mov_b32 s18, 0
 ; GPRIDX-NEXT:    s_mov_b32 s16, 0
 ; GPRIDX-NEXT:    s_mov_b32 s14, 0
@@ -715,6 +714,7 @@ define void @dyn_insertelement_v8f64_const_s_v_v(double %val, i32 %idx) {
 ; GPRIDX-NEXT:    v_mov_b32_e32 v16, s17
 ; GPRIDX-NEXT:    v_mov_b32_e32 v17, s18
 ; GPRIDX-NEXT:    v_mov_b32_e32 v18, s19
+; GPRIDX-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GPRIDX-NEXT:    v_cmp_eq_u32_e32 vcc, 1, v2
 ; GPRIDX-NEXT:    v_cmp_eq_u32_e64 s[16:17], 0, v2
 ; GPRIDX-NEXT:    v_cmp_eq_u32_e64 s[4:5], 2, v2
@@ -751,7 +751,6 @@ define void @dyn_insertelement_v8f64_const_s_v_v(double %val, i32 %idx) {
 ;
 ; GFX10-LABEL: dyn_insertelement_v8f64_const_s_v_v:
 ; GFX10:       ; %bb.0: ; %entry
-; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX10-NEXT:    s_mov_b32 s18, 0
 ; GFX10-NEXT:    s_mov_b32 s16, 0
 ; GFX10-NEXT:    s_mov_b32 s14, 0
@@ -781,6 +780,7 @@ define void @dyn_insertelement_v8f64_const_s_v_v(double %val, i32 %idx) {
 ; GFX10-NEXT:    v_mov_b32_e32 v16, s17
 ; GFX10-NEXT:    v_mov_b32_e32 v17, s18
 ; GFX10-NEXT:    v_mov_b32_e32 v18, s19
+; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX10-NEXT:    v_cmp_eq_u32_e32 vcc_lo, 0, v2
 ; GFX10-NEXT:    v_cmp_eq_u32_e64 s4, 1, v2
 ; GFX10-NEXT:    v_cmp_eq_u32_e64 s5, 2, v2
@@ -817,7 +817,6 @@ define void @dyn_insertelement_v8f64_const_s_v_v(double %val, i32 %idx) {
 ;
 ; GFX11-LABEL: dyn_insertelement_v8f64_const_s_v_v:
 ; GFX11:       ; %bb.0: ; %entry
-; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX11-NEXT:    s_mov_b32 s14, 0
 ; GFX11-NEXT:    s_mov_b32 s15, 0x40200000
 ; GFX11-NEXT:    s_mov_b32 s12, 0
@@ -833,6 +832,7 @@ define void @dyn_insertelement_v8f64_const_s_v_v(double %val, i32 %idx) {
 ; GFX11-NEXT:    s_mov_b64 s[2:3], 2.0
 ; GFX11-NEXT:    v_dual_mov_b32 v18, s15 :: v_dual_mov_b32 v17, s14
 ; GFX11-NEXT:    v_dual_mov_b32 v4, s1 :: v_dual_mov_b32 v3, s0
+; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX11-NEXT:    v_cmp_eq_u32_e32 vcc_lo, 0, v2
 ; GFX11-NEXT:    v_dual_mov_b32 v16, s13 :: v_dual_mov_b32 v15, s12
 ; GFX11-NEXT:    v_dual_mov_b32 v14, s11 :: v_dual_mov_b32 v13, s10

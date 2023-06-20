@@ -145,8 +145,8 @@ define amdgpu_ps void @ds_fadd_f32_ss_offset_nortn(ptr addrspace(3) inreg %ptr, 
 define float @ds_fadd_f32_vv(ptr addrspace(3) %ptr, float %val) {
 ; GFX8-LABEL: ds_fadd_f32_vv:
 ; GFX8:       ; %bb.0:
-; GFX8-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX8-NEXT:    s_mov_b32 m0, -1
+; GFX8-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX8-NEXT:    ds_add_rtn_f32 v0, v0, v1
 ; GFX8-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX8-NEXT:    s_setpc_b64 s[30:31]
@@ -171,8 +171,8 @@ define float @ds_fadd_f32_vv(ptr addrspace(3) %ptr, float %val) {
 define float @ds_fadd_f32_vv_offset(ptr addrspace(3) %ptr, float %val) {
 ; GFX8-LABEL: ds_fadd_f32_vv_offset:
 ; GFX8:       ; %bb.0:
-; GFX8-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX8-NEXT:    s_mov_b32 m0, -1
+; GFX8-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX8-NEXT:    ds_add_rtn_f32 v0, v0, v1 offset:512
 ; GFX8-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX8-NEXT:    s_setpc_b64 s[30:31]
@@ -198,8 +198,8 @@ define float @ds_fadd_f32_vv_offset(ptr addrspace(3) %ptr, float %val) {
 define void @ds_fadd_f32_vv_nortn(ptr addrspace(3) %ptr, float %val) {
 ; GFX8-LABEL: ds_fadd_f32_vv_nortn:
 ; GFX8:       ; %bb.0:
-; GFX8-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX8-NEXT:    s_mov_b32 m0, -1
+; GFX8-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX8-NEXT:    ds_add_f32 v0, v1
 ; GFX8-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX8-NEXT:    s_setpc_b64 s[30:31]
@@ -224,8 +224,8 @@ define void @ds_fadd_f32_vv_nortn(ptr addrspace(3) %ptr, float %val) {
 define void @ds_fadd_f32_vv_offset_nortn(ptr addrspace(3) %ptr, float %val) {
 ; GFX8-LABEL: ds_fadd_f32_vv_offset_nortn:
 ; GFX8:       ; %bb.0:
-; GFX8-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX8-NEXT:    s_mov_b32 m0, -1
+; GFX8-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX8-NEXT:    ds_add_f32 v0, v1 offset:512
 ; GFX8-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX8-NEXT:    s_setpc_b64 s[30:31]
@@ -251,8 +251,8 @@ define void @ds_fadd_f32_vv_offset_nortn(ptr addrspace(3) %ptr, float %val) {
 define float @ds_fadd_f32_vv_volatile(ptr addrspace(3) %ptr, float %val) {
 ; GFX8-LABEL: ds_fadd_f32_vv_volatile:
 ; GFX8:       ; %bb.0:
-; GFX8-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX8-NEXT:    s_mov_b32 m0, -1
+; GFX8-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX8-NEXT:    ds_add_rtn_f32 v0, v0, v1
 ; GFX8-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX8-NEXT:    s_setpc_b64 s[30:31]

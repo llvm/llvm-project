@@ -6,10 +6,12 @@ declare hidden ptr addrspace(1) @ext(ptr addrspace(1))
 define ptr addrspace(1) @call_assert_align() {
 ; CHECK-LABEL: call_assert_align:
 ; CHECK:       ; %bb.0: ; %entry
-; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; CHECK-NEXT:    s_waitcnt lgkmcnt(0)
 ; CHECK-NEXT:    s_mov_b32 s16, s33
 ; CHECK-NEXT:    s_mov_b32 s33, s32
+; CHECK-NEXT:    s_waitcnt expcnt(0)
 ; CHECK-NEXT:    s_or_saveexec_b64 s[18:19], -1
+; CHECK-NEXT:    s_waitcnt vmcnt(0)
 ; CHECK-NEXT:    buffer_store_dword v40, off, s[0:3], s33 ; 4-byte Folded Spill
 ; CHECK-NEXT:    s_mov_b64 exec, s[18:19]
 ; CHECK-NEXT:    v_writelane_b32 v40, s16, 2
@@ -44,7 +46,6 @@ entry:
 define ptr addrspace(1) @tail_call_assert_align() {
 ; CHECK-LABEL: tail_call_assert_align:
 ; CHECK:       ; %bb.0: ; %entry
-; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; CHECK-NEXT:    v_mov_b32_e32 v0, 0
 ; CHECK-NEXT:    v_mov_b32_e32 v1, 0
 ; CHECK-NEXT:    s_getpc_b64 s[16:17]

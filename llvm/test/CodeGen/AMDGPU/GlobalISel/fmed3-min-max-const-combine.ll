@@ -278,8 +278,8 @@ define <2 x half> @test_min_max_v2f16(<2 x half> %a) #0 {
 ;
 ; GFX8-LABEL: test_min_max_v2f16:
 ; GFX8:       ; %bb.0:
-; GFX8-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX8-NEXT:    v_mov_b32_e32 v2, 0x4000
+; GFX8-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX8-NEXT:    v_max_f16_e32 v1, 2.0, v0
 ; GFX8-NEXT:    v_max_f16_sdwa v0, v0, v2 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:DWORD
 ; GFX8-NEXT:    v_mov_b32_e32 v2, 0x4400

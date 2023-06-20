@@ -26,10 +26,12 @@
 define float @call_split_type_used_outside_block_v2f32() #0 {
 ; GCN-LABEL: call_split_type_used_outside_block_v2f32:
 ; GCN:       ; %bb.0: ; %bb0
-; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GCN-NEXT:    s_waitcnt lgkmcnt(0)
 ; GCN-NEXT:    s_mov_b32 s16, s33
 ; GCN-NEXT:    s_mov_b32 s33, s32
+; GCN-NEXT:    s_waitcnt expcnt(0)
 ; GCN-NEXT:    s_or_saveexec_b64 s[18:19], -1
+; GCN-NEXT:    s_waitcnt vmcnt(0)
 ; GCN-NEXT:    buffer_store_dword v40, off, s[0:3], s33 ; 4-byte Folded Spill
 ; GCN-NEXT:    s_mov_b64 exec, s[18:19]
 ; GCN-NEXT:    v_writelane_b32 v40, s16, 2
@@ -62,10 +64,12 @@ bb1:
 define float @call_split_type_used_outside_block_v3f32() #0 {
 ; GCN-LABEL: call_split_type_used_outside_block_v3f32:
 ; GCN:       ; %bb.0: ; %bb0
-; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GCN-NEXT:    s_waitcnt lgkmcnt(0)
 ; GCN-NEXT:    s_mov_b32 s16, s33
 ; GCN-NEXT:    s_mov_b32 s33, s32
+; GCN-NEXT:    s_waitcnt expcnt(0)
 ; GCN-NEXT:    s_or_saveexec_b64 s[18:19], -1
+; GCN-NEXT:    s_waitcnt vmcnt(0)
 ; GCN-NEXT:    buffer_store_dword v40, off, s[0:3], s33 ; 4-byte Folded Spill
 ; GCN-NEXT:    s_mov_b64 exec, s[18:19]
 ; GCN-NEXT:    v_writelane_b32 v40, s16, 2
@@ -98,10 +102,12 @@ bb1:
 define half @call_split_type_used_outside_block_v4f16() #0 {
 ; GCN-LABEL: call_split_type_used_outside_block_v4f16:
 ; GCN:       ; %bb.0: ; %bb0
-; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GCN-NEXT:    s_waitcnt lgkmcnt(0)
 ; GCN-NEXT:    s_mov_b32 s16, s33
 ; GCN-NEXT:    s_mov_b32 s33, s32
+; GCN-NEXT:    s_waitcnt expcnt(0)
 ; GCN-NEXT:    s_or_saveexec_b64 s[18:19], -1
+; GCN-NEXT:    s_waitcnt vmcnt(0)
 ; GCN-NEXT:    buffer_store_dword v40, off, s[0:3], s33 ; 4-byte Folded Spill
 ; GCN-NEXT:    s_mov_b64 exec, s[18:19]
 ; GCN-NEXT:    v_writelane_b32 v40, s16, 2
@@ -134,10 +140,12 @@ bb1:
 define { i32, half } @call_split_type_used_outside_block_struct() #0 {
 ; GCN-LABEL: call_split_type_used_outside_block_struct:
 ; GCN:       ; %bb.0: ; %bb0
-; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GCN-NEXT:    s_waitcnt lgkmcnt(0)
 ; GCN-NEXT:    s_mov_b32 s16, s33
 ; GCN-NEXT:    s_mov_b32 s33, s32
+; GCN-NEXT:    s_waitcnt expcnt(0)
 ; GCN-NEXT:    s_or_saveexec_b64 s[18:19], -1
+; GCN-NEXT:    s_waitcnt vmcnt(0)
 ; GCN-NEXT:    buffer_store_dword v40, off, s[0:3], s33 ; 4-byte Folded Spill
 ; GCN-NEXT:    s_mov_b64 exec, s[18:19]
 ; GCN-NEXT:    v_writelane_b32 v40, s16, 2

@@ -85,16 +85,16 @@ define double @v_rsq_clamp_fabs_f64(double %src) #0 {
 define float @v_rsq_clamp_undef_f32() #0 {
 ; SI-LABEL: v_rsq_clamp_undef_f32:
 ; SI:       ; %bb.0:
-; SI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; SI-NEXT:    v_rsq_clamp_f32_e32 v0, s4
+; SI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; SI-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; VI-LABEL: v_rsq_clamp_undef_f32:
 ; VI:       ; %bb.0:
-; VI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; VI-NEXT:    v_rsq_f32_e32 v0, s4
 ; VI-NEXT:    v_min_f32_e32 v0, 0x7f7fffff, v0
 ; VI-NEXT:    v_max_f32_e32 v0, 0xff7fffff, v0
+; VI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; VI-NEXT:    s_setpc_b64 s[30:31]
   %rsq_clamp = call float @llvm.amdgcn.rsq.clamp.f32(float undef)
   ret float %rsq_clamp
@@ -103,19 +103,19 @@ define float @v_rsq_clamp_undef_f32() #0 {
 define double @v_rsq_clamp_undef_f64() #0 {
 ; SI-LABEL: v_rsq_clamp_undef_f64:
 ; SI:       ; %bb.0:
-; SI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; SI-NEXT:    v_rsq_clamp_f64_e32 v[0:1], s[4:5]
+; SI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; SI-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; VI-LABEL: v_rsq_clamp_undef_f64:
 ; VI:       ; %bb.0:
-; VI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; VI-NEXT:    v_rsq_f64_e32 v[0:1], s[4:5]
 ; VI-NEXT:    s_mov_b32 s4, -1
 ; VI-NEXT:    s_mov_b32 s5, 0x7fefffff
 ; VI-NEXT:    v_min_f64 v[0:1], v[0:1], s[4:5]
 ; VI-NEXT:    s_mov_b32 s5, 0xffefffff
 ; VI-NEXT:    v_max_f64 v[0:1], v[0:1], s[4:5]
+; VI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; VI-NEXT:    s_setpc_b64 s[30:31]
   %rsq_clamp = call double @llvm.amdgcn.rsq.clamp.f64(double undef)
   ret double %rsq_clamp

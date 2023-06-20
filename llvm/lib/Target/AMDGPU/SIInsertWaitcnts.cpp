@@ -254,6 +254,7 @@ public:
                      const MachineRegisterInfo *MRI, WaitEventType E,
                      MachineInstr &MI);
 
+  void setPendingEvent(WaitEventType E) { PendingEvents |= 1 << E; }
   unsigned hasPendingEvent() const { return PendingEvents; }
   unsigned hasPendingEvent(WaitEventType E) const {
     return PendingEvents & (1 << E);
@@ -292,6 +293,56 @@ public:
   void clearVgprVmemTypes(int GprNo) {
     assert(GprNo < NUM_ALL_VGPRS);
     VgprVmemTypes[GprNo] = 0;
+  }
+
+  void setNonEntryFunctionInitialState(const MachineFunction &MF) {
+    const MachineRegisterInfo &MRI = MF.getRegInfo();
+    const SIRegisterInfo &TRI = ST->getInstrInfo()->getRegisterInfo();
+
+    // All counters are in unknown states.
+    for (auto T : inst_counter_types())
+      setScoreUB(T, getWaitCountMax(T));
+
+    // There may be pending events of any type.
+    if (ST->hasVscnt()) {
+      setPendingEvent(VMEM_READ_ACCESS);
+      setPendingEvent(VMEM_WRITE_ACCESS);
+      setPendingEvent(SCRATCH_WRITE_ACCESS);
+    } else {
+      setPendingEvent(VMEM_ACCESS);
+    }
+    for (unsigned I = LDS_ACCESS; I < NUM_WAIT_EVENTS; ++I)
+      setPendingEvent(WaitEventType(I));
+
+    auto SetStateForPhysReg = [&](MCRegister Reg) {
+      RegInterval Interval = getRegInterval(Reg, &MRI, &TRI);
+      if (Interval.first < NUM_ALL_VGPRS) {
+        for (int RegNo = Interval.first; RegNo < Interval.second; ++RegNo) {
+          for (auto T : inst_counter_types())
+            setRegScore(RegNo, T, getWaitCountMax(T));
+          VgprVmemTypes[RegNo] = -1;
+        }
+      } else {
+        for (int RegNo = Interval.first; RegNo < Interval.second; ++RegNo)
+          setRegScore(RegNo, LGKM_CNT, getWaitCountMax(LGKM_CNT));
+      }
+    };
+
+    // Live-in registers may depend on any counter.
+    const MachineBasicBlock &EntryMBB = MF.front();
+    for (auto [Reg, Mask] : EntryMBB.liveins()) {
+      // TODO: Use Mask to narrow the interval?
+      SetStateForPhysReg(Reg);
+    }
+
+    // Reserved SGPRs (e.g. stack pointer or scratch descriptor) may depend on
+    // any counter.
+    // FIXME: Why are these not live-in to the function and/or the entry BB?
+    for (unsigned I = 0, E = ST->getMaxNumSGPRs(MF); I != E; ++I) {
+      MCRegister Reg = AMDGPU::SGPR_32RegClass.getRegister(I);
+      if (MRI.getReservedRegs()[Reg])
+        SetStateForPhysReg(Reg);
+    }
   }
 
   void print(raw_ostream &);
@@ -570,7 +621,7 @@ void WaitcntBrackets::updateByEvent(const SIInstrInfo *TII,
   // PendingEvents and ScoreUB need to be update regardless if this event
   // changes the score of a register or not.
   // Examples including vm_cnt when buffer-store or lgkm_cnt when send-message.
-  PendingEvents |= 1 << E;
+  setPendingEvent(E);
   setScoreUB(T, CurrScore);
 
   if (T == EXP_CNT) {
@@ -1855,27 +1906,18 @@ bool SIInsertWaitcnts::runOnMachineFunction(MachineFunction &MF) {
   BlockInfos.clear();
   bool Modified = false;
 
-  if (!MFI->isEntryFunction()) {
-    // Wait for any outstanding memory operations that the input registers may
-    // depend on. We can't track them and it's better to do the wait after the
-    // costly call sequence.
-
-    // TODO: Could insert earlier and schedule more liberally with operations
-    // that only use caller preserved registers.
-    MachineBasicBlock &EntryBB = MF.front();
-    MachineBasicBlock::iterator I = EntryBB.begin();
-    for (MachineBasicBlock::iterator E = EntryBB.end();
-         I != E && (I->isPHI() || I->isMetaInstruction()); ++I)
-      ;
-    BuildMI(EntryBB, I, DebugLoc(), TII->get(AMDGPU::S_WAITCNT)).addImm(0);
-
-    Modified = true;
-  }
-
   // Keep iterating over the blocks in reverse post order, inserting and
   // updating s_waitcnt where needed, until a fix point is reached.
   for (auto *MBB : ReversePostOrderTraversal<MachineFunction *>(&MF))
     BlockInfos.insert({MBB, BlockInfo()});
+
+  if (!MFI->isEntryFunction()) {
+    MachineBasicBlock &EntryMBB = MF.front();
+    BlockInfo &EntryBI = BlockInfos.find(&EntryMBB)->second;
+    EntryBI.Incoming = std::make_unique<WaitcntBrackets>(ST, Limits, Encoding);
+    WaitcntBrackets &Brackets = *EntryBI.Incoming;
+    Brackets.setNonEntryFunctionInitialState(MF);
+  }
 
   std::unique_ptr<WaitcntBrackets> Brackets;
   bool Repeat;

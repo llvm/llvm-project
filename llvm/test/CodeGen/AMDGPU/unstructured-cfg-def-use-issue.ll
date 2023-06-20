@@ -5,10 +5,12 @@
 define hidden void @widget() {
 ; GCN-LABEL: widget:
 ; GCN:       ; %bb.0: ; %bb
-; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GCN-NEXT:    s_waitcnt lgkmcnt(0)
 ; GCN-NEXT:    s_mov_b32 s16, s33
 ; GCN-NEXT:    s_mov_b32 s33, s32
+; GCN-NEXT:    s_waitcnt expcnt(0)
 ; GCN-NEXT:    s_or_saveexec_b64 s[18:19], -1
+; GCN-NEXT:    s_waitcnt vmcnt(0)
 ; GCN-NEXT:    buffer_store_dword v40, off, s[0:3], s33 offset:4 ; 4-byte Folded Spill
 ; GCN-NEXT:    s_mov_b64 exec, s[18:19]
 ; GCN-NEXT:    v_writelane_b32 v40, s16, 16
@@ -253,10 +255,12 @@ define hidden void @blam() {
 ;
 ; GCN-LABEL: blam:
 ; GCN:       ; %bb.0: ; %bb
-; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GCN-NEXT:    s_waitcnt lgkmcnt(0)
 ; GCN-NEXT:    s_mov_b32 s16, s33
 ; GCN-NEXT:    s_mov_b32 s33, s32
+; GCN-NEXT:    s_waitcnt expcnt(0)
 ; GCN-NEXT:    s_or_saveexec_b64 s[18:19], -1
+; GCN-NEXT:    s_waitcnt vmcnt(0)
 ; GCN-NEXT:    buffer_store_dword v40, off, s[0:3], s33 offset:20 ; 4-byte Folded Spill
 ; GCN-NEXT:    s_mov_b64 exec, s[18:19]
 ; GCN-NEXT:    v_writelane_b32 v40, s16, 28

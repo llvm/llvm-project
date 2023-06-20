@@ -909,8 +909,8 @@ define float @v_neg_rsq_neg_f32(float %val) {
 ;
 ; GCN-DAZ-SAFE-LABEL: v_neg_rsq_neg_f32:
 ; GCN-DAZ-SAFE:       ; %bb.0:
-; GCN-DAZ-SAFE-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GCN-DAZ-SAFE-NEXT:    s_mov_b32 s4, 0x8f800000
+; GCN-DAZ-SAFE-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GCN-DAZ-SAFE-NEXT:    v_mul_f32_e32 v1, 0xcf800000, v0
 ; GCN-DAZ-SAFE-NEXT:    v_cmp_lt_f32_e32 vcc, s4, v0
 ; GCN-DAZ-SAFE-NEXT:    v_cndmask_b32_e64 v0, -v0, v1, vcc
@@ -932,8 +932,8 @@ define float @v_neg_rsq_neg_f32(float %val) {
 ;
 ; SI-IEEE-SAFE-LABEL: v_neg_rsq_neg_f32:
 ; SI-IEEE-SAFE:       ; %bb.0:
-; SI-IEEE-SAFE-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; SI-IEEE-SAFE-NEXT:    s_mov_b32 s4, 0x8f800000
+; SI-IEEE-SAFE-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; SI-IEEE-SAFE-NEXT:    v_mul_f32_e32 v1, 0xcf800000, v0
 ; SI-IEEE-SAFE-NEXT:    v_cmp_lt_f32_e32 vcc, s4, v0
 ; SI-IEEE-SAFE-NEXT:    v_cndmask_b32_e64 v0, -v0, v1, vcc
@@ -963,8 +963,8 @@ define float @v_neg_rsq_neg_f32(float %val) {
 ;
 ; CI-IEEE-SAFE-LABEL: v_neg_rsq_neg_f32:
 ; CI-IEEE-SAFE:       ; %bb.0:
-; CI-IEEE-SAFE-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; CI-IEEE-SAFE-NEXT:    s_mov_b32 s4, 0x8f800000
+; CI-IEEE-SAFE-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; CI-IEEE-SAFE-NEXT:    v_mul_f32_e32 v1, 0xcf800000, v0
 ; CI-IEEE-SAFE-NEXT:    v_cmp_lt_f32_e32 vcc, s4, v0
 ; CI-IEEE-SAFE-NEXT:    v_cndmask_b32_e64 v0, -v0, v1, vcc
@@ -1015,9 +1015,9 @@ define <2 x float> @v_neg_rsq_neg_v2f32(<2 x float> %val) {
 ;
 ; GCN-DAZ-SAFE-LABEL: v_neg_rsq_neg_v2f32:
 ; GCN-DAZ-SAFE:       ; %bb.0:
-; GCN-DAZ-SAFE-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GCN-DAZ-SAFE-NEXT:    s_mov_b32 s4, 0x8f800000
 ; GCN-DAZ-SAFE-NEXT:    s_mov_b32 s5, 0x4f800000
+; GCN-DAZ-SAFE-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GCN-DAZ-SAFE-NEXT:    v_mul_f32_e64 v2, -v1, s5
 ; GCN-DAZ-SAFE-NEXT:    v_cmp_lt_f32_e32 vcc, s4, v1
 ; GCN-DAZ-SAFE-NEXT:    v_cndmask_b32_e64 v1, -v1, v2, vcc
@@ -1055,9 +1055,9 @@ define <2 x float> @v_neg_rsq_neg_v2f32(<2 x float> %val) {
 ;
 ; SI-IEEE-SAFE-LABEL: v_neg_rsq_neg_v2f32:
 ; SI-IEEE-SAFE:       ; %bb.0:
-; SI-IEEE-SAFE-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; SI-IEEE-SAFE-NEXT:    s_mov_b32 s6, 0x8f800000
 ; SI-IEEE-SAFE-NEXT:    s_mov_b32 s7, 0x4f800000
+; SI-IEEE-SAFE-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; SI-IEEE-SAFE-NEXT:    v_mul_f32_e64 v2, -v1, s7
 ; SI-IEEE-SAFE-NEXT:    v_cmp_lt_f32_e32 vcc, s6, v1
 ; SI-IEEE-SAFE-NEXT:    v_cndmask_b32_e64 v1, -v1, v2, vcc
@@ -1110,9 +1110,9 @@ define <2 x float> @v_neg_rsq_neg_v2f32(<2 x float> %val) {
 ;
 ; CI-IEEE-SAFE-LABEL: v_neg_rsq_neg_v2f32:
 ; CI-IEEE-SAFE:       ; %bb.0:
-; CI-IEEE-SAFE-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; CI-IEEE-SAFE-NEXT:    s_mov_b32 s6, 0x8f800000
 ; CI-IEEE-SAFE-NEXT:    s_mov_b32 s7, 0x4f800000
+; CI-IEEE-SAFE-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; CI-IEEE-SAFE-NEXT:    v_mul_f32_e64 v2, -v1, s7
 ; CI-IEEE-SAFE-NEXT:    v_cmp_lt_f32_e32 vcc, s6, v1
 ; CI-IEEE-SAFE-NEXT:    v_cndmask_b32_e64 v1, -v1, v2, vcc
@@ -1180,8 +1180,8 @@ define float @v_neg_rsq_neg_f32_foldable_user(float %val0, float %val1) {
 ;
 ; GCN-DAZ-SAFE-LABEL: v_neg_rsq_neg_f32_foldable_user:
 ; GCN-DAZ-SAFE:       ; %bb.0:
-; GCN-DAZ-SAFE-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GCN-DAZ-SAFE-NEXT:    s_mov_b32 s4, 0x8f800000
+; GCN-DAZ-SAFE-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GCN-DAZ-SAFE-NEXT:    v_mul_f32_e32 v2, 0xcf800000, v0
 ; GCN-DAZ-SAFE-NEXT:    v_cmp_lt_f32_e32 vcc, s4, v0
 ; GCN-DAZ-SAFE-NEXT:    v_cndmask_b32_e64 v0, -v0, v2, vcc
@@ -1204,8 +1204,8 @@ define float @v_neg_rsq_neg_f32_foldable_user(float %val0, float %val1) {
 ;
 ; SI-IEEE-SAFE-LABEL: v_neg_rsq_neg_f32_foldable_user:
 ; SI-IEEE-SAFE:       ; %bb.0:
-; SI-IEEE-SAFE-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; SI-IEEE-SAFE-NEXT:    s_mov_b32 s4, 0x8f800000
+; SI-IEEE-SAFE-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; SI-IEEE-SAFE-NEXT:    v_mul_f32_e32 v2, 0xcf800000, v0
 ; SI-IEEE-SAFE-NEXT:    v_cmp_lt_f32_e32 vcc, s4, v0
 ; SI-IEEE-SAFE-NEXT:    v_cndmask_b32_e64 v0, -v0, v2, vcc
@@ -1236,8 +1236,8 @@ define float @v_neg_rsq_neg_f32_foldable_user(float %val0, float %val1) {
 ;
 ; CI-IEEE-SAFE-LABEL: v_neg_rsq_neg_f32_foldable_user:
 ; CI-IEEE-SAFE:       ; %bb.0:
-; CI-IEEE-SAFE-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; CI-IEEE-SAFE-NEXT:    s_mov_b32 s4, 0x8f800000
+; CI-IEEE-SAFE-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; CI-IEEE-SAFE-NEXT:    v_mul_f32_e32 v2, 0xcf800000, v0
 ; CI-IEEE-SAFE-NEXT:    v_cmp_lt_f32_e32 vcc, s4, v0
 ; CI-IEEE-SAFE-NEXT:    v_cndmask_b32_e64 v0, -v0, v2, vcc
@@ -1290,9 +1290,9 @@ define <2 x float> @v_neg_rsq_neg_v2f32_foldable_user(<2 x float> %val0, <2 x fl
 ;
 ; GCN-DAZ-SAFE-LABEL: v_neg_rsq_neg_v2f32_foldable_user:
 ; GCN-DAZ-SAFE:       ; %bb.0:
-; GCN-DAZ-SAFE-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GCN-DAZ-SAFE-NEXT:    s_mov_b32 s4, 0x8f800000
 ; GCN-DAZ-SAFE-NEXT:    s_mov_b32 s5, 0x4f800000
+; GCN-DAZ-SAFE-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GCN-DAZ-SAFE-NEXT:    v_mul_f32_e64 v4, -v1, s5
 ; GCN-DAZ-SAFE-NEXT:    v_cmp_lt_f32_e32 vcc, s4, v1
 ; GCN-DAZ-SAFE-NEXT:    v_cndmask_b32_e64 v1, -v1, v4, vcc
@@ -1332,9 +1332,9 @@ define <2 x float> @v_neg_rsq_neg_v2f32_foldable_user(<2 x float> %val0, <2 x fl
 ;
 ; SI-IEEE-SAFE-LABEL: v_neg_rsq_neg_v2f32_foldable_user:
 ; SI-IEEE-SAFE:       ; %bb.0:
-; SI-IEEE-SAFE-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; SI-IEEE-SAFE-NEXT:    s_mov_b32 s6, 0x8f800000
 ; SI-IEEE-SAFE-NEXT:    s_mov_b32 s7, 0x4f800000
+; SI-IEEE-SAFE-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; SI-IEEE-SAFE-NEXT:    v_mul_f32_e64 v4, -v1, s7
 ; SI-IEEE-SAFE-NEXT:    v_cmp_lt_f32_e32 vcc, s6, v1
 ; SI-IEEE-SAFE-NEXT:    v_cndmask_b32_e64 v1, -v1, v4, vcc
@@ -1389,9 +1389,9 @@ define <2 x float> @v_neg_rsq_neg_v2f32_foldable_user(<2 x float> %val0, <2 x fl
 ;
 ; CI-IEEE-SAFE-LABEL: v_neg_rsq_neg_v2f32_foldable_user:
 ; CI-IEEE-SAFE:       ; %bb.0:
-; CI-IEEE-SAFE-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; CI-IEEE-SAFE-NEXT:    s_mov_b32 s6, 0x8f800000
 ; CI-IEEE-SAFE-NEXT:    s_mov_b32 s7, 0x4f800000
+; CI-IEEE-SAFE-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; CI-IEEE-SAFE-NEXT:    v_mul_f32_e64 v4, -v1, s7
 ; CI-IEEE-SAFE-NEXT:    v_cmp_lt_f32_e32 vcc, s6, v1
 ; CI-IEEE-SAFE-NEXT:    v_cndmask_b32_e64 v1, -v1, v4, vcc
@@ -1462,8 +1462,8 @@ define float @v_neg_rsq_f32(float %val) {
 ;
 ; GCN-DAZ-SAFE-LABEL: v_neg_rsq_f32:
 ; GCN-DAZ-SAFE:       ; %bb.0:
-; GCN-DAZ-SAFE-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GCN-DAZ-SAFE-NEXT:    s_mov_b32 s4, 0xf800000
+; GCN-DAZ-SAFE-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GCN-DAZ-SAFE-NEXT:    v_mul_f32_e32 v1, 0x4f800000, v0
 ; GCN-DAZ-SAFE-NEXT:    v_cmp_gt_f32_e32 vcc, s4, v0
 ; GCN-DAZ-SAFE-NEXT:    v_cndmask_b32_e32 v0, v0, v1, vcc
@@ -1485,8 +1485,8 @@ define float @v_neg_rsq_f32(float %val) {
 ;
 ; SI-IEEE-SAFE-LABEL: v_neg_rsq_f32:
 ; SI-IEEE-SAFE:       ; %bb.0:
-; SI-IEEE-SAFE-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; SI-IEEE-SAFE-NEXT:    s_mov_b32 s4, 0xf800000
+; SI-IEEE-SAFE-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; SI-IEEE-SAFE-NEXT:    v_mul_f32_e32 v1, 0x4f800000, v0
 ; SI-IEEE-SAFE-NEXT:    v_cmp_gt_f32_e32 vcc, s4, v0
 ; SI-IEEE-SAFE-NEXT:    v_cndmask_b32_e32 v0, v0, v1, vcc
@@ -1516,8 +1516,8 @@ define float @v_neg_rsq_f32(float %val) {
 ;
 ; CI-IEEE-SAFE-LABEL: v_neg_rsq_f32:
 ; CI-IEEE-SAFE:       ; %bb.0:
-; CI-IEEE-SAFE-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; CI-IEEE-SAFE-NEXT:    s_mov_b32 s4, 0xf800000
+; CI-IEEE-SAFE-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; CI-IEEE-SAFE-NEXT:    v_mul_f32_e32 v1, 0x4f800000, v0
 ; CI-IEEE-SAFE-NEXT:    v_cmp_gt_f32_e32 vcc, s4, v0
 ; CI-IEEE-SAFE-NEXT:    v_cndmask_b32_e32 v0, v0, v1, vcc
@@ -1567,8 +1567,8 @@ define <2 x float> @v_neg_rsq_v2f32(<2 x float> %val) {
 ;
 ; GCN-DAZ-SAFE-LABEL: v_neg_rsq_v2f32:
 ; GCN-DAZ-SAFE:       ; %bb.0:
-; GCN-DAZ-SAFE-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GCN-DAZ-SAFE-NEXT:    s_mov_b32 s4, 0xf800000
+; GCN-DAZ-SAFE-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GCN-DAZ-SAFE-NEXT:    v_mul_f32_e32 v2, 0x4f800000, v1
 ; GCN-DAZ-SAFE-NEXT:    v_cmp_gt_f32_e32 vcc, s4, v1
 ; GCN-DAZ-SAFE-NEXT:    v_cndmask_b32_e32 v1, v1, v2, vcc
@@ -1606,8 +1606,8 @@ define <2 x float> @v_neg_rsq_v2f32(<2 x float> %val) {
 ;
 ; SI-IEEE-SAFE-LABEL: v_neg_rsq_v2f32:
 ; SI-IEEE-SAFE:       ; %bb.0:
-; SI-IEEE-SAFE-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; SI-IEEE-SAFE-NEXT:    s_mov_b32 s6, 0xf800000
+; SI-IEEE-SAFE-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; SI-IEEE-SAFE-NEXT:    v_mul_f32_e32 v2, 0x4f800000, v1
 ; SI-IEEE-SAFE-NEXT:    v_cmp_gt_f32_e32 vcc, s6, v1
 ; SI-IEEE-SAFE-NEXT:    v_cndmask_b32_e32 v1, v1, v2, vcc
@@ -1660,8 +1660,8 @@ define <2 x float> @v_neg_rsq_v2f32(<2 x float> %val) {
 ;
 ; CI-IEEE-SAFE-LABEL: v_neg_rsq_v2f32:
 ; CI-IEEE-SAFE:       ; %bb.0:
-; CI-IEEE-SAFE-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; CI-IEEE-SAFE-NEXT:    s_mov_b32 s6, 0xf800000
+; CI-IEEE-SAFE-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; CI-IEEE-SAFE-NEXT:    v_mul_f32_e32 v2, 0x4f800000, v1
 ; CI-IEEE-SAFE-NEXT:    v_cmp_gt_f32_e32 vcc, s6, v1
 ; CI-IEEE-SAFE-NEXT:    v_cndmask_b32_e32 v1, v1, v2, vcc
@@ -1728,8 +1728,8 @@ define float @v_neg_rsq_f32_foldable_user(float %val0, float %val1) {
 ;
 ; GCN-DAZ-SAFE-LABEL: v_neg_rsq_f32_foldable_user:
 ; GCN-DAZ-SAFE:       ; %bb.0:
-; GCN-DAZ-SAFE-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GCN-DAZ-SAFE-NEXT:    s_mov_b32 s4, 0xf800000
+; GCN-DAZ-SAFE-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GCN-DAZ-SAFE-NEXT:    v_mul_f32_e32 v2, 0x4f800000, v0
 ; GCN-DAZ-SAFE-NEXT:    v_cmp_gt_f32_e32 vcc, s4, v0
 ; GCN-DAZ-SAFE-NEXT:    v_cndmask_b32_e32 v0, v0, v2, vcc
@@ -1752,8 +1752,8 @@ define float @v_neg_rsq_f32_foldable_user(float %val0, float %val1) {
 ;
 ; SI-IEEE-SAFE-LABEL: v_neg_rsq_f32_foldable_user:
 ; SI-IEEE-SAFE:       ; %bb.0:
-; SI-IEEE-SAFE-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; SI-IEEE-SAFE-NEXT:    s_mov_b32 s4, 0xf800000
+; SI-IEEE-SAFE-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; SI-IEEE-SAFE-NEXT:    v_mul_f32_e32 v2, 0x4f800000, v0
 ; SI-IEEE-SAFE-NEXT:    v_cmp_gt_f32_e32 vcc, s4, v0
 ; SI-IEEE-SAFE-NEXT:    v_cndmask_b32_e32 v0, v0, v2, vcc
@@ -1784,8 +1784,8 @@ define float @v_neg_rsq_f32_foldable_user(float %val0, float %val1) {
 ;
 ; CI-IEEE-SAFE-LABEL: v_neg_rsq_f32_foldable_user:
 ; CI-IEEE-SAFE:       ; %bb.0:
-; CI-IEEE-SAFE-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; CI-IEEE-SAFE-NEXT:    s_mov_b32 s4, 0xf800000
+; CI-IEEE-SAFE-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; CI-IEEE-SAFE-NEXT:    v_mul_f32_e32 v2, 0x4f800000, v0
 ; CI-IEEE-SAFE-NEXT:    v_cmp_gt_f32_e32 vcc, s4, v0
 ; CI-IEEE-SAFE-NEXT:    v_cndmask_b32_e32 v0, v0, v2, vcc
@@ -1837,8 +1837,8 @@ define <2 x float> @v_neg_rsq_v2f32_foldable_user(<2 x float> %val0, <2 x float>
 ;
 ; GCN-DAZ-SAFE-LABEL: v_neg_rsq_v2f32_foldable_user:
 ; GCN-DAZ-SAFE:       ; %bb.0:
-; GCN-DAZ-SAFE-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GCN-DAZ-SAFE-NEXT:    s_mov_b32 s4, 0xf800000
+; GCN-DAZ-SAFE-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GCN-DAZ-SAFE-NEXT:    v_mul_f32_e32 v4, 0x4f800000, v1
 ; GCN-DAZ-SAFE-NEXT:    v_cmp_gt_f32_e32 vcc, s4, v1
 ; GCN-DAZ-SAFE-NEXT:    v_cndmask_b32_e32 v1, v1, v4, vcc
@@ -1878,8 +1878,8 @@ define <2 x float> @v_neg_rsq_v2f32_foldable_user(<2 x float> %val0, <2 x float>
 ;
 ; SI-IEEE-SAFE-LABEL: v_neg_rsq_v2f32_foldable_user:
 ; SI-IEEE-SAFE:       ; %bb.0:
-; SI-IEEE-SAFE-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; SI-IEEE-SAFE-NEXT:    s_mov_b32 s6, 0xf800000
+; SI-IEEE-SAFE-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; SI-IEEE-SAFE-NEXT:    v_mul_f32_e32 v4, 0x4f800000, v1
 ; SI-IEEE-SAFE-NEXT:    v_cmp_gt_f32_e32 vcc, s6, v1
 ; SI-IEEE-SAFE-NEXT:    v_cndmask_b32_e32 v1, v1, v4, vcc
@@ -1934,8 +1934,8 @@ define <2 x float> @v_neg_rsq_v2f32_foldable_user(<2 x float> %val0, <2 x float>
 ;
 ; CI-IEEE-SAFE-LABEL: v_neg_rsq_v2f32_foldable_user:
 ; CI-IEEE-SAFE:       ; %bb.0:
-; CI-IEEE-SAFE-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; CI-IEEE-SAFE-NEXT:    s_mov_b32 s6, 0xf800000
+; CI-IEEE-SAFE-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; CI-IEEE-SAFE-NEXT:    v_mul_f32_e32 v4, 0x4f800000, v1
 ; CI-IEEE-SAFE-NEXT:    v_cmp_gt_f32_e32 vcc, s6, v1
 ; CI-IEEE-SAFE-NEXT:    v_cndmask_b32_e32 v1, v1, v4, vcc
@@ -2003,9 +2003,9 @@ define float @v_rsq_f32(float %val) {
 ;
 ; GCN-IEEE-SAFE-LABEL: v_rsq_f32:
 ; GCN-IEEE-SAFE:       ; %bb.0:
-; GCN-IEEE-SAFE-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GCN-IEEE-SAFE-NEXT:    s_mov_b32 s4, 0x800000
 ; GCN-IEEE-SAFE-NEXT:    v_mov_b32_e32 v1, 0x4b800000
+; GCN-IEEE-SAFE-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GCN-IEEE-SAFE-NEXT:    v_cmp_gt_f32_e32 vcc, s4, v0
 ; GCN-IEEE-SAFE-NEXT:    v_cndmask_b32_e32 v1, 1.0, v1, vcc
 ; GCN-IEEE-SAFE-NEXT:    v_mul_f32_e32 v0, v0, v1
@@ -2045,8 +2045,8 @@ define { float, float } @v_rsq_f32_multi_use(float %val) {
 ;
 ; SI-IEEE-SAFE-LABEL: v_rsq_f32_multi_use:
 ; SI-IEEE-SAFE:       ; %bb.0:
-; SI-IEEE-SAFE-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; SI-IEEE-SAFE-NEXT:    s_mov_b32 s4, 0xf800000
+; SI-IEEE-SAFE-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; SI-IEEE-SAFE-NEXT:    v_mul_f32_e32 v1, 0x4f800000, v0
 ; SI-IEEE-SAFE-NEXT:    v_cmp_gt_f32_e32 vcc, s4, v0
 ; SI-IEEE-SAFE-NEXT:    v_cndmask_b32_e32 v0, v0, v1, vcc
@@ -2076,8 +2076,8 @@ define { float, float } @v_rsq_f32_multi_use(float %val) {
 ;
 ; CI-IEEE-SAFE-LABEL: v_rsq_f32_multi_use:
 ; CI-IEEE-SAFE:       ; %bb.0:
-; CI-IEEE-SAFE-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; CI-IEEE-SAFE-NEXT:    s_mov_b32 s4, 0xf800000
+; CI-IEEE-SAFE-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; CI-IEEE-SAFE-NEXT:    v_mul_f32_e32 v1, 0x4f800000, v0
 ; CI-IEEE-SAFE-NEXT:    v_cmp_gt_f32_e32 vcc, s4, v0
 ; CI-IEEE-SAFE-NEXT:    v_cndmask_b32_e32 v0, v0, v1, vcc
@@ -2130,8 +2130,8 @@ define float @v_rsq_f32_missing_contract0(float %val) {
 ;
 ; SI-IEEE-SAFE-LABEL: v_rsq_f32_missing_contract0:
 ; SI-IEEE-SAFE:       ; %bb.0:
-; SI-IEEE-SAFE-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; SI-IEEE-SAFE-NEXT:    s_mov_b32 s4, 0xf800000
+; SI-IEEE-SAFE-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; SI-IEEE-SAFE-NEXT:    v_mul_f32_e32 v1, 0x4f800000, v0
 ; SI-IEEE-SAFE-NEXT:    v_cmp_gt_f32_e32 vcc, s4, v0
 ; SI-IEEE-SAFE-NEXT:    v_cndmask_b32_e32 v0, v0, v1, vcc
@@ -2161,8 +2161,8 @@ define float @v_rsq_f32_missing_contract0(float %val) {
 ;
 ; CI-IEEE-SAFE-LABEL: v_rsq_f32_missing_contract0:
 ; CI-IEEE-SAFE:       ; %bb.0:
-; CI-IEEE-SAFE-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; CI-IEEE-SAFE-NEXT:    s_mov_b32 s4, 0xf800000
+; CI-IEEE-SAFE-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; CI-IEEE-SAFE-NEXT:    v_mul_f32_e32 v1, 0x4f800000, v0
 ; CI-IEEE-SAFE-NEXT:    v_cmp_gt_f32_e32 vcc, s4, v0
 ; CI-IEEE-SAFE-NEXT:    v_cndmask_b32_e32 v0, v0, v1, vcc
@@ -2213,8 +2213,8 @@ define float @v_rsq_f32_missing_contract1(float %val) {
 ;
 ; SI-IEEE-SAFE-LABEL: v_rsq_f32_missing_contract1:
 ; SI-IEEE-SAFE:       ; %bb.0:
-; SI-IEEE-SAFE-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; SI-IEEE-SAFE-NEXT:    s_mov_b32 s4, 0xf800000
+; SI-IEEE-SAFE-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; SI-IEEE-SAFE-NEXT:    v_mul_f32_e32 v1, 0x4f800000, v0
 ; SI-IEEE-SAFE-NEXT:    v_cmp_gt_f32_e32 vcc, s4, v0
 ; SI-IEEE-SAFE-NEXT:    v_cndmask_b32_e32 v0, v0, v1, vcc
@@ -2244,8 +2244,8 @@ define float @v_rsq_f32_missing_contract1(float %val) {
 ;
 ; CI-IEEE-SAFE-LABEL: v_rsq_f32_missing_contract1:
 ; CI-IEEE-SAFE:       ; %bb.0:
-; CI-IEEE-SAFE-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; CI-IEEE-SAFE-NEXT:    s_mov_b32 s4, 0xf800000
+; CI-IEEE-SAFE-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; CI-IEEE-SAFE-NEXT:    v_mul_f32_e32 v1, 0x4f800000, v0
 ; CI-IEEE-SAFE-NEXT:    v_cmp_gt_f32_e32 vcc, s4, v0
 ; CI-IEEE-SAFE-NEXT:    v_cndmask_b32_e32 v0, v0, v1, vcc
@@ -2293,9 +2293,9 @@ define float @v_rsq_f32_contractable_user(float %val0, float %val1) {
 ;
 ; GCN-IEEE-SAFE-LABEL: v_rsq_f32_contractable_user:
 ; GCN-IEEE-SAFE:       ; %bb.0:
-; GCN-IEEE-SAFE-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GCN-IEEE-SAFE-NEXT:    s_mov_b32 s4, 0x800000
 ; GCN-IEEE-SAFE-NEXT:    v_mov_b32_e32 v2, 0x4b800000
+; GCN-IEEE-SAFE-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GCN-IEEE-SAFE-NEXT:    v_cmp_gt_f32_e32 vcc, s4, v0
 ; GCN-IEEE-SAFE-NEXT:    v_cndmask_b32_e32 v2, 1.0, v2, vcc
 ; GCN-IEEE-SAFE-NEXT:    v_mul_f32_e32 v0, v0, v2
@@ -2328,9 +2328,9 @@ define float @v_rsq_f32_contractable_user_missing_contract0(float %val0, float %
 ;
 ; GCN-IEEE-SAFE-LABEL: v_rsq_f32_contractable_user_missing_contract0:
 ; GCN-IEEE-SAFE:       ; %bb.0:
-; GCN-IEEE-SAFE-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GCN-IEEE-SAFE-NEXT:    s_mov_b32 s4, 0x800000
 ; GCN-IEEE-SAFE-NEXT:    v_mov_b32_e32 v2, 0x4b800000
+; GCN-IEEE-SAFE-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GCN-IEEE-SAFE-NEXT:    v_cmp_gt_f32_e32 vcc, s4, v0
 ; GCN-IEEE-SAFE-NEXT:    v_cndmask_b32_e32 v2, 1.0, v2, vcc
 ; GCN-IEEE-SAFE-NEXT:    v_mul_f32_e32 v0, v0, v2
@@ -2363,9 +2363,9 @@ define float @v_rsq_f32_contractable_user_missing_contract1(float %val0, float %
 ;
 ; GCN-IEEE-SAFE-LABEL: v_rsq_f32_contractable_user_missing_contract1:
 ; GCN-IEEE-SAFE:       ; %bb.0:
-; GCN-IEEE-SAFE-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GCN-IEEE-SAFE-NEXT:    s_mov_b32 s4, 0x800000
 ; GCN-IEEE-SAFE-NEXT:    v_mov_b32_e32 v2, 0x4b800000
+; GCN-IEEE-SAFE-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GCN-IEEE-SAFE-NEXT:    v_cmp_gt_f32_e32 vcc, s4, v0
 ; GCN-IEEE-SAFE-NEXT:    v_cndmask_b32_e32 v2, 1.0, v2, vcc
 ; GCN-IEEE-SAFE-NEXT:    v_mul_f32_e32 v0, v0, v2
@@ -2413,9 +2413,9 @@ define float @v_rsq_f32_known_never_posdenormal(float nofpclass(psub) %val) {
 ;
 ; GCN-IEEE-SAFE-LABEL: v_rsq_f32_known_never_posdenormal:
 ; GCN-IEEE-SAFE:       ; %bb.0:
-; GCN-IEEE-SAFE-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GCN-IEEE-SAFE-NEXT:    s_mov_b32 s4, 0x800000
 ; GCN-IEEE-SAFE-NEXT:    v_mov_b32_e32 v1, 0x4b800000
+; GCN-IEEE-SAFE-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GCN-IEEE-SAFE-NEXT:    v_cmp_gt_f32_e32 vcc, s4, v0
 ; GCN-IEEE-SAFE-NEXT:    v_cndmask_b32_e32 v1, 1.0, v1, vcc
 ; GCN-IEEE-SAFE-NEXT:    v_mul_f32_e32 v0, v0, v1

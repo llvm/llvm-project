@@ -7,7 +7,6 @@
 define i32 @s_add_co_select_user() {
 ; GFX7-LABEL: s_add_co_select_user:
 ; GFX7:       ; %bb.0: ; %bb
-; GFX7-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX7-NEXT:    s_mov_b64 s[4:5], 0
 ; GFX7-NEXT:    s_load_dword s6, s[4:5], 0x0
 ; GFX7-NEXT:    s_waitcnt lgkmcnt(0)
@@ -22,11 +21,11 @@ define i32 @s_add_co_select_user() {
 ; GFX7-NEXT:    v_mov_b32_e32 v1, s4
 ; GFX7-NEXT:    s_cselect_b64 vcc, -1, 0
 ; GFX7-NEXT:    v_cndmask_b32_e32 v0, v1, v0, vcc
+; GFX7-NEXT:    s_waitcnt vmcnt(0) expcnt(0)
 ; GFX7-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX9-LABEL: s_add_co_select_user:
 ; GFX9:       ; %bb.0: ; %bb
-; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX9-NEXT:    s_mov_b64 s[4:5], 0
 ; GFX9-NEXT:    s_load_dword s6, s[4:5], 0x0
 ; GFX9-NEXT:    s_waitcnt lgkmcnt(0)
@@ -40,11 +39,11 @@ define i32 @s_add_co_select_user() {
 ; GFX9-NEXT:    v_mov_b32_e32 v1, s4
 ; GFX9-NEXT:    s_cselect_b64 vcc, -1, 0
 ; GFX9-NEXT:    v_cndmask_b32_e32 v0, v1, v0, vcc
+; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0)
 ; GFX9-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX10-LABEL: s_add_co_select_user:
 ; GFX10:       ; %bb.0: ; %bb
-; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX10-NEXT:    s_mov_b64 s[4:5], 0
 ; GFX10-NEXT:    s_load_dword s4, s[4:5], 0x0
 ; GFX10-NEXT:    s_waitcnt lgkmcnt(0)
@@ -57,11 +56,11 @@ define i32 @s_add_co_select_user() {
 ; GFX10-NEXT:    s_cmp_gt_u32 s4, 31
 ; GFX10-NEXT:    s_cselect_b32 vcc_lo, -1, 0
 ; GFX10-NEXT:    v_cndmask_b32_e32 v0, s5, v0, vcc_lo
+; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0)
 ; GFX10-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX11-LABEL: s_add_co_select_user:
 ; GFX11:       ; %bb.0: ; %bb
-; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX11-NEXT:    s_mov_b64 s[0:1], 0
 ; GFX11-NEXT:    s_load_b32 s0, s[0:1], 0x0
 ; GFX11-NEXT:    s_waitcnt lgkmcnt(0)
@@ -75,6 +74,7 @@ define i32 @s_add_co_select_user() {
 ; GFX11-NEXT:    s_cmp_gt_u32 s0, 31
 ; GFX11-NEXT:    s_cselect_b32 vcc_lo, -1, 0
 ; GFX11-NEXT:    v_cndmask_b32_e32 v0, s1, v0, vcc_lo
+; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0)
 ; GFX11-NEXT:    s_setpc_b64 s[30:31]
 bb:
   %i = load volatile i32, ptr addrspace(4) null, align 8

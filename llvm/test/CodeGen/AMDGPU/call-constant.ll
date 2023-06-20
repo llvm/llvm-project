@@ -11,8 +11,7 @@ define amdgpu_kernel void @test_call_undef() #0 {
 }
 
 ; GCN-LABEL: {{^}}test_tail_call_undef:
-; SDAG: s_waitcnt
-; SDAG-NEXT: .Lfunc_end
+; SDAG: .Lfunc_end
 
 ; GISEL: s_setpc_b64 s{{\[[0-9]+:[0-9]+\]}}
 define i32 @test_tail_call_undef() #0 {
@@ -31,8 +30,7 @@ define amdgpu_kernel void @test_call_null() #0 {
 }
 
 ; GCN-LABEL: {{^}}test_tail_call_null:
-; SDAG: s_waitcnt
-; SDAG-NEXT: .Lfunc_end
+; SDAG: .Lfunc_end
 
 ; GISEL: s_setpc_b64 s{{\[[0-9]+:[0-9]+\]$}}
 define i32 @test_tail_call_null() #0 {

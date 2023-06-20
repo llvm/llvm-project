@@ -130,7 +130,6 @@ endif:
 define void @constrained_if_register_class() {
 ; CHECK-LABEL: constrained_if_register_class:
 ; CHECK:       ; %bb.0: ; %bb
-; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; CHECK-NEXT:    s_getpc_b64 s[4:5]
 ; CHECK-NEXT:    s_add_u32 s4, s4, external_constant@gotpcrel32@lo+4
 ; CHECK-NEXT:    s_addc_u32 s5, s5, external_constant@gotpcrel32@hi+12
@@ -141,6 +140,7 @@ define void @constrained_if_register_class() {
 ; CHECK-NEXT:    s_cmp_lg_u32 s4, 0
 ; CHECK-NEXT:    s_cbranch_scc0 .LBB4_2
 ; CHECK-NEXT:  .LBB4_1: ; %bb12
+; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0)
 ; CHECK-NEXT:    s_setpc_b64 s[30:31]
 ; CHECK-NEXT:  .LBB4_2: ; %bb2
 ; CHECK-NEXT:    s_getpc_b64 s[4:5]
@@ -164,7 +164,7 @@ define void @constrained_if_register_class() {
 ; CHECK-NEXT:  ; %bb.5: ; %bb11
 ; CHECK-NEXT:    v_mov_b32_e32 v0, 4.0
 ; CHECK-NEXT:    buffer_store_dword v0, v0, s[0:3], 0 offen
-; CHECK-NEXT:    s_waitcnt vmcnt(0)
+; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0)
 ; CHECK-NEXT:    s_setpc_b64 s[30:31]
 bb:
   %tmp = load i32, ptr addrspace(4) @external_constant

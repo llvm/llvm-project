@@ -30,64 +30,60 @@
 define void @func_use_lds_global() {
 ; GFX8-SDAG-LABEL: func_use_lds_global:
 ; GFX8-SDAG:       ; %bb.0:
-; GFX8-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX8-SDAG-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX8-SDAG-NEXT:    s_mov_b32 m0, -1
 ; GFX8-SDAG-NEXT:    ds_write_b32 v0, v0
+; GFX8-SDAG-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX8-SDAG-NEXT:    s_mov_b64 s[0:1], s[6:7]
 ; GFX8-SDAG-NEXT:    s_trap 2
-; GFX8-SDAG-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX8-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0)
 ; GFX8-SDAG-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX8-GISEL-LABEL: func_use_lds_global:
 ; GFX8-GISEL:       ; %bb.0:
-; GFX8-GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX8-GISEL-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX8-GISEL-NEXT:    s_mov_b32 m0, -1
+; GFX8-GISEL-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX8-GISEL-NEXT:    s_mov_b64 s[0:1], s[6:7]
 ; GFX8-GISEL-NEXT:    s_trap 2
 ; GFX8-GISEL-NEXT:    ds_write_b32 v0, v0
-; GFX8-GISEL-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX8-GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX8-GISEL-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX9-SDAG-LABEL: func_use_lds_global:
 ; GFX9-SDAG:       ; %bb.0:
-; GFX9-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX9-SDAG-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX9-SDAG-NEXT:    ds_write_b32 v0, v0
 ; GFX9-SDAG-NEXT:    s_trap 2
-; GFX9-SDAG-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX9-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX9-SDAG-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX9-GISEL-LABEL: func_use_lds_global:
 ; GFX9-GISEL:       ; %bb.0:
-; GFX9-GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX9-GISEL-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX9-GISEL-NEXT:    s_trap 2
 ; GFX9-GISEL-NEXT:    ds_write_b32 v0, v0
-; GFX9-GISEL-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX9-GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX9-GISEL-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; SDAG-LABEL: func_use_lds_global:
 ; SDAG:       ; %bb.0:
-; SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; SDAG-NEXT:    v_mov_b32_e32 v0, 0
 ; SDAG-NEXT:    ds_write_b32 v0, v0
 ; SDAG-NEXT:    s_cbranch_execnz .LBB0_2
 ; SDAG-NEXT:  ; %bb.1:
-; SDAG-NEXT:    s_waitcnt lgkmcnt(0)
+; SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; SDAG-NEXT:    s_setpc_b64 s[30:31]
 ; SDAG-NEXT:  .LBB0_2:
 ; SDAG-NEXT:    s_endpgm
 ;
 ; GISEL-LABEL: func_use_lds_global:
 ; GISEL:       ; %bb.0:
-; GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GISEL-NEXT:    s_cbranch_execnz .LBB0_2
 ; GISEL-NEXT:  ; %bb.1:
 ; GISEL-NEXT:    v_mov_b32_e32 v0, 0
 ; GISEL-NEXT:    ds_write_b32 v0, v0
-; GISEL-NEXT:    s_waitcnt lgkmcnt(0)
+; GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GISEL-NEXT:    s_setpc_b64 s[30:31]
 ; GISEL-NEXT:  .LBB0_2:
 ; GISEL-NEXT:    s_endpgm
@@ -99,50 +95,49 @@ define void @func_use_lds_global() {
 define void @func_use_lds_global_constexpr_cast() {
 ; GFX8-SDAG-LABEL: func_use_lds_global_constexpr_cast:
 ; GFX8-SDAG:       ; %bb.0:
-; GFX8-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX8-SDAG-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX8-SDAG-NEXT:    s_mov_b64 s[0:1], s[6:7]
 ; GFX8-SDAG-NEXT:    s_trap 2
+; GFX8-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0)
 ; GFX8-SDAG-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX8-GISEL-LABEL: func_use_lds_global_constexpr_cast:
 ; GFX8-GISEL:       ; %bb.0:
-; GFX8-GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX8-GISEL-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX8-GISEL-NEXT:    s_mov_b64 s[0:1], s[6:7]
 ; GFX8-GISEL-NEXT:    s_trap 2
 ; GFX8-GISEL-NEXT:    flat_store_dword v[0:1], v0
-; GFX8-GISEL-NEXT:    s_waitcnt vmcnt(0)
+; GFX8-GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0)
 ; GFX8-GISEL-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX9-SDAG-LABEL: func_use_lds_global_constexpr_cast:
 ; GFX9-SDAG:       ; %bb.0:
-; GFX9-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX9-SDAG-NEXT:    s_trap 2
+; GFX9-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX9-SDAG-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX9-GISEL-LABEL: func_use_lds_global_constexpr_cast:
 ; GFX9-GISEL:       ; %bb.0:
-; GFX9-GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX9-GISEL-NEXT:    s_trap 2
 ; GFX9-GISEL-NEXT:    global_store_dword v[0:1], v0, off
-; GFX9-GISEL-NEXT:    s_waitcnt vmcnt(0)
+; GFX9-GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX9-GISEL-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; SDAG-LABEL: func_use_lds_global_constexpr_cast:
 ; SDAG:       ; %bb.0:
-; SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; SDAG-NEXT:    s_cbranch_execnz .LBB1_2
 ; SDAG-NEXT:  ; %bb.1:
+; SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; SDAG-NEXT:    s_setpc_b64 s[30:31]
 ; SDAG-NEXT:  .LBB1_2:
 ; SDAG-NEXT:    s_endpgm
 ;
 ; GISEL-LABEL: func_use_lds_global_constexpr_cast:
 ; GISEL:       ; %bb.0:
-; GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GISEL-NEXT:    s_cbranch_execnz .LBB1_2
 ; GISEL-NEXT:  ; %bb.1:
 ; GISEL-NEXT:    global_store_dword v[0:1], v0, off
-; GISEL-NEXT:    s_waitcnt vmcnt(0)
+; GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GISEL-NEXT:    s_setpc_b64 s[30:31]
 ; GISEL-NEXT:  .LBB1_2:
 ; GISEL-NEXT:    s_endpgm
@@ -357,9 +352,9 @@ ret:
 define void @func_uses_lds_code_after(ptr addrspace(1) %ptr) {
 ; GFX8-SDAG-LABEL: func_uses_lds_code_after:
 ; GFX8-SDAG:       ; %bb.0:
-; GFX8-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX8-SDAG-NEXT:    v_mov_b32_e32 v2, 0
 ; GFX8-SDAG-NEXT:    s_mov_b32 m0, -1
+; GFX8-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX8-SDAG-NEXT:    ds_write_b32 v0, v2
 ; GFX8-SDAG-NEXT:    v_mov_b32_e32 v2, 1
 ; GFX8-SDAG-NEXT:    s_mov_b64 s[0:1], s[6:7]
@@ -370,11 +365,12 @@ define void @func_uses_lds_code_after(ptr addrspace(1) %ptr) {
 ;
 ; GFX8-GISEL-LABEL: func_uses_lds_code_after:
 ; GFX8-GISEL:       ; %bb.0:
-; GFX8-GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX8-GISEL-NEXT:    v_mov_b32_e32 v2, 0
 ; GFX8-GISEL-NEXT:    s_mov_b32 m0, -1
+; GFX8-GISEL-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX8-GISEL-NEXT:    s_mov_b64 s[0:1], s[6:7]
 ; GFX8-GISEL-NEXT:    s_trap 2
+; GFX8-GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0)
 ; GFX8-GISEL-NEXT:    ds_write_b32 v0, v2
 ; GFX8-GISEL-NEXT:    v_mov_b32_e32 v2, 1
 ; GFX8-GISEL-NEXT:    flat_store_dword v[0:1], v2
@@ -383,8 +379,8 @@ define void @func_uses_lds_code_after(ptr addrspace(1) %ptr) {
 ;
 ; GFX9-SDAG-LABEL: func_uses_lds_code_after:
 ; GFX9-SDAG:       ; %bb.0:
-; GFX9-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX9-SDAG-NEXT:    v_mov_b32_e32 v2, 0
+; GFX9-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX9-SDAG-NEXT:    ds_write_b32 v0, v2
 ; GFX9-SDAG-NEXT:    v_mov_b32_e32 v2, 1
 ; GFX9-SDAG-NEXT:    s_trap 2
@@ -394,9 +390,9 @@ define void @func_uses_lds_code_after(ptr addrspace(1) %ptr) {
 ;
 ; GFX9-GISEL-LABEL: func_uses_lds_code_after:
 ; GFX9-GISEL:       ; %bb.0:
-; GFX9-GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX9-GISEL-NEXT:    v_mov_b32_e32 v2, 0
 ; GFX9-GISEL-NEXT:    s_trap 2
+; GFX9-GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX9-GISEL-NEXT:    ds_write_b32 v0, v2
 ; GFX9-GISEL-NEXT:    v_mov_b32_e32 v2, 1
 ; GFX9-GISEL-NEXT:    global_store_dword v[0:1], v2, off
@@ -405,8 +401,8 @@ define void @func_uses_lds_code_after(ptr addrspace(1) %ptr) {
 ;
 ; SDAG-LABEL: func_uses_lds_code_after:
 ; SDAG:       ; %bb.0:
-; SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; SDAG-NEXT:    v_mov_b32_e32 v2, 0
+; SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; SDAG-NEXT:    ds_write_b32 v0, v2
 ; SDAG-NEXT:    s_cbranch_execnz .LBB3_2
 ; SDAG-NEXT:  ; %bb.1:
@@ -419,10 +415,10 @@ define void @func_uses_lds_code_after(ptr addrspace(1) %ptr) {
 ;
 ; GISEL-LABEL: func_uses_lds_code_after:
 ; GISEL:       ; %bb.0:
-; GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GISEL-NEXT:    s_cbranch_execnz .LBB3_2
 ; GISEL-NEXT:  ; %bb.1:
 ; GISEL-NEXT:    v_mov_b32_e32 v2, 0
+; GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GISEL-NEXT:    ds_write_b32 v0, v2
 ; GISEL-NEXT:    v_mov_b32_e32 v2, 1
 ; GISEL-NEXT:    global_store_dword v[0:1], v2, off

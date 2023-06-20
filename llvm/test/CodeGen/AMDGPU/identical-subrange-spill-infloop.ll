@@ -4,8 +4,9 @@
 define void @main(i1 %arg) #0 {
 ; CHECK-LABEL: main:
 ; CHECK:       ; %bb.0: ; %bb
-; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; CHECK-NEXT:    s_waitcnt expcnt(0)
 ; CHECK-NEXT:    s_xor_saveexec_b64 s[4:5], -1
+; CHECK-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; CHECK-NEXT:    buffer_store_dword v1, off, s[0:3], s32 ; 4-byte Folded Spill
 ; CHECK-NEXT:    buffer_store_dword v5, off, s[0:3], s32 offset:4 ; 4-byte Folded Spill
 ; CHECK-NEXT:    buffer_store_dword v4, off, s[0:3], s32 offset:8 ; 4-byte Folded Spill

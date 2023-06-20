@@ -1010,8 +1010,8 @@ bb.end:                                           ; preds = %bb.then, %bb
 define void @scc_liveness(i32 %arg) local_unnamed_addr #0 {
 ; GCN-LABEL: scc_liveness:
 ; GCN:       ; %bb.0: ; %bb
-; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GCN-NEXT:    s_movk_i32 s4, 0x207
+; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GCN-NEXT:    v_cmp_gt_i32_e32 vcc, s4, v0
 ; GCN-NEXT:    s_mov_b32 s8, 0
 ; GCN-NEXT:    v_cmp_eq_u32_e64 s[4:5], 0, v0
@@ -1080,8 +1080,9 @@ define void @scc_liveness(i32 %arg) local_unnamed_addr #0 {
 ;
 ; GCN-O0-LABEL: scc_liveness:
 ; GCN-O0:       ; %bb.0: ; %bb
-; GCN-O0-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GCN-O0-NEXT:    s_waitcnt expcnt(0)
 ; GCN-O0-NEXT:    s_xor_saveexec_b64 s[4:5], -1
+; GCN-O0-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; GCN-O0-NEXT:    buffer_store_dword v0, off, s[0:3], s32 offset:72 ; 4-byte Folded Spill
 ; GCN-O0-NEXT:    buffer_store_dword v4, off, s[0:3], s32 offset:76 ; 4-byte Folded Spill
 ; GCN-O0-NEXT:    s_mov_b64 exec, s[4:5]

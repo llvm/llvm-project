@@ -223,10 +223,12 @@ define amdgpu_kernel void @kernel_caller_byval() {
 define void @func_caller_stack() {
 ; MUBUF-LABEL: func_caller_stack:
 ; MUBUF:       ; %bb.0:
-; MUBUF-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; MUBUF-NEXT:    s_waitcnt lgkmcnt(0)
 ; MUBUF-NEXT:    s_mov_b32 s4, s33
 ; MUBUF-NEXT:    s_mov_b32 s33, s32
+; MUBUF-NEXT:    s_waitcnt expcnt(0)
 ; MUBUF-NEXT:    s_or_saveexec_b64 s[6:7], -1
+; MUBUF-NEXT:    s_waitcnt vmcnt(0)
 ; MUBUF-NEXT:    buffer_store_dword v40, off, s[0:3], s33 ; 4-byte Folded Spill
 ; MUBUF-NEXT:    s_mov_b64 exec, s[6:7]
 ; MUBUF-NEXT:    s_addk_i32 s32, 0x400
@@ -258,10 +260,12 @@ define void @func_caller_stack() {
 ;
 ; FLATSCR-LABEL: func_caller_stack:
 ; FLATSCR:       ; %bb.0:
-; FLATSCR-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; FLATSCR-NEXT:    s_waitcnt lgkmcnt(0)
 ; FLATSCR-NEXT:    s_mov_b32 s0, s33
 ; FLATSCR-NEXT:    s_mov_b32 s33, s32
+; FLATSCR-NEXT:    s_waitcnt expcnt(0)
 ; FLATSCR-NEXT:    s_or_saveexec_b64 s[2:3], -1
+; FLATSCR-NEXT:    s_waitcnt vmcnt(0)
 ; FLATSCR-NEXT:    scratch_store_dword off, v40, s33 ; 4-byte Folded Spill
 ; FLATSCR-NEXT:    s_mov_b64 exec, s[2:3]
 ; FLATSCR-NEXT:    s_add_i32 s32, s32, 16
@@ -301,10 +305,12 @@ define void @func_caller_stack() {
 define void @func_caller_byval(ptr addrspace(5) %argptr) {
 ; MUBUF-LABEL: func_caller_byval:
 ; MUBUF:       ; %bb.0:
-; MUBUF-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; MUBUF-NEXT:    s_waitcnt lgkmcnt(0)
 ; MUBUF-NEXT:    s_mov_b32 s4, s33
 ; MUBUF-NEXT:    s_mov_b32 s33, s32
+; MUBUF-NEXT:    s_waitcnt expcnt(0)
 ; MUBUF-NEXT:    s_or_saveexec_b64 s[6:7], -1
+; MUBUF-NEXT:    s_waitcnt vmcnt(0)
 ; MUBUF-NEXT:    buffer_store_dword v40, off, s[0:3], s33 ; 4-byte Folded Spill
 ; MUBUF-NEXT:    s_mov_b64 exec, s[6:7]
 ; MUBUF-NEXT:    buffer_load_dword v1, v0, s[0:3], 0 offen
@@ -383,10 +389,12 @@ define void @func_caller_byval(ptr addrspace(5) %argptr) {
 ;
 ; FLATSCR-LABEL: func_caller_byval:
 ; FLATSCR:       ; %bb.0:
-; FLATSCR-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; FLATSCR-NEXT:    s_waitcnt lgkmcnt(0)
 ; FLATSCR-NEXT:    s_mov_b32 s0, s33
 ; FLATSCR-NEXT:    s_mov_b32 s33, s32
+; FLATSCR-NEXT:    s_waitcnt expcnt(0)
 ; FLATSCR-NEXT:    s_or_saveexec_b64 s[2:3], -1
+; FLATSCR-NEXT:    s_waitcnt vmcnt(0)
 ; FLATSCR-NEXT:    scratch_store_dword off, v40, s33 ; 4-byte Folded Spill
 ; FLATSCR-NEXT:    s_mov_b64 exec, s[2:3]
 ; FLATSCR-NEXT:    scratch_load_dwordx2 v[1:2], v0, off

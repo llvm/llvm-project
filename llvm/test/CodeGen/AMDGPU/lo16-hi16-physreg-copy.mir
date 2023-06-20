@@ -47,7 +47,6 @@ body:             |
 ...
 
 # GCN-LABEL: {{^}}lo_to_lo_samereg:
-# GCN:        s_waitcnt
 # GCN-NEXT:   s_endpgm
 name: lo_to_lo_samereg
 tracksRegLiveness: true
@@ -81,7 +80,6 @@ body:             |
 ...
 
 # GCN-LABEL: {{^}}hi_to_hi_samereg:
-# GCN:      s_waitcnt
 # GCN-NEXT: s_endpgm
 name: hi_to_hi_samereg
 tracksRegLiveness: true
@@ -179,8 +177,7 @@ body:             |
 
 # NB: copy of undef just killed instead of expansion
 # GCN-LABEL: {{^}}lo_to_lo_undef:
-# GCN:        s_waitcnt
-# GCN-NEXT:   v_mov_b32_e32 v2, v1
+# GCN:        v_mov_b32_e32 v2, v1
 # GCN-NEXT:   s_endpgm
 name: lo_to_lo_undef
 tracksRegLiveness: true

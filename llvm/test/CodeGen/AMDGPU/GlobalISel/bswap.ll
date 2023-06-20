@@ -52,15 +52,15 @@ define i32 @v_bswap_i32(i32 %src) {
 ;
 ; GFX8-LABEL: v_bswap_i32:
 ; GFX8:       ; %bb.0:
-; GFX8-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX8-NEXT:    s_mov_b32 s4, 0x10203
+; GFX8-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX8-NEXT:    v_perm_b32 v0, 0, v0, s4
 ; GFX8-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX9-LABEL: v_bswap_i32:
 ; GFX9:       ; %bb.0:
-; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX9-NEXT:    s_mov_b32 s4, 0x10203
+; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX9-NEXT:    v_perm_b32 v0, 0, v0, s4
 ; GFX9-NEXT:    s_setpc_b64 s[30:31]
 ;
@@ -135,16 +135,16 @@ define <2 x i32> @v_bswap_v2i32(<2 x i32> %src) {
 ;
 ; GFX8-LABEL: v_bswap_v2i32:
 ; GFX8:       ; %bb.0:
-; GFX8-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX8-NEXT:    s_mov_b32 s4, 0x10203
+; GFX8-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX8-NEXT:    v_perm_b32 v0, 0, v0, s4
 ; GFX8-NEXT:    v_perm_b32 v1, 0, v1, s4
 ; GFX8-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX9-LABEL: v_bswap_v2i32:
 ; GFX9:       ; %bb.0:
-; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX9-NEXT:    s_mov_b32 s4, 0x10203
+; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX9-NEXT:    v_perm_b32 v0, 0, v0, s4
 ; GFX9-NEXT:    v_perm_b32 v1, 0, v1, s4
 ; GFX9-NEXT:    s_setpc_b64 s[30:31]
@@ -222,8 +222,8 @@ define i64 @v_bswap_i64(i64 %src) {
 ;
 ; GFX8-LABEL: v_bswap_i64:
 ; GFX8:       ; %bb.0:
-; GFX8-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX8-NEXT:    s_mov_b32 s4, 0x10203
+; GFX8-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX8-NEXT:    v_perm_b32 v2, 0, v1, s4
 ; GFX8-NEXT:    v_perm_b32 v1, 0, v0, s4
 ; GFX8-NEXT:    v_mov_b32_e32 v0, v2
@@ -231,8 +231,8 @@ define i64 @v_bswap_i64(i64 %src) {
 ;
 ; GFX9-LABEL: v_bswap_i64:
 ; GFX9:       ; %bb.0:
-; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX9-NEXT:    s_mov_b32 s4, 0x10203
+; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX9-NEXT:    v_perm_b32 v2, 0, v1, s4
 ; GFX9-NEXT:    v_perm_b32 v1, 0, v0, s4
 ; GFX9-NEXT:    v_mov_b32_e32 v0, v2
@@ -343,8 +343,8 @@ define <2 x i64> @v_bswap_v2i64(<2 x i64> %src) {
 ;
 ; GFX8-LABEL: v_bswap_v2i64:
 ; GFX8:       ; %bb.0:
-; GFX8-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX8-NEXT:    s_mov_b32 s4, 0x10203
+; GFX8-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX8-NEXT:    v_perm_b32 v4, 0, v1, s4
 ; GFX8-NEXT:    v_perm_b32 v5, 0, v3, s4
 ; GFX8-NEXT:    v_perm_b32 v1, 0, v0, s4
@@ -355,8 +355,8 @@ define <2 x i64> @v_bswap_v2i64(<2 x i64> %src) {
 ;
 ; GFX9-LABEL: v_bswap_v2i64:
 ; GFX9:       ; %bb.0:
-; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX9-NEXT:    s_mov_b32 s4, 0x10203
+; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX9-NEXT:    v_perm_b32 v4, 0, v1, s4
 ; GFX9-NEXT:    v_perm_b32 v5, 0, v3, s4
 ; GFX9-NEXT:    v_perm_b32 v1, 0, v0, s4
@@ -423,15 +423,15 @@ define i16 @v_bswap_i16(i16 %src) {
 ;
 ; GFX8-LABEL: v_bswap_i16:
 ; GFX8:       ; %bb.0:
-; GFX8-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX8-NEXT:    s_mov_b32 s4, 0xc0c0001
+; GFX8-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX8-NEXT:    v_perm_b32 v0, 0, v0, s4
 ; GFX8-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX9-LABEL: v_bswap_i16:
 ; GFX9:       ; %bb.0:
-; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX9-NEXT:    s_mov_b32 s4, 0xc0c0001
+; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX9-NEXT:    v_perm_b32 v0, 0, v0, s4
 ; GFX9-NEXT:    s_setpc_b64 s[30:31]
 ;
@@ -497,15 +497,15 @@ define i32 @v_bswap_i16_zext_to_i32(i16 %src) {
 ;
 ; GFX8-LABEL: v_bswap_i16_zext_to_i32:
 ; GFX8:       ; %bb.0:
-; GFX8-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX8-NEXT:    s_mov_b32 s4, 0xc0c0001
+; GFX8-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX8-NEXT:    v_perm_b32 v0, 0, v0, s4
 ; GFX8-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX9-LABEL: v_bswap_i16_zext_to_i32:
 ; GFX9:       ; %bb.0:
-; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX9-NEXT:    s_mov_b32 s4, 0xc0c0001
+; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX9-NEXT:    v_perm_b32 v0, 0, v0, s4
 ; GFX9-NEXT:    s_setpc_b64 s[30:31]
 ;
@@ -531,16 +531,16 @@ define i32 @v_bswap_i16_sext_to_i32(i16 %src) {
 ;
 ; GFX8-LABEL: v_bswap_i16_sext_to_i32:
 ; GFX8:       ; %bb.0:
-; GFX8-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX8-NEXT:    s_mov_b32 s4, 0xc0c0001
+; GFX8-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX8-NEXT:    v_perm_b32 v0, 0, v0, s4
 ; GFX8-NEXT:    v_bfe_i32 v0, v0, 0, 16
 ; GFX8-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX9-LABEL: v_bswap_i16_sext_to_i32:
 ; GFX9:       ; %bb.0:
-; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX9-NEXT:    s_mov_b32 s4, 0xc0c0001
+; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX9-NEXT:    v_perm_b32 v0, 0, v0, s4
 ; GFX9-NEXT:    v_bfe_i32 v0, v0, 0, 16
 ; GFX9-NEXT:    s_setpc_b64 s[30:31]
@@ -570,15 +570,15 @@ define <2 x i16> @v_bswap_v2i16(<2 x i16> %src) {
 ;
 ; GFX8-LABEL: v_bswap_v2i16:
 ; GFX8:       ; %bb.0:
-; GFX8-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX8-NEXT:    s_mov_b32 s4, 0x2030001
+; GFX8-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX8-NEXT:    v_perm_b32 v0, 0, v0, s4
 ; GFX8-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX9-LABEL: v_bswap_v2i16:
 ; GFX9:       ; %bb.0:
-; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX9-NEXT:    s_mov_b32 s4, 0x2030001
+; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX9-NEXT:    v_perm_b32 v0, 0, v0, s4
 ; GFX9-NEXT:    s_setpc_b64 s[30:31]
 ;
@@ -608,16 +608,16 @@ define <3 x i16> @v_bswap_v3i16(<3 x i16> %src) {
 ;
 ; GFX8-LABEL: v_bswap_v3i16:
 ; GFX8:       ; %bb.0:
-; GFX8-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX8-NEXT:    s_mov_b32 s4, 0x2030001
+; GFX8-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX8-NEXT:    v_perm_b32 v0, 0, v0, s4
 ; GFX8-NEXT:    v_perm_b32 v1, 0, v1, s4
 ; GFX8-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX9-LABEL: v_bswap_v3i16:
 ; GFX9:       ; %bb.0:
-; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX9-NEXT:    s_mov_b32 s4, 0x2030001
+; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX9-NEXT:    v_perm_b32 v0, 0, v0, s4
 ; GFX9-NEXT:    v_perm_b32 v1, 0, v1, s4
 ; GFX9-NEXT:    s_setpc_b64 s[30:31]
@@ -648,8 +648,8 @@ define i64 @v_bswap_i48(i64 %src) {
 ;
 ; GFX8-LABEL: v_bswap_i48:
 ; GFX8:       ; %bb.0:
-; GFX8-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX8-NEXT:    s_mov_b32 s4, 0x10203
+; GFX8-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX8-NEXT:    v_perm_b32 v1, 0, v1, s4
 ; GFX8-NEXT:    v_perm_b32 v2, 0, v0, s4
 ; GFX8-NEXT:    v_lshrrev_b64 v[0:1], 16, v[1:2]
@@ -657,8 +657,8 @@ define i64 @v_bswap_i48(i64 %src) {
 ;
 ; GFX9-LABEL: v_bswap_i48:
 ; GFX9:       ; %bb.0:
-; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX9-NEXT:    s_mov_b32 s4, 0x10203
+; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX9-NEXT:    v_perm_b32 v1, 0, v1, s4
 ; GFX9-NEXT:    v_perm_b32 v2, 0, v0, s4
 ; GFX9-NEXT:    v_lshrrev_b64 v[0:1], 16, v[1:2]

@@ -8,10 +8,9 @@
 
 ; Materialize into a mov. Make sure there isn't an unnecessary copy.
 ; GCN-LABEL: {{^}}func_mov_fi_i32:
-; GCN: s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 
-; CI-NEXT: v_lshr_b32_e64 v0, s32, 6
-; GFX9-MUBUF-NEXT: v_lshrrev_b32_e64 v0, 6, s32
+; CI: v_lshr_b32_e64 v0, s32, 6
+; GFX9-MUBUF: v_lshrrev_b32_e64 v0, 6, s32
 
 ; GFX9-FLATSCR:     v_mov_b32_e32 v0, s32
 ; GFX9-FLATSCR-NOT: v_lshrrev_b32_e64
@@ -27,7 +26,6 @@ define void @func_mov_fi_i32() #0 {
 
 ; Offset due to different objects
 ; GCN-LABEL: {{^}}func_mov_fi_i32_offset:
-; GCN: s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 
 ; CI-DAG: v_lshr_b32_e64 v0, s32, 6
 ; CI-NOT: v_mov
@@ -36,7 +34,7 @@ define void @func_mov_fi_i32() #0 {
 ; CI-NEXT: v_add_i32_e{{32|64}} v0, {{s\[[0-9]+:[0-9]+\]|vcc}}, 4, [[SCALED]]
 ; CI-NEXT: ds_write_b32 v0, v0
 
-; GFX9-MUBUF-NEXT:   v_lshrrev_b32_e64 v0, 6, s32
+; GFX9-MUBUF:        v_lshrrev_b32_e64 v0, 6, s32
 ; GFX9-FLATSCR:      v_mov_b32_e32 v0, s32
 ; GFX9-FLATSCR:      s_add_i32 [[ADD:[^,]+]], s32, 4
 ; GFX9-NEXT:         ds_write_b32 v0, v0
@@ -56,7 +54,6 @@ define void @func_mov_fi_i32_offset() #0 {
 ; FIXME: Should be able to merge adds
 
 ; GCN-LABEL: {{^}}func_add_constant_to_fi_i32:
-; GCN: s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 
 ; CI: v_lshr_b32_e64 [[SCALED:v[0-9]+]], s32, 6
 ; CI-NEXT: v_add_i32_e32 v0, vcc, 4, [[SCALED]]
@@ -109,16 +106,14 @@ define void @func_store_private_arg_i32_ptr(ptr addrspace(5) %ptr) #0 {
 }
 
 ; GCN-LABEL: {{^}}func_load_private_arg_i32_ptr:
-; GCN: s_waitcnt
-; MUBUF-NEXT:        buffer_load_dword v0, v0, s[0:3], 0 offen glc{{$}}
-; GFX9-FLATSCR-NEXT: scratch_load_dword v0, v0, off glc{{$}}
+; MUBUF:        buffer_load_dword v0, v0, s[0:3], 0 offen glc{{$}}
+; GFX9-FLATSCR: scratch_load_dword v0, v0, off glc{{$}}
 define void @func_load_private_arg_i32_ptr(ptr addrspace(5) %ptr) #0 {
   %val = load volatile i32, ptr addrspace(5) %ptr
   ret void
 }
 
 ; GCN-LABEL: {{^}}void_func_byval_struct_i8_i32_ptr:
-; GCN: s_waitcnt
 
 ; CI: v_lshr_b32_e64 [[SHIFT:v[0-9]+]], s32, 6
 ; CI-NEXT: v_or_b32_e32 v0, 4, [[SHIFT]]
@@ -140,10 +135,9 @@ define void @void_func_byval_struct_i8_i32_ptr(ptr addrspace(5) byval({ i8, i32 
 }
 
 ; GCN-LABEL: {{^}}void_func_byval_struct_i8_i32_ptr_value:
-; GCN: s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; MUBUF-NEXT: buffer_load_ubyte v0, off, s[0:3], s32
+; MUBUF:      buffer_load_ubyte v0, off, s[0:3], s32
 ; MUBUF-NEXT: buffer_load_dword v1, off, s[0:3], s32 offset:4
-; GFX9-FLATSCR-NEXT: scratch_load_ubyte v0, off, s32
+; GFX9-FLATSCR:      scratch_load_ubyte v0, off, s32
 ; GFX9-FLATSCR-NEXT: scratch_load_dword v1, off, s32 offset:4
 define void @void_func_byval_struct_i8_i32_ptr_value(ptr addrspace(5) byval({ i8, i32 }) %arg0) #0 {
   %gep0 = getelementptr inbounds { i8, i32 }, ptr addrspace(5) %arg0, i32 0, i32 0

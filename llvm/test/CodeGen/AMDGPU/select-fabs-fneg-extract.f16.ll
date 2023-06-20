@@ -278,9 +278,9 @@ define half @add_select_fabs_negk_negk_f16(i32 %c, half %x) {
 ;
 ; VI-LABEL: add_select_fabs_negk_negk_f16:
 ; VI:       ; %bb.0:
-; VI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; VI-NEXT:    v_mov_b32_e32 v2, 0xbc00
 ; VI-NEXT:    v_mov_b32_e32 v3, 0xc000
+; VI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; VI-NEXT:    v_cmp_eq_u32_e32 vcc, 0, v0
 ; VI-NEXT:    v_cndmask_b32_e32 v0, v2, v3, vcc
 ; VI-NEXT:    v_add_f16_e64 v0, |v0|, v1
@@ -288,8 +288,8 @@ define half @add_select_fabs_negk_negk_f16(i32 %c, half %x) {
 ;
 ; GFX11-LABEL: add_select_fabs_negk_negk_f16:
 ; GFX11:       ; %bb.0:
-; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX11-NEXT:    v_mov_b32_e32 v2, 0xc000
+; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX11-NEXT:    v_cmp_eq_u32_e32 vcc_lo, 0, v0
 ; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX11-NEXT:    v_cndmask_b32_e32 v0, 0xbc00, v2, vcc_lo
@@ -315,9 +315,9 @@ define half @add_select_posk_posk_f16(i32 %c, half %x) {
 ;
 ; VI-LABEL: add_select_posk_posk_f16:
 ; VI:       ; %bb.0:
-; VI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; VI-NEXT:    v_mov_b32_e32 v2, 0x3c00
 ; VI-NEXT:    v_mov_b32_e32 v3, 0x4000
+; VI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; VI-NEXT:    v_cmp_eq_u32_e32 vcc, 0, v0
 ; VI-NEXT:    v_cndmask_b32_e32 v0, v2, v3, vcc
 ; VI-NEXT:    v_add_f16_e32 v0, v0, v1
@@ -325,8 +325,8 @@ define half @add_select_posk_posk_f16(i32 %c, half %x) {
 ;
 ; GFX11-LABEL: add_select_posk_posk_f16:
 ; GFX11:       ; %bb.0:
-; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX11-NEXT:    v_mov_b32_e32 v2, 0x4000
+; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX11-NEXT:    v_cmp_eq_u32_e32 vcc_lo, 0, v0
 ; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX11-NEXT:    v_cndmask_b32_e32 v0, 0x3c00, v2, vcc_lo
@@ -432,8 +432,8 @@ define half @add_select_fabs_posk_f16(i32 %c, half %x, half %y) {
 ;
 ; VI-LABEL: add_select_fabs_posk_f16:
 ; VI:       ; %bb.0:
-; VI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; VI-NEXT:    v_mov_b32_e32 v3, 0x3c00
+; VI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; VI-NEXT:    v_cmp_eq_u32_e32 vcc, 0, v0
 ; VI-NEXT:    v_cndmask_b32_e32 v0, v3, v1, vcc
 ; VI-NEXT:    v_add_f16_e64 v0, |v0|, v2
@@ -469,8 +469,8 @@ define half @add_select_posk_fabs_f16(i32 %c, half %x, half %y) {
 ;
 ; VI-LABEL: add_select_posk_fabs_f16:
 ; VI:       ; %bb.0:
-; VI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; VI-NEXT:    v_mov_b32_e32 v3, 0x3c00
+; VI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; VI-NEXT:    v_cmp_ne_u32_e32 vcc, 0, v0
 ; VI-NEXT:    v_cndmask_b32_e32 v0, v3, v1, vcc
 ; VI-NEXT:    v_add_f16_e64 v0, |v0|, v2
@@ -724,8 +724,8 @@ define half @add_select_fneg_negk_f16(i32 %c, half %x, half %y) {
 ;
 ; VI-LABEL: add_select_fneg_negk_f16:
 ; VI:       ; %bb.0:
-; VI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; VI-NEXT:    v_mov_b32_e32 v3, 0x3c00
+; VI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; VI-NEXT:    v_cmp_eq_u32_e32 vcc, 0, v0
 ; VI-NEXT:    v_cndmask_b32_e32 v0, v3, v1, vcc
 ; VI-NEXT:    v_sub_f16_e32 v0, v2, v0
@@ -762,8 +762,8 @@ define half @add_select_fneg_inv2pi_f16(i32 %c, half %x, half %y) {
 ;
 ; VI-LABEL: add_select_fneg_inv2pi_f16:
 ; VI:       ; %bb.0:
-; VI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; VI-NEXT:    v_mov_b32_e32 v3, 0xb118
+; VI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; VI-NEXT:    v_cmp_eq_u32_e32 vcc, 0, v0
 ; VI-NEXT:    v_cndmask_b32_e32 v0, v3, v1, vcc
 ; VI-NEXT:    v_sub_f16_e32 v0, v2, v0
@@ -800,8 +800,8 @@ define half @add_select_fneg_neginv2pi_f16(i32 %c, half %x, half %y) {
 ;
 ; VI-LABEL: add_select_fneg_neginv2pi_f16:
 ; VI:       ; %bb.0:
-; VI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; VI-NEXT:    v_mov_b32_e32 v3, 0x3118
+; VI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; VI-NEXT:    v_cmp_eq_u32_e32 vcc, 0, v0
 ; VI-NEXT:    v_cndmask_b32_e32 v0, v3, v1, vcc
 ; VI-NEXT:    v_sub_f16_e32 v0, v2, v0
@@ -835,9 +835,9 @@ define half @add_select_negk_negk_f16(i32 %c, half %x) {
 ;
 ; VI-LABEL: add_select_negk_negk_f16:
 ; VI:       ; %bb.0:
-; VI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; VI-NEXT:    v_mov_b32_e32 v2, 0xbc00
 ; VI-NEXT:    v_mov_b32_e32 v3, 0xc000
+; VI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; VI-NEXT:    v_cmp_eq_u32_e32 vcc, 0, v0
 ; VI-NEXT:    v_cndmask_b32_e32 v0, v2, v3, vcc
 ; VI-NEXT:    v_add_f16_e32 v0, v0, v1
@@ -845,8 +845,8 @@ define half @add_select_negk_negk_f16(i32 %c, half %x) {
 ;
 ; GFX11-LABEL: add_select_negk_negk_f16:
 ; GFX11:       ; %bb.0:
-; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX11-NEXT:    v_mov_b32_e32 v2, 0xc000
+; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX11-NEXT:    v_cmp_eq_u32_e32 vcc_lo, 0, v0
 ; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX11-NEXT:    v_cndmask_b32_e32 v0, 0xbc00, v2, vcc_lo
@@ -873,9 +873,9 @@ define half @add_select_negliteralk_negliteralk_f16(i32 %c, half %x) {
 ;
 ; VI-LABEL: add_select_negliteralk_negliteralk_f16:
 ; VI:       ; %bb.0:
-; VI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; VI-NEXT:    v_mov_b32_e32 v2, 0xec00
 ; VI-NEXT:    v_mov_b32_e32 v3, 0xe800
+; VI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; VI-NEXT:    v_cmp_eq_u32_e32 vcc, 0, v0
 ; VI-NEXT:    v_cndmask_b32_e32 v0, v2, v3, vcc
 ; VI-NEXT:    v_add_f16_e32 v0, v0, v1
@@ -883,8 +883,8 @@ define half @add_select_negliteralk_negliteralk_f16(i32 %c, half %x) {
 ;
 ; GFX11-LABEL: add_select_negliteralk_negliteralk_f16:
 ; GFX11:       ; %bb.0:
-; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX11-NEXT:    v_mov_b32_e32 v2, 0xe800
+; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX11-NEXT:    v_cmp_eq_u32_e32 vcc_lo, 0, v0
 ; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX11-NEXT:    v_cndmask_b32_e32 v0, 0xec00, v2, vcc_lo
@@ -909,9 +909,9 @@ define half @add_select_fneg_negk_negk_f16(i32 %c, half %x) {
 ;
 ; VI-LABEL: add_select_fneg_negk_negk_f16:
 ; VI:       ; %bb.0:
-; VI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; VI-NEXT:    v_mov_b32_e32 v2, 0xbc00
 ; VI-NEXT:    v_mov_b32_e32 v3, 0xc000
+; VI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; VI-NEXT:    v_cmp_eq_u32_e32 vcc, 0, v0
 ; VI-NEXT:    v_cndmask_b32_e32 v0, v2, v3, vcc
 ; VI-NEXT:    v_sub_f16_e32 v0, v1, v0
@@ -919,8 +919,8 @@ define half @add_select_fneg_negk_negk_f16(i32 %c, half %x) {
 ;
 ; GFX11-LABEL: add_select_fneg_negk_negk_f16:
 ; GFX11:       ; %bb.0:
-; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX11-NEXT:    v_mov_b32_e32 v2, 0xc000
+; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX11-NEXT:    v_cmp_eq_u32_e32 vcc_lo, 0, v0
 ; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX11-NEXT:    v_cndmask_b32_e32 v0, 0xbc00, v2, vcc_lo
@@ -948,8 +948,8 @@ define half @add_select_negk_fneg_f16(i32 %c, half %x, half %y) {
 ;
 ; VI-LABEL: add_select_negk_fneg_f16:
 ; VI:       ; %bb.0:
-; VI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; VI-NEXT:    v_mov_b32_e32 v3, 0x3c00
+; VI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; VI-NEXT:    v_cmp_ne_u32_e32 vcc, 0, v0
 ; VI-NEXT:    v_cndmask_b32_e32 v0, v3, v1, vcc
 ; VI-NEXT:    v_sub_f16_e32 v0, v2, v0
@@ -985,8 +985,8 @@ define half @add_select_fneg_posk_f16(i32 %c, half %x, half %y) {
 ;
 ; VI-LABEL: add_select_fneg_posk_f16:
 ; VI:       ; %bb.0:
-; VI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; VI-NEXT:    v_mov_b32_e32 v3, 0xbc00
+; VI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; VI-NEXT:    v_cmp_eq_u32_e32 vcc, 0, v0
 ; VI-NEXT:    v_cndmask_b32_e32 v0, v3, v1, vcc
 ; VI-NEXT:    v_sub_f16_e32 v0, v2, v0
@@ -1022,8 +1022,8 @@ define half @add_select_posk_fneg_f16(i32 %c, half %x, half %y) {
 ;
 ; VI-LABEL: add_select_posk_fneg_f16:
 ; VI:       ; %bb.0:
-; VI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; VI-NEXT:    v_mov_b32_e32 v3, 0xbc00
+; VI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; VI-NEXT:    v_cmp_ne_u32_e32 vcc, 0, v0
 ; VI-NEXT:    v_cndmask_b32_e32 v0, v3, v1, vcc
 ; VI-NEXT:    v_sub_f16_e32 v0, v2, v0

@@ -388,8 +388,8 @@ define double @v_uint_to_fp_i8_to_f64(i8 %in) {
 ;
 ; VI-LABEL: v_uint_to_fp_i8_to_f64:
 ; VI:       ; %bb.0:
-; VI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; VI-NEXT:    v_mov_b32_e32 v1, 0xffff
+; VI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; VI-NEXT:    v_and_b32_sdwa v0, v1, v0 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:BYTE_0
 ; VI-NEXT:    v_cvt_f64_u32_e32 v[0:1], v0
 ; VI-NEXT:    s_setpc_b64 s[30:31]
@@ -434,8 +434,8 @@ define amdgpu_kernel void @s_select_uint_to_fp_i1_vals_f64(ptr addrspace(1) %out
 define void @v_select_uint_to_fp_i1_vals_f64(ptr addrspace(1) %out, i32 %in) {
 ; GCN-LABEL: v_select_uint_to_fp_i1_vals_f64:
 ; GCN:       ; %bb.0:
-; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GCN-NEXT:    v_mov_b32_e32 v4, 0x3ff00000
+; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GCN-NEXT:    v_cmp_eq_u32_e32 vcc, 0, v2
 ; GCN-NEXT:    v_mov_b32_e32 v3, 0
 ; GCN-NEXT:    v_cndmask_b32_e32 v4, 0, v4, vcc
@@ -485,8 +485,8 @@ define amdgpu_kernel void @s_select_uint_to_fp_i1_vals_i64(ptr addrspace(1) %out
 define void @v_select_uint_to_fp_i1_vals_i64(ptr addrspace(1) %out, i32 %in) {
 ; GCN-LABEL: v_select_uint_to_fp_i1_vals_i64:
 ; GCN:       ; %bb.0:
-; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GCN-NEXT:    v_mov_b32_e32 v4, 0x3ff00000
+; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GCN-NEXT:    v_cmp_eq_u32_e32 vcc, 0, v2
 ; GCN-NEXT:    v_mov_b32_e32 v3, 0
 ; GCN-NEXT:    v_cndmask_b32_e32 v4, 0, v4, vcc
@@ -537,8 +537,8 @@ define amdgpu_kernel void @s_swap_select_uint_to_fp_i1_vals_f64(ptr addrspace(1)
 define void @v_swap_select_uint_to_fp_i1_vals_f64(ptr addrspace(1) %out, i32 %in) {
 ; GCN-LABEL: v_swap_select_uint_to_fp_i1_vals_f64:
 ; GCN:       ; %bb.0:
-; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GCN-NEXT:    v_mov_b32_e32 v4, 0x3ff00000
+; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GCN-NEXT:    v_cmp_eq_u32_e32 vcc, 0, v2
 ; GCN-NEXT:    v_mov_b32_e32 v3, 0
 ; GCN-NEXT:    v_cndmask_b32_e64 v4, v4, 0, vcc

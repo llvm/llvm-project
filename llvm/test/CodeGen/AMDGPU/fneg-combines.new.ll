@@ -2618,8 +2618,8 @@ define { float, float } @multi_use_cost_to_fold_into_src(float %a, float %b, flo
 define <2 x float> @fneg_fma_fneg_dagcombine_loop(<2 x float> %arg, <2 x float> %arg1, <2 x float> %arg2) #0 {
 ; GCN-LABEL: fneg_fma_fneg_dagcombine_loop:
 ; GCN:       ; %bb.0: ; %bb
-; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GCN-NEXT:    s_brev_b32 s4, 1
+; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GCN-NEXT:    v_fma_f32 v3, v3, -v5, s4
 ; GCN-NEXT:    v_fma_f32 v2, v2, -v4, s4
 ; GCN-NEXT:    v_sub_f32_e32 v1, v3, v1

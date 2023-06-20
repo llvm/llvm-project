@@ -12,9 +12,10 @@
 define float @mubuf_vgpr(<4 x i32> %i, i32 %c) #0 {
 ; GFX9_W64-LABEL: mubuf_vgpr:
 ; GFX9_W64:       ; %bb.0:
-; GFX9_W64-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX9_W64-NEXT:    s_mov_b64 s[6:7], exec
+; GFX9_W64-NEXT:    s_waitcnt vmcnt(0)
 ; GFX9_W64-NEXT:  .LBB0_1: ; =>This Inner Loop Header: Depth=1
+; GFX9_W64-NEXT:    s_waitcnt expcnt(0) lgkmcnt(0)
 ; GFX9_W64-NEXT:    v_readfirstlane_b32 s8, v0
 ; GFX9_W64-NEXT:    v_readfirstlane_b32 s9, v1
 ; GFX9_W64-NEXT:    v_readfirstlane_b32 s10, v2
@@ -37,9 +38,10 @@ define float @mubuf_vgpr(<4 x i32> %i, i32 %c) #0 {
 ;
 ; GFX1010_W32-LABEL: mubuf_vgpr:
 ; GFX1010_W32:       ; %bb.0:
-; GFX1010_W32-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX1010_W32-NEXT:    s_mov_b32 s5, exec_lo
+; GFX1010_W32-NEXT:    s_waitcnt vmcnt(0)
 ; GFX1010_W32-NEXT:  .LBB0_1: ; =>This Inner Loop Header: Depth=1
+; GFX1010_W32-NEXT:    s_waitcnt expcnt(0) lgkmcnt(0)
 ; GFX1010_W32-NEXT:    v_readfirstlane_b32 s8, v0
 ; GFX1010_W32-NEXT:    v_readfirstlane_b32 s9, v1
 ; GFX1010_W32-NEXT:    v_readfirstlane_b32 s10, v2
@@ -62,9 +64,10 @@ define float @mubuf_vgpr(<4 x i32> %i, i32 %c) #0 {
 ;
 ; GFX1010_W64-LABEL: mubuf_vgpr:
 ; GFX1010_W64:       ; %bb.0:
-; GFX1010_W64-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX1010_W64-NEXT:    s_mov_b64 s[6:7], exec
+; GFX1010_W64-NEXT:    s_waitcnt vmcnt(0)
 ; GFX1010_W64-NEXT:  .LBB0_1: ; =>This Inner Loop Header: Depth=1
+; GFX1010_W64-NEXT:    s_waitcnt expcnt(0) lgkmcnt(0)
 ; GFX1010_W64-NEXT:    v_readfirstlane_b32 s8, v0
 ; GFX1010_W64-NEXT:    v_readfirstlane_b32 s9, v1
 ; GFX1010_W64-NEXT:    v_readfirstlane_b32 s10, v2
@@ -87,9 +90,10 @@ define float @mubuf_vgpr(<4 x i32> %i, i32 %c) #0 {
 ;
 ; GFX1100_W32-LABEL: mubuf_vgpr:
 ; GFX1100_W32:       ; %bb.0:
-; GFX1100_W32-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX1100_W32-NEXT:    s_mov_b32 s1, exec_lo
+; GFX1100_W32-NEXT:    s_waitcnt vmcnt(0)
 ; GFX1100_W32-NEXT:  .LBB0_1: ; =>This Inner Loop Header: Depth=1
+; GFX1100_W32-NEXT:    s_waitcnt expcnt(0) lgkmcnt(0)
 ; GFX1100_W32-NEXT:    v_readfirstlane_b32 s4, v0
 ; GFX1100_W32-NEXT:    v_readfirstlane_b32 s5, v1
 ; GFX1100_W32-NEXT:    v_readfirstlane_b32 s6, v2
@@ -113,9 +117,10 @@ define float @mubuf_vgpr(<4 x i32> %i, i32 %c) #0 {
 ;
 ; GFX1100_W64-LABEL: mubuf_vgpr:
 ; GFX1100_W64:       ; %bb.0:
-; GFX1100_W64-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX1100_W64-NEXT:    s_mov_b64 s[2:3], exec
+; GFX1100_W64-NEXT:    s_waitcnt vmcnt(0)
 ; GFX1100_W64-NEXT:  .LBB0_1: ; =>This Inner Loop Header: Depth=1
+; GFX1100_W64-NEXT:    s_waitcnt expcnt(0) lgkmcnt(0)
 ; GFX1100_W64-NEXT:    v_readfirstlane_b32 s4, v0
 ; GFX1100_W64-NEXT:    v_readfirstlane_b32 s5, v1
 ; GFX1100_W64-NEXT:    v_readfirstlane_b32 s6, v2
@@ -139,8 +144,9 @@ define float @mubuf_vgpr(<4 x i32> %i, i32 %c) #0 {
 ;
 ; W64-O0-LABEL: mubuf_vgpr:
 ; W64-O0:       ; %bb.0:
-; W64-O0-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; W64-O0-NEXT:    s_waitcnt expcnt(0)
 ; W64-O0-NEXT:    s_xor_saveexec_b64 s[4:5], -1
+; W64-O0-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; W64-O0-NEXT:    buffer_store_dword v0, off, s[0:3], s32 offset:28 ; 4-byte Folded Spill
 ; W64-O0-NEXT:    buffer_store_dword v1, off, s[0:3], s32 offset:32 ; 4-byte Folded Spill
 ; W64-O0-NEXT:    s_mov_b64 exec, s[4:5]
@@ -258,9 +264,10 @@ define float @mubuf_vgpr(<4 x i32> %i, i32 %c) #0 {
 define void @mubuf_vgpr_adjacent_in_block(<4 x i32> %i, <4 x i32> %j, i32 %c, ptr addrspace(1) %out0, ptr addrspace(1) %out1) #0 {
 ; GFX9_W64-LABEL: mubuf_vgpr_adjacent_in_block:
 ; GFX9_W64:       ; %bb.0: ; %entry
-; GFX9_W64-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX9_W64-NEXT:    s_mov_b64 s[6:7], exec
+; GFX9_W64-NEXT:    s_waitcnt vmcnt(0)
 ; GFX9_W64-NEXT:  .LBB1_1: ; =>This Inner Loop Header: Depth=1
+; GFX9_W64-NEXT:    s_waitcnt expcnt(0) lgkmcnt(0)
 ; GFX9_W64-NEXT:    v_readfirstlane_b32 s8, v0
 ; GFX9_W64-NEXT:    v_readfirstlane_b32 s9, v1
 ; GFX9_W64-NEXT:    v_readfirstlane_b32 s10, v2
@@ -303,9 +310,10 @@ define void @mubuf_vgpr_adjacent_in_block(<4 x i32> %i, <4 x i32> %j, i32 %c, pt
 ;
 ; GFX1010_W32-LABEL: mubuf_vgpr_adjacent_in_block:
 ; GFX1010_W32:       ; %bb.0: ; %entry
-; GFX1010_W32-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX1010_W32-NEXT:    s_mov_b32 s5, exec_lo
+; GFX1010_W32-NEXT:    s_waitcnt vmcnt(0)
 ; GFX1010_W32-NEXT:  .LBB1_1: ; =>This Inner Loop Header: Depth=1
+; GFX1010_W32-NEXT:    s_waitcnt expcnt(0) lgkmcnt(0)
 ; GFX1010_W32-NEXT:    v_readfirstlane_b32 s8, v0
 ; GFX1010_W32-NEXT:    v_readfirstlane_b32 s9, v1
 ; GFX1010_W32-NEXT:    v_readfirstlane_b32 s10, v2
@@ -349,9 +357,10 @@ define void @mubuf_vgpr_adjacent_in_block(<4 x i32> %i, <4 x i32> %j, i32 %c, pt
 ;
 ; GFX1010_W64-LABEL: mubuf_vgpr_adjacent_in_block:
 ; GFX1010_W64:       ; %bb.0: ; %entry
-; GFX1010_W64-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX1010_W64-NEXT:    s_mov_b64 s[6:7], exec
+; GFX1010_W64-NEXT:    s_waitcnt vmcnt(0)
 ; GFX1010_W64-NEXT:  .LBB1_1: ; =>This Inner Loop Header: Depth=1
+; GFX1010_W64-NEXT:    s_waitcnt expcnt(0) lgkmcnt(0)
 ; GFX1010_W64-NEXT:    v_readfirstlane_b32 s8, v0
 ; GFX1010_W64-NEXT:    v_readfirstlane_b32 s9, v1
 ; GFX1010_W64-NEXT:    v_readfirstlane_b32 s10, v2
@@ -395,9 +404,10 @@ define void @mubuf_vgpr_adjacent_in_block(<4 x i32> %i, <4 x i32> %j, i32 %c, pt
 ;
 ; GFX1100_W32-LABEL: mubuf_vgpr_adjacent_in_block:
 ; GFX1100_W32:       ; %bb.0: ; %entry
-; GFX1100_W32-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX1100_W32-NEXT:    s_mov_b32 s1, exec_lo
+; GFX1100_W32-NEXT:    s_waitcnt vmcnt(0)
 ; GFX1100_W32-NEXT:  .LBB1_1: ; =>This Inner Loop Header: Depth=1
+; GFX1100_W32-NEXT:    s_waitcnt expcnt(0) lgkmcnt(0)
 ; GFX1100_W32-NEXT:    v_readfirstlane_b32 s4, v0
 ; GFX1100_W32-NEXT:    v_readfirstlane_b32 s5, v1
 ; GFX1100_W32-NEXT:    v_readfirstlane_b32 s6, v2
@@ -444,9 +454,10 @@ define void @mubuf_vgpr_adjacent_in_block(<4 x i32> %i, <4 x i32> %j, i32 %c, pt
 ;
 ; GFX1100_W64-LABEL: mubuf_vgpr_adjacent_in_block:
 ; GFX1100_W64:       ; %bb.0: ; %entry
-; GFX1100_W64-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX1100_W64-NEXT:    s_mov_b64 s[2:3], exec
+; GFX1100_W64-NEXT:    s_waitcnt vmcnt(0)
 ; GFX1100_W64-NEXT:  .LBB1_1: ; =>This Inner Loop Header: Depth=1
+; GFX1100_W64-NEXT:    s_waitcnt expcnt(0) lgkmcnt(0)
 ; GFX1100_W64-NEXT:    v_readfirstlane_b32 s4, v0
 ; GFX1100_W64-NEXT:    v_readfirstlane_b32 s5, v1
 ; GFX1100_W64-NEXT:    v_readfirstlane_b32 s6, v2
@@ -493,8 +504,9 @@ define void @mubuf_vgpr_adjacent_in_block(<4 x i32> %i, <4 x i32> %j, i32 %c, pt
 ;
 ; W64-O0-LABEL: mubuf_vgpr_adjacent_in_block:
 ; W64-O0:       ; %bb.0: ; %entry
-; W64-O0-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; W64-O0-NEXT:    s_waitcnt expcnt(0)
 ; W64-O0-NEXT:    s_xor_saveexec_b64 s[4:5], -1
+; W64-O0-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; W64-O0-NEXT:    buffer_store_dword v0, off, s[0:3], s32 offset:76 ; 4-byte Folded Spill
 ; W64-O0-NEXT:    buffer_store_dword v1, off, s[0:3], s32 offset:80 ; 4-byte Folded Spill
 ; W64-O0-NEXT:    s_mov_b64 exec, s[4:5]
@@ -729,13 +741,14 @@ entry:
 define void @mubuf_vgpr_outside_entry(<4 x i32> %i, <4 x i32> %j, i32 %c, ptr addrspace(1) %in, ptr addrspace(1) %out) #0 {
 ; GFX9_W64-LABEL: mubuf_vgpr_outside_entry:
 ; GFX9_W64:       ; %bb.0: ; %entry
-; GFX9_W64-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX9_W64-NEXT:    ;;#ASMSTART
 ; GFX9_W64-NEXT:    s_mov_b32 s4, 17
 ; GFX9_W64-NEXT:    ;;#ASMEND
 ; GFX9_W64-NEXT:    v_mov_b32_e32 v8, s4
 ; GFX9_W64-NEXT:    s_mov_b64 s[12:13], exec
+; GFX9_W64-NEXT:    s_waitcnt vmcnt(0)
 ; GFX9_W64-NEXT:  .LBB2_1: ; =>This Inner Loop Header: Depth=1
+; GFX9_W64-NEXT:    s_waitcnt expcnt(0) lgkmcnt(0)
 ; GFX9_W64-NEXT:    v_readfirstlane_b32 s8, v0
 ; GFX9_W64-NEXT:    v_readfirstlane_b32 s9, v1
 ; GFX9_W64-NEXT:    v_readfirstlane_b32 s10, v2
@@ -785,13 +798,14 @@ define void @mubuf_vgpr_outside_entry(<4 x i32> %i, <4 x i32> %j, i32 %c, ptr ad
 ;
 ; GFX1010_W32-LABEL: mubuf_vgpr_outside_entry:
 ; GFX1010_W32:       ; %bb.0: ; %entry
-; GFX1010_W32-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX1010_W32-NEXT:    ;;#ASMSTART
 ; GFX1010_W32-NEXT:    s_mov_b32 s4, 17
 ; GFX1010_W32-NEXT:    ;;#ASMEND
 ; GFX1010_W32-NEXT:    v_mov_b32_e32 v8, s4
 ; GFX1010_W32-NEXT:    s_mov_b32 s6, exec_lo
+; GFX1010_W32-NEXT:    s_waitcnt vmcnt(0)
 ; GFX1010_W32-NEXT:  .LBB2_1: ; =>This Inner Loop Header: Depth=1
+; GFX1010_W32-NEXT:    s_waitcnt expcnt(0) lgkmcnt(0)
 ; GFX1010_W32-NEXT:    v_readfirstlane_b32 s8, v0
 ; GFX1010_W32-NEXT:    v_readfirstlane_b32 s9, v1
 ; GFX1010_W32-NEXT:    v_readfirstlane_b32 s10, v2
@@ -841,13 +855,14 @@ define void @mubuf_vgpr_outside_entry(<4 x i32> %i, <4 x i32> %j, i32 %c, ptr ad
 ;
 ; GFX1010_W64-LABEL: mubuf_vgpr_outside_entry:
 ; GFX1010_W64:       ; %bb.0: ; %entry
-; GFX1010_W64-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX1010_W64-NEXT:    ;;#ASMSTART
 ; GFX1010_W64-NEXT:    s_mov_b32 s4, 17
 ; GFX1010_W64-NEXT:    ;;#ASMEND
 ; GFX1010_W64-NEXT:    v_mov_b32_e32 v8, s4
 ; GFX1010_W64-NEXT:    s_mov_b64 s[12:13], exec
+; GFX1010_W64-NEXT:    s_waitcnt vmcnt(0)
 ; GFX1010_W64-NEXT:  .LBB2_1: ; =>This Inner Loop Header: Depth=1
+; GFX1010_W64-NEXT:    s_waitcnt expcnt(0) lgkmcnt(0)
 ; GFX1010_W64-NEXT:    v_readfirstlane_b32 s8, v0
 ; GFX1010_W64-NEXT:    v_readfirstlane_b32 s9, v1
 ; GFX1010_W64-NEXT:    v_readfirstlane_b32 s10, v2
@@ -897,13 +912,14 @@ define void @mubuf_vgpr_outside_entry(<4 x i32> %i, <4 x i32> %j, i32 %c, ptr ad
 ;
 ; GFX1100_W32-LABEL: mubuf_vgpr_outside_entry:
 ; GFX1100_W32:       ; %bb.0: ; %entry
-; GFX1100_W32-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX1100_W32-NEXT:    ;;#ASMSTART
 ; GFX1100_W32-NEXT:    s_mov_b32 s4, 17
 ; GFX1100_W32-NEXT:    ;;#ASMEND
 ; GFX1100_W32-NEXT:    v_mov_b32_e32 v8, s4
 ; GFX1100_W32-NEXT:    s_mov_b32 s1, exec_lo
+; GFX1100_W32-NEXT:    s_waitcnt vmcnt(0)
 ; GFX1100_W32-NEXT:  .LBB2_1: ; =>This Inner Loop Header: Depth=1
+; GFX1100_W32-NEXT:    s_waitcnt expcnt(0) lgkmcnt(0)
 ; GFX1100_W32-NEXT:    v_readfirstlane_b32 s8, v0
 ; GFX1100_W32-NEXT:    v_readfirstlane_b32 s9, v1
 ; GFX1100_W32-NEXT:    v_readfirstlane_b32 s10, v2
@@ -957,13 +973,14 @@ define void @mubuf_vgpr_outside_entry(<4 x i32> %i, <4 x i32> %j, i32 %c, ptr ad
 ;
 ; GFX1100_W64-LABEL: mubuf_vgpr_outside_entry:
 ; GFX1100_W64:       ; %bb.0: ; %entry
-; GFX1100_W64-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX1100_W64-NEXT:    ;;#ASMSTART
 ; GFX1100_W64-NEXT:    s_mov_b32 s4, 17
 ; GFX1100_W64-NEXT:    ;;#ASMEND
 ; GFX1100_W64-NEXT:    v_mov_b32_e32 v8, s4
 ; GFX1100_W64-NEXT:    s_mov_b64 s[2:3], exec
+; GFX1100_W64-NEXT:    s_waitcnt vmcnt(0)
 ; GFX1100_W64-NEXT:  .LBB2_1: ; =>This Inner Loop Header: Depth=1
+; GFX1100_W64-NEXT:    s_waitcnt expcnt(0) lgkmcnt(0)
 ; GFX1100_W64-NEXT:    v_readfirstlane_b32 s8, v0
 ; GFX1100_W64-NEXT:    v_readfirstlane_b32 s9, v1
 ; GFX1100_W64-NEXT:    v_readfirstlane_b32 s10, v2
@@ -1017,8 +1034,9 @@ define void @mubuf_vgpr_outside_entry(<4 x i32> %i, <4 x i32> %j, i32 %c, ptr ad
 ;
 ; W64-O0-LABEL: mubuf_vgpr_outside_entry:
 ; W64-O0:       ; %bb.0: ; %entry
-; W64-O0-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; W64-O0-NEXT:    s_waitcnt expcnt(0)
 ; W64-O0-NEXT:    s_xor_saveexec_b64 s[4:5], -1
+; W64-O0-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; W64-O0-NEXT:    buffer_store_dword v0, off, s[0:3], s32 offset:76 ; 4-byte Folded Spill
 ; W64-O0-NEXT:    buffer_store_dword v1, off, s[0:3], s32 offset:80 ; 4-byte Folded Spill
 ; W64-O0-NEXT:    s_mov_b64 exec, s[4:5]

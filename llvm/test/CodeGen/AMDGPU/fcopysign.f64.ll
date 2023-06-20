@@ -861,8 +861,8 @@ define amdgpu_kernel void @s_test_copysign_v4f64(ptr addrspace(1) %out, <4 x dou
 define double @v_test_copysign_f64(ptr addrspace(1) %out, [8 x i32], double %mag, [8 x i32], double %sign) {
 ; SIVI-LABEL: v_test_copysign_f64:
 ; SIVI:       ; %bb.0:
-; SIVI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; SIVI-NEXT:    s_brev_b32 s4, -2
+; SIVI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; SIVI-NEXT:    v_mov_b32_e32 v0, v10
 ; SIVI-NEXT:    v_bfi_b32 v1, s4, v11, v21
 ; SIVI-NEXT:    s_setpc_b64 s[30:31]
@@ -967,8 +967,8 @@ define double @v_test_copysign_f64_neg10(ptr addrspace(1) %out, [8 x i32], doubl
 define double @v_test_copysign_f64_f32(ptr addrspace(1) %out, [8 x i32], double %mag, [8 x i32], float %sign) {
 ; SIVI-LABEL: v_test_copysign_f64_f32:
 ; SIVI:       ; %bb.0:
-; SIVI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; SIVI-NEXT:    s_brev_b32 s4, -2
+; SIVI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; SIVI-NEXT:    v_mov_b32_e32 v0, v10
 ; SIVI-NEXT:    v_bfi_b32 v1, s4, v11, v20
 ; SIVI-NEXT:    s_setpc_b64 s[30:31]
@@ -987,8 +987,8 @@ define double @v_test_copysign_f64_f32(ptr addrspace(1) %out, [8 x i32], double 
 define double @v_test_copysign_f64_f16(ptr addrspace(1) %out, [8 x i32], double %mag, [8 x i32], half %sign) {
 ; SI-LABEL: v_test_copysign_f64_f16:
 ; SI:       ; %bb.0:
-; SI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; SI-NEXT:    s_brev_b32 s4, -2
+; SI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; SI-NEXT:    v_mov_b32_e32 v0, v10
 ; SI-NEXT:    v_bfi_b32 v1, s4, v11, v20
 ; SI-NEXT:    s_setpc_b64 s[30:31]
@@ -1017,8 +1017,8 @@ define double @v_test_copysign_f64_f16(ptr addrspace(1) %out, [8 x i32], double 
 define <2 x double> @v_test_copysign_v2f64(ptr addrspace(1) %out, <2 x double> %mag, <2 x double> %sign) {
 ; SIVI-LABEL: v_test_copysign_v2f64:
 ; SIVI:       ; %bb.0:
-; SIVI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; SIVI-NEXT:    s_brev_b32 s4, -2
+; SIVI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; SIVI-NEXT:    v_mov_b32_e32 v0, v2
 ; SIVI-NEXT:    v_bfi_b32 v1, s4, v3, v7
 ; SIVI-NEXT:    v_bfi_b32 v3, s4, v5, v9
@@ -1040,8 +1040,8 @@ define <2 x double> @v_test_copysign_v2f64(ptr addrspace(1) %out, <2 x double> %
 define <3 x double> @v_test_copysign_v3f64(ptr addrspace(1) %out, <3 x double> %mag, <3 x double> %sign) {
 ; SIVI-LABEL: v_test_copysign_v3f64:
 ; SIVI:       ; %bb.0:
-; SIVI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; SIVI-NEXT:    s_brev_b32 s4, -2
+; SIVI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; SIVI-NEXT:    v_mov_b32_e32 v0, v2
 ; SIVI-NEXT:    v_bfi_b32 v1, s4, v3, v9
 ; SIVI-NEXT:    v_bfi_b32 v3, s4, v5, v11
@@ -1067,8 +1067,8 @@ define <3 x double> @v_test_copysign_v3f64(ptr addrspace(1) %out, <3 x double> %
 define <4 x double> @v_test_copysign_v4f64(ptr addrspace(1) %out, <4 x double> %mag, <4 x double> %sign) {
 ; SIVI-LABEL: v_test_copysign_v4f64:
 ; SIVI:       ; %bb.0:
-; SIVI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; SIVI-NEXT:    s_brev_b32 s4, -2
+; SIVI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; SIVI-NEXT:    v_mov_b32_e32 v0, v2
 ; SIVI-NEXT:    v_bfi_b32 v1, s4, v3, v11
 ; SIVI-NEXT:    v_bfi_b32 v3, s4, v5, v13

@@ -498,8 +498,8 @@ define float @missing_truncate_promote_bswap(i32 %arg) {
 ;
 ; VI-LABEL: missing_truncate_promote_bswap:
 ; VI:       ; %bb.0: ; %bb
-; VI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; VI-NEXT:    s_mov_b32 s4, 0xc0c0001
+; VI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; VI-NEXT:    v_perm_b32 v0, 0, v0, s4
 ; VI-NEXT:    v_cvt_f32_f16_e32 v0, v0
 ; VI-NEXT:    s_setpc_b64 s[30:31]
@@ -532,8 +532,8 @@ define i16 @v_bswap_i16(i16 %src) {
 ;
 ; VI-LABEL: v_bswap_i16:
 ; VI:       ; %bb.0:
-; VI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; VI-NEXT:    s_mov_b32 s4, 0xc0c0001
+; VI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; VI-NEXT:    v_perm_b32 v0, 0, v0, s4
 ; VI-NEXT:    s_setpc_b64 s[30:31]
 ;
@@ -559,8 +559,8 @@ define i32 @v_bswap_i16_zext_to_i32(i16 %src) {
 ;
 ; VI-LABEL: v_bswap_i16_zext_to_i32:
 ; VI:       ; %bb.0:
-; VI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; VI-NEXT:    s_mov_b32 s4, 0xc0c0001
+; VI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; VI-NEXT:    v_perm_b32 v0, 0, v0, s4
 ; VI-NEXT:    s_setpc_b64 s[30:31]
 ;
@@ -587,8 +587,8 @@ define i32 @v_bswap_i16_sext_to_i32(i16 %src) {
 ;
 ; VI-LABEL: v_bswap_i16_sext_to_i32:
 ; VI:       ; %bb.0:
-; VI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; VI-NEXT:    s_mov_b32 s4, 0xc0c0001
+; VI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; VI-NEXT:    v_perm_b32 v0, 0, v0, s4
 ; VI-NEXT:    v_bfe_i32 v0, v0, 0, 16
 ; VI-NEXT:    s_setpc_b64 s[30:31]
@@ -622,8 +622,8 @@ define <2 x i16> @v_bswap_v2i16(<2 x i16> %src) {
 ;
 ; VI-LABEL: v_bswap_v2i16:
 ; VI:       ; %bb.0:
-; VI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; VI-NEXT:    s_mov_b32 s4, 0x2030001
+; VI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; VI-NEXT:    v_perm_b32 v0, 0, v0, s4
 ; VI-NEXT:    s_setpc_b64 s[30:31]
 ;
@@ -658,8 +658,8 @@ define <3 x i16> @v_bswap_v3i16(<3 x i16> %src) {
 ;
 ; VI-LABEL: v_bswap_v3i16:
 ; VI:       ; %bb.0:
-; VI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; VI-NEXT:    s_mov_b32 s4, 0x2030001
+; VI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; VI-NEXT:    v_perm_b32 v0, 0, v0, s4
 ; VI-NEXT:    v_perm_b32 v1, 0, v1, s4
 ; VI-NEXT:    s_setpc_b64 s[30:31]
@@ -701,8 +701,8 @@ define <4 x i16> @v_bswap_v4i16(<4 x i16> %src) {
 ;
 ; VI-LABEL: v_bswap_v4i16:
 ; VI:       ; %bb.0:
-; VI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; VI-NEXT:    s_mov_b32 s4, 0x2030001
+; VI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; VI-NEXT:    v_perm_b32 v0, 0, v0, s4
 ; VI-NEXT:    v_perm_b32 v1, 0, v1, s4
 ; VI-NEXT:    s_setpc_b64 s[30:31]
@@ -734,8 +734,8 @@ define i64 @v_bswap_i48(i64 %src) {
 ;
 ; VI-LABEL: v_bswap_i48:
 ; VI:       ; %bb.0:
-; VI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; VI-NEXT:    s_mov_b32 s4, 0x10203
+; VI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; VI-NEXT:    v_perm_b32 v2, 0, v0, s4
 ; VI-NEXT:    v_perm_b32 v0, 0, v1, s4
 ; VI-NEXT:    v_alignbit_b32 v0, v2, v0, 16

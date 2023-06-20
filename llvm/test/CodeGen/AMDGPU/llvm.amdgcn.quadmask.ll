@@ -8,8 +8,8 @@ declare i64 @llvm.amdgcn.s.quadmask.i64(i64)
 define i32 @test_quadmask_constant_zero_i32() {
 ; GFX11-LABEL: test_quadmask_constant_zero_i32:
 ; GFX11:       ; %bb.0: ; %entry
-; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX11-NEXT:    v_mov_b32_e32 v0, 0
+; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX11-NEXT:    s_setpc_b64 s[30:31]
 entry:
   %qm = call i32 @llvm.amdgcn.s.quadmask.i32(i32 0)
@@ -19,8 +19,8 @@ entry:
 define i32 @test_quadmask_constant_neg_one_i32() {
 ; GFX11-LABEL: test_quadmask_constant_neg_one_i32:
 ; GFX11:       ; %bb.0: ; %entry
-; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX11-NEXT:    v_mov_b32_e32 v0, 0xff
+; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX11-NEXT:    s_setpc_b64 s[30:31]
 entry:
   %qm = call i32 @llvm.amdgcn.s.quadmask.i32(i32 -1)
@@ -30,9 +30,9 @@ entry:
 define i32 @test_quadmask_constant_undef_i32() {
 ; GFX11-LABEL: test_quadmask_constant_undef_i32:
 ; GFX11:       ; %bb.0: ; %entry
-; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX11-NEXT:    s_quadmask_b32 s0, s0
 ; GFX11-NEXT:    v_mov_b32_e32 v0, s0
+; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX11-NEXT:    s_setpc_b64 s[30:31]
 entry:
   %qm = call i32 @llvm.amdgcn.s.quadmask.i32(i32 undef)
@@ -42,9 +42,9 @@ entry:
 define i32 @test_quadmask_constant_poison_i32() {
 ; GFX11-LABEL: test_quadmask_constant_poison_i32:
 ; GFX11:       ; %bb.0: ; %entry
-; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX11-NEXT:    s_quadmask_b32 s0, s0
 ; GFX11-NEXT:    v_mov_b32_e32 v0, s0
+; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX11-NEXT:    s_setpc_b64 s[30:31]
 entry:
   %qm = call i32 @llvm.amdgcn.s.quadmask.i32(i32 poison)
@@ -54,8 +54,8 @@ entry:
 define i32 @test_quadmask_constant_i32() {
 ; GFX11-LABEL: test_quadmask_constant_i32:
 ; GFX11:       ; %bb.0: ; %entry
-; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX11-NEXT:    v_mov_b32_e32 v0, 0xcb
+; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX11-NEXT:    s_setpc_b64 s[30:31]
 entry:
   %qm = call i32 @llvm.amdgcn.s.quadmask.i32(i32 u0x85003092)
@@ -94,8 +94,8 @@ entry:
 define i64 @test_quadmask_constant_i64() {
 ; GFX11-LABEL: test_quadmask_constant_i64:
 ; GFX11:       ; %bb.0: ; %entry
-; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX11-NEXT:    v_dual_mov_b32 v0, 0xe3e6 :: v_dual_mov_b32 v1, 0
+; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX11-NEXT:    s_setpc_b64 s[30:31]
 entry:
   %qm = call i64 @llvm.amdgcn.s.quadmask.i64(i64 u0x67D000FC85F00A90)
@@ -105,8 +105,8 @@ entry:
 define i64 @test_quadmask_constant_zero_i64() {
 ; GFX11-LABEL: test_quadmask_constant_zero_i64:
 ; GFX11:       ; %bb.0: ; %entry
-; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX11-NEXT:    v_dual_mov_b32 v0, 0 :: v_dual_mov_b32 v1, 0
+; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX11-NEXT:    s_setpc_b64 s[30:31]
 entry:
   %qm = call i64 @llvm.amdgcn.s.quadmask.i64(i64 0)
@@ -116,8 +116,8 @@ entry:
 define i64 @test_quadmask_constant_neg_one_i64() {
 ; GFX11-LABEL: test_quadmask_constant_neg_one_i64:
 ; GFX11:       ; %bb.0: ; %entry
-; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX11-NEXT:    v_dual_mov_b32 v0, 0xffff :: v_dual_mov_b32 v1, 0
+; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX11-NEXT:    s_setpc_b64 s[30:31]
 entry:
   %qm = call i64 @llvm.amdgcn.s.quadmask.i64(i64 -1)
@@ -127,9 +127,9 @@ entry:
 define i64 @test_quadmask_constant_undef_i64() {
 ; GFX11-LABEL: test_quadmask_constant_undef_i64:
 ; GFX11:       ; %bb.0: ; %entry
-; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX11-NEXT:    s_quadmask_b64 s[0:1], s[0:1]
 ; GFX11-NEXT:    v_dual_mov_b32 v0, s0 :: v_dual_mov_b32 v1, s1
+; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX11-NEXT:    s_setpc_b64 s[30:31]
 entry:
   %qm = call i64 @llvm.amdgcn.s.quadmask.i64(i64 undef)
@@ -139,9 +139,9 @@ entry:
 define i64 @test_quadmask_constant_poison_i64() {
 ; GFX11-LABEL: test_quadmask_constant_poison_i64:
 ; GFX11:       ; %bb.0: ; %entry
-; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX11-NEXT:    s_quadmask_b64 s[0:1], s[0:1]
 ; GFX11-NEXT:    v_dual_mov_b32 v0, s0 :: v_dual_mov_b32 v1, s1
+; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX11-NEXT:    s_setpc_b64 s[30:31]
 entry:
   %qm = call i64 @llvm.amdgcn.s.quadmask.i64(i64 poison)

@@ -4,8 +4,9 @@
 define i32 @test(i32 %val, i32 %cond) {
 ; GCN-LABEL: test:
 ; GCN:       ; %bb.0: ; %entry
-; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GCN-NEXT:    s_waitcnt expcnt(0)
 ; GCN-NEXT:    s_xor_saveexec_b32 s4, -1
+; GCN-NEXT:    s_waitcnt lgkmcnt(0)
 ; GCN-NEXT:    buffer_store_dword v2, off, s[0:3], s32 ; 4-byte Folded Spill
 ; GCN-NEXT:    buffer_store_dword v3, off, s[0:3], s32 offset:4 ; 4-byte Folded Spill
 ; GCN-NEXT:    s_waitcnt_depctr 0xffe3
@@ -13,6 +14,7 @@ define i32 @test(i32 %val, i32 %cond) {
 ; GCN-NEXT:    s_or_saveexec_b32 s4, -1
 ; GCN-NEXT:    v_mov_b32_e32 v2, 0
 ; GCN-NEXT:    s_mov_b32 exec_lo, s4
+; GCN-NEXT:    s_waitcnt vmcnt(0)
 ; GCN-NEXT:    v_mov_b32_e32 v3, v0
 ; GCN-NEXT:    s_not_b32 exec_lo, exec_lo
 ; GCN-NEXT:    v_mov_b32_e32 v3, 0

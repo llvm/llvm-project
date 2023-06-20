@@ -685,8 +685,8 @@ define amdgpu_kernel void @s_test_copysign_v4f32(ptr addrspace(1) %out, <4 x flo
 define float @v_test_copysign_f32(float %mag, float %sign) {
 ; SIVI-LABEL: v_test_copysign_f32:
 ; SIVI:       ; %bb.0:
-; SIVI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; SIVI-NEXT:    s_brev_b32 s4, -2
+; SIVI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; SIVI-NEXT:    v_bfi_b32 v0, s4, v0, v1
 ; SIVI-NEXT:    s_setpc_b64 s[30:31]
 ;
@@ -782,8 +782,8 @@ define float @v_test_copysign_f32_neg10(float %mag) {
 define <2 x float> @v_test_copysign_v2f32(<2 x float> %mag, <2 x float> %sign) {
 ; SIVI-LABEL: v_test_copysign_v2f32:
 ; SIVI:       ; %bb.0:
-; SIVI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; SIVI-NEXT:    s_brev_b32 s4, -2
+; SIVI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; SIVI-NEXT:    v_bfi_b32 v0, s4, v0, v2
 ; SIVI-NEXT:    v_bfi_b32 v1, s4, v1, v3
 ; SIVI-NEXT:    s_setpc_b64 s[30:31]
@@ -837,8 +837,8 @@ define <2 x float> @v_test_copysign_v2f32_neg1(<2 x float> %mag) {
 define <3 x float> @v_test_copysign_v3f32(<3 x float> %mag, <3 x float> %sign) {
 ; SIVI-LABEL: v_test_copysign_v3f32:
 ; SIVI:       ; %bb.0:
-; SIVI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; SIVI-NEXT:    s_brev_b32 s4, -2
+; SIVI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; SIVI-NEXT:    v_bfi_b32 v0, s4, v0, v3
 ; SIVI-NEXT:    v_bfi_b32 v1, s4, v1, v4
 ; SIVI-NEXT:    v_bfi_b32 v2, s4, v2, v5
@@ -858,8 +858,8 @@ define <3 x float> @v_test_copysign_v3f32(<3 x float> %mag, <3 x float> %sign) {
 define <4 x float> @v_test_copysign_v4f32(<4 x float> %mag, <4 x float> %sign) {
 ; SIVI-LABEL: v_test_copysign_v4f32:
 ; SIVI:       ; %bb.0:
-; SIVI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; SIVI-NEXT:    s_brev_b32 s4, -2
+; SIVI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; SIVI-NEXT:    v_bfi_b32 v0, s4, v0, v4
 ; SIVI-NEXT:    v_bfi_b32 v1, s4, v1, v5
 ; SIVI-NEXT:    v_bfi_b32 v2, s4, v2, v6
@@ -881,8 +881,8 @@ define <4 x float> @v_test_copysign_v4f32(<4 x float> %mag, <4 x float> %sign) {
 define <5 x float> @v_test_copysign_v5f32(<5 x float> %mag, <5 x float> %sign) {
 ; SIVI-LABEL: v_test_copysign_v5f32:
 ; SIVI:       ; %bb.0:
-; SIVI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; SIVI-NEXT:    s_brev_b32 s4, -2
+; SIVI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; SIVI-NEXT:    v_bfi_b32 v0, s4, v0, v5
 ; SIVI-NEXT:    v_bfi_b32 v1, s4, v1, v6
 ; SIVI-NEXT:    v_bfi_b32 v2, s4, v2, v7

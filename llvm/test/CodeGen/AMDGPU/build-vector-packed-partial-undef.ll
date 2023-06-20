@@ -61,8 +61,8 @@ define void @undef_lo_op_v2f16(half %arg0) {
 ;
 ; GFX8-LABEL: undef_lo_op_v2f16:
 ; GFX8:       ; %bb.0:
-; GFX8-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX8-NEXT:    v_mov_b32_e32 v1, 0x3c00
+; GFX8-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX8-NEXT:    v_add_f16_sdwa v0, v0, v1 dst_sel:WORD_1 dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:DWORD
 ; GFX8-NEXT:    v_or_b32_e32 v0, 0x7e00, v0
 ; GFX8-NEXT:    ;;#ASMSTART
@@ -89,8 +89,8 @@ define void @undef_lo_op_v2i16(i16 %arg0) {
 ;
 ; GFX8-LABEL: undef_lo_op_v2i16:
 ; GFX8:       ; %bb.0:
-; GFX8-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX8-NEXT:    v_mov_b32_e32 v1, 0x63
+; GFX8-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX8-NEXT:    v_add_u16_sdwa v0, v0, v1 dst_sel:WORD_1 dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:DWORD
 ; GFX8-NEXT:    ;;#ASMSTART
 ; GFX8-NEXT:    ; use v0
@@ -151,8 +151,8 @@ define void @undef_lo3_v4f16(half %arg0) {
 define void @undef_lo2_v4i16(<2 x i16> %arg0) {
 ; GFX9-LABEL: undef_lo2_v4i16:
 ; GFX9:       ; %bb.0:
-; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX9-NEXT:    s_mov_b32 s4, 0x7060302
+; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX9-NEXT:    v_perm_b32 v0, v0, v0, s4
 ; GFX9-NEXT:    ;;#ASMSTART
 ; GFX9-NEXT:    ; use v[0:1]
@@ -176,8 +176,8 @@ define void @undef_lo2_v4i16(<2 x i16> %arg0) {
 define void @undef_lo2_v4f16(<2 x half> %arg0) {
 ; GFX9-LABEL: undef_lo2_v4f16:
 ; GFX9:       ; %bb.0:
-; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX9-NEXT:    s_mov_b32 s4, 0x7060302
+; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX9-NEXT:    v_perm_b32 v0, v0, v0, s4
 ; GFX9-NEXT:    ;;#ASMSTART
 ; GFX9-NEXT:    ; use v[0:1]
@@ -268,8 +268,8 @@ define void @undef_hi_op_v2f16(half %arg0) {
 define void @undef_hi_op_v2i16(i16 %arg0) {
 ; GFX9-LABEL: undef_hi_op_v2i16:
 ; GFX9:       ; %bb.0:
-; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX9-NEXT:    s_movk_i32 s4, 0x63
+; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX9-NEXT:    v_pk_add_u16 v0, v0, s4 op_sel_hi:[1,0]
 ; GFX9-NEXT:    ;;#ASMSTART
 ; GFX9-NEXT:    ; use v0

@@ -112,9 +112,9 @@ entry:
 define void @test_sgpr_offset_function_scavenge_fail_func() #2 {
 ; MUBUF-LABEL: test_sgpr_offset_function_scavenge_fail_func:
 ; MUBUF:       ; %bb.0: ; %entry
-; MUBUF-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; MUBUF-NEXT:    ;;#ASMSTART
 ; MUBUF-NEXT:    ;;#ASMEND
+; MUBUF-NEXT:    s_waitcnt lgkmcnt(0)
 ; MUBUF-NEXT:    buffer_load_dword v0, off, s[0:3], s32 offset:8 glc
 ; MUBUF-NEXT:    s_waitcnt vmcnt(0)
 ; MUBUF-NEXT:    s_add_i32 s10, s32, 0x40100
@@ -130,11 +130,11 @@ define void @test_sgpr_offset_function_scavenge_fail_func() #2 {
 ; MUBUF-NEXT:    s_waitcnt vmcnt(0)
 ; MUBUF-NEXT:    ;;#ASMSTART
 ; MUBUF-NEXT:    ;;#ASMEND
+; MUBUF-NEXT:    s_waitcnt expcnt(0)
 ; MUBUF-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; FLATSCR-LABEL: test_sgpr_offset_function_scavenge_fail_func:
 ; FLATSCR:       ; %bb.0: ; %entry
-; FLATSCR-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; FLATSCR-NEXT:    ;;#ASMSTART
 ; FLATSCR-NEXT:    ;;#ASMEND
 ; FLATSCR-NEXT:    scratch_load_dword v0, off, s32 offset:8 glc
@@ -152,6 +152,7 @@ define void @test_sgpr_offset_function_scavenge_fail_func() #2 {
 ; FLATSCR-NEXT:    s_waitcnt vmcnt(0)
 ; FLATSCR-NEXT:    ;;#ASMSTART
 ; FLATSCR-NEXT:    ;;#ASMEND
+; FLATSCR-NEXT:    s_waitcnt expcnt(0) lgkmcnt(0)
 ; FLATSCR-NEXT:    s_setpc_b64 s[30:31]
 entry:
   ; Occupy 4096 bytes of scratch, so the offset of the spill of %a does not
@@ -410,7 +411,7 @@ entry:
 define void @test_inst_offset_function() {
 ; MUBUF-LABEL: test_inst_offset_function:
 ; MUBUF:       ; %bb.0: ; %entry
-; MUBUF-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; MUBUF-NEXT:    s_waitcnt lgkmcnt(0)
 ; MUBUF-NEXT:    buffer_load_dword v0, off, s[0:3], s32 offset:4 glc
 ; MUBUF-NEXT:    s_waitcnt vmcnt(0)
 ; MUBUF-NEXT:    buffer_store_dword v0, off, s[0:3], s32 offset:4088 ; 4-byte Folded Spill
@@ -419,12 +420,12 @@ define void @test_inst_offset_function() {
 ; MUBUF-NEXT:    buffer_load_dword v0, off, s[0:3], s32 offset:4088 ; 4-byte Folded Reload
 ; MUBUF-NEXT:    s_waitcnt vmcnt(0)
 ; MUBUF-NEXT:    buffer_store_dword v0, off, s[0:3], s32 offset:4
-; MUBUF-NEXT:    s_waitcnt vmcnt(0)
+; MUBUF-NEXT:    s_waitcnt vmcnt(0) expcnt(0)
 ; MUBUF-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; FLATSCR-LABEL: test_inst_offset_function:
 ; FLATSCR:       ; %bb.0: ; %entry
-; FLATSCR-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; FLATSCR-NEXT:    s_waitcnt lgkmcnt(0)
 ; FLATSCR-NEXT:    scratch_load_dword v0, off, s32 offset:4 glc
 ; FLATSCR-NEXT:    s_waitcnt vmcnt(0)
 ; FLATSCR-NEXT:    scratch_store_dword off, v0, s32 offset:4088 ; 4-byte Folded Spill
@@ -433,7 +434,7 @@ define void @test_inst_offset_function() {
 ; FLATSCR-NEXT:    scratch_load_dword v0, off, s32 offset:4088 ; 4-byte Folded Reload
 ; FLATSCR-NEXT:    s_waitcnt vmcnt(0)
 ; FLATSCR-NEXT:    scratch_store_dword off, v0, s32 offset:4
-; FLATSCR-NEXT:    s_waitcnt vmcnt(0)
+; FLATSCR-NEXT:    s_waitcnt vmcnt(0) expcnt(0)
 ; FLATSCR-NEXT:    s_setpc_b64 s[30:31]
 entry:
   ; Occupy enough bytes of scratch, so the offset of the spill of %a
@@ -459,7 +460,7 @@ entry:
 define void @test_sgpr_offset_function() {
 ; MUBUF-LABEL: test_sgpr_offset_function:
 ; MUBUF:       ; %bb.0: ; %entry
-; MUBUF-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; MUBUF-NEXT:    s_waitcnt lgkmcnt(0)
 ; MUBUF-NEXT:    buffer_load_dword v0, off, s[0:3], s32 offset:8 glc
 ; MUBUF-NEXT:    s_waitcnt vmcnt(0)
 ; MUBUF-NEXT:    s_add_i32 s4, s32, 0x40100
@@ -470,12 +471,12 @@ define void @test_sgpr_offset_function() {
 ; MUBUF-NEXT:    buffer_load_dword v0, off, s[0:3], s4 ; 4-byte Folded Reload
 ; MUBUF-NEXT:    s_waitcnt vmcnt(0)
 ; MUBUF-NEXT:    buffer_store_dword v0, off, s[0:3], s32 offset:8
-; MUBUF-NEXT:    s_waitcnt vmcnt(0)
+; MUBUF-NEXT:    s_waitcnt vmcnt(0) expcnt(0)
 ; MUBUF-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; FLATSCR-LABEL: test_sgpr_offset_function:
 ; FLATSCR:       ; %bb.0: ; %entry
-; FLATSCR-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; FLATSCR-NEXT:    s_waitcnt lgkmcnt(0)
 ; FLATSCR-NEXT:    scratch_load_dword v0, off, s32 offset:8 glc
 ; FLATSCR-NEXT:    s_waitcnt vmcnt(0)
 ; FLATSCR-NEXT:    s_add_i32 s0, s32, 0x1004
@@ -486,7 +487,7 @@ define void @test_sgpr_offset_function() {
 ; FLATSCR-NEXT:    scratch_load_dword v0, off, s0 ; 4-byte Folded Reload
 ; FLATSCR-NEXT:    s_waitcnt vmcnt(0)
 ; FLATSCR-NEXT:    scratch_store_dword off, v0, s32 offset:8
-; FLATSCR-NEXT:    s_waitcnt vmcnt(0)
+; FLATSCR-NEXT:    s_waitcnt vmcnt(0) expcnt(0)
 ; FLATSCR-NEXT:    s_setpc_b64 s[30:31]
 entry:
   ; Occupy 4096 bytes of scratch, so the offset of the spill of %a does not
@@ -509,7 +510,7 @@ entry:
 define void @test_sgpr_offset_subregs_function() {
 ; MUBUF-LABEL: test_sgpr_offset_subregs_function:
 ; MUBUF:       ; %bb.0: ; %entry
-; MUBUF-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; MUBUF-NEXT:    s_waitcnt lgkmcnt(0)
 ; MUBUF-NEXT:    buffer_load_dword v0, off, s[0:3], s32 offset:8 glc
 ; MUBUF-NEXT:    s_waitcnt vmcnt(0)
 ; MUBUF-NEXT:    buffer_load_dword v1, off, s[0:3], s32 offset:12 glc
@@ -527,11 +528,12 @@ define void @test_sgpr_offset_subregs_function() {
 ; MUBUF-NEXT:    ;;#ASMSTART
 ; MUBUF-NEXT:    ; v[0:1]
 ; MUBUF-NEXT:    ;;#ASMEND
+; MUBUF-NEXT:    s_waitcnt expcnt(0)
 ; MUBUF-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; FLATSCR-LABEL: test_sgpr_offset_subregs_function:
 ; FLATSCR:       ; %bb.0: ; %entry
-; FLATSCR-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; FLATSCR-NEXT:    s_waitcnt lgkmcnt(0)
 ; FLATSCR-NEXT:    scratch_load_dwordx2 v[0:1], off, s32 offset:8 glc
 ; FLATSCR-NEXT:    s_waitcnt vmcnt(0)
 ; FLATSCR-NEXT:    scratch_store_dwordx2 off, v[0:1], s32 offset:4084 ; 8-byte Folded Spill
@@ -544,6 +546,7 @@ define void @test_sgpr_offset_subregs_function() {
 ; FLATSCR-NEXT:    ;;#ASMSTART
 ; FLATSCR-NEXT:    ; v[0:1]
 ; FLATSCR-NEXT:    ;;#ASMEND
+; FLATSCR-NEXT:    s_waitcnt expcnt(0)
 ; FLATSCR-NEXT:    s_setpc_b64 s[30:31]
 entry:
   ; We want to test the spill of the last subreg of %a is the highest
@@ -573,7 +576,7 @@ entry:
 define void @test_inst_offset_subregs_function() {
 ; MUBUF-LABEL: test_inst_offset_subregs_function:
 ; MUBUF:       ; %bb.0: ; %entry
-; MUBUF-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; MUBUF-NEXT:    s_waitcnt lgkmcnt(0)
 ; MUBUF-NEXT:    buffer_load_dword v0, off, s[0:3], s32 offset:12 glc
 ; MUBUF-NEXT:    s_waitcnt vmcnt(0)
 ; MUBUF-NEXT:    buffer_load_dword v1, off, s[0:3], s32 offset:16 glc
@@ -593,11 +596,12 @@ define void @test_inst_offset_subregs_function() {
 ; MUBUF-NEXT:    ;;#ASMSTART
 ; MUBUF-NEXT:    ; v[0:1]
 ; MUBUF-NEXT:    ;;#ASMEND
+; MUBUF-NEXT:    s_waitcnt expcnt(0)
 ; MUBUF-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; FLATSCR-LABEL: test_inst_offset_subregs_function:
 ; FLATSCR:       ; %bb.0: ; %entry
-; FLATSCR-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; FLATSCR-NEXT:    s_waitcnt lgkmcnt(0)
 ; FLATSCR-NEXT:    scratch_load_dwordx2 v[0:1], off, s32 offset:12 glc
 ; FLATSCR-NEXT:    s_waitcnt vmcnt(0)
 ; FLATSCR-NEXT:    scratch_store_dwordx2 off, v[0:1], s32 offset:4092 ; 8-byte Folded Spill
@@ -610,6 +614,7 @@ define void @test_inst_offset_subregs_function() {
 ; FLATSCR-NEXT:    ;;#ASMSTART
 ; FLATSCR-NEXT:    ; v[0:1]
 ; FLATSCR-NEXT:    ;;#ASMEND
+; FLATSCR-NEXT:    s_waitcnt expcnt(0)
 ; FLATSCR-NEXT:    s_setpc_b64 s[30:31]
 entry:
   ; Occupy 4088 bytes of scratch, so that the spill of the last subreg of %a

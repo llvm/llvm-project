@@ -2122,8 +2122,8 @@ define amdgpu_kernel void @test_mul2(i32 %p) {
 define void @shl_or_k(ptr addrspace(1) %out, i32 %in) {
 ; SI-LABEL: shl_or_k:
 ; SI:       ; %bb.0:
-; SI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; SI-NEXT:    s_mov_b32 s6, 0
+; SI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; SI-NEXT:    v_lshlrev_b32_e32 v2, 2, v2
 ; SI-NEXT:    s_mov_b32 s7, 0xf000
 ; SI-NEXT:    s_mov_b32 s4, s6
@@ -2163,8 +2163,8 @@ define void @shl_or_k(ptr addrspace(1) %out, i32 %in) {
 define void @shl_or_k_two_uses(ptr addrspace(1) %out0, ptr addrspace(1) %out1, i32 %in) {
 ; SI-LABEL: shl_or_k_two_uses:
 ; SI:       ; %bb.0:
-; SI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; SI-NEXT:    s_mov_b32 s6, 0
+; SI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; SI-NEXT:    v_or_b32_e32 v4, 1, v4
 ; SI-NEXT:    s_mov_b32 s7, 0xf000
 ; SI-NEXT:    s_mov_b32 s4, s6
