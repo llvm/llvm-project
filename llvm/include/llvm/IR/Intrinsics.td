@@ -2253,7 +2253,7 @@ def int_hwasan_check_memaccess_shortgranules :
 //===----------------------------------------------------------------------===//
 // Custom event logging for x-ray.
 // Takes a pointer to a string and the length of the string.
-def int_xray_customevent : Intrinsic<[], [llvm_ptr_ty, llvm_i32_ty],
+def int_xray_customevent : Intrinsic<[], [llvm_ptr_ty, llvm_i64_ty],
                                      [IntrWriteMem, NoCapture<ArgIndex<0>>,
                                       ReadOnly<ArgIndex<0>>]>;
 // Typed event logging for x-ray.

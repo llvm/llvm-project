@@ -52,8 +52,8 @@
   static constexpr char kPhase[] = "always";
   __xray_customevent(kPhase, 6);
   __xray_typedevent(1, kPhase, 6);
-  // CUSTOM: call void @llvm.xray.customevent(ptr{{.*}}, i32 6)
-  // NOCUSTOM-NOT: call void @llvm.xray.customevent(ptr{{.*}}, i32 6)
+  // CUSTOM: call void @llvm.xray.customevent(ptr {{.*}}, i64 6)
+  // NOCUSTOM-NOT: call void @llvm.xray.customevent(
   // TYPED: call void @llvm.xray.typedevent(i64 {{.*}}, ptr{{.*}}, i64 6)
   // NOTYPED-NOT: call void @llvm.xray.typedevent(
 }
