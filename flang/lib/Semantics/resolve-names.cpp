@@ -888,7 +888,8 @@ private:
   void CheckExtantProc(const parser::Name &, Symbol::Flag);
   // Create a subprogram symbol in the current scope and push a new scope.
   Symbol &PushSubprogramScope(const parser::Name &, Symbol::Flag,
-      const parser::LanguageBindingSpec * = nullptr);
+      const parser::LanguageBindingSpec * = nullptr,
+      bool hasModulePrefix = false);
   Symbol *GetSpecificFromGeneric(const parser::Name &);
   Symbol &PostSubprogramStmt();
   void CreateDummyArgument(SubprogramDetails &, const parser::Name &);
@@ -3601,10 +3602,21 @@ void SubprogramVisitor::Post(const parser::PrefixSpec::Cluster_Dims &x) {
   }
 }
 
+static bool HasModulePrefix(const std::list<parser::PrefixSpec> &prefixes) {
+  for (const auto &prefix : prefixes) {
+    if (std::holds_alternative<parser::PrefixSpec::Module>(prefix.u)) {
+      return true;
+    }
+  }
+  return false;
+}
+
 bool SubprogramVisitor::Pre(const parser::InterfaceBody::Subroutine &x) {
-  const auto &name{std::get<parser::Name>(
-      std::get<parser::Statement<parser::SubroutineStmt>>(x.t).statement.t)};
-  return BeginSubprogram(name, Symbol::Flag::Subroutine);
+  const auto &stmtTuple{
+      std::get<parser::Statement<parser::SubroutineStmt>>(x.t).statement.t};
+  return BeginSubprogram(std::get<parser::Name>(stmtTuple),
+      Symbol::Flag::Subroutine,
+      HasModulePrefix(std::get<std::list<parser::PrefixSpec>>(stmtTuple)));
 }
 void SubprogramVisitor::Post(const parser::InterfaceBody::Subroutine &x) {
   const auto &stmt{std::get<parser::Statement<parser::SubroutineStmt>>(x.t)};
@@ -3612,9 +3624,11 @@ void SubprogramVisitor::Post(const parser::InterfaceBody::Subroutine &x) {
       &std::get<std::optional<parser::LanguageBindingSpec>>(stmt.statement.t));
 }
 bool SubprogramVisitor::Pre(const parser::InterfaceBody::Function &x) {
-  const auto &name{std::get<parser::Name>(
-      std::get<parser::Statement<parser::FunctionStmt>>(x.t).statement.t)};
-  return BeginSubprogram(name, Symbol::Flag::Function);
+  const auto &stmtTuple{
+      std::get<parser::Statement<parser::FunctionStmt>>(x.t).statement.t};
+  return BeginSubprogram(std::get<parser::Name>(stmtTuple),
+      Symbol::Flag::Function,
+      HasModulePrefix(std::get<std::list<parser::PrefixSpec>>(stmtTuple)));
 }
 void SubprogramVisitor::Post(const parser::InterfaceBody::Function &x) {
   const auto &stmt{std::get<parser::Statement<parser::FunctionStmt>>(x.t)};
@@ -4023,10 +4037,16 @@ bool SubprogramVisitor::BeginSubprogram(const parser::Name &name,
     if (moduleInterface && &moduleInterface->owner() == &currScope()) {
       // Subprogram is MODULE FUNCTION or MODULE SUBROUTINE with an interface
       // previously defined in the same scope.
-      EraseSymbol(name);
+      if (GenericDetails *
+          generic{DEREF(FindSymbol(name)).detailsIf<GenericDetails>()}) {
+        generic->clear_specific();
+      } else {
+        EraseSymbol(name);
+      }
     }
   }
-  Symbol &newSymbol{PushSubprogramScope(name, subpFlag, bindingSpec)};
+  Symbol &newSymbol{
+      PushSubprogramScope(name, subpFlag, bindingSpec, hasModulePrefix)};
   if (moduleInterface) {
     newSymbol.get<SubprogramDetails>().set_moduleInterface(*moduleInterface);
     if (moduleInterface->attrs().test(Attr::PRIVATE)) {
@@ -4134,7 +4154,8 @@ void SubprogramVisitor::CheckExtantProc(
 }
 
 Symbol &SubprogramVisitor::PushSubprogramScope(const parser::Name &name,
-    Symbol::Flag subpFlag, const parser::LanguageBindingSpec *bindingSpec) {
+    Symbol::Flag subpFlag, const parser::LanguageBindingSpec *bindingSpec,
+    bool hasModulePrefix) {
   Symbol *symbol{GetSpecificFromGeneric(name)};
   if (!symbol) {
     if (bindingSpec && currScope().IsGlobal() && bindingSpec->v) {
@@ -4159,6 +4180,8 @@ Symbol &SubprogramVisitor::PushSubprogramScope(const parser::Name &name,
     details.set_isInterface();
     if (isAbstract()) {
       SetExplicitAttr(*symbol, Attr::ABSTRACT);
+    } else if (hasModulePrefix) {
+      SetExplicitAttr(*symbol, Attr::MODULE);
     } else {
       MakeExternal(*symbol);
     }
@@ -4172,7 +4195,10 @@ Symbol &SubprogramVisitor::PushSubprogramScope(const parser::Name &name,
     }
     set_inheritFromParent(false);
   }
-  FindSymbol(name)->set(subpFlag); // PushScope() created symbol
+  if (Symbol * found{FindSymbol(name)};
+      found && found->has<HostAssocDetails>()) {
+    found->set(subpFlag); // PushScope() created symbol
+  }
   return *symbol;
 }
 
@@ -4208,6 +4234,7 @@ Symbol *SubprogramVisitor::GetSpecificFromGeneric(const parser::Name &name) {
     } else if (auto *details{symbol->detailsIf<GenericDetails>()}) {
       // found generic, want specific procedure
       auto *specific{details->specific()};
+      Attrs moduleAttr;
       if (inInterfaceBlock()) {
         if (specific) {
           // Defining an interface in a generic of the same name which is
@@ -4218,6 +4245,7 @@ Symbol *SubprogramVisitor::GetSpecificFromGeneric(const parser::Name &name) {
             // The shadowed procedure is a separate module procedure that is
             // actually defined later in this (sub)module.
             // Define its interface now as a new symbol.
+            moduleAttr.set(Attr::MODULE);
             specific = nullptr;
           } else if (&specific->owner() != &symbol->owner()) {
             // The shadowed procedure was from an enclosing scope and will be
@@ -4236,8 +4264,8 @@ Symbol *SubprogramVisitor::GetSpecificFromGeneric(const parser::Name &name) {
         }
       }
       if (!specific) {
-        specific =
-            &currScope().MakeSymbol(name.source, Attrs{}, SubprogramDetails{});
+        specific = &currScope().MakeSymbol(
+            name.source, std::move(moduleAttr), SubprogramDetails{});
         if (details->derivedType()) {
           // A specific procedure with the same name as a derived type
           SayAlreadyDeclared(name, *details->derivedType());
