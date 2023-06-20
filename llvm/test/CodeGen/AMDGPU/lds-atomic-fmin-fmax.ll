@@ -173,7 +173,6 @@ define amdgpu_kernel void @lds_ds_fmin(ptr addrspace(5) %out, ptr addrspace(3) %
 ; GFX11-NEXT:    ds_min_rtn_f32 v0, v3, v1
 ; GFX11-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX11-NEXT:    scratch_store_b32 off, v0, s0
-; GFX11-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-NEXT:    s_endpgm
 ;
 ; G_SI-LABEL: lds_ds_fmin:
@@ -333,7 +332,6 @@ define amdgpu_kernel void @lds_ds_fmin(ptr addrspace(5) %out, ptr addrspace(3) %
 ; G_GFX11-NEXT:    ds_min_rtn_f32 v0, v3, v0
 ; G_GFX11-NEXT:    s_waitcnt lgkmcnt(0)
 ; G_GFX11-NEXT:    scratch_store_b32 off, v0, s0
-; G_GFX11-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; G_GFX11-NEXT:    s_endpgm
   %idx.add = add nuw i32 %idx, 4
   %shl0 = shl i32 %idx.add, 3
@@ -501,7 +499,6 @@ define amdgpu_kernel void @lds_ds_fmax(ptr addrspace(5) %out, ptr addrspace(3) %
 ; GFX11-NEXT:    ds_max_rtn_f32 v0, v3, v1
 ; GFX11-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX11-NEXT:    scratch_store_b32 off, v0, s0
-; GFX11-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-NEXT:    s_endpgm
 ;
 ; G_SI-LABEL: lds_ds_fmax:
@@ -661,7 +658,6 @@ define amdgpu_kernel void @lds_ds_fmax(ptr addrspace(5) %out, ptr addrspace(3) %
 ; G_GFX11-NEXT:    ds_max_rtn_f32 v0, v3, v0
 ; G_GFX11-NEXT:    s_waitcnt lgkmcnt(0)
 ; G_GFX11-NEXT:    scratch_store_b32 off, v0, s0
-; G_GFX11-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; G_GFX11-NEXT:    s_endpgm
   %idx.add = add nuw i32 %idx, 4
   %shl0 = shl i32 %idx.add, 3
@@ -860,7 +856,6 @@ define amdgpu_kernel void @lds_ds_fmin_f64(ptr addrspace(5) %out, ptr addrspace(
 ; GFX11-NEXT:    ds_min_rtn_f64 v[0:1], v5, v[2:3]
 ; GFX11-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX11-NEXT:    scratch_store_b64 off, v[0:1], s0
-; GFX11-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-NEXT:    s_endpgm
 ;
 ; G_SI-LABEL: lds_ds_fmin_f64:
@@ -1049,7 +1044,6 @@ define amdgpu_kernel void @lds_ds_fmin_f64(ptr addrspace(5) %out, ptr addrspace(
 ; G_GFX11-NEXT:    ds_min_rtn_f64 v[0:1], v5, v[2:3]
 ; G_GFX11-NEXT:    s_waitcnt lgkmcnt(0)
 ; G_GFX11-NEXT:    scratch_store_b64 off, v[0:1], s0
-; G_GFX11-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; G_GFX11-NEXT:    s_endpgm
   %idx.add = add nuw i32 %idx, 4
   %shl0 = shl i32 %idx.add, 3
@@ -1248,7 +1242,6 @@ define amdgpu_kernel void @lds_ds_fmax_f64(ptr addrspace(5) %out, ptr addrspace(
 ; GFX11-NEXT:    ds_max_rtn_f64 v[0:1], v5, v[2:3]
 ; GFX11-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX11-NEXT:    scratch_store_b64 off, v[0:1], s0
-; GFX11-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-NEXT:    s_endpgm
 ;
 ; G_SI-LABEL: lds_ds_fmax_f64:
@@ -1437,7 +1430,6 @@ define amdgpu_kernel void @lds_ds_fmax_f64(ptr addrspace(5) %out, ptr addrspace(
 ; G_GFX11-NEXT:    ds_max_rtn_f64 v[0:1], v5, v[2:3]
 ; G_GFX11-NEXT:    s_waitcnt lgkmcnt(0)
 ; G_GFX11-NEXT:    scratch_store_b64 off, v[0:1], s0
-; G_GFX11-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; G_GFX11-NEXT:    s_endpgm
   %idx.add = add nuw i32 %idx, 4
   %shl0 = shl i32 %idx.add, 3

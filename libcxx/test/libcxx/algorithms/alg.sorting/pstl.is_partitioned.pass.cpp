@@ -26,4 +26,6 @@ int main(int, char**) {
     return i < 5;
   }));
   assert(call_count == std::size(a));
+
+  return 0;
 }

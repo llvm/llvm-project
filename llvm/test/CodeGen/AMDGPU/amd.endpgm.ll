@@ -87,7 +87,6 @@ define amdgpu_kernel void @test2(ptr %p, i32 %x) {
 ; GFX11-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX11-NEXT:    v_dual_mov_b32 v0, s0 :: v_dual_mov_b32 v1, s1
 ; GFX11-NEXT:    flat_store_b32 v[0:1], v2
-; GFX11-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-NEXT:    s_endpgm
 ; GFX11-NEXT:  .LBB2_2: ; %then
 ; GFX11-NEXT:    s_endpgm

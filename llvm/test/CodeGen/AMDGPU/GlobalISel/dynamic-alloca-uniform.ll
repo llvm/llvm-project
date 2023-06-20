@@ -54,7 +54,6 @@ define amdgpu_kernel void @kernel_dynamic_stackalloc_sgpr_align4(i32 %n) {
 ; GFX11-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX11-NEXT:    s_add_u32 s0, s32, s0
 ; GFX11-NEXT:    scratch_store_b32 off, v0, s0
-; GFX11-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-NEXT:    s_endpgm
   %alloca = alloca i32, i32 %n, align 4, addrspace(5)
   store i32 0, ptr addrspace(5) %alloca
@@ -194,7 +193,6 @@ define amdgpu_kernel void @kernel_dynamic_stackalloc_sgpr_align16(i32 %n) {
 ; GFX11-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX11-NEXT:    s_add_u32 s0, s32, s0
 ; GFX11-NEXT:    scratch_store_b32 off, v0, s0
-; GFX11-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-NEXT:    s_endpgm
   %alloca = alloca i32, i32 %n, align 16, addrspace(5)
   store i32 0, ptr addrspace(5) %alloca
@@ -337,7 +335,6 @@ define amdgpu_kernel void @kernel_dynamic_stackalloc_sgpr_align32(i32 %n) {
 ; GFX11-NEXT:    s_add_u32 s0, s32, s0
 ; GFX11-NEXT:    s_and_b32 s0, s0, 0xfffffc00
 ; GFX11-NEXT:    scratch_store_b32 off, v0, s0
-; GFX11-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-NEXT:    s_endpgm
   %alloca = alloca i32, i32 %n, align 32, addrspace(5)
   store i32 0, ptr addrspace(5) %alloca

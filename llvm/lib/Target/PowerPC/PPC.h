@@ -127,8 +127,9 @@ class ModulePass;
     /// General Dynamic model for AIX.
     MO_TLSGD_FLAG = 32,
 
-    /// MO_TPREL_FLAG - If this bit is set the symbol reference is relative to
-    /// TLS Initial Exec model.
+    /// MO_TPREL_FLAG - If this bit is set, the symbol reference is relative to
+    /// the thread pointer and the symbol can be used for the TLS Initial Exec
+    /// and Local Exec models.
     MO_TPREL_FLAG = 64,
 
     /// MO_TLSLD_FLAG - If this bit is set the symbol reference is relative to

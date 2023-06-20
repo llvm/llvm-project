@@ -4382,7 +4382,6 @@ define amdgpu_kernel void @test_call_external_void_func_v32i32() #0 {
 ; GFX11-NEXT:    s_waitcnt vmcnt(7)
 ; GFX11-NEXT:    scratch_store_b32 off, v31, s32
 ; GFX11-NEXT:    s_swappc_b64 s[30:31], s[2:3]
-; GFX11-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-NEXT:    s_endpgm
 ;
 ; HSA-LABEL: test_call_external_void_func_v32i32:
@@ -4552,7 +4551,6 @@ define amdgpu_kernel void @test_call_external_void_func_v32i32_i32(i32) #0 {
 ; GFX11-NEXT:    s_waitcnt vmcnt(7)
 ; GFX11-NEXT:    scratch_store_b32 off, v32, s4
 ; GFX11-NEXT:    s_swappc_b64 s[30:31], s[2:3]
-; GFX11-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-NEXT:    s_endpgm
 ;
 ; HSA-LABEL: test_call_external_void_func_v32i32_i32:
@@ -4926,7 +4924,6 @@ define amdgpu_kernel void @test_call_external_void_func_byval_struct_i8_i32() #0
 ; GFX11-NEXT:    s_waitcnt vmcnt(0)
 ; GFX11-NEXT:    scratch_store_b64 off, v[0:1], s32
 ; GFX11-NEXT:    s_swappc_b64 s[30:31], s[2:3]
-; GFX11-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-NEXT:    s_endpgm
 ;
 ; HSA-LABEL: test_call_external_void_func_byval_struct_i8_i32:
