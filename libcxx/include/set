@@ -483,6 +483,7 @@ erase_if(multiset<Key, Compare, Allocator>& c, Predicate pred);  // C++20
 #include <__algorithm/lexicographical_compare.h>
 #include <__algorithm/lexicographical_compare_three_way.h>
 #include <__assert> // all public C++ headers provide the assertion handler
+#include <__availability>
 #include <__config>
 #include <__functional/is_transparent.h>
 #include <__functional/operations.h>
@@ -1623,10 +1624,10 @@ _LIBCPP_END_NAMESPACE_STD
 _LIBCPP_BEGIN_NAMESPACE_STD
 namespace pmr {
 template <class _KeyT, class _CompareT = std::less<_KeyT>>
-using set = std::set<_KeyT, _CompareT, polymorphic_allocator<_KeyT>>;
+using set _LIBCPP_AVAILABILITY_PMR = std::set<_KeyT, _CompareT, polymorphic_allocator<_KeyT>>;
 
 template <class _KeyT, class _CompareT = std::less<_KeyT>>
-using multiset = std::multiset<_KeyT, _CompareT, polymorphic_allocator<_KeyT>>;
+using multiset _LIBCPP_AVAILABILITY_PMR = std::multiset<_KeyT, _CompareT, polymorphic_allocator<_KeyT>>;
 } // namespace pmr
 _LIBCPP_END_NAMESPACE_STD
 #endif

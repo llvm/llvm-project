@@ -188,6 +188,7 @@ template <class T, class Allocator, class Predicate>
 #include <__algorithm/lexicographical_compare_three_way.h>
 #include <__algorithm/min.h>
 #include <__assert> // all public C++ headers provide the assertion handler
+#include <__availability>
 #include <__config>
 #include <__iterator/distance.h>
 #include <__iterator/iterator_traits.h>
@@ -1814,7 +1815,7 @@ _LIBCPP_END_NAMESPACE_STD
 _LIBCPP_BEGIN_NAMESPACE_STD
 namespace pmr {
 template <class _ValueT>
-using forward_list = std::forward_list<_ValueT, polymorphic_allocator<_ValueT>>;
+using forward_list _LIBCPP_AVAILABILITY_PMR = std::forward_list<_ValueT, polymorphic_allocator<_ValueT>>;
 } // namespace pmr
 _LIBCPP_END_NAMESPACE_STD
 #endif
