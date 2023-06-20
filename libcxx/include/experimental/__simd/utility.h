@@ -12,6 +12,7 @@
 
 #include <__type_traits/is_arithmetic.h>
 #include <__type_traits/is_const.h>
+#include <__type_traits/is_constant_evaluated.h>
 #include <__type_traits/is_same.h>
 #include <__type_traits/is_volatile.h>
 
