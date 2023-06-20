@@ -851,7 +851,7 @@ body: |
     ; GFX12-NEXT: $vgpr37 = DS_READ_B32_gfx9 $vgpr99, 0, 0, implicit $exec
     ; GFX12-NEXT: $vgpr38 = DS_READ_B32_gfx9 $vgpr99, 0, 0, implicit $exec
     ; GFX12-NEXT: $vgpr39 = DS_READ_B32_gfx9 $vgpr99, 0, 0, implicit $exec
-    ; GFX12-NEXT: S_WAIT_DSCNT 30
+    ; GFX12-NEXT: S_WAIT_DSCNT 39
     ; GFX12-NEXT: $vgpr0 = V_ADD_F32_e32 $vgpr0, $vgpr0, implicit $mode, implicit $exec
     ; GFX12-NEXT: S_ENDPGM 0
     $vgpr0 = DS_READ_B32_gfx9 $vgpr99, 0, 0, implicit $exec
