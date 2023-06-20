@@ -1081,7 +1081,7 @@ The AMDGPU backend supports the following calling conventions:
 
      ``fastcc``                      The fast calling convention. Mostly the same as the ``ccc``.
 
-     ``coldcc``                      The cold calling convention. Mostly the same as the ``ccc`.
+     ``coldcc``                      The cold calling convention. Mostly the same as the ``ccc``.
 
      ``amdgpu_cs``                   Used for Mesa/AMDPAL compute shaders.
                                      ..TODO::
