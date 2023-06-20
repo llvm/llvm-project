@@ -56,11 +56,47 @@ int main() {
   return rc;
 }
 
-/// CHECK: Could not register callback 'ompt_callback_target_data_op_emi'
-/// CHECK: Could not register callback 'ompt_callback_target_emi'
-/// CHECK: Could not register callback 'ompt_callback_target_submit_emi'
-/// CHECK: Could not register callback 'ompt_callback_target_map_emi'
-
+/// CHECK: 0: Could not register callback 'ompt_callback_target_map_emi'
 /// CHECK: Callback Init:
 /// CHECK: Callback Load:
+/// CHECK: Callback Target EMI: kind=1 endpoint=1
+/// CHECK: Callback DataOp EMI: endpoint=1 optype=1
+/// CHECK: Callback DataOp EMI: endpoint=2 optype=1
+/// CHECK: Callback DataOp EMI: endpoint=1 optype=2
+/// CHECK: Callback DataOp EMI: endpoint=2 optype=2
+/// CHECK: Callback DataOp EMI: endpoint=1 optype=1
+/// CHECK: Callback DataOp EMI: endpoint=2 optype=1
+/// CHECK: Callback DataOp EMI: endpoint=1 optype=2
+/// CHECK: Callback DataOp EMI: endpoint=2 optype=2
+/// CHECK: Callback Submit EMI: endpoint=1 req_num_teams=1
+/// CHECK: Callback Submit EMI: endpoint=2 req_num_teams=1
+/// CHECK: Callback DataOp EMI: endpoint=1 optype=3
+/// CHECK: Callback DataOp EMI: endpoint=2 optype=3
+/// CHECK: Callback DataOp EMI: endpoint=1 optype=3
+/// CHECK: Callback DataOp EMI: endpoint=2 optype=3
+/// CHECK: Callback DataOp EMI: endpoint=1 optype=4
+/// CHECK: Callback DataOp EMI: endpoint=2 optype=4
+/// CHECK: Callback DataOp EMI: endpoint=1 optype=4
+/// CHECK: Callback DataOp EMI: endpoint=2 optype=4
+/// CHECK: Callback Target EMI: kind=1 endpoint=2
+/// CHECK: Callback Target EMI: kind=1 endpoint=1
+/// CHECK: Callback DataOp EMI: endpoint=1 optype=1
+/// CHECK: Callback DataOp EMI: endpoint=2 optype=1
+/// CHECK: Callback DataOp EMI: endpoint=1 optype=2
+/// CHECK: Callback DataOp EMI: endpoint=2 optype=2
+/// CHECK: Callback DataOp EMI: endpoint=1 optype=1
+/// CHECK: Callback DataOp EMI: endpoint=2 optype=1
+/// CHECK: Callback DataOp EMI: endpoint=1 optype=2
+/// CHECK: Callback DataOp EMI: endpoint=2 optype=2
+/// CHECK: Callback Submit EMI: endpoint=1 req_num_teams=0
+/// CHECK: Callback Submit EMI: endpoint=2 req_num_teams=0
+/// CHECK: Callback DataOp EMI: endpoint=1 optype=3
+/// CHECK: Callback DataOp EMI: endpoint=2 optype=3
+/// CHECK: Callback DataOp EMI: endpoint=1 optype=3
+/// CHECK: Callback DataOp EMI: endpoint=2 optype=3
+/// CHECK: Callback DataOp EMI: endpoint=1 optype=4
+/// CHECK: Callback DataOp EMI: endpoint=2 optype=4
+/// CHECK: Callback DataOp EMI: endpoint=1 optype=4
+/// CHECK: Callback DataOp EMI: endpoint=2 optype=4
+/// CHECK: Callback Target EMI: kind=1 endpoint=2
 /// CHECK: Callback Fini:

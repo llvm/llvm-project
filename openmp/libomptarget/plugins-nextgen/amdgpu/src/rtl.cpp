@@ -24,6 +24,7 @@
 #include "Debug.h"
 #include "Environment.h"
 #include "GlobalHandler.h"
+#include "OmptCallback.h"
 #include "PluginInterface.h"
 #include "Utilities.h"
 #include "UtilitiesRTL.h"
@@ -64,7 +65,7 @@
 #include <ompt_device_callbacks.h>
 #define OMPT_IF_ENABLED(stmts)                                                 \
   do {                                                                         \
-    if (OmptDeviceCallbacks.is_enabled()) {                                    \
+    if (llvm::omp::target::ompt::Initialized) {                                \
       stmts                                                                    \
     }                                                                          \
   } while (0)
@@ -91,8 +92,6 @@ int kmtCheck(T err, const char *const func, const char *const file,
 }
 
 #ifdef OMPT_SUPPORT
-extern bool OmptEnabled;
-extern void OmptCallbackInit();
 extern void setOmptTimestamp(uint64_t Start, uint64_t End);
 extern void setOmptHostToDeviceRate(double Slope, double Offset);
 
@@ -2663,8 +2662,7 @@ struct AMDGPUDeviceTy : public GenericDeviceTy, AMDGenericDeviceTy {
 
     // For large transfers use synchronous behavior.
     // If OMPT is enabled or synchronous behavior is explicitly requested:
-    /// ToDo: mhalk Add ompt::Initialized here instead of 'is_enabled'
-    if (OmptDeviceCallbacks.is_enabled() || OMPX_ForceSyncRegions ||
+    if (ompt::Initialized || OMPX_ForceSyncRegions ||
         Size >= OMPX_MaxAsyncCopyBytes) {
       if (AsyncInfoWrapper.hasQueue())
         if (auto Err = synchronize(AsyncInfoWrapper))
@@ -2729,8 +2727,7 @@ struct AMDGPUDeviceTy : public GenericDeviceTy, AMDGenericDeviceTy {
 
     // For large transfers use synchronous behavior.
     // If OMPT is enabled or synchronous behavior is explicitly requested:
-    /// ToDo: mhalk Add ompt::Initialized here instead of 'is_enabled'
-    if (OmptDeviceCallbacks.is_enabled() || OMPX_ForceSyncRegions ||
+    if (ompt::Initialized || OMPX_ForceSyncRegions ||
         Size >= OMPX_MaxAsyncCopyBytes) {
       if (AsyncInfoWrapper.hasQueue())
         if (auto Err = synchronize(AsyncInfoWrapper))
@@ -3437,6 +3434,10 @@ struct AMDGPUPluginTy final : public GenericPluginTy {
     UInt32Envar KernTrace("LIBOMPTARGET_KERNEL_TRACE", 0);
     llvm::omp::target::plugin::PrintKernelTrace = KernTrace.get();
 
+#ifdef OMPT_SUPPORT
+    ompt::connectLibrary();
+#endif
+
     // Register event handler to detect memory errors on the devices.
     Status = hsa_amd_register_system_event_handler(eventHandler, nullptr);
     if (auto Err = Plugin::check(
@@ -3490,10 +3491,6 @@ struct AMDGPUPluginTy final : public GenericPluginTy {
     // Setup the memory pools of available for the host.
     if (auto Err = HostDevice->init())
       return std::move(Err);
-
-#ifdef OMPT_SUPPORT
-    ::OmptCallbackInit();
-#endif
 
     // Initialize flags for device type:
     hasGfx90aDevice();

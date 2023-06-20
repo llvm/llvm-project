@@ -27,6 +27,13 @@
   FOREACH_OMPT_NOEMI_EVENT(macro)                                              \
   FOREACH_OMPT_EMI_EVENT(macro)
 
+// Supported device tracing entry points
+#define FOREACH_OMPT_DEVICE_TRACING_FN(macro)                                  \
+  macro(ompt_set_trace_ompt) macro(ompt_start_trace) macro(ompt_flush_trace)   \
+      macro(ompt_stop_trace) macro(ompt_advance_buffer_cursor)                 \
+          macro(ompt_get_record_ompt) macro(ompt_get_device_time)              \
+              macro(ompt_get_record_type) macro(ompt_translate_time)
+
 #define performOmptCallback(CallbackName, ...)                                 \
   do {                                                                         \
     if (ompt_callback_##CallbackName##_fn)                                     \
@@ -62,6 +69,9 @@ extern ompt_get_callback_t lookupCallbackByCode;
 /// \p InterfaceFunctionName the name of the OMPT callback function to look up
 extern ompt_function_lookup_t lookupCallbackByName;
 
+/// Wrapper function to find a callback given its name
+extern ompt_interface_fn_t doLookup(const char *InterfaceFunctionName);
+
 /// This is the function called by the higher layer (libomp / libomtarget)
 /// responsible for initializing OMPT in this library. This is passed to libomp
 /// as part of the OMPT connector object.
@@ -80,6 +90,9 @@ void finalizeLibrary(ompt_data_t *tool_data);
 /// This function will connect the \p initializeLibrary and \p finalizeLibrary
 /// functions to their respective higher layer.
 void connectLibrary();
+
+/// OMPT initialization status; false if initializeLibrary has not been executed
+extern bool Initialized;
 
 } // namespace ompt
 } // namespace target

@@ -13,14 +13,13 @@
 #ifndef _OMPTARGET_OMPTINTERFACE_H
 #define _OMPTARGET_OMPTINTERFACE_H
 
+// Only provide functionality if target OMPT support is enabled
+#ifdef OMPT_SUPPORT
+
+#include "OmptCallback.h"
 #include "omp-tools.h"
 
-// If target OMPT support is compiled in
-#ifdef OMPT_SUPPORT
 #define OMPT_IF_BUILT(stmt) stmt
-#else
-#define OMPT_IF_BUILT(stmt)
-#endif
 
 /// Callbacks for target regions require task_data representing the
 /// encountering task.
@@ -28,6 +27,7 @@
 /// target_task_data representing the target task region.
 typedef ompt_data_t *(*ompt_get_task_data_t)();
 typedef ompt_data_t *(*ompt_get_target_task_data_t)();
+typedef int (*ompt_set_frame_enter_t)(void *addr, int flags, int state);
 
 namespace llvm {
 namespace omp {
@@ -36,8 +36,9 @@ namespace ompt {
 
 /// Function pointers that will be used to track task_data and
 /// target_task_data.
-static ompt_get_task_data_t ompt_get_task_data_fn;
-static ompt_get_target_task_data_t ompt_get_target_task_data_fn;
+extern ompt_get_task_data_t ompt_get_task_data_fn;
+extern ompt_get_target_task_data_t ompt_get_target_task_data_fn;
+extern ompt_set_frame_enter_t ompt_set_frame_enter_fn;
 
 /// Used to maintain execution state for this thread
 class Interface {
@@ -147,11 +148,16 @@ private:
   void endTargetRegion();
 };
 
+/// Thread local state for target region and associated metadata
+// ToDo: mhalk Uncomment next patch; for now: avoid ambiguous decl
+// extern thread_local llvm::omp::target::ompt::Interface OmptInterface;
+
 } // namespace ompt
 } // namespace target
 } // namespace omp
 } // namespace llvm
-
-extern thread_local llvm::omp::target::ompt::Interface OmptInterface;
+#else
+#define OMPT_IF_BUILT(stmt)
+#endif
 
 #endif // _OMPTARGET_OMPTINTERFACE_H

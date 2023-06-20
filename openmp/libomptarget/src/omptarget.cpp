@@ -12,6 +12,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "omptarget.h"
+#include "OmptCallback.h"
 #include "device.h"
 #include "private.h"
 #include "rtl.h"
@@ -29,7 +30,7 @@ using llvm::SmallVector;
 #include "ompt_callback.h"
 #define OMPT_IF_ENABLED(stmts)                                                 \
   do {                                                                         \
-    if (OmptEnabled) {                                                         \
+    if (llvm::omp::target::ompt::Initialized) {                                \
       stmts                                                                    \
     }                                                                          \
   } while (0)

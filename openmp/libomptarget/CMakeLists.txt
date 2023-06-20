@@ -95,6 +95,7 @@ if (LIBOMPTARGET_OMPT_SUPPORT)
   add_definitions(-DOMPT_SUPPORT=1)
   message(STATUS "OMPT target enabled")
 else()
+  set(LIBOMPTARGET_OMPT_SUPPORT FALSE)
   message(STATUS "OMPT target disabled")
 endif()
 

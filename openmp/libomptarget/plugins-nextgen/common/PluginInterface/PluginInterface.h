@@ -28,6 +28,11 @@
 #include "Utilities.h"
 #include "omptarget.h"
 
+#ifdef OMPT_SUPPORT
+#include "OmptCallback.h"
+#include "omp-tools.h"
+#endif
+
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/Frontend/OpenMP/OMPConstants.h"
 #include "llvm/Frontend/OpenMP/OMPGridValues.h"
@@ -640,7 +645,7 @@ struct GenericDeviceTy : public DeviceAllocatorTy {
   /// Deinitialize the device and free all its resources. After this call, the
   /// device is no longer considered ready, so no queries or modifications are
   /// allowed.
-  Error deinit(GenericPluginTy &Plugin);
+  Error deinit();
   virtual Error deinitImpl() = 0;
 
   /// Load the binary image into the device and return the target table.
@@ -936,6 +941,22 @@ private:
   /// Return the kernel environment object for kernel \p Name.
   Expected<KernelEnvironmentTy>
   getKernelEnvironmentForKernel(StringRef Name, DeviceImageTy &Image);
+
+#ifdef OMPT_SUPPORT
+  /// OMPT callback functions
+#define defineOmptCallback(Name, Type, Code) Name##_t Name##_fn = nullptr;
+  FOREACH_OMPT_DEVICE_EVENT(defineOmptCallback)
+#undef defineOmptCallback
+
+  /// OMPT device tracing functions
+#define defineOmptTracingFunction(FunctionName)                                \
+  ompt_interface_fn_t FunctionName##_fn = nullptr;
+  FOREACH_OMPT_DEVICE_TRACING_FN(defineOmptTracingFunction);
+#undef defineOmptTracingFunction
+
+  /// Internal representation for OMPT device (initialize & finalize)
+  std::atomic<bool> OmptInitialized;
+#endif
 };
 
 /// Class implementing common functionalities of offload plugins. Each plugin

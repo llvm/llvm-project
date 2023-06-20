@@ -11,6 +11,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "device.h"
+#include "OmptCallback.h"
 #include "omptarget.h"
 #include "private.h"
 #include "rtl.h"
@@ -27,9 +28,10 @@
 
 #ifdef OMPT_SUPPORT
 #include "ompt_callback.h"
+using namespace llvm::omp::target;
 #define OMPT_IF_ENABLED(stmts)                                                 \
   do {                                                                         \
-    if (OmptEnabled) {                                                         \
+    if (ompt::Initialized) {                                                   \
       stmts                                                                    \
     }                                                                          \
   } while (0)
@@ -758,7 +760,10 @@ int32_t DeviceTy::submitData(void *TgtPtrBegin, void *HstPtrBegin, int64_t Size,
   OmptInterfaceTargetDataOpRAII submit_raii(ompt_target_data_transfer_to_device,
                                             HstPtrBegin, TgtPtrBegin,
                                             RTLDeviceID, Size);
-  if (ForceSynchronousTargetRegions || OmptEnabled || !AsyncInfo ||
+  if (ForceSynchronousTargetRegions || !AsyncInfo ||
+#ifdef OMPT_SUPPORT
+      ompt::Initialized ||
+#endif
       !RTL->data_submit_async || !RTL->synchronize)
     return RTL->data_submit(RTLDeviceID, TgtPtrBegin, HstPtrBegin, Size);
   return RTL->data_submit_async(RTLDeviceID, TgtPtrBegin, HstPtrBegin, Size,
@@ -785,8 +790,11 @@ int32_t DeviceTy::retrieveData(void *HstPtrBegin, void *TgtPtrBegin,
   OmptInterfaceTargetDataOpRAII retrieve_raii(
       ompt_target_data_transfer_from_device, HstPtrBegin, TgtPtrBegin,
       RTLDeviceID, Size);
-  if (ForceSynchronousTargetRegions || OmptEnabled ||
-      !RTL->data_retrieve_async || !RTL->synchronize)
+  if (ForceSynchronousTargetRegions || !RTL->data_retrieve_async ||
+#ifdef OMPT_SUPPORT
+      ompt::Initialized ||
+#endif
+      !RTL->synchronize)
     return RTL->data_retrieve(RTLDeviceID, HstPtrBegin, TgtPtrBegin, Size);
   return RTL->data_retrieve_async(RTLDeviceID, HstPtrBegin, TgtPtrBegin, Size,
                                   AsyncInfo);
@@ -795,7 +803,10 @@ int32_t DeviceTy::retrieveData(void *HstPtrBegin, void *TgtPtrBegin,
 // Copy data from current device to destination device directly
 int32_t DeviceTy::dataExchange(void *SrcPtr, DeviceTy &DstDev, void *DstPtr,
                                int64_t Size, AsyncInfoTy &AsyncInfo) {
-  if (ForceSynchronousTargetRegions || OmptEnabled || !AsyncInfo ||
+  if (ForceSynchronousTargetRegions || !AsyncInfo ||
+#ifdef OMPT_SUPPORT
+      ompt::Initialized ||
+#endif
       !RTL->data_exchange_async || !RTL->synchronize) {
     assert(RTL->data_exchange && "RTL->data_exchange is nullptr");
     return RTL->data_exchange(RTLDeviceID, SrcPtr, DstDev.RTLDeviceID, DstPtr,
@@ -837,7 +848,10 @@ int32_t DeviceTy::launchKernel(void *TgtEntryPtr, void **TgtVarsPtr,
                                ptrdiff_t *TgtOffsets,
                                const KernelArgsTy &KernelArgs,
                                AsyncInfoTy &AsyncInfo) {
-  if (ForceSynchronousTargetRegions || OmptEnabled || !RTL->launch_kernel ||
+  if (ForceSynchronousTargetRegions || !RTL->launch_kernel ||
+#ifdef OMPT_SUPPORT
+      ompt::Initialized ||
+#endif
       !RTL->synchronize)
     return RTL->launch_kernel_sync(RTLDeviceID, TgtEntryPtr, TgtVarsPtr,
                                    TgtOffsets, &KernelArgs);

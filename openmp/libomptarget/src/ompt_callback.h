@@ -27,6 +27,8 @@
 
 #include <omp-tools.h>
 
+using namespace llvm::omp::target::ompt;
+
 class OmptInterface {
 public:
   OmptInterface()
@@ -131,7 +133,5 @@ private:
 };
 
 extern thread_local OmptInterface ompt_interface;
-
-extern bool OmptEnabled;
 
 #endif

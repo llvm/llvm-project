@@ -11,16 +11,25 @@
 //===----------------------------------------------------------------------===//
 
 #ifdef OMPT_SUPPORT
-#include <atomic>
-#include <cstdio>
-#include <string.h>
-#include <vector>
 
+#include "llvm/Support/DynamicLibrary.h"
 #include "llvm/Support/ErrorHandling.h"
 
+#include <cstdlib>
+#include <cstring>
+#include <memory>
+
 #include "Debug.h"
-#include "ompt-connector.h"
+#include "OmptCallback.h"
+#include "OmptConnector.h"
 #include "ompt_device_callbacks.h"
+
+using namespace llvm::omp::target::ompt;
+
+bool llvm::omp::target::ompt::Initialized = false;
+
+ompt_get_callback_t llvm::omp::target::ompt::lookupCallbackByCode = nullptr;
+ompt_function_lookup_t llvm::omp::target::ompt::lookupCallbackByName = nullptr;
 
 //****************************************************************************
 // macros
@@ -61,9 +70,6 @@ static std::mutex get_record_type_mutex;
 
 /// Object maintaining all the callbacks in the plugin
 OmptDeviceCallbacksTy OmptDeviceCallbacks;
-
-/// Used to indicate whether OMPT was enabled for this library
-static bool OmptEnabled = false;
 
 static double HostToDeviceSlope = .0;
 static double HostToDeviceOffset = .0;
@@ -313,6 +319,7 @@ int OmptDeviceCallbacksTy::lookup_device_id(ompt_device *device) {
 
 /// Lookup function used for querying callback functions maintained
 /// by the plugin
+// ToDo: mhalk Remove this when OmptDeviceCallbacksTy is migrated
 ompt_interface_fn_t
 OmptDeviceCallbacksTy::doLookup(const char *InterfaceFunctionName) {
 #define macro(fn)                                                              \
@@ -324,15 +331,24 @@ OmptDeviceCallbacksTy::doLookup(const char *InterfaceFunctionName) {
 #undef macro
 }
 
-/// This function is passed to libomptarget as part of the OMPT connector
-/// object. It is called by libomptarget during initialization of OMPT in the
-/// plugin. \p lookup to be used to query callbacks registered with libomptarget
-/// \p initial_device_num Initial device num provided by libomptarget
-/// \p tool_data as provided by the tool
-static int OmptDeviceInit(ompt_function_lookup_t lookup, int initial_device_num,
-                          ompt_data_t *tool_data) {
-  DP("OMPT: Enter OmptDeviceInit\n");
-  OmptEnabled = true;
+/// Lookup function used for querying callback functions maintained
+/// by the plugin
+ompt_interface_fn_t
+llvm::omp::target::ompt::doLookup(const char *InterfaceFunctionName) {
+#define macro(fn)                                                              \
+  if (strcmp(InterfaceFunctionName, #fn) == 0)                                 \
+    return (ompt_interface_fn_t)fn;
+
+  FOREACH_OMPT_DEVICE_TRACING_FN(macro);
+
+#undef macro
+  return (ompt_interface_fn_t)lookupCallbackByName(InterfaceFunctionName);
+}
+
+int llvm::omp::target::ompt::initializeLibrary(ompt_function_lookup_t lookup,
+                                               int initial_device_num,
+                                               ompt_data_t *tool_data) {
+  DP("OMPT: Executing initializeLibrary (libomptarget)\n");
 
   LIBOMPTARGET_GET_TARGET_OPID =
       (ompt_get_target_info_t)lookup(stringify(LIBOMPTARGET_GET_TARGET_OPID));
@@ -340,46 +356,46 @@ static int OmptDeviceInit(ompt_function_lookup_t lookup, int initial_device_num,
   DP("OMPT: libomptarget_get_target_info = %p\n",
      fnptr_to_ptr(LIBOMPTARGET_GET_TARGET_OPID));
 
-  // The lookup parameter is provided by libomptarget which already has the tool
-  // callbacks registered at this point. The registration call below causes the
-  // same callback functions to be registered in the plugin as well.
-  OmptDeviceCallbacks.registerCallbacks(lookup);
-  DP("OMPT: Exit OmptDeviceInit\n");
-  return 0;
+#define bindOmptFunctionName(OmptFunction, DestinationFunction)                \
+  if (lookup)                                                                  \
+    DestinationFunction = (OmptFunction##_t)lookup(#OmptFunction);             \
+  DP("OMPT: initializeLibrary (libomptarget) bound %s=%p\n",                   \
+     #DestinationFunction, ((void *)(uint64_t)DestinationFunction));
+
+    bindOmptFunctionName(ompt_get_callback, lookupCallbackByCode);
+#undef bindOmptFunctionName
+
+    // Store pointer of 'ompt_libomp_target_fn_lookup' for use by the plugin
+    lookupCallbackByName = lookup;
+
+    Initialized = true;
+
+    return 0;
 }
 
-/// This function is passed to libomptarget as part of the OMPT connector
-/// object. It is called by libomptarget during finalization of OMPT in the
-/// plugin.
-static void OmptDeviceFini(ompt_data_t *tool_data) {
-  DP("OMPT: Executing OmptDeviceFini\n");
-}
+  void llvm::omp::target::ompt::finalizeLibrary(ompt_data_t * tool_data) {
+    DP("OMPT: Executing finalizeLibrary (libomptarget)\n");
+  }
 
-//****************************************************************************
-// constructor
-//****************************************************************************
-/// Used to initialize callbacks implemented by the tool. This interface will
-/// lookup the callbacks table in libomptarget and assign them to the callbacks
-/// table maintained in the calling plugin library.
-void OmptCallbackInit() {
-  DP("OMPT: Entering OmptCallbackInit\n");
-  /// Connect plugin instance with libomptarget
-  OmptLibraryConnectorTy LibomptargetConnector("libomptarget");
-  ompt_start_tool_result_t OmptResult;
+  void llvm::omp::target::ompt::connectLibrary() {
+    DP("OMPT: Entering connectLibrary (libomptarget)\n");
+    /// Connect plugin instance with libomptarget
+    OmptLibraryConnectorTy LibomptargetConnector("libomptarget");
+    ompt_start_tool_result_t OmptResult;
 
-  // Initialize OmptResult with the init and fini functions that will be
-  // called by the connector
-  OmptResult.initialize = OmptDeviceInit;
-  OmptResult.finalize = OmptDeviceFini;
-  OmptResult.tool_data.value = 0;
+    // Initialize OmptResult with the init and fini functions that will be
+    // called by the connector
+    OmptResult.initialize = ompt::initializeLibrary;
+    OmptResult.finalize = ompt::finalizeLibrary;
+    OmptResult.tool_data.value = 0;
 
-  // Initialize the device callbacks first
-  OmptDeviceCallbacks.init();
+    // Initialize the device callbacks first
+    OmptDeviceCallbacks.init();
 
-  // Now call connect that causes the above init/fini functions to be called
-  LibomptargetConnector.connect(&OmptResult);
-  DP("OMPT: Exiting OmptCallbackInit\n");
-}
+    // Now call connect that causes the above init/fini functions to be called
+    LibomptargetConnector.connect(&OmptResult);
+    DP("OMPT: Exiting connectLibrary (libomptarget)\n");
+  }
 
 #pragma pop_macro("DEBUG_PREFIX")
 

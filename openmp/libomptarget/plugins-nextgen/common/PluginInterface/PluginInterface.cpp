@@ -15,9 +15,13 @@
 #include "elf_common.h"
 #include "omptarget.h"
 #include "omptargetplugin.h"
-
 #include "print_tracing.h"
 #include "trace.h"
+
+#ifdef OMPT_SUPPORT
+#include "OmptCallback.h"
+#include "omp-tools.h"
+#endif
 
 #include "llvm/Frontend/OpenMP/OMPConstants.h"
 #include "llvm/Support/Error.h"
@@ -38,7 +42,7 @@ extern void setOmptGrantedNumTeams(uint64_t NumTeams);
 #include <ompt_device_callbacks.h>
 #define OMPT_IF_ENABLED(stmts)                                                 \
   do {                                                                         \
-    if (OmptDeviceCallbacks.is_enabled()) {                                    \
+    if (llvm::omp::target::ompt::Initialized) {                                \
       stmts                                                                    \
     }                                                                          \
   } while (0)
@@ -484,7 +488,32 @@ GenericDeviceTy::GenericDeviceTy(int32_t DeviceId, int32_t NumDevices,
       OMPX_InitialNumEvents("LIBOMPTARGET_NUM_INITIAL_EVENTS", 1),
       DeviceId(DeviceId), GridValues(OMPGridValues),
       PeerAccesses(NumDevices, PeerAccessState::PENDING), PeerAccessesLock(),
-      PinnedAllocs(*this), RPCHandle(nullptr) {}
+      PinnedAllocs(*this), RPCHandle(nullptr) {
+#ifdef OMPT_SUPPORT
+  OmptInitialized.store(false);
+  // Bind the callbacks to this device's member functions
+#define bindOmptCallback(Name, Type, Code)                                     \
+  if (ompt::Initialized && ompt::lookupCallbackByCode) {                       \
+    ompt::lookupCallbackByCode((ompt_callbacks_t)(Code),                       \
+                               ((ompt_callback_t *)&(Name##_fn)));             \
+    DP("OMPT: class bound %s=%p\n", #Name, ((void *)(uint64_t)Name##_fn));     \
+  }
+
+  FOREACH_OMPT_DEVICE_EVENT(bindOmptCallback);
+#undef bindOmptCallback
+
+#define bindOmptTracingFunction(FunctionName)                                  \
+  if (ompt::Initialized && ompt::doLookup) {                                   \
+    FunctionName##_fn = ompt::doLookup(#FunctionName);                         \
+    DP("OMPT: device tracing fn bound %s=%p\n", #FunctionName,                 \
+       ((void *)(uint64_t)FunctionName##_fn));                                 \
+  }
+
+  FOREACH_OMPT_DEVICE_TRACING_FN(bindOmptTracingFunction);
+#undef bindOmptTracingFunction
+
+#endif
+}
 
 Error GenericDeviceTy::init(GenericPluginTy &Plugin) {
   if (auto Err = initImpl(Plugin))
@@ -494,6 +523,18 @@ Error GenericDeviceTy::init(GenericPluginTy &Plugin) {
                   OmptDeviceCallbacks.compute_parent_dyn_lib("libomptarget.so");
                   OmptDeviceCallbacks.ompt_callback_device_initialize(
                       DeviceId, getComputeUnitKind().c_str()););
+#ifdef OMPT_SUPPORT
+  if (ompt::Initialized) {
+    bool ExpectedStatus = false;
+    if (OmptInitialized.compare_exchange_strong(ExpectedStatus, true))
+      performOmptCallback(device_initialize,
+                          /* device_num */ DeviceId,
+                          /* type */ getComputeUnitKind().c_str(),
+                          /* device */ reinterpret_cast<ompt_device_t *>(this),
+                          /* lookup */ ompt::doLookup,
+                          /* documentation */ nullptr);
+  }
+#endif
 
   // Read and reinitialize the envars that depend on the device initialization.
   // Notice these two envars may change the stack size and heap size of the
@@ -532,7 +573,7 @@ Error GenericDeviceTy::init(GenericPluginTy &Plugin) {
   return Plugin::success();
 }
 
-Error GenericDeviceTy::deinit(GenericPluginTy &Plugin) {
+Error GenericDeviceTy::deinit() {
   // Delete the memory manager before deinitializing the device. Otherwise,
   // we may delete device allocations after the device is deinitialized.
   if (MemoryManager)
@@ -547,6 +588,14 @@ Error GenericDeviceTy::deinit(GenericPluginTy &Plugin) {
   if (RPCHandle)
     if (auto Err = RPCHandle->deinitDevice())
       return Err;
+
+#ifdef OMPT_SUPPORT
+  if (ompt::Initialized) {
+    bool ExpectedStatus = true;
+    if (OmptInitialized.compare_exchange_strong(ExpectedStatus, false))
+      performOmptCallback(device_finalize, /* device_num */ DeviceId);
+  }
+#endif
 
   return deinitImpl();
 }
@@ -598,6 +647,22 @@ GenericDeviceTy::loadBinary(GenericPluginTy &Plugin,
 
   if (auto Err = setupRPCServer(Plugin, *Image))
     return std::move(Err);
+
+#ifdef OMPT_SUPPORT
+  if (ompt::Initialized) {
+    size_t Bytes =
+        getPtrDiff(InputTgtImage->ImageEnd, InputTgtImage->ImageStart);
+    performOmptCallback(device_load,
+                        /* device_num */ DeviceId,
+                        /* FileName */ nullptr,
+                        /* File Offset */ 0,
+                        /* VmaInFile */ nullptr,
+                        /* ImgSize */ Bytes,
+                        /* HostAddr */ InputTgtImage->ImageStart,
+                        /* DeviceAddr */ nullptr,
+                        /* FIXME: ModuleId */ 0);
+  }
+#endif
 
   // Return the pointer to the table of entries.
   return Image->getOffloadEntryTable();
@@ -1332,7 +1397,7 @@ Error GenericPluginTy::deinitDevice(int32_t DeviceId) {
     return Plugin::success();
 
   // Deinitialize the device and release its resources.
-  if (auto Err = Devices[DeviceId]->deinit(*this))
+  if (auto Err = Devices[DeviceId]->deinit())
     return Err;
 
   // Delete the device and invalidate its reference.
