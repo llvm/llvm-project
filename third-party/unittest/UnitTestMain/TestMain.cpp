@@ -29,10 +29,6 @@ int main(int argc, char **argv) {
                                             true /* Disable crash reporting */);
   }
 
-  // Use the "threadsafe" test style for death tests -- the "fast" test style
-  // can cause deadlocks.
-  testing::GTEST_FLAG(death_test_style) = "threadsafe";
-
   // Initialize both gmock and gtest.
   testing::InitGoogleMock(&argc, argv);
 
