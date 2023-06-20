@@ -64,11 +64,6 @@ parseFunctionSignature(OpAsmParser &parser, bool allowVariadic,
                        bool &isVariadic, SmallVectorImpl<Type> &resultTypes,
                        SmallVectorImpl<DictionaryAttr> &resultAttrs);
 
-/// Get a function type corresponding to an array of arguments (which have
-/// types) and a set of result types.
-Type getFunctionType(Builder &builder, ArrayRef<OpAsmParser::Argument> argAttrs,
-                     ArrayRef<Type> resultTypes);
-
 /// Parser implementation for function-like operations.  Uses
 /// `funcTypeBuilder` to construct the custom function type given lists of
 /// input and output types. The parser sets the `typeAttrName` attribute to the
