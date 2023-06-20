@@ -5552,8 +5552,7 @@ static SDValue PerformMinMaxFpToSatCombine(SDValue N0, SDValue N1, SDValue N2,
   SDLoc DL(Fp);
   SDValue Sat = DAG.getNode(NewOpc, DL, NewVT, Fp.getOperand(0),
                             DAG.getValueType(NewVT.getScalarType()));
-  return Unsigned ? DAG.getZExtOrTrunc(Sat, DL, N2->getValueType(0))
-                  : DAG.getSExtOrTrunc(Sat, DL, N2->getValueType(0));
+  return DAG.getExtOrTrunc(!Unsigned, Sat, DL, N2->getValueType(0));
 }
 
 static SDValue PerformUMinFpToSatCombine(SDValue N0, SDValue N1, SDValue N2,
@@ -9997,8 +9996,8 @@ static SDValue combineShiftToMULH(SDNode *N, SelectionDAG &DAG,
 
   SDValue Result =
       DAG.getNode(MulhOpcode, DL, NarrowVT, LeftOp.getOperand(0), MulhRightOp);
-  return (N->getOpcode() == ISD::SRA ? DAG.getSExtOrTrunc(Result, DL, WideVT)
-                                     : DAG.getZExtOrTrunc(Result, DL, WideVT));
+  bool IsSigned = N->getOpcode() == ISD::SRA;
+  return DAG.getExtOrTrunc(IsSigned, Result, DL, WideVT);
 }
 
 // fold (bswap (logic_op(bswap(x),y))) -> logic_op(x,bswap(y))
