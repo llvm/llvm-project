@@ -459,7 +459,8 @@ inline mapped_iterator<ItTy, FuncTy> map_iterator(ItTy I, FuncTy F) {
 
 template <class ContainerTy, class FuncTy>
 auto map_range(ContainerTy &&C, FuncTy F) {
-  return make_range(map_iterator(C.begin(), F), map_iterator(C.end(), F));
+  return make_range(map_iterator(std::begin(C), F),
+                    map_iterator(std::end(C), F));
 }
 
 /// A base type of mapped iterator, that is useful for building derived

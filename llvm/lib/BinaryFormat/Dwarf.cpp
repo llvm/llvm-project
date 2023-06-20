@@ -172,6 +172,40 @@ unsigned llvm::dwarf::getOperationEncoding(StringRef OperationEncodingString) {
       .Default(0);
 }
 
+static StringRef LlvmUserOperationEncodingString(unsigned Encoding) {
+  switch (Encoding) {
+  default:
+    llvm_unreachable("unhandled DWARF operation with LLVM user op");
+#define HANDLE_DW_OP_LLVM_USEROP(ID, NAME)                                     \
+  case DW_OP_LLVM_##NAME:                                                      \
+    return "DW_OP_LLVM_" #NAME;
+#include "llvm/BinaryFormat/Dwarf.def"
+  }
+}
+
+static unsigned
+getLlvmUserOperationEncoding(StringRef LlvmUserOperationEncodingString) {
+  unsigned E = StringSwitch<unsigned>(LlvmUserOperationEncodingString)
+#define HANDLE_DW_OP_LLVM_USEROP(ID, NAME) .Case(#NAME, DW_OP_LLVM_##NAME)
+#include "llvm/BinaryFormat/Dwarf.def"
+                   .Default(0);
+  assert(E && "unhandled DWARF operation string with LLVM user op");
+  return E;
+}
+
+StringRef llvm::dwarf::SubOperationEncodingString(unsigned OpEncoding,
+                                                  unsigned SubOpEncoding) {
+  assert(OpEncoding == DW_OP_LLVM_user);
+  return LlvmUserOperationEncodingString(SubOpEncoding);
+}
+
+unsigned
+llvm::dwarf::getSubOperationEncoding(unsigned OpEncoding,
+                                     StringRef SubOperationEncodingString) {
+  assert(OpEncoding == DW_OP_LLVM_user);
+  return getLlvmUserOperationEncoding(SubOperationEncodingString);
+}
+
 unsigned llvm::dwarf::OperationVersion(dwarf::LocationAtom Op) {
   switch (Op) {
   default:

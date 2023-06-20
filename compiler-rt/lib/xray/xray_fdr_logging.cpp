@@ -580,9 +580,9 @@ void fdrLoggingHandleCustomEvent(void *Event,
   TLD.Controller->customEvent(TSC, CPU, Event, ReducedEventSize);
 }
 
-void fdrLoggingHandleTypedEvent(
-    uint16_t EventType, const void *Event,
-    std::size_t EventSize) noexcept XRAY_NEVER_INSTRUMENT {
+void fdrLoggingHandleTypedEvent(size_t EventType, const void *Event,
+                                size_t EventSize) noexcept
+    XRAY_NEVER_INSTRUMENT {
   auto TC = getTimestamp();
   auto &TSC = TC.TSC;
   auto &CPU = TC.CPU;
@@ -607,7 +607,8 @@ void fdrLoggingHandleTypedEvent(
     return;
 
   int32_t ReducedEventSize = static_cast<int32_t>(EventSize);
-  TLD.Controller->typedEvent(TSC, CPU, EventType, Event, ReducedEventSize);
+  TLD.Controller->typedEvent(TSC, CPU, static_cast<uint16_t>(EventType), Event,
+                             ReducedEventSize);
 }
 
 XRayLogInitStatus fdrLoggingInit(size_t, size_t, void *Options,

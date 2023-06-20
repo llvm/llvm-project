@@ -362,3 +362,16 @@ test/Examples/transform/Ch1/invalidation-2.mlir:24:13: note: nested payload op
 Note that the “add” elementwise operation is indicated as payload ancestor because it was used to produce the tile loop, and the loop therefore has its location.
 
 Finally, we would like to replace the call to the outlined function with a call to the microkernel. Unfortunately, the Transform dialect doesn’t have support for this transformation (and cannot have if the call is rewritten to a custom, out-of-tree operation). Therefore, we need to define new transform operations. The next chapters will describe how this can be done.
+
+## Tracking IR Modifications
+
+The transform dialect automatically tracks all IR changes that are made as part
+of transform ops. (Implementations must use the provided rewriter to modify IR.)
+If a payload op is erased, it is automatically removed from all handles that it
+is currently associated with. If a payload op is replaced, the transform dialect
+tries to find the replacement op and updates all handles accordingly. If a
+multi-result op is replaced with values that are defined by multiple ops, or if
+an op is replaced with an op of a different type, an error is produced. This is
+because it is unclear whether the direct replacements actually represent the
+computation of the original op. There are ways to customize this behavior. More
+details can be found at the documentation of `transform::TrackingListener`.

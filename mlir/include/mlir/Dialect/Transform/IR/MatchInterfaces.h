@@ -50,7 +50,8 @@ public:
     return success();
   }
 
-  DiagnosedSilenceableFailure apply(TransformResults &results,
+  DiagnosedSilenceableFailure apply(TransformRewriter &rewriter,
+                                    TransformResults &results,
                                     TransformState &state) {
     Value operandHandle = cast<OpTy>(this->getOperation()).getOperandHandle();
     auto payload = state.getPayloadOps(operandHandle);
@@ -90,7 +91,8 @@ public:
     return success();
   }
 
-  DiagnosedSilenceableFailure apply(TransformResults &results,
+  DiagnosedSilenceableFailure apply(TransformRewriter &rewriter,
+                                    TransformResults &results,
                                     TransformState &state) {
     Value operandHandle = cast<OpTy>(this->getOperation()).getOperandHandle();
     ValueRange payload = state.getPayloadValues(operandHandle);

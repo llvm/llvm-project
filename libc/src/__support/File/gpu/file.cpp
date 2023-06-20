@@ -26,8 +26,8 @@ class GPUFile : public File {
 
 public:
   constexpr GPUFile(uintptr_t file, File::ModeFlags modeflags)
-      : File(&write_func, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr,
-             0, _IONBF, false, modeflags),
+      : File(&write_func, nullptr, nullptr, nullptr, nullptr, nullptr, 0,
+             _IONBF, false, modeflags),
         file(file) {}
 
   uintptr_t get_file() const { return file; }

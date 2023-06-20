@@ -335,7 +335,6 @@ int File::flush_unlocked() {
       return buf_result.error;
     }
     pos = 0;
-    return platform_flush(this);
   }
   // TODO: Add POSIX behavior for input streams.
   return 0;
