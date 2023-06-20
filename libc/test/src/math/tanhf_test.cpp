@@ -43,35 +43,31 @@ TEST(LlvmLibcTanhfTest, SpecialNumbers) {
 }
 
 TEST(LlvmLibcTanhfTest, InFloatRange) {
-  constexpr uint32_t COUNT = 100'000;
+  constexpr uint32_t COUNT = 100'001;
   constexpr uint32_t STEP = UINT32_MAX / COUNT;
   for (uint32_t i = 0, v = 0; i <= COUNT; ++i, v += STEP) {
     float x = float(FPBits(v));
     if (isnan(x) || isinf(x))
       continue;
-    ASSERT_MPFR_MATCH(mpfr::Operation::Tanh, x, __llvm_libc::tanhf(x), 0.5);
+    ASSERT_MPFR_MATCH_ALL_ROUNDING(mpfr::Operation::Tanh, x,
+                                   __llvm_libc::tanhf(x), 0.5);
   }
 }
 
-// For small values, tanh(x) is x.
-TEST(LlvmLibcTanhfTest, SmallValues) {
-  float x = float(FPBits(uint32_t(0x17800000)));
-  float result = __llvm_libc::tanhf(x);
-  EXPECT_MPFR_MATCH(mpfr::Operation::Tanh, x, result, 0.5);
-  EXPECT_FP_EQ(x, result);
-
-  x = float(FPBits(uint32_t(0x00400000)));
-  result = __llvm_libc::tanhf(x);
-  EXPECT_MPFR_MATCH(mpfr::Operation::Tanh, x, result, 0.5);
-  EXPECT_FP_EQ(x, result);
-}
-
 TEST(LlvmLibcTanhfTest, ExceptionalValues) {
-  float x = float(FPBits(uint32_t(0x3a12'85ffU)));
-  EXPECT_MPFR_MATCH_ALL_ROUNDING(mpfr::Operation::Tanh, x,
-                                 __llvm_libc::tanhf(x), 0.5);
+  constexpr int N = 4;
+  constexpr uint32_t INPUTS[N] = {
+      0x0040'0000,
+      0x1780'0000,
+      0x3a12'85ff,
+      0x4058'e0a3,
+  };
 
-  x = -float(FPBits(uint32_t(0x3a12'85ffU)));
-  EXPECT_MPFR_MATCH_ALL_ROUNDING(mpfr::Operation::Tanh, x,
-                                 __llvm_libc::tanhf(x), 0.5);
+  for (int i = 0; i < N; ++i) {
+    float x = float(FPBits(INPUTS[i]));
+    EXPECT_MPFR_MATCH_ALL_ROUNDING(mpfr::Operation::Tanh, x,
+                                   __llvm_libc::tanhf(x), 0.5);
+    EXPECT_MPFR_MATCH_ALL_ROUNDING(mpfr::Operation::Tanh, -x,
+                                   __llvm_libc::tanhf(-x), 0.5);
+  }
 }
