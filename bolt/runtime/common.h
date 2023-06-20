@@ -246,6 +246,21 @@ uint64_t __sigprocmask(int how, const void *set, void *oldset) {
   return ret;
 }
 
+uint64_t __getpid() {
+  uint64_t ret;
+#if defined(__APPLE__)
+#define GETPID_SYSCALL 20
+#else
+#define GETPID_SYSCALL 39
+#endif
+  __asm__ __volatile__("movq $" STRINGIFY(GETPID_SYSCALL) ", %%rax\n"
+                                                          "syscall\n"
+                       : "=a"(ret)
+                       :
+                       : "cc", "rcx", "r11", "memory");
+  return ret;
+}
+
 uint64_t __exit(uint64_t code) {
 #if defined(__APPLE__)
 #define EXIT_SYSCALL 0x2000001
@@ -505,16 +520,6 @@ int __mprotect(void *addr, size_t len, int prot) {
                        "syscall\n"
                        : "=a"(ret)
                        : "D"(addr), "S"(len), "d"(prot)
-                       : "cc", "rcx", "r11", "memory");
-  return ret;
-}
-
-uint64_t __getpid() {
-  uint64_t ret;
-  __asm__ __volatile__("movq $39, %%rax\n"
-                       "syscall\n"
-                       : "=a"(ret)
-                       :
                        : "cc", "rcx", "r11", "memory");
   return ret;
 }
