@@ -875,6 +875,7 @@ CommandArgumentType
 .. py:data:: eArgTypeColumnNum
 .. py:data:: eArgTypeModuleUUID
 .. py:data:: eArgTypeLastArg
+.. py:data:: eArgTypeCompletionType
 
 .. _SymbolType:
 
