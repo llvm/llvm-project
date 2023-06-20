@@ -33,6 +33,7 @@
 #include "clang/Analysis/FlowSensitive/DataflowAnalysisContext.h"
 #include "clang/Analysis/FlowSensitive/DataflowEnvironment.h"
 #include "clang/Analysis/FlowSensitive/MatchSwitch.h"
+#include "clang/Analysis/FlowSensitive/NoopAnalysis.h"
 #include "clang/Analysis/FlowSensitive/WatchedLiteralsSolver.h"
 #include "clang/Basic/LLVM.h"
 #include "clang/Serialization/PCHContainerOperations.h"
@@ -381,12 +382,66 @@ checkDataflow(AnalysisInputs<AnalysisT> AI,
       });
 }
 
+using BuiltinOptions = DataflowAnalysisContext::Options;
+
+/// Runs dataflow on `Code` with a `NoopAnalysis` and calls `VerifyResults` to
+/// verify the results.
+template <typename VerifyResultsT>
+llvm::Error
+runDataflowReturnError(llvm::StringRef Code, VerifyResultsT VerifyResults,
+                       DataflowAnalysisOptions Options,
+                       LangStandard::Kind Std = LangStandard::lang_cxx17,
+                       llvm::StringRef TargetFun = "target") {
+  using ast_matchers::hasName;
+  llvm::SmallVector<std::string, 3> ASTBuildArgs = {
+      // -fnodelayed-template-parsing is the default everywhere but on Windows.
+      // Set it explicitly so that tests behave the same on Windows as on other
+      // platforms.
+      "-fsyntax-only", "-fno-delayed-template-parsing",
+      "-std=" +
+          std::string(LangStandard::getLangStandardForKind(Std).getName())};
+  AnalysisInputs<NoopAnalysis> AI(
+      Code, hasName(TargetFun),
+      [UseBuiltinModel = Options.BuiltinOpts.has_value()](ASTContext &C,
+                                                          Environment &Env) {
+        return NoopAnalysis(
+            C,
+            DataflowAnalysisOptions{
+                UseBuiltinModel ? Env.getDataflowAnalysisContext().getOptions()
+                                : std::optional<BuiltinOptions>()});
+      });
+  AI.ASTBuildArgs = ASTBuildArgs;
+  if (Options.BuiltinOpts)
+    AI.BuiltinOptions = *Options.BuiltinOpts;
+  return checkDataflow<NoopAnalysis>(
+      std::move(AI),
+      /*VerifyResults=*/
+      [&VerifyResults](
+          const llvm::StringMap<DataflowAnalysisState<NoopLattice>> &Results,
+          const AnalysisOutputs &AO) { VerifyResults(Results, AO.ASTCtx); });
+}
+
 /// Returns the `ValueDecl` for the given identifier.
 ///
 /// Requirements:
 ///
 ///   `Name` must be unique in `ASTCtx`.
 const ValueDecl *findValueDecl(ASTContext &ASTCtx, llvm::StringRef Name);
+
+/// Returns the storage location (of type `LocT`) for the given identifier.
+/// `LocT` must be a subclass of `StorageLocation` and must be of the
+/// appropriate type.
+///
+/// Requirements:
+///
+///   `Name` must be unique in `ASTCtx`.
+template <class LocT>
+LocT &getLocForDecl(ASTContext &ASTCtx, const Environment &Env,
+                    llvm::StringRef Name) {
+  const ValueDecl *VD = findValueDecl(ASTCtx, Name);
+  assert(VD != nullptr);
+  return *cast<LocT>(Env.getStorageLocation(*VD));
+}
 
 /// Returns the value (of type `ValueT`) for the given identifier.
 /// `ValueT` must be a subclass of `Value` and must be of the appropriate type.

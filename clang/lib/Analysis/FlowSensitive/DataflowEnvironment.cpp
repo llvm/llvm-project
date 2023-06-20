@@ -739,6 +739,23 @@ void Environment::setValue(const StorageLocation &Loc, Value &Val) {
   }
 }
 
+void Environment::clearValue(const StorageLocation &Loc) {
+  LocToVal.erase(&Loc);
+
+  if (auto It = MemberLocToStruct.find(&Loc); It != MemberLocToStruct.end()) {
+    // `Loc` is the location of a struct member so we need to also clear the
+    // member in the corresponding `StructValue`.
+
+    assert(It->second.first != nullptr);
+    StructValue &StructVal = *It->second.first;
+
+    assert(It->second.second != nullptr);
+    const ValueDecl &Member = *It->second.second;
+
+    StructVal.clearChild(Member);
+  }
+}
+
 void Environment::setValueStrict(const Expr &E, Value &Val) {
   assert(E.isPRValue());
   assert(!isa<ReferenceValue>(Val));
