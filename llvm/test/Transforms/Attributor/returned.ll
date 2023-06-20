@@ -1405,7 +1405,7 @@ define ptr @use_const() #0 {
 ; CGSCC: Function Attrs: mustprogress nofree noinline nosync nounwind willreturn memory(none) uwtable
 ; CGSCC-LABEL: define {{[^@]+}}@use_const
 ; CGSCC-SAME: () #[[ATTR3]] {
-; CGSCC-NEXT:    [[C:%.*]] = call noundef nonnull dereferenceable(1) ptr @ret_const() #[[ATTR9:[0-9]+]]
+; CGSCC-NEXT:    [[C:%.*]] = call noundef nonnull dereferenceable(1) ptr @ret_const()
 ; CGSCC-NEXT:    ret ptr [[C]]
 ;
   %c = call ptr @ret_const()
@@ -1420,7 +1420,7 @@ define ptr @dont_use_const() #0 {
 ; CGSCC: Function Attrs: mustprogress nofree noinline nosync nounwind willreturn memory(none) uwtable
 ; CGSCC-LABEL: define {{[^@]+}}@dont_use_const
 ; CGSCC-SAME: () #[[ATTR3]] {
-; CGSCC-NEXT:    [[C:%.*]] = musttail call noundef nonnull dereferenceable(1) ptr @ret_const() #[[ATTR9]]
+; CGSCC-NEXT:    [[C:%.*]] = musttail call noundef nonnull dereferenceable(1) ptr @ret_const()
 ; CGSCC-NEXT:    ret ptr [[C]]
 ;
   %c = musttail call ptr @ret_const()
@@ -1491,5 +1491,4 @@ attributes #0 = { noinline nounwind uwtable }
 ; CGSCC: attributes #[[ATTR6:[0-9]+]] = { mustprogress nofree norecurse nosync nounwind willreturn memory(none) }
 ; CGSCC: attributes #[[ATTR7]] = { nofree nosync nounwind }
 ; CGSCC: attributes #[[ATTR8]] = { nounwind }
-; CGSCC: attributes #[[ATTR9]] = { willreturn }
 ;.

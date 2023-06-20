@@ -32,7 +32,7 @@ entry:
 define void @exportedfun(ptr %a) {
 ; TUNIT-LABEL: define {{[^@]+}}@exportedfun
 ; TUNIT-SAME: (ptr nocapture nofree readnone [[A:%.*]]) {
-; TUNIT-NEXT:    [[INALLOCA_SAVE:%.*]] = tail call ptr @llvm.stacksave() #[[ATTR1:[0-9]+]]
+; TUNIT-NEXT:    [[INALLOCA_SAVE:%.*]] = tail call ptr @llvm.stacksave()
 ; TUNIT-NEXT:    [[ARGMEM:%.*]] = alloca inalloca <{ [[STRUCT_A:%.*]] }>, align 4
 ; TUNIT-NEXT:    call x86_thiscallcc void @internalfun(ptr noalias nocapture nofree readnone undef, ptr noundef nonnull inalloca(<{ [[STRUCT_A]] }>) align 4 dereferenceable(1) [[ARGMEM]])
 ; TUNIT-NEXT:    call void @llvm.stackrestore(ptr nofree [[INALLOCA_SAVE]])
@@ -40,7 +40,7 @@ define void @exportedfun(ptr %a) {
 ;
 ; CGSCC-LABEL: define {{[^@]+}}@exportedfun
 ; CGSCC-SAME: (ptr nocapture nofree readnone [[A:%.*]]) {
-; CGSCC-NEXT:    [[INALLOCA_SAVE:%.*]] = tail call ptr @llvm.stacksave() #[[ATTR1:[0-9]+]]
+; CGSCC-NEXT:    [[INALLOCA_SAVE:%.*]] = tail call ptr @llvm.stacksave()
 ; CGSCC-NEXT:    [[ARGMEM:%.*]] = alloca inalloca <{ [[STRUCT_A:%.*]] }>, align 4
 ; CGSCC-NEXT:    call x86_thiscallcc void @internalfun(ptr noalias nocapture nofree readnone [[A]], ptr noundef nonnull inalloca(<{ [[STRUCT_A]] }>) align 4 dereferenceable(1) [[ARGMEM]])
 ; CGSCC-NEXT:    call void @llvm.stackrestore(ptr nofree [[INALLOCA_SAVE]])
@@ -59,5 +59,4 @@ declare ptr @llvm.stacksave()
 declare void @llvm.stackrestore(ptr)
 ;.
 ; CHECK: attributes #[[ATTR0:[0-9]+]] = { nocallback nofree nosync nounwind willreturn }
-; CHECK: attributes #[[ATTR1:[0-9]+]] = { willreturn }
 ;.
