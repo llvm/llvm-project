@@ -70,6 +70,9 @@ protected:
   llvm::StringRef
   GetLibdlFunctionDeclarations(lldb_private::Process *process) override;
 
+  typedef std::unique_ptr<AdbClient> AdbClientUP;
+  virtual AdbClientUP GetAdbClient(Status &error);
+
 private:
   AdbClient::SyncService *GetSyncService(Status &error);
 
@@ -78,7 +81,7 @@ private:
   uint32_t m_sdk_version;
 };
 
-} // namespace platofor_android
+} // namespace platform_android
 } // namespace lldb_private
 
 #endif // LLDB_SOURCE_PLUGINS_PLATFORM_ANDROID_PLATFORMANDROID_H
