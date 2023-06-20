@@ -24,6 +24,6 @@ public:
   bool Init();
   double getCurrentTime() { return pImpl->getCurrentTime(); }
 };
-}; // namespace TimeStatistics
+} // namespace TimeStatistics
 
 #endif // AMD_COMGR_PERF_TIMER_H

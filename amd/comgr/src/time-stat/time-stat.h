@@ -68,6 +68,6 @@ public:
   }
 };
 
-}; // namespace TimeStatistics
+} // namespace TimeStatistics
 
 #endif // AMD_COMGR_TIME_STAT_H
