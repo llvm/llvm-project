@@ -88,7 +88,7 @@ transform.sequence failures(propagate) {
   %1 = transform.structured.match ops{["test.foo"]} in %arg1 : (!transform.any_op) -> !transform.any_op
   transform.apply_patterns to %0 {
     transform.apply_patterns.transform.test_patterns
-  } {fail_on_payload_replacement_not_found = false} : !transform.any_op
+  } {transform.silence_tracking_failures} : !transform.any_op
   transform.annotate %1 "annotated" : !transform.any_op
 }
 

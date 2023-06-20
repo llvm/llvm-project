@@ -1,4 +1,4 @@
-//===- TransformDialect.cpp - Transform dialect operations ----------------===//
+//===- TransformOps.cpp - Transform dialect operations --------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "mlir/Dialect/Transform/IR/TransformOps.h"
+
 #include "mlir/Dialect/Transform/IR/MatchInterfaces.h"
 #include "mlir/Dialect/Transform/IR/TransformAttrs.h"
 #include "mlir/Dialect/Transform/IR/TransformDialect.h"
@@ -115,7 +116,8 @@ static void forwardEmptyOperands(Block *block, transform::TransformState &state,
 }
 
 DiagnosedSilenceableFailure
-transform::AlternativesOp::apply(transform::TransformResults &results,
+transform::AlternativesOp::apply(transform::TransformRewriter &rewriter,
+                                 transform::TransformResults &results,
                                  transform::TransformState &state) {
   SmallVector<Operation *> originals;
   if (Value scopeHandle = getScope())
@@ -222,7 +224,8 @@ LogicalResult transform::AlternativesOp::verify() {
 //===----------------------------------------------------------------------===//
 
 DiagnosedSilenceableFailure
-transform::AnnotateOp::apply(transform::TransformResults &results,
+transform::AnnotateOp::apply(transform::TransformRewriter &rewriter,
+                             transform::TransformResults &results,
                              transform::TransformState &state) {
   SmallVector<Operation *> targets =
       llvm::to_vector(state.getPayloadOps(getTarget()));
@@ -258,10 +261,9 @@ void transform::AnnotateOp::getEffects(
 // ApplyPatternsOp
 //===----------------------------------------------------------------------===//
 
-DiagnosedSilenceableFailure
-transform::ApplyPatternsOp::applyToOne(Operation *target,
-                                       ApplyToEachResultList &results,
-                                       transform::TransformState &state) {
+DiagnosedSilenceableFailure transform::ApplyPatternsOp::applyToOne(
+    transform::TransformRewriter &rewriter, Operation *target,
+    ApplyToEachResultList &results, transform::TransformState &state) {
   // Make sure that this transform is not applied to itself. Modifying the
   // transform IR while it is being interpreted is generally dangerous. Even
   // more so for the ApplyPatternsOp because the GreedyPatternRewriteDriver
@@ -282,9 +284,9 @@ transform::ApplyPatternsOp::applyToOne(Operation *target,
   }
 
   // Configure the GreedyPatternRewriteDriver.
-  ErrorCheckingTrackingListener listener(state, *this);
   GreedyRewriteConfig config;
-  config.listener = &listener;
+  config.listener =
+      static_cast<RewriterBase::Listener *>(rewriter.getListener());
 
   LogicalResult result = failure();
   if (target->hasTrait<OpTrait::IsIsolatedFromAbove>()) {
@@ -310,14 +312,6 @@ transform::ApplyPatternsOp::applyToOne(Operation *target,
   if (failed(result)) {
     return emitSilenceableFailure(target)
            << "greedy pattern application failed";
-  }
-
-  // Check listener state for tracking errors.
-  if (listener.failed()) {
-    DiagnosedSilenceableFailure status = listener.checkAndResetError();
-    if (getFailOnPayloadReplacementNotFound())
-      return status;
-    (void)status.silence();
   }
 
   return DiagnosedSilenceableFailure::success();
@@ -346,12 +340,8 @@ void transform::ApplyPatternsOp::getEffects(
 
 void transform::ApplyPatternsOp::build(
     OpBuilder &builder, OperationState &result, Value target,
-    function_ref<void(OpBuilder &, Location)> bodyBuilder,
-    bool failOnPayloadReplacementNotFound) {
+    function_ref<void(OpBuilder &, Location)> bodyBuilder) {
   result.addOperands(target);
-  result.getOrAddProperties<Properties>()
-      .fail_on_payload_replacement_not_found =
-      builder.getBoolAttr(failOnPayloadReplacementNotFound);
 
   OpBuilder::InsertionGuard g(builder);
   Region *region = result.addRegion();
@@ -377,10 +367,9 @@ void transform::ApplyCanonicalizationPatternsOp::populatePatterns(
 // ApplyRegisteredPassOp
 //===----------------------------------------------------------------------===//
 
-DiagnosedSilenceableFailure
-transform::ApplyRegisteredPassOp::applyToOne(Operation *target,
-                                             ApplyToEachResultList &results,
-                                             transform::TransformState &state) {
+DiagnosedSilenceableFailure transform::ApplyRegisteredPassOp::applyToOne(
+    transform::TransformRewriter &rewriter, Operation *target,
+    ApplyToEachResultList &results, transform::TransformState &state) {
   // Make sure that this transform is not applied to itself. Modifying the
   // transform IR while it is being interpreted is generally dangerous. Even
   // more so when applying passes because they may perform a wide range of IR
@@ -420,7 +409,8 @@ transform::ApplyRegisteredPassOp::applyToOne(Operation *target,
 //===----------------------------------------------------------------------===//
 
 DiagnosedSilenceableFailure
-transform::CastOp::applyToOne(Operation *target, ApplyToEachResultList &results,
+transform::CastOp::applyToOne(transform::TransformRewriter &rewriter,
+                              Operation *target, ApplyToEachResultList &results,
                               transform::TransformState &state) {
   results.push_back(target);
   return DiagnosedSilenceableFailure::success();
@@ -482,7 +472,8 @@ matchBlock(Block &block, Operation *op, transform::TransformState &state,
 }
 
 DiagnosedSilenceableFailure
-transform::ForeachMatchOp::apply(transform::TransformResults &results,
+transform::ForeachMatchOp::apply(transform::TransformRewriter &rewriter,
+                                 transform::TransformResults &results,
                                  transform::TransformState &state) {
   SmallVector<std::pair<FunctionOpInterface, FunctionOpInterface>>
       matchActionPairs;
@@ -780,7 +771,8 @@ LogicalResult transform::ForeachMatchOp::verifySymbolUses(
 //===----------------------------------------------------------------------===//
 
 DiagnosedSilenceableFailure
-transform::ForeachOp::apply(transform::TransformResults &results,
+transform::ForeachOp::apply(transform::TransformRewriter &rewriter,
+                            transform::TransformResults &results,
                             transform::TransformState &state) {
   SmallVector<SmallVector<Operation *>> resultOps(getNumResults(), {});
 
@@ -869,6 +861,7 @@ LogicalResult transform::ForeachOp::verify() {
 //===----------------------------------------------------------------------===//
 
 DiagnosedSilenceableFailure transform::GetClosestIsolatedParentOp::apply(
+    transform::TransformRewriter &rewriter,
     transform::TransformResults &results, transform::TransformState &state) {
   SetVector<Operation *> parents;
   for (Operation *target : state.getPayloadOps(getTarget())) {
@@ -892,7 +885,8 @@ DiagnosedSilenceableFailure transform::GetClosestIsolatedParentOp::apply(
 //===----------------------------------------------------------------------===//
 
 DiagnosedSilenceableFailure
-transform::GetConsumersOfResult::apply(transform::TransformResults &results,
+transform::GetConsumersOfResult::apply(transform::TransformRewriter &rewriter,
+                                       transform::TransformResults &results,
                                        transform::TransformState &state) {
   int64_t resultNumber = getResultNumber();
   auto payloadOps = state.getPayloadOps(getTarget());
@@ -917,7 +911,8 @@ transform::GetConsumersOfResult::apply(transform::TransformResults &results,
 //===----------------------------------------------------------------------===//
 
 DiagnosedSilenceableFailure
-transform::GetDefiningOp::apply(transform::TransformResults &results,
+transform::GetDefiningOp::apply(transform::TransformRewriter &rewriter,
+                                transform::TransformResults &results,
                                 transform::TransformState &state) {
   SmallVector<Operation *> definingOps;
   for (Value v : state.getPayloadValues(getTarget())) {
@@ -938,7 +933,8 @@ transform::GetDefiningOp::apply(transform::TransformResults &results,
 //===----------------------------------------------------------------------===//
 
 DiagnosedSilenceableFailure
-transform::GetProducerOfOperand::apply(transform::TransformResults &results,
+transform::GetProducerOfOperand::apply(transform::TransformRewriter &rewriter,
+                                       transform::TransformResults &results,
                                        transform::TransformState &state) {
   int64_t operandNumber = getOperandNumber();
   SmallVector<Operation *> producers;
@@ -966,7 +962,8 @@ transform::GetProducerOfOperand::apply(transform::TransformResults &results,
 //===----------------------------------------------------------------------===//
 
 DiagnosedSilenceableFailure
-transform::GetResultOp::apply(transform::TransformResults &results,
+transform::GetResultOp::apply(transform::TransformRewriter &rewriter,
+                              transform::TransformResults &results,
                               transform::TransformState &state) {
   int64_t resultNumber = getResultNumber();
   SmallVector<Value> opResults;
@@ -1017,7 +1014,8 @@ applySequenceBlock(Block &block, transform::FailurePropagationMode mode,
 }
 
 DiagnosedSilenceableFailure
-transform::IncludeOp::apply(transform::TransformResults &results,
+transform::IncludeOp::apply(transform::TransformRewriter &rewriter,
+                            transform::TransformResults &results,
                             transform::TransformState &state) {
   auto callee = SymbolTable::lookupNearestSymbolFrom<NamedSequenceOp>(
       getOperation(), getTarget());
@@ -1155,7 +1153,8 @@ DiagnosedSilenceableFailure transform::MatchOperationNameOp::matchOperation(
 //===----------------------------------------------------------------------===//
 
 DiagnosedSilenceableFailure
-transform::MatchParamCmpIOp::apply(transform::TransformResults &results,
+transform::MatchParamCmpIOp::apply(transform::TransformRewriter &rewriter,
+                                   transform::TransformResults &results,
                                    transform::TransformState &state) {
   auto signedAPIntAsString = [&](APInt value) {
     std::string str;
@@ -1241,7 +1240,8 @@ void transform::MatchParamCmpIOp::getEffects(
 //===----------------------------------------------------------------------===//
 
 DiagnosedSilenceableFailure
-transform::ParamConstantOp::apply(transform::TransformResults &results,
+transform::ParamConstantOp::apply(transform::TransformRewriter &rewriter,
+                                  transform::TransformResults &results,
                                   transform::TransformState &state) {
   results.setParams(cast<OpResult>(getParam()), {getValue()});
   return DiagnosedSilenceableFailure::success();
@@ -1252,7 +1252,8 @@ transform::ParamConstantOp::apply(transform::TransformResults &results,
 //===----------------------------------------------------------------------===//
 
 DiagnosedSilenceableFailure
-transform::MergeHandlesOp::apply(transform::TransformResults &results,
+transform::MergeHandlesOp::apply(transform::TransformRewriter &rewriter,
+                                 transform::TransformResults &results,
                                  transform::TransformState &state) {
   SmallVector<Operation *> operations;
   for (Value operand : getHandles())
@@ -1295,7 +1296,8 @@ OpFoldResult transform::MergeHandlesOp::fold(FoldAdaptor adaptor) {
 //===----------------------------------------------------------------------===//
 
 DiagnosedSilenceableFailure
-transform::NamedSequenceOp::apply(transform::TransformResults &results,
+transform::NamedSequenceOp::apply(transform::TransformRewriter &rewriter,
+                                  transform::TransformResults &results,
                                   transform::TransformState &state) {
   // Nothing to do here.
   return DiagnosedSilenceableFailure::success();
@@ -1461,7 +1463,8 @@ void transform::SplitHandleOp::build(OpBuilder &builder, OperationState &result,
 }
 
 DiagnosedSilenceableFailure
-transform::SplitHandleOp::apply(transform::TransformResults &results,
+transform::SplitHandleOp::apply(transform::TransformRewriter &rewriter,
+                                transform::TransformResults &results,
                                 transform::TransformState &state) {
   int64_t numPayloadOps = llvm::range_size(state.getPayloadOps(getHandle()));
   auto produceNumOpsError = [&]() {
@@ -1522,7 +1525,8 @@ LogicalResult transform::SplitHandleOp::verify() {
 //===----------------------------------------------------------------------===//
 
 DiagnosedSilenceableFailure
-transform::ReplicateOp::apply(transform::TransformResults &results,
+transform::ReplicateOp::apply(transform::TransformRewriter &rewriter,
+                              transform::TransformResults &results,
                               transform::TransformState &state) {
   unsigned numRepetitions = llvm::range_size(state.getPayloadOps(getPattern()));
   for (const auto &en : llvm::enumerate(getHandles())) {
@@ -1562,7 +1566,8 @@ void transform::ReplicateOp::getEffects(
 //===----------------------------------------------------------------------===//
 
 DiagnosedSilenceableFailure
-transform::SequenceOp::apply(transform::TransformResults &results,
+transform::SequenceOp::apply(transform::TransformRewriter &rewriter,
+                             transform::TransformResults &results,
                              transform::TransformState &state) {
   // Map the entry block argument to the list of operations.
   auto scope = state.make_region_scope(*getBodyBlock()->getParent());
@@ -1852,7 +1857,8 @@ void transform::PrintOp::build(OpBuilder &builder, OperationState &result,
 }
 
 DiagnosedSilenceableFailure
-transform::PrintOp::apply(transform::TransformResults &results,
+transform::PrintOp::apply(transform::TransformRewriter &rewriter,
+                          transform::TransformResults &results,
                           transform::TransformState &state) {
   llvm::outs() << "[[[ IR printer: ";
   if (getName().has_value())
