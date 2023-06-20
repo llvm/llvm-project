@@ -119,10 +119,20 @@ multiclass RVVSignedShiftBuiltinSet
                           [["vv", "v", "vvUv"],
                            ["vx", "v", "vvz"]]>;
 
+multiclass RVVSignedShiftBuiltinSetRoundingMode
+    : RVVOutOp1BuiltinSet<NAME, "csil",
+                          [["vv", "v", "vvUvu"],
+                           ["vx", "v", "vvzu"]]>;
+
 multiclass RVVUnsignedShiftBuiltinSet
     : RVVOutOp1BuiltinSet<NAME, "csil",
                           [["vv", "Uv", "UvUvUv"],
                            ["vx", "Uv", "UvUvz"]]>;
+
+multiclass RVVUnsignedShiftBuiltinSetRoundingMode
+    : RVVOutOp1BuiltinSet<NAME, "csil",
+                          [["vv", "Uv", "UvUvUvu"],
+                           ["vx", "Uv", "UvUvzu"]]>;
 
 multiclass RVVShiftBuiltinSet
     : RVVSignedShiftBuiltinSet,
@@ -133,10 +143,22 @@ let Log2LMUL = [-3, -2, -1, 0, 1, 2] in {
       : RVVOutOp0Op1BuiltinSet<NAME, "csil",
                                      [["wv", "v", "vwUv"],
                                       ["wx", "v", "vwz"]]>;
+
+  multiclass RVVSignedNShiftBuiltinSetRoundingMode
+      : RVVOutOp0Op1BuiltinSet<NAME, "csil",
+                                     [["wv", "v", "vwUvu"],
+                                      ["wx", "v", "vwzu"]]>;
+
   multiclass RVVUnsignedNShiftBuiltinSet
       : RVVOutOp0Op1BuiltinSet<NAME, "csil",
                                      [["wv", "Uv", "UvUwUv"],
                                       ["wx", "Uv", "UvUwz"]]>;
+
+  multiclass RVVUnsignedNShiftBuiltinSetRoundingMode
+      : RVVOutOp0Op1BuiltinSet<NAME, "csil",
+                                     [["wv", "Uv", "UvUwUvu"],
+                                      ["wx", "Uv", "UvUwzu"]]>;
+
 }
 
 multiclass RVVCarryinBuiltinSet
@@ -1743,7 +1765,6 @@ defm vsadd : RVVSignedBinBuiltinSet;
 defm vssubu : RVVUnsignedBinBuiltinSet;
 defm vssub : RVVSignedBinBuiltinSet;
 
-// 13.2. Vector Single-Width Averaging Add and Subtract
 let ManualCodegen = [{
   {
     // LLVM intrinsic
@@ -1779,24 +1800,62 @@ let ManualCodegen = [{
     return Builder.CreateCall(F, Operands, "");
   }
 }] in {
+  // 13.2. Vector Single-Width Averaging Add and Subtract
   defm vaaddu : RVVUnsignedBinBuiltinSetRoundingMode;
   defm vaadd : RVVSignedBinBuiltinSetRoundingMode;
   defm vasubu : RVVUnsignedBinBuiltinSetRoundingMode;
   defm vasub : RVVSignedBinBuiltinSetRoundingMode;
+
+  // 13.3. Vector Single-Width Fractional Multiply with Rounding and Saturation
+  let RequiredFeatures = ["FullMultiply"] in {
+  defm vsmul : RVVSignedBinBuiltinSetRoundingMode;
+  }
+
+  // 13.4. Vector Single-Width Scaling Shift Instructions
+  defm vssrl : RVVUnsignedShiftBuiltinSetRoundingMode;
+  defm vssra : RVVSignedShiftBuiltinSetRoundingMode;
 }
 
-// 13.3. Vector Single-Width Fractional Multiply with Rounding and Saturation
-let RequiredFeatures = ["FullMultiply"] in {
-defm vsmul : RVVSignedBinBuiltinSet;
+let ManualCodegen = [{
+  {
+    // LLVM intrinsic
+    // Unmasked: (passthru, op0, op1, round_mode, vl)
+    // Masked:   (passthru, vector_in, vector_in/scalar_in, mask, vxrm, vl, policy)
+
+    SmallVector<llvm::Value*, 7> Operands;
+    bool HasMaskedOff = !(
+        (IsMasked && (PolicyAttrs & RVV_VTA) && (PolicyAttrs & RVV_VMA)) ||
+        (!IsMasked && PolicyAttrs & RVV_VTA));
+    unsigned Offset = IsMasked ?
+        (HasMaskedOff ? 2 : 1) : (HasMaskedOff ? 1 : 0);
+
+    if (!HasMaskedOff)
+      Operands.push_back(llvm::PoisonValue::get(ResultType));
+    else
+      Operands.push_back(Ops[IsMasked ? 1 : 0]);
+
+    Operands.push_back(Ops[Offset]); // op0
+    Operands.push_back(Ops[Offset + 1]); // op1
+
+    if (IsMasked)
+      Operands.push_back(Ops[0]); // mask
+
+    Operands.push_back(Ops[Offset + 2]); // vxrm
+    Operands.push_back(Ops[Offset + 3]); // vl
+
+    if (IsMasked)
+      Operands.push_back(ConstantInt::get(Ops.back()->getType(), PolicyAttrs));
+
+    IntrinsicTypes = {ResultType, Ops[Offset]->getType(), Ops[Offset + 1]->getType(),
+                      Ops.back()->getType()};
+    llvm::Function *F = CGM.getIntrinsic(ID, IntrinsicTypes);
+    return Builder.CreateCall(F, Operands, "");
+  }
+}] in {
+  // 13.5. Vector Narrowing Fixed-Point Clip Instructions
+  defm vnclipu : RVVUnsignedNShiftBuiltinSetRoundingMode;
+  defm vnclip : RVVSignedNShiftBuiltinSetRoundingMode;
 }
-
-// 13.4. Vector Single-Width Scaling Shift Instructions
-defm vssrl : RVVUnsignedShiftBuiltinSet;
-defm vssra : RVVSignedShiftBuiltinSet;
-
-// 13.5. Vector Narrowing Fixed-Point Clip Instructions
-defm vnclipu : RVVUnsignedNShiftBuiltinSet;
-defm vnclip : RVVSignedNShiftBuiltinSet;
 
 // 14. Vector Floating-Point Instructions
 // 14.2. Vector Single-Width Floating-Point Add/Subtract Instructions
