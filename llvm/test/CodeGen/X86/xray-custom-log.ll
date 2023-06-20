@@ -6,10 +6,10 @@
 
 define i32 @customevent() nounwind "function-instrument"="xray-always" !dbg !1 {
     %eventptr = alloca i8
-    %eventsize = alloca i32
-    store i32 3, ptr %eventsize
-    %val = load i32, ptr %eventsize
-    call void @llvm.xray.customevent(ptr %eventptr, i32 %val), !dbg !8
+    %eventsize = alloca i64
+    store i64 3, ptr %eventsize
+    %val = load i64, ptr %eventsize
+    call void @llvm.xray.customevent(ptr %eventptr, i64 %val), !dbg !8
     ; CHECK-LABEL: Lxray_event_sled_0:
     ; CHECK:       .byte 0xeb, 0x0f
     ; CHECK-NEXT:  pushq %rdi
@@ -75,7 +75,7 @@ define i32 @typedevent() nounwind "function-instrument"="xray-always" !dbg !2 {
 ; CHECK-LABEL: Lxray_sleds_start1:
 ; CHECK:       .quad {{.*}}xray_typed_event_sled_0
 
-declare void @llvm.xray.customevent(ptr, i32)
+declare void @llvm.xray.customevent(ptr, i64)
 declare void @llvm.xray.typedevent(i64, ptr, i64)
 
 ;; Construct call site entries for PATCHABLE_EVENT_CALL.
