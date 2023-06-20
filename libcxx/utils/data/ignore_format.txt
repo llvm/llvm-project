@@ -186,7 +186,6 @@ libcxx/include/__filesystem/directory_entry.h
 libcxx/include/__filesystem/directory_iterator.h
 libcxx/include/__filesystem/directory_options.h
 libcxx/include/__filesystem/file_status.h
-libcxx/include/__filesystem/filesystem_error.h
 libcxx/include/__filesystem/file_type.h
 libcxx/include/__filesystem/operations.h
 libcxx/include/__filesystem/path.h
