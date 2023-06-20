@@ -181,7 +181,7 @@ void sharedObjectTest(amd_comgr_data_kind_t Kind) {
   free(Buf);
 }
 
-int main() {
+int main(void) {
 #ifdef HIP_COMPILER
   createFatBinary("source1.hip", TEST_OBJ_DIR "/source1.hip",
                   TEST_OBJ_DIR "/source1.fatbin");
