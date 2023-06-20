@@ -618,6 +618,36 @@ TEST_F(TargetDeclTest, Coroutine) {
   EXPECT_DECLS("RecordTypeLoc", "struct executor");
 }
 
+TEST_F(TargetDeclTest, RewrittenBinaryOperator) {
+  Flags.push_back("-std=c++20");
+
+  Code = R"cpp(
+  namespace std {
+    struct strong_ordering {
+      int n;
+      constexpr operator int() const { return n; }
+      static const strong_ordering equal, greater, less;
+    };
+    constexpr strong_ordering strong_ordering::equal = {0};
+    constexpr strong_ordering strong_ordering::greater = {1};
+    constexpr strong_ordering strong_ordering::less = {-1};
+    }
+
+    struct Foo
+    {
+      int x;
+      auto operator<=>(const Foo&) const = default;
+    };
+
+    bool x = (Foo(1) [[!=]] Foo(2));
+  )cpp";
+  EXPECT_DECLS("CXXRewrittenBinaryOperator",
+               {"std::strong_ordering operator<=>(const Foo &) const = default",
+                Rel::TemplatePattern},
+               {"bool operator==(const Foo &) const noexcept = default",
+                Rel::TemplateInstantiation});
+}
+
 TEST_F(TargetDeclTest, FunctionTemplate) {
   Code = R"cpp(
     // Implicit specialization.
