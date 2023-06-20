@@ -6,6 +6,8 @@
 # RUN:   -misched-dump-schedule-trace=true -misched-dump-schedule-trace-col-header-width=21 \
 # RUN: | FileCheck  %s
 
+# REQUIRES: asserts, aarch64-registered-target
+
 --- |
   ; ModuleID = '../llvm-project/llvm/test/CodeGen/AArch64/aarch64-smull.failing.ll'
   source_filename = "../llvm-project/llvm/test/CodeGen/AArch64/aarch64-smull.failing.ll"
