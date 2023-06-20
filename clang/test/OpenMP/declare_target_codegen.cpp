@@ -27,11 +27,13 @@
 // CHECK-DAG: Bake
 // CHECK-NOT: @{{hhh|ggg|fff|eee}} =
 // CHECK-DAG: @flag = protected global i8 undef,
+// CHECK-DAG: @dx = {{protected | }}global i32 0,
+// CHECK-DAG: @dy = {{protected | }}global i32 0,
 // CHECK-DAG: @aaa = external global i32,
-// CHECK-DAG: @bbb ={{ protected | }}global i32 0,
+// CHECK-DAG: @bbb = {{protected | }}global i32 0,
 // CHECK-DAG: weak constant %struct.__tgt_offload_entry { ptr @bbb,
 // CHECK-DAG: @ccc = external global i32,
-// CHECK-DAG: @ddd ={{ protected | }}global i32 0,
+// CHECK-DAG: @ddd = {{protected | }}global i32 0,
 // CHECK-DAG: @hhh_decl_tgt_ref_ptr = weak global ptr null
 // CHECK-DAG: @ggg_decl_tgt_ref_ptr = weak global ptr null
 // CHECK-DAG: @fff_decl_tgt_ref_ptr = weak global ptr null
@@ -51,10 +53,21 @@
 // CHECK-DAG: define {{.*}}i32 @{{.*}}{{foo|bar|baz2|baz3|FA|f_method}}{{.*}}()
 // CHECK-DAG: define {{.*}}void @{{.*}}TemplateClass{{.*}}(ptr {{[^,]*}} %{{.*}})
 // CHECK-DAG: define {{.*}}i32 @{{.*}}TemplateClass{{.*}}f_method{{.*}}(ptr {{[^,]*}} %{{.*}})
-// CHECK-DAG: define {{.*}}void @__omp_offloading_{{.*}}_globals_l[[@LINE+78]]_ctor()
+// CHECK-DAG: define {{.*}}void @__omp_offloading_{{.*}}_globals_l[[@LINE+89]]_ctor()
 
 #ifndef HEADER
 #define HEADER
+
+int dx = 0;
+extern int dx;
+#pragma omp declare target to(dx)
+
+int dy = 0;
+#pragma omp begin declare target
+
+extern int dy;
+#pragma omp end declare target
+
 #pragma omp declare target
 bool flag [[clang::loader_uninitialized]];
 extern int bbb;
