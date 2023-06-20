@@ -56,7 +56,6 @@ public:
   // file position indicator.
   using SeekFunc = ErrorOr<long>(File *, long, int);
   using CloseFunc = int(File *);
-  using FlushFunc = int(File *);
   // CleanupFunc is a function which does the equivalent of this:
   //
   // void my_file_cleanup(File *f) {
@@ -103,7 +102,6 @@ private:
   ReadFunc *platform_read;
   SeekFunc *platform_seek;
   CloseFunc *platform_close;
-  FlushFunc *platform_flush;
   CleanupFunc *platform_cleanup;
 
   Mutex mutex;
@@ -202,15 +200,13 @@ public:
   // is zero. This way, we will not have to employ the semantics of
   // the set_buffer method and allocate a buffer.
   constexpr File(WriteFunc *wf, ReadFunc *rf, SeekFunc *sf, CloseFunc *cf,
-                 FlushFunc *ff, CleanupFunc *clf, uint8_t *buffer,
-                 size_t buffer_size, int buffer_mode, bool owned,
-                 ModeFlags modeflags)
+                 CleanupFunc *clf, uint8_t *buffer, size_t buffer_size,
+                 int buffer_mode, bool owned, ModeFlags modeflags)
       : platform_write(wf), platform_read(rf), platform_seek(sf),
-        platform_close(cf), platform_flush(ff), platform_cleanup(clf),
-        mutex(false, false, false), ungetc_buf(0), buf(buffer),
-        bufsize(buffer_size), bufmode(buffer_mode), own_buf(owned),
-        mode(modeflags), pos(0), prev_op(FileOp::NONE), read_limit(0),
-        eof(false), err(false) {
+        platform_close(cf), platform_cleanup(clf), mutex(false, false, false),
+        ungetc_buf(0), buf(buffer), bufsize(buffer_size), bufmode(buffer_mode),
+        own_buf(owned), mode(modeflags), pos(0), prev_op(FileOp::NONE),
+        read_limit(0), eof(false), err(false) {
     if constexpr (ENABLE_BUFFER)
       adjust_buf();
   }

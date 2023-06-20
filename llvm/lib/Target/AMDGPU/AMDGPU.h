@@ -327,9 +327,6 @@ extern char &SIMemoryLegalizerID;
 void initializeSIModeRegisterPass(PassRegistry&);
 extern char &SIModeRegisterID;
 
-void initializeAMDGPUReleaseVGPRsPass(PassRegistry &);
-extern char &AMDGPUReleaseVGPRsID;
-
 void initializeAMDGPUInsertDelayAluPass(PassRegistry &);
 extern char &AMDGPUInsertDelayAluID;
 

@@ -759,7 +759,8 @@ void LVELFReader::createLineAndFileRecords(
     }
 }
 
-std::string LVELFReader::getRegisterName(LVSmall Opcode, uint64_t Operands[2]) {
+std::string LVELFReader::getRegisterName(LVSmall Opcode,
+                                         ArrayRef<uint64_t> Operands) {
   // The 'prettyPrintRegisterOp' function uses the DWARFUnit to support
   // DW_OP_regval_type. At this point we are operating on a logical view
   // item, with no access to the underlying DWARF data used by LLVM.
@@ -973,19 +974,8 @@ void LVELFReader::processLocationList(dwarf::Attribute Attr,
                                       bool CallSiteLocation) {
 
   auto ProcessLocationExpression = [&](const DWARFExpression &Expression) {
-    // DW_OP_const_type is variable-length and has 3
-    // operands. DWARFExpression thus far only supports 2.
-    uint64_t Operands[2] = {0};
-    for (const DWARFExpression::Operation &Op : Expression) {
-      DWARFExpression::Operation::Description Description = Op.getDescription();
-      for (unsigned Operand = 0; Operand < 2; ++Operand) {
-        if (Description.Op[Operand] == DWARFExpression::Operation::SizeNA)
-          break;
-        Operands[Operand] = Op.getRawOperand(Operand);
-      }
-      CurrentSymbol->addLocationOperands(Op.getCode(), Operands[0],
-                                         Operands[1]);
-    }
+    for (const DWARFExpression::Operation &Op : Expression)
+      CurrentSymbol->addLocationOperands(Op.getCode(), Op.getRawOperands());
   };
 
   DWARFUnit *U = Die.getDwarfUnit();

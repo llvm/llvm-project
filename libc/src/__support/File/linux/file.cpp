@@ -24,7 +24,6 @@ FileIOResult write_func(File *, const void *, size_t);
 FileIOResult read_func(File *, void *, size_t);
 ErrorOr<long> seek_func(File *, long, int);
 int close_func(File *);
-int flush_func(File *);
 
 } // anonymous namespace
 
@@ -34,7 +33,7 @@ class LinuxFile : public File {
 public:
   constexpr LinuxFile(int file_descriptor, uint8_t *buffer, size_t buffer_size,
                       int buffer_mode, bool owned, File::ModeFlags modeflags)
-      : File(&write_func, &read_func, &seek_func, &close_func, flush_func,
+      : File(&write_func, &read_func, &seek_func, &close_func,
              &cleanup_file<LinuxFile>, buffer, buffer_size, buffer_mode, owned,
              modeflags),
         fd(file_descriptor) {}
@@ -85,15 +84,6 @@ ErrorOr<long> seek_func(File *f, long offset, int whence) {
 int close_func(File *f) {
   auto *lf = reinterpret_cast<LinuxFile *>(f);
   int ret = __llvm_libc::syscall_impl(SYS_close, lf->get_fd());
-  if (ret < 0) {
-    return -ret;
-  }
-  return 0;
-}
-
-int flush_func(File *f) {
-  auto *lf = reinterpret_cast<LinuxFile *>(f);
-  int ret = __llvm_libc::syscall_impl(SYS_fsync, lf->get_fd());
   if (ret < 0) {
     return -ret;
   }

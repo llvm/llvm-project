@@ -76,8 +76,9 @@ extern int __xray_remove_customevent_handler();
 
 /// Set a handler for xray typed event logging. The first parameter is a type
 /// identifier, the second is a payload, and the third is the payload size.
-extern int __xray_set_typedevent_handler(void (*entry)(uint16_t, const void *,
-                                                       std::size_t));
+/// NOTE: fdrLoggingHandleTypedEvent only supports uint16_t event type.
+extern int __xray_set_typedevent_handler(void (*entry)(size_t, const void *,
+                                                       size_t));
 
 /// Removes the currently set typed event handler.
 /// Returns 1 on success, 0 on error.

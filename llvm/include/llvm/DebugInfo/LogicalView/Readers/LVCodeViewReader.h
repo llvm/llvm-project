@@ -215,7 +215,8 @@ public:
   static StringRef getSymbolKindName(SymbolKind Kind);
   static std::string formatRegisterId(RegisterId Register, CPUType CPU);
 
-  std::string getRegisterName(LVSmall Opcode, uint64_t Operands[2]) override;
+  std::string getRegisterName(LVSmall Opcode,
+                              ArrayRef<uint64_t> Operands) override;
 
   bool isSystemEntry(LVElement *Element, StringRef Name) const override;
 

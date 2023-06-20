@@ -16,7 +16,6 @@ define amdgpu_cs void @flat_atomic_fmin_f32_noret(ptr %ptr, float %data) {
 ; GFX11-LABEL: flat_atomic_fmin_f32_noret:
 ; GFX11:       ; %bb.0:
 ; GFX11-NEXT:    flat_atomic_min_f32 v[0:1], v2
-; GFX11-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-NEXT:    s_endpgm
   %ret = call float @llvm.amdgcn.flat.atomic.fmin.f32.p1.f32(ptr %ptr, float %data)
   ret void
@@ -31,7 +30,6 @@ define amdgpu_cs void @flat_atomic_fmax_f32_noret(ptr %ptr, float %data) {
 ; GFX11-LABEL: flat_atomic_fmax_f32_noret:
 ; GFX11:       ; %bb.0:
 ; GFX11-NEXT:    flat_atomic_max_f32 v[0:1], v2
-; GFX11-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-NEXT:    s_endpgm
   %ret = call float @llvm.amdgcn.flat.atomic.fmax.f32.p1.f32(ptr %ptr, float %data)
   ret void

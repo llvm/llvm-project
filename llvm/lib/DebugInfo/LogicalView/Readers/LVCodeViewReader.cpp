@@ -1212,7 +1212,7 @@ Error LVCodeViewReader::loadTargetInfo(const PDBFile &Pdb) {
 }
 
 std::string LVCodeViewReader::getRegisterName(LVSmall Opcode,
-                                              uint64_t Operands[2]) {
+                                              ArrayRef<uint64_t> Operands) {
   // Get Compilation Unit CPU Type.
   CPUType CPU = getCompileUnitCPUType();
   // For CodeView the register always is in Operands[0];

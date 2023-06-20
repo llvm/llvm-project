@@ -5420,8 +5420,10 @@ let TargetPrefix = "x86" in {
                         [llvm_i16_ty, llvm_i16_ty, llvm_i16_ty,
                          llvm_x86amx_ty, llvm_x86amx_ty,
                          llvm_x86amx_ty], []>;
+  // the vector size can be smaller than AMX register size (1024 bytes)
   def int_x86_cast_vector_to_tile:
       DefaultAttrsIntrinsic<[llvm_x86amx_ty], [llvm_anyvector_ty], [IntrNoMem]>;
+  // the vector size can be smaller than AMX register size (1024 bytes)
   def int_x86_cast_tile_to_vector:
       DefaultAttrsIntrinsic<[llvm_anyvector_ty], [llvm_x86amx_ty], [IntrNoMem]>;
 

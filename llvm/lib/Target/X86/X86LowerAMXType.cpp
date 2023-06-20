@@ -934,9 +934,8 @@ bool X86LowerAMXCast::combineCastStore(IntrinsicInst *Cast, StoreInst *ST) {
   Value *Row = II->getOperand(0);
   Value *Col = II->getOperand(1);
   IRBuilder<> Builder(ST);
-  // Use the maximum column as stride. It must be the same with load
-  // stride.
-  Value *Stride = Builder.getInt64(64);
+  // Stride should be equal to col(measured by bytes)
+  Value *Stride = Builder.CreateSExt(Col, Builder.getInt64Ty());
   Value *I8Ptr =
       Builder.CreateBitCast(ST->getOperand(1), Builder.getInt8PtrTy());
   std::array<Value *, 5> Args = {Row, Col, I8Ptr, Stride, Tile};
@@ -962,8 +961,8 @@ bool X86LowerAMXCast::combineLoadCast(IntrinsicInst *Cast, LoadInst *LD) {
     return false;
   std::tie(Row, Col) = getShape(II, OpNo);
   IRBuilder<> Builder(LD);
-  // Use the maximun column as stride.
-  Value *Stride = Builder.getInt64(64);
+  // Stride should be equal to col(measured by bytes)
+  Value *Stride = Builder.CreateSExt(Col, Builder.getInt64Ty());
   Value *I8Ptr;
 
   // To save compiling time, we create doninator tree when it is really
@@ -1089,8 +1088,14 @@ bool X86LowerAMXCast::combineAMXcast(TargetLibraryInfo *TLI) {
 
   EraseInst(Vec2TileInsts);
   EraseInst(Tile2VecInsts);
+  LLVM_DEBUG(dbgs() << "[LowerAMXTYpe][combineAMXcast] IR dump after combine "
+                       "Vec2Tile and Tile2Vec:\n";
+             Func.dump());
   Change |= combineLdSt(LiveCasts);
   EraseInst(LiveCasts);
+  LLVM_DEBUG(dbgs() << "[LowerAMXTYpe][combineAMXcast] IR dump after combine "
+                       "AMXCast and load/store:\n";
+             Func.dump());
 
   // Handle the A->B->A cast, and there is an intervening PHI node.
   for (BasicBlock &BB : Func) {
@@ -1118,6 +1123,9 @@ bool X86LowerAMXCast::combineAMXcast(TargetLibraryInfo *TLI) {
     Instruction *I = DeadInst.pop_back_val();
     Change |= DCEInstruction(I, DeadInst, TLI);
   }
+  LLVM_DEBUG(dbgs() << "[LowerAMXTYpe][combineAMXcast] IR dump after "
+                       "optimizeAMXCastFromPhi:\n";
+             Func.dump());
   return Change;
 }
 

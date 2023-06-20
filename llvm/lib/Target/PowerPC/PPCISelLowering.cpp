@@ -3326,9 +3326,31 @@ SDValue PPCTargetLowering::LowerGlobalTLSAddressAIX(SDValue Op,
   SDLoc dl(GA);
   const GlobalValue *GV = GA->getGlobal();
   EVT PtrVT = getPointerTy(DAG.getDataLayout());
+  bool Is64Bit = Subtarget.isPPC64();
+  TLSModel::Model Model = getTargetMachine().getTLSModel(GV);
 
-  // The general-dynamic model is the only access model supported for now, so
-  // all the GlobalTLSAddress nodes are lowered with this model.
+  if (Model == TLSModel::LocalExec) {
+    if (Is64Bit) {
+      // For local-exec on AIX (64-bit), the sequence that is generated involves
+      // a load of the variable offset (from the TOC), followed by an add of the
+      // loaded variable offset to R13 (the thread pointer).
+      // This code sequence looks like:
+      //    ld reg1,var[TC](2)
+      //    add reg2, reg1, r13     // r13 contains the thread pointer
+      SDValue TLSReg = DAG.getRegister(PPC::X13, MVT::i64);
+      SDValue VariableOffsetTGA =
+          DAG.getTargetGlobalAddress(GV, dl, PtrVT, 0, PPCII::MO_TPREL_FLAG);
+      SDValue VariableOffset = getTOCEntry(DAG, dl, VariableOffsetTGA);
+      return DAG.getNode(PPCISD::ADD_TLS, dl, PtrVT, TLSReg, VariableOffset);
+    } else {
+      report_fatal_error("On AIX, the local-exec TLS model is only supported "
+                         "on PPC64 for now.");
+    }
+  }
+
+  // The Local-Exec and General-Dynamic TLS models are currently the only
+  // supported access models. If Local-exec is not possible or specified, all
+  // GlobalTLSAddress nodes are lowered using the general-dynamic model.
   // We need to generate two TOC entries, one for the variable offset, one for
   // the region handle. The global address for the TOC entry of the region
   // handle is created with the MO_TLSGDM_FLAG flag and the global address

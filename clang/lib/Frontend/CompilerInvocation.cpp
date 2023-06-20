@@ -1894,7 +1894,7 @@ bool CompilerInvocation::ParseCodeGenArgs(CodeGenOptions &Opts, ArgList &Args,
   if (Arg *A = Args.getLastArg(OPT_ftlsmodel_EQ)) {
     if (T.isOSAIX()) {
       StringRef Name = A->getValue();
-      if (Name != "global-dynamic")
+      if (Name != "global-dynamic" && Name != "local-exec")
         Diags.Report(diag::err_aix_unsupported_tls_model) << Name;
     }
   }
