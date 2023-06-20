@@ -234,10 +234,32 @@ Status PlatformAndroid::DownloadModuleSlice(const FileSpec &src_file_spec,
                                             const uint64_t src_offset,
                                             const uint64_t src_size,
                                             const FileSpec &dst_file_spec) {
-  if (src_offset != 0)
-    return Status("Invalid offset - %" PRIu64, src_offset);
+  // In Android API level 23 and above, dynamic loader is able to load .so
+  // file directly from APK. In that case, src_offset will be an non-zero.
+  if (src_offset == 0) // Use GetFile for a normal file.
+    return GetFile(src_file_spec, dst_file_spec);
 
-  return GetFile(src_file_spec, dst_file_spec);
+  std::string source_file = src_file_spec.GetPath(false);
+  if (source_file.find('\'') != std::string::npos)
+    return Status("Doesn't support single-quotes in filenames");
+
+  // For zip .so file, src_file_spec will be "zip_path!/so_path".
+  // Extract "zip_path" from the source_file.
+  static constexpr llvm::StringLiteral k_zip_separator("!/");
+  size_t pos = source_file.find(k_zip_separator);
+  if (pos != std::string::npos)
+    source_file = source_file.substr(0, pos);
+
+  AdbClient adb(m_device_id);
+
+  // Use 'shell dd' to download the file slice with the offset and size.
+  char cmd[PATH_MAX];
+  snprintf(cmd, sizeof(cmd),
+           "dd if='%s' iflag=skip_bytes,count_bytes "
+           "skip=%" PRIu64 " count=%" PRIu64 " status=none",
+           source_file.c_str(), src_offset, src_size);
+
+  return adb.ShellToFile(cmd, minutes(1), dst_file_spec);
 }
 
 Status PlatformAndroid::DisconnectRemote() {
@@ -310,15 +332,16 @@ Status PlatformAndroid::DownloadSymbolFile(const lldb::ModuleSP &module_sp,
 
   // Create file remover for the temporary directory created on the device
   std::unique_ptr<std::string, std::function<void(std::string *)>>
-  tmpdir_remover(&tmpdir, [&adb](std::string *s) {
-    StreamString command;
-    command.Printf("rm -rf %s", s->c_str());
-    Status error = adb.Shell(command.GetData(), seconds(5), nullptr);
+      tmpdir_remover(&tmpdir, [&adb](std::string *s) {
+        StreamString command;
+        command.Printf("rm -rf %s", s->c_str());
+        Status error = adb.Shell(command.GetData(), seconds(5), nullptr);
 
-    Log *log = GetLog(LLDBLog::Platform);
-    if (log && error.Fail())
-      LLDB_LOGF(log, "Failed to remove temp directory: %s", error.AsCString());
-  });
+        Log *log = GetLog(LLDBLog::Platform);
+        if (log && error.Fail())
+          LLDB_LOGF(log, "Failed to remove temp directory: %s",
+                    error.AsCString());
+      });
 
   FileSpec symfile_platform_filespec(tmpdir);
   symfile_platform_filespec.AppendPathComponent("symbolized.oat");
@@ -344,15 +367,15 @@ bool PlatformAndroid::GetRemoteOSVersion() {
 llvm::StringRef
 PlatformAndroid::GetLibdlFunctionDeclarations(lldb_private::Process *process) {
   SymbolContextList matching_symbols;
-  std::vector<const char *> dl_open_names = { "__dl_dlopen", "dlopen" };
+  std::vector<const char *> dl_open_names = {"__dl_dlopen", "dlopen"};
   const char *dl_open_name = nullptr;
   Target &target = process->GetTarget();
-  for (auto name: dl_open_names) {
+  for (auto name : dl_open_names) {
     target.GetImages().FindFunctionSymbols(
         ConstString(name), eFunctionNameTypeFull, matching_symbols);
     if (matching_symbols.GetSize()) {
-       dl_open_name = name;
-       break;
+      dl_open_name = name;
+      break;
     }
   }
   // Older platform versions have the dl function symbols mangled
