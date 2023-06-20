@@ -117,6 +117,7 @@ void BinarySection::emitAsData(MCStreamer &Streamer,
       if (std::any_of(ROI, ROE, HasUndefSym))
         continue;
 
+#ifndef NDEBUG
       for (const auto &Relocation : make_range(ROI, ROE)) {
         LLVM_DEBUG(
             dbgs() << "BOLT-DEBUG: emitting relocation for symbol "
@@ -126,6 +127,7 @@ void BinarySection::emitAsData(MCStreamer &Streamer,
                    << " with size "
                    << Relocation::getSizeForType(Relocation.Type) << '\n');
       }
+#endif
 
       size_t RelocationSize = Relocation::emit(ROI, ROE, &Streamer);
       SectionOffset += RelocationSize;
