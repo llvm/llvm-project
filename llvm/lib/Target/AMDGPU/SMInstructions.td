@@ -302,7 +302,8 @@ multiclass SM_Pseudo_Atomics<RegisterClass baseClass,
 // does sdst for SMRD on SI/CI?
 defm S_LOAD_DWORD    : SM_Pseudo_Loads <SReg_64, SReg_32_XM0_XEXEC>;
 defm S_LOAD_DWORDX2  : SM_Pseudo_Loads <SReg_64, SReg_64_XEXEC>;
-defm S_LOAD_DWORDX3  : SM_Pseudo_Loads <SReg_64, SReg_96>;
+let SubtargetPredicate = HasScalarDwordx3Loads in
+  defm S_LOAD_DWORDX3  : SM_Pseudo_Loads <SReg_64, SReg_96>;
 defm S_LOAD_DWORDX4  : SM_Pseudo_Loads <SReg_64, SReg_128>;
 defm S_LOAD_DWORDX8  : SM_Pseudo_Loads <SReg_64, SReg_256>;
 defm S_LOAD_DWORDX16 : SM_Pseudo_Loads <SReg_64, SReg_512>;
@@ -316,7 +317,8 @@ defm S_BUFFER_LOAD_DWORD : SM_Pseudo_Loads <SReg_128, SReg_32_XM0_XEXEC>;
 // FIXME: exec_lo/exec_hi appear to be allowed for SMRD loads on
 // SI/CI, bit disallowed for SMEM on VI.
 defm S_BUFFER_LOAD_DWORDX2 : SM_Pseudo_Loads <SReg_128, SReg_64_XEXEC>;
-defm S_BUFFER_LOAD_DWORDX3 : SM_Pseudo_Loads <SReg_128, SReg_96>;
+let SubtargetPredicate = HasScalarDwordx3Loads in
+  defm S_BUFFER_LOAD_DWORDX3 : SM_Pseudo_Loads <SReg_128, SReg_96>;
 defm S_BUFFER_LOAD_DWORDX4 : SM_Pseudo_Loads <SReg_128, SReg_128>;
 defm S_BUFFER_LOAD_DWORDX8 : SM_Pseudo_Loads <SReg_128, SReg_256>;
 defm S_BUFFER_LOAD_DWORDX16 : SM_Pseudo_Loads <SReg_128, SReg_512>;
@@ -850,7 +852,7 @@ def SMRDBufferImm   : ComplexPattern<iPTR, 1, "SelectSMRDBufferImm">;
 def SMRDBufferImm32 : ComplexPattern<iPTR, 1, "SelectSMRDBufferImm32">;
 def SMRDBufferSgprImm : ComplexPattern<iPTR, 2, "SelectSMRDBufferSgprImm">;
 
-multiclass SMRD_Pattern <string Instr, ValueType vt> {
+multiclass SMRD_Pattern <string Instr, ValueType vt, bit immci = true> {
 
   // 1. IMM offset
   def : GCNPat <
@@ -859,7 +861,7 @@ multiclass SMRD_Pattern <string Instr, ValueType vt> {
   >;
 
   // 2. 32-bit IMM offset on CI
-  def : GCNPat <
+  if immci then def : GCNPat <
     (smrd_load (SMRDImm32 i64:$sbase, i32:$offset)),
     (vt (!cast<InstSI>(Instr#"_IMM_ci") $sbase, $offset, 0))> {
     let OtherPredicates = [isGFX7Only];
@@ -891,7 +893,7 @@ multiclass SMRD_Pattern <string Instr, ValueType vt> {
   >;
 }
 
-multiclass SMLoad_Pattern <string Instr, ValueType vt> {
+multiclass SMLoad_Pattern <string Instr, ValueType vt, bit immci = true> {
   // 1. Offset as an immediate
   def : GCNPat <
     (SIsbuffer_load v4i32:$sbase, (SMRDBufferImm i32:$offset), timm:$cachepolicy),
@@ -900,7 +902,7 @@ multiclass SMLoad_Pattern <string Instr, ValueType vt> {
   }
 
   // 2. 32-bit IMM offset on CI
-  def : GCNPat <
+  if immci then def : GCNPat <
     (vt (SIsbuffer_load v4i32:$sbase, (SMRDBufferImm32 i32:$offset), timm:$cachepolicy)),
     (!cast<InstSI>(Instr#"_IMM_ci") SReg_128:$sbase, smrd_literal_offset:$offset,
                                     (extract_cpol $cachepolicy))> {
@@ -1003,6 +1005,10 @@ foreach vt = SReg_64.RegTypes in {
 defm : SMRD_Pattern <"S_LOAD_DWORDX2", vt>;
 }
 
+foreach vt = SReg_96.RegTypes in {
+defm : SMRD_Pattern <"S_LOAD_DWORDX3", vt, false>;
+}
+
 foreach vt = SReg_128.RegTypes in {
 defm : SMRD_Pattern <"S_LOAD_DWORDX4", vt>;
 }
@@ -1019,12 +1025,14 @@ defm : SMRD_Pattern <"S_LOAD_DWORDX16", vt>;
 
 defm : SMLoad_Pattern <"S_BUFFER_LOAD_DWORD",     i32>;
 defm : SMLoad_Pattern <"S_BUFFER_LOAD_DWORDX2",   v2i32>;
+defm : SMLoad_Pattern <"S_BUFFER_LOAD_DWORDX3",   v3i32, false>;
 defm : SMLoad_Pattern <"S_BUFFER_LOAD_DWORDX4",   v4i32>;
 defm : SMLoad_Pattern <"S_BUFFER_LOAD_DWORDX8",   v8i32>;
 defm : SMLoad_Pattern <"S_BUFFER_LOAD_DWORDX16",  v16i32>;
 
 defm : SMLoad_Pattern <"S_BUFFER_LOAD_DWORD",     f32>;
 defm : SMLoad_Pattern <"S_BUFFER_LOAD_DWORDX2",   v2f32>;
+defm : SMLoad_Pattern <"S_BUFFER_LOAD_DWORDX3",   v3f32, false>;
 defm : SMLoad_Pattern <"S_BUFFER_LOAD_DWORDX4",   v4f32>;
 defm : SMLoad_Pattern <"S_BUFFER_LOAD_DWORDX8",   v8f32>;
 defm : SMLoad_Pattern <"S_BUFFER_LOAD_DWORDX16",  v16f32>;

@@ -800,12 +800,8 @@ define amdgpu_ps <3 x i32> @s_load_constant_v3i32_align4(ptr addrspace(4) inreg 
 ;
 ; GFX12-LABEL: s_load_constant_v3i32_align4:
 ; GFX12:       ; %bb.0:
-; GFX12-NEXT:    s_clause 0x1
-; GFX12-NEXT:    s_load_b64 s[4:5], s[0:1], 0x0
-; GFX12-NEXT:    s_load_b32 s2, s[0:1], 0x8
+; GFX12-NEXT:    s_load_b96 s[0:2], s[0:1], 0x0
 ; GFX12-NEXT:    s_wait_kmcnt 0x0
-; GFX12-NEXT:    s_mov_b32 s0, s4
-; GFX12-NEXT:    s_mov_b32 s1, s5
 ; GFX12-NEXT:    ; return to shader part epilog
   %load = load <3 x i32>, ptr addrspace(4) %ptr, align 4
   ret <3 x i32> %load
@@ -832,12 +828,8 @@ define amdgpu_ps i96 @s_load_constant_i96_align8(ptr addrspace(4) inreg %ptr) {
 ;
 ; GFX12-LABEL: s_load_constant_i96_align8:
 ; GFX12:       ; %bb.0:
-; GFX12-NEXT:    s_clause 0x1
-; GFX12-NEXT:    s_load_b64 s[4:5], s[0:1], 0x0
-; GFX12-NEXT:    s_load_b32 s2, s[0:1], 0x8
+; GFX12-NEXT:    s_load_b96 s[0:2], s[0:1], 0x0
 ; GFX12-NEXT:    s_wait_kmcnt 0x0
-; GFX12-NEXT:    s_mov_b32 s0, s4
-; GFX12-NEXT:    s_mov_b32 s1, s5
 ; GFX12-NEXT:    ; return to shader part epilog
   %load = load i96, ptr addrspace(4) %ptr, align 8
   ret i96 %load
@@ -864,12 +856,8 @@ define amdgpu_ps <3 x i32> @s_load_constant_v3i32_align8(ptr addrspace(4) inreg 
 ;
 ; GFX12-LABEL: s_load_constant_v3i32_align8:
 ; GFX12:       ; %bb.0:
-; GFX12-NEXT:    s_clause 0x1
-; GFX12-NEXT:    s_load_b64 s[4:5], s[0:1], 0x0
-; GFX12-NEXT:    s_load_b32 s2, s[0:1], 0x8
+; GFX12-NEXT:    s_load_b96 s[0:2], s[0:1], 0x0
 ; GFX12-NEXT:    s_wait_kmcnt 0x0
-; GFX12-NEXT:    s_mov_b32 s0, s4
-; GFX12-NEXT:    s_mov_b32 s1, s5
 ; GFX12-NEXT:    ; return to shader part epilog
   %load = load <3 x i32>, ptr addrspace(4) %ptr, align 8
   ret <3 x i32> %load
@@ -896,12 +884,8 @@ define amdgpu_ps <3 x i32> @s_load_constant_v6i16_align8(ptr addrspace(4) inreg 
 ;
 ; GFX12-LABEL: s_load_constant_v6i16_align8:
 ; GFX12:       ; %bb.0:
-; GFX12-NEXT:    s_clause 0x1
-; GFX12-NEXT:    s_load_b64 s[4:5], s[0:1], 0x0
-; GFX12-NEXT:    s_load_b32 s2, s[0:1], 0x8
+; GFX12-NEXT:    s_load_b96 s[0:2], s[0:1], 0x0
 ; GFX12-NEXT:    s_wait_kmcnt 0x0
-; GFX12-NEXT:    s_mov_b32 s0, s4
-; GFX12-NEXT:    s_mov_b32 s1, s5
 ; GFX12-NEXT:    ; return to shader part epilog
   %load = load <6 x i16>, ptr addrspace(4) %ptr, align 8
   %cast = bitcast <6 x i16> %load to <3 x i32>
@@ -947,21 +931,21 @@ define amdgpu_ps <12 x i8> @s_load_constant_v12i8_align8(ptr addrspace(4) inreg 
 ;
 ; GFX12-LABEL: s_load_constant_v12i8_align8:
 ; GFX12:       ; %bb.0:
-; GFX12-NEXT:    s_clause 0x1
-; GFX12-NEXT:    s_load_b64 s[12:13], s[0:1], 0x0
-; GFX12-NEXT:    s_load_b32 s8, s[0:1], 0x8
+; GFX12-NEXT:    s_load_b96 s[0:2], s[0:1], 0x0
 ; GFX12-NEXT:    s_wait_kmcnt 0x0
-; GFX12-NEXT:    s_lshr_b32 s1, s12, 8
-; GFX12-NEXT:    s_lshr_b32 s2, s12, 16
-; GFX12-NEXT:    s_lshr_b32 s3, s12, 24
-; GFX12-NEXT:    s_lshr_b32 s5, s13, 8
-; GFX12-NEXT:    s_lshr_b32 s6, s13, 16
-; GFX12-NEXT:    s_lshr_b32 s7, s13, 24
-; GFX12-NEXT:    s_lshr_b32 s9, s8, 8
-; GFX12-NEXT:    s_lshr_b32 s10, s8, 16
-; GFX12-NEXT:    s_lshr_b32 s11, s8, 24
-; GFX12-NEXT:    s_mov_b32 s0, s12
-; GFX12-NEXT:    s_mov_b32 s4, s13
+; GFX12-NEXT:    s_lshr_b32 s13, s0, 8
+; GFX12-NEXT:    s_lshr_b32 s12, s0, 16
+; GFX12-NEXT:    s_lshr_b32 s3, s0, 24
+; GFX12-NEXT:    s_lshr_b32 s5, s1, 8
+; GFX12-NEXT:    s_lshr_b32 s6, s1, 16
+; GFX12-NEXT:    s_lshr_b32 s7, s1, 24
+; GFX12-NEXT:    s_lshr_b32 s9, s2, 8
+; GFX12-NEXT:    s_lshr_b32 s10, s2, 16
+; GFX12-NEXT:    s_lshr_b32 s11, s2, 24
+; GFX12-NEXT:    s_mov_b32 s4, s1
+; GFX12-NEXT:    s_mov_b32 s8, s2
+; GFX12-NEXT:    s_mov_b32 s1, s13
+; GFX12-NEXT:    s_mov_b32 s2, s12
 ; GFX12-NEXT:    ; return to shader part epilog
   %load = load <12 x i8>, ptr addrspace(4) %ptr, align 8
   ret <12 x i8> %load
@@ -976,7 +960,7 @@ define amdgpu_ps <3 x i32> @s_load_constant_v3i32_align16(ptr addrspace(4) inreg
 ;
 ; GFX12-LABEL: s_load_constant_v3i32_align16:
 ; GFX12:       ; %bb.0:
-; GFX12-NEXT:    s_load_b128 s[0:3], s[0:1], 0x0
+; GFX12-NEXT:    s_load_b96 s[0:2], s[0:1], 0x0
 ; GFX12-NEXT:    s_wait_kmcnt 0x0
 ; GFX12-NEXT:    ; return to shader part epilog
   %load = load <3 x i32>, ptr addrspace(4) %ptr, align 16

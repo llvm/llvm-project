@@ -411,6 +411,12 @@ def FeatureVGPRIndexMode : SubtargetFeature<"vgpr-index-mode",
   "Has VGPR mode register indexing"
 >;
 
+def FeatureScalarDwordx3Loads : SubtargetFeature<"scalar-dwordx3-loads",
+  "HasScalarDwordx3Loads",
+  "true",
+  "Has 96-bit scalar load instructions"
+>;
+
 def FeatureScalarStores : SubtargetFeature<"scalar-stores",
   "HasScalarStores",
   "true",
@@ -1547,7 +1553,8 @@ def FeatureISAVersion12 : FeatureSet<
    FeatureSALUFloatInsts,
    FeaturePseudoScalarTrans,
    FeatureHasRestrictedSOffset,
-   FeatureVGPRSingleUseHintInsts]>;
+   FeatureVGPRSingleUseHintInsts,
+   FeatureScalarDwordx3Loads]>;
 
 def FeatureISAVersion12_10 : FeatureSet<
   [FeatureGFX12,
@@ -2129,6 +2136,8 @@ def Has512AddressableVGPRs : Predicate<"Subtarget->has512AddressableVGPRs()">,
   AssemblerPredicate<(all_of Feature512AddressableVGPRs)>;
 
 def HasGDS : Predicate<"Subtarget->hasGDS()">;
+
+def HasScalarDwordx3Loads : Predicate<"Subtarget->hasScalarDwordx3Loads()">;
 
 // Include AMDGPU TD files
 include "SISchedule.td"
