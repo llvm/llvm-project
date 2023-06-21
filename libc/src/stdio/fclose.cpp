@@ -15,8 +15,7 @@
 namespace __llvm_libc {
 
 LLVM_LIBC_FUNCTION(int, fclose, (::FILE * stream)) {
-  auto *file = reinterpret_cast<__llvm_libc::File *>(stream);
-  int result = File::cleanup(file);
+  int result = reinterpret_cast<__llvm_libc::File *>(stream)->close();
   if (result != 0) {
     libc_errno = result;
     return EOF;

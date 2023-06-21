@@ -975,7 +975,8 @@ static bool processAShr(BinaryOperator *SDI, LazyValueInfo *LVI) {
   if (SDI->getType()->isVectorTy())
     return false;
 
-  ConstantRange LRange = LVI->getConstantRangeAtUse(SDI->getOperandUse(0));
+  ConstantRange LRange =
+      LVI->getConstantRangeAtUse(SDI->getOperandUse(0), /*UndefAllowed*/ false);
   unsigned OrigWidth = SDI->getType()->getIntegerBitWidth();
   ConstantRange NegOneOrZero =
       ConstantRange(APInt(OrigWidth, (uint64_t)-1, true), APInt(OrigWidth, 1));
@@ -1007,7 +1008,8 @@ static bool processSExt(SExtInst *SDI, LazyValueInfo *LVI) {
     return false;
 
   const Use &Base = SDI->getOperandUse(0);
-  if (!LVI->getConstantRangeAtUse(Base).isAllNonNegative())
+  if (!LVI->getConstantRangeAtUse(Base, /*UndefAllowed*/ false)
+           .isAllNonNegative())
     return false;
 
   ++NumSExt;

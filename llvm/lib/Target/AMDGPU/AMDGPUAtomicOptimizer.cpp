@@ -145,10 +145,17 @@ PreservedAnalyses AMDGPUAtomicOptimizerPass::run(Function &F,
 
   bool IsPixelShader = F.getCallingConv() == CallingConv::AMDGPU_PS;
 
-  return AMDGPUAtomicOptimizerImpl(UA, DL, DTU, ST, IsPixelShader, ScanImpl)
-                 .run(F)
-             ? PreservedAnalyses::none()
-             : PreservedAnalyses::all();
+  bool IsChanged =
+      AMDGPUAtomicOptimizerImpl(UA, DL, DTU, ST, IsPixelShader, ScanImpl)
+          .run(F);
+
+  if (!IsChanged) {
+    return PreservedAnalyses::all();
+  }
+
+  PreservedAnalyses PA;
+  PA.preserve<DominatorTreeAnalysis>();
+  return PA;
 }
 
 bool AMDGPUAtomicOptimizerImpl::run(Function &F) {
@@ -770,9 +777,6 @@ void AMDGPUAtomicOptimizerImpl::optimizeAtomic(Instruction &I,
   Instruction *const SingleLaneTerminator =
       SplitBlockAndInsertIfThen(Cond, &I, false, nullptr, &DTU, nullptr);
 
-  // Control flow is changed here after splitting I's block
-  assert(DTU.getDomTree().verify(DominatorTree::VerificationLevel::Full));
-
   // At this point, we have split the I's block to allow one lane in wavefront
   // to update the precomputed reduced value. Also, completed the codegen for
   // new control flow i.e. iterative loop which perform reduction and scan using
@@ -799,7 +803,6 @@ void AMDGPUAtomicOptimizerImpl::optimizeAtomic(Instruction &I,
         {{DominatorTree::Insert, EntryBB, ComputeLoop},
          {DominatorTree::Insert, ComputeLoop, ComputeEnd},
          {DominatorTree::Delete, EntryBB, SingleLaneTerminator->getParent()}});
-    assert(DTU.getDomTree().verify(DominatorTree::VerificationLevel::Full));
 
     Predecessor = ComputeEnd;
   } else {

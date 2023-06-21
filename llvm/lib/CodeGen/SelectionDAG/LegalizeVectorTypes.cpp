@@ -4087,7 +4087,8 @@ void DAGTypeLegalizer::WidenVectorResult(SDNode *N, unsigned ResNo) {
 
   case ISD::FLDEXP:
   case ISD::FPOWI:
-    Res = WidenVecRes_ExpOp(N);
+    if (!unrollExpandedOp())
+      Res = WidenVecRes_ExpOp(N);
     break;
 
   case ISD::ANY_EXTEND_VECTOR_INREG:

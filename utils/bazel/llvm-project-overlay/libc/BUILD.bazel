@@ -81,7 +81,10 @@ libc_support_library(
 libc_support_library(
     name = "__support_macros_properties_cpu_features",
     hdrs = ["src/__support/macros/properties/cpu_features.h"],
-    deps = [":libc_root"],
+    deps = [
+        "__support_macros_properties_architectures",
+        ":libc_root",
+    ],
 )
 
 libc_support_library(
@@ -1197,6 +1200,7 @@ libc_math_function(
         ":__support_fputil_polyeval",
         ":__support_fputil_rounding_mode",
         ":__support_macros_optimization",
+        ":__support_macros_properties_cpu_features",
         ":explogxf",
     ],
 )
@@ -1982,7 +1986,6 @@ libc_support_library(
         "src/string/memory_utils/op_aarch64.h",
         "src/string/memory_utils/op_builtin.h",
         "src/string/memory_utils/op_generic.h",
-        "src/string/memory_utils/op_riscv.h",
         "src/string/memory_utils/op_x86.h",
         "src/string/memory_utils/utils.h",
     ],

@@ -35,21 +35,20 @@ define void @_Z3foov() {
 ; CHECK-NEXT:    vs1r.v v8, (a0) # Unknown-size Folded Spill
 ; CHECK-NEXT:    lui a0, %hi(.L__const._Z3foov.var_46)
 ; CHECK-NEXT:    addi a0, a0, %lo(.L__const._Z3foov.var_46)
-; CHECK-NEXT:    vmv.v.v v8, v10
-; CHECK-NEXT:    vle16.v v10, (a0)
+; CHECK-NEXT:    vle16.v v12, (a0)
 ; CHECK-NEXT:    lui a0, %hi(.L__const._Z3foov.var_45)
 ; CHECK-NEXT:    addi a0, a0, %lo(.L__const._Z3foov.var_45)
-; CHECK-NEXT:    vle16.v v12, (a0)
+; CHECK-NEXT:    vle16.v v14, (a0)
 ; CHECK-NEXT:    addi a0, sp, 16
 ; CHECK-NEXT:    csrr a1, vlenb
 ; CHECK-NEXT:    slli a1, a1, 1
-; CHECK-NEXT:    vs2r.v v8, (a0) # Unknown-size Folded Spill
-; CHECK-NEXT:    add a0, a0, a1
 ; CHECK-NEXT:    vs2r.v v10, (a0) # Unknown-size Folded Spill
 ; CHECK-NEXT:    add a0, a0, a1
 ; CHECK-NEXT:    vs2r.v v12, (a0) # Unknown-size Folded Spill
 ; CHECK-NEXT:    add a0, a0, a1
 ; CHECK-NEXT:    vs2r.v v14, (a0) # Unknown-size Folded Spill
+; CHECK-NEXT:    add a0, a0, a1
+; CHECK-NEXT:    vs2r.v v16, (a0) # Unknown-size Folded Spill
 ; CHECK-NEXT:    #APP
 ; CHECK-NEXT:    #NO_APP
 ; CHECK-NEXT:    vsetivli zero, 2, e16, m2, ta, ma

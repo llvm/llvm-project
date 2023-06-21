@@ -8,7 +8,7 @@ auto lambdatest(f&& cb) {
 
 int main() {
   auto *s = lambdatest([](){});
-// CHECK: @"__PRETTY_FUNCTION__._Z10lambdatestIZ4mainE3$_0EDaOT_" = private unnamed_addr constant [{{[0-9]+}} x i8] c"auto lambdatest(f &&) [f = (lambda at ./UNLIKELY_PATH/empty{{/|\\\\}}{{.*}}.cpp:[[#@LINE-1]]:24)]\00", align 1
+// CHECK: @"__PRETTY_FUNCTION__._Z10lambdatestIZ4mainE3$_0EDaOT_" = private unnamed_addr constant [{{[0-9]+}} x i8] c"auto lambdatest(f &&) [f = (lambda at ./UNLIKELY_PATH/empty{{/|\\\\}}{{.*}}.cpp:[[#@LINE-1]]:24)]\00", align {{[0-9]+}}
 
   return 0;
 }

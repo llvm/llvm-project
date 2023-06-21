@@ -531,11 +531,8 @@ private:
   MachinePostDominatorTree *PDT;
 
   struct BlockInfo {
-    MachineBasicBlock *MBB;
     std::unique_ptr<WaitcntBrackets> Incoming;
     bool Dirty = true;
-
-    explicit BlockInfo(MachineBasicBlock *MBB) : MBB(MBB) {}
   };
 
   InstCounterType SmemAccessCounter;
@@ -2431,7 +2428,7 @@ bool SIInsertWaitcnts::runOnMachineFunction(MachineFunction &MF) {
   // Keep iterating over the blocks in reverse post order, inserting and
   // updating s_waitcnt where needed, until a fix point is reached.
   for (auto *MBB : ReversePostOrderTraversal<MachineFunction *>(&MF))
-    BlockInfos.insert({MBB, BlockInfo(MBB)});
+    BlockInfos.insert({MBB, BlockInfo()});
 
   std::unique_ptr<WaitcntBrackets> Brackets;
   bool Repeat;
@@ -2440,6 +2437,7 @@ bool SIInsertWaitcnts::runOnMachineFunction(MachineFunction &MF) {
 
     for (auto BII = BlockInfos.begin(), BIE = BlockInfos.end(); BII != BIE;
          ++BII) {
+      MachineBasicBlock *MBB = BII->first;
       BlockInfo &BI = BII->second;
       if (!BI.Dirty)
         continue;
@@ -2458,12 +2456,12 @@ bool SIInsertWaitcnts::runOnMachineFunction(MachineFunction &MF) {
                                       WaitEventMaskForInst, SmemAccessCounter);
       }
 
-      Modified |= insertWaitcntInBlock(MF, *BI.MBB, *Brackets);
+      Modified |= insertWaitcntInBlock(MF, *MBB, *Brackets);
       BI.Dirty = false;
 
       if (Brackets->hasPendingEvent()) {
         BlockInfo *MoveBracketsToSucc = nullptr;
-        for (MachineBasicBlock *Succ : BI.MBB->successors()) {
+        for (MachineBasicBlock *Succ : MBB->successors()) {
           auto SuccBII = BlockInfos.find(Succ);
           BlockInfo &SuccBI = SuccBII->second;
           if (!SuccBI.Incoming) {

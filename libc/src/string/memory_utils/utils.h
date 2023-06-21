@@ -15,10 +15,9 @@
 #include "src/__support/endian.h"
 #include "src/__support/macros/attributes.h" // LIBC_INLINE
 #include "src/__support/macros/config.h"     // LIBC_HAS_BUILTIN
-#include "src/__support/macros/properties/architectures.h"
 
 #include <stddef.h> // size_t
-#include <stdint.h> // intptr_t / uintptr_t / INT32_MAX / INT32_MIN
+#include <stdint.h> // intptr_t / uintptr_t
 
 namespace __llvm_libc {
 
@@ -165,56 +164,6 @@ private:
 using MemcmpReturnType = StrictIntegralType<int32_t>;
 using BcmpReturnType = StrictIntegralType<uint32_t>;
 
-// This implements the semantic of 'memcmp' returning a negative value when 'a'
-// is less than 'b', '0' when 'a' equals 'b' and a positive number otherwise.
-LIBC_INLINE MemcmpReturnType cmp_uint32_t(uint32_t a, uint32_t b) {
-  // We perform the difference as an int64_t.
-  const int64_t diff = static_cast<int64_t>(a) - static_cast<int64_t>(b);
-  // For the int64_t to int32_t conversion we want the following properties:
-  // - int32_t[31:31] == 1 iff diff < 0
-  // - int32_t[31:0] == 0 iff diff == 0
-
-  // We also observe that:
-  // - When diff < 0: diff[63:32] == 0xffffffff and diff[31:0] != 0
-  // - When diff > 0: diff[63:32] == 0 and diff[31:0] != 0
-  // - When diff == 0: diff[63:32] == 0 and diff[31:0] == 0
-  // - https://godbolt.org/z/8W7qWP6e5
-  // - This implies that we can only look at diff[32:32] for determining the
-  // sign bit for the returned int32_t.
-
-  // So, we do the following:
-  // - int32_t[31:31] = diff[32:32]
-  // - int32_t[30:0] = diff[31:0] == 0 ? 0 : non-0.
-
-  // And, we can achieve the above by the expression below. We could have also
-  // used (diff64 >> 1) | (diff64 & 0x1) but (diff64 & 0xFFFF) is faster than
-  // (diff64 & 0x1). https://godbolt.org/z/j3b569rW1
-  return static_cast<int32_t>((diff >> 1) | (diff & 0xFFFF));
-}
-
-// Returns a negative value if 'a' is less than 'b' and a positive value
-// otherwise. This implements the semantic of 'memcmp' when we know that 'a' and
-// 'b' differ.
-LIBC_INLINE MemcmpReturnType cmp_neq_uint64_t(uint64_t a, uint64_t b) {
-#if defined(LIBC_TARGET_ARCH_IS_X86_64)
-  // On x86, we choose the returned values so that they are just one unit appart
-  // as this allows for better code generation.
-  static constexpr int32_t POSITIVE = INT32_MAX;
-  static constexpr int32_t NEGATIVE = INT32_MIN;
-  static_assert(cpp::bit_cast<uint32_t>(NEGATIVE) -
-                    cpp::bit_cast<uint32_t>(POSITIVE) ==
-                1);
-#else
-  // On RISC-V we simply use '1' and '-1' as it leads to branchless code.
-  // On ARMv8, both strategies lead to the same performance.
-  static constexpr int32_t POSITIVE = 1;
-  static constexpr int32_t NEGATIVE = -1;
-#endif
-  static_assert(POSITIVE > 0);
-  static_assert(NEGATIVE < 0);
-  return a < b ? NEGATIVE : POSITIVE;
-}
-
 // Loads bytes from memory (possibly unaligned) and materializes them as
 // type.
 template <typename T> LIBC_INLINE T load(CPtr ptr) {
@@ -345,16 +294,6 @@ void align_to_next_boundary(T1 *__restrict &p1, T2 *__restrict &p2,
   else
     deferred_static_assert("AlignOn must be either Arg::P1 or Arg::P2");
 }
-
-template <size_t SIZE> struct AlignHelper {
-  AlignHelper(CPtr ptr) : offset_(distance_to_next_aligned<SIZE>(ptr)) {}
-
-  LIBC_INLINE bool not_aligned() const { return offset_ != SIZE; }
-  LIBC_INLINE uintptr_t offset() const { return offset_; }
-
-private:
-  uintptr_t offset_;
-};
 
 } // namespace __llvm_libc
 

@@ -196,6 +196,7 @@ public:
   void LowerSTACKMAP(StackMaps &SM, const MachineInstr &MI);
   void LowerPATCHPOINT(StackMaps &SM, const MachineInstr &MI);
   void EmitTlsCall(const MachineInstr *MI, MCSymbolRefExpr::VariantKind VK);
+  void EmitAIXTlsCallHelper(const MachineInstr *MI);
   bool runOnMachineFunction(MachineFunction &MF) override {
     Subtarget = &MF.getSubtarget<PPCSubtarget>();
     bool Changed = AsmPrinter::runOnMachineFunction(MF);
@@ -611,11 +612,24 @@ void PPCAsmPrinter::LowerPATCHPOINT(StackMaps &SM, const MachineInstr &MI) {
 /// This helper function creates the TlsGetAddr MCSymbol for AIX. We will
 /// create the csect and use the qual-name symbol instead of creating just the
 /// external symbol.
-static MCSymbol *createMCSymbolForTlsGetAddr(MCContext &Ctx) {
+static MCSymbol *createMCSymbolForTlsGetAddr(MCContext &Ctx, unsigned MIOpc) {
+  StringRef SymName =
+      MIOpc == PPC::GETtlsTpointer32AIX ? ".__get_tpointer" : ".__tls_get_addr";
   return Ctx
-      .getXCOFFSection(".__tls_get_addr", SectionKind::getText(),
+      .getXCOFFSection(SymName, SectionKind::getText(),
                        XCOFF::CsectProperties(XCOFF::XMC_PR, XCOFF::XTY_ER))
       ->getQualNameSymbol();
+}
+
+void PPCAsmPrinter::EmitAIXTlsCallHelper(const MachineInstr *MI) {
+  assert(Subtarget->isAIXABI() &&
+         "Only expecting to emit calls to get the thread pointer on AIX!");
+
+  MCSymbol *TlsCall = createMCSymbolForTlsGetAddr(OutContext, MI->getOpcode());
+  const MCExpr *TlsRef =
+      MCSymbolRefExpr::create(TlsCall, MCSymbolRefExpr::VK_None, OutContext);
+  EmitToStreamer(*OutStreamer, MCInstBuilder(PPC::BLA).addExpr(TlsRef));
+  return;
 }
 
 /// EmitTlsCall -- Given a GETtls[ld]ADDR[32] instruction, print a
@@ -652,10 +666,7 @@ void PPCAsmPrinter::EmitTlsCall(const MachineInstr *MI,
     assert(MI->getOperand(2).isReg() &&
            MI->getOperand(2).getReg() == VarOffsetReg &&
            "GETtls[ld]ADDR[32] must read GPR4");
-    MCSymbol *TlsGetAddr = createMCSymbolForTlsGetAddr(OutContext);
-    const MCExpr *TlsRef = MCSymbolRefExpr::create(
-        TlsGetAddr, MCSymbolRefExpr::VK_None, OutContext);
-    EmitToStreamer(*OutStreamer, MCInstBuilder(PPC::BLA).addExpr(TlsRef));
+    EmitAIXTlsCallHelper(MI);
     return;
   }
 
@@ -1355,6 +1366,12 @@ void PPCAsmPrinter::emitInstruction(const MachineInstr *MI) {
     // Transform: %r3 = GETtlsADDR32 %r3, @sym
     // Into: BL_TLS __tls_get_addr(sym at tlsgd)@PLT
     EmitTlsCall(MI, MCSymbolRefExpr::VK_PPC_TLSGD);
+    return;
+  }
+  case PPC::GETtlsTpointer32AIX: {
+    // Transform: %r3 = GETtlsTpointer32AIX
+    // Into: BLA .__get_tpointer()
+    EmitAIXTlsCallHelper(MI);
     return;
   }
   case PPC::ADDIStlsldHA: {
@@ -2776,11 +2793,13 @@ void PPCAIXAsmPrinter::emitInstruction(const MachineInstr *MI) {
 		 MMI->hasDebugInfo());
     break;
   }
+  case PPC::GETtlsTpointer32AIX:
   case PPC::GETtlsADDR64AIX:
   case PPC::GETtlsADDR32AIX: {
-    // The reference to .__tls_get_addr is unknown to the assembler
-    // so we need to emit an external symbol reference.
-    MCSymbol *TlsGetAddr = createMCSymbolForTlsGetAddr(OutContext);
+    // A reference to .__tls_get_addr/.__get_tpointer is unknown to the
+    // assembler so we need to emit an external symbol reference.
+    MCSymbol *TlsGetAddr =
+        createMCSymbolForTlsGetAddr(OutContext, MI->getOpcode());
     ExtSymSDNodeSymbols.insert(TlsGetAddr);
     break;
   }

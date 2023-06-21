@@ -9,6 +9,7 @@
 #ifndef _LIBCPP___MEMORY_RESOURCE_SYNCHRONIZED_POOL_RESOURCE_H
 #define _LIBCPP___MEMORY_RESOURCE_SYNCHRONIZED_POOL_RESOURCE_H
 
+#include <__availability>
 #include <__config>
 #include <__memory_resource/memory_resource.h>
 #include <__memory_resource/pool_options.h>
@@ -28,7 +29,7 @@ namespace pmr {
 
 // [mem.res.pool.overview]
 
-class _LIBCPP_EXPORTED_FROM_ABI synchronized_pool_resource : public memory_resource {
+class _LIBCPP_AVAILABILITY_PMR _LIBCPP_EXPORTED_FROM_ABI synchronized_pool_resource : public memory_resource {
 public:
   _LIBCPP_HIDE_FROM_ABI synchronized_pool_resource(const pool_options& __opts, memory_resource* __upstream)
       : __unsync_(__opts, __upstream) {}

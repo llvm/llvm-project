@@ -636,3 +636,26 @@ func.func @call_llvm_func() {
   llvm.call @llvm_func() : () -> ()
   return
 }
+
+// -----
+
+// CHECK-LABEL: func @to_memref_op_unsupported(
+//  CHECK-SAME:     %[[arg0:.*]]: memref<?xf32,
+func.func @to_memref_op_unsupported(
+    %t1: tensor<?xf32> {bufferization.writable = true}, %idx1: index,
+    %idx2: index, %idx3: index, %v1: vector<5xf32>) -> (vector<5xf32>) {
+
+  // Insert a copy because we cannot analyze what happens with the result of a
+  // to_memref op.
+  // CHECK: %[[alloc:.*]] = memref.alloc
+  // CHECK: memref.copy %[[arg0]], %[[alloc]]
+  %0 = bufferization.to_memref %t1 : memref<?xf32>
+  // CHECK: "test.foo"(%[[alloc]])
+  "test.foo"(%0) : (memref<?xf32>) -> ()
+
+  // CHECK: vector.transfer_read %[[arg0]]
+  %cst = arith.constant 0.0 : f32
+  %r1 = vector.transfer_read %t1[%idx3], %cst : tensor<?xf32>, vector<5xf32>
+
+  return %r1 : vector<5xf32>
+}

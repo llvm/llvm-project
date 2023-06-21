@@ -73,29 +73,46 @@ public:
     }
   }
 
+  unsigned getInvertedBranchOpcode(unsigned Opcode) const {
+    switch (Opcode) {
+    default:
+      llvm_unreachable("Failed to invert branch opcode");
+      return Opcode;
+    case RISCV::BEQ:
+      return RISCV::BNE;
+    case RISCV::BNE:
+      return RISCV::BEQ;
+    case RISCV::BLT:
+      return RISCV::BGE;
+    case RISCV::BGE:
+      return RISCV::BLT;
+    case RISCV::BLTU:
+      return RISCV::BGEU;
+    case RISCV::BGEU:
+      return RISCV::BLTU;
+    case RISCV::C_BEQZ:
+      return RISCV::C_BNEZ;
+    case RISCV::C_BNEZ:
+      return RISCV::C_BEQZ;
+    }
+  }
+
+  bool reverseBranchCondition(MCInst &Inst, const MCSymbol *TBB,
+                              MCContext *Ctx) const override {
+    auto Opcode = getInvertedBranchOpcode(Inst.getOpcode());
+    Inst.setOpcode(Opcode);
+    return replaceBranchTarget(Inst, TBB, Ctx);
+  }
+
   bool replaceBranchTarget(MCInst &Inst, const MCSymbol *TBB,
                            MCContext *Ctx) const override {
     assert((isCall(Inst) || isBranch(Inst)) && !isIndirectBranch(Inst) &&
            "Invalid instruction");
 
     unsigned SymOpIndex;
-
-    switch (Inst.getOpcode()) {
-    default:
-      llvm_unreachable("not implemented");
-    case RISCV::C_J:
-      SymOpIndex = 0;
-      break;
-    case RISCV::JAL:
-    case RISCV::C_BEQZ:
-    case RISCV::C_BNEZ:
-      SymOpIndex = 1;
-      break;
-    case RISCV::BEQ:
-    case RISCV::BGE:
-      SymOpIndex = 2;
-      break;
-    }
+    auto Result = getSymbolRefOperandNum(Inst, SymOpIndex);
+    (void)Result;
+    assert(Result && "unimplemented branch");
 
     Inst.getOperand(SymOpIndex) = MCOperand::createExpr(
         MCSymbolRefExpr::create(TBB, MCSymbolRefExpr::VK_None, *Ctx));
@@ -131,6 +148,26 @@ public:
     }
 
     setTailCall(Inst);
+    return true;
+  }
+
+  bool createReturn(MCInst &Inst) const override {
+    // TODO "c.jr ra" when RVC is enabled
+    Inst.setOpcode(RISCV::JALR);
+    Inst.clear();
+    Inst.addOperand(MCOperand::createReg(RISCV::X0));
+    Inst.addOperand(MCOperand::createReg(RISCV::X1));
+    Inst.addOperand(MCOperand::createImm(0));
+    return true;
+  }
+
+  bool createUncondBranch(MCInst &Inst, const MCSymbol *TBB,
+                          MCContext *Ctx) const override {
+    Inst.setOpcode(RISCV::JAL);
+    Inst.clear();
+    Inst.addOperand(MCOperand::createReg(RISCV::X0));
+    Inst.addOperand(MCOperand::createExpr(
+        MCSymbolRefExpr::create(TBB, MCSymbolRefExpr::VK_None, *Ctx)));
     return true;
   }
 
@@ -186,8 +223,50 @@ public:
     return true;
   }
 
+  bool getSymbolRefOperandNum(const MCInst &Inst, unsigned &OpNum) const {
+    switch (Inst.getOpcode()) {
+    default:
+      return false;
+    case RISCV::C_J:
+      OpNum = 0;
+      return true;
+    case RISCV::JAL:
+    case RISCV::C_BEQZ:
+    case RISCV::C_BNEZ:
+      OpNum = 1;
+      return true;
+    case RISCV::BEQ:
+    case RISCV::BGE:
+    case RISCV::BGEU:
+    case RISCV::BNE:
+    case RISCV::BLT:
+    case RISCV::BLTU:
+      OpNum = 2;
+      return true;
+    }
+  }
+
+  const MCSymbol *getTargetSymbol(const MCExpr *Expr) const override {
+    auto *RISCVExpr = dyn_cast<RISCVMCExpr>(Expr);
+    if (RISCVExpr && RISCVExpr->getSubExpr())
+      return getTargetSymbol(RISCVExpr->getSubExpr());
+
+    auto *BinExpr = dyn_cast<MCBinaryExpr>(Expr);
+    if (BinExpr)
+      return getTargetSymbol(BinExpr->getLHS());
+
+    auto *SymExpr = dyn_cast<MCSymbolRefExpr>(Expr);
+    if (SymExpr && SymExpr->getKind() == MCSymbolRefExpr::VK_None)
+      return &SymExpr->getSymbol();
+
+    return nullptr;
+  }
+
   const MCSymbol *getTargetSymbol(const MCInst &Inst,
                                   unsigned OpNum = 0) const override {
+    if (!OpNum && !getSymbolRefOperandNum(Inst, OpNum))
+      return nullptr;
+
     const MCOperand &Op = Inst.getOperand(OpNum);
     if (!Op.isExpr())
       return nullptr;

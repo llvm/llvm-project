@@ -516,6 +516,7 @@ template <class Key, class T, class Hash, class Pred, class Alloc>
 
 #include <__algorithm/is_permutation.h>
 #include <__assert> // all public C++ headers provide the assertion handler
+#include <__availability>
 #include <__config>
 #include <__debug>
 #include <__functional/is_transparent.h>
@@ -2646,11 +2647,11 @@ _LIBCPP_END_NAMESPACE_STD
 _LIBCPP_BEGIN_NAMESPACE_STD
 namespace pmr {
 template <class _KeyT, class _ValueT, class _HashT = std::hash<_KeyT>, class _PredT = std::equal_to<_KeyT>>
-using unordered_map =
+using unordered_map _LIBCPP_AVAILABILITY_PMR =
     std::unordered_map<_KeyT, _ValueT, _HashT, _PredT, polymorphic_allocator<std::pair<const _KeyT, _ValueT>>>;
 
 template <class _KeyT, class _ValueT, class _HashT = std::hash<_KeyT>, class _PredT = std::equal_to<_KeyT>>
-using unordered_multimap =
+using unordered_multimap _LIBCPP_AVAILABILITY_PMR =
     std::unordered_multimap<_KeyT, _ValueT, _HashT, _PredT, polymorphic_allocator<std::pair<const _KeyT, _ValueT>>>;
 } // namespace pmr
 _LIBCPP_END_NAMESPACE_STD

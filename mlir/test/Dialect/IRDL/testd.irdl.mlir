@@ -104,4 +104,19 @@ irdl.dialect @testd {
     %2 = irdl.any_of(%0, %1)
     irdl.results(%2, %2)
   }
+
+  // CHECK: irdl.operation @attrs {
+  // CHECK:   %[[v0:[^ ]*]] = irdl.is i32
+  // CHECK:   %[[v1:[^ ]*]] = irdl.is i64
+  // CHECK:   irdl.attributes {"attr1" = %[[v0]], "attr2" = %[[v1]]}
+  // CHECK: }
+  irdl.operation @attrs {
+    %0 = irdl.is i32
+    %1 = irdl.is i64
+
+    irdl.attributes {
+      "attr1" = %0,
+      "attr2" = %1
+    }
+  }
 }
