@@ -456,8 +456,11 @@ static bool CheckFieldsInitialized(InterpState &S, CodePtr OpPC,
 
 bool CheckCtorCall(InterpState &S, CodePtr OpPC, const Pointer &This) {
   assert(!This.isZero());
-  const Record *R = This.getRecord();
-  return CheckFieldsInitialized(S, OpPC, This, R);
+  if (const Record *R = This.getRecord())
+    return CheckFieldsInitialized(S, OpPC, This, R);
+  const auto *CAT =
+      cast<ConstantArrayType>(This.getType()->getAsArrayTypeUnsafe());
+  return CheckArrayInitialized(S, OpPC, This, CAT);
 }
 
 bool CheckFloatResult(InterpState &S, CodePtr OpPC, APFloat::opStatus Status) {

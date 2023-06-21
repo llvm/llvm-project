@@ -57,7 +57,7 @@
 #DWARF-CHECK: [0x0000000000001130, 0x0000000000001170)
 #DWARF-CHECK-NOT: .debug_addr contents:
 #DWARF-CHECK: .debug_rnglists contents:
-#DWARF-CHECK: 0x00000000: range list header: length = 0x00000040, format = DWARF32, version = 0x0005, addr_size = 0x08, seg_size = 0x00, offset_entry_count = 0x00000000
+#DWARF-CHECK: 0x00000000: range list header: length = 0x0000003f, format = DWARF32, version = 0x0005, addr_size = 0x08, seg_size = 0x00, offset_entry_count = 0x00000000
 #DWARF-CHECK: ranges:
 #DWARF-CHECK: 0x[[F1RANGE_OFF]]: [DW_RLE_start_length]:  0x0000000000001130, 0x0000000000000010 => [0x0000000000001130, 0x0000000000001140)
 #DWARF-CHECK: {{.*}} [DW_RLE_end_of_list ]

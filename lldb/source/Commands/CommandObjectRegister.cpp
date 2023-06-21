@@ -11,6 +11,7 @@
 #include "lldb/Core/DumpRegisterInfo.h"
 #include "lldb/Core/DumpRegisterValue.h"
 #include "lldb/Host/OptionParser.h"
+#include "lldb/Interpreter/CommandInterpreter.h"
 #include "lldb/Interpreter/CommandOptionArgumentTable.h"
 #include "lldb/Interpreter/CommandReturnObject.h"
 #include "lldb/Interpreter/OptionGroupFormat.h"
@@ -418,6 +419,8 @@ Read from   (*)  The registers that the value of this register is constructed
                  read from the wider register.
 In sets     (*)  The register sets that contain this register. For example the
                  PC will be in the "General Purpose Register" set.
+Fields      (*)  A table of the names and bit positions of the values contained
+                 in this register.
 
 Fields marked with (*) may not always be present. Some information may be
 different for the same register when connected to different debug servers.)");
@@ -453,7 +456,9 @@ protected:
     RegisterContext *reg_ctx = m_exe_ctx.GetRegisterContext();
     const RegisterInfo *reg_info = reg_ctx->GetRegisterInfoByName(reg_name);
     if (reg_info) {
-      DumpRegisterInfo(result.GetOutputStream(), *reg_ctx, *reg_info);
+      DumpRegisterInfo(
+          result.GetOutputStream(), *reg_ctx, *reg_info,
+          GetCommandInterpreter().GetDebugger().GetTerminalWidth());
       result.SetStatus(eReturnStatusSuccessFinishResult);
     } else
       result.AppendErrorWithFormat("No register found with name '%s'.\n",

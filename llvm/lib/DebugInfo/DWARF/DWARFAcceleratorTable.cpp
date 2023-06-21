@@ -309,6 +309,43 @@ AppleAcceleratorTable::SameNameIterator::SameNameIterator(
     const AppleAcceleratorTable &AccelTable, uint64_t DataOffset)
     : Current(AccelTable), Offset(DataOffset) {}
 
+void AppleAcceleratorTable::Iterator::prepareNextEntryOrEnd() {
+  if (NumEntriesToCome == 0)
+    prepareNextStringOrEnd();
+  if (isEnd())
+    return;
+  uint64_t OffsetCopy = Offset;
+  Current.BaseEntry.extract(&OffsetCopy);
+  NumEntriesToCome--;
+  Offset += getTable().getHashDataEntryLength();
+}
+
+void AppleAcceleratorTable::Iterator::prepareNextStringOrEnd() {
+  std::optional<uint32_t> StrOffset = getTable().readStringOffsetAt(Offset);
+  if (!StrOffset)
+    return setToEnd();
+
+  // A zero denotes the end of the collision list. Read the next string
+  // again.
+  if (*StrOffset == 0)
+    return prepareNextStringOrEnd();
+  Current.StrOffset = *StrOffset;
+
+  std::optional<uint32_t> MaybeNumEntries = getTable().readU32FromAccel(Offset);
+  if (!MaybeNumEntries || *MaybeNumEntries == 0)
+    return setToEnd();
+  NumEntriesToCome = *MaybeNumEntries;
+}
+
+AppleAcceleratorTable::Iterator::Iterator(const AppleAcceleratorTable &Table,
+                                          bool SetEnd)
+    : Current(Table), Offset(Table.getEntriesBase()), NumEntriesToCome(0) {
+  if (SetEnd)
+    setToEnd();
+  else
+    prepareNextEntryOrEnd();
+}
+
 iterator_range<AppleAcceleratorTable::SameNameIterator>
 AppleAcceleratorTable::equal_range(StringRef Key) const {
   const auto EmptyRange =
