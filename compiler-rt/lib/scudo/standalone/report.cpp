@@ -21,7 +21,7 @@ public:
   void append(const char *Format, ...) {
     va_list Args;
     va_start(Args, Format);
-    Message.append(Format, Args);
+    Message.vappend(Format, Args);
     va_end(Args);
   }
   NORETURN ~ScopedErrorReport() {
