@@ -32,5 +32,5 @@ define i32 @foo() nounwind noinline uwtable "function-instrument"="xray-always" 
 ; CHECK-NEXT:  .space 5
 ; CHECK-LABEL: .Lxray_sleds_end0:
 ; CHECK-LABEL: xray_fn_idx
-; CHECK:       .word .Lxray_sleds_start0{{$}}
-; CHECK-NEXT:  .word .Lxray_sleds_end0{{$}}
+; CHECK:       .word .Lxray_sleds_start0-.Lxray_fn_idx[[#]]
+; CHECK-NEXT:  .word 2

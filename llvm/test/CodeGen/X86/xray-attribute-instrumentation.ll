@@ -19,9 +19,10 @@ define i32 @foo() nounwind noinline uwtable "function-instrument"="xray-always" 
 ; CHECK-LINUX:         .quad .Lxray_sled_0
 ; CHECK-LINUX:         .quad .Lxray_sled_1
 ; CHECK-LINUX-LABEL: .Lxray_sleds_end0:
-; CHECK-LINUX-LABEL: .section xray_fn_idx,"awo",@progbits,foo{{$}}
-; CHECK-LINUX:         .quad .Lxray_sleds_start0
-; CHECK-LINUX-NEXT:    .quad .Lxray_sleds_end0
+; CHECK-LINUX-LABEL: .section xray_fn_idx,"ao",@progbits,foo{{$}}
+; CHECK-LINUX:       [[IDX:\.Lxray_fn_idx[0-9]+]]:
+; CHECK-LINUX-NEXT:    .quad .Lxray_sleds_start0-[[IDX]]
+; CHECK-LINUX-NEXT:    .quad 2
 
 ; CHECK-MACOS-LABEL: .section __DATA,xray_instr_map,regular,live_support{{$}}
 ; CHECK-MACOS-LABEL: Lxray_sleds_start0:
@@ -29,8 +30,9 @@ define i32 @foo() nounwind noinline uwtable "function-instrument"="xray-always" 
 ; CHECK-MACOS:         .quad Lxray_sled_1
 ; CHECK-MACOS-LABEL: Lxray_sleds_end0:
 ; CHECK-MACOS-LABEL: .section __DATA,xray_fn_idx,regular,live_support{{$}}
-; CHECK-MACOS:         .quad Lxray_sleds_start0
-; CHECK-MACOS-NEXT:    .quad Lxray_sleds_end0
+; CHECK-MACOS:       [[IDX:lxray_fn_idx[0-9]+]]:
+; CHECK-MACOS-NEXT:    .quad Lxray_sleds_start0-[[IDX]]
+; CHECK-MACOS-NEXT:    .quad 2
 
 
 ; We test multiple returns in a single function to make sure we're getting all
@@ -66,9 +68,10 @@ NotEqual:
 ; CHECK-LINUX:       [[TMP:.Ltmp[0-9]+]]:
 ; CHECK-LINUX-NEXT:    .quad .Lxray_sled_4-[[TMP]]
 ; CHECK-LINUX-LABEL: .Lxray_sleds_end1:
-; CHECK-LINUX-LABEL: .section xray_fn_idx,"awo",@progbits,bar{{$}}
-; CHECK-LINUX:         .quad .Lxray_sleds_start1
-; CHECK-LINUX-NEXT:    .quad .Lxray_sleds_end1
+; CHECK-LINUX-LABEL: .section xray_fn_idx,"ao",@progbits,bar{{$}}
+; CHECK-LINUX:       [[IDX:\.Lxray_fn_idx[0-9]+]]:
+; CHECK-LINUX-NEXT:    .quad .Lxray_sleds_start1-[[IDX]]
+; CHECK-LINUX-NEXT:    .quad 3
 
 ; CHECK-MACOS-LABEL: .section __DATA,xray_instr_map,regular,live_support{{$}}
 ; CHECK-MACOS-LABEL: Lxray_sleds_start1:
@@ -80,5 +83,6 @@ NotEqual:
 ; CHECK-MACOS-NEXT:    .quad Lxray_sled_4-[[TMP]]
 ; CHECK-MACOS-LABEL: Lxray_sleds_end1:
 ; CHECK-MACOS-LABEL: .section __DATA,xray_fn_idx,regular,live_support{{$}}
-; CHECK-MACOS:         .quad Lxray_sleds_start1
-; CHECK-MACOS-NEXT:    .quad Lxray_sleds_end1
+; CHECK-MACOS:       [[IDX:lxray_fn_idx[0-9]+]]:
+; CHECK-MACOS-NEXT:    .quad Lxray_sleds_start1-[[IDX]]
+; CHECK-MACOS-NEXT:    .quad 3
