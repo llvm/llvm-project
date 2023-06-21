@@ -177,6 +177,7 @@
 ; CHECK-NEXT:       Lazy Machine Block Frequency Analysis
 ; CHECK-NEXT:       Machine Optimization Remark Emitter
 ; CHECK-NEXT:       Stack Frame Layout Analysis
+; CHECK-NEXT:       RISC-V Zcmp move merging pass
 ; CHECK-NEXT:       RISC-V pseudo instruction expansion pass
 ; CHECK-NEXT:       RISC-V atomic pseudo instruction expansion pass
 ; CHECK-NEXT:       Lazy Machine Block Frequency Analysis
