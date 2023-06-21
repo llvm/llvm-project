@@ -32,9 +32,14 @@ XRayArgs::XRayArgs(const ToolChain &TC, const ArgList &Args) {
     return;
   XRayInstrument = Args.getLastArg(options::OPT_fxray_instrument);
   if (Triple.isMacOSX()) {
-    if (Triple.getArch() != llvm::Triple::x86_64) {
+    switch (Triple.getArch()) {
+    case llvm::Triple::aarch64:
+    case llvm::Triple::x86_64:
+      break;
+    default:
       D.Diag(diag::err_drv_unsupported_opt_for_target)
           << XRayInstrument->getSpelling() << Triple.str();
+      break;
     }
   } else if (Triple.isOSBinFormatELF()) {
     switch (Triple.getArch()) {
