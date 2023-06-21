@@ -25,6 +25,18 @@
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/Program.h"
+#include "llvm/Support/Signals.h"
+
+#ifdef __linux__
+#ifdef HAVE_LIBPFM
+#include <perfmon/perf_event.h>
+#endif
+#include <sys/mman.h>
+#include <sys/ptrace.h>
+#include <sys/syscall.h>
+#include <sys/wait.h>
+#include <unistd.h>
+#endif // __linux__
 
 namespace llvm {
 namespace exegesis {
@@ -129,6 +141,179 @@ private:
   const ExecutableFunction Function;
   BenchmarkRunner::ScratchSpace *const Scratch;
 };
+
+#ifdef __linux__
+// The following class implements a function executor that executes the
+// benchmark code within a subprocess rather than within the main llvm-exegesis
+// process. This allows for much more control over the execution context of the
+// snippet, particularly with regard to memory. This class performs all the
+// necessary functions to create the subprocess, execute the snippet in the
+// subprocess, and report results/handle errors.
+class SubProcessFunctionExecutorImpl
+    : public BenchmarkRunner::FunctionExecutor {
+public:
+  SubProcessFunctionExecutorImpl(const LLVMState &State,
+                                 object::OwningBinary<object::ObjectFile> Obj,
+                                 const BenchmarkKey &Key)
+      : State(State), Function(State.createTargetMachine(), std::move(Obj)),
+        Key(Key) {}
+
+private:
+  enum ChildProcessExitCodeE {
+    CounterFDReadFailed = 1,
+    TranslatingCounterFDFailed
+  };
+
+  StringRef childProcessExitCodeToString(int ExitCode) const {
+    switch (ExitCode) {
+    case ChildProcessExitCodeE::CounterFDReadFailed:
+      return "Counter file descriptor read failed";
+    case ChildProcessExitCodeE::TranslatingCounterFDFailed:
+      return "Translating counter file descriptor into a file descriptor in "
+             "the child process failed. This might be due running an older "
+             "Linux kernel that doesn't support the pidfd_getfd system call "
+             "(anything before Linux 5.6).";
+    default:
+      return "Child process returned with unknown exit code";
+    }
+  }
+
+  Error createSubProcessAndRunBenchmark(
+      StringRef CounterName, SmallVectorImpl<int64_t> &CounterValues) const {
+    int PipeFiles[2];
+    int PipeSuccessOrErr = pipe(PipeFiles);
+    if (PipeSuccessOrErr != 0) {
+      return make_error<Failure>(
+          "Failed to create a pipe for interprocess communication between "
+          "llvm-exegesis and the benchmarking subprocess");
+    }
+
+    pid_t ParentOrChildPID = fork();
+    if (ParentOrChildPID == 0) {
+      // We are in the child process, close the write end of the pipe
+      close(PipeFiles[1]);
+      // Unregister handlers, signal handling is now handled through ptrace in
+      // the host process
+      llvm::sys::unregisterHandlers();
+      prepareAndRunBenchmark(PipeFiles[0], Key);
+      // The child process terminates in the above function, so we should never
+      // get to this point.
+      llvm_unreachable("Child process didn't exit when expected.");
+    }
+
+    const ExegesisTarget &ET = State.getExegesisTarget();
+    auto CounterOrError =
+        ET.createCounter(CounterName, State, ParentOrChildPID);
+
+    if (!CounterOrError)
+      return CounterOrError.takeError();
+
+    pfm::Counter *Counter = CounterOrError.get().get();
+
+    close(PipeFiles[0]);
+
+    int CounterFileDescriptor = Counter->getFileDescriptor();
+    ssize_t BytesWritten =
+        write(PipeFiles[1], &CounterFileDescriptor, sizeof(int));
+
+    if (BytesWritten != sizeof(int))
+      return make_error<Failure>("Writing peformance counter file descriptor "
+                                 "to child process failed: " +
+                                 Twine(strerror(errno)));
+
+    if (ptrace(PTRACE_SEIZE, ParentOrChildPID, NULL, NULL) != 0)
+      return make_error<Failure>("Failed to seize the child process: " +
+                                 Twine(strerror(errno)));
+
+    int ChildStatus;
+    if (wait(&ChildStatus) == -1) {
+      return make_error<Failure>(
+          "Waiting for the child process to complete failed: " +
+          Twine(strerror(errno)));
+    }
+
+    if (WIFEXITED(ChildStatus)) {
+      int ChildExitCode = WEXITSTATUS(ChildStatus);
+      if (ChildExitCode == 0) {
+        // The child exited succesfully, read counter values and return
+        // success
+        CounterValues[0] = Counter->read();
+        return Error::success();
+      }
+      // The child exited, but not successfully
+      return make_error<SnippetCrash>(
+          "Child benchmarking process exited with non-zero exit code: " +
+          childProcessExitCodeToString(ChildExitCode));
+    }
+
+    // An error was encountered running the snippet, process it
+    siginfo_t ChildSignalInfo;
+    if (ptrace(PTRACE_GETSIGINFO, ParentOrChildPID, NULL, &ChildSignalInfo) ==
+        -1) {
+      return make_error<Failure>("Getting signal info from the child failed: " +
+                                 Twine(strerror(errno)));
+    }
+
+    return make_error<SnippetCrash>(
+        "The benchmarking subprocess sent unexpected signal: " +
+        Twine(strsignal(ChildSignalInfo.si_signo)));
+  }
+
+  [[noreturn]] void prepareAndRunBenchmark(int Pipe,
+                                           const BenchmarkKey &Key) const {
+    // The following occurs within the benchmarking subprocess
+
+    int ParentCounterFileDescriptor = -1;
+    ssize_t BytesRead = read(Pipe, &ParentCounterFileDescriptor, sizeof(int));
+
+    if (BytesRead != sizeof(int)) {
+      exit(ChildProcessExitCodeE::CounterFDReadFailed);
+    }
+
+    pid_t ParentPID = getppid();
+
+    int ParentPIDFD = syscall(SYS_pidfd_open, ParentPID, 0);
+#ifdef SYS_pidfd_getfd
+    int CounterFileDescriptor =
+        syscall(SYS_pidfd_getfd, ParentPIDFD, ParentCounterFileDescriptor, 0);
+#else
+    int CounterFileDescriptor = 0;
+    exit(ChildProcessExitCodeE::TranslatingCounterFDFailed);
+#endif
+
+    if (CounterFileDescriptor == -1) {
+      exit(ChildProcessExitCodeE::TranslatingCounterFDFailed);
+    }
+
+#ifdef HAVE_LIBPFM
+    ioctl(CounterFileDescriptor, PERF_EVENT_IOC_RESET);
+#endif
+    this->Function(nullptr);
+#ifdef HAVE_LIBPFM
+    ioctl(CounterFileDescriptor, PERF_EVENT_IOC_DISABLE);
+#endif
+
+    exit(0);
+  }
+
+  Expected<llvm::SmallVector<int64_t, 4>>
+  runWithCounter(StringRef CounterName) const override {
+    SmallVector<int64_t, 4> Value(1, 0);
+    Error PossibleBenchmarkError =
+        createSubProcessAndRunBenchmark(CounterName, Value);
+
+    if (PossibleBenchmarkError) {
+      return std::move(PossibleBenchmarkError);
+    }
+
+    return Value;
+  }
+
+  const LLVMState &State;
+  const ExecutableFunction Function;
+  const BenchmarkKey &Key;
+};
+#endif // __linux__
 } // namespace
 
 Expected<SmallString<0>> BenchmarkRunner::assembleSnippet(
@@ -201,6 +386,14 @@ BenchmarkRunner::createFunctionExecutor(
   case ExecutionModeE::InProcess:
     return std::make_unique<InProcessFunctionExecutorImpl>(
         State, std::move(ObjectFile), Scratch.get());
+  case ExecutionModeE::SubProcess:
+#ifdef __linux__
+    return std::make_unique<SubProcessFunctionExecutorImpl>(
+        State, std::move(ObjectFile), Key);
+#else
+    return make_error<Failure>(
+        "The subprocess execution mode is only supported on Linux");
+#endif
   }
   llvm_unreachable("ExecutionMode is outside expected range");
 }
