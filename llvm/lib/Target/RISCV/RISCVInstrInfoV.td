@@ -738,6 +738,12 @@ multiclass VRED_FV_V<string opcodestr, bits<6> funct6> {
                    ReadVMask]>;
 }
 
+multiclass VREDMINMAX_FV_V<string opcodestr, bits<6> funct6> {
+  def _VS : VALUVV<funct6, OPFVV, opcodestr # ".vs">,
+            Sched<[WriteVFRedMinMaxV_From_WorstCase, ReadVFRedV, ReadVFRedV0,
+                   ReadVMask]>;
+}
+
 multiclass VREDO_FV_V<string opcodestr, bits<6> funct6> {
   def _VS : VALUVV<funct6, OPFVV, opcodestr # ".vs">,
             Sched<[WriteVFRedOV_From_WorstCase, ReadVFRedOV, ReadVFRedOV0,
@@ -1514,8 +1520,8 @@ defm VFREDOSUM : VREDO_FV_V<"vfredosum", 0b000011>;
 defm VFREDUSUM : VRED_FV_V<"vfredusum", 0b000001>;
 }
 let mayRaiseFPException = true in {
-defm VFREDMAX : VRED_FV_V<"vfredmax", 0b000111>;
-defm VFREDMIN : VRED_FV_V<"vfredmin", 0b000101>;
+defm VFREDMAX : VREDMINMAX_FV_V<"vfredmax", 0b000111>;
+defm VFREDMIN : VREDMINMAX_FV_V<"vfredmin", 0b000101>;
 }
 } // RVVConstraint = NoConstraint
 
