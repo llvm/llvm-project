@@ -444,6 +444,10 @@ def OMPC_OMPX_DynCGroupMem : Clause<"ompx_dyn_cgroup_mem"> {
   let flangClass = "ScalarIntExpr";
 }
 
+def OMPC_Doacross : Clause<"doacross"> {
+  let clangClass = "OMPDoacrossClause";
+}
+
 //===----------------------------------------------------------------------===//
 // Definition of OpenMP directives
 //===----------------------------------------------------------------------===//
@@ -604,7 +608,8 @@ def OMP_Flush : Directive<"flush"> {
 }
 def OMP_Ordered : Directive<"ordered"> {
   let allowedClauses = [
-    VersionedClause<OMPC_Depend>
+    VersionedClause<OMPC_Depend>,
+    VersionedClause<OMPC_Doacross, 52>
   ];
   let allowedOnceClauses = [
     VersionedClause<OMPC_Threads>,
