@@ -2973,10 +2973,16 @@ static SDValue lowerBUILD_VECTOR(SDValue Op, SelectionDAG &DAG,
       unsigned BitPos = 0, IntegerEltIdx = 0;
       SDValue Vec = DAG.getUNDEF(IntegerViaVecVT);
 
-      for (unsigned I = 0; I < NumElts; I++, BitPos++) {
-        // Once we accumulate enough bits to fill our scalar type, insert into
-        // our vector and clear our accumulated data.
-        if (I != 0 && I % NumViaIntegerBits == 0) {
+      for (unsigned I = 0; I < NumElts;) {
+        SDValue V = Op.getOperand(I);
+        bool BitValue = !V.isUndef() && cast<ConstantSDNode>(V)->getZExtValue();
+        Bits |= ((uint64_t)BitValue << BitPos);
+        ++BitPos;
+        ++I;
+
+        // Once we accumulate enough bits to fill our scalar type or process the
+        // last element, insert into our vector and clear our accumulated data.
+        if (I % NumViaIntegerBits == 0 || I == NumElts) {
           if (NumViaIntegerBits <= 32)
             Bits = SignExtend64<32>(Bits);
           SDValue Elt = DAG.getConstant(Bits, DL, XLenVT);
@@ -2986,18 +2992,7 @@ static SDValue lowerBUILD_VECTOR(SDValue Op, SelectionDAG &DAG,
           BitPos = 0;
           IntegerEltIdx++;
         }
-        SDValue V = Op.getOperand(I);
-        bool BitValue = !V.isUndef() && cast<ConstantSDNode>(V)->getZExtValue();
-        Bits |= ((uint64_t)BitValue << BitPos);
       }
-
-      // Insert the (remaining) scalar value into position in our integer
-      // vector type.
-      if (NumViaIntegerBits <= 32)
-        Bits = SignExtend64<32>(Bits);
-      SDValue Elt = DAG.getConstant(Bits, DL, XLenVT);
-      Vec = DAG.getNode(ISD::INSERT_VECTOR_ELT, DL, IntegerViaVecVT, Vec, Elt,
-                        DAG.getConstant(IntegerEltIdx, DL, XLenVT));
 
       if (NumElts < NumViaIntegerBits) {
         // If we're producing a smaller vector than our minimum legal integer
