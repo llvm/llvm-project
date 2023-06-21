@@ -100,6 +100,18 @@ public:
         wait_for(Lock& lock,
                  const chrono::duration<Rep, Period>& rel_time,
                  Predicate pred);
+
+    // [thread.condvarany.intwait], interruptible waits
+    template <class Lock, class Predicate>
+      bool wait(Lock& lock, stop_token stoken, Predicate pred);                               // since C++20
+
+    template <class Lock, class Clock, class Duration, class Predicate>
+      bool wait_until(Lock& lock, stop_token stoken,
+                      const chrono::time_point<Clock, Duration>& abs_time, Predicate pred);   // since C++20
+
+    template <class Lock, class Rep, class Period, class Predicate>
+      bool wait_for(Lock& lock, stop_token stoken,
+                    const chrono::duration<Rep, Period>& rel_time, Predicate pred);           // since C++20
 };
 
 }  // std
@@ -107,6 +119,7 @@ public:
 */
 
 #include <__assert> // all public C++ headers provide the assertion handler
+#include <__availability>
 #include <__chrono/duration.h>
 #include <__chrono/steady_clock.h>
 #include <__chrono/time_point.h>
@@ -118,6 +131,7 @@ public:
 #include <__mutex/mutex.h>
 #include <__mutex/tag_types.h>
 #include <__mutex/unique_lock.h>
+#include <__stop_token/stop_token.h>
 #include <__utility/move.h>
 #include <version>
 
@@ -174,6 +188,21 @@ public:
         wait_for(_Lock& __lock,
                  const chrono::duration<_Rep, _Period>& __d,
                  _Predicate __pred);
+
+#if _LIBCPP_STD_VER >= 20 && !defined(_LIBCPP_HAS_NO_EXPERIMENTAL_STOP_TOKEN)
+
+    template <class _Lock, class _Predicate>
+    _LIBCPP_AVAILABILITY_SYNC _LIBCPP_HIDE_FROM_ABI bool wait(_Lock& __lock, stop_token __stoken, _Predicate __pred);
+
+    template <class _Lock, class _Clock, class _Duration, class _Predicate>
+    _LIBCPP_AVAILABILITY_SYNC _LIBCPP_HIDE_FROM_ABI bool wait_until(_Lock& __lock, stop_token __stoken,
+                const chrono::time_point<_Clock, _Duration>& __abs_time, _Predicate __pred);
+
+    template <class _Lock, class _Rep, class _Period, class _Predicate>
+    _LIBCPP_AVAILABILITY_SYNC _LIBCPP_HIDE_FROM_ABI bool wait_for(_Lock& __lock, stop_token __stoken,
+                const chrono::duration<_Rep, _Period>& __rel_time, _Predicate __pred);
+
+#endif // _LIBCPP_STD_VER >= 20 && !defined(_LIBCPP_HAS_NO_EXPERIMENTAL_STOP_TOKEN)
 };
 
 inline
@@ -268,6 +297,38 @@ condition_variable_any::wait_for(_Lock& __lock,
     return wait_until(__lock, chrono::steady_clock::now() + __d,
                       _VSTD::move(__pred));
 }
+
+#if _LIBCPP_STD_VER >= 20 && !defined(_LIBCPP_HAS_NO_EXPERIMENTAL_STOP_TOKEN)
+
+template <class _Lock, class _Predicate>
+bool condition_variable_any::wait(_Lock& __lock, stop_token __stoken, _Predicate __pred) {
+    while (!__stoken.stop_requested()) {
+        if (__pred())
+            return true;
+        wait(__lock);
+    }
+    return __pred();
+}
+
+template <class _Lock, class _Clock, class _Duration, class _Predicate>
+bool condition_variable_any::wait_until(
+    _Lock& __lock, stop_token __stoken, const chrono::time_point<_Clock, _Duration>& __abs_time, _Predicate __pred) {
+    while (!__stoken.stop_requested()) {
+        if (__pred())
+            return true;
+        if (wait_until(__lock, __abs_time) == cv_status::timeout)
+            return __pred();
+    }
+    return __pred();
+}
+
+template <class _Lock, class _Rep, class _Period, class _Predicate>
+bool condition_variable_any::wait_for(
+    _Lock& __lock, stop_token __stoken, const chrono::duration<_Rep, _Period>& __rel_time, _Predicate __pred) {
+    return wait_until(__lock, std::move(__stoken), chrono::steady_clock::now() + __rel_time, std::move(__pred));
+}
+
+#endif // _LIBCPP_STD_VER >= 20 && !defined(_LIBCPP_HAS_NO_EXPERIMENTAL_STOP_TOKEN)
 
 _LIBCPP_EXPORTED_FROM_ABI void notify_all_at_thread_exit(condition_variable&, unique_lock<mutex>);
 
