@@ -63,7 +63,8 @@ struct SimplifyAffineMinMaxOp : public OpRewritePattern<OpTy> {
 } // namespace
 
 DiagnosedSilenceableFailure
-SimplifyBoundedAffineOpsOp::apply(TransformResults &results,
+SimplifyBoundedAffineOpsOp::apply(transform::TransformRewriter &rewriter,
+                                  TransformResults &results,
                                   TransformState &state) {
   // Get constraints for bounded values.
   SmallVector<int64_t> lbs;
@@ -127,6 +128,8 @@ SimplifyBoundedAffineOpsOp::apply(TransformResults &results,
                   SimplifyAffineMinMaxOp<AffineMaxOp>>(getContext(), cstr);
   FrozenRewritePatternSet frozenPatterns(std::move(patterns));
   GreedyRewriteConfig config;
+  config.listener =
+      static_cast<RewriterBase::Listener *>(rewriter.getListener());
   config.strictMode = GreedyRewriteStrictness::ExistingAndNewOps;
   // Apply the simplification pattern to a fixpoint.
   if (failed(applyOpPatternsAndFold(targets, frozenPatterns, config))) {

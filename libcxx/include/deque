@@ -189,6 +189,7 @@ template <class T, class Allocator, class Predicate>
 #include <__algorithm/remove_if.h>
 #include <__algorithm/unwrap_iter.h>
 #include <__assert> // all public C++ headers provide the assertion handler
+#include <__availability>
 #include <__config>
 #include <__format/enable_insertable.h>
 #include <__iterator/distance.h>
@@ -2652,7 +2653,7 @@ _LIBCPP_END_NAMESPACE_STD
 _LIBCPP_BEGIN_NAMESPACE_STD
 namespace pmr {
 template <class _ValueT>
-using deque = std::deque<_ValueT, polymorphic_allocator<_ValueT>>;
+using deque _LIBCPP_AVAILABILITY_PMR = std::deque<_ValueT, polymorphic_allocator<_ValueT>>;
 } // namespace pmr
 _LIBCPP_END_NAMESPACE_STD
 #endif

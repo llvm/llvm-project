@@ -35,7 +35,8 @@ void transform::ApplyForLoopCanonicalizationPatternsOp::populatePatterns(
 // GetParentForOp
 //===----------------------------------------------------------------------===//
 DiagnosedSilenceableFailure
-transform::GetParentForOp::apply(transform::TransformResults &results,
+transform::GetParentForOp::apply(transform::TransformRewriter &rewriter,
+                                 transform::TransformResults &results,
                                  transform::TransformState &state) {
   SetVector<Operation *> parents;
   for (Operation *target : state.getPayloadOps(getTarget())) {
@@ -92,7 +93,8 @@ static scf::ExecuteRegionOp wrapInExecuteRegion(RewriterBase &b,
 }
 
 DiagnosedSilenceableFailure
-transform::LoopOutlineOp::apply(transform::TransformResults &results,
+transform::LoopOutlineOp::apply(transform::TransformRewriter &rewriter,
+                                transform::TransformResults &results,
                                 transform::TransformState &state) {
   SmallVector<Operation *> functions;
   SmallVector<Operation *> calls;
@@ -100,7 +102,6 @@ transform::LoopOutlineOp::apply(transform::TransformResults &results,
   for (Operation *target : state.getPayloadOps(getTarget())) {
     Location location = target->getLoc();
     Operation *symbolTableOp = SymbolTable::getNearestSymbolTable(target);
-    IRRewriter rewriter(getContext());
     scf::ExecuteRegionOp exec = wrapInExecuteRegion(rewriter, target);
     if (!exec) {
       DiagnosedSilenceableFailure diag = emitSilenceableError()
@@ -135,11 +136,11 @@ transform::LoopOutlineOp::apply(transform::TransformResults &results,
 //===----------------------------------------------------------------------===//
 
 DiagnosedSilenceableFailure
-transform::LoopPeelOp::applyToOne(scf::ForOp target,
+transform::LoopPeelOp::applyToOne(transform::TransformRewriter &rewriter,
+                                  scf::ForOp target,
                                   transform::ApplyToEachResultList &results,
                                   transform::TransformState &state) {
   scf::ForOp result;
-  IRRewriter rewriter(target->getContext());
   // This helper returns failure when peeling does not occur (i.e. when the IR
   // is not modified). This is not a failure for the op as the postcondition:
   //    "the loop trip count is divisible by the step"
@@ -192,7 +193,8 @@ loopScheduling(scf::ForOp forOp,
 }
 
 DiagnosedSilenceableFailure
-transform::LoopPipelineOp::applyToOne(scf::ForOp target,
+transform::LoopPipelineOp::applyToOne(transform::TransformRewriter &rewriter,
+                                      scf::ForOp target,
                                       transform::ApplyToEachResultList &results,
                                       transform::TransformState &state) {
   scf::PipeliningOption options;
@@ -203,7 +205,6 @@ transform::LoopPipelineOp::applyToOne(scf::ForOp target,
                        getReadLatency());
       };
   scf::ForLoopPipeliningPattern pattern(options, target->getContext());
-  IRRewriter rewriter(getContext());
   rewriter.setInsertionPoint(target);
   FailureOr<scf::ForOp> patternResult =
       scf::pipelineForLoop(rewriter, target, options);
@@ -219,7 +220,8 @@ transform::LoopPipelineOp::applyToOne(scf::ForOp target,
 //===----------------------------------------------------------------------===//
 
 DiagnosedSilenceableFailure
-transform::LoopUnrollOp::applyToOne(Operation *op,
+transform::LoopUnrollOp::applyToOne(transform::TransformRewriter &rewriter,
+                                    Operation *op,
                                     transform::ApplyToEachResultList &results,
                                     transform::TransformState &state) {
   LogicalResult result(failure());
@@ -241,7 +243,8 @@ transform::LoopUnrollOp::applyToOne(Operation *op,
 //===----------------------------------------------------------------------===//
 
 DiagnosedSilenceableFailure
-transform::LoopCoalesceOp::applyToOne(Operation *op,
+transform::LoopCoalesceOp::applyToOne(transform::TransformRewriter &rewriter,
+                                      Operation *op,
                                       transform::ApplyToEachResultList &results,
                                       transform::TransformState &state) {
   LogicalResult result(failure());
@@ -276,12 +279,10 @@ static void replaceOpWithRegion(RewriterBase &rewriter, Operation *op,
 }
 
 DiagnosedSilenceableFailure transform::TakeAssumedBranchOp::applyToOne(
-    scf::IfOp ifOp, transform::ApplyToEachResultList &results,
+    transform::TransformRewriter &rewriter, scf::IfOp ifOp,
+    transform::ApplyToEachResultList &results,
     transform::TransformState &state) {
-  TrackingListener listener(state, *this);
-  IRRewriter rewriter(ifOp->getContext(), &listener);
   rewriter.setInsertionPoint(ifOp);
-
   Region &region =
       getTakeElseBranch() ? ifOp.getElseRegion() : ifOp.getThenRegion();
   if (!llvm::hasSingleElement(region)) {

@@ -113,6 +113,8 @@ static void updateCallee(mlir::func::CallOp call, llvm::StringRef newTarget) {
 // to the user.
 ::mlir::DiagnosedSilenceableFailure
 mlir::transform::ChangeCallTargetOp::applyToOne(
+    // The rewriter that should be used when modifying IR.
+    ::mlir::transform::TransformRewriter &rewriter,
     // The single payload operation to which the transformation is applied.
     ::mlir::func::CallOp call,
     // The payload IR entities that will be appended to lists associated with
@@ -146,27 +148,27 @@ void mlir::transform::ChangeCallTargetOp::getEffects(
 // CallToOp
 //===---------------------------------------------------------------------===//
 
-static mlir::Operation *replaceCallWithOp(mlir::CallOpInterface call) {
+static mlir::Operation *replaceCallWithOp(mlir::RewriterBase &rewriter,
+                                          mlir::CallOpInterface call) {
   // Construct an operation from an unregistered dialect. This is discouraged
   // and is only used here for brevity of the overall example.
   mlir::OperationState state(call.getLoc(), "my.mm4");
   state.types.assign(call->result_type_begin(), call->result_type_end());
   state.operands.assign(call->operand_begin(), call->operand_end());
 
-  mlir::OpBuilder builder(call);
-  mlir::Operation *replacement = builder.create(state);
-  call->replaceAllUsesWith(replacement->getResults());
-  call->erase();
+  mlir::Operation *replacement = rewriter.create(state);
+  rewriter.replaceOp(call, replacement->getResults());
   return replacement;
 }
 
 // See above for the signature description.
 mlir::DiagnosedSilenceableFailure mlir::transform::CallToOp::applyToOne(
-    mlir::CallOpInterface call, mlir::transform::ApplyToEachResultList &results,
+    mlir::transform::TransformRewriter &rewriter, mlir::CallOpInterface call,
+    mlir::transform::ApplyToEachResultList &results,
     mlir::transform::TransformState &state) {
 
   // Dispatch to the actual transformation.
-  Operation *replacement = replaceCallWithOp(call);
+  Operation *replacement = replaceCallWithOp(rewriter, call);
 
   // Associate the payload operation produced by the rewrite with the result
   // handle of this transform operation.

@@ -175,6 +175,7 @@ class InlineSpiller : public Spiller {
 
   // All COPY instructions to/from snippets.
   // They are ignored since both operands refer to the same stack slot.
+  // For bundled copies, this will only include the first header copy.
   SmallPtrSet<MachineInstr*, 8> SnippetCopies;
 
   // Values that failed to remat at some point.
@@ -255,15 +256,58 @@ Spiller *llvm::createInlineSpiller(MachineFunctionPass &Pass,
 // This minimizes register pressure and maximizes the store-to-load distance for
 // spill slots which can be important in tight loops.
 
-/// isFullCopyOf - If MI is a COPY to or from Reg, return the other register,
-/// otherwise return 0.
-static Register isFullCopyOf(const MachineInstr &MI, Register Reg) {
-  if (!MI.isFullCopy())
+/// If MI is a COPY to or from Reg, return the other register, otherwise return
+/// 0.
+static Register isCopyOf(const MachineInstr &MI, Register Reg) {
+  assert(!MI.isBundled());
+  if (!MI.isCopy())
     return Register();
-  if (MI.getOperand(0).getReg() == Reg)
-    return MI.getOperand(1).getReg();
-  if (MI.getOperand(1).getReg() == Reg)
-    return MI.getOperand(0).getReg();
+
+  const MachineOperand &DstOp = MI.getOperand(0);
+  const MachineOperand &SrcOp = MI.getOperand(1);
+
+  // TODO: Probably only worth allowing subreg copies with undef dests.
+  if (DstOp.getSubReg() != SrcOp.getSubReg())
+    return Register();
+  if (DstOp.getReg() == Reg)
+    return SrcOp.getReg();
+  if (SrcOp.getReg() == Reg)
+    return DstOp.getReg();
+  return Register();
+}
+
+/// Check for a copy bundle as formed by SplitKit.
+static Register isCopyOfBundle(const MachineInstr &FirstMI, Register Reg) {
+  if (!FirstMI.isBundled())
+    return isCopyOf(FirstMI, Reg);
+
+  assert(!FirstMI.isBundledWithPred() && FirstMI.isBundledWithSucc() &&
+         "expected to see first instruction in bundle");
+
+  Register SnipReg;
+  MachineBasicBlock::const_instr_iterator I = FirstMI.getIterator();
+  while (I->isBundledWithSucc()) {
+    const MachineInstr &MI = *I;
+    if (!MI.isCopy())
+      return Register();
+
+    const MachineOperand &DstOp = MI.getOperand(0);
+    const MachineOperand &SrcOp = MI.getOperand(1);
+    if (DstOp.getReg() == Reg) {
+      if (!SnipReg)
+        SnipReg = SrcOp.getReg();
+      else if (SnipReg != SrcOp.getReg())
+        return Register();
+    } else if (SrcOp.getReg() == Reg) {
+      if (!SnipReg)
+        SnipReg = DstOp.getReg();
+      else if (SnipReg != DstOp.getReg())
+        return Register();
+    }
+
+    ++I;
+  }
+
   return Register();
 }
 
@@ -307,14 +351,14 @@ bool InlineSpiller::isSnippet(const LiveInterval &SnipLI) {
   MachineInstr *UseMI = nullptr;
 
   // Check that all uses satisfy our criteria.
-  for (MachineRegisterInfo::reg_instr_nodbg_iterator
-           RI = MRI.reg_instr_nodbg_begin(SnipLI.reg()),
-           E = MRI.reg_instr_nodbg_end();
+  for (MachineRegisterInfo::reg_bundle_nodbg_iterator
+           RI = MRI.reg_bundle_nodbg_begin(SnipLI.reg()),
+           E = MRI.reg_bundle_nodbg_end();
        RI != E;) {
     MachineInstr &MI = *RI++;
 
     // Allow copies to/from Reg.
-    if (isFullCopyOf(MI, Reg))
+    if (isCopyOfBundle(MI, Reg))
       continue;
 
     // Allow stack slot loads.
@@ -351,9 +395,8 @@ void InlineSpiller::collectRegsToSpill() {
   if (Original == Reg)
     return;
 
-  for (MachineInstr &MI :
-       llvm::make_early_inc_range(MRI.reg_instructions(Reg))) {
-    Register SnipReg = isFullCopyOf(MI, Reg);
+  for (MachineInstr &MI : llvm::make_early_inc_range(MRI.reg_bundles(Reg))) {
+    Register SnipReg = isCopyOfBundle(MI, Reg);
     if (!isSibling(SnipReg))
       continue;
     LiveInterval &SnipLI = LIS.getInterval(SnipReg);
@@ -475,7 +518,7 @@ void InlineSpiller::eliminateRedundantSpills(LiveInterval &SLI, VNInfo *VNI) {
 
     // Find all spills and copies of VNI.
     for (MachineInstr &MI :
-         llvm::make_early_inc_range(MRI.use_nodbg_instructions(Reg))) {
+         llvm::make_early_inc_range(MRI.use_nodbg_bundles(Reg))) {
       if (!MI.isCopy() && !MI.mayStore())
         continue;
       SlotIndex Idx = LIS.getInstructionIndex(MI);
@@ -483,13 +526,14 @@ void InlineSpiller::eliminateRedundantSpills(LiveInterval &SLI, VNInfo *VNI) {
         continue;
 
       // Follow sibling copies down the dominator tree.
-      if (Register DstReg = isFullCopyOf(MI, Reg)) {
+      if (Register DstReg = isCopyOfBundle(MI, Reg)) {
         if (isSibling(DstReg)) {
-           LiveInterval &DstLI = LIS.getInterval(DstReg);
-           VNInfo *DstVNI = DstLI.getVNInfoAt(Idx.getRegSlot());
-           assert(DstVNI && "Missing defined value");
-           assert(DstVNI->def == Idx.getRegSlot() && "Wrong copy def slot");
-           WorkList.push_back(std::make_pair(&DstLI, DstVNI));
+          LiveInterval &DstLI = LIS.getInterval(DstReg);
+          VNInfo *DstVNI = DstLI.getVNInfoAt(Idx.getRegSlot());
+          assert(DstVNI && "Missing defined value");
+          assert(DstVNI->def == Idx.getRegSlot() && "Wrong copy def slot");
+
+          WorkList.push_back(std::make_pair(&DstLI, DstVNI));
         }
         continue;
       }
@@ -1111,7 +1155,7 @@ void InlineSpiller::spillAroundUses(Register Reg) {
         Idx = VNI->def;
 
     // Check for a sibling copy.
-    Register SibReg = isFullCopyOf(MI, Reg);
+    Register SibReg = isCopyOfBundle(MI, Reg);
     if (SibReg && isSibling(SibReg)) {
       // This may actually be a copy between snippets.
       if (isRegToSpill(SibReg)) {
@@ -1202,8 +1246,8 @@ void InlineSpiller::spillAll() {
          llvm::make_early_inc_range(MRI.reg_instructions(Reg))) {
       assert(SnippetCopies.count(&MI) && "Remaining use wasn't a snippet copy");
       // FIXME: Do this with a LiveRangeEdit callback.
-      LIS.RemoveMachineInstrFromMaps(MI);
-      MI.eraseFromParent();
+      LIS.getSlotIndexes()->removeSingleMachineInstrFromMaps(MI);
+      MI.eraseFromBundle();
     }
   }
 

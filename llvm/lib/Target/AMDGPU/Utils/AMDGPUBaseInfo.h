@@ -880,13 +880,6 @@ struct Waitcnt {
 
   bool hasWaitStoreCnt() const { return StoreCnt != ~0u; }
 
-  bool dominates(const Waitcnt &Other) const {
-    return LoadCnt <= Other.LoadCnt && ExpCnt <= Other.ExpCnt &&
-           DsCnt <= Other.DsCnt && StoreCnt <= Other.StoreCnt &&
-           SampleCnt <= Other.SampleCnt && BvhCnt <= Other.BvhCnt &&
-           KmCnt <= Other.KmCnt;
-  }
-
   Waitcnt combined(const Waitcnt &Other) const {
     // Does the right thing provided self and Other are either both pre-gfx12
     // or both gfx12+.

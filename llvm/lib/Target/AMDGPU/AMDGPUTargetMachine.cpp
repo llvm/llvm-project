@@ -409,8 +409,6 @@ extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializeAMDGPUTarget() {
   initializeAMDGPUPromoteAllocaToVectorPass(*PR);
   initializeAMDGPUCodeGenPreparePass(*PR);
   initializeAMDGPULateCodeGenPreparePass(*PR);
-  initializeAMDGPUPropagateAttributesEarlyPass(*PR);
-  initializeAMDGPUPropagateAttributesLatePass(*PR);
   initializeAMDGPURemoveIncompatibleFunctionsPass(*PR);
   initializeAMDGPULowerModuleLDSPass(*PR);
   initializeAMDGPURewriteOutArgumentsPass(*PR);
@@ -621,12 +619,8 @@ void AMDGPUTargetMachine::registerDefaultAliasAnalyses(AAManager &AAM) {
 
 void AMDGPUTargetMachine::registerPassBuilderCallbacks(PassBuilder &PB) {
   PB.registerPipelineParsingCallback(
-      [this](StringRef PassName, ModulePassManager &PM,
-             ArrayRef<PassBuilder::PipelineElement>) {
-        if (PassName == "amdgpu-propagate-attributes-late") {
-          PM.addPass(AMDGPUPropagateAttributesLatePass(*this));
-          return true;
-        }
+      [](StringRef PassName, ModulePassManager &PM,
+         ArrayRef<PassBuilder::PipelineElement>) {
         if (PassName == "amdgpu-unify-metadata") {
           PM.addPass(AMDGPUUnifyMetadataPass());
           return true;
@@ -676,10 +670,6 @@ void AMDGPUTargetMachine::registerPassBuilderCallbacks(PassBuilder &PB) {
           PM.addPass(AMDGPULowerKernelAttributesPass());
           return true;
         }
-        if (PassName == "amdgpu-propagate-attributes-early") {
-          PM.addPass(AMDGPUPropagateAttributesEarlyPass(*this));
-          return true;
-        }
         if (PassName == "amdgpu-promote-kernel-arguments") {
           PM.addPass(AMDGPUPromoteKernelArgumentsPass());
           return true;
@@ -715,7 +705,6 @@ void AMDGPUTargetMachine::registerPassBuilderCallbacks(PassBuilder &PB) {
   PB.registerPipelineStartEPCallback(
       [this](ModulePassManager &PM, OptimizationLevel Level) {
         FunctionPassManager FPM;
-        FPM.addPass(AMDGPUPropagateAttributesEarlyPass(*this));
         FPM.addPass(AMDGPUUseNativeCallsPass());
         if (EnableLibCallSimplify && Level != OptimizationLevel::O0)
           FPM.addPass(AMDGPUSimplifyLibCallsPass(*this));
@@ -723,7 +712,7 @@ void AMDGPUTargetMachine::registerPassBuilderCallbacks(PassBuilder &PB) {
       });
 
   PB.registerPipelineEarlySimplificationEPCallback(
-      [this](ModulePassManager &PM, OptimizationLevel Level) {
+      [](ModulePassManager &PM, OptimizationLevel Level) {
         PM.addPass(AMDGPUPrintfRuntimeBindingPass());
 
         if (Level == OptimizationLevel::O0)
@@ -733,11 +722,9 @@ void AMDGPUTargetMachine::registerPassBuilderCallbacks(PassBuilder &PB) {
 
         if (InternalizeSymbols) {
           PM.addPass(InternalizePass(mustPreserveGV));
-        }
-        PM.addPass(AMDGPUPropagateAttributesLatePass(*this));
-        if (InternalizeSymbols) {
           PM.addPass(GlobalDCEPass());
         }
+
         if (EarlyInlineAll && !EnableFunctionCalls)
           PM.addPass(AMDGPUAlwaysInlinePass());
       });
@@ -1010,9 +997,6 @@ void AMDGPUPassConfig::addIRPasses() {
   addPass(createAMDGPUPrintfRuntimeBinding());
   if (LowerCtorDtor)
     addPass(createAMDGPUCtorDtorLoweringLegacyPass());
-
-  // A call to propagate attributes pass in the backend in case opt was not run.
-  addPass(createAMDGPUPropagateAttributesEarlyPass(&TM));
 
   if (isPassEnabled(EnableImageIntrinsicOptimizer))
     addPass(createAMDGPUImageIntrinsicOptimizerPass(&TM));

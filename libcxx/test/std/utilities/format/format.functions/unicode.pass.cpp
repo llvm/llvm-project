@@ -269,6 +269,31 @@ static void test_malformed_code_point() {
     check(SV("*ZZZZ\xefZZZZ*"), SV("{:*^11}"), SV("ZZZZ\xefZZZZ"));
     check(SV("*ZZZZ\xffZZZZ*"), SV("{:*^11}"), SV("ZZZZ\xffZZZZ"));
 
+    // Invalid continuations
+    check(SV("\xc2\x00"), SV("{}"), SV("\xc2\x00"));
+    check(SV("\xc2\x40"), SV("{}"), SV("\xc2\x40"));
+    check(SV("\xc2\xc0"), SV("{}"), SV("\xc2\xc0"));
+
+    check(SV("\xe0\x00\x80"), SV("{}"), SV("\xe0\x00\x80"));
+    check(SV("\xe0\x40\x80"), SV("{}"), SV("\xe0\x40\x80"));
+    check(SV("\xe0\xc0\x80"), SV("{}"), SV("\xe0\xc0\x80"));
+
+    check(SV("\xe0\x80\x00"), SV("{}"), SV("\xe0\x80\x00"));
+    check(SV("\xe0\x80\x40"), SV("{}"), SV("\xe0\x80\x40"));
+    check(SV("\xe0\x80\xc0"), SV("{}"), SV("\xe0\x80\xc0"));
+
+    check(SV("\xf0\x80\x80\x00"), SV("{}"), SV("\xf0\x80\x80\x00"));
+    check(SV("\xf0\x80\x80\x40"), SV("{}"), SV("\xf0\x80\x80\x40"));
+    check(SV("\xf0\x80\x80\xc0"), SV("{}"), SV("\xf0\x80\x80\xc0"));
+
+    check(SV("\xf0\x80\x00\x80"), SV("{}"), SV("\xf0\x80\x00\x80"));
+    check(SV("\xf0\x80\x40\x80"), SV("{}"), SV("\xf0\x80\x40\x80"));
+    check(SV("\xf0\x80\xc0\x80"), SV("{}"), SV("\xf0\x80\xc0\x80"));
+
+    check(SV("\xf0\x00\x80\x80"), SV("{}"), SV("\xf0\x00\x80\x80"));
+    check(SV("\xf0\x40\x80\x80"), SV("{}"), SV("\xf0\x40\x80\x80"));
+    check(SV("\xf0\xc0\x80\x80"), SV("{}"), SV("\xf0\xc0\x80\x80"));
+
     // Premature end.
     check(SV("*ZZZZ\xef\xf5*"), SV("{:*^8}"), SV("ZZZZ\xef\xf5"));
     check(SV("*ZZZZ\xef\xf5ZZZZ*"), SV("{:*^12}"), SV("ZZZZ\xef\xf5ZZZZ"));

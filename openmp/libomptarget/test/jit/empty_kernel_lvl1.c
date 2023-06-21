@@ -28,6 +28,8 @@
 // RUN: %fcheck-plain-generic --input-file %t.pre.ll %S/empty_kernel.inc --check-prefixes=FIRST,SECOND
 // clang-format on
 
+// UNSUPPORTED: aarch64-unknown-linux-gnu
+// UNSUPPORTED: aarch64-unknown-linux-gnu-LTO
 // UNSUPPORTED: x86_64-pc-linux-gnu
 // UNSUPPORTED: x86_64-pc-linux-gnu-LTO
 

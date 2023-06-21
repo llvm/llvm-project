@@ -1038,14 +1038,8 @@ static SDValue earlyExpandDIVFIX(SDNode *N, SDValue LHS, SDValue RHS,
   if (VT.isVector())
     WideVT = EVT::getVectorVT(*DAG.getContext(), WideVT,
                               VT.getVectorElementCount());
-  if (Signed) {
-    LHS = DAG.getSExtOrTrunc(LHS, dl, WideVT);
-    RHS = DAG.getSExtOrTrunc(RHS, dl, WideVT);
-  } else {
-    LHS = DAG.getZExtOrTrunc(LHS, dl, WideVT);
-    RHS = DAG.getZExtOrTrunc(RHS, dl, WideVT);
-  }
-
+  LHS = DAG.getExtOrTrunc(Signed, LHS, dl, WideVT);
+  RHS = DAG.getExtOrTrunc(Signed, RHS, dl, WideVT);
   SDValue Res = TLI.expandFixedPointDiv(N->getOpcode(), dl, LHS, RHS, Scale,
                                         DAG);
   assert(Res && "Expanding DIVFIX with wide type failed?");

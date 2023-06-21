@@ -173,6 +173,9 @@ private:
 
   CCAssignFn *CCAssignFnForCall(CallingConv::ID CC, bool IsVarArg) const;
   CCAssignFn *CCAssignFnForReturn(CallingConv::ID CC, bool IsVarArg) const;
+
+  bool decomposeMulByConstant(LLVMContext &Context, EVT VT,
+                              SDValue C) const override;
 };
 
 } // namespace llvm

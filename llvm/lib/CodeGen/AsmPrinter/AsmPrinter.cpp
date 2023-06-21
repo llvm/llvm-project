@@ -4013,16 +4013,16 @@ void AsmPrinter::emitXRayTable() {
 
     if (TM.Options.XRayFunctionIndex)
       FnSledIndex = OutContext.getELFSection(
-          "xray_fn_idx", ELF::SHT_PROGBITS, Flags | ELF::SHF_WRITE, 0,
-          GroupName, F.hasComdat(), MCSection::NonUniqueID, LinkedToSym);
+          "xray_fn_idx", ELF::SHT_PROGBITS, Flags, 0, GroupName, F.hasComdat(),
+          MCSection::NonUniqueID, LinkedToSym);
   } else if (MF->getSubtarget().getTargetTriple().isOSBinFormatMachO()) {
     InstMap = OutContext.getMachOSection("__DATA", "xray_instr_map",
                                          MachO::S_ATTR_LIVE_SUPPORT,
                                          SectionKind::getReadOnlyWithRel());
     if (TM.Options.XRayFunctionIndex)
-      FnSledIndex = OutContext.getMachOSection(
-          "__DATA", "xray_fn_idx", MachO::S_ATTR_LIVE_SUPPORT,
-          SectionKind::getReadOnlyWithRel());
+      FnSledIndex = OutContext.getMachOSection("__DATA", "xray_fn_idx",
+                                               MachO::S_ATTR_LIVE_SUPPORT,
+                                               SectionKind::getReadOnly());
   } else {
     llvm_unreachable("Unsupported target");
   }
@@ -4064,8 +4064,17 @@ void AsmPrinter::emitXRayTable() {
     OutStreamer->switchSection(FnSledIndex);
     OutStreamer->emitCodeAlignment(Align(2 * WordSizeBytes),
                                    &getSubtargetInfo());
-    OutStreamer->emitSymbolValue(SledsStart, WordSizeBytes, false);
-    OutStreamer->emitSymbolValue(SledsEnd, WordSizeBytes, false);
+    // For Mach-O, use an "l" symbol as the atom of this subsection. The label
+    // difference uses a SUBTRACTOR external relocation which references the
+    // symbol.
+    MCSymbol *Dot = Ctx.createLinkerPrivateSymbol("xray_fn_idx");
+    OutStreamer->emitLabel(Dot);
+    OutStreamer->emitValueImpl(
+        MCBinaryExpr::createSub(MCSymbolRefExpr::create(SledsStart, Ctx),
+                                MCSymbolRefExpr::create(Dot, Ctx), Ctx),
+        WordSizeBytes);
+    OutStreamer->emitValueImpl(MCConstantExpr::create(Sleds.size(), Ctx),
+                               WordSizeBytes);
     OutStreamer->switchSection(PrevSection);
   }
   Sleds.clear();
