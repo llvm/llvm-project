@@ -532,11 +532,8 @@ define <8 x i8> @widen_splat_ve3(<4 x i8> %v) {
 ; CHECK-LABEL: widen_splat_ve3:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 8, e8, mf2, ta, ma
-; CHECK-NEXT:    vmv.v.i v9, 0
-; CHECK-NEXT:    vsetivli zero, 4, e8, mf2, tu, ma
-; CHECK-NEXT:    vmv.v.v v9, v8
-; CHECK-NEXT:    vsetivli zero, 8, e8, mf2, ta, ma
-; CHECK-NEXT:    vrgather.vi v8, v9, 3
+; CHECK-NEXT:    vrgather.vi v9, v8, 3
+; CHECK-NEXT:    vmv1r.v v8, v9
 ; CHECK-NEXT:    ret
   %shuf = shufflevector <4 x i8> %v, <4 x i8> poison, <8 x i32> <i32 3, i32 3, i32 3, i32 3, i32 3, i32 3, i32 3, i32 3>
   ret <8 x i8> %shuf
