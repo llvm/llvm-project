@@ -2955,7 +2955,7 @@ void JoinVals::computeAssignment(unsigned ValNo, JoinVals &Other) {
     // its lanes.
     if (OtherV.ErasableImplicitDef &&
         TrackSubRegLiveness &&
-        (OtherV.WriteLanes & ~V.ValidLanes).any()) {
+        (OtherV.ValidLanes & ~V.ValidLanes).any()) {
       LLVM_DEBUG(dbgs() << "Cannot erase implicit_def with missing values\n");
 
       OtherV.ErasableImplicitDef = false;
