@@ -36,9 +36,8 @@ struct PadOpTiling : public TilingInterface::ExternalModel<PadOpTiling, PadOp> {
   SmallVector<Range> getIterationDomain(Operation *op, OpBuilder &b) const {
     ReifiedRankedShapedTypeDims reifiedShapes;
     (void)reifyResultShapes(b, op, reifiedShapes);
-    Location loc = op->getLoc();
-    Value zero = b.create<arith::ConstantIndexOp>(loc, 0);
-    Value one = b.create<arith::ConstantIndexOp>(loc, 1);
+    OpFoldResult zero = b.getIndexAttr(0);
+    OpFoldResult one = b.getIndexAttr(1);
     // Initialize all the ranges to {zero, one, one}. All the `ub`s are
     // overwritten.
     SmallVector<Range> loopRanges(reifiedShapes[0].size(), {zero, one, one});
@@ -76,11 +75,10 @@ static SmallVector<Range> getPackUnPackIterationDomain(OpTy op,
   static_assert(llvm::is_one_of<OpTy, PackOp, UnPackOp>::value,
                 "applies to only pack or unpack operations");
   OpBuilder::InsertionGuard g(builder);
-  Location loc = op.getLoc();
   int64_t rank = (std::is_same<OpTy, PackOp>::value) ? op.getSourceRank()
                                                      : op.getDestRank();
-  Value zero = builder.create<arith::ConstantIndexOp>(loc, 0);
-  Value one = builder.create<arith::ConstantIndexOp>(loc, 1);
+  OpFoldResult zero = builder.getIndexAttr(0);
+  OpFoldResult one = builder.getIndexAttr(1);
   ReifiedRankedShapedTypeDims resultShape;
   (void)reifyResultShapes(builder, op, resultShape);
   SmallVector<Range> loopBounds(rank);
