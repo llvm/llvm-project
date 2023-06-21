@@ -1,4 +1,4 @@
-# RUN: llc --run-pass=simple-register-coalescing -o - %s | FileCheck %s
+# RUN: llc --run-pass=register-coalescer -o - %s | FileCheck %s
 # pr45489
 # Coalescing variables across a setjmp call can add a undefined
 # variable value when longjmp if such variables are spilled and

@@ -896,9 +896,14 @@ static bool isAddressUse(const TargetTransformInfo &TTI,
 /// Return the type of the memory being accessed.
 static MemAccessTy getAccessType(const TargetTransformInfo &TTI,
                                  Instruction *Inst, Value *OperandVal) {
-  MemAccessTy AccessTy(Inst->getType(), MemAccessTy::UnknownAddressSpace);
+  MemAccessTy AccessTy = MemAccessTy::getUnknown(Inst->getContext());
+
+  // First get the type of memory being accessed.
+  if (Type *Ty = Inst->getAccessType())
+    AccessTy.MemTy = Ty;
+
+  // Then get the pointer address space.
   if (const StoreInst *SI = dyn_cast<StoreInst>(Inst)) {
-    AccessTy.MemTy = SI->getOperand(0)->getType();
     AccessTy.AddrSpace = SI->getPointerAddressSpace();
   } else if (const LoadInst *LI = dyn_cast<LoadInst>(Inst)) {
     AccessTy.AddrSpace = LI->getPointerAddressSpace();
@@ -923,7 +928,6 @@ static MemAccessTy getAccessType(const TargetTransformInfo &TTI,
           II->getArgOperand(0)->getType()->getPointerAddressSpace();
       break;
     case Intrinsic::masked_store:
-      AccessTy.MemTy = II->getOperand(0)->getType();
       AccessTy.AddrSpace =
           II->getArgOperand(1)->getType()->getPointerAddressSpace();
       break;
