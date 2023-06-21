@@ -615,23 +615,35 @@ void DwarfStreamer::emitDwarfDebugLocListsTableFragment(
 
   // Make .debug_loclists the current section.
   MS->switchSection(MC->getObjectFileInfo()->getDwarfLoclistsSection());
-
-  unsigned AddressSize = Unit.getOrigUnit().getAddressByteSize();
+  std::optional<uint64_t> BaseAddress;
 
   for (const DWARFLocationExpression &LocExpression :
        LinkedLocationExpression) {
     if (LocExpression.Range) {
+
+      if (!BaseAddress) {
+
+        BaseAddress = LocExpression.Range->LowPC;
+
+        // Emit base address.
+        MS->emitInt8(dwarf::DW_LLE_base_address);
+        LocListsSectionSize += 1;
+        unsigned AddressSize = Unit.getOrigUnit().getAddressByteSize();
+        MS->emitIntValue(*BaseAddress, AddressSize);
+        LocListsSectionSize += AddressSize;
+      }
+
       // Emit type of entry.
-      MS->emitInt8(dwarf::DW_LLE_start_length);
+      MS->emitInt8(dwarf::DW_LLE_offset_pair);
       LocListsSectionSize += 1;
 
-      // Emit start address.
-      MS->emitIntValue(LocExpression.Range->LowPC, AddressSize);
-      LocListsSectionSize += AddressSize;
+      // Emit start offset relative to base address.
+      LocListsSectionSize +=
+          MS->emitULEB128IntValue(LocExpression.Range->LowPC - *BaseAddress);
 
-      // Emit length of the range.
-      LocListsSectionSize += MS->emitSLEB128IntValue(
-          LocExpression.Range->HighPC - LocExpression.Range->LowPC);
+      // Emit end offset relative to base address.
+      LocListsSectionSize +=
+          MS->emitULEB128IntValue(LocExpression.Range->HighPC - *BaseAddress);
     } else {
       // Emit type of entry.
       MS->emitInt8(dwarf::DW_LLE_default_location);

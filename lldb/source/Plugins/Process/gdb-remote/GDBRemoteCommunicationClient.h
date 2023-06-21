@@ -492,7 +492,7 @@ public:
   ///
   /// \see \b Process::ConfigureStructuredData(...) for details.
   Status
-  ConfigureRemoteStructuredData(ConstString type_name,
+  ConfigureRemoteStructuredData(llvm::StringRef type_name,
                                 const StructuredData::ObjectSP &config_sp);
 
   llvm::Expected<TraceSupportedResponse>

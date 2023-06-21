@@ -59,9 +59,16 @@ public:
       return val;
     };
     hlfir::ElementalOp elementalOp = hlfir::genElementalOp(
-        loc, builder, elementType, resultShape, typeParams, genKernel);
+        loc, builder, elementType, resultShape, typeParams, genKernel,
+        transpose.getResult().getType());
 
-    rewriter.replaceOp(transpose, elementalOp.getResult());
+    // it wouldn't be safe to replace block arguments with a different
+    // hlfir.expr type. Types can differ due to differing amounts of shape
+    // information
+    assert(elementalOp.getResult().getType() ==
+           transpose.getResult().getType());
+
+    rewriter.replaceOp(transpose, elementalOp);
     return mlir::success();
   }
 

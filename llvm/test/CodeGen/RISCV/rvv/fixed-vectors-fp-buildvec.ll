@@ -35,9 +35,8 @@ define void @buildvec_no_vid_v4f32(<4 x float>* %x) {
 define <4 x float> @hang_when_merging_stores_after_legalization(<8 x float> %x, <8 x float> %y) optsize {
 ; LMULMAX1-LABEL: hang_when_merging_stores_after_legalization:
 ; LMULMAX1:       # %bb.0:
-; LMULMAX1-NEXT:    li a0, 2
 ; LMULMAX1-NEXT:    vsetivli zero, 4, e32, m1, ta, mu
-; LMULMAX1-NEXT:    vmv.s.x v0, a0
+; LMULMAX1-NEXT:    vmv.v.i v0, 2
 ; LMULMAX1-NEXT:    vrgather.vi v12, v8, 0
 ; LMULMAX1-NEXT:    vrgather.vi v12, v9, 3, v0.t
 ; LMULMAX1-NEXT:    vsetivli zero, 3, e32, m1, tu, ma
@@ -49,14 +48,15 @@ define <4 x float> @hang_when_merging_stores_after_legalization(<8 x float> %x, 
 ;
 ; LMULMAX2-LABEL: hang_when_merging_stores_after_legalization:
 ; LMULMAX2:       # %bb.0:
-; LMULMAX2-NEXT:    vsetivli zero, 8, e32, m2, ta, mu
+; LMULMAX2-NEXT:    vsetivli zero, 8, e32, m2, ta, ma
 ; LMULMAX2-NEXT:    vid.v v12
 ; LMULMAX2-NEXT:    li a0, 7
 ; LMULMAX2-NEXT:    vmul.vx v14, v12, a0
 ; LMULMAX2-NEXT:    vrgather.vv v12, v8, v14
-; LMULMAX2-NEXT:    li a0, 12
-; LMULMAX2-NEXT:    vmv.s.x v0, a0
 ; LMULMAX2-NEXT:    vadd.vi v8, v14, -14
+; LMULMAX2-NEXT:    vsetivli zero, 1, e8, mf8, ta, ma
+; LMULMAX2-NEXT:    vmv.v.i v0, 12
+; LMULMAX2-NEXT:    vsetivli zero, 8, e32, m2, ta, mu
 ; LMULMAX2-NEXT:    vrgather.vv v12, v10, v8, v0.t
 ; LMULMAX2-NEXT:    vmv1r.v v8, v12
 ; LMULMAX2-NEXT:    ret
@@ -150,10 +150,9 @@ define void @buildvec_dominant2_v4f32(<4 x float>* %x, float %f) {
 define void @buildvec_merge0_v4f32(<4 x float>* %x, float %f) {
 ; CHECK-LABEL: buildvec_merge0_v4f32:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    li a1, 6
 ; CHECK-NEXT:    vsetivli zero, 4, e32, m1, ta, ma
-; CHECK-NEXT:    vmv.s.x v0, a1
 ; CHECK-NEXT:    vfmv.v.f v8, fa0
+; CHECK-NEXT:    vmv.v.i v0, 6
 ; CHECK-NEXT:    lui a1, 262144
 ; CHECK-NEXT:    vmerge.vxm v8, v8, a1, v0
 ; CHECK-NEXT:    vse32.v v8, (a0)
