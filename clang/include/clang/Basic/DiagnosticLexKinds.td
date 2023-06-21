@@ -767,7 +767,8 @@ def warn_pp_date_time : Warning<
 
 def warn_pp_encounter_nonreproducible: Warning<
   "encountered non-reproducible token, caching will be skipped">,
-  InGroup<DiagGroup<"reproducible-caching">>, DefaultIgnore;
+  InGroup<DiagGroup<"reproducible-caching">>,
+  DefaultWarnNoWerror, ShowInSystemHeader, ShowInSystemMacro;
 def err_pp_encounter_nonreproducible: Error<
   "encountered non-reproducible token, caching failed">;
 
