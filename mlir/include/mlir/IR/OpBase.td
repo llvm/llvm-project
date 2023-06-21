@@ -238,6 +238,25 @@ class Property<string storageTypeParam = "", string desc = ""> {
     llvm::hash_value($_storage);
   }];
 
+  // The call expression to emit the storage type to bytecode.
+  //
+  // Format:
+  // - `$_storage` is the storage type value.
+  // - `$_writer` is a `DialectBytecodeWriter`.
+  code writeToMlirBytecode = [{
+    writeToMlirBytecode($_writer, $_storage)
+  }];
+
+  // The call expression to read the storage type from bytecode.
+  //
+  // Format:
+  // - `$_storage` is the storage type value.
+  // - `$_reader` is a `DialectBytecodeReader`.
+  code readFromMlirBytecode = [{
+    if (failed(readFromMlirBytecode($_reader, $_storage)))
+      return failure();
+  }];
+
   // Default value for the property.
   string defaultValue = ?;
 }
@@ -1155,6 +1174,20 @@ class DefaultValuedOptionalStrAttr<Attr attr, string val>
 
 //===----------------------------------------------------------------------===//
 // Primitive property kinds
+
+// Any kind of integer stored as properties.
+class IntProperty<string storageTypeParam = "", string desc = ""> :
+    Property<storageTypeParam, desc> {
+  code writeToMlirBytecode = [{
+    $_writer.writeVarInt($_storage);
+  }];
+  code readFromMlirBytecode = [{
+    uint64_t val;
+    if (failed($_reader.readVarInt(val)))
+      return ::mlir::failure();
+    $_storage = val;
+  }];
+}
 
 class ArrayProperty<string storageTypeParam = "", int n, string desc = ""> :
   Property<storageTypeParam # "[" # n # "]", desc> {
@@ -2515,6 +2548,12 @@ class ElementCount<string name> :
 
 class ElementType<string name> : StrFunc<"getElementTypeOrSelf($" # name # ")">;
 
+class AnyPred<list<string> values> :
+  CPred<!if(!lt(!size(values), 1),
+            "false",
+            !foldl("(" # !head(values) # ")", !tail(values), acc, v,
+                   acc # " || (" # v # ")"))>;
+
 class AllMatchPred<list<string> values> :
   CPred<!if(!lt(!size(values), 2),
             "true",
@@ -2534,6 +2573,17 @@ class AllMatchSameOperatorTrait<list<string> names, string operator,
     PredOpTrait<
         "all of {" # !interleave(names, ", ") # "} have same " # summary,
         AllMatchSameOperatorPred<names, operator>> {
+  list<string> values = names;
+}
+
+class AnyMatchOperatorPred<list<string> names, string operator> :
+    AnyPred<!foreach(n, names, !subst("$_self", "$" # n, operator))>;
+
+class AnyMatchOperatorTrait<list<string> names, string operator,
+                            string summary> :
+    PredOpTrait<
+        "any of {" # !interleave(names, ", ") # "} has " # summary,
+        AnyMatchOperatorPred<names, operator>> {
   list<string> values = names;
 }
 
@@ -2661,5 +2711,17 @@ class TCopVTEtAreSameAt<list<int> indices> : CPred<
       "::mlir::ArrayRef<unsigned>({" # !interleave(indices, ", ") # "}), "
       "[this](unsigned i) { return getElementTypeOrSelf(this->getOperand(i)); "
       "}))">;
+
+class AnyScalarTypeMatch<list<string> names> :
+    AnyMatchOperatorTrait<names, "$_self.getType().isSignlessInteger(1)",
+                          "scalar type">;
+
+class ScalarConditionOrMatchingShape<list<string> names> :
+    PredOpTrait<
+        !head(names) # " is scalar or has matching shape",
+        Or<[AnyScalarTypeMatch<[!head(names)]>.predicate,
+            AllShapesMatch<names>.predicate]>> {
+  list<string> values = names;
+}
 
 #endif // OP_BASE

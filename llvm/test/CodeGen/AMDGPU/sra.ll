@@ -187,13 +187,13 @@ define amdgpu_kernel void @ashr_v2i16(ptr addrspace(1) %out, ptr addrspace(1) %i
 ; VI-NEXT:    s_mov_b32 s4, s0
 ; VI-NEXT:    s_mov_b32 s5, s1
 ; VI-NEXT:    s_waitcnt vmcnt(0)
-; VI-NEXT:    v_readfirstlane_b32 s0, v0
-; VI-NEXT:    v_readfirstlane_b32 s1, v1
-; VI-NEXT:    s_ashr_i32 s2, s0, 16
-; VI-NEXT:    s_sext_i32_i16 s0, s0
-; VI-NEXT:    s_ashr_i32 s3, s1, 16
+; VI-NEXT:    v_readfirstlane_b32 s0, v1
+; VI-NEXT:    v_readfirstlane_b32 s1, v0
+; VI-NEXT:    s_ashr_i32 s2, s1, 16
 ; VI-NEXT:    s_sext_i32_i16 s1, s1
-; VI-NEXT:    s_ashr_i32 s0, s0, s1
+; VI-NEXT:    s_ashr_i32 s3, s0, 16
+; VI-NEXT:    s_sext_i32_i16 s0, s0
+; VI-NEXT:    s_ashr_i32 s0, s1, s0
 ; VI-NEXT:    s_ashr_i32 s1, s2, s3
 ; VI-NEXT:    s_lshl_b32 s1, s1, 16
 ; VI-NEXT:    s_and_b32 s0, s0, 0xffff

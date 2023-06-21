@@ -12,6 +12,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "InterCheckerAPI.h"
+#include "clang/Basic/Builtins.h"
 #include "clang/Basic/CharInfo.h"
 #include "clang/StaticAnalyzer/Checkers/BuiltinCheckerRegistration.h"
 #include "clang/StaticAnalyzer/Core/BugReporter/BugType.h"
@@ -175,6 +176,8 @@ public:
        std::bind(&CStringChecker::evalMemcmp, _1, _2, _3, CK_Regular)},
       {{CDF_MaybeBuiltin, {"bzero"}, 2}, &CStringChecker::evalBzero},
       {{CDF_MaybeBuiltin, {"explicit_bzero"}, 2}, &CStringChecker::evalBzero},
+      {{CDF_MaybeBuiltin, {"sprintf"}, 2}, &CStringChecker::evalSprintf},
+      {{CDF_MaybeBuiltin, {"snprintf"}, 2}, &CStringChecker::evalSnprintf},
   };
 
   // These require a bit of special handling.
@@ -227,6 +230,11 @@ public:
   void evalStdCopyCommon(CheckerContext &C, const CallExpr *CE) const;
   void evalMemset(CheckerContext &C, const CallExpr *CE) const;
   void evalBzero(CheckerContext &C, const CallExpr *CE) const;
+
+  void evalSprintf(CheckerContext &C, const CallExpr *CE) const;
+  void evalSnprintf(CheckerContext &C, const CallExpr *CE) const;
+  void evalSprintfCommon(CheckerContext &C, const CallExpr *CE, bool IsBounded,
+                         bool IsBuiltin) const;
 
   // Utility methods
   std::pair<ProgramStateRef , ProgramStateRef >
@@ -2348,6 +2356,51 @@ void CStringChecker::evalBzero(CheckerContext &C, const CallExpr *CE) const {
 
   if (!memsetAux(Buffer.Expression, Zero, Size.Expression, C, State))
     return;
+
+  C.addTransition(State);
+}
+
+void CStringChecker::evalSprintf(CheckerContext &C, const CallExpr *CE) const {
+  CurrentFunctionDescription = "'sprintf'";
+  bool IsBI = CE->getBuiltinCallee() == Builtin::BI__builtin___sprintf_chk;
+  evalSprintfCommon(C, CE, /* IsBounded */ false, IsBI);
+}
+
+void CStringChecker::evalSnprintf(CheckerContext &C, const CallExpr *CE) const {
+  CurrentFunctionDescription = "'snprintf'";
+  bool IsBI = CE->getBuiltinCallee() == Builtin::BI__builtin___snprintf_chk;
+  evalSprintfCommon(C, CE, /* IsBounded */ true, IsBI);
+}
+
+void CStringChecker::evalSprintfCommon(CheckerContext &C, const CallExpr *CE,
+                                       bool IsBounded, bool IsBuiltin) const {
+  ProgramStateRef State = C.getState();
+  DestinationArgExpr Dest = {CE->getArg(0), 0};
+
+  const auto NumParams = CE->getCalleeDecl()->getAsFunction()->getNumParams();
+  assert(CE->getNumArgs() >= NumParams);
+
+  const auto AllArguments =
+      llvm::make_range(CE->getArgs(), CE->getArgs() + CE->getNumArgs());
+  const auto VariadicArguments = drop_begin(enumerate(AllArguments), NumParams);
+
+  for (const auto &[ArgIdx, ArgExpr] : VariadicArguments) {
+    // We consider only string buffers
+    if (const QualType type = ArgExpr->getType();
+        !type->isAnyPointerType() ||
+        !type->getPointeeType()->isAnyCharacterType())
+      continue;
+    SourceArgExpr Source = {ArgExpr, unsigned(ArgIdx)};
+
+    // Ensure the buffers do not overlap.
+    SizeArgExpr SrcExprAsSizeDummy = {Source.Expression, Source.ArgumentIndex};
+    State = CheckOverlap(
+        C, State,
+        (IsBounded ? SizeArgExpr{CE->getArg(1), 1} : SrcExprAsSizeDummy), Dest,
+        Source);
+    if (!State)
+      return;
+  }
 
   C.addTransition(State);
 }

@@ -59,6 +59,15 @@ void Thread::Init(uptr stack_buffer_start, uptr stack_buffer_size,
   InitStackAndTls(state);
   dtls_ = DTLS_Get();
   AllocatorThreadStart(allocator_cache());
+
+  if (flags()->verbose_threads) {
+    if (IsMainThread()) {
+      Printf("sizeof(Thread): %zd sizeof(HeapRB): %zd sizeof(StackRB): %zd\n",
+             sizeof(Thread), heap_allocations_->SizeInBytes(),
+             stack_allocations_->size() * sizeof(uptr));
+    }
+    Print("Creating  : ");
+  }
 }
 
 void Thread::InitStackRingBuffer(uptr stack_buffer_start,
@@ -80,22 +89,17 @@ void Thread::InitStackRingBuffer(uptr stack_buffer_start,
     CHECK(MemIsApp(stack_bottom_));
     CHECK(MemIsApp(stack_top_ - 1));
   }
-
-  if (flags()->verbose_threads) {
-    if (IsMainThread()) {
-      Printf("sizeof(Thread): %zd sizeof(HeapRB): %zd sizeof(StackRB): %zd\n",
-             sizeof(Thread), heap_allocations_->SizeInBytes(),
-             stack_allocations_->size() * sizeof(uptr));
-    }
-    Print("Creating  : ");
-  }
 }
 
 void Thread::ClearShadowForThreadStackAndTLS() {
   if (stack_top_ != stack_bottom_)
-    TagMemory(stack_bottom_, stack_top_ - stack_bottom_, 0);
+    TagMemory(UntagAddr(stack_bottom_),
+              UntagAddr(stack_top_) - UntagAddr(stack_bottom_),
+              GetTagFromPointer(stack_top_));
   if (tls_begin_ != tls_end_)
-    TagMemory(tls_begin_, tls_end_ - tls_begin_, 0);
+    TagMemory(UntagAddr(tls_begin_),
+              UntagAddr(tls_end_) - UntagAddr(tls_begin_),
+              GetTagFromPointer(tls_begin_));
 }
 
 void Thread::Destroy() {

@@ -89,9 +89,11 @@ public:
 
   TensorLevel makeTensorLevel(TensorId t, Level l) const {
     // Make sure LoopEmitter, GenericOp, and Merger agree on the number of
-    // tensors. Merger has one more synthetic tensor for loop invariants.
-    assert(loopEmitter.getNumTensors() == linalgOp->getNumOperands() &&
-           loopEmitter.getNumTensors() == latticeMerger.getNumTensors() - 1);
+    // tensors.
+    assert(loopEmitter.getNumManifestTensors() == linalgOp->getNumOperands() &&
+           loopEmitter.getNumTensors() == latticeMerger.getNumTensors() &&
+           loopEmitter.getOutTensorId() == latticeMerger.getOutTensorID() &&
+           loopEmitter.getSynTensorId() == latticeMerger.getSynTensorID());
     return loopEmitter.makeTensorLevel(t, l);
   }
   std::pair<TensorId, Level> unpackTensorLevel(TensorLevel tl) const {

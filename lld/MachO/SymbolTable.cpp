@@ -385,7 +385,7 @@ static bool recoverFromUndefinedSymbol(const Undefined &sym) {
   }
 
   // Leave dtrace symbols, since we will handle them when we do the relocation
-  if (name.startswith("___dtrace_"))
+  if (name.starts_with("___dtrace_"))
     return true;
 
   // Handle -U.
@@ -530,7 +530,7 @@ static const Symbol *getAlternativeSpelling(const Undefined &sym,
 
   // The reference may be a mangled name while the definition is not. Suggest a
   // missing extern "C".
-  if (name.startswith("__Z")) {
+  if (name.starts_with("__Z")) {
     std::string buf = name.str();
     llvm::ItaniumPartialDemangler d;
     if (!d.partialDemangle(buf.c_str()))

@@ -1,0 +1,27 @@
+add_object_library(
+  linux_file
+  SRCS
+    file.cpp
+  DEPENDS
+    libc.include.fcntl
+    libc.include.stdio
+    libc.include.sys_syscall
+    libc.src.__support.CPP.new
+    libc.src.__support.OSUtil.osutil
+    libc.src.errno.errno
+    libc.src.__support.error_or
+    libc.src.__support.File.file
+)
+
+add_object_library(
+  linux_dir
+  SRCS
+    dir.cpp
+  DEPENDS
+    libc.include.fcntl
+    libc.include.sys_syscall
+    libc.src.__support.OSUtil.osutil
+    libc.src.__support.error_or
+    libc.src.errno.errno
+    libc.src.__support.File.dir
+)

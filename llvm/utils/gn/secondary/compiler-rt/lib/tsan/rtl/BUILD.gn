@@ -59,6 +59,7 @@ target(tsan_target_type, "rtl") {
     "tsan_ignoreset.h",
     "tsan_ilist.h",
     "tsan_interceptors.h",
+    "tsan_interceptors_memintrinsics.cpp",
     "tsan_interceptors_posix.cpp",
     "tsan_interface.cpp",
     "tsan_interface.h",

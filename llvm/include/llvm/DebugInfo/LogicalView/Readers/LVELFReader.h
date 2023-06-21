@@ -145,7 +145,8 @@ public:
     return SymbolsWithLocations;
   }
 
-  std::string getRegisterName(LVSmall Opcode, uint64_t Operands[2]) override;
+  std::string getRegisterName(LVSmall Opcode,
+                              ArrayRef<uint64_t> Operands) override;
 
   void print(raw_ostream &OS) const;
 

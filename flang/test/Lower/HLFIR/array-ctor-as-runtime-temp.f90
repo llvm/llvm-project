@@ -1,5 +1,5 @@
 ! Test lowering of array constructors requiring runtime library help to HLFIR.
-! RUN: bbc -emit-fir -hlfir -o - %s | FileCheck %s
+! RUN: bbc -emit-hlfir -o - %s | FileCheck %s
 module arrayctor
 contains
 

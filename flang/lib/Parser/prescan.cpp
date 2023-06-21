@@ -127,6 +127,17 @@ void Prescanner::Statement() {
       } else {
         SkipSpaces();
       }
+    } else if (directiveSentinel_[0] == '@' && directiveSentinel_[1] == 'c' &&
+        directiveSentinel_[2] == 'u' && directiveSentinel_[3] == 'f' &&
+        directiveSentinel_[4] == '\0') {
+      // CUDA conditional compilation line.  Remove the sentinel and then
+      // treat the line as if it were normal source.
+      at_ += 5, column_ += 5;
+      if (inFixedForm_) {
+        LabelField(tokens);
+      } else {
+        SkipSpaces();
+      }
     } else {
       // Compiler directive.  Emit normalized sentinel.
       EmitChar(tokens, '!');

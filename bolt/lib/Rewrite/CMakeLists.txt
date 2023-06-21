@@ -1,7 +1,7 @@
 set(LLVM_LINK_COMPONENTS
   DebugInfoDWARF
   DWP
-  ExecutionEngine
+  JITLink
   MC
   Object
   Support
@@ -13,6 +13,7 @@ add_llvm_library(LLVMBOLTRewrite
   BoltDiff.cpp
   DWARFRewriter.cpp
   ExecutableFileMemoryManager.cpp
+  JITLinkLinker.cpp
   MachORewriteInstance.cpp
   RewriteInstance.cpp
 

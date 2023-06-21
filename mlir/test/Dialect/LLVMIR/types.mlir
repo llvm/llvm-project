@@ -176,3 +176,20 @@ llvm.func @aliases() {
   "some.op"() : () -> !llvm.struct<(i32, f32, !qux)>
   llvm.return
 }
+
+// -----
+
+// CHECK-LABEL: ext_target
+llvm.func @ext_target() {
+    // CHECK: !llvm.target<"target1", i32, 1>
+    %0 = "some.op"() : () -> !llvm.target<"target1", i32, 1>
+    // CHECK: !llvm.target<"target2">
+    %1 = "some.op"() : () -> !llvm.target<"target2">
+    // CHECK: !llvm.target<"target3", i32, i64, f64>
+    %2 = "some.op"() : () -> !llvm.target<"target3", i32, i64, f64>
+    // CHECK: !llvm.target<"target4", 1, 0, 42>
+    %3 = "some.op"() : () -> !llvm.target<"target4", 1, 0, 42>
+    // CHECK: !llvm.target<"target5", i32, f64, 0, 5>
+    %4 = "some.op"() : () -> !llvm.target<"target5", i32, f64, 0, 5>
+    llvm.return
+}

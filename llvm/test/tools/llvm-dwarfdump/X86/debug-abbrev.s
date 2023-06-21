@@ -79,7 +79,7 @@
     .byte 0x02 ## Invalid children encoding (interpreted as DW_CHILDREN_no).
         .byte 0, 0         ## End of attributes.
 
-    .byte 0 ## End of abbrevs.
+    .byte 0 ## End of first abbreviation set.
 
     ## Second .debug_abbrev set.
     .byte 0x42 ## Abbreviation Code (duplicate in different unit)
@@ -88,3 +88,5 @@
         .byte 0x66 ## DW_AT_elemental
         .byte 0x19 ## DW_FORM_flag_present
         .byte 0, 0 ## End of attributes.
+
+    .byte 0 # End of second abbreviation set.

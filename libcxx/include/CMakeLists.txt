@@ -24,6 +24,7 @@ set(files
   __algorithm/find_if_not.h
   __algorithm/for_each.h
   __algorithm/for_each_n.h
+  __algorithm/for_each_segment.h
   __algorithm/generate.h
   __algorithm/generate_n.h
   __algorithm/half_positive.h
@@ -77,14 +78,23 @@ set(files
   __algorithm/pstl_backends/cpu_backends/fill.h
   __algorithm/pstl_backends/cpu_backends/find_if.h
   __algorithm/pstl_backends/cpu_backends/for_each.h
+  __algorithm/pstl_backends/cpu_backends/merge.h
   __algorithm/pstl_backends/cpu_backends/serial.h
+  __algorithm/pstl_backends/cpu_backends/stable_sort.h
   __algorithm/pstl_backends/cpu_backends/thread.h
   __algorithm/pstl_backends/cpu_backends/transform.h
+  __algorithm/pstl_backends/cpu_backends/transform_reduce.h
   __algorithm/pstl_copy.h
+  __algorithm/pstl_count.h
   __algorithm/pstl_fill.h
   __algorithm/pstl_find.h
   __algorithm/pstl_for_each.h
   __algorithm/pstl_frontend_dispatch.h
+  __algorithm/pstl_generate.h
+  __algorithm/pstl_is_partitioned.h
+  __algorithm/pstl_merge.h
+  __algorithm/pstl_replace.h
+  __algorithm/pstl_stable_sort.h
   __algorithm/pstl_transform.h
   __algorithm/push_heap.h
   __algorithm/ranges_adjacent_find.h
@@ -318,6 +328,7 @@ set(files
   __coroutine/trivial_awaitables.h
   __debug
   __debug_utils/randomize_range.h
+  __debug_utils/strict_weak_ordering_check.h
   __exception/exception.h
   __exception/exception_ptr.h
   __exception/nested_exception.h
@@ -426,6 +437,7 @@ set(files
   __iterator/common_iterator.h
   __iterator/concepts.h
   __iterator/counted_iterator.h
+  __iterator/cpp17_iterator_concepts.h
   __iterator/data.h
   __iterator/default_sentinel.h
   __iterator/distance.h
@@ -490,6 +502,7 @@ set(files
   __memory/temp_value.h
   __memory/temporary_buffer.h
   __memory/uninitialized_algorithms.h
+  __memory/uninitialized_buffer.h
   __memory/unique_ptr.h
   __memory/uses_allocator.h
   __memory/uses_allocator_construction.h
@@ -514,6 +527,8 @@ set(files
   __numeric/iota.h
   __numeric/midpoint.h
   __numeric/partial_sum.h
+  __numeric/pstl_reduce.h
+  __numeric/pstl_transform_reduce.h
   __numeric/reduce.h
   __numeric/transform_exclusive_scan.h
   __numeric/transform_inclusive_scan.h
@@ -633,6 +648,10 @@ set(files
   __stop_token/atomic_unique_lock.h
   __stop_token/intrusive_list_view.h
   __stop_token/intrusive_shared_ptr.h
+  __stop_token/stop_callback.h
+  __stop_token/stop_source.h
+  __stop_token/stop_state.h
+  __stop_token/stop_token.h
   __string/char_traits.h
   __string/constexpr_c_functions.h
   __string/extern_template_lists.h
@@ -654,7 +673,10 @@ set(files
   __system_error/error_code.h
   __system_error/error_condition.h
   __system_error/system_error.h
+  __thread/formatter.h
   __thread/poll_with_backoff.h
+  __thread/this_thread.h
+  __thread/thread.h
   __thread/timed_backoff_policy.h
   __threading_support
   __tree
@@ -784,6 +806,7 @@ set(files
   __type_traits/nat.h
   __type_traits/negation.h
   __type_traits/noexcept_move_assign_container.h
+  __type_traits/operation_traits.h
   __type_traits/predicate_traits.h
   __type_traits/promote.h
   __type_traits/rank.h
@@ -815,6 +838,7 @@ set(files
   __utility/forward_like.h
   __utility/in_place.h
   __utility/integer_sequence.h
+  __utility/is_pointer_in_range.h
   __utility/move.h
   __utility/pair.h
   __utility/piecewise_construct.h
@@ -949,6 +973,7 @@ set(files
   stdint.h
   stdio.h
   stdlib.h
+  stop_token
   streambuf
   string
   string.h
@@ -973,7 +998,7 @@ set(files
   wctype.h
   )
 
-foreach(feature LIBCXX_ENABLE_FILESYSTEM LIBCXX_ENABLE_LOCALIZATION LIBCXX_ENABLE_FSTREAM LIBCXX_ENABLE_THREADS LIBCXX_ENABLE_WIDE_CHARACTERS)
+foreach(feature LIBCXX_ENABLE_FILESYSTEM LIBCXX_ENABLE_LOCALIZATION LIBCXX_ENABLE_THREADS LIBCXX_ENABLE_WIDE_CHARACTERS)
   if (NOT ${${feature}})
     set(requires_${feature} "requires LIBCXX_CONFIGURED_WITHOUT_SUPPORT_FOR_THIS_HEADER")
   endif()

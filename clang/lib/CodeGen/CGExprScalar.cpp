@@ -814,13 +814,21 @@ public:
                             Value *(ScalarExprEmitter::*F)(const BinOpInfo &));
 
   QualType getPromotionType(QualType Ty) {
+    const auto &Ctx = CGF.getContext();
     if (auto *CT = Ty->getAs<ComplexType>()) {
       QualType ElementType = CT->getElementType();
-      if (ElementType.UseExcessPrecision(CGF.getContext()))
-        return CGF.getContext().getComplexType(CGF.getContext().FloatTy);
+      if (ElementType.UseExcessPrecision(Ctx))
+        return Ctx.getComplexType(Ctx.FloatTy);
     }
-    if (Ty.UseExcessPrecision(CGF.getContext()))
-      return CGF.getContext().FloatTy;
+
+    if (Ty.UseExcessPrecision(Ctx)) {
+      if (auto *VT = Ty->getAs<VectorType>()) {
+        unsigned NumElements = VT->getNumElements();
+        return Ctx.getVectorType(Ctx.FloatTy, NumElements, VT->getVectorKind());
+      }
+      return Ctx.FloatTy;
+    }
+
     return QualType();
   }
 
@@ -2038,15 +2046,15 @@ Value *ScalarExprEmitter::VisitCastExpr(CastExpr *CE) {
   case CK_LValueBitCast:
   case CK_ObjCObjectLValueCast: {
     Address Addr = EmitLValue(E).getAddress(CGF);
-    Addr = Builder.CreateElementBitCast(Addr, CGF.ConvertTypeForMem(DestTy));
+    Addr = Addr.withElementType(CGF.ConvertTypeForMem(DestTy));
     LValue LV = CGF.MakeAddrLValue(Addr, DestTy);
     return EmitLoadOfLValue(LV, CE->getExprLoc());
   }
 
   case CK_LValueToRValueBitCast: {
     LValue SourceLVal = CGF.EmitLValue(E);
-    Address Addr = Builder.CreateElementBitCast(SourceLVal.getAddress(CGF),
-                                                CGF.ConvertTypeForMem(DestTy));
+    Address Addr = SourceLVal.getAddress(CGF).withElementType(
+        CGF.ConvertTypeForMem(DestTy));
     LValue DestLV = CGF.MakeAddrLValue(Addr, DestTy);
     DestLV.setTBAAInfo(TBAAAccessInfo::getMayAliasInfo());
     return EmitLoadOfLValue(DestLV, CE->getExprLoc());
@@ -2169,8 +2177,7 @@ Value *ScalarExprEmitter::VisitCastExpr(CastExpr *CE) {
       Address Addr = CGF.CreateDefaultAlignTempAlloca(SrcTy, "saved-value");
       LValue LV = CGF.MakeAddrLValue(Addr, E->getType());
       CGF.EmitStoreOfScalar(Src, LV);
-      Addr = Builder.CreateElementBitCast(Addr, CGF.ConvertTypeForMem(DestTy),
-                                          "castFixedSve");
+      Addr = Addr.withElementType(CGF.ConvertTypeForMem(DestTy));
       LValue DestLV = CGF.MakeAddrLValue(Addr, DestTy);
       DestLV.setTBAAInfo(TBAAAccessInfo::getMayAliasInfo());
       return EmitLoadOfLValue(DestLV, CE->getExprLoc());
@@ -5136,7 +5143,7 @@ LValue CodeGenFunction::EmitObjCIsaExpr(const ObjCIsaExpr *E) {
   }
 
   // Cast the address to Class*.
-  Addr = Builder.CreateElementBitCast(Addr, ConvertType(E->getType()));
+  Addr = Addr.withElementType(ConvertType(E->getType()));
   return MakeAddrLValue(Addr, E->getType());
 }
 

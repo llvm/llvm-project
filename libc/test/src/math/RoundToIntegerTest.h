@@ -214,9 +214,10 @@ public:
   }
 
   void testSubnormalRange(RoundToIntegerFunc func) {
-    constexpr UIntType COUNT = 1000001;
+    constexpr UIntType COUNT = 1'000'001;
     constexpr UIntType STEP =
-        (FPBits::MAX_SUBNORMAL - FPBits::MIN_SUBNORMAL) / COUNT;
+        (UIntType(FPBits::MAX_SUBNORMAL) - UIntType(FPBits::MIN_SUBNORMAL)) /
+        COUNT;
     for (UIntType i = FPBits::MIN_SUBNORMAL; i <= FPBits::MAX_SUBNORMAL;
          i += STEP) {
       F x = F(FPBits(i));
@@ -258,8 +259,9 @@ public:
     if (sizeof(I) > sizeof(long))
       return;
 
-    constexpr UIntType COUNT = 1000001;
-    constexpr UIntType STEP = (FPBits::MAX_NORMAL - FPBits::MIN_NORMAL) / COUNT;
+    constexpr UIntType COUNT = 1'000'001;
+    constexpr UIntType STEP =
+        (UIntType(FPBits::MAX_NORMAL) - UIntType(FPBits::MIN_NORMAL)) / COUNT;
     for (UIntType i = FPBits::MIN_NORMAL; i <= FPBits::MAX_NORMAL; i += STEP) {
       F x = F(FPBits(i));
       // In normal range on x86 platforms, the long double implicit 1 bit can be

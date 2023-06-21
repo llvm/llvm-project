@@ -173,6 +173,9 @@ def SDTFPToIntOp : SDTypeProfile<1, 1, [    // fp_to_[su]int
 def SDTFPToIntSatOp : SDTypeProfile<1, 2, [    // fp_to_[su]int_sat
   SDTCisInt<0>, SDTCisFP<1>, SDTCisSameNumEltsAs<0, 1>, SDTCisVT<2, OtherVT>
 ]>;
+def SDTFPExpOp : SDTypeProfile<1, 2, [      // ldexp
+  SDTCisSameAs<0, 1>, SDTCisFP<0>, SDTCisInt<2>
+]>;
 def SDTExtInreg : SDTypeProfile<1, 2, [     // sext_inreg
   SDTCisSameAs<0, 1>, SDTCisInt<0>, SDTCisVT<2, OtherVT>,
   SDTCisVTSmallerThanOp<2, 1>
@@ -469,6 +472,8 @@ def vecreduce_umax  : SDNode<"ISD::VECREDUCE_UMAX", SDTVecReduce>;
 def vecreduce_smin  : SDNode<"ISD::VECREDUCE_SMIN", SDTVecReduce>;
 def vecreduce_umin  : SDNode<"ISD::VECREDUCE_UMIN", SDTVecReduce>;
 def vecreduce_fadd  : SDNode<"ISD::VECREDUCE_FADD", SDTFPVecReduce>;
+def vecreduce_fmin  : SDNode<"ISD::VECREDUCE_FMIN", SDTFPVecReduce>;
+def vecreduce_fmax  : SDNode<"ISD::VECREDUCE_FMAX", SDTFPVecReduce>;
 
 def fadd       : SDNode<"ISD::FADD"       , SDTFPBinOp, [SDNPCommutative]>;
 def fsub       : SDNode<"ISD::FSUB"       , SDTFPBinOp>;
@@ -499,6 +504,7 @@ def fcos       : SDNode<"ISD::FCOS"       , SDTFPUnaryOp>;
 def fexp2      : SDNode<"ISD::FEXP2"      , SDTFPUnaryOp>;
 def fpow       : SDNode<"ISD::FPOW"       , SDTFPBinOp>;
 def flog2      : SDNode<"ISD::FLOG2"      , SDTFPUnaryOp>;
+def fldexp     : SDNode<"ISD::FLDEXP"     , SDTFPExpOp>;
 def frint      : SDNode<"ISD::FRINT"      , SDTFPUnaryOp>;
 def ftrunc     : SDNode<"ISD::FTRUNC"     , SDTFPUnaryOp>;
 def fceil      : SDNode<"ISD::FCEIL"      , SDTFPUnaryOp>;
@@ -549,6 +555,8 @@ def strict_fexp2      : SDNode<"ISD::STRICT_FEXP2",
                                SDTFPUnaryOp, [SDNPHasChain]>;
 def strict_fpow       : SDNode<"ISD::STRICT_FPOW",
                                SDTFPBinOp, [SDNPHasChain]>;
+def strict_fldexp       : SDNode<"ISD::STRICT_FLDEXP",
+                               SDTFPExpOp, [SDNPHasChain]>;
 def strict_flog2      : SDNode<"ISD::STRICT_FLOG2",
                                SDTFPUnaryOp, [SDNPHasChain]>;
 def strict_frint      : SDNode<"ISD::STRICT_FRINT",
@@ -1449,6 +1457,9 @@ def any_fexp2      : PatFrags<(ops node:$src),
 def any_fpow       : PatFrags<(ops node:$lhs, node:$rhs),
                               [(strict_fpow node:$lhs, node:$rhs),
                                (fpow node:$lhs, node:$rhs)]>;
+def any_fldexp      : PatFrags<(ops node:$lhs, node:$rhs),
+                              [(strict_fldexp node:$lhs, node:$rhs),
+                               (fldexp node:$lhs, node:$rhs)]>;
 def any_flog2      : PatFrags<(ops node:$src),
                               [(strict_flog2 node:$src),
                                (flog2 node:$src)]>;

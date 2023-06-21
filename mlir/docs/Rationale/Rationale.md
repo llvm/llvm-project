@@ -202,7 +202,7 @@ For more context, block arguments were previously used in the Swift
 and described in
 [a talk on YouTube](https://www.youtube.com/watch?v=Ntj8ab-5cvE). The section of
 interest
-[starts here](https://www.google.com/url?q=https://youtu.be/Ntj8ab-5cvE?t%3D596&sa=D&ust=1529450150971000&usg=AFQjCNFQHEWL7m8q3eO-1DiKw9zqC2v24Q).
+[starts here](https://www.youtube.com/watch?v=Ntj8ab-5cvE&t=596s).
 
 ### Index type usage and limitations
 

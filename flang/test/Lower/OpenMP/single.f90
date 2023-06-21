@@ -72,9 +72,9 @@ end subroutine single_allocate
 ! CHECK-LABEL: func.func @_QPsingle_privatization(
 ! CHECK-SAME:                                     %[[VAL_0:.*]]: !fir.ref<f32> {fir.bindc_name = "x"},
 ! CHECK-SAME:                                     %[[VAL_1:.*]]: !fir.ref<f64> {fir.bindc_name = "y"}) {
-! CHECK:         %[[VAL_2:.*]] = fir.alloca f32 {bindc_name = "x", pinned, uniq_name = "_QFsingle_privatizationEx"}
-! CHECK:         %[[VAL_3:.*]] = fir.alloca f64 {bindc_name = "y", pinned, uniq_name = "_QFsingle_privatizationEy"}
 ! CHECK:         omp.single   {
+! CHECK:           %[[VAL_2:.*]] = fir.alloca f32 {bindc_name = "x", pinned, uniq_name = "_QFsingle_privatizationEx"}
+! CHECK:           %[[VAL_3:.*]] = fir.alloca f64 {bindc_name = "y", pinned, uniq_name = "_QFsingle_privatizationEy"}
 ! CHECK:           %[[VAL_4:.*]] = fir.load %[[VAL_1]] : !fir.ref<f64>
 ! CHECK:           fir.store %[[VAL_4]] to %[[VAL_3]] : !fir.ref<f64>
 ! CHECK:           fir.call @_QPbar(%[[VAL_2]], %[[VAL_3]]) {{.*}}: (!fir.ref<f32>, !fir.ref<f64>) -> ()
@@ -96,9 +96,9 @@ end subroutine
 ! CHECK-SAME:                                      %[[VAL_0:.*]]: !fir.ref<f32> {fir.bindc_name = "x"},
 ! CHECK-SAME:                                      %[[VAL_1:.*]]: !fir.ref<f64> {fir.bindc_name = "y"}) {
 ! CHECK:         omp.parallel   {
-! CHECK:           %[[VAL_2:.*]] = fir.alloca f32 {bindc_name = "x", pinned, uniq_name = "_QFsingle_privatization2Ex"}
-! CHECK:           %[[VAL_3:.*]] = fir.alloca f64 {bindc_name = "y", pinned, uniq_name = "_QFsingle_privatization2Ey"}
 ! CHECK:           omp.single   {
+! CHECK:             %[[VAL_2:.*]] = fir.alloca f32 {bindc_name = "x", pinned, uniq_name = "_QFsingle_privatization2Ex"}
+! CHECK:             %[[VAL_3:.*]] = fir.alloca f64 {bindc_name = "y", pinned, uniq_name = "_QFsingle_privatization2Ey"}
 ! CHECK:             %[[VAL_4:.*]] = fir.load %[[VAL_1]] : !fir.ref<f64>
 ! CHECK:             fir.store %[[VAL_4]] to %[[VAL_3]] : !fir.ref<f64>
 ! CHECK:             fir.call @_QPbar(%[[VAL_2]], %[[VAL_3]]) {{.*}}: (!fir.ref<f32>, !fir.ref<f64>) -> ()

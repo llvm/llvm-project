@@ -59,6 +59,10 @@
 #define SCUDO_CAN_USE_PRIMARY64 (SCUDO_WORDSIZE == 64U)
 #endif
 
+#ifndef SCUDO_CAN_USE_MTE
+#define SCUDO_CAN_USE_MTE (SCUDO_LINUX || SCUDO_TRUSTY)
+#endif
+
 #ifndef SCUDO_MIN_ALIGNMENT_LOG
 // We force malloc-type functions to be aligned to std::max_align_t, but there
 // is no reason why the minimum alignment for all other functions can't be 8

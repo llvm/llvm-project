@@ -61,6 +61,7 @@ add_mlir_dialect_library(MLIRGPUTransforms
   LINK_COMPONENTS
   Core
   MC
+  Target
   ${NVPTX_LIBS}
   ${AMDGPU_LIBS}
 
@@ -120,8 +121,7 @@ if(MLIR_ENABLE_CUDA_RUNNER)
     ${CMAKE_CUDA_TOOLKIT_INCLUDE_DIRECTORIES}
   )
 
-  find_library(CUDA_DRIVER_LIBRARY cuda)
-
+  find_library(CUDA_DRIVER_LIBRARY cuda HINTS ${CMAKE_CUDA_IMPLICIT_LINK_DIRECTORIES} REQUIRED)
   target_link_libraries(MLIRGPUTransforms
     PRIVATE
     MLIRNVVMToLLVMIRTranslation

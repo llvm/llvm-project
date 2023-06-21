@@ -64,6 +64,14 @@ llvm.mlir.global external @has_dso_local(42 : i64) {dso_local} : i64
 // CHECK: llvm.mlir.global external @has_addr_space(32 : i64) {addr_space = 3 : i32} : i64
 llvm.mlir.global external @has_addr_space(32 : i64) {addr_space = 3: i32} : i64
 
+// CHECK: llvm.comdat @__llvm_comdat
+llvm.comdat @__llvm_comdat {
+  // CHECK: llvm.comdat_selector @any any
+  llvm.comdat_selector @any any
+}
+// CHECK: llvm.mlir.global external @any() comdat(@__llvm_comdat::@any) {addr_space = 0 : i32} : i64
+llvm.mlir.global @any() comdat(@__llvm_comdat::@any) : i64
+
 // CHECK-LABEL: references
 func.func @references() {
   // CHECK: llvm.mlir.addressof @".string" : !llvm.ptr
@@ -232,3 +240,16 @@ llvm.func @dtor() {
 
 // CHECK: llvm.mlir.global_dtors {dtors = [@dtor], priorities = [0 : i32]}
 llvm.mlir.global_dtors { dtors = [@dtor], priorities = [0 : i32]}
+
+// -----
+
+// CHECK: llvm.mlir.global external @target_ext() {addr_space = 0 : i32} : !llvm.target<"spirv.Image", i32, 0>
+llvm.mlir.global @target_ext() : !llvm.target<"spirv.Image", i32, 0>
+
+// CHECK: llvm.mlir.global external @target_ext_init(0 : i64) {addr_space = 0 : i32} : !llvm.target<"spirv.Image", i32, 0>
+llvm.mlir.global @target_ext_init(0 : i64) : !llvm.target<"spirv.Image", i32, 0>
+
+// -----
+
+// expected-error @+1 {{expected zero value for global with target extension type}}
+llvm.mlir.global @target_fail(1 : i64) : !llvm.target<"spirv.Image", i32, 0>

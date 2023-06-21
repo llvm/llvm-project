@@ -562,6 +562,20 @@ def: Pat<(v4i8 (trunc V4I16:$Rs)),
 def: Pat<(v2i16 (trunc V2I32:$Rs)),
          (A2_combine_ll (HiReg $Rs), (LoReg $Rs))>;
 
+// Truncate to vNi1
+def: Pat<(v2i1 (trunc V2I32:$Rs)),
+         (A4_vcmpweqi (A2_andp V2I32:$Rs, (A2_combineii (i32 1), (i32 1))),
+                      (i32 1))>;
+def: Pat<(v4i1 (trunc V4I16:$Rs)),
+         (A4_vcmpheqi (Combinew (A2_andir (HiReg $Rs), (i32 0x00010001)),
+                                (A2_andir (LoReg $Rs), (i32 0x00010001))),
+                      (i32 1))>;
+def: Pat<(v8i1 (trunc V8I8:$Rs)),
+         (A4_vcmpbeqi (Combinew (A2_andir (HiReg $Rs), (i32 0x01010101)),
+                                (A2_andir (LoReg $Rs), (i32 0x01010101))),
+                      (i32 1))>;
+
+
 // Saturation:
 // Note: saturation assumes the same signed-ness for the input and the
 // output.
@@ -831,8 +845,31 @@ def: Pat<(i32 (zext (i1 (setne I32:$Rs, anyimm:$s8)))),
 
 def: Pat<(i1 (seteq I1:$Ps, (i1 -1))), (I1:$Ps)>;
 def: Pat<(i1 (setne I1:$Ps, (i1 -1))), (C2_not I1:$Ps)>;
-def: Pat<(i1 (seteq I1:$Ps, I1:$Pt)),  (C2_xor I1:$Ps, (C2_not I1:$Pt))>;
+def: Pat<(i1 (seteq I1:$Ps, I1:$Pt)),  (C2_not (C2_xor I1:$Ps, I1:$Pt))>;
 def: Pat<(i1 (setne I1:$Ps, I1:$Pt)),  (C2_xor I1:$Ps, I1:$Pt)>;
+
+multiclass BoolE_pat<PatFrag OpPred, ValueType ResTy> {
+  def: Pat<(ResTy (seteq OpPred:$Ps, OpPred:$Pt)), (C2_not (C2_xor $Ps, $Pt))>;
+  def: Pat<(ResTy (setne OpPred:$Ps, OpPred:$Pt)), (C2_xor $Ps, $Pt)>;
+}
+
+defm: BoolE_pat<I1,   i1>;
+defm: BoolE_pat<V2I1, v2i1>;
+defm: BoolE_pat<V4I1, v4i1>;
+defm: BoolE_pat<V8I1, v8i1>;
+
+multiclass BoolL_pat<PatFrag OpPred, ValueType ResTy> {
+  // Signed "true" == -1
+  def: Pat<(ResTy (setlt  OpPred:$Ps, OpPred:$Pt)), (C2_andn $Ps, $Pt)>;
+  def: Pat<(ResTy (setle  OpPred:$Ps, OpPred:$Pt)), (C2_orn  $Ps, $Pt)>;
+  def: Pat<(ResTy (setult OpPred:$Ps, OpPred:$Pt)), (C2_andn $Pt, $Ps)>;
+  def: Pat<(ResTy (setule OpPred:$Ps, OpPred:$Pt)), (C2_orn  $Pt, $Ps)>;
+}
+
+defm: BoolL_pat<I1,   i1>;
+defm: BoolL_pat<V2I1, v2i1>;
+defm: BoolL_pat<V4I1, v4i1>;
+defm: BoolL_pat<V8I1, v8i1>;
 
 // Floating-point comparisons with checks for ordered/unordered status.
 
@@ -941,10 +978,22 @@ def: Pat<(vselect (pnot V2I1:$Pu), V2I32:$Rs, V2I32:$Rt),
 
 
 // From LegalizeDAG.cpp: (Pu ? Pv : Pw) <=> (Pu & Pv) | (!Pu & Pw).
-def: Pat<(select I1:$Pu, I1:$Pv, I1:$Pw),
-         (C2_or (C2_and  I1:$Pu, I1:$Pv),
-                (C2_andn I1:$Pw, I1:$Pu))>;
+def: Pat<(select I1:$Pu, I1:$Ps, I1:$Pt),
+         (C4_or_andn (C2_and $Ps, $Pu), $Pt, $Pu)>;
 
+def: Pat<(vselect V2I1:$Pu, V2I1:$Ps, V2I1:$Pt),
+         (C4_or_andn (C2_and $Ps, $Pu), $Pt, $Pu)>;
+def: Pat<(vselect V4I1:$Pu, V4I1:$Ps, V4I1:$Pt),
+         (C4_or_andn (C2_and $Ps, $Pu), $Pt, $Pu)>;
+def: Pat<(vselect V8I1:$Pu, V8I1:$Ps, V8I1:$Pt),
+         (C4_or_andn (C2_and $Ps, $Pu), $Pt, $Pu)>;
+
+def: Pat<(select I1:$Pu, V2I1:$Ps, V2I1:$Pt),
+         (C2_tfrrp (C2_mux $Pu, (C2_tfrpr $Ps), (C2_tfrpr $Pt)))>;
+def: Pat<(select I1:$Pu, V4I1:$Ps, V4I1:$Pt),
+         (C2_tfrrp (C2_mux $Pu, (C2_tfrpr $Ps), (C2_tfrpr $Pt)))>;
+def: Pat<(select I1:$Pu, V8I1:$Ps, V8I1:$Pt),
+         (C2_tfrrp (C2_mux $Pu, (C2_tfrpr $Ps), (C2_tfrpr $Pt)))>;
 
 def IsPosHalf : PatLeaf<(i32 IntRegs:$a), [{
   return isPositiveHalfWord(N);
@@ -2755,7 +2804,7 @@ let AddedComplexity = 90 in {
   def: Storexr_shl_pat<store,           F64, S4_storerd_rr>;
 
   def: Pat<(store I1:$Pu, (add (shl I32:$Rs, u2_0ImmPred:$u2), I32:$Rt)),
-           (S4_storerb_ur IntRegs:$Rt, IntRegs:$Rs, imm:$u2, (I1toI32 I1:$Pu))>;
+           (S4_storerb_rr IntRegs:$Rt, IntRegs:$Rs, imm:$u2, (I1toI32 I1:$Pu))>;
 }
 
 class SS_<PatFrag F> : SmallStackStore<F>;

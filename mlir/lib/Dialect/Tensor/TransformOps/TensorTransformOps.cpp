@@ -12,74 +12,110 @@
 #include "mlir/Dialect/SCF/IR/SCF.h"
 #include "mlir/Dialect/Tensor/IR/Tensor.h"
 #include "mlir/Dialect/Tensor/Transforms/Transforms.h"
+#include "mlir/Dialect/Tensor/Utils/Utils.h"
 #include "mlir/Dialect/Transform/IR/TransformDialect.h"
 #include "mlir/Dialect/Transform/IR/TransformInterfaces.h"
-#include "mlir/Interfaces/ValueBoundsOpInterface.h"
-#include "llvm/ADT/TypeSwitch.h"
 
 using namespace mlir;
 using namespace tensor;
 
 //===----------------------------------------------------------------------===//
-// TrackingListener
+// FindPayloadReplacementOpInterface implementations
 //===----------------------------------------------------------------------===//
 
-/// A tensor.insert_slice is a cast-like operation if it merely rank-extends the
-/// source tensor or inserts the source tensor into a destination tensor with
-/// the same shape.
-static bool isCastLikeInsertSliceOp(InsertSliceOp op) {
-  llvm::SmallBitVector droppedDims = op.getDroppedDims();
-  int64_t srcDim = 0;
-  // Source dims and destination dims (apart from dropped dims) must have the
-  // same size.
-  for (int64_t resultDim = 0; resultDim < op.getDestType().getRank();
-       ++resultDim) {
-    if (droppedDims.test(resultDim)) {
-      continue;
-    }
-    FailureOr<bool> equalDimSize = ValueBoundsConstraintSet::areEqual(
-        op.getSource(), op.getResult(), srcDim, resultDim);
-    if (failed(equalDimSize) || !*equalDimSize)
-      return false;
-    ++srcDim;
+namespace {
+struct ExtractSliceOpReplacementInterface
+    : public transform::FindPayloadReplacementOpInterface::ExternalModel<
+          ExtractSliceOpReplacementInterface, tensor::ExtractSliceOp> {
+  SmallVector<Value> getNextOperands(Operation *op) const {
+    auto extractSliceOp = cast<tensor::ExtractSliceOp>(op);
+    if (!isCastLikeExtractSliceOp(extractSliceOp))
+      return {};
+    return {extractSliceOp.getSource()};
   }
+};
 
-  return true;
+struct InsertSliceOpReplacementInterface
+    : public transform::FindPayloadReplacementOpInterface::ExternalModel<
+          InsertSliceOpReplacementInterface, tensor::InsertSliceOp> {
+  SmallVector<Value> getNextOperands(Operation *op) const {
+    auto insertSliceOp = cast<tensor::InsertSliceOp>(op);
+    if (!isCastLikeInsertSliceOp(insertSliceOp))
+      return {};
+    return {insertSliceOp.getSource()};
+  }
+};
+
+struct ReshapeOpReplacementInterface
+    : public transform::FindPayloadReplacementOpInterface::ExternalModel<
+          ReshapeOpReplacementInterface, tensor::ReshapeOp> {
+  SmallVector<Value> getNextOperands(Operation *op) const {
+    auto reshapeOp = cast<tensor::ReshapeOp>(op);
+    return {reshapeOp.getSource()};
+  }
+};
+
+template <typename ConcreteOp>
+struct ReassociativeReshapeOpReplacementInterface
+    : public transform::FindPayloadReplacementOpInterface::ExternalModel<
+          ReassociativeReshapeOpReplacementInterface<ConcreteOp>, ConcreteOp> {
+  SmallVector<Value> getNextOperands(Operation *op) const {
+    auto reshapeOp = cast<ConcreteOp>(op);
+    return {reshapeOp.getSrc()};
+  }
+};
+} // namespace
+
+void tensor::registerFindPayloadReplacementOpInterfaceExternalModels(
+    DialectRegistry &registry) {
+  registry.addExtension(+[](MLIRContext *ctx, tensor::TensorDialect *dialect) {
+    CollapseShapeOp::attachInterface<
+        ReassociativeReshapeOpReplacementInterface<CollapseShapeOp>>(*ctx);
+    ExpandShapeOp::attachInterface<
+        ReassociativeReshapeOpReplacementInterface<ExpandShapeOp>>(*ctx);
+    ExtractSliceOp::attachInterface<ExtractSliceOpReplacementInterface>(*ctx);
+    InsertSliceOp::attachInterface<InsertSliceOpReplacementInterface>(*ctx);
+    ReshapeOp::attachInterface<ReshapeOpReplacementInterface>(*ctx);
+  });
 }
 
-Operation *
-tensor::TrackingListener::findReplacementOp(Operation *op,
-                                            ValueRange newValues) const {
-  SmallVector<Value> values(newValues.begin(), newValues.end());
-  do {
-    if (Operation *replacement =
-            transform::TrackingListener::findReplacementOp(op, values))
-      return replacement;
+//===----------------------------------------------------------------------===//
+// Apply...PatternsOp
+//===----------------------------------------------------------------------===//
 
-    Operation *defOp = getCommonDefiningOp(values);
-    if (!defOp)
-      return nullptr;
+void transform::ApplyDropRedundantInsertSliceRankExpansionPatternsOp::
+    populatePatterns(RewritePatternSet &patterns) {
+  tensor::populateDropRedundantInsertSliceRankExpansionPatterns(patterns);
+}
 
-    // Skip cast-like operations.
-    // TODO: CastOpInterface could be used if CollapseShapeOp and ExpandShapeOp
-    // implement that interface
-    values.clear();
-    llvm::TypeSwitch<Operation *>(defOp)
-        .Case<CastOp>([&](CastOp op) { values.push_back(op.getSource()); })
-        .Case<CollapseShapeOp>(
-            [&](CollapseShapeOp op) { values.push_back(op.getSrc()); })
-        .Case<ExpandShapeOp>(
-            [&](ExpandShapeOp op) { values.push_back(op.getSrc()); })
-        .Case<ReshapeOp>(
-            [&](ReshapeOp op) { values.push_back(op.getSource()); })
-        .Case<InsertSliceOp>([&](InsertSliceOp op) {
-          if (isCastLikeInsertSliceOp(op))
-            values.push_back(op.getSource());
-        })
-        .Default([](Operation *op) {});
-  } while (!values.empty());
+void transform::ApplyFoldTensorEmptyPatternsOp::populatePatterns(
+    RewritePatternSet &patterns) {
+  tensor::populateFoldTensorEmptyPatterns(patterns, getFoldSingleUseOnly());
+}
 
-  return nullptr;
+void transform::ApplyFoldIntoPackAndUnpackPatternsOp::populatePatterns(
+    RewritePatternSet &patterns) {
+  tensor::populateFoldIntoPackAndUnpackPatterns(patterns);
+}
+
+void transform::ApplyFoldTensorSubsetOpsPatternsOp::populatePatterns(
+    RewritePatternSet &patterns) {
+  tensor::populateFoldTensorSubsetOpPatterns(patterns);
+}
+
+void transform::ApplyMergeConsecutiveInsertExtractSlicePatternsOp::
+    populatePatterns(RewritePatternSet &patterns) {
+  tensor::populateMergeConsecutiveInsertExtractSlicePatterns(patterns);
+}
+
+void transform::ApplyReassociativeReshapeFoldingPatternsOp::populatePatterns(
+    RewritePatternSet &patterns) {
+  tensor::populateReassociativeReshapeFoldingPatterns(patterns);
+}
+
+void transform::ApplyRewriteTensorOpsAsConstantPatternsOp::populatePatterns(
+    RewritePatternSet &patterns) {
+  tensor::populateRewriteAsConstantPatterns(patterns);
 }
 
 //===----------------------------------------------------------------------===//
@@ -87,7 +123,8 @@ tensor::TrackingListener::findReplacementOp(Operation *op,
 //===----------------------------------------------------------------------===//
 
 DiagnosedSilenceableFailure transform::MakeLoopIndependentOp::applyToOne(
-    Operation *target, transform::ApplyToEachResultList &results,
+    transform::TransformRewriter &rewriter, Operation *target,
+    transform::ApplyToEachResultList &results,
     transform::TransformState &state) {
   // Gather IVs.
   SmallVector<Value> ivs;
@@ -105,7 +142,6 @@ DiagnosedSilenceableFailure transform::MakeLoopIndependentOp::applyToOne(
   }
 
   // Rewrite IR.
-  IRRewriter rewriter(target->getContext());
   FailureOr<Value> replacement = failure();
   if (auto padOp = dyn_cast<tensor::PadOp>(target)) {
     replacement = tensor::buildIndependentOp(rewriter, padOp, ivs);

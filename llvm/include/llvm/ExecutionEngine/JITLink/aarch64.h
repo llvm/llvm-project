@@ -180,6 +180,20 @@ enum EdgeKind_aarch64 : Edge::Kind {
   ///     out-of-range error will be returned.
   LDRLiteral19,
 
+  /// The signed 21-bit delta from the fixup to the target.
+  ///
+  /// Fixup expression:
+  ///
+  ///   Fixup <- Target - Fixup + Addend : int21
+  ///
+  /// Notes:
+  ///   For ADR fixups.
+  ///
+  /// Errors:
+  ///   - The result of the fixup expression must fit into an int21 otherwise an
+  ///     out-of-range error will be returned.
+  ADRLiteral21,
+
   /// The signed 21-bit delta from the fixup page to the page containing the
   /// target.
   ///
@@ -358,6 +372,11 @@ inline bool isCompAndBranchImm19(uint32_t Instr) {
   return (Instr & CompAndBranchImm19Mask) == 0x34000000;
 }
 
+inline bool isADR(uint32_t Instr) {
+  constexpr uint32_t ADRMask = 0x9f000000;
+  return (Instr & ADRMask) == 0x10000000;
+}
+
 // Returns the amount the address operand of LD/ST (imm12)
 // should be shifted right by.
 //
@@ -487,6 +506,20 @@ inline Error applyFixup(LinkGraph &G, Block &B, const Edge &E) {
 
     uint32_t EncodedImm = ((static_cast<uint32_t>(Delta) >> 2) & 0x7ffff) << 5;
     uint32_t FixedInstr = RawInstr | EncodedImm;
+    *(ulittle32_t *)FixupPtr = FixedInstr;
+    break;
+  }
+  case ADRLiteral21: {
+    assert((FixupAddress.getValue() & 0x3) == 0 && "ADR is not 32-bit aligned");
+    uint32_t RawInstr = *(ulittle32_t *)FixupPtr;
+    assert(isADR(RawInstr) && "RawInstr is not an ADR");
+    int64_t Delta = E.getTarget().getAddress() + E.getAddend() - FixupAddress;
+    if (!isInt<21>(Delta))
+      return makeTargetOutOfRangeError(G, B, E);
+    auto UDelta = static_cast<uint32_t>(Delta);
+    uint32_t EncodedImmHi = ((UDelta >> 2) & 0x7ffff) << 5;
+    uint32_t EncodedImmLo = (UDelta & 0x3) << 29;
+    uint32_t FixedInstr = RawInstr | EncodedImmHi | EncodedImmLo;
     *(ulittle32_t *)FixupPtr = FixedInstr;
     break;
   }

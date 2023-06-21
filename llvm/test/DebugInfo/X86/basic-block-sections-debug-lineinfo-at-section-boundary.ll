@@ -12,9 +12,12 @@
 ;
 ; Reduced from the above example, the IR has been modified so that
 ; the store and return instructions have the same DebugLoc; in this
-; context, we should see 2 different directives for line #4
+; context, we should see 2 different directives for line #4 with an
+; intervening section directive.
 ;
-; CHECK-COUNT-2: .loc    0 4 1
+; CHECK: .loc    0 4 1
+; CHECK: .section .text.func,"ax",@progbits,unique
+; CHECK: .loc    0 4 1
 
 define void @func(i1 %0) !dbg !8 {
   br i1 %0, label %3, label %2

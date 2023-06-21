@@ -1397,6 +1397,8 @@ Init *TGParser::ParseOperation(Record *CurRec, RecTy *ItemType) {
   case tgtok::XRange:
   case tgtok::XStrConcat:
   case tgtok::XInterleave:
+  case tgtok::XGetDagArg:
+  case tgtok::XGetDagName:
   case tgtok::XSetDagOp: { // Value ::= !binop '(' Value ',' Value ')'
     tgtok::TokKind OpTok = Lex.getCode();
     SMLoc OpLoc = Lex.getLoc();
@@ -1429,6 +1431,12 @@ Init *TGParser::ParseOperation(Record *CurRec, RecTy *ItemType) {
     case tgtok::XStrConcat:  Code = BinOpInit::STRCONCAT; break;
     case tgtok::XInterleave: Code = BinOpInit::INTERLEAVE; break;
     case tgtok::XSetDagOp:   Code = BinOpInit::SETDAGOP; break;
+    case tgtok::XGetDagArg:
+      Code = BinOpInit::GETDAGARG;
+      break;
+    case tgtok::XGetDagName:
+      Code = BinOpInit::GETDAGNAME;
+      break;
     }
 
     RecTy *Type = nullptr;
@@ -1439,6 +1447,18 @@ Init *TGParser::ParseOperation(Record *CurRec, RecTy *ItemType) {
     case tgtok::XConcat:
     case tgtok::XSetDagOp:
       Type = DagRecTy::get(Records);
+      ArgType = DagRecTy::get(Records);
+      break;
+    case tgtok::XGetDagArg:
+      Type = ParseOperatorType();
+      if (!Type) {
+        TokError("did not get type for !getdagarg operator");
+        return nullptr;
+      }
+      ArgType = DagRecTy::get(Records);
+      break;
+    case tgtok::XGetDagName:
+      Type = StringRecTy::get(Records);
       ArgType = DagRecTy::get(Records);
       break;
     case tgtok::XAND:
@@ -1594,6 +1614,8 @@ Init *TGParser::ParseOperation(Record *CurRec, RecTy *ItemType) {
             return nullptr;
           }
           break;
+        case BinOpInit::GETDAGARG: // The 2nd argument of !getdagarg could be
+                                   // index or name.
         case BinOpInit::LE:
         case BinOpInit::LT:
         case BinOpInit::GE:
@@ -1657,6 +1679,15 @@ Init *TGParser::ParseOperation(Record *CurRec, RecTy *ItemType) {
           // After parsing the first dag argument, switch to expecting
           // a record, with no restriction on its superclasses.
           ArgType = RecordRecTy::get(Records, {});
+          break;
+        case BinOpInit::GETDAGARG:
+          // After parsing the first dag argument, expect an index integer or a
+          // name string.
+          ArgType = nullptr;
+          break;
+        case BinOpInit::GETDAGNAME:
+          // After parsing the first dag argument, expect an index integer.
+          ArgType = IntRecTy::get(Records);
           break;
         default:
           break;
@@ -1738,6 +1769,8 @@ Init *TGParser::ParseOperation(Record *CurRec, RecTy *ItemType) {
     return ParseOperationForEachFilter(CurRec, ItemType);
   }
 
+  case tgtok::XSetDagArg:
+  case tgtok::XSetDagName:
   case tgtok::XDag:
   case tgtok::XIf:
   case tgtok::XSubst: { // Value ::= !ternop '(' Value ',' Value ',' Value ')'
@@ -1758,6 +1791,16 @@ Init *TGParser::ParseOperation(Record *CurRec, RecTy *ItemType) {
       break;
     case tgtok::XSubst:
       Code = TernOpInit::SUBST;
+      break;
+    case tgtok::XSetDagArg:
+      Code = TernOpInit::SETDAGARG;
+      Type = DagRecTy::get(Records);
+      ItemType = nullptr;
+      break;
+    case tgtok::XSetDagName:
+      Code = TernOpInit::SETDAGNAME;
+      Type = DagRecTy::get(Records);
+      ItemType = nullptr;
       break;
     }
     if (!consume(tgtok::l_paren)) {
@@ -1869,6 +1912,35 @@ Init *TGParser::ParseOperation(Record *CurRec, RecTy *ItemType) {
         return nullptr;
       }
       Type = RHSt->getType();
+      break;
+    }
+    case tgtok::XSetDagArg: {
+      TypedInit *MHSt = dyn_cast<TypedInit>(MHS);
+      if (!MHSt || !isa<IntRecTy, StringRecTy>(MHSt->getType())) {
+        Error(MHSLoc, Twine("expected integer index or string name, got ") +
+                          (MHSt ? ("type '" + MHSt->getType()->getAsString())
+                                : ("'" + MHS->getAsString())) +
+                          "'");
+        return nullptr;
+      }
+      break;
+    }
+    case tgtok::XSetDagName: {
+      TypedInit *MHSt = dyn_cast<TypedInit>(MHS);
+      if (!MHSt || !isa<IntRecTy, StringRecTy>(MHSt->getType())) {
+        Error(MHSLoc, Twine("expected integer index or string name, got ") +
+                          (MHSt ? ("type '" + MHSt->getType()->getAsString())
+                                : ("'" + MHS->getAsString())) +
+                          "'");
+        return nullptr;
+      }
+      TypedInit *RHSt = dyn_cast<TypedInit>(RHS);
+      // The name could be a string or unset.
+      if (RHSt && !isa<StringRecTy>(RHSt->getType())) {
+        Error(RHSLoc, Twine("expected string or unset name, got type '") +
+                          RHSt->getType()->getAsString() + "'");
+        return nullptr;
+      }
       break;
     }
     }
@@ -2753,7 +2825,11 @@ Init *TGParser::ParseSimpleValue(Record *CurRec, RecTy *ItemType,
   case tgtok::XRange:
   case tgtok::XStrConcat:
   case tgtok::XInterleave:
+  case tgtok::XGetDagArg:
+  case tgtok::XGetDagName:
   case tgtok::XSetDagOp: // Value ::= !binop '(' Value ',' Value ')'
+  case tgtok::XSetDagArg:
+  case tgtok::XSetDagName:
   case tgtok::XIf:
   case tgtok::XCond:
   case tgtok::XFoldl:

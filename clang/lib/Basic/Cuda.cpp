@@ -222,7 +222,11 @@ CudaVersion MaxVersionForCudaArch(CudaArch A) {
   case CudaArch::SM_21:
     return CudaVersion::CUDA_80;
   case CudaArch::SM_30:
-    return CudaVersion::CUDA_110;
+  case CudaArch::SM_32:
+    return CudaVersion::CUDA_102;
+  case CudaArch::SM_35:
+  case CudaArch::SM_37:
+    return CudaVersion::CUDA_118;
   default:
     return CudaVersion::NEW;
   }

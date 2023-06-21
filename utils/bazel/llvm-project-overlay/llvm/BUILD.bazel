@@ -17,7 +17,18 @@ package(
 
 licenses(["notice"])
 
-exports_files(["LICENSE.TXT"])
+exports_files([
+    "LICENSE.TXT",
+    "cmake/modules/llvm-driver-template.cpp.in",
+    "include/llvm/CodeGen/SDNodeProperties.td",
+    "include/llvm/CodeGen/ValueTypes.td",
+    "include/llvm/Frontend/Directive/DirectiveBase.td",
+    "include/llvm/Frontend/OpenACC/ACC.td",
+    "include/llvm/Frontend/OpenMP/OMP.td",
+    "include/llvm/IR/Intrinsics.td",
+    "include/llvm/Option/OptParser.td",
+    "utils/lit/lit.py",
+])
 
 # It may be tempting to add compiler flags here, but that should be avoided.
 # The necessary warnings and other compile flags should be provided by the
@@ -572,16 +583,15 @@ cc_binary(
     srcs = [
         "utils/TableGen/Attributes.cpp",
         "utils/TableGen/CodeGenIntrinsics.cpp",
+        "utils/TableGen/CodeGenIntrinsics.h",
         "utils/TableGen/DirectiveEmitter.cpp",
         "utils/TableGen/IntrinsicEmitter.cpp",
         "utils/TableGen/RISCVTargetDefEmitter.cpp",
         "utils/TableGen/SDNodeProperties.cpp",
-        "utils/TableGen/TableGen.cpp",
-        "utils/TableGen/VTEmitter.cpp",
-
-        "utils/TableGen/CodeGenIntrinsics.h",
         "utils/TableGen/SDNodeProperties.h",
         "utils/TableGen/SequenceToOffsetTable.h",
+        "utils/TableGen/TableGen.cpp",
+        "utils/TableGen/VTEmitter.cpp",
     ],
     copts = llvm_copts,
     stamp = 0,
@@ -2751,6 +2761,25 @@ cc_library(
     ],
 )
 
+cc_library(
+    name = "DWARFLinkerParallel",
+    srcs = glob([
+        "lib/DWARFLinkerParallel/*.cpp",
+        "lib/DWARFLinkerParallel/*.h",
+    ]),
+    hdrs = glob(["include/llvm/DWARFLinkerParallel/*.h"]),
+    copts = llvm_copts,
+    deps = [
+        ":BinaryFormat",
+        ":CodeGen",
+        ":DWARFLinker",
+        ":DebugInfoDWARF",
+        ":MC",
+        ":Support",
+        ":TargetParser",
+    ],
+)
+
 gentbl(
     name = "DllOptionsTableGen",
     strip_include_prefix = "lib/ToolDrivers/llvm-dlltool",
@@ -3023,6 +3052,7 @@ cc_binary(
         ":CodeGen",
         ":CodeGenTypes",
         ":DWARFLinker",
+        ":DWARFLinkerParallel",
         ":DebugInfo",
         ":DebugInfoDWARF",
         ":DsymutilTableGen",
@@ -3445,6 +3475,7 @@ cc_binary(
         ":AllTargetsCodeGens",
         ":CodeGenTypes",
         ":DWARFLinker",
+        ":DWARFLinkerParallel",
         ":DebugInfoDWARF",
         ":DwarfutilOptionsTableGen",
         ":MC",

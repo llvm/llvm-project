@@ -375,6 +375,31 @@ define void @store.v16i32(ptr %p) sanitize_address {
   ret void
 }
 
+define void @store.v2i32.align8(ptr %p) sanitize_address {
+; CHECK-LABEL: @store.v2i32.align8(
+; CHECK-NEXT:    [[TMP1:%.*]] = ptrtoint ptr [[P:%.*]] to i64
+; CHECK-NEXT:    [[TMP2:%.*]] = lshr i64 [[TMP1]], 3
+; CHECK-NEXT:    [[TMP3:%.*]] = or i64 [[TMP2]], 17592186044416
+; CHECK-NEXT:    [[TMP4:%.*]] = inttoptr i64 [[TMP3]] to ptr
+; CHECK-NEXT:    [[TMP5:%.*]] = load i8, ptr [[TMP4]], align 1
+; CHECK-NEXT:    [[TMP6:%.*]] = icmp ne i8 [[TMP5]], 0
+; CHECK-NEXT:    br i1 [[TMP6]], label [[TMP7:%.*]], label [[TMP8:%.*]]
+; CHECK:       7:
+; CHECK-NEXT:    call void @__asan_report_store8(i64 [[TMP1]]) #[[ATTR4]]
+; CHECK-NEXT:    unreachable
+; CHECK:       8:
+; CHECK-NEXT:    store <2 x i32> zeroinitializer, ptr [[P]], align 8
+; CHECK-NEXT:    ret void
+;
+; CALLS-LABEL: @store.v2i32.align8(
+; CALLS-NEXT:    [[TMP1:%.*]] = ptrtoint ptr [[P:%.*]] to i64
+; CALLS-NEXT:    call void @__asan_store8(i64 [[TMP1]])
+; CALLS-NEXT:    store <2 x i32> zeroinitializer, ptr [[P]], align 8
+; CALLS-NEXT:    ret void
+;
+  store <2 x i32> zeroinitializer, ptr %p, align 8
+  ret void
+}
 
 define void @load.nxv1i32(ptr %p) sanitize_address {
 ; CHECK-LABEL: @load.nxv1i32(

@@ -17,4 +17,4 @@ target_link_libraries(llvm-bolt-heatmap
   LLVMBOLTUtils
   )
 
-set_target_properties(llvm-bolt-heatmap PROPERTIES FOLDER "BOLT")
+add_dependencies(bolt llvm-bolt-heatmap)

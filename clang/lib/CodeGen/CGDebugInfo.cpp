@@ -637,17 +637,21 @@ void CGDebugInfo::CreateCompileUnit() {
       SDK = *It;
   }
 
+  llvm::DICompileUnit::DebugNameTableKind NameTableKind =
+      static_cast<llvm::DICompileUnit::DebugNameTableKind>(
+          CGOpts.DebugNameTable);
+  if (CGM.getTarget().getTriple().isNVPTX())
+    NameTableKind = llvm::DICompileUnit::DebugNameTableKind::None;
+  else if (CGM.getTarget().getTriple().getVendor() == llvm::Triple::Apple)
+    NameTableKind = llvm::DICompileUnit::DebugNameTableKind::Apple;
+
   // Create new compile unit.
   TheCU = DBuilder.createCompileUnit(
       LangTag, CUFile, CGOpts.EmitVersionIdentMetadata ? Producer : "",
       LO.Optimize || CGOpts.PrepareForLTO || CGOpts.PrepareForThinLTO,
       CGOpts.DwarfDebugFlags, RuntimeVers, CGOpts.SplitDwarfFile, EmissionKind,
       DwoId, CGOpts.SplitDwarfInlining, CGOpts.DebugInfoForProfiling,
-      CGM.getTarget().getTriple().isNVPTX()
-          ? llvm::DICompileUnit::DebugNameTableKind::None
-          : static_cast<llvm::DICompileUnit::DebugNameTableKind>(
-                CGOpts.DebugNameTable),
-      CGOpts.DebugRangesBaseAddress, remapDIPath(Sysroot), SDK);
+      NameTableKind, CGOpts.DebugRangesBaseAddress, remapDIPath(Sysroot), SDK);
 }
 
 llvm::DIType *CGDebugInfo::CreateType(const BuiltinType *BT) {
@@ -1941,27 +1945,8 @@ llvm::DISubprogram *CGDebugInfo::CreateCXXMemberFunction(
     ContainingType = RecordTy;
   }
 
-  // We're checking for deleted C++ special member functions
-  // [Ctors,Dtors, Copy/Move]
-  auto checkAttrDeleted = [&](const auto *Method) {
-    if (Method->getCanonicalDecl()->isDeleted())
-      SPFlags |= llvm::DISubprogram::SPFlagDeleted;
-  };
-
-  switch (Method->getKind()) {
-
-  case Decl::CXXConstructor:
-  case Decl::CXXDestructor:
-    checkAttrDeleted(Method);
-    break;
-  case Decl::CXXMethod:
-    if (Method->isCopyAssignmentOperator() ||
-        Method->isMoveAssignmentOperator())
-      checkAttrDeleted(Method);
-    break;
-  default:
-    break;
-  }
+  if (Method->getCanonicalDecl()->isDeleted())
+    SPFlags |= llvm::DISubprogram::SPFlagDeleted;
 
   if (Method->isNoReturn())
     Flags |= llvm::DINode::FlagNoReturn;
@@ -3307,7 +3292,7 @@ llvm::DIType *CGDebugInfo::CreateType(const MemberPointerType *Ty,
         Flags);
 
   const FunctionProtoType *FPT =
-      Ty->getPointeeType()->getAs<FunctionProtoType>();
+      Ty->getPointeeType()->castAs<FunctionProtoType>();
   return DBuilder.createMemberPointerType(
       getOrCreateInstanceMethodType(
           CXXMethodDecl::getThisType(FPT, Ty->getMostRecentCXXRecordDecl()),

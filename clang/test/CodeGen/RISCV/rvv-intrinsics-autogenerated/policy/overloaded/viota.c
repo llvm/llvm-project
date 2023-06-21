@@ -666,3 +666,223 @@ vuint64m8_t test_viota_m_u64m8_tumu(vbool8_t mask, vuint64m8_t maskedoff, vbool8
   return __riscv_viota_tumu(mask, maskedoff, op1, vl);
 }
 
+// CHECK-RV64-LABEL: define dso_local <vscale x 1 x i8> @test_viota_m_u8mf8_mu
+// CHECK-RV64-SAME: (<vscale x 1 x i1> [[MASK:%.*]], <vscale x 1 x i8> [[MASKEDOFF:%.*]], <vscale x 1 x i1> [[OP1:%.*]], i64 noundef [[VL:%.*]]) #[[ATTR0]] {
+// CHECK-RV64-NEXT:  entry:
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 1 x i8> @llvm.riscv.viota.mask.nxv1i8.i64(<vscale x 1 x i8> [[MASKEDOFF]], <vscale x 1 x i1> [[OP1]], <vscale x 1 x i1> [[MASK]], i64 [[VL]], i64 1)
+// CHECK-RV64-NEXT:    ret <vscale x 1 x i8> [[TMP0]]
+//
+vuint8mf8_t test_viota_m_u8mf8_mu(vbool64_t mask, vuint8mf8_t maskedoff, vbool64_t op1, size_t vl) {
+  return __riscv_viota_mu(mask, maskedoff, op1, vl);
+}
+
+// CHECK-RV64-LABEL: define dso_local <vscale x 2 x i8> @test_viota_m_u8mf4_mu
+// CHECK-RV64-SAME: (<vscale x 2 x i1> [[MASK:%.*]], <vscale x 2 x i8> [[MASKEDOFF:%.*]], <vscale x 2 x i1> [[OP1:%.*]], i64 noundef [[VL:%.*]]) #[[ATTR0]] {
+// CHECK-RV64-NEXT:  entry:
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 2 x i8> @llvm.riscv.viota.mask.nxv2i8.i64(<vscale x 2 x i8> [[MASKEDOFF]], <vscale x 2 x i1> [[OP1]], <vscale x 2 x i1> [[MASK]], i64 [[VL]], i64 1)
+// CHECK-RV64-NEXT:    ret <vscale x 2 x i8> [[TMP0]]
+//
+vuint8mf4_t test_viota_m_u8mf4_mu(vbool32_t mask, vuint8mf4_t maskedoff, vbool32_t op1, size_t vl) {
+  return __riscv_viota_mu(mask, maskedoff, op1, vl);
+}
+
+// CHECK-RV64-LABEL: define dso_local <vscale x 4 x i8> @test_viota_m_u8mf2_mu
+// CHECK-RV64-SAME: (<vscale x 4 x i1> [[MASK:%.*]], <vscale x 4 x i8> [[MASKEDOFF:%.*]], <vscale x 4 x i1> [[OP1:%.*]], i64 noundef [[VL:%.*]]) #[[ATTR0]] {
+// CHECK-RV64-NEXT:  entry:
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 4 x i8> @llvm.riscv.viota.mask.nxv4i8.i64(<vscale x 4 x i8> [[MASKEDOFF]], <vscale x 4 x i1> [[OP1]], <vscale x 4 x i1> [[MASK]], i64 [[VL]], i64 1)
+// CHECK-RV64-NEXT:    ret <vscale x 4 x i8> [[TMP0]]
+//
+vuint8mf2_t test_viota_m_u8mf2_mu(vbool16_t mask, vuint8mf2_t maskedoff, vbool16_t op1, size_t vl) {
+  return __riscv_viota_mu(mask, maskedoff, op1, vl);
+}
+
+// CHECK-RV64-LABEL: define dso_local <vscale x 8 x i8> @test_viota_m_u8m1_mu
+// CHECK-RV64-SAME: (<vscale x 8 x i1> [[MASK:%.*]], <vscale x 8 x i8> [[MASKEDOFF:%.*]], <vscale x 8 x i1> [[OP1:%.*]], i64 noundef [[VL:%.*]]) #[[ATTR0]] {
+// CHECK-RV64-NEXT:  entry:
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 8 x i8> @llvm.riscv.viota.mask.nxv8i8.i64(<vscale x 8 x i8> [[MASKEDOFF]], <vscale x 8 x i1> [[OP1]], <vscale x 8 x i1> [[MASK]], i64 [[VL]], i64 1)
+// CHECK-RV64-NEXT:    ret <vscale x 8 x i8> [[TMP0]]
+//
+vuint8m1_t test_viota_m_u8m1_mu(vbool8_t mask, vuint8m1_t maskedoff, vbool8_t op1, size_t vl) {
+  return __riscv_viota_mu(mask, maskedoff, op1, vl);
+}
+
+// CHECK-RV64-LABEL: define dso_local <vscale x 16 x i8> @test_viota_m_u8m2_mu
+// CHECK-RV64-SAME: (<vscale x 16 x i1> [[MASK:%.*]], <vscale x 16 x i8> [[MASKEDOFF:%.*]], <vscale x 16 x i1> [[OP1:%.*]], i64 noundef [[VL:%.*]]) #[[ATTR0]] {
+// CHECK-RV64-NEXT:  entry:
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 16 x i8> @llvm.riscv.viota.mask.nxv16i8.i64(<vscale x 16 x i8> [[MASKEDOFF]], <vscale x 16 x i1> [[OP1]], <vscale x 16 x i1> [[MASK]], i64 [[VL]], i64 1)
+// CHECK-RV64-NEXT:    ret <vscale x 16 x i8> [[TMP0]]
+//
+vuint8m2_t test_viota_m_u8m2_mu(vbool4_t mask, vuint8m2_t maskedoff, vbool4_t op1, size_t vl) {
+  return __riscv_viota_mu(mask, maskedoff, op1, vl);
+}
+
+// CHECK-RV64-LABEL: define dso_local <vscale x 32 x i8> @test_viota_m_u8m4_mu
+// CHECK-RV64-SAME: (<vscale x 32 x i1> [[MASK:%.*]], <vscale x 32 x i8> [[MASKEDOFF:%.*]], <vscale x 32 x i1> [[OP1:%.*]], i64 noundef [[VL:%.*]]) #[[ATTR0]] {
+// CHECK-RV64-NEXT:  entry:
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 32 x i8> @llvm.riscv.viota.mask.nxv32i8.i64(<vscale x 32 x i8> [[MASKEDOFF]], <vscale x 32 x i1> [[OP1]], <vscale x 32 x i1> [[MASK]], i64 [[VL]], i64 1)
+// CHECK-RV64-NEXT:    ret <vscale x 32 x i8> [[TMP0]]
+//
+vuint8m4_t test_viota_m_u8m4_mu(vbool2_t mask, vuint8m4_t maskedoff, vbool2_t op1, size_t vl) {
+  return __riscv_viota_mu(mask, maskedoff, op1, vl);
+}
+
+// CHECK-RV64-LABEL: define dso_local <vscale x 64 x i8> @test_viota_m_u8m8_mu
+// CHECK-RV64-SAME: (<vscale x 64 x i1> [[MASK:%.*]], <vscale x 64 x i8> [[MASKEDOFF:%.*]], <vscale x 64 x i1> [[OP1:%.*]], i64 noundef [[VL:%.*]]) #[[ATTR0]] {
+// CHECK-RV64-NEXT:  entry:
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 64 x i8> @llvm.riscv.viota.mask.nxv64i8.i64(<vscale x 64 x i8> [[MASKEDOFF]], <vscale x 64 x i1> [[OP1]], <vscale x 64 x i1> [[MASK]], i64 [[VL]], i64 1)
+// CHECK-RV64-NEXT:    ret <vscale x 64 x i8> [[TMP0]]
+//
+vuint8m8_t test_viota_m_u8m8_mu(vbool1_t mask, vuint8m8_t maskedoff, vbool1_t op1, size_t vl) {
+  return __riscv_viota_mu(mask, maskedoff, op1, vl);
+}
+
+// CHECK-RV64-LABEL: define dso_local <vscale x 1 x i16> @test_viota_m_u16mf4_mu
+// CHECK-RV64-SAME: (<vscale x 1 x i1> [[MASK:%.*]], <vscale x 1 x i16> [[MASKEDOFF:%.*]], <vscale x 1 x i1> [[OP1:%.*]], i64 noundef [[VL:%.*]]) #[[ATTR0]] {
+// CHECK-RV64-NEXT:  entry:
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 1 x i16> @llvm.riscv.viota.mask.nxv1i16.i64(<vscale x 1 x i16> [[MASKEDOFF]], <vscale x 1 x i1> [[OP1]], <vscale x 1 x i1> [[MASK]], i64 [[VL]], i64 1)
+// CHECK-RV64-NEXT:    ret <vscale x 1 x i16> [[TMP0]]
+//
+vuint16mf4_t test_viota_m_u16mf4_mu(vbool64_t mask, vuint16mf4_t maskedoff, vbool64_t op1, size_t vl) {
+  return __riscv_viota_mu(mask, maskedoff, op1, vl);
+}
+
+// CHECK-RV64-LABEL: define dso_local <vscale x 2 x i16> @test_viota_m_u16mf2_mu
+// CHECK-RV64-SAME: (<vscale x 2 x i1> [[MASK:%.*]], <vscale x 2 x i16> [[MASKEDOFF:%.*]], <vscale x 2 x i1> [[OP1:%.*]], i64 noundef [[VL:%.*]]) #[[ATTR0]] {
+// CHECK-RV64-NEXT:  entry:
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 2 x i16> @llvm.riscv.viota.mask.nxv2i16.i64(<vscale x 2 x i16> [[MASKEDOFF]], <vscale x 2 x i1> [[OP1]], <vscale x 2 x i1> [[MASK]], i64 [[VL]], i64 1)
+// CHECK-RV64-NEXT:    ret <vscale x 2 x i16> [[TMP0]]
+//
+vuint16mf2_t test_viota_m_u16mf2_mu(vbool32_t mask, vuint16mf2_t maskedoff, vbool32_t op1, size_t vl) {
+  return __riscv_viota_mu(mask, maskedoff, op1, vl);
+}
+
+// CHECK-RV64-LABEL: define dso_local <vscale x 4 x i16> @test_viota_m_u16m1_mu
+// CHECK-RV64-SAME: (<vscale x 4 x i1> [[MASK:%.*]], <vscale x 4 x i16> [[MASKEDOFF:%.*]], <vscale x 4 x i1> [[OP1:%.*]], i64 noundef [[VL:%.*]]) #[[ATTR0]] {
+// CHECK-RV64-NEXT:  entry:
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 4 x i16> @llvm.riscv.viota.mask.nxv4i16.i64(<vscale x 4 x i16> [[MASKEDOFF]], <vscale x 4 x i1> [[OP1]], <vscale x 4 x i1> [[MASK]], i64 [[VL]], i64 1)
+// CHECK-RV64-NEXT:    ret <vscale x 4 x i16> [[TMP0]]
+//
+vuint16m1_t test_viota_m_u16m1_mu(vbool16_t mask, vuint16m1_t maskedoff, vbool16_t op1, size_t vl) {
+  return __riscv_viota_mu(mask, maskedoff, op1, vl);
+}
+
+// CHECK-RV64-LABEL: define dso_local <vscale x 8 x i16> @test_viota_m_u16m2_mu
+// CHECK-RV64-SAME: (<vscale x 8 x i1> [[MASK:%.*]], <vscale x 8 x i16> [[MASKEDOFF:%.*]], <vscale x 8 x i1> [[OP1:%.*]], i64 noundef [[VL:%.*]]) #[[ATTR0]] {
+// CHECK-RV64-NEXT:  entry:
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 8 x i16> @llvm.riscv.viota.mask.nxv8i16.i64(<vscale x 8 x i16> [[MASKEDOFF]], <vscale x 8 x i1> [[OP1]], <vscale x 8 x i1> [[MASK]], i64 [[VL]], i64 1)
+// CHECK-RV64-NEXT:    ret <vscale x 8 x i16> [[TMP0]]
+//
+vuint16m2_t test_viota_m_u16m2_mu(vbool8_t mask, vuint16m2_t maskedoff, vbool8_t op1, size_t vl) {
+  return __riscv_viota_mu(mask, maskedoff, op1, vl);
+}
+
+// CHECK-RV64-LABEL: define dso_local <vscale x 16 x i16> @test_viota_m_u16m4_mu
+// CHECK-RV64-SAME: (<vscale x 16 x i1> [[MASK:%.*]], <vscale x 16 x i16> [[MASKEDOFF:%.*]], <vscale x 16 x i1> [[OP1:%.*]], i64 noundef [[VL:%.*]]) #[[ATTR0]] {
+// CHECK-RV64-NEXT:  entry:
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 16 x i16> @llvm.riscv.viota.mask.nxv16i16.i64(<vscale x 16 x i16> [[MASKEDOFF]], <vscale x 16 x i1> [[OP1]], <vscale x 16 x i1> [[MASK]], i64 [[VL]], i64 1)
+// CHECK-RV64-NEXT:    ret <vscale x 16 x i16> [[TMP0]]
+//
+vuint16m4_t test_viota_m_u16m4_mu(vbool4_t mask, vuint16m4_t maskedoff, vbool4_t op1, size_t vl) {
+  return __riscv_viota_mu(mask, maskedoff, op1, vl);
+}
+
+// CHECK-RV64-LABEL: define dso_local <vscale x 32 x i16> @test_viota_m_u16m8_mu
+// CHECK-RV64-SAME: (<vscale x 32 x i1> [[MASK:%.*]], <vscale x 32 x i16> [[MASKEDOFF:%.*]], <vscale x 32 x i1> [[OP1:%.*]], i64 noundef [[VL:%.*]]) #[[ATTR0]] {
+// CHECK-RV64-NEXT:  entry:
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 32 x i16> @llvm.riscv.viota.mask.nxv32i16.i64(<vscale x 32 x i16> [[MASKEDOFF]], <vscale x 32 x i1> [[OP1]], <vscale x 32 x i1> [[MASK]], i64 [[VL]], i64 1)
+// CHECK-RV64-NEXT:    ret <vscale x 32 x i16> [[TMP0]]
+//
+vuint16m8_t test_viota_m_u16m8_mu(vbool2_t mask, vuint16m8_t maskedoff, vbool2_t op1, size_t vl) {
+  return __riscv_viota_mu(mask, maskedoff, op1, vl);
+}
+
+// CHECK-RV64-LABEL: define dso_local <vscale x 1 x i32> @test_viota_m_u32mf2_mu
+// CHECK-RV64-SAME: (<vscale x 1 x i1> [[MASK:%.*]], <vscale x 1 x i32> [[MASKEDOFF:%.*]], <vscale x 1 x i1> [[OP1:%.*]], i64 noundef [[VL:%.*]]) #[[ATTR0]] {
+// CHECK-RV64-NEXT:  entry:
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 1 x i32> @llvm.riscv.viota.mask.nxv1i32.i64(<vscale x 1 x i32> [[MASKEDOFF]], <vscale x 1 x i1> [[OP1]], <vscale x 1 x i1> [[MASK]], i64 [[VL]], i64 1)
+// CHECK-RV64-NEXT:    ret <vscale x 1 x i32> [[TMP0]]
+//
+vuint32mf2_t test_viota_m_u32mf2_mu(vbool64_t mask, vuint32mf2_t maskedoff, vbool64_t op1, size_t vl) {
+  return __riscv_viota_mu(mask, maskedoff, op1, vl);
+}
+
+// CHECK-RV64-LABEL: define dso_local <vscale x 2 x i32> @test_viota_m_u32m1_mu
+// CHECK-RV64-SAME: (<vscale x 2 x i1> [[MASK:%.*]], <vscale x 2 x i32> [[MASKEDOFF:%.*]], <vscale x 2 x i1> [[OP1:%.*]], i64 noundef [[VL:%.*]]) #[[ATTR0]] {
+// CHECK-RV64-NEXT:  entry:
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 2 x i32> @llvm.riscv.viota.mask.nxv2i32.i64(<vscale x 2 x i32> [[MASKEDOFF]], <vscale x 2 x i1> [[OP1]], <vscale x 2 x i1> [[MASK]], i64 [[VL]], i64 1)
+// CHECK-RV64-NEXT:    ret <vscale x 2 x i32> [[TMP0]]
+//
+vuint32m1_t test_viota_m_u32m1_mu(vbool32_t mask, vuint32m1_t maskedoff, vbool32_t op1, size_t vl) {
+  return __riscv_viota_mu(mask, maskedoff, op1, vl);
+}
+
+// CHECK-RV64-LABEL: define dso_local <vscale x 4 x i32> @test_viota_m_u32m2_mu
+// CHECK-RV64-SAME: (<vscale x 4 x i1> [[MASK:%.*]], <vscale x 4 x i32> [[MASKEDOFF:%.*]], <vscale x 4 x i1> [[OP1:%.*]], i64 noundef [[VL:%.*]]) #[[ATTR0]] {
+// CHECK-RV64-NEXT:  entry:
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 4 x i32> @llvm.riscv.viota.mask.nxv4i32.i64(<vscale x 4 x i32> [[MASKEDOFF]], <vscale x 4 x i1> [[OP1]], <vscale x 4 x i1> [[MASK]], i64 [[VL]], i64 1)
+// CHECK-RV64-NEXT:    ret <vscale x 4 x i32> [[TMP0]]
+//
+vuint32m2_t test_viota_m_u32m2_mu(vbool16_t mask, vuint32m2_t maskedoff, vbool16_t op1, size_t vl) {
+  return __riscv_viota_mu(mask, maskedoff, op1, vl);
+}
+
+// CHECK-RV64-LABEL: define dso_local <vscale x 8 x i32> @test_viota_m_u32m4_mu
+// CHECK-RV64-SAME: (<vscale x 8 x i1> [[MASK:%.*]], <vscale x 8 x i32> [[MASKEDOFF:%.*]], <vscale x 8 x i1> [[OP1:%.*]], i64 noundef [[VL:%.*]]) #[[ATTR0]] {
+// CHECK-RV64-NEXT:  entry:
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 8 x i32> @llvm.riscv.viota.mask.nxv8i32.i64(<vscale x 8 x i32> [[MASKEDOFF]], <vscale x 8 x i1> [[OP1]], <vscale x 8 x i1> [[MASK]], i64 [[VL]], i64 1)
+// CHECK-RV64-NEXT:    ret <vscale x 8 x i32> [[TMP0]]
+//
+vuint32m4_t test_viota_m_u32m4_mu(vbool8_t mask, vuint32m4_t maskedoff, vbool8_t op1, size_t vl) {
+  return __riscv_viota_mu(mask, maskedoff, op1, vl);
+}
+
+// CHECK-RV64-LABEL: define dso_local <vscale x 16 x i32> @test_viota_m_u32m8_mu
+// CHECK-RV64-SAME: (<vscale x 16 x i1> [[MASK:%.*]], <vscale x 16 x i32> [[MASKEDOFF:%.*]], <vscale x 16 x i1> [[OP1:%.*]], i64 noundef [[VL:%.*]]) #[[ATTR0]] {
+// CHECK-RV64-NEXT:  entry:
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 16 x i32> @llvm.riscv.viota.mask.nxv16i32.i64(<vscale x 16 x i32> [[MASKEDOFF]], <vscale x 16 x i1> [[OP1]], <vscale x 16 x i1> [[MASK]], i64 [[VL]], i64 1)
+// CHECK-RV64-NEXT:    ret <vscale x 16 x i32> [[TMP0]]
+//
+vuint32m8_t test_viota_m_u32m8_mu(vbool4_t mask, vuint32m8_t maskedoff, vbool4_t op1, size_t vl) {
+  return __riscv_viota_mu(mask, maskedoff, op1, vl);
+}
+
+// CHECK-RV64-LABEL: define dso_local <vscale x 1 x i64> @test_viota_m_u64m1_mu
+// CHECK-RV64-SAME: (<vscale x 1 x i1> [[MASK:%.*]], <vscale x 1 x i64> [[MASKEDOFF:%.*]], <vscale x 1 x i1> [[OP1:%.*]], i64 noundef [[VL:%.*]]) #[[ATTR0]] {
+// CHECK-RV64-NEXT:  entry:
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 1 x i64> @llvm.riscv.viota.mask.nxv1i64.i64(<vscale x 1 x i64> [[MASKEDOFF]], <vscale x 1 x i1> [[OP1]], <vscale x 1 x i1> [[MASK]], i64 [[VL]], i64 1)
+// CHECK-RV64-NEXT:    ret <vscale x 1 x i64> [[TMP0]]
+//
+vuint64m1_t test_viota_m_u64m1_mu(vbool64_t mask, vuint64m1_t maskedoff, vbool64_t op1, size_t vl) {
+  return __riscv_viota_mu(mask, maskedoff, op1, vl);
+}
+
+// CHECK-RV64-LABEL: define dso_local <vscale x 2 x i64> @test_viota_m_u64m2_mu
+// CHECK-RV64-SAME: (<vscale x 2 x i1> [[MASK:%.*]], <vscale x 2 x i64> [[MASKEDOFF:%.*]], <vscale x 2 x i1> [[OP1:%.*]], i64 noundef [[VL:%.*]]) #[[ATTR0]] {
+// CHECK-RV64-NEXT:  entry:
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 2 x i64> @llvm.riscv.viota.mask.nxv2i64.i64(<vscale x 2 x i64> [[MASKEDOFF]], <vscale x 2 x i1> [[OP1]], <vscale x 2 x i1> [[MASK]], i64 [[VL]], i64 1)
+// CHECK-RV64-NEXT:    ret <vscale x 2 x i64> [[TMP0]]
+//
+vuint64m2_t test_viota_m_u64m2_mu(vbool32_t mask, vuint64m2_t maskedoff, vbool32_t op1, size_t vl) {
+  return __riscv_viota_mu(mask, maskedoff, op1, vl);
+}
+
+// CHECK-RV64-LABEL: define dso_local <vscale x 4 x i64> @test_viota_m_u64m4_mu
+// CHECK-RV64-SAME: (<vscale x 4 x i1> [[MASK:%.*]], <vscale x 4 x i64> [[MASKEDOFF:%.*]], <vscale x 4 x i1> [[OP1:%.*]], i64 noundef [[VL:%.*]]) #[[ATTR0]] {
+// CHECK-RV64-NEXT:  entry:
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 4 x i64> @llvm.riscv.viota.mask.nxv4i64.i64(<vscale x 4 x i64> [[MASKEDOFF]], <vscale x 4 x i1> [[OP1]], <vscale x 4 x i1> [[MASK]], i64 [[VL]], i64 1)
+// CHECK-RV64-NEXT:    ret <vscale x 4 x i64> [[TMP0]]
+//
+vuint64m4_t test_viota_m_u64m4_mu(vbool16_t mask, vuint64m4_t maskedoff, vbool16_t op1, size_t vl) {
+  return __riscv_viota_mu(mask, maskedoff, op1, vl);
+}
+
+// CHECK-RV64-LABEL: define dso_local <vscale x 8 x i64> @test_viota_m_u64m8_mu
+// CHECK-RV64-SAME: (<vscale x 8 x i1> [[MASK:%.*]], <vscale x 8 x i64> [[MASKEDOFF:%.*]], <vscale x 8 x i1> [[OP1:%.*]], i64 noundef [[VL:%.*]]) #[[ATTR0]] {
+// CHECK-RV64-NEXT:  entry:
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 8 x i64> @llvm.riscv.viota.mask.nxv8i64.i64(<vscale x 8 x i64> [[MASKEDOFF]], <vscale x 8 x i1> [[OP1]], <vscale x 8 x i1> [[MASK]], i64 [[VL]], i64 1)
+// CHECK-RV64-NEXT:    ret <vscale x 8 x i64> [[TMP0]]
+//
+vuint64m8_t test_viota_m_u64m8_mu(vbool8_t mask, vuint64m8_t maskedoff, vbool8_t op1, size_t vl) {
+  return __riscv_viota_mu(mask, maskedoff, op1, vl);
+}
+

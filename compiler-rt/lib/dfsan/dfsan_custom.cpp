@@ -682,6 +682,37 @@ SANITIZER_INTERFACE_ATTRIBUTE char *__dfso_strcat(
   return ret;
 }
 
+SANITIZER_INTERFACE_ATTRIBUTE char *__dfsw_strncat(
+    char *dest, const char *src, size_t num, dfsan_label dest_label,
+    dfsan_label src_label, dfsan_label num_label, dfsan_label *ret_label) {
+  size_t src_len = strlen(src);
+  src_len = src_len < num ? src_len : num;
+  size_t dest_len = strlen(dest);
+
+  char *ret = strncat(dest, src, num);
+  dfsan_mem_shadow_transfer(dest + dest_len, src, src_len);
+  *ret_label = dest_label;
+  return ret;
+}
+
+SANITIZER_INTERFACE_ATTRIBUTE char *__dfso_strncat(
+    char *dest, const char *src, size_t num, dfsan_label dest_label,
+    dfsan_label src_label, dfsan_label num_label, dfsan_label *ret_label,
+    dfsan_origin dest_origin, dfsan_origin src_origin, dfsan_origin num_origin,
+    dfsan_origin *ret_origin) {
+  size_t src_len = strlen(src);
+  src_len = src_len < num ? src_len : num;
+  size_t dest_len = strlen(dest);
+
+  char *ret = strncat(dest, src, num);
+
+  dfsan_mem_origin_transfer(dest + dest_len, src, src_len);
+  dfsan_mem_shadow_transfer(dest + dest_len, src, src_len);
+  *ret_label = dest_label;
+  *ret_origin = dest_origin;
+  return ret;
+}
+
 SANITIZER_INTERFACE_ATTRIBUTE char *
 __dfsw_strdup(const char *s, dfsan_label s_label, dfsan_label *ret_label) {
   size_t len = strlen(s);

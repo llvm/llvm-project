@@ -110,7 +110,7 @@ static void parseArgs(int argc, char **argv) {
 
   parseIntArg(Args, OPT_port, Port, 0u);
   parseIntArg(Args, OPT_scan_interval, ScanInterval, 300);
-  parseIntArg(Args, OPT_max_concurrency, MaxConcurrency, 0ul);
+  parseIntArg(Args, OPT_max_concurrency, MaxConcurrency, size_t(0));
 
   if (const opt::Arg *A = Args.getLastArg(OPT_min_interval)) {
     StringRef V(A->getValue());

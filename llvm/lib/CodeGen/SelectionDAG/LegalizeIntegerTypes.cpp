@@ -141,7 +141,9 @@ void DAGTypeLegalizer::PromoteIntegerResult(SDNode *N, unsigned ResNo) {
                          Res = PromoteIntRes_EXTEND_VECTOR_INREG(N); break;
 
   case ISD::SIGN_EXTEND:
+  case ISD::VP_SIGN_EXTEND:
   case ISD::ZERO_EXTEND:
+  case ISD::VP_ZERO_EXTEND:
   case ISD::ANY_EXTEND:  Res = PromoteIntRes_INT_EXTEND(N); break;
 
   case ISD::VP_FP_TO_SINT:
@@ -760,8 +762,8 @@ SDValue DAGTypeLegalizer::PromoteIntRes_INT_EXTEND(SDNode *N) {
     assert(Res.getValueType().bitsLE(NVT) && "Extension doesn't make sense!");
 
     // If the result and operand types are the same after promotion, simplify
-    // to an in-register extension.
-    if (NVT == Res.getValueType()) {
+    // to an in-register extension. Unless this is a VP_*_EXTEND.
+    if (NVT == Res.getValueType() && N->getNumOperands() == 1) {
       // The high bits are not guaranteed to be anything.  Insert an extend.
       if (N->getOpcode() == ISD::SIGN_EXTEND)
         return DAG.getNode(ISD::SIGN_EXTEND_INREG, dl, NVT, Res,
@@ -774,6 +776,12 @@ SDValue DAGTypeLegalizer::PromoteIntRes_INT_EXTEND(SDNode *N) {
   }
 
   // Otherwise, just extend the original operand all the way to the larger type.
+  if (N->getNumOperands() != 1) {
+    assert(N->getNumOperands() == 3 && "Unexpected number of operands!");
+    assert(N->isVPOpcode() && "Expected VP opcode");
+    return DAG.getNode(N->getOpcode(), dl, NVT, N->getOperand(0),
+                       N->getOperand(1), N->getOperand(2));
+  }
   return DAG.getNode(N->getOpcode(), dl, NVT, N->getOperand(0));
 }
 
@@ -1030,14 +1038,8 @@ static SDValue earlyExpandDIVFIX(SDNode *N, SDValue LHS, SDValue RHS,
   if (VT.isVector())
     WideVT = EVT::getVectorVT(*DAG.getContext(), WideVT,
                               VT.getVectorElementCount());
-  if (Signed) {
-    LHS = DAG.getSExtOrTrunc(LHS, dl, WideVT);
-    RHS = DAG.getSExtOrTrunc(RHS, dl, WideVT);
-  } else {
-    LHS = DAG.getZExtOrTrunc(LHS, dl, WideVT);
-    RHS = DAG.getZExtOrTrunc(RHS, dl, WideVT);
-  }
-
+  LHS = DAG.getExtOrTrunc(Signed, LHS, dl, WideVT);
+  RHS = DAG.getExtOrTrunc(Signed, RHS, dl, WideVT);
   SDValue Res = TLI.expandFixedPointDiv(N->getOpcode(), dl, LHS, RHS, Scale,
                                         DAG);
   assert(Res && "Expanding DIVFIX with wide type failed?");
@@ -1663,6 +1665,7 @@ bool DAGTypeLegalizer::PromoteIntegerOperand(SDNode *N, unsigned OpNo) {
   case ISD::VP_SETCC:
   case ISD::SETCC:        Res = PromoteIntOp_SETCC(N, OpNo); break;
   case ISD::SIGN_EXTEND:  Res = PromoteIntOp_SIGN_EXTEND(N); break;
+  case ISD::VP_SIGN_EXTEND: Res = PromoteIntOp_VP_SIGN_EXTEND(N); break;
   case ISD::VP_SINT_TO_FP:
   case ISD::SINT_TO_FP:   Res = PromoteIntOp_SINT_TO_FP(N); break;
   case ISD::STRICT_SINT_TO_FP: Res = PromoteIntOp_STRICT_SINT_TO_FP(N); break;
@@ -1684,6 +1687,7 @@ bool DAGTypeLegalizer::PromoteIntegerOperand(SDNode *N, unsigned OpNo) {
   case ISD::UINT_TO_FP:   Res = PromoteIntOp_UINT_TO_FP(N); break;
   case ISD::STRICT_UINT_TO_FP:  Res = PromoteIntOp_STRICT_UINT_TO_FP(N); break;
   case ISD::ZERO_EXTEND:  Res = PromoteIntOp_ZERO_EXTEND(N); break;
+  case ISD::VP_ZERO_EXTEND: Res = PromoteIntOp_VP_ZERO_EXTEND(N); break;
   case ISD::EXTRACT_SUBVECTOR: Res = PromoteIntOp_EXTRACT_SUBVECTOR(N); break;
   case ISD::INSERT_SUBVECTOR: Res = PromoteIntOp_INSERT_SUBVECTOR(N); break;
 
@@ -1714,10 +1718,10 @@ bool DAGTypeLegalizer::PromoteIntegerOperand(SDNode *N, unsigned OpNo) {
   case ISD::SDIVFIXSAT:
   case ISD::UDIVFIX:
   case ISD::UDIVFIXSAT: Res = PromoteIntOp_FIX(N); break;
-
   case ISD::FPOWI:
-  case ISD::STRICT_FPOWI: Res = PromoteIntOp_FPOWI(N); break;
-
+  case ISD::STRICT_FPOWI:
+  case ISD::FLDEXP:
+  case ISD::STRICT_FLDEXP: Res = PromoteIntOp_ExpOp(N); break;
   case ISD::VECREDUCE_ADD:
   case ISD::VECREDUCE_MUL:
   case ISD::VECREDUCE_AND:
@@ -2013,6 +2017,23 @@ SDValue DAGTypeLegalizer::PromoteIntOp_SIGN_EXTEND(SDNode *N) {
                      Op, DAG.getValueType(N->getOperand(0).getValueType()));
 }
 
+SDValue DAGTypeLegalizer::PromoteIntOp_VP_SIGN_EXTEND(SDNode *N) {
+  SDLoc dl(N);
+  EVT VT = N->getValueType(0);
+  SDValue Op = GetPromotedInteger(N->getOperand(0));
+  // FIXME: There is no VP_ANY_EXTEND yet.
+  Op = DAG.getNode(ISD::VP_ZERO_EXTEND, dl, VT, Op, N->getOperand(1),
+                   N->getOperand(2));
+  unsigned Diff =
+      VT.getScalarSizeInBits() - N->getOperand(0).getScalarValueSizeInBits();
+  SDValue ShAmt = DAG.getShiftAmountConstant(Diff, VT, dl);
+  // FIXME: There is no VP_SIGN_EXTEND_INREG so use a pair of shifts.
+  SDValue Shl = DAG.getNode(ISD::VP_SHL, dl, VT, Op, ShAmt, N->getOperand(1),
+                            N->getOperand(2));
+  return DAG.getNode(ISD::VP_ASHR, dl, VT, Shl, ShAmt, N->getOperand(1),
+                     N->getOperand(2));
+}
+
 SDValue DAGTypeLegalizer::PromoteIntOp_SINT_TO_FP(SDNode *N) {
   if (N->getOpcode() == ISD::VP_SINT_TO_FP)
     return SDValue(DAG.UpdateNodeOperands(N,
@@ -2164,6 +2185,19 @@ SDValue DAGTypeLegalizer::PromoteIntOp_ZERO_EXTEND(SDNode *N) {
   return DAG.getZeroExtendInReg(Op, dl, N->getOperand(0).getValueType());
 }
 
+SDValue DAGTypeLegalizer::PromoteIntOp_VP_ZERO_EXTEND(SDNode *N) {
+  SDLoc dl(N);
+  EVT VT = N->getValueType(0);
+  SDValue Op = GetPromotedInteger(N->getOperand(0));
+  // FIXME: There is no VP_ANY_EXTEND yet.
+  Op = DAG.getNode(ISD::VP_ZERO_EXTEND, dl, VT, Op, N->getOperand(1),
+                   N->getOperand(2));
+  APInt Imm = APInt::getLowBitsSet(VT.getScalarSizeInBits(),
+                                   N->getOperand(0).getScalarValueSizeInBits());
+  return DAG.getNode(ISD::VP_AND, dl, VT, Op, DAG.getConstant(Imm, dl, VT),
+                     N->getOperand(1), N->getOperand(2));
+}
+
 SDValue DAGTypeLegalizer::PromoteIntOp_ADDSUBO_CARRY(SDNode *N, unsigned OpNo) {
   assert(OpNo == 2 && "Don't know how to promote this operand!");
 
@@ -2201,26 +2235,29 @@ SDValue DAGTypeLegalizer::PromoteIntOp_PREFETCH(SDNode *N, unsigned OpNo) {
                  0);
 }
 
-SDValue DAGTypeLegalizer::PromoteIntOp_FPOWI(SDNode *N) {
+SDValue DAGTypeLegalizer::PromoteIntOp_ExpOp(SDNode *N) {
   bool IsStrict = N->isStrictFPOpcode();
   SDValue Chain = IsStrict ? N->getOperand(0) : SDValue();
 
-  // The integer operand is the last operand in FPOWI (so the result and
-  // floating point operand is already type legalized).
+  bool IsPowI =
+      N->getOpcode() == ISD::FPOWI || N->getOpcode() == ISD::STRICT_FPOWI;
+
+  // The integer operand is the last operand in FPOWI (or FLDEXP) (so the result
+  // and floating point operand is already type legalized).
+  RTLIB::Libcall LC = IsPowI ? RTLIB::getPOWI(N->getValueType(0))
+                             : RTLIB::getLDEXP(N->getValueType(0));
+
+  if (LC == RTLIB::UNKNOWN_LIBCALL || !TLI.getLibcallName(LC)) {
+    SDValue Op = SExtPromotedInteger(N->getOperand(1));
+    return SDValue(DAG.UpdateNodeOperands(N, N->getOperand(0), Op), 0);
+  }
 
   // We can't just promote the exponent type in FPOWI, since we want to lower
   // the node to a libcall and we if we promote to a type larger than
   // sizeof(int) the libcall might not be according to the targets ABI. Instead
   // we rewrite to a libcall here directly, letting makeLibCall handle promotion
   // if the target accepts it according to shouldSignExtendTypeInLibCall.
-  RTLIB::Libcall LC = RTLIB::getPOWI(N->getValueType(0));
-  assert(LC != RTLIB::UNKNOWN_LIBCALL && "Unexpected fpowi.");
-  if (!TLI.getLibcallName(LC)) {
-    // Some targets don't have a powi libcall; use pow instead.
-    // FIXME: Implement this if some target needs it.
-    DAG.getContext()->emitError("Don't know how to promote fpowi to fpow");
-    return DAG.getUNDEF(N->getValueType(0));
-  }
+
   unsigned OpOffset = IsStrict ? 1 : 0;
   // The exponent should fit in a sizeof(int) type for the libcall to be valid.
   assert(DAG.getLibInfo().getIntSize() ==

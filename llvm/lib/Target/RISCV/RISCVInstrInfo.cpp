@@ -745,7 +745,7 @@ void RISCVInstrInfo::movImm(MachineBasicBlock &MBB,
       RISCVMatInt::generateInstSeq(Val, STI.getFeatureBits());
   assert(!Seq.empty());
 
-  for (RISCVMatInt::Inst &Inst : Seq) {
+  for (const RISCVMatInt::Inst &Inst : Seq) {
     switch (Inst.getOpndKind()) {
     case RISCVMatInt::Imm:
       BuildMI(MBB, MBBI, DL, get(Inst.getOpcode()), DstReg)
@@ -1344,7 +1344,7 @@ void RISCVInstrInfo::setSpecialOperandAttr(MachineInstr &OldMI1,
                                            MachineInstr &OldMI2,
                                            MachineInstr &NewMI1,
                                            MachineInstr &NewMI2) const {
-  uint16_t IntersectedFlags = OldMI1.getFlags() & OldMI2.getFlags();
+  uint32_t IntersectedFlags = OldMI1.getFlags() & OldMI2.getFlags();
   NewMI1.setFlags(IntersectedFlags);
   NewMI2.setFlags(IntersectedFlags);
 }
@@ -1630,7 +1630,7 @@ static void combineFPFusedMultiply(MachineInstr &Root, MachineInstr &Prev,
 
   Register DstReg = Dst.getReg();
   unsigned FusedOpc = getFPFusedMultiplyOpcode(Root.getOpcode(), Pattern);
-  auto IntersectedFlags = Root.getFlags() & Prev.getFlags();
+  uint32_t IntersectedFlags = Root.getFlags() & Prev.getFlags();
   DebugLoc MergedLoc =
       DILocation::getMergedLocation(Root.getDebugLoc(), Prev.getDebugLoc());
 
@@ -1793,13 +1793,6 @@ bool RISCVInstrInfo::verifyInstruction(const MachineInstr &MI,
   }
 
   const uint64_t TSFlags = Desc.TSFlags;
-  if (RISCVII::hasMergeOp(TSFlags)) {
-    unsigned OpIdx = RISCVII::getMergeOpNum(Desc);
-    if (MI.findTiedOperandIdx(0) != OpIdx) {
-      ErrInfo = "Merge op improperly tied";
-      return false;
-    }
-  }
   if (RISCVII::hasVLOp(TSFlags)) {
     const MachineOperand &Op = MI.getOperand(RISCVII::getVLOpNum(Desc));
     if (!Op.isImm() && !Op.isReg())  {

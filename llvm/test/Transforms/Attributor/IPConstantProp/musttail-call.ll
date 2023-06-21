@@ -78,7 +78,7 @@ define internal ptr @side_effects(i8 %v) {
 }
 
 define internal ptr @no_side_effects(i8 %v) readonly nounwind {
-; CGSCC: Function Attrs: nofree norecurse nosync nounwind willreturn memory(none)
+; CGSCC: Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn memory(none)
 ; CGSCC-LABEL: define {{[^@]+}}@no_side_effects
 ; CGSCC-SAME: (i8 [[V:%.*]]) #[[ATTR0:[0-9]+]] {
 ; CGSCC-NEXT:    ret ptr null
@@ -96,5 +96,5 @@ define internal ptr @dont_zap_me(i8 %v) {
   ret ptr null
 }
 ;.
-; CGSCC: attributes #[[ATTR0]] = { nofree norecurse nosync nounwind willreturn memory(none) }
+; CGSCC: attributes #[[ATTR0]] = { mustprogress nofree norecurse nosync nounwind willreturn memory(none) }
 ;.

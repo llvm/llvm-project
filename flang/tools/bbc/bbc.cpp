@@ -15,6 +15,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "flang/Common/Fortran-features.h"
+#include "flang/Common/OpenMP-features.h"
 #include "flang/Common/default-kinds.h"
 #include "flang/Lower/Bridge.h"
 #include "flang/Lower/PFTBuilder.h"
@@ -102,6 +103,11 @@ static llvm::cl::opt<bool>
     emitFIR("emit-fir",
             llvm::cl::desc("Dump the FIR created by lowering and exit"),
             llvm::cl::init(false));
+
+static llvm::cl::opt<bool>
+    emitHLFIR("emit-hlfir",
+              llvm::cl::desc("Dump the HLFIR created by lowering and exit"),
+              llvm::cl::init(false));
 
 static llvm::cl::opt<bool> warnStdViolation("Mstandard",
                                             llvm::cl::desc("emit warnings"),
@@ -274,7 +280,7 @@ static mlir::LogicalResult convertFortranSourceToMLIR(
   // Use default lowering options for bbc.
   Fortran::lower::LoweringOptions loweringOptions{};
   loweringOptions.setPolymorphicTypeImpl(enablePolymorphic);
-  loweringOptions.setLowerToHighLevelFIR(useHLFIR);
+  loweringOptions.setLowerToHighLevelFIR(useHLFIR || emitHLFIR);
   auto burnside = Fortran::lower::LoweringBridge::create(
       ctx, semanticsContext, defKinds, semanticsContext.intrinsics(),
       semanticsContext.targetCharacteristics(), parsing.allCooked(), "",
@@ -311,7 +317,7 @@ static mlir::LogicalResult convertFortranSourceToMLIR(
       mlir::emitError(mlir::UnknownLoc::get(&ctx)) << msg;
       return mlir::failure();
     });
-  } else if (emitFIR) {
+  } else if (emitFIR || emitHLFIR) {
     // --emit-fir: Build the IR, verify it, and dump the IR if the IR passes
     // verification. Use --dump-module-on-failure to dump invalid IR.
     pm.addPass(std::make_unique<Fortran::lower::VerifierPass>());
@@ -319,6 +325,16 @@ static mlir::LogicalResult convertFortranSourceToMLIR(
       llvm::errs() << "FATAL: verification of lowering to FIR failed";
       return mlir::failure();
     }
+
+    if (emitFIR && useHLFIR) {
+      // lower HLFIR to FIR
+      fir::createHLFIRToFIRPassPipeline(pm, llvm::OptimizationLevel::O2);
+      if (mlir::failed(pm.run(mlirModule))) {
+        llvm::errs() << "FATAL: lowering from HLFIR to FIR failed";
+        return mlir::failure();
+      }
+    }
+
     printModule(mlirModule, out);
     return mlir::success();
   } else {
@@ -376,7 +392,7 @@ int main(int argc, char **argv) {
   // enable parsing of OpenMP
   if (enableOpenMP) {
     options.features.Enable(Fortran::common::LanguageFeature::OpenMP);
-    options.predefinitions.emplace_back("_OPENMP", "201511");
+    Fortran::common::setOpenMPMacro(setOpenMPVersion, options.predefinitions);
   }
 
   // enable parsing of OpenACC
@@ -405,6 +421,8 @@ int main(int argc, char **argv) {
     semanticsContext.targetCharacteristics().DisableType(
         Fortran::common::TypeCategory::Real, /*kind=*/10);
   }
+  if (targetTriple.isPPC())
+    semanticsContext.targetCharacteristics().set_isPPC(true);
 
   return mlir::failed(convertFortranSourceToMLIR(
       inputFilename, options, programPrefix, semanticsContext, passPipe));

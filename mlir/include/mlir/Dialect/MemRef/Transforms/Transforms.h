@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 //
-/// This header declares functions that assit transformations in the MemRef
+/// This header declares functions that assist transformations in the MemRef
 /// dialect.
 //
 //===----------------------------------------------------------------------===//
@@ -44,9 +44,9 @@ void populateFoldMemRefAliasOpPatterns(RewritePatternSet &patterns);
 
 /// Appends patterns that resolve `memref.dim` operations with values that are
 /// defined by operations that implement the
-/// `ReifyRankedShapeTypeShapeOpInterface`, in terms of shapes of its input
+/// `ReifyRankedShapedTypeOpInterface`, in terms of shapes of its input
 /// operands.
-void populateResolveRankedShapeTypeResultDimsPatterns(
+void populateResolveRankedShapedTypeResultDimsPatterns(
     RewritePatternSet &patterns);
 
 /// Appends patterns that resolve `memref.dim` operations with values that are
@@ -68,7 +68,7 @@ void populateMemRefWideIntEmulationPatterns(
     arith::WideIntEmulationConverter &typeConverter,
     RewritePatternSet &patterns);
 
-/// Appends type converions for emulating wide integer memref operations with
+/// Appends type conversions for emulating wide integer memref operations with
 /// ops over narrowe integer types.
 void populateMemRefWideIntEmulationConversions(
     arith::WideIntEmulationConverter &typeConverter);

@@ -138,6 +138,14 @@ public:
 template <class T>
 bool operator==(const nasty_vector<T>& x, const nasty_vector<T>& y) { return x.v_ == y.v_; }
 
+
+#if TEST_STD_VER >= 20
+
+template <class T>
+auto operator<=>(const nasty_vector<T>& x, const nasty_vector<T>& y) { return x.v_ <=> y.v_; }
+
+#endif
+
 template <class T>
 class nasty_list
 {
@@ -284,6 +292,13 @@ public:
 
 template <class T>
 bool operator==(const nasty_list<T>& x, const nasty_list<T>& y) { return x.l_ == y.l_; }
+
+#if TEST_STD_VER >= 20
+
+template <class T>
+auto operator<=>(const nasty_list<T>& x, const nasty_list<T>& y) { return x.l_ <=> y.l_; }
+
+#endif
 
 // Not really a mutex, but can play one in tests
 class nasty_mutex

@@ -32,7 +32,7 @@ def SDT_PPCcv_fp_to_int  : SDTypeProfile<1, 1, [
   SDTCisFP<0>, SDTCisFP<1>
   ]>;
 def SDT_PPCstore_scal_int_from_vsr : SDTypeProfile<0, 3, [
-  SDTCisVT<0, f64>, SDTCisPtrTy<1>, SDTCisPtrTy<2>
+  SDTCisFP<0>, SDTCisPtrTy<1>, SDTCisPtrTy<2>
 ]>;
 def SDT_PPCVexts  : SDTypeProfile<1, 2, [
   SDTCisVT<0, f64>, SDTCisVT<1, f64>, SDTCisPtrTy<2>
@@ -164,10 +164,6 @@ def PPCany_fcfidus : PatFrags<(ops node:$op),
                               [(PPCfcfidus node:$op),
                                (PPCstrict_fcfidus node:$op)]>;
 
-def PPCcv_fp_to_uint_in_vsr:
-    SDNode<"PPCISD::FP_TO_UINT_IN_VSR", SDT_PPCcv_fp_to_int, []>;
-def PPCcv_fp_to_sint_in_vsr:
-    SDNode<"PPCISD::FP_TO_SINT_IN_VSR", SDT_PPCcv_fp_to_int, []>;
 def PPCstore_scal_int_from_vsr:
    SDNode<"PPCISD::ST_VSR_SCAL_INT", SDT_PPCstore_scal_int_from_vsr,
            [SDNPHasChain, SDNPMayStore]>;
@@ -217,6 +213,7 @@ def PPCaddTls     : SDNode<"PPCISD::ADD_TLS", SDTIntBinOp, []>;
 def PPCaddisTlsgdHA : SDNode<"PPCISD::ADDIS_TLSGD_HA", SDTIntBinOp>;
 def PPCaddiTlsgdL   : SDNode<"PPCISD::ADDI_TLSGD_L", SDTIntBinOp>;
 def PPCgetTlsAddr   : SDNode<"PPCISD::GET_TLS_ADDR", SDTIntBinOp>;
+def PPCgetTpointer : SDNode<"PPCISD::GET_TPOINTER", SDTIntLeaf, []>;
 def PPCaddiTlsgdLAddr : SDNode<"PPCISD::ADDI_TLSGD_L_ADDR",
                                SDTypeProfile<1, 3, [
                                  SDTCisSameAs<0, 1>, SDTCisSameAs<0, 2>,
@@ -3146,6 +3143,24 @@ def GETtlsADDR32AIX : PPCEmitTimePseudo<(outs gprc:$rD), (ins gprc:$offset, gprc
                           "GETtlsADDR32AIX",
                           [(set i32:$rD,
                             (PPCgetTlsAddr i32:$offset, i32:$handle))]>;
+
+// For local-exec accesses on 32-bit AIX, a call to .__get_tpointer is
+// generated to retrieve the thread pointer. GETtlsTpointer32AIX clobbers both
+// R3 and the LR (link register).
+let hasExtraSrcRegAllocReq = 1, hasExtraDefRegAllocReq = 1,
+    Defs = [R3,LR] in
+def GETtlsTpointer32AIX : PPCEmitTimePseudo<(outs gprc:$rD), (ins),
+                          "GETtlsTpointer32AIX",
+                          [(set i32:$rD, (PPCgetTpointer))]>;
+
+// The following pattern matches local-exec TLS accesses on 32-bit AIX.
+// PPCaddTls is used in local-exec accesses in order to:
+//   - Get the address of a variable (add the variable offset to the thread
+//     pointer, retrieved by calling .__get_tpointer).
+//   - Create an opportunity to optimize the user of the loaded address.
+def : Pat<(PPCaddTls i32:$in, i32:$addr),
+          (ADD4TLS $in, $addr)>;
+
 // Combined op for ADDItlsgdL32 and GETtlsADDR32, late expanded.  R3 and LR
 // are true defines while the rest of the Defs are clobbers.
 let hasExtraSrcRegAllocReq = 1, hasExtraDefRegAllocReq = 1,

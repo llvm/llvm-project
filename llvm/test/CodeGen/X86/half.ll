@@ -2110,4 +2110,113 @@ define <8 x half> @maxnum_v8f16(<8 x half> %0, <8 x half> %1) #0 {
   ret <8 x half> %3
 }
 
+define void @pr63114() {
+; CHECK-LIBCALL-LABEL: pr63114:
+; CHECK-LIBCALL:       # %bb.0:
+; CHECK-LIBCALL-NEXT:    movdqu (%rax), %xmm4
+; CHECK-LIBCALL-NEXT:    pshuflw {{.*#+}} xmm0 = xmm4[0,1,3,3,4,5,6,7]
+; CHECK-LIBCALL-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[0,0,2,1]
+; CHECK-LIBCALL-NEXT:    movdqa {{.*#+}} xmm1 = [65535,65535,65535,0,65535,65535,65535,65535]
+; CHECK-LIBCALL-NEXT:    pand %xmm1, %xmm0
+; CHECK-LIBCALL-NEXT:    movdqa {{.*#+}} xmm2 = [0,0,0,15360,0,0,0,0]
+; CHECK-LIBCALL-NEXT:    por %xmm2, %xmm0
+; CHECK-LIBCALL-NEXT:    movdqa {{.*#+}} xmm3 = [65535,65535,65535,65535,65535,65535,65535,0]
+; CHECK-LIBCALL-NEXT:    pand %xmm3, %xmm0
+; CHECK-LIBCALL-NEXT:    movdqa {{.*#+}} xmm5 = [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,60]
+; CHECK-LIBCALL-NEXT:    por %xmm5, %xmm0
+; CHECK-LIBCALL-NEXT:    pshufhw {{.*#+}} xmm6 = xmm4[0,1,2,3,4,5,7,7]
+; CHECK-LIBCALL-NEXT:    pshufd {{.*#+}} xmm6 = xmm6[0,2,2,3]
+; CHECK-LIBCALL-NEXT:    pand %xmm1, %xmm6
+; CHECK-LIBCALL-NEXT:    por %xmm2, %xmm6
+; CHECK-LIBCALL-NEXT:    pand %xmm3, %xmm6
+; CHECK-LIBCALL-NEXT:    por %xmm5, %xmm6
+; CHECK-LIBCALL-NEXT:    pshufhw {{.*#+}} xmm7 = xmm4[0,1,2,3,5,5,5,5]
+; CHECK-LIBCALL-NEXT:    shufps {{.*#+}} xmm4 = xmm4[0,3,0,3]
+; CHECK-LIBCALL-NEXT:    pshufhw {{.*#+}} xmm4 = xmm4[0,1,2,3,5,5,5,5]
+; CHECK-LIBCALL-NEXT:    pand %xmm1, %xmm4
+; CHECK-LIBCALL-NEXT:    por %xmm2, %xmm4
+; CHECK-LIBCALL-NEXT:    pand %xmm3, %xmm4
+; CHECK-LIBCALL-NEXT:    por %xmm5, %xmm4
+; CHECK-LIBCALL-NEXT:    pand %xmm1, %xmm7
+; CHECK-LIBCALL-NEXT:    por %xmm2, %xmm7
+; CHECK-LIBCALL-NEXT:    pand %xmm3, %xmm7
+; CHECK-LIBCALL-NEXT:    por %xmm5, %xmm7
+; CHECK-LIBCALL-NEXT:    movdqu %xmm7, 0
+; CHECK-LIBCALL-NEXT:    movdqu %xmm4, 32
+; CHECK-LIBCALL-NEXT:    movdqu %xmm6, 48
+; CHECK-LIBCALL-NEXT:    movdqu %xmm0, 16
+; CHECK-LIBCALL-NEXT:    retq
+;
+; BWON-F16C-LABEL: pr63114:
+; BWON-F16C:       # %bb.0:
+; BWON-F16C-NEXT:    vmovdqu (%rax), %xmm0
+; BWON-F16C-NEXT:    vpsrld $16, %xmm0, %xmm1
+; BWON-F16C-NEXT:    vbroadcastss (%rax), %xmm2
+; BWON-F16C-NEXT:    vpsrldq {{.*#+}} xmm3 = xmm0[14,15],zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero
+; BWON-F16C-NEXT:    vshufps {{.*#+}} xmm2 = xmm2[0,0],xmm3[0,0]
+; BWON-F16C-NEXT:    vpinsrw $0, {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm3
+; BWON-F16C-NEXT:    vpsllq $48, %xmm3, %xmm4
+; BWON-F16C-NEXT:    vpblendw {{.*#+}} xmm2 = xmm2[0,1,2],xmm4[3],xmm2[4,5,6,7]
+; BWON-F16C-NEXT:    vpslldq {{.*#+}} xmm3 = zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,xmm3[0,1]
+; BWON-F16C-NEXT:    vpor %xmm3, %xmm2, %xmm2
+; BWON-F16C-NEXT:    vshufps {{.*#+}} xmm1 = xmm0[0,3],xmm1[2,0]
+; BWON-F16C-NEXT:    vpblendw {{.*#+}} xmm1 = xmm1[0,1,2],xmm4[3],xmm1[4,5,6,7]
+; BWON-F16C-NEXT:    vpor %xmm3, %xmm1, %xmm1
+; BWON-F16C-NEXT:    vinsertf128 $1, %xmm2, %ymm1, %ymm1
+; BWON-F16C-NEXT:    vpshuflw {{.*#+}} xmm2 = xmm0[0,1,3,3,4,5,6,7]
+; BWON-F16C-NEXT:    vpshufd {{.*#+}} xmm2 = xmm2[0,0,2,1]
+; BWON-F16C-NEXT:    vpblendw {{.*#+}} xmm2 = xmm2[0,1,2],xmm4[3],xmm2[4,5,6,7]
+; BWON-F16C-NEXT:    vpblendw {{.*#+}} xmm2 = xmm2[0,1,2,3,4,5,6],xmm3[7]
+; BWON-F16C-NEXT:    vpshufhw {{.*#+}} xmm0 = xmm0[0,1,2,3,5,5,5,5]
+; BWON-F16C-NEXT:    vpblendw {{.*#+}} xmm0 = xmm0[0,1,2],xmm4[3],xmm0[4,5,6,7]
+; BWON-F16C-NEXT:    vpblendw {{.*#+}} xmm0 = xmm0[0,1,2,3,4,5,6],xmm3[7]
+; BWON-F16C-NEXT:    vinsertf128 $1, %xmm2, %ymm0, %ymm0
+; BWON-F16C-NEXT:    vmovups %ymm0, 0
+; BWON-F16C-NEXT:    vmovups %ymm1, 32
+; BWON-F16C-NEXT:    vzeroupper
+; BWON-F16C-NEXT:    retq
+;
+; CHECK-I686-LABEL: pr63114:
+; CHECK-I686:       # %bb.0:
+; CHECK-I686-NEXT:    movdqu (%eax), %xmm6
+; CHECK-I686-NEXT:    pshuflw {{.*#+}} xmm0 = xmm6[0,1,3,3,4,5,6,7]
+; CHECK-I686-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[0,0,2,1]
+; CHECK-I686-NEXT:    movdqa {{.*#+}} xmm1 = [65535,65535,65535,0,65535,65535,65535,65535]
+; CHECK-I686-NEXT:    pand %xmm1, %xmm0
+; CHECK-I686-NEXT:    movdqa {{.*#+}} xmm2 = [0,0,0,15360,0,0,0,0]
+; CHECK-I686-NEXT:    por %xmm2, %xmm0
+; CHECK-I686-NEXT:    movdqa {{.*#+}} xmm3 = [65535,65535,65535,65535,65535,65535,65535,0]
+; CHECK-I686-NEXT:    pand %xmm3, %xmm0
+; CHECK-I686-NEXT:    movdqa {{.*#+}} xmm4 = [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,60]
+; CHECK-I686-NEXT:    por %xmm4, %xmm0
+; CHECK-I686-NEXT:    pshufhw {{.*#+}} xmm5 = xmm6[0,1,2,3,4,5,7,7]
+; CHECK-I686-NEXT:    pshufd {{.*#+}} xmm5 = xmm5[0,2,2,3]
+; CHECK-I686-NEXT:    pand %xmm1, %xmm5
+; CHECK-I686-NEXT:    por %xmm2, %xmm5
+; CHECK-I686-NEXT:    pand %xmm3, %xmm5
+; CHECK-I686-NEXT:    por %xmm4, %xmm5
+; CHECK-I686-NEXT:    pshufhw {{.*#+}} xmm7 = xmm6[0,1,2,3,5,5,5,5]
+; CHECK-I686-NEXT:    shufps {{.*#+}} xmm6 = xmm6[0,3,0,3]
+; CHECK-I686-NEXT:    pshufhw {{.*#+}} xmm6 = xmm6[0,1,2,3,5,5,5,5]
+; CHECK-I686-NEXT:    pand %xmm1, %xmm6
+; CHECK-I686-NEXT:    por %xmm2, %xmm6
+; CHECK-I686-NEXT:    pand %xmm3, %xmm6
+; CHECK-I686-NEXT:    por %xmm4, %xmm6
+; CHECK-I686-NEXT:    pand %xmm1, %xmm7
+; CHECK-I686-NEXT:    por %xmm2, %xmm7
+; CHECK-I686-NEXT:    pand %xmm3, %xmm7
+; CHECK-I686-NEXT:    por %xmm4, %xmm7
+; CHECK-I686-NEXT:    movdqu %xmm7, 0
+; CHECK-I686-NEXT:    movdqu %xmm6, 32
+; CHECK-I686-NEXT:    movdqu %xmm5, 48
+; CHECK-I686-NEXT:    movdqu %xmm0, 16
+; CHECK-I686-NEXT:    retl
+  %1 = load <24 x half>, ptr poison, align 2
+  %2 = shufflevector <24 x half> %1, <24 x half> poison, <8 x i32> <i32 2, i32 5, i32 8, i32 11, i32 14, i32 17, i32 20, i32 23>
+  %3 = shufflevector <8 x half> %2, <8 x half> <half 0xH3C00, half 0xH3C00, half 0xH3C00, half 0xH3C00, half 0xH3C00, half 0xH3C00, half 0xH3C00, half 0xH3C00>, <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>
+  %4 = shufflevector <16 x half> poison, <16 x half> %3, <32 x i32> <i32 0, i32 8, i32 16, i32 24, i32 1, i32 9, i32 17, i32 25, i32 2, i32 10, i32 18, i32 26, i32 3, i32 11, i32 19, i32 27, i32 4, i32 12, i32 20, i32 28, i32 5, i32 13, i32 21, i32 29, i32 6, i32 14, i32 22, i32 30, i32 7, i32 15, i32 23, i32 31>
+  store <32 x half> %4, ptr null, align 2
+  ret void
+}
+
 attributes #0 = { nounwind }

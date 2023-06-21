@@ -13,30 +13,22 @@ import shutil
 import subprocess
 import sys
 
-_isClang = lambda cfg: "__clang__" in compilerMacros(
-    cfg
-) and "__apple_build_version__" not in compilerMacros(cfg)
+_isClang = lambda cfg: "__clang__" in compilerMacros(cfg) and "__apple_build_version__" not in compilerMacros(cfg)
 _isAppleClang = lambda cfg: "__apple_build_version__" in compilerMacros(cfg)
-_isGCC = lambda cfg: "__GNUC__" in compilerMacros(
-    cfg
-) and "__clang__" not in compilerMacros(cfg)
+_isGCC = lambda cfg: "__GNUC__" in compilerMacros(cfg) and "__clang__" not in compilerMacros(cfg)
 _isMSVC = lambda cfg: "_MSC_VER" in compilerMacros(cfg)
-_msvcVersion = lambda cfg: (
-    int(compilerMacros(cfg)["_MSC_VER"]) // 100,
-    int(compilerMacros(cfg)["_MSC_VER"]) % 100,
-)
+_msvcVersion = lambda cfg: (int(compilerMacros(cfg)["_MSC_VER"]) // 100, int(compilerMacros(cfg)["_MSC_VER"]) % 100)
 
 
 def _getSuitableClangTidy(cfg):
     try:
         # If we didn't build the libcxx-tidy plugin via CMake, we can't run the clang-tidy tests.
-        if (
-            runScriptExitCode(
-                cfg, ["stat %{test-tools}/clang_tidy_checks/libcxx-tidy.plugin"]
-            )
-            != 0
-        ):
+        if runScriptExitCode(cfg, ["stat %{test-tools}/clang_tidy_checks/libcxx-tidy.plugin"]) != 0:
             return None
+
+        # TODO MODULES require ToT due module specific fixes.
+        if runScriptExitCode(cfg, ['clang-tidy-17 --version']) == 0:
+          return 'clang-tidy-17'
 
         # TODO This should be the last stable release.
         # LLVM RELEASE bump to latest stable version
@@ -44,14 +36,7 @@ def _getSuitableClangTidy(cfg):
             return "clang-tidy-16"
 
         # LLVM RELEASE bump version
-        if (
-            int(
-                re.search(
-                    "[0-9]+", commandOutput(cfg, ["clang-tidy --version"])
-                ).group()
-            )
-            >= 16
-        ):
+        if int(re.search("[0-9]+", commandOutput(cfg, ["clang-tidy --version"])).group()) >= 16:
             return "clang-tidy"
 
     except ConfigurationRuntimeError:
@@ -233,8 +218,7 @@ DEFAULT_FEATURES = [
     # manages to find binaries to execute.
     Feature(
         name="executor-has-no-bash",
-        when=lambda cfg: runScriptExitCode(cfg, ["%{exec} bash -c 'bash --version'"])
-        != 0,
+        when=lambda cfg: runScriptExitCode(cfg, ["%{exec} bash -c 'bash --version'"]) != 0,
     ),
     Feature(
         name="has-clang-tidy",
@@ -249,15 +233,11 @@ DEFAULT_FEATURES = [
         when=_isAppleClang,
     ),
     Feature(
-        name=lambda cfg: "apple-clang-{__clang_major__}.{__clang_minor__}".format(
-            **compilerMacros(cfg)
-        ),
+        name=lambda cfg: "apple-clang-{__clang_major__}.{__clang_minor__}".format(**compilerMacros(cfg)),
         when=_isAppleClang,
     ),
     Feature(
-        name=lambda cfg: "apple-clang-{__clang_major__}.{__clang_minor__}.{__clang_patchlevel__}".format(
-            **compilerMacros(cfg)
-        ),
+        name=lambda cfg: "apple-clang-{__clang_major__}.{__clang_minor__}.{__clang_patchlevel__}".format(**compilerMacros(cfg)),
         when=_isAppleClang,
     ),
     Feature(name="clang", when=_isClang),
@@ -266,15 +246,11 @@ DEFAULT_FEATURES = [
         when=_isClang,
     ),
     Feature(
-        name=lambda cfg: "clang-{__clang_major__}.{__clang_minor__}".format(
-            **compilerMacros(cfg)
-        ),
+        name=lambda cfg: "clang-{__clang_major__}.{__clang_minor__}".format(**compilerMacros(cfg)),
         when=_isClang,
     ),
     Feature(
-        name=lambda cfg: "clang-{__clang_major__}.{__clang_minor__}.{__clang_patchlevel__}".format(
-            **compilerMacros(cfg)
-        ),
+        name=lambda cfg: "clang-{__clang_major__}.{__clang_minor__}.{__clang_patchlevel__}".format(**compilerMacros(cfg)),
         when=_isClang,
     ),
     # Note: Due to a GCC bug (https://gcc.gnu.org/bugzilla/show_bug.cgi?id=104760), we must disable deprecation warnings
@@ -290,21 +266,18 @@ DEFAULT_FEATURES = [
             AddCompileFlag("-D_LIBCPP_DISABLE_DEPRECATION_WARNINGS"),
             AddCompileFlag("-Wno-placement-new"),
             AddCompileFlag("-Wno-class-memaccess"),
+            AddFeature("GCC-ALWAYS_INLINE-FIXME"),
         ],
     ),
     Feature(
         name=lambda cfg: "gcc-{__GNUC__}".format(**compilerMacros(cfg)), when=_isGCC
     ),
     Feature(
-        name=lambda cfg: "gcc-{__GNUC__}.{__GNUC_MINOR__}".format(
-            **compilerMacros(cfg)
-        ),
+        name=lambda cfg: "gcc-{__GNUC__}.{__GNUC_MINOR__}".format(**compilerMacros(cfg)),
         when=_isGCC,
     ),
     Feature(
-        name=lambda cfg: "gcc-{__GNUC__}.{__GNUC_MINOR__}.{__GNUC_PATCHLEVEL__}".format(
-            **compilerMacros(cfg)
-        ),
+        name=lambda cfg: "gcc-{__GNUC__}.{__GNUC_MINOR__}.{__GNUC_PATCHLEVEL__}".format(**compilerMacros(cfg)),
         when=_isGCC,
     ),
     Feature(name="msvc", when=_isMSVC),
@@ -329,10 +302,9 @@ macros = {
     "_LIBCPP_HAS_THREAD_API_PTHREAD": "libcpp-has-thread-api-pthread",
     "_LIBCPP_NO_VCRUNTIME": "libcpp-no-vcruntime",
     "_LIBCPP_ABI_VERSION": "libcpp-abi-version",
-    "_LIBCPP_HAS_NO_FILESYSTEM_LIBRARY": "no-filesystem",
+    "_LIBCPP_HAS_NO_FILESYSTEM": "no-filesystem",
     "_LIBCPP_HAS_NO_RANDOM_DEVICE": "no-random-device",
     "_LIBCPP_HAS_NO_LOCALIZATION": "no-localization",
-    "_LIBCPP_HAS_NO_FSTREAM": "no-fstream",
     "_LIBCPP_HAS_NO_WIDE_CHARACTERS": "no-wide-characters",
     "_LIBCPP_HAS_NO_UNICODE": "libcpp-has-no-unicode",
     "_LIBCPP_ENABLE_DEBUG_MODE": "libcpp-has-debug-mode",
@@ -340,8 +312,7 @@ macros = {
 for macro, feature in macros.items():
     DEFAULT_FEATURES.append(
         Feature(
-            name=lambda cfg, m=macro, f=feature: f
-            + ("={}".format(compilerMacros(cfg)[m]) if compilerMacros(cfg)[m] else ""),
+            name=lambda cfg, m=macro, f=feature: f + ("={}".format(compilerMacros(cfg)[m]) if compilerMacros(cfg)[m] else ""),
             when=lambda cfg, m=macro: m in compilerMacros(cfg),
         )
     )
@@ -551,7 +522,7 @@ DEFAULT_FEATURES += [
     Feature(
         name="availability-pmr-missing",
         when=lambda cfg: BooleanExpression.evaluate(
-            "stdlib=apple-libc++ && target={{.+}}-apple-macosx{{(10.9|10.10|10.11|10.12|10.13|10.14|10.15|11.0)(.0)?}}",
+            "stdlib=apple-libc++ && target={{.+}}-apple-macosx{{(10.9|10.10|10.11|10.12|10.13|10.14|10.15|11.0|12.0|13.0)(.0)?}}",
             cfg.available_features,
         ),
     ),

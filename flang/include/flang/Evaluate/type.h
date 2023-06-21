@@ -22,6 +22,7 @@
 #include "integer.h"
 #include "logical.h"
 #include "real.h"
+#include "flang/Common/Fortran-features.h"
 #include "flang/Common/Fortran.h"
 #include "flang/Common/idioms.h"
 #include "flang/Common/real.h"
@@ -472,8 +473,10 @@ int SelectedCharKind(const std::string &, int defaultKind);
 std::optional<DynamicType> ComparisonType(
     const DynamicType &, const DynamicType &);
 
-bool IsInteroperableIntrinsicType(
-    const DynamicType &, bool checkCharLength = true);
+bool IsInteroperableIntrinsicType(const DynamicType &,
+    const common::LanguageFeatureControl * = nullptr,
+    bool checkCharLength = true);
+bool IsCUDAIntrinsicType(const DynamicType &);
 
 // Determine whether two derived type specs are sufficiently identical
 // to be considered the "same" type even if declared separately.

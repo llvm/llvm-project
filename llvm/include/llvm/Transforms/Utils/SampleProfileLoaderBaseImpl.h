@@ -132,13 +132,15 @@ public:
 
 extern cl::opt<bool> SampleProfileUseProfi;
 
-template <typename BT> class SampleProfileLoaderBaseImpl {
+template <typename FT> class SampleProfileLoaderBaseImpl {
 public:
   SampleProfileLoaderBaseImpl(std::string Name, std::string RemapName,
                               IntrusiveRefCntPtr<vfs::FileSystem> FS)
       : Filename(Name), RemappingFilename(RemapName), FS(std::move(FS)) {}
   void dump() { Reader->dump(); }
 
+  using NodeRef = typename GraphTraits<FT *>::NodeRef;
+  using BT = typename std::remove_pointer<NodeRef>::type;
   using InstructionT = typename afdo_detail::IRTraits<BT>::InstructionT;
   using BasicBlockT = typename afdo_detail::IRTraits<BT>::BasicBlockT;
   using BlockFrequencyInfoT =
@@ -929,11 +931,11 @@ void SampleProfileLoaderBaseImpl<BT>::propagateWeights(FunctionT &F) {
   }
 }
 
-template <typename BT>
-void SampleProfileLoaderBaseImpl<BT>::applyProfi(
+template <typename FT>
+void SampleProfileLoaderBaseImpl<FT>::applyProfi(
     FunctionT &F, BlockEdgeMap &Successors, BlockWeightMap &SampleBlockWeights,
     BlockWeightMap &BlockWeights, EdgeWeightMap &EdgeWeights) {
-  auto Infer = SampleProfileInference<BT>(F, Successors, SampleBlockWeights);
+  auto Infer = SampleProfileInference<FT>(F, Successors, SampleBlockWeights);
   Infer.apply(BlockWeights, EdgeWeights);
 }
 
@@ -1111,18 +1113,6 @@ unsigned SampleProfileLoaderBaseImpl<BT>::getFunctionLoc(FunctionT &F) {
           ": Function profile not used",
       DS_Warning));
   return 0;
-}
-
-template <typename BT>
-void SampleProfileLoaderBaseImpl<BT>::computeDominanceAndLoopInfo(
-    FunctionT &F) {
-  DT.reset(new DominatorTree);
-  DT->recalculate(F);
-
-  PDT.reset(new PostDominatorTree(F));
-
-  LI.reset(new LoopInfo);
-  LI->analyze(*DT);
 }
 
 #undef DEBUG_TYPE

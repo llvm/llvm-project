@@ -77,6 +77,7 @@ private:
   unsigned SyntaxUsed : 4;
   unsigned SpellingIndex : 4;
   unsigned IsAlignas : 1;
+  unsigned IsRegularKeywordAttribute : 1;
 
 protected:
   static constexpr unsigned SpellingNotCalculated = 0xf;
@@ -86,24 +87,29 @@ public:
   /// including its syntax and spelling.
   class Form {
   public:
-    constexpr Form(Syntax SyntaxUsed, unsigned SpellingIndex, bool IsAlignas)
+    constexpr Form(Syntax SyntaxUsed, unsigned SpellingIndex, bool IsAlignas,
+                   bool IsRegularKeywordAttribute)
         : SyntaxUsed(SyntaxUsed), SpellingIndex(SpellingIndex),
-          IsAlignas(IsAlignas) {}
+          IsAlignas(IsAlignas),
+          IsRegularKeywordAttribute(IsRegularKeywordAttribute) {}
     constexpr Form(tok::TokenKind Tok)
         : SyntaxUsed(AS_Keyword), SpellingIndex(SpellingNotCalculated),
-          IsAlignas(Tok == tok::kw_alignas) {}
+          IsAlignas(Tok == tok::kw_alignas),
+          IsRegularKeywordAttribute(tok::isRegularKeywordAttribute(Tok)) {}
 
     Syntax getSyntax() const { return Syntax(SyntaxUsed); }
     unsigned getSpellingIndex() const { return SpellingIndex; }
     bool isAlignas() const { return IsAlignas; }
+    bool isRegularKeywordAttribute() const { return IsRegularKeywordAttribute; }
 
     static Form GNU() { return AS_GNU; }
     static Form CXX11() { return AS_CXX11; }
     static Form C2x() { return AS_C2x; }
     static Form Declspec() { return AS_Declspec; }
     static Form Microsoft() { return AS_Microsoft; }
-    static Form Keyword(bool IsAlignas) {
-      return Form(AS_Keyword, SpellingNotCalculated, IsAlignas);
+    static Form Keyword(bool IsAlignas, bool IsRegularKeywordAttribute) {
+      return Form(AS_Keyword, SpellingNotCalculated, IsAlignas,
+                  IsRegularKeywordAttribute);
     }
     static Form Pragma() { return AS_Pragma; }
     static Form ContextSensitiveKeyword() { return AS_ContextSensitiveKeyword; }
@@ -113,11 +119,12 @@ public:
   private:
     constexpr Form(Syntax SyntaxUsed)
         : SyntaxUsed(SyntaxUsed), SpellingIndex(SpellingNotCalculated),
-          IsAlignas(0) {}
+          IsAlignas(0), IsRegularKeywordAttribute(0) {}
 
     unsigned SyntaxUsed : 4;
     unsigned SpellingIndex : 4;
     unsigned IsAlignas : 1;
+    unsigned IsRegularKeywordAttribute : 1;
   };
 
   AttributeCommonInfo(const IdentifierInfo *AttrName,
@@ -127,7 +134,8 @@ public:
         ScopeLoc(ScopeLoc), AttrKind(AttrKind),
         SyntaxUsed(FormUsed.getSyntax()),
         SpellingIndex(FormUsed.getSpellingIndex()),
-        IsAlignas(FormUsed.isAlignas()) {
+        IsAlignas(FormUsed.isAlignas()),
+        IsRegularKeywordAttribute(FormUsed.isRegularKeywordAttribute()) {
     assert(SyntaxUsed >= AS_GNU && SyntaxUsed <= AS_Implicit &&
            "Invalid syntax!");
   }
@@ -154,7 +162,10 @@ public:
 
   Kind getParsedKind() const { return Kind(AttrKind); }
   Syntax getSyntax() const { return Syntax(SyntaxUsed); }
-  Form getForm() const { return Form(getSyntax(), SpellingIndex, IsAlignas); }
+  Form getForm() const {
+    return Form(getSyntax(), SpellingIndex, IsAlignas,
+                IsRegularKeywordAttribute);
+  }
   const IdentifierInfo *getAttrName() const { return AttrName; }
   SourceLocation getLoc() const { return AttrRange.getBegin(); }
   SourceRange getRange() const { return AttrRange; }
@@ -190,6 +201,8 @@ public:
   bool isKeywordAttribute() const {
     return SyntaxUsed == AS_Keyword || SyntaxUsed == AS_ContextSensitiveKeyword;
   }
+
+  bool isRegularKeywordAttribute() const { return IsRegularKeywordAttribute; }
 
   bool isContextSensitiveKeywordAttribute() const {
     return SyntaxUsed == AS_ContextSensitiveKeyword;

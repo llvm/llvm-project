@@ -230,10 +230,7 @@ bool llvm::isTriviallyDead(const MachineInstr &MI,
     return false;
 
   // Instructions without side-effects are dead iff they only define dead vregs.
-  for (const auto &MO : MI.operands()) {
-    if (!MO.isReg() || !MO.isDef())
-      continue;
-
+  for (const auto &MO : MI.all_defs()) {
     Register Reg = MO.getReg();
     if (Reg.isPhysical() || !MRI.use_nodbg_empty(Reg))
       return false;

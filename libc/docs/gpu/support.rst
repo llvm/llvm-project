@@ -12,7 +12,7 @@ Supported Functions
 
 The following functions and headers are supported at least partially on the
 device. Some functions are implemented fully on the GPU, while others require a
-`remote procedure call <libc_gpu_rpc>`.
+`remote procedure call <libc_gpu_rpc>`_.
 
 ctype.h
 -------
@@ -85,17 +85,27 @@ stdlib.h
 Function Name  Available  RPC Required
 =============  =========  ============
 abs            |check|
-atoi           
-atof           
-atol           
-atoll          
+atoi           |check|
+atof           |check|
+atol           |check|
+atoll          |check|
 labs           |check|
 llabs          |check|
-strtod         
-strtof         
-strtol         
-strtold        
-strtoll        
-strtoul        
-strtoull       
+strtod         |check|
+strtof         |check|
+strtol         |check|
+strtold        |check|
+strtoll        |check|
+strtoul        |check|
+strtoull       |check|
+=============  =========  ============
+
+stdio.h
+--------
+
+=============  =========  ============
+Function Name  Available  RPC Required
+=============  =========  ============
+puts           |check|    |check|
+fputs          |check|    |check|
 =============  =========  ============

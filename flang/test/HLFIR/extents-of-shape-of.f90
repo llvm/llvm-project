@@ -1,5 +1,5 @@
-! RUN: bbc -emit-fir -hlfir %s -o - | FileCheck --check-prefix CHECK-ALL --check-prefix CHECK-HLFIR %s
-! RUN: bbc -emit-fir -hlfir %s -o - | fir-opt --lower-hlfir-intrinsics | fir-opt --bufferize-hlfir | fir-opt --convert-hlfir-to-fir | FileCheck --check-prefix CHECK-ALL --check-prefix CHECK-FIR %s
+! RUN: bbc -emit-hlfir %s -o - | FileCheck --check-prefix CHECK-ALL --check-prefix CHECK-HLFIR %s
+! RUN: bbc -emit-hlfir %s -o - | fir-opt --lower-hlfir-intrinsics | fir-opt --bufferize-hlfir | fir-opt --convert-hlfir-to-fir | FileCheck --check-prefix CHECK-ALL --check-prefix CHECK-FIR %s
 subroutine foo(a, b)
   real :: a(2, 2), b(:, :)
   interface

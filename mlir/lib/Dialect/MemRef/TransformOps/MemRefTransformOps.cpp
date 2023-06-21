@@ -27,14 +27,43 @@ using namespace mlir;
 #define DBGS() (llvm::dbgs() << '[' << DEBUG_TYPE << "] ")
 
 //===----------------------------------------------------------------------===//
+// Apply...PatternsOp
+//===----------------------------------------------------------------------===//
+
+void transform::ApplyExpandOpsPatternsOp::populatePatterns(
+    RewritePatternSet &patterns) {
+  memref::populateExpandOpsPatterns(patterns);
+}
+
+void transform::ApplyExpandStridedMetadataPatternsOp::populatePatterns(
+    RewritePatternSet &patterns) {
+  memref::populateExpandStridedMetadataPatterns(patterns);
+}
+
+void transform::ApplyExtractAddressComputationsPatternsOp::populatePatterns(
+    RewritePatternSet &patterns) {
+  memref::populateExtractAddressComputationsPatterns(patterns);
+}
+
+void transform::ApplyFoldMemrefAliasOpsPatternsOp::populatePatterns(
+    RewritePatternSet &patterns) {
+  memref::populateFoldMemRefAliasOpPatterns(patterns);
+}
+
+void transform::ApplyResolveRankedShapedTypeResultDimsPatternsOp::
+    populatePatterns(RewritePatternSet &patterns) {
+  memref::populateResolveRankedShapedTypeResultDimsPatterns(patterns);
+}
+
+//===----------------------------------------------------------------------===//
 // MemRefMultiBufferOp
 //===----------------------------------------------------------------------===//
 
 DiagnosedSilenceableFailure transform::MemRefMultiBufferOp::apply(
+    transform::TransformRewriter &rewriter,
     transform::TransformResults &transformResults,
     transform::TransformState &state) {
   SmallVector<Operation *> results;
-  IRRewriter rewriter(getContext());
   for (Operation *op : state.getPayloadOps(getTarget())) {
     bool canApplyMultiBuffer = true;
     auto target = cast<memref::AllocOp>(op);
@@ -72,36 +101,12 @@ DiagnosedSilenceableFailure transform::MemRefMultiBufferOp::apply(
 }
 
 //===----------------------------------------------------------------------===//
-// MemRefExtractAddressComputationsOp
-//===----------------------------------------------------------------------===//
-
-DiagnosedSilenceableFailure
-transform::MemRefExtractAddressComputationsOp::applyToOne(
-    Operation *target, transform::ApplyToEachResultList &results,
-    transform::TransformState &state) {
-  if (!target->hasTrait<OpTrait::IsIsolatedFromAbove>()) {
-    auto diag = this->emitOpError("requires isolated-from-above targets");
-    diag.attachNote(target->getLoc()) << "non-isolated target";
-    return DiagnosedSilenceableFailure::definiteFailure();
-  }
-
-  MLIRContext *ctx = getContext();
-  RewritePatternSet patterns(ctx);
-  memref::populateExtractAddressComputationsPatterns(patterns);
-
-  if (failed(applyPatternsAndFoldGreedily(target, std::move(patterns))))
-    return emitDefaultDefiniteFailure(target);
-
-  results.push_back(target);
-  return DiagnosedSilenceableFailure::success();
-}
-
-//===----------------------------------------------------------------------===//
 // MemRefMakeLoopIndependentOp
 //===----------------------------------------------------------------------===//
 
 DiagnosedSilenceableFailure transform::MemRefMakeLoopIndependentOp::applyToOne(
-    Operation *target, transform::ApplyToEachResultList &results,
+    transform::TransformRewriter &rewriter, Operation *target,
+    transform::ApplyToEachResultList &results,
     transform::TransformState &state) {
   // Gather IVs.
   SmallVector<Value> ivs;
@@ -119,7 +124,6 @@ DiagnosedSilenceableFailure transform::MemRefMakeLoopIndependentOp::applyToOne(
   }
 
   // Rewrite IR.
-  IRRewriter rewriter(target->getContext());
   FailureOr<Value> replacement = failure();
   if (auto allocaOp = dyn_cast<memref::AllocaOp>(target)) {
     replacement = memref::replaceWithIndependentOp(rewriter, allocaOp, ivs);

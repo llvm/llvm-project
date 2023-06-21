@@ -118,12 +118,13 @@ define i32 @imm_cost_too_large_cost_of_2() {
   ; CHECK: bb.1.entry:
   ; CHECK-NEXT:   successors: %bb.2(0x40000000), %bb.4(0x40000000)
   ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT:   [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 -2228259
   ; CHECK-NEXT:   [[GV:%[0-9]+]]:_(p0) = G_GLOBAL_VALUE @var2
   ; CHECK-NEXT:   [[GV1:%[0-9]+]]:_(p0) = G_GLOBAL_VALUE @var3
-  ; CHECK-NEXT:   [[C1:%[0-9]+]]:_(s32) = G_CONSTANT i32 0
+  ; CHECK-NEXT:   [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 0
   ; CHECK-NEXT:   [[GV2:%[0-9]+]]:_(p0) = G_GLOBAL_VALUE @var1
   ; CHECK-NEXT:   [[LOAD:%[0-9]+]]:_(s32) = G_LOAD [[GV2]](p0) :: (dereferenceable load (s32) from @var1)
+  ; CHECK-NEXT:   [[C1:%[0-9]+]]:_(s32) = G_CONSTANT i32 -2228259
+  ; CHECK-NEXT:   [[OPAQUE:%[0-9]+]]:_(s32) = G_CONSTANT_FOLD_BARRIER [[C1]]
   ; CHECK-NEXT:   [[C2:%[0-9]+]]:_(s32) = G_CONSTANT i32 1
   ; CHECK-NEXT:   [[ICMP:%[0-9]+]]:_(s1) = G_ICMP intpred(ne), [[LOAD]](s32), [[C2]]
   ; CHECK-NEXT:   G_BRCOND [[ICMP]](s1), %bb.4
@@ -133,19 +134,19 @@ define i32 @imm_cost_too_large_cost_of_2() {
   ; CHECK-NEXT:   successors: %bb.3(0x80000000)
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT:   [[GV3:%[0-9]+]]:_(p0) = G_GLOBAL_VALUE @var2
-  ; CHECK-NEXT:   G_STORE [[C]](s32), [[GV3]](p0) :: (store (s32) into @var2)
+  ; CHECK-NEXT:   G_STORE [[OPAQUE]](s32), [[GV3]](p0) :: (store (s32) into @var2)
   ; CHECK-NEXT:   G_BR %bb.3
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.3.if.then2:
   ; CHECK-NEXT:   successors: %bb.4(0x80000000)
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT:   [[GV4:%[0-9]+]]:_(p0) = G_GLOBAL_VALUE @var1
-  ; CHECK-NEXT:   G_STORE [[C]](s32), [[GV4]](p0) :: (store (s32) into @var1)
+  ; CHECK-NEXT:   G_STORE [[OPAQUE]](s32), [[GV4]](p0) :: (store (s32) into @var1)
   ; CHECK-NEXT:   G_BR %bb.4
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.4.if.end:
   ; CHECK-NEXT:   [[GV5:%[0-9]+]]:_(p0) = G_GLOBAL_VALUE @var3
-  ; CHECK-NEXT:   G_STORE [[C]](s32), [[GV5]](p0) :: (store (s32) into @var3)
+  ; CHECK-NEXT:   G_STORE [[OPAQUE]](s32), [[GV5]](p0) :: (store (s32) into @var3)
   ; CHECK-NEXT:   [[C3:%[0-9]+]]:_(s32) = G_CONSTANT i32 0
   ; CHECK-NEXT:   $w0 = COPY [[C3]](s32)
   ; CHECK-NEXT:   RET_ReallyLR implicit $w0
@@ -173,12 +174,13 @@ define i64 @imm_cost_too_large_cost_of_4() {
   ; CHECK: bb.1.entry:
   ; CHECK-NEXT:   successors: %bb.2(0x40000000), %bb.4(0x40000000)
   ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT:   [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 -2228259
   ; CHECK-NEXT:   [[GV:%[0-9]+]]:_(p0) = G_GLOBAL_VALUE @var2_64
   ; CHECK-NEXT:   [[GV1:%[0-9]+]]:_(p0) = G_GLOBAL_VALUE @var3_64
-  ; CHECK-NEXT:   [[C1:%[0-9]+]]:_(s64) = G_CONSTANT i64 0
+  ; CHECK-NEXT:   [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 0
   ; CHECK-NEXT:   [[GV2:%[0-9]+]]:_(p0) = G_GLOBAL_VALUE @var1_64
   ; CHECK-NEXT:   [[LOAD:%[0-9]+]]:_(s64) = G_LOAD [[GV2]](p0) :: (dereferenceable load (s64) from @var1_64, align 4)
+  ; CHECK-NEXT:   [[C1:%[0-9]+]]:_(s64) = G_CONSTANT i64 -2228259
+  ; CHECK-NEXT:   [[OPAQUE:%[0-9]+]]:_(s64) = G_CONSTANT_FOLD_BARRIER [[C1]]
   ; CHECK-NEXT:   [[C2:%[0-9]+]]:_(s64) = G_CONSTANT i64 1
   ; CHECK-NEXT:   [[ICMP:%[0-9]+]]:_(s1) = G_ICMP intpred(ne), [[LOAD]](s64), [[C2]]
   ; CHECK-NEXT:   G_BRCOND [[ICMP]](s1), %bb.4
@@ -188,19 +190,19 @@ define i64 @imm_cost_too_large_cost_of_4() {
   ; CHECK-NEXT:   successors: %bb.3(0x80000000)
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT:   [[GV3:%[0-9]+]]:_(p0) = G_GLOBAL_VALUE @var2_64
-  ; CHECK-NEXT:   G_STORE [[C]](s64), [[GV3]](p0) :: (store (s64) into @var2_64)
+  ; CHECK-NEXT:   G_STORE [[OPAQUE]](s64), [[GV3]](p0) :: (store (s64) into @var2_64)
   ; CHECK-NEXT:   G_BR %bb.3
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.3.if.then2:
   ; CHECK-NEXT:   successors: %bb.4(0x80000000)
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT:   [[GV4:%[0-9]+]]:_(p0) = G_GLOBAL_VALUE @var1_64
-  ; CHECK-NEXT:   G_STORE [[C]](s64), [[GV4]](p0) :: (store (s64) into @var1_64)
+  ; CHECK-NEXT:   G_STORE [[OPAQUE]](s64), [[GV4]](p0) :: (store (s64) into @var1_64)
   ; CHECK-NEXT:   G_BR %bb.4
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.4.if.end:
   ; CHECK-NEXT:   [[GV5:%[0-9]+]]:_(p0) = G_GLOBAL_VALUE @var3_64
-  ; CHECK-NEXT:   G_STORE [[C]](s64), [[GV5]](p0) :: (store (s64) into @var3_64)
+  ; CHECK-NEXT:   G_STORE [[OPAQUE]](s64), [[GV5]](p0) :: (store (s64) into @var3_64)
   ; CHECK-NEXT:   [[C3:%[0-9]+]]:_(s64) = G_CONSTANT i64 0
   ; CHECK-NEXT:   $x0 = COPY [[C3]](s64)
   ; CHECK-NEXT:   RET_ReallyLR implicit $x0

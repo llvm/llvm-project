@@ -36,9 +36,7 @@
 # CHECK: error: instruction requires: ras
 # CHECK-NEXT:   esb
 
-// PR32873: without extra features, '.arch' is currently ignored.
-// Add an unrelated feature to accept the directive.
-	.arch armv8+crc
+	.arch armv8
         casa  w5, w7, [x19]
 
 # CHECK: error: instruction requires: lse

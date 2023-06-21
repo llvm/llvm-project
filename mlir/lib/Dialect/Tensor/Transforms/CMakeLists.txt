@@ -8,6 +8,7 @@ add_mlir_dialect_library(MLIRTensorTransforms
   IndependenceTransforms.cpp
   MergeConsecutiveInsertExtractSlicePatterns.cpp
   ReshapePatterns.cpp
+  RewriteAsConstant.cpp
   SwapExtractSliceWithProducerPatterns.cpp
 
   ADDITIONAL_HEADER_DIRS
@@ -29,6 +30,7 @@ add_mlir_dialect_library(MLIRTensorTransforms
   MLIRPass
   MLIRSCFDialect
   MLIRTensorDialect
+  MLIRTensorUtils
   MLIRTilingInterface
   MLIRTransforms
   MLIRVectorDialect

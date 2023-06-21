@@ -47,6 +47,11 @@ public:
   GenericUniformityInfo(GenericUniformityInfo &&) = default;
   GenericUniformityInfo &operator=(GenericUniformityInfo &&) = default;
 
+  void compute() {
+    DA->initialize();
+    DA->compute();
+  }
+
   /// Whether any divergence was detected.
   bool hasDivergence() const;
 

@@ -78,7 +78,7 @@ TEST(LlvmLibcLog2Test, AllExponents) {
 }
 
 TEST(LlvmLibcLog2Test, InDoubleRange) {
-  constexpr uint64_t COUNT = 234561;
+  constexpr uint64_t COUNT = 1'001;
   constexpr uint64_t START = 0x3FD0'0000'0000'0000ULL; // 0.25
   constexpr uint64_t STOP = 0x4010'0000'0000'0000ULL;  // 4.0
   // constexpr uint64_t START = 0x3FF0'0000'0000'0000ULL;  // 1.0
@@ -87,6 +87,9 @@ TEST(LlvmLibcLog2Test, InDoubleRange) {
 
   auto test = [&](mpfr::RoundingMode rounding_mode) {
     mpfr::ForceRoundingMode __r(rounding_mode);
+    if (!__r.success)
+      return;
+
     uint64_t fails = 0;
     uint64_t count = 0;
     uint64_t cc = 0;
@@ -105,11 +108,11 @@ TEST(LlvmLibcLog2Test, InDoubleRange) {
 
       ++count;
       // ASSERT_MPFR_MATCH(mpfr::Operation::Log2, x, result, 0.5);
-      if (!EXPECT_MPFR_MATCH_ROUNDING_SILENTLY(mpfr::Operation::Log2, x, result,
-                                               0.5, rounding_mode)) {
+      if (!TEST_MPFR_MATCH_ROUNDING_SILENTLY(mpfr::Operation::Log2, x, result,
+                                             0.5, rounding_mode)) {
         ++fails;
-        while (!EXPECT_MPFR_MATCH_ROUNDING_SILENTLY(
-            mpfr::Operation::Log2, x, result, tol, rounding_mode)) {
+        while (!TEST_MPFR_MATCH_ROUNDING_SILENTLY(mpfr::Operation::Log2, x,
+                                                  result, tol, rounding_mode)) {
           mx = x;
           mr = result;
           tol *= 2.0;

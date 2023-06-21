@@ -768,10 +768,6 @@ INITIALIZE_PASS_DEPENDENCY(TypeBasedAAWrapperPass)
 INITIALIZE_PASS_END(AAResultsWrapperPass, "aa",
                     "Function Alias Analysis Results", false, true)
 
-FunctionPass *llvm::createAAResultsWrapperPass() {
-  return new AAResultsWrapperPass();
-}
-
 /// Run the wrapper pass to rebuild an aggregation over known AA passes.
 ///
 /// This is the legacy pass manager's interface to the new-style AA results
@@ -838,29 +834,6 @@ AAManager::Result AAManager::run(Function &F, FunctionAnalysisManager &AM) {
   for (auto &Getter : ResultGetters)
     (*Getter)(F, AM, R);
   return R;
-}
-
-AAResults llvm::createLegacyPMAAResults(Pass &P, Function &F,
-                                        BasicAAResult &BAR) {
-  AAResults AAR(P.getAnalysis<TargetLibraryInfoWrapperPass>().getTLI(F));
-
-  // Add in our explicitly constructed BasicAA results.
-  if (!DisableBasicAA)
-    AAR.addAAResult(BAR);
-
-  // Populate the results with the other currently available AAs.
-  if (auto *WrapperPass =
-          P.getAnalysisIfAvailable<ScopedNoAliasAAWrapperPass>())
-    AAR.addAAResult(WrapperPass->getResult());
-  if (auto *WrapperPass = P.getAnalysisIfAvailable<TypeBasedAAWrapperPass>())
-    AAR.addAAResult(WrapperPass->getResult());
-  if (auto *WrapperPass = P.getAnalysisIfAvailable<GlobalsAAWrapperPass>())
-    AAR.addAAResult(WrapperPass->getResult());
-  if (auto *WrapperPass = P.getAnalysisIfAvailable<ExternalAAWrapperPass>())
-    if (WrapperPass->CB)
-      WrapperPass->CB(P, F, AAR);
-
-  return AAR;
 }
 
 bool llvm::isNoAliasCall(const Value *V) {

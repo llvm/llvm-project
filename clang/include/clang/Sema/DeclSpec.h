@@ -1972,9 +1972,10 @@ public:
         InventedTemplateParameterList(nullptr) {
     assert(llvm::all_of(DeclarationAttrs,
                         [](const ParsedAttr &AL) {
-                          return AL.isStandardAttributeSyntax();
+                          return (AL.isStandardAttributeSyntax() ||
+                                  AL.isRegularKeywordAttribute());
                         }) &&
-           "DeclarationAttrs may only contain [[]] attributes");
+           "DeclarationAttrs may only contain [[]] and keyword attributes");
   }
 
   ~Declarator() {
@@ -2617,14 +2618,6 @@ public:
       if (!getTypeObject(i).getAttrs().empty())
         return true;
     return false;
-  }
-
-  /// Return a source range list of C++11 attributes associated
-  /// with the declarator.
-  void getCXX11AttributeRanges(SmallVectorImpl<SourceRange> &Ranges) {
-    for (const ParsedAttr &AL : Attrs)
-      if (AL.isCXX11Attribute())
-        Ranges.push_back(AL.getRange());
   }
 
   void setAsmLabel(Expr *E) { AsmLabel = E; }

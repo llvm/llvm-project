@@ -23,6 +23,7 @@
 #include "llvm/IR/GlobalValue.h"
 #include "llvm/IR/ProfileSummary.h"
 #include "llvm/ProfileData/InstrProfData.inc"
+#include "llvm/Support/BalancedPartitioning.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/Endian.h"
@@ -337,8 +338,17 @@ enum class instrprof_error {
 /// An ordered list of functions identified by their NameRef found in
 /// INSTR_PROF_DATA
 struct TemporalProfTraceTy {
-  uint64_t Weight = 1;
   std::vector<uint64_t> FunctionNameRefs;
+  uint64_t Weight;
+  TemporalProfTraceTy(std::initializer_list<uint64_t> Trace = {},
+                      uint64_t Weight = 1)
+      : FunctionNameRefs(Trace), Weight(Weight) {}
+
+  /// Use a set of temporal profile traces to create a list of balanced
+  /// partitioning function nodes used by BalancedPartitioning to generate a
+  /// function order that reduces page faults during startup
+  static std::vector<BPFunctionNode>
+  createBPFunctionNodes(ArrayRef<TemporalProfTraceTy> Traces);
 };
 
 inline std::error_code make_error_code(instrprof_error E) {
@@ -382,61 +392,6 @@ public:
 private:
   instrprof_error Err;
   std::string Msg;
-};
-
-class SoftInstrProfErrors {
-  /// Count the number of soft instrprof_errors encountered and keep track of
-  /// the first such error for reporting purposes.
-
-  /// The first soft error encountered.
-  instrprof_error FirstError = instrprof_error::success;
-
-  /// The number of hash mismatches.
-  unsigned NumHashMismatches = 0;
-
-  /// The number of count mismatches.
-  unsigned NumCountMismatches = 0;
-
-  /// The number of counter overflows.
-  unsigned NumCounterOverflows = 0;
-
-  /// The number of value site count mismatches.
-  unsigned NumValueSiteCountMismatches = 0;
-
-public:
-  SoftInstrProfErrors() = default;
-
-  ~SoftInstrProfErrors() {
-    assert(FirstError == instrprof_error::success &&
-           "Unchecked soft error encountered");
-  }
-
-  /// Track a soft error (\p IE) and increment its associated counter.
-  void addError(instrprof_error IE);
-
-  /// Get the number of hash mismatches.
-  unsigned getNumHashMismatches() const { return NumHashMismatches; }
-
-  /// Get the number of count mismatches.
-  unsigned getNumCountMismatches() const { return NumCountMismatches; }
-
-  /// Get the number of counter overflows.
-  unsigned getNumCounterOverflows() const { return NumCounterOverflows; }
-
-  /// Get the number of value site count mismatches.
-  unsigned getNumValueSiteCountMismatches() const {
-    return NumValueSiteCountMismatches;
-  }
-
-  /// Return the first encountered error and reset FirstError to a success
-  /// value.
-  Error takeError() {
-    if (FirstError == instrprof_error::success)
-      return Error::success();
-    auto E = make_error<InstrProfError>(FirstError);
-    FirstError = instrprof_error::success;
-    return E;
-  }
 };
 
 namespace object {
@@ -1236,10 +1191,6 @@ struct Header {
 };
 
 } // end namespace RawInstrProf
-
-// Parse MemOP Size range option.
-void getMemOPSizeRangeFromOption(StringRef Str, int64_t &RangeStart,
-                                 int64_t &RangeLast);
 
 // Create the variable for the profile file name.
 void createProfileFileNameVar(Module &M, StringRef InstrProfileOutput);

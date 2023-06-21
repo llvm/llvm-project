@@ -1,5 +1,5 @@
-// RUN: %clang_cc1 -fsyntax-only -std=c++11 -pedantic -verify=expected,cxx11 -fcxx-exceptions %s -fconstexpr-depth 128 -triple i686-pc-linux-gnu
-// RUN: %clang_cc1 -fsyntax-only -std=c++2a -pedantic -verify=expected,cxx20 -fcxx-exceptions %s -fconstexpr-depth 128 -triple i686-pc-linux-gnu
+// RUN: %clang_cc1 -fsyntax-only -std=c++11 -pedantic -verify=expected,cxx11 -fcxx-exceptions %s -fconstexpr-depth=128 -triple i686-pc-linux-gnu
+// RUN: %clang_cc1 -fsyntax-only -std=c++2a -pedantic -verify=expected,cxx20 -fcxx-exceptions %s -fconstexpr-depth=128 -triple i686-pc-linux-gnu
 
 // A conditional-expression is a core constant expression unless it involves one
 // of the following as a potentially evaluated subexpression [...]:

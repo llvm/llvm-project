@@ -105,13 +105,13 @@ define amdgpu_ps <4 x float> @sample_1d_tfe(<8 x i32> inreg %rsrc, <4 x i32> inr
 ; GFX11-NEXT:    s_mov_b32 s14, exec_lo
 ; GFX11-NEXT:    s_wqm_b32 exec_lo, exec_lo
 ; GFX11-NEXT:    v_dual_mov_b32 v5, v0 :: v_dual_mov_b32 v6, 0
+; GFX11-NEXT:    v_mov_b32_e32 v7, v6
+; GFX11-NEXT:    v_mov_b32_e32 v8, v6
 ; GFX11-NEXT:    v_mov_b32_e32 v9, v6
 ; GFX11-NEXT:    v_mov_b32_e32 v10, v6
-; GFX11-NEXT:    v_mov_b32_e32 v8, v6
-; GFX11-NEXT:    v_mov_b32_e32 v7, v6
-; GFX11-NEXT:    v_mov_b32_e32 v0, v6
-; GFX11-NEXT:    v_dual_mov_b32 v2, v8 :: v_dual_mov_b32 v1, v7
-; GFX11-NEXT:    v_dual_mov_b32 v3, v9 :: v_dual_mov_b32 v4, v10
+; GFX11-NEXT:    v_dual_mov_b32 v0, v6 :: v_dual_mov_b32 v1, v7
+; GFX11-NEXT:    v_dual_mov_b32 v2, v8 :: v_dual_mov_b32 v3, v9
+; GFX11-NEXT:    v_mov_b32_e32 v4, v10
 ; GFX11-NEXT:    s_and_b32 exec_lo, exec_lo, s14
 ; GFX11-NEXT:    image_sample v[0:4], v5, s[0:7], s[8:11] dmask:0xf dim:SQ_RSRC_IMG_1D tfe
 ; GFX11-NEXT:    s_waitcnt vmcnt(0)
@@ -568,13 +568,13 @@ define amdgpu_ps <4 x float> @sample_1d_lwe(<8 x i32> inreg %rsrc, <4 x i32> inr
 ; GFX11-NEXT:    s_mov_b32 s14, exec_lo
 ; GFX11-NEXT:    s_wqm_b32 exec_lo, exec_lo
 ; GFX11-NEXT:    v_dual_mov_b32 v5, v0 :: v_dual_mov_b32 v6, 0
+; GFX11-NEXT:    v_mov_b32_e32 v7, v6
+; GFX11-NEXT:    v_mov_b32_e32 v8, v6
 ; GFX11-NEXT:    v_mov_b32_e32 v9, v6
 ; GFX11-NEXT:    v_mov_b32_e32 v10, v6
-; GFX11-NEXT:    v_mov_b32_e32 v8, v6
-; GFX11-NEXT:    v_mov_b32_e32 v7, v6
-; GFX11-NEXT:    v_mov_b32_e32 v0, v6
-; GFX11-NEXT:    v_dual_mov_b32 v2, v8 :: v_dual_mov_b32 v1, v7
-; GFX11-NEXT:    v_dual_mov_b32 v3, v9 :: v_dual_mov_b32 v4, v10
+; GFX11-NEXT:    v_dual_mov_b32 v0, v6 :: v_dual_mov_b32 v1, v7
+; GFX11-NEXT:    v_dual_mov_b32 v2, v8 :: v_dual_mov_b32 v3, v9
+; GFX11-NEXT:    v_mov_b32_e32 v4, v10
 ; GFX11-NEXT:    s_and_b32 exec_lo, exec_lo, s14
 ; GFX11-NEXT:    image_sample v[0:4], v5, s[0:7], s[8:11] dmask:0xf dim:SQ_RSRC_IMG_1D lwe
 ; GFX11-NEXT:    s_waitcnt vmcnt(0)

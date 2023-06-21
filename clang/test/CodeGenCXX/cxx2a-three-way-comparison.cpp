@@ -1,5 +1,5 @@
-// RUN: %clang_cc1 -no-opaque-pointers -std=c++2a -emit-llvm %s -o - -triple %itanium_abi_triple | FileCheck %s --check-prefixes=CHECK,ITANIUM
-// RUN: %clang_cc1 -no-opaque-pointers -std=c++2a -emit-llvm %s -o - -triple x86_64-pc-win32 2>&1 | FileCheck %s --check-prefixes=CHECK,MSABI
+// RUN: %clang_cc1 -std=c++2a -emit-llvm %s -o - -triple %itanium_abi_triple | FileCheck %s --check-prefixes=CHECK,ITANIUM
+// RUN: %clang_cc1 -std=c++2a -emit-llvm %s -o - -triple x86_64-pc-win32 2>&1 | FileCheck %s --check-prefixes=CHECK,MSABI
 
 namespace std {
   struct strong_ordering {
@@ -35,8 +35,8 @@ struct Y : Primary, X {
   virtual std::strong_ordering operator<=>(const Y&) const = default;
 };
 Y y;
-// ITANIUM: @_ZTV1Y = {{.*}}constant {{.*}} null, {{.*}} @_ZTI1Y {{.*}} @_ZN7Primary1fEv {{.*}} @_ZNK1YssERKS_ {{.*}} @_ZN1YaSERKS_ {{.*}} @_ZN1YaSEOS_ {{.*}} @_ZNK1YeqERKS_ {{.*}} -[[POINTERSIZE:4|8]]
-// ITANIUM-SAME: @_ZTI1Y {{.*}} @_ZThn[[POINTERSIZE]]_N1YaSERKS_
+// ITANIUM: @_ZTV1Y = {{.*}}constant {{.*}} null, {{.*}} @_ZTI1Y, {{.*}} @_ZN7Primary1fEv, {{.*}} @_ZNK1YssERKS_, {{.*}} @_ZN1YaSERKS_, {{.*}} @_ZN1YaSEOS_, {{.*}} @_ZNK1YeqERKS_], {{.*}} -[[POINTERSIZE:4|8]]
+// ITANIUM-SAME: @_ZTI1Y, {{.*}} @_ZThn[[POINTERSIZE]]_N1YaSERKS_
 
 struct A {
   void operator<=>(int);

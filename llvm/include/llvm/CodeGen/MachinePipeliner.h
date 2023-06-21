@@ -179,7 +179,8 @@ class SwingSchedulerDAG : public ScheduleDAGInstrs {
       for (const auto &NodeNum : Topo)
         Node2Idx->at(NodeNum) = Idx++;
     }
-
+    Circuits &operator=(const Circuits &other) = delete;
+    Circuits(const Circuits &other) = delete;
     ~Circuits() { delete Node2Idx; }
 
     /// Reset the data structures used in the circuit algorithm.

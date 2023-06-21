@@ -132,7 +132,6 @@ constexpr Parser<EntryStmt> entryStmt; // R1541
 constexpr Parser<ContainsStmt> containsStmt; // R1543
 constexpr Parser<CompilerDirective> compilerDirective;
 constexpr Parser<OpenACCConstruct> openaccConstruct;
-constexpr Parser<AccEndCombinedDirective> accEndCombinedDirective;
 constexpr Parser<OpenACCDeclarativeConstruct> openaccDeclarativeConstruct;
 constexpr Parser<OpenMPConstruct> openmpConstruct;
 constexpr Parser<OpenMPDeclarativeConstruct> openmpDeclarativeConstruct;

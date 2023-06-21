@@ -468,6 +468,16 @@ InputArgList OptTable::ParseArgs(ArrayRef<const char *> ArgArr,
       continue;
     }
 
+    // In DashDashParsing mode, the first "--" stops option scanning and treats
+    // all subsequent arguments as positional.
+    if (DashDashParsing && Str == "--") {
+      while (++Index < End) {
+        Args.append(new Arg(getOption(InputOptionID), Str, Index,
+                            Args.getArgString(Index)));
+      }
+      break;
+    }
+
     unsigned Prev = Index;
     std::unique_ptr<Arg> A = GroupedShortOptions
                  ? parseOneArgGrouped(Args, Index)

@@ -25,7 +25,7 @@ public:
     enum class Mode { Always, Default, Never } m_mode;
     uint32_t m_count;
 
-    PointerDepth operator--() const {
+    PointerDepth Decremented() const {
       if (m_count > 0)
         return PointerDepth{m_mode, m_count - 1};
       return PointerDepth{m_mode, m_count};

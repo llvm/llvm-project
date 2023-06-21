@@ -10,7 +10,7 @@
 
 #Slice = #sparse_tensor.encoding<{
   lvlTypes = [ "compressed-nu", "singleton" ],
-  slice = [ (?, 1, 1), (?, 3, 1) ]
+  dimSlices = [ (?, 1, 1), (?, 3, 1) ]
 }>
 
 // CHECK-LABEL: func @sparse_nop_cast(

@@ -411,6 +411,7 @@ enum NodeType {
   STRICT_FSQRT,
   STRICT_FPOW,
   STRICT_FPOWI,
+  STRICT_FLDEXP,
   STRICT_FSIN,
   STRICT_FCOS,
   STRICT_FEXP,
@@ -926,8 +927,10 @@ enum NodeType {
   FCBRT,
   FSIN,
   FCOS,
-  FPOWI,
   FPOW,
+  FPOWI,
+  /// FLDEXP - ldexp, inspired by libm (op0 * 2**op1).
+  FLDEXP,
   FLOG,
   FLOG2,
   FLOG10,
@@ -970,6 +973,30 @@ enum NodeType {
 
   /// FSINCOS - Compute both fsin and fcos as a single operation.
   FSINCOS,
+
+  /// Gets the current floating-point environment. The first operand is a token
+  /// chain. The results are FP environment, represented by an integer value,
+  /// and a token chain.
+  GET_FPENV,
+
+  /// Sets the current floating-point environment. The first operand is a token
+  /// chain, the second is FP environment, represented by an integer value. The
+  /// result is a token chain.
+  SET_FPENV,
+
+  /// Set floating-point environment to default state. The first operand and the
+  /// result are token chains.
+  RESET_FPENV,
+
+  /// Gets the current floating-point environment. The first operand is a token
+  /// chain, the second is a pointer to memory, where FP environment is stored
+  /// to. The result is a token chain.
+  GET_FPENV_MEM,
+
+  /// Sets the current floating point environment. The first operand is a token
+  /// chain, the second is a pointer to memory, where FP environment is loaded
+  /// from. The result is a token chain.
+  SET_FPENV_MEM,
 
   /// LOAD and STORE have token chains as their first operand, then the same
   /// operands as an LLVM load/store instruction, then an offset node that
@@ -1291,6 +1318,10 @@ enum NodeType {
   /// FMIN/FMAX nodes can have flags, for NaN/NoNaN variants.
   VECREDUCE_FMAX,
   VECREDUCE_FMIN,
+  /// FMINIMUM/FMAXIMUM nodes propatate NaNs and signed zeroes using the
+  /// llvm.minimum and llvm.maximum semantics.
+  VECREDUCE_FMAXIMUM,
+  VECREDUCE_FMINIMUM,
   /// Integer reductions may have a result type larger than the vector element
   /// type. However, the reduction is performed using the vector element type
   /// and the value in the top bits is unspecified.

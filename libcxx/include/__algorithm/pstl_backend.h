@@ -32,6 +32,9 @@ A PSTL parallel backend is a tag type to which the following functions are assoc
   template <class _ExecutionPolicy, class _Iterator, class _Predicate>
   _Iterator __pstl_find_if(_Backend, _Iterator __first, _Iterator __last, _Predicate __pred);
 
+  template <class _ExecutionPolicy, class _RandomAccessIterator, class _Comp>
+  void __pstl_stable_sort(_Backend, _RandomAccessIterator __first, _RandomAccessIterator __last, _Comp __comp);
+
   template <class _ExecutionPolicy, class _InIterator, class _OutIterator, class _UnaryOperation>
   _OutIterator __pstl_transform(_InIterator __first, _InIterator __last, _OutIterator __result, _UnaryOperation __op);
 
@@ -41,6 +44,29 @@ A PSTL parallel backend is a tag type to which the following functions are assoc
                                 _InIterator2 __first2,
                                 _OutIterator __result,
                                 _BinaryOperation __op);
+
+  template <class _ExecutionPolicy,
+            class _Iterator1,
+            class _Iterator2,
+            class _Tp,
+            class _BinaryOperation1,
+            class _BinaryOperation2>
+  _Tp __pstl_transform_reduce(_Backend,
+                              _Iterator1 __first1,
+                              _Iterator1 __last1,
+                              _Iterator2 __first2,
+                              _Iterator2 __last2,
+                              _Tp __init,
+                              _BinaryOperation1 __reduce,
+                              _BinaryOperation2 __transform);
+
+  template <class _ExecutionPolicy, class _Iterator, class _Tp, class _BinaryOperation, class _UnaryOperation>
+  _Tp __pstl_transform_reduce(_Backend,
+                              _Iterator __first,
+                              _Iterator __last,
+                              _Tp __init,
+                              _BinaryOperation __reduce,
+                              _UnaryOperation __transform);
 
 // TODO: Complete this list
 
@@ -71,6 +97,58 @@ implemented, all the algorithms will eventually forward to the basis algorithms 
 
   template <class _ExecutionPolicy, class _Iterator, class _SizeT, class _Tp>
   void __pstl_fill_n(_Backend, _Iterator __first, _SizeT __n, const _Tp& __value);
+
+  template <class _ExecutionPolicy, class _Iterator, class _Generator>
+  void __pstl_generate(_Backend, _Iterator __first, _Iterator __last, _Generator __gen);
+
+  template <class _ExecutionPolicy, class _Iterator, class _Predicate>
+  void __pstl_is_partitioned(_Backend, _Iterator __first, _Iterator __last, _Predicate __pred);
+
+  template <class _ExecutionPolicy, class _Iterator, class _Size, class _Generator>
+  void __pstl_generator_n(_Backend, _Iterator __first, _Size __n, _Generator __gen);
+
+  template <class _ExecutionPolicy, class _terator1, class _Iterator2, class _OutIterator, class _Comp>
+  _OutIterator __pstl_merge(_Backend,
+                            _Iterator1 __first1,
+                            _Iterator1 __last1,
+                            _Iterator2 __first2,
+                            _Iterator2 __last2,
+                            _OutIterator __result,
+                            _Comp __comp);
+
+  template <class _ExecutionPolicy, class _Iterator, class _Tp, class _BinaryOperation>
+  _Tp __pstl_reduce(_Backend, _Iterator __first, _Iterator __last, _Tp __init, _BinaryOperation __op);
+
+  temlate <class _ExecutionPolicy, class _Iterator>
+  __iter_value_type<_Iterator> __pstl_reduce(_Backend, _Iterator __first, _Iterator __last);
+
+  template <class _ExecuitonPolicy, class _Iterator, class _Tp>
+  __iter_diff_t<_Iterator> __pstl_count(_Backend, _Iterator __first, _Iterator __last, const _Tp& __value);
+
+  template <class _ExecutionPolicy, class _Iterator, class _Predicate>
+  __iter_diff_t<_Iterator> __pstl_count_if(_Backend, _Iterator __first, _Iterator __last, _Predicate __pred);
+
+  template <class _ExecutionPolicy, class _Iterator, class _Tp>
+  void __pstl_replace(_Backend, _Iterator __first, _Iterator __last, const _Tp& __old_value, const _Tp& __new_value);
+
+  template <class _ExecutionPolicy, class _Iterator, class _Pred, class _Tp>
+  void __pstl_replace_if(_Backend, _Iterator __first, _Iterator __last, _Pred __pred, const _Tp& __new_value);
+
+  template <class _ExecutionPolicy, class _Iterator, class _OutIterator, class _Tp>
+  void __pstl_replace_copy(_Backend,
+                           _Iterator __first,
+                           _Iterator __last,
+                           _OutIterator __result,
+                           const _Tp& __old_value,
+                           const _Tp& __new_value);
+
+  template <class _ExecutionPolicy, class _Iterator, class _OutIterator, class _Pred, class _Tp>
+  void __pstl_replace_copy_if(_Backend,
+                              _Iterator __first,
+                              _Iterator __last,
+                              _OutIterator __result,
+                              _Pred __pred,
+                              const _Tp& __new_value);
 
 // TODO: Complete this list
 

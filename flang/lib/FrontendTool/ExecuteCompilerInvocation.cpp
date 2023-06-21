@@ -40,8 +40,10 @@ createFrontendAction(CompilerInstance &ci) {
     return std::make_unique<PrintPreprocessedAction>();
   case ParseSyntaxOnly:
     return std::make_unique<ParseSyntaxOnlyAction>();
-  case EmitMLIR:
-    return std::make_unique<EmitMLIRAction>();
+  case EmitFIR:
+    return std::make_unique<EmitFIRAction>();
+  case EmitHLFIR:
+    return std::make_unique<EmitHLFIRAction>();
   case EmitLLVM:
     return std::make_unique<EmitLLVMAction>();
   case EmitLLVMBitcode:

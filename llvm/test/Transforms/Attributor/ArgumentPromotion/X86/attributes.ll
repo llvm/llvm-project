@@ -7,7 +7,7 @@
 target triple = "x86_64-unknown-linux-gnu"
 
 define internal fastcc void @no_promote_avx2(ptr %arg, ptr readonly %arg1) #0 {
-; CHECK: Function Attrs: inlinehint nofree norecurse nosync nounwind willreturn memory(argmem: readwrite) uwtable
+; CHECK: Function Attrs: inlinehint mustprogress nofree norecurse nosync nounwind willreturn memory(argmem: readwrite) uwtable
 ; CHECK-LABEL: define {{[^@]+}}@no_promote_avx2
 ; CHECK-SAME: (ptr noalias nocapture nofree noundef nonnull writeonly align 32 dereferenceable(32) [[ARG:%.*]], ptr noalias nocapture nofree noundef nonnull readonly align 32 dereferenceable(32) [[ARG1:%.*]]) #[[ATTR0:[0-9]+]] {
 ; CHECK-NEXT:  bb:
@@ -22,7 +22,7 @@ bb:
 }
 
 define void @no_promote(ptr %arg) #1 {
-; TUNIT: Function Attrs: nofree norecurse nosync nounwind willreturn memory(argmem: readwrite) uwtable
+; TUNIT: Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn memory(argmem: readwrite) uwtable
 ; TUNIT-LABEL: define {{[^@]+}}@no_promote
 ; TUNIT-SAME: (ptr nocapture nofree writeonly [[ARG:%.*]]) #[[ATTR1:[0-9]+]] {
 ; TUNIT-NEXT:  bb:
@@ -34,7 +34,7 @@ define void @no_promote(ptr %arg) #1 {
 ; TUNIT-NEXT:    store <4 x i64> [[TMP4]], ptr [[ARG]], align 2
 ; TUNIT-NEXT:    ret void
 ;
-; CGSCC: Function Attrs: nofree nosync nounwind willreturn memory(argmem: readwrite) uwtable
+; CGSCC: Function Attrs: mustprogress nofree nosync nounwind willreturn memory(argmem: readwrite) uwtable
 ; CGSCC-LABEL: define {{[^@]+}}@no_promote
 ; CGSCC-SAME: (ptr nocapture nofree noundef nonnull writeonly align 2 dereferenceable(32) [[ARG:%.*]]) #[[ATTR1:[0-9]+]] {
 ; CGSCC-NEXT:  bb:
@@ -57,7 +57,7 @@ bb:
 }
 
 define internal fastcc void @promote_avx2(ptr %arg, ptr readonly %arg1) #0 {
-; CHECK: Function Attrs: inlinehint nofree norecurse nosync nounwind willreturn memory(argmem: readwrite) uwtable
+; CHECK: Function Attrs: inlinehint mustprogress nofree norecurse nosync nounwind willreturn memory(argmem: readwrite) uwtable
 ; CHECK-LABEL: define {{[^@]+}}@promote_avx2
 ; CHECK-SAME: (ptr noalias nocapture nofree noundef nonnull writeonly align 32 dereferenceable(32) [[ARG:%.*]], <4 x i64> [[TMP0:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:  bb:
@@ -74,7 +74,7 @@ bb:
 }
 
 define void @promote(ptr %arg) #0 {
-; TUNIT: Function Attrs: inlinehint nofree norecurse nosync nounwind willreturn memory(argmem: readwrite) uwtable
+; TUNIT: Function Attrs: inlinehint mustprogress nofree norecurse nosync nounwind willreturn memory(argmem: readwrite) uwtable
 ; TUNIT-LABEL: define {{[^@]+}}@promote
 ; TUNIT-SAME: (ptr nocapture nofree writeonly [[ARG:%.*]]) #[[ATTR0]] {
 ; TUNIT-NEXT:  bb:
@@ -87,7 +87,7 @@ define void @promote(ptr %arg) #0 {
 ; TUNIT-NEXT:    store <4 x i64> [[TMP4]], ptr [[ARG]], align 2
 ; TUNIT-NEXT:    ret void
 ;
-; CGSCC: Function Attrs: inlinehint nofree norecurse nosync nounwind willreturn memory(argmem: readwrite) uwtable
+; CGSCC: Function Attrs: inlinehint mustprogress nofree norecurse nosync nounwind willreturn memory(argmem: readwrite) uwtable
 ; CGSCC-LABEL: define {{[^@]+}}@promote
 ; CGSCC-SAME: (ptr nocapture nofree noundef nonnull writeonly align 2 dereferenceable(32) [[ARG:%.*]]) #[[ATTR0]] {
 ; CGSCC-NEXT:  bb:
@@ -117,14 +117,14 @@ attributes #0 = { inlinehint norecurse nounwind uwtable "target-features"="+avx2
 attributes #1 = { nounwind uwtable }
 attributes #2 = { argmemonly nounwind }
 ;.
-; TUNIT: attributes #[[ATTR0]] = { inlinehint nofree norecurse nosync nounwind willreturn memory(argmem: readwrite) uwtable "target-features"="+avx2" }
-; TUNIT: attributes #[[ATTR1]] = { nofree norecurse nosync nounwind willreturn memory(argmem: readwrite) uwtable }
+; TUNIT: attributes #[[ATTR0]] = { inlinehint mustprogress nofree norecurse nosync nounwind willreturn memory(argmem: readwrite) uwtable "target-features"="+avx2" }
+; TUNIT: attributes #[[ATTR1]] = { mustprogress nofree norecurse nosync nounwind willreturn memory(argmem: readwrite) uwtable }
 ; TUNIT: attributes #[[ATTR2:[0-9]+]] = { nocallback nofree nounwind willreturn memory(argmem: write) }
 ; TUNIT: attributes #[[ATTR3]] = { willreturn }
 ; TUNIT: attributes #[[ATTR4]] = { nofree nosync nounwind willreturn }
 ;.
-; CGSCC: attributes #[[ATTR0]] = { inlinehint nofree norecurse nosync nounwind willreturn memory(argmem: readwrite) uwtable "target-features"="+avx2" }
-; CGSCC: attributes #[[ATTR1]] = { nofree nosync nounwind willreturn memory(argmem: readwrite) uwtable }
+; CGSCC: attributes #[[ATTR0]] = { inlinehint mustprogress nofree norecurse nosync nounwind willreturn memory(argmem: readwrite) uwtable "target-features"="+avx2" }
+; CGSCC: attributes #[[ATTR1]] = { mustprogress nofree nosync nounwind willreturn memory(argmem: readwrite) uwtable }
 ; CGSCC: attributes #[[ATTR2:[0-9]+]] = { nocallback nofree nounwind willreturn memory(argmem: write) }
 ; CGSCC: attributes #[[ATTR3]] = { willreturn }
 ; CGSCC: attributes #[[ATTR4]] = { nounwind willreturn }

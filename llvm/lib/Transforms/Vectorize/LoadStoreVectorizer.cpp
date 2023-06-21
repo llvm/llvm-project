@@ -137,7 +137,8 @@ using EqClassKey =
                unsigned /* Load/Store element size bits */,
                char /* IsLoad; char b/c bool can't be a DenseMap key */
                >;
-llvm::raw_ostream &operator<<(llvm::raw_ostream &OS, const EqClassKey &K) {
+[[maybe_unused]] llvm::raw_ostream &operator<<(llvm::raw_ostream &OS,
+                                               const EqClassKey &K) {
   const auto &[UnderlyingObject, AddrSpace, ElementSize, IsLoad] = K;
   return OS << (IsLoad ? "load" : "store") << " of " << *UnderlyingObject
             << " of element size " << ElementSize << " bits in addrspace "
@@ -173,7 +174,7 @@ void sortChainInOffsetOrder(Chain &C) {
   });
 }
 
-void dumpChain(ArrayRef<ChainElem> C) {
+[[maybe_unused]] void dumpChain(ArrayRef<ChainElem> C) {
   for (const auto &E : C) {
     dbgs() << "  " << *E.Inst << " (offset " << E.OffsetFromLeader << ")\n";
   }
@@ -295,10 +296,13 @@ private:
 
   /// Tries to compute the offset in bytes PtrB - PtrA.
   std::optional<APInt> getConstantOffset(Value *PtrA, Value *PtrB,
+                                         Instruction *ContextInst,
                                          unsigned Depth = 0);
-  std::optional<APInt> gtConstantOffsetComplexAddrs(Value *PtrA, Value *PtrB,
-                                                    unsigned Depth);
+  std::optional<APInt> getConstantOffsetComplexAddrs(Value *PtrA, Value *PtrB,
+                                                     Instruction *ContextInst,
+                                                     unsigned Depth);
   std::optional<APInt> getConstantOffsetSelects(Value *PtrA, Value *PtrB,
+                                                Instruction *ContextInst,
                                                 unsigned Depth);
 
   /// Gets the element type of the vector that the chain will load or store.
@@ -797,12 +801,15 @@ std::vector<Chain> Vectorizer::splitChainByAlignment(Chain &C) {
       //
       // FIXME: We will upgrade the alignment of the alloca even if it turns out
       // we can't vectorize for some other reason.
+      Value *PtrOperand = getLoadStorePointerOperand(C[CBegin].Inst);
+      bool IsAllocaAccess = AS == DL.getAllocaAddrSpace() &&
+                            isa<AllocaInst>(PtrOperand->stripPointerCasts());
       Align Alignment = getLoadStoreAlignment(C[CBegin].Inst);
-      if (AS == DL.getAllocaAddrSpace() && Alignment.value() % SizeBytes != 0 &&
-          IsAllowedAndFast(Align(StackAdjustedAlignment))) {
+      Align PrefAlign = Align(StackAdjustedAlignment);
+      if (IsAllocaAccess && Alignment.value() % SizeBytes != 0 &&
+          IsAllowedAndFast(PrefAlign)) {
         Align NewAlign = getOrEnforceKnownAlignment(
-            getLoadStorePointerOperand(C[CBegin].Inst),
-            Align(StackAdjustedAlignment), DL, C[CBegin].Inst, nullptr, &DT);
+            PtrOperand, PrefAlign, DL, C[CBegin].Inst, nullptr, &DT);
         if (NewAlign >= Alignment) {
           LLVM_DEBUG(dbgs()
                      << "LSV: splitByChain upgrading alloca alignment from "
@@ -1159,15 +1166,15 @@ static bool checkIfSafeAddSequence(const APInt &IdxDiff, Instruction *AddOpA,
   return false;
 }
 
-std::optional<APInt> Vectorizer::gtConstantOffsetComplexAddrs(Value *PtrA,
-                                                              Value *PtrB,
-                                                              unsigned Depth) {
-  LLVM_DEBUG(dbgs() << "LSV: gtConstantOffsetComplexAddrs PtrA=" << *PtrA
-                    << " PtrB=" << *PtrB << " Depth=" << Depth << "\n");
+std::optional<APInt> Vectorizer::getConstantOffsetComplexAddrs(
+    Value *PtrA, Value *PtrB, Instruction *ContextInst, unsigned Depth) {
+  LLVM_DEBUG(dbgs() << "LSV: getConstantOffsetComplexAddrs PtrA=" << *PtrA
+                    << " PtrB=" << *PtrB << " ContextInst=" << *ContextInst
+                    << " Depth=" << Depth << "\n");
   auto *GEPA = dyn_cast<GetElementPtrInst>(PtrA);
   auto *GEPB = dyn_cast<GetElementPtrInst>(PtrB);
   if (!GEPA || !GEPB)
-    return getConstantOffsetSelects(PtrA, PtrB, Depth);
+    return getConstantOffsetSelects(PtrA, PtrB, ContextInst, Depth);
 
   // Look through GEPs after checking they're the same except for the last
   // index.
@@ -1214,7 +1221,7 @@ std::optional<APInt> Vectorizer::gtConstantOffsetComplexAddrs(Value *PtrA,
     return std::nullopt;
   APInt IdxDiff = *IdxDiffRange.getSingleElement();
 
-  LLVM_DEBUG(dbgs() << "LSV: gtConstantOffsetComplexAddrs IdxDiff=" << IdxDiff
+  LLVM_DEBUG(dbgs() << "LSV: getConstantOffsetComplexAddrs IdxDiff=" << IdxDiff
                     << "\n");
 
   // Now we need to prove that adding IdxDiff to ValA won't overflow.
@@ -1256,7 +1263,6 @@ std::optional<APInt> Vectorizer::gtConstantOffsetComplexAddrs(Value *PtrA,
   if (!Safe) {
     // When computing known bits, use the GEPs as context instructions, since
     // they likely are in the same BB as the load/store.
-    Instruction *ContextInst = GEPA->comesBefore(GEPB) ? GEPB : GEPA;
     KnownBits Known(BitWidth);
     computeKnownBits((IdxDiff.sge(0) ? ValA : OpB), Known, DL, 0, &AC,
                      ContextInst, &DT);
@@ -1273,8 +1279,8 @@ std::optional<APInt> Vectorizer::gtConstantOffsetComplexAddrs(Value *PtrA,
   return std::nullopt;
 }
 
-std::optional<APInt>
-Vectorizer::getConstantOffsetSelects(Value *PtrA, Value *PtrB, unsigned Depth) {
+std::optional<APInt> Vectorizer::getConstantOffsetSelects(
+    Value *PtrA, Value *PtrB, Instruction *ContextInst, unsigned Depth) {
   if (Depth++ == MaxDepth)
     return std::nullopt;
 
@@ -1283,13 +1289,15 @@ Vectorizer::getConstantOffsetSelects(Value *PtrA, Value *PtrB, unsigned Depth) {
       if (SelectA->getCondition() != SelectB->getCondition())
         return std::nullopt;
       LLVM_DEBUG(dbgs() << "LSV: getConstantOffsetSelects, PtrA=" << *PtrA
-                        << ", PtrB=" << *PtrB << ", Depth=" << Depth << "\n");
+                        << ", PtrB=" << *PtrB << ", ContextInst="
+                        << *ContextInst << ", Depth=" << Depth << "\n");
       std::optional<APInt> TrueDiff = getConstantOffset(
-          SelectA->getTrueValue(), SelectB->getTrueValue(), Depth);
+          SelectA->getTrueValue(), SelectB->getTrueValue(), ContextInst, Depth);
       if (!TrueDiff.has_value())
         return std::nullopt;
-      std::optional<APInt> FalseDiff = getConstantOffset(
-          SelectA->getFalseValue(), SelectB->getFalseValue(), Depth);
+      std::optional<APInt> FalseDiff =
+          getConstantOffset(SelectA->getFalseValue(), SelectB->getFalseValue(),
+                            ContextInst, Depth);
       if (TrueDiff == FalseDiff)
         return TrueDiff;
     }
@@ -1422,20 +1430,21 @@ std::vector<Chain> Vectorizer::gatherChains(ArrayRef<Instruction *> Instrs) {
   // chains.  This limits the O(n^2) behavior of this pass while also allowing
   // us to build arbitrarily long chains.
   for (Instruction *I : Instrs) {
-    constexpr size_t MaxChainsToTry = 64;
+    constexpr int MaxChainsToTry = 64;
 
     bool MatchFound = false;
     auto ChainIter = MRU.begin();
-    for (int J = 0; J < MaxChainsToTry && ChainIter != MRU.end();
+    for (size_t J = 0; J < MaxChainsToTry && ChainIter != MRU.end();
          ++J, ++ChainIter) {
-      std::optional<APInt> Offset =
-          getConstantOffset(getLoadStorePointerOperand(ChainIter->first),
-                            getLoadStorePointerOperand(I));
+      std::optional<APInt> Offset = getConstantOffset(
+          getLoadStorePointerOperand(ChainIter->first),
+          getLoadStorePointerOperand(I),
+          /*ContextInst=*/
+          (ChainIter->first->comesBefore(I) ? I : ChainIter->first));
       if (Offset.has_value()) {
         // `Offset` might not have the expected number of bits, if e.g. AS has a
         // different number of bits than opaque pointers.
-        ChainIter->second.push_back(
-            ChainElem{I, Offset.value().sextOrTrunc(ASPtrBits)});
+        ChainIter->second.push_back(ChainElem{I, Offset.value()});
         // Move ChainIter to the front of the MRU list.
         MRU.remove(*ChainIter);
         MRU.push_front(*ChainIter);
@@ -1463,12 +1472,16 @@ std::vector<Chain> Vectorizer::gatherChains(ArrayRef<Instruction *> Instrs) {
 }
 
 std::optional<APInt> Vectorizer::getConstantOffset(Value *PtrA, Value *PtrB,
+                                                   Instruction *ContextInst,
                                                    unsigned Depth) {
   LLVM_DEBUG(dbgs() << "LSV: getConstantOffset, PtrA=" << *PtrA
-                    << ", PtrB=" << *PtrB << ", Depth=" << Depth << "\n");
-  unsigned OffsetBitWidth = DL.getIndexTypeSizeInBits(PtrA->getType());
-  APInt OffsetA(OffsetBitWidth, 0);
-  APInt OffsetB(OffsetBitWidth, 0);
+                    << ", PtrB=" << *PtrB << ", ContextInst= " << *ContextInst
+                    << ", Depth=" << Depth << "\n");
+  // We'll ultimately return a value of this bit width, even if computations
+  // happen in a different width.
+  unsigned OrigBitWidth = DL.getIndexTypeSizeInBits(PtrA->getType());
+  APInt OffsetA(OrigBitWidth, 0);
+  APInt OffsetB(OrigBitWidth, 0);
   PtrA = PtrA->stripAndAccumulateInBoundsConstantOffsets(DL, OffsetA);
   PtrB = PtrB->stripAndAccumulateInBoundsConstantOffsets(DL, OffsetB);
   unsigned NewPtrBitWidth = DL.getTypeStoreSizeInBits(PtrA->getType());
@@ -1484,18 +1497,24 @@ std::optional<APInt> Vectorizer::getConstantOffset(Value *PtrA, Value *PtrB,
   OffsetA = OffsetA.sextOrTrunc(NewPtrBitWidth);
   OffsetB = OffsetB.sextOrTrunc(NewPtrBitWidth);
   if (PtrA == PtrB)
-    return OffsetB - OffsetA;
+    return (OffsetB - OffsetA).sextOrTrunc(OrigBitWidth);
 
   // Try to compute B - A.
   const SCEV *DistScev = SE.getMinusSCEV(SE.getSCEV(PtrB), SE.getSCEV(PtrA));
   if (DistScev != SE.getCouldNotCompute()) {
     LLVM_DEBUG(dbgs() << "LSV: SCEV PtrB - PtrA =" << *DistScev << "\n");
     ConstantRange DistRange = SE.getSignedRange(DistScev);
-    if (DistRange.isSingleElement())
-      return OffsetB - OffsetA + *DistRange.getSingleElement();
+    if (DistRange.isSingleElement()) {
+      // Handle index width (the width of Dist) != pointer width (the width of
+      // the Offset*s at this point).
+      APInt Dist = DistRange.getSingleElement()->sextOrTrunc(NewPtrBitWidth);
+      return (OffsetB - OffsetA + Dist).sextOrTrunc(OrigBitWidth);
+    }
   }
-  std::optional<APInt> Diff = gtConstantOffsetComplexAddrs(PtrA, PtrB, Depth);
+  std::optional<APInt> Diff =
+      getConstantOffsetComplexAddrs(PtrA, PtrB, ContextInst, Depth);
   if (Diff.has_value())
-    return OffsetB - OffsetA + Diff->sext(OffsetB.getBitWidth());
+    return (OffsetB - OffsetA + Diff->sext(OffsetB.getBitWidth()))
+        .sextOrTrunc(OrigBitWidth);
   return std::nullopt;
 }

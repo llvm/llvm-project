@@ -1,0 +1,10 @@
+add_entrypoint_object(
+  rpc_reset
+  SRCS
+    rpc_reset.cpp
+  HDRS
+    rpc_reset.h
+  DEPENDS
+    libc.src.__support.RPC.rpc_client
+    libc.src.__support.GPU.utils
+)

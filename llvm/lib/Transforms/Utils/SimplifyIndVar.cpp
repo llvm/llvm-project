@@ -217,8 +217,10 @@ bool SimplifyIndvar::makeIVComparisonInvariant(ICmpInst *ICmp,
 
   // Do not generate something ridiculous.
   auto *PHTerm = Preheader->getTerminator();
-  if (Rewriter.isHighCostExpansion({ InvariantLHS, InvariantRHS }, L,
-                                   2 * SCEVCheapExpansionBudget, TTI, PHTerm))
+  if (Rewriter.isHighCostExpansion({InvariantLHS, InvariantRHS}, L,
+                                   2 * SCEVCheapExpansionBudget, TTI, PHTerm) ||
+      !Rewriter.isSafeToExpandAt(InvariantLHS, PHTerm) ||
+      !Rewriter.isSafeToExpandAt(InvariantRHS, PHTerm))
     return false;
   auto *NewLHS =
       Rewriter.expandCodeFor(InvariantLHS, IVOperand->getType(), PHTerm);
@@ -905,6 +907,14 @@ void SimplifyIndvar::simplifyUsers(PHINode *CurrIV, IVVisitor *V) {
     // simplifications.
     if (replaceIVUserWithLoopInvariant(UseInst))
       continue;
+
+    // Go further for the bitcast ''prtoint ptr to i64'
+    if (isa<PtrToIntInst>(UseInst))
+      for (Use &U : UseInst->uses()) {
+        Instruction *User = cast<Instruction>(U.getUser());
+        if (replaceIVUserWithLoopInvariant(User))
+          break; // done replacing
+      }
 
     Instruction *IVOperand = UseOper.second;
     for (unsigned N = 0; IVOperand; ++N) {

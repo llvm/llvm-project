@@ -237,19 +237,31 @@ bool ByteCodeExprGen<Emitter>::VisitBinaryOperator(const BinaryOperator *BO) {
   if (!visit(LHS) || !visit(RHS))
     return false;
 
+  // For languages such as C, cast the result of one
+  // of our comparision opcodes to T (which is usually int).
+  auto MaybeCastToBool = [this, T, BO](bool Result) {
+    if (!Result)
+      return false;
+    if (DiscardResult)
+      return this->emitPop(*T, BO);
+    if (T != PT_Bool)
+      return this->emitCast(PT_Bool, *T, BO);
+    return true;
+  };
+
   switch (BO->getOpcode()) {
   case BO_EQ:
-    return Discard(this->emitEQ(*LT, BO));
+    return MaybeCastToBool(this->emitEQ(*LT, BO));
   case BO_NE:
-    return Discard(this->emitNE(*LT, BO));
+    return MaybeCastToBool(this->emitNE(*LT, BO));
   case BO_LT:
-    return Discard(this->emitLT(*LT, BO));
+    return MaybeCastToBool(this->emitLT(*LT, BO));
   case BO_LE:
-    return Discard(this->emitLE(*LT, BO));
+    return MaybeCastToBool(this->emitLE(*LT, BO));
   case BO_GT:
-    return Discard(this->emitGT(*LT, BO));
+    return MaybeCastToBool(this->emitGT(*LT, BO));
   case BO_GE:
-    return Discard(this->emitGE(*LT, BO));
+    return MaybeCastToBool(this->emitGE(*LT, BO));
   case BO_Sub:
     if (BO->getType()->isFloatingType())
       return Discard(this->emitSubf(getRoundingMode(BO), BO));
@@ -883,6 +895,51 @@ bool ByteCodeExprGen<Emitter>::VisitTypeTraitExpr(const TypeTraitExpr *E) {
   return this->emitConstBool(E->getValue(), E);
 }
 
+template <class Emitter>
+bool ByteCodeExprGen<Emitter>::VisitLambdaExpr(const LambdaExpr *E) {
+  // XXX We assume here that a pointer-to-initialize is on the stack.
+
+  const Record *R = P.getOrCreateRecord(E->getLambdaClass());
+
+  auto *CaptureInitIt = E->capture_init_begin();
+  // Initialize all fields (which represent lambda captures) of the
+  // record with their initializers.
+  for (const Record::Field &F : R->fields()) {
+    const Expr *Init = *CaptureInitIt;
+    ++CaptureInitIt;
+
+    if (std::optional<PrimType> T = classify(Init)) {
+      if (!this->visit(Init))
+        return false;
+
+      if (!this->emitSetField(*T, F.Offset, E))
+        return false;
+    } else {
+      if (!this->emitDupPtr(E))
+        return false;
+
+      if (!this->emitGetPtrField(F.Offset, E))
+        return false;
+
+      if (!this->visitInitializer(Init))
+        return false;
+
+      if (!this->emitPopPtr(E))
+        return false;
+    }
+  }
+
+  return true;
+}
+
+template <class Emitter>
+bool ByteCodeExprGen<Emitter>::VisitPredefinedExpr(const PredefinedExpr *E) {
+  if (DiscardResult)
+    return true;
+
+  return this->visit(E->getFunctionName());
+}
+
 template <class Emitter> bool ByteCodeExprGen<Emitter>::discard(const Expr *E) {
   if (E->containsErrors())
     return false;
@@ -925,6 +982,15 @@ bool ByteCodeExprGen<Emitter>::visitConditional(
 
   if (!this->visit(Condition))
     return false;
+
+  // C special case: Convert to bool because our jump ops need that.
+  // TODO: We probably want this to be done in visitBool().
+  if (std::optional<PrimType> CondT = classify(Condition->getType());
+      CondT && CondT != PT_Bool) {
+    if (!this->emitCast(*CondT, PT_Bool, E))
+      return false;
+  }
+
   if (!this->jumpFalse(LabelFalse))
     return false;
 
@@ -1462,6 +1528,8 @@ bool ByteCodeExprGen<Emitter>::visitRecordInitializer(const Expr *Initializer) {
                  dyn_cast<AbstractConditionalOperator>(Initializer)) {
     return this->visitConditional(
         ACO, [this](const Expr *E) { return this->visitRecordInitializer(E); });
+  } else if (const auto *LE = dyn_cast<LambdaExpr>(Initializer)) {
+    return this->VisitLambdaExpr(LE);
   }
 
   return false;
@@ -1690,12 +1758,24 @@ bool ByteCodeExprGen<Emitter>::VisitCallExpr(const CallExpr *E) {
 
     assert(HasRVO == Func->hasRVO());
 
+    bool HasQualifier = false;
+    if (const auto *ME = dyn_cast<MemberExpr>(E->getCallee()))
+      HasQualifier = ME->hasQualifier();
+
+    bool IsVirtual = false;
+    if (const auto *MD = dyn_cast<CXXMethodDecl>(FuncDecl))
+      IsVirtual = MD->isVirtual();
+
     // In any case call the function. The return value will end up on the stack
     // and if the function has RVO, we already have the pointer on the stack to
     // write the result into.
-    if (!this->emitCall(Func, E))
-      return false;
-
+    if (IsVirtual && !HasQualifier) {
+      if (!this->emitCallVirt(Func, E))
+        return false;
+    } else {
+      if (!this->emitCall(Func, E))
+        return false;
+    }
   } else {
     // Indirect call. Visit the callee, which will leave a FunctionPointer on
     // the stack. Cleanup of the returned value if necessary will be done after
@@ -1945,6 +2025,16 @@ bool ByteCodeExprGen<Emitter>::VisitDeclRefExpr(const DeclRefExpr *E) {
         return this->emitGetParamPtr(It->second, E);
       return this->emitGetPtrParam(It->second, E);
     }
+  }
+
+  // Handle lambda captures.
+  if (auto It = this->LambdaCaptures.find(D);
+      It != this->LambdaCaptures.end()) {
+    auto [Offset, IsReference] = It->second;
+
+    if (IsReference)
+      return this->emitGetThisFieldPtr(Offset, E);
+    return this->emitGetPtrThisField(Offset, E);
   }
 
   return false;

@@ -22060,13 +22060,11 @@ bool ARMTargetLowering::isComplexDeinterleavingOperationSupported(
 }
 
 Value *ARMTargetLowering::createComplexDeinterleavingIR(
-    Instruction *I, ComplexDeinterleavingOperation OperationType,
+    IRBuilderBase &B, ComplexDeinterleavingOperation OperationType,
     ComplexDeinterleavingRotation Rotation, Value *InputA, Value *InputB,
     Value *Accumulator) const {
 
   FixedVectorType *Ty = cast<FixedVectorType>(InputA->getType());
-
-  IRBuilder<> B(I);
 
   unsigned TyWidth = Ty->getScalarSizeInBits() * Ty->getNumElements();
 
@@ -22092,9 +22090,9 @@ Value *ARMTargetLowering::createComplexDeinterleavingIR(
     }
 
     auto *LowerSplitInt = createComplexDeinterleavingIR(
-        I, OperationType, Rotation, LowerSplitA, LowerSplitB, LowerSplitAcc);
+        B, OperationType, Rotation, LowerSplitA, LowerSplitB, LowerSplitAcc);
     auto *UpperSplitInt = createComplexDeinterleavingIR(
-        I, OperationType, Rotation, UpperSplitA, UpperSplitB, UpperSplitAcc);
+        B, OperationType, Rotation, UpperSplitA, UpperSplitB, UpperSplitAcc);
 
     ArrayRef<int> JoinMask(&SplitSeqVec[0], Ty->getNumElements());
     return B.CreateShuffleVector(LowerSplitInt, UpperSplitInt, JoinMask);

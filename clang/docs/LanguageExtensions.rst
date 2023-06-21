@@ -645,6 +645,10 @@ Unless specified otherwise operation(±0) = ±0 and operation(±infinity) = ±in
                                              rounding halfway cases to even (that is, to the nearest value
                                              that is an even integer), regardless of the current rounding
                                              direction.
+ T __builtin_elementwise_round(T x)          round x to the nearest  integer value in floating point format,      floating point types
+                                             rounding halfway cases away from zero, regardless of the
+                                             current rounding direction. May raise floating-point
+                                             exceptions.
  T __builtin_elementwise_trunc(T x)          return the integral value nearest to but no larger in            floating point types
                                              magnitude than x
  T __builtin_elementwise_canonicalize(T x)   return the platform specific canonical encoding                  floating point types
@@ -774,61 +778,89 @@ The matrix type extension supports explicit casts. Implicit type conversion betw
 Half-Precision Floating Point
 =============================
 
-Clang supports three half-precision (16-bit) floating point types: ``__fp16``,
-``_Float16`` and ``__bf16``.  These types are supported in all language modes.
+Clang supports three half-precision (16-bit) floating point types:
+``__fp16``, ``_Float16`` and ``__bf16``. These types are supported
+in all language modes, but their support differs between targets.
+A target is said to have "native support" for a type if the target
+processor offers instructions for directly performing basic arithmetic
+on that type.  In the absence of native support, a type can still be
+supported if the compiler can emulate arithmetic on the type by promoting
+to ``float``; see below for more information on this emulation.
 
-``__fp16`` is supported on every target, as it is purely a storage format; see below.
-``_Float16`` is currently only supported on the following targets, with further
-targets pending ABI standardization:
+* ``__fp16`` is supported on all targets. The special semantics of this
+  type mean that no arithmetic is ever performed directly on ``__fp16`` values;
+  see below.
 
-* 32-bit ARM
-* 64-bit ARM (AArch64)
-* AMDGPU
-* SPIR
-* X86 (see below)
+* ``_Float16`` is supported on the following targets:
+  * 32-bit ARM (natively on some architecture versions)
+  * 64-bit ARM (AArch64) (natively on ARMv8.2a and above)
+  * AMDGPU (natively)
+  * SPIR (natively)
+  * X86 (if SSE2 is available; natively if AVX512-FP16 is also available)
 
-On X86 targets, ``_Float16`` is supported as long as SSE2 is available, which
-includes all 64-bit and all recent 32-bit processors. When the target supports
-AVX512-FP16, ``_Float16`` arithmetic is performed using that native support.
-Otherwise, ``_Float16`` arithmetic is performed by promoting to ``float``,
-performing the operation, and then truncating to ``_Float16``. When doing this
-emulation, Clang defaults to following the C standard's rules for excess
-precision arithmetic, which avoids intermediate truncations within statements
-and may generate different results from a strict operation-by-operation
-emulation.
+* ``__bf16`` is supported on the following targets (currently never natively):
+  * 32-bit ARM
+  * 64-bit ARM (AArch64)
+  * X86 (when SSE2 is available)
 
-``_Float16`` will be supported on more targets as they define ABIs for it.
+(For X86, SSE2 is available on 64-bit and all recent 32-bit processors.)
 
-``__bf16`` is purely a storage format; it is currently only supported on the following targets:
+``__fp16`` and ``_Float16`` both use the binary16 format from IEEE
+754-2008, which provides a 5-bit exponent and an 11-bit significand
+(counting the implicit leading 1). ``__bf16`` uses the `bfloat16
+<https://en.wikipedia.org/wiki/Bfloat16_floating-point_format>`_ format,
+which provides an 8-bit exponent and an 8-bit significand; this is the same
+exponent range as `float`, just with greatly reduced precision.
 
-* 32-bit ARM
-* 64-bit ARM (AArch64)
-* X86 (see below)
+``_Float16`` and ``__bf16`` follow the usual rules for arithmetic
+floating-point types. Most importantly, this means that arithmetic operations
+on operands of these types are formally performed in the type and produce
+values of the type. ``__fp16`` does not follow those rules: most operations
+immediately promote operands of type ``__fp16`` to ``float``, and so
+arithmetic operations are defined to be performed in ``float`` and so result in
+a value of type ``float`` (unless further promoted because of other operands).
+See below for more information on the exact specifications of these types.
 
-On X86 targets, ``__bf16`` is supported as long as SSE2 is available, which
-includes all 64-bit and all recent 32-bit processors.
+When compiling arithmetic on ``_Float16`` and ``__bf16`` for a target without
+native support, Clang will perform the arithmetic in ``float``, inserting
+extensions and truncations as necessary. This can be done in a way that
+exactly matches the operation-by-operation behavior of native support,
+but that can require many extra truncations and extensions. By default,
+when emulating ``_Float16`` and ``__bf16`` arithmetic using ``float``, Clang
+does not truncate intermediate operands back to their true type unless the
+operand is the result of an explicit cast or assignment. This is generally
+much faster but can generate different results from strict operation-by-operation
+emulation. Usually the results are more precise. This is permitted by the
+C and C++ standards under the rules for excess precision in intermediate operands;
+see the discussion of evaluation formats in the C standard and [expr.pre] in
+the C++ standard.
 
-``__fp16`` is a storage and interchange format only.  This means that values of
-``__fp16`` are immediately promoted to (at least) ``float`` when used in arithmetic
-operations, so that e.g. the result of adding two ``__fp16`` values has type ``float``.
-The behavior of ``__fp16`` is specified by the Arm C Language Extensions (`ACLE <https://github.com/ARM-software/acle/releases>`_).
-Clang uses the ``binary16`` format from IEEE 754-2008 for ``__fp16``, not the ARM
-alternative format.
+The use of excess precision can be independently controlled for these two
+types with the ``-ffloat16-excess-precision=`` and
+``-fbfloat16-excess-precision=`` options. Valid values include:
 
-``_Float16`` is an interchange floating-point type.  This means that, just like arithmetic on
-``float`` or ``double``, arithmetic on ``_Float16`` operands is formally performed in the
-``_Float16`` type, so that e.g. the result of adding two ``_Float16`` values has type
-``_Float16``.  The behavior of ``_Float16`` is specified by ISO/IEC TS 18661-3:2015
-("Floating-point extensions for C").  As with ``__fp16``, Clang uses the ``binary16``
-format from IEEE 754-2008 for ``_Float16``.
+* ``none``: meaning to perform strict operation-by-operation emulation
+* ``standard``: meaning that excess precision is permitted under the rules
+  described in the standard, i.e. never across explicit casts or statements
+* ``fast``: meaning that excess precision is permitted whenever the
+  optimizer sees an opportunity to avoid truncations; currently this has no
+  effect beyond ``standard``
 
-``_Float16`` arithmetic will be performed using native half-precision support
-when available on the target (e.g. on ARMv8.2a); otherwise it will be performed
-at a higher precision (currently always ``float``) and then truncated down to
-``_Float16``.  Note that C and C++ allow intermediate floating-point operands
-of an expression to be computed with greater precision than is expressible in
-their type, so Clang may avoid intermediate truncations in certain cases; this may
-lead to results that are inconsistent with native arithmetic.
+The ``_Float16`` type is an interchange floating type specified in
+ISO/IEC TS 18661-3:2015 ("Floating-point extensions for C"). It will
+be supported on more targets as they define ABIs for it.
+
+The ``__bf16`` type is a non-standard extension, but it generally follows
+the rules for arithmetic interchange floating types from ISO/IEC TS
+18661-3:2015. In previous versions of Clang, it was a storage-only type
+that forbade arithmetic operations. It will be supported on more targets
+as they define ABIs for it.
+
+The ``__fp16`` type was originally an ARM extension and is specified
+by the `ARM C Language Extensions <https://github.com/ARM-software/acle/releases>`_.
+Clang uses the ``binary16`` format from IEEE 754-2008 for ``__fp16``,
+not the ARM alternative format. Operators that expect arithmetic operands
+immediately promote ``__fp16`` operands to ``float``.
 
 It is recommended that portable code use ``_Float16`` instead of ``__fp16``,
 as it has been defined by the C standards committee and has behavior that is
@@ -843,7 +875,7 @@ A literal can be given ``_Float16`` type using the suffix ``f16``. For example,
 
 Because default argument promotion only applies to the standard floating-point
 types, ``_Float16`` values are not promoted to ``double`` when passed as variadic
-or untyped arguments.  As a consequence, some caution must be taken when using
+or untyped arguments. As a consequence, some caution must be taken when using
 certain library facilities with ``_Float16``; for example, there is no ``printf`` format
 specifier for ``_Float16``, and (unlike ``float``) it will not be implicitly promoted to
 ``double`` when passed to ``printf``, so the programmer must explicitly cast it to
@@ -1348,6 +1380,17 @@ standard.
 In C, type compatibility is decided according to the rules given in the
 appropriate standard, but in C++, which lacks the type compatibility rules used
 in C, types are considered compatible only if they are equivalent.
+
+Clang also supports an extended form of ``_Generic`` with a controlling type
+rather than a controlling expression. Unlike with a controlling expression, a
+controlling type argument does not undergo any conversions and thus is suitable
+for use when trying to match qualified types, incomplete types, or function
+types. Variable-length array types lack the necessary compile-time information
+to resolve which association they match with and thus are not allowed as a
+controlling type argument.
+
+Use ``__has_extension(c_generic_selection_with_controlling_type)`` to determine
+if support for this extension is enabled.
 
 C11 ``_Static_assert()``
 ^^^^^^^^^^^^^^^^^^^^^^^^
@@ -2273,6 +2316,138 @@ targets.
   void foo(__generic volatile unsigned int* a) {
     atomic_add(a, 1);
   }
+
+WebAssembly Features
+====================
+
+Clang supports the WebAssembly features documented below. For further 
+information related to the semantics of the builtins, please refer to the `WebAssembly Specification <https://webassembly.github.io/spec/core/>`_.
+In this section, when we refer to reference types, we are referring to 
+WebAssembly reference types, not C++ reference types unless stated
+otherwise.
+
+``__builtin_wasm_table_set``
+----------------------------
+
+This builtin function stores a value in a WebAssembly table. 
+It takes three arguments.
+The first argument is the table to store a value into, the second 
+argument is the index to which to store the value into, and the
+third argument is a value of reference type to store in the table.
+It returns nothing.
+
+.. code-block:: c++
+
+  static __externref_t table[0];
+  extern __externref_t JSObj;
+
+  void store(int index) {
+    __builtin_wasm_table_set(table, index, JSObj);
+  } 
+
+``__builtin_wasm_table_get``
+----------------------------
+
+This builtin function is the counterpart to ``__builtin_wasm_table_set``
+and loads a value from a WebAssembly table of reference typed values.
+It takes 2 arguments.
+The first argument is a table of reference typed values and the 
+second argument is an index from which to load the value. It returns
+the loaded reference typed value.
+
+.. code-block:: c++
+
+  static __externref_t table[0];
+  
+  __externref_t load(int index) {
+    __externref_t Obj = __builtin_wasm_table_get(table, index);
+    return Obj;
+  }
+
+``__builtin_wasm_table_size``
+-----------------------------
+
+This builtin function returns the size of the WebAssembly table.
+Takes the table as an argument and returns an unsigned integer (``size_t``)
+with the current table size.
+
+.. code-block:: c++
+
+  typedef void (*__funcref funcref_t)();
+  static __funcref table[0];
+
+  size_t getSize() {
+    return __builtin_wasm_table_size(table);
+  }
+
+``__builtin_wasm_table_grow``
+-----------------------------
+
+This builtin function grows the WebAssembly table by a certain amount.
+Currently, as all WebAssembly tables created in C/C++ are zero-sized, 
+this always needs to be called to grow the table. 
+
+It takes three arguments. The first argument is the WebAssembly table 
+to grow. The second argument is the reference typed value to store in 
+the new table entries (the initialization value), and the third argument
+is the amound to grow the table by. It returns the previous table size
+or -1. It will return -1 if not enough space could be allocated.
+
+.. code-block:: c++
+
+  typedef void (*__funcref funcref_t)();
+  static __funcref table[0];
+
+  // grow returns the new table size or -1 on error.
+  int grow(__funcref fn, int delta) {
+    int prevSize = __builtin_wasm_table_grow(table, fn, delta);
+    if (prevSize == -1)
+      return -1;
+    return prevSize + delta;
+  }
+
+``__builtin_wasm_table_fill``
+-----------------------------
+
+This builtin function sets all the entries of a WebAssembly table to a given 
+reference typed value. It takes four arguments. The first argument is 
+the WebAssembly table, the second argument is the index that starts the 
+range, the third argument is the value to set in the new entries, and 
+the fourth and the last argument is the size of the range. It returns 
+nothing.
+
+.. code-block:: c++
+
+  static __externref_t table[0];
+
+  // resets a table by setting all of its entries to a given value.
+  void reset(__externref_t Obj) {
+    int Size = __builtin_wasm_table_size(table);
+    __builtin_wasm_table_fill(table, 0, Obj, Size);
+  }
+
+``__builtin_wasm_table_copy``
+-----------------------------
+
+This builtin function copies elements from a source WebAssembly table 
+to a possibly overlapping destination region. It takes five arguments.
+The first argument is the destination WebAssembly table, and the second
+argument is the source WebAssembly table. The third argument is the 
+destination index from where the copy starts, the fourth argument is the 
+source index from there the copy starts, and the fifth and last argument
+is the number of elements to copy. It returns nothing.
+
+.. code-block:: c++
+
+  static __externref_t tableSrc[0];
+  static __externref_t tableDst[0];
+
+  // Copy nelem elements from [src, src + nelem - 1] in tableSrc to
+  // [dst, dst + nelem - 1] in tableDst
+  void copy(int dst, int src, int nelem) {
+    __builtin_wasm_table_copy(tableDst, tableSrc, dst, src, nelem);
+  }
+
 
 Builtin Functions
 =================
@@ -3318,6 +3493,69 @@ Query for this feature with ``__has_builtin(__builtin_add_overflow)``, etc.
 Floating point builtins
 ---------------------------------------
 
+``__builtin_isfpclass``
+-----------------------
+
+``__builtin_isfpclass`` is used to test if the specified floating-point value
+falls into one of the specified floating-point classes.
+
+**Syntax**:
+
+.. code-block:: c++
+
+    int __builtin_isfpclass(fp_type expr, int mask)
+
+``fp_type`` is a floating-point type supported by the target. ``mask`` is an
+integer constant expression, where each bit represents floating-point class to
+test. The function returns boolean value.
+
+**Example of use**:
+
+.. code-block:: c++
+
+  if (__builtin_isfpclass(x, 448)) {
+     // `x` is positive finite value
+	 ...
+  }
+
+**Description**:
+
+The ``__builtin_isfpclass()`` builtin is a generalization of functions ``isnan``,
+``isinf``, ``isfinite`` and some others defined by the C standard. It tests if
+the floating-point value, specified by the first argument, falls into any of data
+classes, specified by the second argument. The later is a bitmask, in which each
+data class is represented by a bit using the encoding:
+
+========== =================== ======================
+Mask value Data class          Macro
+========== =================== ======================
+0x0001     Signaling NaN       __FPCLASS_SNAN
+0x0002     Quiet NaN           __FPCLASS_QNAN
+0x0004     Negative infinity   __FPCLASS_NEGINF
+0x0008     Negative normal     __FPCLASS_NEGNORMAL
+0x0010     Negative subnormal  __FPCLASS_NEGSUBNORMAL
+0x0020     Negative zero       __FPCLASS_NEGZERO
+0x0040     Positive zero       __FPCLASS_POSZERO
+0x0080     Positive subnormal  __FPCLASS_POSSUBNORMAL
+0x0100     Positive normal     __FPCLASS_POSNORMAL
+0x0200     Positive infinity   __FPCLASS_POSINF
+========== =================== ======================
+
+For convenience preprocessor defines macros for these values. The function
+returns 1 if ``expr`` falls into one of the specified data classes, 0 otherwise.
+
+In the example above the mask value 448 (0x1C0) contains the bits selecting
+positive zero, positive subnormal and positive normal classes.
+``__builtin_isfpclass(x, 448)`` would return true only if ``x`` if of any of
+these data classes. Using suitable mask value, the function can implement any of
+the standard classification functions, for example, ``__builtin_isfpclass(x, 3)``
+is identical to ``isnan``,``__builtin_isfpclass(x, 504)`` - to ``isfinite``
+and so on.
+
+This function never raises floating-point exceptions and does not canonicalize
+its input. The floating-point argument is not promoted, its data class is
+determined based on its representation in its actual semantic type.
+
 ``__builtin_canonicalize``
 --------------------------
 
@@ -3530,7 +3768,7 @@ The third argument is one of the memory ordering specifiers ``__ATOMIC_RELAXED``
 ``__ATOMIC_CONSUME``, ``__ATOMIC_ACQUIRE``, ``__ATOMIC_RELEASE``,
 ``__ATOMIC_ACQ_REL``, or ``__ATOMIC_SEQ_CST`` following C++11 memory model semantics.
 
-In terms or aquire-release ordering barriers these two operations are always
+In terms of acquire-release ordering barriers these two operations are always
 considered as operations with *load-store* semantics, even when the original value
 is not actually modified after comparison.
 

@@ -39,7 +39,6 @@ add_mlir_translation_library(MLIRTargetLLVMIRExport
   MLIRLLVMDialect
   MLIRLLVMIRTransforms
   MLIRTranslateLib
-  MLIROpenMPDialect
   )
 
 add_mlir_translation_library(MLIRToLLVMIRTranslationRegistration
@@ -47,6 +46,7 @@ add_mlir_translation_library(MLIRToLLVMIRTranslationRegistration
 
   LINK_LIBS PUBLIC
   MLIRArmNeonToLLVMIRTranslation
+  MLIRArmSMEToLLVMIRTranslation
   MLIRArmSVEToLLVMIRTranslation
   MLIRAMXToLLVMIRTranslation
   MLIRBuiltinToLLVMIRTranslation

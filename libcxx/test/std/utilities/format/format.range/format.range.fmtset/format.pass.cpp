@@ -7,8 +7,7 @@
 
 // UNSUPPORTED: c++03, c++11, c++14, c++17, c++20
 
-// TODO FMT Fix this test using GCC, it currently times out.
-// UNSUPPORTED: gcc-12
+// UNSUPPORTED: GCC-ALWAYS_INLINE-FIXME
 
 // <format>
 
@@ -78,8 +77,9 @@ void test_assure_parse_is_called() {
   std::set<parse_call_validator> arg{parse_call_validator{}};
 
   String result;
-  OutIt out             = std::back_inserter(result);
-  FormatCtxT format_ctx = test_format_context_create<OutIt, CharT>(out, std::make_format_args<FormatCtxT>(arg));
+  OutIt out = std::back_inserter(result);
+  [[maybe_unused]] FormatCtxT format_ctx =
+      test_format_context_create<OutIt, CharT>(out, std::make_format_args<FormatCtxT>(arg));
 
   { // parse not called
     [[maybe_unused]] const std::formatter<decltype(arg), CharT> formatter;

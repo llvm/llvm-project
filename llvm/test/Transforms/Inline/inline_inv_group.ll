@@ -14,8 +14,9 @@ define ptr @callee() alwaysinline {
   ret ptr %1
 }
 
-define ptr @caller() {
-; CHECK-LABEL: define ptr @caller() {
+define ptr @caller() null_pointer_is_valid {
+; CHECK-LABEL: define ptr @caller
+; CHECK-SAME: () #[[ATTR1:[0-9]+]] {
 ; CHECK-NEXT:    [[TMP1:%.*]] = call ptr @llvm.strip.invariant.group.p0(ptr null)
 ; CHECK-NEXT:    ret ptr [[TMP1]]
 ;

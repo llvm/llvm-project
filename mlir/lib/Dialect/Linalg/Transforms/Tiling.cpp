@@ -380,11 +380,14 @@ static FailureOr<ForallTilingResult> tileToForallOpImpl(
     auto destinationStyleOp = dyn_cast<DestinationStyleOpInterface>(clonedOp);
     if (destinationStyleOp) {
       for (OpOperand *outOperand : destinationStyleOp.getDpsInitOperands()) {
-        auto *it = llvm::find(dest, outOperand->get());
-        if (it == dest.end())
-          return op->emitOpError("must have \"tensor semantic\" for tiling");
-        unsigned destNum = std::distance(dest.begin(), it);
-        outOperand->set(destBbArgs[destNum]);
+        // Swap tensor inits with the corresponding block argument of the
+        // scf.forall op. Memref inits remain as is.
+        if (outOperand->get().getType().isa<TensorType>()) {
+          auto *it = llvm::find(dest, outOperand->get());
+          assert(it != dest.end() && "could not find destination tensor");
+          unsigned destNum = std::distance(dest.begin(), it);
+          outOperand->set(destBbArgs[destNum]);
+        }
       }
     }
 
@@ -392,9 +395,14 @@ static FailureOr<ForallTilingResult> tileToForallOpImpl(
     FailureOr<TilingResult> tilingResult =
         cast<TilingInterface>(clonedOp).getTiledImplementation(b, tiledOffsets,
                                                                tiledSizes);
+    if (failed(tilingResult))
+      return clonedOp->emitError("Failed to tile op: ");
+    if (tilingResult->tiledOps.size() != 1) {
+      return clonedOp->emitError("expected a single produced tiled op, got ")
+             << tilingResult->tiledOps.size();
+    }
+
     b.eraseOp(clonedOp);
-    assert(tilingResult->tiledOps.size() == 1 &&
-           "expected a single produced tiled op");
     tiledOp = tilingResult->tiledOps.front();
     tiledValues = tilingResult->tiledValues;
   }
@@ -733,8 +741,12 @@ FailureOr<linalg::ForallReductionTilingResult> linalg::tileReductionUsingForall(
       FailureOr<TilingResult> tilingResult =
           cast<TilingInterface>(clonedOp).getTiledImplementation(
               b, tiledOffsets, tiledSizes);
-      assert(tilingResult->tiledOps.size() == 1 &&
-             "expected a single produced tiled op");
+      if (failed(tilingResult))
+        return clonedOp->emitError("Failed to tile op: ");
+      if (tilingResult->tiledOps.size() != 1) {
+        return clonedOp->emitError("expected a single produced tiled op, got ")
+               << tilingResult->tiledOps.size();
+      }
       tiledOp = tilingResult->tiledOps.front();
       tilingResults = tilingResult->tiledValues;
     } else {
@@ -747,8 +759,9 @@ FailureOr<linalg::ForallReductionTilingResult> linalg::tileReductionUsingForall(
       SmallVector<Value> ids = forallOp.getInductionVars();
       mapLoopToProcessorIds(cast<scf::ForOp>(maybeTiled->loops.back()), ids,
                             materializedNonZeroNumThreads);
-      assert(maybeTiled->loops.size() == 1 &&
-             "expected a single produced loop");
+      if (maybeTiled->loops.size() != 1) {
+        return clonedOp->emitError("expected a single produced loop");
+      }
       tiledOp = maybeTiled->op;
       tilingResults = maybeTiled->loops.front()->getResults();
     }

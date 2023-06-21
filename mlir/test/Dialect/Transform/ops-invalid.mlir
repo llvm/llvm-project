@@ -672,3 +672,14 @@ module attributes { transform.with_named_sequence } {
       @match -> @action : (!transform.any_op) -> !transform.any_op
   }
 }
+
+// -----
+
+transform.sequence failures(propagate) {
+^bb0(%arg0: !transform.any_op):
+  // expected-error @below {{expected children ops to implement PatternDescriptorOpInterface}}
+  transform.apply_patterns to %arg0 {
+    // expected-note @below {{op without interface}}
+    transform.named_sequence @foo()
+  } : !transform.any_op
+}

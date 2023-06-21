@@ -20,9 +20,7 @@ using namespace llvm;
 template <>
 bool llvm::GenericUniformityAnalysisImpl<MachineSSAContext>::hasDivergentDefs(
     const MachineInstr &I) const {
-  for (auto &op : I.operands()) {
-    if (!op.isReg() || !op.isDef())
-      continue;
+  for (auto &op : I.all_defs()) {
     if (isDivergent(op.getReg()))
       return true;
   }
@@ -36,9 +34,7 @@ bool llvm::GenericUniformityAnalysisImpl<MachineSSAContext>::markDefsDivergent(
   const auto &MRI = F.getRegInfo();
   const auto &RBI = *F.getSubtarget().getRegBankInfo();
   const auto &TRI = *MRI.getTargetRegisterInfo();
-  for (auto &op : Instr.operands()) {
-    if (!op.isReg() || !op.isDef())
-      continue;
+  for (auto &op : Instr.all_defs()) {
     if (!op.getReg().isVirtual())
       continue;
     assert(!op.getSubReg());
@@ -84,9 +80,7 @@ void llvm::GenericUniformityAnalysisImpl<MachineSSAContext>::pushUsers(
   assert(!isAlwaysUniform(Instr));
   if (Instr.isTerminator())
     return;
-  for (const MachineOperand &op : Instr.operands()) {
-    if (!op.isReg() || !op.isDef())
-      continue;
+  for (const MachineOperand &op : Instr.all_defs()) {
     auto Reg = op.getReg();
     if (isDivergent(Reg))
       pushUsers(Reg);
@@ -119,9 +113,7 @@ void llvm::GenericUniformityAnalysisImpl<MachineSSAContext>::
     propagateTemporalDivergence(const MachineInstr &I,
                                 const MachineCycle &DefCycle) {
   const auto &RegInfo = F.getRegInfo();
-  for (auto &Op : I.operands()) {
-    if (!Op.isReg() || !Op.isDef())
-      continue;
+  for (auto &Op : I.all_defs()) {
     if (!Op.getReg().isVirtual())
       continue;
     auto Reg = Op.getReg();
@@ -161,12 +153,14 @@ template class llvm::GenericUniformityInfo<MachineSSAContext>;
 template struct llvm::GenericUniformityAnalysisImplDeleter<
     llvm::GenericUniformityAnalysisImpl<MachineSSAContext>>;
 
-MachineUniformityInfo
-llvm::computeMachineUniformityInfo(MachineFunction &F,
-                                   const MachineCycleInfo &cycleInfo,
-                                   const MachineDomTree &domTree) {
+MachineUniformityInfo llvm::computeMachineUniformityInfo(
+    MachineFunction &F, const MachineCycleInfo &cycleInfo,
+    const MachineDomTree &domTree, bool HasBranchDivergence) {
   assert(F.getRegInfo().isSSA() && "Expected to be run on SSA form!");
-  return MachineUniformityInfo(F, domTree, cycleInfo);
+  MachineUniformityInfo UI(F, domTree, cycleInfo);
+  if (HasBranchDivergence)
+    UI.compute();
+  return UI;
 }
 
 namespace {
@@ -226,7 +220,9 @@ void MachineUniformityAnalysisPass::getAnalysisUsage(AnalysisUsage &AU) const {
 bool MachineUniformityAnalysisPass::runOnMachineFunction(MachineFunction &MF) {
   auto &DomTree = getAnalysis<MachineDominatorTree>().getBase();
   auto &CI = getAnalysis<MachineCycleInfoWrapperPass>().getCycleInfo();
-  UI = computeMachineUniformityInfo(MF, CI, DomTree);
+  // FIXME: Query TTI::hasBranchDivergence. -run-pass seems to end up with a
+  // default NoTTI
+  UI = computeMachineUniformityInfo(MF, CI, DomTree, true);
   return false;
 }
 

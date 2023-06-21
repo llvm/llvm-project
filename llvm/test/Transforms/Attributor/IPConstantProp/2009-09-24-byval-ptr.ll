@@ -43,7 +43,7 @@ return:                                           ; preds = %entry
 }
 
 define internal i32 @vfu2(ptr byval(%struct.MYstr) align 4 %u) nounwind readonly {
-; CHECK: Function Attrs: nofree norecurse nosync nounwind willreturn memory(argmem: read)
+; CHECK: Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn memory(argmem: read)
 ; CHECK-LABEL: define {{[^@]+}}@vfu2
 ; CHECK-SAME: (i8 [[TMP0:%.*]], i32 [[TMP1:%.*]]) #[[ATTR1:[0-9]+]] {
 ; CHECK-NEXT:  entry:
@@ -90,7 +90,7 @@ entry:
 }
 
 define internal i32 @vfu2_v2(ptr byval(%struct.MYstr) align 4 %u) nounwind readonly {
-; CHECK: Function Attrs: nofree norecurse nosync nounwind willreturn memory(argmem: read)
+; CHECK: Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn memory(argmem: read)
 ; CHECK-LABEL: define {{[^@]+}}@vfu2_v2
 ; CHECK-SAME: (i8 [[TMP0:%.*]], i32 [[TMP1:%.*]]) #[[ATTR1]] {
 ; CHECK-NEXT:  entry:
@@ -149,5 +149,5 @@ entry:
 }
 ;.
 ; CHECK: attributes #[[ATTR0]] = { nounwind }
-; CHECK: attributes #[[ATTR1]] = { nofree norecurse nosync nounwind willreturn memory(argmem: read) }
+; CHECK: attributes #[[ATTR1]] = { mustprogress nofree norecurse nosync nounwind willreturn memory(argmem: read) }
 ;.

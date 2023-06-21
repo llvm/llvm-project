@@ -51,6 +51,12 @@ static cl::opt<std::string> OutputFilename(cl::Required, "o",
                                            cl::value_desc("filename"),
                                            cl::cat(DwpCategory));
 
+static cl::opt<bool> ContinueOnCuIndexOverflow(
+    "continue-on-cu-index-overflow",
+    cl::desc("This turns an error when offset for .debug_*.dwo sections "
+             "overfolws into a warning."),
+    cl::cat(DwpCategory));
+
 static Expected<SmallVector<std::string, 16>>
 getDWOFilenames(StringRef ExecFilename) {
   auto ErrOrObj = object::ObjectFile::createObjectFile(ExecFilename);
@@ -207,7 +213,7 @@ int main(int argc, char **argv) {
   if (!MS)
     return error("no object streamer for target " + TripleName, Context);
 
-  if (auto Err = write(*MS, DWOFilenames)) {
+  if (auto Err = write(*MS, DWOFilenames, ContinueOnCuIndexOverflow)) {
     logAllUnhandledErrors(std::move(Err), WithColor::error());
     return 1;
   }

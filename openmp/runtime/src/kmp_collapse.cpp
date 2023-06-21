@@ -1135,10 +1135,6 @@ bool kmp_calc_original_ivs_for_chunk_end(
   kmp_iterations_t iterations =
       (kmp_iterations_t)__kmp_allocate(sizeof(kmp_loop_nest_iv_t) * n);
 
-#if defined(KMP_DEBUG)
-  auto new_iv_saved = new_iv;
-#endif
-
   // First, calc corresponding iteration in every modified loop:
   for (kmp_index_t ind = n; ind > 0;) {
     --ind;

@@ -50,7 +50,7 @@ def FeatureAES : SubtargetFeature<
 // Crypto has been split up and any combination is now valid (see the
 // crypto definitions above). Also, crypto is now context sensitive:
 // it has a different meaning for e.g. Armv8.4 than it has for Armv8.2.
-// Therefore, we rely on Clang, the user interacing tool, to pass on the
+// Therefore, we rely on Clang, the user interfacing tool, to pass on the
 // appropriate crypto options. But here in the backend, crypto has very little
 // meaning anymore. We kept the Crypto definition here for backward
 // compatibility, and now imply features SHA2 and AES, which was the
@@ -690,6 +690,8 @@ include "AArch64SystemOperands.td"
 foreach i = 1-3 in
 def FeatureUseEL#i#ForTP : SubtargetFeature<"tpidr-el"#i, "UseEL"#i#"ForTP",
   "true", "Permit use of TPIDR_EL"#i#" for the TLS base">;
+def FeatureUseROEL0ForTP : SubtargetFeature<"tpidrro-el0", "UseROEL0ForTP",
+  "true", "Permit use of TPIDRRO_EL0 for the TLS base">;
 
 //===----------------------------------------------------------------------===//
 // Control codegen mitigation against Straight Line Speculation vulnerability.
@@ -731,6 +733,7 @@ def SMEUnsupported : AArch64Unsupported {
 
 include "AArch64SchedA53.td"
 include "AArch64SchedA55.td"
+include "AArch64SchedA510.td"
 include "AArch64SchedA57.td"
 include "AArch64SchedCyclone.td"
 include "AArch64SchedFalkor.td"
@@ -745,6 +748,7 @@ include "AArch64SchedThunderX3T110.td"
 include "AArch64SchedTSV110.td"
 include "AArch64SchedAmpere1.td"
 include "AArch64SchedNeoverseN2.td"
+include "AArch64SchedNeoverseV2.td"
 
 def TuneA35     : SubtargetFeature<"a35", "ARMProcFamily", "CortexA35",
                                 "Cortex-A35 ARM processors">;
@@ -1344,7 +1348,7 @@ def : ProcessorModel<"cortex-a53", CortexA53Model, ProcessorFeatures.A53,
                      [TuneA53]>;
 def : ProcessorModel<"cortex-a55", CortexA55Model, ProcessorFeatures.A55,
                      [TuneA55]>;
-def : ProcessorModel<"cortex-a510", CortexA55Model, ProcessorFeatures.A510,
+def : ProcessorModel<"cortex-a510", CortexA510Model, ProcessorFeatures.A510,
                      [TuneA510]>;
 def : ProcessorModel<"cortex-a57", CortexA57Model, ProcessorFeatures.A53,
                      [TuneA57]>;
@@ -1392,7 +1396,7 @@ def : ProcessorModel<"neoverse-512tvb", NeoverseN2Model,
                      ProcessorFeatures.Neoverse512TVB, [TuneNeoverse512TVB]>;
 def : ProcessorModel<"neoverse-v1", NeoverseN2Model,
                      ProcessorFeatures.NeoverseV1, [TuneNeoverseV1]>;
-def : ProcessorModel<"neoverse-v2", NeoverseN2Model,
+def : ProcessorModel<"neoverse-v2", NeoverseV2Model,
                      ProcessorFeatures.NeoverseV2, [TuneNeoverseV2]>;
 def : ProcessorModel<"exynos-m3", ExynosM3Model, ProcessorFeatures.ExynosM3,
                      [TuneExynosM3]>;

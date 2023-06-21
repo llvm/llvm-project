@@ -136,7 +136,8 @@ func.func @compute3(%a: memref<10x10xf32>, %b: memref<10x10xf32>, %c: memref<10x
   %pc = acc.present varPtr(%c : memref<10xf32>) -> memref<10xf32>
   %pd = acc.present varPtr(%d : memref<10xf32>) -> memref<10xf32>
   acc.data dataOperands(%pa, %pb, %pc, %pd: memref<10x10xf32>, memref<10x10xf32>, memref<10xf32>, memref<10xf32>) {
-    acc.parallel num_gangs(%numGangs: i64) num_workers(%numWorkers: i64) private(@privatization_memref_10_f32 -> %c : memref<10xf32>) {
+    %private = acc.private varPtr(%c : memref<10xf32>) -> memref<10xf32>
+    acc.parallel num_gangs(%numGangs: i64) num_workers(%numWorkers: i64) private(@privatization_memref_10_f32 -> %private : memref<10xf32>) {
       acc.loop gang {
         scf.for %x = %lb to %c10 step %st {
           acc.loop worker {
@@ -178,7 +179,8 @@ func.func @compute3(%a: memref<10x10xf32>, %b: memref<10x10xf32>, %c: memref<10x
 // CHECK-NEXT:   [[NUMGANG:%.*]] = arith.constant 10 : i64
 // CHECK-NEXT:   [[NUMWORKERS:%.*]] = arith.constant 10 : i64
 // CHECK:        acc.data dataOperands(%{{.*}}, %{{.*}}, %{{.*}}, %{{.*}} : memref<10x10xf32>, memref<10x10xf32>, memref<10xf32>, memref<10xf32>) {
-// CHECK-NEXT:     acc.parallel num_gangs([[NUMGANG]] : i64) num_workers([[NUMWORKERS]] : i64) private(@privatization_memref_10_f32 -> [[ARG2]] : memref<10xf32>) {
+// CHECK-NEXT:     %[[P_ARG2:.*]] = acc.private varPtr([[ARG2]] : memref<10xf32>) -> memref<10xf32> 
+// CHECK-NEXT:     acc.parallel num_gangs([[NUMGANG]] : i64) num_workers([[NUMWORKERS]] : i64) private(@privatization_memref_10_f32 -> %[[P_ARG2]] : memref<10xf32>) {
 // CHECK-NEXT:       acc.loop gang {
 // CHECK-NEXT:         scf.for %{{.*}} = [[C0]] to [[C10]] step [[C1]] {
 // CHECK-NEXT:           acc.loop worker {
@@ -272,6 +274,14 @@ func.func @testloopop() -> () {
     "test.openacc_dummy_op"() : () -> ()
     acc.yield
   }
+  acc.loop gang(static=%i64Value: i64, num=%i64Value: i64) {
+    "test.openacc_dummy_op"() : () -> ()
+    acc.yield
+  }
+  acc.loop gang(dim=%i64Value : i64, static=%i64Value: i64) {
+    "test.openacc_dummy_op"() : () -> ()
+    acc.yield
+  }
   return
 }
 
@@ -334,6 +344,14 @@ func.func @testloopop() -> () {
 // CHECK-NEXT:   "test.openacc_dummy_op"() : () -> ()
 // CHECK-NEXT:   acc.yield
 // CHECK-NEXT: }
+// CHECK:      acc.loop gang(num=[[I64VALUE]] : i64, static=[[I64VALUE]] : i64) {
+// CHECK-NEXT:   "test.openacc_dummy_op"() : () -> ()
+// CHECK-NEXT:   acc.yield
+// CHECK-NEXT: }
+// CHECK:      acc.loop gang(dim=[[I64VALUE]] : i64, static=[[I64VALUE]] : i64) {
+// CHECK-NEXT:   "test.openacc_dummy_op"() : () -> ()
+// CHECK-NEXT:   acc.yield
+// CHECK-NEXT: }
 
 // -----
 
@@ -388,6 +406,19 @@ acc.private.recipe @privatization_memref_10_10_f32 : memref<10x10xf32> init {
   acc.terminator
 }
 
+acc.firstprivate.recipe @privatization_memref_10xf32 : memref<10xf32> init {
+^bb0(%arg0: memref<10xf32>):
+  %0 = memref.alloc() : memref<10xf32>
+  acc.yield %0 : memref<10xf32>
+} copy {
+^bb0(%arg0: memref<10xf32>, %arg1: memref<10xf32>):
+  acc.terminator
+} destroy {
+^bb0(%arg0: memref<10xf32>):
+  memref.dealloc %arg0 : memref<10xf32> 
+  acc.terminator
+}
+
 func.func @testparallelop(%a: memref<10xf32>, %b: memref<10xf32>, %c: memref<10x10xf32>) -> () {
   %i64value = arith.constant 1 : i64
   %i32value = arith.constant 1 : i32
@@ -424,7 +455,7 @@ func.func @testparallelop(%a: memref<10xf32>, %b: memref<10xf32>, %c: memref<10x
   }
   acc.parallel vector_length(%idxValue: index) {
   }
-  acc.parallel private(@privatization_memref_10_f32 -> %a : memref<10xf32>, @privatization_memref_10_10_f32 -> %c : memref<10x10xf32>) firstprivate(%b: memref<10xf32>) {
+  acc.parallel private(@privatization_memref_10_f32 -> %a : memref<10xf32>, @privatization_memref_10_10_f32 -> %c : memref<10x10xf32>) firstprivate(@privatization_memref_10xf32 -> %b: memref<10xf32>) {
   }
   acc.parallel {
   } attributes {defaultAttr = #acc<defaultvalue none>}
@@ -475,7 +506,7 @@ func.func @testparallelop(%a: memref<10xf32>, %b: memref<10xf32>, %c: memref<10x
 // CHECK-NEXT: }
 // CHECK:      acc.parallel vector_length([[IDXVALUE]] : index) {
 // CHECK-NEXT: }
-// CHECK:      acc.parallel firstprivate([[ARGB]] : memref<10xf32>) private(@privatization_memref_10_f32 -> [[ARGA]] : memref<10xf32>, @privatization_memref_10_10_f32 -> [[ARGC]] : memref<10x10xf32>) {
+// CHECK:      acc.parallel firstprivate(@privatization_memref_10xf32 -> [[ARGB]] : memref<10xf32>) private(@privatization_memref_10_f32 -> [[ARGA]] : memref<10xf32>, @privatization_memref_10_10_f32 -> [[ARGC]] : memref<10x10xf32>) {
 // CHECK-NEXT: }
 // CHECK:      acc.parallel {
 // CHECK-NEXT: } attributes {defaultAttr = #acc<defaultvalue none>}
@@ -510,7 +541,19 @@ acc.private.recipe @privatization_memref_10_10_f32 : memref<10x10xf32> init {
   acc.terminator
 }
 
-acc.firstprivate.recipe @privatization_memref_10xf32 : memref<10xf32> init {
+// Test optional destroy region
+acc.firstprivate.recipe @firstprivatization_memref_20xf32 : memref<20xf32> init {
+^bb0(%arg0: memref<20xf32>):
+  %0 = memref.alloc() : memref<20xf32>
+  acc.yield %0 : memref<20xf32>
+} copy {
+^bb0(%arg0: memref<20xf32>, %arg1: memref<20xf32>):
+  acc.terminator
+}
+
+// CHECK-LABEL: acc.firstprivate.recipe @firstprivatization_memref_20xf32 : memref<20xf32> init
+
+acc.firstprivate.recipe @firstprivatization_memref_10xf32 : memref<10xf32> init {
 ^bb0(%arg0: memref<10xf32>):
   %0 = memref.alloc() : memref<10xf32>
   acc.yield %0 : memref<10xf32>
@@ -522,18 +565,6 @@ acc.firstprivate.recipe @privatization_memref_10xf32 : memref<10xf32> init {
   memref.dealloc %arg0 : memref<10xf32> 
   acc.terminator
 }
-
-// Test optional destroy region
-acc.firstprivate.recipe @privatization_memref_20xf32 : memref<20xf32> init {
-^bb0(%arg0: memref<20xf32>):
-  %0 = memref.alloc() : memref<20xf32>
-  acc.yield %0 : memref<20xf32>
-} copy {
-^bb0(%arg0: memref<20xf32>, %arg1: memref<20xf32>):
-  acc.terminator
-}
-
-// CHECK-LABEL: acc.firstprivate.recipe @privatization_memref_20xf32 : memref<20xf32> init
 
 func.func @testserialop(%a: memref<10xf32>, %b: memref<10xf32>, %c: memref<10x10xf32>) -> () {
   %i64value = arith.constant 1 : i64
@@ -553,7 +584,8 @@ func.func @testserialop(%a: memref<10xf32>, %b: memref<10xf32>, %c: memref<10x10
   }
   acc.serial wait(%i64value, %i32value, %idxValue : i64, i32, index) {
   }
-  acc.serial private(@privatization_memref_10_f32 -> %a : memref<10xf32>, @privatization_memref_10_10_f32 -> %c : memref<10x10xf32>) firstprivate(%b: memref<10xf32>) {
+  %firstprivate = acc.firstprivate varPtr(%b : memref<10xf32>) -> memref<10xf32>
+  acc.serial private(@privatization_memref_10_f32 -> %a : memref<10xf32>, @privatization_memref_10_10_f32 -> %c : memref<10x10xf32>) firstprivate(@firstprivatization_memref_10xf32 -> %firstprivate : memref<10xf32>) {
   }
   acc.serial {
   } attributes {defaultAttr = #acc<defaultvalue none>}
@@ -589,7 +621,8 @@ func.func @testserialop(%a: memref<10xf32>, %b: memref<10xf32>, %c: memref<10x10
 // CHECK-NEXT: }
 // CHECK:      acc.serial wait([[I64VALUE]], [[I32VALUE]], [[IDXVALUE]] : i64, i32, index) {
 // CHECK-NEXT: }
-// CHECK:      acc.serial firstprivate([[ARGB]] : memref<10xf32>) private(@privatization_memref_10_f32 -> [[ARGA]] : memref<10xf32>, @privatization_memref_10_10_f32 -> [[ARGC]] : memref<10x10xf32>) {
+// CHECK:      %[[FIRSTP:.*]] = acc.firstprivate varPtr([[ARGB]] : memref<10xf32>) -> memref<10xf32>
+// CHECK:      acc.serial firstprivate(@firstprivatization_memref_10xf32 -> %[[FIRSTP]] : memref<10xf32>) private(@privatization_memref_10_f32 -> [[ARGA]] : memref<10xf32>, @privatization_memref_10_10_f32 -> [[ARGC]] : memref<10x10xf32>) {
 // CHECK-NEXT: }
 // CHECK:      acc.serial {
 // CHECK-NEXT: } attributes {defaultAttr = #acc<defaultvalue none>}

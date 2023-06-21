@@ -508,6 +508,10 @@ struct ClientCapabilities {
   /// textDocument.completion.completionItem.documentationFormat
   MarkupKind CompletionDocumentationFormat = MarkupKind::PlainText;
 
+  /// The client has support for completion item label details.
+  /// textDocument.completion.completionItem.labelDetailsSupport.
+  bool CompletionLabelDetail = false;
+
   /// Client supports CodeAction return value for textDocument/codeAction.
   /// textDocument.codeAction.codeActionLiteralSupport.
   bool CodeActionStructure = false;
@@ -1277,10 +1281,27 @@ enum class InsertTextFormat {
   Snippet = 2,
 };
 
+/// Additional details for a completion item label.
+struct CompletionItemLabelDetails {
+  /// An optional string which is rendered less prominently directly after label
+	/// without any spacing. Should be used for function signatures or type
+  /// annotations.
+  std::string detail;
+
+  /// An optional string which is rendered less prominently after
+	/// CompletionItemLabelDetails.detail. Should be used for fully qualified
+	/// names or file path.
+  std::string description;
+};
+llvm::json::Value toJSON(const CompletionItemLabelDetails &);
+
 struct CompletionItem {
   /// The label of this completion item. By default also the text that is
   /// inserted when selecting this completion.
   std::string label;
+
+  /// Additional details for the label.
+  std::optional<CompletionItemLabelDetails> labelDetails;
 
   /// The kind of this completion item. Based of the kind an icon is chosen by
   /// the editor.
@@ -1341,6 +1362,10 @@ struct CompletionItem {
 };
 llvm::json::Value toJSON(const CompletionItem &);
 llvm::raw_ostream &operator<<(llvm::raw_ostream &, const CompletionItem &);
+
+/// Remove the labelDetails field (for clients that don't support it).
+/// Places the information into other fields of the completion item.
+void removeCompletionLabelDetails(CompletionItem &);
 
 bool operator<(const CompletionItem &, const CompletionItem &);
 

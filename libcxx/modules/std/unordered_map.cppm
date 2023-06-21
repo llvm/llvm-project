@@ -19,9 +19,6 @@ export namespace std {
   using std::unordered_multimap;
 
   using std::operator==;
-#if 1 // P1614
-  using std::operator!=;
-#endif
 
   using std::swap;
 

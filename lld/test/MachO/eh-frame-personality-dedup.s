@@ -1,7 +1,7 @@
 # REQUIRES: x86
 # RUN: rm -rf %t; split-file %s %t
-# RUN: llvm-mc -filetype=obj -triple=x86_64-apple-darwin19.0.0 %t/eh-frame.s -o %t/eh-frame.o
-# RUN: llvm-mc -filetype=obj -triple=x86_64-apple-darwin19.0.0 %t/cu.s -o %t/cu.o
+# RUN: llvm-mc -filetype=obj -triple=x86_64-apple-darwin19.0.0 -emit-compact-unwind-non-canonical=true %t/eh-frame.s -o %t/eh-frame.o
+# RUN: llvm-mc -filetype=obj -triple=x86_64-apple-darwin19.0.0 -emit-compact-unwind-non-canonical=true %t/cu.s -o %t/cu.o
 # RUN: %lld -dylib %t/cu.o %t/eh-frame.o -o %t/out
 
 ## Sanity check: we want our input to contain a section (and not symbol)

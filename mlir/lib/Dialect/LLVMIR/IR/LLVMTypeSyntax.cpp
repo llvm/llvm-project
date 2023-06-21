@@ -45,6 +45,7 @@ static StringRef getTypeKeyword(Type type) {
           [&](Type) { return "vec"; })
       .Case<LLVMArrayType>([&](Type) { return "array"; })
       .Case<LLVMStructType>([&](Type) { return "struct"; })
+      .Case<LLVMTargetExtType>([&](Type) { return "target"; })
       .Default([](Type) -> StringRef {
         llvm_unreachable("unexpected 'llvm' type kind");
       });
@@ -119,7 +120,7 @@ void mlir::LLVM::detail::printType(Type type, AsmPrinter &printer) {
 
   llvm::TypeSwitch<Type>(type)
       .Case<LLVMPointerType, LLVMArrayType, LLVMFixedVectorType,
-            LLVMScalableVectorType, LLVMFunctionType>(
+            LLVMScalableVectorType, LLVMFunctionType, LLVMTargetExtType>(
           [&](auto type) { type.print(printer); })
       .Case([&](LLVMStructType structType) {
         printStructType(printer, structType);
@@ -332,6 +333,7 @@ static Type dispatchParse(AsmParser &parser, bool allowAny = true) {
       .Case("vec", [&] { return parseVectorType(parser); })
       .Case("array", [&] { return LLVMArrayType::parse(parser); })
       .Case("struct", [&] { return parseStructType(parser); })
+      .Case("target", [&] { return LLVMTargetExtType::parse(parser); })
       .Default([&] {
         parser.emitError(keyLoc) << "unknown LLVM type: " << key;
         return Type();

@@ -11,6 +11,8 @@
 #define _LIBCPP___ALGORITHM_PSTL_BACKENDS_CPU_BACKENDS_SERIAL_H
 
 #include <__config>
+#include <__utility/move.h>
+#include <cstddef>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header
@@ -28,7 +30,35 @@ _LIBCPP_HIDE_FROM_ABI void __parallel_for(_RandomAccessIterator __first, _Random
   __f(__first, __last);
 }
 
+template <class _Index, class _UnaryOp, class _Tp, class _BinaryOp, class _Reduce>
+_LIBCPP_HIDE_FROM_ABI _Tp
+__parallel_transform_reduce(_Index __first, _Index __last, _UnaryOp, _Tp __init, _BinaryOp, _Reduce __reduce) {
+  return __reduce(std::move(__first), std::move(__last), std::move(__init));
+}
+
+template <class _RandomAccessIterator, class _Compare, class _LeafSort>
+_LIBCPP_HIDE_FROM_ABI void __parallel_stable_sort(
+    _RandomAccessIterator __first, _RandomAccessIterator __last, _Compare __comp, _LeafSort __leaf_sort) {
+  __leaf_sort(__first, __last, __comp);
+}
+
 _LIBCPP_HIDE_FROM_ABI inline void __cancel_execution() {}
+
+template <class _RandomAccessIterator1,
+          class _RandomAccessIterator2,
+          class _RandomAccessIterator3,
+          class _Compare,
+          class _LeafMerge>
+_LIBCPP_HIDE_FROM_ABI void __parallel_merge(
+    _RandomAccessIterator1 __first1,
+    _RandomAccessIterator1 __last1,
+    _RandomAccessIterator2 __first2,
+    _RandomAccessIterator2 __last2,
+    _RandomAccessIterator3 __outit,
+    _Compare __comp,
+    _LeafMerge __leaf_merge) {
+  __leaf_merge(__first1, __last1, __first2, __last2, __outit, __comp);
+}
 
 // TODO: Complete this list
 

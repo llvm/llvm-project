@@ -144,7 +144,7 @@ public:
       // jumps, and (unfused) conditional jumps with nops.  Both the
       // instructions aligned and the alignment method (nop vs prefix) may
       // change in the future.
-      AlignBoundary = assumeAligned(32);;
+      AlignBoundary = assumeAligned(32);
       AlignBranchType.addKind(X86::AlignBranchFused);
       AlignBranchType.addKind(X86::AlignBranchJcc);
       AlignBranchType.addKind(X86::AlignBranchJmp);
@@ -231,20 +231,23 @@ static unsigned getRelaxedOpcode(const MCInst &MI, bool Is16BitMode) {
                                    : X86::getOpcodeForLongImmediateForm(Opcode);
 }
 
-static X86::CondCode getCondFromBranch(const MCInst &MI) {
+static X86::CondCode getCondFromBranch(const MCInst &MI,
+                                       const MCInstrInfo &MCII) {
   unsigned Opcode = MI.getOpcode();
   switch (Opcode) {
   default:
     return X86::COND_INVALID;
-  case X86::JCC_1:
+  case X86::JCC_1: {
+    const MCInstrDesc &Desc = MCII.get(Opcode);
     return static_cast<X86::CondCode>(
-        MI.getOperand(MI.getNumOperands() - 1).getImm());
+        MI.getOperand(Desc.getNumOperands() - 1).getImm());
+  }
   }
 }
 
 static X86::SecondMacroFusionInstKind
-classifySecondInstInMacroFusion(const MCInst &MI) {
-  X86::CondCode CC = getCondFromBranch(MI);
+classifySecondInstInMacroFusion(const MCInst &MI, const MCInstrInfo &MCII) {
+  X86::CondCode CC = getCondFromBranch(MI, MCII);
   return classifySecondCondCodeInMacroFusion(CC);
 }
 
@@ -351,7 +354,7 @@ bool X86AsmBackend::isMacroFused(const MCInst &Cmp, const MCInst &Jcc) const {
   const X86::FirstMacroFusionInstKind CmpKind =
       X86::classifyFirstOpcodeInMacroFusion(Cmp.getOpcode());
   const X86::SecondMacroFusionInstKind BranchKind =
-      classifySecondInstInMacroFusion(Jcc);
+      classifySecondInstInMacroFusion(Jcc, *MCII);
   return X86::isMacroFused(CmpKind, BranchKind);
 }
 
@@ -1324,9 +1327,13 @@ public:
 
   /// Implementation of algorithm to generate the compact unwind encoding
   /// for the CFI instructions.
-  uint32_t
-  generateCompactUnwindEncoding(ArrayRef<MCCFIInstruction> Instrs) const override {
+  uint32_t generateCompactUnwindEncoding(const MCDwarfFrameInfo *FI,
+                                         const MCContext *Ctxt) const override {
+    ArrayRef<MCCFIInstruction> Instrs = FI->Instructions;
     if (Instrs.empty()) return 0;
+    if (!isDarwinCanonicalPersonality(FI->Personality) &&
+        !Ctxt->emitCompactUnwindNonCanonical())
+      return CU::UNWIND_MODE_DWARF;
 
     // Reset the saved registers.
     unsigned SavedRegIdx = 0;
@@ -1512,6 +1519,12 @@ MCAsmBackend *llvm::createX86_64AsmBackend(const Target &T,
 
   if (TheTriple.isOSWindows() && TheTriple.isOSBinFormatCOFF())
     return new WindowsX86AsmBackend(T, true, STI);
+
+  if (TheTriple.isUEFI()) {
+    assert(TheTriple.isOSBinFormatCOFF() &&
+         "Only COFF format is supported in UEFI environment.");
+    return new WindowsX86AsmBackend(T, true, STI);
+  }
 
   uint8_t OSABI = MCELFObjectTargetWriter::getOSABI(TheTriple.getOS());
 

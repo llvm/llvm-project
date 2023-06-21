@@ -202,6 +202,14 @@ add_entrypoint_object(
     libc.include.stdlib
 )
 
+add_header_library(
+  qsort_util
+  HDRS
+    qsort_util.h
+  DEPENDS
+    libc.include.stdlib
+)
+
 add_entrypoint_object(
   qsort
   SRCS
@@ -209,6 +217,18 @@ add_entrypoint_object(
   HDRS
     qsort.h
   DEPENDS
+    .qsort_util
+    libc.include.stdlib
+)
+
+add_entrypoint_object(
+  qsort_r
+  SRCS
+    qsort_r.cpp
+  HDRS
+    qsort_r.h
+  DEPENDS
+    .qsort_util
     libc.include.stdlib
 )
 
@@ -287,10 +307,7 @@ if(LLVM_LIBC_INCLUDE_SCUDO)
     DEPENDS
       ${SCUDO_DEPS}
   )
-else()
-  add_entrypoint_external(
-    malloc
-  )
+elseif(LIBC_TARGET_ARCHITECTURE_IS_GPU)
   add_entrypoint_external(
     calloc
   )
@@ -300,8 +317,21 @@ else()
   add_entrypoint_external(
     aligned_alloc
   )
+else()
+  add_entrypoint_external(
+    malloc
+  )
   add_entrypoint_external(
     free
+  )
+  add_entrypoint_external(
+    calloc
+  )
+  add_entrypoint_external(
+    realloc
+  )
+  add_entrypoint_external(
+    aligned_alloc
   )
 endif()
 
@@ -356,3 +386,19 @@ add_entrypoint_object(
   DEPENDS
     .${LIBC_TARGET_OS}.abort
 )
+
+if(LIBC_TARGET_ARCHITECTURE_IS_GPU)
+  add_entrypoint_object(
+    malloc
+    ALIAS
+    DEPENDS
+      .${LIBC_TARGET_OS}.malloc
+  )
+
+  add_entrypoint_object(
+    free
+    ALIAS
+    DEPENDS
+      .${LIBC_TARGET_OS}.free
+  )
+endif()

@@ -56,7 +56,6 @@ void *from_val_array(value Elements);
 #define Use_val(v) ((LLVMUseRef)from_val(v))
 #define BasicBlock_val(v) ((LLVMBasicBlockRef)from_val(v))
 #define MemoryBuffer_val(v) ((LLVMMemoryBufferRef)from_val(v))
-#define PassManager_val(v) ((LLVMPassManagerRef)from_val(v))
 
 /* Convert a C pointer to an OCaml option */
 value ptr_to_option(void *Ptr);

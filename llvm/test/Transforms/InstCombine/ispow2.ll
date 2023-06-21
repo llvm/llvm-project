@@ -282,7 +282,7 @@ define i1 @is_pow2_ctpop_wrong_cmp_op1_logical(i32 %x) {
 ; CHECK-NEXT:    [[T0:%.*]] = tail call i32 @llvm.ctpop.i32(i32 [[X:%.*]]), !range [[RNG0]]
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp ult i32 [[T0]], 3
 ; CHECK-NEXT:    [[NOTZERO:%.*]] = icmp ne i32 [[X]], 0
-; CHECK-NEXT:    [[R:%.*]] = and i1 [[NOTZERO]], [[CMP]]
+; CHECK-NEXT:    [[R:%.*]] = select i1 [[NOTZERO]], i1 [[CMP]], i1 false
 ; CHECK-NEXT:    ret i1 [[R]]
 ;
   %t0 = tail call i32 @llvm.ctpop.i32(i32 %x)
@@ -314,7 +314,7 @@ define i1 @is_pow2_ctpop_wrong_cmp_op2_logical(i32 %x) {
 ; CHECK-NEXT:    [[T0:%.*]] = tail call i32 @llvm.ctpop.i32(i32 [[X:%.*]]), !range [[RNG0]]
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp ult i32 [[T0]], 2
 ; CHECK-NEXT:    [[NOTZERO:%.*]] = icmp ne i32 [[X]], 1
-; CHECK-NEXT:    [[R:%.*]] = and i1 [[NOTZERO]], [[CMP]]
+; CHECK-NEXT:    [[R:%.*]] = select i1 [[NOTZERO]], i1 [[CMP]], i1 false
 ; CHECK-NEXT:    ret i1 [[R]]
 ;
   %t0 = tail call i32 @llvm.ctpop.i32(i32 %x)
@@ -346,7 +346,7 @@ define i1 @is_pow2_ctpop_wrong_pred1_logical(i32 %x) {
 ; CHECK-NEXT:    [[T0:%.*]] = tail call i32 @llvm.ctpop.i32(i32 [[X:%.*]]), !range [[RNG0]]
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp ugt i32 [[T0]], 2
 ; CHECK-NEXT:    [[NOTZERO:%.*]] = icmp ne i32 [[X]], 0
-; CHECK-NEXT:    [[R:%.*]] = and i1 [[NOTZERO]], [[CMP]]
+; CHECK-NEXT:    [[R:%.*]] = select i1 [[NOTZERO]], i1 [[CMP]], i1 false
 ; CHECK-NEXT:    ret i1 [[R]]
 ;
   %t0 = tail call i32 @llvm.ctpop.i32(i32 %x)
@@ -378,7 +378,7 @@ define i1 @is_pow2_ctpop_wrong_pred2_logical(i32 %x) {
 ; CHECK-NEXT:    [[T0:%.*]] = tail call i32 @llvm.ctpop.i32(i32 [[X:%.*]]), !range [[RNG0]]
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp ult i32 [[T0]], 2
 ; CHECK-NEXT:    [[CMP2:%.*]] = icmp sgt i32 [[X]], 0
-; CHECK-NEXT:    [[R:%.*]] = and i1 [[CMP2]], [[CMP]]
+; CHECK-NEXT:    [[R:%.*]] = select i1 [[CMP2]], i1 [[CMP]], i1 false
 ; CHECK-NEXT:    ret i1 [[R]]
 ;
   %t0 = tail call i32 @llvm.ctpop.i32(i32 %x)
@@ -493,7 +493,7 @@ define i1 @isnot_pow2_ctpop_wrong_cmp_op1_logical(i32 %x) {
 ; CHECK-NEXT:    [[T0:%.*]] = tail call i32 @llvm.ctpop.i32(i32 [[X:%.*]]), !range [[RNG0]]
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp ugt i32 [[T0]], 2
 ; CHECK-NEXT:    [[ISZERO:%.*]] = icmp eq i32 [[X]], 0
-; CHECK-NEXT:    [[R:%.*]] = or i1 [[ISZERO]], [[CMP]]
+; CHECK-NEXT:    [[R:%.*]] = select i1 [[ISZERO]], i1 true, i1 [[CMP]]
 ; CHECK-NEXT:    ret i1 [[R]]
 ;
   %t0 = tail call i32 @llvm.ctpop.i32(i32 %x)
@@ -525,7 +525,7 @@ define i1 @isnot_pow2_ctpop_wrong_cmp_op2_logical(i32 %x) {
 ; CHECK-NEXT:    [[T0:%.*]] = tail call i32 @llvm.ctpop.i32(i32 [[X:%.*]]), !range [[RNG0]]
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp ugt i32 [[T0]], 1
 ; CHECK-NEXT:    [[ISZERO:%.*]] = icmp eq i32 [[X]], 1
-; CHECK-NEXT:    [[R:%.*]] = or i1 [[ISZERO]], [[CMP]]
+; CHECK-NEXT:    [[R:%.*]] = select i1 [[ISZERO]], i1 true, i1 [[CMP]]
 ; CHECK-NEXT:    ret i1 [[R]]
 ;
   %t0 = tail call i32 @llvm.ctpop.i32(i32 %x)
@@ -557,7 +557,7 @@ define i1 @isnot_pow2_ctpop_wrong_pred2_logical(i32 %x) {
 ; CHECK-NEXT:    [[T0:%.*]] = tail call i32 @llvm.ctpop.i32(i32 [[X:%.*]]), !range [[RNG0]]
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp ugt i32 [[T0]], 1
 ; CHECK-NEXT:    [[CMP2:%.*]] = icmp slt i32 [[X]], 0
-; CHECK-NEXT:    [[R:%.*]] = or i1 [[CMP2]], [[CMP]]
+; CHECK-NEXT:    [[R:%.*]] = select i1 [[CMP2]], i1 true, i1 [[CMP]]
 ; CHECK-NEXT:    ret i1 [[R]]
 ;
   %t0 = tail call i32 @llvm.ctpop.i32(i32 %x)
@@ -855,7 +855,7 @@ define i1 @is_pow2or0_ctpop_wrong_cmp_op1_logical(i32 %x) {
 ; CHECK-NEXT:    [[T0:%.*]] = tail call i32 @llvm.ctpop.i32(i32 [[X:%.*]]), !range [[RNG0]]
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i32 [[T0]], 3
 ; CHECK-NEXT:    [[ISZERO:%.*]] = icmp eq i32 [[X]], 0
-; CHECK-NEXT:    [[R:%.*]] = or i1 [[ISZERO]], [[CMP]]
+; CHECK-NEXT:    [[R:%.*]] = select i1 [[ISZERO]], i1 true, i1 [[CMP]]
 ; CHECK-NEXT:    ret i1 [[R]]
 ;
   %t0 = tail call i32 @llvm.ctpop.i32(i32 %x)
@@ -914,11 +914,7 @@ define i1 @is_pow2or0_ctpop_wrong_pred2(i32 %x) {
 
 define i1 @is_pow2or0_ctpop_wrong_pred2_logical(i32 %x) {
 ; CHECK-LABEL: @is_pow2or0_ctpop_wrong_pred2_logical(
-; CHECK-NEXT:    [[T0:%.*]] = tail call i32 @llvm.ctpop.i32(i32 [[X:%.*]]), !range [[RNG0]]
-; CHECK-NEXT:    [[CMP:%.*]] = icmp ne i32 [[T0]], 1
-; CHECK-NEXT:    [[ISZERO:%.*]] = icmp ne i32 [[X]], 0
-; CHECK-NEXT:    [[R:%.*]] = or i1 [[ISZERO]], [[CMP]]
-; CHECK-NEXT:    ret i1 [[R]]
+; CHECK-NEXT:    ret i1 true
 ;
   %t0 = tail call i32 @llvm.ctpop.i32(i32 %x)
   %cmp = icmp ne i32 %t0, 1
@@ -1062,7 +1058,7 @@ define i1 @isnot_pow2nor0_ctpop_wrong_cmp_op1_logical(i32 %x) {
 ; CHECK-NEXT:    [[T0:%.*]] = tail call i32 @llvm.ctpop.i32(i32 [[X:%.*]]), !range [[RNG0]]
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp ne i32 [[T0]], 5
 ; CHECK-NEXT:    [[NOTZERO:%.*]] = icmp ne i32 [[X]], 0
-; CHECK-NEXT:    [[R:%.*]] = and i1 [[NOTZERO]], [[CMP]]
+; CHECK-NEXT:    [[R:%.*]] = select i1 [[NOTZERO]], i1 [[CMP]], i1 false
 ; CHECK-NEXT:    ret i1 [[R]]
 ;
   %t0 = tail call i32 @llvm.ctpop.i32(i32 %x)
@@ -1121,11 +1117,7 @@ define i1 @isnot_pow2nor0_ctpop_wrong_pred2(i32 %x) {
 
 define i1 @isnot_pow2nor0_ctpop_wrong_pred2_logical(i32 %x) {
 ; CHECK-LABEL: @isnot_pow2nor0_ctpop_wrong_pred2_logical(
-; CHECK-NEXT:    [[T0:%.*]] = tail call i32 @llvm.ctpop.i32(i32 [[X:%.*]]), !range [[RNG0]]
-; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i32 [[T0]], 1
-; CHECK-NEXT:    [[NOTZERO:%.*]] = icmp eq i32 [[X]], 0
-; CHECK-NEXT:    [[R:%.*]] = and i1 [[NOTZERO]], [[CMP]]
-; CHECK-NEXT:    ret i1 [[R]]
+; CHECK-NEXT:    ret i1 false
 ;
   %t0 = tail call i32 @llvm.ctpop.i32(i32 %x)
   %cmp = icmp eq i32 %t0, 1
@@ -1147,4 +1139,17 @@ define <2 x i1> @isnot_pow2nor0_wrong_pred3_ctpop_commute_vec(<2 x i8> %x) {
   %notzero = icmp ne <2 x i8> %x, <i8 0, i8 0>
   %r = or <2 x i1> %cmp, %notzero
   ret <2 x i1> %r
+}
+
+define i1 @is_pow2_fail_pr63327(i32 %x) {
+; CHECK-LABEL: @is_pow2_fail_pr63327(
+; CHECK-NEXT:    [[NX:%.*]] = sub i32 0, [[X:%.*]]
+; CHECK-NEXT:    [[X_AND_NX:%.*]] = and i32 [[NX]], [[X]]
+; CHECK-NEXT:    [[R:%.*]] = icmp sge i32 [[X_AND_NX]], [[X]]
+; CHECK-NEXT:    ret i1 [[R]]
+;
+  %nx = sub i32 0, %x
+  %x_and_nx = and i32 %x, %nx
+  %r = icmp sge i32 %x_and_nx, %x
+  ret i1 %r
 }

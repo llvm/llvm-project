@@ -98,16 +98,10 @@ Properties::Apropos(llvm::StringRef keyword,
   return matching_properties.size();
 }
 
-lldb::OptionValuePropertiesSP
-Properties::GetSubProperty(const ExecutionContext *exe_ctx,
-                           ConstString name) {
-  OptionValuePropertiesSP properties_sp(GetValueProperties());
-  if (properties_sp)
-    return properties_sp->GetSubProperty(exe_ctx, name);
-  return lldb::OptionValuePropertiesSP();
+llvm::StringRef Properties::GetExperimentalSettingsName() {
+  static constexpr llvm::StringLiteral g_experimental("experimental");
+  return g_experimental;
 }
-
-const char *Properties::GetExperimentalSettingsName() { return "experimental"; }
 
 bool Properties::IsSettingExperimental(llvm::StringRef setting) {
   if (setting.empty())

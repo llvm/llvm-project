@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -no-opaque-pointers -triple i686-linux-gnu %s -emit-llvm -o - | FileCheck %s
+// RUN: %clang_cc1 -triple i686-linux-gnu %s -emit-llvm -o - | FileCheck %s
 
 class A {
   // append has to have the same prototype as fn1 to tickle the bug.
@@ -17,16 +17,13 @@ class C {
 };
 class D : C {};
 
-void fn1(A *p1) {
-}
-
-void
-fn2(C *) {
-}
+A p1;
+C p2;
+D p3;
 
 // We end up using an opaque type for 'append' to avoid circular references.
-// CHECK: %class.A = type { {}* }
-// CHECK: %class.C = type <{ %class.D*, %class.B, [3 x i8] }>
-// CHECK: %class.D = type { %class.C.base, [3 x i8] }
-// CHECK: %class.C.base = type <{ %class.D*, %class.B }>
+// CHECK: %class.A = type { ptr }
+// CHECK: %class.C = type <{ ptr, %class.B, [3 x i8] }>
 // CHECK: %class.B = type { i8 }
+// CHECK: %class.D = type { %class.C.base, [3 x i8] }
+// CHECK: %class.C.base = type <{ ptr, %class.B }>

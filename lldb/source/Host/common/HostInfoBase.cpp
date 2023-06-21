@@ -225,24 +225,20 @@ bool HostInfoBase::ComputePathRelativeToLibrary(FileSpec &file_spec,
     return false;
 
   std::string raw_path = lldb_file_spec.GetPath();
-  LLDB_LOGF(log,
-            "HostInfo::%s() attempting to "
-            "derive the path %s relative to liblldb install path: %s",
-            __FUNCTION__, dir.data(), raw_path.c_str());
+  LLDB_LOG(
+      log,
+      "Attempting to derive the path {0} relative to liblldb install path: {1}",
+      dir, raw_path);
 
   // Drop bin (windows) or lib
   llvm::StringRef parent_path = llvm::sys::path::parent_path(raw_path);
   if (parent_path.empty()) {
-    LLDB_LOGF(log,
-              "HostInfo::%s() failed to find liblldb within the shared "
-              "lib path",
-              __FUNCTION__);
+    LLDB_LOG(log, "Failed to find liblldb within the shared lib path");
     return false;
   }
 
   raw_path = (parent_path + dir).str();
-  LLDB_LOGF(log, "HostInfo::%s() derived the path as: %s", __FUNCTION__,
-            raw_path.c_str());
+  LLDB_LOG(log, "Derived the path as: {0}", raw_path);
   file_spec.SetDirectory(raw_path);
   return (bool)file_spec.GetDirectory();
 }

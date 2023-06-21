@@ -492,6 +492,7 @@ DeclRefExpr::DeclRefExpr(const ASTContext &Ctx, ValueDecl *D,
   DeclRefExprBits.RefersToEnclosingVariableOrCapture =
       RefersToEnclosingVariableOrCapture;
   DeclRefExprBits.NonOdrUseReason = NOUR;
+  DeclRefExprBits.IsImmediateEscalating = false;
   DeclRefExprBits.Loc = L;
   setDependence(computeDependence(this, Ctx));
 }
@@ -529,6 +530,7 @@ DeclRefExpr::DeclRefExpr(const ASTContext &Ctx,
     getTrailingObjects<ASTTemplateKWAndArgsInfo>()->initializeFrom(
         TemplateKWLoc);
   }
+  DeclRefExprBits.IsImmediateEscalating = false;
   DeclRefExprBits.HadMultipleCandidates = 0;
   setDependence(computeDependence(this, Ctx));
 }
@@ -784,7 +786,21 @@ std::string PredefinedExpr::ComputeName(IdentKind IK, const Decl *CurrentDecl) {
         Out << "static ";
     }
 
+    class PrettyCallbacks final : public PrintingCallbacks {
+    public:
+      PrettyCallbacks(const LangOptions &LO) : LO(LO) {}
+      std::string remapPath(StringRef Path) const override {
+        SmallString<128> p(Path);
+        LO.remapPathPrefix(p);
+        return std::string(p);
+      }
+
+    private:
+      const LangOptions &LO;
+    };
     PrintingPolicy Policy(Context.getLangOpts());
+    PrettyCallbacks PrettyCB(Context.getLangOpts());
+    Policy.Callbacks = &PrettyCB;
     std::string Proto;
     llvm::raw_string_ostream POut(Proto);
 
@@ -4326,18 +4342,48 @@ GenericSelectionExpr::GenericSelectionExpr(
            AssocExprs[ResultIndex]->getValueKind(),
            AssocExprs[ResultIndex]->getObjectKind()),
       NumAssocs(AssocExprs.size()), ResultIndex(ResultIndex),
-      DefaultLoc(DefaultLoc), RParenLoc(RParenLoc) {
+      IsExprPredicate(true), DefaultLoc(DefaultLoc), RParenLoc(RParenLoc) {
   assert(AssocTypes.size() == AssocExprs.size() &&
          "Must have the same number of association expressions"
          " and TypeSourceInfo!");
   assert(ResultIndex < NumAssocs && "ResultIndex is out-of-bounds!");
 
   GenericSelectionExprBits.GenericLoc = GenericLoc;
-  getTrailingObjects<Stmt *>()[ControllingIndex] = ControllingExpr;
+  getTrailingObjects<Stmt *>()[getIndexOfControllingExpression()] =
+      ControllingExpr;
   std::copy(AssocExprs.begin(), AssocExprs.end(),
-            getTrailingObjects<Stmt *>() + AssocExprStartIndex);
+            getTrailingObjects<Stmt *>() + getIndexOfStartOfAssociatedExprs());
   std::copy(AssocTypes.begin(), AssocTypes.end(),
-            getTrailingObjects<TypeSourceInfo *>());
+            getTrailingObjects<TypeSourceInfo *>() +
+                getIndexOfStartOfAssociatedTypes());
+
+  setDependence(computeDependence(this, ContainsUnexpandedParameterPack));
+}
+
+GenericSelectionExpr::GenericSelectionExpr(
+    const ASTContext &, SourceLocation GenericLoc,
+    TypeSourceInfo *ControllingType, ArrayRef<TypeSourceInfo *> AssocTypes,
+    ArrayRef<Expr *> AssocExprs, SourceLocation DefaultLoc,
+    SourceLocation RParenLoc, bool ContainsUnexpandedParameterPack,
+    unsigned ResultIndex)
+    : Expr(GenericSelectionExprClass, AssocExprs[ResultIndex]->getType(),
+           AssocExprs[ResultIndex]->getValueKind(),
+           AssocExprs[ResultIndex]->getObjectKind()),
+      NumAssocs(AssocExprs.size()), ResultIndex(ResultIndex),
+      IsExprPredicate(false), DefaultLoc(DefaultLoc), RParenLoc(RParenLoc) {
+  assert(AssocTypes.size() == AssocExprs.size() &&
+         "Must have the same number of association expressions"
+         " and TypeSourceInfo!");
+  assert(ResultIndex < NumAssocs && "ResultIndex is out-of-bounds!");
+
+  GenericSelectionExprBits.GenericLoc = GenericLoc;
+  getTrailingObjects<TypeSourceInfo *>()[getIndexOfControllingType()] =
+      ControllingType;
+  std::copy(AssocExprs.begin(), AssocExprs.end(),
+            getTrailingObjects<Stmt *>() + getIndexOfStartOfAssociatedExprs());
+  std::copy(AssocTypes.begin(), AssocTypes.end(),
+            getTrailingObjects<TypeSourceInfo *>() +
+                getIndexOfStartOfAssociatedTypes());
 
   setDependence(computeDependence(this, ContainsUnexpandedParameterPack));
 }
@@ -4350,17 +4396,44 @@ GenericSelectionExpr::GenericSelectionExpr(
     : Expr(GenericSelectionExprClass, Context.DependentTy, VK_PRValue,
            OK_Ordinary),
       NumAssocs(AssocExprs.size()), ResultIndex(ResultDependentIndex),
-      DefaultLoc(DefaultLoc), RParenLoc(RParenLoc) {
+      IsExprPredicate(true), DefaultLoc(DefaultLoc), RParenLoc(RParenLoc) {
   assert(AssocTypes.size() == AssocExprs.size() &&
          "Must have the same number of association expressions"
          " and TypeSourceInfo!");
 
   GenericSelectionExprBits.GenericLoc = GenericLoc;
-  getTrailingObjects<Stmt *>()[ControllingIndex] = ControllingExpr;
+  getTrailingObjects<Stmt *>()[getIndexOfControllingExpression()] =
+      ControllingExpr;
   std::copy(AssocExprs.begin(), AssocExprs.end(),
-            getTrailingObjects<Stmt *>() + AssocExprStartIndex);
+            getTrailingObjects<Stmt *>() + getIndexOfStartOfAssociatedExprs());
   std::copy(AssocTypes.begin(), AssocTypes.end(),
-            getTrailingObjects<TypeSourceInfo *>());
+            getTrailingObjects<TypeSourceInfo *>() +
+                getIndexOfStartOfAssociatedTypes());
+
+  setDependence(computeDependence(this, ContainsUnexpandedParameterPack));
+}
+
+GenericSelectionExpr::GenericSelectionExpr(
+    const ASTContext &Context, SourceLocation GenericLoc,
+    TypeSourceInfo *ControllingType, ArrayRef<TypeSourceInfo *> AssocTypes,
+    ArrayRef<Expr *> AssocExprs, SourceLocation DefaultLoc,
+    SourceLocation RParenLoc, bool ContainsUnexpandedParameterPack)
+    : Expr(GenericSelectionExprClass, Context.DependentTy, VK_PRValue,
+           OK_Ordinary),
+      NumAssocs(AssocExprs.size()), ResultIndex(ResultDependentIndex),
+      IsExprPredicate(false), DefaultLoc(DefaultLoc), RParenLoc(RParenLoc) {
+  assert(AssocTypes.size() == AssocExprs.size() &&
+         "Must have the same number of association expressions"
+         " and TypeSourceInfo!");
+
+  GenericSelectionExprBits.GenericLoc = GenericLoc;
+  getTrailingObjects<TypeSourceInfo *>()[getIndexOfControllingType()] =
+      ControllingType;
+  std::copy(AssocExprs.begin(), AssocExprs.end(),
+            getTrailingObjects<Stmt *>() + getIndexOfStartOfAssociatedExprs());
+  std::copy(AssocTypes.begin(), AssocTypes.end(),
+            getTrailingObjects<TypeSourceInfo *>() +
+                getIndexOfStartOfAssociatedTypes());
 
   setDependence(computeDependence(this, ContainsUnexpandedParameterPack));
 }
@@ -4393,6 +4466,35 @@ GenericSelectionExpr *GenericSelectionExpr::Create(
       alignof(GenericSelectionExpr));
   return new (Mem) GenericSelectionExpr(
       Context, GenericLoc, ControllingExpr, AssocTypes, AssocExprs, DefaultLoc,
+      RParenLoc, ContainsUnexpandedParameterPack);
+}
+
+GenericSelectionExpr *GenericSelectionExpr::Create(
+    const ASTContext &Context, SourceLocation GenericLoc,
+    TypeSourceInfo *ControllingType, ArrayRef<TypeSourceInfo *> AssocTypes,
+    ArrayRef<Expr *> AssocExprs, SourceLocation DefaultLoc,
+    SourceLocation RParenLoc, bool ContainsUnexpandedParameterPack,
+    unsigned ResultIndex) {
+  unsigned NumAssocs = AssocExprs.size();
+  void *Mem = Context.Allocate(
+      totalSizeToAlloc<Stmt *, TypeSourceInfo *>(1 + NumAssocs, NumAssocs),
+      alignof(GenericSelectionExpr));
+  return new (Mem) GenericSelectionExpr(
+      Context, GenericLoc, ControllingType, AssocTypes, AssocExprs, DefaultLoc,
+      RParenLoc, ContainsUnexpandedParameterPack, ResultIndex);
+}
+
+GenericSelectionExpr *GenericSelectionExpr::Create(
+    const ASTContext &Context, SourceLocation GenericLoc,
+    TypeSourceInfo *ControllingType, ArrayRef<TypeSourceInfo *> AssocTypes,
+    ArrayRef<Expr *> AssocExprs, SourceLocation DefaultLoc,
+    SourceLocation RParenLoc, bool ContainsUnexpandedParameterPack) {
+  unsigned NumAssocs = AssocExprs.size();
+  void *Mem = Context.Allocate(
+      totalSizeToAlloc<Stmt *, TypeSourceInfo *>(1 + NumAssocs, NumAssocs),
+      alignof(GenericSelectionExpr));
+  return new (Mem) GenericSelectionExpr(
+      Context, GenericLoc, ControllingType, AssocTypes, AssocExprs, DefaultLoc,
       RParenLoc, ContainsUnexpandedParameterPack);
 }
 
@@ -4857,6 +4959,7 @@ unsigned AtomicExpr::getNumSubExprs(AtomicOp Op) {
 
   case AO__hip_atomic_exchange:
   case AO__hip_atomic_fetch_add:
+  case AO__hip_atomic_fetch_sub:
   case AO__hip_atomic_fetch_and:
   case AO__hip_atomic_fetch_or:
   case AO__hip_atomic_fetch_xor:

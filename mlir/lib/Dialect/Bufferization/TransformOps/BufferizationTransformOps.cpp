@@ -26,7 +26,8 @@ using namespace mlir::transform;
 //===----------------------------------------------------------------------===//
 
 DiagnosedSilenceableFailure
-transform::OneShotBufferizeOp::apply(TransformResults &transformResults,
+transform::OneShotBufferizeOp::apply(transform::TransformRewriter &rewriter,
+                                     TransformResults &transformResults,
                                      TransformState &state) {
   OneShotBufferizationOptions options;
   options.allowReturnAllocs = getAllowReturnAllocs();
@@ -71,10 +72,9 @@ void transform::EliminateEmptyTensorsOp::getEffects(
   modifiesPayload(effects);
 }
 
-DiagnosedSilenceableFailure
-transform::EliminateEmptyTensorsOp::apply(TransformResults &transformResults,
-                                          TransformState &state) {
-  IRRewriter rewriter(getContext());
+DiagnosedSilenceableFailure transform::EliminateEmptyTensorsOp::apply(
+    transform::TransformRewriter &rewriter, TransformResults &transformResults,
+    TransformState &state) {
   OneShotBufferizationOptions options;
   options.allowReturnAllocs = true;
 
@@ -95,11 +95,9 @@ transform::EliminateEmptyTensorsOp::apply(TransformResults &transformResults,
 // EmptyTensorToAllocTensorOp
 //===----------------------------------------------------------------------===//
 
-DiagnosedSilenceableFailure
-EmptyTensorToAllocTensorOp::applyToOne(tensor::EmptyOp target,
-                                       ApplyToEachResultList &results,
-                                       transform::TransformState &state) {
-  IRRewriter rewriter(target->getContext());
+DiagnosedSilenceableFailure EmptyTensorToAllocTensorOp::applyToOne(
+    transform::TransformRewriter &rewriter, tensor::EmptyOp target,
+    ApplyToEachResultList &results, transform::TransformState &state) {
   rewriter.setInsertionPoint(target);
   auto alloc = rewriter.replaceOpWithNewOp<bufferization::AllocTensorOp>(
       target, target.getType(), target.getDynamicSizes());

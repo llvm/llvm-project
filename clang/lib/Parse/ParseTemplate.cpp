@@ -210,7 +210,15 @@ Decl *Parser::ParseSingleDeclarationAfterTemplate(
   }
 
   ParsedAttributes prefixAttrs(AttrFactory);
-  MaybeParseCXX11Attributes(prefixAttrs);
+  ParsedAttributes DeclSpecAttrs(AttrFactory);
+
+  // GNU attributes are applied to the declaration specification while the
+  // standard attributes are applied to the declaration.  We parse the two
+  // attribute sets into different containters so we can apply them during
+  // the regular parsing process.
+  while (MaybeParseCXX11Attributes(prefixAttrs) ||
+         MaybeParseGNUAttributes(DeclSpecAttrs))
+    ;
 
   if (Tok.is(tok::kw_using)) {
     auto usingDeclPtr = ParseUsingDirectiveOrDeclaration(Context, TemplateInfo, DeclEnd,
@@ -223,6 +231,9 @@ Decl *Parser::ParseSingleDeclarationAfterTemplate(
   // Parse the declaration specifiers, stealing any diagnostics from
   // the template parameters.
   ParsingDeclSpec DS(*this, &DiagsFromTParams);
+  DS.SetRangeStart(DeclSpecAttrs.Range.getBegin());
+  DS.SetRangeEnd(DeclSpecAttrs.Range.getEnd());
+  DS.takeAttributesFrom(DeclSpecAttrs);
 
   ParseDeclarationSpecifiers(DS, TemplateInfo, AS,
                              getDeclSpecContextFromDeclaratorContext(Context));

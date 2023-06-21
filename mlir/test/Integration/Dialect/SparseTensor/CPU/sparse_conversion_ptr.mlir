@@ -34,14 +34,14 @@
 
 #DCSC  = #sparse_tensor.encoding<{
   lvlTypes = [ "compressed", "compressed" ],
-  dimOrdering = affine_map<(i,j) -> (j,i)>,
+  dimToLvl = affine_map<(i,j) -> (j,i)>,
   posWidth = 64,
   crdWidth = 64
 }>
 
 #CSC  = #sparse_tensor.encoding<{
   lvlTypes = [ "dense", "compressed" ],
-  dimOrdering = affine_map<(i,j) -> (j,i)>,
+  dimToLvl = affine_map<(i,j) -> (j,i)>,
   posWidth = 16,
   crdWidth = 32
 }>

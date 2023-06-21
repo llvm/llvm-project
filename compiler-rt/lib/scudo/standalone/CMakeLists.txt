@@ -114,6 +114,13 @@ set(SCUDO_SOURCES
   timing.cpp
   )
 
+# Temporary hack until LLVM libc supports inttypes.h print format macros
+# See: https://github.com/llvm/llvm-project/issues/63317#issuecomment-1591906241
+if(LLVM_LIBC_INCLUDE_SCUDO)
+  list(REMOVE_ITEM SCUDO_HEADERS timing.h)
+  list(REMOVE_ITEM SCUDO_SOURCES timing.cpp)
+endif()
+
 # Enable the necessary instruction set for scudo_crc32.cpp, if available.
 # Newer compiler versions use -mcrc32 rather than -msse4.2.
 if (COMPILER_RT_HAS_MCRC32_FLAG)

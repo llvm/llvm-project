@@ -2,7 +2,7 @@
 ; RUN: llc < %s -march=nvptx64 -mcpu=sm_20 | FileCheck %s --check-prefix PTX
 ; RUN: opt -mtriple=nvptx-- < %s -S -passes=infer-address-spaces | FileCheck %s --check-prefix IR
 ; RUN: opt -mtriple=nvptx64-- < %s -S -passes=infer-address-spaces | FileCheck %s --check-prefix IR
-; RUN: %if ptxas %{ llc < %s -march=nvptx -mcpu=sm_20 | %ptxas-verify %}
+; RUN: %if ptxas && !ptxas-12.0 %{ llc < %s -march=nvptx -mcpu=sm_20 | %ptxas-verify %}
 ; RUN: %if ptxas %{ llc < %s -march=nvptx64 -mcpu=sm_20 | %ptxas-verify %}
 
 @array = internal addrspace(3) global [10 x float] zeroinitializer, align 4

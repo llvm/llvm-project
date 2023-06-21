@@ -90,6 +90,7 @@ StringRef getPlatformName(PlatformType Platform) {
 
 PlatformType getPlatformFromName(StringRef Name) {
   return StringSwitch<PlatformType>(Name)
+      .Case("osx", PLATFORM_MACOS)
       .Case("macos", PLATFORM_MACOS)
       .Case("ios", PLATFORM_IOS)
       .Case("tvos", PLATFORM_TVOS)

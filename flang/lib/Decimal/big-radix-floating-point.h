@@ -348,11 +348,26 @@ private:
   using Raw = typename Real::RawType;
   constexpr Raw SignBit() const { return Raw{isNegative_} << (Real::bits - 1); }
   constexpr Raw Infinity() const {
-    return (Raw{Real::maxExponent} << Real::significandBits) | SignBit();
+    Raw result{static_cast<Raw>(Real::maxExponent)};
+    result <<= Real::significandBits;
+    result |= SignBit();
+    if constexpr (Real::bits == 80) { // x87
+      result |= Raw{1} << 63;
+    }
+    return result;
   }
   constexpr Raw NaN(bool isQuiet = true) {
-    return (Raw{Real::maxExponent} << Real::significandBits) |
-        (Raw{1} << (Real::significandBits - (isQuiet ? 1 : 2))) | SignBit();
+    Raw result{Real::maxExponent};
+    result <<= Real::significandBits;
+    result |= SignBit();
+    if constexpr (Real::bits == 80) { // x87
+      result |= Raw{isQuiet ? 3u : 2u} << 62;
+    } else {
+      Raw quiet{isQuiet ? Raw{2} : Raw{1}};
+      quiet <<= Real::significandBits - 2;
+      result |= quiet;
+    }
+    return result;
   }
 
   Digit digit_[maxDigits]; // in little-endian order: digit_[0] is LSD

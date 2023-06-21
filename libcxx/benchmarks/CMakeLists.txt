@@ -1,8 +1,3 @@
-if (CMAKE_VERSION VERSION_LESS 3.17)
-  message(WARNING "The libc++ benchmarks won't be available because the version of CMake is too old to support them.")
-  return()
-endif()
-
 include(ExternalProject)
 include(CheckCXXCompilerFlag)
 

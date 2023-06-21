@@ -45,6 +45,7 @@ tool_patterns = [
     "llvm-objdump",
     "llvm-otool",
     "llvm-pdbutil",
+    "llvm-profdata",
     "llvm-dwarfdump",
     "llvm-readelf",
     "llvm-readobj",
@@ -124,9 +125,6 @@ if lit.util.which("cvtres", config.environment["PATH"]) or config.have_libxml2:
 
 if config.enable_backtrace:
     config.available_features.add("backtrace")
-
-if config.have_libxar:
-    config.available_features.add("xar")
 
 if config.have_libxml2:
     config.available_features.add("libxml2")

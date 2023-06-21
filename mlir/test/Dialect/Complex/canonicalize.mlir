@@ -155,3 +155,25 @@ func.func @complex_sub_zero() -> complex<f32> {
   %sub = complex.sub %complex1, %complex2 : complex<f32>
   return %sub : complex<f32>
 }
+
+// CHECK-LABEL: func @re_neg
+//  CHECK-SAME: (%[[ARG0:.*]]: f32, %[[ARG1:.*]]: f32)
+func.func @re_neg(%arg0: f32, %arg1: f32) -> f32 {
+  %create = complex.create %arg0, %arg1: complex<f32>
+  // CHECK: %[[NEG:.*]] = arith.negf %[[ARG0]]
+  %neg = complex.neg %create : complex<f32>
+  %re = complex.re %neg : complex<f32>
+  // CHECK-NEXT: return %[[NEG]]
+  return %re : f32
+}
+
+// CHECK-LABEL: func @im_neg
+//  CHECK-SAME: (%[[ARG0:.*]]: f32, %[[ARG1:.*]]: f32)
+func.func @im_neg(%arg0: f32, %arg1: f32) -> f32 {
+  %create = complex.create %arg0, %arg1: complex<f32>
+  // CHECK: %[[NEG:.*]] = arith.negf %[[ARG1]]
+  %neg = complex.neg %create : complex<f32>
+  %im = complex.im %neg : complex<f32>
+  // CHECK-NEXT: return %[[NEG]]
+  return %im : f32
+}

@@ -1098,8 +1098,8 @@ For example:
     declare i32 @atoi(i8 zeroext)
     declare signext i8 @returns_signed_char()
 
-Note that any attributes for the function result (``nounwind``,
-``readonly``) come immediately after the argument list.
+Note that any attributes for the function result (``nonnull``,
+``signext``) come before the result type.
 
 Currently, only the following parameter attributes are defined:
 
@@ -7436,9 +7436,9 @@ functions was called.
 '``annotation``' Metadata
 ^^^^^^^^^^^^^^^^^^^^^^^^^
 
-The ``annotation`` metadata can be used to attach a tuple of annotation strings 
-or a tuple of a tuple of annotation strings to any instruction. This metadata does 
-not impact the semantics of the program and may only be used to provide additional 
+The ``annotation`` metadata can be used to attach a tuple of annotation strings
+or a tuple of a tuple of annotation strings to any instruction. This metadata does
+not impact the semantics of the program and may only be used to provide additional
 insight about the program and transformations to users.
 
 Example:
@@ -9623,7 +9623,7 @@ Overview:
 """""""""
 
 The '``frem``' instruction returns the remainder from the division of
-its two operands. 
+its two operands.
 
 .. note::
 
@@ -14713,6 +14713,47 @@ trapping or setting ``errno``.
 When specified with the fast-math-flag 'afn', the result may be approximated
 using a less accurate calculation.
 
+'``llvm.ldexp.*``' Intrinsic
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Syntax:
+"""""""
+
+This is an overloaded intrinsic. You can use ``llvm.ldexp`` on any
+floating point or vector of floating point type. Not all targets support
+all types however.
+
+::
+
+      declare float     @llvm.ldexp.f32.i32(float %Val, i32 %Exp)
+      declare double    @llvm.ldexp.f64.i32(double %Val, i32 %Exp)
+      declare x86_fp80  @llvm.ldexp.f80.i32(x86_fp80 %Val, i32 %Exp)
+      declare fp128     @llvm.ldexp.f128.i32(fp128 %Val, i32 %Exp)
+      declare ppc_fp128 @llvm.ldexp.ppcf128.i32(ppc_fp128 %Val, i32 %Exp)
+      declare <2 x float> @llvm.ldexp.v2f32.v2i32(<2 x float> %Val, <2 x i32> %Exp)
+
+Overview:
+"""""""""
+
+The '``llvm.ldexp.*``' intrinsics perform the ldexp function.
+
+Arguments:
+""""""""""
+
+The first argument and the return value are :ref:`floating-point
+<t_floating>` or :ref:`vector <t_vector>` of floating-point values of
+the same type. The second argument is an integer with the same number
+of elements.
+
+Semantics:
+""""""""""
+
+This function multiplies the first argument by 2 raised to the second
+argument's power. If the first argument is NaN or infinite, the same
+value is returned. If the result underflows a zero with the same sign
+is returned. If the result overflows, the result is an infinity with
+the same sign.
+
 '``llvm.log.*``' Intrinsic
 ^^^^^^^^^^^^^^^^^^^^^^^^^^
 
@@ -17800,6 +17841,64 @@ containing both +0.0 and -0.0 elements, the sign of the result is unspecified.
 
 If the intrinsic call has the ``nnan`` fast-math flag, then the operation can
 assume that NaNs are not present in the input vector.
+
+Arguments:
+""""""""""
+The argument to this intrinsic must be a vector of floating-point values.
+
+.. _int_vector_reduce_fmaximum:
+
+'``llvm.vector.reduce.fmaximum.*``' Intrinsic
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Syntax:
+"""""""
+This is an overloaded intrinsic.
+
+::
+
+      declare float @llvm.vector.reduce.fmaximum.v4f32(<4 x float> %a)
+      declare double @llvm.vector.reduce.fmaximum.v2f64(<2 x double> %a)
+
+Overview:
+"""""""""
+
+The '``llvm.vector.reduce.fmaximum.*``' intrinsics do a floating-point
+``MAX`` reduction of a vector, returning the result as a scalar. The return type
+matches the element-type of the vector input.
+
+This instruction has the same comparison semantics as the '``llvm.maximum.*``'
+intrinsic. That is, this intrinsic propagates NaNs and +0.0 is considered
+greater than -0.0. If any element of the vector is a NaN, the result is NaN.
+
+Arguments:
+""""""""""
+The argument to this intrinsic must be a vector of floating-point values.
+
+.. _int_vector_reduce_fminimum:
+
+'``llvm.vector.reduce.fminimum.*``' Intrinsic
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Syntax:
+"""""""
+This is an overloaded intrinsic.
+
+::
+
+      declare float @llvm.vector.reduce.fminimum.v4f32(<4 x float> %a)
+      declare double @llvm.vector.reduce.fminimum.v2f64(<2 x double> %a)
+
+Overview:
+"""""""""
+
+The '``llvm.vector.reduce.fminimum.*``' intrinsics do a floating-point
+``MIN`` reduction of a vector, returning the result as a scalar. The return type
+matches the element-type of the vector input.
+
+This instruction has the same comparison semantics as the '``llvm.minimum.*``'
+intrinsic. That is, this intrinsic propagates NaNs and -0.0 is considered less
+than +0.0. If any element of the vector is a NaN, the result is NaN.
 
 Arguments:
 """"""""""
@@ -24306,6 +24405,47 @@ This function returns the first value raised to the second power with an
 unspecified sequence of rounding operations.
 
 
+'``llvm.experimental.constrained.ldexp``' Intrinsic
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Syntax:
+"""""""
+
+::
+
+      declare <type0>
+      @llvm.experimental.constrained.ldexp(<type0> <op1>, <type1> <op2>,
+                                          metadata <rounding mode>,
+                                          metadata <exception behavior>)
+
+Overview:
+"""""""""
+
+The '``llvm.experimental.constrained.ldexp``' performs the ldexp function.
+
+
+Arguments:
+""""""""""
+
+The first argument and the return value are :ref:`floating-point
+<t_floating>` or :ref:`vector <t_vector>` of floating-point values of
+the same type. The second argument is an integer with the same number
+of elements.
+
+
+The third and fourth arguments specify the rounding mode and exception
+behavior as described above.
+
+Semantics:
+""""""""""
+
+This function multiplies the first argument by 2 raised to the second
+argument's power. If the first argument is NaN or infinite, the same
+value is returned. If the result underflows a zero with the same sign
+is returned. If the result overflows, the result is an infinity with
+the same sign.
+
+
 '``llvm.experimental.constrained.sin``' Intrinsic
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
@@ -25247,6 +25387,81 @@ The '``llvm.set.rounding``' intrinsic sets the current rounding mode. It is
 similar to C library function 'fesetround', however this intrinsic does not
 return any value and uses platform-independent representation of IEEE rounding
 modes.
+
+
+'``llvm.get.fpenv``' Intrinsic
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Syntax:
+"""""""
+
+::
+
+      declare <integer_type> @llvm.get.fpenv()
+
+Overview:
+"""""""""
+
+The '``llvm.get.fpenv``' intrinsic returns bits of the current floating-point
+environment. The return value type is platform-specific.
+
+Semantics:
+""""""""""
+
+The '``llvm.get.fpenv``' intrinsic reads the current floating-point environment
+and returns it as an integer value.
+
+
+'``llvm.set.fpenv``' Intrinsic
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Syntax:
+"""""""
+
+::
+
+      declare void @llvm.set.fpenv(<integer_type> <val>)
+
+Overview:
+"""""""""
+
+The '``llvm.set.fpenv``' intrinsic sets the current floating-point environment.
+
+Arguments:
+""""""""""
+
+The argument is an integer representing the new floating-point environment. The
+integer type is platform-specific.
+
+Semantics:
+""""""""""
+
+The '``llvm.set.fpenv``' intrinsic sets the current floating-point environment
+to the state specified by the argument. The state may be previously obtained by a
+call to '``llvm.get.fpenv``' or synthesised in a platform-dependent way.
+
+
+'``llvm.reset.fpenv``' Intrinsic
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Syntax:
+"""""""
+
+::
+
+      declare void @llvm.reset.fpenv()
+
+Overview:
+"""""""""
+
+The '``llvm.reset.fpenv``' intrinsic sets the default floating-point environment.
+
+Semantics:
+""""""""""
+
+The '``llvm.reset.fpenv``' intrinsic sets the current floating-point environment
+to default state. It is similar to the call 'fesetenv(FE_DFL_ENV)', except it
+does not return any value.
 
 
 Floating-Point Test Intrinsics

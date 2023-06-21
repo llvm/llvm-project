@@ -383,15 +383,18 @@ public:
   /// Compute known bits for shl(LHS, RHS).
   /// NOTE: RHS (shift amount) bitwidth doesn't need to be the same as LHS.
   static KnownBits shl(const KnownBits &LHS, const KnownBits &RHS,
-                       bool NUW = false, bool NSW = false);
+                       bool NUW = false, bool NSW = false,
+                       bool ShAmtNonZero = false);
 
   /// Compute known bits for lshr(LHS, RHS).
   /// NOTE: RHS (shift amount) bitwidth doesn't need to be the same as LHS.
-  static KnownBits lshr(const KnownBits &LHS, const KnownBits &RHS);
+  static KnownBits lshr(const KnownBits &LHS, const KnownBits &RHS,
+                        bool ShAmtNonZero = false);
 
   /// Compute known bits for ashr(LHS, RHS).
   /// NOTE: RHS (shift amount) bitwidth doesn't need to be the same as LHS.
-  static KnownBits ashr(const KnownBits &LHS, const KnownBits &RHS);
+  static KnownBits ashr(const KnownBits &LHS, const KnownBits &RHS,
+                        bool ShAmtNonZero = false);
 
   /// Determine if these known bits always give the same ICMP_EQ result.
   static std::optional<bool> eq(const KnownBits &LHS, const KnownBits &RHS);

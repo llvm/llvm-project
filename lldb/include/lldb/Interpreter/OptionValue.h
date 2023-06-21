@@ -125,7 +125,7 @@ public:
 
   virtual bool IsAggregateValue() const { return false; }
 
-  virtual ConstString GetName() const { return ConstString(); }
+  virtual llvm::StringRef GetName() const { return llvm::StringRef(); }
 
   virtual bool DumpQualifiedName(Stream &strm) const;
 

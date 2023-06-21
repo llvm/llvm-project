@@ -60,7 +60,7 @@ public:
   /// @param Mode Enable, disable or compute whether to use colors.
   WithColor(raw_ostream &OS, HighlightColor S,
             ColorMode Mode = ColorMode::Auto);
-  /// To be used like this: WithColor(OS, raw_ostream::Black) << "text";
+  /// To be used like this: WithColor(OS, raw_ostream::BLACK) << "text";
   /// @param OS The output stream
   /// @param Color ANSI color to use, the special SAVEDCOLOR can be used to
   /// change only the bold attribute, and keep colors untouched

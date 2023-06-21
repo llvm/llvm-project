@@ -216,17 +216,7 @@ void DataAggregator::launchPerfProcess(StringRef Name, PerfProcessInfo &PPI,
   outs() << "PERF2BOLT: spawning perf job to read " << Name << '\n';
   Argv.push_back(PerfPath.data());
 
-  char *WritableArgsString = strdup(ArgsString);
-  char *Str = WritableArgsString;
-  do {
-    Argv.push_back(Str);
-    while (*Str && *Str != ' ')
-      ++Str;
-    if (!*Str)
-      break;
-    *Str++ = 0;
-  } while (true);
-
+  StringRef(ArgsString).split(Argv, ' ');
   Argv.push_back("-f");
   Argv.push_back("-i");
   Argv.push_back(Filename.c_str());
@@ -266,8 +256,6 @@ void DataAggregator::launchPerfProcess(StringRef Name, PerfProcessInfo &PPI,
   else
     PPI.PI = sys::ExecuteNoWait(PerfPath.data(), Argv, /*envp*/ std::nullopt,
                                 Redirects);
-
-  free(WritableArgsString);
 }
 
 void DataAggregator::processFileBuildID(StringRef FileBuildID) {
@@ -636,6 +624,12 @@ void DataAggregator::processProfile(BinaryContext &BC) {
       BF.markProfiled(Flags);
   }
 
+  for (auto &FuncBranches : NamesToBranches)
+    llvm::stable_sort(FuncBranches.second.Data);
+
+  for (auto &MemEvents : NamesToMemEvents)
+    llvm::stable_sort(MemEvents.second.Data);
+
   // Release intermediate storage.
   clear(BranchLBRs);
   clear(FallthroughLBRs);
@@ -777,7 +771,8 @@ bool DataAggregator::doBranch(uint64_t From, uint64_t To, uint64_t Count,
   if (!FromFunc && !ToFunc)
     return false;
 
-  if (FromFunc == ToFunc) {
+  // Treat recursive control transfers as inter-branches.
+  if (FromFunc == ToFunc && (To != ToFunc->getAddress())) {
     recordBranch(*FromFunc, From - FromFunc->getAddress(),
                  To - FromFunc->getAddress(), Count, Mispreds);
     return doIntraBranch(*FromFunc, From, To, Count, Mispreds);
@@ -791,23 +786,23 @@ bool DataAggregator::doTrace(const LBREntry &First, const LBREntry &Second,
   BinaryFunction *FromFunc = getBinaryFunctionContainingAddress(First.To);
   BinaryFunction *ToFunc = getBinaryFunctionContainingAddress(Second.From);
   if (!FromFunc || !ToFunc) {
-    LLVM_DEBUG(
-        dbgs() << "Out of range trace starting in " << FromFunc->getPrintName()
-               << " @ " << Twine::utohexstr(First.To - FromFunc->getAddress())
-               << " and ending in " << ToFunc->getPrintName() << " @ "
-               << ToFunc->getPrintName() << " @ "
-               << Twine::utohexstr(Second.From - ToFunc->getAddress()) << '\n');
+    LLVM_DEBUG({
+      dbgs() << "Out of range trace starting in " << FromFunc->getPrintName()
+             << formatv(" @ {0:x}", First.To - FromFunc->getAddress())
+             << " and ending in " << ToFunc->getPrintName()
+             << formatv(" @ {0:x}\n", Second.From - ToFunc->getAddress());
+    });
     NumLongRangeTraces += Count;
     return false;
   }
   if (FromFunc != ToFunc) {
     NumInvalidTraces += Count;
-    LLVM_DEBUG(
-        dbgs() << "Invalid trace starting in " << FromFunc->getPrintName()
-               << " @ " << Twine::utohexstr(First.To - FromFunc->getAddress())
-               << " and ending in " << ToFunc->getPrintName() << " @ "
-               << ToFunc->getPrintName() << " @ "
-               << Twine::utohexstr(Second.From - ToFunc->getAddress()) << '\n');
+    LLVM_DEBUG({
+      dbgs() << "Invalid trace starting in " << FromFunc->getPrintName()
+             << formatv(" @ {0:x}", First.To - FromFunc->getAddress())
+             << " and ending in " << ToFunc->getPrintName()
+             << formatv(" @ {0:x}\n", Second.From - ToFunc->getAddress());
+    });
     return false;
   }
 
@@ -838,11 +833,9 @@ bool DataAggregator::doTrace(const LBREntry &First, const LBREntry &Second,
 }
 
 bool DataAggregator::recordTrace(
-    BinaryFunction &BF,
-    const LBREntry &FirstLBR,
-    const LBREntry &SecondLBR,
+    BinaryFunction &BF, const LBREntry &FirstLBR, const LBREntry &SecondLBR,
     uint64_t Count,
-    SmallVector<std::pair<uint64_t, uint64_t>, 16> *Branches) const {
+    SmallVector<std::pair<uint64_t, uint64_t>, 16> &Branches) const {
   BinaryContext &BC = BF.getBinaryContext();
 
   if (!BF.isSimple())
@@ -902,22 +895,25 @@ bool DataAggregator::recordTrace(
       return false;
     }
 
-    // Record fall-through jumps
-    BinaryBasicBlock::BinaryBranchInfo &BI = BB->getBranchInfo(*NextBB);
-    BI.Count += Count;
+    const MCInst *Instr = BB->getLastNonPseudoInstr();
+    uint64_t Offset = 0;
+    if (Instr)
+      Offset = BC.MIB->getOffsetWithDefault(*Instr, 0);
+    else
+      Offset = BB->getOffset();
 
-    if (Branches) {
-      const MCInst *Instr = BB->getLastNonPseudoInstr();
-      uint64_t Offset = 0;
-      if (Instr)
-        Offset = BC.MIB->getOffsetWithDefault(*Instr, 0);
-      else
-        Offset = BB->getOffset();
-
-      Branches->emplace_back(Offset, NextBB->getOffset());
-    }
+    Branches.emplace_back(Offset, NextBB->getOffset());
 
     BB = NextBB;
+  }
+
+  // Record fall-through jumps
+  for (const auto &[FromOffset, ToOffset] : Branches) {
+    BinaryBasicBlock *FromBB = BF.getBasicBlockContainingOffset(FromOffset);
+    BinaryBasicBlock *ToBB = BF.getBasicBlockAtOffset(ToOffset);
+    assert(FromBB && ToBB);
+    BinaryBasicBlock::BinaryBranchInfo &BI = FromBB->getBranchInfo(*ToBB);
+    BI.Count += Count;
   }
 
   return true;
@@ -930,7 +926,7 @@ DataAggregator::getFallthroughsInTrace(BinaryFunction &BF,
                                        uint64_t Count) const {
   SmallVector<std::pair<uint64_t, uint64_t>, 16> Res;
 
-  if (!recordTrace(BF, FirstLBR, SecondLBR, Count, &Res))
+  if (!recordTrace(BF, FirstLBR, SecondLBR, Count, Res))
     return std::nullopt;
 
   return Res;
@@ -1976,6 +1972,8 @@ std::error_code DataAggregator::parseMMapEvents() {
 
     std::pair<StringRef, MMapInfo> FileMMapInfo = FileMMapInfoRes.get();
     if (FileMMapInfo.second.PID == -1)
+      continue;
+    if (FileMMapInfo.first.equals("(deleted)"))
       continue;
 
     // Consider only the first mapping of the file for any given PID

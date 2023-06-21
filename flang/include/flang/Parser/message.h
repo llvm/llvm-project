@@ -54,6 +54,7 @@ public:
   constexpr MessageFixedText &operator=(MessageFixedText &&) = default;
 
   CharBlock text() const { return text_; }
+  bool empty() const { return text_.empty(); }
   Severity severity() const { return severity_; }
   MessageFixedText &set_severity(Severity severity) {
     severity_ = severity;

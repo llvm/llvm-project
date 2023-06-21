@@ -1204,11 +1204,13 @@ bool IRPosition::getAttrsFromAssumes(Attribute::AttrKind AK,
 
   LLVMContext &Ctx = AssociatedValue.getContext();
   unsigned AttrsSize = Attrs.size();
-  MustBeExecutedContextExplorer &Explorer =
+  MustBeExecutedContextExplorer *Explorer =
       A.getInfoCache().getMustBeExecutedContextExplorer();
-  auto EIt = Explorer.begin(getCtxI()), EEnd = Explorer.end(getCtxI());
+  if (!Explorer)
+    return false;
+  auto EIt = Explorer->begin(getCtxI()), EEnd = Explorer->end(getCtxI());
   for (const auto &It : A2K)
-    if (Explorer.findInContextOf(It.first, EIt, EEnd))
+    if (Explorer->findInContextOf(It.first, EIt, EEnd))
       Attrs.push_back(Attribute::get(Ctx, AK, It.second.Max));
   return AttrsSize != Attrs.size();
 }
@@ -3192,6 +3194,9 @@ void Attributor::identifyDefaultAbstractAttributes(Function &F) {
 
   // Every function might be "will-return".
   getOrCreateAAFor<AAWillReturn>(FPos);
+
+  // Every function might be "must-progress".
+  getOrCreateAAFor<AAMustProgress>(FPos);
 
   // Every function might contain instructions that cause "undefined behavior".
   getOrCreateAAFor<AAUndefinedBehavior>(FPos);

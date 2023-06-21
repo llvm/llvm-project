@@ -4,7 +4,7 @@
 #===============================================================================
 # Setup Project
 #===============================================================================
-cmake_minimum_required(VERSION 3.13.4)
+cmake_minimum_required(VERSION 3.20.0)
 
 set(LLVM_COMMON_CMAKE_UTILS "${CMAKE_CURRENT_SOURCE_DIR}/../cmake")
 
@@ -57,16 +57,10 @@ option(LIBCXX_ENABLE_ASSERTIONS
    by users in their own code regardless of this option." OFF)
 option(LIBCXX_ENABLE_SHARED "Build libc++ as a shared library." ON)
 option(LIBCXX_ENABLE_STATIC "Build libc++ as a static library." ON)
-set(ENABLE_FILESYSTEM_DEFAULT ON)
-if (WIN32 AND NOT MINGW)
-  # Filesystem is buildable for windows, but it requires __int128 helper
-  # functions, that currently are provided by libgcc or compiler_rt builtins.
-  # These are available in MinGW environments, but not currently in MSVC
-  # environments.
-  set(ENABLE_FILESYSTEM_DEFAULT OFF)
-endif()
-option(LIBCXX_ENABLE_FILESYSTEM "Build filesystem as part of the main libc++ library"
-    ${ENABLE_FILESYSTEM_DEFAULT})
+option(LIBCXX_ENABLE_FILESYSTEM
+  "Whether to include support for parts of the library that rely on a filesystem being
+   available on the platform. This includes things like most parts of <filesystem> and
+   others like <fstream>" ON)
 option(LIBCXX_INCLUDE_TESTS "Build the libc++ tests." ${LLVM_INCLUDE_TESTS})
 option(LIBCXX_ENABLE_DEBUG_MODE
   "Whether to build libc++ with the debug mode enabled.
@@ -85,8 +79,6 @@ option(LIBCXX_ENABLE_LOCALIZATION
    the C locale API (e.g. embedded). When localization is not supported,
    several parts of the library will be disabled: <iostream>, <regex>, <locale>
    will be completely unusable, and other parts may be only partly available." ON)
-option(LIBCXX_ENABLE_FSTREAM
-   "Whether to include support for <fstream>." ON) # TODO: Consider rolling that into LIBCXX_ENABLE_FILESYSTEM
 option(LIBCXX_ENABLE_UNICODE
   "Whether to include support for Unicode in the library. Disabling Unicode can
    be useful when porting to platforms that don't support UTF-8 encoding (e.g.
@@ -105,6 +97,12 @@ option(LIBCXX_ENABLE_VENDOR_AVAILABILITY_ANNOTATIONS
    the shared library they shipped should turn this on and see `include/__availability`
    for more details." OFF)
 option(LIBCXX_ENABLE_CLANG_TIDY "Whether to compile and run clang-tidy checks" OFF)
+# TODO MODULES Remove this option and test for the requirements (CMake/Clang) instead.
+option(LIBCXX_ENABLE_STD_MODULES
+   "Whether to enable the building the C++23 `std` module. This feature is
+    experimental and has additional dependencies. Only enable this when
+    interested in testing or developing this module. See
+    https://libcxx.llvm.org/Modules.html for more information." OFF)
 
 if (CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
   set(LIBCXX_DEFAULT_TEST_CONFIG "llvm-libc++-shared-gcc.cfg.in")
@@ -418,6 +416,7 @@ set(LIBCXX_STATIC_OUTPUT_NAME "c++" CACHE STRING "Output name for the static lib
 if(LLVM_ENABLE_PER_TARGET_RUNTIME_DIR AND NOT APPLE)
   set(LIBCXX_LIBRARY_DIR ${LLVM_LIBRARY_OUTPUT_INTDIR}/${LLVM_DEFAULT_TARGET_TRIPLE})
   set(LIBCXX_GENERATED_INCLUDE_DIR "${LLVM_BINARY_DIR}/include/c++/v1")
+  set(LIBCXX_GENERATED_MODULE_DIR "${LLVM_BINARY_DIR}/modules/c++/v1")
   set(LIBCXX_GENERATED_INCLUDE_TARGET_DIR "${LLVM_BINARY_DIR}/include/${LLVM_DEFAULT_TARGET_TRIPLE}/c++/v1")
   set(LIBCXX_INSTALL_LIBRARY_DIR lib${LLVM_LIBDIR_SUFFIX}/${LLVM_DEFAULT_TARGET_TRIPLE} CACHE PATH
       "Path where built libc++ libraries should be installed.")
@@ -431,9 +430,11 @@ else()
   if(LLVM_LIBRARY_OUTPUT_INTDIR)
     set(LIBCXX_LIBRARY_DIR ${LLVM_LIBRARY_OUTPUT_INTDIR})
     set(LIBCXX_GENERATED_INCLUDE_DIR "${LLVM_BINARY_DIR}/include/c++/v1")
+    set(LIBCXX_GENERATED_MODULE_DIR "${LLVM_BINARY_DIR}/modules/c++/v1")
   else()
     set(LIBCXX_LIBRARY_DIR ${CMAKE_BINARY_DIR}/lib${LIBCXX_LIBDIR_SUFFIX})
     set(LIBCXX_GENERATED_INCLUDE_DIR "${CMAKE_BINARY_DIR}/include/c++/v1")
+    set(LIBCXX_GENERATED_MODULE_DIR "${CMAKE_BINARY_DIR}/modules/c++/v1")
   endif()
   set(LIBCXX_GENERATED_INCLUDE_TARGET_DIR "${LIBCXX_GENERATED_INCLUDE_DIR}")
   set(LIBCXX_INSTALL_LIBRARY_DIR lib${LIBCXX_LIBDIR_SUFFIX} CACHE PATH
@@ -553,10 +554,6 @@ function(cxx_add_basic_build_flags target)
   # it easier to upgrade the library to a newer language standard without build
   # errors.
   target_compile_definitions(${target} PRIVATE -D_LIBCPP_REMOVE_TRANSITIVE_INCLUDES)
-
-  if (NOT LIBCXX_ENABLE_NEW_DELETE_DEFINITIONS)
-    target_compile_definitions(${target} PRIVATE -D_LIBCPP_DISABLE_NEW_DELETE_DEFINITIONS)
-  endif()
 
   if (C_SUPPORTS_COMMENT_LIB_PRAGMA)
     if (LIBCXX_HAS_PTHREAD_LIB)
@@ -788,10 +785,9 @@ config_define_if(LIBCXX_HAS_WIN32_THREAD_API _LIBCPP_HAS_THREAD_API_WIN32)
 config_define_if(LIBCXX_BUILD_EXTERNAL_THREAD_LIBRARY _LIBCPP_HAS_THREAD_LIBRARY_EXTERNAL)
 config_define_if(LIBCXX_HAS_MUSL_LIBC _LIBCPP_HAS_MUSL_LIBC)
 config_define_if(LIBCXX_NO_VCRUNTIME _LIBCPP_NO_VCRUNTIME)
-config_define_if_not(LIBCXX_ENABLE_FILESYSTEM _LIBCPP_HAS_NO_FILESYSTEM_LIBRARY)
+config_define_if_not(LIBCXX_ENABLE_FILESYSTEM _LIBCPP_HAS_NO_FILESYSTEM)
 config_define_if_not(LIBCXX_ENABLE_RANDOM_DEVICE _LIBCPP_HAS_NO_RANDOM_DEVICE)
 config_define_if_not(LIBCXX_ENABLE_LOCALIZATION _LIBCPP_HAS_NO_LOCALIZATION)
-config_define_if_not(LIBCXX_ENABLE_FSTREAM _LIBCPP_HAS_NO_FSTREAM)
 config_define_if_not(LIBCXX_ENABLE_UNICODE _LIBCPP_HAS_NO_UNICODE)
 config_define_if_not(LIBCXX_ENABLE_WIDE_CHARACTERS _LIBCPP_HAS_NO_WIDE_CHARACTERS)
 config_define_if_not(LIBCXX_ENABLE_VENDOR_AVAILABILITY_ANNOTATIONS _LIBCPP_HAS_NO_VENDOR_AVAILABILITY_ANNOTATIONS)
@@ -865,6 +861,9 @@ endfunction()
 add_subdirectory(include)
 add_subdirectory(src)
 add_subdirectory(utils)
+if (LIBCXX_ENABLE_STD_MODULES)
+  add_subdirectory(modules)
+endif()
 
 set(LIBCXX_TEST_DEPS "cxx_experimental")
 
@@ -874,6 +873,10 @@ endif()
 
 if (LIBCXX_ENABLE_CLANG_TIDY)
   list(APPEND LIBCXX_TEST_DEPS cxx-tidy)
+endif()
+
+if (LIBCXX_ENABLE_STD_MODULES)
+  list(APPEND LIBCXX_TEST_DEPS generate-cxx-modules generate-test-module-std)
 endif()
 
 if (LIBCXX_INCLUDE_BENCHMARKS)

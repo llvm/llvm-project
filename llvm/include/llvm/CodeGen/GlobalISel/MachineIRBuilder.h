@@ -1825,6 +1825,13 @@ public:
     return buildInstr(TargetOpcode::G_FPOW, {Dst}, {Src0, Src1}, Flags);
   }
 
+  /// Build and insert \p Dst = G_FLDEXP \p Src0, \p Src1
+  MachineInstrBuilder
+  buildFLdexp(const DstOp &Dst, const SrcOp &Src0, const SrcOp &Src1,
+              std::optional<unsigned> Flags = std::nullopt) {
+    return buildInstr(TargetOpcode::G_FLDEXP, {Dst}, {Src0, Src1}, Flags);
+  }
+
   /// Build and insert \p Res = G_FCOPYSIGN \p Op0, \p Op1
   MachineInstrBuilder buildFCopysign(const DstOp &Dst, const SrcOp &Src0,
                                      const SrcOp &Src1) {

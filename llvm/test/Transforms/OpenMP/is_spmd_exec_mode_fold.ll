@@ -23,8 +23,9 @@ target triple = "nvptx64"
 ; CHECK: @[[NON_SPMD_NESTED_PARALLELISM:[a-zA-Z0-9_$"\\.-]+]] = weak constant i8 0
 ; CHECK: @[[WILL_NOT_BE_SPMD_NESTED_PARALLELISM:[a-zA-Z0-9_$"\\.-]+]] = weak constant i8 0
 ;.
-define weak void @is_spmd() {
-; CHECK-LABEL: define {{[^@]+}}@is_spmd() {
+define weak void @is_spmd() "kernel" {
+; CHECK-LABEL: define {{[^@]+}}@is_spmd
+; CHECK-SAME: () #[[ATTR0:[0-9]+]] {
 ; CHECK-NEXT:    [[I:%.*]] = call i32 @__kmpc_target_init(ptr null, i8 2, i1 false)
 ; CHECK-NEXT:    call void @is_spmd_helper1()
 ; CHECK-NEXT:    call void @is_spmd_helper2()
@@ -40,8 +41,9 @@ define weak void @is_spmd() {
   ret void
 }
 
-define weak void @will_be_spmd() {
-; CHECK-LABEL: define {{[^@]+}}@will_be_spmd() {
+define weak void @will_be_spmd() "kernel" {
+; CHECK-LABEL: define {{[^@]+}}@will_be_spmd
+; CHECK-SAME: () #[[ATTR0]] {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[CAPTURED_VARS_ADDRS:%.*]] = alloca [0 x ptr], align 8
 ; CHECK-NEXT:    [[I:%.*]] = call i32 @__kmpc_target_init(ptr null, i8 2, i1 false)
@@ -50,7 +52,7 @@ define weak void @will_be_spmd() {
 ; CHECK:       common.ret:
 ; CHECK-NEXT:    ret void
 ; CHECK:       user_code.entry:
-; CHECK-NEXT:    [[TMP0:%.*]] = call i32 @__kmpc_global_thread_num(ptr null) #[[ATTR2:[0-9]+]]
+; CHECK-NEXT:    [[TMP0:%.*]] = call i32 @__kmpc_global_thread_num(ptr null) #[[ATTR3:[0-9]+]]
 ; CHECK-NEXT:    call void @is_spmd_helper2()
 ; CHECK-NEXT:    call void @__kmpc_parallel_51(ptr null, i32 [[TMP0]], i32 1, i32 -1, i32 -1, ptr @__omp_outlined__, ptr @__omp_outlined___wrapper, ptr [[CAPTURED_VARS_ADDRS]], i64 0)
 ; CHECK-NEXT:    call void @__kmpc_target_deinit(ptr null, i8 2)
@@ -73,8 +75,9 @@ user_code.entry:
   ret void
 }
 
-define weak void @non_spmd() {
-; CHECK-LABEL: define {{[^@]+}}@non_spmd() {
+define weak void @non_spmd() "kernel" {
+; CHECK-LABEL: define {{[^@]+}}@non_spmd
+; CHECK-SAME: () #[[ATTR0]] {
 ; CHECK-NEXT:    [[I:%.*]] = call i32 @__kmpc_target_init(ptr null, i8 1, i1 false)
 ; CHECK-NEXT:    call void @is_generic_helper1()
 ; CHECK-NEXT:    call void @is_generic_helper2()
@@ -90,8 +93,9 @@ define weak void @non_spmd() {
   ret void
 }
 
-define weak void @will_not_be_spmd() {
-; CHECK-LABEL: define {{[^@]+}}@will_not_be_spmd() {
+define weak void @will_not_be_spmd() "kernel" {
+; CHECK-LABEL: define {{[^@]+}}@will_not_be_spmd
+; CHECK-SAME: () #[[ATTR0]] {
 ; CHECK-NEXT:    [[I:%.*]] = call i32 @__kmpc_target_init(ptr null, i8 1, i1 false)
 ; CHECK-NEXT:    call void @is_generic_helper1()
 ; CHECK-NEXT:    call void @is_generic_helper2()
@@ -217,9 +221,10 @@ declare void @bar()
 !4 = !{ptr @non_spmd, !"kernel", i32 1}
 !5 = !{ptr @will_not_be_spmd, !"kernel", i32 1}
 ;.
-; CHECK: attributes #[[ATTR0:[0-9]+]] = { "llvm.assume"="ompx_spmd_amenable" }
-; CHECK: attributes #[[ATTR1:[0-9]+]] = { alwaysinline }
-; CHECK: attributes #[[ATTR2]] = { nounwind }
+; CHECK: attributes #[[ATTR0]] = { "kernel" }
+; CHECK: attributes #[[ATTR1:[0-9]+]] = { "llvm.assume"="ompx_spmd_amenable" }
+; CHECK: attributes #[[ATTR2:[0-9]+]] = { alwaysinline }
+; CHECK: attributes #[[ATTR3]] = { nounwind }
 ;.
 ; CHECK: [[META0:![0-9]+]] = !{i32 7, !"openmp", i32 50}
 ; CHECK: [[META1:![0-9]+]] = !{i32 7, !"openmp-device", i32 50}

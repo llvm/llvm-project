@@ -2513,8 +2513,8 @@ void InstrRefBasedLDV::placeMLocPHIs(
     Register R = MTracker->LocIdxToLocID[L];
     SmallSet<Register, 8> FoundRegUnits;
     bool AnyIllegal = false;
-    for (MCRegUnitIterator RUI(R.asMCReg(), TRI); RUI.isValid(); ++RUI) {
-      for (MCRegUnitRootIterator URoot(*RUI, TRI); URoot.isValid(); ++URoot){
+    for (MCRegUnit Unit : TRI->regunits(R.asMCReg())) {
+      for (MCRegUnitRootIterator URoot(Unit, TRI); URoot.isValid(); ++URoot) {
         if (!MTracker->isRegisterTracked(*URoot)) {
           // Not all roots were loaded into the tracking map: this register
           // isn't actually def'd anywhere, we only read from it. Generate PHIs
@@ -4055,10 +4055,7 @@ public:
   /// ValueIsPHI - Check if the instruction that defines the specified value
   /// is a PHI instruction.
   static LDVSSAPhi *ValueIsPHI(BlockValueNum Val, LDVSSAUpdater *Updater) {
-    auto PHIIt = Updater->PHIs.find(Val);
-    if (PHIIt == Updater->PHIs.end())
-      return nullptr;
-    return PHIIt->second;
+    return Updater->PHIs.lookup(Val);
   }
 
   /// ValueIsNewPHI - Like ValueIsPHI but also check if the PHI has no source

@@ -11,8 +11,18 @@
 #include <errno.h>
 #include <filesystem>
 #include <stack>
+#include <utility>
 
-#include "filesystem_common.h"
+#include "error.h"
+#include "file_descriptor.h"
+
+#if defined(_LIBCPP_WIN32API)
+# define WIN32_LEAN_AND_MEAN
+# define NOMINMAX
+# include <windows.h>
+#else
+# include <dirent.h>   // for DIR & friends
+#endif
 
 _LIBCPP_BEGIN_NAMESPACE_FILESYSTEM
 

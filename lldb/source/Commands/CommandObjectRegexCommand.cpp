@@ -104,7 +104,7 @@ bool CommandObjectRegexCommand::AddRegexCommand(llvm::StringRef re_cstr,
 
 void CommandObjectRegexCommand::HandleCompletion(CompletionRequest &request) {
   if (m_completion_type_mask) {
-    CommandCompletions::InvokeCommonCompletionCallbacks(
+    lldb_private::CommandCompletions::InvokeCommonCompletionCallbacks(
         GetCommandInterpreter(), m_completion_type_mask, request, nullptr);
   }
 }

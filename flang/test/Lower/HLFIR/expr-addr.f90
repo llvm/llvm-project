@@ -1,5 +1,5 @@
 ! Test lowering of of expressions as address
-! RUN: bbc -emit-fir -hlfir -o - %s 2>&1 | FileCheck %s
+! RUN: bbc -emit-hlfir -o - %s 2>&1 | FileCheck %s
 
 ! CHECK-LABEL: func.func @_QPfoo(
 ! CHECK-SAME: %[[arg0:.*]]: !fir.ref<i32>

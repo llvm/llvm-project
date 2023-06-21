@@ -1,22 +1,40 @@
 // General tests that as(1) invocations on AIX targets are sane. Note that we
 // only test assembler functionalities in this suite.
 
+// Check powerpc-ibm-aix7.1.0.0, system assembler is used for assembly files, 32-bit.
+// RUN: %clang -x assembler %s -### -c -fintegrated-as 2>&1 \
+// RUN:         --target=powerpc-ibm-aix7.1.0.0 \
+// RUN:   | FileCheck --check-prefix=CHECK-AS32 %s
+//
+// RUN: %clang -x assembler %s -### -c 2>&1 -fno-integrated-as \
+// RUN:         --target=powerpc-ibm-aix7.1.0.0 \
+// RUN:   | FileCheck --check-prefix=CHECK-AS32 %s
+
 // Check powerpc-ibm-aix7.1.0.0, 32-bit.
 // RUN: %clang %s -### -c 2>&1 \
 // RUN:         --target=powerpc-ibm-aix7.1.0.0 \
-// RUN:   | FileCheck --check-prefix=CHECK-AS32 %s
+// RUN:   | FileCheck --check-prefixes=CHECK-AS32,CHECK-AS32-CC1 %s
 // CHECK-AS32-NOT: warning:
-// CHECK-AS32: "-cc1" "-triple" "powerpc-ibm-aix7.1.0.0"
+// CHECK-AS32-CC1: "-cc1" "-triple" "powerpc-ibm-aix7.1.0.0"
 // CHECK-AS32: "{{.*}}as{{(.exe)?}}" 
 // CHECK-AS32: "-a32" 
 // CHECK-AS32: "-many" 
 
+// Check powerpc64-ibm-aix7.1.0.0, system assembler is used for assembly files, 64-bit.
+// RUN: %clang -x assembler %s -### -c -fintegrated-as 2>&1 \
+// RUN:         --target=powerpc64-ibm-aix7.1.0.0 \
+// RUN:   | FileCheck --check-prefix=CHECK-AS64 %s
+//
+// RUN: %clang -x assembler %s -### -c -fno-integrated-as 2>&1 \
+// RUN:         --target=powerpc64-ibm-aix7.1.0.0 \
+// RUN:   | FileCheck --check-prefix=CHECK-AS64 %s
+
 // Check powerpc64-ibm-aix7.1.0.0, 64-bit.
 // RUN: %clang %s -### -c 2>&1 \
 // RUN:         --target=powerpc64-ibm-aix7.1.0.0 \
-// RUN:   | FileCheck --check-prefix=CHECK-AS64 %s
+// RUN:   | FileCheck --check-prefixes=CHECK-AS64,CHECK-AS64-CC1 %s
 // CHECK-AS64-NOT: warning:
-// CHECK-AS64: "-cc1" "-triple" "powerpc64-ibm-aix7.1.0.0"
+// CHECK-AS64-CC1: "-cc1" "-triple" "powerpc64-ibm-aix7.1.0.0"
 // CHECK-AS64: "{{.*}}as{{(.exe)?}}" 
 // CHECK-AS64: "-a64" 
 // CHECK-AS64: "-many"

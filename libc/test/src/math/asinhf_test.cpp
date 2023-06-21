@@ -43,7 +43,7 @@ TEST(LlvmLibcAsinhfTest, SpecialNumbers) {
 }
 
 TEST(LlvmLibcAsinhfTest, InFloatRange) {
-  constexpr uint32_t COUNT = 234561;
+  constexpr uint32_t COUNT = 1'001;
   constexpr uint32_t STEP = UINT32_MAX / COUNT;
   for (uint32_t i = 0, v = 0; i <= COUNT; ++i, v += STEP) {
     float x = float(FPBits_t(v));

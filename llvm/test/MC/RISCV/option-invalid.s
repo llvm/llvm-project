@@ -1,5 +1,5 @@
 # RUN: not llvm-mc -triple riscv32 < %s 2>&1 \
-# RUN:   | FileCheck -check-prefixes=CHECK %s
+# RUN:   | FileCheck --implicit-check-not=error: %s
 
 # CHECK: :[[#@LINE+1]]:8: error: expected identifier
 .option
@@ -16,7 +16,7 @@
 # CHECK: :[[#@LINE+1]]:23: error: unexpected token, expected + or -
 .option arch, +f, +d, rv32ifd, -d
 
-# CHECK: :[[#@LINE+1]]:22: error: unexpected token, expected end of statement
+# CHECK: :[[#@LINE+1]]:22: error: expected newline
 .option arch, rv32ifd, +f, +d
 
 # CHECK: :[[#@LINE+1]]:16: error: unexpected token, expected identifier
@@ -31,7 +31,7 @@
 # CHECK: :[[#@LINE+1]]:16: error: unexpected token, expected identifier
 .option arch, +
 
-# CHECK: :[[#@LINE+1]]:18: error: unexpected token, expected end of statement
+# CHECK: :[[#@LINE+1]]:18: error: expected comma
 .option arch, +c foo
 
 # CHECK: :[[#@LINE+1]]:16: error: Extension version number parsing not currently implemented
@@ -46,6 +46,9 @@
 
 # CHECK: :[[#@LINE+1]]:20: error: 'f' and 'zfinx' extensions are incompatible
 .option arch, +f, +zfinx
+
+## Make sure the above error isn't sticky
+.option arch, +f
 
 # CHECK: :[[#@LINE+1]]:13: error: expected newline
 .option rvc foo

@@ -274,34 +274,3 @@ transform.sequence failures(propagate) {
   // expected-error @below {{duplicated attribute, cannot map different loops to the same processor}}
   transform.gpu.map_nested_forall_to_threads %funcop block_dims = [32, 32, 1] : (!transform.any_op) -> !transform.any_op
 }
-
-// -----
-
-func.func @tiling_buffer_semantic_op(%x: memref<32x32xf32>, %y: memref<32x32xf32>, %stream : !gpu.async.token) {
-  %one = arith.constant 1 : index
-  %name = gpu.launch async[%stream] blocks(%arg3, %arg4, %arg5) in (%arg9 = %one, %arg10 = %one, %arg11 = %one)
-            threads(%arg6, %arg7, %arg8) in (%arg12 = %one, %arg13 = %one, %arg14 = %one)
-  {
-    // expected-error @below {{'linalg.generic' op must have "tensor semantic" for tiling}}
-    // expected-note @below {{when applied to this op}}
-    linalg.generic
-      {indexing_maps = [affine_map<(d0, d1) -> (d0, d1)>,
-                        affine_map<(d0, d1) -> (d0, d1)>],
-       iterator_types = ["parallel", "parallel"]}
-      ins(%x : memref<32x32xf32>)
-      outs(%y : memref<32x32xf32>) {
-        ^bb0(%in: f32, %out: f32):
-          linalg.yield %in : f32
-    }
-    gpu.terminator
-  }
-  return
-}
-
-transform.sequence failures(propagate) {
-^bb1(%arg0: !transform.any_op):
-  %matmul = transform.structured.match ops{["linalg.generic"]} in %arg0 : (!transform.any_op) -> !transform.any_op
-  // expected-error @below {{transform.structured.tile_to_forall_op failed to apply}}
-  %forall, %tiled = transform.structured.tile_to_forall_op %matmul num_threads [10, 20, 30] (mapping = [ #gpu.thread<y>, #gpu.thread<x>, #gpu.thread<z> ] )
-    : (!transform.any_op) -> (!transform.any_op, !transform.any_op)
-}

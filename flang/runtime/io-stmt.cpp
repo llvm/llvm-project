@@ -335,8 +335,8 @@ void ExternalIoStatementState<DIR>::CompleteOperation() {
   } else { // output
     if (mutableModes().nonAdvancing) {
       // Make effects of positioning past the last Emit() visible with blanks.
-      std::int64_t n{unit().positionInRecord - unit().furthestPositionInRecord};
-      while (n-- > 0 && unit().Emit(" ", 1, 1, *this)) {
+      if (unit().positionInRecord > unit().furthestPositionInRecord) {
+        unit().Emit("", 0, 1, *this); // Emit() will pad
       }
       unit().leftTabLimit = unit().positionInRecord;
     } else {

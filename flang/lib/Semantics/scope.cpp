@@ -93,7 +93,7 @@ Symbol *Scope::FindSymbol(const SourceName &name) const {
     const Scope *parent{symbol_->get<ModuleDetails>().parent()};
     return parent ? parent->FindSymbol(name) : nullptr;
   } else if (CanImport(name)) {
-    return parent_.FindSymbol(name);
+    return parent_->FindSymbol(name);
   } else {
     return nullptr;
   }
@@ -289,7 +289,7 @@ void Scope::add_importName(const SourceName &name) {
 
 // true if name can be imported or host-associated from parent scope.
 bool Scope::CanImport(const SourceName &name) const {
-  if (IsTopLevel() || parent_.IsTopLevel()) {
+  if (IsTopLevel() || parent_->IsTopLevel()) {
     return false;
   }
   switch (GetImportKind()) {

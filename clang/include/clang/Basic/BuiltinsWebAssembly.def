@@ -201,5 +201,13 @@ TARGET_BUILTIN(__builtin_wasm_ref_null_extern, "i", "nct", "reference-types")
 // return type.
 TARGET_BUILTIN(__builtin_wasm_ref_null_func, "i", "nct", "reference-types")
 
+// Table builtins
+TARGET_BUILTIN(__builtin_wasm_table_set,  "viii", "t", "reference-types")
+TARGET_BUILTIN(__builtin_wasm_table_get,  "iii", "t", "reference-types")
+TARGET_BUILTIN(__builtin_wasm_table_size, "zi", "nt", "reference-types")
+TARGET_BUILTIN(__builtin_wasm_table_grow, "iiii", "nt", "reference-types")
+TARGET_BUILTIN(__builtin_wasm_table_fill, "viiii", "t", "reference-types")
+TARGET_BUILTIN(__builtin_wasm_table_copy, "viiiii", "t", "reference-types")
+
 #undef BUILTIN
 #undef TARGET_BUILTIN

@@ -218,12 +218,6 @@ static bool valueDominatesPHI(Value *V, PHINode *P, const DominatorTree *DT) {
     // Arguments and constants dominate all instructions.
     return true;
 
-  // If we are processing instructions (and/or basic blocks) that have not been
-  // fully added to a function, the parent nodes may still be null. Simply
-  // return the conservative answer in these cases.
-  if (!I->getParent() || !P->getParent() || !I->getFunction())
-    return false;
-
   // If we have a DominatorTree then do a precise test.
   if (DT)
     return DT->dominates(I, P);
@@ -2638,7 +2632,7 @@ static bool isAllocDisjoint(const Value *V) {
   // that might be resolve lazily to symbols in another dynamically-loaded
   // library (and, thus, could be malloc'ed by the implementation).
   if (const AllocaInst *AI = dyn_cast<AllocaInst>(V))
-    return AI->getParent() && AI->getFunction() && AI->isStaticAlloca();
+    return AI->isStaticAlloca();
   if (const GlobalValue *GV = dyn_cast<GlobalValue>(V))
     return (GV->hasLocalLinkage() || GV->hasHiddenVisibility() ||
             GV->hasProtectedVisibility() || GV->hasGlobalUnnamedAddr()) &&
@@ -3669,7 +3663,7 @@ static Value *simplifyICmpWithDominatingAssume(CmpInst::Predicate Predicate,
                                                Value *LHS, Value *RHS,
                                                const SimplifyQuery &Q) {
   // Gracefully handle instructions that have not been inserted yet.
-  if (!Q.AC || !Q.CxtI || !Q.CxtI->getParent())
+  if (!Q.AC || !Q.CxtI)
     return nullptr;
 
   for (Value *AssumeBaseOp : {LHS, RHS}) {
@@ -3686,6 +3680,36 @@ static Value *simplifyICmpWithDominatingAssume(CmpInst::Predicate Predicate,
   }
 
   return nullptr;
+}
+
+static Value *simplifyICmpWithIntrinsicOnLHS(CmpInst::Predicate Pred,
+                                             Value *LHS, Value *RHS) {
+  auto *II = dyn_cast<IntrinsicInst>(LHS);
+  if (!II)
+    return nullptr;
+
+  switch (II->getIntrinsicID()) {
+  case Intrinsic::uadd_sat:
+    // uadd.sat(X, Y) uge X, uadd.sat(X, Y) uge Y
+    if (II->getArgOperand(0) == RHS || II->getArgOperand(1) == RHS) {
+      if (Pred == ICmpInst::ICMP_UGE)
+        return ConstantInt::getTrue(getCompareTy(II));
+      if (Pred == ICmpInst::ICMP_ULT)
+        return ConstantInt::getFalse(getCompareTy(II));
+    }
+    return nullptr;
+  case Intrinsic::usub_sat:
+    // usub.sat(X, Y) ule X
+    if (II->getArgOperand(0) == RHS) {
+      if (Pred == ICmpInst::ICMP_ULE)
+        return ConstantInt::getTrue(getCompareTy(II));
+      if (Pred == ICmpInst::ICMP_UGT)
+        return ConstantInt::getFalse(getCompareTy(II));
+    }
+    return nullptr;
+  default:
+    return nullptr;
+  }
 }
 
 /// Given operands for an ICmpInst, see if we can fold the result.
@@ -3950,6 +3974,12 @@ static Value *simplifyICmpInst(unsigned Predicate, Value *LHS, Value *RHS,
     return V;
 
   if (Value *V = simplifyICmpWithMinMax(Pred, LHS, RHS, Q, MaxRecurse))
+    return V;
+
+  if (Value *V = simplifyICmpWithIntrinsicOnLHS(Pred, LHS, RHS))
+    return V;
+  if (Value *V = simplifyICmpWithIntrinsicOnLHS(
+          ICmpInst::getSwappedPredicate(Pred), RHS, LHS))
     return V;
 
   if (Value *V = simplifyICmpWithDominatingAssume(Pred, LHS, RHS, Q))
@@ -4646,7 +4676,8 @@ static Value *simplifySelectInst(Value *Cond, Value *TrueVal, Value *FalseVal,
   if (auto *CondC = dyn_cast<Constant>(Cond)) {
     if (auto *TrueC = dyn_cast<Constant>(TrueVal))
       if (auto *FalseC = dyn_cast<Constant>(FalseVal))
-        return ConstantFoldSelectInstruction(CondC, TrueC, FalseC);
+        if (Constant *C = ConstantFoldSelectInstruction(CondC, TrueC, FalseC))
+          return C;
 
     // select poison, X, Y -> poison
     if (isa<PoisonValue>(CondC))
@@ -6474,9 +6505,6 @@ static Value *simplifyIntrinsic(CallBase *Call, Value *Callee,
   if (!NumOperands) {
     switch (IID) {
     case Intrinsic::vscale: {
-      // Call may not be inserted into the IR yet at point of calling simplify.
-      if (!Call->getParent() || !Call->getParent()->getParent())
-        return nullptr;
       auto Attr = Call->getFunction()->getFnAttribute(Attribute::VScaleRange);
       if (!Attr.isValid())
         return nullptr;
@@ -6748,6 +6776,7 @@ static Value *simplifyInstructionWithOperands(Instruction *I,
                                               ArrayRef<Value *> NewOps,
                                               const SimplifyQuery &SQ,
                                               unsigned MaxRecurse) {
+  assert(I->getFunction() && "instruction should be inserted in a function");
   const SimplifyQuery Q = SQ.CxtI ? SQ : SQ.getWithInstruction(I);
 
   switch (I->getOpcode()) {
@@ -6923,10 +6952,7 @@ static bool replaceAndRecursivelySimplifyImpl(
     // Replace the instruction with its simplified value.
     I->replaceAllUsesWith(SimpleV);
 
-    // Gracefully handle edge cases where the instruction is not wired into any
-    // parent block.
-    if (I->getParent() && !I->isEHPad() && !I->isTerminator() &&
-        !I->mayHaveSideEffects())
+    if (!I->isEHPad() && !I->isTerminator() && !I->mayHaveSideEffects())
       I->eraseFromParent();
   } else {
     Worklist.insert(I);
@@ -6955,10 +6981,7 @@ static bool replaceAndRecursivelySimplifyImpl(
     // Replace the instruction with its simplified value.
     I->replaceAllUsesWith(SimpleV);
 
-    // Gracefully handle edge cases where the instruction is not wired into any
-    // parent block.
-    if (I->getParent() && !I->isEHPad() && !I->isTerminator() &&
-        !I->mayHaveSideEffects())
+    if (!I->isEHPad() && !I->isTerminator() && !I->mayHaveSideEffects())
       I->eraseFromParent();
   }
   return Simplified;

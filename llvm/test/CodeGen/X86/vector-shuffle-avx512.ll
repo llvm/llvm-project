@@ -300,7 +300,8 @@ define <8 x float> @expand15(<4 x float> %a) {
 ; AVX512-FAST-LABEL: expand15:
 ; AVX512-FAST:       # %bb.0:
 ; AVX512-FAST-NEXT:    # kill: def $xmm0 killed $xmm0 def $ymm0
-; AVX512-FAST-NEXT:    vmovaps {{.*#+}} ymm1 = <u,u,0,u,1,u,u,u>
+; AVX512-FAST-NEXT:    vbroadcastf128 {{.*#+}} ymm1 = [1,0,0,0,1,0,0,0]
+; AVX512-FAST-NEXT:    # ymm1 = mem[0,1,0,1]
 ; AVX512-FAST-NEXT:    vpermps %ymm0, %ymm1, %ymm0
 ; AVX512-FAST-NEXT:    vblendps {{.*#+}} ymm0 = mem[0,1],ymm0[2],mem[3],ymm0[4],mem[5,6,7]
 ; AVX512-FAST-NEXT:    ret{{[l|q]}}
@@ -336,7 +337,7 @@ define <64 x i8> @test_mm512_mask_blend_epi8(<64 x i8> %A, <64 x i8> %W){
 ;
 ; AVX512F-LABEL: test_mm512_mask_blend_epi8:
 ; AVX512F:       # %bb.0: # %entry
-; AVX512F-NEXT:    vpbroadcastw {{.*#+}} ymm2 = [255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255]
+; AVX512F-NEXT:    vpbroadcastw {{.*#+}} ymm2 = [255,0,255,0,255,0,255,0,255,0,255,0,255,0,255,0,255,0,255,0,255,0,255,0,255,0,255,0,255,0,255,0]
 ; AVX512F-NEXT:    vinserti64x4 $1, %ymm2, %zmm2, %zmm2
 ; AVX512F-NEXT:    vpternlogq $216, %zmm2, %zmm1, %zmm0
 ; AVX512F-NEXT:    ret{{[l|q]}}
@@ -454,7 +455,7 @@ define <32 x i8> @test_mm256_mask_blend_epi8(<32 x i8> %A, <32 x i8> %W){
 ;
 ; AVX512F-LABEL: test_mm256_mask_blend_epi8:
 ; AVX512F:       # %bb.0: # %entry
-; AVX512F-NEXT:    vmovdqa {{.*#+}} ymm2 = [255,0,255,0,255,0,255,0,255,0,255,0,255,0,255,0,255,0,255,0,255,0,255,0,255,0,255,0,255,0,255,0]
+; AVX512F-NEXT:    vpbroadcastw {{.*#+}} ymm2 = [255,0,255,0,255,0,255,0,255,0,255,0,255,0,255,0,255,0,255,0,255,0,255,0,255,0,255,0,255,0,255,0]
 ; AVX512F-NEXT:    vpblendvb %ymm2, %ymm1, %ymm0, %ymm0
 ; AVX512F-NEXT:    ret{{[l|q]}}
 entry:
@@ -472,7 +473,7 @@ define <16 x i8> @test_mm_mask_blend_epi8(<16 x i8> %A, <16 x i8> %W){
 ;
 ; AVX512F-LABEL: test_mm_mask_blend_epi8:
 ; AVX512F:       # %bb.0: # %entry
-; AVX512F-NEXT:    vmovdqa {{.*#+}} xmm2 = [255,0,255,0,255,0,255,0,255,0,255,0,255,0,255,0]
+; AVX512F-NEXT:    vpbroadcastw {{.*#+}} xmm2 = [255,0,255,0,255,0,255,0,255,0,255,0,255,0,255,0]
 ; AVX512F-NEXT:    vpblendvb %xmm2, %xmm1, %xmm0, %xmm0
 ; AVX512F-NEXT:    ret{{[l|q]}}
 entry:

@@ -26,7 +26,7 @@
 // CHECK-RELOCATABLE-LLD-NOT: ld.lld: detected cortex-a8-657419 erratum sequence
 
 /// Basic tests for the -fix-cortex-a8 erratum fix. The full details of the
-/// erratum and the patch are in ARMA8ErrataFix.cpp . The test creates an
+/// erratum and the patch are in ARMErrataFix.cpp . The test creates an
 /// instance of the erratum every 4KiB (32-bit non-branch, followed by 32-bit
 /// branch instruction, where the branch instruction spans two 4 KiB regions,
 /// and the branch destination is in the first 4KiB region.
@@ -163,7 +163,7 @@ target7:
 // CALLSITE7-NEXT:    27ffe:            bne.w   0x2901c <__CortexA8657417_27FFE>
 
  .section .text.6, "ax", %progbits
- .space 4082
+ .space 4080
  .arm
  .global target8
  .type target8, %function

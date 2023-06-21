@@ -9,8 +9,8 @@
 /// \file
 /// This file defines the SymbolGraphSerializer class.
 ///
-/// Implement an APISerializer for the Symbol Graph format for ExtractAPI.
-/// See https://github.com/apple/swift-docc-symbolkit.
+/// Implement an APISetVisitor to serialize the APISet into the Symbol Graph
+/// format for ExtractAPI. See https://github.com/apple/swift-docc-symbolkit.
 ///
 //===----------------------------------------------------------------------===//
 
@@ -31,14 +31,18 @@ namespace extractapi {
 
 using namespace llvm::json;
 
-/// The serializer that organizes API information in the Symbol Graph format.
+/// Common options to customize the visitor output.
+struct SymbolGraphSerializerOption {
+  /// Do not include unnecessary whitespaces to save space.
+  bool Compact;
+};
+
+/// The visitor that organizes API information in the Symbol Graph format.
 ///
 /// The Symbol Graph format (https://github.com/apple/swift-docc-symbolkit)
 /// models an API set as a directed graph, where nodes are symbol declarations,
 /// and edges are relationships between the connected symbols.
-class SymbolGraphSerializer : public APISerializer {
-  virtual void anchor();
-
+class SymbolGraphSerializer : public APISetVisitor<SymbolGraphSerializer> {
   /// A JSON array of formatted symbols in \c APISet.
   Array Symbols;
 
@@ -48,7 +52,7 @@ class SymbolGraphSerializer : public APISerializer {
   /// The Symbol Graph format version used by this serializer.
   static const VersionTuple FormatVersion;
 
-  /// Indicates whether child symbols should be serialized. This is mainly
+  /// Indicates whether child symbols should be visited. This is mainly
   /// useful for \c serializeSingleSymbolSGF.
   bool ShouldRecurse;
 
@@ -59,9 +63,8 @@ public:
   /// Symbol Graph.
   Object serialize();
 
-  /// Implement the APISerializer::serialize interface. Wrap serialize(void) and
-  /// write out the serialized JSON object to \p os.
-  void serialize(raw_ostream &os) override;
+  ///  Wrap serialize(void) and write out the serialized JSON object to \p os.
+  void serialize(raw_ostream &os);
 
   /// Serialize a single symbol SGF. This is primarily used for libclang.
   ///
@@ -136,35 +139,44 @@ private:
   void serializeRelationship(RelationshipKind Kind, SymbolReference Source,
                              SymbolReference Target);
 
-  /// Serialize a global function record.
-  void serializeGlobalFunctionRecord(const GlobalFunctionRecord &Record);
+protected:
+  /// The list of symbols to ignore.
+  ///
+  /// Note: This should be consulted before emitting a symbol.
+  const APIIgnoresList &IgnoresList;
 
-  /// Serialize a global variable record.
-  void serializeGlobalVariableRecord(const GlobalVariableRecord &Record);
-
-  /// Serialize an enum record.
-  void serializeEnumRecord(const EnumRecord &Record);
-
-  /// Serialize a struct record.
-  void serializeStructRecord(const StructRecord &Record);
-
-  /// Serialize an Objective-C container record.
-  void serializeObjCContainerRecord(const ObjCContainerRecord &Record);
-
-  /// Serialize a macro definition record.
-  void serializeMacroDefinitionRecord(const MacroDefinitionRecord &Record);
-
-  /// Serialize a typedef record.
-  void serializeTypedefRecord(const TypedefRecord &Record);
-
-  void serializeSingleRecord(const APIRecord *Record);
+  SymbolGraphSerializerOption Options;
 
 public:
+  /// Visit a global function record.
+  void visitGlobalFunctionRecord(const GlobalFunctionRecord &Record);
+
+  /// Visit a global variable record.
+  void visitGlobalVariableRecord(const GlobalVariableRecord &Record);
+
+  /// Visit an enum record.
+  void visitEnumRecord(const EnumRecord &Record);
+
+  /// Visit a struct record.
+  void visitStructRecord(const StructRecord &Record);
+
+  /// Visit an Objective-C container record.
+  void visitObjCContainerRecord(const ObjCContainerRecord &Record);
+
+  /// Visit a macro definition record.
+  void visitMacroDefinitionRecord(const MacroDefinitionRecord &Record);
+
+  /// Visit a typedef record.
+  void visitTypedefRecord(const TypedefRecord &Record);
+
+  /// Serialize a single record.
+  void serializeSingleRecord(const APIRecord *Record);
+
   SymbolGraphSerializer(const APISet &API, const APIIgnoresList &IgnoresList,
-                        APISerializerOption Options = {},
+                        SymbolGraphSerializerOption Options = {},
                         bool ShouldRecurse = true)
-      : APISerializer(API, IgnoresList, Options), ShouldRecurse(ShouldRecurse) {
-  }
+      : APISetVisitor(API), ShouldRecurse(ShouldRecurse),
+        IgnoresList(IgnoresList), Options(Options) {}
 };
 
 } // namespace extractapi

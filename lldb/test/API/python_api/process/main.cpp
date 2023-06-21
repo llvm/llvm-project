@@ -3,7 +3,7 @@
 
 // This simple program is to test the lldb Python API related to process.
 
-char my_char = 'u';
+static char my_char = 'u';
 char my_cstring[] = "lldb.SBProcess.ReadCStringFromMemory() works!";
 char *my_char_ptr = (char *)"Does it work?";
 uint32_t my_uint32 = 12345;

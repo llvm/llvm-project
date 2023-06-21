@@ -11,8 +11,13 @@
 
 ; CHECK: @_ZZN9SingletonI1SE11getInstanceEvE8instance = available_externally dso_local global %struct.S zeroinitializer
 ; CHECK: @_ZZN9SingletonI1SE11getInstanceEvE13instance_weak = available_externally dso_local global ptr null, align 8
-; CHECK: define linkonce_odr dso_local dereferenceable(16) ptr @_ZN9SingletonI1SE11getInstanceEv() comdat
-; INTERNALIZE: define internal dereferenceable(16) ptr @_ZN9SingletonI1SE11getInstanceEv()
+
+;; We should not internalize a linkonce_odr function when the IR definition(s)
+;; are not prevailing (prevailing def in native object). This can break function
+;; pointer equality (unless it has an unnamed_addr attribute indicating that the
+;; address is not significant), and also can increase code size.
+; CHECK: define available_externally dso_local dereferenceable(16) ptr @_ZN9SingletonI1SE11getInstanceEv()
+; INTERNALIZE: define available_externally dso_local dereferenceable(16) ptr @_ZN9SingletonI1SE11getInstanceEv()
 
 target datalayout = "e-m:e-p270:32:32-p271:32:32-p272:64:64-i64:64-f80:128-n8:16:32:64-S128"
 target triple = "x86_64-unknown-linux-gnu"

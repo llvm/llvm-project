@@ -12,6 +12,42 @@ Check the same for a 64-bit input .obj.
 # RUN: lld-link %p/Inputs/hello64.obj /winsysroot:%t.dir/sysroot \
 # RUN:          /defaultlib:std64 /entry:main
 
+Check directly passed lib with /machine:
+# RUN: lld-link %p/Inputs/hello64.obj /winsysroot:%t.dir/sysroot /machine:x64 \
+# RUN:          std64.lib /entry:main
+
+# RUN: lld-link %t.obj /winsysroot:%t.dir/sysroot /machine:x86 \
+# RUN:          std32.lib /entry:main
+
+Check directly passed lib without /machine: (should infer from obj arch)
+# RUN: lld-link %p/Inputs/hello64.obj /winsysroot:%t.dir/sysroot \
+# RUN:          std64.lib /entry:main
+
+# RUN: lld-link %t.obj /winsysroot:%t.dir/sysroot \
+# RUN:          std32.lib /entry:main
+
+Check that passing a lib from /winsysroot twice is ok
+# RUN: lld-link %p/Inputs/hello64.obj /winsysroot:%t.dir/sysroot \
+# RUN:          std64.lib std64.lib /entry:main
+
+Check unknown library
+# RUN: not lld-link %p/Inputs/hello64.obj /winsysroot:%t.dir/sysroot \
+# RUN:          notfound.lib /entry:main 2>&1 | FileCheck --check-prefix=UNKNOWNLIB %s
+UNKNOWNLIB: could not open 'notfound.lib'
+
+If winsysroot lib appears before we can detect arch we don't find it
+# RUN: not lld-link std64.lib %p/Inputs/hello64.obj /winsysroot:%t.dir/sysroot \
+# RUN:          /entry:main 2>&1 | FileCheck --check-prefix=NO64 %s
+
+Check we don't choose the wrong arch
+# RUN: not lld-link %t.obj /winsysroot:%t.dir/sysroot \
+# RUN:          std64.lib /entry:main 2>&1 | FileCheck --check-prefix=NO64 %s
+NO64: could not open 'std64.lib'
+
+# RUN: not lld-link %p/Inputs/hello64.obj /winsysroot:%t.dir/sysroot \
+# RUN:          std32.lib /entry:main 2>&1 | FileCheck --check-prefix=NO32 %s
+NO32: could not open 'std32.lib'
+
 Check that when /winsysroot is specified, %LIB% is ignored.
 # RUN: env LIB=foo.dir/sysroot/VC/Tools/MSVC/1.1.1.1/lib/x86 not lld-link %t.obj /winsysroot:%t.dir/doesnotexist /defaultlib:std32 2>&1 | FileCheck -check-prefix=LIBIGNORED %s
 LIBIGNORED: could not open 'std32.lib'

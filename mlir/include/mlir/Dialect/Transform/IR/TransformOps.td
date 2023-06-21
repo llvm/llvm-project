@@ -16,6 +16,7 @@ include "mlir/Interfaces/InferTypeOpInterface.td"
 include "mlir/Interfaces/SideEffectInterfaces.td"
 include "mlir/IR/FunctionInterfaces.td"
 include "mlir/IR/OpAsmInterface.td"
+include "mlir/IR/RegionKindInterface.td"
 include "mlir/IR/SymbolInterfaces.td"
 include "mlir/Dialect/Transform/IR/MatchInterfaces.td"
 include "mlir/Dialect/Transform/IR/TransformAttrs.td"
@@ -101,6 +102,133 @@ def AlternativesOp : TransformDialectOp<"alternatives",
   let hasVerifier = 1;
 }
 
+def AnnotateOp : TransformDialectOp<"annotate",
+    [DeclareOpInterfaceMethods<TransformOpInterface>,
+     DeclareOpInterfaceMethods<MemoryEffectsOpInterface>]> {
+  let summary = "Annotates the target operation with an attribute by name";
+  let description = [{
+    Adds an attribute with the given `name` to the `target` operation. An
+    optional `param` handle can be provided to give the attribute a specific
+    value, else a UnitAttr is added. A single attribute will be broadcasted to
+    all target operations, otherwise the attributes will be mapped 1:1 based on
+    the order within the handles.
+
+    Fails silently if the length of the parameter payload does not match the length of
+    the target payload. Does not consume the provided handles.
+  }];
+
+  let arguments = (ins TransformHandleTypeInterface:$target,
+                       StrAttr:$name,
+                       Optional<TransformParamTypeInterface>:$param);
+  let results = (outs);
+
+  let assemblyFormat =
+    "$target $name attr-dict (`=` $param^)?"
+    "`:` type($target) (`,` type($param)^)?";
+}
+
+def ApplyPatternsOp : TransformDialectOp<"apply_patterns",
+    [TransformOpInterface, TransformEachOpTrait,
+     DeclareOpInterfaceMethods<MemoryEffectsOpInterface>,
+     ReportTrackingListenerFailuresOpTrait]
+        # GraphRegionNoTerminator.traits> {
+  let summary = "Greedily applies patterns to the body of the targeted op";
+  let description = [{
+    This transform greedily applies the specified patterns to the body of the
+    targeted op until a fixpoint was reached. Patterns are not applied to the
+    targeted op itself.
+
+    The patterns that should be applied are specified in the graph region of
+    this op. They must implement the `PatternDescriptorOpInterface`. The order
+    in which patterns are applied is unspecified; i.e., the ordering of ops in
+    the region of this op is irrelevant.
+
+    This transform only reads the target handle and modifies the payload. If a
+    pattern erases or replaces a tracked op, the mapping is updated accordingly.
+
+    Only replacements via `RewriterBase::replaceOp` or `replaceOpWithNewOp` are
+    considered "payload op replacements". Furthermore, only if the replacement
+    values are defined by the same op and that op has the same type as the
+    original op, the mapping is updated. Otherwise, this transform fails
+    silently. More details can be found at the documentation site of
+    `TrackingListener`.
+
+    This transform also fails silently if the pattern application did not
+    converge within the default number of iterations/rewrites of the greedy
+    pattern rewrite driver.
+  }];
+
+  let arguments = (ins
+    TransformHandleTypeInterface:$target);
+  let results = (outs);
+  let regions = (region MaxSizedRegion<1>:$region);
+
+  let assemblyFormat = "`to` $target $region attr-dict `:` type($target)";
+  let hasVerifier = 1;
+
+  let skipDefaultBuilders = 1;
+  let builders = [
+    OpBuilder<(ins
+        "Value":$target,
+        CArg<"function_ref<void(OpBuilder &, Location)>", "nullptr">:
+            $bodyBuilder)>,
+  ];
+
+  let extraClassDeclaration = [{
+    ::mlir::DiagnosedSilenceableFailure applyToOne(
+      ::mlir::transform::TransformRewriter &rewriter,
+      ::mlir::Operation *target,
+      ::mlir::transform::ApplyToEachResultList &results,
+      ::mlir::transform::TransformState &state);
+  }];
+}
+
+def ApplyCanonicalizationPatternsOp
+    : TransformDialectOp<"apply_patterns.canonicalization",
+        [DeclareOpInterfaceMethods<PatternDescriptorOpInterface>]> {
+  let summary = "Populates canonicalization patterns";
+  let description = [{
+    This op populates all canonicalization patterns of all loaded dialects in
+    an `apply_patterns` transform.
+  }];
+  let assemblyFormat = "attr-dict";
+}
+
+def ApplyRegisteredPassOp : TransformDialectOp<"apply_registered_pass",
+    [TransformOpInterface, TransformEachOpTrait,
+     FunctionalStyleTransformOpTrait, MemoryEffectsOpInterface]> {
+  let summary = "Applies the specified registered pass";
+  let description = [{
+    This transform applies the specified pass to the targeted ops. The name of
+    the pass is specified as a string attribute, as set during pass
+    registration. Optionally, pass options may be specified as a string
+    attribute. The pass options syntax is identical to the one used with
+    "mlir-opt".
+
+    This transform consumes the target handle and produces a new handle that is
+    mapped to the same op. Passes are not allowed to remove/modify the operation
+    that they operate on, so the target op is guaranteed to still exist. The
+    target handle is invalidated because a pass may arbitrarily modify the body
+    of targeted ops.
+  }];
+
+  let arguments = (ins TransformHandleTypeInterface:$target,
+                       StrAttr:$pass_name,
+                       DefaultValuedAttr<StrAttr, "\"\"">:$options);
+  let results = (outs TransformHandleTypeInterface:$result);
+  let assemblyFormat = [{
+    $pass_name `to` $target attr-dict `:` functional-type(operands, results)
+  }];
+
+  let extraClassDeclaration = [{
+    ::mlir::DiagnosedSilenceableFailure applyToOne(
+      ::mlir::transform::TransformRewriter &rewriter, 
+      ::mlir::Operation *target,
+      ::mlir::transform::ApplyToEachResultList &results,
+      ::mlir::transform::TransformState &state);
+  }];
+}
+
 def CastOp : TransformDialectOp<"cast",
     [TransformOpInterface, TransformEachOpTrait,
      DeclareOpInterfaceMethods<CastOpInterface>,
@@ -111,6 +239,7 @@ def CastOp : TransformDialectOp<"cast",
 
   let extraClassDeclaration = [{
     ::mlir::DiagnosedSilenceableFailure applyToOne(
+      ::mlir::transform::TransformRewriter &rewriter,
       ::mlir::Operation *target,
       ::mlir::transform::ApplyToEachResultList &results,
       ::mlir::transform::TransformState &state);
@@ -150,7 +279,12 @@ def ForeachMatchOp : TransformDialectOp<"foreach_match", [
     satisfies the constraints of actual types on both sides). The action symbol
     may not have results. The actions are expected to only modify payload
     operations nested in the `root` payload operations associated with the
-    operand of this transform operation.
+    operand of this transform operation. Furhermore, the actions may not modify
+    operations outside of the currently matched payload operation, e.g., they
+    may not modify sibling or parent operations. If such behavior is desired,
+    the parent must be matched first and the nested operations obtained by
+    traversing the IR from the parent. This is due to the matching being
+    performed as a post-order IR walk.
 
     This operation consumes the operand and produces a new handle associated
     with the same payload. This is necessary to trigger invalidation of handles
@@ -425,22 +559,22 @@ def MatchParamCmpIOp : Op<Transform_Dialect, "match.param.cmpi", [
 def MergeHandlesOp : TransformDialectOp<"merge_handles",
     [DeclareOpInterfaceMethods<TransformOpInterface, ["allowsRepeatedHandleOperands"]>,
      DeclareOpInterfaceMethods<MemoryEffectsOpInterface>,
-     SameOperandsAndResultType]> {
+     MatchOpInterface, SameOperandsAndResultType]> {
   let summary = "Merges handles into one pointing to the union of payload ops";
   let description = [{
     Creates a new Transform IR handle value that points to the same Payload IR
-    operations as the operand handles. The Payload IR operations are listed
-    in the same order as they are in the operand handles, grouped by operand
-    handle, e.g., all Payload IR operations associated with the first handle
-    come first, then all Payload IR operations associated with the second handle
-    and so on. If `deduplicate` is set, do not add the given Payload IR
-    operation more than once to the final list regardless of it coming from the
+    operations/values/parameters as the operand handles. The Payload IR elements
+    are listed in the same order as they are in the operand handles, grouped by
+    operand handle, e.g., all Payload IR associated with the first handle comes
+    first, then all Payload IR associated with the second handle and so on. If
+    `deduplicate` is set, do not add the given Payload IR operation, value, or
+    parameter more than once to the final list regardless of it coming from the
     same or different handles. Consumes the operands and produces a new handle.
   }];
 
-  let arguments = (ins Variadic<TransformHandleTypeInterface>:$handles,
+  let arguments = (ins Variadic<Transform_AnyHandleOrParamType>:$handles,
                        UnitAttr:$deduplicate);
-  let results = (outs TransformHandleTypeInterface:$result);
+  let results = (outs Transform_AnyHandleOrParamType:$result);
   let assemblyFormat = "(`deduplicate` $deduplicate^)? $handles attr-dict `:` type($result)";
   let hasFolder = 1;
 }
@@ -669,6 +803,26 @@ def SequenceOp : TransformDialectOp<"sequence",
     IR, typically the root operation of the pass interpreting the transform
     dialect. Operand omission is only allowed for sequences not contained in
     another sequence.
+
+    The type of the block argument must match the type of the operand. If the
+    sequence is a top-level transform (without an operand), it can be used for
+    matching operations if the specified type within the top-level container
+    payload IR (including the container op itself). E.g.:
+
+    ```mlir
+    transform.sequence failures(propagate) {
+    ^bb1(%arg1: !transform.any_op):
+      // %arg1 is mapped to the top-level container of the payload IR, which is
+      // typically a module
+    }
+
+    transform.sequence failures(propagate) {
+    ^bb1(%arg1: !transform.op<"func.func>"):
+      // %arg1 is mapped to all "func.func" ops within and including the
+      // top-level container of the payload IR. Nested operations that have the
+      // specified op type are not included.
+    }
+    ```
 
     The body of the sequence terminates with an implicit or explicit
     `transform.yield` op. The operands of the terminator are returned as the

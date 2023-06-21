@@ -140,6 +140,12 @@ public:
   // On PPC ELF V2 abi, the first entry in the .got is the .TOC.
   unsigned gotHeaderEntriesNum = 0;
 
+  // On PPC ELF V2 abi, the dynamic section needs DT_PPC64_OPT (DT_LOPROC + 3)
+  // to be set to 0x2 if there can be multiple TOC's. Although we do not emit
+  // multiple TOC's, there can be a mix of TOC and NOTOC addressing which
+  // is functionally equivalent.
+  int ppc64DynamicSectionOpt = 0;
+
   bool needsThunks = false;
 
   // A 4-byte field corresponding to one or more trap instructions, used to pad

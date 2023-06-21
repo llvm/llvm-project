@@ -41,9 +41,6 @@ public:
         ElementType(ElementType), Alignment(Alignment) {
     assert(Pointer != nullptr && "Pointer cannot be null");
     assert(ElementType != nullptr && "Element type cannot be null");
-    assert(llvm::cast<llvm::PointerType>(Pointer->getType())
-               ->isOpaqueOrPointeeTypeMatches(ElementType) &&
-           "Incorrect pointer element type");
   }
 
   static Address invalid() { return Address(nullptr); }
@@ -98,6 +95,12 @@ public:
                    isKnownNonNull());
   }
 
+  /// Return address with different element type, but same pointer and
+  /// alignment.
+  Address withElementType(llvm::Type *ElemTy) const {
+    return Address(getPointer(), ElemTy, getAlignment(), isKnownNonNull());
+  }
+
   /// Whether the pointer is known not to be null.
   KnownNonNull_t isKnownNonNull() const {
     assert(isValid());
@@ -130,10 +133,8 @@ public:
     return llvm::cast<llvm::Constant>(Address::getPointer());
   }
 
-  ConstantAddress getElementBitCast(llvm::Type *ElemTy) const {
-    llvm::Constant *BitCast = llvm::ConstantExpr::getBitCast(
-        getPointer(), ElemTy->getPointerTo(getAddressSpace()));
-    return ConstantAddress(BitCast, ElemTy, getAlignment());
+  ConstantAddress withElementType(llvm::Type *ElemTy) const {
+    return ConstantAddress(getPointer(), ElemTy, getAlignment());
   }
 
   static bool isaImpl(Address addr) {

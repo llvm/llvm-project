@@ -4,6 +4,7 @@
 #include <memory>
 
 #include "profile/MemProfData.inc"
+#include "sanitizer_common/sanitizer_array_ref.h"
 #include "sanitizer_common/sanitizer_common.h"
 #include "sanitizer_common/sanitizer_procmaps.h"
 #include "sanitizer_common/sanitizer_stackdepot.h"
@@ -19,10 +20,10 @@ using ::__sanitizer::StackDepotPut;
 using ::__sanitizer::StackTrace;
 using ::llvm::memprof::MemInfoBlock;
 
-uint64_t PopulateFakeMap(const MemInfoBlock &FakeMIB, uint64_t StackPCBegin,
+uint64_t PopulateFakeMap(const MemInfoBlock &FakeMIB, uintptr_t StackPCBegin,
                          MIBMapTy &FakeMap) {
   constexpr int kSize = 5;
-  uint64_t array[kSize];
+  uintptr_t array[kSize];
   for (int i = 0; i < kSize; i++) {
     array[i] = StackPCBegin + i;
   }

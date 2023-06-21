@@ -6,7 +6,7 @@
 
 #CSR_SLICE = #sparse_tensor.encoding<{
   lvlTypes = [ "dense", "compressed" ],
-  slice = [ (0, 4, 1), (0, 8, 1) ]
+  dimSlices = [ (0, 4, 1), (0, 8, 1) ]
 }>
 
 // CHECK-LABEL:   func.func @sparse_slice(

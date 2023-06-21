@@ -427,6 +427,33 @@ SDValue AVRTargetLowering::LowerShifts(SDValue Op, SelectionDAG &DAG) const {
       Victim = DAG.getNode(AVRISD::ASRBN, dl, VT, Victim,
                            DAG.getConstant(7, dl, VT));
       ShiftAmount = 0;
+    } else if (Op.getOpcode() == ISD::ROTL && ShiftAmount == 3) {
+      // Optimize left rotation 3 bits to swap then right rotation 1 bit.
+      Victim = DAG.getNode(AVRISD::SWAP, dl, VT, Victim);
+      Victim =
+          DAG.getNode(AVRISD::ROR, dl, VT, Victim, DAG.getConstant(1, dl, VT));
+      ShiftAmount = 0;
+    } else if (Op.getOpcode() == ISD::ROTR && ShiftAmount == 3) {
+      // Optimize right rotation 3 bits to swap then left rotation 1 bit.
+      Victim = DAG.getNode(AVRISD::SWAP, dl, VT, Victim);
+      Victim =
+          DAG.getNode(AVRISD::ROL, dl, VT, Victim, DAG.getConstant(1, dl, VT));
+      ShiftAmount = 0;
+    } else if (Op.getOpcode() == ISD::ROTL && ShiftAmount == 7) {
+      // Optimize left rotation 7 bits to right rotation 1 bit.
+      Victim =
+          DAG.getNode(AVRISD::ROR, dl, VT, Victim, DAG.getConstant(1, dl, VT));
+      ShiftAmount = 0;
+    } else if (Op.getOpcode() == ISD::ROTR && ShiftAmount == 7) {
+      // Optimize right rotation 7 bits to left rotation 1 bit.
+      Victim =
+          DAG.getNode(AVRISD::ROL, dl, VT, Victim, DAG.getConstant(1, dl, VT));
+      ShiftAmount = 0;
+    } else if ((Op.getOpcode() == ISD::ROTR || Op.getOpcode() == ISD::ROTL) &&
+               ShiftAmount >= 4) {
+      // Optimize left/right rotation with the SWAP instruction.
+      Victim = DAG.getNode(AVRISD::SWAP, dl, VT, Victim);
+      ShiftAmount -= 4;
     }
   } else if (VT.getSizeInBits() == 16) {
     if (Op.getOpcode() == ISD::SRA)
@@ -1747,11 +1774,11 @@ AVRTargetLowering::LowerReturn(SDValue Chain, CallingConv::ID CallConv,
 //===----------------------------------------------------------------------===//
 
 MachineBasicBlock *AVRTargetLowering::insertShift(MachineInstr &MI,
-                                                  MachineBasicBlock *BB) const {
+                                                  MachineBasicBlock *BB,
+                                                  bool Tiny) const {
   unsigned Opc;
   const TargetRegisterClass *RC;
   bool HasRepeatedOperand = false;
-  bool HasZeroOperand = false;
   MachineFunction *F = BB->getParent();
   MachineRegisterInfo &RI = F->getRegInfo();
   const TargetInstrInfo &TII = *Subtarget.getInstrInfo();
@@ -1786,9 +1813,8 @@ MachineBasicBlock *AVRTargetLowering::insertShift(MachineInstr &MI,
     RC = &AVR::DREGSRegClass;
     break;
   case AVR::Rol8:
-    Opc = AVR::ROLBRd;
+    Opc = Tiny ? AVR::ROLBRdR17 : AVR::ROLBRdR1;
     RC = &AVR::GPR8RegClass;
-    HasZeroOperand = true;
     break;
   case AVR::Rol16:
     Opc = AVR::ROLWRd;
@@ -1850,8 +1876,6 @@ MachineBasicBlock *AVRTargetLowering::insertShift(MachineInstr &MI,
   auto ShiftMI = BuildMI(LoopBB, dl, TII.get(Opc), ShiftReg2).addReg(ShiftReg);
   if (HasRepeatedOperand)
     ShiftMI.addReg(ShiftReg);
-  if (HasZeroOperand)
-    ShiftMI.addReg(Subtarget.getZeroRegister());
 
   // CheckBB:
   // ShiftReg = phi [%SrcReg, BB], [%ShiftReg2, LoopBB]
@@ -2332,6 +2356,7 @@ MachineBasicBlock *
 AVRTargetLowering::EmitInstrWithCustomInserter(MachineInstr &MI,
                                                MachineBasicBlock *MBB) const {
   int Opc = MI.getOpcode();
+  const AVRSubtarget &STI = MBB->getParent()->getSubtarget<AVRSubtarget>();
 
   // Pseudo shift instructions with a non constant shift amount are expanded
   // into a loop.
@@ -2346,7 +2371,7 @@ AVRTargetLowering::EmitInstrWithCustomInserter(MachineInstr &MI,
   case AVR::Ror16:
   case AVR::Asr8:
   case AVR::Asr16:
-    return insertShift(MI, MBB);
+    return insertShift(MI, MBB, STI.hasTinyEncoding());
   case AVR::Lsl32:
   case AVR::Lsr32:
   case AVR::Asr32:

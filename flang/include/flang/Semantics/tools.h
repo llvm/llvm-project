@@ -190,6 +190,22 @@ bool IsPolymorphic(const Symbol &);
 bool IsUnlimitedPolymorphic(const Symbol &);
 bool IsPolymorphicAllocatable(const Symbol &);
 
+inline bool IsCUDADeviceContext(const Scope *scope) {
+  if (scope) {
+    if (const Symbol * symbol{scope->symbol()}) {
+      if (const auto *subp{symbol->detailsIf<SubprogramDetails>()}) {
+        if (auto attrs{subp->cudaSubprogramAttrs()}) {
+          return *attrs != common::CUDASubprogramAttrs::Host;
+        }
+      }
+    }
+  }
+  return false;
+}
+
+const Scope *FindCUDADeviceContext(const Scope *);
+std::optional<common::CUDADataAttr> GetCUDADataAttr(const Symbol *);
+
 // Return an error if a symbol is not accessible from a scope
 std::optional<parser::MessageFormattedText> CheckAccessibleSymbol(
     const semantics::Scope &, const Symbol &);
@@ -386,9 +402,9 @@ std::list<std::list<SymbolRef>> GetStorageAssociations(const Scope &);
 //     its non-POINTER derived type components.  (The lifetime of each
 //     potential subobject component is that of the entire instance.)
 //   - PotentialAndPointer subobject components of a derived type are the
-//   closure of
-//     its components (including POINTERs) and the PotentialAndPointer subobject
-//     components of its non-POINTER derived type components.
+//     closure of its components (including POINTERs) and the
+//     PotentialAndPointer subobject components of its non-POINTER derived type
+//     components.
 // Parent and procedure components are considered against these definitions.
 // For this kind of iterator, the component tree is recursively visited in the
 // following order:

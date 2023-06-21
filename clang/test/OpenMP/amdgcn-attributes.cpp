@@ -32,10 +32,10 @@ int callable(int x) {
   return x + 1;
 }
 
-// DEFAULT: attributes #0 = { convergent noinline norecurse nounwind optnone "kernel" "no-trapping-math"="true" "stack-protector-buffer-size"="8" "uniform-work-group-size"="true" }
-// CPU: attributes #0 = { convergent noinline norecurse nounwind optnone "kernel" "no-trapping-math"="true" "stack-protector-buffer-size"="8" "target-cpu"="gfx900" "target-features"="+16-bit-insts,+ci-insts,+dpp,+gfx8-insts,+gfx9-insts,+s-memrealtime,+s-memtime-inst,+wavefrontsize64" "uniform-work-group-size"="true" }
-// NOIEEE: attributes #0 = { convergent noinline norecurse nounwind optnone "amdgpu-ieee"="false" "kernel" "no-nans-fp-math"="true" "no-trapping-math"="true" "stack-protector-buffer-size"="8" "uniform-work-group-size"="true" }
-// UNSAFEATOMIC: attributes #0 = { convergent noinline norecurse nounwind optnone "amdgpu-unsafe-fp-atomics"="true" "kernel" "no-trapping-math"="true" "stack-protector-buffer-size"="8" "uniform-work-group-size"="true" }
+// DEFAULT: attributes #0 = { convergent mustprogress noinline norecurse nounwind optnone "kernel" "no-trapping-math"="true" "stack-protector-buffer-size"="8" "uniform-work-group-size"="true" }
+// CPU: attributes #0 = { convergent mustprogress noinline norecurse nounwind optnone "kernel" "no-trapping-math"="true" "stack-protector-buffer-size"="8" "target-cpu"="gfx900" "target-features"="+16-bit-insts,+ci-insts,+dpp,+gfx8-insts,+gfx9-insts,+s-memrealtime,+s-memtime-inst,+wavefrontsize64" "uniform-work-group-size"="true" }
+// NOIEEE: attributes #0 = { convergent mustprogress noinline norecurse nounwind optnone "amdgpu-ieee"="false" "kernel" "no-nans-fp-math"="true" "no-trapping-math"="true" "stack-protector-buffer-size"="8" "uniform-work-group-size"="true" }
+// UNSAFEATOMIC: attributes #0 = { convergent mustprogress noinline norecurse nounwind optnone "amdgpu-unsafe-fp-atomics"="true" "kernel" "no-trapping-math"="true" "stack-protector-buffer-size"="8" "uniform-work-group-size"="true" }
 
 // DEFAULT: attributes #1 = { convergent mustprogress noinline nounwind optnone "no-trapping-math"="true" "stack-protector-buffer-size"="8" }
 // CPU: attributes #1 = { convergent mustprogress noinline nounwind optnone "no-trapping-math"="true" "stack-protector-buffer-size"="8" "target-cpu"="gfx900" "target-features"="+16-bit-insts,+ci-insts,+dpp,+gfx8-insts,+gfx9-insts,+s-memrealtime,+s-memtime-inst,+wavefrontsize64" }

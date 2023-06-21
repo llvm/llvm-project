@@ -6,15 +6,13 @@
 //===----------------------------------------------------------------------===//
 
 // UNSUPPORTED: c++03, c++11, c++14, c++17, c++20
+// UNSUPPORTED: GCC-ALWAYS_INLINE-FIXME
 
 // This version runs the test when the platform has Unicode support.
 // UNSUPPORTED: libcpp-has-no-unicode
 
 // TODO FMT Investigate Windows and 32-bit AIX issues.
 // UNSUPPORTED: msvc, target={{.+}}-windows-gnu, target=powerpc-ibm-aix{{.*}}
-
-// TODO FMT Fix this test using GCC, it currently crashes.
-// UNSUPPORTED: gcc-12
 
 // TODO FMT This test should not require std::to_chars(floating-point)
 // XFAIL: availability-fp_to_chars-missing
@@ -502,6 +500,12 @@ static void test_ill_formed_utf8() {
               "{:?}",
               "\xf7\xbf\xbf"
               "a");
+
+  test_format(R"("a\x{f1}\x{80}\x{80}\x{e1}\x{80}\x{c2}b")"sv,
+              "{:?}",
+              "a"
+              "\xf1\x80\x80\xe1\x80\xc2"
+              "b");
 
   // Code unit out of range
   test_format(R"("\u{10ffff}")"sv, "{:?}", "\xf4\x8f\xbf\xbf");               // last valid code point

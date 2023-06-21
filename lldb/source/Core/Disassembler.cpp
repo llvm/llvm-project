@@ -893,8 +893,8 @@ bool Instruction::TestEmulation(Stream *out_stream, const char *file_name) {
 
   OptionValueDictionary *data_dictionary =
       data_dictionary_sp->GetAsDictionary();
-  static ConstString description_key("assembly_string");
-  static ConstString triple_key("triple");
+  static constexpr llvm::StringLiteral description_key("assembly_string");
+  static constexpr llvm::StringLiteral triple_key("triple");
 
   OptionValueSP value_sp = data_dictionary->GetValueForKey(description_key);
 

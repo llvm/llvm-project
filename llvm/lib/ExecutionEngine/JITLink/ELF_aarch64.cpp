@@ -47,6 +47,7 @@ class ELFLinkGraphBuilder_aarch64 : public ELFLinkGraphBuilder<ELFT> {
 private:
   enum ELFAArch64RelocationKind : Edge::Kind {
     ELFCall26 = Edge::FirstRelocation,
+    ELFAdrLo21,
     ELFAdrPage21,
     ELFAddAbs12,
     ELFLdSt8Abs12,
@@ -79,6 +80,8 @@ private:
     case ELF::R_AARCH64_CALL26:
     case ELF::R_AARCH64_JUMP26:
       return ELFCall26;
+    case ELF::R_AARCH64_ADR_PREL_LO21:
+      return ELFAdrLo21;
     case ELF::R_AARCH64_ADR_PREL_PG_HI21:
       return ELFAdrPage21;
     case ELF::R_AARCH64_ADD_ABS_LO12_NC:
@@ -184,6 +187,15 @@ private:
     switch (*RelocKind) {
     case ELFCall26: {
       Kind = aarch64::Branch26PCRel;
+      break;
+    }
+    case ELFAdrLo21: {
+      uint32_t Instr = *(const ulittle32_t *)FixupContent;
+      if (!aarch64::isADR(Instr))
+        return make_error<JITLinkError>(
+            "R_AARCH64_ADR_PREL_LO21 target is not an ADR instruction");
+
+      Kind = aarch64::ADRLiteral21;
       break;
     }
     case ELFAdrPage21: {

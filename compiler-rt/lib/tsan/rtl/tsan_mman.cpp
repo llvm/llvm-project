@@ -25,6 +25,8 @@ namespace __tsan {
 
 struct MapUnmapCallback {
   void OnMap(uptr p, uptr size) const { }
+  void OnMapSecondary(uptr p, uptr size, uptr user_begin,
+                      uptr user_size) const {};
   void OnUnmap(uptr p, uptr size) const {
     // We are about to unmap a chunk of user memory.
     // Mark the corresponding shadow memory as not needed.
@@ -379,6 +381,10 @@ uptr user_alloc_usable_size(const void *p) {
 
 uptr user_alloc_usable_size_fast(const void *p) {
   MBlock *b = ctx->metamap.GetBlock((uptr)p);
+  // Static objects may have malloc'd before tsan completes
+  // initialization, and may believe returned ptrs to be valid.
+  if (!b)
+    return 0;  // Not a valid pointer.
   if (b->siz == 0)
     return 1;  // Zero-sized allocations are actually 1 byte.
   return b->siz;

@@ -22,6 +22,7 @@
 #include "llvm/Analysis/ScalarEvolution.h"
 #include "llvm/Analysis/TargetLibraryInfo.h"
 #include "llvm/Bitcode/BitcodeReader.h"
+#include "llvm/IR/Attributes.h"
 #include "llvm/IR/CFG.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/DebugInfoMetadata.h"
@@ -33,6 +34,7 @@
 #include "llvm/IR/Value.h"
 #include "llvm/MC/TargetRegistry.h"
 #include "llvm/Support/CommandLine.h"
+#include "llvm/Support/FileSystem.h"
 #include "llvm/Target/TargetMachine.h"
 #include "llvm/Target/TargetOptions.h"
 #include "llvm/Transforms/Utils/BasicBlockUtils.h"
@@ -2120,8 +2122,7 @@ CanonicalLoopInfo *OpenMPIRBuilder::createCanonicalLoop(
     // Avoid incrementing past stop since it could overflow.
     Value *CountIfTwo = Builder.CreateAdd(
         Builder.CreateUDiv(Builder.CreateSub(Span, One), Incr), One);
-    Value *OneCmp = Builder.CreateICmp(
-        InclusiveStop ? CmpInst::ICMP_ULT : CmpInst::ICMP_ULE, Span, Incr);
+    Value *OneCmp = Builder.CreateICmp(CmpInst::ICMP_ULE, Span, Incr);
     CountIfLooping = Builder.CreateSelect(OneCmp, One, CountIfTwo);
   }
   Value *TripCount = Builder.CreateSelect(ZeroCmp, Zero, CountIfLooping,
@@ -4077,73 +4078,121 @@ Constant *OpenMPIRBuilder::registerTargetRegionFunction(
 }
 
 OpenMPIRBuilder::InsertPointTy OpenMPIRBuilder::createTargetData(
-    const LocationDescription &Loc, OpenMPIRBuilder::InsertPointTy CodeGenIP,
-    SmallVectorImpl<uint64_t> &MapTypeFlags,
-    SmallVectorImpl<Constant *> &MapNames, struct MapperAllocas &MapperAllocas,
-    bool IsBegin, int64_t DeviceID, Value *IfCond,
-    BodyGenCallbackTy ProcessMapOpCB, BodyGenCallbackTy BodyGenCB) {
+    const LocationDescription &Loc, InsertPointTy AllocaIP,
+    InsertPointTy CodeGenIP, Value *DeviceID, Value *IfCond,
+    TargetDataInfo &Info,
+    function_ref<MapInfosTy &(InsertPointTy CodeGenIP)> GenMapInfoCB,
+    omp::RuntimeFunction *MapperFunc,
+    function_ref<InsertPointTy(InsertPointTy CodeGenIP, BodyGenTy BodyGenType)>
+        BodyGenCB) {
   if (!updateToLocation(Loc))
     return InsertPointTy();
 
   Builder.restoreIP(CodeGenIP);
+  bool IsStandAlone = !BodyGenCB;
 
-  // LLVM utilities like blocks with terminators.
-  // The UI acts as a resume point for code insertion after the BodyGen
-  auto *UI = Builder.CreateUnreachable();
-  if (IfCond) {
-    auto *ThenTI =
-        SplitBlockAndInsertIfThen(IfCond, UI, /* Unreachable */ false);
-    ThenTI->getParent()->setName("omp_if.then");
-    Builder.SetInsertPoint(ThenTI);
-  } else {
-    Builder.SetInsertPoint(UI);
-  }
+  // Generate the code for the opening of the data environment. Capture all the
+  // arguments of the runtime call by reference because they are used in the
+  // closing of the region.
+  auto BeginThenGen = [&](InsertPointTy AllocaIP, InsertPointTy CodeGenIP) {
+    emitOffloadingArrays(AllocaIP, Builder.saveIP(),
+                         GenMapInfoCB(Builder.saveIP()), Info,
+                         /*IsNonContiguous=*/true);
 
-  ProcessMapOpCB(Builder.saveIP(), Builder.saveIP());
+    TargetDataRTArgs RTArgs;
+    emitOffloadingArraysArgument(Builder, RTArgs, Info);
 
-  uint32_t SrcLocStrSize;
-  Constant *SrcLocStr = getOrCreateSrcLocStr(Loc, SrcLocStrSize);
-  Value *srcLocInfo = getOrCreateIdent(SrcLocStr, SrcLocStrSize);
+    // Emit the number of elements in the offloading arrays.
+    Value *PointerNum = Builder.getInt32(Info.NumberOfPtrs);
 
-  GlobalVariable *MapTypesGV =
-      createOffloadMaptypes(MapTypeFlags, ".offload_maptypes");
-  Value *MapTypesArg = Builder.CreateConstInBoundsGEP2_32(
-      ArrayType::get(Builder.getInt64Ty(), MapTypeFlags.size()), MapTypesGV,
-      /*Idx0=*/0, /*Idx1=*/0);
+    // Source location for the ident struct
+    uint32_t SrcLocStrSize;
+    Constant *SrcLocStr = getOrCreateSrcLocStr(Loc, SrcLocStrSize);
+    Value *SrcLocInfo = getOrCreateIdent(SrcLocStr, SrcLocStrSize);
 
-  GlobalVariable *MapNamesGV =
-      createOffloadMapnames(MapNames, ".offload_mapnames");
-  Value *MapNamesArg = Builder.CreateConstInBoundsGEP2_32(
-      ArrayType::get(Builder.getInt8PtrTy(), MapNames.size()), MapNamesGV,
-      /*Idx0=*/0, /*Idx1=*/0);
+    Value *OffloadingArgs[] = {SrcLocInfo,           DeviceID,
+                               PointerNum,           RTArgs.BasePointersArray,
+                               RTArgs.PointersArray, RTArgs.SizesArray,
+                               RTArgs.MapTypesArray, RTArgs.MapNamesArray,
+                               RTArgs.MappersArray};
 
-  Function *beginMapperFunc =
-      getOrCreateRuntimeFunctionPtr(omp::OMPRTL___tgt_target_data_begin_mapper);
-  Function *endMapperFunc =
-      getOrCreateRuntimeFunctionPtr(omp::OMPRTL___tgt_target_data_end_mapper);
+    if (IsStandAlone) {
+      assert(MapperFunc && "MapperFunc missing for standalone target data");
+      Builder.CreateCall(getOrCreateRuntimeFunctionPtr(*MapperFunc),
+                         OffloadingArgs);
+    } else {
+      Function *BeginMapperFunc = getOrCreateRuntimeFunctionPtr(
+          omp::OMPRTL___tgt_target_data_begin_mapper);
+
+      Builder.CreateCall(BeginMapperFunc, OffloadingArgs);
+
+      // If device pointer privatization is required, emit the body of the
+      // region here. It will have to be duplicated: with and without
+      // privatization.
+      Builder.restoreIP(BodyGenCB(Builder.saveIP(), BodyGenTy::Priv));
+    }
+  };
+
+  // If we need device pointer privatization, we need to emit the body of the
+  // region with no privatization in the 'else' branch of the conditional.
+  // Otherwise, we don't have to do anything.
+  auto BeginElseGen = [&](InsertPointTy AllocaIP, InsertPointTy CodeGenIP) {
+    Builder.restoreIP(BodyGenCB(Builder.saveIP(), BodyGenTy::DupNoPriv));
+  };
+
+  // Generate code for the closing of the data region.
+  auto EndThenGen = [&](InsertPointTy AllocaIP, InsertPointTy CodeGenIP) {
+    TargetDataRTArgs RTArgs;
+    emitOffloadingArraysArgument(Builder, RTArgs, Info, /*EmitDebug=*/false,
+                                 /*ForEndCall=*/true);
+
+    // Emit the number of elements in the offloading arrays.
+    Value *PointerNum = Builder.getInt32(Info.NumberOfPtrs);
+
+    // Source location for the ident struct
+    uint32_t SrcLocStrSize;
+    Constant *SrcLocStr = getOrCreateSrcLocStr(Loc, SrcLocStrSize);
+    Value *SrcLocInfo = getOrCreateIdent(SrcLocStr, SrcLocStrSize);
+
+    Value *OffloadingArgs[] = {SrcLocInfo,           DeviceID,
+                               PointerNum,           RTArgs.BasePointersArray,
+                               RTArgs.PointersArray, RTArgs.SizesArray,
+                               RTArgs.MapTypesArray, RTArgs.MapNamesArray,
+                               RTArgs.MappersArray};
+    Function *EndMapperFunc =
+        getOrCreateRuntimeFunctionPtr(omp::OMPRTL___tgt_target_data_end_mapper);
+
+    Builder.CreateCall(EndMapperFunc, OffloadingArgs);
+  };
+
+  // We don't have to do anything to close the region if the if clause evaluates
+  // to false.
+  auto EndElseGen = [&](InsertPointTy AllocaIP, InsertPointTy CodeGenIP) {};
 
   if (BodyGenCB) {
-    // Create call to start the data region.
-    emitMapperCall(Builder.saveIP(), beginMapperFunc, srcLocInfo, MapTypesArg,
-                   MapNamesArg, MapperAllocas, DeviceID, MapTypeFlags.size());
+    if (IfCond) {
+      emitIfClause(IfCond, BeginThenGen, BeginElseGen, AllocaIP);
+    } else {
+      BeginThenGen(AllocaIP, Builder.saveIP());
+    }
 
-    BodyGenCB(Builder.saveIP(), Builder.saveIP());
+    // If we don't require privatization of device pointers, we emit the body in
+    // between the runtime calls. This avoids duplicating the body code.
+    Builder.restoreIP(BodyGenCB(Builder.saveIP(), BodyGenTy::NoPriv));
 
-    Builder.SetInsertPoint(UI->getParent());
-    // Create call to end the data region.
-    emitMapperCall(Builder.saveIP(), endMapperFunc, srcLocInfo, MapTypesArg,
-                   MapNamesArg, MapperAllocas, DeviceID, MapTypeFlags.size());
+    if (IfCond) {
+      emitIfClause(IfCond, EndThenGen, EndElseGen, AllocaIP);
+    } else {
+      EndThenGen(AllocaIP, Builder.saveIP());
+    }
   } else {
-    emitMapperCall(Builder.saveIP(), IsBegin ? beginMapperFunc : endMapperFunc,
-                   srcLocInfo, MapTypesArg, MapNamesArg, MapperAllocas,
-                   DeviceID, MapTypeFlags.size());
+    if (IfCond) {
+      emitIfClause(IfCond, BeginThenGen, EndElseGen, AllocaIP);
+    } else {
+      BeginThenGen(AllocaIP, Builder.saveIP());
+    }
   }
 
-  // Update the insertion point and remove the terminator we introduced.
-  Builder.SetInsertPoint(UI->getParent());
-  if (IfCond)
-    UI->getParent()->setName("omp_if.end");
-  UI->eraseFromParent();
   return Builder.saveIP();
 }
 
@@ -4415,6 +4464,327 @@ void OpenMPIRBuilder::emitOffloadingArraysArgument(IRBuilderBase &Builder,
   else
     RTArgs.MappersArray =
         Builder.CreatePointerCast(Info.RTArgs.MappersArray, VoidPtrPtrTy);
+}
+
+void OpenMPIRBuilder::emitNonContiguousDescriptor(InsertPointTy AllocaIP,
+                                                  InsertPointTy CodeGenIP,
+                                                  MapInfosTy &CombinedInfo,
+                                                  TargetDataInfo &Info) {
+  MapInfosTy::StructNonContiguousInfo &NonContigInfo =
+      CombinedInfo.NonContigInfo;
+
+  // Build an array of struct descriptor_dim and then assign it to
+  // offload_args.
+  //
+  // struct descriptor_dim {
+  //  uint64_t offset;
+  //  uint64_t count;
+  //  uint64_t stride
+  // };
+  Type *Int64Ty = Builder.getInt64Ty();
+  StructType *DimTy = StructType::create(
+      M.getContext(), ArrayRef<Type *>({Int64Ty, Int64Ty, Int64Ty}),
+      "struct.descriptor_dim");
+
+  enum { OffsetFD = 0, CountFD, StrideFD };
+  // We need two index variable here since the size of "Dims" is the same as
+  // the size of Components, however, the size of offset, count, and stride is
+  // equal to the size of base declaration that is non-contiguous.
+  for (unsigned I = 0, L = 0, E = NonContigInfo.Dims.size(); I < E; ++I) {
+    // Skip emitting ir if dimension size is 1 since it cannot be
+    // non-contiguous.
+    if (NonContigInfo.Dims[I] == 1)
+      continue;
+    Builder.restoreIP(AllocaIP);
+    ArrayType *ArrayTy = ArrayType::get(DimTy, NonContigInfo.Dims[I]);
+    AllocaInst *DimsAddr =
+        Builder.CreateAlloca(ArrayTy, /* ArraySize = */ nullptr, "dims");
+    Builder.restoreIP(CodeGenIP);
+    for (unsigned II = 0, EE = NonContigInfo.Dims[I]; II < EE; ++II) {
+      unsigned RevIdx = EE - II - 1;
+      Value *DimsLVal = Builder.CreateInBoundsGEP(
+          DimsAddr->getAllocatedType(), DimsAddr,
+          {Builder.getInt64(0), Builder.getInt64(II)});
+      // Offset
+      Value *OffsetLVal = Builder.CreateStructGEP(DimTy, DimsLVal, OffsetFD);
+      Builder.CreateAlignedStore(
+          NonContigInfo.Offsets[L][RevIdx], OffsetLVal,
+          M.getDataLayout().getPrefTypeAlign(OffsetLVal->getType()));
+      // Count
+      Value *CountLVal = Builder.CreateStructGEP(DimTy, DimsLVal, CountFD);
+      Builder.CreateAlignedStore(
+          NonContigInfo.Counts[L][RevIdx], CountLVal,
+          M.getDataLayout().getPrefTypeAlign(CountLVal->getType()));
+      // Stride
+      Value *StrideLVal = Builder.CreateStructGEP(DimTy, DimsLVal, StrideFD);
+      Builder.CreateAlignedStore(
+          NonContigInfo.Strides[L][RevIdx], StrideLVal,
+          M.getDataLayout().getPrefTypeAlign(CountLVal->getType()));
+    }
+    // args[I] = &dims
+    Builder.restoreIP(CodeGenIP);
+    Value *DAddr = Builder.CreatePointerBitCastOrAddrSpaceCast(
+        DimsAddr, Builder.getInt8PtrTy());
+    Value *P = Builder.CreateConstInBoundsGEP2_32(
+        ArrayType::get(Builder.getInt8PtrTy(), Info.NumberOfPtrs),
+        Info.RTArgs.PointersArray, 0, I);
+    Builder.CreateAlignedStore(
+        DAddr, P, M.getDataLayout().getPrefTypeAlign(Builder.getInt8PtrTy()));
+    ++L;
+  }
+}
+
+void OpenMPIRBuilder::emitOffloadingArrays(
+    InsertPointTy AllocaIP, InsertPointTy CodeGenIP, MapInfosTy &CombinedInfo,
+    TargetDataInfo &Info, bool IsNonContiguous,
+    function_ref<void(unsigned int, Value *, Value *)> DeviceAddrCB,
+    function_ref<Value *(unsigned int)> CustomMapperCB) {
+
+  // Reset the array information.
+  Info.clearArrayInfo();
+  Info.NumberOfPtrs = CombinedInfo.BasePointers.size();
+
+  if (Info.NumberOfPtrs == 0)
+    return;
+
+  Builder.restoreIP(AllocaIP);
+  // Detect if we have any capture size requiring runtime evaluation of the
+  // size so that a constant array could be eventually used.
+  ArrayType *PointerArrayType =
+      ArrayType::get(Builder.getInt8PtrTy(), Info.NumberOfPtrs);
+
+  Info.RTArgs.BasePointersArray = Builder.CreateAlloca(
+      PointerArrayType, /* ArraySize = */ nullptr, ".offload_baseptrs");
+
+  Info.RTArgs.PointersArray = Builder.CreateAlloca(
+      PointerArrayType, /* ArraySize = */ nullptr, ".offload_ptrs");
+  AllocaInst *MappersArray = Builder.CreateAlloca(
+      PointerArrayType, /* ArraySize = */ nullptr, ".offload_mappers");
+  Info.RTArgs.MappersArray = MappersArray;
+
+  // If we don't have any VLA types or other types that require runtime
+  // evaluation, we can use a constant array for the map sizes, otherwise we
+  // need to fill up the arrays as we do for the pointers.
+  Type *Int64Ty = Builder.getInt64Ty();
+  SmallVector<Constant *> ConstSizes(CombinedInfo.Sizes.size(),
+                                     ConstantInt::get(Builder.getInt64Ty(), 0));
+  SmallBitVector RuntimeSizes(CombinedInfo.Sizes.size());
+  for (unsigned I = 0, E = CombinedInfo.Sizes.size(); I < E; ++I) {
+    if (auto *CI = dyn_cast<Constant>(CombinedInfo.Sizes[I])) {
+      if (!isa<ConstantExpr>(CI) && !isa<GlobalValue>(CI)) {
+        if (IsNonContiguous &&
+            static_cast<std::underlying_type_t<OpenMPOffloadMappingFlags>>(
+                CombinedInfo.Types[I] &
+                OpenMPOffloadMappingFlags::OMP_MAP_NON_CONTIG))
+          ConstSizes[I] = ConstantInt::get(Builder.getInt64Ty(),
+                                           CombinedInfo.NonContigInfo.Dims[I]);
+        else
+          ConstSizes[I] = CI;
+        continue;
+      }
+    }
+    RuntimeSizes.set(I);
+  }
+
+  if (RuntimeSizes.all()) {
+    ArrayType *SizeArrayType = ArrayType::get(Int64Ty, Info.NumberOfPtrs);
+    Info.RTArgs.SizesArray = Builder.CreateAlloca(
+        SizeArrayType, /* ArraySize = */ nullptr, ".offload_sizes");
+    Builder.restoreIP(CodeGenIP);
+  } else {
+    auto *SizesArrayInit = ConstantArray::get(
+        ArrayType::get(Int64Ty, ConstSizes.size()), ConstSizes);
+    std::string Name = createPlatformSpecificName({"offload_sizes"});
+    auto *SizesArrayGbl =
+        new GlobalVariable(M, SizesArrayInit->getType(), /*isConstant=*/true,
+                           GlobalValue::PrivateLinkage, SizesArrayInit, Name);
+    SizesArrayGbl->setUnnamedAddr(GlobalValue::UnnamedAddr::Global);
+
+    if (!RuntimeSizes.any()) {
+      Info.RTArgs.SizesArray = SizesArrayGbl;
+    } else {
+      unsigned IndexSize = M.getDataLayout().getIndexSizeInBits(0);
+      Align OffloadSizeAlign = M.getDataLayout().getABIIntegerTypeAlignment(64);
+      ArrayType *SizeArrayType = ArrayType::get(Int64Ty, Info.NumberOfPtrs);
+      AllocaInst *Buffer = Builder.CreateAlloca(
+          SizeArrayType, /* ArraySize = */ nullptr, ".offload_sizes");
+      Buffer->setAlignment(OffloadSizeAlign);
+      Builder.restoreIP(CodeGenIP);
+      Value *GblConstPtr = Builder.CreatePointerBitCastOrAddrSpaceCast(
+          SizesArrayGbl, Int64Ty->getPointerTo());
+      Builder.CreateMemCpy(
+          Buffer, M.getDataLayout().getPrefTypeAlign(Buffer->getType()),
+          GblConstPtr, OffloadSizeAlign,
+          Builder.getIntN(
+              IndexSize,
+              Buffer->getAllocationSize(M.getDataLayout())->getFixedValue()));
+
+      Info.RTArgs.SizesArray = Buffer;
+    }
+    Builder.restoreIP(CodeGenIP);
+  }
+
+  // The map types are always constant so we don't need to generate code to
+  // fill arrays. Instead, we create an array constant.
+  SmallVector<uint64_t, 4> Mapping;
+  for (auto mapFlag : CombinedInfo.Types)
+    Mapping.push_back(
+        static_cast<std::underlying_type_t<OpenMPOffloadMappingFlags>>(
+            mapFlag));
+  std::string MaptypesName = createPlatformSpecificName({"offload_maptypes"});
+  auto *MapTypesArrayGbl = createOffloadMaptypes(Mapping, MaptypesName);
+  Info.RTArgs.MapTypesArray = MapTypesArrayGbl;
+
+  // The information types are only built if provided.
+  if (!CombinedInfo.Names.empty()) {
+    std::string MapnamesName = createPlatformSpecificName({"offload_mapnames"});
+    auto *MapNamesArrayGbl =
+        createOffloadMapnames(CombinedInfo.Names, MapnamesName);
+    Info.RTArgs.MapNamesArray = MapNamesArrayGbl;
+  }
+
+  // If there's a present map type modifier, it must not be applied to the end
+  // of a region, so generate a separate map type array in that case.
+  if (Info.separateBeginEndCalls()) {
+    bool EndMapTypesDiffer = false;
+    for (uint64_t &Type : Mapping) {
+      if (Type & static_cast<std::underlying_type_t<OpenMPOffloadMappingFlags>>(
+                     OpenMPOffloadMappingFlags::OMP_MAP_PRESENT)) {
+        Type &= ~static_cast<std::underlying_type_t<OpenMPOffloadMappingFlags>>(
+            OpenMPOffloadMappingFlags::OMP_MAP_PRESENT);
+        EndMapTypesDiffer = true;
+      }
+    }
+    if (EndMapTypesDiffer) {
+      MapTypesArrayGbl = createOffloadMaptypes(Mapping, MaptypesName);
+      Info.RTArgs.MapTypesArrayEnd = MapTypesArrayGbl;
+    }
+  }
+
+  for (unsigned I = 0; I < Info.NumberOfPtrs; ++I) {
+    Value *BPVal = CombinedInfo.BasePointers[I];
+    Value *BP = Builder.CreateConstInBoundsGEP2_32(
+        ArrayType::get(Builder.getInt8PtrTy(), Info.NumberOfPtrs),
+        Info.RTArgs.BasePointersArray, 0, I);
+    BP = Builder.CreatePointerBitCastOrAddrSpaceCast(
+        BP, BPVal->getType()->getPointerTo(/*AddrSpace=*/0));
+    Builder.CreateAlignedStore(
+        BPVal, BP, M.getDataLayout().getPrefTypeAlign(Builder.getInt8PtrTy()));
+
+    if (Info.requiresDevicePointerInfo()) {
+      assert(DeviceAddrCB &&
+             "DeviceAddrCB missing for DevicePtr code generation");
+      DeviceAddrCB(I, BP, BPVal);
+    }
+
+    Value *PVal = CombinedInfo.Pointers[I];
+    Value *P = Builder.CreateConstInBoundsGEP2_32(
+        ArrayType::get(Builder.getInt8PtrTy(), Info.NumberOfPtrs),
+        Info.RTArgs.PointersArray, 0, I);
+    P = Builder.CreatePointerBitCastOrAddrSpaceCast(
+        P, PVal->getType()->getPointerTo(/*AddrSpace=*/0));
+    // TODO: Check alignment correct.
+    Builder.CreateAlignedStore(
+        PVal, P, M.getDataLayout().getPrefTypeAlign(Builder.getInt8PtrTy()));
+
+    if (RuntimeSizes.test(I)) {
+      Value *S = Builder.CreateConstInBoundsGEP2_32(
+          ArrayType::get(Int64Ty, Info.NumberOfPtrs), Info.RTArgs.SizesArray,
+          /*Idx0=*/0,
+          /*Idx1=*/I);
+      Builder.CreateAlignedStore(
+          Builder.CreateIntCast(CombinedInfo.Sizes[I], Int64Ty,
+                                /*isSigned=*/true),
+          S, M.getDataLayout().getPrefTypeAlign(Builder.getInt8PtrTy()));
+    }
+    // Fill up the mapper array.
+    unsigned IndexSize = M.getDataLayout().getIndexSizeInBits(0);
+    Value *MFunc = ConstantPointerNull::get(Builder.getInt8PtrTy());
+    if (CustomMapperCB)
+      if (Value *CustomMFunc = CustomMapperCB(I))
+        MFunc = Builder.CreatePointerCast(CustomMFunc, Builder.getInt8PtrTy());
+    Value *MAddr = Builder.CreateInBoundsGEP(
+        MappersArray->getAllocatedType(), MappersArray,
+        {Builder.getIntN(IndexSize, 0), Builder.getIntN(IndexSize, I)});
+    Builder.CreateAlignedStore(
+        MFunc, MAddr, M.getDataLayout().getPrefTypeAlign(MAddr->getType()));
+  }
+
+  if (!IsNonContiguous || CombinedInfo.NonContigInfo.Offsets.empty() ||
+      Info.NumberOfPtrs == 0)
+    return;
+  emitNonContiguousDescriptor(AllocaIP, CodeGenIP, CombinedInfo, Info);
+}
+
+void OpenMPIRBuilder::emitBranch(BasicBlock *Target) {
+  BasicBlock *CurBB = Builder.GetInsertBlock();
+
+  if (!CurBB || CurBB->getTerminator()) {
+    // If there is no insert point or the previous block is already
+    // terminated, don't touch it.
+  } else {
+    // Otherwise, create a fall-through branch.
+    Builder.CreateBr(Target);
+  }
+
+  Builder.ClearInsertionPoint();
+}
+
+void OpenMPIRBuilder::emitBlock(BasicBlock *BB, Function *CurFn,
+                                bool IsFinished) {
+  BasicBlock *CurBB = Builder.GetInsertBlock();
+
+  // Fall out of the current block (if necessary).
+  emitBranch(BB);
+
+  if (IsFinished && BB->use_empty()) {
+    BB->eraseFromParent();
+    return;
+  }
+
+  // Place the block after the current block, if possible, or else at
+  // the end of the function.
+  if (CurBB && CurBB->getParent())
+    CurFn->insert(std::next(CurBB->getIterator()), BB);
+  else
+    CurFn->insert(CurFn->end(), BB);
+  Builder.SetInsertPoint(BB);
+}
+
+void OpenMPIRBuilder::emitIfClause(Value *Cond, BodyGenCallbackTy ThenGen,
+                                   BodyGenCallbackTy ElseGen,
+                                   InsertPointTy AllocaIP) {
+  // If the condition constant folds and can be elided, try to avoid emitting
+  // the condition and the dead arm of the if/else.
+  if (auto *CI = dyn_cast<ConstantInt>(Cond)) {
+    auto CondConstant = CI->getSExtValue();
+    if (CondConstant)
+      ThenGen(AllocaIP, Builder.saveIP());
+    else
+      ElseGen(AllocaIP, Builder.saveIP());
+    return;
+  }
+
+  Function *CurFn = Builder.GetInsertBlock()->getParent();
+
+  // Otherwise, the condition did not fold, or we couldn't elide it.  Just
+  // emit the conditional branch.
+  BasicBlock *ThenBlock = BasicBlock::Create(M.getContext(), "omp_if.then");
+  BasicBlock *ElseBlock = BasicBlock::Create(M.getContext(), "omp_if.else");
+  BasicBlock *ContBlock = BasicBlock::Create(M.getContext(), "omp_if.end");
+  Builder.CreateCondBr(Cond, ThenBlock, ElseBlock);
+  // Emit the 'then' code.
+  emitBlock(ThenBlock, CurFn);
+  ThenGen(AllocaIP, Builder.saveIP());
+  emitBranch(ContBlock);
+  // Emit the 'else' code if present.
+  // There is no need to emit line number for unconditional branch.
+  emitBlock(ElseBlock, CurFn);
+  ElseGen(AllocaIP, Builder.saveIP());
+  // There is no need to emit line number for unconditional branch.
+  emitBranch(ContBlock);
+  // Emit the continuation block for code after the if.
+  emitBlock(ContBlock, CurFn, /*IsFinished=*/true);
 }
 
 bool OpenMPIRBuilder::checkAndEmitFlushAfterAtomic(
@@ -5025,6 +5395,7 @@ void OpenMPIRBuilder::createOffloadEntry(Constant *ID, Constant *Addr,
   Fn->addFnAttr(Attribute::get(Ctx, "kernel"));
   if (Triple(M.getTargetTriple()).isAMDGCN())
     Fn->addFnAttr("uniform-work-group-size", "true");
+  Fn->addFnAttr(Attribute::MustProgress);
 }
 
 // We only generate metadata for function that contain target regions.
@@ -5130,7 +5501,8 @@ void OpenMPIRBuilder::createOffloadEntriesAndInfoMetadata(
           static_cast<OffloadEntriesInfoManager::OMPTargetGlobalVarEntryKind>(
               CE->getFlags());
       switch (Flags) {
-      case OffloadEntriesInfoManager::OMPTargetGlobalVarEntryTo: {
+      case OffloadEntriesInfoManager::OMPTargetGlobalVarEntryEnter:
+      case OffloadEntriesInfoManager::OMPTargetGlobalVarEntryTo:
         if (Config.isEmbedded() && Config.hasRequiresUnifiedSharedMemory())
           continue;
         if (!CE->getAddress()) {
@@ -5141,7 +5513,6 @@ void OpenMPIRBuilder::createOffloadEntriesAndInfoMetadata(
         if (CE->getVarSize() == 0)
           continue;
         break;
-      }
       case OffloadEntriesInfoManager::OMPTargetGlobalVarEntryLink:
         assert(((Config.isEmbedded() && !CE->getAddress()) ||
                 (!Config.isEmbedded() && CE->getAddress())) &&
@@ -5152,6 +5523,8 @@ void OpenMPIRBuilder::createOffloadEntriesAndInfoMetadata(
           ErrorFn(EMIT_MD_GLOBAL_VAR_LINK_ERROR, TargetRegionEntryInfo());
           continue;
         }
+        break;
+      default:
         break;
       }
 
@@ -5187,6 +5560,157 @@ void OffloadEntriesInfoManager::getTargetRegionEntryFnName(
   TargetRegionEntryInfo::getTargetRegionEntryFnName(
       Name, EntryInfo.ParentName, EntryInfo.DeviceID, EntryInfo.FileID,
       EntryInfo.Line, NewCount);
+}
+
+TargetRegionEntryInfo
+OpenMPIRBuilder::getTargetEntryUniqueInfo(FileIdentifierInfoCallbackTy CallBack,
+                                          StringRef ParentName) {
+  sys::fs::UniqueID ID;
+  auto FileIDInfo = CallBack();
+  if (auto EC = sys::fs::getUniqueID(std::get<0>(FileIDInfo), ID)) {
+    report_fatal_error(("Unable to get unique ID for file, during "
+                        "getTargetEntryUniqueInfo, error message: " +
+                        EC.message())
+                           .c_str());
+  }
+
+  return TargetRegionEntryInfo(ParentName, ID.getDevice(), ID.getFile(),
+                               std::get<1>(FileIDInfo));
+}
+
+Constant *OpenMPIRBuilder::getAddrOfDeclareTargetVar(
+    OffloadEntriesInfoManager::OMPTargetGlobalVarEntryKind CaptureClause,
+    OffloadEntriesInfoManager::OMPTargetDeviceClauseKind DeviceClause,
+    bool IsDeclaration, bool IsExternallyVisible,
+    TargetRegionEntryInfo EntryInfo, StringRef MangledName,
+    std::vector<GlobalVariable *> &GeneratedRefs, bool OpenMPSIMD,
+    std::vector<Triple> TargetTriple, Type *LlvmPtrTy,
+    std::function<Constant *()> GlobalInitializer,
+    std::function<GlobalValue::LinkageTypes()> VariableLinkage) {
+  // TODO: convert this to utilise the IRBuilder Config rather than
+  // a passed down argument.
+  if (OpenMPSIMD)
+    return nullptr;
+
+  if (CaptureClause == OffloadEntriesInfoManager::OMPTargetGlobalVarEntryLink ||
+      ((CaptureClause == OffloadEntriesInfoManager::OMPTargetGlobalVarEntryTo ||
+        CaptureClause ==
+            OffloadEntriesInfoManager::OMPTargetGlobalVarEntryEnter) &&
+       Config.hasRequiresUnifiedSharedMemory())) {
+    SmallString<64> PtrName;
+    {
+      raw_svector_ostream OS(PtrName);
+      OS << MangledName;
+      if (!IsExternallyVisible)
+        OS << format("_%x", EntryInfo.FileID);
+      OS << "_decl_tgt_ref_ptr";
+    }
+
+    Value *Ptr = M.getNamedValue(PtrName);
+
+    if (!Ptr) {
+      GlobalValue *GlobalValue = M.getNamedValue(MangledName);
+      Ptr = getOrCreateInternalVariable(LlvmPtrTy, PtrName);
+
+      auto *GV = cast<GlobalVariable>(Ptr);
+      GV->setLinkage(GlobalValue::WeakAnyLinkage);
+
+      if (!Config.isEmbedded()) {
+        if (GlobalInitializer)
+          GV->setInitializer(GlobalInitializer());
+        else
+          GV->setInitializer(GlobalValue);
+      }
+
+      registerTargetGlobalVariable(
+          CaptureClause, DeviceClause, IsDeclaration, IsExternallyVisible,
+          EntryInfo, MangledName, GeneratedRefs, OpenMPSIMD, TargetTriple,
+          GlobalInitializer, VariableLinkage, LlvmPtrTy, cast<Constant>(Ptr));
+    }
+
+    return cast<Constant>(Ptr);
+  }
+
+  return nullptr;
+}
+
+void OpenMPIRBuilder::registerTargetGlobalVariable(
+    OffloadEntriesInfoManager::OMPTargetGlobalVarEntryKind CaptureClause,
+    OffloadEntriesInfoManager::OMPTargetDeviceClauseKind DeviceClause,
+    bool IsDeclaration, bool IsExternallyVisible,
+    TargetRegionEntryInfo EntryInfo, StringRef MangledName,
+    std::vector<GlobalVariable *> &GeneratedRefs, bool OpenMPSIMD,
+    std::vector<Triple> TargetTriple,
+    std::function<Constant *()> GlobalInitializer,
+    std::function<GlobalValue::LinkageTypes()> VariableLinkage, Type *LlvmPtrTy,
+    Constant *Addr) {
+  if (DeviceClause != OffloadEntriesInfoManager::OMPTargetDeviceClauseAny ||
+      (TargetTriple.empty() && !Config.isEmbedded()))
+    return;
+
+  OffloadEntriesInfoManager::OMPTargetGlobalVarEntryKind Flags;
+  StringRef VarName;
+  int64_t VarSize;
+  GlobalValue::LinkageTypes Linkage;
+
+  if ((CaptureClause == OffloadEntriesInfoManager::OMPTargetGlobalVarEntryTo ||
+       CaptureClause ==
+           OffloadEntriesInfoManager::OMPTargetGlobalVarEntryEnter) &&
+      !Config.hasRequiresUnifiedSharedMemory()) {
+    Flags = OffloadEntriesInfoManager::OMPTargetGlobalVarEntryTo;
+    VarName = MangledName;
+    GlobalValue *LlvmVal = M.getNamedValue(VarName);
+
+    if (!IsDeclaration)
+      VarSize = divideCeil(
+          M.getDataLayout().getTypeSizeInBits(LlvmVal->getValueType()), 8);
+    else
+      VarSize = 0;
+    Linkage = (VariableLinkage) ? VariableLinkage() : LlvmVal->getLinkage();
+
+    // This is a workaround carried over from Clang which prevents undesired
+    // optimisation of internal variables.
+    if (Config.isEmbedded() &&
+        (!IsExternallyVisible || Linkage == GlobalValue::LinkOnceODRLinkage)) {
+      // Do not create a "ref-variable" if the original is not also available
+      // on the host.
+      if (!OffloadInfoManager.hasDeviceGlobalVarEntryInfo(VarName))
+        return;
+
+      std::string RefName = createPlatformSpecificName({VarName, "ref"});
+
+      if (!M.getNamedValue(RefName)) {
+        Constant *AddrRef =
+            getOrCreateInternalVariable(Addr->getType(), RefName);
+        auto *GvAddrRef = cast<GlobalVariable>(AddrRef);
+        GvAddrRef->setConstant(true);
+        GvAddrRef->setLinkage(GlobalValue::InternalLinkage);
+        GvAddrRef->setInitializer(Addr);
+        GeneratedRefs.push_back(GvAddrRef);
+      }
+    }
+  } else {
+    if (CaptureClause == OffloadEntriesInfoManager::OMPTargetGlobalVarEntryLink)
+      Flags = OffloadEntriesInfoManager::OMPTargetGlobalVarEntryLink;
+    else
+      Flags = OffloadEntriesInfoManager::OMPTargetGlobalVarEntryTo;
+
+    if (Config.isEmbedded()) {
+      VarName = (Addr) ? Addr->getName() : "";
+      Addr = nullptr;
+    } else {
+      Addr = getAddrOfDeclareTargetVar(
+          CaptureClause, DeviceClause, IsDeclaration, IsExternallyVisible,
+          EntryInfo, MangledName, GeneratedRefs, OpenMPSIMD, TargetTriple,
+          LlvmPtrTy, GlobalInitializer, VariableLinkage);
+      VarName = (Addr) ? Addr->getName() : "";
+    }
+    VarSize = M.getDataLayout().getPointerSize();
+    Linkage = GlobalValue::WeakAnyLinkage;
+  }
+
+  OffloadInfoManager.registerDeviceGlobalVarEntryInfo(VarName, Addr, VarSize,
+                                                      Flags, Linkage);
 }
 
 /// Loads all the offload entries information from the host IR

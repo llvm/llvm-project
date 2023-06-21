@@ -145,7 +145,7 @@ class LifetimeIterator {
       assert(lifetime_cache.contains(this) && lifetime_cache.contains(&rhs));
       assert(!rhs.moved_from_);
 
-      v_ = rhs.v_;
+      *v_ = *rhs.v_;
       moved_from_ = false;
 
       return *this;
@@ -157,7 +157,7 @@ class LifetimeIterator {
       assert(!rhs.moved_from_);
       rhs.moved_from_ = true;
 
-      v_ = rhs.v_;
+      *v_ = *rhs.v_;
       moved_from_ = false;
 
       return *this;

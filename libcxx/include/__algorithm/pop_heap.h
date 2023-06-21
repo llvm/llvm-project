@@ -65,8 +65,7 @@ void pop_heap(_RandomAccessIterator __first, _RandomAccessIterator __last, _Comp
 template <class _RandomAccessIterator>
 inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20
 void pop_heap(_RandomAccessIterator __first, _RandomAccessIterator __last) {
-  std::pop_heap(std::move(__first), std::move(__last),
-      __less<typename iterator_traits<_RandomAccessIterator>::value_type>());
+  std::pop_heap(std::move(__first), std::move(__last), __less<>());
 }
 
 _LIBCPP_END_NAMESPACE_STD

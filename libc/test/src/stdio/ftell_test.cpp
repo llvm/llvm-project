@@ -7,7 +7,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "src/stdio/fclose.h"
-#include "src/stdio/fflush.h"
 #include "src/stdio/fopen.h"
 #include "src/stdio/fread.h"
 #include "src/stdio/fseek.h"

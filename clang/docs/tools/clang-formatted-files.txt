@@ -378,6 +378,8 @@ clang/lib/Basic/Targets/VE.h
 clang/lib/Basic/Targets/WebAssembly.cpp
 clang/lib/Basic/Targets/WebAssembly.h
 clang/lib/Basic/Targets/XCore.cpp
+clang/lib/CodeGen/ABIInfoImpl.cpp
+clang/lib/CodeGen/ABIInfoImpl.h
 clang/lib/CodeGen/CGCUDARuntime.cpp
 clang/lib/CodeGen/CGLoopInfo.cpp
 clang/lib/CodeGen/CGLoopInfo.h
@@ -3102,7 +3104,6 @@ libc/src/__support/CPP/Bit.h
 libc/src/__support/CPP/Bitset.h
 libc/src/__support/CPP/Functional.h
 libc/src/__support/CPP/Limits.h
-libc/src/__support/CPP/StringView.h
 libc/src/__support/CPP/Utility.h
 libc/src/__support/CPP/vector.h
 libc/src/__support/File/file.cpp
@@ -3451,7 +3452,6 @@ libcxx/src/ryu/d2fixed.cpp
 libcxx/src/ryu/d2s.cpp
 libcxx/src/ryu/f2s.cpp
 libcxxabi/src/cxa_guard_impl.h
-libcxxabi/src/demangle/StringView.h
 libcxxabi/src/demangle/Utility.h
 libunwind/src/cet_unwind.h
 lld/COFF/CallGraphSort.cpp
@@ -5250,7 +5250,6 @@ llvm/include/llvm/Debuginfod/Debuginfod.h
 llvm/include/llvm/Debuginfod/DIFetcher.h
 llvm/include/llvm/Debuginfod/HTTPClient.h
 llvm/include/llvm/Demangle/Demangle.h
-llvm/include/llvm/Demangle/StringView.h
 llvm/include/llvm/Demangle/StringViewExtras.h
 llvm/include/llvm/Demangle/Utility.h
 llvm/include/llvm/DWARFLinker/DWARFLinker.h

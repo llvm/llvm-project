@@ -57,7 +57,6 @@ define amdgpu_kernel void @test_kern_stack() local_unnamed_addr #0 {
 ; GFX1100-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX1100-NEXT:    scratch_store_b32 off, v0, off offset:4 dlc
 ; GFX1100-NEXT:    s_waitcnt_vscnt null, 0x0
-; GFX1100-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX1100-NEXT:    s_endpgm
 entry:
   %x = alloca i32, align 4, addrspace(5)
@@ -238,7 +237,6 @@ define amdgpu_kernel void @test_kern_stack_and_call() local_unnamed_addr #0 {
 ; GFX1100-NEXT:    s_add_u32 s16, s16, ex@rel32@lo+4
 ; GFX1100-NEXT:    s_addc_u32 s17, s17, ex@rel32@hi+12
 ; GFX1100-NEXT:    s_swappc_b64 s[30:31], s[16:17]
-; GFX1100-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX1100-NEXT:    s_endpgm
 
 entry:
@@ -310,7 +308,6 @@ define amdgpu_kernel void @test_force_fp_kern_stack() local_unnamed_addr #2 {
 ; GFX1100-NEXT:    s_mov_b32 s33, 0
 ; GFX1100-NEXT:    scratch_store_b32 off, v0, s33 offset:4 dlc
 ; GFX1100-NEXT:    s_waitcnt_vscnt null, 0x0
-; GFX1100-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX1100-NEXT:    s_endpgm
 entry:
   %x = alloca i32, align 4, addrspace(5)
@@ -517,7 +514,6 @@ define amdgpu_kernel void @test_force_fp_kern_stack_and_call() local_unnamed_add
 ; GFX1100-NEXT:    s_add_u32 s16, s16, ex@rel32@lo+4
 ; GFX1100-NEXT:    s_addc_u32 s17, s17, ex@rel32@hi+12
 ; GFX1100-NEXT:    s_swappc_b64 s[30:31], s[16:17]
-; GFX1100-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX1100-NEXT:    s_endpgm
 entry:
   %x = alloca i32, align 4, addrspace(5)
@@ -587,7 +583,6 @@ define amdgpu_kernel void @test_sgpr_offset_kernel() #1 {
 ; GFX1100-NEXT:    s_waitcnt vmcnt(0)
 ; GFX1100-NEXT:    scratch_store_b32 off, v0, off offset:8 dlc
 ; GFX1100-NEXT:    s_waitcnt_vscnt null, 0x0
-; GFX1100-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX1100-NEXT:    s_endpgm
 entry:
   ; Occupy 4096 bytes of scratch, so the offset of the spill of %a does not

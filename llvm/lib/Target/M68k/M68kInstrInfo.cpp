@@ -809,7 +809,12 @@ M68kInstrInfo::getSerializableDirectMachineOperandTargetFlags() const {
       {MO_GOT, "m68k-got"},
       {MO_GOTOFF, "m68k-gotoff"},
       {MO_GOTPCREL, "m68k-gotpcrel"},
-      {MO_PLT, "m68k-plt"}};
+      {MO_PLT, "m68k-plt"},
+      {MO_TLSGD, "m68k-tlsgd"},
+      {MO_TLSLD, "m68k-tlsld"},
+      {MO_TLSLDM, "m68k-tlsldm"},
+      {MO_TLSIE, "m68k-tlsie"},
+      {MO_TLSLE, "m68k-tlsle"}};
   return ArrayRef(TargetFlags);
 }
 

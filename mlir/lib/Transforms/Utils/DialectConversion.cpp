@@ -1452,7 +1452,14 @@ void ConversionPatternRewriter::replaceOpWithIf(
       "replaceOpWithIf is currently not supported by DialectConversion");
 }
 
+void ConversionPatternRewriter::replaceOp(Operation *op, Operation *newOp) {
+  assert(op && newOp && "expected non-null op");
+  replaceOp(op, newOp->getResults());
+}
+
 void ConversionPatternRewriter::replaceOp(Operation *op, ValueRange newValues) {
+  assert(op->getNumResults() == newValues.size() &&
+         "incorrect # of replacement values");
   LLVM_DEBUG({
     impl->logger.startLine()
         << "** Replace : '" << op->getName() << "'(" << op << ")\n";

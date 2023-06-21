@@ -41,6 +41,8 @@ ASM_WRAPPER_NAME(setjmp):
   CFI_ENDPROC
 ASM_SIZE(ASM_WRAPPER_NAME(setjmp))
 
+ASM_INTERCEPTOR_TRAMPOLINE(setjmp)
+
 #if SANITIZER_ANDROID
 // Bionic also defines a function `setjmp` that calls `sigsetjmp` saving the
 // current signal.

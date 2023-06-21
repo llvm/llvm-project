@@ -45,14 +45,6 @@ class OpenMP_Attr<string name, string attrMnemonic,
   let mnemonic = attrMnemonic;
 }
 
-def IsDeviceAttr : OpenMP_Attr<"IsDevice", "isdevice"> {
-  let parameters = (ins
-    "bool":$is_device
-  );
-
-  let assemblyFormat = "`<` struct(params) `>`";
-}
-
 def VersionAttr : OpenMP_Attr<"Version", "version"> {
   let parameters = (ins
     "uint32_t":$version
@@ -1698,6 +1690,37 @@ def ReductionOp : OpenMP_Op<"reduction"> {
     $operand `,` $accumulator attr-dict `:` type($operand) `,` type($accumulator)
   }];
   let hasVerifier = 1;
+}
+
+//===----------------------------------------------------------------------===//
+// 8.2 requires directive
+//===----------------------------------------------------------------------===//
+
+// atomic_default_mem_order clause values not defined here because they can be
+// represented by the OMPC_MemoryOrder enumeration instead.
+def ClauseRequiresNone : I32BitEnumAttrCaseNone<"none">;
+def ClauseRequiresReverseOffload : I32BitEnumAttrCaseBit<"reverse_offload", 0>;
+def ClauseRequiresUnifiedAddress : I32BitEnumAttrCaseBit<"unified_address", 1>;
+def ClauseRequiresUnifiedSharedMemory
+    : I32BitEnumAttrCaseBit<"unified_shared_memory", 2>;
+def ClauseRequiresDynamicAllocators
+    : I32BitEnumAttrCaseBit<"dynamic_allocators", 3>;
+
+def ClauseRequires : I32BitEnumAttr<
+    "ClauseRequires",
+    "requires clauses",
+    [
+      ClauseRequiresNone,
+      ClauseRequiresReverseOffload,
+      ClauseRequiresUnifiedAddress,
+      ClauseRequiresUnifiedSharedMemory,
+      ClauseRequiresDynamicAllocators
+    ]> {
+  let genSpecializedAttr = 0;
+  let cppNamespace = "::mlir::omp";
+}
+def ClauseRequiresAttr :
+  EnumAttr<OpenMP_Dialect, ClauseRequires, "clause_requires"> {
 }
 
 #endif // OPENMP_OPS

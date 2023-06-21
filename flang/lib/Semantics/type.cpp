@@ -567,6 +567,60 @@ DerivedTypeSpec InstantiateHelper::CreateDerivedTypeSpec(
   return result;
 }
 
+std::string DerivedTypeSpec::VectorTypeAsFortran() const {
+  std::string buf;
+  llvm::raw_string_ostream ss{buf};
+
+  switch (category()) {
+    SWITCH_COVERS_ALL_CASES
+  case (Fortran::semantics::DerivedTypeSpec::Category::IntrinsicVector): {
+    int64_t vecElemKind;
+    int64_t vecElemCategory;
+
+    for (const auto &pair : parameters()) {
+      if (pair.first == "element_category") {
+        vecElemCategory =
+            Fortran::evaluate::ToInt64(pair.second.GetExplicit()).value_or(-1);
+      } else if (pair.first == "element_kind") {
+        vecElemKind =
+            Fortran::evaluate::ToInt64(pair.second.GetExplicit()).value_or(0);
+      }
+    }
+
+    assert((vecElemCategory >= 0 &&
+               static_cast<size_t>(vecElemCategory) <
+                   Fortran::common::VectorElementCategory_enumSize) &&
+        "Vector element type is not specified");
+    assert(vecElemKind && "Vector element kind is not specified");
+
+    ss << "vector(";
+    switch (static_cast<common::VectorElementCategory>(vecElemCategory)) {
+      SWITCH_COVERS_ALL_CASES
+    case common::VectorElementCategory::Integer:
+      ss << "integer(" << vecElemKind << ")";
+      break;
+    case common::VectorElementCategory::Unsigned:
+      ss << "unsigned(" << vecElemKind << ")";
+      break;
+    case common::VectorElementCategory::Real:
+      ss << "real(" << vecElemKind << ")";
+      break;
+    }
+    ss << ")";
+    break;
+  }
+  case (Fortran::semantics::DerivedTypeSpec::Category::PairVector):
+    ss << "__vector_pair";
+    break;
+  case (Fortran::semantics::DerivedTypeSpec::Category::QuadVector):
+    ss << "__vector_quad";
+    break;
+  case (Fortran::semantics::DerivedTypeSpec::Category::DerivedType):
+    Fortran::common::die("Vector element type not implemented");
+  }
+  return ss.str();
+}
+
 std::string DerivedTypeSpec::AsFortran() const {
   std::string buf;
   llvm::raw_string_ostream ss{buf};
@@ -781,6 +835,8 @@ std::string DeclTypeSpec::AsFortran() const {
             .get<DerivedTypeDetails>()
             .isDECStructure()) {
       return "RECORD" + derivedTypeSpec().typeSymbol().name().ToString();
+    } else if (derivedTypeSpec().IsVectorType()) {
+      return derivedTypeSpec().VectorTypeAsFortran();
     } else {
       return "TYPE(" + derivedTypeSpec().AsFortran() + ')';
     }
@@ -797,9 +853,10 @@ llvm::raw_ostream &operator<<(llvm::raw_ostream &o, const DeclTypeSpec &x) {
   return o << x.AsFortran();
 }
 
-bool IsInteroperableIntrinsicType(const DeclTypeSpec &type) {
+bool IsInteroperableIntrinsicType(
+    const DeclTypeSpec &type, const common::LanguageFeatureControl &features) {
   auto dyType{evaluate::DynamicType::From(type)};
-  return dyType && IsInteroperableIntrinsicType(*dyType);
+  return dyType && IsInteroperableIntrinsicType(*dyType, &features);
 }
 
 } // namespace Fortran::semantics

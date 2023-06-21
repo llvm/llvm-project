@@ -217,7 +217,7 @@ BitcodeCompiler::BitcodeCompiler() {
       continue;
     StringRef s = sym->getName();
     for (StringRef prefix : {"__start_", "__stop_"})
-      if (s.startswith(prefix))
+      if (s.starts_with(prefix))
         usedStartStop.insert(s.substr(prefix.size()));
   }
 }

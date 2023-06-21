@@ -54,7 +54,7 @@ namespace llvm {
     SmallVector<TrackingMDNodeRef, 4> AllRetainTypes;
     SmallVector<DISubprogram *, 4> AllSubprograms;
     SmallVector<Metadata *, 4> AllGVs;
-    SmallVector<TrackingMDNodeRef, 4> AllImportedModules;
+    SmallVector<TrackingMDNodeRef, 4> ImportedModules;
     /// Map Macro parent (which can be DIMacroFile or nullptr) to a list of
     /// Metadata all of type DIMacroNode.
     /// DIMacroNode's with nullptr parent are DICompileUnit direct children.
@@ -64,15 +64,25 @@ namespace llvm {
     SmallVector<TrackingMDNodeRef, 4> UnresolvedNodes;
     bool AllowUnresolvedNodes;
 
-    /// Each subprogram's preserved local variables.
+    /// Each subprogram's preserved local variables, labels and imported
+    /// entities.
     ///
     /// Do not use a std::vector.  Some versions of libc++ apparently copy
     /// instead of move on grow operations, and TrackingMDRef is expensive to
     /// copy.
-    DenseMap<MDNode *, SmallVector<TrackingMDNodeRef, 1>> PreservedVariables;
+    DenseMap<DISubprogram *, SmallVector<TrackingMDNodeRef, 4>>
+        SubprogramTrackedNodes;
 
-    /// Each subprogram's preserved labels.
-    DenseMap<MDNode *, SmallVector<TrackingMDNodeRef, 1>> PreservedLabels;
+    SmallVectorImpl<TrackingMDNodeRef> &
+    getImportTrackingVector(const DIScope *S) {
+      return isa_and_nonnull<DILocalScope>(S)
+                 ? getSubprogramNodesTrackingVector(S)
+                 : ImportedModules;
+    }
+    SmallVectorImpl<TrackingMDNodeRef> &
+    getSubprogramNodesTrackingVector(const DIScope *S) {
+      return SubprogramTrackedNodes[cast<DILocalScope>(S)->getSubprogram()];
+    }
 
     /// Create a temporary.
     ///

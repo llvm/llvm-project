@@ -98,8 +98,8 @@ body: |
     ; GFX6-NEXT: [[OR:%[0-9]+]]:_(s32) = G_OR [[UV3]], [[UMIN1]]
     ; GFX6-NEXT: [[UITOFP:%[0-9]+]]:_(s32) = G_UITOFP [[OR]](s32)
     ; GFX6-NEXT: [[SUB:%[0-9]+]]:_(s32) = G_SUB [[C]], [[UMIN]]
-    ; GFX6-NEXT: [[INT:%[0-9]+]]:_(s32) = G_INTRINSIC intrinsic(@llvm.amdgcn.ldexp), [[UITOFP]](s32), [[SUB]](s32)
-    ; GFX6-NEXT: $vgpr0 = COPY [[INT]](s32)
+    ; GFX6-NEXT: [[FLDEXP:%[0-9]+]]:_(s32) = G_FLDEXP [[UITOFP]], [[SUB]](s32)
+    ; GFX6-NEXT: $vgpr0 = COPY [[FLDEXP]](s32)
     ; GFX8-LABEL: name: test_uitofp_s64_to_s32
     ; GFX8: liveins: $vgpr0_vgpr1
     ; GFX8-NEXT: {{  $}}
@@ -115,8 +115,8 @@ body: |
     ; GFX8-NEXT: [[OR:%[0-9]+]]:_(s32) = G_OR [[UV3]], [[UMIN1]]
     ; GFX8-NEXT: [[UITOFP:%[0-9]+]]:_(s32) = G_UITOFP [[OR]](s32)
     ; GFX8-NEXT: [[SUB:%[0-9]+]]:_(s32) = G_SUB [[C]], [[UMIN]]
-    ; GFX8-NEXT: [[INT:%[0-9]+]]:_(s32) = G_INTRINSIC intrinsic(@llvm.amdgcn.ldexp), [[UITOFP]](s32), [[SUB]](s32)
-    ; GFX8-NEXT: $vgpr0 = COPY [[INT]](s32)
+    ; GFX8-NEXT: [[FLDEXP:%[0-9]+]]:_(s32) = G_FLDEXP [[UITOFP]], [[SUB]](s32)
+    ; GFX8-NEXT: $vgpr0 = COPY [[FLDEXP]](s32)
     %0:_(s64) = COPY $vgpr0_vgpr1
     %1:_(s32) = G_UITOFP %0
     $vgpr0 = COPY %1
@@ -136,8 +136,8 @@ body: |
     ; GFX6-NEXT: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 32
     ; GFX6-NEXT: [[UITOFP:%[0-9]+]]:_(s64) = G_UITOFP [[UV1]](s32)
     ; GFX6-NEXT: [[UITOFP1:%[0-9]+]]:_(s64) = G_UITOFP [[UV]](s32)
-    ; GFX6-NEXT: [[INT:%[0-9]+]]:_(s64) = G_INTRINSIC intrinsic(@llvm.amdgcn.ldexp), [[UITOFP]](s64), [[C]](s32)
-    ; GFX6-NEXT: [[FADD:%[0-9]+]]:_(s64) = G_FADD [[INT]], [[UITOFP1]]
+    ; GFX6-NEXT: [[FLDEXP:%[0-9]+]]:_(s64) = G_FLDEXP [[UITOFP]], [[C]](s32)
+    ; GFX6-NEXT: [[FADD:%[0-9]+]]:_(s64) = G_FADD [[FLDEXP]], [[UITOFP1]]
     ; GFX6-NEXT: $vgpr0_vgpr1 = COPY [[FADD]](s64)
     ; GFX8-LABEL: name: test_uitofp_s64_to_s64
     ; GFX8: liveins: $vgpr0_vgpr1
@@ -147,8 +147,8 @@ body: |
     ; GFX8-NEXT: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 32
     ; GFX8-NEXT: [[UITOFP:%[0-9]+]]:_(s64) = G_UITOFP [[UV1]](s32)
     ; GFX8-NEXT: [[UITOFP1:%[0-9]+]]:_(s64) = G_UITOFP [[UV]](s32)
-    ; GFX8-NEXT: [[INT:%[0-9]+]]:_(s64) = G_INTRINSIC intrinsic(@llvm.amdgcn.ldexp), [[UITOFP]](s64), [[C]](s32)
-    ; GFX8-NEXT: [[FADD:%[0-9]+]]:_(s64) = G_FADD [[INT]], [[UITOFP1]]
+    ; GFX8-NEXT: [[FLDEXP:%[0-9]+]]:_(s64) = G_FLDEXP [[UITOFP]], [[C]](s32)
+    ; GFX8-NEXT: [[FADD:%[0-9]+]]:_(s64) = G_FADD [[FLDEXP]], [[UITOFP1]]
     ; GFX8-NEXT: $vgpr0_vgpr1 = COPY [[FADD]](s64)
     %0:_(s64) = COPY $vgpr0_vgpr1
     %1:_(s64) = G_UITOFP %0
@@ -444,8 +444,8 @@ body: |
     ; GFX6-NEXT: [[OR:%[0-9]+]]:_(s32) = G_OR [[UV3]], [[UMIN1]]
     ; GFX6-NEXT: [[UITOFP:%[0-9]+]]:_(s32) = G_UITOFP [[OR]](s32)
     ; GFX6-NEXT: [[SUB:%[0-9]+]]:_(s32) = G_SUB [[C1]], [[UMIN]]
-    ; GFX6-NEXT: [[INT:%[0-9]+]]:_(s32) = G_INTRINSIC intrinsic(@llvm.amdgcn.ldexp), [[UITOFP]](s32), [[SUB]](s32)
-    ; GFX6-NEXT: $vgpr0 = COPY [[INT]](s32)
+    ; GFX6-NEXT: [[FLDEXP:%[0-9]+]]:_(s32) = G_FLDEXP [[UITOFP]], [[SUB]](s32)
+    ; GFX6-NEXT: $vgpr0 = COPY [[FLDEXP]](s32)
     ; GFX8-LABEL: name: test_uitofp_s33_to_s32
     ; GFX8: liveins: $vgpr0_vgpr1
     ; GFX8-NEXT: {{  $}}
@@ -463,8 +463,8 @@ body: |
     ; GFX8-NEXT: [[OR:%[0-9]+]]:_(s32) = G_OR [[UV3]], [[UMIN1]]
     ; GFX8-NEXT: [[UITOFP:%[0-9]+]]:_(s32) = G_UITOFP [[OR]](s32)
     ; GFX8-NEXT: [[SUB:%[0-9]+]]:_(s32) = G_SUB [[C1]], [[UMIN]]
-    ; GFX8-NEXT: [[INT:%[0-9]+]]:_(s32) = G_INTRINSIC intrinsic(@llvm.amdgcn.ldexp), [[UITOFP]](s32), [[SUB]](s32)
-    ; GFX8-NEXT: $vgpr0 = COPY [[INT]](s32)
+    ; GFX8-NEXT: [[FLDEXP:%[0-9]+]]:_(s32) = G_FLDEXP [[UITOFP]], [[SUB]](s32)
+    ; GFX8-NEXT: $vgpr0 = COPY [[FLDEXP]](s32)
     %0:_(s64) = COPY $vgpr0_vgpr1
     %1:_(s33) = G_TRUNC %0
     %2:_(s32) = G_UITOFP %1
@@ -492,8 +492,8 @@ body: |
     ; GFX6-NEXT: [[OR:%[0-9]+]]:_(s32) = G_OR [[UV3]], [[UMIN1]]
     ; GFX6-NEXT: [[UITOFP:%[0-9]+]]:_(s32) = G_UITOFP [[OR]](s32)
     ; GFX6-NEXT: [[SUB:%[0-9]+]]:_(s32) = G_SUB [[C]], [[UMIN]]
-    ; GFX6-NEXT: [[INT:%[0-9]+]]:_(s32) = G_INTRINSIC intrinsic(@llvm.amdgcn.ldexp), [[UITOFP]](s32), [[SUB]](s32)
-    ; GFX6-NEXT: [[FPTRUNC:%[0-9]+]]:_(s16) = G_FPTRUNC [[INT]](s32)
+    ; GFX6-NEXT: [[FLDEXP:%[0-9]+]]:_(s32) = G_FLDEXP [[UITOFP]], [[SUB]](s32)
+    ; GFX6-NEXT: [[FPTRUNC:%[0-9]+]]:_(s16) = G_FPTRUNC [[FLDEXP]](s32)
     ; GFX6-NEXT: [[ANYEXT:%[0-9]+]]:_(s32) = G_ANYEXT [[FPTRUNC]](s16)
     ; GFX6-NEXT: $vgpr0 = COPY [[ANYEXT]](s32)
     ; GFX8-LABEL: name: test_uitofp_s64_to_s16
@@ -511,8 +511,8 @@ body: |
     ; GFX8-NEXT: [[OR:%[0-9]+]]:_(s32) = G_OR [[UV3]], [[UMIN1]]
     ; GFX8-NEXT: [[UITOFP:%[0-9]+]]:_(s32) = G_UITOFP [[OR]](s32)
     ; GFX8-NEXT: [[SUB:%[0-9]+]]:_(s32) = G_SUB [[C]], [[UMIN]]
-    ; GFX8-NEXT: [[INT:%[0-9]+]]:_(s32) = G_INTRINSIC intrinsic(@llvm.amdgcn.ldexp), [[UITOFP]](s32), [[SUB]](s32)
-    ; GFX8-NEXT: [[FPTRUNC:%[0-9]+]]:_(s16) = G_FPTRUNC [[INT]](s32)
+    ; GFX8-NEXT: [[FLDEXP:%[0-9]+]]:_(s32) = G_FLDEXP [[UITOFP]], [[SUB]](s32)
+    ; GFX8-NEXT: [[FPTRUNC:%[0-9]+]]:_(s16) = G_FPTRUNC [[FLDEXP]](s32)
     ; GFX8-NEXT: [[ANYEXT:%[0-9]+]]:_(s32) = G_ANYEXT [[FPTRUNC]](s16)
     ; GFX8-NEXT: $vgpr0 = COPY [[ANYEXT]](s32)
     %0:_(s64) = COPY $vgpr0_vgpr1
@@ -543,8 +543,8 @@ body: |
     ; GFX6-NEXT: [[OR:%[0-9]+]]:_(s32) = G_OR [[UV5]], [[UMIN1]]
     ; GFX6-NEXT: [[UITOFP:%[0-9]+]]:_(s32) = G_UITOFP [[OR]](s32)
     ; GFX6-NEXT: [[SUB:%[0-9]+]]:_(s32) = G_SUB [[C]], [[UMIN]]
-    ; GFX6-NEXT: [[INT:%[0-9]+]]:_(s32) = G_INTRINSIC intrinsic(@llvm.amdgcn.ldexp), [[UITOFP]](s32), [[SUB]](s32)
-    ; GFX6-NEXT: [[FPTRUNC:%[0-9]+]]:_(s16) = G_FPTRUNC [[INT]](s32)
+    ; GFX6-NEXT: [[FLDEXP:%[0-9]+]]:_(s32) = G_FLDEXP [[UITOFP]], [[SUB]](s32)
+    ; GFX6-NEXT: [[FPTRUNC:%[0-9]+]]:_(s16) = G_FPTRUNC [[FLDEXP]](s32)
     ; GFX6-NEXT: [[UV6:%[0-9]+]]:_(s32), [[UV7:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[UV1]](s64)
     ; GFX6-NEXT: [[AMDGPU_FFBH_U32_1:%[0-9]+]]:_(s32) = G_AMDGPU_FFBH_U32 [[UV7]](s32)
     ; GFX6-NEXT: [[UMIN2:%[0-9]+]]:_(s32) = G_UMIN [[AMDGPU_FFBH_U32_1]], [[C]]
@@ -554,8 +554,8 @@ body: |
     ; GFX6-NEXT: [[OR1:%[0-9]+]]:_(s32) = G_OR [[UV9]], [[UMIN3]]
     ; GFX6-NEXT: [[UITOFP1:%[0-9]+]]:_(s32) = G_UITOFP [[OR1]](s32)
     ; GFX6-NEXT: [[SUB1:%[0-9]+]]:_(s32) = G_SUB [[C]], [[UMIN2]]
-    ; GFX6-NEXT: [[INT1:%[0-9]+]]:_(s32) = G_INTRINSIC intrinsic(@llvm.amdgcn.ldexp), [[UITOFP1]](s32), [[SUB1]](s32)
-    ; GFX6-NEXT: [[FPTRUNC1:%[0-9]+]]:_(s16) = G_FPTRUNC [[INT1]](s32)
+    ; GFX6-NEXT: [[FLDEXP1:%[0-9]+]]:_(s32) = G_FLDEXP [[UITOFP1]], [[SUB1]](s32)
+    ; GFX6-NEXT: [[FPTRUNC1:%[0-9]+]]:_(s16) = G_FPTRUNC [[FLDEXP1]](s32)
     ; GFX6-NEXT: [[ZEXT:%[0-9]+]]:_(s32) = G_ZEXT [[FPTRUNC]](s16)
     ; GFX6-NEXT: [[ZEXT1:%[0-9]+]]:_(s32) = G_ZEXT [[FPTRUNC1]](s16)
     ; GFX6-NEXT: [[C2:%[0-9]+]]:_(s32) = G_CONSTANT i32 16
@@ -579,8 +579,8 @@ body: |
     ; GFX8-NEXT: [[OR:%[0-9]+]]:_(s32) = G_OR [[UV5]], [[UMIN1]]
     ; GFX8-NEXT: [[UITOFP:%[0-9]+]]:_(s32) = G_UITOFP [[OR]](s32)
     ; GFX8-NEXT: [[SUB:%[0-9]+]]:_(s32) = G_SUB [[C]], [[UMIN]]
-    ; GFX8-NEXT: [[INT:%[0-9]+]]:_(s32) = G_INTRINSIC intrinsic(@llvm.amdgcn.ldexp), [[UITOFP]](s32), [[SUB]](s32)
-    ; GFX8-NEXT: [[FPTRUNC:%[0-9]+]]:_(s16) = G_FPTRUNC [[INT]](s32)
+    ; GFX8-NEXT: [[FLDEXP:%[0-9]+]]:_(s32) = G_FLDEXP [[UITOFP]], [[SUB]](s32)
+    ; GFX8-NEXT: [[FPTRUNC:%[0-9]+]]:_(s16) = G_FPTRUNC [[FLDEXP]](s32)
     ; GFX8-NEXT: [[UV6:%[0-9]+]]:_(s32), [[UV7:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[UV1]](s64)
     ; GFX8-NEXT: [[AMDGPU_FFBH_U32_1:%[0-9]+]]:_(s32) = G_AMDGPU_FFBH_U32 [[UV7]](s32)
     ; GFX8-NEXT: [[UMIN2:%[0-9]+]]:_(s32) = G_UMIN [[AMDGPU_FFBH_U32_1]], [[C]]
@@ -590,8 +590,8 @@ body: |
     ; GFX8-NEXT: [[OR1:%[0-9]+]]:_(s32) = G_OR [[UV9]], [[UMIN3]]
     ; GFX8-NEXT: [[UITOFP1:%[0-9]+]]:_(s32) = G_UITOFP [[OR1]](s32)
     ; GFX8-NEXT: [[SUB1:%[0-9]+]]:_(s32) = G_SUB [[C]], [[UMIN2]]
-    ; GFX8-NEXT: [[INT1:%[0-9]+]]:_(s32) = G_INTRINSIC intrinsic(@llvm.amdgcn.ldexp), [[UITOFP1]](s32), [[SUB1]](s32)
-    ; GFX8-NEXT: [[FPTRUNC1:%[0-9]+]]:_(s16) = G_FPTRUNC [[INT1]](s32)
+    ; GFX8-NEXT: [[FLDEXP1:%[0-9]+]]:_(s32) = G_FLDEXP [[UITOFP1]], [[SUB1]](s32)
+    ; GFX8-NEXT: [[FPTRUNC1:%[0-9]+]]:_(s16) = G_FPTRUNC [[FLDEXP1]](s32)
     ; GFX8-NEXT: [[ZEXT:%[0-9]+]]:_(s32) = G_ZEXT [[FPTRUNC]](s16)
     ; GFX8-NEXT: [[ZEXT1:%[0-9]+]]:_(s32) = G_ZEXT [[FPTRUNC1]](s16)
     ; GFX8-NEXT: [[C2:%[0-9]+]]:_(s32) = G_CONSTANT i32 16

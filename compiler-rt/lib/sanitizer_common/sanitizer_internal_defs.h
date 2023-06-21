@@ -13,6 +13,7 @@
 #define SANITIZER_DEFS_H
 
 #include "sanitizer_platform.h"
+#include "sanitizer_redefine_builtins.h"
 
 #ifndef SANITIZER_DEBUG
 # define SANITIZER_DEBUG 0
@@ -256,6 +257,12 @@ typedef u64 tid_t;
 #  define FALLTHROUGH [[fallthrough]]
 #else
 #  define FALLTHROUGH
+#endif
+
+#if __has_attribute(uninitialized)
+#  define UNINITIALIZED __attribute__((uninitialized))
+#else
+#  define UNINITIALIZED
 #endif
 
 // Unaligned versions of basic types.

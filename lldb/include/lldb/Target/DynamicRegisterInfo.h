@@ -46,8 +46,8 @@ public:
 
   DynamicRegisterInfo() = default;
 
-  DynamicRegisterInfo(const lldb_private::StructuredData::Dictionary &dict,
-                      const lldb_private::ArchSpec &arch);
+  static std::unique_ptr<DynamicRegisterInfo>
+  Create(const StructuredData::Dictionary &dict, const ArchSpec &arch);
 
   virtual ~DynamicRegisterInfo() = default;
 

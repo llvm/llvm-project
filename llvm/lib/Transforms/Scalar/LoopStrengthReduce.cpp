@@ -896,9 +896,14 @@ static bool isAddressUse(const TargetTransformInfo &TTI,
 /// Return the type of the memory being accessed.
 static MemAccessTy getAccessType(const TargetTransformInfo &TTI,
                                  Instruction *Inst, Value *OperandVal) {
-  MemAccessTy AccessTy(Inst->getType(), MemAccessTy::UnknownAddressSpace);
+  MemAccessTy AccessTy = MemAccessTy::getUnknown(Inst->getContext());
+
+  // First get the type of memory being accessed.
+  if (Type *Ty = Inst->getAccessType())
+    AccessTy.MemTy = Ty;
+
+  // Then get the pointer address space.
   if (const StoreInst *SI = dyn_cast<StoreInst>(Inst)) {
-    AccessTy.MemTy = SI->getOperand(0)->getType();
     AccessTy.AddrSpace = SI->getPointerAddressSpace();
   } else if (const LoadInst *LI = dyn_cast<LoadInst>(Inst)) {
     AccessTy.AddrSpace = LI->getPointerAddressSpace();
@@ -923,7 +928,6 @@ static MemAccessTy getAccessType(const TargetTransformInfo &TTI,
           II->getArgOperand(0)->getType()->getPointerAddressSpace();
       break;
     case Intrinsic::masked_store:
-      AccessTy.MemTy = II->getOperand(0)->getType();
       AccessTy.AddrSpace =
           II->getArgOperand(1)->getType()->getPointerAddressSpace();
       break;
@@ -4138,6 +4142,29 @@ void LSRInstance::GenerateScales(LSRUse &LU, unsigned LUIdx, Formula Base) {
   }
 }
 
+/// Extend/Truncate \p Expr to \p ToTy considering post-inc uses in \p Loops.
+/// For all PostIncLoopSets in \p Loops, first de-normalize \p Expr, then
+/// perform the extension/truncate and normalize again, as the normalized form
+/// can result in folds that are not valid in the post-inc use contexts. The
+/// expressions for all PostIncLoopSets must match, otherwise return nullptr.
+static const SCEV *
+getAnyExtendConsideringPostIncUses(ArrayRef<PostIncLoopSet> Loops,
+                                   const SCEV *Expr, Type *ToTy,
+                                   ScalarEvolution &SE) {
+  const SCEV *Result = nullptr;
+  for (auto &L : Loops) {
+    auto *DenormExpr = denormalizeForPostIncUse(Expr, L, SE);
+    const SCEV *NewDenormExpr = SE.getAnyExtendExpr(DenormExpr, ToTy);
+    const SCEV *New = normalizeForPostIncUse(NewDenormExpr, L, SE);
+    if (Result && New != Result)
+      return nullptr;
+    Result = New;
+  }
+
+  assert(Result && "failed to create expression");
+  return Result;
+}
+
 /// Generate reuse formulae from different IV types.
 void LSRInstance::GenerateTruncates(LSRUse &LU, unsigned LUIdx, Formula Base) {
   // Don't bother truncating symbolic values.
@@ -4157,6 +4184,10 @@ void LSRInstance::GenerateTruncates(LSRUse &LU, unsigned LUIdx, Formula Base) {
              [](const SCEV *S) { return S->getType()->isPointerTy(); }))
     return;
 
+  SmallVector<PostIncLoopSet> Loops;
+  for (auto &LF : LU.Fixups)
+    Loops.push_back(LF.PostIncLoops);
+
   for (Type *SrcTy : Types) {
     if (SrcTy != DstTy && TTI.isTruncateFree(SrcTy, DstTy)) {
       Formula F = Base;
@@ -4166,15 +4197,17 @@ void LSRInstance::GenerateTruncates(LSRUse &LU, unsigned LUIdx, Formula Base) {
       // initial node (maybe due to depth limitations), but it can do them while
       // taking ext.
       if (F.ScaledReg) {
-        const SCEV *NewScaledReg = SE.getAnyExtendExpr(F.ScaledReg, SrcTy);
-        if (NewScaledReg->isZero())
-         continue;
+        const SCEV *NewScaledReg =
+            getAnyExtendConsideringPostIncUses(Loops, F.ScaledReg, SrcTy, SE);
+        if (!NewScaledReg || NewScaledReg->isZero())
+          continue;
         F.ScaledReg = NewScaledReg;
       }
       bool HasZeroBaseReg = false;
       for (const SCEV *&BaseReg : F.BaseRegs) {
-        const SCEV *NewBaseReg = SE.getAnyExtendExpr(BaseReg, SrcTy);
-        if (NewBaseReg->isZero()) {
+        const SCEV *NewBaseReg =
+            getAnyExtendConsideringPostIncUses(Loops, BaseReg, SrcTy, SE);
+        if (!NewBaseReg || NewBaseReg->isZero()) {
           HasZeroBaseReg = true;
           break;
         }
@@ -5659,7 +5692,7 @@ void LSRInstance::RewriteForPHI(
       }
     }
 
-  formLCSSAForInstructions(InsertedNonLCSSAInsts, DT, LI);
+  formLCSSAForInstructions(InsertedNonLCSSAInsts, DT, LI, &SE);
 }
 
 /// Emit instructions for the leading candidate expression for this LSRUse (this

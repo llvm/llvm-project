@@ -353,9 +353,6 @@ public:
   getDecisionAndClampRange(const std::function<bool(ElementCount)> &Predicate,
                            VFRange &Range);
 
-  /// Check if the number of runtime checks exceeds the threshold.
-  bool requiresTooManyRuntimeChecks() const;
-
   /// \return The most profitable vectorization factor and the cost of that VF
   /// for vectorizing the epilogue. Returns VectorizationFactor::Disabled if
   /// epilogue vectorization is not supported for the loop.

@@ -234,18 +234,21 @@ define void @PR52039(ptr %pa, ptr %pb) {
 ; SSE-NEXT:    movdqa %xmm2, %xmm3
 ; SSE-NEXT:    psubd %xmm1, %xmm3
 ; SSE-NEXT:    psubd %xmm0, %xmm2
-; SSE-NEXT:    movdqa {{.*#+}} xmm0 = [3,3,3,3]
-; SSE-NEXT:    movdqu %xmm2, (%rsi)
-; SSE-NEXT:    pmulld %xmm0, %xmm2
-; SSE-NEXT:    pmulld %xmm3, %xmm0
+; SSE-NEXT:    movdqa %xmm2, %xmm0
+; SSE-NEXT:    paddd %xmm2, %xmm0
+; SSE-NEXT:    paddd %xmm2, %xmm0
+; SSE-NEXT:    movdqa %xmm3, %xmm1
+; SSE-NEXT:    paddd %xmm3, %xmm1
+; SSE-NEXT:    paddd %xmm3, %xmm1
 ; SSE-NEXT:    movdqu %xmm3, 16(%rsi)
-; SSE-NEXT:    movdqu %xmm0, 16(%rdi)
-; SSE-NEXT:    movdqu %xmm2, (%rdi)
+; SSE-NEXT:    movdqu %xmm2, (%rsi)
+; SSE-NEXT:    movdqu %xmm1, 16(%rdi)
+; SSE-NEXT:    movdqu %xmm0, (%rdi)
 ; SSE-NEXT:    retq
 ;
 ; AVX1-LABEL: PR52039:
 ; AVX1:       # %bb.0:
-; AVX1-NEXT:    vmovdqa {{.*#+}} xmm0 = [10,10,10,10]
+; AVX1-NEXT:    vbroadcastss {{.*#+}} xmm0 = [10,10,10,10]
 ; AVX1-NEXT:    vpsubd 16(%rdi), %xmm0, %xmm1
 ; AVX1-NEXT:    vpsubd (%rdi), %xmm0, %xmm0
 ; AVX1-NEXT:    vpaddd %xmm0, %xmm0, %xmm2

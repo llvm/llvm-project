@@ -320,8 +320,12 @@ bool RealOutputEditing<KIND>::EditEorDOutput(const DataEdit &edit) {
     decimal::ConversionToDecimalResult converted{
         Convert(significantDigits, edit.modes.round, flags)};
     if (IsInfOrNaN(converted)) {
-      return EmitPrefix(edit, converted.length, editWidth) &&
-          EmitAscii(io_, converted.str, converted.length) && EmitSuffix(edit);
+      return editWidth > 0 &&
+              converted.length > static_cast<std::size_t>(editWidth)
+          ? EmitRepeated(io_, '*', editWidth)
+          : EmitPrefix(edit, converted.length, editWidth) &&
+              EmitAscii(io_, converted.str, converted.length) &&
+              EmitSuffix(edit);
     }
     if (!IsZero()) {
       converted.decimalExponent -= scale;
@@ -415,8 +419,12 @@ bool RealOutputEditing<KIND>::EditFOutput(const DataEdit &edit) {
     decimal::ConversionToDecimalResult converted{
         Convert(extraDigits + fracDigits, rounding, flags)};
     if (IsInfOrNaN(converted)) {
-      return EmitPrefix(edit, converted.length, editWidth) &&
-          EmitAscii(io_, converted.str, converted.length) && EmitSuffix(edit);
+      return editWidth > 0 &&
+              converted.length > static_cast<std::size_t>(editWidth)
+          ? EmitRepeated(io_, '*', editWidth)
+          : EmitPrefix(edit, converted.length, editWidth) &&
+              EmitAscii(io_, converted.str, converted.length) &&
+              EmitSuffix(edit);
     }
     int expo{converted.decimalExponent + edit.modes.scale /*kP*/};
     int signLength{*converted.str == '-' || *converted.str == '+' ? 1 : 0};

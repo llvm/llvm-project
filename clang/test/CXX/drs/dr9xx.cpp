@@ -92,7 +92,7 @@ namespace dr974 { // dr974: yes
 
 namespace dr977 { // dr977: yes
 enum E { e = E() };
-#ifndef _WIN32
+#if !defined(_WIN32) || defined(__MINGW32__)
 // expected-error@-2 {{invalid use of incomplete type 'E'}}
 // expected-note@-3 {{definition of 'dr977::E' is not complete until the closing '}'}}
 #endif

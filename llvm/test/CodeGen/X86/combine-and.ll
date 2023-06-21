@@ -325,21 +325,11 @@ define <2 x i64> @and_or_v2i64(<2 x i64> %a0) {
 ; SSE-NEXT:    movaps {{.*#+}} xmm0 = [8,8]
 ; SSE-NEXT:    retq
 ;
-; AVX1-LABEL: and_or_v2i64:
-; AVX1:       # %bb.0:
-; AVX1-NEXT:    vmovaps {{.*#+}} xmm0 = [8,8]
-; AVX1-NEXT:    retq
-;
-; AVX2-LABEL: and_or_v2i64:
-; AVX2:       # %bb.0:
-; AVX2-NEXT:    vmovaps {{.*#+}} xmm0 = [8,8]
-; AVX2-NEXT:    retq
-;
-; AVX512-LABEL: and_or_v2i64:
-; AVX512:       # %bb.0:
-; AVX512-NEXT:    vmovddup {{.*#+}} xmm0 = [8,8]
-; AVX512-NEXT:    # xmm0 = mem[0,0]
-; AVX512-NEXT:    retq
+; AVX-LABEL: and_or_v2i64:
+; AVX:       # %bb.0:
+; AVX-NEXT:    vmovddup {{.*#+}} xmm0 = [8,8]
+; AVX-NEXT:    # xmm0 = mem[0,0]
+; AVX-NEXT:    retq
   %1 = or <2 x i64> %a0, <i64 255, i64 255>
   %2 = and <2 x i64> %1, <i64 8, i64 8>
   ret <2 x i64> %2
@@ -351,20 +341,10 @@ define <4 x i32> @and_or_v4i32(<4 x i32> %a0) {
 ; SSE-NEXT:    movaps {{.*#+}} xmm0 = [3,3,3,3]
 ; SSE-NEXT:    retq
 ;
-; AVX1-LABEL: and_or_v4i32:
-; AVX1:       # %bb.0:
-; AVX1-NEXT:    vmovaps {{.*#+}} xmm0 = [3,3,3,3]
-; AVX1-NEXT:    retq
-;
-; AVX2-LABEL: and_or_v4i32:
-; AVX2:       # %bb.0:
-; AVX2-NEXT:    vbroadcastss {{.*#+}} xmm0 = [3,3,3,3]
-; AVX2-NEXT:    retq
-;
-; AVX512-LABEL: and_or_v4i32:
-; AVX512:       # %bb.0:
-; AVX512-NEXT:    vbroadcastss {{.*#+}} xmm0 = [3,3,3,3]
-; AVX512-NEXT:    retq
+; AVX-LABEL: and_or_v4i32:
+; AVX:       # %bb.0:
+; AVX-NEXT:    vbroadcastss {{.*#+}} xmm0 = [3,3,3,3]
+; AVX-NEXT:    retq
   %1 = or <4 x i32> %a0, <i32 15, i32 15, i32 15, i32 15>
   %2 = and <4 x i32> %1, <i32 3, i32 3, i32 3, i32 3>
   ret <4 x i32> %2

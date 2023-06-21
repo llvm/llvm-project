@@ -329,14 +329,14 @@ bool ClangModulesDeclVendorImpl::AddModule(const SourceModule &module,
 
       bool is_system = true;
       bool is_framework = false;
-      auto dir =
-          HS.getFileMgr().getDirectory(module.search_path.GetStringRef());
+      auto dir = HS.getFileMgr().getOptionalDirectoryRef(
+          module.search_path.GetStringRef());
       if (!dir)
         return error();
-      auto *file = HS.lookupModuleMapFile(*dir, is_framework);
+      auto file = HS.lookupModuleMapFile(*dir, is_framework);
       if (!file)
         return error();
-      if (!HS.loadModuleMapFile(file, is_system))
+      if (!HS.loadModuleMapFile(*file, is_system))
         return error();
     }
   }

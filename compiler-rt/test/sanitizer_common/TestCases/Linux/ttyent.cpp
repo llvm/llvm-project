@@ -1,6 +1,7 @@
 // RUN: %clangxx -O0 -g %s -o %t
-//
-// REQUIRES: freebsd || netbsd
+
+// Android doesn't have ttyent.h.
+// UNSUPPORTED: android
 
 #include <assert.h>
 #include <stdlib.h>

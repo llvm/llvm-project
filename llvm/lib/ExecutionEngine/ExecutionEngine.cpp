@@ -878,6 +878,12 @@ GenericValue ExecutionEngine::getConstantValue(const Constant *C) {
     report_fatal_error(OS.str());
   }
 
+  if (auto *TETy = dyn_cast<TargetExtType>(C->getType())) {
+    assert(TETy->hasProperty(TargetExtType::HasZeroInit) && C->isNullValue() &&
+           "TargetExtType only supports null constant value");
+    C = Constant::getNullValue(TETy->getLayoutType());
+  }
+
   // Otherwise, we have a simple constant.
   GenericValue Result;
   switch (C->getType()->getTypeID()) {
@@ -1017,6 +1023,11 @@ GenericValue ExecutionEngine::getConstantValue(const Constant *C) {
 
 void ExecutionEngine::StoreValueToMemory(const GenericValue &Val,
                                          GenericValue *Ptr, Type *Ty) {
+  // It is safe to treat TargetExtType as its layout type since the underlying
+  // bits are only copied and are not inspected.
+  if (auto *TETy = dyn_cast<TargetExtType>(Ty))
+    Ty = TETy->getLayoutType();
+
   const unsigned StoreBytes = getDataLayout().getTypeStoreSize(Ty);
 
   switch (Ty->getTypeID()) {
@@ -1068,6 +1079,9 @@ void ExecutionEngine::StoreValueToMemory(const GenericValue &Val,
 void ExecutionEngine::LoadValueFromMemory(GenericValue &Result,
                                           GenericValue *Ptr,
                                           Type *Ty) {
+  if (auto *TETy = dyn_cast<TargetExtType>(Ty))
+    Ty = TETy->getLayoutType();
+
   const unsigned LoadBytes = getDataLayout().getTypeStoreSize(Ty);
 
   switch (Ty->getTypeID()) {

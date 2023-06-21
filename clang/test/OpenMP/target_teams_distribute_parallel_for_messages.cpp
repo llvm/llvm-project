@@ -1,10 +1,10 @@
 // RUN: %clang_cc1 -verify=expected,omp45 -fopenmp -fopenmp-version=45 -std=c++11 %s -Wuninitialized
-// RUN: %clang_cc1 -verify=expected,omp50 -fopenmp -fopenmp-version=50 -std=c++11 %s -Wuninitialized
-// RUN: %clang_cc1 -verify=expected,omp51 -fopenmp -fopenmp-version=51 -std=c++11 %s -Wuninitialized
+// RUN: %clang_cc1 -verify=expected,omp5,omp50 -fopenmp -fopenmp-version=50 -std=c++11 %s -Wuninitialized
+// RUN: %clang_cc1 -verify=expected,omp5,omp51 -fopenmp -std=c++11 %s -Wuninitialized
 
 // RUN: %clang_cc1 -verify=expected,omp45 -fopenmp-simd -fopenmp-version=45 -std=c++11 %s -Wuninitialized
-// RUN: %clang_cc1 -verify=expected,omp50 -fopenmp-simd -fopenmp-version=50 -std=c++11 %s -Wuninitialized
-// RUN: %clang_cc1 -verify=expected,omp51 -fopenmp-simd -fopenmp-version=51 -std=c++11 %s -Wuninitialized
+// RUN: %clang_cc1 -verify=expected,omp5,omp50 -fopenmp-simd -fopenmp-version=50 -std=c++11 %s -Wuninitialized
+// RUN: %clang_cc1 -verify=expected,omp5,omp51 -fopenmp-simd -std=c++11 %s -Wuninitialized
 
 void xxx(int argc) {
   int x; // expected-note {{initialize the variable 'x' to silence this warning}}
@@ -104,10 +104,10 @@ void test_ordered() {
 #pragma omp target teams distribute parallel for order // omp45-error {{unexpected OpenMP clause 'order' in directive '#pragma omp target teams distribute parallel for'}} expected-error {{expected '(' after 'order'}}
   for (int i = 0; i < 10; ++i)
     ;
-#pragma omp target teams distribute parallel for order( // omp45-error {{unexpected OpenMP clause 'order' in directive '#pragma omp target teams distribute parallel for'}} expected-error {{expected ')'}} expected-note {{to match this '('}} omp50-error {{expected 'concurrent' in OpenMP clause 'order'}} omp51-error {{expected 'concurrent' in OpenMP clause 'order'}}
+#pragma omp target teams distribute parallel for order( // omp45-error {{unexpected OpenMP clause 'order' in directive '#pragma omp target teams distribute parallel for'}} expected-error {{expected ')'}} expected-note {{to match this '('}} omp5-error {{expected 'concurrent' in OpenMP clause 'order'}}
   for (int i = 0; i < 10; ++i)
     ;
-#pragma omp target teams distribute parallel for order(none // omp45-error {{unexpected OpenMP clause 'order' in directive '#pragma omp target teams distribute parallel for'}} expected-error {{expected ')'}} expected-note {{to match this '('}} omp50-error {{expected 'concurrent' in OpenMP clause 'order'}} omp51-error {{expected 'concurrent' in OpenMP clause 'order'}}
+#pragma omp target teams distribute parallel for order(none // omp45-error {{unexpected OpenMP clause 'order' in directive '#pragma omp target teams distribute parallel for'}} expected-error {{expected ')'}} expected-note {{to match this '('}} omp5-error {{expected 'concurrent' in OpenMP clause 'order'}}
   for (int i = 0; i < 10; ++i)
     ;
 #pragma omp target teams distribute parallel for order(concurrent // omp45-error {{unexpected OpenMP clause 'order' in directive '#pragma omp target teams distribute parallel for'}} expected-error {{expected ')'}} expected-note {{to match this '('}}
@@ -116,7 +116,7 @@ void test_ordered() {
 #pragma omp target teams distribute parallel for order(concurrent) // omp45-error {{unexpected OpenMP clause 'order' in directive '#pragma omp target teams distribute parallel for'}}
   for (int i = 0; i < 10; ++i)
     ;
-#pragma omp target teams distribute parallel for order(unconstrained:) // omp45-error {{unexpected OpenMP clause 'order' in directive '#pragma omp target teams distribute parallel for'}} omp50-error {{expected 'concurrent' in OpenMP clause 'order'}} omp51-error {{expected 'concurrent' in OpenMP clause 'order'}}
+#pragma omp target teams distribute parallel for order(unconstrained:) // omp45-error {{unexpected OpenMP clause 'order' in directive '#pragma omp target teams distribute parallel for'}} omp5-error {{expected 'concurrent' in OpenMP clause 'order'}}
   for (int i = 0; i < 10; ++i)
     ;
 #pragma omp target teams distribute parallel for order(reproducible:concurrent // omp45-error {{unexpected OpenMP clause 'order' in directive '#pragma omp target teams distribute parallel for'}} expected-error {{expected ')'}} expected-note {{to match this '('}} omp50-error {{expected 'concurrent' in OpenMP clause 'order'}}

@@ -524,8 +524,8 @@ MachineBasicBlock *SILowerControlFlow::emitEndCf(MachineInstr &MI) {
 
       for (MachineBasicBlock *BlockPiece : {&MBB, SplitBB}) {
         for (MachineInstr &X : *BlockPiece) {
-          for (MachineOperand &Op : X.operands()) {
-            if (Op.isReg() && Op.isDef() && Op.getReg().isVirtual())
+          for (MachineOperand &Op : X.all_defs()) {
+            if (Op.getReg().isVirtual())
               DefInOrigBlock.insert(Op.getReg());
           }
         }

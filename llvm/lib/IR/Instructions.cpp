@@ -2290,7 +2290,7 @@ Constant *ShuffleVectorInst::convertShuffleMaskForBitcode(ArrayRef<int> Mask,
   SmallVector<Constant *, 16> MaskConst;
   for (int Elem : Mask) {
     if (Elem == PoisonMaskElem)
-      MaskConst.push_back(UndefValue::get(Int32Ty));
+      MaskConst.push_back(PoisonValue::get(Int32Ty));
     else
       MaskConst.push_back(ConstantInt::get(Int32Ty, Elem));
   }

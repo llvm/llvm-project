@@ -100,7 +100,7 @@ LIBC_INLINE uint32_t get_lane_size() { return LANE_SIZE; }
 /// Returns the bit-mask of active threads in the current warp.
 [[clang::convergent]] LIBC_INLINE uint64_t get_lane_mask() {
   uint32_t mask;
-  asm volatile("activemask.b32 %0;" : "=r"(mask));
+  LIBC_INLINE_ASM("activemask.b32 %0;" : "=r"(mask));
   return mask;
 }
 

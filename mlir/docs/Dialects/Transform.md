@@ -1,22 +1,8 @@
 # Transform Dialect
 
-Fine-grain transformation control dialect.
+Fine-grain transformation control dialect. See [../Tutorials/transform](tutorial) for more introductory information.
 
 [TOC]
-
-## Disclaimer
-
-**This dialect is actively developed and may change frequently.**
-
-To decrease the maintenance burden and churn, please post a description of
-the intended use case on the MLIR forum. A few in-tree use cases are
-currently supported:
-
-  - high-level transformations on "structured ops" (i.e. ops that operate on
-    chunks of data in a way that can be decomposed into operations on
-    smaller chunks of data and control flow) in Linalg, Tensor and Vector
-    dialects;
-  - loop transformations in the SCF dialect.
 
 ## Overview
 
@@ -186,12 +172,12 @@ effects on these resources.
 
   * `TransformMappingResource` - side effect resource corresponding to the
     mapping between transform IR values and payload IR operations.
-    
+
     - An `Allocate` effect from this resource means creating a new mapping
       entry, it is always accompanied by a `Write` effect.
-      
+
     - A `Read` effect from this resource means accessing the mapping.
-    
+
     - A `Free` effect on this resource indicates the removal of the mapping
       entry, typically after a transformation that modifies the payload IR
       operations associated with one of the transform IR operation's
@@ -290,7 +276,7 @@ The following handle invalidation rules apply.
       payload operations described above;
 
     - value handles associated with any result of any operation described above;
-    
+
     - value handles associated with any argument of a block contained in a
       region attached to any operation described above.
 
@@ -311,7 +297,7 @@ The following handle invalidation rules apply.
     - value handles associated with any result of any operation described above,
       including all results of the operation defining as result the value
       associated with the consumed handle;
-    
+
     - value handles associated with any argument of a block contained in a
       region attached to any operation described above.
 
@@ -430,6 +416,10 @@ ops rather than having the methods directly act on the payload IR.
 ## MemRef Transform Operations
 
 [include "Dialects/MemRefTransformOps.md"]
+
+## PDL (extension) Transform Operations
+
+[include "Dialects/PDLExtensionOps.md"]
 
 ## Structured (Linalg) Match Operations
 

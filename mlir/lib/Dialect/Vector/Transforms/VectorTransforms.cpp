@@ -885,6 +885,66 @@ private:
   std::function<bool(BitCastOp)> controlFn;
 };
 
+/// Reorders elementwise(broadcast) to broadcast(elementwise). Ex:
+/// ```
+/// %a = vector.broadcast %arg1 : index to vector<1x4xindex>
+/// %b = vector.broadcast %arg2 : index to vector<1x4xindex>
+/// %r = arith.addi %a, %b : vector<1x4xindex>
+/// ```
+/// Gets converted to:
+/// ```
+/// %r = arith.addi %arg0, %arg1 : index
+/// %b = vector.broadcast %r : index to vector<1x4xindex>
+/// ```
+struct ReorderElementwiseOpsOnBroadcast final
+    : public OpTraitRewritePattern<OpTrait::Elementwise> {
+  using OpTraitRewritePattern::OpTraitRewritePattern;
+  LogicalResult matchAndRewrite(Operation *op,
+                                PatternRewriter &rewriter) const override {
+    if (op->getNumResults() != 1)
+      return failure();
+    if (!llvm::isa<ShapedType>(op->getResults()[0].getType()))
+      return failure();
+    if (!OpTrait::hasElementwiseMappableTraits(op))
+      return failure();
+
+    // Get the type of the first operand
+    auto firstBcast = op->getOperand(0).getDefiningOp<vector::BroadcastOp>();
+    if (!firstBcast)
+      return failure();
+    auto firstOpType = firstBcast.getOperand().getType();
+
+    // Make sure that operands are "broadcast"ed from identical (scalar or
+    // vector) types. That indicates that it's safe to skip the broadcasting of
+    // operands.
+    if (!llvm::all_of(op->getOperands(), [&firstOpType](Value val) {
+          auto bcast = val.getDefiningOp<vector::BroadcastOp>();
+          return (bcast && (bcast.getOperand().getType() == firstOpType));
+        })) {
+      return failure();
+    }
+
+    // Collect the source values
+    SmallVector<Value> srcValues;
+    srcValues.reserve(op->getNumOperands());
+
+    for (Value operand : op->getOperands()) {
+      srcValues.push_back(
+          operand.getDefiningOp<vector::BroadcastOp>().getOperand());
+    }
+
+    Operation *elementwiseOp =
+        rewriter.create(op->getLoc(), op->getName().getIdentifier(), srcValues,
+                        firstOpType, op->getAttrs());
+
+    auto vectorType = op->getResultTypes()[0];
+    rewriter.replaceOpWithNewOp<vector::BroadcastOp>(
+        op, vectorType, elementwiseOp->getResults());
+
+    return success();
+  }
+};
+
 // Helper that returns a vector comparison that constructs a mask:
 //     mask = [0,1,..,n-1] + [o,o,..,o] < [b,b,..,b]
 //
@@ -1212,7 +1272,53 @@ private:
   FilterConstraintType filter;
 };
 
+/// Pattern to fold arithmetic extensions on floating point data types into
+/// vector contraction operations. linalg.matmul introduces arithmetic
+/// extensions on its operands. Please mlir snippets below for more details.
+/// ```mlir
+///   "linalg.matmul"(%lhs, %rhs, %acc) ({
+///      ^bb0(%arg1: f16, %arg2: f16, %arg3: f32):
+///        %lhs_f32 = "arith.extf"(%arg1) : (f16) -> f32
+///        %rhs_f32 = "arith.extf"(%arg2) : (f16) -> f32
+///        %mul = "arith.mulf"(%lhs_f32, %rhs_f32) : (f32, f32) -> f32
+///        %acc = "arith.addf"(%arg3, %mul) : (f32, f32) -> f32
+///        "linalg.yield"(%acc) : (f32) -> ()
+///     })
+/// ```
+/// This restricts the native usage of mixed precision NVIDIA Ampere Tensor
+/// Cores, i.e, `mma.sync.*.f32.f16.f16.f32` and `mma.sync.*.f32.bf16.bf16.f32`.
+/// This pattern folds the arithmetic extensions into the vector contraction and
+/// enables the usage of native mixed precision Tensor Core instructions.
+struct FoldArithExtIntoContractionOp
+    : public OpRewritePattern<vector::ContractionOp> {
+  using OpRewritePattern::OpRewritePattern;
+
+  LogicalResult matchAndRewrite(vector::ContractionOp contractOp,
+                                PatternRewriter &rewriter) const override {
+
+    auto lhsDefOp = contractOp.getLhs().getDefiningOp<arith::ExtFOp>();
+    auto rhsDefOp = contractOp.getRhs().getDefiningOp<arith::ExtFOp>();
+
+    if (!lhsDefOp || !rhsDefOp) {
+      return rewriter.notifyMatchFailure(contractOp,
+                                         "no defining op on contract operands");
+    }
+
+    rewriter.replaceOpWithNewOp<vector::ContractionOp>(
+        contractOp, lhsDefOp->getOperand(0), rhsDefOp->getOperand(0),
+        contractOp.getAcc(), contractOp.getIndexingMapsAttr(),
+        contractOp.getIteratorTypesAttr());
+
+    return success();
+  }
+};
+
 } // namespace
+
+void mlir::vector::populateFoldArithExtensionPatterns(
+    RewritePatternSet &patterns) {
+  patterns.add<FoldArithExtIntoContractionOp>(patterns.getContext());
+}
 
 void mlir::vector::populateVectorMaskMaterializationPatterns(
     RewritePatternSet &patterns, bool force32BitVectorIndices,
@@ -1263,6 +1369,12 @@ void mlir::vector::
     populateVectorTransferCollapseInnerMostContiguousDimsPatterns(
         RewritePatternSet &patterns, PatternBenefit benefit) {
   patterns.add<DropInnerMostUnitDims>(patterns.getContext(), benefit);
+}
+
+void mlir::vector::populateSinkVectorBroadcastPatterns(
+    RewritePatternSet &patterns, PatternBenefit benefit) {
+  patterns.add<ReorderElementwiseOpsOnBroadcast>(patterns.getContext(),
+                                                 benefit);
 }
 
 //===----------------------------------------------------------------------===//

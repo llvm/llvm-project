@@ -252,6 +252,36 @@ TEST(WalkAST, FunctionTemplates) {
                        "auto x = [] { ^foo<int>(); };"),
               ElementsAre(Decl::FunctionTemplate));
 }
+TEST(WalkAST, TemplateSpecializationsFromUsingDecl) {
+  // Class templates
+  testWalk(R"cpp(
+namespace ns {
+template<class T> class $ambiguous^Z {};      // primary template
+template<class T> class $ambiguous^Z<T*> {};  // partial specialization
+template<> class $ambiguous^Z<int> {};        // full specialization
+}
+  )cpp",
+           "using ns::^Z;");
+
+  // Var templates
+  testWalk(R"cpp(
+namespace ns {
+template<class T> T $ambiguous^foo;      // primary template
+template<class T> T $ambiguous^foo<T*>;  // partial specialization
+template<> int* $ambiguous^foo<int>;     // full specialization
+}
+  )cpp",
+           "using ns::^foo;");
+  // Function templates, no partial template specializations.
+  testWalk(R"cpp(
+namespace ns {
+template<class T> void $ambiguous^function(T);  // primary template
+template<> void $ambiguous^function(int);       // full specialization
+}
+  )cpp",
+           "using ns::^function;");
+}
+
 
 TEST(WalkAST, Alias) {
   testWalk(R"cpp(

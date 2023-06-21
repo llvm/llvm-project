@@ -84,10 +84,23 @@ def LLVM_OpaqueStruct : Type<
   And<[LLVM_AnyStruct.predicate,
        CPred<"::llvm::cast<::mlir::LLVM::LLVMStructType>($_self).isOpaque()">]>>;
 
+// Type constraint accepting any LLVM target extension type.
+def LLVM_AnyTargetExt : Type<CPred<"::llvm::isa<::mlir::LLVM::LLVMTargetExtType>($_self)">,
+                            "LLVM target extension type">;
+
+// Type constraint accepting LLVM target extension types with no support for
+// memory operations such as alloca, load and store.
+def LLVM_NonLoadableTargetExtType : Type<
+  And<[LLVM_AnyTargetExt.predicate, 
+        CPred<"!::llvm::cast<::mlir::LLVM::LLVMTargetExtType>($_self).supportsMemOps()">]
+        >>;
+
 // Type constraint accepting any LLVM type that can be loaded or stored, i.e. a
-// type that has size (not void, function or opaque struct type).
+// type that has size (not void, function, opaque struct type or target 
+// extension type which does not support memory operations).
 def LLVM_LoadableType : Type<
-  Or<[And<[LLVM_PrimitiveType.predicate, Neg<LLVM_OpaqueStruct.predicate>]>,
+  Or<[And<[LLVM_PrimitiveType.predicate, Neg<LLVM_OpaqueStruct.predicate>,
+          Neg<LLVM_NonLoadableTargetExtType.predicate>]>,
       LLVM_PointerElementTypeInterface.predicate]>,
   "LLVM type with size">;
 
@@ -318,16 +331,16 @@ class LLVM_IntrOpBase<Dialect dialect, string opName, string enumName,
                              LLVM_IntrPatterns.structResult,
                              LLVM_IntrPatterns.result);
   string llvmEnumName = enumName;
+  list<string> declTypeList = !listconcat(
+            ListIntSubst<resultPattern, overloadedResults>.lst,
+            ListIntSubst<LLVM_IntrPatterns.operand,
+                         overloadedOperands>.lst);
+  string declTypes = [{ { }] # !interleave(declTypeList, ", ") # [{ } }];
   let llvmBuilder = [{
     llvm::Module *module = builder.GetInsertBlock()->getModule();
     llvm::Function *fn = llvm::Intrinsic::getDeclaration(
         module,
-        llvm::Intrinsic::}] # enumName # [{,
-        { }] # !interleave(!listconcat(
-            ListIntSubst<resultPattern, overloadedResults>.lst,
-            ListIntSubst<LLVM_IntrPatterns.operand,
-                         overloadedOperands>.lst), ", ") # [{
-        });
+        llvm::Intrinsic::}] # enumName # [{,}] # declTypes # [{);
     auto operands = moduleTranslation.lookupValues(opInst.getOperands());
     }] # [{
     auto *inst = builder.CreateCall(fn, operands);

@@ -76,100 +76,59 @@ class VPatBinarySDNode_VV<SDPatternOperator vop,
                           string instruction_name,
                           ValueType result_type,
                           ValueType op_type,
-                          int sew,
+                          int log2sew,
                           LMULInfo vlmul,
                           OutPatFrag avl,
-                          VReg op_reg_class> :
+                          VReg op_reg_class,
+                          bit isSEWAware = 0> :
     Pat<(result_type (vop
                      (op_type op_reg_class:$rs1),
                      (op_type op_reg_class:$rs2))),
-        (!cast<Instruction>(instruction_name#"_VV_"# vlmul.MX)
+        (!cast<Instruction>(
+                     !if(isSEWAware,
+                         instruction_name#"_VV_"# vlmul.MX#"_E"#!shl(1, log2sew)#"_TU",
+                         instruction_name#"_VV_"# vlmul.MX#"_TU"))
+                     (result_type (IMPLICIT_DEF)),
                      op_reg_class:$rs1,
                      op_reg_class:$rs2,
-                     avl, sew)>;
-
-class VPatBinarySDNode_VV_E<SDPatternOperator vop,
-                            string instruction_name,
-                            ValueType result_type,
-                            ValueType op_type,
-                            int log2sew,
-                            LMULInfo vlmul,
-                            int sew,
-                            OutPatFrag avl,
-                            VReg op_reg_class> :
-    Pat<(result_type (vop
-                     (op_type op_reg_class:$rs1),
-                     (op_type op_reg_class:$rs2))),
-        (!cast<Instruction>(instruction_name#"_VV_"# vlmul.MX#"_E"#sew)
-                     op_reg_class:$rs1,
-                     op_reg_class:$rs2,
-                     avl, log2sew)>;
+                     avl, log2sew, TA_MA)>;
 
 class VPatBinarySDNode_XI<SDPatternOperator vop,
                           string instruction_name,
                           string suffix,
                           ValueType result_type,
                           ValueType vop_type,
-                          int sew,
+                          int log2sew,
                           LMULInfo vlmul,
                           OutPatFrag avl,
                           VReg vop_reg_class,
                           ComplexPattern SplatPatKind,
-                          DAGOperand xop_kind> :
+                          DAGOperand xop_kind,
+                          bit isSEWAware = 0> :
     Pat<(result_type (vop
                      (vop_type vop_reg_class:$rs1),
                      (vop_type (SplatPatKind xop_kind:$rs2)))),
-        (!cast<Instruction>(instruction_name#_#suffix#_# vlmul.MX)
+        (!cast<Instruction>(
+                     !if(isSEWAware,
+                         instruction_name#_#suffix#_# vlmul.MX#"_E"#!shl(1, log2sew)#"_TU",
+                         instruction_name#_#suffix#_# vlmul.MX#"_TU"))
+                     (result_type (IMPLICIT_DEF)),
                      vop_reg_class:$rs1,
                      xop_kind:$rs2,
-                     avl, sew)>;
-
-class VPatBinarySDNode_XI_E<SDPatternOperator vop,
-                            string instruction_name,
-                            string suffix,
-                            ValueType result_type,
-                            ValueType vop_type,
-                            int log2sew,
-                            LMULInfo vlmul,
-                            int sew,
-                            OutPatFrag avl,
-                            VReg vop_reg_class,
-                            ComplexPattern SplatPatKind,
-                            DAGOperand xop_kind> :
-    Pat<(result_type (vop
-                     (vop_type vop_reg_class:$rs1),
-                     (vop_type (SplatPatKind xop_kind:$rs2)))),
-        (!cast<Instruction>(instruction_name#_#suffix#_# vlmul.MX#"_E"#sew)
-                     vop_reg_class:$rs1,
-                     xop_kind:$rs2,
-                     avl, log2sew)>;
+                     avl, log2sew, TA_MA)>;
 
 multiclass VPatBinarySDNode_VV_VX<SDPatternOperator vop, string instruction_name,
-                                  list<VTypeInfo> vtilist = AllIntegerVectors> {
+                                  list<VTypeInfo> vtilist = AllIntegerVectors,
+                                  bit isSEWAware = 0> {
   foreach vti = vtilist in {
     let Predicates = GetVTypePredicates<vti>.Predicates in {
       def : VPatBinarySDNode_VV<vop, instruction_name,
                                 vti.Vector, vti.Vector, vti.Log2SEW,
-                                vti.LMul, vti.AVL, vti.RegClass>;
+                                vti.LMul, vti.AVL, vti.RegClass, isSEWAware>;
       def : VPatBinarySDNode_XI<vop, instruction_name, "VX",
                                 vti.Vector, vti.Vector, vti.Log2SEW,
                                 vti.LMul, vti.AVL, vti.RegClass,
-                                SplatPat, GPR>;
-    }
-  }
-}
-
-multiclass VPatBinarySDNode_VV_VX_E<SDPatternOperator vop,
-                                    string instruction_name> {
-  foreach vti = AllIntegerVectors in {
-    let Predicates = GetVTypePredicates<vti>.Predicates in {
-      def : VPatBinarySDNode_VV_E<vop, instruction_name,
-                                  vti.Vector, vti.Vector, vti.Log2SEW,
-                                  vti.LMul, vti.SEW, vti.AVL, vti.RegClass>;
-      def : VPatBinarySDNode_XI_E<vop, instruction_name, "VX",
-                                  vti.Vector, vti.Vector, vti.Log2SEW,
-                                  vti.LMul, vti.SEW, vti.AVL, vti.RegClass,
-                                  SplatPat, GPR>;
+                                SplatPat, GPR, isSEWAware>;
     }
   }
 }
@@ -192,86 +151,52 @@ class VPatBinarySDNode_VF<SDPatternOperator vop,
                           ValueType result_type,
                           ValueType vop_type,
                           ValueType xop_type,
-                          int sew,
+                          int log2sew,
                           LMULInfo vlmul,
                           OutPatFrag avl,
                           VReg vop_reg_class,
-                          DAGOperand xop_kind> :
+                          DAGOperand xop_kind,
+                          bit isSEWAware = 0> :
     Pat<(result_type (vop (vop_type vop_reg_class:$rs1),
                           (vop_type (SplatFPOp xop_kind:$rs2)))),
-        (!cast<Instruction>(instruction_name#"_"#vlmul.MX)
+        (!cast<Instruction>(
+                     !if(isSEWAware,
+                         instruction_name#"_"#vlmul.MX#"_E"#!shl(1, log2sew)#"_TU",
+                         instruction_name#"_"#vlmul.MX#"_TU"))
+                     (result_type (IMPLICIT_DEF)),
                      vop_reg_class:$rs1,
                      (xop_type xop_kind:$rs2),
-                     avl, sew)>;
+                     avl, log2sew, TA_MA)>;
 
-class VPatBinarySDNode_VF_E<SDPatternOperator vop,
-                            string instruction_name,
-                            ValueType result_type,
-                            ValueType vop_type,
-                            ValueType xop_type,
-                            int log2sew,
-                            LMULInfo vlmul,
-                            int sew,
-                            OutPatFrag avl,
-                            VReg vop_reg_class,
-                            DAGOperand xop_kind> :
-    Pat<(result_type (vop (vop_type vop_reg_class:$rs1),
-                          (vop_type (SplatFPOp xop_kind:$rs2)))),
-        (!cast<Instruction>(instruction_name#"_"#vlmul.MX#"_E"#sew)
-                     vop_reg_class:$rs1,
-                     (xop_type xop_kind:$rs2),
-                     avl, log2sew)>;
-
-multiclass VPatBinaryFPSDNode_VV_VF<SDPatternOperator vop, string instruction_name> {
+multiclass VPatBinaryFPSDNode_VV_VF<SDPatternOperator vop, string instruction_name,
+                                    bit isSEWAware = 0> {
   foreach vti = AllFloatVectors in {
     let Predicates = GetVTypePredicates<vti>.Predicates in {
       def : VPatBinarySDNode_VV<vop, instruction_name,
                                 vti.Vector, vti.Vector, vti.Log2SEW,
-                                vti.LMul, vti.AVL, vti.RegClass>;
+                                vti.LMul, vti.AVL, vti.RegClass, isSEWAware>;
       def : VPatBinarySDNode_VF<vop, instruction_name#"_V"#vti.ScalarSuffix,
                                 vti.Vector, vti.Vector, vti.Scalar,
                                 vti.Log2SEW, vti.LMul, vti.AVL, vti.RegClass,
-                                vti.ScalarRegClass>;
+                                vti.ScalarRegClass, isSEWAware>;
     }
   }
 }
 
-multiclass VPatBinaryFPSDNode_VV_VF_E<SDPatternOperator vop,
-                                      string instruction_name> {
-  foreach vti = AllFloatVectors in {
-    let Predicates = GetVTypePredicates<vti>.Predicates in {
-      def : VPatBinarySDNode_VV_E<vop, instruction_name,
-                                vti.Vector, vti.Vector, vti.Log2SEW,
-                                vti.LMul, vti.SEW, vti.AVL, vti.RegClass>;
-      def : VPatBinarySDNode_VF_E<vop, instruction_name#"_V"#vti.ScalarSuffix,
-                                vti.Vector, vti.Vector, vti.Scalar,
-                                vti.Log2SEW, vti.LMul, vti.SEW, vti.AVL,
-                                vti.RegClass, vti.ScalarRegClass>;
-    }
-  }
-}
-
-multiclass VPatBinaryFPSDNode_R_VF<SDPatternOperator vop, string instruction_name> {
+multiclass VPatBinaryFPSDNode_R_VF<SDPatternOperator vop, string instruction_name,
+                                   bit isSEWAware = 0> {
   foreach fvti = AllFloatVectors in
     let Predicates = GetVTypePredicates<fvti>.Predicates in
     def : Pat<(fvti.Vector (vop (fvti.Vector (SplatFPOp fvti.Scalar:$rs2)),
                                 (fvti.Vector fvti.RegClass:$rs1))),
-              (!cast<Instruction>(instruction_name#"_V"#fvti.ScalarSuffix#"_"#fvti.LMul.MX)
+              (!cast<Instruction>(
+                           !if(isSEWAware,
+                             instruction_name#"_V"#fvti.ScalarSuffix#"_"#fvti.LMul.MX#"_E"#fvti.SEW#"_TU",
+                             instruction_name#"_V"#fvti.ScalarSuffix#"_"#fvti.LMul.MX#"_TU"))
+                           (fvti.Vector (IMPLICIT_DEF)),
                            fvti.RegClass:$rs1,
                            (fvti.Scalar fvti.ScalarRegClass:$rs2),
-                           fvti.AVL, fvti.Log2SEW)>;
-}
-
-multiclass VPatBinaryFPSDNode_R_VF_E<SDPatternOperator vop,
-                                     string instruction_name> {
-  foreach fvti = AllFloatVectors in
-    let Predicates = GetVTypePredicates<fvti>.Predicates in
-    def : Pat<(fvti.Vector (vop (fvti.Vector (SplatFPOp fvti.Scalar:$rs2)),
-                                (fvti.Vector fvti.RegClass:$rs1))),
-              (!cast<Instruction>(instruction_name#"_V"#fvti.ScalarSuffix#"_"#fvti.LMul.MX#"_E"#fvti.SEW)
-                           fvti.RegClass:$rs1,
-                           (fvti.Scalar fvti.ScalarRegClass:$rs2),
-                           fvti.AVL, fvti.Log2SEW)>;
+                           fvti.AVL, fvti.Log2SEW, TA_MA)>;
 }
 
 multiclass VPatIntegerSetCCSDNode_VV<string instruction_name,
@@ -808,6 +733,27 @@ defm : VPatWidenBinarySDNode_VV_VX_WV_WX<sub, sext_oneuse, "PseudoVWSUB">;
 defm : VPatWidenBinarySDNode_VV_VX_WV_WX<sub, zext_oneuse, "PseudoVWSUBU">;
 defm : VPatWidenBinarySDNode_VV_VX_WV_WX<sub, anyext_oneuse, "PseudoVWSUBU">;
 
+// shl (ext v, splat 1) is a special case of widening add.
+foreach vtiToWti = AllWidenableIntVectors in {
+  defvar vti = vtiToWti.Vti;
+  defvar wti = vtiToWti.Wti;
+  let Predicates = !listconcat(GetVTypePredicates<vti>.Predicates,
+                               GetVTypePredicates<wti>.Predicates) in {
+    def : Pat<(shl (wti.Vector (sext_oneuse (vti.Vector vti.RegClass:$rs1))),
+                   (wti.Vector (riscv_vmv_v_x_vl (wti.Vector undef), 1, (XLenVT srcvalue)))),
+              (!cast<Instruction>("PseudoVWADD_VV_"#vti.LMul.MX)
+                  vti.RegClass:$rs1, vti.RegClass:$rs1, vti.AVL, vti.Log2SEW)>;
+    def : Pat<(shl (wti.Vector (zext_oneuse (vti.Vector vti.RegClass:$rs1))),
+                   (wti.Vector (riscv_vmv_v_x_vl (wti.Vector undef), 1, (XLenVT srcvalue)))),
+              (!cast<Instruction>("PseudoVWADDU_VV_"#vti.LMul.MX)
+                  vti.RegClass:$rs1, vti.RegClass:$rs1, vti.AVL, vti.Log2SEW)>;
+    def : Pat<(shl (wti.Vector (anyext_oneuse (vti.Vector vti.RegClass:$rs1))),
+                   (wti.Vector (riscv_vmv_v_x_vl (wti.Vector undef), 1, (XLenVT srcvalue)))),
+              (!cast<Instruction>("PseudoVWADDU_VV_"#vti.LMul.MX)
+                  vti.RegClass:$rs1, vti.RegClass:$rs1, vti.AVL, vti.Log2SEW)>;
+  }
+}
+
 // 11.3. Vector Integer Extension
 defm : VPatExtendSDNode_V<[zext, anyext], "PseudoVZEXT", "VF2",
                           AllFractionableVF2IntVectors>;
@@ -895,10 +841,10 @@ let Predicates = [HasVInstructionsFullMultiply] in {
 }
 
 // 11.11. Vector Integer Divide Instructions
-defm : VPatBinarySDNode_VV_VX_E<udiv, "PseudoVDIVU">;
-defm : VPatBinarySDNode_VV_VX_E<sdiv, "PseudoVDIV">;
-defm : VPatBinarySDNode_VV_VX_E<urem, "PseudoVREMU">;
-defm : VPatBinarySDNode_VV_VX_E<srem, "PseudoVREM">;
+defm : VPatBinarySDNode_VV_VX<udiv, "PseudoVDIVU", AllIntegerVectors, /*isSEWAware*/ 1>;
+defm : VPatBinarySDNode_VV_VX<sdiv, "PseudoVDIV", AllIntegerVectors, /*isSEWAware*/ 1>;
+defm : VPatBinarySDNode_VV_VX<urem, "PseudoVREMU", AllIntegerVectors, /*isSEWAware*/ 1>;
+defm : VPatBinarySDNode_VV_VX<srem, "PseudoVREM", AllIntegerVectors, /*isSEWAware*/ 1>;
 
 // 11.12. Vector Widening Integer Multiply Instructions
 defm : VPatWidenBinarySDNode_VV_VX<mul, sext_oneuse, sext_oneuse,
@@ -932,18 +878,21 @@ foreach vti = AllIntegerVectors in {
   let Predicates = GetVTypePredicates<vti>.Predicates in {
     def : Pat<(vti.Vector (vselect (vti.Mask V0), vti.RegClass:$rs1,
                                                         vti.RegClass:$rs2)),
-              (!cast<Instruction>("PseudoVMERGE_VVM_"#vti.LMul.MX)
+              (!cast<Instruction>("PseudoVMERGE_VVM_"#vti.LMul.MX#"_TU")
+                   (vti.Vector (IMPLICIT_DEF)),
                    vti.RegClass:$rs2, vti.RegClass:$rs1, (vti.Mask V0),
                    vti.AVL, vti.Log2SEW)>;
 
     def : Pat<(vti.Vector (vselect (vti.Mask V0), (SplatPat XLenVT:$rs1),
                                                         vti.RegClass:$rs2)),
-              (!cast<Instruction>("PseudoVMERGE_VXM_"#vti.LMul.MX)
+              (!cast<Instruction>("PseudoVMERGE_VXM_"#vti.LMul.MX#"_TU")
+                   (vti.Vector (IMPLICIT_DEF)),
                    vti.RegClass:$rs2, GPR:$rs1, (vti.Mask V0), vti.AVL, vti.Log2SEW)>;
 
     def : Pat<(vti.Vector (vselect (vti.Mask V0), (SplatPat_simm5 simm5:$rs1),
                                                         vti.RegClass:$rs2)),
-              (!cast<Instruction>("PseudoVMERGE_VIM_"#vti.LMul.MX)
+              (!cast<Instruction>("PseudoVMERGE_VIM_"#vti.LMul.MX#"_TU")
+                   (vti.Vector (IMPLICIT_DEF)),
                    vti.RegClass:$rs2, simm5:$rs1, (vti.Mask V0), vti.AVL, vti.Log2SEW)>;
   }
 }
@@ -1008,8 +957,8 @@ defm : VPatWidenBinaryFPSDNode_VV_VF_WV_WF<fsub, "PseudoVFWSUB">;
 
 // 13.4. Vector Single-Width Floating-Point Multiply/Divide Instructions
 defm : VPatBinaryFPSDNode_VV_VF<any_fmul, "PseudoVFMUL">;
-defm : VPatBinaryFPSDNode_VV_VF_E<any_fdiv, "PseudoVFDIV">;
-defm : VPatBinaryFPSDNode_R_VF_E<any_fdiv, "PseudoVFRDIV">;
+defm : VPatBinaryFPSDNode_VV_VF<any_fdiv, "PseudoVFDIV", /*isSEWAware*/ 1>;
+defm : VPatBinaryFPSDNode_R_VF<any_fdiv, "PseudoVFRDIV", /*isSEWAware*/ 1>;
 
 // 13.5. Vector Widening Floating-Point Multiply Instructions
 defm : VPatWidenBinaryFPSDNode_VV_VF<fmul, "PseudoVFWMUL">;
@@ -1145,14 +1094,16 @@ foreach fvti = AllFloatVectors in {
   let Predicates = GetVTypePredicates<fvti>.Predicates in {
     def : Pat<(fvti.Vector (vselect (fvti.Mask V0), fvti.RegClass:$rs1,
                                                           fvti.RegClass:$rs2)),
-              (!cast<Instruction>("PseudoVMERGE_VVM_"#fvti.LMul.MX)
+              (!cast<Instruction>("PseudoVMERGE_VVM_"#fvti.LMul.MX#"_TU")
+                   (fvti.Vector (IMPLICIT_DEF)),
                    fvti.RegClass:$rs2, fvti.RegClass:$rs1, (fvti.Mask V0),
                    fvti.AVL, fvti.Log2SEW)>;
 
     def : Pat<(fvti.Vector (vselect (fvti.Mask V0),
                                     (SplatFPOp fvti.ScalarRegClass:$rs1),
                                     fvti.RegClass:$rs2)),
-              (!cast<Instruction>("PseudoVFMERGE_V"#fvti.ScalarSuffix#"M_"#fvti.LMul.MX)
+              (!cast<Instruction>("PseudoVFMERGE_V"#fvti.ScalarSuffix#"M_"#fvti.LMul.MX#"_TU")
+                   (fvti.Vector (IMPLICIT_DEF)),
                    fvti.RegClass:$rs2,
                    (fvti.Scalar fvti.ScalarRegClass:$rs1),
                    (fvti.Mask V0), fvti.AVL, fvti.Log2SEW)>;
@@ -1160,7 +1111,8 @@ foreach fvti = AllFloatVectors in {
     def : Pat<(fvti.Vector (vselect (fvti.Mask V0),
                                     (SplatFPOp (fvti.Scalar fpimm0)),
                                     fvti.RegClass:$rs2)),
-              (!cast<Instruction>("PseudoVMERGE_VIM_"#fvti.LMul.MX)
+              (!cast<Instruction>("PseudoVMERGE_VIM_"#fvti.LMul.MX#"_TU")
+                   (fvti.Vector (IMPLICIT_DEF)),
                    fvti.RegClass:$rs2, 0, (fvti.Mask V0), fvti.AVL, fvti.Log2SEW)>;
   }
 }

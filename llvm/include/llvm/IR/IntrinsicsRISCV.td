@@ -570,6 +570,17 @@ let TargetPrefix = "riscv" in {
     let ScalarOperand = 2;
     let VLOperand = 3;
   }
+  // For Saturating binary operations with rounding-mode operand
+  // The destination vector type is the same as first source vector.
+  // Input: (passthru, vector_in, vector_in/scalar_in, vxrm, vl)
+  class RISCVSaturatingBinaryAAXUnMaskedRoundingMode
+        : Intrinsic<[llvm_anyvector_ty],
+                    [LLVMMatchType<0>, LLVMMatchType<0>, llvm_any_ty,
+                     llvm_anyint_ty, LLVMMatchType<2>],
+                    [ImmArg<ArgIndex<3>>, IntrNoMem]>, RISCVVIntrinsic {
+    let ScalarOperand = 2;
+    let VLOperand = 4;
+  }
   // For Saturating binary operations with mask.
   // The destination vector type is the same as first source vector.
   // Input: (maskedoff, vector_in, vector_in/scalar_in, mask, vl, policy)
@@ -581,6 +592,18 @@ let TargetPrefix = "riscv" in {
                     [ImmArg<ArgIndex<5>>, IntrNoMem, IntrHasSideEffects]>, RISCVVIntrinsic {
     let ScalarOperand = 2;
     let VLOperand = 4;
+  }
+  // For Saturating binary operations with mask and rounding-mode operand
+  // The destination vector type is the same as first source vector.
+  // Input: (maskedoff, vector_in, vector_in/scalar_in, mask, vxrm, vl, policy)
+  class RISCVSaturatingBinaryAAXMaskedRoundingMode
+        : Intrinsic<[llvm_anyvector_ty],
+                    [LLVMMatchType<0>, LLVMMatchType<0>, llvm_any_ty,
+                     LLVMScalarOrSameVectorWidth<0, llvm_i1_ty>, llvm_anyint_ty,
+                     LLVMMatchType<2>, LLVMMatchType<2>],
+                    [ImmArg<ArgIndex<4>>, ImmArg<ArgIndex<6>>, IntrNoMem]>, RISCVVIntrinsic {
+    let ScalarOperand = 2;
+    let VLOperand = 5;
   }
   // For Saturating binary operations.
   // The destination vector type is the same as first source vector.
@@ -606,6 +629,31 @@ let TargetPrefix = "riscv" in {
     let VLOperand = 4;
   }
   // For Saturating binary operations.
+  // The destination vector type is the same as first source vector.
+  // The second source operand matches the destination type or is an XLen scalar.
+  // Input: (passthru, vector_in, vector_in/scalar_in, vxrm, vl)
+  class RISCVSaturatingBinaryAAShiftUnMaskedRoundingMode
+        : DefaultAttrsIntrinsic<[llvm_anyvector_ty],
+                    [LLVMMatchType<0>, LLVMMatchType<0>, llvm_any_ty,
+                     llvm_anyint_ty, LLVMMatchType<2>],
+                    [ImmArg<ArgIndex<3>>, IntrNoMem, IntrHasSideEffects]>,
+                    RISCVVIntrinsic {
+    let VLOperand = 4;
+  }
+  // For Saturating binary operations with mask.
+  // The destination vector type is the same as first source vector.
+  // The second source operand matches the destination type or is an XLen scalar.
+  // Input: (maskedoff, vector_in, vector_in/scalar_in, mask, vxrm, vl, policy)
+  class RISCVSaturatingBinaryAAShiftMaskedRoundingMode
+        : DefaultAttrsIntrinsic<[llvm_anyvector_ty],
+                    [LLVMMatchType<0>, LLVMMatchType<0>, llvm_any_ty,
+                     LLVMScalarOrSameVectorWidth<0, llvm_i1_ty>, llvm_anyint_ty,
+                     LLVMMatchType<2>, LLVMMatchType<2>],
+                    [ImmArg<ArgIndex<4>>,ImmArg<ArgIndex<6>>, IntrNoMem, IntrHasSideEffects]>,
+                    RISCVVIntrinsic {
+    let VLOperand = 6;
+  }
+  // For Saturating binary operations.
   // The destination vector type is NOT the same as first source vector.
   // The second source operand matches the destination type or is an XLen scalar.
   // Input: (passthru, vector_in, vector_in/scalar_in, vl)
@@ -627,6 +675,31 @@ let TargetPrefix = "riscv" in {
                      LLVMMatchType<3>],
                     [ImmArg<ArgIndex<5>>, IntrNoMem, IntrHasSideEffects]>, RISCVVIntrinsic {
     let VLOperand = 4;
+  }
+  // For Saturating binary operations.
+  // The destination vector type is NOT the same as first source vector.
+  // The second source operand matches the destination type or is an XLen scalar.
+  // Input: (passthru, vector_in, vector_in/scalar_in, vxrm, vl)
+  class RISCVSaturatingBinaryABShiftUnMaskedRoundingMode
+        : DefaultAttrsIntrinsic<[llvm_anyvector_ty],
+                    [LLVMMatchType<0>, llvm_anyvector_ty, llvm_any_ty,
+                     llvm_anyint_ty, LLVMMatchType<3>],
+                    [ImmArg<ArgIndex<3>>, IntrNoMem, IntrHasSideEffects]>,
+                    RISCVVIntrinsic {
+    let VLOperand = 4;
+  }
+  // For Saturating binary operations with mask.
+  // The destination vector type is NOT the same as first source vector (with mask).
+  // The second source operand matches the destination type or is an XLen scalar.
+  // Input: (maskedoff, vector_in, vector_in/scalar_in, mask, vxrm, vl, policy)
+  class RISCVSaturatingBinaryABShiftMaskedRoundingMode
+        : DefaultAttrsIntrinsic<[llvm_anyvector_ty],
+                    [LLVMMatchType<0>, llvm_anyvector_ty, llvm_any_ty,
+                     LLVMScalarOrSameVectorWidth<0, llvm_i1_ty>, llvm_anyint_ty,
+                     LLVMMatchType<3>, LLVMMatchType<3>],
+                    [ImmArg<ArgIndex<4>>, ImmArg<ArgIndex<6>>, IntrNoMem,
+                     IntrHasSideEffects]>, RISCVVIntrinsic {
+    let VLOperand = 5;
   }
   // Input: (vector_in, vector_in, scalar_in, vl, policy)
   class RVVSlideUnMasked
@@ -1058,13 +1131,17 @@ let TargetPrefix = "riscv" in {
     def "int_riscv_" # NAME : RISCVSaturatingBinaryAAXUnMasked;
     def "int_riscv_" # NAME # "_mask" : RISCVSaturatingBinaryAAXMasked;
   }
-  multiclass RISCVSaturatingBinaryAAShift {
-    def "int_riscv_" # NAME : RISCVSaturatingBinaryAAShiftUnMasked;
-    def "int_riscv_" # NAME # "_mask" : RISCVSaturatingBinaryAAShiftMasked;
+  multiclass RISCVSaturatingBinaryAAXRoundingMode {
+    def "int_riscv_" # NAME : RISCVSaturatingBinaryAAXUnMaskedRoundingMode;
+    def "int_riscv_" # NAME # "_mask" : RISCVSaturatingBinaryAAXMaskedRoundingMode;
   }
-  multiclass RISCVSaturatingBinaryABShift {
-    def "int_riscv_" # NAME : RISCVSaturatingBinaryABShiftUnMasked;
-    def "int_riscv_" # NAME # "_mask" : RISCVSaturatingBinaryABShiftMasked;
+  multiclass RISCVSaturatingBinaryAAShiftRoundingMode {
+    def "int_riscv_" # NAME : RISCVSaturatingBinaryAAShiftUnMaskedRoundingMode;
+    def "int_riscv_" # NAME # "_mask" : RISCVSaturatingBinaryAAShiftMaskedRoundingMode;
+  }
+  multiclass RISCVSaturatingBinaryABShiftRoundingMode {
+    def "int_riscv_" # NAME : RISCVSaturatingBinaryABShiftUnMaskedRoundingMode;
+    def "int_riscv_" # NAME # "_mask" : RISCVSaturatingBinaryABShiftMaskedRoundingMode;
   }
   multiclass RVVSlide {
     def "int_riscv_" # NAME : RVVSlideUnMasked;
@@ -1334,18 +1411,18 @@ let TargetPrefix = "riscv" in {
 
   def "int_riscv_vcompress" : RISCVCompress;
 
-  defm vaaddu : RISCVSaturatingBinaryAAX;
-  defm vaadd : RISCVSaturatingBinaryAAX;
-  defm vasubu : RISCVSaturatingBinaryAAX;
-  defm vasub : RISCVSaturatingBinaryAAX;
+  defm vaaddu : RISCVSaturatingBinaryAAXRoundingMode;
+  defm vaadd : RISCVSaturatingBinaryAAXRoundingMode;
+  defm vasubu : RISCVSaturatingBinaryAAXRoundingMode;
+  defm vasub : RISCVSaturatingBinaryAAXRoundingMode;
 
-  defm vsmul : RISCVSaturatingBinaryAAX;
+  defm vsmul : RISCVSaturatingBinaryAAXRoundingMode;
 
-  defm vssrl : RISCVSaturatingBinaryAAShift;
-  defm vssra : RISCVSaturatingBinaryAAShift;
+  defm vssrl : RISCVSaturatingBinaryAAShiftRoundingMode;
+  defm vssra : RISCVSaturatingBinaryAAShiftRoundingMode;
 
-  defm vnclipu : RISCVSaturatingBinaryABShift;
-  defm vnclip : RISCVSaturatingBinaryABShift;
+  defm vnclipu : RISCVSaturatingBinaryABShiftRoundingMode;
+  defm vnclip : RISCVSaturatingBinaryABShiftRoundingMode;
 
   defm vmfeq : RISCVCompare;
   defm vmfne : RISCVCompare;
@@ -1511,7 +1588,7 @@ class ScalarCryptoGprIntrinsicAny
 
 class ScalarCryptoByteSelect32
     : DefaultAttrsIntrinsic<[llvm_i32_ty],
-                            [llvm_i32_ty, llvm_i32_ty, llvm_i8_ty],
+                            [llvm_i32_ty, llvm_i32_ty, llvm_i32_ty],
                             [IntrNoMem, IntrSpeculatable,
                              ImmArg<ArgIndex<2>>]>;
 
@@ -1532,7 +1609,7 @@ class ScalarCryptoGprIntrinsic64
 
 class ScalarCryptoByteSelectAny
     : DefaultAttrsIntrinsic<[llvm_anyint_ty],
-                            [LLVMMatchType<0>, LLVMMatchType<0>, llvm_i8_ty],
+                            [LLVMMatchType<0>, LLVMMatchType<0>, llvm_i32_ty],
                             [IntrNoMem, IntrSpeculatable, ImmArg<ArgIndex<2>>]>;
 
 // Zknd

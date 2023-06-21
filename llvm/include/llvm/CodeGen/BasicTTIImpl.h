@@ -276,7 +276,7 @@ public:
         E, AddressSpace, Alignment, MachineMemOperand::MONone, Fast);
   }
 
-  bool hasBranchDivergence() { return false; }
+  bool hasBranchDivergence(const Function *F = nullptr) { return false; }
 
   bool isSourceOfDivergence(const Value *V) { return false; }
 
@@ -284,6 +284,10 @@ public:
 
   bool isValidAddrSpaceCast(unsigned FromAS, unsigned ToAS) const {
     return false;
+  }
+
+  bool addrspacesMayAlias(unsigned AS0, unsigned AS1) const {
+    return true;
   }
 
   unsigned getFlatAddressSpace() {
@@ -532,10 +536,10 @@ public:
     return TargetTransformInfo::TCC_Expensive;
   }
 
-  unsigned getInliningThresholdMultiplier() { return 1; }
+  unsigned getInliningThresholdMultiplier() const { return 1; }
   unsigned adjustInliningThreshold(const CallBase *CB) { return 0; }
 
-  int getInlinerVectorBonusPercent() { return 150; }
+  int getInlinerVectorBonusPercent() const { return 150; }
 
   void getUnrollingPreferences(Loop *L, ScalarEvolution &SE,
                                TTI::UnrollingPreferences &UP,

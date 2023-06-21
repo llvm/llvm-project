@@ -24,9 +24,9 @@
 
 using namespace mlir;
 
-static void getForwardSliceImpl(Operation *op,
-                                SetVector<Operation *> *forwardSlice,
-                                TransitiveFilter filter) {
+static void
+getForwardSliceImpl(Operation *op, SetVector<Operation *> *forwardSlice,
+                    SliceOptions::TransitiveFilter filter = nullptr) {
   if (!op)
     return;
 
@@ -51,9 +51,9 @@ static void getForwardSliceImpl(Operation *op,
 }
 
 void mlir::getForwardSlice(Operation *op, SetVector<Operation *> *forwardSlice,
-                           TransitiveFilter filter, bool inclusive) {
-  getForwardSliceImpl(op, forwardSlice, filter);
-  if (!inclusive) {
+                           ForwardSliceOptions options) {
+  getForwardSliceImpl(op, forwardSlice, options.filter);
+  if (!options.inclusive) {
     // Don't insert the top level operation, we just queried on it and don't
     // want it in the results.
     forwardSlice->remove(op);
@@ -67,9 +67,9 @@ void mlir::getForwardSlice(Operation *op, SetVector<Operation *> *forwardSlice,
 }
 
 void mlir::getForwardSlice(Value root, SetVector<Operation *> *forwardSlice,
-                           TransitiveFilter filter, bool inclusive) {
+                           SliceOptions options) {
   for (Operation *user : root.getUsers())
-    getForwardSliceImpl(user, forwardSlice, filter);
+    getForwardSliceImpl(user, forwardSlice, options.filter);
 
   // Reverse to get back the actual topological order.
   // std::reverse does not work out of the box on SetVector and I want an
@@ -80,22 +80,25 @@ void mlir::getForwardSlice(Value root, SetVector<Operation *> *forwardSlice,
 
 static void getBackwardSliceImpl(Operation *op,
                                  SetVector<Operation *> *backwardSlice,
-                                 TransitiveFilter filter) {
+                                 BackwardSliceOptions options) {
   if (!op || op->hasTrait<OpTrait::IsIsolatedFromAbove>())
     return;
 
   // Evaluate whether we should keep this def.
   // This is useful in particular to implement scoping; i.e. return the
   // transitive backwardSlice in the current scope.
-  if (filter && !filter(op))
+  if (options.filter && !options.filter(op))
     return;
 
   for (const auto &en : llvm::enumerate(op->getOperands())) {
     auto operand = en.value();
     if (auto *definingOp = operand.getDefiningOp()) {
       if (backwardSlice->count(definingOp) == 0)
-        getBackwardSliceImpl(definingOp, backwardSlice, filter);
+        getBackwardSliceImpl(definingOp, backwardSlice, options);
     } else if (auto blockArg = dyn_cast<BlockArgument>(operand)) {
+      if (options.omitBlockArguments)
+        continue;
+
       Block *block = blockArg.getOwner();
       Operation *parentOp = block->getParentOp();
       // TODO: determine whether we want to recurse backward into the other
@@ -104,7 +107,7 @@ static void getBackwardSliceImpl(Operation *op,
       if (parentOp && backwardSlice->count(parentOp) == 0) {
         assert(parentOp->getNumRegions() == 1 &&
                parentOp->getRegion(0).getBlocks().size() == 1);
-        getBackwardSliceImpl(parentOp, backwardSlice, filter);
+        getBackwardSliceImpl(parentOp, backwardSlice, options);
       }
     } else {
       llvm_unreachable("No definingOp and not a block argument.");
@@ -116,10 +119,10 @@ static void getBackwardSliceImpl(Operation *op,
 
 void mlir::getBackwardSlice(Operation *op,
                             SetVector<Operation *> *backwardSlice,
-                            TransitiveFilter filter, bool inclusive) {
-  getBackwardSliceImpl(op, backwardSlice, filter);
+                            BackwardSliceOptions options) {
+  getBackwardSliceImpl(op, backwardSlice, options);
 
-  if (!inclusive) {
+  if (!options.inclusive) {
     // Don't insert the top level operation, we just queried on it and don't
     // want it in the results.
     backwardSlice->remove(op);
@@ -127,19 +130,18 @@ void mlir::getBackwardSlice(Operation *op,
 }
 
 void mlir::getBackwardSlice(Value root, SetVector<Operation *> *backwardSlice,
-                            TransitiveFilter filter, bool inclusive) {
+                            BackwardSliceOptions options) {
   if (Operation *definingOp = root.getDefiningOp()) {
-    getBackwardSlice(definingOp, backwardSlice, filter, inclusive);
+    getBackwardSlice(definingOp, backwardSlice, options);
     return;
   }
   Operation *bbAargOwner = cast<BlockArgument>(root).getOwner()->getParentOp();
-  getBackwardSlice(bbAargOwner, backwardSlice, filter, inclusive);
+  getBackwardSlice(bbAargOwner, backwardSlice, options);
 }
 
 SetVector<Operation *> mlir::getSlice(Operation *op,
-                                      TransitiveFilter backwardFilter,
-                                      TransitiveFilter forwardFilter,
-                                      bool inclusive) {
+                                      BackwardSliceOptions backwardSliceOptions,
+                                      ForwardSliceOptions forwardSliceOptions) {
   SetVector<Operation *> slice;
   slice.insert(op);
 
@@ -150,12 +152,12 @@ SetVector<Operation *> mlir::getSlice(Operation *op,
     auto *currentOp = (slice)[currentIndex];
     // Compute and insert the backwardSlice starting from currentOp.
     backwardSlice.clear();
-    getBackwardSlice(currentOp, &backwardSlice, backwardFilter, inclusive);
+    getBackwardSlice(currentOp, &backwardSlice, backwardSliceOptions);
     slice.insert(backwardSlice.begin(), backwardSlice.end());
 
     // Compute and insert the forwardSlice starting from currentOp.
     forwardSlice.clear();
-    getForwardSlice(currentOp, &forwardSlice, forwardFilter, inclusive);
+    getForwardSlice(currentOp, &forwardSlice, forwardSliceOptions);
     slice.insert(forwardSlice.begin(), forwardSlice.end());
     ++currentIndex;
   }
@@ -225,8 +227,11 @@ static bool dependsOnCarriedVals(Value value,
                                  Operation *ancestorOp) {
   // Compute the backward slice of the value.
   SetVector<Operation *> slice;
-  getBackwardSlice(value, &slice,
-                   [&](Operation *op) { return !ancestorOp->isAncestor(op); });
+  BackwardSliceOptions sliceOptions;
+  sliceOptions.filter = [&](Operation *op) {
+    return !ancestorOp->isAncestor(op);
+  };
+  getBackwardSlice(value, &slice, sliceOptions);
 
   // Check that none of the operands of the operations in the backward slice are
   // loop iteration arguments, and neither is the value itself.

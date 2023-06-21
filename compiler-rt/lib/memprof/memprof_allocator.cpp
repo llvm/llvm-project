@@ -23,6 +23,7 @@
 #include "sanitizer_common/sanitizer_allocator_checks.h"
 #include "sanitizer_common/sanitizer_allocator_interface.h"
 #include "sanitizer_common/sanitizer_allocator_report.h"
+#include "sanitizer_common/sanitizer_array_ref.h"
 #include "sanitizer_common/sanitizer_common.h"
 #include "sanitizer_common/sanitizer_errno.h"
 #include "sanitizer_common/sanitizer_file.h"
@@ -189,6 +190,7 @@ void MemprofMapUnmapCallback::OnMap(uptr p, uptr size) const {
   thread_stats.mmaps++;
   thread_stats.mmaped += size;
 }
+
 void MemprofMapUnmapCallback::OnUnmap(uptr p, uptr size) const {
   // We are about to unmap a chunk of user memory.
   // Mark the corresponding shadow memory as not needed.

@@ -2,9 +2,6 @@
 
 // CHECK-LABEL: @intrinsics
 llvm.func @intrinsics(%arg0: f32, %arg1: f32, %arg2: vector<8xf32>, %arg3: !llvm.ptr<i8>) {
-  %c3 = llvm.mlir.constant(3 : i32) : i32
-  %c1 = llvm.mlir.constant(1 : i32) : i32
-  %c0 = llvm.mlir.constant(0 : i32) : i32
   // CHECK: call float @llvm.fmuladd.f32
   "llvm.intr.fmuladd"(%arg0, %arg1, %arg0) : (f32, f32, f32) -> f32
   // CHECK: call <8 x float> @llvm.fmuladd.v8f32
@@ -14,15 +11,14 @@ llvm.func @intrinsics(%arg0: f32, %arg1: f32, %arg2: vector<8xf32>, %arg3: !llvm
   // CHECK: call <8 x float> @llvm.fma.v8f32
   "llvm.intr.fma"(%arg2, %arg2, %arg2) : (vector<8xf32>, vector<8xf32>, vector<8xf32>) -> vector<8xf32>
   // CHECK: call void @llvm.prefetch.p0(ptr %3, i32 0, i32 3, i32 1)
-  "llvm.intr.prefetch"(%arg3, %c0, %c3, %c1) : (!llvm.ptr<i8>, i32, i32, i32) -> ()
+  "llvm.intr.prefetch"(%arg3) <{cache = 1 : i32, hint = 3 : i32, rw = 0 : i32}> : (!llvm.ptr<i8>) -> ()
   llvm.return
 }
 
 // CHECK-LABEL: @fpclass_test
 llvm.func @fpclass_test(%arg0: f32) -> i1 {
-  %checkNan = llvm.mlir.constant(0 : i32) : i32
   // CHECK: call i1 @llvm.is.fpclass
-  %0 = "llvm.intr.is.fpclass"(%arg0, %checkNan) : (f32, i32) -> i1
+  %0 = "llvm.intr.is.fpclass"(%arg0) <{bit = 0 : i32 }>: (f32) -> i1
   llvm.return %0 : i1
 }
 
@@ -134,6 +130,76 @@ llvm.func @pow_test(%arg0: f32, %arg1: f32, %arg2: vector<8xf32>, %arg3: vector<
   llvm.return
 }
 
+// CHECK-LABEL: @rint_test
+llvm.func @rint_test(%arg0 : f32, %arg1 : f64, %arg2 : vector<8xf32>, %arg3 : vector<8xf64>) {
+  // CHECK: call float @llvm.rint.f32
+  "llvm.intr.rint"(%arg0) : (f32) -> f32
+  // CHECK: call double @llvm.rint.f64
+  "llvm.intr.rint"(%arg1) : (f64) -> f64
+  // CHECK: call <8 x float> @llvm.rint.v8f32
+  "llvm.intr.rint"(%arg2) : (vector<8xf32>) -> vector<8xf32>
+  // CHECK: call <8 x double> @llvm.rint.v8f64
+  "llvm.intr.rint"(%arg3) : (vector<8xf64>) -> vector<8xf64>
+  llvm.return
+}
+
+// CHECK-LABEL: @nearbyint_test
+llvm.func @nearbyint_test(%arg0 : f32, %arg1 : f64, %arg2 : vector<8xf32>, %arg3 : vector<8xf64>) {
+  // CHECK: call float @llvm.nearbyint.f32
+  "llvm.intr.nearbyint"(%arg0) : (f32) -> f32
+  // CHECK: call double @llvm.nearbyint.f64
+  "llvm.intr.nearbyint"(%arg1) : (f64) -> f64
+  // CHECK: call <8 x float> @llvm.nearbyint.v8f32
+  "llvm.intr.nearbyint"(%arg2) : (vector<8xf32>) -> vector<8xf32>
+  // CHECK: call <8 x double> @llvm.nearbyint.v8f64
+  "llvm.intr.nearbyint"(%arg3) : (vector<8xf64>) -> vector<8xf64>
+  llvm.return
+}
+
+// CHECK-LABEL: @lround_test
+llvm.func @lround_test(%arg0 : f32, %arg1 : f64) {
+  // CHECK: call i32 @llvm.lround.i32.f32
+  "llvm.intr.lround"(%arg0) : (f32) -> i32
+  // CHECK: call i64 @llvm.lround.i64.f32
+  "llvm.intr.lround"(%arg0) : (f32) -> i64
+  // CHECK: call i32 @llvm.lround.i32.f64
+  "llvm.intr.lround"(%arg1) : (f64) -> i32
+  // CHECK: call i64 @llvm.lround.i64.f64
+  "llvm.intr.lround"(%arg1) : (f64) -> i64
+  llvm.return
+}
+
+// CHECK-LABEL: @llround_test
+llvm.func @llround_test(%arg0 : f32, %arg1 : f64) {
+  // CHECK: call i64 @llvm.llround.i64.f32
+  "llvm.intr.llround"(%arg0) : (f32) -> i64
+  // CHECK: call i64 @llvm.llround.i64.f64
+  "llvm.intr.llround"(%arg1) : (f64) -> i64
+  llvm.return
+}
+
+// CHECK-LABEL: @lrint_test
+llvm.func @lrint_test(%arg0 : f32, %arg1 : f64) {
+  // CHECK: call i32 @llvm.lrint.i32.f32
+  "llvm.intr.lrint"(%arg0) : (f32) -> i32
+  // CHECK: call i64 @llvm.lrint.i64.f32
+  "llvm.intr.lrint"(%arg0) : (f32) -> i64
+  // CHECK: call i32 @llvm.lrint.i32.f64
+  "llvm.intr.lrint"(%arg1) : (f64) -> i32
+  // CHECK: call i64 @llvm.lrint.i64.f64
+  "llvm.intr.lrint"(%arg1) : (f64) -> i64
+  llvm.return
+}
+
+// CHECK-LABEL: @llrint_test
+llvm.func @llrint_test(%arg0 : f32, %arg1 : f64) {
+  // CHECK: call i64 @llvm.llrint.i64.f32
+  "llvm.intr.llrint"(%arg0) : (f32) -> i64
+  // CHECK: call i64 @llvm.llrint.i64.f64
+  "llvm.intr.llrint"(%arg1) : (f64) -> i64
+  llvm.return
+}
+
 // CHECK-LABEL: @bitreverse_test
 llvm.func @bitreverse_test(%arg0: i32, %arg1: vector<8xi32>) {
   // CHECK: call i32 @llvm.bitreverse.i32
@@ -154,21 +220,28 @@ llvm.func @byteswap_test(%arg0: i32, %arg1: vector<8xi32>) {
 
 // CHECK-LABEL: @ctlz_test
 llvm.func @ctlz_test(%arg0: i32, %arg1: vector<8xi32>) {
-  %i1 = llvm.mlir.constant(false) : i1
   // CHECK: call i32 @llvm.ctlz.i32
-  "llvm.intr.ctlz"(%arg0, %i1) : (i32, i1) -> i32
+  "llvm.intr.ctlz"(%arg0) <{is_zero_poison = 0 : i1}> : (i32) -> i32
   // CHECK: call <8 x i32> @llvm.ctlz.v8i32
-  "llvm.intr.ctlz"(%arg1, %i1) : (vector<8xi32>, i1) -> vector<8xi32>
+  "llvm.intr.ctlz"(%arg1) <{is_zero_poison = 1 : i1}> : (vector<8xi32>) -> vector<8xi32>
   llvm.return
 }
 
 // CHECK-LABEL: @cttz_test
 llvm.func @cttz_test(%arg0: i32, %arg1: vector<8xi32>) {
-  %i1 = llvm.mlir.constant(false) : i1
   // CHECK: call i32 @llvm.cttz.i32
-  "llvm.intr.cttz"(%arg0, %i1) : (i32, i1) -> i32
+  "llvm.intr.cttz"(%arg0) <{is_zero_poison = 0 : i1}> : (i32) -> i32
   // CHECK: call <8 x i32> @llvm.cttz.v8i32
-  "llvm.intr.cttz"(%arg1, %i1) : (vector<8xi32>, i1) -> vector<8xi32>
+  "llvm.intr.cttz"(%arg1) <{is_zero_poison = 1 : i1}> : (vector<8xi32>) -> vector<8xi32>
+  llvm.return
+}
+
+// CHECK-LABEL: @abs_test
+llvm.func @abs_test(%arg0: i32, %arg1: vector<8xi32>) {
+  // CHECK: call i32 @llvm.abs.i32
+  "llvm.intr.abs"(%arg0) <{is_int_min_poison = 0 : i1}> : (i32) -> i32
+  // CHECK: call <8 x i32> @llvm.abs.v8i32
+  "llvm.intr.abs"(%arg1) <{is_int_min_poison = 1 : i1}> : (vector<8xi32>) -> vector<8xi32>
   llvm.return
 }
 
@@ -387,28 +460,27 @@ llvm.func @trap_intrinsics() {
 
 // CHECK-LABEL: @memcpy_test
 llvm.func @memcpy_test(%arg0: i32, %arg2: !llvm.ptr<i8>, %arg3: !llvm.ptr<i8>) {
-  %i1 = llvm.mlir.constant(false) : i1
-  // CHECK: call void @llvm.memcpy.p0.p0.i32(ptr %{{.*}}, ptr %{{.*}}, i32 %{{.*}}, i1 {{.*}})
-  "llvm.intr.memcpy"(%arg2, %arg3, %arg0, %i1) : (!llvm.ptr<i8>, !llvm.ptr<i8>, i32, i1) -> ()
-  %sz = llvm.mlir.constant(10: i64) : i64
-  // CHECK: call void @llvm.memcpy.inline.p0.p0.i64(ptr %{{.*}}, ptr %{{.*}}, i64 10, i1 {{.*}})
-  "llvm.intr.memcpy.inline"(%arg2, %arg3, %sz, %i1) : (!llvm.ptr<i8>, !llvm.ptr<i8>, i64, i1) -> ()
+  // CHECK: call void @llvm.memcpy.p0.p0.i32(ptr %{{.*}}, ptr %{{.*}}, i32 %{{.*}}, i1 false
+  "llvm.intr.memcpy"(%arg2, %arg3, %arg0) <{isVolatile = false}> : (!llvm.ptr<i8>, !llvm.ptr<i8>, i32) -> ()
+  // CHECK: call void @llvm.memcpy.inline.p0.p0.i32(ptr %{{.*}}, ptr %{{.*}}, i32 10, i1 true
+  "llvm.intr.memcpy.inline"(%arg2, %arg3) <{isVolatile = true, len = 10 : i32}> : (!llvm.ptr<i8>, !llvm.ptr<i8>) -> ()
+  // CHECK: call void @llvm.memcpy.inline.p0.p0.i64(ptr %{{.*}}, ptr %{{.*}}, i64 10, i1 true
+  "llvm.intr.memcpy.inline"(%arg2, %arg3) <{isVolatile = true, len = 10 : i64}> : (!llvm.ptr<i8>, !llvm.ptr<i8>) -> ()
   llvm.return
 }
 
 // CHECK-LABEL: @memmove_test
 llvm.func @memmove_test(%arg0: i32, %arg2: !llvm.ptr<i8>, %arg3: !llvm.ptr<i8>) {
-  %i1 = llvm.mlir.constant(false) : i1
-  // CHECK: call void @llvm.memmove.p0.p0.i32(ptr %{{.*}}, ptr %{{.*}}, i32 %{{.*}}, i1 {{.*}})
-  "llvm.intr.memmove"(%arg2, %arg3, %arg0, %i1) : (!llvm.ptr<i8>, !llvm.ptr<i8>, i32, i1) -> ()
+  // CHECK: call void @llvm.memmove.p0.p0.i32(ptr %{{.*}}, ptr %{{.*}}, i32 %{{.*}}, i1 false
+  "llvm.intr.memmove"(%arg2, %arg3, %arg0) <{isVolatile = false}> : (!llvm.ptr<i8>, !llvm.ptr<i8>, i32) -> ()
   llvm.return
 }
 
 // CHECK-LABEL: @memset_test
 llvm.func @memset_test(%arg0: i32, %arg2: !llvm.ptr<i8>, %arg3: i8) {
   %i1 = llvm.mlir.constant(false) : i1
-  // CHECK: call void @llvm.memset.p0.i32(ptr %{{.*}}, i8 %{{.*}}, i32 %{{.*}}, i1 {{.*}})
-  "llvm.intr.memset"(%arg2, %arg3, %arg0, %i1) : (!llvm.ptr<i8>, i8, i32, i1) -> ()
+  // CHECK: call void @llvm.memset.p0.i32(ptr %{{.*}}, i8 %{{.*}}, i32 %{{.*}}, i1 false
+  "llvm.intr.memset"(%arg2, %arg3, %arg0) <{isVolatile = false}> : (!llvm.ptr<i8>, i8, i32) -> ()
   llvm.return
 }
 
@@ -486,6 +558,13 @@ llvm.func @expect_with_probability(%arg0: i16) {
   %0 = llvm.mlir.constant(42 : i16) : i16
   // CHECK: call i16 @llvm.expect.with.probability.i16(i16 %{{.*}}, i16 42, double 5.000000e-01)
   %1 = llvm.intr.expect.with.probability %arg0, %0, 5.000000e-01 : i16
+  llvm.return
+}
+
+// CHECK-LABEL: @threadlocal_test
+llvm.func @threadlocal_test(%arg0 : !llvm.ptr) {
+  // CHECK: call ptr @llvm.threadlocal.address.p0(ptr %{{.*}})
+  "llvm.intr.threadlocal.address"(%arg0) : (!llvm.ptr) -> !llvm.ptr
   llvm.return
 }
 
@@ -848,6 +927,7 @@ llvm.func @lifetime(%p: !llvm.ptr) {
 // CHECK-DAG: declare float @llvm.fmuladd.f32(float, float, float)
 // CHECK-DAG: declare <8 x float> @llvm.fmuladd.v8f32(<8 x float>, <8 x float>, <8 x float>) #0
 // CHECK-DAG: declare void @llvm.prefetch.p0(ptr nocapture readonly, i32 immarg, i32 immarg, i32 immarg)
+// CHECK-DAG: declare i1 @llvm.is.fpclass.f32(float, i32 immarg)
 // CHECK-DAG: declare float @llvm.exp.f32(float)
 // CHECK-DAG: declare <8 x float> @llvm.exp.v8f32(<8 x float>) #0
 // CHECK-DAG: declare float @llvm.log.f32(float)
@@ -865,6 +945,26 @@ llvm.func @lifetime(%p: !llvm.ptr) {
 // CHECK-DAG: declare float @llvm.cos.f32(float)
 // CHECK-DAG: declare <8 x float> @llvm.cos.v8f32(<8 x float>) #0
 // CHECK-DAG: declare float @llvm.copysign.f32(float, float)
+// CHECK-DAG: declare float @llvm.rint.f32(float)
+// CHECK-DAG: declare double @llvm.rint.f64(double)
+// CHECK-DAG: declare <8 x float> @llvm.rint.v8f32(<8 x float>)
+// CHECK-DAG: declare <8 x double> @llvm.rint.v8f64(<8 x double>)
+// CHECK-DAG: declare float @llvm.nearbyint.f32(float)
+// CHECK-DAG: declare double @llvm.nearbyint.f64(double)
+// CHECK-DAG: declare <8 x float> @llvm.nearbyint.v8f32(<8 x float>)
+// CHECK-DAG: declare <8 x double> @llvm.nearbyint.v8f64(<8 x double>)
+// CHECK-DAG: declare i32 @llvm.lround.i32.f32(float)
+// CHECK-DAG: declare i64 @llvm.lround.i64.f32(float)
+// CHECK-DAG: declare i32 @llvm.lround.i32.f64(double)
+// CHECK-DAG: declare i64 @llvm.lround.i64.f64(double)
+// CHECK-DAG: declare i64 @llvm.llround.i64.f32(float)
+// CHECK-DAG: declare i64 @llvm.llround.i64.f64(double)
+// CHECK-DAG: declare i32 @llvm.lrint.i32.f32(float)
+// CHECK-DAG: declare i64 @llvm.lrint.i64.f32(float)
+// CHECK-DAG: declare i32 @llvm.lrint.i32.f64(double)
+// CHECK-DAG: declare i64 @llvm.lrint.i64.f64(double)
+// CHECK-DAG: declare i64 @llvm.llrint.i64.f32(float)
+// CHECK-DAG: declare i64 @llvm.llrint.i64.f64(double)
 // CHECK-DAG: declare <12 x float> @llvm.matrix.multiply.v12f32.v64f32.v48f32(<64 x float>, <48 x float>, i32 immarg, i32 immarg, i32 immarg)
 // CHECK-DAG: declare <48 x float> @llvm.matrix.transpose.v48f32(<48 x float>, i32 immarg, i32 immarg)
 // CHECK-DAG: declare <48 x float> @llvm.matrix.column.major.load.v48f32.i64(ptr nocapture, i64, i1 immarg, i32 immarg, i32 immarg)
@@ -880,6 +980,7 @@ llvm.func @lifetime(%p: !llvm.ptr) {
 // CHECK-DAG: declare void @llvm.debugtrap()
 // CHECK-DAG: declare void @llvm.ubsantrap(i8 immarg)
 // CHECK-DAG: declare void @llvm.memcpy.p0.p0.i32(ptr noalias nocapture writeonly, ptr noalias nocapture readonly, i32, i1 immarg)
+// CHECK-DAG: declare void @llvm.memcpy.inline.p0.p0.i32(ptr noalias nocapture writeonly, ptr noalias nocapture readonly, i32 immarg, i1 immarg)
 // CHECK-DAG: declare void @llvm.memcpy.inline.p0.p0.i64(ptr noalias nocapture writeonly, ptr noalias nocapture readonly, i64 immarg, i1 immarg)
 // CHECK-DAG: declare { i32, i1 } @llvm.sadd.with.overflow.i32(i32, i32)
 // CHECK-DAG: declare { <8 x i32>, <8 x i1> } @llvm.sadd.with.overflow.v8i32(<8 x i32>, <8 x i32>)
@@ -906,6 +1007,7 @@ llvm.func @lifetime(%p: !llvm.ptr) {
 // CHECK-DAG: declare i1 @llvm.is.constant.i32(i32)
 // CHECK-DAG: declare i32 @llvm.expect.i32(i32, i32)
 // CHECK-DAG: declare i16 @llvm.expect.with.probability.i16(i16, i16, double immarg)
+// CHECK-DAG: declare nonnull ptr @llvm.threadlocal.address.p0(ptr nonnull)
 // CHECK-DAG: declare token @llvm.coro.id(i32, ptr readnone, ptr nocapture readonly, ptr)
 // CHECK-DAG: declare ptr @llvm.coro.begin(token, ptr writeonly)
 // CHECK-DAG: declare i64 @llvm.coro.size.i64()

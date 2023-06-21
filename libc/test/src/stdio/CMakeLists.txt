@@ -201,7 +201,7 @@ add_libc_unittest(
     LibcFPTestHelpers
 )
 
-add_libc_unittest(
+add_libc_test(
   puts_test
   SUITE
     libc_stdio_unittests
@@ -209,6 +209,16 @@ add_libc_unittest(
     puts_test.cpp
   DEPENDS
     libc.src.stdio.puts
+)
+
+add_libc_test(
+  fputs_test
+  SUITE
+    libc_stdio_unittests
+  SRCS
+    fputs_test.cpp
+  DEPENDS
+    libc.src.stdio.fputs
 )
 
 add_libc_unittest(

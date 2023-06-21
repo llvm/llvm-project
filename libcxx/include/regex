@@ -543,7 +543,7 @@ template <class BidirectionalIterator, class Allocator>
     operator==(const match_results<BidirectionalIterator, Allocator>& m1,
                const match_results<BidirectionalIterator, Allocator>& m2);
 
-template <class BidirectionalIterator, class Allocator>
+template <class BidirectionalIterator, class Allocator>                    // Removed in C++20
     bool
     operator!=(const match_results<BidirectionalIterator, Allocator>& m1,
                const match_results<BidirectionalIterator, Allocator>& m2);
@@ -710,7 +710,7 @@ public:
     regex_iterator& operator=(const regex_iterator&);
 
     bool operator==(const regex_iterator&) const;
-    bool operator!=(const regex_iterator&) const;
+    bool operator!=(const regex_iterator&) const;                                // Removed in C++20
 
     const value_type& operator*() const;
     const value_type* operator->() const;
@@ -768,7 +768,7 @@ public:
     regex_token_iterator& operator=(const regex_token_iterator&);
 
     bool operator==(const regex_token_iterator&) const;
-    bool operator!=(const regex_token_iterator&) const;
+    bool operator!=(const regex_token_iterator&) const;                  // Removed in C++20
 
     const value_type& operator*() const;
     const value_type* operator->() const;
@@ -788,6 +788,7 @@ typedef regex_token_iterator<wstring::const_iterator> wsregex_token_iterator;
 #include <__algorithm/find.h>
 #include <__algorithm/search.h>
 #include <__assert> // all public C++ headers provide the assertion handler
+#include <__availability>
 #include <__config>
 #include <__iterator/back_insert_iterator.h>
 #include <__iterator/wrap_iter.h>
@@ -1020,7 +1021,7 @@ enum error_type
 
 } // namespace regex_constants
 
-class _LIBCPP_EXCEPTION_ABI regex_error
+class _LIBCPP_EXPORTED_FROM_ABI regex_error
     : public runtime_error
 {
     regex_constants::error_type __code_;
@@ -1245,7 +1246,7 @@ regex_traits<_CharT>::__transform_primary(_ForwardIterator __f,
 
 // lookup_collatename is very FreeBSD-specific
 
-_LIBCPP_FUNC_VIS string __get_collation_name(const char* __s);
+_LIBCPP_EXPORTED_FROM_ABI string __get_collation_name(const char* __s);
 
 template <class _CharT>
 template <class _ForwardIterator>
@@ -1308,8 +1309,7 @@ regex_traits<_CharT>::__lookup_collatename(_ForwardIterator __f,
 
 // lookup_classname
 
-regex_traits<char>::char_class_type _LIBCPP_FUNC_VIS
-__get_classname(const char* __s, bool __icase);
+regex_traits<char>::char_class_type _LIBCPP_EXPORTED_FROM_ABI __get_classname(const char* __s, bool __icase);
 
 template <class _CharT>
 template <class _ForwardIterator>
@@ -2225,9 +2225,9 @@ public:
     void __exec(__state&) const override;
 };
 
-template <> _LIBCPP_FUNC_VIS void __match_any_but_newline<char>::__exec(__state&) const;
+template <> _LIBCPP_EXPORTED_FROM_ABI void __match_any_but_newline<char>::__exec(__state&) const;
 #ifndef _LIBCPP_HAS_NO_WIDE_CHARACTERS
-template <> _LIBCPP_FUNC_VIS void __match_any_but_newline<wchar_t>::__exec(__state&) const;
+template <> _LIBCPP_EXPORTED_FROM_ABI void __match_any_but_newline<wchar_t>::__exec(__state&) const;
 #endif
 
 // __match_char
@@ -5817,6 +5817,7 @@ operator==(const match_results<_BidirectionalIterator, _Allocator>& __x,
            __x.__suffix_ == __y.__suffix_;
 }
 
+#if _LIBCPP_STD_VER < 20
 template <class _BidirectionalIterator, class _Allocator>
 inline _LIBCPP_INLINE_VISIBILITY
 bool
@@ -5825,6 +5826,7 @@ operator!=(const match_results<_BidirectionalIterator, _Allocator>& __x,
 {
     return !(__x == __y);
 }
+#endif
 
 template <class _BidirectionalIterator, class _Allocator>
 inline _LIBCPP_INLINE_VISIBILITY
@@ -6428,8 +6430,10 @@ public:
 #endif
 
     bool operator==(const regex_iterator& __x) const;
+#if _LIBCPP_STD_VER < 20
     _LIBCPP_INLINE_VISIBILITY
     bool operator!=(const regex_iterator& __x) const {return !(*this == __x);}
+#endif
 
     _LIBCPP_INLINE_VISIBILITY
     reference operator*() const {return  __match_;}
@@ -6607,7 +6611,9 @@ public:
 
     bool operator==(const regex_token_iterator& __x) const;
     _LIBCPP_INLINE_VISIBILITY
+#if _LIBCPP_STD_VER < 20
     bool operator!=(const regex_token_iterator& __x) const {return !(*this == __x);}
+#endif
 
     _LIBCPP_INLINE_VISIBILITY
     const value_type& operator*() const {return *__result_;}
@@ -6918,14 +6924,14 @@ _LIBCPP_END_NAMESPACE_STD
 _LIBCPP_BEGIN_NAMESPACE_STD
 namespace pmr {
 template <class _BidirT>
-using match_results = std::match_results<_BidirT, polymorphic_allocator<std::sub_match<_BidirT>>>;
+using match_results _LIBCPP_AVAILABILITY_PMR = std::match_results<_BidirT, polymorphic_allocator<std::sub_match<_BidirT>>>;
 
-using cmatch  = match_results<const char*>;
-using smatch  = match_results<std::pmr::string::const_iterator>;
+using cmatch _LIBCPP_AVAILABILITY_PMR  = match_results<const char*>;
+using smatch _LIBCPP_AVAILABILITY_PMR  = match_results<std::pmr::string::const_iterator>;
 
 #ifndef _LIBCPP_HAS_NO_WIDE_CHARACTERS
-using wcmatch = match_results<const wchar_t*>;
-using wsmatch = match_results<std::pmr::wstring::const_iterator>;
+using wcmatch _LIBCPP_AVAILABILITY_PMR = match_results<const wchar_t*>;
+using wsmatch _LIBCPP_AVAILABILITY_PMR = match_results<std::pmr::wstring::const_iterator>;
 #endif
 } // namespace pmr
 _LIBCPP_END_NAMESPACE_STD

@@ -26,9 +26,9 @@ int main() {
   // CHECK: {{READ of size 1 at 0x.* thread T0}}
   // CHECK: {{    #0 0x.* in main}}
   // CHECK: {{freed by thread T0 here:}}
-  // CHECK: {{    #0 0x.* in wrap_free}}
+  // CHECK: {{    #0 0x.* in free}}
   // CHECK: {{    #1 0x.* in main}}
   // CHECK: {{previously allocated by thread T0 here:}}
-  // CHECK: {{    #0 0x.* in wrap_malloc}}
+  // CHECK: {{    #0 0x.* in malloc}}
   // CHECK: {{    #1 0x.* in main}}
 }

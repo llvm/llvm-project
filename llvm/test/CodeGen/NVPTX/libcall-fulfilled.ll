@@ -1,5 +1,5 @@
-; RUN: llc < %s -march=nvptx 2>&1 | FileCheck %s
-; RUN: %if ptxas %{ llc < %s -march=nvptx | %ptxas-verify %}
+; RUN: llc < %s -march=nvptx64 2>&1 | FileCheck %s
+; RUN: %if ptxas %{ llc < %s -march=nvptx64 | %ptxas-verify %}
 
 ; Allow to make libcalls that are defined in the current module
 

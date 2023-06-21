@@ -308,7 +308,7 @@ static InputFile *addFile(StringRef path, LoadType loadType,
 
     bool isLCLinkerForceLoad = loadType == LoadType::LCLinkerOption &&
                                config->forceLoadSwift &&
-                               path::filename(path).startswith("libswift");
+                               path::filename(path).starts_with("libswift");
     if ((isCommandLineLoad && config->allLoad) ||
         loadType == LoadType::CommandLineForce || isLCLinkerForceLoad) {
       if (std::optional<MemoryBufferRef> buffer = readFile(path)) {
@@ -336,7 +336,7 @@ static InputFile *addFile(StringRef path, LoadType loadType,
       }
     } else if (isCommandLineLoad && config->forceLoadObjC) {
       for (const object::Archive::Symbol &sym : file->getArchive().symbols())
-        if (sym.getName().startswith(objc::klass))
+        if (sym.getName().starts_with(objc::klass))
           file->fetch(sym);
 
       // TODO: no need to look for ObjC sections for a given archive member if
@@ -391,7 +391,7 @@ static InputFile *addFile(StringRef path, LoadType loadType,
     if ((isa<ObjFile>(newFile) || isa<BitcodeFile>(newFile)) && newFile->lazy &&
         config->forceLoadObjC) {
       for (Symbol *sym : newFile->symbols)
-        if (sym && sym->getName().startswith(objc::klass)) {
+        if (sym && sym->getName().starts_with(objc::klass)) {
           extract(*newFile, "-ObjC");
           break;
         }
@@ -934,7 +934,7 @@ static std::vector<SectionAlign> parseSectAlign(const opt::InputArgList &args) {
     StringRef segName = arg->getValue(0);
     StringRef sectName = arg->getValue(1);
     StringRef alignStr = arg->getValue(2);
-    if (alignStr.startswith("0x") || alignStr.startswith("0X"))
+    if (alignStr.starts_with("0x") || alignStr.starts_with("0X"))
       alignStr = alignStr.drop_front(2);
     uint32_t align;
     if (alignStr.getAsInteger(16, align)) {
@@ -1253,7 +1253,7 @@ static void addSynthenticMethnames() {
   const int prefixLength = ObjCStubsSection::symbolPrefix.size();
   for (Symbol *sym : symtab->getSymbols())
     if (isa<Undefined>(sym))
-      if (sym->getName().startswith(ObjCStubsSection::symbolPrefix))
+      if (sym->getName().starts_with(ObjCStubsSection::symbolPrefix))
         os << sym->getName().drop_front(prefixLength) << '\0';
 
   if (data.empty())
@@ -1367,9 +1367,10 @@ static void handleExplicitExports() {
   }
 }
 
-bool macho::link(ArrayRef<const char *> argsArr, llvm::raw_ostream &stdoutOS,
-                 llvm::raw_ostream &stderrOS, bool exitEarly,
-                 bool disableOutput) {
+namespace lld {
+namespace macho {
+bool link(ArrayRef<const char *> argsArr, llvm::raw_ostream &stdoutOS,
+          llvm::raw_ostream &stderrOS, bool exitEarly, bool disableOutput) {
   // This driver-specific context will be freed later by lldMain().
   auto *ctx = new CommonLinkerContext;
 
@@ -1480,7 +1481,7 @@ bool macho::link(ArrayRef<const char *> argsArr, llvm::raw_ostream &stdoutOS,
       StringRef sep = sys::path::get_separator();
       // real_path removes trailing slashes as part of the normalization, but
       // these are meaningful for our text based stripping
-      if (config->osoPrefix.equals(".") || config->osoPrefix.endswith(sep))
+      if (config->osoPrefix.equals(".") || config->osoPrefix.ends_with(sep))
         expanded += sep;
       config->osoPrefix = saver().save(expanded.str());
     }
@@ -1614,7 +1615,6 @@ bool macho::link(ArrayRef<const char *> argsArr, llvm::raw_ostream &stdoutOS,
   config->implicitDylibs = !args.hasArg(OPT_no_implicit_dylibs);
   config->emitFunctionStarts =
       args.hasFlag(OPT_function_starts, OPT_no_function_starts, true);
-  config->emitBitcodeBundle = args.hasArg(OPT_bitcode_bundle);
   config->emitDataInCodeInfo =
       args.hasFlag(OPT_data_in_code_info, OPT_no_data_in_code_info, true);
   config->emitChainedFixups = shouldEmitChainedFixups(args);
@@ -1637,6 +1637,9 @@ bool macho::link(ArrayRef<const char *> argsArr, llvm::raw_ostream &stdoutOS,
   for (const Arg *arg : args.filtered(OPT_ignore_auto_link_option))
     config->ignoreAutoLinkOptions.insert(arg->getValue());
   config->strictAutoLink = args.hasArg(OPT_strict_auto_link);
+  config->ltoDebugPassManager = args.hasArg(OPT_lto_debug_pass_manager);
+  config->csProfileGenerate = args.hasArg(OPT_cs_profile_generate);
+  config->csProfilePath = args.getLastArgValue(OPT_cs_profile_path);
 
   for (const Arg *arg : args.filtered(OPT_alias)) {
     config->aliasedSymbols.push_back(
@@ -1653,11 +1656,6 @@ bool macho::link(ArrayRef<const char *> argsArr, llvm::raw_ostream &stdoutOS,
   config->emitEncryptionInfo =
       args.hasFlag(OPT_encryptable, OPT_no_encryption,
                    is_contained(encryptablePlatforms, config->platform()));
-
-#ifndef LLVM_HAVE_LIBXAR
-  if (config->emitBitcodeBundle)
-    error("-bitcode_bundle unsupported because LLD wasn't built with libxar");
-#endif
 
   if (const Arg *arg = args.getLastArg(OPT_install_name)) {
     if (config->warnDylibInstallName && config->outputType != MH_DYLIB)
@@ -1971,3 +1969,5 @@ bool macho::link(ArrayRef<const char *> argsArr, llvm::raw_ostream &stdoutOS,
 
   return errorCount() == 0;
 }
+} // namespace macho
+} // namespace lld

@@ -151,9 +151,6 @@ private:
   void onCallHierarchyIncomingCalls(
       const CallHierarchyIncomingCallsParams &,
       Callback<std::vector<CallHierarchyIncomingCall>>);
-  void onCallHierarchyOutgoingCalls(
-      const CallHierarchyOutgoingCallsParams &,
-      Callback<std::vector<CallHierarchyOutgoingCall>>);
   void onClangdInlayHints(const InlayHintsParams &,
                           Callback<llvm::json::Value>);
   void onInlayHint(const InlayHintsParams &, Callback<std::vector<InlayHint>>);
@@ -263,6 +260,8 @@ private:
   SymbolKindBitset SupportedSymbolKinds;
   /// The supported completion item kinds of the client.
   CompletionItemKindBitset SupportedCompletionItemKinds;
+  // Whether the client supports CompletionItem.labelDetails.
+  bool SupportsCompletionLabelDetails = false;
   /// Whether the client supports CodeAction response objects.
   bool SupportsCodeAction = false;
   /// From capabilities of textDocument/documentSymbol.

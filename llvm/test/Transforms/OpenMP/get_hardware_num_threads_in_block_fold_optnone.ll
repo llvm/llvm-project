@@ -119,7 +119,7 @@ declare void @__kmpc_target_deinit(ptr nocapture readnone, i1 zeroext) #1
 !llvm.module.flags = !{!0, !1}
 !nvvm.annotations = !{!2, !3, !4}
 
-attributes #0 = { optnone noinline "omp_target_thread_limit"="666" "omp_target_num_teams"="777"}
+attributes #0 = { optnone noinline "kernel" "omp_target_thread_limit"="666" "omp_target_num_teams"="777"}
 
 !0 = !{i32 7, !"openmp", i32 50}
 !1 = !{i32 7, !"openmp-device", i32 50}
@@ -128,7 +128,7 @@ attributes #0 = { optnone noinline "omp_target_thread_limit"="666" "omp_target_n
 !4 = !{ptr @kernel2, !"kernel", i32 1}
 ;
 ;.
-; CHECK: attributes #[[ATTR0]] = { noinline optnone "omp_target_num_teams"="777" "omp_target_thread_limit"="666" }
+; CHECK: attributes #[[ATTR0]] = { noinline optnone "kernel" "omp_target_num_teams"="777" "omp_target_thread_limit"="666" }
 ; CHECK: attributes #[[ATTR1]] = { nounwind }
 ;.
 ; CHECK: [[META0:![0-9]+]] = !{i32 7, !"openmp", i32 50}

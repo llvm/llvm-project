@@ -80,7 +80,22 @@ enum NodeType : unsigned {
   CRCC_W_D_W,
 
   CSRRD,
+
+  // Write new value to CSR and return old value.
+  // Operand 0: A chain pointer.
+  // Operand 1: The new value to write.
+  // Operand 2: The address of the required CSR.
+  // Result 0: The old value of the CSR.
+  // Result 1: The new chain pointer.
   CSRWR,
+
+  // Similar to CSRWR but with a write mask.
+  // Operand 0: A chain pointer.
+  // Operand 1: The new value to write.
+  // Operand 2: The write mask.
+  // Operand 3: The address of the required CSR.
+  // Result 0: The old value of the CSR.
+  // Result 1: The new chain pointer.
   CSRXCHG,
 
   // IOCSR access operations
@@ -191,6 +206,11 @@ public:
 
   bool convertSelectOfConstantsToMath(EVT VT) const override { return true; }
 
+  bool allowsMisalignedMemoryAccesses(
+      EVT VT, unsigned AddrSpace = 0, Align Alignment = Align(1),
+      MachineMemOperand::Flags Flags = MachineMemOperand::MONone,
+      unsigned *Fast = nullptr) const override;
+
 private:
   /// Target-specific function used to lower LoongArch calling conventions.
   typedef bool LoongArchCCAssignFn(const DataLayout &DL, LoongArchABI::ABI ABI,
@@ -210,9 +230,9 @@ private:
   template <class NodeTy>
   SDValue getAddr(NodeTy *N, SelectionDAG &DAG, bool IsLocal = true) const;
   SDValue getStaticTLSAddr(GlobalAddressSDNode *N, SelectionDAG &DAG,
-                           unsigned Opc) const;
+                           unsigned Opc, bool Large = false) const;
   SDValue getDynamicTLSAddr(GlobalAddressSDNode *N, SelectionDAG &DAG,
-                            unsigned Opc) const;
+                            unsigned Opc, bool Large = false) const;
   SDValue lowerGlobalAddress(SDValue Op, SelectionDAG &DAG) const;
   SDValue lowerBlockAddress(SDValue Op, SelectionDAG &DAG) const;
   SDValue lowerJumpTable(SDValue Op, SelectionDAG &DAG) const;

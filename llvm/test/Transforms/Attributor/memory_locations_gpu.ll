@@ -15,7 +15,7 @@ declare ptr addrspace(3) @ptr_to_shared() memory(none)
 ; CHECK: @[[G:[a-zA-Z0-9_$"\\.-]+]] = external dso_local addrspace(4) global i32, align 4
 ;.
 define i32 @test_const_as_global1() {
-; CHECK: Function Attrs: nofree norecurse nosync nounwind willreturn memory(none)
+; CHECK: Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn memory(none)
 ; CHECK-LABEL: define {{[^@]+}}@test_const_as_global1
 ; CHECK-SAME: () #[[ATTR1:[0-9]+]] {
 ; CHECK-NEXT:    [[L1:%.*]] = load i32, ptr addrspace(4) @G, align 4
@@ -26,7 +26,7 @@ define i32 @test_const_as_global1() {
 }
 ; Should be memory(none)
 define i32 @test_const_as_global2() {
-; CHECK: Function Attrs: nofree norecurse nosync nounwind willreturn memory(none)
+; CHECK: Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn memory(none)
 ; CHECK-LABEL: define {{[^@]+}}@test_const_as_global2
 ; CHECK-SAME: () #[[ATTR1]] {
 ; CHECK-NEXT:    [[L2:%.*]] = load i32, ptr addrspacecast (ptr addrspace(4) @G to ptr), align 4
@@ -98,7 +98,7 @@ define i32 @test_shared_as_call2() {
 }
 ;.
 ; CHECK: attributes #[[ATTR0:[0-9]+]] = { memory(none) }
-; CHECK: attributes #[[ATTR1]] = { nofree norecurse nosync nounwind willreturn memory(none) }
+; CHECK: attributes #[[ATTR1]] = { mustprogress nofree norecurse nosync nounwind willreturn memory(none) }
 ; CHECK: attributes #[[ATTR2]] = { nosync memory(read) }
 ; CHECK: attributes #[[ATTR3]] = { nosync memory(none) }
 ;.

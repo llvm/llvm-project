@@ -30,6 +30,8 @@
 #include "x86_64/FEnvImpl.h"
 #elif defined(LIBC_TARGET_ARCH_IS_ARM)
 #include "arm/FEnvImpl.h"
+#elif defined(LIBC_TARGET_ARCH_IS_RISCV32)
+#include "riscv32/FEnvImpl.h"
 #elif defined(LIBC_TARGET_ARCH_IS_RISCV64)
 #include "riscv64/FEnvImpl.h"
 #else
@@ -42,6 +44,8 @@ LIBC_INLINE int clear_except(int) { return 0; }
 
 LIBC_INLINE int test_except(int) { return 0; }
 
+LIBC_INLINE int get_except() { return 0; }
+
 LIBC_INLINE int set_except(int) { return 0; }
 
 LIBC_INLINE int raise_except(int) { return 0; }
@@ -52,7 +56,9 @@ LIBC_INLINE int disable_except(int) { return 0; }
 
 LIBC_INLINE int get_round() { return FE_TONEAREST; }
 
-LIBC_INLINE int set_round(int) { return 0; }
+LIBC_INLINE int set_round(int rounding_mode) {
+  return (rounding_mode == FE_TONEAREST) ? 0 : 1;
+}
 
 LIBC_INLINE int get_env(fenv_t *) { return 0; }
 

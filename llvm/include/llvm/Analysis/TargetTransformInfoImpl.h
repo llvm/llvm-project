@@ -77,6 +77,10 @@ public:
     return TTI::TCC_Expensive;
   }
 
+  uint64_t getMaxMemIntrinsicInlineSizeThreshold() const {
+    return 64;
+  }
+
   // Although this default value is arbitrary, it is not random. It is assumed
   // that a condition that evaluates the same way by a higher percentage than
   // this is best represented as control flow. Therefore, the default value N
@@ -87,7 +91,7 @@ public:
     return BranchProbability(99, 100);
   }
 
-  bool hasBranchDivergence() const { return false; }
+  bool hasBranchDivergence(const Function *F = nullptr) const { return false; }
 
   bool isSourceOfDivergence(const Value *V) const { return false; }
 
@@ -95,6 +99,10 @@ public:
 
   bool isValidAddrSpaceCast(unsigned FromAS, unsigned ToAS) const {
     return false;
+  }
+
+  bool addrspacesMayAlias(unsigned AS0, unsigned AS1) const {
+    return true;
   }
 
   unsigned getFlatAddressSpace() const { return -1; }

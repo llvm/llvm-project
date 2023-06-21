@@ -62,6 +62,26 @@ LogicalResult acc::DataBoundsOp::verify() {
 }
 
 //===----------------------------------------------------------------------===//
+// PrivateOp
+//===----------------------------------------------------------------------===//
+LogicalResult acc::PrivateOp::verify() {
+  if (getDataClause() != acc::DataClause::acc_private)
+    return emitError(
+        "data clause associated with private operation must match its intent");
+  return success();
+}
+
+//===----------------------------------------------------------------------===//
+// FirstprivateOp
+//===----------------------------------------------------------------------===//
+LogicalResult acc::FirstprivateOp::verify() {
+  if (getDataClause() != acc::DataClause::acc_firstprivate)
+    return emitError("data clause associated with firstprivate operation must "
+                     "match its intent");
+  return success();
+}
+
+//===----------------------------------------------------------------------===//
 // DevicePtrOp
 //===----------------------------------------------------------------------===//
 LogicalResult acc::DevicePtrOp::verify() {
@@ -498,7 +518,7 @@ template <typename Op>
 static LogicalResult
 checkSymOperandList(Operation *op, std::optional<mlir::ArrayAttr> attributes,
                     mlir::OperandRange operands, llvm::StringRef operandName,
-                    llvm::StringRef symbolName) {
+                    llvm::StringRef symbolName, bool checkOperandType = true) {
   if (!operands.empty()) {
     if (!attributes || attributes->size() != operands.size())
       return op->emitOpError()
@@ -527,7 +547,7 @@ checkSymOperandList(Operation *op, std::optional<mlir::ArrayAttr> attributes,
              << "expected symbol reference " << symbolRef << " to point to a "
              << operandName << " declaration";
 
-    if (decl.getType() && decl.getType() != varType)
+    if (checkOperandType && decl.getType() && decl.getType() != varType)
       return op->emitOpError() << "expected " << operandName << " (" << varType
                                << ") to be the same type as " << operandName
                                << " declaration (" << decl.getType() << ")";
@@ -558,7 +578,7 @@ LogicalResult acc::ParallelOp::verify() {
     return failure();
   if (failed(checkSymOperandList<mlir::acc::ReductionRecipeOp>(
           *this, getReductionRecipes(), getReductionOperands(), "reduction",
-          "reductions")))
+          "reductions", false)))
     return failure();
   return checkDataOperands<acc::ParallelOp>(*this, getDataClauseOperands());
 }
@@ -586,7 +606,7 @@ LogicalResult acc::SerialOp::verify() {
     return failure();
   if (failed(checkSymOperandList<mlir::acc::ReductionRecipeOp>(
           *this, getReductionRecipes(), getReductionOperands(), "reduction",
-          "reductions")))
+          "reductions", false)))
     return failure();
   return checkDataOperands<acc::SerialOp>(*this, getDataClauseOperands());
 }
@@ -635,37 +655,72 @@ void acc::HostDataOp::getCanonicalizationPatterns(RewritePatternSet &results,
 //===----------------------------------------------------------------------===//
 
 static ParseResult
-parseGangClause(OpAsmParser &parser,
-                std::optional<OpAsmParser::UnresolvedOperand> &gangNum,
-                Type &gangNumType,
-                std::optional<OpAsmParser::UnresolvedOperand> &gangStatic,
-                Type &gangStaticType, UnitAttr &hasGang) {
+parseGangValue(OpAsmParser &parser, llvm::StringRef keyword,
+               std::optional<OpAsmParser::UnresolvedOperand> &value,
+               Type &valueType, bool &needComa, bool &newValue) {
+  if (succeeded(parser.parseOptionalKeyword(keyword))) {
+    if (parser.parseEqual())
+      return failure();
+    value = OpAsmParser::UnresolvedOperand{};
+    if (parser.parseOperand(*value) || parser.parseColonType(valueType))
+      return failure();
+    needComa = true;
+    newValue = true;
+  }
+  return success();
+}
+
+static ParseResult parseGangClause(
+    OpAsmParser &parser, std::optional<OpAsmParser::UnresolvedOperand> &gangNum,
+    Type &gangNumType, std::optional<OpAsmParser::UnresolvedOperand> &gangDim,
+    Type &gangDimType,
+    std::optional<OpAsmParser::UnresolvedOperand> &gangStatic,
+    Type &gangStaticType, UnitAttr &hasGang) {
   hasGang = UnitAttr::get(parser.getBuilder().getContext());
+  gangNum = std::nullopt;
+  gangDim = std::nullopt;
+  gangStatic = std::nullopt;
+  bool needComa = false;
+
   // optional gang operands
   if (succeeded(parser.parseOptionalLParen())) {
-    if (succeeded(parser.parseOptionalKeyword(LoopOp::getGangNumKeyword()))) {
-      if (parser.parseEqual())
+    while (true) {
+      bool newValue = false;
+      bool needValue = false;
+      if (needComa) {
+        if (succeeded(parser.parseOptionalComma()))
+          needValue = true; // expect a new value after comma.
+        else
+          break;
+      }
+
+      if (failed(parseGangValue(parser, LoopOp::getGangNumKeyword(), gangNum,
+                                gangNumType, needComa, newValue)))
         return failure();
-      gangNum = OpAsmParser::UnresolvedOperand{};
-      if (parser.parseOperand(*gangNum) || parser.parseColonType(gangNumType))
+      if (failed(parseGangValue(parser, LoopOp::getGangDimKeyword(), gangDim,
+                                gangDimType, needComa, newValue)))
         return failure();
-    } else {
-      gangNum = std::nullopt;
+      if (failed(parseGangValue(parser, LoopOp::getGangStaticKeyword(),
+                                gangStatic, gangStaticType, needComa,
+                                newValue)))
+        return failure();
+
+      if (!newValue && needValue) {
+        parser.emitError(parser.getCurrentLocation(),
+                         "new value expected after comma");
+        return failure();
+      }
+
+      if (!newValue)
+        break;
     }
-    // FIXME: Comma should require subsequent operands.
-    (void)parser.parseOptionalComma();
-    if (succeeded(
-            parser.parseOptionalKeyword(LoopOp::getGangStaticKeyword()))) {
-      gangStatic = OpAsmParser::UnresolvedOperand{};
-      if (parser.parseEqual())
-        return failure();
-      gangStatic = OpAsmParser::UnresolvedOperand{};
-      if (parser.parseOperand(*gangStatic) ||
-          parser.parseColonType(gangStaticType))
-        return failure();
+
+    if (!gangNum && !gangDim && !gangStatic) {
+      parser.emitError(parser.getCurrentLocation(),
+                       "expect at least one of num, dim or static values");
+      return failure();
     }
-    // FIXME: Why allow optional last commas?
-    (void)parser.parseOptionalComma();
+
     if (failed(parser.parseRParen()))
       return failure();
   }
@@ -673,13 +728,19 @@ parseGangClause(OpAsmParser &parser,
 }
 
 void printGangClause(OpAsmPrinter &p, Operation *op, Value gangNum,
-                     Type gangNumType, Value gangStatic, Type gangStaticType,
-                     UnitAttr hasGang) {
-  if (gangNum || gangStatic) {
+                     Type gangNumType, Value gangDim, Type gangDimType,
+                     Value gangStatic, Type gangStaticType, UnitAttr hasGang) {
+  if (gangNum || gangStatic || gangDim) {
     p << "(";
     if (gangNum) {
       p << LoopOp::getGangNumKeyword() << "=" << gangNum << " : "
         << gangNumType;
+      if (gangStatic || gangDim)
+        p << ", ";
+    }
+    if (gangDim) {
+      p << LoopOp::getGangDimKeyword() << "=" << gangDim << " : "
+        << gangDimType;
       if (gangStatic)
         p << ", ";
     }
@@ -751,7 +812,7 @@ LogicalResult acc::LoopOp::verify() {
 
   if (failed(checkSymOperandList<mlir::acc::ReductionRecipeOp>(
           *this, getReductionRecipes(), getReductionOperands(), "reduction",
-          "reductions")))
+          "reductions", false)))
     return failure();
 
   // Check non-empty body().

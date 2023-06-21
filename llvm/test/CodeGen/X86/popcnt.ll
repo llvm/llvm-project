@@ -62,7 +62,7 @@ define i8 @cnt8(i8 %x) nounwind readnone {
 define i16 @cnt16(i16 %x) nounwind readnone {
 ; X86-LABEL: cnt16:
 ; X86:       # %bb.0:
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    movzwl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    movl %eax, %ecx
 ; X86-NEXT:    shrl %ecx
 ; X86-NEXT:    andl $21845, %ecx # imm = 0x5555
@@ -1523,7 +1523,7 @@ define i32 @popcount_zext_i32(i16 zeroext %x) {
 define i32 @popcount_i16_zext(i16 zeroext %x) {
 ; X86-LABEL: popcount_i16_zext:
 ; X86:       # %bb.0:
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    movzwl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    movl %eax, %ecx
 ; X86-NEXT:    shrl %ecx
 ; X86-NEXT:    andl $21845, %ecx # imm = 0x5555

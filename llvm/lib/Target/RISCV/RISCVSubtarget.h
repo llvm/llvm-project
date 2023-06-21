@@ -152,6 +152,11 @@ public:
     return VLen == 0 ? 65536 : VLen;
   }
   RISCVABI::ABI getTargetABI() const { return TargetABI; }
+  bool isSoftFPABI() const {
+    return TargetABI == RISCVABI::ABI_LP64 ||
+           TargetABI == RISCVABI::ABI_ILP32 ||
+           TargetABI == RISCVABI::ABI_ILP32E;
+  }
   bool isRegisterReservedByUser(Register i) const {
     assert(i < RISCV::NUM_TARGET_REGS && "Register out of range");
     return UserReservedRegister[i];
@@ -172,6 +177,14 @@ public:
   bool hasVInstructionsFullMultiply() const { return HasStdExtV; }
   unsigned getMaxInterleaveFactor() const {
     return hasVInstructions() ? MaxInterleaveFactor : 1;
+  }
+
+  // Returns VLEN divided by DLEN. Where DLEN is the datapath width of the
+  // vector hardware implementation which may be less than VLEN.
+  unsigned getDLenFactor() const {
+    if (DLenFactor2)
+      return 2;
+    return 1;
   }
 
 protected:

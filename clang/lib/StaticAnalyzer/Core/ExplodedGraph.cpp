@@ -233,8 +233,7 @@ void ExplodedNode::NodeGroup::addNode(ExplodedNode *N, ExplodedGraph &G) {
     ExplodedNode *Old = Storage.get<ExplodedNode *>();
 
     BumpVectorContext &Ctx = G.getNodeAllocator();
-    V = G.getAllocator().Allocate<ExplodedNodeVector>();
-    new (V) ExplodedNodeVector(Ctx, 4);
+    V = new (G.getAllocator()) ExplodedNodeVector(Ctx, 4);
     V->push_back(Old, Ctx);
 
     Storage = V;
@@ -408,7 +407,7 @@ ExplodedNode *ExplodedGraph::getNode(const ProgramPoint &L,
     }
     else {
       // Allocate a new node.
-      V = (NodeTy*) getAllocator().Allocate<NodeTy>();
+      V = getAllocator().Allocate<NodeTy>();
     }
 
     ++NumNodes;
@@ -432,7 +431,7 @@ ExplodedNode *ExplodedGraph::createUncachedNode(const ProgramPoint &L,
                                                 ProgramStateRef State,
                                                 int64_t Id,
                                                 bool IsSink) {
-  NodeTy *V = (NodeTy *) getAllocator().Allocate<NodeTy>();
+  NodeTy *V = getAllocator().Allocate<NodeTy>();
   new (V) NodeTy(L, State, Id, IsSink);
   return V;
 }

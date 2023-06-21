@@ -149,7 +149,7 @@ public:
   /// The build directory of this module. This is the directory in
   /// which the module is notionally built, and relative to which its headers
   /// are found.
-  const DirectoryEntry *Directory = nullptr;
+  OptionalDirectoryEntryRefDegradesToDirectoryEntryPtr Directory;
 
   /// The presumed file name for the module map defining this module.
   /// Only non-empty when building from preprocessed source.
@@ -217,7 +217,7 @@ private:
   OptionalFileEntryRef ASTFile;
 
   /// The top-level headers associated with this module.
-  llvm::SmallSetVector<const FileEntry *, 2> TopHeaders;
+  llvm::SmallSetVector<FileEntryRef, 2> TopHeaders;
 
   /// top-level header filenames that aren't resolved to FileEntries yet.
   std::vector<std::string> TopHeaderNames;
@@ -243,9 +243,7 @@ public:
   struct Header {
     std::string NameAsWritten;
     std::string PathRelativeToRootModuleDirectory;
-    OptionalFileEntryRefDegradesToFileEntryPtr Entry;
-
-    explicit operator bool() { return Entry.has_value(); }
+    FileEntryRef Entry;
   };
 
   /// Information about a directory name as found in the module map
@@ -253,9 +251,7 @@ public:
   struct DirectoryName {
     std::string NameAsWritten;
     std::string PathRelativeToRootModuleDirectory;
-    OptionalDirectoryEntryRefDegradesToDirectoryEntryPtr Entry;
-
-    explicit operator bool() { return Entry.has_value(); }
+    DirectoryEntryRef Entry;
   };
 
   /// The headers that are part of this module.
@@ -653,21 +649,21 @@ public:
   }
 
   /// Retrieve the umbrella directory as written.
-  DirectoryName getUmbrellaDirAsWritten() const {
+  std::optional<DirectoryName> getUmbrellaDirAsWritten() const {
     if (const auto *ME =
             Umbrella.dyn_cast<const DirectoryEntryRef::MapEntry *>())
       return DirectoryName{UmbrellaAsWritten,
                            UmbrellaRelativeToRootModuleDirectory,
                            DirectoryEntryRef(*ME)};
-    return DirectoryName{};
+    return std::nullopt;
   }
 
   /// Retrieve the umbrella header as written.
-  Header getUmbrellaHeaderAsWritten() const {
+  std::optional<Header> getUmbrellaHeaderAsWritten() const {
     if (const auto *ME = Umbrella.dyn_cast<const FileEntryRef::MapEntry *>())
       return Header{UmbrellaAsWritten, UmbrellaRelativeToRootModuleDirectory,
                     FileEntryRef(*ME)};
-    return Header{};
+    return std::nullopt;
   }
 
   /// Get the effective umbrella directory for this module: either the one
@@ -676,7 +672,7 @@ public:
   OptionalDirectoryEntryRef getEffectiveUmbrellaDir() const;
 
   /// Add a top-level header associated with this module.
-  void addTopHeader(const FileEntry *File);
+  void addTopHeader(FileEntryRef File);
 
   /// Add a top-level header filename associated with this module.
   void addTopHeaderFilename(StringRef Filename) {
@@ -684,7 +680,7 @@ public:
   }
 
   /// The top-level headers associated with this module.
-  ArrayRef<const FileEntry *> getTopHeaders(FileManager &FileMgr);
+  ArrayRef<FileEntryRef> getTopHeaders(FileManager &FileMgr);
 
   /// Determine whether this module has declared its intention to
   /// directly use another module.

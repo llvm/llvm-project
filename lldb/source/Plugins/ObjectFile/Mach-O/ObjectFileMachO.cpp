@@ -1439,18 +1439,32 @@ static lldb::SectionType GetSectionType(uint32_t flags,
   static ConstString g_sect_name_cfstring("__cfstring");
 
   static ConstString g_sect_name_dwarf_debug_abbrev("__debug_abbrev");
+  static ConstString g_sect_name_dwarf_debug_abbrev_dwo("__debug_abbrev.dwo");
+  static ConstString g_sect_name_dwarf_debug_addr("__debug_addr");
   static ConstString g_sect_name_dwarf_debug_aranges("__debug_aranges");
+  static ConstString g_sect_name_dwarf_debug_cu_index("__debug_cu_index");
   static ConstString g_sect_name_dwarf_debug_frame("__debug_frame");
   static ConstString g_sect_name_dwarf_debug_info("__debug_info");
+  static ConstString g_sect_name_dwarf_debug_info_dwo("__debug_info.dwo");
   static ConstString g_sect_name_dwarf_debug_line("__debug_line");
+  static ConstString g_sect_name_dwarf_debug_line_dwo("__debug_line.dwo");
+  static ConstString g_sect_name_dwarf_debug_line_str("__debug_line_str");
   static ConstString g_sect_name_dwarf_debug_loc("__debug_loc");
   static ConstString g_sect_name_dwarf_debug_loclists("__debug_loclists");
+  static ConstString g_sect_name_dwarf_debug_loclists_dwo("__debug_loclists.dwo");
   static ConstString g_sect_name_dwarf_debug_macinfo("__debug_macinfo");
+  static ConstString g_sect_name_dwarf_debug_macro("__debug_macro");
+  static ConstString g_sect_name_dwarf_debug_macro_dwo("__debug_macro.dwo");
   static ConstString g_sect_name_dwarf_debug_names("__debug_names");
   static ConstString g_sect_name_dwarf_debug_pubnames("__debug_pubnames");
   static ConstString g_sect_name_dwarf_debug_pubtypes("__debug_pubtypes");
   static ConstString g_sect_name_dwarf_debug_ranges("__debug_ranges");
+  static ConstString g_sect_name_dwarf_debug_rnglists("__debug_rnglists");
   static ConstString g_sect_name_dwarf_debug_str("__debug_str");
+  static ConstString g_sect_name_dwarf_debug_str_dwo("__debug_str.dwo");
+  static ConstString g_sect_name_dwarf_debug_str_offs("__debug_str_offs");
+  static ConstString g_sect_name_dwarf_debug_str_offs_dwo("__debug_str_offs.dwo");
+  static ConstString g_sect_name_dwarf_debug_tu_index("__debug_tu_index");
   static ConstString g_sect_name_dwarf_debug_types("__debug_types");
   static ConstString g_sect_name_dwarf_apple_names("__apple_names");
   static ConstString g_sect_name_dwarf_apple_types("__apple_types");
@@ -1464,20 +1478,38 @@ static lldb::SectionType GetSectionType(uint32_t flags,
 
   if (section_name == g_sect_name_dwarf_debug_abbrev)
     return eSectionTypeDWARFDebugAbbrev;
+  if (section_name == g_sect_name_dwarf_debug_abbrev_dwo)
+    return eSectionTypeDWARFDebugAbbrevDwo;
+  if (section_name == g_sect_name_dwarf_debug_addr)
+    return eSectionTypeDWARFDebugAddr;
   if (section_name == g_sect_name_dwarf_debug_aranges)
     return eSectionTypeDWARFDebugAranges;
+  if (section_name == g_sect_name_dwarf_debug_cu_index)
+    return eSectionTypeDWARFDebugCuIndex;
   if (section_name == g_sect_name_dwarf_debug_frame)
     return eSectionTypeDWARFDebugFrame;
   if (section_name == g_sect_name_dwarf_debug_info)
     return eSectionTypeDWARFDebugInfo;
+  if (section_name == g_sect_name_dwarf_debug_info_dwo)
+    return eSectionTypeDWARFDebugInfoDwo;
   if (section_name == g_sect_name_dwarf_debug_line)
     return eSectionTypeDWARFDebugLine;
+  if (section_name == g_sect_name_dwarf_debug_line_dwo)
+    return eSectionTypeDWARFDebugLine; // Same as debug_line.
+  if (section_name == g_sect_name_dwarf_debug_line_str)
+    return eSectionTypeDWARFDebugLineStr;
   if (section_name == g_sect_name_dwarf_debug_loc)
     return eSectionTypeDWARFDebugLoc;
   if (section_name == g_sect_name_dwarf_debug_loclists)
     return eSectionTypeDWARFDebugLocLists;
+  if (section_name == g_sect_name_dwarf_debug_loclists_dwo)
+    return eSectionTypeDWARFDebugLocListsDwo;
   if (section_name == g_sect_name_dwarf_debug_macinfo)
     return eSectionTypeDWARFDebugMacInfo;
+  if (section_name == g_sect_name_dwarf_debug_macro)
+    return eSectionTypeDWARFDebugMacro;
+  if (section_name == g_sect_name_dwarf_debug_macro_dwo)
+    return eSectionTypeDWARFDebugMacInfo; // Same as debug_macro.
   if (section_name == g_sect_name_dwarf_debug_names)
     return eSectionTypeDWARFDebugNames;
   if (section_name == g_sect_name_dwarf_debug_pubnames)
@@ -1486,8 +1518,18 @@ static lldb::SectionType GetSectionType(uint32_t flags,
     return eSectionTypeDWARFDebugPubTypes;
   if (section_name == g_sect_name_dwarf_debug_ranges)
     return eSectionTypeDWARFDebugRanges;
+  if (section_name == g_sect_name_dwarf_debug_rnglists)
+    return eSectionTypeDWARFDebugRngLists;
   if (section_name == g_sect_name_dwarf_debug_str)
     return eSectionTypeDWARFDebugStr;
+  if (section_name == g_sect_name_dwarf_debug_str_dwo)
+    return eSectionTypeDWARFDebugStrDwo;
+  if (section_name == g_sect_name_dwarf_debug_str_offs)
+    return eSectionTypeDWARFDebugStrOffsets;
+  if (section_name == g_sect_name_dwarf_debug_str_offs_dwo)
+    return eSectionTypeDWARFDebugStrOffsetsDwo;
+  if (section_name == g_sect_name_dwarf_debug_tu_index)
+    return eSectionTypeDWARFDebugTuIndex;
   if (section_name == g_sect_name_dwarf_debug_types)
     return eSectionTypeDWARFDebugTypes;
   if (section_name == g_sect_name_dwarf_apple_names)
@@ -6878,62 +6920,22 @@ bool ObjectFileMachO::LoadCoreFileImages(lldb_private::Process &process) {
       continue;
     }
 
-    // If this binary is currently executing, we want to force a
-    // possibly expensive search for the binary and its dSYM.
-    if (image.currently_executing && image.uuid.IsValid()) {
-      ModuleSpec module_spec;
-      module_spec.GetUUID() = image.uuid;
-      Symbols::DownloadObjectAndSymbolFile(module_spec, error, true);
-      if (FileSystem::Instance().Exists(module_spec.GetFileSpec())) {
-        module_sp = process.GetTarget().GetOrCreateModule(module_spec, false);
-        process.GetTarget().GetImages().AppendIfNeeded(module_sp,
-                                                       false /* notify */);
-      }
+    bool value_is_offset = image.load_address == LLDB_INVALID_ADDRESS;
+    uint64_t value = value_is_offset ? image.slide : image.load_address;
+    if (value_is_offset && value == LLDB_INVALID_ADDRESS) {
+      // We have neither address nor slide; so we will find the binary
+      // by UUID and load it at slide/offset 0.
+      value = 0;
     }
 
-    // We have an address, that's the best way to discover the binary.
-    if (!module_sp && image.load_address != LLDB_INVALID_ADDRESS) {
+    // We have either a UUID, or we have a load address which
+    // and can try to read load commands and find a UUID.
+    if (image.uuid.IsValid() ||
+        (!value_is_offset && value != LLDB_INVALID_ADDRESS)) {
+      const bool set_load_address = image.segment_load_addresses.size() == 0;
       module_sp = DynamicLoader::LoadBinaryWithUUIDAndAddress(
-          &process, image.filename, image.uuid, image.load_address,
-          false /* value_is_offset */, image.currently_executing,
-          false /* notify */);
-      if (module_sp) {
-        // We've already set the load address in the Target,
-        // don't do any more processing on this module.
-        added_modules.Append(module_sp, false /* notify */);
-        continue;
-      }
-    }
-
-    // If we have a slide, we need to find the original binary
-    // by UUID, then we can apply the slide value.
-    if (!module_sp && image.uuid.IsValid() &&
-        image.slide != LLDB_INVALID_ADDRESS) {
-      module_sp = DynamicLoader::LoadBinaryWithUUIDAndAddress(
-          &process, image.filename, image.uuid, image.slide,
-          true /* value_is_offset */, image.currently_executing,
-          false /* notify */);
-      if (module_sp) {
-        // We've already set the load address in the Target,
-        // don't do any more processing on this module.
-        added_modules.Append(module_sp, false /* notify */);
-        continue;
-      }
-    }
-
-    // Try to find the binary by UUID or filename on the local
-    // filesystem or in lldb's global module cache.
-    if (!module_sp) {
-      Status error;
-      ModuleSpec module_spec;
-      if (image.uuid.IsValid())
-        module_spec.GetUUID() = image.uuid;
-      if (!image.filename.empty())
-        module_spec.GetFileSpec() = FileSpec(image.filename.c_str());
-      module_sp =
-          process.GetTarget().GetOrCreateModule(module_spec, false, &error);
-      process.GetTarget().GetImages().AppendIfNeeded(module_sp,
-                                                     false /* notify */);
+          &process, image.filename, image.uuid, value, value_is_offset,
+          image.currently_executing, false /* notify */, set_load_address);
     }
 
     // We have a ModuleSP to load in the Target.  Load it at the
@@ -6947,7 +6949,8 @@ bool ObjectFileMachO::LoadCoreFileImages(lldb_private::Process &process) {
           std::string uuidstr = image.uuid.GetAsString();
           log->Printf("ObjectFileMachO::LoadCoreFileImages adding binary '%s' "
                       "UUID %s with section load addresses",
-                      image.filename.c_str(), uuidstr.c_str());
+                      module_sp->GetFileSpec().GetPath().c_str(),
+                      uuidstr.c_str());
         }
         for (auto name_vmaddr_tuple : image.segment_load_addresses) {
           SectionList *sectlist = module_sp->GetObjectFile()->GetSectionList();
@@ -6960,39 +6963,17 @@ bool ObjectFileMachO::LoadCoreFileImages(lldb_private::Process &process) {
             }
           }
         }
-      } else if (image.load_address != LLDB_INVALID_ADDRESS) {
-        if (log) {
-          std::string uuidstr = image.uuid.GetAsString();
-          log->Printf("ObjectFileMachO::LoadCoreFileImages adding binary '%s' "
-                      "UUID %s with load address 0x%" PRIx64,
-                      image.filename.c_str(), uuidstr.c_str(),
-                      image.load_address);
-        }
-        const bool address_is_slide = false;
-        bool changed = false;
-        module_sp->SetLoadAddress(process.GetTarget(), image.load_address,
-                                  address_is_slide, changed);
-      } else if (image.slide != 0) {
-        if (log) {
-          std::string uuidstr = image.uuid.GetAsString();
-          log->Printf("ObjectFileMachO::LoadCoreFileImages adding binary '%s' "
-                      "UUID %s with slide amount 0x%" PRIx64,
-                      image.filename.c_str(), uuidstr.c_str(), image.slide);
-        }
-        const bool address_is_slide = true;
-        bool changed = false;
-        module_sp->SetLoadAddress(process.GetTarget(), image.slide,
-                                  address_is_slide, changed);
       } else {
         if (log) {
           std::string uuidstr = image.uuid.GetAsString();
           log->Printf("ObjectFileMachO::LoadCoreFileImages adding binary '%s' "
-                      "UUID %s at its file address, no slide applied",
-                      image.filename.c_str(), uuidstr.c_str());
+                      "UUID %s with %s 0x%" PRIx64,
+                      module_sp->GetFileSpec().GetPath().c_str(),
+                      uuidstr.c_str(),
+                      value_is_offset ? "slide" : "load address", value);
         }
-        const bool address_is_slide = true;
-        bool changed = false;
-        module_sp->SetLoadAddress(process.GetTarget(), 0, address_is_slide,
+        bool changed;
+        module_sp->SetLoadAddress(process.GetTarget(), value, value_is_offset,
                                   changed);
       }
     }

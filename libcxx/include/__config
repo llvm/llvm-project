@@ -35,6 +35,8 @@
 
 #ifdef __cplusplus
 
+// The attributes supported by clang are documented at https://clang.llvm.org/docs/AttributeReference.html
+
 // _LIBCPP_VERSION represents the version of libc++, which matches the version of LLVM.
 // Given a LLVM release LLVM XX.YY.ZZ (e.g. LLVM 17.0.1 == 17.00.01), _LIBCPP_VERSION is
 // defined to XXYYZZ.
@@ -311,8 +313,8 @@
 #  endif   // __BYTE_ORDER__
 
 #  ifdef __FreeBSD__
-#    include <sys/endian.h>
 #    include <osreldate.h>
+#    include <sys/endian.h>
 #    if _BYTE_ORDER == _LITTLE_ENDIAN
 #      define _LIBCPP_LITTLE_ENDIAN
 #    else // _BYTE_ORDER == _LITTLE_ENDIAN
@@ -537,9 +539,6 @@ typedef __char32_t char32_t;
 #      define _LIBCPP_EXPORTED_FROM_ABI __declspec(dllimport)
 #    endif
 
-#    define _LIBCPP_TYPE_VIS _LIBCPP_DLL_VIS
-#    define _LIBCPP_FUNC_VIS _LIBCPP_DLL_VIS
-#    define _LIBCPP_EXCEPTION_ABI _LIBCPP_DLL_VIS
 #    define _LIBCPP_HIDDEN
 #    define _LIBCPP_METHOD_TEMPLATE_IMPLICIT_INSTANTIATION_VIS
 #    define _LIBCPP_TEMPLATE_VIS
@@ -555,11 +554,8 @@ typedef __char32_t char32_t;
 #    endif
 
 #    define _LIBCPP_HIDDEN _LIBCPP_VISIBILITY("hidden")
-#    define _LIBCPP_FUNC_VIS _LIBCPP_VISIBILITY("default")
-#    define _LIBCPP_TYPE_VIS _LIBCPP_VISIBILITY("default")
 #    define _LIBCPP_TEMPLATE_DATA_VIS _LIBCPP_VISIBILITY("default")
 #    define _LIBCPP_EXPORTED_FROM_ABI _LIBCPP_VISIBILITY("default")
-#    define _LIBCPP_EXCEPTION_ABI _LIBCPP_VISIBILITY("default")
 #    define _LIBCPP_EXTERN_TEMPLATE_TYPE_VIS _LIBCPP_VISIBILITY("default")
 #    define _LIBCPP_CLASS_TEMPLATE_INSTANTIATION_VIS
 
@@ -685,7 +681,7 @@ _LIBCPP_BEGIN_NAMESPACE_STD _LIBCPP_END_NAMESPACE_STD
 #    define _LIBCPP_PREFERRED_OVERLOAD __attribute__((__enable_if__(true, "")))
 #  endif
 
-#  ifndef __SIZEOF_INT128__
+#  if !defined(__SIZEOF_INT128__) || defined(_MSC_VER)
 #    define _LIBCPP_HAS_NO_INT128
 #  endif
 
@@ -703,7 +699,7 @@ _LIBCPP_BEGIN_NAMESPACE_STD _LIBCPP_END_NAMESPACE_STD
 
 #  ifdef _LIBCPP_CXX03_LANG
 #    define _LIBCPP_DECLARE_STRONG_ENUM(x)                                                                             \
-      struct _LIBCPP_TYPE_VIS x {                                                                                      \
+      struct _LIBCPP_EXPORTED_FROM_ABI x {                                                                             \
         enum __lx
 // clang-format off
 #    define _LIBCPP_DECLARE_STRONG_ENUM_EPILOG(x)                                                                      \
@@ -811,11 +807,11 @@ _LIBCPP_BEGIN_NAMESPACE_STD _LIBCPP_END_NAMESPACE_STD
 #    define _LIBCPP_DEPRECATED_IN_CXX20
 #  endif
 
-#if _LIBCPP_STD_VER >= 23
-#  define _LIBCPP_DEPRECATED_IN_CXX23 _LIBCPP_DEPRECATED
-#else
-#  define _LIBCPP_DEPRECATED_IN_CXX23
-#endif
+#  if _LIBCPP_STD_VER >= 23
+#    define _LIBCPP_DEPRECATED_IN_CXX23 _LIBCPP_DEPRECATED
+#  else
+#    define _LIBCPP_DEPRECATED_IN_CXX23
+#  endif
 
 #  if !defined(_LIBCPP_HAS_NO_CHAR8_T)
 #    define _LIBCPP_DEPRECATED_WITH_CHAR8_T _LIBCPP_DEPRECATED
@@ -900,14 +896,8 @@ _LIBCPP_BEGIN_NAMESPACE_STD _LIBCPP_END_NAMESPACE_STD
 #  endif
 
 #  ifndef _LIBCPP_HAS_NO_ASAN
-    extern "C" _LIBCPP_FUNC_VIS void
+    extern "C" _LIBCPP_EXPORTED_FROM_ABI void
     __sanitizer_annotate_contiguous_container(const void*, const void*, const void*, const void*);
-#    if _LIBCPP_CLANG_VER >= 1600
-extern "C" _LIBCPP_FUNC_VIS void __sanitizer_annotate_double_ended_contiguous_container(
-    const void*, const void*, const void*, const void*, const void*, const void*);
-extern "C" _LIBCPP_FUNC_VIS int
-__sanitizer_verify_double_ended_contiguous_container(const void*, const void*, const void*, const void*);
-#    endif
 #  endif
 
 // Try to find out if RTTI is disabled.
@@ -1105,6 +1095,12 @@ __sanitizer_verify_double_ended_contiguous_container(const void*, const void*, c
 #    define _LIBCPP_PREFERRED_NAME(x)
 #  endif
 
+#  if __has_attribute(__no_sanitize__)
+#    define _LIBCPP_NO_SANITIZE(...) __attribute__((__no_sanitize__(__VA_ARGS__)))
+#  else
+#    define _LIBCPP_NO_SANITIZE(...)
+#  endif
+
 // We often repeat things just for handling wide characters in the library.
 // When wide characters are disabled, it can be useful to have a quick way of
 // disabling it without having to resort to #if-#endif, which has a larger
@@ -1279,20 +1275,20 @@ __sanitizer_verify_double_ended_contiguous_container(const void*, const void*, c
 #  endif
 
 // TODO: Make this a proper configuration option
-#define _PSTL_PAR_BACKEND_SERIAL
+#  define _PSTL_PAR_BACKEND_SERIAL
 
-#define _PSTL_PRAGMA(x) _Pragma(#    x)
+#  define _PSTL_PRAGMA(x) _Pragma(#x)
 
 // Enable SIMD for compilers that support OpenMP 4.0
-#if (defined(_OPENMP) && _OPENMP >= 201307)
+#  if (defined(_OPENMP) && _OPENMP >= 201307)
 
-#  define _PSTL_UDR_PRESENT
-#  define _PSTL_PRAGMA_SIMD _PSTL_PRAGMA(omp simd)
-#  define _PSTL_PRAGMA_DECLARE_SIMD _PSTL_PRAGMA(omp declare simd)
-#  define _PSTL_PRAGMA_SIMD_REDUCTION(PRM) _PSTL_PRAGMA(omp simd reduction(PRM))
-#  define _PSTL_PRAGMA_SIMD_SCAN(PRM) _PSTL_PRAGMA(omp simd reduction(inscan, PRM))
-#  define _PSTL_PRAGMA_SIMD_INCLUSIVE_SCAN(PRM) _PSTL_PRAGMA(omp scan inclusive(PRM))
-#  define _PSTL_PRAGMA_SIMD_EXCLUSIVE_SCAN(PRM) _PSTL_PRAGMA(omp scan exclusive(PRM))
+#    define _PSTL_UDR_PRESENT
+#    define _PSTL_PRAGMA_SIMD _PSTL_PRAGMA(omp simd)
+#    define _PSTL_PRAGMA_DECLARE_SIMD _PSTL_PRAGMA(omp declare simd)
+#    define _PSTL_PRAGMA_SIMD_REDUCTION(PRM) _PSTL_PRAGMA(omp simd reduction(PRM))
+#    define _PSTL_PRAGMA_SIMD_SCAN(PRM) _PSTL_PRAGMA(omp simd reduction(inscan, PRM))
+#    define _PSTL_PRAGMA_SIMD_INCLUSIVE_SCAN(PRM) _PSTL_PRAGMA(omp scan inclusive(PRM))
+#    define _PSTL_PRAGMA_SIMD_EXCLUSIVE_SCAN(PRM) _PSTL_PRAGMA(omp scan exclusive(PRM))
 
 // Declaration of reduction functor, where
 // NAME - the name of the functor
@@ -1301,22 +1297,22 @@ __sanitizer_verify_double_ended_contiguous_container(const void*, const void*, c
 // omp_out - refers to the final value of the combiner operator
 // omp_priv - refers to the private copy of the initial value
 // omp_orig - refers to the original variable to be reduced
-#  define _PSTL_PRAGMA_DECLARE_REDUCTION(NAME, OP)                                                                     \
-    _PSTL_PRAGMA(omp declare reduction(NAME:OP : omp_out(omp_in)) initializer(omp_priv = omp_orig))
+#    define _PSTL_PRAGMA_DECLARE_REDUCTION(NAME, OP)                                                                   \
+      _PSTL_PRAGMA(omp declare reduction(NAME:OP : omp_out(omp_in)) initializer(omp_priv = omp_orig))
 
-#else // (defined(_OPENMP) && _OPENMP >= 201307)
+#  else // (defined(_OPENMP) && _OPENMP >= 201307)
 
-#  define _PSTL_PRAGMA_SIMD
-#  define _PSTL_PRAGMA_DECLARE_SIMD
-#  define _PSTL_PRAGMA_SIMD_REDUCTION(PRM)
-#  define _PSTL_PRAGMA_SIMD_SCAN(PRM)
-#  define _PSTL_PRAGMA_SIMD_INCLUSIVE_SCAN(PRM)
-#  define _PSTL_PRAGMA_SIMD_EXCLUSIVE_SCAN(PRM)
-#  define _PSTL_PRAGMA_DECLARE_REDUCTION(NAME, OP)
+#    define _PSTL_PRAGMA_SIMD
+#    define _PSTL_PRAGMA_DECLARE_SIMD
+#    define _PSTL_PRAGMA_SIMD_REDUCTION(PRM)
+#    define _PSTL_PRAGMA_SIMD_SCAN(PRM)
+#    define _PSTL_PRAGMA_SIMD_INCLUSIVE_SCAN(PRM)
+#    define _PSTL_PRAGMA_SIMD_EXCLUSIVE_SCAN(PRM)
+#    define _PSTL_PRAGMA_DECLARE_REDUCTION(NAME, OP)
 
-#endif // (defined(_OPENMP) && _OPENMP >= 201307)
+#  endif // (defined(_OPENMP) && _OPENMP >= 201307)
 
-#define _PSTL_USE_NONTEMPORAL_STORES_IF_ALLOWED
+#  define _PSTL_USE_NONTEMPORAL_STORES_IF_ALLOWED
 
 #endif // __cplusplus
 

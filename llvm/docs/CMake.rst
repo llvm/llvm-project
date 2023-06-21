@@ -34,7 +34,7 @@ Quick start
 We use here the command-line, non-interactive CMake interface.
 
 #. `Download <http://www.cmake.org/cmake/resources/software.html>`_ and install
-   CMake. Version 3.13.4 is the minimum required.
+   CMake. Version 3.20.0 is the minimum required.
 
 #. Open a shell. Your development tools must be reachable from this shell
    through the PATH environment variable.
@@ -489,6 +489,11 @@ enabled sub-projects. Nearly all of these variable names begin with
 **LLVM_ENABLE_EXPENSIVE_CHECKS**:BOOL
   Enable additional time/memory expensive checking. Defaults to OFF.
 
+**LLVM_ENABLE_HTTPLIB**:BOOL
+  Enables the optional cpp-httplib dependency which is used by llvm-debuginfod
+  to serve debug info over HTTP. `cpp-httplib <https://github.com/yhirose/cpp-httplib>`_
+  must be installed, or `httplib_ROOT` must be set. Defaults to OFF.
+
 **LLVM_ENABLE_FFI**:BOOL
   Indicates whether the LLVM Interpreter will be linked with the Foreign Function
   Interface library (libffi) in order to enable calling external functions.
@@ -508,6 +513,11 @@ enabled sub-projects. Nearly all of these variable names begin with
   If the host compiler and linker supports the stdlib flag, -stdlib=libc++ is
   passed to invocations of both so that the project is built using libc++
   instead of stdlibc++. Defaults to OFF.
+
+**LLVM_ENABLE_LLVM_LIBC**: BOOL
+  If the LLVM libc overlay is installed in a location where the host linker
+  can access it, all built executables will be linked against the LLVM libc
+  overlay before linking against the system libc. Defaults to OFF.
 
 **LLVM_ENABLE_LIBPFM**:BOOL
   Enable building with libpfm to support hardware counter measurements in LLVM
@@ -911,7 +921,7 @@ and uses them to build a simple application ``simple-tool``.
 
 .. code-block:: cmake
 
-  cmake_minimum_required(VERSION 3.13.4)
+  cmake_minimum_required(VERSION 3.20.0)
   project(SimpleProject)
 
   find_package(LLVM REQUIRED CONFIG)

@@ -24,8 +24,7 @@ template <class _Tp>
 struct _LIBCPP_TEMPLATE_VIS is_copy_assignable
     : public integral_constant<
           bool,
-          __is_assignable(__add_lvalue_reference_t<_Tp>,
-                          __add_lvalue_reference_t<typename add_const<_Tp>::type>)> {};
+          __is_assignable(__add_lvalue_reference_t<_Tp>, __add_lvalue_reference_t<typename add_const<_Tp>::type>)> {};
 
 #if _LIBCPP_STD_VER >= 17
 template <class _Tp>

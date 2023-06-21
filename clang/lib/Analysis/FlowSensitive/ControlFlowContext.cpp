@@ -68,13 +68,13 @@ static llvm::BitVector findReachableBlocks(const CFG &Cfg) {
 }
 
 llvm::Expected<ControlFlowContext>
-ControlFlowContext::build(const FunctionDecl &Func, ASTContext &C) {
+ControlFlowContext::build(const FunctionDecl &Func) {
   if (!Func.hasBody())
     return llvm::createStringError(
         std::make_error_code(std::errc::invalid_argument),
         "Cannot analyze function without a body");
 
-  return build(Func, *Func.getBody(), C);
+  return build(Func, *Func.getBody(), Func.getASTContext());
 }
 
 llvm::Expected<ControlFlowContext>

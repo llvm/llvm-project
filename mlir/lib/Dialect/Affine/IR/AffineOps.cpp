@@ -2482,9 +2482,12 @@ LogicalResult AffineForOp::fold(FoldAdaptor adaptor,
                                 SmallVectorImpl<OpFoldResult> &results) {
   bool folded = succeeded(foldLoopBounds(*this));
   folded |= succeeded(canonicalizeLoopBounds(*this));
-  if (hasTrivialZeroTripCount(*this)) {
+  if (hasTrivialZeroTripCount(*this) && getNumResults() != 0) {
     // The initial values of the loop-carried variables (iter_args) are the
-    // results of the op.
+    // results of the op. But this must be avoided for an affine.for op that
+    // does not return any results. Since ops that do not return results cannot
+    // be folded away, we would enter an infinite loop of folds on the same
+    // affine.for op.
     results.assign(getIterOperands().begin(), getIterOperands().end());
     folded = true;
   }

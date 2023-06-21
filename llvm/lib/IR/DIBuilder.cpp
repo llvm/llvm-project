@@ -35,7 +35,7 @@ DIBuilder::DIBuilder(Module &m, bool AllowUnresolvedNodes, DICompileUnit *CU)
     if (const auto &GVs = CUNode->getGlobalVariables())
       AllGVs.assign(GVs.begin(), GVs.end());
     if (const auto &IMs = CUNode->getImportedEntities())
-      AllImportedModules.assign(IMs.begin(), IMs.end());
+      ImportedModules.assign(IMs.begin(), IMs.end());
     if (const auto &MNs = CUNode->getMacros())
       AllMacrosPerParent.insert({nullptr, {MNs.begin(), MNs.end()}});
   }
@@ -52,23 +52,11 @@ void DIBuilder::trackIfUnresolved(MDNode *N) {
 }
 
 void DIBuilder::finalizeSubprogram(DISubprogram *SP) {
-  MDTuple *Temp = SP->getRetainedNodes().get();
-  if (!Temp || !Temp->isTemporary())
-    return;
-
-  SmallVector<Metadata *, 16> RetainedNodes;
-
-  auto PV = PreservedVariables.find(SP);
-  if (PV != PreservedVariables.end())
-    RetainedNodes.append(PV->second.begin(), PV->second.end());
-
-  auto PL = PreservedLabels.find(SP);
-  if (PL != PreservedLabels.end())
-    RetainedNodes.append(PL->second.begin(), PL->second.end());
-
-  DINodeArray Node = getOrCreateArray(RetainedNodes);
-
-  TempMDTuple(Temp)->replaceAllUsesWith(Node.get());
+  auto PN = SubprogramTrackedNodes.find(SP);
+  if (PN != SubprogramTrackedNodes.end())
+    SP->replaceRetainedNodes(
+        MDTuple::get(VMContext, SmallVector<Metadata *, 16>(PN->second.begin(),
+                                                            PN->second.end())));
 }
 
 void DIBuilder::finalize() {
@@ -105,10 +93,10 @@ void DIBuilder::finalize() {
   if (!AllGVs.empty())
     CUNode->replaceGlobalVariables(MDTuple::get(VMContext, AllGVs));
 
-  if (!AllImportedModules.empty())
+  if (!ImportedModules.empty())
     CUNode->replaceImportedEntities(MDTuple::get(
-        VMContext, SmallVector<Metadata *, 16>(AllImportedModules.begin(),
-                                               AllImportedModules.end())));
+        VMContext, SmallVector<Metadata *, 16>(ImportedModules.begin(),
+                                               ImportedModules.end())));
 
   for (const auto &I : AllMacrosPerParent) {
     // DIMacroNode's with nullptr parent are DICompileUnit direct children.
@@ -172,7 +160,7 @@ static DIImportedEntity *
 createImportedModule(LLVMContext &C, dwarf::Tag Tag, DIScope *Context,
                      Metadata *NS, DIFile *File, unsigned Line, StringRef Name,
                      DINodeArray Elements,
-                     SmallVectorImpl<TrackingMDNodeRef> &AllImportedModules) {
+                     SmallVectorImpl<TrackingMDNodeRef> &ImportedModules) {
   if (Line)
     assert(File && "Source location has line number but no file");
   unsigned EntitiesCount = C.pImpl->DIImportedEntitys.size();
@@ -181,7 +169,7 @@ createImportedModule(LLVMContext &C, dwarf::Tag Tag, DIScope *Context,
   if (EntitiesCount < C.pImpl->DIImportedEntitys.size())
     // A new Imported Entity was just added to the context.
     // Add it to the Imported Modules list.
-    AllImportedModules.emplace_back(M);
+    ImportedModules.emplace_back(M);
   return M;
 }
 
@@ -191,7 +179,7 @@ DIImportedEntity *DIBuilder::createImportedModule(DIScope *Context,
                                                   DINodeArray Elements) {
   return ::createImportedModule(VMContext, dwarf::DW_TAG_imported_module,
                                 Context, NS, File, Line, StringRef(), Elements,
-                                AllImportedModules);
+                                getImportTrackingVector(Context));
 }
 
 DIImportedEntity *DIBuilder::createImportedModule(DIScope *Context,
@@ -200,7 +188,7 @@ DIImportedEntity *DIBuilder::createImportedModule(DIScope *Context,
                                                   DINodeArray Elements) {
   return ::createImportedModule(VMContext, dwarf::DW_TAG_imported_module,
                                 Context, NS, File, Line, StringRef(), Elements,
-                                AllImportedModules);
+                                getImportTrackingVector(Context));
 }
 
 DIImportedEntity *DIBuilder::createImportedModule(DIScope *Context, DIModule *M,
@@ -208,7 +196,7 @@ DIImportedEntity *DIBuilder::createImportedModule(DIScope *Context, DIModule *M,
                                                   DINodeArray Elements) {
   return ::createImportedModule(VMContext, dwarf::DW_TAG_imported_module,
                                 Context, M, File, Line, StringRef(), Elements,
-                                AllImportedModules);
+                                getImportTrackingVector(Context));
 }
 
 DIImportedEntity *
@@ -219,7 +207,7 @@ DIBuilder::createImportedDeclaration(DIScope *Context, DINode *Decl,
   // types that have one.
   return ::createImportedModule(VMContext, dwarf::DW_TAG_imported_declaration,
                                 Context, Decl, File, Line, Name, Elements,
-                                AllImportedModules);
+                                getImportTrackingVector(Context));
 }
 
 DIFile *DIBuilder::createFile(StringRef Filename, StringRef Directory,
@@ -766,26 +754,20 @@ DIGlobalVariable *DIBuilder::createTempGlobalVariableFwdDecl(
 
 static DILocalVariable *createLocalVariable(
     LLVMContext &VMContext,
-    DenseMap<MDNode *, SmallVector<TrackingMDNodeRef, 1>> &PreservedVariables,
-    DIScope *Scope, StringRef Name, unsigned ArgNo, DIFile *File,
+    SmallVectorImpl<TrackingMDNodeRef> &PreservedNodes,
+    DIScope *Context, StringRef Name, unsigned ArgNo, DIFile *File,
     unsigned LineNo, DIType *Ty, bool AlwaysPreserve, DINode::DIFlags Flags,
     uint32_t AlignInBits, DINodeArray Annotations = nullptr) {
-  // FIXME: Why getNonCompileUnitScope()?
-  // FIXME: Why is "!Context" okay here?
   // FIXME: Why doesn't this check for a subprogram or lexical block (AFAICT
   // the only valid scopes)?
-  DIScope *Context = getNonCompileUnitScope(Scope);
-
-  auto *Node = DILocalVariable::get(
-      VMContext, cast_or_null<DILocalScope>(Context), Name, File, LineNo, Ty,
-      ArgNo, Flags, AlignInBits, Annotations);
+  auto *Scope = cast<DILocalScope>(Context);
+  auto *Node = DILocalVariable::get(VMContext, Scope, Name, File, LineNo, Ty,
+                                    ArgNo, Flags, AlignInBits, Annotations);
   if (AlwaysPreserve) {
     // The optimizer may remove local variables. If there is an interest
     // to preserve variable info in such situation then stash it in a
     // named mdnode.
-    DISubprogram *Fn = getDISubprogram(Scope);
-    assert(Fn && "Missing subprogram for local variable");
-    PreservedVariables[Fn].emplace_back(Node);
+    PreservedNodes.emplace_back(Node);
   }
   return Node;
 }
@@ -795,9 +777,11 @@ DILocalVariable *DIBuilder::createAutoVariable(DIScope *Scope, StringRef Name,
                                                DIType *Ty, bool AlwaysPreserve,
                                                DINode::DIFlags Flags,
                                                uint32_t AlignInBits) {
-  return createLocalVariable(VMContext, PreservedVariables, Scope, Name,
-                             /* ArgNo */ 0, File, LineNo, Ty, AlwaysPreserve,
-                             Flags, AlignInBits);
+  assert(Scope && isa<DILocalScope>(Scope) &&
+         "Unexpected scope for a local variable.");
+  return createLocalVariable(
+      VMContext, getSubprogramNodesTrackingVector(Scope), Scope, Name,
+      /* ArgNo */ 0, File, LineNo, Ty, AlwaysPreserve, Flags, AlignInBits);
 }
 
 DILocalVariable *DIBuilder::createParameterVariable(
@@ -805,25 +789,23 @@ DILocalVariable *DIBuilder::createParameterVariable(
     unsigned LineNo, DIType *Ty, bool AlwaysPreserve, DINode::DIFlags Flags,
     DINodeArray Annotations) {
   assert(ArgNo && "Expected non-zero argument number for parameter");
-  return createLocalVariable(VMContext, PreservedVariables, Scope, Name, ArgNo,
-                             File, LineNo, Ty, AlwaysPreserve, Flags,
-                             /*AlignInBits=*/0, Annotations);
+  assert(Scope && isa<DILocalScope>(Scope) &&
+         "Unexpected scope for a local variable.");
+  return createLocalVariable(
+      VMContext, getSubprogramNodesTrackingVector(Scope), Scope, Name, ArgNo,
+      File, LineNo, Ty, AlwaysPreserve, Flags, /*AlignInBits=*/0, Annotations);
 }
 
-DILabel *DIBuilder::createLabel(DIScope *Scope, StringRef Name, DIFile *File,
-                                unsigned LineNo, bool AlwaysPreserve) {
-  DIScope *Context = getNonCompileUnitScope(Scope);
-
-  auto *Node = DILabel::get(VMContext, cast_or_null<DILocalScope>(Context),
-                            Name, File, LineNo);
+DILabel *DIBuilder::createLabel(DIScope *Context, StringRef Name, DIFile *File,
+                                 unsigned LineNo, bool AlwaysPreserve) {
+  auto *Scope = cast<DILocalScope>(Context);
+  auto *Node = DILabel::get(VMContext, Scope, Name, File, LineNo);
 
   if (AlwaysPreserve) {
     /// The optimizer may remove labels. If there is an interest
     /// to preserve label info in such situation then append it to
     /// the list of retained nodes of the DISubprogram.
-    DISubprogram *Fn = getDISubprogram(Scope);
-    assert(Fn && "Missing subprogram for label");
-    PreservedLabels[Fn].emplace_back(Node);
+    getSubprogramNodesTrackingVector(Scope).emplace_back(Node);
   }
   return Node;
 }
@@ -850,9 +832,8 @@ DISubprogram *DIBuilder::createFunction(
   auto *Node = getSubprogram(
       /*IsDistinct=*/IsDefinition, VMContext, getNonCompileUnitScope(Context),
       Name, LinkageName, File, LineNo, Ty, ScopeLine, nullptr, 0, 0, Flags,
-      SPFlags, IsDefinition ? CUNode : nullptr, TParams, Decl,
-      MDTuple::getTemporary(VMContext, std::nullopt).release(), ThrownTypes,
-      Annotations, TargetFuncName);
+      SPFlags, IsDefinition ? CUNode : nullptr, TParams, Decl, nullptr,
+      ThrownTypes, Annotations, TargetFuncName);
 
   if (IsDefinition)
     AllSubprograms.push_back(Node);

@@ -2643,10 +2643,7 @@ public:
   }
 
   VPValue *getSCEVExpansion(const SCEV *S) const {
-    auto I = SCEVToExpansion.find(S);
-    if (I == SCEVToExpansion.end())
-      return nullptr;
-    return I->second;
+    return SCEVToExpansion.lookup(S);
   }
 
   void addSCEVExpansion(const SCEV *S, VPValue *V) {
@@ -2979,6 +2976,8 @@ inline bool isUniformAfterVectorization(VPValue *VPV) {
   assert(Def && "Must have definition for value defined inside vector region");
   if (auto Rep = dyn_cast<VPReplicateRecipe>(Def))
     return Rep->isUniform();
+  if (auto *GEP = dyn_cast<VPWidenGEPRecipe>(Def))
+    return all_of(GEP->operands(), isUniformAfterVectorization);
   return false;
 }
 } // end namespace vputils

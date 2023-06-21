@@ -101,9 +101,54 @@ C++23, informally referred to as C++26.</p>
     <th>C++26 Proposal</th>
     <th>Available in Clang?</th>
  </tr>
+ <!-- Spring 2023 papers (Varna) -->
+ <tr>
+  <td>Remove undefined behavior from lexing</td>
+  <td><a href="https://wg21.link/P2621R2">P2621R2</a> (<a href="#dr">DR</a>)</td>
+  <td class="full" align="center">Clang 3.3</td>
+ </tr>
+ <tr>
+  <td>Making non-encodable string literals ill-formed</td>
+  <td><a href="https://wg21.link/P1854R4">P1854R4</a> (<a href="#dr">DR</a>)</td>
+  <td class="full" align="center">Clang 14</td>
+ </tr>
+ <tr>
+  <td>Unevaluated strings</td>
+  <td><a href="https://wg21.link/P2361R6">P2361R6</a></td>
+  <td class="none" align="center">No</td>
+ </tr>
+ <tr>
+  <td>Add @, $, and ` to the basic character set</td>
+  <td><a href="https://wg21.link/P2558R2">P2558R2</a></td>
+  <td class="full" align="center">Yes</td>
+ </tr>
+ <tr>
+  <td>constexpr cast from <tt>void*</tt></td>
+  <td><a href="https://wg21.link/P2738R1">P2738R1</a></td>
+  <td class="none" align="center">No</td>
+ </tr>
+ <tr>
+  <td>On the ignorability of standard attributes</td>
+  <td><a href="https://wg21.link/P2552R3">P2552R3</a> (<a href="#dr">DR</a>)</td>
+  <td class="none" align="center">No</td>
+ </tr>
+ <tr>
+  <td>Static storage for braced initializers</td>
+  <td><a href="https://wg21.link/P2752R3">P2752R3</a> (<a href="#dr">DR</a>)</td>
+  <td class="none" align="center">No</td>
+ </tr>
+ <tr>
+  <td>User-generated <tt>static_assert</tt> messages</td>
+  <td><a href="https://wg21.link/P2741R3">P2741R3</a></td>
+  <td class="none" align="center">No</td>
+ </tr>
+ <tr>
+  <td>Placeholder variables with no name</td>
+  <td><a href="https://wg21.link/P2169R4">P2169R4</a></td>
+  <td class="none" align="center">No</td>
+ </tr>
 </table>
 </details>
-
 
 <h2 id="cxx23">C++23 implementation status</h2>
 
@@ -363,7 +408,7 @@ C++23, informally referred to as C++26.</p>
     <tr>
       <td>consteval needs to propagate up</td>
       <td><a href="https://wg21.link/P2564R3">P2564R3</a> (<a href="#dr">DR</a>)</td>
-      <td class="none" align="center">No</td>
+      <td class="unreleased" align="center">Clang 17</td>
     </tr>
     <tr>
       <td>Lifetime extension in range-based for loops</td>
@@ -532,7 +577,7 @@ C++23, informally referred to as C++26.</p>
       </tr>
       <tr> <!-- from Prague -->
         <td><a href="https://wg21.link/p2002r1">P2002R1</a></td>
-        <td class="partial" align="center">Partial</td>
+        <td class="unreleased" align="center">Clang 17</td>
       </tr>
       <tr>
         <td><a href="https://wg21.link/p2085r0">P2085R0</a></td>
@@ -551,7 +596,7 @@ C++23, informally referred to as C++26.</p>
     <tr>
       <td>Lambdas in unevaluated contexts</td>
       <td><a href="https://wg21.link/p0315r4">P0315R4</a></td>
-      <td class="full" align="center">Clang 17</td>
+      <td class="unreleased" align="center">Clang 17</td>
     </tr>
     <!-- Jacksonville papers -->
     <tr>
@@ -643,14 +688,7 @@ C++23, informally referred to as C++26.</p>
     <tr>
       <td rowspan=2>Immediate functions (<tt>consteval</tt>)</td>
       <td><a href="https://wg21.link/p1073r3">P1073R3</a></td>
-      <td class="partial" align="center">
-        <details><summary>Clang 15 (Partial)</summary>
-          Clang still incorrectly defers some consteval executions to runtime,
-          resulting in CodeGen crashes. Additionally, Clang does not properly
-          handle default arguments in consteval functions under all
-          circumstances.
-        </details>
-      </td>
+      <td class="full" align="center">Clang 17</td>
     </tr>
       <tr> <!-- from Prague -->
         <td><a href="https://wg21.link/p1937r2">P1937R2</a></td>
@@ -686,7 +724,7 @@ C++23, informally referred to as C++26.</p>
     <tr>
       <td rowspan="2">Parenthesized initialization of aggregates</td>
       <td><a href="https://wg21.link/p0960r3">P0960R3</a></td>
-      <td rowspan="2" class="none" align="center">No</td>
+      <td rowspan="2" class="full" align="center">Clang 16</td>
     </tr>
       <tr> <!-- from Belfast -->
         <td><a href="https://wg21.link/p1975r0">P1975R0</a></td>

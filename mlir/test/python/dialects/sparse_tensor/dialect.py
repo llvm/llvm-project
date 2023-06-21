@@ -30,14 +30,14 @@ def testEncodingAttr1D():
 
         # CHECK: lvl_types: [<DimLevelType.compressed: 8>]
         print(f"lvl_types: {casted.lvl_types}")
-        # CHECK: dim_ordering: None
-        print(f"dim_ordering: {casted.dim_ordering}")
+        # CHECK: dim_to_lvl: None
+        print(f"dim_to_lvl: {casted.dim_to_lvl}")
         # CHECK: pos_width: 16
         print(f"pos_width: {casted.pos_width}")
         # CHECK: crd_width: 32
         print(f"crd_width: {casted.crd_width}")
 
-        created = st.EncodingAttr.get(casted.lvl_types, None, None, 0, 0)
+        created = st.EncodingAttr.get(casted.lvl_types, None, 0, 0)
         # CHECK: #sparse_tensor.encoding<{ lvlTypes = [ "compressed" ] }>
         print(created)
         # CHECK: created_equal: False
@@ -57,12 +57,12 @@ def testEncodingAttr2D():
         parsed = Attribute.parse(
             "#sparse_tensor.encoding<{"
             '  lvlTypes = [ "dense", "compressed" ],'
-            "  dimOrdering = affine_map<(d0, d1) -> (d1, d0)>,"
+            "  dimToLvl = affine_map<(d0, d1) -> (d1, d0)>,"
             "  posWidth = 8,"
             "  crdWidth = 32"
             "}>"
         )
-        # CHECK: #sparse_tensor.encoding<{ lvlTypes = [ "dense", "compressed" ], dimOrdering = affine_map<(d0, d1) -> (d1, d0)>, posWidth = 8, crdWidth = 32 }>
+        # CHECK: #sparse_tensor.encoding<{ lvlTypes = [ "dense", "compressed" ], dimToLvl = affine_map<(d0, d1) -> (d1, d0)>, posWidth = 8, crdWidth = 32 }>
         print(parsed)
 
         casted = st.EncodingAttr(parsed)
@@ -71,17 +71,17 @@ def testEncodingAttr2D():
 
         # CHECK: lvl_types: [<DimLevelType.dense: 4>, <DimLevelType.compressed: 8>]
         print(f"lvl_types: {casted.lvl_types}")
-        # CHECK: dim_ordering: (d0, d1) -> (d1, d0)
-        print(f"dim_ordering: {casted.dim_ordering}")
+        # CHECK: dim_to_lvl: (d0, d1) -> (d1, d0)
+        print(f"dim_to_lvl: {casted.dim_to_lvl}")
         # CHECK: pos_width: 8
         print(f"pos_width: {casted.pos_width}")
         # CHECK: crd_width: 32
         print(f"crd_width: {casted.crd_width}")
 
         created = st.EncodingAttr.get(
-            casted.lvl_types, casted.dim_ordering, casted.higher_ordering, 8, 32
+            casted.lvl_types, casted.dim_to_lvl, 8, 32
         )
-        # CHECK: #sparse_tensor.encoding<{ lvlTypes = [ "dense", "compressed" ], dimOrdering = affine_map<(d0, d1) -> (d1, d0)>, posWidth = 8, crdWidth = 32 }>
+        # CHECK: #sparse_tensor.encoding<{ lvlTypes = [ "dense", "compressed" ], dimToLvl = affine_map<(d0, d1) -> (d1, d0)>, posWidth = 8, crdWidth = 32 }>
         print(created)
         # CHECK: created_equal: True
         print(f"created_equal: {created == casted}")

@@ -622,11 +622,12 @@ void Preprocessor::Directive(const TokenSequence &dir, Prescanner &prescanner) {
       TokenSequence braced{dir, j + 1, k - j - 1};
       include = braced.ToString();
       j = k;
-    } else if ((include = dir.TokenAt(j).ToString()).substr(0, 1) == "\"" &&
-        include.substr(include.size() - 1, 1) == "\"") { // #include "foo"
+    } else if (((include = dir.TokenAt(j).ToString()).substr(0, 1) == "\"" ||
+                   include.substr(0, 1) == "'") &&
+        include.substr(include.size() - 1, 1) == include.substr(0, 1)) {
+      // #include "foo" and #include 'foo'
       include = include.substr(1, include.size() - 2);
-      // #include "foo" starts search in directory of file containing
-      // the directive
+      // Start search in directory of file containing the directive
       auto prov{dir.GetTokenProvenanceRange(dirOffset).start()};
       if (const auto *currentFile{allSources_.GetSourceFile(prov)}) {
         prependPath = DirectoryName(currentFile->path());

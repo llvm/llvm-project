@@ -128,13 +128,14 @@ static void sizesForTensor(OpBuilder &builder, SmallVectorImpl<Value> &sizes,
 
 // TODO: The dim level property of the COO type relies on input tensors, the
 // shape relies on the output tensor
-static RankedTensorType
-getUnorderedCOOFromTypeWithOrdering(RankedTensorType src, AffineMap ordering) {
-  return getCOOFromTypeWithOrdering(src, ordering, false);
+static RankedTensorType getCOOType(const SparseTensorType &stt, bool ordered) {
+  return getCOOFromTypeWithOrdering(stt, stt.getDimToLvl(), ordered);
 }
 
-static RankedTensorType getUnorderedCOOFromType(RankedTensorType src) {
-  return getCOOFromType(src, false);
+static RankedTensorType getBufferType(const SparseTensorType &stt,
+                                      bool needTmpCOO) {
+  return needTmpCOO ? getCOOType(stt, /*ordered=*/false)
+                    : stt.getRankedTensorType();
 }
 
 /// Collects the dynamic dimension sizes for `tp` with the assumption that
@@ -386,6 +387,90 @@ public:
   }
 };
 
+/// Rewrites a sparse reduction that would not sparsify directly since
+/// doing so would only iterate over the stored elements, ignoring the
+/// implicit zeros, into a semi-ring. Applies to all prod/and/min/max
+/// (note that reductions like add/sub/or/xor can directly be sparsified
+/// since the implicit zeros do not contribute to the final result).
+/// Note that prod/and are still included since, even though they often
+/// are nullified in sparse data, they may still occur for special
+/// situations in which e.g. some rows in a sparse matrix are fully
+/// dense. For min/max, including the implicit zeros is a much more
+/// common situation.
+///
+/// TODO: this essentially "densifies" the operation; we want to implement
+///       this much more efficiently by performing the reduction over the
+///       stored values, and feed in the zero once if there were *any*
+///       implicit zeros as well; but for now, at least we provide
+///       the functionality
+///
+struct GenSemiRingReduction : public OpRewritePattern<GenericOp> {
+public:
+  using OpRewritePattern<GenericOp>::OpRewritePattern;
+
+  LogicalResult matchAndRewrite(GenericOp op,
+                                PatternRewriter &rewriter) const override {
+    // Reject non-reductions.
+    if (!op.hasTensorSemantics() || op.getNumDpsInputs() != 1 ||
+        op.getNumReductionLoops() == 0 || op.getNumResults() != 1)
+      return failure();
+    auto inp = op.getDpsInputOperand(0);
+    auto init = op.getDpsInitOperand(0);
+    if (!isSparseTensor(inp))
+      return failure();
+    // Look for direct x = x OP y for semi-ring ready reductions.
+    auto red = cast<linalg::YieldOp>(op.getRegion().front().getTerminator())
+                   .getOperand(0)
+                   .getDefiningOp();
+    if (!isa<arith::AndIOp, arith::MulIOp, arith::MulFOp, arith::MinFOp,
+             arith::MinSIOp, arith::MinUIOp, arith::MaxFOp, arith::MaxSIOp,
+             arith::MaxUIOp>(red))
+      return failure();
+    Value s0 = op.getBlock()->getArgument(0);
+    Value s1 = op.getBlock()->getArgument(1);
+    if ((red->getOperand(0) != s0 || red->getOperand(1) != s1) &&
+        (red->getOperand(0) != s1 || red->getOperand(1) != s0))
+      return failure();
+    // Identity.
+    Location loc = op.getLoc();
+    Value identity =
+        rewriter.create<tensor::ExtractOp>(loc, init->get(), ValueRange());
+    // Unary {
+    //    present -> value
+    //    absent  -> zero.
+    // }
+    Type rtp = s0.getType();
+    rewriter.setInsertionPointToStart(&op.getRegion().front());
+    auto semiring = rewriter.create<sparse_tensor::UnaryOp>(loc, rtp, s0);
+    Block *present =
+        rewriter.createBlock(&semiring.getPresentRegion(), {}, rtp, loc);
+    rewriter.setInsertionPointToStart(&semiring.getPresentRegion().front());
+    rewriter.create<sparse_tensor::YieldOp>(loc, present->getArgument(0));
+    rewriter.createBlock(&semiring.getAbsentRegion(), {}, {}, {});
+    rewriter.setInsertionPointToStart(&semiring.getAbsentRegion().front());
+    auto zero =
+        rewriter.create<arith::ConstantOp>(loc, rewriter.getZeroAttr(rtp));
+    rewriter.create<sparse_tensor::YieldOp>(loc, zero);
+    rewriter.setInsertionPointAfter(semiring);
+    // CustomReduce {
+    //    x = x REDUC y, identity
+    // }
+    auto custom = rewriter.create<sparse_tensor::ReduceOp>(
+        loc, rtp, semiring.getResult(), s1, identity);
+    Block *region =
+        rewriter.createBlock(&custom.getRegion(), {}, {rtp, rtp}, {loc, loc});
+    rewriter.setInsertionPointToStart(&custom.getRegion().front());
+    IRMapping irMap;
+    irMap.map(red->getOperand(0), region->getArgument(0));
+    irMap.map(red->getOperand(1), region->getArgument(1));
+    auto cloned = rewriter.clone(*red, irMap);
+    rewriter.create<sparse_tensor::YieldOp>(loc, cloned->getResult(0));
+    rewriter.setInsertionPointAfter(custom);
+    rewriter.replaceOp(red, custom.getResult());
+    return success();
+  }
+};
+
 /// Sparse rewriting rule for sparse-to-sparse reshape operator.
 struct TensorReshapeRewriter : public OpRewritePattern<tensor::ReshapeOp> {
 public:
@@ -411,10 +496,9 @@ public:
     Value nnz = rewriter.create<NumberOfEntriesOp>(loc, srcTensor);
     // Only need an unordered COO buffer if input and output are not sorted
     // in the same way.
-    Type bufferTp =
-        srcTp.isAllOrdered() && srcTp.isIdentity() && dstTp.isIdentity()
-            ? dstTp.getRankedTensorType()
-            : getUnorderedCOOFromType(dstTp);
+    Type bufferTp = getBufferType(
+        dstTp.withoutDimToLvl(),
+        !srcTp.isAllOrdered() || !srcTp.isIdentity() || !dstTp.isIdentity());
     SmallVector<Value> dynSizes;
     Value buffer = rewriter
                        .create<AllocTensorOp>(loc, bufferTp, dynSizes, Value(),
@@ -522,10 +606,9 @@ public:
     Value nnz = rewriter.create<NumberOfEntriesOp>(loc, srcTensor);
     // Only need a unordered COO buffer if input and output are not sorted
     // in the same way.
-    Type bufferTp =
-        srcTp.isAllOrdered() && srcTp.isIdentity() && dstTp.isIdentity()
-            ? dstTp.getRankedTensorType()
-            : getUnorderedCOOFromType(dstTp);
+    Type bufferTp = getBufferType(
+        dstTp.withoutDimToLvl(),
+        !srcTp.isAllOrdered() || !srcTp.isIdentity() || !dstTp.isIdentity());
 
     Value buffer =
         rewriter
@@ -648,12 +731,12 @@ struct ConcatenateRewriter : public OpRewritePattern<ConcatenateOp> {
     Value annotatedDenseDst;
     if (dstTp.hasEncoding()) {
       bool allOrdered = false;
-      // When concatenating on dimension 0, and all inputs are sorted and have
-      // an identity dimOrdering, the concatenate will generate coords in
-      // lexOrder thus no need for the tmp COO buffer.
+      // When concatenating on dimension 0, and all inputs are sorted
+      // and have an identity dimToLvl, the concatenate will generate
+      // coords in lexOrder thus no need for the tmp COO buffer.
       // TODO: When conDim != 0, as long as conDim is the first dimension
       // in all input/output buffers, and all input/output buffers have the same
-      // dimOrdering, the tmp COO buffer is still unnecessary (e.g, concatenate
+      // dimToLvl, the tmp COO buffer is still unnecessary (e.g, concatenate
       // CSC matrices along column).
       if (!allDense && conDim == 0 && dstTp.isIdentity()) {
         for (auto i : op.getInputs()) {
@@ -665,8 +748,8 @@ struct ConcatenateRewriter : public OpRewritePattern<ConcatenateOp> {
       }
 
       needTmpCOO = !allDense && !allOrdered;
-      const RankedTensorType tp = needTmpCOO ? getUnorderedCOOFromType(dstTp)
-                                             : dstTp.getRankedTensorType();
+      const RankedTensorType tp =
+          getBufferType(dstTp.withoutDimToLvl(), needTmpCOO);
       encDst = needTmpCOO ? getSparseTensorEncoding(tp) : encDst;
       SmallVector<Value> dynSizes;
       getDynamicSizes(dstTp, sizes, dynSizes);
@@ -831,16 +914,20 @@ private:
     // COO tensor.
     // TODO: enhance foreachOp to take ordering to remove the need of a
     // temporary COO tensor here.
-    const RankedTensorType bufferTp = dstTp.isIdentity() || fromSparseConst
-                                          ? dstTp.getRankedTensorType()
-                                          : getUnorderedCOOFromTypeWithOrdering(
-                                                dstTp, dstTp.getDimToLvlMap());
+    const RankedTensorType bufferTp =
+        getBufferType(dstTp, !dstTp.isIdentity() && !fromSparseConst);
     // Only imposes foreach order on dense constant (which will be statically
     // sorted by the sparse compiler), otherwise the rotated loop sequence
     // results to bad cache locality.
-    AffineMapAttr foreachOrder = nullptr;
-    if (encDst.getDimOrdering() && fromSparseConst)
-      foreachOrder = AffineMapAttr::get(encDst.getDimOrdering());
+    const AffineMapAttr foreachOrder =
+        (!dstTp.isIdentity() && fromSparseConst)
+            ? AffineMapAttr::get(dstTp.getExpandedDimToLvl())
+            : nullptr;
+    // TODO: This assertion is to match the behavior from before we merged
+    // dimOrdering and higherOrdering into dimToLvl.  Although the above
+    // can construct `foreachOrder` for non-permutations, it's not clear
+    // that the `foreachOp` below actually supports non-permutations.
+    assert(!foreachOrder || dstTp.isPermutation());
 
     auto buffer =
         rewriter.create<AllocTensorOp>(loc, bufferTp, dynSizes).getResult();
@@ -950,17 +1037,16 @@ private:
     // 1. the src tensor is not a COO and
     // 2. the src tensor is not ordered in the same way as the target
     // tensor (e.g., src tensor is not ordered or src tensor haves a different
-    // dimOrdering).
+    // dimToLvl).
     if (const SparseTensorType srcTp(srcRTT);
-        !(srcTp.isAllOrdered() && srcTp.hasSameDimToLvlMap(dstTp))) {
+        !(srcTp.isAllOrdered() && srcTp.hasSameDimToLvl(dstTp))) {
       // Construct a COO tensor from the src tensor.
       // TODO: there may be cases for which more efficiently without
       // going through an intermediate COO, such as cases that only change
       // the overhead types.
       SmallVector<Value> dynSrcSizes;
       getDynamicSizes(srcRTT, srcSizes, dynSrcSizes);
-      srcRTT =
-          getUnorderedCOOFromTypeWithOrdering(srcRTT, dstTp.getDimToLvlMap());
+      srcRTT = getCOOType(srcTp.withDimToLvl(dstTp), /*ordered=*/false);
       // Ensure that mutating `srcRTT` didn't invalidate `dimRank`.
       assert(static_cast<Dimension>(srcRTT.getRank()) == dimRank);
       tmpCoo = rewriter
@@ -995,7 +1081,7 @@ private:
       // Sort the COO tensor so that its elements are ordered via increasing
       // coordinates for the storage ordering of the dst tensor.  Use SortCoo
       // if the COO tensor has the same ordering as the dst tensor.
-      if (dimRank > 1 && srcTp.hasSameDimToLvlMap(dstTp)) {
+      if (dimRank > 1 && srcTp.hasSameDimToLvl(dstTp)) {
         Value xs = genToCoordinatesBuffer(rewriter, loc, src);
         rewriter.create<SortCooOp>(
             loc, nnz, xs, ValueRange{y}, rewriter.getIndexAttr(dimRank),
@@ -1094,7 +1180,8 @@ public:
       loopEmitter.enterNewLoopSeq(rewriter, loc, tidLvls);
       // Note that reduc will be taken care of by loop emitter and get updated
       // in place.
-      loopEmitter.enterLoopOverTensorAtLvl(rewriter, loc, tidLvls, reduc);
+      loopEmitter.enterCoIterationOverTensorsAtLvls(rewriter, loc, tidLvls,
+                                                    reduc);
     }
 
     SmallVector<Value> lcvs;
@@ -1174,8 +1261,7 @@ struct NewRewriter : public OpRewritePattern<NewOp> {
     // Implement the NewOp as follows:
     //   %orderedCoo = sparse_tensor.new %filename
     //   %t = sparse_tensor.convert %orderedCoo
-    RankedTensorType cooTp =
-        getCOOFromTypeWithOrdering(dstTp, encDst.getDimOrdering(), true);
+    RankedTensorType cooTp = getCOOType(dstTp, /*ordered=*/true);
     Value cooTensor = rewriter.create<NewOp>(loc, cooTp, op.getSource());
     Value convert = rewriter.replaceOpWithNewOp<ConvertOp>(
         op, dstTp.getRankedTensorType(), cooTensor);
@@ -1261,8 +1347,8 @@ struct OutRewriter : public OpRewritePattern<OutOp> {
 //===---------------------------------------------------------------------===//
 
 void mlir::populatePreSparsificationRewriting(RewritePatternSet &patterns) {
-  patterns.add<FoldInvariantYield, FuseSparseMultiplyOverAdd, FuseTensorCast>(
-      patterns.getContext());
+  patterns.add<FoldInvariantYield, FuseSparseMultiplyOverAdd, FuseTensorCast,
+               GenSemiRingReduction>(patterns.getContext());
 }
 
 void mlir::populatePostSparsificationRewriting(RewritePatternSet &patterns,

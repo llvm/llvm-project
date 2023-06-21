@@ -1252,23 +1252,10 @@ let Predicates = [PCRelativeMemops] in {
             (PSTDpc $RS, $ga, 0)>;
 
   // Special Cases For PPCstore_scal_int_from_vsr
-  def : Pat<(PPCstore_scal_int_from_vsr
-              (f64 (PPCcv_fp_to_sint_in_vsr f64:$src)),
-              (PPCmatpcreladdr PCRelForm:$dst), 8),
-            (PSTXSDpc (XSCVDPSXDS f64:$src), $dst, 0)>;
-  def : Pat<(PPCstore_scal_int_from_vsr
-              (f64 (PPCcv_fp_to_sint_in_vsr f128:$src)),
-              (PPCmatpcreladdr PCRelForm:$dst), 8),
-            (PSTXSDpc (COPY_TO_REGCLASS (XSCVQPSDZ f128:$src), VFRC), $dst, 0)>;
-
-  def : Pat<(PPCstore_scal_int_from_vsr
-              (f64 (PPCcv_fp_to_uint_in_vsr f64:$src)),
-              (PPCmatpcreladdr PCRelForm:$dst), 8),
-            (PSTXSDpc (XSCVDPUXDS f64:$src), $dst, 0)>;
-  def : Pat<(PPCstore_scal_int_from_vsr
-              (f64 (PPCcv_fp_to_uint_in_vsr f128:$src)),
-              (PPCmatpcreladdr PCRelForm:$dst), 8),
-            (PSTXSDpc (COPY_TO_REGCLASS (XSCVQPUDZ f128:$src), VFRC), $dst, 0)>;
+  def : Pat<(PPCstore_scal_int_from_vsr f64:$src, (PPCmatpcreladdr PCRelForm:$dst), 8),
+            (PSTXSDpc $src, $dst, 0)>;
+  def : Pat<(PPCstore_scal_int_from_vsr f128:$src, (PPCmatpcreladdr PCRelForm:$dst), 8),
+            (PSTXSDpc (COPY_TO_REGCLASS $src, VFRC), $dst, 0)>;
 
   def : Pat<(v4f32 (PPCldvsxlh (PPCmatpcreladdr PCRelForm:$addr))),
             (SUBREG_TO_REG (i64 1), (PLFDpc $addr, 0), sub_64)>;
@@ -2209,20 +2196,10 @@ def : Pat<(f64 nzFPImmAsi64:$A),
   def : Pat<(store v2f64:$XS, PDForm:$dst), (PSTXV $XS, memri34:$dst)>;
 
   // Cases For PPCstore_scal_int_from_vsr
-  def : Pat<(PPCstore_scal_int_from_vsr
-            (f64 (PPCcv_fp_to_uint_in_vsr f64:$src)), PDForm:$dst, 8),
-            (PSTXSD (XSCVDPUXDS f64:$src), PDForm:$dst)>;
-  def : Pat<(PPCstore_scal_int_from_vsr
-            (f64 (PPCcv_fp_to_sint_in_vsr f64:$src)), PDForm:$dst, 8),
-            (PSTXSD (XSCVDPSXDS f64:$src), PDForm:$dst)>;
-  def : Pat<(PPCstore_scal_int_from_vsr
-            (f64 (PPCcv_fp_to_uint_in_vsr f128:$src)), PDForm:$dst, 8),
-            (PSTXSD (COPY_TO_REGCLASS (XSCVQPUDZ f128:$src), VFRC),
-                     PDForm:$dst)>;
-  def : Pat<(PPCstore_scal_int_from_vsr
-            (f64 (PPCcv_fp_to_sint_in_vsr f128:$src)), PDForm:$dst, 8),
-            (PSTXSD (COPY_TO_REGCLASS (XSCVQPSDZ f128:$src), VFRC),
-                     PDForm:$dst)>;
+  def : Pat<(PPCstore_scal_int_from_vsr f64:$src, PDForm:$dst, 8),
+            (PSTXSD $src, PDForm:$dst)>;
+  def : Pat<(PPCstore_scal_int_from_vsr f128:$src, PDForm:$dst, 8),
+            (PSTXSD (COPY_TO_REGCLASS $src, VFRC), PDForm:$dst)>;
 }
 
 let Predicates = [PrefixInstrs] in {

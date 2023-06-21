@@ -165,7 +165,8 @@ void ProcessPlatformSpecificAllocations(Frontier *frontier) {
   vm_address_t address = 0;
   kern_return_t err = KERN_SUCCESS;
 
-  InternalMmapVectorNoCtor<RootRegion> const *root_regions = GetRootRegions();
+  InternalMmapVector<Region> mapped_regions;
+  bool use_root_regions = flags()->use_root_regions && HasRootRegions();
 
   RegionScanState scan_state;
   while (err == KERN_SUCCESS) {
@@ -203,8 +204,7 @@ void ProcessPlatformSpecificAllocations(Frontier *frontier) {
 
     // Recursing over the full memory map is very slow, break out
     // early if we don't need the full iteration.
-    if (scan_state.seen_regions == SeenRegion::All &&
-        !(flags()->use_root_regions && root_regions->size() > 0)) {
+    if (scan_state.seen_regions == SeenRegion::All && !use_root_regions) {
       break;
     }
 
@@ -215,15 +215,12 @@ void ProcessPlatformSpecificAllocations(Frontier *frontier) {
     //
     // TODO(fjricci) - remove this once sanitizer_procmaps_mac has the same
     // behavior as sanitizer_procmaps_linux and traverses all memory regions
-    if (flags()->use_root_regions) {
-      for (uptr i = 0; i < root_regions->size(); i++) {
-        ScanRootRegion(frontier, (*root_regions)[i], address, end_address,
-                       info.protection & kProtectionRead);
-      }
-    }
+    if (use_root_regions && (info.protection & kProtectionRead))
+      mapped_regions.push_back({address, end_address});
 
     address = end_address;
   }
+  ScanRootRegions(frontier, mapped_regions);
 }
 
 // On darwin, we can intercept _exit gracefully, and return a failing exit code

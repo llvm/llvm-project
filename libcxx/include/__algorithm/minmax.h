@@ -39,7 +39,7 @@ _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_SINCE_CXX14
 pair<const _Tp&, const _Tp&>
 minmax(_LIBCPP_LIFETIMEBOUND const _Tp& __a, _LIBCPP_LIFETIMEBOUND const _Tp& __b)
 {
-    return std::minmax(__a, __b, __less<_Tp>());
+    return std::minmax(__a, __b, __less<>());
 }
 
 #ifndef _LIBCPP_CXX03_LANG
@@ -59,7 +59,7 @@ _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_SINCE_CXX14
 pair<_Tp, _Tp>
 minmax(initializer_list<_Tp> __t)
 {
-    return std::minmax(__t, __less<_Tp>());
+    return std::minmax(__t, __less<>());
 }
 
 #endif // _LIBCPP_CXX03_LANG

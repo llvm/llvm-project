@@ -107,10 +107,11 @@ void Ctx::reset() {
   needsTlsLd.store(false, std::memory_order_relaxed);
 }
 
-bool elf::link(ArrayRef<const char *> args, llvm::raw_ostream &stdoutOS,
-               llvm::raw_ostream &stderrOS, bool exitEarly,
-               bool disableOutput) {
-  // This driver-specific context will be freed later by lldMain().
+namespace lld {
+namespace elf {
+bool link(ArrayRef<const char *> args, llvm::raw_ostream &stdoutOS,
+          llvm::raw_ostream &stderrOS, bool exitEarly, bool disableOutput) {
+  // This driver-specific context will be freed later by unsafeLldMain().
   auto *ctx = new CommonLinkerContext;
 
   ctx->e.initialize(stdoutOS, stderrOS, exitEarly, disableOutput);
@@ -147,12 +148,14 @@ bool elf::link(ArrayRef<const char *> args, llvm::raw_ostream &stdoutOS,
 
   return errorCount() == 0;
 }
+} // namespace elf
+} // namespace lld
 
 // Parses a linker -m option.
 static std::tuple<ELFKind, uint16_t, uint8_t> parseEmulation(StringRef emul) {
   uint8_t osabi = 0;
   StringRef s = emul;
-  if (s.endswith("_fbsd")) {
+  if (s.ends_with("_fbsd")) {
     s = s.drop_back(5);
     osabi = ELFOSABI_FREEBSD;
   }
@@ -529,11 +532,11 @@ constexpr const char *knownZFlags[] = {
 
 static bool isKnownZFlag(StringRef s) {
   return llvm::is_contained(knownZFlags, s) ||
-         s.startswith("common-page-size=") || s.startswith("bti-report=") ||
-         s.startswith("cet-report=") ||
-         s.startswith("dead-reloc-in-nonalloc=") ||
-         s.startswith("max-page-size=") || s.startswith("stack-size=") ||
-         s.startswith("start-stop-visibility=");
+         s.starts_with("common-page-size=") || s.starts_with("bti-report=") ||
+         s.starts_with("cet-report=") ||
+         s.starts_with("dead-reloc-in-nonalloc=") ||
+         s.starts_with("max-page-size=") || s.starts_with("stack-size=") ||
+         s.starts_with("start-stop-visibility=");
 }
 
 // Report a warning for an unknown -z option.
@@ -713,7 +716,7 @@ static bool isOutputFormatBinary(opt::InputArgList &args) {
   StringRef s = args.getLastArgValue(OPT_oformat, "elf");
   if (s == "binary")
     return true;
-  if (!s.startswith("elf"))
+  if (!s.starts_with("elf"))
     error("unknown --oformat value: " + s);
   return false;
 }
@@ -797,7 +800,7 @@ static StripPolicy getStrip(opt::InputArgList &args) {
 static uint64_t parseSectionAddress(StringRef s, opt::InputArgList &args,
                                     const opt::Arg &arg) {
   uint64_t va = 0;
-  if (s.startswith("0x"))
+  if (s.starts_with("0x"))
     s = s.drop_front(2);
   if (!to_integer(s, va, 16))
     error("invalid argument: " + arg.getAsString(args));
@@ -862,7 +865,7 @@ getBuildId(opt::InputArgList &args) {
     return {BuildIdKind::Sha1, {}};
   if (s == "uuid")
     return {BuildIdKind::Uuid, {}};
-  if (s.startswith("0x"))
+  if (s.starts_with("0x"))
     return {BuildIdKind::Hexstring, parseHex(s.substr(2))};
 
   if (s != "none")
@@ -1442,7 +1445,7 @@ static void readConfigs(opt::InputArgList &args) {
   // unsupported LLVMgold.so option and error.
   for (opt::Arg *arg : args.filtered(OPT_plugin_opt_eq)) {
     StringRef v(arg->getValue());
-    if (!v.endswith("lto-wrapper") && !v.endswith("lto-wrapper.exe"))
+    if (!v.ends_with("lto-wrapper") && !v.ends_with("lto-wrapper.exe"))
       error(arg->getSpelling() + ": unknown plugin option '" + arg->getValue() +
             "'");
   }
@@ -1497,7 +1500,7 @@ static void readConfigs(opt::InputArgList &args) {
     std::tie(config->ekind, config->emachine, config->osabi) =
         parseEmulation(s);
     config->mipsN32Abi =
-        (s.startswith("elf32btsmipn32") || s.startswith("elf32ltsmipn32"));
+        (s.starts_with("elf32btsmipn32") || s.starts_with("elf32ltsmipn32"));
     config->emulation = s;
   }
 

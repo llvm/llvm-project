@@ -15,9 +15,10 @@
 # RUN: llvm-objdump -d --no-show-raw-insn %t | FileCheck %s
 
 ## DT_PLTGOT points to .plt
-# SEC: .plt NOBITS 00000000100303f0 0003f0 000018
-# SEC: 0x0000000000000003 (PLTGOT) 0x100303f0
+# SEC: .plt NOBITS 0000000010030400 000400 000018
+# SEC: 0x0000000000000003 (PLTGOT) 0x10030400
 # SEC: 0x0000000070000000 (PPC64_GLINK) 0x100102e0
+# SEC: 0x0000000070000003 (PPC64_OPT) 0x0
 
 ## .plt[0] holds the address of _dl_runtime_resolve.
 ## .plt[1] holds the link map.

@@ -1,0 +1,25 @@
+# RUN: llc -O0 -run-pass=avr-expand-pseudo %s -o - | FileCheck %s
+
+# This test checks the expansion of the 8-bit RORB (rotate) pseudo instruction.
+
+--- |
+  target triple = "avr--"
+  define void @test_rorbrd() {
+  entry:
+    ret void
+  }
+...
+
+---
+name:            test_rorbrd
+body: |
+  bb.0.entry:
+    liveins: $r14
+
+    ; CHECK-LABEL: test_rorbrd
+    ; CHECK:         BST $r14, 0, implicit-def $sreg
+    ; CHECK-NEXT:    $r14 = RORRd $r14, implicit-def $sreg, implicit $sreg
+    ; CHECK-NEXT:    $r14 = BLD $r14, 7, implicit $sreg
+
+    $r14 = RORBRd $r14, implicit-def $sreg
+...

@@ -28,7 +28,7 @@ public:
 
   bool HasValue() const override;
 
-  const char *GetError() const override;
+  llvm::StringRef GetError() const override;
 
   lldb::addr_t GetLoadAddress() const override;
 

@@ -1,4 +1,7 @@
 BasedOnStyle: LLVM
+# Note that we don't specify the language in this file because some files are
+# detected as Cpp, but others are detected as ObjC and we want this formatting
+# to apply to all types of files.
 
 AlignAfterOpenBracket: Align
 AlignConsecutiveAssignments: Consecutive
@@ -24,13 +27,10 @@ AttributeMacros: ['_LIBCPP_HIDE_FROM_ABI',
                   '_LIBCPP_DISABLE_EXTENTSION_WARNING',
                   '_LIBCPP_HIDDEN',
                   '_LIBCPP_METHOD_TEMPLATE_IMPLICIT_INSTANTIATION_VIS',
-                  '_LIBCPP_FUNC_VIS',
-                  '_LIBCPP_TYPE_VIS',
                   '_LIBCPP_TEMPLATE_VIS',
                   '_LIBCPP_TEMPLATE_DATA_VIS',
                   '_LIBCPP_EXPORTED_FROM_ABI',
                   '_LIBCPP_OVERRIDABLE_FUNC_VIS',
-                  '_LIBCPP_EXCEPTION_ABI',
                   '_LIBCPP_ENUM_VIS',
                   '_LIBCPP_EXTERN_TEMPLATE_TYPE_VIS',
                   '_LIBCPP_INTERNAL_LINKAGE',
@@ -38,6 +38,7 @@ AttributeMacros: ['_LIBCPP_HIDE_FROM_ABI',
                   '_LIBCPP_HIDE_FROM_ABI_AFTER_V1',
                   '_LIBCPP_INLINE_VISIBILITY',
                   '_LIBCPP_NOALIAS',
+                  '_LIBCPP_NO_SANITIZE',
                   '_LIBCPP_USING_IF_EXISTS',
                   '_LIBCPP_DEPRECATED',
                   '_LIBCPP_DEPRECATED_IN_CXX11',
@@ -68,7 +69,6 @@ PackConstructorInitializers: NextLine
 
 PenaltyIndentedWhitespace: 2
 
-Language: Cpp
 Standard: c++20
 SpacesInAngles: Leave
 

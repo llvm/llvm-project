@@ -12,6 +12,7 @@
 #include "AMDKernelCodeT.h"
 #include "MCTargetDesc/AMDGPUMCTargetDesc.h"
 #include "llvm/BinaryFormat/ELF.h"
+#include "llvm/CodeGen/TargetRegisterInfo.h"
 #include "llvm/IR/Attributes.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/Function.h"
@@ -576,9 +577,10 @@ std::optional<unsigned> InstInfo::getInvalidCompOperandIndex(
 
   unsigned CompOprIdx;
   for (CompOprIdx = 0; CompOprIdx < Component::MAX_OPR_NUM; ++CompOprIdx) {
-    unsigned BanksNum = BANKS_NUM[CompOprIdx];
+    unsigned BanksMasks = VOPD_VGPR_BANK_MASKS[CompOprIdx];
     if (OpXRegs[CompOprIdx] && OpYRegs[CompOprIdx] &&
-        (OpXRegs[CompOprIdx] % BanksNum == OpYRegs[CompOprIdx] % BanksNum))
+        ((OpXRegs[CompOprIdx] & BanksMasks) ==
+         (OpYRegs[CompOprIdx] & BanksMasks)))
       return CompOprIdx;
   }
 
@@ -2367,11 +2369,15 @@ unsigned getRegBitWidth(const MCRegisterClass &RC) {
   return getRegBitWidth(RC.getID());
 }
 
+unsigned getRegBitWidth(const TargetRegisterClass &RC) {
+  return getRegBitWidth(RC.getID());
+}
+
 unsigned getRegOperandSize(const MCRegisterInfo *MRI, const MCInstrDesc &Desc,
                            unsigned OpNo) {
   assert(OpNo < Desc.NumOperands);
   unsigned RCID = Desc.operands()[OpNo].RegClass;
-  return getRegBitWidth(MRI->getRegClass(RCID)) / 8;
+  return getRegBitWidth(RCID) / 8;
 }
 
 bool isInlinableLiteral64(int64_t Literal, bool HasInv2Pi) {

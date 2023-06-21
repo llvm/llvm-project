@@ -880,6 +880,8 @@ static const IntrinsicInterface genericIntrinsicFunction[]{
             {"back", AnyLogical, Rank::elemental, Optionality::optional},
             DefaultingKIND},
         KINDInt},
+    {"__builtin_fma", {{"f1", SameReal}, {"f2", SameReal}, {"f3", SameReal}},
+        SameReal},
     {"__builtin_ieee_is_nan", {{"a", AnyFloating}}, DefaultLogical},
     {"__builtin_ieee_is_negative", {{"a", AnyFloating}}, DefaultLogical},
     {"__builtin_ieee_is_normal", {{"a", AnyFloating}}, DefaultLogical},
@@ -916,6 +918,8 @@ static const IntrinsicInterface genericIntrinsicFunction[]{
     {"__builtin_ieee_support_underflow_control",
         {{"x", AnyReal, Rank::elemental, Optionality::optional}},
         DefaultLogical},
+    {"__builtin_compiler_options", {}, DefaultChar},
+    {"__builtin_compiler_version", {}, DefaultChar},
 };
 
 // TODO: Coarray intrinsic functions
@@ -2070,6 +2074,12 @@ std::optional<SpecificCall> IntrinsicInterface::Match(
       resultType = DynamicType{TypeCategory::Logical,
           defaults.GetDefaultKind(TypeCategory::Logical)};
       break;
+    case KindCode::defaultCharKind:
+      CHECK(result.categorySet == CharType);
+      CHECK(*category == TypeCategory::Character);
+      resultType = DynamicType{TypeCategory::Character,
+          defaults.GetDefaultKind(TypeCategory::Character)};
+      break;
     case KindCode::same:
       CHECK(sameArg);
       if (std::optional<DynamicType> aType{sameArg->GetType()}) {
@@ -2158,7 +2168,6 @@ std::optional<SpecificCall> IntrinsicInterface::Match(
     case KindCode::exactKind:
       resultType = DynamicType{*category, result.exactKindValue};
       break;
-    case KindCode::defaultCharKind:
     case KindCode::typeless:
     case KindCode::any:
     case KindCode::kindArg:

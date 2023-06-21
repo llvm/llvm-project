@@ -103,7 +103,7 @@ static bool GetFormatFromFormatName(llvm::StringRef format_name,
   if (partial_match_ok) {
     for (i = 0; i < g_num_format_infos; ++i) {
       if (llvm::StringRef(g_format_infos[i].format_name)
-              .startswith_insensitive(format_name)) {
+              .starts_with_insensitive(format_name)) {
         format = g_format_infos[i].format;
         return true;
       }
@@ -476,7 +476,7 @@ bool FormatManager::ShouldPrintAsOneLiner(ValueObject &valobj) {
 
   for (size_t idx = 0; idx < valobj.GetNumChildren(); idx++) {
     bool is_synth_val = false;
-    ValueObjectSP child_sp(valobj.GetChildAtIndex(idx, true));
+    ValueObjectSP child_sp(valobj.GetChildAtIndex(idx));
     // something is wrong here - bail out
     if (!child_sp)
       return false;

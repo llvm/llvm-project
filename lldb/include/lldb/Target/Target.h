@@ -554,6 +554,17 @@ public:
 
   bool IsDummyTarget() const { return m_is_dummy_target; }
 
+  const std::string &GetLabel() const { return m_label; }
+
+  /// Set a label for a target.
+  ///
+  /// The label cannot be used by another target or be only integral.
+  ///
+  /// \return
+  ///     The label for this target or an error if the label didn't match the
+  ///     requirements.
+  llvm::Error SetLabel(llvm::StringRef label);
+
   /// Find a binary on the system and return its Module,
   /// or return an existing Module that is already in the Target.
   ///
@@ -1520,6 +1531,7 @@ protected:
   /// detect that code is running on the private state thread.
   std::recursive_mutex m_private_mutex;
   Arch m_arch;
+  std::string m_label;
   ModuleList m_images; ///< The list of images for this process (shared
                        /// libraries and anything dynamically loaded).
   SectionLoadHistory m_section_load_history;

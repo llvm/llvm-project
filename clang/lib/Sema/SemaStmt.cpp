@@ -932,11 +932,12 @@ StmtResult Sema::ActOnIfStmt(SourceLocation IfLoc,
   }
 
   if (ConstevalOrNegatedConsteval) {
-    bool Immediate = isImmediateFunctionContext();
+    bool Immediate = ExprEvalContexts.back().Context ==
+                     ExpressionEvaluationContext::ImmediateFunctionContext;
     if (CurContext->isFunctionOrMethod()) {
       const auto *FD =
           dyn_cast<FunctionDecl>(Decl::castFromDeclContext(CurContext));
-      if (FD && FD->isConsteval())
+      if (FD && FD->isImmediateFunction())
         Immediate = true;
     }
     if (isUnevaluatedContext() || Immediate)
@@ -1728,9 +1729,7 @@ Sema::ActOnDoStmt(SourceLocation DoLoc, Stmt *Body,
 
 namespace {
   // Use SetVector since the diagnostic cares about the ordering of the Decl's.
-  using DeclSetVector =
-      llvm::SetVector<VarDecl *, llvm::SmallVector<VarDecl *, 8>,
-                      llvm::SmallPtrSet<VarDecl *, 8>>;
+  using DeclSetVector = llvm::SmallSetVector<VarDecl *, 8>;
 
   // This visitor will traverse a conditional statement and store all
   // the evaluated decls into a vector.  Simple is set to true if none
@@ -3825,9 +3824,18 @@ bool Sema::DeduceFunctionTypeFromReturnExpr(FunctionDecl *FD,
   {
     //  Otherwise, [...] deduce a value for U using the rules of template
     //  argument deduction.
-    TemplateDeductionInfo Info(RetExpr->getExprLoc());
-    TemplateDeductionResult Res =
-        DeduceAutoType(OrigResultType, RetExpr, Deduced, Info);
+    auto RetExprLoc = RetExpr->getExprLoc();
+    TemplateDeductionInfo Info(RetExprLoc);
+    SourceLocation TemplateSpecLoc;
+    if (RetExpr->getType() == Context.OverloadTy) {
+      auto FindResult = OverloadExpr::find(RetExpr);
+      if (FindResult.Expression)
+        TemplateSpecLoc = FindResult.Expression->getNameLoc();
+    }
+    TemplateSpecCandidateSet FailedTSC(TemplateSpecLoc);
+    TemplateDeductionResult Res = DeduceAutoType(
+        OrigResultType, RetExpr, Deduced, Info, /*DependentDeduction=*/false,
+        /*IgnoreConstraints=*/false, &FailedTSC);
     if (Res != TDK_Success && FD->isInvalidDecl())
       return true;
     switch (Res) {
@@ -3853,6 +3861,7 @@ bool Sema::DeduceFunctionTypeFromReturnExpr(FunctionDecl *FD,
     default:
       Diag(RetExpr->getExprLoc(), diag::err_auto_fn_deduction_failure)
           << OrigResultType.getType() << RetExpr->getType();
+      FailedTSC.NoteCandidates(*this, RetExprLoc);
       return true;
     }
   }
@@ -3968,6 +3977,14 @@ StmtResult Sema::BuildReturnStmt(SourceLocation ReturnLoc, Expr *RetValExp,
     }
   } else // If we don't have a function/method context, bail.
     return StmtError();
+
+  if (RetValExp) {
+    const auto *ATy = dyn_cast<ArrayType>(RetValExp->getType());
+    if (ATy && ATy->getElementType().isWebAssemblyReferenceType()) {
+      Diag(ReturnLoc, diag::err_wasm_table_art) << 1;
+      return StmtError();
+    }
+  }
 
   // C++1z: discarded return statements are not considered when deducing a
   // return type.
@@ -4743,6 +4760,7 @@ void Sema::ActOnCapturedRegionStart(SourceLocation Loc, Scope *CurScope,
 
   PushExpressionEvaluationContext(
       ExpressionEvaluationContext::PotentiallyEvaluated);
+  ExprEvalContexts.back().InImmediateEscalatingFunctionContext = false;
 }
 
 void Sema::ActOnCapturedRegionStart(SourceLocation Loc, Scope *CurScope,

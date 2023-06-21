@@ -29,34 +29,29 @@ add_object_library(
     libc.src.__support.threads.mutex
 )
 
-if(EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/${LIBC_TARGET_OS}_file.cpp)
-  add_object_library(
-    platform_file
-    SRCS
-      ${LIBC_TARGET_OS}_file.cpp
-    DEPENDS
-      .file
-      libc.include.fcntl
-      libc.include.stdio
-      libc.include.sys_syscall
-      libc.src.__support.CPP.new
-      libc.src.__support.OSUtil.osutil
-      libc.src.errno.errno
-      libc.src.__support.error_or
-  )
+if(NOT EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/${LIBC_TARGET_OS})
+  return()
 endif()
 
-if(EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/${LIBC_TARGET_OS}_dir.cpp)
-  add_object_library(
-    platform_dir
-    SRCS
-      ${LIBC_TARGET_OS}_dir.cpp
-    DEPENDS
-      .dir
-      libc.include.fcntl
-      libc.include.sys_syscall
-      libc.src.__support.OSUtil.osutil
-      libc.src.__support.error_or
-      libc.src.errno.errno
-  )
+add_subdirectory(${LIBC_TARGET_OS})
+set(target_file libc.src.__support.File.${LIBC_TARGET_OS}.${LIBC_TARGET_OS}_file)
+set(target_dir libc.src.__support.File.${LIBC_TARGET_OS}.${LIBC_TARGET_OS}_dir)
+if((NOT TARGET ${target_file}) OR (NOT TARGET ${target_dir}))
+  return()
 endif()
+
+add_object_library(
+  platform_file
+  ALIAS
+    ${target_file}
+  DEPENDS
+    ${target_file}
+)
+
+add_object_library(
+  platform_dir
+  ALIAS
+    ${target_dir}
+  DEPENDS
+    ${target_dir}
+)

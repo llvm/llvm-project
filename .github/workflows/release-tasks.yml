@@ -75,3 +75,36 @@ jobs:
           git config user.name "llvmbot"
           git commit -a -m "Add ${{ steps.validate-tag.outputs.release-version }} documentation"
           git push https://${{ secrets.WWW_RELEASES_TOKEN }}@github.com/${{ github.repository_owner }}/www-releases main:main
+
+  release-lit:
+    runs-on: ubuntu-latest
+    if: github.repository == 'llvm/llvm-project'
+    steps:
+      - name: Checkout LLVM
+        uses: actions/checkout@v3
+
+      - name: Install dependencies
+        run: apt-get install -y python3-setuptools
+
+      - name: Test lit
+        run: |
+          cd llvm/utils/lit
+          python3 lit.py tests
+
+      - name: Package lit
+        run: |
+          cd llvm/utils/lit
+          # Remove 'dev' suffix from lit version.
+          sed -i "s/ + 'dev'//g" lit/__init__.py
+          python3 setup.py sdist
+
+      - name: Upload lit to test.pypi.org
+        uses: pypa/gh-action-pypi-publish@release/v1
+        with:
+          password: ${{ secrets.LLVM_LIT_TEST_PYPI_API_TOKEN }}
+          repository-url: https://test.pypi.org/legacy/
+
+      - name: Upload lit to pypi.org
+        uses: pypa/gh-action-pypi-publish@release/v1
+        with:
+          password: ${{ secrets.LLVM_LIT_PYPI_API_TOKEN }}

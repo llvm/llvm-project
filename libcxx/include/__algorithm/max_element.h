@@ -48,8 +48,7 @@ template <class _ForwardIterator>
 _LIBCPP_NODISCARD_EXT inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX14 _ForwardIterator
 max_element(_ForwardIterator __first, _ForwardIterator __last)
 {
-    return _VSTD::max_element(__first, __last,
-              __less<typename iterator_traits<_ForwardIterator>::value_type>());
+    return _VSTD::max_element(__first, __last, __less<>());
 }
 
 _LIBCPP_END_NAMESPACE_STD

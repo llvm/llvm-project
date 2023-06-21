@@ -29,6 +29,7 @@
 #include "llvm/ADT/PostOrderIterator.h"
 #include "llvm/ADT/ScopeExit.h"
 #include "llvm/ADT/StringSet.h"
+#include "llvm/IR/Comdat.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/InlineAsm.h"
 #include "llvm/IR/InstIterator.h"
@@ -79,6 +80,12 @@ static constexpr StringRef getGlobalDtorsVarName() {
 /// conflict with the user namespace.
 static constexpr StringRef getGlobalMetadataOpName() {
   return "__llvm_global_metadata";
+}
+
+/// Returns the symbol name for the module-level comdat operation. It must not
+/// conflict with the user namespace.
+static constexpr StringRef getGlobalComdatOpName() {
+  return "__llvm_global_comdat";
 }
 
 /// Converts the sync scope identifier of `inst` to the string representation
@@ -165,6 +172,16 @@ MetadataOp ModuleImport::getGlobalMetadataOp() {
   builder.setInsertionPointToEnd(mlirModule.getBody());
   return globalMetadataOp = builder.create<MetadataOp>(
              mlirModule.getLoc(), getGlobalMetadataOpName());
+}
+
+ComdatOp ModuleImport::getGlobalComdatOp() {
+  if (globalComdatOp)
+    return globalComdatOp;
+
+  OpBuilder::InsertionGuard guard(builder);
+  builder.setInsertionPointToStart(mlirModule.getBody());
+  return globalComdatOp = builder.create<ComdatOp>(mlirModule.getLoc(),
+                                                   getGlobalComdatOpName());
 }
 
 LogicalResult ModuleImport::processTBAAMetadata(const llvm::MDNode *node) {
@@ -540,6 +557,20 @@ LogicalResult ModuleImport::convertMetadata() {
   return success();
 }
 
+LogicalResult ModuleImport::convertComdats() {
+  ComdatOp comdat = getGlobalComdatOp();
+  OpBuilder::InsertionGuard guard(builder);
+  builder.setInsertionPointToEnd(&comdat.getBody().back());
+  for (auto &kv : llvmModule->getComdatSymbolTable()) {
+    StringRef name = kv.getKey();
+    llvm::Comdat::SelectionKind selector = kv.getValue().getSelectionKind();
+    builder.create<ComdatSelectorOp>(mlirModule.getLoc(), name,
+                                     convertComdatFromLLVM(selector));
+  }
+
+  return success();
+}
+
 LogicalResult ModuleImport::convertGlobals() {
   for (llvm::GlobalVariable &globalVar : llvmModule->globals()) {
     if (globalVar.getName() == getGlobalCtorsVarName() ||
@@ -857,6 +888,19 @@ LogicalResult ModuleImport::convertGlobal(llvm::GlobalVariable *globalVar) {
   globalOp.setVisibility_(
       convertVisibilityFromLLVM(globalVar->getVisibility()));
 
+  if (globalVar->hasComdat()) {
+    llvm::Comdat *llvmComdat = globalVar->getComdat();
+    ComdatOp comdat = getGlobalComdatOp();
+    if (ComdatSelectorOp selector = dyn_cast<ComdatSelectorOp>(
+            comdat.lookupSymbol(llvmComdat->getName()))) {
+      auto symbolRef =
+          SymbolRefAttr::get(builder.getContext(), getGlobalComdatOpName(),
+                             FlatSymbolRefAttr::get(selector.getSymNameAttr()));
+      globalOp.setComdatAttr(symbolRef);
+    } else
+      return failure();
+  }
+
   return success();
 }
 
@@ -1063,6 +1107,23 @@ FailureOr<Value> ModuleImport::convertConstant(llvm::Constant *constant) {
       }
     }
     return root;
+  }
+
+  if (auto *constTargetNone = dyn_cast<llvm::ConstantTargetNone>(constant)) {
+    LLVMTargetExtType targetExtType =
+        cast<LLVMTargetExtType>(convertType(constTargetNone->getType()));
+    assert(targetExtType.hasProperty(LLVMTargetExtType::HasZeroInit) &&
+           "target extension type does not support zero-initialization");
+    // As the number of values needed for initialization is target-specific and
+    // opaque to the compiler, use a single i64 zero-valued attribute to
+    // represent the 'zeroinitializer', which is the only constant value allowed
+    // for target extension types (besides poison and undef).
+    // TODO: Replace with 'zeroinitializer' once there is a dedicated
+    // zeroinitializer operation in the LLVM dialect.
+    return builder
+        .create<LLVM::ConstantOp>(loc, targetExtType,
+                                  builder.getI64IntegerAttr(0))
+        .getRes();
   }
 
   StringRef error = "";
@@ -1762,6 +1823,8 @@ mlir::translateLLVMIRToModule(std::unique_ptr<llvm::Module> llvmModule,
   if (failed(moduleImport.convertDataLayout()))
     return {};
   if (failed(moduleImport.convertMetadata()))
+    return {};
+  if (failed(moduleImport.convertComdats()))
     return {};
   if (failed(moduleImport.convertGlobals()))
     return {};

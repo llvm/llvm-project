@@ -129,6 +129,10 @@ enum NodeType : unsigned {
   ZIP,
   UNZIP,
   // Vector Extension
+  // VMV_V_V_VL matches the semantics of vmv.v.v but includes an extra operand
+  // for the VL value to be used for the operation. The first operand is
+  // passthru operand.
+  VMV_V_V_VL,
   // VMV_V_X_VL matches the semantics of vmv.v.x but includes an extra operand
   // for the VL value to be used for the operation. The first operand is
   // passthru operand.
@@ -284,6 +288,18 @@ enum NodeType : unsigned {
   VWSUB_W_VL,
   VWSUBU_W_VL,
 
+  VFWMUL_VL,
+  VFWADD_VL,
+  VFWSUB_VL,
+  VFWADD_W_VL,
+  VFWSUB_W_VL,
+
+  // Widening ternary operations with a mask as the fourth operand and VL as the
+  // fifth operand.
+  VWMACC_VL,
+  VWMACCU_VL,
+  VWMACCSU_VL,
+
   // Narrowing logical shift right.
   // Operands are (source, shift, passthru, mask, vl)
   VNSRL_VL,
@@ -369,8 +385,9 @@ enum NodeType : unsigned {
   // have memop! In fact, starting from FIRST_TARGET_MEMORY_OPCODE all
   // opcodes will be thought as target memory ops!
 
-  // Load address.
-  LA = ISD::FIRST_TARGET_MEMORY_OPCODE,
+  // Represents an AUIPC+L[WD] pair. Selected to PseudoLGA.
+  LGA = ISD::FIRST_TARGET_MEMORY_OPCODE,
+  // Load initial exec thread-local address.
   LA_TLS_IE,
 
   TH_LWD,
@@ -667,7 +684,7 @@ public:
       std::optional<CallingConv::ID> CC) const override;
 
   // Return the value of VLMax for the given vector type (i.e. SEW and LMUL)
-  SDValue computeVLMax(MVT VecVT, SDLoc DL, SelectionDAG &DAG) const;
+  SDValue computeVLMax(MVT VecVT, const SDLoc &DL, SelectionDAG &DAG) const;
 
   static RISCVII::VLMUL getLMUL(MVT VT);
   inline static unsigned computeVLMAX(unsigned VectorBits, unsigned EltSize,
@@ -763,7 +780,8 @@ private:
                          RISCVCCAssignFn Fn) const;
 
   template <class NodeTy>
-  SDValue getAddr(NodeTy *N, SelectionDAG &DAG, bool IsLocal = true) const;
+  SDValue getAddr(NodeTy *N, SelectionDAG &DAG, bool IsLocal = true,
+                  bool IsExternWeak = false) const;
   SDValue getStaticTLSAddr(GlobalAddressSDNode *N, SelectionDAG &DAG,
                            bool UseGOT) const;
   SDValue getDynamicTLSAddr(GlobalAddressSDNode *N, SelectionDAG &DAG) const;
@@ -861,6 +879,9 @@ private:
   bool useRVVForFixedLengthVectorVT(MVT VT) const;
 
   MVT getVPExplicitVectorLengthTy() const override;
+
+  bool shouldExpandGetVectorLength(EVT TripCountVT, unsigned VF,
+                                   bool IsScalable) const override;
 
   /// RVV code generation for fixed length vectors does not lower all
   /// BUILD_VECTORs. This makes BUILD_VECTOR legalisation a source of stores to

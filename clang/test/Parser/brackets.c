@@ -2,7 +2,7 @@
 // RUN: cp %s %t
 // RUN: not %clang_cc1 -fixit %t -x c -DFIXIT
 // RUN: %clang_cc1 -fsyntax-only %t -x c -DFIXIT
-// RUN: not %clang_cc1 -fsyntax-only -fdiagnostics-parseable-fixits %s 2>&1 | FileCheck %s -strict-whitespace
+// RUN: not %clang_cc1 -fsyntax-only -fdiagnostics-parseable-fixits -fno-diagnostics-show-line-numbers %s 2>&1 | FileCheck %s -strict-whitespace
 
 void test1(void) {
   int a[] = {0,1,1,2,3};
@@ -55,7 +55,7 @@ void test3(void) {
   // CHECK-NOT: fix-it
   // expected-error@-5{{brackets are not allowed here; to declare an array, place the brackets after the identifier}}
   // CHECK: {{^}}  int [5] *;
-  // CHECK: {{^}}      ~~~~ ^
+  // CHECK: {{^}}      ~~~  ^
   // CHECK: {{^}}          ()[5]
   // CHECK: fix-it:{{.*}}:{[[@LINE-9]]:7-[[@LINE-9]]:11}:""
   // CHECK: fix-it:{{.*}}:{[[@LINE-10]]:11-[[@LINE-10]]:11}:"("
@@ -64,7 +64,7 @@ void test3(void) {
   int [5] * a;
   // expected-error@-1{{brackets are not allowed here; to declare an array, place the brackets after the identifier}}
   // CHECK: {{^}}  int [5] * a;
-  // CHECK: {{^}}      ~~~~   ^
+  // CHECK: {{^}}      ~~~    ^
   // CHECK: {{^}}          (  )[5]
   // CHECK: fix-it:{{.*}}:{[[@LINE-5]]:7-[[@LINE-5]]:11}:""
   // CHECK: fix-it:{{.*}}:{[[@LINE-6]]:11-[[@LINE-6]]:11}:"("

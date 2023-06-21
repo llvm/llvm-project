@@ -275,8 +275,6 @@ LogicalResult ConvertToLLVMPattern::copyUnrankedDescriptors(
                                          sizes);
 
   // Get frequently used types.
-  MLIRContext *context = builder.getContext();
-  auto i1Type = IntegerType::get(context, 1);
   Type indexType = getTypeConverter()->getIndexType();
 
   // Find the malloc and free, or declare them if necessary.
@@ -288,10 +286,6 @@ LogicalResult ConvertToLLVMPattern::copyUnrankedDescriptors(
   if (!toDynamic)
     freeFunc = LLVM::lookupOrCreateFreeFn(
         module, getTypeConverter()->useOpaquePointers());
-
-  // Initialize shared constants.
-  Value zero =
-      builder.create<LLVM::ConstantOp>(loc, i1Type, builder.getBoolAttr(false));
 
   unsigned unrankedMemrefPos = 0;
   for (unsigned i = 0, e = operands.size(); i < e; ++i) {
@@ -311,7 +305,7 @@ LogicalResult ConvertToLLVMPattern::copyUnrankedDescriptors(
                                              allocationSize,
                                              /*alignment=*/0);
     Value source = desc.memRefDescPtr(builder, loc);
-    builder.create<LLVM::MemcpyOp>(loc, memory, source, allocationSize, zero);
+    builder.create<LLVM::MemcpyOp>(loc, memory, source, allocationSize, false);
     if (!toDynamic)
       builder.create<LLVM::CallOp>(loc, freeFunc, source);
 

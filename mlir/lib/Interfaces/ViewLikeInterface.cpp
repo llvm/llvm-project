@@ -103,6 +103,7 @@ void mlir::printDynamicIndexList(OpAsmPrinter &printer, Operation *op,
                                  OperandRange values,
                                  ArrayRef<int64_t> integers,
                                  TypeRange valueTypes,
+                                 BoolAttr isTrailingIdxScalable,
                                  AsmParser::Delimiter delimiter) {
   char leftDelimiter = getLeftDelimiter(delimiter);
   char rightDelimiter = getRightDelimiter(delimiter);
@@ -111,6 +112,14 @@ void mlir::printDynamicIndexList(OpAsmPrinter &printer, Operation *op,
     printer << rightDelimiter;
     return;
   }
+
+  int64_t trailingScalableInteger;
+  if (isTrailingIdxScalable && isTrailingIdxScalable.getValue()) {
+    // ATM only the trailing idx can be scalable
+    trailingScalableInteger = integers.back();
+    integers = integers.drop_back();
+  }
+
   unsigned idx = 0;
   llvm::interleaveComma(integers, printer, [&](int64_t integer) {
     if (ShapedType::isDynamic(integer)) {
@@ -122,19 +131,42 @@ void mlir::printDynamicIndexList(OpAsmPrinter &printer, Operation *op,
       printer << integer;
     }
   });
+
+  // Print the trailing scalable index
+  if (isTrailingIdxScalable && isTrailingIdxScalable.getValue()) {
+    if (!integers.empty())
+      printer << ", ";
+    printer << "[";
+    printer << trailingScalableInteger;
+    printer << "]";
+  }
+
   printer << rightDelimiter;
 }
 
 ParseResult mlir::parseDynamicIndexList(
     OpAsmParser &parser,
     SmallVectorImpl<OpAsmParser::UnresolvedOperand> &values,
-    DenseI64ArrayAttr &integers, SmallVectorImpl<Type> *valueTypes,
-    AsmParser::Delimiter delimiter) {
+    DenseI64ArrayAttr &integers, bool *isTrailingIdxScalable,
+    SmallVectorImpl<Type> *valueTypes, AsmParser::Delimiter delimiter) {
 
   SmallVector<int64_t, 4> integerVals;
+  bool foundScalable = false;
   auto parseIntegerOrValue = [&]() {
     OpAsmParser::UnresolvedOperand operand;
     auto res = parser.parseOptionalOperand(operand);
+
+    // If `foundScalable` has already been set to `true` then a non-trailing
+    // index was identified as scalable.
+    if (foundScalable) {
+      parser.emitError(parser.getNameLoc())
+          << "non-trailing index cannot be scalable";
+      return failure();
+    }
+
+    if (isTrailingIdxScalable && parser.parseOptionalLSquare().succeeded())
+      foundScalable = true;
+
     if (res.has_value() && succeeded(res.value())) {
       values.push_back(operand);
       integerVals.push_back(ShapedType::kDynamic);
@@ -146,6 +178,8 @@ ParseResult mlir::parseDynamicIndexList(
         return failure();
       integerVals.push_back(integer);
     }
+    if (foundScalable && parser.parseOptionalRSquare().failed())
+      return failure();
     return success();
   };
   if (parser.parseCommaSeparatedList(delimiter, parseIntegerOrValue,
@@ -153,6 +187,8 @@ ParseResult mlir::parseDynamicIndexList(
     return parser.emitError(parser.getNameLoc())
            << "expected SSA value or integer";
   integers = parser.getBuilder().getDenseI64ArrayAttr(integerVals);
+  if (isTrailingIdxScalable)
+    *isTrailingIdxScalable = foundScalable;
   return success();
 }
 

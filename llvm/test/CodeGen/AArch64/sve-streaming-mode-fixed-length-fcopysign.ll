@@ -235,7 +235,7 @@ define void @test_copysign_v2f64_v2f32(ptr %ap, ptr %bp) #0 {
 define void @test_copysign_v4f64_v4f32(ptr %ap, ptr %bp) #0 {
 ; CHECK-LABEL: test_copysign_v4f64_v4f32:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov x8, #2
+; CHECK-NEXT:    mov x8, #2 // =0x2
 ; CHECK-NEXT:    ptrue p0.d, vl2
 ; CHECK-NEXT:    ldp q0, q1, [x0]
 ; CHECK-NEXT:    ld1w { z2.d }, p0/z, [x1, x8, lsl #2]

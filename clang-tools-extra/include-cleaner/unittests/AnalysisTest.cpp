@@ -91,7 +91,8 @@ TEST_F(WalkUsedTest, Basic) {
   #include "header.h"
   #include "private.h"
 
-  void $bar^bar($private^Private $p^p) {
+  // No reference reported for the Parameter "p".
+  void $bar^bar($private^Private p) {
     $foo^foo();
     std::$vector^vector $vconstructor^$v^v;
     $builtin^__builtin_popcount(1);
@@ -120,7 +121,6 @@ TEST_F(WalkUsedTest, Basic) {
       offsetToProviders(AST, SM),
       UnorderedElementsAre(
           Pair(Code.point("bar"), UnorderedElementsAre(MainFile)),
-          Pair(Code.point("p"), UnorderedElementsAre(MainFile)),
           Pair(Code.point("private"),
                UnorderedElementsAre(PublicFile, PrivateFile)),
           Pair(Code.point("foo"), UnorderedElementsAre(HeaderFile)),
@@ -182,13 +182,14 @@ TEST_F(WalkUsedTest, MacroRefs) {
   Symbol Answer2 =
       Macro{&Idents.get("ANSWER"), SM.getComposedLoc(HdrID, Hdr.point())};
   EXPECT_THAT(
-      offsetToProviders(AST, SM,
-                        {SymbolReference{SM.getComposedLoc(SM.getMainFileID(),
-                                                           Code.point("1")),
-                                         Answer1, RefType::Explicit},
-                         SymbolReference{SM.getComposedLoc(SM.getMainFileID(),
-                                                           Code.point("2")),
-                                         Answer2, RefType::Explicit}}),
+      offsetToProviders(
+          AST, SM,
+          {SymbolReference{
+               Answer1, SM.getComposedLoc(SM.getMainFileID(), Code.point("1")),
+               RefType::Explicit},
+           SymbolReference{
+               Answer2, SM.getComposedLoc(SM.getMainFileID(), Code.point("2")),
+               RefType::Explicit}}),
       UnorderedElementsAre(
           Pair(Code.point("1"), UnorderedElementsAre(HdrFile)),
           Pair(Code.point("2"), UnorderedElementsAre(HdrFile)),

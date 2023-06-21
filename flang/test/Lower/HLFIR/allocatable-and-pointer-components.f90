@@ -1,5 +1,5 @@
 ! Test lowering of whole allocatable and pointer components to HLFIR
-! RUN: bbc -emit-fir -hlfir -o - %s -I nw | FileCheck %s
+! RUN: bbc -emit-hlfir -o - %s -I nw | FileCheck %s
 
 module def_test_types
   type t1

@@ -99,7 +99,7 @@ CGOPT(bool, EmitCallSiteInfo)
 CGOPT(bool, EnableMachineFunctionSplitter)
 CGOPT(bool, EnableDebugEntryValues)
 CGOPT(bool, ForceDwarfFrameSection)
-CGOPT(bool, XRayOmitFunctionIndex)
+CGOPT(bool, XRayFunctionIndex)
 CGOPT(bool, DebugStrictDwarf)
 CGOPT(unsigned, AlignLoops)
 CGOPT(bool, JMCInstrument)
@@ -461,10 +461,10 @@ codegen::RegisterCodeGenFlags::RegisterCodeGenFlags() {
       cl::desc("Always emit a debug frame section."), cl::init(false));
   CGBINDOPT(ForceDwarfFrameSection);
 
-  static cl::opt<bool> XRayOmitFunctionIndex(
-      "no-xray-index", cl::desc("Don't emit xray_fn_idx section"),
-      cl::init(false));
-  CGBINDOPT(XRayOmitFunctionIndex);
+  static cl::opt<bool> XRayFunctionIndex("xray-function-index",
+                                         cl::desc("Emit xray_fn_idx section"),
+                                         cl::init(true));
+  CGBINDOPT(XRayFunctionIndex);
 
   static cl::opt<bool> DebugStrictDwarf(
       "strict-dwarf", cl::desc("use strict dwarf"), cl::init(false));
@@ -559,7 +559,7 @@ codegen::InitTargetOptionsFromCodeGenFlags(const Triple &TheTriple) {
   Options.EmitCallSiteInfo = getEmitCallSiteInfo();
   Options.EnableDebugEntryValues = getEnableDebugEntryValues();
   Options.ForceDwarfFrameSection = getForceDwarfFrameSection();
-  Options.XRayOmitFunctionIndex = getXRayOmitFunctionIndex();
+  Options.XRayFunctionIndex = getXRayFunctionIndex();
   Options.DebugStrictDwarf = getDebugStrictDwarf();
   Options.LoopAlignment = getAlignLoops();
   Options.JMCInstrument = getJMCInstrument();

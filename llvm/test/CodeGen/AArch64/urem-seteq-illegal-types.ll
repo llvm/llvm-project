@@ -4,7 +4,7 @@
 define i1 @test_urem_odd(i13 %X) nounwind {
 ; CHECK-LABEL: test_urem_odd:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov w8, #3277
+; CHECK-NEXT:    mov w8, #3277 // =0xccd
 ; CHECK-NEXT:    mul w8, w0, w8
 ; CHECK-NEXT:    and w8, w8, #0x1fff
 ; CHECK-NEXT:    cmp w8, #1639
@@ -18,13 +18,13 @@ define i1 @test_urem_odd(i13 %X) nounwind {
 define i1 @test_urem_even(i27 %X) nounwind {
 ; CHECK-LABEL: test_urem_even:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov w8, #28087
+; CHECK-NEXT:    mov w8, #28087 // =0x6db7
 ; CHECK-NEXT:    movk w8, #1755, lsl #16
 ; CHECK-NEXT:    mul w8, w0, w8
 ; CHECK-NEXT:    lsl w9, w8, #26
 ; CHECK-NEXT:    bfxil w9, w8, #1, #26
 ; CHECK-NEXT:    and w8, w9, #0x7ffffff
-; CHECK-NEXT:    mov w9, #18725
+; CHECK-NEXT:    mov w9, #18725 // =0x4925
 ; CHECK-NEXT:    movk w9, #146, lsl #16
 ; CHECK-NEXT:    cmp w8, w9
 ; CHECK-NEXT:    cset w0, lo
@@ -37,7 +37,7 @@ define i1 @test_urem_even(i27 %X) nounwind {
 define i1 @test_urem_odd_setne(i4 %X) nounwind {
 ; CHECK-LABEL: test_urem_odd_setne:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov w8, #13
+; CHECK-NEXT:    mov w8, #13 // =0xd
 ; CHECK-NEXT:    mul w8, w0, w8
 ; CHECK-NEXT:    and w8, w8, #0xf
 ; CHECK-NEXT:    cmp w8, #3
@@ -51,7 +51,7 @@ define i1 @test_urem_odd_setne(i4 %X) nounwind {
 define i1 @test_urem_negative_odd(i9 %X) nounwind {
 ; CHECK-LABEL: test_urem_negative_odd:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov w8, #307
+; CHECK-NEXT:    mov w8, #307 // =0x133
 ; CHECK-NEXT:    mul w8, w0, w8
 ; CHECK-NEXT:    and w8, w8, #0x1ff
 ; CHECK-NEXT:    cmp w8, #1
@@ -78,7 +78,7 @@ define <3 x i1> @test_urem_vec(<3 x i11> %X) nounwind {
 ; CHECK-NEXT:    mul v0.4h, v0.4h, v2.4h
 ; CHECK-NEXT:    ldr d2, [x8, :lo12:.LCPI4_2]
 ; CHECK-NEXT:    adrp x8, .LCPI4_3
-; CHECK-NEXT:    shl v3.4h, v0.4h, #1
+; CHECK-NEXT:    add v3.4h, v0.4h, v0.4h
 ; CHECK-NEXT:    bic v0.4h, #248, lsl #8
 ; CHECK-NEXT:    ushl v0.4h, v0.4h, v1.4h
 ; CHECK-NEXT:    ushl v1.4h, v3.4h, v2.4h

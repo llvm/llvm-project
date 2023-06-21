@@ -513,6 +513,7 @@ void ClangdLSPServer::onInitialize(const InitializeParams &Params,
     SupportedSymbolKinds |= *Params.capabilities.WorkspaceSymbolKinds;
   if (Params.capabilities.CompletionItemKinds)
     SupportedCompletionItemKinds |= *Params.capabilities.CompletionItemKinds;
+  SupportsCompletionLabelDetails = Params.capabilities.CompletionLabelDetail;
   SupportsCodeAction = Params.capabilities.CodeActionStructure;
   SupportsHierarchicalDocumentSymbol =
       Params.capabilities.HierarchicalDocumentSymbol;
@@ -1100,6 +1101,8 @@ void ClangdLSPServer::onCompletion(const CompletionParams &Params,
                            CompletionItem C = R.render(Opts);
                            C.kind = adjustKindToCapability(
                                C.kind, SupportedCompletionItemKinds);
+                           if (!SupportsCompletionLabelDetails)
+                             removeCompletionLabelDetails(C);
                            LSPList.items.push_back(std::move(C));
                          }
                          return Reply(std::move(LSPList));

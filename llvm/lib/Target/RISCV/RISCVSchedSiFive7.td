@@ -448,6 +448,8 @@ foreach mx = SchedMxList in {
     defm "" : LMULWriteResMX<"WriteVShiftV",    [SiFive7VA], mx, IsWorstCase>;
     defm "" : LMULWriteResMX<"WriteVShiftX",    [SiFive7VA], mx, IsWorstCase>;
     defm "" : LMULWriteResMX<"WriteVShiftI",    [SiFive7VA], mx, IsWorstCase>;
+    defm "" : LMULWriteResMX<"WriteVIMinMaxV",  [SiFive7VA], mx, IsWorstCase>;
+    defm "" : LMULWriteResMX<"WriteVIMinMaxX",  [SiFive7VA], mx, IsWorstCase>;
     defm "" : LMULWriteResMX<"WriteVIMulV",     [SiFive7VA], mx, IsWorstCase>;
     defm "" : LMULWriteResMX<"WriteVIMulX",     [SiFive7VA], mx, IsWorstCase>;
     defm "" : LMULWriteResMX<"WriteVIMulAddV",  [SiFive7VA], mx, IsWorstCase>;
@@ -556,6 +558,8 @@ foreach mx = SchedMxList in {
   let Latency = 4, ResourceCycles = [Cycles] in {
     defm "" : LMULWriteResMX<"WriteVFSgnjV",     [SiFive7VA], mx, IsWorstCase>;
     defm "" : LMULWriteResMX<"WriteVFSgnjF",     [SiFive7VA], mx, IsWorstCase>;
+    defm "" : LMULWriteResMX<"WriteVFMinMaxV",   [SiFive7VA], mx, IsWorstCase>;
+    defm "" : LMULWriteResMX<"WriteVFMinMaxF",   [SiFive7VA], mx, IsWorstCase>;
     defm "" : LMULWriteResMX<"WriteVFClassV",    [SiFive7VA], mx, IsWorstCase>;
     defm "" : LMULWriteResMX<"WriteVFMergeV",    [SiFive7VA], mx, IsWorstCase>;
     defm "" : LMULWriteResMX<"WriteVFMovV",      [SiFive7VA], mx, IsWorstCase>;
@@ -567,7 +571,7 @@ foreach mx = SchedMxList in {
   }
 }
 foreach mx = SchedMxListF in {
-  foreach sew = SchedSEWSetF<mx>.val in {
+  foreach sew = SchedSEWSet<mx, /*isF*/ 1>.val in {
     defvar Cycles = !mul(SiFive7GetDivOrSqrtFactor<sew>.c,
                          !div(SiFive7GetCyclesOnePerElement<mx, sew>.c, 4));
     defvar IsWorstCase = SiFive7IsWorstCaseMXSEW<mx, sew, SchedMxListF, 1>.c;
@@ -620,12 +624,12 @@ foreach mx = SchedMxListFW in {
 
 // 14. Vector Reduction Operations
 let Latency = 32 in {
-defm "" : LMULWriteRes<"WriteVIRedV_From", [SiFive7VA]>;
-defm "" : LMULWriteRes<"WriteVIWRedV_From", [SiFive7VA]>;
-defm "" : LMULWriteRes<"WriteVFRedV_From", [SiFive7VA]>;
-defm "" : LMULWriteRes<"WriteVFRedOV_From", [SiFive7VA]>;
-defm "" : LMULWriteResFWRed<"WriteVFWRedV_From", [SiFive7VA]>;
-defm "" : LMULWriteResFWRed<"WriteVFWRedOV_From", [SiFive7VA]>;
+defm "" : LMULSEWWriteRes<"WriteVIRedV_From", [SiFive7VA]>;
+defm "" : LMULSEWWriteRes<"WriteVIWRedV_From", [SiFive7VA]>;
+defm "" : LMULSEWWriteRes<"WriteVFRedV_From", [SiFive7VA]>;
+defm "" : LMULSEWWriteRes<"WriteVFRedOV_From", [SiFive7VA]>;
+defm "" : LMULSEWWriteResFWRed<"WriteVFWRedV_From", [SiFive7VA]>;
+defm "" : LMULSEWWriteResFWRed<"WriteVFWRedOV_From", [SiFive7VA]>;
 }
 
 // 15. Vector Mask Instructions
@@ -856,6 +860,8 @@ defm : LMULReadAdvanceW<"ReadVNShiftV", 0>;
 defm : LMULReadAdvanceW<"ReadVNShiftX", 0>;
 defm : LMULReadAdvance<"ReadVICmpV", 0>;
 defm : LMULReadAdvance<"ReadVICmpX", 0>;
+defm : LMULReadAdvance<"ReadVIMinMaxV", 0>;
+defm : LMULReadAdvance<"ReadVIMinMaxX", 0>;
 defm : LMULReadAdvance<"ReadVIMulV", 0>;
 defm : LMULReadAdvance<"ReadVIMulX", 0>;
 defm : LMULSEWReadAdvance<"ReadVIDivV", 0>;
@@ -900,10 +906,12 @@ defm "" : LMULReadAdvanceFW<"ReadVFWMulAddV", 0>;
 defm "" : LMULReadAdvanceFW<"ReadVFWMulAddF", 0>;
 defm "" : LMULSEWReadAdvanceF<"ReadVFSqrtV", 0>;
 defm "" : LMULReadAdvance<"ReadVFRecpV", 0>;
-defm "" : LMULReadAdvance<"ReadVFCmpV", 0>;
-defm "" : LMULReadAdvance<"ReadVFCmpF", 0>;
+defm "" : LMULReadAdvance<"ReadVFMinMaxV", 0>;
+defm "" : LMULReadAdvance<"ReadVFMinMaxF", 0>;
 defm "" : LMULReadAdvance<"ReadVFSgnjV", 0>;
 defm "" : LMULReadAdvance<"ReadVFSgnjF", 0>;
+defm "" : LMULReadAdvance<"ReadVFCmpV", 0>;
+defm "" : LMULReadAdvance<"ReadVFCmpF", 0>;
 defm "" : LMULReadAdvance<"ReadVFClassV", 0>;
 defm "" : LMULReadAdvance<"ReadVFMergeV", 0>;
 defm "" : LMULReadAdvance<"ReadVFMergeF", 0>;

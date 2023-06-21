@@ -52,9 +52,11 @@ const unsigned RegisterBankInfo::InvalidMappingID = UINT_MAX - 1;
 //------------------------------------------------------------------------------
 // RegisterBankInfo implementation.
 //------------------------------------------------------------------------------
-RegisterBankInfo::RegisterBankInfo(RegisterBank **RegBanks,
-                                   unsigned NumRegBanks)
-    : RegBanks(RegBanks), NumRegBanks(NumRegBanks) {
+RegisterBankInfo::RegisterBankInfo(const RegisterBank **RegBanks,
+                                   unsigned NumRegBanks, const unsigned *Sizes,
+                                   unsigned HwMode)
+    : RegBanks(RegBanks), NumRegBanks(NumRegBanks), Sizes(Sizes),
+      HwMode(HwMode) {
 #ifndef NDEBUG
   for (unsigned Idx = 0, End = getNumRegBanks(); Idx != End; ++Idx) {
     assert(RegBanks[Idx] != nullptr && "Invalid RegisterBank");
@@ -70,7 +72,7 @@ bool RegisterBankInfo::verify(const TargetRegisterInfo &TRI) const {
     assert(Idx == RegBank.getID() &&
            "ID does not match the index in the array");
     LLVM_DEBUG(dbgs() << "Verify " << RegBank << '\n');
-    assert(RegBank.verify(TRI) && "RegBank is invalid");
+    assert(RegBank.verify(*this, TRI) && "RegBank is invalid");
   }
 #endif // NDEBUG
   return true;
@@ -516,12 +518,14 @@ LLVM_DUMP_METHOD void RegisterBankInfo::PartialMapping::dump() const {
 }
 #endif
 
-bool RegisterBankInfo::PartialMapping::verify() const {
+bool RegisterBankInfo::PartialMapping::verify(
+    const RegisterBankInfo &RBI) const {
   assert(RegBank && "Register bank not set");
   assert(Length && "Empty mapping");
   assert((StartIdx <= getHighBitIdx()) && "Overflow, switch to APInt?");
   // Check if the minimum width fits into RegBank.
-  assert(RegBank->getSize() >= Length && "Register bank too small for Mask");
+  assert(RBI.getMaximumSize(RegBank->getID()) >= Length &&
+         "Register bank too small for Mask");
   return true;
 }
 
@@ -546,13 +550,14 @@ bool RegisterBankInfo::ValueMapping::partsAllUniform() const {
   return true;
 }
 
-bool RegisterBankInfo::ValueMapping::verify(unsigned MeaningfulBitWidth) const {
+bool RegisterBankInfo::ValueMapping::verify(const RegisterBankInfo &RBI,
+                                            unsigned MeaningfulBitWidth) const {
   assert(NumBreakDowns && "Value mapped nowhere?!");
   unsigned OrigValueBitWidth = 0;
   for (const RegisterBankInfo::PartialMapping &PartMap : *this) {
     // Check that each register bank is big enough to hold the partial value:
     // this check is done by PartialMapping::verify
-    assert(PartMap.verify() && "Partial mapping is invalid");
+    assert(PartMap.verify(RBI) && "Partial mapping is invalid");
     // The original value should completely be mapped.
     // Thus the maximum accessed index + 1 is the size of the original value.
     OrigValueBitWidth =
@@ -626,8 +631,9 @@ bool RegisterBankInfo::InstructionMapping::verify(
     (void)MOMapping;
     // Register size in bits.
     // This size must match what the mapping expects.
-    assert(MOMapping.verify(RBI->getSizeInBits(
-               Reg, MF.getRegInfo(), *MF.getSubtarget().getRegisterInfo())) &&
+    assert(MOMapping.verify(*RBI, RBI->getSizeInBits(
+                                      Reg, MF.getRegInfo(),
+                                      *MF.getSubtarget().getRegisterInfo())) &&
            "Value mapping is invalid");
   }
   return true;

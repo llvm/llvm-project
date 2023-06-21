@@ -279,7 +279,7 @@
           "sourceFile": "thread",
           "sourceLine": 298,
           "symbol": "void* std::__1::__thread_proxy<std::__1::tuple<std::__1::unique_ptr<std::__1::__thread_struct, std::__1::default_delete<std::__1::__thread_struct> >, void (*)(int&), std::__1::reference_wrapper<int> > >(void*)",
-          "symbolLocation": 84
+          "symbolLocation": null
         },
         {
           "imageIndex": 1,

@@ -11,6 +11,7 @@
 #include "lldb/Core/ValueObject.h"
 #include "lldb/DataFormatters/DumpValueObjectOptions.h"
 #include "lldb/Expression/ExpressionVariable.h"
+#include "lldb/Expression/UserExpression.h"
 #include "lldb/Interpreter/CommandInterpreter.h"
 #include "lldb/Interpreter/CommandObject.h"
 #include "lldb/Interpreter/CommandReturnObject.h"
@@ -51,9 +52,8 @@ Options *CommandObjectDWIMPrint::GetOptions() { return &m_option_group; }
 
 void CommandObjectDWIMPrint::HandleArgumentCompletion(
     CompletionRequest &request, OptionElementVector &opt_element_vector) {
-  CommandCompletions::InvokeCommonCompletionCallbacks(
-      GetCommandInterpreter(), CommandCompletions::eVariablePathCompletion,
-      request, nullptr);
+  lldb_private::CommandCompletions::InvokeCommonCompletionCallbacks(
+      GetCommandInterpreter(), lldb::eVariablePathCompletion, request, nullptr);
 }
 
 bool CommandObjectDWIMPrint::DoExecute(StringRef command,
@@ -135,7 +135,8 @@ bool CommandObjectDWIMPrint::DoExecute(StringRef command,
                                         expr);
       }
 
-      valobj_sp->Dump(result.GetOutputStream(), dump_options);
+      if (valobj_sp->GetError().GetError() != UserExpression::kNoResult)
+        valobj_sp->Dump(result.GetOutputStream(), dump_options);
 
       if (suppress_result)
         if (auto result_var_sp =

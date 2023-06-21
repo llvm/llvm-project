@@ -32,10 +32,11 @@ Build LLVM/Clang with `CMake <https://llvm.org/docs/CMake.html>`_.
 Usage
 =====
 
-Use ``clang++`` to compile and link your program with ``-fsanitize=undefined``
-flag. Make sure to use ``clang++`` (not ``ld``) as a linker, so that your
-executable is linked with proper UBSan runtime libraries. You can use ``clang``
-instead of ``clang++`` if you're compiling/linking C code.
+Use ``clang++`` to compile and link your program with the ``-fsanitize=undefined``
+option. Make sure to use ``clang++`` (not ``ld``) as a linker, so that your
+executable is linked with proper UBSan runtime libraries, unless all enabled
+checks use trap mode. You can use ``clang`` instead of ``clang++`` if you're
+compiling/linking C code.
 
 .. code-block:: console
 
@@ -49,27 +50,55 @@ instead of ``clang++`` if you're compiling/linking C code.
   % ./a.out
   test.cc:3:5: runtime error: signed integer overflow: 2147483647 + 1 cannot be represented in type 'int'
 
-You can enable only a subset of :ref:`checks <ubsan-checks>` offered by UBSan,
-and define the desired behavior for each kind of check:
-
-* ``-fsanitize=...``: print a verbose error report and continue execution (default);
-* ``-fno-sanitize-recover=...``: print a verbose error report and exit the program;
-* ``-fsanitize-trap=...``: execute a trap instruction (doesn't require UBSan run-time support).
-* ``-fno-sanitize=...``: disable any check, e.g., -fno-sanitize=alignment.
-
-Note that the ``trap`` / ``recover`` options do not enable the corresponding
-sanitizer, and in general need to be accompanied by a suitable ``-fsanitize=``
-flag.
-
-For example if you compile/link your program as:
+You can use ``-fsanitize=...`` and ``-fno-sanitize=`` to enable and disable one
+check or one check group. For an individual check, the last option that enabling
+or disabling it wins.
 
 .. code-block:: console
 
-  % clang++ -fsanitize=signed-integer-overflow,null,alignment -fno-sanitize-recover=null -fsanitize-trap=alignment
+  # Enable all checks in the "undefined" group, but disable "alignment".
+  % clang -fsanitize=undefined -fno-sanitize=alignment a.c
 
-the program will continue execution after signed integer overflows, exit after
+  # Enable just "alignment".
+  % clang -fsanitize=alignment a.c
+
+  # The same. -fno-sanitize=undefined nullifies the previous -fsanitize=undefined.
+  % clang -fsanitize=undefined -fno-sanitize=undefined -fsanitize=alignment a.c
+
+For most checks (:ref:`checks <ubsan-checks>`), the instrumented program prints
+a verbose error report and continues execution upon a failed check.
+You can use the following options to change the error reporting behavior:
+
+* ``-fno-sanitize-recover=...``: print a verbose error report and exit the program;
+* ``-fsanitize-trap=...``: execute a trap instruction (doesn't require UBSan
+  run-time support). If the signal is not caught, the program will typically
+  terminate due to a ``SIGILL`` or ``SIGTRAP`` signal.
+
+For example:
+
+.. code-block:: console
+
+  % clang++ -fsanitize=signed-integer-overflow,null,alignment -fno-sanitize-recover=null -fsanitize-trap=alignment a.cc
+
+The program will continue execution after signed integer overflows, exit after
 the first invalid use of a null pointer, and trap after the first use of misaligned
 pointer.
+
+.. code-block:: console
+
+  % clang++ -fsanitize=undefined -fsanitize-trap=all a.cc
+
+All checks in the "undefined" group are put into trap mode. Since no check
+needs run-time support, the UBSan run-time library it not linked. Note that
+some other sanitizers also support trap mode and ``-fsanitize-trap=all``
+enables trap mode for them.
+
+.. code-block:: console
+
+  % clang -fsanitize-trap=undefined -fsanitize-recover=all a.c
+
+``-fsanitize-trap=`` and ``-fsanitize-recover=`` are a no-op in the absence of
+a ``-fsanitize=`` option. There is no unused command line option warning.
 
 .. _ubsan-checks:
 

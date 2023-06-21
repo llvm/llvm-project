@@ -8,8 +8,7 @@
 
 def smrd_offset_8 : ImmOperand<i32, "SMRDOffset8", 1>;
 
-let OperandType = "OPERAND_IMMEDIATE",
-    EncoderMethod = "getSMEMOffsetEncoding",
+let EncoderMethod = "getSMEMOffsetEncoding",
     DecoderMethod = "decodeSMEMOffset" in {
 def smem_offset : ImmOperand<i32, "SMEMOffset", 1>;
 def smem_offset_mod : NamedIntOperand<i32, "offset", "SMEMOffsetMod">;
@@ -115,6 +114,7 @@ class SM_Load_Pseudo <string opName, RegisterClass baseClass,
               " $sdst, $sbase, " # offsets.Asm # "$cpol", []> {
   RegisterClass BaseClass = baseClass;
   let mayLoad = 1;
+  let isReMaterializable = 1;
   let mayStore = 0;
   let has_glc = 1;
   let has_dlc = 1;

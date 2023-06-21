@@ -108,6 +108,54 @@ constexpr void SequenceContainerDeductionGuidesSfinaeAway() {
 #endif
 }
 
+// Deduction guides should be SFINAE'd away when given:
+// - a "bad" allocator (that is, a type not qualifying as an allocator);
+// - an allocator instead of a container;
+// - an allocator and a container that uses a different allocator;
+// - a range not satisfying the `input_range` concept.
+template<template<typename ...> class Container, typename InstantiatedContainer>
+constexpr void ContainerAdaptorDeductionGuidesSfinaeAway() {
+  using T = typename InstantiatedContainer::value_type;
+  using Alloc = std::allocator<T>;
+  using Iter = T*;
+
+  using BadIter = int;
+  using BadAlloc = Empty;
+
+  // (container) -- no constraints.
+
+  // (container, alloc)
+  //
+  // Cannot deduce from (container, BAD_alloc)
+  static_assert(SFINAEs_away<Container, std::vector<T>, BadAlloc>);
+
+  // (iter, iter)
+  //
+  // Cannot deduce from (BAD_iter, BAD_iter)
+  LIBCPP_STATIC_ASSERT(SFINAEs_away<Container, BadIter, BadIter>);
+
+#if TEST_STD_VER >= 23
+  using BadRange = BadRangeT<T>;
+
+  // (iter, iter, alloc)
+  //
+  // Cannot deduce from (BAD_iter, BAD_iter, alloc)
+  LIBCPP_STATIC_ASSERT(SFINAEs_away<Container, BadIter, BadIter, Alloc>);
+  // Cannot deduce from (iter, iter, BAD_alloc)
+  static_assert(SFINAEs_away<Container, Iter, Iter, BadAlloc>);
+
+  // (from_range, range)
+  //
+  // Cannot deduce from (BAD_range)
+  static_assert(SFINAEs_away<Container, std::from_range_t, BadRange>);
+
+  // (from_range, range, alloc)
+  //
+  // Cannot deduce from (range, BAD_alloc)
+  static_assert(SFINAEs_away<Container, std::from_range_t, RangeT<int>, BadAlloc>);
+#endif
+}
+
 // For associative containers the deduction guides should be SFINAE'd away when
 // given:
 // - "bad" input iterators (that is, a type not qualifying as an input

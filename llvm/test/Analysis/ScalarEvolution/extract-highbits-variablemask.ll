@@ -40,7 +40,7 @@ define i32 @mask_b(i32 %val, i32 %numlowbits) nounwind {
 ; CHECK-LABEL: 'mask_b'
 ; CHECK-NEXT:  Classifying expressions for: @mask_b
 ; CHECK-NEXT:    %mask = shl i32 -1, %numlowbits
-; CHECK-NEXT:    --> %mask U: full-set S: full-set
+; CHECK-NEXT:    --> %mask U: [-2147483648,0) S: [-2147483648,0)
 ; CHECK-NEXT:    %masked = and i32 %mask, %val
 ; CHECK-NEXT:    --> %masked U: full-set S: full-set
 ; CHECK-NEXT:  Determining loop execution counts for: @mask_b

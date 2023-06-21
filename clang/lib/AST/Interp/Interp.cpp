@@ -53,17 +53,6 @@ static bool Jf(InterpState &S, CodePtr &PC, int32_t Offset) {
   return true;
 }
 
-static bool CheckInitialized(InterpState &S, CodePtr OpPC, const Pointer &Ptr,
-                             AccessKinds AK) {
-  if (Ptr.isInitialized())
-    return true;
-  if (!S.checkingPotentialConstantExpression()) {
-    const SourceInfo &Loc = S.Current->getSource(OpPC);
-    S.FFDiag(Loc, diag::note_constexpr_access_uninit) << AK << false;
-  }
-  return false;
-}
-
 static bool CheckActive(InterpState &S, CodePtr OpPC, const Pointer &Ptr,
                         AccessKinds AK) {
   if (Ptr.isActive())
@@ -243,6 +232,18 @@ bool CheckMutable(InterpState &S, CodePtr OpPC, const Pointer &Ptr) {
   return false;
 }
 
+bool CheckInitialized(InterpState &S, CodePtr OpPC, const Pointer &Ptr,
+                      AccessKinds AK) {
+  if (Ptr.isInitialized())
+    return true;
+
+  if (!S.checkingPotentialConstantExpression()) {
+    const SourceInfo &Loc = S.Current->getSource(OpPC);
+    S.FFDiag(Loc, diag::note_constexpr_access_uninit) << AK << false;
+  }
+  return false;
+}
+
 bool CheckLoad(InterpState &S, CodePtr OpPC, const Pointer &Ptr) {
   if (!CheckLive(S, OpPC, Ptr, AK_Read))
     return false;
@@ -341,6 +342,17 @@ bool CheckCallable(InterpState &S, CodePtr OpPC, const Function *F) {
   return true;
 }
 
+bool CheckCallDepth(InterpState &S, CodePtr OpPC) {
+  if ((S.Current->getDepth() + 1) > S.getLangOpts().ConstexprCallDepth) {
+    S.FFDiag(S.Current->getSource(OpPC),
+             diag::note_constexpr_depth_limit_exceeded)
+        << S.getLangOpts().ConstexprCallDepth;
+    return false;
+  }
+
+  return true;
+}
+
 bool CheckThis(InterpState &S, CodePtr OpPC, const Pointer &This) {
   if (!This.isZero())
     return true;
@@ -386,7 +398,7 @@ static bool CheckArrayInitialized(InterpState &S, CodePtr OpPC,
   size_t NumElems = CAT->getSize().getZExtValue();
   QualType ElemType = CAT->getElementType();
 
-  if (isa<RecordType>(ElemType.getTypePtr())) {
+  if (ElemType->isRecordType()) {
     const Record *R = BasePtr.getElemRecord();
     for (size_t I = 0; I != NumElems; ++I) {
       Pointer ElemPtr = BasePtr.atIndex(I).narrow();
@@ -444,8 +456,11 @@ static bool CheckFieldsInitialized(InterpState &S, CodePtr OpPC,
 
 bool CheckCtorCall(InterpState &S, CodePtr OpPC, const Pointer &This) {
   assert(!This.isZero());
-  const Record *R = This.getRecord();
-  return CheckFieldsInitialized(S, OpPC, This, R);
+  if (const Record *R = This.getRecord())
+    return CheckFieldsInitialized(S, OpPC, This, R);
+  const auto *CAT =
+      cast<ConstantArrayType>(This.getType()->getAsArrayTypeUnsafe());
+  return CheckArrayInitialized(S, OpPC, This, CAT);
 }
 
 bool CheckFloatResult(InterpState &S, CodePtr OpPC, APFloat::opStatus Status) {

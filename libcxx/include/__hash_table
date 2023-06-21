@@ -72,8 +72,7 @@ struct __is_hash_value_type : false_type {};
 template <class _One>
 struct __is_hash_value_type<_One> : __is_hash_value_type_imp<__remove_cvref_t<_One> > {};
 
-_LIBCPP_FUNC_VIS
-size_t __next_prime(size_t __n);
+_LIBCPP_EXPORTED_FROM_ABI size_t __next_prime(size_t __n);
 
 template <class _NodePtr>
 struct __hash_node_base

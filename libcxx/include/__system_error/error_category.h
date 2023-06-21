@@ -20,12 +20,12 @@
 
 _LIBCPP_BEGIN_NAMESPACE_STD
 
-class _LIBCPP_TYPE_VIS error_condition;
-class _LIBCPP_TYPE_VIS error_code;
+class _LIBCPP_EXPORTED_FROM_ABI error_condition;
+class _LIBCPP_EXPORTED_FROM_ABI error_code;
 
 class _LIBCPP_HIDDEN __do_message;
 
-class _LIBCPP_TYPE_VIS error_category {
+class _LIBCPP_EXPORTED_FROM_ABI error_category {
 public:
   virtual ~error_category() _NOEXCEPT;
 
@@ -67,8 +67,8 @@ public:
   string message(int __ev) const override;
 };
 
-_LIBCPP_FUNC_VIS const error_category& generic_category() _NOEXCEPT;
-_LIBCPP_FUNC_VIS const error_category& system_category() _NOEXCEPT;
+_LIBCPP_EXPORTED_FROM_ABI const error_category& generic_category() _NOEXCEPT;
+_LIBCPP_EXPORTED_FROM_ABI const error_category& system_category() _NOEXCEPT;
 
 _LIBCPP_END_NAMESPACE_STD
 

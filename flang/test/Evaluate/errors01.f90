@@ -45,6 +45,7 @@ module m
     integer :: x(3)
     !CHECK: error: Invalid 'vector=' argument in PACK: the 'mask=' argument has 3 true elements, but the vector has only 2 elements
     x = pack(array, mask, [0,0])
+    x = pack(spread(array, x(1), x(2)), .true.) ! regression check, once crashed
   end subroutine
   subroutine s5
     logical, parameter :: mask(2,3) = reshape([.false., .true., .true., .false., .false., .true.], shape(mask))

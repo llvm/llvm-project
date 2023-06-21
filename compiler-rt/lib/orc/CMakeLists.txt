@@ -83,7 +83,7 @@ if (TARGET cxx-headers OR HAVE_LIBCXX)
 endif()
 
 if (APPLE)
-  add_asm_sources(ORC_ASM_SOURCES
+  set(ORC_ASM_SOURCES
     macho_tlv.x86-64.S
     macho_tlv.arm64.S
     )
@@ -146,7 +146,7 @@ else() # not Apple
       elfnix_platform.cpp
       )
 
-    add_asm_sources(ORC_ASM_SOURCES
+    set(ORC_ASM_SOURCES
       elfnix_tls.x86-64.S
       elfnix_tls.aarch64.S
       )

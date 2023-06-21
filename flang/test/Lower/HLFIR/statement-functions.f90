@@ -1,5 +1,5 @@
 ! Test lowering of statement functions to HLFIR
-! RUN: bbc -emit-fir -hlfir -o - %s 2>&1 | FileCheck %s
+! RUN: bbc -emit-hlfir -o - %s 2>&1 | FileCheck %s
 
 subroutine numeric_test(x)
   integer :: x(:), i, stmt_func

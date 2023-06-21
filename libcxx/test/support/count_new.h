@@ -9,9 +9,11 @@
 #ifndef COUNT_NEW_H
 #define COUNT_NEW_H
 
-# include <cstdlib>
-# include <cassert>
-# include <new>
+#include <algorithm>
+#include <cassert>
+#include <cerrno>
+#include <cstdlib>
+#include <new>
 #include <type_traits>
 
 #include "test_macros.h"
@@ -78,7 +80,6 @@ public:
     void newCalled(std::size_t s)
     {
         assert(disable_allocations == false);
-        assert(s);
         if (throw_after == 0) {
             throw_after = never_throw_value;
             detail::throw_bad_alloc_helper();
@@ -112,7 +113,6 @@ public:
     void newArrayCalled(std::size_t s)
     {
         assert(disable_allocations == false);
-        assert(s);
         if (throw_after == 0) {
             throw_after = never_throw_value;
             detail::throw_bad_alloc_helper();
@@ -410,11 +410,11 @@ void operator delete[](void* p) TEST_NOEXCEPT
 void* operator new(std::size_t s, std::align_val_t av) TEST_THROW_SPEC(std::bad_alloc) {
   const std::size_t a = static_cast<std::size_t>(av);
   getGlobalMemCounter()->alignedNewCalled(s, a);
-  void *ret;
+  void *ret = nullptr;
 #ifdef USE_ALIGNED_ALLOC
   ret = _aligned_malloc(s, a);
 #else
-  posix_memalign(&ret, a, s);
+  assert(posix_memalign(&ret, std::max(a, sizeof(void*)), s) != EINVAL);
 #endif
   if (ret == nullptr)
     detail::throw_bad_alloc_helper();

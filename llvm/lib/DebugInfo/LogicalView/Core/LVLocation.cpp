@@ -352,7 +352,7 @@ std::string LVOperation::getOperandsCodeViewInfo() {
   uint16_t OperationCode = getCodeViewOperationCode(Opcode);
 
   switch (OperationCode) {
-  // Operands: [Offset, 0].
+  // Operands: [Offset].
   case codeview::SymbolKind::S_DEFRANGE_FRAMEPOINTER_REL:
     Stream << "frame_pointer_rel " << int(Operands[0]);
     break;
@@ -360,7 +360,7 @@ std::string LVOperation::getOperandsCodeViewInfo() {
     Stream << "frame_pointer_rel_full_scope " << int(Operands[0]);
     break;
 
-  // Operands: [Register, 0].
+  // Operands: [Register].
   case codeview::SymbolKind::S_DEFRANGE_REGISTER:
     Stream << "register " << getReader().getRegisterName(Opcode, Operands);
     break;
@@ -375,7 +375,7 @@ std::string LVOperation::getOperandsCodeViewInfo() {
            << " offset " << int(Operands[1]);
     break;
 
-  // Operands: [Program, 0].
+  // Operands: [Program].
   case codeview::SymbolKind::S_DEFRANGE:
     Stream << "frame " << int(Operands[0]);
     break;
@@ -576,11 +576,11 @@ void LVLocationSymbol::addObject(LVAddress LowPC, LVAddress HighPC,
 }
 
 // Add a Location Record.
-void LVLocationSymbol::addObject(LVSmall Opcode, LVUnsigned Operand1,
-                                 LVUnsigned Operand2) {
+void LVLocationSymbol::addObject(LVSmall Opcode,
+                                 ArrayRef<LVUnsigned> Operands) {
   if (!Entries)
     Entries = std::make_unique<LVOperations>();
-  Entries->push_back(getReader().createOperation(Opcode, Operand1, Operand2));
+  Entries->push_back(getReader().createOperation(Opcode, Operands));
 }
 
 // Based on the DWARF attribute, define the location kind.

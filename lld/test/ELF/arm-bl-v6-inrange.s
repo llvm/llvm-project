@@ -38,8 +38,8 @@ thumbfunc:
 // CHECK-NEXT:   500004:       f3ff effe       blx    0x900004 <armfunc>
 // CHECK-NEXT:   500008:       4770    bx      lr
 
-  .arm
   .section .callee_high, "ax", %progbits
+  .arm
   .globl armfunc
   .type armfunc, %function
 armfunc:

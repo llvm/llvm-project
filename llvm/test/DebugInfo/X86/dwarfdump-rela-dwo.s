@@ -31,6 +31,7 @@
         .byte 0x25  # DW_FORM_strx1
         .byte 0x00  # EOM(1)
         .byte 0x00  # EOM(2)
+        .byte 0x00  # EOM(3)
 
         .section .debug_info.dwo,"e",@progbits
 # CHECK-LABEL: .debug_info.dwo

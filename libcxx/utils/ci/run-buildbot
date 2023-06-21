@@ -35,8 +35,11 @@ ${PROGNAME} [options] <BUILDER>
 Environment variables
 CC                  The C compiler to use, this value is used by CMake. This
                     variable is optional.
+
 CXX                 The C++ compiler to use, this value is used by CMake. This
                     variable is optional.
+
+CMAKE               The CMake binary to use. This variable is optional.
 
 CLANG_FORMAT        The clang-format binary to use when generating the format
                     ignore list.
@@ -89,8 +92,24 @@ INSTALL_DIR="${BUILD_DIR}/install"
 # version will generally work with the Clang shipped in Xcode (e.g. if Clang
 # knows about -std=c++20, the CMake bundled in Xcode will probably know about
 # that flag too).
-if xcrun --find ninja &>/dev/null; then NINJA="$(xcrun --find ninja)"; else NINJA="ninja"; fi
-if xcrun --find cmake &>/dev/null; then CMAKE="$(xcrun --find cmake)"; else CMAKE="cmake"; fi
+if xcrun --find ninja &>/dev/null; then
+    NINJA="$(xcrun --find ninja)"
+elif which ninja &>/dev/null; then
+    # The current implementation of modules needs the absolute path to the ninja
+    # binary.
+    # TODO MODULES Is this still needed when CMake has libc++ module support?
+    NINJA="$(which ninja)"
+else
+    NINJA="ninja"
+fi
+
+if [ -z "${CMAKE}" ]; then
+    if xcrun --find cmake &>/dev/null; then
+        CMAKE="$(xcrun --find cmake)"
+    else
+        CMAKE="cmake"
+    fi
+fi
 
 function clean() {
     rm -rf "${BUILD_DIR}"
@@ -124,19 +143,10 @@ function generate-cmake() {
 }
 
 function generate-cmake-libcxx-win() {
-    # TODO: Clang-cl in MSVC configurations don't have access to compiler_rt
-    # builtins helpers for int128 division. See
-    # https://reviews.llvm.org/D91139#2429595 for a comment about longterm
-    # intent for handling the issue. In the meantime, define
-    # -D_LIBCPP_HAS_NO_INT128 (both when building the library itself and
-    # when building tests) to allow enabling filesystem for running tests,
-    # even if it uses a non-permanent ABI.
     generate-cmake-base \
           -DLLVM_ENABLE_RUNTIMES="libcxx" \
           -DCMAKE_C_COMPILER=clang-cl \
           -DCMAKE_CXX_COMPILER=clang-cl \
-          -DLIBCXX_ENABLE_FILESYSTEM=YES \
-          -DLIBCXX_EXTRA_SITE_DEFINES="_LIBCPP_HAS_NO_INT128" \
           "${@}"
 }
 
@@ -187,8 +197,8 @@ check-format)
     fi
     ${GIT_CLANG_FORMAT} \
         --diff \
-        --extensions ',h,hpp,c,cpp,inc,ipp' HEAD~1 \
-        -- $(find libcxx/{benchmarks,include,src}/ -type f | grep -vf libcxx/utils/data/ignore_format.txt) \
+        --extensions ',h,hpp,c,cpp,cppm,inc,ipp' HEAD~1 \
+        -- $(find libcxx/{benchmarks,include,modules,src}/ -type f | grep -vf libcxx/utils/data/ignore_format.txt) \
         | tee ${BUILD_DIR}/clang-format.patch
     # Check if the diff is empty, fail otherwise.
     ! grep -q '^--- a' ${BUILD_DIR}/clang-format.patch
@@ -340,6 +350,7 @@ bootstrapping-build)
           -S "${MONOREPO_ROOT}/llvm" \
           -B "${BUILD_DIR}" \
           -GNinja -DCMAKE_MAKE_PROGRAM="${NINJA}" \
+          -DCMAKE_CXX_COMPILER_LAUNCHER="ccache" \
           -DCMAKE_BUILD_TYPE=RelWithDebInfo \
           -DCMAKE_INSTALL_PREFIX="${INSTALL_DIR}" \
           -DLLVM_ENABLE_PROJECTS="clang" \
@@ -354,6 +365,8 @@ bootstrapping-build)
 
     echo "--- Installing libc++ and libc++abi to a fake location"
     ${NINJA} -C "${BUILD_DIR}" install-runtimes
+
+    ccache -s
 ;;
 generic-static)
     clean
@@ -385,6 +398,9 @@ generic-with_llvm_unwinder)
     generate-cmake -DLIBCXXABI_USE_LLVM_UNWINDER=ON
     check-runtimes
 ;;
+#
+# Module builds
+#
 generic-modules)
     clean
     generate-cmake -C "${MONOREPO_ROOT}/libcxx/cmake/caches/Generic-modules.cmake"
@@ -394,6 +410,12 @@ generic-modules)
 generic-modules-lsv)
     clean
     generate-cmake -C "${MONOREPO_ROOT}/libcxx/cmake/caches/Generic-modules-lsv.cmake"
+    check-runtimes
+    check-abi-list
+;;
+generic-module-std-cxx23)
+    clean
+    generate-cmake -C "${MONOREPO_ROOT}/libcxx/cmake/caches/Generic-module-std-cxx23.cmake"
     check-runtimes
     check-abi-list
 ;;
@@ -413,11 +435,6 @@ generic-no-filesystem)
 generic-no-random_device)
     clean
     generate-cmake -C "${MONOREPO_ROOT}/libcxx/cmake/caches/Generic-no-random_device.cmake"
-    check-runtimes
-;;
-generic-no-fstream)
-    clean
-    generate-cmake -C "${MONOREPO_ROOT}/libcxx/cmake/caches/Generic-no-fstream.cmake"
     check-runtimes
 ;;
 generic-no-localization)

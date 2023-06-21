@@ -132,7 +132,7 @@ static Expr ActualArgToExpr(ActualArgSpec &arg) {
                     },
                     [&](common::Indirection<FunctionReference> &z) {
                       return WithSource(
-                          z.value().v.source, Expr{std::move(z.value())});
+                          z.value().source, Expr{std::move(z.value())});
                     },
                 },
                 y.value().u);
@@ -151,10 +151,10 @@ Designator FunctionReference::ConvertToArrayElementRef() {
       common::visitors{
           [&](const Name &name) {
             return WithSource(
-                v.source, MakeArrayElementRef(name, std::move(args)));
+                source, MakeArrayElementRef(name, std::move(args)));
           },
           [&](ProcComponentRef &pcr) {
-            return WithSource(v.source,
+            return WithSource(source,
                 MakeArrayElementRef(std::move(pcr.v.thing), std::move(args)));
           },
       },
@@ -226,9 +226,10 @@ Statement<ActionStmt> StmtFunctionStmt::ConvertToAssignment() {
   }
   CHECK(*source.end() == ')');
   source = CharBlock{source.begin(), source.end() + 1};
-  FunctionReference funcRef{WithSource(source,
+  FunctionReference funcRef{
       Call{ProcedureDesignator{Name{funcName.source, funcName.symbol}},
-          std::move(actuals)})};
+          std::move(actuals)}};
+  funcRef.source = source;
   auto variable{Variable{common::Indirection{std::move(funcRef)}}};
   return Statement{std::nullopt,
       ActionStmt{common::Indirection{
@@ -242,7 +243,7 @@ CharBlock Variable::GetSource() const {
             return des.value().source;
           },
           [&](const common::Indirection<parser::FunctionReference> &call) {
-            return call.value().v.source;
+            return call.value().source;
           },
       },
       u);

@@ -75,6 +75,7 @@ fopen U
 fork U
 fprintf U
 fputc U
+fputwc U
 free U
 freelocale U
 fwrite U
@@ -87,6 +88,7 @@ getpwuid U
 getrlimit U
 gettimeofday U
 getuid U
+getwc U
 ioctl U
 isalnum U
 isalpha U
@@ -173,6 +175,7 @@ tolower U
 toupper U
 uname U
 ungetc U
+ungetwc U
 unlink U
 uselocale U
 vasprintf U

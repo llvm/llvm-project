@@ -129,6 +129,7 @@ add_llvm_component_library(LLVMSupport
   Allocator.cpp
   AutoConvert.cpp
   Base64.cpp
+  BalancedPartitioning.cpp
   BinaryStreamError.cpp
   BinaryStreamReader.cpp
   BinaryStreamRef.cpp
@@ -225,7 +226,6 @@ add_llvm_component_library(LLVMSupport
   TimeProfiler.cpp
   Timer.cpp
   ToolOutputFile.cpp
-  TrigramIndex.cpp
   Twine.cpp
   TypeSize.cpp
   Unicode.cpp

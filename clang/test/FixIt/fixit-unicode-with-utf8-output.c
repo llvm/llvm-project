@@ -1,7 +1,7 @@
 // This test is an additional set of checks for the fixit-unicode.c test for
 // systems capable of outputting Unicode characters to the standard output in
 // the UTF-8 encoding.
-// RUN: not %clang_cc1 -fsyntax-only %S/fixit-unicode.c 2>&1 | FileCheck -strict-whitespace %s
+// RUN: not %clang_cc1 -fsyntax-only -fno-diagnostics-show-line-numbers %S/fixit-unicode.c 2>&1 | FileCheck -strict-whitespace %s
 // REQUIRES: utf8-capable-terminal
 
 // CHECK: warning: format specifies type 'int' but the argument has type 'long'

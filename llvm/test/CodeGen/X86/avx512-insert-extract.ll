@@ -1878,10 +1878,11 @@ define i96 @test_insertelement_variable_v96i1(<96 x i8> %a, i8 %b, i32 %index) n
 ; KNL-NEXT:    vpinsrb $14, 720(%rbp), %xmm3, %xmm3
 ; KNL-NEXT:    vpinsrb $15, 728(%rbp), %xmm3, %xmm3
 ; KNL-NEXT:    vinserti128 $1, %xmm3, %ymm2, %ymm2
-; KNL-NEXT:    vpcmpeqb %ymm0, %ymm2, %ymm0
-; KNL-NEXT:    vpternlogq $15, %zmm0, %zmm0, %zmm0
+; KNL-NEXT:    vpcmpeqb %ymm0, %ymm2, %ymm2
+; KNL-NEXT:    vpternlogq $15, %zmm2, %zmm2, %zmm2
 ; KNL-NEXT:    cmpb $0, 736(%rbp)
 ; KNL-NEXT:    vmovdqa %ymm0, {{[0-9]+}}(%rsp)
+; KNL-NEXT:    vmovdqa %ymm2, {{[0-9]+}}(%rsp)
 ; KNL-NEXT:    vmovdqa64 %zmm1, (%rsp)
 ; KNL-NEXT:    setne (%rsp,%rax)
 ; KNL-NEXT:    vpmovsxbd (%rsp), %zmm0

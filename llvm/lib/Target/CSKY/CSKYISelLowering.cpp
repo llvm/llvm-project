@@ -116,8 +116,9 @@ CSKYTargetLowering::CSKYTargetLowering(const TargetMachine &TM,
       ISD::SETUGE, ISD::SETULT, ISD::SETULE,
   };
 
-  ISD::NodeType FPOpToExpand[] = {ISD::FSIN, ISD::FCOS, ISD::FSINCOS,
-                                  ISD::FPOW, ISD::FREM, ISD::FCOPYSIGN};
+  ISD::NodeType FPOpToExpand[] = {
+      ISD::FSIN, ISD::FCOS,      ISD::FSINCOS,    ISD::FPOW,
+      ISD::FREM, ISD::FCOPYSIGN, ISD::FP16_TO_FP, ISD::FP_TO_FP16};
 
   if (STI.useHardFloat()) {
 
@@ -136,10 +137,14 @@ CSKYTargetLowering::CSKYTargetLowering(const TargetMachine &TM,
 
     if (STI.hasFPUv2SingleFloat() || STI.hasFPUv3SingleFloat()) {
       setOperationAction(ISD::ConstantFP, MVT::f32, Legal);
+      setLoadExtAction(ISD::EXTLOAD, MVT::f32, MVT::f16, Expand);
+      setTruncStoreAction(MVT::f32, MVT::f16, Expand);
     }
     if (STI.hasFPUv2DoubleFloat() || STI.hasFPUv3DoubleFloat()) {
       setLoadExtAction(ISD::EXTLOAD, MVT::f64, MVT::f32, Expand);
       setTruncStoreAction(MVT::f64, MVT::f32, Expand);
+      setLoadExtAction(ISD::EXTLOAD, MVT::f64, MVT::f16, Expand);
+      setTruncStoreAction(MVT::f64, MVT::f16, Expand);
     }
   }
 
@@ -1370,4 +1375,29 @@ SDValue CSKYTargetLowering::getDynamicTLSAddr(GlobalAddressSDNode *N,
   SDValue V = LowerCallTo(CLI).first;
 
   return V;
+}
+
+bool CSKYTargetLowering::decomposeMulByConstant(LLVMContext &Context, EVT VT,
+                                                SDValue C) const {
+  if (!VT.isScalarInteger())
+    return false;
+
+  // Omit if data size exceeds.
+  if (VT.getSizeInBits() > Subtarget.XLen)
+    return false;
+
+  if (auto *ConstNode = dyn_cast<ConstantSDNode>(C.getNode())) {
+    const APInt &Imm = ConstNode->getAPIntValue();
+    // Break MULT to LSLI + ADDU/SUBU.
+    if ((Imm + 1).isPowerOf2() || (Imm - 1).isPowerOf2() ||
+        (1 - Imm).isPowerOf2())
+      return true;
+    // Only break MULT for sub targets without MULT32, since an extra
+    // instruction will be generated against the above 3 cases. We leave it
+    // unchanged on sub targets with MULT32, since not sure it is better.
+    if (!Subtarget.hasE2() && (-1 - Imm).isPowerOf2())
+      return true;
+  }
+
+  return false;
 }

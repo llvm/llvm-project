@@ -371,9 +371,9 @@ private:
   bool expandLoadLocalAddress(MachineBasicBlock &MBB,
                               MachineBasicBlock::iterator MBBI,
                               MachineBasicBlock::iterator &NextMBBI);
-  bool expandLoadAddress(MachineBasicBlock &MBB,
-                         MachineBasicBlock::iterator MBBI,
-                         MachineBasicBlock::iterator &NextMBBI);
+  bool expandLoadGlobalAddress(MachineBasicBlock &MBB,
+                               MachineBasicBlock::iterator MBBI,
+                               MachineBasicBlock::iterator &NextMBBI);
   bool expandLoadTLSIEAddress(MachineBasicBlock &MBB,
                               MachineBasicBlock::iterator MBBI,
                               MachineBasicBlock::iterator &NextMBBI);
@@ -431,8 +431,8 @@ bool RISCVPreRAExpandPseudo::expandMI(MachineBasicBlock &MBB,
   switch (MBBI->getOpcode()) {
   case RISCV::PseudoLLA:
     return expandLoadLocalAddress(MBB, MBBI, NextMBBI);
-  case RISCV::PseudoLA:
-    return expandLoadAddress(MBB, MBBI, NextMBBI);
+  case RISCV::PseudoLGA:
+    return expandLoadGlobalAddress(MBB, MBBI, NextMBBI);
   case RISCV::PseudoLA_TLS_IE:
     return expandLoadTLSIEAddress(MBB, MBBI, NextMBBI);
   case RISCV::PseudoLA_TLS_GD:
@@ -480,17 +480,12 @@ bool RISCVPreRAExpandPseudo::expandLoadLocalAddress(
                              RISCV::ADDI);
 }
 
-bool RISCVPreRAExpandPseudo::expandLoadAddress(
+bool RISCVPreRAExpandPseudo::expandLoadGlobalAddress(
     MachineBasicBlock &MBB, MachineBasicBlock::iterator MBBI,
     MachineBasicBlock::iterator &NextMBBI) {
   MachineFunction *MF = MBB.getParent();
 
   const auto &STI = MF->getSubtarget<RISCVSubtarget>();
-  // When HWASAN is used and tagging of global variables is enabled
-  // they should be accessed via the GOT, since the tagged address of a global
-  // is incompatible with existing code models. This also applies to non-pic
-  // mode.
-  assert(MF->getTarget().isPositionIndependent() || STI.allowTaggedGlobals());
   unsigned SecondOpcode = STI.is64Bit() ? RISCV::LD : RISCV::LW;
   return expandAuipcInstPair(MBB, MBBI, NextMBBI, RISCVII::MO_GOT_HI,
                              SecondOpcode);

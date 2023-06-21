@@ -1029,6 +1029,10 @@ macro(add_llvm_executable name)
     target_link_libraries(${name} PRIVATE ${LLVM_PTHREAD_LIB})
   endif()
 
+  if(HAVE_LLVM_LIBC)
+    target_link_libraries(${name} PRIVATE llvmlibc)
+  endif()
+
   llvm_codesign(${name} ENTITLEMENTS ${ARG_ENTITLEMENTS} BUNDLE_PATH ${ARG_BUNDLE_PATH})
 endmacro(add_llvm_executable name)
 
@@ -2121,7 +2125,7 @@ function(llvm_install_symlink project name dest)
   if (NOT LLVM_ENABLE_IDE AND NOT ARG_ALWAYS_GENERATE)
     add_llvm_install_targets(install-${name}
                              DEPENDS ${name} ${dest}
-                             COMPONENT ${name}
+                             COMPONENT ${component}
                              SYMLINK ${dest})
   endif()
 endfunction()
@@ -2463,5 +2467,15 @@ function(setup_host_tool tool_name setting_name exe_var_name target_var_name)
   if(LLVM_USE_HOST_TOOLS AND NOT ${setting_name})
     build_native_tool(${tool_name} exe_name DEPENDS ${tool_name})
     add_custom_target(${target_var_name} DEPENDS ${exe_name})
+  endif()
+endfunction()
+
+# Adds the unittests folder if gtest is available.
+function(llvm_add_unittests tests_added)
+  if (EXISTS ${LLVM_THIRD_PARTY_DIR}/unittest/googletest/include/gtest/gtest.h)
+    add_subdirectory(unittests)
+    set(${tests_added} ON PARENT_SCOPE)
+  else()
+    message(WARNING "gtest not found, unittests will not be available")
   endif()
 endfunction()

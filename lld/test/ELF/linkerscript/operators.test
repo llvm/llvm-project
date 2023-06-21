@@ -12,6 +12,7 @@ SECTIONS {
   multiplicative = 20 / 2 % 7;
   additive = 1 - 2 + -3 * -2;
   shift = 2 << 5 >> 1 << 2;
+  shift2 = 2 << 69 >> 65;
   less = 1 < 0 ? 1 : 2;
   lesseq = 1<<0 <= 1>>0 ? 1 : 2;
   greater = 0 > 1 ? 1 : 2;
@@ -36,9 +37,11 @@ SECTIONS {
   minusassign = 3;
   minusassign -= 1;
   lshiftassign = 1;
-  lshiftassign <<= 2;
-  rshiftassign = 5;
+  lshiftassign <<= 1;
+  lshiftassign <<= 65;  # arbitrarily reduced to 1
+  rshiftassign = 24;
   rshiftassign >>= 1;
+  rshiftassign >>= 130;  # arbitrarily reduced to 2
   andassign = 6;
   andassign &= 4;
   orassign = 4;
@@ -73,6 +76,7 @@ SECTIONS {
 # CHECK-NEXT: 0000000000000003 A multiplicative
 # CHECK-NEXT: 0000000000000005 A additive
 # CHECK-NEXT: 0000000000000080 A shift
+# CHECK-NEXT: 0000000000000020 A shift
 # CHECK-NEXT: 0000000000000002 A less
 # CHECK-NEXT: 0000000000000001 A lesseq
 # CHECK-NEXT: 0000000000000002 A greater
@@ -92,7 +96,7 @@ SECTIONS {
 # CHECK-NEXT: 0000000000000003 A plusassign
 # CHECK-NEXT: 0000000000000002 A minusassign
 # CHECK-NEXT: 0000000000000004 A lshiftassign
-# CHECK-NEXT: 0000000000000002 A rshiftassign
+# CHECK-NEXT: 0000000000000003 A rshiftassign
 # CHECK-NEXT: 0000000000000004 A andassign
 # CHECK-NEXT: 0000000000000005 A orassign
 # CHECK-NEXT: 0000000000000015 A braces

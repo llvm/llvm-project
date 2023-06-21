@@ -22,62 +22,20 @@ define void @widen_2xv4i16(ptr %x, ptr %z) {
 }
 
 define void @widen_3xv4i16(ptr %x, ptr %z) {
-; RV32-LABEL: widen_3xv4i16:
-; RV32:       # %bb.0:
-; RV32-NEXT:    vsetivli zero, 4, e16, mf2, ta, ma
-; RV32-NEXT:    vle16.v v8, (a0)
-; RV32-NEXT:    addi a2, a0, 8
-; RV32-NEXT:    vle16.v v10, (a2)
-; RV32-NEXT:    addi a0, a0, 16
-; RV32-NEXT:    vle16.v v12, (a0)
-; RV32-NEXT:    vsetivli zero, 8, e16, m2, tu, ma
-; RV32-NEXT:    vslideup.vi v8, v10, 4
-; RV32-NEXT:    addi a0, a1, 16
-; RV32-NEXT:    vsetivli zero, 4, e16, mf2, ta, ma
-; RV32-NEXT:    vse16.v v12, (a0)
-; RV32-NEXT:    vsetivli zero, 8, e16, m1, ta, ma
-; RV32-NEXT:    vse16.v v8, (a1)
-; RV32-NEXT:    ret
-;
-; RV64-LABEL: widen_3xv4i16:
-; RV64:       # %bb.0:
-; RV64-NEXT:    vsetivli zero, 4, e16, mf2, ta, ma
-; RV64-NEXT:    vle16.v v8, (a0)
-; RV64-NEXT:    addi a2, a0, 8
-; RV64-NEXT:    vle16.v v10, (a2)
-; RV64-NEXT:    addi a0, a0, 16
-; RV64-NEXT:    vle16.v v12, (a0)
-; RV64-NEXT:    vsetivli zero, 8, e16, m2, tu, ma
-; RV64-NEXT:    vslideup.vi v8, v10, 4
-; RV64-NEXT:    vsetivli zero, 12, e16, m2, tu, ma
-; RV64-NEXT:    vslideup.vi v8, v12, 8
-; RV64-NEXT:    vsetivli zero, 1, e64, m2, ta, ma
-; RV64-NEXT:    vslidedown.vi v10, v8, 2
-; RV64-NEXT:    addi a0, a1, 16
-; RV64-NEXT:    vse64.v v10, (a0)
-; RV64-NEXT:    vsetivli zero, 8, e16, m1, ta, ma
-; RV64-NEXT:    vse16.v v8, (a1)
-; RV64-NEXT:    ret
-;
-; ZVE64F-LABEL: widen_3xv4i16:
-; ZVE64F:       # %bb.0:
-; ZVE64F-NEXT:    vsetivli zero, 4, e16, mf2, ta, ma
-; ZVE64F-NEXT:    vle16.v v8, (a0)
-; ZVE64F-NEXT:    addi a2, a0, 8
-; ZVE64F-NEXT:    vle16.v v10, (a2)
-; ZVE64F-NEXT:    addi a0, a0, 16
-; ZVE64F-NEXT:    vle16.v v12, (a0)
-; ZVE64F-NEXT:    vsetivli zero, 8, e16, m2, tu, ma
-; ZVE64F-NEXT:    vslideup.vi v8, v10, 4
-; ZVE64F-NEXT:    vsetivli zero, 12, e16, m2, tu, ma
-; ZVE64F-NEXT:    vslideup.vi v8, v12, 8
-; ZVE64F-NEXT:    vsetivli zero, 1, e64, m2, ta, ma
-; ZVE64F-NEXT:    vslidedown.vi v10, v8, 2
-; ZVE64F-NEXT:    addi a0, a1, 16
-; ZVE64F-NEXT:    vse64.v v10, (a0)
-; ZVE64F-NEXT:    vsetivli zero, 8, e16, m1, ta, ma
-; ZVE64F-NEXT:    vse16.v v8, (a1)
-; ZVE64F-NEXT:    ret
+; CHECK-LABEL: widen_3xv4i16:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetivli zero, 4, e16, mf2, ta, ma
+; CHECK-NEXT:    vle16.v v8, (a0)
+; CHECK-NEXT:    addi a2, a0, 8
+; CHECK-NEXT:    vle16.v v10, (a2)
+; CHECK-NEXT:    addi a0, a0, 16
+; CHECK-NEXT:    vle16.v v12, (a0)
+; CHECK-NEXT:    vsetivli zero, 8, e16, m2, tu, ma
+; CHECK-NEXT:    vslideup.vi v8, v10, 4
+; CHECK-NEXT:    vsetivli zero, 12, e16, m2, tu, ma
+; CHECK-NEXT:    vslideup.vi v8, v12, 8
+; CHECK-NEXT:    vse16.v v8, (a1)
+; CHECK-NEXT:    ret
   %a = load <4 x i16>, ptr %x
   %b.gep = getelementptr i8, ptr %x, i64 8
   %b = load <4 x i16>, ptr %b.gep

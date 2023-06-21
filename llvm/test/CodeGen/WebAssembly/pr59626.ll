@@ -13,6 +13,9 @@ define i8 @f(ptr %0, ptr %1) {
 ; CHECK-32-NEXT:    i32.const 0
 ; CHECK-32-NEXT:    i32.store16 0
 ; CHECK-32-NEXT:    local.get 1
+; CHECK-32-NEXT:    i32.const 0
+; CHECK-32-NEXT:    i32.store8 2
+; CHECK-32-NEXT:    local.get 1
 ; CHECK-32-NEXT:    local.get 0
 ; CHECK-32-NEXT:    i8x16.splat
 ; CHECK-32-NEXT:    v128.store16_lane 0, 0

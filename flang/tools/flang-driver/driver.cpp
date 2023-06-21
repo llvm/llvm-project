@@ -28,7 +28,9 @@
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/InitLLVM.h"
 #include "llvm/Support/VirtualFileSystem.h"
+#include "llvm/Support/raw_ostream.h"
 #include "llvm/TargetParser/Host.h"
+#include <stdlib.h>
 
 using llvm::StringRef;
 
@@ -134,6 +136,28 @@ int main(int argc, const char **argv) {
       theDriver.BuildCompilation(args));
   llvm::SmallVector<std::pair<int, const clang::driver::Command *>, 4>
       failingCommands;
+
+  // Set the environment variable, FLANG_COMPILER_OPTIONS_STRING, to contain all
+  // the compiler options. This is intended for the frontend driver,
+  // flang-new -fc1, to enable the implementation of the COMPILER_OPTIONS
+  // intrinsic. To this end, the frontend driver requires the list of the
+  // original compiler options, which is not available through other means.
+  // TODO: This way of passing information between the compiler and frontend
+  // drivers is discouraged. We should find a better way not involving env
+  // variables.
+  std::string compilerOptsGathered;
+  llvm::raw_string_ostream os(compilerOptsGathered);
+  for (int i = 0; i < argc; ++i) {
+    os << argv[i];
+    if (i < argc - 1) {
+      os << ' ';
+    }
+  }
+#ifdef _WIN32
+  _putenv_s("FLANG_COMPILER_OPTIONS_STRING", compilerOptsGathered.c_str());
+#else
+  setenv("FLANG_COMPILER_OPTIONS_STRING", compilerOptsGathered.c_str(), 1);
+#endif
 
   // Run the driver
   int res = 1;

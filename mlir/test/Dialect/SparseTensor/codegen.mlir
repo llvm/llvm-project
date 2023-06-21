@@ -32,7 +32,7 @@
 
 #CSC = #sparse_tensor.encoding<{
   lvlTypes = [ "dense", "compressed" ],
-  dimOrdering = affine_map<(i, j) -> (j, i)>
+  dimToLvl = affine_map<(i, j) -> (j, i)>
 }>
 
 #DCSR = #sparse_tensor.encoding<{
@@ -43,7 +43,7 @@
 
 #Dense3D = #sparse_tensor.encoding<{
   lvlTypes = [ "dense", "dense", "dense" ],
-  dimOrdering = affine_map<(i, j, k) -> (k, i, j)>
+  dimToLvl = affine_map<(i, j, k) -> (k, i, j)>
 }>
 
 #Coo = #sparse_tensor.encoding<{
@@ -52,7 +52,7 @@
 
 #CooPNo = #sparse_tensor.encoding<{
   lvlTypes = [ "compressed-nu", "singleton-no" ],
-  dimOrdering = affine_map<(i, j) -> (j, i)>
+  dimToLvl = affine_map<(i, j) -> (j, i)>
 }>
 
 #ccoo = #sparse_tensor.encoding<{
@@ -189,7 +189,7 @@ func.func @sparse_dense_3d(%arg0: tensor<10x20x30xf64, #Dense3D>) -> index {
 //
 // Querying for dimension 1 in the tensor type needs to be permuted
 // into querying for dimension 2 in the stored sparse tensor scheme,
-// since the latter honors the dimOrdering.
+// since the latter honors the dimToLvl mapping.
 //
 // CHECK-LABEL: func @sparse_dense_3d_dyn(
 //  CHECK-SAME: %[[A0:.*]]: memref<?xf64>,

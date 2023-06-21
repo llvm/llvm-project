@@ -127,7 +127,7 @@ static std::optional<std::string> findFile(StringRef path1,
 // This is for -lfoo. We'll look for libfoo.dll.a or libfoo.a from search paths.
 static std::string
 searchLibrary(StringRef name, ArrayRef<StringRef> searchPaths, bool bStatic) {
-  if (name.startswith(":")) {
+  if (name.starts_with(":")) {
     for (StringRef dir : searchPaths)
       if (std::optional<std::string> s = findFile(dir, name.substr(1)))
         return *s;
@@ -157,11 +157,17 @@ searchLibrary(StringRef name, ArrayRef<StringRef> searchPaths, bool bStatic) {
   return "";
 }
 
+namespace lld {
+namespace coff {
+bool link(ArrayRef<const char *> argsArr, llvm::raw_ostream &stdoutOS,
+          llvm::raw_ostream &stderrOS, bool exitEarly, bool disableOutput);
+}
+
+namespace mingw {
 // Convert Unix-ish command line arguments to Windows-ish ones and
 // then call coff::link.
-bool mingw::link(ArrayRef<const char *> argsArr, llvm::raw_ostream &stdoutOS,
-                 llvm::raw_ostream &stderrOS, bool exitEarly,
-                 bool disableOutput) {
+bool link(ArrayRef<const char *> argsArr, llvm::raw_ostream &stdoutOS,
+          llvm::raw_ostream &stderrOS, bool exitEarly, bool disableOutput) {
   auto *ctx = new CommonLinkerContext;
   ctx->e.initialize(stdoutOS, stderrOS, exitEarly, disableOutput);
 
@@ -204,7 +210,7 @@ bool mingw::link(ArrayRef<const char *> argsArr, llvm::raw_ostream &stdoutOS,
 
   if (auto *a = args.getLastArg(OPT_entry)) {
     StringRef s = a->getValue();
-    if (args.getLastArgValue(OPT_m) == "i386pe" && s.startswith("_"))
+    if (args.getLastArgValue(OPT_m) == "i386pe" && s.starts_with("_"))
       add("-entry:" + s.substr(1));
     else
       add("-entry:" + s);
@@ -482,3 +488,5 @@ bool mingw::link(ArrayRef<const char *> argsArr, llvm::raw_ostream &stdoutOS,
 
   return coff::link(vec, stdoutOS, stderrOS, exitEarly, disableOutput);
 }
+} // namespace mingw
+} // namespace lld

@@ -65,7 +65,7 @@ runAnalysis(llvm::StringRef Code, AnalysisT (*MakeAnalysis)(ASTContext &)) {
   assert(Func != nullptr);
 
   auto CFCtx =
-      llvm::cantFail(ControlFlowContext::build(*Func, AST->getASTContext()));
+      llvm::cantFail(ControlFlowContext::build(*Func));
 
   AnalysisT Analysis = MakeAnalysis(AST->getASTContext());
   DataflowAnalysisContext DACtx(std::make_unique<WatchedLiteralsSolver>());

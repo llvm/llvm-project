@@ -124,9 +124,9 @@ bool BreakFalseDeps::pickBestRegisterForUndef(MachineInstr *MI, unsigned OpIdx,
   MCRegister OriginalReg = MO.getReg().asMCReg();
 
   // Update only undef operands that have reg units that are mapped to one root.
-  for (MCRegUnitIterator Unit(OriginalReg, TRI); Unit.isValid(); ++Unit) {
+  for (MCRegUnit Unit : TRI->regunits(OriginalReg)) {
     unsigned NumRoots = 0;
-    for (MCRegUnitRootIterator Root(*Unit, TRI); Root.isValid(); ++Root) {
+    for (MCRegUnitRootIterator Root(Unit, TRI); Root.isValid(); ++Root) {
       NumRoots++;
       if (NumRoots > 1)
         return false;
@@ -140,9 +140,8 @@ bool BreakFalseDeps::pickBestRegisterForUndef(MachineInstr *MI, unsigned OpIdx,
 
   // If the instruction has a true dependency, we can hide the false depdency
   // behind it.
-  for (MachineOperand &CurrMO : MI->operands()) {
-    if (!CurrMO.isReg() || CurrMO.isDef() || CurrMO.isUndef() ||
-      !OpRC->contains(CurrMO.getReg()))
+  for (MachineOperand &CurrMO : MI->all_uses()) {
+    if (CurrMO.isUndef() || !OpRC->contains(CurrMO.getReg()))
       continue;
     // We found a true dependency - replace the undef register with the true
     // dependency.

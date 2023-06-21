@@ -6,12 +6,10 @@
 //===----------------------------------------------------------------------===//
 
 // UNSUPPORTED: c++03, c++11, c++14, c++17
+// UNSUPPORTED: GCC-ALWAYS_INLINE-FIXME
 
 // This version runs the test when the platform has Unicode support.
 // UNSUPPORTED: libcpp-has-no-unicode
-
-// TODO FMT Investigate Windows issues.
-// UNSUPPORTED msvc, target={{.+}}-windows-gnu
 
 // TODO FMT This test should not require std::to_chars(floating-point)
 // XFAIL: availability-fp_to_chars-missing
@@ -270,6 +268,31 @@ static void test_malformed_code_point() {
     check(SV("*ZZZZ\xcfZZZZ*"), SV("{:*^11}"), SV("ZZZZ\xcfZZZZ"));
     check(SV("*ZZZZ\xefZZZZ*"), SV("{:*^11}"), SV("ZZZZ\xefZZZZ"));
     check(SV("*ZZZZ\xffZZZZ*"), SV("{:*^11}"), SV("ZZZZ\xffZZZZ"));
+
+    // Invalid continuations
+    check(SV("\xc2\x00"), SV("{}"), SV("\xc2\x00"));
+    check(SV("\xc2\x40"), SV("{}"), SV("\xc2\x40"));
+    check(SV("\xc2\xc0"), SV("{}"), SV("\xc2\xc0"));
+
+    check(SV("\xe0\x00\x80"), SV("{}"), SV("\xe0\x00\x80"));
+    check(SV("\xe0\x40\x80"), SV("{}"), SV("\xe0\x40\x80"));
+    check(SV("\xe0\xc0\x80"), SV("{}"), SV("\xe0\xc0\x80"));
+
+    check(SV("\xe0\x80\x00"), SV("{}"), SV("\xe0\x80\x00"));
+    check(SV("\xe0\x80\x40"), SV("{}"), SV("\xe0\x80\x40"));
+    check(SV("\xe0\x80\xc0"), SV("{}"), SV("\xe0\x80\xc0"));
+
+    check(SV("\xf0\x80\x80\x00"), SV("{}"), SV("\xf0\x80\x80\x00"));
+    check(SV("\xf0\x80\x80\x40"), SV("{}"), SV("\xf0\x80\x80\x40"));
+    check(SV("\xf0\x80\x80\xc0"), SV("{}"), SV("\xf0\x80\x80\xc0"));
+
+    check(SV("\xf0\x80\x00\x80"), SV("{}"), SV("\xf0\x80\x00\x80"));
+    check(SV("\xf0\x80\x40\x80"), SV("{}"), SV("\xf0\x80\x40\x80"));
+    check(SV("\xf0\x80\xc0\x80"), SV("{}"), SV("\xf0\x80\xc0\x80"));
+
+    check(SV("\xf0\x00\x80\x80"), SV("{}"), SV("\xf0\x00\x80\x80"));
+    check(SV("\xf0\x40\x80\x80"), SV("{}"), SV("\xf0\x40\x80\x80"));
+    check(SV("\xf0\xc0\x80\x80"), SV("{}"), SV("\xf0\xc0\x80\x80"));
 
     // Premature end.
     check(SV("*ZZZZ\xef\xf5*"), SV("{:*^8}"), SV("ZZZZ\xef\xf5"));

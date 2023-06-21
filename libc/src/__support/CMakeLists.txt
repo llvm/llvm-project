@@ -102,6 +102,7 @@ add_header_library(
   HDRS
     float_to_string.h
     ryu_constants.h
+    ryu_long_double_constants.h
   DEPENDS
     .libc_assert
     libc.src.__support.CPP.type_traits
@@ -132,6 +133,8 @@ add_header_library(
     libc.src.__support.CPP.limits
     libc.src.__support.FPUtil.fenv_impl
     libc.src.__support.FPUtil.fp_bits
+    libc.src.__support.FPUtil.rounding_mode
+    libc.src.__support.FPUtil.dyadic_float
     libc.src.__support.builtin_wrappers
     libc.src.__support.common
     libc.src.errno.errno

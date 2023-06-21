@@ -2174,6 +2174,7 @@ MachineVerifier::visitMachineOperand(const MachineOperand *MO, unsigned MONum) {
           }
 
           const RegisterBank *RegBank = MRI->getRegBankOrNull(Reg);
+          const RegisterBankInfo *RBI = MF->getSubtarget().getRegBankInfo();
 
           // If we're post-RegBankSelect, the gvreg must have a bank.
           if (!RegBank && isFunctionRegBankSelected) {
@@ -2185,12 +2186,12 @@ MachineVerifier::visitMachineOperand(const MachineOperand *MO, unsigned MONum) {
 
           // Make sure the register fits into its register bank if any.
           if (RegBank && Ty.isValid() &&
-              RegBank->getSize() < Ty.getSizeInBits()) {
+              RBI->getMaximumSize(RegBank->getID()) < Ty.getSizeInBits()) {
             report("Register bank is too small for virtual register", MO,
                    MONum);
             errs() << "Register bank " << RegBank->getName() << " too small("
-                   << RegBank->getSize() << ") to fit " << Ty.getSizeInBits()
-                   << "-bits\n";
+                   << RBI->getMaximumSize(RegBank->getID()) << ") to fit "
+                   << Ty.getSizeInBits() << "-bits\n";
             return;
           }
         }
@@ -2439,12 +2440,11 @@ void MachineVerifier::checkLiveness(const MachineOperand *MO, unsigned MONum) {
       SlotIndex UseIdx = LiveInts->getInstructionIndex(*MI);
       // Check the cached regunit intervals.
       if (Reg.isPhysical() && !isReserved(Reg)) {
-        for (MCRegUnitIterator Units(Reg.asMCReg(), TRI); Units.isValid();
-             ++Units) {
-          if (MRI->isReservedRegUnit(*Units))
+        for (MCRegUnit Unit : TRI->regunits(Reg.asMCReg())) {
+          if (MRI->isReservedRegUnit(Unit))
             continue;
-          if (const LiveRange *LR = LiveInts->getCachedRegUnit(*Units))
-            checkLivenessAtUse(MO, MONum, UseIdx, *LR, *Units);
+          if (const LiveRange *LR = LiveInts->getCachedRegUnit(Unit))
+            checkLivenessAtUse(MO, MONum, UseIdx, *LR, Unit);
         }
       }
 

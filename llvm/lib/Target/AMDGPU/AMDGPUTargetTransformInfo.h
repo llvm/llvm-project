@@ -55,6 +55,8 @@ public:
 
   void getPeelingPreferences(Loop *L, ScalarEvolution &SE,
                              TTI::PeelingPreferences &PP);
+
+  int64_t getMaxInlineSizeThreshold() const;
 };
 
 class GCNTTIImpl final : public BasicTTIImplBase<GCNTTIImpl> {
@@ -100,7 +102,7 @@ class GCNTTIImpl final : public BasicTTIImplBase<GCNTTIImpl> {
 public:
   explicit GCNTTIImpl(const AMDGPUTargetMachine *TM, const Function &F);
 
-  bool hasBranchDivergence() { return true; }
+  bool hasBranchDivergence(const Function *F = nullptr) const;
 
   void getUnrollingPreferences(Loop *L, ScalarEvolution &SE,
                                TTI::UnrollingPreferences &UP,
@@ -132,6 +134,8 @@ public:
                                    unsigned AddrSpace) const;
   bool isLegalToVectorizeStoreChain(unsigned ChainSizeInBytes, Align Alignment,
                                     unsigned AddrSpace) const;
+
+  int64_t getMaxInlineSizeThreshold() const;
   Type *getMemcpyLoopLoweringType(
       LLVMContext & Context, Value * Length, unsigned SrcAddrSpace,
       unsigned DestAddrSpace, unsigned SrcAlign, unsigned DestAlign,
@@ -190,6 +194,10 @@ public:
     return false;
   }
 
+  bool addrspacesMayAlias(unsigned AS0, unsigned AS1) const {
+    return AMDGPU::addrspacesMayAlias(AS0, AS1);
+  }
+
   unsigned getFlatAddressSpace() const {
     // Don't bother running InferAddressSpaces pass on graphics shaders which
     // don't use flat addressing.
@@ -230,10 +238,10 @@ public:
   bool areInlineCompatible(const Function *Caller,
                            const Function *Callee) const;
 
-  unsigned getInliningThresholdMultiplier() { return 11; }
+  unsigned getInliningThresholdMultiplier() const { return 11; }
   unsigned adjustInliningThreshold(const CallBase *CB) const;
 
-  int getInlinerVectorBonusPercent() { return 0; }
+  int getInlinerVectorBonusPercent() const { return 0; }
 
   InstructionCost getArithmeticReductionCost(
       unsigned Opcode, VectorType *Ty, std::optional<FastMathFlags> FMF,

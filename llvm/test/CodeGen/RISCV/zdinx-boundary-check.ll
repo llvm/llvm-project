@@ -4,11 +4,10 @@
 ; RUN: llc -mtriple=riscv64 -mattr=+zdinx -verify-machineinstrs < %s \
 ; RUN:   -target-abi=lp64 | FileCheck -check-prefix=RV64ZDINX %s
 
-define void @foo(ptr nocapture %p, double %d) {
+define void @foo(ptr nocapture %p, double %d) nounwind {
 ; RV32ZDINX-LABEL: foo:
 ; RV32ZDINX:       # %bb.0: # %entry
 ; RV32ZDINX-NEXT:    addi sp, sp, -16
-; RV32ZDINX-NEXT:    .cfi_def_cfa_offset 16
 ; RV32ZDINX-NEXT:    sw a1, 8(sp)
 ; RV32ZDINX-NEXT:    sw a2, 12(sp)
 ; RV32ZDINX-NEXT:    lw a2, 8(sp)
@@ -29,11 +28,10 @@ entry:
   ret void
 }
 
-define void @foo2(ptr nocapture %p, double %d) {
+define void @foo2(ptr nocapture %p, double %d) nounwind {
 ; RV32ZDINX-LABEL: foo2:
 ; RV32ZDINX:       # %bb.0: # %entry
 ; RV32ZDINX-NEXT:    addi sp, sp, -16
-; RV32ZDINX-NEXT:    .cfi_def_cfa_offset 16
 ; RV32ZDINX-NEXT:    sw a1, 8(sp)
 ; RV32ZDINX-NEXT:    sw a2, 12(sp)
 ; RV32ZDINX-NEXT:    lw a2, 8(sp)
@@ -59,7 +57,7 @@ entry:
 
 @d = global double 4.2, align 8
 
-define void @foo3(ptr nocapture %p) {
+define void @foo3(ptr nocapture %p) nounwind {
 ; RV32ZDINX-LABEL: foo3:
 ; RV32ZDINX:       # %bb.0: # %entry
 ; RV32ZDINX-NEXT:    lui a1, %hi(d)
@@ -83,11 +81,10 @@ entry:
   ret void
 }
 
-define void @foo4(ptr %p) {
+define void @foo4(ptr %p) nounwind {
 ; RV32ZDINX-LABEL: foo4:
 ; RV32ZDINX:       # %bb.0: # %entry
 ; RV32ZDINX-NEXT:    addi sp, sp, -16
-; RV32ZDINX-NEXT:    .cfi_def_cfa_offset 16
 ; RV32ZDINX-NEXT:    sw a0, 8(sp)
 ; RV32ZDINX-NEXT:    addi a0, a0, 2047
 ; RV32ZDINX-NEXT:    lw a1, 1(a0)
@@ -101,7 +98,6 @@ define void @foo4(ptr %p) {
 ; RV64ZDINX-LABEL: foo4:
 ; RV64ZDINX:       # %bb.0: # %entry
 ; RV64ZDINX-NEXT:    addi sp, sp, -16
-; RV64ZDINX-NEXT:    .cfi_def_cfa_offset 16
 ; RV64ZDINX-NEXT:    sd a0, 8(sp)
 ; RV64ZDINX-NEXT:    ld a0, 2044(a0)
 ; RV64ZDINX-NEXT:    lui a1, %hi(d)
@@ -118,11 +114,10 @@ entry:
   ret void
 }
 
-define void @foo5(ptr nocapture %p, double %d) {
+define void @foo5(ptr nocapture %p, double %d) nounwind {
 ; RV32ZDINX-LABEL: foo5:
 ; RV32ZDINX:       # %bb.0: # %entry
 ; RV32ZDINX-NEXT:    addi sp, sp, -16
-; RV32ZDINX-NEXT:    .cfi_def_cfa_offset 16
 ; RV32ZDINX-NEXT:    sw a1, 8(sp)
 ; RV32ZDINX-NEXT:    sw a2, 12(sp)
 ; RV32ZDINX-NEXT:    lw a2, 8(sp)
@@ -141,5 +136,37 @@ define void @foo5(ptr nocapture %p, double %d) {
 entry:
   %add.ptr = getelementptr inbounds i8, ptr %p, i64 -2049
   store double %d, ptr %add.ptr, align 8
+  ret void
+}
+
+define void @foo6(ptr %p, double %d) nounwind {
+; RV32ZDINX-LABEL: foo6:
+; RV32ZDINX:       # %bb.0: # %entry
+; RV32ZDINX-NEXT:    addi sp, sp, -16
+; RV32ZDINX-NEXT:    sw a1, 8(sp)
+; RV32ZDINX-NEXT:    sw a2, 12(sp)
+; RV32ZDINX-NEXT:    lw a2, 8(sp)
+; RV32ZDINX-NEXT:    lw a3, 12(sp)
+; RV32ZDINX-NEXT:    lui a1, %hi(.LCPI5_0)
+; RV32ZDINX-NEXT:    lw a4, %lo(.LCPI5_0)(a1)
+; RV32ZDINX-NEXT:    lw a5, %lo(.LCPI5_0+4)(a1)
+; RV32ZDINX-NEXT:    fadd.d a2, a2, a4
+; RV32ZDINX-NEXT:    addi a0, a0, 2047
+; RV32ZDINX-NEXT:    sw a2, -3(a0)
+; RV32ZDINX-NEXT:    sw a3, 1(a0)
+; RV32ZDINX-NEXT:    addi sp, sp, 16
+; RV32ZDINX-NEXT:    ret
+;
+; RV64ZDINX-LABEL: foo6:
+; RV64ZDINX:       # %bb.0: # %entry
+; RV64ZDINX-NEXT:    lui a2, %hi(.LCPI5_0)
+; RV64ZDINX-NEXT:    ld a2, %lo(.LCPI5_0)(a2)
+; RV64ZDINX-NEXT:    fadd.d a1, a1, a2
+; RV64ZDINX-NEXT:    sd a1, 2044(a0)
+; RV64ZDINX-NEXT:    ret
+entry:
+  %add = fadd double %d, 3.140000e+00
+  %add.ptr = getelementptr inbounds i8, ptr %p, i64 2044
+  store double %add, ptr %add.ptr, align 8
   ret void
 }

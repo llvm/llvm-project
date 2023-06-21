@@ -43,12 +43,6 @@ FunctionPass *createDeadCodeEliminationPass();
 
 //===----------------------------------------------------------------------===//
 //
-// CallSiteSplitting - This pass split call-site based on its known argument
-// values.
-FunctionPass *createCallSiteSplittingPass();
-
-//===----------------------------------------------------------------------===//
-//
 // GuardWidening - An optimization over the @llvm.experimental.guard intrinsic
 // that (optimistically) combines multiple guards into one to have fewer checks
 // at runtime.
@@ -77,9 +71,6 @@ FunctionPass *createSROAPass(bool PreserveCFG = true);
 // LICM - This pass is a loop invariant code motion and memory promotion pass.
 //
 Pass *createLICMPass();
-Pass *createLICMPass(unsigned LicmMssaOptCap,
-                     unsigned LicmMssaNoAccForPromotionCap,
-                     bool AllowSpeculation);
 
 //===----------------------------------------------------------------------===//
 //
@@ -116,10 +107,6 @@ Pass *createLoopUnrollPass(int OptLevel = 2, bool OnlyWhenForced = false,
                            int Count = -1, int AllowPartial = -1,
                            int Runtime = -1, int UpperBound = -1,
                            int AllowPeeling = -1);
-// Create an unrolling pass for full unrolling that uses exact trip count only
-// and also does peeling.
-Pass *createSimpleLoopUnrollPass(int OptLevel = 2, bool OnlyWhenForced = false,
-                                 bool ForgetAllSCEV = false);
 
 //===----------------------------------------------------------------------===//
 //
@@ -309,13 +296,6 @@ FunctionPass *createStraightLineStrengthReducePass();
 // order following this pass.
 //
 FunctionPass *createPlaceSafepointsPass();
-
-//===----------------------------------------------------------------------===//
-//
-// RewriteStatepointsForGC - Rewrite any gc.statepoints which do not yet have
-// explicit relocations to include explicit relocations.
-//
-ModulePass *createRewriteStatepointsForGCLegacyPass();
 
 //===----------------------------------------------------------------------===//
 //

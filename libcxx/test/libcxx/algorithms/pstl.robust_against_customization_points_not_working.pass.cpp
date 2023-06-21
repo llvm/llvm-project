@@ -15,6 +15,8 @@
 // Make sure that the customization points get called properly when overloaded
 
 #include <__config>
+#include <__iterator/iterator_traits.h>
+#include <__iterator/readable_traits.h>
 #include <cassert>
 
 struct TestPolicy {};
@@ -38,6 +40,42 @@ bool __pstl_all_of(TestBackend, ForwardIterator, ForwardIterator, Pred) {
   assert(!pstl_all_of_called);
   pstl_all_of_called = true;
   return true;
+}
+
+bool pstl_count_called = false;
+
+template <class, class ForwardIterator, class T>
+typename std::iterator_traits<ForwardIterator>::difference_type
+__pstl_count(TestBackend, ForwardIterator, ForwardIterator, const T&) {
+  assert(!pstl_count_called);
+  pstl_count_called = true;
+  return 0;
+}
+
+bool pstl_count_if_called = false;
+
+template <class, class ForwardIterator, class Pred>
+typename std::iterator_traits<ForwardIterator>::difference_type
+__pstl_count_if(TestBackend, ForwardIterator, ForwardIterator, Pred) {
+  assert(!pstl_count_if_called);
+  pstl_count_if_called = true;
+  return 0;
+}
+
+bool pstl_generate_called = false;
+
+template <class, class ForwardIterator, class Gen>
+void __pstl_generate(TestBackend, ForwardIterator, ForwardIterator, Gen) {
+  assert(!pstl_generate_called);
+  pstl_generate_called = true;
+}
+
+bool pstl_generate_n_called = false;
+
+template <class, class ForwardIterator, class Size, class Gen>
+void __pstl_generate_n(TestBackend, Size, ForwardIterator, Gen) {
+  assert(!pstl_generate_n_called);
+  pstl_generate_n_called = true;
 }
 
 bool pstl_none_of_called = false;
@@ -108,6 +146,47 @@ void __pstl_fill_n(TestBackend, ForwardIterator, Size, Func) {
   pstl_fill_n_called = true;
 }
 
+bool pstl_is_partitioned_called = false;
+
+template <class, class ForwardIterator, class Func>
+bool __pstl_is_partitioned(TestBackend, ForwardIterator, ForwardIterator, Func) {
+  assert(!pstl_is_partitioned_called);
+  pstl_is_partitioned_called = true;
+  return {};
+}
+
+bool pstl_replace_called = false;
+
+template <class, class ForwardIterator, class T>
+void __pstl_replace(TestBackend, ForwardIterator, ForwardIterator, const T&, const T&) {
+  assert(!pstl_replace_called);
+  pstl_replace_called = true;
+}
+
+bool pstl_replace_if_called = false;
+
+template <class, class ForwardIterator, class T, class Func>
+void __pstl_replace_if(TestBackend, ForwardIterator, ForwardIterator, Func, const T&) {
+  assert(!pstl_replace_if_called);
+  pstl_replace_if_called = true;
+}
+
+bool pstl_replace_copy_called = false;
+
+template <class, class ForwardIterator, class ForwardOutIterator, class T>
+void __pstl_replace_copy(TestBackend, ForwardIterator, ForwardIterator, ForwardOutIterator, const T&, const T&) {
+  assert(!pstl_replace_copy_called);
+  pstl_replace_copy_called = true;
+}
+
+bool pstl_replace_copy_if_called = false;
+
+template <class, class ForwardIterator, class ForwardOutIterator, class T, class Func>
+void __pstl_replace_copy_if(TestBackend, ForwardIterator, ForwardIterator, ForwardOutIterator, Func, const T&) {
+  assert(!pstl_replace_copy_if_called);
+  pstl_replace_copy_if_called = true;
+}
+
 bool pstl_unary_transform_called = false;
 
 template <class, class ForwardIterator, class ForwardOutIterator, class UnaryOperation>
@@ -127,11 +206,55 @@ ForwardOutIterator __pstl_transform(
   return {};
 }
 
+bool pstl_reduce_with_init_called = false;
+
+template <class, class ForwardIterator, class T, class BinaryOperation>
+T __pstl_reduce(TestBackend, ForwardIterator, ForwardIterator, T, BinaryOperation) {
+  assert(!pstl_reduce_with_init_called);
+  pstl_reduce_with_init_called = true;
+  return {};
+}
+
+bool pstl_reduce_without_init_called = false;
+
+template <class, class ForwardIterator>
+typename std::iterator_traits<ForwardIterator>::value_type
+__pstl_reduce(TestBackend, ForwardIterator, ForwardIterator) {
+  assert(!pstl_reduce_without_init_called);
+  pstl_reduce_without_init_called = true;
+  return {};
+}
+
+bool pstl_unary_transform_reduce_called = false;
+
+template <class, class ForwardIterator, class T, class UnaryOperation, class BinaryOperation>
+T __pstl_transform_reduce(TestBackend, ForwardIterator, ForwardIterator, T, UnaryOperation, BinaryOperation) {
+  assert(!pstl_unary_transform_reduce_called);
+  pstl_unary_transform_reduce_called = true;
+  return {};
+}
+
+bool pstl_binary_transform_reduce_called = false;
+
+template <class,
+          class ForwardIterator1,
+          class ForwardIterator2,
+          class T,
+          class BinaryOperation1,
+          class BinaryOperation2>
+typename std::iterator_traits<ForwardIterator1>::value_type __pstl_transform_reduce(
+    TestBackend, ForwardIterator1, ForwardIterator1, ForwardIterator2, T, BinaryOperation1, BinaryOperation2) {
+  assert(!pstl_binary_transform_reduce_called);
+  pstl_binary_transform_reduce_called = true;
+  return {};
+}
+
 _LIBCPP_END_NAMESPACE_STD
 
 #include <algorithm>
 #include <cassert>
 #include <iterator>
+#include <numeric>
 
 template <>
 inline constexpr bool std::is_execution_policy_v<TestPolicy> = true;
@@ -151,6 +274,10 @@ int main(int, char**) {
   assert(std::pstl_all_of_called);
   (void)std::none_of(TestPolicy{}, std::begin(a), std::end(a), pred);
   assert(std::pstl_none_of_called);
+  (void)std::count(TestPolicy{}, std::begin(a), std::end(a), 0);
+  assert(std::pstl_count_called);
+  (void)std::count_if(TestPolicy{}, std::begin(a), std::end(a), pred);
+  assert(std::pstl_count_if_called);
   (void)std::fill(TestPolicy{}, std::begin(a), std::end(a), 0);
   assert(std::pstl_fill_called);
   (void)std::fill_n(TestPolicy{}, std::begin(a), std::size(a), 0);
@@ -165,10 +292,32 @@ int main(int, char**) {
   assert(std::pstl_for_each_called);
   (void)std::for_each_n(TestPolicy{}, std::begin(a), std::size(a), pred);
   assert(std::pstl_for_each_n_called);
+  (void)std::generate(TestPolicy{}, std::begin(a), std::end(a), pred);
+  assert(std::pstl_generate_called);
+  (void)std::generate_n(TestPolicy{}, std::begin(a), std::size(a), pred);
+  assert(std::pstl_generate_n_called);
+  (void)std::is_partitioned(TestPolicy{}, std::begin(a), std::end(a), pred);
+  assert(std::pstl_generate_n_called);
+  (void)std::replace(TestPolicy{}, std::begin(a), std::end(a), 0, 0);
+  assert(std::pstl_replace_called);
+  (void)std::replace_if(TestPolicy{}, std::begin(a), std::end(a), pred, 0);
+  assert(std::pstl_replace_if_called);
+  (void)std::replace_copy(TestPolicy{}, std::begin(a), std::end(a), std::begin(a), 0, 0);
+  assert(std::pstl_replace_copy_called);
+  (void)std::replace_copy_if(TestPolicy{}, std::begin(a), std::end(a), std::begin(a), pred, 0);
+  assert(std::pstl_replace_copy_if_called);
   (void)std::transform(TestPolicy{}, std::begin(a), std::end(a), std::begin(a), pred);
   assert(std::pstl_unary_transform_called);
   (void)std::transform(TestPolicy{}, std::begin(a), std::end(a), std::begin(a), std::begin(a), pred);
   assert(std::pstl_unary_transform_called);
+  (void)std::reduce(TestPolicy{}, std::begin(a), std::end(a), 0, pred);
+  assert(std::pstl_reduce_with_init_called);
+  (void)std::reduce(TestPolicy{}, std::begin(a), std::end(a));
+  assert(std::pstl_reduce_without_init_called);
+  (void)std::transform_reduce(TestPolicy{}, std::begin(a), std::end(a), 0, pred, pred);
+  assert(std::pstl_unary_transform_reduce_called);
+  (void)std::transform_reduce(TestPolicy{}, std::begin(a), std::end(a), std::begin(a), 0, pred, pred);
+  assert(std::pstl_binary_transform_reduce_called);
 
   return 0;
 }

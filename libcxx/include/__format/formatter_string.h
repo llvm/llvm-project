@@ -115,7 +115,8 @@ struct _LIBCPP_TEMPLATE_VIS formatter<_CharT[_Size], _CharT>
   using _Base = __formatter_string<_CharT>;
 
   template <class _FormatContext>
-  _LIBCPP_HIDE_FROM_ABI typename _FormatContext::iterator format(_CharT __str[_Size], _FormatContext& __ctx) const {
+  _LIBCPP_HIDE_FROM_ABI typename _FormatContext::iterator
+  format(const _CharT (&__str)[_Size], _FormatContext& __ctx) const {
     return _Base::format(basic_string_view<_CharT>(__str, _Size), __ctx);
   }
 };

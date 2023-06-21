@@ -191,3 +191,19 @@ func.func @char_array_section_cst_len(%arg0: !fir.box<!fir.array<?x!fir.char<1,5
 // CHECK:  %[[VAL_12:.*]] = fir.undefined index
 // CHECK:  %[[VAL_13:.*]] = fir.slice %[[VAL_6]], %[[VAL_8]]#1, %[[VAL_9]] : (index, index, index) -> !fir.slice<1>
 // CHECK:  %[[VAL_14:.*]] = fir.rebox %[[VAL_4]] {{\[}}%[[VAL_13]]] : (!fir.box<!fir.array<?x!fir.char<1,5>>>, !fir.slice<1>) -> !fir.box<!fir.array<?x!fir.char<1,5>>>
+
+func.func @test_polymorphic_array_elt(%arg0: !fir.class<!fir.array<?x!fir.type<_QMtypesTt1>>> {fir.bindc_name = "x"}) {
+  %0:2 = hlfir.declare %arg0 {uniq_name = "_QFtest1Ex"} : (!fir.class<!fir.array<?x!fir.type<_QMtypesTt1>>>) -> (!fir.class<!fir.array<?x!fir.type<_QMtypesTt1>>>, !fir.class<!fir.array<?x!fir.type<_QMtypesTt1>>>)
+  %c7 = arith.constant 7 : index
+  %1 = hlfir.designate %0#0 (%c7)  : (!fir.class<!fir.array<?x!fir.type<_QMtypesTt1>>>, index) -> !fir.class<!fir.type<_QMtypesTt1>>
+  return
+}
+// CHECK-LABEL:   func.func @test_polymorphic_array_elt(
+// CHECK-SAME:        %[[VAL_0:.*]]: !fir.class<!fir.array<?x!fir.type<_QMtypesTt1>>> {fir.bindc_name = "x"}) {
+// CHECK:           %[[VAL_1:.*]] = fir.declare %[[VAL_0]] {uniq_name = "_QFtest1Ex"} : (!fir.class<!fir.array<?x!fir.type<_QMtypesTt1>>>) -> !fir.class<!fir.array<?x!fir.type<_QMtypesTt1>>>
+// CHECK:           %[[VAL_2:.*]] = fir.rebox %[[VAL_1]] : (!fir.class<!fir.array<?x!fir.type<_QMtypesTt1>>>) -> !fir.class<!fir.array<?x!fir.type<_QMtypesTt1>>>
+// CHECK:           %[[VAL_3:.*]] = arith.constant 7 : index
+// CHECK:           %[[VAL_4:.*]] = fir.array_coor %[[VAL_1]] %[[VAL_3]] : (!fir.class<!fir.array<?x!fir.type<_QMtypesTt1>>>, index) -> !fir.ref<!fir.type<_QMtypesTt1>>
+// CHECK:           %[[VAL_5:.*]] = fir.embox %[[VAL_4]] source_box %[[VAL_1]] : (!fir.ref<!fir.type<_QMtypesTt1>>, !fir.class<!fir.array<?x!fir.type<_QMtypesTt1>>>) -> !fir.class<!fir.type<_QMtypesTt1>>
+// CHECK:           return
+// CHECK:         }

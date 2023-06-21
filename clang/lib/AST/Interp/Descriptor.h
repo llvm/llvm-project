@@ -41,7 +41,7 @@ using BlockDtorFn = void (*)(Block *Storage, char *FieldPtr,
 /// blocks are persisted: the move function copies all inline descriptors and
 /// non-trivial fields, as existing pointers might need to reference those
 /// descriptors. Data is not copied since it cannot be legally read.
-using BlockMoveFn = void (*)(Block *Storage, char *SrcFieldPtr,
+using BlockMoveFn = void (*)(Block *Storage, const char *SrcFieldPtr,
                              char *DstFieldPtr, const Descriptor *FieldDesc);
 
 /// Inline descriptor embedded in structures and arrays.

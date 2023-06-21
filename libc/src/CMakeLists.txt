@@ -20,6 +20,10 @@ if(${LIBC_TARGET_OS} STREQUAL "linux")
   add_subdirectory(unistd)
 endif()
 
+if(${LIBC_TARGET_OS} STREQUAL "gpu")
+  add_subdirectory(gpu)
+endif()
+
 if(NOT LLVM_LIBC_FULL_BUILD)
   return()
 endif()

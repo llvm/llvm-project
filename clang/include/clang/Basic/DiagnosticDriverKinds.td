@@ -417,6 +417,9 @@ def warn_drv_assuming_mfloat_abi_is : Warning<
 def warn_drv_unsupported_float_abi_by_lib : Warning<
   "float ABI '%0' is not supported by current library">,
   InGroup<DiagGroup<"unsupported-abi">>;
+def warn_drv_no_floating_point_registers: Warning<
+  "'%0': selected processor lacks floating point registers; flag ignored">,
+  InGroup<OptionIgnored>;
 def warn_ignoring_ftabstop_value : Warning<
   "ignoring invalid -ftabstop value '%0', using default value %1">;
 def warn_drv_overriding_flag_option : Warning<
@@ -618,6 +621,9 @@ def warn_drv_moutline_atomics_unsupported_opt : Warning<
 def warn_drv_darwin_sdk_invalid_settings : Warning<
   "SDK settings were ignored as 'SDKSettings.json' could not be parsed">,
   InGroup<DiagGroup<"darwin-sdk-settings">>;
+
+def err_drv_darwin_sdk_missing_arclite : Error<
+  "SDK does not contain 'libarclite' at the path '%0'; try increasing the minimum deployment target">;
 
 def err_drv_trivial_auto_var_init_stop_after_missing_dependency : Error<
   "'-ftrivial-auto-var-init-stop-after=*' is used without "

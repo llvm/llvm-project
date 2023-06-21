@@ -542,7 +542,9 @@ HexagonToolChain::getSmallDataThreshold(const ArgList &Args) {
 std::string HexagonToolChain::getCompilerRTPath() const {
   SmallString<128> Dir(getDriver().SysRoot);
   llvm::sys::path::append(Dir, "usr", "lib");
-  Dir += SelectedMultilib.gccSuffix();
+  if (!SelectedMultilibs.empty()) {
+    Dir += SelectedMultilibs.back().gccSuffix();
+  }
   return std::string(Dir.str());
 }
 

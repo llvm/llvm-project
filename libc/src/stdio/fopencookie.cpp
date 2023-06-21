@@ -26,14 +26,12 @@ class CookieFile : public __llvm_libc::File {
   static FileIOResult cookie_read(File *f, void *data, size_t size);
   static ErrorOr<long> cookie_seek(File *f, long offset, int whence);
   static int cookie_close(File *f);
-  static int cookie_flush(File *);
 
 public:
   CookieFile(void *c, cookie_io_functions_t cops, uint8_t *buffer,
              size_t bufsize, File::ModeFlags mode)
       : File(&cookie_write, &cookie_read, &CookieFile::cookie_seek,
-             &cookie_close, &cookie_flush, &cleanup_file<CookieFile>, buffer,
-             bufsize, 0 /* default buffering mode */,
+             &cookie_close, buffer, bufsize, 0 /* default buffering mode */,
              true /* File owns buffer */, mode),
         cookie(c), ops(cops) {}
 };
@@ -71,10 +69,12 @@ int CookieFile::cookie_close(File *f) {
   auto cookie_file = reinterpret_cast<CookieFile *>(f);
   if (cookie_file->ops.close == nullptr)
     return 0;
-  return cookie_file->ops.close(cookie_file->cookie);
+  int retval = cookie_file->ops.close(cookie_file->cookie);
+  if (retval != 0)
+    return retval;
+  delete cookie_file;
+  return 0;
 }
-
-int CookieFile::cookie_flush(File *) { return 0; }
 
 } // anonymous namespace
 

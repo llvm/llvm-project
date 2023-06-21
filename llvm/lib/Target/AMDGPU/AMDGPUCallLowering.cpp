@@ -521,7 +521,7 @@ bool AMDGPUCallLowering::lowerFormalArgumentsKernel(
 
   unsigned i = 0;
   const Align KernArgBaseAlign(16);
-  const unsigned BaseOffset = Subtarget->getExplicitKernelArgOffset(F);
+  const unsigned BaseOffset = Subtarget->getExplicitKernelArgOffset();
   uint64_t ExplicitArgOffset = 0;
 
   // TODO: Align down to dword alignment and extract bits for extending loads.

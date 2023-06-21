@@ -123,20 +123,39 @@ def FMA : Predicate<"Subtarget->hasFMA()">;
 
 def InstFlag : OperandWithDefaultOps <i32, (ops (i32 0))>;
 
-class ImmOperandClass<string name, bit optional> : AsmOperandClass {
+class CustomOperandClass<string name, bit optional, string parserMethod,
+                         string defaultMethod>
+    : AsmOperandClass {
   let Name = name;
   let PredicateMethod = "is"#name;
-  let ParserMethod = "";
+  let ParserMethod = parserMethod;
   let RenderMethod = "addImmOperands";
   let IsOptional = optional;
-  let DefaultMethod = "default"#name;
+  let DefaultMethod = defaultMethod;
 }
 
-class ImmOperand<ValueType type, string name, bit optional = 0,
-                 string printer = "print"#name> : Operand<type> {
-  let ParserMatchClass = ImmOperandClass<name, optional>;
+class CustomOperandProps<bit optional = 0, string name = NAME> {
+  string ImmTy = "ImmTy"#name;
+  string ParserMethod = "parse"#name;
+  string DefaultValue = "0";
+  string DefaultMethod = "[this]() { return "#
+    "AMDGPUOperand::CreateImm(this, "#DefaultValue#", SMLoc(), "#
+    "AMDGPUOperand::"#ImmTy#"); }";
+  string PrintMethod = "print"#name;
+  AsmOperandClass ParserMatchClass =
+    CustomOperandClass<name, optional, ParserMethod, DefaultMethod>;
+  string OperandType = "OPERAND_IMMEDIATE";
+}
+
+class CustomOperand<ValueType type, bit optional = 0, string name = NAME>
+  : Operand<type>, CustomOperandProps<optional, name>;
+
+class ImmOperand<ValueType type, string name = NAME, bit optional = 0,
+                 string printer = "print"#name>
+    : CustomOperand<type, optional, name> {
+  let ImmTy = "ImmTyNone";
+  let ParserMethod = "";
   let PrintMethod = printer;
-  let OperandType = "OPERAND_IMMEDIATE";
 }
 
 def s16imm : ImmOperand<i16, "S16Imm", 0, "printU16ImmOperand">;
@@ -200,6 +219,12 @@ class is_canonicalized<SDPatternOperator op> : PatFrag<
   }];
 }
 
+class FoldTernaryOpPat<SDPatternOperator op1, SDPatternOperator op2> : PatFrag<
+  (ops node:$src0, node:$src1, node:$src2),
+  (op2 (op1 node:$src0, node:$src1), node:$src2)
+>;
+
+def imad : FoldTernaryOpPat<mul, add>;
 
 let Properties = [SDNPCommutative, SDNPAssociative] in {
 def smax_oneuse : HasOneUseBinOp<smax>;

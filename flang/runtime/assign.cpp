@@ -23,7 +23,8 @@ enum AssignFlags {
   CanBeDefinedAssignment = 1 << 2,
   ComponentCanBeDefinedAssignment = 1 << 3,
   ExplicitLengthCharacterLHS = 1 << 4,
-  PolymorphicLHS = 1 << 5
+  PolymorphicLHS = 1 << 5,
+  DeallocateLHS = 1 << 6
 };
 
 // Predicate: is the left-hand side of an assignment an allocated allocatable
@@ -249,30 +250,14 @@ static void BlankPadCharacterAssignment(Descriptor &to, const Descriptor &from,
 // dealing with array constructors.
 static void Assign(
     Descriptor &to, const Descriptor &from, Terminator &terminator, int flags) {
-  bool mustDeallocateLHS{MustDeallocateLHS(to, from, terminator, flags)};
+  bool mustDeallocateLHS{(flags & DeallocateLHS) ||
+      MustDeallocateLHS(to, from, terminator, flags)};
   DescriptorAddendum *toAddendum{to.Addendum()};
   const typeInfo::DerivedType *toDerived{
       toAddendum ? toAddendum->derivedType() : nullptr};
-  if (toDerived) {
-    if (flags & CanBeDefinedAssignment) {
-      // Check for a user-defined assignment type-bound procedure;
-      // see 10.2.1.4-5.  A user-defined assignment TBP defines all of
-      // the semantics, including allocatable (re)allocation and any
-      // finalization.
-      if (to.rank() == 0) {
-        if (const auto *special{toDerived->FindSpecialBinding(
-                typeInfo::SpecialBinding::Which::ScalarAssignment)}) {
-          return DoScalarDefinedAssignment(to, from, *special);
-        }
-      }
-      if (const auto *special{toDerived->FindSpecialBinding(
-              typeInfo::SpecialBinding::Which::ElementalAssignment)}) {
-        return DoElementalDefinedAssignment(to, from, *toDerived, *special);
-      }
-    }
-    if ((flags & NeedFinalization) && toDerived->noFinalizationNeeded()) {
-      flags &= ~NeedFinalization;
-    }
+  if (toDerived && (flags & NeedFinalization) &&
+      toDerived->noFinalizationNeeded()) {
+    flags &= ~NeedFinalization;
   }
   std::size_t toElementBytes{to.ElementBytes()};
   std::size_t fromElementBytes{from.ElementBytes()};
@@ -315,7 +300,7 @@ static void Assign(
         Assign(to, newFrom, terminator,
             flags &
                 (NeedFinalization | ComponentCanBeDefinedAssignment |
-                    ExplicitLengthCharacterLHS));
+                    ExplicitLengthCharacterLHS | CanBeDefinedAssignment));
         newFrom.Deallocate();
       }
       return;
@@ -343,6 +328,27 @@ static void Assign(
       }
       flags &= ~NeedFinalization;
       toElementBytes = to.ElementBytes(); // may have changed
+    }
+  }
+  if (toDerived && (flags & CanBeDefinedAssignment)) {
+    // Check for a user-defined assignment type-bound procedure;
+    // see 10.2.1.4-5.  A user-defined assignment TBP defines all of
+    // the semantics, including allocatable (re)allocation and any
+    // finalization.
+    //
+    // Note that the aliasing and LHS (re)allocation handling above
+    // needs to run even with CanBeDefinedAssignment flag, when
+    // the Assign() is invoked recursively for component-per-component
+    // assignments.
+    if (to.rank() == 0) {
+      if (const auto *special{toDerived->FindSpecialBinding(
+              typeInfo::SpecialBinding::Which::ScalarAssignment)}) {
+        return DoScalarDefinedAssignment(to, from, *special);
+      }
+    }
+    if (const auto *special{toDerived->FindSpecialBinding(
+            typeInfo::SpecialBinding::Which::ElementalAssignment)}) {
+      return DoElementalDefinedAssignment(to, from, *toDerived, *special);
     }
   }
   SubscriptValue toAt[maxRank];
@@ -429,32 +435,31 @@ static void Assign(
               to.Element<char>(toAt) + comp.offset())};
           const auto *fromDesc{reinterpret_cast<const Descriptor *>(
               from.Element<char>(fromAt) + comp.offset())};
+          // Allocatable components of the LHS are unconditionally
+          // deallocated before assignment (F'2018 10.2.1.3(13)(1)),
+          // unlike a "top-level" assignment to a variable, where
+          // deallocation is optional.
+          //
+          // Be careful not to destroy/reallocate the LHS, if there is
+          // overlap between LHS and RHS (it seems that partial overlap
+          // is not possible, though).
+          // Invoke Assign() recursively to deal with potential aliasing.
           if (toDesc->IsAllocatable()) {
-            if (toDesc->IsAllocated()) {
-              // Allocatable components of the LHS are unconditionally
-              // deallocated before assignment (F'2018 10.2.1.3(13)(1)),
-              // unlike a "top-level" assignment to a variable, where
-              // deallocation is optional.
-              // TODO: Consider skipping this step and deferring the
-              // deallocation to the recursive activation of Assign(),
-              // which might be able to avoid deallocation/reallocation
-              // when the existing allocation can be reoccupied.
-              toDesc->Destroy(false /*already finalized*/);
-            }
             if (!fromDesc->IsAllocated()) {
+              // No aliasing.
+              //
+              // If to is not allocated, the Destroy() call is a no-op.
+              // This is just a shortcut, because the recursive Assign()
+              // below would initiate the destruction for to.
+              // No finalization is required.
+              toDesc->Destroy();
               continue; // F'2018 10.2.1.3(13)(2)
             }
-
-            // F'2018 10.2.1.3(13) (2)
-            // If from is allocated, allocate to with the same type.
-            if (nestedFlags & CanBeDefinedAssignment) {
-              if (AllocateAssignmentLHS(
-                      *toDesc, *fromDesc, terminator, nestedFlags) != StatOk) {
-                return;
-              }
-            }
           }
-          Assign(*toDesc, *fromDesc, terminator, nestedFlags);
+          // Force LHS deallocation with DeallocateLHS flag.
+          // The actual deallocation may be avoided, if the existing
+          // location can be reoccupied.
+          Assign(*toDesc, *fromDesc, terminator, nestedFlags | DeallocateLHS);
         }
         break;
       }
@@ -504,6 +509,8 @@ static void Assign(
     }
   }
   if (deferDeallocation) {
+    // deferDeallocation is used only when LHS is an allocatable.
+    // The finalization has already been run for it.
     deferDeallocation->Destroy();
   }
 }

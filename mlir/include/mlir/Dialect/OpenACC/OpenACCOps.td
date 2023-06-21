@@ -223,6 +223,23 @@ class OpenACC_DataEntryOp<string mnemonic, string clause, list<Trait> traits = [
 }
 
 //===----------------------------------------------------------------------===//
+// 2.5.13 private clause
+//===----------------------------------------------------------------------===//
+def OpenACC_PrivateOp : OpenACC_DataEntryOp<"private",
+    "mlir::acc::DataClause::acc_private"> {
+  let summary = "Represents private semantics for acc private clause.";
+}
+
+//===----------------------------------------------------------------------===//
+// 2.5.14 firstprivate clause
+//===----------------------------------------------------------------------===//
+def OpenACC_FirstprivateOp : OpenACC_DataEntryOp<"firstprivate",
+    "mlir::acc::DataClause::acc_firstprivate"> {
+  let summary = "Represents firstprivate semantic for the acc firstprivate "
+                "clause.";
+}
+
+//===----------------------------------------------------------------------===//
 // 2.7.4 deviceptr clause
 //===----------------------------------------------------------------------===//
 def OpenACC_DevicePtrOp : OpenACC_DataEntryOp<"deviceptr",
@@ -639,7 +656,8 @@ def OpenACC_ParallelOp : OpenACC_Op<"parallel",
                        OptionalAttr<SymbolRefArrayAttr>:$reductionRecipes,
                        Variadic<OpenACC_PointerLikeTypeInterface>:$gangPrivateOperands,
                        OptionalAttr<SymbolRefArrayAttr>:$privatizations,
-                       Variadic<AnyType>:$gangFirstPrivateOperands,
+                       Variadic<OpenACC_PointerLikeTypeInterface>:$gangFirstPrivateOperands,
+                       OptionalAttr<SymbolRefArrayAttr>:$firstprivatizations,
                        Variadic<OpenACC_PointerLikeTypeInterface>:$dataClauseOperands,
                        OptionalAttr<DefaultValueAttr>:$defaultAttr);
 
@@ -657,8 +675,9 @@ def OpenACC_ParallelOp : OpenACC_Op<"parallel",
     oilist(
         `dataOperands` `(` $dataClauseOperands `:` type($dataClauseOperands) `)`
       | `async` `(` $async `:` type($async) `)`
-      | `firstprivate` `(` $gangFirstPrivateOperands `:`
-            type($gangFirstPrivateOperands) `)`
+      | `firstprivate` `(` custom<SymOperandList>($gangFirstPrivateOperands,
+            type($gangFirstPrivateOperands), $firstprivatizations)
+        `)`
       | `num_gangs` `(` $numGangs `:` type($numGangs) `)`
       | `num_workers` `(` $numWorkers `:` type($numWorkers) `)`
       | `private` `(` custom<SymOperandList>(
@@ -709,7 +728,8 @@ def OpenACC_SerialOp : OpenACC_Op<"serial",
                        OptionalAttr<SymbolRefArrayAttr>:$reductionRecipes,
                        Variadic<OpenACC_PointerLikeTypeInterface>:$gangPrivateOperands,
                        OptionalAttr<SymbolRefArrayAttr>:$privatizations,
-                       Variadic<AnyType>:$gangFirstPrivateOperands,
+                       Variadic<OpenACC_PointerLikeTypeInterface>:$gangFirstPrivateOperands,
+                       OptionalAttr<SymbolRefArrayAttr>:$firstprivatizations,
                        Variadic<OpenACC_PointerLikeTypeInterface>:$dataClauseOperands,
                        OptionalAttr<DefaultValueAttr>:$defaultAttr);
 
@@ -727,8 +747,9 @@ def OpenACC_SerialOp : OpenACC_Op<"serial",
     oilist(
         `dataOperands` `(` $dataClauseOperands `:` type($dataClauseOperands) `)`
       | `async` `(` $async `:` type($async) `)`
-      | `firstprivate` `(` $gangFirstPrivateOperands `:`
-            type($gangFirstPrivateOperands) `)`
+      | `firstprivate` `(` custom<SymOperandList>($gangFirstPrivateOperands,
+            type($gangFirstPrivateOperands), $firstprivatizations)
+        `)`
       | `private` `(` custom<SymOperandList>(
             $gangPrivateOperands, type($gangPrivateOperands), $privatizations)
         `)`
@@ -1034,6 +1055,7 @@ def OpenACC_LoopOp : OpenACC_Op<"loop",
 
   let arguments = (ins OptionalAttr<I64Attr>:$collapse,
                        Optional<IntOrIndex>:$gangNum,
+                       Optional<IntOrIndex>:$gangDim,
                        Optional<IntOrIndex>:$gangStatic,
                        Optional<IntOrIndex>:$workerNum,
                        Optional<IntOrIndex>:$vectorLength,
@@ -1056,13 +1078,14 @@ def OpenACC_LoopOp : OpenACC_Op<"loop",
   let extraClassDeclaration = [{
     static StringRef getAutoAttrStrName() { return "auto"; }
     static StringRef getGangNumKeyword() { return "num"; }
+    static StringRef getGangDimKeyword() { return "dim"; }
     static StringRef getGangStaticKeyword() { return "static"; }
   }];
 
   let hasCustomAssemblyFormat = 1;
   let assemblyFormat = [{
     oilist(
-        `gang` `` custom<GangClause>($gangNum, type($gangNum), $gangStatic, type($gangStatic), $hasGang)
+        `gang` `` custom<GangClause>($gangNum, type($gangNum), $gangDim, type($gangDim), $gangStatic, type($gangStatic), $hasGang)
       | `worker` `` custom<WorkerClause>($workerNum, type($workerNum), $hasWorker)
       | `vector` `` custom<VectorClause>($vectorLength, type($vectorLength), $hasVector)
       | `private` `(` custom<SymOperandList>(

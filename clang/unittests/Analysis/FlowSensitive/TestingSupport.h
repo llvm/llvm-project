@@ -241,7 +241,7 @@ checkDataflow(AnalysisInputs<AnalysisT> AI,
           llvm::errc::invalid_argument, "Could not find the target function.");
 
     // Build the control flow graph for the target function.
-    auto MaybeCFCtx = ControlFlowContext::build(*Target, Context);
+    auto MaybeCFCtx = ControlFlowContext::build(*Target);
     if (!MaybeCFCtx) return MaybeCFCtx.takeError();
     auto &CFCtx = *MaybeCFCtx;
 

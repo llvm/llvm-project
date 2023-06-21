@@ -2,7 +2,7 @@
 ! Lowering must close the eyes and do as if it did not know
 ! about the function definition since semantic lets these
 ! programs through with a warning.
-! RUN: bbc -emit-fir -hlfir %s -o - | FileCheck %s
+! RUN: bbc -emit-hlfir %s -o - | FileCheck %s
 
 subroutine takes_char(c)
   character(8) :: c

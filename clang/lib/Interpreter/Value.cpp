@@ -108,7 +108,7 @@ static Value::Kind ConvertQualTypeToKind(const ASTContext &Ctx, QualType QT) {
   if (!BT || BT->isNullPtrType())
     return Value::K_PtrOrObj;
 
-  switch (QT->getAs<BuiltinType>()->getKind()) {
+  switch (QT->castAs<BuiltinType>()->getKind()) {
   default:
     assert(false && "Type not supported");
     return Value::K_Unspecified;

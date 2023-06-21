@@ -20,45 +20,45 @@
 using namespace lldb;
 using namespace lldb_private;
 
-OptionValueProperties::OptionValueProperties(ConstString name) : m_name(name) {}
+OptionValueProperties::OptionValueProperties(llvm::StringRef name)
+    : m_name(name.str()) {}
 
 void OptionValueProperties::Initialize(const PropertyDefinitions &defs) {
   for (const auto &definition : defs) {
     Property property(definition);
     assert(property.IsValid());
-    m_name_to_index.Append(ConstString(property.GetName()),
-                           m_properties.size());
+    m_name_to_index.insert({property.GetName(), m_properties.size()});
     property.GetValue()->SetParent(shared_from_this());
     m_properties.push_back(property);
   }
-  m_name_to_index.Sort();
 }
 
 void OptionValueProperties::SetValueChangedCallback(
-    uint32_t property_idx, std::function<void()> callback) {
+    size_t property_idx, std::function<void()> callback) {
   Property *property = ProtectedGetPropertyAtIndex(property_idx);
   if (property)
     property->SetValueChangedCallback(std::move(callback));
 }
 
-void OptionValueProperties::AppendProperty(ConstString name,
+void OptionValueProperties::AppendProperty(llvm::StringRef name,
                                            llvm::StringRef desc, bool is_global,
                                            const OptionValueSP &value_sp) {
-  Property property(name.GetStringRef(), desc, is_global, value_sp);
-  m_name_to_index.Append(name, m_properties.size());
+  Property property(name, desc, is_global, value_sp);
+  m_name_to_index.insert({name, m_properties.size()});
   m_properties.push_back(property);
   value_sp->SetParent(shared_from_this());
-  m_name_to_index.Sort();
 }
 
 lldb::OptionValueSP
 OptionValueProperties::GetValueForKey(const ExecutionContext *exe_ctx,
-                                      ConstString key) const {
-  lldb::OptionValueSP value_sp;
-  size_t idx = m_name_to_index.Find(key, SIZE_MAX);
-  if (idx < m_properties.size())
-    value_sp = GetPropertyAtIndex(idx, exe_ctx)->GetValue();
-  return value_sp;
+                                      llvm::StringRef key) const {
+  auto iter = m_name_to_index.find(key);
+  if (iter == m_name_to_index.end())
+    return OptionValueSP();
+  const size_t idx = iter->second;
+  if (idx >= m_properties.size())
+    return OptionValueSP();
+  return GetPropertyAtIndex(idx, exe_ctx)->GetValue();
 }
 
 lldb::OptionValueSP
@@ -69,13 +69,13 @@ OptionValueProperties::GetSubValue(const ExecutionContext *exe_ctx,
     return OptionValueSP();
 
   llvm::StringRef sub_name;
-  ConstString key;
+  llvm::StringRef key;
   size_t key_len = name.find_first_of(".[{");
   if (key_len != llvm::StringRef::npos) {
-    key.SetString(name.take_front(key_len));
+    key = name.take_front(key_len);
     sub_name = name.drop_front(key_len);
   } else
-    key.SetString(name);
+    key = name;
 
   value_sp = GetValueForKey(exe_ctx, key);
   if (sub_name.empty() || !value_sp)
@@ -88,8 +88,8 @@ OptionValueProperties::GetSubValue(const ExecutionContext *exe_ctx,
         value_sp->GetSubValue(exe_ctx, sub_name.drop_front(), error);
     if (!return_val_sp) {
       if (Properties::IsSettingExperimental(sub_name.drop_front())) {
-        size_t experimental_len =
-            strlen(Properties::GetExperimentalSettingsName());
+        const size_t experimental_len =
+            Properties::GetExperimentalSettingsName().size();
         if (sub_name[experimental_len + 1] == '.')
           return_val_sp = value_sp->GetSubValue(
               exe_ctx, sub_name.drop_front(experimental_len + 2), error);
@@ -138,18 +138,24 @@ Status OptionValueProperties::SetSubValue(const ExecutionContext *exe_ctx,
   return error;
 }
 
-uint32_t OptionValueProperties::GetPropertyIndex(ConstString name) const {
-  return m_name_to_index.Find(name, SIZE_MAX);
+size_t OptionValueProperties::GetPropertyIndex(llvm::StringRef name) const {
+  auto iter = m_name_to_index.find(name);
+  if (iter == m_name_to_index.end())
+    return SIZE_MAX;
+  return iter->second;
 }
 
 const Property *
-OptionValueProperties::GetProperty(ConstString name,
+OptionValueProperties::GetProperty(llvm::StringRef name,
                                    const ExecutionContext *exe_ctx) const {
-  return GetPropertyAtIndex(m_name_to_index.Find(name, SIZE_MAX), exe_ctx);
+  auto iter = m_name_to_index.find(name);
+  if (iter == m_name_to_index.end())
+    return nullptr;
+  return GetPropertyAtIndex(iter->second, exe_ctx);
 }
 
 lldb::OptionValueSP OptionValueProperties::GetPropertyValueAtIndex(
-    uint32_t idx, const ExecutionContext *exe_ctx) const {
+    size_t idx, const ExecutionContext *exe_ctx) const {
   const Property *setting = GetPropertyAtIndex(idx, exe_ctx);
   if (setting)
     return setting->GetValue();
@@ -158,7 +164,7 @@ lldb::OptionValueSP OptionValueProperties::GetPropertyValueAtIndex(
 
 OptionValuePathMappings *
 OptionValueProperties::GetPropertyAtIndexAsOptionValuePathMappings(
-    uint32_t idx, const ExecutionContext *exe_ctx) const {
+    size_t idx, const ExecutionContext *exe_ctx) const {
   OptionValueSP value_sp(GetPropertyValueAtIndex(idx, exe_ctx));
   if (value_sp)
     return value_sp->GetAsPathMappings();
@@ -167,7 +173,7 @@ OptionValueProperties::GetPropertyAtIndexAsOptionValuePathMappings(
 
 OptionValueFileSpecList *
 OptionValueProperties::GetPropertyAtIndexAsOptionValueFileSpecList(
-    uint32_t idx, const ExecutionContext *exe_ctx) const {
+    size_t idx, const ExecutionContext *exe_ctx) const {
   OptionValueSP value_sp(GetPropertyValueAtIndex(idx, exe_ctx));
   if (value_sp)
     return value_sp->GetAsFileSpecList();
@@ -175,7 +181,7 @@ OptionValueProperties::GetPropertyAtIndexAsOptionValueFileSpecList(
 }
 
 bool OptionValueProperties::GetPropertyAtIndexAsArgs(
-    uint32_t idx, Args &args, const ExecutionContext *exe_ctx) const {
+    size_t idx, Args &args, const ExecutionContext *exe_ctx) const {
   const Property *property = GetPropertyAtIndex(idx, exe_ctx);
   if (!property)
     return false;
@@ -206,7 +212,7 @@ bool OptionValueProperties::GetPropertyAtIndexAsArgs(
 }
 
 bool OptionValueProperties::SetPropertyAtIndexFromArgs(
-    uint32_t idx, const Args &args, const ExecutionContext *exe_ctx) {
+    size_t idx, const Args &args, const ExecutionContext *exe_ctx) {
   const Property *property = GetPropertyAtIndex(idx, exe_ctx);
   if (!property)
     return false;
@@ -232,7 +238,7 @@ bool OptionValueProperties::SetPropertyAtIndexFromArgs(
 
 OptionValueDictionary *
 OptionValueProperties::GetPropertyAtIndexAsOptionValueDictionary(
-    uint32_t idx, const ExecutionContext *exe_ctx) const {
+    size_t idx, const ExecutionContext *exe_ctx) const {
   const Property *property = GetPropertyAtIndex(idx, exe_ctx);
   if (property)
     return property->GetValue()->GetAsDictionary();
@@ -241,7 +247,7 @@ OptionValueProperties::GetPropertyAtIndexAsOptionValueDictionary(
 
 OptionValueFileSpec *
 OptionValueProperties::GetPropertyAtIndexAsOptionValueFileSpec(
-    uint32_t idx, const ExecutionContext *exe_ctx) const {
+    size_t idx, const ExecutionContext *exe_ctx) const {
   const Property *property = GetPropertyAtIndex(idx, exe_ctx);
   if (property) {
     OptionValue *value = property->GetValue().get();
@@ -252,7 +258,7 @@ OptionValueProperties::GetPropertyAtIndexAsOptionValueFileSpec(
 }
 
 OptionValueSInt64 *OptionValueProperties::GetPropertyAtIndexAsOptionValueSInt64(
-    uint32_t idx, const ExecutionContext *exe_ctx) const {
+    size_t idx, const ExecutionContext *exe_ctx) const {
   const Property *property = GetPropertyAtIndex(idx, exe_ctx);
   if (property) {
     OptionValue *value = property->GetValue().get();
@@ -263,7 +269,7 @@ OptionValueSInt64 *OptionValueProperties::GetPropertyAtIndexAsOptionValueSInt64(
 }
 
 OptionValueUInt64 *OptionValueProperties::GetPropertyAtIndexAsOptionValueUInt64(
-    uint32_t idx, const ExecutionContext *exe_ctx) const {
+    size_t idx, const ExecutionContext *exe_ctx) const {
   const Property *property = GetPropertyAtIndex(idx, exe_ctx);
   if (property) {
     OptionValue *value = property->GetValue().get();
@@ -274,7 +280,7 @@ OptionValueUInt64 *OptionValueProperties::GetPropertyAtIndexAsOptionValueUInt64(
 }
 
 OptionValueString *OptionValueProperties::GetPropertyAtIndexAsOptionValueString(
-    uint32_t idx, const ExecutionContext *exe_ctx) const {
+    size_t idx, const ExecutionContext *exe_ctx) const {
   OptionValueSP value_sp(GetPropertyValueAtIndex(idx, exe_ctx));
   if (value_sp)
     return value_sp->GetAsString();
@@ -399,18 +405,19 @@ OptionValueProperties::DeepCopy(const OptionValueSP &new_parent) const {
 const Property *
 OptionValueProperties::GetPropertyAtPath(const ExecutionContext *exe_ctx,
                                          llvm::StringRef name) const {
-  const Property *property = nullptr;
   if (name.empty())
     return nullptr;
+
+  const Property *property = nullptr;
   llvm::StringRef sub_name;
-  ConstString key;
+  llvm::StringRef key;
   size_t key_len = name.find_first_of(".[{");
 
   if (key_len != llvm::StringRef::npos) {
-    key.SetString(name.take_front(key_len));
+    key = name.take_front(key_len);
     sub_name = name.drop_front(key_len);
   } else
-    key.SetString(name);
+    key = name;
 
   property = GetProperty(key, exe_ctx);
   if (sub_name.empty() || !property)
@@ -473,7 +480,7 @@ void OptionValueProperties::Apropos(
 
 lldb::OptionValuePropertiesSP
 OptionValueProperties::GetSubProperty(const ExecutionContext *exe_ctx,
-                                      ConstString name) {
+                                      llvm::StringRef name) {
   lldb::OptionValueSP option_value_sp(GetValueForKey(exe_ctx, name));
   if (option_value_sp) {
     OptionValueProperties *ov_properties = option_value_sp->GetAsProperties();

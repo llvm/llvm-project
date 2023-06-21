@@ -57,6 +57,7 @@ static_library("Utility") {
     "VASprintf.cpp",
     "VMRange.cpp",
     "XcodeSDK.cpp",
+    "ZipFile.cpp",
   ]
 
   if (current_os == "win") {

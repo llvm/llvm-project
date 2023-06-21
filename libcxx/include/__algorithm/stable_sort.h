@@ -15,9 +15,10 @@
 #include <__algorithm/iterator_operations.h>
 #include <__algorithm/sort.h>
 #include <__config>
+#include <__debug_utils/strict_weak_ordering_check.h>
 #include <__iterator/iterator_traits.h>
 #include <__memory/destruct_n.h>
-#include <__memory/temporary_buffer.h>
+#include <__memory/uninitialized_buffer.h>
 #include <__memory/unique_ptr.h>
 #include <__type_traits/is_trivially_copy_assignable.h>
 #include <__utility/move.h>
@@ -248,17 +249,13 @@ void __stable_sort_impl(_RandomAccessIterator __first, _RandomAccessIterator __l
   using difference_type = typename iterator_traits<_RandomAccessIterator>::difference_type;
 
   difference_type __len = __last - __first;
-  pair<value_type*, ptrdiff_t> __buf(0, 0);
-  unique_ptr<value_type, __return_temporary_buffer> __h;
-  if (__len > static_cast<difference_type>(__stable_sort_switch<value_type>::value)) {
-// TODO: Remove the use of std::get_temporary_buffer
-_LIBCPP_SUPPRESS_DEPRECATED_PUSH
-      __buf = std::get_temporary_buffer<value_type>(__len);
-_LIBCPP_SUPPRESS_DEPRECATED_POP
-      __h.reset(__buf.first);
-  }
+  __uninitialized_buffer_t<value_type[]> __buf;
+  if (__len > static_cast<difference_type>(__stable_sort_switch<value_type>::value))
+        __buf = std::__make_uninitialized_buffer<value_type[]>(nothrow, __len);
 
-  std::__stable_sort<_AlgPolicy, __comp_ref_type<_Compare> >(__first, __last, __comp, __len, __buf.first, __buf.second);
+  std::__stable_sort<_AlgPolicy, __comp_ref_type<_Compare> >(
+      __first, __last, __comp, __len, __buf.get(), __buf ? __len : 0);
+  std::__check_strict_weak_ordering_sorted(__first, __last, __comp);
 }
 
 template <class _RandomAccessIterator, class _Compare>
@@ -270,7 +267,7 @@ void stable_sort(_RandomAccessIterator __first, _RandomAccessIterator __last, _C
 template <class _RandomAccessIterator>
 inline _LIBCPP_HIDE_FROM_ABI
 void stable_sort(_RandomAccessIterator __first, _RandomAccessIterator __last) {
-  std::stable_sort(__first, __last, __less<typename iterator_traits<_RandomAccessIterator>::value_type>());
+  std::stable_sort(__first, __last, __less<>());
 }
 
 _LIBCPP_END_NAMESPACE_STD

@@ -156,6 +156,12 @@ static BasicType ParseBasicType(char c) {
   }
 }
 
+static VectorTypeModifier getTupleVTM(unsigned NF) {
+  assert(2 <= NF && NF <= 8 && "2 <= NF <= 8");
+  return static_cast<VectorTypeModifier>(
+      static_cast<uint8_t>(VectorTypeModifier::Tuple2) + (NF - 2));
+}
+
 void emitCodeGenSwitchBody(const RVVIntrinsic *RVVI, raw_ostream &OS) {
   if (!RVVI->getIRName().empty())
     OS << "  ID = Intrinsic::riscv_" + RVVI->getIRName() + ";\n";
@@ -364,38 +370,38 @@ void RVVEmitter::createHeader(raw_ostream &OS) {
                                 TypeModifier::UnsignedInteger));
         printType(*UT);
       }
-      // FIXME: Expand more type declaration
-      if (I == 'i' && Log2LMUL == 0) { // vint32m1x2_t
+      for (int NF = 2; NF <= 8; ++NF) {
         auto TupleT = TypeCache.computeType(
             BT, Log2LMUL,
-            PrototypeDescriptor(BaseTypeModifier::Vector,
-                                VectorTypeModifier::Tuple2,
+            PrototypeDescriptor(BaseTypeModifier::Vector, getTupleVTM(NF),
                                 TypeModifier::SignedInteger));
+        auto TupleUT = TypeCache.computeType(
+            BT, Log2LMUL,
+            PrototypeDescriptor(BaseTypeModifier::Vector, getTupleVTM(NF),
+                                TypeModifier::UnsignedInteger));
         if (TupleT)
           printType(*TupleT);
+        if (TupleUT)
+          printType(*TupleUT);
       }
     }
   }
 
-  for (int Log2LMUL : Log2LMULs) {
-    auto T = TypeCache.computeType(BasicType::Float16, Log2LMUL,
-                                   PrototypeDescriptor::Vector);
-    if (T)
-      printType(*T);
-  }
-
-  for (int Log2LMUL : Log2LMULs) {
-    auto T = TypeCache.computeType(BasicType::Float32, Log2LMUL,
-                                   PrototypeDescriptor::Vector);
-    if (T)
-      printType(*T);
-  }
-
-  for (int Log2LMUL : Log2LMULs) {
-    auto T = TypeCache.computeType(BasicType::Float64, Log2LMUL,
-                                   PrototypeDescriptor::Vector);
-    if (T)
-      printType(*T);
+  for (BasicType BT :
+       {BasicType::Float16, BasicType::Float32, BasicType::Float64}) {
+    for (int Log2LMUL : Log2LMULs) {
+      auto T = TypeCache.computeType(BT, Log2LMUL, PrototypeDescriptor::Vector);
+      if (T)
+        printType(*T);
+      for (int NF = 2; NF <= 8; ++NF) {
+        auto TupleT = TypeCache.computeType(
+            BT, Log2LMUL,
+            PrototypeDescriptor(BaseTypeModifier::Vector, getTupleVTM(NF),
+                                TypeModifier::Float));
+        if (TupleT)
+          printType(*TupleT);
+      }
+    }
   }
 
   OS << "#define __riscv_v_intrinsic_overloading 1\n";
@@ -545,9 +551,11 @@ void RVVEmitter::createRVVIntrinsics(
         BasicPrototype, /*IsMasked=*/false,
         /*HasMaskedOffOperand=*/false, HasVL, NF, UnMaskedPolicyScheme,
         DefaultPolicy, IsTuple);
-    auto MaskedPrototype = RVVIntrinsic::computeBuiltinTypes(
-        BasicPrototype, /*IsMasked=*/true, HasMaskedOffOperand, HasVL, NF,
-        MaskedPolicyScheme, DefaultPolicy, IsTuple);
+    llvm::SmallVector<PrototypeDescriptor> MaskedPrototype;
+    if (HasMasked)
+      MaskedPrototype = RVVIntrinsic::computeBuiltinTypes(
+          BasicPrototype, /*IsMasked=*/true, HasMaskedOffOperand, HasVL, NF,
+          MaskedPolicyScheme, DefaultPolicy, IsTuple);
 
     // Create Intrinsics for each type and LMUL.
     for (char I : TypeRange) {

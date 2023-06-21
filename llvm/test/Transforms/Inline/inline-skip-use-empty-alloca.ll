@@ -1,9 +1,11 @@
-; RUN: opt -opaque-pointers=0 < %s -S -passes=inline | FileCheck %s
-; RUN: opt -opaque-pointers=0 < %s -S -strip-debug -passes=inline | FileCheck %s
+; RUN: opt < %s -S -passes=inline | FileCheck %s
+; RUN: opt < %s -S -strip-debug -passes=inline | FileCheck %s
 
 ; https://bugs.llvm.org/show_bug.cgi?id=43291
 ; The purpose of this test is to check if there is use_empty in the inner loop when scanning
 ; blocks of allocas, if the alloca is use_empty, skip it when allocas inlining.
+
+declare void @use(ptr )
 
 define void @foo(i16 %k) !dbg !6 {
   call void @llvm.dbg.value(metadata i16 %k, metadata !14, metadata !DIExpression()), !dbg !15
@@ -13,14 +15,13 @@ define void @foo(i16 %k) !dbg !6 {
   call void @llvm.dbg.value(metadata i16 %k, metadata !14, metadata !DIExpression()), !dbg !15
   %alloca_c = alloca i32
   call void @llvm.dbg.value(metadata i16 %k, metadata !14, metadata !DIExpression()), !dbg !15
-  %alloca_a..1 = bitcast i32* %alloca_a to i8**, !dbg !16
-  %alloca_c..1 = bitcast i32* %alloca_c to i8**, !dbg !16
+  call void @use(ptr %alloca_a), !dbg !16
+  call void @use(ptr %alloca_c), !dbg !16
   %_tmp23 = icmp ne i16 %k, 0
   br i1 %_tmp23, label %bb1, label %bb2
 
 bb1:                                              ; preds = %0
-  %_tmp28 = getelementptr [3 x i32], [3 x i32]* %alloca_b, i16 0, i64 0
-  store i32 0, i32* %_tmp28
+  store i32 0, ptr %alloca_b
   br label %bb2
 
 bb2:                                              ; preds = %bb1, %0

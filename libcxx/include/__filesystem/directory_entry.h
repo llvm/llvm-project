@@ -39,7 +39,7 @@ _LIBCPP_PUSH_MACROS
 
 _LIBCPP_BEGIN_NAMESPACE_FILESYSTEM
 
-_LIBCPP_AVAILABILITY_FILESYSTEM_PUSH
+_LIBCPP_AVAILABILITY_FILESYSTEM_LIBRARY_PUSH
 
 
 class directory_entry {
@@ -322,8 +322,7 @@ private:
     __data_ = __dt;
   }
 
-  _LIBCPP_FUNC_VIS
-  error_code __do_refresh() noexcept;
+  _LIBCPP_EXPORTED_FROM_ABI error_code __do_refresh() noexcept;
 
   _LIBCPP_INLINE_VISIBILITY
   static bool __is_dne_error(error_code const& __ec) {
@@ -517,7 +516,7 @@ private:
   directory_entry __elem_;
 };
 
-_LIBCPP_AVAILABILITY_FILESYSTEM_POP
+_LIBCPP_AVAILABILITY_FILESYSTEM_LIBRARY_POP
 
 _LIBCPP_END_NAMESPACE_FILESYSTEM
 

@@ -23,8 +23,8 @@ using namespace clang::interp;
 
 InterpFrame::InterpFrame(InterpState &S, const Function *Func,
                          InterpFrame *Caller, CodePtr RetPC)
-    : Caller(Caller), S(S), Func(Func), RetPC(RetPC),
-      ArgSize(Func ? Func->getArgSize() : 0),
+    : Caller(Caller), S(S), Depth(Caller ? Caller->Depth + 1 : 0), Func(Func),
+      RetPC(RetPC), ArgSize(Func ? Func->getArgSize() : 0),
       Args(static_cast<char *>(S.Stk.top())), FrameOffset(S.Stk.size()) {
   if (!Func)
     return;
@@ -98,20 +98,19 @@ void print(llvm::raw_ostream &OS, const Pointer &P, ASTContext &Ctx,
     return;
   }
 
-  auto printDesc = [&OS, &Ctx](Descriptor *Desc) {
-    if (auto *D = Desc->asDecl()) {
+  auto printDesc = [&OS, &Ctx](const Descriptor *Desc) {
+    if (const auto *D = Desc->asDecl()) {
       // Subfields or named values.
-      if (auto *VD = dyn_cast<ValueDecl>(D)) {
+      if (const auto *VD = dyn_cast<ValueDecl>(D)) {
         OS << *VD;
         return;
       }
       // Base classes.
-      if (isa<RecordDecl>(D)) {
+      if (isa<RecordDecl>(D))
         return;
-      }
     }
     // Temporary expression.
-    if (auto *E = Desc->asExpr()) {
+    if (const auto *E = Desc->asExpr()) {
       E->printPretty(OS, nullptr, Ctx.getPrintingPolicy());
       return;
     }

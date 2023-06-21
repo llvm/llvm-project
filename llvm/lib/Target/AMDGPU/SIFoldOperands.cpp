@@ -908,11 +908,10 @@ void SIFoldOperands::foldOperand(
       TRI->getRegClass(FoldDesc.operands()[0].RegClass);
 
   // Split 64-bit constants into 32-bits for folding.
-  if (UseOp.getSubReg() && AMDGPU::getRegBitWidth(FoldRC->getID()) == 64) {
+  if (UseOp.getSubReg() && AMDGPU::getRegBitWidth(*FoldRC) == 64) {
     Register UseReg = UseOp.getReg();
     const TargetRegisterClass *UseRC = MRI->getRegClass(UseReg);
-
-    if (AMDGPU::getRegBitWidth(UseRC->getID()) != 64)
+    if (AMDGPU::getRegBitWidth(*UseRC) != 64)
       return;
 
     APInt Imm(64, OpToFold.getImm());

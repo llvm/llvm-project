@@ -811,6 +811,31 @@ TEST(TransferTest, BinaryOperatorAssign) {
       });
 }
 
+TEST(TransferTest, BinaryOperatorAssignIntegerLiteral) {
+  std::string Code = R"(
+    void target() {
+      int Foo = 1;
+      // [[before]]
+      Foo = 2;
+      // [[after]]
+    }
+  )";
+  runDataflow(
+      Code,
+      [](const llvm::StringMap<DataflowAnalysisState<NoopLattice>> &Results,
+         ASTContext &ASTCtx) {
+        const Environment &Before =
+            getEnvironmentAtAnnotation(Results, "before");
+        const Environment &After = getEnvironmentAtAnnotation(Results, "after");
+
+        const auto &ValBefore =
+            getValueForDecl<IntegerValue>(ASTCtx, Before, "Foo");
+        const auto &ValAfter =
+            getValueForDecl<IntegerValue>(ASTCtx, After, "Foo");
+        EXPECT_NE(&ValBefore, &ValAfter);
+      });
+}
+
 TEST(TransferTest, VarDeclInitAssign) {
   std::string Code = R"(
     void target() {
@@ -3441,6 +3466,24 @@ TEST(TransferTest, BooleanInequality) {
       });
 }
 
+TEST(TransferTest, IntegerLiteralEquality) {
+  std::string Code = R"(
+    void target() {
+      bool equal = (42 == 42);
+      // [[p]]
+    }
+  )";
+  runDataflow(
+      Code,
+      [](const llvm::StringMap<DataflowAnalysisState<NoopLattice>> &Results,
+         ASTContext &ASTCtx) {
+        const Environment &Env = getEnvironmentAtAnnotation(Results, "p");
+
+        auto &Equal = getValueForDecl<BoolValue>(ASTCtx, Env, "equal");
+        EXPECT_TRUE(Env.flowConditionImplies(Equal));
+      });
+}
+
 TEST(TransferTest, CorrelatedBranches) {
   std::string Code = R"(
     void target(bool B, bool C) {
@@ -5324,6 +5367,39 @@ TEST(TransferTest, FunctionToPointerDecayHasValue) {
         auto &MemberP2 =
             getValueForDecl<PointerValue>(ASTCtx, Env, "member_p2");
         EXPECT_EQ(&MemberP1.getPointeeLoc(), &MemberP2.getPointeeLoc());
+      });
+}
+
+// Check that the pointer that a builtin function decays to is associated with
+// a value.
+TEST(TransferTest, BuiltinFunctionModeled) {
+  std::string Code = R"(
+    void target() {
+      __builtin_expect(0, 0);
+      // [[p]]
+    }
+  )";
+  runDataflow(
+      Code,
+      [](const llvm::StringMap<DataflowAnalysisState<NoopLattice>> &Results,
+         ASTContext &ASTCtx) {
+        using ast_matchers::selectFirst;
+        using ast_matchers::match;
+        using ast_matchers::traverse;
+        using ast_matchers::implicitCastExpr;
+        using ast_matchers::hasCastKind;
+
+        const Environment &Env = getEnvironmentAtAnnotation(Results, "p");
+
+        auto *ImplicitCast = selectFirst<ImplicitCastExpr>(
+            "implicit_cast",
+            match(traverse(TK_AsIs,
+                           implicitCastExpr(hasCastKind(CK_BuiltinFnToFnPtr))
+                               .bind("implicit_cast")),
+                  ASTCtx));
+
+        ASSERT_THAT(ImplicitCast, NotNull());
+        EXPECT_THAT(Env.getValueStrict(*ImplicitCast), NotNull());
       });
 }
 

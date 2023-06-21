@@ -294,6 +294,8 @@ Expr<Type<TypeCategory::Real, KIND>> FoldIntrinsicFunction(
     return FoldSum<T>(context, std::move(funcRef));
   } else if (name == "tiny") {
     return Expr<T>{Scalar<T>::TINY()};
+  } else if (name == "__builtin_fma") {
+    CHECK(args.size() == 3);
   } else if (name == "__builtin_ieee_next_after") {
     if (const auto *yExpr{UnwrapExpr<Expr<SomeReal>>(args[1])}) {
       return common::visit(

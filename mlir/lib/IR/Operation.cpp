@@ -1276,52 +1276,6 @@ bool OpTrait::hasElementwiseMappableTraits(Operation *op) {
 }
 
 //===----------------------------------------------------------------------===//
-// CastOpInterface
-//===----------------------------------------------------------------------===//
-
-/// Attempt to fold the given cast operation.
-LogicalResult
-impl::foldCastInterfaceOp(Operation *op, ArrayRef<Attribute> attrOperands,
-                          SmallVectorImpl<OpFoldResult> &foldResults) {
-  OperandRange operands = op->getOperands();
-  if (operands.empty())
-    return failure();
-  ResultRange results = op->getResults();
-
-  // Check for the case where the input and output types match 1-1.
-  if (operands.getTypes() == results.getTypes()) {
-    foldResults.append(operands.begin(), operands.end());
-    return success();
-  }
-
-  return failure();
-}
-
-/// Attempt to verify the given cast operation.
-LogicalResult impl::verifyCastInterfaceOp(
-    Operation *op, function_ref<bool(TypeRange, TypeRange)> areCastCompatible) {
-  auto resultTypes = op->getResultTypes();
-  if (resultTypes.empty())
-    return op->emitOpError()
-           << "expected at least one result for cast operation";
-
-  auto operandTypes = op->getOperandTypes();
-  if (!areCastCompatible(operandTypes, resultTypes)) {
-    InFlightDiagnostic diag = op->emitOpError("operand type");
-    if (operandTypes.empty())
-      diag << "s []";
-    else if (llvm::size(operandTypes) == 1)
-      diag << " " << *operandTypes.begin();
-    else
-      diag << "s " << operandTypes;
-    return diag << " and result type" << (resultTypes.size() == 1 ? " " : "s ")
-                << resultTypes << " are cast incompatible";
-  }
-
-  return success();
-}
-
-//===----------------------------------------------------------------------===//
 // Misc. utils
 //===----------------------------------------------------------------------===//
 

@@ -4,7 +4,6 @@ __kmpc_*
 
 _ZN4ompx*
 
-__keep_alive
 IsSPMDMode
 
 memcmp

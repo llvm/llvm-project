@@ -59,7 +59,6 @@ using namespace object;
 namespace bolt {
 
 class BinaryFunction;
-class ExecutableFileMemoryManager;
 
 /// Information on loadable part of the file.
 struct SegmentInfo {
@@ -312,10 +311,6 @@ public:
   using FilteredBinaryDataConstIterator =
       FilterIterator<binary_data_const_iterator>;
   using FilteredBinaryDataIterator = FilterIterator<binary_data_iterator>;
-
-  /// Memory manager for sections and segments. Used to communicate with ORC
-  /// among other things.
-  std::shared_ptr<ExecutableFileMemoryManager> EFMM;
 
   StringRef getFilename() const { return Filename; }
   void setFilename(StringRef Name) { Filename = std::string(Name); }
@@ -727,6 +722,8 @@ public:
            TheTriple->getArch() == llvm::Triple::x86_64;
   }
 
+  bool isRISCV() const { return TheTriple->getArch() == llvm::Triple::riscv64; }
+
   // AArch64-specific functions to check if symbol is used to delimit
   // code/data in .text. Code is marked by $x, data by $d.
   MarkerSymType getMarkerType(const SymbolRef &Symbol) const;
@@ -845,13 +842,11 @@ public:
   /// Return BinaryData for the given \p Name or nullptr if no
   /// global symbol with that name exists.
   const BinaryData *getBinaryDataByName(StringRef Name) const {
-    auto Itr = GlobalSymbols.find(Name);
-    return Itr != GlobalSymbols.end() ? Itr->second : nullptr;
+    return GlobalSymbols.lookup(Name);
   }
 
   BinaryData *getBinaryDataByName(StringRef Name) {
-    auto Itr = GlobalSymbols.find(Name);
-    return Itr != GlobalSymbols.end() ? Itr->second : nullptr;
+    return GlobalSymbols.lookup(Name);
   }
 
   /// Return registered PLT entry BinaryData with the given \p Name
@@ -1165,7 +1160,7 @@ public:
 
   /// Return a dynamic relocation registered at a given \p Address, or nullptr
   /// if there is no dynamic relocation at such address.
-  const Relocation *getDynamicRelocationAt(uint64_t Address);
+  const Relocation *getDynamicRelocationAt(uint64_t Address) const;
 
   /// Remove registered relocation at a given \p Address.
   bool removeRelocationAt(uint64_t Address);

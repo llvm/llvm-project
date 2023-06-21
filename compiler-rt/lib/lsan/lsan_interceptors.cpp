@@ -415,8 +415,10 @@ INTERCEPTOR(char *, strerror, int errnum) {
 
 #if SANITIZER_POSIX
 
-extern "C" void *__lsan_thread_start_func(void *arg) {
-  atomic_uintptr_t *atomic_tid = (atomic_uintptr_t *)arg;
+template <bool Detached>
+static void *ThreadStartFunc(void *arg) {
+  u32 parent_tid = (uptr)arg;
+  uptr tid = ThreadCreate(parent_tid, Detached);
   // Wait until the last iteration to maximize the chance that we are the last
   // destructor to run.
 #if !SANITIZER_NETBSD && !SANITIZER_FREEBSD
@@ -425,12 +427,8 @@ extern "C" void *__lsan_thread_start_func(void *arg) {
     Report("LeakSanitizer: failed to set thread key.\n");
     Die();
   }
-#endif
-  int tid = 0;
-  while ((tid = atomic_load(atomic_tid, memory_order_acquire)) == 0)
-    internal_sched_yield();
+#  endif
   ThreadStart(tid, GetTid());
-  atomic_store(atomic_tid, 0, memory_order_release);
   auto self = GetThreadSelf();
   auto args = GetThreadArgRetval().GetArgs(self);
   void *retval = (*args.routine)(args.arg_retval);
@@ -442,17 +440,19 @@ INTERCEPTOR(int, pthread_create, void *th, void *attr,
             void *(*callback)(void *), void *param) {
   ENSURE_LSAN_INITED;
   EnsureMainThreadIDIsCorrect();
+
   bool detached = [attr]() {
     int d = 0;
     return attr && !pthread_attr_getdetachstate(attr, &d) && IsStateDetached(d);
   }();
+
   __sanitizer_pthread_attr_t myattr;
   if (!attr) {
     pthread_attr_init(&myattr);
     attr = &myattr;
   }
   AdjustStackSize(attr);
-  atomic_uintptr_t atomic_tid = {};
+  uptr this_tid = GetCurrentThreadId();
   int result;
   {
     // Ignore all allocations made by pthread_create: thread stack/TLS may be
@@ -461,17 +461,11 @@ INTERCEPTOR(int, pthread_create, void *th, void *attr,
     // objects, the latter are calculated by obscure pointer arithmetic.
     ScopedInterceptorDisabler disabler;
     GetThreadArgRetval().Create(detached, {callback, param}, [&]() -> uptr {
-      result =
-          REAL(pthread_create)(th, attr, __lsan_thread_start_func, &atomic_tid);
+      result = REAL(pthread_create)(
+          th, attr, detached ? ThreadStartFunc<true> : ThreadStartFunc<false>,
+          (void *)this_tid);
       return result ? 0 : *(uptr *)(th);
     });
-  }
-  if (result == 0) {
-    int tid = ThreadCreate(GetCurrentThreadId(), detached);
-    CHECK_NE(tid, kMainTid);
-    atomic_store(&atomic_tid, tid, memory_order_release);
-    while (atomic_load(&atomic_tid, memory_order_acquire) != 0)
-      internal_sched_yield();
   }
   if (attr == &myattr)
     pthread_attr_destroy(&myattr);

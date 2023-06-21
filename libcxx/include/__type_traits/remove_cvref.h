@@ -34,10 +34,11 @@ struct __is_same_uncvref : _IsSame<__remove_cvref_t<_Tp>, __remove_cvref_t<_Up> 
 #if _LIBCPP_STD_VER >= 20
 template <class _Tp>
 struct remove_cvref {
-    using type _LIBCPP_NODEBUG = __remove_cvref_t<_Tp>;
+  using type _LIBCPP_NODEBUG = __remove_cvref_t<_Tp>;
 };
 
-template <class _Tp> using remove_cvref_t = __remove_cvref_t<_Tp>;
+template <class _Tp>
+using remove_cvref_t = __remove_cvref_t<_Tp>;
 #endif
 
 _LIBCPP_END_NAMESPACE_STD

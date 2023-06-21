@@ -28,7 +28,7 @@
 
 namespace std { // purposefully not using versioning namespace
 
-class _LIBCPP_EXCEPTION_ABI nested_exception {
+class _LIBCPP_EXPORTED_FROM_ABI nested_exception {
   exception_ptr __ptr_;
 
 public:

@@ -1518,7 +1518,9 @@ Instruction *llvm::SplitBlockAndInsertIfThen(Value *Cond,
 
   if (LI) {
     if (Loop *L = LI->getLoopFor(Head)) {
-      L->addBasicBlockToLoop(ThenBlock, *LI);
+      // unreachable-terminated blocks cannot belong to any loop.
+      if (!Unreachable)
+        L->addBasicBlockToLoop(ThenBlock, *LI);
       L->addBasicBlockToLoop(Tail, *LI);
     }
   }

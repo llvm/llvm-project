@@ -417,10 +417,6 @@ public:
   /// gets the specified attribute from the list of attributes.
   Attribute getParamAttribute(unsigned ArgNo, Attribute::AttrKind Kind) const;
 
-  /// removes noundef and other attributes that imply undefined behavior if a
-  /// `undef` or `poison` value is passed from the list of attributes.
-  void removeParamUndefImplyingAttrs(unsigned ArgNo);
-
   /// Return the stack alignment for the function.
   MaybeAlign getFnStackAlign() const {
     return AttributeSets.getFnStackAlignment();

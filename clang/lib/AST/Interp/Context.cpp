@@ -158,3 +158,38 @@ bool Context::Check(State &Parent, llvm::Expected<bool> &&Flag) {
   });
   return false;
 }
+
+// TODO: Virtual bases?
+const CXXMethodDecl *
+Context::getOverridingFunction(const CXXRecordDecl *DynamicDecl,
+                               const CXXRecordDecl *StaticDecl,
+                               const CXXMethodDecl *InitialFunction) const {
+
+  const CXXRecordDecl *CurRecord = DynamicDecl;
+  const CXXMethodDecl *FoundFunction = InitialFunction;
+  for (;;) {
+    const CXXMethodDecl *Overrider =
+        FoundFunction->getCorrespondingMethodDeclaredInClass(CurRecord, false);
+    if (Overrider)
+      return Overrider;
+
+    // Common case of only one base class.
+    if (CurRecord->getNumBases() == 1) {
+      CurRecord = CurRecord->bases_begin()->getType()->getAsCXXRecordDecl();
+      continue;
+    }
+
+    // Otherwise, go to the base class that will lead to the StaticDecl.
+    for (const CXXBaseSpecifier &Spec : CurRecord->bases()) {
+      const CXXRecordDecl *Base = Spec.getType()->getAsCXXRecordDecl();
+      if (Base == StaticDecl || Base->isDerivedFrom(StaticDecl)) {
+        CurRecord = Base;
+        break;
+      }
+    }
+  }
+
+  llvm_unreachable(
+      "Couldn't find an overriding function in the class hierarchy?");
+  return nullptr;
+}

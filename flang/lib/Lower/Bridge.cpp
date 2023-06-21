@@ -187,7 +187,7 @@ private:
   /// Track symbols symbols processed during and after the registration
   /// to avoid infinite loops between type conversions and global variable
   /// creation.
-  llvm::SmallSetVector<Fortran::semantics::SymbolRef, 64> seen;
+  llvm::SmallSetVector<Fortran::semantics::SymbolRef, 32> seen;
 };
 
 class DispatchTableConverter {
@@ -612,23 +612,6 @@ public:
           return fir::substBase(hexv, temp);
         });
 
-    // Replace all uses of the original with the clone/copy,
-    // esepcially for loop bounds (that uses the variable being privatised)
-    // since loop bounds use old values that need to be fixed by using the
-    // new copied value.
-    // Not able to use replaceAllUsesWith() because uses outside
-    // the loop body should not use the clone.
-    // FIXME: Call privatization before the loop operation.
-    mlir::Region &curRegion = getFirOpBuilder().getRegion();
-    mlir::Value oldVal = fir::getBase(hexv);
-    mlir::Value cloneVal = fir::getBase(exv);
-    for (auto &oper : curRegion.getOps()) {
-      for (unsigned int ii = 0; ii < oper.getNumOperands(); ++ii) {
-        if (oper.getOperand(ii) == oldVal) {
-          oper.setOperand(ii, cloneVal);
-        }
-      }
-    }
     return bindIfNewSymbol(sym, exv);
   }
 
@@ -1321,7 +1304,7 @@ private:
   void genFIR(const Fortran::parser::CallStmt &stmt) {
     Fortran::lower::StatementContext stmtCtx;
     Fortran::lower::pft::Evaluation &eval = getEval();
-    setCurrentPosition(stmt.v.source);
+    setCurrentPosition(stmt.source);
     assert(stmt.typedCall && "Call was not analyzed");
     mlir::Value res{};
     if (lowerToHighLevelFIR()) {
@@ -1348,7 +1331,7 @@ private:
     llvm::SmallVector<Fortran::parser::Label> labelList;
     int64_t index = 0;
     for (const Fortran::parser::ActualArgSpec &arg :
-         std::get<std::list<Fortran::parser::ActualArgSpec>>(stmt.v.t)) {
+         std::get<std::list<Fortran::parser::ActualArgSpec>>(stmt.call.t)) {
       const auto &actual = std::get<Fortran::parser::ActualArg>(arg.t);
       if (const auto *altReturn =
               std::get_if<Fortran::parser::AltReturnSpec>(&actual.u)) {
@@ -4010,8 +3993,38 @@ private:
         Fortran::lower::mapSymbolAttributes(*this, altResult, localSymbols,
                                             stmtCtx);
       } else {
+        // catch cases where the allocation for the function result storage type
+        // doesn't match the type of this symbol
+        mlir::Value preAlloc = primaryFuncResultStorage;
+        mlir::Type resTy = primaryFuncResultStorage.getType();
+        mlir::Type symTy = genType(altResult);
+        mlir::Type wrappedSymTy = fir::ReferenceType::get(symTy);
+        if (resTy != wrappedSymTy) {
+          // check size of the pointed to type so we can't overflow by writing
+          // double precision to a single precision allocation, etc
+          LLVM_ATTRIBUTE_UNUSED auto getBitWidth = [this](mlir::Type ty) {
+            // 15.6.2.6.3: differering result types should be integer, real,
+            // complex or logical
+            if (auto cmplx = mlir::dyn_cast_or_null<fir::ComplexType>(ty)) {
+              fir::KindTy kind = cmplx.getFKind();
+              return 2 * builder->getKindMap().getRealBitsize(kind);
+            }
+            if (auto logical = mlir::dyn_cast_or_null<fir::LogicalType>(ty)) {
+              fir::KindTy kind = logical.getFKind();
+              return builder->getKindMap().getLogicalBitsize(kind);
+            }
+            return ty.getIntOrFloatBitWidth();
+          };
+          assert(getBitWidth(fir::unwrapRefType(resTy)) >= getBitWidth(symTy));
+
+          // convert the storage to the symbol type so that the hlfir.declare
+          // gets the correct type for this symbol
+          preAlloc = builder->create<fir::ConvertOp>(getCurrentLocation(),
+                                                     wrappedSymTy, preAlloc);
+        }
+
         Fortran::lower::mapSymbolAttributes(*this, altResult, localSymbols,
-                                            stmtCtx, primaryFuncResultStorage);
+                                            stmtCtx, preAlloc);
       }
     }
 

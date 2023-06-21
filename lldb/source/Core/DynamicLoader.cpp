@@ -187,14 +187,13 @@ static ModuleSP ReadUnnamedMemoryModule(Process *process, addr_t addr,
 
 ModuleSP DynamicLoader::LoadBinaryWithUUIDAndAddress(
     Process *process, llvm::StringRef name, UUID uuid, addr_t value,
-    bool value_is_offset, bool force_symbol_search, bool notify) {
+    bool value_is_offset, bool force_symbol_search, bool notify,
+    bool set_address_in_target) {
   ModuleSP memory_module_sp;
   ModuleSP module_sp;
   PlatformSP platform_sp = process->GetTarget().GetPlatform();
   Target &target = process->GetTarget();
   Status error;
-  ModuleSpec module_spec;
-  module_spec.GetUUID() = uuid;
 
   if (!uuid.IsValid() && !value_is_offset) {
     memory_module_sp = ReadUnnamedMemoryModule(process, value, name);
@@ -202,23 +201,46 @@ ModuleSP DynamicLoader::LoadBinaryWithUUIDAndAddress(
     if (memory_module_sp)
       uuid = memory_module_sp->GetUUID();
   }
+  ModuleSpec module_spec;
+  module_spec.GetUUID() = uuid;
+  FileSpec name_filespec(name);
+  if (FileSystem::Instance().Exists(name_filespec))
+    module_spec.GetFileSpec() = name_filespec;
 
   if (uuid.IsValid()) {
-    ModuleSpec module_spec;
-    module_spec.GetUUID() = uuid;
-
+    // Has lldb already seen a module with this UUID?
     if (!module_sp)
-      module_sp = target.GetOrCreateModule(module_spec, false, &error);
+      error = ModuleList::GetSharedModule(module_spec, module_sp, nullptr,
+                                          nullptr, nullptr);
+
+    // Can lldb's symbol/executable location schemes
+    // find an executable and symbol file.
+    if (!module_sp) {
+      FileSpecList search_paths = Target::GetDefaultDebugFileSearchPaths();
+      module_spec.GetSymbolFileSpec() =
+          Symbols::LocateExecutableSymbolFile(module_spec, search_paths);
+      ModuleSpec objfile_module_spec =
+          Symbols::LocateExecutableObjectFile(module_spec);
+      module_spec.GetFileSpec() = objfile_module_spec.GetFileSpec();
+      if (FileSystem::Instance().Exists(module_spec.GetFileSpec()) &&
+          FileSystem::Instance().Exists(module_spec.GetSymbolFileSpec())) {
+        module_sp = std::make_shared<Module>(module_spec);
+      }
+    }
 
     // If we haven't found a binary, or we don't have a SymbolFile, see
     // if there is an external search tool that can find it.
-    if (force_symbol_search &&
-        (!module_sp || !module_sp->GetSymbolFileFileSpec())) {
-      Symbols::DownloadObjectAndSymbolFile(module_spec, error, true);
+    if (!module_sp || !module_sp->GetSymbolFileFileSpec()) {
+      Symbols::DownloadObjectAndSymbolFile(module_spec, error,
+                                           force_symbol_search);
       if (FileSystem::Instance().Exists(module_spec.GetFileSpec())) {
         module_sp = std::make_shared<Module>(module_spec);
       }
     }
+
+    // If we only found the executable, create a Module based on that.
+    if (!module_sp && FileSystem::Instance().Exists(module_spec.GetFileSpec()))
+      module_sp = std::make_shared<Module>(module_spec);
   }
 
   // If we couldn't find the binary anywhere else, as a last resort,
@@ -239,25 +261,34 @@ ModuleSP DynamicLoader::LoadBinaryWithUUIDAndAddress(
     target.GetImages().AppendIfNeeded(module_sp, false);
 
     bool changed = false;
-    if (module_sp->GetObjectFile()) {
-      if (value != LLDB_INVALID_ADDRESS) {
-        LLDB_LOGF(log, "Loading binary UUID %s at %s 0x%" PRIx64,
-                  uuid.GetAsString().c_str(),
-                  value_is_offset ? "offset" : "address", value);
-        module_sp->SetLoadAddress(target, value, value_is_offset, changed);
+    if (set_address_in_target) {
+      if (module_sp->GetObjectFile()) {
+        if (value != LLDB_INVALID_ADDRESS) {
+          LLDB_LOGF(log,
+                    "DynamicLoader::LoadBinaryWithUUIDAndAddress Loading "
+                    "binary UUID %s at %s 0x%" PRIx64,
+                    uuid.GetAsString().c_str(),
+                    value_is_offset ? "offset" : "address", value);
+          module_sp->SetLoadAddress(target, value, value_is_offset, changed);
+        } else {
+          // No address/offset/slide, load the binary at file address,
+          // offset 0.
+          LLDB_LOGF(log,
+                    "DynamicLoader::LoadBinaryWithUUIDAndAddress Loading "
+                    "binary UUID %s at file address",
+                    uuid.GetAsString().c_str());
+          module_sp->SetLoadAddress(target, 0, true /* value_is_slide */,
+                                    changed);
+        }
       } else {
-        // No address/offset/slide, load the binary at file address,
-        // offset 0.
-        LLDB_LOGF(log, "Loading binary UUID %s at file address",
-                  uuid.GetAsString().c_str());
+        // In-memory image, load at its true address, offset 0.
+        LLDB_LOGF(log,
+                  "DynamicLoader::LoadBinaryWithUUIDAndAddress Loading binary "
+                  "UUID %s from memory at address 0x%" PRIx64,
+                  uuid.GetAsString().c_str(), value);
         module_sp->SetLoadAddress(target, 0, true /* value_is_slide */,
                                   changed);
       }
-    } else {
-      // In-memory image, load at its true address, offset 0.
-      LLDB_LOGF(log, "Loading binary UUID %s from memory at address 0x%" PRIx64,
-                uuid.GetAsString().c_str(), value);
-      module_sp->SetLoadAddress(target, 0, true /* value_is_slide */, changed);
     }
 
     if (notify) {

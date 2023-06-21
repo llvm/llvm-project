@@ -294,15 +294,9 @@ define i64 @known_power_of_two_urem_loop_ashr_negative(i64 %size, i64 %a) {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    br label [[FOR_BODY:%.*]]
 ; CHECK:       for.body:
-; CHECK-NEXT:    [[PHI:%.*]] = phi i64 [ -9223372036854775808, [[ENTRY:%.*]] ], [ [[I:%.*]], [[FOR_BODY]] ]
-; CHECK-NEXT:    [[SUM:%.*]] = phi i64 [ 0, [[ENTRY]] ], [ [[ADD:%.*]], [[FOR_BODY]] ]
-; CHECK-NEXT:    [[UREM:%.*]] = urem i64 [[SIZE:%.*]], [[PHI]]
-; CHECK-NEXT:    [[ADD]] = add nsw i64 [[SUM]], [[UREM]]
-; CHECK-NEXT:    [[I]] = ashr i64 [[PHI]], [[A:%.*]]
-; CHECK-NEXT:    [[ICMP:%.*]] = icmp ugt i64 [[I]], 1
-; CHECK-NEXT:    br i1 [[ICMP]], label [[FOR_BODY]], label [[FOR_END:%.*]]
+; CHECK-NEXT:    br i1 true, label [[FOR_BODY]], label [[FOR_END:%.*]]
 ; CHECK:       for.end:
-; CHECK-NEXT:    ret i64 [[SUM]]
+; CHECK-NEXT:    ret i64 poison
 ;
 entry:
   br label %for.body

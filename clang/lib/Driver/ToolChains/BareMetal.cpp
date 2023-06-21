@@ -38,39 +38,39 @@ static bool findRISCVMultilibs(const Driver &D,
 
   if (TargetTriple.isRISCV64()) {
     MultilibBuilder Imac =
-        MultilibBuilder().flag("+march=rv64imac").flag("+mabi=lp64");
+        MultilibBuilder().flag("-march=rv64imac").flag("-mabi=lp64");
     MultilibBuilder Imafdc = MultilibBuilder("/rv64imafdc/lp64d")
-                                 .flag("+march=rv64imafdc")
-                                 .flag("+mabi=lp64d");
+                                 .flag("-march=rv64imafdc")
+                                 .flag("-mabi=lp64d");
 
     // Multilib reuse
     bool UseImafdc =
         (Arch == "rv64imafdc") || (Arch == "rv64gc"); // gc => imafdc
 
-    addMultilibFlag((Arch == "rv64imac"), "march=rv64imac", Flags);
-    addMultilibFlag(UseImafdc, "march=rv64imafdc", Flags);
-    addMultilibFlag(Abi == "lp64", "mabi=lp64", Flags);
-    addMultilibFlag(Abi == "lp64d", "mabi=lp64d", Flags);
+    addMultilibFlag((Arch == "rv64imac"), "-march=rv64imac", Flags);
+    addMultilibFlag(UseImafdc, "-march=rv64imafdc", Flags);
+    addMultilibFlag(Abi == "lp64", "-mabi=lp64", Flags);
+    addMultilibFlag(Abi == "lp64d", "-mabi=lp64d", Flags);
 
     Result.Multilibs =
         MultilibSetBuilder().Either(Imac, Imafdc).makeMultilibSet();
-    return Result.Multilibs.select(Flags, Result.SelectedMultilib);
+    return Result.Multilibs.select(Flags, Result.SelectedMultilibs);
   }
   if (TargetTriple.isRISCV32()) {
     MultilibBuilder Imac =
-        MultilibBuilder().flag("+march=rv32imac").flag("+mabi=ilp32");
+        MultilibBuilder().flag("-march=rv32imac").flag("-mabi=ilp32");
     MultilibBuilder I = MultilibBuilder("/rv32i/ilp32")
-                            .flag("+march=rv32i")
-                            .flag("+mabi=ilp32");
+                            .flag("-march=rv32i")
+                            .flag("-mabi=ilp32");
     MultilibBuilder Im = MultilibBuilder("/rv32im/ilp32")
-                             .flag("+march=rv32im")
-                             .flag("+mabi=ilp32");
+                             .flag("-march=rv32im")
+                             .flag("-mabi=ilp32");
     MultilibBuilder Iac = MultilibBuilder("/rv32iac/ilp32")
-                              .flag("+march=rv32iac")
-                              .flag("+mabi=ilp32");
+                              .flag("-march=rv32iac")
+                              .flag("-mabi=ilp32");
     MultilibBuilder Imafc = MultilibBuilder("/rv32imafc/ilp32f")
-                                .flag("+march=rv32imafc")
-                                .flag("+mabi=ilp32f");
+                                .flag("-march=rv32imafc")
+                                .flag("-mabi=ilp32f");
 
     // Multilib reuse
     bool UseI = (Arch == "rv32i") || (Arch == "rv32ic");    // ic => i
@@ -78,17 +78,17 @@ static bool findRISCVMultilibs(const Driver &D,
     bool UseImafc = (Arch == "rv32imafc") || (Arch == "rv32imafdc") ||
                     (Arch == "rv32gc"); // imafdc,gc => imafc
 
-    addMultilibFlag(UseI, "march=rv32i", Flags);
-    addMultilibFlag(UseIm, "march=rv32im", Flags);
-    addMultilibFlag((Arch == "rv32iac"), "march=rv32iac", Flags);
-    addMultilibFlag((Arch == "rv32imac"), "march=rv32imac", Flags);
-    addMultilibFlag(UseImafc, "march=rv32imafc", Flags);
-    addMultilibFlag(Abi == "ilp32", "mabi=ilp32", Flags);
-    addMultilibFlag(Abi == "ilp32f", "mabi=ilp32f", Flags);
+    addMultilibFlag(UseI, "-march=rv32i", Flags);
+    addMultilibFlag(UseIm, "-march=rv32im", Flags);
+    addMultilibFlag((Arch == "rv32iac"), "-march=rv32iac", Flags);
+    addMultilibFlag((Arch == "rv32imac"), "-march=rv32imac", Flags);
+    addMultilibFlag(UseImafc, "-march=rv32imafc", Flags);
+    addMultilibFlag(Abi == "ilp32", "-mabi=ilp32", Flags);
+    addMultilibFlag(Abi == "ilp32f", "-mabi=ilp32f", Flags);
 
     Result.Multilibs =
         MultilibSetBuilder().Either(I, Im, Iac, Imac, Imafc).makeMultilibSet();
-    return Result.Multilibs.select(Flags, Result.SelectedMultilib);
+    return Result.Multilibs.select(Flags, Result.SelectedMultilibs);
   }
   return false;
 }
@@ -103,9 +103,12 @@ BareMetal::BareMetal(const Driver &D, const llvm::Triple &Triple,
   findMultilibs(D, Triple, Args);
   SmallString<128> SysRoot(computeSysRoot());
   if (!SysRoot.empty()) {
-    llvm::sys::path::append(SysRoot, "lib");
-    getFilePaths().push_back(std::string(SysRoot));
-    getLibraryPaths().push_back(std::string(SysRoot));
+    for (const Multilib &M : getOrderedMultilibs()) {
+      SmallString<128> Dir(SysRoot);
+      llvm::sys::path::append(Dir, M.osSuffix(), "lib");
+      getFilePaths().push_back(std::string(Dir));
+      getLibraryPaths().push_back(std::string(Dir));
+    }
   }
 }
 
@@ -155,14 +158,60 @@ static bool isRISCVBareMetal(const llvm::Triple &Triple) {
   return Triple.getEnvironmentName() == "elf";
 }
 
+static bool findMultilibsFromYAML(const ToolChain &TC, const Driver &D,
+                                  StringRef MultilibPath, const ArgList &Args,
+                                  DetectedMultilibs &Result) {
+  llvm::ErrorOr<std::unique_ptr<llvm::MemoryBuffer>> MB =
+      D.getVFS().getBufferForFile(MultilibPath);
+  if (!MB)
+    return false;
+  Multilib::flags_list Flags = TC.getMultilibFlags(Args);
+  llvm::ErrorOr<MultilibSet> ErrorOrMultilibSet =
+      MultilibSet::parseYaml(*MB.get());
+  if (ErrorOrMultilibSet.getError())
+    return false;
+  Result.Multilibs = ErrorOrMultilibSet.get();
+  return Result.Multilibs.select(Flags, Result.SelectedMultilibs);
+}
+
+static constexpr llvm::StringLiteral MultilibFilename = "multilib.yaml";
+
+// Get the sysroot, before multilib takes effect.
+static std::string computeBaseSysRoot(const Driver &D,
+                                      const llvm::Triple &Triple) {
+  if (!D.SysRoot.empty())
+    return D.SysRoot;
+
+  SmallString<128> SysRootDir(D.Dir);
+  llvm::sys::path::append(SysRootDir, "..", "lib", "clang-runtimes");
+
+  SmallString<128> MultilibPath(SysRootDir);
+  llvm::sys::path::append(MultilibPath, MultilibFilename);
+
+  // New behaviour: if multilib.yaml is found then use clang-runtimes as the
+  // sysroot.
+  if (D.getVFS().exists(MultilibPath))
+    return std::string(SysRootDir);
+
+  // Otherwise fall back to the old behaviour of appending the target triple.
+  llvm::sys::path::append(SysRootDir, D.getTargetTriple());
+  return std::string(SysRootDir);
+}
+
 void BareMetal::findMultilibs(const Driver &D, const llvm::Triple &Triple,
                               const ArgList &Args) {
   DetectedMultilibs Result;
   if (isRISCVBareMetal(Triple)) {
     if (findRISCVMultilibs(D, Triple, Args, Result)) {
-      SelectedMultilib = Result.SelectedMultilib;
+      SelectedMultilibs = Result.SelectedMultilibs;
       Multilibs = Result.Multilibs;
     }
+  } else {
+    llvm::SmallString<128> MultilibPath(computeBaseSysRoot(D, Triple));
+    llvm::sys::path::append(MultilibPath, MultilibFilename);
+    findMultilibsFromYAML(*this, D, MultilibPath, Args, Result);
+    SelectedMultilibs = Result.SelectedMultilibs;
+    Multilibs = Result.Multilibs;
   }
 }
 
@@ -176,15 +225,17 @@ Tool *BareMetal::buildLinker() const {
 }
 
 std::string BareMetal::computeSysRoot() const {
-  if (!getDriver().SysRoot.empty())
-    return getDriver().SysRoot + SelectedMultilib.osSuffix();
+  return computeBaseSysRoot(getDriver(), getTriple());
+}
 
-  SmallString<128> SysRootDir;
-  llvm::sys::path::append(SysRootDir, getDriver().Dir, "../lib/clang-runtimes",
-                          getDriver().getTargetTriple());
+BareMetal::OrderedMultilibs BareMetal::getOrderedMultilibs() const {
+  // Get multilibs in reverse order because they're ordered most-specific last.
+  if (!SelectedMultilibs.empty())
+    return llvm::reverse(SelectedMultilibs);
 
-  SysRootDir += SelectedMultilib.osSuffix();
-  return std::string(SysRootDir);
+  // No multilibs selected so return a single default multilib.
+  static const llvm::SmallVector<Multilib> Default = {Multilib()};
+  return llvm::reverse(Default);
 }
 
 void BareMetal::AddClangSystemIncludeArgs(const ArgList &DriverArgs,
@@ -199,10 +250,14 @@ void BareMetal::AddClangSystemIncludeArgs(const ArgList &DriverArgs,
   }
 
   if (!DriverArgs.hasArg(options::OPT_nostdlibinc)) {
-    SmallString<128> Dir(computeSysRoot());
-    if (!Dir.empty()) {
-      llvm::sys::path::append(Dir, "include");
-      addSystemInclude(DriverArgs, CC1Args, Dir.str());
+    const SmallString<128> SysRoot(computeSysRoot());
+    if (!SysRoot.empty()) {
+      for (const Multilib &M : getOrderedMultilibs()) {
+        SmallString<128> Dir(SysRoot);
+        llvm::sys::path::append(Dir, M.includeSuffix());
+        llvm::sys::path::append(Dir, "include");
+        addSystemInclude(DriverArgs, CC1Args, Dir.str());
+      }
     }
   }
 }
@@ -225,44 +280,47 @@ void BareMetal::AddClangCXXStdlibIncludeArgs(const ArgList &DriverArgs,
   if (SysRoot.empty())
     return;
 
-  switch (GetCXXStdlibType(DriverArgs)) {
-  case ToolChain::CST_Libcxx: {
-    // First check sysroot/usr/include/c++/v1 if it exists.
-    SmallString<128> TargetDir(SysRoot);
-    llvm::sys::path::append(TargetDir, "usr", "include", "c++", "v1");
-    if (D.getVFS().exists(TargetDir)) {
-      addSystemInclude(DriverArgs, CC1Args, TargetDir.str());
+  for (const Multilib &M : getOrderedMultilibs()) {
+    SmallString<128> Dir(SysRoot);
+    llvm::sys::path::append(Dir, M.gccSuffix());
+    switch (GetCXXStdlibType(DriverArgs)) {
+    case ToolChain::CST_Libcxx: {
+      // First check sysroot/usr/include/c++/v1 if it exists.
+      SmallString<128> TargetDir(Dir);
+      llvm::sys::path::append(TargetDir, "usr", "include", "c++", "v1");
+      if (D.getVFS().exists(TargetDir)) {
+        addSystemInclude(DriverArgs, CC1Args, TargetDir.str());
+        break;
+      }
+      // Add generic path if nothing else succeeded so far.
+      llvm::sys::path::append(Dir, "include", "c++", "v1");
+      addSystemInclude(DriverArgs, CC1Args, Dir.str());
       break;
     }
-    // Add generic path if nothing else succeeded so far.
-    SmallString<128> Dir(SysRoot);
-    llvm::sys::path::append(Dir, "include", "c++", "v1");
-    addSystemInclude(DriverArgs, CC1Args, Dir.str());
-    break;
-  }
-  case ToolChain::CST_Libstdcxx: {
-    SmallString<128> Dir(SysRoot);
-    llvm::sys::path::append(Dir, "include", "c++");
-    std::error_code EC;
-    Generic_GCC::GCCVersion Version = {"", -1, -1, -1, "", "", ""};
-    // Walk the subdirs, and find the one with the newest gcc version:
-    for (llvm::vfs::directory_iterator LI = D.getVFS().dir_begin(Dir.str(), EC),
-                                       LE;
-         !EC && LI != LE; LI = LI.increment(EC)) {
-      StringRef VersionText = llvm::sys::path::filename(LI->path());
-      auto CandidateVersion = Generic_GCC::GCCVersion::Parse(VersionText);
-      if (CandidateVersion.Major == -1)
-        continue;
-      if (CandidateVersion <= Version)
-        continue;
-      Version = CandidateVersion;
+    case ToolChain::CST_Libstdcxx: {
+      llvm::sys::path::append(Dir, "include", "c++");
+      std::error_code EC;
+      Generic_GCC::GCCVersion Version = {"", -1, -1, -1, "", "", ""};
+      // Walk the subdirs, and find the one with the newest gcc version:
+      for (llvm::vfs::directory_iterator
+               LI = D.getVFS().dir_begin(Dir.str(), EC),
+               LE;
+           !EC && LI != LE; LI = LI.increment(EC)) {
+        StringRef VersionText = llvm::sys::path::filename(LI->path());
+        auto CandidateVersion = Generic_GCC::GCCVersion::Parse(VersionText);
+        if (CandidateVersion.Major == -1)
+          continue;
+        if (CandidateVersion <= Version)
+          continue;
+        Version = CandidateVersion;
+      }
+      if (Version.Major != -1) {
+        llvm::sys::path::append(Dir, Version.Text);
+        addSystemInclude(DriverArgs, CC1Args, Dir.str());
+      }
+      break;
     }
-    if (Version.Major == -1)
-      return;
-    llvm::sys::path::append(Dir, Version.Text);
-    addSystemInclude(DriverArgs, CC1Args, Dir.str());
-    break;
-  }
+    }
   }
 }
 

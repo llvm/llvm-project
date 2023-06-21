@@ -690,6 +690,10 @@ struct A {
 struct B : public A {
   using A::A;
 };
+
+struct AlwaysEqType {
+  bool operator==(const AlwaysEqType &RHS) const { return true; }
+};
 } // namespace
 
 namespace llvm {
@@ -700,6 +704,16 @@ struct DenseMapInfo<T, std::enable_if_t<std::is_base_of_v<A, T>>> {
   static unsigned getHashValue(const T &Val) { return Val.value; }
   static bool isEqual(const T &LHS, const T &RHS) {
     return LHS.value == RHS.value;
+  }
+};
+
+template <> struct DenseMapInfo<AlwaysEqType> {
+  using T = AlwaysEqType;
+  static inline T getEmptyKey() { return {}; }
+  static inline T getTombstoneKey() { return {}; }
+  static unsigned getHashValue(const T &Val) { return 0; }
+  static bool isEqual(const T &LHS, const T &RHS) {
+    return false;
   }
 };
 } // namespace llvm
@@ -725,16 +739,20 @@ TEST(DenseMapCustomTest, SFINAEMapInfo) {
 }
 
 TEST(DenseMapCustomTest, VariantSupport) {
-  using variant = std::variant<int, int>;
+  using variant = std::variant<int, int, AlwaysEqType>;
   DenseMap<variant, int> Map;
   variant Keys[] = {
       variant(std::in_place_index<0>, 1),
       variant(std::in_place_index<1>, 1),
+      variant(std::in_place_index<2>),
   };
   Map.try_emplace(Keys[0], 0);
   Map.try_emplace(Keys[1], 1);
   EXPECT_THAT(Map, testing::SizeIs(2));
   EXPECT_NE(DenseMapInfo<variant>::getHashValue(Keys[0]),
             DenseMapInfo<variant>::getHashValue(Keys[1]));
+  // Check that isEqual dispatches to isEqual of underlying type, and not to
+  // operator==.
+  EXPECT_FALSE(DenseMapInfo<variant>::isEqual(Keys[2], Keys[2]));
 }
 } // namespace

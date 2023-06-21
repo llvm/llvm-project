@@ -1159,7 +1159,7 @@ bool MachineBlockPlacement::canTailDuplicateUnplacedPreds(
     // tail-duplicated into.
     // Skip any blocks that are already placed or not in this loop.
     if (Pred == BB || (BlockFilter && !BlockFilter->count(Pred))
-        || BlockToChain[Pred] == &Chain)
+        || (BlockToChain[Pred] == &Chain && !Succ->succ_empty()))
       continue;
     if (!TailDup.canTailDuplicate(Succ, Pred)) {
       if (Successors.size() > 1 && hasSameSuccessors(*Pred, Successors))

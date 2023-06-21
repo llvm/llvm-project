@@ -62,9 +62,13 @@
 // RUN:   | FileCheck --check-prefix=CHECK-ERR-NONE %s
 
 // CHECK-FAST: "-ffloat16-excess-precision=fast"
+// CHECK-FAST: "-fbfloat16-excess-precision=fast"
 // CHECK-STD: "-ffloat16-excess-precision=standard"
+// CHECK-STD: "-fbfloat16-excess-precision=standard"
 // CHECK-NONE: "-ffloat16-excess-precision=none"
+// CHECK-NONE: "-fbfloat16-excess-precision=none"
 // CHECK-ERR-NONE: unsupported argument 'none' to option '-fexcess-precision='
 // CHECK: "-cc1"
 // CHECK-NOT: "-ffloat16-excess-precision=fast"
+// CHECK-NOT: "-fbfloat16-excess-precision=fast"
 // CHECK-ERR-16: unsupported argument '16' to option '-fexcess-precision='

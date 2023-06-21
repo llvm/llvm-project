@@ -4886,18 +4886,9 @@ TEST_F(OpenMPIRBuilderTest, TargetEnterData) {
   OMPBuilder.initialize();
   F->setName("func");
   IRBuilder<> Builder(BB);
-
   OpenMPIRBuilder::LocationDescription Loc({Builder.saveIP(), DL});
 
-  unsigned NumDataOperands = 1;
   int64_t DeviceID = 2;
-  struct OpenMPIRBuilder::MapperAllocas MapperAllocas;
-  SmallVector<uint64_t> MapTypeFlagsTo = {1};
-  SmallVector<Constant *> MapNames;
-  auto *I8PtrTy = Builder.getInt8PtrTy();
-  auto *ArrI8PtrTy = ArrayType::get(I8PtrTy, NumDataOperands);
-  auto *I64Ty = Builder.getInt64Ty();
-  auto *ArrI64Ty = ArrayType::get(I64Ty, NumDataOperands);
 
   AllocaInst *Val1 =
       Builder.CreateAlloca(Builder.getInt32Ty(), Builder.getInt64(1));
@@ -4905,44 +4896,34 @@ TEST_F(OpenMPIRBuilderTest, TargetEnterData) {
 
   IRBuilder<>::InsertPoint AllocaIP(&F->getEntryBlock(),
                                     F->getEntryBlock().getFirstInsertionPt());
-  OMPBuilder.createMapperAllocas(Builder.saveIP(), AllocaIP, NumDataOperands,
-                                 MapperAllocas);
 
+  llvm::OpenMPIRBuilder::MapInfosTy CombinedInfo;
   using InsertPointTy = OpenMPIRBuilder::InsertPointTy;
-  auto ProcessMapOpCB = [&](InsertPointTy AllocaIP, InsertPointTy CodeGenIP) {
-    Value *DataValue = Val1;
-    Value *DataPtrBase;
-    Value *DataPtr;
-    DataPtrBase = DataValue;
-    DataPtr = DataValue;
-    Builder.restoreIP(CodeGenIP);
+  auto GenMapInfoCB =
+      [&](InsertPointTy codeGenIP) -> llvm::OpenMPIRBuilder::MapInfosTy & {
+    // Get map clause information.
+    Builder.restoreIP(codeGenIP);
 
-    Value *Null = Constant::getNullValue(DataValue->getType()->getPointerTo());
-    Value *SizeGep =
-        Builder.CreateGEP(DataValue->getType(), Null, Builder.getInt32(1));
-    Value *SizePtrToInt = Builder.CreatePtrToInt(SizeGep, I64Ty);
-
-    Value *PtrBaseGEP =
-        Builder.CreateInBoundsGEP(ArrI8PtrTy, MapperAllocas.ArgsBase,
-                                  {Builder.getInt32(0), Builder.getInt32(0)});
-    Value *PtrBaseCast = Builder.CreateBitCast(
-        PtrBaseGEP, DataPtrBase->getType()->getPointerTo());
-    Builder.CreateStore(DataPtrBase, PtrBaseCast);
-    Value *PtrGEP =
-        Builder.CreateInBoundsGEP(ArrI8PtrTy, MapperAllocas.Args,
-                                  {Builder.getInt32(0), Builder.getInt32(0)});
-    Value *PtrCast =
-        Builder.CreateBitCast(PtrGEP, DataPtr->getType()->getPointerTo());
-    Builder.CreateStore(DataPtr, PtrCast);
-    Value *SizeGEP =
-        Builder.CreateInBoundsGEP(ArrI64Ty, MapperAllocas.ArgSizes,
-                                  {Builder.getInt32(0), Builder.getInt32(0)});
-    Builder.CreateStore(SizePtrToInt, SizeGEP);
+    CombinedInfo.BasePointers.emplace_back(Val1);
+    CombinedInfo.Pointers.emplace_back(Val1);
+    CombinedInfo.Sizes.emplace_back(Builder.getInt64(4));
+    CombinedInfo.Types.emplace_back(llvm::omp::OpenMPOffloadMappingFlags(1));
+    uint32_t temp;
+    CombinedInfo.Names.emplace_back(
+        OMPBuilder.getOrCreateSrcLocStr("unknown", temp));
+    return CombinedInfo;
   };
 
+  llvm::OpenMPIRBuilder::TargetDataInfo Info(
+      /*RequiresDevicePointerInfo=*/false,
+      /*SeparateBeginEndCalls=*/true);
+
+  OMPBuilder.Config.setIsTargetCodegen(true);
+
+  llvm::omp::RuntimeFunction RTLFunc = OMPRTL___tgt_target_data_begin_mapper;
   Builder.restoreIP(OMPBuilder.createTargetData(
-      Loc, Builder.saveIP(), MapTypeFlagsTo, MapNames, MapperAllocas,
-      /* IsBegin= */ true, DeviceID, /* IfCond= */ nullptr, ProcessMapOpCB));
+      Loc, AllocaIP, Builder.saveIP(), Builder.getInt64(DeviceID),
+      /* IfCond= */ nullptr, Info, GenMapInfoCB, &RTLFunc));
 
   CallInst *TargetDataCall = dyn_cast<CallInst>(&BB->back());
   EXPECT_NE(TargetDataCall, nullptr);
@@ -4962,18 +4943,9 @@ TEST_F(OpenMPIRBuilderTest, TargetExitData) {
   OMPBuilder.initialize();
   F->setName("func");
   IRBuilder<> Builder(BB);
-
   OpenMPIRBuilder::LocationDescription Loc({Builder.saveIP(), DL});
 
-  unsigned NumDataOperands = 1;
   int64_t DeviceID = 2;
-  struct OpenMPIRBuilder::MapperAllocas MapperAllocas;
-  SmallVector<uint64_t> MapTypeFlagsFrom = {2};
-  SmallVector<Constant *> MapNames;
-  auto *I8PtrTy = Builder.getInt8PtrTy();
-  auto *ArrI8PtrTy = ArrayType::get(I8PtrTy, NumDataOperands);
-  auto *I64Ty = Builder.getInt64Ty();
-  auto *ArrI64Ty = ArrayType::get(I64Ty, NumDataOperands);
 
   AllocaInst *Val1 =
       Builder.CreateAlloca(Builder.getInt32Ty(), Builder.getInt64(1));
@@ -4981,44 +4953,34 @@ TEST_F(OpenMPIRBuilderTest, TargetExitData) {
 
   IRBuilder<>::InsertPoint AllocaIP(&F->getEntryBlock(),
                                     F->getEntryBlock().getFirstInsertionPt());
-  OMPBuilder.createMapperAllocas(Builder.saveIP(), AllocaIP, NumDataOperands,
-                                 MapperAllocas);
 
+  llvm::OpenMPIRBuilder::MapInfosTy CombinedInfo;
   using InsertPointTy = OpenMPIRBuilder::InsertPointTy;
-  auto ProcessMapOpCB = [&](InsertPointTy AllocaIP, InsertPointTy CodeGenIP) {
-    Value *DataValue = Val1;
-    Value *DataPtrBase;
-    Value *DataPtr;
-    DataPtrBase = DataValue;
-    DataPtr = DataValue;
-    Builder.restoreIP(CodeGenIP);
+  auto GenMapInfoCB =
+      [&](InsertPointTy codeGenIP) -> llvm::OpenMPIRBuilder::MapInfosTy & {
+    // Get map clause information.
+    Builder.restoreIP(codeGenIP);
 
-    Value *Null = Constant::getNullValue(DataValue->getType()->getPointerTo());
-    Value *SizeGep =
-        Builder.CreateGEP(DataValue->getType(), Null, Builder.getInt32(1));
-    Value *SizePtrToInt = Builder.CreatePtrToInt(SizeGep, I64Ty);
-
-    Value *PtrBaseGEP =
-        Builder.CreateInBoundsGEP(ArrI8PtrTy, MapperAllocas.ArgsBase,
-                                  {Builder.getInt32(0), Builder.getInt32(0)});
-    Value *PtrBaseCast = Builder.CreateBitCast(
-        PtrBaseGEP, DataPtrBase->getType()->getPointerTo());
-    Builder.CreateStore(DataPtrBase, PtrBaseCast);
-    Value *PtrGEP =
-        Builder.CreateInBoundsGEP(ArrI8PtrTy, MapperAllocas.Args,
-                                  {Builder.getInt32(0), Builder.getInt32(0)});
-    Value *PtrCast =
-        Builder.CreateBitCast(PtrGEP, DataPtr->getType()->getPointerTo());
-    Builder.CreateStore(DataPtr, PtrCast);
-    Value *SizeGEP =
-        Builder.CreateInBoundsGEP(ArrI64Ty, MapperAllocas.ArgSizes,
-                                  {Builder.getInt32(0), Builder.getInt32(0)});
-    Builder.CreateStore(SizePtrToInt, SizeGEP);
+    CombinedInfo.BasePointers.emplace_back(Val1);
+    CombinedInfo.Pointers.emplace_back(Val1);
+    CombinedInfo.Sizes.emplace_back(Builder.getInt64(4));
+    CombinedInfo.Types.emplace_back(llvm::omp::OpenMPOffloadMappingFlags(2));
+    uint32_t temp;
+    CombinedInfo.Names.emplace_back(
+        OMPBuilder.getOrCreateSrcLocStr("unknown", temp));
+    return CombinedInfo;
   };
 
+  llvm::OpenMPIRBuilder::TargetDataInfo Info(
+      /*RequiresDevicePointerInfo=*/false,
+      /*SeparateBeginEndCalls=*/true);
+
+  OMPBuilder.Config.setIsTargetCodegen(true);
+
+  llvm::omp::RuntimeFunction RTLFunc = OMPRTL___tgt_target_data_end_mapper;
   Builder.restoreIP(OMPBuilder.createTargetData(
-      Loc, Builder.saveIP(), MapTypeFlagsFrom, MapNames, MapperAllocas,
-      /* IsBegin= */ false, DeviceID, /* IfCond= */ nullptr, ProcessMapOpCB));
+      Loc, AllocaIP, Builder.saveIP(), Builder.getInt64(DeviceID),
+      /* IfCond= */ nullptr, Info, GenMapInfoCB, &RTLFunc));
 
   CallInst *TargetDataCall = dyn_cast<CallInst>(&BB->back());
   EXPECT_NE(TargetDataCall, nullptr);
@@ -5038,18 +5000,9 @@ TEST_F(OpenMPIRBuilderTest, TargetDataRegion) {
   OMPBuilder.initialize();
   F->setName("func");
   IRBuilder<> Builder(BB);
-
   OpenMPIRBuilder::LocationDescription Loc({Builder.saveIP(), DL});
 
-  unsigned NumDataOperands = 1;
   int64_t DeviceID = 2;
-  struct OpenMPIRBuilder::MapperAllocas MapperAllocas;
-  SmallVector<uint64_t> MapTypeFlagsToFrom = {3};
-  SmallVector<Constant *> MapNames;
-  auto *I8PtrTy = Builder.getInt8PtrTy();
-  auto *ArrI8PtrTy = ArrayType::get(I8PtrTy, NumDataOperands);
-  auto *I64Ty = Builder.getInt64Ty();
-  auto *ArrI64Ty = ArrayType::get(I64Ty, NumDataOperands);
 
   AllocaInst *Val1 =
       Builder.CreateAlloca(Builder.getInt32Ty(), Builder.getInt64(1));
@@ -5057,57 +5010,52 @@ TEST_F(OpenMPIRBuilderTest, TargetDataRegion) {
 
   IRBuilder<>::InsertPoint AllocaIP(&F->getEntryBlock(),
                                     F->getEntryBlock().getFirstInsertionPt());
-  OMPBuilder.createMapperAllocas(Builder.saveIP(), AllocaIP, NumDataOperands,
-                                 MapperAllocas);
 
+  llvm::OpenMPIRBuilder::MapInfosTy CombinedInfo;
   using InsertPointTy = OpenMPIRBuilder::InsertPointTy;
-  auto ProcessMapOpCB = [&](InsertPointTy AllocaIP, InsertPointTy CodeGenIP) {
-    Value *DataValue = Val1;
-    Value *DataPtrBase;
-    Value *DataPtr;
-    DataPtrBase = DataValue;
-    DataPtr = DataValue;
-    Builder.restoreIP(CodeGenIP);
+  auto GenMapInfoCB =
+      [&](InsertPointTy codeGenIP) -> llvm::OpenMPIRBuilder::MapInfosTy & {
+    // Get map clause information.
+    Builder.restoreIP(codeGenIP);
 
-    Value *Null = Constant::getNullValue(DataValue->getType()->getPointerTo());
-    Value *SizeGep =
-        Builder.CreateGEP(DataValue->getType(), Null, Builder.getInt32(1));
-    Value *SizePtrToInt = Builder.CreatePtrToInt(SizeGep, I64Ty);
-
-    Value *PtrBaseGEP =
-        Builder.CreateInBoundsGEP(ArrI8PtrTy, MapperAllocas.ArgsBase,
-                                  {Builder.getInt32(0), Builder.getInt32(0)});
-    Value *PtrBaseCast = Builder.CreateBitCast(
-        PtrBaseGEP, DataPtrBase->getType()->getPointerTo());
-    Builder.CreateStore(DataPtrBase, PtrBaseCast);
-    Value *PtrGEP =
-        Builder.CreateInBoundsGEP(ArrI8PtrTy, MapperAllocas.Args,
-                                  {Builder.getInt32(0), Builder.getInt32(0)});
-    Value *PtrCast =
-        Builder.CreateBitCast(PtrGEP, DataPtr->getType()->getPointerTo());
-    Builder.CreateStore(DataPtr, PtrCast);
-    Value *SizeGEP =
-        Builder.CreateInBoundsGEP(ArrI64Ty, MapperAllocas.ArgSizes,
-                                  {Builder.getInt32(0), Builder.getInt32(0)});
-    Builder.CreateStore(SizePtrToInt, SizeGEP);
+    CombinedInfo.BasePointers.emplace_back(Val1);
+    CombinedInfo.Pointers.emplace_back(Val1);
+    CombinedInfo.Sizes.emplace_back(Builder.getInt64(4));
+    CombinedInfo.Types.emplace_back(llvm::omp::OpenMPOffloadMappingFlags(3));
+    uint32_t temp;
+    CombinedInfo.Names.emplace_back(
+        OMPBuilder.getOrCreateSrcLocStr("unknown", temp));
+    return CombinedInfo;
   };
 
-  auto BodyCB = [&](InsertPointTy allocaIP, InsertPointTy codeGenIP) {
-    Builder.restoreIP(codeGenIP);
-    auto *SI = Builder.CreateStore(Builder.getInt32(99), Val1);
-    auto *newBB = SplitBlock(Builder.GetInsertBlock(), SI);
-    Builder.SetInsertPoint(newBB);
-    auto *UI = &Builder.GetInsertBlock()->back();
-    SplitBlock(Builder.GetInsertBlock(), UI);
+  llvm::OpenMPIRBuilder::TargetDataInfo Info(
+      /*RequiresDevicePointerInfo=*/false,
+      /*SeparateBeginEndCalls=*/true);
+
+  OMPBuilder.Config.setIsTargetCodegen(true);
+
+  auto BodyCB = [&](InsertPointTy CodeGenIP, int BodyGenType) {
+    if (BodyGenType == 3) {
+      Builder.restoreIP(CodeGenIP);
+      CallInst *TargetDataCall = dyn_cast<CallInst>(&BB->back());
+      EXPECT_NE(TargetDataCall, nullptr);
+      EXPECT_EQ(TargetDataCall->arg_size(), 9U);
+      EXPECT_EQ(TargetDataCall->getCalledFunction()->getName(),
+                "__tgt_target_data_begin_mapper");
+      EXPECT_TRUE(TargetDataCall->getOperand(1)->getType()->isIntegerTy(64));
+      EXPECT_TRUE(TargetDataCall->getOperand(2)->getType()->isIntegerTy(32));
+      EXPECT_TRUE(TargetDataCall->getOperand(8)->getType()->isPointerTy());
+      Builder.restoreIP(CodeGenIP);
+      Builder.CreateStore(Builder.getInt32(99), Val1);
+    }
+    return Builder.saveIP();
   };
 
   Builder.restoreIP(OMPBuilder.createTargetData(
-      Loc, Builder.saveIP(), MapTypeFlagsToFrom, MapNames, MapperAllocas,
-      /* IsBegin= */ false, DeviceID, /* IfCond= */ nullptr, ProcessMapOpCB,
-      BodyCB));
+      Loc, AllocaIP, Builder.saveIP(), Builder.getInt64(DeviceID),
+      /* IfCond= */ nullptr, Info, GenMapInfoCB, nullptr, BodyCB));
 
-  CallInst *TargetDataCall =
-      dyn_cast<CallInst>(&Builder.GetInsertBlock()->back());
+  CallInst *TargetDataCall = dyn_cast<CallInst>(&BB->back());
   EXPECT_NE(TargetDataCall, nullptr);
   EXPECT_EQ(TargetDataCall->arg_size(), 9U);
   EXPECT_EQ(TargetDataCall->getCalledFunction()->getName(),
@@ -5855,4 +5803,84 @@ TEST_F(OpenMPIRBuilderTest, OffloadEntriesInfoManager) {
       GlobalValue::WeakAnyLinkage);
   EXPECT_TRUE(InfoManager.hasDeviceGlobalVarEntryInfo("gvar"));
 }
+
+// Tests both registerTargetGlobalVariable and getAddrOfDeclareTargetVar as they
+// call each other (recursively in some cases). The test case test these
+// functions by utilising them for host code generation for declare target
+// global variables
+TEST_F(OpenMPIRBuilderTest, registerTargetGlobalVariable) {
+  OpenMPIRBuilder OMPBuilder(*M);
+  OMPBuilder.initialize();
+  OpenMPIRBuilderConfig Config(false, false, false, false);
+  OMPBuilder.setConfig(Config);
+
+  std::vector<llvm::Triple> TargetTriple;
+  TargetTriple.emplace_back("amdgcn-amd-amdhsa");
+
+  TargetRegionEntryInfo EntryInfo("", 42, 4711, 17);
+  std::vector<GlobalVariable *> RefsGathered;
+
+  std::vector<Constant *> Globals;
+  auto *IntTy = Type::getInt32Ty(Ctx);
+  for (int I = 0; I < 2; ++I) {
+    Globals.push_back(M->getOrInsertGlobal(
+        "test_data_int_" + std::to_string(I), IntTy, [&]() -> GlobalVariable * {
+          return new GlobalVariable(
+              *M, IntTy, false, GlobalValue::LinkageTypes::WeakAnyLinkage,
+              ConstantInt::get(IntTy, I), "test_data_int_" + std::to_string(I));
+        }));
+  }
+
+  OMPBuilder.registerTargetGlobalVariable(
+      OffloadEntriesInfoManager::OMPTargetGlobalVarEntryTo,
+      OffloadEntriesInfoManager::OMPTargetDeviceClauseAny, false, true,
+      EntryInfo, Globals[0]->getName(), RefsGathered, false, TargetTriple,
+      nullptr, nullptr, Globals[0]->getType(), Globals[0]);
+
+  OMPBuilder.registerTargetGlobalVariable(
+      OffloadEntriesInfoManager::OMPTargetGlobalVarEntryLink,
+      OffloadEntriesInfoManager::OMPTargetDeviceClauseAny, false, true,
+      EntryInfo, Globals[1]->getName(), RefsGathered, false, TargetTriple,
+      nullptr, nullptr, Globals[1]->getType(), Globals[1]);
+
+  llvm::OpenMPIRBuilder::EmitMetadataErrorReportFunctionTy &&ErrorReportfn =
+      [](llvm::OpenMPIRBuilder::EmitMetadataErrorKind Kind,
+         const llvm::TargetRegionEntryInfo &EntryInfo) -> void {
+    // If this is invoked, then we want to emit an error, even if it is not
+    // neccesarily the most readable, as something has went wrong. The
+    // test-suite unfortunately eats up all error output
+    ASSERT_EQ(Kind, Kind);
+  };
+
+  OMPBuilder.createOffloadEntriesAndInfoMetadata(ErrorReportfn);
+
+  // Clauses for data_int_0 with To + Any clauses for the host
+  std::vector<GlobalVariable *> OffloadEntries;
+  OffloadEntries.push_back(M->getNamedGlobal(".omp_offloading.entry_name"));
+  OffloadEntries.push_back(
+      M->getNamedGlobal(".omp_offloading.entry.test_data_int_0"));
+
+  // Clauses for data_int_1 with Link + Any clauses for the host
+  OffloadEntries.push_back(
+      M->getNamedGlobal("test_data_int_1_decl_tgt_ref_ptr"));
+  OffloadEntries.push_back(M->getNamedGlobal(".omp_offloading.entry_name.1"));
+  OffloadEntries.push_back(M->getNamedGlobal(
+      ".omp_offloading.entry.test_data_int_1_decl_tgt_ref_ptr"));
+
+  for (unsigned I = 0; I < OffloadEntries.size(); ++I)
+    EXPECT_NE(OffloadEntries[I], nullptr);
+
+  // Metadata generated for the host offload module
+  NamedMDNode *OffloadMetadata = M->getNamedMetadata("omp_offload.info");
+  EXPECT_NE(OffloadMetadata, nullptr);
+  if (OffloadMetadata) {
+    EXPECT_EQ(OffloadMetadata->getOperand(0)->getOperand(1).equalsStr(
+                  "test_data_int_0"),
+              true);
+    EXPECT_EQ(OffloadMetadata->getOperand(1)->getOperand(1).equalsStr(
+                  "test_data_int_1_decl_tgt_ref_ptr"),
+              true);
+  }
+}
+
 } // namespace

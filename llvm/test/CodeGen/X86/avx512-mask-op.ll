@@ -74,8 +74,7 @@ define i32 @mask8_zext(i8 %x) {
 ; X86-LABEL: mask8_zext:
 ; X86:       ## %bb.0:
 ; X86-NEXT:    movzbl {{[0-9]+}}(%esp), %eax
-; X86-NEXT:    notb %al
-; X86-NEXT:    movzbl %al, %eax
+; X86-NEXT:    xorl $255, %eax
 ; X86-NEXT:    retl
   %m0 = bitcast i8 %x to <8 x i1>
   %m1 = xor <8 x i1> %m0, <i1 -1, i1 -1, i1 -1, i1 -1, i1 -1, i1 -1, i1 -1, i1 -1>

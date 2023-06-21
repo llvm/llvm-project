@@ -59,6 +59,7 @@ executable("llvm-tblgen") {
     "FastISelEmitter.cpp",
     "GICombinerEmitter.cpp",
     "GlobalISelEmitter.cpp",
+    "GlobalISelMatchTable.cpp",
     "InfoByHwMode.cpp",
     "InstrDocsEmitter.cpp",
     "InstrInfoEmitter.cpp",

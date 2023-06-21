@@ -494,7 +494,7 @@ define i32 @test_sqrdmlsh_i32(i32 %acc, i32 %mhs, i32 %rhs) {
 ;-----------------------------------------------------------------------------
 ; RDMA Scalar, by element
 ; i16 tests are performed via tests in above chapter, with IR in ACLE style
-; i32 tests are for i32_indexed in SIMDIndexedSQRDMLxHSDTied
+; i32 tests are for v1i32_indexed in SIMDIndexedSQRDMLxHSDTied
 
 define i16 @test_sqrdmlah_extract_i16(i16 %acc, i16 %x, <4 x i16> %y_vec) {
 ; CHECK-LABEL: test_sqrdmlah_extract_i16:

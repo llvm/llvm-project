@@ -360,17 +360,13 @@ define void @callee_large_struct_ret(ptr noalias sret(%struct.large) %agg.result
 ; CHECK-LABEL: callee_large_struct_ret:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    ori $a1, $zero, 4
-; CHECK-NEXT:    st.w $a1, $a0, 24
+; CHECK-NEXT:    st.d $a1, $a0, 24
 ; CHECK-NEXT:    ori $a1, $zero, 3
-; CHECK-NEXT:    st.w $a1, $a0, 16
+; CHECK-NEXT:    st.d $a1, $a0, 16
 ; CHECK-NEXT:    ori $a1, $zero, 2
-; CHECK-NEXT:    st.w $a1, $a0, 8
-; CHECK-NEXT:    st.w $zero, $a0, 28
-; CHECK-NEXT:    st.w $zero, $a0, 20
-; CHECK-NEXT:    st.w $zero, $a0, 12
-; CHECK-NEXT:    st.w $zero, $a0, 4
+; CHECK-NEXT:    st.d $a1, $a0, 8
 ; CHECK-NEXT:    ori $a1, $zero, 1
-; CHECK-NEXT:    st.w $a1, $a0, 0
+; CHECK-NEXT:    st.d $a1, $a0, 0
 ; CHECK-NEXT:    ret
   %a = getelementptr inbounds %struct.large, ptr %agg.result, i64 0, i32 0
   store i64 1, ptr %a, align 4

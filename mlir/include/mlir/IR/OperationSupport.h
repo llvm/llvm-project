@@ -18,6 +18,7 @@
 #include "mlir/IR/BlockSupport.h"
 #include "mlir/IR/BuiltinAttributes.h"
 #include "mlir/IR/Diagnostics.h"
+#include "mlir/IR/DialectRegistry.h"
 #include "mlir/IR/Location.h"
 #include "mlir/IR/TypeRange.h"
 #include "mlir/IR/Types.h"
@@ -46,7 +47,6 @@ class NamedAttrList;
 class Operation;
 struct OperationState;
 class OpAsmParser;
-class OpAsmParserResult;
 class OpAsmPrinter;
 class OperandRange;
 class OperandRangeRange;
@@ -348,6 +348,11 @@ public:
   /// interfaces for the concrete operation.
   template <typename... Models>
   void attachInterface() {
+    // Handle the case where the models resolve a promised interface.
+    (dialect_extension_detail::handleAdditionOfUndefinedPromisedInterface(
+         *getDialect(), Models::Interface::getInterfaceID()),
+     ...);
+
     getImpl()->getInterfaceMap().insertModels<Models...>();
   }
 

@@ -62,11 +62,11 @@ gentbl_cc_library(
 cc_binary(
     name = "toyc-ch3",
     srcs = [
-        "toyc.cpp",
-        "parser/AST.cpp",
-        "mlir/MLIRGen.cpp",
         "mlir/Dialect.cpp",
+        "mlir/MLIRGen.cpp",
         "mlir/ToyCombine.cpp",
+        "parser/AST.cpp",
+        "toyc.cpp",
     ] + glob(["include/toy/*.h"]),
     includes = ["include/"],
     deps = [

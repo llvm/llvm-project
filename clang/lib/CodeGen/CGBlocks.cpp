@@ -1259,9 +1259,8 @@ Address CodeGenFunction::GetAddrOfBlockDecl(const VarDecl *variable) {
     // to byref*.
 
     auto &byrefInfo = getBlockByrefInfo(variable);
-    addr = Address(Builder.CreateLoad(addr), Int8Ty, byrefInfo.ByrefAlignment);
-
-    addr = Builder.CreateElementBitCast(addr, byrefInfo.Type, "byref.addr");
+    addr = Address(Builder.CreateLoad(addr), byrefInfo.Type,
+                   byrefInfo.ByrefAlignment);
 
     addr = emitBlockByrefAddress(addr, byrefInfo, /*follow*/ true,
                                  variable->getName());
@@ -1427,7 +1426,8 @@ void CodeGenFunction::setBlockContextParameter(const ImplicitParamDecl *D,
   // directly as BlockPointer.
   BlockPointer = Builder.CreatePointerCast(
       arg,
-      BlockInfo->StructureType->getPointerTo(
+      llvm::PointerType::get(
+          getLLVMContext(),
           getContext().getLangOpts().OpenCL
               ? getContext().getTargetAddressSpace(LangAS::opencl_generic)
               : 0),
@@ -1934,14 +1934,12 @@ CodeGenFunction::GenerateCopyHelperFunction(const CGBlockInfo &blockInfo) {
   auto AL = ApplyDebugLocation::CreateArtificial(*this);
 
   Address src = GetAddrOfLocalVar(&SrcDecl);
-  src = Address(Builder.CreateLoad(src), Int8Ty, blockInfo.BlockAlign);
-  src = Builder.CreateElementBitCast(src, blockInfo.StructureType,
-                                     "block.source");
+  src = Address(Builder.CreateLoad(src), blockInfo.StructureType,
+                blockInfo.BlockAlign);
 
   Address dst = GetAddrOfLocalVar(&DstDecl);
-  dst = Address(Builder.CreateLoad(dst), Int8Ty, blockInfo.BlockAlign);
-  dst =
-      Builder.CreateElementBitCast(dst, blockInfo.StructureType, "block.dest");
+  dst = Address(Builder.CreateLoad(dst), blockInfo.StructureType,
+                blockInfo.BlockAlign);
 
   for (auto &capture : blockInfo.SortedCaptures) {
     if (capture.isConstantOrTrivial())
@@ -2124,8 +2122,8 @@ CodeGenFunction::GenerateDestroyHelperFunction(const CGBlockInfo &blockInfo) {
   auto AL = ApplyDebugLocation::CreateArtificial(*this);
 
   Address src = GetAddrOfLocalVar(&SrcDecl);
-  src = Address(Builder.CreateLoad(src), Int8Ty, blockInfo.BlockAlign);
-  src = Builder.CreateElementBitCast(src, blockInfo.StructureType, "block");
+  src = Address(Builder.CreateLoad(src), blockInfo.StructureType,
+                blockInfo.BlockAlign);
 
   CodeGenFunction::RunCleanupsScope cleanups(*this);
 
@@ -2162,9 +2160,9 @@ public:
 
   void emitCopy(CodeGenFunction &CGF, Address destField,
                 Address srcField) override {
-    destField = CGF.Builder.CreateElementBitCast(destField, CGF.Int8Ty);
+    destField = destField.withElementType(CGF.Int8Ty);
 
-    srcField = CGF.Builder.CreateElementBitCast(srcField, CGF.Int8PtrTy);
+    srcField = srcField.withElementType(CGF.Int8PtrTy);
     llvm::Value *srcValue = CGF.Builder.CreateLoad(srcField);
 
     unsigned flags = (Flags | BLOCK_BYREF_CALLER).getBitMask();
@@ -2177,7 +2175,7 @@ public:
   }
 
   void emitDispose(CodeGenFunction &CGF, Address field) override {
-    field = CGF.Builder.CreateElementBitCast(field, CGF.Int8PtrTy);
+    field = field.withElementType(CGF.Int8PtrTy);
     llvm::Value *value = CGF.Builder.CreateLoad(field);
 
     CGF.BuildBlockRelease(value, Flags | BLOCK_BYREF_CALLER, false);
@@ -2369,17 +2367,15 @@ generateByrefCopyHelper(CodeGenFunction &CGF, const BlockByrefInfo &byrefInfo,
   if (generator.needsCopy()) {
     // dst->x
     Address destField = CGF.GetAddrOfLocalVar(&Dst);
-    destField = Address(CGF.Builder.CreateLoad(destField), CGF.Int8Ty,
+    destField = Address(CGF.Builder.CreateLoad(destField), byrefInfo.Type,
                         byrefInfo.ByrefAlignment);
-    destField = CGF.Builder.CreateElementBitCast(destField, byrefInfo.Type);
     destField =
         CGF.emitBlockByrefAddress(destField, byrefInfo, false, "dest-object");
 
     // src->x
     Address srcField = CGF.GetAddrOfLocalVar(&Src);
-    srcField = Address(CGF.Builder.CreateLoad(srcField), CGF.Int8Ty,
+    srcField = Address(CGF.Builder.CreateLoad(srcField), byrefInfo.Type,
                        byrefInfo.ByrefAlignment);
-    srcField = CGF.Builder.CreateElementBitCast(srcField, byrefInfo.Type);
     srcField =
         CGF.emitBlockByrefAddress(srcField, byrefInfo, false, "src-object");
 
@@ -2435,9 +2431,8 @@ generateByrefDisposeHelper(CodeGenFunction &CGF,
 
   if (generator.needsDispose()) {
     Address addr = CGF.GetAddrOfLocalVar(&Src);
-    addr = Address(CGF.Builder.CreateLoad(addr), CGF.Int8Ty,
+    addr = Address(CGF.Builder.CreateLoad(addr), byrefInfo.Type,
                    byrefInfo.ByrefAlignment);
-    addr = CGF.Builder.CreateElementBitCast(addr, byrefInfo.Type);
     addr = CGF.emitBlockByrefAddress(addr, byrefInfo, false, "object");
 
     generator.emitDispose(CGF, addr);

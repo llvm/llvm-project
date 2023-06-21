@@ -1,5 +1,5 @@
 ! Test lowering of character array constructors to HLFIR.
-! RUN: bbc -emit-fir -hlfir -o - %s | FileCheck %s
+! RUN: bbc -emit-hlfir -o - %s | FileCheck %s
 
 module chararrayctor
   character(3), target :: ctarg1 = "abc"

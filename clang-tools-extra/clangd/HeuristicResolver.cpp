@@ -8,8 +8,10 @@
 
 #include "HeuristicResolver.h"
 #include "clang/AST/ASTContext.h"
+#include "clang/AST/CXXInheritance.h"
 #include "clang/AST/DeclTemplate.h"
 #include "clang/AST/ExprCXX.h"
+#include "clang/AST/Type.h"
 
 namespace clang {
 namespace clangd {
@@ -29,11 +31,38 @@ const auto TemplateFilter = [](const NamedDecl *D) {
   return isa<TemplateDecl>(D);
 };
 
+namespace {
+
+const Type *resolveDeclsToType(const std::vector<const NamedDecl *> &Decls,
+                               ASTContext &Ctx) {
+  if (Decls.size() != 1) // Names an overload set -- just bail.
+    return nullptr;
+  if (const auto *TD = dyn_cast<TypeDecl>(Decls[0])) {
+    return Ctx.getTypeDeclType(TD).getTypePtr();
+  }
+  if (const auto *VD = dyn_cast<ValueDecl>(Decls[0])) {
+    return VD->getType().getTypePtrOrNull();
+  }
+  return nullptr;
+}
+
+} // namespace
+
 // Helper function for HeuristicResolver::resolveDependentMember()
 // which takes a possibly-dependent type `T` and heuristically
 // resolves it to a CXXRecordDecl in which we can try name lookup.
-CXXRecordDecl *resolveTypeToRecordDecl(const Type *T) {
+CXXRecordDecl *HeuristicResolver::resolveTypeToRecordDecl(const Type *T) const {
   assert(T);
+
+  // Unwrap type sugar such as type aliases.
+  T = T->getCanonicalTypeInternal().getTypePtr();
+
+  if (const auto *DNT = T->getAs<DependentNameType>()) {
+    T = resolveDeclsToType(resolveDependentNameType(DNT), Ctx);
+    if (!T)
+      return nullptr;
+    T = T->getCanonicalTypeInternal().getTypePtr();
+  }
 
   if (const auto *RT = T->getAs<RecordType>())
     return dyn_cast<CXXRecordDecl>(RT->getDecl());
@@ -182,18 +211,6 @@ HeuristicResolver::resolveTemplateSpecializationType(
       DTST->getIdentifier(), TemplateFilter);
 }
 
-const Type *resolveDeclsToType(const std::vector<const NamedDecl *> &Decls) {
-  if (Decls.size() != 1) // Names an overload set -- just bail.
-    return nullptr;
-  if (const auto *TD = dyn_cast<TypeDecl>(Decls[0])) {
-    return TD->getTypeForDecl();
-  }
-  if (const auto *VD = dyn_cast<ValueDecl>(Decls[0])) {
-    return VD->getType().getTypePtrOrNull();
-  }
-  return nullptr;
-}
-
 std::vector<const NamedDecl *>
 HeuristicResolver::resolveExprToDecls(const Expr *E) const {
   if (const auto *ME = dyn_cast<CXXDependentScopeMemberExpr>(E)) {
@@ -217,7 +234,7 @@ HeuristicResolver::resolveExprToDecls(const Expr *E) const {
 const Type *HeuristicResolver::resolveExprToType(const Expr *E) const {
   std::vector<const NamedDecl *> Decls = resolveExprToDecls(E);
   if (!Decls.empty())
-    return resolveDeclsToType(Decls);
+    return resolveDeclsToType(Decls, Ctx);
 
   return E->getType().getTypePtr();
 }
@@ -236,14 +253,78 @@ const Type *HeuristicResolver::resolveNestedNameSpecifierToType(
   case NestedNameSpecifier::TypeSpecWithTemplate:
     return NNS->getAsType();
   case NestedNameSpecifier::Identifier: {
-    return resolveDeclsToType(resolveDependentMember(
-        resolveNestedNameSpecifierToType(NNS->getPrefix()),
-        NNS->getAsIdentifier(), TypeFilter));
+    return resolveDeclsToType(
+        resolveDependentMember(
+            resolveNestedNameSpecifierToType(NNS->getPrefix()),
+            NNS->getAsIdentifier(), TypeFilter),
+        Ctx);
   }
   default:
     break;
   }
   return nullptr;
+}
+
+namespace {
+
+bool isOrdinaryMember(const NamedDecl *ND) {
+  return ND->isInIdentifierNamespace(Decl::IDNS_Ordinary | Decl::IDNS_Tag |
+                                     Decl::IDNS_Member);
+}
+
+bool findOrdinaryMember(const CXXRecordDecl *RD, CXXBasePath &Path,
+                        DeclarationName Name) {
+  Path.Decls = RD->lookup(Name).begin();
+  for (DeclContext::lookup_iterator I = Path.Decls, E = I.end(); I != E; ++I)
+    if (isOrdinaryMember(*I))
+      return true;
+
+  return false;
+}
+
+} // namespace
+
+bool HeuristicResolver::findOrdinaryMemberInDependentClasses(
+    const CXXBaseSpecifier *Specifier, CXXBasePath &Path,
+    DeclarationName Name) const {
+  CXXRecordDecl *RD =
+      resolveTypeToRecordDecl(Specifier->getType().getTypePtr());
+  if (!RD)
+    return false;
+  return findOrdinaryMember(RD, Path, Name);
+}
+
+std::vector<const NamedDecl *> HeuristicResolver::lookupDependentName(
+    CXXRecordDecl *RD, DeclarationName Name,
+    llvm::function_ref<bool(const NamedDecl *ND)> Filter) const {
+  std::vector<const NamedDecl *> Results;
+
+  // Lookup in the class.
+  bool AnyOrdinaryMembers = false;
+  for (const NamedDecl *ND : RD->lookup(Name)) {
+    if (isOrdinaryMember(ND))
+      AnyOrdinaryMembers = true;
+    if (Filter(ND))
+      Results.push_back(ND);
+  }
+  if (AnyOrdinaryMembers)
+    return Results;
+
+  // Perform lookup into our base classes.
+  CXXBasePaths Paths;
+  Paths.setOrigin(RD);
+  if (!RD->lookupInBases(
+          [&](const CXXBaseSpecifier *Specifier, CXXBasePath &Path) {
+            return findOrdinaryMemberInDependentClasses(Specifier, Path, Name);
+          },
+          Paths, /*LookupInDependent=*/true))
+    return Results;
+  for (DeclContext::lookup_iterator I = Paths.front().Decls, E = I.end();
+       I != E; ++I) {
+    if (isOrdinaryMember(*I) && Filter(*I))
+      Results.push_back(*I);
+  }
+  return Results;
 }
 
 std::vector<const NamedDecl *> HeuristicResolver::resolveDependentMember(
@@ -259,7 +340,7 @@ std::vector<const NamedDecl *> HeuristicResolver::resolveDependentMember(
     if (!RD->hasDefinition())
       return {};
     RD = RD->getDefinition();
-    return RD->lookupDependentName(Name, Filter);
+    return lookupDependentName(RD, Name, Filter);
   }
   return {};
 }

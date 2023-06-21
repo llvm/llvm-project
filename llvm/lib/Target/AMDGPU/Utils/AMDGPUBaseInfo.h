@@ -31,6 +31,7 @@ class MCRegisterClass;
 class MCRegisterInfo;
 class MCSubtargetInfo;
 class StringRef;
+class TargetRegisterClass;
 class Triple;
 class raw_ostream;
 
@@ -559,8 +560,9 @@ enum Component : unsigned {
   MAX_OPR_NUM = DST_NUM + MAX_SRC_NUM
 };
 
-// Number of VGPR banks per VOPD component operand.
-constexpr unsigned BANKS_NUM[] = {2, 4, 4, 2};
+// LSB mask for VGPR banks per VOPD component operand.
+// 4 banks result in a mask 3, setting 2 lower bits.
+constexpr unsigned VOPD_VGPR_BANK_MASKS[] = {1, 3, 3, 1};
 
 enum ComponentIndex : unsigned { X = 0, Y = 1 };
 constexpr unsigned COMPONENTS[] = {ComponentIndex::X, ComponentIndex::Y};
@@ -860,11 +862,6 @@ struct Waitcnt {
 
   bool hasWaitVsCnt() const {
     return VsCnt != ~0u;
-  }
-
-  bool dominates(const Waitcnt &Other) const {
-    return VmCnt <= Other.VmCnt && ExpCnt <= Other.ExpCnt &&
-           LgkmCnt <= Other.LgkmCnt && VsCnt <= Other.VsCnt;
   }
 
   Waitcnt combined(const Waitcnt &Other) const {
@@ -1177,6 +1174,9 @@ unsigned getRegBitWidth(unsigned RCID);
 
 /// Get the size in bits of a register from the register class \p RC.
 unsigned getRegBitWidth(const MCRegisterClass &RC);
+
+/// Get the size in bits of a register from the register class \p RC.
+unsigned getRegBitWidth(const TargetRegisterClass &RC);
 
 /// Get size of register operand
 unsigned getRegOperandSize(const MCRegisterInfo *MRI, const MCInstrDesc &Desc,

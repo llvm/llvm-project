@@ -542,6 +542,7 @@ erase_if(multimap<Key, T, Compare, Allocator>& c, Predicate pred);  // C++20
 #include <__algorithm/lexicographical_compare.h>
 #include <__algorithm/lexicographical_compare_three_way.h>
 #include <__assert> // all public C++ headers provide the assertion handler
+#include <__availability>
 #include <__config>
 #include <__functional/binary_function.h>
 #include <__functional/is_transparent.h>
@@ -2389,10 +2390,10 @@ _LIBCPP_END_NAMESPACE_STD
 _LIBCPP_BEGIN_NAMESPACE_STD
 namespace pmr {
 template <class _KeyT, class _ValueT, class _CompareT = std::less<_KeyT>>
-using map = std::map<_KeyT, _ValueT, _CompareT, polymorphic_allocator<std::pair<const _KeyT, _ValueT>>>;
+using map _LIBCPP_AVAILABILITY_PMR = std::map<_KeyT, _ValueT, _CompareT, polymorphic_allocator<std::pair<const _KeyT, _ValueT>>>;
 
 template <class _KeyT, class _ValueT, class _CompareT = std::less<_KeyT>>
-using multimap = std::multimap<_KeyT, _ValueT, _CompareT, polymorphic_allocator<std::pair<const _KeyT, _ValueT>>>;
+using multimap _LIBCPP_AVAILABILITY_PMR = std::multimap<_KeyT, _ValueT, _CompareT, polymorphic_allocator<std::pair<const _KeyT, _ValueT>>>;
 } // namespace pmr
 _LIBCPP_END_NAMESPACE_STD
 #endif

@@ -2,7 +2,7 @@
 ! The goal here is not to test every intrinsics, it is to test the
 ! lowering framework for elemental intrinsics. This test various
 ! intrinsics that have different number or arguments and argument types.
-! RUN: bbc -emit-fir -hlfir -o - %s | FileCheck %s
+! RUN: bbc -emit-hlfir -o - %s | FileCheck %s
 
 subroutine simple_elemental(x,y)
   real :: x(100), y(100)

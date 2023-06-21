@@ -43,8 +43,6 @@ def Glorrmp_eq : Flag<["--"], "glorrmp=">;
 def Blurmpq : Flag<["--"], "blurmp">;
 def Blurmpq_eq : Flag<["--"], "blurmp=">;
 
-def DashDash : Option<["--"], "", KIND_REMAINING_ARGS>;
-
 class XOpts<string base> : KeyPathAndMacro<"X->", base> {}
 
 def marshalled_flag_d : Flag<["-"], "marshalled-flag-d">,

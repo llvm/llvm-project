@@ -83,7 +83,7 @@ public:
   struct ArgumentTableEntry {
     lldb::CommandArgumentType arg_type;
     const char *arg_name;
-    CommandCompletions::CommonCompletionTypes completion_type;
+    lldb::CompletionType completion_type;
     OptionEnumValues enum_values;
     ArgumentHelpCallback help_function;
     const char *help_text;

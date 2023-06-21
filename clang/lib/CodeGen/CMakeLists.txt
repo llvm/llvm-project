@@ -31,6 +31,8 @@ set(LLVM_LINK_COMPONENTS
   )
 
 add_clang_library(clangCodeGen
+  ABIInfo.cpp
+  ABIInfoImpl.cpp
   BackendUtil.cpp
   CGAtomic.cpp
   CGBlocks.cpp
@@ -87,6 +89,31 @@ add_clang_library(clangCodeGen
   SanitizerMetadata.cpp
   SwiftCallingConv.cpp
   TargetInfo.cpp
+  Targets/AArch64.cpp
+  Targets/AMDGPU.cpp
+  Targets/ARC.cpp
+  Targets/ARM.cpp
+  Targets/AVR.cpp
+  Targets/BPF.cpp
+  Targets/CSKY.cpp
+  Targets/Hexagon.cpp
+  Targets/Lanai.cpp
+  Targets/LoongArch.cpp
+  Targets/M68k.cpp
+  Targets/MSP430.cpp
+  Targets/Mips.cpp
+  Targets/NVPTX.cpp
+  Targets/PNaCl.cpp
+  Targets/PPC.cpp
+  Targets/RISCV.cpp
+  Targets/SPIR.cpp
+  Targets/Sparc.cpp
+  Targets/SystemZ.cpp
+  Targets/TCE.cpp
+  Targets/VE.cpp
+  Targets/WebAssembly.cpp
+  Targets/X86.cpp
+  Targets/XCore.cpp
   VarBypassDetector.cpp
 
   DEPENDS

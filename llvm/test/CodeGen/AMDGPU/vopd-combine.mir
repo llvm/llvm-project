@@ -19,6 +19,7 @@
   define void @vopd_schedule_unconstrained_2() { ret void }
   define void @vopd_mov_fixup() { ret void }
   define void @vopd_mov_fixup_fail() { ret void }
+  define void @vopd_no_combine_dependent_subreg() { ret void }
 ...
 
 ---
@@ -540,4 +541,23 @@ body: |
     ; PAIR-NEXT: $vgpr1 = V_MOV_B32_e32 target-flags(amdgpu-abs32-lo) @lds + 4, implicit $exec
     $vgpr0 = V_MOV_B32_e32 target-flags(amdgpu-abs32-lo) @lds, implicit $exec
     $vgpr1 = V_MOV_B32_e32 target-flags(amdgpu-abs32-lo) @lds + 4, implicit $exec
+...
+
+---
+name:            vopd_no_combine_dependent_subreg
+tracksRegLiveness: true
+body:             |
+  bb.0:
+
+    ; SCHED-LABEL: name: vopd_no_combine_dependent_subreg
+    ; SCHED: $vgpr0 = IMPLICIT_DEF
+    ; SCHED-NEXT: $vgpr2 = V_MOV_B32_e32 0, implicit-def $vgpr2_vgpr3, implicit $exec
+    ; SCHED-NEXT: $vgpr5 = V_ADD_F32_e32 killed $vgpr0, killed $vgpr3, implicit $mode, implicit $exec
+    ; PAIR-LABEL: name: vopd_no_combine_dependent_subreg
+    ; PAIR: $vgpr0 = IMPLICIT_DEF
+    ; PAIR-NEXT: $vgpr2 = V_MOV_B32_e32 0, implicit-def $vgpr2_vgpr3, implicit $exec
+    ; PAIR-NEXT: $vgpr5 = V_ADD_F32_e32 killed $vgpr0, killed $vgpr3, implicit $mode, implicit $exec
+    $vgpr0 = IMPLICIT_DEF
+    $vgpr2 = V_MOV_B32_e32 0, implicit-def $vgpr2_vgpr3, implicit $exec
+    $vgpr5 = V_ADD_F32_e32 $vgpr0, $vgpr3, implicit $mode, implicit $exec
 ...

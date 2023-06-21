@@ -77,10 +77,10 @@ void foo(double *d, float f, float *fp, long double *l, int *i, const char *c) {
 
   __builtin_ldexp(f,f);    __builtin_ldexpf(f,f);   __builtin_ldexpl(f,f);  __builtin_ldexpf128(f,f);
 
-// NO__ERRNO: declare double @ldexp(double noundef, i32 noundef) [[READNONE]]
-// NO__ERRNO: declare float @ldexpf(float noundef, i32 noundef) [[READNONE]]
-// NO__ERRNO: declare x86_fp80 @ldexpl(x86_fp80 noundef, i32 noundef) [[READNONE]]
-// NO__ERRNO: declare fp128 @ldexpf128(fp128 noundef, i32 noundef) [[READNONE]]
+// NO__ERRNO: declare double @llvm.ldexp.f64.i32(double, i32) [[READNONE_INTRINSIC]]
+// NO__ERRNO: declare float @llvm.ldexp.f32.i32(float, i32) [[READNONE_INTRINSIC]]
+// NO__ERRNO: declare x86_fp80 @llvm.ldexp.f80.i32(x86_fp80, i32) [[READNONE_INTRINSIC]]
+// NO__ERRNO: declare fp128 @llvm.ldexp.f128.i32(fp128, i32) [[READNONE_INTRINSIC]]
 // HAS_ERRNO: declare double @ldexp(double noundef, i32 noundef) [[NOT_READNONE]]
 // HAS_ERRNO: declare float @ldexpf(float noundef, i32 noundef) [[NOT_READNONE]]
 // HAS_ERRNO: declare x86_fp80 @ldexpl(x86_fp80 noundef, i32 noundef) [[NOT_READNONE]]

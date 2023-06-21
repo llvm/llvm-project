@@ -27,6 +27,10 @@
 #include "llvm/Support/ScopedPrinter.h"
 #include "llvm/Support/raw_ostream.h"
 
+#ifdef MLIR_GREEDY_REWRITE_RANDOMIZER_SEED
+#include <random>
+#endif // MLIR_GREEDY_REWRITE_RANDOMIZER_SEED
+
 using namespace mlir;
 
 #define DEBUG_TYPE "greedy-rewriter"
@@ -165,7 +169,7 @@ public:
   /// Reverse the worklist.
   void reverse();
 
-private:
+protected:
   /// The worklist of operations.
   std::vector<Operation *> list;
 
@@ -225,6 +229,37 @@ void Worklist::reverse() {
     map[list[i]] = i;
 }
 
+#ifdef MLIR_GREEDY_REWRITE_RANDOMIZER_SEED
+/// A worklist that pops elements at a random position. This worklist is for
+/// testing/debugging purposes only. It can be used to ensure that lowering
+/// pipelines work correctly regardless of the order in which ops are processed
+/// by the GreedyPatternRewriteDriver.
+class RandomizedWorklist : public Worklist {
+public:
+  RandomizedWorklist() : Worklist() {
+    generator.seed(MLIR_GREEDY_REWRITE_RANDOMIZER_SEED);
+  }
+
+  /// Pop a random non-empty op from the worklist.
+  Operation *pop() {
+    Operation *op = nullptr;
+    do {
+      assert(!list.empty() && "cannot pop from empty worklist");
+      int64_t pos = generator() % list.size();
+      op = list[pos];
+      list.erase(list.begin() + pos);
+      for (int64_t i = pos, e = list.size(); i < e; ++i)
+        map[list[i]] = i;
+      map.erase(op);
+    } while (!op);
+    return op;
+  }
+
+private:
+  std::minstd_rand0 generator;
+};
+#endif // MLIR_GREEDY_REWRITE_RANDOMIZER_SEED
+
 //===----------------------------------------------------------------------===//
 // GreedyPatternRewriteDriver
 //===----------------------------------------------------------------------===//
@@ -272,7 +307,11 @@ protected:
 
   /// The worklist for this transformation keeps track of the operations that
   /// need to be (re)visited.
+#ifdef MLIR_GREEDY_REWRITE_RANDOMIZER_SEED
+  RandomizedWorklist worklist;
+#else
   Worklist worklist;
+#endif // MLIR_GREEDY_REWRITE_RANDOMIZER_SEED
 
   /// Non-pattern based folder for operations.
   OperationFolder folder;

@@ -65,6 +65,18 @@ struct UnwrapperHelper {
     return common::visit([](const auto &y) { return Unwrap<A>(y); }, x);
   }
 
+  template <typename A, std::size_t J = 0, typename... Bs>
+  static const A *Unwrap(const std::tuple<Bs...> &x) {
+    if constexpr (J < sizeof...(Bs)) {
+      if (auto result{Unwrap<A>(std::get<J>(x))}) {
+        return result;
+      }
+      return Unwrap<A, (J + 1)>(x);
+    } else {
+      return nullptr;
+    }
+  }
+
   template <typename A, typename B>
   static const A *Unwrap(const std::optional<B> &o) {
     if (o) {
@@ -122,5 +134,120 @@ template <typename A, typename = int> struct HasTypedExpr : std::false_type {};
 template <typename A>
 struct HasTypedExpr<A, decltype(static_cast<void>(A::typedExpr), 0)>
     : std::true_type {};
+
+// GetSource()
+
+template <bool GET_FIRST> struct GetSourceHelper {
+
+  using Result = std::optional<CharBlock>;
+
+  template <typename A> static Result GetSource(A *p) {
+    if (p) {
+      return GetSource(*p);
+    } else {
+      return std::nullopt;
+    }
+  }
+  template <typename A>
+  static Result GetSource(const common::Indirection<A> &x) {
+    return GetSource(x.value());
+  }
+
+  template <typename A, bool COPY>
+  static Result GetSource(const common::Indirection<A, COPY> &x) {
+    return GetSource(x.value());
+  }
+
+  template <typename... As>
+  static Result GetSource(const std::variant<As...> &x) {
+    return common::visit([](const auto &y) { return GetSource(y); }, x);
+  }
+
+  template <std::size_t J = 0, typename... As>
+  static Result GetSource(const std::tuple<As...> &x) {
+    if constexpr (J < sizeof...(As)) {
+      constexpr std::size_t index{GET_FIRST ? J : sizeof...(As) - J - 1};
+      if (auto result{GetSource(std::get<index>(x))}) {
+        return result;
+      }
+      return GetSource<(J + 1)>(x);
+    } else {
+      return {};
+    }
+  }
+
+  template <typename A> static Result GetSource(const std::optional<A> &o) {
+    if (o) {
+      return GetSource(*o);
+    } else {
+      return {};
+    }
+  }
+
+  template <typename A> static Result GetSource(const std::list<A> &x) {
+    if constexpr (GET_FIRST) {
+      for (const A &y : x) {
+        if (auto result{GetSource(y)}) {
+          return result;
+        }
+      }
+    } else {
+      for (auto iter{x.rbegin()}; iter != x.rend(); ++iter) {
+        if (auto result{GetSource(*iter)}) {
+          return result;
+        }
+      }
+    }
+    return {};
+  }
+
+  template <typename A> static Result GetSource(const std::vector<A> &x) {
+    if constexpr (GET_FIRST) {
+      for (const A &y : x) {
+        if (auto result{GetSource(y)}) {
+          return result;
+        }
+      }
+    } else {
+      for (auto iter{x.rbegin()}; iter != x.rend(); ++iter) {
+        if (auto result{GetSource(*iter)}) {
+          return result;
+        }
+      }
+    }
+    return {};
+  }
+
+  template <typename A> static Result GetSource(A &x) {
+    if constexpr (HasSource<A>::value) {
+      return x.source;
+    } else if constexpr (ConstraintTrait<A>) {
+      return GetSource(x.thing);
+    } else if constexpr (WrapperTrait<A>) {
+      return GetSource(x.v);
+    } else if constexpr (UnionTrait<A>) {
+      return GetSource(x.u);
+    } else if constexpr (TupleTrait<A>) {
+      return GetSource(x.t);
+    } else {
+      return {};
+    }
+  }
+};
+
+template <typename A> std::optional<CharBlock> GetSource(const A &x) {
+  return GetSourceHelper<true>::GetSource(x);
+}
+template <typename A> std::optional<CharBlock> GetSource(A &x) {
+  return GetSourceHelper<true>::GetSource(const_cast<const A &>(x));
+}
+
+template <typename A> std::optional<CharBlock> GetLastSource(const A &x) {
+  return GetSourceHelper<false>::GetSource(x);
+}
+template <typename A> std::optional<CharBlock> GetLastSource(A &x) {
+  return GetSourceHelper<false>::GetSource(const_cast<const A &>(x));
+}
+
 } // namespace Fortran::parser
 #endif // FORTRAN_PARSER_TOOLS_H_

@@ -92,7 +92,7 @@ std::string MakeAbsolutePath(const SourceManager &SM, StringRef Path) {
                  << '\n';
   // Handle symbolic link path cases.
   // We are trying to get the real file path of the symlink.
-  auto Dir = SM.getFileManager().getDirectory(
+  auto Dir = SM.getFileManager().getOptionalDirectoryRef(
       llvm::sys::path::parent_path(AbsolutePath.str()));
   if (Dir) {
     StringRef DirName = SM.getFileManager().getCanonicalName(*Dir);

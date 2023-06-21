@@ -933,11 +933,12 @@ public:
   }
   bool operator()(const parser::CallStmt &stmt) {
     const auto &procedureDesignator{
-        std::get<parser::ProcedureDesignator>(stmt.v.t)};
+        std::get<parser::ProcedureDesignator>(stmt.call.t)};
     if (auto *name{std::get_if<parser::Name>(&procedureDesignator.u)}) {
       // TODO: also ensure that the procedure is, in fact, an intrinsic
       if (name->source == "move_alloc") {
-        const auto &args{std::get<std::list<parser::ActualArgSpec>>(stmt.v.t)};
+        const auto &args{
+            std::get<std::list<parser::ActualArgSpec>>(stmt.call.t)};
         if (!args.empty()) {
           const parser::ActualArg &actualArg{
               std::get<parser::ActualArg>(args.front().t)};
@@ -1063,6 +1064,18 @@ bool IsUnlimitedPolymorphic(const Symbol &symbol) {
 
 bool IsPolymorphicAllocatable(const Symbol &symbol) {
   return IsAllocatable(symbol) && IsPolymorphic(symbol);
+}
+
+const Scope *FindCUDADeviceContext(const Scope *scope) {
+  return !scope ? nullptr : FindScopeContaining(*scope, [](const Scope &s) {
+    return IsCUDADeviceContext(&s);
+  });
+}
+
+std::optional<common::CUDADataAttr> GetCUDADataAttr(const Symbol *symbol) {
+  const auto *object{
+      symbol ? symbol->detailsIf<ObjectEntityDetails>() : nullptr};
+  return object ? object->cudaDataAttr() : std::nullopt;
 }
 
 std::optional<parser::MessageFormattedText> CheckAccessibleSymbol(

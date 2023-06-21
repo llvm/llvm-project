@@ -242,10 +242,8 @@ bool MissingFrameInferrer::inferMissingFrames(
 
   // Done with the inference if the calle is reachable via a single callsite.
   // This may not be accurate but it improves the search throughput.
-  for (auto Target : CallEdgesF[From]) {
-    if (Target == ToFRange->Func)
-      return true;
-  }
+  if (llvm::is_contained(CallEdgesF[From], ToFRange->Func))
+    return true;
 
   // Bail out if callee is not tailcall reachable at all.
   if (!TailCallTargetFuncs.contains(ToFRange->Func))

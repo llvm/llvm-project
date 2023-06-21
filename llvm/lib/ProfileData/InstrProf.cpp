@@ -13,6 +13,7 @@
 
 #include "llvm/ProfileData/InstrProf.h"
 #include "llvm/ADT/ArrayRef.h"
+#include "llvm/ADT/SetVector.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringExtras.h"
@@ -230,31 +231,6 @@ std::string getInstrProfSectionName(InstrProfSectKind IPSK,
     SectName += ",regular,live_support";
 
   return SectName;
-}
-
-void SoftInstrProfErrors::addError(instrprof_error IE) {
-  if (IE == instrprof_error::success)
-    return;
-
-  if (FirstError == instrprof_error::success)
-    FirstError = IE;
-
-  switch (IE) {
-  case instrprof_error::hash_mismatch:
-    ++NumHashMismatches;
-    break;
-  case instrprof_error::count_mismatch:
-    ++NumCountMismatches;
-    break;
-  case instrprof_error::counter_overflow:
-    ++NumCounterOverflows;
-    break;
-  case instrprof_error::value_site_count_mismatch:
-    ++NumValueSiteCountMismatches;
-    break;
-  default:
-    llvm_unreachable("Not a soft error");
-  }
 }
 
 std::string InstrProfError::message() const {
@@ -801,6 +777,48 @@ void InstrProfRecord::addValueData(uint32_t ValueKind, uint32_t Site,
     ValueSites.emplace_back();
   else
     ValueSites.emplace_back(VData, VData + N);
+}
+
+std::vector<BPFunctionNode> TemporalProfTraceTy::createBPFunctionNodes(
+    ArrayRef<TemporalProfTraceTy> Traces) {
+  using IDT = BPFunctionNode::IDT;
+  using UtilityNodeT = BPFunctionNode::UtilityNodeT;
+  // Collect all function IDs ordered by their smallest timestamp. This will be
+  // used as the initial FunctionNode order.
+  SetVector<IDT> FunctionIds;
+  size_t LargestTraceSize = 0;
+  for (auto &Trace : Traces)
+    LargestTraceSize =
+        std::max(LargestTraceSize, Trace.FunctionNameRefs.size());
+  for (size_t Timestamp = 0; Timestamp < LargestTraceSize; Timestamp++)
+    for (auto &Trace : Traces)
+      if (Timestamp < Trace.FunctionNameRefs.size())
+        FunctionIds.insert(Trace.FunctionNameRefs[Timestamp]);
+
+  int N = std::ceil(std::log2(LargestTraceSize));
+
+  // TODO: We need to use the Trace.Weight field to give more weight to more
+  // important utilities
+  DenseMap<IDT, SmallVector<UtilityNodeT, 4>> FuncGroups;
+  for (size_t TraceIdx = 0; TraceIdx < Traces.size(); TraceIdx++) {
+    auto &Trace = Traces[TraceIdx].FunctionNameRefs;
+    for (size_t Timestamp = 0; Timestamp < Trace.size(); Timestamp++) {
+      for (int I = std::floor(std::log2(Timestamp + 1)); I < N; I++) {
+        auto &FunctionId = Trace[Timestamp];
+        UtilityNodeT GroupId = TraceIdx * N + I;
+        FuncGroups[FunctionId].push_back(GroupId);
+      }
+    }
+  }
+
+  std::vector<BPFunctionNode> Nodes;
+  for (auto &Id : FunctionIds) {
+    auto &UNs = FuncGroups[Id];
+    llvm::sort(UNs);
+    UNs.erase(std::unique(UNs.begin(), UNs.end()), UNs.end());
+    Nodes.emplace_back(Id, UNs);
+  }
+  return Nodes;
 }
 
 #define INSTR_PROF_COMMON_API_IMPL

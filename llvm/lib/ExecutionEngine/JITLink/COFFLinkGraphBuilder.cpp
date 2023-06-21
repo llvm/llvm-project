@@ -135,6 +135,13 @@ Error COFFLinkGraphBuilder::graphifySections() {
       SectionName = *SecNameOrErr;
 
     // FIXME: Skip debug info sections
+    if (SectionName == ".voltbl") {
+      LLVM_DEBUG({
+        dbgs() << "    "
+               << "Skipping section \"" << SectionName << "\"\n";
+      });
+      continue;
+    }
 
     LLVM_DEBUG({
       dbgs() << "    "

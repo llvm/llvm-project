@@ -151,6 +151,7 @@ bool WebAssemblyTargetInfo::initFeatureMap(
     Features["atomics"] = true;
     Features["mutable-globals"] = true;
     Features["tail-call"] = true;
+    Features["reference-types"] = true;
     setSIMDLevel(Features, SIMD128, true);
   } else if (CPU == "generic") {
     Features["sign-ext"] = true;

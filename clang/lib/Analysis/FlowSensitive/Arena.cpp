@@ -68,4 +68,12 @@ BoolValue &Arena::makeEquals(BoolValue &LHS, BoolValue &RHS) {
   return *Res.first->second;
 }
 
+IntegerValue &Arena::makeIntLiteral(llvm::APInt Value) {
+  auto [It, Inserted] = IntegerLiterals.try_emplace(Value, nullptr);
+
+  if (Inserted)
+    It->second = &create<IntegerValue>();
+  return *It->second;
+}
+
 } // namespace clang::dataflow

@@ -1358,7 +1358,9 @@ public:
     if (!IsIntVec && !FMF.allowReassoc())
       return;
 
-    auto CanBeFlattened = [](Value *Op) {
+    auto CanBeFlattened = [this](Value *Op) {
+      if (match(Op, m_BinOp()) && ShapeMap.find(Op) != ShapeMap.end())
+        return true;
       return match(
           Op, m_OneUse(m_CombineOr(
                   m_Load(m_Value()),
@@ -1384,6 +1386,16 @@ public:
               TTI.getShuffleCost(TTI::SK_Splice, FixedVectorType::get(EltTy, 1),
                                  std::nullopt, TTI::TCK_RecipThroughput);
         return EmbedCost;
+      }
+
+      if (match(Op, m_BinOp()) && ShapeMap.find(Op) != ShapeMap.end()) {
+        InstructionCost OriginalCost =
+            TTI.getArithmeticInstrCost(cast<Instruction>(Op)->getOpcode(),
+                                       EltTy) *
+            N;
+        InstructionCost NewCost = TTI.getArithmeticInstrCost(
+            cast<Instruction>(Op)->getOpcode(), VecTy);
+        return NewCost - OriginalCost;
       }
 
       if (match(Op, m_Intrinsic<Intrinsic::matrix_transpose>())) {
@@ -1433,8 +1445,12 @@ public:
       if (!CanBeFlattened(Op))
         return Op;
 
-      FusedInsts.insert(cast<Instruction>(Op));
+      if (match(Op, m_BinOp()) && ShapeMap.find(Op) != ShapeMap.end()) {
+        ShapeMap[Op] = ShapeMap[Op].t();
+        return Op;
+      }
 
+      FusedInsts.insert(cast<Instruction>(Op));
       // If vector uses the builtin load, lower to a LoadInst
       Value *Arg;
       if (match(Op, m_Intrinsic<Intrinsic::matrix_column_major_load>(

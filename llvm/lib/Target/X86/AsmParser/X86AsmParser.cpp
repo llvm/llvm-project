@@ -1776,10 +1776,6 @@ bool X86AsmParser::CreateMemForMSInlineAsm(
                                              BaseReg && IndexReg));
     return false;
   }
-  // Otherwise, we set the base register to a non-zero value
-  // if we don't know the actual value at this time.  This is necessary to
-  // get the matching correct in some cases.
-  BaseReg = BaseReg ? BaseReg : 1;
   Operands.push_back(X86Operand::CreateMem(
       getPointerWidth(), SegReg, Disp, BaseReg, IndexReg, Scale, Start, End,
       Size,
@@ -2315,7 +2311,8 @@ bool X86AsmParser::ParseIntelDotOperator(IntelExprStateMachine &SM,
   // .Imm gets lexed as a real.
   if (Tok.is(AsmToken::Real)) {
     APInt DotDisp;
-    DotDispStr.getAsInteger(10, DotDisp);
+    if (DotDispStr.getAsInteger(10, DotDisp))
+      return Error(Tok.getLoc(), "Unexpected offset");
     Info.Offset = DotDisp.getZExtValue();
   } else if ((isParsingMSInlineAsm() || getParser().isParsingMasm()) &&
              Tok.is(AsmToken::Identifier)) {

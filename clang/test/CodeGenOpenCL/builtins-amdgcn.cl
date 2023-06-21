@@ -172,6 +172,20 @@ void test_cos_f32(global float* out, float a)
   *out = __builtin_amdgcn_cosf(a);
 }
 
+// CHECK-LABEL: @test_log_f32
+// CHECK: call float @llvm.amdgcn.log.f32
+void test_log_f32(global float* out, float a)
+{
+  *out = __builtin_amdgcn_logf(a);
+}
+
+// CHECK-LABEL: @test_exp2_f32
+// CHECK: call float @llvm.amdgcn.exp2.f32
+void test_exp2_f32(global float* out, float a)
+{
+  *out = __builtin_amdgcn_exp2f(a);
+}
+
 // CHECK-LABEL: @test_log_clamp_f32
 // CHECK: call float @llvm.amdgcn.log.clamp.f32
 void test_log_clamp_f32(global float* out, float a)
@@ -180,14 +194,14 @@ void test_log_clamp_f32(global float* out, float a)
 }
 
 // CHECK-LABEL: @test_ldexp_f32
-// CHECK: call float @llvm.amdgcn.ldexp.f32
+// CHECK: call float @llvm.ldexp.f32.i32
 void test_ldexp_f32(global float* out, float a, int b)
 {
   *out = __builtin_amdgcn_ldexpf(a, b);
 }
 
 // CHECK-LABEL: @test_ldexp_f64
-// CHECK: call double @llvm.amdgcn.ldexp.f64
+// CHECK: call double @llvm.ldexp.f64.i32
 void test_ldexp_f64(global double* out, double a, int b)
 {
   *out = __builtin_amdgcn_ldexp(a, b);
@@ -794,6 +808,26 @@ kernel void test_mqsad_u32_u8(global uint4* out, ulong src0, uint src1, uint4 sr
 // CHECK: call void @llvm.amdgcn.s.setreg(i32 8193, i32 %val)
 kernel void test_s_setreg(uint val) {
   __builtin_amdgcn_s_setreg(8193, val);
+}
+
+// CHECK-LABEL test_atomic_inc_dec(
+void test_atomic_inc_dec(local uint *lptr, global uint *gptr, uint val) {
+  uint res;
+
+  // CHECK: atomicrmw uinc_wrap ptr addrspace(3) %lptr, i32 %val syncscope("workgroup") seq_cst, align 4
+  res = __builtin_amdgcn_atomic_inc32(lptr, val, __ATOMIC_SEQ_CST, "workgroup");
+
+  // CHECK: atomicrmw udec_wrap ptr addrspace(3) %lptr, i32 %val syncscope("workgroup") seq_cst, align 4
+  res = __builtin_amdgcn_atomic_dec32(lptr, val, __ATOMIC_SEQ_CST, "workgroup");
+
+  // CHECK: atomicrmw uinc_wrap ptr addrspace(1) %gptr, i32 %val syncscope("agent") seq_cst, align 4
+  res = __builtin_amdgcn_atomic_inc32(gptr, val, __ATOMIC_SEQ_CST, "agent");
+
+  // CHECK: atomicrmw udec_wrap ptr addrspace(1) %gptr, i32 %val seq_cst, align 4
+  res = __builtin_amdgcn_atomic_dec32(gptr, val, __ATOMIC_SEQ_CST, "");
+
+  // CHECK: atomicrmw volatile udec_wrap ptr addrspace(1) %gptr, i32 %val seq_cst, align 4
+  res = __builtin_amdgcn_atomic_dec32((volatile global uint*)gptr, val, __ATOMIC_SEQ_CST, "");
 }
 
 // CHECK-DAG: [[$WI_RANGE]] = !{i32 0, i32 1024}

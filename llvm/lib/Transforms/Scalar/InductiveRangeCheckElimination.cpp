@@ -1530,7 +1530,7 @@ bool LoopConstrainer::run() {
 
   // This function canonicalizes the loop into Loop-Simplify and LCSSA forms.
   auto CanonicalizeLoop = [&] (Loop *L, bool IsOriginalLoop) {
-    formLCSSARecursively(*L, DT, &LI);
+    formLCSSARecursively(*L, DT, &LI, &SE);
     simplifyLoop(L, &DT, &LI, &SE, nullptr, nullptr, true);
     // Pre/post loops are slow paths, we do not need to perform any loop
     // optimizations on them.
@@ -1759,7 +1759,7 @@ PreservedAnalyses IRCEPass::run(Function &F, FunctionAnalysisManager &AM) {
     for (const auto &L : LI) {
       CFGChanged |= simplifyLoop(L, &DT, &LI, &SE, nullptr, nullptr,
                                  /*PreserveLCSSA=*/false);
-      Changed |= formLCSSARecursively(*L, DT, &LI);
+      Changed |= formLCSSARecursively(*L, DT, &LI, &SE);
     }
     Changed |= CFGChanged;
 

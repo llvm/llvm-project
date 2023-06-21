@@ -21,7 +21,7 @@
 
 _LIBCPP_BEGIN_NAMESPACE_FILESYSTEM
 
-_LIBCPP_AVAILABILITY_FILESYSTEM_PUSH
+_LIBCPP_AVAILABILITY_FILESYSTEM_LIBRARY_PUSH
 
 enum class _LIBCPP_ENUM_VIS copy_options : unsigned short {
   none = 0,
@@ -75,7 +75,7 @@ inline copy_options& operator^=(copy_options& __lhs, copy_options __rhs) {
   return __lhs = __lhs ^ __rhs;
 }
 
-_LIBCPP_AVAILABILITY_FILESYSTEM_POP
+_LIBCPP_AVAILABILITY_FILESYSTEM_LIBRARY_POP
 
 _LIBCPP_END_NAMESPACE_FILESYSTEM
 

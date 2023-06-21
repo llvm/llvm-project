@@ -140,10 +140,7 @@ bool GCOVFile::readGCNO(GCOVBuffer &buf) {
         if (version >= GCOV::V900)
           fn->endColumn = buf.getWord();
       }
-      auto r = filenameToIdx.try_emplace(filename, filenameToIdx.size());
-      if (r.second)
-        filenames.emplace_back(filename);
-      fn->srcIdx = r.first->second;
+      fn->srcIdx = addNormalizedPathToMap(filename);
       identToFunction[fn->ident] = fn;
     } else if (tag == GCOV_TAG_BLOCKS && fn) {
       if (version < GCOV::V800) {
@@ -325,6 +322,19 @@ void GCOVFile::print(raw_ostream &OS) const {
 /// dump - Dump GCOVFile content to dbgs() for debugging purposes.
 LLVM_DUMP_METHOD void GCOVFile::dump() const { print(dbgs()); }
 #endif
+
+unsigned GCOVFile::addNormalizedPathToMap(StringRef filename) {
+  // unify filename, as the same path can have different form
+  SmallString<256> P(filename);
+  sys::path::remove_dots(P, true);
+  filename = P.str();
+
+  auto r = filenameToIdx.try_emplace(filename, filenameToIdx.size());
+  if (r.second)
+    filenames.emplace_back(filename);
+
+  return r.first->second;
+}
 
 bool GCOVArc::onTree() const { return flags & GCOV_ARC_ON_TREE; }
 

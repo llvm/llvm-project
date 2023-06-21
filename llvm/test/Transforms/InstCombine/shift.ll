@@ -1765,12 +1765,11 @@ define void @ashr_out_of_range_1(ptr %A) {
 define void @ossfuzz_38078(i32 %arg, i32 %arg1, ptr %ptr, ptr %ptr2, ptr %ptr3, ptr %ptr4, ptr %ptr5, ptr %ptr6, ptr %ptr7) {
 ; CHECK-LABEL: @ossfuzz_38078(
 ; CHECK-NEXT:  bb:
-; CHECK-NEXT:    [[I2:%.*]] = add nsw i32 [[ARG:%.*]], [[ARG1:%.*]]
-; CHECK-NEXT:    [[B3:%.*]] = or i32 [[I2]], 2147483647
 ; CHECK-NEXT:    [[G1:%.*]] = getelementptr i32, ptr [[PTR:%.*]], i64 -1
-; CHECK-NEXT:    [[I5:%.*]] = icmp eq i32 [[I2]], 0
+; CHECK-NEXT:    [[I2:%.*]] = sub i32 0, [[ARG1:%.*]]
+; CHECK-NEXT:    [[I5:%.*]] = icmp eq i32 [[I2]], [[ARG:%.*]]
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[I5]])
-; CHECK-NEXT:    store volatile i32 [[B3]], ptr [[G1]], align 4
+; CHECK-NEXT:    store volatile i32 2147483647, ptr [[G1]], align 4
 ; CHECK-NEXT:    br label [[BB:%.*]]
 ; CHECK:       BB:
 ; CHECK-NEXT:    unreachable

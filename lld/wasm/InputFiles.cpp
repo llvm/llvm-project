@@ -487,7 +487,7 @@ void ObjFile::parse(bool ignoreComdats) {
     // relied on the naming convention.  To maintain compat with such objects
     // we still imply the TLS flag based on the name of the segment.
     if (!seg->isTLS() &&
-        (seg->name.startswith(".tdata") || seg->name.startswith(".tbss")))
+        (seg->name.starts_with(".tdata") || seg->name.starts_with(".tbss")))
       seg->flags |= WASM_SEG_FLAG_TLS;
     segments.emplace_back(seg);
   }
@@ -705,7 +705,7 @@ void StubFile::parse() {
     }
 
     // Lines starting with # are considered comments
-    if (line.startswith("#"))
+    if (line.starts_with("#"))
       continue;
 
     StringRef sym;

@@ -21,7 +21,6 @@
 #include "lldb/Host/Time.h"
 #include "lldb/Target/Language.h"
 #include "lldb/Target/Process.h"
-#include "lldb/Target/ProcessStructReader.h"
 #include "lldb/Target/Target.h"
 #include "lldb/Utility/DataBufferHeap.h"
 #include "lldb/Utility/Endian.h"
@@ -305,120 +304,97 @@ bool lldb_private::formatters::NSIndexSetSummaryProvider(
 
 static void NSNumber_FormatChar(ValueObject &valobj, Stream &stream, char value,
                                 lldb::LanguageType lang) {
-  static ConstString g_TypeHint("NSNumber:char");
+  static constexpr llvm::StringLiteral g_TypeHint("NSNumber:char");
 
-  std::string prefix, suffix;
-  if (Language *language = Language::FindPlugin(lang)) {
-    if (!language->GetFormatterPrefixSuffix(valobj, g_TypeHint, prefix,
-                                            suffix)) {
-      prefix.clear();
-      suffix.clear();
-    }
-  }
+  llvm::StringRef prefix, suffix;
+  if (Language *language = Language::FindPlugin(lang))
+    std::tie(prefix, suffix) = language->GetFormatterPrefixSuffix(g_TypeHint);
 
-  stream.Printf("%s%hhd%s", prefix.c_str(), value, suffix.c_str());
+  stream << prefix;
+  stream.Printf("%hhd", value);
+  stream << suffix;
 }
 
 static void NSNumber_FormatShort(ValueObject &valobj, Stream &stream,
                                  short value, lldb::LanguageType lang) {
-  static ConstString g_TypeHint("NSNumber:short");
+  static constexpr llvm::StringLiteral g_TypeHint("NSNumber:short");
 
-  std::string prefix, suffix;
-  if (Language *language = Language::FindPlugin(lang)) {
-    if (!language->GetFormatterPrefixSuffix(valobj, g_TypeHint, prefix,
-                                            suffix)) {
-      prefix.clear();
-      suffix.clear();
-    }
-  }
+  llvm::StringRef prefix, suffix;
+  if (Language *language = Language::FindPlugin(lang))
+    std::tie(prefix, suffix) = language->GetFormatterPrefixSuffix(g_TypeHint);
 
-  stream.Printf("%s%hd%s", prefix.c_str(), value, suffix.c_str());
+  stream << prefix;
+  stream.Printf("%hd", value);
+  stream << suffix;
 }
 
 static void NSNumber_FormatInt(ValueObject &valobj, Stream &stream, int value,
                                lldb::LanguageType lang) {
-  static ConstString g_TypeHint("NSNumber:int");
+  static constexpr llvm::StringLiteral g_TypeHint("NSNumber:int");
 
-  std::string prefix, suffix;
-  if (Language *language = Language::FindPlugin(lang)) {
-    if (!language->GetFormatterPrefixSuffix(valobj, g_TypeHint, prefix,
-                                            suffix)) {
-      prefix.clear();
-      suffix.clear();
-    }
-  }
+  llvm::StringRef prefix, suffix;
+  if (Language *language = Language::FindPlugin(lang))
+    std::tie(prefix, suffix) = language->GetFormatterPrefixSuffix(g_TypeHint);
 
-  stream.Printf("%s%d%s", prefix.c_str(), value, suffix.c_str());
+  stream << prefix;
+  stream.Printf("%d", value);
+  stream << suffix;
 }
 
 static void NSNumber_FormatLong(ValueObject &valobj, Stream &stream,
                                 int64_t value, lldb::LanguageType lang) {
-  static ConstString g_TypeHint("NSNumber:long");
+  static constexpr llvm::StringLiteral g_TypeHint("NSNumber:long");
 
-  std::string prefix, suffix;
-  if (Language *language = Language::FindPlugin(lang)) {
-    if (!language->GetFormatterPrefixSuffix(valobj, g_TypeHint, prefix,
-                                            suffix)) {
-      prefix.clear();
-      suffix.clear();
-    }
-  }
+  llvm::StringRef prefix, suffix;
+  if (Language *language = Language::FindPlugin(lang))
+    std::tie(prefix, suffix) = language->GetFormatterPrefixSuffix(g_TypeHint);
 
-  stream.Printf("%s%" PRId64 "%s", prefix.c_str(), value, suffix.c_str());
+  stream << prefix;
+  stream.Printf("%" PRId64 "", value);
+  stream << suffix;
 }
 
 static void NSNumber_FormatInt128(ValueObject &valobj, Stream &stream,
                                   const llvm::APInt &value,
                                   lldb::LanguageType lang) {
-  static ConstString g_TypeHint("NSNumber:int128_t");
+  static constexpr llvm::StringLiteral g_TypeHint("NSNumber:int128_t");
 
-  std::string prefix, suffix;
-  if (Language *language = Language::FindPlugin(lang)) {
-    if (!language->GetFormatterPrefixSuffix(valobj, g_TypeHint, prefix,
-                                            suffix)) {
-      prefix.clear();
-      suffix.clear();
-    }
-  }
+  llvm::StringRef prefix, suffix;
+  if (Language *language = Language::FindPlugin(lang))
+    std::tie(prefix, suffix) = language->GetFormatterPrefixSuffix(g_TypeHint);
 
-  stream.PutCString(prefix.c_str());
+  stream << prefix;
   const int radix = 10;
   const bool isSigned = true;
   std::string str = llvm::toString(value, radix, isSigned);
   stream.PutCString(str.c_str());
-  stream.PutCString(suffix.c_str());
+  stream << suffix;
 }
 
 static void NSNumber_FormatFloat(ValueObject &valobj, Stream &stream,
                                  float value, lldb::LanguageType lang) {
-  static ConstString g_TypeHint("NSNumber:float");
+  static constexpr llvm::StringLiteral g_TypeHint("NSNumber:float");
 
-  std::string prefix, suffix;
-  if (Language *language = Language::FindPlugin(lang)) {
-    if (!language->GetFormatterPrefixSuffix(valobj, g_TypeHint, prefix,
-                                            suffix)) {
-      prefix.clear();
-      suffix.clear();
-    }
-  }
+  llvm::StringRef prefix, suffix;
+  if (Language *language = Language::FindPlugin(lang))
+    std::tie(prefix, suffix) = language->GetFormatterPrefixSuffix(g_TypeHint);
 
-  stream.Printf("%s%f%s", prefix.c_str(), value, suffix.c_str());
+  stream << prefix;
+  stream.Printf("%f", value);
+  stream << suffix;
 }
 
 static void NSNumber_FormatDouble(ValueObject &valobj, Stream &stream,
                                   double value, lldb::LanguageType lang) {
-  static ConstString g_TypeHint("NSNumber:double");
+  static constexpr llvm::StringLiteral g_TypeHint("NSNumber:double");
 
-  std::string prefix, suffix;
-  if (Language *language = Language::FindPlugin(lang)) {
-    if (!language->GetFormatterPrefixSuffix(valobj, g_TypeHint, prefix,
-                                            suffix)) {
-      prefix.clear();
-      suffix.clear();
-    }
-  }
+  llvm::StringRef prefix, suffix;
+  if (Language *language = Language::FindPlugin(lang))
+    std::tie(prefix, suffix) = language->GetFormatterPrefixSuffix(g_TypeHint);
 
-  stream.Printf("%s%g%s", prefix.c_str(), value, suffix.c_str());
+  stream << prefix;
+  stream.Printf("%g", value);
+  stream << suffix;
 }
 
 bool lldb_private::formatters::NSNumberSummaryProvider(
@@ -813,29 +789,27 @@ bool lldb_private::formatters::NSURLSummaryProvider(
   if (!NSStringSummaryProvider(*text, summary, options) || summary.Empty())
     return false;
 
-  const char quote_char = '"';
-  std::string prefix, suffix;
-  if (Language *language = Language::FindPlugin(options.GetLanguage())) {
-    if (!language->GetFormatterPrefixSuffix(*text, ConstString("NSString"),
-                                            prefix, suffix)) {
-      prefix.clear();
-      suffix.clear();
-    }
-  }
+  static constexpr llvm::StringLiteral quote_char("\"");
+  static constexpr llvm::StringLiteral g_TypeHint("NSString");
+  llvm::StringRef prefix, suffix;
+  if (Language *language = Language::FindPlugin(options.GetLanguage()))
+    std::tie(prefix, suffix) = language->GetFormatterPrefixSuffix(g_TypeHint);
+
   // @"A" -> @"A
   llvm::StringRef summary_str = summary.GetString();
-  bool back_consumed = summary_str.consume_back(quote_char + suffix);
+  bool back_consumed =
+      summary_str.consume_back(suffix) && summary_str.consume_back(quote_char);
   assert(back_consumed);
   UNUSED_IF_ASSERT_DISABLED(back_consumed);
   // @"B" -> B"
   llvm::StringRef base_summary_str = base_summary.GetString();
-  bool front_consumed = base_summary_str.consume_front(prefix + quote_char);
+  bool front_consumed = base_summary_str.consume_front(prefix) &&
+                        base_summary_str.consume_front(quote_char);
   assert(front_consumed);
   UNUSED_IF_ASSERT_DISABLED(front_consumed);
   // @"A -- B"
   if (!summary_str.empty() && !base_summary_str.empty()) {
-    stream.Printf("%s -- %s", summary_str.str().c_str(),
-                  base_summary_str.str().c_str());
+    stream << summary_str << " -- " << base_summary_str;
     return true;
   }
 
@@ -1124,7 +1098,7 @@ bool lldb_private::formatters::ObjCBOOLSummaryProvider(
     if (err.Fail() || !real_guy_sp)
       return false;
   } else if (type_info & eTypeIsReference) {
-    real_guy_sp = valobj.GetChildAtIndex(0, true);
+    real_guy_sp = valobj.GetChildAtIndex(0);
     if (!real_guy_sp)
       return false;
   }

@@ -97,18 +97,21 @@ define void @test_tile_dpbssd(ptr byval(%struct.__tile1024i_str) align 64 %a, pt
 ; CHECK-NEXT:    [[B_ROW_PTR:%.*]] = getelementptr inbounds i8, ptr [[B:%.*]], i64 2
 ; CHECK-NEXT:    [[B_ROW:%.*]] = load i16, ptr [[B_ROW_PTR]], align 2
 ; CHECK-NEXT:    [[B_TILE_PTR:%.*]] = getelementptr inbounds i8, ptr [[B]], i64 64
+; CHECK-NEXT:    [[TMP1:%.*]] = sext i16 [[B_ROW]] to i64
 ; CHECK-NEXT:    [[B_TILE:%.*]] = load <256 x i32>, ptr [[B_TILE_PTR]], align 64
 ; CHECK-NEXT:    store <256 x i32> [[B_TILE]], ptr [[TMP0]], align 1024
 ; CHECK-NEXT:    [[A_ROW:%.*]] = load i16, ptr [[A:%.*]], align 64
 ; CHECK-NEXT:    [[A_COL_PTR:%.*]] = getelementptr inbounds i8, ptr [[A]], i64 2
 ; CHECK-NEXT:    [[A_COL:%.*]] = load i16, ptr [[A_COL_PTR]], align 2
-; CHECK-NEXT:    [[TMP1:%.*]] = udiv i16 [[A_COL]], 4
+; CHECK-NEXT:    [[TMP2:%.*]] = udiv i16 [[A_COL]], 4
 ; CHECK-NEXT:    [[A_TILE_PTR:%.*]] = getelementptr inbounds i8, ptr [[A]], i64 64
-; CHECK-NEXT:    [[TMP2:%.*]] = call x86_amx @llvm.x86.tileloadd64.internal(i16 [[A_ROW]], i16 [[A_COL]], ptr [[A_TILE_PTR]], i64 64)
+; CHECK-NEXT:    [[TMP3:%.*]] = sext i16 [[A_COL]] to i64
+; CHECK-NEXT:    [[TMP4:%.*]] = call x86_amx @llvm.x86.tileloadd64.internal(i16 [[A_ROW]], i16 [[A_COL]], ptr [[A_TILE_PTR]], i64 [[TMP3]])
 ; CHECK-NEXT:    [[C_TILE_PTR:%.*]] = getelementptr inbounds [[STRUCT___TILE1024I_STR:%.*]], ptr [[C:%.*]], i64 0, i32 3
-; CHECK-NEXT:    [[TMP3:%.*]] = call x86_amx @llvm.x86.tileloadd64.internal(i16 [[A_ROW]], i16 [[B_ROW]], ptr [[C_TILE_PTR]], i64 64)
-; CHECK-NEXT:    [[TMP4:%.*]] = call x86_amx @llvm.x86.tileloadd64.internal(i16 [[TMP1]], i16 [[B_ROW]], ptr [[TMP0]], i64 64)
-; CHECK-NEXT:    [[RES:%.*]] = tail call x86_amx @llvm.x86.tdpbssd.internal(i16 [[A_ROW]], i16 [[B_ROW]], i16 [[A_COL]], x86_amx [[TMP3]], x86_amx [[TMP2]], x86_amx [[TMP4]])
+; CHECK-NEXT:    [[TMP5:%.*]] = sext i16 [[B_ROW]] to i64
+; CHECK-NEXT:    [[TMP6:%.*]] = call x86_amx @llvm.x86.tileloadd64.internal(i16 [[A_ROW]], i16 [[B_ROW]], ptr [[C_TILE_PTR]], i64 [[TMP5]])
+; CHECK-NEXT:    [[TMP7:%.*]] = call x86_amx @llvm.x86.tileloadd64.internal(i16 [[TMP2]], i16 [[B_ROW]], ptr [[TMP0]], i64 [[TMP1]])
+; CHECK-NEXT:    [[RES:%.*]] = tail call x86_amx @llvm.x86.tdpbssd.internal(i16 [[A_ROW]], i16 [[B_ROW]], i16 [[A_COL]], x86_amx [[TMP6]], x86_amx [[TMP4]], x86_amx [[TMP7]])
 ; CHECK-NEXT:    ret void
 ;
 entry:
@@ -130,8 +133,38 @@ entry:
   ret void
 }
 
+define void @combine_v256i8amcast_with_store(i8* %src_ptr, <256 x i8>* %dst_ptr) {
+; CHECK-LABEL: @combine_v256i8amcast_with_store(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[TILE:%.*]] = call x86_amx @llvm.x86.tileloadd64.internal(i16 8, i16 32, ptr [[SRC_PTR:%.*]], i64 64)
+; CHECK-NEXT:    call void @llvm.x86.tilestored64.internal(i16 8, i16 32, ptr [[DST_PTR:%.*]], i64 32, x86_amx [[TILE]])
+; CHECK-NEXT:    ret void
+;
+entry:
+  %tile = call x86_amx @llvm.x86.tileloadd64.internal(i16 8, i16 32, i8* %src_ptr, i64 64)
+  %vec = call <256 x i8> @llvm.x86.cast.tile.to.vector.v256i8(x86_amx %tile)
+  store <256 x i8> %vec, <256 x i8>* %dst_ptr, align 256
+  ret void
+}
+
+define void @combine_v256i8amcast_with_load(i8* %src_ptr, <256 x i8>* %dst_ptr) {
+; CHECK-LABEL: @combine_v256i8amcast_with_load(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[TMP0:%.*]] = call x86_amx @llvm.x86.tileloadd64.internal(i16 8, i16 32, ptr [[SRC_PTR:%.*]], i64 32)
+; CHECK-NEXT:    call void @llvm.x86.tilestored64.internal(i16 8, i16 32, ptr [[DST_PTR:%.*]], i64 32, x86_amx [[TMP0]])
+; CHECK-NEXT:    ret void
+;
+entry:
+  %vec = load <256 x i8>, ptr %src_ptr, align 256
+  %tile = call x86_amx @llvm.x86.cast.vector.to.tile.v256i8(<256 x i8> %vec)
+  call void @llvm.x86.tilestored64.internal(i16 8, i16 32, <256 x i8>* %dst_ptr, i64 32, x86_amx %tile)
+  ret void
+}
+
 declare x86_amx @llvm.x86.cast.vector.to.tile.v256i32(<256 x i32>)
 declare <256 x i32> @llvm.x86.cast.tile.to.vector.v256i32(x86_amx)
+declare x86_amx @llvm.x86.cast.vector.to.tile.v256i8(<256 x i8>)
+declare <256 x i8> @llvm.x86.cast.tile.to.vector.v256i8(x86_amx)
 declare x86_amx @llvm.x86.tilezero.internal(i16, i16)
 declare x86_amx @llvm.x86.tileloadd64.internal(i16, i16, ptr, i64)
 declare void @llvm.x86.tilestored64.internal(i16, i16, ptr, i64, x86_amx)

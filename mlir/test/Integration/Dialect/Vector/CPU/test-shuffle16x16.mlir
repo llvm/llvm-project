@@ -30,9 +30,9 @@ func.func @entry() {
 }
 
 transform.sequence failures(propagate) {
-^bb1(%module_op: !pdl.operation):
-  transform.vector.lower_transpose %module_op
-    lowering_strategy = "shuffle_16x16"
-      : (!pdl.operation) -> !pdl.operation
+^bb1(%func_op: !transform.op<"func.func">):
+  transform.apply_patterns to %func_op {
+    transform.apply_patterns.vector.lower_transpose lowering_strategy = "shuffle_16x16"
+  } : !transform.op<"func.func">
 }
 

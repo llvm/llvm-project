@@ -864,70 +864,62 @@ TypeSystemClang::GetBuiltinTypeForEncodingAndBitSize(Encoding encoding,
   return CompilerType();
 }
 
-lldb::BasicType
-TypeSystemClang::GetBasicTypeEnumeration(ConstString name) {
-  if (name) {
-    typedef UniqueCStringMap<lldb::BasicType> TypeNameToBasicTypeMap;
-    static TypeNameToBasicTypeMap g_type_map;
-    static llvm::once_flag g_once_flag;
-    llvm::call_once(g_once_flag, []() {
+lldb::BasicType TypeSystemClang::GetBasicTypeEnumeration(llvm::StringRef name) {
+  static const llvm::StringMap<lldb::BasicType> g_type_map = {
       // "void"
-      g_type_map.Append(ConstString("void"), eBasicTypeVoid);
+      {"void", eBasicTypeVoid},
 
       // "char"
-      g_type_map.Append(ConstString("char"), eBasicTypeChar);
-      g_type_map.Append(ConstString("signed char"), eBasicTypeSignedChar);
-      g_type_map.Append(ConstString("unsigned char"), eBasicTypeUnsignedChar);
-      g_type_map.Append(ConstString("wchar_t"), eBasicTypeWChar);
-      g_type_map.Append(ConstString("signed wchar_t"), eBasicTypeSignedWChar);
-      g_type_map.Append(ConstString("unsigned wchar_t"),
-                        eBasicTypeUnsignedWChar);
+      {"char", eBasicTypeChar},
+      {"signed char", eBasicTypeSignedChar},
+      {"unsigned char", eBasicTypeUnsignedChar},
+      {"wchar_t", eBasicTypeWChar},
+      {"signed wchar_t", eBasicTypeSignedWChar},
+      {"unsigned wchar_t", eBasicTypeUnsignedWChar},
+
       // "short"
-      g_type_map.Append(ConstString("short"), eBasicTypeShort);
-      g_type_map.Append(ConstString("short int"), eBasicTypeShort);
-      g_type_map.Append(ConstString("unsigned short"), eBasicTypeUnsignedShort);
-      g_type_map.Append(ConstString("unsigned short int"),
-                        eBasicTypeUnsignedShort);
+      {"short", eBasicTypeShort},
+      {"short int", eBasicTypeShort},
+      {"unsigned short", eBasicTypeUnsignedShort},
+      {"unsigned short int", eBasicTypeUnsignedShort},
 
       // "int"
-      g_type_map.Append(ConstString("int"), eBasicTypeInt);
-      g_type_map.Append(ConstString("signed int"), eBasicTypeInt);
-      g_type_map.Append(ConstString("unsigned int"), eBasicTypeUnsignedInt);
-      g_type_map.Append(ConstString("unsigned"), eBasicTypeUnsignedInt);
+      {"int", eBasicTypeInt},
+      {"signed int", eBasicTypeInt},
+      {"unsigned int", eBasicTypeUnsignedInt},
+      {"unsigned", eBasicTypeUnsignedInt},
 
       // "long"
-      g_type_map.Append(ConstString("long"), eBasicTypeLong);
-      g_type_map.Append(ConstString("long int"), eBasicTypeLong);
-      g_type_map.Append(ConstString("unsigned long"), eBasicTypeUnsignedLong);
-      g_type_map.Append(ConstString("unsigned long int"),
-                        eBasicTypeUnsignedLong);
+      {"long", eBasicTypeLong},
+      {"long int", eBasicTypeLong},
+      {"unsigned long", eBasicTypeUnsignedLong},
+      {"unsigned long int", eBasicTypeUnsignedLong},
 
       // "long long"
-      g_type_map.Append(ConstString("long long"), eBasicTypeLongLong);
-      g_type_map.Append(ConstString("long long int"), eBasicTypeLongLong);
-      g_type_map.Append(ConstString("unsigned long long"),
-                        eBasicTypeUnsignedLongLong);
-      g_type_map.Append(ConstString("unsigned long long int"),
-                        eBasicTypeUnsignedLongLong);
+      {"long long", eBasicTypeLongLong},
+      {"long long int", eBasicTypeLongLong},
+      {"unsigned long long", eBasicTypeUnsignedLongLong},
+      {"unsigned long long int", eBasicTypeUnsignedLongLong},
 
       // "int128"
-      g_type_map.Append(ConstString("__int128_t"), eBasicTypeInt128);
-      g_type_map.Append(ConstString("__uint128_t"), eBasicTypeUnsignedInt128);
+      {"__int128_t", eBasicTypeInt128},
+      {"__uint128_t", eBasicTypeUnsignedInt128},
 
       // Miscellaneous
-      g_type_map.Append(ConstString("bool"), eBasicTypeBool);
-      g_type_map.Append(ConstString("float"), eBasicTypeFloat);
-      g_type_map.Append(ConstString("double"), eBasicTypeDouble);
-      g_type_map.Append(ConstString("long double"), eBasicTypeLongDouble);
-      g_type_map.Append(ConstString("id"), eBasicTypeObjCID);
-      g_type_map.Append(ConstString("SEL"), eBasicTypeObjCSel);
-      g_type_map.Append(ConstString("nullptr"), eBasicTypeNullPtr);
-      g_type_map.Sort();
-    });
+      {"bool", eBasicTypeBool},
+      {"float", eBasicTypeFloat},
+      {"double", eBasicTypeDouble},
+      {"long double", eBasicTypeLongDouble},
+      {"id", eBasicTypeObjCID},
+      {"SEL", eBasicTypeObjCSel},
+      {"nullptr", eBasicTypeNullPtr},
+  };
 
-    return g_type_map.Find(name, eBasicTypeInvalid);
-  }
-  return eBasicTypeInvalid;
+  auto iter = g_type_map.find(name);
+  if (iter == g_type_map.end())
+    return eBasicTypeInvalid;
+
+  return iter->second;
 }
 
 uint32_t TypeSystemClang::GetPointerByteSize() {
@@ -5049,73 +5041,8 @@ lldb::Encoding TypeSystemClang::GetEncoding(lldb::opaque_compiler_type_t type,
       break;
 
     // RISC-V V builtin types.
-    case clang::BuiltinType::RvvInt8mf8:
-    case clang::BuiltinType::RvvInt8mf4:
-    case clang::BuiltinType::RvvInt8mf2:
-    case clang::BuiltinType::RvvInt8m1:
-    case clang::BuiltinType::RvvInt8m2:
-    case clang::BuiltinType::RvvInt8m4:
-    case clang::BuiltinType::RvvInt8m8:
-    case clang::BuiltinType::RvvUint8mf8:
-    case clang::BuiltinType::RvvUint8mf4:
-    case clang::BuiltinType::RvvUint8mf2:
-    case clang::BuiltinType::RvvUint8m1:
-    case clang::BuiltinType::RvvUint8m2:
-    case clang::BuiltinType::RvvUint8m4:
-    case clang::BuiltinType::RvvUint8m8:
-    case clang::BuiltinType::RvvInt16mf4:
-    case clang::BuiltinType::RvvInt16mf2:
-    case clang::BuiltinType::RvvInt16m1:
-    case clang::BuiltinType::RvvInt16m2:
-    case clang::BuiltinType::RvvInt16m4:
-    case clang::BuiltinType::RvvInt16m8:
-    case clang::BuiltinType::RvvUint16mf4:
-    case clang::BuiltinType::RvvUint16mf2:
-    case clang::BuiltinType::RvvUint16m1:
-    case clang::BuiltinType::RvvUint16m2:
-    case clang::BuiltinType::RvvUint16m4:
-    case clang::BuiltinType::RvvUint16m8:
-    case clang::BuiltinType::RvvInt32mf2:
-    case clang::BuiltinType::RvvInt32m1:
-    case clang::BuiltinType::RvvInt32m2:
-    case clang::BuiltinType::RvvInt32m4:
-    case clang::BuiltinType::RvvInt32m8:
-    case clang::BuiltinType::RvvUint32mf2:
-    case clang::BuiltinType::RvvUint32m1:
-    case clang::BuiltinType::RvvUint32m2:
-    case clang::BuiltinType::RvvUint32m4:
-    case clang::BuiltinType::RvvUint32m8:
-    case clang::BuiltinType::RvvInt64m1:
-    case clang::BuiltinType::RvvInt64m2:
-    case clang::BuiltinType::RvvInt64m4:
-    case clang::BuiltinType::RvvInt64m8:
-    case clang::BuiltinType::RvvUint64m1:
-    case clang::BuiltinType::RvvUint64m2:
-    case clang::BuiltinType::RvvUint64m4:
-    case clang::BuiltinType::RvvUint64m8:
-    case clang::BuiltinType::RvvFloat16mf4:
-    case clang::BuiltinType::RvvFloat16mf2:
-    case clang::BuiltinType::RvvFloat16m1:
-    case clang::BuiltinType::RvvFloat16m2:
-    case clang::BuiltinType::RvvFloat16m4:
-    case clang::BuiltinType::RvvFloat16m8:
-    case clang::BuiltinType::RvvFloat32mf2:
-    case clang::BuiltinType::RvvFloat32m1:
-    case clang::BuiltinType::RvvFloat32m2:
-    case clang::BuiltinType::RvvFloat32m4:
-    case clang::BuiltinType::RvvFloat32m8:
-    case clang::BuiltinType::RvvFloat64m1:
-    case clang::BuiltinType::RvvFloat64m2:
-    case clang::BuiltinType::RvvFloat64m4:
-    case clang::BuiltinType::RvvFloat64m8:
-    case clang::BuiltinType::RvvBool1:
-    case clang::BuiltinType::RvvBool2:
-    case clang::BuiltinType::RvvBool4:
-    case clang::BuiltinType::RvvBool8:
-    case clang::BuiltinType::RvvBool16:
-    case clang::BuiltinType::RvvBool32:
-    case clang::BuiltinType::RvvBool64:
-    case clang::BuiltinType::RvvInt32m1x2:
+#define RVV_TYPE(Name, Id, SingletonId) case clang::BuiltinType::Id:
+#include "clang/Basic/RISCVVTypes.def"
       break;
 
     // WebAssembly builtin types.
@@ -6728,9 +6655,9 @@ uint32_t TypeSystemClang::GetIndexForRecordChild(
 // index 1 is the child index for "m_b" within class A
 
 size_t TypeSystemClang::GetIndexOfChildMemberWithName(
-    lldb::opaque_compiler_type_t type, const char *name,
+    lldb::opaque_compiler_type_t type, llvm::StringRef name,
     bool omit_empty_base_classes, std::vector<uint32_t> &child_indexes) {
-  if (type && name && name[0]) {
+  if (type && !name.empty()) {
     clang::QualType qual_type = RemoveWrappingTypes(GetCanonicalQualType(type));
     const clang::Type::TypeClass type_class = qual_type->getTypeClass();
     switch (type_class) {
@@ -6748,7 +6675,6 @@ size_t TypeSystemClang::GetIndexOfChildMemberWithName(
 
         // Try and find a field that matches NAME
         clang::RecordDecl::field_iterator field, field_end;
-        llvm::StringRef name_sref(name);
         for (field = record_decl->field_begin(),
             field_end = record_decl->field_end();
              field != field_end; ++field, ++child_idx) {
@@ -6761,7 +6687,7 @@ size_t TypeSystemClang::GetIndexOfChildMemberWithName(
               return child_indexes.size();
             child_indexes.pop_back();
 
-          } else if (field_name.equals(name_sref)) {
+          } else if (field_name.equals(name)) {
             // We have to add on the number of base classes to this index!
             child_indexes.push_back(
                 child_idx + TypeSystemClang::GetNumBaseClasses(
@@ -6774,8 +6700,7 @@ size_t TypeSystemClang::GetIndexOfChildMemberWithName(
           const clang::RecordDecl *parent_record_decl = cxx_record_decl;
 
           // Didn't find things easily, lets let clang do its thang...
-          clang::IdentifierInfo &ident_ref =
-              getASTContext().Idents.get(name_sref);
+          clang::IdentifierInfo &ident_ref = getASTContext().Idents.get(name);
           clang::DeclarationName decl_name(&ident_ref);
 
           clang::CXXBasePaths paths;
@@ -6968,9 +6893,9 @@ size_t TypeSystemClang::GetIndexOfChildMemberWithName(
 
 uint32_t
 TypeSystemClang::GetIndexOfChildWithName(lldb::opaque_compiler_type_t type,
-                                         const char *name,
+                                         llvm::StringRef name,
                                          bool omit_empty_base_classes) {
-  if (type && name && name[0]) {
+  if (type && !name.empty()) {
     clang::QualType qual_type = RemoveWrappingTypes(GetCanonicalQualType(type));
 
     const clang::Type::TypeClass type_class = qual_type->getTypeClass();
@@ -7015,11 +6940,10 @@ TypeSystemClang::GetIndexOfChildWithName(lldb::opaque_compiler_type_t type,
 
         // Try and find a field that matches NAME
         clang::RecordDecl::field_iterator field, field_end;
-        llvm::StringRef name_sref(name);
         for (field = record_decl->field_begin(),
             field_end = record_decl->field_end();
              field != field_end; ++field, ++child_idx) {
-          if (field->getName().equals(name_sref))
+          if (field->getName().equals(name))
             return child_idx;
         }
       }
@@ -7028,7 +6952,6 @@ TypeSystemClang::GetIndexOfChildWithName(lldb::opaque_compiler_type_t type,
     case clang::Type::ObjCObject:
     case clang::Type::ObjCInterface:
       if (GetCompleteType(type)) {
-        llvm::StringRef name_sref(name);
         const clang::ObjCObjectType *objc_class_type =
             llvm::dyn_cast<clang::ObjCObjectType>(qual_type.getTypePtr());
         assert(objc_class_type);
@@ -7047,7 +6970,7 @@ TypeSystemClang::GetIndexOfChildWithName(lldb::opaque_compiler_type_t type,
                  ivar_pos != ivar_end; ++ivar_pos, ++child_idx) {
               const clang::ObjCIvarDecl *ivar_decl = *ivar_pos;
 
-              if (ivar_decl->getName().equals(name_sref)) {
+              if (ivar_decl->getName().equals(name)) {
                 if ((!omit_empty_base_classes && superclass_interface_decl) ||
                     (omit_empty_base_classes &&
                      ObjCDeclHasIVars(superclass_interface_decl, true)))
@@ -7058,7 +6981,7 @@ TypeSystemClang::GetIndexOfChildWithName(lldb::opaque_compiler_type_t type,
             }
 
             if (superclass_interface_decl) {
-              if (superclass_interface_decl->getName().equals(name_sref))
+              if (superclass_interface_decl->getName().equals(name))
                 return 0;
             }
           }

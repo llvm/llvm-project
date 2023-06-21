@@ -134,6 +134,7 @@ gentbl(
     td_file = "include/clang/Basic/arm_sve.td",
     td_srcs = [
         "include/clang/Basic/arm_sve.td",
+        "include/clang/Basic/arm_sve_sme_incl.td",
     ],
 )
 
@@ -147,6 +148,7 @@ gentbl(
     td_file = "include/clang/Basic/arm_sve.td",
     td_srcs = [
         "include/clang/Basic/arm_sve.td",
+        "include/clang/Basic/arm_sve_sme_incl.td",
     ],
 )
 
@@ -160,6 +162,7 @@ gentbl(
     td_file = "include/clang/Basic/arm_sve.td",
     td_srcs = [
         "include/clang/Basic/arm_sve.td",
+        "include/clang/Basic/arm_sve_sme_incl.td",
     ],
 )
 
@@ -173,6 +176,49 @@ gentbl(
     td_file = "include/clang/Basic/arm_sve.td",
     td_srcs = [
         "include/clang/Basic/arm_sve.td",
+        "include/clang/Basic/arm_sve_sme_incl.td",
+    ],
+)
+
+gentbl(
+    name = "basic_arm_sme_builtins_gen",
+    tbl_outs = [(
+        "-gen-arm-sme-builtins",
+        "include/clang/Basic/arm_sme_builtins.inc",
+    )],
+    tblgen = ":clang-tblgen",
+    td_file = "include/clang/Basic/arm_sme.td",
+    td_srcs = [
+        "include/clang/Basic/arm_sme.td",
+        "include/clang/Basic/arm_sve_sme_incl.td",
+    ],
+)
+
+gentbl(
+    name = "basic_arm_sme_builtin_cg_gen",
+    tbl_outs = [(
+        "-gen-arm-sme-builtin-codegen",
+        "include/clang/Basic/arm_sme_builtin_cg.inc",
+    )],
+    tblgen = ":clang-tblgen",
+    td_file = "include/clang/Basic/arm_sme.td",
+    td_srcs = [
+        "include/clang/Basic/arm_sme.td",
+        "include/clang/Basic/arm_sve_sme_incl.td",
+    ],
+)
+
+gentbl(
+    name = "basic_arm_sme_sema_rangechecks_gen",
+    tbl_outs = [(
+        "-gen-arm-sme-sema-rangechecks",
+        "include/clang/Basic/arm_sme_sema_rangechecks.inc",
+    )],
+    tblgen = ":clang-tblgen",
+    td_file = "include/clang/Basic/arm_sme.td",
+    td_srcs = [
+        "include/clang/Basic/arm_sme.td",
+        "include/clang/Basic/arm_sve_sme_incl.td",
     ],
 )
 
@@ -373,6 +419,10 @@ gentbl(
             "-gen-clang-attr-subject-match-rule-list",
             "include/clang/Basic/AttrSubMatchRulesList.inc",
         ),
+        (
+            "-gen-clang-attr-token-kinds",
+            "include/clang/Basic/AttrTokenKinds.inc",
+        ),
     ],
     tblgen = ":clang-tblgen",
     td_file = "include/clang/Basic/Attr.td",
@@ -498,6 +548,8 @@ cc_library(
         "include/clang/Basic/arm_mve_builtin_aliases.inc",
         "include/clang/Basic/arm_mve_builtin_cg.inc",
         "include/clang/Basic/arm_mve_builtin_sema.inc",
+        "include/clang/Basic/arm_sme_builtins.inc",
+        "include/clang/Basic/arm_sme_builtin_cg.inc",
         "include/clang/Basic/arm_neon.inc",
         "include/clang/Basic/AttrHasAttributeImpl.inc",
         "include/clang/Basic/AttrList.inc",
@@ -527,6 +579,8 @@ cc_library(
         ":basic_arm_mve_inc_gen",
         ":basic_arm_mve_sema_gen",
         ":basic_arm_neon_inc_gen",
+        ":basic_arm_sme_builtin_cg_gen",
+        ":basic_arm_sme_builtins_gen",
         ":basic_arm_sve_builtins_gen",
         ":basic_arm_sve_typeflags_gen",
         ":basic_attr_gen",
@@ -873,14 +927,14 @@ cc_library(
 
 genrule(
     name = "analysis_htmllogger_gen",
-    outs = ["lib/Analysis/FlowSensitive/HTMLLogger.inc"],
     srcs = [
         "lib/Analysis/FlowSensitive/HTMLLogger.html",
         "lib/Analysis/FlowSensitive/HTMLLogger.css",
         "lib/Analysis/FlowSensitive/HTMLLogger.js",
     ],
-    tools = [":bundle_resources"],
+    outs = ["lib/Analysis/FlowSensitive/HTMLLogger.inc"],
     cmd = "$(location :bundle_resources) $@ $(SRCS)",
+    tools = [":bundle_resources"],
 )
 
 cc_library(
@@ -891,7 +945,7 @@ cc_library(
         "lib/Analysis/*.cpp",
         "lib/Analysis/*.h",
     ]) + [
-        ":analysis_htmllogger_gen"
+        ":analysis_htmllogger_gen",
     ],
     hdrs = glob([
         "include/clang/Analysis/**/*.h",
@@ -973,6 +1027,8 @@ cc_library(
         ":basic",
         ":basic_arm_cde_aliases_gen",
         ":basic_arm_cde_sema_gen",
+        ":basic_arm_sme_builtins_gen",
+        ":basic_arm_sme_sema_rangechecks_gen",
         ":basic_arm_sve_builtins_gen",
         ":basic_arm_sve_sema_rangechecks_gen",
         ":basic_riscv_sifive_vector_builtin_sema_gen",
@@ -1550,6 +1606,7 @@ gentbl(
     td_file = "include/clang/Basic/arm_sve.td",
     td_srcs = [
         "include/clang/Basic/arm_sve.td",
+        "include/clang/Basic/arm_sve_sme_incl.td",
     ],
 )
 
@@ -1564,6 +1621,24 @@ gentbl(
     td_srcs = [
         "include/clang/Basic/arm_bf16.td",
         "include/clang/Basic/arm_neon_incl.td",
+    ],
+)
+
+gentbl(
+    name = "headers_arm_sme_draft_spec_subject_to_change_gen",
+    copts = [
+        "-Wno-implicit-fallthrough",
+        "-Wno-error=frame-larger-than=",
+    ],
+    tbl_outs = [(
+        "-gen-arm-sme-header",
+        "lib/Headers/arm_sme_draft_spec_subject_to_change.h",
+    )],
+    tblgen = ":clang-tblgen",
+    td_file = "include/clang/Basic/arm_sme.td",
+    td_srcs = [
+        "include/clang/Basic/arm_sme.td",
+        "include/clang/Basic/arm_sve_sme_incl.td",
     ],
 )
 
@@ -1598,6 +1673,7 @@ builtin_headers = glob(
     "lib/Headers/arm_mve.h",
     "lib/Headers/arm_neon.h",
     "lib/Headers/arm_sve.h",
+    "lib/Headers/arm_sme_draft_spec_subject_to_change.h",
     "lib/Headers/arm_bf16.h",
     "lib/Headers/module.modulemap",
     "lib/Headers/riscv_vector.h",
@@ -1615,7 +1691,7 @@ genrule(
     outs = [hdr.replace("lib/Headers/", "staging/include/") for hdr in builtin_headers],
     cmd = """
        for src in $(SRCS); do
-         relsrc=$${src/*"$(WORKSPACE_ROOT)"\\/clang\\/lib\\/Headers}
+         relsrc=$${src#*"$(WORKSPACE_ROOT)"/clang/lib/Headers}
          target=$(@D)/staging/include/$$relsrc
          mkdir -p $$(dirname $$target)
          cp $$src $$target
@@ -1718,6 +1794,7 @@ cc_library(
         "//llvm:AllTargetsCodeGens",
         "//llvm:Core",
         "//llvm:ExecutionEngine",
+        "//llvm:MC",
         "//llvm:Option",
         "//llvm:OrcJIT",
         "//llvm:OrcShared",
@@ -1731,17 +1808,21 @@ cc_library(
 cc_library(
     name = "codegen",
     srcs = glob([
-        "lib/CodeGen/*.cpp",
-        "lib/CodeGen/*.h",
+        "lib/CodeGen/**/*.cpp",
+        "lib/CodeGen/**/*.h",
     ]),
     hdrs = glob(["include/clang/CodeGen/*.h"]),
     copts = ["$(STACK_FRAME_UNLIMITED)"],
-    includes = ["include"],
+    includes = [
+        "include",
+        "lib/CodeGen",
+    ],
     deps = [
         ":analysis",
         ":ast",
         ":basic",
         ":basic_arm_cde_cg_gen",
+        ":basic_arm_sme_builtin_cg_gen",
         ":basic_arm_sve_builtin_cg_gen",
         ":basic_riscv_sifive_vector_builtin_cg_gen",
         ":basic_riscv_vector_builtin_cg_gen",
@@ -2287,29 +2368,29 @@ cc_binary(
     copts = [
         "-I$(GENDIR)/$(WORKSPACE_ROOT)/clang/tools/clang-linker-wrapper",
     ],
+    stamp = 0,
     toolchains = [
         ":workspace_root",
     ],
-    stamp = 0,
     deps = [
         ":basic",
         ":linker_wrapper_opts_gen",
         "//llvm:AllTargetsAsmParsers",
-        "//llvm:BitWriter",
-        "//llvm:Core",
-        "//llvm:BinaryFormat",
-        "//llvm:MC",
-        "//llvm:Target",
-        "//llvm:TransformUtils",
         "//llvm:Analysis",
-        "//llvm:Passes",
+        "//llvm:BinaryFormat",
+        "//llvm:BitWriter",
+        "//llvm:CodeGen",
+        "//llvm:Core",
         "//llvm:IRReader",
+        "//llvm:LTO",
+        "//llvm:MC",
         "//llvm:Object",
         "//llvm:Option",
+        "//llvm:Passes",
         "//llvm:Support",
+        "//llvm:Target",
         "//llvm:TargetParser",
-        "//llvm:CodeGen",
-        "//llvm:LTO",
+        "//llvm:TransformUtils",
     ],
 )
 

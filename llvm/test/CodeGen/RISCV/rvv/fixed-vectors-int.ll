@@ -39,33 +39,16 @@ define void @add_v8i16(ptr %x, ptr %y) {
 }
 
 define void @add_v6i16(ptr %x, ptr %y) {
-; RV32-LABEL: add_v6i16:
-; RV32:       # %bb.0:
-; RV32-NEXT:    vsetivli zero, 8, e16, m1, ta, ma
-; RV32-NEXT:    vle16.v v8, (a0)
-; RV32-NEXT:    vle16.v v9, (a1)
-; RV32-NEXT:    vadd.vv v8, v8, v9
-; RV32-NEXT:    vsetivli zero, 1, e32, m1, ta, ma
-; RV32-NEXT:    vslidedown.vi v9, v8, 2
-; RV32-NEXT:    addi a1, a0, 8
-; RV32-NEXT:    vse32.v v9, (a1)
-; RV32-NEXT:    vsetivli zero, 4, e16, mf2, ta, ma
-; RV32-NEXT:    vse16.v v8, (a0)
-; RV32-NEXT:    ret
-;
-; RV64-LABEL: add_v6i16:
-; RV64:       # %bb.0:
-; RV64-NEXT:    vsetivli zero, 8, e16, m1, ta, ma
-; RV64-NEXT:    vle16.v v8, (a0)
-; RV64-NEXT:    vle16.v v9, (a1)
-; RV64-NEXT:    vadd.vv v8, v8, v9
-; RV64-NEXT:    vsetivli zero, 1, e64, m1, ta, ma
-; RV64-NEXT:    vse64.v v8, (a0)
-; RV64-NEXT:    vsetivli zero, 1, e32, m1, ta, ma
-; RV64-NEXT:    vslidedown.vi v8, v8, 2
-; RV64-NEXT:    addi a0, a0, 8
-; RV64-NEXT:    vse32.v v8, (a0)
-; RV64-NEXT:    ret
+; CHECK-LABEL: add_v6i16:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetivli zero, 6, e16, m1, ta, ma
+; CHECK-NEXT:    vle16.v v8, (a0)
+; CHECK-NEXT:    vle16.v v9, (a1)
+; CHECK-NEXT:    vsetivli zero, 8, e16, m1, ta, ma
+; CHECK-NEXT:    vadd.vv v8, v8, v9
+; CHECK-NEXT:    vsetivli zero, 6, e16, m1, ta, ma
+; CHECK-NEXT:    vse16.v v8, (a0)
+; CHECK-NEXT:    ret
   %a = load <6 x i16>, ptr %x
   %b = load <6 x i16>, ptr %y
   %c = add <6 x i16> %a, %b
@@ -138,33 +121,16 @@ define void @sub_v8i16(ptr %x, ptr %y) {
 }
 
 define void @sub_v6i16(ptr %x, ptr %y) {
-; RV32-LABEL: sub_v6i16:
-; RV32:       # %bb.0:
-; RV32-NEXT:    vsetivli zero, 8, e16, m1, ta, ma
-; RV32-NEXT:    vle16.v v8, (a0)
-; RV32-NEXT:    vle16.v v9, (a1)
-; RV32-NEXT:    vsub.vv v8, v8, v9
-; RV32-NEXT:    vsetivli zero, 1, e32, m1, ta, ma
-; RV32-NEXT:    vslidedown.vi v9, v8, 2
-; RV32-NEXT:    addi a1, a0, 8
-; RV32-NEXT:    vse32.v v9, (a1)
-; RV32-NEXT:    vsetivli zero, 4, e16, mf2, ta, ma
-; RV32-NEXT:    vse16.v v8, (a0)
-; RV32-NEXT:    ret
-;
-; RV64-LABEL: sub_v6i16:
-; RV64:       # %bb.0:
-; RV64-NEXT:    vsetivli zero, 8, e16, m1, ta, ma
-; RV64-NEXT:    vle16.v v8, (a0)
-; RV64-NEXT:    vle16.v v9, (a1)
-; RV64-NEXT:    vsub.vv v8, v8, v9
-; RV64-NEXT:    vsetivli zero, 1, e64, m1, ta, ma
-; RV64-NEXT:    vse64.v v8, (a0)
-; RV64-NEXT:    vsetivli zero, 1, e32, m1, ta, ma
-; RV64-NEXT:    vslidedown.vi v8, v8, 2
-; RV64-NEXT:    addi a0, a0, 8
-; RV64-NEXT:    vse32.v v8, (a0)
-; RV64-NEXT:    ret
+; CHECK-LABEL: sub_v6i16:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetivli zero, 6, e16, m1, ta, ma
+; CHECK-NEXT:    vle16.v v8, (a0)
+; CHECK-NEXT:    vle16.v v9, (a1)
+; CHECK-NEXT:    vsetivli zero, 8, e16, m1, ta, ma
+; CHECK-NEXT:    vsub.vv v8, v8, v9
+; CHECK-NEXT:    vsetivli zero, 6, e16, m1, ta, ma
+; CHECK-NEXT:    vse16.v v8, (a0)
+; CHECK-NEXT:    ret
   %a = load <6 x i16>, ptr %x
   %b = load <6 x i16>, ptr %y
   %c = sub <6 x i16> %a, %b
@@ -237,33 +203,16 @@ define void @mul_v8i16(ptr %x, ptr %y) {
 }
 
 define void @mul_v6i16(ptr %x, ptr %y) {
-; RV32-LABEL: mul_v6i16:
-; RV32:       # %bb.0:
-; RV32-NEXT:    vsetivli zero, 8, e16, m1, ta, ma
-; RV32-NEXT:    vle16.v v8, (a0)
-; RV32-NEXT:    vle16.v v9, (a1)
-; RV32-NEXT:    vmul.vv v8, v8, v9
-; RV32-NEXT:    vsetivli zero, 1, e32, m1, ta, ma
-; RV32-NEXT:    vslidedown.vi v9, v8, 2
-; RV32-NEXT:    addi a1, a0, 8
-; RV32-NEXT:    vse32.v v9, (a1)
-; RV32-NEXT:    vsetivli zero, 4, e16, mf2, ta, ma
-; RV32-NEXT:    vse16.v v8, (a0)
-; RV32-NEXT:    ret
-;
-; RV64-LABEL: mul_v6i16:
-; RV64:       # %bb.0:
-; RV64-NEXT:    vsetivli zero, 8, e16, m1, ta, ma
-; RV64-NEXT:    vle16.v v8, (a0)
-; RV64-NEXT:    vle16.v v9, (a1)
-; RV64-NEXT:    vmul.vv v8, v8, v9
-; RV64-NEXT:    vsetivli zero, 1, e64, m1, ta, ma
-; RV64-NEXT:    vse64.v v8, (a0)
-; RV64-NEXT:    vsetivli zero, 1, e32, m1, ta, ma
-; RV64-NEXT:    vslidedown.vi v8, v8, 2
-; RV64-NEXT:    addi a0, a0, 8
-; RV64-NEXT:    vse32.v v8, (a0)
-; RV64-NEXT:    ret
+; CHECK-LABEL: mul_v6i16:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetivli zero, 6, e16, m1, ta, ma
+; CHECK-NEXT:    vle16.v v8, (a0)
+; CHECK-NEXT:    vle16.v v9, (a1)
+; CHECK-NEXT:    vsetivli zero, 8, e16, m1, ta, ma
+; CHECK-NEXT:    vmul.vv v8, v8, v9
+; CHECK-NEXT:    vsetivli zero, 6, e16, m1, ta, ma
+; CHECK-NEXT:    vse16.v v8, (a0)
+; CHECK-NEXT:    ret
   %a = load <6 x i16>, ptr %x
   %b = load <6 x i16>, ptr %y
   %c = mul <6 x i16> %a, %b
@@ -336,33 +285,16 @@ define void @and_v8i16(ptr %x, ptr %y) {
 }
 
 define void @and_v6i16(ptr %x, ptr %y) {
-; RV32-LABEL: and_v6i16:
-; RV32:       # %bb.0:
-; RV32-NEXT:    vsetivli zero, 8, e16, m1, ta, ma
-; RV32-NEXT:    vle16.v v8, (a0)
-; RV32-NEXT:    vle16.v v9, (a1)
-; RV32-NEXT:    vand.vv v8, v8, v9
-; RV32-NEXT:    vsetivli zero, 1, e32, m1, ta, ma
-; RV32-NEXT:    vslidedown.vi v9, v8, 2
-; RV32-NEXT:    addi a1, a0, 8
-; RV32-NEXT:    vse32.v v9, (a1)
-; RV32-NEXT:    vsetivli zero, 4, e16, mf2, ta, ma
-; RV32-NEXT:    vse16.v v8, (a0)
-; RV32-NEXT:    ret
-;
-; RV64-LABEL: and_v6i16:
-; RV64:       # %bb.0:
-; RV64-NEXT:    vsetivli zero, 8, e16, m1, ta, ma
-; RV64-NEXT:    vle16.v v8, (a0)
-; RV64-NEXT:    vle16.v v9, (a1)
-; RV64-NEXT:    vand.vv v8, v8, v9
-; RV64-NEXT:    vsetivli zero, 1, e64, m1, ta, ma
-; RV64-NEXT:    vse64.v v8, (a0)
-; RV64-NEXT:    vsetivli zero, 1, e32, m1, ta, ma
-; RV64-NEXT:    vslidedown.vi v8, v8, 2
-; RV64-NEXT:    addi a0, a0, 8
-; RV64-NEXT:    vse32.v v8, (a0)
-; RV64-NEXT:    ret
+; CHECK-LABEL: and_v6i16:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetivli zero, 6, e16, m1, ta, ma
+; CHECK-NEXT:    vle16.v v8, (a0)
+; CHECK-NEXT:    vle16.v v9, (a1)
+; CHECK-NEXT:    vsetivli zero, 8, e16, m1, ta, ma
+; CHECK-NEXT:    vand.vv v8, v8, v9
+; CHECK-NEXT:    vsetivli zero, 6, e16, m1, ta, ma
+; CHECK-NEXT:    vse16.v v8, (a0)
+; CHECK-NEXT:    ret
   %a = load <6 x i16>, ptr %x
   %b = load <6 x i16>, ptr %y
   %c = and <6 x i16> %a, %b
@@ -435,33 +367,16 @@ define void @or_v8i16(ptr %x, ptr %y) {
 }
 
 define void @or_v6i16(ptr %x, ptr %y) {
-; RV32-LABEL: or_v6i16:
-; RV32:       # %bb.0:
-; RV32-NEXT:    vsetivli zero, 8, e16, m1, ta, ma
-; RV32-NEXT:    vle16.v v8, (a0)
-; RV32-NEXT:    vle16.v v9, (a1)
-; RV32-NEXT:    vor.vv v8, v8, v9
-; RV32-NEXT:    vsetivli zero, 1, e32, m1, ta, ma
-; RV32-NEXT:    vslidedown.vi v9, v8, 2
-; RV32-NEXT:    addi a1, a0, 8
-; RV32-NEXT:    vse32.v v9, (a1)
-; RV32-NEXT:    vsetivli zero, 4, e16, mf2, ta, ma
-; RV32-NEXT:    vse16.v v8, (a0)
-; RV32-NEXT:    ret
-;
-; RV64-LABEL: or_v6i16:
-; RV64:       # %bb.0:
-; RV64-NEXT:    vsetivli zero, 8, e16, m1, ta, ma
-; RV64-NEXT:    vle16.v v8, (a0)
-; RV64-NEXT:    vle16.v v9, (a1)
-; RV64-NEXT:    vor.vv v8, v8, v9
-; RV64-NEXT:    vsetivli zero, 1, e64, m1, ta, ma
-; RV64-NEXT:    vse64.v v8, (a0)
-; RV64-NEXT:    vsetivli zero, 1, e32, m1, ta, ma
-; RV64-NEXT:    vslidedown.vi v8, v8, 2
-; RV64-NEXT:    addi a0, a0, 8
-; RV64-NEXT:    vse32.v v8, (a0)
-; RV64-NEXT:    ret
+; CHECK-LABEL: or_v6i16:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetivli zero, 6, e16, m1, ta, ma
+; CHECK-NEXT:    vle16.v v8, (a0)
+; CHECK-NEXT:    vle16.v v9, (a1)
+; CHECK-NEXT:    vsetivli zero, 8, e16, m1, ta, ma
+; CHECK-NEXT:    vor.vv v8, v8, v9
+; CHECK-NEXT:    vsetivli zero, 6, e16, m1, ta, ma
+; CHECK-NEXT:    vse16.v v8, (a0)
+; CHECK-NEXT:    ret
   %a = load <6 x i16>, ptr %x
   %b = load <6 x i16>, ptr %y
   %c = or <6 x i16> %a, %b
@@ -534,33 +449,16 @@ define void @xor_v8i16(ptr %x, ptr %y) {
 }
 
 define void @xor_v6i16(ptr %x, ptr %y) {
-; RV32-LABEL: xor_v6i16:
-; RV32:       # %bb.0:
-; RV32-NEXT:    vsetivli zero, 8, e16, m1, ta, ma
-; RV32-NEXT:    vle16.v v8, (a0)
-; RV32-NEXT:    vle16.v v9, (a1)
-; RV32-NEXT:    vxor.vv v8, v8, v9
-; RV32-NEXT:    vsetivli zero, 1, e32, m1, ta, ma
-; RV32-NEXT:    vslidedown.vi v9, v8, 2
-; RV32-NEXT:    addi a1, a0, 8
-; RV32-NEXT:    vse32.v v9, (a1)
-; RV32-NEXT:    vsetivli zero, 4, e16, mf2, ta, ma
-; RV32-NEXT:    vse16.v v8, (a0)
-; RV32-NEXT:    ret
-;
-; RV64-LABEL: xor_v6i16:
-; RV64:       # %bb.0:
-; RV64-NEXT:    vsetivli zero, 8, e16, m1, ta, ma
-; RV64-NEXT:    vle16.v v8, (a0)
-; RV64-NEXT:    vle16.v v9, (a1)
-; RV64-NEXT:    vxor.vv v8, v8, v9
-; RV64-NEXT:    vsetivli zero, 1, e64, m1, ta, ma
-; RV64-NEXT:    vse64.v v8, (a0)
-; RV64-NEXT:    vsetivli zero, 1, e32, m1, ta, ma
-; RV64-NEXT:    vslidedown.vi v8, v8, 2
-; RV64-NEXT:    addi a0, a0, 8
-; RV64-NEXT:    vse32.v v8, (a0)
-; RV64-NEXT:    ret
+; CHECK-LABEL: xor_v6i16:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetivli zero, 6, e16, m1, ta, ma
+; CHECK-NEXT:    vle16.v v8, (a0)
+; CHECK-NEXT:    vle16.v v9, (a1)
+; CHECK-NEXT:    vsetivli zero, 8, e16, m1, ta, ma
+; CHECK-NEXT:    vxor.vv v8, v8, v9
+; CHECK-NEXT:    vsetivli zero, 6, e16, m1, ta, ma
+; CHECK-NEXT:    vse16.v v8, (a0)
+; CHECK-NEXT:    ret
   %a = load <6 x i16>, ptr %x
   %b = load <6 x i16>, ptr %y
   %c = xor <6 x i16> %a, %b
@@ -633,33 +531,16 @@ define void @lshr_v8i16(ptr %x, ptr %y) {
 }
 
 define void @lshr_v6i16(ptr %x, ptr %y) {
-; RV32-LABEL: lshr_v6i16:
-; RV32:       # %bb.0:
-; RV32-NEXT:    vsetivli zero, 8, e16, m1, ta, ma
-; RV32-NEXT:    vle16.v v8, (a0)
-; RV32-NEXT:    vle16.v v9, (a1)
-; RV32-NEXT:    vsrl.vv v8, v8, v9
-; RV32-NEXT:    vsetivli zero, 1, e32, m1, ta, ma
-; RV32-NEXT:    vslidedown.vi v9, v8, 2
-; RV32-NEXT:    addi a1, a0, 8
-; RV32-NEXT:    vse32.v v9, (a1)
-; RV32-NEXT:    vsetivli zero, 4, e16, mf2, ta, ma
-; RV32-NEXT:    vse16.v v8, (a0)
-; RV32-NEXT:    ret
-;
-; RV64-LABEL: lshr_v6i16:
-; RV64:       # %bb.0:
-; RV64-NEXT:    vsetivli zero, 8, e16, m1, ta, ma
-; RV64-NEXT:    vle16.v v8, (a0)
-; RV64-NEXT:    vle16.v v9, (a1)
-; RV64-NEXT:    vsrl.vv v8, v8, v9
-; RV64-NEXT:    vsetivli zero, 1, e64, m1, ta, ma
-; RV64-NEXT:    vse64.v v8, (a0)
-; RV64-NEXT:    vsetivli zero, 1, e32, m1, ta, ma
-; RV64-NEXT:    vslidedown.vi v8, v8, 2
-; RV64-NEXT:    addi a0, a0, 8
-; RV64-NEXT:    vse32.v v8, (a0)
-; RV64-NEXT:    ret
+; CHECK-LABEL: lshr_v6i16:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetivli zero, 6, e16, m1, ta, ma
+; CHECK-NEXT:    vle16.v v8, (a0)
+; CHECK-NEXT:    vle16.v v9, (a1)
+; CHECK-NEXT:    vsetivli zero, 8, e16, m1, ta, ma
+; CHECK-NEXT:    vsrl.vv v8, v8, v9
+; CHECK-NEXT:    vsetivli zero, 6, e16, m1, ta, ma
+; CHECK-NEXT:    vse16.v v8, (a0)
+; CHECK-NEXT:    ret
   %a = load <6 x i16>, ptr %x
   %b = load <6 x i16>, ptr %y
   %c = lshr <6 x i16> %a, %b
@@ -732,33 +613,16 @@ define void @ashr_v8i16(ptr %x, ptr %y) {
 }
 
 define void @ashr_v6i16(ptr %x, ptr %y) {
-; RV32-LABEL: ashr_v6i16:
-; RV32:       # %bb.0:
-; RV32-NEXT:    vsetivli zero, 8, e16, m1, ta, ma
-; RV32-NEXT:    vle16.v v8, (a0)
-; RV32-NEXT:    vle16.v v9, (a1)
-; RV32-NEXT:    vsra.vv v8, v8, v9
-; RV32-NEXT:    vsetivli zero, 1, e32, m1, ta, ma
-; RV32-NEXT:    vslidedown.vi v9, v8, 2
-; RV32-NEXT:    addi a1, a0, 8
-; RV32-NEXT:    vse32.v v9, (a1)
-; RV32-NEXT:    vsetivli zero, 4, e16, mf2, ta, ma
-; RV32-NEXT:    vse16.v v8, (a0)
-; RV32-NEXT:    ret
-;
-; RV64-LABEL: ashr_v6i16:
-; RV64:       # %bb.0:
-; RV64-NEXT:    vsetivli zero, 8, e16, m1, ta, ma
-; RV64-NEXT:    vle16.v v8, (a0)
-; RV64-NEXT:    vle16.v v9, (a1)
-; RV64-NEXT:    vsra.vv v8, v8, v9
-; RV64-NEXT:    vsetivli zero, 1, e64, m1, ta, ma
-; RV64-NEXT:    vse64.v v8, (a0)
-; RV64-NEXT:    vsetivli zero, 1, e32, m1, ta, ma
-; RV64-NEXT:    vslidedown.vi v8, v8, 2
-; RV64-NEXT:    addi a0, a0, 8
-; RV64-NEXT:    vse32.v v8, (a0)
-; RV64-NEXT:    ret
+; CHECK-LABEL: ashr_v6i16:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetivli zero, 6, e16, m1, ta, ma
+; CHECK-NEXT:    vle16.v v8, (a0)
+; CHECK-NEXT:    vle16.v v9, (a1)
+; CHECK-NEXT:    vsetivli zero, 8, e16, m1, ta, ma
+; CHECK-NEXT:    vsra.vv v8, v8, v9
+; CHECK-NEXT:    vsetivli zero, 6, e16, m1, ta, ma
+; CHECK-NEXT:    vse16.v v8, (a0)
+; CHECK-NEXT:    ret
   %a = load <6 x i16>, ptr %x
   %b = load <6 x i16>, ptr %y
   %c = ashr <6 x i16> %a, %b
@@ -831,33 +695,16 @@ define void @shl_v8i16(ptr %x, ptr %y) {
 }
 
 define void @shl_v6i16(ptr %x, ptr %y) {
-; RV32-LABEL: shl_v6i16:
-; RV32:       # %bb.0:
-; RV32-NEXT:    vsetivli zero, 8, e16, m1, ta, ma
-; RV32-NEXT:    vle16.v v8, (a0)
-; RV32-NEXT:    vle16.v v9, (a1)
-; RV32-NEXT:    vsll.vv v8, v8, v9
-; RV32-NEXT:    vsetivli zero, 1, e32, m1, ta, ma
-; RV32-NEXT:    vslidedown.vi v9, v8, 2
-; RV32-NEXT:    addi a1, a0, 8
-; RV32-NEXT:    vse32.v v9, (a1)
-; RV32-NEXT:    vsetivli zero, 4, e16, mf2, ta, ma
-; RV32-NEXT:    vse16.v v8, (a0)
-; RV32-NEXT:    ret
-;
-; RV64-LABEL: shl_v6i16:
-; RV64:       # %bb.0:
-; RV64-NEXT:    vsetivli zero, 8, e16, m1, ta, ma
-; RV64-NEXT:    vle16.v v8, (a0)
-; RV64-NEXT:    vle16.v v9, (a1)
-; RV64-NEXT:    vsll.vv v8, v8, v9
-; RV64-NEXT:    vsetivli zero, 1, e64, m1, ta, ma
-; RV64-NEXT:    vse64.v v8, (a0)
-; RV64-NEXT:    vsetivli zero, 1, e32, m1, ta, ma
-; RV64-NEXT:    vslidedown.vi v8, v8, 2
-; RV64-NEXT:    addi a0, a0, 8
-; RV64-NEXT:    vse32.v v8, (a0)
-; RV64-NEXT:    ret
+; CHECK-LABEL: shl_v6i16:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetivli zero, 6, e16, m1, ta, ma
+; CHECK-NEXT:    vle16.v v8, (a0)
+; CHECK-NEXT:    vle16.v v9, (a1)
+; CHECK-NEXT:    vsetivli zero, 8, e16, m1, ta, ma
+; CHECK-NEXT:    vsll.vv v8, v8, v9
+; CHECK-NEXT:    vsetivli zero, 6, e16, m1, ta, ma
+; CHECK-NEXT:    vse16.v v8, (a0)
+; CHECK-NEXT:    ret
   %a = load <6 x i16>, ptr %x
   %b = load <6 x i16>, ptr %y
   %c = shl <6 x i16> %a, %b
@@ -930,48 +777,23 @@ define void @sdiv_v8i16(ptr %x, ptr %y) {
 }
 
 define void @sdiv_v6i16(ptr %x, ptr %y) {
-; RV32-LABEL: sdiv_v6i16:
-; RV32:       # %bb.0:
-; RV32-NEXT:    vsetivli zero, 8, e16, m1, ta, ma
-; RV32-NEXT:    vle16.v v8, (a1)
-; RV32-NEXT:    vle16.v v9, (a0)
-; RV32-NEXT:    vsetivli zero, 2, e16, m1, ta, ma
-; RV32-NEXT:    vslidedown.vi v10, v8, 4
-; RV32-NEXT:    vslidedown.vi v11, v9, 4
-; RV32-NEXT:    vsetivli zero, 2, e16, mf4, ta, ma
-; RV32-NEXT:    vdiv.vv v10, v11, v10
-; RV32-NEXT:    vsetivli zero, 6, e16, m1, ta, ma
-; RV32-NEXT:    vslideup.vi v11, v10, 4
-; RV32-NEXT:    vsetivli zero, 4, e16, mf2, ta, ma
-; RV32-NEXT:    vdiv.vv v8, v9, v8
-; RV32-NEXT:    vse16.v v8, (a0)
-; RV32-NEXT:    vsetivli zero, 1, e32, m1, ta, ma
-; RV32-NEXT:    vslidedown.vi v8, v11, 2
-; RV32-NEXT:    addi a0, a0, 8
-; RV32-NEXT:    vse32.v v8, (a0)
-; RV32-NEXT:    ret
-;
-; RV64-LABEL: sdiv_v6i16:
-; RV64:       # %bb.0:
-; RV64-NEXT:    vsetivli zero, 8, e16, m1, ta, ma
-; RV64-NEXT:    vle16.v v8, (a1)
-; RV64-NEXT:    vle16.v v9, (a0)
-; RV64-NEXT:    vsetivli zero, 2, e16, m1, ta, ma
-; RV64-NEXT:    vslidedown.vi v10, v8, 4
-; RV64-NEXT:    vslidedown.vi v11, v9, 4
-; RV64-NEXT:    vsetivli zero, 2, e16, mf4, ta, ma
-; RV64-NEXT:    vdiv.vv v10, v11, v10
-; RV64-NEXT:    vsetivli zero, 4, e16, mf2, ta, ma
-; RV64-NEXT:    vdiv.vv v8, v9, v8
-; RV64-NEXT:    vsetivli zero, 8, e16, m1, ta, ma
-; RV64-NEXT:    vslideup.vi v8, v10, 4
-; RV64-NEXT:    vsetivli zero, 1, e64, m1, ta, ma
-; RV64-NEXT:    vse64.v v8, (a0)
-; RV64-NEXT:    vsetivli zero, 1, e32, m1, ta, ma
-; RV64-NEXT:    vslidedown.vi v8, v8, 2
-; RV64-NEXT:    addi a0, a0, 8
-; RV64-NEXT:    vse32.v v8, (a0)
-; RV64-NEXT:    ret
+; CHECK-LABEL: sdiv_v6i16:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetivli zero, 6, e16, m1, ta, ma
+; CHECK-NEXT:    vle16.v v8, (a1)
+; CHECK-NEXT:    vle16.v v9, (a0)
+; CHECK-NEXT:    vsetivli zero, 2, e16, m1, ta, ma
+; CHECK-NEXT:    vslidedown.vi v10, v8, 4
+; CHECK-NEXT:    vslidedown.vi v11, v9, 4
+; CHECK-NEXT:    vsetivli zero, 2, e16, mf4, ta, ma
+; CHECK-NEXT:    vdiv.vv v10, v11, v10
+; CHECK-NEXT:    vsetivli zero, 4, e16, mf2, ta, ma
+; CHECK-NEXT:    vdiv.vv v8, v9, v8
+; CHECK-NEXT:    vsetivli zero, 8, e16, m1, ta, ma
+; CHECK-NEXT:    vslideup.vi v8, v10, 4
+; CHECK-NEXT:    vsetivli zero, 6, e16, m1, ta, ma
+; CHECK-NEXT:    vse16.v v8, (a0)
+; CHECK-NEXT:    ret
   %a = load <6 x i16>, ptr %x
   %b = load <6 x i16>, ptr %y
   %c = sdiv <6 x i16> %a, %b
@@ -1044,48 +866,23 @@ define void @srem_v8i16(ptr %x, ptr %y) {
 }
 
 define void @srem_v6i16(ptr %x, ptr %y) {
-; RV32-LABEL: srem_v6i16:
-; RV32:       # %bb.0:
-; RV32-NEXT:    vsetivli zero, 8, e16, m1, ta, ma
-; RV32-NEXT:    vle16.v v8, (a1)
-; RV32-NEXT:    vle16.v v9, (a0)
-; RV32-NEXT:    vsetivli zero, 2, e16, m1, ta, ma
-; RV32-NEXT:    vslidedown.vi v10, v8, 4
-; RV32-NEXT:    vslidedown.vi v11, v9, 4
-; RV32-NEXT:    vsetivli zero, 2, e16, mf4, ta, ma
-; RV32-NEXT:    vrem.vv v10, v11, v10
-; RV32-NEXT:    vsetivli zero, 6, e16, m1, ta, ma
-; RV32-NEXT:    vslideup.vi v11, v10, 4
-; RV32-NEXT:    vsetivli zero, 4, e16, mf2, ta, ma
-; RV32-NEXT:    vrem.vv v8, v9, v8
-; RV32-NEXT:    vse16.v v8, (a0)
-; RV32-NEXT:    vsetivli zero, 1, e32, m1, ta, ma
-; RV32-NEXT:    vslidedown.vi v8, v11, 2
-; RV32-NEXT:    addi a0, a0, 8
-; RV32-NEXT:    vse32.v v8, (a0)
-; RV32-NEXT:    ret
-;
-; RV64-LABEL: srem_v6i16:
-; RV64:       # %bb.0:
-; RV64-NEXT:    vsetivli zero, 8, e16, m1, ta, ma
-; RV64-NEXT:    vle16.v v8, (a1)
-; RV64-NEXT:    vle16.v v9, (a0)
-; RV64-NEXT:    vsetivli zero, 2, e16, m1, ta, ma
-; RV64-NEXT:    vslidedown.vi v10, v8, 4
-; RV64-NEXT:    vslidedown.vi v11, v9, 4
-; RV64-NEXT:    vsetivli zero, 2, e16, mf4, ta, ma
-; RV64-NEXT:    vrem.vv v10, v11, v10
-; RV64-NEXT:    vsetivli zero, 4, e16, mf2, ta, ma
-; RV64-NEXT:    vrem.vv v8, v9, v8
-; RV64-NEXT:    vsetivli zero, 8, e16, m1, ta, ma
-; RV64-NEXT:    vslideup.vi v8, v10, 4
-; RV64-NEXT:    vsetivli zero, 1, e64, m1, ta, ma
-; RV64-NEXT:    vse64.v v8, (a0)
-; RV64-NEXT:    vsetivli zero, 1, e32, m1, ta, ma
-; RV64-NEXT:    vslidedown.vi v8, v8, 2
-; RV64-NEXT:    addi a0, a0, 8
-; RV64-NEXT:    vse32.v v8, (a0)
-; RV64-NEXT:    ret
+; CHECK-LABEL: srem_v6i16:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetivli zero, 6, e16, m1, ta, ma
+; CHECK-NEXT:    vle16.v v8, (a1)
+; CHECK-NEXT:    vle16.v v9, (a0)
+; CHECK-NEXT:    vsetivli zero, 2, e16, m1, ta, ma
+; CHECK-NEXT:    vslidedown.vi v10, v8, 4
+; CHECK-NEXT:    vslidedown.vi v11, v9, 4
+; CHECK-NEXT:    vsetivli zero, 2, e16, mf4, ta, ma
+; CHECK-NEXT:    vrem.vv v10, v11, v10
+; CHECK-NEXT:    vsetivli zero, 4, e16, mf2, ta, ma
+; CHECK-NEXT:    vrem.vv v8, v9, v8
+; CHECK-NEXT:    vsetivli zero, 8, e16, m1, ta, ma
+; CHECK-NEXT:    vslideup.vi v8, v10, 4
+; CHECK-NEXT:    vsetivli zero, 6, e16, m1, ta, ma
+; CHECK-NEXT:    vse16.v v8, (a0)
+; CHECK-NEXT:    ret
   %a = load <6 x i16>, ptr %x
   %b = load <6 x i16>, ptr %y
   %c = srem <6 x i16> %a, %b
@@ -1158,48 +955,23 @@ define void @udiv_v8i16(ptr %x, ptr %y) {
 }
 
 define void @udiv_v6i16(ptr %x, ptr %y) {
-; RV32-LABEL: udiv_v6i16:
-; RV32:       # %bb.0:
-; RV32-NEXT:    vsetivli zero, 8, e16, m1, ta, ma
-; RV32-NEXT:    vle16.v v8, (a1)
-; RV32-NEXT:    vle16.v v9, (a0)
-; RV32-NEXT:    vsetivli zero, 2, e16, m1, ta, ma
-; RV32-NEXT:    vslidedown.vi v10, v8, 4
-; RV32-NEXT:    vslidedown.vi v11, v9, 4
-; RV32-NEXT:    vsetivli zero, 2, e16, mf4, ta, ma
-; RV32-NEXT:    vdivu.vv v10, v11, v10
-; RV32-NEXT:    vsetivli zero, 6, e16, m1, ta, ma
-; RV32-NEXT:    vslideup.vi v11, v10, 4
-; RV32-NEXT:    vsetivli zero, 4, e16, mf2, ta, ma
-; RV32-NEXT:    vdivu.vv v8, v9, v8
-; RV32-NEXT:    vse16.v v8, (a0)
-; RV32-NEXT:    vsetivli zero, 1, e32, m1, ta, ma
-; RV32-NEXT:    vslidedown.vi v8, v11, 2
-; RV32-NEXT:    addi a0, a0, 8
-; RV32-NEXT:    vse32.v v8, (a0)
-; RV32-NEXT:    ret
-;
-; RV64-LABEL: udiv_v6i16:
-; RV64:       # %bb.0:
-; RV64-NEXT:    vsetivli zero, 8, e16, m1, ta, ma
-; RV64-NEXT:    vle16.v v8, (a1)
-; RV64-NEXT:    vle16.v v9, (a0)
-; RV64-NEXT:    vsetivli zero, 2, e16, m1, ta, ma
-; RV64-NEXT:    vslidedown.vi v10, v8, 4
-; RV64-NEXT:    vslidedown.vi v11, v9, 4
-; RV64-NEXT:    vsetivli zero, 2, e16, mf4, ta, ma
-; RV64-NEXT:    vdivu.vv v10, v11, v10
-; RV64-NEXT:    vsetivli zero, 4, e16, mf2, ta, ma
-; RV64-NEXT:    vdivu.vv v8, v9, v8
-; RV64-NEXT:    vsetivli zero, 8, e16, m1, ta, ma
-; RV64-NEXT:    vslideup.vi v8, v10, 4
-; RV64-NEXT:    vsetivli zero, 1, e64, m1, ta, ma
-; RV64-NEXT:    vse64.v v8, (a0)
-; RV64-NEXT:    vsetivli zero, 1, e32, m1, ta, ma
-; RV64-NEXT:    vslidedown.vi v8, v8, 2
-; RV64-NEXT:    addi a0, a0, 8
-; RV64-NEXT:    vse32.v v8, (a0)
-; RV64-NEXT:    ret
+; CHECK-LABEL: udiv_v6i16:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetivli zero, 6, e16, m1, ta, ma
+; CHECK-NEXT:    vle16.v v8, (a1)
+; CHECK-NEXT:    vle16.v v9, (a0)
+; CHECK-NEXT:    vsetivli zero, 2, e16, m1, ta, ma
+; CHECK-NEXT:    vslidedown.vi v10, v8, 4
+; CHECK-NEXT:    vslidedown.vi v11, v9, 4
+; CHECK-NEXT:    vsetivli zero, 2, e16, mf4, ta, ma
+; CHECK-NEXT:    vdivu.vv v10, v11, v10
+; CHECK-NEXT:    vsetivli zero, 4, e16, mf2, ta, ma
+; CHECK-NEXT:    vdivu.vv v8, v9, v8
+; CHECK-NEXT:    vsetivli zero, 8, e16, m1, ta, ma
+; CHECK-NEXT:    vslideup.vi v8, v10, 4
+; CHECK-NEXT:    vsetivli zero, 6, e16, m1, ta, ma
+; CHECK-NEXT:    vse16.v v8, (a0)
+; CHECK-NEXT:    ret
   %a = load <6 x i16>, ptr %x
   %b = load <6 x i16>, ptr %y
   %c = udiv <6 x i16> %a, %b
@@ -1272,48 +1044,23 @@ define void @urem_v8i16(ptr %x, ptr %y) {
 }
 
 define void @urem_v6i16(ptr %x, ptr %y) {
-; RV32-LABEL: urem_v6i16:
-; RV32:       # %bb.0:
-; RV32-NEXT:    vsetivli zero, 8, e16, m1, ta, ma
-; RV32-NEXT:    vle16.v v8, (a1)
-; RV32-NEXT:    vle16.v v9, (a0)
-; RV32-NEXT:    vsetivli zero, 2, e16, m1, ta, ma
-; RV32-NEXT:    vslidedown.vi v10, v8, 4
-; RV32-NEXT:    vslidedown.vi v11, v9, 4
-; RV32-NEXT:    vsetivli zero, 2, e16, mf4, ta, ma
-; RV32-NEXT:    vremu.vv v10, v11, v10
-; RV32-NEXT:    vsetivli zero, 6, e16, m1, ta, ma
-; RV32-NEXT:    vslideup.vi v11, v10, 4
-; RV32-NEXT:    vsetivli zero, 4, e16, mf2, ta, ma
-; RV32-NEXT:    vremu.vv v8, v9, v8
-; RV32-NEXT:    vse16.v v8, (a0)
-; RV32-NEXT:    vsetivli zero, 1, e32, m1, ta, ma
-; RV32-NEXT:    vslidedown.vi v8, v11, 2
-; RV32-NEXT:    addi a0, a0, 8
-; RV32-NEXT:    vse32.v v8, (a0)
-; RV32-NEXT:    ret
-;
-; RV64-LABEL: urem_v6i16:
-; RV64:       # %bb.0:
-; RV64-NEXT:    vsetivli zero, 8, e16, m1, ta, ma
-; RV64-NEXT:    vle16.v v8, (a1)
-; RV64-NEXT:    vle16.v v9, (a0)
-; RV64-NEXT:    vsetivli zero, 2, e16, m1, ta, ma
-; RV64-NEXT:    vslidedown.vi v10, v8, 4
-; RV64-NEXT:    vslidedown.vi v11, v9, 4
-; RV64-NEXT:    vsetivli zero, 2, e16, mf4, ta, ma
-; RV64-NEXT:    vremu.vv v10, v11, v10
-; RV64-NEXT:    vsetivli zero, 4, e16, mf2, ta, ma
-; RV64-NEXT:    vremu.vv v8, v9, v8
-; RV64-NEXT:    vsetivli zero, 8, e16, m1, ta, ma
-; RV64-NEXT:    vslideup.vi v8, v10, 4
-; RV64-NEXT:    vsetivli zero, 1, e64, m1, ta, ma
-; RV64-NEXT:    vse64.v v8, (a0)
-; RV64-NEXT:    vsetivli zero, 1, e32, m1, ta, ma
-; RV64-NEXT:    vslidedown.vi v8, v8, 2
-; RV64-NEXT:    addi a0, a0, 8
-; RV64-NEXT:    vse32.v v8, (a0)
-; RV64-NEXT:    ret
+; CHECK-LABEL: urem_v6i16:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetivli zero, 6, e16, m1, ta, ma
+; CHECK-NEXT:    vle16.v v8, (a1)
+; CHECK-NEXT:    vle16.v v9, (a0)
+; CHECK-NEXT:    vsetivli zero, 2, e16, m1, ta, ma
+; CHECK-NEXT:    vslidedown.vi v10, v8, 4
+; CHECK-NEXT:    vslidedown.vi v11, v9, 4
+; CHECK-NEXT:    vsetivli zero, 2, e16, mf4, ta, ma
+; CHECK-NEXT:    vremu.vv v10, v11, v10
+; CHECK-NEXT:    vsetivli zero, 4, e16, mf2, ta, ma
+; CHECK-NEXT:    vremu.vv v8, v9, v8
+; CHECK-NEXT:    vsetivli zero, 8, e16, m1, ta, ma
+; CHECK-NEXT:    vslideup.vi v8, v10, 4
+; CHECK-NEXT:    vsetivli zero, 6, e16, m1, ta, ma
+; CHECK-NEXT:    vse16.v v8, (a0)
+; CHECK-NEXT:    ret
   %a = load <6 x i16>, ptr %x
   %b = load <6 x i16>, ptr %y
   %c = urem <6 x i16> %a, %b
@@ -1358,45 +1105,45 @@ define void @mulhu_v16i8(ptr %x) {
 ; RV32:       # %bb.0:
 ; RV32-NEXT:    vsetivli zero, 16, e8, m1, ta, ma
 ; RV32-NEXT:    vle8.v v8, (a0)
-; RV32-NEXT:    li a1, 513
+; RV32-NEXT:    lui a1, 3
+; RV32-NEXT:    addi a1, a1, -2044
 ; RV32-NEXT:    vsetivli zero, 1, e16, mf4, ta, ma
-; RV32-NEXT:    vmv.s.x v0, a1
+; RV32-NEXT:    vmv.v.x v0, a1
+; RV32-NEXT:    vsetivli zero, 16, e8, m1, ta, ma
+; RV32-NEXT:    vmv.v.i v9, 0
+; RV32-NEXT:    li a1, -128
+; RV32-NEXT:    vmerge.vxm v10, v9, a1, v0
+; RV32-NEXT:    lui a1, 1
+; RV32-NEXT:    addi a2, a1, 32
+; RV32-NEXT:    vsetivli zero, 1, e16, mf4, ta, ma
+; RV32-NEXT:    vmv.v.x v0, a2
+; RV32-NEXT:    vsetivli zero, 16, e8, m1, ta, ma
+; RV32-NEXT:    lui a2, %hi(.LCPI65_0)
+; RV32-NEXT:    addi a2, a2, %lo(.LCPI65_0)
+; RV32-NEXT:    vle8.v v11, (a2)
+; RV32-NEXT:    vmerge.vim v9, v9, 1, v0
+; RV32-NEXT:    vsrl.vv v9, v8, v9
+; RV32-NEXT:    vmulhu.vv v9, v9, v11
+; RV32-NEXT:    vsub.vv v8, v8, v9
+; RV32-NEXT:    vmulhu.vv v8, v8, v10
+; RV32-NEXT:    vadd.vv v8, v8, v9
+; RV32-NEXT:    li a2, 513
+; RV32-NEXT:    vsetivli zero, 1, e16, mf4, ta, ma
+; RV32-NEXT:    vmv.v.x v0, a2
 ; RV32-NEXT:    vsetivli zero, 16, e8, m1, ta, ma
 ; RV32-NEXT:    vmv.v.i v9, 4
 ; RV32-NEXT:    vmerge.vim v9, v9, 1, v0
-; RV32-NEXT:    lui a1, 1
-; RV32-NEXT:    addi a2, a1, 78
+; RV32-NEXT:    addi a1, a1, 78
 ; RV32-NEXT:    vsetivli zero, 1, e16, mf4, ta, ma
-; RV32-NEXT:    vmv.s.x v0, a2
+; RV32-NEXT:    vmv.v.x v0, a1
 ; RV32-NEXT:    vsetivli zero, 16, e8, m1, ta, ma
 ; RV32-NEXT:    vmerge.vim v9, v9, 3, v0
-; RV32-NEXT:    lui a2, 8
-; RV32-NEXT:    addi a2, a2, 304
+; RV32-NEXT:    lui a1, 8
+; RV32-NEXT:    addi a1, a1, 304
 ; RV32-NEXT:    vsetivli zero, 1, e16, mf4, ta, ma
-; RV32-NEXT:    vmv.s.x v0, a2
+; RV32-NEXT:    vmv.v.x v0, a1
 ; RV32-NEXT:    vsetivli zero, 16, e8, m1, ta, ma
 ; RV32-NEXT:    vmerge.vim v9, v9, 2, v0
-; RV32-NEXT:    lui a2, 3
-; RV32-NEXT:    addi a2, a2, -2044
-; RV32-NEXT:    vsetivli zero, 1, e16, mf4, ta, ma
-; RV32-NEXT:    vmv.s.x v0, a2
-; RV32-NEXT:    vsetivli zero, 16, e8, m1, ta, ma
-; RV32-NEXT:    vmv.v.i v10, 0
-; RV32-NEXT:    li a2, -128
-; RV32-NEXT:    vmerge.vxm v11, v10, a2, v0
-; RV32-NEXT:    addi a1, a1, 32
-; RV32-NEXT:    vsetivli zero, 1, e16, mf4, ta, ma
-; RV32-NEXT:    vmv.s.x v0, a1
-; RV32-NEXT:    vsetivli zero, 16, e8, m1, ta, ma
-; RV32-NEXT:    lui a1, %hi(.LCPI65_0)
-; RV32-NEXT:    addi a1, a1, %lo(.LCPI65_0)
-; RV32-NEXT:    vle8.v v12, (a1)
-; RV32-NEXT:    vmerge.vim v10, v10, 1, v0
-; RV32-NEXT:    vsrl.vv v10, v8, v10
-; RV32-NEXT:    vmulhu.vv v10, v10, v12
-; RV32-NEXT:    vsub.vv v8, v8, v10
-; RV32-NEXT:    vmulhu.vv v8, v8, v11
-; RV32-NEXT:    vadd.vv v8, v8, v10
 ; RV32-NEXT:    vsrl.vv v8, v8, v9
 ; RV32-NEXT:    vse8.v v8, (a0)
 ; RV32-NEXT:    ret
@@ -1405,45 +1152,45 @@ define void @mulhu_v16i8(ptr %x) {
 ; RV64:       # %bb.0:
 ; RV64-NEXT:    vsetivli zero, 16, e8, m1, ta, ma
 ; RV64-NEXT:    vle8.v v8, (a0)
-; RV64-NEXT:    li a1, 513
+; RV64-NEXT:    lui a1, 3
+; RV64-NEXT:    addiw a1, a1, -2044
 ; RV64-NEXT:    vsetivli zero, 1, e16, mf4, ta, ma
-; RV64-NEXT:    vmv.s.x v0, a1
+; RV64-NEXT:    vmv.v.x v0, a1
+; RV64-NEXT:    vsetivli zero, 16, e8, m1, ta, ma
+; RV64-NEXT:    vmv.v.i v9, 0
+; RV64-NEXT:    li a1, -128
+; RV64-NEXT:    vmerge.vxm v10, v9, a1, v0
+; RV64-NEXT:    lui a1, 1
+; RV64-NEXT:    addiw a2, a1, 32
+; RV64-NEXT:    vsetivli zero, 1, e16, mf4, ta, ma
+; RV64-NEXT:    vmv.v.x v0, a2
+; RV64-NEXT:    vsetivli zero, 16, e8, m1, ta, ma
+; RV64-NEXT:    lui a2, %hi(.LCPI65_0)
+; RV64-NEXT:    addi a2, a2, %lo(.LCPI65_0)
+; RV64-NEXT:    vle8.v v11, (a2)
+; RV64-NEXT:    vmerge.vim v9, v9, 1, v0
+; RV64-NEXT:    vsrl.vv v9, v8, v9
+; RV64-NEXT:    vmulhu.vv v9, v9, v11
+; RV64-NEXT:    vsub.vv v8, v8, v9
+; RV64-NEXT:    vmulhu.vv v8, v8, v10
+; RV64-NEXT:    vadd.vv v8, v8, v9
+; RV64-NEXT:    li a2, 513
+; RV64-NEXT:    vsetivli zero, 1, e16, mf4, ta, ma
+; RV64-NEXT:    vmv.v.x v0, a2
 ; RV64-NEXT:    vsetivli zero, 16, e8, m1, ta, ma
 ; RV64-NEXT:    vmv.v.i v9, 4
 ; RV64-NEXT:    vmerge.vim v9, v9, 1, v0
-; RV64-NEXT:    lui a1, 1
-; RV64-NEXT:    addiw a2, a1, 78
+; RV64-NEXT:    addiw a1, a1, 78
 ; RV64-NEXT:    vsetivli zero, 1, e16, mf4, ta, ma
-; RV64-NEXT:    vmv.s.x v0, a2
+; RV64-NEXT:    vmv.v.x v0, a1
 ; RV64-NEXT:    vsetivli zero, 16, e8, m1, ta, ma
 ; RV64-NEXT:    vmerge.vim v9, v9, 3, v0
-; RV64-NEXT:    lui a2, 8
-; RV64-NEXT:    addiw a2, a2, 304
+; RV64-NEXT:    lui a1, 8
+; RV64-NEXT:    addiw a1, a1, 304
 ; RV64-NEXT:    vsetivli zero, 1, e16, mf4, ta, ma
-; RV64-NEXT:    vmv.s.x v0, a2
+; RV64-NEXT:    vmv.v.x v0, a1
 ; RV64-NEXT:    vsetivli zero, 16, e8, m1, ta, ma
 ; RV64-NEXT:    vmerge.vim v9, v9, 2, v0
-; RV64-NEXT:    lui a2, 3
-; RV64-NEXT:    addiw a2, a2, -2044
-; RV64-NEXT:    vsetivli zero, 1, e16, mf4, ta, ma
-; RV64-NEXT:    vmv.s.x v0, a2
-; RV64-NEXT:    vsetivli zero, 16, e8, m1, ta, ma
-; RV64-NEXT:    vmv.v.i v10, 0
-; RV64-NEXT:    li a2, -128
-; RV64-NEXT:    vmerge.vxm v11, v10, a2, v0
-; RV64-NEXT:    addiw a1, a1, 32
-; RV64-NEXT:    vsetivli zero, 1, e16, mf4, ta, ma
-; RV64-NEXT:    vmv.s.x v0, a1
-; RV64-NEXT:    vsetivli zero, 16, e8, m1, ta, ma
-; RV64-NEXT:    lui a1, %hi(.LCPI65_0)
-; RV64-NEXT:    addi a1, a1, %lo(.LCPI65_0)
-; RV64-NEXT:    vle8.v v12, (a1)
-; RV64-NEXT:    vmerge.vim v10, v10, 1, v0
-; RV64-NEXT:    vsrl.vv v10, v8, v10
-; RV64-NEXT:    vmulhu.vv v10, v10, v12
-; RV64-NEXT:    vsub.vv v8, v8, v10
-; RV64-NEXT:    vmulhu.vv v8, v8, v11
-; RV64-NEXT:    vadd.vv v8, v8, v10
 ; RV64-NEXT:    vsrl.vv v8, v8, v9
 ; RV64-NEXT:    vse8.v v8, (a0)
 ; RV64-NEXT:    ret
@@ -1458,31 +1205,30 @@ define void @mulhu_v8i16(ptr %x) {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 8, e16, m1, ta, ma
 ; CHECK-NEXT:    vle16.v v8, (a0)
-; CHECK-NEXT:    vmv.v.i v9, 0
+; CHECK-NEXT:    li a1, 33
+; CHECK-NEXT:    vmv.v.x v0, a1
+; CHECK-NEXT:    vmv.v.i v9, 3
+; CHECK-NEXT:    vmerge.vim v9, v9, 2, v0
+; CHECK-NEXT:    vmv.v.i v10, 1
+; CHECK-NEXT:    vsetivli zero, 7, e16, m1, tu, ma
+; CHECK-NEXT:    vslideup.vi v9, v10, 6
+; CHECK-NEXT:    vsetivli zero, 8, e16, m1, ta, ma
+; CHECK-NEXT:    vmv.v.i v11, 0
 ; CHECK-NEXT:    lui a1, 1048568
 ; CHECK-NEXT:    vsetvli zero, zero, e16, m1, tu, ma
-; CHECK-NEXT:    vmv.v.i v10, 0
-; CHECK-NEXT:    vmv.s.x v10, a1
-; CHECK-NEXT:    vsetvli zero, zero, e16, m1, ta, ma
-; CHECK-NEXT:    vmv.v.i v11, 1
+; CHECK-NEXT:    vmv.v.i v12, 0
+; CHECK-NEXT:    vmv.s.x v12, a1
 ; CHECK-NEXT:    vsetivli zero, 7, e16, m1, tu, ma
-; CHECK-NEXT:    vslideup.vi v9, v11, 6
+; CHECK-NEXT:    vslideup.vi v11, v10, 6
 ; CHECK-NEXT:    vsetivli zero, 8, e16, m1, ta, ma
 ; CHECK-NEXT:    lui a1, %hi(.LCPI66_0)
 ; CHECK-NEXT:    addi a1, a1, %lo(.LCPI66_0)
-; CHECK-NEXT:    vle16.v v12, (a1)
-; CHECK-NEXT:    vsrl.vv v9, v8, v9
-; CHECK-NEXT:    vmulhu.vv v9, v9, v12
-; CHECK-NEXT:    vsub.vv v8, v8, v9
-; CHECK-NEXT:    vmulhu.vv v8, v8, v10
-; CHECK-NEXT:    vadd.vv v8, v8, v9
-; CHECK-NEXT:    li a1, 33
-; CHECK-NEXT:    vmv.s.x v0, a1
-; CHECK-NEXT:    vmv.v.i v9, 3
-; CHECK-NEXT:    vmerge.vim v9, v9, 2, v0
-; CHECK-NEXT:    vsetivli zero, 7, e16, m1, tu, ma
-; CHECK-NEXT:    vslideup.vi v9, v11, 6
-; CHECK-NEXT:    vsetivli zero, 8, e16, m1, ta, ma
+; CHECK-NEXT:    vle16.v v10, (a1)
+; CHECK-NEXT:    vsrl.vv v11, v8, v11
+; CHECK-NEXT:    vmulhu.vv v10, v11, v10
+; CHECK-NEXT:    vsub.vv v8, v8, v10
+; CHECK-NEXT:    vmulhu.vv v8, v8, v12
+; CHECK-NEXT:    vadd.vv v8, v8, v10
 ; CHECK-NEXT:    vsrl.vv v8, v8, v9
 ; CHECK-NEXT:    vse16.v v8, (a0)
 ; CHECK-NEXT:    ret
@@ -1493,54 +1239,26 @@ define void @mulhu_v8i16(ptr %x) {
 }
 
 define void @mulhu_v6i16(ptr %x) {
-; RV32-LABEL: mulhu_v6i16:
-; RV32:       # %bb.0:
-; RV32-NEXT:    vsetivli zero, 8, e16, m1, ta, ma
-; RV32-NEXT:    vle16.v v8, (a0)
-; RV32-NEXT:    vsetivli zero, 2, e16, m1, ta, ma
-; RV32-NEXT:    vslidedown.vi v9, v8, 4
-; RV32-NEXT:    vsetivli zero, 2, e16, mf4, ta, ma
-; RV32-NEXT:    vid.v v10
-; RV32-NEXT:    vadd.vi v10, v10, 12
-; RV32-NEXT:    vdivu.vv v9, v9, v10
-; RV32-NEXT:    vsetivli zero, 6, e16, m1, ta, ma
-; RV32-NEXT:    vslideup.vi v10, v9, 4
-; RV32-NEXT:    lui a1, %hi(.LCPI67_0)
-; RV32-NEXT:    addi a1, a1, %lo(.LCPI67_0)
-; RV32-NEXT:    vsetivli zero, 4, e16, mf2, ta, ma
-; RV32-NEXT:    vle16.v v9, (a1)
-; RV32-NEXT:    vdivu.vv v8, v8, v9
-; RV32-NEXT:    vse16.v v8, (a0)
-; RV32-NEXT:    vsetivli zero, 1, e32, m1, ta, ma
-; RV32-NEXT:    vslidedown.vi v8, v10, 2
-; RV32-NEXT:    addi a0, a0, 8
-; RV32-NEXT:    vse32.v v8, (a0)
-; RV32-NEXT:    ret
-;
-; RV64-LABEL: mulhu_v6i16:
-; RV64:       # %bb.0:
-; RV64-NEXT:    vsetivli zero, 8, e16, m1, ta, ma
-; RV64-NEXT:    vle16.v v8, (a0)
-; RV64-NEXT:    lui a1, %hi(.LCPI67_0)
-; RV64-NEXT:    addi a1, a1, %lo(.LCPI67_0)
-; RV64-NEXT:    vsetivli zero, 4, e16, mf2, ta, ma
-; RV64-NEXT:    vle16.v v9, (a1)
-; RV64-NEXT:    vdivu.vv v9, v8, v9
-; RV64-NEXT:    vsetivli zero, 2, e16, m1, ta, ma
-; RV64-NEXT:    vslidedown.vi v8, v8, 4
-; RV64-NEXT:    vsetivli zero, 2, e16, mf4, ta, ma
-; RV64-NEXT:    vid.v v10
-; RV64-NEXT:    vadd.vi v10, v10, 12
-; RV64-NEXT:    vdivu.vv v8, v8, v10
-; RV64-NEXT:    vsetivli zero, 8, e16, m1, ta, ma
-; RV64-NEXT:    vslideup.vi v9, v8, 4
-; RV64-NEXT:    vsetivli zero, 1, e64, m1, ta, ma
-; RV64-NEXT:    vse64.v v9, (a0)
-; RV64-NEXT:    vsetivli zero, 1, e32, m1, ta, ma
-; RV64-NEXT:    vslidedown.vi v8, v9, 2
-; RV64-NEXT:    addi a0, a0, 8
-; RV64-NEXT:    vse32.v v8, (a0)
-; RV64-NEXT:    ret
+; CHECK-LABEL: mulhu_v6i16:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetivli zero, 6, e16, m1, ta, ma
+; CHECK-NEXT:    vle16.v v8, (a0)
+; CHECK-NEXT:    lui a1, %hi(.LCPI67_0)
+; CHECK-NEXT:    addi a1, a1, %lo(.LCPI67_0)
+; CHECK-NEXT:    vsetivli zero, 4, e16, mf2, ta, ma
+; CHECK-NEXT:    vle16.v v9, (a1)
+; CHECK-NEXT:    vdivu.vv v9, v8, v9
+; CHECK-NEXT:    vsetivli zero, 2, e16, m1, ta, ma
+; CHECK-NEXT:    vslidedown.vi v8, v8, 4
+; CHECK-NEXT:    vsetivli zero, 2, e16, mf4, ta, ma
+; CHECK-NEXT:    vid.v v10
+; CHECK-NEXT:    vadd.vi v10, v10, 12
+; CHECK-NEXT:    vdivu.vv v8, v8, v10
+; CHECK-NEXT:    vsetivli zero, 8, e16, m1, ta, ma
+; CHECK-NEXT:    vslideup.vi v9, v8, 4
+; CHECK-NEXT:    vsetivli zero, 6, e16, m1, ta, ma
+; CHECK-NEXT:    vse16.v v9, (a0)
+; CHECK-NEXT:    ret
   %a = load <6 x i16>, ptr %x
   %b = udiv <6 x i16> %a, <i16 7, i16 9, i16 10, i16 11, i16 12, i16 13>
   store <6 x i16> %b, ptr %x
@@ -1600,16 +1318,20 @@ define void @mulhu_v2i64(ptr %x) {
 ; RV64-LABEL: mulhu_v2i64:
 ; RV64:       # %bb.0:
 ; RV64-NEXT:    vsetivli zero, 2, e64, m1, ta, ma
-; RV64-NEXT:    lui a1, %hi(.LCPI69_0)
-; RV64-NEXT:    addi a1, a1, %lo(.LCPI69_0)
-; RV64-NEXT:    vlse64.v v8, (a1), zero
-; RV64-NEXT:    lui a1, %hi(.LCPI69_1)
-; RV64-NEXT:    ld a1, %lo(.LCPI69_1)(a1)
-; RV64-NEXT:    vle64.v v9, (a0)
+; RV64-NEXT:    vle64.v v8, (a0)
+; RV64-NEXT:    lui a1, 838861
+; RV64-NEXT:    addiw a1, a1, -819
+; RV64-NEXT:    slli a2, a1, 32
+; RV64-NEXT:    add a1, a1, a2
+; RV64-NEXT:    vmv.v.x v9, a1
+; RV64-NEXT:    lui a1, 699051
+; RV64-NEXT:    addiw a1, a1, -1365
+; RV64-NEXT:    slli a2, a1, 32
+; RV64-NEXT:    add a1, a1, a2
 ; RV64-NEXT:    vsetvli zero, zero, e64, m1, tu, ma
-; RV64-NEXT:    vmv.s.x v8, a1
+; RV64-NEXT:    vmv.s.x v9, a1
 ; RV64-NEXT:    vsetvli zero, zero, e64, m1, ta, ma
-; RV64-NEXT:    vmulhu.vv v8, v9, v8
+; RV64-NEXT:    vmulhu.vv v8, v8, v9
 ; RV64-NEXT:    vid.v v9
 ; RV64-NEXT:    vadd.vi v9, v9, 1
 ; RV64-NEXT:    vsrl.vv v8, v8, v9
@@ -1626,18 +1348,18 @@ define void @mulhs_v16i8(ptr %x) {
 ; RV32:       # %bb.0:
 ; RV32-NEXT:    vsetivli zero, 16, e8, m1, ta, ma
 ; RV32-NEXT:    vle8.v v8, (a0)
+; RV32-NEXT:    li a1, -123
+; RV32-NEXT:    vmv.v.x v9, a1
 ; RV32-NEXT:    lui a1, 5
 ; RV32-NEXT:    addi a1, a1, -1452
 ; RV32-NEXT:    vsetivli zero, 1, e16, mf4, ta, ma
-; RV32-NEXT:    vmv.s.x v0, a1
+; RV32-NEXT:    vmv.v.x v0, a1
+; RV32-NEXT:    li a1, 57
 ; RV32-NEXT:    vsetivli zero, 16, e8, m1, ta, ma
+; RV32-NEXT:    vmerge.vxm v9, v9, a1, v0
+; RV32-NEXT:    vmulhu.vv v8, v8, v9
 ; RV32-NEXT:    vmv.v.i v9, 7
 ; RV32-NEXT:    vmerge.vim v9, v9, 1, v0
-; RV32-NEXT:    li a1, -123
-; RV32-NEXT:    vmv.v.x v10, a1
-; RV32-NEXT:    li a1, 57
-; RV32-NEXT:    vmerge.vxm v10, v10, a1, v0
-; RV32-NEXT:    vmulhu.vv v8, v8, v10
 ; RV32-NEXT:    vsrl.vv v8, v8, v9
 ; RV32-NEXT:    vse8.v v8, (a0)
 ; RV32-NEXT:    ret
@@ -1646,18 +1368,18 @@ define void @mulhs_v16i8(ptr %x) {
 ; RV64:       # %bb.0:
 ; RV64-NEXT:    vsetivli zero, 16, e8, m1, ta, ma
 ; RV64-NEXT:    vle8.v v8, (a0)
+; RV64-NEXT:    li a1, -123
+; RV64-NEXT:    vmv.v.x v9, a1
 ; RV64-NEXT:    lui a1, 5
 ; RV64-NEXT:    addiw a1, a1, -1452
 ; RV64-NEXT:    vsetivli zero, 1, e16, mf4, ta, ma
-; RV64-NEXT:    vmv.s.x v0, a1
+; RV64-NEXT:    vmv.v.x v0, a1
+; RV64-NEXT:    li a1, 57
 ; RV64-NEXT:    vsetivli zero, 16, e8, m1, ta, ma
+; RV64-NEXT:    vmerge.vxm v9, v9, a1, v0
+; RV64-NEXT:    vmulhu.vv v8, v8, v9
 ; RV64-NEXT:    vmv.v.i v9, 7
 ; RV64-NEXT:    vmerge.vim v9, v9, 1, v0
-; RV64-NEXT:    li a1, -123
-; RV64-NEXT:    vmv.v.x v10, a1
-; RV64-NEXT:    li a1, 57
-; RV64-NEXT:    vmerge.vxm v10, v10, a1, v0
-; RV64-NEXT:    vmulhu.vv v8, v8, v10
 ; RV64-NEXT:    vsrl.vv v8, v8, v9
 ; RV64-NEXT:    vse8.v v8, (a0)
 ; RV64-NEXT:    ret
@@ -1672,11 +1394,11 @@ define void @mulhs_v8i16(ptr %x) {
 ; RV32:       # %bb.0:
 ; RV32-NEXT:    vsetivli zero, 8, e16, m1, ta, ma
 ; RV32-NEXT:    vle16.v v8, (a0)
-; RV32-NEXT:    li a1, 105
-; RV32-NEXT:    vmv.s.x v0, a1
 ; RV32-NEXT:    lui a1, 5
 ; RV32-NEXT:    addi a1, a1, -1755
 ; RV32-NEXT:    vmv.v.x v9, a1
+; RV32-NEXT:    li a1, 105
+; RV32-NEXT:    vmv.v.x v0, a1
 ; RV32-NEXT:    lui a1, 1048571
 ; RV32-NEXT:    addi a1, a1, 1755
 ; RV32-NEXT:    vmerge.vxm v9, v9, a1, v0
@@ -1691,11 +1413,11 @@ define void @mulhs_v8i16(ptr %x) {
 ; RV64:       # %bb.0:
 ; RV64-NEXT:    vsetivli zero, 8, e16, m1, ta, ma
 ; RV64-NEXT:    vle16.v v8, (a0)
-; RV64-NEXT:    li a1, 105
-; RV64-NEXT:    vmv.s.x v0, a1
 ; RV64-NEXT:    lui a1, 5
 ; RV64-NEXT:    addiw a1, a1, -1755
 ; RV64-NEXT:    vmv.v.x v9, a1
+; RV64-NEXT:    li a1, 105
+; RV64-NEXT:    vmv.v.x v0, a1
 ; RV64-NEXT:    lui a1, 1048571
 ; RV64-NEXT:    addiw a1, a1, 1755
 ; RV64-NEXT:    vmerge.vxm v9, v9, a1, v0
@@ -1712,62 +1434,29 @@ define void @mulhs_v8i16(ptr %x) {
 }
 
 define void @mulhs_v6i16(ptr %x) {
-; RV32-LABEL: mulhs_v6i16:
-; RV32:       # %bb.0:
-; RV32-NEXT:    vsetivli zero, 8, e16, m1, ta, ma
-; RV32-NEXT:    vle16.v v8, (a0)
-; RV32-NEXT:    vsetivli zero, 2, e16, mf4, ta, ma
-; RV32-NEXT:    vmv.v.i v9, 7
-; RV32-NEXT:    vid.v v10
-; RV32-NEXT:    li a1, -14
-; RV32-NEXT:    vmadd.vx v10, a1, v9
-; RV32-NEXT:    vsetivli zero, 2, e16, m1, ta, ma
-; RV32-NEXT:    vslidedown.vi v9, v8, 4
-; RV32-NEXT:    vsetivli zero, 2, e16, mf4, ta, ma
-; RV32-NEXT:    vdiv.vv v9, v9, v10
-; RV32-NEXT:    vsetivli zero, 6, e16, m1, ta, ma
-; RV32-NEXT:    vslideup.vi v10, v9, 4
-; RV32-NEXT:    li a1, 6
-; RV32-NEXT:    vmv.s.x v0, a1
-; RV32-NEXT:    vsetivli zero, 4, e16, mf2, ta, ma
-; RV32-NEXT:    vmv.v.i v9, -7
-; RV32-NEXT:    vmerge.vim v9, v9, 7, v0
-; RV32-NEXT:    vdiv.vv v8, v8, v9
-; RV32-NEXT:    vse16.v v8, (a0)
-; RV32-NEXT:    vsetivli zero, 1, e32, m1, ta, ma
-; RV32-NEXT:    vslidedown.vi v8, v10, 2
-; RV32-NEXT:    addi a0, a0, 8
-; RV32-NEXT:    vse32.v v8, (a0)
-; RV32-NEXT:    ret
-;
-; RV64-LABEL: mulhs_v6i16:
-; RV64:       # %bb.0:
-; RV64-NEXT:    vsetivli zero, 8, e16, m1, ta, ma
-; RV64-NEXT:    vle16.v v8, (a0)
-; RV64-NEXT:    vsetivli zero, 2, e16, mf4, ta, ma
-; RV64-NEXT:    vmv.v.i v9, 7
-; RV64-NEXT:    vid.v v10
-; RV64-NEXT:    li a1, -14
-; RV64-NEXT:    vmadd.vx v10, a1, v9
-; RV64-NEXT:    vsetivli zero, 2, e16, m1, ta, ma
-; RV64-NEXT:    vslidedown.vi v9, v8, 4
-; RV64-NEXT:    vsetivli zero, 2, e16, mf4, ta, ma
-; RV64-NEXT:    vdiv.vv v9, v9, v10
-; RV64-NEXT:    li a1, 6
-; RV64-NEXT:    vmv.s.x v0, a1
-; RV64-NEXT:    vsetivli zero, 4, e16, mf2, ta, ma
-; RV64-NEXT:    vmv.v.i v10, -7
-; RV64-NEXT:    vmerge.vim v10, v10, 7, v0
-; RV64-NEXT:    vdiv.vv v8, v8, v10
-; RV64-NEXT:    vsetivli zero, 8, e16, m1, ta, ma
-; RV64-NEXT:    vslideup.vi v8, v9, 4
-; RV64-NEXT:    vsetivli zero, 1, e64, m1, ta, ma
-; RV64-NEXT:    vse64.v v8, (a0)
-; RV64-NEXT:    vsetivli zero, 1, e32, m1, ta, ma
-; RV64-NEXT:    vslidedown.vi v8, v8, 2
-; RV64-NEXT:    addi a0, a0, 8
-; RV64-NEXT:    vse32.v v8, (a0)
-; RV64-NEXT:    ret
+; CHECK-LABEL: mulhs_v6i16:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetivli zero, 6, e16, m1, ta, ma
+; CHECK-NEXT:    vle16.v v8, (a0)
+; CHECK-NEXT:    vmv.v.i v0, 6
+; CHECK-NEXT:    vsetivli zero, 4, e16, mf2, ta, ma
+; CHECK-NEXT:    vmv.v.i v9, -7
+; CHECK-NEXT:    vmerge.vim v9, v9, 7, v0
+; CHECK-NEXT:    vdiv.vv v9, v8, v9
+; CHECK-NEXT:    vsetivli zero, 2, e16, mf4, ta, ma
+; CHECK-NEXT:    vmv.v.i v10, 7
+; CHECK-NEXT:    vid.v v11
+; CHECK-NEXT:    li a1, -14
+; CHECK-NEXT:    vmadd.vx v11, a1, v10
+; CHECK-NEXT:    vsetivli zero, 2, e16, m1, ta, ma
+; CHECK-NEXT:    vslidedown.vi v8, v8, 4
+; CHECK-NEXT:    vsetivli zero, 2, e16, mf4, ta, ma
+; CHECK-NEXT:    vdiv.vv v8, v8, v11
+; CHECK-NEXT:    vsetivli zero, 8, e16, m1, ta, ma
+; CHECK-NEXT:    vslideup.vi v9, v8, 4
+; CHECK-NEXT:    vsetivli zero, 6, e16, m1, ta, ma
+; CHECK-NEXT:    vse16.v v9, (a0)
+; CHECK-NEXT:    ret
   %a = load <6 x i16>, ptr %x
   %b = sdiv <6 x i16> %a, <i16 -7, i16 7, i16 7, i16 -7, i16 7, i16 -7>
   store <6 x i16> %b, ptr %x
@@ -1779,11 +1468,10 @@ define void @mulhs_v4i32(ptr %x) {
 ; RV32:       # %bb.0:
 ; RV32-NEXT:    vsetivli zero, 4, e32, m1, ta, ma
 ; RV32-NEXT:    vle32.v v8, (a0)
-; RV32-NEXT:    li a1, 5
-; RV32-NEXT:    vmv.s.x v0, a1
 ; RV32-NEXT:    lui a1, 419430
 ; RV32-NEXT:    addi a1, a1, 1639
 ; RV32-NEXT:    vmv.v.x v9, a1
+; RV32-NEXT:    vmv.v.i v0, 5
 ; RV32-NEXT:    lui a1, 629146
 ; RV32-NEXT:    addi a1, a1, -1639
 ; RV32-NEXT:    vmerge.vxm v9, v9, a1, v0
@@ -1851,19 +1539,21 @@ define void @mulhs_v2i64(ptr %x) {
 ; RV64-LABEL: mulhs_v2i64:
 ; RV64:       # %bb.0:
 ; RV64-NEXT:    vsetivli zero, 2, e64, m1, ta, ma
-; RV64-NEXT:    lui a1, %hi(.LCPI74_0)
-; RV64-NEXT:    addi a1, a1, %lo(.LCPI74_0)
-; RV64-NEXT:    vlse64.v v8, (a1), zero
-; RV64-NEXT:    lui a1, %hi(.LCPI74_1)
-; RV64-NEXT:    ld a1, %lo(.LCPI74_1)(a1)
-; RV64-NEXT:    vle64.v v9, (a0)
+; RV64-NEXT:    lui a1, 349525
+; RV64-NEXT:    addiw a1, a1, 1365
+; RV64-NEXT:    slli a2, a1, 32
+; RV64-NEXT:    add a1, a1, a2
+; RV64-NEXT:    lui a2, %hi(.LCPI74_0)
+; RV64-NEXT:    ld a2, %lo(.LCPI74_0)(a2)
+; RV64-NEXT:    vle64.v v8, (a0)
+; RV64-NEXT:    vmv.v.x v9, a1
 ; RV64-NEXT:    vsetvli zero, zero, e64, m1, tu, ma
-; RV64-NEXT:    vmv.s.x v8, a1
+; RV64-NEXT:    vmv.s.x v9, a2
 ; RV64-NEXT:    vsetvli zero, zero, e64, m1, ta, ma
-; RV64-NEXT:    vmulh.vv v8, v9, v8
+; RV64-NEXT:    vmulh.vv v9, v8, v9
 ; RV64-NEXT:    vid.v v10
 ; RV64-NEXT:    vrsub.vi v11, v10, 0
-; RV64-NEXT:    vmadd.vv v11, v9, v8
+; RV64-NEXT:    vmadd.vv v11, v8, v9
 ; RV64-NEXT:    li a1, 63
 ; RV64-NEXT:    vsrl.vx v8, v11, a1
 ; RV64-NEXT:    vsra.vv v9, v11, v10
@@ -1911,33 +1601,16 @@ define void @smin_v8i16(ptr %x, ptr %y) {
 }
 
 define void @smin_v6i16(ptr %x, ptr %y) {
-; RV32-LABEL: smin_v6i16:
-; RV32:       # %bb.0:
-; RV32-NEXT:    vsetivli zero, 8, e16, m1, ta, ma
-; RV32-NEXT:    vle16.v v8, (a0)
-; RV32-NEXT:    vle16.v v9, (a1)
-; RV32-NEXT:    vmin.vv v8, v8, v9
-; RV32-NEXT:    vsetivli zero, 1, e32, m1, ta, ma
-; RV32-NEXT:    vslidedown.vi v9, v8, 2
-; RV32-NEXT:    addi a1, a0, 8
-; RV32-NEXT:    vse32.v v9, (a1)
-; RV32-NEXT:    vsetivli zero, 4, e16, mf2, ta, ma
-; RV32-NEXT:    vse16.v v8, (a0)
-; RV32-NEXT:    ret
-;
-; RV64-LABEL: smin_v6i16:
-; RV64:       # %bb.0:
-; RV64-NEXT:    vsetivli zero, 8, e16, m1, ta, ma
-; RV64-NEXT:    vle16.v v8, (a0)
-; RV64-NEXT:    vle16.v v9, (a1)
-; RV64-NEXT:    vmin.vv v8, v8, v9
-; RV64-NEXT:    vsetivli zero, 1, e64, m1, ta, ma
-; RV64-NEXT:    vse64.v v8, (a0)
-; RV64-NEXT:    vsetivli zero, 1, e32, m1, ta, ma
-; RV64-NEXT:    vslidedown.vi v8, v8, 2
-; RV64-NEXT:    addi a0, a0, 8
-; RV64-NEXT:    vse32.v v8, (a0)
-; RV64-NEXT:    ret
+; CHECK-LABEL: smin_v6i16:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetivli zero, 6, e16, m1, ta, ma
+; CHECK-NEXT:    vle16.v v8, (a0)
+; CHECK-NEXT:    vle16.v v9, (a1)
+; CHECK-NEXT:    vsetivli zero, 8, e16, m1, ta, ma
+; CHECK-NEXT:    vmin.vv v8, v8, v9
+; CHECK-NEXT:    vsetivli zero, 6, e16, m1, ta, ma
+; CHECK-NEXT:    vse16.v v8, (a0)
+; CHECK-NEXT:    ret
   %a = load <6 x i16>, ptr %x
   %b = load <6 x i16>, ptr %y
   %cc = icmp slt <6 x i16> %a, %b
@@ -2015,31 +1688,15 @@ define void @smin_vx_v8i16(ptr %x, i16 %y) {
 declare <8 x i16> @llvm.smin.v8i16(<8 x i16>, <8 x i16>)
 
 define void @smin_vx_v6i16(ptr %x, i16 %y) {
-; RV32-LABEL: smin_vx_v6i16:
-; RV32:       # %bb.0:
-; RV32-NEXT:    vsetivli zero, 8, e16, m1, ta, ma
-; RV32-NEXT:    vle16.v v8, (a0)
-; RV32-NEXT:    vmin.vx v8, v8, a1
-; RV32-NEXT:    vsetivli zero, 1, e32, m1, ta, ma
-; RV32-NEXT:    vslidedown.vi v9, v8, 2
-; RV32-NEXT:    addi a1, a0, 8
-; RV32-NEXT:    vse32.v v9, (a1)
-; RV32-NEXT:    vsetivli zero, 4, e16, mf2, ta, ma
-; RV32-NEXT:    vse16.v v8, (a0)
-; RV32-NEXT:    ret
-;
-; RV64-LABEL: smin_vx_v6i16:
-; RV64:       # %bb.0:
-; RV64-NEXT:    vsetivli zero, 8, e16, m1, ta, ma
-; RV64-NEXT:    vle16.v v8, (a0)
-; RV64-NEXT:    vmin.vx v8, v8, a1
-; RV64-NEXT:    vsetivli zero, 1, e64, m1, ta, ma
-; RV64-NEXT:    vse64.v v8, (a0)
-; RV64-NEXT:    vsetivli zero, 1, e32, m1, ta, ma
-; RV64-NEXT:    vslidedown.vi v8, v8, 2
-; RV64-NEXT:    addi a0, a0, 8
-; RV64-NEXT:    vse32.v v8, (a0)
-; RV64-NEXT:    ret
+; CHECK-LABEL: smin_vx_v6i16:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetivli zero, 6, e16, m1, ta, ma
+; CHECK-NEXT:    vle16.v v8, (a0)
+; CHECK-NEXT:    vsetivli zero, 8, e16, m1, ta, ma
+; CHECK-NEXT:    vmin.vx v8, v8, a1
+; CHECK-NEXT:    vsetivli zero, 6, e16, m1, ta, ma
+; CHECK-NEXT:    vse16.v v8, (a0)
+; CHECK-NEXT:    ret
   %a = load <6 x i16>, ptr %x
   %b = insertelement <6 x i16> poison, i16 %y, i32 0
   %c = shufflevector <6 x i16> %b, <6 x i16> poison, <6 x i32> zeroinitializer
@@ -2099,31 +1756,15 @@ define void @smin_xv_v8i16(ptr %x, i16 %y) {
 }
 
 define void @smin_xv_v6i16(ptr %x, i16 %y) {
-; RV32-LABEL: smin_xv_v6i16:
-; RV32:       # %bb.0:
-; RV32-NEXT:    vsetivli zero, 8, e16, m1, ta, ma
-; RV32-NEXT:    vle16.v v8, (a0)
-; RV32-NEXT:    vmin.vx v8, v8, a1
-; RV32-NEXT:    vsetivli zero, 1, e32, m1, ta, ma
-; RV32-NEXT:    vslidedown.vi v9, v8, 2
-; RV32-NEXT:    addi a1, a0, 8
-; RV32-NEXT:    vse32.v v9, (a1)
-; RV32-NEXT:    vsetivli zero, 4, e16, mf2, ta, ma
-; RV32-NEXT:    vse16.v v8, (a0)
-; RV32-NEXT:    ret
-;
-; RV64-LABEL: smin_xv_v6i16:
-; RV64:       # %bb.0:
-; RV64-NEXT:    vsetivli zero, 8, e16, m1, ta, ma
-; RV64-NEXT:    vle16.v v8, (a0)
-; RV64-NEXT:    vmin.vx v8, v8, a1
-; RV64-NEXT:    vsetivli zero, 1, e64, m1, ta, ma
-; RV64-NEXT:    vse64.v v8, (a0)
-; RV64-NEXT:    vsetivli zero, 1, e32, m1, ta, ma
-; RV64-NEXT:    vslidedown.vi v8, v8, 2
-; RV64-NEXT:    addi a0, a0, 8
-; RV64-NEXT:    vse32.v v8, (a0)
-; RV64-NEXT:    ret
+; CHECK-LABEL: smin_xv_v6i16:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetivli zero, 6, e16, m1, ta, ma
+; CHECK-NEXT:    vle16.v v8, (a0)
+; CHECK-NEXT:    vsetivli zero, 8, e16, m1, ta, ma
+; CHECK-NEXT:    vmin.vx v8, v8, a1
+; CHECK-NEXT:    vsetivli zero, 6, e16, m1, ta, ma
+; CHECK-NEXT:    vse16.v v8, (a0)
+; CHECK-NEXT:    ret
   %a = load <6 x i16>, ptr %x
   %b = insertelement <6 x i16> poison, i16 %y, i32 0
   %c = shufflevector <6 x i16> %b, <6 x i16> poison, <6 x i32> zeroinitializer
@@ -2183,33 +1824,16 @@ define void @smax_v8i16(ptr %x, ptr %y) {
 }
 
 define void @smax_v6i16(ptr %x, ptr %y) {
-; RV32-LABEL: smax_v6i16:
-; RV32:       # %bb.0:
-; RV32-NEXT:    vsetivli zero, 8, e16, m1, ta, ma
-; RV32-NEXT:    vle16.v v8, (a0)
-; RV32-NEXT:    vle16.v v9, (a1)
-; RV32-NEXT:    vmax.vv v8, v8, v9
-; RV32-NEXT:    vsetivli zero, 1, e32, m1, ta, ma
-; RV32-NEXT:    vslidedown.vi v9, v8, 2
-; RV32-NEXT:    addi a1, a0, 8
-; RV32-NEXT:    vse32.v v9, (a1)
-; RV32-NEXT:    vsetivli zero, 4, e16, mf2, ta, ma
-; RV32-NEXT:    vse16.v v8, (a0)
-; RV32-NEXT:    ret
-;
-; RV64-LABEL: smax_v6i16:
-; RV64:       # %bb.0:
-; RV64-NEXT:    vsetivli zero, 8, e16, m1, ta, ma
-; RV64-NEXT:    vle16.v v8, (a0)
-; RV64-NEXT:    vle16.v v9, (a1)
-; RV64-NEXT:    vmax.vv v8, v8, v9
-; RV64-NEXT:    vsetivli zero, 1, e64, m1, ta, ma
-; RV64-NEXT:    vse64.v v8, (a0)
-; RV64-NEXT:    vsetivli zero, 1, e32, m1, ta, ma
-; RV64-NEXT:    vslidedown.vi v8, v8, 2
-; RV64-NEXT:    addi a0, a0, 8
-; RV64-NEXT:    vse32.v v8, (a0)
-; RV64-NEXT:    ret
+; CHECK-LABEL: smax_v6i16:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetivli zero, 6, e16, m1, ta, ma
+; CHECK-NEXT:    vle16.v v8, (a0)
+; CHECK-NEXT:    vle16.v v9, (a1)
+; CHECK-NEXT:    vsetivli zero, 8, e16, m1, ta, ma
+; CHECK-NEXT:    vmax.vv v8, v8, v9
+; CHECK-NEXT:    vsetivli zero, 6, e16, m1, ta, ma
+; CHECK-NEXT:    vse16.v v8, (a0)
+; CHECK-NEXT:    ret
   %a = load <6 x i16>, ptr %x
   %b = load <6 x i16>, ptr %y
   %cc = icmp sgt <6 x i16> %a, %b
@@ -2287,31 +1911,15 @@ define void @smax_vx_v8i16(ptr %x, i16 %y) {
 declare <8 x i16> @llvm.smax.v8i16(<8 x i16>, <8 x i16>)
 
 define void @smax_vx_v6i16(ptr %x, i16 %y) {
-; RV32-LABEL: smax_vx_v6i16:
-; RV32:       # %bb.0:
-; RV32-NEXT:    vsetivli zero, 8, e16, m1, ta, ma
-; RV32-NEXT:    vle16.v v8, (a0)
-; RV32-NEXT:    vmax.vx v8, v8, a1
-; RV32-NEXT:    vsetivli zero, 1, e32, m1, ta, ma
-; RV32-NEXT:    vslidedown.vi v9, v8, 2
-; RV32-NEXT:    addi a1, a0, 8
-; RV32-NEXT:    vse32.v v9, (a1)
-; RV32-NEXT:    vsetivli zero, 4, e16, mf2, ta, ma
-; RV32-NEXT:    vse16.v v8, (a0)
-; RV32-NEXT:    ret
-;
-; RV64-LABEL: smax_vx_v6i16:
-; RV64:       # %bb.0:
-; RV64-NEXT:    vsetivli zero, 8, e16, m1, ta, ma
-; RV64-NEXT:    vle16.v v8, (a0)
-; RV64-NEXT:    vmax.vx v8, v8, a1
-; RV64-NEXT:    vsetivli zero, 1, e64, m1, ta, ma
-; RV64-NEXT:    vse64.v v8, (a0)
-; RV64-NEXT:    vsetivli zero, 1, e32, m1, ta, ma
-; RV64-NEXT:    vslidedown.vi v8, v8, 2
-; RV64-NEXT:    addi a0, a0, 8
-; RV64-NEXT:    vse32.v v8, (a0)
-; RV64-NEXT:    ret
+; CHECK-LABEL: smax_vx_v6i16:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetivli zero, 6, e16, m1, ta, ma
+; CHECK-NEXT:    vle16.v v8, (a0)
+; CHECK-NEXT:    vsetivli zero, 8, e16, m1, ta, ma
+; CHECK-NEXT:    vmax.vx v8, v8, a1
+; CHECK-NEXT:    vsetivli zero, 6, e16, m1, ta, ma
+; CHECK-NEXT:    vse16.v v8, (a0)
+; CHECK-NEXT:    ret
   %a = load <6 x i16>, ptr %x
   %b = insertelement <6 x i16> poison, i16 %y, i32 0
   %c = shufflevector <6 x i16> %b, <6 x i16> poison, <6 x i32> zeroinitializer
@@ -2371,31 +1979,15 @@ define void @smax_xv_v8i16(ptr %x, i16 %y) {
 }
 
 define void @smax_xv_v6i16(ptr %x, i16 %y) {
-; RV32-LABEL: smax_xv_v6i16:
-; RV32:       # %bb.0:
-; RV32-NEXT:    vsetivli zero, 8, e16, m1, ta, ma
-; RV32-NEXT:    vle16.v v8, (a0)
-; RV32-NEXT:    vmax.vx v8, v8, a1
-; RV32-NEXT:    vsetivli zero, 1, e32, m1, ta, ma
-; RV32-NEXT:    vslidedown.vi v9, v8, 2
-; RV32-NEXT:    addi a1, a0, 8
-; RV32-NEXT:    vse32.v v9, (a1)
-; RV32-NEXT:    vsetivli zero, 4, e16, mf2, ta, ma
-; RV32-NEXT:    vse16.v v8, (a0)
-; RV32-NEXT:    ret
-;
-; RV64-LABEL: smax_xv_v6i16:
-; RV64:       # %bb.0:
-; RV64-NEXT:    vsetivli zero, 8, e16, m1, ta, ma
-; RV64-NEXT:    vle16.v v8, (a0)
-; RV64-NEXT:    vmax.vx v8, v8, a1
-; RV64-NEXT:    vsetivli zero, 1, e64, m1, ta, ma
-; RV64-NEXT:    vse64.v v8, (a0)
-; RV64-NEXT:    vsetivli zero, 1, e32, m1, ta, ma
-; RV64-NEXT:    vslidedown.vi v8, v8, 2
-; RV64-NEXT:    addi a0, a0, 8
-; RV64-NEXT:    vse32.v v8, (a0)
-; RV64-NEXT:    ret
+; CHECK-LABEL: smax_xv_v6i16:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetivli zero, 6, e16, m1, ta, ma
+; CHECK-NEXT:    vle16.v v8, (a0)
+; CHECK-NEXT:    vsetivli zero, 8, e16, m1, ta, ma
+; CHECK-NEXT:    vmax.vx v8, v8, a1
+; CHECK-NEXT:    vsetivli zero, 6, e16, m1, ta, ma
+; CHECK-NEXT:    vse16.v v8, (a0)
+; CHECK-NEXT:    ret
   %a = load <6 x i16>, ptr %x
   %b = insertelement <6 x i16> poison, i16 %y, i32 0
   %c = shufflevector <6 x i16> %b, <6 x i16> poison, <6 x i32> zeroinitializer
@@ -2455,33 +2047,16 @@ define void @umin_v8i16(ptr %x, ptr %y) {
 }
 
 define void @umin_v6i16(ptr %x, ptr %y) {
-; RV32-LABEL: umin_v6i16:
-; RV32:       # %bb.0:
-; RV32-NEXT:    vsetivli zero, 8, e16, m1, ta, ma
-; RV32-NEXT:    vle16.v v8, (a0)
-; RV32-NEXT:    vle16.v v9, (a1)
-; RV32-NEXT:    vminu.vv v8, v8, v9
-; RV32-NEXT:    vsetivli zero, 1, e32, m1, ta, ma
-; RV32-NEXT:    vslidedown.vi v9, v8, 2
-; RV32-NEXT:    addi a1, a0, 8
-; RV32-NEXT:    vse32.v v9, (a1)
-; RV32-NEXT:    vsetivli zero, 4, e16, mf2, ta, ma
-; RV32-NEXT:    vse16.v v8, (a0)
-; RV32-NEXT:    ret
-;
-; RV64-LABEL: umin_v6i16:
-; RV64:       # %bb.0:
-; RV64-NEXT:    vsetivli zero, 8, e16, m1, ta, ma
-; RV64-NEXT:    vle16.v v8, (a0)
-; RV64-NEXT:    vle16.v v9, (a1)
-; RV64-NEXT:    vminu.vv v8, v8, v9
-; RV64-NEXT:    vsetivli zero, 1, e64, m1, ta, ma
-; RV64-NEXT:    vse64.v v8, (a0)
-; RV64-NEXT:    vsetivli zero, 1, e32, m1, ta, ma
-; RV64-NEXT:    vslidedown.vi v8, v8, 2
-; RV64-NEXT:    addi a0, a0, 8
-; RV64-NEXT:    vse32.v v8, (a0)
-; RV64-NEXT:    ret
+; CHECK-LABEL: umin_v6i16:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetivli zero, 6, e16, m1, ta, ma
+; CHECK-NEXT:    vle16.v v8, (a0)
+; CHECK-NEXT:    vle16.v v9, (a1)
+; CHECK-NEXT:    vsetivli zero, 8, e16, m1, ta, ma
+; CHECK-NEXT:    vminu.vv v8, v8, v9
+; CHECK-NEXT:    vsetivli zero, 6, e16, m1, ta, ma
+; CHECK-NEXT:    vse16.v v8, (a0)
+; CHECK-NEXT:    ret
   %a = load <6 x i16>, ptr %x
   %b = load <6 x i16>, ptr %y
   %cc = icmp ult <6 x i16> %a, %b
@@ -2559,31 +2134,15 @@ define void @umin_vx_v8i16(ptr %x, i16 %y) {
 declare <8 x i16> @llvm.umin.v8i16(<8 x i16>, <8 x i16>)
 
 define void @umin_vx_v6i16(ptr %x, i16 %y) {
-; RV32-LABEL: umin_vx_v6i16:
-; RV32:       # %bb.0:
-; RV32-NEXT:    vsetivli zero, 8, e16, m1, ta, ma
-; RV32-NEXT:    vle16.v v8, (a0)
-; RV32-NEXT:    vminu.vx v8, v8, a1
-; RV32-NEXT:    vsetivli zero, 1, e32, m1, ta, ma
-; RV32-NEXT:    vslidedown.vi v9, v8, 2
-; RV32-NEXT:    addi a1, a0, 8
-; RV32-NEXT:    vse32.v v9, (a1)
-; RV32-NEXT:    vsetivli zero, 4, e16, mf2, ta, ma
-; RV32-NEXT:    vse16.v v8, (a0)
-; RV32-NEXT:    ret
-;
-; RV64-LABEL: umin_vx_v6i16:
-; RV64:       # %bb.0:
-; RV64-NEXT:    vsetivli zero, 8, e16, m1, ta, ma
-; RV64-NEXT:    vle16.v v8, (a0)
-; RV64-NEXT:    vminu.vx v8, v8, a1
-; RV64-NEXT:    vsetivli zero, 1, e64, m1, ta, ma
-; RV64-NEXT:    vse64.v v8, (a0)
-; RV64-NEXT:    vsetivli zero, 1, e32, m1, ta, ma
-; RV64-NEXT:    vslidedown.vi v8, v8, 2
-; RV64-NEXT:    addi a0, a0, 8
-; RV64-NEXT:    vse32.v v8, (a0)
-; RV64-NEXT:    ret
+; CHECK-LABEL: umin_vx_v6i16:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetivli zero, 6, e16, m1, ta, ma
+; CHECK-NEXT:    vle16.v v8, (a0)
+; CHECK-NEXT:    vsetivli zero, 8, e16, m1, ta, ma
+; CHECK-NEXT:    vminu.vx v8, v8, a1
+; CHECK-NEXT:    vsetivli zero, 6, e16, m1, ta, ma
+; CHECK-NEXT:    vse16.v v8, (a0)
+; CHECK-NEXT:    ret
   %a = load <6 x i16>, ptr %x
   %b = insertelement <6 x i16> poison, i16 %y, i32 0
   %c = shufflevector <6 x i16> %b, <6 x i16> poison, <6 x i32> zeroinitializer
@@ -2643,31 +2202,15 @@ define void @umin_xv_v8i16(ptr %x, i16 %y) {
 }
 
 define void @umin_xv_v6i16(ptr %x, i16 %y) {
-; RV32-LABEL: umin_xv_v6i16:
-; RV32:       # %bb.0:
-; RV32-NEXT:    vsetivli zero, 8, e16, m1, ta, ma
-; RV32-NEXT:    vle16.v v8, (a0)
-; RV32-NEXT:    vminu.vx v8, v8, a1
-; RV32-NEXT:    vsetivli zero, 1, e32, m1, ta, ma
-; RV32-NEXT:    vslidedown.vi v9, v8, 2
-; RV32-NEXT:    addi a1, a0, 8
-; RV32-NEXT:    vse32.v v9, (a1)
-; RV32-NEXT:    vsetivli zero, 4, e16, mf2, ta, ma
-; RV32-NEXT:    vse16.v v8, (a0)
-; RV32-NEXT:    ret
-;
-; RV64-LABEL: umin_xv_v6i16:
-; RV64:       # %bb.0:
-; RV64-NEXT:    vsetivli zero, 8, e16, m1, ta, ma
-; RV64-NEXT:    vle16.v v8, (a0)
-; RV64-NEXT:    vminu.vx v8, v8, a1
-; RV64-NEXT:    vsetivli zero, 1, e64, m1, ta, ma
-; RV64-NEXT:    vse64.v v8, (a0)
-; RV64-NEXT:    vsetivli zero, 1, e32, m1, ta, ma
-; RV64-NEXT:    vslidedown.vi v8, v8, 2
-; RV64-NEXT:    addi a0, a0, 8
-; RV64-NEXT:    vse32.v v8, (a0)
-; RV64-NEXT:    ret
+; CHECK-LABEL: umin_xv_v6i16:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetivli zero, 6, e16, m1, ta, ma
+; CHECK-NEXT:    vle16.v v8, (a0)
+; CHECK-NEXT:    vsetivli zero, 8, e16, m1, ta, ma
+; CHECK-NEXT:    vminu.vx v8, v8, a1
+; CHECK-NEXT:    vsetivli zero, 6, e16, m1, ta, ma
+; CHECK-NEXT:    vse16.v v8, (a0)
+; CHECK-NEXT:    ret
   %a = load <6 x i16>, ptr %x
   %b = insertelement <6 x i16> poison, i16 %y, i32 0
   %c = shufflevector <6 x i16> %b, <6 x i16> poison, <6 x i32> zeroinitializer
@@ -2727,33 +2270,16 @@ define void @umax_v8i16(ptr %x, ptr %y) {
 }
 
 define void @umax_v6i16(ptr %x, ptr %y) {
-; RV32-LABEL: umax_v6i16:
-; RV32:       # %bb.0:
-; RV32-NEXT:    vsetivli zero, 8, e16, m1, ta, ma
-; RV32-NEXT:    vle16.v v8, (a0)
-; RV32-NEXT:    vle16.v v9, (a1)
-; RV32-NEXT:    vmaxu.vv v8, v8, v9
-; RV32-NEXT:    vsetivli zero, 1, e32, m1, ta, ma
-; RV32-NEXT:    vslidedown.vi v9, v8, 2
-; RV32-NEXT:    addi a1, a0, 8
-; RV32-NEXT:    vse32.v v9, (a1)
-; RV32-NEXT:    vsetivli zero, 4, e16, mf2, ta, ma
-; RV32-NEXT:    vse16.v v8, (a0)
-; RV32-NEXT:    ret
-;
-; RV64-LABEL: umax_v6i16:
-; RV64:       # %bb.0:
-; RV64-NEXT:    vsetivli zero, 8, e16, m1, ta, ma
-; RV64-NEXT:    vle16.v v8, (a0)
-; RV64-NEXT:    vle16.v v9, (a1)
-; RV64-NEXT:    vmaxu.vv v8, v8, v9
-; RV64-NEXT:    vsetivli zero, 1, e64, m1, ta, ma
-; RV64-NEXT:    vse64.v v8, (a0)
-; RV64-NEXT:    vsetivli zero, 1, e32, m1, ta, ma
-; RV64-NEXT:    vslidedown.vi v8, v8, 2
-; RV64-NEXT:    addi a0, a0, 8
-; RV64-NEXT:    vse32.v v8, (a0)
-; RV64-NEXT:    ret
+; CHECK-LABEL: umax_v6i16:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetivli zero, 6, e16, m1, ta, ma
+; CHECK-NEXT:    vle16.v v8, (a0)
+; CHECK-NEXT:    vle16.v v9, (a1)
+; CHECK-NEXT:    vsetivli zero, 8, e16, m1, ta, ma
+; CHECK-NEXT:    vmaxu.vv v8, v8, v9
+; CHECK-NEXT:    vsetivli zero, 6, e16, m1, ta, ma
+; CHECK-NEXT:    vse16.v v8, (a0)
+; CHECK-NEXT:    ret
   %a = load <6 x i16>, ptr %x
   %b = load <6 x i16>, ptr %y
   %cc = icmp ugt <6 x i16> %a, %b
@@ -2831,31 +2357,15 @@ define void @umax_vx_v8i16(ptr %x, i16 %y) {
 declare <8 x i16> @llvm.umax.v8i16(<8 x i16>, <8 x i16>)
 
 define void @umax_vx_v6i16(ptr %x, i16 %y) {
-; RV32-LABEL: umax_vx_v6i16:
-; RV32:       # %bb.0:
-; RV32-NEXT:    vsetivli zero, 8, e16, m1, ta, ma
-; RV32-NEXT:    vle16.v v8, (a0)
-; RV32-NEXT:    vmaxu.vx v8, v8, a1
-; RV32-NEXT:    vsetivli zero, 1, e32, m1, ta, ma
-; RV32-NEXT:    vslidedown.vi v9, v8, 2
-; RV32-NEXT:    addi a1, a0, 8
-; RV32-NEXT:    vse32.v v9, (a1)
-; RV32-NEXT:    vsetivli zero, 4, e16, mf2, ta, ma
-; RV32-NEXT:    vse16.v v8, (a0)
-; RV32-NEXT:    ret
-;
-; RV64-LABEL: umax_vx_v6i16:
-; RV64:       # %bb.0:
-; RV64-NEXT:    vsetivli zero, 8, e16, m1, ta, ma
-; RV64-NEXT:    vle16.v v8, (a0)
-; RV64-NEXT:    vmaxu.vx v8, v8, a1
-; RV64-NEXT:    vsetivli zero, 1, e64, m1, ta, ma
-; RV64-NEXT:    vse64.v v8, (a0)
-; RV64-NEXT:    vsetivli zero, 1, e32, m1, ta, ma
-; RV64-NEXT:    vslidedown.vi v8, v8, 2
-; RV64-NEXT:    addi a0, a0, 8
-; RV64-NEXT:    vse32.v v8, (a0)
-; RV64-NEXT:    ret
+; CHECK-LABEL: umax_vx_v6i16:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetivli zero, 6, e16, m1, ta, ma
+; CHECK-NEXT:    vle16.v v8, (a0)
+; CHECK-NEXT:    vsetivli zero, 8, e16, m1, ta, ma
+; CHECK-NEXT:    vmaxu.vx v8, v8, a1
+; CHECK-NEXT:    vsetivli zero, 6, e16, m1, ta, ma
+; CHECK-NEXT:    vse16.v v8, (a0)
+; CHECK-NEXT:    ret
   %a = load <6 x i16>, ptr %x
   %b = insertelement <6 x i16> poison, i16 %y, i32 0
   %c = shufflevector <6 x i16> %b, <6 x i16> poison, <6 x i32> zeroinitializer
@@ -2915,31 +2425,15 @@ define void @umax_xv_v8i16(ptr %x, i16 %y) {
 }
 
 define void @umax_xv_v6i16(ptr %x, i16 %y) {
-; RV32-LABEL: umax_xv_v6i16:
-; RV32:       # %bb.0:
-; RV32-NEXT:    vsetivli zero, 8, e16, m1, ta, ma
-; RV32-NEXT:    vle16.v v8, (a0)
-; RV32-NEXT:    vmaxu.vx v8, v8, a1
-; RV32-NEXT:    vsetivli zero, 1, e32, m1, ta, ma
-; RV32-NEXT:    vslidedown.vi v9, v8, 2
-; RV32-NEXT:    addi a1, a0, 8
-; RV32-NEXT:    vse32.v v9, (a1)
-; RV32-NEXT:    vsetivli zero, 4, e16, mf2, ta, ma
-; RV32-NEXT:    vse16.v v8, (a0)
-; RV32-NEXT:    ret
-;
-; RV64-LABEL: umax_xv_v6i16:
-; RV64:       # %bb.0:
-; RV64-NEXT:    vsetivli zero, 8, e16, m1, ta, ma
-; RV64-NEXT:    vle16.v v8, (a0)
-; RV64-NEXT:    vmaxu.vx v8, v8, a1
-; RV64-NEXT:    vsetivli zero, 1, e64, m1, ta, ma
-; RV64-NEXT:    vse64.v v8, (a0)
-; RV64-NEXT:    vsetivli zero, 1, e32, m1, ta, ma
-; RV64-NEXT:    vslidedown.vi v8, v8, 2
-; RV64-NEXT:    addi a0, a0, 8
-; RV64-NEXT:    vse32.v v8, (a0)
-; RV64-NEXT:    ret
+; CHECK-LABEL: umax_xv_v6i16:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetivli zero, 6, e16, m1, ta, ma
+; CHECK-NEXT:    vle16.v v8, (a0)
+; CHECK-NEXT:    vsetivli zero, 8, e16, m1, ta, ma
+; CHECK-NEXT:    vmaxu.vx v8, v8, a1
+; CHECK-NEXT:    vsetivli zero, 6, e16, m1, ta, ma
+; CHECK-NEXT:    vse16.v v8, (a0)
+; CHECK-NEXT:    ret
   %a = load <6 x i16>, ptr %x
   %b = insertelement <6 x i16> poison, i16 %y, i32 0
   %c = shufflevector <6 x i16> %b, <6 x i16> poison, <6 x i32> zeroinitializer
@@ -3104,34 +2598,16 @@ define void @add_v8i32(ptr %x, ptr %y) {
 }
 
 define void @add_v6i32(ptr %x, ptr %y) {
-; LMULMAX2-RV32-LABEL: add_v6i32:
-; LMULMAX2-RV32:       # %bb.0:
-; LMULMAX2-RV32-NEXT:    vsetivli zero, 8, e32, m2, ta, ma
-; LMULMAX2-RV32-NEXT:    vle32.v v8, (a0)
-; LMULMAX2-RV32-NEXT:    vle32.v v10, (a1)
-; LMULMAX2-RV32-NEXT:    vadd.vv v8, v8, v10
-; LMULMAX2-RV32-NEXT:    vsetivli zero, 2, e32, m2, ta, ma
-; LMULMAX2-RV32-NEXT:    vslidedown.vi v10, v8, 4
-; LMULMAX2-RV32-NEXT:    addi a1, a0, 16
-; LMULMAX2-RV32-NEXT:    vsetivli zero, 2, e32, mf2, ta, ma
-; LMULMAX2-RV32-NEXT:    vse32.v v10, (a1)
-; LMULMAX2-RV32-NEXT:    vsetivli zero, 4, e32, m1, ta, ma
-; LMULMAX2-RV32-NEXT:    vse32.v v8, (a0)
-; LMULMAX2-RV32-NEXT:    ret
-;
-; LMULMAX2-RV64-LABEL: add_v6i32:
-; LMULMAX2-RV64:       # %bb.0:
-; LMULMAX2-RV64-NEXT:    vsetivli zero, 8, e32, m2, ta, ma
-; LMULMAX2-RV64-NEXT:    vle32.v v8, (a0)
-; LMULMAX2-RV64-NEXT:    vle32.v v10, (a1)
-; LMULMAX2-RV64-NEXT:    vadd.vv v8, v8, v10
-; LMULMAX2-RV64-NEXT:    vsetivli zero, 1, e64, m2, ta, ma
-; LMULMAX2-RV64-NEXT:    vslidedown.vi v10, v8, 2
-; LMULMAX2-RV64-NEXT:    addi a1, a0, 16
-; LMULMAX2-RV64-NEXT:    vse64.v v10, (a1)
-; LMULMAX2-RV64-NEXT:    vsetivli zero, 4, e32, m1, ta, ma
-; LMULMAX2-RV64-NEXT:    vse32.v v8, (a0)
-; LMULMAX2-RV64-NEXT:    ret
+; LMULMAX2-LABEL: add_v6i32:
+; LMULMAX2:       # %bb.0:
+; LMULMAX2-NEXT:    vsetivli zero, 6, e32, m2, ta, ma
+; LMULMAX2-NEXT:    vle32.v v8, (a0)
+; LMULMAX2-NEXT:    vle32.v v10, (a1)
+; LMULMAX2-NEXT:    vsetivli zero, 8, e32, m2, ta, ma
+; LMULMAX2-NEXT:    vadd.vv v8, v8, v10
+; LMULMAX2-NEXT:    vsetivli zero, 6, e32, m2, ta, ma
+; LMULMAX2-NEXT:    vse32.v v8, (a0)
+; LMULMAX2-NEXT:    ret
 ;
 ; LMULMAX1-RV32-LABEL: add_v6i32:
 ; LMULMAX1-RV32:       # %bb.0:
@@ -5476,45 +4952,45 @@ define void @mulhu_v32i8(ptr %x) {
 ; LMULMAX2-RV32-NEXT:    li a1, 32
 ; LMULMAX2-RV32-NEXT:    vsetvli zero, a1, e8, m2, ta, ma
 ; LMULMAX2-RV32-NEXT:    vle8.v v8, (a0)
-; LMULMAX2-RV32-NEXT:    lui a2, 66049
-; LMULMAX2-RV32-NEXT:    addi a2, a2, 32
-; LMULMAX2-RV32-NEXT:    vsetivli zero, 1, e32, mf2, ta, ma
-; LMULMAX2-RV32-NEXT:    vmv.s.x v0, a2
-; LMULMAX2-RV32-NEXT:    vsetvli zero, a1, e8, m2, ta, ma
-; LMULMAX2-RV32-NEXT:    lui a2, %hi(.LCPI181_0)
-; LMULMAX2-RV32-NEXT:    addi a2, a2, %lo(.LCPI181_0)
-; LMULMAX2-RV32-NEXT:    vle8.v v10, (a2)
-; LMULMAX2-RV32-NEXT:    vmv.v.i v12, 0
-; LMULMAX2-RV32-NEXT:    vmerge.vim v14, v12, 1, v0
-; LMULMAX2-RV32-NEXT:    vsrl.vv v14, v8, v14
-; LMULMAX2-RV32-NEXT:    vmulhu.vv v10, v14, v10
-; LMULMAX2-RV32-NEXT:    vsub.vv v8, v8, v10
+; LMULMAX2-RV32-NEXT:    vmv.v.i v10, 0
 ; LMULMAX2-RV32-NEXT:    lui a2, 163907
 ; LMULMAX2-RV32-NEXT:    addi a2, a2, -2044
 ; LMULMAX2-RV32-NEXT:    vsetivli zero, 1, e32, mf2, ta, ma
-; LMULMAX2-RV32-NEXT:    vmv.s.x v0, a2
+; LMULMAX2-RV32-NEXT:    vmv.v.x v0, a2
 ; LMULMAX2-RV32-NEXT:    li a2, -128
 ; LMULMAX2-RV32-NEXT:    vsetvli zero, a1, e8, m2, ta, ma
-; LMULMAX2-RV32-NEXT:    vmerge.vxm v12, v12, a2, v0
+; LMULMAX2-RV32-NEXT:    vmerge.vxm v12, v10, a2, v0
+; LMULMAX2-RV32-NEXT:    lui a2, 66049
+; LMULMAX2-RV32-NEXT:    addi a2, a2, 32
+; LMULMAX2-RV32-NEXT:    vsetivli zero, 1, e32, mf2, ta, ma
+; LMULMAX2-RV32-NEXT:    vmv.v.x v0, a2
+; LMULMAX2-RV32-NEXT:    vsetvli zero, a1, e8, m2, ta, ma
+; LMULMAX2-RV32-NEXT:    lui a2, %hi(.LCPI181_0)
+; LMULMAX2-RV32-NEXT:    addi a2, a2, %lo(.LCPI181_0)
+; LMULMAX2-RV32-NEXT:    vle8.v v14, (a2)
+; LMULMAX2-RV32-NEXT:    vmerge.vim v10, v10, 1, v0
+; LMULMAX2-RV32-NEXT:    vsrl.vv v10, v8, v10
+; LMULMAX2-RV32-NEXT:    vmulhu.vv v10, v10, v14
+; LMULMAX2-RV32-NEXT:    vsub.vv v8, v8, v10
 ; LMULMAX2-RV32-NEXT:    vmulhu.vv v8, v8, v12
 ; LMULMAX2-RV32-NEXT:    vadd.vv v8, v8, v10
+; LMULMAX2-RV32-NEXT:    vmv.v.i v10, 4
 ; LMULMAX2-RV32-NEXT:    lui a2, 8208
 ; LMULMAX2-RV32-NEXT:    addi a2, a2, 513
 ; LMULMAX2-RV32-NEXT:    vsetivli zero, 1, e32, mf2, ta, ma
-; LMULMAX2-RV32-NEXT:    vmv.s.x v0, a2
+; LMULMAX2-RV32-NEXT:    vmv.v.x v0, a2
 ; LMULMAX2-RV32-NEXT:    vsetvli zero, a1, e8, m2, ta, ma
-; LMULMAX2-RV32-NEXT:    vmv.v.i v10, 4
 ; LMULMAX2-RV32-NEXT:    vmerge.vim v10, v10, 1, v0
 ; LMULMAX2-RV32-NEXT:    lui a2, 66785
 ; LMULMAX2-RV32-NEXT:    addi a2, a2, 78
 ; LMULMAX2-RV32-NEXT:    vsetivli zero, 1, e32, mf2, ta, ma
-; LMULMAX2-RV32-NEXT:    vmv.s.x v0, a2
+; LMULMAX2-RV32-NEXT:    vmv.v.x v0, a2
 ; LMULMAX2-RV32-NEXT:    vsetvli zero, a1, e8, m2, ta, ma
 ; LMULMAX2-RV32-NEXT:    vmerge.vim v10, v10, 3, v0
 ; LMULMAX2-RV32-NEXT:    lui a2, 529160
 ; LMULMAX2-RV32-NEXT:    addi a2, a2, 304
 ; LMULMAX2-RV32-NEXT:    vsetivli zero, 1, e32, mf2, ta, ma
-; LMULMAX2-RV32-NEXT:    vmv.s.x v0, a2
+; LMULMAX2-RV32-NEXT:    vmv.v.x v0, a2
 ; LMULMAX2-RV32-NEXT:    vsetvli zero, a1, e8, m2, ta, ma
 ; LMULMAX2-RV32-NEXT:    vmerge.vim v10, v10, 2, v0
 ; LMULMAX2-RV32-NEXT:    vsrl.vv v8, v8, v10
@@ -5526,45 +5002,45 @@ define void @mulhu_v32i8(ptr %x) {
 ; LMULMAX2-RV64-NEXT:    li a1, 32
 ; LMULMAX2-RV64-NEXT:    vsetvli zero, a1, e8, m2, ta, ma
 ; LMULMAX2-RV64-NEXT:    vle8.v v8, (a0)
-; LMULMAX2-RV64-NEXT:    lui a2, 66049
-; LMULMAX2-RV64-NEXT:    addiw a2, a2, 32
-; LMULMAX2-RV64-NEXT:    vsetivli zero, 1, e32, mf2, ta, ma
-; LMULMAX2-RV64-NEXT:    vmv.s.x v0, a2
-; LMULMAX2-RV64-NEXT:    vsetvli zero, a1, e8, m2, ta, ma
-; LMULMAX2-RV64-NEXT:    lui a2, %hi(.LCPI181_0)
-; LMULMAX2-RV64-NEXT:    addi a2, a2, %lo(.LCPI181_0)
-; LMULMAX2-RV64-NEXT:    vle8.v v10, (a2)
-; LMULMAX2-RV64-NEXT:    vmv.v.i v12, 0
-; LMULMAX2-RV64-NEXT:    vmerge.vim v14, v12, 1, v0
-; LMULMAX2-RV64-NEXT:    vsrl.vv v14, v8, v14
-; LMULMAX2-RV64-NEXT:    vmulhu.vv v10, v14, v10
-; LMULMAX2-RV64-NEXT:    vsub.vv v8, v8, v10
+; LMULMAX2-RV64-NEXT:    vmv.v.i v10, 0
 ; LMULMAX2-RV64-NEXT:    lui a2, 163907
 ; LMULMAX2-RV64-NEXT:    addiw a2, a2, -2044
 ; LMULMAX2-RV64-NEXT:    vsetivli zero, 1, e32, mf2, ta, ma
-; LMULMAX2-RV64-NEXT:    vmv.s.x v0, a2
+; LMULMAX2-RV64-NEXT:    vmv.v.x v0, a2
 ; LMULMAX2-RV64-NEXT:    li a2, -128
 ; LMULMAX2-RV64-NEXT:    vsetvli zero, a1, e8, m2, ta, ma
-; LMULMAX2-RV64-NEXT:    vmerge.vxm v12, v12, a2, v0
+; LMULMAX2-RV64-NEXT:    vmerge.vxm v12, v10, a2, v0
+; LMULMAX2-RV64-NEXT:    lui a2, 66049
+; LMULMAX2-RV64-NEXT:    addiw a2, a2, 32
+; LMULMAX2-RV64-NEXT:    vsetivli zero, 1, e32, mf2, ta, ma
+; LMULMAX2-RV64-NEXT:    vmv.v.x v0, a2
+; LMULMAX2-RV64-NEXT:    vsetvli zero, a1, e8, m2, ta, ma
+; LMULMAX2-RV64-NEXT:    lui a2, %hi(.LCPI181_0)
+; LMULMAX2-RV64-NEXT:    addi a2, a2, %lo(.LCPI181_0)
+; LMULMAX2-RV64-NEXT:    vle8.v v14, (a2)
+; LMULMAX2-RV64-NEXT:    vmerge.vim v10, v10, 1, v0
+; LMULMAX2-RV64-NEXT:    vsrl.vv v10, v8, v10
+; LMULMAX2-RV64-NEXT:    vmulhu.vv v10, v10, v14
+; LMULMAX2-RV64-NEXT:    vsub.vv v8, v8, v10
 ; LMULMAX2-RV64-NEXT:    vmulhu.vv v8, v8, v12
 ; LMULMAX2-RV64-NEXT:    vadd.vv v8, v8, v10
+; LMULMAX2-RV64-NEXT:    vmv.v.i v10, 4
 ; LMULMAX2-RV64-NEXT:    lui a2, 8208
 ; LMULMAX2-RV64-NEXT:    addiw a2, a2, 513
 ; LMULMAX2-RV64-NEXT:    vsetivli zero, 1, e32, mf2, ta, ma
-; LMULMAX2-RV64-NEXT:    vmv.s.x v0, a2
+; LMULMAX2-RV64-NEXT:    vmv.v.x v0, a2
 ; LMULMAX2-RV64-NEXT:    vsetvli zero, a1, e8, m2, ta, ma
-; LMULMAX2-RV64-NEXT:    vmv.v.i v10, 4
 ; LMULMAX2-RV64-NEXT:    vmerge.vim v10, v10, 1, v0
 ; LMULMAX2-RV64-NEXT:    lui a2, 66785
 ; LMULMAX2-RV64-NEXT:    addiw a2, a2, 78
 ; LMULMAX2-RV64-NEXT:    vsetivli zero, 1, e32, mf2, ta, ma
-; LMULMAX2-RV64-NEXT:    vmv.s.x v0, a2
+; LMULMAX2-RV64-NEXT:    vmv.v.x v0, a2
 ; LMULMAX2-RV64-NEXT:    vsetvli zero, a1, e8, m2, ta, ma
 ; LMULMAX2-RV64-NEXT:    vmerge.vim v10, v10, 3, v0
 ; LMULMAX2-RV64-NEXT:    lui a2, 529160
 ; LMULMAX2-RV64-NEXT:    addiw a2, a2, 304
 ; LMULMAX2-RV64-NEXT:    vsetivli zero, 1, e32, mf2, ta, ma
-; LMULMAX2-RV64-NEXT:    vmv.s.x v0, a2
+; LMULMAX2-RV64-NEXT:    vmv.v.x v0, a2
 ; LMULMAX2-RV64-NEXT:    vsetvli zero, a1, e8, m2, ta, ma
 ; LMULMAX2-RV64-NEXT:    vmerge.vim v10, v10, 2, v0
 ; LMULMAX2-RV64-NEXT:    vsrl.vv v8, v8, v10
@@ -5596,32 +5072,38 @@ define void @mulhu_v16i16(ptr %x) {
 ; LMULMAX2-RV32:       # %bb.0:
 ; LMULMAX2-RV32-NEXT:    vsetivli zero, 16, e16, m2, ta, ma
 ; LMULMAX2-RV32-NEXT:    vle16.v v10, (a0)
-; LMULMAX2-RV32-NEXT:    lui a1, 2
-; LMULMAX2-RV32-NEXT:    addi a1, a1, 289
-; LMULMAX2-RV32-NEXT:    vmv.s.x v0, a1
-; LMULMAX2-RV32-NEXT:    vmv.v.i v12, 3
+; LMULMAX2-RV32-NEXT:    li a1, 257
+; LMULMAX2-RV32-NEXT:    vsetivli zero, 1, e16, mf4, ta, ma
+; LMULMAX2-RV32-NEXT:    vmv.v.x v0, a1
+; LMULMAX2-RV32-NEXT:    vsetivli zero, 16, e16, m2, ta, ma
+; LMULMAX2-RV32-NEXT:    vmv.v.i v12, 0
+; LMULMAX2-RV32-NEXT:    lui a1, 1048568
+; LMULMAX2-RV32-NEXT:    vmerge.vxm v14, v12, a1, v0
 ; LMULMAX2-RV32-NEXT:    lui a1, 4
 ; LMULMAX2-RV32-NEXT:    addi a1, a1, 64
-; LMULMAX2-RV32-NEXT:    vmv.s.x v8, a1
-; LMULMAX2-RV32-NEXT:    vmerge.vim v12, v12, 2, v0
-; LMULMAX2-RV32-NEXT:    vmv1r.v v0, v8
-; LMULMAX2-RV32-NEXT:    vmerge.vim v12, v12, 1, v0
-; LMULMAX2-RV32-NEXT:    li a1, 257
-; LMULMAX2-RV32-NEXT:    vmv.s.x v0, a1
-; LMULMAX2-RV32-NEXT:    vmv.v.i v14, 0
+; LMULMAX2-RV32-NEXT:    vsetivli zero, 1, e16, mf4, ta, ma
+; LMULMAX2-RV32-NEXT:    vmv.v.x v8, a1
+; LMULMAX2-RV32-NEXT:    vsetivli zero, 16, e16, m2, ta, ma
 ; LMULMAX2-RV32-NEXT:    lui a1, %hi(.LCPI182_0)
 ; LMULMAX2-RV32-NEXT:    addi a1, a1, %lo(.LCPI182_0)
 ; LMULMAX2-RV32-NEXT:    vle16.v v16, (a1)
-; LMULMAX2-RV32-NEXT:    lui a1, 1048568
-; LMULMAX2-RV32-NEXT:    vmerge.vxm v18, v14, a1, v0
 ; LMULMAX2-RV32-NEXT:    vmv1r.v v0, v8
-; LMULMAX2-RV32-NEXT:    vmerge.vim v8, v14, 1, v0
+; LMULMAX2-RV32-NEXT:    vmerge.vim v12, v12, 1, v0
+; LMULMAX2-RV32-NEXT:    vsrl.vv v12, v10, v12
+; LMULMAX2-RV32-NEXT:    vmulhu.vv v12, v12, v16
+; LMULMAX2-RV32-NEXT:    vsub.vv v10, v10, v12
+; LMULMAX2-RV32-NEXT:    vmulhu.vv v10, v10, v14
+; LMULMAX2-RV32-NEXT:    vadd.vv v10, v10, v12
+; LMULMAX2-RV32-NEXT:    lui a1, 2
+; LMULMAX2-RV32-NEXT:    addi a1, a1, 289
+; LMULMAX2-RV32-NEXT:    vsetivli zero, 1, e16, mf4, ta, ma
+; LMULMAX2-RV32-NEXT:    vmv.v.x v0, a1
+; LMULMAX2-RV32-NEXT:    vsetivli zero, 16, e16, m2, ta, ma
+; LMULMAX2-RV32-NEXT:    vmv.v.i v12, 3
+; LMULMAX2-RV32-NEXT:    vmerge.vim v12, v12, 2, v0
+; LMULMAX2-RV32-NEXT:    vmv1r.v v0, v8
+; LMULMAX2-RV32-NEXT:    vmerge.vim v8, v12, 1, v0
 ; LMULMAX2-RV32-NEXT:    vsrl.vv v8, v10, v8
-; LMULMAX2-RV32-NEXT:    vmulhu.vv v8, v8, v16
-; LMULMAX2-RV32-NEXT:    vsub.vv v10, v10, v8
-; LMULMAX2-RV32-NEXT:    vmulhu.vv v10, v10, v18
-; LMULMAX2-RV32-NEXT:    vadd.vv v8, v10, v8
-; LMULMAX2-RV32-NEXT:    vsrl.vv v8, v8, v12
 ; LMULMAX2-RV32-NEXT:    vse16.v v8, (a0)
 ; LMULMAX2-RV32-NEXT:    ret
 ;
@@ -5629,32 +5111,38 @@ define void @mulhu_v16i16(ptr %x) {
 ; LMULMAX2-RV64:       # %bb.0:
 ; LMULMAX2-RV64-NEXT:    vsetivli zero, 16, e16, m2, ta, ma
 ; LMULMAX2-RV64-NEXT:    vle16.v v10, (a0)
-; LMULMAX2-RV64-NEXT:    lui a1, 2
-; LMULMAX2-RV64-NEXT:    addiw a1, a1, 289
-; LMULMAX2-RV64-NEXT:    vmv.s.x v0, a1
-; LMULMAX2-RV64-NEXT:    vmv.v.i v12, 3
+; LMULMAX2-RV64-NEXT:    li a1, 257
+; LMULMAX2-RV64-NEXT:    vsetivli zero, 1, e16, mf4, ta, ma
+; LMULMAX2-RV64-NEXT:    vmv.v.x v0, a1
+; LMULMAX2-RV64-NEXT:    vsetivli zero, 16, e16, m2, ta, ma
+; LMULMAX2-RV64-NEXT:    vmv.v.i v12, 0
+; LMULMAX2-RV64-NEXT:    lui a1, 1048568
+; LMULMAX2-RV64-NEXT:    vmerge.vxm v14, v12, a1, v0
 ; LMULMAX2-RV64-NEXT:    lui a1, 4
 ; LMULMAX2-RV64-NEXT:    addiw a1, a1, 64
-; LMULMAX2-RV64-NEXT:    vmv.s.x v8, a1
-; LMULMAX2-RV64-NEXT:    vmerge.vim v12, v12, 2, v0
-; LMULMAX2-RV64-NEXT:    vmv1r.v v0, v8
-; LMULMAX2-RV64-NEXT:    vmerge.vim v12, v12, 1, v0
-; LMULMAX2-RV64-NEXT:    li a1, 257
-; LMULMAX2-RV64-NEXT:    vmv.s.x v0, a1
-; LMULMAX2-RV64-NEXT:    vmv.v.i v14, 0
+; LMULMAX2-RV64-NEXT:    vsetivli zero, 1, e16, mf4, ta, ma
+; LMULMAX2-RV64-NEXT:    vmv.v.x v8, a1
+; LMULMAX2-RV64-NEXT:    vsetivli zero, 16, e16, m2, ta, ma
 ; LMULMAX2-RV64-NEXT:    lui a1, %hi(.LCPI182_0)
 ; LMULMAX2-RV64-NEXT:    addi a1, a1, %lo(.LCPI182_0)
 ; LMULMAX2-RV64-NEXT:    vle16.v v16, (a1)
-; LMULMAX2-RV64-NEXT:    lui a1, 1048568
-; LMULMAX2-RV64-NEXT:    vmerge.vxm v18, v14, a1, v0
 ; LMULMAX2-RV64-NEXT:    vmv1r.v v0, v8
-; LMULMAX2-RV64-NEXT:    vmerge.vim v8, v14, 1, v0
+; LMULMAX2-RV64-NEXT:    vmerge.vim v12, v12, 1, v0
+; LMULMAX2-RV64-NEXT:    vsrl.vv v12, v10, v12
+; LMULMAX2-RV64-NEXT:    vmulhu.vv v12, v12, v16
+; LMULMAX2-RV64-NEXT:    vsub.vv v10, v10, v12
+; LMULMAX2-RV64-NEXT:    vmulhu.vv v10, v10, v14
+; LMULMAX2-RV64-NEXT:    vadd.vv v10, v10, v12
+; LMULMAX2-RV64-NEXT:    lui a1, 2
+; LMULMAX2-RV64-NEXT:    addiw a1, a1, 289
+; LMULMAX2-RV64-NEXT:    vsetivli zero, 1, e16, mf4, ta, ma
+; LMULMAX2-RV64-NEXT:    vmv.v.x v0, a1
+; LMULMAX2-RV64-NEXT:    vsetivli zero, 16, e16, m2, ta, ma
+; LMULMAX2-RV64-NEXT:    vmv.v.i v12, 3
+; LMULMAX2-RV64-NEXT:    vmerge.vim v12, v12, 2, v0
+; LMULMAX2-RV64-NEXT:    vmv1r.v v0, v8
+; LMULMAX2-RV64-NEXT:    vmerge.vim v8, v12, 1, v0
 ; LMULMAX2-RV64-NEXT:    vsrl.vv v8, v10, v8
-; LMULMAX2-RV64-NEXT:    vmulhu.vv v8, v8, v16
-; LMULMAX2-RV64-NEXT:    vsub.vv v10, v10, v8
-; LMULMAX2-RV64-NEXT:    vmulhu.vv v10, v10, v18
-; LMULMAX2-RV64-NEXT:    vadd.vv v8, v10, v8
-; LMULMAX2-RV64-NEXT:    vsrl.vv v8, v8, v12
 ; LMULMAX2-RV64-NEXT:    vse16.v v8, (a0)
 ; LMULMAX2-RV64-NEXT:    ret
 ;
@@ -5684,7 +5172,9 @@ define void @mulhu_v8i32(ptr %x) {
 ; LMULMAX2-NEXT:    vsetivli zero, 8, e32, m2, ta, ma
 ; LMULMAX2-NEXT:    vle32.v v8, (a0)
 ; LMULMAX2-NEXT:    li a1, 68
-; LMULMAX2-NEXT:    vmv.s.x v0, a1
+; LMULMAX2-NEXT:    vsetivli zero, 1, e8, mf8, ta, ma
+; LMULMAX2-NEXT:    vmv.v.x v0, a1
+; LMULMAX2-NEXT:    vsetivli zero, 8, e32, m2, ta, ma
 ; LMULMAX2-NEXT:    lui a1, %hi(.LCPI183_0)
 ; LMULMAX2-NEXT:    addi a1, a1, %lo(.LCPI183_0)
 ; LMULMAX2-NEXT:    vle32.v v10, (a1)
@@ -5696,7 +5186,9 @@ define void @mulhu_v8i32(ptr %x) {
 ; LMULMAX2-NEXT:    vmulhu.vv v8, v8, v12
 ; LMULMAX2-NEXT:    vadd.vv v8, v8, v10
 ; LMULMAX2-NEXT:    li a1, 136
-; LMULMAX2-NEXT:    vmv.s.x v0, a1
+; LMULMAX2-NEXT:    vsetivli zero, 1, e8, mf8, ta, ma
+; LMULMAX2-NEXT:    vmv.v.x v0, a1
+; LMULMAX2-NEXT:    vsetivli zero, 8, e32, m2, ta, ma
 ; LMULMAX2-NEXT:    vmv.v.i v10, 2
 ; LMULMAX2-NEXT:    vmerge.vim v10, v10, 1, v0
 ; LMULMAX2-NEXT:    vsrl.vv v8, v8, v10
@@ -5857,13 +5349,17 @@ define void @mulhu_v4i64(ptr %x) {
 ; LMULMAX1-RV64-NEXT:    vmulhu.vv v9, v9, v10
 ; LMULMAX1-RV64-NEXT:    vadd.vv v9, v9, v11
 ; LMULMAX1-RV64-NEXT:    vid.v v10
-; LMULMAX1-RV64-NEXT:    lui a2, %hi(.LCPI184_2)
-; LMULMAX1-RV64-NEXT:    addi a2, a2, %lo(.LCPI184_2)
-; LMULMAX1-RV64-NEXT:    vlse64.v v11, (a2), zero
-; LMULMAX1-RV64-NEXT:    lui a2, %hi(.LCPI184_3)
-; LMULMAX1-RV64-NEXT:    ld a2, %lo(.LCPI184_3)(a2)
-; LMULMAX1-RV64-NEXT:    vadd.vi v12, v10, 2
-; LMULMAX1-RV64-NEXT:    vsrl.vv v9, v9, v12
+; LMULMAX1-RV64-NEXT:    vadd.vi v11, v10, 2
+; LMULMAX1-RV64-NEXT:    vsrl.vv v9, v9, v11
+; LMULMAX1-RV64-NEXT:    lui a2, 838861
+; LMULMAX1-RV64-NEXT:    addiw a2, a2, -819
+; LMULMAX1-RV64-NEXT:    slli a3, a2, 32
+; LMULMAX1-RV64-NEXT:    add a2, a2, a3
+; LMULMAX1-RV64-NEXT:    vmv.v.x v11, a2
+; LMULMAX1-RV64-NEXT:    lui a2, 699051
+; LMULMAX1-RV64-NEXT:    addiw a2, a2, -1365
+; LMULMAX1-RV64-NEXT:    slli a3, a2, 32
+; LMULMAX1-RV64-NEXT:    add a2, a2, a3
 ; LMULMAX1-RV64-NEXT:    vsetvli zero, zero, e64, m1, tu, ma
 ; LMULMAX1-RV64-NEXT:    vmv.s.x v11, a2
 ; LMULMAX1-RV64-NEXT:    vsetvli zero, zero, e64, m1, ta, ma
@@ -5885,18 +5381,18 @@ define void @mulhs_v32i8(ptr %x) {
 ; LMULMAX2-RV32-NEXT:    li a1, 32
 ; LMULMAX2-RV32-NEXT:    vsetvli zero, a1, e8, m2, ta, ma
 ; LMULMAX2-RV32-NEXT:    vle8.v v8, (a0)
-; LMULMAX2-RV32-NEXT:    li a2, -123
-; LMULMAX2-RV32-NEXT:    vmv.v.x v10, a2
+; LMULMAX2-RV32-NEXT:    vmv.v.i v10, 7
 ; LMULMAX2-RV32-NEXT:    lui a2, 304453
 ; LMULMAX2-RV32-NEXT:    addi a2, a2, -1452
 ; LMULMAX2-RV32-NEXT:    vsetivli zero, 1, e32, mf2, ta, ma
-; LMULMAX2-RV32-NEXT:    vmv.s.x v0, a2
-; LMULMAX2-RV32-NEXT:    li a2, 57
+; LMULMAX2-RV32-NEXT:    vmv.v.x v0, a2
 ; LMULMAX2-RV32-NEXT:    vsetvli zero, a1, e8, m2, ta, ma
-; LMULMAX2-RV32-NEXT:    vmerge.vxm v10, v10, a2, v0
-; LMULMAX2-RV32-NEXT:    vmulhu.vv v8, v8, v10
-; LMULMAX2-RV32-NEXT:    vmv.v.i v10, 7
 ; LMULMAX2-RV32-NEXT:    vmerge.vim v10, v10, 1, v0
+; LMULMAX2-RV32-NEXT:    li a1, -123
+; LMULMAX2-RV32-NEXT:    vmv.v.x v12, a1
+; LMULMAX2-RV32-NEXT:    li a1, 57
+; LMULMAX2-RV32-NEXT:    vmerge.vxm v12, v12, a1, v0
+; LMULMAX2-RV32-NEXT:    vmulhu.vv v8, v8, v12
 ; LMULMAX2-RV32-NEXT:    vsrl.vv v8, v8, v10
 ; LMULMAX2-RV32-NEXT:    vse8.v v8, (a0)
 ; LMULMAX2-RV32-NEXT:    ret
@@ -5906,18 +5402,18 @@ define void @mulhs_v32i8(ptr %x) {
 ; LMULMAX2-RV64-NEXT:    li a1, 32
 ; LMULMAX2-RV64-NEXT:    vsetvli zero, a1, e8, m2, ta, ma
 ; LMULMAX2-RV64-NEXT:    vle8.v v8, (a0)
-; LMULMAX2-RV64-NEXT:    li a2, -123
-; LMULMAX2-RV64-NEXT:    vmv.v.x v10, a2
+; LMULMAX2-RV64-NEXT:    vmv.v.i v10, 7
 ; LMULMAX2-RV64-NEXT:    lui a2, 304453
 ; LMULMAX2-RV64-NEXT:    addiw a2, a2, -1452
 ; LMULMAX2-RV64-NEXT:    vsetivli zero, 1, e32, mf2, ta, ma
-; LMULMAX2-RV64-NEXT:    vmv.s.x v0, a2
-; LMULMAX2-RV64-NEXT:    li a2, 57
+; LMULMAX2-RV64-NEXT:    vmv.v.x v0, a2
 ; LMULMAX2-RV64-NEXT:    vsetvli zero, a1, e8, m2, ta, ma
-; LMULMAX2-RV64-NEXT:    vmerge.vxm v10, v10, a2, v0
-; LMULMAX2-RV64-NEXT:    vmulhu.vv v8, v8, v10
-; LMULMAX2-RV64-NEXT:    vmv.v.i v10, 7
 ; LMULMAX2-RV64-NEXT:    vmerge.vim v10, v10, 1, v0
+; LMULMAX2-RV64-NEXT:    li a1, -123
+; LMULMAX2-RV64-NEXT:    vmv.v.x v12, a1
+; LMULMAX2-RV64-NEXT:    li a1, 57
+; LMULMAX2-RV64-NEXT:    vmerge.vxm v12, v12, a1, v0
+; LMULMAX2-RV64-NEXT:    vmulhu.vv v8, v8, v12
 ; LMULMAX2-RV64-NEXT:    vsrl.vv v8, v8, v10
 ; LMULMAX2-RV64-NEXT:    vse8.v v8, (a0)
 ; LMULMAX2-RV64-NEXT:    ret
@@ -5931,7 +5427,7 @@ define void @mulhs_v32i8(ptr %x) {
 ; LMULMAX1-RV32-NEXT:    lui a2, 5
 ; LMULMAX1-RV32-NEXT:    addi a2, a2, -1452
 ; LMULMAX1-RV32-NEXT:    vsetivli zero, 1, e16, mf4, ta, ma
-; LMULMAX1-RV32-NEXT:    vmv.s.x v0, a2
+; LMULMAX1-RV32-NEXT:    vmv.v.x v0, a2
 ; LMULMAX1-RV32-NEXT:    vsetivli zero, 16, e8, m1, ta, ma
 ; LMULMAX1-RV32-NEXT:    vmv.v.i v10, -9
 ; LMULMAX1-RV32-NEXT:    vmerge.vim v10, v10, 9, v0
@@ -5950,7 +5446,7 @@ define void @mulhs_v32i8(ptr %x) {
 ; LMULMAX1-RV64-NEXT:    lui a2, 5
 ; LMULMAX1-RV64-NEXT:    addiw a2, a2, -1452
 ; LMULMAX1-RV64-NEXT:    vsetivli zero, 1, e16, mf4, ta, ma
-; LMULMAX1-RV64-NEXT:    vmv.s.x v0, a2
+; LMULMAX1-RV64-NEXT:    vmv.v.x v0, a2
 ; LMULMAX1-RV64-NEXT:    vsetivli zero, 16, e8, m1, ta, ma
 ; LMULMAX1-RV64-NEXT:    vmv.v.i v10, -9
 ; LMULMAX1-RV64-NEXT:    vmerge.vim v10, v10, 9, v0
@@ -5970,14 +5466,16 @@ define void @mulhs_v16i16(ptr %x) {
 ; LMULMAX2-RV32:       # %bb.0:
 ; LMULMAX2-RV32-NEXT:    vsetivli zero, 16, e16, m2, ta, ma
 ; LMULMAX2-RV32-NEXT:    vle16.v v8, (a0)
-; LMULMAX2-RV32-NEXT:    lui a1, 7
-; LMULMAX2-RV32-NEXT:    addi a1, a1, -1687
-; LMULMAX2-RV32-NEXT:    vmv.s.x v0, a1
 ; LMULMAX2-RV32-NEXT:    lui a1, 5
 ; LMULMAX2-RV32-NEXT:    addi a1, a1, -1755
 ; LMULMAX2-RV32-NEXT:    vmv.v.x v10, a1
+; LMULMAX2-RV32-NEXT:    lui a1, 7
+; LMULMAX2-RV32-NEXT:    addi a1, a1, -1687
+; LMULMAX2-RV32-NEXT:    vsetivli zero, 1, e16, mf4, ta, ma
+; LMULMAX2-RV32-NEXT:    vmv.v.x v0, a1
 ; LMULMAX2-RV32-NEXT:    lui a1, 1048571
 ; LMULMAX2-RV32-NEXT:    addi a1, a1, 1755
+; LMULMAX2-RV32-NEXT:    vsetivli zero, 16, e16, m2, ta, ma
 ; LMULMAX2-RV32-NEXT:    vmerge.vxm v10, v10, a1, v0
 ; LMULMAX2-RV32-NEXT:    vmulh.vv v8, v8, v10
 ; LMULMAX2-RV32-NEXT:    vsra.vi v8, v8, 1
@@ -5990,14 +5488,16 @@ define void @mulhs_v16i16(ptr %x) {
 ; LMULMAX2-RV64:       # %bb.0:
 ; LMULMAX2-RV64-NEXT:    vsetivli zero, 16, e16, m2, ta, ma
 ; LMULMAX2-RV64-NEXT:    vle16.v v8, (a0)
-; LMULMAX2-RV64-NEXT:    lui a1, 7
-; LMULMAX2-RV64-NEXT:    addiw a1, a1, -1687
-; LMULMAX2-RV64-NEXT:    vmv.s.x v0, a1
 ; LMULMAX2-RV64-NEXT:    lui a1, 5
 ; LMULMAX2-RV64-NEXT:    addiw a1, a1, -1755
 ; LMULMAX2-RV64-NEXT:    vmv.v.x v10, a1
+; LMULMAX2-RV64-NEXT:    lui a1, 7
+; LMULMAX2-RV64-NEXT:    addiw a1, a1, -1687
+; LMULMAX2-RV64-NEXT:    vsetivli zero, 1, e16, mf4, ta, ma
+; LMULMAX2-RV64-NEXT:    vmv.v.x v0, a1
 ; LMULMAX2-RV64-NEXT:    lui a1, 1048571
 ; LMULMAX2-RV64-NEXT:    addiw a1, a1, 1755
+; LMULMAX2-RV64-NEXT:    vsetivli zero, 16, e16, m2, ta, ma
 ; LMULMAX2-RV64-NEXT:    vmerge.vxm v10, v10, a1, v0
 ; LMULMAX2-RV64-NEXT:    vmulh.vv v8, v8, v10
 ; LMULMAX2-RV64-NEXT:    vsra.vi v8, v8, 1
@@ -6013,7 +5513,7 @@ define void @mulhs_v16i16(ptr %x) {
 ; LMULMAX1-NEXT:    addi a1, a0, 16
 ; LMULMAX1-NEXT:    vle16.v v9, (a1)
 ; LMULMAX1-NEXT:    li a2, 105
-; LMULMAX1-NEXT:    vmv.s.x v0, a2
+; LMULMAX1-NEXT:    vmv.v.x v0, a2
 ; LMULMAX1-NEXT:    vmv.v.i v10, 7
 ; LMULMAX1-NEXT:    vmerge.vim v10, v10, -7, v0
 ; LMULMAX1-NEXT:    vdiv.vv v9, v9, v10
@@ -6032,13 +5532,15 @@ define void @mulhs_v8i32(ptr %x) {
 ; LMULMAX2-RV32:       # %bb.0:
 ; LMULMAX2-RV32-NEXT:    vsetivli zero, 8, e32, m2, ta, ma
 ; LMULMAX2-RV32-NEXT:    vle32.v v8, (a0)
-; LMULMAX2-RV32-NEXT:    li a1, 85
-; LMULMAX2-RV32-NEXT:    vmv.s.x v0, a1
 ; LMULMAX2-RV32-NEXT:    lui a1, 419430
 ; LMULMAX2-RV32-NEXT:    addi a1, a1, 1639
 ; LMULMAX2-RV32-NEXT:    vmv.v.x v10, a1
+; LMULMAX2-RV32-NEXT:    li a1, 85
+; LMULMAX2-RV32-NEXT:    vsetivli zero, 1, e8, mf8, ta, ma
+; LMULMAX2-RV32-NEXT:    vmv.v.x v0, a1
 ; LMULMAX2-RV32-NEXT:    lui a1, 629146
 ; LMULMAX2-RV32-NEXT:    addi a1, a1, -1639
+; LMULMAX2-RV32-NEXT:    vsetivli zero, 8, e32, m2, ta, ma
 ; LMULMAX2-RV32-NEXT:    vmerge.vxm v10, v10, a1, v0
 ; LMULMAX2-RV32-NEXT:    vmulh.vv v8, v8, v10
 ; LMULMAX2-RV32-NEXT:    vsrl.vi v10, v8, 31
@@ -6069,11 +5571,10 @@ define void @mulhs_v8i32(ptr %x) {
 ; LMULMAX1-RV32-NEXT:    vle32.v v8, (a0)
 ; LMULMAX1-RV32-NEXT:    addi a1, a0, 16
 ; LMULMAX1-RV32-NEXT:    vle32.v v9, (a1)
-; LMULMAX1-RV32-NEXT:    li a2, 5
-; LMULMAX1-RV32-NEXT:    vmv.s.x v0, a2
 ; LMULMAX1-RV32-NEXT:    lui a2, 419430
 ; LMULMAX1-RV32-NEXT:    addi a2, a2, 1639
 ; LMULMAX1-RV32-NEXT:    vmv.v.x v10, a2
+; LMULMAX1-RV32-NEXT:    vmv.v.i v0, 5
 ; LMULMAX1-RV32-NEXT:    lui a2, 629146
 ; LMULMAX1-RV32-NEXT:    addi a2, a2, -1639
 ; LMULMAX1-RV32-NEXT:    vmerge.vxm v10, v10, a2, v0
@@ -6117,18 +5618,21 @@ define void @mulhs_v4i64(ptr %x) {
 ; LMULMAX2-RV32:       # %bb.0:
 ; LMULMAX2-RV32-NEXT:    vsetivli zero, 4, e64, m2, ta, ma
 ; LMULMAX2-RV32-NEXT:    vle64.v v8, (a0)
-; LMULMAX2-RV32-NEXT:    li a1, 17
-; LMULMAX2-RV32-NEXT:    vmv.s.x v0, a1
 ; LMULMAX2-RV32-NEXT:    lui a1, 349525
 ; LMULMAX2-RV32-NEXT:    addi a2, a1, 1365
 ; LMULMAX2-RV32-NEXT:    vsetivli zero, 8, e32, m2, ta, ma
 ; LMULMAX2-RV32-NEXT:    vmv.v.x v10, a2
+; LMULMAX2-RV32-NEXT:    li a2, 17
+; LMULMAX2-RV32-NEXT:    vsetivli zero, 1, e8, mf8, ta, ma
+; LMULMAX2-RV32-NEXT:    vmv.v.x v0, a2
 ; LMULMAX2-RV32-NEXT:    addi a1, a1, 1366
+; LMULMAX2-RV32-NEXT:    vsetivli zero, 8, e32, m2, ta, ma
 ; LMULMAX2-RV32-NEXT:    vmerge.vxm v10, v10, a1, v0
 ; LMULMAX2-RV32-NEXT:    vsetivli zero, 4, e64, m2, ta, ma
 ; LMULMAX2-RV32-NEXT:    vmulh.vv v10, v8, v10
 ; LMULMAX2-RV32-NEXT:    li a1, 51
-; LMULMAX2-RV32-NEXT:    vmv.s.x v0, a1
+; LMULMAX2-RV32-NEXT:    vsetivli zero, 1, e8, mf8, ta, ma
+; LMULMAX2-RV32-NEXT:    vmv.v.x v0, a1
 ; LMULMAX2-RV32-NEXT:    vsetivli zero, 8, e32, m2, ta, ma
 ; LMULMAX2-RV32-NEXT:    vmv.v.i v12, -1
 ; LMULMAX2-RV32-NEXT:    vmerge.vim v12, v12, 0, v0
@@ -6137,7 +5641,8 @@ define void @mulhs_v4i64(ptr %x) {
 ; LMULMAX2-RV32-NEXT:    li a1, 63
 ; LMULMAX2-RV32-NEXT:    vsrl.vx v8, v12, a1
 ; LMULMAX2-RV32-NEXT:    li a1, 68
-; LMULMAX2-RV32-NEXT:    vmv.s.x v0, a1
+; LMULMAX2-RV32-NEXT:    vsetivli zero, 1, e8, mf8, ta, ma
+; LMULMAX2-RV32-NEXT:    vmv.v.x v0, a1
 ; LMULMAX2-RV32-NEXT:    vsetivli zero, 8, e32, m2, ta, ma
 ; LMULMAX2-RV32-NEXT:    vmv.v.i v10, 0
 ; LMULMAX2-RV32-NEXT:    vmerge.vim v10, v10, 1, v0
@@ -6150,24 +5655,27 @@ define void @mulhs_v4i64(ptr %x) {
 ; LMULMAX2-RV64-LABEL: mulhs_v4i64:
 ; LMULMAX2-RV64:       # %bb.0:
 ; LMULMAX2-RV64-NEXT:    vsetivli zero, 4, e64, m2, ta, ma
-; LMULMAX2-RV64-NEXT:    li a1, 5
-; LMULMAX2-RV64-NEXT:    vmv.s.x v0, a1
-; LMULMAX2-RV64-NEXT:    lui a1, %hi(.LCPI188_0)
-; LMULMAX2-RV64-NEXT:    addi a1, a1, %lo(.LCPI188_0)
-; LMULMAX2-RV64-NEXT:    vlse64.v v8, (a1), zero
-; LMULMAX2-RV64-NEXT:    lui a1, %hi(.LCPI188_1)
-; LMULMAX2-RV64-NEXT:    ld a1, %lo(.LCPI188_1)(a1)
-; LMULMAX2-RV64-NEXT:    vle64.v v10, (a0)
+; LMULMAX2-RV64-NEXT:    vle64.v v8, (a0)
+; LMULMAX2-RV64-NEXT:    vsetivli zero, 1, e8, mf8, ta, ma
+; LMULMAX2-RV64-NEXT:    vmv.v.i v0, 5
+; LMULMAX2-RV64-NEXT:    vsetivli zero, 4, e64, m2, ta, ma
+; LMULMAX2-RV64-NEXT:    vmv.v.i v10, 1
+; LMULMAX2-RV64-NEXT:    vmerge.vim v10, v10, 0, v0
+; LMULMAX2-RV64-NEXT:    lui a1, 349525
+; LMULMAX2-RV64-NEXT:    addiw a1, a1, 1365
+; LMULMAX2-RV64-NEXT:    slli a2, a1, 32
+; LMULMAX2-RV64-NEXT:    add a1, a1, a2
+; LMULMAX2-RV64-NEXT:    lui a2, %hi(.LCPI188_0)
+; LMULMAX2-RV64-NEXT:    ld a2, %lo(.LCPI188_0)(a2)
 ; LMULMAX2-RV64-NEXT:    vmv.v.i v12, -1
 ; LMULMAX2-RV64-NEXT:    vmerge.vim v12, v12, 0, v0
-; LMULMAX2-RV64-NEXT:    vmerge.vxm v8, v8, a1, v0
-; LMULMAX2-RV64-NEXT:    vmulh.vv v8, v10, v8
-; LMULMAX2-RV64-NEXT:    vmacc.vv v8, v10, v12
+; LMULMAX2-RV64-NEXT:    vmv.v.x v14, a1
+; LMULMAX2-RV64-NEXT:    vmerge.vxm v14, v14, a2, v0
+; LMULMAX2-RV64-NEXT:    vmulh.vv v14, v8, v14
+; LMULMAX2-RV64-NEXT:    vmacc.vv v14, v8, v12
+; LMULMAX2-RV64-NEXT:    vsra.vv v8, v14, v10
 ; LMULMAX2-RV64-NEXT:    li a1, 63
-; LMULMAX2-RV64-NEXT:    vsrl.vx v10, v8, a1
-; LMULMAX2-RV64-NEXT:    vmv.v.i v12, 1
-; LMULMAX2-RV64-NEXT:    vmerge.vim v12, v12, 0, v0
-; LMULMAX2-RV64-NEXT:    vsra.vv v8, v8, v12
+; LMULMAX2-RV64-NEXT:    vsrl.vx v10, v14, a1
 ; LMULMAX2-RV64-NEXT:    vadd.vv v8, v8, v10
 ; LMULMAX2-RV64-NEXT:    vse64.v v8, (a0)
 ; LMULMAX2-RV64-NEXT:    ret
@@ -6193,31 +5701,33 @@ define void @mulhs_v4i64(ptr %x) {
 ; LMULMAX1-RV64:       # %bb.0:
 ; LMULMAX1-RV64-NEXT:    vsetivli zero, 2, e64, m1, ta, ma
 ; LMULMAX1-RV64-NEXT:    vle64.v v8, (a0)
-; LMULMAX1-RV64-NEXT:    lui a1, %hi(.LCPI188_0)
-; LMULMAX1-RV64-NEXT:    addi a1, a1, %lo(.LCPI188_0)
-; LMULMAX1-RV64-NEXT:    vlse64.v v9, (a1), zero
-; LMULMAX1-RV64-NEXT:    lui a1, %hi(.LCPI188_1)
-; LMULMAX1-RV64-NEXT:    ld a1, %lo(.LCPI188_1)(a1)
-; LMULMAX1-RV64-NEXT:    addi a2, a0, 16
-; LMULMAX1-RV64-NEXT:    vle64.v v10, (a2)
+; LMULMAX1-RV64-NEXT:    addi a1, a0, 16
+; LMULMAX1-RV64-NEXT:    lui a2, 349525
+; LMULMAX1-RV64-NEXT:    addiw a2, a2, 1365
+; LMULMAX1-RV64-NEXT:    slli a3, a2, 32
+; LMULMAX1-RV64-NEXT:    add a2, a2, a3
+; LMULMAX1-RV64-NEXT:    lui a3, %hi(.LCPI188_0)
+; LMULMAX1-RV64-NEXT:    ld a3, %lo(.LCPI188_0)(a3)
+; LMULMAX1-RV64-NEXT:    vle64.v v9, (a1)
+; LMULMAX1-RV64-NEXT:    vmv.v.x v10, a2
 ; LMULMAX1-RV64-NEXT:    vsetvli zero, zero, e64, m1, tu, ma
-; LMULMAX1-RV64-NEXT:    vmv.s.x v9, a1
+; LMULMAX1-RV64-NEXT:    vmv.s.x v10, a3
 ; LMULMAX1-RV64-NEXT:    vsetvli zero, zero, e64, m1, ta, ma
-; LMULMAX1-RV64-NEXT:    vmulh.vv v11, v10, v9
+; LMULMAX1-RV64-NEXT:    vmulh.vv v11, v9, v10
 ; LMULMAX1-RV64-NEXT:    vid.v v12
 ; LMULMAX1-RV64-NEXT:    vrsub.vi v13, v12, 0
-; LMULMAX1-RV64-NEXT:    vmacc.vv v11, v13, v10
-; LMULMAX1-RV64-NEXT:    li a1, 63
-; LMULMAX1-RV64-NEXT:    vsrl.vx v10, v11, a1
+; LMULMAX1-RV64-NEXT:    vmacc.vv v11, v13, v9
+; LMULMAX1-RV64-NEXT:    li a2, 63
+; LMULMAX1-RV64-NEXT:    vsrl.vx v9, v11, a2
 ; LMULMAX1-RV64-NEXT:    vsra.vv v11, v11, v12
-; LMULMAX1-RV64-NEXT:    vadd.vv v10, v11, v10
-; LMULMAX1-RV64-NEXT:    vmulh.vv v9, v8, v9
-; LMULMAX1-RV64-NEXT:    vmacc.vv v9, v8, v13
-; LMULMAX1-RV64-NEXT:    vsrl.vx v8, v9, a1
-; LMULMAX1-RV64-NEXT:    vsra.vv v9, v9, v12
-; LMULMAX1-RV64-NEXT:    vadd.vv v8, v9, v8
+; LMULMAX1-RV64-NEXT:    vadd.vv v9, v11, v9
+; LMULMAX1-RV64-NEXT:    vmulh.vv v10, v8, v10
+; LMULMAX1-RV64-NEXT:    vmacc.vv v10, v8, v13
+; LMULMAX1-RV64-NEXT:    vsrl.vx v8, v10, a2
+; LMULMAX1-RV64-NEXT:    vsra.vv v10, v10, v12
+; LMULMAX1-RV64-NEXT:    vadd.vv v8, v10, v8
 ; LMULMAX1-RV64-NEXT:    vse64.v v8, (a0)
-; LMULMAX1-RV64-NEXT:    vse64.v v10, (a2)
+; LMULMAX1-RV64-NEXT:    vse64.v v9, (a1)
 ; LMULMAX1-RV64-NEXT:    ret
   %a = load <4 x i64>, ptr %x
   %b = sdiv <4 x i64> %a, <i64 3, i64 -3, i64 3, i64 -3>
@@ -8831,8 +8341,10 @@ define void @mulhu_vx_v2i64(ptr %x) {
 ; RV64:       # %bb.0:
 ; RV64-NEXT:    vsetivli zero, 2, e64, m1, ta, ma
 ; RV64-NEXT:    vle64.v v8, (a0)
-; RV64-NEXT:    lui a1, %hi(.LCPI317_0)
-; RV64-NEXT:    ld a1, %lo(.LCPI317_0)(a1)
+; RV64-NEXT:    lui a1, 699051
+; RV64-NEXT:    addiw a1, a1, -1365
+; RV64-NEXT:    slli a2, a1, 32
+; RV64-NEXT:    add a1, a1, a2
 ; RV64-NEXT:    vmulhu.vx v8, v8, a1
 ; RV64-NEXT:    vsrl.vi v8, v8, 1
 ; RV64-NEXT:    vse64.v v8, (a0)

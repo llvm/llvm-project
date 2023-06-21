@@ -225,8 +225,8 @@ The primary goal of experimental support is to assist in the process of ratifica
 ``experimental-zvfh``
   LLVM implements `this draft text <https://github.com/riscv/riscv-v-spec/pull/780>`__.
 
-``experimental-zvbb``, ``experimental-zvbc``, ``experimental-zvkg``, ``experimental-zvkn``, ``experimental-zvkng``, ``experimental-zvknha``, ``experimental-zvknhb``, ``experimental-zvkns``, ``experimental-zvks``, ``experimental-zvksed``, ``experimental-zvksg``, ``experimental-zvksh``, ``experimental-zvkt``
-  LLVM implements the `0.5 draft specification <https://github.com/riscv/riscv-crypto/releases/download/v20230407/riscv-crypto-spec-vector.pdf>`__. Note that current vector crypto extension version can be found in: <https://github.com/riscv/riscv-crypto>.
+``experimental-zvbb``, ``experimental-zvbc``, ``experimental-zvkg``, ``experimental-zvkn``, ``experimental-zvknc``, ``experimental-zvkned``, ``experimental-zvkng``, ``experimental-zvknha``, ``experimental-zvknhb``, ``experimental-zvks``, ``experimental-zvksc``, ``experimental-zvksed``, ``experimental-zvksg``, ``experimental-zvksh``, ``experimental-zvkt``
+  LLVM implements the `0.9.7 draft specification <https://github.com/riscv/riscv-crypto/releases/download/v20230531/riscv-crypto-spec-vector.pdf>`__. Note that current vector crypto extension version can be found in: <https://github.com/riscv/riscv-crypto>.
 
 To use an experimental extension from `clang`, you must add `-menable-experimental-extensions` to the command line, and specify the exact version of the experimental extension you are using.  To use an experimental extension with LLVM's internal developer tools (e.g. `llc`, `llvm-objdump`, `llvm-mc`), you must prefix the extension name with `experimental-`.  Note that you don't need to specify the version with internal tools, and shouldn't include the `experimental-` prefix with `clang`.
 
@@ -279,3 +279,9 @@ The current vendor extensions supported are:
 
 ``XSfvcp``
   LLVM implements `version 1.0.0 of the SiFive Vector Coprocessor Interface (VCIX) Software Specification <https://sifive.cdn.prismic.io/sifive/c3829e36-8552-41f0-a841-79945784241b_vcix-spec-software.pdf>`_ by SiFive.  All instructions are prefixed with `sf.vc.` as described in the specification, and the riscv-toolchain-convention document linked above.
+
+``XCVbitmanip``
+  LLVM implements `version 1.3.1 of the Core-V bit manipulation custom instructions specification <https://github.com/openhwgroup/cv32e40p/blob/62bec66b36182215e18c9cf10f723567e23878e9/docs/source/instruction_set_extensions.rst>`_ by Core-V.  All instructions are prefixed with `cv.` as described in the specification.
+
+``XCVmac``
+  LLVM implements `version 1.3.1 of the Core-V Multiply-Accumulate (MAC) custom instructions specification <https://github.com/openhwgroup/cv32e40p/blob/4f024fe4b15a68b76615b0630c07a6745c620da7/docs/source/instruction_set_extensions.rst>`_ by Core-V.  All instructions are prefixed with `cv.mac.` as described in the specification. These instructions are only available for riscv32 at this time.

@@ -29,7 +29,6 @@ class RegisterBank {
 private:
   unsigned ID;
   const char *Name;
-  unsigned Size;
   BitVector ContainedRegClasses;
 
   /// Sentinel value used to recognize register bank not properly
@@ -40,8 +39,8 @@ private:
   friend RegisterBankInfo;
 
 public:
-  RegisterBank(unsigned ID, const char *Name, unsigned Size,
-               const uint32_t *CoveredClasses, unsigned NumRegClasses);
+  RegisterBank(unsigned ID, const char *Name, const uint32_t *CoveredClasses,
+               unsigned NumRegClasses);
 
   /// Get the identifier of this register bank.
   unsigned getID() const { return ID; }
@@ -49,9 +48,6 @@ public:
   /// Get a user friendly name of this register bank.
   /// Should be used only for debugging purposes.
   const char *getName() const { return Name; }
-
-  /// Get the maximal size in bits that fits in this register bank.
-  unsigned getSize() const { return Size; }
 
   /// Check whether this instance is ready to be used.
   bool isValid() const;
@@ -62,7 +58,7 @@ public:
   /// \note This method does not check anything when assertions are disabled.
   ///
   /// \return True is the check was successful.
-  bool verify(const TargetRegisterInfo &TRI) const;
+  bool verify(const RegisterBankInfo &RBI, const TargetRegisterInfo &TRI) const;
 
   /// Check whether this register bank covers \p RC.
   /// In other words, check if this register bank fully covers

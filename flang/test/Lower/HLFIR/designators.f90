@@ -1,5 +1,5 @@
 ! Test lowering of designators to HLFIR
-! RUN: bbc -emit-fir -hlfir -o - %s 2>&1 | FileCheck %s
+! RUN: bbc -emit-hlfir -o - %s 2>&1 | FileCheck %s
 
 subroutine array_ref(x, n)
   real :: x(:)

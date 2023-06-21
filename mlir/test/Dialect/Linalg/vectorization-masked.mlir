@@ -484,3 +484,4 @@ transform.sequence failures(propagate) {
   %0 = transform.structured.match ops{["linalg.matmul"]} in %arg1 : (!transform.any_op) -> !transform.any_op
   transform.structured.masked_vectorize %0 vector_sizes [8, 16, 4] : !transform.any_op
 }
+

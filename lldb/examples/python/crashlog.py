@@ -306,6 +306,8 @@ class CrashLog(symbolication.Symbolicator):
             if self.show_symbol_progress():
                 with print_lock:
                     print("Getting symbols for %s %s..." % (uuid_str, self.path))
+            # Keep track of unresolved source paths.
+            unavailable_source_paths = set()
             if os.path.exists(self.dsymForUUIDBinary):
                 dsym_for_uuid_command = "%s %s" % (self.dsymForUUIDBinary, uuid_str)
                 s = subprocess.check_output(dsym_for_uuid_command, shell=True)
@@ -335,6 +337,12 @@ class CrashLog(symbolication.Symbolicator):
                                     plist["DBGSymbolRichExecutable"]
                                 )
                                 self.resolved_path = self.path
+                            if "DBGSourcePathRemapping" in plist:
+                                path_remapping = plist["DBGSourcePathRemapping"]
+                                for _, value in path_remapping.items():
+                                    source_path = os.path.expanduser(value)
+                                    if not os.path.exists(source_path):
+                                        unavailable_source_paths.add(source_path)
             if not self.resolved_path and os.path.exists(self.path):
                 if not self.find_matching_slice():
                     return False
@@ -373,6 +381,12 @@ class CrashLog(symbolication.Symbolicator):
             ):
                 with print_lock:
                     print("Resolved symbols for %s %s..." % (uuid_str, self.path))
+                    if len(unavailable_source_paths):
+                        for source_path in unavailable_source_paths:
+                            print(
+                                "Could not access remapped source path for %s %s"
+                                % (uuid_str, source_path)
+                            )
                 return True
             else:
                 self.unavailable = True
@@ -395,6 +409,10 @@ class CrashLog(symbolication.Symbolicator):
         self.version = -1
         self.target = None
         self.verbose = verbose
+        self.process_id = None
+        self.process_identifier = None
+        self.process_path = None
+        self.process_arch = None
 
     def dump(self):
         print("Crash Log File: %s" % (self.path))
@@ -484,9 +502,9 @@ class CrashLogParser:
     def __init__(self, debugger, path, verbose):
         self.path = os.path.expanduser(path)
         self.verbose = verbose
-        self.crashlog = CrashLog(debugger, self.path, self.verbose)
         # List of DarwinImages sorted by their index.
         self.images = list()
+        self.crashlog = CrashLog(debugger, self.path, self.verbose)
 
     @abc.abstractmethod
     def parse(self):
@@ -547,6 +565,8 @@ class JSONCrashLogParser(CrashLogParser):
     def parse_process_info(self, json_data):
         self.crashlog.process_id = json_data["pid"]
         self.crashlog.process_identifier = json_data["procName"]
+        if "procPath" in json_data:
+            self.crashlog.process_path = json_data["procPath"]
 
     def parse_crash_reason(self, json_exception):
         self.crashlog.exception = json_exception
@@ -574,6 +594,10 @@ class JSONCrashLogParser(CrashLogParser):
             darwin_image = self.crashlog.DarwinImage(
                 low, high, name, version, img_uuid, path, self.verbose
             )
+            if "arch" in json_image:
+                darwin_image.arch = json_image["arch"]
+                if path == self.crashlog.process_path:
+                    self.crashlog.process_arch = darwin_image.arch
             self.images.append(darwin_image)
             self.crashlog.images.append(darwin_image)
 
@@ -598,7 +622,9 @@ class JSONCrashLogParser(CrashLogParser):
 
             if "symbol" in json_frame:
                 symbol = json_frame["symbol"]
-                location = int(json_frame["symbolLocation"])
+                location = 0
+                if "symbolLocation" in json_frame and json_frame["symbolLocation"]:
+                    location = int(json_frame["symbolLocation"])
                 image = self.images[image_id]
                 image.symbols[symbol] = {
                     "name": symbol,
@@ -737,6 +763,13 @@ class JSONCrashLogParser(CrashLogParser):
             if key == "x":
                 gpr_dict = {str(idx): reg for idx, reg in enumerate(state)}
                 registers.update(self.parse_thread_registers(gpr_dict, key))
+                continue
+            if key == "flavor":
+                if not self.crashlog.process_arch:
+                    if state == "ARM_THREAD_STATE64":
+                        self.crashlog.process_arch = "arm64"
+                    elif state == "X86_THREAD_STATE":
+                        self.crashlog.process_arch = "x86_64"
                 continue
             try:
                 value = int(state["value"])
@@ -910,6 +943,8 @@ class TextCrashLogParser(CrashLogParser):
                 line[8:].strip().split(" [")
             )
             self.crashlog.process_id = pid_with_brackets.strip("[]")
+        elif line.startswith("Path:"):
+            self.crashlog.process_path = line[5:].strip()
         elif line.startswith("Identifier:"):
             self.crashlog.process_identifier = line[11:].strip()
         elif line.startswith("Version:"):
@@ -921,6 +956,11 @@ class TextCrashLogParser(CrashLogParser):
             else:
                 self.crashlog.process = version_string
                 self.crashlog.process_compatability_version = version_string
+        elif line.startswith("Code Type:"):
+            if "ARM-64" in line:
+                self.crashlog.process_arch = "arm64"
+            elif "X86-64" in line:
+                self.crashlog.process_arch = "x86_64"
         elif self.parent_process_regex.search(line):
             parent_process_match = self.parent_process_regex.search(line)
             self.crashlog.parent_process_name = parent_process_match.group(1)
@@ -1245,7 +1285,7 @@ class Symbolicate:
         pass
 
     def __call__(self, debugger, command, exe_ctx, result):
-        SymbolicateCrashLogs(debugger, shlex.split(command), result)
+        SymbolicateCrashLogs(debugger, shlex.split(command), result, True)
 
     def get_short_help(self):
         return "Symbolicate one or more darwin crash log files."
@@ -1281,7 +1321,7 @@ def SymbolicateCrashLog(crash_log, options):
         for thread in crash_log.threads:
             if thread.did_crash():
                 for ident in thread.idents:
-                    for image in self.crashlog.find_images_with_identifier(ident):
+                    for image in crash_log.find_images_with_identifier(ident):
                         image.resolve = True
 
     futures = []
@@ -1320,13 +1360,7 @@ def SymbolicateCrashLog(crash_log, options):
             print(error)
 
 
-def load_crashlog_in_scripted_process(debugger, crash_log_file, options, result):
-    crashlog_path = os.path.expanduser(crash_log_file)
-    if not os.path.exists(crashlog_path):
-        raise InteractiveCrashLogException(
-            "crashlog file %s does not exist" % crashlog_path
-        )
-
+def load_crashlog_in_scripted_process(debugger, crashlog_path, options, result):
     crashlog = CrashLogParser.create(debugger, crashlog_path, False).parse()
 
     target = lldb.SBTarget()
@@ -1341,9 +1375,14 @@ def load_crashlog_in_scripted_process(debugger, crash_log_file, options, result)
     # 2. If the user didn't provide a target, try to create a target using the symbolicator
     if not target or not target.IsValid():
         target = crashlog.create_target()
-    # 3. If that didn't work, and a target is already loaded, use it
-    if (target is None or not target.IsValid()) and debugger.GetNumTargets() > 0:
-        target = debugger.GetTargetAtIndex(0)
+    # 3. If that didn't work, create a dummy target
+    if target is None or not target.IsValid():
+        arch = crashlog.process_arch
+        if not arch:
+            raise InteractiveCrashLogException(
+                "couldn't create find the architecture to create the target"
+            )
+        target = debugger.CreateTargetWithFileAndArch(None, arch)
     # 4. Fail
     if target is None or not target.IsValid():
         raise InteractiveCrashLogException("couldn't create target")
@@ -1571,7 +1610,7 @@ be disassembled and lookups can be performed using the addresses found in the cr
     return CreateSymbolicateCrashLogOptions("crashlog", description, True)
 
 
-def SymbolicateCrashLogs(debugger, command_args, result):
+def SymbolicateCrashLogs(debugger, command_args, result, is_command):
     option_parser = CrashLogOptionParser()
 
     if not len(command_args):
@@ -1582,6 +1621,26 @@ def SymbolicateCrashLogs(debugger, command_args, result):
         (options, args) = option_parser.parse_args(command_args)
     except:
         return
+
+    # Interactive mode requires running the crashlog command from inside lldb.
+    if options.interactive and not is_command:
+        lldb_exec = (
+            subprocess.check_output(["/usr/bin/xcrun", "-f", "lldb"])
+            .decode("utf-8")
+            .strip()
+        )
+        sys.exit(
+            os.execv(
+                lldb_exec,
+                [
+                    lldb_exec,
+                    "-o",
+                    "command script import lldb.macosx",
+                    "-o",
+                    "crashlog {}".format(shlex.join(command_args)),
+                ],
+            )
+        )
 
     if options.version:
         print(debugger.GetVersionString())
@@ -1610,17 +1669,22 @@ def SymbolicateCrashLogs(debugger, command_args, result):
     ci = debugger.GetCommandInterpreter()
 
     if args:
-        for crash_log_file in args:
+        for crashlog_file in args:
+            crashlog_path = os.path.expanduser(crashlog_file)
+            if not os.path.exists(crashlog_path):
+                raise FileNotFoundError(
+                    "crashlog file %s does not exist" % crashlog_path
+                )
             if should_run_in_interactive_mode(options, ci):
                 try:
                     load_crashlog_in_scripted_process(
-                        debugger, crash_log_file, options, result
+                        debugger, crashlog_path, options, result
                     )
                 except InteractiveCrashLogException as e:
                     result.SetError(str(e))
             else:
                 crash_log = CrashLogParser.create(
-                    debugger, crash_log_file, options.verbose
+                    debugger, crashlog_path, options.verbose
                 ).parse()
                 SymbolicateCrashLog(crash_log, options)
 
@@ -1629,16 +1693,16 @@ if __name__ == "__main__":
     # Create a new debugger instance
     debugger = lldb.SBDebugger.Create()
     result = lldb.SBCommandReturnObject()
-    SymbolicateCrashLogs(debugger, sys.argv[1:], result)
+    SymbolicateCrashLogs(debugger, sys.argv[1:], result, False)
     lldb.SBDebugger.Destroy(debugger)
 
 
 def __lldb_init_module(debugger, internal_dict):
     debugger.HandleCommand(
-        "command script add -o -c lldb.macosx.crashlog.Symbolicate crashlog"
+        "command script add -o -c lldb.macosx.crashlog.Symbolicate -C disk-file crashlog"
     )
     debugger.HandleCommand(
-        "command script add -o -f lldb.macosx.crashlog.save_crashlog save_crashlog"
+        "command script add -o -f lldb.macosx.crashlog.save_crashlog -C disk-file save_crashlog"
     )
     print(
         '"crashlog" and "save_crashlog" commands have been installed, use '

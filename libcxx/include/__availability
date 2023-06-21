@@ -146,10 +146,10 @@
 
     // These macros control the availability of all parts of <filesystem> that
     // depend on something in the dylib.
-// #   define _LIBCPP_AVAILABILITY_HAS_NO_FILESYSTEM
-#   define _LIBCPP_AVAILABILITY_FILESYSTEM
-#   define _LIBCPP_AVAILABILITY_FILESYSTEM_PUSH
-#   define _LIBCPP_AVAILABILITY_FILESYSTEM_POP
+// #   define _LIBCPP_AVAILABILITY_HAS_NO_FILESYSTEM_LIBRARY
+#   define _LIBCPP_AVAILABILITY_FILESYSTEM_LIBRARY
+#   define _LIBCPP_AVAILABILITY_FILESYSTEM_LIBRARY_PUSH
+#   define _LIBCPP_AVAILABILITY_FILESYSTEM_LIBRARY_POP
 
     // This controls the availability of floating-point std::to_chars functions.
     // These overloads were added later than the integer overloads.
@@ -168,6 +168,11 @@
     // to use it when the mechanism isn't overriden at compile-time.
 // #   define _LIBCPP_AVAILABILITY_HAS_NO_VERBOSE_ABORT
 #   define _LIBCPP_AVAILABILITY_VERBOSE_ABORT
+
+    // This controls the availability of the C++17 std::pmr library,
+    // which is implemented in large part in the built library.
+// #   define _LIBCPP_AVAILABILITY_HAS_NO_PMR
+#   define _LIBCPP_AVAILABILITY_PMR
 
 #elif defined(__APPLE__)
 
@@ -271,19 +276,19 @@
         (defined(__ENVIRONMENT_IPHONE_OS_VERSION_MIN_REQUIRED__) && __ENVIRONMENT_IPHONE_OS_VERSION_MIN_REQUIRED__ < 130000) || \
         (defined(__ENVIRONMENT_TV_OS_VERSION_MIN_REQUIRED__) && __ENVIRONMENT_TV_OS_VERSION_MIN_REQUIRED__ < 130000) ||         \
         (defined(__ENVIRONMENT_WATCH_OS_VERSION_MIN_REQUIRED__) && __ENVIRONMENT_WATCH_OS_VERSION_MIN_REQUIRED__ < 60000)
-#       define _LIBCPP_AVAILABILITY_HAS_NO_FILESYSTEM
+#       define _LIBCPP_AVAILABILITY_HAS_NO_FILESYSTEM_LIBRARY
 #   endif
-#   define _LIBCPP_AVAILABILITY_FILESYSTEM                                      \
+#   define _LIBCPP_AVAILABILITY_FILESYSTEM_LIBRARY                              \
         __attribute__((availability(macos,strict,introduced=10.15)))            \
         __attribute__((availability(ios,strict,introduced=13.0)))               \
         __attribute__((availability(tvos,strict,introduced=13.0)))              \
         __attribute__((availability(watchos,strict,introduced=6.0)))
-#   define _LIBCPP_AVAILABILITY_FILESYSTEM_PUSH                                 \
+#   define _LIBCPP_AVAILABILITY_FILESYSTEM_LIBRARY_PUSH                                 \
         _Pragma("clang attribute push(__attribute__((availability(macos,strict,introduced=10.15))), apply_to=any(function,record))") \
         _Pragma("clang attribute push(__attribute__((availability(ios,strict,introduced=13.0))), apply_to=any(function,record))")    \
         _Pragma("clang attribute push(__attribute__((availability(tvos,strict,introduced=13.0))), apply_to=any(function,record))")   \
         _Pragma("clang attribute push(__attribute__((availability(watchos,strict,introduced=6.0))), apply_to=any(function,record))")
-#   define _LIBCPP_AVAILABILITY_FILESYSTEM_POP                                  \
+#   define _LIBCPP_AVAILABILITY_FILESYSTEM_LIBRARY_POP                                  \
         _Pragma("clang attribute pop")                                          \
         _Pragma("clang attribute pop")                                          \
         _Pragma("clang attribute pop")                                          \
@@ -321,6 +326,27 @@
 #   endif
 #   define _LIBCPP_AVAILABILITY_VERBOSE_ABORT                                   \
         __attribute__((unavailable))
+
+    // std::pmr
+#   if (defined(__ENVIRONMENT_MAC_OS_X_VERSION_MIN_REQUIRED__) && __ENVIRONMENT_MAC_OS_X_VERSION_MIN_REQUIRED__ < 140000) ||    \
+        (defined(__ENVIRONMENT_IPHONE_OS_VERSION_MIN_REQUIRED__) && __ENVIRONMENT_IPHONE_OS_VERSION_MIN_REQUIRED__ < 170000) || \
+        (defined(__ENVIRONMENT_TV_OS_VERSION_MIN_REQUIRED__) && __ENVIRONMENT_TV_OS_VERSION_MIN_REQUIRED__ < 170000) ||         \
+        (defined(__ENVIRONMENT_WATCH_OS_VERSION_MIN_REQUIRED__) && __ENVIRONMENT_WATCH_OS_VERSION_MIN_REQUIRED__ < 100000)
+#       define _LIBCPP_AVAILABILITY_HAS_NO_PMR
+#   endif
+// TODO: Enable std::pmr markup once https://github.com/llvm/llvm-project/issues/40340 has been fixed
+//       Until then, it is possible for folks to try to use `std::pmr` when back-deploying to targets that don't support
+//       it and it'll be a load-time error, but we don't have a good alternative because the library won't compile if we
+//       use availability annotations until that bug has been fixed.
+#  if 0
+#    define _LIBCPP_AVAILABILITY_PMR                                                                                   \
+      __attribute__((availability(macos, strict, introduced = 14.0)))                                                  \
+      __attribute__((availability(ios, strict, introduced = 17.0)))                                                    \
+      __attribute__((availability(tvos, strict, introduced = 17.0)))                                                   \
+      __attribute__((availability(watchos, strict, introduced = 10.0)))
+#  else
+#    define _LIBCPP_AVAILABILITY_PMR
+#  endif
 
 #else
 

@@ -24,6 +24,7 @@
 #include "llvm/ExecutionEngine/Orc/IRTransformLayer.h"
 #include "llvm/ExecutionEngine/Orc/JITTargetMachineBuilder.h"
 #include "llvm/ExecutionEngine/Orc/RTDyldObjectLinkingLayer.h"
+#include "llvm/ExecutionEngine/Orc/Shared/ExecutorSymbolDef.h"
 #include "llvm/ExecutionEngine/SectionMemoryManager.h"
 #include "llvm/IR/DataLayout.h"
 #include "llvm/IR/LLVMContext.h"
@@ -175,7 +176,7 @@ public:
 
     auto ES = std::make_unique<ExecutionSession>(std::move(*EPC));
 
-    auto EPCIU = EPCIndirectionUtils::Create(ES->getExecutorProcessControl());
+    auto EPCIU = EPCIndirectionUtils::Create(*ES);
     if (!EPCIU)
       return EPCIU.takeError();
 

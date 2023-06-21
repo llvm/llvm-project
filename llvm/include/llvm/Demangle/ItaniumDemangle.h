@@ -3714,8 +3714,9 @@ Node *AbstractManglingParser<Derived, Alloc>::parseQualifiedType() {
       std::string_view ProtoSourceName(Qual.data() + Len, Qual.size() - Len);
       std::string_view Proto;
       {
-        ScopedOverride<const char *> SaveFirst(First, &*ProtoSourceName.begin()),
-            SaveLast(Last, &*ProtoSourceName.end());
+        ScopedOverride<const char *> SaveFirst(First,
+                                               &*ProtoSourceName.begin()),
+            SaveLast(Last, &*ProtoSourceName.rbegin() + 1);
         Proto = parseBareSourceName();
       }
       if (Proto.empty())

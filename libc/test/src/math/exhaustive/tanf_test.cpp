@@ -25,14 +25,16 @@ struct LlvmLibcTanfExhaustiveTest : public LlvmLibcExhaustiveTest<uint32_t> {
   bool check(uint32_t start, uint32_t stop,
              mpfr::RoundingMode rounding) override {
     mpfr::ForceRoundingMode r(rounding);
+    if (!r.success)
+      return true;
     uint32_t bits = start;
     bool result = true;
     int tol = TOLERANCE;
     do {
       FPBits xbits(bits);
       float x = float(xbits);
-      bool r = EXPECT_MPFR_MATCH(mpfr::Operation::Tan, x, __llvm_libc::tanf(x),
-                                 0.5, rounding);
+      bool r = TEST_MPFR_MATCH(mpfr::Operation::Tan, x, __llvm_libc::tanf(x),
+                               0.5, rounding);
       result &= r;
       if (!r)
         --tol;

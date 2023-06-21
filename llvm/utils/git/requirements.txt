@@ -4,7 +4,7 @@
 #
 #    pip-compile --output-file=requirements.txt requirements.txt.in
 #
-certifi==2022.9.24
+certifi==2023.5.7
     # via requests
 cffi==1.15.1
     # via pynacl

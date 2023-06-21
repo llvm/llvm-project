@@ -328,6 +328,10 @@ public:
   
   const char *GetABIName();
 
+  const char *GetLabel() const;
+
+  SBError SetLabel(const char *label);
+
   /// Architecture data byte width accessor
   ///
   /// \return

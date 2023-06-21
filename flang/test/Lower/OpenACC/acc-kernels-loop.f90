@@ -16,6 +16,8 @@ subroutine acc_kernels_loop
   real, dimension(n) :: a, b, c
   real, dimension(n, n) :: d, e
   real, pointer :: f, g
+  integer :: reduction_i
+  real :: reduction_r
 
   integer :: gangNum = 8
   integer :: gangStatic = 8
@@ -705,6 +707,20 @@ subroutine acc_kernels_loop
 
 ! CHECK:      acc.kernels {
 ! CHECK:        acc.loop tile(%{{.*}}, %{{.*}} : i32, i32) {
+! CHECK:          fir.do_loop
+! CHECK:          acc.yield
+! CHECK-NEXT:   }{{$}}
+! CHECK:        acc.terminator
+! CHECK-NEXT: }{{$}}
+
+  !$acc kernels loop reduction(+:reduction_r) reduction(*:reduction_i)
+  do i = 1, n
+    reduction_r = reduction_r + a(i)
+    reduction_i = 1
+  end do
+
+! CHECK:      acc.kernels {
+! CHECK:        acc.loop reduction(@reduction_add_f32 -> %{{.*}} : !fir.ref<f32>, @reduction_mul_i32 -> %{{.*}} : !fir.ref<i32>) {
 ! CHECK:          fir.do_loop
 ! CHECK:          acc.yield
 ! CHECK-NEXT:   }{{$}}

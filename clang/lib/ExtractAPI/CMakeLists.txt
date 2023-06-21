@@ -9,7 +9,6 @@ add_clang_library(clangExtractAPI
   AvailabilityInfo.cpp
   ExtractAPIConsumer.cpp
   DeclarationFragments.cpp
-  Serialization/SerializerBase.cpp
   Serialization/SymbolGraphSerializer.cpp
   TypedefUnderlyingTypeResolver.cpp
 

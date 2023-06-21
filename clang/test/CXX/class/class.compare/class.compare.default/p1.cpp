@@ -15,7 +15,8 @@ struct A {
 
   bool operator<(const A&) const;
   bool operator<=(const A&) const = default;
-  bool operator==(const A&) const volatile && = default; // surprisingly, OK
+  bool operator==(const A&) const && = default; // expected-error {{ref-qualifier '&&' is not allowed on a defaulted comparison operator}}
+  bool operator>=(const A&) const volatile = default; // expected-error {{defaulted comparison function must not be volatile}}
   bool operator<=>(const A&) = default; // expected-error {{defaulted member three-way comparison operator must be const-qualified}}
   bool operator>=(const B&) const = default; // expected-error-re {{invalid parameter type for defaulted relational comparison operator; found 'const B &', expected 'const A &'{{$}}}}
   static bool operator>(const B&) = default; // expected-error {{overloaded 'operator>' cannot be a static member function}}
@@ -194,6 +195,11 @@ bool operator==(const S6&, const S6&); // expected-note {{previous declaration}}
 struct S6 {
     friend bool operator==(const S6&, const S6&) = default; // expected-error {{because it was already declared outside}}
 };
+
+struct S7 {
+  bool operator==(S7 const &) const &&;
+};
+bool S7::operator==(S7 const &) const && = default; // expected-error {{ref-qualifier '&&' is not allowed on a defaulted comparison operator}}
 
 enum e {};
 bool operator==(e, int) = default; // expected-error{{expected class or reference to a constant class}}

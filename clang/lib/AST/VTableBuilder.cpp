@@ -2259,7 +2259,7 @@ VTableLayout::VTableLayout(ArrayRef<size_t> VTableIndices,
 VTableLayout::~VTableLayout() { }
 
 bool VTableContextBase::hasVtableSlot(const CXXMethodDecl *MD) {
-  return MD->isVirtual() && !MD->isConsteval();
+  return MD->isVirtual() && !MD->isImmediateFunction();
 }
 
 ItaniumVTableContext::ItaniumVTableContext(

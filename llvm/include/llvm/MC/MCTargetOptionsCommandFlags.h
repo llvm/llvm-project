@@ -35,6 +35,8 @@ bool getDwarf64();
 
 EmitDwarfUnwindType getEmitDwarfUnwind();
 
+bool getEmitCompactUnwindNonCanonical();
+
 bool getShowMCInst();
 
 bool getFatalWarnings();

@@ -233,6 +233,24 @@ TEST(ELFTest, getELFRelocationTypeNameForLoongArch) {
             getELFRelocationTypeName(EM_LOONGARCH, R_LARCH_32_PCREL));
   EXPECT_EQ("R_LARCH_RELAX",
             getELFRelocationTypeName(EM_LOONGARCH, R_LARCH_RELAX));
+  EXPECT_EQ("R_LARCH_DELETE",
+            getELFRelocationTypeName(EM_LOONGARCH, R_LARCH_DELETE));
+  EXPECT_EQ("R_LARCH_ALIGN",
+            getELFRelocationTypeName(EM_LOONGARCH, R_LARCH_ALIGN));
+  EXPECT_EQ("R_LARCH_PCREL20_S2",
+            getELFRelocationTypeName(EM_LOONGARCH, R_LARCH_PCREL20_S2));
+  EXPECT_EQ("R_LARCH_CFA",
+            getELFRelocationTypeName(EM_LOONGARCH, R_LARCH_CFA));
+  EXPECT_EQ("R_LARCH_ADD6",
+            getELFRelocationTypeName(EM_LOONGARCH, R_LARCH_ADD6));
+  EXPECT_EQ("R_LARCH_SUB6",
+            getELFRelocationTypeName(EM_LOONGARCH, R_LARCH_SUB6));
+  EXPECT_EQ("R_LARCH_ADD_ULEB128",
+            getELFRelocationTypeName(EM_LOONGARCH, R_LARCH_ADD_ULEB128));
+  EXPECT_EQ("R_LARCH_SUB_ULEB128",
+            getELFRelocationTypeName(EM_LOONGARCH, R_LARCH_SUB_ULEB128));
+  EXPECT_EQ("R_LARCH_64_PCREL",
+            getELFRelocationTypeName(EM_LOONGARCH, R_LARCH_64_PCREL));
 }
 
 TEST(ELFTest, getELFRelativeRelocationType) {

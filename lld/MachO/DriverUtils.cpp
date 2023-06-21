@@ -275,7 +275,7 @@ macho::findPathCombination(const Twine &name,
 }
 
 StringRef macho::rerootPath(StringRef path) {
-  if (!path::is_absolute(path, path::Style::posix) || path.endswith(".o"))
+  if (!path::is_absolute(path, path::Style::posix) || path.ends_with(".o"))
     return path;
 
   if (std::optional<StringRef> rerootedPath =

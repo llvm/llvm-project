@@ -248,7 +248,6 @@ private:
   OperandMatchResultTy tryParseOptionalShiftExtend(OperandVector &Operands);
   OperandMatchResultTy tryParseBarrierOperand(OperandVector &Operands);
   OperandMatchResultTy tryParseBarriernXSOperand(OperandVector &Operands);
-  OperandMatchResultTy tryParseMRSSystemRegister(OperandVector &Operands);
   OperandMatchResultTy tryParseSysReg(OperandVector &Operands);
   OperandMatchResultTy tryParseSysCROperand(OperandVector &Operands);
   template <bool IsSVEPrefetch = false>
@@ -3678,10 +3677,24 @@ static const struct Extension {
     {"cssc", {AArch64::FeatureCSSC}},
     {"rcpc3", {AArch64::FeatureRCPC3}},
     {"gcs", {AArch64::FeatureGCS}},
-    // FIXME: Unsupported extensions
-    {"lor", {}},
-    {"rdma", {}},
-    {"profile", {}},
+    {"bf16", {AArch64::FeatureBF16}},
+    {"compnum", {AArch64::FeatureComplxNum}},
+    {"dotprod", {AArch64::FeatureDotProd}},
+    {"f32mm", {AArch64::FeatureMatMulFP32}},
+    {"f64mm", {AArch64::FeatureMatMulFP64}},
+    {"fp16", {AArch64::FeatureFullFP16}},
+    {"fp16fml", {AArch64::FeatureFP16FML}},
+    {"i8mm", {AArch64::FeatureMatMulInt8}},
+    {"lor", {AArch64::FeatureLOR}},
+    {"profile", {AArch64::FeatureSPE}},
+    // "rdma" is the name documented by binutils for the feature, but
+    // binutils also accepts incomplete prefixes of features, so "rdm"
+    // works too. Support both spellings here.
+    {"rdm", {AArch64::FeatureRDM}},
+    {"rdma", {AArch64::FeatureRDM}},
+    {"sb", {AArch64::FeatureSB}},
+    {"ssbs", {AArch64::FeatureSSBS}},
+    {"tme", {AArch64::FeatureTME}},
 };
 
 static void setRequiredFeatureString(FeatureBitset FBS, std::string &Str) {
@@ -4115,13 +4128,13 @@ AArch64AsmParser::tryParseVectorIndex(OperandVector &Operands) {
     const MCConstantExpr *MCE = dyn_cast<MCConstantExpr>(ImmVal);
     if (!MCE) {
       TokError("immediate value expected for vector index");
-      return MatchOperand_ParseFail;;
+      return MatchOperand_ParseFail;
     }
 
     SMLoc E = getLoc();
 
     if (parseToken(AsmToken::RBrac, "']' expected"))
-      return MatchOperand_ParseFail;;
+      return MatchOperand_ParseFail;
 
     Operands.push_back(AArch64Operand::CreateVectorIndex(MCE->getValue(), SIdx,
                                                          E, getContext()));
@@ -6907,6 +6920,7 @@ bool AArch64AsmParser::parseDirectiveArch(SMLoc L) {
   ExpandCryptoAEK(*ArchInfo, RequestedExtensions);
 
   FeatureBitset Features = STI.getFeatureBits();
+  setAvailableFeatures(ComputeAvailableFeatures(Features));
   for (auto Name : RequestedExtensions) {
     bool EnableFeature = true;
 

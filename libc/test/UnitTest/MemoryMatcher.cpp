@@ -13,7 +13,6 @@
 using __llvm_libc::testing::tlog;
 
 namespace __llvm_libc {
-namespace memory {
 namespace testing {
 
 template <typename T>
@@ -76,5 +75,4 @@ void MemoryMatcher::explainError() {
 }
 
 } // namespace testing
-} // namespace memory
 } // namespace __llvm_libc

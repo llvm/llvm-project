@@ -103,6 +103,7 @@ def : GINodeEquiv<G_FREM, frem>;
 def : GINodeEquiv<G_FPOW, fpow>;
 def : GINodeEquiv<G_FEXP2, fexp2>;
 def : GINodeEquiv<G_FLOG2, flog2>;
+def : GINodeEquiv<G_FLDEXP, fldexp>;
 def : GINodeEquiv<G_FCANONICALIZE, fcanonicalize>;
 def : GINodeEquiv<G_IS_FPCLASS, is_fpclass>;
 def : GINodeEquiv<G_INTRINSIC, intrinsic_wo_chain>;
@@ -158,6 +159,7 @@ def : GINodeEquiv<G_STRICT_FDIV, strict_fdiv>;
 def : GINodeEquiv<G_STRICT_FREM, strict_frem>;
 def : GINodeEquiv<G_STRICT_FMA, strict_fma>;
 def : GINodeEquiv<G_STRICT_FSQRT, strict_fsqrt>;
+def : GINodeEquiv<G_STRICT_FLDEXP, strict_fldexp>;
 
 // Broadly speaking G_LOAD is equivalent to ISD::LOAD but there are some
 // complications that tablegen must take care of. For example, Predicates such

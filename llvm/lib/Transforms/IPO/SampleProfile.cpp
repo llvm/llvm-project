@@ -505,8 +505,7 @@ private:
 /// This pass reads profile data from the file specified by
 /// -sample-profile-file and annotates every affected function with the
 /// profile information found in that file.
-class SampleProfileLoader final
-    : public SampleProfileLoaderBaseImpl<BasicBlock> {
+class SampleProfileLoader final : public SampleProfileLoaderBaseImpl<Function> {
 public:
   SampleProfileLoader(
       StringRef Name, StringRef RemapName, ThinOrFullLTOPhase LTOPhase,
@@ -636,6 +635,50 @@ private:
   }
 };
 } // end anonymous namespace
+
+namespace llvm {
+template <>
+inline bool SampleProfileInference<Function>::isExit(const BasicBlock *BB) {
+  return succ_empty(BB);
+}
+
+template <>
+inline void SampleProfileInference<Function>::findUnlikelyJumps(
+    const std::vector<const BasicBlockT *> &BasicBlocks,
+    BlockEdgeMap &Successors, FlowFunction &Func) {
+  for (auto &Jump : Func.Jumps) {
+    const auto *BB = BasicBlocks[Jump.Source];
+    const auto *Succ = BasicBlocks[Jump.Target];
+    const Instruction *TI = BB->getTerminator();
+    // Check if a block ends with InvokeInst and mark non-taken branch unlikely.
+    // In that case block Succ should be a landing pad
+    if (Successors[BB].size() == 2 && Successors[BB].back() == Succ) {
+      if (isa<InvokeInst>(TI)) {
+        Jump.IsUnlikely = true;
+      }
+    }
+    const Instruction *SuccTI = Succ->getTerminator();
+    // Check if the target block contains UnreachableInst and mark it unlikely
+    if (SuccTI->getNumSuccessors() == 0) {
+      if (isa<UnreachableInst>(SuccTI)) {
+        Jump.IsUnlikely = true;
+      }
+    }
+  }
+}
+
+template <>
+void SampleProfileLoaderBaseImpl<Function>::computeDominanceAndLoopInfo(
+    Function &F) {
+  DT.reset(new DominatorTree);
+  DT->recalculate(F);
+
+  PDT.reset(new PostDominatorTree(F));
+
+  LI.reset(new LoopInfo);
+  LI->analyze(*DT);
+}
+} // namespace llvm
 
 ErrorOr<uint64_t> SampleProfileLoader::getInstWeight(const Instruction &Inst) {
   if (FunctionSamples::ProfileIsProbeBased)

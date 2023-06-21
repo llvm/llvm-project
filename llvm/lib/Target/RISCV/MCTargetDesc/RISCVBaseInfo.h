@@ -58,29 +58,24 @@ enum {
   ConstraintShift = InstFormatShift + 5,
   VS2Constraint = 0b001 << ConstraintShift,
   VS1Constraint = 0b010 << ConstraintShift,
-  VMConstraint  = 0b100 << ConstraintShift,
+  VMConstraint = 0b100 << ConstraintShift,
   ConstraintMask = 0b111 << ConstraintShift,
 
   VLMulShift = ConstraintShift + 3,
   VLMulMask = 0b111 << VLMulShift,
 
-  // Do we need to add a dummy mask op when converting RVV Pseudo to MCInst.
-  HasDummyMaskOpShift = VLMulShift + 3,
-  HasDummyMaskOpMask = 1 << HasDummyMaskOpShift,
-
   // Force a tail agnostic policy even this instruction has a tied destination.
-  ForceTailAgnosticShift = HasDummyMaskOpShift + 1,
+  ForceTailAgnosticShift = VLMulShift + 3,
   ForceTailAgnosticMask = 1 << ForceTailAgnosticShift,
 
-  // Does this instruction have a merge operand that must be removed when
-  // converting to MCInst. It will be the first explicit use operand. Used by
-  // RVV Pseudos.
-  HasMergeOpShift = ForceTailAgnosticShift + 1,
-  HasMergeOpMask = 1 << HasMergeOpShift,
+  // Is this a _TIED vector pseudo instruction. For these instructions we
+  // shouldn't skip the tied operand when converting to MC instructions.
+  IsTiedPseudoShift = ForceTailAgnosticShift + 1,
+  IsTiedPseudoMask = 1 << IsTiedPseudoShift,
 
   // Does this instruction have a SEW operand. It will be the last explicit
   // operand unless there is a vector policy operand. Used by RVV Pseudos.
-  HasSEWOpShift = HasMergeOpShift + 1,
+  HasSEWOpShift = IsTiedPseudoShift + 1,
   HasSEWOpMask = 1 << HasSEWOpShift,
 
   // Does this instruction have a VL operand. It will be the second to last
@@ -112,6 +107,9 @@ enum {
   // in bits 63:31. Used by the SExtWRemoval pass.
   IsSignExtendingOpWShift = UsesMaskPolicyShift + 1,
   IsSignExtendingOpWMask = 1ULL << IsSignExtendingOpWShift,
+
+  HasRoundModeOpShift = IsSignExtendingOpWShift + 1,
+  HasRoundModeOpMask = 1 << HasRoundModeOpShift,
 };
 
 enum VLMUL : uint8_t {
@@ -140,17 +138,13 @@ static inline unsigned getFormat(uint64_t TSFlags) {
 static inline VLMUL getLMul(uint64_t TSFlags) {
   return static_cast<VLMUL>((TSFlags & VLMulMask) >> VLMulShift);
 }
-/// \returns true if there is a dummy mask operand for the instruction.
-static inline bool hasDummyMaskOp(uint64_t TSFlags) {
-  return TSFlags & HasDummyMaskOpMask;
-}
 /// \returns true if tail agnostic is enforced for the instruction.
 static inline bool doesForceTailAgnostic(uint64_t TSFlags) {
   return TSFlags & ForceTailAgnosticMask;
 }
-/// \returns true if there is a merge operand for the instruction.
-static inline bool hasMergeOp(uint64_t TSFlags) {
-  return TSFlags & HasMergeOpMask;
+/// \returns true if this a _TIED pseudo.
+static inline bool isTiedPseudo(uint64_t TSFlags) {
+  return TSFlags & IsTiedPseudoMask;
 }
 /// \returns true if there is a SEW operand for the instruction.
 static inline bool hasSEWOp(uint64_t TSFlags) {
@@ -173,10 +167,9 @@ static inline bool usesMaskPolicy(uint64_t TSFlags) {
   return TSFlags & UsesMaskPolicyMask;
 }
 
-static inline unsigned getMergeOpNum(const MCInstrDesc &Desc) {
-  assert(hasMergeOp(Desc.TSFlags));
-  assert(!Desc.isVariadic());
-  return Desc.getNumDefs();
+/// \returns true if there is a rounding mode operand for this instruction
+static inline bool hasRoundModeOp(uint64_t TSFlags) {
+  return TSFlags & HasRoundModeOpMask;
 }
 
 static inline unsigned getVLOpNum(const MCInstrDesc &Desc) {
@@ -202,6 +195,15 @@ static inline unsigned getSEWOpNum(const MCInstrDesc &Desc) {
 static inline unsigned getVecPolicyOpNum(const MCInstrDesc &Desc) {
   assert(hasVecPolicyOp(Desc.TSFlags));
   return Desc.getNumOperands() - 1;
+}
+
+// Is the first def operand tied to the first use operand. This is true for
+// vector pseudo instructions that have a merge operand for tail/mask
+// undisturbed. It's also true for vector FMA instructions where one of the
+// operands is also the destination register.
+static inline bool isFirstDefTiedToFirstUse(const MCInstrDesc &Desc) {
+  return Desc.getNumDefs() < Desc.getNumOperands() &&
+         Desc.getOperandConstraint(Desc.getNumDefs(), MCOI::TIED_TO) == 0;
 }
 
 // RISC-V Specific Machine Operand Flags

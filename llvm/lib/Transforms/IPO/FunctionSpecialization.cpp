@@ -74,22 +74,6 @@ static cl::opt<bool> ForceSpecialization(
     "Force function specialization for every call site with a constant "
     "argument"));
 
-// Set to 2^3 to model three levels of if-else nest.
-static cl::opt<unsigned> BlockFreqMultiplier(
-    "funcspec-block-freq-multiplier", cl::init(8), cl::Hidden, cl::desc(
-    "Multiplier to scale block frequency of user instructions during "
-    "specialization bonus estimation"));
-
-static cl::opt<unsigned> MinEntryFreq(
-    "funcspec-min-entry-freq", cl::init(450), cl::Hidden, cl::desc(
-    "Do not specialize functions with entry block frequency lower than "
-    "this value"));
-
-static cl::opt<unsigned> MinScore(
-    "funcspec-min-score", cl::init(2), cl::Hidden, cl::desc(
-    "Do not specialize functions with score lower than this value "
-    "(the ratio of specialization bonus over specialization cost)"));
-
 static cl::opt<unsigned> MaxClones(
     "funcspec-max-clones", cl::init(3), cl::Hidden, cl::desc(
     "The maximum number of clones allowed for a single function "
@@ -104,14 +88,14 @@ static cl::opt<bool> SpecializeOnAddress(
     "funcspec-on-address", cl::init(false), cl::Hidden, cl::desc(
     "Enable function specialization on the address of global values"));
 
+// Disabled by default as it can significantly increase compilation times.
+//
+// https://llvm-compile-time-tracker.com
+// https://github.com/nikic/llvm-compile-time-tracker
 static cl::opt<bool> SpecializeLiteralConstant(
-    "funcspec-for-literal-constant", cl::init(true), cl::Hidden, cl::desc(
+    "funcspec-for-literal-constant", cl::init(false), cl::Hidden, cl::desc(
     "Enable specialization of functions that take a literal constant as an "
     "argument"));
-
-unsigned FunctionSpecializer::getBlockFreqMultiplier() {
-  return BlockFreqMultiplier;
-}
 
 // Estimates the instruction cost of all the basic blocks in \p WorkList.
 // The successors of such blocks are added to the list as long as they are
@@ -130,8 +114,7 @@ static Cost estimateBasicBlocks(SmallVectorImpl<BasicBlock *> &WorkList,
   while (!WorkList.empty()) {
     BasicBlock *BB = WorkList.pop_back_val();
 
-    uint64_t Weight = BlockFreqMultiplier *
-                      BFI.getBlockFreq(BB).getFrequency() /
+    uint64_t Weight = BFI.getBlockFreq(BB).getFrequency() /
                       BFI.getEntryFreq();
     if (!Weight)
       continue;
@@ -184,8 +167,7 @@ Cost InstCostVisitor::getUserBonus(Instruction *User, Value *Use, Constant *C) {
 
   KnownConstants.insert({User, C});
 
-  uint64_t Weight = BlockFreqMultiplier *
-                    BFI.getBlockFreq(User->getParent()).getFrequency() /
+  uint64_t Weight = BFI.getBlockFreq(User->getParent()).getFrequency() /
                     BFI.getEntryFreq();
   if (!Weight)
     return 0;
@@ -238,6 +220,34 @@ Cost InstCostVisitor::estimateBranchInst(BranchInst &I) {
     WorkList.push_back(Succ);
 
   return estimateBasicBlocks(WorkList, KnownConstants, Solver, BFI, TTI);
+}
+
+Constant *InstCostVisitor::visitFreezeInst(FreezeInst &I) {
+  if (isGuaranteedNotToBeUndefOrPoison(LastVisited->second))
+    return LastVisited->second;
+  return nullptr;
+}
+
+Constant *InstCostVisitor::visitCallBase(CallBase &I) {
+  Function *F = I.getCalledFunction();
+  if (!F || !canConstantFoldCallTo(&I, F))
+    return nullptr;
+
+  SmallVector<Constant *, 8> Operands;
+  Operands.reserve(I.getNumOperands());
+
+  for (unsigned Idx = 0, E = I.getNumOperands() - 1; Idx != E; ++Idx) {
+    Value *V = I.getOperand(Idx);
+    auto *C = dyn_cast<Constant>(V);
+    if (!C)
+      C = findConstantFor(V, KnownConstants);
+    if (!C)
+      return nullptr;
+    Operands.push_back(C);
+  }
+
+  auto Ops = ArrayRef(Operands.begin(), Operands.end());
+  return ConstantFoldCall(&I, F, Ops);
 }
 
 Constant *InstCostVisitor::visitLoadInst(LoadInst &I) {
@@ -387,49 +397,37 @@ Constant *FunctionSpecializer::getConstantStackValue(CallInst *Call,
 //       ret void
 //     }
 //
-void FunctionSpecializer::promoteConstantStackValues() {
-  // Iterate over the argument tracked functions see if there
-  // are any new constant values for the call instruction via
-  // stack variables.
-  for (Function &F : M) {
-    if (!Solver.isArgumentTrackedFunction(&F))
+// See if there are any new constant values for the callers of \p F via
+// stack variables and promote them to global variables.
+void FunctionSpecializer::promoteConstantStackValues(Function *F) {
+  for (User *U : F->users()) {
+
+    auto *Call = dyn_cast<CallInst>(U);
+    if (!Call)
       continue;
 
-    for (auto *User : F.users()) {
+    if (!Solver.isBlockExecutable(Call->getParent()))
+      continue;
 
-      auto *Call = dyn_cast<CallInst>(User);
-      if (!Call)
+    for (const Use &U : Call->args()) {
+      unsigned Idx = Call->getArgOperandNo(&U);
+      Value *ArgOp = Call->getArgOperand(Idx);
+      Type *ArgOpType = ArgOp->getType();
+
+      if (!Call->onlyReadsMemory(Idx) || !ArgOpType->isPointerTy())
         continue;
 
-      if (!Solver.isBlockExecutable(Call->getParent()))
+      auto *ConstVal = getConstantStackValue(Call, ArgOp);
+      if (!ConstVal)
         continue;
 
-      bool Changed = false;
-      for (const Use &U : Call->args()) {
-        unsigned Idx = Call->getArgOperandNo(&U);
-        Value *ArgOp = Call->getArgOperand(Idx);
-        Type *ArgOpType = ArgOp->getType();
+      Value *GV = new GlobalVariable(M, ConstVal->getType(), true,
+                                     GlobalValue::InternalLinkage, ConstVal,
+                                     "funcspec.arg");
+      if (ArgOpType != ConstVal->getType())
+        GV = ConstantExpr::getBitCast(cast<Constant>(GV), ArgOpType);
 
-        if (!Call->onlyReadsMemory(Idx) || !ArgOpType->isPointerTy())
-          continue;
-
-        auto *ConstVal = getConstantStackValue(Call, ArgOp);
-        if (!ConstVal)
-          continue;
-
-        Value *GV = new GlobalVariable(M, ConstVal->getType(), true,
-                                       GlobalValue::InternalLinkage, ConstVal,
-                                       "funcspec.arg");
-        if (ArgOpType != ConstVal->getType())
-          GV = ConstantExpr::getBitCast(cast<Constant>(GV), ArgOpType);
-
-        Call->setArgOperand(Idx, GV);
-        Changed = true;
-      }
-
-      // Add the changed CallInst to Solver Worklist
-      if (Changed)
-        Solver.visitCall(*Call);
+      Call->setArgOperand(Idx, GV);
     }
   }
 }
@@ -494,17 +492,37 @@ bool FunctionSpecializer::run() {
     if (!isCandidateFunction(&F))
       continue;
 
-    Cost SpecCost = getSpecializationCost(&F);
-    if (!SpecCost.isValid()) {
-      LLVM_DEBUG(dbgs() << "FnSpecialization: Invalid specialization cost for "
-                        << F.getName() << "\n");
-      continue;
+    auto [It, Inserted] = FunctionMetrics.try_emplace(&F);
+    CodeMetrics &Metrics = It->second;
+    //Analyze the function.
+    if (Inserted) {
+      SmallPtrSet<const Value *, 32> EphValues;
+      CodeMetrics::collectEphemeralValues(&F, &GetAC(F), EphValues);
+      for (BasicBlock &BB : F)
+        Metrics.analyzeBasicBlock(&BB, GetTTI(F), EphValues);
     }
 
-    LLVM_DEBUG(dbgs() << "FnSpecialization: Specialization cost for "
-                      << F.getName() << " is " << SpecCost << "\n");
+    // If the code metrics reveal that we shouldn't duplicate the function,
+    // or if the code size implies that this function is easy to get inlined,
+    // then we shouldn't specialize it.
+    if (Metrics.notDuplicatable || !Metrics.NumInsts.isValid() ||
+        (!ForceSpecialization && !F.hasFnAttribute(Attribute::NoInline) &&
+         Metrics.NumInsts < MinFunctionSize))
+      continue;
 
-    if (!findSpecializations(&F, SpecCost, AllSpecs, SM)) {
+    // TODO: For now only consider recursive functions when running multiple
+    // times. This should change if specialization on literal constants gets
+    // enabled.
+    if (!Inserted && !Metrics.isRecursive && !SpecializeLiteralConstant)
+      continue;
+
+    LLVM_DEBUG(dbgs() << "FnSpecialization: Specialization cost for "
+                      << F.getName() << " is " << Metrics.NumInsts << "\n");
+
+    if (Inserted && Metrics.isRecursive)
+      promoteConstantStackValues(&F);
+
+    if (!findSpecializations(&F, Metrics.NumInsts, AllSpecs, SM)) {
       LLVM_DEBUG(
           dbgs() << "FnSpecialization: No possible specializations found for "
                  << F.getName() << "\n");
@@ -612,7 +630,10 @@ bool FunctionSpecializer::run() {
   // Rerun the solver to notify the users of the modified callsites.
   Solver.solveWhileResolvedUndefs();
 
-  promoteConstantStackValues();
+  for (Function *F : OriginalFuncs)
+    if (FunctionMetrics[F].isRecursive)
+      promoteConstantStackValues(F);
+
   return true;
 }
 
@@ -625,20 +646,6 @@ void FunctionSpecializer::removeDeadFunctions() {
     F->eraseFromParent();
   }
   FullySpecialized.clear();
-}
-
-// Compute the code metrics for function \p F.
-CodeMetrics &FunctionSpecializer::analyzeFunction(Function *F) {
-  auto I = FunctionMetrics.insert({F, CodeMetrics()});
-  CodeMetrics &Metrics = I.first->second;
-  if (I.second) {
-    // The code metrics were not cached.
-    SmallPtrSet<const Value *, 32> EphValues;
-    CodeMetrics::collectEphemeralValues(F, &(GetAC)(*F), EphValues);
-    for (BasicBlock &BB : *F)
-      Metrics.analyzeBasicBlock(&BB, (GetTTI)(*F), EphValues);
-  }
-  return Metrics;
 }
 
 /// Clone the function \p F and remove the ssa_copy intrinsics added by
@@ -667,7 +674,6 @@ bool FunctionSpecializer::findSpecializations(Function *F, Cost SpecCost,
   if (Args.empty())
     return false;
 
-  bool HasCheckedEntryFreq = false;
   for (User *U : F->users()) {
     if (!isa<CallInst>(U) && !isa<InvokeInst>(U))
       continue;
@@ -703,21 +709,6 @@ bool FunctionSpecializer::findSpecializations(Function *F, Cost SpecCost,
     if (S.Args.empty())
       continue;
 
-    // Check the function entry frequency only once. We sink this code here to
-    // postpone running the Block Frequency Analysis until we know for sure
-    // there are Specialization candidates, otherwise we are adding unnecessary
-    // overhead.
-    if (!HasCheckedEntryFreq) {
-      // Reject cold functions (for some definition of 'cold').
-      uint64_t EntryFreq = (GetBFI)(*F).getEntryFreq();
-      if (!ForceSpecialization && EntryFreq < MinEntryFreq)
-        return false;
-
-      HasCheckedEntryFreq = true;
-      LLVM_DEBUG(dbgs() << "FnSpecialization: Entry block frequency for "
-                        << F->getName() << " = " << EntryFreq << "\n");
-    }
-
     // Check if we have encountered the same specialisation already.
     if (auto It = UniqueSpecs.find(S); It != UniqueSpecs.end()) {
       // Existing specialisation. Add the call to the list to rewrite, unless
@@ -732,14 +723,13 @@ bool FunctionSpecializer::findSpecializations(Function *F, Cost SpecCost,
       AllSpecs[Index].CallSites.push_back(&CS);
     } else {
       // Calculate the specialisation gain.
-      Cost Score = 0;
+      Cost Score = 0 - SpecCost;
       InstCostVisitor Visitor = getInstCostVisitorFor(F);
       for (ArgInfo &A : S.Args)
         Score += getSpecializationBonus(A.Formal, A.Actual, Visitor);
-      Score /= SpecCost;
 
       // Discard unprofitable specialisations.
-      if (!ForceSpecialization && Score < MinScore)
+      if (!ForceSpecialization && Score <= 0)
         continue;
 
       // Create a new specialisation entry.
@@ -807,23 +797,6 @@ Function *FunctionSpecializer::createSpecialization(Function *F,
   ++NumSpecsCreated;
 
   return Clone;
-}
-
-/// Compute and return the cost of specializing function \p F.
-Cost FunctionSpecializer::getSpecializationCost(Function *F) {
-  CodeMetrics &Metrics = analyzeFunction(F);
-  // If the code metrics reveal that we shouldn't duplicate the function, we
-  // shouldn't specialize it. Set the specialization cost to Invalid.
-  // Or if the lines of codes implies that this function is easy to get
-  // inlined so that we shouldn't specialize it.
-  if (Metrics.notDuplicatable || !Metrics.NumInsts.isValid() ||
-      (!ForceSpecialization && !F->hasFnAttribute(Attribute::NoInline) &&
-       Metrics.NumInsts < MinFunctionSize))
-    return InstructionCost::getInvalid();
-
-  // Otherwise, set the specialization cost to be the cost of all the
-  // instructions in the function.
-  return Metrics.NumInsts;
 }
 
 /// Compute a bonus for replacing argument \p A with constant \p C.

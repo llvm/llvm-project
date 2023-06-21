@@ -79,7 +79,7 @@ public:
   ThreadOptionValueProperties(ConstString name) : Cloneable(name) {}
 
   const Property *
-  GetPropertyAtIndex(uint32_t idx,
+  GetPropertyAtIndex(size_t idx,
                      const ExecutionContext *exe_ctx) const override {
     // When getting the value for a key from the thread options, we will always
     // try and grab the setting from the current thread if there is one. Else

@@ -22,9 +22,6 @@
 // nor does the dynamic library shipped with z/OS.
 // UNSUPPORTED: target={{.+}}-zos{{.*}}
 
-// TODO: Investigate why this fails on MinGW-shared
-// UNSUPPORTED: target={{.+}}-windows-gnu
-
 #include <new>
 #include <cstddef>
 #include <cstdlib>
@@ -58,11 +55,11 @@ int main(int, char**) {
     {
         new_called = delete_called = 0;
         OverAligned* x = new OverAligned[3];
-        assert(static_cast<void*>(x) == DummyData);
-        assert(new_called == 1);
+        ASSERT_WITH_OPERATOR_NEW_FALLBACKS(static_cast<void*>(x) == DummyData);
+        ASSERT_WITH_OPERATOR_NEW_FALLBACKS(new_called == 1);
 
         delete[] x;
-        assert(delete_called == 1);
+        ASSERT_WITH_OPERATOR_NEW_FALLBACKS(delete_called == 1);
     }
 
     // Test with a type that is right on the verge of being overaligned

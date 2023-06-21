@@ -210,11 +210,10 @@ Status Platform::GetSharedModule(
     Status error(eErrorTypeGeneric);
     ModuleSpec resolved_spec;
     // Check if we have sysroot set.
-    if (m_sdk_sysroot) {
+    if (!m_sdk_sysroot.empty()) {
       // Prepend sysroot to module spec.
       resolved_spec = spec;
-      resolved_spec.GetFileSpec().PrependPathComponent(
-          m_sdk_sysroot.GetStringRef());
+      resolved_spec.GetFileSpec().PrependPathComponent(m_sdk_sysroot);
       // Try to get shared module with resolved spec.
       error = ModuleList::GetSharedModule(resolved_spec, module_sp,
                                           module_search_paths_ptr, old_modules,
@@ -312,9 +311,9 @@ void Platform::GetStatus(Stream &strm) {
     strm.Printf(" Connected: %s\n", is_connected ? "yes" : "no");
   }
 
-  if (GetSDKRootDirectory()) {
-    strm.Format("   Sysroot: {0}\n", GetSDKRootDirectory());
-  }
+  if (const std::string &sdk_root = GetSDKRootDirectory(); !sdk_root.empty())
+    strm.Format("   Sysroot: {0}\n", sdk_root);
+
   if (GetWorkingDirectory()) {
     strm.Printf("WorkingDir: %s\n", GetWorkingDirectory().GetPath().c_str());
   }
@@ -1631,7 +1630,7 @@ Status Platform::DownloadModuleSlice(const FileSpec &src_file_spec,
     return error;
   }
 
-  std::vector<char> buffer(1024);
+  std::vector<char> buffer(512 * 1024);
   auto offset = src_offset;
   uint64_t total_bytes_read = 0;
   while (total_bytes_read < src_size) {

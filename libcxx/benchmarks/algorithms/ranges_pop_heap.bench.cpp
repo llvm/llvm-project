@@ -16,17 +16,14 @@ struct RangesPopHeap {
   size_t Quantity;
 
   void run(benchmark::State& state) const {
-    runOpOnCopies<ValueType>(
-        state, Quantity, Order(), BatchSize::CountElements, [](auto& Copy) {
-          for (auto B = Copy.begin(), I = Copy.end(); I != B; --I) {
-            std::ranges::pop_heap(B, I);
-          }
-        });
+    runOpOnCopies<ValueType>(state, Quantity, Order(), BatchSize::CountElements, [](auto& Copy) {
+      for (auto B = Copy.begin(), I = Copy.end(); I != B; --I) {
+        std::ranges::pop_heap(B, I);
+      }
+    });
   }
 
-  std::string name() const {
-    return "BM_RangesPopHeap" + ValueType::name() + "_" + std::to_string(Quantity);
-  };
+  std::string name() const { return "BM_RangesPopHeap" + ValueType::name() + "_" + std::to_string(Quantity); };
 };
 } // namespace
 

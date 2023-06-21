@@ -27,15 +27,16 @@ add_llvm_target(RISCVCodeGen
   RISCVFrameLowering.cpp
   RISCVGatherScatterLowering.cpp
   RISCVInsertVSETVLI.cpp
+  RISCVInsertReadWriteCSR.cpp
   RISCVInstrInfo.cpp
   RISCVISelDAGToDAG.cpp
   RISCVISelLowering.cpp
   RISCVMachineFunctionInfo.cpp
   RISCVMacroFusion.cpp
-  RISCVMCInstLower.cpp
   RISCVMergeBaseOffset.cpp
   RISCVOptWInstrs.cpp
   RISCVRedundantCopyElimination.cpp
+  RISCVMoveMerger.cpp
   RISCVRegisterInfo.cpp
   RISCVRVVInitUndef.cpp
   RISCVSubtarget.cpp

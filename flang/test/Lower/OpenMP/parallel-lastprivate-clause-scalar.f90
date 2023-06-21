@@ -173,7 +173,7 @@ end subroutine
 !CHECK: func.func @_QPfirstpriv_lastpriv_int2(%[[ARG1:.*]]: !fir.ref<i32> {fir.bindc_name = "arg1"}) {
 !CHECK: omp.parallel  {
 ! Firstprivate update
-!CHECK-NEXT: %[[CLONE1:.*]] = fir.alloca i32 {bindc_name = "arg1"
+!CHECK: %[[CLONE1:.*]] = fir.alloca i32 {bindc_name = "arg1"
 !CHECK-NEXT: %[[FPV_LD:.*]] = fir.load %[[ARG1]] : !fir.ref<i32>
 !CHECK-NEXT: fir.store %[[FPV_LD]] to %[[CLONE1]] : !fir.ref<i32>
 !CHECK-NEXT: omp.barrier

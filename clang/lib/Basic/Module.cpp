@@ -271,18 +271,16 @@ OptionalDirectoryEntryRef Module::getEffectiveUmbrellaDir() const {
   return std::nullopt;
 }
 
-void Module::addTopHeader(const FileEntry *File) {
+void Module::addTopHeader(FileEntryRef File) {
   assert(File);
   TopHeaders.insert(File);
 }
 
-ArrayRef<const FileEntry *> Module::getTopHeaders(FileManager &FileMgr) {
+ArrayRef<FileEntryRef> Module::getTopHeaders(FileManager &FileMgr) {
   if (!TopHeaderNames.empty()) {
-    for (std::vector<std::string>::iterator
-           I = TopHeaderNames.begin(), E = TopHeaderNames.end(); I != E; ++I) {
-      if (auto FE = FileMgr.getFile(*I))
+    for (StringRef TopHeaderName : TopHeaderNames)
+      if (auto FE = FileMgr.getOptionalFileRef(TopHeaderName))
         TopHeaders.insert(*FE);
-    }
     TopHeaderNames.clear();
   }
 
@@ -483,15 +481,15 @@ void Module::print(raw_ostream &OS, unsigned Indent, bool Dump) const {
     OS << "\n";
   }
 
-  if (Header H = getUmbrellaHeaderAsWritten()) {
+  if (std::optional<Header> H = getUmbrellaHeaderAsWritten()) {
     OS.indent(Indent + 2);
     OS << "umbrella header \"";
-    OS.write_escaped(H.NameAsWritten);
+    OS.write_escaped(H->NameAsWritten);
     OS << "\"\n";
-  } else if (DirectoryName D = getUmbrellaDirAsWritten()) {
+  } else if (std::optional<DirectoryName> D = getUmbrellaDirAsWritten()) {
     OS.indent(Indent + 2);
     OS << "umbrella \"";
-    OS.write_escaped(D.NameAsWritten);
+    OS.write_escaped(D->NameAsWritten);
     OS << "\"\n";
   }
 
@@ -523,8 +521,8 @@ void Module::print(raw_ostream &OS, unsigned Indent, bool Dump) const {
       OS.indent(Indent + 2);
       OS << K.Prefix << "header \"";
       OS.write_escaped(H.NameAsWritten);
-      OS << "\" { size " << H.Entry->getSize()
-         << " mtime " << H.Entry->getModificationTime() << " }\n";
+      OS << "\" { size " << H.Entry.getSize()
+         << " mtime " << H.Entry.getModificationTime() << " }\n";
     }
   }
   for (auto *Unresolved : {&UnresolvedHeaders, &MissingHeaders}) {

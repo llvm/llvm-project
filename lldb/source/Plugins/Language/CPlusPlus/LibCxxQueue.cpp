@@ -33,7 +33,7 @@ public:
   }
 
   ValueObjectSP GetChildAtIndex(size_t idx) override {
-    return m_container_sp ? m_container_sp->GetChildAtIndex(idx, true)
+    return m_container_sp ? m_container_sp->GetChildAtIndex(idx)
                           : nullptr;
   }
 
@@ -49,7 +49,7 @@ private:
 
 bool QueueFrontEnd::Update() {
   m_container_sp = nullptr;
-  ValueObjectSP c_sp = m_backend.GetChildMemberWithName(ConstString("c"), true);
+  ValueObjectSP c_sp = m_backend.GetChildMemberWithName("c");
   if (!c_sp)
     return false;
   m_container_sp = c_sp->GetSyntheticValue().get();

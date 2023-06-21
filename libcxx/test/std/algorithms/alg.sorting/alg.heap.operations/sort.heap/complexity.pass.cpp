@@ -58,6 +58,9 @@ int main(int, char**) {
     const int n = (1 << logn);
     auto first  = v.begin();
     auto last   = v.begin() + n;
+    const int debug_elements = std::min(100, n);
+    // Multiplier 2 because of comp(a,b) comp(b, a) checks.
+    const int debug_comparisons = 2 * (debug_elements + 1) * debug_elements;
     std::shuffle(first, last, g);
     std::make_heap(first, last);
     // The exact stats of our current implementation are recorded here.
@@ -69,7 +72,7 @@ int main(int, char**) {
     LIBCPP_ASSERT(stats.compared <= n * logn);
 #endif
     LIBCPP_ASSERT(std::is_sorted(first, last));
-    LIBCPP_ASSERT(stats.compared <= 2 * n * logn);
+    LIBCPP_ASSERT(stats.compared <= 2 * n * logn + debug_comparisons);
   }
   return 0;
 }

@@ -518,7 +518,7 @@ public:
 
   // PowerPC specific version of setSpecialOperandAttr that copies Flags to MI
   // and clears nuw, nsw, and exact flags.
-  void setSpecialOperandAttr(MachineInstr &MI, uint16_t Flags) const;
+  void setSpecialOperandAttr(MachineInstr &MI, uint32_t Flags) const;
 
   bool isCoalescableExtInstr(const MachineInstr &MI,
                              Register &SrcReg, Register &DstReg,

@@ -1433,7 +1433,7 @@ define <4 x i1> @pass_vector_mask_arg_via_stack(<4 x i1> %v) {
 ; LMULMAX8-NEXT:    vsetivli zero, 8, e8, mf2, ta, ma
 ; LMULMAX8-NEXT:    vmv.v.i v17, 0
 ; LMULMAX8-NEXT:    vsetivli zero, 4, e8, mf2, tu, ma
-; LMULMAX8-NEXT:    vslideup.vi v17, v16, 0
+; LMULMAX8-NEXT:    vmv.v.v v17, v16
 ; LMULMAX8-NEXT:    vsetivli zero, 8, e8, mf2, ta, ma
 ; LMULMAX8-NEXT:    vmsne.vi v16, v17, 0
 ; LMULMAX8-NEXT:    addi a0, sp, 136
@@ -1471,7 +1471,7 @@ define <4 x i1> @pass_vector_mask_arg_via_stack(<4 x i1> %v) {
 ; LMULMAX4-NEXT:    vsetivli zero, 8, e8, mf2, ta, ma
 ; LMULMAX4-NEXT:    vmv.v.i v13, 0
 ; LMULMAX4-NEXT:    vsetivli zero, 4, e8, mf2, tu, ma
-; LMULMAX4-NEXT:    vslideup.vi v13, v12, 0
+; LMULMAX4-NEXT:    vmv.v.v v13, v12
 ; LMULMAX4-NEXT:    vsetivli zero, 8, e8, mf2, ta, ma
 ; LMULMAX4-NEXT:    vmsne.vi v12, v13, 0
 ; LMULMAX4-NEXT:    addi a0, sp, 136
@@ -1515,7 +1515,7 @@ define <4 x i1> @pass_vector_mask_arg_via_stack(<4 x i1> %v) {
 ; LMULMAX2-NEXT:    vsetivli zero, 8, e8, mf2, ta, ma
 ; LMULMAX2-NEXT:    vmv.v.i v11, 0
 ; LMULMAX2-NEXT:    vsetivli zero, 4, e8, mf2, tu, ma
-; LMULMAX2-NEXT:    vslideup.vi v11, v10, 0
+; LMULMAX2-NEXT:    vmv.v.v v11, v10
 ; LMULMAX2-NEXT:    vsetivli zero, 8, e8, mf2, ta, ma
 ; LMULMAX2-NEXT:    vmsne.vi v10, v11, 0
 ; LMULMAX2-NEXT:    addi a0, sp, 136
@@ -1571,7 +1571,7 @@ define <4 x i1> @pass_vector_mask_arg_via_stack(<4 x i1> %v) {
 ; LMULMAX1-NEXT:    vsetivli zero, 8, e8, mf2, ta, ma
 ; LMULMAX1-NEXT:    vmv.v.i v10, 0
 ; LMULMAX1-NEXT:    vsetivli zero, 4, e8, mf2, tu, ma
-; LMULMAX1-NEXT:    vslideup.vi v10, v9, 0
+; LMULMAX1-NEXT:    vmv.v.v v10, v9
 ; LMULMAX1-NEXT:    vsetivli zero, 8, e8, mf2, ta, ma
 ; LMULMAX1-NEXT:    vmsne.vi v9, v10, 0
 ; LMULMAX1-NEXT:    addi a0, sp, 136

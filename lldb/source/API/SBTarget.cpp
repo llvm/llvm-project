@@ -1601,6 +1601,26 @@ const char *SBTarget::GetABIName() {
   return const_name.GetCString();
 }
 
+const char *SBTarget::GetLabel() const {
+  LLDB_INSTRUMENT_VA(this);
+
+  TargetSP target_sp(GetSP());
+  if (!target_sp)
+    return nullptr;
+
+  return ConstString(target_sp->GetLabel().data()).AsCString();
+}
+
+SBError SBTarget::SetLabel(const char *label) {
+  LLDB_INSTRUMENT_VA(this, label);
+
+  TargetSP target_sp(GetSP());
+  if (!target_sp)
+    return Status("Couldn't get internal target object.");
+
+  return Status(target_sp->SetLabel(label));
+}
+
 uint32_t SBTarget::GetDataByteSize() {
   LLDB_INSTRUMENT_VA(this);
 
@@ -1892,7 +1912,7 @@ SBValueList SBTarget::FindGlobalVariables(const char *name,
                                                  max_matches, variable_list);
       break;
     case eMatchTypeStartsWith:
-      regexstr = llvm::Regex::escape(name) + ".*";
+      regexstr = "^" + llvm::Regex::escape(name) + ".*";
       target_sp->GetImages().FindGlobalVariables(RegularExpression(regexstr),
                                                  max_matches, variable_list);
       break;

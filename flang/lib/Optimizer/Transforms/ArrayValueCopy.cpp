@@ -850,8 +850,7 @@ static bool getAdjustedExtents(mlir::Location loc,
         auto triples = sliceOp.getTriples();
         const std::size_t tripleSize = triples.size();
         auto module = arrLoad->getParentOfType<mlir::ModuleOp>();
-        fir::KindMapping kindMap = getKindMapping(module);
-        FirOpBuilder builder(rewriter, kindMap);
+        FirOpBuilder builder(rewriter, module);
         size = builder.genExtentFromTriplet(loc, triples[tripleSize - 3],
                                             triples[tripleSize - 2],
                                             triples[tripleSize - 1], idxTy);
@@ -937,8 +936,7 @@ static mlir::Value genCoorOp(mlir::PatternRewriter &rewriter,
   assert(seqTy && seqTy.isa<SequenceType>());
   const auto dimension = seqTy.cast<SequenceType>().getDimension();
   auto module = load->getParentOfType<mlir::ModuleOp>();
-  fir::KindMapping kindMap = getKindMapping(module);
-  FirOpBuilder builder(rewriter, kindMap);
+  FirOpBuilder builder(rewriter, module);
   auto typeparams = getTypeParamsIfRawData(loc, builder, load, alloc.getType());
   mlir::Value result = rewriter.create<ArrayCoorOp>(
       loc, eleTy, alloc, shape, slice,
@@ -1002,8 +1000,7 @@ void genArrayCopy(mlir::Location loc, mlir::PatternRewriter &rewriter,
   // Reverse the indices so they are in column-major order.
   std::reverse(indices.begin(), indices.end());
   auto module = arrLoad->getParentOfType<mlir::ModuleOp>();
-  fir::KindMapping kindMap = getKindMapping(module);
-  FirOpBuilder builder(rewriter, kindMap);
+  FirOpBuilder builder(rewriter, module);
   auto fromAddr = rewriter.create<ArrayCoorOp>(
       loc, getEleTy(src.getType()), src, shapeOp,
       CopyIn && copyUsingSlice ? sliceOp : mlir::Value{},
@@ -1041,8 +1038,7 @@ genArrayLoadTypeParameters(mlir::Location loc, mlir::PatternRewriter &rewriter,
       if (auto charTy = eleTy.dyn_cast<CharacterType>()) {
         assert(load.getMemref().getType().isa<BoxType>());
         auto module = load->getParentOfType<mlir::ModuleOp>();
-        fir::KindMapping kindMap = getKindMapping(module);
-        FirOpBuilder builder(rewriter, kindMap);
+        FirOpBuilder builder(rewriter, module);
         return {getCharacterLen(loc, builder, load, charTy)};
       }
       TODO(loc, "unhandled dynamic type parameters");
@@ -1094,14 +1090,12 @@ allocateArrayTemp(mlir::Location loc, mlir::PatternRewriter &rewriter,
         loc, fir::BoxType::get(allocmem.getType()), allocmem, shape,
         /*slice=*/mlir::Value{}, typeParams);
     auto module = load->getParentOfType<mlir::ModuleOp>();
-    fir::KindMapping kindMap = getKindMapping(module);
-    FirOpBuilder builder(rewriter, kindMap);
+    FirOpBuilder builder(rewriter, module);
     runtime::genDerivedTypeInitialize(builder, loc, box);
     // Any allocatable component that may have been allocated must be
     // deallocated during the clean-up.
     auto cleanup = [=](mlir::PatternRewriter &r) {
-      fir::KindMapping kindMap = getKindMapping(module);
-      FirOpBuilder builder(r, kindMap);
+      FirOpBuilder builder(r, module);
       runtime::genDerivedTypeDestroy(builder, loc, box);
       r.create<FreeMemOp>(loc, allocmem);
     };

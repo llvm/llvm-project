@@ -99,10 +99,6 @@ bool operator==(const year_month_weekday& __lhs, const year_month_weekday& __rhs
 { return __lhs.year() == __rhs.year() && __lhs.month() == __rhs.month() && __lhs.weekday_indexed() == __rhs.weekday_indexed(); }
 
 _LIBCPP_HIDE_FROM_ABI inline constexpr
-bool operator!=(const year_month_weekday& __lhs, const year_month_weekday& __rhs) noexcept
-{ return !(__lhs == __rhs); }
-
-_LIBCPP_HIDE_FROM_ABI inline constexpr
 year_month_weekday operator/(const year_month& __lhs, const weekday_indexed& __rhs) noexcept
 { return year_month_weekday{__lhs.year(), __lhs.month(), __rhs}; }
 
@@ -190,11 +186,6 @@ days year_month_weekday_last::__to_days() const noexcept
 _LIBCPP_HIDE_FROM_ABI inline constexpr
 bool operator==(const year_month_weekday_last& __lhs, const year_month_weekday_last& __rhs) noexcept
 { return __lhs.year() == __rhs.year() && __lhs.month() == __rhs.month() && __lhs.weekday_last() == __rhs.weekday_last(); }
-
-_LIBCPP_HIDE_FROM_ABI inline constexpr
-bool operator!=(const year_month_weekday_last& __lhs, const year_month_weekday_last& __rhs) noexcept
-{ return !(__lhs == __rhs); }
-
 
 _LIBCPP_HIDE_FROM_ABI inline constexpr
 year_month_weekday_last operator/(const year_month& __lhs, const weekday_last& __rhs) noexcept

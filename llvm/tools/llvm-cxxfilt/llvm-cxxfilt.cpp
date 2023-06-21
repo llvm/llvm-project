@@ -8,6 +8,7 @@
 
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/Demangle/Demangle.h"
+#include "llvm/Demangle/StringViewExtras.h"
 #include "llvm/Option/Arg.h"
 #include "llvm/Option/ArgList.h"
 #include "llvm/Option/Option.h"
@@ -71,10 +72,11 @@ static void error(const Twine &Message) {
 }
 
 static std::string demangle(const std::string &Mangled) {
-  const char *DecoratedStr = Mangled.c_str();
+  using llvm::itanium_demangle::starts_with;
+  std::string_view DecoratedStr = Mangled;
   if (StripUnderscore)
     if (DecoratedStr[0] == '_')
-      ++DecoratedStr;
+      DecoratedStr.remove_prefix(1);
 
   std::string Result;
   if (nonMicrosoftDemangle(DecoratedStr, Result))
@@ -86,9 +88,9 @@ static std::string demangle(const std::string &Mangled) {
   if (Types)
     Undecorated = itaniumDemangle(DecoratedStr);
 
-  if (!Undecorated && strncmp(DecoratedStr, "__imp_", 6) == 0) {
+  if (!Undecorated && starts_with(DecoratedStr, "__imp_")) {
     Prefix = "import thunk for ";
-    Undecorated = itaniumDemangle(DecoratedStr + 6);
+    Undecorated = itaniumDemangle(DecoratedStr.substr(6));
   }
 
   Result = Undecorated ? Prefix + Undecorated : Mangled;

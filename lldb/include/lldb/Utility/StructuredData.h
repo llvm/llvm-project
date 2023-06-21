@@ -484,6 +484,7 @@ public:
       }
       return success;
     }
+      
     template <class IntType>
     bool GetValueForKeyAsInteger(llvm::StringRef key, IntType &result) const {
       ObjectSP value_sp = GetValueForKey(key);
@@ -533,26 +534,6 @@ public:
         else
           result = llvm::StringRef();
       }
-      return success;
-    }
-
-    bool GetValueForKeyAsString(llvm::StringRef key,
-                                ConstString &result) const {
-      ObjectSP value_sp = GetValueForKey(key);
-      if (value_sp.get()) {
-        if (auto string_value = value_sp->GetAsString()) {
-          result = ConstString(string_value->GetValue());
-          return true;
-        }
-      }
-      return false;
-    }
-
-    bool GetValueForKeyAsString(llvm::StringRef key, ConstString &result,
-                                const char *default_val) const {
-      bool success = GetValueForKeyAsString(key, result);
-      if (!success)
-        result.SetCString(default_val);
       return success;
     }
 

@@ -269,31 +269,33 @@ const int STACK_TRACE_TAG_POISON = StackTrace::TAG_CUSTOM + 1;
 const int STACK_TRACE_TAG_FIELDS = STACK_TRACE_TAG_POISON + 1;
 const int STACK_TRACE_TAG_VPTR = STACK_TRACE_TAG_FIELDS + 1;
 
-#define GET_MALLOC_STACK_TRACE                                            \
-  BufferedStackTrace stack;                                               \
-  if (__msan_get_track_origins() && msan_inited)                          \
-    stack.Unwind(StackTrace::GetCurrentPc(), GET_CURRENT_FRAME(),         \
-                 nullptr, common_flags()->fast_unwind_on_malloc,          \
-                 common_flags()->malloc_context_size)
+#define GET_MALLOC_STACK_TRACE                                             \
+  UNINITIALIZED BufferedStackTrace stack;                                  \
+  if (__msan_get_track_origins() && msan_inited) {                         \
+    stack.Unwind(StackTrace::GetCurrentPc(), GET_CURRENT_FRAME(), nullptr, \
+                 common_flags()->fast_unwind_on_malloc,                    \
+                 common_flags()->malloc_context_size);                     \
+  }
 
 // For platforms which support slow unwinder only, we restrict the store context
 // size to 1, basically only storing the current pc. We do this because the slow
 // unwinder which is based on libunwind is not async signal safe and causes
 // random freezes in forking applications as well as in signal handlers.
-#define GET_STORE_STACK_TRACE_PC_BP(pc, bp)                                    \
-  BufferedStackTrace stack;                                                    \
-  if (__msan_get_track_origins() > 1 && msan_inited) {                         \
-    int size = flags()->store_context_size;                                    \
-    if (!SANITIZER_CAN_FAST_UNWIND)                                            \
-      size = Min(size, 1);                                                     \
-    stack.Unwind(pc, bp, nullptr, common_flags()->fast_unwind_on_malloc, size);\
+#define GET_STORE_STACK_TRACE_PC_BP(pc, bp)                              \
+  UNINITIALIZED BufferedStackTrace stack;                                \
+  if (__msan_get_track_origins() > 1 && msan_inited) {                   \
+    int size = flags()->store_context_size;                              \
+    if (!SANITIZER_CAN_FAST_UNWIND)                                      \
+      size = Min(size, 1);                                               \
+    stack.Unwind(pc, bp, nullptr, common_flags()->fast_unwind_on_malloc, \
+                 size);                                                  \
   }
 
 #define GET_STORE_STACK_TRACE \
   GET_STORE_STACK_TRACE_PC_BP(StackTrace::GetCurrentPc(), GET_CURRENT_FRAME())
 
 #define GET_FATAL_STACK_TRACE_PC_BP(pc, bp)                              \
-  BufferedStackTrace stack;                                              \
+  UNINITIALIZED BufferedStackTrace stack;                                \
   if (msan_inited) {                                                     \
     stack.Unwind(pc, bp, nullptr, common_flags()->fast_unwind_on_fatal); \
   }

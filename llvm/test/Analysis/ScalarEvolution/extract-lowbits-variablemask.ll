@@ -45,11 +45,11 @@ define i32 @mask_b(i32 %val, i32 %numlowbits) nounwind {
 ; CHECK-LABEL: 'mask_b'
 ; CHECK-NEXT:  Classifying expressions for: @mask_b
 ; CHECK-NEXT:    %notmask = shl i32 -1, %numlowbits
-; CHECK-NEXT:    --> %notmask U: full-set S: full-set
+; CHECK-NEXT:    --> %notmask U: [-2147483648,0) S: [-2147483648,0)
 ; CHECK-NEXT:    %mask = xor i32 %notmask, -1
-; CHECK-NEXT:    --> (-1 + (-1 * %notmask)) U: full-set S: full-set
+; CHECK-NEXT:    --> (-1 + (-1 * %notmask)) U: [0,-2147483648) S: [0,-2147483648)
 ; CHECK-NEXT:    %masked = and i32 %mask, %val
-; CHECK-NEXT:    --> %masked U: full-set S: full-set
+; CHECK-NEXT:    --> %masked U: [0,-2147483648) S: [0,-2147483648)
 ; CHECK-NEXT:  Determining loop execution counts for: @mask_b
 ;
   %notmask = shl i32 -1, %numlowbits
@@ -64,7 +64,7 @@ define i32 @mask_c(i32 %val, i32 %numlowbits) nounwind {
 ; CHECK-NEXT:    %numhighbits = sub i32 32, %numlowbits
 ; CHECK-NEXT:    --> (32 + (-1 * %numlowbits)) U: full-set S: full-set
 ; CHECK-NEXT:    %mask = lshr i32 -1, %numhighbits
-; CHECK-NEXT:    --> %mask U: full-set S: full-set
+; CHECK-NEXT:    --> %mask U: [1,0) S: [1,0)
 ; CHECK-NEXT:    %masked = and i32 %mask, %val
 ; CHECK-NEXT:    --> %masked U: full-set S: full-set
 ; CHECK-NEXT:  Determining loop execution counts for: @mask_c

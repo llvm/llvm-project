@@ -17,8 +17,7 @@ using namespace clang::interp;
 
 InterpState::InterpState(State &Parent, Program &P, InterpStack &Stk,
                          Context &Ctx, SourceMapper *M)
-    : Parent(Parent), M(M), P(P), Stk(Stk), Ctx(Ctx), Current(nullptr),
-      CallStackDepth(Parent.getCallStackDepth() + 1) {}
+    : Parent(Parent), M(M), P(P), Stk(Stk), Ctx(Ctx), Current(nullptr) {}
 
 InterpState::~InterpState() {
   while (Current) {
