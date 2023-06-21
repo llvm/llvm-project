@@ -473,9 +473,11 @@ public:
   /// \name Symbol Management
   /// @{
 
-  /// Create and return a new linker temporary symbol with a unique but
-  /// unspecified name.
+  /// Create a new linker temporary symbol with the specified prefix (Name) or
+  /// "tmp". This creates a "l"-prefixed symbol for Mach-O and is identical to
+  /// createNamedTempSymbol for other object file formats.
   MCSymbol *createLinkerPrivateTempSymbol();
+  MCSymbol *createLinkerPrivateSymbol(const Twine &Name);
 
   /// Create a temporary symbol with a unique name. The name will be omitted
   /// in the symbol table if UseNamesOnTempLabels is false (default except
