@@ -959,9 +959,12 @@ bool SILoadStoreOptimizer::offsetsCanBeCombined(CombineInfo &CI,
 
   // Handle all non-DS instructions.
   if ((CI.InstClass != DS_READ) && (CI.InstClass != DS_WRITE)) {
-    return (EltOffset0 + CI.Width == EltOffset1 ||
-            EltOffset1 + Paired.Width == EltOffset0) &&
-           CI.CPol == Paired.CPol;
+    if (EltOffset0 + CI.Width != EltOffset1 &&
+            EltOffset1 + Paired.Width != EltOffset0)
+      return false;
+    if (CI.CPol != Paired.CPol)
+      return false;
+    return true;
   }
 
   // If the offset in elements doesn't fit in 8-bits, we might be able to use
