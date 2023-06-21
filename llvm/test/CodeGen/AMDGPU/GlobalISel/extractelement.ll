@@ -32,7 +32,6 @@ define float @dyn_extract_v8f32_const_s_v(i32 %sel) {
 ; GFX10PLUS-LABEL: dyn_extract_v8f32_const_s_v:
 ; GFX10PLUS:       ; %bb.0: ; %entry
 ; GFX10PLUS-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX10PLUS-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX10PLUS-NEXT:    v_cmp_eq_u32_e32 vcc_lo, 1, v0
 ; GFX10PLUS-NEXT:    v_cndmask_b32_e64 v1, 1.0, 2.0, vcc_lo
 ; GFX10PLUS-NEXT:    v_cmp_eq_u32_e32 vcc_lo, 2, v0
@@ -180,7 +179,6 @@ define float @dyn_extract_v8f32_v_v(<8 x float> %vec, i32 %sel) {
 ; GFX10PLUS-LABEL: dyn_extract_v8f32_v_v:
 ; GFX10PLUS:       ; %bb.0: ; %entry
 ; GFX10PLUS-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX10PLUS-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX10PLUS-NEXT:    v_cmp_eq_u32_e32 vcc_lo, 1, v8
 ; GFX10PLUS-NEXT:    v_cndmask_b32_e32 v0, v0, v1, vcc_lo
 ; GFX10PLUS-NEXT:    v_cmp_eq_u32_e32 vcc_lo, 2, v8
@@ -344,7 +342,6 @@ define i64 @dyn_extract_v8i64_const_s_v(i32 %sel) {
 ; GFX10-LABEL: dyn_extract_v8i64_const_s_v:
 ; GFX10:       ; %bb.0: ; %entry
 ; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX10-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX10-NEXT:    s_mov_b64 s[6:7], 2
 ; GFX10-NEXT:    v_cmp_eq_u32_e32 vcc_lo, 1, v0
 ; GFX10-NEXT:    v_mov_b32_e32 v1, s6
@@ -381,7 +378,6 @@ define i64 @dyn_extract_v8i64_const_s_v(i32 %sel) {
 ; GFX11-LABEL: dyn_extract_v8i64_const_s_v:
 ; GFX11:       ; %bb.0: ; %entry
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-NEXT:    s_mov_b64 s[2:3], 2
 ; GFX11-NEXT:    v_cmp_eq_u32_e32 vcc_lo, 1, v0
 ; GFX11-NEXT:    v_dual_mov_b32 v1, s2 :: v_dual_mov_b32 v2, s3
@@ -724,7 +720,6 @@ define i64 @dyn_extract_v8i64_v_v(<8 x i64> %vec, i32 %sel) {
 ; GFX10-LABEL: dyn_extract_v8i64_v_v:
 ; GFX10:       ; %bb.0: ; %entry
 ; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX10-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX10-NEXT:    v_cmp_eq_u32_e32 vcc_lo, 1, v16
 ; GFX10-NEXT:    v_cndmask_b32_e32 v0, v0, v2, vcc_lo
 ; GFX10-NEXT:    v_cndmask_b32_e32 v1, v1, v3, vcc_lo
@@ -751,7 +746,6 @@ define i64 @dyn_extract_v8i64_v_v(<8 x i64> %vec, i32 %sel) {
 ; GFX11-LABEL: dyn_extract_v8i64_v_v:
 ; GFX11:       ; %bb.0: ; %entry
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-NEXT:    v_cmp_eq_u32_e32 vcc_lo, 1, v16
 ; GFX11-NEXT:    v_dual_cndmask_b32 v0, v0, v2 :: v_dual_cndmask_b32 v1, v1, v3
 ; GFX11-NEXT:    v_cmp_eq_u32_e32 vcc_lo, 2, v16
@@ -1019,7 +1013,6 @@ define float @dyn_extract_v8f32_v_v_offset3(<8 x float> %vec, i32 %sel) {
 ; GFX10PLUS-LABEL: dyn_extract_v8f32_v_v_offset3:
 ; GFX10PLUS:       ; %bb.0: ; %entry
 ; GFX10PLUS-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX10PLUS-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX10PLUS-NEXT:    v_add_nc_u32_e32 v8, 3, v8
 ; GFX10PLUS-NEXT:    v_cmp_eq_u32_e32 vcc_lo, 1, v8
 ; GFX10PLUS-NEXT:    v_cndmask_b32_e32 v0, v0, v1, vcc_lo
@@ -1523,7 +1516,6 @@ define double @dyn_extract_v8f64_v_v_offset3(<8 x double> %vec, i32 %sel) {
 ; GFX10-LABEL: dyn_extract_v8f64_v_v_offset3:
 ; GFX10:       ; %bb.0: ; %entry
 ; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX10-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX10-NEXT:    v_add_nc_u32_e32 v16, 3, v16
 ; GFX10-NEXT:    v_cmp_eq_u32_e32 vcc_lo, 1, v16
 ; GFX10-NEXT:    v_cndmask_b32_e32 v0, v0, v2, vcc_lo
@@ -1551,7 +1543,6 @@ define double @dyn_extract_v8f64_v_v_offset3(<8 x double> %vec, i32 %sel) {
 ; GFX11-LABEL: dyn_extract_v8f64_v_v_offset3:
 ; GFX11:       ; %bb.0: ; %entry
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-NEXT:    v_add_nc_u32_e32 v16, 3, v16
 ; GFX11-NEXT:    v_cmp_eq_u32_e32 vcc_lo, 1, v16
 ; GFX11-NEXT:    v_dual_cndmask_b32 v1, v1, v3 :: v_dual_cndmask_b32 v0, v0, v2
@@ -1597,7 +1588,6 @@ define ptr addrspace(3) @dyn_extract_v8p3_v_v(<8 x ptr addrspace(3)> %vec, i32 %
 ; GFX10PLUS-LABEL: dyn_extract_v8p3_v_v:
 ; GFX10PLUS:       ; %bb.0: ; %entry
 ; GFX10PLUS-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX10PLUS-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX10PLUS-NEXT:    v_cmp_eq_u32_e32 vcc_lo, 1, v8
 ; GFX10PLUS-NEXT:    v_cndmask_b32_e32 v0, v0, v1, vcc_lo
 ; GFX10PLUS-NEXT:    v_cmp_eq_u32_e32 vcc_lo, 2, v8
@@ -1723,7 +1713,6 @@ define ptr addrspace(1) @dyn_extract_v8p1_v_v(<8 x ptr addrspace(1)> %vec, i32 %
 ; GFX10-LABEL: dyn_extract_v8p1_v_v:
 ; GFX10:       ; %bb.0: ; %entry
 ; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX10-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX10-NEXT:    v_cmp_eq_u32_e32 vcc_lo, 1, v16
 ; GFX10-NEXT:    v_cndmask_b32_e32 v0, v0, v2, vcc_lo
 ; GFX10-NEXT:    v_cndmask_b32_e32 v1, v1, v3, vcc_lo
@@ -1750,7 +1739,6 @@ define ptr addrspace(1) @dyn_extract_v8p1_v_v(<8 x ptr addrspace(1)> %vec, i32 %
 ; GFX11-LABEL: dyn_extract_v8p1_v_v:
 ; GFX11:       ; %bb.0: ; %entry
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-NEXT:    v_cmp_eq_u32_e32 vcc_lo, 1, v16
 ; GFX11-NEXT:    v_dual_cndmask_b32 v0, v0, v2 :: v_dual_cndmask_b32 v1, v1, v3
 ; GFX11-NEXT:    v_cmp_eq_u32_e32 vcc_lo, 2, v16
@@ -2227,7 +2215,6 @@ define float @dyn_extract_v6f32_v_v(<6 x float> %vec, i32 %sel) {
 ; GFX10PLUS-LABEL: dyn_extract_v6f32_v_v:
 ; GFX10PLUS:       ; %bb.0: ; %entry
 ; GFX10PLUS-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX10PLUS-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX10PLUS-NEXT:    v_cmp_eq_u32_e32 vcc_lo, 1, v6
 ; GFX10PLUS-NEXT:    v_cndmask_b32_e32 v0, v0, v1, vcc_lo
 ; GFX10PLUS-NEXT:    v_cmp_eq_u32_e32 vcc_lo, 2, v6
@@ -2378,7 +2365,6 @@ define float @dyn_extract_v7f32_v_v(<7 x float> %vec, i32 %sel) {
 ; GFX10PLUS-LABEL: dyn_extract_v7f32_v_v:
 ; GFX10PLUS:       ; %bb.0: ; %entry
 ; GFX10PLUS-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX10PLUS-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX10PLUS-NEXT:    v_cmp_eq_u32_e32 vcc_lo, 1, v7
 ; GFX10PLUS-NEXT:    v_cndmask_b32_e32 v0, v0, v1, vcc_lo
 ; GFX10PLUS-NEXT:    v_cmp_eq_u32_e32 vcc_lo, 2, v7
@@ -2612,7 +2598,6 @@ define double @dyn_extract_v6f64_v_v(<6 x double> %vec, i32 %sel) {
 ; GFX10-LABEL: dyn_extract_v6f64_v_v:
 ; GFX10:       ; %bb.0: ; %entry
 ; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX10-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX10-NEXT:    v_cmp_eq_u32_e32 vcc_lo, 1, v12
 ; GFX10-NEXT:    v_cndmask_b32_e32 v0, v0, v2, vcc_lo
 ; GFX10-NEXT:    v_cndmask_b32_e32 v1, v1, v3, vcc_lo
@@ -2633,7 +2618,6 @@ define double @dyn_extract_v6f64_v_v(<6 x double> %vec, i32 %sel) {
 ; GFX11-LABEL: dyn_extract_v6f64_v_v:
 ; GFX11:       ; %bb.0: ; %entry
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-NEXT:    v_cmp_eq_u32_e32 vcc_lo, 1, v12
 ; GFX11-NEXT:    v_dual_cndmask_b32 v0, v0, v2 :: v_dual_cndmask_b32 v1, v1, v3
 ; GFX11-NEXT:    v_cmp_eq_u32_e32 vcc_lo, 2, v12
@@ -2898,7 +2882,6 @@ define double @dyn_extract_v7f64_v_v(<7 x double> %vec, i32 %sel) {
 ; GFX10-LABEL: dyn_extract_v7f64_v_v:
 ; GFX10:       ; %bb.0: ; %entry
 ; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX10-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX10-NEXT:    v_cmp_eq_u32_e32 vcc_lo, 1, v14
 ; GFX10-NEXT:    v_cndmask_b32_e32 v0, v0, v2, vcc_lo
 ; GFX10-NEXT:    v_cndmask_b32_e32 v1, v1, v3, vcc_lo
@@ -2925,7 +2908,6 @@ define double @dyn_extract_v7f64_v_v(<7 x double> %vec, i32 %sel) {
 ; GFX11-LABEL: dyn_extract_v7f64_v_v:
 ; GFX11:       ; %bb.0: ; %entry
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-NEXT:    v_cmp_eq_u32_e32 vcc_lo, 1, v14
 ; GFX11-NEXT:    v_dual_cndmask_b32 v0, v0, v2 :: v_dual_cndmask_b32 v1, v1, v3
 ; GFX11-NEXT:    v_cmp_eq_u32_e32 vcc_lo, 2, v14
@@ -3449,7 +3431,6 @@ define float @dyn_extract_v15f32_const_s_v(i32 %sel) {
 ; GFX10-LABEL: dyn_extract_v15f32_const_s_v:
 ; GFX10:       ; %bb.0: ; %entry
 ; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX10-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX10-NEXT:    v_cmp_eq_u32_e32 vcc_lo, 1, v0
 ; GFX10-NEXT:    v_cndmask_b32_e64 v1, 1.0, 2.0, vcc_lo
 ; GFX10-NEXT:    v_cmp_eq_u32_e32 vcc_lo, 2, v0
@@ -3485,7 +3466,6 @@ define float @dyn_extract_v15f32_const_s_v(i32 %sel) {
 ; GFX11-LABEL: dyn_extract_v15f32_const_s_v:
 ; GFX11:       ; %bb.0: ; %entry
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-NEXT:    v_cmp_eq_u32_e32 vcc_lo, 1, v0
 ; GFX11-NEXT:    v_cndmask_b32_e64 v1, 1.0, 2.0, vcc_lo
 ; GFX11-NEXT:    v_cmp_eq_u32_e32 vcc_lo, 2, v0
@@ -3699,7 +3679,6 @@ define float @dyn_extract_v15f32_v_v(<15 x float> %vec, i32 %sel) {
 ; GFX10-LABEL: dyn_extract_v15f32_v_v:
 ; GFX10:       ; %bb.0: ; %entry
 ; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX10-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX10-NEXT:    v_cmp_eq_u32_e32 vcc_lo, 1, v15
 ; GFX10-NEXT:    v_cndmask_b32_e32 v0, v0, v1, vcc_lo
 ; GFX10-NEXT:    v_cmp_eq_u32_e32 vcc_lo, 2, v15
@@ -3735,7 +3714,6 @@ define float @dyn_extract_v15f32_v_v(<15 x float> %vec, i32 %sel) {
 ; GFX11-LABEL: dyn_extract_v15f32_v_v:
 ; GFX11:       ; %bb.0: ; %entry
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-NEXT:    v_cmp_eq_u32_e32 vcc_lo, 1, v15
 ; GFX11-NEXT:    v_cndmask_b32_e32 v0, v0, v1, vcc_lo
 ; GFX11-NEXT:    v_cmp_eq_u32_e32 vcc_lo, 2, v15
@@ -3971,7 +3949,6 @@ define float @dyn_extract_v15f32_v_v_offset3(<15 x float> %vec, i32 %sel) {
 ; GFX10-LABEL: dyn_extract_v15f32_v_v_offset3:
 ; GFX10:       ; %bb.0: ; %entry
 ; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX10-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX10-NEXT:    v_add_nc_u32_e32 v15, 3, v15
 ; GFX10-NEXT:    v_cmp_eq_u32_e32 vcc_lo, 1, v15
 ; GFX10-NEXT:    v_cndmask_b32_e32 v0, v0, v1, vcc_lo
@@ -4008,7 +3985,6 @@ define float @dyn_extract_v15f32_v_v_offset3(<15 x float> %vec, i32 %sel) {
 ; GFX11-LABEL: dyn_extract_v15f32_v_v_offset3:
 ; GFX11:       ; %bb.0: ; %entry
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-NEXT:    v_add_nc_u32_e32 v15, 3, v15
 ; GFX11-NEXT:    v_cmp_eq_u32_e32 vcc_lo, 1, v15
 ; GFX11-NEXT:    v_cndmask_b32_e32 v0, v0, v1, vcc_lo
@@ -4772,7 +4748,6 @@ define i32 @v_extract_v64i32_7(ptr addrspace(1) %ptr) {
 ; GFX10-LABEL: v_extract_v64i32_7:
 ; GFX10:       ; %bb.0:
 ; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX10-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX10-NEXT:    global_load_dwordx4 v[4:7], v[0:1], off offset:16
 ; GFX10-NEXT:    s_waitcnt vmcnt(0)
 ; GFX10-NEXT:    v_mov_b32_e32 v0, v7
@@ -4781,7 +4756,6 @@ define i32 @v_extract_v64i32_7(ptr addrspace(1) %ptr) {
 ; GFX11-LABEL: v_extract_v64i32_7:
 ; GFX11:       ; %bb.0:
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-NEXT:    global_load_b128 v[4:7], v[0:1], off offset:16
 ; GFX11-NEXT:    s_waitcnt vmcnt(0)
 ; GFX11-NEXT:    v_mov_b32_e32 v0, v7
@@ -4814,7 +4788,6 @@ define i32 @v_extract_v64i32_32(ptr addrspace(1) %ptr) {
 ; GFX10-LABEL: v_extract_v64i32_32:
 ; GFX10:       ; %bb.0:
 ; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX10-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX10-NEXT:    global_load_dwordx4 v[0:3], v[0:1], off offset:128
 ; GFX10-NEXT:    s_waitcnt vmcnt(0)
 ; GFX10-NEXT:    s_setpc_b64 s[30:31]
@@ -4822,7 +4795,6 @@ define i32 @v_extract_v64i32_32(ptr addrspace(1) %ptr) {
 ; GFX11-LABEL: v_extract_v64i32_32:
 ; GFX11:       ; %bb.0:
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-NEXT:    global_load_b128 v[0:3], v[0:1], off offset:128
 ; GFX11-NEXT:    s_waitcnt vmcnt(0)
 ; GFX11-NEXT:    s_setpc_b64 s[30:31]
@@ -4856,7 +4828,6 @@ define i32 @v_extract_v64i32_33(ptr addrspace(1) %ptr) {
 ; GFX10-LABEL: v_extract_v64i32_33:
 ; GFX10:       ; %bb.0:
 ; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX10-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX10-NEXT:    global_load_dwordx4 v[0:3], v[0:1], off offset:128
 ; GFX10-NEXT:    s_waitcnt vmcnt(0)
 ; GFX10-NEXT:    v_mov_b32_e32 v0, v1
@@ -4865,7 +4836,6 @@ define i32 @v_extract_v64i32_33(ptr addrspace(1) %ptr) {
 ; GFX11-LABEL: v_extract_v64i32_33:
 ; GFX11:       ; %bb.0:
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-NEXT:    global_load_b128 v[0:3], v[0:1], off offset:128
 ; GFX11-NEXT:    s_waitcnt vmcnt(0)
 ; GFX11-NEXT:    v_mov_b32_e32 v0, v1
@@ -4897,7 +4867,6 @@ define i32 @v_extract_v64i32_37(ptr addrspace(1) %ptr) {
 ; GFX10-LABEL: v_extract_v64i32_37:
 ; GFX10:       ; %bb.0:
 ; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX10-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX10-NEXT:    global_load_dwordx4 v[4:7], v[0:1], off offset:144
 ; GFX10-NEXT:    s_waitcnt vmcnt(0)
 ; GFX10-NEXT:    v_mov_b32_e32 v0, v5
@@ -4906,7 +4875,6 @@ define i32 @v_extract_v64i32_37(ptr addrspace(1) %ptr) {
 ; GFX11-LABEL: v_extract_v64i32_37:
 ; GFX11:       ; %bb.0:
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-NEXT:    global_load_b128 v[4:7], v[0:1], off offset:144
 ; GFX11-NEXT:    s_waitcnt vmcnt(0)
 ; GFX11-NEXT:    v_mov_b32_e32 v0, v5

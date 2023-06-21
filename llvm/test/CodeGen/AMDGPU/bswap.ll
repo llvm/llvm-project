@@ -500,7 +500,6 @@ define float @missing_truncate_promote_bswap(i32 %arg) {
 ; GFX11-LABEL: missing_truncate_promote_bswap:
 ; GFX11:       ; %bb.0: ; %bb
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-NEXT:    v_perm_b32 v0, 0, v0, 0xc0c0001
 ; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX11-NEXT:    v_cvt_f32_f16_e32 v0, v0
@@ -534,7 +533,6 @@ define i16 @v_bswap_i16(i16 %src) {
 ; GFX11-LABEL: v_bswap_i16:
 ; GFX11:       ; %bb.0:
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-NEXT:    v_perm_b32 v0, 0, v0, 0xc0c0001
 ; GFX11-NEXT:    s_setpc_b64 s[30:31]
   %bswap = call i16 @llvm.bswap.i16(i16 %src)
@@ -562,7 +560,6 @@ define i32 @v_bswap_i16_zext_to_i32(i16 %src) {
 ; GFX11-LABEL: v_bswap_i16_zext_to_i32:
 ; GFX11:       ; %bb.0:
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-NEXT:    v_perm_b32 v0, 0, v0, 0xc0c0001
 ; GFX11-NEXT:    s_setpc_b64 s[30:31]
   %bswap = call i16 @llvm.bswap.i16(i16 %src)
@@ -592,7 +589,6 @@ define i32 @v_bswap_i16_sext_to_i32(i16 %src) {
 ; GFX11-LABEL: v_bswap_i16_sext_to_i32:
 ; GFX11:       ; %bb.0:
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-NEXT:    v_perm_b32 v0, 0, v0, 0xc0c0001
 ; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX11-NEXT:    v_bfe_i32 v0, v0, 0, 16
@@ -629,7 +625,6 @@ define <2 x i16> @v_bswap_v2i16(<2 x i16> %src) {
 ; GFX11-LABEL: v_bswap_v2i16:
 ; GFX11:       ; %bb.0:
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-NEXT:    v_perm_b32 v0, 0, v0, 0x2030001
 ; GFX11-NEXT:    s_setpc_b64 s[30:31]
   %bswap = call <2 x i16> @llvm.bswap.v2i16(<2 x i16> %src)
@@ -668,7 +663,6 @@ define <3 x i16> @v_bswap_v3i16(<3 x i16> %src) {
 ; GFX11-LABEL: v_bswap_v3i16:
 ; GFX11:       ; %bb.0:
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-NEXT:    v_perm_b32 v0, 0, v0, 0x2030001
 ; GFX11-NEXT:    v_perm_b32 v1, 0, v1, 0x2030001
 ; GFX11-NEXT:    s_setpc_b64 s[30:31]
@@ -714,7 +708,6 @@ define <4 x i16> @v_bswap_v4i16(<4 x i16> %src) {
 ; GFX11-LABEL: v_bswap_v4i16:
 ; GFX11:       ; %bb.0:
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-NEXT:    v_perm_b32 v0, 0, v0, 0x2030001
 ; GFX11-NEXT:    v_perm_b32 v1, 0, v1, 0x2030001
 ; GFX11-NEXT:    s_setpc_b64 s[30:31]
@@ -750,7 +743,6 @@ define i64 @v_bswap_i48(i64 %src) {
 ; GFX11-LABEL: v_bswap_i48:
 ; GFX11:       ; %bb.0:
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-NEXT:    v_perm_b32 v2, 0, v0, 0x10203
 ; GFX11-NEXT:    v_perm_b32 v0, 0, v1, 0x10203
 ; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_2)

@@ -80,7 +80,6 @@ define i32 @divergent_vec_0_i16(i16 %a) {
 ; GFX11-LABEL: divergent_vec_0_i16:
 ; GFX11:       ; %bb.0:
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-NEXT:    v_lshlrev_b32_e32 v0, 16, v0
 ; GFX11-NEXT:    s_setpc_b64 s[30:31]
   %tmp = insertelement <2 x i16> undef, i16 0, i32 0
@@ -165,7 +164,6 @@ define i32 @divergent_vec_i16_0(i16 %a) {
 ; GFX11-LABEL: divergent_vec_i16_0:
 ; GFX11:       ; %bb.0:
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-NEXT:    v_and_b32_e32 v0, 0xffff, v0
 ; GFX11-NEXT:    s_setpc_b64 s[30:31]
   %tmp = insertelement <2 x i16> undef, i16 %a, i32 0
@@ -250,7 +248,6 @@ define float @divergent_vec_f16_0(half %a) {
 ; GFX11-LABEL: divergent_vec_f16_0:
 ; GFX11:       ; %bb.0:
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-NEXT:    v_and_b32_e32 v0, 0xffff, v0
 ; GFX11-NEXT:    s_setpc_b64 s[30:31]
   %tmp = insertelement <2 x half> undef, half %a, i32 0
@@ -350,7 +347,6 @@ define i32 @divergent_vec_i16_LL(i16 %a, i16 %b) {
 ; GFX11-LABEL: divergent_vec_i16_LL:
 ; GFX11:       ; %bb.0:
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-NEXT:    v_perm_b32 v0, v1, v0, 0x5040100
 ; GFX11-NEXT:    s_setpc_b64 s[30:31]
   %tmp = insertelement <2 x i16> undef, i16 %a, i32 0
@@ -439,7 +435,6 @@ define i32 @divergent_vec_i16_LH(i16 %a, i32 %b) {
 ; GFX11-LABEL: divergent_vec_i16_LH:
 ; GFX11:       ; %bb.0:
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-NEXT:    v_bfi_b32 v0, 0xffff, v0, v1
 ; GFX11-NEXT:    s_setpc_b64 s[30:31]
   %shift = lshr i32 %b, 16
@@ -533,7 +528,6 @@ define i32 @divergent_vec_i16_HH(i32 %a, i32 %b) {
 ; GFX11-LABEL: divergent_vec_i16_HH:
 ; GFX11:       ; %bb.0:
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-NEXT:    v_perm_b32 v0, v1, v0, 0x7060302
 ; GFX11-NEXT:    s_setpc_b64 s[30:31]
   %shift_a = lshr i32 %a, 16
@@ -641,7 +635,6 @@ define float @divergent_vec_f16_LL(half %a, half %b) {
 ; GFX11-LABEL: divergent_vec_f16_LL:
 ; GFX11:       ; %bb.0:
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-NEXT:    v_perm_b32 v0, v1, v0, 0x5040100
 ; GFX11-NEXT:    s_setpc_b64 s[30:31]
   %tmp = insertelement <2 x half> undef, half %a, i32 0
@@ -676,7 +669,6 @@ define <2 x i16> @build_vec_v2i16_undeflo_divergent(ptr addrspace(3) %in) #0 {
 ; GFX11-LABEL: build_vec_v2i16_undeflo_divergent:
 ; GFX11:       ; %bb.0: ; %entry
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-NEXT:    ds_load_u16_d16 v0, v0
 ; GFX11-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX11-NEXT:    s_setpc_b64 s[30:31]

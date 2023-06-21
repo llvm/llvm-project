@@ -119,7 +119,6 @@ define <4 x i16> @vec_8xi16_extract_4xi16(ptr addrspace(1) %p0, ptr addrspace(1)
 ; GFX11-LABEL: vec_8xi16_extract_4xi16:
 ; GFX11:       ; %bb.0:
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-NEXT:    s_cbranch_scc0 .LBB0_2
 ; GFX11-NEXT:  ; %bb.1: ; %F
 ; GFX11-NEXT:    global_load_b128 v[2:5], v[2:3], off glc dlc
@@ -283,7 +282,6 @@ define <4 x i16> @vec_8xi16_extract_4xi16_2(ptr addrspace(1) %p0, ptr addrspace(
 ; GFX11-LABEL: vec_8xi16_extract_4xi16_2:
 ; GFX11:       ; %bb.0:
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-NEXT:    s_cbranch_scc0 .LBB1_2
 ; GFX11-NEXT:  ; %bb.1: ; %F
 ; GFX11-NEXT:    global_load_b128 v[2:5], v[2:3], off glc dlc
@@ -450,7 +448,6 @@ define <4 x half> @vec_8xf16_extract_4xf16(ptr addrspace(1) %p0, ptr addrspace(1
 ; GFX11-LABEL: vec_8xf16_extract_4xf16:
 ; GFX11:       ; %bb.0:
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-NEXT:    s_cbranch_scc0 .LBB2_2
 ; GFX11-NEXT:  ; %bb.1: ; %F
 ; GFX11-NEXT:    global_load_b128 v[2:5], v[2:3], off glc dlc
@@ -652,7 +649,6 @@ define <4 x i16> @vec_16xi16_extract_4xi16(ptr addrspace(1) %p0, ptr addrspace(1
 ; GFX11-LABEL: vec_16xi16_extract_4xi16:
 ; GFX11:       ; %bb.0:
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-NEXT:    s_cbranch_scc0 .LBB3_2
 ; GFX11-NEXT:  ; %bb.1: ; %F
 ; GFX11-NEXT:    global_load_b128 v[4:7], v[2:3], off offset:16 glc dlc
@@ -859,7 +855,6 @@ define <4 x i16> @vec_16xi16_extract_4xi16_2(ptr addrspace(1) %p0, ptr addrspace
 ; GFX11-LABEL: vec_16xi16_extract_4xi16_2:
 ; GFX11:       ; %bb.0:
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-NEXT:    s_cbranch_scc0 .LBB4_2
 ; GFX11-NEXT:  ; %bb.1: ; %F
 ; GFX11-NEXT:    global_load_b128 v[4:7], v[2:3], off offset:16 glc dlc
@@ -1069,7 +1064,6 @@ define <4 x half> @vec_16xf16_extract_4xf16(ptr addrspace(1) %p0, ptr addrspace(
 ; GFX11-LABEL: vec_16xf16_extract_4xf16:
 ; GFX11:       ; %bb.0:
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-NEXT:    s_cbranch_scc0 .LBB5_2
 ; GFX11-NEXT:  ; %bb.1: ; %F
 ; GFX11-NEXT:    global_load_b128 v[4:7], v[2:3], off offset:16 glc dlc
@@ -1156,7 +1150,6 @@ define <8 x i16> @large_vector(ptr addrspace(3) %p, i32 %idxp) {
 ; GFX11-LABEL: large_vector:
 ; GFX11:       ; %bb.0:
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-NEXT:    v_lshl_add_u32 v2, v1, 5, v0
 ; GFX11-NEXT:    ds_load_2addr_b32 v[0:1], v2 offset1:1
 ; GFX11-NEXT:    ds_load_2addr_b32 v[2:3], v2 offset0:2 offset1:3
