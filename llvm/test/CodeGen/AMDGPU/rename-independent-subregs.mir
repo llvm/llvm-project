@@ -1,4 +1,4 @@
-# RUN: llc -march=amdgcn -verify-machineinstrs -run-pass simple-register-coalescing,rename-independent-subregs -o - %s | FileCheck %s
+# RUN: llc -march=amdgcn -verify-machineinstrs -run-pass register-coalescer,rename-independent-subregs -o - %s | FileCheck %s
 --- |
   define amdgpu_kernel void @test0() { ret void }
   define amdgpu_kernel void @test1() { ret void }
