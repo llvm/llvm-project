@@ -322,6 +322,8 @@ CODEGENOPT(UseRegisterSizedBitfieldAccess , 1, 0)
 
 CODEGENOPT(VerifyModule      , 1, 1) ///< Control whether the module should be run
                                      ///< through the LLVM Verifier.
+CODEGENOPT(VerifyEach        , 1, 1) ///< Control whether the LLVM verifier
+                                     ///< should run after every pass.
 
 CODEGENOPT(StackRealignment  , 1, 0) ///< Control whether to force stack
                                      ///< realignment.
