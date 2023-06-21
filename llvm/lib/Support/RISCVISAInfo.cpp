@@ -860,13 +860,11 @@ RISCVISAInfo::parseArchString(StringRef Arch, bool EnableExperimentalExtension,
 
 Error RISCVISAInfo::checkDependency() {
   bool HasC = Exts.count("c") != 0;
-  bool HasD = Exts.count("d") != 0;
   bool HasF = Exts.count("f") != 0;
   bool HasZfinx = Exts.count("zfinx") != 0;
   bool HasVector = Exts.count("zve32x") != 0;
   bool HasZvl = MinVLen != 0;
   bool HasZcmt = Exts.count("zcmt") != 0;
-  bool HasZcd = Exts.count("zcd") != 0;
 
   if (HasF && HasZfinx)
     return createStringError(errc::invalid_argument,
@@ -899,15 +897,13 @@ Error RISCVISAInfo::checkDependency() {
         errc::invalid_argument,
         "'zvknhb' requires 'v' or 'zve64*' extension to also be specified");
 
-  if (HasZcmt && HasD && HasC)
+  if ((HasZcmt || Exts.count("zcmp")) && Exts.count("d") &&
+      (HasC || Exts.count("zcd")))
     return createStringError(
         errc::invalid_argument,
-        "'zcmt' is incompatible with 'c' extension when 'd' extension is set");
-
-  if (HasZcmt && HasD && HasZcd)
-    return createStringError(errc::invalid_argument,
-                             "'zcmt' is incompatible with 'zcd' extension when "
-                             "'d' extension is set");
+        Twine("'") + (HasZcmt ? "zcmt" : "zcmp") +
+        "' extension is incompatible with '" + (HasC ? "c" : "zcd") +
+        "' extension when 'd' extension is enabled");
 
   // Additional dependency checks.
   // TODO: The 'q' extension requires rv64.
