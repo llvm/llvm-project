@@ -3,8 +3,8 @@
 
 ; Test if RegisterCoalesce pass is disabled in -O1.
 
-; O1-NOT: Simple Register Coalescing
-; O2: Simple Register Coalescing
+; O1-NOT: Register Coalescer
+; O2: Register Coalescer
 target triple = "wasm32-unknown-unknown"
 
 define void @test() {
