@@ -2358,9 +2358,6 @@ function(llvm_setup_rpath name)
     endif()
     if(LLVM_LINKER_IS_GNULD)
       # $ORIGIN is not interpreted at link time by ld.bfd
-      if(NOT LLVM_LIBRARY_OUTPUT_INTDIR)
-        message(SEND_ERROR "Project does not define LLVM_LIBRARY_OUTPUT_INTDIR and it is required")
-      endif()
       set_property(TARGET ${name} APPEND_STRING PROPERTY
                    LINK_FLAGS " -Wl,-rpath-link,${LLVM_LIBRARY_OUTPUT_INTDIR} ")
     endif()
