@@ -231,6 +231,15 @@ def OpenACC_PrivateOp : OpenACC_DataEntryOp<"private",
 }
 
 //===----------------------------------------------------------------------===//
+// 2.5.14 firstprivate clause
+//===----------------------------------------------------------------------===//
+def OpenACC_FirstprivateOp : OpenACC_DataEntryOp<"firstprivate",
+    "mlir::acc::DataClause::acc_firstprivate"> {
+  let summary = "Represents firstprivate semantic for the acc firstprivate "
+                "clause.";
+}
+
+//===----------------------------------------------------------------------===//
 // 2.7.4 deviceptr clause
 //===----------------------------------------------------------------------===//
 def OpenACC_DevicePtrOp : OpenACC_DataEntryOp<"deviceptr",
