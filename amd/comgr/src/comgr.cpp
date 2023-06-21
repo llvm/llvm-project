@@ -631,7 +631,7 @@ amd_comgr_status_t AMD_COMGR_API
     return Status;
   }
 
-  MetaP->MetaDoc.reset(MetaDoc.release());
+  MetaP->MetaDoc = std::move(MetaDoc);
   MetaP->MetaDoc->EmitIntegerBooleans = true;
   MetaP->DocNode = MetaP->MetaDoc->Document.getRoot();
 
