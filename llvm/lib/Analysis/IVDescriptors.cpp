@@ -706,6 +706,10 @@ RecurrenceDescriptor::isMinMaxPattern(Instruction *I, RecurKind Kind,
     return InstDesc(Kind == RecurKind::FMin, I);
   if (match(I, m_Intrinsic<Intrinsic::maxnum>(m_Value(), m_Value())))
     return InstDesc(Kind == RecurKind::FMax, I);
+  if (match(I, m_Intrinsic<Intrinsic::minimum>(m_Value(), m_Value())))
+    return InstDesc(Kind == RecurKind::FMinimum, I);
+  if (match(I, m_Intrinsic<Intrinsic::maximum>(m_Value(), m_Value())))
+    return InstDesc(Kind == RecurKind::FMaximum, I);
 
   return InstDesc(false, I);
 }
@@ -801,11 +805,18 @@ RecurrenceDescriptor::isRecurrenceInstr(Loop *L, PHINode *OrigPhi,
   case Instruction::Call:
     if (isSelectCmpRecurrenceKind(Kind))
       return isSelectCmpPattern(L, OrigPhi, I, Prev);
+    auto HasRequiredFMF = [&]() {
+     if (FuncFMF.noNaNs() && FuncFMF.noSignedZeros())
+       return true;
+     if (isa<FPMathOperator>(I) && I->hasNoNaNs() && I->hasNoSignedZeros())
+       return true;
+     // minimum and maximum intrinsics do not require nsz and nnan flags since
+     // NaN and signed zeroes are propagated in the intrinsic implementation.
+     return match(I, m_Intrinsic<Intrinsic::minimum>(m_Value(), m_Value())) ||
+            match(I, m_Intrinsic<Intrinsic::maximum>(m_Value(), m_Value()));
+    };
     if (isIntMinMaxRecurrenceKind(Kind) ||
-        (((FuncFMF.noNaNs() && FuncFMF.noSignedZeros()) ||
-          (isa<FPMathOperator>(I) && I->hasNoNaNs() &&
-           I->hasNoSignedZeros())) &&
-         isFPMinMaxRecurrenceKind(Kind)))
+        (HasRequiredFMF() && isFPMinMaxRecurrenceKind(Kind)))
       return isMinMaxPattern(I, Kind, Prev);
     else if (isFMulAddIntrinsic(I))
       return InstDesc(Kind == RecurKind::FMulAdd, I,
@@ -921,6 +932,16 @@ bool RecurrenceDescriptor::isReductionPHI(PHINode *Phi, Loop *TheLoop,
   if (AddReductionVar(Phi, RecurKind::FMulAdd, TheLoop, FMF, RedDes, DB, AC, DT,
                       SE)) {
     LLVM_DEBUG(dbgs() << "Found an FMulAdd reduction PHI." << *Phi << "\n");
+    return true;
+  }
+  if (AddReductionVar(Phi, RecurKind::FMaximum, TheLoop, FMF, RedDes, DB, AC, DT,
+                      SE)) {
+    LLVM_DEBUG(dbgs() << "Found a float MAXIMUM reduction PHI." << *Phi << "\n");
+    return true;
+  }
+  if (AddReductionVar(Phi, RecurKind::FMinimum, TheLoop, FMF, RedDes, DB, AC, DT,
+                      SE)) {
+    LLVM_DEBUG(dbgs() << "Found a float MINIMUM reduction PHI." << *Phi << "\n");
     return true;
   }
   // Not a reduction of known type.
@@ -1063,6 +1084,10 @@ Value *RecurrenceDescriptor::getRecurrenceIdentity(RecurKind K, Type *Tp,
     assert((FMF.noNaNs() && FMF.noSignedZeros()) &&
            "nnan, nsz is expected to be set for FP max reduction.");
     return ConstantFP::getInfinity(Tp, true /*Negative*/);
+  case RecurKind::FMinimum:
+    return ConstantFP::getInfinity(Tp, false /*Negative*/);
+  case RecurKind::FMaximum:
+    return ConstantFP::getInfinity(Tp, true /*Negative*/);
   case RecurKind::SelectICmp:
   case RecurKind::SelectFCmp:
     return getRecurrenceStartValue();
@@ -1097,6 +1122,8 @@ unsigned RecurrenceDescriptor::getOpcode(RecurKind Kind) {
     return Instruction::ICmp;
   case RecurKind::FMax:
   case RecurKind::FMin:
+  case RecurKind::FMaximum:
+  case RecurKind::FMinimum:
   case RecurKind::SelectFCmp:
     return Instruction::FCmp;
   default:

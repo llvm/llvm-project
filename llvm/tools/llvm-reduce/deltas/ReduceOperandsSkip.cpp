@@ -163,6 +163,12 @@ opportunities(Function &F,
         if (OpVal->getType() != V->getType())
           return true;
 
+        // Do not introduce address captures of intrinsics.
+        if (Function *F = dyn_cast<Function>(V)) {
+          if (F->isIntrinsic())
+            return true;
+        }
+
         // Only consider candidates that are "more reduced" than the original
         // value. This explicitly also rules out candidates with the same
         // reduction power. This is to ensure that repeated invocations of this

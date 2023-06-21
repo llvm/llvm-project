@@ -2652,12 +2652,9 @@ Error BinaryWriter::finalize() {
   // MinAddr will be skipped.
   uint64_t MinAddr = UINT64_MAX;
   for (SectionBase &Sec : Obj.allocSections()) {
-    // If Sec's type is changed from SHT_NOBITS due to --set-section-flags,
-    // Offset may not be aligned. Align it to max(Align, 1).
     if (Sec.ParentSegment != nullptr)
-      Sec.Addr = alignTo(Sec.Offset - Sec.ParentSegment->Offset +
-                             Sec.ParentSegment->PAddr,
-                         std::max(Sec.Align, uint64_t(1)));
+      Sec.Addr =
+          Sec.Offset - Sec.ParentSegment->Offset + Sec.ParentSegment->PAddr;
     if (Sec.Type != SHT_NOBITS && Sec.Size > 0)
       MinAddr = std::min(MinAddr, Sec.Addr);
   }

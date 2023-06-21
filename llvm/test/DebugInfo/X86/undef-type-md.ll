@@ -1,7 +1,7 @@
-; RUN:  opt -opaque-pointers=0 -S -passes=ipsccp %S/undef-type-md.ll | FileCheck %s
+; RUN:  opt -S -passes=ipsccp %S/undef-type-md.ll | FileCheck %s
 ; CHECK: llvm.nondebug.metadata = !{[[NONDEBUG_METADATA:![0-9]+]]}
-; CHECK: [[NONDEBUG_METADATA]] =  distinct !{null}
-; CHECK: !DITemplateValueParameter({{.*}} value: %class.1 addrspace(1)* undef)
+; CHECK: [[NONDEBUG_METADATA]] = !{ptr addrspace(1) @extern_const}
+; CHECK: !DITemplateValueParameter({{.*}} value: ptr addrspace(1) @extern_const)
 
 ; ModuleID = '<stdin>'
 source_filename = "test.cpp"
@@ -31,6 +31,6 @@ entry:
 !6 = !DISubroutineType(types: !7)
 !7 = !{null}
 !8 = !{!9}
-!9 = !DITemplateValueParameter(name: "S", type: !10, value: %"class.1" addrspace(1)* bitcast ({ { float, i32, i8 } } addrspace(1)* @extern_const to %"class.1" addrspace(1)*))
+!9 = !DITemplateValueParameter(name: "S", type: !10, value: ptr addrspace(1) @extern_const)
 !10 = !DIBasicType(name: "int", size: 32, encoding: DW_ATE_signed)
-!11 = !{%"class.1" addrspace(1)* bitcast ({ { float, i32, i8 } } addrspace(1)* @extern_const to %"class.1" addrspace(1)*)}
+!11 = !{ptr addrspace(1) @extern_const}

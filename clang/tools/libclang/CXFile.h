@@ -15,7 +15,8 @@
 namespace clang {
 namespace cxfile {
 inline CXFile makeCXFile(OptionalFileEntryRef FE) {
-  return CXFile(FE ? &FE->getMapEntry() : nullptr);
+  return CXFile(FE ? const_cast<FileEntryRef::MapEntry *>(&FE->getMapEntry())
+                   : nullptr);
 }
 
 inline OptionalFileEntryRef getFileEntryRef(CXFile File) {

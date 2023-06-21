@@ -21,10 +21,10 @@ namespace exegesis {
 
 class LatencyBenchmarkRunner : public BenchmarkRunner {
 public:
-  LatencyBenchmarkRunner(
-      const LLVMState &State, Benchmark::ModeE Mode,
-      BenchmarkPhaseSelectorE BenchmarkPhaseSelector,
-      Benchmark::ResultAggregationModeE ResultAggMode);
+  LatencyBenchmarkRunner(const LLVMState &State, Benchmark::ModeE Mode,
+                         BenchmarkPhaseSelectorE BenchmarkPhaseSelector,
+                         Benchmark::ResultAggregationModeE ResultAggMode,
+                         ExecutionModeE ExecutionMode);
   ~LatencyBenchmarkRunner() override;
 
 private:

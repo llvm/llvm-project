@@ -8,6 +8,7 @@
 
 #include "HeuristicResolver.h"
 #include "clang/AST/ASTContext.h"
+#include "clang/AST/CXXInheritance.h"
 #include "clang/AST/DeclTemplate.h"
 #include "clang/AST/ExprCXX.h"
 #include "clang/AST/Type.h"
@@ -264,6 +265,68 @@ const Type *HeuristicResolver::resolveNestedNameSpecifierToType(
   return nullptr;
 }
 
+namespace {
+
+bool isOrdinaryMember(const NamedDecl *ND) {
+  return ND->isInIdentifierNamespace(Decl::IDNS_Ordinary | Decl::IDNS_Tag |
+                                     Decl::IDNS_Member);
+}
+
+bool findOrdinaryMember(const CXXRecordDecl *RD, CXXBasePath &Path,
+                        DeclarationName Name) {
+  Path.Decls = RD->lookup(Name).begin();
+  for (DeclContext::lookup_iterator I = Path.Decls, E = I.end(); I != E; ++I)
+    if (isOrdinaryMember(*I))
+      return true;
+
+  return false;
+}
+
+} // namespace
+
+bool HeuristicResolver::findOrdinaryMemberInDependentClasses(
+    const CXXBaseSpecifier *Specifier, CXXBasePath &Path,
+    DeclarationName Name) const {
+  CXXRecordDecl *RD =
+      resolveTypeToRecordDecl(Specifier->getType().getTypePtr());
+  if (!RD)
+    return false;
+  return findOrdinaryMember(RD, Path, Name);
+}
+
+std::vector<const NamedDecl *> HeuristicResolver::lookupDependentName(
+    CXXRecordDecl *RD, DeclarationName Name,
+    llvm::function_ref<bool(const NamedDecl *ND)> Filter) const {
+  std::vector<const NamedDecl *> Results;
+
+  // Lookup in the class.
+  bool AnyOrdinaryMembers = false;
+  for (const NamedDecl *ND : RD->lookup(Name)) {
+    if (isOrdinaryMember(ND))
+      AnyOrdinaryMembers = true;
+    if (Filter(ND))
+      Results.push_back(ND);
+  }
+  if (AnyOrdinaryMembers)
+    return Results;
+
+  // Perform lookup into our base classes.
+  CXXBasePaths Paths;
+  Paths.setOrigin(RD);
+  if (!RD->lookupInBases(
+          [&](const CXXBaseSpecifier *Specifier, CXXBasePath &Path) {
+            return findOrdinaryMemberInDependentClasses(Specifier, Path, Name);
+          },
+          Paths, /*LookupInDependent=*/true))
+    return Results;
+  for (DeclContext::lookup_iterator I = Paths.front().Decls, E = I.end();
+       I != E; ++I) {
+    if (isOrdinaryMember(*I) && Filter(*I))
+      Results.push_back(*I);
+  }
+  return Results;
+}
+
 std::vector<const NamedDecl *> HeuristicResolver::resolveDependentMember(
     const Type *T, DeclarationName Name,
     llvm::function_ref<bool(const NamedDecl *ND)> Filter) const {
@@ -277,7 +340,7 @@ std::vector<const NamedDecl *> HeuristicResolver::resolveDependentMember(
     if (!RD->hasDefinition())
       return {};
     RD = RD->getDefinition();
-    return RD->lookupDependentName(Name, Filter);
+    return lookupDependentName(RD, Name, Filter);
   }
   return {};
 }

@@ -4469,7 +4469,8 @@ void computeKnownFPClass(const Value *V, const APInt &DemandedElts,
         // If the input denormal mode could be PreserveSign, a negative
         // subnormal input could produce a negative zero output.
         const Function *F = II->getFunction();
-        if (F && KnownSrc.isKnownNeverLogicalNegZero(*F, II->getType())) {
+        if (Q.IIQ.hasNoSignedZeros(II) ||
+            (F && KnownSrc.isKnownNeverLogicalNegZero(*F, II->getType()))) {
           Known.knownNot(fcNegZero);
           if (KnownSrc.isKnownNeverNaN())
             Known.SignBit = false;

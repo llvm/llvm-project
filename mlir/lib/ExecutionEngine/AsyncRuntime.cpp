@@ -13,8 +13,6 @@
 
 #include "mlir/ExecutionEngine/AsyncRuntime.h"
 
-#ifdef MLIR_ASYNCRUNTIME_DEFINE_FUNCTIONS
-
 #include <atomic>
 #include <cassert>
 #include <condition_variable>
@@ -455,21 +453,13 @@ extern "C" void mlirAsyncRuntimePrintCurrentThreadId() {
 // MLIR ExecutionEngine dynamic library integration.
 //===----------------------------------------------------------------------===//
 
-// Export symbols for the MLIR ExecutionEngine integration. All other symbols
-// are hidden.
-#ifdef _WIN32
-#define API __declspec(dllexport)
-#else
-#define API __attribute__((visibility("default")))
-#endif
-
 // Visual Studio had a bug that fails to compile nested generic lambdas
 // inside an `extern "C"` function.
 //   https://developercommunity.visualstudio.com/content/problem/475494/clexe-error-with-lambda-inside-function-templates.html
 // The bug is fixed in VS2019 16.1. Separating the declaration and definition is
 // a work around for older versions of Visual Studio.
 // NOLINTNEXTLINE(*-identifier-naming): externally called.
-extern "C" API void
+extern "C" MLIR_ASYNC_RUNTIME_EXPORT void
 __mlir_execution_engine_init(llvm::StringMap<void *> &exportSymbols);
 
 // NOLINTNEXTLINE(*-identifier-naming): externally called.
@@ -528,11 +518,9 @@ void __mlir_execution_engine_init(llvm::StringMap<void *> &exportSymbols) {
 }
 
 // NOLINTNEXTLINE(*-identifier-naming): externally called.
-extern "C" API void __mlir_execution_engine_destroy() {
+extern "C" MLIR_ASYNC_RUNTIME_EXPORT void __mlir_execution_engine_destroy() {
   resetDefaultAsyncRuntime();
 }
 
 } // namespace runtime
 } // namespace mlir
-
-#endif // MLIR_ASYNCRUNTIME_DEFINE_FUNCTIONS

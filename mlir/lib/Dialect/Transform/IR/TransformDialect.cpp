@@ -157,6 +157,13 @@ LogicalResult transform::TransformDialect::verifyOperationAttribute(
     }
     return success();
   }
+  if (attribute.getName().getValue() == kSilenceTrackingFailuresAttrName) {
+    if (!llvm::isa<UnitAttr>(attribute.getValue())) {
+      return op->emitError()
+             << attribute.getName() << " must be a unit attribute";
+    }
+    return success();
+  }
   return emitError(op->getLoc())
          << "unknown attribute: " << attribute.getName();
 }

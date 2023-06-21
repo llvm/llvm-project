@@ -5,6 +5,12 @@
 ; RUN: llc  -verify-machineinstrs -mcpu=pwr7 -ppc-asm-full-reg-names \
 ; RUN:      -mtriple powerpc64-ibm-aix-xcoff --code-model=large < %s \
 ; RUN:      | FileCheck %s --check-prefix=LARGE64
+; RUN: llc  -verify-machineinstrs -mcpu=pwr7 -ppc-asm-full-reg-names \
+; RUN:      -mtriple powerpc-ibm-aix-xcoff < %s | FileCheck %s \
+; RUN:      --check-prefix=SMALL32
+; RUN: llc  -verify-machineinstrs -mcpu=pwr7 -ppc-asm-full-reg-names \
+; RUN:      -mtriple powerpc-ibm-aix-xcoff --code-model=large < %s \
+; RUN:      | FileCheck %s --check-prefix=LARGE32
 
 @ThreadLocalVarInit = thread_local(localexec) global i64 1, align 8
 @VarInit = global i64 87, align 8
@@ -28,6 +34,39 @@ define void @storeITLUninit(i64 noundef %x) {
 ; LARGE64-NEXT:    add r4, r13, r4
 ; LARGE64-NEXT:    std r3, 0(r4)
 ; LARGE64-NEXT:    blr
+;
+; SMALL32-LABEL: storeITLUninit:
+; SMALL32:       # %bb.0: # %entry
+; SMALL32-NEXT:    mflr r0
+; SMALL32-NEXT:    stwu r1, -32(r1)
+; SMALL32-NEXT:    lwz r6, L..C0(r2) # target-flags(ppc-tprel) @IThreadLocalVarUninit
+; SMALL32-NEXT:    mr r5, r3
+; SMALL32-NEXT:    bla .__get_tpointer[PR]
+; SMALL32-NEXT:    stw r0, 40(r1)
+; SMALL32-NEXT:    add r3, r3, r6
+; SMALL32-NEXT:    stw r4, 4(r3)
+; SMALL32-NEXT:    stw r5, 0(r3)
+; SMALL32-NEXT:    addi r1, r1, 32
+; SMALL32-NEXT:    lwz r0, 8(r1)
+; SMALL32-NEXT:    mtlr r0
+; SMALL32-NEXT:    blr
+;
+; LARGE32-LABEL: storeITLUninit:
+; LARGE32:       # %bb.0: # %entry
+; LARGE32-NEXT:    mflr r0
+; LARGE32-NEXT:    stwu r1, -32(r1)
+; LARGE32-NEXT:    stw r0, 40(r1)
+; LARGE32-NEXT:    mr r5, r3
+; LARGE32-NEXT:    addis r3, L..C0@u(r2)
+; LARGE32-NEXT:    lwz r6, L..C0@l(r3)
+; LARGE32-NEXT:    bla .__get_tpointer[PR]
+; LARGE32-NEXT:    add r3, r3, r6
+; LARGE32-NEXT:    stw r4, 4(r3)
+; LARGE32-NEXT:    stw r5, 0(r3)
+; LARGE32-NEXT:    addi r1, r1, 32
+; LARGE32-NEXT:    lwz r0, 8(r1)
+; LARGE32-NEXT:    mtlr r0
+; LARGE32-NEXT:    blr
 entry:
   %0 = tail call align 8 ptr @llvm.threadlocal.address.p0(ptr align 8 @IThreadLocalVarUninit)
   store i64 %x, ptr %0, align 8
@@ -49,6 +88,39 @@ define void @storeITLInit(i64 noundef %x) {
 ; LARGE64-NEXT:    add r4, r13, r4
 ; LARGE64-NEXT:    std r3, 0(r4)
 ; LARGE64-NEXT:    blr
+;
+; SMALL32-LABEL: storeITLInit:
+; SMALL32:       # %bb.0: # %entry
+; SMALL32-NEXT:    mflr r0
+; SMALL32-NEXT:    stwu r1, -32(r1)
+; SMALL32-NEXT:    lwz r6, L..C1(r2) # target-flags(ppc-tprel) @IThreadLocalVarInit
+; SMALL32-NEXT:    mr r5, r3
+; SMALL32-NEXT:    bla .__get_tpointer[PR]
+; SMALL32-NEXT:    stw r0, 40(r1)
+; SMALL32-NEXT:    add r3, r3, r6
+; SMALL32-NEXT:    stw r4, 4(r3)
+; SMALL32-NEXT:    stw r5, 0(r3)
+; SMALL32-NEXT:    addi r1, r1, 32
+; SMALL32-NEXT:    lwz r0, 8(r1)
+; SMALL32-NEXT:    mtlr r0
+; SMALL32-NEXT:    blr
+;
+; LARGE32-LABEL: storeITLInit:
+; LARGE32:       # %bb.0: # %entry
+; LARGE32-NEXT:    mflr r0
+; LARGE32-NEXT:    stwu r1, -32(r1)
+; LARGE32-NEXT:    stw r0, 40(r1)
+; LARGE32-NEXT:    mr r5, r3
+; LARGE32-NEXT:    addis r3, L..C1@u(r2)
+; LARGE32-NEXT:    lwz r6, L..C1@l(r3)
+; LARGE32-NEXT:    bla .__get_tpointer[PR]
+; LARGE32-NEXT:    add r3, r3, r6
+; LARGE32-NEXT:    stw r4, 4(r3)
+; LARGE32-NEXT:    stw r5, 0(r3)
+; LARGE32-NEXT:    addi r1, r1, 32
+; LARGE32-NEXT:    lwz r0, 8(r1)
+; LARGE32-NEXT:    mtlr r0
+; LARGE32-NEXT:    blr
 entry:
   %0 = tail call align 8 ptr @llvm.threadlocal.address.p0(ptr align 8 @IThreadLocalVarInit)
   store i64 %x, ptr %0, align 8
@@ -70,6 +142,39 @@ define void @storeTLUninit(i64 noundef %x) {
 ; LARGE64-NEXT:    add r4, r13, r4
 ; LARGE64-NEXT:    std r3, 0(r4)
 ; LARGE64-NEXT:    blr
+;
+; SMALL32-LABEL: storeTLUninit:
+; SMALL32:       # %bb.0: # %entry
+; SMALL32-NEXT:    mflr r0
+; SMALL32-NEXT:    stwu r1, -32(r1)
+; SMALL32-NEXT:    lwz r6, L..C2(r2) # target-flags(ppc-tprel) @ThreadLocalVarUninit
+; SMALL32-NEXT:    mr r5, r3
+; SMALL32-NEXT:    bla .__get_tpointer[PR]
+; SMALL32-NEXT:    stw r0, 40(r1)
+; SMALL32-NEXT:    add r3, r3, r6
+; SMALL32-NEXT:    stw r4, 4(r3)
+; SMALL32-NEXT:    stw r5, 0(r3)
+; SMALL32-NEXT:    addi r1, r1, 32
+; SMALL32-NEXT:    lwz r0, 8(r1)
+; SMALL32-NEXT:    mtlr r0
+; SMALL32-NEXT:    blr
+;
+; LARGE32-LABEL: storeTLUninit:
+; LARGE32:       # %bb.0: # %entry
+; LARGE32-NEXT:    mflr r0
+; LARGE32-NEXT:    stwu r1, -32(r1)
+; LARGE32-NEXT:    stw r0, 40(r1)
+; LARGE32-NEXT:    mr r5, r3
+; LARGE32-NEXT:    addis r3, L..C2@u(r2)
+; LARGE32-NEXT:    lwz r6, L..C2@l(r3)
+; LARGE32-NEXT:    bla .__get_tpointer[PR]
+; LARGE32-NEXT:    add r3, r3, r6
+; LARGE32-NEXT:    stw r4, 4(r3)
+; LARGE32-NEXT:    stw r5, 0(r3)
+; LARGE32-NEXT:    addi r1, r1, 32
+; LARGE32-NEXT:    lwz r0, 8(r1)
+; LARGE32-NEXT:    mtlr r0
+; LARGE32-NEXT:    blr
 entry:
   %0 = tail call align 8 ptr @llvm.threadlocal.address.p0(ptr align 8 @ThreadLocalVarUninit)
   store i64 %x, ptr %0, align 8
@@ -91,6 +196,39 @@ define void @storeTLInit(i64 noundef %x) {
 ; LARGE64-NEXT:    add r4, r13, r4
 ; LARGE64-NEXT:    std r3, 0(r4)
 ; LARGE64-NEXT:    blr
+;
+; SMALL32-LABEL: storeTLInit:
+; SMALL32:       # %bb.0: # %entry
+; SMALL32-NEXT:    mflr r0
+; SMALL32-NEXT:    stwu r1, -32(r1)
+; SMALL32-NEXT:    lwz r6, L..C3(r2) # target-flags(ppc-tprel) @ThreadLocalVarInit
+; SMALL32-NEXT:    mr r5, r3
+; SMALL32-NEXT:    bla .__get_tpointer[PR]
+; SMALL32-NEXT:    stw r0, 40(r1)
+; SMALL32-NEXT:    add r3, r3, r6
+; SMALL32-NEXT:    stw r4, 4(r3)
+; SMALL32-NEXT:    stw r5, 0(r3)
+; SMALL32-NEXT:    addi r1, r1, 32
+; SMALL32-NEXT:    lwz r0, 8(r1)
+; SMALL32-NEXT:    mtlr r0
+; SMALL32-NEXT:    blr
+;
+; LARGE32-LABEL: storeTLInit:
+; LARGE32:       # %bb.0: # %entry
+; LARGE32-NEXT:    mflr r0
+; LARGE32-NEXT:    stwu r1, -32(r1)
+; LARGE32-NEXT:    stw r0, 40(r1)
+; LARGE32-NEXT:    mr r5, r3
+; LARGE32-NEXT:    addis r3, L..C3@u(r2)
+; LARGE32-NEXT:    lwz r6, L..C3@l(r3)
+; LARGE32-NEXT:    bla .__get_tpointer[PR]
+; LARGE32-NEXT:    add r3, r3, r6
+; LARGE32-NEXT:    stw r4, 4(r3)
+; LARGE32-NEXT:    stw r5, 0(r3)
+; LARGE32-NEXT:    addi r1, r1, 32
+; LARGE32-NEXT:    lwz r0, 8(r1)
+; LARGE32-NEXT:    mtlr r0
+; LARGE32-NEXT:    blr
 entry:
   %0 = tail call align 8 ptr @llvm.threadlocal.address.p0(ptr align 8 @ThreadLocalVarInit)
   store i64 %x, ptr %0, align 8
@@ -112,6 +250,37 @@ define i64 @loadITLUninit() {
 ; LARGE64-NEXT:    add r3, r13, r3
 ; LARGE64-NEXT:    ld r3, 0(r3)
 ; LARGE64-NEXT:    blr
+;
+; SMALL32-LABEL: loadITLUninit:
+; SMALL32:       # %bb.0: # %entry
+; SMALL32-NEXT:    mflr r0
+; SMALL32-NEXT:    stwu r1, -32(r1)
+; SMALL32-NEXT:    lwz r4, L..C0(r2) # target-flags(ppc-tprel) @IThreadLocalVarUninit
+; SMALL32-NEXT:    bla .__get_tpointer[PR]
+; SMALL32-NEXT:    stw r0, 40(r1)
+; SMALL32-NEXT:    add r4, r3, r4
+; SMALL32-NEXT:    lwz r3, 0(r4)
+; SMALL32-NEXT:    lwz r4, 4(r4)
+; SMALL32-NEXT:    addi r1, r1, 32
+; SMALL32-NEXT:    lwz r0, 8(r1)
+; SMALL32-NEXT:    mtlr r0
+; SMALL32-NEXT:    blr
+;
+; LARGE32-LABEL: loadITLUninit:
+; LARGE32:       # %bb.0: # %entry
+; LARGE32-NEXT:    mflr r0
+; LARGE32-NEXT:    stwu r1, -32(r1)
+; LARGE32-NEXT:    stw r0, 40(r1)
+; LARGE32-NEXT:    addis r3, L..C0@u(r2)
+; LARGE32-NEXT:    lwz r4, L..C0@l(r3)
+; LARGE32-NEXT:    bla .__get_tpointer[PR]
+; LARGE32-NEXT:    add r4, r3, r4
+; LARGE32-NEXT:    lwz r3, 0(r4)
+; LARGE32-NEXT:    lwz r4, 4(r4)
+; LARGE32-NEXT:    addi r1, r1, 32
+; LARGE32-NEXT:    lwz r0, 8(r1)
+; LARGE32-NEXT:    mtlr r0
+; LARGE32-NEXT:    blr
 entry:
   %0 = tail call align 8 ptr @llvm.threadlocal.address.p0(ptr align 8 @IThreadLocalVarUninit)
   %1 = load i64, ptr %0, align 8
@@ -140,6 +309,48 @@ define i64 @loadITLUninit2() {
 ; LARGE64-NEXT:    ld r3, 0(r3)
 ; LARGE64-NEXT:    add r3, r4, r3
 ; LARGE64-NEXT:    blr
+;
+; SMALL32-LABEL: loadITLUninit2:
+; SMALL32:       # %bb.0: # %entry
+; SMALL32-NEXT:    mflr r0
+; SMALL32-NEXT:    stwu r1, -32(r1)
+; SMALL32-NEXT:    lwz r4, L..C0(r2) # target-flags(ppc-tprel) @IThreadLocalVarUninit
+; SMALL32-NEXT:    lwz r5, L..C4(r2) # @VarInit
+; SMALL32-NEXT:    bla .__get_tpointer[PR]
+; SMALL32-NEXT:    stw r0, 40(r1)
+; SMALL32-NEXT:    add r3, r3, r4
+; SMALL32-NEXT:    lwz r6, 4(r5)
+; SMALL32-NEXT:    lwz r5, 0(r5)
+; SMALL32-NEXT:    lwz r4, 4(r3)
+; SMALL32-NEXT:    lwz r3, 0(r3)
+; SMALL32-NEXT:    addc r4, r6, r4
+; SMALL32-NEXT:    adde r3, r5, r3
+; SMALL32-NEXT:    addi r1, r1, 32
+; SMALL32-NEXT:    lwz r0, 8(r1)
+; SMALL32-NEXT:    mtlr r0
+; SMALL32-NEXT:    blr
+;
+; LARGE32-LABEL: loadITLUninit2:
+; LARGE32:       # %bb.0: # %entry
+; LARGE32-NEXT:    mflr r0
+; LARGE32-NEXT:    stwu r1, -32(r1)
+; LARGE32-NEXT:    stw r0, 40(r1)
+; LARGE32-NEXT:    addis r3, L..C0@u(r2)
+; LARGE32-NEXT:    lwz r4, L..C0@l(r3)
+; LARGE32-NEXT:    bla .__get_tpointer[PR]
+; LARGE32-NEXT:    add r3, r3, r4
+; LARGE32-NEXT:    lwz r4, 4(r3)
+; LARGE32-NEXT:    lwz r3, 0(r3)
+; LARGE32-NEXT:    addis r5, L..C4@u(r2)
+; LARGE32-NEXT:    lwz r5, L..C4@l(r5)
+; LARGE32-NEXT:    lwz r6, 4(r5)
+; LARGE32-NEXT:    lwz r5, 0(r5)
+; LARGE32-NEXT:    addc r4, r6, r4
+; LARGE32-NEXT:    adde r3, r5, r3
+; LARGE32-NEXT:    addi r1, r1, 32
+; LARGE32-NEXT:    lwz r0, 8(r1)
+; LARGE32-NEXT:    mtlr r0
+; LARGE32-NEXT:    blr
 entry:
   %0 = tail call align 8 ptr @llvm.threadlocal.address.p0(ptr align 8 @IThreadLocalVarUninit)
   %1 = load i64, ptr %0, align 8
@@ -163,6 +374,37 @@ define i64 @loadITLInit() {
 ; LARGE64-NEXT:    add r3, r13, r3
 ; LARGE64-NEXT:    ld r3, 0(r3)
 ; LARGE64-NEXT:    blr
+;
+; SMALL32-LABEL: loadITLInit:
+; SMALL32:       # %bb.0: # %entry
+; SMALL32-NEXT:    mflr r0
+; SMALL32-NEXT:    stwu r1, -32(r1)
+; SMALL32-NEXT:    lwz r4, L..C1(r2) # target-flags(ppc-tprel) @IThreadLocalVarInit
+; SMALL32-NEXT:    bla .__get_tpointer[PR]
+; SMALL32-NEXT:    stw r0, 40(r1)
+; SMALL32-NEXT:    add r4, r3, r4
+; SMALL32-NEXT:    lwz r3, 0(r4)
+; SMALL32-NEXT:    lwz r4, 4(r4)
+; SMALL32-NEXT:    addi r1, r1, 32
+; SMALL32-NEXT:    lwz r0, 8(r1)
+; SMALL32-NEXT:    mtlr r0
+; SMALL32-NEXT:    blr
+;
+; LARGE32-LABEL: loadITLInit:
+; LARGE32:       # %bb.0: # %entry
+; LARGE32-NEXT:    mflr r0
+; LARGE32-NEXT:    stwu r1, -32(r1)
+; LARGE32-NEXT:    stw r0, 40(r1)
+; LARGE32-NEXT:    addis r3, L..C1@u(r2)
+; LARGE32-NEXT:    lwz r4, L..C1@l(r3)
+; LARGE32-NEXT:    bla .__get_tpointer[PR]
+; LARGE32-NEXT:    add r4, r3, r4
+; LARGE32-NEXT:    lwz r3, 0(r4)
+; LARGE32-NEXT:    lwz r4, 4(r4)
+; LARGE32-NEXT:    addi r1, r1, 32
+; LARGE32-NEXT:    lwz r0, 8(r1)
+; LARGE32-NEXT:    mtlr r0
+; LARGE32-NEXT:    blr
 entry:
   %0 = tail call align 8 ptr @llvm.threadlocal.address.p0(ptr align 8 @IThreadLocalVarInit)
   %1 = load i64, ptr %0, align 8
@@ -191,6 +433,48 @@ define i64 @loadITLInit2() {
 ; LARGE64-NEXT:    ld r3, 0(r3)
 ; LARGE64-NEXT:    add r3, r4, r3
 ; LARGE64-NEXT:    blr
+;
+; SMALL32-LABEL: loadITLInit2:
+; SMALL32:       # %bb.0: # %entry
+; SMALL32-NEXT:    mflr r0
+; SMALL32-NEXT:    stwu r1, -32(r1)
+; SMALL32-NEXT:    lwz r4, L..C1(r2) # target-flags(ppc-tprel) @IThreadLocalVarInit
+; SMALL32-NEXT:    lwz r5, L..C4(r2) # @VarInit
+; SMALL32-NEXT:    bla .__get_tpointer[PR]
+; SMALL32-NEXT:    stw r0, 40(r1)
+; SMALL32-NEXT:    add r3, r3, r4
+; SMALL32-NEXT:    lwz r6, 4(r5)
+; SMALL32-NEXT:    lwz r5, 0(r5)
+; SMALL32-NEXT:    lwz r4, 4(r3)
+; SMALL32-NEXT:    lwz r3, 0(r3)
+; SMALL32-NEXT:    addc r4, r6, r4
+; SMALL32-NEXT:    adde r3, r5, r3
+; SMALL32-NEXT:    addi r1, r1, 32
+; SMALL32-NEXT:    lwz r0, 8(r1)
+; SMALL32-NEXT:    mtlr r0
+; SMALL32-NEXT:    blr
+;
+; LARGE32-LABEL: loadITLInit2:
+; LARGE32:       # %bb.0: # %entry
+; LARGE32-NEXT:    mflr r0
+; LARGE32-NEXT:    stwu r1, -32(r1)
+; LARGE32-NEXT:    stw r0, 40(r1)
+; LARGE32-NEXT:    addis r3, L..C1@u(r2)
+; LARGE32-NEXT:    lwz r4, L..C1@l(r3)
+; LARGE32-NEXT:    bla .__get_tpointer[PR]
+; LARGE32-NEXT:    add r3, r3, r4
+; LARGE32-NEXT:    lwz r4, 4(r3)
+; LARGE32-NEXT:    lwz r3, 0(r3)
+; LARGE32-NEXT:    addis r5, L..C4@u(r2)
+; LARGE32-NEXT:    lwz r5, L..C4@l(r5)
+; LARGE32-NEXT:    lwz r6, 4(r5)
+; LARGE32-NEXT:    lwz r5, 0(r5)
+; LARGE32-NEXT:    addc r4, r6, r4
+; LARGE32-NEXT:    adde r3, r5, r3
+; LARGE32-NEXT:    addi r1, r1, 32
+; LARGE32-NEXT:    lwz r0, 8(r1)
+; LARGE32-NEXT:    mtlr r0
+; LARGE32-NEXT:    blr
 entry:
   %0 = tail call align 8 ptr @llvm.threadlocal.address.p0(ptr align 8 @IThreadLocalVarInit)
   %1 = load i64, ptr %0, align 8
@@ -214,6 +498,37 @@ define i64 @loadTLUninit() {
 ; LARGE64-NEXT:    add r3, r13, r3
 ; LARGE64-NEXT:    ld r3, 0(r3)
 ; LARGE64-NEXT:    blr
+;
+; SMALL32-LABEL: loadTLUninit:
+; SMALL32:       # %bb.0: # %entry
+; SMALL32-NEXT:    mflr r0
+; SMALL32-NEXT:    stwu r1, -32(r1)
+; SMALL32-NEXT:    lwz r4, L..C2(r2) # target-flags(ppc-tprel) @ThreadLocalVarUninit
+; SMALL32-NEXT:    bla .__get_tpointer[PR]
+; SMALL32-NEXT:    stw r0, 40(r1)
+; SMALL32-NEXT:    add r4, r3, r4
+; SMALL32-NEXT:    lwz r3, 0(r4)
+; SMALL32-NEXT:    lwz r4, 4(r4)
+; SMALL32-NEXT:    addi r1, r1, 32
+; SMALL32-NEXT:    lwz r0, 8(r1)
+; SMALL32-NEXT:    mtlr r0
+; SMALL32-NEXT:    blr
+;
+; LARGE32-LABEL: loadTLUninit:
+; LARGE32:       # %bb.0: # %entry
+; LARGE32-NEXT:    mflr r0
+; LARGE32-NEXT:    stwu r1, -32(r1)
+; LARGE32-NEXT:    stw r0, 40(r1)
+; LARGE32-NEXT:    addis r3, L..C2@u(r2)
+; LARGE32-NEXT:    lwz r4, L..C2@l(r3)
+; LARGE32-NEXT:    bla .__get_tpointer[PR]
+; LARGE32-NEXT:    add r4, r3, r4
+; LARGE32-NEXT:    lwz r3, 0(r4)
+; LARGE32-NEXT:    lwz r4, 4(r4)
+; LARGE32-NEXT:    addi r1, r1, 32
+; LARGE32-NEXT:    lwz r0, 8(r1)
+; LARGE32-NEXT:    mtlr r0
+; LARGE32-NEXT:    blr
 entry:
   %0 = tail call align 8 ptr @llvm.threadlocal.address.p0(ptr align 8 @ThreadLocalVarUninit)
   %1 = load i64, ptr %0, align 8
@@ -242,6 +557,48 @@ define i64 @loadTLUninit2() {
 ; LARGE64-NEXT:    ld r3, 0(r3)
 ; LARGE64-NEXT:    add r3, r4, r3
 ; LARGE64-NEXT:    blr
+;
+; SMALL32-LABEL: loadTLUninit2:
+; SMALL32:       # %bb.0: # %entry
+; SMALL32-NEXT:    mflr r0
+; SMALL32-NEXT:    stwu r1, -32(r1)
+; SMALL32-NEXT:    lwz r4, L..C2(r2) # target-flags(ppc-tprel) @ThreadLocalVarUninit
+; SMALL32-NEXT:    lwz r5, L..C4(r2) # @VarInit
+; SMALL32-NEXT:    bla .__get_tpointer[PR]
+; SMALL32-NEXT:    stw r0, 40(r1)
+; SMALL32-NEXT:    add r3, r3, r4
+; SMALL32-NEXT:    lwz r6, 4(r5)
+; SMALL32-NEXT:    lwz r5, 0(r5)
+; SMALL32-NEXT:    lwz r4, 4(r3)
+; SMALL32-NEXT:    lwz r3, 0(r3)
+; SMALL32-NEXT:    addc r4, r6, r4
+; SMALL32-NEXT:    adde r3, r5, r3
+; SMALL32-NEXT:    addi r1, r1, 32
+; SMALL32-NEXT:    lwz r0, 8(r1)
+; SMALL32-NEXT:    mtlr r0
+; SMALL32-NEXT:    blr
+;
+; LARGE32-LABEL: loadTLUninit2:
+; LARGE32:       # %bb.0: # %entry
+; LARGE32-NEXT:    mflr r0
+; LARGE32-NEXT:    stwu r1, -32(r1)
+; LARGE32-NEXT:    stw r0, 40(r1)
+; LARGE32-NEXT:    addis r3, L..C2@u(r2)
+; LARGE32-NEXT:    lwz r4, L..C2@l(r3)
+; LARGE32-NEXT:    bla .__get_tpointer[PR]
+; LARGE32-NEXT:    add r3, r3, r4
+; LARGE32-NEXT:    lwz r4, 4(r3)
+; LARGE32-NEXT:    lwz r3, 0(r3)
+; LARGE32-NEXT:    addis r5, L..C4@u(r2)
+; LARGE32-NEXT:    lwz r5, L..C4@l(r5)
+; LARGE32-NEXT:    lwz r6, 4(r5)
+; LARGE32-NEXT:    lwz r5, 0(r5)
+; LARGE32-NEXT:    addc r4, r6, r4
+; LARGE32-NEXT:    adde r3, r5, r3
+; LARGE32-NEXT:    addi r1, r1, 32
+; LARGE32-NEXT:    lwz r0, 8(r1)
+; LARGE32-NEXT:    mtlr r0
+; LARGE32-NEXT:    blr
 entry:
   %0 = tail call align 8 ptr @llvm.threadlocal.address.p0(ptr align 8 @ThreadLocalVarUninit)
   %1 = load i64, ptr %0, align 8
@@ -265,6 +622,37 @@ define i64 @loadTLInit() {
 ; LARGE64-NEXT:    add r3, r13, r3
 ; LARGE64-NEXT:    ld r3, 0(r3)
 ; LARGE64-NEXT:    blr
+;
+; SMALL32-LABEL: loadTLInit:
+; SMALL32:       # %bb.0: # %entry
+; SMALL32-NEXT:    mflr r0
+; SMALL32-NEXT:    stwu r1, -32(r1)
+; SMALL32-NEXT:    lwz r4, L..C3(r2) # target-flags(ppc-tprel) @ThreadLocalVarInit
+; SMALL32-NEXT:    bla .__get_tpointer[PR]
+; SMALL32-NEXT:    stw r0, 40(r1)
+; SMALL32-NEXT:    add r4, r3, r4
+; SMALL32-NEXT:    lwz r3, 0(r4)
+; SMALL32-NEXT:    lwz r4, 4(r4)
+; SMALL32-NEXT:    addi r1, r1, 32
+; SMALL32-NEXT:    lwz r0, 8(r1)
+; SMALL32-NEXT:    mtlr r0
+; SMALL32-NEXT:    blr
+;
+; LARGE32-LABEL: loadTLInit:
+; LARGE32:       # %bb.0: # %entry
+; LARGE32-NEXT:    mflr r0
+; LARGE32-NEXT:    stwu r1, -32(r1)
+; LARGE32-NEXT:    stw r0, 40(r1)
+; LARGE32-NEXT:    addis r3, L..C3@u(r2)
+; LARGE32-NEXT:    lwz r4, L..C3@l(r3)
+; LARGE32-NEXT:    bla .__get_tpointer[PR]
+; LARGE32-NEXT:    add r4, r3, r4
+; LARGE32-NEXT:    lwz r3, 0(r4)
+; LARGE32-NEXT:    lwz r4, 4(r4)
+; LARGE32-NEXT:    addi r1, r1, 32
+; LARGE32-NEXT:    lwz r0, 8(r1)
+; LARGE32-NEXT:    mtlr r0
+; LARGE32-NEXT:    blr
 entry:
   %0 = tail call align 8 ptr @llvm.threadlocal.address.p0(ptr align 8 @ThreadLocalVarInit)
   %1 = load i64, ptr %0, align 8
@@ -293,6 +681,48 @@ define i64 @loadTLInit2() {
 ; LARGE64-NEXT:    ld r3, 0(r3)
 ; LARGE64-NEXT:    add r3, r4, r3
 ; LARGE64-NEXT:    blr
+;
+; SMALL32-LABEL: loadTLInit2:
+; SMALL32:       # %bb.0: # %entry
+; SMALL32-NEXT:    mflr r0
+; SMALL32-NEXT:    stwu r1, -32(r1)
+; SMALL32-NEXT:    lwz r4, L..C3(r2) # target-flags(ppc-tprel) @ThreadLocalVarInit
+; SMALL32-NEXT:    lwz r5, L..C4(r2) # @VarInit
+; SMALL32-NEXT:    bla .__get_tpointer[PR]
+; SMALL32-NEXT:    stw r0, 40(r1)
+; SMALL32-NEXT:    add r3, r3, r4
+; SMALL32-NEXT:    lwz r6, 4(r5)
+; SMALL32-NEXT:    lwz r5, 0(r5)
+; SMALL32-NEXT:    lwz r4, 4(r3)
+; SMALL32-NEXT:    lwz r3, 0(r3)
+; SMALL32-NEXT:    addc r4, r6, r4
+; SMALL32-NEXT:    adde r3, r5, r3
+; SMALL32-NEXT:    addi r1, r1, 32
+; SMALL32-NEXT:    lwz r0, 8(r1)
+; SMALL32-NEXT:    mtlr r0
+; SMALL32-NEXT:    blr
+;
+; LARGE32-LABEL: loadTLInit2:
+; LARGE32:       # %bb.0: # %entry
+; LARGE32-NEXT:    mflr r0
+; LARGE32-NEXT:    stwu r1, -32(r1)
+; LARGE32-NEXT:    stw r0, 40(r1)
+; LARGE32-NEXT:    addis r3, L..C3@u(r2)
+; LARGE32-NEXT:    lwz r4, L..C3@l(r3)
+; LARGE32-NEXT:    bla .__get_tpointer[PR]
+; LARGE32-NEXT:    add r3, r3, r4
+; LARGE32-NEXT:    lwz r4, 4(r3)
+; LARGE32-NEXT:    lwz r3, 0(r3)
+; LARGE32-NEXT:    addis r5, L..C4@u(r2)
+; LARGE32-NEXT:    lwz r5, L..C4@l(r5)
+; LARGE32-NEXT:    lwz r6, 4(r5)
+; LARGE32-NEXT:    lwz r5, 0(r5)
+; LARGE32-NEXT:    addc r4, r6, r4
+; LARGE32-NEXT:    adde r3, r5, r3
+; LARGE32-NEXT:    addi r1, r1, 32
+; LARGE32-NEXT:    lwz r0, 8(r1)
+; LARGE32-NEXT:    mtlr r0
+; LARGE32-NEXT:    blr
 entry:
   %0 = tail call align 8 ptr @llvm.threadlocal.address.p0(ptr align 8 @ThreadLocalVarInit)
   %1 = load i64, ptr %0, align 8
@@ -326,3 +756,27 @@ entry:
 ; LARGE64-NEXT: .tc ThreadLocalVarInit[TE],ThreadLocalVarInit[TL]@le
 ; LARGE64-LABEL: L..C4:
 ; LARGE64-NEXT: .tc VarInit[TE],VarInit[RW]
+
+; SMALL32-LABEL: .toc
+; SMALL32-LABEL: L..C0:
+; SMALL32-NEXT: .tc IThreadLocalVarUninit[TC],IThreadLocalVarUninit[UL]@le
+; SMALL32-LABEL: L..C1:
+; SMALL32-NEXT: .tc IThreadLocalVarInit[TC],IThreadLocalVarInit[TL]@le
+; SMALL32-LABEL: L..C2:
+; SMALL32-NEXT: .tc ThreadLocalVarUninit[TC],ThreadLocalVarUninit[TL]@le
+; SMALL32-LABEL: L..C3:
+; SMALL32-NEXT: .tc ThreadLocalVarInit[TC],ThreadLocalVarInit[TL]@le
+; SMALL32-LABEL: L..C4:
+; SMALL32-NEXT: .tc VarInit[TC],VarInit[RW]
+
+; LARGE32-LABEL: .toc
+; LARGE32-LABEL: L..C0:
+; LARGE32-NEXT: .tc IThreadLocalVarUninit[TE],IThreadLocalVarUninit[UL]@le
+; LARGE32-LABEL: L..C1:
+; LARGE32-NEXT: .tc IThreadLocalVarInit[TE],IThreadLocalVarInit[TL]@le
+; LARGE32-LABEL: L..C2:
+; LARGE32-NEXT: .tc ThreadLocalVarUninit[TE],ThreadLocalVarUninit[TL]@le
+; LARGE32-LABEL: L..C3:
+; LARGE32-NEXT: .tc ThreadLocalVarInit[TE],ThreadLocalVarInit[TL]@le
+; LARGE32-LABEL: L..C4:
+; LARGE32-NEXT: .tc VarInit[TE],VarInit[RW]

@@ -32,48 +32,36 @@ _LIBCPP_BEGIN_NAMESPACE_FILESYSTEM
 
 class _LIBCPP_AVAILABILITY_FILESYSTEM_LIBRARY _LIBCPP_EXPORTED_FROM_ABI filesystem_error : public system_error {
 public:
-  _LIBCPP_INLINE_VISIBILITY
-  filesystem_error(const string& __what, error_code __ec)
-      : system_error(__ec, __what),
-        __storage_(make_shared<_Storage>(path(), path())) {
+  _LIBCPP_HIDE_FROM_ABI filesystem_error(const string& __what, error_code __ec)
+      : system_error(__ec, __what), __storage_(make_shared<_Storage>(path(), path())) {
     __create_what(0);
   }
 
-  _LIBCPP_INLINE_VISIBILITY
-  filesystem_error(const string& __what, const path& __p1, error_code __ec)
-      : system_error(__ec, __what),
-        __storage_(make_shared<_Storage>(__p1, path())) {
+  _LIBCPP_HIDE_FROM_ABI filesystem_error(const string& __what, const path& __p1, error_code __ec)
+      : system_error(__ec, __what), __storage_(make_shared<_Storage>(__p1, path())) {
     __create_what(1);
   }
 
-  _LIBCPP_INLINE_VISIBILITY
-  filesystem_error(const string& __what, const path& __p1, const path& __p2,
-                   error_code __ec)
-      : system_error(__ec, __what),
-        __storage_(make_shared<_Storage>(__p1, __p2)) {
+  _LIBCPP_HIDE_FROM_ABI filesystem_error(const string& __what, const path& __p1, const path& __p2, error_code __ec)
+      : system_error(__ec, __what), __storage_(make_shared<_Storage>(__p1, __p2)) {
     __create_what(2);
   }
 
-  _LIBCPP_INLINE_VISIBILITY
-  const path& path1() const noexcept { return __storage_->__p1_; }
+  _LIBCPP_HIDE_FROM_ABI const path& path1() const noexcept { return __storage_->__p1_; }
 
-  _LIBCPP_INLINE_VISIBILITY
-  const path& path2() const noexcept { return __storage_->__p2_; }
+  _LIBCPP_HIDE_FROM_ABI const path& path2() const noexcept { return __storage_->__p2_; }
 
   _LIBCPP_HIDE_FROM_ABI filesystem_error(const filesystem_error&) = default;
   ~filesystem_error() override; // key function
 
   _LIBCPP_HIDE_FROM_ABI_VIRTUAL
-  const char* what() const noexcept override {
-    return __storage_->__what_.c_str();
-  }
+  const char* what() const noexcept override { return __storage_->__what_.c_str(); }
 
   void __create_what(int __num_paths);
 
 private:
   struct _LIBCPP_HIDDEN _Storage {
-    _LIBCPP_INLINE_VISIBILITY
-    _Storage(const path& __p1, const path& __p2) : __p1_(__p1), __p2_(__p2) {}
+    _LIBCPP_HIDE_FROM_ABI _Storage(const path& __p1, const path& __p2) : __p1_(__p1), __p2_(__p2) {}
 
     path __p1_;
     path __p2_;
@@ -86,17 +74,17 @@ private:
 //                filesystem_error to work around PR41078.
 _LIBCPP_AVAILABILITY_FILESYSTEM_LIBRARY_PUSH
 
+#  ifndef _LIBCPP_HAS_NO_EXCEPTIONS
 template <class... _Args>
-_LIBCPP_NORETURN inline _LIBCPP_INLINE_VISIBILITY
-#ifndef _LIBCPP_HAS_NO_EXCEPTIONS
-void __throw_filesystem_error(_Args&&... __args) {
+_LIBCPP_NORETURN inline _LIBCPP_HIDE_FROM_ABI void __throw_filesystem_error(_Args&&... __args) {
   throw filesystem_error(_VSTD::forward<_Args>(__args)...);
 }
-#else
-void __throw_filesystem_error(_Args&&...) {
-    _LIBCPP_VERBOSE_ABORT("filesystem_error was thrown in -fno-exceptions mode");
+#  else
+template <class... _Args>
+_LIBCPP_NORETURN inline _LIBCPP_HIDE_FROM_ABI void __throw_filesystem_error(_Args&&...) {
+  _LIBCPP_VERBOSE_ABORT("filesystem_error was thrown in -fno-exceptions mode");
 }
-#endif
+#  endif
 _LIBCPP_AVAILABILITY_FILESYSTEM_LIBRARY_POP
 
 _LIBCPP_END_NAMESPACE_FILESYSTEM

@@ -156,7 +156,14 @@ if(LLVM_ENABLE_PIC)
 
     EXCLUDE_FROM_LIBMLIR
   )
+  set_property(TARGET mlir_runner_utils PROPERTY CXX_VISIBILITY_PRESET hidden)
   target_compile_definitions(mlir_runner_utils PRIVATE mlir_runner_utils_EXPORTS)
+  if(CMAKE_SYSTEM_NAME STREQUAL "Linux")
+    # Don't export symbols from link-time dependencies, these are internal
+    # implementation details.
+    # FIXME: Add a similar fix for Windows.
+    target_link_options(mlir_runner_utils PRIVATE "-Wl,-exclude-libs,ALL")
+  endif()
 
   add_mlir_library(mlir_async_runtime
     SHARED

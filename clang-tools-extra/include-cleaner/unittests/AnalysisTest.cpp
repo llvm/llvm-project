@@ -91,7 +91,8 @@ TEST_F(WalkUsedTest, Basic) {
   #include "header.h"
   #include "private.h"
 
-  void $bar^bar($private^Private $p^p) {
+  // No reference reported for the Parameter "p".
+  void $bar^bar($private^Private p) {
     $foo^foo();
     std::$vector^vector $vconstructor^$v^v;
     $builtin^__builtin_popcount(1);
@@ -120,7 +121,6 @@ TEST_F(WalkUsedTest, Basic) {
       offsetToProviders(AST, SM),
       UnorderedElementsAre(
           Pair(Code.point("bar"), UnorderedElementsAre(MainFile)),
-          Pair(Code.point("p"), UnorderedElementsAre(MainFile)),
           Pair(Code.point("private"),
                UnorderedElementsAre(PublicFile, PrivateFile)),
           Pair(Code.point("foo"), UnorderedElementsAre(HeaderFile)),

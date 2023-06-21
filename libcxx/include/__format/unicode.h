@@ -105,7 +105,7 @@ template <contiguous_iterator _Iterator>
   requires same_as<iter_value_t<_Iterator>, char>
 _LIBCPP_HIDE_FROM_ABI constexpr bool __is_continuation(_Iterator __char, int __count) {
   do {
-    if ((*__char & 0b1000'0000) != 0b1000'0000)
+    if ((*__char & 0b1100'0000) != 0b1000'0000)
       return false;
     --__count;
     ++__char;

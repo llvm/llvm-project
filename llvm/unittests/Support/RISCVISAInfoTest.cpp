@@ -447,6 +447,30 @@ TEST(ParseArchString, RejectsConflictingExtensions) {
     EXPECT_EQ(toString(RISCVISAInfo::parseArchString(Input, true).takeError()),
               "'f' and 'zfinx' extensions are incompatible");
   }
+
+  for (StringRef Input : {"rv32idc_zcmp1p0", "rv64idc_zcmp1p0"}) {
+    EXPECT_EQ(toString(RISCVISAInfo::parseArchString(Input, true).takeError()),
+              "'zcmp' extension is incompatible with 'c' extension when 'd' "
+              "extension is enabled");
+  }
+
+  for (StringRef Input : {"rv32id_zcd1p0_zcmp1p0", "rv64id_zcd1p0_zcmp1p0"}) {
+    EXPECT_EQ(toString(RISCVISAInfo::parseArchString(Input, true).takeError()),
+              "'zcmp' extension is incompatible with 'zcd' extension when 'd' "
+              "extension is enabled");
+  }
+
+  for (StringRef Input : {"rv32idc_zcmt1p0", "rv64idc_zcmt1p0"}) {
+    EXPECT_EQ(toString(RISCVISAInfo::parseArchString(Input, true).takeError()),
+              "'zcmt' extension is incompatible with 'c' extension when 'd' "
+              "extension is enabled");
+  }
+
+  for (StringRef Input : {"rv32id_zcd1p0_zcmt1p0", "rv64id_zcd1p0_zcmt1p0"}) {
+    EXPECT_EQ(toString(RISCVISAInfo::parseArchString(Input, true).takeError()),
+              "'zcmt' extension is incompatible with 'zcd' extension when 'd' "
+              "extension is enabled");
+  }
 }
 
 TEST(ToFeatureVector, IIsDroppedAndExperimentalExtensionsArePrefixed) {

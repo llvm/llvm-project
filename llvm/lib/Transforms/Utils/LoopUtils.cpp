@@ -909,6 +909,10 @@ Intrinsic::ID llvm::getMinMaxReductionIntrinsicOp(RecurKind RK) {
     return Intrinsic::minnum;
   case RecurKind::FMax:
     return Intrinsic::maxnum;
+  case RecurKind::FMinimum:
+    return Intrinsic::minimum;
+  case RecurKind::FMaximum:
+    return Intrinsic::maximum;
   }
 }
 
@@ -928,6 +932,9 @@ CmpInst::Predicate llvm::getMinMaxReductionPredicate(RecurKind RK) {
     return CmpInst::FCMP_OLT;
   case RecurKind::FMax:
     return CmpInst::FCMP_OGT;
+  // We do not add FMinimum/FMaximum recurrence kind here since there is no
+  // equivalent predicate which compares signed zeroes according to the
+  // semantics of the intrinsics (llvm.minimum/maximum).
   }
 }
 
@@ -943,7 +950,8 @@ Value *llvm::createSelectCmpOp(IRBuilderBase &Builder, Value *StartVal,
 Value *llvm::createMinMaxOp(IRBuilderBase &Builder, RecurKind RK, Value *Left,
                             Value *Right) {
   Type *Ty = Left->getType();
-  if (Ty->isIntOrIntVectorTy()) {
+  if (Ty->isIntOrIntVectorTy() ||
+      (RK == RecurKind::FMinimum || RK == RecurKind::FMaximum)) {
     // TODO: Add float minnum/maxnum support when FMF nnan is set.
     Intrinsic::ID Id = getMinMaxReductionIntrinsicOp(RK);
     return Builder.CreateIntrinsic(Ty, Id, {Left, Right}, nullptr,
@@ -1094,6 +1102,10 @@ Value *llvm::createSimpleTargetReduction(IRBuilderBase &Builder,
     return Builder.CreateFPMaxReduce(Src);
   case RecurKind::FMin:
     return Builder.CreateFPMinReduce(Src);
+  case RecurKind::FMinimum:
+    return Builder.CreateFPMinimumReduce(Src);
+  case RecurKind::FMaximum:
+    return Builder.CreateFPMaximumReduce(Src);
   default:
     llvm_unreachable("Unhandled opcode");
   }

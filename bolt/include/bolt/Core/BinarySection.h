@@ -56,6 +56,7 @@ class BinarySection {
   unsigned Alignment;          // alignment in bytes (must be > 0)
   unsigned ELFType;            // ELF section type
   unsigned ELFFlags;           // ELF section flags
+  bool IsRelro{false};         // GNU RELRO section (read-only after relocation)
 
   // Relocations associated with this section. Relocation offsets are
   // wrt. to the original section address and size.
@@ -287,6 +288,8 @@ public:
   }
   bool isReordered() const { return IsReordered; }
   bool isAnonymous() const { return IsAnonymous; }
+  bool isRelro() const { return IsRelro; }
+  void setRelro() { IsRelro = true; }
   unsigned getELFType() const { return ELFType; }
   unsigned getELFFlags() const { return ELFFlags; }
 
