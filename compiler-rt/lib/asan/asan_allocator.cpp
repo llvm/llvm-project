@@ -248,6 +248,15 @@ void AsanMapUnmapCallback::OnMap(uptr p, uptr size) const {
   thread_stats.mmaps++;
   thread_stats.mmaped += size;
 }
+
+void AsanMapUnmapCallback::OnMapSecondary(uptr p, uptr size) const {
+  PoisonShadow(p, size, kAsanHeapLeftRedzoneMagic);
+  // Statistics.
+  AsanStats &thread_stats = GetCurrentThreadStats();
+  thread_stats.mmaps++;
+  thread_stats.mmaped += size;
+}
+
 void AsanMapUnmapCallback::OnUnmap(uptr p, uptr size) const {
   PoisonShadow(p, size, 0);
   // We are about to unmap a chunk of user memory.

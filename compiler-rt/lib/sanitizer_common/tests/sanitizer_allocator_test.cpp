@@ -476,11 +476,15 @@ TEST(SanitizerCommon, SizeClassAllocator32CompactGetBlockBegin) {
 #endif  // SANITIZER_CAN_USE_ALLOCATOR64
 
 struct TestMapUnmapCallback {
-  static int map_count, unmap_count;
+  static int map_count, map_secondary_count, unmap_count;
   void OnMap(uptr p, uptr size) const { map_count++; }
+  void OnMapSecondary(uptr p, uptr size) const { map_secondary_count++; }
   void OnUnmap(uptr p, uptr size) const { unmap_count++; }
+
+  static void Reset() { map_count = map_secondary_count = unmap_count = 0; }
 };
 int TestMapUnmapCallback::map_count;
+int TestMapUnmapCallback::map_secondary_count;
 int TestMapUnmapCallback::unmap_count;
 
 #if SANITIZER_CAN_USE_ALLOCATOR64
@@ -500,12 +504,12 @@ struct AP64WithCallback {
 };
 
 TEST(SanitizerCommon, SizeClassAllocator64MapUnmapCallback) {
-  TestMapUnmapCallback::map_count = 0;
-  TestMapUnmapCallback::unmap_count = 0;
+  TestMapUnmapCallback::Reset();
   typedef SizeClassAllocator64<AP64WithCallback<>> Allocator64WithCallBack;
   Allocator64WithCallBack *a = new Allocator64WithCallBack;
   a->Init(kReleaseToOSIntervalNever);
   EXPECT_EQ(TestMapUnmapCallback::map_count, 1);  // Allocator state.
+  EXPECT_EQ(TestMapUnmapCallback::map_secondary_count, 0);
   typename Allocator64WithCallBack::AllocatorCache cache;
   memset(&cache, 0, sizeof(cache));
   cache.Init(0);
@@ -516,6 +520,7 @@ TEST(SanitizerCommon, SizeClassAllocator64MapUnmapCallback) {
   a->GetFromAllocator(&stats, 30, chunks, kNumChunks);
   // State + alloc + metadata + freearray.
   EXPECT_EQ(TestMapUnmapCallback::map_count, 4);
+  EXPECT_EQ(TestMapUnmapCallback::map_secondary_count, 0);
   a->TestOnlyUnmap();
   EXPECT_EQ(TestMapUnmapCallback::unmap_count, 1);  // The whole thing.
   delete a;
@@ -536,12 +541,12 @@ struct AP32WithCallback {
 };
 
 TEST(SanitizerCommon, SizeClassAllocator32MapUnmapCallback) {
-  TestMapUnmapCallback::map_count = 0;
-  TestMapUnmapCallback::unmap_count = 0;
+  TestMapUnmapCallback::Reset();
   typedef SizeClassAllocator32<AP32WithCallback<>> Allocator32WithCallBack;
   Allocator32WithCallBack *a = new Allocator32WithCallBack;
   a->Init(kReleaseToOSIntervalNever);
   EXPECT_EQ(TestMapUnmapCallback::map_count, 0);
+  EXPECT_EQ(TestMapUnmapCallback::map_secondary_count, 0);
   Allocator32WithCallBack::AllocatorCache cache;
   memset(&cache, 0, sizeof(cache));
   cache.Init(0);
@@ -549,23 +554,21 @@ TEST(SanitizerCommon, SizeClassAllocator32MapUnmapCallback) {
   stats.Init();
   a->AllocateBatch(&stats, &cache, 32);
   EXPECT_EQ(TestMapUnmapCallback::map_count, 1);
+  EXPECT_EQ(TestMapUnmapCallback::map_secondary_count, 0);
   a->TestOnlyUnmap();
   EXPECT_EQ(TestMapUnmapCallback::unmap_count, 1);
   delete a;
-  // fprintf(stderr, "Map: %d Unmap: %d\n",
-  //         TestMapUnmapCallback::map_count,
-  //         TestMapUnmapCallback::unmap_count);
 }
 
 TEST(SanitizerCommon, LargeMmapAllocatorMapUnmapCallback) {
-  TestMapUnmapCallback::map_count = 0;
-  TestMapUnmapCallback::unmap_count = 0;
+  TestMapUnmapCallback::Reset();
   LargeMmapAllocator<TestMapUnmapCallback> a;
   a.Init();
   AllocatorStats stats;
   stats.Init();
   void *x = a.Allocate(&stats, 1 << 20, 1);
-  EXPECT_EQ(TestMapUnmapCallback::map_count, 1);
+  EXPECT_EQ(TestMapUnmapCallback::map_count, 0);
+  EXPECT_EQ(TestMapUnmapCallback::map_secondary_count, 1);
   a.Deallocate(&stats, x);
   EXPECT_EQ(TestMapUnmapCallback::unmap_count, 1);
 }
