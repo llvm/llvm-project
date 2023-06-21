@@ -2324,6 +2324,35 @@ bool PPCFrameLowering::assignCalleeSavedSpillSlots(
   if (CSI.empty())
     return true; // Early exit if no callee saved registers are modified!
 
+  const PPCRegisterInfo *RegInfo = Subtarget.getRegisterInfo();
+  const MCPhysReg *CSRegs = RegInfo->getCalleeSavedRegs(&MF);
+  const MachineRegisterInfo &MRI = MF.getRegInfo();
+
+  if (Subtarget.hasSPE()) {
+    // In case of SPE we only have SuperRegs and CRs
+    // in our CalleSaveInfo vector.
+
+    unsigned Idx = 0;
+    for (auto &CalleeSaveReg : CSI) {
+      const MCPhysReg &Reg = CalleeSaveReg.getReg();
+      const MCPhysReg &Lower = RegInfo->getSubReg(Reg, 1);
+      const MCPhysReg &Higher = RegInfo->getSubReg(Reg, 2);
+
+      // Check only for SuperRegs.
+      if (Lower) {
+        if (MRI.isPhysRegModified(Higher)) {
+          Idx++;
+          continue;
+        } else {
+          // Replace Reg if only lower-32 bits modified
+          CSI.erase(CSI.begin() + Idx);
+          CSI.insert(CSI.begin() + Idx, CalleeSavedInfo(Lower));
+        }
+      }
+      Idx++;
+    }
+  }
+
   // Early exit if cannot spill gprs to volatile vector registers.
   MachineFrameInfo &MFI = MF.getFrameInfo();
   if (!EnablePEVectorSpills || MFI.hasCalls() || !Subtarget.hasP9Vector())
@@ -2332,8 +2361,6 @@ bool PPCFrameLowering::assignCalleeSavedSpillSlots(
   // Build a BitVector of VSRs that can be used for spilling GPRs.
   BitVector BVAllocatable = TRI->getAllocatableSet(MF);
   BitVector BVCalleeSaved(TRI->getNumRegs());
-  const PPCRegisterInfo *RegInfo = Subtarget.getRegisterInfo();
-  const MCPhysReg *CSRegs = RegInfo->getCalleeSavedRegs(&MF);
   for (unsigned i = 0; CSRegs[i]; ++i)
     BVCalleeSaved.set(CSRegs[i]);
 
@@ -2341,7 +2368,7 @@ bool PPCFrameLowering::assignCalleeSavedSpillSlots(
     // Set to 0 if the register is not a volatile VSX register, or if it is
     // used in the function.
     if (BVCalleeSaved[Reg] || !PPC::VSRCRegClass.contains(Reg) ||
-        MF.getRegInfo().isPhysRegUsed(Reg))
+        MRI.isPhysRegUsed(Reg))
       BVAllocatable.reset(Reg);
   }
 
