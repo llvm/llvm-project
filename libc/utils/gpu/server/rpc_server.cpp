@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "Server.h"
+#include "rpc_server.h"
 
 #include "src/__support/RPC/rpc.h"
 #include <atomic>
