@@ -11032,10 +11032,7 @@ private:
   /// Initialization of data-sharing attributes stack.
   void InitDataSharingAttributesStack();
   void DestroyDataSharingAttributesStack();
-  ExprResult
-  VerifyPositiveIntegerConstantInClause(Expr *Op, OpenMPClauseKind CKind,
-                                        bool StrictlyPositive = true,
-                                        bool SuppressExprDiags = false);
+
   /// Returns OpenMP nesting level for current directive.
   unsigned getOpenMPNestingLevel() const;
 
@@ -11120,6 +11117,11 @@ public:
   bool isInOpenMPDeclareVariantScope() const {
     return !OMPDeclareVariantScopes.empty();
   }
+
+  ExprResult
+  VerifyPositiveIntegerConstantInClause(Expr *Op, OpenMPClauseKind CKind,
+                                        bool StrictlyPositive = true,
+                                        bool SuppressExprDiags = false);
 
   /// Given the potential call expression \p Call, determine if there is a
   /// specialization via the OpenMP declare variant mechanism available. If
@@ -12280,6 +12282,13 @@ public:
   OMPClause *ActOnOpenMPXDynCGroupMemClause(Expr *Size, SourceLocation StartLoc,
                                             SourceLocation LParenLoc,
                                             SourceLocation EndLoc);
+
+  /// Called on well-formed 'doacross' clause.
+  OMPClause *
+  ActOnOpenMPDoacrossClause(OpenMPDoacrossClauseModifier DepType,
+                            SourceLocation DepLoc, SourceLocation ColonLoc,
+                            ArrayRef<Expr *> VarList, SourceLocation StartLoc,
+                            SourceLocation LParenLoc, SourceLocation EndLoc);
 
   /// The kind of conversion being performed.
   enum CheckedConversionKind {

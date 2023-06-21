@@ -10362,6 +10362,12 @@ OMPClause *OMPClauseReader::readClause() {
   case llvm::omp::OMPC_ompx_dyn_cgroup_mem:
     C = new (Context) OMPXDynCGroupMemClause();
     break;
+  case llvm::omp::OMPC_doacross: {
+    unsigned NumVars = Record.readInt();
+    unsigned NumLoops = Record.readInt();
+    C = OMPDoacrossClause::CreateEmpty(Context, NumVars, NumLoops);
+    break;
+  }
 #define OMP_CLAUSE_NO_CLASS(Enum, Str)                                         \
   case llvm::omp::Enum:                                                        \
     break;
@@ -11436,6 +11442,22 @@ void OMPClauseReader::VisitOMPXDynCGroupMemClause(OMPXDynCGroupMemClause *C) {
   VisitOMPClauseWithPreInit(C);
   C->setSize(Record.readSubExpr());
   C->setLParenLoc(Record.readSourceLocation());
+}
+
+void OMPClauseReader::VisitOMPDoacrossClause(OMPDoacrossClause *C) {
+  C->setLParenLoc(Record.readSourceLocation());
+  C->setDependenceType(
+      static_cast<OpenMPDoacrossClauseModifier>(Record.readInt()));
+  C->setDependenceLoc(Record.readSourceLocation());
+  C->setColonLoc(Record.readSourceLocation());
+  unsigned NumVars = C->varlist_size();
+  SmallVector<Expr *, 16> Vars;
+  Vars.reserve(NumVars);
+  for (unsigned I = 0; I != NumVars; ++I)
+    Vars.push_back(Record.readSubExpr());
+  C->setVarRefs(Vars);
+  for (unsigned I = 0, E = C->getNumLoops(); I < E; ++I)
+    C->setLoopData(I, Record.readSubExpr());
 }
 
 OMPTraitInfo *ASTRecordReader::readOMPTraitInfo() {
