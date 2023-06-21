@@ -140,6 +140,11 @@ class AppleAcceleratorTable : public DWARFAcceleratorTable {
   /// Return the offset into the section where the offset list begins.
   uint64_t getOffsetBase() const { return getHashBase() + getNumHashes() * 4; }
 
+  /// Return the offset into the section where the table entries begin.
+  uint64_t getEntriesBase() const {
+    return getOffsetBase() + getNumHashes() * 4;
+  }
+
   /// Return the offset into the section where the I-th offset is.
   uint64_t getIthOffsetBase(uint32_t I) const {
     return getOffsetBase() + I * 4;
@@ -240,6 +245,58 @@ public:
     }
   };
 
+  struct EntryWithName {
+    EntryWithName(const AppleAcceleratorTable &Table)
+        : BaseEntry(Table), StrOffset(0) {}
+
+    std::optional<StringRef> readName() const {
+      return BaseEntry.Table.readStringFromStrSection(StrOffset);
+    }
+
+    Entry BaseEntry;
+    uint32_t StrOffset;
+  };
+
+  /// An iterator for all entries in the table.
+  class Iterator
+      : public iterator_facade_base<Iterator, std::forward_iterator_tag,
+                                    EntryWithName> {
+    constexpr static auto EndMarker = std::numeric_limits<uint64_t>::max();
+
+    EntryWithName Current;
+    uint64_t Offset = EndMarker;
+    uint32_t NumEntriesToCome = 0;
+
+    void setToEnd() { Offset = EndMarker; }
+    bool isEnd() const { return Offset == EndMarker; }
+    const AppleAcceleratorTable &getTable() const {
+      return Current.BaseEntry.Table;
+    }
+
+    /// Reads the next Entry in the table, populating `Current`.
+    /// If not possible (e.g. end of the section), becomes the end iterator.
+    void prepareNextEntryOrEnd();
+
+    /// Reads the next string pointer and the entry count for that string,
+    /// populating `NumEntriesToCome`.
+    /// If not possible (e.g. end of the section), becomes the end iterator.
+    /// Assumes `Offset` points to a string reference.
+    void prepareNextStringOrEnd();
+
+  public:
+    Iterator(const AppleAcceleratorTable &Table, bool SetEnd = false);
+
+    Iterator &operator++() {
+      prepareNextEntryOrEnd();
+      return *this;
+    }
+    bool operator==(const Iterator &It) const { return Offset == It.Offset; }
+    const EntryWithName &operator*() const {
+      assert(!isEnd() && "dereferencing end iterator");
+      return Current;
+    }
+  };
+
   AppleAcceleratorTable(const DWARFDataExtractor &AccelSection,
                         DataExtractor StringSection)
       : DWARFAcceleratorTable(AccelSection, StringSection) {}
@@ -271,6 +328,11 @@ public:
 
   /// Look up all entries in the accelerator table matching \c Key.
   iterator_range<SameNameIterator> equal_range(StringRef Key) const;
+
+  /// Lookup all entries in the accelerator table.
+  auto entries() const {
+    return make_range(Iterator(*this), Iterator(*this, /*SetEnd*/ true));
+  }
 };
 
 /// .debug_names section consists of one or more units. Each unit starts with a

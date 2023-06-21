@@ -605,3 +605,31 @@ class TestXMLRegisterFlags(GDBRemoteTestBase):
 
         self.expect("register read x0", substrs=["(correct = 1)"])
         self.expect("register read x1", substrs=["(correct = 1)"])
+
+    @skipIfXmlSupportMissing
+    @skipIfRemote
+    def test_flags_in_register_info(self):
+        # See RegisterFlags for comprehensive formatting tests.
+        self.setup_flags_test(
+            '<field name="D" start="0" end="7"/>'
+            '<field name="C" start="8" end="15"/>'
+            '<field name="B" start="16" end="23"/>'
+            '<field name="A" start="24" end="31"/>'
+        )
+
+        # The table should split according to terminal width.
+        self.runCmd("settings set term-width 17")
+
+        self.expect("register info cpsr",
+            substrs=[
+                "       Name: cpsr\n"
+                "       Size: 4 bytes (32 bits)\n"
+                "    In sets: general (index 0)\n"
+                "\n"
+                "| 31-24 | 23-16 |\n"
+                "|-------|-------|\n"
+                "|   A   |   B   |\n"
+                "\n"
+                "| 15-8 | 7-0 |\n"
+                "|------|-----|\n"
+                "|  C   |  D  |"])

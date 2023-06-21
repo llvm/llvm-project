@@ -138,14 +138,43 @@ static_assert(!b4); // ref-error {{not an integral constant expression}} \
 namespace UninitializedFields {
   class A {
   public:
-    int a; // expected-note 3{{subobject declared here}} \
-           // ref-note 3{{subobject declared here}}
+    int a; // expected-note 4{{subobject declared here}} \
+           // ref-note 4{{subobject declared here}}
     constexpr A() {}
   };
   constexpr A a; // expected-error {{must be initialized by a constant expression}} \
                  // expected-note {{subobject 'a' is not initialized}} \
                  // ref-error {{must be initialized by a constant expression}} \
                  // ref-note {{subobject 'a' is not initialized}}
+  constexpr A aarr[2]; // expected-error {{must be initialized by a constant expression}} \
+                       // expected-note {{subobject 'a' is not initialized}} \
+                       // ref-error {{must be initialized by a constant expression}} \
+                       // ref-note {{subobject 'a' is not initialized}}
+  class F {
+    public:
+      int f; // expected-note 3{{subobject declared here}} \
+             // ref-note 3{{subobject declared here}}
+
+      constexpr F() {}
+      constexpr F(bool b) {
+        if (b)
+          f = 42;
+      }
+  };
+
+  constexpr F foo[2] = {true}; // expected-error {{must be initialized by a constant expression}} \
+                               // expected-note {{subobject 'f' is not initialized}} \
+                               // ref-error {{must be initialized by a constant expression}} \
+                               // ref-note {{subobject 'f' is not initialized}}
+  constexpr F foo2[3] = {true, false, true}; // expected-error {{must be initialized by a constant expression}} \
+                                             // expected-note {{subobject 'f' is not initialized}} \
+                                             // ref-error {{must be initialized by a constant expression}} \
+                                             // ref-note {{subobject 'f' is not initialized}}
+  constexpr F foo3[3] = {true, true, F()}; // expected-error {{must be initialized by a constant expression}} \
+                                           // expected-note {{subobject 'f' is not initialized}} \
+                                           // ref-error {{must be initialized by a constant expression}} \
+                                           // ref-note {{subobject 'f' is not initialized}}
+
 
 
   class Base {
