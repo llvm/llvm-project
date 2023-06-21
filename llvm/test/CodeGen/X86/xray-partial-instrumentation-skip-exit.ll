@@ -55,7 +55,8 @@ NotEqual:
 ; CHECK-LINUX:         .quad .Lxray_sled_1
 ; CHECK-LINUX-LABEL: .Lxray_sleds_end1:
 ; CHECK-LINUX-LABEL: .section xray_fn_idx,"awo",@progbits,bar{[$}}
-; CHECK-LINUX:         .quad .Lxray_sleds_start1
+; CHECK-LINUX:       .Lxray_fn_idx0:
+; CHECK-LINUX-NEXT:    .quad .Lxray_sleds_start1-.Lxray_fn_idx0
 ; CHECK-LINUX-NEXT:    .quad .Lxray_sleds_end1
 
 ; CHECK-MACOS-LABEL: .section __DATA,xray_instr_map,regular,live_support{{$}}
@@ -63,5 +64,6 @@ NotEqual:
 ; CHECK-MACOS:         .quad Lxray_sled_1
 ; CHECK-MACOS-LABEL: Lxray_sleds_end1:
 ; CHECK-MACOS-LABEL: .section __DATA,xray_fn_idx,regular,live_support{{$}}
-; CHECK-MACOS:         .quad Lxray_sleds_start1
+; CHECK-MACOS:       Lxray_fn_idx0:
+; CHECK-MACOS-NEXT:    .quad Lxray_sleds_start1-Lxray_fn_idx0
 ; CHECK-MACOS-NEXT:    .quad Lxray_sleds_end1
