@@ -40,7 +40,7 @@ TEST(ConstraintSolverTest, TestSolutionChecks) {
 
   {
     ConstraintSystem CS;
-    // x + y <= 10, 10 >= x, 10 >= y; does not have a solution.
+    // x + y <= 10, x >= 10, y >= 10; does not have a solution.
     CS.addVariableRow({10, 1, 1});
     CS.addVariableRow({-10, -1, 0});
     CS.addVariableRow({-10, 0, -1});
