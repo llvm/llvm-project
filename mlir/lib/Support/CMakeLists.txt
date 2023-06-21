@@ -1,6 +1,5 @@
 set(LLVM_OPTIONAL_SOURCES
   FileUtilities.cpp
-  IndentedOstream.cpp
   InterfaceSupport.cpp
   StorageUniquer.cpp
   Timing.cpp
@@ -10,7 +9,6 @@ set(LLVM_OPTIONAL_SOURCES
 
 add_mlir_library(MLIRSupport
   FileUtilities.cpp
-  IndentedOstream.cpp
   InterfaceSupport.cpp
   StorageUniquer.cpp
   Timing.cpp
@@ -22,14 +20,3 @@ add_mlir_library(MLIRSupport
 
   LINK_LIBS PUBLIC
   ${LLVM_PTHREAD_LIB})
-
-# This doesn't use add_mlir_library as it is used in mlir-tblgen and else
-# mlir-tblgen ends up depending on mlir-generic-headers.
-add_llvm_library(MLIRSupportIndentedOstream
-  IndentedOstream.cpp
-
-  DISABLE_LLVM_LINK_LLVM_DYLIB
-
-  LINK_COMPONENTS
-  Support
-  )
