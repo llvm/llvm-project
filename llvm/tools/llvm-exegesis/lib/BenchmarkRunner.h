@@ -34,9 +34,11 @@ namespace exegesis {
 // Common code for all benchmark modes.
 class BenchmarkRunner {
 public:
-  explicit BenchmarkRunner(const LLVMState &State,
-                           Benchmark::ModeE Mode,
-                           BenchmarkPhaseSelectorE BenchmarkPhaseSelector);
+  enum ExecutionModeE { InProcess };
+
+  explicit BenchmarkRunner(const LLVMState &State, Benchmark::ModeE Mode,
+                           BenchmarkPhaseSelectorE BenchmarkPhaseSelector,
+                           ExecutionModeE ExecutionMode);
 
   virtual ~BenchmarkRunner();
 
@@ -105,6 +107,7 @@ protected:
   const LLVMState &State;
   const Benchmark::ModeE Mode;
   const BenchmarkPhaseSelectorE BenchmarkPhaseSelector;
+  const ExecutionModeE ExecutionMode;
 
 private:
   virtual Expected<std::vector<BenchmarkMeasure>>
@@ -119,6 +122,10 @@ private:
                                         StringRef FileName) const;
 
   const std::unique_ptr<ScratchSpace> Scratch;
+
+  Expected<std::unique_ptr<FunctionExecutor>>
+  createFunctionExecutor(object::OwningBinary<object::ObjectFile> Obj,
+                         const BenchmarkKey &Key) const;
 };
 
 } // namespace exegesis
