@@ -2,7 +2,7 @@
 
 ! RUN: %flang_fc1 -mmlir --mlir-print-debuginfo -emit-fir -o - %s | FileCheck %s
 
-! REQUIRES: linux
+! REQUIRES: system-linux
 
 subroutine sb1()
 end subroutine
