@@ -146,7 +146,7 @@ std::string RegisterFlags::AsTable(uint32_t max_width) const {
     // one column, put out what we have and move to a new table on the next line
     // (+1 here because we need to cap the ends with '|'). If this is the first
     // column, just let it overflow and we'll wrap next time around. There's not
-    // mich we can do with a very small terminal.
+    // much we can do with a very small terminal.
     if (current_width && ((current_width + column_width + 1) >= max_width)) {
       EmitTable(table, lines);
       // Blank line between each.
