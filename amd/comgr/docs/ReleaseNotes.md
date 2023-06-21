@@ -54,6 +54,8 @@ like amd\_comgr\_iterate\_symbols() from multiple threads
 - Fixed an issue where providing DataObjects with an empty name to the bitcode
 linking action caused errors when AMD\_COMGR\_SAVE\_TEMPS was enabled, or when
 linking bitcode bundles.
+- Updated to use lld::lldMain() introduced in D110949 instead of the older
+lld::elf::link in Comgr's linkWithLLD()
 
 
 New APIs
