@@ -2652,6 +2652,7 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
         isValidAssumeForContext(II, LHS, &DT)) {
       MDNode *MD = MDNode::get(II->getContext(), std::nullopt);
       LHS->setMetadata(LLVMContext::MD_nonnull, MD);
+      LHS->setMetadata(LLVMContext::MD_noundef, MD);
       return RemoveConditionFromAssume(II);
 
       // TODO: apply nonnull return attributes to calls and invokes
