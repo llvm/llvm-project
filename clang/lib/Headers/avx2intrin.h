@@ -19,22 +19,112 @@
 #define __DEFAULT_FN_ATTRS128 __attribute__((__always_inline__, __nodebug__, __target__("avx2"), __min_vector_width__(128)))
 
 /* SSE4 Multiple Packed Sums of Absolute Difference.  */
+/// Computes sixteen sum of absolute difference (SAD) operations on sets of
+///    four unsigned 8-bit integers from the 256-bit integer vectors \a X and
+///    \a Y.
+///
+///    Eight SAD results are computed using the lower half of the input
+///    vectors, and another eight using the upper half. These 16-bit values
+///    are returned in the lower and upper halves of the 256-bit result,
+///    respectively.
+///
+///    A single SAD operation selects four bytes from \a X and four bytes from
+///    \a Y as input. It computes the differences between each \a X byte and
+///    the corresponding \a Y byte, takes the absolute value of each
+///    difference, and sums these four values to form one 16-bit result. The
+///    intrinsic computes 16 of these results with different sets of input
+///    bytes.
+///
+///    For each set of eight results, the SAD operations use the same four
+///    bytes from \a Y; the starting bit position for these four bytes is
+///    specified by \a M[1:0] times 32. The eight operations use successive
+///    sets of four bytes from \a X; the starting bit position for the first
+///    set of four bytes is specified by \a M[2] times 32. These bit positions
+///    are all relative to the 128-bit lane for each set of eight operations.
+///
+/// \code{.operation}
+/// r := 0
+/// FOR i := 0 TO 1
+///   j := i*3
+///   Ybase := M[j+1:j]*32 + i*128
+///   Xbase := M[j+2]*32 + i*128
+///   FOR k := 0 TO 3
+///     temp0 := ABS(X[Xbase+7:Xbase] - Y[Ybase+7:Ybase])
+///     temp1 := ABS(X[Xbase+15:Xbase+8] - Y[Ybase+15:Ybase+8])
+///     temp2 := ABS(X[Xbase+23:Xbase+16] - Y[Ybase+23:Ybase+16])
+///     temp3 := ABS(X[Xbase+31:Xbase+24] - Y[Ybase+31:Ybase+24])
+///     result[r+15:r] := temp0 + temp1 + temp2 + temp3
+///     Xbase := Xbase + 8
+///     r := r + 16
+///   ENDFOR
+/// ENDFOR
+/// \endcode
+///
+/// \headerfile <immintrin.h>
+///
+/// \code
+/// __m256i _mm256_mpsadbw_epu8(__m256i X, __m256i Y, const int M);
+/// \endcode
+///
+/// This intrinsic corresponds to the \c VMPSADBW instruction.
+///
+/// \param X
+///    A 256-bit integer vector containing one of the inputs.
+/// \param Y
+///    A 256-bit integer vector containing one of the inputs.
+/// \param M
+///     An unsigned immediate value specifying the starting positions of the
+///     bytes to operate on.
+/// \returns A 256-bit vector of [16 x i16] containing the result.
 #define _mm256_mpsadbw_epu8(X, Y, M) \
   ((__m256i)__builtin_ia32_mpsadbw256((__v32qi)(__m256i)(X), \
                                       (__v32qi)(__m256i)(Y), (int)(M)))
 
+/// Computes the absolute value of each signed byte in the 256-bit integer
+///    vector \a __a and returns each value in the corresponding byte of
+///    the result.
+///
+/// \headerfile <immintrin.h>
+///
+/// This intrinsic corresponds to the \c VPABSB instruction.
+///
+/// \param __a
+///    A 256-bit integer vector.
+/// \returns A 256-bit integer vector containing the result.
 static __inline__ __m256i __DEFAULT_FN_ATTRS256
 _mm256_abs_epi8(__m256i __a)
 {
     return (__m256i)__builtin_elementwise_abs((__v32qs)__a);
 }
 
+/// Computes the absolute value of each signed 16-bit element in the 256-bit
+///    vector of [16 x i16] in \a __a and returns each value in the
+///    corresponding element of the result.
+///
+/// \headerfile <immintrin.h>
+///
+/// This intrinsic corresponds to the \c VPABSW instruction.
+///
+/// \param __a
+///    A 256-bit vector of [16 x i16].
+/// \returns A 256-bit vector of [16 x i16] containing the result.
 static __inline__ __m256i __DEFAULT_FN_ATTRS256
 _mm256_abs_epi16(__m256i __a)
 {
     return (__m256i)__builtin_elementwise_abs((__v16hi)__a);
 }
 
+/// Computes the absolute value of each signed 32-bit element in the 256-bit
+///    vector of [8 x i32] in \a __a and returns each value in the
+///    corresponding element of the result.
+///
+/// \headerfile <immintrin.h>
+///
+/// This intrinsic corresponds to the \c VPABSD instruction.
+///
+/// \param __a
+///    A 256-bit vector of [8 x i32].
+/// \returns A 256-bit vector of [8 x i32] containing the result.
 static __inline__ __m256i __DEFAULT_FN_ATTRS256
 _mm256_abs_epi32(__m256i __a)
 {
@@ -345,24 +435,88 @@ _mm256_adds_epu16(__m256i __a, __m256i __b)
   ((__m256i)__builtin_ia32_palignr256((__v32qi)(__m256i)(a), \
                                       (__v32qi)(__m256i)(b), (n)))
 
+/// Computes the bitwise AND of the 256-bit integer vectors in \a __a and
+///    \a __b.
+///
+/// \headerfile <immintrin.h>
+///
+/// This intrinsic corresponds to the \c VPAND instruction.
+///
+/// \param __a
+///    A 256-bit integer vector.
+/// \param __b
+///    A 256-bit integer vector.
+/// \returns A 256-bit integer vector containing the result.
 static __inline__ __m256i __DEFAULT_FN_ATTRS256
 _mm256_and_si256(__m256i __a, __m256i __b)
 {
   return (__m256i)((__v4du)__a & (__v4du)__b);
 }
 
+/// Computes the bitwise AND of the 256-bit integer vector in \a __b with
+///    the bitwise NOT of the 256-bit integer vector in \a __a.
+///
+/// \headerfile <immintrin.h>
+///
+/// This intrinsic corresponds to the \c VPANDN instruction.
+///
+/// \param __a
+///    A 256-bit integer vector.
+/// \param __b
+///    A 256-bit integer vector.
+/// \returns A 256-bit integer vector containing the result.
 static __inline__ __m256i __DEFAULT_FN_ATTRS256
 _mm256_andnot_si256(__m256i __a, __m256i __b)
 {
   return (__m256i)(~(__v4du)__a & (__v4du)__b);
 }
 
+/// Computes the averages of the corresponding unsigned bytes in the two
+///    256-bit integer vectors in \a __a and \a __b and returns each
+///    average in the corresponding byte of the 256-bit result.
+///
+/// \code{.operation}
+/// FOR i := 0 TO 31
+///   j := i*8
+///   result[j+7:j] := (__a[j+7:j] + __b[j+7:j] + 1) >> 1
+/// ENDFOR
+/// \endcode
+///
+/// \headerfile <immintrin.h>
+///
+/// This intrinsic corresponds to the \c VPAVGB instruction.
+///
+/// \param __a
+///    A 256-bit integer vector.
+/// \param __b
+///    A 256-bit integer vector.
+/// \returns A 256-bit integer vector containing the result.
 static __inline__ __m256i __DEFAULT_FN_ATTRS256
 _mm256_avg_epu8(__m256i __a, __m256i __b)
 {
   return (__m256i)__builtin_ia32_pavgb256((__v32qi)__a, (__v32qi)__b);
 }
 
+/// Computes the averages of the corresponding unsigned 16-bit integers in
+///    the two 256-bit vectors of [16 x i16] in \a __a and \a __b and returns
+///    each average in the corresponding element of the 256-bit result.
+///
+/// \code{.operation}
+/// FOR i := 0 TO 15
+///   j := i*16
+///   result[j+15:j] := (__a[j+15:j] + __b[j+15:j] + 1) >> 1
+/// ENDFOR
+/// \endcode
+///
+/// \headerfile <immintrin.h>
+///
+/// This intrinsic corresponds to the \c VPAVGW instruction.
+///
+/// \param __a
+///    A 256-bit vector of [16 x i16].
+/// \param __b
+///    A 256-bit vector of [16 x i16].
+/// \returns A 256-bit vector of [16 x i16] containing the result.
 static __inline__ __m256i __DEFAULT_FN_ATTRS256
 _mm256_avg_epu16(__m256i __a, __m256i __b)
 {
@@ -765,72 +919,228 @@ _mm256_madd_epi16(__m256i __a, __m256i __b)
   return (__m256i)__builtin_ia32_pmaddwd256((__v16hi)__a, (__v16hi)__b);
 }
 
+/// Compares the corresponding signed bytes in the two 256-bit integer vectors
+///     in \a __a and \a __b and returns the larger of each pair in the
+///     corresponding byte of the 256-bit result.
+///
+/// \headerfile <immintrin.h>
+///
+/// This intrinsic corresponds to the \c VPMAXSB instruction.
+///
+/// \param __a
+///    A 256-bit integer vector.
+/// \param __b
+///    A 256-bit integer vector.
+/// \returns A 256-bit integer vector containing the result.
 static __inline__ __m256i __DEFAULT_FN_ATTRS256
 _mm256_max_epi8(__m256i __a, __m256i __b)
 {
   return (__m256i)__builtin_elementwise_max((__v32qs)__a, (__v32qs)__b);
 }
 
+/// Compares the corresponding signed 16-bit integers in the two 256-bit
+///    vectors of [16 x i16] in \a __a and \a __b and returns the larger of
+///    each pair in the corresponding element of the 256-bit result.
+///
+/// \headerfile <immintrin.h>
+///
+/// This intrinsic corresponds to the \c VPMAXSW instruction.
+///
+/// \param __a
+///    A 256-bit vector of [16 x i16].
+/// \param __b
+///    A 256-bit vector of [16 x i16].
+/// \returns A 256-bit vector of [16 x i16] containing the result.
 static __inline__ __m256i __DEFAULT_FN_ATTRS256
 _mm256_max_epi16(__m256i __a, __m256i __b)
 {
   return (__m256i)__builtin_elementwise_max((__v16hi)__a, (__v16hi)__b);
 }
 
+/// Compares the corresponding signed 32-bit integers in the two 256-bit
+///    vectors of [8 x i32] in \a __a and \a __b and returns the larger of
+///    each pair in the corresponding element of the 256-bit result.
+///
+/// \headerfile <immintrin.h>
+///
+/// This intrinsic corresponds to the \c VPMAXSD instruction.
+///
+/// \param __a
+///    A 256-bit vector of [8 x i32].
+/// \param __b
+///    A 256-bit vector of [8 x i32].
+/// \returns A 256-bit vector of [8 x i32] containing the result.
 static __inline__ __m256i __DEFAULT_FN_ATTRS256
 _mm256_max_epi32(__m256i __a, __m256i __b)
 {
   return (__m256i)__builtin_elementwise_max((__v8si)__a, (__v8si)__b);
 }
 
+/// Compares the corresponding unsigned bytes in the two 256-bit integer
+///     vectors in \a __a and \a __b and returns the larger of each pair in
+///     the corresponding byte of the 256-bit result.
+///
+/// \headerfile <immintrin.h>
+///
+/// This intrinsic corresponds to the \c VPMAXUB instruction.
+///
+/// \param __a
+///    A 256-bit integer vector.
+/// \param __b
+///    A 256-bit integer vector.
+/// \returns A 256-bit integer vector containing the result.
 static __inline__ __m256i __DEFAULT_FN_ATTRS256
 _mm256_max_epu8(__m256i __a, __m256i __b)
 {
   return (__m256i)__builtin_elementwise_max((__v32qu)__a, (__v32qu)__b);
 }
 
+/// Compares the corresponding unsigned 16-bit integers in the two 256-bit
+///    vectors of [16 x i16] in \a __a and \a __b and returns the larger of
+///    each pair in the corresponding element of the 256-bit result.
+///
+/// \headerfile <immintrin.h>
+///
+/// This intrinsic corresponds to the \c VPMAXUW instruction.
+///
+/// \param __a
+///    A 256-bit vector of [16 x i16].
+/// \param __b
+///    A 256-bit vector of [16 x i16].
+/// \returns A 256-bit vector of [16 x i16] containing the result.
 static __inline__ __m256i __DEFAULT_FN_ATTRS256
 _mm256_max_epu16(__m256i __a, __m256i __b)
 {
   return (__m256i)__builtin_elementwise_max((__v16hu)__a, (__v16hu)__b);
 }
 
+/// Compares the corresponding unsigned 32-bit integers in the two 256-bit
+///    vectors of [8 x i32] in \a __a and \a __b and returns the larger of
+///    each pair in the corresponding element of the 256-bit result.
+///
+/// \headerfile <immintrin.h>
+///
+/// This intrinsic corresponds to the \c VPMAXUD instruction.
+///
+/// \param __a
+///    A 256-bit vector of [8 x i32].
+/// \param __b
+///    A 256-bit vector of [8 x i32].
+/// \returns A 256-bit vector of [8 x i32] containing the result.
 static __inline__ __m256i __DEFAULT_FN_ATTRS256
 _mm256_max_epu32(__m256i __a, __m256i __b)
 {
   return (__m256i)__builtin_elementwise_max((__v8su)__a, (__v8su)__b);
 }
 
+/// Compares the corresponding signed bytes in the two 256-bit integer vectors
+///     in \a __a and \a __b and returns the smaller of each pair in the
+///     corresponding byte of the 256-bit result.
+///
+/// \headerfile <immintrin.h>
+///
+/// This intrinsic corresponds to the \c VPMINSB instruction.
+///
+/// \param __a
+///    A 256-bit integer vector.
+/// \param __b
+///    A 256-bit integer vector.
+/// \returns A 256-bit integer vector containing the result.
 static __inline__ __m256i __DEFAULT_FN_ATTRS256
 _mm256_min_epi8(__m256i __a, __m256i __b)
 {
   return (__m256i)__builtin_elementwise_min((__v32qs)__a, (__v32qs)__b);
 }
 
+/// Compares the corresponding signed 16-bit integers in the two 256-bit
+///    vectors of [16 x i16] in \a __a and \a __b and returns the smaller of
+///    each pair in the corresponding element of the 256-bit result.
+///
+/// \headerfile <immintrin.h>
+///
+/// This intrinsic corresponds to the \c VPMINSW instruction.
+///
+/// \param __a
+///    A 256-bit vector of [16 x i16].
+/// \param __b
+///    A 256-bit vector of [16 x i16].
+/// \returns A 256-bit vector of [16 x i16] containing the result.
 static __inline__ __m256i __DEFAULT_FN_ATTRS256
 _mm256_min_epi16(__m256i __a, __m256i __b)
 {
   return (__m256i)__builtin_elementwise_min((__v16hi)__a, (__v16hi)__b);
 }
 
+/// Compares the corresponding signed 32-bit integers in the two 256-bit
+///    vectors of [8 x i32] in \a __a and \a __b and returns the smaller of
+///    each pair in the corresponding element of the 256-bit result.
+///
+/// \headerfile <immintrin.h>
+///
+/// This intrinsic corresponds to the \c VPMINSD instruction.
+///
+/// \param __a
+///    A 256-bit vector of [8 x i32].
+/// \param __b
+///    A 256-bit vector of [8 x i32].
+/// \returns A 256-bit vector of [8 x i32] containing the result.
 static __inline__ __m256i __DEFAULT_FN_ATTRS256
 _mm256_min_epi32(__m256i __a, __m256i __b)
 {
   return (__m256i)__builtin_elementwise_min((__v8si)__a, (__v8si)__b);
 }
 
+/// Compares the corresponding unsigned bytes in the two 256-bit integer
+///     vectors in \a __a and \a __b and returns the smaller of each pair in
+///     the corresponding byte of the 256-bit result.
+///
+/// \headerfile <immintrin.h>
+///
+/// This intrinsic corresponds to the \c VPMINUB instruction.
+///
+/// \param __a
+///    A 256-bit integer vector.
+/// \param __b
+///    A 256-bit integer vector.
+/// \returns A 256-bit integer vector containing the result.
 static __inline__ __m256i __DEFAULT_FN_ATTRS256
 _mm256_min_epu8(__m256i __a, __m256i __b)
 {
   return (__m256i)__builtin_elementwise_min((__v32qu)__a, (__v32qu)__b);
 }
 
+/// Compares the corresponding unsigned 16-bit integers in the two 256-bit
+///    vectors of [16 x i16] in \a __a and \a __b and returns the smaller of
+///    each pair in the corresponding element of the 256-bit result.
+///
+/// \headerfile <immintrin.h>
+///
+/// This intrinsic corresponds to the \c VPMINUW instruction.
+///
+/// \param __a
+///    A 256-bit vector of [16 x i16].
+/// \param __b
+///    A 256-bit vector of [16 x i16].
+/// \returns A 256-bit vector of [16 x i16] containing the result.
 static __inline__ __m256i __DEFAULT_FN_ATTRS256
 _mm256_min_epu16(__m256i __a, __m256i __b)
 {
   return (__m256i)__builtin_elementwise_min((__v16hu)__a, (__v16hu)__b);
 }
 
+/// Compares the corresponding unsigned 32-bit integers in the two 256-bit
+///    vectors of [8 x i32] in \a __a and \a __b and returns the smaller of
+///    each pair in the corresponding element of the 256-bit result.
+///
+/// \headerfile <immintrin.h>
+///
+/// This intrinsic corresponds to the \c VPMINUD instruction.
+///
+/// \param __a
+///    A 256-bit vector of [8 x i32].
+/// \param __b
+///    A 256-bit vector of [8 x i32].
+/// \returns A 256-bit vector of [8 x i32] containing the result.
 static __inline__ __m256i __DEFAULT_FN_ATTRS256
 _mm256_min_epu32(__m256i __a, __m256i __b)
 {
@@ -1076,12 +1386,63 @@ _mm256_mul_epu32(__m256i __a, __m256i __b)
   return __builtin_ia32_pmuludq256((__v8si)__a, (__v8si)__b);
 }
 
+/// Computes the bitwise OR of the 256-bit integer vectors in \a __a and
+///    \a __b.
+///
+/// \headerfile <immintrin.h>
+///
+/// This intrinsic corresponds to the \c VPOR instruction.
+///
+/// \param __a
+///    A 256-bit integer vector.
+/// \param __b
+///    A 256-bit integer vector.
+/// \returns A 256-bit integer vector containing the result.
 static __inline__ __m256i __DEFAULT_FN_ATTRS256
 _mm256_or_si256(__m256i __a, __m256i __b)
 {
   return (__m256i)((__v4du)__a | (__v4du)__b);
 }
 
+/// Computes four sum of absolute difference (SAD) operations on sets of eight
+///    unsigned 8-bit integers from the 256-bit integer vectors \a __a and
+///    \a __b.
+///
+///    One SAD result is computed for each set of eight bytes from \a __a and
+///    eight bytes from \a __b. The zero-extended SAD value is returned in the
+///    corresponding 64-bit element of the result.
+///
+///    A single SAD operation takes the differences between the corresponding
+///    bytes of \a __a and \a __b, takes the absolute value of each difference,
+///    and sums these eight values to form one 16-bit result. This operation
+///    is repeated four times with successive sets of eight bytes.
+///
+/// \code{.operation}
+/// FOR i := 0 TO 3
+///   j := i*64
+///   temp0 := ABS(__a[j+7:j] - __b[j+7:j])
+///   temp1 := ABS(__a[j+15:j+8] - __b[j+15:j+8])
+///   temp2 := ABS(__a[j+23:j+16] - __b[j+23:j+16])
+///   temp3 := ABS(__a[j+31:j+24] - __b[j+31:j+24])
+///   temp4 := ABS(__a[j+39:j+32] - __b[j+39:j+32])
+///   temp5 := ABS(__a[j+47:j+40] - __b[j+47:j+40])
+///   temp6 := ABS(__a[j+55:j+48] - __b[j+55:j+48])
+///   temp7 := ABS(__a[j+63:j+56] - __b[j+63:j+56])
+///   result[j+15:j] := temp0 + temp1 + temp2 + temp3 +
+///                     temp4 + temp5 + temp6 + temp7
+///   result[j+63:j+16] := 0
+/// ENDFOR
+/// \endcode
+///
+/// \headerfile <immintrin.h>
+///
+/// This intrinsic corresponds to the \c VPSADBW instruction.
+///
+/// \param __a
+///    A 256-bit integer vector.
+/// \param __b
+///    A 256-bit integer vector.
+/// \returns A 256-bit integer vector containing the result.
 static __inline__ __m256i __DEFAULT_FN_ATTRS256
 _mm256_sad_epu8(__m256i __a, __m256i __b)
 {
@@ -1233,18 +1594,63 @@ _mm256_shuffle_epi8(__m256i __a, __m256i __b)
 #define _mm256_shufflelo_epi16(a, imm) \
   ((__m256i)__builtin_ia32_pshuflw256((__v16hi)(__m256i)(a), (int)(imm)))
 
+/// Sets each byte of the result to the corresponding byte of the 256-bit
+///    integer vector in \a __a, the negative of that byte, or zero, depending
+///    on whether the corresponding byte of the 256-bit integer vector in
+///    \a __b is greater than zero, less than zero, or equal to zero,
+///    respectively.
+///
+/// \headerfile <immintrin.h>
+///
+/// This intrinsic corresponds to the \c VPSIGNB instruction.
+///
+/// \param __a
+///    A 256-bit integer vector.
+/// \param __b
+///    A 256-bit integer vector].
+/// \returns A 256-bit integer vector containing the result.
 static __inline__ __m256i __DEFAULT_FN_ATTRS256
 _mm256_sign_epi8(__m256i __a, __m256i __b)
 {
     return (__m256i)__builtin_ia32_psignb256((__v32qi)__a, (__v32qi)__b);
 }
 
+/// Sets each element of the result to the corresponding element of the
+///    256-bit vector of [16 x i16] in \a __a, the negative of that element,
+///    or zero, depending on whether the corresponding element of the 256-bit
+///    vector of [16 x i16] in \a __b is greater than zero, less than zero, or
+///    equal to zero, respectively.
+///
+/// \headerfile <immintrin.h>
+///
+/// This intrinsic corresponds to the \c VPSIGNW instruction.
+///
+/// \param __a
+///    A 256-bit vector of [16 x i16].
+/// \param __b
+///    A 256-bit vector of [16 x i16].
+/// \returns A 256-bit vector of [16 x i16] containing the result.
 static __inline__ __m256i __DEFAULT_FN_ATTRS256
 _mm256_sign_epi16(__m256i __a, __m256i __b)
 {
     return (__m256i)__builtin_ia32_psignw256((__v16hi)__a, (__v16hi)__b);
 }
 
+/// Sets each element of the result to the corresponding element of the
+///    256-bit vector of [8 x i32] in \a __a, the negative of that element, or
+///    zero, depending on whether the corresponding element of the 256-bit
+///    vector of [8 x i32] in \a __b is greater than zero, less than zero, or
+///    equal to zero, respectively.
+///
+/// \headerfile <immintrin.h>
+///
+/// This intrinsic corresponds to the \c VPSIGND instruction.
+///
+/// \param __a
+///    A 256-bit vector of [8 x i32].
+/// \param __b
+///    A 256-bit vector of [8 x i32].
+/// \returns A 256-bit vector of [8 x i32] containing the result.
 static __inline__ __m256i __DEFAULT_FN_ATTRS256
 _mm256_sign_epi32(__m256i __a, __m256i __b)
 {
@@ -2132,6 +2538,18 @@ _mm256_unpacklo_epi64(__m256i __a, __m256i __b)
   return (__m256i)__builtin_shufflevector((__v4di)__a, (__v4di)__b, 0, 4+0, 2, 4+2);
 }
 
+/// Computes the bitwise XOR of the 256-bit integer vectors in \a __a and
+///    \a __b.
+///
+/// \headerfile <immintrin.h>
+///
+/// This intrinsic corresponds to the \c VPXOR instruction.
+///
+/// \param __a
+///    A 256-bit integer vector.
+/// \param __b
+///    A 256-bit integer vector.
+/// \returns A 256-bit integer vector containing the result.
 static __inline__ __m256i __DEFAULT_FN_ATTRS256
 _mm256_xor_si256(__m256i __a, __m256i __b)
 {
