@@ -1,4 +1,4 @@
-# RUN: llc -march=amdgcn -mcpu=gfx803 -run-pass simple-register-coalescing -verify-machineinstrs -o - %s | FileCheck --check-prefix=GCN %s
+# RUN: llc -march=amdgcn -mcpu=gfx803 -run-pass register-coalescer -verify-machineinstrs -o - %s | FileCheck --check-prefix=GCN %s
 #
 # This test gave "Use not jointly dominated by defs" when
 # removePartialRedundancy attempted to prune and then re-extend a subrange.

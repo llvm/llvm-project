@@ -2,12 +2,12 @@
 target datalayout = "e-m:e-i64:64-n32:64"
 target triple = "powerpc64le-unknown-linux-gnu"
 ; This file mainly tests the case that the two input registers of the ISEL instruction are the same register.
-; The foldable ISEL in this test case is introduced at simple register coalescing stage.
+; The foldable ISEL in this test case is introduced at register coalescing stage.
 
 ; Before that stage we have:
 ; %vreg18<def> = ISEL8 %vreg5, %vreg2, %vreg15<undef>;
 
-; At simple register coalescing stage, the register coalescer figures out it could remove the copy
+; At register coalescing stage, the register coalescer figures out it could remove the copy
 ; from %vreg2 to %vreg5, put the original value %X3 into %vreg5 directly
 ;  erased: 336r    %vreg5<def> = COPY %vreg2
 ;  updated: 288B   %vreg5<def> = COPY %X3;
