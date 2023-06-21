@@ -248,6 +248,15 @@ static cl::opt<std::string>
                               "and prints a message to access it"),
                      cl::ValueOptional, cl::cat(BenchmarkOptions));
 
+static cl::opt<BenchmarkRunner::ExecutionModeE> ExecutionMode(
+    "execution-mode",
+    cl::desc("Selects the execution mode to use for running snippets"),
+    cl::cat(BenchmarkOptions),
+    cl::values(clEnumValN(BenchmarkRunner::ExecutionModeE::InProcess,
+                          "inprocess",
+                          "Executes the snippets within the same process")),
+    cl::init(BenchmarkRunner::ExecutionModeE::InProcess));
+
 static ExitOnError ExitOnErr("llvm-exegesis error: ");
 
 // Helper function that logs the error(s) and exits.
@@ -459,7 +468,8 @@ void benchmarkMain() {
 
   const std::unique_ptr<BenchmarkRunner> Runner =
       ExitOnErr(State.getExegesisTarget().createBenchmarkRunner(
-          BenchmarkMode, State, BenchmarkPhaseSelector, ResultAggMode));
+          BenchmarkMode, State, BenchmarkPhaseSelector, ExecutionMode,
+          ResultAggMode));
   if (!Runner) {
     ExitWithError("cannot create benchmark runner");
   }

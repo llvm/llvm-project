@@ -76,6 +76,7 @@ Expected<std::unique_ptr<BenchmarkRunner>>
 ExegesisTarget::createBenchmarkRunner(
     Benchmark::ModeE Mode, const LLVMState &State,
     BenchmarkPhaseSelectorE BenchmarkPhaseSelector,
+    BenchmarkRunner::ExecutionModeE ExecutionMode,
     Benchmark::ResultAggregationModeE ResultAggMode) const {
   PfmCountersInfo PfmCounters = State.getPfmCounters();
   switch (Mode) {
@@ -98,7 +99,7 @@ ExegesisTarget::createBenchmarkRunner(
                   "the kernel for real event counts."));
     }
     return createLatencyBenchmarkRunner(State, Mode, BenchmarkPhaseSelector,
-                                        ResultAggMode);
+                                        ResultAggMode, ExecutionMode);
   case Benchmark::Uops:
     if (BenchmarkPhaseSelector == BenchmarkPhaseSelectorE::Measure &&
         !PfmCounters.UopsCounter && !PfmCounters.IssueCounters)
@@ -108,7 +109,7 @@ ExegesisTarget::createBenchmarkRunner(
           "benchmarking or --use-dummy-perf-counters to not query the kernel "
           "for real event counts.");
     return createUopsBenchmarkRunner(State, BenchmarkPhaseSelector,
-                                     ResultAggMode);
+                                     ResultAggMode, ExecutionMode);
   }
   return nullptr;
 }
@@ -126,15 +127,18 @@ std::unique_ptr<SnippetGenerator> ExegesisTarget::createParallelSnippetGenerator
 std::unique_ptr<BenchmarkRunner> ExegesisTarget::createLatencyBenchmarkRunner(
     const LLVMState &State, Benchmark::ModeE Mode,
     BenchmarkPhaseSelectorE BenchmarkPhaseSelector,
-    Benchmark::ResultAggregationModeE ResultAggMode) const {
+    Benchmark::ResultAggregationModeE ResultAggMode,
+    BenchmarkRunner::ExecutionModeE ExecutionMode) const {
   return std::make_unique<LatencyBenchmarkRunner>(
-      State, Mode, BenchmarkPhaseSelector, ResultAggMode);
+      State, Mode, BenchmarkPhaseSelector, ResultAggMode, ExecutionMode);
 }
 
 std::unique_ptr<BenchmarkRunner> ExegesisTarget::createUopsBenchmarkRunner(
     const LLVMState &State, BenchmarkPhaseSelectorE BenchmarkPhaseSelector,
-    Benchmark::ResultAggregationModeE /*unused*/) const {
-  return std::make_unique<UopsBenchmarkRunner>(State, BenchmarkPhaseSelector);
+    Benchmark::ResultAggregationModeE /*unused*/,
+    BenchmarkRunner::ExecutionModeE ExecutionMode) const {
+  return std::make_unique<UopsBenchmarkRunner>(State, BenchmarkPhaseSelector,
+                                               ExecutionMode);
 }
 
 static_assert(std::is_trivial_v<PfmCountersInfo>,
