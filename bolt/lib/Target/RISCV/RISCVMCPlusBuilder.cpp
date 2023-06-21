@@ -73,6 +73,37 @@ public:
     }
   }
 
+  unsigned getInvertedBranchOpcode(unsigned Opcode) const {
+    switch (Opcode) {
+    default:
+      llvm_unreachable("Failed to invert branch opcode");
+      return Opcode;
+    case RISCV::BEQ:
+      return RISCV::BNE;
+    case RISCV::BNE:
+      return RISCV::BEQ;
+    case RISCV::BLT:
+      return RISCV::BGE;
+    case RISCV::BGE:
+      return RISCV::BLT;
+    case RISCV::BLTU:
+      return RISCV::BGEU;
+    case RISCV::BGEU:
+      return RISCV::BLTU;
+    case RISCV::C_BEQZ:
+      return RISCV::C_BNEZ;
+    case RISCV::C_BNEZ:
+      return RISCV::C_BEQZ;
+    }
+  }
+
+  bool reverseBranchCondition(MCInst &Inst, const MCSymbol *TBB,
+                              MCContext *Ctx) const override {
+    auto Opcode = getInvertedBranchOpcode(Inst.getOpcode());
+    Inst.setOpcode(Opcode);
+    return replaceBranchTarget(Inst, TBB, Ctx);
+  }
+
   bool replaceBranchTarget(MCInst &Inst, const MCSymbol *TBB,
                            MCContext *Ctx) const override {
     assert((isCall(Inst) || isBranch(Inst)) && !isIndirectBranch(Inst) &&
