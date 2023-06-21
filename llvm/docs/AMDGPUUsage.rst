@@ -2786,20 +2786,6 @@ temporarily updated. The location list expression created for this artificial
 variable is used to define the value of the ``DW_AT_LLVM_active_lane``
 attribute.
 
-``DW_AT_LLVM_augmentation``
-~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-For AMDGPU, the ``DW_AT_LLVM_augmentation`` attribute of a compilation unit
-debugger information entry has the following value for the augmentation string:
-
-::
-
-  [amdgpu:v0.0]
-
-The "vX.Y" specifies the major X and minor Y version number of the AMDGPU
-extensions used in the DWARF of the compilation unit. The version number
-conforms to [SEMVER]_.
-
 Call Frame Information
 ----------------------
 
@@ -2855,37 +2841,6 @@ Accelerated Access
 ------------------
 
 See DWARF Version 5 section 6.1.
-
-Lookup By Name Section Header
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-See DWARF Version 5 section 6.1.1.4.1 and :ref:`amdgpu-dwarf-lookup-by-name`.
-
-For AMDGPU the lookup by name section header table:
-
-``augmentation_string_size`` (uword)
-
-  Set to the length of the ``augmentation_string`` value which is always a
-  multiple of 4.
-
-``augmentation_string`` (sequence of UTF-8 characters)
-
-  Contains the following UTF-8 string null padded to a multiple of 4 bytes:
-
-  ::
-
-    [amdgpu:v0.0]
-
-  The "vX.Y" specifies the major X and minor Y version number of the AMDGPU
-  extensions used in the DWARF of this index. The version number conforms to
-  [SEMVER]_.
-
-  .. note::
-
-    This is different to the DWARF Version 5 definition that requires the first
-    4 characters to be the vendor ID. But this is consistent with the other
-    augmentation strings and does allow multiple vendor contributions. However,
-    backwards compatibility may be more desirable.
 
 Lookup By Address Section Header
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~

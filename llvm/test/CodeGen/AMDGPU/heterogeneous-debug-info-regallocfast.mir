@@ -1018,115 +1018,114 @@ body:             |
 # ASM-NEXT:         .short  4                               ; DWARF version number
 # ASM-NEXT:         .long   .debug_abbrev                   ; Offset Into Abbrev. Section
 # ASM-NEXT:         .byte   8                               ; Address Size (in bytes)
-# ASM-NEXT:         .byte   1                               ; Abbrev [1] 0xb:0x111 DW_TAG_compile_unit
+# ASM-NEXT:         .byte   1                               ; Abbrev [1] 0xb:0x10d DW_TAG_compile_unit
 # ASM-NEXT:         .long   .Linfo_string0                  ; DW_AT_producer
 # ASM-NEXT:         .short  33                              ; DW_AT_language
 # ASM-NEXT:         .long   .Linfo_string1                  ; DW_AT_name
 # ASM-NEXT:         .long   .Lline_table_start0             ; DW_AT_stmt_list
 # ASM-NEXT:         .long   .Linfo_string2                  ; DW_AT_comp_dir
-# ASM-NEXT:         .long   .Linfo_string3                  ; DW_AT_LLVM_augmentation
 # ASM-NEXT:         .quad   .Lfunc_begin0                   ; DW_AT_low_pc
 # ASM-NEXT:         .long   .Lfunc_end9-.Lfunc_begin0       ; DW_AT_high_pc
-# ASM-NEXT:         .byte   2                               ; Abbrev [2] 0x2e:0x1a DW_TAG_subprogram
+# ASM-NEXT:         .byte   2                               ; Abbrev [2] 0x2a:0x1a DW_TAG_subprogram
 # ASM-NEXT:         .quad   .Lfunc_begin0                   ; DW_AT_low_pc
 # ASM-NEXT:         .long   .Lfunc_end0-.Lfunc_begin0       ; DW_AT_high_pc
 # ASM-NEXT:         .byte   2                               ; DW_AT_frame_base
 # ASM-NEXT:         .byte   144
 # ASM-NEXT:         .byte   64
 # ASM-NEXT:                                         ; DW_AT_external
-# ASM-NEXT:         .byte   3                               ; Abbrev [3] 0x3e:0x9 DW_TAG_variable
+# ASM-NEXT:         .byte   3                               ; Abbrev [3] 0x3a:0x9 DW_TAG_variable
 # ASM-NEXT:         .long   .Ldebug_loc0                    ; DW_AT_location
-# ASM-NEXT:         .long   276                             ; DW_AT_type
+# ASM-NEXT:         .long   272                             ; DW_AT_type
 # ASM-NEXT:         .byte   0                               ; End Of Children Mark
-# ASM-NEXT:         .byte   2                               ; Abbrev [2] 0x48:0x1a DW_TAG_subprogram
+# ASM-NEXT:         .byte   2                               ; Abbrev [2] 0x44:0x1a DW_TAG_subprogram
 # ASM-NEXT:         .quad   .Lfunc_begin1                   ; DW_AT_low_pc
 # ASM-NEXT:         .long   .Lfunc_end1-.Lfunc_begin1       ; DW_AT_high_pc
 # ASM-NEXT:         .byte   2                               ; DW_AT_frame_base
 # ASM-NEXT:         .byte   144
 # ASM-NEXT:         .byte   64
 # ASM-NEXT:                                         ; DW_AT_external
-# ASM-NEXT:         .byte   3                               ; Abbrev [3] 0x58:0x9 DW_TAG_variable
+# ASM-NEXT:         .byte   3                               ; Abbrev [3] 0x54:0x9 DW_TAG_variable
 # ASM-NEXT:         .long   .Ldebug_loc1                    ; DW_AT_location
-# ASM-NEXT:         .long   276                             ; DW_AT_type
+# ASM-NEXT:         .long   272                             ; DW_AT_type
 # ASM-NEXT:         .byte   0                               ; End Of Children Mark
-# ASM-NEXT:         .byte   2                               ; Abbrev [2] 0x62:0x1a DW_TAG_subprogram
+# ASM-NEXT:         .byte   2                               ; Abbrev [2] 0x5e:0x1a DW_TAG_subprogram
 # ASM-NEXT:         .quad   .Lfunc_begin2                   ; DW_AT_low_pc
 # ASM-NEXT:         .long   .Lfunc_end2-.Lfunc_begin2       ; DW_AT_high_pc
 # ASM-NEXT:         .byte   2                               ; DW_AT_frame_base
 # ASM-NEXT:         .byte   144
 # ASM-NEXT:         .byte   64
 # ASM-NEXT:                                         ; DW_AT_external
-# ASM-NEXT:         .byte   3                               ; Abbrev [3] 0x72:0x9 DW_TAG_variable
+# ASM-NEXT:         .byte   3                               ; Abbrev [3] 0x6e:0x9 DW_TAG_variable
 # ASM-NEXT:         .long   .Ldebug_loc2                    ; DW_AT_location
-# ASM-NEXT:         .long   276                             ; DW_AT_type
+# ASM-NEXT:         .long   272                             ; DW_AT_type
 # ASM-NEXT:         .byte   0                               ; End Of Children Mark
-# ASM-NEXT:         .byte   2                               ; Abbrev [2] 0x7c:0x1a DW_TAG_subprogram
+# ASM-NEXT:         .byte   2                               ; Abbrev [2] 0x78:0x1a DW_TAG_subprogram
 # ASM-NEXT:         .quad   .Lfunc_begin3                   ; DW_AT_low_pc
 # ASM-NEXT:         .long   .Lfunc_end3-.Lfunc_begin3       ; DW_AT_high_pc
 # ASM-NEXT:         .byte   2                               ; DW_AT_frame_base
 # ASM-NEXT:         .byte   144
 # ASM-NEXT:         .byte   64
 # ASM-NEXT:                                         ; DW_AT_external
-# ASM-NEXT:         .byte   3                               ; Abbrev [3] 0x8c:0x9 DW_TAG_variable
+# ASM-NEXT:         .byte   3                               ; Abbrev [3] 0x88:0x9 DW_TAG_variable
 # ASM-NEXT:         .long   .Ldebug_loc3                    ; DW_AT_location
-# ASM-NEXT:         .long   276                             ; DW_AT_type
+# ASM-NEXT:         .long   272                             ; DW_AT_type
 # ASM-NEXT:         .byte   0                               ; End Of Children Mark
-# ASM-NEXT:         .byte   2                               ; Abbrev [2] 0x96:0x1a DW_TAG_subprogram
+# ASM-NEXT:         .byte   2                               ; Abbrev [2] 0x92:0x1a DW_TAG_subprogram
 # ASM-NEXT:         .quad   .Lfunc_begin4                   ; DW_AT_low_pc
 # ASM-NEXT:         .long   .Lfunc_end4-.Lfunc_begin4       ; DW_AT_high_pc
 # ASM-NEXT:         .byte   2                               ; DW_AT_frame_base
 # ASM-NEXT:         .byte   144
 # ASM-NEXT:         .byte   64
 # ASM-NEXT:                                         ; DW_AT_external
-# ASM-NEXT:         .byte   3                               ; Abbrev [3] 0xa6:0x9 DW_TAG_variable
+# ASM-NEXT:         .byte   3                               ; Abbrev [3] 0xa2:0x9 DW_TAG_variable
 # ASM-NEXT:         .long   .Ldebug_loc4                    ; DW_AT_location
-# ASM-NEXT:         .long   276                             ; DW_AT_type
+# ASM-NEXT:         .long   272                             ; DW_AT_type
 # ASM-NEXT:         .byte   0                               ; End Of Children Mark
-# ASM-NEXT:         .byte   2                               ; Abbrev [2] 0xb0:0x1a DW_TAG_subprogram
+# ASM-NEXT:         .byte   2                               ; Abbrev [2] 0xac:0x1a DW_TAG_subprogram
 # ASM-NEXT:         .quad   .Lfunc_begin5                   ; DW_AT_low_pc
 # ASM-NEXT:         .long   .Lfunc_end5-.Lfunc_begin5       ; DW_AT_high_pc
 # ASM-NEXT:         .byte   2                               ; DW_AT_frame_base
 # ASM-NEXT:         .byte   144
 # ASM-NEXT:         .byte   64
 # ASM-NEXT:                                         ; DW_AT_external
-# ASM-NEXT:         .byte   3                               ; Abbrev [3] 0xc0:0x9 DW_TAG_variable
+# ASM-NEXT:         .byte   3                               ; Abbrev [3] 0xbc:0x9 DW_TAG_variable
 # ASM-NEXT:         .long   .Ldebug_loc5                    ; DW_AT_location
-# ASM-NEXT:         .long   276                             ; DW_AT_type
+# ASM-NEXT:         .long   272                             ; DW_AT_type
 # ASM-NEXT:         .byte   0                               ; End Of Children Mark
-# ASM-NEXT:         .byte   2                               ; Abbrev [2] 0xca:0x1a DW_TAG_subprogram
+# ASM-NEXT:         .byte   2                               ; Abbrev [2] 0xc6:0x1a DW_TAG_subprogram
 # ASM-NEXT:         .quad   .Lfunc_begin6                   ; DW_AT_low_pc
 # ASM-NEXT:         .long   .Lfunc_end6-.Lfunc_begin6       ; DW_AT_high_pc
 # ASM-NEXT:         .byte   2                               ; DW_AT_frame_base
 # ASM-NEXT:         .byte   144
 # ASM-NEXT:         .byte   64
 # ASM-NEXT:                                         ; DW_AT_external
-# ASM-NEXT:         .byte   3                               ; Abbrev [3] 0xda:0x9 DW_TAG_variable
+# ASM-NEXT:         .byte   3                               ; Abbrev [3] 0xd6:0x9 DW_TAG_variable
 # ASM-NEXT:         .long   .Ldebug_loc6                    ; DW_AT_location
-# ASM-NEXT:         .long   276                             ; DW_AT_type
+# ASM-NEXT:         .long   272                             ; DW_AT_type
 # ASM-NEXT:         .byte   0                               ; End Of Children Mark
-# ASM-NEXT:         .byte   4                               ; Abbrev [4] 0xe4:0x10 DW_TAG_subprogram
+# ASM-NEXT:         .byte   4                               ; Abbrev [4] 0xe0:0x10 DW_TAG_subprogram
 # ASM-NEXT:         .quad   .Lfunc_begin7                   ; DW_AT_low_pc
 # ASM-NEXT:         .long   .Lfunc_end7-.Lfunc_begin7       ; DW_AT_high_pc
 # ASM-NEXT:         .byte   2                               ; DW_AT_frame_base
 # ASM-NEXT:         .byte   144
 # ASM-NEXT:         .byte   64
 # ASM-NEXT:                                         ; DW_AT_external
-# ASM-NEXT:         .byte   4                               ; Abbrev [4] 0xf4:0x10 DW_TAG_subprogram
+# ASM-NEXT:         .byte   4                               ; Abbrev [4] 0xf0:0x10 DW_TAG_subprogram
 # ASM-NEXT:         .quad   .Lfunc_begin8                   ; DW_AT_low_pc
 # ASM-NEXT:         .long   .Lfunc_end8-.Lfunc_begin8       ; DW_AT_high_pc
 # ASM-NEXT:         .byte   2                               ; DW_AT_frame_base
 # ASM-NEXT:         .byte   144
 # ASM-NEXT:         .byte   64
 # ASM-NEXT:                                         ; DW_AT_external
-# ASM-NEXT:         .byte   4                               ; Abbrev [4] 0x104:0x10 DW_TAG_subprogram
+# ASM-NEXT:         .byte   4                               ; Abbrev [4] 0x100:0x10 DW_TAG_subprogram
 # ASM-NEXT:         .quad   .Lfunc_begin9                   ; DW_AT_low_pc
 # ASM-NEXT:         .long   .Lfunc_end9-.Lfunc_begin9       ; DW_AT_high_pc
 # ASM-NEXT:         .byte   2                               ; DW_AT_frame_base
 # ASM-NEXT:         .byte   144
 # ASM-NEXT:         .byte   64
 # ASM-NEXT:                                         ; DW_AT_external
-# ASM-NEXT:         .byte   5                               ; Abbrev [5] 0x114:0x7 DW_TAG_base_type
-# ASM-NEXT:         .long   .Linfo_string4                  ; DW_AT_name
+# ASM-NEXT:         .byte   5                               ; Abbrev [5] 0x110:0x7 DW_TAG_base_type
+# ASM-NEXT:         .long   .Linfo_string3                  ; DW_AT_name
 # ASM-NEXT:         .byte   5                               ; DW_AT_encoding
 # ASM-NEXT:         .byte   4                               ; DW_AT_byte_size
 # ASM-NEXT:         .byte   0                               ; End Of Children Mark

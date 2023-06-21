@@ -1055,10 +1055,6 @@ void DwarfDebug::finishUnitAttributes(const DICompileUnit *DIUnit,
                     dwarf::DW_FORM_data1, RVer);
   }
 
-  if (useHeterogeneousExtensionAttributes()) {
-    NewCU.addString(Die, dwarf::DW_AT_LLVM_augmentation, "[llvm:v0.0]");
-  }
-
   if (DIUnit->getDWOId()) {
     // This CU is either a clang module DWO or a skeleton CU.
     NewCU.addUInt(Die, dwarf::DW_AT_GNU_dwo_id, dwarf::DW_FORM_data8,
