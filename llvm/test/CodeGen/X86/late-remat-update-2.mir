@@ -1,4 +1,4 @@
-# RUN: llc -mtriple=x86_64-- -run-pass=simple-register-coalescing -run-pass=regallocbasic -run-pass=virtregrewriter -late-remat-update-threshold=0 %s -o - | FileCheck %s
+# RUN: llc -mtriple=x86_64-- -run-pass=register-coalescer -run-pass=regallocbasic -run-pass=virtregrewriter -late-remat-update-threshold=0 %s -o - | FileCheck %s
 #
 # PR40061: %t2 = %t1 is rematerialized and %t1 is added into toBeUpdated set
 # to postpone its live interval update. After the rematerialization, the live

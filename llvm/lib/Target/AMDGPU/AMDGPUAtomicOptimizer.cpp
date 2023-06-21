@@ -145,10 +145,17 @@ PreservedAnalyses AMDGPUAtomicOptimizerPass::run(Function &F,
 
   bool IsPixelShader = F.getCallingConv() == CallingConv::AMDGPU_PS;
 
-  return AMDGPUAtomicOptimizerImpl(UA, DL, DTU, ST, IsPixelShader, ScanImpl)
-                 .run(F)
-             ? PreservedAnalyses::none()
-             : PreservedAnalyses::all();
+  bool IsChanged =
+      AMDGPUAtomicOptimizerImpl(UA, DL, DTU, ST, IsPixelShader, ScanImpl)
+          .run(F);
+
+  if (!IsChanged) {
+    return PreservedAnalyses::all();
+  }
+
+  PreservedAnalyses PA;
+  PA.preserve<DominatorTreeAnalysis>();
+  return PA;
 }
 
 bool AMDGPUAtomicOptimizerImpl::run(Function &F) {
