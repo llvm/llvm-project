@@ -26,5 +26,9 @@
     <true/>
     <key>com.apple.private.cs.debugger</key>
     <true/>
+    <key>com.apple.private.thread-set-state</key>
+    <true/>
+    <key>com.apple.private.set-exception-port</key>
+    <true/>
 </dict>
 </plist>
