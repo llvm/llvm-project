@@ -22,9 +22,12 @@
 #include "llvm/ADT/Statistic.h"
 #include "llvm/CodeGen/ISDOpcodes.h"
 #include "llvm/CodeGen/RuntimeLibcalls.h"
+#include "llvm/CodeGen/SelectionDAGNodes.h"
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/IntrinsicsLoongArch.h"
+#include "llvm/Support/CodeGen.h"
 #include "llvm/Support/Debug.h"
+#include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/KnownBits.h"
 #include "llvm/Support/MathExtras.h"
 
@@ -467,16 +470,44 @@ SDValue LoongArchTargetLowering::getAddr(NodeTy *N, SelectionDAG &DAG,
   SDLoc DL(N);
   EVT Ty = getPointerTy(DAG.getDataLayout());
   SDValue Addr = getTargetNode(N, DL, Ty, DAG, 0);
-  // TODO: Check CodeModel.
-  if (IsLocal)
-    // This generates the pattern (PseudoLA_PCREL sym), which expands to
-    // (addi.w/d (pcalau12i %pc_hi20(sym)) %pc_lo12(sym)).
-    return SDValue(DAG.getMachineNode(LoongArch::PseudoLA_PCREL, DL, Ty, Addr),
-                   0);
 
-  // This generates the pattern (PseudoLA_GOT sym), which expands to (ld.w/d
-  // (pcalau12i %got_pc_hi20(sym)) %got_pc_lo12(sym)).
-  return SDValue(DAG.getMachineNode(LoongArch::PseudoLA_GOT, DL, Ty, Addr), 0);
+  switch (DAG.getTarget().getCodeModel()) {
+  default:
+    report_fatal_error("Unsupported code model");
+
+  case CodeModel::Large: {
+    assert(Subtarget.is64Bit() && "Large code model requires LA64");
+
+    // This is not actually used, but is necessary for successfully matching
+    // the PseudoLA_*_LARGE nodes.
+    SDValue Tmp = DAG.getConstant(0, DL, Ty);
+    if (IsLocal)
+      // This generates the pattern (PseudoLA_PCREL_LARGE tmp sym), that
+      // eventually becomes the desired 5-insn code sequence.
+      return SDValue(DAG.getMachineNode(LoongArch::PseudoLA_PCREL_LARGE, DL, Ty,
+                                        Tmp, Addr),
+                     0);
+
+    // This generates the pattern (PseudoLA_GOT_LARGE tmp sym), that eventually
+    // becomes the desired 5-insn code sequence.
+    return SDValue(
+        DAG.getMachineNode(LoongArch::PseudoLA_GOT_LARGE, DL, Ty, Tmp, Addr),
+        0);
+  }
+
+  case CodeModel::Small:
+  case CodeModel::Medium:
+    if (IsLocal)
+      // This generates the pattern (PseudoLA_PCREL sym), which expands to
+      // (addi.w/d (pcalau12i %pc_hi20(sym)) %pc_lo12(sym)).
+      return SDValue(
+          DAG.getMachineNode(LoongArch::PseudoLA_PCREL, DL, Ty, Addr), 0);
+
+    // This generates the pattern (PseudoLA_GOT sym), which expands to (ld.w/d
+    // (pcalau12i %got_pc_hi20(sym)) %got_pc_lo12(sym)).
+    return SDValue(DAG.getMachineNode(LoongArch::PseudoLA_GOT, DL, Ty, Addr),
+                   0);
+  }
 }
 
 SDValue LoongArchTargetLowering::lowerBlockAddress(SDValue Op,
@@ -503,13 +534,19 @@ SDValue LoongArchTargetLowering::lowerGlobalAddress(SDValue Op,
 
 SDValue LoongArchTargetLowering::getStaticTLSAddr(GlobalAddressSDNode *N,
                                                   SelectionDAG &DAG,
-                                                  unsigned Opc) const {
+                                                  unsigned Opc,
+                                                  bool Large) const {
   SDLoc DL(N);
   EVT Ty = getPointerTy(DAG.getDataLayout());
   MVT GRLenVT = Subtarget.getGRLenVT();
 
+  // This is not actually used, but is necessary for successfully matching the
+  // PseudoLA_*_LARGE nodes.
+  SDValue Tmp = DAG.getConstant(0, DL, Ty);
   SDValue Addr = DAG.getTargetGlobalAddress(N->getGlobal(), DL, Ty, 0, 0);
-  SDValue Offset = SDValue(DAG.getMachineNode(Opc, DL, Ty, Addr), 0);
+  SDValue Offset = Large
+                       ? SDValue(DAG.getMachineNode(Opc, DL, Ty, Tmp, Addr), 0)
+                       : SDValue(DAG.getMachineNode(Opc, DL, Ty, Addr), 0);
 
   // Add the thread pointer.
   return DAG.getNode(ISD::ADD, DL, Ty, Offset,
@@ -518,14 +555,20 @@ SDValue LoongArchTargetLowering::getStaticTLSAddr(GlobalAddressSDNode *N,
 
 SDValue LoongArchTargetLowering::getDynamicTLSAddr(GlobalAddressSDNode *N,
                                                    SelectionDAG &DAG,
-                                                   unsigned Opc) const {
+                                                   unsigned Opc,
+                                                   bool Large) const {
   SDLoc DL(N);
   EVT Ty = getPointerTy(DAG.getDataLayout());
   IntegerType *CallTy = Type::getIntNTy(*DAG.getContext(), Ty.getSizeInBits());
 
+  // This is not actually used, but is necessary for successfully matching the
+  // PseudoLA_*_LARGE nodes.
+  SDValue Tmp = DAG.getConstant(0, DL, Ty);
+
   // Use a PC-relative addressing mode to access the dynamic GOT address.
   SDValue Addr = DAG.getTargetGlobalAddress(N->getGlobal(), DL, Ty, 0, 0);
-  SDValue Load = SDValue(DAG.getMachineNode(Opc, DL, Ty, Addr), 0);
+  SDValue Load = Large ? SDValue(DAG.getMachineNode(Opc, DL, Ty, Tmp, Addr), 0)
+                       : SDValue(DAG.getMachineNode(Opc, DL, Ty, Addr), 0);
 
   // Prepare argument list to generate call.
   ArgListTy Args;
@@ -552,6 +595,9 @@ LoongArchTargetLowering::lowerGlobalTLSAddress(SDValue Op,
       CallingConv::GHC)
     report_fatal_error("In GHC calling convention TLS is not supported");
 
+  bool Large = DAG.getTarget().getCodeModel() == CodeModel::Large;
+  assert((!Large || Subtarget.is64Bit()) && "Large code model requires LA64");
+
   GlobalAddressSDNode *N = cast<GlobalAddressSDNode>(Op);
   assert(N->getOffset() == 0 && "unexpected offset in global node");
 
@@ -561,20 +607,31 @@ LoongArchTargetLowering::lowerGlobalTLSAddress(SDValue Op,
     // In this model, application code calls the dynamic linker function
     // __tls_get_addr to locate TLS offsets into the dynamic thread vector at
     // runtime.
-    Addr = getDynamicTLSAddr(N, DAG, LoongArch::PseudoLA_TLS_GD);
+    Addr = getDynamicTLSAddr(N, DAG,
+                             Large ? LoongArch::PseudoLA_TLS_GD_LARGE
+                                   : LoongArch::PseudoLA_TLS_GD,
+                             Large);
     break;
   case TLSModel::LocalDynamic:
     // Same as GeneralDynamic, except for assembly modifiers and relocation
     // records.
-    Addr = getDynamicTLSAddr(N, DAG, LoongArch::PseudoLA_TLS_LD);
+    Addr = getDynamicTLSAddr(N, DAG,
+                             Large ? LoongArch::PseudoLA_TLS_LD_LARGE
+                                   : LoongArch::PseudoLA_TLS_LD,
+                             Large);
     break;
   case TLSModel::InitialExec:
     // This model uses the GOT to resolve TLS offsets.
-    Addr = getStaticTLSAddr(N, DAG, LoongArch::PseudoLA_TLS_IE);
+    Addr = getStaticTLSAddr(N, DAG,
+                            Large ? LoongArch::PseudoLA_TLS_IE_LARGE
+                                  : LoongArch::PseudoLA_TLS_IE,
+                            Large);
     break;
   case TLSModel::LocalExec:
     // This model is used when static linking as the TLS offsets are resolved
     // during program linking.
+    //
+    // This node doesn't need an extra argument for the large code model.
     Addr = getStaticTLSAddr(N, DAG, LoongArch::PseudoLA_TLS_LE);
     break;
   }
