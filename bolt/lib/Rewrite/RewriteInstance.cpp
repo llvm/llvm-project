@@ -31,6 +31,7 @@
 #include "bolt/RuntimeLibs/InstrumentationRuntimeLibrary.h"
 #include "bolt/Utils/CommandLineOpts.h"
 #include "bolt/Utils/Utils.h"
+#include "llvm/ADT/AddressRanges.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/DebugInfo/DWARF/DWARFContext.h"
 #include "llvm/DebugInfo/DWARF/DWARFDebugFrame.h"
@@ -413,6 +414,85 @@ static bool shouldDisassemble(const BinaryFunction &BF) {
     return true;
 
   return !BF.isIgnored();
+}
+
+// Return if a section stored in the image falls into a segment address space.
+// If not, Set \p Overlap to true if there's a partial overlap.
+template <class ELFT>
+static bool checkOffsets(const typename ELFT::Phdr &Phdr,
+                         const typename ELFT::Shdr &Sec, bool &Overlap) {
+  // SHT_NOBITS sections don't need to have an offset inside the segment.
+  if (Sec.sh_type == ELF::SHT_NOBITS)
+    return true;
+
+  // Only non-empty sections can be at the end of a segment.
+  uint64_t SectionSize = Sec.sh_size ? Sec.sh_size : 1;
+  AddressRange SectionAddressRange(Sec.sh_offset, Sec.sh_offset + SectionSize);
+  AddressRange SegmentAddressRange(Phdr.p_offset,
+                                   Phdr.p_offset + Phdr.p_filesz);
+  if (SegmentAddressRange.contains(SectionAddressRange))
+    return true;
+
+  Overlap = SegmentAddressRange.intersects(SectionAddressRange);
+  return false;
+}
+
+// Check that an allocatable section belongs to a virtual address
+// space of a segment.
+template <class ELFT>
+static bool checkVMA(const typename ELFT::Phdr &Phdr,
+                     const typename ELFT::Shdr &Sec, bool &Overlap) {
+  // Only non-empty sections can be at the end of a segment.
+  uint64_t SectionSize = Sec.sh_size ? Sec.sh_size : 1;
+  AddressRange SectionAddressRange(Sec.sh_addr, Sec.sh_addr + SectionSize);
+  AddressRange SegmentAddressRange(Phdr.p_vaddr, Phdr.p_vaddr + Phdr.p_memsz);
+
+  if (SegmentAddressRange.contains(SectionAddressRange))
+    return true;
+  Overlap = SegmentAddressRange.intersects(SectionAddressRange);
+  return false;
+}
+
+void RewriteInstance::markGnuRelroSections() {
+  using ELFT = ELF64LE;
+  using ELFShdrTy = typename ELFObjectFile<ELFT>::Elf_Shdr;
+  auto ELF64LEFile = cast<ELF64LEObjectFile>(InputFile);
+  const ELFFile<ELFT> &Obj = ELF64LEFile->getELFFile();
+
+  auto handleSection = [&](const ELFT::Phdr &Phdr, SectionRef SecRef) {
+    BinarySection *BinarySection = BC->getSectionForSectionRef(SecRef);
+    // If the section is non-allocatable, ignore it for GNU_RELRO purposes:
+    // it can't be made read-only after runtime relocations processing.
+    if (!BinarySection || !BinarySection->isAllocatable())
+      return;
+    const ELFShdrTy *Sec = cantFail(Obj.getSection(SecRef.getIndex()));
+    bool ImageOverlap{false}, VMAOverlap{false};
+    bool ImageContains = checkOffsets<ELFT>(Phdr, *Sec, ImageOverlap);
+    bool VMAContains = checkVMA<ELFT>(Phdr, *Sec, VMAOverlap);
+    if (ImageOverlap) {
+      if (opts::Verbosity >= 1)
+        errs() << "BOLT-WARNING: GNU_RELRO segment has partial file offset "
+               << "overlap with section " << BinarySection->getName() << '\n';
+      return;
+    }
+    if (VMAOverlap) {
+      if (opts::Verbosity >= 1)
+        errs() << "BOLT-WARNING: GNU_RELRO segment has partial VMA overlap "
+               << "with section " << BinarySection->getName() << '\n';
+      return;
+    }
+    if (!ImageContains || !VMAContains)
+      return;
+    BinarySection->setRelro();
+    if (opts::Verbosity >= 1)
+      outs() << "BOLT-INFO: marking " << BinarySection->getName()
+             << " as GNU_RELRO\n";
+  };
+
+  for (const ELFT::Phdr &Phdr : cantFail(Obj.program_headers()))
+    if (Phdr.p_type == ELF::PT_GNU_RELRO)
+      for (SectionRef SecRef : InputFile->sections())
+        handleSection(Phdr, SecRef);
 }
 
 Error RewriteInstance::discoverStorage() {
@@ -1754,6 +1834,9 @@ Error RewriteInstance::readSpecialSections() {
     if (isKSymtabSection(SectionName))
       opts::LinuxKernelMode = true;
   }
+
+  // Set IsRelro section attribute based on PT_GNU_RELRO segment.
+  markGnuRelroSections();
 
   if (HasDebugInfo && !opts::UpdateDebugSections && !opts::AggregateOnly) {
     errs() << "BOLT-WARNING: debug info will be stripped from the binary. "
