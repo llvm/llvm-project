@@ -789,8 +789,8 @@ private:
       SourceName, SourceName, Symbol &localSymbol, const Symbol &useSymbol);
   void AddUse(const GenericSpecInfo &);
   // If appropriate, erase a previously USE-associated symbol
-  void EraseRenamedSymbol(const Symbol &);
-  // Record a name appearing in a USE rename clause
+  void EraseRenamedUse(const Symbol *);
+  // Record a name appearing as the target of a USE rename clause
   void AddUseRename(const SourceName &name) {
     useRenames_.emplace(std::make_pair(name, useModuleScope_));
   }
@@ -2775,11 +2775,8 @@ bool ModuleVisitor::Pre(const parser::Only &x) {
 bool ModuleVisitor::Pre(const parser::Rename::Names &x) {
   const auto &localName{std::get<0>(x.t)};
   const auto &useName{std::get<1>(x.t)};
-  AddUseRename(useName.source);
   SymbolRename rename{AddUse(localName.source, useName.source)};
-  if (rename.use && localName.source != useName.source) {
-    EraseRenamedSymbol(*rename.use);
-  }
+  AddUseRename(useName.source);
   Resolve(useName, rename.use);
   Resolve(localName, rename.local);
   return false;
@@ -2797,9 +2794,6 @@ bool ModuleVisitor::Pre(const parser::Rename::Operators &x) {
         "Logical constant '%s' may not be used as a defined operator"_err_en_US);
   } else {
     SymbolRename rename{AddUse(localInfo.symbolName(), useInfo.symbolName())};
-    if (rename.use) {
-      EraseRenamedSymbol(*rename.use);
-    }
     useInfo.Resolve(rename.use);
     localInfo.Resolve(rename.local);
   }
@@ -2910,17 +2904,20 @@ static bool ConvertToUseError(
   }
 }
 
-// If a symbol has previously been USE-associated and did not appear in a USE
-// ONLY clause, erase it from the current scope.  This is needed when a name
-// appears in a USE rename clause.
-void ModuleVisitor::EraseRenamedSymbol(const Symbol &useSymbol) {
-  const SourceName &name{useSymbol.name()};
+// If a symbol has previously been USE-associated and did not appear in
+// an ONLY clause or renaming, erase it from the current scope.  This is
+// necessary when a name appears as the target of a later USE rename clause.
+void ModuleVisitor::EraseRenamedUse(const Symbol *useSymbol) {
+  if (!useSymbol) {
+    return;
+  }
+  const SourceName &name{useSymbol->name()};
   if (const Symbol * symbol{FindInScope(name)}) {
-    if (auto *useDetails{symbol->detailsIf<UseDetails>()}) {
+    if (const auto *useDetails{symbol->detailsIf<UseDetails>()}) {
       const Symbol &moduleSymbol{useDetails->symbol()};
       if (moduleSymbol.name() == name &&
-          moduleSymbol.owner() == useSymbol.owner() && IsUseRenamed(name) &&
-          !IsUseOnly(name)) {
+          moduleSymbol.owner() == useSymbol->owner() && !IsUseOnly(name) &&
+          !IsUseRenamed(name)) {
         EraseSymbol(*symbol);
       }
     }
@@ -2930,7 +2927,7 @@ void ModuleVisitor::EraseRenamedSymbol(const Symbol &useSymbol) {
 void ModuleVisitor::DoAddUse(SourceName location, SourceName localName,
     Symbol &localSymbol, const Symbol &useSymbol) {
   if (localName != useSymbol.name()) {
-    EraseRenamedSymbol(useSymbol);
+    EraseRenamedUse(&useSymbol);
   }
   if (auto *details{localSymbol.detailsIf<UseErrorDetails>()}) {
     details->add_occurrence(location, *useModuleScope_);
