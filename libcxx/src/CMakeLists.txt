@@ -34,7 +34,6 @@ set(LIBCXX_SOURCES
   memory_resource.cpp
   mutex.cpp
   mutex_destructor.cpp
-  new.cpp
   new_handler.cpp
   new_helpers.cpp
   optional.cpp
@@ -131,6 +130,12 @@ if (LIBCXX_ENABLE_FILESYSTEM)
       filesystem/int128_builtins.cpp
       )
   endif()
+endif()
+
+if (LIBCXX_ENABLE_NEW_DELETE_DEFINITIONS)
+  list(APPEND LIBCXX_SOURCES
+    new.cpp
+    )
 endif()
 
 # Add all the headers to the project for IDEs.

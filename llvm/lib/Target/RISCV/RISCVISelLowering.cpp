@@ -3520,10 +3520,11 @@ static bool isInterleaveShuffle(ArrayRef<int> Mask, MVT VT, int &EvenSrc,
   // vectors, or at the start and middle of the first vector if it's an unary
   // interleave.
   // In both cases, HalfNumElts will be extracted.
-  // So make sure that EvenSrc/OddSrc are within range.
+  // We need to ensure that the extract indices are 0 or HalfNumElts otherwise
+  // we'll create an illegal extract_subvector.
+  // FIXME: We could support other values using a slidedown first.
   int HalfNumElts = NumElts / 2;
-  return (((EvenSrc % NumElts) + HalfNumElts) <= NumElts) &&
-         (((OddSrc % NumElts) + HalfNumElts) <= NumElts);
+  return ((EvenSrc % HalfNumElts) == 0) && ((OddSrc % HalfNumElts) == 0);
 }
 
 /// Match shuffles that concatenate two vectors, rotate the concatenation,

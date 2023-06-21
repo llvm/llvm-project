@@ -398,14 +398,14 @@ char RegisterCoalescer::ID = 0;
 
 char &llvm::RegisterCoalescerID = RegisterCoalescer::ID;
 
-INITIALIZE_PASS_BEGIN(RegisterCoalescer, "simple-register-coalescing",
-                      "Simple Register Coalescing", false, false)
+INITIALIZE_PASS_BEGIN(RegisterCoalescer, "register-coalescer",
+                      "Register Coalescer", false, false)
 INITIALIZE_PASS_DEPENDENCY(LiveIntervals)
 INITIALIZE_PASS_DEPENDENCY(SlotIndexes)
 INITIALIZE_PASS_DEPENDENCY(MachineLoopInfo)
 INITIALIZE_PASS_DEPENDENCY(AAResultsWrapperPass)
-INITIALIZE_PASS_END(RegisterCoalescer, "simple-register-coalescing",
-                    "Simple Register Coalescing", false, false)
+INITIALIZE_PASS_END(RegisterCoalescer, "register-coalescer",
+                    "Register Coalescer", false, false)
 
 [[nodiscard]] static bool isMoveInstr(const TargetRegisterInfo &tri,
                                       const MachineInstr *MI, Register &Src,
@@ -4093,7 +4093,7 @@ void RegisterCoalescer::releaseMemory() {
 }
 
 bool RegisterCoalescer::runOnMachineFunction(MachineFunction &fn) {
-  LLVM_DEBUG(dbgs() << "********** SIMPLE REGISTER COALESCING **********\n"
+  LLVM_DEBUG(dbgs() << "********** REGISTER COALESCER **********\n"
                     << "********** Function: " << fn.getName() << '\n');
 
   // Variables changed between a setjmp and a longjump can have undefined value
