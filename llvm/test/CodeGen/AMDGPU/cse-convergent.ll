@@ -5,7 +5,6 @@ define i32 @test(i32 %val, i32 %cond) {
 ; GCN-LABEL: test:
 ; GCN:       ; %bb.0: ; %entry
 ; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GCN-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GCN-NEXT:    s_xor_saveexec_b32 s4, -1
 ; GCN-NEXT:    buffer_store_dword v2, off, s[0:3], s32 ; 4-byte Folded Spill
 ; GCN-NEXT:    buffer_store_dword v3, off, s[0:3], s32 offset:4 ; 4-byte Folded Spill
@@ -47,7 +46,6 @@ define i32 @test(i32 %val, i32 %cond) {
 ; GCN-NEXT:    s_waitcnt_depctr 0xffe3
 ; GCN-NEXT:    s_mov_b32 exec_lo, s4
 ; GCN-NEXT:    s_waitcnt vmcnt(0)
-; GCN-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GCN-NEXT:    s_setpc_b64 s[30:31]
 entry:
   ; %x = subgroup operation over all lanes.

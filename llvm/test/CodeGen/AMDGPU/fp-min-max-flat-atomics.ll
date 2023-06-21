@@ -42,7 +42,6 @@ define amdgpu_cs float @flat_atomic_fmin_f32_rtn(ptr %ptr, float %data, ptr %out
 ; GFX10-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; GFX10-NEXT:    flat_store_dword v[3:4], v0
 ; GFX10-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX10-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX10-NEXT:    ; return to shader part epilog
 ;
 ; GFX11-LABEL: flat_atomic_fmin_f32_rtn:
@@ -51,7 +50,6 @@ define amdgpu_cs float @flat_atomic_fmin_f32_rtn(ptr %ptr, float %data, ptr %out
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; GFX11-NEXT:    flat_store_b32 v[3:4], v0
 ; GFX11-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-NEXT:    ; return to shader part epilog
   %ret = call float @llvm.amdgcn.flat.atomic.fmin.f32.p1.f32(ptr %ptr, float %data)
   store float %ret, ptr %out
@@ -65,7 +63,6 @@ define amdgpu_cs float @flat_atomic_fmax_f32_rtn(ptr %ptr, float %data, ptr %out
 ; GFX10-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; GFX10-NEXT:    flat_store_dword v[3:4], v0
 ; GFX10-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX10-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX10-NEXT:    ; return to shader part epilog
 ;
 ; GFX11-LABEL: flat_atomic_fmax_f32_rtn:
@@ -74,7 +71,6 @@ define amdgpu_cs float @flat_atomic_fmax_f32_rtn(ptr %ptr, float %data, ptr %out
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; GFX11-NEXT:    flat_store_b32 v[3:4], v0
 ; GFX11-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-NEXT:    ; return to shader part epilog
   %ret = call float @llvm.amdgcn.flat.atomic.fmax.f32.p1.f32(ptr %ptr, float %data)
   store float %ret, ptr %out
