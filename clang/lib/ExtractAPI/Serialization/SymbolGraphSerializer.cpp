@@ -747,7 +747,6 @@ void SymbolGraphSerializer::visitObjCCategoryRecord(
     return;
 
   Symbols.emplace_back(std::move(*ObjCCategory));
-  serializeMembers(Record, Record.Ivars);
   serializeMembers(Record, Record.Methods);
   serializeMembers(Record, Record.Properties);
 
