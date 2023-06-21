@@ -270,10 +270,9 @@ private:
       exit(ChildProcessExitCodeE::CounterFDReadFailed);
     }
 
-    pid_t ParentPID = getppid();
-
-    int ParentPIDFD = syscall(SYS_pidfd_open, ParentPID, 0);
 #ifdef SYS_pidfd_getfd
+    pid_t ParentPID = getppid();
+    int ParentPIDFD = syscall(SYS_pidfd_open, ParentPID, 0);
     int CounterFileDescriptor =
         syscall(SYS_pidfd_getfd, ParentPIDFD, ParentCounterFileDescriptor, 0);
 #else
