@@ -227,7 +227,6 @@ LogicalResult OpaqueType::verify(function_ref<InFlightDiagnostic()> emitError,
 
 LogicalResult VectorType::verify(function_ref<InFlightDiagnostic()> emitError,
                                  ArrayRef<int64_t> shape, Type elementType,
-                                 unsigned numScalableDims,
                                  ArrayRef<bool> scalableDims) {
   if (!isValidElementType(elementType))
     return emitError()
@@ -239,20 +238,9 @@ LogicalResult VectorType::verify(function_ref<InFlightDiagnostic()> emitError,
            << "vector types must have positive constant sizes but got "
            << shape;
 
-  if (numScalableDims > shape.size())
-    return emitError()
-           << "number of scalable dims cannot exceed the number of dims"
-           << " (" << numScalableDims << " vs " << shape.size() << ")";
-
   if (scalableDims.size() != shape.size())
     return emitError() << "number of dims must match, got "
                        << scalableDims.size() << " and " << shape.size();
-
-  auto numScale =
-      count_if(scalableDims, [](bool isScalable) { return isScalable; });
-  if (numScale != numScalableDims)
-    return emitError() << "number of scalable dims must match, explicit: "
-                       << numScalableDims << ", and bools:" << numScale;
 
   return success();
 }
@@ -262,17 +250,17 @@ VectorType VectorType::scaleElementBitwidth(unsigned scale) {
     return VectorType();
   if (auto et = llvm::dyn_cast<IntegerType>(getElementType()))
     if (auto scaledEt = et.scaleElementBitwidth(scale))
-      return VectorType::get(getShape(), scaledEt, getNumScalableDims());
+      return VectorType::get(getShape(), scaledEt, getScalableDims());
   if (auto et = llvm::dyn_cast<FloatType>(getElementType()))
     if (auto scaledEt = et.scaleElementBitwidth(scale))
-      return VectorType::get(getShape(), scaledEt, getNumScalableDims());
+      return VectorType::get(getShape(), scaledEt, getScalableDims());
   return VectorType();
 }
 
 VectorType VectorType::cloneWith(std::optional<ArrayRef<int64_t>> shape,
                                  Type elementType) const {
   return VectorType::get(shape.value_or(getShape()), elementType,
-                         getNumScalableDims());
+                         getScalableDims());
 }
 
 //===----------------------------------------------------------------------===//
