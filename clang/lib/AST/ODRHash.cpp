@@ -377,7 +377,6 @@ public:
     Hash.AddBoolean(Method->isVariadic());
     Hash.AddBoolean(Method->isSynthesizedAccessorStub());
     Hash.AddBoolean(Method->isDefined());
-    Hash.AddBoolean(Method->isOverriding());
     Hash.AddBoolean(Method->isDirectMethod());
     Hash.AddBoolean(Method->isThisDeclarationADesignatedInitializer());
     Hash.AddBoolean(Method->hasSkippedBody());
