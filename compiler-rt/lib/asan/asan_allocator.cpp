@@ -643,10 +643,6 @@ struct Allocator {
     PoisonShadow(m->Beg(), RoundUpTo(m->UsedSize(), ASAN_SHADOW_GRANULARITY),
                  kAsanHeapFreeMagic);
 
-    AsanStats &thread_stats = GetCurrentThreadStats();
-    thread_stats.frees++;
-    thread_stats.freed += m->UsedSize();
-
     // Push into quarantine.
     if (t) {
       AsanThreadLocalMallocStorage *ms = &t->malloc_storage();
@@ -698,6 +694,10 @@ struct Allocator {
         ReportNewDeleteTypeMismatch(p, delete_size, delete_alignment, stack);
       }
     }
+
+    AsanStats &thread_stats = GetCurrentThreadStats();
+    thread_stats.frees++;
+    thread_stats.freed += m->UsedSize();
 
     QuarantineChunk(m, ptr, stack);
   }
