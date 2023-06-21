@@ -273,3 +273,17 @@ func.func @interchange_matmul(%arg0 : tensor<?x?xf32>, %arg1 : tensor<?x?xf32>,
 //      CHECK:       scf.yield %[[INNER2]]
 //      CHECK:     scf.yield %[[INNER1]]
 //      CHECK:   return %[[OUTER]]
+
+// -----
+
+// CHECK-LABEL: func @linalg_copy_matmul(
+//       CHECK:   scf.for
+//       CHECK:     scf.for
+//       CHECK:       memref.subview
+//       CHECK:       memref.subview
+//       CHECK:       linalg.copy
+func.func @linalg_copy_matmul(%a: memref<?x?xf32>, %b: memref<?x?xf32>) {
+  linalg.copy {__internal_linalg_transform__ = "simple_copy_memref"}
+      ins(%a : memref<?x?xf32>) outs(%b : memref<?x?xf32>)
+  return
+}
