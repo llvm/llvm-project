@@ -584,7 +584,8 @@ func.func @testserialop(%a: memref<10xf32>, %b: memref<10xf32>, %c: memref<10x10
   }
   acc.serial wait(%i64value, %i32value, %idxValue : i64, i32, index) {
   }
-  acc.serial private(@privatization_memref_10_f32 -> %a : memref<10xf32>, @privatization_memref_10_10_f32 -> %c : memref<10x10xf32>) firstprivate(@firstprivatization_memref_10xf32 -> %b: memref<10xf32>) {
+  %firstprivate = acc.firstprivate varPtr(%b : memref<10xf32>) -> memref<10xf32>
+  acc.serial private(@privatization_memref_10_f32 -> %a : memref<10xf32>, @privatization_memref_10_10_f32 -> %c : memref<10x10xf32>) firstprivate(@firstprivatization_memref_10xf32 -> %firstprivate : memref<10xf32>) {
   }
   acc.serial {
   } attributes {defaultAttr = #acc<defaultvalue none>}
@@ -620,7 +621,8 @@ func.func @testserialop(%a: memref<10xf32>, %b: memref<10xf32>, %c: memref<10x10
 // CHECK-NEXT: }
 // CHECK:      acc.serial wait([[I64VALUE]], [[I32VALUE]], [[IDXVALUE]] : i64, i32, index) {
 // CHECK-NEXT: }
-// CHECK:      acc.serial firstprivate(@firstprivatization_memref_10xf32 -> [[ARGB]] : memref<10xf32>) private(@privatization_memref_10_f32 -> [[ARGA]] : memref<10xf32>, @privatization_memref_10_10_f32 -> [[ARGC]] : memref<10x10xf32>) {
+// CHECK:      %[[FIRSTP:.*]] = acc.firstprivate varPtr([[ARGB]] : memref<10xf32>) -> memref<10xf32>
+// CHECK:      acc.serial firstprivate(@firstprivatization_memref_10xf32 -> %[[FIRSTP]] : memref<10xf32>) private(@privatization_memref_10_f32 -> [[ARGA]] : memref<10xf32>, @privatization_memref_10_10_f32 -> [[ARGC]] : memref<10x10xf32>) {
 // CHECK-NEXT: }
 // CHECK:      acc.serial {
 // CHECK-NEXT: } attributes {defaultAttr = #acc<defaultvalue none>}

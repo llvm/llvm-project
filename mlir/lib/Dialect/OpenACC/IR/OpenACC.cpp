@@ -72,6 +72,16 @@ LogicalResult acc::PrivateOp::verify() {
 }
 
 //===----------------------------------------------------------------------===//
+// FirstprivateOp
+//===----------------------------------------------------------------------===//
+LogicalResult acc::FirstprivateOp::verify() {
+  if (getDataClause() != acc::DataClause::acc_firstprivate)
+    return emitError("data clause associated with firstprivate operation must "
+                     "match its intent");
+  return success();
+}
+
+//===----------------------------------------------------------------------===//
 // DevicePtrOp
 //===----------------------------------------------------------------------===//
 LogicalResult acc::DevicePtrOp::verify() {
