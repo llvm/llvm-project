@@ -147,8 +147,15 @@ if(LLVM_ENABLE_PIC)
     MLIRSparseTensorEnums
     MLIRSparseTensorRuntime
     )
+  set_property(TARGET mlir_c_runner_utils PROPERTY CXX_VISIBILITY_PRESET hidden)
   set_property(TARGET mlir_c_runner_utils PROPERTY CXX_STANDARD 17)
   target_compile_definitions(mlir_c_runner_utils PRIVATE mlir_c_runner_utils_EXPORTS)
+  if(CMAKE_SYSTEM_NAME STREQUAL "Linux")
+    # Don't export symbols from link-time dependencies, these are internal
+    # implementation details.
+    # FIXME: Add a similar fix for Windows.
+    target_link_options(mlir_c_runner_utils PRIVATE "-Wl,-exclude-libs,ALL")
+  endif()
 
   add_mlir_library(mlir_runner_utils
     SHARED
