@@ -87,6 +87,7 @@ extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializeRISCVTarget() {
   initializeRISCVInsertReadWriteCSRPass(*PR);
   initializeRISCVDAGToDAGISelPass(*PR);
   initializeRISCVInitUndefPass(*PR);
+  initializeRISCVMoveMergePass(*PR);
 }
 
 static StringRef computeDataLayout(const Triple &TT) {
@@ -348,6 +349,8 @@ void RISCVPassConfig::addPreEmitPass() {
 }
 
 void RISCVPassConfig::addPreEmitPass2() {
+  if (TM->getOptLevel() != CodeGenOpt::None)
+    addPass(createRISCVMoveMergePass());
   addPass(createRISCVExpandPseudoPass());
 
   // Schedule the expansion of AMOs at the last possible moment, avoiding the

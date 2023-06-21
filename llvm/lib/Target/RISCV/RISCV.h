@@ -70,6 +70,9 @@ FunctionPass *createRISCVInitUndefPass();
 void initializeRISCVInitUndefPass(PassRegistry &);
 extern char &RISCVInitUndefID;
 
+FunctionPass *createRISCVMoveMergePass();
+void initializeRISCVMoveMergePass(PassRegistry &);
+
 InstructionSelector *createRISCVInstructionSelector(const RISCVTargetMachine &,
                                                     RISCVSubtarget &,
                                                     RISCVRegisterBankInfo &);
