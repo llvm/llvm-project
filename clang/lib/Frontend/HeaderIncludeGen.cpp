@@ -214,13 +214,8 @@ void HeaderIncludesCallback::FileChanged(SourceLocation Loc,
 
     // We track when we are done with the predefines by watching for the first
     // place where we drop back to a nesting depth of 1.
-    if (CurrentIncludeDepth == 1 && !HasProcessedPredefines) {
-      if (!DepOpts.ShowIncludesPretendHeader.empty()) {
-        PrintHeaderInfo(OutputFile, DepOpts.ShowIncludesPretendHeader,
-                        ShowDepth, 2, MSStyle);
-      }
+    if (CurrentIncludeDepth == 1 && !HasProcessedPredefines)
       HasProcessedPredefines = true;
-    }
 
     return;
   } else {
@@ -233,8 +228,6 @@ void HeaderIncludesCallback::FileChanged(SourceLocation Loc,
   unsigned IncludeDepth = CurrentIncludeDepth;
   if (!HasProcessedPredefines)
     --IncludeDepth; // Ignore indent from <built-in>.
-  else if (!DepOpts.ShowIncludesPretendHeader.empty())
-    ++IncludeDepth; // Pretend inclusion by ShowIncludesPretendHeader.
 
   // FIXME: Identify headers in a more robust way than comparing their name to
   // "<command line>" and "<built-in>" in a bunch of places.
