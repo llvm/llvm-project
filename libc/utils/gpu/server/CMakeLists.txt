@@ -1,8 +1,14 @@
-add_library(rpc_server STATIC Server.cpp)
+add_library(llvmlibc_rpc_server STATIC rpc_server.cpp)
 
 # Include the RPC implemenation from libc.
-add_dependencies(rpc_server libc.src.__support.RPC.rpc)
-target_include_directories(rpc_server PRIVATE ${LIBC_SOURCE_DIR})
-# TODO: This is for the opcodes, we will copy the file here when installed.
-target_include_directories(rpc_server PUBLIC ${LIBC_SOURCE_DIR}/include)
-target_include_directories(rpc_server PUBLIC ${CMAKE_CURRENT_SOURCE_DIR})
+target_include_directories(llvmlibc_rpc_server PRIVATE ${LIBC_SOURCE_DIR})
+target_include_directories(llvmlibc_rpc_server PUBLIC ${LIBC_SOURCE_DIR}/include)
+target_include_directories(llvmlibc_rpc_server PUBLIC ${CMAKE_CURRENT_SOURCE_DIR})
+
+# Install the server and associated header.
+install(FILES ${CMAKE_CURRENT_SOURCE_DIR}/rpc_server.h
+        DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/gpu-none-llvm/
+        COMPONENT libc)
+install(TARGETS llvmlibc_rpc_server
+        ARCHIVE DESTINATION "lib${LLVM_LIBDIR_SUFFIX}"
+        COMPONENT libc)

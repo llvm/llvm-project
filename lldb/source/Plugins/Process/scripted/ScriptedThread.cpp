@@ -250,10 +250,12 @@ bool ScriptedThread::CalculateStopInfo() {
         StopInfo::CreateStopReasonWithBreakpointSiteID(*this, break_id);
   } break;
   case lldb::eStopReasonSignal: {
-    int signal;
+    uint32_t signal;
     llvm::StringRef description;
-    data_dict->GetValueForKeyAsInteger("signal", signal,
-                                       LLDB_INVALID_SIGNAL_NUMBER);
+    if (!data_dict->GetValueForKeyAsInteger("signal", signal)) {
+        signal = LLDB_INVALID_SIGNAL_NUMBER;
+        return false;
+    }
     data_dict->GetValueForKeyAsString("desc", description);
     stop_info_sp =
         StopInfo::CreateStopReasonWithSignal(*this, signal, description.data());
