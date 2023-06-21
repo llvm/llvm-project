@@ -7950,8 +7950,8 @@ cc_library(
     hdrs = ["include/mlir/ExecutionEngine/RunnerUtils.h"],
     includes = ["include"],
     deps = [
-        ":LLVMSupportHeaders",
         ":mlir_c_runner_utils",
+        "//llvm:Support",
     ],
 )
 
