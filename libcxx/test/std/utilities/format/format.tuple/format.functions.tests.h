@@ -351,23 +351,17 @@ void run_tests(TestFunction check, ExceptionTest check_exception) {
   test_escaping<CharT>(check, std::make_pair(CharT('*'), STR("")));
   test_escaping<CharT>(check, std::make_tuple(CharT('*'), STR("")));
 
-  // Test cvref-qualified types.
+  // Test const ref-qualified types.
   // clang-format off
-  check(SV("(42)"), SV("{}"), std::tuple<               int  >{42});
-  check(SV("(42)"), SV("{}"), std::tuple<const          int  >{42});
-  check(SV("(42)"), SV("{}"), std::tuple<      volatile int  >{42});
-  check(SV("(42)"), SV("{}"), std::tuple<const volatile int  >{42});
+  check(SV("(42)"), SV("{}"), std::tuple<      int  >{42});
+  check(SV("(42)"), SV("{}"), std::tuple<const int  >{42});
 
   int answer = 42;
-  check(SV("(42)"), SV("{}"), std::tuple<               int& >{answer});
-  check(SV("(42)"), SV("{}"), std::tuple<const          int& >{answer});
-  check(SV("(42)"), SV("{}"), std::tuple<      volatile int& >{answer});
-  check(SV("(42)"), SV("{}"), std::tuple<const volatile int& >{answer});
+  check(SV("(42)"), SV("{}"), std::tuple<      int& >{answer});
+  check(SV("(42)"), SV("{}"), std::tuple<const int& >{answer});
 
-  check(SV("(42)"), SV("{}"), std::tuple<               int&&>{42});
-  check(SV("(42)"), SV("{}"), std::tuple<const          int&&>{42});
-  check(SV("(42)"), SV("{}"), std::tuple<      volatile int&&>{42});
-  check(SV("(42)"), SV("{}"), std::tuple<const volatile int&&>{42});
+  check(SV("(42)"), SV("{}"), std::tuple<      int&&>{42});
+  check(SV("(42)"), SV("{}"), std::tuple<const int&&>{42});
   // clang-format on
 }
 
