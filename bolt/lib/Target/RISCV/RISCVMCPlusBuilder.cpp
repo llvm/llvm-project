@@ -134,6 +134,26 @@ public:
     return true;
   }
 
+  bool createReturn(MCInst &Inst) const override {
+    // TODO "c.jr ra" when RVC is enabled
+    Inst.setOpcode(RISCV::JALR);
+    Inst.clear();
+    Inst.addOperand(MCOperand::createReg(RISCV::X0));
+    Inst.addOperand(MCOperand::createReg(RISCV::X1));
+    Inst.addOperand(MCOperand::createImm(0));
+    return true;
+  }
+
+  bool createUncondBranch(MCInst &Inst, const MCSymbol *TBB,
+                          MCContext *Ctx) const override {
+    Inst.setOpcode(RISCV::JAL);
+    Inst.clear();
+    Inst.addOperand(MCOperand::createReg(RISCV::X0));
+    Inst.addOperand(MCOperand::createExpr(
+        MCSymbolRefExpr::create(TBB, MCSymbolRefExpr::VK_None, *Ctx)));
+    return true;
+  }
+
   bool analyzeBranch(InstructionIterator Begin, InstructionIterator End,
                      const MCSymbol *&TBB, const MCSymbol *&FBB,
                      MCInst *&CondBranch,
