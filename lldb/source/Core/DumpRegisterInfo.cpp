@@ -8,6 +8,7 @@
 
 #include "lldb/Core/DumpRegisterInfo.h"
 #include "lldb/Target/RegisterContext.h"
+#include "lldb/Target/RegisterFlags.h"
 #include "lldb/Utility/Stream.h"
 
 using namespace lldb;
@@ -16,7 +17,8 @@ using namespace lldb_private;
 using SetInfo = std::pair<const char *, uint32_t>;
 
 void lldb_private::DumpRegisterInfo(Stream &strm, RegisterContext &ctx,
-                                    const RegisterInfo &info) {
+                                    const RegisterInfo &info,
+                                    uint32_t terminal_width) {
   std::vector<const char *> invalidates;
   if (info.invalidate_regs) {
     for (uint32_t *inv_regs = info.invalidate_regs;
@@ -60,7 +62,8 @@ void lldb_private::DumpRegisterInfo(Stream &strm, RegisterContext &ctx,
   }
 
   DoDumpRegisterInfo(strm, info.name, info.alt_name, info.byte_size,
-                     invalidates, read_from, in_sets);
+                     invalidates, read_from, in_sets, info.flags_type,
+                     terminal_width);
 }
 
 template <typename ElementType>
@@ -85,7 +88,8 @@ void lldb_private::DoDumpRegisterInfo(
     Stream &strm, const char *name, const char *alt_name, uint32_t byte_size,
     const std::vector<const char *> &invalidates,
     const std::vector<const char *> &read_from,
-    const std::vector<SetInfo> &in_sets) {
+    const std::vector<SetInfo> &in_sets, const RegisterFlags *flags_type,
+    uint32_t terminal_width) {
   strm << "       Name: " << name;
   if (alt_name)
     strm << " (" << alt_name << ")";
@@ -106,4 +110,7 @@ void lldb_private::DoDumpRegisterInfo(
     strm.Printf("%s (index %d)", info.first, info.second);
   };
   DumpList(strm, "    In sets: ", in_sets, emit_set);
+
+  if (flags_type)
+    strm.Printf("\n\n%s", flags_type->AsTable(terminal_width).c_str());
 }
