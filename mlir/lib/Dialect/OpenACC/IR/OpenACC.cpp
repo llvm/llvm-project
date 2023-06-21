@@ -635,11 +635,11 @@ LogicalResult acc::KernelsOp::verify() {
 //===----------------------------------------------------------------------===//
 
 LogicalResult acc::HostDataOp::verify() {
-  if (getDataOperands().empty())
+  if (getDataClauseOperands().empty())
     return emitError("at least one operand must appear on the host_data "
                      "operation");
 
-  for (mlir::Value operand : getDataOperands())
+  for (mlir::Value operand : getDataClauseOperands())
     if (!mlir::isa<acc::UseDeviceOp>(operand.getDefiningOp()))
       return emitError("expect data entry operation as defining op");
   return success();

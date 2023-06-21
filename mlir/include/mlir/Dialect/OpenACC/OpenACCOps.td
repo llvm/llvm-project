@@ -1009,7 +1009,7 @@ def OpenACC_HostDataOp : OpenACC_Op<"host_data", [AttrSizedOperandSegments]> {
   }];
 
   let arguments = (ins Optional<I1>:$ifCond,
-                       Variadic<OpenACC_PointerLikeTypeInterface>:$dataOperands,
+                       Variadic<OpenACC_PointerLikeTypeInterface>:$dataClauseOperands,
                        UnitAttr:$ifPresent);
 
   let regions = (region AnyRegion:$region);
@@ -1017,7 +1017,7 @@ def OpenACC_HostDataOp : OpenACC_Op<"host_data", [AttrSizedOperandSegments]> {
   let assemblyFormat = [{
     oilist(
         `if` `(` $ifCond `)`
-      | `dataOperands` `(` $dataOperands `:` type($dataOperands) `)`
+      | `dataOperands` `(` $dataClauseOperands `:` type($dataClauseOperands) `)`
     )
     $region attr-dict-with-keyword
   }];
