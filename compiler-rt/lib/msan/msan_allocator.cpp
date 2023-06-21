@@ -30,7 +30,8 @@ struct Metadata {
 
 struct MsanMapUnmapCallback {
   void OnMap(uptr p, uptr size) const {}
-  void OnMapSecondary(uptr p, uptr size) const {}
+  void OnMapSecondary(uptr p, uptr size, uptr user_begin,
+                      uptr user_size) const {}
   void OnUnmap(uptr p, uptr size) const {
     __msan_unpoison((void *)p, size);
 
