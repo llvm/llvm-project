@@ -223,6 +223,23 @@ class OpenACC_DataEntryOp<string mnemonic, string clause, list<Trait> traits = [
 }
 
 //===----------------------------------------------------------------------===//
+// 2.5.13 private clause
+//===----------------------------------------------------------------------===//
+def OpenACC_PrivateOp : OpenACC_DataEntryOp<"private",
+    "mlir::acc::DataClause::acc_private"> {
+  let summary = "Represents private semantics for acc private clause.";
+}
+
+//===----------------------------------------------------------------------===//
+// 2.5.14 firstprivate clause
+//===----------------------------------------------------------------------===//
+def OpenACC_FirstprivateOp : OpenACC_DataEntryOp<"firstprivate",
+    "mlir::acc::DataClause::acc_firstprivate"> {
+  let summary = "Represents firstprivate semantic for the acc firstprivate "
+                "clause.";
+}
+
+//===----------------------------------------------------------------------===//
 // 2.7.4 deviceptr clause
 //===----------------------------------------------------------------------===//
 def OpenACC_DevicePtrOp : OpenACC_DataEntryOp<"deviceptr",
@@ -992,7 +1009,7 @@ def OpenACC_HostDataOp : OpenACC_Op<"host_data", [AttrSizedOperandSegments]> {
   }];
 
   let arguments = (ins Optional<I1>:$ifCond,
-                       Variadic<OpenACC_PointerLikeTypeInterface>:$dataOperands,
+                       Variadic<OpenACC_PointerLikeTypeInterface>:$dataClauseOperands,
                        UnitAttr:$ifPresent);
 
   let regions = (region AnyRegion:$region);
@@ -1000,7 +1017,7 @@ def OpenACC_HostDataOp : OpenACC_Op<"host_data", [AttrSizedOperandSegments]> {
   let assemblyFormat = [{
     oilist(
         `if` `(` $ifCond `)`
-      | `dataOperands` `(` $dataOperands `:` type($dataOperands) `)`
+      | `dataOperands` `(` $dataClauseOperands `:` type($dataClauseOperands) `)`
     )
     $region attr-dict-with-keyword
   }];

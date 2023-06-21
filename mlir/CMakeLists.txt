@@ -35,11 +35,6 @@ if(MLIR_STANDALONE_BUILD)
     "${CMAKE_CURRENT_BINARY_DIR}/lib${LLVM_LIBDIR_SUFFIX}")
   set(CMAKE_RUNTIME_OUTPUT_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}/bin")
 
-  # Some LLVM CMake utilities use these aliases for the CMake builtin variables.
-  # We set them for compatibility.
-  set(LLVM_LIBRARY_OUTPUT_INTDIR ${CMAKE_LIBRARY_OUTPUT_DIRECTORY})
-  set(LLVM_RUNTIME_OUTPUT_INTDIR ${CMAKE_RUNTIME_OUTPUT_DIRECTORY})
-
   set(LLVM_LIT_ARGS "-sv" CACHE STRING "Default options for lit")
 endif()
 
