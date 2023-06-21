@@ -57,6 +57,7 @@ void convert(const BinaryFunction &BF,
       if (!BC.MIB->isCall(Instr) && !BC.MIB->isIndirectBranch(Instr))
         continue;
 
+      SmallVector<std::pair<StringRef, yaml::bolt::CallSiteInfo>> CSTargets;
       yaml::bolt::CallSiteInfo CSI;
       std::optional<uint32_t> Offset = BC.MIB->getOffset(Instr);
       if (!Offset || *Offset < BB->getInputOffset())
@@ -69,25 +70,31 @@ void convert(const BinaryFunction &BF,
         if (!ICSP)
           continue;
         for (const IndirectCallProfile &CSP : ICSP.get()) {
+          StringRef TargetName = "";
           CSI.DestId = 0; // designated for unknown functions
           CSI.EntryDiscriminator = 0;
           if (CSP.Symbol) {
             const BinaryFunction *Callee = BC.getFunctionForSymbol(CSP.Symbol);
-            if (Callee)
+            if (Callee) {
               CSI.DestId = Callee->getFunctionNumber();
+              TargetName = Callee->getOneName();
+            }
           }
           CSI.Count = CSP.Count;
           CSI.Mispreds = CSP.Mispreds;
-          YamlBB.CallSites.push_back(CSI);
+          CSTargets.emplace_back(TargetName, CSI);
         }
       } else { // direct call or a tail call
         uint64_t EntryID = 0;
+        CSI.DestId = 0;
+        StringRef TargetName = "";
         const MCSymbol *CalleeSymbol = BC.MIB->getTargetSymbol(Instr);
         const BinaryFunction *const Callee =
             BC.getFunctionForSymbol(CalleeSymbol, &EntryID);
         if (Callee) {
           CSI.DestId = Callee->getFunctionNumber();
           CSI.EntryDiscriminator = EntryID;
+          TargetName = Callee->getOneName();
         }
 
         if (BC.MIB->getConditionalTailCall(Instr)) {
@@ -107,11 +114,17 @@ void convert(const BinaryFunction &BF,
         }
 
         if (CSI.Count)
-          YamlBB.CallSites.emplace_back(CSI);
+          CSTargets.emplace_back(TargetName, CSI);
       }
+      // Sort targets in a similar way to getBranchData, see Location::operator<
+      llvm::sort(CSTargets, [](const auto &RHS, const auto &LHS) {
+        if (RHS.first != LHS.first)
+          return RHS.first < LHS.first;
+        return RHS.second.Offset < LHS.second.Offset;
+      });
+      for (auto &KV : CSTargets)
+        YamlBB.CallSites.push_back(KV.second);
     }
-
-    llvm::sort(YamlBB.CallSites);
 
     // Skip printing if there's no profile data for non-entry basic block.
     // Include landing pads with non-zero execution count.

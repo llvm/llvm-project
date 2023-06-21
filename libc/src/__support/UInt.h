@@ -137,7 +137,7 @@ template <size_t Bits, bool Signed> struct BigInt {
   constexpr uint64_t add(const BigInt<Bits, Signed> &x) {
     SumCarry<uint64_t> s{0, 0};
     for (size_t i = 0; i < WORDCOUNT; ++i) {
-      s = add_with_carry(val[i], x.val[i], s.carry);
+      s = add_with_carry_const(val[i], x.val[i], s.carry);
       val[i] = s.sum;
     }
     return s.carry;
@@ -176,7 +176,7 @@ template <size_t Bits, bool Signed> struct BigInt {
   constexpr uint64_t sub(const BigInt<Bits, Signed> &x) {
     DiffBorrow<uint64_t> d{0, 0};
     for (size_t i = 0; i < WORDCOUNT; ++i) {
-      d = sub_with_borrow(val[i], x.val[i], d.borrow);
+      d = sub_with_borrow_const(val[i], x.val[i], d.borrow);
       val[i] = d.diff;
     }
     return d.borrow;

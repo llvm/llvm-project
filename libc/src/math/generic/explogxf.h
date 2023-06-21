@@ -16,6 +16,7 @@
 #include "src/__support/FPUtil/PolyEval.h"
 #include "src/__support/FPUtil/nearest_integer.h"
 #include "src/__support/common.h"
+#include "src/__support/macros/properties/cpu_features.h"
 
 #include <errno.h>
 
@@ -210,13 +211,24 @@ template <class Base> LIBC_INLINE exp_b_reduc_t exp_b_range_reduc(float x) {
 template <bool is_sinh> LIBC_INLINE double exp_pm_eval(float x) {
   double xd = static_cast<double>(x);
 
-  // round(x * log2(e) * 2^5)
-  double kd = fputil::nearest_integer(ExpBase::LOG2_B * xd);
-
+  // kd = round(x * log2(e) * 2^5)
   // k_p = round(x * log2(e) * 2^5)
-  int k_p = static_cast<int>(kd);
   // k_m = round(-x * log2(e) * 2^5)
-  int k_m = -k_p;
+  double kd;
+  int k_p, k_m;
+
+#ifdef LIBC_TARGET_CPU_HAS_NEAREST_INT
+  kd = fputil::nearest_integer(ExpBase::LOG2_B * xd);
+  k_p = static_cast<int>(kd);
+  k_m = -k_p;
+#else
+  constexpr double HALF_WAY[2] = {0.5, -0.5};
+
+  k_p = static_cast<int>(
+      fputil::multiply_add(xd, ExpBase::LOG2_B, HALF_WAY[x < 0.0f]));
+  k_m = -k_p;
+  kd = static_cast<double>(k_p);
+#endif // LIBC_TARGET_CPU_HAS_NEAREST_INT
 
   // hi = floor(kf * 2^(-5))
   // exp_hi = shift hi to the exponent field of double precision.
@@ -243,19 +255,19 @@ template <bool is_sinh> LIBC_INLINE double exp_pm_eval(float x) {
   double dx2 = dx * dx;
 
   // c0 = 1 + COEFFS[0] * lo^2
-  // P_even = 1 + COEFFS[0] * lo^2 + COEFFS[2] * lo^4
-  double p_even =
-      fputil::polyeval(dx2, 1.0, ExpBase::COEFFS[0], ExpBase::COEFFS[2]);
-  // P_odd = 1 + COEFFS[1] * lo^2 + COEFFS[3] * lo^4
-  double p_odd =
-      fputil::polyeval(dx2, 1.0, ExpBase::COEFFS[1], ExpBase::COEFFS[3]);
+  // P_even = (1 + COEFFS[0] * lo^2 + COEFFS[2] * lo^4) / 2
+  double p_even = fputil::polyeval(dx2, 0.5, ExpBase::COEFFS[0] * 0.5,
+                                   ExpBase::COEFFS[2] * 0.5);
+  // P_odd = (1 + COEFFS[1] * lo^2 + COEFFS[3] * lo^4) / 2
+  double p_odd = fputil::polyeval(dx2, 0.5, ExpBase::COEFFS[1] * 0.5,
+                                  ExpBase::COEFFS[3] * 0.5);
 
   double r;
   if constexpr (is_sinh)
     r = fputil::multiply_add(dx * mh_sum, p_odd, p_even * mh_diff);
   else
     r = fputil::multiply_add(dx * mh_diff, p_odd, p_even * mh_sum);
-  return 0.5 * r;
+  return r;
 }
 
 // x should be positive, normal finite value

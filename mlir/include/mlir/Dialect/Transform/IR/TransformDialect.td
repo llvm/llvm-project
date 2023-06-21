@@ -27,10 +27,15 @@ def Transform_Dialect : Dialect {
       constexpr const static ::llvm::StringLiteral
           kWithNamedSequenceAttrName = "transform.with_named_sequence";
 
-      /// Names of the attribute attachable to an operation so it can be
+      /// Name of the attribute attachable to an operation so it can be
       /// identified as root by the default interpreter pass.
       constexpr const static ::llvm::StringLiteral
           kTargetTagAttrName = "transform.target_tag";
+
+      /// Name of the attribute attachable to an operation, indicating that
+      /// TrackingListener failures should be silenced.
+      constexpr const static ::llvm::StringLiteral
+          kSilenceTrackingFailuresAttrName = "transform.silence_tracking_failures";
 
       /// Names of the attributes indicating whether an argument of an external
       /// transform dialect symbol is consumed or only read.

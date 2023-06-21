@@ -60,10 +60,10 @@ void transform::ApplyResolveRankedShapedTypeResultDimsPatternsOp::
 //===----------------------------------------------------------------------===//
 
 DiagnosedSilenceableFailure transform::MemRefMultiBufferOp::apply(
+    transform::TransformRewriter &rewriter,
     transform::TransformResults &transformResults,
     transform::TransformState &state) {
   SmallVector<Operation *> results;
-  IRRewriter rewriter(getContext());
   for (Operation *op : state.getPayloadOps(getTarget())) {
     bool canApplyMultiBuffer = true;
     auto target = cast<memref::AllocOp>(op);
@@ -105,7 +105,8 @@ DiagnosedSilenceableFailure transform::MemRefMultiBufferOp::apply(
 //===----------------------------------------------------------------------===//
 
 DiagnosedSilenceableFailure transform::MemRefMakeLoopIndependentOp::applyToOne(
-    Operation *target, transform::ApplyToEachResultList &results,
+    transform::TransformRewriter &rewriter, Operation *target,
+    transform::ApplyToEachResultList &results,
     transform::TransformState &state) {
   // Gather IVs.
   SmallVector<Value> ivs;
@@ -123,7 +124,6 @@ DiagnosedSilenceableFailure transform::MemRefMakeLoopIndependentOp::applyToOne(
   }
 
   // Rewrite IR.
-  IRRewriter rewriter(target->getContext());
   FailureOr<Value> replacement = failure();
   if (auto allocaOp = dyn_cast<memref::AllocaOp>(target)) {
     replacement = memref::replaceWithIndependentOp(rewriter, allocaOp, ivs);

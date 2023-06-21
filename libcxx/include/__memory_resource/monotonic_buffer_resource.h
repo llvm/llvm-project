@@ -9,6 +9,7 @@
 #ifndef _LIBCPP___MEMORY_RESOURCE_MONOTONIC_BUFFER_RESOURCE_H
 #define _LIBCPP___MEMORY_RESOURCE_MONOTONIC_BUFFER_RESOURCE_H
 
+#include <__availability>
 #include <__config>
 #include <__memory/addressof.h>
 #include <__memory_resource/memory_resource.h>
@@ -26,7 +27,7 @@ namespace pmr {
 
 // [mem.res.monotonic.buffer]
 
-class _LIBCPP_EXPORTED_FROM_ABI monotonic_buffer_resource : public memory_resource {
+class _LIBCPP_AVAILABILITY_PMR _LIBCPP_EXPORTED_FROM_ABI monotonic_buffer_resource : public memory_resource {
   static const size_t __default_buffer_capacity  = 1024;
   static const size_t __default_buffer_alignment = 16;
 

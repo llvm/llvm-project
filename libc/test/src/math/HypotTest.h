@@ -85,7 +85,8 @@ public:
 
   void test_normal_range(Func func) {
     constexpr UIntType COUNT = 10'001;
-    constexpr UIntType STEP = (FPBits::MAX_NORMAL - FPBits::MIN_NORMAL) / COUNT;
+    constexpr UIntType STEP =
+        (UIntType(FPBits::MAX_NORMAL) - UIntType(FPBits::MIN_NORMAL)) / COUNT;
     for (int signs = 0; signs < 4; ++signs) {
       for (UIntType v = FPBits::MIN_NORMAL, w = FPBits::MAX_NORMAL;
            v <= FPBits::MAX_NORMAL && w >= FPBits::MIN_NORMAL;

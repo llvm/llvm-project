@@ -1738,6 +1738,7 @@ const char *PPCTargetLowering::getTargetNodeName(unsigned Opcode) const {
   case PPCISD::ADDIS_TLSGD_HA:  return "PPCISD::ADDIS_TLSGD_HA";
   case PPCISD::ADDI_TLSGD_L:    return "PPCISD::ADDI_TLSGD_L";
   case PPCISD::GET_TLS_ADDR:    return "PPCISD::GET_TLS_ADDR";
+  case PPCISD::GET_TPOINTER:    return "PPCISD::GET_TPOINTER";
   case PPCISD::ADDI_TLSGD_L_ADDR: return "PPCISD::ADDI_TLSGD_L_ADDR";
   case PPCISD::TLSGD_AIX:       return "PPCISD::TLSGD_AIX";
   case PPCISD::ADDIS_TLSLD_HA:  return "PPCISD::ADDIS_TLSLD_HA";
@@ -3330,22 +3331,28 @@ SDValue PPCTargetLowering::LowerGlobalTLSAddressAIX(SDValue Op,
   TLSModel::Model Model = getTargetMachine().getTLSModel(GV);
 
   if (Model == TLSModel::LocalExec) {
-    if (Is64Bit) {
+    SDValue VariableOffsetTGA =
+        DAG.getTargetGlobalAddress(GV, dl, PtrVT, 0, PPCII::MO_TPREL_FLAG);
+    SDValue VariableOffset = getTOCEntry(DAG, dl, VariableOffsetTGA);
+    SDValue TLSReg;
+    if (Is64Bit)
       // For local-exec on AIX (64-bit), the sequence that is generated involves
       // a load of the variable offset (from the TOC), followed by an add of the
       // loaded variable offset to R13 (the thread pointer).
       // This code sequence looks like:
       //    ld reg1,var[TC](2)
       //    add reg2, reg1, r13     // r13 contains the thread pointer
-      SDValue TLSReg = DAG.getRegister(PPC::X13, MVT::i64);
-      SDValue VariableOffsetTGA =
-          DAG.getTargetGlobalAddress(GV, dl, PtrVT, 0, PPCII::MO_TPREL_FLAG);
-      SDValue VariableOffset = getTOCEntry(DAG, dl, VariableOffsetTGA);
-      return DAG.getNode(PPCISD::ADD_TLS, dl, PtrVT, TLSReg, VariableOffset);
-    } else {
-      report_fatal_error("On AIX, the local-exec TLS model is only supported "
-                         "on PPC64 for now.");
-    }
+      TLSReg = DAG.getRegister(PPC::X13, MVT::i64);
+    else
+      // For local-exec on AIX (32-bit), the sequence that is generated involves
+      // loading the variable offset from the TOC, generating a call to
+      // .__get_tpointer to get the thread pointer (which will be in R3), and
+      // adding the two together:
+      //    lwz reg1,var[TC](2)
+      //    bla .__get_tpointer
+      //    add reg2, reg1, r3
+      TLSReg = DAG.getNode(PPCISD::GET_TPOINTER, dl, PtrVT);
+    return DAG.getNode(PPCISD::ADD_TLS, dl, PtrVT, TLSReg, VariableOffset);
   }
 
   // The Local-Exec and General-Dynamic TLS models are currently the only

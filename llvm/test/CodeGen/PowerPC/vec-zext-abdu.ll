@@ -20,17 +20,11 @@ define <12 x i8> @zext_abdu(<12 x i8> %a, <12 x i8> %b) {
 ; CHECK-NEXT:    vperm 1, 4, 3, 1
 ; CHECK-NEXT:    vperm 2, 4, 2, 7
 ; CHECK-NEXT:    vperm 3, 4, 3, 7
-; CHECK-NEXT:    xvnegsp 36, 38
-; CHECK-NEXT:    xvnegsp 35, 35
-; CHECK-NEXT:    xvnegsp 34, 34
-; CHECK-NEXT:    vabsduw 2, 2, 3
-; CHECK-NEXT:    xvnegsp 35, 33
-; CHECK-NEXT:    vabsduw 3, 4, 3
-; CHECK-NEXT:    xvnegsp 36, 37
-; CHECK-NEXT:    xvnegsp 37, 32
-; CHECK-NEXT:    vpkuwum 2, 2, 2
-; CHECK-NEXT:    vabsduw 4, 5, 4
+; CHECK-NEXT:    vabsduw 4, 5, 0
+; CHECK-NEXT:    vabsduw 2, 3, 2
+; CHECK-NEXT:    vabsduw 3, 1, 6
 ; CHECK-NEXT:    vpkuwum 3, 4, 3
+; CHECK-NEXT:    vpkuwum 2, 2, 2
 ; CHECK-NEXT:    vpkuhum 2, 2, 3
 ; CHECK-NEXT:    blr
 entry:

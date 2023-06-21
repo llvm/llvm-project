@@ -289,7 +289,9 @@ __cpp_lib_within_lifetime                               202306L <type_traits>
 # define __cpp_lib_make_from_tuple                      201606L
 # define __cpp_lib_map_try_emplace                      201411L
 // # define __cpp_lib_math_special_functions               201603L
-# define __cpp_lib_memory_resource                      201603L
+# if !defined(_LIBCPP_AVAILABILITY_HAS_NO_PMR)
+#   define __cpp_lib_memory_resource                    201603L
+# endif
 # define __cpp_lib_node_extract                         201606L
 # define __cpp_lib_nonmember_container_access           201411L
 # define __cpp_lib_not_fn                               201603L
@@ -376,7 +378,9 @@ __cpp_lib_within_lifetime                               202306L <type_traits>
 # define __cpp_lib_list_remove_return_type              201806L
 # define __cpp_lib_math_constants                       201907L
 # define __cpp_lib_move_iterator_concept                202207L
-# define __cpp_lib_polymorphic_allocator                201902L
+# if !defined(_LIBCPP_AVAILABILITY_HAS_NO_PMR)
+#   define __cpp_lib_polymorphic_allocator              201902L
+# endif
 # define __cpp_lib_ranges                               202106L
 # define __cpp_lib_remove_cvref                         201711L
 # if !defined(_LIBCPP_HAS_NO_THREADS) && !defined(_LIBCPP_AVAILABILITY_HAS_NO_SYNC)
