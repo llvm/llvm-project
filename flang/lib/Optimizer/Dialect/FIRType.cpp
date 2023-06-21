@@ -508,6 +508,9 @@ std::string getTypeAsString(mlir::Type ty, const fir::KindMapping &kindMap,
         llvm::report_fatal_error("unsupported type");
       }
       break;
+    } else if (mlir::isa<mlir::NoneType>(ty)) {
+      name << "none";
+      break;
     } else if (auto charTy = mlir::dyn_cast_or_null<fir::CharacterType>(ty)) {
       name << 'c' << kindMap.getCharacterBitsize(charTy.getFKind());
       if (charTy.getLen() != fir::CharacterType::singleton())
@@ -520,8 +523,20 @@ std::string getTypeAsString(mlir::Type ty, const fir::KindMapping &kindMap,
     } else if (auto refTy = mlir::dyn_cast_or_null<fir::ReferenceType>(ty)) {
       name << "ref_";
       ty = refTy.getEleTy();
+    } else if (auto ptrTy = mlir::dyn_cast_or_null<fir::PointerType>(ty)) {
+      name << "ptr_";
+      ty = ptrTy.getEleTy();
+    } else if (auto heapTy = mlir::dyn_cast_or_null<fir::HeapType>(ty)) {
+      name << "heap_";
+      ty = heapTy.getEleTy();
+    } else if (auto classTy = mlir::dyn_cast_or_null<fir::ClassType>(ty)) {
+      name << "class_";
+      ty = classTy.getEleTy();
+    } else if (auto boxTy = mlir::dyn_cast_or_null<fir::BoxType>(ty)) {
+      name << "box_";
+      ty = boxTy.getEleTy();
     } else {
-      // TODO: add support for RecordType/BaseBoxType
+      // TODO: add support for RecordType
       llvm::report_fatal_error("unsupported type");
     }
   }
