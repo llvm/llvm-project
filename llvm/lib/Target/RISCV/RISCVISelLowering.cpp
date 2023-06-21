@@ -2965,13 +2965,14 @@ static SDValue lowerBUILD_VECTOR(SDValue Op, SelectionDAG &DAG,
         return SDValue();
       // Now we can create our integer vector type. Note that it may be larger
       // than the resulting mask type: v4i1 would use v1i8 as its integer type.
+      unsigned IntegerViaVecElts = divideCeil(NumElts, NumViaIntegerBits);
       MVT IntegerViaVecVT =
           MVT::getVectorVT(MVT::getIntegerVT(NumViaIntegerBits),
-                           divideCeil(NumElts, NumViaIntegerBits));
+                           IntegerViaVecElts);
 
       uint64_t Bits = 0;
       unsigned BitPos = 0, IntegerEltIdx = 0;
-      SDValue Vec = DAG.getUNDEF(IntegerViaVecVT);
+      SmallVector<SDValue, 8> Elts(IntegerViaVecElts);
 
       for (unsigned I = 0; I < NumElts;) {
         SDValue V = Op.getOperand(I);
@@ -2986,13 +2987,14 @@ static SDValue lowerBUILD_VECTOR(SDValue Op, SelectionDAG &DAG,
           if (NumViaIntegerBits <= 32)
             Bits = SignExtend64<32>(Bits);
           SDValue Elt = DAG.getConstant(Bits, DL, XLenVT);
-          Vec = DAG.getNode(ISD::INSERT_VECTOR_ELT, DL, IntegerViaVecVT, Vec,
-                            Elt, DAG.getConstant(IntegerEltIdx, DL, XLenVT));
+          Elts[IntegerEltIdx] = Elt;
           Bits = 0;
           BitPos = 0;
           IntegerEltIdx++;
         }
       }
+
+      SDValue Vec = DAG.getBuildVector(IntegerViaVecVT, DL, Elts);
 
       if (NumElts < NumViaIntegerBits) {
         // If we're producing a smaller vector than our minimum legal integer
