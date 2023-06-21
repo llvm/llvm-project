@@ -478,7 +478,10 @@ TEST(SanitizerCommon, SizeClassAllocator32CompactGetBlockBegin) {
 struct TestMapUnmapCallback {
   static int map_count, map_secondary_count, unmap_count;
   void OnMap(uptr p, uptr size) const { map_count++; }
-  void OnMapSecondary(uptr p, uptr size) const { map_secondary_count++; }
+  void OnMapSecondary(uptr p, uptr size, uptr user_begin,
+                      uptr user_size) const {
+    map_secondary_count++;
+  }
   void OnUnmap(uptr p, uptr size) const { unmap_count++; }
 
   static void Reset() { map_count = map_secondary_count = unmap_count = 0; }

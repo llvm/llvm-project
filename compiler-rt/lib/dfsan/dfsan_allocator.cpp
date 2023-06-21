@@ -30,7 +30,10 @@ struct Metadata {
 
 struct DFsanMapUnmapCallback {
   void OnMap(uptr p, uptr size) const { dfsan_set_label(0, (void *)p, size); }
-  void OnMapSecondary(uptr p, uptr size) const { OnMap(p, size); }
+  void OnMapSecondary(uptr p, uptr size, uptr user_begin,
+                      uptr user_size) const {
+    OnMap(p, size);
+  }
   void OnUnmap(uptr p, uptr size) const { dfsan_set_label(0, (void *)p, size); }
 };
 

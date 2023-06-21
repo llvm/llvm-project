@@ -64,7 +64,8 @@ inline void RandomShuffle(T *a, u32 n, u32 *rand_state) {
 
 struct NoOpMapUnmapCallback {
   void OnMap(uptr p, uptr size) const {}
-  void OnMapSecondary(uptr p, uptr size) const {}
+  void OnMapSecondary(uptr p, uptr size, uptr user_begin,
+                      uptr user_size) const {}
   void OnUnmap(uptr p, uptr size) const {}
 };
 
