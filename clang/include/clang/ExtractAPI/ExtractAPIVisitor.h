@@ -125,6 +125,15 @@ static void modifyRecords(const T &Records, const StringRef &Name) {
   }
 }
 
+template <typename T>
+static bool isExternalCategory(const T &Records, const StringRef &Name) {
+  for (const auto &Record : Records) {
+    if (Name == Record.second.get()->Name)
+      return false;
+  }
+  return true;
+}
+
 template <typename Derived>
 bool ExtractAPIVisitorBase<Derived>::VisitVarDecl(const VarDecl *Decl) {
   // skip function parameters.
@@ -484,13 +493,16 @@ bool ExtractAPIVisitorBase<Derived>::VisitObjCCategoryDecl(
   SymbolReference Interface(InterfaceDecl->getName(),
                             API.recordUSR(InterfaceDecl));
 
-  if (isInSystemHeader(InterfaceDecl))
+  bool IsFromExternalModule =
+      isExternalCategory(API.getObjCInterfaces(), InterfaceDecl->getName());
+
+  if (IsFromExternalModule)
     API.addObjCCategoryModule(InterfaceDecl->getName(),
                               API.recordUSR(InterfaceDecl));
 
   ObjCCategoryRecord *ObjCCategoryRecord = API.addObjCCategory(
       Name, USR, Loc, AvailabilitySet(Decl), Comment, Declaration, SubHeading,
-      Interface, isInSystemHeader(Decl), isInSystemHeader(InterfaceDecl));
+      Interface, isInSystemHeader(Decl), IsFromExternalModule);
 
   getDerivedExtractAPIVisitor().recordObjCMethods(ObjCCategoryRecord,
                                                   Decl->methods());
