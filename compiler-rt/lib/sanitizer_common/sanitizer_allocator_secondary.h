@@ -99,7 +99,7 @@ class LargeMmapAllocator {
     if (!map_beg)
       return nullptr;
     CHECK(IsAligned(map_beg, page_size_));
-    MapUnmapCallback().OnMap(map_beg, map_size);
+    MapUnmapCallback().OnMapSecondary(map_beg, map_size);
     uptr map_end = map_beg + map_size;
     uptr res = map_beg + page_size_;
     if (res & (alignment - 1))  // Align.
