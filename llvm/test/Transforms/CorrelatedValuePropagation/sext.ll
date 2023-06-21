@@ -133,3 +133,34 @@ bb:
 exit:
   ret void
 }
+
+define i64 @may_including_undef(i1 %c.1, i1 %c.2) {
+; CHECK-LABEL: @may_including_undef(
+; CHECK-NEXT:    br i1 [[C_1:%.*]], label [[TRUE_1:%.*]], label [[FALSE:%.*]]
+; CHECK:       true.1:
+; CHECK-NEXT:    br i1 [[C_2:%.*]], label [[TRUE_2:%.*]], label [[EXIT:%.*]]
+; CHECK:       true.2:
+; CHECK-NEXT:    br label [[EXIT]]
+; CHECK:       false:
+; CHECK-NEXT:    br label [[EXIT]]
+; CHECK:       exit:
+; CHECK-NEXT:    [[P:%.*]] = phi i32 [ 0, [[TRUE_1]] ], [ 1, [[TRUE_2]] ], [ undef, [[FALSE]] ]
+; CHECK-NEXT:    [[EXT:%.*]] = sext i32 [[P]] to i64
+; CHECK-NEXT:    ret i64 [[EXT]]
+;
+  br i1 %c.1, label %true.1, label %false
+
+true.1:
+  br i1 %c.2, label %true.2, label %exit
+
+true.2:
+  br label %exit
+
+false:
+  br label %exit
+
+exit:
+  %p = phi i32 [ 0, %true.1 ], [ 1, %true.2], [ undef, %false ]
+  %ext = sext i32 %p to i64
+  ret i64 %ext
+}
