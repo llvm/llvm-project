@@ -23106,6 +23106,13 @@ TEST_F(FormatTest, DisableRegions) {
                "int* j;\n"
                "// clang-format only\n"
                "int* k;");
+
+  verifyNoChange("// clang-format off\n"
+                 "#if 0\n"
+                 "        #if SHOULD_STAY_INDENTED\n"
+                 " #endif\n"
+                 "#endif\n"
+                 "// clang-format on");
 }
 
 TEST_F(FormatTest, DoNotCrashOnInvalidInput) {

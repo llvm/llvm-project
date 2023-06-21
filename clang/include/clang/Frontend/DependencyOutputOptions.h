@@ -76,9 +76,6 @@ public:
   /// target.
   std::vector<std::pair<std::string, ExtraDepKind>> ExtraDeps;
 
-  /// In /showIncludes mode, pretend the main TU is a header with this name.
-  std::string ShowIncludesPretendHeader;
-
   /// The file to write GraphViz-formatted header dependencies to.
   std::string DOTOutputFile;
 

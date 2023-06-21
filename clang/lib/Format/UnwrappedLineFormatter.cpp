@@ -1411,8 +1411,16 @@ unsigned UnwrappedLineFormatter::format(
       NextLine = Joiner.getNextMergedLine(DryRun, IndentTracker);
       RangeMinLevel = UINT_MAX;
     }
-    if (!DryRun)
-      markFinalized(TheLine.First);
+    if (!DryRun) {
+      auto *Tok = TheLine.First;
+      if (Tok->is(tok::hash) && !Tok->Previous && Tok->Next &&
+          Tok->Next->isOneOf(tok::pp_if, tok::pp_ifdef, tok::pp_ifndef,
+                             tok::pp_elif, tok::pp_elifdef, tok::pp_elifndef,
+                             tok::pp_else, tok::pp_endif)) {
+        Tok = Tok->Next;
+      }
+      markFinalized(Tok);
+    }
   }
   PenaltyCache[CacheKey] = Penalty;
   return Penalty;
