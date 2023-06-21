@@ -1171,6 +1171,7 @@ void PyOperationBase::writeBytecode(const py::object &fileObject,
   mlirBytecodeWriterConfigDesiredEmitVersion(config, *bytecodeVersion);
   MlirLogicalResult res = mlirOperationWriteBytecodeWithConfig(
       operation, config, accum.getCallback(), accum.getUserData());
+  mlirBytecodeWriterConfigDestroy(config);
   if (mlirLogicalResultIsFailure(res))
     throw py::value_error((Twine("Unable to honor desired bytecode version ") +
                            Twine(*bytecodeVersion))
