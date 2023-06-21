@@ -107,15 +107,16 @@ static Value *mergeDistinctValues(QualType Type, Value &Val1,
     // if (o.has_value())
     //   x = o.value();
     // ```
-    auto *Expr1 = cast<BoolValue>(&Val1);
-    auto *Expr2 = cast<BoolValue>(&Val2);
-    auto &MergedVal = MergedEnv.makeAtomicBoolValue();
-    MergedEnv.addToFlowCondition(MergedEnv.makeOr(
-        MergedEnv.makeAnd(Env1.getFlowConditionToken(),
-                          MergedEnv.makeIff(MergedVal, *Expr1)),
-        MergedEnv.makeAnd(Env2.getFlowConditionToken(),
-                          MergedEnv.makeIff(MergedVal, *Expr2))));
-    return &MergedVal;
+    auto &Expr1 = cast<BoolValue>(Val1).formula();
+    auto &Expr2 = cast<BoolValue>(Val2).formula();
+    auto &A = MergedEnv.arena();
+    auto &MergedVal = A.makeAtomRef(A.makeAtom());
+    MergedEnv.addToFlowCondition(
+        A.makeOr(A.makeAnd(A.makeAtomRef(Env1.getFlowConditionToken()),
+                           A.makeEquals(MergedVal, Expr1)),
+                 A.makeAnd(A.makeAtomRef(Env2.getFlowConditionToken()),
+                           A.makeEquals(MergedVal, Expr2))));
+    return &A.makeBoolValue(MergedVal);
   }
 
   // FIXME: Consider destroying `MergedValue` immediately if `ValueModel::merge`
@@ -269,11 +270,11 @@ void Environment::initFieldsGlobalsAndFuncs(const FunctionDecl *FuncDecl) {
 
 Environment::Environment(DataflowAnalysisContext &DACtx)
     : DACtx(&DACtx),
-      FlowConditionToken(&DACtx.arena().makeFlowConditionToken()) {}
+      FlowConditionToken(DACtx.arena().makeFlowConditionToken()) {}
 
 Environment Environment::fork() const {
   Environment Copy(*this);
-  Copy.FlowConditionToken = &DACtx->forkFlowCondition(*FlowConditionToken);
+  Copy.FlowConditionToken = DACtx->forkFlowCondition(FlowConditionToken);
   return Copy;
 }
 
@@ -587,8 +588,8 @@ Environment Environment::join(const Environment &EnvA, const Environment &EnvB,
 
   // FIXME: update join to detect backedges and simplify the flow condition
   // accordingly.
-  JoinedEnv.FlowConditionToken = &EnvA.DACtx->joinFlowConditions(
-      *EnvA.FlowConditionToken, *EnvB.FlowConditionToken);
+  JoinedEnv.FlowConditionToken = EnvA.DACtx->joinFlowConditions(
+      EnvA.FlowConditionToken, EnvB.FlowConditionToken);
 
   for (auto &Entry : EnvA.LocToVal) {
     const StorageLocation *Loc = Entry.first;
@@ -819,7 +820,7 @@ Value *Environment::createValueUnlessSelfReferential(
     // with integers, and so distinguishing them serves no purpose, but could
     // prevent convergence.
     CreatedValuesCount++;
-    return &DACtx->arena().create<IntegerValue>();
+    return &arena().create<IntegerValue>();
   }
 
   if (Type->isReferenceType() || Type->isPointerType()) {
@@ -837,9 +838,9 @@ Value *Environment::createValueUnlessSelfReferential(
     }
 
     if (Type->isReferenceType())
-      return &DACtx->arena().create<ReferenceValue>(PointeeLoc);
+      return &arena().create<ReferenceValue>(PointeeLoc);
     else
-      return &DACtx->arena().create<PointerValue>(PointeeLoc);
+      return &arena().create<PointerValue>(PointeeLoc);
   }
 
   if (Type->isRecordType()) {
@@ -859,7 +860,7 @@ Value *Environment::createValueUnlessSelfReferential(
       Visited.erase(FieldType.getCanonicalType());
     }
 
-    return &DACtx->arena().create<StructValue>(std::move(FieldValues));
+    return &arena().create<StructValue>(std::move(FieldValues));
   }
 
   return nullptr;
@@ -884,12 +885,18 @@ const StorageLocation &Environment::skip(const StorageLocation &Loc,
   return skip(*const_cast<StorageLocation *>(&Loc), SP);
 }
 
+void Environment::addToFlowCondition(const Formula &Val) {
+  DACtx->addFlowConditionConstraint(FlowConditionToken, Val);
+}
 void Environment::addToFlowCondition(BoolValue &Val) {
-  DACtx->addFlowConditionConstraint(*FlowConditionToken, Val);
+  addToFlowCondition(Val.formula());
 }
 
+bool Environment::flowConditionImplies(const Formula &Val) const {
+  return DACtx->flowConditionImplies(FlowConditionToken, Val);
+}
 bool Environment::flowConditionImplies(BoolValue &Val) const {
-  return DACtx->flowConditionImplies(*FlowConditionToken, Val);
+  return flowConditionImplies(Val.formula());
 }
 
 void Environment::dump(raw_ostream &OS) const {
@@ -909,7 +916,7 @@ void Environment::dump(raw_ostream &OS) const {
   }
 
   OS << "FlowConditionToken:\n";
-  DACtx->dumpFlowCondition(*FlowConditionToken, OS);
+  DACtx->dumpFlowCondition(FlowConditionToken, OS);
 }
 
 void Environment::dump() const {
