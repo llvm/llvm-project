@@ -8,6 +8,7 @@
 
 #include "CommandObjectRegister.h"
 #include "lldb/Core/Debugger.h"
+#include "lldb/Core/DumpRegisterInfo.h"
 #include "lldb/Core/DumpRegisterValue.h"
 #include "lldb/Host/OptionParser.h"
 #include "lldb/Interpreter/CommandOptionArgumentTable.h"
@@ -398,16 +399,82 @@ protected:
   }
 };
 
+// "register info"
+class CommandObjectRegisterInfo : public CommandObjectParsed {
+public:
+  CommandObjectRegisterInfo(CommandInterpreter &interpreter)
+      : CommandObjectParsed(interpreter, "register info",
+                            "View information about a register.", nullptr,
+                            eCommandRequiresRegContext |
+                                eCommandProcessMustBeLaunched) {
+    SetHelpLong(R"(
+Name             The name lldb uses for the register, optionally with an alias.
+Size             The size of the register in bytes and again in bits.
+Invalidates (*)  The registers that would be changed if you wrote this
+                 register. For example, writing to a narrower alias of a wider
+                 register would change the value of the wider register.
+Read from   (*)  The registers that the value of this register is constructed
+                 from. For example, a narrower alias of a wider register will be
+                 read from the wider register.
+In sets     (*)  The register sets that contain this register. For example the
+                 PC will be in the "General Purpose Register" set.
+
+Fields marked with (*) may not always be present. Some information may be
+different for the same register when connected to different debug servers.)");
+
+    CommandArgumentData register_arg;
+    register_arg.arg_type = eArgTypeRegisterName;
+    register_arg.arg_repetition = eArgRepeatPlain;
+
+    CommandArgumentEntry arg1;
+    arg1.push_back(register_arg);
+    m_arguments.push_back(arg1);
+  }
+
+  ~CommandObjectRegisterInfo() override = default;
+
+  void
+  HandleArgumentCompletion(CompletionRequest &request,
+                           OptionElementVector &opt_element_vector) override {
+    if (!m_exe_ctx.HasProcessScope() || request.GetCursorIndex() != 0)
+      return;
+    CommandCompletions::InvokeCommonCompletionCallbacks(
+        GetCommandInterpreter(), lldb::eRegisterCompletion, request, nullptr);
+  }
+
+protected:
+  bool DoExecute(Args &command, CommandReturnObject &result) override {
+    if (command.GetArgumentCount() != 1) {
+      result.AppendError("register info takes exactly 1 argument: <reg-name>");
+      return result.Succeeded();
+    }
+
+    llvm::StringRef reg_name = command[0].ref();
+    RegisterContext *reg_ctx = m_exe_ctx.GetRegisterContext();
+    const RegisterInfo *reg_info = reg_ctx->GetRegisterInfoByName(reg_name);
+    if (reg_info) {
+      DumpRegisterInfo(result.GetOutputStream(), *reg_ctx, *reg_info);
+      result.SetStatus(eReturnStatusSuccessFinishResult);
+    } else
+      result.AppendErrorWithFormat("No register found with name '%s'.\n",
+                                   reg_name.str().c_str());
+
+    return result.Succeeded();
+  }
+};
+
 // CommandObjectRegister constructor
 CommandObjectRegister::CommandObjectRegister(CommandInterpreter &interpreter)
     : CommandObjectMultiword(interpreter, "register",
                              "Commands to access registers for the current "
                              "thread and stack frame.",
-                             "register [read|write] ...") {
+                             "register [read|write|info] ...") {
   LoadSubCommand("read",
                  CommandObjectSP(new CommandObjectRegisterRead(interpreter)));
   LoadSubCommand("write",
                  CommandObjectSP(new CommandObjectRegisterWrite(interpreter)));
+  LoadSubCommand("info",
+                 CommandObjectSP(new CommandObjectRegisterInfo(interpreter)));
 }
 
 CommandObjectRegister::~CommandObjectRegister() = default;

@@ -137,3 +137,121 @@ TEST(RegisterFieldsTest, ReverseFieldOrder) {
                      make_field(28, 28)});
   ASSERT_EQ(0x00000005ULL, rf3.ReverseFieldOrder(0xA0000000));
 }
+
+TEST(RegisterFlagsTest, AsTable) {
+  // Anonymous fields are shown with an empty name cell,
+  // whether they are known up front or added during construction.
+  RegisterFlags anon_field("", 4, {make_field(0, 31)});
+  ASSERT_EQ("| 31-0 |\n"
+            "|------|\n"
+            "|      |",
+            anon_field.AsTable(100));
+
+  RegisterFlags anon_with_pad("", 4, {make_field(16, 31)});
+  ASSERT_EQ("| 31-16 | 15-0 |\n"
+            "|-------|------|\n"
+            "|       |      |",
+            anon_with_pad.AsTable(100));
+
+  // Use the wider of position and name to set the column width.
+  RegisterFlags name_wider("", 4, {RegisterFlags::Field("aardvark", 0, 31)});
+  ASSERT_EQ("|   31-0   |\n"
+            "|----------|\n"
+            "| aardvark |",
+            name_wider.AsTable(100));
+  // When the padding is an odd number, put the remaining 1 on the right.
+  RegisterFlags pos_wider("", 4, {RegisterFlags::Field("?", 0, 31)});
+  ASSERT_EQ("| 31-0 |\n"
+            "|------|\n"
+            "|  ?   |",
+            pos_wider.AsTable(100));
+
+  // Single bit fields don't need to show start and end, just one of them.
+  RegisterFlags single_bit("", 4, {make_field(31, 31)});
+  ASSERT_EQ("| 31 | 30-0 |\n"
+            "|----|------|\n"
+            "|    |      |",
+            single_bit.AsTable(100));
+
+  // Columns are printed horizontally if max width allows.
+  RegisterFlags many_fields("", 4,
+                            {RegisterFlags::Field("cat", 28, 31),
+                             RegisterFlags::Field("pigeon", 20, 23),
+                             RegisterFlags::Field("wolf", 12, 12),
+                             RegisterFlags::Field("x", 0, 4)});
+  ASSERT_EQ("| 31-28 | 27-24 | 23-20  | 19-13 |  12  | 11-5 | 4-0 |\n"
+            "|-------|-------|--------|-------|------|------|-----|\n"
+            "|  cat  |       | pigeon |       | wolf |      |  x  |",
+            many_fields.AsTable(100));
+
+  // max_width tells us when we need to split into further tables.
+  // Here no split is needed.
+  RegisterFlags exact_max_single_col("", 4, {RegisterFlags::Field("?", 0, 31)});
+  ASSERT_EQ("| 31-0 |\n"
+            "|------|\n"
+            "|  ?   |",
+            exact_max_single_col.AsTable(9));
+  RegisterFlags exact_max_two_col(
+      "", 4,
+      {RegisterFlags::Field("?", 16, 31), RegisterFlags::Field("#", 0, 15)});
+  ASSERT_EQ("| 31-16 | 15-0 |\n"
+            "|-------|------|\n"
+            "|   ?   |  #   |",
+            exact_max_two_col.AsTable(16));
+
+  // If max is less than a single column, just print the single column. The user
+  // will have to put up with some wrapping in this niche case.
+  RegisterFlags zero_max_single_col("", 4, {RegisterFlags::Field("?", 0, 31)});
+  ASSERT_EQ("| 31-0 |\n"
+            "|------|\n"
+            "|  ?   |",
+            zero_max_single_col.AsTable(0));
+  // Same logic for any following columns. Effectively making a "vertical"
+  // table, just with more grid lines.
+  RegisterFlags zero_max_two_col(
+      "", 4,
+      {RegisterFlags::Field("?", 16, 31), RegisterFlags::Field("#", 0, 15)});
+  ASSERT_EQ("| 31-16 |\n"
+            "|-------|\n"
+            "|   ?   |\n"
+            "\n"
+            "| 15-0 |\n"
+            "|------|\n"
+            "|  #   |",
+            zero_max_two_col.AsTable(0));
+
+  RegisterFlags max_less_than_single_col("", 4,
+                                         {RegisterFlags::Field("?", 0, 31)});
+  ASSERT_EQ("| 31-0 |\n"
+            "|------|\n"
+            "|  ?   |",
+            max_less_than_single_col.AsTable(3));
+  RegisterFlags max_less_than_two_col(
+      "", 4,
+      {RegisterFlags::Field("?", 16, 31), RegisterFlags::Field("#", 0, 15)});
+  ASSERT_EQ("| 31-16 |\n"
+            "|-------|\n"
+            "|   ?   |\n"
+            "\n"
+            "| 15-0 |\n"
+            "|------|\n"
+            "|  #   |",
+            max_less_than_two_col.AsTable(9));
+  RegisterFlags max_many_columns(
+      "", 4,
+      {RegisterFlags::Field("A", 24, 31), RegisterFlags::Field("B", 16, 23),
+       RegisterFlags::Field("C", 8, 15),
+       RegisterFlags::Field("really long name", 0, 7)});
+  ASSERT_EQ("| 31-24 | 23-16 |\n"
+            "|-------|-------|\n"
+            "|   A   |   B   |\n"
+            "\n"
+            "| 15-8 |\n"
+            "|------|\n"
+            "|  C   |\n"
+            "\n"
+            "|       7-0        |\n"
+            "|------------------|\n"
+            "| really long name |",
+            max_many_columns.AsTable(23));
+}
