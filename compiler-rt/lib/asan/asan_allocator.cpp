@@ -249,7 +249,8 @@ void AsanMapUnmapCallback::OnMap(uptr p, uptr size) const {
   thread_stats.mmaped += size;
 }
 
-void AsanMapUnmapCallback::OnMapSecondary(uptr p, uptr size) const {
+void AsanMapUnmapCallback::OnMapSecondary(uptr p, uptr size, uptr user_begin,
+                                          uptr user_size) const {
   PoisonShadow(p, size, kAsanHeapLeftRedzoneMagic);
   // Statistics.
   AsanStats &thread_stats = GetCurrentThreadStats();
