@@ -1211,7 +1211,8 @@ static Value genExp(CodegenEnv &env, RewriterBase &rewriter, ExprId e,
     if (ee &&
         (kind == TensorExp::Kind::kUnary || kind == TensorExp::Kind::kBinary ||
          kind == TensorExp::Kind::kBinaryBranch ||
-         kind == TensorExp::Kind::kReduce || kind == TensorExp::Kind::kSelect)) {
+         kind == TensorExp::Kind::kReduce ||
+         kind == TensorExp::Kind::kSelect)) {
       OpBuilder::InsertionGuard guard(rewriter);
       ee = relinkBranch(env, rewriter, ee.getParentBlock(), ee, ldx);
     }
