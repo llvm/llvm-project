@@ -39,6 +39,23 @@ MlirContext mlirContextCreate() {
   return wrap(context);
 }
 
+static inline MLIRContext::Threading toThreadingEnum(bool threadingEnabled) {
+  return threadingEnabled ? MLIRContext::Threading::ENABLED
+                          : MLIRContext::Threading::DISABLED;
+}
+
+MlirContext mlirContextCreateWithThreading(bool threadingEnabled) {
+  auto *context = new MLIRContext(toThreadingEnum(threadingEnabled));
+  return wrap(context);
+}
+
+MlirContext mlirContextCreateWithRegistry(MlirDialectRegistry registry,
+                                          bool threadingEnabled) {
+  auto *context =
+      new MLIRContext(*unwrap(registry), toThreadingEnum(threadingEnabled));
+  return wrap(context);
+}
+
 bool mlirContextEqual(MlirContext ctx1, MlirContext ctx2) {
   return unwrap(ctx1) == unwrap(ctx2);
 }
@@ -82,6 +99,11 @@ void mlirContextEnableMultithreading(MlirContext context, bool enable) {
 
 void mlirContextLoadAllAvailableDialects(MlirContext context) {
   unwrap(context)->loadAllAvailableDialects();
+}
+
+void mlirContextSetThreadPool(MlirContext context,
+                              MlirLlvmThreadPool threadPool) {
+  unwrap(context)->setThreadPool(*unwrap(threadPool));
 }
 
 //===----------------------------------------------------------------------===//
