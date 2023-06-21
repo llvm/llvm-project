@@ -223,6 +223,14 @@ class OpenACC_DataEntryOp<string mnemonic, string clause, list<Trait> traits = [
 }
 
 //===----------------------------------------------------------------------===//
+// 2.5.13 private clause
+//===----------------------------------------------------------------------===//
+def OpenACC_PrivateOp : OpenACC_DataEntryOp<"private",
+    "mlir::acc::DataClause::acc_private"> {
+  let summary = "Represents private semantics for acc private clause.";
+}
+
+//===----------------------------------------------------------------------===//
 // 2.7.4 deviceptr clause
 //===----------------------------------------------------------------------===//
 def OpenACC_DevicePtrOp : OpenACC_DataEntryOp<"deviceptr",
