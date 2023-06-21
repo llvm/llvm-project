@@ -58,16 +58,16 @@
 // CHECK-NOT: __ARM_FEATURE_SVE_BITS 1024
 // CHECK-NOT: __ARM_FEATURE_SVE_BITS 2048
 
-// RUN: %clang -target aarch64-arm-eabi -march=armv8-r -x c -E -dM %s -o - | FileCheck %s -check-prefix CHECK-R-PROFILE
+// RUN: %clang -target aarch64-none-elf -march=armv8-r -x c -E -dM %s -o - | FileCheck %s -check-prefix CHECK-R-PROFILE
 // RUN: %clang -target arm64-none-linux-gnu -march=armv8-r -x c -E -dM %s -o - | FileCheck %s -check-prefix CHECK-R-PROFILE
 // CHECK-R-PROFILE: __ARM_ARCH_PROFILE 'R'
 
-// RUN: %clang -target aarch64-arm-eabi -x c -E -dM %s -o - | FileCheck %s -check-prefix CHECK-A-PROFILE
-// RUN: %clang -target aarch64-arm-eabi -march=armv8-a -x c -E -dM %s -o - | FileCheck %s -check-prefix CHECK-A-PROFILE
+// RUN: %clang -target aarch64-none-elf -x c -E -dM %s -o - | FileCheck %s -check-prefix CHECK-A-PROFILE
+// RUN: %clang -target aarch64-none-elf -march=armv8-a -x c -E -dM %s -o - | FileCheck %s -check-prefix CHECK-A-PROFILE
 // RUN: %clang -target arm64-none-linux-gnu -march=armv8-a -x c -E -dM %s -o - | FileCheck %s -check-prefix CHECK-A-PROFILE
 // CHECK-A-PROFILE: __ARM_ARCH_PROFILE 'A'
 
-// RUN: %clang -target aarch64_be-eabi -x c -E -dM %s -o - | FileCheck %s -check-prefix CHECK-BIGENDIAN
+// RUN: %clang -target aarch64_be-none-elf -x c -E -dM %s -o - | FileCheck %s -check-prefix CHECK-BIGENDIAN
 // CHECK-BIGENDIAN: __ARM_BIG_ENDIAN 1
 
 // RUN: %clang -target aarch64-none-linux-gnu -march=armv8-a+crypto -x c -E -dM %s -o - | FileCheck --check-prefix=CHECK-FEAT-CRYPTO %s
@@ -135,8 +135,8 @@
 // CHECK-NEON: __ARM_NEON 1
 // CHECK-NEON: __ARM_NEON_FP 0xE
 
-// RUN: %clang -target aarch64-none-eabi -march=armv8.1-a -x c -E -dM %s -o - | FileCheck --check-prefix=CHECK-QRDMX %s
-// RUN: %clang -target aarch64-none-eabi -march=armv8.2-a -x c -E -dM %s -o - | FileCheck --check-prefix=CHECK-QRDMX %s
+// RUN: %clang -target aarch64-none-elf -march=armv8.1-a -x c -E -dM %s -o - | FileCheck --check-prefix=CHECK-QRDMX %s
+// RUN: %clang -target aarch64-none-elf -march=armv8.2-a -x c -E -dM %s -o - | FileCheck --check-prefix=CHECK-QRDMX %s
 // CHECK-QRDMX: __ARM_FEATURE_QRDMX 1
 
 // RUN: %clang -target aarch64 -march=arm64 -### -c %s 2>&1 | FileCheck -check-prefix=CHECK-ARCH-NOT-ACCEPT %s
@@ -526,30 +526,30 @@
 // CHECK-BTI:         #define __ARM_FEATURE_BTI_DEFAULT 1
 
 // ================== Check Armv8.5-A random number generation extension.
-// RUN: %clang -target aarch64-arm-none-eabi -march=armv8.5-a+rng -x c -E -dM %s -o - 2>&1 | FileCheck -check-prefix=CHECK-RNG %s
-// RUN: %clang -target aarch64-arm-none-eabi -march=armv8.5-a -x c -E -dM %s -o - 2>&1 | FileCheck -check-prefix=CHECK-NO-RNG %s
+// RUN: %clang -target aarch64-none-elf -march=armv8.5-a+rng -x c -E -dM %s -o - 2>&1 | FileCheck -check-prefix=CHECK-RNG %s
+// RUN: %clang -target aarch64-none-elf -march=armv8.5-a -x c -E -dM %s -o - 2>&1 | FileCheck -check-prefix=CHECK-NO-RNG %s
 // CHECK-RNG: __ARM_FEATURE_RNG 1
 // CHECK-NO-RNG-NOT: __ARM_FEATURE_RNG 1
 
 // ================== Check BFloat16 Extensions.
-// RUN: %clang -target aarch64-arm-none-eabi -march=armv8.6-a+bf16 -x c -E -dM %s -o - 2>&1 | FileCheck -check-prefix=CHECK-BFLOAT %s
+// RUN: %clang -target aarch64-none-elf -march=armv8.6-a+bf16 -x c -E -dM %s -o - 2>&1 | FileCheck -check-prefix=CHECK-BFLOAT %s
 // CHECK-BFLOAT: __ARM_BF16_FORMAT_ALTERNATIVE 1
 // CHECK-BFLOAT: __ARM_FEATURE_BF16 1
 // CHECK-BFLOAT: __ARM_FEATURE_BF16_VECTOR_ARITHMETIC 1
 
 // ================== Check Armv8.7-A LS64 extension.
-// RUN: %clang -target aarch64-arm-none-eabi -march=armv8.7-a+ls64 -x c -E -dM %s -o - 2>&1 | FileCheck -check-prefix=CHECK-LS64 %s
-// RUN: %clang -target aarch64-arm-none-eabi -march=armv8.7-a      -x c -E -dM %s -o - 2>&1 | FileCheck -check-prefix=CHECK-NO-LS64 %s
+// RUN: %clang -target aarch64-none-elf -march=armv8.7-a+ls64 -x c -E -dM %s -o - 2>&1 | FileCheck -check-prefix=CHECK-LS64 %s
+// RUN: %clang -target aarch64-none-elf -march=armv8.7-a      -x c -E -dM %s -o - 2>&1 | FileCheck -check-prefix=CHECK-NO-LS64 %s
 // CHECK-LS64: __ARM_FEATURE_LS64 1
 // CHECK-NO-LS64-NOT: __ARM_FEATURE_LS64 1
 
 // ================== Check sve-vector-bits flag.
-// RUN: %clang -target aarch64-arm-none-eabi -march=armv8-a+sve -msve-vector-bits=128  -x c -E -dM %s -o - 2>&1 | FileCheck -check-prefix=CHECK-SVE-VECTOR-BITS -D#VBITS=128  %s
-// RUN: %clang -target aarch64-arm-none-eabi -march=armv8-a+sve -msve-vector-bits=256  -x c -E -dM %s -o - 2>&1 | FileCheck -check-prefix=CHECK-SVE-VECTOR-BITS -D#VBITS=256  %s
-// RUN: %clang -target aarch64-arm-none-eabi -march=armv8-a+sve -msve-vector-bits=512  -x c -E -dM %s -o - 2>&1 | FileCheck -check-prefix=CHECK-SVE-VECTOR-BITS -D#VBITS=512  %s
-// RUN: %clang -target aarch64-arm-none-eabi -march=armv8-a+sve -msve-vector-bits=1024 -x c -E -dM %s -o - 2>&1 | FileCheck -check-prefix=CHECK-SVE-VECTOR-BITS -D#VBITS=1024 %s
-// RUN: %clang -target aarch64-arm-none-eabi -march=armv8-a+sve -msve-vector-bits=2048 -x c -E -dM %s -o - 2>&1 | FileCheck -check-prefix=CHECK-SVE-VECTOR-BITS -D#VBITS=2048 %s
-// RUN: %clang -target aarch64-arm-none-eabi -march=armv8-a+sve -msve-vector-bits=512+ -x c -E -dM %s -o - 2>&1 | FileCheck -check-prefix=CHECK-NO-SVE-VECTOR-BITS %s
+// RUN: %clang -target aarch64-none-elf -march=armv8-a+sve -msve-vector-bits=128  -x c -E -dM %s -o - 2>&1 | FileCheck -check-prefix=CHECK-SVE-VECTOR-BITS -D#VBITS=128  %s
+// RUN: %clang -target aarch64-none-elf -march=armv8-a+sve -msve-vector-bits=256  -x c -E -dM %s -o - 2>&1 | FileCheck -check-prefix=CHECK-SVE-VECTOR-BITS -D#VBITS=256  %s
+// RUN: %clang -target aarch64-none-elf -march=armv8-a+sve -msve-vector-bits=512  -x c -E -dM %s -o - 2>&1 | FileCheck -check-prefix=CHECK-SVE-VECTOR-BITS -D#VBITS=512  %s
+// RUN: %clang -target aarch64-none-elf -march=armv8-a+sve -msve-vector-bits=1024 -x c -E -dM %s -o - 2>&1 | FileCheck -check-prefix=CHECK-SVE-VECTOR-BITS -D#VBITS=1024 %s
+// RUN: %clang -target aarch64-none-elf -march=armv8-a+sve -msve-vector-bits=2048 -x c -E -dM %s -o - 2>&1 | FileCheck -check-prefix=CHECK-SVE-VECTOR-BITS -D#VBITS=2048 %s
+// RUN: %clang -target aarch64-none-elf -march=armv8-a+sve -msve-vector-bits=512+ -x c -E -dM %s -o - 2>&1 | FileCheck -check-prefix=CHECK-NO-SVE-VECTOR-BITS %s
 // CHECK-SVE-VECTOR-BITS: __ARM_FEATURE_SVE_BITS [[#VBITS:]]
 // CHECK-NO-SVE-VECTOR-BITS-NOT: __ARM_FEATURE_SVE_BITS
 
@@ -561,43 +561,43 @@
 // CHECK-LSE: __ARM_FEATURE_ATOMICS 1
 
 // ================== Check Armv8.8-A/Armv9.3-A memcpy and memset acceleration instructions (MOPS)
-// RUN: %clang -target aarch64-arm-none-eabi -march=armv8.7-a             -x c -E -dM %s -o - | FileCheck --check-prefix=CHECK-NOMOPS %s
-// RUN: %clang -target aarch64-arm-none-eabi -march=armv8.7-a+mops        -x c -E -dM %s -o - | FileCheck --check-prefix=CHECK-MOPS   %s
-// RUN: %clang -target aarch64-arm-none-eabi -march=armv8.8-a             -x c -E -dM %s -o - | FileCheck --check-prefix=CHECK-MOPS   %s
-// RUN: %clang -target aarch64-arm-none-eabi -march=armv8.8-a+nomops      -x c -E -dM %s -o - | FileCheck --check-prefix=CHECK-NOMOPS %s
-// RUN: %clang -target aarch64-arm-none-eabi -march=armv8.8-a+nomops+mops -x c -E -dM %s -o - | FileCheck --check-prefix=CHECK-MOPS   %s
-// RUN: %clang -target aarch64-arm-none-eabi -march=armv8.8-a+mops        -x c -E -dM %s -o - | FileCheck --check-prefix=CHECK-MOPS   %s
-// RUN: %clang -target aarch64-arm-none-eabi -march=armv8.8-a+mops+nomops -x c -E -dM %s -o - | FileCheck --check-prefix=CHECK-NOMOPS %s
-// RUN: %clang -target aarch64-arm-none-eabi -march=armv9.2-a             -x c -E -dM %s -o - | FileCheck --check-prefix=CHECK-NOMOPS %s
-// RUN: %clang -target aarch64-arm-none-eabi -march=armv9.2-a+mops        -x c -E -dM %s -o - | FileCheck --check-prefix=CHECK-MOPS   %s
-// RUN: %clang -target aarch64-arm-none-eabi -march=armv9.3-a             -x c -E -dM %s -o - | FileCheck --check-prefix=CHECK-MOPS   %s
-// RUN: %clang -target aarch64-arm-none-eabi -march=armv9.3-a+nomops      -x c -E -dM %s -o - | FileCheck --check-prefix=CHECK-NOMOPS %s
-// RUN: %clang -target aarch64-arm-none-eabi -march=armv9.3-a+mops        -x c -E -dM %s -o - | FileCheck --check-prefix=CHECK-MOPS   %s
+// RUN: %clang -target aarch64-none-elf -march=armv8.7-a             -x c -E -dM %s -o - | FileCheck --check-prefix=CHECK-NOMOPS %s
+// RUN: %clang -target aarch64-none-elf -march=armv8.7-a+mops        -x c -E -dM %s -o - | FileCheck --check-prefix=CHECK-MOPS   %s
+// RUN: %clang -target aarch64-none-elf -march=armv8.8-a             -x c -E -dM %s -o - | FileCheck --check-prefix=CHECK-MOPS   %s
+// RUN: %clang -target aarch64-none-elf -march=armv8.8-a+nomops      -x c -E -dM %s -o - | FileCheck --check-prefix=CHECK-NOMOPS %s
+// RUN: %clang -target aarch64-none-elf -march=armv8.8-a+nomops+mops -x c -E -dM %s -o - | FileCheck --check-prefix=CHECK-MOPS   %s
+// RUN: %clang -target aarch64-none-elf -march=armv8.8-a+mops        -x c -E -dM %s -o - | FileCheck --check-prefix=CHECK-MOPS   %s
+// RUN: %clang -target aarch64-none-elf -march=armv8.8-a+mops+nomops -x c -E -dM %s -o - | FileCheck --check-prefix=CHECK-NOMOPS %s
+// RUN: %clang -target aarch64-none-elf -march=armv9.2-a             -x c -E -dM %s -o - | FileCheck --check-prefix=CHECK-NOMOPS %s
+// RUN: %clang -target aarch64-none-elf -march=armv9.2-a+mops        -x c -E -dM %s -o - | FileCheck --check-prefix=CHECK-MOPS   %s
+// RUN: %clang -target aarch64-none-elf -march=armv9.3-a             -x c -E -dM %s -o - | FileCheck --check-prefix=CHECK-MOPS   %s
+// RUN: %clang -target aarch64-none-elf -march=armv9.3-a+nomops      -x c -E -dM %s -o - | FileCheck --check-prefix=CHECK-NOMOPS %s
+// RUN: %clang -target aarch64-none-elf -march=armv9.3-a+mops        -x c -E -dM %s -o - | FileCheck --check-prefix=CHECK-MOPS   %s
 // Check that -target-feature -v9.3a doesn't enable dependant features
-// RUN: %clang -target aarch64-arm-none-eabi -Xclang -target-feature -Xclang -v9.3a  -x c -E -dM %s -o - | FileCheck --check-prefix=CHECK-NOMOPS   %s
+// RUN: %clang -target aarch64-none-elf -Xclang -target-feature -Xclang -v9.3a  -x c -E -dM %s -o - | FileCheck --check-prefix=CHECK-NOMOPS   %s
 // CHECK-MOPS: __ARM_FEATURE_MOPS 1
 // CHECK-NOMOPS-NOT: __ARM_FEATURE_MOPS 1
 
 // ================== Check Armv8.9-A/Armv9.4-A 128-bit System Registers (FEAT_SYSREG128)
-// RUN: %clang -target aarch64-arm-none-eabi -march=armv8.9-a      -x c -E -dM %s -o - | FileCheck --check-prefix=CHECK-NOSYS128 %s
-// RUN: %clang -target aarch64-arm-none-eabi -march=armv9.4-a      -x c -E -dM %s -o - | FileCheck --check-prefix=CHECK-NOSYS128 %s
-// RUN: %clang -target aarch64-arm-none-eabi -march=armv9.4-a+d128 -x c -E -dM %s -o - | FileCheck --check-prefix=CHECK-SYS128   %s
+// RUN: %clang -target aarch64-none-elf -march=armv8.9-a      -x c -E -dM %s -o - | FileCheck --check-prefix=CHECK-NOSYS128 %s
+// RUN: %clang -target aarch64-none-elf -march=armv9.4-a      -x c -E -dM %s -o - | FileCheck --check-prefix=CHECK-NOSYS128 %s
+// RUN: %clang -target aarch64-none-elf -march=armv9.4-a+d128 -x c -E -dM %s -o - | FileCheck --check-prefix=CHECK-SYS128   %s
 // CHECK-SYS128: __ARM_FEATURE_SYSREG128 1
 // CHECK-NOSYS128-NOT: __ARM_FEATURE_SYSREG128 1
 
 // ================== Check default macros for Armv8.1-A and later
-// RUN: %clang -target aarch64-arm-none-eabi -march=armv8.1-a -x c -E -dM %s -o - | FileCheck --check-prefixes=CHECK-V81-OR-LATER,CHECK-BEFORE-V83,CHECK-BEFORE-V85     %s
-// RUN: %clang -target aarch64-arm-none-eabi -march=armv8.2-a -x c -E -dM %s -o - | FileCheck --check-prefixes=CHECK-V81-OR-LATER,CHECK-BEFORE-V83,CHECK-BEFORE-V85     %s
-// RUN: %clang -target aarch64-arm-none-eabi -march=armv8.3-a -x c -E -dM %s -o - | FileCheck --check-prefixes=CHECK-V81-OR-LATER,CHECK-V83-OR-LATER,CHECK-BEFORE-V85   %s
-// RUN: %clang -target aarch64-arm-none-eabi -march=armv8.4-a -x c -E -dM %s -o - | FileCheck --check-prefixes=CHECK-V81-OR-LATER,CHECK-V83-OR-LATER,CHECK-BEFORE-V85   %s
-// RUN: %clang -target aarch64-arm-none-eabi -march=armv8.5-a -x c -E -dM %s -o - | FileCheck --check-prefixes=CHECK-V81-OR-LATER,CHECK-V83-OR-LATER,CHECK-V85-OR-LATER %s
-// RUN: %clang -target aarch64-arm-none-eabi -march=armv8.6-a -x c -E -dM %s -o - | FileCheck --check-prefixes=CHECK-V81-OR-LATER,CHECK-V83-OR-LATER,CHECK-V85-OR-LATER %s
-// RUN: %clang -target aarch64-arm-none-eabi -march=armv8.7-a -x c -E -dM %s -o - | FileCheck --check-prefixes=CHECK-V81-OR-LATER,CHECK-V83-OR-LATER,CHECK-V85-OR-LATER %s
-// RUN: %clang -target aarch64-arm-none-eabi -march=armv8.8-a -x c -E -dM %s -o - | FileCheck --check-prefixes=CHECK-V81-OR-LATER,CHECK-V83-OR-LATER,CHECK-V85-OR-LATER %s
-// RUN: %clang -target aarch64-arm-none-eabi -march=armv9-a   -x c -E -dM %s -o - | FileCheck --check-prefixes=CHECK-V81-OR-LATER,CHECK-V83-OR-LATER,CHECK-V85-OR-LATER %s
-// RUN: %clang -target aarch64-arm-none-eabi -march=armv9.1-a -x c -E -dM %s -o - | FileCheck --check-prefixes=CHECK-V81-OR-LATER,CHECK-V83-OR-LATER,CHECK-V85-OR-LATER %s
-// RUN: %clang -target aarch64-arm-none-eabi -march=armv9.2-a -x c -E -dM %s -o - | FileCheck --check-prefixes=CHECK-V81-OR-LATER,CHECK-V83-OR-LATER,CHECK-V85-OR-LATER %s
-// RUN: %clang -target aarch64-arm-none-eabi -march=armv9.3-a -x c -E -dM %s -o - | FileCheck --check-prefixes=CHECK-V81-OR-LATER,CHECK-V83-OR-LATER,CHECK-V85-OR-LATER %s
+// RUN: %clang -target aarch64-none-elf -march=armv8.1-a -x c -E -dM %s -o - | FileCheck --check-prefixes=CHECK-V81-OR-LATER,CHECK-BEFORE-V83,CHECK-BEFORE-V85     %s
+// RUN: %clang -target aarch64-none-elf -march=armv8.2-a -x c -E -dM %s -o - | FileCheck --check-prefixes=CHECK-V81-OR-LATER,CHECK-BEFORE-V83,CHECK-BEFORE-V85     %s
+// RUN: %clang -target aarch64-none-elf -march=armv8.3-a -x c -E -dM %s -o - | FileCheck --check-prefixes=CHECK-V81-OR-LATER,CHECK-V83-OR-LATER,CHECK-BEFORE-V85   %s
+// RUN: %clang -target aarch64-none-elf -march=armv8.4-a -x c -E -dM %s -o - | FileCheck --check-prefixes=CHECK-V81-OR-LATER,CHECK-V83-OR-LATER,CHECK-BEFORE-V85   %s
+// RUN: %clang -target aarch64-none-elf -march=armv8.5-a -x c -E -dM %s -o - | FileCheck --check-prefixes=CHECK-V81-OR-LATER,CHECK-V83-OR-LATER,CHECK-V85-OR-LATER %s
+// RUN: %clang -target aarch64-none-elf -march=armv8.6-a -x c -E -dM %s -o - | FileCheck --check-prefixes=CHECK-V81-OR-LATER,CHECK-V83-OR-LATER,CHECK-V85-OR-LATER %s
+// RUN: %clang -target aarch64-none-elf -march=armv8.7-a -x c -E -dM %s -o - | FileCheck --check-prefixes=CHECK-V81-OR-LATER,CHECK-V83-OR-LATER,CHECK-V85-OR-LATER %s
+// RUN: %clang -target aarch64-none-elf -march=armv8.8-a -x c -E -dM %s -o - | FileCheck --check-prefixes=CHECK-V81-OR-LATER,CHECK-V83-OR-LATER,CHECK-V85-OR-LATER %s
+// RUN: %clang -target aarch64-none-elf -march=armv9-a   -x c -E -dM %s -o - | FileCheck --check-prefixes=CHECK-V81-OR-LATER,CHECK-V83-OR-LATER,CHECK-V85-OR-LATER %s
+// RUN: %clang -target aarch64-none-elf -march=armv9.1-a -x c -E -dM %s -o - | FileCheck --check-prefixes=CHECK-V81-OR-LATER,CHECK-V83-OR-LATER,CHECK-V85-OR-LATER %s
+// RUN: %clang -target aarch64-none-elf -march=armv9.2-a -x c -E -dM %s -o - | FileCheck --check-prefixes=CHECK-V81-OR-LATER,CHECK-V83-OR-LATER,CHECK-V85-OR-LATER %s
+// RUN: %clang -target aarch64-none-elf -march=armv9.3-a -x c -E -dM %s -o - | FileCheck --check-prefixes=CHECK-V81-OR-LATER,CHECK-V83-OR-LATER,CHECK-V85-OR-LATER %s
 // CHECK-V81-OR-LATER: __ARM_FEATURE_ATOMICS 1
 // CHECK-V85-OR-LATER: __ARM_FEATURE_BTI 1
 // CHECK-V83-OR-LATER: __ARM_FEATURE_COMPLEX 1
