@@ -122,6 +122,7 @@ private:
     AffineExpr threadIDInGroup = dim % 4;
     return {RowColIndexing{threadIDInGroup, groupID}};
   }
+
   /// From the NVIDIA doc:
   /// groupID          = %laneid >> 2
   /// threadIDInGroup = %laneid % 4
@@ -136,6 +137,80 @@ private:
             RowColIndexing{groupID, threadIDInGroup * 2 + 1},
             RowColIndexing{groupID + 8, threadIDInGroup * 2 + 0},
             RowColIndexing{groupID + 8, threadIDInGroup * 2 + 1}};
+  }
+
+  //===--------------------------------------------------------------------===//
+  // m16n8k16 f16 case.
+  //===--------------------------------------------------------------------===//
+  /// From the NVIDIA doc:
+  /// groupID           = %laneid >> 2
+  /// threadIDInGroup = %laneid % 4
+  ///
+  /// row =      groupID            for ai where  0 <= i < 2 || 4 <= i < 6
+  ///           groupID + 8         Otherwise
+  ///
+  /// col =  (threadIDInGroup * 2) + (i & 0x1)          for ai where i <  4
+  ///        (threadIDInGroup * 2) + (i & 0x1) + 8      for ai where i >= 4
+  static SmallVector<RowColIndexing> m16n8k16f16Lhs(MLIRContext *ctx) {
+    auto dim = getAffineDimExpr(0, ctx);
+    AffineExpr groupID = dim.floorDiv(4);
+    AffineExpr threadIDInGroup = dim % 4;
+    // clang-format off
+    return {
+      RowColIndexing{groupID, threadIDInGroup * 2 + 0},         // i == 0
+      RowColIndexing{groupID, threadIDInGroup * 2 + 1},         // i == 1
+      RowColIndexing{groupID + 8, threadIDInGroup * 2 + 0},     // i == 2
+      RowColIndexing{groupID + 8, threadIDInGroup * 2 + 1},     // i == 3
+      RowColIndexing{groupID, threadIDInGroup * 2 + 0 + 8},     // i == 4
+      RowColIndexing{groupID, threadIDInGroup * 2 + 1 + 8},     // i == 5
+      RowColIndexing{groupID + 8, threadIDInGroup * 2 + 0 + 8}, // i == 6
+      RowColIndexing{groupID + 8, threadIDInGroup * 2 + 1 + 8}  // i == 7
+    };
+    // clang-format on
+  }
+
+  /// From the NVIDIA doc:
+  /// groupID           = %laneid >> 2
+  /// threadIDInGroup = %laneid % 4
+  ///
+  /// row =  (threadIDInGroup * 2) + (i & 0x1)           for bi where i <  2
+  ///        (threadIDInGroup * 2) + (i & 0x1) + 8       for bi where i >= 2
+  ///
+  /// col = groupID
+  static SmallVector<RowColIndexing> m16n8k16f16Rhs(MLIRContext *ctx) {
+    auto dim = getAffineDimExpr(0, ctx);
+    AffineExpr groupID = dim.floorDiv(4);
+    AffineExpr threadIDInGroup = dim % 4;
+    // clang-format off
+    return {
+      RowColIndexing{threadIDInGroup * 2 + 0, groupID},        // i == 0
+      RowColIndexing{threadIDInGroup * 2 + 1, groupID},        // i == 1
+      RowColIndexing{threadIDInGroup * 2 + 0 + 8, groupID},    // i == 2
+      RowColIndexing{threadIDInGroup * 2 + 1 + 8, groupID}     // i == 3
+    };
+    // clang-format on
+  }
+
+  /// From the NVIDIA doc:
+  /// groupID           = %laneid >> 2
+  /// threadIDInGroup = %laneid % 4
+  ///
+  /// row =      groupID                               for ci where i <  2
+  ///          groupID + 8                             for ci where i >= 2
+  ///
+  /// col =  (threadIDInGroup * 2) + (i & 0x1)      for ci where i = {0,..,3}
+  static SmallVector<RowColIndexing> m16n8k16f16Res(MLIRContext *ctx) {
+    auto dim = getAffineDimExpr(0, ctx);
+    AffineExpr groupID = dim.floorDiv(4);
+    AffineExpr threadIDInGroup = dim % 4;
+    // clang-format off
+    return {
+      RowColIndexing{groupID, threadIDInGroup * 2 + 0},        // i == 0
+      RowColIndexing{groupID, threadIDInGroup * 2 + 1},        // i == 1
+      RowColIndexing{groupID + 8, threadIDInGroup * 2 + 0},    // i == 2
+      RowColIndexing{groupID + 8, threadIDInGroup * 2 + 1}     // i == 3
+    };
+    // clang-format on
   }
 
   //===--------------------------------------------------------------------===//
@@ -293,6 +368,7 @@ FailureOr<MmaSyncBuilder::MmaSyncInfo>
 MmaSyncBuilder::getIndexCalculators(ArrayRef<int64_t> opShape,
                                     TypeRange elementalTypes) {
   // TODO: Tablegen all this.
+  Type f16 = b.getF16Type();
   Type f32 = b.getF32Type();
   if (opShape == ArrayRef<int64_t>{16, 8, 4} &&
       elementalTypes == TypeRange{f32, f32, f32}) {
@@ -302,6 +378,17 @@ MmaSyncBuilder::getIndexCalculators(ArrayRef<int64_t> opShape,
                        makeVectorShapes({2, 1}, {1, 1}, {2, 2}),
                        SmallVector<int64_t>{opShape.begin(), opShape.end()},
                        /*tf32Enabled=*/true};
+  }
+  // This is the version with f16 accumulation.
+  // TODO: version with f32 accumulation.
+  if (opShape == ArrayRef<int64_t>{16, 8, 16} &&
+      elementalTypes == TypeRange{f16, f16, f16}) {
+    return MmaSyncInfo{std::make_tuple(&MmaSyncBuilder::m16n8k16f16Lhs,
+                                       &MmaSyncBuilder::m16n8k16f16Rhs,
+                                       &MmaSyncBuilder::m16n8k16f16Res),
+                       makeVectorShapes({4, 2}, {2, 2}, {2, 2}),
+                       SmallVector<int64_t>{opShape.begin(), opShape.end()},
+                       /*tf32Enabled=*/false};
   }
   return failure();
 }

@@ -80,3 +80,34 @@ transform.sequence failures(propagate) {
   transform.nvgpu.rewrite_matmul_as_mma_sync %matmul 
     : (!transform.any_op) -> ()
 }
+
+// -----
+
+// CHECK-LABEL: func.func @matmul_16x8x16xf16_global
+func.func @matmul_16x8x16xf16_global(
+    %A: memref<16x16xf16>, %B: memref<16x8xf16>, %C: memref<16x8xf16>) {
+
+  // CHECK-COUNT-8: memref.load {{.*}} : memref<16x16xf16>
+  // CHECK-COUNT-8: vector.insert {{.*}} : f16 into vector<4x2xf16> 
+  // CHECK-COUNT-4: memref.load {{.*}} : memref<16x8xf16>
+  // CHECK-COUNT-4: vector.insert {{.*}} : f16 into vector<2x2xf16> 
+  // CHECK-COUNT-4: memref.load {{.*}} : memref<16x8xf16>
+  // CHECK-COUNT-4: vector.insert {{.*}} : f16 into vector<2x2xf16>
+  //
+  //         CHECK: nvgpu.mma.sync(%{{.*}}) {mmaShape = [16, 8, 16]} 
+  //    CHECK-SAME:   : (vector<4x2xf16>, vector<2x2xf16>, vector<2x2xf16>) -> vector<2x2xf16>
+  //
+  // CHECK-COUNT-4: vector.extract %{{.*}} : vector<2x2xf16>
+  // CHECK-COUNT-4: memref.store %{{.*}} : memref<16x8xf16>
+  linalg.matmul ins(%A, %B: memref<16x16xf16>, memref<16x8xf16>)
+            outs(%C: memref<16x8xf16>)
+  return
+}
+
+transform.sequence failures(propagate) {
+^bb1(%arg1: !transform.any_op):
+  %matmul = transform.structured.match ops{["linalg.matmul"]} in %arg1 
+    : (!transform.any_op) -> !transform.any_op
+  transform.nvgpu.rewrite_matmul_as_mma_sync %matmul 
+    : (!transform.any_op) -> ()
+}
