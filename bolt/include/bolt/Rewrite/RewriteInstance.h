@@ -236,6 +236,12 @@ private:
   /// Return value for the symbol \p Name in the output.
   uint64_t getNewValueForSymbol(const StringRef Name);
 
+  /// Check for PT_GNU_RELRO segment presence, mark covered sections as
+  /// (dynamically) read-only (written once), as specified in LSB Chapter 12:
+  /// "segment which may be made read-only after relocations have been
+  /// processed".
+  void markGnuRelroSections();
+
   /// Detect addresses and offsets available in the binary for allocating
   /// new sections.
   Error discoverStorage();
