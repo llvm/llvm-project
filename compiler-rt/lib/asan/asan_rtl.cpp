@@ -454,6 +454,9 @@ static void AsanInitInternal() {
   allocator_options.SetFrom(flags(), common_flags());
   InitializeAllocator(allocator_options);
 
+  if (SANITIZER_START_BACKGROUND_THREAD_IN_ASAN_INTERNAL)
+    MaybeStartBackgroudThread();
+
   // On Linux AsanThread::ThreadStart() calls malloc() that's why asan_inited
   // should be set to 1 prior to initializing the threads.
   replace_intrin_cached = flags()->replace_intrin;
