@@ -66,6 +66,7 @@ add_llvm_library(LLVMExegesis
   SnippetFile.cpp
   SnippetGenerator.cpp
   SnippetRepetitor.cpp
+  SubprocessMemory.cpp
   Target.cpp
   UopsBenchmarkRunner.cpp
 
