@@ -230,6 +230,10 @@ template <class ELFT> void MarkLive<ELFT>::run() {
     markSymbol(symtab.find(s));
   for (StringRef s : script->referencedSymbols)
     markSymbol(symtab.find(s));
+  for (auto [symName, _] : symtab.cmseSymMap) {
+    markSymbol(symtab.cmseSymMap[symName].sym);
+    markSymbol(symtab.cmseSymMap[symName].acleSeSym);
+  }
 
   // Mark .eh_frame sections as live because there are usually no relocations
   // that point to .eh_frames. Otherwise, the garbage collector would drop
