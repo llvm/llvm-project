@@ -162,8 +162,8 @@ public:
   Expected<std::unique_ptr<BenchmarkRunner>> createBenchmarkRunner(
       Benchmark::ModeE Mode, const LLVMState &State,
       BenchmarkPhaseSelectorE BenchmarkPhaseSelector,
-      Benchmark::ResultAggregationModeE ResultAggMode =
-          Benchmark::Min) const;
+      BenchmarkRunner::ExecutionModeE ExecutionMode,
+      Benchmark::ResultAggregationModeE ResultAggMode = Benchmark::Min) const;
 
   // Returns the ExegesisTarget for the given triple or nullptr if the target
   // does not exist.
@@ -205,10 +205,12 @@ private:
   std::unique_ptr<BenchmarkRunner> virtual createLatencyBenchmarkRunner(
       const LLVMState &State, Benchmark::ModeE Mode,
       BenchmarkPhaseSelectorE BenchmarkPhaseSelector,
-      Benchmark::ResultAggregationModeE ResultAggMode) const;
+      Benchmark::ResultAggregationModeE ResultAggMode,
+      BenchmarkRunner::ExecutionModeE ExecutionMode) const;
   std::unique_ptr<BenchmarkRunner> virtual createUopsBenchmarkRunner(
       const LLVMState &State, BenchmarkPhaseSelectorE BenchmarkPhaseSelector,
-      Benchmark::ResultAggregationModeE ResultAggMode) const;
+      Benchmark::ResultAggregationModeE ResultAggMode,
+      BenchmarkRunner::ExecutionModeE ExecutionMode) const;
 
   const ExegesisTarget *Next = nullptr;
   const ArrayRef<CpuAndPfmCounters> CpuPfmCounters;

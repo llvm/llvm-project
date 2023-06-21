@@ -29,11 +29,11 @@
 namespace llvm {
 namespace exegesis {
 
-BenchmarkRunner::BenchmarkRunner(const LLVMState &State,
-                                 Benchmark::ModeE Mode,
-                                 BenchmarkPhaseSelectorE BenchmarkPhaseSelector)
+BenchmarkRunner::BenchmarkRunner(const LLVMState &State, Benchmark::ModeE Mode,
+                                 BenchmarkPhaseSelectorE BenchmarkPhaseSelector,
+                                 ExecutionModeE ExecutionMode)
     : State(State), Mode(Mode), BenchmarkPhaseSelector(BenchmarkPhaseSelector),
-      Scratch(std::make_unique<ScratchSpace>()) {}
+      ExecutionMode(ExecutionMode), Scratch(std::make_unique<ScratchSpace>()) {}
 
 BenchmarkRunner::~BenchmarkRunner() = default;
 
@@ -66,11 +66,11 @@ BenchmarkRunner::FunctionExecutor::runAndSample(const char *Counters) const {
 }
 
 namespace {
-class FunctionExecutorImpl : public BenchmarkRunner::FunctionExecutor {
+class InProcessFunctionExecutorImpl : public BenchmarkRunner::FunctionExecutor {
 public:
-  FunctionExecutorImpl(const LLVMState &State,
-                       object::OwningBinary<object::ObjectFile> Obj,
-                       BenchmarkRunner::ScratchSpace *Scratch)
+  InProcessFunctionExecutorImpl(const LLVMState &State,
+                                object::OwningBinary<object::ObjectFile> Obj,
+                                BenchmarkRunner::ScratchSpace *Scratch)
       : State(State), Function(State.createTargetMachine(), std::move(Obj)),
         Scratch(Scratch) {}
 
@@ -193,6 +193,18 @@ BenchmarkRunner::getRunnableConfiguration(
   return std::move(RC);
 }
 
+Expected<std::unique_ptr<BenchmarkRunner::FunctionExecutor>>
+BenchmarkRunner::createFunctionExecutor(
+    object::OwningBinary<object::ObjectFile> ObjectFile,
+    const BenchmarkKey &Key) const {
+  switch (ExecutionMode) {
+  case ExecutionModeE::InProcess:
+    return std::make_unique<InProcessFunctionExecutorImpl>(
+        State, std::move(ObjectFile), Scratch.get());
+  }
+  llvm_unreachable("ExecutionMode is outside expected range");
+}
+
 Expected<Benchmark> BenchmarkRunner::runConfiguration(
     RunnableConfiguration &&RC,
     const std::optional<StringRef> &DumpFile) const {
@@ -216,9 +228,12 @@ Expected<Benchmark> BenchmarkRunner::runConfiguration(
     return std::move(InstrBenchmark);
   }
 
-  const FunctionExecutorImpl Executor(State, std::move(ObjectFile),
-                                      Scratch.get());
-  auto NewMeasurements = runMeasurements(Executor);
+  Expected<std::unique_ptr<BenchmarkRunner::FunctionExecutor>> Executor =
+      createFunctionExecutor(std::move(ObjectFile), RC.InstrBenchmark.Key);
+  if (!Executor)
+    return Executor.takeError();
+  auto NewMeasurements = runMeasurements(**Executor);
+
   if (Error E = NewMeasurements.takeError()) {
     if (!E.isA<SnippetCrash>())
       return std::move(E);
