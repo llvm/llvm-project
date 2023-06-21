@@ -28,6 +28,7 @@ typedef enum {
   RPC_STATUS_OUT_OF_RANGE = 0x1001,
   RPC_STATUS_UNHANDLED_OPCODE = 0x1002,
   RPC_STATUS_INVALID_LANE_SIZE = 0x1003,
+  RPC_STATUS_NOT_INITIALIZED = 0x1004,
 } rpc_status_t;
 
 /// A struct containing an opaque handle to an RPC port. This is what allows the

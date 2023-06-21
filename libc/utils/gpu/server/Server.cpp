@@ -11,6 +11,7 @@
 #include "src/__support/RPC/rpc.h"
 #include <atomic>
 #include <cstdio>
+#include <cstring>
 #include <memory>
 #include <mutex>
 #include <unordered_map>
@@ -91,7 +92,8 @@ private:
                 : (port->get_opcode() == RPC_WRITE_TO_STDERR ? stderr
                                                              : files[id]);
         int ret = fwrite(strs[id], sizes[id], 1, file);
-        reinterpret_cast<int *>(buffer->data)[0] = ret >= 0 ? sizes[id] : ret;
+        ret = ret >= 0 ? sizes[id] : ret;
+        std::memcpy(buffer->data, &ret, sizeof(int));
       });
       for (uint64_t i = 0; i < rpc::MAX_LANE_SIZE; ++i) {
         if (strs[i])
@@ -101,7 +103,9 @@ private:
     }
     case RPC_EXIT: {
       port->recv([](rpc::Buffer *buffer) {
-        exit(reinterpret_cast<uint32_t *>(buffer->data)[0]);
+        int status = 0;
+        std::memcpy(&status, buffer->data, sizeof(int));
+        exit(status);
       });
       break;
     }
@@ -143,7 +147,7 @@ private:
       break;
     }
     case RPC_NOOP: {
-      port->recv([](rpc::Buffer *buffer) {});
+      port->recv([](rpc::Buffer *) {});
       break;
     }
     default: {
@@ -215,6 +219,8 @@ rpc_status_t rpc_shutdown(void) {
 rpc_status_t rpc_server_init(uint32_t device_id, uint64_t num_ports,
                              uint32_t lane_size, rpc_alloc_ty alloc,
                              void *data) {
+  if (!state)
+    return RPC_STATUS_NOT_INITIALIZED;
   if (device_id >= state->num_devices)
     return RPC_STATUS_OUT_OF_RANGE;
 
@@ -250,6 +256,8 @@ rpc_status_t rpc_server_init(uint32_t device_id, uint64_t num_ports,
 
 rpc_status_t rpc_server_shutdown(uint32_t device_id, rpc_free_ty dealloc,
                                  void *data) {
+  if (!state)
+    return RPC_STATUS_NOT_INITIALIZED;
   if (device_id >= state->num_devices)
     return RPC_STATUS_OUT_OF_RANGE;
   if (!state->devices[device_id])
@@ -263,6 +271,8 @@ rpc_status_t rpc_server_shutdown(uint32_t device_id, rpc_free_ty dealloc,
 }
 
 rpc_status_t rpc_handle_server(uint32_t device_id) {
+  if (!state)
+    return RPC_STATUS_NOT_INITIALIZED;
   if (device_id >= state->num_devices)
     return RPC_STATUS_OUT_OF_RANGE;
   if (!state->devices[device_id])
@@ -280,6 +290,8 @@ rpc_status_t rpc_handle_server(uint32_t device_id) {
 rpc_status_t rpc_register_callback(uint32_t device_id, rpc_opcode_t opcode,
                                    rpc_opcode_callback_ty callback,
                                    void *data) {
+  if (!state)
+    return RPC_STATUS_NOT_INITIALIZED;
   if (device_id >= state->num_devices)
     return RPC_STATUS_OUT_OF_RANGE;
   if (!state->devices[device_id])
@@ -291,6 +303,8 @@ rpc_status_t rpc_register_callback(uint32_t device_id, rpc_opcode_t opcode,
 }
 
 void *rpc_get_buffer(uint32_t device_id) {
+  if (!state)
+    return nullptr;
   if (device_id >= state->num_devices)
     return nullptr;
   if (!state->devices[device_id])
