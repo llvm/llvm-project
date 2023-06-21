@@ -11,7 +11,6 @@ add_llvm_exegesis_unittest_sources(
   SnippetFileTest.cpp
   SnippetGeneratorTest.cpp
   SnippetRepetitorTest.cpp
-  SubprocessMemoryTest.cpp
   TargetTest.cpp
   )
 
