@@ -35,6 +35,7 @@ class StackCoreScriptedProcesTestCase(TestBase):
     @skipIfOutOfTreeDebugserver
     @skipIfRemote
     @skipIfAsan  # On ASAN builds, this test times-out (rdar://98678134)
+    @skipIfDarwin
     def test_launch_scripted_process_stack_frames(self):
         """Test that we can launch an lldb scripted process from the command
         line, check its process ID and read string from memory."""

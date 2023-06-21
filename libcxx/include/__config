@@ -460,8 +460,17 @@ typedef __char32_t char32_t;
 
 #  if defined(_LIBCPP_COMPILER_CLANG_BASED)
 
-#    if defined(__APPLE__) && !defined(__i386__) && !defined(__x86_64__) && (!defined(__arm__) || __ARM_ARCH_7K__ >= 2)
-#      define _LIBCPP_ABI_ALTERNATE_STRING_LAYOUT
+#    if defined(__APPLE__)
+#      if defined(__i386__) || defined(__x86_64__)
+// use old string layout on x86_64 and i386
+#      elif defined(__arm__)
+// use old string layout on arm (which does not include aarch64/arm64), except on watch ABIs
+#        if defined(__ARM_ARCH_7K__) && __ARM_ARCH_7K__ >= 2
+#          define _LIBCPP_ABI_ALTERNATE_STRING_LAYOUT
+#        endif
+#      else
+#        define _LIBCPP_ABI_ALTERNATE_STRING_LAYOUT
+#      endif
 #    endif
 
 // Objective-C++ features (opt-in)
