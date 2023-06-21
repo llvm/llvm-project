@@ -1063,26 +1063,29 @@ Expr<T> RewriteSpecificMINorMAX(
   auto &intrinsic{DEREF(std::get_if<SpecificIntrinsic>(&funcRef.proc().u))};
   // Rewrite MAX1(args) to INT(MAX(args)) and fold. Same logic for MIN1.
   // Find result type for max/min based on the arguments.
-  DynamicType resultType{args[0].value().GetType().value()};
-  auto *resultTypeArg{&args[0]};
-  for (auto j{args.size() - 1}; j > 0; --j) {
-    DynamicType type{args[j].value().GetType().value()};
-    if (type.category() == resultType.category()) {
-      if (type.kind() > resultType.kind()) {
-        resultTypeArg = &args[j];
-        resultType = type;
-      }
-    } else if (resultType.category() == TypeCategory::Integer) {
+  std::optional<DynamicType> resultType;
+  ActualArgument *resultTypeArg{nullptr};
+  for (auto j{args.size()}; j-- > 0;) {
+    if (args[j]) {
+      DynamicType type{args[j]->GetType().value()};
       // Handle mixed real/integer arguments: all the previous arguments were
       // integers and this one is real. The type of the MAX/MIN result will
       // be the one of the real argument.
-      resultTypeArg = &args[j];
-      resultType = type;
+      if (!resultType ||
+          (type.category() == resultType->category() &&
+              type.kind() > resultType->kind()) ||
+          resultType->category() == TypeCategory::Integer) {
+        resultType = type;
+        resultTypeArg = &*args[j];
+      }
     }
+  }
+  if (!resultType) { // error recovery
+    return Expr<T>{std::move(funcRef)};
   }
   intrinsic.name =
       intrinsic.name.find("max") != std::string::npos ? "max"s : "min"s;
-  intrinsic.characteristics.value().functionResult.value().SetType(resultType);
+  intrinsic.characteristics.value().functionResult.value().SetType(*resultType);
   auto insertConversion{[&](const auto &x) -> Expr<T> {
     using TR = ResultType<decltype(x)>;
     FunctionRef<TR> maxRef{std::move(funcRef.proc()), std::move(args)};
