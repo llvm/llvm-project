@@ -307,3 +307,39 @@ transform.sequence failures(propagate) {
   transform.gpu.map_nested_forall_to_threads %funcop
     block_dims = [12, 11, 1] warp_dims = [3, 2, 1] : (!transform.any_op) -> !transform.any_op
 }
+
+// -----
+
+// CHECK-LABEL: func.func @tiling_buffer_semantic_op(
+//       CHECK:   gpu.launch {{.*}} {
+//       CHECK:     scf.forall {{.*}} {
+//       CHECK:       memref.subview
+//       CHECK:       memref.subview
+//       CHECK:       linalg.generic
+//       CHECK:     }
+//       CHECK:   }
+func.func @tiling_buffer_semantic_op(%x: memref<32x32xf32>, %y: memref<32x32xf32>, %stream : !gpu.async.token) {
+  %one = arith.constant 1 : index
+  %name = gpu.launch async[%stream] blocks(%arg3, %arg4, %arg5) in (%arg9 = %one, %arg10 = %one, %arg11 = %one)
+            threads(%arg6, %arg7, %arg8) in (%arg12 = %one, %arg13 = %one, %arg14 = %one)
+  {
+    linalg.generic
+      {indexing_maps = [affine_map<(d0, d1) -> (d0, d1)>,
+                        affine_map<(d0, d1) -> (d0, d1)>],
+       iterator_types = ["parallel", "parallel"]}
+      ins(%x : memref<32x32xf32>)
+      outs(%y : memref<32x32xf32>) {
+        ^bb0(%in: f32, %out: f32):
+          linalg.yield %in : f32
+    }
+    gpu.terminator
+  }
+  return
+}
+
+transform.sequence failures(propagate) {
+^bb1(%arg0: !transform.any_op):
+  %matmul = transform.structured.match ops{["linalg.generic"]} in %arg0 : (!transform.any_op) -> !transform.any_op
+  %forall, %tiled = transform.structured.tile_to_forall_op %matmul num_threads [10, 20, 30] (mapping = [ #gpu.thread<y>, #gpu.thread<x>, #gpu.thread<z> ] )
+    : (!transform.any_op) -> (!transform.any_op, !transform.any_op)
+}

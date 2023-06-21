@@ -13,6 +13,7 @@
 #include <__assert>
 #include <__concepts/arithmetic.h>
 #include <__config>
+#include <__format/concepts.h>
 #include <__format/format_error.h>
 #include <__format/format_fwd.h>
 #include <__format/format_parse_context.h>
@@ -158,18 +159,14 @@ public:
   /// Contains the implementation for basic_format_arg::handle.
   struct __handle {
     template <class _Tp>
-    _LIBCPP_HIDE_FROM_ABI explicit __handle(_Tp&& __v) noexcept
+    _LIBCPP_HIDE_FROM_ABI explicit __handle(_Tp& __v) noexcept
         : __ptr_(_VSTD::addressof(__v)),
           __format_([](basic_format_parse_context<_CharT>& __parse_ctx, _Context& __ctx, const void* __ptr) {
-            using _Dp = remove_cvref_t<_Tp>;
-            using _Formatter = typename _Context::template formatter_type<_Dp>;
-            constexpr bool __const_formattable =
-                requires { _Formatter().format(std::declval<const _Dp&>(), std::declval<_Context&>()); };
-            using _Qp = conditional_t<__const_formattable, const _Dp, _Dp>;
+            using _Dp = remove_const_t<_Tp>;
+            using _Qp = conditional_t<__formattable_with<const _Dp, _Context>, const _Dp, _Dp>;
+            static_assert(__formattable_with<_Qp, _Context>, "Mandated by [format.arg]/10");
 
-            static_assert(__const_formattable || !is_const_v<remove_reference_t<_Tp>>, "Mandated by [format.arg]/18");
-
-            _Formatter __f;
+            typename _Context::template formatter_type<_Dp> __f;
             __parse_ctx.advance_to(__f.parse(__parse_ctx));
             __ctx.advance_to(__f.format(*const_cast<_Qp*>(static_cast<const _Dp*>(__ptr)), __ctx));
           }) {}
@@ -221,9 +218,7 @@ public:
   _LIBCPP_HIDE_FROM_ABI __basic_format_arg_value(basic_string_view<_CharT> __value) noexcept
       : __string_view_(__value) {}
   _LIBCPP_HIDE_FROM_ABI __basic_format_arg_value(const void* __value) noexcept : __ptr_(__value) {}
-  _LIBCPP_HIDE_FROM_ABI __basic_format_arg_value(__handle __value) noexcept
-      // TODO FMT Investigate why it doesn't work without the forward.
-      : __handle_(std::forward<__handle>(__value)) {}
+  _LIBCPP_HIDE_FROM_ABI __basic_format_arg_value(__handle&& __value) noexcept : __handle_(std::move(__value)) {}
 };
 
 template <class _Context>

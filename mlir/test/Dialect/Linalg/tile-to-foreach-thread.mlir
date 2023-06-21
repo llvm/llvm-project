@@ -40,6 +40,53 @@ module {
 
 // -----
 
+module {
+  // CHECK-LABEL: func @matmul_memref(
+  //       CHECK:   scf.forall (%{{.*}}, %{{.*}}) in (10, 20) {
+  //       CHECK:     memref.subview
+  //       CHECK:     memref.subview
+  //       CHECK:     memref.subview
+  //       CHECK:     linalg.matmul
+  //       CHECK:   } {mapping = [#gpu.thread<y>, #gpu.thread<x>]}
+  func.func @matmul_memref(%A: memref<?x?xf32>, %B: memref<?x?xf32>, %C: memref<?x?xf32>) {
+    linalg.matmul ins(%A, %B : memref<?x?xf32>, memref<?x?xf32>)
+                  outs(%C : memref<?x?xf32>)
+    return
+  }
+
+  transform.sequence failures(propagate) {
+  ^bb1(%arg1: !transform.any_op):
+    %0 = transform.structured.match ops{["linalg.matmul"]} in %arg1 : (!transform.any_op) -> !transform.any_op
+    %1:2 = transform.structured.tile_to_forall_op %0 num_threads [10, 20] (mapping = [ #gpu.thread<y>, #gpu.thread<x> ] )
+         : (!transform.any_op) -> (!transform.any_op, !transform.any_op)
+  }
+}
+
+// -----
+
+module {
+  // CHECK-LABEL: func @copy_memref(
+  //       CHECK:   scf.forall (%{{.*}}, %{{.*}}) in (10, 20) {
+  //       CHECK:     memref.subview
+  //       CHECK:     memref.subview
+  //       CHECK:     linalg.copy
+  //       CHECK:   } {mapping = [#gpu.thread<y>, #gpu.thread<x>]}
+  func.func @copy_memref(%A: memref<?x?xf32>, %B: memref<?x?xf32>) {
+    linalg.copy ins(%A: memref<?x?xf32>)
+                outs(%B : memref<?x?xf32>)
+    return
+  }
+
+  transform.sequence failures(propagate) {
+  ^bb1(%arg1: !transform.any_op):
+    %0 = transform.structured.match ops{["linalg.copy"]} in %arg1 : (!transform.any_op) -> !transform.any_op
+    %1:2 = transform.structured.tile_to_forall_op %0 num_threads [10, 20] (mapping = [ #gpu.thread<y>, #gpu.thread<x> ] )
+         : (!transform.any_op) -> (!transform.any_op, !transform.any_op)
+  }
+}
+
+// -----
+
 // In this test case, matmul dims and tile size are dynamic.
 
 // CHECK-DAG: #[[$map0:.+]] = affine_map<()[s0, s1] -> (s0 ceildiv s1)>
