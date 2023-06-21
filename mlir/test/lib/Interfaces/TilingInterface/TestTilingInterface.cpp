@@ -507,7 +507,8 @@ void TestTilingInterfacePass::addTestPatterns(MLIRContext *context,
     addPatternForTiling(context, patterns, "pad_inner_tiling", {0, 3});
     // 9. Tiling inner dimension of 2d pad tensor operations.
     addPatternForTiling(context, patterns, "pad_outer_tiling", {2, 3});
-
+    // 10. Tiling M and N dims of `linalg.copy` on memrefs.
+    addPatternForTiling(context, patterns, "simple_copy_memref", {10, 20});
     return;
   }
   if (testTileConsumerAndFuseProducer) {
