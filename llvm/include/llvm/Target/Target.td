@@ -1670,6 +1670,12 @@ class SubtargetFeature<string n, string a,  string v, string d,
 
   // Value - Value the attribute to be set to by feature.
   //
+  // A value of "true" or "false" implies the attribute is a bool. Otherwise,
+  // it is assumed to be an integer. the integer value may be the name of an
+  // enum constant. If multiple features use the same integer attribute, the
+  // attribute will be set to the maximum value of all enabled features that
+  // share the attribute.
+  //
   string Value = v;
 
   // Desc - Feature description.  Used by command line (-mattr=) to display help

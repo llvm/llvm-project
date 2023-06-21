@@ -31,8 +31,8 @@ public:
   CookieFile(void *c, cookie_io_functions_t cops, uint8_t *buffer,
              size_t bufsize, File::ModeFlags mode)
       : File(&cookie_write, &cookie_read, &CookieFile::cookie_seek,
-             &cookie_close, &cleanup_file<CookieFile>, buffer, bufsize,
-             0 /* default buffering mode */, true /* File owns buffer */, mode),
+             &cookie_close, buffer, bufsize, 0 /* default buffering mode */,
+             true /* File owns buffer */, mode),
         cookie(c), ops(cops) {}
 };
 
@@ -69,7 +69,11 @@ int CookieFile::cookie_close(File *f) {
   auto cookie_file = reinterpret_cast<CookieFile *>(f);
   if (cookie_file->ops.close == nullptr)
     return 0;
-  return cookie_file->ops.close(cookie_file->cookie);
+  int retval = cookie_file->ops.close(cookie_file->cookie);
+  if (retval != 0)
+    return retval;
+  delete cookie_file;
+  return 0;
 }
 
 } // anonymous namespace

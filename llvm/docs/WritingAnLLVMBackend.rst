@@ -1765,6 +1765,13 @@ feature, the value of the attribute, and a description of the feature.  (The
 fifth parameter is a list of features whose presence is implied, and its
 default value is an empty array.)
 
+If the value for the attribute is the string "true" or "false", the attribute
+is assumed to be a bool and only one SubtargetFeature should refer to it.
+Otherwise, it is assumed to be an integer. The integer value may be the name
+of an enum constant. If multiple features use the same integer attribute, the
+attribute will be set to the maximum value of all enabled features that share
+the attribute.
+
 .. code-block:: text
 
   class SubtargetFeature<string n, string a, string v, string d,
