@@ -37,6 +37,7 @@ FIXABLE_GADGET(UPCAddressofArraySubscript) // '&DRE[any]' in an Unspecified Poin
 FIXABLE_GADGET(UPCStandalonePointer)
 FIXABLE_GADGET(UPCPreIncrement)            // '++Ptr' in an Unspecified Pointer Context
 FIXABLE_GADGET(PointerAssignment)
+FIXABLE_GADGET(PointerInit)
 
 #undef FIXABLE_GADGET
 #undef WARNING_GADGET

@@ -38,6 +38,15 @@ void uuc_if_body2(bool flag) {
   p[5] = 4;  // expected-note{{used in buffer access here}}
 }
 
+void uuc_if_body2_ptr_init(bool flag) {
+  int *r = new int[7];
+  if (flag) {
+  } else {
+    int* p = r;  // expected-warning{{'p' is an unsafe pointer used for buffer access}} // expected-note-re{{{{^change type of 'p' to 'std::span' to preserve bounds information, and change 'r' to 'std::span' to propagate bounds information between them$}}}}
+    p[5] = 4;  // expected-note{{used in buffer access here}}
+  }
+}
+
 void uuc_if_cond_no_unsafe_op() {
   int *r = new int[7];
   int *p = new int[4];

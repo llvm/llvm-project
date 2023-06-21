@@ -533,23 +533,66 @@ public:
   // FIXME: this gadge will need a fix-it
 };
 
+/// A pointer initialization expression of the form:
+///  \code
+///  int *p = q;
+///  \endcode
+class PointerInitGadget : public FixableGadget {
+private:
+  static constexpr const char *const PointerInitLHSTag = "ptrInitLHS";
+  static constexpr const char *const PointerInitRHSTag = "ptrInitRHS";
+  const VarDecl * PtrInitLHS;         // the LHS pointer expression in `PI`
+  const DeclRefExpr * PtrInitRHS;         // the RHS pointer expression in `PI`
+
+public:
+  PointerInitGadget(const MatchFinder::MatchResult &Result)
+      : FixableGadget(Kind::PointerInit),
+    PtrInitLHS(Result.Nodes.getNodeAs<VarDecl>(PointerInitLHSTag)),
+    PtrInitRHS(Result.Nodes.getNodeAs<DeclRefExpr>(PointerInitRHSTag)) {}
+
+  static bool classof(const Gadget *G) {
+    return G->getKind() == Kind::PointerInit;
+  }
+
+  static Matcher matcher() {
+    auto PtrInitStmt = declStmt(hasSingleDecl(varDecl(
+                                 hasInitializer(ignoringImpCasts(declRefExpr(
+                                                  hasPointerType()).
+                                                  bind(PointerInitRHSTag)))).
+                                              bind(PointerInitLHSTag)));
+
+    return stmt(PtrInitStmt);
+  }
+
+  virtual std::optional<FixItList> getFixits(const Strategy &S) const override;
+
+  virtual const Stmt *getBaseStmt() const override { return nullptr; }
+
+  virtual DeclUseList getClaimedVarUseSites() const override {
+    return DeclUseList{PtrInitRHS};
+  }
+
+  virtual std::optional<std::pair<const VarDecl *, const VarDecl *>>
+  getStrategyImplications() const override {
+      return std::make_pair(PtrInitLHS,
+                            cast<VarDecl>(PtrInitRHS->getDecl()));
+  }
+};
+
 /// A pointer assignment expression of the form:
 ///  \code
 ///  p = q;
 ///  \endcode
 class PointerAssignmentGadget : public FixableGadget {
 private:
-  static constexpr const char *const PointerAssignmentTag = "ptrAssign";
   static constexpr const char *const PointerAssignLHSTag = "ptrLHS";
   static constexpr const char *const PointerAssignRHSTag = "ptrRHS";
-  const BinaryOperator *PA;    // pointer arithmetic expression
   const DeclRefExpr * PtrLHS;         // the LHS pointer expression in `PA`
   const DeclRefExpr * PtrRHS;         // the RHS pointer expression in `PA`
 
 public:
   PointerAssignmentGadget(const MatchFinder::MatchResult &Result)
       : FixableGadget(Kind::PointerAssignment),
-    PA(Result.Nodes.getNodeAs<BinaryOperator>(PointerAssignmentTag)),
     PtrLHS(Result.Nodes.getNodeAs<DeclRefExpr>(PointerAssignLHSTag)),
     PtrRHS(Result.Nodes.getNodeAs<DeclRefExpr>(PointerAssignRHSTag)) {}
 
@@ -566,13 +609,12 @@ public:
                                                       to(varDecl())).
                                           bind(PointerAssignLHSTag))));
     
-    //FIXME: Handle declarations at assignments
     return stmt(isInUnspecifiedUntypedContext(PtrAssignExpr));
   }
   
   virtual std::optional<FixItList> getFixits(const Strategy &S) const override;
 
-  virtual const Stmt *getBaseStmt() const override { return PA; }
+  virtual const Stmt *getBaseStmt() const override { return nullptr; }
 
   virtual DeclUseList getClaimedVarUseSites() const override {
     return DeclUseList{PtrLHS, PtrRHS};
@@ -769,8 +811,8 @@ public:
 
 namespace {
 // An auxiliary tracking facility for the fixit analysis. It helps connect
-// declarations to its and make sure we've covered all uses with our analysis
-// before we try to fix the declaration.
+// declarations to its uses and make sure we've covered all uses with our
+// analysis before we try to fix the declaration.
 class DeclUseTracker {
   using UseSetTy = SmallSet<const DeclRefExpr *, 16>;
   using DefMapTy = DenseMap<const VarDecl *, const DeclStmt *>;
@@ -1174,6 +1216,24 @@ PointerAssignmentGadget::getFixits(const Strategy &S) const {
   return std::nullopt;
 }
 
+std::optional<FixItList>
+PointerInitGadget::getFixits(const Strategy &S) const {
+  const auto *LeftVD = PtrInitLHS;
+  const auto *RightVD = cast<VarDecl>(PtrInitRHS->getDecl());
+  switch (S.lookup(LeftVD)) {
+    case Strategy::Kind::Span:
+      if (S.lookup(RightVD) == Strategy::Kind::Span)
+        return FixItList{};
+      return std::nullopt;
+    case Strategy::Kind::Wontfix:
+      return std::nullopt;
+    case Strategy::Kind::Iterator:
+    case Strategy::Kind::Array:
+    case Strategy::Kind::Vector:
+    llvm_unreachable("unsupported strategies for FixableGadgets");
+  }
+  return std::nullopt;
+}
 
 std::optional<FixItList>
 ULCArraySubscriptGadget::getFixits(const Strategy &S) const {
@@ -2020,10 +2080,10 @@ static bool overlapWithMacro(const FixItList &FixIts) {
   });
 }
 
-static bool impossibleToFixForVar(const FixableGadgetSets &FixablesForUnsafeVars,
+static bool impossibleToFixForVar(const FixableGadgetSets &FixablesForAllVars,
                                   const Strategy &S,
                                   const VarDecl * Var) {
-  for (const auto &F : FixablesForUnsafeVars.byVar.find(Var)->second) {
+  for (const auto &F : FixablesForAllVars.byVar.find(Var)->second) {
     std::optional<FixItList> Fixits = F->getFixits(S);
     if (!Fixits) {
       return true;
@@ -2033,13 +2093,13 @@ static bool impossibleToFixForVar(const FixableGadgetSets &FixablesForUnsafeVars
 }
 
 static std::map<const VarDecl *, FixItList>
-getFixIts(FixableGadgetSets &FixablesForUnsafeVars, const Strategy &S,
+getFixIts(FixableGadgetSets &FixablesForAllVars, const Strategy &S,
 	  ASTContext &Ctx,
           /* The function decl under analysis */ const Decl *D,
     const DeclUseTracker &Tracker, UnsafeBufferUsageHandler &Handler,
 	  const DefMapTy &VarGrpMap) {
   std::map<const VarDecl *, FixItList> FixItsForVariable;
-  for (const auto &[VD, Fixables] : FixablesForUnsafeVars.byVar) {
+  for (const auto &[VD, Fixables] : FixablesForAllVars.byVar) {
     FixItsForVariable[VD] =
         fixVariable(VD, S.lookup(VD), D, Tracker, Ctx, Handler);
     // If we fail to produce Fix-It for the declaration we have to skip the
@@ -2073,7 +2133,7 @@ getFixIts(FixableGadgetSets &FixablesForUnsafeVars, const Strategy &S,
         if (V == VD) {
           continue;
         }
-        if (impossibleToFixForVar(FixablesForUnsafeVars, S, V)) {
+        if (impossibleToFixForVar(FixablesForAllVars, S, V)) {
           ImpossibleToFix = true;
           break;
         }
