@@ -640,31 +640,34 @@ static mlir::Value genCombiner(fir::FirOpBuilder &builder, mlir::Location loc,
   // Handle combiner on arrays.
   if (auto refTy = mlir::dyn_cast<fir::ReferenceType>(ty)) {
     if (auto seqTy = mlir::dyn_cast<fir::SequenceType>(refTy.getEleTy())) {
-      if (seqTy.getShape().size() > 1)
-        TODO(loc, "OpenACC reduction on array with more than one dimension");
       if (seqTy.hasDynamicExtents())
         TODO(loc, "OpenACC reduction on array with dynamic extents");
       mlir::Type idxTy = builder.getIndexType();
       mlir::Type refTy = fir::ReferenceType::get(seqTy.getEleTy());
-      auto lb = builder.create<mlir::arith::ConstantOp>(
-          loc, idxTy, builder.getIntegerAttr(idxTy, 0));
-      auto ub = builder.create<mlir::arith::ConstantOp>(
-          loc, idxTy, builder.getIntegerAttr(idxTy, seqTy.getShape()[0] - 1));
-      auto step = builder.create<mlir::arith::ConstantOp>(
-          loc, idxTy, builder.getIntegerAttr(idxTy, 1));
-      auto loop = builder.create<fir::DoLoopOp>(loc, lb, ub, step,
-                                                /*unordered=*/false);
-      builder.setInsertionPointToStart(loop.getBody());
-      auto addr1 = builder.create<fir::CoordinateOp>(
-          loc, refTy, value1, mlir::ValueRange{loop.getInductionVar()});
-      auto addr2 = builder.create<fir::CoordinateOp>(
-          loc, refTy, value2, mlir::ValueRange{loop.getInductionVar()});
+
+      llvm::SmallVector<fir::DoLoopOp> loops;
+      llvm::SmallVector<mlir::Value> ivs;
+      for (auto ext : seqTy.getShape()) {
+        auto lb = builder.create<mlir::arith::ConstantOp>(
+            loc, idxTy, builder.getIntegerAttr(idxTy, 0));
+        auto ub = builder.create<mlir::arith::ConstantOp>(
+            loc, idxTy, builder.getIntegerAttr(idxTy, ext - 1));
+        auto step = builder.create<mlir::arith::ConstantOp>(
+            loc, idxTy, builder.getIntegerAttr(idxTy, 1));
+        auto loop = builder.create<fir::DoLoopOp>(loc, lb, ub, step,
+                                                  /*unordered=*/false);
+        builder.setInsertionPointToStart(loop.getBody());
+        loops.push_back(loop);
+        ivs.push_back(loop.getInductionVar());
+      }
+      auto addr1 = builder.create<fir::CoordinateOp>(loc, refTy, value1, ivs);
+      auto addr2 = builder.create<fir::CoordinateOp>(loc, refTy, value2, ivs);
       auto load1 = builder.create<fir::LoadOp>(loc, addr1);
       auto load2 = builder.create<fir::LoadOp>(loc, addr2);
       auto combined =
           genCombiner(builder, loc, op, seqTy.getEleTy(), load1, load2);
       builder.create<fir::StoreOp>(loc, combined, addr1);
-      builder.setInsertionPointAfter(loop);
+      builder.setInsertionPointAfter(loops[0]);
       return value1;
     }
   }
