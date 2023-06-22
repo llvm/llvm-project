@@ -137,8 +137,20 @@ protected:
   /// cheaper than calling load_outbox to get the value to store.
   LIBC_INLINE uint32_t invert_outbox(uint64_t index, uint32_t current_outbox) {
     uint32_t inverted_outbox = !current_outbox;
+    atomic_thread_fence(cpp::MemoryOrder::RELEASE);
     outbox[index].store(inverted_outbox, cpp::MemoryOrder::RELAXED);
     return inverted_outbox;
+  }
+
+  // Given the current outbox and inbox values, wait until the inbox changes
+  // to indicate that this thread owns the buffer element.
+  LIBC_INLINE void wait_for_ownership(uint64_t index, uint32_t outbox,
+                                      uint32_t in) {
+    while (buffer_unavailable(in, outbox)) {
+      sleep_briefly();
+      in = load_inbox(index);
+    }
+    atomic_thread_fence(cpp::MemoryOrder::ACQUIRE);
   }
 
   /// Determines if this process needs to wait for ownership of the buffer. We
@@ -347,14 +359,10 @@ LIBC_INLINE void Port<T, S>::send(F fill) {
   uint32_t in = owns_buffer ? out ^ T : process.load_inbox(index);
 
   // We need to wait until we own the buffer before sending.
-  while (Process<T, S>::buffer_unavailable(in, out)) {
-    sleep_briefly();
-    in = process.load_inbox(index);
-  }
+  process.wait_for_ownership(index, out, in);
 
   // Apply the \p fill function to initialize the buffer and release the memory.
   process.invoke_rpc(fill, process.packet[index]);
-  atomic_thread_fence(cpp::MemoryOrder::RELEASE);
   out = process.invert_outbox(index, out);
   owns_buffer = false;
   receive = false;
@@ -374,11 +382,7 @@ LIBC_INLINE void Port<T, S>::recv(U use) {
   uint32_t in = owns_buffer ? out ^ T : process.load_inbox(index);
 
   // We need to wait until we own the buffer before receiving.
-  while (Process<T, S>::buffer_unavailable(in, out)) {
-    sleep_briefly();
-    in = process.load_inbox(index);
-  }
-  atomic_thread_fence(cpp::MemoryOrder::ACQUIRE);
+  process.wait_for_ownership(index, out, in);
 
   // Apply the \p use function to read the memory out of the buffer.
   process.invoke_rpc(use, process.packet[index]);
