@@ -2861,6 +2861,7 @@ Parser::ParseCXXClassMemberDeclaration(AccessSpecifier AS,
     RecordDecl *AnonRecord = nullptr;
     Decl *TheDecl = Actions.ParsedFreeStandingDeclSpec(
         getCurScope(), AS, DS, DeclAttrs, TemplateParams, false, AnonRecord);
+    Actions.ActOnDefinedDeclarationSpecifier(TheDecl);
     DS.complete(TheDecl);
     if (AnonRecord) {
       Decl *decls[] = {AnonRecord, TheDecl};
@@ -2868,6 +2869,9 @@ Parser::ParseCXXClassMemberDeclaration(AccessSpecifier AS,
     }
     return Actions.ConvertDeclToDeclGroup(TheDecl);
   }
+
+  if (DS.hasTagDefinition())
+    Actions.ActOnDefinedDeclarationSpecifier(DS.getRepAsDecl());
 
   ParsingDeclarator DeclaratorInfo(*this, DS, DeclAttrs,
                                    DeclaratorContext::Member);
