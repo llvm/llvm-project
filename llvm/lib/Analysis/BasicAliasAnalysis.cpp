@@ -864,9 +864,11 @@ ModRefInfo BasicAAResult::getModRefInfo(const CallBase *Call,
     if (!AI->isStaticAlloca() && isIntrinsicCall(Call, Intrinsic::stackrestore))
       return ModRefInfo::Mod;
 
-  // If the pointer is to a locally allocated object that does not escape,
-  // then the call can not mod/ref the pointer unless the call takes the pointer
-  // as an argument, and itself doesn't capture it.
+  // A call can access a locally allocated object either because it is passed as
+  // an argument to the call, or because it has escaped prior to the call.
+  //
+  // Make sure the object has not escaped here, and then check that none of the
+  // call arguments alias the object below.
   if (!isa<Constant>(Object) && Call != Object &&
       AAQI.CI->isNotCapturedBeforeOrAt(Object, Call)) {
 
@@ -877,12 +879,7 @@ ModRefInfo BasicAAResult::getModRefInfo(const CallBase *Call,
     unsigned OperandNo = 0;
     for (auto CI = Call->data_operands_begin(), CE = Call->data_operands_end();
          CI != CE; ++CI, ++OperandNo) {
-      // Only look at the no-capture or byval pointer arguments.  If this
-      // pointer were passed to arguments that were neither of these, then it
-      // couldn't be no-capture.
-      if (!(*CI)->getType()->isPointerTy() ||
-          (!Call->doesNotCapture(OperandNo) && OperandNo < Call->arg_size() &&
-           !Call->isByValArgument(OperandNo)))
+      if (!(*CI)->getType()->isPointerTy())
         continue;
 
       // Call doesn't access memory through this operand, so we don't care
