@@ -288,7 +288,13 @@ void AsanMapUnmapCallback::OnMap(uptr p, uptr size) const {
 
 void AsanMapUnmapCallback::OnMapSecondary(uptr p, uptr size, uptr user_begin,
                                           uptr user_size) const {
-  PoisonShadow(p, size, kAsanHeapLeftRedzoneMagic);
+  uptr user_end = RoundDownTo(user_begin + user_size, ASAN_SHADOW_GRANULARITY);
+  user_begin = RoundUpTo(user_begin, ASAN_SHADOW_GRANULARITY);
+  // The secondary mapping will be immediately returned to user, no value
+  // poisoning that with non-zero just before unpoisoning by Allocate(). So just
+  // poison head/tail invisible to Allocate().
+  PoisonShadow(p, user_begin - p, kAsanHeapLeftRedzoneMagic);
+  PoisonShadow(user_end, size - (user_end - p), kAsanHeapLeftRedzoneMagic);
   // Statistics.
   AsanStats &thread_stats = GetCurrentThreadStats();
   thread_stats.mmaps++;
@@ -550,9 +556,10 @@ struct Allocator {
     uptr needed_size = rounded_size + rz_size;
     if (alignment > min_alignment)
       needed_size += alignment;
+    bool from_primary = PrimaryAllocator::CanAllocate(needed_size, alignment);
     // If we are allocating from the secondary allocator, there will be no
     // automatic right redzone, so add the right redzone manually.
-    if (!PrimaryAllocator::CanAllocate(needed_size, alignment))
+    if (!from_primary)
       needed_size += rz_size;
     CHECK(IsAligned(needed_size, min_alignment));
     if (size > kMaxAllowedMallocSize || needed_size > kMaxAllowedMallocSize ||
@@ -584,15 +591,6 @@ struct Allocator {
       ReportOutOfMemory(size, stack);
     }
 
-    if (*(u8 *)MEM_TO_SHADOW((uptr)allocated) == 0 && CanPoisonMemory()) {
-      // Heap poisoning is enabled, but the allocator provides an unpoisoned
-      // chunk. This is possible if CanPoisonMemory() was false for some
-      // time, for example, due to flags()->start_disabled.
-      // Anyway, poison the block before using it for anything else.
-      uptr allocated_size = allocator.GetActuallyAllocatedSize(allocated);
-      PoisonShadow((uptr)allocated, allocated_size, kAsanHeapLeftRedzoneMagic);
-    }
-
     uptr alloc_beg = reinterpret_cast<uptr>(allocated);
     uptr alloc_end = alloc_beg + needed_size;
     uptr user_beg = alloc_beg + rz_size;
@@ -608,6 +606,17 @@ struct Allocator {
     m->user_requested_alignment_log = user_requested_alignment_log;
 
     m->SetAllocContext(t ? t->tid() : kMainTid, StackDepotPut(*stack));
+
+    if (!from_primary || *(u8 *)MEM_TO_SHADOW((uptr)allocated) == 0) {
+      // The allocator provides an unpoisoned chunk. This is possible for the
+      // secondary allocator, or if CanPoisonMemory() was false for some time,
+      // for example, due to flags()->start_disabled. Anyway, poison left and
+      // right of the block before using it for anything else.
+      uptr tail_beg = RoundUpTo(user_end, ASAN_SHADOW_GRANULARITY);
+      uptr tail_end = alloc_beg + allocator.GetActuallyAllocatedSize(allocated);
+      PoisonShadow(alloc_beg, user_beg - alloc_beg, kAsanHeapLeftRedzoneMagic);
+      PoisonShadow(tail_beg, tail_end - tail_beg, kAsanHeapLeftRedzoneMagic);
+    }
 
     uptr size_rounded_down_to_granularity =
         RoundDownTo(size, ASAN_SHADOW_GRANULARITY);
