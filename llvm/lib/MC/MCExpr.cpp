@@ -672,7 +672,7 @@ static void AttemptToFoldSymbolOffsetDifference(
       Displacement *= -1;
     }
 
-    bool Found = false;
+    [[maybe_unused]] bool Found = false;
     for (auto FI = FB->getIterator(), FE = SecA.end(); FI != FE; ++FI) {
       auto DF = dyn_cast<MCDataFragment>(FI);
       if (&*FI == FA) {
