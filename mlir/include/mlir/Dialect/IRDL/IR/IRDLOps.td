@@ -161,7 +161,7 @@ def IRDL_ParametersOp : IRDL_Op<"parameters",
 
 def IRDL_OperationOp : IRDL_Op<"operation",
     [HasParent<"DialectOp">, NoTerminator, NoRegionArguments,
-    AtMostOneChildOf<"OperandsOp, ResultsOp">, Symbol]> {
+    AtMostOneChildOf<"OperandsOp, ResultsOp, AttributesOp">, Symbol]> {
   let summary = "Define a new operation";
   let description = [{
     `irdl.operation` defines a new operation belonging to the `irdl.dialect`
@@ -258,6 +258,43 @@ def IRDL_ResultsOp : IRDL_Op<"results", [HasParent<"OperationOp">]> {
 
   let arguments = (ins Variadic<IRDL_AttributeType>:$args);
   let assemblyFormat = " `(` $args `)` attr-dict ";
+}
+
+def IRDL_AttributesOp : IRDL_Op<"attributes", [HasParent<"OperationOp">]> {
+  let summary = "Define the attributes of an operation";
+
+  let description = [{
+    `irdl.attributes` defines the attributes of the `irdl.operation` parent 
+    operation definition.
+
+    In the following example, `irdl.attributes` defines the attributes of the
+    `attr_op` operation:
+
+    ```mlir
+    irdl.dialect @example {
+
+      irdl.operation @attr_op {
+        %0 = irdl.any
+        %1 = irdl.is i64
+        irdl.attibutes {
+          "attr1" = %0,
+          "attr2" = %1
+        }
+      }
+    }
+    ```
+
+    The operation will expect an arbitrary attribute "attr1" and an
+    attribute "attr2" with value `i64`.
+  }];
+
+  let arguments = (ins Variadic<IRDL_AttributeType>:$attributeValues, 
+                        StrArrayAttr:$attributeValueNames);
+  let assemblyFormat = [{
+    custom<AttributesOp>($attributeValues, $attributeValueNames) attr-dict 
+  }];
+
+  let hasVerifier = true;
 }
 
 //===----------------------------------------------------------------------===//

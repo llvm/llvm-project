@@ -62,6 +62,26 @@ LogicalResult acc::DataBoundsOp::verify() {
 }
 
 //===----------------------------------------------------------------------===//
+// PrivateOp
+//===----------------------------------------------------------------------===//
+LogicalResult acc::PrivateOp::verify() {
+  if (getDataClause() != acc::DataClause::acc_private)
+    return emitError(
+        "data clause associated with private operation must match its intent");
+  return success();
+}
+
+//===----------------------------------------------------------------------===//
+// FirstprivateOp
+//===----------------------------------------------------------------------===//
+LogicalResult acc::FirstprivateOp::verify() {
+  if (getDataClause() != acc::DataClause::acc_firstprivate)
+    return emitError("data clause associated with firstprivate operation must "
+                     "match its intent");
+  return success();
+}
+
+//===----------------------------------------------------------------------===//
 // DevicePtrOp
 //===----------------------------------------------------------------------===//
 LogicalResult acc::DevicePtrOp::verify() {
@@ -615,11 +635,11 @@ LogicalResult acc::KernelsOp::verify() {
 //===----------------------------------------------------------------------===//
 
 LogicalResult acc::HostDataOp::verify() {
-  if (getDataOperands().empty())
+  if (getDataClauseOperands().empty())
     return emitError("at least one operand must appear on the host_data "
                      "operation");
 
-  for (mlir::Value operand : getDataOperands())
+  for (mlir::Value operand : getDataClauseOperands())
     if (!mlir::isa<acc::UseDeviceOp>(operand.getDefiningOp()))
       return emitError("expect data entry operation as defining op");
   return success();

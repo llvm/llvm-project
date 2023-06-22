@@ -413,12 +413,6 @@ def Bufferization_ToMemrefOp : Bufferization_Op<"to_memref", [
       return true;
     }
 
-    bool mustBufferizeInPlace(OpOperand &opOperand,
-                              const AnalysisState &state) const {
-      // ToMemrefOps always bufferize inplace.
-      return true;
-    }
-
     AliasingOpResultList getAliasingOpResults(
         OpOperand &opOperand, const AnalysisState &state) const {
       return {};

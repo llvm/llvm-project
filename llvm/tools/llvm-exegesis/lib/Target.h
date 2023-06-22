@@ -75,7 +75,8 @@ public:
 
   // Targets can use this to create target-specific perf counters.
   virtual Expected<std::unique_ptr<pfm::Counter>>
-  createCounter(StringRef CounterName, const LLVMState &State) const;
+  createCounter(StringRef CounterName, const LLVMState &State,
+                const pid_t ProcessID = 0) const;
 
   // Targets can use this to add target-specific passes in assembleToStream();
   virtual void addTargetSpecificPasses(PassManagerBase &PM) const {}
@@ -162,8 +163,8 @@ public:
   Expected<std::unique_ptr<BenchmarkRunner>> createBenchmarkRunner(
       Benchmark::ModeE Mode, const LLVMState &State,
       BenchmarkPhaseSelectorE BenchmarkPhaseSelector,
-      Benchmark::ResultAggregationModeE ResultAggMode =
-          Benchmark::Min) const;
+      BenchmarkRunner::ExecutionModeE ExecutionMode,
+      Benchmark::ResultAggregationModeE ResultAggMode = Benchmark::Min) const;
 
   // Returns the ExegesisTarget for the given triple or nullptr if the target
   // does not exist.
@@ -205,10 +206,12 @@ private:
   std::unique_ptr<BenchmarkRunner> virtual createLatencyBenchmarkRunner(
       const LLVMState &State, Benchmark::ModeE Mode,
       BenchmarkPhaseSelectorE BenchmarkPhaseSelector,
-      Benchmark::ResultAggregationModeE ResultAggMode) const;
+      Benchmark::ResultAggregationModeE ResultAggMode,
+      BenchmarkRunner::ExecutionModeE ExecutionMode) const;
   std::unique_ptr<BenchmarkRunner> virtual createUopsBenchmarkRunner(
       const LLVMState &State, BenchmarkPhaseSelectorE BenchmarkPhaseSelector,
-      Benchmark::ResultAggregationModeE ResultAggMode) const;
+      Benchmark::ResultAggregationModeE ResultAggMode,
+      BenchmarkRunner::ExecutionModeE ExecutionMode) const;
 
   const ExegesisTarget *Next = nullptr;
   const ArrayRef<CpuAndPfmCounters> CpuPfmCounters;

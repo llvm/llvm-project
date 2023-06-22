@@ -1,5 +1,4 @@
 ; RUN: llc -march=amdgcn -mcpu=tahiti -verify-machineinstrs < %s 2>&1 | FileCheck -check-prefix=GCN %s
-
 ; GCN: callee_kernel:
 ; GCN: s_endpgm
 define amdgpu_kernel void @callee_kernel(i32 addrspace(1)* %out) #0 {

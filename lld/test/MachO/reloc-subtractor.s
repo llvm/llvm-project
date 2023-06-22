@@ -33,15 +33,6 @@ L_.minuend:
   .space 16
 
 .section __DATA,bar
-_minuend_1:
-  .space 16
-_minuend_2:
-  .space 16
-_subtrahend_1:
-  .space 16
-_subtrahend_2:
-  .space 16
-
 _sub1:
   .long _minuend_1 - _subtrahend_1
   .space 12
@@ -57,6 +48,15 @@ _sub4:
 _sub5:
   .quad L_.minuend - _subtrahend_1 + 1
   .space 8
+
+_minuend_1:
+  .space 16
+_minuend_2:
+  .space 16
+_subtrahend_1:
+  .space 16
+_subtrahend_2:
+  .space 16
 
 .text
 .p2align 2

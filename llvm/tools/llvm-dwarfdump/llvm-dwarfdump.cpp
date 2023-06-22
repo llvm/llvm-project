@@ -12,6 +12,7 @@
 
 #include "llvm-dwarfdump.h"
 #include "llvm/ADT/STLExtras.h"
+#include "llvm/ADT/SmallSet.h"
 #include "llvm/ADT/StringSet.h"
 #include "llvm/DebugInfo/DIContext.h"
 #include "llvm/DebugInfo/DWARF/DWARFAcceleratorTable.h"
@@ -25,6 +26,7 @@
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/Format.h"
+#include "llvm/Support/FormatVariadic.h"
 #include "llvm/Support/InitLLVM.h"
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/Path.h"
@@ -171,6 +173,10 @@ static list<std::string>
          value_desc("name"), cat(DwarfDumpCategory));
 static alias FindAlias("f", desc("Alias for --find."), aliasopt(Find),
                        cl::NotHidden);
+static opt<bool> FindAllApple(
+    "find-all-apple",
+    desc("Print every debug information entry in the accelerator tables."),
+    cat(DwarfDumpCategory));
 static opt<bool> IgnoreCase("ignore-case",
                             desc("Ignore case distinctions when using --name."),
                             value_desc("i"), cat(DwarfDumpCategory));
@@ -460,6 +466,37 @@ static void filterByAccelName(ArrayRef<std::string> Names, DWARFContext &DICtx,
     Die.dump(OS, 0, DumpOpts);
 }
 
+/// Print all DIEs in apple accelerator tables
+static void findAllApple(
+    DWARFContext &DICtx, raw_ostream &OS,
+    std::function<StringRef(uint64_t RegNum, bool IsEH)> GetNameForDWARFReg) {
+  StringMap<llvm::SmallSet<DWARFDie, 2>> NameToDies;
+
+  auto PushDIEs = [&](const AppleAcceleratorTable &Accel) {
+    for (const auto &Entry : Accel.entries()) {
+      if (std::optional<uint64_t> Off = Entry.BaseEntry.getDIESectionOffset()) {
+        std::optional<StringRef> MaybeName = Entry.readName();
+        DWARFDie Die = DICtx.getDIEForOffset(*Off);
+        if (Die && MaybeName)
+          NameToDies[*MaybeName].insert(Die);
+      }
+    }
+  };
+
+  PushDIEs(DICtx.getAppleNames());
+  PushDIEs(DICtx.getAppleNamespaces());
+  PushDIEs(DICtx.getAppleTypes());
+
+  DIDumpOptions DumpOpts = getDumpOpts(DICtx);
+  DumpOpts.GetNameForDWARFReg = GetNameForDWARFReg;
+  for (const auto &[Name, Dies] : NameToDies) {
+    OS << llvm::formatv("\nApple accelerator entries with name = \"{0}\":\n",
+                        Name);
+    for (DWARFDie Die : Dies)
+      Die.dump(OS, 0, DumpOpts);
+  }
+}
+
 /// Handle the --lookup option and dump the DIEs and line info for the given
 /// address.
 /// TODO: specified Address for --lookup option could relate for several
@@ -644,6 +681,13 @@ static bool dumpObjectFile(ObjectFile &Obj, DWARFContext &DICtx,
     return true;
   }
 
+#ifdef FIXME_GetRegName
+  // Handle the --find-all-apple option and lower it to --debug-info=<offset>.
+  if (FindAllApple) {
+    findAllApple(DICtx, OS, GetRegName);
+    return true;
+  }
+#endif
   // Dump the complete DWARF structure.
   auto DumpOpts = getDumpOpts(DICtx);
   DumpOpts.GetNameForDWARFReg = Callbacks.GetNameForDWARFReg;
@@ -802,7 +846,7 @@ int main(int argc, char **argv) {
 
   // Unless dumping a specific DIE, default to --show-children.
   if (!ShowChildren && !Verify && !OffsetRequested && Name.empty() &&
-      Find.empty())
+      Find.empty() && !FindAllApple)
     ShowChildren = true;
 
   // Defaults to a.out if no filenames specified.

@@ -53,8 +53,6 @@ ModulePass *createAMDGPURemoveIncompatibleFunctionsPass(const TargetMachine *);
 FunctionPass *createAMDGPUCodeGenPreparePass();
 FunctionPass *createAMDGPULateCodeGenPreparePass();
 FunctionPass *createAMDGPUMachineCFGStructurizerPass();
-FunctionPass *createAMDGPUPropagateAttributesEarlyPass(const TargetMachine *);
-ModulePass *createAMDGPUPropagateAttributesLatePass(const TargetMachine *);
 FunctionPass *createAMDGPURewriteOutArgumentsPass();
 ModulePass *createAMDGPULowerModuleLDSPass();
 FunctionPass *createSIModeRegisterPass();
@@ -114,30 +112,6 @@ extern char &AMDGPULowerKernelAttributesID;
 struct AMDGPULowerKernelAttributesPass
     : PassInfoMixin<AMDGPULowerKernelAttributesPass> {
   PreservedAnalyses run(Function &F, FunctionAnalysisManager &AM);
-};
-
-void initializeAMDGPUPropagateAttributesEarlyPass(PassRegistry &);
-extern char &AMDGPUPropagateAttributesEarlyID;
-
-struct AMDGPUPropagateAttributesEarlyPass
-    : PassInfoMixin<AMDGPUPropagateAttributesEarlyPass> {
-  AMDGPUPropagateAttributesEarlyPass(TargetMachine &TM) : TM(TM) {}
-  PreservedAnalyses run(Function &F, FunctionAnalysisManager &AM);
-
-private:
-  TargetMachine &TM;
-};
-
-void initializeAMDGPUPropagateAttributesLatePass(PassRegistry &);
-extern char &AMDGPUPropagateAttributesLateID;
-
-struct AMDGPUPropagateAttributesLatePass
-    : PassInfoMixin<AMDGPUPropagateAttributesLatePass> {
-  AMDGPUPropagateAttributesLatePass(TargetMachine &TM) : TM(TM) {}
-  PreservedAnalyses run(Module &M, ModuleAnalysisManager &AM);
-
-private:
-  TargetMachine &TM;
 };
 
 void initializeAMDGPULowerModuleLDSPass(PassRegistry &);

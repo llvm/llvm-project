@@ -1255,16 +1255,48 @@ DiagnosedSilenceableFailure
 transform::MergeHandlesOp::apply(transform::TransformRewriter &rewriter,
                                  transform::TransformResults &results,
                                  transform::TransformState &state) {
-  SmallVector<Operation *> operations;
-  for (Value operand : getHandles())
-    llvm::append_range(operations, state.getPayloadOps(operand));
-  if (!getDeduplicate()) {
-    results.set(llvm::cast<OpResult>(getResult()), operations);
+  ValueRange handles = getHandles();
+  if (isa<TransformHandleTypeInterface>(handles.front().getType())) {
+    SmallVector<Operation *> operations;
+    for (Value operand : handles)
+      llvm::append_range(operations, state.getPayloadOps(operand));
+    if (!getDeduplicate()) {
+      results.set(llvm::cast<OpResult>(getResult()), operations);
+      return DiagnosedSilenceableFailure::success();
+    }
+
+    SetVector<Operation *> uniqued(operations.begin(), operations.end());
+    results.set(llvm::cast<OpResult>(getResult()), uniqued.getArrayRef());
     return DiagnosedSilenceableFailure::success();
   }
 
-  SetVector<Operation *> uniqued(operations.begin(), operations.end());
-  results.set(llvm::cast<OpResult>(getResult()), uniqued.getArrayRef());
+  if (llvm::isa<TransformParamTypeInterface>(handles.front().getType())) {
+    SmallVector<Attribute> attrs;
+    for (Value attribute : handles)
+      llvm::append_range(attrs, state.getParams(attribute));
+    if (!getDeduplicate()) {
+      results.setParams(cast<OpResult>(getResult()), attrs);
+      return DiagnosedSilenceableFailure::success();
+    }
+
+    SetVector<Attribute> uniqued(attrs.begin(), attrs.end());
+    results.setParams(cast<OpResult>(getResult()), uniqued.getArrayRef());
+    return DiagnosedSilenceableFailure::success();
+  }
+
+  assert(
+      llvm::isa<TransformValueHandleTypeInterface>(handles.front().getType()) &&
+      "expected value handle type");
+  SmallVector<Value> payloadValues;
+  for (Value value : handles)
+    llvm::append_range(payloadValues, state.getPayloadValues(value));
+  if (!getDeduplicate()) {
+    results.setValues(cast<OpResult>(getResult()), payloadValues);
+    return DiagnosedSilenceableFailure::success();
+  }
+
+  SetVector<Value> uniqued(payloadValues.begin(), payloadValues.end());
+  results.setValues(cast<OpResult>(getResult()), uniqued.getArrayRef());
   return DiagnosedSilenceableFailure::success();
 }
 

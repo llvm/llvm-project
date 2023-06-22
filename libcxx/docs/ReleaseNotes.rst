@@ -111,6 +111,9 @@ Deprecations and Removals
 - The classes ``strstreambuf`` , ``istrstream``, ``ostrstream``, and ``strstream`` have been deprecated.
   They have been deprecated in the Standard since C++98, but were never marked as deprecated in libc++.
 
+- LWG3631 ``basic_format_arg(T&&) should use remove_cvref_t<T> throughout`` removed
+  support for ``volatile`` qualified formatters.
+
 Upcoming Deprecations and Removals
 ----------------------------------
 

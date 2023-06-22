@@ -623,7 +623,7 @@ static llvm::Function *emitOutlinedFunctionPrologue(
       (CGM.getLangOpts().OpenMPIsDevice && argsNeedAddrSpace &&
        (Ctx.getTargetInfo().getTriple().isAMDGCN()))
           ? CGM.getTypes().arrangeLLVMFunctionInfo(
-                Ctx.VoidTy, false, false, argCanQualTypes,
+                Ctx.VoidTy, FnInfoOpts::None, argCanQualTypes,
                 FunctionType::ExtInfo(), {}, RequiredArgs::All)
           : CGM.getTypes().arrangeBuiltinFunctionDeclaration(Ctx.VoidTy,
                                                              TargetArgs);

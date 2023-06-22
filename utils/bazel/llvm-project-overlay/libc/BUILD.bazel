@@ -1986,7 +1986,6 @@ libc_support_library(
         "src/string/memory_utils/op_aarch64.h",
         "src/string/memory_utils/op_builtin.h",
         "src/string/memory_utils/op_generic.h",
-        "src/string/memory_utils/op_riscv.h",
         "src/string/memory_utils/op_x86.h",
         "src/string/memory_utils/utils.h",
     ],

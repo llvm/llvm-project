@@ -9,38 +9,22 @@ define void @test() {
 ; CHECK-NEXT:  bb:
 ; CHECK-NEXT:    br label [[BB3:%.*]]
 ; CHECK:       bb3:
-; CHECK-NEXT:    [[LSR_IV13:%.*]] = phi i32 [ [[LSR_IV_NEXT14:%.*]], [[BB7:%.*]] ], [ 0, [[BB:%.*]] ]
-; CHECK-NEXT:    [[LSR_IV11:%.*]] = phi i32 [ [[LSR_IV_NEXT12:%.*]], [[BB7]] ], [ 98304, [[BB]] ]
-; CHECK-NEXT:    [[LSR_IV9:%.*]] = phi i32 [ [[LSR_IV_NEXT10:%.*]], [[BB7]] ], [ 0, [[BB]] ]
-; CHECK-NEXT:    [[LSR_IV7:%.*]] = phi i32 [ [[LSR_IV_NEXT8:%.*]], [[BB7]] ], [ 147456, [[BB]] ]
-; CHECK-NEXT:    [[LSR_IV5:%.*]] = phi i32 [ [[LSR_IV_NEXT6:%.*]], [[BB7]] ], [ 0, [[BB]] ]
-; CHECK-NEXT:    [[LSR_IV3:%.*]] = phi i32 [ [[LSR_IV_NEXT4:%.*]], [[BB7]] ], [ 57344, [[BB]] ]
-; CHECK-NEXT:    [[LSR_IV1:%.*]] = phi i32 [ [[LSR_IV_NEXT2:%.*]], [[BB7]] ], [ 0, [[BB]] ]
-; CHECK-NEXT:    [[LSR_IV:%.*]] = phi i32 [ [[LSR_IV_NEXT:%.*]], [[BB7]] ], [ 4096, [[BB]] ]
+; CHECK-NEXT:    [[LSR_IV1:%.*]] = phi i32 [ [[LSR_IV_NEXT2:%.*]], [[BB7:%.*]] ], [ 0, [[BB:%.*]] ]
+; CHECK-NEXT:    [[LSR_IV:%.*]] = phi i32 [ [[LSR_IV_NEXT:%.*]], [[BB7]] ], [ 16, [[BB]] ]
 ; CHECK-NEXT:    br label [[BB4:%.*]]
 ; CHECK:       bb4:
-; CHECK-NEXT:    [[LSR_IV21:%.*]] = phi i32 [ [[LSR_IV_NEXT22:%.*]], [[BB6:%.*]] ], [ 0, [[BB3]] ]
-; CHECK-NEXT:    [[LSR_IV19:%.*]] = phi i32 [ [[LSR_IV_NEXT20:%.*]], [[BB6]] ], [ [[LSR_IV1]], [[BB3]] ]
-; CHECK-NEXT:    [[LSR_IV17:%.*]] = phi i32 [ [[LSR_IV_NEXT18:%.*]], [[BB6]] ], [ [[LSR_IV5]], [[BB3]] ]
-; CHECK-NEXT:    [[LSR_IV15:%.*]] = phi i32 [ [[LSR_IV_NEXT16:%.*]], [[BB6]] ], [ [[LSR_IV9]], [[BB3]] ]
+; CHECK-NEXT:    [[LSR_IV3:%.*]] = phi i32 [ [[LSR_IV_NEXT4:%.*]], [[BB6:%.*]] ], [ [[LSR_IV1]], [[BB3]] ]
 ; CHECK-NEXT:    br i1 true, label [[BB7]], label [[BB6]]
 ; CHECK:       bb6:
-; CHECK-NEXT:    [[LSR_IV_NEXT16]] = add i32 [[LSR_IV15]], [[LSR_IV13]]
-; CHECK-NEXT:    [[LSR_IV_NEXT18]] = add i32 [[LSR_IV17]], [[LSR_IV15]]
-; CHECK-NEXT:    [[LSR_IV_NEXT20]] = add i32 [[LSR_IV19]], [[LSR_IV17]]
-; CHECK-NEXT:    [[LSR_IV_NEXT22]] = add i32 [[LSR_IV21]], [[LSR_IV19]]
+; CHECK-NEXT:    [[LSR_IV_NEXT4]] = add i32 [[LSR_IV3]], 268435456
 ; CHECK-NEXT:    br label [[BB4]]
 ; CHECK:       bb7:
-; CHECK-NEXT:    call void @foo(i32 [[LSR_IV21]])
-; CHECK-NEXT:    [[SEXT:%.*]] = sext i32 [[LSR_IV21]] to i64
-; CHECK-NEXT:    [[LSR_IV_NEXT]] = add i32 [[LSR_IV]], 8192
+; CHECK-NEXT:    [[MUL9:%.*]] = mul i32 [[LSR_IV3]], [[LSR_IV3]]
+; CHECK-NEXT:    [[MUL10:%.*]] = mul i32 [[MUL9]], [[LSR_IV3]]
+; CHECK-NEXT:    call void @foo(i32 [[MUL10]])
+; CHECK-NEXT:    [[SEXT:%.*]] = sext i32 [[MUL10]] to i64
+; CHECK-NEXT:    [[LSR_IV_NEXT]] = add i32 [[LSR_IV]], 32
 ; CHECK-NEXT:    [[LSR_IV_NEXT2]] = add i32 [[LSR_IV1]], [[LSR_IV]]
-; CHECK-NEXT:    [[LSR_IV_NEXT4]] = add i32 [[LSR_IV3]], 114688
-; CHECK-NEXT:    [[LSR_IV_NEXT6]] = add i32 [[LSR_IV5]], [[LSR_IV3]]
-; CHECK-NEXT:    [[LSR_IV_NEXT8]] = add i32 [[LSR_IV7]], 294912
-; CHECK-NEXT:    [[LSR_IV_NEXT10]] = add i32 [[LSR_IV9]], [[LSR_IV7]]
-; CHECK-NEXT:    [[LSR_IV_NEXT12]] = add i32 [[LSR_IV11]], 196608
-; CHECK-NEXT:    [[LSR_IV_NEXT14]] = add i32 [[LSR_IV13]], [[LSR_IV11]]
 ; CHECK-NEXT:    br label [[BB3]]
 ;
 bb:

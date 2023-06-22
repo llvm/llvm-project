@@ -455,7 +455,7 @@ mlir::scf::tileReductionUsingScf(RewriterBase &b,
   SmallVector<OpFoldResult> resultSizesList;
   for (size_t i = 0; i < offsets.size(); i++)
     resultSizesList.push_back(
-        b.createOrFold<tensor::DimOp>(loc, parallelOp->getResult(0), i));
+        tensor::getMixedSize(b, loc, parallelOp->getResult(0), i));
   SmallVector<OpFoldResult> outOffsets(offsets.size(), b.getIndexAttr(0));
   SmallVector<Value> replacements = yieldTiledValues(
       b, (*identityTensor)->getResults(), parallelOp->getResults(), outOffsets,

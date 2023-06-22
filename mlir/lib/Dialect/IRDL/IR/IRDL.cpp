@@ -71,6 +71,49 @@ LogicalResult DialectOp::verify() {
   return success();
 }
 
+LogicalResult AttributesOp::verify() {
+  const size_t namesSize = getAttributeValueNames().size();
+  const size_t valuesSize = getAttributeValues().size();
+
+  if (namesSize != valuesSize)
+    return emitOpError()
+           << "the number of attribute names and their constraints must be "
+              "the same but got "
+           << namesSize << " and " << valuesSize << " respectively";
+
+  return success();
+}
+
+static ParseResult
+parseAttributesOp(OpAsmParser &p,
+                  SmallVectorImpl<OpAsmParser::UnresolvedOperand> &attrOperands,
+                  ArrayAttr &attrNamesAttr) {
+  Builder &builder = p.getBuilder();
+  SmallVector<Attribute> attrNames;
+  if (succeeded(p.parseOptionalLBrace())) {
+    auto parseOperands = [&]() {
+      if (p.parseAttribute(attrNames.emplace_back()) || p.parseEqual() ||
+          p.parseOperand(attrOperands.emplace_back()))
+        return failure();
+      return success();
+    };
+    if (p.parseCommaSeparatedList(parseOperands) || p.parseRBrace())
+      return failure();
+  }
+  attrNamesAttr = builder.getArrayAttr(attrNames);
+  return success();
+}
+
+static void printAttributesOp(OpAsmPrinter &p, AttributesOp op,
+                              OperandRange attrArgs, ArrayAttr attrNames) {
+  if (attrNames.empty())
+    return;
+  p << "{";
+  interleaveComma(llvm::seq<int>(0, attrNames.size()), p,
+                  [&](int i) { p << attrNames[i] << " = " << attrArgs[i]; });
+  p << '}';
+}
+
 #include "mlir/Dialect/IRDL/IR/IRDLInterfaces.cpp.inc"
 
 #define GET_TYPEDEF_CLASSES

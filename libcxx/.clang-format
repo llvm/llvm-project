@@ -1,4 +1,7 @@
 BasedOnStyle: LLVM
+# Note that we don't specify the language in this file because some files are
+# detected as Cpp, but others are detected as ObjC and we want this formatting
+# to apply to all types of files.
 
 AlignAfterOpenBracket: Align
 AlignConsecutiveAssignments: Consecutive
@@ -66,7 +69,6 @@ PackConstructorInitializers: NextLine
 
 PenaltyIndentedWhitespace: 2
 
-Language: Cpp
 Standard: c++20
 SpacesInAngles: Leave
 

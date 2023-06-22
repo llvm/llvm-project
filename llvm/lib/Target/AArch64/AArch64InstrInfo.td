@@ -787,6 +787,12 @@ def AArch64fmaxnmv : PatFrags<(ops node:$Rn),
 def AArch64fminnmv : PatFrags<(ops node:$Rn),
                               [(vecreduce_fmin node:$Rn),
                                (int_aarch64_neon_fminnmv node:$Rn)]>;
+def AArch64fmaxv : PatFrags<(ops node:$Rn),
+                            [(vecreduce_fmaximum node:$Rn),
+                             (int_aarch64_neon_fmaxv node:$Rn)]>;
+def AArch64fminv : PatFrags<(ops node:$Rn),
+                            [(vecreduce_fminimum node:$Rn),
+                             (int_aarch64_neon_fminv node:$Rn)]>;
 
 def SDT_AArch64SETTAG : SDTypeProfile<0, 2, [SDTCisPtrTy<0>, SDTCisPtrTy<1>]>;
 def AArch64stg : SDNode<"AArch64ISD::STG", SDT_AArch64SETTAG, [SDNPHasChain, SDNPMayStore, SDNPMemOperand]>;
@@ -5827,17 +5833,17 @@ def : Pat<(f32 (AArch64fmaxnmv (v2f32 V64:$Rn))),
           (FMAXNMPv2i32p V64:$Rn)>;
 def : Pat<(f64 (AArch64fmaxnmv (v2f64 V128:$Rn))),
           (FMAXNMPv2i64p V128:$Rn)>;
-def : Pat<(f32 (int_aarch64_neon_fmaxv (v2f32 V64:$Rn))),
+def : Pat<(f32 (AArch64fmaxv (v2f32 V64:$Rn))),
           (FMAXPv2i32p V64:$Rn)>;
-def : Pat<(f64 (int_aarch64_neon_fmaxv (v2f64 V128:$Rn))),
+def : Pat<(f64 (AArch64fmaxv (v2f64 V128:$Rn))),
           (FMAXPv2i64p V128:$Rn)>;
 def : Pat<(f32 (AArch64fminnmv (v2f32 V64:$Rn))),
           (FMINNMPv2i32p V64:$Rn)>;
 def : Pat<(f64 (AArch64fminnmv (v2f64 V128:$Rn))),
           (FMINNMPv2i64p V128:$Rn)>;
-def : Pat<(f32 (int_aarch64_neon_fminv (v2f32 V64:$Rn))),
+def : Pat<(f32 (AArch64fminv (v2f32 V64:$Rn))),
           (FMINPv2i32p V64:$Rn)>;
-def : Pat<(f64 (int_aarch64_neon_fminv (v2f64 V128:$Rn))),
+def : Pat<(f64 (AArch64fminv (v2f64 V128:$Rn))),
           (FMINPv2i64p V128:$Rn)>;
 
 //----------------------------------------------------------------------------
@@ -6302,9 +6308,9 @@ defm UMINV   : SIMDAcrossLanesBHS<1, 0b11010, "uminv">;
 defm SADDLV  : SIMDAcrossLanesHSD<0, 0b00011, "saddlv">;
 defm UADDLV  : SIMDAcrossLanesHSD<1, 0b00011, "uaddlv">;
 defm FMAXNMV : SIMDFPAcrossLanes<0b01100, 0, "fmaxnmv", AArch64fmaxnmv>;
-defm FMAXV   : SIMDFPAcrossLanes<0b01111, 0, "fmaxv", int_aarch64_neon_fmaxv>;
+defm FMAXV   : SIMDFPAcrossLanes<0b01111, 0, "fmaxv", AArch64fmaxv>;
 defm FMINNMV : SIMDFPAcrossLanes<0b01100, 1, "fminnmv", AArch64fminnmv>;
-defm FMINV   : SIMDFPAcrossLanes<0b01111, 1, "fminv", int_aarch64_neon_fminv>;
+defm FMINV   : SIMDFPAcrossLanes<0b01111, 1, "fminv", AArch64fminv>;
 
 multiclass SIMDAcrossLaneLongPairIntrinsic<string Opc, SDPatternOperator addlp> {
   // Patterns for addv(addlp(x)) ==> addlv

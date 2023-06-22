@@ -68,8 +68,7 @@ static Value getConvolvedIndex(OpBuilder &b, Location loc, Value oIndex,
   AffineExpr oExpr, fExpr;
   bindSymbols(b.getContext(), oExpr, fExpr);
   AffineMap convMap = AffineMap::get(0, 2, stride * oExpr + fExpr);
-  return affine::makeComposedAffineApply(b, loc, convMap,
-                                         ValueRange{oIndex, fIndex});
+  return affine::makeComposedAffineApply(b, loc, convMap, {oIndex, fIndex});
 }
 
 FailureOr<std::pair<Operation *, Operation *>>

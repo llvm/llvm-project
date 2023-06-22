@@ -20,6 +20,7 @@
 #include "llvm/ADT/StringMap.h"
 
 #include <memory>
+#include <variant>
 
 namespace mlir {
 class AsmResourcePrinter;

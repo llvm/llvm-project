@@ -4,7 +4,6 @@
 
 // RUN: llvm-mc %s -triple=armv7aeb-linux-gnueabihf -arm-add-build-attributes -filetype=obj -mcpu=cortex-a8 -o %t.o
 // RUN: not ld.lld %t.o -o /dev/null 2>&1 | FileCheck %s
-// RUN: not ld.lld --be8 %t.o -o /dev/null 2>&1 | FileCheck %s
 
 // CHECK: InputSection too large for range extension thunk
         .syntax unified

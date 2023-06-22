@@ -623,8 +623,9 @@ void tools::gnutools::Linker::ConstructJob(Compilation &C, const JobAction &JA,
   // AddRuntTimeLibs).
   if (D.IsFlangMode()) {
     addFortranRuntimeLibraryPath(ToolChain, Args, CmdArgs);
-    if (Args.hasArg(options::OPT_flang_experimental_exec))
-      addFortranRuntimeLibs(ToolChain, CmdArgs);
+#ifdef FLANG_FIXME
+    addFortranRuntimeLibs(ToolChain, CmdArgs);
+#endif
     CmdArgs.push_back("-lm");
   }
 

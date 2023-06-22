@@ -143,6 +143,8 @@ void DAGTypeLegalizer::ScalarizeVectorResult(SDNode *N, unsigned ResNo) {
   case ISD::FREM:
   case ISD::FSUB:
   case ISD::MUL:
+  case ISD::MULHS:
+  case ISD::MULHU:
   case ISD::OR:
   case ISD::SDIV:
   case ISD::SREM:
@@ -4087,7 +4089,8 @@ void DAGTypeLegalizer::WidenVectorResult(SDNode *N, unsigned ResNo) {
 
   case ISD::FLDEXP:
   case ISD::FPOWI:
-    Res = WidenVecRes_ExpOp(N);
+    if (!unrollExpandedOp())
+      Res = WidenVecRes_ExpOp(N);
     break;
 
   case ISD::ANY_EXTEND_VECTOR_INREG:

@@ -9,7 +9,7 @@
 #ifndef LLVM_LIBC_UTILS_GPU_LOADER_LOADER_H
 #define LLVM_LIBC_UTILS_GPU_LOADER_LOADER_H
 
-#include "utils/gpu/server/Server.h"
+#include "utils/gpu/server/rpc_server.h"
 #include <cstddef>
 #include <cstdint>
 #include <cstdio>

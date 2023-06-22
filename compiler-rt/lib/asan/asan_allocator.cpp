@@ -248,6 +248,16 @@ void AsanMapUnmapCallback::OnMap(uptr p, uptr size) const {
   thread_stats.mmaps++;
   thread_stats.mmaped += size;
 }
+
+void AsanMapUnmapCallback::OnMapSecondary(uptr p, uptr size, uptr user_begin,
+                                          uptr user_size) const {
+  PoisonShadow(p, size, kAsanHeapLeftRedzoneMagic);
+  // Statistics.
+  AsanStats &thread_stats = GetCurrentThreadStats();
+  thread_stats.mmaps++;
+  thread_stats.mmaped += size;
+}
+
 void AsanMapUnmapCallback::OnUnmap(uptr p, uptr size) const {
   PoisonShadow(p, size, 0);
   // We are about to unmap a chunk of user memory.
@@ -391,8 +401,9 @@ struct Allocator {
   }
 
   void GetOptions(AllocatorOptions *options) const {
-    options->quarantine_size_mb = quarantine.GetSize() >> 20;
-    options->thread_local_quarantine_size_kb = quarantine.GetCacheSize() >> 10;
+    options->quarantine_size_mb = quarantine.GetMaxSize() >> 20;
+    options->thread_local_quarantine_size_kb =
+        quarantine.GetMaxCacheSize() >> 10;
     options->min_redzone = atomic_load(&min_redzone, memory_order_acquire);
     options->max_redzone = atomic_load(&max_redzone, memory_order_acquire);
     options->may_return_null = AllocatorMayReturnNull();
@@ -648,10 +659,6 @@ struct Allocator {
     PoisonShadow(m->Beg(), RoundUpTo(m->UsedSize(), ASAN_SHADOW_GRANULARITY),
                  kAsanHeapFreeMagic);
 
-    AsanStats &thread_stats = GetCurrentThreadStats();
-    thread_stats.frees++;
-    thread_stats.freed += m->UsedSize();
-
     // Push into quarantine.
     if (t) {
       AsanThreadLocalMallocStorage *ms = &t->malloc_storage();
@@ -703,6 +710,10 @@ struct Allocator {
         ReportNewDeleteTypeMismatch(p, delete_size, delete_alignment, stack);
       }
     }
+
+    AsanStats &thread_stats = GetCurrentThreadStats();
+    thread_stats.frees++;
+    thread_stats.freed += m->UsedSize();
 
     QuarantineChunk(m, ptr, stack);
   }

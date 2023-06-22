@@ -13,11 +13,6 @@
 // RUN: ld.lld %t3 -o %t4
 // RUN: llvm-objdump --no-print-imm-hex -d %t4 --triple=thumbv7aeb-unknown-linux-gnueabi --no-show-raw-insn | FileCheck %s
 
-// RUN: ld.lld --be8 %t -o %t2
-// RUN: llvm-objdump --no-print-imm-hex -d %t2 --triple=armv7aeb-unknown-linux-gnueabi --no-show-raw-insn | FileCheck %s
-// RUN: ld.lld --be8 %t3 -o %t4
-// RUN: llvm-objdump --no-print-imm-hex -d %t4 --triple=thumbv7aeb-unknown-linux-gnueabi --no-show-raw-insn | FileCheck %s
-
 /// Test the following relocation pairs:
 ///  * R_ARM_MOVW_ABS_NC and R_ARM_MOVT_ABS
 ///  * R_ARM_MOVW_PREL_NC and R_ARM_MOVT_PREL

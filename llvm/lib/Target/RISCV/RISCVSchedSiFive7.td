@@ -628,6 +628,7 @@ defm "" : LMULSEWWriteRes<"WriteVIRedV_From", [SiFive7VA]>;
 defm "" : LMULSEWWriteRes<"WriteVIWRedV_From", [SiFive7VA]>;
 defm "" : LMULSEWWriteRes<"WriteVFRedV_From", [SiFive7VA]>;
 defm "" : LMULSEWWriteRes<"WriteVFRedOV_From", [SiFive7VA]>;
+defm "" : LMULSEWWriteResF<"WriteVFRedMinMaxV_From", [SiFive7VA]>;
 defm "" : LMULSEWWriteResFWRed<"WriteVFWRedV_From", [SiFive7VA]>;
 defm "" : LMULSEWWriteResFWRed<"WriteVFWRedOV_From", [SiFive7VA]>;
 }

@@ -190,6 +190,7 @@ void MemprofMapUnmapCallback::OnMap(uptr p, uptr size) const {
   thread_stats.mmaps++;
   thread_stats.mmaped += size;
 }
+
 void MemprofMapUnmapCallback::OnUnmap(uptr p, uptr size) const {
   // We are about to unmap a chunk of user memory.
   // Mark the corresponding shadow memory as not needed.

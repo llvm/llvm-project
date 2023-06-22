@@ -10,9 +10,7 @@
 #include <cstdlib>
 #include <new>
 
-#if !defined(__GLIBCXX__) &&                                                   \
-    !defined(_LIBCPP_ABI_VCRUNTIME) &&      \
-    !defined(_LIBCPP_DISABLE_NEW_DELETE_DEFINITIONS)
+#if !defined(__GLIBCXX__) && !defined(_LIBCPP_ABI_VCRUNTIME)
 
 // The code below is copied as-is into libc++abi's libcxxabi/src/stdlib_new_delete.cpp
 // file. The version in this file is the canonical one.
@@ -257,4 +255,4 @@ operator delete[] (void* ptr, size_t, std::align_val_t alignment) noexcept
 #endif // !_LIBCPP_HAS_NO_LIBRARY_ALIGNED_ALLOCATION
 // ------------------ END COPY ------------------
 
-#endif // !__GLIBCXX__ && !_LIBCPP_ABI_VCRUNTIME && !_LIBCPP_DISABLE_NEW_DELETE_DEFINITIONS
+#endif // !__GLIBCXX__ && !_LIBCPP_ABI_VCRUNTIME
