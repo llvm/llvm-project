@@ -279,14 +279,7 @@ public:
     /// Forgets the mapping from or to values defined in the associated
     /// transform IR region, and restores the mapping that existed before
     /// entering this scope.
-    ~RegionScope() {
-      state.mappings.erase(region);
-      if (storedMappings.has_value())
-        state.mappings.swap(*storedMappings);
-#if LLVM_ENABLE_ABI_BREAKING_CHECKS
-      state.regionStack.pop_back();
-#endif // LLVM_ENABLE_ABI_BREAKING_CHECKS
-    }
+    ~RegionScope();
 
   private:
     /// Tag structure for differentiating the constructor for isolated regions.
