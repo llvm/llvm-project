@@ -12,12 +12,12 @@
 // FIXME: Make it work. Don't xfail to avoid excessive memory usage.
 // UNSUPPORTED: asan, msan, hwasan
 
-void* p;
+void *p;
 
 int main(int argc, char **argv) {
-  for (int i = 0; i < sizeof(void*) * 8; ++i) {
+  for (int i = 0; i < sizeof(void *) * 8; ++i) {
     p = malloc(1ull << i);
-    printf("%llu: %p\n", (1ull << i), p);
+    fprintf(stderr, "%llu: %p\n", (1ull << i), p);
     free(p);
   }
   return 0;
