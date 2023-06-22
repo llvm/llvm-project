@@ -20,6 +20,16 @@
 # CHECK-SAME: "-lc" "-lm" "-lclang_rt.builtins"
 # CHECK-SAME: "-o" "{{.*}}.tmp.out"
 
+# RUN: %T/baremetal_multilib/bin/clang -no-canonical-prefixes -x c++ %s -### -o %t.out 2>&1 \
+# RUN:     --target=thumbv7em-none-eabi -mfpu=fpv4-sp-d16 --sysroot= \
+# RUN:   | FileCheck --check-prefix=CHECK-NO-MATCH %s
+# CHECK-NO-MATCH: error: no multilib found matching flags:
+# CHECK-NO-MATCH-SAME: --target=thumbv7em-none-unknown-eabi
+# CHECK-NO-MATCH: note: available multilibs are:
+# CHECK-NO-MATCH: --target=thumbv6m-none-unknown-eabi -mfpu=none
+# CHECK-NO-MATCH: --target=thumbv7m-none-unknown-eabi -mfpu=none
+# CHECK-NO-MATCH: --target=thumbv7em-none-unknown-eabi -mfpu=none
+
 # RUN: %T/baremetal_multilib/bin/clang -no-canonical-prefixes -print-multi-directory 2>&1 \
 # RUN:     --target=thumbv8m.main-none-eabihf --sysroot= \
 # RUN:   | FileCheck --check-prefix=CHECK-PRINT-MULTI-DIRECTORY %s
@@ -75,6 +85,9 @@ MultilibVersion: 1.0
 # multilib, layered on top of each other.
 
 Variants:
+- Dir: arm-none-eabi/arm/v4t
+  Flags: [--target=armv4t-none-unknown-eabi]
+
 - Dir: arm-none-eabi/thumb/v6-m/nofp
   Flags: [--target=thumbv6m-none-unknown-eabi, -mfpu=none]
 
