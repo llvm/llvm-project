@@ -30,8 +30,8 @@ using testing::UnorderedElementsAre;
 
 // Checks if the conjunction of `Vals` is satisfiable and returns the
 // corresponding result.
-Solver::Result solve(llvm::DenseSet<BoolValue *> Vals) {
-  return WatchedLiteralsSolver().solve(std::move(Vals));
+Solver::Result solve(llvm::ArrayRef<BoolValue *> Vals) {
+  return WatchedLiteralsSolver().solve(Vals);
 }
 
 void expectUnsatisfiable(Solver::Result Result) {
