@@ -192,6 +192,20 @@ class LargeChunkHeader {
   }
 };
 
+static void FillChunk(AsanChunk *m) {
+  Flags &fl = *flags();
+
+  if (fl.max_free_fill_size > 0) {
+    // We have to skip the chunk header, it contains free_context_id.
+    uptr scribble_start = (uptr)m + kChunkHeaderSize + kChunkHeader2Size;
+    if (m->UsedSize() >= kChunkHeader2Size) {  // Skip Header2 in user area.
+      uptr size_to_fill = m->UsedSize() - kChunkHeader2Size;
+      size_to_fill = Min(size_to_fill, (uptr)fl.max_free_fill_size);
+      REAL(memset)((void *)scribble_start, fl.free_fill_byte, size_to_fill);
+    }
+  }
+}
+
 struct QuarantineCallback {
   QuarantineCallback(AllocatorCache *cache, BufferedStackTrace *stack)
       : cache_(cache),
@@ -199,18 +213,7 @@ struct QuarantineCallback {
   }
 
   void PreQuarantine(AsanChunk *m) {
-    Flags &fl = *flags();
-
-    if (fl.max_free_fill_size > 0) {
-      // We have to skip the chunk header, it contains free_context_id.
-      uptr scribble_start = (uptr)m + kChunkHeaderSize + kChunkHeader2Size;
-      if (m->UsedSize() >= kChunkHeader2Size) {  // Skip Header2 in user area.
-        uptr size_to_fill = m->UsedSize() - kChunkHeader2Size;
-        size_to_fill = Min(size_to_fill, (uptr)fl.max_free_fill_size);
-        REAL(memset)((void *)scribble_start, fl.free_fill_byte, size_to_fill);
-      }
-    }
-
+    FillChunk(m);
     // Poison the region.
     PoisonShadow(m->Beg(), RoundUpTo(m->UsedSize(), ASAN_SHADOW_GRANULARITY),
                  kAsanHeapFreeMagic);
