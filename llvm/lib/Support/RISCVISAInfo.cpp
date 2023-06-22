@@ -56,6 +56,13 @@ static const RISCVSupportedExtension SupportedExtensions[] = {
 
     {"zihintpause", RISCVExtensionVersion{2, 0}},
 
+    {"zca", RISCVExtensionVersion{1, 0}},
+    {"zcb", RISCVExtensionVersion{1, 0}},
+    {"zcd", RISCVExtensionVersion{1, 0}},
+    {"zcf", RISCVExtensionVersion{1, 0}},
+    {"zcmp", RISCVExtensionVersion{1, 0}},
+    {"zcmt", RISCVExtensionVersion{1, 0}},
+
     {"zfhmin", RISCVExtensionVersion{1, 0}},
     {"zfh", RISCVExtensionVersion{1, 0}},
 
@@ -140,12 +147,6 @@ static const RISCVSupportedExtension SupportedExperimentalExtensions[] = {
 
     {"zihintntl", RISCVExtensionVersion{0, 2}},
 
-    {"zca", RISCVExtensionVersion{1, 0}},
-    {"zcb", RISCVExtensionVersion{1, 0}},
-    {"zcd", RISCVExtensionVersion{1, 0}},
-    {"zcf", RISCVExtensionVersion{1, 0}},
-    {"zcmp", RISCVExtensionVersion{1, 0}},
-    {"zcmt", RISCVExtensionVersion{1, 0}},
     {"zfa", RISCVExtensionVersion{0, 2}},
     {"zfbfmin", RISCVExtensionVersion{0, 6}},
     {"zicond", RISCVExtensionVersion{1, 0}},

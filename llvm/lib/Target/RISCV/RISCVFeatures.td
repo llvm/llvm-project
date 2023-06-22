@@ -323,7 +323,7 @@ def FeatureStdExtZk
                         FeatureStdExtZkt]>;
 
 def FeatureStdExtZca
-    : SubtargetFeature<"experimental-zca", "HasStdExtZca", "true",
+    : SubtargetFeature<"zca", "HasStdExtZca", "true",
                        "'Zca' (part of the C extension, excluding compressed "
                        "floating point loads/stores)">;
 
@@ -335,7 +335,7 @@ def HasStdExtCOrZca
                                    "compressed floating point loads/stores)">;
 
 def FeatureStdExtZcb
-    : SubtargetFeature<"experimental-zcb", "HasStdExtZcb", "true",
+    : SubtargetFeature<"zcb", "HasStdExtZcb", "true",
                        "'Zcb' (Compressed basic bit manipulation instructions)",
                        [FeatureStdExtZca]>;
 def HasStdExtZcb : Predicate<"Subtarget->hasStdExtZcb()">,
@@ -343,7 +343,7 @@ def HasStdExtZcb : Predicate<"Subtarget->hasStdExtZcb()">,
                              "'Zcb' (Compressed basic bit manipulation instructions)">;
 
 def FeatureStdExtZcd
-    : SubtargetFeature<"experimental-zcd", "HasStdExtZcd", "true",
+    : SubtargetFeature<"zcd", "HasStdExtZcd", "true",
                        "'Zcd' (Compressed Double-Precision Floating-Point Instructions)">;
 
 def HasStdExtCOrZcd
@@ -353,7 +353,7 @@ def HasStdExtCOrZcd
                                    "'Zcd' (Compressed Double-Precision Floating-Point Instructions)">;
 
 def FeatureStdExtZcf
-    : SubtargetFeature<"experimental-zcf", "HasStdExtZcf", "true",
+    : SubtargetFeature<"zcf", "HasStdExtZcf", "true",
                        "'Zcf' (Compressed Single-Precision Floating-Point Instructions)">;
 
 def HasStdExtCOrZcf
@@ -363,7 +363,7 @@ def HasStdExtCOrZcf
                                    "'Zcf' (Compressed Single-Precision Floating-Point Instructions)">;
 
 def FeatureStdExtZcmp
-    : SubtargetFeature<"experimental-zcmp", "HasStdExtZcmp", "true",
+    : SubtargetFeature<"zcmp", "HasStdExtZcmp", "true",
                        "'Zcmp' (sequenced instuctions for code-size reduction)", 
                        [FeatureStdExtZca]>;
 def HasStdExtZcmp : Predicate<"Subtarget->hasStdExtZcmp() && !Subtarget->hasStdExtC()">,
@@ -371,7 +371,7 @@ def HasStdExtZcmp : Predicate<"Subtarget->hasStdExtZcmp() && !Subtarget->hasStdE
                                "'Zcmp' (sequenced instuctions for code-size reduction)">;
 
 def FeatureStdExtZcmt
-    : SubtargetFeature<"experimental-zcmt", "HasStdExtZcmt", "true",
+    : SubtargetFeature<"zcmt", "HasStdExtZcmt", "true",
                        "'Zcmt' (table jump instuctions for code-size reduction)", 
                        [FeatureStdExtZca, FeatureStdExtZicsr]>; 
 def HasStdExtZcmt : Predicate<"Subtarget->hasStdExtZcmt()">,
