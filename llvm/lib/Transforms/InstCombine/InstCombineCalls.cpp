@@ -2773,6 +2773,12 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
     if (Known.isAllOnes() && isAssumeWithEmptyBundle(cast<AssumeInst>(*II)))
       return eraseInstFromFunction(*II);
 
+    // assume(false) is unreachable.
+    if (match(IIOperand, m_CombineOr(m_Zero(), m_Undef()))) {
+      CreateNonTerminatorUnreachable(II);
+      return eraseInstFromFunction(*II);
+    }
+
     // Update the cache of affected values for this assumption (we might be
     // here because we just simplified the condition).
     AC.updateAffectedValues(cast<AssumeInst>(II));
