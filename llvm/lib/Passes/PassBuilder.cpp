@@ -897,6 +897,26 @@ Expected<LICMOptions> parseLICMOptions(StringRef Params) {
   return Result;
 }
 
+Expected<std::pair<bool, bool>> parseLoopRotateOptions(StringRef Params) {
+  std::pair<bool, bool> Result = {true, false};
+  while (!Params.empty()) {
+    StringRef ParamName;
+    std::tie(ParamName, Params) = Params.split(';');
+
+    bool Enable = !ParamName.consume_front("no-");
+    if (ParamName == "header-duplication") {
+      Result.first = Enable;
+    } else if (ParamName == "prepare-for-lto") {
+      Result.second = Enable;
+    } else {
+      return make_error<StringError>(
+          formatv("invalid LoopRotate pass parameter '{0}' ", ParamName).str(),
+          inconvertibleErrorCode());
+    }
+  }
+  return Result;
+}
+
 Expected<bool> parseMergedLoadStoreMotionOptions(StringRef Params) {
   bool Result = false;
   while (!Params.empty()) {
