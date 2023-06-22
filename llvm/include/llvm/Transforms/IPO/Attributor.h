@@ -1125,25 +1125,42 @@ struct AnalysisGetter {
   template <typename, typename = void> static constexpr bool HasLegacyWrapper = false;
 
   template <typename Analysis>
-  typename Analysis::Result *getAnalysis(const Function &F) {
-    if (FAM)
+  typename Analysis::Result *getAnalysis(const Function &F,
+                                         bool RequestCachedOnly = false) {
+    if (!LegacyPass && !FAM)
+      return nullptr;
+    if (FAM) {
+      if (CachedOnly || RequestCachedOnly)
+        return FAM->getCachedResult<Analysis>(const_cast<Function &>(F));
       return &FAM->getResult<Analysis>(const_cast<Function &>(F));
-    if constexpr (HasLegacyWrapper<Analysis>)
-      if (LegacyPass)
+    }
+    if constexpr (HasLegacyWrapper<Analysis>) {
+      if (!CachedOnly && !RequestCachedOnly)
         return &LegacyPass
                     ->getAnalysis<typename Analysis::LegacyWrapper>(
                         const_cast<Function &>(F))
                     .getResult();
+      if (auto *P =
+              LegacyPass
+                  ->getAnalysisIfAvailable<typename Analysis::LegacyWrapper>())
+        return &P->getResult();
+    }
     return nullptr;
   }
 
-  AnalysisGetter(FunctionAnalysisManager &FAM) : FAM(&FAM) {}
-  AnalysisGetter(Pass *P) : LegacyPass(P) {}
+  AnalysisGetter(FunctionAnalysisManager &FAM, bool CachedOnly = false)
+      : FAM(&FAM), CachedOnly(CachedOnly) {}
+  AnalysisGetter(Pass *P, bool CachedOnly = false)
+      : LegacyPass(P), CachedOnly(CachedOnly) {}
   AnalysisGetter() = default;
 
 private:
   FunctionAnalysisManager *FAM = nullptr;
   Pass *LegacyPass = nullptr;
+
+  /// If \p CachedOnly is true, no pass is created, just existing results are
+  /// used. Also available per request.
+  bool CachedOnly = false;
 };
 
 template <typename Analysis>
@@ -1288,9 +1305,6 @@ struct InformationCache {
     return AG.getAnalysis<TargetLibraryAnalysis>(F);
   }
 
-  /// Return AliasAnalysis Result for function \p F.
-  AAResults *getAAResultsForFunction(const Function &F);
-
   /// Return true if \p Arg is involved in a must-tail call, thus the argument
   /// of the caller or callee.
   bool isInvolvedInMustTailCall(const Argument &Arg) {
@@ -1304,8 +1318,9 @@ struct InformationCache {
 
   /// Return the analysis result from a pass \p AP for function \p F.
   template <typename AP>
-  typename AP::Result *getAnalysisResultForFunction(const Function &F) {
-    return AG.getAnalysis<AP>(F);
+  typename AP::Result *getAnalysisResultForFunction(const Function &F,
+                                                    bool CachedOnly = false) {
+    return AG.getAnalysis<AP>(F, CachedOnly);
   }
 
   /// Return datalayout used in the module.
