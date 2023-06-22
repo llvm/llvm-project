@@ -11,6 +11,68 @@
 ///
 /// This file is included from RISCVInstrInfoV.td
 ///
+/// Overview of our vector instruction pseudos.  Many of the instructions
+/// have behavior which depends on the value of VTYPE.  Several core aspects of
+/// the compiler - e.g. register allocation - depend on fields in this
+/// configuration register.  The details of which fields matter differ by the
+/// specific instruction, but the common dimensions are:
+///
+/// LMUL/EMUL - Most instructions can write to differently sized register groups
+/// depending on LMUL.
+///
+/// Masked vs Unmasked - Many instructions which allow a mask disallow register
+/// overlap.  As a result, masked vs unmasked require different register
+/// allocation constraints.
+///
+/// Policy - For each of mask and tail policy, there are three options:
+/// * "Undisturbed" - As defined in the specification, required to preserve the
+/// exact bit pattern of inactive lanes.
+/// * "Agnostic" - As defined in the specification, required to either preserve
+/// the exact bit pattern of inactive lanes, or produce the bit pattern -1 for
+/// those lanes.  Note that each lane can make this choice independently.
+/// Instructions which produce masks (and only those instructions) also have the
+/// option of producing a result as-if VL had been VLMAX. 
+/// * "Undefined" - The bit pattern of the inactive lanes is unspecified, and
+/// can be changed without impacting the semantics of the program.  Note that
+/// this concept does not exist in the specification, and requires source
+/// knowledge to be preserved.
+///
+/// SEW - Some instructions have semantics which depend on SEW.  This is
+/// relatively rare, and mostly impacts scheduling and cost estimation.
+///
+/// We have two techniques we use to represent the impact of these fields:
+/// * For fields which don't impact register classes, we largely use
+/// dummy operands on the pseudo instructions which convey information
+/// about the value of VTYPE.
+/// * For fields which do impact register classes (and a few bits of
+/// legacy - see policy discussion below), we define a family of pseudo
+/// instructions for each actual instruction.  Said differently, we encode
+/// each of the preceding fields which are relevant for a given instruction
+/// in the opcode space.
+///
+/// Currently, the policy is represented via the following instrinsic families:
+/// * _MASK - Can represent all three policy states for both tail and mask.  If
+///   passthrough is IMPLICIT_DEF, then represents "undefined".  Otherwise,
+///   policy operand and tablegen flags drive the interpretation.  (If policy
+///   operand is not present - there are a couple, thought we're rapidly
+///   removing them - a non-undefined policy defaults to "tail agnostic", and
+///   "mask undisturbed".  Since this is the only variant with a mask, all
+///   other variants are "mask undefined".
+/// * Unsuffixed w/ both passthrough and policy operand. Can represent all
+///   three policy states.  If passthrough is IMPLICIT_DEF, then represents
+///   "undefined".  Otherwise, policy operand and tablegen flags drive the
+///   interpretation.
+/// * Unsuffixed w/o passthrough or policy operand -- Does not have a
+///   passthrough operand, and thus represents the "undefined" state.  Note
+///   that terminology in code frequently refers to these as "TA" which is
+///   confusing.  We're in the process of migrating away from this
+///   representation.
+/// * _TU w/o policy operand -- Has a passthrough operand, and always
+///   represents the tail undisturbed state.  
+/// * _TU w/policy operand - Can represent all three policy states.  If
+///   passthrough is IMPLICIT_DEF, then represents "undefined".  Otherwise,
+///   policy operand and tablegen flags drive the interpretation.
+///
 //===----------------------------------------------------------------------===//
 
 def riscv_vmv_x_s : SDNode<"RISCVISD::VMV_X_S",
