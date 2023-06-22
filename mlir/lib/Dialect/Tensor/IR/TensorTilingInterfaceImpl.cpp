@@ -134,7 +134,7 @@ struct PackOpTiling
     DenseMap<int64_t, OpFoldResult> dimAndTileMapping =
         packOp.getDimAndTileMapping();
     SmallVector<OpFoldResult> srcDimValues =
-        tensor::createDimValues(b, loc, packOp.getSource());
+        tensor::getMixedSizes(b, loc, packOp.getSource());
     SmallVector<OpFoldResult> inputIndices, inputSizes;
     for (auto dim : llvm::seq<int64_t>(0, inputRank)) {
       using AV = affine::AffineValueExpr;
@@ -502,8 +502,7 @@ FailureOr<TilingResult> tensor::bubbleUpPadSlice(OpBuilder &b,
     bool hasHighPad = !isConstantIntValue(high, 0);
     auto offset = offsets[dim];
     auto length = sizes[dim];
-    auto srcSize =
-        tensor::createDimValue(b, loc, padOp.getSource(), dim).value();
+    auto srcSize = tensor::getMixedSize(b, loc, padOp.getSource(), dim);
 
     // The new amount of low padding is `low - offset`. Except for the case
     // where none of the low padding is read. In that case, the new amount of

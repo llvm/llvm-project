@@ -34,9 +34,9 @@ PadOp mlir::tensor::createPadHighOp(RankedTensorType type, Value source,
     // Compute the padding width.
     AffineExpr d0;
     bindDims(b.getContext(), d0);
-    auto dimOp = b.createOrFold<tensor::DimOp>(loc, source, en.index());
+    OpFoldResult sz = tensor::getMixedSize(b, loc, source, en.index());
     high[en.index()] =
-        affine::makeComposedAffineApply(b, loc, en.value() - d0, {dimOp})
+        affine::makeComposedAffineApply(b, loc, en.value() - d0, {sz})
             .getResult();
   }
   return b.create<PadOp>(loc, type, source, low, high, pad, nofold);
@@ -53,35 +53,6 @@ SmallVector<Value> mlir::tensor::createDynamicDimValues(OpBuilder &b,
           b.create<tensor::DimOp>(loc, rankedTensor, en.index()));
   }
   return dynamicDims;
-}
-
-FailureOr<OpFoldResult> mlir::tensor::createDimValue(OpBuilder &b, Location loc,
-                                                     Value rankedTensor,
-                                                     int64_t dim) {
-  auto tensorTy = dyn_cast<RankedTensorType>(rankedTensor.getType());
-  if (!tensorTy)
-    return failure();
-  auto shape = tensorTy.getShape();
-  if (dim >= static_cast<int64_t>(shape.size()))
-    return failure();
-  if (ShapedType::isDynamic(shape[dim]))
-    return OpFoldResult(b.createOrFold<tensor::DimOp>(loc, rankedTensor, dim));
-  return OpFoldResult(b.getIndexAttr(shape[dim]));
-}
-
-SmallVector<OpFoldResult>
-mlir::tensor::createDimValues(OpBuilder &b, Location loc, Value rankedTensor) {
-  auto tensorTy = cast<RankedTensorType>(rankedTensor.getType());
-  SmallVector<OpFoldResult> dims;
-  for (const auto &en : llvm::enumerate(tensorTy.getShape())) {
-    if (ShapedType::isDynamic(en.value())) {
-      dims.push_back(
-          b.createOrFold<tensor::DimOp>(loc, rankedTensor, en.index()));
-    } else {
-      dims.push_back(b.getIndexAttr(en.value()));
-    }
-  }
-  return dims;
 }
 
 FailureOr<RankedTensorType>

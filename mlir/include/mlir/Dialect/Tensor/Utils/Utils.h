@@ -26,16 +26,6 @@ PadOp createPadHighOp(RankedTensorType type, Value source, Value pad,
 SmallVector<Value> createDynamicDimValues(OpBuilder &b, Location loc,
                                           Value rankedTensor);
 
-// Returns the tensor extent along dimension `dim` if `rankedTensor` is of
-// `RankedTensorType`. Returns `failure()` otherwise.
-FailureOr<OpFoldResult> createDimValue(OpBuilder &b, Location loc,
-                                       Value rankedTensor, int64_t dim);
-
-// Creates dim ops or constant ops for each dimension of the ranked tensor
-// argument and returns these as values.
-SmallVector<OpFoldResult> createDimValues(OpBuilder &b, Location loc,
-                                          Value rankedTensor);
-
 /// Returns the transposed `rankedTensorType` if `transposeVector` is non-empty.
 /// Fail if `transposeVector` is not a permutation matching the tensor rank.
 FailureOr<RankedTensorType>
