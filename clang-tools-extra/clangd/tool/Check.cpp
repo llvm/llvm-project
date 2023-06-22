@@ -251,8 +251,8 @@ public:
       elog("Failed to build AST");
       return false;
     }
-    ErrCount += showErrors(llvm::ArrayRef(*AST->getDiagnostics())
-                               .drop_front(Preamble->Diags.size()));
+    ErrCount +=
+        showErrors(AST->getDiagnostics().drop_front(Preamble->Diags.size()));
 
     if (Opts.BuildDynamicSymbolIndex) {
       log("Indexing AST...");
