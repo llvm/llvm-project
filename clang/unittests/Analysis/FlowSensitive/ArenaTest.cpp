@@ -31,12 +31,6 @@ TEST_F(ArenaTest, CreateTopBoolValueReturnsDistinctValues) {
   EXPECT_NE(&X, &Y);
 }
 
-TEST_F(ArenaTest, GetOrCreateConjunctionReturnsSameExprGivenSameArgs) {
-  auto &X = A.makeAtomRef(A.makeAtom());
-  auto &XAndX = A.makeAnd(X, X);
-  EXPECT_EQ(&XAndX, &X);
-}
-
 TEST_F(ArenaTest, GetOrCreateConjunctionReturnsSameExprOnSubsequentCalls) {
   auto &X = A.makeAtomRef(A.makeAtom());
   auto &Y = A.makeAtomRef(A.makeAtom());
@@ -50,12 +44,6 @@ TEST_F(ArenaTest, GetOrCreateConjunctionReturnsSameExprOnSubsequentCalls) {
   auto &Z = A.makeAtomRef(A.makeAtom());
   auto &XAndZ = A.makeAnd(X, Z);
   EXPECT_NE(&XAndY1, &XAndZ);
-}
-
-TEST_F(ArenaTest, GetOrCreateDisjunctionReturnsSameExprGivenSameArgs) {
-  auto &X = A.makeAtomRef(A.makeAtom());
-  auto &XOrX = A.makeOr(X, X);
-  EXPECT_EQ(&XOrX, &X);
 }
 
 TEST_F(ArenaTest, GetOrCreateDisjunctionReturnsSameExprOnSubsequentCalls) {
@@ -83,12 +71,6 @@ TEST_F(ArenaTest, GetOrCreateNegationReturnsSameExprOnSubsequentCalls) {
   EXPECT_NE(&NotX1, &NotY);
 }
 
-TEST_F(ArenaTest, GetOrCreateImplicationReturnsTrueGivenSameArgs) {
-  auto &X = A.makeAtomRef(A.makeAtom());
-  auto &XImpliesX = A.makeImplies(X, X);
-  EXPECT_EQ(&XImpliesX, &A.makeLiteral(true));
-}
-
 TEST_F(ArenaTest, GetOrCreateImplicationReturnsSameExprOnSubsequentCalls) {
   auto &X = A.makeAtomRef(A.makeAtom());
   auto &Y = A.makeAtomRef(A.makeAtom());
@@ -102,12 +84,6 @@ TEST_F(ArenaTest, GetOrCreateImplicationReturnsSameExprOnSubsequentCalls) {
   auto &Z = A.makeAtomRef(A.makeAtom());
   auto &XImpliesZ = A.makeImplies(X, Z);
   EXPECT_NE(&XImpliesY1, &XImpliesZ);
-}
-
-TEST_F(ArenaTest, GetOrCreateIffReturnsTrueGivenSameArgs) {
-  auto &X = A.makeAtomRef(A.makeAtom());
-  auto &XIffX = A.makeEquals(X, X);
-  EXPECT_EQ(&XIffX, &A.makeLiteral(true));
 }
 
 TEST_F(ArenaTest, GetOrCreateIffReturnsSameExprOnSubsequentCalls) {
@@ -135,6 +111,37 @@ TEST_F(ArenaTest, Interning) {
   BoolValue &B2 = A.makeBoolValue(F2);
   EXPECT_EQ(&B1, &B2);
   EXPECT_EQ(&B1.formula(), &F1);
+}
+
+TEST_F(ArenaTest, IdentitySimplification) {
+  auto &X = A.makeAtomRef(A.makeAtom());
+
+  EXPECT_EQ(&X, &A.makeAnd(X, X));
+  EXPECT_EQ(&X, &A.makeOr(X, X));
+  EXPECT_EQ(&A.makeLiteral(true), &A.makeImplies(X, X));
+  EXPECT_EQ(&A.makeLiteral(true), &A.makeEquals(X, X));
+  EXPECT_EQ(&X, &A.makeNot(A.makeNot(X)));
+}
+
+TEST_F(ArenaTest, LiteralSimplification) {
+  auto &X = A.makeAtomRef(A.makeAtom());
+
+  EXPECT_EQ(&X, &A.makeAnd(X, A.makeLiteral(true)));
+  EXPECT_EQ(&A.makeLiteral(false), &A.makeAnd(X, A.makeLiteral(false)));
+
+  EXPECT_EQ(&A.makeLiteral(true), &A.makeOr(X, A.makeLiteral(true)));
+  EXPECT_EQ(&X, &A.makeOr(X, A.makeLiteral(false)));
+
+  EXPECT_EQ(&A.makeLiteral(true), &A.makeImplies(X, A.makeLiteral(true)));
+  EXPECT_EQ(&A.makeNot(X), &A.makeImplies(X, A.makeLiteral(false)));
+  EXPECT_EQ(&X, &A.makeImplies(A.makeLiteral(true), X));
+  EXPECT_EQ(&A.makeLiteral(true), &A.makeImplies(A.makeLiteral(false), X));
+
+  EXPECT_EQ(&X, &A.makeEquals(X, A.makeLiteral(true)));
+  EXPECT_EQ(&A.makeNot(X), &A.makeEquals(X, A.makeLiteral(false)));
+
+  EXPECT_EQ(&A.makeLiteral(false), &A.makeNot(A.makeLiteral(true)));
+  EXPECT_EQ(&A.makeLiteral(true), &A.makeNot(A.makeLiteral(false)));
 }
 
 } // namespace
