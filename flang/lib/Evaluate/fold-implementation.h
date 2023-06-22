@@ -1764,7 +1764,12 @@ Expr<T> FoldOperation(FoldingContext &context, Negate<T> &&x) {
   }
   auto &operand{x.left()};
   if (auto *nn{std::get_if<Negate<T>>(&x.left().u)}) {
-    return std::move(nn->left()); // -(-x) -> x
+    // -(-x) -> (x)
+    if (IsVariable(nn->left())) {
+      return FoldOperation(context, Parentheses<T>{std::move(nn->left())});
+    } else {
+      return std::move(nn->left());
+    }
   } else if (auto value{GetScalarConstantValue<T>(operand)}) {
     if constexpr (T::category == TypeCategory::Integer) {
       auto negated{value->Negate()};
@@ -1883,9 +1888,13 @@ Expr<T> FoldOperation(FoldingContext &context, Multiply<T> &&x) {
       if (c->IsZero()) {
         return std::move(x.left());
       } else if (c->CompareSigned(Scalar<T>{1}) == Ordering::Equal) {
-        return std::move(x.right());
+        if (IsVariable(x.right())) {
+          return FoldOperation(context, Parentheses<T>{std::move(x.right())});
+        } else {
+          return std::move(x.right());
+        }
       } else if (c->CompareSigned(Scalar<T>{-1}) == Ordering::Equal) {
-        return Expr<T>{Negate<T>{std::move(x.right())}};
+        return FoldOperation(context, Negate<T>{std::move(x.right())});
       }
     }
   }
