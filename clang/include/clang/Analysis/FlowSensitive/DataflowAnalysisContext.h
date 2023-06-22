@@ -25,6 +25,7 @@
 #include "clang/Analysis/FlowSensitive/Value.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/DenseSet.h"
+#include "llvm/ADT/SetVector.h"
 #include "llvm/Support/Compiler.h"
 #include <cassert>
 #include <memory>
@@ -200,7 +201,7 @@ private:
   /// to track tokens of flow conditions that were already visited by recursive
   /// calls.
   void addTransitiveFlowConditionConstraints(
-      AtomicBoolValue &Token, llvm::DenseSet<BoolValue *> &Constraints,
+      AtomicBoolValue &Token, llvm::SetVector<BoolValue *> &Constraints,
       llvm::DenseSet<AtomicBoolValue *> &VisitedTokens);
 
   /// Returns the outcome of satisfiability checking on `Constraints`.
@@ -208,11 +209,11 @@ private:
   /// - `Satisfiable`: A satisfying assignment exists and is returned.
   /// - `Unsatisfiable`: A satisfying assignment does not exist.
   /// - `TimedOut`: The search for a satisfying assignment was not completed.
-  Solver::Result querySolver(llvm::DenseSet<BoolValue *> Constraints);
+  Solver::Result querySolver(llvm::SetVector<BoolValue *> Constraints);
 
   /// Returns true if the solver is able to prove that there is no satisfying
   /// assignment for `Constraints`
-  bool isUnsatisfiable(llvm::DenseSet<BoolValue *> Constraints) {
+  bool isUnsatisfiable(llvm::SetVector<BoolValue *> Constraints) {
     return querySolver(std::move(Constraints)).getStatus() ==
            Solver::Result::Status::Unsatisfiable;
   }
