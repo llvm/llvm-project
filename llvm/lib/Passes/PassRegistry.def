@@ -565,7 +565,6 @@ LOOP_PASS("dot-ddg", DDGDotPrinterPass())
 LOOP_PASS("invalidate<all>", InvalidateAllAnalysesPass())
 LOOP_PASS("loop-idiom", LoopIdiomRecognizePass())
 LOOP_PASS("loop-instsimplify", LoopInstSimplifyPass())
-LOOP_PASS("loop-rotate", LoopRotatePass())
 LOOP_PASS("no-op-loop", NoOpLoopPass())
 LOOP_PASS("print", PrintLoopPass(dbgs()))
 LOOP_PASS("loop-deletion", LoopDeletionPass())
@@ -608,4 +607,12 @@ LOOP_PASS_WITH_PARAMS("lnicm", "LNICMPass",
                       },
                       parseLICMOptions,
                       "allowspeculation");
+
+LOOP_PASS_WITH_PARAMS("loop-rotate",
+                      "LoopRotatePass",
+                      [](std::pair<bool, bool> Params) {
+                        return LoopRotatePass(Params.first, Params.second);
+                      },
+                      parseLoopRotateOptions,
+                      "no-header-duplication;header-duplication;no-prepare-for-lto;prepare-for-lto")
 #undef LOOP_PASS_WITH_PARAMS
