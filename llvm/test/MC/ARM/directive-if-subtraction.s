@@ -14,6 +14,16 @@ orr r1, r1, #1
 orr r1, r1, #2
 .endif
 
+nop
+.arch_extension sec
+9997:nop
+.if 9997b - . == 0
+// ASM:    :[[#@LINE-1]]:5: error: expected absolute expression
+// DISASM: orr	r1, r1, #2
+orr r1, r1, #1
+.else
+orr r1, r1, #2
+.endif
 
 @ RUN: not llvm-mc -filetype=obj -triple arm-linux-gnueabihf --defsym=ERR=1 %s -o /dev/null 2>&1 | FileCheck --check-prefix=ARM-ERR %s
 @ RUN: not llvm-mc -filetype=obj -triple thumbv7a-linux-gnueabihf --defsym=ERR=1 %s -o /dev/null 2>&1 | FileCheck --check-prefix=THUMB2-ERR %s

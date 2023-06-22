@@ -660,6 +660,18 @@ static void AttemptToFoldSymbolOffsetDifference(
     // Try to find a constant displacement from FA to FB, add the displacement
     // between the offset in FA of SA and the offset in FB of SB.
     int64_t Displacement = SA.getOffset() - SB.getOffset();
+    bool Reverse = false;
+    if (FA == FB) {
+      Reverse = SA.getOffset() < SB.getOffset();
+    } else if (!isa<MCDummyFragment>(FA)) {
+      Reverse = std::find_if(std::next(FA->getIterator()), SecA.end(),
+                             [&](auto &I) { return &I == FB; }) != SecA.end();
+    }
+    if (Reverse) {
+      std::swap(FA, FB);
+      Displacement *= -1;
+    }
+
     bool Found = false;
     for (auto FI = FB->getIterator(), FE = SecA.end(); FI != FE; ++FI) {
       auto DF = dyn_cast<MCDataFragment>(FI);
@@ -678,13 +690,12 @@ static void AttemptToFoldSymbolOffsetDifference(
         return;
       }
     }
-    // If FA is found or if FA is a dummy fragment not in the fragment list,
-    // (which means SA is a pending label (see flushPendingLabels)), we can
-    // resolve the difference.
-    if (Found || isa<MCDummyFragment>(FA)) {
-      Addend += Displacement;
-      FinalizeFolding();
-    }
+    // If the previous loop does not find FA, FA must be a dummy fragment not in
+    // the fragment list (which means SA is a pending label (see
+    // flushPendingLabels)). In either case, we can resolve the difference.
+    assert(Found || isa<MCDummyFragment>(FA));
+    Addend += Reverse ? -Displacement : Displacement;
+    FinalizeFolding();
   }
 }
 
