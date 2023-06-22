@@ -254,11 +254,7 @@ static cl::opt<BenchmarkRunner::ExecutionModeE> ExecutionMode(
     cl::cat(BenchmarkOptions),
     cl::values(clEnumValN(BenchmarkRunner::ExecutionModeE::InProcess,
                           "inprocess",
-                          "Executes the snippets within the same process"),
-               clEnumValN(BenchmarkRunner::ExecutionModeE::SubProcess,
-                          "subprocess",
-                          "Spawns a subprocess for each snippet execution, "
-                          "allows for the use of memory annotations")),
+                          "Executes the snippets within the same process")),
     cl::init(BenchmarkRunner::ExecutionModeE::InProcess));
 
 static ExitOnError ExitOnErr("llvm-exegesis error: ");
