@@ -271,6 +271,13 @@ Defined *elf::addSyntheticLocal(StringRef name, uint8_t type, uint64_t value,
                            value, size, &section);
   if (in.symTab)
     in.symTab->addSymbol(s);
+
+  if (config->emachine == EM_ARM && !config->isLE && config->armBe8 &&
+      (section.flags & SHF_EXECINSTR))
+    // Adding Linker generated mapping symbols to the arm specific mapping
+    // symbols list.
+    addArmSyntheticSectionMappingSymbol(s);
+
   return s;
 }
 
