@@ -84,7 +84,7 @@ class CStringChecker : public Checker< eval::Call,
   mutable std::unique_ptr<BugType> BT_Null, BT_Bounds, BT_Overlap,
       BT_NotCString, BT_AdditionOverflow, BT_UninitRead;
 
-  mutable const char *CurrentFunctionDescription;
+  mutable const char *CurrentFunctionDescription = nullptr;
 
 public:
   /// The filter is used to filter out the diagnostics which are not enabled by
