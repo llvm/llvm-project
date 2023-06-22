@@ -535,6 +535,41 @@ getReductionOperator(const Fortran::parser::AccReductionOperator &op) {
   llvm_unreachable("unexpected reduction operator");
 }
 
+/// Get the correct DenseElementsAttr attribute for the given init value.
+/// The verifier on the DenseElementsAttr is strict about the init value passed
+/// to it so it must matched the type.
+static mlir::DenseElementsAttr getDenseAttr(mlir::ShapedType shTy,
+                                            int64_t value) {
+  if (shTy.getElementType().isIntOrIndex()) {
+    if (auto intTy = mlir::dyn_cast<mlir::IntegerType>(shTy.getElementType())) {
+      if (intTy.getIntOrFloatBitWidth() == 8)
+        return mlir::DenseElementsAttr::get(shTy, static_cast<int8_t>(value));
+      if (intTy.getIntOrFloatBitWidth() == 16)
+        return mlir::DenseElementsAttr::get(shTy, static_cast<int16_t>(value));
+      if (intTy.getIntOrFloatBitWidth() == 32)
+        return mlir::DenseElementsAttr::get(shTy, static_cast<int32_t>(value));
+      if (intTy.getIntOrFloatBitWidth() == 64)
+        return mlir::DenseElementsAttr::get(shTy, value);
+    }
+  }
+
+  if (mlir::isa<mlir::FloatType>(shTy.getElementType())) {
+    if (auto intTy = mlir::dyn_cast<mlir::FloatType>(shTy.getElementType())) {
+      if (intTy.getIntOrFloatBitWidth() == 16)
+        return mlir::DenseElementsAttr::get(shTy, static_cast<float>(value));
+      if (intTy.getIntOrFloatBitWidth() == 32)
+        return mlir::DenseElementsAttr::get(shTy, static_cast<float>(value));
+      if (intTy.getIntOrFloatBitWidth() == 64)
+        return mlir::DenseElementsAttr::get(shTy, static_cast<double>(value));
+      if (intTy.getIntOrFloatBitWidth() == 128)
+        return mlir::DenseElementsAttr::get(shTy,
+                                            static_cast<long double>(value));
+    }
+  }
+
+  llvm_unreachable("unsupported dense attribute type");
+}
+
 static mlir::Value genReductionInitValue(fir::FirOpBuilder &builder,
                                          mlir::Location loc, mlir::Type ty,
                                          mlir::acc::ReductionOperator op) {
@@ -584,6 +619,15 @@ static mlir::Value genReductionInitValue(fir::FirOpBuilder &builder,
     if (mlir::isa<mlir::FloatType>(ty))
       return builder.create<mlir::arith::ConstantOp>(
           loc, ty, builder.getFloatAttr(ty, initValue));
+    if (auto refTy = mlir::dyn_cast<fir::ReferenceType>(ty)) {
+      if (auto seqTy = mlir::dyn_cast<fir::SequenceType>(refTy.getEleTy())) {
+        mlir::Type vecType =
+            mlir::VectorType::get(seqTy.getShape(), seqTy.getEleTy());
+        mlir::DenseElementsAttr denseAttr =
+            getDenseAttr(vecType.cast<mlir::ShapedType>(), initValue);
+        return builder.create<mlir::arith::ConstantOp>(loc, vecType, denseAttr);
+      }
+    }
   }
 
   TODO(loc, "reduction type");
@@ -592,6 +636,39 @@ static mlir::Value genReductionInitValue(fir::FirOpBuilder &builder,
 static mlir::Value genCombiner(fir::FirOpBuilder &builder, mlir::Location loc,
                                mlir::acc::ReductionOperator op, mlir::Type ty,
                                mlir::Value value1, mlir::Value value2) {
+
+  // Handle combiner on arrays.
+  if (auto refTy = mlir::dyn_cast<fir::ReferenceType>(ty)) {
+    if (auto seqTy = mlir::dyn_cast<fir::SequenceType>(refTy.getEleTy())) {
+      if (seqTy.getShape().size() > 1)
+        TODO(loc, "OpenACC reduction on array with more than one dimension");
+      if (seqTy.hasDynamicExtents())
+        TODO(loc, "OpenACC reduction on array with dynamic extents");
+      mlir::Type idxTy = builder.getIndexType();
+      mlir::Type refTy = fir::ReferenceType::get(seqTy.getEleTy());
+      auto lb = builder.create<mlir::arith::ConstantOp>(
+          loc, idxTy, builder.getIntegerAttr(idxTy, 0));
+      auto ub = builder.create<mlir::arith::ConstantOp>(
+          loc, idxTy, builder.getIntegerAttr(idxTy, seqTy.getShape()[0] - 1));
+      auto step = builder.create<mlir::arith::ConstantOp>(
+          loc, idxTy, builder.getIntegerAttr(idxTy, 1));
+      auto loop = builder.create<fir::DoLoopOp>(loc, lb, ub, step,
+                                                /*unordered=*/false);
+      builder.setInsertionPointToStart(loop.getBody());
+      auto addr1 = builder.create<fir::CoordinateOp>(
+          loc, refTy, value1, mlir::ValueRange{loop.getInductionVar()});
+      auto addr2 = builder.create<fir::CoordinateOp>(
+          loc, refTy, value2, mlir::ValueRange{loop.getInductionVar()});
+      auto load1 = builder.create<fir::LoadOp>(loc, addr1);
+      auto load2 = builder.create<fir::LoadOp>(loc, addr2);
+      auto combined =
+          genCombiner(builder, loc, op, seqTy.getEleTy(), load1, load2);
+      builder.create<fir::StoreOp>(loc, combined, addr1);
+      builder.setInsertionPointAfter(loop);
+      return value1;
+    }
+  }
+
   if (op == mlir::acc::ReductionOperator::AccAdd) {
     if (ty.isIntOrIndex())
       return builder.create<mlir::arith::AddIOp>(loc, value1, value2);
@@ -666,10 +743,16 @@ genReductions(const Fortran::parser::AccObjectListWithReduction &objectList,
         converter, builder, semanticsContext, stmtCtx, accObject,
         operandLocation, asFortran, bounds);
 
-    if (!fir::isa_trivial(fir::unwrapRefType(baseAddr.getType())))
+    mlir::Type reductionTy = fir::unwrapRefType(baseAddr.getType());
+    if (auto seqTy = mlir::dyn_cast<fir::SequenceType>(reductionTy))
+      reductionTy = seqTy.getEleTy();
+
+    if (!fir::isa_trivial(reductionTy))
       TODO(operandLocation, "reduction with unsupported type");
 
     mlir::Type ty = fir::unwrapRefType(baseAddr.getType());
+    if (!fir::isa_trivial(ty))
+      ty = baseAddr.getType();
     std::string recipeName = fir::getTypeAsString(
         ty, converter.getKindMap(),
         ("reduction_" + stringifyReductionOperator(mlirOp)).str());
