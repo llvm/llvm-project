@@ -6777,6 +6777,10 @@ Sema::ActOnTypedefNameDecl(Scope *S, DeclContext *DC, TypedefNameDecl *NewTD,
       case tok::InterestingIdentifierKind::ucontext_t:
         Context.setucontext_tDecl(NewTD);
         break;
+      case tok::InterestingIdentifierKind::float_t:
+      case tok::InterestingIdentifierKind::double_t:
+        NewTD->addAttr(AvailableOnlyInDefaultEvalMethodAttr::Create(Context));
+        break;
       default:
         break;
       }
