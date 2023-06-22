@@ -5466,6 +5466,15 @@ static Constant *propagateNaN(Constant *In) {
   if (!In->isNaN())
     return ConstantFP::getNaN(Ty);
 
+  // If we known this is a NaN, and it's scalable vector, we must have a splat
+  // on our hands. Grab that before splatting a QNaN constant.
+  if (isa<ScalableVectorType>(Ty)) {
+    auto *Splat = In->getSplatValue();
+    assert(Splat && Splat->isNaN() &&
+           "Found a scalable-vector NaN but not a splat");
+    In = Splat;
+  }
+
   // Propagate an existing QNaN constant. If it is an SNaN, make it quiet, but
   // preserve the sign/payload.
   return ConstantFP::get(Ty, cast<ConstantFP>(In)->getValue().makeQuiet());
