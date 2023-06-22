@@ -1561,8 +1561,10 @@ Instruction *InstCombinerImpl::visitStoreInst(StoreInst &SI) {
 
   // This is a non-terminator unreachable marker. Don't remove it.
   if (isa<UndefValue>(Ptr)) {
-    // Remove unreachable instructions after the marker.
-    if (handleUnreachableFrom(SI.getNextNode()))
+    // Remove all instructions after the marker and guaranteed-to-transfer
+    // instructions before the marker.
+    if (handleUnreachableFrom(SI.getNextNode()) ||
+        removeInstructionsBeforeUnreachable(SI))
       return &SI;
     return nullptr;
   }
