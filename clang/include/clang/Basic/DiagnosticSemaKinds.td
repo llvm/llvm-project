@@ -11558,6 +11558,10 @@ def err_objc_type_args_wrong_arity : Error<
   "too %select{many|few}0 type arguments for class %1 (have %2, expected %3)">;
 }
 
+def err_type_available_only_in_default_eval_method : Error<
+  "cannot use type '%0' within '#pragma clang fp eval_method'; type is set "
+  "according to the default eval method for the translation unit">;
+
 def err_objc_type_arg_not_id_compatible : Error<
   "type argument %0 is neither an Objective-C object nor a block type">;
 

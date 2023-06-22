@@ -4661,6 +4661,13 @@ The full syntax this pragma supports is
     a = b[i] * c[i] + e;
   }
 
+Note: ``math.h`` defines the typedefs ``float_t`` and ``double_t`` based on the active
+evaluation method at the point where the header is included, not where the
+typedefs are used.  Because of this, it is unwise to combine these typedefs with
+``#pragma clang fp eval_method``.  To catch obvious bugs, Clang will emit an
+error for any references to these typedefs within the scope of this pragma;
+however, this is not a fool-proof protection, and programmers must take care.
+
 The ``#pragma float_control`` pragma allows precise floating-point
 semantics and floating-point exception behavior to be specified
 for a section of the source code. This pragma can only appear at file or
