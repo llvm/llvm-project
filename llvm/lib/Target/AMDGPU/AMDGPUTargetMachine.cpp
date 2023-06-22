@@ -274,20 +274,15 @@ static cl::opt<bool> OptVGPRLiveRange(
     cl::desc("Enable VGPR liverange optimizations for if-else structure"),
     cl::init(true), cl::Hidden);
 
-// Enable atomic optimization
-static cl::opt<bool>
-    EnableAtomicOptimizations("amdgpu-atomic-optimizations",
-                              cl::desc("Enable atomic optimizations"),
-                              cl::init(true), cl::Hidden);
-
 static cl::opt<ScanOptions> AMDGPUAtomicOptimizerStrategy(
     "amdgpu-atomic-optimizer-strategy",
     cl::desc("Select DPP or Iterative strategy for scan"),
     cl::init(ScanOptions::Iterative),
-    cl::values(clEnumValN(ScanOptions::DPP, "DPP",
-                          "Use DPP operations for scan"),
-               clEnumValN(ScanOptions::Iterative, "Iterative",
-                          "Use Iterative approach for scan")));
+    cl::values(
+        clEnumValN(ScanOptions::DPP, "DPP", "Use DPP operations for scan"),
+        clEnumValN(ScanOptions::Iterative, "Iterative",
+                   "Use Iterative approach for scan"),
+        clEnumValN(ScanOptions::None, "None", "Disable atomic optimizer")));
 
 // Enable Mode register optimization
 static cl::opt<bool> EnableSIModeRegisterPass(
@@ -1130,7 +1125,8 @@ bool GCNPassConfig::addPreISel() {
   if (TM->getOptLevel() > CodeGenOpt::None)
     addPass(createAMDGPULateCodeGenPreparePass());
 
-  if (isPassEnabled(EnableAtomicOptimizations, CodeGenOpt::Less)) {
+  if ((TM->getOptLevel() >= CodeGenOpt::Less) &&
+      (AMDGPUAtomicOptimizerStrategy != ScanOptions::None)) {
     addPass(createAMDGPUAtomicOptimizerPass(AMDGPUAtomicOptimizerStrategy));
   }
 
