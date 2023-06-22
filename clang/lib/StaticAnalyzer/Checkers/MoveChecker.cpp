@@ -184,7 +184,7 @@ private:
     bool Found;
   };
 
-  AggressivenessKind Aggressiveness;
+  AggressivenessKind Aggressiveness = AK_KnownsAndLocals;
 
 public:
   void setAggressiveness(StringRef Str, CheckerManager &Mgr) {

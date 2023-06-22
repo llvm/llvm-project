@@ -89,7 +89,7 @@ namespace clang {
     using RecordData = ASTReader::RecordData;
 
     TypeID DeferredTypeID = 0;
-    unsigned AnonymousDeclNumber;
+    unsigned AnonymousDeclNumber = 0;
     GlobalDeclID NamedDeclForTagDecl = 0;
     IdentifierInfo *TypedefNameForLinkage = nullptr;
 
