@@ -116,6 +116,61 @@
 ! CHECK:   acc.yield %[[COMBINED]] : f32
 ! CHECK: }
 
+! CHECK-LABEL: acc.reduction.recipe @reduction_add_ref_100x10x2xi32 : !fir.ref<!fir.array<100x10x2xi32>> reduction_operator <add> init {
+! CHECK: ^bb0(%{{.*}}: !fir.ref<!fir.array<100x10x2xi32>>):
+! CHECK:   %[[CST:.*]] = arith.constant dense<0> : vector<100x10x2xi32>
+! CHECK:   acc.yield %[[CST]] : vector<100x10x2xi32>
+! CHECK: } combiner {
+! CHECK: ^bb0(%[[ARG0:.*]]: !fir.ref<!fir.array<100x10x2xi32>>, %[[ARG1:.*]]: !fir.ref<!fir.array<100x10x2xi32>>):
+! CHECK:   %[[LB0:.*]] = arith.constant 0 : index
+! CHECK:   %[[UB0:.*]] = arith.constant 99 : index
+! CHECK:   %[[STEP0:.*]] = arith.constant 1 : index
+! CHECK:   fir.do_loop %[[IV0:.*]] = %[[LB0]] to %[[UB0]] step %[[STEP0]] {
+! CHECK:     %[[LB1:.*]] = arith.constant 0 : index
+! CHECK:     %[[UB1:.*]] = arith.constant 9 : index
+! CHECK:     %[[STEP1:.*]] = arith.constant 1 : index
+! CHECK:     fir.do_loop %[[IV1:.*]] = %[[LB1]] to %[[UB1]] step %[[STEP1]] {
+! CHECK:       %[[LB2:.*]] = arith.constant 0 : index
+! CHECK:       %[[UB2:.*]] = arith.constant 1 : index
+! CHECK:       %[[STEP2:.*]] = arith.constant 1 : index
+! CHECK:       fir.do_loop %[[IV2:.*]] = %[[LB2]] to %[[UB2]] step %[[STEP2]] {
+! CHECK:         %[[COORD1:.*]] = fir.coordinate_of %[[ARG0]], %[[IV0]], %[[IV1]], %[[IV2]] : (!fir.ref<!fir.array<100x10x2xi32>>, index, index, index) -> !fir.ref<i32>
+! CHECK:         %[[COORD2:.*]] = fir.coordinate_of %[[ARG1]], %[[IV0]], %[[IV1]], %[[IV2]] : (!fir.ref<!fir.array<100x10x2xi32>>, index, index, index) -> !fir.ref<i32>
+! CHECK:         %[[LOAD1:.*]] = fir.load %[[COORD1]] : !fir.ref<i32>
+! CHECK:         %[[LOAD2:.*]] = fir.load %[[COORD2]] : !fir.ref<i32>
+! CHECK:         %[[COMBINED:.*]] = arith.addi %[[LOAD1]], %[[LOAD2]] : i32
+! CHECK:         fir.store %[[COMBINED]] to %[[COORD1]] : !fir.ref<i32>
+! CHECK:       }
+! CHECK:     }
+! CHECK:   }
+! CHECK:   acc.yield %[[ARG0]] : !fir.ref<!fir.array<100x10x2xi32>>
+! CHECK: }
+
+! CHECK-LABEL: acc.reduction.recipe @reduction_add_ref_100x10xi32 : !fir.ref<!fir.array<100x10xi32>> reduction_operator <add> init {
+! CHECK: ^bb0(%{{.*}}: !fir.ref<!fir.array<100x10xi32>>):
+! CHECK: %[[CST:.*]] = arith.constant dense<0> : vector<100x10xi32>
+! CHECK: acc.yield %[[CST]] : vector<100x10xi32>
+! CHECK: } combiner {
+! CHECK: ^bb0(%[[ARG0:.*]]: !fir.ref<!fir.array<100x10xi32>>, %[[ARG1:.*]]: !fir.ref<!fir.array<100x10xi32>>):
+! CHECK:   %[[LB0:.*]] = arith.constant 0 : index
+! CHECK:   %[[UB0:.*]] = arith.constant 99 : index
+! CHECK:   %[[STEP0:.*]] = arith.constant 1 : index
+! CHECK:   fir.do_loop %[[IV0:.*]] = %[[LB0]] to %[[UB0]] step %[[STEP0]] {
+! CHECK:     %[[LB1:.*]] = arith.constant 0 : index
+! CHECK:     %[[UB1:.*]] = arith.constant 9 : index
+! CHECK:     %[[STEP1:.*]] = arith.constant 1 : index
+! CHECK:     fir.do_loop %[[IV1:.*]] = %[[LB1]] to %[[UB1]] step %[[STEP1]] {
+! CHECK:       %[[COORD1:.*]] = fir.coordinate_of %[[ARG0]], %[[IV0]], %[[IV1]] : (!fir.ref<!fir.array<100x10xi32>>, index, index) -> !fir.ref<i32>
+! CHECK:       %[[COORD2:.*]] = fir.coordinate_of %[[ARG1]], %[[IV0]], %[[IV1]] : (!fir.ref<!fir.array<100x10xi32>>, index, index) -> !fir.ref<i32>
+! CHECK:       %[[LOAD1]] = fir.load %[[COORD1]] : !fir.ref<i32>
+! CHECK:       %[[LOAD2]] = fir.load %[[COORD2]] : !fir.ref<i32>
+! CHECK:       %[[COMBINED:.*]] = arith.addi %[[LOAD1]], %[[LOAD2]] : i32
+! CHECK:       fir.store %[[COMBINED]] to %[[COORD1]] : !fir.ref<i32>
+! CHECK:     }
+! CHECK:   }
+! CHECK:   acc.yield %[[ARG0]] : !fir.ref<!fir.array<100x10xi32>>
+! CHECK: }
+
 ! CHECK-LABEL: acc.reduction.recipe @reduction_add_ref_100xi32 : !fir.ref<!fir.array<100xi32>> reduction_operator <add> init {
 ! CHECK: ^bb0(%{{.*}}: !fir.ref<!fir.array<100xi32>>):
 ! CHECK:   %[[CST:.*]] = arith.constant dense<0> : vector<100xi32>
@@ -173,6 +228,42 @@ end subroutine
 ! CHECK-LABEL: func.func @_QPacc_reduction_add_int_array_1d(
 ! CHECK-SAME:  %{{.*}}: !fir.ref<!fir.array<100xi32>> {fir.bindc_name = "a"}, %[[B:.*]]: !fir.ref<!fir.array<100xi32>> {fir.bindc_name = "b"})
 ! CHECK:       acc.loop reduction(@reduction_add_ref_100xi32 -> %[[B]] : !fir.ref<!fir.array<100xi32>>)
+
+subroutine acc_reduction_add_int_array_2d(a, b)
+  integer :: a(100, 10), b(100, 10)
+  integer :: i, j
+
+  !$acc loop collapse(2) reduction(+:b)
+  do i = 1, 100
+    do j = 1, 10
+      b(i, j) = b(i, j) + a(i, j)
+    end do
+  end do
+end subroutine
+
+! CHECK-LABEL: func.func @_QPacc_reduction_add_int_array_2d(
+! CHECK-SAME:  %[[ARG0:.*]]: !fir.ref<!fir.array<100x10xi32>> {fir.bindc_name = "a"}, %[[ARG1:.*]]: !fir.ref<!fir.array<100x10xi32>> {fir.bindc_name = "b"}) {
+! CHECK:       acc.loop reduction(@reduction_add_ref_100x10xi32 -> %[[ARG1]] : !fir.ref<!fir.array<100x10xi32>>) {
+! CHECK: } attributes {collapse = 2 : i64}
+
+subroutine acc_reduction_add_int_array_3d(a, b)
+  integer :: a(100, 10, 2), b(100, 10, 2)
+  integer :: i, j, k
+
+  !$acc loop collapse(3) reduction(+:b)
+  do i = 1, 100
+    do j = 1, 10
+      do k = 1, 2
+        b(i, j, k) = b(i, j, k) + a(i, j, k)
+      end do
+    end do
+  end do
+end subroutine
+
+! CHECK-LABEL: func.func @_QPacc_reduction_add_int_array_3d(
+! CHECK-SAME: %{{.*}}: !fir.ref<!fir.array<100x10x2xi32>> {fir.bindc_name = "a"}, %[[ARG1:.*]]: !fir.ref<!fir.array<100x10x2xi32>> {fir.bindc_name = "b"})
+! CHECK: acc.loop reduction(@reduction_add_ref_100x10x2xi32 -> %[[ARG1]] : !fir.ref<!fir.array<100x10x2xi32>>)
+! CHECK: } attributes {collapse = 3 : i64}
 
 subroutine acc_reduction_add_float(a, b)
   real :: a(100), b
