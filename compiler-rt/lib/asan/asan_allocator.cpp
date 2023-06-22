@@ -193,6 +193,7 @@ class LargeChunkHeader {
 };
 
 static void FillChunk(AsanChunk *m) {
+  // FIXME: Use ReleaseMemoryPagesToOS.
   Flags &fl = *flags();
 
   if (fl.max_free_fill_size > 0) {
