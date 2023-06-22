@@ -133,6 +133,10 @@ Changes to the AMDGPU Backend
   improves the interaction between AMDGPU buffer operations and the LLVM memory
   model, and so the non `.ptr` intrinsics are deprecated.
 
+* Removed ``llvm.amdgcn.atomic.inc`` and ``llvm.amdgcn.atomic.dec``
+  intrinsics. :ref:`atomicrmw <i_atomicrmw>` should be used instead
+  with ``uinc_wrap`` and ``udec_wrap``.
+
 * Added llvm.amdgcn.log.f32 intrinsic. This provides direct access to
   v_log_f32.
 
