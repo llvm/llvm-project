@@ -474,6 +474,10 @@ void IntrinsicEmitter::EmitAttributes(const CodeGenIntrinsicTable &Ints,
           OS << "      Attribute::get(C, Attribute::Alignment, "
              << Attr.Value << "),\n";
           break;
+        case CodeGenIntrinsic::Dereferenceable:
+          OS << "      Attribute::get(C, Attribute::Dereferenceable, "
+             << Attr.Value << "),\n";
+          break;
         }
       }
       OS << "    });\n";
