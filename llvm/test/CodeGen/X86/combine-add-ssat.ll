@@ -77,11 +77,8 @@ define <8 x i16> @combine_constfold_undef_v8i16() {
 define i32 @combine_constant_i32(i32 %a0) {
 ; CHECK-LABEL: combine_constant_i32:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    # kill: def $edi killed $edi def $rdi
-; CHECK-NEXT:    leal 1(%rdi), %eax
-; CHECK-NEXT:    sarl $31, %eax
-; CHECK-NEXT:    addl $-2147483648, %eax # imm = 0x80000000
 ; CHECK-NEXT:    incl %edi
+; CHECK-NEXT:    movl $2147483647, %eax # imm = 0x7FFFFFFF
 ; CHECK-NEXT:    cmovnol %edi, %eax
 ; CHECK-NEXT:    retq
   %res = call i32 @llvm.sadd.sat.i32(i32 1, i32 %a0)
