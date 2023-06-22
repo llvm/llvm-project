@@ -2,6 +2,7 @@
 
 foo:
   .long 0
+  .p2align 2
 bar:
   .long 1
 
