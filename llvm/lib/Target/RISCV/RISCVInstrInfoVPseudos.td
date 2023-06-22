@@ -1196,13 +1196,14 @@ class VPseudoBinaryNoMaskTURoundingMode<VReg RetClass,
                                         string Constraint> :
         Pseudo<(outs RetClass:$rd),
                (ins RetClass:$merge, Op1Class:$rs2, Op2Class:$rs1, ixlenimm:$rm,
-                    AVL:$vl, ixlenimm:$sew), []>,
+                    AVL:$vl, ixlenimm:$sew, ixlenimm:$policy), []>,
         RISCVVPseudo {
   let mayLoad = 0;
   let mayStore = 0;
   let Constraints = Join<[Constraint, "$rd = $merge"], ",">.ret;
   let HasVLOp = 1;
   let HasSEWOp = 1;
+  let HasVecPolicyOp = 1;
   let HasRoundModeOp = 1;
 }
 
@@ -4157,7 +4158,7 @@ class VPatBinaryNoMaskTURoundingMode<string intrinsic_name,
                    (op1_type op1_reg_class:$rs1),
                    (op2_type op2_kind:$rs2),
                    (XLenVT timm:$round),
-                   GPR:$vl, sew)>;
+                   GPR:$vl, sew, TU_MU)>;
 
 
 // Same as above but source operands are swapped.
