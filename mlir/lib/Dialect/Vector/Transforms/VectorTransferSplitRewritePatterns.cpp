@@ -77,7 +77,7 @@ static Value createInBoundsCond(RewriterBase &b,
     auto d0 = getAffineDimExpr(0, xferOp.getContext());
     auto vs = getAffineConstantExpr(vectorSize, xferOp.getContext());
     Value sum = affine::makeComposedAffineApply(b, loc, d0 + vs,
-                                                xferOp.indices()[indicesIdx]);
+                                                {xferOp.indices()[indicesIdx]});
     Value cond = createFoldedSLE(
         b, sum, vector::createOrFoldDimOp(b, loc, xferOp.source(), indicesIdx));
     if (!cond)

@@ -1193,111 +1193,53 @@ void mlir::affine::fullyComposeAffineMapAndOperands(
   }
 }
 
-/// Given a list of `OpFoldResult`, build the necessary operations to populate
-/// `actualValues` with values produced by operations. In particular, for any
-/// attribute-typed element in `values`, call the constant materializer
-/// associated with the Affine dialect to produce an operation. Do NOT notify
-/// the builder listener about the constant ops being created as they are
-/// intended to be removed after being folded into affine constructs; this is
-/// not suitable for use beyond the Affine dialect.
-static void materializeConstants(OpBuilder &b, Location loc,
-                                 ArrayRef<OpFoldResult> values,
-                                 SmallVectorImpl<Operation *> &constants,
-                                 SmallVectorImpl<Value> &actualValues) {
-  OpBuilder::Listener *listener = b.getListener();
-  b.setListener(nullptr);
-  auto listenerResetter =
-      llvm::make_scope_exit([listener, &b] { b.setListener(listener); });
-
-  actualValues.reserve(values.size());
-  auto *dialect = b.getContext()->getLoadedDialect<AffineDialect>();
-  for (OpFoldResult ofr : values) {
-    if (auto value = llvm::dyn_cast_if_present<Value>(ofr)) {
-      actualValues.push_back(value);
-      continue;
+/// Fold all attributes among the given operands into the affine map and return
+/// all remaining values. The affine map is modified in-place.
+static SmallVector<Value>
+foldAttributesIntoMap(Builder &b, AffineMap *map,
+                      ArrayRef<OpFoldResult> operands) {
+  SmallVector<AffineExpr> dimReplacements, symReplacements;
+  SmallVector<Value, 8> valueOperands;
+  int64_t numDims = 0;
+  for (int64_t i = 0; i < map->getNumDims(); ++i) {
+    if (auto attr = operands[i].dyn_cast<Attribute>()) {
+      dimReplacements.push_back(
+          b.getAffineConstantExpr(attr.cast<IntegerAttr>().getInt()));
+    } else {
+      dimReplacements.push_back(b.getAffineDimExpr(numDims++));
+      valueOperands.push_back(operands[i].get<Value>());
     }
-    // Since we are directly specifying `index` as the result type, we need to
-    // ensure the provided attribute is also an index type. Otherwise, the
-    // AffineDialect materializer will create invalid `arith.constant`
-    // operations if the provided Attribute is any other kind of integer.
-    constants.push_back(dialect->materializeConstant(
-        b,
-        b.getIndexAttr(llvm::cast<IntegerAttr>(ofr.get<Attribute>()).getInt()),
-        b.getIndexType(), loc));
-    actualValues.push_back(constants.back()->getResult(0));
   }
+  int64_t numSymbols = 0;
+  for (int64_t i = 0; i < map->getNumSymbols(); ++i) {
+    if (auto attr = operands[i + map->getNumDims()].dyn_cast<Attribute>()) {
+      symReplacements.push_back(
+          b.getAffineConstantExpr(attr.cast<IntegerAttr>().getInt()));
+    } else {
+      symReplacements.push_back(b.getAffineSymbolExpr(numSymbols++));
+      valueOperands.push_back(operands[i + map->getNumDims()].get<Value>());
+    }
+  }
+  *map = map->replaceDimsAndSymbols(dimReplacements, symReplacements, numDims,
+                                    numSymbols);
+  return valueOperands;
 }
 
-/// Create an operation of the type provided as template argument and attempt to
-/// fold it immediately. The operation is expected to have a builder taking
-/// arbitrary `leadingArguments`, followed by a list of Value-typed `operands`.
-/// The operation is also expected to always produce a single result. Return an
-/// `OpFoldResult` containing the Attribute representing the folded constant if
-/// complete folding was possible and a Value produced by the created operation
-/// otherwise.
-template <typename OpTy, typename... Args>
-static std::enable_if_t<OpTy::template hasTrait<OpTrait::OneResult>(),
-                        OpFoldResult>
-createOrFold(OpBuilder &b, Location loc, ValueRange operands,
-             Args &&...leadingArguments) {
-  // Identify the constant operands and extract their values as attributes.
-  // Note that we cannot use the original values directly because the list of
-  // operands may have changed due to canonicalization and composition.
-  SmallVector<Attribute> constantOperands;
-  constantOperands.reserve(operands.size());
-  for (Value operand : operands) {
-    IntegerAttr attr;
-    if (matchPattern(operand, m_Constant(&attr)))
-      constantOperands.push_back(attr);
-    else
-      constantOperands.push_back(nullptr);
-  }
-
-  // Create the operation and immediately attempt to fold it. On success,
-  // delete the operation and prepare the (unmaterialized) value for being
-  // returned. On failure, return the operation result value. Temporarily remove
-  // the listener to avoid notifying it when the op is created as it may be
-  // removed immediately and there is no way of notifying the caller about that
-  // without resorting to RewriterBase.
-  //
-  // TODO: arguably, the main folder (createOrFold) API should support this use
-  // case instead of indiscriminately materializing constants.
-  OpBuilder::Listener *listener = b.getListener();
-  b.setListener(nullptr);
-  auto listenerResetter =
-      llvm::make_scope_exit([listener, &b] { b.setListener(listener); });
-  OpTy op =
-      b.create<OpTy>(loc, std::forward<Args>(leadingArguments)..., operands);
-  SmallVector<OpFoldResult, 1> foldResults;
-  if (succeeded(op->fold(constantOperands, foldResults)) &&
-      !foldResults.empty()) {
-    op->erase();
-    return foldResults.front();
-  }
-
-  // Notify the listener now that we definitely know that the operation will
-  // persist. Use the original listener stored in the variable.
-  if (listener)
-    listener->notifyOperationInserted(op);
-  return op->getResult(0);
+AffineApplyOp
+mlir::affine::makeComposedAffineApply(OpBuilder &b, Location loc, AffineMap map,
+                                      ArrayRef<OpFoldResult> operands) {
+  SmallVector<Value> valueOperands = foldAttributesIntoMap(b, &map, operands);
+  composeAffineMapAndOperands(&map, &valueOperands);
+  assert(map);
+  return b.create<AffineApplyOp>(loc, map, valueOperands);
 }
 
-AffineApplyOp mlir::affine::makeComposedAffineApply(OpBuilder &b, Location loc,
-                                                    AffineMap map,
-                                                    ValueRange operands) {
-  AffineMap normalizedMap = map;
-  SmallVector<Value, 8> normalizedOperands(operands.begin(), operands.end());
-  composeAffineMapAndOperands(&normalizedMap, &normalizedOperands);
-  assert(normalizedMap);
-  return b.create<AffineApplyOp>(loc, normalizedMap, normalizedOperands);
-}
-
-AffineApplyOp mlir::affine::makeComposedAffineApply(OpBuilder &b, Location loc,
-                                                    AffineExpr e,
-                                                    ValueRange values) {
+AffineApplyOp
+mlir::affine::makeComposedAffineApply(OpBuilder &b, Location loc, AffineExpr e,
+                                      ArrayRef<OpFoldResult> operands) {
   return makeComposedAffineApply(
       b, loc, AffineMap::inferFromExprList(ArrayRef<AffineExpr>{e}).front(),
-      values);
+      operands);
 }
 
 /// Composes the given affine map with the given list of operands, pulling in
@@ -1336,17 +1278,35 @@ mlir::affine::makeComposedFoldedAffineApply(OpBuilder &b, Location loc,
                                             ArrayRef<OpFoldResult> operands) {
   assert(map.getNumResults() == 1 && "building affine.apply with !=1 result");
 
-  SmallVector<Operation *> constants;
-  SmallVector<Value> actualValues;
-  materializeConstants(b, loc, operands, constants, actualValues);
-  composeAffineMapAndOperands(&map, &actualValues);
-  OpFoldResult result = createOrFold<AffineApplyOp>(b, loc, actualValues, map);
+  // Temporarily disconnect the listener, so that no notification is triggered
+  // if the op is folded.
+  // TODO: OpBuilder::createOrFold should return OpFoldResults, then this
+  // workaround is no longer needed.
+  OpBuilder::Listener *listener = b.getListener();
+  b.setListener(nullptr);
+  auto listenerResetter =
+      llvm::make_scope_exit([listener, &b] { b.setListener(listener); });
 
-  // Constants are always folded into affine min/max because they can be
-  // represented as constant expressions, so delete them.
-  for (Operation *op : constants)
-    op->erase();
-  return result;
+  // Create op.
+  AffineApplyOp applyOp = makeComposedAffineApply(b, loc, map, operands);
+
+  // Get constant operands.
+  SmallVector<Attribute> constOperands(applyOp->getNumOperands());
+  for (unsigned i = 0, e = constOperands.size(); i != e; ++i)
+    matchPattern(applyOp->getOperand(i), m_Constant(&constOperands[i]));
+
+  // Try to fold the operation.
+  SmallVector<OpFoldResult> foldResults;
+  if (failed(applyOp->fold(constOperands, foldResults)) ||
+      foldResults.empty()) {
+    if (listener)
+      listener->notifyOperationInserted(applyOp);
+    return applyOp.getResult();
+  }
+
+  applyOp->erase();
+  assert(foldResults.size() == 1 && "expected 1 folded result");
+  return foldResults.front();
 }
 
 OpFoldResult
@@ -1369,29 +1329,53 @@ mlir::affine::makeComposedFoldedMultiResultAffineApply(
                              });
 }
 
-Value mlir::affine::makeComposedAffineMin(OpBuilder &b, Location loc,
-                                          AffineMap map, ValueRange operands) {
-  SmallVector<Value> allOperands = llvm::to_vector(operands);
-  composeMultiResultAffineMap(map, allOperands);
-  return b.createOrFold<AffineMinOp>(loc, b.getIndexType(), map, allOperands);
+template <typename OpTy>
+static OpTy makeComposedMinMax(OpBuilder &b, Location loc, AffineMap map,
+                               ArrayRef<OpFoldResult> operands) {
+  SmallVector<Value> valueOperands = foldAttributesIntoMap(b, &map, operands);
+  composeMultiResultAffineMap(map, valueOperands);
+  return b.create<OpTy>(loc, b.getIndexType(), map, valueOperands);
+}
+
+AffineMinOp
+mlir::affine::makeComposedAffineMin(OpBuilder &b, Location loc, AffineMap map,
+                                    ArrayRef<OpFoldResult> operands) {
+  return makeComposedMinMax<AffineMinOp>(b, loc, map, operands);
 }
 
 template <typename OpTy>
 static OpFoldResult makeComposedFoldedMinMax(OpBuilder &b, Location loc,
                                              AffineMap map,
                                              ArrayRef<OpFoldResult> operands) {
-  SmallVector<Operation *> constants;
-  SmallVector<Value> actualValues;
-  materializeConstants(b, loc, operands, constants, actualValues);
-  composeMultiResultAffineMap(map, actualValues);
-  OpFoldResult result =
-      createOrFold<OpTy>(b, loc, actualValues, b.getIndexType(), map);
+  // Temporarily disconnect the listener, so that no notification is triggered
+  // if the op is folded.
+  // TODO: OpBuilder::createOrFold should return OpFoldResults, then this
+  // workaround is no longer needed.
+  OpBuilder::Listener *listener = b.getListener();
+  b.setListener(nullptr);
+  auto listenerResetter =
+      llvm::make_scope_exit([listener, &b] { b.setListener(listener); });
 
-  // Constants are always folded into affine min/max because they can be
-  // represented as constant expressions, so delete them.
-  for (Operation *op : constants)
-    op->erase();
-  return result;
+  // Create op.
+  auto minMaxOp = makeComposedMinMax<OpTy>(b, loc, map, operands);
+
+  // Get constant operands.
+  SmallVector<Attribute> constOperands(minMaxOp->getNumOperands());
+  for (unsigned i = 0, e = constOperands.size(); i != e; ++i)
+    matchPattern(minMaxOp->getOperand(i), m_Constant(&constOperands[i]));
+
+  // Try to fold the operation.
+  SmallVector<OpFoldResult> foldResults;
+  if (failed(minMaxOp->fold(constOperands, foldResults)) ||
+      foldResults.empty()) {
+    if (listener)
+      listener->notifyOperationInserted(minMaxOp);
+    return minMaxOp.getResult();
+  }
+
+  minMaxOp->erase();
+  assert(foldResults.size() == 1 && "expected 1 folded result");
+  return foldResults.front();
 }
 
 OpFoldResult
