@@ -1559,6 +1559,10 @@ Instruction *InstCombinerImpl::visitStoreInst(StoreInst &SI) {
     return nullptr;  // Do not modify these!
   }
 
+  // This is a non-terminator unreachable marker. Don't remove it.
+  if (isa<UndefValue>(Ptr))
+    return nullptr;
+
   // store undef, Ptr -> noop
   // FIXME: This is technically incorrect because it might overwrite a poison
   // value. Change to PoisonValue once #52930 is resolved.
