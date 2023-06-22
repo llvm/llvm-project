@@ -221,20 +221,26 @@ struct QuarantineCallback {
 
   void Recycle(AsanChunk *m) const {
     void *p = get_allocator().GetBlockBegin(m);
-    if (p != m) {
-      // Clear the magic value, as allocator internals may overwrite the
-      // contents of deallocated chunk, confusing GetAsanChunk lookup.
-      reinterpret_cast<LargeChunkHeader *>(p)->Set(nullptr);
-    }
 
-    u8 old_chunk_state = CHUNK_QUARANTINE;
-    if (!atomic_compare_exchange_strong(&m->chunk_state, &old_chunk_state,
-                                        CHUNK_INVALID, memory_order_acquire)) {
-      CHECK_EQ(old_chunk_state, CHUNK_QUARANTINE);
-    }
+    // The secondary will immediately unpoison and unmap the memory, so this
+    // branch is unnecessary.
+    if (get_allocator().FromPrimary(p)) {
+      if (p != m) {
+        // Clear the magic value, as allocator internals may overwrite the
+        // contents of deallocated chunk, confusing GetAsanChunk lookup.
+        reinterpret_cast<LargeChunkHeader *>(p)->Set(nullptr);
+      }
 
-    PoisonShadow(m->Beg(), RoundUpTo(m->UsedSize(), ASAN_SHADOW_GRANULARITY),
-                 kAsanHeapLeftRedzoneMagic);
+      u8 old_chunk_state = CHUNK_QUARANTINE;
+      if (!atomic_compare_exchange_strong(&m->chunk_state, &old_chunk_state,
+                                          CHUNK_INVALID,
+                                          memory_order_acquire)) {
+        CHECK_EQ(old_chunk_state, CHUNK_QUARANTINE);
+      }
+
+      PoisonShadow(m->Beg(), RoundUpTo(m->UsedSize(), ASAN_SHADOW_GRANULARITY),
+                   kAsanHeapLeftRedzoneMagic);
+    }
 
     // Statistics.
     AsanStats &thread_stats = GetCurrentThreadStats();
@@ -245,8 +251,12 @@ struct QuarantineCallback {
   }
 
   void RecyclePassThrough(AsanChunk *m) const {
-    // TODO: We don't need all these here.
-    PreQuarantine(m);
+    // Recycle for the secondary will immediately unpoison and unmap the
+    // memory, so quarantine preparation is unnecessary.
+    if (get_allocator().FromPrimary(m)) {
+      // The primary allocation may need pattern fill if enabled.
+      FillChunk(m);
+    }
     Recycle(m);
   }
 
