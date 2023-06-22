@@ -581,6 +581,16 @@ namespace {
     }
   };
 
+  struct KmpcAllocFree final : EHScopeStack::Cleanup {
+    std::pair<llvm::Value *, llvm::Value *> AddrSizePair;
+    KmpcAllocFree(const std::pair<llvm::Value *, llvm::Value *> &AddrSizePair)
+        : AddrSizePair(AddrSizePair) {}
+    void Emit(CodeGenFunction &CGF, Flags EmissionFlags) override {
+      auto &RT = CGF.CGM.getOpenMPRuntime();
+      RT.getKmpcFreeShared(CGF, AddrSizePair);
+    }
+  };
+
   struct ExtendGCLifetime final : EHScopeStack::Cleanup {
     const VarDecl &Var;
     ExtendGCLifetime(const VarDecl *var) : Var(*var) {}
@@ -1583,28 +1593,59 @@ CodeGenFunction::EmitAutoVarAlloca(const VarDecl &D) {
   } else {
     EnsureInsertPoint();
 
-    if (!DidCallStackSave) {
-      // Save the stack.
-      Address Stack =
-        CreateTempAlloca(Int8PtrTy, getPointerAlign(), "saved_stack");
+    // Delayed globalization for variable length declarations. This ensures that
+    // the expression representing the length has been emitted and can be used
+    // by the definition of the VLA. Since this is an escaped declaration, in
+    // OpenMP we have to use a call to __kmpc_alloc_shared(). The matching
+    // deallocation call to __kmpc_free_shared() is emitted later.
+    bool VarAllocated = false;
+    if (getLangOpts().OpenMPIsDevice) {
+      auto &RT = CGM.getOpenMPRuntime();
+      if (RT.isDelayedVariableLengthDecl(*this, &D)) {
+        // Emit call to __kmpc_alloc_shared() instead of the alloca.
+        std::pair<llvm::Value *, llvm::Value *> AddrSizePair =
+            RT.getKmpcAllocShared(*this, &D);
 
-      llvm::Function *F = CGM.getIntrinsic(llvm::Intrinsic::stacksave);
-      llvm::Value *V = Builder.CreateCall(F);
-      Builder.CreateStore(V, Stack);
+        // Save the address of the allocation:
+        LValue Base = MakeAddrLValue(AddrSizePair.first, D.getType(),
+                                     CGM.getContext().getDeclAlign(&D),
+                                     AlignmentSource::Decl);
+        address = Base.getAddress(*this);
 
-      DidCallStackSave = true;
+        // Push a cleanup block to emit the call to __kmpc_free_shared in the
+        // appropriate location at the end of the scope of the
+        // __kmpc_alloc_shared functions:
+        pushKmpcAllocFree(NormalCleanup, AddrSizePair);
 
-      // Push a cleanup block and restore the stack there.
-      // FIXME: in general circumstances, this should be an EH cleanup.
-      pushStackRestore(NormalCleanup, Stack);
+        // Mark variable as allocated:
+        VarAllocated = true;
+      }
     }
 
-    auto VlaSize = getVLASize(Ty);
-    llvm::Type *llvmTy = ConvertTypeForMem(VlaSize.Type);
+    if (!VarAllocated) {
+      if (!DidCallStackSave) {
+        // Save the stack.
+        Address Stack =
+            CreateTempAlloca(Int8PtrTy, getPointerAlign(), "saved_stack");
 
-    // Allocate memory for the array.
-    address = CreateTempAlloca(llvmTy, alignment, "vla", VlaSize.NumElts,
-                               &AllocaAddr);
+        llvm::Function *F = CGM.getIntrinsic(llvm::Intrinsic::stacksave);
+        llvm::Value *V = Builder.CreateCall(F);
+        Builder.CreateStore(V, Stack);
+
+        DidCallStackSave = true;
+
+        // Push a cleanup block and restore the stack there.
+        // FIXME: in general circumstances, this should be an EH cleanup.
+        pushStackRestore(NormalCleanup, Stack);
+      }
+
+      auto VlaSize = getVLASize(Ty);
+      llvm::Type *llvmTy = ConvertTypeForMem(VlaSize.Type);
+
+      // Allocate memory for the array.
+      address = CreateTempAlloca(llvmTy, alignment, "vla", VlaSize.NumElts,
+                                 &AllocaAddr);
+    }
 
     // If we have debug info enabled, properly describe the VLA dimensions for
     // this type by registering the vla size expression for each of the
@@ -2139,6 +2180,11 @@ void CodeGenFunction::pushDestroy(CleanupKind cleanupKind, Address addr,
 
 void CodeGenFunction::pushStackRestore(CleanupKind Kind, Address SPMem) {
   EHStack.pushCleanup<CallStackRestore>(Kind, SPMem);
+}
+
+void CodeGenFunction::pushKmpcAllocFree(
+    CleanupKind Kind, std::pair<llvm::Value *, llvm::Value *> AddrSizePair) {
+  EHStack.pushCleanup<KmpcAllocFree>(Kind, AddrSizePair);
 }
 
 void CodeGenFunction::pushLifetimeExtendedDestroy(CleanupKind cleanupKind,
