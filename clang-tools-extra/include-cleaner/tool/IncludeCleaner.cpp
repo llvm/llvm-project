@@ -148,7 +148,7 @@ class Action : public clang::ASTFrontendAction {
       }
     }
 
-    if (Edit) {
+    if (Edit && (!Results.Missing.empty() || !Results.Unused.empty())) {
       if (auto Err = llvm::writeToOutput(
               Path, [&](llvm::raw_ostream &OS) -> llvm::Error {
                 OS << Final;
