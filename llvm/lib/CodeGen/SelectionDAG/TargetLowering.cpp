@@ -8054,6 +8054,19 @@ SDValue TargetLowering::expandFMINNUM_FMAXNUM(SDNode *Node,
   return SDValue();
 }
 
+/// If this FPClassTest can be performed with a fcmp to 0, return the test mask
+/// for the floating-point mode.
+static bool isFCmpEqualZero(FPClassTest Test, const fltSemantics &Semantics,
+                            const MachineFunction &MF) {
+  if (Test == fcZero &&
+      MF.getDenormalMode(Semantics).Input == DenormalMode::IEEE)
+    return true;
+  if (Test == (fcZero | fcSubnormal) &&
+      MF.getDenormalMode(Semantics).inputsAreZero())
+    return true;
+  return false;
+}
+
 SDValue TargetLowering::expandIS_FPCLASS(EVT ResultVT, SDValue Op,
                                          FPClassTest Test, SDNodeFlags Flags,
                                          const SDLoc &DL,
@@ -8062,7 +8075,7 @@ SDValue TargetLowering::expandIS_FPCLASS(EVT ResultVT, SDValue Op,
   assert(OperandVT.isFloatingPoint());
 
   // Degenerated cases.
-  if (Test == 0)
+  if (Test == fcNone)
     return DAG.getBoolConstant(false, DL, ResultVT, OperandVT);
   if ((Test & fcAllFlags) == fcAllFlags)
     return DAG.getBoolConstant(true, DL, ResultVT, OperandVT);
@@ -8092,18 +8105,14 @@ SDValue TargetLowering::expandIS_FPCLASS(EVT ResultVT, SDValue Op,
   // Some checks can be implemented using float comparisons, if floating point
   // exceptions are ignored.
   if (Flags.hasNoFPExcept() &&
+      // TODO: Should check isCondCodeLegal
       isOperationLegalOrCustom(ISD::SETCC, OperandVT.getScalarType())) {
-    if (Test == fcZero) {
-      DenormalMode Mode = DAG.getMachineFunction().getDenormalMode(Semantics);
-      if (Mode.Input == DenormalMode::IEEE) {
-        // If denormals could be implicitly treated as 0, this is not equivalent
-        // to a compare with 0 since it will also be true for denormals.
-        //
-        // TODO: With DAZ, check == fcZero | fcSubnormal
-        return DAG.getSetCC(DL, ResultVT, Op,
-                            DAG.getConstantFP(0.0, DL, OperandVT),
-                            IsInverted ? ISD::SETUNE : ISD::SETOEQ);
-      }
+    if (isFCmpEqualZero(Test, Semantics, DAG.getMachineFunction())) {
+      // If denormals could be implicitly treated as 0, this is not equivalent
+      // to a compare with 0 since it will also be true for denormals.
+      return DAG.getSetCC(DL, ResultVT, Op,
+                          DAG.getConstantFP(0.0, DL, OperandVT),
+                          IsInverted ? ISD::SETUNE : ISD::SETOEQ);
     }
 
     if (Test == fcNan)
