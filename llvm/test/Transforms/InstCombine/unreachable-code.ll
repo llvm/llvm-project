@@ -193,7 +193,6 @@ default:
 define void @non_term_unreachable() {
 ; CHECK-LABEL: define void @non_term_unreachable() {
 ; CHECK-NEXT:    store i1 true, ptr poison, align 1
-; CHECK-NEXT:    call void @dummy()
 ; CHECK-NEXT:    ret void
 ;
   store i1 true, ptr poison
@@ -208,11 +207,9 @@ define i32 @non_term_unreachable_phi(i1 %c) {
 ; CHECK-NEXT:    br i1 [[C]], label [[IF:%.*]], label [[JOIN:%.*]]
 ; CHECK:       if:
 ; CHECK-NEXT:    store i1 true, ptr poison, align 1
-; CHECK-NEXT:    call void @dummy()
 ; CHECK-NEXT:    br label [[JOIN]]
 ; CHECK:       join:
-; CHECK-NEXT:    [[PHI:%.*]] = phi i32 [ 1, [[IF]] ], [ 2, [[ENTRY:%.*]] ]
-; CHECK-NEXT:    ret i32 [[PHI]]
+; CHECK-NEXT:    ret i32 2
 ;
 entry:
   br i1 %c, label %if, label %join
