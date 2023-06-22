@@ -2398,6 +2398,15 @@ class Res<Constraint constraint, string desc = "",
           list<OpVariableDecorator> decorators = []>
   : OpVariable<constraint, desc, decorators>;
 
+// Marker to group ops together for documentation purposes.
+class OpDocGroup {
+  // Single line summary of the group of ops.
+  string summary;
+
+  // Longer description of documentation group.
+  string description;
+}
+
 // Base class for all ops.
 class Op<Dialect dialect, string mnemonic, list<Trait> props = []> {
   // The dialect of the op.
@@ -2414,6 +2423,9 @@ class Op<Dialect dialect, string mnemonic, list<Trait> props = []> {
 
   // Additional, longer human-readable description of what the op does.
   string description = "";
+
+  // Optional. The group of ops this op is part of.
+  OpDocGroup opDocGroup = ?;
 
   // Dag containing the arguments of the op. Default to 0 arguments.
   dag arguments = (ins);
