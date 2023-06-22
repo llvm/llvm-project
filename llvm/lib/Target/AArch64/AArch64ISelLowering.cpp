@@ -1160,6 +1160,8 @@ AArch64TargetLowering::AArch64TargetLowering(const TargetMachine &TM,
       if (VT.getVectorElementType() != MVT::f16 || Subtarget->hasFullFP16()) {
         setOperationAction(ISD::VECREDUCE_FMAX, VT, Legal);
         setOperationAction(ISD::VECREDUCE_FMIN, VT, Legal);
+        setOperationAction(ISD::VECREDUCE_FMAXIMUM, VT, Legal);
+        setOperationAction(ISD::VECREDUCE_FMINIMUM, VT, Legal);
 
         setOperationAction(ISD::VECREDUCE_FADD, VT, Legal);
       }
