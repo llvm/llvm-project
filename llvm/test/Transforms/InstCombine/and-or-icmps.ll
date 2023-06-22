@@ -362,7 +362,7 @@ define <2 x i1> @and_ne_with_diff_one_splatvec(<2 x i32> %x) {
 ; on an 'and' that should have been killed. It's not obvious
 ; why, but removing anything hides the bug, hence the long test.
 
-define void @simplify_before_foldAndOfICmps() {
+define void @simplify_before_foldAndOfICmps(ptr %p) {
 ; CHECK-LABEL: @simplify_before_foldAndOfICmps(
 ; CHECK-NEXT:    [[A8:%.*]] = alloca i16, align 2
 ; CHECK-NEXT:    [[L7:%.*]] = load i16, ptr [[A8]], align 2
@@ -379,9 +379,9 @@ define void @simplify_before_foldAndOfICmps() {
 ; CHECK-NEXT:    [[C18:%.*]] = or i1 [[C7]], [[TMP3]]
 ; CHECK-NEXT:    [[TMP4:%.*]] = sext i1 [[C3]] to i64
 ; CHECK-NEXT:    [[G26:%.*]] = getelementptr i1, ptr null, i64 [[TMP4]]
-; CHECK-NEXT:    store i16 [[L7]], ptr undef, align 2
-; CHECK-NEXT:    store i1 [[C18]], ptr undef, align 1
-; CHECK-NEXT:    store ptr [[G26]], ptr undef, align 8
+; CHECK-NEXT:    store i16 [[L7]], ptr [[P:%.*]], align 2
+; CHECK-NEXT:    store i1 [[C18]], ptr [[P]], align 1
+; CHECK-NEXT:    store ptr [[G26]], ptr [[P]], align 8
 ; CHECK-NEXT:    ret void
 ;
   %A8 = alloca i16
@@ -412,9 +412,9 @@ define void @simplify_before_foldAndOfICmps() {
   store i16 undef, ptr %G21
   %C18 = icmp ule i1 %C10, %C7
   %G26 = getelementptr i1, ptr null, i1 %C3
-  store i16 %B33, ptr undef
-  store i1 %C18, ptr undef
-  store ptr %G26, ptr undef
+  store i16 %B33, ptr %p
+  store i1 %C18, ptr %p
+  store ptr %G26, ptr %p
   ret void
 }
 
