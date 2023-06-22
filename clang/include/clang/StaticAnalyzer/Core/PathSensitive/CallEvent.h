@@ -84,6 +84,10 @@ public:
   CallEventRef(const T *Call) : IntrusiveRefCntPtr<const T>(Call) {}
   CallEventRef(const CallEventRef &Orig) : IntrusiveRefCntPtr<const T>(Orig) {}
 
+  // The copy assignment operator is defined as deleted pending further
+  // motivation.
+  CallEventRef &operator=(const CallEventRef &) = delete;
+
   CallEventRef<T> cloneWithState(ProgramStateRef State) const {
     return this->get()->template cloneWithState<T>(State);
   }
