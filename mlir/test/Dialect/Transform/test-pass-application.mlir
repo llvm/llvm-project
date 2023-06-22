@@ -70,3 +70,22 @@ transform.sequence failures(propagate) {
   %1 = transform.structured.match ops{["func.func"]} in %arg1 : (!transform.any_op) -> !transform.any_op
   transform.apply_registered_pass "canonicalize" to %1 {options = "top-down=false"} : (!transform.any_op) -> !transform.any_op
 }
+
+// -----
+
+module {
+  // expected-error @below {{trying to schedule a pass on an unsupported operation}}
+  // expected-note @below {{target op}}
+  func.func @invalid_target_op_type() {
+    return
+  }
+
+  transform.sequence failures(propagate) {
+  ^bb1(%arg1: !transform.any_op):
+    %1 = transform.structured.match ops{["func.func"]} in %arg1 : (!transform.any_op) -> !transform.any_op
+
+    // func-bufferize can be applied only to ModuleOps.
+    // expected-error @below {{pass pipeline failed}}
+    transform.apply_registered_pass "func-bufferize" to %1 : (!transform.any_op) -> !transform.any_op
+  }
+}

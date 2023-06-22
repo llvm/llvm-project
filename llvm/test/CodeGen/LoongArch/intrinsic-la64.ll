@@ -29,6 +29,14 @@ define i32 @crc_w_b_w(i32 %a, i32 %b) nounwind {
   ret i32 %res
 }
 
+define void @crc_w_b_w_noret(i32 %a, i32 %b) nounwind {
+; CHECK-LABEL: crc_w_b_w_noret:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    ret
+  %res = call i32 @llvm.loongarch.crc.w.b.w(i32 %a, i32 %b)
+  ret void
+}
+
 define i32 @crc_w_h_w(i32 %a, i32 %b) nounwind {
 ; CHECK-LABEL: crc_w_h_w:
 ; CHECK:       # %bb.0:
@@ -38,6 +46,14 @@ define i32 @crc_w_h_w(i32 %a, i32 %b) nounwind {
   ret i32 %res
 }
 
+define void @crc_w_h_w_noret(i32 %a, i32 %b) nounwind {
+; CHECK-LABEL: crc_w_h_w_noret:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    ret
+  %res = call i32 @llvm.loongarch.crc.w.h.w(i32 %a, i32 %b)
+  ret void
+}
+
 define i32 @crc_w_w_w(i32 %a, i32 %b) nounwind {
 ; CHECK-LABEL: crc_w_w_w:
 ; CHECK:       # %bb.0:
@@ -45,6 +61,14 @@ define i32 @crc_w_w_w(i32 %a, i32 %b) nounwind {
 ; CHECK-NEXT:    ret
   %res = call i32 @llvm.loongarch.crc.w.w.w(i32 %a, i32 %b)
   ret i32 %res
+}
+
+define void @crc_w_w_w_noret(i32 %a, i32 %b) nounwind {
+; CHECK-LABEL: crc_w_w_w_noret:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    ret
+  %res = call i32 @llvm.loongarch.crc.w.w.w(i32 %a, i32 %b)
+  ret void
 }
 
 define void @cacop_d(i64 %a) nounwind {
@@ -65,6 +89,14 @@ define i32 @crc_w_d_w(i64 %a, i32 %b) nounwind {
   ret i32 %res
 }
 
+define void @crc_w_d_w_noret(i64 %a, i32 %b) nounwind {
+; CHECK-LABEL: crc_w_d_w_noret:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    ret
+  %res = call i32 @llvm.loongarch.crc.w.d.w(i64 %a, i32 %b)
+  ret void
+}
+
 define i32 @crcc_w_b_w(i32 %a, i32 %b) nounwind {
 ; CHECK-LABEL: crcc_w_b_w:
 ; CHECK:       # %bb.0:
@@ -72,6 +104,14 @@ define i32 @crcc_w_b_w(i32 %a, i32 %b) nounwind {
 ; CHECK-NEXT:    ret
   %res = call i32 @llvm.loongarch.crcc.w.b.w(i32 %a, i32 %b)
   ret i32 %res
+}
+
+define void @crcc_w_b_w_noret(i32 %a, i32 %b) nounwind {
+; CHECK-LABEL: crcc_w_b_w_noret:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    ret
+  %res = call i32 @llvm.loongarch.crcc.w.b.w(i32 %a, i32 %b)
+  ret void
 }
 
 define i32 @crcc_w_h_w(i32 %a, i32 %b) nounwind {
@@ -83,6 +123,14 @@ define i32 @crcc_w_h_w(i32 %a, i32 %b) nounwind {
   ret i32 %res
 }
 
+define void @crcc_w_h_w_noret(i32 %a, i32 %b) nounwind {
+; CHECK-LABEL: crcc_w_h_w_noret:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    ret
+  %res = call i32 @llvm.loongarch.crcc.w.h.w(i32 %a, i32 %b)
+  ret void
+}
+
 define i32 @crcc_w_w_w(i32 %a, i32 %b) nounwind {
 ; CHECK-LABEL: crcc_w_w_w:
 ; CHECK:       # %bb.0:
@@ -90,6 +138,14 @@ define i32 @crcc_w_w_w(i32 %a, i32 %b) nounwind {
 ; CHECK-NEXT:    ret
   %res = call i32 @llvm.loongarch.crcc.w.w.w(i32 %a, i32 %b)
   ret i32 %res
+}
+
+define void @crcc_w_w_w_noret(i32 %a, i32 %b) nounwind {
+; CHECK-LABEL: crcc_w_w_w_noret:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    ret
+  %res = call i32 @llvm.loongarch.crcc.w.w.w(i32 %a, i32 %b)
+  ret void
 }
 
 define i32 @crcc_w_d_w(i64 %a, i32 %b) nounwind {
@@ -101,6 +157,14 @@ define i32 @crcc_w_d_w(i64 %a, i32 %b) nounwind {
   ret i32 %res
 }
 
+define void @crcc_w_d_w_noret(i64 %a, i32 %b) nounwind {
+; CHECK-LABEL: crcc_w_d_w_noret:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    ret
+  %res = call i32 @llvm.loongarch.crcc.w.d.w(i64 %a, i32 %b)
+  ret void
+}
+
 define i64 @csrrd_d() {
 ; CHECK-LABEL: csrrd_d:
 ; CHECK:       # %bb.0: # %entry
@@ -109,6 +173,15 @@ define i64 @csrrd_d() {
 entry:
   %0 = tail call i64 @llvm.loongarch.csrrd.d(i32 1)
   ret i64 %0
+}
+
+define void @csrrd_d_noret() {
+; CHECK-LABEL: csrrd_d_noret:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    ret
+entry:
+  %0 = tail call i64 @llvm.loongarch.csrrd.d(i32 1)
+  ret void
 }
 
 define i64 @csrwr_d(i64 %a) {
@@ -163,6 +236,15 @@ entry:
   ret i64 %0
 }
 
+define void @iocsrrd_d_noret(i32 %a) {
+; CHECK-LABEL: iocsrrd_d_noret:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    ret
+entry:
+  %0 = tail call i64 @llvm.loongarch.iocsrrd.d(i32 %a)
+  ret void
+}
+
 define void @iocsrwr_d(i64 %a, i32 signext %b) {
 ; CHECK-LABEL: iocsrwr_d:
 ; CHECK:       # %bb.0: # %entry
@@ -201,6 +283,16 @@ define i64 @lddir_d(i64 %a) {
 entry:
   %0 = tail call i64 @llvm.loongarch.lddir.d(i64 %a, i64 1)
   ret i64 %0
+}
+
+define void @lddir_d_noret(i64 %a) {
+; CHECK-LABEL: lddir_d_noret:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    lddir $a0, $a0, 1
+; CHECK-NEXT:    ret
+entry:
+  %0 = tail call i64 @llvm.loongarch.lddir.d(i64 %a, i64 1)
+  ret void
 }
 
 define void @ldpte_d(i64 %a) {

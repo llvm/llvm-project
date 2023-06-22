@@ -788,6 +788,7 @@ typedef regex_token_iterator<wstring::const_iterator> wsregex_token_iterator;
 #include <__algorithm/find.h>
 #include <__algorithm/search.h>
 #include <__assert> // all public C++ headers provide the assertion handler
+#include <__availability>
 #include <__config>
 #include <__iterator/back_insert_iterator.h>
 #include <__iterator/wrap_iter.h>
@@ -6923,14 +6924,14 @@ _LIBCPP_END_NAMESPACE_STD
 _LIBCPP_BEGIN_NAMESPACE_STD
 namespace pmr {
 template <class _BidirT>
-using match_results = std::match_results<_BidirT, polymorphic_allocator<std::sub_match<_BidirT>>>;
+using match_results _LIBCPP_AVAILABILITY_PMR = std::match_results<_BidirT, polymorphic_allocator<std::sub_match<_BidirT>>>;
 
-using cmatch  = match_results<const char*>;
-using smatch  = match_results<std::pmr::string::const_iterator>;
+using cmatch _LIBCPP_AVAILABILITY_PMR  = match_results<const char*>;
+using smatch _LIBCPP_AVAILABILITY_PMR  = match_results<std::pmr::string::const_iterator>;
 
 #ifndef _LIBCPP_HAS_NO_WIDE_CHARACTERS
-using wcmatch = match_results<const wchar_t*>;
-using wsmatch = match_results<std::pmr::wstring::const_iterator>;
+using wcmatch _LIBCPP_AVAILABILITY_PMR = match_results<const wchar_t*>;
+using wsmatch _LIBCPP_AVAILABILITY_PMR = match_results<std::pmr::wstring::const_iterator>;
 #endif
 } // namespace pmr
 _LIBCPP_END_NAMESPACE_STD
