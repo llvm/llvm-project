@@ -3509,7 +3509,6 @@ bool AArch64InstructionSelector::select(MachineInstr &I) {
     return selectConcatVectors(I, MRI);
   case TargetOpcode::G_JUMP_TABLE:
     return selectJumpTable(I, MRI);
-  case TargetOpcode::G_VECREDUCE_FADD:
   case TargetOpcode::G_VECREDUCE_ADD:
     return selectReduction(I, MRI);
   case TargetOpcode::G_MEMCPY:
@@ -3559,19 +3558,6 @@ bool AArch64InstructionSelector::selectReduction(MachineInstr &I,
     return constrainSelectedInstRegOperands(I, TII, TRI, RBI);
   }
 
-  if (I.getOpcode() == TargetOpcode::G_VECREDUCE_FADD) {
-    unsigned Opc = 0;
-    if (VecTy == LLT::fixed_vector(2, 32))
-      Opc = AArch64::FADDPv2i32p;
-    else if (VecTy == LLT::fixed_vector(2, 64))
-      Opc = AArch64::FADDPv2i64p;
-    else {
-      LLVM_DEBUG(dbgs() << "Unhandled type for fadd reduction");
-      return false;
-    }
-    I.setDesc(TII.get(Opc));
-    return constrainSelectedInstRegOperands(I, TII, TRI, RBI);
-  }
   return false;
 }
 
