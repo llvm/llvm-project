@@ -66,6 +66,26 @@ C++23 Feature Support
 C++2c Feature Support
 ^^^^^^^^^^^^^^^^^^^^^
 
+- Implemented `P2169R4: A nice placeholder with no name <https://wg21.link/P2169R4>`_. This allows using ``_``
+  as a variable name multiple times in the same scope and is supported in all C++ language modes as an extension.
+  An extension warning is produced when multiple variables are introduced by ``_`` in the same scope.
+  Unused warnings are no longer produced for variables named ``_``.
+  Currently, inspecting placeholders variables in a debugger when more than one are declared in the same scope
+  is not supported.
+
+  .. code-block:: cpp
+    struct S {
+      int _, _; // Was invalid, now OK
+    };
+    void func() {
+      int _, _; // Was invalid, now OK
+    }
+    void other() {
+      int _; // Previously diagnosed under -Wunused, no longer diagnosed
+    }
+
+
+
 Resolutions to C++ Defect Reports
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
