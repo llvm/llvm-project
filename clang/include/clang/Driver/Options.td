@@ -5283,6 +5283,11 @@ def flang_experimental_hlfir : Flag<["-"], "flang-experimental-hlfir">,
   Flags<[FlangOption, FC1Option, FlangOnlyOption, NoXarchOption, HelpHidden]>,
   HelpText<"Use HLFIR lowering (experimental)">;
 
+def flang_experimental_polymorphism : Flag<["-"], "flang-experimental-polymorphism">,
+  Flags<[FlangOption, FC1Option, FlangOnlyOption, NoXarchOption, HelpHidden]>,
+  HelpText<"Enable Fortran 2003 polymorphism (experimental)">;
+  
+
 //===----------------------------------------------------------------------===//
 // FLangOption + CoreOption + NoXarchOption
 //===----------------------------------------------------------------------===//
