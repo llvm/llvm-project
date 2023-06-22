@@ -397,8 +397,9 @@ struct Allocator {
   }
 
   void GetOptions(AllocatorOptions *options) const {
-    options->quarantine_size_mb = quarantine.GetSize() >> 20;
-    options->thread_local_quarantine_size_kb = quarantine.GetCacheSize() >> 10;
+    options->quarantine_size_mb = quarantine.GetMaxSize() >> 20;
+    options->thread_local_quarantine_size_kb =
+        quarantine.GetMaxCacheSize() >> 10;
     options->min_redzone = atomic_load(&min_redzone, memory_order_acquire);
     options->max_redzone = atomic_load(&max_redzone, memory_order_acquire);
     options->may_return_null = AllocatorMayReturnNull();
