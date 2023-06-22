@@ -177,15 +177,6 @@ static void updateSupportedARMFeatures(const ARMAttributeParser &attributes) {
       config->armHasMovtMovw = true;
     break;
   }
-
-  // Only ARMv8-M or later architectures have CMSE support.
-  std::optional<unsigned> profile =
-      attributes.getAttributeValue(ARMBuildAttrs::CPU_arch_profile);
-  if (!profile)
-    return;
-  if (arch >= ARMBuildAttrs::CPUArch::v8_M_Base &&
-      profile == ARMBuildAttrs::MicroControllerProfile)
-    config->armCMSESupport = true;
 }
 
 InputFile::InputFile(Kind k, MemoryBufferRef m)
@@ -325,14 +316,6 @@ template <class ELFT> static void doParseFile(InputFile *file) {
 
 // Add symbols in File to the symbol table.
 void elf::parseFile(InputFile *file) { invokeELFT(doParseFile, file); }
-
-template <class ELFT> static void doParseArmCMSEImportLib(InputFile *file) {
-  cast<ObjFile<ELFT>>(file)->importCmseSymbols();
-}
-
-void elf::parseArmCMSEImportLib(InputFile *file) {
-  invokeELFT(doParseArmCMSEImportLib, file);
-}
 
 // Concatenates arguments to construct a string representing an error location.
 static std::string createFileLineMsg(StringRef path, unsigned line) {
@@ -1048,8 +1031,8 @@ InputSectionBase *ObjFile<ELFT>::createInputSection(uint32_t idx,
   return makeThreadLocal<InputSection>(*this, sec, name);
 }
 
-// Initialize symbols. symbols is a parallel array to the corresponding ELF
-// symbol table.
+// Initialize this->Symbols. this->Symbols is a parallel array as
+// its corresponding ELF symbol table.
 template <class ELFT>
 void ObjFile<ELFT>::initializeSymbols(const object::ELFFile<ELFT> &obj) {
   ArrayRef<Elf_Sym> eSyms = this->getELFSyms<ELFT>();

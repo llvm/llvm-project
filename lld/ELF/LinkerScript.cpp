@@ -896,15 +896,6 @@ void LinkerScript::diagnoseOrphanHandling() const {
   }
 }
 
-void LinkerScript::diagnoseMissingSGSectionAddress() const {
-  if (!config->cmseImplib || !in.armCmseSGSection->isNeeded())
-    return;
-
-  OutputSection *sec = findByName(sectionCommands, ".gnu.sgstubs");
-  if (sec && !sec->addrExpr && !config->sectionStartMap.count(".gnu.sgstubs"))
-    error("no address assigned to the veneers output section " + sec->name);
-}
-
 // This function searches for a memory region to place the given output
 // section in. If found, a pointer to the appropriate memory region is
 // returned in the first member of the pair. Otherwise, a nullptr is returned.
