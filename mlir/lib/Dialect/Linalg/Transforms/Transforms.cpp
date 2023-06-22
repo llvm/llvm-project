@@ -139,12 +139,6 @@ static FailureOr<Value> padOperandToSmallestStaticBoundingBox(
                                opOperand->get(), paddingValue, nofold);
 }
 
-static SmallVector<utils::IteratorType>
-getNParallelLoopsAttrs(unsigned nParallelLoops) {
-  return SmallVector<utils::IteratorType>(nParallelLoops,
-                                          utils::IteratorType::parallel);
-}
-
 //===----------------------------------------------------------------------===//
 // Transformations exposed as functional-style API calls.
 //===----------------------------------------------------------------------===//
@@ -1026,71 +1020,6 @@ LogicalResult mlir::linalg::LinalgPaddingPattern::matchAndRewrite(
 LogicalResult mlir::linalg::CopyVectorizationPattern::matchAndRewrite(
     memref::CopyOp copyOp, PatternRewriter &rewriter) const {
   return vectorizeCopy(rewriter, copyOp);
-}
-
-///
-/// Pattern to rewrite a tensor::PadOp into a sequence of EmptyOp, FillOp (to
-/// initialize with pad_val) and GenericOp (to copy contents).
-///
-LogicalResult
-PadOpTransformationPattern::matchAndRewrite(tensor::PadOp padOp,
-                                            PatternRewriter &rewriter) const {
-
-  auto inputShapedType = cast<ShapedType>(padOp.getSource().getType());
-  auto resultShapedType = cast<ShapedType>(padOp.getResult().getType());
-
-  // Bail on non-static shapes.
-  if (!inputShapedType.hasStaticShape())
-    return failure();
-  if (!resultShapedType.hasStaticShape())
-    return failure();
-
-  // Only support padding with a constant for now, i.e. either:
-  //   1. A BBarg from a different block.
-  //   2. A value defined outside of the current block.
-  Block &block = padOp.getRegion().front();
-  auto yieldOp = cast<tensor::YieldOp>(block.getTerminator());
-  Value padValue = yieldOp.getValue();
-  Operation *definingOp = padValue.getDefiningOp();
-  if (definingOp && definingOp->getBlock() == &block)
-    return failure();
-  if (!definingOp && cast<BlockArgument>(padValue).getOwner() == &block)
-    return failure();
-
-  // Create tensor with the padded shape
-  Location loc = padOp.getLoc();
-  SmallVector<Value> indices(resultShapedType.getRank(),
-                             rewriter.create<arith::ConstantIndexOp>(loc, 0));
-  Value emptyTensor = rewriter.create<tensor::EmptyOp>(
-      loc, resultShapedType.getShape(), resultShapedType.getElementType());
-
-  // Initialize tensor with the pad value
-  Value tmpTensor = rewriter
-                        .create<linalg::FillOp>(loc, ValueRange{padValue},
-                                                ValueRange{emptyTensor})
-                        .result();
-
-  // Copy original contents into new tensor
-  // Uses linalg.generic, but could be done with tensor.insert_slice
-  SmallVector<AffineExpr, 4> outputExprs;
-  for (unsigned i = 0; i < resultShapedType.getRank(); ++i) {
-    outputExprs.push_back(getAffineDimExpr(i, rewriter.getContext()) +
-                          padOp.getStaticLow()[i]);
-  }
-
-  SmallVector<AffineMap, 2> transferMaps = {
-      rewriter.getMultiDimIdentityMap(inputShapedType.getRank()),
-      AffineMap::get(resultShapedType.getRank(),
-                     /*symbolCount=*/0, outputExprs, rewriter.getContext())};
-
-  rewriter.replaceOpWithNewOp<linalg::GenericOp>(
-      padOp, resultShapedType, padOp.getSource(), tmpTensor, transferMaps,
-      getNParallelLoopsAttrs(resultShapedType.getRank()),
-      [&](OpBuilder &nestedBuilder, Location nestedLoc, ValueRange args) {
-        nestedBuilder.create<linalg::YieldOp>(nestedLoc, args[0]);
-      });
-
-  return success();
 }
 
 /// Filling `dest` using FillOp constant padding value if possible.
