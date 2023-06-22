@@ -41,7 +41,6 @@ enum class ComplexDeinterleavingOperation {
   Symmetric,
   ReductionPHI,
   ReductionOperation,
-  ReductionSelect,
 };
 
 enum class ComplexDeinterleavingRotation {
