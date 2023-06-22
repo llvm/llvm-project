@@ -212,10 +212,10 @@ def: Pat<(any_ffloor FPR32:$rs1), (FROUND_S FPR32:$rs1, FRM_RDN)>;
 def: Pat<(any_fceil FPR32:$rs1), (FROUND_S FPR32:$rs1, FRM_RUP)>;
 def: Pat<(any_ftrunc FPR32:$rs1), (FROUND_S FPR32:$rs1, FRM_RTZ)>;
 
-def: PatSetCC<FPR32, strict_fsetcc, SETLT, FLTQ_S>;
-def: PatSetCC<FPR32, strict_fsetcc, SETOLT, FLTQ_S>;
-def: PatSetCC<FPR32, strict_fsetcc, SETLE, FLEQ_S>;
-def: PatSetCC<FPR32, strict_fsetcc, SETOLE, FLEQ_S>;
+def: PatSetCC<FPR32, strict_fsetcc, SETLT, FLTQ_S, f32>;
+def: PatSetCC<FPR32, strict_fsetcc, SETOLT, FLTQ_S, f32>;
+def: PatSetCC<FPR32, strict_fsetcc, SETLE, FLEQ_S, f32>;
+def: PatSetCC<FPR32, strict_fsetcc, SETOLE, FLEQ_S, f32>;
 } // Predicates = [HasStdExtZfa]
 
 let Predicates = [HasStdExtZfa, HasStdExtD] in {
@@ -235,10 +235,10 @@ def: Pat<(any_ffloor FPR64:$rs1), (FROUND_D FPR64:$rs1, FRM_RDN)>;
 def: Pat<(any_fceil FPR64:$rs1), (FROUND_D FPR64:$rs1, FRM_RUP)>;
 def: Pat<(any_ftrunc FPR64:$rs1), (FROUND_D FPR64:$rs1, FRM_RTZ)>;
 
-def: PatSetCC<FPR64, strict_fsetcc, SETLT, FLTQ_D>;
-def: PatSetCC<FPR64, strict_fsetcc, SETOLT, FLTQ_D>;
-def: PatSetCC<FPR64, strict_fsetcc, SETLE, FLEQ_D>;
-def: PatSetCC<FPR64, strict_fsetcc, SETOLE, FLEQ_D>;
+def: PatSetCC<FPR64, strict_fsetcc, SETLT, FLTQ_D, f64>;
+def: PatSetCC<FPR64, strict_fsetcc, SETOLT, FLTQ_D, f64>;
+def: PatSetCC<FPR64, strict_fsetcc, SETLE, FLEQ_D, f64>;
+def: PatSetCC<FPR64, strict_fsetcc, SETOLE, FLEQ_D, f64>;
 } // Predicates = [HasStdExtZfa, HasStdExtD]
 
 let Predicates = [HasStdExtZfa, HasStdExtD, IsRV32] in {
@@ -263,8 +263,8 @@ def: Pat<(any_ffloor FPR16:$rs1), (FROUND_H FPR16:$rs1, FRM_RDN)>;
 def: Pat<(any_fceil FPR16:$rs1), (FROUND_H FPR16:$rs1, FRM_RUP)>;
 def: Pat<(any_ftrunc FPR16:$rs1), (FROUND_H FPR16:$rs1, FRM_RTZ)>;
 
-def: PatSetCC<FPR16, strict_fsetcc, SETLT, FLTQ_H>;
-def: PatSetCC<FPR16, strict_fsetcc, SETOLT, FLTQ_H>;
-def: PatSetCC<FPR16, strict_fsetcc, SETLE, FLEQ_H>;
-def: PatSetCC<FPR16, strict_fsetcc, SETOLE, FLEQ_H>;
+def: PatSetCC<FPR16, strict_fsetcc, SETLT, FLTQ_H, f16>;
+def: PatSetCC<FPR16, strict_fsetcc, SETOLT, FLTQ_H, f16>;
+def: PatSetCC<FPR16, strict_fsetcc, SETLE, FLEQ_H, f16>;
+def: PatSetCC<FPR16, strict_fsetcc, SETOLE, FLEQ_H, f16>;
 } // Predicates = [HasStdExtZfa, HasStdExtZfh]

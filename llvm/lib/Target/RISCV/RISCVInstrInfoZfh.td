@@ -356,59 +356,59 @@ foreach Ext = ZfhExts in {
 
 // Match non-signaling FEQ_D
 foreach Ext = ZfhExts in {
-  defm : PatSetCC_m<any_fsetcc,    SETEQ,  FEQ_H,            Ext>;
-  defm : PatSetCC_m<any_fsetcc,    SETOEQ, FEQ_H,            Ext>;
-  defm : PatSetCC_m<strict_fsetcc, SETLT,  PseudoQuietFLT_H, Ext>;
-  defm : PatSetCC_m<strict_fsetcc, SETOLT, PseudoQuietFLT_H, Ext>;
-  defm : PatSetCC_m<strict_fsetcc, SETLE,  PseudoQuietFLE_H, Ext>;
-  defm : PatSetCC_m<strict_fsetcc, SETOLE, PseudoQuietFLE_H, Ext>;
+  defm : PatSetCC_m<any_fsetcc,    SETEQ,  FEQ_H,            Ext, f16>;
+  defm : PatSetCC_m<any_fsetcc,    SETOEQ, FEQ_H,            Ext, f16>;
+  defm : PatSetCC_m<strict_fsetcc, SETLT,  PseudoQuietFLT_H, Ext, f16>;
+  defm : PatSetCC_m<strict_fsetcc, SETOLT, PseudoQuietFLT_H, Ext, f16>;
+  defm : PatSetCC_m<strict_fsetcc, SETLE,  PseudoQuietFLE_H, Ext, f16>;
+  defm : PatSetCC_m<strict_fsetcc, SETOLE, PseudoQuietFLE_H, Ext, f16>;
 }
 
 let Predicates = [HasStdExtZfh] in {
 // Match signaling FEQ_H
-def : Pat<(strict_fsetccs FPR16:$rs1, FPR16:$rs2, SETEQ),
+def : Pat<(XLenVT (strict_fsetccs FPR16:$rs1, FPR16:$rs2, SETEQ)),
           (AND (FLE_H $rs1, $rs2),
                (FLE_H $rs2, $rs1))>;
-def : Pat<(strict_fsetccs FPR16:$rs1, FPR16:$rs2, SETOEQ),
+def : Pat<(XLenVT (strict_fsetccs FPR16:$rs1, FPR16:$rs2, SETOEQ)),
           (AND (FLE_H $rs1, $rs2),
                (FLE_H $rs2, $rs1))>;
 // If both operands are the same, use a single FLE.
-def : Pat<(strict_fsetccs FPR16:$rs1, FPR16:$rs1, SETEQ),
+def : Pat<(XLenVT (strict_fsetccs FPR16:$rs1, FPR16:$rs1, SETEQ)),
           (FLE_H $rs1, $rs1)>;
-def : Pat<(strict_fsetccs FPR16:$rs1, FPR16:$rs1, SETOEQ),
+def : Pat<(XLenVT (strict_fsetccs FPR16:$rs1, FPR16:$rs1, SETOEQ)),
           (FLE_H $rs1, $rs1)>;
 } // Predicates = [HasStdExtZfh]
 
 let Predicates = [HasStdExtZhinx] in {
 // Match signaling FEQ_H
-def : Pat<(strict_fsetccs FPR16INX:$rs1, FPR16INX:$rs2, SETEQ),
+def : Pat<(XLenVT (strict_fsetccs FPR16INX:$rs1, FPR16INX:$rs2, SETEQ)),
           (AND (FLE_H_INX $rs1, $rs2),
                (FLE_H_INX $rs2, $rs1))>;
-def : Pat<(strict_fsetccs FPR16INX:$rs1, FPR16INX:$rs2, SETOEQ),
+def : Pat<(XLenVT (strict_fsetccs FPR16INX:$rs1, FPR16INX:$rs2, SETOEQ)),
           (AND (FLE_H_INX $rs1, $rs2),
                (FLE_H_INX $rs2, $rs1))>;
 // If both operands are the same, use a single FLE.
-def : Pat<(strict_fsetccs FPR16INX:$rs1, FPR16INX:$rs1, SETEQ),
+def : Pat<(XLenVT (strict_fsetccs FPR16INX:$rs1, FPR16INX:$rs1, SETEQ)),
           (FLE_H_INX $rs1, $rs1)>;
-def : Pat<(strict_fsetccs FPR16INX:$rs1, FPR16INX:$rs1, SETOEQ),
+def : Pat<(XLenVT (strict_fsetccs FPR16INX:$rs1, FPR16INX:$rs1, SETOEQ)),
           (FLE_H_INX $rs1, $rs1)>;
 } // Predicates = [HasStdExtZhinx]
 
 foreach Ext = ZfhExts in {
-  defm : PatSetCC_m<any_fsetccs, SETLT,  FLT_H, Ext>;
-  defm : PatSetCC_m<any_fsetccs, SETOLT, FLT_H, Ext>;
-  defm : PatSetCC_m<any_fsetccs, SETLE,  FLE_H, Ext>;
-  defm : PatSetCC_m<any_fsetccs, SETOLE, FLE_H, Ext>;
+  defm : PatSetCC_m<any_fsetccs, SETLT,  FLT_H, Ext, f16>;
+  defm : PatSetCC_m<any_fsetccs, SETOLT, FLT_H, Ext, f16>;
+  defm : PatSetCC_m<any_fsetccs, SETLE,  FLE_H, Ext, f16>;
+  defm : PatSetCC_m<any_fsetccs, SETOLE, FLE_H, Ext, f16>;
 }
 
 let Predicates = [HasStdExtZfh] in {
-defm Select_FPR16 : SelectCC_GPR_rrirr<FPR16>;
+defm Select_FPR16 : SelectCC_GPR_rrirr<FPR16, f16>;
 
 def PseudoFROUND_H : PseudoFROUND<FPR16>;
 } // Predicates = [HasStdExtZfh]
 
 let Predicates = [HasStdExtZhinx] in {
-defm Select_FPR16INX : SelectCC_GPR_rrirr<FPR16INX>;
+defm Select_FPR16INX : SelectCC_GPR_rrirr<FPR16INX, f16>;
 
 def PseudoFROUND_H_INX : PseudoFROUND<FPR16INX>;
 } // Predicates = [HasStdExtZhinx]

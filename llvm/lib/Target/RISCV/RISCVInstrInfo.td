@@ -1203,9 +1203,9 @@ def : InstAlias<".insn_s $opcode, $funct3, $rs2, ${imm12}(${rs1})",
 /// Generic pattern classes
 
 class PatGpr<SDPatternOperator OpNode, RVInst Inst, ValueType vt = XLenVT>
-    : Pat<(vt (OpNode GPR:$rs1)), (Inst GPR:$rs1)>;
+    : Pat<(vt (OpNode (vt GPR:$rs1))), (Inst GPR:$rs1)>;
 class PatGprGpr<SDPatternOperator OpNode, RVInst Inst, ValueType vt = XLenVT>
-    : Pat<(vt (OpNode GPR:$rs1, GPR:$rs2)), (Inst GPR:$rs1, GPR:$rs2)>;
+    : Pat<(vt (OpNode (vt GPR:$rs1), (vt GPR:$rs2))), (Inst GPR:$rs1, GPR:$rs2)>;
 
 class PatGprImm<SDPatternOperator OpNode, RVInst Inst, ImmLeaf ImmType>
     : Pat<(XLenVT (OpNode (XLenVT GPR:$rs1), ImmType:$imm)),
@@ -1322,7 +1322,7 @@ def PseudoAddTPRel : Pseudo<(outs GPR:$rd),
 
 /// FrameIndex calculations
 
-def : Pat<(FrameAddrRegImm GPR:$rs1, simm12:$imm12),
+def : Pat<(FrameAddrRegImm (iPTR GPR:$rs1), simm12:$imm12),
           (ADDI GPR:$rs1, simm12:$imm12)>;
 
 /// HI and ADD_LO address nodes.
@@ -1365,9 +1365,9 @@ def riscv_seteq : ComplexPattern<XLenVT, 1, "selectSETEQ", [setcc]>;
 
 // Define pattern expansions for setcc operations that aren't directly
 // handled by a RISC-V instruction.
-def : Pat<(riscv_seteq GPR:$rs1), (SLTIU GPR:$rs1, 1)>;
-def : Pat<(riscv_setne GPR:$rs1), (SLTU X0, GPR:$rs1)>;
-def : Pat<(setne GPR:$rs1, -1), (SLTIU GPR:$rs1, -1)>;
+def : Pat<(riscv_seteq (XLenVT GPR:$rs1)), (SLTIU GPR:$rs1, 1)>;
+def : Pat<(riscv_setne (XLenVT GPR:$rs1)), (SLTU (XLenVT X0), GPR:$rs1)>;
+def : Pat<(XLenVT (setne (XLenVT GPR:$rs1), -1)), (SLTIU GPR:$rs1, -1)>;
 
 def IntCCtoRISCVCC : SDNodeXForm<riscv_selectcc, [{
   ISD::CondCode CC = cast<CondCodeSDNode>(N->getOperand(2))->get();
@@ -1390,8 +1390,9 @@ def PseudoCCMOVGPR : Pseudo<(outs GPR:$dst),
                             (ins GPR:$lhs, GPR:$rhs, ixlenimm:$cc,
                              GPR:$falsev, GPR:$truev),
                             [(set GPR:$dst,
-                              (riscv_selectcc_frag:$cc GPR:$lhs, GPR:$rhs,
-                                                       cond, GPR:$truev,
+                              (riscv_selectcc_frag:$cc (XLenVT GPR:$lhs),
+                                                       GPR:$rhs, cond,
+                                                       (XLenVT GPR:$truev),
                                                        GPR:$falsev))]>,
                      Sched<[WriteSFB, ReadSFB, ReadSFB, ReadSFB, ReadSFB]>;
 }
@@ -1434,29 +1435,29 @@ def PseudoCCSUBW : Pseudo<(outs GPR:$dst),
                    Sched<[WriteSFB, ReadSFB, ReadSFB, ReadSFB, ReadSFB, ReadSFB]>;
 }
 
-multiclass SelectCC_GPR_rrirr<DAGOperand valty> {
+multiclass SelectCC_GPR_rrirr<DAGOperand valty, ValueType vt> {
   let usesCustomInserter = 1 in
   def _Using_CC_GPR : Pseudo<(outs valty:$dst),
                              (ins GPR:$lhs, GPR:$rhs, ixlenimm:$cc,
                               valty:$truev, valty:$falsev),
                              [(set valty:$dst,
-                               (riscv_selectcc_frag:$cc GPR:$lhs, GPR:$rhs, cond,
-                                                        valty:$truev, valty:$falsev))]>;
+                               (riscv_selectcc_frag:$cc (XLenVT GPR:$lhs), GPR:$rhs, cond,
+                                                        (vt valty:$truev), valty:$falsev))]>;
   // Explicitly select 0 in the condition to X0. The register coalescer doesn't
   // always do it.
-  def : Pat<(riscv_selectcc_frag:$cc GPR:$lhs, 0, cond, valty:$truev,
+  def : Pat<(riscv_selectcc_frag:$cc (XLenVT GPR:$lhs), 0, cond, (vt valty:$truev),
                                      valty:$falsev),
-            (!cast<Instruction>(NAME#"_Using_CC_GPR") GPR:$lhs, X0,
+            (!cast<Instruction>(NAME#"_Using_CC_GPR") GPR:$lhs, (XLenVT X0),
              (IntCCtoRISCVCC $cc), valty:$truev, valty:$falsev)>;
 }
 
 let Predicates = [NoShortForwardBranchOpt] in
-defm Select_GPR : SelectCC_GPR_rrirr<GPR>;
+defm Select_GPR : SelectCC_GPR_rrirr<GPR, XLenVT>;
 
 class SelectCompressOpt<CondCode Cond>
-    : Pat<(riscv_selectcc_frag:$select GPR:$lhs, simm12_no6:$Constant, Cond,
-                                       GPR:$truev, GPR:$falsev),
-    (Select_GPR_Using_CC_GPR (ADDI GPR:$lhs, (NegImm simm12:$Constant)), X0,
+    : Pat<(riscv_selectcc_frag:$select (XLenVT GPR:$lhs), simm12_no6:$Constant, Cond,
+                                       (XLenVT GPR:$truev), GPR:$falsev),
+    (Select_GPR_Using_CC_GPR (ADDI GPR:$lhs, (NegImm simm12:$Constant)), (XLenVT X0),
                           (IntCCtoRISCVCC $select), GPR:$truev, GPR:$falsev)>;
 
 def OptForMinSize : Predicate<"MF ? MF->getFunction().hasMinSize() : false">;
@@ -1470,16 +1471,16 @@ let Predicates = [HasStdExtC, OptForMinSize] in {
 
 // Match `riscv_brcc` and lower to the appropriate RISC-V branch instruction.
 multiclass BccPat<CondCode Cond, RVInstB Inst> {
-  def : Pat<(riscv_brcc GPR:$rs1, GPR:$rs2, Cond, bb:$imm12),
+  def : Pat<(riscv_brcc (XLenVT GPR:$rs1), GPR:$rs2, Cond, bb:$imm12),
             (Inst GPR:$rs1, GPR:$rs2, simm13_lsb0:$imm12)>;
   // Explicitly select 0 to X0. The register coalescer doesn't always do it.
-  def : Pat<(riscv_brcc GPR:$rs1, 0, Cond, bb:$imm12),
-            (Inst GPR:$rs1, X0, simm13_lsb0:$imm12)>;
+  def : Pat<(riscv_brcc (XLenVT GPR:$rs1), 0, Cond, bb:$imm12),
+            (Inst GPR:$rs1, (XLenVT X0), simm13_lsb0:$imm12)>;
 }
 
 class BrccCompressOpt<CondCode Cond, RVInstB Inst>
     : Pat<(riscv_brcc GPR:$lhs, simm12_no6:$Constant, Cond, bb:$place),
-          (Inst (ADDI GPR:$lhs, (NegImm simm12:$Constant)), X0, bb:$place)>;
+          (Inst (ADDI GPR:$lhs, (NegImm simm12:$Constant)), (XLenVT X0), bb:$place)>;
 
 defm : BccPat<SETEQ, BEQ>;
 defm : BccPat<SETNE, BNE>;
@@ -1552,8 +1553,8 @@ def PseudoCALL : Pseudo<(outs), (ins call_symbol:$func), []>,
 def : Pat<(riscv_call tglobaladdr:$func), (PseudoCALL tglobaladdr:$func)>;
 def : Pat<(riscv_call texternalsym:$func), (PseudoCALL texternalsym:$func)>;
 
-def : Pat<(riscv_sret_glue), (SRET X0, X0)>;
-def : Pat<(riscv_mret_glue), (MRET X0, X0)>;
+def : Pat<(riscv_sret_glue), (SRET (XLenVT X0), (XLenVT X0))>;
+def : Pat<(riscv_mret_glue), (MRET (XLenVT X0), (XLenVT X0))>;
 
 let isCall = 1, Defs = [X1] in
 def PseudoCALLIndirect : Pseudo<(outs), (ins GPRJALR:$rs1),
@@ -1606,7 +1607,7 @@ let hasSideEffects = 0, mayLoad = 1, mayStore = 0, Size = 8, isCodeGenOnly = 0,
 def PseudoLGA : Pseudo<(outs GPR:$dst), (ins bare_symbol:$src), [],
                        "lga", "$dst, $src">;
 
-def : Pat<(riscv_lga tglobaladdr:$in), (PseudoLGA tglobaladdr:$in)>;
+def : Pat<(iPTR (riscv_lga tglobaladdr:$in)), (PseudoLGA tglobaladdr:$in)>;
 
 let hasSideEffects = 0, mayLoad = 1, mayStore = 0, Size = 8, isCodeGenOnly = 0,
     isAsmParserOnly = 1 in
@@ -1618,7 +1619,7 @@ let hasSideEffects = 0, mayLoad = 1, mayStore = 0, Size = 8, isCodeGenOnly = 0,
 def PseudoLA_TLS_IE : Pseudo<(outs GPR:$dst), (ins bare_symbol:$src), [],
                              "la.tls.ie", "$dst, $src">;
 
-def : Pat<(riscv_la_tls_ie tglobaltlsaddr:$in),
+def : Pat<(iPTR (riscv_la_tls_ie tglobaltlsaddr:$in)),
           (PseudoLA_TLS_IE  tglobaltlsaddr:$in)>;
 
 let hasSideEffects = 0, mayLoad = 0, mayStore = 0, Size = 8, isCodeGenOnly = 0,
@@ -1650,7 +1651,7 @@ def PseudoZEXT_W : Pseudo<(outs GPR:$rd), (ins GPR:$rs), [], "zext.w", "$rd, $rs
 /// Loads
 
 class LdPat<PatFrag LoadOp, RVInst Inst, ValueType vt = XLenVT>
-    : Pat<(vt (LoadOp (AddrRegImm GPR:$rs1, simm12:$imm12))),
+    : Pat<(vt (LoadOp (AddrRegImm (XLenVT GPR:$rs1), simm12:$imm12))),
           (Inst GPR:$rs1, simm12:$imm12)>;
 
 def : LdPat<sextloadi8, LB>;
@@ -1665,7 +1666,8 @@ def : LdPat<zextloadi16, LHU>;
 
 class StPat<PatFrag StoreOp, RVInst Inst, RegisterClass StTy,
             ValueType vt>
-    : Pat<(StoreOp (vt StTy:$rs2), (AddrRegImm GPR:$rs1, simm12:$imm12)),
+    : Pat<(StoreOp (vt StTy:$rs2), (AddrRegImm (XLenVT GPR:$rs1),
+                   simm12:$imm12)),
           (Inst StTy:$rs2, GPR:$rs1, simm12:$imm12)>;
 
 def : StPat<truncstorei8, SB, GPR, XLenVT>;
@@ -1700,7 +1702,7 @@ def : Pat<(atomic_fence (XLenVT 7), (timm)), (FENCE 0b11, 0b11)>;
 
 class ReadSysReg<SysReg SR, list<Register> Regs>
   : Pseudo<(outs GPR:$rd), (ins),
-           [(set GPR:$rd, (riscv_read_csr (XLenVT SR.Encoding)))]>,
+           [(set GPR:$rd, (XLenVT (riscv_read_csr (XLenVT SR.Encoding))))]>,
     PseudoInstExpansion<(CSRRS GPR:$rd, SR.Encoding, X0)> {
   let hasSideEffects = 0;
   let Uses = Regs;
@@ -1708,7 +1710,7 @@ class ReadSysReg<SysReg SR, list<Register> Regs>
 
 class WriteSysReg<SysReg SR, list<Register> Regs>
   : Pseudo<(outs), (ins GPR:$val),
-           [(riscv_write_csr (XLenVT SR.Encoding), GPR:$val)]>,
+           [(riscv_write_csr (XLenVT SR.Encoding), (XLenVT GPR:$val))]>,
     PseudoInstExpansion<(CSRRW X0, SR.Encoding, GPR:$val)> {
   let hasSideEffects = 0;
   let Defs = Regs;
@@ -1724,7 +1726,7 @@ class WriteSysRegImm<SysReg SR, list<Register> Regs>
 
 class SwapSysReg<SysReg SR, list<Register> Regs>
   : Pseudo<(outs GPR:$rd), (ins GPR:$val),
-           [(set GPR:$rd, (riscv_swap_csr (XLenVT SR.Encoding), GPR:$val))]>,
+           [(set GPR:$rd, (riscv_swap_csr (XLenVT SR.Encoding), (XLenVT GPR:$val)))]>,
     PseudoInstExpansion<(CSRRW GPR:$rd, SR.Encoding, GPR:$val)> {
   let hasSideEffects = 0;
   let Uses = Regs;
@@ -1733,7 +1735,7 @@ class SwapSysReg<SysReg SR, list<Register> Regs>
 
 class SwapSysRegImm<SysReg SR, list<Register> Regs>
   : Pseudo<(outs GPR:$rd), (ins uimm5:$val),
-           [(set GPR:$rd, (riscv_swap_csr (XLenVT SR.Encoding), uimm5:$val))]>,
+           [(set GPR:$rd, (XLenVT (riscv_swap_csr (XLenVT SR.Encoding), uimm5:$val)))]>,
     PseudoInstExpansion<(CSRRWI GPR:$rd, SR.Encoding, uimm5:$val)> {
   let hasSideEffects = 0;
   let Uses = Regs;
@@ -1860,7 +1862,7 @@ def : StPat<store, SD, GPR, i64>;
 /// readcyclecounter
 // On RV64, we can directly read the 64-bit "cycle" CSR.
 let Predicates = [IsRV64] in
-def : Pat<(i64 (readcyclecounter)), (CSRRS CYCLE.Encoding, X0)>;
+def : Pat<(i64 (readcyclecounter)), (CSRRS CYCLE.Encoding, (XLenVT X0))>;
 // On RV32, ReadCycleWide will be expanded to the suggested loop reading both
 // halves of the 64-bit "cycle" CSR.
 let Predicates = [IsRV32], usesCustomInserter = 1, hasNoSchedulingInfo = 1 in
@@ -1886,7 +1888,7 @@ def HWASAN_CHECK_MEMACCESS_SHORTGRANULES
                                                       (i32 timm:$accessinfo))]>;
 
 /// Simple optimization
-def : Pat<(add GPR:$rs1, (AddiPair:$rs2)),
+def : Pat<(XLenVT (add GPR:$rs1, (AddiPair:$rs2))),
           (ADDI (ADDI GPR:$rs1, (AddiPairImmLarge AddiPair:$rs2)),
                 (AddiPairImmSmall GPR:$rs2))>;
 
