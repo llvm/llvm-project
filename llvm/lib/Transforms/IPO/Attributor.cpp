@@ -3116,10 +3116,6 @@ void InformationCache::initializeInformationCache(const Function &CF,
     InlineableFunctions.insert(&F);
 }
 
-AAResults *InformationCache::getAAResultsForFunction(const Function &F) {
-  return AG.getAnalysis<AAManager>(F);
-}
-
 InformationCache::FunctionInfo::~FunctionInfo() {
   // The instruction vectors are allocated using a BumpPtrAllocator, we need to
   // manually destroy them.
