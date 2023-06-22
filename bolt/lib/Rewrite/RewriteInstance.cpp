@@ -2985,7 +2985,9 @@ void RewriteInstance::handleRelocation(const SectionRef &RelocatedSection,
   };
 
   if ((ReferencedSection && refersToReorderedSection(ReferencedSection)) ||
-      (opts::ForceToDataRelocations && checkMaxDataRelocations()))
+      (opts::ForceToDataRelocations && checkMaxDataRelocations()) ||
+      // RISC-V has ADD/SUB data-to-data relocations
+      BC->isRISCV())
     ForceRelocation = true;
 
   if (IsFromCode) {
