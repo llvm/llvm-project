@@ -193,7 +193,6 @@ default:
 define void @non_term_unreachable() {
 ; CHECK-LABEL: define void @non_term_unreachable() {
 ; CHECK-NEXT:    call void @dummy()
-; CHECK-NEXT:    call void @dummy() #[[ATTR0:[0-9]+]]
 ; CHECK-NEXT:    store i1 true, ptr poison, align 1
 ; CHECK-NEXT:    ret void
 ;

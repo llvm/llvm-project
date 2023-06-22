@@ -661,6 +661,7 @@ public:
 
   bool tryToSinkInstruction(Instruction *I, BasicBlock *DestBlock);
 
+  bool removeInstructionsBeforeUnreachable(Instruction &I);
   bool handleUnreachableFrom(Instruction *I);
   bool handlePotentiallyDeadSuccessors(BasicBlock *BB, BasicBlock *LiveSucc);
 };
