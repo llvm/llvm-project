@@ -212,14 +212,14 @@ struct QuarantineCallback {
         stack_(stack) {
   }
 
-  void PreQuarantine(AsanChunk *m) {
+  void PreQuarantine(AsanChunk *m) const {
     FillChunk(m);
     // Poison the region.
     PoisonShadow(m->Beg(), RoundUpTo(m->UsedSize(), ASAN_SHADOW_GRANULARITY),
                  kAsanHeapFreeMagic);
   }
 
-  void Recycle(AsanChunk *m) {
+  void Recycle(AsanChunk *m) const {
     void *p = get_allocator().GetBlockBegin(m);
     if (p != m) {
       // Clear the magic value, as allocator internals may overwrite the
@@ -244,13 +244,13 @@ struct QuarantineCallback {
     get_allocator().Deallocate(cache_, p);
   }
 
-  void RecyclePassThrough(AsanChunk *m) {
+  void RecyclePassThrough(AsanChunk *m) const {
     // TODO: We don't need all these here.
     PreQuarantine(m);
     Recycle(m);
   }
 
-  void *Allocate(uptr size) {
+  void *Allocate(uptr size) const {
     void *res = get_allocator().Allocate(cache_, size, 1);
     // TODO(alekseys): Consider making quarantine OOM-friendly.
     if (UNLIKELY(!res))
@@ -258,9 +258,7 @@ struct QuarantineCallback {
     return res;
   }
 
-  void Deallocate(void *p) {
-    get_allocator().Deallocate(cache_, p);
-  }
+  void Deallocate(void *p) const { get_allocator().Deallocate(cache_, p); }
 
  private:
   AllocatorCache* const cache_;
