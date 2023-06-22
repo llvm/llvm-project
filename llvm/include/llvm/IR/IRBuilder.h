@@ -200,6 +200,14 @@ public:
       SetCurrentDebugLocation(IP->getStableDebugLoc());
   }
 
+  /// This specifies that created instructions should be inserted at
+  /// the specified point, but also requires that \p IP is dereferencable.
+  void SetInsertPoint(BasicBlock::iterator IP) {
+    BB = IP->getParent();
+    InsertPt = IP;
+    SetCurrentDebugLocation(IP->getStableDebugLoc());
+  }
+
   /// This specifies that created instructions should inserted at the beginning
   /// end of the specified function, but after already existing static alloca
   /// instructions that are at the start.

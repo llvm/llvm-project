@@ -224,7 +224,9 @@ public:
   /// of cases, e.g. phi nodes or terminators that return values. This function
   /// may return null if the insertion after the definition is not possible,
   /// e.g. due to a catchswitch terminator.
-  Instruction *getInsertionPointAfterDef();
+  std::optional<
+      SymbolTableList<Instruction, ilist_iterator_bits<true>>::iterator>
+  getInsertionPointAfterDef();
 
   //===--------------------------------------------------------------------===//
   // Subclass classification.
