@@ -40,6 +40,21 @@ public:
 
 } // end anonymous namespace
 
+// skip allocas
+static BasicBlock::iterator getInsertPt(BasicBlock &BB) {
+  BasicBlock::iterator InsPt = BB.getFirstInsertionPt();
+  for (BasicBlock::iterator E = BB.end(); InsPt != E; ++InsPt) {
+    AllocaInst *AI = dyn_cast<AllocaInst>(&*InsPt);
+
+    // If this is a dynamic alloca, the value may depend on the loaded kernargs,
+    // so loads will need to be inserted before it.
+    if (!AI || !AI->isStaticAlloca())
+      break;
+  }
+
+  return InsPt;
+}
+
 bool AMDGPULowerKernelArguments::runOnFunction(Function &F) {
   CallingConv::ID CC = F.getCallingConv();
   if (CC != CallingConv::AMDGPU_KERNEL || F.arg_empty())
@@ -52,7 +67,7 @@ bool AMDGPULowerKernelArguments::runOnFunction(Function &F) {
   LLVMContext &Ctx = F.getParent()->getContext();
   const DataLayout &DL = F.getParent()->getDataLayout();
   BasicBlock &EntryBlock = *F.begin();
-  IRBuilder<> Builder(&*EntryBlock.getFirstNonPHIOrDbgOrAlloca());
+  IRBuilder<> Builder(&*getInsertPt(EntryBlock));
 
   const Align KernArgBaseAlign(16); // FIXME: Increase if necessary
   const uint64_t BaseOffset = ST.getExplicitKernelArgOffset();
