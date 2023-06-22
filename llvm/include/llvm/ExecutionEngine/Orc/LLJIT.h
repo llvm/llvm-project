@@ -22,6 +22,7 @@
 #include "llvm/ExecutionEngine/Orc/ThreadSafeModule.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/ThreadPool.h"
+#include <variant>
 
 namespace llvm {
 namespace orc {
