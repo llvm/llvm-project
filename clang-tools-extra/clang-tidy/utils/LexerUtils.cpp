@@ -269,8 +269,9 @@ SourceLocation getLocationForNoexceptSpecifier(const FunctionDecl *FuncDecl,
   const SourceLocation NoexceptLoc =
       FuncDecl->getParamDecl(FuncDecl->getNumParams() - 1)->getEndLoc();
   if (NoexceptLoc.isValid())
-    return Lexer::findLocationAfterToken(NoexceptLoc, tok::r_paren, SM,
-                                         LangOpts, true);
+    return Lexer::findLocationAfterToken(
+        NoexceptLoc, tok::r_paren, SM, LangOpts,
+        /*SkipTrailingWhitespaceAndNewLine=*/true);
 
   return {};
 }
