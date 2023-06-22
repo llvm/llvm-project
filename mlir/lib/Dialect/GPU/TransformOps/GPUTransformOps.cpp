@@ -149,7 +149,7 @@ struct GpuWarpIdBuilder : public GpuIdBuilder {
       // Reverse back to be in [x, y, z] order.
       for (AffineExpr e : llvm::reverse(delinearizingExprs))
         ids.push_back(
-            affine::makeComposedAffineApply(rewriter, loc, e, warpId));
+            affine::makeComposedAffineApply(rewriter, loc, e, {warpId}));
 
       // clang-format off
       LDBG("----linearId: " << linearId);
@@ -205,7 +205,7 @@ struct GpuLinearIdBuilder : public GpuIdBuilder {
       // Reverse back to be in [x, y, z] order.
       for (AffineExpr e : llvm::reverse(delinearizingExprs))
         ids.push_back(
-            affine::makeComposedAffineApply(rewriter, loc, e, linearId));
+            affine::makeComposedAffineApply(rewriter, loc, e, {linearId}));
 
       // clang-format off
       LLVM_DEBUG(llvm::interleaveComma(reverseBasisSizes,

@@ -61,12 +61,9 @@ static DimAndIndex invertSliceIndexing(OpBuilder &b, Location loc,
   auto [dim, indexValue] = dimAndIndex;
   assert(dim < sliceParams.size() && "slice should be non rank-reducing");
   return std::make_pair(
-      dim,
-      affine::makeComposedAffineApply(
-          b, loc, s0 + d0 * s1,
-          {indexValue,
-           getValueOrCreateConstantIndexOp(b, loc, sliceParams[dim].offset),
-           getValueOrCreateConstantIndexOp(b, loc, sliceParams[dim].stride)}));
+      dim, affine::makeComposedAffineApply(
+               b, loc, s0 + d0 * s1,
+               {indexValue, sliceParams[dim].offset, sliceParams[dim].stride}));
 }
 
 /// Transform `dimAndIndex` from the result tensor index space of a
