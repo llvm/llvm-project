@@ -204,9 +204,6 @@ public:
   /// Returns textual patch contents.
   llvm::StringRef text() const { return PatchContents; }
 
-  /// Whether diagnostics generated using this patch are trustable.
-  bool preserveDiagnostics() const;
-
   /// Returns diag locations for Modified contents.
   llvm::ArrayRef<Diag> patchedDiags() const { return PatchedDiags; }
 

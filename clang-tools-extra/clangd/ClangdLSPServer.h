@@ -10,6 +10,7 @@
 #define LLVM_CLANG_TOOLS_EXTRA_CLANGD_CLANGDLSPSERVER_H
 
 #include "ClangdServer.h"
+#include "Diagnostics.h"
 #include "GlobalCompilationDatabase.h"
 #include "LSPBinder.h"
 #include "Protocol.h"
@@ -18,6 +19,7 @@
 #include "support/MemoryTree.h"
 #include "support/Path.h"
 #include "support/Threading.h"
+#include "llvm/ADT/ArrayRef.h"
 #include "llvm/Support/JSON.h"
 #include <chrono>
 #include <cstddef>
@@ -80,7 +82,7 @@ public:
 private:
   // Implement ClangdServer::Callbacks.
   void onDiagnosticsReady(PathRef File, llvm::StringRef Version,
-                          std::vector<Diag> Diagnostics) override;
+                          llvm::ArrayRef<Diag> Diagnostics) override;
   void onFileUpdated(PathRef File, const TUStatus &Status) override;
   void onBackgroundIndexProgress(const BackgroundQueue::Stats &Stats) override;
   void onSemanticsMaybeChanged(PathRef File) override;
@@ -196,7 +198,6 @@ private:
 
   void bindMethods(LSPBinder &, const ClientCapabilities &Caps);
   std::vector<CodeAction> getFixes(StringRef File, const clangd::Diagnostic &D);
-
 
   /// Checks if completion request should be ignored. We need this due to the
   /// limitation of the LSP. Per LSP, a client sends requests for all "trigger

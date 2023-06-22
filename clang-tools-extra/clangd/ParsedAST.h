@@ -89,9 +89,7 @@ public:
   ArrayRef<Decl *> getLocalTopLevelDecls();
   ArrayRef<const Decl *> getLocalTopLevelDecls() const;
 
-  const std::optional<std::vector<Diag>> &getDiagnostics() const {
-    return Diags;
-  }
+  llvm::ArrayRef<Diag> getDiagnostics() const;
 
   /// Returns the estimated size of the AST and the accessory structures, in
   /// bytes. Does not include the size of the preamble.
@@ -131,9 +129,8 @@ private:
             std::unique_ptr<CompilerInstance> Clang,
             std::unique_ptr<FrontendAction> Action, syntax::TokenBuffer Tokens,
             MainFileMacros Macros, std::vector<PragmaMark> Marks,
-            std::vector<Decl *> LocalTopLevelDecls,
-            std::optional<std::vector<Diag>> Diags, IncludeStructure Includes,
-            CanonicalIncludes CanonIncludes);
+            std::vector<Decl *> LocalTopLevelDecls, std::vector<Diag> Diags,
+            IncludeStructure Includes, CanonicalIncludes CanonIncludes);
 
   Path TUPath;
   std::string Version;
@@ -157,9 +154,9 @@ private:
   MainFileMacros Macros;
   // Pragma marks in the main file.
   std::vector<PragmaMark> Marks;
-  // Data, stored after parsing. std::nullopt if AST was built with a stale
-  // preamble.
-  std::optional<std::vector<Diag>> Diags;
+  // Diags emitted while parsing this AST (including preamble and compiler
+  // invocation).
+  std::vector<Diag> Diags;
   // Top-level decls inside the current file. Not that this does not include
   // top-level decls from the preamble.
   std::vector<Decl *> LocalTopLevelDecls;
