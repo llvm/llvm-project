@@ -183,7 +183,7 @@
 #define BUILTIN_ROUND_F32 __builtin_roundf
 #define BUILTIN_ROUND_F64 __builtin_round
 #define BUILTIN_ROUND_F16 __builtin_roundf16
-#define BUILTIN_ROUND_2F16 __llvm_round_2f16
+#define BUILTIN_ROUND_2F16 __builtin_elementwise_round
 
 #define BUILTIN_DIV_F32(X,Y) ({ \
     float _div_x = X; \

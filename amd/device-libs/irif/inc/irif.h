@@ -15,7 +15,6 @@
 #define REQUIRES_WAVE64 __attribute__((target("wavefrontsize64")))
 
 // Generic intrinsics
-extern __attribute__((const)) half2 __llvm_round_2f16(half2) __asm("llvm.round.v2f16");
 extern __attribute__((const)) half2 __llvm_rint_2f16(half2) __asm("llvm.rint.v2f16");
 
 #define BUILTIN_CLZ_U8(x) (uchar)(x == 0u ? 8 : __builtin_clz(x) - 24)
