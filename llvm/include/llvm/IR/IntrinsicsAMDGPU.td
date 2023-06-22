@@ -461,21 +461,6 @@ def int_amdgcn_fmad_ftz :
             [IntrNoMem, IntrSpeculatable]
 >;
 
-// Fields should mirror atomicrmw
-class AMDGPUAtomicIncIntrin : Intrinsic<[llvm_anyint_ty],
-  [llvm_anyptr_ty,
-  LLVMMatchType<0>,
-  llvm_i32_ty, // ordering
-  llvm_i32_ty, // scope
-  llvm_i1_ty], // isVolatile
-  [IntrArgMemOnly, IntrWillReturn, NoCapture<ArgIndex<0>>,
-   ImmArg<ArgIndex<2>>, ImmArg<ArgIndex<3>>, ImmArg<ArgIndex<4>>, IntrNoCallback, IntrNoFree], "",
-  [SDNPMemOperand]
->;
-
-def int_amdgcn_atomic_inc : AMDGPUAtomicIncIntrin;
-def int_amdgcn_atomic_dec : AMDGPUAtomicIncIntrin;
-
 class AMDGPULDSIntrin :
   Intrinsic<[llvm_any_ty],
     [LLVMQualPointerType<LLVMMatchType<0>, 3>,

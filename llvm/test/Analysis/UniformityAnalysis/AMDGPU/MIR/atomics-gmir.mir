@@ -22,34 +22,6 @@ body:             |
 ...
 
 ---
-name:            test_atomic_inc_dec
-tracksRegLiveness: true
-body:             |
-  bb.1:
-
-    %2:_(s32) = IMPLICIT_DEF
-    %3:_(s32) = IMPLICIT_DEF
-    %0:_(p1) = G_MERGE_VALUES %2(s32), %3(s32)
-    %1:_(s32) = IMPLICIT_DEF
-    %5:_(s64) = IMPLICIT_DEF
-
-    ; CHECK: DIVERGENT: %{{[0-9]}}: %{{[0-9]}}:_(s32) = G_INTRINSIC_W_SIDE_EFFECTS intrinsic(@llvm.amdgcn.atomic.inc)
-    %4:_(s32) = G_INTRINSIC_W_SIDE_EFFECTS intrinsic(@llvm.amdgcn.atomic.inc), %0(p1), %1(s32), 0, 0, 0 :: (load store (s32) )
-
-    ; CHECK: DIVERGENT: %{{[0-9]}}: %{{[0-9]}}:_(s64) = G_INTRINSIC_W_SIDE_EFFECTS intrinsic(@llvm.amdgcn.atomic.inc)
-    %6:_(s64) = G_INTRINSIC_W_SIDE_EFFECTS intrinsic(@llvm.amdgcn.atomic.inc), %0(p1), %5(s64), 0, 0, 0 :: (load store (s64) )
-
-    ; CHECK: DIVERGENT: %{{[0-9]}}: %{{[0-9]}}:_(s32) = G_INTRINSIC_W_SIDE_EFFECTS intrinsic(@llvm.amdgcn.atomic.dec)
-    %7:_(s32) = G_INTRINSIC_W_SIDE_EFFECTS intrinsic(@llvm.amdgcn.atomic.dec), %0(p1), %1(s32), 0, 0, 0 :: (load store (s32) )
-
-    ; CHECK: DIVERGENT: %{{[0-9]}}: %{{[0-9]}}:_(s64) = G_INTRINSIC_W_SIDE_EFFECTS intrinsic(@llvm.amdgcn.atomic.dec)
-    %8:_(s64) = G_INTRINSIC_W_SIDE_EFFECTS intrinsic(@llvm.amdgcn.atomic.dec), %0(p1), %5(s64), 0, 0, 0 :: (load store (s64) )
-    $vgpr0 = COPY %4(s32)
-    SI_RETURN implicit $vgpr0
-
-...
-
----
 name:            test_atomics
 tracksRegLiveness: true
 body:             |
@@ -102,6 +74,12 @@ body:             |
 
     ; CHECK: DIVERGENT: %{{[0-9]*}}: %{{[0-9]*}}:_(s32) = G_ATOMICRMW_FMIN
     %18:_(s32) = G_ATOMICRMW_FMIN %1, %5
+
+    ; CHECK: DIVERGENT: %{{[0-9]*}}: %{{[0-9]*}}:_(s32) = G_ATOMICRMW_UINC_WRAP
+    %19:_(s32) = G_ATOMICRMW_UINC_WRAP %1, %5
+
+    ; CHECK: DIVERGENT: %{{[0-9]*}}: %{{[0-9]*}}:_(s32) = G_ATOMICRMW_UDEC_WRAP
+    %20:_(s32) = G_ATOMICRMW_UDEC_WRAP %1, %5
 
     $vgpr0 = COPY %4(s32)
     SI_RETURN implicit $vgpr0

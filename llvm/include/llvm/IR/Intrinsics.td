@@ -94,6 +94,11 @@ class Align<AttrIndex idx, int align> : IntrinsicProperty {
   int Align = align;
 }
 
+class Dereferenceable<AttrIndex idx, int bytes> : IntrinsicProperty {
+  int ArgNo = idx.Value;
+  int Bytes = bytes;
+}
+
 // Returned - The specified argument is always the return value of the
 // intrinsic.
 class Returned<AttrIndex idx> : IntrinsicProperty {
