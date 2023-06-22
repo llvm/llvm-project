@@ -327,33 +327,30 @@ elect_uint_wave32(int pred, uint val, uint none) {
 static uint
 elect_uint(int pred, uint val, uint none)
 {
-    return __oclc_wavefrontsize64 ?
-        elect_uint_wave64(pred, val, none) :
-        elect_uint_wave32(pred, val, none);
+    return __oclc_wavefrontsize64 ?  elect_uint_wave64(pred, val, none) : elect_uint_wave32(pred, val, none);
 }
 
 REQUIRES_WAVE64
 static uint
-countnz_wave64(ulong a)
+votes_wave64(bool b)
 {
-    ulong mask = __builtin_amdgcn_ballot_w64(a != 0UL);
+    ulong mask = __builtin_amdgcn_ballot_w64(b);
     return __builtin_popcountl(mask);
 }
 
 REQUIRES_WAVE32
 static uint
-countnz_wave32(ulong a)
+votes_wave32(bool b)
 {
-    uint mask = __builtin_amdgcn_ballot_w32(a != 0UL);
+    uint mask = __builtin_amdgcn_ballot_w32(b);
     return __builtin_popcount(mask);
 }
 
 // Count the number of nonzero arguments across the wave
 static uint
-countnz(ulong a)
+votes(bool b)
 {
-    return __oclc_wavefrontsize64 ?
-        countnz_wave64(a) : countnz_wave32(a);
+    return __oclc_wavefrontsize64 ?  votes_wave64(b) : votes_wave32(b);
 }
 
 // The kind of the smallest block that can hold sz bytes
@@ -417,10 +414,9 @@ non_slab_free(ulong addr)
 }
 
 // public dealloc() entrypoint
-__attribute__((noinline)) void
+__attribute__((cold)) void
 __ockl_dm_dealloc(ulong addr)
 {
-    // Check for non-block and handle elsewhere
     if ((addr & 0xfffUL) == 0UL) {
         if (addr)
             non_slab_free(addr);
@@ -428,7 +424,7 @@ __ockl_dm_dealloc(ulong addr)
         return;
     }
 
-    // This must be a slab block
+    // Find a slab block
     ulong saddr = addr & ~(ulong)0x1fffffUL;
     __global slab_t *sptr = (__global slab_t *)saddr;
     kind_t my_k = sptr->k;
@@ -896,7 +892,7 @@ block_find(__global sdata_t *sdp)
     uint aid = __ockl_activelane_u32();
     O0(aid);
     uint nactive = active_lane_count();
-    __global slab_t *sp = (__global slab_t *)sdp->saddr;
+    __global slab_t *sp = (__global slab_t *)AL(&sdp->saddr, memory_order_relaxed);
     kind_t k = sp->k;
 
     uint i = 0;
@@ -923,7 +919,7 @@ block_find(__global sdata_t *sdp)
         i = (i + 1) % n;
     }
 
-    uint done = countnz((ulong)ret);
+    uint done = votes(ret != (__global void *)0);
     if (aid == 0)
         AFA(&sdp->num_used_blocks, done, memory_order_relaxed);
 
@@ -969,7 +965,7 @@ slab_malloc(int sz)
 }
 
 // public alloc() entrypoint
-__attribute__((noinline)) __global void *
+__attribute__((cold)) __global void *
 __ockl_dm_alloc(ulong sz)
 {
     if (sz == 0)
@@ -983,7 +979,8 @@ __ockl_dm_alloc(ulong sz)
 
 // Initialize the heap
 //   This is intended to be called by a kernel launched by the language runtime
-//   at device initialization time, having one workgroup consisting of 256 workitems.
+//   at device initialization time. The launched NDrange must have one workgroup
+//   consisting of 256 workitems.
 __attribute__((weak)) void
 __ockl_dm_init_v1(ulong hp, ulong sp, uint hb, uint nis)
 {
@@ -1006,9 +1003,206 @@ __ockl_dm_init_v1(ulong hp, ulong sp, uint hb, uint nis)
     }
 }
 
-// Retrieve some info about the current state of the heap
-//   Expecting the caller to limit the number of threads executing here to 1
-void
+// reverse local array, n <= wavesize
+// Expect this to be called by one full wave
+// TODO make this work on devices which can't permute full wave
+static void
+reverse_la(__local uint *x, uint i, uint n)
+{
+    if (i < n) {
+        uint j = n - 1 - i;
+        x[i] = __builtin_amdgcn_ds_bpermute(j << 2, x[i]);
+    }
+}
+
+// Shift wavesize consecutive elements downward by n
+static void
+shift_la(__local uint *a, uint i, uint n)
+{
+    a[i] = a[i+n];
+}
+
+// Find and record destination location for trim
+static uint
+dst_scan(__global heap_t *hp, kind_t k, ulong iss, ulong ise, uint l, uint i, uint n, uint c0, __local uint *d)
+{
+    bool b = false;
+
+    if (l+i < n) {
+        __global sdata_t *sdp = sdata_for(hp, k, l+i);
+        uint nub = AL(&sdp->num_used_blocks, memory_order_relaxed);
+        ulong saddr = AL(&sdp->saddr, memory_order_relaxed);
+
+        b = nub == 0 && saddr && (saddr < iss || saddr >= ise);
+        if (b) {
+            release_slab(saddr);
+            AS(&sdp->saddr, 0UL, memory_order_relaxed);
+            AS(&sdp->num_used_blocks, 0U, memory_order_relaxed);
+            d[c0+__ockl_activelane_u32()] = l+i;
+        }
+    }
+
+    return c0 + votes(b);
+}
+
+// Find and record source location for trim
+static uint
+src_scan(__global heap_t *hp, kind_t k, ulong iss, ulong ise, uint r, uint i, uint n, uint c0, __local uint *s)
+{
+    bool b = false;
+
+    if (r+i < n) {
+        __global sdata_t *sdp = sdata_for(hp, k, r+i);
+        ulong saddr = AL(&sdp->saddr, memory_order_relaxed);
+        uint nub = AL(&sdp->num_used_blocks, memory_order_relaxed);
+
+        b = nub > 0 || (saddr >= iss && saddr < ise);
+        if (b) {
+            s[c0+__ockl_activelane_u32()] = r+i;
+        } else if (saddr) {
+            release_slab(saddr);
+            AS(&sdp->saddr, 0UL, memory_order_relaxed);
+            AS(&sdp->num_used_blocks, 0U, memory_order_relaxed);
+        }
+    }
+
+    uint c = votes(b);
+    reverse_la(s + c0, i, c);
+    return c0 + c;
+}
+
+// Count available slabs
+static uint
+end_scan(__global heap_t *hp, kind_t k, uint l, uint i, uint n, int c0)
+{
+    bool b = false;
+
+    if (l+i < n) {
+        __global sdata_t *sdp = sdata_for(hp, k, l+i);
+        ulong saddr = AL(&sdp->saddr, memory_order_relaxed);
+        b = saddr != 0;
+    }
+
+    return c0 + votes(b);
+}
+
+// Move up to n slabs (n <= wavesize) from index in s[] to index in d[]
+// and return the number moved
+static uint
+move_slabs(__global heap_t *hp, kind_t k, uint i, uint n, __local uint *d, __local uint *s)
+{
+    bool b = i < n && d[i] < s[i];
+    if (b) {
+        __global sdata_t *dsdp = sdata_for(hp, k, d[i]);
+
+        __global sdata_t *ssdp = sdata_for(hp, k, s[i]);
+        ulong ssaddr = AL(&ssdp->saddr, memory_order_relaxed);
+        ((__global slab_t *)ssaddr)->i = d[i];
+
+        AS(&dsdp->saddr, ssaddr, memory_order_relaxed);
+        AS(&dsdp->num_used_blocks, AL(&ssdp->num_used_blocks, memory_order_relaxed), memory_order_relaxed);
+
+        AS(&ssdp->saddr, 0UL, memory_order_relaxed);
+        AS(&ssdp->num_used_blocks, 0UL, memory_order_relaxed);
+    }
+
+    return votes(b);
+}
+
+// "Trim" slabs of kind k
+// Expecting an exactly one-full-wave caller
+static uint
+trim_kind(__global heap_t *hp, kind_t k, ulong iss, ulong ise, uint i, uint n, __local uint *srcs, __local uint *dsts)
+{
+    uint l = 0;
+    uint lm = 0;
+    uint nd = 0;
+    const uint wsz = __oclc_wavefrontsize64 ? 64 : 32;
+
+    uint r = (n - 1) / wsz * wsz;
+    uint ns = 0;
+
+    for (;;) {
+        while (l < n && nd < wsz) {
+            nd = dst_scan(hp, k, iss, ise, l, i, n, nd, dsts);
+            l += wsz;
+        }
+
+        if (nd == 0)
+            break;
+
+        while (r < n && ns < wsz) {
+            ns = src_scan(hp, k, iss, ise, r, i, n, ns, srcs);
+            r -= wsz;
+        }
+
+        if (ns == 0)
+            break;
+
+        uint m = nd < ns ? nd : ns;
+        m = wsz < m ? wsz : m;
+
+        uint mm = move_slabs(hp, k, i, m, dsts, srcs);
+
+        if (mm)
+            lm = dsts[mm-1];
+
+        if (l >= n || mm != m)
+            break;
+
+        shift_la(dsts, i, m);
+        shift_la(srcs, i, m);
+        nd -= m;
+        ns -= m;
+    }
+
+    lm = lm / wsz * wsz;
+    l = lm;
+    uint nn = lm;
+    do {
+        nn = end_scan(hp, k, l, i, n, nn);
+        l += wsz;
+    } while (l == nn);
+
+    return nn;
+}
+
+// "Trim" non-initial empty slabs of all kinds
+//
+// This function must be called from a 1D 1-full-wave kernel that only 
+// calls this function.  When that kernel runs, no other kernel on the
+// device using dm_[de]alloc may be running.
+//
+// The calling kernel must pass in a generic pointer to a __local int array with 4*wavesize elements
+//
+// TODO consider a design which allows trimming concurrent with other use
+//
+__attribute__((weak, cold)) void
+__ockl_dm_trim(int *mem)
+{
+    __local uint *dsts = (__local uint *)OCKL_MANGLE_T(to,local)(mem);
+    __local uint *srcs = dsts + (__oclc_wavefrontsize64 ? 2*64 : 2*32);
+    __global heap_t *hp = get_heap_ptr();
+    ulong iss = hp->initial_slabs_start;
+    ulong ise = hp->initial_slabs_end;
+    uint i = __ockl_lane_u32();
+
+    for (kind_t k=0; k<NUM_KINDS; ++k) {
+        uint nas = 0;
+        if (i == 0)
+            nas = AL(&hp->num_allocated_slabs[k].value, memory_order_relaxed);
+        nas = first(nas);
+        if (nas) {
+            uint tnas = trim_kind(hp, k, iss, ise, i, nas, srcs, dsts);
+            if (i == 0)
+                AS(&hp->num_allocated_slabs[k].value, tnas, memory_order_relaxed);
+        }
+    }
+}
+
+// Grab some info about the current state of the heap
+// Expecting the caller to limit the number of threads executing here to 1
+__attribute__((cold)) void
 __ockl_dm_hinfo(ulong *rp)
 {
     __global heap_t *hp = get_heap_ptr();
@@ -1033,10 +1227,12 @@ __ockl_dm_hinfo(ulong *rp)
 #endif
 }
 
+// 
+
 #if defined NON_SLAB_TRACKING
 // return a snapshot of the current number of nonslab allocations
 // which haven't been deallocated
-ulong
+__attribute__((cold)) ulong
 __ockl_dm_nna(void)
 {
     __global heap_t *hp = get_heap_ptr();

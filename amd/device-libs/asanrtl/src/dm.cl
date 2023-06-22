@@ -647,6 +647,12 @@ __ockl_dm_init_v1(ulong ha, ulong sa, uint hb, uint nis)
     }
 }
 
+NO_SANITIZE_ADDR
+void
+__ockl_dm_trim(int *mem)
+{
+}
+
 #if defined NON_SLAB_TRACKING
 // return a snapshot of the current number of nonslab allocations
 // which haven't been deallocated
