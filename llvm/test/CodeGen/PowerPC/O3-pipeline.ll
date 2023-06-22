@@ -27,7 +27,6 @@
 ; CHECK-NEXT:     FunctionPass Manager
 ; CHECK-NEXT:       Dominator Tree Construction
 ; CHECK-NEXT:       Natural Loop Information
-; CHECK-NEXT:       Scalar Evolution Analysis
 ; CHECK-NEXT:       Split GEPs to a variadic base and a constant offset for better CSE
 ; CHECK-NEXT:       Early CSE
 ; CHECK-NEXT:       Basic Alias Analysis (stateless AA impl)
