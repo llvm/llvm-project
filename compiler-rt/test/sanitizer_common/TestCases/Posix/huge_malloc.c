@@ -10,7 +10,10 @@
 // UNSUPPORTED: android-26
 
 // FIXME: Make it work. Don't xfail to avoid excessive memory usage.
-// UNSUPPORTED: msan, hwasan
+// UNSUPPORTED: msan
+
+// Hwasan requires tagging of new allocations, so needs RSS for shadow.
+// UNSUPPORTED: hwasan
 
 void *p;
 
