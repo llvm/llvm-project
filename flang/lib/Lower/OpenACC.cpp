@@ -462,7 +462,7 @@ mlir::acc::FirstprivateRecipeOp Fortran::lower::createOrGetFirstprivateRecipe(
   return recipe;
 }
 
-template <typename Op>
+template <typename RecipeOp>
 static void
 genPrivatizations(const Fortran::parser::AccObjectList &objectList,
                   Fortran::lower::AbstractConverter &converter,
@@ -478,21 +478,29 @@ genPrivatizations(const Fortran::parser::AccObjectList &objectList,
     mlir::Value baseAddr = gatherDataOperandAddrAndBounds(
         converter, builder, semanticsContext, stmtCtx, accObject,
         operandLocation, asFortran, bounds);
-    Op recipe;
-    if constexpr (std::is_same_v<Op, mlir::acc::PrivateRecipeOp>) {
+
+    RecipeOp recipe;
+    if constexpr (std::is_same_v<RecipeOp, mlir::acc::PrivateRecipeOp>) {
       std::string recipeName = fir::getTypeAsString(
           baseAddr.getType(), converter.getKindMap(), "privatization");
       recipe = Fortran::lower::createOrGetPrivateRecipe(
           builder, recipeName, operandLocation, baseAddr.getType());
+      auto op = createDataEntryOp<mlir::acc::PrivateOp>(
+          builder, operandLocation, baseAddr, asFortran, bounds, true,
+          mlir::acc::DataClause::acc_private);
+      dataOperands.push_back(op.getAccPtr());
     } else {
       std::string recipeName = fir::getTypeAsString(
           baseAddr.getType(), converter.getKindMap(), "firstprivatization");
       recipe = Fortran::lower::createOrGetFirstprivateRecipe(
           builder, recipeName, operandLocation, baseAddr.getType());
+      auto op = createDataEntryOp<mlir::acc::FirstprivateOp>(
+          builder, operandLocation, baseAddr, asFortran, bounds, true,
+          mlir::acc::DataClause::acc_firstprivate);
+      dataOperands.push_back(op.getAccPtr());
     }
     privatizations.push_back(mlir::SymbolRefAttr::get(
         builder.getContext(), recipe.getSymName().str()));
-    dataOperands.push_back(baseAddr);
   }
 }
 

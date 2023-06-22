@@ -25,6 +25,7 @@ set(NVPTXCodeGen_sources
   NVPTXLowerAggrCopies.cpp
   NVPTXLowerArgs.cpp
   NVPTXLowerAlloca.cpp
+  NVPTXLowerUnreachable.cpp
   NVPTXPeephole.cpp
   NVPTXMCExpr.cpp
   NVPTXPrologEpilogPass.cpp

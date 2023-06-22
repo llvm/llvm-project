@@ -4171,10 +4171,10 @@ Status GDBRemoteCommunicationClient::SendSignalsToIgnore(
 }
 
 Status GDBRemoteCommunicationClient::ConfigureRemoteStructuredData(
-    ConstString type_name, const StructuredData::ObjectSP &config_sp) {
+    llvm::StringRef type_name, const StructuredData::ObjectSP &config_sp) {
   Status error;
 
-  if (type_name.GetLength() == 0) {
+  if (type_name.empty()) {
     error.SetErrorString("invalid type_name argument");
     return error;
   }
@@ -4182,7 +4182,7 @@ Status GDBRemoteCommunicationClient::ConfigureRemoteStructuredData(
   // Build command: Configure{type_name}: serialized config data.
   StreamGDBRemote stream;
   stream.PutCString("QConfigure");
-  stream.PutCString(type_name.GetStringRef());
+  stream.PutCString(type_name);
   stream.PutChar(':');
   if (config_sp) {
     // Gather the plain-text version of the configuration data.
@@ -4201,21 +4201,20 @@ Status GDBRemoteCommunicationClient::ConfigureRemoteStructuredData(
   auto result = SendPacketAndWaitForResponse(stream.GetString(), response);
   if (result == PacketResult::Success) {
     // We failed if the config result comes back other than OK.
-    if (strcmp(response.GetStringRef().data(), "OK") == 0) {
+    if (response.GetStringRef() == "OK") {
       // Okay!
       error.Clear();
     } else {
-      error.SetErrorStringWithFormat("configuring StructuredData feature "
-                                     "%s failed with error %s",
-                                     type_name.AsCString(),
-                                     response.GetStringRef().data());
+      error.SetErrorStringWithFormatv(
+          "configuring StructuredData feature {0} failed with error {1}",
+          type_name, response.GetStringRef());
     }
   } else {
     // Can we get more data here on the failure?
-    error.SetErrorStringWithFormat("configuring StructuredData feature %s "
-                                   "failed when sending packet: "
-                                   "PacketResult=%d",
-                                   type_name.AsCString(), (int)result);
+    error.SetErrorStringWithFormatv(
+        "configuring StructuredData feature {0} failed when sending packet: "
+        "PacketResult={1}",
+        type_name, (int)result);
   }
   return error;
 }

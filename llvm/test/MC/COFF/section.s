@@ -1,5 +1,6 @@
 // RUN: llvm-mc -triple i386-pc-win32 -filetype=obj %s | llvm-readobj -S - | FileCheck %s
 // RUN: llvm-mc -triple x86_64-pc-win32 -filetype=obj %s | llvm-readobj -S - | FileCheck %s
+// RUN: not llvm-mc -triple x86_64-pc-win32 -filetype=obj --defsym ERR=1 %s -o /dev/null 2>&1 | FileCheck %s --check-prefix=ERR
 
 .section .foo$bar; .long 1
 .section .foo@bar; .long 1
@@ -208,3 +209,74 @@
 
 // CHECK-NOT:    Section {
 // CHECK:      ]
+
+.section data1; .quad 0
+
+.pushsection data2; .quad 0
+.popsection
+
+// Back to section data1
+.quad 2
+
+// CHECK:       Section {
+// CHECK-NEXT:    Number:
+// CHECK-NEXT:    Name: data1
+// CHECK:         RawDataSize: 16
+
+// CHECK:       Section {
+// CHECK-NEXT:    Number:
+// CHECK-NEXT:    Name: data2
+// CHECK:         RawDataSize: 8
+
+.section .data3,"dw"; .quad 1
+
+.pushsection .data4,"dw"; .quad 1
+.popsection
+
+.pushsection .data5,"dr"; .quad 1
+.popsection
+
+// in section .data3
+.quad 4
+
+// Notice the different section flags here.
+// This shouldn't overwrite the intial section flags.
+.pushsection .data4,"dr"; .quad 1
+.popsection
+
+// CHECK:       Section {
+// CHECK-NEXT:    Number:
+// CHECK-NEXT:    Name: .data3
+// CHECK:         RawDataSize: 16
+// CHECK:         Characteristics [
+// CHECK-NEXT:      IMAGE_SCN_ALIGN_1BYTES
+// CHECK-NEXT:      IMAGE_SCN_CNT_INITIALIZED_DATA
+// CHECK-NEXT:      IMAGE_SCN_MEM_READ
+// CHECK-NEXT:      IMAGE_SCN_MEM_WRITE
+// CHECK-NEXT:    ]
+
+// CHECK:       Section {
+// CHECK-NEXT:    Number:
+// CHECK-NEXT:    Name: .data4
+// CHECK:         RawDataSize: 16
+// CHECK:         Characteristics [
+// CHECK-NEXT:      IMAGE_SCN_ALIGN_1BYTES
+// CHECK-NEXT:      IMAGE_SCN_CNT_INITIALIZED_DATA
+// CHECK-NEXT:      IMAGE_SCN_MEM_READ
+// CHECK-NEXT:      IMAGE_SCN_MEM_WRITE
+// CHECK-NEXT:    ]
+
+// CHECK:       Section {
+// CHECK-NEXT:    Number:
+// CHECK-NEXT:    Name: .data5
+// CHECK:         RawDataSize: 8
+// CHECK:         Characteristics [
+// CHECK-NEXT:      IMAGE_SCN_ALIGN_1BYTES
+// CHECK-NEXT:      IMAGE_SCN_CNT_INITIALIZED_DATA
+// CHECK-NEXT:      IMAGE_SCN_MEM_READ
+// CHECK-NEXT:    ]
+
+.ifdef ERR
+// ERR: :[[#@LINE+1]]:12: error: .popsection without corresponding .pushsection
+.popsection
+.endif

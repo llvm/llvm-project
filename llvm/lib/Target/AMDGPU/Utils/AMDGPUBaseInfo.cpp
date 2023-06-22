@@ -112,7 +112,7 @@ unsigned getBvhcntBitWidth(unsigned VersionMajor) {
 
 /// \returns Dscnt bit width.
 unsigned getDscntBitWidth(unsigned VersionMajor) {
-  return VersionMajor >= 12 ? 5 : 0;
+  return VersionMajor >= 12 ? 6 : 0;
 }
 
 /// \returns Dscnt bit shift in combined S_WAIT instructions.
