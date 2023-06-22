@@ -2149,6 +2149,11 @@ template <class ELFT> void Writer<ELFT>::finalizeSections() {
     sec->finalize();
 
   script->checkMemoryRegions();
+
+  if (config->emachine == EM_ARM && !config->isLE && config->armBe8) {
+    addArmInputSectionMappingSymbols();
+    sortArmMappingSymbols();
+  }
 }
 
 // Ensure data sections are not mixed with executable sections when
