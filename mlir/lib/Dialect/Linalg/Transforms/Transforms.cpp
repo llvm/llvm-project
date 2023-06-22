@@ -512,12 +512,10 @@ FailureOr<LowerPackResult> linalg::lowerPack(RewriterBase &rewriter,
        llvm::zip_equal(packOp.getInnerDimsPos(), packOp.getMixedTiles())) {
     int outerPos =
         packedToStripMinedShapePerm[packingMetadata.outerPositions[pos]];
-    OpFoldResult origSize = rewriter.createOrFold<tensor::DimOp>(
-        loc, packOp.getSource(),
-        rewriter.create<arith::ConstantIndexOp>(loc, pos));
-    OpFoldResult outerSize = rewriter.createOrFold<tensor::DimOp>(
-        loc, packOp.getDest(),
-        rewriter.create<arith::ConstantIndexOp>(loc, outerPos));
+    OpFoldResult origSize =
+        tensor::getMixedSize(rewriter, loc, packOp.getSource(), pos);
+    OpFoldResult outerSize =
+        tensor::getMixedSize(rewriter, loc, packOp.getDest(), outerPos);
     AffineExpr s0, d0, d1;
     bindDims(rewriter.getContext(), d0, d1);
     bindSymbols(rewriter.getContext(), s0);
@@ -1132,8 +1130,8 @@ GeneralizePadOpPattern::matchAndRewrite(tensor::PadOp padOp,
   SmallVector<int64_t> staticSizes;
   for (unsigned dim = 0; dim < resultType.getRank(); ++dim) {
     if (resultType.isDynamicDim(dim)) {
-      auto srcSize = rewriter.createOrFold<tensor::DimOp>(
-          padOp.getLoc(), padOp.getSource(), dim);
+      auto srcSize = getIdxValue(tensor::getMixedSize(rewriter, padOp.getLoc(),
+                                                      padOp.getSource(), dim));
       // Add low and high padding value.
       auto plusLow = rewriter.createOrFold<arith::AddIOp>(
           padOp.getLoc(), srcSize, getIdxValue(padOp.getMixedLowPad()[dim]));
@@ -1157,15 +1155,8 @@ GeneralizePadOpPattern::matchAndRewrite(tensor::PadOp padOp,
   // for copying the PadOp source.
   auto sourceType = padOp.getSourceType();
   // Compute size of source of tensor::PadOp.
-  SmallVector<OpFoldResult> srcSizes;
-  for (unsigned dim = 0; dim < sourceType.getRank(); ++dim) {
-    if (sourceType.isDynamicDim(dim)) {
-      srcSizes.push_back(rewriter.createOrFold<tensor::DimOp>(
-          padOp.getLoc(), padOp.getSource(), dim));
-    } else {
-      srcSizes.push_back(rewriter.getIndexAttr(sourceType.getDimSize(dim)));
-    }
-  }
+  SmallVector<OpFoldResult> srcSizes =
+      tensor::getMixedSizes(rewriter, padOp.getLoc(), padOp.getSource());
   // Strides of InsertSliceOp are all 1.
   SmallVector<OpFoldResult> strides(sourceType.getRank(),
                                     rewriter.getIndexAttr(1));
@@ -1459,8 +1450,8 @@ LogicalResult GeneralizeOuterUnitDimsUnPackOpPattern::matchAndRewrite(
   ArrayRef<int64_t> destShape = unpackOp.getDestType().getShape();
   for (auto i : llvm::seq<unsigned>(0, destRank)) {
     if (dimAndTileMapping.count(i) || destShape[i] != 1)
-      tileSizes.push_back(getAsOpFoldResult(
-          rewriter.createOrFold<tensor::DimOp>(loc, unpackOp.getDest(), i)));
+      tileSizes.push_back(
+          tensor::getMixedSize(rewriter, loc, unpackOp.getDest(), i));
   }
 
   auto partialTile = rewriter.create<tensor::ExtractSliceOp>(
