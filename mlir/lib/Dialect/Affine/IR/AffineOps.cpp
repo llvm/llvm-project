@@ -1199,7 +1199,7 @@ static SmallVector<Value>
 foldAttributesIntoMap(Builder &b, AffineMap *map,
                       ArrayRef<OpFoldResult> operands) {
   SmallVector<AffineExpr> dimReplacements, symReplacements;
-  SmallVector<Value, 8> valueOperands;
+  SmallVector<Value> valueOperands;
   int64_t numDims = 0;
   for (int64_t i = 0; i < map->getNumDims(); ++i) {
     if (auto attr = operands[i].dyn_cast<Attribute>()) {
