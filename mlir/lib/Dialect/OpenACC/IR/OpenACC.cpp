@@ -436,7 +436,7 @@ LogicalResult acc::FirstprivateRecipeOp::verifyRegions() {
 LogicalResult acc::ReductionRecipeOp::verifyRegions() {
   if (failed(verifyInitLikeSingleArgRegion(*this, getInitRegion(), "reduction",
                                            "init", getType(),
-                                           /*verifyYield=*/true)))
+                                           /*verifyYield=*/false)))
     return failure();
 
   if (getCombinerRegion().empty())
