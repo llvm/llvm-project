@@ -269,7 +269,7 @@ computeBlockInputState(const CFGBlock &Block, AnalysisContext &AC) {
     // initialize the state of each basic block differently.
     MaybeState.emplace(Analysis.typeErasedInitialElement(), AC.InitEnv);
   }
-  return *MaybeState;
+  return std::move(*MaybeState);
 }
 
 /// Built-in transfer function for `CFGStmt`.
