@@ -1,13 +1,13 @@
-# RUN: llvm-mc %s -triple=riscv32 -riscv-no-aliases -mattr=+experimental-zcmt -show-encoding \
+# RUN: llvm-mc %s -triple=riscv32 -riscv-no-aliases -mattr=+zcmt -show-encoding \
 # RUN:     | FileCheck -check-prefixes=CHECK-INST,CHECK-ENC %s
-# RUN: llvm-mc -filetype=obj -triple riscv32 -mattr=+experimental-zcmt < %s \
-# RUN:     | llvm-objdump -d --mattr=+experimental-zcmt - \
+# RUN: llvm-mc -filetype=obj -triple riscv32 -mattr=+zcmt < %s \
+# RUN:     | llvm-objdump -d --mattr=+zcmt - \
 # RUN:     | FileCheck -check-prefix=CHECK-INST-ALIAS %s
 #
-# RUN: llvm-mc %s -triple=riscv64 -riscv-no-aliases -mattr=+experimental-zcmt -show-encoding \
+# RUN: llvm-mc %s -triple=riscv64 -riscv-no-aliases -mattr=+zcmt -show-encoding \
 # RUN:     | FileCheck -check-prefixes=CHECK-INST,CHECK-ENC %s
-# RUN: llvm-mc -filetype=obj -triple riscv64 -mattr=+experimental-zcmt < %s \
-# RUN:     | llvm-objdump -d --mattr=+experimental-zcmt - \
+# RUN: llvm-mc -filetype=obj -triple riscv64 -mattr=+zcmt < %s \
+# RUN:     | llvm-objdump -d --mattr=+zcmt - \
 # RUN:     | FileCheck -check-prefix=CHECK-INST-ALIAS %s
 
 ##################################
