@@ -984,9 +984,9 @@ let isAdd = 1 in {
 
   def tADDi8 :                    // A8.6.4 T2
     T1sItGenEncodeImm<{1,1,0,?,?}, (outs tGPR:$Rdn),
-                      (ins tGPR:$Rn, imm0_255:$imm8), IIC_iALUi,
+                      (ins tGPR:$Rn, imm0_255_expr:$imm8), IIC_iALUi,
                       "add", "\t$Rdn, $imm8",
-                      [(set tGPR:$Rdn, (add tGPR:$Rn, imm8_255:$imm8))]>,
+                      [(set tGPR:$Rdn, (add tGPR:$Rn, imm0_255_expr:$imm8))]>,
                       Sched<[WriteALU]>;
 
   // Add register
@@ -995,7 +995,8 @@ let isAdd = 1 in {
     T1sIGenEncode<0b01100, (outs tGPR:$Rd), (ins tGPR:$Rn, tGPR:$Rm),
                   IIC_iALUr,
                   "add", "\t$Rd, $Rn, $Rm",
-                  [(set tGPR:$Rd, (add tGPR:$Rn, tGPR:$Rm))]>, Sched<[WriteALU]>;
+                  [(set tGPR:$Rd, (add tGPR:$Rn, tGPR:$Rm))]>,
+                  Sched<[WriteALU]>;
 
   /// Similar to the above except these set the 's' bit so the
   /// instruction modifies the CPSR register.
@@ -1018,10 +1019,10 @@ let isAdd = 1 in {
                   Requires<[IsThumb1Only]>,
                   Sched<[WriteALU]>;
 
-    def tADDSi8 : tPseudoInst<(outs tGPR:$Rdn), (ins tGPR:$Rn, imm0_255:$imm8),
+    def tADDSi8 : tPseudoInst<(outs tGPR:$Rdn), (ins tGPR:$Rn, imm0_255_expr:$imm8),
                               2, IIC_iALUi,
                               [(set tGPR:$Rdn, CPSR, (ARMaddc tGPR:$Rn,
-                                                      imm8_255:$imm8))]>,
+                                                      imm0_255_expr:$imm8))]>,
                   Requires<[IsThumb1Only]>,
                   Sched<[WriteALU]>;
 
@@ -1196,9 +1197,9 @@ def tLSRrr :                    // A8.6.91
 
 // Move register
 let isMoveImm = 1 in
-def tMOVi8 : T1sI<(outs tGPR:$Rd), (ins imm0_255:$imm8), IIC_iMOVi,
+def tMOVi8 : T1sI<(outs tGPR:$Rd), (ins imm0_255_expr:$imm8), IIC_iMOVi,
                   "mov", "\t$Rd, $imm8",
-                  [(set tGPR:$Rd, imm0_255:$imm8)]>,
+                  [(set tGPR:$Rd, imm0_255_expr:$imm8)]>,
              T1General<{1,0,0,?,?}>, Sched<[WriteALU]> {
   // A8.6.96
   bits<3> Rd;
@@ -1208,8 +1209,8 @@ def tMOVi8 : T1sI<(outs tGPR:$Rd), (ins imm0_255:$imm8), IIC_iMOVi,
 }
 // Because we have an explicit tMOVSr below, we need an alias to handle
 // the immediate "movs" form here. Blech.
-def : tInstAlias <"movs $Rdn, $imm",
-                 (tMOVi8 tGPR:$Rdn, CPSR, imm0_255:$imm, 14, 0)>;
+def : tInstAlias <"movs $Rdn, $imm8",
+                 (tMOVi8 tGPR:$Rdn, CPSR, imm0_255_expr:$imm8, 14, 0)>;
 
 // A7-73: MOV(2) - mov setting flag.
 
