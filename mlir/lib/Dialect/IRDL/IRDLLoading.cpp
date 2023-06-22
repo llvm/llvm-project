@@ -21,6 +21,7 @@
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/Support/SMLoc.h"
+#include <numeric>
 
 using namespace mlir;
 using namespace mlir::irdl;
@@ -49,26 +50,162 @@ irdlAttrOrTypeVerifier(function_ref<InFlightDiagnostic()> emitError,
   return success();
 }
 
+/// Get the operand segment sizes from the attribute dictionary.
+LogicalResult getSegmentSizesFromAttr(Operation *op, StringRef elemName,
+                                      StringRef attrName, unsigned numElements,
+                                      ArrayRef<Variadicity> variadicities,
+                                      SmallVectorImpl<int> &segmentSizes) {
+  // Get the segment sizes attribute, and check that it is of the right type.
+  Attribute segmentSizesAttr = op->getAttr(attrName);
+  if (!segmentSizesAttr) {
+    return op->emitError() << "'" << attrName
+                           << "' attribute is expected but not provided";
+  }
+
+  auto denseSegmentSizes = dyn_cast<DenseI32ArrayAttr>(segmentSizesAttr);
+  if (!denseSegmentSizes) {
+    return op->emitError() << "'" << attrName
+                           << "' attribute is expected to be a dense i32 array";
+  }
+
+  if (denseSegmentSizes.size() != (int64_t)variadicities.size()) {
+    return op->emitError() << "'" << attrName << "' attribute for specifying "
+                           << elemName << " segments must have "
+                           << variadicities.size() << " elements, but got "
+                           << denseSegmentSizes.size();
+  }
+
+  // Check that the segment sizes are corresponding to the given variadicities,
+  for (auto [i, segmentSize, variadicity] :
+       enumerate(denseSegmentSizes.asArrayRef(), variadicities)) {
+    if (segmentSize < 0)
+      return op->emitError()
+             << "'" << attrName << "' attribute for specifying " << elemName
+             << " segments must have non-negative values";
+    if (variadicity == Variadicity::single && segmentSize != 1)
+      return op->emitError() << "element " << i << " in '" << attrName
+                             << "' attribute must be equal to 1";
+
+    if (variadicity == Variadicity::optional && segmentSize > 1)
+      return op->emitError() << "element " << i << " in '" << attrName
+                             << "' attribute must be equal to 0 or 1";
+
+    segmentSizes.push_back(segmentSize);
+  }
+
+  // Check that the sum of the segment sizes is equal to the number of elements.
+  int32_t sum = 0;
+  for (int32_t segmentSize : denseSegmentSizes.asArrayRef())
+    sum += segmentSize;
+  if (sum != static_cast<int32_t>(numElements))
+    return op->emitError() << "sum of elements in '" << attrName
+                           << "' attribute must be equal to the number of "
+                           << elemName << "s";
+
+  return success();
+}
+
+/// Compute the segment sizes of the given element (operands, results).
+/// If the operation has more than two non-single elements (optional or
+/// variadic), then get the segment sizes from the attribute dictionary.
+/// Otherwise, compute the segment sizes from the number of elements.
+/// `elemName` should be either `"operand"` or `"result"`.
+LogicalResult getSegmentSizes(Operation *op, StringRef elemName,
+                              StringRef attrName, unsigned numElements,
+                              ArrayRef<Variadicity> variadicities,
+                              SmallVectorImpl<int> &segmentSizes) {
+  // If we have more than one non-single variadicity, we need to get the
+  // segment sizes from the attribute dictionary.
+  int numberNonSingle = count_if(
+      variadicities, [](Variadicity v) { return v != Variadicity::single; });
+  if (numberNonSingle > 1)
+    return getSegmentSizesFromAttr(op, elemName, attrName, numElements,
+                                   variadicities, segmentSizes);
+
+  // If we only have single variadicities, the segments sizes are all 1.
+  if (numberNonSingle == 0) {
+    if (numElements != variadicities.size()) {
+      return op->emitError() << "op expects exactly " << variadicities.size()
+                             << " " << elemName << "s, but got " << numElements;
+    }
+    for (size_t i = 0, e = variadicities.size(); i < e; ++i)
+      segmentSizes.push_back(1);
+    return success();
+  }
+
+  assert(numberNonSingle == 1);
+
+  // There is exactly one non-single element, so we can
+  // compute its size and check that it is valid.
+  int nonSingleSegmentSize = static_cast<int>(numElements) -
+                             static_cast<int>(variadicities.size()) + 1;
+
+  if (nonSingleSegmentSize < 0) {
+    return op->emitError() << "op expects at least " << variadicities.size() - 1
+                           << " " << elemName << "s, but got " << numElements;
+  }
+
+  // Add the segment sizes.
+  for (Variadicity variadicity : variadicities) {
+    if (variadicity == Variadicity::single) {
+      segmentSizes.push_back(1);
+      continue;
+    }
+
+    // If we have an optional element, we should check that it represents
+    // zero or one elements.
+    if (nonSingleSegmentSize > 1 && variadicity == Variadicity::optional)
+      return op->emitError() << "op expects at most " << variadicities.size()
+                             << " " << elemName << "s, but got " << numElements;
+
+    segmentSizes.push_back(nonSingleSegmentSize);
+  }
+
+  return success();
+}
+
+/// Compute the segment sizes of the given operands.
+/// If the operation has more than two non-single operands (optional or
+/// variadic), then get the segment sizes from the attribute dictionary.
+/// Otherwise, compute the segment sizes from the number of operands.
+LogicalResult getOperandSegmentSizes(Operation *op,
+                                     ArrayRef<Variadicity> variadicities,
+                                     SmallVectorImpl<int> &segmentSizes) {
+  return getSegmentSizes(op, "operand", "operand_segment_sizes",
+                         op->getNumOperands(), variadicities, segmentSizes);
+}
+
+/// Compute the segment sizes of the given results.
+/// If the operation has more than two non-single results (optional or
+/// variadic), then get the segment sizes from the attribute dictionary.
+/// Otherwise, compute the segment sizes from the number of results.
+LogicalResult getResultSegmentSizes(Operation *op,
+                                    ArrayRef<Variadicity> variadicities,
+                                    SmallVectorImpl<int> &segmentSizes) {
+  return getSegmentSizes(op, "result", "result_segment_sizes",
+                         op->getNumResults(), variadicities, segmentSizes);
+}
+
 /// Verify that the given operation satisfies the given constraints.
 /// This encodes the logic of the verification method for operations defined
 /// with IRDL.
-static LogicalResult
-irdlOpVerifier(Operation *op, ArrayRef<std::unique_ptr<Constraint>> constraints,
-               ArrayRef<size_t> operandConstrs, ArrayRef<size_t> resultConstrs,
-               const DenseMap<StringAttr, size_t> &attributeConstrs) {
-  /// Check that we have the right number of operands.
-  unsigned numOperands = op->getNumOperands();
-  size_t numExpectedOperands = operandConstrs.size();
-  if (numOperands != numExpectedOperands)
-    return op->emitOpError() << numExpectedOperands
-                             << " operands expected, but got " << numOperands;
+static LogicalResult irdlOpVerifier(
+    Operation *op, ArrayRef<std::unique_ptr<Constraint>> constraints,
+    ArrayRef<size_t> operandConstrs, ArrayRef<Variadicity> operandVariadicity,
+    ArrayRef<size_t> resultConstrs, ArrayRef<Variadicity> resultVariadicity,
+    const DenseMap<StringAttr, size_t> &attributeConstrs) {
+  // Get the segment sizes for the operands.
+  // This will check that the number of operands is correct.
+  SmallVector<int> operandSegmentSizes;
+  if (failed(
+          getOperandSegmentSizes(op, operandVariadicity, operandSegmentSizes)))
+    return failure();
 
-  /// Check that we have the right number of results.
-  unsigned numResults = op->getNumResults();
-  size_t numExpectedResults = resultConstrs.size();
-  if (numResults != numExpectedResults)
-    return op->emitOpError()
-           << numExpectedResults << " results expected, but got " << numResults;
+  // Get the segment sizes for the results.
+  // This will check that the number of results is correct.
+  SmallVector<int> resultSegmentSizes;
+  if (failed(getResultSegmentSizes(op, resultVariadicity, resultSegmentSizes)))
+    return failure();
 
   auto emitError = [op] { return op->emitError(); };
 
@@ -90,17 +227,29 @@ irdlOpVerifier(Operation *op, ArrayRef<std::unique_ptr<Constraint>> constraints,
       return failure();
   }
 
-  /// Check that all operands satisfy the constraints.
-  for (auto [i, operandType] : enumerate(op->getOperandTypes()))
-    if (failed(verifier.verify({emitError}, TypeAttr::get(operandType),
-                               operandConstrs[i])))
-      return failure();
+  // Check that all operands satisfy the constraints
+  int operandIdx = 0;
+  for (auto [defIndex, segmentSize] : enumerate(operandSegmentSizes)) {
+    for (int i = 0; i < segmentSize; i++) {
+      if (failed(verifier.verify(
+              {emitError}, TypeAttr::get(op->getOperandTypes()[operandIdx]),
+              operandConstrs[defIndex])))
+        return failure();
+      ++operandIdx;
+    }
+  }
 
-  /// Check that all results satisfy the constraints.
-  for (auto [i, resultType] : enumerate(op->getResultTypes()))
-    if (failed(verifier.verify({emitError}, TypeAttr::get(resultType),
-                               resultConstrs[i])))
-      return failure();
+  // Check that all results satisfy the constraints
+  int resultIdx = 0;
+  for (auto [defIndex, segmentSize] : enumerate(resultSegmentSizes)) {
+    for (int i = 0; i < segmentSize; i++) {
+      if (failed(verifier.verify({emitError},
+                                 TypeAttr::get(op->getResultTypes()[resultIdx]),
+                                 resultConstrs[defIndex])))
+        return failure();
+      ++resultIdx;
+    }
+  }
 
   return success();
 }
@@ -135,7 +284,7 @@ static WalkResult loadOperation(
   }
 
   SmallVector<size_t> operandConstraints;
-  SmallVector<size_t> resultConstraints;
+  SmallVector<Variadicity> operandVariadicity;
 
   // Gather which constraint slots correspond to operand constraints
   auto operandsOp = op.getOp<OperandsOp>();
@@ -149,7 +298,14 @@ static WalkResult loadOperation(
         }
       }
     }
+
+    // Gather the variadicities of each operand
+    for (VariadicityAttr attr : operandsOp->getVariadicity())
+      operandVariadicity.push_back(attr.getValue());
   }
+
+  SmallVector<size_t> resultConstraints;
+  SmallVector<Variadicity> resultVariadicity;
 
   // Gather which constraint slots correspond to result constraints
   auto resultsOp = op.getOp<ResultsOp>();
@@ -163,6 +319,10 @@ static WalkResult loadOperation(
         }
       }
     }
+
+    // Gather the variadicities of each result
+    for (Attribute attr : resultsOp->getVariadicity())
+      resultVariadicity.push_back(attr.cast<VariadicityAttr>().getValue());
   }
 
   // Gather which constraint slots correspond to attributes constraints
@@ -193,10 +353,13 @@ static WalkResult loadOperation(
   auto verifier =
       [constraints{std::move(constraints)},
        operandConstraints{std::move(operandConstraints)},
+       operandVariadicity{std::move(operandVariadicity)},
        resultConstraints{std::move(resultConstraints)},
+       resultVariadicity{std::move(resultVariadicity)},
        attributesContraints{std::move(attributesContraints)}](Operation *op) {
         return irdlOpVerifier(op, constraints, operandConstraints,
-                              resultConstraints, attributesContraints);
+                              operandVariadicity, resultConstraints,
+                              resultVariadicity, attributesContraints);
       };
 
   // IRDL does not support defining regions.
