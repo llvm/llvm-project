@@ -94,7 +94,7 @@ Ldata_expr_2 = Ldata_d - Ldata_c
 // CHECK:     Offset: 383
 // CHECK:     Alignment: 0
 // CHECK:     RelocationOffset: 0x1C4
-// CHECK:     RelocationCount: 3
+// CHECK:     RelocationCount: 1
 // CHECK:     Type: Regular (0x0)
 // CHECK:     Attributes [ (0x0)
 // CHECK:     ]
@@ -115,8 +115,6 @@ Ldata_expr_2 = Ldata_d - Ldata_c
 // CHECK:   }
 // CHECK:   Section __data {
 // CHECK:     0x28 0 2 n/a GENERIC_RELOC_VANILLA 1 0x2B
-// CHECK:     0x10 0 2 n/a GENERIC_RELOC_LOCAL_SECTDIFF 1 0x2B
-// CHECK:     0x0 0 2 n/a GENERIC_RELOC_PAIR 1 0x2F
 // CHECK:   }
 // CHECK: ]
 // CHECK: Symbols [
