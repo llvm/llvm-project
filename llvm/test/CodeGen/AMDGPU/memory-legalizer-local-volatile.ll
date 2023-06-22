@@ -364,25 +364,21 @@ define amdgpu_kernel void @local_volatile_store_0(
 ;
 ; GFX12-WGP-LABEL: local_volatile_store_0:
 ; GFX12-WGP:       ; %bb.0: ; %entry
-; GFX12-WGP-NEXT:    s_clause 0x1
-; GFX12-WGP-NEXT:    s_load_b64 s[2:3], s[0:1], 0x0
-; GFX12-WGP-NEXT:    s_load_b32 s0, s[0:1], 0x8
+; GFX12-WGP-NEXT:    s_load_b96 s[0:2], s[0:1], 0x0
 ; GFX12-WGP-NEXT:    s_wait_kmcnt 0x0
-; GFX12-WGP-NEXT:    s_load_b32 s1, s[2:3], 0x0
+; GFX12-WGP-NEXT:    s_load_b32 s0, s[0:1], 0x0
 ; GFX12-WGP-NEXT:    s_wait_kmcnt 0x0
-; GFX12-WGP-NEXT:    v_dual_mov_b32 v0, s0 :: v_dual_mov_b32 v1, s1
+; GFX12-WGP-NEXT:    v_dual_mov_b32 v0, s2 :: v_dual_mov_b32 v1, s0
 ; GFX12-WGP-NEXT:    ds_store_b32 v0, v1
 ; GFX12-WGP-NEXT:    s_endpgm
 ;
 ; GFX12-CU-LABEL: local_volatile_store_0:
 ; GFX12-CU:       ; %bb.0: ; %entry
-; GFX12-CU-NEXT:    s_clause 0x1
-; GFX12-CU-NEXT:    s_load_b64 s[2:3], s[0:1], 0x0
-; GFX12-CU-NEXT:    s_load_b32 s0, s[0:1], 0x8
+; GFX12-CU-NEXT:    s_load_b96 s[0:2], s[0:1], 0x0
 ; GFX12-CU-NEXT:    s_wait_kmcnt 0x0
-; GFX12-CU-NEXT:    s_load_b32 s1, s[2:3], 0x0
+; GFX12-CU-NEXT:    s_load_b32 s0, s[0:1], 0x0
 ; GFX12-CU-NEXT:    s_wait_kmcnt 0x0
-; GFX12-CU-NEXT:    v_dual_mov_b32 v0, s0 :: v_dual_mov_b32 v1, s1
+; GFX12-CU-NEXT:    v_dual_mov_b32 v0, s2 :: v_dual_mov_b32 v1, s0
 ; GFX12-CU-NEXT:    ds_store_b32 v0, v1
 ; GFX12-CU-NEXT:    s_endpgm
     ptr addrspace(1) %in, ptr addrspace(3) %out) {
@@ -489,27 +485,23 @@ define amdgpu_kernel void @local_volatile_store_1(
 ;
 ; GFX12-WGP-LABEL: local_volatile_store_1:
 ; GFX12-WGP:       ; %bb.0: ; %entry
-; GFX12-WGP-NEXT:    s_clause 0x1
-; GFX12-WGP-NEXT:    s_load_b64 s[2:3], s[0:1], 0x0
-; GFX12-WGP-NEXT:    s_load_b32 s0, s[0:1], 0x8
+; GFX12-WGP-NEXT:    s_load_b96 s[0:2], s[0:1], 0x0
 ; GFX12-WGP-NEXT:    s_wait_kmcnt 0x0
-; GFX12-WGP-NEXT:    s_load_b32 s1, s[2:3], 0x0
-; GFX12-WGP-NEXT:    v_lshl_add_u32 v0, v0, 2, s0
+; GFX12-WGP-NEXT:    s_load_b32 s0, s[0:1], 0x0
+; GFX12-WGP-NEXT:    v_lshl_add_u32 v0, v0, 2, s2
 ; GFX12-WGP-NEXT:    s_wait_kmcnt 0x0
-; GFX12-WGP-NEXT:    v_mov_b32_e32 v1, s1
+; GFX12-WGP-NEXT:    v_mov_b32_e32 v1, s0
 ; GFX12-WGP-NEXT:    ds_store_b32 v0, v1
 ; GFX12-WGP-NEXT:    s_endpgm
 ;
 ; GFX12-CU-LABEL: local_volatile_store_1:
 ; GFX12-CU:       ; %bb.0: ; %entry
-; GFX12-CU-NEXT:    s_clause 0x1
-; GFX12-CU-NEXT:    s_load_b64 s[2:3], s[0:1], 0x0
-; GFX12-CU-NEXT:    s_load_b32 s0, s[0:1], 0x8
+; GFX12-CU-NEXT:    s_load_b96 s[0:2], s[0:1], 0x0
 ; GFX12-CU-NEXT:    s_wait_kmcnt 0x0
-; GFX12-CU-NEXT:    s_load_b32 s1, s[2:3], 0x0
-; GFX12-CU-NEXT:    v_lshl_add_u32 v0, v0, 2, s0
+; GFX12-CU-NEXT:    s_load_b32 s0, s[0:1], 0x0
+; GFX12-CU-NEXT:    v_lshl_add_u32 v0, v0, 2, s2
 ; GFX12-CU-NEXT:    s_wait_kmcnt 0x0
-; GFX12-CU-NEXT:    v_mov_b32_e32 v1, s1
+; GFX12-CU-NEXT:    v_mov_b32_e32 v1, s0
 ; GFX12-CU-NEXT:    ds_store_b32 v0, v1
 ; GFX12-CU-NEXT:    s_endpgm
     ptr addrspace(1) %in, ptr addrspace(3) %out) {

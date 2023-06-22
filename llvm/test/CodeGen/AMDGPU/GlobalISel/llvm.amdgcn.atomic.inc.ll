@@ -93,9 +93,7 @@ define amdgpu_kernel void @lds_atomic_inc_ret_i32(ptr addrspace(1) %out, ptr add
 ;
 ; GFX12-LABEL: lds_atomic_inc_ret_i32:
 ; GFX12:       ; %bb.0:
-; GFX12-NEXT:    s_clause 0x1
-; GFX12-NEXT:    s_load_b32 s2, s[0:1], 0x8
-; GFX12-NEXT:    s_load_b64 s[0:1], s[0:1], 0x0
+; GFX12-NEXT:    s_load_b96 s[0:2], s[0:1], 0x0
 ; GFX12-NEXT:    s_wait_kmcnt 0x0
 ; GFX12-NEXT:    v_dual_mov_b32 v1, 42 :: v_dual_mov_b32 v0, s2
 ; GFX12-NEXT:    ds_inc_rtn_u32 v0, v0, v1
@@ -186,11 +184,9 @@ define amdgpu_kernel void @lds_atomic_inc_ret_i32_offset(ptr addrspace(1) %out, 
 ;
 ; GFX12-LABEL: lds_atomic_inc_ret_i32_offset:
 ; GFX12:       ; %bb.0:
-; GFX12-NEXT:    s_load_b32 s2, s[0:1], 0x8
-; GFX12-NEXT:    v_mov_b32_e32 v0, 42
-; GFX12-NEXT:    s_load_b64 s[0:1], s[0:1], 0x0
+; GFX12-NEXT:    s_load_b96 s[0:2], s[0:1], 0x0
 ; GFX12-NEXT:    s_wait_kmcnt 0x0
-; GFX12-NEXT:    v_mov_b32_e32 v1, s2
+; GFX12-NEXT:    v_dual_mov_b32 v0, 42 :: v_dual_mov_b32 v1, s2
 ; GFX12-NEXT:    ds_inc_rtn_u32 v0, v1, v0 offset:16
 ; GFX12-NEXT:    v_mov_b32_e32 v1, 0
 ; GFX12-NEXT:    s_wait_dscnt 0x0
@@ -949,12 +945,10 @@ define amdgpu_kernel void @lds_atomic_inc_ret_i64(ptr addrspace(1) %out, ptr add
 ;
 ; GFX12-LABEL: lds_atomic_inc_ret_i64:
 ; GFX12:       ; %bb.0:
-; GFX12-NEXT:    s_load_b32 s2, s[0:1], 0x8
+; GFX12-NEXT:    s_load_b96 s[0:2], s[0:1], 0x0
 ; GFX12-NEXT:    v_mov_b32_e32 v0, 42
-; GFX12-NEXT:    v_mov_b32_e32 v1, 0
-; GFX12-NEXT:    s_load_b64 s[0:1], s[0:1], 0x0
 ; GFX12-NEXT:    s_wait_kmcnt 0x0
-; GFX12-NEXT:    v_mov_b32_e32 v2, s2
+; GFX12-NEXT:    v_dual_mov_b32 v1, 0 :: v_dual_mov_b32 v2, s2
 ; GFX12-NEXT:    ds_inc_rtn_u64 v[0:1], v2, v[0:1]
 ; GFX12-NEXT:    v_mov_b32_e32 v2, 0
 ; GFX12-NEXT:    s_wait_dscnt 0x0
@@ -1044,12 +1038,10 @@ define amdgpu_kernel void @lds_atomic_inc_ret_i64_offset(ptr addrspace(1) %out, 
 ;
 ; GFX12-LABEL: lds_atomic_inc_ret_i64_offset:
 ; GFX12:       ; %bb.0:
-; GFX12-NEXT:    s_load_b32 s2, s[0:1], 0x8
+; GFX12-NEXT:    s_load_b96 s[0:2], s[0:1], 0x0
 ; GFX12-NEXT:    v_mov_b32_e32 v0, 42
-; GFX12-NEXT:    v_mov_b32_e32 v1, 0
-; GFX12-NEXT:    s_load_b64 s[0:1], s[0:1], 0x0
 ; GFX12-NEXT:    s_wait_kmcnt 0x0
-; GFX12-NEXT:    v_mov_b32_e32 v2, s2
+; GFX12-NEXT:    v_dual_mov_b32 v1, 0 :: v_dual_mov_b32 v2, s2
 ; GFX12-NEXT:    ds_inc_rtn_u64 v[0:1], v2, v[0:1] offset:32
 ; GFX12-NEXT:    v_mov_b32_e32 v2, 0
 ; GFX12-NEXT:    s_wait_dscnt 0x0

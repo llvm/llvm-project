@@ -120,9 +120,7 @@ define amdgpu_kernel void @s_test_canonicalize_var_f32(ptr addrspace(1) %out, fl
 ;
 ; GFX12-LABEL: s_test_canonicalize_var_f32:
 ; GFX12:       ; %bb.0:
-; GFX12-NEXT:    s_clause 0x1
-; GFX12-NEXT:    s_load_b32 s2, s[0:1], 0x8
-; GFX12-NEXT:    s_load_b64 s[0:1], s[0:1], 0x0
+; GFX12-NEXT:    s_load_b96 s[0:2], s[0:1], 0x0
 ; GFX12-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX12-NEXT:    s_wait_kmcnt 0x0
 ; GFX12-NEXT:    v_max_num_f32_e64 v1, s2, s2

@@ -1192,9 +1192,11 @@ public:
 
   /// \returns true if the target uses LOADcnt/SAMPLEcnt/BVHcnt, DScnt/KMcnt
   /// and STOREcnt rather than VMcnt, LGKMcnt and VScnt respectively.
-  bool hasExtendedWaitCounts() const {
-    return getGeneration() >= GFX12;
-  }
+  bool hasExtendedWaitCounts() const { return getGeneration() >= GFX12; }
+
+  /// \returns true if the target supports using software to avoid hazards
+  /// between VMEM and VALU instructions in some instances.
+  bool hasSoftwareHazardMode() const { return getGeneration() >= GFX12; }
 
   bool hasBitOp3Insts() const { return HasBitOp3Insts; }
 
