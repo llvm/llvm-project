@@ -134,7 +134,7 @@ def SM3P1 : RVKUnary<0b000100001001, 0b001, "sm3p1">;
 //===----------------------------------------------------------------------===//
 
 class PatGprGprByteSelect<SDPatternOperator OpNode, RVInst Inst>
-    : Pat<(OpNode GPR:$rs1, GPR:$rs2, byteselect:$imm),
+    : Pat<(XLenVT (OpNode (XLenVT GPR:$rs1), (XLenVT GPR:$rs2), byteselect:$imm)),
           (Inst GPR:$rs1, GPR:$rs2, byteselect:$imm)>;
 
 // Zknd

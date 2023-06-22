@@ -6862,7 +6862,7 @@ defm : VPatNullaryV<"int_riscv_vid", "PseudoVID">;
 
 foreach vti = AllIntegerVectors in {
   let Predicates = GetVTypePredicates<vti>.Predicates in
-  def : Pat<(riscv_vmv_x_s (vti.Vector vti.RegClass:$rs2)),
+  def : Pat<(XLenVT (riscv_vmv_x_s (vti.Vector vti.RegClass:$rs2))),
             (!cast<Instruction>("PseudoVMV_X_S_" # vti.LMul.MX) $rs2, vti.Log2SEW)>;
   // vmv.s.x is handled with a custom node in RISCVInstrInfoVVLPatterns.td
 }
@@ -6884,7 +6884,7 @@ foreach fvti = AllFloatVectors in {
     def : Pat<(fvti.Vector (int_riscv_vfmv_s_f (fvti.Vector fvti.RegClass:$rs1),
                            (fvti.Scalar (fpimm0)), VLOpFrag)),
               (!cast<Instruction>("PseudoVMV_S_X_" # fvti.LMul.MX)
-               (fvti.Vector $rs1), X0, GPR:$vl, fvti.Log2SEW)>;
+               (fvti.Vector $rs1), (XLenVT X0), GPR:$vl, fvti.Log2SEW)>;
   }
 }
 
