@@ -99,7 +99,7 @@ class Quarantine {
 
   void Put(Cache *c, Callback cb, Node *ptr, uptr size) {
     uptr max_cache_size = GetMaxCacheSize();
-    if (max_cache_size) {
+    if (max_cache_size && size <= GetMaxSize()) {
       c->Enqueue(cb, ptr, size);
     } else {
       // GetMaxCacheSize() == 0 only when GetMaxSize() == 0 (see Init).
