@@ -2875,7 +2875,13 @@ void RewriteInstance::handleRelocation(const SectionRef &RelocatedSection,
           ReferencedSymbol =
               ReferencedBF->getOrCreateLocalLabel(Address,
                                                   /*CreatePastEnd =*/true);
-          ReferencedBF->registerReferencedOffset(RefFunctionOffset);
+
+          // If ContainingBF != nullptr, it equals ReferencedBF (see
+          // if-condition above) so we're handling a relocation from a function
+          // to itself. RISC-V uses such relocations for branches, for example.
+          // These should not be registered as externally references offsets.
+          if (!ContainingBF)
+            ReferencedBF->registerReferencedOffset(RefFunctionOffset);
         }
         if (opts::Verbosity > 1 &&
             BinarySection(*BC, RelocatedSection).isWritable())
