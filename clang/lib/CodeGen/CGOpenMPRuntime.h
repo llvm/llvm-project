@@ -232,7 +232,7 @@ public:
   /// as those marked as `omp declare target`.
   class DisableAutoDeclareTargetRAII {
     CodeGenModule &CGM;
-    bool SavedShouldMarkAsGlobal;
+    bool SavedShouldMarkAsGlobal = false;
 
   public:
     DisableAutoDeclareTargetRAII(CodeGenModule &CGM);
