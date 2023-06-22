@@ -3456,6 +3456,18 @@ multiclass VPseudoVFRED_VS {
   }
 }
 
+multiclass VPseudoVFREDMINMAX_VS {
+  foreach m = MxListF in {
+    defvar mx = m.MX;
+    foreach e = SchedSEWSet<mx, /*isF*/ 1>.val in {
+      defvar WriteVFRedMinMaxV_From_MX_E = !cast<SchedWrite>("WriteVFRedMinMaxV_From_" # mx # "_E" # e);
+      defm _VS : VPseudoTernaryWithTailPolicy<V_M1.vrclass, m.vrclass, V_M1.vrclass, m, e>,
+                 Sched<[WriteVFRedMinMaxV_From_MX_E, ReadVFRedV, ReadVFRedV, ReadVFRedV,
+                        ReadVMask]>;
+    }
+  }
+}
+
 multiclass VPseudoVFREDO_VS {
   foreach m = MxListF in {
     defvar mx = m.MX;
@@ -6152,8 +6164,8 @@ defm PseudoVFREDOSUM : VPseudoVFREDO_VS;
 defm PseudoVFREDUSUM : VPseudoVFRED_VS;
 }
 let mayRaiseFPException = true in {
-defm PseudoVFREDMIN  : VPseudoVFRED_VS;
-defm PseudoVFREDMAX  : VPseudoVFRED_VS;
+defm PseudoVFREDMIN  : VPseudoVFREDMINMAX_VS;
+defm PseudoVFREDMAX  : VPseudoVFREDMINMAX_VS;
 }
 
 //===----------------------------------------------------------------------===//
