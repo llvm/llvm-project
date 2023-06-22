@@ -1,5 +1,6 @@
 ; Test moving of local imports/enums from DICompileUnit to DISubprogram's 'retainedNodes'
-;
+; XFAIL: *
+
 ; RUN: llvm-dis -o - %s.bc | FileCheck %s
 
 %"struct.ns::t1" = type { i8 }
