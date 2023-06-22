@@ -1204,10 +1204,12 @@ StreamChecker::reportLeaks(const SmallVector<SymbolRef, 2> &LeakedSyms,
     // FIXME: Add a checker option to turn this uniqueing feature off.
     const ExplodedNode *StreamOpenNode = getAcquisitionSite(Err, LeakSym, C);
     assert(StreamOpenNode && "Could not find place of stream opening.");
-    PathDiagnosticLocation LocUsedForUniqueing =
-        PathDiagnosticLocation::createBegin(
-            StreamOpenNode->getStmtForDiagnostics(), C.getSourceManager(),
-            StreamOpenNode->getLocationContext());
+
+    PathDiagnosticLocation LocUsedForUniqueing;
+    if (const Stmt *StreamStmt = StreamOpenNode->getStmtForDiagnostics())
+       LocUsedForUniqueing = PathDiagnosticLocation::createBegin(
+          StreamStmt, C.getSourceManager(),
+          StreamOpenNode->getLocationContext());
 
     std::unique_ptr<PathSensitiveBugReport> R =
         std::make_unique<PathSensitiveBugReport>(
