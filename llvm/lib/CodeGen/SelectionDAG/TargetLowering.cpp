@@ -9746,6 +9746,37 @@ SDValue TargetLowering::expandAddSubSat(SDNode *Node, SelectionDAG &DAG) const {
     return DAG.getSelect(dl, VT, Overflow, Zero, SumDiff);
   }
 
+  if (Opcode == ISD::SADDSAT || Opcode == ISD::SSUBSAT) {
+    APInt MinVal = APInt::getSignedMinValue(BitWidth);
+    APInt MaxVal = APInt::getSignedMaxValue(BitWidth);
+
+    KnownBits KnownLHS = DAG.computeKnownBits(LHS);
+    KnownBits KnownRHS = DAG.computeKnownBits(RHS);
+
+    // If either of the operand signs are known, then they are guaranteed to
+    // only saturate in one direction. If non-negative they will saturate
+    // towards SIGNED_MAX, if negative they will saturate towards SIGNED_MIN.
+    //
+    // In the case of ISD::SSUBSAT, 'x - y' is equivalent to 'x + (-y)', so the
+    // sign of 'y' has to be flipped.
+
+    bool LHSIsNonNegative = KnownLHS.isNonNegative();
+    bool RHSIsNonNegative = Opcode == ISD::SADDSAT ? KnownRHS.isNonNegative()
+                                                   : KnownRHS.isNegative();
+    if (LHSIsNonNegative || RHSIsNonNegative) {
+      SDValue SatMax = DAG.getConstant(MaxVal, dl, VT);
+      return DAG.getSelect(dl, VT, Overflow, SatMax, SumDiff);
+    }
+
+    bool LHSIsNegative = KnownLHS.isNegative();
+    bool RHSIsNegative = Opcode == ISD::SADDSAT ? KnownRHS.isNegative()
+                                                : KnownRHS.isNonNegative();
+    if (LHSIsNegative || RHSIsNegative) {
+      SDValue SatMin = DAG.getConstant(MinVal, dl, VT);
+      return DAG.getSelect(dl, VT, Overflow, SatMin, SumDiff);
+    }
+  }
+
   // Overflow ? (SumDiff >> BW) ^ MinVal : SumDiff
   APInt MinVal = APInt::getSignedMinValue(BitWidth);
   SDValue SatMin = DAG.getConstant(MinVal, dl, VT);

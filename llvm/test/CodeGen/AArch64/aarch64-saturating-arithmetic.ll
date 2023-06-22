@@ -4,10 +4,9 @@
 define i64 @test_ssub_nonneg_rhs(i64 %x) {
 ; CHECK-LABEL: test_ssub_nonneg_rhs:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    subs x8, x0, #1
-; CHECK-NEXT:    asr x9, x8, #63
-; CHECK-NEXT:    eor x9, x9, #0x8000000000000000
-; CHECK-NEXT:    csel x0, x9, x8, vs
+; CHECK-NEXT:    mov x8, #-9223372036854775808 // =0x8000000000000000
+; CHECK-NEXT:    subs x9, x0, #1
+; CHECK-NEXT:    csel x0, x8, x9, vs
 ; CHECK-NEXT:    ret
   %sat = call i64 @llvm.ssub.sat.i64(i64 %x, i64 1)
   ret i64 %sat
@@ -16,10 +15,9 @@ define i64 @test_ssub_nonneg_rhs(i64 %x) {
 define i64 @test_ssub_neg_rhs(i64 %x) {
 ; CHECK-LABEL: test_ssub_neg_rhs:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    adds x8, x0, #1
-; CHECK-NEXT:    asr x9, x8, #63
-; CHECK-NEXT:    eor x9, x9, #0x8000000000000000
-; CHECK-NEXT:    csel x0, x9, x8, vs
+; CHECK-NEXT:    mov x8, #9223372036854775807 // =0x7fffffffffffffff
+; CHECK-NEXT:    adds x9, x0, #1
+; CHECK-NEXT:    csel x0, x8, x9, vs
 ; CHECK-NEXT:    ret
   %sat = call i64 @llvm.ssub.sat.i64(i64 %x, i64 -1)
   ret i64 %sat
@@ -28,10 +26,9 @@ define i64 @test_ssub_neg_rhs(i64 %x) {
 define i64 @test_sadd_nonneg_rhs(i64 %x) {
 ; CHECK-LABEL: test_sadd_nonneg_rhs:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    adds x8, x0, #1
-; CHECK-NEXT:    asr x9, x8, #63
-; CHECK-NEXT:    eor x9, x9, #0x8000000000000000
-; CHECK-NEXT:    csel x0, x9, x8, vs
+; CHECK-NEXT:    mov x8, #9223372036854775807 // =0x7fffffffffffffff
+; CHECK-NEXT:    adds x9, x0, #1
+; CHECK-NEXT:    csel x0, x8, x9, vs
 ; CHECK-NEXT:    ret
   %sat = call i64 @llvm.sadd.sat.i64(i64 %x, i64 1)
   ret i64 %sat
@@ -41,10 +38,9 @@ define i64 @test_sadd_nonneg_rhs(i64 %x) {
 define i64 @test_sadd_neg_rhs(i64 %x) {
 ; CHECK-LABEL: test_sadd_neg_rhs:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    subs x8, x0, #1
-; CHECK-NEXT:    asr x9, x8, #63
-; CHECK-NEXT:    eor x9, x9, #0x8000000000000000
-; CHECK-NEXT:    csel x0, x9, x8, vs
+; CHECK-NEXT:    mov x8, #-9223372036854775808 // =0x8000000000000000
+; CHECK-NEXT:    subs x9, x0, #1
+; CHECK-NEXT:    csel x0, x8, x9, vs
 ; CHECK-NEXT:    ret
   %sat = call i64 @llvm.sadd.sat.i64(i64 %x, i64 -1)
   ret i64 %sat
@@ -54,9 +50,8 @@ define i64 @test_ssub_nonneg_lhs(i64 %x) {
 ; CHECK-LABEL: test_ssub_nonneg_lhs:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    mov w8, #1 // =0x1
+; CHECK-NEXT:    mov x9, #9223372036854775807 // =0x7fffffffffffffff
 ; CHECK-NEXT:    subs x8, x8, x0
-; CHECK-NEXT:    asr x9, x8, #63
-; CHECK-NEXT:    eor x9, x9, #0x8000000000000000
 ; CHECK-NEXT:    csel x0, x9, x8, vs
 ; CHECK-NEXT:    ret
   %sat = call i64 @llvm.ssub.sat.i64(i64 1, i64 %x)
@@ -67,9 +62,8 @@ define i64 @test_ssub_neg_lhs(i64 %x) {
 ; CHECK-LABEL: test_ssub_neg_lhs:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    mov x8, #-1 // =0xffffffffffffffff
+; CHECK-NEXT:    mov x9, #-9223372036854775808 // =0x8000000000000000
 ; CHECK-NEXT:    subs x8, x8, x0
-; CHECK-NEXT:    asr x9, x8, #63
-; CHECK-NEXT:    eor x9, x9, #0x8000000000000000
 ; CHECK-NEXT:    csel x0, x9, x8, vs
 ; CHECK-NEXT:    ret
   %sat = call i64 @llvm.ssub.sat.i64(i64 -1, i64 %x)
@@ -79,10 +73,9 @@ define i64 @test_ssub_neg_lhs(i64 %x) {
 define i64 @test_sadd_nonneg_lhs(i64 %x) {
 ; CHECK-LABEL: test_sadd_nonneg_lhs:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    adds x8, x0, #1
-; CHECK-NEXT:    asr x9, x8, #63
-; CHECK-NEXT:    eor x9, x9, #0x8000000000000000
-; CHECK-NEXT:    csel x0, x9, x8, vs
+; CHECK-NEXT:    mov x8, #9223372036854775807 // =0x7fffffffffffffff
+; CHECK-NEXT:    adds x9, x0, #1
+; CHECK-NEXT:    csel x0, x8, x9, vs
 ; CHECK-NEXT:    ret
   %sat = call i64 @llvm.sadd.sat.i64(i64 1, i64 %x)
   ret i64 %sat
@@ -91,10 +84,9 @@ define i64 @test_sadd_nonneg_lhs(i64 %x) {
 define i64 @test_sadd_neg_lhs(i64 %x) {
 ; CHECK-LABEL: test_sadd_neg_lhs:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    subs x8, x0, #1
-; CHECK-NEXT:    asr x9, x8, #63
-; CHECK-NEXT:    eor x9, x9, #0x8000000000000000
-; CHECK-NEXT:    csel x0, x9, x8, vs
+; CHECK-NEXT:    mov x8, #-9223372036854775808 // =0x8000000000000000
+; CHECK-NEXT:    subs x9, x0, #1
+; CHECK-NEXT:    csel x0, x8, x9, vs
 ; CHECK-NEXT:    ret
   %sat = call i64 @llvm.sadd.sat.i64(i64 -1, i64 %x)
   ret i64 %sat
@@ -104,10 +96,9 @@ define i64 @test_ssub_nonneg_rhs_nonconst(i64 %x) {
 ; CHECK-LABEL: test_ssub_nonneg_rhs_nonconst:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    mov w8, #123 // =0x7b
+; CHECK-NEXT:    mov x9, #-9223372036854775808 // =0x8000000000000000
 ; CHECK-NEXT:    and x8, x0, x8
 ; CHECK-NEXT:    subs x8, x0, x8
-; CHECK-NEXT:    asr x9, x8, #63
-; CHECK-NEXT:    eor x9, x9, #0x8000000000000000
 ; CHECK-NEXT:    csel x0, x9, x8, vs
 ; CHECK-NEXT:    ret
   %y = and i64 %x, 123
@@ -119,11 +110,10 @@ define i64 @test_ssub_neg_rhs_nonconst(i64 %x) {
 ; CHECK-LABEL: test_ssub_neg_rhs_nonconst:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    cmn x0, #1
-; CHECK-NEXT:    csinv x8, x0, xzr, lt
-; CHECK-NEXT:    subs x8, x0, x8
-; CHECK-NEXT:    asr x9, x8, #63
-; CHECK-NEXT:    eor x9, x9, #0x8000000000000000
-; CHECK-NEXT:    csel x0, x9, x8, vs
+; CHECK-NEXT:    mov x8, #9223372036854775807 // =0x7fffffffffffffff
+; CHECK-NEXT:    csinv x9, x0, xzr, lt
+; CHECK-NEXT:    subs x9, x0, x9
+; CHECK-NEXT:    csel x0, x8, x9, vs
 ; CHECK-NEXT:    ret
   %y = call i64 @llvm.smin(i64 %x, i64 -1)
   %sat = call i64 @llvm.ssub.sat.i64(i64 %x, i64 %y)
@@ -134,11 +124,10 @@ define i64 @test_sadd_nonneg_rhs_nonconst(i64 %x) {
 ; CHECK-LABEL: test_sadd_nonneg_rhs_nonconst:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    cmp x0, #1
-; CHECK-NEXT:    csinc x8, x0, xzr, gt
-; CHECK-NEXT:    adds x8, x0, x8
-; CHECK-NEXT:    asr x9, x8, #63
-; CHECK-NEXT:    eor x9, x9, #0x8000000000000000
-; CHECK-NEXT:    csel x0, x9, x8, vs
+; CHECK-NEXT:    mov x8, #9223372036854775807 // =0x7fffffffffffffff
+; CHECK-NEXT:    csinc x9, x0, xzr, gt
+; CHECK-NEXT:    adds x9, x0, x9
+; CHECK-NEXT:    csel x0, x8, x9, vs
 ; CHECK-NEXT:    ret
   %y = call i64 @llvm.smax(i64 %x, i64 1)
   %sat = call i64 @llvm.sadd.sat.i64(i64 %x, i64 %y)
@@ -149,11 +138,10 @@ define i64 @test_sadd_nonneg_rhs_nonconst(i64 %x) {
 define i64 @test_sadd_neg_rhs_nonconst(i64 %x) {
 ; CHECK-LABEL: test_sadd_neg_rhs_nonconst:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    orr x8, x0, #0x8000000000000000
-; CHECK-NEXT:    adds x8, x0, x8
-; CHECK-NEXT:    asr x9, x8, #63
-; CHECK-NEXT:    eor x9, x9, #0x8000000000000000
-; CHECK-NEXT:    csel x0, x9, x8, vs
+; CHECK-NEXT:    orr x9, x0, #0x8000000000000000
+; CHECK-NEXT:    mov x8, #-9223372036854775808 // =0x8000000000000000
+; CHECK-NEXT:    adds x9, x0, x9
+; CHECK-NEXT:    csel x0, x8, x9, vs
 ; CHECK-NEXT:    ret
   %y = or i64 %x, u0x8000000000000000
   %sat = call i64 @llvm.sadd.sat.i64(i64 %x, i64 %y)
@@ -164,10 +152,9 @@ define i64 @test_ssub_nonneg_lhs_nonconst(i64 %x) {
 ; CHECK-LABEL: test_ssub_nonneg_lhs_nonconst:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    mov w8, #123 // =0x7b
+; CHECK-NEXT:    mov x9, #9223372036854775807 // =0x7fffffffffffffff
 ; CHECK-NEXT:    and x8, x0, x8
 ; CHECK-NEXT:    subs x8, x8, x0
-; CHECK-NEXT:    asr x9, x8, #63
-; CHECK-NEXT:    eor x9, x9, #0x8000000000000000
 ; CHECK-NEXT:    csel x0, x9, x8, vs
 ; CHECK-NEXT:    ret
   %y = and i64 %x, 123
@@ -179,11 +166,10 @@ define i64 @test_ssub_neg_lhs_nonconst(i64 %x) {
 ; CHECK-LABEL: test_ssub_neg_lhs_nonconst:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    cmn x0, #1
-; CHECK-NEXT:    csinv x8, x0, xzr, lt
-; CHECK-NEXT:    subs x8, x8, x0
-; CHECK-NEXT:    asr x9, x8, #63
-; CHECK-NEXT:    eor x9, x9, #0x8000000000000000
-; CHECK-NEXT:    csel x0, x9, x8, vs
+; CHECK-NEXT:    mov x8, #-9223372036854775808 // =0x8000000000000000
+; CHECK-NEXT:    csinv x9, x0, xzr, lt
+; CHECK-NEXT:    subs x9, x9, x0
+; CHECK-NEXT:    csel x0, x8, x9, vs
 ; CHECK-NEXT:    ret
   %y = call i64 @llvm.smin(i64 %x, i64 -1)
   %sat = call i64 @llvm.ssub.sat.i64(i64 %y, i64 %x)
@@ -194,11 +180,10 @@ define i64 @test_sadd_nonneg_lhs_nonconst(i64 %x) {
 ; CHECK-LABEL: test_sadd_nonneg_lhs_nonconst:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    cmp x0, #1
-; CHECK-NEXT:    csinc x8, x0, xzr, gt
-; CHECK-NEXT:    adds x8, x8, x0
-; CHECK-NEXT:    asr x9, x8, #63
-; CHECK-NEXT:    eor x9, x9, #0x8000000000000000
-; CHECK-NEXT:    csel x0, x9, x8, vs
+; CHECK-NEXT:    mov x8, #9223372036854775807 // =0x7fffffffffffffff
+; CHECK-NEXT:    csinc x9, x0, xzr, gt
+; CHECK-NEXT:    adds x9, x9, x0
+; CHECK-NEXT:    csel x0, x8, x9, vs
 ; CHECK-NEXT:    ret
   %y = call i64 @llvm.smax(i64 %x, i64 1)
   %sat = call i64 @llvm.sadd.sat.i64(i64 %y, i64 %x)
@@ -208,11 +193,10 @@ define i64 @test_sadd_nonneg_lhs_nonconst(i64 %x) {
 define i64 @test_sadd_neg_lhs_nonconst(i64 %x) {
 ; CHECK-LABEL: test_sadd_neg_lhs_nonconst:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    orr x8, x0, #0x8000000000000000
-; CHECK-NEXT:    adds x8, x8, x0
-; CHECK-NEXT:    asr x9, x8, #63
-; CHECK-NEXT:    eor x9, x9, #0x8000000000000000
-; CHECK-NEXT:    csel x0, x9, x8, vs
+; CHECK-NEXT:    orr x9, x0, #0x8000000000000000
+; CHECK-NEXT:    mov x8, #-9223372036854775808 // =0x8000000000000000
+; CHECK-NEXT:    adds x9, x9, x0
+; CHECK-NEXT:    csel x0, x8, x9, vs
 ; CHECK-NEXT:    ret
   %y = or i64 %x, u0x8000000000000000
   %sat = call i64 @llvm.sadd.sat.i64(i64 %y, i64 %x)
