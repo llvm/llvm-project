@@ -1963,9 +1963,6 @@ private:
   /// Check if the return value of this function requires sanitization.
   bool requiresReturnValueCheck() const;
 
-  bool isInAllocaArgument(CGCXXABI &ABI, QualType Ty);
-  bool hasInAllocaArg(const CXXMethodDecl *MD);
-
   llvm::BasicBlock *TerminateLandingPad = nullptr;
   llvm::BasicBlock *TerminateHandler = nullptr;
   llvm::SmallVector<llvm::BasicBlock *, 2> TrapBBs;
@@ -2228,17 +2225,10 @@ public:
   void EmitBlockWithFallThrough(llvm::BasicBlock *BB, const Stmt *S);
 
   void EmitForwardingCallToLambda(const CXXMethodDecl *LambdaCallOperator,
-                                  CallArgList &CallArgs,
-                                  const CGFunctionInfo *CallOpFnInfo = nullptr,
-                                  llvm::Constant *CallOpFn = nullptr);
+                                  CallArgList &CallArgs);
   void EmitLambdaBlockInvokeBody();
+  void EmitLambdaDelegatingInvokeBody(const CXXMethodDecl *MD);
   void EmitLambdaStaticInvokeBody(const CXXMethodDecl *MD);
-  void EmitLambdaDelegatingInvokeBody(const CXXMethodDecl *MD,
-                                      CallArgList &CallArgs);
-  void EmitLambdaInAllocaImplFn(const CXXMethodDecl *CallOp,
-                                const CGFunctionInfo **ImplFnInfo,
-                                llvm::Function **ImplFn);
-  void EmitLambdaInAllocaCallOpBody(const CXXMethodDecl *MD);
   void EmitLambdaVLACapture(const VariableArrayType *VAT, LValue LV) {
     EmitStoreThroughLValue(RValue::get(VLASizeMap[VAT->getSizeExpr()]), LV);
   }
