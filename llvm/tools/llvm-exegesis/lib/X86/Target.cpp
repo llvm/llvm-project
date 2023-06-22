@@ -665,8 +665,7 @@ public:
   ExegesisX86Target() : ExegesisTarget(X86CpuPfmCounters) {}
 
   Expected<std::unique_ptr<pfm::Counter>>
-  createCounter(StringRef CounterName, const LLVMState &State,
-                const pid_t ProcessID) const override {
+  createCounter(StringRef CounterName, const LLVMState &State) const override {
     // If LbrSamplingPeriod was provided, then ignore the
     // CounterName because we only have one for LBR.
     if (LbrSamplingPeriod > 0) {
@@ -683,7 +682,7 @@ public:
           llvm::errc::invalid_argument);
 #endif
     }
-    return ExegesisTarget::createCounter(CounterName, State, ProcessID);
+    return ExegesisTarget::createCounter(CounterName, State);
   }
 
 private:
