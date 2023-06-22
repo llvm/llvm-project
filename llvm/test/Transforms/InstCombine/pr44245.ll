@@ -3,13 +3,13 @@
 
 ; This used to cause on infinite instcombine loop.
 
-define void @test(i1 %c) {
+define void @test(i1 %c, ptr %p) {
 ; CHECK-LABEL: @test(
 ; CHECK-NEXT:  bb16:
 ; CHECK-NEXT:    br i1 [[C:%.*]], label [[BB17:%.*]], label [[BB24:%.*]]
 ; CHECK:       bb17:
 ; CHECK-NEXT:    [[I:%.*]] = phi ptr [ [[DOTIN1:%.*]], [[BB47:%.*]] ], [ undef, [[BB16:%.*]] ]
-; CHECK-NEXT:    store ptr [[I]], ptr undef, align 8
+; CHECK-NEXT:    store ptr [[I]], ptr [[P:%.*]], align 8
 ; CHECK-NEXT:    ret void
 ; CHECK:       bb24:
 ; CHECK-NEXT:    br i1 [[C]], label [[BB44:%.*]], label [[BB49:%.*]]
@@ -66,7 +66,7 @@ bb16:
 
 bb17:                                             ; preds = %bb47, %bb16
   %i = phi ptr [ %.in1, %bb47 ], [ undef, %bb16 ]
-  store ptr %i, ptr undef, align 8
+  store ptr %i, ptr %p, align 8
   ret void
 
 bb24:                                             ; preds = %bb16
