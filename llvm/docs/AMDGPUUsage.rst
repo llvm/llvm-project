@@ -14717,6 +14717,7 @@ force specific encoding, one can add a suffix to the opcode of the instruction:
 * _e32 for 32-bit VOP1/VOP2/VOPC
 * _e64 for 64-bit VOP3
 * _dpp for VOP_DPP
+* _e64_dpp for VOP3 with DPP
 * _sdwa for VOP_SDWA
 
 VOP1/VOP2/VOP3/VOPC examples:
@@ -14748,6 +14749,15 @@ VOP_DPP examples:
   v_mov_b32 v0, v0 quad_perm:[1,3,0,1] row_mask:0xa bank_mask:0x1 bound_ctrl:0
   v_add_f32 v0, v0, |v0| row_shl:1 row_mask:0xa bank_mask:0x1 bound_ctrl:0
   v_max_f16 v1, v2, v3 row_shl:1 row_mask:0xa bank_mask:0x1 bound_ctrl:0
+
+
+VOP3_DPP examples (Available on GFX11+):
+
+.. code-block:: nasm
+
+  v_add_f32_e64_dpp v0, v1, v2 dpp8:[0,1,2,3,4,5,6,7]
+  v_sqrt_f32_e64_dpp v0, v1 row_shl:1 row_mask:0xa bank_mask:0x1 bound_ctrl:0
+  v_ldexp_f32 v0, v1, v2 dpp8:[0,1,2,3,4,5,6,7]
 
 VOP_SDWA examples:
 
