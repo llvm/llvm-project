@@ -68,10 +68,6 @@ struct QuarantineBatch {
 
 COMPILER_CHECK(sizeof(QuarantineBatch) <= (1 << 13));  // 8Kb.
 
-// The callback interface is:
-// void Callback::Recycle(Node *ptr);
-// void *cb.Allocate(uptr size);
-// void cb.Deallocate(void *ptr);
 template<typename Callback, typename Node>
 class Quarantine {
  public:
@@ -100,10 +96,11 @@ class Quarantine {
   void Put(Cache *c, Callback cb, Node *ptr, uptr size) {
     uptr max_cache_size = GetMaxCacheSize();
     if (max_cache_size && size <= GetMaxSize()) {
+      cb.PreQuarantine(ptr);
       c->Enqueue(cb, ptr, size);
     } else {
       // GetMaxCacheSize() == 0 only when GetMaxSize() == 0 (see Init).
-      cb.Recycle(ptr);
+      cb.RecyclePassThrough(ptr);
     }
     // Check cache size anyway to accommodate for runtime cache_size change.
     if (c->Size() > max_cache_size)
