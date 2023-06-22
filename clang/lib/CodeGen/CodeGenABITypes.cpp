@@ -65,8 +65,9 @@ CodeGen::arrangeFreeFunctionCall(CodeGenModule &CGM,
                                  ArrayRef<CanQualType> argTypes,
                                  FunctionType::ExtInfo info,
                                  RequiredArgs args) {
-  return CGM.getTypes().arrangeLLVMFunctionInfo(returnType, FnInfoOpts::None,
-                                                argTypes, info, {}, args);
+  return CGM.getTypes().arrangeLLVMFunctionInfo(
+      returnType, /*instanceMethod=*/false, /*chainCall=*/false, argTypes,
+      info, {}, args);
 }
 
 ImplicitCXXConstructorArgs
