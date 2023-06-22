@@ -35,7 +35,7 @@ end
 
 subroutine p6
   real b(8)
-  !ERROR: Array spec was already declared for 'b'
+  !ERROR: The dimensions of 'b' have already been declared
   pointer(a, b(4))
 end
 
@@ -59,7 +59,7 @@ subroutine p8
   pointer(t, a)
   !ERROR: 's' is not a variable
   pointer(s, b)
-  !ERROR: 'k' is not a variable
+  !ERROR: 'k' is a named constant and may not be a Cray pointer
   pointer(k, c)
 contains
   subroutine s
@@ -70,11 +70,11 @@ subroutine p9
   integer(8), parameter :: k = 2
   type t
   end type
-  !ERROR: 't' is not a variable
+  !ERROR: 't' is already declared in this scoping unit
   pointer(a, t)
-  !ERROR: 's' is not a variable
+  !ERROR: Declaration of 's' conflicts with its use as internal procedure
   pointer(b, s)
-  !ERROR: 'k' is not a variable
+  !ERROR: 'k' is a named constant and may not be a Cray pointee
   pointer(c, k)
 contains
   subroutine s
@@ -87,7 +87,7 @@ module m10
 end
 subroutine p10
   use m10
-  !ERROR: 'b' cannot be a Cray pointee as it is use-associated
+  !ERROR: 'b' is use-associated from module 'm10' and cannot be re-declared
   pointer(a, c),(d, b)
 end
 
@@ -112,4 +112,12 @@ subroutine p12
   pointer(a, x1)
   !ERROR: Type of Cray pointee 'x2' is a non-sequence derived type
   pointer(b, x2)
+end
+
+subroutine p13
+  pointer(ip, x)
+ contains
+  subroutine s
+    pointer(ip, x) ! ok, local declaration
+  end
 end
