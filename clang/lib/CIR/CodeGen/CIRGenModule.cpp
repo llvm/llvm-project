@@ -41,6 +41,7 @@
 #include "clang/AST/RecursiveASTVisitor.h"
 #include "clang/AST/StmtCXX.h"
 #include "clang/AST/StmtObjC.h"
+#include "clang/AST/Type.h"
 #include "clang/Basic/Diagnostic.h"
 #include "clang/Basic/NoSanitizeList.h"
 #include "clang/Basic/SourceLocation.h"
@@ -673,6 +674,11 @@ mlir::cir::GlobalOp CIRGenModule::buildGlobal(const VarDecl *D,
 mlir::Value CIRGenModule::getAddrOfGlobalVar(const VarDecl *D,
                                              std::optional<mlir::Type> Ty,
                                              ForDefinition_t IsForDefinition) {
+  assert(D->hasGlobalStorage() && "Not a global variable");
+  QualType ASTTy = D->getType();
+  if (!Ty)
+    Ty = getTypes().convertTypeForMem(ASTTy);
+
   auto g = buildGlobal(D, Ty, IsForDefinition);
   auto ptrTy =
       mlir::cir::PointerType::get(builder.getContext(), g.getSymType());
@@ -1998,7 +2004,8 @@ CIRGenModule::GetAddrOfGlobal(GlobalDecl GD, ForDefinition_t IsForDefinition) {
                              IsForDefinition);
   }
 
-  llvm_unreachable("NYI");
+  return getAddrOfGlobalVar(cast<VarDecl>(D), /*Ty=*/nullptr, IsForDefinition)
+      .getDefiningOp();
 }
 
 void CIRGenModule::Release() {
