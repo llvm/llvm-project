@@ -126,5 +126,6 @@ add_custom_command(TARGET libc_str_to_float_comparison_test
 
 add_subdirectory(CPP)
 add_subdirectory(File)
+add_subdirectory(RPC)
 add_subdirectory(OSUtil)
 add_subdirectory(FPUtil)

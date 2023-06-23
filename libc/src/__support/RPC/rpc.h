@@ -116,11 +116,10 @@ public:
   ///   Atomic<uint32_t> secondary[port_count];
   ///   Packet buffer[port_count];
   /// };
-  LIBC_INLINE static uint64_t allocation_size(uint64_t port_count) {
+  LIBC_INLINE static constexpr uint64_t allocation_size(uint64_t port_count) {
     return buffer_offset(port_count) + buffer_bytes(port_count);
   }
 
-protected:
   /// Retrieve the inbox state from memory shared between processes.
   LIBC_INLINE uint32_t load_inbox(uint64_t index) {
     return inbox[index].load(cpp::MemoryOrder::RELAXED);
@@ -251,27 +250,27 @@ protected:
   }
 
   /// Number of bytes to allocate for an inbox or outbox.
-  LIBC_INLINE static uint64_t mailbox_bytes(uint64_t port_count) {
+  LIBC_INLINE static constexpr uint64_t mailbox_bytes(uint64_t port_count) {
     return port_count * sizeof(cpp::Atomic<uint32_t>);
   }
 
   /// Number of bytes to allocate for the buffer containing the packets.
-  LIBC_INLINE static uint64_t buffer_bytes(uint64_t port_count) {
+  LIBC_INLINE static constexpr uint64_t buffer_bytes(uint64_t port_count) {
     return port_count * sizeof(Packet<lane_size>);
   }
 
   /// Offset of the inbox in memory. This is the same as the outbox if inverted.
-  LIBC_INLINE static uint64_t inbox_offset(uint64_t port_count) {
+  LIBC_INLINE static constexpr uint64_t inbox_offset(uint64_t port_count) {
     return Invert ? mailbox_bytes(port_count) : 0;
   }
 
   /// Offset of the outbox in memory. This is the same as the inbox if inverted.
-  LIBC_INLINE static uint64_t outbox_offset(uint64_t port_count) {
+  LIBC_INLINE static constexpr uint64_t outbox_offset(uint64_t port_count) {
     return Invert ? 0 : mailbox_bytes(port_count);
   }
 
   /// Offset of the buffer containing the packets after the inbox and outbox.
-  LIBC_INLINE static uint64_t buffer_offset(uint64_t port_count) {
+  LIBC_INLINE static constexpr uint64_t buffer_offset(uint64_t port_count) {
     return align_up(2 * mailbox_bytes(port_count), alignof(Packet<lane_size>));
   }
 };
