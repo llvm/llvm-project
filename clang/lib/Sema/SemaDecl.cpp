@@ -5716,10 +5716,10 @@ Decl *Sema::BuildAnonymousStructOrUnion(Scope *S, DeclSpec &DS,
       SC = SC_None;
     }
 
-    assert(DS.getAttributes().empty() && "No attribute expected");
     Anon = VarDecl::Create(Context, Owner, DS.getBeginLoc(),
                            Record->getLocation(), /*IdentifierInfo=*/nullptr,
                            Context.getTypeDeclType(Record), TInfo, SC);
+    ProcessDeclAttributes(S, Anon, Dc);
 
     // Default-initialize the implicit variable. This initialization will be
     // trivial in almost all cases, except if a union member has an in-class

@@ -528,6 +528,9 @@ Bug Fixes in This Version
   statement expression that appears outside of a function block scope. The
   assertion was benign outside of asserts builds and would only fire in C.
   (`#48579 <https://github.com/llvm/llvm-project/issues/48579>_`).
+- Fixed a failing assertion when applying an attribute to an anonymous union.
+  The assertion was benign outside of asserts builds and would only fire in C++.
+  (`#48512 <https://github.com/llvm/llvm-project/issues/48512>_`).
 
 Bug Fixes to Compiler Builtins
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
