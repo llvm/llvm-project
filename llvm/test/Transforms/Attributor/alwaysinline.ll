@@ -49,17 +49,10 @@ entry:
 
 ; CHECK-NOT: Function Attrs
 define i32 @outer2() {
-; TUNIT: Function Attrs: norecurse
-; TUNIT-LABEL: define {{[^@]+}}@outer2
-; TUNIT-SAME: () #[[ATTR2:[0-9]+]] {
-; TUNIT-NEXT:  entry:
-; TUNIT-NEXT:    [[R:%.*]] = call i32 @inner2() #[[ATTR3:[0-9]+]]
-; TUNIT-NEXT:    ret i32 [[R]]
-;
-; CGSCC-LABEL: define {{[^@]+}}@outer2() {
-; CGSCC-NEXT:  entry:
-; CGSCC-NEXT:    [[R:%.*]] = call i32 @inner2() #[[ATTR2:[0-9]+]]
-; CGSCC-NEXT:    ret i32 [[R]]
+; CHECK-LABEL: define {{[^@]+}}@outer2() {
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[R:%.*]] = call i32 @inner2() #[[ATTR2:[0-9]+]]
+; CHECK-NEXT:    ret i32 [[R]]
 ;
 entry:
   %r = call i32 @inner2() alwaysinline
@@ -70,25 +63,15 @@ entry:
 ; it is `unexactly defined` and alwaysinline but cannot be inlined.
 ; so it will not be analyzed
 define linkonce i32 @inner3(ptr %addr) alwaysinline {
-; TUNIT: Function Attrs: alwaysinline
-; TUNIT-LABEL: define {{[^@]+}}@inner3
-; TUNIT-SAME: (ptr [[ADDR:%.*]]) #[[ATTR3]] {
-; TUNIT-NEXT:  entry:
-; TUNIT-NEXT:    indirectbr ptr [[ADDR]], [label [[ONE:%.*]], label %two]
-; TUNIT:       one:
-; TUNIT-NEXT:    ret i32 42
-; TUNIT:       two:
-; TUNIT-NEXT:    ret i32 44
-;
-; CGSCC: Function Attrs: alwaysinline
-; CGSCC-LABEL: define {{[^@]+}}@inner3
-; CGSCC-SAME: (ptr [[ADDR:%.*]]) #[[ATTR2]] {
-; CGSCC-NEXT:  entry:
-; CGSCC-NEXT:    indirectbr ptr [[ADDR]], [label [[ONE:%.*]], label %two]
-; CGSCC:       one:
-; CGSCC-NEXT:    ret i32 42
-; CGSCC:       two:
-; CGSCC-NEXT:    ret i32 44
+; CHECK: Function Attrs: alwaysinline
+; CHECK-LABEL: define {{[^@]+}}@inner3
+; CHECK-SAME: (ptr [[ADDR:%.*]]) #[[ATTR2]] {
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    indirectbr ptr [[ADDR]], [label [[ONE:%.*]], label %two]
+; CHECK:       one:
+; CHECK-NEXT:    ret i32 42
+; CHECK:       two:
+; CHECK-NEXT:    ret i32 44
 ;
 entry:
   indirectbr ptr %addr, [ label %one, label %two ]
@@ -101,20 +84,12 @@ two:
 }
 
 define i32 @outer3(i32 %x) {
-; TUNIT: Function Attrs: norecurse
-; TUNIT-LABEL: define {{[^@]+}}@outer3
-; TUNIT-SAME: (i32 [[X:%.*]]) #[[ATTR2]] {
-; TUNIT-NEXT:    [[CMP:%.*]] = icmp slt i32 [[X]], 42
-; TUNIT-NEXT:    [[ADDR:%.*]] = select i1 [[CMP]], ptr blockaddress(@inner3, [[ONE:%.*]]), ptr blockaddress(@inner3, [[TWO:%.*]])
-; TUNIT-NEXT:    [[CALL:%.*]] = call i32 @inner3(ptr [[ADDR]])
-; TUNIT-NEXT:    ret i32 [[CALL]]
-;
-; CGSCC-LABEL: define {{[^@]+}}@outer3
-; CGSCC-SAME: (i32 [[X:%.*]]) {
-; CGSCC-NEXT:    [[CMP:%.*]] = icmp slt i32 [[X]], 42
-; CGSCC-NEXT:    [[ADDR:%.*]] = select i1 [[CMP]], ptr blockaddress(@inner3, [[ONE:%.*]]), ptr blockaddress(@inner3, [[TWO:%.*]])
-; CGSCC-NEXT:    [[CALL:%.*]] = call i32 @inner3(ptr [[ADDR]])
-; CGSCC-NEXT:    ret i32 [[CALL]]
+; CHECK-LABEL: define {{[^@]+}}@outer3
+; CHECK-SAME: (i32 [[X:%.*]]) {
+; CHECK-NEXT:    [[CMP:%.*]] = icmp slt i32 [[X]], 42
+; CHECK-NEXT:    [[ADDR:%.*]] = select i1 [[CMP]], ptr blockaddress(@inner3, [[ONE:%.*]]), ptr blockaddress(@inner3, [[TWO:%.*]])
+; CHECK-NEXT:    [[CALL:%.*]] = call i32 @inner3(ptr [[ADDR]])
+; CHECK-NEXT:    ret i32 [[CALL]]
 ;
   %cmp = icmp slt i32 %x, 42
   %addr = select i1 %cmp, ptr blockaddress(@inner3, %one), ptr blockaddress(@inner3, %two)
@@ -124,8 +99,7 @@ define i32 @outer3(i32 %x) {
 ;.
 ; TUNIT: attributes #[[ATTR0]] = { alwaysinline mustprogress nofree norecurse nosync nounwind willreturn memory(none) }
 ; TUNIT: attributes #[[ATTR1]] = { mustprogress nofree norecurse nosync nounwind willreturn memory(none) }
-; TUNIT: attributes #[[ATTR2]] = { norecurse }
-; TUNIT: attributes #[[ATTR3]] = { alwaysinline }
+; TUNIT: attributes #[[ATTR2]] = { alwaysinline }
 ;.
 ; CGSCC: attributes #[[ATTR0]] = { alwaysinline mustprogress nofree norecurse nosync nounwind willreturn memory(none) }
 ; CGSCC: attributes #[[ATTR1]] = { mustprogress nofree nosync nounwind willreturn memory(none) }
