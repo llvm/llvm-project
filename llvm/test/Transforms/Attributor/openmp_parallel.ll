@@ -70,11 +70,11 @@ define internal void @.omp_outlined.(ptr noalias nocapture readonly %.global_tid
 ; TUNIT:       omp.precond.then:
 ; TUNIT-NEXT:    call void @llvm.lifetime.start.p0(i64 noundef 4, ptr nocapture nofree noundef nonnull align 4 dereferenceable(4) [[DOTOMP_LB]]) #[[ATTR3:[0-9]+]]
 ; TUNIT-NEXT:    store i32 0, ptr [[DOTOMP_LB]], align 4
-; TUNIT-NEXT:    call void @llvm.lifetime.start.p0(i64 noundef 4, ptr nocapture nofree noundef nonnull align 4 dereferenceable(4) [[DOTOMP_UB]])
+; TUNIT-NEXT:    call void @llvm.lifetime.start.p0(i64 noundef 4, ptr nocapture nofree noundef nonnull align 4 dereferenceable(4) [[DOTOMP_UB]]) #[[ATTR3]]
 ; TUNIT-NEXT:    store i32 197, ptr [[DOTOMP_UB]], align 4
-; TUNIT-NEXT:    call void @llvm.lifetime.start.p0(i64 noundef 4, ptr nocapture nofree noundef nonnull align 4 dereferenceable(4) [[DOTOMP_STRIDE]])
+; TUNIT-NEXT:    call void @llvm.lifetime.start.p0(i64 noundef 4, ptr nocapture nofree noundef nonnull align 4 dereferenceable(4) [[DOTOMP_STRIDE]]) #[[ATTR3]]
 ; TUNIT-NEXT:    store i32 1, ptr [[DOTOMP_STRIDE]], align 4
-; TUNIT-NEXT:    call void @llvm.lifetime.start.p0(i64 noundef 4, ptr nocapture nofree noundef nonnull align 4 dereferenceable(4) [[DOTOMP_IS_LAST]])
+; TUNIT-NEXT:    call void @llvm.lifetime.start.p0(i64 noundef 4, ptr nocapture nofree noundef nonnull align 4 dereferenceable(4) [[DOTOMP_IS_LAST]]) #[[ATTR3]]
 ; TUNIT-NEXT:    store i32 0, ptr [[DOTOMP_IS_LAST]], align 4
 ; TUNIT-NEXT:    [[TMP0:%.*]] = load i32, ptr [[DOTGLOBAL_TID_]], align 4
 ; TUNIT-NEXT:    call void @__kmpc_for_static_init_4(ptr noundef nonnull align 8 dereferenceable(24) @[[GLOB1]], i32 [[TMP0]], i32 noundef 34, ptr noundef nonnull align 4 dereferenceable(4) [[DOTOMP_IS_LAST]], ptr noundef nonnull align 4 dereferenceable(4) [[DOTOMP_LB]], ptr noundef nonnull align 4 dereferenceable(4) [[DOTOMP_UB]], ptr noundef nonnull align 4 dereferenceable(4) [[DOTOMP_STRIDE]], i32 noundef 1, i32 noundef 1)
@@ -126,11 +126,11 @@ define internal void @.omp_outlined.(ptr noalias nocapture readonly %.global_tid
 ; CGSCC:       omp.precond.then:
 ; CGSCC-NEXT:    call void @llvm.lifetime.start.p0(i64 noundef 4, ptr nocapture nofree noundef nonnull align 4 dereferenceable(4) [[DOTOMP_LB]]) #[[ATTR3:[0-9]+]]
 ; CGSCC-NEXT:    store i32 0, ptr [[DOTOMP_LB]], align 4
-; CGSCC-NEXT:    call void @llvm.lifetime.start.p0(i64 noundef 4, ptr nocapture nofree noundef nonnull align 4 dereferenceable(4) [[DOTOMP_UB]])
+; CGSCC-NEXT:    call void @llvm.lifetime.start.p0(i64 noundef 4, ptr nocapture nofree noundef nonnull align 4 dereferenceable(4) [[DOTOMP_UB]]) #[[ATTR3]]
 ; CGSCC-NEXT:    store i32 [[SUB2]], ptr [[DOTOMP_UB]], align 4
-; CGSCC-NEXT:    call void @llvm.lifetime.start.p0(i64 noundef 4, ptr nocapture nofree noundef nonnull align 4 dereferenceable(4) [[DOTOMP_STRIDE]])
+; CGSCC-NEXT:    call void @llvm.lifetime.start.p0(i64 noundef 4, ptr nocapture nofree noundef nonnull align 4 dereferenceable(4) [[DOTOMP_STRIDE]]) #[[ATTR3]]
 ; CGSCC-NEXT:    store i32 1, ptr [[DOTOMP_STRIDE]], align 4
-; CGSCC-NEXT:    call void @llvm.lifetime.start.p0(i64 noundef 4, ptr nocapture nofree noundef nonnull align 4 dereferenceable(4) [[DOTOMP_IS_LAST]])
+; CGSCC-NEXT:    call void @llvm.lifetime.start.p0(i64 noundef 4, ptr nocapture nofree noundef nonnull align 4 dereferenceable(4) [[DOTOMP_IS_LAST]]) #[[ATTR3]]
 ; CGSCC-NEXT:    store i32 0, ptr [[DOTOMP_IS_LAST]], align 4
 ; CGSCC-NEXT:    [[TMP1:%.*]] = load i32, ptr [[DOTGLOBAL_TID_]], align 4
 ; CGSCC-NEXT:    call void @__kmpc_for_static_init_4(ptr noundef nonnull align 8 dereferenceable(24) @[[GLOB1]], i32 [[TMP1]], i32 noundef 34, ptr noundef nonnull align 4 dereferenceable(4) [[DOTOMP_IS_LAST]], ptr noundef nonnull align 4 dereferenceable(4) [[DOTOMP_LB]], ptr noundef nonnull align 4 dereferenceable(4) [[DOTOMP_UB]], ptr noundef nonnull align 4 dereferenceable(4) [[DOTOMP_STRIDE]], i32 noundef 1, i32 noundef 1)

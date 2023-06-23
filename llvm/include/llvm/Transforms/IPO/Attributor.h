@@ -3150,18 +3150,6 @@ struct IRAttribute : public BaseType {
       this->getState().indicateOptimisticFixpoint();
       return;
     }
-
-    bool IsFnInterface = IRP.isFnInterfaceKind();
-    const Function *FnScope = IRP.getAnchorScope();
-    // TODO: Not all attributes require an exact definition. Find a way to
-    //       enable deduction for some but not all attributes in case the
-    //       definition might be changed at runtime, see also
-    //       http://lists.llvm.org/pipermail/llvm-dev/2018-February/121275.html.
-    // TODO: We could always determine abstract attributes and if sufficient
-    //       information was found we could duplicate the functions that do not
-    //       have an exact definition.
-    if (IsFnInterface && (!FnScope || !A.isFunctionIPOAmendable(*FnScope)))
-      this->getState().indicatePessimisticFixpoint();
   }
 
   /// See AbstractAttribute::manifest(...).
