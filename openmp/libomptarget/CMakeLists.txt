@@ -15,7 +15,7 @@ if("${CMAKE_SOURCE_DIR}" STREQUAL "${CMAKE_CURRENT_SOURCE_DIR}")
 endif()
 
 # Add cmake directory to search for custom cmake functions.
-set(CMAKE_MODULE_PATH ${CMAKE_CURRENT_SOURCE_DIR}/cmake/Modules ${CMAKE_MODULE_PATH})
+list(PREPEND CMAKE_MODULE_PATH ${CMAKE_CURRENT_SOURCE_DIR}/cmake/Modules)
 
 # Set the path of all resulting libraries to a unified location so that it can
 # be used for testing.
@@ -38,18 +38,18 @@ endif()
 include_directories(${LIBOMPTARGET_LLVM_INCLUDE_DIRS})
 
 # This is a list of all the targets that are supported/tested right now.
-set (LIBOMPTARGET_ALL_TARGETS "${LIBOMPTARGET_ALL_TARGETS} aarch64-unknown-linux-gnu")
-set (LIBOMPTARGET_ALL_TARGETS "${LIBOMPTARGET_ALL_TARGETS} aarch64-unknown-linux-gnu-LTO")
-set (LIBOMPTARGET_ALL_TARGETS "${LIBOMPTARGET_ALL_TARGETS} amdgcn-amd-amdhsa")
-set (LIBOMPTARGET_ALL_TARGETS "${LIBOMPTARGET_ALL_TARGETS} powerpc64le-ibm-linux-gnu")
-set (LIBOMPTARGET_ALL_TARGETS "${LIBOMPTARGET_ALL_TARGETS} powerpc64le-ibm-linux-gnu-LTO")
-set (LIBOMPTARGET_ALL_TARGETS "${LIBOMPTARGET_ALL_TARGETS} powerpc64-ibm-linux-gnu")
-set (LIBOMPTARGET_ALL_TARGETS "${LIBOMPTARGET_ALL_TARGETS} powerpc64-ibm-linux-gnu-LTO")
-set (LIBOMPTARGET_ALL_TARGETS "${LIBOMPTARGET_ALL_TARGETS} x86_64-pc-linux-gnu")
-set (LIBOMPTARGET_ALL_TARGETS "${LIBOMPTARGET_ALL_TARGETS} x86_64-pc-linux-gnu-LTO")
-set (LIBOMPTARGET_ALL_TARGETS "${LIBOMPTARGET_ALL_TARGETS} nvptx64-nvidia-cuda")
-set (LIBOMPTARGET_ALL_TARGETS "${LIBOMPTARGET_ALL_TARGETS} nvptx64-nvidia-cuda-LTO")
-set (LIBOMPTARGET_ALL_TARGETS "${LIBOMPTARGET_ALL_TARGETS} nvptx64-nvidia-cuda-JIT-LTO")
+list(APPEND LIBOMPTARGET_ALL_TARGETS "aarch64-unknown-linux-gnu")
+list(APPEND LIBOMPTARGET_ALL_TARGETS "aarch64-unknown-linux-gnu-LTO")
+list(APPEND LIBOMPTARGET_ALL_TARGETS "amdgcn-amd-amdhsa")
+list(APPEND LIBOMPTARGET_ALL_TARGETS "powerpc64le-ibm-linux-gnu")
+list(APPEND LIBOMPTARGET_ALL_TARGETS "powerpc64le-ibm-linux-gnu-LTO")
+list(APPEND LIBOMPTARGET_ALL_TARGETS "powerpc64-ibm-linux-gnu")
+list(APPEND LIBOMPTARGET_ALL_TARGETS "powerpc64-ibm-linux-gnu-LTO")
+list(APPEND LIBOMPTARGET_ALL_TARGETS "x86_64-pc-linux-gnu")
+list(APPEND LIBOMPTARGET_ALL_TARGETS "x86_64-pc-linux-gnu-LTO")
+list(APPEND LIBOMPTARGET_ALL_TARGETS "nvptx64-nvidia-cuda")
+list(APPEND LIBOMPTARGET_ALL_TARGETS "nvptx64-nvidia-cuda-LTO")
+list(APPEND LIBOMPTARGET_ALL_TARGETS "nvptx64-nvidia-cuda-JIT-LTO")
 
 # Once the plugins for the different targets are validated, they will be added to
 # the list of supported targets in the current system.
