@@ -291,3 +291,12 @@ namespace ReturnLocalPtr {
                                  // ref-note {{read of variable whose lifetime has ended}} \
                                  // expected-error {{not an integral constant expression}}
 }
+
+namespace VoidReturn {
+  /// ReturnStmt with an expression in a void function used to cause problems.
+  constexpr void bar() {}
+  constexpr void foo() {
+    return bar();
+  }
+  static_assert((foo(),1) == 1, "");
+}
