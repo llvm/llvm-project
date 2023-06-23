@@ -34,16 +34,15 @@
 ; FIXME we should recognize this as UB and make it an unreachable.
 
 define dso_local i16 @foo(i16 %a) {
-; TUNIT: Function Attrs: norecurse
+; TUNIT: Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn memory(none)
 ; TUNIT-LABEL: define {{[^@]+}}@foo
 ; TUNIT-SAME: (i16 [[A:%.*]]) #[[ATTR0:[0-9]+]] {
-; TUNIT-NEXT:    [[CALL:%.*]] = call i16 bitcast (i16 (i16, i16)* @bar to i16 (i16)*)(i16 [[A]])
-; TUNIT-NEXT:    ret i16 [[CALL]]
+; TUNIT-NEXT:    ret i16 0
 ;
-; CGSCC: Function Attrs: nosync nounwind
+; CGSCC: Function Attrs: mustprogress nofree nosync nounwind willreturn
 ; CGSCC-LABEL: define {{[^@]+}}@foo
 ; CGSCC-SAME: (i16 [[A:%.*]]) #[[ATTR0:[0-9]+]] {
-; CGSCC-NEXT:    [[CALL:%.*]] = call i16 bitcast (i16 (i16, i16)* @bar to i16 (i16)*)(i16 [[A]])
+; CGSCC-NEXT:    [[CALL:%.*]] = call i16 bitcast (i16 (i16, i16)* @bar to i16 (i16)*)(i16 [[A]]) #[[ATTR2:[0-9]+]]
 ; CGSCC-NEXT:    ret i16 [[CALL]]
 ;
   %call = call i16 bitcast (i16 (i16, i16) * @bar to i16 (i16) *)(i16 %a)
@@ -51,25 +50,25 @@ define dso_local i16 @foo(i16 %a) {
 }
 
 define internal i16 @bar(i16 %p1, i16 %p2) {
-; CHECK: Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn memory(none)
-; CHECK-LABEL: define {{[^@]+}}@bar
-; CHECK-SAME: (i16 [[P1:%.*]], i16 [[P2:%.*]]) #[[ATTR1:[0-9]+]] {
-; CHECK-NEXT:    ret i16 0
+; CGSCC: Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn memory(none)
+; CGSCC-LABEL: define {{[^@]+}}@bar
+; CGSCC-SAME: (i16 [[P1:%.*]], i16 [[P2:%.*]]) #[[ATTR1:[0-9]+]] {
+; CGSCC-NEXT:    ret i16 0
 ;
   ret i16 0
 }
 
 define dso_local i16 @foo2(i16 %a) {
-; TUNIT: Function Attrs: norecurse
+; TUNIT: Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn memory(none)
 ; TUNIT-LABEL: define {{[^@]+}}@foo2
 ; TUNIT-SAME: (i16 [[A:%.*]]) #[[ATTR0]] {
-; TUNIT-NEXT:    [[CALL:%.*]] = call i16 bitcast (i16 (i16, i16)* @bar2 to i16 (i16)*)(i16 [[A]])
+; TUNIT-NEXT:    [[CALL:%.*]] = call i16 bitcast (i16 (i16, i16)* @bar2 to i16 (i16)*)(i16 [[A]]) #[[ATTR1:[0-9]+]]
 ; TUNIT-NEXT:    ret i16 [[CALL]]
 ;
-; CGSCC: Function Attrs: nosync nounwind
+; CGSCC: Function Attrs: mustprogress nofree nosync nounwind willreturn
 ; CGSCC-LABEL: define {{[^@]+}}@foo2
 ; CGSCC-SAME: (i16 [[A:%.*]]) #[[ATTR0]] {
-; CGSCC-NEXT:    [[CALL:%.*]] = call i16 bitcast (i16 (i16, i16)* @bar2 to i16 (i16)*)(i16 [[A]])
+; CGSCC-NEXT:    [[CALL:%.*]] = call i16 bitcast (i16 (i16, i16)* @bar2 to i16 (i16)*)(i16 [[A]]) #[[ATTR2]]
 ; CGSCC-NEXT:    ret i16 [[CALL]]
 ;
   %call = call i16 bitcast (i16 (i16, i16) * @bar2 to i16 (i16) *)(i16 %a)
@@ -77,11 +76,17 @@ define dso_local i16 @foo2(i16 %a) {
 }
 
 define internal i16 @bar2(i16 %p1, i16 %p2) {
-; CHECK: Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn memory(none)
-; CHECK-LABEL: define {{[^@]+}}@bar2
-; CHECK-SAME: (i16 [[P1:%.*]], i16 [[P2:%.*]]) #[[ATTR1]] {
-; CHECK-NEXT:    [[A:%.*]] = add i16 [[P1]], [[P2]]
-; CHECK-NEXT:    ret i16 [[A]]
+; TUNIT: Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn memory(none)
+; TUNIT-LABEL: define {{[^@]+}}@bar2
+; TUNIT-SAME: (i16 [[P1:%.*]], i16 [[P2:%.*]]) #[[ATTR0]] {
+; TUNIT-NEXT:    [[A:%.*]] = add i16 [[P1]], [[P2]]
+; TUNIT-NEXT:    ret i16 [[A]]
+;
+; CGSCC: Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn memory(none)
+; CGSCC-LABEL: define {{[^@]+}}@bar2
+; CGSCC-SAME: (i16 [[P1:%.*]], i16 [[P2:%.*]]) #[[ATTR1]] {
+; CGSCC-NEXT:    [[A:%.*]] = add i16 [[P1]], [[P2]]
+; CGSCC-NEXT:    ret i16 [[A]]
 ;
   %a = add i16 %p1, %p2
   ret i16 %a
@@ -94,18 +99,16 @@ define internal i16 @bar2(i16 %p1, i16 %p2) {
 ; been provided),
 
 define dso_local i16 @vararg_tests(i16 %a) {
-; TUNIT: Function Attrs: norecurse
+; TUNIT: Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn memory(none)
 ; TUNIT-LABEL: define {{[^@]+}}@vararg_tests
 ; TUNIT-SAME: (i16 [[A:%.*]]) #[[ATTR0]] {
-; TUNIT-NEXT:    [[CALL2:%.*]] = call i16 bitcast (i16 (i16, i16, ...)* @vararg_no_prop to i16 (i16)*)(i16 noundef 7)
-; TUNIT-NEXT:    [[ADD:%.*]] = add i16 7, [[CALL2]]
-; TUNIT-NEXT:    ret i16 [[ADD]]
+; TUNIT-NEXT:    ret i16 14
 ;
-; CGSCC: Function Attrs: nosync nounwind
+; CGSCC: Function Attrs: mustprogress nofree nosync nounwind willreturn
 ; CGSCC-LABEL: define {{[^@]+}}@vararg_tests
 ; CGSCC-SAME: (i16 [[A:%.*]]) #[[ATTR0]] {
 ; CGSCC-NEXT:    [[CALL1:%.*]] = call i16 (i16, ...) @vararg_prop(i16 noundef 7, i16 noundef 8, i16 [[A]])
-; CGSCC-NEXT:    [[CALL2:%.*]] = call i16 bitcast (i16 (i16, i16, ...)* @vararg_no_prop to i16 (i16)*)(i16 7)
+; CGSCC-NEXT:    [[CALL2:%.*]] = call i16 bitcast (i16 (i16, i16, ...)* @vararg_no_prop to i16 (i16)*)(i16 7) #[[ATTR2]]
 ; CGSCC-NEXT:    [[ADD:%.*]] = add i16 [[CALL1]], [[CALL2]]
 ; CGSCC-NEXT:    ret i16 [[ADD]]
 ;
@@ -125,18 +128,21 @@ define internal i16 @vararg_prop(i16 %p1, ...) {
 }
 
 define internal i16 @vararg_no_prop(i16 %p1, i16 %p2, ...) {
-; CHECK: Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn memory(none)
-; CHECK-LABEL: define {{[^@]+}}@vararg_no_prop
-; CHECK-SAME: (i16 [[P1:%.*]], i16 [[P2:%.*]], ...) #[[ATTR1]] {
-; CHECK-NEXT:    ret i16 7
+; CGSCC: Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn memory(none)
+; CGSCC-LABEL: define {{[^@]+}}@vararg_no_prop
+; CGSCC-SAME: (i16 [[P1:%.*]], i16 [[P2:%.*]], ...) #[[ATTR1]] {
+; CGSCC-NEXT:    ret i16 7
 ;
   ret i16 %p1
 }
 
 ;.
-; TUNIT: attributes #[[ATTR0]] = { norecurse }
-; TUNIT: attributes #[[ATTR1]] = { mustprogress nofree norecurse nosync nounwind willreturn memory(none) }
+; TUNIT: attributes #[[ATTR0]] = { mustprogress nofree norecurse nosync nounwind willreturn memory(none) }
+; TUNIT: attributes #[[ATTR1]] = { nofree nosync nounwind willreturn memory(none) }
 ;.
-; CGSCC: attributes #[[ATTR0]] = { nosync nounwind }
+; CGSCC: attributes #[[ATTR0]] = { mustprogress nofree nosync nounwind willreturn }
 ; CGSCC: attributes #[[ATTR1]] = { mustprogress nofree norecurse nosync nounwind willreturn memory(none) }
+; CGSCC: attributes #[[ATTR2]] = { nofree nounwind willreturn }
 ;.
+;; NOTE: These prefixes are unused and the list is autogenerated. Do not add tests below this line:
+; CHECK: {{.*}}

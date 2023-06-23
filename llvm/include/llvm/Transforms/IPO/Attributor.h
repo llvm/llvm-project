@@ -708,7 +708,8 @@ struct IRPosition {
       // function.
       if (Argument *Arg = getAssociatedArgument())
         return Arg->getParent();
-      return CB->getCalledFunction();
+      return dyn_cast_if_present<Function>(
+          CB->getCalledOperand()->stripPointerCasts());
     }
     return getAnchorScope();
   }
@@ -1257,7 +1258,8 @@ struct InformationCache {
 
       for (Instruction &I : instructions(*F))
         if (auto *CB = dyn_cast<CallBase>(&I))
-          if (Function *Callee = CB->getCalledFunction())
+          if (auto *Callee =
+                  dyn_cast_if_present<Function>(CB->getCalledOperand()))
             if (Seen.insert(Callee).second)
               Worklist.push_back(Callee);
     }
