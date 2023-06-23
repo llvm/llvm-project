@@ -252,13 +252,11 @@ public:
   /// this.
   ///
   /// \param argTypes - must all actually be canonical as params
-  const CGFunctionInfo &arrangeLLVMFunctionInfo(CanQualType returnType,
-                                                bool instanceMethod,
-                                                bool chainCall,
-                                                ArrayRef<CanQualType> argTypes,
-                                                FunctionType::ExtInfo info,
-                    ArrayRef<FunctionProtoType::ExtParameterInfo> paramInfos,
-                                                RequiredArgs args);
+  const CGFunctionInfo &arrangeLLVMFunctionInfo(
+      CanQualType returnType, FnInfoOpts opts, ArrayRef<CanQualType> argTypes,
+      FunctionType::ExtInfo info,
+      ArrayRef<FunctionProtoType::ExtParameterInfo> paramInfos,
+      RequiredArgs args);
 
   /// Compute a new LLVM record layout object for the given record.
   std::unique_ptr<CGRecordLayout> ComputeRecordLayout(const RecordDecl *D,
