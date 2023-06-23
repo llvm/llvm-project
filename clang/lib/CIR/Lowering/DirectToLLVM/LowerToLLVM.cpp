@@ -1234,6 +1234,8 @@ lowerDirectlyFromCIRToLLVMIR(mlir::ModuleOp theModule,
   // emission directly from our frontend.
   pm.addPass(mlir::LLVM::createDIScopeForLLVMFuncOpPass());
 
+  (void)mlir::applyPassManagerCLOptions(pm);
+
   auto result = !mlir::failed(pm.run(theModule));
   if (!result)
     report_fatal_error(
