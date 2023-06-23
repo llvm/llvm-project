@@ -212,8 +212,7 @@ static void DumpCharacter(Stream &s, const char c) {
     s.PutChar(c);
     return;
   }
-  // Non-print characters can be assumed to be unsigned.
-  s.Printf("\\x%2.2x", static_cast<unsigned char>(c));
+  s.Printf("\\x%2.2hhx", c);
 }
 
 /// Dump a floating point type.
