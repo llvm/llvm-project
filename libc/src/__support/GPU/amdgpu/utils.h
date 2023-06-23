@@ -10,6 +10,7 @@
 #define LLVM_LIBC_SRC_SUPPORT_GPU_AMDGPU_IO_H
 
 #include "src/__support/common.h"
+#include "src/__support/macros/config.h"
 
 #include <stdint.h>
 
@@ -142,6 +143,30 @@ LIBC_INLINE uint32_t get_lane_size() { return LANE_SIZE; }
 /// Wait for all threads in the wavefront to converge, this is a noop on AMDGPU.
 [[clang::convergent]] LIBC_INLINE void sync_lane(uint64_t) {
   __builtin_amdgcn_wave_barrier();
+}
+
+/// Returns the current value of the GPU's processor clock.
+/// NOTE: The RDNA3 and RDNA2 architectures use a 20-bit cycle cycle counter.
+LIBC_INLINE uint64_t processor_clock() {
+  if constexpr (LIBC_HAS_BUILTIN(__builtin_amdgcn_s_memtime))
+    return __builtin_amdgcn_s_memtime();
+  else if constexpr (LIBC_HAS_BUILTIN(__builtin_readcyclecounter))
+    return __builtin_readcyclecounter();
+  else
+    return 0;
+}
+
+/// Returns a fixed-frequency timestamp. The actual frequency is dependent on
+/// the card and can only be queried via the driver.
+LIBC_INLINE uint64_t fixed_frequrency_clock() {
+  if constexpr (LIBC_HAS_BUILTIN(__builtin_amdgcn_s_sendmsg_rtnl))
+    return __builtin_amdgcn_s_sendmsg_rtnl(0x83);
+  else if constexpr (LIBC_HAS_BUILTIN(__builtin_amdgcn_s_memrealtime))
+    return __builtin_amdgcn_s_memrealtime();
+  else if constexpr (LIBC_HAS_BUILTIN(__builtin_amdgcn_s_memtime))
+    return __builtin_amdgcn_s_memtime();
+  else
+    return 0;
 }
 
 } // namespace gpu
