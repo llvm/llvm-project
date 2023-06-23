@@ -144,7 +144,7 @@ define amdgpu_kernel void @neg_rsq_neg_f32(ptr addrspace(1) noalias %out, ptr ad
 ; SI-UNSAFE: v_fma_f64
 define amdgpu_kernel void @neg_rsq_neg_f64(ptr addrspace(1) noalias %out, ptr addrspace(1) noalias %in) #0 {
   %val = load double, ptr addrspace(1) %in, align 4
-  %val.fneg = fsub double -0.0, %val
+  %val.fneg = fneg double %val
   %sqrt = call double @llvm.sqrt.f64(double %val.fneg)
   %div = fdiv double -1.0, %sqrt
   store double %div, ptr addrspace(1) %out, align 4
