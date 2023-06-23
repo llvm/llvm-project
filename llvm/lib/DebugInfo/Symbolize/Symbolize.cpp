@@ -550,24 +550,19 @@ LLVMSymbolizer::createModuleInfo(const ObjectFile *Obj,
   return InsertResult.first->second.get();
 }
 
-std::pair<std::string, std::string>
-LLVMSymbolizer::splitBinaryFileName(StringRef Name) {
-  StringRef BinaryName = Name;
+Expected<SymbolizableModule *>
+LLVMSymbolizer::getOrCreateModuleInfo(const std::string &ModuleName) {
+  std::string BinaryName = ModuleName;
   std::string ArchName = Opts.DefaultArch;
-  size_t ColonPos = Name.find_last_of(':');
-  if (ColonPos != StringRef::npos) {
-    StringRef ArchStr = Name.substr(ColonPos + 1);
+  size_t ColonPos = ModuleName.find_last_of(':');
+  // Verify that substring after colon form a valid arch name.
+  if (ColonPos != std::string::npos) {
+    std::string ArchStr = ModuleName.substr(ColonPos + 1);
     if (Triple(ArchStr).getArch() != Triple::UnknownArch) {
-      BinaryName = Name.substr(0, ColonPos);
+      BinaryName = ModuleName.substr(0, ColonPos);
       ArchName = ArchStr;
     }
   }
-  return std::make_pair(BinaryName.str(), ArchName);
-}
-
-Expected<SymbolizableModule *>
-LLVMSymbolizer::getOrCreateModuleInfo(const std::string &ModuleName) {
-  auto [BinaryName, ArchName] = splitBinaryFileName(ModuleName);
 
   auto I = Modules.find(ModuleName);
   if (I != Modules.end()) {
@@ -710,15 +705,6 @@ LLVMSymbolizer::DemangleName(const std::string &Name,
     return DemangledCName;
   }
   return Name;
-}
-
-Error LLVMSymbolizer::checkFileExists(StringRef BinName) {
-  auto [BinaryName, ArchName] = splitBinaryFileName(BinName);
-  sys::fs::file_status Stat;
-  std::error_code EC = sys::fs::status(BinaryName, Stat);
-  if (!EC && sys::fs::is_directory(Stat))
-    EC = errc::is_a_directory;
-  return errorCodeToError(EC);
 }
 
 void LLVMSymbolizer::recordAccess(CachedBinary &Bin) {

@@ -119,7 +119,12 @@ public:
     BIDFetcher = std::move(Fetcher);
   }
 
-  Error checkFileExists(StringRef Name);
+  /// Returns a SymbolizableModule or an error if loading debug info failed.
+  /// Only one attempt is made to load a module, and errors during loading are
+  /// only reported once. Subsequent calls to get module info for a module that
+  /// failed to load will return nullptr.
+  Expected<SymbolizableModule *>
+  getOrCreateModuleInfo(const std::string &ModuleName);
 
 private:
   // Bundles together object file with code/data and object file with
@@ -142,12 +147,6 @@ private:
   symbolizeFrameCommon(const T &ModuleSpecifier,
                        object::SectionedAddress ModuleOffset);
 
-  /// Returns a SymbolizableModule or an error if loading debug info failed.
-  /// Only one attempt is made to load a module, and errors during loading are
-  /// only reported once. Subsequent calls to get module info for a module that
-  /// failed to load will return nullptr.
-  Expected<SymbolizableModule *>
-  getOrCreateModuleInfo(const std::string &ModuleName);
   Expected<SymbolizableModule *> getOrCreateModuleInfo(const ObjectFile &Obj);
 
   /// Returns a SymbolizableModule or an error if loading debug info failed.
@@ -189,11 +188,6 @@ private:
 
   /// Update the LRU cache order when a binary is accessed.
   void recordAccess(CachedBinary &Bin);
-
-  /// Split binary file name into file and architecture parts. For example,
-  /// the name 'macho-universal:i386', will be split into 'macho-universal' and
-  /// 'i386'.
-  std::pair<std::string, std::string> splitBinaryFileName(StringRef Name);
 
   std::map<std::string, std::unique_ptr<SymbolizableModule>, std::less<>>
       Modules;
