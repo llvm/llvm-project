@@ -48,16 +48,21 @@ X86LegalizerInfo::X86LegalizerInfo(const X86Subtarget &STI,
   const LLT s80 = LLT::scalar(80);
   const LLT s128 = LLT::scalar(128);
   const LLT sMaxScalar = Subtarget.is64Bit() ? s64 : s32;
+  const LLT v2s32 = LLT::fixed_vector(2, 32);
+  const LLT v4s8 = LLT::fixed_vector(4, 8);
+
 
   const LLT v16s8 = LLT::fixed_vector(16, 8);
   const LLT v8s16 = LLT::fixed_vector(8, 16);
   const LLT v4s32 = LLT::fixed_vector(4, 32);
   const LLT v2s64 = LLT::fixed_vector(2, 64);
+  const LLT v2p0 = LLT::fixed_vector(2, p0);
 
   const LLT v32s8 = LLT::fixed_vector(32, 8);
   const LLT v16s16 = LLT::fixed_vector(16, 16);
   const LLT v8s32 = LLT::fixed_vector(8, 32);
   const LLT v4s64 = LLT::fixed_vector(4, 64);
+  const LLT v4p0 = LLT::fixed_vector(4, p0);
 
   const LLT v64s8 = LLT::fixed_vector(64, 8);
   const LLT v32s16 = LLT::fixed_vector(32, 16);
@@ -330,7 +335,7 @@ X86LegalizerInfo::X86LegalizerInfo(const X86Subtarget &STI,
 
   getActionDefinitionsBuilder({G_FRAME_INDEX, G_GLOBAL_VALUE}).legalFor({p0});
 
-  // load/store
+  // load/store: add more corner cases
   for (unsigned Op : {G_LOAD, G_STORE}) {
     auto &Action = getActionDefinitionsBuilder(Op);
     Action.legalForTypesWithMemDesc({{s8, p0, s1, 1},
@@ -341,22 +346,26 @@ X86LegalizerInfo::X86LegalizerInfo(const X86Subtarget &STI,
                                      {s32, p0, s16, 1},
                                      {s32, p0, s32, 1},
                                      {s80, p0, s80, 1},
-                                     {p0, p0, p0, 1}});
+                                     {p0, p0, p0, 1},
+                                     {v4s8, p0, v4s8, 1}});
     if (Is64Bit)
       Action.legalForTypesWithMemDesc({{s64, p0, s8, 1},
                                        {s64, p0, s16, 1},
                                        {s64, p0, s32, 1},
-                                       {s64, p0, s64, 1}});
+                                       {s64, p0, s64, 1},
+                                       {v2s32, p0, v2s32, 1}});
     if (HasSSE1)
       Action.legalForTypesWithMemDesc({{v16s8, p0, v16s8, 1},
                                        {v8s16, p0, v8s16, 1},
                                        {v4s32, p0, v4s32, 1},
-                                       {v2s64, p0, v2s64, 1}});
+                                       {v2s64, p0, v2s64, 1},
+                                       {v2p0, p0, v2p0, 1}});
     if (HasAVX)
       Action.legalForTypesWithMemDesc({{v32s8, p0, v32s8, 1},
                                        {v16s16, p0, v16s16, 1},
                                        {v8s32, p0, v8s32, 1},
-                                       {v4s64, p0, v4s64, 1}});
+                                       {v4s64, p0, v4s64, 1},
+                                       {v4p0, p0, v4p0, 1}});
     if (HasAVX512)
       Action.legalForTypesWithMemDesc({{v64s8, p0, v64s8, 1},
                                        {v32s16, p0, v32s16, 1},
