@@ -154,7 +154,7 @@ public:
   void rewrite(Operation *op, ArrayRef<Value> operands,
                ConversionPatternRewriter &rewriter) const final {
     if constexpr (SourceOp::hasProperties())
-      rewrite(cast<SourceOp>(op),
+      return rewrite(cast<SourceOp>(op),
               OpAdaptor(operands, op->getDiscardableAttrDictionary(),
                         cast<SourceOp>(op).getProperties()),
               rewriter);
