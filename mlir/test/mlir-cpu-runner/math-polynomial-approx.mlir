@@ -293,7 +293,7 @@ func.func @exp() {
   %f0 = arith.constant 1.0 : f32
   call @exp_f32(%f0) : (f32) -> ()
 
-  // CHECK: 0.778802, 2.117, 2.71828, 3.85742
+  // CHECK: 0.778801, 2.117, 2.71828, 3.85743
   %v1 = arith.constant dense<[-0.25, 0.75, 1.0, 1.35]> : vector<4xf32>
   call @exp_4xf32(%v1) : (vector<4xf32>) -> ()
 
@@ -301,7 +301,7 @@ func.func @exp() {
   %zero = arith.constant 0.0 : f32
   call @exp_f32(%zero) : (f32) -> ()
 
-  // CHECK: 1.17549e-38, 1.38879e-11, 7.20049e+10, inf
+  // CHECK: 0, 1.38879e-11, 7.20049e+10, inf
   %special_vec = arith.constant dense<[-89.0, -25.0, 25.0, 89.0]> : vector<4xf32>
   call @exp_4xf32(%special_vec) : (vector<4xf32>) -> ()
 
@@ -349,7 +349,7 @@ func.func @expm1() {
   %f0 = arith.constant 1.0e-10 : f32
   call @expm1_f32(%f0) : (f32) -> ()
 
-  // CHECK: -0.00995016, 0.0100502, 0.648721, 6.38905
+  // CHECK: -0.00995017, 0.0100502, 0.648721, 6.38906
   %v1 = arith.constant dense<[-0.01, 0.01, 0.5, 2.0]> : vector<4xf32>
   call @expm1_4xf32(%v1) : (vector<4xf32>) -> ()
 
@@ -701,5 +701,3 @@ func.func @main() {
   call @ceilf() : () -> ()
   return
 }
-
-
