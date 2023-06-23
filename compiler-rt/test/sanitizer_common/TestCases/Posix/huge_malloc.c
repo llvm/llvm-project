@@ -3,11 +3,11 @@
 #include <stdlib.h>
 #include <stdio.h>
 
-// FIXME: Hangs.
-// UNSUPPORTED: tsan
-
 // https://github.com/google/sanitizers/issues/981
 // UNSUPPORTED: android-26
+
+// FIXME: Hangs.
+// UNSUPPORTED: tsan
 
 // FIXME: Make it work. Don't xfail to avoid excessive memory usage.
 // UNSUPPORTED: msan
