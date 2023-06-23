@@ -11,6 +11,14 @@
 # we `file(WRITE)` a file with an @variable reference and `configure_file` it.
 cmake_policy(SET CMP0053 OLD)
 
+if(${CMAKE_VERSION} VERSION_GREATER_EQUAL "3.20.0")
+  # The policy change was for handling of relative paths for
+  # DEPFILE. We only use absolute paths but cmake still feels the need
+  # to complain without setting this.
+  cmake_policy(SET CMP0116 NEW)
+endif()
+
+
 if (WIN32)
   set(EXE_SUFFIX ".exe")
 else()
@@ -67,7 +75,7 @@ endmacro()
 macro(opencl_bc_lib)
   set(parse_options)
   set(one_value_args NAME)
-  set(multi_value_args SOURCES INTERNAL_LINK_LIBS HEADERS)
+  set(multi_value_args SOURCES INTERNAL_LINK_LIBS)
 
   cmake_parse_arguments(OPENCL_BC_LIB "${parse_options}" "${one_value_args}"
                                       "${multi_value_args}" ${ARGN})
@@ -75,7 +83,6 @@ macro(opencl_bc_lib)
   set(name ${OPENCL_BC_LIB_NAME})
   set(sources ${OPENCL_BC_LIB_SOURCES})
   set(internal_link_libs ${OPENCL_BC_LIB_INTERNAL_LINK_LIBS})
-  set(headers ${OPENCL_BC_LIB_HEADERS})
 
   get_target_property(irif_lib_output irif OUTPUT_NAME)
 
@@ -97,40 +104,24 @@ macro(opencl_bc_lib)
   set_inc_options()
   set(deps)
   foreach(file ${OPENCL_BC_LIB_SOURCES})
+    get_filename_component(fname "${file}" NAME)
     get_filename_component(fname_we "${file}" NAME_WE)
     get_filename_component(fext "${file}" EXT)
     if (fext STREQUAL ".cl")
       set(output "${CMAKE_CURRENT_BINARY_DIR}/${fname_we}${BC_EXT}")
+      set(depfile "${CMAKE_CURRENT_BINARY_DIR}/${fname}.d")
 
       get_property(file_specific_flags SOURCE "${file}" PROPERTY COMPILE_FLAGS)
-
-      # irif is not included normally so is invisible to
-      # IMPLICIT_DEPENDS scanning, so we have to forcibly add it as a
-      # dependency.
-      set(depends_args DEPENDS
-        "$<TARGET_FILE:clang>"
-        "${irif_lib_output}"
-        "${CMAKE_CURRENT_SOURCE_DIR}/../irif/inc/irif.h")
-
-      # FIXME: Currently IMPLICIT_DEPENDS is only supported for GNU
-      # Makefile, so as an overly-conservatively workaround to cover
-      # all generators we just assume all .cl sources require all
-      # headers. If all the generators we care about begin to support
-      # IMPLICIT_DEPENDS we won't need this.
-      if(CMAKE_GENERATOR MATCHES "Makefiles")
-        list(APPEND depends_args IMPLICIT_DEPENDS C "${file}")
-      else()
-        list(APPEND depends_args  ${headers})
-        # FIXME: Use DEPFILE instead for Ninja
-      endif()
 
       add_custom_command(OUTPUT "${output}"
         COMMAND $<TARGET_FILE:clang> ${inc_options} ${CLANG_OCL_FLAGS}
           ${file_specific_flags}
           -emit-llvm -Xclang -mlink-builtin-bitcode -Xclang "${irif_lib_output}"
           -c "${file}" -o "${output}"
-          MAIN_DEPENDENCY "${file}"
-          ${depends_args})
+          -MD -MF ${depfile}
+         MAIN_DEPENDENCY "${file}"
+         DEPENDS "$<TARGET_FILE:clang>" "${irif_lib_output}"
+         DEPFILE ${depfile})
       list(APPEND deps "${output}")
       list(APPEND clean_files "${output}")
     endif()

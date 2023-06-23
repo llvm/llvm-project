@@ -9,11 +9,6 @@ file(GLOB sources
   ${CMAKE_CURRENT_SOURCE_DIR}/src/*.cl
   )
 
-file(GLOB headers
-  ${CMAKE_CURRENT_SOURCE_DIR}/src/*.h
-  ${CMAKE_CURRENT_SOURCE_DIR}/inc/*.h
-)
-
 include_directories(${CMAKE_CURRENT_SOURCE_DIR}/../irif/inc)
 include_directories(${CMAKE_CURRENT_SOURCE_DIR}/../oclc/inc)
 include_directories(${CMAKE_CURRENT_SOURCE_DIR}/inc)
@@ -30,4 +25,4 @@ set_source_files_properties(
   ${CMAKE_CURRENT_SOURCE_DIR}/src/native_rsqrtH.cl
   PROPERTIES COMPILE_FLAGS "${rcp_f16_flags}")
 
-opencl_bc_lib(NAME ocml SOURCES ${sources} HEADERS ${headers})
+opencl_bc_lib(NAME ocml SOURCES ${sources})
