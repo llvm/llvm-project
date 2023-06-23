@@ -585,3 +585,193 @@ body:             |
     STRSui killed renamable $s1, renamable $x1, 1 :: (store (s32))
     RET undef $lr
 ...
+
+
+---
+name:            21-ldrswpre-ldrswui-no-merge
+tracksRegLiveness: true
+liveins:
+  - { reg: '$x0' }
+  - { reg: '$x1' }
+  - { reg: '$x2' }
+machineFunctionInfo:
+  hasRedZone:      false
+body:             |
+  bb.0:
+    liveins: $x0, $x1, $x2
+    ; CHECK-LABEL: name: 21-ldrswpre-ldrswui-no-merge
+    ; CHECK: liveins: $x0, $x1, $x2
+    ; CHECK: early-clobber renamable $x1, renamable $x0 = LDRSWpre renamable $x1, 40, implicit $w1 :: (load (s32))
+    ; CHECK: renamable $x2 = LDRSWui renamable $x1, 1 :: (load (s32))
+    ; CHECK: STPXi renamable $x0, renamable $x2, renamable $x1, 0 :: (store (s64))
+    ; CHECK: RET undef $lr
+    early-clobber renamable $x1, renamable $x0 = LDRSWpre killed renamable $x1, 40 :: (load (s32))
+    renamable $x2 = LDRSWui renamable $x1, 1 :: (load (s32))
+    STRXui killed renamable $x0, renamable $x1, 0 :: (store (s64))
+    STRXui killed renamable $x2, renamable $x1, 1 :: (store (s64))
+    RET undef $lr
+...
+
+
+---
+name:            22-ldrswpre-ldurswi-no-merge
+tracksRegLiveness: true
+liveins:
+  - { reg: '$x0' }
+  - { reg: '$x1' }
+  - { reg: '$x2' }
+machineFunctionInfo:
+  hasRedZone:      false
+body:             |
+  bb.0:
+    liveins: $x0, $x1, $x2
+    ; CHECK-LABEL: name: 22-ldrswpre-ldurswi-no-merge
+    ; CHECK: liveins: $x0, $x1, $x2
+    ; CHECK: early-clobber renamable $x1, renamable $x0 = LDRSWpre renamable $x1, 40, implicit $w1 :: (load (s32))
+    ; CHECK: renamable $x2 = LDURSWi renamable $x1, 4 :: (load (s32))
+    ; CHECK: STPXi renamable $x0, renamable $x2, renamable $x1, 0 :: (store (s64))
+    ; CHECK: RET undef $lr
+    early-clobber renamable $x1, renamable $x0 = LDRSWpre killed renamable $x1, 40 :: (load (s32))
+    renamable $x2 = LDURSWi renamable $x1, 4 :: (load (s32))
+    STRXui killed renamable $x0, renamable $x1, 0 :: (store (s64))
+    STRXui killed renamable $x2, renamable $x1, 1 :: (store (s64))
+    RET undef $lr
+...
+
+
+---
+name:            23-ldrswui-ldrswpre-no-merge
+tracksRegLiveness: true
+liveins:
+  - { reg: '$x0' }
+  - { reg: '$x1' }
+  - { reg: '$x2' }
+machineFunctionInfo:
+  hasRedZone:      false
+body:             |
+  bb.0:
+    liveins: $x0, $x1, $x2
+    ; CHECK-LABEL: name: 23-ldrswui-ldrswpre-no-merge
+    ; CHECK: liveins: $x0, $x1, $x2
+    ; CHECK: renamable $x2 = LDRSWui renamable $x1, 1 :: (load (s32))
+    ; CHECK: early-clobber renamable $x1, renamable $x0 = LDRSWpre renamable $x1, 40, implicit $w1 :: (load (s32))
+    ; CHECK: STPXi renamable $x0, renamable $x2, renamable $x1, 0 :: (store (s64))
+    ; CHECK: RET undef $lr
+    renamable $x2 = LDRSWui renamable $x1, 1 :: (load (s32))
+    early-clobber renamable $x1, renamable $x0 = LDRSWpre killed renamable $x1, 40 :: (load (s32))
+    STRXui killed renamable $x0, renamable $x1, 0 :: (store (s64))
+    STRXui killed renamable $x2, renamable $x1, 1 :: (store (s64))
+    RET undef $lr
+...
+
+
+---
+name:            24-ldurswi-ldrswpre-no-merge
+tracksRegLiveness: true
+liveins:
+  - { reg: '$x0' }
+  - { reg: '$x1' }
+  - { reg: '$x2' }
+machineFunctionInfo:
+  hasRedZone:      false
+body:             |
+  bb.0:
+    liveins: $x0, $x1, $x2
+    ; CHECK-LABEL: name: 24-ldurswi-ldrswpre-no-merge
+    ; CHECK: liveins: $x0, $x1, $x2
+    ; CHECK: renamable $x2 = LDURSWi renamable $x1, 4 :: (load (s32))
+    ; CHECK: early-clobber renamable $x1, renamable $x0 = LDRSWpre renamable $x1, 40, implicit $w1 :: (load (s32))
+    ; CHECK: STPXi renamable $x0, renamable $x2, renamable $x1, 0 :: (store (s64))
+    ; CHECK: RET undef $lr
+    renamable $x2 = LDURSWi renamable $x1, 4 :: (load (s32))
+    early-clobber renamable $x1, renamable $x0 = LDRSWpre killed renamable $x1, 40 :: (load (s32))
+    STRXui killed renamable $x0, renamable $x1, 0 :: (store (s64))
+    STRXui killed renamable $x2, renamable $x1, 1 :: (store (s64))
+    RET undef $lr
+...
+
+
+---
+name:            25-ldrswpre-ldrswpre-no-merge
+tracksRegLiveness: true
+liveins:
+  - { reg: '$x0' }
+  - { reg: '$x1' }
+  - { reg: '$x2' }
+machineFunctionInfo:
+  hasRedZone:      false
+body:             |
+  bb.0:
+    liveins: $x0, $x1, $x2
+    ; CHECK-LABEL: name: 25-ldrswpre-ldrswpre-no-merge
+    ; CHECK: liveins: $x0, $x1, $x2
+    ; CHECK: early-clobber renamable $x1, dead renamable $x0 = LDRSWpre renamable $x1, 48, implicit $w1 :: (load (s32))
+    ; CHECK: early-clobber renamable $x1, dead renamable $x2 = LDRSWpre renamable $x1, 1, implicit $w1 :: (load (s32))
+    ; CHECK: early-clobber renamable $x1, dead renamable $x0 = LDRSWpre renamable $x1, 16, implicit $w1 :: (load (s32))
+    ; CHECK: early-clobber renamable $x1, dead renamable $x2 = LDRSWpre renamable $x1, 12, implicit $w1 :: (load (s32))
+    ; CHECK: early-clobber renamable $x1, renamable $x0 = LDRSWpre renamable $x1, 16, implicit $w1 :: (load (s32))
+    ; CHECK: early-clobber renamable $x1, renamable $x2 = LDRSWpre renamable $x1, 16, implicit $w1 :: (load (s32))
+    ; CHECK: STPXi renamable $x0, renamable $x2, renamable $x1, 0 :: (store (s64))
+    ; CHECK: RET undef $lr
+    early-clobber renamable $x1, renamable $x0 = LDRSWpre killed renamable $x1, 48 :: (load (s32))
+    early-clobber renamable $x1, renamable $x2 = LDRSWpre killed renamable $x1, 1 :: (load (s32))
+    early-clobber renamable $x1, renamable $x0 = LDRSWpre killed renamable $x1, 16 :: (load (s32))
+    early-clobber renamable $x1, renamable $x2 = LDRSWpre killed renamable $x1, 12 :: (load (s32))
+    early-clobber renamable $x1, renamable $x0 = LDRSWpre killed renamable $x1, 16 :: (load (s32))
+    early-clobber renamable $x1, renamable $x2 = LDRSWpre killed renamable $x1, 16 :: (load (s32))
+    STRXui killed renamable $x0, renamable $x1, 0 :: (store (s64))
+    STRXui killed renamable $x2, renamable $x1, 1 :: (store (s64))
+    RET undef $lr
+...
+
+
+---
+name:            26-ldrswpre-ldrwui-no-merge
+tracksRegLiveness: true
+liveins:
+  - { reg: '$x0' }
+  - { reg: '$x1' }
+  - { reg: '$x2' }
+machineFunctionInfo:
+  hasRedZone:      false
+body:             |
+  bb.0:
+    liveins: $x0, $x1, $x2
+    ; CHECK-LABEL: name: 26-ldrswpre-ldrwui-no-merge
+    ; CHECK: liveins: $x0, $x1, $x2
+    ; CHECK: early-clobber renamable $x1, renamable $x0 = LDRSWpre renamable $x1, 40, implicit $w1 :: (load (s32))
+    ; CHECK: renamable $w2 = LDRWui renamable $x1, 1, implicit-def $x2 :: (load (s32))
+    ; CHECK: STPXi renamable $x0, renamable $x2, renamable $x1, 0 :: (store (s64))
+    ; CHECK: RET undef $lr
+    early-clobber renamable $x1, renamable $x0 = LDRSWpre killed renamable $x1, 40 :: (load (s32))
+    renamable $w2 = LDRWui renamable $x1, 1 :: (load (s32))
+    STRXui killed renamable $x0, renamable $x1, 0 :: (store (s64))
+    STRXui killed renamable $x2, renamable $x1, 1 :: (store (s64))
+    RET undef $lr
+...
+
+
+---
+name:            27-ldrwpre-ldrswui-no-merge
+tracksRegLiveness: true
+liveins:
+  - { reg: '$x0' }
+  - { reg: '$x1' }
+  - { reg: '$x2' }
+machineFunctionInfo:
+  hasRedZone:      false
+body:             |
+  bb.0:
+    liveins: $x0, $x1, $x2
+    ; CHECK-LABEL: name: 27-ldrwpre-ldrswui-no-merge
+    ; CHECK: liveins: $x0, $x1, $x2
+    ; CHECK: early-clobber renamable $x1, renamable $w0 = LDRWpre renamable $x1, 40, implicit $w1 :: (load (s32))
+    ; CHECK: renamable $x2 = LDRSWui renamable $x1, 1 :: (load (s32))
+    ; CHECK: STPXi renamable $x0, renamable $x2, renamable $x1, 0 :: (store (s64))
+    ; CHECK: RET undef $lr
+    early-clobber renamable $x1, renamable $w0 = LDRWpre killed renamable $x1, 40 :: (load (s32))
+    renamable $x2 = LDRSWui renamable $x1, 1 :: (load (s32))
+    STRXui killed renamable $x0, renamable $x1, 0 :: (store (s64))
+    STRXui killed renamable $x2, renamable $x1, 1 :: (store (s64))
+    RET undef $lr
+...
