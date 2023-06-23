@@ -16,18 +16,22 @@
 #include "clang/Lex/PPCallbacks.h"
 #include "clang/Lex/Preprocessor.h"
 #include "llvm/ADT/DenseMap.h"
+#include <cstddef>
 #include <string>
 
 namespace clang {
 namespace clangd {
 
 struct MacroOccurrence {
-  // Instead of storing SourceLocation, we have to store the token range because
-  // SourceManager from preamble is not available when we build the AST.
-  Range Rng;
+  // Half-open range (end offset is exclusive) inside the main file.
+  size_t StartOffset;
+  size_t EndOffset;
+
   bool IsDefinition;
   // True if the occurence is used in a conditional directive, e.g. #ifdef MACRO
   bool InConditionalDirective;
+
+  Range toRange(const SourceManager &SM) const;
 };
 
 struct MainFileMacros {
