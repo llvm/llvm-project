@@ -9,9 +9,6 @@
 // FIXME: Hangs.
 // UNSUPPORTED: tsan
 
-// FIXME: Make it work. Don't xfail to avoid excessive memory usage.
-// UNSUPPORTED: msan
-
 // Hwasan requires tagging of new allocations, so needs RSS for shadow.
 // UNSUPPORTED: hwasan
 
@@ -19,8 +16,9 @@ void *p;
 
 int main(int argc, char **argv) {
   for (int i = 0; i < sizeof(void *) * 8; ++i) {
-    p = malloc(1ull << i);
-    fprintf(stderr, "%llu: %p\n", (1ull << i), p);
+    // Calloc avoids MSAN shadow poisoning.
+    p = calloc(1ull << i, 1);
+    fprintf(stderr, "%d %llu: %p\n", i, (1ull << i), p);
     free(p);
   }
   return 0;
