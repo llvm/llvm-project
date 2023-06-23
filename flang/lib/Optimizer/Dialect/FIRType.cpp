@@ -482,7 +482,8 @@ int getTypeCode(mlir::Type ty, const fir::KindMapping &kindMap) {
 
 std::string getTypeAsString(mlir::Type ty, const fir::KindMapping &kindMap,
                             llvm::StringRef prefix) {
-  std::stringstream name;
+  std::string buf;
+  llvm::raw_string_ostream name{buf};
   name << prefix.str();
   if (!prefix.empty())
     name << "_";
@@ -535,8 +536,10 @@ std::string getTypeAsString(mlir::Type ty, const fir::KindMapping &kindMap,
     } else if (auto boxTy = mlir::dyn_cast_or_null<fir::BoxType>(ty)) {
       name << "box_";
       ty = boxTy.getEleTy();
+    } else if (auto recTy = mlir::dyn_cast_or_null<fir::RecordType>(ty)) {
+      name << "rec_" << recTy.getName();
+      break;
     } else {
-      // TODO: add support for RecordType
       llvm::report_fatal_error("unsupported type");
     }
   }

@@ -299,4 +299,9 @@ TEST_F(FIRTypesTest, getTypeAsString) {
   EXPECT_EQ("class_none",
       fir::getTypeAsString(
           fir::ClassType::get(mlir::NoneType::get(&context)), *kindMap));
+  auto derivedTy = fir::RecordType::get(&context, "derived");
+  llvm::SmallVector<std::pair<std::string, mlir::Type>> components;
+  components.emplace_back("p1", mlir::IntegerType::get(&context, 64));
+  derivedTy.finalize({}, components);
+  EXPECT_EQ("rec_derived", fir::getTypeAsString(derivedTy, *kindMap));
 }

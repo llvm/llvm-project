@@ -2757,6 +2757,10 @@ MachineBasicBlock *AArch64TargetLowering::EmitInstrWithCustomInserter(
   case TargetOpcode::PATCHPOINT:
     return emitPatchPoint(MI, BB);
 
+  case TargetOpcode::PATCHABLE_EVENT_CALL:
+  case TargetOpcode::PATCHABLE_TYPED_EVENT_CALL:
+    return BB;
+
   case AArch64::CATCHRET:
     return EmitLoweredCatchRet(MI, BB);
   case AArch64::LD1_MXIPXX_H_PSEUDO_B:

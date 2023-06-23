@@ -103,4 +103,32 @@ ASM_SYMBOL(__xray_FunctionTailExit):
   RESTORE_REGISTERS
   ret
 
+.global ASM_SYMBOL(__xray_CustomEvent)
+ASM_HIDDEN(__xray_CustomEvent)
+ASM_TYPE_FUNCTION(__xray_CustomEvent)
+ASM_SYMBOL(__xray_CustomEvent):
+  SAVE_REGISTERS
+  adrp x8, ASM_SYMBOL(_ZN6__xray22XRayPatchedCustomEventE)
+  ldr x8, [x8, #:lo12:ASM_SYMBOL(_ZN6__xray22XRayPatchedCustomEventE)]
+  cbz x8, 1f
+  blr x8
+1:
+  RESTORE_REGISTERS
+  ret
+ASM_SIZE(__xray_CustomEvent)
+
+.global ASM_SYMBOL(__xray_TypedEvent)
+ASM_HIDDEN(__xray_TypedEvent)
+ASM_TYPE_FUNCTION(__xray_TypedEvent)
+ASM_SYMBOL(__xray_TypedEvent):
+  SAVE_REGISTERS
+  adrp x8, ASM_SYMBOL(_ZN6__xray21XRayPatchedTypedEventE)
+  ldr x8, [x8, #:lo12:ASM_SYMBOL(_ZN6__xray21XRayPatchedTypedEventE)]
+  cbz x8, 1f
+  blr x8
+1:
+  RESTORE_REGISTERS
+  ret
+ASM_SIZE(__xray_TypedEvent)
+
 NO_EXEC_STACK_DIRECTIVE
