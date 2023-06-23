@@ -192,7 +192,10 @@ static void *MsanAllocate(StackTrace *stack, uptr size, uptr alignment,
       reinterpret_cast<Metadata *>(allocator.GetMetaData(allocated));
   meta->requested_size = size;
   if (zeroise) {
-    __msan_clear_and_unpoison(allocated, size);
+    if (allocator.FromPrimary(allocated))
+      __msan_clear_and_unpoison(allocated, size);
+    else
+      __msan_unpoison(allocated, size);  // Mem is already zeroed.
   } else if (flags()->poison_in_malloc) {
     __msan_poison(allocated, size);
     if (__msan_get_track_origins()) {
@@ -215,8 +218,9 @@ void MsanDeallocate(StackTrace *stack, void *p) {
   uptr size = meta->requested_size;
   meta->requested_size = 0;
   // This memory will not be reused by anyone else, so we are free to keep it
-  // poisoned.
-  if (flags()->poison_in_free) {
+  // poisoned. The secondary allocator will unmap and unpoison by
+  // MsanMapUnmapCallback, no need to poison it here.
+  if (flags()->poison_in_free && allocator.FromPrimary(p)) {
     __msan_poison(p, size);
     if (__msan_get_track_origins()) {
       stack->tag = StackTrace::TAG_DEALLOC;
