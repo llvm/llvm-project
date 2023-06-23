@@ -2946,7 +2946,6 @@ struct AMDGPUDeviceTy : public GenericDeviceTy, AMDGenericDeviceTy {
   /// active, the next default-constructed queue is initialized. Otherwise, the
   /// queue is selected in a round-robin fashion.
   AMDGPUQueueTy &getNextQueue(bool shouldTrackBusy = false) {
-    static std::atomic<uint32_t> NextQueue(0);
     // For now, simply use a lock.
     // TODO: Improve implementation and get rid of lock if possible
     std::lock_guard<std::mutex> LG(QueuesLock);
@@ -3107,6 +3106,9 @@ private:
 
   /// List of device packet queues.
   std::vector<AMDGPUQueueTy> Queues;
+
+  // The next queue index to be used.
+  std::atomic<uint32_t> NextQueue = {0};
 
   /// Guarding the whole queue initialization
   std::mutex QueuesLock;
