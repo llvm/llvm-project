@@ -5,3 +5,6 @@ CHECK-NONEXISTENT-A2L: llvm-addr2line{{.*}}: error: '{{.*}}Inputs/nonexistent': 
 RUN: not llvm-addr2line -e %p/Inputs 0x12 2>&1 | FileCheck %s --check-prefix=CHECK-DIRECTORY-A2L -DMSG=%errc_EISDIR
 RUN: not llvm-addr2line -e %p/Inputs 2>&1 | FileCheck %s --check-prefix=CHECK-DIRECTORY-A2L -DMSG=%errc_EISDIR
 CHECK-DIRECTORY-A2L: llvm-addr2line{{.*}}: error: '{{.*}}Inputs': [[MSG]]
+
+not llvm-addr2line --output-style=JSON -e %p/Inputs/nonexistent 2>&1 | FileCheck %s --check-prefix=NONEXIST-JSON -DMSG=%errc_ENOENT
+NONEXIST-JSON: {"Address":"0x0","Error":{"Message":"[[MSG]]"},"ModuleName":"{{.*}}nonexistent"}
