@@ -119,6 +119,8 @@ public:
     BIDFetcher = std::move(Fetcher);
   }
 
+  Error checkFileExists(StringRef Name);
+
 private:
   // Bundles together object file with code/data and object file with
   // corresponding debug info. These objects can be the same.
@@ -187,6 +189,11 @@ private:
 
   /// Update the LRU cache order when a binary is accessed.
   void recordAccess(CachedBinary &Bin);
+
+  /// Split binary file name into file and architecture parts. For example,
+  /// the name 'macho-universal:i386', will be split into 'macho-universal' and
+  /// 'i386'.
+  std::pair<std::string, std::string> splitBinaryFileName(StringRef Name);
 
   std::map<std::string, std::unique_ptr<SymbolizableModule>, std::less<>>
       Modules;

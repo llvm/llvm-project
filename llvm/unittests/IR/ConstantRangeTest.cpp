@@ -997,6 +997,26 @@ TEST_F(ConstantRangeTest, Multiply) {
   EXPECT_EQ(ConstantRange(APInt(8, -2)).multiply(
               ConstantRange(APInt(8, 0), APInt(8, 2))),
             ConstantRange(APInt(8, -2), APInt(8, 1)));
+
+  // Multiplication by -1 should give precise results.
+  EXPECT_EQ(ConstantRange(APInt(8, 3), APInt(8, -11))
+                .multiply(ConstantRange(APInt(8, -1))),
+            ConstantRange(APInt(8, 12), APInt(8, -2)));
+  EXPECT_EQ(ConstantRange(APInt(8, -1))
+                .multiply(ConstantRange(APInt(8, 3), APInt(8, -11))),
+            ConstantRange(APInt(8, 12), APInt(8, -2)));
+
+  TestBinaryOpExhaustive(
+      [](const ConstantRange &CR1, const ConstantRange &CR2) {
+        return CR1.multiply(CR2);
+      },
+      [](const APInt &N1, const APInt &N2) {
+        return N1 * N2;
+      },
+      PreferSmallest,
+      [](const ConstantRange &, const ConstantRange &) {
+        return false; // Check correctness only.
+      });
 }
 
 TEST_F(ConstantRangeTest, smul_fast) {

@@ -1408,7 +1408,7 @@ ReferencesResult findReferences(ParsedAST &AST, Position Pos, uint32_t Limit,
       if (Refs != IDToRefs.end()) {
         for (const auto &Ref : Refs->second) {
           ReferencesResult::Reference Result;
-          Result.Loc.range = Ref.Rng;
+          Result.Loc.range = Ref.toRange(SM);
           Result.Loc.uri = URIMainFile;
           if (Ref.IsDefinition) {
             Result.Attributes |= ReferencesResult::Declaration;

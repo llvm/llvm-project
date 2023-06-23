@@ -1211,7 +1211,8 @@ getSemanticHighlightings(ParsedAST &AST, bool IncludeInactiveRegionTokens) {
       AST.getHeuristicResolver());
   // Add highlightings for macro references.
   auto AddMacro = [&](const MacroOccurrence &M) {
-    auto &T = Builder.addToken(M.Rng, HighlightingKind::Macro);
+    auto &T = Builder.addToken(M.toRange(C.getSourceManager()),
+                               HighlightingKind::Macro);
     T.addModifier(HighlightingModifier::GlobalScope);
     if (M.IsDefinition)
       T.addModifier(HighlightingModifier::Declaration);

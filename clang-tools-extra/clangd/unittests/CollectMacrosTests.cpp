@@ -23,7 +23,9 @@ namespace {
 
 using testing::UnorderedElementsAreArray;
 
-MATCHER_P(rangeIs, R, "") { return arg.Rng == R; }
+MATCHER_P(rangeIs, R, "") {
+  return arg.StartOffset == R.Begin && arg.EndOffset == R.End;
+}
 MATCHER(isDef, "") { return arg.IsDefinition; }
 MATCHER(inConditionalDirective, "") { return arg.InConditionalDirective; }
 
@@ -90,7 +92,7 @@ TEST(CollectMainFileMacros, SelectedMacros) {
         #define $2(def)[[FOO]] $3[[BAR]]
         int A = $2[[FOO]];
       )cpp"};
-  auto ExpectedResults = [](const Annotations &T, StringRef Name) {
+  auto ExpectedResults = [](const llvm::Annotations &T, StringRef Name) {
     std::vector<Matcher<MacroOccurrence>> ExpectedLocations;
     for (const auto &[R, Bits] : T.rangesWithPayload(Name)) {
       if (Bits == "def")
@@ -105,7 +107,7 @@ TEST(CollectMainFileMacros, SelectedMacros) {
   };
 
   for (const char *Test : Tests) {
-    Annotations T(Test);
+    llvm::Annotations T(Test);
     auto Inputs = TestTU::withCode(T.code());
     Inputs.ExtraArgs.push_back("-std=c++2b");
     auto AST = Inputs.build();

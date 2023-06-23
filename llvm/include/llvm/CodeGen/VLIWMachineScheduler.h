@@ -264,8 +264,6 @@ protected:
 #endif
 };
 
-ScheduleDAGMILive *createVLIWSched(MachineSchedContext *C);
-
 } // end namespace llvm
 
 #endif // LLVM_CODEGEN_VLIWMACHINESCHEDULER_H

@@ -50,7 +50,6 @@ class DominatorTree;
 class InnerLoopVectorizer;
 class IRBuilderBase;
 class LoopInfo;
-class PredicateScalarEvolution;
 class raw_ostream;
 class RecurrenceDescriptor;
 class SCEV;

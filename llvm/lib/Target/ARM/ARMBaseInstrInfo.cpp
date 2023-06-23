@@ -3327,7 +3327,8 @@ bool ARMBaseInstrInfo::FoldImmediate(MachineInstr &UseMI, MachineInstr &DefMI,
                                      MachineRegisterInfo *MRI) const {
   // Fold large immediates into add, sub, or, xor.
   unsigned DefOpc = DefMI.getOpcode();
-  if (DefOpc != ARM::t2MOVi32imm && DefOpc != ARM::MOVi32imm)
+  if (DefOpc != ARM::t2MOVi32imm && DefOpc != ARM::MOVi32imm &&
+      DefOpc != ARM::tMOVi32imm)
     return false;
   if (!DefMI.getOperand(1).isImm())
     // Could be t2MOVi32imm @xx
@@ -5538,7 +5539,10 @@ ARMBaseInstrInfo::getSerializableDirectMachineOperandTargetFlags() const {
   using namespace ARMII;
 
   static const std::pair<unsigned, const char *> TargetFlags[] = {
-      {MO_LO16, "arm-lo16"}, {MO_HI16, "arm-hi16"}};
+      {MO_LO16, "arm-lo16"},       {MO_HI16, "arm-hi16"},
+      {MO_LO_0_7, "arm-lo-0-7"},   {MO_HI_0_7, "arm-hi-0-7"},
+      {MO_LO_8_15, "arm-lo-8-15"}, {MO_HI_8_15, "arm-hi-8-15"},
+  };
   return ArrayRef(TargetFlags);
 }
 
