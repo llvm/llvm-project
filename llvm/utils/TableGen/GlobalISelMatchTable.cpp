@@ -792,7 +792,7 @@ void RuleMatcher::definePhysRegOperand(Record *Reg, OperandMatcher &OM) {
   }
 }
 
-inline InstructionMatcher &
+InstructionMatcher &
 RuleMatcher::getInstructionMatcher(StringRef SymbolicName) const {
   for (const auto &I : InsnVariableIDs)
     if (I.first->getSymbolicName() == SymbolicName)
@@ -801,8 +801,7 @@ RuleMatcher::getInstructionMatcher(StringRef SymbolicName) const {
       ("Failed to lookup instruction " + SymbolicName).str().c_str());
 }
 
-inline const OperandMatcher &
-RuleMatcher::getPhysRegOperandMatcher(Record *Reg) const {
+const OperandMatcher &RuleMatcher::getPhysRegOperandMatcher(Record *Reg) const {
   const auto &I = PhysRegOperands.find(Reg);
 
   if (I == PhysRegOperands.end()) {
