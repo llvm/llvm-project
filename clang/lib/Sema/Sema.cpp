@@ -1365,12 +1365,12 @@ void Sema::ActOnEndOfTranslationUnit() {
                   << DiagD << DiagRange;
             else
               Diag(DiagD->getLocation(), diag::warn_unneeded_internal_decl)
-                  << /*function*/ 0 << DiagD << DiagRange;
+                  << /*function=*/0 << DiagD << DiagRange;
           }
         } else {
           if (FD->getDescribedFunctionTemplate())
             Diag(DiagD->getLocation(), diag::warn_unused_template)
-                << /*function*/ 0 << DiagD << DiagRange;
+                << /*function=*/0 << DiagD << DiagRange;
           else
             Diag(DiagD->getLocation(), isa<CXXMethodDecl>(DiagD)
                                            ? diag::warn_unused_member_function
@@ -1389,10 +1389,10 @@ void Sema::ActOnEndOfTranslationUnit() {
         }
         if (DiagD->isReferenced()) {
           Diag(DiagD->getLocation(), diag::warn_unneeded_internal_decl)
-              << /*variable*/ 1 << DiagD << DiagRange;
+              << /*variable=*/1 << DiagD << DiagRange;
         } else if (DiagD->getDescribedVarTemplate()) {
           Diag(DiagD->getLocation(), diag::warn_unused_template)
-              << /*variable*/ 1 << DiagD << DiagRange;
+              << /*variable=*/1 << DiagD << DiagRange;
         } else if (DiagD->getType().isConstQualified()) {
           const SourceManager &SM = SourceMgr;
           if (SM.getMainFileID() != SM.getFileID(DiagD->getLocation()) ||

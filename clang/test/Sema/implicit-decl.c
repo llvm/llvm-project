@@ -1,18 +1,16 @@
-// RUN: %clang_cc1 %s -verify -fsyntax-only -Werror=implicit-function-declaration -std=c99
-// RUN: %clang_cc1 %s -verify -fsyntax-only -std=c11
-// RUN: %clang_cc1 %s -verify=c2x -fsyntax-only -std=c2x
+// RUN: %clang_cc1 %s -verify=expected,both -fsyntax-only -Werror=implicit-function-declaration -std=c99
+// RUN: %clang_cc1 %s -verify=expected,both -fsyntax-only -std=c11
+// RUN: %clang_cc1 %s -verify=c2x,both -fsyntax-only -std=c2x
 
 /// -Werror-implicit-function-declaration is a deprecated alias used by many projects.
-// RUN: %clang_cc1 %s -verify -fsyntax-only -Werror-implicit-function-declaration
+// RUN: %clang_cc1 %s -verify=expected,both -fsyntax-only -Werror-implicit-function-declaration
 
 // c2x-note@*:* {{'__builtin_va_list' declared here}}
 
 typedef int int32_t;
 typedef unsigned char Boolean;
 
-extern int printf(__const char *__restrict __format, ...); // expected-note{{'printf' declared here}} \
-                                                              c2x-note {{'printf' declared here}}
-
+extern int printf(__const char *__restrict __format, ...); // both-note{{'printf' declared here}}
 void func(void) {
    int32_t *vector[16];
    const char compDesc[16 + 1];
@@ -53,3 +51,26 @@ void test_suggestion(void) {
   bork(); // expected-error {{call to undeclared function 'bork'; ISO C99 and later do not support implicit function declarations}} \
              c2x-error {{use of undeclared identifier 'bork'}}
 }
+
+// The following used to cause an assertion from trying to define the implicit
+// function within a structure scope as opposed to within function or global
+// scoped.
+int GH48579_1(void) {
+  struct {
+    int x __attribute__((aligned(({ a(); })))); // expected-error {{call to undeclared function 'a'; ISO C99 and later do not support implicit function declarations}} \
+                                                   c2x-error {{use of undeclared identifier 'a'}} \
+                                                   both-error {{'aligned' attribute requires integer constant}}
+  } x;
+}
+
+void GH48579_2(void) {
+  struct S {
+    int array[({ a(); })]; // expected-error {{call to undeclared function 'a'; ISO C99 and later do not support implicit function declarations}} \
+                              c2x-error {{use of undeclared identifier 'a'}} \
+                              expected-error {{fields must have a constant size: 'variable length array in structure' extension will never be supported}} \
+                              c2x-error {{size of array has non-integer type 'void'}}
+  };
+}
+
+int GH48579_3 = ({a();});              // both-error {{statement expression not allowed at file scope}}
+void GH48579_4(int array[({ a(); })]); // both-error {{statement expression not allowed at file scope}}

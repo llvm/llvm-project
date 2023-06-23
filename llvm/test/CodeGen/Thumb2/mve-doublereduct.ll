@@ -35,12 +35,9 @@ define float @fmin_f32(<8 x float> %a, <4 x float> %b) {
 ; CHECK-LABEL: fmin_f32:
 ; CHECK:       @ %bb.0:
 ; CHECK-NEXT:    vminnm.f32 q0, q0, q1
-; CHECK-NEXT:    vminnm.f32 s4, s8, s9
+; CHECK-NEXT:    vminnm.f32 q0, q0, q2
 ; CHECK-NEXT:    vminnm.f32 s2, s2, s3
 ; CHECK-NEXT:    vminnm.f32 s0, s0, s1
-; CHECK-NEXT:    vminnm.f32 s0, s0, s2
-; CHECK-NEXT:    vminnm.f32 s2, s10, s11
-; CHECK-NEXT:    vminnm.f32 s2, s4, s2
 ; CHECK-NEXT:    vminnm.f32 s0, s0, s2
 ; CHECK-NEXT:    bx lr
   %r1 = call fast float @llvm.vector.reduce.fmin.v8f32(<8 x float> %a)
@@ -53,12 +50,9 @@ define float @fmax_f32(<8 x float> %a, <4 x float> %b) {
 ; CHECK-LABEL: fmax_f32:
 ; CHECK:       @ %bb.0:
 ; CHECK-NEXT:    vmaxnm.f32 q0, q0, q1
-; CHECK-NEXT:    vmaxnm.f32 s4, s8, s9
+; CHECK-NEXT:    vmaxnm.f32 q0, q0, q2
 ; CHECK-NEXT:    vmaxnm.f32 s2, s2, s3
 ; CHECK-NEXT:    vmaxnm.f32 s0, s0, s1
-; CHECK-NEXT:    vmaxnm.f32 s0, s0, s2
-; CHECK-NEXT:    vmaxnm.f32 s2, s10, s11
-; CHECK-NEXT:    vmaxnm.f32 s2, s4, s2
 ; CHECK-NEXT:    vmaxnm.f32 s0, s0, s2
 ; CHECK-NEXT:    bx lr
   %r1 = call fast float @llvm.vector.reduce.fmax.v8f32(<8 x float> %a)

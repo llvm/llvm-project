@@ -100,6 +100,10 @@ RelExpr ARM::getRelExpr(RelType type, const Symbol &s,
   case R_ARM_MOVT_ABS:
   case R_ARM_THM_MOVW_ABS_NC:
   case R_ARM_THM_MOVT_ABS:
+  case R_ARM_THM_ALU_ABS_G0_NC:
+  case R_ARM_THM_ALU_ABS_G1_NC:
+  case R_ARM_THM_ALU_ABS_G2_NC:
+  case R_ARM_THM_ALU_ABS_G3:
     return R_ABS;
   case R_ARM_THM_JUMP8:
   case R_ARM_THM_JUMP11:
@@ -681,6 +685,18 @@ void ARM::relocate(uint8_t *loc, const Relocation &rel, uint64_t val) const {
                   ((val << 4) & 0x7000) |    // imm3
                   (val & 0x00ff));           // imm8
     break;
+  case R_ARM_THM_ALU_ABS_G3:
+    write16(loc, (read16(loc) &~ 0x00ff) | ((val >> 24) & 0x00ff));
+    break;
+  case R_ARM_THM_ALU_ABS_G2_NC:
+    write16(loc, (read16(loc) &~ 0x00ff) | ((val >> 16) & 0x00ff));
+    break;
+  case R_ARM_THM_ALU_ABS_G1_NC:
+    write16(loc, (read16(loc) &~ 0x00ff) | ((val >> 8) & 0x00ff));
+    break;
+  case R_ARM_THM_ALU_ABS_G0_NC:
+    write16(loc, (read16(loc) &~ 0x00ff) | (val & 0x00ff));
+    break;
   case R_ARM_ALU_PC_G0:
     encodeAluGroup(loc, rel, val, 0, true);
     break;
@@ -858,6 +874,11 @@ int64_t ARM::getImplicitAddend(const uint8_t *buf, RelType type) const {
                             ((lo & 0x7000) >> 4) |  // imm3
                             (lo & 0x00ff));         // imm8
   }
+  case R_ARM_THM_ALU_ABS_G0_NC:
+  case R_ARM_THM_ALU_ABS_G1_NC:
+  case R_ARM_THM_ALU_ABS_G2_NC:
+  case R_ARM_THM_ALU_ABS_G3:
+    return read16(buf) & 0xff;
   case R_ARM_ALU_PC_G0:
   case R_ARM_ALU_PC_G0_NC:
   case R_ARM_ALU_PC_G1:

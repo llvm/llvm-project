@@ -5265,6 +5265,7 @@ void SITargetLowering::ReplaceNodeResults(SDNode *N,
     return;
   }
   default:
+    AMDGPUTargetLowering::ReplaceNodeResults(N, Results, DAG);
     break;
   }
 }

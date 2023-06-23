@@ -1130,8 +1130,8 @@ public:
     case Instruction::GetElementPtr: {
       const auto *GEP = cast<GEPOperator>(U);
       return TargetTTI->getGEPCost(GEP->getSourceElementType(),
-                                   GEP->getPointerOperand(),
-                                   Operands.drop_front(), CostKind);
+                                   Operands.front(), Operands.drop_front(),
+                                   CostKind);
     }
     case Instruction::Add:
     case Instruction::FAdd:
@@ -1152,11 +1152,10 @@ public:
     case Instruction::Or:
     case Instruction::Xor:
     case Instruction::FNeg: {
-      const TTI::OperandValueInfo Op1Info = TTI::getOperandInfo(U->getOperand(0));
+      const TTI::OperandValueInfo Op1Info = TTI::getOperandInfo(Operands[0]);
       TTI::OperandValueInfo Op2Info;
       if (Opcode != Instruction::FNeg)
-        Op2Info = TTI::getOperandInfo(U->getOperand(1));
-      SmallVector<const Value *, 2> Operands(U->operand_values());
+        Op2Info = TTI::getOperandInfo(Operands[1]);
       return TargetTTI->getArithmeticInstrCost(Opcode, Ty, CostKind, Op1Info,
                                                Op2Info, Operands, I);
     }
@@ -1173,14 +1172,14 @@ public:
     case Instruction::SExt:
     case Instruction::ZExt:
     case Instruction::AddrSpaceCast: {
-      Type *OpTy = U->getOperand(0)->getType();
+      Type *OpTy = Operands[0]->getType();
       return TargetTTI->getCastInstrCost(
           Opcode, Ty, OpTy, TTI::getCastContextHint(I), CostKind, I);
     }
     case Instruction::Store: {
       auto *SI = cast<StoreInst>(U);
-      Type *ValTy = U->getOperand(0)->getType();
-      TTI::OperandValueInfo OpInfo = TTI::getOperandInfo(U->getOperand(0));
+      Type *ValTy = Operands[0]->getType();
+      TTI::OperandValueInfo OpInfo = TTI::getOperandInfo(Operands[0]);
       return TargetTTI->getMemoryOpCost(Opcode, ValTy, SI->getAlign(),
                                         SI->getPointerAddressSpace(), CostKind,
                                         OpInfo, I);
@@ -1223,14 +1222,14 @@ public:
             match(U, m_LogicalOr()) ? Instruction::Or : Instruction::And, Ty,
             CostKind, Op1Info, Op2Info, Operands, I);
       }
-      Type *CondTy = U->getOperand(0)->getType();
+      Type *CondTy = Operands[0]->getType();
       return TargetTTI->getCmpSelInstrCost(Opcode, U->getType(), CondTy,
                                            CmpInst::BAD_ICMP_PREDICATE,
                                            CostKind, I);
     }
     case Instruction::ICmp:
     case Instruction::FCmp: {
-      Type *ValTy = U->getOperand(0)->getType();
+      Type *ValTy = Operands[0]->getType();
       // TODO: Also handle ICmp/FCmp constant expressions.
       return TargetTTI->getCmpSelInstrCost(Opcode, ValTy, U->getType(),
                                            I ? cast<CmpInst>(I)->getPredicate()
@@ -1242,7 +1241,7 @@ public:
       if (!IE)
         return TTI::TCC_Basic; // FIXME
       unsigned Idx = -1;
-      if (auto *CI = dyn_cast<ConstantInt>(IE->getOperand(2)))
+      if (auto *CI = dyn_cast<ConstantInt>(Operands[2]))
         if (CI->getValue().getActiveBits() <= 32)
           Idx = CI->getZExtValue();
       return TargetTTI->getVectorInstrCost(*IE, Ty, CostKind, Idx);
@@ -1253,7 +1252,7 @@ public:
         return TTI::TCC_Basic; // FIXME
 
       auto *VecTy = cast<VectorType>(U->getType());
-      auto *VecSrcTy = cast<VectorType>(U->getOperand(0)->getType());
+      auto *VecSrcTy = cast<VectorType>(Operands[0]->getType());
       int NumSubElts, SubIndex;
 
       if (Shuffle->changesLength()) {
@@ -1337,10 +1336,10 @@ public:
       if (!EEI)
         return TTI::TCC_Basic; // FIXME
       unsigned Idx = -1;
-      if (auto *CI = dyn_cast<ConstantInt>(EEI->getOperand(1)))
+      if (auto *CI = dyn_cast<ConstantInt>(Operands[1]))
         if (CI->getValue().getActiveBits() <= 32)
           Idx = CI->getZExtValue();
-      Type *DstTy = U->getOperand(0)->getType();
+      Type *DstTy = Operands[0]->getType();
       return TargetTTI->getVectorInstrCost(*EEI, DstTy, CostKind, Idx);
     }
     }
