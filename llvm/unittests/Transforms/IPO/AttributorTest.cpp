@@ -63,7 +63,7 @@ TEST_F(AttributorTestBase, TestCast) {
   Function *F = M.getFunction("foo");
 
   const AbstractAttribute *AA =
-      &A.getOrCreateAAFor<AAIsDead>(IRPosition::function(*F));
+      A.getOrCreateAAFor<AAIsDead>(IRPosition::function(*F));
 
   EXPECT_TRUE(AA);
 
@@ -171,16 +171,16 @@ TEST_F(AttributorTestBase, AAReachabilityTest) {
   Instruction &F9SecondInst = *++(F9.getEntryBlock().begin());
 
   const AAInterFnReachability &F1AA =
-      A.getOrCreateAAFor<AAInterFnReachability>(IRPosition::function(F1));
+      *A.getOrCreateAAFor<AAInterFnReachability>(IRPosition::function(F1));
 
   const AAInterFnReachability &F6AA =
-      A.getOrCreateAAFor<AAInterFnReachability>(IRPosition::function(F6));
+      *A.getOrCreateAAFor<AAInterFnReachability>(IRPosition::function(F6));
 
   const AAInterFnReachability &F7AA =
-      A.getOrCreateAAFor<AAInterFnReachability>(IRPosition::function(F7));
+      *A.getOrCreateAAFor<AAInterFnReachability>(IRPosition::function(F7));
 
   const AAInterFnReachability &F9AA =
-      A.getOrCreateAAFor<AAInterFnReachability>(IRPosition::function(F9));
+      *A.getOrCreateAAFor<AAInterFnReachability>(IRPosition::function(F9));
 
   F1AA.canReach(A, F3);
   F1AA.canReach(A, F4);
