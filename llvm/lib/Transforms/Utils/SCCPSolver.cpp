@@ -838,9 +838,13 @@ bool SCCPInstVisitor::markBlockExecutable(BasicBlock *BB) {
 }
 
 void SCCPInstVisitor::pushToWorkList(ValueLatticeElement &IV, Value *V) {
-  if (IV.isOverdefined())
-    return OverdefinedInstWorkList.push_back(V);
-  InstWorkList.push_back(V);
+  if (IV.isOverdefined()) {
+    if (OverdefinedInstWorkList.empty() || OverdefinedInstWorkList.back() != V)
+      OverdefinedInstWorkList.push_back(V);
+    return;
+  }
+  if (InstWorkList.empty() || InstWorkList.back() != V)
+    InstWorkList.push_back(V);
 }
 
 void SCCPInstVisitor::pushToWorkListMsg(ValueLatticeElement &IV, Value *V) {
