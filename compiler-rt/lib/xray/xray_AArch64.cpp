@@ -105,15 +105,37 @@ bool patchFunctionTailExit(const bool Enable, const uint32_t FuncId,
   return patchSled(Enable, FuncId, Sled, __xray_FunctionTailExit);
 }
 
+// AArch64AsmPrinter::LowerPATCHABLE_EVENT_CALL generates this code sequence:
+//
+// .Lxray_event_sled_N:
+//   b 1f
+//   save x0 and x1 (and also x2 for TYPED_EVENT_CALL)
+//   set up x0 and x1 (and also x2 for TYPED_EVENT_CALL)
+//   bl __xray_CustomEvent or __xray_TypedEvent
+//   restore x0 and x1 (and also x2 for TYPED_EVENT_CALL)
+// 1f
+//
+// There are 6 instructions for EVENT_CALL and 9 for TYPED_EVENT_CALL.
+//
+// Enable: b .+24 => nop
+// Disable: nop => b .+24
 bool patchCustomEvent(const bool Enable, const uint32_t FuncId,
-                      const XRaySledEntry &Sled)
-    XRAY_NEVER_INSTRUMENT { // FIXME: Implement in aarch64?
+                      const XRaySledEntry &Sled) XRAY_NEVER_INSTRUMENT {
+  uint32_t Inst = Enable ? 0xd503201f : 0x14000006;
+  std::atomic_store_explicit(
+      reinterpret_cast<std::atomic<uint32_t> *>(Sled.address()), Inst,
+      std::memory_order_release);
   return false;
 }
 
+// Enable: b +36 => nop
+// Disable: nop => b +36
 bool patchTypedEvent(const bool Enable, const uint32_t FuncId,
                      const XRaySledEntry &Sled) XRAY_NEVER_INSTRUMENT {
-  // FIXME: Implement in aarch64?
+  uint32_t Inst = Enable ? 0xd503201f : 0x14000009;
+  std::atomic_store_explicit(
+      reinterpret_cast<std::atomic<uint32_t> *>(Sled.address()), Inst,
+      std::memory_order_release);
   return false;
 }
 
