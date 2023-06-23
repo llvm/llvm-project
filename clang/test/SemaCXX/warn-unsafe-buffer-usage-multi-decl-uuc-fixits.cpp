@@ -48,6 +48,21 @@ void uuc_if_body1(bool flag) {
   p[5] = 4;
 }
 
+void uuc_if_body2_ptr_init(bool flag) {
+  int *r = new int[7];
+  // CHECK-DAG: fix-it:"{{.*}}":{[[@LINE-1]]:3-[[@LINE-1]]:11}:"std::span<int> r"
+  // CHECK-DAG: fix-it:"{{.*}}":{[[@LINE-2]]:12-[[@LINE-2]]:12}:"{"
+  // CHECK-DAG: fix-it:"{{.*}}":{[[@LINE-3]]:22-[[@LINE-3]]:22}:", 7}"
+  if (flag) {
+  } else {
+    int* p = r;
+    // CHECK-DAG: fix-it:"{{.*}}":{[[@LINE-1]]:5-[[@LINE-1]]:13}:"std::span<int> p"
+    // CHECK-DAG: fix-it:"{{.*}}":{[[@LINE-2]]:14-[[@LINE-2]]:14}:"{"
+    // CHECK-DAG: fix-it:"{{.*}}":{[[@LINE-3]]:15-[[@LINE-3]]:15}:", <# placeholder #>}"
+    p[5] = 4;
+  }
+}
+
 void uuc_if_cond_no_unsafe_op() {
   int *r = new int[7];
   int *p = new int[4];
@@ -58,32 +73,32 @@ void uuc_if_cond_no_unsafe_op() {
 
 void uuc_if_cond_unsafe_op() {
   int *r = new int[7];
-  int *p = new int[4];  //expected-warning{{'p' is an unsafe pointer used for buffer access}}
+  int *p = new int[4];
   if ((p = r)) {
-    p[3] = 2;  // expected-note{{used in buffer access here}}
+    p[3] = 2;
   }
 }
 
 void uuc_if_cond_unsafe_op1() {
-  int *r = new int[7];  // expected-warning{{'r' is an unsafe pointer used for buffer access}}
+  int *r = new int[7];
   int *p = new int[4];
   if ((p = r)) {
-    r[3] = 2;  // expected-note{{used in buffer access here}}
+    r[3] = 2;
   }
 }
 
 void uuc_if_cond_unsafe_op2() {
-  int *r = new int[7];  // expected-warning{{'r' is an unsafe pointer used for buffer access}}
-  int *p = new int[4];  // expected-warning{{'p' is an unsafe pointer used for buffer access}}
+  int *r = new int[7];
+  int *p = new int[4];
   if ((p = r)) {
-    r[3] = 2;  // expected-note{{used in buffer access here}}
+    r[3] = 2;
   }
-  p[4] = 6;  // expected-note{{used in buffer access here}}
+  p[4] = 6;
 }
 
 void uuc_call1() {
-  int *w = new int[4];  // expected-warning{{'w' is an unsafe pointer used for buffer access}}
+  int *w = new int[4];
   int *y = new int[4];
   bar(w = y);
-  w[5] = 0;  // expected-note{{used in buffer access here}}
+  w[5] = 0;
 }

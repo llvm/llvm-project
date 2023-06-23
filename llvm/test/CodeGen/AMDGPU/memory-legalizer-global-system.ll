@@ -1442,9 +1442,7 @@ define amdgpu_kernel void @global_system_monotonic_atomicrmw(
 ;
 ; GFX12-WGP-LABEL: global_system_monotonic_atomicrmw:
 ; GFX12-WGP:       ; %bb.0: ; %entry
-; GFX12-WGP-NEXT:    s_clause 0x1
-; GFX12-WGP-NEXT:    s_load_b32 s2, s[0:1], 0x8
-; GFX12-WGP-NEXT:    s_load_b64 s[0:1], s[0:1], 0x0
+; GFX12-WGP-NEXT:    s_load_b96 s[0:2], s[0:1], 0x0
 ; GFX12-WGP-NEXT:    s_wait_kmcnt 0x0
 ; GFX12-WGP-NEXT:    v_dual_mov_b32 v0, 0 :: v_dual_mov_b32 v1, s2
 ; GFX12-WGP-NEXT:    global_atomic_swap_b32 v0, v1, s[0:1]
@@ -1453,9 +1451,7 @@ define amdgpu_kernel void @global_system_monotonic_atomicrmw(
 ;
 ; GFX12-CU-LABEL: global_system_monotonic_atomicrmw:
 ; GFX12-CU:       ; %bb.0: ; %entry
-; GFX12-CU-NEXT:    s_clause 0x1
-; GFX12-CU-NEXT:    s_load_b32 s2, s[0:1], 0x8
-; GFX12-CU-NEXT:    s_load_b64 s[0:1], s[0:1], 0x0
+; GFX12-CU-NEXT:    s_load_b96 s[0:2], s[0:1], 0x0
 ; GFX12-CU-NEXT:    s_wait_kmcnt 0x0
 ; GFX12-CU-NEXT:    v_dual_mov_b32 v0, 0 :: v_dual_mov_b32 v1, s2
 ; GFX12-CU-NEXT:    global_atomic_swap_b32 v0, v1, s[0:1]
@@ -1612,9 +1608,7 @@ define amdgpu_kernel void @global_system_acquire_atomicrmw(
 ;
 ; GFX12-WGP-LABEL: global_system_acquire_atomicrmw:
 ; GFX12-WGP:       ; %bb.0: ; %entry
-; GFX12-WGP-NEXT:    s_clause 0x1
-; GFX12-WGP-NEXT:    s_load_b32 s2, s[0:1], 0x8
-; GFX12-WGP-NEXT:    s_load_b64 s[0:1], s[0:1], 0x0
+; GFX12-WGP-NEXT:    s_load_b96 s[0:2], s[0:1], 0x0
 ; GFX12-WGP-NEXT:    s_wait_kmcnt 0x0
 ; GFX12-WGP-NEXT:    v_dual_mov_b32 v0, 0 :: v_dual_mov_b32 v1, s2
 ; GFX12-WGP-NEXT:    global_atomic_swap_b32 v0, v1, s[0:1]
@@ -1624,9 +1618,7 @@ define amdgpu_kernel void @global_system_acquire_atomicrmw(
 ;
 ; GFX12-CU-LABEL: global_system_acquire_atomicrmw:
 ; GFX12-CU:       ; %bb.0: ; %entry
-; GFX12-CU-NEXT:    s_clause 0x1
-; GFX12-CU-NEXT:    s_load_b32 s2, s[0:1], 0x8
-; GFX12-CU-NEXT:    s_load_b64 s[0:1], s[0:1], 0x0
+; GFX12-CU-NEXT:    s_load_b96 s[0:2], s[0:1], 0x0
 ; GFX12-CU-NEXT:    s_wait_kmcnt 0x0
 ; GFX12-CU-NEXT:    v_dual_mov_b32 v0, 0 :: v_dual_mov_b32 v1, s2
 ; GFX12-CU-NEXT:    global_atomic_swap_b32 v0, v1, s[0:1]
@@ -1778,9 +1770,7 @@ define amdgpu_kernel void @global_system_release_atomicrmw(
 ;
 ; GFX12-WGP-LABEL: global_system_release_atomicrmw:
 ; GFX12-WGP:       ; %bb.0: ; %entry
-; GFX12-WGP-NEXT:    s_clause 0x1
-; GFX12-WGP-NEXT:    s_load_b32 s2, s[0:1], 0x8
-; GFX12-WGP-NEXT:    s_load_b64 s[0:1], s[0:1], 0x0
+; GFX12-WGP-NEXT:    s_load_b96 s[0:2], s[0:1], 0x0
 ; GFX12-WGP-NEXT:    s_wait_kmcnt 0x0
 ; GFX12-WGP-NEXT:    v_dual_mov_b32 v0, 0 :: v_dual_mov_b32 v1, s2
 ; GFX12-WGP-NEXT:    s_wait_bvhcnt 0x0
@@ -1793,9 +1783,7 @@ define amdgpu_kernel void @global_system_release_atomicrmw(
 ;
 ; GFX12-CU-LABEL: global_system_release_atomicrmw:
 ; GFX12-CU:       ; %bb.0: ; %entry
-; GFX12-CU-NEXT:    s_clause 0x1
-; GFX12-CU-NEXT:    s_load_b32 s2, s[0:1], 0x8
-; GFX12-CU-NEXT:    s_load_b64 s[0:1], s[0:1], 0x0
+; GFX12-CU-NEXT:    s_load_b96 s[0:2], s[0:1], 0x0
 ; GFX12-CU-NEXT:    s_wait_kmcnt 0x0
 ; GFX12-CU-NEXT:    v_dual_mov_b32 v0, 0 :: v_dual_mov_b32 v1, s2
 ; GFX12-CU-NEXT:    s_wait_bvhcnt 0x0
@@ -1975,9 +1963,7 @@ define amdgpu_kernel void @global_system_acq_rel_atomicrmw(
 ;
 ; GFX12-WGP-LABEL: global_system_acq_rel_atomicrmw:
 ; GFX12-WGP:       ; %bb.0: ; %entry
-; GFX12-WGP-NEXT:    s_clause 0x1
-; GFX12-WGP-NEXT:    s_load_b32 s2, s[0:1], 0x8
-; GFX12-WGP-NEXT:    s_load_b64 s[0:1], s[0:1], 0x0
+; GFX12-WGP-NEXT:    s_load_b96 s[0:2], s[0:1], 0x0
 ; GFX12-WGP-NEXT:    s_wait_kmcnt 0x0
 ; GFX12-WGP-NEXT:    v_dual_mov_b32 v0, 0 :: v_dual_mov_b32 v1, s2
 ; GFX12-WGP-NEXT:    s_wait_bvhcnt 0x0
@@ -1991,9 +1977,7 @@ define amdgpu_kernel void @global_system_acq_rel_atomicrmw(
 ;
 ; GFX12-CU-LABEL: global_system_acq_rel_atomicrmw:
 ; GFX12-CU:       ; %bb.0: ; %entry
-; GFX12-CU-NEXT:    s_clause 0x1
-; GFX12-CU-NEXT:    s_load_b32 s2, s[0:1], 0x8
-; GFX12-CU-NEXT:    s_load_b64 s[0:1], s[0:1], 0x0
+; GFX12-CU-NEXT:    s_load_b96 s[0:2], s[0:1], 0x0
 ; GFX12-CU-NEXT:    s_wait_kmcnt 0x0
 ; GFX12-CU-NEXT:    v_dual_mov_b32 v0, 0 :: v_dual_mov_b32 v1, s2
 ; GFX12-CU-NEXT:    s_wait_bvhcnt 0x0
@@ -2174,9 +2158,7 @@ define amdgpu_kernel void @global_system_seq_cst_atomicrmw(
 ;
 ; GFX12-WGP-LABEL: global_system_seq_cst_atomicrmw:
 ; GFX12-WGP:       ; %bb.0: ; %entry
-; GFX12-WGP-NEXT:    s_clause 0x1
-; GFX12-WGP-NEXT:    s_load_b32 s2, s[0:1], 0x8
-; GFX12-WGP-NEXT:    s_load_b64 s[0:1], s[0:1], 0x0
+; GFX12-WGP-NEXT:    s_load_b96 s[0:2], s[0:1], 0x0
 ; GFX12-WGP-NEXT:    s_wait_kmcnt 0x0
 ; GFX12-WGP-NEXT:    v_dual_mov_b32 v0, 0 :: v_dual_mov_b32 v1, s2
 ; GFX12-WGP-NEXT:    s_wait_bvhcnt 0x0
@@ -2190,9 +2172,7 @@ define amdgpu_kernel void @global_system_seq_cst_atomicrmw(
 ;
 ; GFX12-CU-LABEL: global_system_seq_cst_atomicrmw:
 ; GFX12-CU:       ; %bb.0: ; %entry
-; GFX12-CU-NEXT:    s_clause 0x1
-; GFX12-CU-NEXT:    s_load_b32 s2, s[0:1], 0x8
-; GFX12-CU-NEXT:    s_load_b64 s[0:1], s[0:1], 0x0
+; GFX12-CU-NEXT:    s_load_b96 s[0:2], s[0:1], 0x0
 ; GFX12-CU-NEXT:    s_wait_kmcnt 0x0
 ; GFX12-CU-NEXT:    v_dual_mov_b32 v0, 0 :: v_dual_mov_b32 v1, s2
 ; GFX12-CU-NEXT:    s_wait_bvhcnt 0x0
@@ -2367,9 +2347,7 @@ define amdgpu_kernel void @global_system_acquire_ret_atomicrmw(
 ;
 ; GFX12-WGP-LABEL: global_system_acquire_ret_atomicrmw:
 ; GFX12-WGP:       ; %bb.0: ; %entry
-; GFX12-WGP-NEXT:    s_clause 0x1
-; GFX12-WGP-NEXT:    s_load_b32 s2, s[0:1], 0x8
-; GFX12-WGP-NEXT:    s_load_b64 s[0:1], s[0:1], 0x0
+; GFX12-WGP-NEXT:    s_load_b96 s[0:2], s[0:1], 0x0
 ; GFX12-WGP-NEXT:    s_wait_kmcnt 0x0
 ; GFX12-WGP-NEXT:    v_dual_mov_b32 v0, 0 :: v_dual_mov_b32 v1, s2
 ; GFX12-WGP-NEXT:    global_atomic_swap_b32 v1, v0, v1, s[0:1] th:TH_ATOMIC_RETURN
@@ -2383,9 +2361,7 @@ define amdgpu_kernel void @global_system_acquire_ret_atomicrmw(
 ;
 ; GFX12-CU-LABEL: global_system_acquire_ret_atomicrmw:
 ; GFX12-CU:       ; %bb.0: ; %entry
-; GFX12-CU-NEXT:    s_clause 0x1
-; GFX12-CU-NEXT:    s_load_b32 s2, s[0:1], 0x8
-; GFX12-CU-NEXT:    s_load_b64 s[0:1], s[0:1], 0x0
+; GFX12-CU-NEXT:    s_load_b96 s[0:2], s[0:1], 0x0
 ; GFX12-CU-NEXT:    s_wait_kmcnt 0x0
 ; GFX12-CU-NEXT:    v_dual_mov_b32 v0, 0 :: v_dual_mov_b32 v1, s2
 ; GFX12-CU-NEXT:    global_atomic_swap_b32 v1, v0, v1, s[0:1] th:TH_ATOMIC_RETURN
@@ -2580,9 +2556,7 @@ define amdgpu_kernel void @global_system_acq_rel_ret_atomicrmw(
 ;
 ; GFX12-WGP-LABEL: global_system_acq_rel_ret_atomicrmw:
 ; GFX12-WGP:       ; %bb.0: ; %entry
-; GFX12-WGP-NEXT:    s_clause 0x1
-; GFX12-WGP-NEXT:    s_load_b32 s2, s[0:1], 0x8
-; GFX12-WGP-NEXT:    s_load_b64 s[0:1], s[0:1], 0x0
+; GFX12-WGP-NEXT:    s_load_b96 s[0:2], s[0:1], 0x0
 ; GFX12-WGP-NEXT:    s_wait_kmcnt 0x0
 ; GFX12-WGP-NEXT:    v_dual_mov_b32 v0, 0 :: v_dual_mov_b32 v1, s2
 ; GFX12-WGP-NEXT:    s_wait_bvhcnt 0x0
@@ -2600,9 +2574,7 @@ define amdgpu_kernel void @global_system_acq_rel_ret_atomicrmw(
 ;
 ; GFX12-CU-LABEL: global_system_acq_rel_ret_atomicrmw:
 ; GFX12-CU:       ; %bb.0: ; %entry
-; GFX12-CU-NEXT:    s_clause 0x1
-; GFX12-CU-NEXT:    s_load_b32 s2, s[0:1], 0x8
-; GFX12-CU-NEXT:    s_load_b64 s[0:1], s[0:1], 0x0
+; GFX12-CU-NEXT:    s_load_b96 s[0:2], s[0:1], 0x0
 ; GFX12-CU-NEXT:    s_wait_kmcnt 0x0
 ; GFX12-CU-NEXT:    v_dual_mov_b32 v0, 0 :: v_dual_mov_b32 v1, s2
 ; GFX12-CU-NEXT:    s_wait_bvhcnt 0x0
@@ -2801,9 +2773,7 @@ define amdgpu_kernel void @global_system_seq_cst_ret_atomicrmw(
 ;
 ; GFX12-WGP-LABEL: global_system_seq_cst_ret_atomicrmw:
 ; GFX12-WGP:       ; %bb.0: ; %entry
-; GFX12-WGP-NEXT:    s_clause 0x1
-; GFX12-WGP-NEXT:    s_load_b32 s2, s[0:1], 0x8
-; GFX12-WGP-NEXT:    s_load_b64 s[0:1], s[0:1], 0x0
+; GFX12-WGP-NEXT:    s_load_b96 s[0:2], s[0:1], 0x0
 ; GFX12-WGP-NEXT:    s_wait_kmcnt 0x0
 ; GFX12-WGP-NEXT:    v_dual_mov_b32 v0, 0 :: v_dual_mov_b32 v1, s2
 ; GFX12-WGP-NEXT:    s_wait_bvhcnt 0x0
@@ -2821,9 +2791,7 @@ define amdgpu_kernel void @global_system_seq_cst_ret_atomicrmw(
 ;
 ; GFX12-CU-LABEL: global_system_seq_cst_ret_atomicrmw:
 ; GFX12-CU:       ; %bb.0: ; %entry
-; GFX12-CU-NEXT:    s_clause 0x1
-; GFX12-CU-NEXT:    s_load_b32 s2, s[0:1], 0x8
-; GFX12-CU-NEXT:    s_load_b64 s[0:1], s[0:1], 0x0
+; GFX12-CU-NEXT:    s_load_b96 s[0:2], s[0:1], 0x0
 ; GFX12-CU-NEXT:    s_wait_kmcnt 0x0
 ; GFX12-CU-NEXT:    v_dual_mov_b32 v0, 0 :: v_dual_mov_b32 v1, s2
 ; GFX12-CU-NEXT:    s_wait_bvhcnt 0x0
@@ -9232,9 +9200,7 @@ define amdgpu_kernel void @global_system_one_as_monotonic_atomicrmw(
 ;
 ; GFX12-WGP-LABEL: global_system_one_as_monotonic_atomicrmw:
 ; GFX12-WGP:       ; %bb.0: ; %entry
-; GFX12-WGP-NEXT:    s_clause 0x1
-; GFX12-WGP-NEXT:    s_load_b32 s2, s[0:1], 0x8
-; GFX12-WGP-NEXT:    s_load_b64 s[0:1], s[0:1], 0x0
+; GFX12-WGP-NEXT:    s_load_b96 s[0:2], s[0:1], 0x0
 ; GFX12-WGP-NEXT:    s_wait_kmcnt 0x0
 ; GFX12-WGP-NEXT:    v_dual_mov_b32 v0, 0 :: v_dual_mov_b32 v1, s2
 ; GFX12-WGP-NEXT:    global_atomic_swap_b32 v0, v1, s[0:1]
@@ -9243,9 +9209,7 @@ define amdgpu_kernel void @global_system_one_as_monotonic_atomicrmw(
 ;
 ; GFX12-CU-LABEL: global_system_one_as_monotonic_atomicrmw:
 ; GFX12-CU:       ; %bb.0: ; %entry
-; GFX12-CU-NEXT:    s_clause 0x1
-; GFX12-CU-NEXT:    s_load_b32 s2, s[0:1], 0x8
-; GFX12-CU-NEXT:    s_load_b64 s[0:1], s[0:1], 0x0
+; GFX12-CU-NEXT:    s_load_b96 s[0:2], s[0:1], 0x0
 ; GFX12-CU-NEXT:    s_wait_kmcnt 0x0
 ; GFX12-CU-NEXT:    v_dual_mov_b32 v0, 0 :: v_dual_mov_b32 v1, s2
 ; GFX12-CU-NEXT:    global_atomic_swap_b32 v0, v1, s[0:1]
@@ -9402,9 +9366,7 @@ define amdgpu_kernel void @global_system_one_as_acquire_atomicrmw(
 ;
 ; GFX12-WGP-LABEL: global_system_one_as_acquire_atomicrmw:
 ; GFX12-WGP:       ; %bb.0: ; %entry
-; GFX12-WGP-NEXT:    s_clause 0x1
-; GFX12-WGP-NEXT:    s_load_b32 s2, s[0:1], 0x8
-; GFX12-WGP-NEXT:    s_load_b64 s[0:1], s[0:1], 0x0
+; GFX12-WGP-NEXT:    s_load_b96 s[0:2], s[0:1], 0x0
 ; GFX12-WGP-NEXT:    s_wait_kmcnt 0x0
 ; GFX12-WGP-NEXT:    v_dual_mov_b32 v0, 0 :: v_dual_mov_b32 v1, s2
 ; GFX12-WGP-NEXT:    global_atomic_swap_b32 v0, v1, s[0:1]
@@ -9414,9 +9376,7 @@ define amdgpu_kernel void @global_system_one_as_acquire_atomicrmw(
 ;
 ; GFX12-CU-LABEL: global_system_one_as_acquire_atomicrmw:
 ; GFX12-CU:       ; %bb.0: ; %entry
-; GFX12-CU-NEXT:    s_clause 0x1
-; GFX12-CU-NEXT:    s_load_b32 s2, s[0:1], 0x8
-; GFX12-CU-NEXT:    s_load_b64 s[0:1], s[0:1], 0x0
+; GFX12-CU-NEXT:    s_load_b96 s[0:2], s[0:1], 0x0
 ; GFX12-CU-NEXT:    s_wait_kmcnt 0x0
 ; GFX12-CU-NEXT:    v_dual_mov_b32 v0, 0 :: v_dual_mov_b32 v1, s2
 ; GFX12-CU-NEXT:    global_atomic_swap_b32 v0, v1, s[0:1]
@@ -9568,9 +9528,7 @@ define amdgpu_kernel void @global_system_one_as_release_atomicrmw(
 ;
 ; GFX12-WGP-LABEL: global_system_one_as_release_atomicrmw:
 ; GFX12-WGP:       ; %bb.0: ; %entry
-; GFX12-WGP-NEXT:    s_clause 0x1
-; GFX12-WGP-NEXT:    s_load_b32 s2, s[0:1], 0x8
-; GFX12-WGP-NEXT:    s_load_b64 s[0:1], s[0:1], 0x0
+; GFX12-WGP-NEXT:    s_load_b96 s[0:2], s[0:1], 0x0
 ; GFX12-WGP-NEXT:    s_wait_kmcnt 0x0
 ; GFX12-WGP-NEXT:    v_dual_mov_b32 v0, 0 :: v_dual_mov_b32 v1, s2
 ; GFX12-WGP-NEXT:    s_wait_bvhcnt 0x0
@@ -9583,9 +9541,7 @@ define amdgpu_kernel void @global_system_one_as_release_atomicrmw(
 ;
 ; GFX12-CU-LABEL: global_system_one_as_release_atomicrmw:
 ; GFX12-CU:       ; %bb.0: ; %entry
-; GFX12-CU-NEXT:    s_clause 0x1
-; GFX12-CU-NEXT:    s_load_b32 s2, s[0:1], 0x8
-; GFX12-CU-NEXT:    s_load_b64 s[0:1], s[0:1], 0x0
+; GFX12-CU-NEXT:    s_load_b96 s[0:2], s[0:1], 0x0
 ; GFX12-CU-NEXT:    s_wait_kmcnt 0x0
 ; GFX12-CU-NEXT:    v_dual_mov_b32 v0, 0 :: v_dual_mov_b32 v1, s2
 ; GFX12-CU-NEXT:    s_wait_bvhcnt 0x0
@@ -9765,9 +9721,7 @@ define amdgpu_kernel void @global_system_one_as_acq_rel_atomicrmw(
 ;
 ; GFX12-WGP-LABEL: global_system_one_as_acq_rel_atomicrmw:
 ; GFX12-WGP:       ; %bb.0: ; %entry
-; GFX12-WGP-NEXT:    s_clause 0x1
-; GFX12-WGP-NEXT:    s_load_b32 s2, s[0:1], 0x8
-; GFX12-WGP-NEXT:    s_load_b64 s[0:1], s[0:1], 0x0
+; GFX12-WGP-NEXT:    s_load_b96 s[0:2], s[0:1], 0x0
 ; GFX12-WGP-NEXT:    s_wait_kmcnt 0x0
 ; GFX12-WGP-NEXT:    v_dual_mov_b32 v0, 0 :: v_dual_mov_b32 v1, s2
 ; GFX12-WGP-NEXT:    s_wait_bvhcnt 0x0
@@ -9781,9 +9735,7 @@ define amdgpu_kernel void @global_system_one_as_acq_rel_atomicrmw(
 ;
 ; GFX12-CU-LABEL: global_system_one_as_acq_rel_atomicrmw:
 ; GFX12-CU:       ; %bb.0: ; %entry
-; GFX12-CU-NEXT:    s_clause 0x1
-; GFX12-CU-NEXT:    s_load_b32 s2, s[0:1], 0x8
-; GFX12-CU-NEXT:    s_load_b64 s[0:1], s[0:1], 0x0
+; GFX12-CU-NEXT:    s_load_b96 s[0:2], s[0:1], 0x0
 ; GFX12-CU-NEXT:    s_wait_kmcnt 0x0
 ; GFX12-CU-NEXT:    v_dual_mov_b32 v0, 0 :: v_dual_mov_b32 v1, s2
 ; GFX12-CU-NEXT:    s_wait_bvhcnt 0x0
@@ -9964,9 +9916,7 @@ define amdgpu_kernel void @global_system_one_as_seq_cst_atomicrmw(
 ;
 ; GFX12-WGP-LABEL: global_system_one_as_seq_cst_atomicrmw:
 ; GFX12-WGP:       ; %bb.0: ; %entry
-; GFX12-WGP-NEXT:    s_clause 0x1
-; GFX12-WGP-NEXT:    s_load_b32 s2, s[0:1], 0x8
-; GFX12-WGP-NEXT:    s_load_b64 s[0:1], s[0:1], 0x0
+; GFX12-WGP-NEXT:    s_load_b96 s[0:2], s[0:1], 0x0
 ; GFX12-WGP-NEXT:    s_wait_kmcnt 0x0
 ; GFX12-WGP-NEXT:    v_dual_mov_b32 v0, 0 :: v_dual_mov_b32 v1, s2
 ; GFX12-WGP-NEXT:    s_wait_bvhcnt 0x0
@@ -9980,9 +9930,7 @@ define amdgpu_kernel void @global_system_one_as_seq_cst_atomicrmw(
 ;
 ; GFX12-CU-LABEL: global_system_one_as_seq_cst_atomicrmw:
 ; GFX12-CU:       ; %bb.0: ; %entry
-; GFX12-CU-NEXT:    s_clause 0x1
-; GFX12-CU-NEXT:    s_load_b32 s2, s[0:1], 0x8
-; GFX12-CU-NEXT:    s_load_b64 s[0:1], s[0:1], 0x0
+; GFX12-CU-NEXT:    s_load_b96 s[0:2], s[0:1], 0x0
 ; GFX12-CU-NEXT:    s_wait_kmcnt 0x0
 ; GFX12-CU-NEXT:    v_dual_mov_b32 v0, 0 :: v_dual_mov_b32 v1, s2
 ; GFX12-CU-NEXT:    s_wait_bvhcnt 0x0
@@ -10157,9 +10105,7 @@ define amdgpu_kernel void @global_system_one_as_acquire_ret_atomicrmw(
 ;
 ; GFX12-WGP-LABEL: global_system_one_as_acquire_ret_atomicrmw:
 ; GFX12-WGP:       ; %bb.0: ; %entry
-; GFX12-WGP-NEXT:    s_clause 0x1
-; GFX12-WGP-NEXT:    s_load_b32 s2, s[0:1], 0x8
-; GFX12-WGP-NEXT:    s_load_b64 s[0:1], s[0:1], 0x0
+; GFX12-WGP-NEXT:    s_load_b96 s[0:2], s[0:1], 0x0
 ; GFX12-WGP-NEXT:    s_wait_kmcnt 0x0
 ; GFX12-WGP-NEXT:    v_dual_mov_b32 v0, 0 :: v_dual_mov_b32 v1, s2
 ; GFX12-WGP-NEXT:    global_atomic_swap_b32 v1, v0, v1, s[0:1] th:TH_ATOMIC_RETURN
@@ -10173,9 +10119,7 @@ define amdgpu_kernel void @global_system_one_as_acquire_ret_atomicrmw(
 ;
 ; GFX12-CU-LABEL: global_system_one_as_acquire_ret_atomicrmw:
 ; GFX12-CU:       ; %bb.0: ; %entry
-; GFX12-CU-NEXT:    s_clause 0x1
-; GFX12-CU-NEXT:    s_load_b32 s2, s[0:1], 0x8
-; GFX12-CU-NEXT:    s_load_b64 s[0:1], s[0:1], 0x0
+; GFX12-CU-NEXT:    s_load_b96 s[0:2], s[0:1], 0x0
 ; GFX12-CU-NEXT:    s_wait_kmcnt 0x0
 ; GFX12-CU-NEXT:    v_dual_mov_b32 v0, 0 :: v_dual_mov_b32 v1, s2
 ; GFX12-CU-NEXT:    global_atomic_swap_b32 v1, v0, v1, s[0:1] th:TH_ATOMIC_RETURN
@@ -10370,9 +10314,7 @@ define amdgpu_kernel void @global_system_one_as_acq_rel_ret_atomicrmw(
 ;
 ; GFX12-WGP-LABEL: global_system_one_as_acq_rel_ret_atomicrmw:
 ; GFX12-WGP:       ; %bb.0: ; %entry
-; GFX12-WGP-NEXT:    s_clause 0x1
-; GFX12-WGP-NEXT:    s_load_b32 s2, s[0:1], 0x8
-; GFX12-WGP-NEXT:    s_load_b64 s[0:1], s[0:1], 0x0
+; GFX12-WGP-NEXT:    s_load_b96 s[0:2], s[0:1], 0x0
 ; GFX12-WGP-NEXT:    s_wait_kmcnt 0x0
 ; GFX12-WGP-NEXT:    v_dual_mov_b32 v0, 0 :: v_dual_mov_b32 v1, s2
 ; GFX12-WGP-NEXT:    s_wait_bvhcnt 0x0
@@ -10390,9 +10332,7 @@ define amdgpu_kernel void @global_system_one_as_acq_rel_ret_atomicrmw(
 ;
 ; GFX12-CU-LABEL: global_system_one_as_acq_rel_ret_atomicrmw:
 ; GFX12-CU:       ; %bb.0: ; %entry
-; GFX12-CU-NEXT:    s_clause 0x1
-; GFX12-CU-NEXT:    s_load_b32 s2, s[0:1], 0x8
-; GFX12-CU-NEXT:    s_load_b64 s[0:1], s[0:1], 0x0
+; GFX12-CU-NEXT:    s_load_b96 s[0:2], s[0:1], 0x0
 ; GFX12-CU-NEXT:    s_wait_kmcnt 0x0
 ; GFX12-CU-NEXT:    v_dual_mov_b32 v0, 0 :: v_dual_mov_b32 v1, s2
 ; GFX12-CU-NEXT:    s_wait_bvhcnt 0x0
@@ -10591,9 +10531,7 @@ define amdgpu_kernel void @global_system_one_as_seq_cst_ret_atomicrmw(
 ;
 ; GFX12-WGP-LABEL: global_system_one_as_seq_cst_ret_atomicrmw:
 ; GFX12-WGP:       ; %bb.0: ; %entry
-; GFX12-WGP-NEXT:    s_clause 0x1
-; GFX12-WGP-NEXT:    s_load_b32 s2, s[0:1], 0x8
-; GFX12-WGP-NEXT:    s_load_b64 s[0:1], s[0:1], 0x0
+; GFX12-WGP-NEXT:    s_load_b96 s[0:2], s[0:1], 0x0
 ; GFX12-WGP-NEXT:    s_wait_kmcnt 0x0
 ; GFX12-WGP-NEXT:    v_dual_mov_b32 v0, 0 :: v_dual_mov_b32 v1, s2
 ; GFX12-WGP-NEXT:    s_wait_bvhcnt 0x0
@@ -10611,9 +10549,7 @@ define amdgpu_kernel void @global_system_one_as_seq_cst_ret_atomicrmw(
 ;
 ; GFX12-CU-LABEL: global_system_one_as_seq_cst_ret_atomicrmw:
 ; GFX12-CU:       ; %bb.0: ; %entry
-; GFX12-CU-NEXT:    s_clause 0x1
-; GFX12-CU-NEXT:    s_load_b32 s2, s[0:1], 0x8
-; GFX12-CU-NEXT:    s_load_b64 s[0:1], s[0:1], 0x0
+; GFX12-CU-NEXT:    s_load_b96 s[0:2], s[0:1], 0x0
 ; GFX12-CU-NEXT:    s_wait_kmcnt 0x0
 ; GFX12-CU-NEXT:    v_dual_mov_b32 v0, 0 :: v_dual_mov_b32 v1, s2
 ; GFX12-CU-NEXT:    s_wait_bvhcnt 0x0

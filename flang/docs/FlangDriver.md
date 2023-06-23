@@ -149,11 +149,6 @@ flang-new -ccc-print-phases -c file.f
 +- 3: backend, {2}, assembler
 4: assembler, {3}, object
 ```
-Note that currently Flang does not support code-generation and `flang-new` will
-fail during the second step above with the following error:
-```bash
-error: code-generation is not available yet
-```
 The other phases are printed nonetheless when using `-ccc-print-phases`, as
 that reflects what `clangDriver`, the library, will try to create and run.
 
@@ -330,16 +325,13 @@ As of [#7246](https://gitlab.kitware.com/cmake/cmake/-/merge_requests/7246)
 supported Fortran compiler. You can configure your CMake projects to use
 `flang-new` as follows:
 ```bash
-cmake -DCMAKE_Fortran_FLAGS="-flang-experimental-exec" -DCMAKE_Fortran_COMPILER=<path/to/flang-new> <src/dir>
+cmake -DCMAKE_Fortran_COMPILER=<path/to/flang-new> <src/dir>
 ```
 You should see the following in the output:
 ```
 -- The Fortran compiler identification is LLVMFlang <version>
 ```
-where `<version>` corresponds to the LLVM Flang version. Note that while
-generating executables remains experimental, you will need to inform CMake to
-use the `-flang-experimental-exec` flag when invoking `flang-new` as in the
-example above.
+where `<version>` corresponds to the LLVM Flang version.
 
 # Testing
 In LIT, we define two variables that you can use to invoke Flang's drivers:

@@ -409,6 +409,7 @@ defm "" : LMULSEWSchedWritesWRed<"WriteVIWRedV_From">;
 // 14.3. Vector Single-Width Floating-Point Reduction Instructions
 defm "" : LMULSEWSchedWritesF<"WriteVFRedV_From">;
 defm "" : LMULSEWSchedWritesF<"WriteVFRedOV_From">;
+defm "" : LMULSEWSchedWritesF<"WriteVFRedMinMaxV_From">;
 // 14.4. Vector Widening Floating-Point Reduction Instructions
 defm "" : LMULSEWSchedWritesFWRed<"WriteVFWRedV_From">;
 defm "" : LMULSEWSchedWritesFWRed<"WriteVFWRedOV_From">;
@@ -633,6 +634,7 @@ def ReadVFRedV        : SchedRead;
 def ReadVFRedV0       : SchedRead;
 def ReadVFRedOV       : SchedRead;
 def ReadVFRedOV0      : SchedRead;
+def ReadVFRedMinMaxV  : SchedRead;
 // 14.4. Vector Widening Floating-Point Reduction Instructions
 def ReadVFWRedV       : SchedRead;
 def ReadVFWRedV0      : SchedRead;
@@ -847,6 +849,7 @@ defm "" : LMULSEWWriteRes<"WriteVIRedV_From", []>;
 defm "" : LMULSEWWriteResWRed<"WriteVIWRedV_From", []>;
 defm "" : LMULSEWWriteResF<"WriteVFRedV_From", []>;
 defm "" : LMULSEWWriteResF<"WriteVFRedOV_From", []>;
+defm "" : LMULSEWWriteResF<"WriteVFRedMinMaxV_From", []>;
 defm "" : LMULSEWWriteResFWRed<"WriteVFWRedV_From", []>;
 defm "" : LMULSEWWriteResFWRed<"WriteVFWRedOV_From", []>;
 
@@ -1006,6 +1009,7 @@ def : ReadAdvance<ReadVFRedV, 0>;
 def : ReadAdvance<ReadVFRedV0, 0>;
 def : ReadAdvance<ReadVFRedOV, 0>;
 def : ReadAdvance<ReadVFRedOV0, 0>;
+def : ReadAdvance<ReadVFRedMinMaxV, 0>;
 def : ReadAdvance<ReadVFWRedV, 0>;
 def : ReadAdvance<ReadVFWRedV0, 0>;
 def : ReadAdvance<ReadVFWRedOV, 0>;

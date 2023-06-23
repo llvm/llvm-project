@@ -14,7 +14,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "mlir/ExecutionEngine/RunnerUtils.h"
-#include "llvm/ADT/StringMap.h"
 #include <chrono>
 
 // NOLINTBEGIN(*-identifier-naming)
@@ -287,86 +286,5 @@ extern "C" int64_t verifyMemRefC64(int64_t rank, void *actualPtr,
   UnrankedMemRefType<impl::complex64> expectedDesc = {rank, expectedPtr};
   return _mlir_ciface_verifyMemRefC64(&actualDesc, &expectedDesc);
 }
-
-//===----------------------------------------------------------------------===//
-// MLIR ExecutionEngine dynamic library integration.
-//===----------------------------------------------------------------------===//
-
-// Visual Studio had a bug that fails to compile nested generic lambdas
-// inside an `extern "C"` function.
-//   https://developercommunity.visualstudio.com/content/problem/475494/clexe-error-with-lambda-inside-function-templates.html
-// The bug is fixed in VS2019 16.1. Separating the declaration and definition is
-// a work around for older versions of Visual Studio.
-extern "C" MLIR_RUNNERUTILS_EXPORT void
-__mlir_execution_engine_init(llvm::StringMap<void *> &exportSymbols);
-
-void __mlir_execution_engine_init(llvm::StringMap<void *> &exportSymbols) {
-  auto exportSymbol = [&](llvm::StringRef name, auto ptr) {
-    assert(exportSymbols.count(name) == 0 && "symbol already exists");
-    exportSymbols[name] = reinterpret_cast<void *>(ptr);
-  };
-
-  exportSymbol("_mlir_ciface_printMemrefShapeI8",
-               &_mlir_ciface_printMemrefShapeI8);
-  exportSymbol("_mlir_ciface_printMemrefShapeI32",
-               &_mlir_ciface_printMemrefShapeI32);
-  exportSymbol("_mlir_ciface_printMemrefShapeI64",
-               &_mlir_ciface_printMemrefShapeI64);
-  exportSymbol("_mlir_ciface_printMemrefShapeF32",
-               &_mlir_ciface_printMemrefShapeF32);
-  exportSymbol("_mlir_ciface_printMemrefShapeF64",
-               &_mlir_ciface_printMemrefShapeF64);
-  exportSymbol("_mlir_ciface_printMemrefShapeInd",
-               &_mlir_ciface_printMemrefShapeInd);
-  exportSymbol("_mlir_ciface_printMemrefShapeC32",
-               &_mlir_ciface_printMemrefShapeC32);
-  exportSymbol("_mlir_ciface_printMemrefShapeC64",
-               &_mlir_ciface_printMemrefShapeC64);
-  exportSymbol("_mlir_ciface_printMemrefI8", &_mlir_ciface_printMemrefI8);
-  exportSymbol("_mlir_ciface_printMemrefI32", &_mlir_ciface_printMemrefI32);
-  exportSymbol("_mlir_ciface_printMemrefI64", &_mlir_ciface_printMemrefI64);
-  exportSymbol("_mlir_ciface_printMemrefF32", &_mlir_ciface_printMemrefF32);
-  exportSymbol("_mlir_ciface_printMemrefF64", &_mlir_ciface_printMemrefF64);
-  exportSymbol("_mlir_ciface_printMemrefInd", &_mlir_ciface_printMemrefInd);
-  exportSymbol("_mlir_ciface_printMemrefC32", &_mlir_ciface_printMemrefC32);
-  exportSymbol("_mlir_ciface_printMemrefC64", &_mlir_ciface_printMemrefC64);
-  exportSymbol("_mlir_ciface_nanoTime", &_mlir_ciface_nanoTime);
-  exportSymbol("printMemrefI32", &printMemrefI32);
-  exportSymbol("printMemrefI64", &printMemrefI64);
-  exportSymbol("printMemrefF32", &printMemrefF32);
-  exportSymbol("printMemrefF64", &printMemrefF64);
-  exportSymbol("printMemrefInd", &printMemrefInd);
-  exportSymbol("printMemrefC32", &printMemrefC32);
-  exportSymbol("printMemrefC64", &printMemrefC64);
-  exportSymbol("printCString", &printCString);
-  exportSymbol("_mlir_ciface_printMemref0dF32", &_mlir_ciface_printMemref0dF32);
-  exportSymbol("_mlir_ciface_printMemref1dF32", &_mlir_ciface_printMemref1dF32);
-  exportSymbol("_mlir_ciface_printMemref2dF32", &_mlir_ciface_printMemref2dF32);
-  exportSymbol("_mlir_ciface_printMemref3dF32", &_mlir_ciface_printMemref3dF32);
-  exportSymbol("_mlir_ciface_printMemref4dF32", &_mlir_ciface_printMemref4dF32);
-  exportSymbol("_mlir_ciface_printMemref1dI8", &_mlir_ciface_printMemref1dI8);
-  exportSymbol("_mlir_ciface_printMemref1dI32", &_mlir_ciface_printMemref1dI32);
-  exportSymbol("_mlir_ciface_printMemref1dI64", &_mlir_ciface_printMemref1dI64);
-  exportSymbol("_mlir_ciface_printMemref1dF64", &_mlir_ciface_printMemref1dF64);
-  exportSymbol("_mlir_ciface_printMemref1dInd", &_mlir_ciface_printMemref1dInd);
-  exportSymbol("_mlir_ciface_printMemref1dC32", &_mlir_ciface_printMemref1dC32);
-  exportSymbol("_mlir_ciface_printMemref1dC64", &_mlir_ciface_printMemref1dC64);
-  exportSymbol("_mlir_ciface_printMemrefVector4x4xf32",
-               &_mlir_ciface_printMemrefVector4x4xf32);
-  exportSymbol("_mlir_ciface_verifyMemRefI32", &_mlir_ciface_verifyMemRefI32);
-  exportSymbol("_mlir_ciface_verifyMemRefF32", &_mlir_ciface_verifyMemRefF32);
-  exportSymbol("_mlir_ciface_verifyMemRefF64", &_mlir_ciface_verifyMemRefF64);
-  exportSymbol("_mlir_ciface_verifyMemRefInd", &_mlir_ciface_verifyMemRefInd);
-  exportSymbol("_mlir_ciface_verifyMemRefC32", &_mlir_ciface_verifyMemRefC32);
-  exportSymbol("_mlir_ciface_verifyMemRefC64", &_mlir_ciface_verifyMemRefC64);
-  exportSymbol("verifyMemRefI32", &verifyMemRefI32);
-  exportSymbol("verifyMemRefF32", &verifyMemRefF32);
-  exportSymbol("verifyMemRefF64", &verifyMemRefF64);
-  exportSymbol("verifyMemRefInd", &verifyMemRefInd);
-  exportSymbol("verifyMemRefC32", &verifyMemRefC32);
-  exportSymbol("verifyMemRefC64", &verifyMemRefC64);
-}
-
-extern "C" MLIR_RUNNERUTILS_EXPORT void __mlir_execution_engine_destroy() {}
 
 // NOLINTEND(*-identifier-naming)

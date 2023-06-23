@@ -234,6 +234,10 @@ void CodeGenIntrinsic::setProperty(Record *R) {
     unsigned ArgNo = R->getValueAsInt("ArgNo");
     uint64_t Align = R->getValueAsInt("Align");
     addArgAttribute(ArgNo, Alignment, Align);
+  } else if (R->isSubClassOf("Dereferenceable")) {
+    unsigned ArgNo = R->getValueAsInt("ArgNo");
+    uint64_t Bytes = R->getValueAsInt("Bytes");
+    addArgAttribute(ArgNo, Dereferenceable, Bytes);
   } else
     llvm_unreachable("Unknown property!");
 }

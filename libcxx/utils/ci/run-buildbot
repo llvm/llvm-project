@@ -198,7 +198,7 @@ check-format)
     ${GIT_CLANG_FORMAT} \
         --diff \
         --extensions ',h,hpp,c,cpp,cppm,inc,ipp' HEAD~1 \
-        -- $(find libcxx/{benchmarks,include,modules,src}/ -type f | grep -vf libcxx/utils/data/ignore_format.txt) \
+        -- $(find libcxx/{benchmarks,include,modules,src} -type f | grep -vf libcxx/utils/data/ignore_format.txt) \
         | tee ${BUILD_DIR}/clang-format.patch
     # Check if the diff is empty, fail otherwise.
     ! grep -q '^--- a' ${BUILD_DIR}/clang-format.patch

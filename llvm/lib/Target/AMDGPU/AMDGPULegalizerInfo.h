@@ -199,9 +199,6 @@ public:
 
   bool legalizeSBufferLoad(LegalizerHelper &Helper, MachineInstr &MI) const;
 
-  bool legalizeAtomicIncDec(MachineInstr &MI,  MachineIRBuilder &B,
-                            bool IsInc) const;
-
   bool legalizeTrapIntrinsic(MachineInstr &MI, MachineRegisterInfo &MRI,
                              MachineIRBuilder &B) const;
   bool legalizeTrapEndpgm(MachineInstr &MI, MachineRegisterInfo &MRI,

@@ -39,8 +39,6 @@
 ! CHECK-NEXT: -finput-charset=<value> Specify the default character set for source files
 ! CHECK-NEXT: -fintrinsic-modules-path <dir>
 ! CHECK-NEXT:                        Specify where to find the compiled intrinsic modules
-! CHECK-NEXT: -flang-experimental-exec
-! CHECK-NEXT:                        Enable support for generating executables (experimental)
 ! CHECK-NEXT: -flang-experimental-hlfir
 ! CHECK-NEXT:                        Use HLFIR lowering (experimental)
 ! CHECK-NEXT: -flarge-sizes          Use INTEGER(KIND=8) for the result type in size-related intrinsics
