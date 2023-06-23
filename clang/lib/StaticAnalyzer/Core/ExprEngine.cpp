@@ -977,6 +977,9 @@ void ExprEngine::processCFGElement(const CFGElement E, ExplodedNode *Pred,
       ProcessLoopExit(E.castAs<CFGLoopExit>().getLoopStmt(), Pred);
       return;
     case CFGElement::LifetimeEnds:
+      ProcessLifetimeEnd(E.castAs<CFGLifetimeEnds>().getTriggerStmt(),
+                         E.castAs<CFGLifetimeEnds>().getVarDecl(), Pred);
+      return;
     case CFGElement::CleanupFunction:
     case CFGElement::FullExprCleanup:
     case CFGElement::ScopeBegin:
@@ -1138,6 +1141,19 @@ void ExprEngine::ProcessLoopExit(const Stmt* S, ExplodedNode *Pred) {
   ExplodedNode *N = Engine.makeNode(PP, NewState, Pred);
   if (N && !N->isSink())
     Engine.enqueueStmtNode(N, getCurrBlock(), currStmtIdx);
+}
+
+void ExprEngine::ProcessLifetimeEnd(const Stmt *S, const VarDecl *D,
+                                    ExplodedNode *Pred) {
+  ExplodedNodeSet Src;
+  NodeBuilder Bldr(Pred, Src, *currBldrCtx);
+  LifetimeEnd PP(S, D, Pred->getStackFrame());
+  Bldr.generateNode(PP, Pred->getState(), Pred);
+
+  ExplodedNodeSet Dst;
+  getCheckerManager().runCheckersForLifetimeEnd(Dst, Src, D, S, *this);
+  Engine.enqueueStmtNodes(Dst, currBldrCtx->getBlock(), currStmtIdx);
+  return;
 }
 
 void ExprEngine::ProcessInitializer(const CFGInitializer CFGInit,

@@ -217,6 +217,11 @@ void ProgramPoint::printJson(llvm::raw_ostream &Out, const char *NL) const {
         << castAs<LoopExit>().getLoopStmt()->getStmtClassName() << '\"';
     break;
 
+  case ProgramPoint::LifetimeEndKind:
+    Out << "LifetimeEnd\", \"var\": \""
+        << castAs<LifetimeEnd>().getDecl()->getNameAsString() << '\"';
+    break;
+
   case ProgramPoint::PreImplicitCallKind: {
     ImplicitCallPoint PC = castAs<ImplicitCallPoint>();
     Out << "PreCall\", \"decl\": \""

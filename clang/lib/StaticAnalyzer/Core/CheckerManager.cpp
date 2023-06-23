@@ -35,17 +35,18 @@ using namespace clang;
 using namespace ento;
 
 bool CheckerManager::hasPathSensitiveCheckers() const {
-  const auto IfAnyAreNonEmpty = [](const auto &... Callbacks) -> bool {
+  const auto IfAnyAreNonEmpty = [](const auto &...Callbacks) -> bool {
     return (!Callbacks.empty() || ...);
   };
   return IfAnyAreNonEmpty(
       StmtCheckers, PreObjCMessageCheckers, ObjCMessageNilCheckers,
       PostObjCMessageCheckers, PreCallCheckers, PostCallCheckers,
-      LocationCheckers, BindCheckers, BlockEntranceCheckers,
-      EndAnalysisCheckers, BeginFunctionCheckers, EndFunctionCheckers,
-      BranchConditionCheckers, NewAllocatorCheckers, LiveSymbolsCheckers,
-      DeadSymbolsCheckers, RegionChangesCheckers, PointerEscapeCheckers,
-      EvalAssumeCheckers, EvalCallCheckers, EndOfTranslationUnitCheckers);
+      LifetimeEndCheckers, LocationCheckers, BindCheckers,
+      BlockEntranceCheckers, EndAnalysisCheckers, BeginFunctionCheckers,
+      EndFunctionCheckers, BranchConditionCheckers, NewAllocatorCheckers,
+      LiveSymbolsCheckers, DeadSymbolsCheckers, RegionChangesCheckers,
+      PointerEscapeCheckers, EvalAssumeCheckers, EvalCallCheckers,
+      EndOfTranslationUnitCheckers);
 }
 
 void CheckerManager::reportInvalidCheckerOptionValue(
@@ -308,6 +309,44 @@ void CheckerManager::runCheckersForCallEvent(bool isPreVisit,
   llvm::TimeTraceScope TimeScope(
       isPreVisit ? "CheckerManager::runCheckersForCallEvent (Pre)"
                  : "CheckerManager::runCheckersForCallEvent (Post)");
+  expandGraphWithCheckers(C, Dst, Src);
+}
+
+namespace {
+
+struct CheckLifetimeEndContext {
+  using CheckersTy = std::vector<CheckerManager::CheckLifetimeEndFunc>;
+
+  const CheckersTy &Checkers;
+  const VarDecl *Decl;
+  const Stmt *TriggerStmt;
+  ExprEngine &Eng;
+
+  CheckLifetimeEndContext(const CheckersTy &checkers, const VarDecl *decl,
+                          const Stmt *stmt, ExprEngine &eng)
+      : Checkers(checkers), Decl(decl), TriggerStmt(stmt), Eng(eng) {}
+
+  CheckersTy::const_iterator checkers_begin() { return Checkers.begin(); }
+  CheckersTy::const_iterator checkers_end() { return Checkers.end(); }
+
+  void runChecker(CheckerManager::CheckLifetimeEndFunc checkFn,
+                  NodeBuilder &Bldr, ExplodedNode *Pred) {
+    assert(Pred->getLocation().getAs<LifetimeEnd>().has_value());
+    const ProgramPoint L = Pred->getLocation().withTag(checkFn.Checker);
+    CheckerContext C(Bldr, Eng, Pred, L);
+    checkFn(Decl, C);
+  }
+};
+
+} // namespace
+
+/// Run checkers for end of variable lifetime
+void CheckerManager::runCheckersForLifetimeEnd(ExplodedNodeSet &Dst,
+                                               const ExplodedNodeSet &Src,
+                                               const VarDecl *Decl,
+                                               const Stmt *TriggerStmt,
+                                               ExprEngine &Eng) {
+  CheckLifetimeEndContext C(LifetimeEndCheckers, Decl, TriggerStmt, Eng);
   expandGraphWithCheckers(C, Dst, Src);
 }
 
@@ -901,6 +940,10 @@ void CheckerManager::_registerForPreCall(CheckCallFunc checkfn) {
 }
 void CheckerManager::_registerForPostCall(CheckCallFunc checkfn) {
   PostCallCheckers.push_back(checkfn);
+}
+
+void CheckerManager::_registerForLifetimeEnd(CheckLifetimeEndFunc checkfn) {
+  LifetimeEndCheckers.push_back(checkfn);
 }
 
 void CheckerManager::_registerForLocation(CheckLocationFunc checkfn) {
