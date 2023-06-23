@@ -29,7 +29,7 @@ MATH_MANGLE(rlen3)(double x, double y, double z)
     c = BUILTIN_FLDEXP_F64(c, -e);
 
     double d2 = MATH_MAD(a, a, MATH_MAD(b, b, c*c));
-    double v = BUILTIN_RSQRT_F64(d2);
+    double v = BUILTIN_AMDGPU_RSQRT_F64(d2);
     double u = MATH_MAD(-d2*v, v, 1.0);
     v = MATH_MAD(v*u, MATH_MAD(u, 0.375, 0.5), v);
     double ret = BUILTIN_FLDEXP_F64(v, -e);

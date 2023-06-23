@@ -17,7 +17,7 @@ MATH_MANGLE(rhypot)(half x, half y)
 
     float d2 = BUILTIN_MAD_F32(fx, fx, fy*fy);
 
-    half ret = (half)BUILTIN_RSQRT_F32(d2);
+    half ret = (half)BUILTIN_AMDGPU_RSQRT_F32(d2);
 
     if (!FINITE_ONLY_OPT()) {
         ret = (BUILTIN_ISINF_F16(x) | BUILTIN_ISINF_F16(y)) ?

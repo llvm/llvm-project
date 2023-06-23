@@ -16,7 +16,7 @@ MATH_MANGLE(rhypot)(float x, float y)
     int e = BUILTIN_FREXP_EXP_F32(t);
     a = BUILTIN_FLDEXP_F32(a, -e);
     b = BUILTIN_FLDEXP_F32(b, -e);
-    float ret = BUILTIN_FLDEXP_F32(BUILTIN_RSQRT_F32(MATH_MAD(a, a, b*b)), -e);
+    float ret = BUILTIN_FLDEXP_F32(BUILTIN_AMDGPU_RSQRT_F32(MATH_MAD(a, a, b*b)), -e);
 
     if (!FINITE_ONLY_OPT()) {
         ret = (BUILTIN_ISINF_F32(x) |

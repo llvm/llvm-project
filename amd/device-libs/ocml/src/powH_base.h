@@ -27,7 +27,7 @@ MATH_MANGLE(pow)(half x, half y)
 #if defined(COMPILING_POWN)
     float fy = (float)ny;
 #elif defined(COMPILING_ROOTN)
-    float fy = BUILTIN_RCP_F32((float)ny);
+    float fy = BUILTIN_AMDGPU_RCP_F32((float)ny);
 #else
     float fy = (float)y;
 #endif

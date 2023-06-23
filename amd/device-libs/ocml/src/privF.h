@@ -8,13 +8,13 @@
 #define MATH_MAD(A,B,C) BUILTIN_MAD_F32(A, B, C)
 #define MATH_MAD2(A,B,C) BUILTIN_MAD_2F32(A, B, C)
 
-#define MATH_FAST_RCP(X) BUILTIN_RCP_F32(X)
+#define MATH_FAST_RCP(X) BUILTIN_AMDGPU_RCP_F32(X)
 #define MATH_RCP(X) BUILTIN_DIV_F32(1.0f, X)
 
 #define MATH_FAST_DIV(X, Y) ({ \
     float _fdiv_x = X; \
     float _fdiv_y = Y; \
-    float _fdiv_ret = _fdiv_x * BUILTIN_RCP_F32(_fdiv_y); \
+    float _fdiv_ret = _fdiv_x * BUILTIN_AMDGPU_RCP_F32(_fdiv_y); \
     _fdiv_ret; \
 })
 #define MATH_DIV(X,Y) BUILTIN_DIV_F32(X, Y)
@@ -36,7 +36,7 @@
         _sqrt_s = _sqrt_vp <= 0.0f ? _sqrt_sp : _sqrt_s; \
         _sqrt_s = _sqrt_vs >  0.0f ? _sqrt_ss : _sqrt_s; \
     } else { \
-        float _sqrt_r = BUILTIN_RSQRT_F32(_sqrt_x); \
+        float _sqrt_r = BUILTIN_AMDGPU_RSQRT_F32(_sqrt_x); \
         _sqrt_s = _sqrt_x * _sqrt_r; \
         float _sqrt_h = 0.5f * _sqrt_r; \
         float _sqrt_e = BUILTIN_FMA_F32(-_sqrt_h, _sqrt_s, 0.5f); \

@@ -11,10 +11,10 @@ CONSTATTR float
 MATH_MANGLE(rsqrt)(float x)
 {
     if (DAZ_OPT()) {
-        return BUILTIN_RSQRT_F32(x);
+        return BUILTIN_AMDGPU_RSQRT_F32(x);
     } else {
         bool s = x < 0x1.0p-100f;
-        return BUILTIN_RSQRT_F32(x * (s ? 0x1.0p+100f : 1.0f)) * (s ? 0x1.0p+50f : 1.0f);
+        return BUILTIN_AMDGPU_RSQRT_F32(x * (s ? 0x1.0p+100f : 1.0f)) * (s ? 0x1.0p+50f : 1.0f);
     }
 }
 

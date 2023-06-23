@@ -64,9 +64,9 @@ CONSTATTR struct redret
 MATH_PRIVATE(trigredlarge)(double x)
 {
     // Scale x by relevant part of 2/pi
-    double p2 = BUILTIN_TRIG_PREOP_F64(x, 0);
-    double p1 = BUILTIN_TRIG_PREOP_F64(x, 1);
-    double p0 = BUILTIN_TRIG_PREOP_F64(x, 2);
+    double p2 = BUILTIN_AMDGPU_TRIG_PREOP_F64(x, 0);
+    double p1 = BUILTIN_AMDGPU_TRIG_PREOP_F64(x, 1);
+    double p0 = BUILTIN_AMDGPU_TRIG_PREOP_F64(x, 2);
 
     x = x >= 0x1.0p+945 ? BUILTIN_FLDEXP_F64(x, -128) : x;
 

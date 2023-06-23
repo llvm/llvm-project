@@ -42,7 +42,7 @@ MATH_MANGLE(remainder)(half x, half y)
 
         int nb = ex - ey;
 
-        float ayinv = BUILTIN_RCP_F32(ay);
+        float ayinv = BUILTIN_AMDGPU_RCP_F32(ay);
 
 #if !defined(COMPILING_FMOD)
         int qacc = 0;

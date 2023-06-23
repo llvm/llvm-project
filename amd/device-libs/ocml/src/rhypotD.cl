@@ -17,7 +17,7 @@ MATH_MANGLE(rhypot)(double x, double y)
     a = BUILTIN_FLDEXP_F64(a, -e);
     b = BUILTIN_FLDEXP_F64(b, -e);
     double d2 = MATH_MAD(a, a, b*b);
-    double z = BUILTIN_RSQRT_F64(d2);
+    double z = BUILTIN_AMDGPU_RSQRT_F64(d2);
     double u = MATH_MAD(-d2*z, z, 1.0);
     z = MATH_MAD(z*u, MATH_MAD(u, 0.375, 0.5), z);
     double ret = BUILTIN_FLDEXP_F64(z, -e);

@@ -33,7 +33,7 @@ MATH_MANGLE(i1)(float x)
         float as = a - 88.0f;
         float e1 = MATH_MANGLE(exp)(a > 88.0f ? as : a);
         float e2 = a > 88.0f ? 0x1.f1056ep+126f : 1.0f;
-        ret = e1 * BUILTIN_RSQRT_F32(a) * ret * e2;
+        ret = e1 * BUILTIN_AMDGPU_RSQRT_F32(a) * ret * e2;
     }
 
     if  (!FINITE_ONLY_OPT()) {

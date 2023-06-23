@@ -79,7 +79,7 @@ MATH_MANGLE(j0)(float x)
         float r = MATH_RCP(x);
         float r2 = r*r;
         float p = MATH_PRIVATE(bp0)(r2) * r;
-        ret = 0x1.988454p-1f * BUILTIN_RSQRT_F32(x) * MATH_PRIVATE(ba0)(r2) * MATH_PRIVATE(cosb)(x, 0, p);
+        ret = 0x1.988454p-1f * BUILTIN_AMDGPU_RSQRT_F32(x) * MATH_PRIVATE(ba0)(r2) * MATH_PRIVATE(cosb)(x, 0, p);
         ret = x == PINF_F32 ? 0.0f : ret;
     }
 

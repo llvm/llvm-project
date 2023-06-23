@@ -17,7 +17,7 @@ MATH_MANGLE(rlen4)(half x, half y, half z, half w)
 
     float d2 = BUILTIN_MAD_F32(fx, fx, BUILTIN_MAD_F32(fy, fy, BUILTIN_MAD_F32(fz, fz, fw*fw)));
 
-    half ret = (half)BUILTIN_RSQRT_F32(d2);
+    half ret = (half)BUILTIN_AMDGPU_RSQRT_F32(d2);
 
     if (!FINITE_ONLY_OPT()) {
         ret = (BUILTIN_ISINF_F16(x) |

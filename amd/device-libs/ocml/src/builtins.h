@@ -148,7 +148,7 @@
 
 #define BUILTIN_MULHI_U32(A,B) (((ulong)(A) * (ulong)(B)) >> 32)
 
-#define BUILTIN_COS_F32 __builtin_amdgcn_cosf
+#define BUILTIN_AMDGPU_COS_F32 __builtin_amdgcn_cosf
 
 #define BUILTIN_AMDGPU_EXP2_F32 __builtin_amdgcn_exp2f
 #define BUILTIN_EXP2_F16 __builtin_exp2f16
@@ -156,15 +156,15 @@
 #define BUILTIN_AMDGPU_LOG2_F32 __builtin_amdgcn_logf
 #define BUILTIN_LOG2_F16 __builtin_log2f16
 
-#define BUILTIN_RCP_F32 __builtin_amdgcn_rcpf
-#define BUILTIN_RCP_F64 __builtin_amdgcn_rcp
-#define BUILTIN_RCP_F16 __builtin_amdgcn_rcph
+#define BUILTIN_AMDGPU_RCP_F32 __builtin_amdgcn_rcpf
+#define BUILTIN_AMDGPU_RCP_F64 __builtin_amdgcn_rcp
+#define BUILTIN_AMDGPU_RCP_F16 __builtin_amdgcn_rcph
 
-#define BUILTIN_RSQRT_F32 __builtin_amdgcn_rsqf
-#define BUILTIN_RSQRT_F64 __builtin_amdgcn_rsq
-#define BUILTIN_RSQRT_F16 __builtin_amdgcn_rsqh
+#define BUILTIN_AMDGPU_RSQRT_F32 __builtin_amdgcn_rsqf
+#define BUILTIN_AMDGPU_RSQRT_F64 __builtin_amdgcn_rsq
+#define BUILTIN_AMDGPU_RSQRT_F16 __builtin_amdgcn_rsqh
 
-#define BUILTIN_SIN_F32 __builtin_amdgcn_sinf
+#define BUILTIN_AMDGPU_SIN_F32 __builtin_amdgcn_sinf
 
 #define BUILTIN_RINT_F32 __builtin_rintf
 #define BUILTIN_RINT_F64 __builtin_rint
@@ -234,7 +234,7 @@
 #define BUILTIN_CMIN_F16 __builtin_fminf16
 #define BUILTIN_CMIN_2F16 __builtin_elementwise_min
 
-#define BUILTIN_TRIG_PREOP_F64 __builtin_amdgcn_trig_preop
+#define BUILTIN_AMDGPU_TRIG_PREOP_F64 __builtin_amdgcn_trig_preop
 
 #define BUILTIN_MAD_F32 __ocml_fmuladd_f32
 #define BUILTIN_MAD_2F32 __ocml_fmuladd_2f32

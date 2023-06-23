@@ -10,7 +10,7 @@
 #define MATH_FAST_RCP(X) ({ \
     double _frcp_x = X; \
     double _frcp_ret; \
-    _frcp_ret = BUILTIN_RCP_F64(_frcp_x); \
+    _frcp_ret = BUILTIN_AMDGPU_RCP_F64(_frcp_x); \
     _frcp_ret = BUILTIN_FMA_F64(BUILTIN_FMA_F64(-_frcp_x, _frcp_ret, 1.0), _frcp_ret, _frcp_ret); \
     _frcp_ret = BUILTIN_FMA_F64(BUILTIN_FMA_F64(-_frcp_x, _frcp_ret, 1.0), _frcp_ret, _frcp_ret); \
     _frcp_ret; \
@@ -21,7 +21,7 @@
     double _fdiv_x = X; \
     double _fdiv_y = Y; \
     double _fdiv_ret; \
-    double _fdiv_r = BUILTIN_RCP_F64(_fdiv_y); \
+    double _fdiv_r = BUILTIN_AMDGPU_RCP_F64(_fdiv_y); \
     _fdiv_r = BUILTIN_FMA_F64(BUILTIN_FMA_F64(-_fdiv_y, _fdiv_r, 1.0), _fdiv_r, _fdiv_r); \
     _fdiv_r = BUILTIN_FMA_F64(BUILTIN_FMA_F64(-_fdiv_y, _fdiv_r, 1.0), _fdiv_r, _fdiv_r); \
     _fdiv_ret = _fdiv_x * _fdiv_r; \
@@ -32,7 +32,7 @@
 
 #define MATH_FAST_SQRT(X) ({ \
     double _fsqrt_x = X; \
-    double _fsqrt_y = BUILTIN_RSQRT_F64(_fsqrt_x); \
+    double _fsqrt_y = BUILTIN_AMDGPU_RSQRT_F64(_fsqrt_x); \
     double _fsqrt_s0 = _fsqrt_x * _fsqrt_y; \
     double _fsqrt_h0 = 0.5 * _fsqrt_y; \
     double _fsqrt_r0 = BUILTIN_FMA_F64(-_fsqrt_h0, _fsqrt_s0, 0.5); \
@@ -48,7 +48,7 @@
     double _sqrt_x = X; \
     bool _sqrt_b = _sqrt_x < 0x1.0p-767; \
     _sqrt_x *= _sqrt_b ? 0x1.0p+256 : 1.0; \
-    double _sqrt_y = BUILTIN_RSQRT_F64(_sqrt_x); \
+    double _sqrt_y = BUILTIN_AMDGPU_RSQRT_F64(_sqrt_x); \
     double _sqrt_s0 = _sqrt_x * _sqrt_y; \
     double _sqrt_h0 = 0.5 * _sqrt_y; \
     double _sqrt_r0 = BUILTIN_FMA_F64(-_sqrt_h0, _sqrt_s0, 0.5); \

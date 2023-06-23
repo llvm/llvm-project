@@ -14,7 +14,7 @@ MATH_MANGLE(atanh)(half hx)
 {
     half ret;
     float x = (float)BUILTIN_ABS_F16(hx);
-    float t = (1.0f + x) * BUILTIN_RCP_F32(1.0f - x);
+    float t = (1.0f + x) * BUILTIN_AMDGPU_RCP_F32(1.0f - x);
     ret = (half)(BUILTIN_AMDGPU_LOG2_F32(t) * 0x1.62e430p-2f);
     ret = x < 0x1.0p-7f ? x : ret;
 

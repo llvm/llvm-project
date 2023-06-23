@@ -28,7 +28,7 @@ MATH_MANGLE(rlen3)(float x, float y, float z)
     b = BUILTIN_FLDEXP_F32(b, -e);
     c = BUILTIN_FLDEXP_F32(c, -e);
 
-    float ret = BUILTIN_RSQRT_F32(MATH_MAD(a, a, MATH_MAD(b, b, c*c)));
+    float ret = BUILTIN_AMDGPU_RSQRT_F32(MATH_MAD(a, a, MATH_MAD(b, b, c*c)));
     ret = BUILTIN_FLDEXP_F32(ret, -e);
 
     if (!FINITE_ONLY_OPT()) {
