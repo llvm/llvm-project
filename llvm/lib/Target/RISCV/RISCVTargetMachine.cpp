@@ -76,7 +76,6 @@ extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializeRISCVTarget() {
   RegisterTargetMachine<RISCVTargetMachine> Y(getTheRISCV64Target());
   auto *PR = PassRegistry::getPassRegistry();
   initializeGlobalISel(*PR);
-  initializeKCFIPass(*PR);
   initializeRISCVMakeCompressibleOptPass(*PR);
   initializeRISCVGatherScatterLoweringPass(*PR);
   initializeRISCVCodeGenPreparePass(*PR);
@@ -334,10 +333,7 @@ bool RISCVPassConfig::addGlobalInstructionSelect() {
   return false;
 }
 
-void RISCVPassConfig::addPreSched2() {
-  // Emit KCFI checks for indirect calls.
-  addPass(createKCFIPass());
-}
+void RISCVPassConfig::addPreSched2() {}
 
 void RISCVPassConfig::addPreEmitPass() {
   addPass(&BranchRelaxationPassID);
@@ -361,11 +357,6 @@ void RISCVPassConfig::addPreEmitPass2() {
   // possibility for other passes to break the requirements for forward
   // progress in the LR/SC block.
   addPass(createRISCVExpandAtomicPseudoPass());
-
-  // KCFI indirect call checks are lowered to a bundle.
-  addPass(createUnpackMachineBundles([&](const MachineFunction &MF) {
-    return MF.getFunction().getParent()->getModuleFlag("kcfi");
-  }));
 }
 
 void RISCVPassConfig::addMachineSSAOptimization() {
