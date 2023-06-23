@@ -1,8 +1,5 @@
 // RUN: mlir-opt -allow-unregistered-dialect -emit-bytecode %s | mlir-opt -allow-unregistered-dialect | FileCheck %s
 
-// Bytecode currently does not support big-endian platforms
-// UNSUPPORTED: target=s390x-{{.*}}
-
 // CHECK-LABEL: "bytecode.test1"
 // CHECK-NEXT:    "unregistered.op"() {test_attr = #test.dynamic_singleton} : () -> ()
 // CHECK-NEXT:    "bytecode.empty"() : () -> ()
