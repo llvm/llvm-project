@@ -478,6 +478,17 @@ int main(int argc, char **argv) {
   else
     Printer = std::make_unique<LLVMPrinter>(outs(), printError, Config);
 
+  StringRef InputFile = Args.getLastArgValue(OPT_obj_EQ);
+  if (!InputFile.empty() && IsAddr2Line) {
+    Error Status = Symbolizer.checkFileExists(InputFile);
+    if (Status) {
+      handleAllErrors(std::move(Status), [&](const ErrorInfoBase &EI) {
+        printError(EI, InputFile);
+      });
+      return EXIT_FAILURE;
+    }
+  }
+
   std::vector<std::string> InputAddresses = Args.getAllArgValues(OPT_INPUT);
   if (InputAddresses.empty()) {
     const int kMaxInputStringLength = 1024;
