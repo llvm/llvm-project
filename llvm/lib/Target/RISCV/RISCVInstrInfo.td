@@ -1887,13 +1887,6 @@ def HWASAN_CHECK_MEMACCESS_SHORTGRANULES
            [(int_hwasan_check_memaccess_shortgranules X5, GPRJALR:$ptr,
                                                       (i32 timm:$accessinfo))]>;
 
-// This gets lowered into a 20-byte instruction sequence (at most)
-let hasSideEffects = 0, mayLoad = 1, mayStore = 0,
-    Defs = [ X6, X7, X28, X29, X30, X31 ], Size = 20 in {
-def KCFI_CHECK
-  : Pseudo<(outs), (ins GPRJALR:$ptr, i32imm:$type), []>, Sched<[]>;
-}
-
 /// Simple optimization
 def : Pat<(XLenVT (add GPR:$rs1, (AddiPair:$rs2))),
           (ADDI (ADDI GPR:$rs1, (AddiPairImmLarge AddiPair:$rs2)),
