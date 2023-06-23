@@ -1,5 +1,4 @@
-// RUN: mlir-opt %s --linalg-generalize-named-ops \
-// RUN:             --sparsification="enable-gpu-libgen" | FileCheck %s
+// RUN: mlir-opt %s --sparsification="enable-gpu-libgen" | FileCheck %s
 
 #trait_sampled_dense_dense = {
   indexing_maps = [
@@ -21,8 +20,6 @@
 }
 
 #CSR = #sparse_tensor.encoding<{ lvlTypes = [ "dense", "compressed" ] }>
-
-module {
 
 // CHECK-LABEL:   func.func @sparse_sampled_dd(
 // CHECK-SAME:                                 %[[VAL_0:.*]]: tensor<8x8xf64, #sparse_tensor.encoding<{ lvlTypes = [ "dense", "compressed" ] }>>,
@@ -82,7 +79,7 @@ module {
 // A kernel that computes a direct sampled matrix matrix multiplication
 // (with sparse result).
 // Compute SDDMM C = C\spy AB
-// 
+//
 func.func @sparse_sampled_dd(%argS: tensor<8x8xf64, #CSR>,
                                %argA: tensor<8x8xf64>,
                                %argB: tensor<8x8xf64>) -> tensor<8x8xf64, #CSR> {
@@ -106,6 +103,4 @@ func.func @sparse_sampled_dd(%argS: tensor<8x8xf64, #CSR>,
            linalg.yield %r : f64
     } -> tensor<8x8xf64, #CSR>
     return %result : tensor<8x8xf64, #CSR>
-  }
-
 }

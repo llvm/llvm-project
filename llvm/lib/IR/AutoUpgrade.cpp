@@ -830,16 +830,25 @@ static bool UpgradeIntrinsicFunction1(Function *F, Function *&NewFn) {
         Name == "arm.cde.vcx3qa.predicated.v2i64.v4i1")
       return true;
 
-    if (Name == "amdgcn.alignbit") {
+    if (Name.startswith("amdgcn."))
+      Name = Name.substr(7); // Strip off "amdgcn."
+
+    if (Name == "alignbit") {
       // Target specific intrinsic became redundant
       NewFn = Intrinsic::getDeclaration(F->getParent(), Intrinsic::fshr,
                                         {F->getReturnType()});
       return true;
     }
 
+    if (Name.startswith("atomic.inc") || Name.startswith("atomic.dec")) {
+      // This was replaced with atomicrmw uinc_wrap and udec_wrap, so there's no
+      // new declaration.
+      NewFn = nullptr;
+      return true;
+    }
+
     break;
   }
-
   case 'c': {
     if (Name.startswith("ctlz.") && F->arg_size() == 1) {
       rename(F);
@@ -2162,6 +2171,38 @@ static Value *UpgradeARMIntrinsicCall(StringRef Name, CallBase *CI, Function *F,
   llvm_unreachable("Unknown function for ARM CallBase upgrade.");
 }
 
+static Value *UpgradeAMDGCNIntrinsicCall(StringRef Name, CallBase *CI,
+                                         Function *F, IRBuilder<> &Builder) {
+  const bool IsInc = Name.startswith("atomic.inc.");
+  if (IsInc || Name.startswith("atomic.dec.")) {
+    if (CI->getNumOperands() != 6) // Malformed bitcode.
+      return nullptr;
+
+    AtomicRMWInst::BinOp RMWOp =
+        IsInc ? AtomicRMWInst::UIncWrap : AtomicRMWInst::UDecWrap;
+
+    Value *Ptr = CI->getArgOperand(0);
+    Value *Val = CI->getArgOperand(1);
+    ConstantInt *OrderArg = dyn_cast<ConstantInt>(CI->getArgOperand(2));
+    ConstantInt *VolatileArg = dyn_cast<ConstantInt>(CI->getArgOperand(4));
+
+    AtomicOrdering Order = AtomicOrdering::SequentiallyConsistent;
+    if (OrderArg && isValidAtomicOrdering(OrderArg->getZExtValue()))
+      Order = static_cast<AtomicOrdering>(OrderArg->getZExtValue());
+    if (Order == AtomicOrdering::NotAtomic ||
+        Order == AtomicOrdering::Unordered)
+      Order = AtomicOrdering::SequentiallyConsistent;
+
+    AtomicRMWInst *RMW = Builder.CreateAtomicRMW(RMWOp, Ptr, Val, std::nullopt, Order);
+
+    if (!VolatileArg || !VolatileArg->isZero())
+      RMW->setVolatile(true);
+    return RMW;
+  }
+
+  llvm_unreachable("Unknown function for AMDGPU intrinsic upgrade.");
+}
+
 /// Upgrade a call to an old intrinsic. All argument and return casting must be
 /// provided to seamlessly integrate with existing context.
 void llvm::UpgradeIntrinsicCall(CallBase *CI, Function *NewFn) {
@@ -2192,6 +2233,9 @@ void llvm::UpgradeIntrinsicCall(CallBase *CI, Function *NewFn) {
     bool IsARM = Name.startswith("arm.");
     if (IsARM)
       Name = Name.substr(4);
+    bool IsAMDGCN = Name.startswith("amdgcn.");
+    if (IsAMDGCN)
+      Name = Name.substr(7);
 
     if (IsX86 && Name.startswith("sse4a.movnt.")) {
       SmallVector<Metadata *, 1> Elts;
@@ -4011,6 +4055,8 @@ void llvm::UpgradeIntrinsicCall(CallBase *CI, Function *NewFn) {
                                CI->getArgOperand(0), "h2f");
     } else if (IsARM) {
       Rep = UpgradeARMIntrinsicCall(Name, CI, F, Builder);
+    } else if (IsAMDGCN) {
+      Rep = UpgradeAMDGCNIntrinsicCall(Name, CI, F, Builder);
     } else {
       llvm_unreachable("Unknown function for CallBase upgrade.");
     }

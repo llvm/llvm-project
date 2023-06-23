@@ -49,16 +49,8 @@ void WhitespaceManager::replaceWhitespace(FormatToken &Tok, unsigned Newlines,
                                           unsigned Spaces,
                                           unsigned StartOfTokenColumn,
                                           bool IsAligned, bool InPPDirective) {
-  auto PPBranchDirectiveStartsLine = [&Tok] {
-    return Tok.is(tok::hash) && !Tok.Previous && Tok.Next &&
-           Tok.Next->isOneOf(tok::pp_if, tok::pp_ifdef, tok::pp_ifndef,
-                             tok::pp_elif, tok::pp_elifdef, tok::pp_elifndef,
-                             tok::pp_else, tok::pp_endif);
-  };
-  if ((Tok.Finalized && !PPBranchDirectiveStartsLine()) ||
-      (Tok.MacroCtx && Tok.MacroCtx->Role == MR_ExpandedArg)) {
+  if (Tok.Finalized || (Tok.MacroCtx && Tok.MacroCtx->Role == MR_ExpandedArg))
     return;
-  }
   Tok.setDecision((Newlines > 0) ? FD_Break : FD_Continue);
   Changes.push_back(Change(Tok, /*CreateReplacement=*/true, Tok.WhitespaceRange,
                            Spaces, StartOfTokenColumn, Newlines, "", "",

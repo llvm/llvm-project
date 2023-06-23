@@ -2,15 +2,15 @@
 ! invocation. These libraries are added on top of other standard runtime
 ! libraries that the Clang driver will include.
 
-! RUN: %flang -### -flang-experimental-exec -target ppc64le-linux-gnu %S/Inputs/hello.f90 2>&1 | FileCheck %s --check-prefixes=CHECK,GNU
-! RUN: %flang -### -flang-experimental-exec -target aarch64-apple-darwin %S/Inputs/hello.f90 2>&1 | FileCheck %s --check-prefixes=CHECK,DARWIN
-! RUN: %flang -### -flang-experimental-exec -target x86_64-windows-gnu %S/Inputs/hello.f90 2>&1 | FileCheck %s --check-prefixes=CHECK,MINGW
+! RUN: %flang -### -target ppc64le-linux-gnu %S/Inputs/hello.f90 2>&1 | FileCheck %s --check-prefixes=CHECK,GNU
+! RUN: %flang -### -target aarch64-apple-darwin %S/Inputs/hello.f90 2>&1 | FileCheck %s --check-prefixes=CHECK,DARWIN
+! RUN: %flang -### -target x86_64-windows-gnu %S/Inputs/hello.f90 2>&1 | FileCheck %s --check-prefixes=CHECK,MINGW
 
 ! NOTE: Clang's driver library, clangDriver, usually adds 'libcmt' and
 !       'oldnames' on Windows, but they are not needed when compiling
 !       Fortran code and they might bring in additional dependencies.
 !       Make sure they're not added.
-! RUN: %flang -### -flang-experimental-exec -target aarch64-windows-msvc %S/Inputs/hello.f90 2>&1 | FileCheck %s --check-prefixes=CHECK,MSVC --implicit-check-not libcmt --implicit-check-not oldnames
+! RUN: %flang -### -target aarch64-windows-msvc %S/Inputs/hello.f90 2>&1 | FileCheck %s --check-prefixes=CHECK,MSVC --implicit-check-not libcmt --implicit-check-not oldnames
 
 ! Compiler invocation to generate the object file
 ! CHECK-LABEL: {{.*}} "-emit-obj"

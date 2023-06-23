@@ -49,7 +49,6 @@ _sub5:
   .quad L_.minuend - _subtrahend_1 + 1
   .space 8
 
-.section __DATA,bar
 _minuend_1:
   .space 16
 _minuend_2:
