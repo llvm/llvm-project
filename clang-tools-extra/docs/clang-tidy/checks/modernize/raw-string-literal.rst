@@ -8,7 +8,7 @@ with raw string literals.
 
 Example:
 
-.. code-blocK:: c++
+.. code-block:: c++
 
   const char *const Quotes{"embedded \"quotes\""};
   const char *const Paragraph{"Line one.\nLine two.\nLine three.\n"};
@@ -44,3 +44,15 @@ string literals are left unchanged.
 An escaped horizontal tab, form feed, or vertical tab prevents the string
 literal from being converted. The presence of a horizontal tab, form feed or
 vertical tab in source code is not visually obvious.
+
+.. option:: DelimiterStem
+
+  Custom delimiter to escape characters in raw string literals. It is used in
+  the following construction: ``R"stem_delimiter(contents)stem_delimiter"``.
+  The default value is `lit`.
+
+.. option:: ReplaceShorterLiterals
+
+  Controls replacing shorter non-raw string literals with longer raw string
+  literals. Setting this option to `true` enables the replacement.
+  The default value is `false` (shorter literals are not replaced).
