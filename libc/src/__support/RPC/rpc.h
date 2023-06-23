@@ -82,9 +82,6 @@ template <bool Invert, uint32_t lane_size> struct Process {
   LIBC_INLINE Process &operator=(Process &&) = default;
   LIBC_INLINE ~Process() = default;
 
-  template <bool T, uint32_t S> friend struct Port;
-
-protected:
   uint64_t port_count;
   cpp::Atomic<uint32_t> *inbox;
   cpp::Atomic<uint32_t> *outbox;
@@ -92,7 +89,6 @@ protected:
 
   cpp::Atomic<uint32_t> lock[DEFAULT_PORT_COUNT] = {0};
 
-public:
   /// Initialize the communication channels.
   LIBC_INLINE void reset(uint64_t port_count, void *buffer) {
     this->port_count = port_count;
@@ -328,7 +324,7 @@ private:
 };
 
 /// The RPC client used to make requests to the server.
-struct Client : public Process<false, gpu::LANE_SIZE> {
+struct Client {
   LIBC_INLINE Client() = default;
   LIBC_INLINE Client(const Client &) = delete;
   LIBC_INLINE Client &operator=(const Client &) = delete;
@@ -337,10 +333,17 @@ struct Client : public Process<false, gpu::LANE_SIZE> {
   using Port = rpc::Port<false, gpu::LANE_SIZE>;
   template <uint16_t opcode> LIBC_INLINE cpp::optional<Port> try_open();
   template <uint16_t opcode> LIBC_INLINE Port open();
+
+  LIBC_INLINE void reset(uint64_t port_count, void *buffer) {
+    process.reset(port_count, buffer);
+  }
+
+private:
+  Process<false, gpu::LANE_SIZE> process;
 };
 
 /// The RPC server used to respond to the client.
-template <uint32_t lane_size> struct Server : public Process<true, lane_size> {
+template <uint32_t lane_size> struct Server {
   LIBC_INLINE Server() = default;
   LIBC_INLINE Server(const Server &) = delete;
   LIBC_INLINE Server &operator=(const Server &) = delete;
@@ -349,6 +352,21 @@ template <uint32_t lane_size> struct Server : public Process<true, lane_size> {
   using Port = rpc::Port<true, lane_size>;
   LIBC_INLINE cpp::optional<Port> try_open();
   LIBC_INLINE Port open();
+
+  LIBC_INLINE void reset(uint64_t port_count, void *buffer) {
+    process.reset(port_count, buffer);
+  }
+
+  LIBC_INLINE void *get_buffer_start() const {
+    return process.get_buffer_start();
+  }
+
+  LIBC_INLINE static uint64_t allocation_size(uint64_t port_count) {
+    return Process<true, lane_size>::allocation_size(port_count);
+  }
+
+private:
+  Process<true, lane_size> process;
 };
 
 /// Applies \p fill to the shared buffer and initiates a send operation.
@@ -487,28 +505,28 @@ template <uint16_t opcode>
 [[clang::convergent]] LIBC_INLINE cpp::optional<Client::Port>
 Client::try_open() {
   // Perform a naive linear scan for a port that can be opened to send data.
-  for (uint64_t index = 0; index < this->port_count; ++index) {
+  for (uint64_t index = 0; index < process.port_count; ++index) {
     // Attempt to acquire the lock on this index.
     uint64_t lane_mask = gpu::get_lane_mask();
-    if (!this->try_lock(lane_mask, index))
+    if (!process.try_lock(lane_mask, index))
       continue;
 
-    uint32_t in = this->load_inbox(index);
-    uint32_t out = this->load_outbox(index);
+    uint32_t in = process.load_inbox(index);
+    uint32_t out = process.load_outbox(index);
 
     // Once we acquire the index we need to check if we are in a valid sending
     // state.
-    if (this->buffer_unavailable(in, out)) {
-      this->unlock(lane_mask, index);
+    if (process.buffer_unavailable(in, out)) {
+      process.unlock(lane_mask, index);
       continue;
     }
 
     if (is_first_lane(lane_mask)) {
-      this->packet[index].header.opcode = opcode;
-      this->packet[index].header.mask = lane_mask;
+      process.packet[index].header.opcode = opcode;
+      process.packet[index].header.mask = lane_mask;
     }
     gpu::sync_lane(lane_mask);
-    return Port(*this, lane_mask, index, out);
+    return Port(process, lane_mask, index, out);
   }
   return cpp::nullopt;
 }
@@ -528,29 +546,29 @@ template <uint32_t lane_size>
     cpp::optional<typename Server<lane_size>::Port>
     Server<lane_size>::try_open() {
   // Perform a naive linear scan for a port that has a pending request.
-  for (uint64_t index = 0; index < this->port_count; ++index) {
-    uint32_t in = this->load_inbox(index);
-    uint32_t out = this->load_outbox(index);
+  for (uint64_t index = 0; index < process.port_count; ++index) {
+    uint32_t in = process.load_inbox(index);
+    uint32_t out = process.load_outbox(index);
 
     // The server is passive, if there is no work pending don't bother
     // opening a port.
-    if (this->buffer_unavailable(in, out))
+    if (process.buffer_unavailable(in, out))
       continue;
 
     // Attempt to acquire the lock on this index.
     uint64_t lane_mask = gpu::get_lane_mask();
-    if (!this->try_lock(lane_mask, index))
+    if (!process.try_lock(lane_mask, index))
       continue;
 
-    in = this->load_inbox(index);
-    out = this->load_outbox(index);
+    in = process.load_inbox(index);
+    out = process.load_outbox(index);
 
-    if (this->buffer_unavailable(in, out)) {
-      this->unlock(lane_mask, index);
+    if (process.buffer_unavailable(in, out)) {
+      process.unlock(lane_mask, index);
       continue;
     }
 
-    return Port(*this, lane_mask, index, out);
+    return Port(process, lane_mask, index, out);
   }
   return cpp::nullopt;
 }
