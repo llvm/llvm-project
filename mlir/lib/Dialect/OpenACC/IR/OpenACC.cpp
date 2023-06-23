@@ -82,6 +82,16 @@ LogicalResult acc::FirstprivateOp::verify() {
 }
 
 //===----------------------------------------------------------------------===//
+// ReductionOp
+//===----------------------------------------------------------------------===//
+LogicalResult acc::ReductionOp::verify() {
+  if (getDataClause() != acc::DataClause::acc_reduction)
+    return emitError("data clause associated with reduction operation must "
+                     "match its intent");
+  return success();
+}
+
+//===----------------------------------------------------------------------===//
 // DevicePtrOp
 //===----------------------------------------------------------------------===//
 LogicalResult acc::DevicePtrOp::verify() {

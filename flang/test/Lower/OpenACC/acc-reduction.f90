@@ -213,7 +213,8 @@ end subroutine
 
 ! CHECK-LABEL: func.func @_QPacc_reduction_add_int(
 ! CHECK-SAME:  %{{.*}}: !fir.ref<!fir.array<100xi32>> {fir.bindc_name = "a"}, %[[B:.*]]: !fir.ref<i32> {fir.bindc_name = "b"})
-! CHECK:       acc.loop reduction(@reduction_add_i32 -> %[[B]] : !fir.ref<i32>)
+! CHECK:       %[[RED_B:.*]] = acc.reduction varPtr(%[[B]] : !fir.ref<i32>) -> !fir.ref<i32> {name = "b"} 
+! CHECK:       acc.loop reduction(@reduction_add_i32 -> %[[RED_B]] : !fir.ref<i32>)
 
 subroutine acc_reduction_add_int_array_1d(a, b)
   integer :: a(100)
@@ -227,7 +228,8 @@ end subroutine
 
 ! CHECK-LABEL: func.func @_QPacc_reduction_add_int_array_1d(
 ! CHECK-SAME:  %{{.*}}: !fir.ref<!fir.array<100xi32>> {fir.bindc_name = "a"}, %[[B:.*]]: !fir.ref<!fir.array<100xi32>> {fir.bindc_name = "b"})
-! CHECK:       acc.loop reduction(@reduction_add_ref_100xi32 -> %[[B]] : !fir.ref<!fir.array<100xi32>>)
+! CHECK:       %[[RED_B:.*]] = acc.reduction varPtr(%[[B]] : !fir.ref<!fir.array<100xi32>>) bounds(%{{.*}}) -> !fir.ref<!fir.array<100xi32>> {name = "b"} 
+! CHECK:       acc.loop reduction(@reduction_add_ref_100xi32 -> %[[RED_B]] : !fir.ref<!fir.array<100xi32>>)
 
 subroutine acc_reduction_add_int_array_2d(a, b)
   integer :: a(100, 10), b(100, 10)
@@ -243,7 +245,8 @@ end subroutine
 
 ! CHECK-LABEL: func.func @_QPacc_reduction_add_int_array_2d(
 ! CHECK-SAME:  %[[ARG0:.*]]: !fir.ref<!fir.array<100x10xi32>> {fir.bindc_name = "a"}, %[[ARG1:.*]]: !fir.ref<!fir.array<100x10xi32>> {fir.bindc_name = "b"}) {
-! CHECK:       acc.loop reduction(@reduction_add_ref_100x10xi32 -> %[[ARG1]] : !fir.ref<!fir.array<100x10xi32>>) {
+! CHECK:       %[[RED_ARG1:.*]] = acc.reduction varPtr(%[[ARG1]] : !fir.ref<!fir.array<100x10xi32>>) bounds(%{{.*}}, %{{.*}}) -> !fir.ref<!fir.array<100x10xi32>> {name = "b"} 
+! CHECK:       acc.loop reduction(@reduction_add_ref_100x10xi32 -> %[[RED_ARG1]] : !fir.ref<!fir.array<100x10xi32>>) {
 ! CHECK: } attributes {collapse = 2 : i64}
 
 subroutine acc_reduction_add_int_array_3d(a, b)
@@ -262,7 +265,8 @@ end subroutine
 
 ! CHECK-LABEL: func.func @_QPacc_reduction_add_int_array_3d(
 ! CHECK-SAME: %{{.*}}: !fir.ref<!fir.array<100x10x2xi32>> {fir.bindc_name = "a"}, %[[ARG1:.*]]: !fir.ref<!fir.array<100x10x2xi32>> {fir.bindc_name = "b"})
-! CHECK: acc.loop reduction(@reduction_add_ref_100x10x2xi32 -> %[[ARG1]] : !fir.ref<!fir.array<100x10x2xi32>>)
+! CHECK: %[[RED_ARG1:.*]] = acc.reduction varPtr(%[[ARG1]] : !fir.ref<!fir.array<100x10x2xi32>>) bounds(%{{.*}}, %{{.*}}, %{{.*}}) -> !fir.ref<!fir.array<100x10x2xi32>> {name = "b"}
+! CHECK: acc.loop reduction(@reduction_add_ref_100x10x2xi32 -> %[[RED_ARG1]] : !fir.ref<!fir.array<100x10x2xi32>>)
 ! CHECK: } attributes {collapse = 3 : i64}
 
 subroutine acc_reduction_add_float(a, b)
@@ -277,7 +281,8 @@ end subroutine
 
 ! CHECK-LABEL: func.func @_QPacc_reduction_add_float(
 ! CHECK-SAME:  %{{.*}}: !fir.ref<!fir.array<100xf32>> {fir.bindc_name = "a"}, %[[B:.*]]: !fir.ref<f32> {fir.bindc_name = "b"})
-! CHECK:       acc.loop reduction(@reduction_add_f32 -> %[[B]] : !fir.ref<f32>)
+! CHECK:       %[[RED_B:.*]] = acc.reduction varPtr(%[[B]] : !fir.ref<f32>) -> !fir.ref<f32> {name = "b"}
+! CHECK:       acc.loop reduction(@reduction_add_f32 -> %[[RED_B]] : !fir.ref<f32>)
 
 subroutine acc_reduction_add_float_array_1d(a, b)
   real :: a(100), b(100)
@@ -291,7 +296,8 @@ end subroutine
 
 ! CHECK-LABEL: func.func @_QPacc_reduction_add_float_array_1d(
 ! CHECK-SAME:  %{{.*}}: !fir.ref<!fir.array<100xf32>> {fir.bindc_name = "a"}, %[[B:.*]]: !fir.ref<!fir.array<100xf32>> {fir.bindc_name = "b"})
-! CHECK:       acc.loop reduction(@reduction_add_ref_100xf32 -> %[[B]] : !fir.ref<!fir.array<100xf32>>)
+! CHECK: %[[RED_B:.*]] = acc.reduction varPtr(%[[B]] : !fir.ref<!fir.array<100xf32>>) bounds(%{{.*}}) -> !fir.ref<!fir.array<100xf32>> {name = "b"} 
+! CHECK:       acc.loop reduction(@reduction_add_ref_100xf32 -> %[[RED_B]] : !fir.ref<!fir.array<100xf32>>)
 
 subroutine acc_reduction_mul_int(a, b)
   integer :: a(100)
@@ -305,7 +311,8 @@ end subroutine
 
 ! CHECK-LABEL: func.func @_QPacc_reduction_mul_int(
 ! CHECK-SAME:  %{{.*}}: !fir.ref<!fir.array<100xi32>> {fir.bindc_name = "a"}, %[[B:.*]]: !fir.ref<i32> {fir.bindc_name = "b"})
-! CHECK:       acc.loop reduction(@reduction_mul_i32 -> %[[B]] : !fir.ref<i32>)
+! CHECK:       %[[RED_B:.*]] = acc.reduction varPtr(%[[B]] : !fir.ref<i32>) -> !fir.ref<i32> {name = "b"}
+! CHECK:       acc.loop reduction(@reduction_mul_i32 -> %[[RED_B]] : !fir.ref<i32>)
 
 subroutine acc_reduction_mul_int_array_1d(a, b)
   integer :: a(100)
@@ -319,7 +326,8 @@ end subroutine
 
 ! CHECK-LABEL: func.func @_QPacc_reduction_mul_int_array_1d(
 ! CHECK-SAME:  %{{.*}}: !fir.ref<!fir.array<100xi32>> {fir.bindc_name = "a"}, %[[B:.*]]: !fir.ref<!fir.array<100xi32>> {fir.bindc_name = "b"})
-! CHECK:       acc.loop reduction(@reduction_mul_ref_100xi32 -> %[[B]] : !fir.ref<!fir.array<100xi32>>)
+! CHECK:       %[[RED_B:.*]] = acc.reduction varPtr(%[[B]] : !fir.ref<!fir.array<100xi32>>) bounds(%{{.*}}) -> !fir.ref<!fir.array<100xi32>> {name = "b"} 
+! CHECK:       acc.loop reduction(@reduction_mul_ref_100xi32 -> %[[RED_B]] : !fir.ref<!fir.array<100xi32>>)
 
 subroutine acc_reduction_mul_float(a, b)
   real :: a(100), b
@@ -333,7 +341,8 @@ end subroutine
 
 ! CHECK-LABEL: func.func @_QPacc_reduction_mul_float(
 ! CHECK-SAME:  %{{.*}}: !fir.ref<!fir.array<100xf32>> {fir.bindc_name = "a"}, %[[B:.*]]: !fir.ref<f32> {fir.bindc_name = "b"})
-! CHECK:       acc.loop reduction(@reduction_mul_f32 -> %[[B]] : !fir.ref<f32>)
+! CHECK:       %[[RED_B:.*]] = acc.reduction varPtr(%[[B]] : !fir.ref<f32>) -> !fir.ref<f32> {name = "b"} 
+! CHECK:       acc.loop reduction(@reduction_mul_f32 -> %[[RED_B]] : !fir.ref<f32>)
 
 subroutine acc_reduction_mul_float_array_1d(a, b)
   real :: a(100), b(100)
@@ -347,7 +356,8 @@ end subroutine
 
 ! CHECK-LABEL: func.func @_QPacc_reduction_mul_float_array_1d(
 ! CHECK-SAME:  %{{.*}}: !fir.ref<!fir.array<100xf32>> {fir.bindc_name = "a"}, %[[B:.*]]: !fir.ref<!fir.array<100xf32>> {fir.bindc_name = "b"})
-! CHECK:       acc.loop reduction(@reduction_mul_ref_100xf32 -> %[[B]] : !fir.ref<!fir.array<100xf32>>)
+! CHECK:       %[[RED_B:.*]] = acc.reduction varPtr(%[[B]] : !fir.ref<!fir.array<100xf32>>) bounds(%2) -> !fir.ref<!fir.array<100xf32>> {name = "b"} 
+! CHECK:       acc.loop reduction(@reduction_mul_ref_100xf32 -> %[[RED_B]] : !fir.ref<!fir.array<100xf32>>)
 
 subroutine acc_reduction_min_int(a, b)
   integer :: a(100)
@@ -361,7 +371,8 @@ end subroutine
 
 ! CHECK-LABEL: func.func @_QPacc_reduction_min_int(
 ! CHECK-SAME:  %{{.*}}: !fir.ref<!fir.array<100xi32>> {fir.bindc_name = "a"}, %[[B:.*]]: !fir.ref<i32> {fir.bindc_name = "b"})
-! CHECK:       acc.loop reduction(@reduction_min_i32 -> %[[B]] : !fir.ref<i32>)
+! CHECK:       %[[RED_B:.*]] = acc.reduction varPtr(%[[B]] : !fir.ref<i32>) -> !fir.ref<i32> {name = "b"} 
+! CHECK:       acc.loop reduction(@reduction_min_i32 -> %[[RED_B]] : !fir.ref<i32>)
 
 subroutine acc_reduction_min_float(a, b)
   real :: a(100), b
@@ -375,7 +386,8 @@ end subroutine
 
 ! CHECK-LABEL: func.func @_QPacc_reduction_min_float(
 ! CHECK-SAME:  %{{.*}}: !fir.ref<!fir.array<100xf32>> {fir.bindc_name = "a"}, %[[B:.*]]: !fir.ref<f32> {fir.bindc_name = "b"})
-! CHECK:       acc.loop reduction(@reduction_min_f32 -> %[[B]] : !fir.ref<f32>)
+! CHECK:       %[[RED_B:.*]] = acc.reduction varPtr(%[[B]] : !fir.ref<f32>) -> !fir.ref<f32> {name = "b"} 
+! CHECK:       acc.loop reduction(@reduction_min_f32 -> %[[RED_B]] : !fir.ref<f32>)
 
 subroutine acc_reduction_max_int(a, b)
   integer :: a(100)
@@ -389,7 +401,8 @@ end subroutine
 
 ! CHECK-LABEL: func.func @_QPacc_reduction_max_int(
 ! CHECK-SAME:  %{{.*}}: !fir.ref<!fir.array<100xi32>> {fir.bindc_name = "a"}, %[[B:.*]]: !fir.ref<i32> {fir.bindc_name = "b"})
-! CHECK:       acc.loop reduction(@reduction_max_i32 -> %[[B]] : !fir.ref<i32>)
+! CHECL:       %[[RED_B:.*]] = acc.reduction varPtr(%[[B]] : !fir.ref<i32>) -> !fir.ref<i32> {name = "b"} 
+! CHECK:       acc.loop reduction(@reduction_max_i32 -> %[[RED_B]] : !fir.ref<i32>)
 
 subroutine acc_reduction_max_float(a, b)
   real :: a(100), b
@@ -403,4 +416,5 @@ end subroutine
 
 ! CHECK-LABEL: func.func @_QPacc_reduction_max_float(
 ! CHECK-SAME:  %{{.*}}: !fir.ref<!fir.array<100xf32>> {fir.bindc_name = "a"}, %[[B:.*]]: !fir.ref<f32> {fir.bindc_name = "b"})
-! CHECK:       acc.loop reduction(@reduction_max_f32 -> %[[B]] : !fir.ref<f32>)
+! CHECK:       %[[RED_B:.*]] = acc.reduction varPtr(%[[B]] : !fir.ref<f32>) -> !fir.ref<f32> {name = "b"} 
+! CHECK:       acc.loop reduction(@reduction_max_f32 -> %[[RED_B]] : !fir.ref<f32>)
