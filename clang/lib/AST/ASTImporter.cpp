@@ -640,6 +640,7 @@ namespace clang {
     ExpectedStmt VisitBinaryOperator(BinaryOperator *E);
     ExpectedStmt VisitConditionalOperator(ConditionalOperator *E);
     ExpectedStmt VisitBinaryConditionalOperator(BinaryConditionalOperator *E);
+    ExpectedStmt VisitCXXRewrittenBinaryOperator(CXXRewrittenBinaryOperator *E);
     ExpectedStmt VisitOpaqueValueExpr(OpaqueValueExpr *E);
     ExpectedStmt VisitArrayTypeTraitExpr(ArrayTypeTraitExpr *E);
     ExpectedStmt VisitExpressionTraitExpr(ExpressionTraitExpr *E);
@@ -7454,6 +7455,17 @@ ASTNodeImporter::VisitBinaryConditionalOperator(BinaryConditionalOperator *E) {
       ToCommon, ToOpaqueValue, ToCond, ToTrueExpr, ToFalseExpr,
       ToQuestionLoc, ToColonLoc, ToType, E->getValueKind(),
       E->getObjectKind());
+}
+
+ExpectedStmt ASTNodeImporter::VisitCXXRewrittenBinaryOperator(
+    CXXRewrittenBinaryOperator *E) {
+  Error Err = Error::success();
+  auto ToSemanticForm = importChecked(Err, E->getSemanticForm());
+  if (Err)
+    return std::move(Err);
+
+  return new (Importer.getToContext())
+      CXXRewrittenBinaryOperator(ToSemanticForm, E->isReversed());
 }
 
 ExpectedStmt ASTNodeImporter::VisitArrayTypeTraitExpr(ArrayTypeTraitExpr *E) {
