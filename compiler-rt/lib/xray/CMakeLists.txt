@@ -78,6 +78,19 @@ set(hexagon_SOURCES
   xray_trampoline_hexagon.S
   )
 
+set(XRAY_SOURCE_ARCHS
+  arm
+  armhf
+  aarch64
+  hexagon
+  mips
+  mipsel
+  mips64
+  mips64el
+  powerpc64le
+  x86_64
+  )
+
 set(XRAY_IMPL_HEADERS
   xray_allocator.h
   xray_basic_flags.h
@@ -171,19 +184,32 @@ if (TARGET cxx-headers OR HAVE_LIBCXX)
 endif()
 
 if (APPLE)
-  set(XRAY_ASM_SOURCES xray_trampoline_x86_64.S)
-
   add_weak_symbols("sanitizer_common" WEAK_SYMBOL_LINK_FLAGS)
   add_weak_symbols("xray" WEAK_SYMBOL_LINK_FLAGS)
 
   add_compiler_rt_object_libraries(RTXray
     OS ${XRAY_SUPPORTED_OS}
     ARCHS ${XRAY_SUPPORTED_ARCH}
-    SOURCES ${XRAY_SOURCES} ${x86_64_SOURCES}
+    SOURCES ${XRAY_SOURCES}
     ADDITIONAL_HEADERS ${XRAY_IMPL_HEADERS}
     CFLAGS ${XRAY_CFLAGS}
     DEFS ${XRAY_COMMON_DEFINITIONS}
     DEPS ${XRAY_DEPS})
+  set(XRAY_RTXRAY_ARCH_LIBS "")
+  foreach(arch ${XRAY_SUPPORTED_ARCH})
+    if(NOT ${arch} IN_LIST XRAY_SOURCE_ARCHS)
+      continue()
+    endif()
+    add_compiler_rt_object_libraries(RTXray_${arch}
+      OS ${XRAY_SUPPORTED_OS}
+      ARCHS ${arch}
+      SOURCES ${${arch}_SOURCES}
+      ADDITIONAL_HEADERS ${XRAY_IMPL_HEADERS}
+      CFLAGS ${XRAY_CFLAGS}
+      DEFS ${XRAY_COMMON_DEFINITIONS}
+      DEPS ${XRAY_DEPS})
+    list(APPEND XRAY_RTXRAY_ARCH_LIBS RTXray_${arch})
+  endforeach()
   add_compiler_rt_object_libraries(RTXrayFDR
     OS ${XRAY_SUPPORTED_OS}
     ARCHS ${XRAY_SUPPORTED_ARCH}
@@ -214,9 +240,7 @@ if (APPLE)
     STATIC
     OS ${XRAY_SUPPORTED_OS}
     ARCHS ${XRAY_SUPPORTED_ARCH}
-    OBJECT_LIBS RTXray
-                RTSanitizerCommon
-                RTSanitizerCommonLibc
+    OBJECT_LIBS ${XRAY_COMMON_RUNTIME_OBJECT_LIBS} RTXray ${XRAY_RTXRAY_ARCH_LIBS}
     CFLAGS ${XRAY_CFLAGS}
     DEFS ${XRAY_COMMON_DEFINITIONS}
     LINK_FLAGS ${XRAY_LINK_FLAGS} ${WEAK_SYMBOL_LINK_FLAGS}
