@@ -205,6 +205,9 @@ C2x Feature Support
 
     bool b = nullptr; // Was incorrectly rejected by Clang, is now accepted.
 
+- Implemented `WG14 N3124 <https://www.open-std.org/jtc1/sc22/wg14/www/docs/n3124.pdf>_`,
+  which allows any universal character name to appear in character and string literals.
+
 
 Non-comprehensive list of changes in this release
 -------------------------------------------------
@@ -585,6 +588,9 @@ Bug Fixes in This Version
 - Correcly diagnose jumps into statement expressions.
   This ensures the behavior of Clang is consistent with GCC.
   (`#63682 <https://github.com/llvm/llvm-project/issues/63682>`_)
+  (`#38717 <https://github.com/llvm/llvm-project/issues/38717>_`).
+- Fix an assertion when using ``\u0024`` (``$``) as an identifier, by disallowing
+  that construct (`#62133 <https://github.com/llvm/llvm-project/issues/38717>_`).
 
 Bug Fixes to Compiler Builtins
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
