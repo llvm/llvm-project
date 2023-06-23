@@ -30,23 +30,14 @@ define linkonce_odr i32 @foo() {
 }
 
 define i32 @bar() {
-; TUNIT: Function Attrs: norecurse
-; TUNIT-LABEL: define {{[^@]+}}@bar
-; TUNIT-SAME: () #[[ATTR1:[0-9]+]] {
-; TUNIT-NEXT:    [[VAL:%.*]] = call i32 @foo()
-; TUNIT-NEXT:    ret i32 [[VAL]]
-;
-; CGSCC-LABEL: define {{[^@]+}}@bar() {
-; CGSCC-NEXT:    [[VAL:%.*]] = call i32 @foo()
-; CGSCC-NEXT:    ret i32 [[VAL]]
+; CHECK-LABEL: define {{[^@]+}}@bar() {
+; CHECK-NEXT:    [[VAL:%.*]] = call i32 @foo()
+; CHECK-NEXT:    ret i32 [[VAL]]
 ;
 
   %val = call i32 @foo()
   ret i32 %val
 }
 ;.
-; TUNIT: attributes #[[ATTR0]] = { mustprogress nofree norecurse nosync nounwind willreturn memory(none) }
-; TUNIT: attributes #[[ATTR1]] = { norecurse }
-;.
-; CGSCC: attributes #[[ATTR0]] = { mustprogress nofree norecurse nosync nounwind willreturn memory(none) }
+; CHECK: attributes #[[ATTR0]] = { mustprogress nofree norecurse nosync nounwind willreturn memory(none) }
 ;.
