@@ -2095,12 +2095,10 @@ public:
     ReturnedValues.clear();
 
     Function *F = getAssociatedFunction();
-    if (!F || F->isDeclaration()) {
+    if (!F || F->isDeclaration() || F->getReturnType()->isVoidTy()) {
       indicatePessimisticFixpoint();
       return;
     }
-    assert(!F->getReturnType()->isVoidTy() &&
-           "Did not expect a void return type!");
 
     // The map from instruction opcodes to those instructions in the function.
     auto &OpcodeInstMap = A.getInfoCache().getOpcodeInstMapForFunction(*F);
@@ -3068,7 +3066,7 @@ struct AANonConvergentFunction final : AANonConvergentImpl {
     // If all function calls are known to not be convergent, we are not convergent.
     auto CalleeIsNotConvergent = [&](Instruction &Inst) {
       CallBase &CB = cast<CallBase>(Inst);
-      Function *Callee = CB.getCalledFunction();
+      auto *Callee = dyn_cast_if_present<Function>(CB.getCalledOperand());
       if (!Callee || Callee->isIntrinsic()) {
         return false;
       }
@@ -3195,7 +3193,7 @@ struct AAUndefinedBehaviorImpl : public AAUndefinedBehavior {
       // Check nonnull and noundef argument attribute violation for each
       // callsite.
       CallBase &CB = cast<CallBase>(I);
-      Function *Callee = CB.getCalledFunction();
+      auto *Callee = dyn_cast_if_present<Function>(CB.getCalledOperand());
       if (!Callee)
         return true;
       for (unsigned idx = 0; idx < CB.arg_size(); idx++) {
@@ -4855,7 +4853,7 @@ struct AAIsDeadFunction : public AAIsDead {
     // functions. It can however cause dead functions to be treated as live.
     for (const Instruction &I : BB)
       if (const auto *CB = dyn_cast<CallBase>(&I))
-        if (const Function *F = CB->getCalledFunction())
+        if (auto *F = dyn_cast_if_present<Function>(CB->getCalledOperand()))
           if (F->hasLocalLinkage())
             A.markLiveInternalFunction(*F);
     return true;
@@ -5819,8 +5817,8 @@ struct AAInstanceInfoImpl : public AAInstanceInfo {
       if (auto *CB = dyn_cast<CallBase>(UserI)) {
         // This check is not guaranteeing uniqueness but for now that we cannot
         // end up with two versions of \p U thinking it was one.
-        if (!CB->getCalledFunction() ||
-            !CB->getCalledFunction()->hasLocalLinkage())
+        auto *Callee = dyn_cast_if_present<Function>(CB->getCalledOperand());
+        if (!Callee || !Callee->hasLocalLinkage())
           return true;
         if (!CB->isArgOperand(&U))
           return false;
@@ -6577,7 +6575,7 @@ struct AAValueSimplifyArgument final : AAValueSimplifyImpl {
     bool Success;
     bool UsedAssumedInformation = false;
     if (hasCallBaseContext() &&
-        getCallBaseContext()->getCalledFunction() == Arg->getParent())
+        getCallBaseContext()->getCalledOperand() == Arg->getParent())
       Success = PredForCallSite(
           AbstractCallSite(&getCallBaseContext()->getCalledOperandUse()));
     else
@@ -7538,7 +7536,9 @@ struct AAPrivatizablePtrArgument final : public AAPrivatizablePtrImpl {
     auto CallSiteCheck = [&](AbstractCallSite ACS) {
       CallBase *CB = ACS.getInstruction();
       return TTI->areTypesABICompatible(
-          CB->getCaller(), CB->getCalledFunction(), ReplacementTypes);
+          CB->getCaller(),
+          dyn_cast_if_present<Function>(CB->getCalledOperand()),
+          ReplacementTypes);
     };
     bool UsedAssumedInformation = false;
     if (!A.checkForAllCallSites(CallSiteCheck, *this, true,
@@ -7620,17 +7620,17 @@ struct AAPrivatizablePtrArgument final : public AAPrivatizablePtrImpl {
       assert(DCArgNo >= 0 && unsigned(DCArgNo) < DC->arg_size() &&
              "Expected a direct call operand for callback call operand");
 
+      Function *DCCallee =
+          dyn_cast_if_present<Function>(DC->getCalledOperand());
       LLVM_DEBUG({
         dbgs() << "[AAPrivatizablePtr] Argument " << *Arg
                << " check if be privatized in the context of its parent ("
                << Arg->getParent()->getName()
                << ")\n[AAPrivatizablePtr] because it is an argument in a "
                   "direct call of ("
-               << DCArgNo << "@" << DC->getCalledFunction()->getName()
-               << ").\n";
+               << DCArgNo << "@" << DCCallee->getName() << ").\n";
       });
 
-      Function *DCCallee = DC->getCalledFunction();
       if (unsigned(DCArgNo) < DCCallee->arg_size()) {
         const auto *DCArgPrivAA = A.getAAFor<AAPrivatizablePtr>(
             *this, IRPosition::argument(*DCCallee->getArg(DCArgNo)),
@@ -7650,7 +7650,7 @@ struct AAPrivatizablePtrArgument final : public AAPrivatizablePtrImpl {
                << Arg->getParent()->getName()
                << ")\n[AAPrivatizablePtr] because it is an argument in a "
                   "direct call of ("
-               << ACS.getInstruction()->getCalledFunction()->getName()
+               << ACS.getInstruction()->getCalledOperand()->getName()
                << ").\n[AAPrivatizablePtr] for which the argument "
                   "privatization is not compatible.\n";
       });
@@ -11481,14 +11481,15 @@ struct AAPotentialValuesFloating : AAPotentialValuesImpl {
       if (V->getType()->isPointerTy()) {
         NewV = AA::getWithType(*V->stripPointerCasts(), *V->getType());
       } else {
-        auto *CB = dyn_cast<CallBase>(V);
-        if (CB && CB->getCalledFunction()) {
-          for (Argument &Arg : CB->getCalledFunction()->args())
-            if (Arg.hasReturnedAttr()) {
-              NewV = CB->getArgOperand(Arg.getArgNo());
-              break;
-            }
-        }
+        if (auto *CB = dyn_cast<CallBase>(V))
+          if (auto *Callee =
+                  dyn_cast_if_present<Function>(CB->getCalledOperand())) {
+            for (Argument &Arg : Callee->args())
+              if (Arg.hasReturnedAttr()) {
+                NewV = CB->getArgOperand(Arg.getArgNo());
+                break;
+              }
+          }
       }
       if (NewV && NewV != V) {
         Worklist.push_back({{*NewV, CtxI}, S});
@@ -11706,7 +11707,7 @@ struct AAPotentialValuesCallSiteReturned : AAPotentialValuesImpl {
           SmallVector<AA::ValueAndContext> ArgValues;
           IRPosition IRP = IRPosition::value(*V);
           if (auto *Arg = dyn_cast<Argument>(V))
-            if (Arg->getParent() == CB->getCalledFunction())
+            if (Arg->getParent() == CB->getCalledOperand())
               IRP = IRPosition::callsite_argument(*CB, Arg->getArgNo());
           if (recurseForValue(A, IRP, AA::AnyScope))
             continue;
