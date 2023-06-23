@@ -107,6 +107,7 @@ public:
   void LowerPATCHABLE_FUNCTION_ENTER(const MachineInstr &MI);
   void LowerPATCHABLE_FUNCTION_EXIT(const MachineInstr &MI);
   void LowerPATCHABLE_TAIL_CALL(const MachineInstr &MI);
+  void LowerPATCHABLE_EVENT_CALL(const MachineInstr &MI, bool Typed);
 
   typedef std::tuple<unsigned, bool, uint32_t> HwasanMemaccessTuple;
   std::map<HwasanMemaccessTuple, MCSymbol *> HwasanMemaccessSymbols;
@@ -321,6 +322,100 @@ void AArch64AsmPrinter::emitSled(const MachineInstr &MI, SledKind Kind) {
 
   OutStreamer->emitLabel(Target);
   recordSled(CurSled, MI, Kind, 2);
+}
+
+// Emit the following code for Intrinsic::{xray_customevent,xray_typedevent}
+// (built-in functions __xray_customevent/__xray_typedevent).
+//
+// .Lxray_event_sled_N:
+//   b 1f
+//   save x0 and x1 (and also x2 for TYPED_EVENT_CALL)
+//   set up x0 and x1 (and also x2 for TYPED_EVENT_CALL)
+//   bl __xray_CustomEvent or __xray_TypedEvent
+//   restore x0 and x1 (and also x2 for TYPED_EVENT_CALL)
+// 1:
+//
+// There are 6 instructions for EVENT_CALL and 9 for TYPED_EVENT_CALL.
+//
+// Then record a sled of kind CUSTOM_EVENT or TYPED_EVENT.
+// After patching, b .+N will become a nop.
+void AArch64AsmPrinter::LowerPATCHABLE_EVENT_CALL(const MachineInstr &MI,
+                                                  bool Typed) {
+  auto &O = *OutStreamer;
+  MCSymbol *CurSled = OutContext.createTempSymbol("xray_sled_", true);
+  O.emitLabel(CurSled);
+  MCInst MovX0Op0 = MCInstBuilder(AArch64::ORRXrs)
+                        .addReg(AArch64::X0)
+                        .addReg(AArch64::XZR)
+                        .addReg(MI.getOperand(0).getReg())
+                        .addImm(0);
+  MCInst MovX1Op1 = MCInstBuilder(AArch64::ORRXrs)
+                        .addReg(AArch64::X1)
+                        .addReg(AArch64::XZR)
+                        .addReg(MI.getOperand(1).getReg())
+                        .addImm(0);
+  bool MachO = TM.getTargetTriple().isOSBinFormatMachO();
+  auto *Sym = MCSymbolRefExpr::create(
+      OutContext.getOrCreateSymbol(
+          Twine(MachO ? "_" : "") +
+          (Typed ? "__xray_TypedEvent" : "__xray_CustomEvent")),
+      OutContext);
+  if (Typed) {
+    O.AddComment("Begin XRay typed event");
+    EmitToStreamer(O, MCInstBuilder(AArch64::B).addImm(9));
+    EmitToStreamer(O, MCInstBuilder(AArch64::STPXpre)
+                          .addReg(AArch64::SP)
+                          .addReg(AArch64::X0)
+                          .addReg(AArch64::X1)
+                          .addReg(AArch64::SP)
+                          .addImm(-4));
+    EmitToStreamer(O, MCInstBuilder(AArch64::STRXui)
+                          .addReg(AArch64::X2)
+                          .addReg(AArch64::SP)
+                          .addImm(2));
+    EmitToStreamer(O, MovX0Op0);
+    EmitToStreamer(O, MovX1Op1);
+    EmitToStreamer(O, MCInstBuilder(AArch64::ORRXrs)
+                          .addReg(AArch64::X2)
+                          .addReg(AArch64::XZR)
+                          .addReg(MI.getOperand(2).getReg())
+                          .addImm(0));
+    EmitToStreamer(O, MCInstBuilder(AArch64::BL).addExpr(Sym));
+    EmitToStreamer(O, MCInstBuilder(AArch64::LDRXui)
+                          .addReg(AArch64::X2)
+                          .addReg(AArch64::SP)
+                          .addImm(2));
+    O.AddComment("End XRay typed event");
+    EmitToStreamer(O, MCInstBuilder(AArch64::LDPXpost)
+                          .addReg(AArch64::SP)
+                          .addReg(AArch64::X0)
+                          .addReg(AArch64::X1)
+                          .addReg(AArch64::SP)
+                          .addImm(4));
+
+    recordSled(CurSled, MI, SledKind::TYPED_EVENT, 2);
+  } else {
+    O.AddComment("Begin XRay custom event");
+    EmitToStreamer(O, MCInstBuilder(AArch64::B).addImm(6));
+    EmitToStreamer(O, MCInstBuilder(AArch64::STPXpre)
+                          .addReg(AArch64::SP)
+                          .addReg(AArch64::X0)
+                          .addReg(AArch64::X1)
+                          .addReg(AArch64::SP)
+                          .addImm(-2));
+    EmitToStreamer(O, MovX0Op0);
+    EmitToStreamer(O, MovX1Op1);
+    EmitToStreamer(O, MCInstBuilder(AArch64::BL).addExpr(Sym));
+    O.AddComment("End XRay custom event");
+    EmitToStreamer(O, MCInstBuilder(AArch64::LDPXpost)
+                          .addReg(AArch64::SP)
+                          .addReg(AArch64::X0)
+                          .addReg(AArch64::X1)
+                          .addReg(AArch64::SP)
+                          .addImm(2));
+
+    recordSled(CurSled, MI, SledKind::CUSTOM_EVENT, 2);
+  }
 }
 
 void AArch64AsmPrinter::LowerKCFI_CHECK(const MachineInstr &MI) {
@@ -1552,6 +1647,10 @@ void AArch64AsmPrinter::emitInstruction(const MachineInstr *MI) {
   case TargetOpcode::PATCHABLE_TAIL_CALL:
     LowerPATCHABLE_TAIL_CALL(*MI);
     return;
+  case TargetOpcode::PATCHABLE_EVENT_CALL:
+    return LowerPATCHABLE_EVENT_CALL(*MI, false);
+  case TargetOpcode::PATCHABLE_TYPED_EVENT_CALL:
+    return LowerPATCHABLE_EVENT_CALL(*MI, true);
 
   case AArch64::KCFI_CHECK:
     LowerKCFI_CHECK(*MI);
