@@ -753,7 +753,10 @@ genReductions(const Fortran::parser::AccObjectListWithReduction &objectList,
     if (!fir::isa_trivial(reductionTy))
       TODO(operandLocation, "reduction with unsupported type");
 
-    mlir::Type ty = fir::unwrapRefType(baseAddr.getType());
+    auto op = createDataEntryOp<mlir::acc::ReductionOp>(
+        builder, operandLocation, baseAddr, asFortran, bounds,
+        /*structured=*/true, mlir::acc::DataClause::acc_reduction);
+    mlir::Type ty = fir::unwrapRefType(op.getAccPtr().getType());
     if (!fir::isa_trivial(ty))
       ty = baseAddr.getType();
     std::string recipeName = fir::getTypeAsString(
@@ -764,7 +767,7 @@ genReductions(const Fortran::parser::AccObjectListWithReduction &objectList,
                                                    operandLocation, ty, mlirOp);
     reductionRecipes.push_back(mlir::SymbolRefAttr::get(
         builder.getContext(), recipe.getSymName().str()));
-    reductionOperands.push_back(baseAddr);
+    reductionOperands.push_back(op.getAccPtr());
   }
 }
 
