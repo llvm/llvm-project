@@ -143,6 +143,8 @@ Changes to the AMDGPU Backend
 * Added llvm.amdgcn.exp2.f32 intrinsic. This provides direct access to
   v_exp_f32.
 
+* llvm.log2.f32 is now lowered accurately. Use llvm.amdgcn.log.f32 to
+  access the old behavior.
 
 Changes to the ARM Backend
 --------------------------
