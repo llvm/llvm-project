@@ -54,12 +54,13 @@ end subroutine test_char_allocatable
 ! CHECK:           %[[VAL_4:.*]]:2 = hlfir.declare %[[VAL_3]] {uniq_name = "_QFtest_char_allocatableEi"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
 ! CHECK:           %[[VAL_5:.*]] = fir.load %[[VAL_2]]#0 : !fir.ref<!fir.box<!fir.heap<!fir.char<1,11>>>>
 ! CHECK:           %[[VAL_6:.*]] = fir.box_addr %[[VAL_5]] : (!fir.box<!fir.heap<!fir.char<1,11>>>) -> !fir.heap<!fir.char<1,11>>
+! CHECK:           %[[VAL_1B:.*]] = arith.constant 11 : index
 ! CHECK:           %[[VAL_7:.*]] = arith.constant 1 : index
 ! CHECK:           %[[VAL_8:.*]] = arith.constant -1 : index
 ! CHECK:           %[[VAL_9:.*]] = arith.constant 0 : index
 ! CHECK:           %[[VAL_10:.*]] = arith.constant true
 ! CHECK:           %[[VAL_11:.*]] = arith.constant 32 : i8
-! CHECK:           %[[VAL_12:.*]] = arith.subi %[[VAL_1]], %[[VAL_7]] : index
+! CHECK:           %[[VAL_12:.*]] = arith.subi %[[VAL_1B]], %[[VAL_7]] : index
 ! CHECK:           %[[VAL_13:.*]]:2 = fir.iterate_while (%[[VAL_14:.*]] = %[[VAL_12]] to %[[VAL_9]] step %[[VAL_8]]) and (%[[VAL_15:.*]] = %[[VAL_10]]) iter_args(%[[VAL_16:.*]] = %[[VAL_12]]) -> (index) {
 ! CHECK:             %[[VAL_17:.*]] = fir.convert %[[VAL_6]] : (!fir.heap<!fir.char<1,11>>) -> !fir.ref<!fir.array<11x!fir.char<1>>>
 ! CHECK:             %[[VAL_18:.*]] = fir.coordinate_of %[[VAL_17]], %[[VAL_14]] : (!fir.ref<!fir.array<11x!fir.char<1>>>, index) -> !fir.ref<!fir.char<1>>
@@ -88,12 +89,13 @@ end subroutine test_char_pointer
 ! CHECK:           %[[VAL_4:.*]]:2 = hlfir.declare %[[VAL_0]] typeparams %[[VAL_3]] {fortran_attrs = #fir.var_attrs<pointer>, uniq_name = "_QFtest_char_pointerEp"} : (!fir.ref<!fir.box<!fir.ptr<!fir.char<1,11>>>>, index) -> (!fir.ref<!fir.box<!fir.ptr<!fir.char<1,11>>>>, !fir.ref<!fir.box<!fir.ptr<!fir.char<1,11>>>>)
 ! CHECK:           %[[VAL_5:.*]] = fir.load %[[VAL_4]]#0 : !fir.ref<!fir.box<!fir.ptr<!fir.char<1,11>>>>
 ! CHECK:           %[[VAL_6:.*]] = fir.box_addr %[[VAL_5]] : (!fir.box<!fir.ptr<!fir.char<1,11>>>) -> !fir.ptr<!fir.char<1,11>>
+! CHECK:           %[[VAL_3B:.*]] = arith.constant 11 : index
 ! CHECK:           %[[VAL_7:.*]] = arith.constant 1 : index
 ! CHECK:           %[[VAL_8:.*]] = arith.constant -1 : index
 ! CHECK:           %[[VAL_9:.*]] = arith.constant 0 : index
 ! CHECK:           %[[VAL_10:.*]] = arith.constant true
 ! CHECK:           %[[VAL_11:.*]] = arith.constant 32 : i8
-! CHECK:           %[[VAL_12:.*]] = arith.subi %[[VAL_3]], %[[VAL_7]] : index
+! CHECK:           %[[VAL_12:.*]] = arith.subi %[[VAL_3B]], %[[VAL_7]] : index
 ! CHECK:           %[[VAL_13:.*]]:2 = fir.iterate_while (%[[VAL_14:.*]] = %[[VAL_12]] to %[[VAL_9]] step %[[VAL_8]]) and (%[[VAL_15:.*]] = %[[VAL_10]]) iter_args(%[[VAL_16:.*]] = %[[VAL_12]]) -> (index) {
 ! CHECK:             %[[VAL_17:.*]] = fir.convert %[[VAL_6]] : (!fir.ptr<!fir.char<1,11>>) -> !fir.ref<!fir.array<11x!fir.char<1>>>
 ! CHECK:             %[[VAL_18:.*]] = fir.coordinate_of %[[VAL_17]], %[[VAL_14]] : (!fir.ref<!fir.array<11x!fir.char<1>>>, index) -> !fir.ref<!fir.char<1>>
@@ -205,14 +207,15 @@ end subroutine test_derived_allocatable
 ! CHECK:           %[[VAL_12:.*]] = fir.embox %[[VAL_11]] : (!fir.heap<!fir.type<_QFtest_derived_allocatableTt>>) -> !fir.class<!fir.heap<!fir.type<_QFtest_derived_allocatableTt>>>
 ! CHECK:           fir.store %[[VAL_12]] to %[[VAL_10]] : !fir.ref<!fir.class<!fir.heap<!fir.type<_QFtest_derived_allocatableTt>>>>
 ! CHECK:           %[[VAL_13:.*]]:2 = hlfir.declare %[[VAL_10]] {fortran_attrs = #fir.var_attrs<allocatable>, uniq_name = "_QFtest_derived_allocatableEr"} : (!fir.ref<!fir.class<!fir.heap<!fir.type<_QFtest_derived_allocatableTt>>>>) -> (!fir.ref<!fir.class<!fir.heap<!fir.type<_QFtest_derived_allocatableTt>>>>, !fir.ref<!fir.class<!fir.heap<!fir.type<_QFtest_derived_allocatableTt>>>>)
-! CHECK:           %[[VAL_14:.*]] = fir.load %[[VAL_4]]#1 : !fir.ref<!fir.box<!fir.heap<!fir.type<_QFtest_derived_allocatableTt>>>>
-! CHECK:           %[[VAL_15:.*]] = fir.load %[[VAL_8]]#1 : !fir.ref<!fir.class<!fir.heap<!fir.type<_QFtest_derived_allocatableTt>>>>
-! CHECK:           %[[VAL_16:.*]] = fir.load %[[VAL_9]]#1 : !fir.ref<!fir.logical<4>>
+! CHECK:           %[[VAL_14:.*]] = fir.load %[[VAL_4]]#0 : !fir.ref<!fir.box<!fir.heap<!fir.type<_QFtest_derived_allocatableTt>>>>
+! CHECK:           %[[VAL_14B:.*]] = fir.box_addr %[[VAL_14]] : (!fir.box<!fir.heap<!fir.type<_QFtest_derived_allocatableTt>>>) -> !fir.heap<!fir.type<_QFtest_derived_allocatableTt>>
+! CHECK:           %[[VAL_15:.*]] = fir.load %[[VAL_8]]#0 : !fir.ref<!fir.class<!fir.heap<!fir.type<_QFtest_derived_allocatableTt>>>>
+! CHECK:           %[[VAL_16:.*]] = fir.load %[[VAL_9]]#0 : !fir.ref<!fir.logical<4>>
 ! CHECK:           %[[VAL_17:.*]] = fir.convert %[[VAL_16]] : (!fir.logical<4>) -> i1
-! CHECK:           %[[VAL_18:.*]] = fir.rebox %[[VAL_15]] : (!fir.class<!fir.heap<!fir.type<_QFtest_derived_allocatableTt>>>) -> !fir.box<!fir.heap<!fir.type<_QFtest_derived_allocatableTt>>>
-! CHECK:           %[[VAL_19:.*]] = arith.select %[[VAL_17]], %[[VAL_14]], %[[VAL_18]] : !fir.box<!fir.heap<!fir.type<_QFtest_derived_allocatableTt>>>
-! CHECK:           %[[VAL_20:.*]]:2 = hlfir.declare %[[VAL_19]] {uniq_name = ".tmp.intrinsic_result"} : (!fir.box<!fir.heap<!fir.type<_QFtest_derived_allocatableTt>>>) -> (!fir.box<!fir.heap<!fir.type<_QFtest_derived_allocatableTt>>>, !fir.box<!fir.heap<!fir.type<_QFtest_derived_allocatableTt>>>)
-! CHECK:           %[[VAL_21:.*]] = hlfir.as_expr %[[VAL_20]]#0 : (!fir.box<!fir.heap<!fir.type<_QFtest_derived_allocatableTt>>>) -> !hlfir.expr<!fir.type<_QFtest_derived_allocatableTt>>
+! CHECK:           %[[VAL_18:.*]] = fir.box_addr %[[VAL_15]] : (!fir.class<!fir.heap<!fir.type<_QFtest_derived_allocatableTt>>>) -> !fir.heap<!fir.type<_QFtest_derived_allocatableTt>>
+! CHECK:           %[[VAL_19:.*]] = arith.select %[[VAL_17]], %[[VAL_14B]], %[[VAL_18]] : !fir.heap<!fir.type<_QFtest_derived_allocatableTt>>
+! CHECK:           %[[VAL_20:.*]]:2 = hlfir.declare %[[VAL_19]] {uniq_name = ".tmp.intrinsic_result"} : (!fir.heap<!fir.type<_QFtest_derived_allocatableTt>>) -> (!fir.heap<!fir.type<_QFtest_derived_allocatableTt>>, !fir.heap<!fir.type<_QFtest_derived_allocatableTt>>)
+! CHECK:           %[[VAL_21:.*]] = hlfir.as_expr %[[VAL_20]]#0 : (!fir.heap<!fir.type<_QFtest_derived_allocatableTt>>) -> !hlfir.expr<!fir.type<_QFtest_derived_allocatableTt>>
 ! CHECK:           hlfir.assign %[[VAL_21]] to %[[VAL_13]]#0 realloc : !hlfir.expr<!fir.type<_QFtest_derived_allocatableTt>>, !fir.ref<!fir.class<!fir.heap<!fir.type<_QFtest_derived_allocatableTt>>>>
 ! CHECK:           hlfir.destroy %[[VAL_21]] : !hlfir.expr<!fir.type<_QFtest_derived_allocatableTt>>
 ! CHECK:           return
@@ -244,14 +247,15 @@ end subroutine test_derived_pointer
 ! CHECK:           %[[VAL_12:.*]] = fir.embox %[[VAL_11]] : (!fir.heap<!fir.type<_QFtest_derived_pointerTt>>) -> !fir.class<!fir.heap<!fir.type<_QFtest_derived_pointerTt>>>
 ! CHECK:           fir.store %[[VAL_12]] to %[[VAL_10]] : !fir.ref<!fir.class<!fir.heap<!fir.type<_QFtest_derived_pointerTt>>>>
 ! CHECK:           %[[VAL_13:.*]]:2 = hlfir.declare %[[VAL_10]] {fortran_attrs = #fir.var_attrs<allocatable>, uniq_name = "_QFtest_derived_pointerEr"} : (!fir.ref<!fir.class<!fir.heap<!fir.type<_QFtest_derived_pointerTt>>>>) -> (!fir.ref<!fir.class<!fir.heap<!fir.type<_QFtest_derived_pointerTt>>>>, !fir.ref<!fir.class<!fir.heap<!fir.type<_QFtest_derived_pointerTt>>>>)
-! CHECK:           %[[VAL_14:.*]] = fir.load %[[VAL_4]]#1 : !fir.ref<!fir.box<!fir.ptr<!fir.type<_QFtest_derived_pointerTt>>>>
-! CHECK:           %[[VAL_15:.*]] = fir.load %[[VAL_8]]#1 : !fir.ref<!fir.class<!fir.heap<!fir.type<_QFtest_derived_pointerTt>>>>
-! CHECK:           %[[VAL_16:.*]] = fir.load %[[VAL_9]]#1 : !fir.ref<!fir.logical<4>>
+! CHECK:           %[[VAL_14:.*]] = fir.load %[[VAL_4]]#0 : !fir.ref<!fir.box<!fir.ptr<!fir.type<_QFtest_derived_pointerTt>>>>
+! CHECK:           %[[VAL_14B:.*]] = fir.box_addr %[[VAL_14]] : (!fir.box<!fir.ptr<!fir.type<_QFtest_derived_pointerTt>>>) -> !fir.ptr<!fir.type<_QFtest_derived_pointerTt>>
+! CHECK:           %[[VAL_15:.*]] = fir.load %[[VAL_8]]#0 : !fir.ref<!fir.class<!fir.heap<!fir.type<_QFtest_derived_pointerTt>>>>
+! CHECK:           %[[VAL_16:.*]] = fir.load %[[VAL_9]]#0 : !fir.ref<!fir.logical<4>>
 ! CHECK:           %[[VAL_17:.*]] = fir.convert %[[VAL_16]] : (!fir.logical<4>) -> i1
-! CHECK:           %[[VAL_18:.*]] = fir.rebox %[[VAL_15]] : (!fir.class<!fir.heap<!fir.type<_QFtest_derived_pointerTt>>>) -> !fir.box<!fir.ptr<!fir.type<_QFtest_derived_pointerTt>>>
-! CHECK:           %[[VAL_19:.*]] = arith.select %[[VAL_17]], %[[VAL_14]], %[[VAL_18]] : !fir.box<!fir.ptr<!fir.type<_QFtest_derived_pointerTt>>>
-! CHECK:           %[[VAL_20:.*]]:2 = hlfir.declare %[[VAL_19]] {uniq_name = ".tmp.intrinsic_result"} : (!fir.box<!fir.ptr<!fir.type<_QFtest_derived_pointerTt>>>) -> (!fir.box<!fir.ptr<!fir.type<_QFtest_derived_pointerTt>>>, !fir.box<!fir.ptr<!fir.type<_QFtest_derived_pointerTt>>>)
-! CHECK:           %[[VAL_21:.*]] = hlfir.as_expr %[[VAL_20]]#0 : (!fir.box<!fir.ptr<!fir.type<_QFtest_derived_pointerTt>>>) -> !hlfir.expr<!fir.type<_QFtest_derived_pointerTt>>
+! CHECK:           %[[VAL_18:.*]] = fir.box_addr %[[VAL_15]] : (!fir.class<!fir.heap<!fir.type<_QFtest_derived_pointerTt>>>) -> !fir.ptr<!fir.type<_QFtest_derived_pointerTt>>
+! CHECK:           %[[VAL_19:.*]] = arith.select %[[VAL_17]], %[[VAL_14B]], %[[VAL_18]] : !fir.ptr<!fir.type<_QFtest_derived_pointerTt>>
+! CHECK:           %[[VAL_20:.*]]:2 = hlfir.declare %[[VAL_19]] {uniq_name = ".tmp.intrinsic_result"} : (!fir.ptr<!fir.type<_QFtest_derived_pointerTt>>) -> (!fir.ptr<!fir.type<_QFtest_derived_pointerTt>>, !fir.ptr<!fir.type<_QFtest_derived_pointerTt>>)
+! CHECK:           %[[VAL_21:.*]] = hlfir.as_expr %[[VAL_20]]#0 : (!fir.ptr<!fir.type<_QFtest_derived_pointerTt>>) -> !hlfir.expr<!fir.type<_QFtest_derived_pointerTt>>
 ! CHECK:           hlfir.assign %[[VAL_21]] to %[[VAL_13]]#0 realloc : !hlfir.expr<!fir.type<_QFtest_derived_pointerTt>>, !fir.ref<!fir.class<!fir.heap<!fir.type<_QFtest_derived_pointerTt>>>>
 ! CHECK:           hlfir.destroy %[[VAL_21]] : !hlfir.expr<!fir.type<_QFtest_derived_pointerTt>>
 ! CHECK:           return

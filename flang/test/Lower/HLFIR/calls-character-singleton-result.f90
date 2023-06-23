@@ -14,7 +14,7 @@ end subroutine
 ! CHECK:  %[[VAL_4:.*]] = fir.convert %{{.*}}#0 : (!fir.ref<!fir.char<1,?>>) -> !fir.ref<!fir.char<1>>
 ! CHECK:  %[[VAL_5:.*]]:2 = hlfir.declare %[[VAL_4]] typeparams %{{.*}}  {{.*}}Ec
 ! CHECK:  %[[VAL_6:.*]]:2 = hlfir.declare %{{.*}}  {{.*}}Ei
-! CHECK:  %[[VAL_7:.*]] = fir.load %[[VAL_6]]#1 : !fir.ref<i64>
+! CHECK:  %[[VAL_7:.*]] = fir.load %[[VAL_6]]#0 : !fir.ref<i64>
 ! CHECK:  %[[VAL_8:.*]] = fir.convert %[[VAL_7]] : (i64) -> i8
 ! CHECK:  %[[VAL_9:.*]] = fir.undefined !fir.char<1>
 ! CHECK:  %[[VAL_10:.*]] = fir.insert_value %[[VAL_9]], %[[VAL_8]], [0 : index] : (!fir.char<1>, i8) -> !fir.char<1>

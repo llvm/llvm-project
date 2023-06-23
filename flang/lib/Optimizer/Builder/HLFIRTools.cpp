@@ -912,52 +912,11 @@ hlfir::translateToExtendedValue(mlir::Location loc, fir::FirOpBuilder &builder,
 std::pair<fir::ExtendedValue, std::optional<hlfir::CleanupFunction>>
 hlfir::convertToValue(mlir::Location loc, fir::FirOpBuilder &builder,
                       const hlfir::Entity &entity) {
-  auto [exv, cleanup] = translateToExtendedValue(loc, builder, entity);
   // Load scalar references to integer, logical, real, or complex value
   // to an mlir value, dereference allocatable and pointers, and get rid
   // of fir.box that are not needed or create a copy into contiguous memory.
-  exv = exv.match(
-      [&](const fir::UnboxedValue &box) -> fir::ExtendedValue {
-        if (mlir::Type elementType = fir::dyn_cast_ptrEleTy(box.getType()))
-          if (fir::isa_trivial(elementType))
-            return builder.create<fir::LoadOp>(loc, box);
-        return box;
-      },
-      [&](const fir::CharBoxValue &box) -> fir::ExtendedValue { return box; },
-      [&](const fir::ArrayBoxValue &box) -> fir::ExtendedValue { return box; },
-      [&](const fir::CharArrayBoxValue &box) -> fir::ExtendedValue {
-        return box;
-      },
-      [&](const fir::MutableBoxValue &box) -> fir::ExtendedValue {
-        if (box.rank() != 0)
-          TODO(loc, "lower array descriptor designator to HLFIR value");
-        if (entity.isProcedure())
-          TODO(loc, "lower proc descriptor designator to HLFIR value");
-
-        hlfir::Entity derefedEntity =
-            hlfir::derefPointersAndAllocatables(loc, builder, entity);
-        mlir::Type eleTy = derefedEntity.getFortranElementType();
-
-        // Trivial values are unboxed.
-        if (derefedEntity.isScalar() && fir::isa_trivial(eleTy))
-          return builder.create<fir::LoadOp>(loc, derefedEntity);
-
-        if (mlir::isa<fir::CharacterType>(eleTy)) {
-          if (mlir::isa<fir::BoxCharType>(derefedEntity.getFirBase().getType()))
-            return genUnboxChar(loc, builder, derefedEntity.getFirBase());
-          // Extract length from the original entity.
-          mlir::Value len = genCharacterVariableLength(loc, builder, entity);
-          return fir::CharBoxValue{derefedEntity, len};
-        }
-
-        // Keep derived type value boxed.
-        return fir::factory::genMutableBoxRead(builder, loc, box);
-      },
-      [&](const auto &) -> fir::ExtendedValue {
-        // Can we end up here?
-        TODO(loc, "lower descriptor designator to HLFIR value");
-      });
-  return {exv, cleanup};
+  auto derefedAndLoadedEntity = loadTrivialScalar(loc, builder, entity);
+  return translateToExtendedValue(loc, builder, derefedAndLoadedEntity);
 }
 
 static fir::ExtendedValue placeTrivialInMemory(mlir::Location loc,
