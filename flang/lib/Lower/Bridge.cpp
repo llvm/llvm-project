@@ -716,7 +716,7 @@ public:
               loc = cooked->GetSourcePositionRange(block)) {
         // loc is a pair (begin, end); use the beginning position
         Fortran::parser::SourcePosition &filePos = loc->first;
-        llvm::SmallString<256> filePath(filePos.file.path());
+        llvm::SmallString<256> filePath(*filePos.path);
         llvm::sys::fs::make_absolute(filePath);
         llvm::sys::path::remove_dots(filePath);
         return mlir::FileLineColLoc::get(&getMLIRContext(), filePath.str(),
