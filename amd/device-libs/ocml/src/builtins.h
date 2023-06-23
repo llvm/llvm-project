@@ -23,16 +23,16 @@
 #define AS_HALF2(X) __builtin_astype(X, half2)
 
 // Class mask bits
-#define CLASS_SNAN 0x001
-#define CLASS_QNAN 0x002
-#define CLASS_NINF 0x004
-#define CLASS_NNOR 0x008
-#define CLASS_NSUB 0x010
-#define CLASS_NZER 0x020
-#define CLASS_PZER 0x040
-#define CLASS_PSUB 0x080
-#define CLASS_PNOR 0x100
-#define CLASS_PINF 0x200
+#define CLASS_SNAN __FPCLASS_SNAN
+#define CLASS_QNAN __FPCLASS_QNAN
+#define CLASS_NINF __FPCLASS_NEGINF
+#define CLASS_NNOR __FPCLASS_NEGNORMAL
+#define CLASS_NSUB __FPCLASS_NEGSUBNORMAL
+#define CLASS_NZER __FPCLASS_NEGZERO
+#define CLASS_PZER __FPCLASS_POSZERO
+#define CLASS_PSUB __FPCLASS_POSSUBNORMAL
+#define CLASS_PNOR __FPCLASS_POSNORMAL
+#define CLASS_PINF __FPCLASS_POSINF
 
 #include "irif.h"
 
@@ -48,9 +48,9 @@
 #define BUILTIN_CEIL_F16 __builtin_ceilf16
 #define BUILTIN_CEIL_2F16 __builtin_elementwise_ceil
 
-#define BUILTIN_CLASS_F32 __builtin_amdgcn_classf
-#define BUILTIN_CLASS_F64 __builtin_amdgcn_class
-#define BUILTIN_CLASS_F16 __builtin_amdgcn_classh
+#define BUILTIN_CLASS_F32 __builtin_isfpclass
+#define BUILTIN_CLASS_F64 __builtin_isfpclass
+#define BUILTIN_CLASS_F16 __builtin_isfpclass
 
 #define BUILTIN_ISNAN_F32(x) __builtin_isnan(x)
 #define BUILTIN_ISNAN_F64(x) __builtin_isnan(x)
@@ -68,13 +68,13 @@
 #define BUILTIN_ISFINITE_F64(x) __builtin_isfinite(x)
 #define BUILTIN_ISFINITE_F16(x) __builtin_isfinite(x)
 
-#define BUILTIN_ISSUBNORMAL_F32(x) __builtin_amdgcn_classf(x, CLASS_NSUB|CLASS_PSUB)
-#define BUILTIN_ISSUBNORMAL_F64(x) __builtin_amdgcn_class(x, CLASS_NSUB|CLASS_PSUB)
-#define BUILTIN_ISSUBNORMAL_F16(x) __builtin_amdgcn_classh(x, CLASS_NSUB|CLASS_PSUB)
+#define BUILTIN_ISSUBNORMAL_F32(x) __builtin_isfpclass(x, CLASS_NSUB|CLASS_PSUB)
+#define BUILTIN_ISSUBNORMAL_F64(x) __builtin_isfpclass(x, CLASS_NSUB|CLASS_PSUB)
+#define BUILTIN_ISSUBNORMAL_F16(x) __builtin_isfpclass(x, CLASS_NSUB|CLASS_PSUB)
 
-#define BUILTIN_ISZERO_F32(x) __builtin_amdgcn_classf(x, CLASS_NZER|CLASS_PZER)
-#define BUILTIN_ISZERO_F64(x) __builtin_amdgcn_class(x, CLASS_NZER|CLASS_PZER)
-#define BUILTIN_ISZERO_F16(x) __builtin_amdgcn_classh(x, CLASS_NZER|CLASS_PZER)
+#define BUILTIN_ISZERO_F32(x) __builtin_isfpclass(x, CLASS_NZER|CLASS_PZER)
+#define BUILTIN_ISZERO_F64(x) __builtin_isfpclass(x, CLASS_NZER|CLASS_PZER)
+#define BUILTIN_ISZERO_F16(x) __builtin_isfpclass(x, CLASS_NZER|CLASS_PZER)
 
 #define BUILTIN_ISNORMAL_F32(x) __builtin_isnormal(x)
 #define BUILTIN_ISNORMAL_F64(x) __builtin_isnormal(x)
