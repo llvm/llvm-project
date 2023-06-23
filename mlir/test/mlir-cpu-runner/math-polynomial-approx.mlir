@@ -471,19 +471,19 @@ func.func @atan_f32(%a : f32) {
 }
 
 func.func @atan() {
-  // CHECK: -0.785184
+  // CHECK: -0.785398
   %0 = arith.constant -1.0 : f32
   call @atan_f32(%0) : (f32) -> ()
 
-  // CHECK: 0.785184
+  // CHECK: 0.785398
   %1 = arith.constant 1.0 : f32
   call @atan_f32(%1) : (f32) -> ()
 
-  // CHECK: -0.463643
+  // CHECK: -0.463648
   %2 = arith.constant -0.5 : f32
   call @atan_f32(%2) : (f32) -> ()
 
-  // CHECK: 0.463643
+  // CHECK: 0.463648
   %3 = arith.constant 0.5 : f32
   call @atan_f32(%3) : (f32) -> ()
 
@@ -548,7 +548,7 @@ func.func @atan2() {
   // CHECK: -1.10715
   call @atan2_f32(%neg_two, %one) : (f32, f32) -> ()
 
-  // CHECK: 0.463643
+  // CHECK: 0.463648
   call @atan2_f32(%one, %two) : (f32, f32) -> ()
 
   // CHECK: 2.67795
@@ -561,7 +561,7 @@ func.func @atan2() {
   %y11 = arith.constant -1.0 : f32
   call @atan2_f32(%neg_one, %neg_two) : (f32, f32) -> ()
 
-  // CHECK: -0.463643
+  // CHECK: -0.463648
   call @atan2_f32(%neg_one, %two) : (f32, f32) -> ()
 
   return
