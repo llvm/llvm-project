@@ -28,9 +28,9 @@ define float @fmin_f32(<vscale x 8 x float> %a, <vscale x 4 x float> %b) {
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ptrue p0.s
 ; CHECK-NEXT:    fminnm z0.s, p0/m, z0.s, z1.s
-; CHECK-NEXT:    fminnmv s2, p0, z2.s
+; CHECK-NEXT:    fminnm z0.s, p0/m, z0.s, z2.s
 ; CHECK-NEXT:    fminnmv s0, p0, z0.s
-; CHECK-NEXT:    fminnm s0, s0, s2
+; CHECK-NEXT:    // kill: def $s0 killed $s0 killed $z0
 ; CHECK-NEXT:    ret
   %r1 = call fast float @llvm.vector.reduce.fmin.nxv8f32(<vscale x 8 x float> %a)
   %r2 = call fast float @llvm.vector.reduce.fmin.nxv4f32(<vscale x 4 x float> %b)
@@ -43,9 +43,9 @@ define float @fmax_f32(<vscale x 8 x float> %a, <vscale x 4 x float> %b) {
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ptrue p0.s
 ; CHECK-NEXT:    fmaxnm z0.s, p0/m, z0.s, z1.s
-; CHECK-NEXT:    fmaxnmv s2, p0, z2.s
+; CHECK-NEXT:    fmaxnm z0.s, p0/m, z0.s, z2.s
 ; CHECK-NEXT:    fmaxnmv s0, p0, z0.s
-; CHECK-NEXT:    fmaxnm s0, s0, s2
+; CHECK-NEXT:    // kill: def $s0 killed $s0 killed $z0
 ; CHECK-NEXT:    ret
   %r1 = call fast float @llvm.vector.reduce.fmax.nxv8f32(<vscale x 8 x float> %a)
   %r2 = call fast float @llvm.vector.reduce.fmax.nxv4f32(<vscale x 4 x float> %b)

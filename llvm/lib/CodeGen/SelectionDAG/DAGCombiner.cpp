@@ -17232,13 +17232,12 @@ SDValue DAGCombiner::visitFMinMax(SDNode *N) {
     }
   }
 
-  const TargetOptions &Options = DAG.getTarget().Options;
-  if ((Options.UnsafeFPMath && Options.NoSignedZerosFPMath) ||
-      (Flags.hasAllowReassociation() && Flags.hasNoSignedZeros()))
-    if (SDValue SD = reassociateReduction(IsMin ? ISD::VECREDUCE_FMIN
-                                                : ISD::VECREDUCE_FMAX,
-                                          Opc, SDLoc(N), VT, N0, N1, Flags))
-      return SD;
+  if (SDValue SD = reassociateReduction(
+          PropagatesNaN
+              ? (IsMin ? ISD::VECREDUCE_FMINIMUM : ISD::VECREDUCE_FMAXIMUM)
+              : (IsMin ? ISD::VECREDUCE_FMIN : ISD::VECREDUCE_FMAX),
+          Opc, SDLoc(N), VT, N0, N1, Flags))
+    return SD;
 
   return SDValue();
 }
