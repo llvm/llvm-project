@@ -1495,15 +1495,10 @@ define ptr @nonnull_function_ptr_1() {
 
 declare ptr @function_decl()
 define ptr @nonnull_function_ptr_2() {
-; TUNIT: Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn memory(none)
-; TUNIT-LABEL: define {{[^@]+}}@nonnull_function_ptr_2
-; TUNIT-SAME: () #[[ATTR1]] {
-; TUNIT-NEXT:    ret ptr @function_decl
-;
-; CGSCC: Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn memory(none)
-; CGSCC-LABEL: define {{[^@]+}}@nonnull_function_ptr_2
-; CGSCC-SAME: () #[[ATTR1]] {
-; CGSCC-NEXT:    ret ptr @function_decl
+; CHECK: Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn memory(none)
+; CHECK-LABEL: define {{[^@]+}}@nonnull_function_ptr_2
+; CHECK-SAME: () #[[ATTR1]] {
+; CHECK-NEXT:    ret ptr @function_decl
 ;
   ret ptr @function_decl
 }

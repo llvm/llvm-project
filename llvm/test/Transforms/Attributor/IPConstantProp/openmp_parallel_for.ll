@@ -47,7 +47,7 @@ define dso_local void @foo(i32 %N) {
 ; CGSCC-NEXT:    store i32 [[N]], ptr [[N_ADDR]], align 4
 ; CGSCC-NEXT:    store float 3.000000e+00, ptr [[P]], align 4
 ; CGSCC-NEXT:    store i32 7, ptr [[N_ADDR]], align 4
-; CGSCC-NEXT:    call void (ptr, i32, ptr, ...) @__kmpc_fork_call(ptr noundef nonnull align 8 dereferenceable(24) @[[GLOB1]], i32 noundef 3, ptr noundef @.omp_outlined., ptr noalias nofree noundef nonnull readonly align 4 dereferenceable(4) [[N_ADDR]], ptr noalias nofree noundef nonnull readonly align 4 dereferenceable(4) [[P]], i64 noundef 4617315517961601024)
+; CGSCC-NEXT:    call void (ptr, i32, ptr, ...) @__kmpc_fork_call(ptr noundef nonnull align 8 dereferenceable(24) @[[GLOB1]], i32 noundef 3, ptr noundef @.omp_outlined., ptr noalias nocapture nofree noundef nonnull readonly align 4 dereferenceable(4) [[N_ADDR]], ptr noalias nocapture nofree noundef nonnull readonly align 4 dereferenceable(4) [[P]], i64 noundef 4617315517961601024)
 ; CGSCC-NEXT:    ret void
 ;
 entry:

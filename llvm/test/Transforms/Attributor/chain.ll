@@ -8,7 +8,7 @@ define dso_local i32 @bar(ptr %arg) {
 ; CHECK_1-LABEL: define {{[^@]+}}@bar
 ; CHECK_1-SAME: (ptr noundef dereferenceable_or_null(8) [[ARG:%.*]]) {
 ; CHECK_1-NEXT:  entry:
-; CHECK_1-NEXT:    call void @foo(ptr noundef dereferenceable_or_null(8) [[ARG]])
+; CHECK_1-NEXT:    call void @foo(ptr noundef nonnull dereferenceable_or_null(8) [[ARG]])
 ; CHECK_1-NEXT:    [[LD:%.*]] = load i32, ptr [[ARG]], align 4
 ; CHECK_1-NEXT:    ret i32 [[LD]]
 ;
