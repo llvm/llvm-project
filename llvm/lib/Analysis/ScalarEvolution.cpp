@@ -6815,14 +6815,14 @@ const ConstantRange &ScalarEvolution::getRangeRef(
           RangeType);
 
     if (U->getType()->isPointerTy() && SignHint == HINT_RANGE_UNSIGNED) {
-      // Strengthen the range if the underlying IR value is a global using the
-      // size of the global.
+      // Strengthen the range if the underlying IR value is a global/alloca
+      // using the size of the object.
       ObjectSizeOpts Opts;
       Opts.RoundToAlign = false;
       Opts.NullIsUnknownSize = true;
       uint64_t ObjSize;
-      auto *GV = dyn_cast<GlobalVariable>(V);
-      if (GV && getObjectSize(V, ObjSize, DL, &TLI, Opts) && ObjSize > 1) {
+      if ((isa<GlobalVariable>(V) || isa<AllocaInst>(V)) &&
+          getObjectSize(V, ObjSize, DL, &TLI, Opts) && ObjSize > 1) {
         // The highest address the object can start is ObjSize bytes before the
         // end (unsigned max value). If this value is not a multiple of the
         // alignment, the last possible start value is the next lowest multiple
@@ -6830,7 +6830,7 @@ const ConstantRange &ScalarEvolution::getRangeRef(
         // because if they would there's no possible start address for the
         // object.
         APInt MaxVal = APInt::getMaxValue(BitWidth) - APInt(BitWidth, ObjSize);
-        uint64_t Align = GV->getAlign().valueOrOne().value();
+        uint64_t Align = U->getValue()->getPointerAlignment(DL).value();
         uint64_t Rem = MaxVal.urem(Align);
         MaxVal -= APInt(BitWidth, Rem);
         ConservativeResult = ConservativeResult.intersectWith(
