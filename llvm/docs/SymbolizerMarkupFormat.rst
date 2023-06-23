@@ -143,6 +143,11 @@ what they contain is specified for each element type.
 No markup elements or ANSI SGR control sequences are interpreted inside the
 contents of a field.
 
+Implementations must ignore markup fields after those expected; this allows
+adding new fields to backwards-compatibly extend elements. Implementations need
+not ignore them silently, but the element should behave otherwise as if the
+fields were removed.
+
 In the descriptions of each element type, ``printf``-style placeholders indicate
 field contents:
 
