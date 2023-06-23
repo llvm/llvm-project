@@ -422,14 +422,14 @@ private:
 };
 
 // Track array specifications. They can occur in AttrSpec, EntityDecl,
-// ObjectDecl, DimensionStmt, CommonBlockObject, BasedPointerStmt, and
+// ObjectDecl, DimensionStmt, CommonBlockObject, BasedPointer, and
 // ComponentDecl.
 // 1. INTEGER, DIMENSION(10) :: x
 // 2. INTEGER :: x(10)
 // 3. ALLOCATABLE :: x(:)
 // 4. DIMENSION :: x(10)
 // 5. COMMON x(10)
-// 6. BasedPointerStmt
+// 6. POINTER(p,x(10))
 class ArraySpecVisitor : public virtual BaseVisitor {
 public:
   void Post(const parser::ArraySpec &);
@@ -789,8 +789,8 @@ private:
       SourceName, SourceName, Symbol &localSymbol, const Symbol &useSymbol);
   void AddUse(const GenericSpecInfo &);
   // If appropriate, erase a previously USE-associated symbol
-  void EraseRenamedSymbol(const Symbol &);
-  // Record a name appearing in a USE rename clause
+  void EraseRenamedUse(const Symbol *);
+  // Record a name appearing as the target of a USE rename clause
   void AddUseRename(const SourceName &name) {
     useRenames_.emplace(std::make_pair(name, useModuleScope_));
   }
@@ -888,7 +888,8 @@ private:
   void CheckExtantProc(const parser::Name &, Symbol::Flag);
   // Create a subprogram symbol in the current scope and push a new scope.
   Symbol &PushSubprogramScope(const parser::Name &, Symbol::Flag,
-      const parser::LanguageBindingSpec * = nullptr);
+      const parser::LanguageBindingSpec * = nullptr,
+      bool hasModulePrefix = false);
   Symbol *GetSpecificFromGeneric(const parser::Name &);
   Symbol &PostSubprogramStmt();
   void CreateDummyArgument(SubprogramDetails &, const parser::Name &);
@@ -1003,7 +1004,8 @@ public:
   void Post(const parser::CommonBlockObject &);
   bool Pre(const parser::EquivalenceStmt &);
   bool Pre(const parser::SaveStmt &);
-  bool Pre(const parser::BasedPointerStmt &);
+  bool Pre(const parser::BasedPointer &);
+  void Post(const parser::BasedPointer &);
 
   void PointerInitialization(
       const parser::Name &, const parser::InitialDataTarget &);
@@ -2774,11 +2776,8 @@ bool ModuleVisitor::Pre(const parser::Only &x) {
 bool ModuleVisitor::Pre(const parser::Rename::Names &x) {
   const auto &localName{std::get<0>(x.t)};
   const auto &useName{std::get<1>(x.t)};
-  AddUseRename(useName.source);
   SymbolRename rename{AddUse(localName.source, useName.source)};
-  if (rename.use && localName.source != useName.source) {
-    EraseRenamedSymbol(*rename.use);
-  }
+  AddUseRename(useName.source);
   Resolve(useName, rename.use);
   Resolve(localName, rename.local);
   return false;
@@ -2796,9 +2795,6 @@ bool ModuleVisitor::Pre(const parser::Rename::Operators &x) {
         "Logical constant '%s' may not be used as a defined operator"_err_en_US);
   } else {
     SymbolRename rename{AddUse(localInfo.symbolName(), useInfo.symbolName())};
-    if (rename.use) {
-      EraseRenamedSymbol(*rename.use);
-    }
     useInfo.Resolve(rename.use);
     localInfo.Resolve(rename.local);
   }
@@ -2909,17 +2905,20 @@ static bool ConvertToUseError(
   }
 }
 
-// If a symbol has previously been USE-associated and did not appear in a USE
-// ONLY clause, erase it from the current scope.  This is needed when a name
-// appears in a USE rename clause.
-void ModuleVisitor::EraseRenamedSymbol(const Symbol &useSymbol) {
-  const SourceName &name{useSymbol.name()};
+// If a symbol has previously been USE-associated and did not appear in
+// an ONLY clause or renaming, erase it from the current scope.  This is
+// necessary when a name appears as the target of a later USE rename clause.
+void ModuleVisitor::EraseRenamedUse(const Symbol *useSymbol) {
+  if (!useSymbol) {
+    return;
+  }
+  const SourceName &name{useSymbol->name()};
   if (const Symbol * symbol{FindInScope(name)}) {
-    if (auto *useDetails{symbol->detailsIf<UseDetails>()}) {
+    if (const auto *useDetails{symbol->detailsIf<UseDetails>()}) {
       const Symbol &moduleSymbol{useDetails->symbol()};
       if (moduleSymbol.name() == name &&
-          moduleSymbol.owner() == useSymbol.owner() && IsUseRenamed(name) &&
-          !IsUseOnly(name)) {
+          moduleSymbol.owner() == useSymbol->owner() && !IsUseOnly(name) &&
+          !IsUseRenamed(name)) {
         EraseSymbol(*symbol);
       }
     }
@@ -2929,7 +2928,7 @@ void ModuleVisitor::EraseRenamedSymbol(const Symbol &useSymbol) {
 void ModuleVisitor::DoAddUse(SourceName location, SourceName localName,
     Symbol &localSymbol, const Symbol &useSymbol) {
   if (localName != useSymbol.name()) {
-    EraseRenamedSymbol(useSymbol);
+    EraseRenamedUse(&useSymbol);
   }
   if (auto *details{localSymbol.detailsIf<UseErrorDetails>()}) {
     details->add_occurrence(location, *useModuleScope_);
@@ -3603,10 +3602,21 @@ void SubprogramVisitor::Post(const parser::PrefixSpec::Cluster_Dims &x) {
   }
 }
 
+static bool HasModulePrefix(const std::list<parser::PrefixSpec> &prefixes) {
+  for (const auto &prefix : prefixes) {
+    if (std::holds_alternative<parser::PrefixSpec::Module>(prefix.u)) {
+      return true;
+    }
+  }
+  return false;
+}
+
 bool SubprogramVisitor::Pre(const parser::InterfaceBody::Subroutine &x) {
-  const auto &name{std::get<parser::Name>(
-      std::get<parser::Statement<parser::SubroutineStmt>>(x.t).statement.t)};
-  return BeginSubprogram(name, Symbol::Flag::Subroutine);
+  const auto &stmtTuple{
+      std::get<parser::Statement<parser::SubroutineStmt>>(x.t).statement.t};
+  return BeginSubprogram(std::get<parser::Name>(stmtTuple),
+      Symbol::Flag::Subroutine,
+      HasModulePrefix(std::get<std::list<parser::PrefixSpec>>(stmtTuple)));
 }
 void SubprogramVisitor::Post(const parser::InterfaceBody::Subroutine &x) {
   const auto &stmt{std::get<parser::Statement<parser::SubroutineStmt>>(x.t)};
@@ -3614,9 +3624,11 @@ void SubprogramVisitor::Post(const parser::InterfaceBody::Subroutine &x) {
       &std::get<std::optional<parser::LanguageBindingSpec>>(stmt.statement.t));
 }
 bool SubprogramVisitor::Pre(const parser::InterfaceBody::Function &x) {
-  const auto &name{std::get<parser::Name>(
-      std::get<parser::Statement<parser::FunctionStmt>>(x.t).statement.t)};
-  return BeginSubprogram(name, Symbol::Flag::Function);
+  const auto &stmtTuple{
+      std::get<parser::Statement<parser::FunctionStmt>>(x.t).statement.t};
+  return BeginSubprogram(std::get<parser::Name>(stmtTuple),
+      Symbol::Flag::Function,
+      HasModulePrefix(std::get<std::list<parser::PrefixSpec>>(stmtTuple)));
 }
 void SubprogramVisitor::Post(const parser::InterfaceBody::Function &x) {
   const auto &stmt{std::get<parser::Statement<parser::FunctionStmt>>(x.t)};
@@ -4025,10 +4037,16 @@ bool SubprogramVisitor::BeginSubprogram(const parser::Name &name,
     if (moduleInterface && &moduleInterface->owner() == &currScope()) {
       // Subprogram is MODULE FUNCTION or MODULE SUBROUTINE with an interface
       // previously defined in the same scope.
-      EraseSymbol(name);
+      if (GenericDetails *
+          generic{DEREF(FindSymbol(name)).detailsIf<GenericDetails>()}) {
+        generic->clear_specific();
+      } else {
+        EraseSymbol(name);
+      }
     }
   }
-  Symbol &newSymbol{PushSubprogramScope(name, subpFlag, bindingSpec)};
+  Symbol &newSymbol{
+      PushSubprogramScope(name, subpFlag, bindingSpec, hasModulePrefix)};
   if (moduleInterface) {
     newSymbol.get<SubprogramDetails>().set_moduleInterface(*moduleInterface);
     if (moduleInterface->attrs().test(Attr::PRIVATE)) {
@@ -4136,7 +4154,8 @@ void SubprogramVisitor::CheckExtantProc(
 }
 
 Symbol &SubprogramVisitor::PushSubprogramScope(const parser::Name &name,
-    Symbol::Flag subpFlag, const parser::LanguageBindingSpec *bindingSpec) {
+    Symbol::Flag subpFlag, const parser::LanguageBindingSpec *bindingSpec,
+    bool hasModulePrefix) {
   Symbol *symbol{GetSpecificFromGeneric(name)};
   if (!symbol) {
     if (bindingSpec && currScope().IsGlobal() && bindingSpec->v) {
@@ -4161,6 +4180,8 @@ Symbol &SubprogramVisitor::PushSubprogramScope(const parser::Name &name,
     details.set_isInterface();
     if (isAbstract()) {
       SetExplicitAttr(*symbol, Attr::ABSTRACT);
+    } else if (hasModulePrefix) {
+      SetExplicitAttr(*symbol, Attr::MODULE);
     } else {
       MakeExternal(*symbol);
     }
@@ -4174,7 +4195,10 @@ Symbol &SubprogramVisitor::PushSubprogramScope(const parser::Name &name,
     }
     set_inheritFromParent(false);
   }
-  FindSymbol(name)->set(subpFlag); // PushScope() created symbol
+  if (Symbol * found{FindSymbol(name)};
+      found && found->has<HostAssocDetails>()) {
+    found->set(subpFlag); // PushScope() created symbol
+  }
   return *symbol;
 }
 
@@ -4210,6 +4234,7 @@ Symbol *SubprogramVisitor::GetSpecificFromGeneric(const parser::Name &name) {
     } else if (auto *details{symbol->detailsIf<GenericDetails>()}) {
       // found generic, want specific procedure
       auto *specific{details->specific()};
+      Attrs moduleAttr;
       if (inInterfaceBlock()) {
         if (specific) {
           // Defining an interface in a generic of the same name which is
@@ -4220,6 +4245,7 @@ Symbol *SubprogramVisitor::GetSpecificFromGeneric(const parser::Name &name) {
             // The shadowed procedure is a separate module procedure that is
             // actually defined later in this (sub)module.
             // Define its interface now as a new symbol.
+            moduleAttr.set(Attr::MODULE);
             specific = nullptr;
           } else if (&specific->owner() != &symbol->owner()) {
             // The shadowed procedure was from an enclosing scope and will be
@@ -4238,8 +4264,8 @@ Symbol *SubprogramVisitor::GetSpecificFromGeneric(const parser::Name &name) {
         }
       }
       if (!specific) {
-        specific =
-            &currScope().MakeSymbol(name.source, Attrs{}, SubprogramDetails{});
+        specific = &currScope().MakeSymbol(
+            name.source, std::move(moduleAttr), SubprogramDetails{});
         if (details->derivedType()) {
           // A specific procedure with the same name as a derived type
           SayAlreadyDeclared(name, *details->derivedType());
@@ -5687,76 +5713,67 @@ bool DeclarationVisitor::Pre(const parser::StructureConstructor &x) {
   return false;
 }
 
-bool DeclarationVisitor::Pre(const parser::BasedPointerStmt &x) {
-  for (const parser::BasedPointer &bp : x.v) {
-    const parser::ObjectName &pointerName{std::get<0>(bp.t)};
-    const parser::ObjectName &pointeeName{std::get<1>(bp.t)};
-    auto *pointer{FindSymbol(pointerName)};
-    if (!pointer) {
-      pointer = &MakeSymbol(pointerName, ObjectEntityDetails{});
-    } else if (!ConvertToObjectEntity(*pointer) || IsNamedConstant(*pointer)) {
-      SayWithDecl(pointerName, *pointer, "'%s' is not a variable"_err_en_US);
-    } else if (pointer->Rank() > 0) {
-      SayWithDecl(pointerName, *pointer,
-          "Cray pointer '%s' must be a scalar"_err_en_US);
-    } else if (pointer->test(Symbol::Flag::CrayPointee)) {
-      Say(pointerName,
-          "'%s' cannot be a Cray pointer as it is already a Cray pointee"_err_en_US);
-    }
-    pointer->set(Symbol::Flag::CrayPointer);
-    const DeclTypeSpec &pointerType{MakeNumericType(TypeCategory::Integer,
-        context().defaultKinds().subscriptIntegerKind())};
-    const auto *type{pointer->GetType()};
-    if (!type) {
-      pointer->SetType(pointerType);
-    } else if (*type != pointerType) {
-      Say(pointerName.source, "Cray pointer '%s' must have type %s"_err_en_US,
-          pointerName.source, pointerType.AsFortran());
-    }
-    if (ResolveName(pointeeName)) {
-      Symbol &pointee{*pointeeName.symbol};
-      if (pointee.has<UseDetails>()) {
-        Say(pointeeName,
-            "'%s' cannot be a Cray pointee as it is use-associated"_err_en_US);
-        continue;
-      } else if (!ConvertToObjectEntity(pointee) || IsNamedConstant(pointee)) {
-        Say(pointeeName, "'%s' is not a variable"_err_en_US);
-        continue;
-      } else if (pointee.test(Symbol::Flag::CrayPointer)) {
-        Say(pointeeName,
-            "'%s' cannot be a Cray pointee as it is already a Cray pointer"_err_en_US);
-      } else if (pointee.test(Symbol::Flag::CrayPointee)) {
-        Say(pointeeName,
-            "'%s' was already declared as a Cray pointee"_err_en_US);
-      } else {
-        pointee.set(Symbol::Flag::CrayPointee);
-      }
-      if (const auto *pointeeType{pointee.GetType()}) {
-        if (const auto *derived{pointeeType->AsDerived()}) {
-          if (!derived->typeSymbol().get<DerivedTypeDetails>().sequence()) {
-            Say(pointeeName,
-                "Type of Cray pointee '%s' is a non-sequence derived type"_err_en_US);
-          }
-        }
-      }
-      // process the pointee array-spec, if present
-      BeginArraySpec();
-      Walk(std::get<std::optional<parser::ArraySpec>>(bp.t));
-      const auto &spec{arraySpec()};
-      if (!spec.empty()) {
-        auto &details{pointee.get<ObjectEntityDetails>()};
-        if (details.shape().empty()) {
-          details.set_shape(spec);
-        } else {
-          SayWithDecl(pointeeName, pointee,
-              "Array spec was already declared for '%s'"_err_en_US);
-        }
-      }
-      ClearArraySpec();
-      currScope().add_crayPointer(pointeeName.source, *pointer);
-    }
+bool DeclarationVisitor::Pre(const parser::BasedPointer &) {
+  BeginArraySpec();
+  return true;
+}
+
+void DeclarationVisitor::Post(const parser::BasedPointer &bp) {
+  const parser::ObjectName &pointerName{std::get<0>(bp.t)};
+  auto *pointer{FindSymbol(pointerName)};
+  if (!pointer) {
+    pointer = &MakeSymbol(pointerName, ObjectEntityDetails{});
+  } else if (!ConvertToObjectEntity(*pointer)) {
+    SayWithDecl(pointerName, *pointer, "'%s' is not a variable"_err_en_US);
+  } else if (IsNamedConstant(*pointer)) {
+    SayWithDecl(pointerName, *pointer,
+        "'%s' is a named constant and may not be a Cray pointer"_err_en_US);
+  } else if (pointer->Rank() > 0) {
+    SayWithDecl(
+        pointerName, *pointer, "Cray pointer '%s' must be a scalar"_err_en_US);
+  } else if (pointer->test(Symbol::Flag::CrayPointee)) {
+    Say(pointerName,
+        "'%s' cannot be a Cray pointer as it is already a Cray pointee"_err_en_US);
   }
-  return false;
+  pointer->set(Symbol::Flag::CrayPointer);
+  const DeclTypeSpec &pointerType{MakeNumericType(
+      TypeCategory::Integer, context().defaultKinds().subscriptIntegerKind())};
+  const auto *type{pointer->GetType()};
+  if (!type) {
+    pointer->SetType(pointerType);
+  } else if (*type != pointerType) {
+    Say(pointerName.source, "Cray pointer '%s' must have type %s"_err_en_US,
+        pointerName.source, pointerType.AsFortran());
+  }
+  const parser::ObjectName &pointeeName{std::get<1>(bp.t)};
+  DeclareObjectEntity(pointeeName);
+  if (Symbol * pointee{pointeeName.symbol}) {
+    if (!ConvertToObjectEntity(*pointee)) {
+      return;
+    }
+    if (IsNamedConstant(*pointee)) {
+      Say(pointeeName,
+          "'%s' is a named constant and may not be a Cray pointee"_err_en_US);
+      return;
+    }
+    if (pointee->test(Symbol::Flag::CrayPointer)) {
+      Say(pointeeName,
+          "'%s' cannot be a Cray pointee as it is already a Cray pointer"_err_en_US);
+    } else if (pointee->test(Symbol::Flag::CrayPointee)) {
+      Say(pointeeName, "'%s' was already declared as a Cray pointee"_err_en_US);
+    } else {
+      pointee->set(Symbol::Flag::CrayPointee);
+    }
+    if (const auto *pointeeType{pointee->GetType()}) {
+      if (const auto *derived{pointeeType->AsDerived()}) {
+        if (!derived->typeSymbol().get<DerivedTypeDetails>().sequence()) {
+          Say(pointeeName,
+              "Type of Cray pointee '%s' is a non-sequence derived type"_err_en_US);
+        }
+      }
+    }
+    currScope().add_crayPointer(pointeeName.source, *pointer);
+  }
 }
 
 bool DeclarationVisitor::Pre(const parser::NamelistStmt::Group &x) {

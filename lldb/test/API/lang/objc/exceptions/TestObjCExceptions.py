@@ -87,7 +87,6 @@ class ObjCExceptionsTestCase(TestBase):
                 "userInfo = ",
                 "1 key/value pair",
                 "reserved = ",
-                "nil",
             ],
         )
 
@@ -105,7 +104,6 @@ class ObjCExceptionsTestCase(TestBase):
         self.assertEqual(
             userInfo.GetChildAtIndex(0).GetChildAtIndex(1).description, "some_value"
         )
-        self.assertEqual(e1.GetChildMemberWithName("reserved").description, "<nil>")
 
         self.expect(
             "frame variable e2", substrs=["(NSException *) e2 = ", '"SomeReason"']

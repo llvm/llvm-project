@@ -1385,12 +1385,6 @@ bool ELFObjectWriter::shouldRelocateWithSymbol(const MCAssembler &Asm,
       if (C != 0)
         return true;
 
-      // gold<2.34 incorrectly ignored the addend for R_386_GOTOFF (9)
-      // (http://sourceware.org/PR16794).
-      if (TargetObjectWriter->getEMachine() == ELF::EM_386 &&
-          Type == ELF::R_386_GOTOFF)
-        return true;
-
       // ld.lld handles R_MIPS_HI16/R_MIPS_LO16 separately, not as a whole, so
       // it doesn't know that an R_MIPS_HI16 with implicit addend 1 and an
       // R_MIPS_LO16 with implicit addend -32768 represents 32768, which is in

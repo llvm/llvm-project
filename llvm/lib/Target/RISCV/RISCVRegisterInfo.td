@@ -115,13 +115,16 @@ let RegAltNameIndices = [ABIRegAltName] in {
 
 def XLenVT : ValueTypeByHwMode<[RV32, RV64],
                                [i32,  i64]>;
+// Floating point class with XLen bits.
+def XLenFVT : ValueTypeByHwMode<[RV32, RV64],
+                                [f32,  f64]>;
 def XLenRI : RegInfoByHwMode<
       [RV32,              RV64],
       [RegInfo<32,32,32>, RegInfo<64,64,64>]>;
 
 // The order of registers represents the preferred allocation sequence.
 // Registers are listed in the order caller-save, callee-save, specials.
-def GPR : RegisterClass<"RISCV", [XLenVT], 32, (add
+def GPR : RegisterClass<"RISCV", [XLenVT, XLenFVT], 32, (add
     (sequence "X%u", 10, 17),
     (sequence "X%u", 5, 7),
     (sequence "X%u", 28, 31),
@@ -132,15 +135,15 @@ def GPR : RegisterClass<"RISCV", [XLenVT], 32, (add
   let RegInfos = XLenRI;
 }
 
-def GPRX0 : RegisterClass<"RISCV", [XLenVT], 32, (add X0)> {
+def GPRX0 : RegisterClass<"RISCV", [XLenVT, XLenFVT], 32, (add X0)> {
   let RegInfos = XLenRI;
 }
 
-def GPRNoX0 : RegisterClass<"RISCV", [XLenVT], 32, (sub GPR, X0)> {
+def GPRNoX0 : RegisterClass<"RISCV", [XLenVT, XLenFVT], 32, (sub GPR, X0)> {
   let RegInfos = XLenRI;
 }
 
-def GPRNoX0X2 : RegisterClass<"RISCV", [XLenVT], 32, (sub GPR, X0, X2)> {
+def GPRNoX0X2 : RegisterClass<"RISCV", [XLenVT, XLenFVT], 32, (sub GPR, X0, X2)> {
   let RegInfos = XLenRI;
 }
 
@@ -148,11 +151,11 @@ def GPRNoX0X2 : RegisterClass<"RISCV", [XLenVT], 32, (sub GPR, X0, X2)> {
 // stack on some microarchitectures. Also remove the reserved registers X0, X2,
 // X3, and X4 as it reduces the number of register classes that get synthesized
 // by tablegen.
-def GPRJALR : RegisterClass<"RISCV", [XLenVT], 32, (sub GPR, (sequence "X%u", 0, 5))> {
+def GPRJALR : RegisterClass<"RISCV", [XLenVT, XLenFVT], 32, (sub GPR, (sequence "X%u", 0, 5))> {
   let RegInfos = XLenRI;
 }
 
-def GPRC : RegisterClass<"RISCV", [XLenVT], 32, (add
+def GPRC : RegisterClass<"RISCV", [XLenVT, XLenFVT], 32, (add
     (sequence "X%u", 10, 15),
     (sequence "X%u", 8, 9)
   )> {
@@ -163,7 +166,7 @@ def GPRC : RegisterClass<"RISCV", [XLenVT], 32, (add
 // restored to the saved value before the tail call, which would clobber a call
 // address. We shouldn't use x5 since that is a hint for to pop the return
 // address stack on some microarchitectures.
-def GPRTC : RegisterClass<"RISCV", [XLenVT], 32, (add
+def GPRTC : RegisterClass<"RISCV", [XLenVT, XLenFVT], 32, (add
     (sequence "X%u", 6, 7),
     (sequence "X%u", 10, 17),
     (sequence "X%u", 28, 31)
@@ -171,12 +174,12 @@ def GPRTC : RegisterClass<"RISCV", [XLenVT], 32, (add
   let RegInfos = XLenRI;
 }
 
-def SP : RegisterClass<"RISCV", [XLenVT], 32, (add X2)> {
+def SP : RegisterClass<"RISCV", [XLenVT, XLenFVT], 32, (add X2)> {
   let RegInfos = XLenRI;
 }
 
 // Saved Registers from s0 to s7, for C.MVA01S07 instruction in Zcmp extension
-def SR07 : RegisterClass<"RISCV", [XLenVT], 32, (add
+def SR07 : RegisterClass<"RISCV", [XLenVT, XLenFVT], 32, (add
     (sequence "X%u", 8, 9),
     (sequence "X%u", 18, 23)
   )> {
@@ -542,7 +545,6 @@ def VMV0 : RegisterClass<"RISCV", VMaskVTs, 64, (add V0)> {
 let RegInfos = XLenRI in {
 def GPRF16  : RegisterClass<"RISCV", [f16], 16, (add GPR)>;
 def GPRF32  : RegisterClass<"RISCV", [f32], 32, (add GPR)>;
-def GPRF64  : RegisterClass<"RISCV", [f64], 64, (add GPR)>;
 } // RegInfos = XLenRI
 
 let RegAltNameIndices = [ABIRegAltName] in {

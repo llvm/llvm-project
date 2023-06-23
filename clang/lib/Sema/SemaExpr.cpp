@@ -4955,7 +4955,8 @@ ExprResult Sema::ActOnArraySubscriptExpr(Scope *S, Expr *base,
   };
   // The matrix subscript operator ([][])is considered a single operator.
   // Separating the index expressions by parenthesis is not allowed.
-  if (base->hasPlaceholderType(BuiltinType::IncompleteMatrixIdx) &&
+  if (base && !base->getType().isNull() &&
+      base->hasPlaceholderType(BuiltinType::IncompleteMatrixIdx) &&
       !isa<MatrixSubscriptExpr>(base)) {
     Diag(base->getExprLoc(), diag::err_matrix_separate_incomplete_index)
         << SourceRange(base->getBeginLoc(), rbLoc);

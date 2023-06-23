@@ -418,15 +418,6 @@ acc.reduction.recipe @reduction_i64 : i64 reduction_operator<add> init {
 
 // -----
 
-// expected-error@+1 {{expects init region to yield a value of the reduction type}}
-acc.reduction.recipe @reduction_i64 : i64 reduction_operator<add> init {
-^bb0(%0: i64):
-  %1 = arith.constant 0 : i32
-  acc.yield %1 : i32
-} combiner {}
-
-// -----
-
 // expected-error@+1 {{expects non-empty combiner region}}
 acc.reduction.recipe @reduction_i64 : i64 reduction_operator<add> init {
 ^bb0(%0: i64):

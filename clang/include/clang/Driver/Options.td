@@ -5502,6 +5502,11 @@ def flang_experimental_hlfir : Flag<["-"], "flang-experimental-hlfir">,
   Flags<[FlangOption, FC1Option, FlangOnlyOption, NoXarchOption, HelpHidden]>,
   HelpText<"Use HLFIR lowering (experimental)">;
 
+def flang_experimental_polymorphism : Flag<["-"], "flang-experimental-polymorphism">,
+  Flags<[FlangOption, FC1Option, FlangOnlyOption, NoXarchOption, HelpHidden]>,
+  HelpText<"Enable Fortran 2003 polymorphism (experimental)">;
+  
+
 //===----------------------------------------------------------------------===//
 // FLangOption + CoreOption + NoXarchOption
 //===----------------------------------------------------------------------===//
@@ -5950,6 +5955,9 @@ def as_secure_log_file : Separate<["-"], "as-secure-log-file">,
 
 let Flags = [CC1Option, NoDriverOption] in {
 
+def llvm_verify_each : Flag<["-"], "llvm-verify-each">,
+  HelpText<"Run the LLVM verifier after every LLVM pass">,
+  MarshallingInfoFlag<CodeGenOpts<"VerifyEach">>;
 def disable_llvm_verifier : Flag<["-"], "disable-llvm-verifier">,
   HelpText<"Don't run the LLVM IR verifier pass">,
   MarshallingInfoNegativeFlag<CodeGenOpts<"VerifyModule">>;

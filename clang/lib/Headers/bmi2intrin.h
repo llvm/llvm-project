@@ -7,8 +7,8 @@
  *===-----------------------------------------------------------------------===
  */
 
-#if !defined __X86INTRIN_H && !defined __IMMINTRIN_H
-#error "Never use <bmi2intrin.h> directly; include <x86intrin.h> instead."
+#ifndef __IMMINTRIN_H
+#error "Never use <bmi2intrin.h> directly; include <immintrin.h> instead."
 #endif
 
 #ifndef __BMI2INTRIN_H
@@ -33,6 +33,14 @@ static __inline__ unsigned int __DEFAULT_FN_ATTRS
 _pext_u32(unsigned int __X, unsigned int __Y)
 {
   return __builtin_ia32_pext_si(__X, __Y);
+}
+
+static __inline__ unsigned int __DEFAULT_FN_ATTRS
+_mulx_u32(unsigned int __X, unsigned int __Y, unsigned int *__P)
+{
+  unsigned long long __res = (unsigned long long) __X * __Y;
+  *__P = (unsigned int)(__res >> 32);
+  return (unsigned int)__res;
 }
 
 #ifdef  __x86_64__
@@ -64,17 +72,7 @@ _mulx_u64 (unsigned long long __X, unsigned long long __Y,
   return (unsigned long long) __res;
 }
 
-#else /* !__x86_64__ */
-
-static __inline__ unsigned int __DEFAULT_FN_ATTRS
-_mulx_u32 (unsigned int __X, unsigned int __Y, unsigned int *__P)
-{
-  unsigned long long __res = (unsigned long long) __X * __Y;
-  *__P = (unsigned int) (__res >> 32);
-  return (unsigned int) __res;
-}
-
-#endif /* !__x86_64__  */
+#endif /* __x86_64__  */
 
 #undef __DEFAULT_FN_ATTRS
 

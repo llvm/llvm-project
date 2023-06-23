@@ -345,31 +345,18 @@ static void checkOptions() {
   if (config->emachine == EM_MIPS && config->gnuHash)
     error("the .gnu.hash section is not compatible with the MIPS target");
 
-  if (config->emachine == EM_ARM) {
-    if (!config->cmseImplib) {
-      if (!config->cmseInputLib.empty())
-        error("--in-implib may not be used without --cmse-implib");
-      if (!config->cmseOutputLib.empty())
-        error("--out-implib may not be used without --cmse-implib");
-    }
-  } else {
-    if (config->cmseImplib)
-      error("--cmse-implib is only supported on ARM targets");
-    if (!config->cmseInputLib.empty())
-      error("--in-implib is only supported on ARM targets");
-    if (!config->cmseOutputLib.empty())
-      error("--out-implib is only supported on ARM targets");
-  }
-
   if (config->fixCortexA53Errata843419 && config->emachine != EM_AARCH64)
     error("--fix-cortex-a53-843419 is only supported on AArch64 targets");
 
   if (config->fixCortexA8 && config->emachine != EM_ARM)
     error("--fix-cortex-a8 is only supported on ARM targets");
 
+  if (config->armBe8 && config->emachine != EM_ARM)
+    error("--be8 is only supported on ARM targets");
+
   if (config->fixCortexA8 && !config->isLE)
     error("--fix-cortex-a8 is not supported on big endian targets");
-  
+
   if (config->tocOptimize && config->emachine != EM_PPC64)
     error("--toc-optimize is only supported on PowerPC64 targets");
 
@@ -1131,6 +1118,7 @@ static void readConfigs(opt::InputArgList &args) {
                                             OPT_no_android_memtag_stack, false);
   config->androidMemtagMode = getMemtagMode(args);
   config->auxiliaryList = args::getStrings(args, OPT_auxiliary);
+  config->armBe8 = args.hasArg(OPT_be8);
   if (opt::Arg *arg =
           args.getLastArg(OPT_Bno_symbolic, OPT_Bsymbolic_non_weak_functions,
                           OPT_Bsymbolic_functions, OPT_Bsymbolic)) {
@@ -1177,9 +1165,6 @@ static void readConfigs(opt::InputArgList &args) {
   config->fini = args.getLastArgValue(OPT_fini, "_fini");
   config->fixCortexA53Errata843419 = args.hasArg(OPT_fix_cortex_a53_843419) &&
                                      !args.hasArg(OPT_relocatable);
-  config->cmseImplib = args.hasArg(OPT_cmse_implib);
-  config->cmseInputLib = args.getLastArgValue(OPT_in_implib);
-  config->cmseOutputLib = args.getLastArgValue(OPT_out_implib);
   config->fixCortexA8 =
       args.hasArg(OPT_fix_cortex_a8) && !args.hasArg(OPT_relocatable);
   config->fortranCommon =
@@ -1756,12 +1741,6 @@ void LinkerDriver::createFiles(opt::InputArgList &args) {
         files.push_back(createObjFile(*mb));
         files.back()->justSymbols = true;
       }
-      break;
-    case OPT_in_implib:
-      if (armCmseImpLib)
-        error("multiple CMSE import libraries not supported");
-      else if (std::optional<MemoryBufferRef> mb = readFile(arg->getValue()))
-        armCmseImpLib = createObjFile(*mb);
       break;
     case OPT_start_group:
       if (InputFile::isInGroup)
@@ -2642,8 +2621,6 @@ void LinkerDriver::link(opt::InputArgList &args) {
       llvm::TimeTraceScope timeScope("Parse input files", files[i]->getName());
       parseFile(files[i]);
     }
-    if (armCmseImpLib)
-      parseArmCMSEImportLib(*armCmseImpLib);
   }
 
   // Now that we have every file, we can decide if we will need a
@@ -2807,9 +2784,6 @@ void LinkerDriver::link(opt::InputArgList &args) {
   // versionId set by scanVersionScript().
   if (args.hasArg(OPT_exclude_libs))
     excludeLibs(args);
-
-  // Record [__acle_se_<sym>, <sym>] pairs for later processing.
-  processArmCmseSymbols();
 
   // Apply symbol renames for --wrap and combine foo@v1 and foo@@v1.
   redirectSymbols(wrapped);

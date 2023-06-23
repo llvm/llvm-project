@@ -519,7 +519,7 @@ multiclass VPatTernaryVMAQA_VV_VX<string intrinsic, string instruction,
 // Pseudo-instructions and codegen patterns
 //===----------------------------------------------------------------------===//
 let Predicates = [HasVendorXTHeadBa] in {
-def : Pat<(add GPR:$rs1, (shl GPR:$rs2, uimm2:$uimm2)),
+def : Pat<(add (XLenVT GPR:$rs1), (shl GPR:$rs2, uimm2:$uimm2)),
           (TH_ADDSL GPR:$rs1, GPR:$rs2, uimm2:$uimm2)>;
 
 // Reuse complex patterns from StdExtZba
@@ -549,18 +549,18 @@ def : Pat<(add (mul_oneuse GPR:$rs1, (XLenVT 40)), GPR:$rs2),
 def : Pat<(add (mul_oneuse GPR:$rs1, (XLenVT 72)), GPR:$rs2),
           (TH_ADDSL GPR:$rs2, (TH_ADDSL GPR:$rs1, GPR:$rs1, 3), 3)>;
 
-def : Pat<(add GPR:$r, CSImm12MulBy4:$i),
-          (TH_ADDSL GPR:$r, (ADDI X0, (SimmShiftRightBy2XForm CSImm12MulBy4:$i)), 2)>;
-def : Pat<(add GPR:$r, CSImm12MulBy8:$i),
-          (TH_ADDSL GPR:$r, (ADDI X0, (SimmShiftRightBy3XForm CSImm12MulBy8:$i)), 3)>;
+def : Pat<(add (XLenVT GPR:$r), CSImm12MulBy4:$i),
+          (TH_ADDSL GPR:$r, (ADDI (XLenVT X0), (SimmShiftRightBy2XForm CSImm12MulBy4:$i)), 2)>;
+def : Pat<(add (XLenVT GPR:$r), CSImm12MulBy8:$i),
+          (TH_ADDSL GPR:$r, (ADDI (XLenVT X0), (SimmShiftRightBy3XForm CSImm12MulBy8:$i)), 3)>;
 
-def : Pat<(mul GPR:$r, C3LeftShift:$i),
+def : Pat<(mul (XLenVT GPR:$r), C3LeftShift:$i),
           (SLLI (TH_ADDSL GPR:$r, GPR:$r, 1),
                 (TrailingZeros C3LeftShift:$i))>;
-def : Pat<(mul GPR:$r, C5LeftShift:$i),
+def : Pat<(mul (XLenVT GPR:$r), C5LeftShift:$i),
           (SLLI (TH_ADDSL GPR:$r, GPR:$r, 2),
                 (TrailingZeros C5LeftShift:$i))>;
-def : Pat<(mul GPR:$r, C9LeftShift:$i),
+def : Pat<(mul (XLenVT GPR:$r), C9LeftShift:$i),
           (SLLI (TH_ADDSL GPR:$r, GPR:$r, 3),
                 (TrailingZeros C9LeftShift:$i))>;
 
@@ -596,14 +596,14 @@ let Predicates = [HasVendorXTHeadBb] in {
 def : PatGprImm<rotr, TH_SRRI, uimmlog2xlen>;
 // There's no encoding for a rotate-left-immediate in X-THead-Bb, as
 // it can be implemented with th.srri by negating the immediate.
-def : Pat<(rotl GPR:$rs1, uimmlog2xlen:$shamt),
+def : Pat<(rotl (XLenVT GPR:$rs1), uimmlog2xlen:$shamt),
           (TH_SRRI GPR:$rs1, (ImmSubFromXLen uimmlog2xlen:$shamt))>;
-def : Pat<(sext_inreg GPR:$rs1, i32), (TH_EXT GPR:$rs1, 31, 0)>;
-def : Pat<(sext_inreg GPR:$rs1, i16), (TH_EXT GPR:$rs1, 15, 0)>;
-def : Pat<(sext_inreg GPR:$rs1, i8), (TH_EXT GPR:$rs1, 7, 0)>;
-def : Pat<(sext_inreg GPR:$rs1, i1), (TH_EXT GPR:$rs1, 0, 0)>;
+def : Pat<(sext_inreg (XLenVT GPR:$rs1), i32), (TH_EXT GPR:$rs1, 31, 0)>;
+def : Pat<(sext_inreg (XLenVT GPR:$rs1), i16), (TH_EXT GPR:$rs1, 15, 0)>;
+def : Pat<(sext_inreg (XLenVT GPR:$rs1), i8), (TH_EXT GPR:$rs1, 7, 0)>;
+def : Pat<(sext_inreg (XLenVT GPR:$rs1), i1), (TH_EXT GPR:$rs1, 0, 0)>;
 def : PatGpr<ctlz, TH_FF1>;
-def : Pat<(ctlz (xor GPR:$rs1, -1)), (TH_FF0 GPR:$rs1)>;
+def : Pat<(XLenVT (ctlz (xor (XLenVT GPR:$rs1), -1))), (TH_FF0 GPR:$rs1)>;
 def : PatGpr<bswap, TH_REV>;
 } // Predicates = [HasVendorXTHeadBb]
 
@@ -620,37 +620,39 @@ def : Pat<(riscv_clzw i64:$rs1),
 } // Predicates = [HasVendorXTHeadBb, IsRV64]
 
 let Predicates = [HasVendorXTHeadBs] in {
-def : Pat<(and (srl GPR:$rs1, uimmlog2xlen:$shamt), 1),
+def : Pat<(and (srl (XLenVT GPR:$rs1), uimmlog2xlen:$shamt), 1),
           (TH_TST GPR:$rs1, uimmlog2xlen:$shamt)>;
-def : Pat<(seteq (and GPR:$rs1, SingleBitSetMask:$mask), 0),
+def : Pat<(XLenVT (seteq (and (XLenVT GPR:$rs1), SingleBitSetMask:$mask), 0)),
           (TH_TST (XORI GPR:$rs1, -1), SingleBitSetMask:$mask)>;
 } // Predicates = [HasVendorXTHeadBs]
 
 let Predicates = [HasVendorXTHeadCondMov] in {
-def : Pat<(select GPR:$cond, GPR:$a, GPR:$b),
+def : Pat<(select (XLenVT GPR:$cond), (XLenVT GPR:$a), (XLenVT GPR:$b)),
           (TH_MVEQZ GPR:$a, GPR:$b, GPR:$cond)>;
-def : Pat<(select GPR:$cond, GPR:$a, (XLenVT 0)),
-          (TH_MVEQZ GPR:$a, X0, GPR:$cond)>;
-def : Pat<(select GPR:$cond, (XLenVT 0), GPR:$b),
-          (TH_MVNEZ GPR:$b, X0, GPR:$cond)>;
+def : Pat<(select (XLenVT GPR:$cond), (XLenVT GPR:$a), (XLenVT 0)),
+          (TH_MVEQZ GPR:$a, (XLenVT X0), GPR:$cond)>;
+def : Pat<(select (XLenVT GPR:$cond), (XLenVT 0), (XLenVT GPR:$b)),
+          (TH_MVNEZ GPR:$b, (XLenVT X0), GPR:$cond)>;
 
-def : Pat<(select (riscv_seteq GPR:$cond), GPR:$a, GPR:$b),
+def : Pat<(select (riscv_seteq (XLenVT GPR:$cond)), (XLenVT GPR:$a), (XLenVT GPR:$b)),
           (TH_MVNEZ GPR:$a, GPR:$b, GPR:$cond)>;
-def : Pat<(select (riscv_setne GPR:$cond), GPR:$a, GPR:$b),
+def : Pat<(select (riscv_setne (XLenVT GPR:$cond)), (XLenVT GPR:$a), (XLenVT GPR:$b)),
           (TH_MVEQZ GPR:$a, GPR:$b, GPR:$cond)>;
-def : Pat<(select (riscv_seteq GPR:$cond), GPR:$a, (XLenVT 0)),
-          (TH_MVNEZ GPR:$a, X0, GPR:$cond)>;
-def : Pat<(select (riscv_setne GPR:$cond), GPR:$a, (XLenVT 0)),
-          (TH_MVEQZ GPR:$a, X0, GPR:$cond)>;
-def : Pat<(select (riscv_seteq GPR:$cond), (XLenVT 0), GPR:$b),
-          (TH_MVEQZ GPR:$b, X0, GPR:$cond)>;
-def : Pat<(select (riscv_setne GPR:$cond),  (XLenVT 0), GPR:$b),
-          (TH_MVNEZ GPR:$b, X0, GPR:$cond)>;
+def : Pat<(select (riscv_seteq (XLenVT GPR:$cond)), (XLenVT GPR:$a), (XLenVT 0)),
+          (TH_MVNEZ GPR:$a, (XLenVT X0), GPR:$cond)>;
+def : Pat<(select (riscv_setne (XLenVT GPR:$cond)), (XLenVT GPR:$a), (XLenVT 0)),
+          (TH_MVEQZ GPR:$a, (XLenVT X0), GPR:$cond)>;
+def : Pat<(select (riscv_seteq (XLenVT GPR:$cond)), (XLenVT 0), (XLenVT GPR:$b)),
+          (TH_MVEQZ GPR:$b, (XLenVT X0), GPR:$cond)>;
+def : Pat<(select (riscv_setne (XLenVT GPR:$cond)),  (XLenVT 0), (XLenVT GPR:$b)),
+          (TH_MVNEZ GPR:$b, (XLenVT X0), GPR:$cond)>;
 } // Predicates = [HasVendorXTHeadCondMov]
 
 let Predicates = [HasVendorXTHeadMac] in {
-def : Pat<(add GPR:$rd, (mul GPR:$rs1, GPR:$rs2)), (TH_MULA GPR:$rd, GPR:$rs1, GPR:$rs2)>;
-def : Pat<(sub GPR:$rd, (mul GPR:$rs1, GPR:$rs2)), (TH_MULS GPR:$rd, GPR:$rs1, GPR:$rs2)>;
+def : Pat<(add GPR:$rd, (mul (XLenVT GPR:$rs1), (XLenVT GPR:$rs2))),
+          (TH_MULA GPR:$rd, GPR:$rs1, GPR:$rs2)>;
+def : Pat<(sub GPR:$rd, (mul (XLenVT GPR:$rs1), (XLenVT GPR:$rs2))),
+          (TH_MULS GPR:$rd, GPR:$rs1, GPR:$rs2)>;
 } // Predicates = [HasVendorXTHeadMac]
 
 let Predicates = [HasVendorXTHeadMac, IsRV64] in {
@@ -661,19 +663,21 @@ def : Pat<(binop_allwusers<sub> GPR:$rd, (mul GPR:$rs1, GPR:$rs2)),
           (TH_MULSW GPR:$rd, GPR:$rs1, GPR:$rs2)>;
 // mulah, mulsh produce a sign-extended result.
 def : Pat<(binop_allwusers<add> GPR:$rd, (mul
-            (sexti16 GPR:$rs1),
-            (sexti16 GPR:$rs2))),
+            (sexti16 (i64 GPR:$rs1)),
+            (sexti16 (i64 GPR:$rs2)))),
           (TH_MULAH GPR:$rd, GPR:$rs1, GPR:$rs2)>;
 def : Pat<(binop_allwusers<sub> GPR:$rd, (mul
-            (sexti16 GPR:$rs1),
-            (sexti16 GPR:$rs2))),
+            (sexti16 (i64 GPR:$rs1)),
+            (sexti16 (i64 GPR:$rs2)))),
           (TH_MULSH GPR:$rd, GPR:$rs1, GPR:$rs2)>;
 } // Predicates = [HasVendorXTHeadMac, IsRV64]
 
 let Predicates = [HasVendorXTHeadMac, IsRV32] in {
-def : Pat<(i32 (add GPR:$rd, (mul (sexti16 GPR:$rs1), (sexti16 GPR:$rs2)))),
+def : Pat<(i32 (add GPR:$rd, (mul (sexti16 (i32 GPR:$rs1)),
+                                  (sexti16 (i32 GPR:$rs2))))),
           (TH_MULAH GPR:$rd, GPR:$rs1, GPR:$rs2)>;
-def : Pat<(i32 (sub GPR:$rd, (mul (sexti16 GPR:$rs1), (sexti16 GPR:$rs2)))),
+def : Pat<(i32 (sub GPR:$rd, (mul (sexti16 (i32 GPR:$rs1)),
+                                  (sexti16 (i32 GPR:$rs2))))),
           (TH_MULSH GPR:$rd, GPR:$rs1, GPR:$rs2)>;
 } // Predicates = [HasVendorXTHeadMac, IsRV32]
 
@@ -760,26 +764,26 @@ def AddrRegZextRegScale
                      [], [], 10>;
 
 multiclass LdIdxPat<PatFrag LoadOp, RVInst Inst, ValueType vt = XLenVT> {
-def : Pat<(vt (LoadOp (AddrRegRegScale GPR:$rs1, GPR:$rs2, uimm2:$uimm2))),
+def : Pat<(vt (LoadOp (AddrRegRegScale (XLenVT GPR:$rs1), (XLenVT GPR:$rs2), uimm2:$uimm2))),
           (Inst GPR:$rs1, GPR:$rs2, uimm2:$uimm2)>;
 }
 
 multiclass LdZextIdxPat<PatFrag LoadOp, RVInst Inst, ValueType vt = i64> {
-def : Pat<(vt (LoadOp (AddrRegZextRegScale (i64 GPR:$rs1), GPR:$rs2, uimm2:$uimm2))),
+def : Pat<(vt (LoadOp (AddrRegZextRegScale (i64 GPR:$rs1), (i64 GPR:$rs2), uimm2:$uimm2))),
           (Inst GPR:$rs1, GPR:$rs2, uimm2:$uimm2)>;
 }
 
 multiclass StIdxPat<PatFrag StoreOp, RVInst Inst, RegisterClass StTy,
                     ValueType vt = XLenVT> {
 def : Pat<(StoreOp (vt StTy:$rd),
-            (AddrRegRegScale GPR:$rs1, GPR:$rs2, uimm2:$uimm2)),
+            (AddrRegRegScale (XLenVT GPR:$rs1), (XLenVT GPR:$rs2), uimm2:$uimm2)),
           (Inst StTy:$rd, GPR:$rs1, GPR:$rs2, uimm2:$uimm2)>;
 }
 
 multiclass StZextIdxPat<PatFrag StoreOp, RVInst Inst, RegisterClass StTy,
                         ValueType vt = i64> {
 def : Pat<(StoreOp (vt StTy:$rd),
-            (AddrRegZextRegScale (i64 GPR:$rs1), GPR:$rs2, uimm2:$uimm2)),
+            (AddrRegZextRegScale (i64 GPR:$rs1), (i64 GPR:$rs2), uimm2:$uimm2)),
           (Inst StTy:$rd, GPR:$rs1, GPR:$rs2, uimm2:$uimm2)>;
 }
 

@@ -1294,7 +1294,7 @@ namespace {
   class SpeculativeEvaluationRAII {
     EvalInfo *Info = nullptr;
     Expr::EvalStatus OldStatus;
-    unsigned OldSpeculativeEvaluationDepth;
+    unsigned OldSpeculativeEvaluationDepth = 0;
 
     void moveFromAndCancel(SpeculativeEvaluationRAII &&Other) {
       Info = Other.Info;

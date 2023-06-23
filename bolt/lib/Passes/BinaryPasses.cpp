@@ -336,7 +336,7 @@ void EliminateUnreachableBlocks::runOnFunction(BinaryFunction &Function) {
     if (Count) {
       Modified.insert(&Function);
       if (opts::Verbosity > 0)
-        outs() << "BOLT-INFO: Removed " << Count
+        outs() << "BOLT-INFO: removed " << Count
                << " dead basic block(s) accounting for " << Bytes
                << " bytes in function " << Function << '\n';
     }
@@ -350,8 +350,9 @@ void EliminateUnreachableBlocks::runOnFunctions(BinaryContext &BC) {
       runOnFunction(Function);
   }
 
-  outs() << "BOLT-INFO: UCE removed " << DeletedBlocks << " blocks and "
-         << DeletedBytes << " bytes of code.\n";
+  if (DeletedBlocks)
+    outs() << "BOLT-INFO: UCE removed " << DeletedBlocks << " blocks and "
+           << DeletedBytes << " bytes of code\n";
 }
 
 bool ReorderBasicBlocks::shouldPrint(const BinaryFunction &BF) const {
@@ -999,16 +1000,17 @@ void SimplifyConditionalTailCalls::runOnFunctions(BinaryContext &BC) {
     }
   }
 
-  outs() << "BOLT-INFO: SCTC: patched " << NumTailCallsPatched
-         << " tail calls (" << NumOrigForwardBranches << " forward)"
-         << " tail calls (" << NumOrigBackwardBranches << " backward)"
-         << " from a total of " << NumCandidateTailCalls << " while removing "
-         << NumDoubleJumps << " double jumps"
-         << " and removing " << DeletedBlocks << " basic blocks"
-         << " totalling " << DeletedBytes
-         << " bytes of code. CTCs total execution count is " << CTCExecCount
-         << " and the number of times CTCs are taken is " << CTCTakenCount
-         << ".\n";
+  if (NumTailCallsPatched)
+    outs() << "BOLT-INFO: SCTC: patched " << NumTailCallsPatched
+           << " tail calls (" << NumOrigForwardBranches << " forward)"
+           << " tail calls (" << NumOrigBackwardBranches << " backward)"
+           << " from a total of " << NumCandidateTailCalls << " while removing "
+           << NumDoubleJumps << " double jumps"
+           << " and removing " << DeletedBlocks << " basic blocks"
+           << " totalling " << DeletedBytes
+           << " bytes of code. CTCs total execution count is " << CTCExecCount
+           << " and the number of times CTCs are taken is " << CTCTakenCount
+           << "\n";
 }
 
 uint64_t ShortenInstructions::shortenInstructions(BinaryFunction &Function) {
@@ -1048,7 +1050,8 @@ void ShortenInstructions::runOnFunctions(BinaryContext &BC) {
       [&](BinaryFunction &BF) { NumShortened += shortenInstructions(BF); },
       nullptr, "ShortenInstructions");
 
-  outs() << "BOLT-INFO: " << NumShortened << " instructions were shortened\n";
+  if (NumShortened)
+    outs() << "BOLT-INFO: " << NumShortened << " instructions were shortened\n";
 }
 
 void Peepholes::addTailcallTraps(BinaryFunction &Function) {

@@ -11,16 +11,18 @@
 // MemorySanitizer allocator.
 //===----------------------------------------------------------------------===//
 
+#include "msan_allocator.h"
+
+#include "msan.h"
+#include "msan_interface_internal.h"
+#include "msan_origin.h"
+#include "msan_poisoning.h"
+#include "msan_thread.h"
 #include "sanitizer_common/sanitizer_allocator.h"
 #include "sanitizer_common/sanitizer_allocator_checks.h"
 #include "sanitizer_common/sanitizer_allocator_interface.h"
 #include "sanitizer_common/sanitizer_allocator_report.h"
 #include "sanitizer_common/sanitizer_errno.h"
-#include "msan.h"
-#include "msan_allocator.h"
-#include "msan_origin.h"
-#include "msan_thread.h"
-#include "msan_poisoning.h"
 
 namespace __msan {
 

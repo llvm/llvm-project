@@ -761,8 +761,8 @@ Attribute ModuleImport::getConstantAsAttr(llvm::Constant *constant) {
 
   // Returns the static shape of the provided type if possible.
   auto getConstantShape = [&](llvm::Type *type) {
-    return llvm::dyn_cast_if_present<ShapedType>(getBuiltinTypeForAttr(convertType(type))
-        );
+    return llvm::dyn_cast_if_present<ShapedType>(
+        getBuiltinTypeForAttr(convertType(type)));
   };
 
   // Convert one-dimensional constant arrays or vectors that store 1/2/4/8-byte
@@ -829,8 +829,8 @@ Attribute ModuleImport::getConstantAsAttr(llvm::Constant *constant) {
 
   // Convert zero aggregates.
   if (auto *constZero = dyn_cast<llvm::ConstantAggregateZero>(constant)) {
-    auto shape = llvm::dyn_cast_if_present<ShapedType>(getBuiltinTypeForAttr(convertType(constZero->getType()))
-                     );
+    auto shape = llvm::dyn_cast_if_present<ShapedType>(
+        getBuiltinTypeForAttr(convertType(constZero->getType())));
     if (!shape)
       return {};
     // Convert zero aggregates with a static shape to splat elements attributes.
@@ -1683,6 +1683,8 @@ void ModuleImport::convertParameterAttributes(llvm::Function *func,
   // Convert the result attributes and attach them wrapped in an ArrayAttribute
   // to the funcOp.
   llvm::AttributeSet llvmResAttr = llvmAttrs.getRetAttrs();
+  if (!llvmResAttr.hasAttributes())
+    return;
   funcOp.setResAttrsAttr(
       builder.getArrayAttr(convertParameterAttribute(llvmResAttr, builder)));
 }
