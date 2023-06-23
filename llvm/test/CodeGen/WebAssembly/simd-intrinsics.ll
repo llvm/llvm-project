@@ -725,6 +725,26 @@ define <4 x float> @nearest_v4f32(<4 x float> %a) {
   ret <4 x float> %v
 }
 
+; CHECK-LABEL: nearest_v4f32_via_rint:
+; CHECK-NEXT: .functype nearest_v4f32_via_rint (v128) -> (v128){{$}}
+; CHECK-NEXT: f32x4.nearest $push[[R:[0-9]+]]=, $0{{$}}
+; CHECK-NEXT: return $pop[[R]]{{$}}
+declare <4 x float> @llvm.rint.v4f32(<4 x float>)
+define <4 x float> @nearest_v4f32_via_rint(<4 x float> %a) {
+  %v = call <4 x float> @llvm.rint.v4f32(<4 x float> %a)
+  ret <4 x float> %v
+}
+
+; CHECK-LABEL: nearest_v4f32_via_roundeven:
+; CHECK-NEXT: .functype nearest_v4f32_via_roundeven (v128) -> (v128){{$}}
+; CHECK-NEXT: f32x4.nearest $push[[R:[0-9]+]]=, $0{{$}}
+; CHECK-NEXT: return $pop[[R]]{{$}}
+declare <4 x float> @llvm.roundeven.v4f32(<4 x float>)
+define <4 x float> @nearest_v4f32_via_roundeven(<4 x float> %a) {
+  %v = call <4 x float> @llvm.roundeven.v4f32(<4 x float> %a)
+  ret <4 x float> %v
+}
+
 ; CHECK-LABEL: madd_v4f32:
 ; CHECK-NEXT: .functype madd_v4f32 (v128, v128, v128) -> (v128){{$}}
 ; CHECK-NEXT: f32x4.relaxed_madd $push[[R:[0-9]+]]=, $0, $1, $2{{$}}
@@ -859,6 +879,26 @@ define <2 x double> @trunc_v2f64(<2 x double> %a) {
 declare <2 x double> @llvm.nearbyint.v2f64(<2 x double>)
 define <2 x double> @nearest_v2f64(<2 x double> %a) {
   %v = call <2 x double> @llvm.nearbyint.v2f64(<2 x double> %a)
+  ret <2 x double> %v
+}
+
+; CHECK-LABEL: nearest_v2f64_via_rint:
+; CHECK-NEXT: .functype nearest_v2f64_via_rint (v128) -> (v128){{$}}
+; CHECK-NEXT: f64x2.nearest $push[[R:[0-9]+]]=, $0{{$}}
+; CHECK-NEXT: return $pop[[R]]{{$}}
+declare <2 x double> @llvm.rint.v2f64(<2 x double>)
+define <2 x double> @nearest_v2f64_via_rint(<2 x double> %a) {
+  %v = call <2 x double> @llvm.rint.v2f64(<2 x double> %a)
+  ret <2 x double> %v
+}
+
+; CHECK-LABEL: nearest_v2f64_via_roundeven:
+; CHECK-NEXT: .functype nearest_v2f64_via_roundeven (v128) -> (v128){{$}}
+; CHECK-NEXT: f64x2.nearest $push[[R:[0-9]+]]=, $0{{$}}
+; CHECK-NEXT: return $pop[[R]]{{$}}
+declare <2 x double> @llvm.roundeven.v2f64(<2 x double>)
+define <2 x double> @nearest_v2f64_via_roundeven(<2 x double> %a) {
+  %v = call <2 x double> @llvm.roundeven.v2f64(<2 x double> %a)
   ret <2 x double> %v
 }
 
