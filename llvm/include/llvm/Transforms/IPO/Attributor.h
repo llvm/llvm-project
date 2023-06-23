@@ -1545,7 +1545,7 @@ struct Attributor {
   /// attribute is used for reasoning. To record the dependences explicitly use
   /// the `Attributor::recordDependence` method.
   template <typename AAType>
-  const AAType &getAAFor(const AbstractAttribute &QueryingAA,
+  const AAType *getAAFor(const AbstractAttribute &QueryingAA,
                          const IRPosition &IRP, DepClassTy DepClass) {
     return getOrCreateAAFor<AAType>(IRP, &QueryingAA, DepClass,
                                     /* ForceUpdate */ false);
@@ -1557,7 +1557,7 @@ struct Attributor {
   /// possible/useful that were not happening before as the abstract attribute
   /// was assumed dead.
   template <typename AAType>
-  const AAType &getAndUpdateAAFor(const AbstractAttribute &QueryingAA,
+  const AAType *getAndUpdateAAFor(const AbstractAttribute &QueryingAA,
                                   const IRPosition &IRP, DepClassTy DepClass) {
     return getOrCreateAAFor<AAType>(IRP, &QueryingAA, DepClass,
                                     /* ForceUpdate */ true);
@@ -1569,7 +1569,7 @@ struct Attributor {
   /// function.
   /// NOTE: ForceUpdate is ignored in any stage other than the update stage.
   template <typename AAType>
-  const AAType &getOrCreateAAFor(IRPosition IRP,
+  const AAType *getOrCreateAAFor(IRPosition IRP,
                                  const AbstractAttribute *QueryingAA,
                                  DepClassTy DepClass, bool ForceUpdate = false,
                                  bool UpdateAfterInit = true) {
@@ -1580,7 +1580,7 @@ struct Attributor {
                                             /* AllowInvalidState */ true)) {
       if (ForceUpdate && Phase == AttributorPhase::UPDATE)
         updateAA(*AAPtr);
-      return *AAPtr;
+      return AAPtr;
     }
 
     // No matching attribute found, create one.
@@ -1594,7 +1594,7 @@ struct Attributor {
     // If we are currenty seeding attributes, enforce seeding rules.
     if (Phase == AttributorPhase::SEEDING && !shouldSeedAttribute(AA)) {
       AA.getState().indicatePessimisticFixpoint();
-      return AA;
+      return &AA;
     }
 
     // For now we ignore naked and optnone functions.
@@ -1616,7 +1616,7 @@ struct Attributor {
     // Allowed we will not perform updates at all.
     if (Invalidate) {
       AA.getState().indicatePessimisticFixpoint();
-      return AA;
+      return &AA;
     }
 
     {
@@ -1631,7 +1631,7 @@ struct Attributor {
     if ((AnchorFn && !isRunOn(const_cast<Function *>(AnchorFn))) &&
         !isRunOn(IRP.getAssociatedFunction())) {
       AA.getState().indicatePessimisticFixpoint();
-      return AA;
+      return &AA;
     }
 
     // If this is queried in the manifest stage, we force the AA to indicate
@@ -1639,7 +1639,7 @@ struct Attributor {
     if (Phase == AttributorPhase::MANIFEST ||
         Phase == AttributorPhase::CLEANUP) {
       AA.getState().indicatePessimisticFixpoint();
-      return AA;
+      return &AA;
     }
 
     // Allow seeded attributes to declare dependencies.
@@ -1656,10 +1656,11 @@ struct Attributor {
     if (QueryingAA && AA.getState().isValidState())
       recordDependence(AA, const_cast<AbstractAttribute &>(*QueryingAA),
                        DepClass);
-    return AA;
+    return &AA;
   }
+
   template <typename AAType>
-  const AAType &getOrCreateAAFor(const IRPosition &IRP) {
+  const AAType *getOrCreateAAFor(const IRPosition &IRP) {
     return getOrCreateAAFor<AAType>(IRP, /* QueryingAA */ nullptr,
                                     DepClassTy::NONE);
   }
