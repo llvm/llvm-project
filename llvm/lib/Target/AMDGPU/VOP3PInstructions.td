@@ -228,7 +228,7 @@ multiclass MadFmaMixPats<SDPatternOperator fma_like,
   >;
 }
 
-let SubtargetPredicate = HasMadMixInsts in {
+let SubtargetPredicate = HasMadMixInsts, OtherPredicates = [NoFP32Denormals] in {
 
 // These are VOP3a-like opcodes which accept no omod.
 // Size of src arguments (16/32) is controlled by op_sel.
@@ -248,7 +248,7 @@ defm V_MAD_MIXHI_F16 : VOP3_VOP3PInst<"v_mad_mixhi_f16", VOP3P_Mix_Profile<VOP_F
 }
 
 defm : MadFmaMixPats<fmad, V_MAD_MIX_F32, V_MAD_MIXLO_F16, V_MAD_MIXHI_F16>;
-} // End SubtargetPredicate = HasMadMixInsts
+} // End SubtargetPredicate = HasMadMixInsts, OtherPredicates = [NoFP32Denormals]
 
 
 // Essentially the same as the mad_mix versions
