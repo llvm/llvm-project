@@ -748,7 +748,7 @@ static bool replaceExtractElements(InsertElementInst *InsElt,
     if (!OldExt || OldExt->getParent() != WideVec->getParent())
       continue;
     auto *NewExt = ExtractElementInst::Create(WideVec, OldExt->getOperand(1));
-    NewExt->insertAfter(OldExt);
+    IC.InsertNewInstWith(NewExt, *OldExt);
     IC.replaceInstUsesWith(*OldExt, NewExt);
     // Add the old extracts to the worklist for DCE. We can't remove the
     // extracts directly, because they may still be used by the calling code.
