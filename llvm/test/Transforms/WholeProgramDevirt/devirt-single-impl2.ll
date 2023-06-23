@@ -34,7 +34,7 @@ entry:
 }
 
 !llvm.ident = !{!2}
-!llvm.module.flags = !{!3, !4, !5, !6}
+!llvm.module.flags = !{!3, !4, !5}
 
 !0 = !{i64 16, !"_ZTS1A"}
 !1 = !{i64 16, !"_ZTSM1AKFivE.virtual"}
@@ -42,4 +42,3 @@ entry:
 !3 = !{i32 1, !"wchar_size", i32 4}
 !4 = !{i32 1, !"EnableSplitLTOUnit", i32 1}
 !5 = !{i32 1, !"ThinLTO", i32 0}
-!6 = !{i32 1, !"LTOPostLink", i32 1}
