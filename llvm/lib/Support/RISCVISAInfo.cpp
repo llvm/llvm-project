@@ -224,11 +224,12 @@ static size_t findLastNonVersionCharacter(StringRef Ext) {
 }
 
 namespace {
-struct FindByName {
-  FindByName(StringRef Ext) : Ext(Ext){};
-  StringRef Ext;
-  bool operator()(const RISCVSupportedExtension &ExtInfo) {
-    return ExtInfo.Name == Ext;
+struct LessExtName {
+  bool operator()(const RISCVSupportedExtension &LHS, StringRef RHS) {
+    return StringRef(LHS.Name) < RHS;
+  }
+  bool operator()(StringRef LHS, const RISCVSupportedExtension &RHS) {
+    return LHS < StringRef(RHS.Name);
   }
 };
 } // namespace
@@ -239,12 +240,12 @@ findDefaultVersion(StringRef ExtName) {
   // TODO: We might set default version based on profile or ISA spec.
   for (auto &ExtInfo : {ArrayRef(SupportedExtensions),
                         ArrayRef(SupportedExperimentalExtensions)}) {
-    auto ExtensionInfoIterator = llvm::find_if(ExtInfo, FindByName(ExtName));
+    auto I = llvm::lower_bound(ExtInfo, ExtName, LessExtName());
 
-    if (ExtensionInfoIterator == ExtInfo.end()) {
+    if (I == ExtInfo.end() || I->Name != ExtName)
       continue;
-    }
-    return ExtensionInfoIterator->Version;
+
+    return I->Version;
   }
   return std::nullopt;
 }
@@ -279,37 +280,50 @@ static StringRef getExtensionType(StringRef Ext) {
 
 static std::optional<RISCVExtensionVersion>
 isExperimentalExtension(StringRef Ext) {
-  auto ExtIterator =
-      llvm::find_if(SupportedExperimentalExtensions, FindByName(Ext));
-  if (ExtIterator == std::end(SupportedExperimentalExtensions))
+  auto I =
+      llvm::lower_bound(SupportedExperimentalExtensions, Ext, LessExtName());
+  if (I == std::end(SupportedExperimentalExtensions) || I->Name != Ext)
     return std::nullopt;
 
-  return ExtIterator->Version;
+  return I->Version;
 }
 
 bool RISCVISAInfo::isSupportedExtensionFeature(StringRef Ext) {
   bool IsExperimental = stripExperimentalPrefix(Ext);
 
-  if (IsExperimental)
-    return llvm::any_of(SupportedExperimentalExtensions, FindByName(Ext));
-  else
-    return llvm::any_of(SupportedExtensions, FindByName(Ext));
+  ArrayRef<RISCVSupportedExtension> ExtInfo =
+      IsExperimental ? ArrayRef(SupportedExperimentalExtensions)
+                     : ArrayRef(SupportedExtensions);
+
+  auto I = llvm::lower_bound(ExtInfo, Ext, LessExtName());
+  return I != ExtInfo.end() && I->Name == Ext;
 }
 
 bool RISCVISAInfo::isSupportedExtension(StringRef Ext) {
   verifyTables();
-  return llvm::any_of(SupportedExtensions, FindByName(Ext)) ||
-         llvm::any_of(SupportedExperimentalExtensions, FindByName(Ext));
+
+  for (auto ExtInfo : {ArrayRef(SupportedExtensions),
+                       ArrayRef(SupportedExperimentalExtensions)}) {
+    auto I = llvm::lower_bound(ExtInfo, Ext, LessExtName());
+    if (I != ExtInfo.end() && I->Name == Ext)
+      return true;
+  }
+
+  return false;
 }
 
 bool RISCVISAInfo::isSupportedExtension(StringRef Ext, unsigned MajorVersion,
                                         unsigned MinorVersion) {
-  auto FindByNameAndVersion = [=](const RISCVSupportedExtension &ExtInfo) {
-    return ExtInfo.Name == Ext && (MajorVersion == ExtInfo.Version.Major) &&
-           (MinorVersion == ExtInfo.Version.Minor);
-  };
-  return llvm::any_of(SupportedExtensions, FindByNameAndVersion) ||
-         llvm::any_of(SupportedExperimentalExtensions, FindByNameAndVersion);
+  for (auto ExtInfo : {ArrayRef(SupportedExtensions),
+                       ArrayRef(SupportedExperimentalExtensions)}) {
+    auto Range =
+        std::equal_range(ExtInfo.begin(), ExtInfo.end(), Ext, LessExtName());
+    for (auto I = Range.first, E = Range.second; I != E; ++I)
+      if (I->Version.Major == MajorVersion && I->Version.Minor == MinorVersion)
+        return true;
+  }
+
+  return false;
 }
 
 bool RISCVISAInfo::hasExtension(StringRef Ext) const {
@@ -549,11 +563,12 @@ RISCVISAInfo::parseFeatures(unsigned XLen,
                               ? ArrayRef(SupportedExperimentalExtensions)
                               : ArrayRef(SupportedExtensions);
     auto ExtensionInfoIterator =
-        llvm::find_if(ExtensionInfos, FindByName(ExtName));
+        llvm::lower_bound(ExtensionInfos, ExtName, LessExtName());
 
     // Not all features is related to ISA extension, like `relax` or
     // `save-restore`, skip those feature.
-    if (ExtensionInfoIterator == ExtensionInfos.end())
+    if (ExtensionInfoIterator == ExtensionInfos.end() ||
+        ExtensionInfoIterator->Name != ExtName)
       continue;
 
     if (Add)
