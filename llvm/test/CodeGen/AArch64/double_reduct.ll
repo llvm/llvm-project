@@ -38,8 +38,8 @@ define float @fmin_f32(<8 x float> %a, <4 x float> %b) {
 ; CHECK-NEXT:    fminnmv s0, v0.4s
 ; CHECK-NEXT:    fminnm s0, s0, s2
 ; CHECK-NEXT:    ret
-  %r1 = call fast float @llvm.vector.reduce.fmin.v8f32(<8 x float> %a)
-  %r2 = call fast float @llvm.vector.reduce.fmin.v4f32(<4 x float> %b)
+  %r1 = call float @llvm.vector.reduce.fmin.v8f32(<8 x float> %a)
+  %r2 = call float @llvm.vector.reduce.fmin.v4f32(<4 x float> %b)
   %r = call float @llvm.minnum.f32(float %r1, float %r2)
   ret float %r
 }
@@ -52,9 +52,66 @@ define float @fmax_f32(<8 x float> %a, <4 x float> %b) {
 ; CHECK-NEXT:    fmaxnmv s0, v0.4s
 ; CHECK-NEXT:    fmaxnm s0, s0, s2
 ; CHECK-NEXT:    ret
-  %r1 = call fast float @llvm.vector.reduce.fmax.v8f32(<8 x float> %a)
-  %r2 = call fast float @llvm.vector.reduce.fmax.v4f32(<4 x float> %b)
+  %r1 = call float @llvm.vector.reduce.fmax.v8f32(<8 x float> %a)
+  %r2 = call float @llvm.vector.reduce.fmax.v4f32(<4 x float> %b)
   %r = call float @llvm.maxnum.f32(float %r1, float %r2)
+  ret float %r
+}
+
+define float @fminimum_f32(<8 x float> %a, <4 x float> %b) {
+; CHECK-LABEL: fminimum_f32:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    fmin v0.4s, v0.4s, v1.4s
+; CHECK-NEXT:    fminv s2, v2.4s
+; CHECK-NEXT:    fminv s0, v0.4s
+; CHECK-NEXT:    fmin s0, s0, s2
+; CHECK-NEXT:    ret
+  %r1 = call float @llvm.vector.reduce.fminimum.v8f32(<8 x float> %a)
+  %r2 = call float @llvm.vector.reduce.fminimum.v4f32(<4 x float> %b)
+  %r = call float @llvm.minimum.f32(float %r1, float %r2)
+  ret float %r
+}
+
+define float @fmaximum_f32(<8 x float> %a, <4 x float> %b) {
+; CHECK-LABEL: fmaximum_f32:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    fmax v0.4s, v0.4s, v1.4s
+; CHECK-NEXT:    fmaxv s2, v2.4s
+; CHECK-NEXT:    fmaxv s0, v0.4s
+; CHECK-NEXT:    fmax s0, s0, s2
+; CHECK-NEXT:    ret
+  %r1 = call float @llvm.vector.reduce.fmaximum.v8f32(<8 x float> %a)
+  %r2 = call float @llvm.vector.reduce.fmaximum.v4f32(<4 x float> %b)
+  %r = call float @llvm.maximum.f32(float %r1, float %r2)
+  ret float %r
+}
+
+; These next two tests have incorrect minnum/minimum combinations
+define float @fminimumnum_f32(<8 x float> %a, <4 x float> %b) {
+; CHECK-LABEL: fminimumnum_f32:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    fmin v0.4s, v0.4s, v1.4s
+; CHECK-NEXT:    fminv s2, v2.4s
+; CHECK-NEXT:    fminv s0, v0.4s
+; CHECK-NEXT:    fminnm s0, s0, s2
+; CHECK-NEXT:    ret
+  %r1 = call float @llvm.vector.reduce.fminimum.v8f32(<8 x float> %a)
+  %r2 = call float @llvm.vector.reduce.fminimum.v4f32(<4 x float> %b)
+  %r = call float @llvm.minnum.f32(float %r1, float %r2)
+  ret float %r
+}
+
+define float @fmaxnumimum_f32(<8 x float> %a, <4 x float> %b) {
+; CHECK-LABEL: fmaxnumimum_f32:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    fmaxnm v0.4s, v0.4s, v1.4s
+; CHECK-NEXT:    fmaxnmv s2, v2.4s
+; CHECK-NEXT:    fmaxnmv s0, v0.4s
+; CHECK-NEXT:    fmax s0, s0, s2
+; CHECK-NEXT:    ret
+  %r1 = call float @llvm.vector.reduce.fmax.v8f32(<8 x float> %a)
+  %r2 = call float @llvm.vector.reduce.fmax.v4f32(<4 x float> %b)
+  %r = call float @llvm.maximum.f32(float %r1, float %r2)
   ret float %r
 }
 
@@ -239,6 +296,10 @@ declare float @llvm.vector.reduce.fmin.v8f32(<8 x float>)
 declare float @llvm.vector.reduce.fmin.v4f32(<4 x float>)
 declare float @llvm.vector.reduce.fmax.v8f32(<8 x float>)
 declare float @llvm.vector.reduce.fmax.v4f32(<4 x float>)
+declare float @llvm.vector.reduce.fminimum.v8f32(<8 x float>)
+declare float @llvm.vector.reduce.fminimum.v4f32(<4 x float>)
+declare float @llvm.vector.reduce.fmaximum.v8f32(<8 x float>)
+declare float @llvm.vector.reduce.fmaximum.v4f32(<4 x float>)
 declare i32 @llvm.vector.reduce.add.i32.v8i32(<8 x i32>)
 declare i32 @llvm.vector.reduce.add.i32.v4i32(<4 x i32>)
 declare i16 @llvm.vector.reduce.add.i16.v32i16(<32 x i16>)
@@ -261,6 +322,8 @@ declare i32 @llvm.vector.reduce.smax.i32.v8i32(<8 x i32>)
 declare i32 @llvm.vector.reduce.smax.i32.v4i32(<4 x i32>)
 declare float @llvm.minnum.f32(float, float)
 declare float @llvm.maxnum.f32(float, float)
+declare float @llvm.minimum.f32(float, float)
+declare float @llvm.maximum.f32(float, float)
 declare i32 @llvm.umin.i32(i32, i32)
 declare i32 @llvm.umax.i32(i32, i32)
 declare i32 @llvm.smin.i32(i32, i32)
