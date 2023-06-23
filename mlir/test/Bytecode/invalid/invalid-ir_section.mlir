@@ -1,9 +1,6 @@
 // This file contains various failure test cases related to the structure of
 // the IR section.
 
-// Bytecode currently does not support big-endian platforms
-// UNSUPPORTED: target=s390x-{{.*}}
-
 //===--------------------------------------------------------------------===//
 // Operations
 //===--------------------------------------------------------------------===//
