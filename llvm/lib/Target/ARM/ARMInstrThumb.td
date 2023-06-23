@@ -1603,7 +1603,22 @@ def tLDRLIT_ga_abs : PseudoInst<(outs tGPR:$dst), (ins i32imm:$src),
                                 IIC_iLoad_i,
                                 [(set tGPR:$dst,
                                       (ARMWrapper tglobaladdr:$src))]>,
-                     Requires<[IsThumb, DontUseMovt]>;
+                     Requires<[IsThumb, DontUseMovt, DontGenExecuteOnly]>;
+
+// 32-bit immediate using mov/add with the 4 :lower0_7: to :upper8_15:
+// relocations.
+// This is a single pseudo instruction to make it re-materializable.
+// FIXME: Remove this when we can do generalized remat.
+let isReMaterializable = 1, isMoveImm = 1, Size = 16, hasNoSchedulingInfo = 1 in
+def tMOVi32imm : PseudoInst<(outs rGPR:$dst), (ins i32imm:$src), NoItinerary,
+                            [(set rGPR:$dst, (i32 imm:$src))]>,
+                            Requires<[IsThumb1Only, GenExecuteOnly, DontUseMovt]>;
+
+def : ARMPat<(ARMWrapper  tglobaladdr :$dst), (tMOVi32imm tglobaladdr :$dst)>,
+            Requires<[GenT1ExecuteOnly]>;
+def : ARMPat<(ARMWrapper texternalsym :$dst), (tMOVi32imm texternalsym :$dst)>,
+            Requires<[GenT1ExecuteOnly]>;
+
 
 // TLS globals
 def : Pat<(ARMWrapperPIC tglobaltlsaddr:$addr),
