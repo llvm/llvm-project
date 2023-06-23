@@ -13,8 +13,12 @@
 namespace {
 enum { lane_size = 8, port_count = 4 };
 
-using ProcAType = __llvm_libc::rpc::Process<false, lane_size>;
-using ProcBType = __llvm_libc::rpc::Process<true, lane_size>;
+struct Packet {
+  uint64_t unused;
+};
+
+using ProcAType = __llvm_libc::rpc::Process<false, Packet>;
+using ProcBType = __llvm_libc::rpc::Process<true, Packet>;
 
 static_assert(ProcAType::inbox_offset(port_count) ==
               ProcBType::outbox_offset(port_count));
