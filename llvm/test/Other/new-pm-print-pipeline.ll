@@ -114,3 +114,9 @@
 
 ; RUN: opt -disable-output -disable-verify -print-pipeline-passes -passes='function(loop(loop-rotate<no-header-duplication;no-prepare-for-lto>))' < %s | FileCheck %s --match-full-lines --check-prefixes=CHECK-33
 ; CHECK-33: function(loop(loop-rotate<no-header-duplication;no-prepare-for-lto>))
+
+; RUN: opt -disable-output -disable-verify -print-pipeline-passes -passes='globaldce' < %s | FileCheck %s --match-full-lines --check-prefixes=CHECK-34
+; CHECK-34: globaldce
+
+; RUN: opt -disable-output -disable-verify -print-pipeline-passes -passes='globaldce<vfe-linkage-unit-visibility>' < %s | FileCheck %s --match-full-lines --check-prefixes=CHECK-35
+; CHECK-35: globaldce<vfe-linkage-unit-visibility>
