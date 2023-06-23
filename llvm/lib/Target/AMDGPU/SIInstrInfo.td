@@ -1765,6 +1765,11 @@ class getVOP3SrcForVT<ValueType VT> {
   );
 }
 
+// VGPR only src, such as VOP3DPP src0.
+class getVGPRSrcForVT<ValueType VT> {
+  RegisterOperand ret = !if(!eq(VT.Size, 64), VGPRSrc_64, VGPRSrc_32);
+}
+
 // Src2 of VOP3 DPP instructions cannot be a literal
 class getVOP3DPPSrcForVT<ValueType VT> {
   bit isFP = isFloatType<VT>.ret;
@@ -1775,7 +1780,8 @@ class getVOP3DPPSrcForVT<ValueType VT> {
                      !if (!eq(VT.Value, v2f16.Value), VCSrc_v2f16, VCSrc_f32)),
                 !if (!eq(VT.Value, i16.Value), VCSrc_b16,
                      !if (!eq(VT.Value, v2i16.Value), VCSrc_v2b16,
-                          VCSrc_b32))));
+                          !if (!eq(VT.Value, i64.Value), VCSrc_b64,
+                               VCSrc_b32)))));
 }
 
 // Float or packed int
@@ -2452,7 +2458,7 @@ class VOPProfile <list<ValueType> _ArgVT, bit _EnableClamp = 0> {
   field RegisterClass Src0DPP = getVregSrcForVT<Src0VT>.ret;
   field RegisterClass Src1DPP = getVregSrcForVT<Src1VT>.ret;
   field RegisterClass Src2DPP = getVregSrcForVT<Src2VT>.ret;
-  field RegisterOperand Src0VOP3DPP = VGPRSrc_32;
+  field RegisterOperand Src0VOP3DPP = getVGPRSrcForVT<Src0VT>.ret;
   field RegisterOperand Src1VOP3DPP = VRegSrc_32;
   field RegisterOperand Src2VOP3DPP = getVOP3DPPSrcForVT<Src2VT>.ret;
   field RegisterOperand Src0SDWA = getSDWASrcForVT<Src0VT>.ret;

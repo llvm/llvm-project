@@ -86,3 +86,15 @@ v_bitop3_b16_e64_dpp v5, v1, v2, -1 bitop3:102 op_sel:[0,0,1,0] dpp8:[7,6,5,4,3,
 
 v_bitop3_b16_e64_dpp v255, v255, v255, src_scc bitop3:103 op_sel:[0,0,0,1] dpp8:[0,0,0,0,0,0,0,0] fi:1
 // GFX1210: v_bitop3_b16_e64_dpp v255, v255, v255, src_scc bitop3:0x67 op_sel:[0,0,0,1] dpp8:[0,0,0,0,0,0,0,0] fi:1 ; encoding: [0xff,0x44,0x33,0xd6,0xea,0xfe,0xf7,0xeb,0xff,0x00,0x00,0x00]
+
+v_lshl_add_u64 v[2:3], v[4:5], v7, v[8:9] dpp8:[7,6,5,4,3,2,1,0]
+// GFX1210: v_lshl_add_u64_e64_dpp v[2:3], v[4:5], v7, v[8:9] dpp8:[7,6,5,4,3,2,1,0] ; encoding: [0x02,0x00,0x52,0xd6,0xe9,0x0e,0x22,0x04,0x04,0x77,0x39,0x05]
+
+v_lshl_add_u64 v[2:3], v[4:5], v1, 1 dpp8:[7,6,5,4,3,2,1,0] fi:1
+// GFX1210: v_lshl_add_u64_e64_dpp v[2:3], v[4:5], v1, 1 dpp8:[7,6,5,4,3,2,1,0] fi:1 ; encoding: [0x02,0x00,0x52,0xd6,0xea,0x02,0x06,0x02,0x04,0x77,0x39,0x05]
+
+v_lshl_add_u64 v[2:3], v[4:5], v3, s[2:3] dpp8:[0,0,0,0,0,0,0,0] fi:0
+// GFX1210: v_lshl_add_u64_e64_dpp v[2:3], v[4:5], v3, s[2:3] dpp8:[0,0,0,0,0,0,0,0] ; encoding: [0x02,0x00,0x52,0xd6,0xe9,0x06,0x0a,0x00,0x04,0x00,0x00,0x00]
+
+v_lshl_add_u64 v[2:3], v[4:5], v4, v[2:3] dpp8:[7,6,5,4,3,2,1,0]
+// GFX1210: v_lshl_add_u64_e64_dpp v[2:3], v[4:5], v4, v[2:3] dpp8:[7,6,5,4,3,2,1,0] ; encoding: [0x02,0x00,0x52,0xd6,0xe9,0x08,0x0a,0x04,0x04,0x77,0x39,0x05]

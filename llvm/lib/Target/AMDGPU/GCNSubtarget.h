@@ -1017,7 +1017,7 @@ public:
 
   bool hasMovB64() const { return GFX940Insts || GFX12_10Insts; }
 
-  bool hasLshlAddB64() const { return GFX940Insts; }
+  bool hasLshlAddB64() const { return GFX940Insts || GFX12_10Insts; }
 
   bool enableSIScheduler() const {
     return EnableSIScheduler;

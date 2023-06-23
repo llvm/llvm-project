@@ -1254,6 +1254,9 @@ def VGPRSrc_32 : RegisterOperand<VGPR_32> {
 def VGPRSrc_32_Lo128 : RegisterOperand<VGPR_32_Lo128> {
   let DecoderMethod = "DecodeVGPR_32RegisterClass";
 }
+def VGPRSrc_64 : RegisterOperand<VReg_64> {
+  let DecoderMethod = "DecodeVReg_64RegisterClass";
+}
 
 //===----------------------------------------------------------------------===//
 //  ASrc_* Operands with an AccVGPR
