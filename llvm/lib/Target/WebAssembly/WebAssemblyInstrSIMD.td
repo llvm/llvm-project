@@ -1158,6 +1158,14 @@ defm FLOOR : SIMDUnary<F64x2, ffloor, "floor", 0x75>;
 defm TRUNC: SIMDUnary<F64x2, ftrunc, "trunc", 0x7a>;
 defm NEAREST: SIMDUnary<F64x2, fnearbyint, "nearest", 0x94>;
 
+// WebAssembly doesn't expose inexact exceptions, so map frint to fnearbyint.
+def : Pat<(v4f32 (frint (v4f32 V128:$src))), (NEAREST_F32x4 V128:$src)>;
+def : Pat<(v2f64 (frint (v2f64 V128:$src))), (NEAREST_F64x2 V128:$src)>;
+
+// WebAssembly always rounds ties-to-even, so map froundeven to fnearbyint.
+def : Pat<(v4f32 (froundeven (v4f32 V128:$src))), (NEAREST_F32x4 V128:$src)>;
+def : Pat<(v2f64 (froundeven (v2f64 V128:$src))), (NEAREST_F64x2 V128:$src)>;
+
 //===----------------------------------------------------------------------===//
 // Floating-point binary arithmetic
 //===----------------------------------------------------------------------===//
