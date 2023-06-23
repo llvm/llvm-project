@@ -4612,6 +4612,24 @@ TEST_F(FormatTest, FormatsInlineASM) {
             format("__asm   {\n"
                    "}\n"
                    "int   i;"));
+
+  auto Style = getLLVMStyleWithColumns(0);
+  const StringRef Code1{"asm(\"xyz\" : \"=a\"(a), \"=d\"(b) : \"a\"(data));"};
+  const StringRef Code2{"asm(\"xyz\"\n"
+                        "    : \"=a\"(a), \"=d\"(b)\n"
+                        "    : \"a\"(data));"};
+  const StringRef Code3{"asm(\"xyz\" : \"=a\"(a), \"=d\"(b)\n"
+                        "    : \"a\"(data));"};
+
+  Style.BreakBeforeInlineASMColon = FormatStyle::BBIAS_OnlyMultiline;
+  verifyFormat(Code1, Style);
+  EXPECT_EQ(Code2, format(Code2, Style));
+  EXPECT_EQ(Code3, format(Code3, Style));
+
+  Style.BreakBeforeInlineASMColon = FormatStyle::BBIAS_Always;
+  EXPECT_EQ(Code2, format(Code1, Style));
+  EXPECT_EQ(Code2, format(Code2, Style));
+  EXPECT_EQ(Code2, format(Code3, Style));
 }
 
 TEST_F(FormatTest, FormatTryCatch) {
