@@ -570,7 +570,7 @@ define internal fastcc double @strtox(ptr %s, ptr %p, i32 %prec) unnamed_addr {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[F:%.*]] = alloca [[STRUCT__IO_FILE:%.*]], align 8
 ; CHECK-NEXT:    call void @llvm.lifetime.start.p0(i64 noundef 144, ptr nocapture nofree noundef nonnull align 8 dereferenceable(240) [[F]]) #[[ATTR11:[0-9]+]]
-; CHECK-NEXT:    [[CALL:%.*]] = call i32 @sh_fromstring(ptr nonnull align 8 dereferenceable(240) [[F]], ptr [[S]])
+; CHECK-NEXT:    [[CALL:%.*]] = call i32 @sh_fromstring(ptr noundef nonnull align 8 dereferenceable(240) [[F]], ptr [[S]])
 ; CHECK-NEXT:    call void @__shlim(ptr noundef nonnull align 8 dereferenceable(240) [[F]], i64 noundef 0)
 ; CHECK-NEXT:    [[CALL1:%.*]] = call double @__floatscan(ptr noundef nonnull align 8 dereferenceable(240) [[F]], i32 noundef 1, i32 noundef 1)
 ; CHECK-NEXT:    call void @llvm.lifetime.end.p0(i64 noundef 144, ptr nocapture nofree noundef nonnull align 8 dereferenceable(240) [[F]])

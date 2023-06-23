@@ -2427,33 +2427,60 @@ indirectgoto:                                     ; preds = %lab0, %entry
 @e = global %struct.a* null
 
 define i32 @main() {
-; CHECK-LABEL: define {{[^@]+}}@main() {
-; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[F:%.*]] = alloca i32, align 4
-; CHECK-NEXT:    br label [[FOR_COND_0:%.*]]
-; CHECK:       for.cond.0:
-; CHECK-NEXT:    [[G_0:%.*]] = phi i32 [ 0, [[ENTRY:%.*]] ], [ [[INC:%.*]], [[FOR_BODY_0:%.*]] ]
-; CHECK-NEXT:    [[CMP_0:%.*]] = icmp ult i32 [[G_0]], 100
-; CHECK-NEXT:    br i1 [[CMP_0]], label [[FOR_BODY_0]], label [[FOR_END_0:%.*]]
-; CHECK:       for.body.0:
-; CHECK-NEXT:    [[INC]] = add nuw nsw i32 [[G_0]], 1
-; CHECK-NEXT:    br label [[FOR_COND_0]]
-; CHECK:       for.end.0:
-; CHECK-NEXT:    [[CALL:%.*]] = call i8* @malloc(i64 noundef 8)
-; CHECK-NEXT:    store i8* [[CALL]], i8** bitcast (%struct.a** @e to i8**), align 8
-; CHECK-NEXT:    [[B:%.*]] = bitcast i8* [[CALL]] to %struct.a**
-; CHECK-NEXT:    store %struct.a* null, %struct.a** [[B]], align 8
-; CHECK-NEXT:    br label [[FOR_COND_1:%.*]]
-; CHECK:       for.cond.1:
-; CHECK-NEXT:    [[G_1:%.*]] = phi i32 [ 0, [[FOR_END_0]] ], [ [[INC6:%.*]], [[FOR_BODY_1:%.*]] ]
-; CHECK-NEXT:    [[CMP_1:%.*]] = icmp ult i32 [[G_1]], 100
-; CHECK-NEXT:    br i1 [[CMP_1]], label [[FOR_BODY_1]], label [[FOR_END_1:%.*]]
-; CHECK:       for.body.1:
-; CHECK-NEXT:    [[CALL4:%.*]] = call i32 (i32*, ...) bitcast (i32 (i32)* @h to i32 (i32*, ...)*)(i32* nonnull [[F]])
-; CHECK-NEXT:    [[INC6]] = add nuw nsw i32 [[G_1]], 1
-; CHECK-NEXT:    br label [[FOR_COND_1]]
-; CHECK:       for.end.1:
-; CHECK-NEXT:    ret i32 0
+; TUNIT-LABEL: define {{[^@]+}}@main() {
+; TUNIT-NEXT:  entry:
+; TUNIT-NEXT:    [[F:%.*]] = alloca i32, align 4
+; TUNIT-NEXT:    br label [[FOR_COND_0:%.*]]
+; TUNIT:       for.cond.0:
+; TUNIT-NEXT:    [[G_0:%.*]] = phi i32 [ 0, [[ENTRY:%.*]] ], [ [[INC:%.*]], [[FOR_BODY_0:%.*]] ]
+; TUNIT-NEXT:    [[CMP_0:%.*]] = icmp ult i32 [[G_0]], 100
+; TUNIT-NEXT:    br i1 [[CMP_0]], label [[FOR_BODY_0]], label [[FOR_END_0:%.*]]
+; TUNIT:       for.body.0:
+; TUNIT-NEXT:    [[INC]] = add nuw nsw i32 [[G_0]], 1
+; TUNIT-NEXT:    br label [[FOR_COND_0]]
+; TUNIT:       for.end.0:
+; TUNIT-NEXT:    [[CALL:%.*]] = call i8* @malloc(i64 noundef 8)
+; TUNIT-NEXT:    store i8* [[CALL]], i8** bitcast (%struct.a** @e to i8**), align 8
+; TUNIT-NEXT:    [[B:%.*]] = bitcast i8* [[CALL]] to %struct.a**
+; TUNIT-NEXT:    store %struct.a* null, %struct.a** [[B]], align 8
+; TUNIT-NEXT:    br label [[FOR_COND_1:%.*]]
+; TUNIT:       for.cond.1:
+; TUNIT-NEXT:    [[G_1:%.*]] = phi i32 [ 0, [[FOR_END_0]] ], [ [[INC6:%.*]], [[FOR_BODY_1:%.*]] ]
+; TUNIT-NEXT:    [[CMP_1:%.*]] = icmp ult i32 [[G_1]], 100
+; TUNIT-NEXT:    br i1 [[CMP_1]], label [[FOR_BODY_1]], label [[FOR_END_1:%.*]]
+; TUNIT:       for.body.1:
+; TUNIT-NEXT:    [[INC6]] = add nuw nsw i32 [[G_1]], 1
+; TUNIT-NEXT:    br label [[FOR_COND_1]]
+; TUNIT:       for.end.1:
+; TUNIT-NEXT:    ret i32 0
+;
+; CGSCC-LABEL: define {{[^@]+}}@main() {
+; CGSCC-NEXT:  entry:
+; CGSCC-NEXT:    [[F:%.*]] = alloca i32, align 4
+; CGSCC-NEXT:    br label [[FOR_COND_0:%.*]]
+; CGSCC:       for.cond.0:
+; CGSCC-NEXT:    [[G_0:%.*]] = phi i32 [ 0, [[ENTRY:%.*]] ], [ [[INC:%.*]], [[FOR_BODY_0:%.*]] ]
+; CGSCC-NEXT:    [[CMP_0:%.*]] = icmp ult i32 [[G_0]], 100
+; CGSCC-NEXT:    br i1 [[CMP_0]], label [[FOR_BODY_0]], label [[FOR_END_0:%.*]]
+; CGSCC:       for.body.0:
+; CGSCC-NEXT:    [[INC]] = add nuw nsw i32 [[G_0]], 1
+; CGSCC-NEXT:    br label [[FOR_COND_0]]
+; CGSCC:       for.end.0:
+; CGSCC-NEXT:    [[CALL:%.*]] = call i8* @malloc(i64 noundef 8)
+; CGSCC-NEXT:    store i8* [[CALL]], i8** bitcast (%struct.a** @e to i8**), align 8
+; CGSCC-NEXT:    [[B:%.*]] = bitcast i8* [[CALL]] to %struct.a**
+; CGSCC-NEXT:    store %struct.a* null, %struct.a** [[B]], align 8
+; CGSCC-NEXT:    br label [[FOR_COND_1:%.*]]
+; CGSCC:       for.cond.1:
+; CGSCC-NEXT:    [[G_1:%.*]] = phi i32 [ 0, [[FOR_END_0]] ], [ [[INC6:%.*]], [[FOR_BODY_1:%.*]] ]
+; CGSCC-NEXT:    [[CMP_1:%.*]] = icmp ult i32 [[G_1]], 100
+; CGSCC-NEXT:    br i1 [[CMP_1]], label [[FOR_BODY_1]], label [[FOR_END_1:%.*]]
+; CGSCC:       for.body.1:
+; CGSCC-NEXT:    [[CALL4:%.*]] = call i32 (i32*, ...) bitcast (i32 (i32)* @h to i32 (i32*, ...)*)(i32* nonnull [[F]]) #[[ATTR2]]
+; CGSCC-NEXT:    [[INC6]] = add nuw nsw i32 [[G_1]], 1
+; CGSCC-NEXT:    br label [[FOR_COND_1]]
+; CGSCC:       for.end.1:
+; CGSCC-NEXT:    ret i32 0
 ;
 entry:
   %f = alloca i32
