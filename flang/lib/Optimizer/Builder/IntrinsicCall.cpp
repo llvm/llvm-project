@@ -3638,20 +3638,21 @@ IntrinsicLibrary::genMerge(mlir::Type,
   // used.
   mlir::Value tsourceCast = tsource;
   mlir::Value fsourceCast = fsource;
+  auto convertToStaticType = [&](mlir::Value polymorphic,
+                                 mlir::Value other) -> mlir::Value {
+    mlir::Type otherType = other.getType();
+    if (otherType.isa<fir::BaseBoxType>())
+      return builder.create<fir::ReboxOp>(loc, otherType, polymorphic,
+                                          /*shape*/ mlir::Value{},
+                                          /*slice=*/mlir::Value{});
+    return builder.create<fir::BoxAddrOp>(loc, otherType, polymorphic);
+  };
   if (fir::isPolymorphicType(tsource.getType()) &&
       !fir::isPolymorphicType(fsource.getType())) {
-    tsourceCast = builder.create<fir::ReboxOp>(loc, fsource.getType(), tsource,
-                                               /*shape*/ mlir::Value{},
-                                               /*slice=*/mlir::Value{});
-
-    // builder.createConvert(loc, fsource.getType(), tsource);
+    tsourceCast = convertToStaticType(tsource, fsource);
   } else if (!fir::isPolymorphicType(tsource.getType()) &&
              fir::isPolymorphicType(fsource.getType())) {
-    fsourceCast = builder.create<fir::ReboxOp>(loc, tsource.getType(), fsource,
-                                               /*shape*/ mlir::Value{},
-                                               /*slice=*/mlir::Value{});
-
-    // fsourceCast = builder.createConvert(loc, tsource.getType(), fsource);
+    fsourceCast = convertToStaticType(fsource, tsource);
   } else {
     // FSOURCE and TSOURCE are not polymorphic.
     // FSOURCE has the same type as TSOURCE, but they may not have the same MLIR
