@@ -2465,6 +2465,10 @@ SDValue NVPTXTargetLowering::LowerSTORE(SDValue Op, SelectionDAG &DAG) const {
                                       VT, *Store->getMemOperand()))
     return expandUnalignedStore(Store, DAG);
 
+  // v2f16 and v2bf16 don't need special handling.
+  if (VT == MVT::v2f16 || VT == MVT::v2bf16)
+    return SDValue();
+
   if (VT.isVector())
     return LowerSTOREVector(Op, DAG);
 
