@@ -169,7 +169,7 @@
 #define BUILTIN_RINT_F32 __builtin_rintf
 #define BUILTIN_RINT_F64 __builtin_rint
 #define BUILTIN_RINT_F16 __builtin_rintf16
-#define BUILTIN_RINT_2F16 __llvm_rint_2f16
+#define BUILTIN_RINT_2F16 __builtin_elementwise_rint
 
 #define BUILTIN_SQRT_F32(X) __builtin_sqrtf(X)
 #define BUILTIN_SQRT_F64(X) __builtin_sqrt(X)
