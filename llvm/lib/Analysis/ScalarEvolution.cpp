@@ -6828,8 +6828,11 @@ const ConstantRange &ScalarEvolution::getRangeRef(
         uint64_t Align = U->getValue()->getPointerAlignment(DL).value();
         uint64_t Rem = MaxVal.urem(Align);
         MaxVal -= APInt(BitWidth, Rem);
+        APInt MinVal = APInt::getZero(BitWidth);
+        if (llvm::isKnownNonZero(V, DL))
+          MinVal = Align;
         ConservativeResult = ConservativeResult.intersectWith(
-            {ConservativeResult.getUnsignedMin(), MaxVal + 1}, RangeType);
+            {MinVal, MaxVal + 1}, RangeType);
       }
     }
 
