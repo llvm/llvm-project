@@ -165,6 +165,11 @@ New checks
   Checks that all implicit and explicit inline functions in header files are
   tagged with the ``LIBC_INLINE`` macro.
 
+- New :doc:`misc-header-include-cycle
+  <clang-tidy/checks/misc/header-include-cycle>` check.
+
+  Check detects cyclic ``#include`` dependencies between user-defined headers.
+
 - New :doc:`misc-include-cleaner
   <clang-tidy/checks/misc/include-cleaner>` check.
 
@@ -406,6 +411,10 @@ Changes in existing checks
   <clang-tidy/checks/readability/container-size-empty>` check when comparing
   ``std::array`` objects to default constructed ones. The behavior for this and
   other relevant classes can now be configured with a new option.
+
+- Fixed a false negative in :doc:`readability-convert-member-functions-to-static
+  <clang-tidy/checks/readability/convert-member-functions-to-static>` when a
+  nested class in a member function uses a ``this`` pointer.
 
 - Fixed reading `HungarianNotation.CString.*` options in
   :doc:`readability-identifier-naming

@@ -1447,6 +1447,8 @@ AArch64TargetLowering::AArch64TargetLowering(const TargetMachine &TM,
       setOperationAction(ISD::VECREDUCE_FADD, VT, Custom);
       setOperationAction(ISD::VECREDUCE_FMAX, VT, Custom);
       setOperationAction(ISD::VECREDUCE_FMIN, VT, Custom);
+      setOperationAction(ISD::VECREDUCE_FMAXIMUM, VT, Custom);
+      setOperationAction(ISD::VECREDUCE_FMINIMUM, VT, Custom);
       setOperationAction(ISD::VECREDUCE_SEQ_FADD, VT, Custom);
       setOperationAction(ISD::VECTOR_SPLICE, VT, Custom);
       setOperationAction(ISD::VECTOR_DEINTERLEAVE, VT, Custom);
@@ -1858,6 +1860,8 @@ void AArch64TargetLowering::addTypeForFixedLengthSVE(MVT VT,
   setOperationAction(ISD::VECREDUCE_FADD, VT, Custom);
   setOperationAction(ISD::VECREDUCE_FMAX, VT, Custom);
   setOperationAction(ISD::VECREDUCE_FMIN, VT, Custom);
+  setOperationAction(ISD::VECREDUCE_FMAXIMUM, VT, Custom);
+  setOperationAction(ISD::VECREDUCE_FMINIMUM, VT, Custom);
   setOperationAction(ISD::VECREDUCE_OR, VT, Custom);
   setOperationAction(ISD::VECREDUCE_SEQ_FADD, VT, Custom);
   setOperationAction(ISD::VECREDUCE_SMAX, VT, Custom);
@@ -5979,6 +5983,8 @@ SDValue AArch64TargetLowering::LowerOperation(SDValue Op,
   case ISD::VECREDUCE_FADD:
   case ISD::VECREDUCE_FMAX:
   case ISD::VECREDUCE_FMIN:
+  case ISD::VECREDUCE_FMAXIMUM:
+  case ISD::VECREDUCE_FMINIMUM:
     return LowerVECREDUCE(Op, DAG);
   case ISD::ATOMIC_LOAD_SUB:
     return LowerATOMIC_LOAD_SUB(Op, DAG);
@@ -13574,6 +13580,10 @@ SDValue AArch64TargetLowering::LowerVECREDUCE(SDValue Op,
       return LowerReductionToSVE(AArch64ISD::FMAXNMV_PRED, Op, DAG);
     case ISD::VECREDUCE_FMIN:
       return LowerReductionToSVE(AArch64ISD::FMINNMV_PRED, Op, DAG);
+    case ISD::VECREDUCE_FMAXIMUM:
+      return LowerReductionToSVE(AArch64ISD::FMAXV_PRED, Op, DAG);
+    case ISD::VECREDUCE_FMINIMUM:
+      return LowerReductionToSVE(AArch64ISD::FMINV_PRED, Op, DAG);
     default:
       llvm_unreachable("Unhandled fixed length reduction");
     }
