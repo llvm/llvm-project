@@ -47,7 +47,6 @@
 #include "llvm/Transforms/IPO/CrossDSOCFI.h"
 #include "llvm/Transforms/IPO/DeadArgumentElimination.h"
 #include "llvm/Transforms/IPO/ElimAvailExtern.h"
-#include "llvm/Transforms/IPO/EmbedBitcodePass.h"
 #include "llvm/Transforms/IPO/ForceFunctionAttrs.h"
 #include "llvm/Transforms/IPO/FunctionAttrs.h"
 #include "llvm/Transforms/IPO/GlobalDCE.h"
@@ -1473,18 +1472,7 @@ PassBuilder::buildPerModuleDefaultPipeline(OptimizationLevel Level,
 
   if (LTOPreLink)
     addRequiredLTOPreLinkPasses(MPM);
-  return MPM;
-}
 
-ModulePassManager
-PassBuilder::buildFatLTODefaultPipeline(OptimizationLevel Level, bool ThinLTO,
-                                        bool EmitSummary) {
-  ModulePassManager MPM;
-  MPM.addPass(EmbedBitcodePass(ThinLTO, EmitSummary,
-                               ThinLTO
-                                   ? buildThinLTOPreLinkDefaultPipeline(Level)
-                                   : buildLTOPreLinkDefaultPipeline(Level)));
-  MPM.addPass(buildPerModuleDefaultPipeline(Level));
   return MPM;
 }
 

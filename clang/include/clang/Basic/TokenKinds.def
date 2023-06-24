@@ -798,13 +798,15 @@ OBJC_AT_KEYWORD(import)
 OBJC_AT_KEYWORD(available)
 
 //===----------------------------------------------------------------------===//
-// Interesting idenitifiers.
+// Interesting identifiers.
 //===----------------------------------------------------------------------===//
 INTERESTING_IDENTIFIER(not_interesting)
 INTERESTING_IDENTIFIER(FILE)
 INTERESTING_IDENTIFIER(jmp_buf)
 INTERESTING_IDENTIFIER(sigjmp_buf)
 INTERESTING_IDENTIFIER(ucontext_t)
+INTERESTING_IDENTIFIER(float_t)
+INTERESTING_IDENTIFIER(double_t)
 
 // TODO: What to do about context-sensitive keywords like:
 //       bycopy/byref/in/inout/oneway/out?
