@@ -1195,7 +1195,7 @@ bool ByteCodeExprGen<Emitter>::dereferenceParam(
     llvm::function_ref<bool(PrimType)> Indirect) {
   auto It = this->Params.find(PD);
   if (It != this->Params.end()) {
-    unsigned Idx = It->second;
+    unsigned Idx = It->second.Offset;
     switch (AK) {
     case DerefKind::Read:
       return DiscardResult ? true : this->emitGetParam(T, Idx, LV);
@@ -2153,18 +2153,19 @@ bool ByteCodeExprGen<Emitter>::VisitDeclRefExpr(const DeclRefExpr *E) {
     return this->emitGetPtrGlobal(*GlobalIndex, E);
   } else if (const auto *PVD = dyn_cast<ParmVarDecl>(D)) {
     if (auto It = this->Params.find(PVD); It != this->Params.end()) {
-      if (IsReference)
-        return this->emitGetParamPtr(It->second, E);
-      return this->emitGetPtrParam(It->second, E);
+      if (IsReference || !It->second.IsPtr)
+        return this->emitGetParamPtr(It->second.Offset, E);
+
+      return this->emitGetPtrParam(It->second.Offset, E);
     }
   }
 
   // Handle lambda captures.
   if (auto It = this->LambdaCaptures.find(D);
       It != this->LambdaCaptures.end()) {
-    auto [Offset, IsReference] = It->second;
+    auto [Offset, IsPtr] = It->second;
 
-    if (IsReference)
+    if (IsPtr)
       return this->emitGetThisFieldPtr(Offset, E);
     return this->emitGetPtrThisField(Offset, E);
   }
