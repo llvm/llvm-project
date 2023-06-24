@@ -6,8 +6,5 @@ unittest("LLVMProfdataTests") {
     "//llvm/lib/Support",
     "//llvm/lib/Testing/Support",
   ]
-  sources = [
-    "MD5CollisionTest.cpp",
-    "OutputSizeLimitTest.cpp",
-  ]
+  sources = [ "OutputSizeLimitTest.cpp" ]
 }
