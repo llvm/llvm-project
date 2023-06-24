@@ -10802,8 +10802,16 @@ struct AACallEdgesFunction : public AACallEdgesImpl {
 
 struct AAInterFnReachabilityFunction
     : public CachedReachabilityAA<AAInterFnReachability, Function> {
+  using Base = CachedReachabilityAA<AAInterFnReachability, Function>;
   AAInterFnReachabilityFunction(const IRPosition &IRP, Attributor &A)
-      : CachedReachabilityAA<AAInterFnReachability, Function>(IRP, A) {}
+      : Base(IRP, A) {}
+
+  void initialize(Attributor &A) override {
+    Base::initialize(A);
+    Function *F = getAssociatedFunction();
+    if (!F || F->isDeclaration() || !A.isFunctionIPOAmendable(*F))
+      indicatePessimisticFixpoint();
+  }
 
   bool instructionCanReach(
       Attributor &A, const Instruction &From, const Function &To,
