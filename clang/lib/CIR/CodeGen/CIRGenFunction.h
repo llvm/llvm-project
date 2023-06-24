@@ -803,6 +803,12 @@ public:
   RValue convertTempToRValue(Address addr, clang::QualType type,
                              clang::SourceLocation Loc);
 
+  /// If a ParmVarDecl had the pass_object_size attribute, this
+  /// will contain a mapping from said ParmVarDecl to its implicit "object_size"
+  /// parameter.
+  llvm::SmallDenseMap<const ParmVarDecl *, const ImplicitParamDecl *, 2>
+      SizeArguments;
+
   // Build a "reference" to a va_list; this is either the address or the value
   // of the expression, depending on how va_list is defined.
   Address buildVAListRef(const Expr *E);
@@ -827,9 +833,17 @@ public:
   /// \returns SSA value with the argument.
   mlir::Value buildVAArg(VAArgExpr *VE, Address &VAListAddr);
 
-  /// Given an expression that represents a value lvalue, this method emits the
-  /// address of the lvalue, then loads the result as an rvalue, returning the
-  /// rvalue.
+  mlir::Value emitBuiltinObjectSize(const Expr *E, unsigned Type,
+                                    mlir::cir::IntType ResType,
+                                    mlir::Value EmittedE, bool IsDynamic);
+  mlir::Value evaluateOrEmitBuiltinObjectSize(const Expr *E, unsigned Type,
+                                              mlir::cir::IntType ResType,
+                                              mlir::Value EmittedE,
+                                              bool IsDynamic);
+
+  /// Given an expression that represents a value lvalue, this method emits
+  /// the address of the lvalue, then loads the result as an rvalue,
+  /// returning the rvalue.
   RValue buildLoadOfLValue(LValue LV, SourceLocation Loc);
   mlir::Value buildLoadOfScalar(Address Addr, bool Volatile, clang::QualType Ty,
                                 clang::SourceLocation Loc,

@@ -736,6 +736,27 @@ void CIRGenFunction::buildCallArgs(
          "MSABI NYI");
   assert(!hasInAllocaArgs(CGM, ExplicitCC, ArgTypes) && "NYI");
 
+  auto MaybeEmitImplicitObjectSize = [&](unsigned I, const Expr *Arg,
+                                         RValue EmittedArg) {
+    if (!AC.hasFunctionDecl() || I >= AC.getNumParams())
+      return;
+    auto *PS = AC.getParamDecl(I)->getAttr<PassObjectSizeAttr>();
+    if (PS == nullptr)
+      return;
+
+    const auto &Context = getContext();
+    auto SizeTy = Context.getSizeType();
+    auto T = builder.getUIntNTy(Context.getTypeSize(SizeTy));
+    assert(EmittedArg.getScalarVal() && "We emitted nothing for the arg?");
+    auto V = evaluateOrEmitBuiltinObjectSize(
+        Arg, PS->getType(), T, EmittedArg.getScalarVal(), PS->isDynamic());
+    Args.add(RValue::get(V), SizeTy);
+    // If we're emitting args in reverse, be sure to do so with
+    // pass_object_size, as well.
+    if (!LeftToRight)
+      std::swap(Args.back(), *(&Args.back() - 1));
+  };
+
   // Evaluate each argument in the appropriate order.
   size_t CallArgsStart = Args.size();
   for (unsigned I = 0, E = ArgTypes.size(); I != E; ++I) {
@@ -753,8 +774,15 @@ void CIRGenFunction::buildCallArgs(
     (void)InitialArgSize;
     // Since pointer argument are never emitted as LValue, it is safe to emit
     // non-null argument check for r-value only.
-    assert(!SanOpts.has(SanitizerKind::NonnullAttribute) && "Sanitizers NYI");
-    assert(!SanOpts.has(SanitizerKind::NullabilityArg) && "Sanitizers NYI");
+    if (!Args.back().hasLValue()) {
+      RValue RVArg = Args.back().getKnownRValue();
+      assert(!SanOpts.has(SanitizerKind::NonnullAttribute) && "Sanitizers NYI");
+      assert(!SanOpts.has(SanitizerKind::NullabilityArg) && "Sanitizers NYI");
+      // @llvm.objectsize should never have side-effects and shouldn't need
+      // destruction/cleanups, so we can safely "emit" it after its arg,
+      // regardless of right-to-leftness
+      MaybeEmitImplicitObjectSize(Idx, *Arg, RVArg);
+    }
   }
 
   if (!LeftToRight) {
