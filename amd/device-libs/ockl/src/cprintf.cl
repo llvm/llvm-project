@@ -40,13 +40,3 @@ __printf_alloc(uint bytes)
 
     return ptr + OFFSET + offset;
 }
-
-// printf stub to resolve link time dependencies.
-// Will be replaced by the compiler.
-__attribute__((noinline))
-__attribute__((optnone))
-__attribute__((format(printf, 1, 2)))
-int printf(__constant const char* st, ...) {
-  __printf_alloc(0);
-  return -1;
-}
