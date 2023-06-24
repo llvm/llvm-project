@@ -505,3 +505,29 @@ void CIRGenFunction::buildVAStartEnd(mlir::Value ArgValue, bool IsStart) {
   else
     builder.create<mlir::cir::VAEndOp>(ArgValue.getLoc(), ArgValue);
 }
+
+/// Returns a Value corresponding to the size of the given expression.
+/// This Value may be either of the following:
+///
+///   - In LLVM: a llvm::Argument (if E is a param with the pass_object_size
+///   attribute on it), CIR: TBD
+///   - A call to a `cir.object_size`.
+///
+/// EmittedE is the result of emitting `E` as a scalar expr. If it's non-null
+/// and we wouldn't otherwise try to reference a pass_object_size parameter,
+/// we'll call `cir.object_size` on EmittedE, rather than emitting E.
+mlir::Value CIRGenFunction::emitBuiltinObjectSize(const Expr *E, unsigned Type,
+                                                  mlir::cir::IntType ResType,
+                                                  mlir::Value EmittedE,
+                                                  bool IsDynamic) {
+  llvm_unreachable("NYI");
+}
+
+mlir::Value CIRGenFunction::evaluateOrEmitBuiltinObjectSize(
+    const Expr *E, unsigned Type, mlir::cir::IntType ResType,
+    mlir::Value EmittedE, bool IsDynamic) {
+  uint64_t ObjectSize;
+  if (!E->tryEvaluateObjectSize(ObjectSize, getContext(), Type))
+    return emitBuiltinObjectSize(E, Type, ResType, EmittedE, IsDynamic);
+  return builder.getConstInt(getLoc(E->getSourceRange()), ResType, ObjectSize);
+}
