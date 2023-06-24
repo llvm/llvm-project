@@ -1887,10 +1887,6 @@ public:
         S.Data = Data;
       }
 
-      if (RelocatedSection != Obj.section_end() && Name.contains(".dwo"))
-        HandleWarning(
-            createError("Unexpected relocations for dwo section " + Name));
-
       if (RelocatedSection == Obj.section_end() ||
           (RelocAction == DWARFContext::ProcessDebugRelocations::Ignore))
         continue;
@@ -1915,6 +1911,12 @@ public:
       // as the section address will be added twice).
       if (!L && isa<MachOObjectFile>(&Obj))
         continue;
+
+      if (!Section.relocations().empty() && Name.ends_with(".dwo") &&
+          RelSecName.startswith(".debug")) {
+        HandleWarning(createError("unexpected relocations for dwo section '" +
+                                  RelSecName + "'"));
+      }
 
       RelSecName = RelSecName.substr(
           RelSecName.find_first_not_of("._z")); // Skip . and _ prefixes.
