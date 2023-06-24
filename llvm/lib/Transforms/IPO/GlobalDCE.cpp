@@ -180,11 +180,6 @@ void GlobalDCEPass::ScanVTables(Module &M) {
   SmallVector<MDNode *, 2> Types;
   LLVM_DEBUG(dbgs() << "Building type info -> vtable map\n");
 
-  auto *LTOPostLinkMD =
-      cast_or_null<ConstantAsMetadata>(M.getModuleFlag("LTOPostLink"));
-  bool LTOPostLink =
-      LTOPostLinkMD && !cast<ConstantInt>(LTOPostLinkMD->getValue())->isZero();
-
   for (GlobalVariable &GV : M.globals()) {
     Types.clear();
     GV.getMetadata(LLVMContext::MD_type, Types);
@@ -211,7 +206,7 @@ void GlobalDCEPass::ScanVTables(Module &M) {
     if (auto GO = dyn_cast<GlobalObject>(&GV)) {
       GlobalObject::VCallVisibility TypeVis = GO->getVCallVisibility();
       if (TypeVis == GlobalObject::VCallVisibilityTranslationUnit ||
-          (LTOPostLink &&
+          (InLTOPostLink &&
            TypeVis == GlobalObject::VCallVisibilityLinkageUnit)) {
         LLVM_DEBUG(dbgs() << GV.getName() << " is safe for VFE\n");
 
@@ -629,4 +624,12 @@ PreservedAnalyses GlobalDCEPass::run(Module &M, ModuleAnalysisManager &MAM) {
   if (Changed)
     return PreservedAnalyses::none();
   return PreservedAnalyses::all();
+}
+
+void GlobalDCEPass::printPipeline(
+    raw_ostream &OS, function_ref<StringRef(StringRef)> MapClassName2PassName) {
+  static_cast<PassInfoMixin<GlobalDCEPass> *>(this)->printPipeline(
+      OS, MapClassName2PassName);
+  if (InLTOPostLink)
+    OS << "<vfe-linkage-unit-visibility>";
 }

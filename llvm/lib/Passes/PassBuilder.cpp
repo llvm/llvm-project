@@ -673,6 +673,10 @@ Expected<bool> parseSinglePassOption(StringRef Params, StringRef OptionName,
   return Result;
 }
 
+Expected<bool> parseGlobalDCEPassOptions(StringRef Params) {
+  return parseSinglePassOption(Params, "vfe-linkage-unit-visibility", "GlobalDCE");
+}
+
 Expected<bool> parseInlinerPassOptions(StringRef Params) {
   return parseSinglePassOption(Params, "only-mandatory", "InlinerPass");
 }

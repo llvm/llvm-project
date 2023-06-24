@@ -30,11 +30,10 @@
 
 ; RESULT2: !llvm.module.flags = !{}
 
-!llvm.module.flags = !{!0, !1, !2, !3, !4, !5}
+!llvm.module.flags = !{!0, !1, !2, !3, !4}
 
 !0 = !{i32 1, !"amdgpu_code_object_version", i32 400}
 !1 = !{i32 1, !"wchar_size", i32 4}
 !2 = !{i32 7, !"openmp", i32 50}
 !3 = !{i32 7, !"openmp-device", i32 50}
 !4 = !{i32 8, !"PIC Level", i32 1}
-!5 = !{i32 1, !"LTOPostLink", i32 1}
