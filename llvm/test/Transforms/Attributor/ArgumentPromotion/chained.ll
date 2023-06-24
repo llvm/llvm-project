@@ -36,7 +36,7 @@ define i32 @caller() {
 ; CGSCC-LABEL: define {{[^@]+}}@caller
 ; CGSCC-SAME: () #[[ATTR1:[0-9]+]] {
 ; CGSCC-NEXT:  entry:
-; CGSCC-NEXT:    [[X:%.*]] = call i32 @test() #[[ATTR2:[0-9]+]]
+; CGSCC-NEXT:    [[X:%.*]] = call i32 @test()
 ; CGSCC-NEXT:    ret i32 [[X]]
 ;
 entry:
@@ -50,5 +50,4 @@ entry:
 ;.
 ; CGSCC: attributes #[[ATTR0]] = { mustprogress nofree norecurse nosync nounwind willreturn memory(none) }
 ; CGSCC: attributes #[[ATTR1]] = { mustprogress nofree nosync nounwind willreturn memory(none) }
-; CGSCC: attributes #[[ATTR2]] = { willreturn }
 ;.

@@ -25,7 +25,7 @@ define i32 @test0-range-check(ptr %p) {
 ; CGSCC: Function Attrs: mustprogress nofree nosync nounwind willreturn memory(argmem: read)
 ; CGSCC-LABEL: define {{[^@]+}}@test0-range-check
 ; CGSCC-SAME: (ptr nocapture nofree noundef nonnull readonly align 4 dereferenceable(4) [[P:%.*]]) #[[ATTR1:[0-9]+]] {
-; CGSCC-NEXT:    [[A:%.*]] = tail call i32 @test0(ptr nocapture nofree noundef nonnull readonly align 4 dereferenceable(4) [[P]]) #[[ATTR5:[0-9]+]]
+; CGSCC-NEXT:    [[A:%.*]] = tail call i32 @test0(ptr nocapture nofree noundef nonnull readonly align 4 dereferenceable(4) [[P]])
 ; CGSCC-NEXT:    ret i32 [[A]]
 ;
   %a = tail call i32 @test0(ptr %p)
@@ -117,7 +117,7 @@ define void @test0-icmp-check(ptr %p){
 ;
 ; CGSCC-LABEL: define {{[^@]+}}@test0-icmp-check
 ; CGSCC-SAME: (ptr nocapture nofree noundef nonnull readonly align 4 dereferenceable(4) [[P:%.*]]) {
-; CGSCC-NEXT:    [[RET:%.*]] = tail call i32 @test0(ptr nocapture nofree noundef nonnull readonly align 4 dereferenceable(4) [[P]]) #[[ATTR5]]
+; CGSCC-NEXT:    [[RET:%.*]] = tail call i32 @test0(ptr nocapture nofree noundef nonnull readonly align 4 dereferenceable(4) [[P]])
 ; CGSCC-NEXT:    [[CMP_EQ_1:%.*]] = icmp eq i32 [[RET]], 10
 ; CGSCC-NEXT:    [[CMP_EQ_2:%.*]] = icmp eq i32 [[RET]], 9
 ; CGSCC-NEXT:    [[CMP_EQ_3:%.*]] = icmp eq i32 [[RET]], 8
@@ -295,7 +295,7 @@ define i1 @test1-check(ptr %p) {
 ; CGSCC: Function Attrs: mustprogress nofree nosync nounwind willreturn memory(argmem: read)
 ; CGSCC-LABEL: define {{[^@]+}}@test1-check
 ; CGSCC-SAME: (ptr nocapture nofree noundef nonnull readonly align 4 dereferenceable(4) [[P:%.*]]) #[[ATTR1]] {
-; CGSCC-NEXT:    [[RES:%.*]] = tail call i32 @test1(ptr nocapture nofree noundef nonnull readonly align 4 dereferenceable(4) [[P]]) #[[ATTR5]]
+; CGSCC-NEXT:    [[RES:%.*]] = tail call i32 @test1(ptr nocapture nofree noundef nonnull readonly align 4 dereferenceable(4) [[P]])
 ; CGSCC-NEXT:    [[CMP:%.*]] = icmp eq i32 [[RES]], 500
 ; CGSCC-NEXT:    ret i1 [[CMP]]
 ;
@@ -353,7 +353,7 @@ define i32 @test2_check(ptr %p) {
 ; CGSCC-LABEL: define {{[^@]+}}@test2_check
 ; CGSCC-SAME: (ptr nocapture nofree noundef nonnull readonly align 4 dereferenceable(4) [[P:%.*]]) #[[ATTR1]] {
 ; CGSCC-NEXT:  entry:
-; CGSCC-NEXT:    [[CALL:%.*]] = tail call i32 @test2(ptr nocapture nofree noundef nonnull readonly align 4 dereferenceable(4) [[P]]) #[[ATTR5]]
+; CGSCC-NEXT:    [[CALL:%.*]] = tail call i32 @test2(ptr nocapture nofree noundef nonnull readonly align 4 dereferenceable(4) [[P]])
 ; CGSCC-NEXT:    [[CMP:%.*]] = icmp slt i32 [[CALL]], 5
 ; CGSCC-NEXT:    br i1 [[CMP]], label [[IF_THEN:%.*]], label [[IF_END:%.*]]
 ; CGSCC:       if.then:
@@ -478,7 +478,7 @@ define void @f1(i32){
 ;
 ; CGSCC-LABEL: define {{[^@]+}}@f1
 ; CGSCC-SAME: (i32 [[TMP0:%.*]]) {
-; CGSCC-NEXT:    [[TMP2:%.*]] = tail call i32 @r1() #[[ATTR5]]
+; CGSCC-NEXT:    [[TMP2:%.*]] = tail call i32 @r1()
 ; CGSCC-NEXT:    [[TMP3:%.*]] = icmp sgt i32 [[TMP2]], 15
 ; CGSCC-NEXT:    br i1 [[TMP3]], label [[TMP4:%.*]], label [[TMP5:%.*]]
 ; CGSCC:       4:
@@ -560,7 +560,7 @@ define dso_local i32 @test4-g1(i32 %u) {
 ; CGSCC-LABEL: define {{[^@]+}}@test4-g1
 ; CGSCC-SAME: (i32 [[U:%.*]]) #[[ATTR3:[0-9]+]] {
 ; CGSCC-NEXT:  entry:
-; CGSCC-NEXT:    [[CALL:%.*]] = tail call i32 @test4-f1(i32 [[U]]) #[[ATTR5]]
+; CGSCC-NEXT:    [[CALL:%.*]] = tail call i32 @test4-f1(i32 [[U]])
 ; CGSCC-NEXT:    ret i32 [[CALL]]
 ;
 ; FIXME: %call should have range [0, inf]
@@ -638,7 +638,7 @@ define dso_local i32 @test4-g2(i32 %u) {
 ; CGSCC-LABEL: define {{[^@]+}}@test4-g2
 ; CGSCC-SAME: (i32 [[U:%.*]]) #[[ATTR3]] {
 ; CGSCC-NEXT:  entry:
-; CGSCC-NEXT:    [[CALL:%.*]] = tail call i32 @test4-f2(i32 [[U]]) #[[ATTR5]]
+; CGSCC-NEXT:    [[CALL:%.*]] = tail call i32 @test4-f2(i32 [[U]])
 ; CGSCC-NEXT:    ret i32 [[CALL]]
 ;
 entry:
@@ -1029,10 +1029,10 @@ define i1 @fcmp_caller(float %fa, float %fb, double %da, double %db, ptr %dpa, p
 ; CGSCC: Function Attrs: mustprogress nofree nosync nounwind willreturn memory(none)
 ; CGSCC-LABEL: define {{[^@]+}}@fcmp_caller
 ; CGSCC-SAME: (float [[FA:%.*]], float [[FB:%.*]], double [[DA:%.*]], double [[DB:%.*]], ptr nofree readnone [[DPA:%.*]], ptr nofree readnone [[DPB:%.*]], ptr nofree readnone [[IPA:%.*]], ptr nofree readnone [[IPB:%.*]]) #[[ATTR3]] {
-; CGSCC-NEXT:    [[R1:%.*]] = call i1 @f_fcmp(float [[FA]], float [[FB]]) #[[ATTR5]]
-; CGSCC-NEXT:    [[R2:%.*]] = call i1 @d_fcmp(double [[DA]], double [[DB]]) #[[ATTR5]]
-; CGSCC-NEXT:    [[R3:%.*]] = call i1 @dp_icmp(ptr noalias nofree readnone [[DPA]], ptr noalias nofree readnone [[DPB]]) #[[ATTR5]]
-; CGSCC-NEXT:    [[R4:%.*]] = call i1 @ip_icmp(ptr noalias nofree readnone [[IPA]], ptr noalias nofree readnone [[IPB]]) #[[ATTR5]]
+; CGSCC-NEXT:    [[R1:%.*]] = call i1 @f_fcmp(float [[FA]], float [[FB]])
+; CGSCC-NEXT:    [[R2:%.*]] = call i1 @d_fcmp(double [[DA]], double [[DB]])
+; CGSCC-NEXT:    [[R3:%.*]] = call i1 @dp_icmp(ptr noalias nofree readnone [[DPA]], ptr noalias nofree readnone [[DPB]])
+; CGSCC-NEXT:    [[R4:%.*]] = call i1 @ip_icmp(ptr noalias nofree readnone [[IPA]], ptr noalias nofree readnone [[IPB]])
 ; CGSCC-NEXT:    [[O1:%.*]] = or i1 [[R1]], [[R2]]
 ; CGSCC-NEXT:    [[O2:%.*]] = or i1 [[R3]], [[R4]]
 ; CGSCC-NEXT:    [[O3:%.*]] = or i1 [[O1]], [[O2]]
@@ -1085,7 +1085,7 @@ define i8 @undef_collapse_1() {
 ; CGSCC: Function Attrs: mustprogress nofree nosync nounwind willreturn memory(none)
 ; CGSCC-LABEL: define {{[^@]+}}@undef_collapse_1
 ; CGSCC-SAME: () #[[ATTR3]] {
-; CGSCC-NEXT:    [[C:%.*]] = call i8 @ret_undef() #[[ATTR5]]
+; CGSCC-NEXT:    [[C:%.*]] = call i8 @ret_undef()
 ; CGSCC-NEXT:    [[S:%.*]] = shl i8 [[C]], 2
 ; CGSCC-NEXT:    ret i8 [[S]]
 ;
@@ -1104,7 +1104,7 @@ define i8 @undef_collapse_2() {
 ; CGSCC: Function Attrs: mustprogress nofree nosync nounwind willreturn memory(none)
 ; CGSCC-LABEL: define {{[^@]+}}@undef_collapse_2
 ; CGSCC-SAME: () #[[ATTR3]] {
-; CGSCC-NEXT:    [[C:%.*]] = call i8 @ret_two() #[[ATTR5]]
+; CGSCC-NEXT:    [[C:%.*]] = call i8 @ret_two()
 ; CGSCC-NEXT:    [[S:%.*]] = shl i8 undef, [[C]]
 ; CGSCC-NEXT:    ret i8 [[S]]
 ;
@@ -1123,8 +1123,8 @@ define i8 @undef_collapse_caller() {
 ; CGSCC: Function Attrs: mustprogress nofree nosync nounwind willreturn memory(none)
 ; CGSCC-LABEL: define {{[^@]+}}@undef_collapse_caller
 ; CGSCC-SAME: () #[[ATTR3]] {
-; CGSCC-NEXT:    [[C1:%.*]] = call i8 @undef_collapse_1() #[[ATTR5]]
-; CGSCC-NEXT:    [[C2:%.*]] = call i8 @undef_collapse_2() #[[ATTR5]]
+; CGSCC-NEXT:    [[C1:%.*]] = call i8 @undef_collapse_1()
+; CGSCC-NEXT:    [[C2:%.*]] = call i8 @undef_collapse_2()
 ; CGSCC-NEXT:    [[A:%.*]] = add i8 [[C1]], [[C2]]
 ; CGSCC-NEXT:    ret i8 [[A]]
 ;
@@ -1167,8 +1167,8 @@ define i1 @callee_range_1(i1 %c1, i1 %c2, i1 %c3) {
 ; CGSCC: Function Attrs: mustprogress nofree nosync nounwind willreturn memory(none)
 ; CGSCC-LABEL: define {{[^@]+}}@callee_range_1
 ; CGSCC-SAME: (i1 [[C1:%.*]], i1 [[C2:%.*]], i1 [[C3:%.*]]) #[[ATTR3]] {
-; CGSCC-NEXT:    [[R1:%.*]] = call i32 @ret1or2(i1 [[C1]]) #[[ATTR5]]
-; CGSCC-NEXT:    [[R2:%.*]] = call i32 @ret1or2(i1 [[C2]]) #[[ATTR5]]
+; CGSCC-NEXT:    [[R1:%.*]] = call i32 @ret1or2(i1 [[C1]])
+; CGSCC-NEXT:    [[R2:%.*]] = call i32 @ret1or2(i1 [[C2]])
 ; CGSCC-NEXT:    [[INDIRECTION:%.*]] = select i1 [[C3]], i32 [[R1]], i32 [[R2]]
 ; CGSCC-NEXT:    [[A:%.*]] = add i32 [[R1]], [[INDIRECTION]]
 ; CGSCC-NEXT:    [[I1:%.*]] = icmp sle i32 [[A]], 4
@@ -1202,8 +1202,8 @@ define i1 @callee_range_2(i1 %c1, i1 %c2) {
 ; CGSCC: Function Attrs: mustprogress nofree nosync nounwind willreturn memory(none)
 ; CGSCC-LABEL: define {{[^@]+}}@callee_range_2
 ; CGSCC-SAME: (i1 [[C1:%.*]], i1 [[C2:%.*]]) #[[ATTR3]] {
-; CGSCC-NEXT:    [[R1:%.*]] = call i32 @ret1or2(i1 [[C1]]) #[[ATTR5]]
-; CGSCC-NEXT:    [[R2:%.*]] = call i32 @ret1or2(i1 [[C2]]) #[[ATTR5]]
+; CGSCC-NEXT:    [[R1:%.*]] = call i32 @ret1or2(i1 [[C1]])
+; CGSCC-NEXT:    [[R2:%.*]] = call i32 @ret1or2(i1 [[C2]])
 ; CGSCC-NEXT:    [[A:%.*]] = add i32 [[R1]], [[R2]]
 ; CGSCC-NEXT:    [[I1:%.*]] = icmp sle i32 [[A]], 3
 ; CGSCC-NEXT:    [[I2:%.*]] = icmp sge i32 [[A]], 2
@@ -1258,7 +1258,7 @@ define i1 @ctx_adjustment(i32 %V) {
 ; CGSCC:       if.true:
 ; CGSCC-NEXT:    br label [[END:%.*]]
 ; CGSCC:       if.false:
-; CGSCC-NEXT:    [[CALL:%.*]] = call i32 @ret100() #[[ATTR5]]
+; CGSCC-NEXT:    [[CALL:%.*]] = call i32 @ret100()
 ; CGSCC-NEXT:    br label [[END]]
 ; CGSCC:       end:
 ; CGSCC-NEXT:    [[PHI:%.*]] = phi i32 [ [[V]], [[IF_TRUE]] ], [ [[CALL]], [[IF_FALSE]] ]
@@ -1315,10 +1315,10 @@ define i32 @simplify_callsite_argument(i1 %d) {
 ; CGSCC-NEXT:    [[C:%.*]] = select i1 [[D]], i1 true, i1 false
 ; CGSCC-NEXT:    br i1 [[C]], label [[T:%.*]], label [[F:%.*]]
 ; CGSCC:       t:
-; CGSCC-NEXT:    [[RET1:%.*]] = call noundef i32 @func(i1 noundef [[C]]) #[[ATTR5]]
+; CGSCC-NEXT:    [[RET1:%.*]] = call noundef i32 @func(i1 noundef [[C]])
 ; CGSCC-NEXT:    ret i32 [[RET1]]
 ; CGSCC:       f:
-; CGSCC-NEXT:    [[RET2:%.*]] = call noundef i32 @func(i1 noundef false) #[[ATTR5]]
+; CGSCC-NEXT:    [[RET2:%.*]] = call noundef i32 @func(i1 noundef false)
 ; CGSCC-NEXT:    ret i32 [[RET2]]
 ;
   %c = select i1 %d, i1 true, i1 false
@@ -1363,10 +1363,10 @@ define i1 @check_divided_range(i32 %arg) {
 ; CGSCC: Function Attrs: mustprogress nofree nosync nounwind willreturn memory(none)
 ; CGSCC-LABEL: define {{[^@]+}}@check_divided_range
 ; CGSCC-SAME: (i32 [[ARG:%.*]]) #[[ATTR3]] {
-; CGSCC-NEXT:    [[CSRET1:%.*]] = call i32 @less_than_65536(i32 noundef 0) #[[ATTR5]]
-; CGSCC-NEXT:    [[CSRET2:%.*]] = call i32 @less_than_65536(i32 [[ARG]]) #[[ATTR5]]
-; CGSCC-NEXT:    [[TRUE1:%.*]] = call i1 @is_less_than_65536(i32 [[CSRET1]]) #[[ATTR5]]
-; CGSCC-NEXT:    [[TRUE2:%.*]] = call i1 @is_less_than_65536(i32 [[CSRET2]]) #[[ATTR5]]
+; CGSCC-NEXT:    [[CSRET1:%.*]] = call i32 @less_than_65536(i32 noundef 0)
+; CGSCC-NEXT:    [[CSRET2:%.*]] = call i32 @less_than_65536(i32 [[ARG]])
+; CGSCC-NEXT:    [[TRUE1:%.*]] = call i1 @is_less_than_65536(i32 [[CSRET1]])
+; CGSCC-NEXT:    [[TRUE2:%.*]] = call i1 @is_less_than_65536(i32 [[CSRET2]])
 ; CGSCC-NEXT:    [[RET:%.*]] = and i1 [[TRUE1]], [[TRUE2]]
 ; CGSCC-NEXT:    ret i1 [[RET]]
 ;
@@ -1410,10 +1410,10 @@ define i1 @check_casted_range(i1 %c) {
 ; CGSCC: Function Attrs: mustprogress nofree nosync nounwind willreturn memory(none)
 ; CGSCC-LABEL: define {{[^@]+}}@check_casted_range
 ; CGSCC-SAME: (i1 [[C:%.*]]) #[[ATTR3]] {
-; CGSCC-NEXT:    [[CSRET1:%.*]] = call i32 @cast_and_return(i1 noundef true) #[[ATTR5]]
-; CGSCC-NEXT:    [[CSRET2:%.*]] = call i32 @cast_and_return(i1 [[C]]) #[[ATTR5]]
+; CGSCC-NEXT:    [[CSRET1:%.*]] = call i32 @cast_and_return(i1 noundef true)
+; CGSCC-NEXT:    [[CSRET2:%.*]] = call i32 @cast_and_return(i1 [[C]])
 ; CGSCC-NEXT:    [[ADD:%.*]] = add i32 [[CSRET1]], [[CSRET2]]
-; CGSCC-NEXT:    [[RET:%.*]] = call i1 @is_less_than_3(i32 [[ADD]]) #[[ATTR5]]
+; CGSCC-NEXT:    [[RET:%.*]] = call i1 @is_less_than_3(i32 [[ADD]])
 ; CGSCC-NEXT:    ret i1 [[RET]]
 ;
   %csret1 = call i32 @cast_and_return(i1 true)
@@ -1498,8 +1498,8 @@ define i1 @propagate_range1(i32 %c){
 ; CGSCC: Function Attrs: mustprogress nofree nosync nounwind willreturn memory(none)
 ; CGSCC-LABEL: define {{[^@]+}}@propagate_range1
 ; CGSCC-SAME: (i32 noundef [[C:%.*]]) #[[ATTR3]] {
-; CGSCC-NEXT:    [[CSRET:%.*]] = call i32 @less_than_100_1(i32 noundef [[C]]) #[[ATTR5]]
-; CGSCC-NEXT:    [[TRUE:%.*]] = call i1 @is_less_than_100_1(i32 noundef [[CSRET]]) #[[ATTR5]]
+; CGSCC-NEXT:    [[CSRET:%.*]] = call i32 @less_than_100_1(i32 noundef [[C]])
+; CGSCC-NEXT:    [[TRUE:%.*]] = call i1 @is_less_than_100_1(i32 noundef [[CSRET]])
 ; CGSCC-NEXT:    ret i1 [[TRUE]]
 ;
   %csret = call i32 @less_than_100_1(i32 %c)
@@ -1624,10 +1624,10 @@ define i1 @propagate_range2(i32 %c) {
 ; CGSCC: Function Attrs: mustprogress nofree nosync nounwind willreturn memory(none)
 ; CGSCC-LABEL: define {{[^@]+}}@propagate_range2
 ; CGSCC-SAME: (i32 noundef [[C:%.*]]) #[[ATTR3]] {
-; CGSCC-NEXT:    [[CSRET1:%.*]] = call i32 @less_than_100_2(i32 noundef 0) #[[ATTR5]]
-; CGSCC-NEXT:    [[TRUE1:%.*]] = call i1 @is_less_than_100_2(i32 noundef [[CSRET1]]) #[[ATTR5]]
-; CGSCC-NEXT:    [[CSRET2:%.*]] = call i32 @less_than_100_2(i32 noundef [[C]]) #[[ATTR5]]
-; CGSCC-NEXT:    [[TRUE2:%.*]] = call i1 @is_less_than_100_2(i32 noundef [[CSRET2]]) #[[ATTR5]]
+; CGSCC-NEXT:    [[CSRET1:%.*]] = call i32 @less_than_100_2(i32 noundef 0)
+; CGSCC-NEXT:    [[TRUE1:%.*]] = call i1 @is_less_than_100_2(i32 noundef [[CSRET1]])
+; CGSCC-NEXT:    [[CSRET2:%.*]] = call i32 @less_than_100_2(i32 noundef [[C]])
+; CGSCC-NEXT:    [[TRUE2:%.*]] = call i1 @is_less_than_100_2(i32 noundef [[CSRET2]])
 ; CGSCC-NEXT:    [[TRUE:%.*]] = and i1 [[TRUE1]], [[TRUE2]]
 ; CGSCC-NEXT:    ret i1 [[TRUE]]
 ;
@@ -1677,7 +1677,7 @@ define i1 @context(ptr %p) {
 ; CGSCC-NEXT:    [[C:%.*]] = icmp slt i8 0, [[L]]
 ; CGSCC-NEXT:    br i1 [[C]], label [[T:%.*]], label [[F:%.*]]
 ; CGSCC:       t:
-; CGSCC-NEXT:    [[R:%.*]] = call i1 @non_zero(i8 [[L]]) #[[ATTR5]]
+; CGSCC-NEXT:    [[R:%.*]] = call i1 @non_zero(i8 [[L]])
 ; CGSCC-NEXT:    ret i1 [[R]]
 ; CGSCC:       f:
 ; CGSCC-NEXT:    ret i1 false
@@ -1817,7 +1817,6 @@ declare void @barney(i32 signext, i32 signext)
 ; CGSCC: attributes #[[ATTR2]] = { mustprogress nofree norecurse nosync nounwind willreturn memory(none) }
 ; CGSCC: attributes #[[ATTR3]] = { mustprogress nofree nosync nounwind willreturn memory(none) }
 ; CGSCC: attributes #[[ATTR4]] = { nofree norecurse nosync nounwind memory(none) }
-; CGSCC: attributes #[[ATTR5]] = { willreturn }
 ;.
 ; TUNIT: [[RNG0]] = !{i32 0, i32 10}
 ; TUNIT: [[RNG1]] = !{i32 10, i32 100}

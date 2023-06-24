@@ -69,7 +69,7 @@ define void @intrinsic(ptr %dest, ptr %src, i32 %len) {
 ; CHECK: Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn memory(argmem: readwrite)
 ; CHECK-LABEL: define {{[^@]+}}@intrinsic
 ; CHECK-SAME: (ptr nocapture nofree writeonly [[DEST:%.*]], ptr nocapture nofree readonly [[SRC:%.*]], i32 [[LEN:%.*]]) #[[ATTR4:[0-9]+]] {
-; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i32(ptr noalias nocapture nofree writeonly [[DEST]], ptr noalias nocapture nofree readonly [[SRC]], i32 [[LEN]], i1 noundef false) #[[ATTR9:[0-9]+]]
+; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i32(ptr noalias nocapture nofree writeonly [[DEST]], ptr noalias nocapture nofree readonly [[SRC]], i32 [[LEN]], i1 noundef false)
 ; CHECK-NEXT:    ret void
 ;
   call void @llvm.memcpy.p0.p0.i32(ptr %dest, ptr %src, i32 %len, i1 false)
@@ -94,7 +94,7 @@ define void @m() norecurse {
 ; TUNIT: Function Attrs: norecurse nosync memory(none)
 ; TUNIT-LABEL: define {{[^@]+}}@m
 ; TUNIT-SAME: () #[[ATTR6]] {
-; TUNIT-NEXT:    [[A:%.*]] = call i32 @called_by_norecurse() #[[ATTR10:[0-9]+]]
+; TUNIT-NEXT:    [[A:%.*]] = call i32 @called_by_norecurse() #[[ATTR9:[0-9]+]]
 ; TUNIT-NEXT:    ret void
 ;
 ; CGSCC: Function Attrs: norecurse nosync memory(none)
@@ -127,7 +127,7 @@ define internal i32 @o() {
 ; TUNIT: Function Attrs: norecurse nosync memory(none)
 ; TUNIT-LABEL: define {{[^@]+}}@o
 ; TUNIT-SAME: () #[[ATTR6]] {
-; TUNIT-NEXT:    [[A:%.*]] = call i32 @called_by_norecurse_indirectly() #[[ATTR10]]
+; TUNIT-NEXT:    [[A:%.*]] = call i32 @called_by_norecurse_indirectly() #[[ATTR9]]
 ; TUNIT-NEXT:    ret i32 [[A]]
 ;
 ; CGSCC: Function Attrs: norecurse nosync memory(none)
@@ -143,7 +143,7 @@ define i32 @p() norecurse {
 ; TUNIT: Function Attrs: norecurse nosync memory(none)
 ; TUNIT-LABEL: define {{[^@]+}}@p
 ; TUNIT-SAME: () #[[ATTR6]] {
-; TUNIT-NEXT:    [[A:%.*]] = call i32 @o() #[[ATTR10]]
+; TUNIT-NEXT:    [[A:%.*]] = call i32 @o() #[[ATTR9]]
 ; TUNIT-NEXT:    ret i32 [[A]]
 ;
 ; CGSCC: Function Attrs: norecurse nosync memory(none)
@@ -316,8 +316,7 @@ f:
 ; TUNIT: attributes #[[ATTR6]] = { norecurse nosync memory(none) }
 ; TUNIT: attributes #[[ATTR7]] = { null_pointer_is_valid }
 ; TUNIT: attributes #[[ATTR8]] = { norecurse }
-; TUNIT: attributes #[[ATTR9]] = { willreturn }
-; TUNIT: attributes #[[ATTR10]] = { nosync }
+; TUNIT: attributes #[[ATTR9]] = { nosync }
 ;.
 ; CGSCC: attributes #[[ATTR0]] = { mustprogress nofree norecurse nosync nounwind willreturn memory(none) }
 ; CGSCC: attributes #[[ATTR1]] = { mustprogress nofree nosync nounwind willreturn memory(none) }
@@ -328,5 +327,4 @@ f:
 ; CGSCC: attributes #[[ATTR6]] = { norecurse nosync memory(none) }
 ; CGSCC: attributes #[[ATTR7]] = { null_pointer_is_valid }
 ; CGSCC: attributes #[[ATTR8]] = { norecurse }
-; CGSCC: attributes #[[ATTR9]] = { willreturn }
 ;.

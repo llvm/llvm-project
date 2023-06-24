@@ -59,12 +59,12 @@ define i32 @main() nounwind  {
 ; TUNIT-NEXT:    store i32 1, ptr [[S]], align 32
 ; TUNIT-NEXT:    [[TMP4:%.*]] = getelementptr [[STRUCT_SS]], ptr [[S]], i32 0, i32 1
 ; TUNIT-NEXT:    [[TMP0:%.*]] = load i32, ptr [[S]], align 8
-; TUNIT-NEXT:    [[S_0_11:%.*]] = getelementptr [[STRUCT_SS]], ptr [[S]], i64 0, i32 1
-; TUNIT-NEXT:    [[TMP1:%.*]] = load i64, ptr [[S_0_11]], align 8
+; TUNIT-NEXT:    [[S_0_1:%.*]] = getelementptr [[STRUCT_SS]], ptr [[S]], i64 0, i32 1
+; TUNIT-NEXT:    [[TMP1:%.*]] = load i64, ptr [[S_0_1]], align 8
 ; TUNIT-NEXT:    [[C0:%.*]] = call i32 @f(i32 [[TMP0]], i64 [[TMP1]]) #[[ATTR2:[0-9]+]]
 ; TUNIT-NEXT:    [[TMP2:%.*]] = load i32, ptr [[S]], align 32
-; TUNIT-NEXT:    [[S_0_1:%.*]] = getelementptr [[STRUCT_SS]], ptr [[S]], i64 0, i32 1
-; TUNIT-NEXT:    [[TMP3:%.*]] = load i64, ptr [[S_0_1]], align 32
+; TUNIT-NEXT:    [[S_0_11:%.*]] = getelementptr [[STRUCT_SS]], ptr [[S]], i64 0, i32 1
+; TUNIT-NEXT:    [[TMP3:%.*]] = load i64, ptr [[S_0_11]], align 32
 ; TUNIT-NEXT:    [[C1:%.*]] = call i32 @g(i32 [[TMP2]], i64 [[TMP3]]) #[[ATTR2]]
 ; TUNIT-NEXT:    [[A:%.*]] = add i32 [[C0]], [[C1]]
 ; TUNIT-NEXT:    ret i32 [[A]]
@@ -99,5 +99,5 @@ entry:
 ;.
 ; CGSCC: attributes #[[ATTR0]] = { mustprogress nofree norecurse nosync nounwind willreturn memory(argmem: readwrite) }
 ; CGSCC: attributes #[[ATTR1]] = { mustprogress nofree nosync nounwind willreturn memory(none) }
-; CGSCC: attributes #[[ATTR2]] = { nounwind willreturn }
+; CGSCC: attributes #[[ATTR2]] = { nounwind }
 ;.

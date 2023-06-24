@@ -70,5 +70,5 @@ entry:
 ;.
 ; CGSCC: attributes #[[ATTR0]] = { mustprogress nofree norecurse nosync nounwind willreturn memory(argmem: readwrite) }
 ; CGSCC: attributes #[[ATTR1]] = { mustprogress nofree nosync nounwind willreturn memory(argmem: readwrite) }
-; CGSCC: attributes #[[ATTR2]] = { nounwind willreturn }
+; CGSCC: attributes #[[ATTR2]] = { nounwind }
 ;.

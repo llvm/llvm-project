@@ -58,7 +58,7 @@ define internal void @level1Kernel(i32 %C) {
 ; CGSCC-LABEL: define {{[^@]+}}@level1Kernel
 ; CGSCC-SAME: (i32 [[C:%.*]]) #[[ATTR1:[0-9]+]] {
 ; CGSCC-NEXT:  entry:
-; CGSCC-NEXT:    call void @level2Kernelall_early() #[[ATTR5:[0-9]+]]
+; CGSCC-NEXT:    call void @level2Kernelall_early() #[[ATTR4]]
 ; CGSCC-NEXT:    [[TOBOOL:%.*]] = icmp ne i32 [[C]], 0
 ; CGSCC-NEXT:    br i1 [[TOBOOL]], label [[IF_THEN:%.*]], label [[IF_ELSE:%.*]]
 ; CGSCC:       if.then:
@@ -222,7 +222,7 @@ define internal void @level1(i32 %C) {
 ; CGSCC-SAME: (i32 [[C:%.*]]) #[[ATTR1]] {
 ; CGSCC-NEXT:  entry:
 ; CGSCC-NEXT:    [[LOCAL:%.*]] = alloca i32, align 4
-; CGSCC-NEXT:    call void @level2all_early(ptr noalias nocapture nofree noundef nonnull writeonly align 4 dereferenceable(4) [[LOCAL]]) #[[ATTR5]]
+; CGSCC-NEXT:    call void @level2all_early(ptr noalias nocapture nofree noundef nonnull writeonly align 4 dereferenceable(4) [[LOCAL]]) #[[ATTR4]]
 ; CGSCC-NEXT:    [[TOBOOL:%.*]] = icmp ne i32 [[C]], 0
 ; CGSCC-NEXT:    br i1 [[TOBOOL]], label [[IF_THEN:%.*]], label [[IF_ELSE:%.*]]
 ; CGSCC:       if.then:
@@ -369,5 +369,4 @@ declare dso_local void @use(i32, i32, i32) nosync norecurse nounwind
 ; CGSCC: attributes #[[ATTR2]] = { mustprogress nofree norecurse nosync nounwind willreturn memory(write) }
 ; CGSCC: attributes #[[ATTR3]] = { nosync nounwind }
 ; CGSCC: attributes #[[ATTR4]] = { nounwind }
-; CGSCC: attributes #[[ATTR5]] = { nounwind willreturn }
 ;.
