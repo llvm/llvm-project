@@ -80,23 +80,23 @@ namespace {
         AtomicSizeInBits = C.toBits(
             C.toCharUnitsFromBits(Offset + OrigBFI.Size + C.getCharWidth() - 1)
                 .alignTo(lvalue.getAlignment()));
-        auto VoidPtrAddr = CGF.EmitCastToVoidPtr(lvalue.getBitFieldPointer());
+        llvm::Value *BitFieldPtr = lvalue.getBitFieldPointer();
         auto OffsetInChars =
             (C.toCharUnitsFromBits(OrigBFI.Offset) / lvalue.getAlignment()) *
             lvalue.getAlignment();
-        VoidPtrAddr = CGF.Builder.CreateConstGEP1_64(
-            CGF.Int8Ty, VoidPtrAddr, OffsetInChars.getQuantity());
-        llvm::Type *IntTy = CGF.Builder.getIntNTy(AtomicSizeInBits);
-        auto Addr = CGF.Builder.CreatePointerBitCastOrAddrSpaceCast(
-            VoidPtrAddr, llvm::PointerType::getUnqual(CGF.getLLVMContext()),
+        llvm::Value *StoragePtr = CGF.Builder.CreateConstGEP1_64(
+            CGF.Int8Ty, BitFieldPtr, OffsetInChars.getQuantity());
+        StoragePtr = CGF.Builder.CreateAddrSpaceCast(
+            StoragePtr, llvm::PointerType::getUnqual(CGF.getLLVMContext()),
             "atomic_bitfield_base");
         BFI = OrigBFI;
         BFI.Offset = Offset;
         BFI.StorageSize = AtomicSizeInBits;
         BFI.StorageOffset += OffsetInChars;
-        LVal = LValue::MakeBitfield(Address(Addr, IntTy, lvalue.getAlignment()),
-                                    BFI, lvalue.getType(), lvalue.getBaseInfo(),
-                                    lvalue.getTBAAInfo());
+        llvm::Type *StorageTy = CGF.Builder.getIntNTy(AtomicSizeInBits);
+        LVal = LValue::MakeBitfield(
+            Address(StoragePtr, StorageTy, lvalue.getAlignment()), BFI,
+            lvalue.getType(), lvalue.getBaseInfo(), lvalue.getTBAAInfo());
         AtomicTy = C.getIntTypeForBitwidth(AtomicSizeInBits, OrigBFI.IsSigned);
         if (AtomicTy.isNull()) {
           llvm::APInt Size(
@@ -805,8 +805,7 @@ AddDirectArgument(CodeGenFunction &CGF, CallArgList &Args,
     Args.add(RValue::get(Val), ValTy);
   } else {
     // Non-optimized functions always take a reference.
-    Args.add(RValue::get(CGF.EmitCastToVoidPtr(Val)),
-                         CGF.getContext().VoidPtrTy);
+    Args.add(RValue::get(Val), CGF.getContext().VoidPtrTy);
   }
 }
 
@@ -1103,8 +1102,8 @@ RValue CodeGenFunction::EmitAtomicExpr(AtomicExpr *E) {
           *this, V, AS, LangAS::opencl_generic, DestType, false);
     };
 
-    Args.add(RValue::get(CastToGenericAddrSpace(
-                 EmitCastToVoidPtr(Ptr.getPointer()), E->getPtr()->getType())),
+    Args.add(RValue::get(CastToGenericAddrSpace(Ptr.getPointer(),
+                                                E->getPtr()->getType())),
              getContext().VoidPtrTy);
 
     std::string LibCallName;
@@ -1137,10 +1136,9 @@ RValue CodeGenFunction::EmitAtomicExpr(AtomicExpr *E) {
       LibCallName = "__atomic_compare_exchange";
       RetTy = getContext().BoolTy;
       HaveRetTy = true;
-      Args.add(
-          RValue::get(CastToGenericAddrSpace(
-              EmitCastToVoidPtr(Val1.getPointer()), E->getVal1()->getType())),
-          getContext().VoidPtrTy);
+      Args.add(RValue::get(CastToGenericAddrSpace(Val1.getPointer(),
+                                                  E->getVal1()->getType())),
+               getContext().VoidPtrTy);
       AddDirectArgument(*this, Args, UseOptimizedLibcall, Val2.getPointer(),
                         MemTy, E->getExprLoc(), TInfo.Width);
       Args.add(RValue::get(Order), getContext().IntTy);
@@ -1302,8 +1300,7 @@ RValue CodeGenFunction::EmitAtomicExpr(AtomicExpr *E) {
       } else {
         // Value is returned through parameter before the order.
         RetTy = getContext().VoidTy;
-        Args.add(RValue::get(EmitCastToVoidPtr(Dest.getPointer())),
-                 getContext().VoidPtrTy);
+        Args.add(RValue::get(Dest.getPointer()), getContext().VoidPtrTy);
       }
     }
     // order is always the last parameter
@@ -1571,10 +1568,8 @@ void AtomicInfo::EmitAtomicLoadLibcall(llvm::Value *AddForLoaded,
   // void __atomic_load(size_t size, void *mem, void *return, int order);
   CallArgList Args;
   Args.add(RValue::get(getAtomicSizeValue()), CGF.getContext().getSizeType());
-  Args.add(RValue::get(CGF.EmitCastToVoidPtr(getAtomicPointer())),
-           CGF.getContext().VoidPtrTy);
-  Args.add(RValue::get(CGF.EmitCastToVoidPtr(AddForLoaded)),
-           CGF.getContext().VoidPtrTy);
+  Args.add(RValue::get(getAtomicPointer()), CGF.getContext().VoidPtrTy);
+  Args.add(RValue::get(AddForLoaded), CGF.getContext().VoidPtrTy);
   Args.add(
       RValue::get(llvm::ConstantInt::get(CGF.IntTy, (int)llvm::toCABI(AO))),
       CGF.getContext().IntTy);
@@ -1768,12 +1763,9 @@ AtomicInfo::EmitAtomicCompareExchangeLibcall(llvm::Value *ExpectedAddr,
   // void *desired, int success, int failure);
   CallArgList Args;
   Args.add(RValue::get(getAtomicSizeValue()), CGF.getContext().getSizeType());
-  Args.add(RValue::get(CGF.EmitCastToVoidPtr(getAtomicPointer())),
-           CGF.getContext().VoidPtrTy);
-  Args.add(RValue::get(CGF.EmitCastToVoidPtr(ExpectedAddr)),
-           CGF.getContext().VoidPtrTy);
-  Args.add(RValue::get(CGF.EmitCastToVoidPtr(DesiredAddr)),
-           CGF.getContext().VoidPtrTy);
+  Args.add(RValue::get(getAtomicPointer()), CGF.getContext().VoidPtrTy);
+  Args.add(RValue::get(ExpectedAddr), CGF.getContext().VoidPtrTy);
+  Args.add(RValue::get(DesiredAddr), CGF.getContext().VoidPtrTy);
   Args.add(RValue::get(
                llvm::ConstantInt::get(CGF.IntTy, (int)llvm::toCABI(Success))),
            CGF.getContext().IntTy);
@@ -2076,10 +2068,8 @@ void CodeGenFunction::EmitAtomicStore(RValue rvalue, LValue dest,
       CallArgList args;
       args.add(RValue::get(atomics.getAtomicSizeValue()),
                getContext().getSizeType());
-      args.add(RValue::get(EmitCastToVoidPtr(atomics.getAtomicPointer())),
-               getContext().VoidPtrTy);
-      args.add(RValue::get(EmitCastToVoidPtr(srcAddr.getPointer())),
-               getContext().VoidPtrTy);
+      args.add(RValue::get(atomics.getAtomicPointer()), getContext().VoidPtrTy);
+      args.add(RValue::get(srcAddr.getPointer()), getContext().VoidPtrTy);
       args.add(
           RValue::get(llvm::ConstantInt::get(IntTy, (int)llvm::toCABI(AO))),
           getContext().IntTy);
