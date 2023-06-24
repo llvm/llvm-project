@@ -20,7 +20,6 @@ add_clang_library(clangTidyMiscModule
   ConstCorrectnessCheck.cpp
   DefinitionsInHeadersCheck.cpp
   ConfusableIdentifierCheck.cpp
-  HeaderIncludeCycleCheck.cpp
   IncludeCleanerCheck.cpp
   MiscTidyModule.cpp
   MisleadingBidirectional.cpp
