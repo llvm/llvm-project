@@ -3466,16 +3466,6 @@ struct AAWillReturnImpl : public AAWillReturn {
   AAWillReturnImpl(const IRPosition &IRP, Attributor &A)
       : AAWillReturn(IRP, A) {}
 
-  /// See AbstractAttribute::initialize(...).
-  void initialize(Attributor &A) override {
-    AAWillReturn::initialize(A);
-
-    if (isImpliedByMustprogressAndReadonly(A, /* KnownOnly */ true)) {
-      indicateOptimisticFixpoint();
-      return;
-    }
-  }
-
   /// Check for `mustprogress` and `readonly` as they imply `willreturn`.
   bool isImpliedByMustprogressAndReadonly(Attributor &A, bool KnownOnly) {
     // Check for `mustprogress` in the scope and the associated function which

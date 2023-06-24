@@ -103,7 +103,7 @@ define internal void @bar() {
 ; CHECK-DISABLED-SAME: () #[[ATTR1]] {
 ; CHECK-DISABLED-NEXT:  entry:
 ; CHECK-DISABLED-NEXT:    [[TMP0:%.*]] = call align 4 ptr @__kmpc_alloc_shared(i64 4) #[[ATTR5:[0-9]+]], !dbg [[DBG8:![0-9]+]]
-; CHECK-DISABLED-NEXT:    call void @share(ptr nofree [[TMP0]]) #[[ATTR1]], !dbg [[DBG8]]
+; CHECK-DISABLED-NEXT:    call void @share(ptr nofree [[TMP0]]) #[[ATTR6:[0-9]+]], !dbg [[DBG8]]
 ; CHECK-DISABLED-NEXT:    call void @__kmpc_free_shared(ptr [[TMP0]], i64 4) #[[ATTR5]]
 ; CHECK-DISABLED-NEXT:    ret void
 ;
@@ -268,6 +268,7 @@ declare void @unknown_no_openmp() "llvm.assume"="omp_no_openmp"
 ; CHECK-DISABLED: attributes #[[ATTR3:[0-9]+]] = { nosync nounwind allocsize(0) }
 ; CHECK-DISABLED: attributes #[[ATTR4:[0-9]+]] = { "llvm.assume"="omp_no_openmp" }
 ; CHECK-DISABLED: attributes #[[ATTR5]] = { nounwind }
+; CHECK-DISABLED: attributes #[[ATTR6]] = { nosync nounwind memory(write) }
 ;.
 ; CHECK: [[META0:![0-9]+]] = distinct !DICompileUnit(language: DW_LANG_C99, file: !1, producer: "clang version 13.0.0", isOptimized: false, runtimeVersion: 0, emissionKind: FullDebug, enums: !2, splitDebugInlining: false, nameTableKind: None)
 ; CHECK: [[META1:![0-9]+]] = !DIFile(filename: "remove_globalization.c", directory: "/tmp/remove_globalization.c")

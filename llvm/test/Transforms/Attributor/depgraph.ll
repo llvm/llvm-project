@@ -80,11 +80,8 @@ define ptr @checkAndAdvance(ptr align 16 %0) {
 ; GRAPH-NEXT:   updates [AANoUnwind] for CtxI '  %6 = call ptr @checkAndAdvance(ptr %5)' at position {cs: [@-1]} with state nounwind
 ; GRAPH-NEXT:   updates [AANoCapture] for CtxI '  %2 = load i32, ptr %0, align 4' at position {arg: [@0]} with state assumed not-captured-maybe-returned
 ; GRAPH-EMPTY:
-; GRAPH-NEXT: [AAMemoryLocation] for CtxI '  %6 = call ptr @checkAndAdvance(ptr %5)' at position {cs: [@-1]} with state memory:argument
-; GRAPH-NEXT:   updates [AAMemoryLocation] for CtxI '  %2 = load i32, ptr %0, align 4' at position {fn:checkAndAdvance [checkAndAdvance@-1]} with state memory:argument
-; GRAPH-EMPTY:
-; GRAPH-NEXT: [AAMemoryLocation] for CtxI '  %2 = load i32, ptr %0, align 4' at position {fn:checkAndAdvance [checkAndAdvance@-1]} with state memory:argument
-; GRAPH-NEXT:   updates [AAMemoryLocation] for CtxI '  %6 = call ptr @checkAndAdvance(ptr %5)' at position {cs: [@-1]} with state memory:argument
+; GRAPH-NEXT: [AAMemoryBehavior] for CtxI '  %6 = call ptr @checkAndAdvance(ptr %5)' at position {cs: [@-1]} with state readonly
+; GRAPH-NEXT:   updates [AAMemoryBehavior] for CtxI '  %2 = load i32, ptr %0, align 4' at position {fn:checkAndAdvance [checkAndAdvance@-1]} with state readonly
 ; GRAPH-EMPTY:
 ; GRAPH-NEXT: [AAMemoryBehavior] for CtxI '  %2 = load i32, ptr %0, align 4' at position {fn:checkAndAdvance [checkAndAdvance@-1]} with state readonly
 ; GRAPH-NEXT:   updates [AAMemoryBehavior] for CtxI '  %6 = call ptr @checkAndAdvance(ptr %5)' at position {cs: [@-1]} with state readonly
@@ -97,9 +94,6 @@ define ptr @checkAndAdvance(ptr align 16 %0) {
 ; GRAPH-EMPTY:
 ; GRAPH-NEXT: [AAIsDead] for CtxI '  br i1 %3, label %4, label %7' at position {flt: [@-1]} with state assumed-live
 ; GRAPH-EMPTY:
-; GRAPH-NEXT: [AAMemoryBehavior] for CtxI '  %6 = call ptr @checkAndAdvance(ptr %5)' at position {cs: [@-1]} with state readonly
-; GRAPH-NEXT:   updates [AAMemoryBehavior] for CtxI '  %2 = load i32, ptr %0, align 4' at position {fn:checkAndAdvance [checkAndAdvance@-1]} with state readonly
-; GRAPH-EMPTY:
 ; GRAPH-NEXT: [AAPotentialValues] for CtxI '  %6 = call ptr @checkAndAdvance(ptr %5)' at position {cs_ret: [@-1]} with state set-state(< {  %5 = getelementptr inbounds i32, ptr %0, i64 4[3],   %5 = getelementptr inbounds i32, ptr %0, i64 4[3], } >)
 ; GRAPH-NEXT:   updates [AAPotentialValues] for CtxI '  %.0 = phi ptr [ %6, %4 ], [ %0, %7 ]' at position {flt:.0 [.0@-1]} with state set-state(< {ptr %0[3],   %5 = getelementptr inbounds i32, ptr %0, i64 4[3],   %5 = getelementptr inbounds i32, ptr %0, i64 4[3], } >)
 ; GRAPH-EMPTY:
@@ -108,9 +102,9 @@ define ptr @checkAndAdvance(ptr align 16 %0) {
 ; GRAPH-EMPTY:
 ; GRAPH-NEXT: [AAReturnedValues] for CtxI '  %2 = load i32, ptr %0, align 4' at position {fn:checkAndAdvance [checkAndAdvance@-1]} with state may-return(#2)
 ; GRAPH-NEXT:   updates [AAPotentialValues] for CtxI '  %2 = load i32, ptr %0, align 4' at position {fn_ret:checkAndAdvance [checkAndAdvance@-1]} with state set-state(< {ptr %0[3],   %5 = getelementptr inbounds i32, ptr %0, i64 4[3], } >)
+; GRAPH-NEXT:   updates [AANoCapture] for CtxI '  %2 = load i32, ptr %0, align 4' at position {arg: [@0]} with state assumed not-captured-maybe-returned
 ; GRAPH-NEXT:   updates [AAAlign] for CtxI '  %2 = load i32, ptr %0, align 4' at position {fn_ret:checkAndAdvance [checkAndAdvance@-1]} with state align<1-16>
 ; GRAPH-NEXT:   updates [AANonNull] for CtxI '  %2 = load i32, ptr %0, align 4' at position {fn_ret:checkAndAdvance [checkAndAdvance@-1]} with state nonnull
-; GRAPH-NEXT:   updates [AANoCapture] for CtxI '  %2 = load i32, ptr %0, align 4' at position {arg: [@0]} with state assumed not-captured-maybe-returned
 ; GRAPH-EMPTY:
 ; GRAPH-NEXT: [AAPotentialValues] for CtxI '  %.0 = phi ptr [ %6, %4 ], [ %0, %7 ]' at position {flt:.0 [.0@-1]} with state set-state(< {ptr %0[3],   %5 = getelementptr inbounds i32, ptr %0, i64 4[3],   %5 = getelementptr inbounds i32, ptr %0, i64 4[3], } >)
 ; GRAPH-NEXT:   updates [AAReturnedValues] for CtxI '  %2 = load i32, ptr %0, align 4' at position {fn:checkAndAdvance [checkAndAdvance@-1]} with state may-return(#2)
@@ -166,6 +160,36 @@ define ptr @checkAndAdvance(ptr align 16 %0) {
 ; GRAPH-NEXT: [AANoFree] for CtxI '  %6 = call ptr @checkAndAdvance(ptr %5)' at position {cs: [@-1]} with state nofree
 ; GRAPH-NEXT:   updates [AANoFree] for CtxI '  %2 = load i32, ptr %0, align 4' at position {fn:checkAndAdvance [checkAndAdvance@-1]} with state nofree
 ; GRAPH-EMPTY:
+; GRAPH-NEXT: [AAMemoryLocation] for CtxI '  %2 = load i32, ptr %0, align 4' at position {fn:checkAndAdvance [checkAndAdvance@-1]} with state memory:argument
+; GRAPH-NEXT:   updates [AAMemoryLocation] for CtxI '  %6 = call ptr @checkAndAdvance(ptr %5)' at position {cs: [@-1]} with state memory:argument
+; GRAPH-EMPTY:
+; GRAPH-NEXT: [AAMemoryLocation] for CtxI '  %6 = call ptr @checkAndAdvance(ptr %5)' at position {cs: [@-1]} with state memory:argument
+; GRAPH-NEXT:   updates [AAMemoryLocation] for CtxI '  %2 = load i32, ptr %0, align 4' at position {fn:checkAndAdvance [checkAndAdvance@-1]} with state memory:argument
+; GRAPH-EMPTY:
+; GRAPH-NEXT: [AAMemoryBehavior] for CtxI '  %6 = call ptr @checkAndAdvance(ptr %5)' at position {cs_arg: [@0]} with state readonly
+; GRAPH-NEXT:   updates [AAMemoryBehavior] for CtxI '  %2 = load i32, ptr %0, align 4' at position {arg: [@0]} with state readonly
+; GRAPH-NEXT:   updates [AAMemoryLocation] for CtxI '  %2 = load i32, ptr %0, align 4' at position {fn:checkAndAdvance [checkAndAdvance@-1]} with state memory:argument
+; GRAPH-EMPTY:
+; GRAPH-NEXT: [AAMemoryBehavior] for CtxI '  %2 = load i32, ptr %0, align 4' at position {arg: [@0]} with state readonly
+; GRAPH-NEXT:   updates [AAMemoryBehavior] for CtxI '  %6 = call ptr @checkAndAdvance(ptr %5)' at position {cs_arg: [@0]} with state readonly
+; GRAPH-EMPTY:
+; GRAPH-NEXT: [AANoCapture] for CtxI '  %2 = load i32, ptr %0, align 4' at position {arg: [@0]} with state assumed not-captured-maybe-returned
+; GRAPH-NEXT:   updates [AANoCapture] for CtxI '  %6 = call ptr @checkAndAdvance(ptr %5)' at position {cs_arg: [@0]} with state assumed not-captured-maybe-returned
+; GRAPH-NEXT:   updates [AAMemoryBehavior] for CtxI '  %2 = load i32, ptr %0, align 4' at position {arg: [@0]} with state readonly
+; GRAPH-EMPTY:
+; GRAPH-NEXT: [AAIsDead] for CtxI '  %5 = getelementptr inbounds i32, ptr %0, i64 4' at position {flt: [@-1]} with state assumed-live
+; GRAPH-EMPTY:
+; GRAPH-NEXT: [AAIsDead] for CtxI '  %6 = call ptr @checkAndAdvance(ptr %5)' at position {cs_arg: [@0]} with state assumed-live
+; GRAPH-EMPTY:
+; GRAPH-NEXT: [AAIsDead] for CtxI '  %2 = load i32, ptr %0, align 4' at position {arg: [@0]} with state assumed-live
+; GRAPH-EMPTY:
+; GRAPH-NEXT: [AANoCapture] for CtxI '  %6 = call ptr @checkAndAdvance(ptr %5)' at position {cs_arg: [@0]} with state assumed not-captured-maybe-returned
+; GRAPH-NEXT:   updates [AANoCapture] for CtxI '  %2 = load i32, ptr %0, align 4' at position {arg: [@0]} with state assumed not-captured-maybe-returned
+; GRAPH-EMPTY:
+; GRAPH-NEXT: [AAIsDead] for CtxI '  br label %8' at position {flt: [@-1]} with state assumed-live
+; GRAPH-EMPTY:
+; GRAPH-NEXT: [AAUnderlyingObjects] for CtxI '  %5 = getelementptr inbounds i32, ptr %0, i64 4' at position {flt: [@-1]} with state UnderlyingObjects inter #1 objs, intra #1 objs
+; GRAPH-EMPTY:
 ; GRAPH-NEXT: [AAAssumptionInfo] for CtxI '  %2 = load i32, ptr %0, align 4' at position {fn:checkAndAdvance [checkAndAdvance@-1]} with state Known [], Assumed []
 ; GRAPH-EMPTY:
 ; GRAPH-NEXT: [AAHeapToStack] for CtxI '  %2 = load i32, ptr %0, align 4' at position {fn:checkAndAdvance [checkAndAdvance@-1]} with state [H2S] Mallocs Good/Bad: 0/0
@@ -198,29 +222,7 @@ define ptr @checkAndAdvance(ptr align 16 %0) {
 ; GRAPH-NEXT:   updates [AANonNull] for CtxI '  %6 = call ptr @checkAndAdvance(ptr %5)' at position {cs_arg: [@0]} with state nonnull
 ; GRAPH-NEXT:   updates [AANonNull] for CtxI '  %2 = load i32, ptr %0, align 4' at position {fn_ret:checkAndAdvance [checkAndAdvance@-1]} with state nonnull
 ; GRAPH-EMPTY:
-; GRAPH-NEXT: [AAIsDead] for CtxI '  %2 = load i32, ptr %0, align 4' at position {arg: [@0]} with state assumed-live
-; GRAPH-EMPTY:
 ; GRAPH-NEXT: [AANoAlias] for CtxI '  %2 = load i32, ptr %0, align 4' at position {arg: [@0]} with state may-alias
-; GRAPH-EMPTY:
-; GRAPH-NEXT: [AANoCapture] for CtxI '  %2 = load i32, ptr %0, align 4' at position {arg: [@0]} with state assumed not-captured-maybe-returned
-; GRAPH-NEXT:   updates [AANoCapture] for CtxI '  %6 = call ptr @checkAndAdvance(ptr %5)' at position {cs_arg: [@0]} with state assumed not-captured-maybe-returned
-; GRAPH-NEXT:   updates [AAMemoryBehavior] for CtxI '  %2 = load i32, ptr %0, align 4' at position {arg: [@0]} with state readonly
-; GRAPH-EMPTY:
-; GRAPH-NEXT: [AAIsDead] for CtxI '  %5 = getelementptr inbounds i32, ptr %0, i64 4' at position {flt: [@-1]} with state assumed-live
-; GRAPH-EMPTY:
-; GRAPH-NEXT: [AAIsDead] for CtxI '  %6 = call ptr @checkAndAdvance(ptr %5)' at position {cs_arg: [@0]} with state assumed-live
-; GRAPH-EMPTY:
-; GRAPH-NEXT: [AANoCapture] for CtxI '  %6 = call ptr @checkAndAdvance(ptr %5)' at position {cs_arg: [@0]} with state assumed not-captured-maybe-returned
-; GRAPH-NEXT:   updates [AANoCapture] for CtxI '  %2 = load i32, ptr %0, align 4' at position {arg: [@0]} with state assumed not-captured-maybe-returned
-; GRAPH-EMPTY:
-; GRAPH-NEXT: [AAIsDead] for CtxI '  br label %8' at position {flt: [@-1]} with state assumed-live
-; GRAPH-EMPTY:
-; GRAPH-NEXT: [AAMemoryBehavior] for CtxI '  %2 = load i32, ptr %0, align 4' at position {arg: [@0]} with state readonly
-; GRAPH-NEXT:   updates [AAMemoryBehavior] for CtxI '  %6 = call ptr @checkAndAdvance(ptr %5)' at position {cs_arg: [@0]} with state readonly
-; GRAPH-EMPTY:
-; GRAPH-NEXT: [AAMemoryBehavior] for CtxI '  %6 = call ptr @checkAndAdvance(ptr %5)' at position {cs_arg: [@0]} with state readonly
-; GRAPH-NEXT:   updates [AAMemoryBehavior] for CtxI '  %2 = load i32, ptr %0, align 4' at position {arg: [@0]} with state readonly
-; GRAPH-NEXT:   updates [AAMemoryLocation] for CtxI '  %2 = load i32, ptr %0, align 4' at position {fn:checkAndAdvance [checkAndAdvance@-1]} with state memory:argument
 ; GRAPH-EMPTY:
 ; GRAPH-NEXT: [AANoFree] for CtxI '  %2 = load i32, ptr %0, align 4' at position {arg: [@0]} with state nofree
 ; GRAPH-NEXT:   updates [AANoFree] for CtxI '  %6 = call ptr @checkAndAdvance(ptr %5)' at position {cs_arg: [@0]} with state nofree
@@ -234,8 +236,6 @@ define ptr @checkAndAdvance(ptr align 16 %0) {
 ; GRAPH-NEXT: [AANoAlias] for CtxI '  %5 = getelementptr inbounds i32, ptr %0, i64 4' at position {flt: [@-1]} with state may-alias
 ; GRAPH-EMPTY:
 ; GRAPH-NEXT: [AANoFree] for CtxI '  %6 = call ptr @checkAndAdvance(ptr %5)' at position {cs_arg: [@0]} with state nofree
-; GRAPH-EMPTY:
-; GRAPH-NEXT: [AAUnderlyingObjects] for CtxI '  %5 = getelementptr inbounds i32, ptr %0, i64 4' at position {flt: [@-1]} with state UnderlyingObjects inter #1 objs, intra #1 objs
 ; GRAPH-EMPTY:
 ; GRAPH-NEXT: [AADereferenceable] for CtxI '  %5 = getelementptr inbounds i32, ptr %0, i64 4' at position {flt: [@-1]} with state unknown-dereferenceable
 
@@ -321,15 +321,12 @@ define ptr @checkAndAdvance(ptr align 16 %0) {
 ; DOT-DAG: Node[[Node74:0x[a-z0-9]+]] [shape=record,label="{[AADereferenceable]
 
 ; DOT-DAG: Node[[Node20]] -> Node[[Node19]];
-; DOT-DAG: Node[[Node67]] -> Node[[Node13]];
 ; DOT-DAG: Node[[Node58]] -> Node[[Node58]];
 ; DOT-DAG: Node[[Node13]] -> Node[[Node12]];
 ; DOT-DAG: Node[[Node55]] -> Node[[Node56]];
 ; DOT-DAG: Node[[Node68]] -> Node[[Node73]];
-; DOT-DAG: Node[[Node61]] -> Node[[Node66]];
 ; DOT-DAG: Node[[Node21]] -> Node[[Node20]];
 ; DOT-DAG: Node[[Node64]] -> Node[[Node61]];
-; DOT-DAG: Node[[Node14]] -> Node[[Node61]];
 ; DOT-DAG: Node[[Node61]] -> Node[[Node64]];
 ; DOT-DAG: Node[[Node12]] -> Node[[Node13]];
 ; DOT-DAG: Node[[Node11]] -> Node[[Node61]];
@@ -339,7 +336,6 @@ define ptr @checkAndAdvance(ptr align 16 %0) {
 ; DOT-DAG: Node[[Node43]] -> Node[[Node68]];
 ; DOT-DAG: Node[[Node19]] -> Node[[Node22]];
 ; DOT-DAG: Node[[Node21]] -> Node[[Node51]];
-; DOT-DAG: Node[[Node14]] -> Node[[Node66]];
 ; DOT-DAG: Node[[Node10]] -> Node[[Node11]];
 ; DOT-DAG: Node[[Node41]] -> Node[[Node42]];
 ; DOT-DAG: Node[[Node42]] -> Node[[Node41]];
@@ -354,7 +350,7 @@ define ptr @checkAndAdvance(ptr align 16 %0) {
 ; DOT-DAG: Node[[Node43]] -> Node[[Node44]];
 ;.
 ; CHECK: attributes #[[ATTR0]] = { nofree nosync nounwind memory(argmem: read) }
-; CHECK: attributes #[[ATTR1]] = { nofree nosync nounwind }
+; CHECK: attributes #[[ATTR1]] = { nofree nosync nounwind memory(read) }
 ;.
 ;; NOTE: These prefixes are unused and the list is autogenerated. Do not add tests below this line:
 ; GRAPH: {{.*}}

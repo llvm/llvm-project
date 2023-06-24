@@ -3670,6 +3670,22 @@ struct AANoAlias
                          StateWrapper<BooleanState, AbstractAttribute>> {
   AANoAlias(const IRPosition &IRP, Attributor &A) : IRAttribute(IRP) {}
 
+  static bool isImpliedByIR(Attributor &A, const IRPosition &IRP,
+                            ArrayRef<Attribute::AttrKind> AttrKinds,
+                            bool IgnoreSubsumingPositions = false) {
+    if (IRAttribute::isImpliedByIR(A, IRP, AttrKinds))
+      return true;
+
+    Value &Val = IRP.getAnchorValue();
+    if (isa<AllocaInst>(Val))
+      return true;
+    if (isa<ConstantPointerNull>(Val) &&
+        !NullPointerIsDefined(IRP.getAnchorScope(),
+                              Val.getType()->getPointerAddressSpace()))
+      return true;
+    return false;
+  }
+
   /// Return true if we assume that the underlying value is alias.
   bool isAssumedNoAlias() const { return getAssumed(); }
 
@@ -5797,24 +5813,27 @@ bool hasAssumedIRAttr(Attributor &A, const AbstractAttribute &QueryingAA,
                       bool IgnoreSubsumingPositions = false) {
   IsKnown = false;
   switch (AK) {
-#define CASE(ATTRNAME, AANAME)                                                 \
+#define CASE(ATTRNAME, AANAME, ...)                                            \
   case Attribute::ATTRNAME: {                                                  \
     if (AANAME::isImpliedByIR(A, IRP, {AK}, IgnoreSubsumingPositions))         \
       return IsKnown = true;                                                   \
     const auto *AA = A.getAAFor<AANAME>(QueryingAA, IRP, DepClass);            \
-    if (!AA || !AA->isAssumed())                                               \
+    if (!AA || !AA->isAssumed(__VA_ARGS__))                                    \
       return false;                                                            \
-    IsKnown = AA->isKnown();                                                   \
+    IsKnown = AA->isKnown(__VA_ARGS__);                                        \
     return true;                                                               \
   }
-    CASE(NoUnwind, AANoUnwind);
-    CASE(WillReturn, AAWillReturn);
-    CASE(NoFree, AANoFree);
-    CASE(NoCapture, AANoCapture);
-    CASE(NoRecurse, AANoRecurse);
-    CASE(NoSync, AANoSync);
-    CASE(NoAlias, AANoAlias);
-    CASE(MustProgress, AAMustProgress);
+    CASE(NoUnwind, AANoUnwind, );
+    CASE(WillReturn, AAWillReturn, );
+    CASE(NoFree, AANoFree, );
+    CASE(NoCapture, AANoCapture, );
+    CASE(NoRecurse, AANoRecurse, );
+    CASE(NoSync, AANoSync, );
+    CASE(NoAlias, AANoAlias, );
+    CASE(MustProgress, AAMustProgress, );
+    CASE(ReadNone, AAMemoryBehavior, AAMemoryBehavior::NO_ACCESSES);
+    CASE(ReadOnly, AAMemoryBehavior, AAMemoryBehavior::NO_WRITES);
+    CASE(WriteOnly, AAMemoryBehavior, AAMemoryBehavior::NO_READS);
 #undef CASE
   default:
     llvm_unreachable("hasAssumedIRAttr not available for this attribute kind");
