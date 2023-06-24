@@ -10,10 +10,6 @@
 #define AL(P, O) __opencl_atomic_load(P, O, memory_scope_device)
 #define ACE(P, E, V, O) __opencl_atomic_compare_exchange_strong(P, E, V, O, O, memory_scope_device)
 
-#ifndef NULL
-#define NULL 0
-#endif
-
 #define OFFSET 8
 
 // Atomically reserves space to the printf data buffer and returns a pointer to it
