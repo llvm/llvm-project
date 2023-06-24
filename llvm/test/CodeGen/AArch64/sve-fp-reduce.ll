@@ -47,7 +47,7 @@ define half @fadda_nxv6f16(<vscale x 6 x half> %v, half %s) {
 ; CHECK-NEXT:    .cfi_offset w29, -16
 ; CHECK-NEXT:    addvl sp, sp, #-1
 ; CHECK-NEXT:    .cfi_escape 0x0f, 0x0c, 0x8f, 0x00, 0x11, 0x10, 0x22, 0x11, 0x08, 0x92, 0x2e, 0x00, 0x1e, 0x22 // sp + 16 + 8 * VG
-; CHECK-NEXT:    mov w8, #32768
+; CHECK-NEXT:    mov w8, #32768 // =0x8000
 ; CHECK-NEXT:    ptrue p0.h
 ; CHECK-NEXT:    ptrue p1.d
 ; CHECK-NEXT:    st1h { z0.h }, p0, [sp]
@@ -72,7 +72,7 @@ define half @fadda_nxv10f16(<vscale x 10 x half> %v, half %s) {
 ; CHECK-NEXT:    .cfi_offset w29, -16
 ; CHECK-NEXT:    addvl sp, sp, #-3
 ; CHECK-NEXT:    .cfi_escape 0x0f, 0x0c, 0x8f, 0x00, 0x11, 0x10, 0x22, 0x11, 0x18, 0x92, 0x2e, 0x00, 0x1e, 0x22 // sp + 16 + 24 * VG
-; CHECK-NEXT:    mov w8, #32768
+; CHECK-NEXT:    mov w8, #32768 // =0x8000
 ; CHECK-NEXT:    ptrue p0.h
 ; CHECK-NEXT:    ptrue p1.d
 ; CHECK-NEXT:    st1h { z1.h }, p0, [sp]
@@ -100,7 +100,7 @@ define half @fadda_nxv10f16(<vscale x 10 x half> %v, half %s) {
 define half @fadda_nxv12f16(<vscale x 12 x half> %v, half %s) {
 ; CHECK-LABEL: fadda_nxv12f16:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov w8, #32768
+; CHECK-NEXT:    mov w8, #32768 // =0x8000
 ; CHECK-NEXT:    // kill: def $h2 killed $h2 def $z2
 ; CHECK-NEXT:    uunpklo z1.s, z1.h
 ; CHECK-NEXT:    ptrue p0.h
@@ -218,7 +218,7 @@ define double @faddv_nxv2f64(double %init, <vscale x 2 x double> %a) {
   ret double %res
 }
 
-; FMAXV
+; FMAXNMV
 
 define half @fmaxv_nxv2f16(<vscale x 2 x half> %a) {
 ; CHECK-LABEL: fmaxv_nxv2f16:
@@ -286,7 +286,7 @@ define double @fmaxv_nxv2f64(<vscale x 2 x double> %a) {
   ret double %res
 }
 
-; FMINV
+; FMINNMV
 
 define half @fminv_nxv2f16(<vscale x 2 x half> %a) {
 ; CHECK-LABEL: fminv_nxv2f16:
@@ -354,6 +354,145 @@ define double @fminv_nxv2f64(<vscale x 2 x double> %a) {
   ret double %res
 }
 
+
+
+
+; FMAXV
+
+define half @fmaximumv_nxv2f16(<vscale x 2 x half> %a) {
+; CHECK-LABEL: fmaximumv_nxv2f16:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    ptrue p0.d
+; CHECK-NEXT:    fmaxv h0, p0, z0.h
+; CHECK-NEXT:    // kill: def $h0 killed $h0 killed $z0
+; CHECK-NEXT:    ret
+  %res = call half @llvm.vector.reduce.fmaximum.nxv2f16(<vscale x 2 x half> %a)
+  ret half %res
+}
+
+define half @fmaximumv_nxv4f16(<vscale x 4 x half> %a) {
+; CHECK-LABEL: fmaximumv_nxv4f16:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    ptrue p0.s
+; CHECK-NEXT:    fmaxv h0, p0, z0.h
+; CHECK-NEXT:    // kill: def $h0 killed $h0 killed $z0
+; CHECK-NEXT:    ret
+  %res = call half @llvm.vector.reduce.fmaximum.nxv4f16(<vscale x 4 x half> %a)
+  ret half %res
+}
+
+define half @fmaximumv_nxv8f16(<vscale x 8 x half> %a) {
+; CHECK-LABEL: fmaximumv_nxv8f16:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    ptrue p0.h
+; CHECK-NEXT:    fmaxv h0, p0, z0.h
+; CHECK-NEXT:    // kill: def $h0 killed $h0 killed $z0
+; CHECK-NEXT:    ret
+  %res = call half @llvm.vector.reduce.fmaximum.nxv8f16(<vscale x 8 x half> %a)
+  ret half %res
+}
+
+define float @fmaximumv_nxv2f32(<vscale x 2 x float> %a) {
+; CHECK-LABEL: fmaximumv_nxv2f32:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    ptrue p0.d
+; CHECK-NEXT:    fmaxv s0, p0, z0.s
+; CHECK-NEXT:    // kill: def $s0 killed $s0 killed $z0
+; CHECK-NEXT:    ret
+  %res = call float @llvm.vector.reduce.fmaximum.nxv2f32(<vscale x 2 x float> %a)
+  ret float %res
+}
+
+define float @fmaximumv_nxv4f32(<vscale x 4 x float> %a) {
+; CHECK-LABEL: fmaximumv_nxv4f32:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    ptrue p0.s
+; CHECK-NEXT:    fmaxv s0, p0, z0.s
+; CHECK-NEXT:    // kill: def $s0 killed $s0 killed $z0
+; CHECK-NEXT:    ret
+  %res = call float @llvm.vector.reduce.fmaximum.nxv4f32(<vscale x 4 x float> %a)
+  ret float %res
+}
+
+define double @fmaximumv_nxv2f64(<vscale x 2 x double> %a) {
+; CHECK-LABEL: fmaximumv_nxv2f64:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    ptrue p0.d
+; CHECK-NEXT:    fmaxv d0, p0, z0.d
+; CHECK-NEXT:    // kill: def $d0 killed $d0 killed $z0
+; CHECK-NEXT:    ret
+  %res = call double @llvm.vector.reduce.fmaximum.nxv2f64(<vscale x 2 x double> %a)
+  ret double %res
+}
+
+; FMINV
+
+define half @fminimumv_nxv2f16(<vscale x 2 x half> %a) {
+; CHECK-LABEL: fminimumv_nxv2f16:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    ptrue p0.d
+; CHECK-NEXT:    fminv h0, p0, z0.h
+; CHECK-NEXT:    // kill: def $h0 killed $h0 killed $z0
+; CHECK-NEXT:    ret
+  %res = call half @llvm.vector.reduce.fminimum.nxv2f16(<vscale x 2 x half> %a)
+  ret half %res
+}
+
+define half @fminimumv_nxv4f16(<vscale x 4 x half> %a) {
+; CHECK-LABEL: fminimumv_nxv4f16:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    ptrue p0.s
+; CHECK-NEXT:    fminv h0, p0, z0.h
+; CHECK-NEXT:    // kill: def $h0 killed $h0 killed $z0
+; CHECK-NEXT:    ret
+  %res = call half @llvm.vector.reduce.fminimum.nxv4f16(<vscale x 4 x half> %a)
+  ret half %res
+}
+
+define half @fminimumv_nxv8f16(<vscale x 8 x half> %a) {
+; CHECK-LABEL: fminimumv_nxv8f16:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    ptrue p0.h
+; CHECK-NEXT:    fminv h0, p0, z0.h
+; CHECK-NEXT:    // kill: def $h0 killed $h0 killed $z0
+; CHECK-NEXT:    ret
+  %res = call half @llvm.vector.reduce.fminimum.nxv8f16(<vscale x 8 x half> %a)
+  ret half %res
+}
+
+define float @fminimumv_nxv2f32(<vscale x 2 x float> %a) {
+; CHECK-LABEL: fminimumv_nxv2f32:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    ptrue p0.d
+; CHECK-NEXT:    fminv s0, p0, z0.s
+; CHECK-NEXT:    // kill: def $s0 killed $s0 killed $z0
+; CHECK-NEXT:    ret
+  %res = call float @llvm.vector.reduce.fminimum.nxv2f32(<vscale x 2 x float> %a)
+  ret float %res
+}
+
+define float @fminimumv_nxv4f32(<vscale x 4 x float> %a) {
+; CHECK-LABEL: fminimumv_nxv4f32:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    ptrue p0.s
+; CHECK-NEXT:    fminv s0, p0, z0.s
+; CHECK-NEXT:    // kill: def $s0 killed $s0 killed $z0
+; CHECK-NEXT:    ret
+  %res = call float @llvm.vector.reduce.fminimum.nxv4f32(<vscale x 4 x float> %a)
+  ret float %res
+}
+
+define double @fminimumv_nxv2f64(<vscale x 2 x double> %a) {
+; CHECK-LABEL: fminimumv_nxv2f64:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    ptrue p0.d
+; CHECK-NEXT:    fminv d0, p0, z0.d
+; CHECK-NEXT:    // kill: def $d0 killed $d0 killed $z0
+; CHECK-NEXT:    ret
+  %res = call double @llvm.vector.reduce.fminimum.nxv2f64(<vscale x 2 x double> %a)
+  ret double %res
+}
+
 define float @fadd_reduct_reassoc_v4v8f32(<vscale x 4 x float> %a, <vscale x 8 x float> %b) {
 ; CHECK-LABEL: fadd_reduct_reassoc_v4v8f32:
 ; CHECK:       // %bb.0:
@@ -393,3 +532,17 @@ declare half @llvm.vector.reduce.fmin.nxv8f16(<vscale x 8 x half>)
 declare float @llvm.vector.reduce.fmin.nxv2f32(<vscale x 2 x float>)
 declare float @llvm.vector.reduce.fmin.nxv4f32(<vscale x 4 x float>)
 declare double @llvm.vector.reduce.fmin.nxv2f64(<vscale x 2 x double>)
+
+declare half @llvm.vector.reduce.fmaximum.nxv2f16(<vscale x 2 x half>)
+declare half @llvm.vector.reduce.fmaximum.nxv4f16(<vscale x 4 x half>)
+declare half @llvm.vector.reduce.fmaximum.nxv8f16(<vscale x 8 x half>)
+declare float @llvm.vector.reduce.fmaximum.nxv2f32(<vscale x 2 x float>)
+declare float @llvm.vector.reduce.fmaximum.nxv4f32(<vscale x 4 x float>)
+declare double @llvm.vector.reduce.fmaximum.nxv2f64(<vscale x 2 x double>)
+
+declare half @llvm.vector.reduce.fminimum.nxv2f16(<vscale x 2 x half>)
+declare half @llvm.vector.reduce.fminimum.nxv4f16(<vscale x 4 x half>)
+declare half @llvm.vector.reduce.fminimum.nxv8f16(<vscale x 8 x half>)
+declare float @llvm.vector.reduce.fminimum.nxv2f32(<vscale x 2 x float>)
+declare float @llvm.vector.reduce.fminimum.nxv4f32(<vscale x 4 x float>)
+declare double @llvm.vector.reduce.fminimum.nxv2f64(<vscale x 2 x double>)
