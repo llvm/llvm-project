@@ -57,7 +57,7 @@ define void @f() {
 ;.
 ; TUNIT: attributes #[[ATTR0]] = { mustprogress nofree norecurse nosync nounwind willreturn memory(argmem: write) }
 ; TUNIT: attributes #[[ATTR1]] = { mustprogress nofree norecurse nosync nounwind willreturn memory(none) }
-; TUNIT: attributes #[[ATTR2]] = { nofree nosync nounwind willreturn }
+; TUNIT: attributes #[[ATTR2]] = { nofree nosync nounwind willreturn memory(write) }
 ;.
 ; CGSCC: attributes #[[ATTR0]] = { mustprogress nofree norecurse nosync nounwind willreturn memory(argmem: readwrite) }
 ; CGSCC: attributes #[[ATTR1]] = { mustprogress nofree nosync nounwind willreturn memory(none) }

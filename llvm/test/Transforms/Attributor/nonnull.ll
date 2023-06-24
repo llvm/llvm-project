@@ -406,7 +406,7 @@ define internal ptr @f1(ptr %arg) {
 ; TUNIT-NEXT:    [[TMP5C:%.*]] = getelementptr inbounds i32, ptr [[TMP5B]], i64 -1
 ; TUNIT-NEXT:    br label [[BB9]]
 ; TUNIT:       bb6:
-; TUNIT-NEXT:    [[TMP7:%.*]] = tail call ptr @f2(ptr nofree nonnull readonly align 4 dereferenceable(4) [[ARG]]) #[[ATTR15]]
+; TUNIT-NEXT:    [[TMP7:%.*]] = tail call ptr @f2(ptr nofree nonnull readonly align 4 dereferenceable(4) [[ARG]]) #[[ATTR16:[0-9]+]]
 ; TUNIT-NEXT:    ret ptr [[TMP7]]
 ; TUNIT:       bb9:
 ; TUNIT-NEXT:    [[TMP10:%.*]] = phi ptr [ [[TMP5C]], [[BB4]] ], [ inttoptr (i64 4 to ptr), [[BB:%.*]] ]
@@ -428,7 +428,7 @@ define internal ptr @f1(ptr %arg) {
 ; CGSCC-NEXT:    [[TMP5C:%.*]] = getelementptr inbounds i32, ptr [[TMP5B]], i64 -1
 ; CGSCC-NEXT:    br label [[BB9]]
 ; CGSCC:       bb6:
-; CGSCC-NEXT:    [[TMP7:%.*]] = tail call ptr @f2(ptr nofree nonnull readonly align 4 dereferenceable(4) [[ARG]]) #[[ATTR15]]
+; CGSCC-NEXT:    [[TMP7:%.*]] = tail call ptr @f2(ptr nofree nonnull readonly align 4 dereferenceable(4) [[ARG]]) #[[ATTR16:[0-9]+]]
 ; CGSCC-NEXT:    ret ptr [[TMP7]]
 ; CGSCC:       bb9:
 ; CGSCC-NEXT:    [[TMP10:%.*]] = phi ptr [ [[TMP5C]], [[BB4]] ], [ inttoptr (i64 4 to ptr), [[BB:%.*]] ]
@@ -1539,7 +1539,8 @@ attributes #1 = { nounwind willreturn}
 ; TUNIT: attributes #[[ATTR12]] = { noinline optnone }
 ; TUNIT: attributes #[[ATTR13:[0-9]+]] = { nofree nounwind willreturn memory(read) }
 ; TUNIT: attributes #[[ATTR14]] = { mustprogress nofree nounwind willreturn memory(read) }
-; TUNIT: attributes #[[ATTR15]] = { nofree nosync nounwind }
+; TUNIT: attributes #[[ATTR15]] = { nofree nosync nounwind memory(read) }
+; TUNIT: attributes #[[ATTR16]] = { nofree nosync nounwind }
 ;.
 ; CGSCC: attributes #[[ATTR0:[0-9]+]] = { nocallback nofree nosync nounwind willreturn memory(inaccessiblemem: readwrite) }
 ; CGSCC: attributes #[[ATTR1]] = { mustprogress nofree norecurse nosync nounwind willreturn memory(none) }
@@ -1556,5 +1557,6 @@ attributes #1 = { nounwind willreturn}
 ; CGSCC: attributes #[[ATTR12]] = { noinline optnone }
 ; CGSCC: attributes #[[ATTR13:[0-9]+]] = { nofree nounwind willreturn memory(read) }
 ; CGSCC: attributes #[[ATTR14]] = { mustprogress nofree nounwind willreturn memory(read) }
-; CGSCC: attributes #[[ATTR15]] = { nofree nosync nounwind }
+; CGSCC: attributes #[[ATTR15]] = { nofree nosync nounwind memory(read) }
+; CGSCC: attributes #[[ATTR16]] = { nofree nosync nounwind }
 ;.
