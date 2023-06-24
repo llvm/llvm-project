@@ -114,7 +114,7 @@ TEST(MD5CollisionTest, TestCollision) {
   ASSERT_FALSE(Reader->read());
 
   std::vector<StringRef> &NameTable = *Reader->getNameTable();
-  ASSERT_EQ(NameTable.size(), 2U);
+  ASSERT_EQ(NameTable.size(), 2);
   StringRef S1 = NameTable[0];
   StringRef S2 = NameTable[1];
   ASSERT_NE(S1, S2);
@@ -131,7 +131,7 @@ TEST(MD5CollisionTest, TestCollision) {
   ExpectedFS.addBodySamples(9, 0, 0);
 
   SampleProfileMap &Profiles = Reader->getProfiles();
-  EXPECT_EQ(Profiles.size(), 1U);
+  EXPECT_EQ(Profiles.size(), 1);
   if (Profiles.size()) {
     auto &[Hash, FS] = *Profiles.begin();
     EXPECT_EQ(Hash, ExpectedHash);
@@ -141,7 +141,7 @@ TEST(MD5CollisionTest, TestCollision) {
   // Inserting S2 again should fail, returning the existing sample unchanged.
   auto [It1, Inserted1] = Profiles.try_emplace(S2, FunctionSamples());
   EXPECT_FALSE(Inserted1);
-  EXPECT_EQ(Profiles.size(), 1U);
+  EXPECT_EQ(Profiles.size(), 1);
   if (Profiles.size()) {
     auto &[Hash, FS] = *It1;
     EXPECT_EQ(Hash, ExpectedHash);
@@ -157,7 +157,7 @@ TEST(MD5CollisionTest, TestCollision) {
 
   auto [It2, Inserted2] = Profiles.try_emplace(S1, FS1);
   EXPECT_TRUE(Inserted2);
-  EXPECT_EQ(Profiles.size(), 1U);
+  EXPECT_EQ(Profiles.size(), 1);
   if (Profiles.size()) {
     auto &[Hash, FS] = *It2;
     EXPECT_EQ(Hash, ExpectedHash);
