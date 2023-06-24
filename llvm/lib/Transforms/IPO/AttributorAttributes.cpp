@@ -4016,7 +4016,8 @@ struct AANoAliasCallSiteArgument final : AANoAliasImpl {
 
     // We have to utilize actual alias analysis queries so we need the object.
     if (!AAR)
-      AAR = A.getInfoCache().getAAResultsForFunction(*getAnchorScope());
+      AAR = A.getInfoCache().getAnalysisResultForFunction<AAManager>(
+          *getAnchorScope());
 
     // Try to rule it out at the call site.
     bool IsAliasing = !AAR || !AAR->isNoAlias(&getAssociatedValue(), ArgOp);
