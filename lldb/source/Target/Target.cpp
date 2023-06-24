@@ -2271,7 +2271,7 @@ ModuleSP Target::GetOrCreateModule(const ModuleSpec &module_spec, bool notify,
               message << " (uuid ";
 
               if (dump_uuid.IsValid())
-                dump_uuid.Dump(&message);
+                dump_uuid.Dump(message);
               else
                 message << "not specified";
 
