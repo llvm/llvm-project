@@ -282,7 +282,7 @@ computeBlockInputState(const CFGBlock &Block, AnalysisContext &AC) {
     if (!MaybePredState)
       continue;
 
-    TypeErasedDataflowAnalysisState PredState = *MaybePredState;
+    TypeErasedDataflowAnalysisState PredState = MaybePredState->fork();
     if (Analysis.builtinOptions()) {
       if (const Stmt *PredTerminatorStmt = Pred->getTerminatorStmt()) {
         const StmtToEnvMap StmtToEnv(AC.CFCtx, AC.BlockStates);
@@ -309,7 +309,7 @@ computeBlockInputState(const CFGBlock &Block, AnalysisContext &AC) {
     // FIXME: Consider passing `Block` to `Analysis.typeErasedInitialElement()`
     // to enable building analyses like computation of dominators that
     // initialize the state of each basic block differently.
-    MaybeState.emplace(Analysis.typeErasedInitialElement(), AC.InitEnv);
+    MaybeState.emplace(Analysis.typeErasedInitialElement(), AC.InitEnv.fork());
   }
   return std::move(*MaybeState);
 }
@@ -447,12 +447,12 @@ runTypeErasedDataflowAnalysis(
   ForwardDataflowWorklist Worklist(CFCtx.getCFG(), &POV);
 
   std::vector<std::optional<TypeErasedDataflowAnalysisState>> BlockStates(
-      CFCtx.getCFG().size(), std::nullopt);
+      CFCtx.getCFG().size());
 
   // The entry basic block doesn't contain statements so it can be skipped.
   const CFGBlock &Entry = CFCtx.getCFG().getEntry();
   BlockStates[Entry.getBlockID()] = {Analysis.typeErasedInitialElement(),
-                                     InitEnv};
+                                     InitEnv.fork()};
   Worklist.enqueueSuccessors(&Entry);
 
   AnalysisContext AC(CFCtx, Analysis, InitEnv, BlockStates);

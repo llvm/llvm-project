@@ -363,7 +363,7 @@ checkDataflow(AnalysisInputs<AnalysisT> AI,
         if (It == StmtToAnnotations.end())
           return;
         auto [_, InsertSuccess] = AnnotationStates.insert(
-            {It->second, StateT{State.Lattice, State.Env}});
+            {It->second, StateT{State.Lattice, State.Env.fork()}});
         (void)_;
         (void)InsertSuccess;
         assert(InsertSuccess);
