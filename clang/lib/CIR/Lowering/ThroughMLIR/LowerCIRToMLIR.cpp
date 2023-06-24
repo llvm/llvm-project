@@ -28,6 +28,7 @@
 #include "mlir/Dialect/SCF/IR/SCF.h"
 #include "mlir/Dialect/SCF/Transforms/Passes.h"
 #include "mlir/IR/BuiltinDialect.h"
+#include "mlir/IR/BuiltinTypes.h"
 #include "mlir/Pass/Pass.h"
 #include "mlir/Pass/PassManager.h"
 #include "mlir/Target/LLVMIR/Dialect/Builtin/BuiltinToLLVMIRTranslation.h"
@@ -35,6 +36,7 @@
 #include "mlir/Target/LLVMIR/Export.h"
 #include "mlir/Transforms/DialectConversion.h"
 #include "clang/CIR/Dialect/IR/CIRDialect.h"
+#include "clang/CIR/Dialect/IR/CIRTypes.h"
 #include "clang/CIR/Passes.h"
 #include "llvm/ADT/Sequence.h"
 
@@ -190,13 +192,8 @@ public:
       signatureConversion.addInputs(argType.index(), convertedType);
     }
 
-    mlir::Type resultType;
-    if (fnType.getNumResults() == 1) {
-      resultType = getTypeConverter()->convertType(fnType.getResult(0));
-      if (!resultType)
-        return mlir::failure();
-    }
-
+    mlir::Type resultType =
+        getTypeConverter()->convertType(fnType.getReturnType());
     auto fn = rewriter.create<mlir::func::FuncOp>(
         op.getLoc(), op.getName(),
         rewriter.getFunctionType(signatureConversion.getConvertedTypes(),
@@ -533,6 +530,8 @@ static mlir::TypeConverter prepareTypeConverter() {
       [&](mlir::IntegerType type) -> mlir::Type { return type; });
   converter.addConversion(
       [&](mlir::FloatType type) -> mlir::Type { return type; });
+  converter.addConversion(
+      [&](mlir::cir::VoidType type) -> mlir::Type { return {}; });
 
   return converter;
 }

@@ -170,9 +170,8 @@ mlir::cir::CallOp CIRGenFunction::buildCoroIDBuiltinCall(mlir::Location loc,
   if (!builtin) {
     fnOp = CGM.createCIRFunction(
         loc, CGM.builtinCoroId,
-        builder.getType<mlir::cir::FuncType>(
-            mlir::TypeRange{int32Ty, VoidPtrTy, VoidPtrTy, VoidPtrTy},
-            mlir::TypeRange{int32Ty}),
+        mlir::cir::FuncType::get({int32Ty, VoidPtrTy, VoidPtrTy, VoidPtrTy},
+                                 int32Ty),
         /*FD=*/nullptr);
     assert(fnOp && "should always succeed");
     fnOp.setBuiltinAttr(mlir::UnitAttr::get(builder.getContext()));
@@ -196,8 +195,7 @@ CIRGenFunction::buildCoroAllocBuiltinCall(mlir::Location loc) {
   if (!builtin) {
     fnOp = CGM.createCIRFunction(
         loc, CGM.builtinCoroAlloc,
-        builder.getType<mlir::cir::FuncType>(mlir::TypeRange{int32Ty},
-                                             mlir::TypeRange{boolTy}),
+        mlir::cir::FuncType::get({int32Ty}, boolTy),
         /*FD=*/nullptr);
     assert(fnOp && "should always succeed");
     fnOp.setBuiltinAttr(mlir::UnitAttr::get(builder.getContext()));
@@ -218,8 +216,8 @@ CIRGenFunction::buildCoroBeginBuiltinCall(mlir::Location loc,
   if (!builtin) {
     fnOp = CGM.createCIRFunction(
         loc, CGM.builtinCoroBegin,
-        builder.getType<mlir::cir::FuncType>(
-            mlir::TypeRange{int32Ty, VoidPtrTy}, mlir::TypeRange{VoidPtrTy}),
+        mlir::cir::FuncType::get({int32Ty, VoidPtrTy},
+                                 VoidPtrTy),
         /*FD=*/nullptr);
     assert(fnOp && "should always succeed");
     fnOp.setBuiltinAttr(mlir::UnitAttr::get(builder.getContext()));
@@ -240,8 +238,7 @@ mlir::cir::CallOp CIRGenFunction::buildCoroEndBuiltinCall(mlir::Location loc,
   if (!builtin) {
     fnOp = CGM.createCIRFunction(
         loc, CGM.builtinCoroEnd,
-        builder.getType<mlir::cir::FuncType>(mlir::TypeRange{VoidPtrTy, boolTy},
-                                             mlir::TypeRange{boolTy}),
+        mlir::cir::FuncType::get({VoidPtrTy, boolTy}, boolTy),
         /*FD=*/nullptr);
     assert(fnOp && "should always succeed");
     fnOp.setBuiltinAttr(mlir::UnitAttr::get(builder.getContext()));

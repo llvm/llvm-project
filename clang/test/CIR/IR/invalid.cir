@@ -377,7 +377,7 @@ module {
 // -----
 
 module {
-  // expected-error@+1 {{functions only supports 0 or 1 results}}
+  // expected-error@+1 {{functions only supports zero or one results}}
   cir.func @variadic() -> (!cir.int<s, 32>, !cir.int<s, 32>)
 }
 
@@ -389,5 +389,36 @@ module {
     // expected-error@+1 {{'cir.call' op too few operands for callee}}
     %1 = cir.call @variadic(%0) : (!cir.int<s, 32>) -> !cir.int<s, 32>
     cir.return %1 : !cir.int<s, 32>
+  }
+}
+
+// -----
+
+module {
+  cir.func private @test() -> !cir.void
+  cir.func @invalid_call() {
+    // expected-error@+1 {{'cir.call' op callee returns void but call has results}}
+    %1 = cir.call @test() : () -> (!cir.int<s, 32>)
+    cir.return
+  }
+}
+
+// -----
+
+module {
+  cir.func private @test() -> !cir.int<u, 8>
+  cir.func @invalid_call() {
+    // expected-error@+1 {{'cir.call' op result type mismatch: expected '!cir.int<u, 8>', but provided '!cir.int<s, 32>'}}
+    %1 = cir.call @test() : () -> (!cir.int<s, 32>)
+    cir.return
+  }
+}
+
+// -----
+
+module {
+  cir.func @invalid_return_type(%0 : !cir.int<u, 64>) -> !cir.int<s, 32> {
+    // expected-error@+1 {{'cir.return' op returns '!cir.int<u, 64>' but enclosing function returns '!cir.int<s, 32>'}}
+    cir.return %0 : !cir.int<u, 64>
   }
 }

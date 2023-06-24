@@ -23,6 +23,7 @@
 #include "clang/AST/GlobalDecl.h"
 #include "clang/CIR/Dialect/IR/CIRDialect.h"
 #include "clang/CIR/Dialect/IR/CIRTypes.h"
+#include "llvm/Support/ErrorHandling.h"
 #include <cassert>
 
 #include "mlir/Dialect/Func/IR/FuncOps.h"
@@ -257,9 +258,9 @@ mlir::cir::FuncType CIRGenTypes::GetFunctionType(const CIRGenFunctionInfo &FI) {
   (void)Erased;
   assert(Erased && "Not in set?");
 
-  return mlir::cir::FuncType::get(&getMLIRContext(), ArgTypes,
-                                  (resultType ? resultType : mlir::TypeRange{}),
-                                  FI.isVariadic());
+  return mlir::cir::FuncType::get(
+      ArgTypes, (resultType ? resultType : Builder.getVoidTy()),
+      FI.isVariadic());
 }
 
 mlir::cir::FuncType CIRGenTypes::GetFunctionTypeForVTable(GlobalDecl GD) {
