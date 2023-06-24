@@ -765,8 +765,36 @@ static CanQual<FunctionProtoType> GetFormalType(const CXXMethodDecl *MD) {
       .getAs<FunctionProtoType>();
 }
 
+/// TODO(cir): this should be shared with LLVM codegen
+static void addExtParameterInfosForCall(
+    llvm::SmallVectorImpl<FunctionProtoType::ExtParameterInfo> &paramInfos,
+    const FunctionProtoType *proto, unsigned prefixArgs, unsigned totalArgs) {
+  assert(proto->hasExtParameterInfos());
+  assert(paramInfos.size() <= prefixArgs);
+  assert(proto->getNumParams() + prefixArgs <= totalArgs);
+
+  paramInfos.reserve(totalArgs);
+
+  // Add default infos for any prefix args that don't already have infos.
+  paramInfos.resize(prefixArgs);
+
+  // Add infos for the prototype.
+  for (const auto &ParamInfo : proto->getExtParameterInfos()) {
+    paramInfos.push_back(ParamInfo);
+    // pass_object_size params have no parameter info.
+    if (ParamInfo.hasPassObjectSize())
+      paramInfos.emplace_back();
+  }
+
+  assert(paramInfos.size() <= totalArgs &&
+         "Did we forget to insert pass_object_size args?");
+  // Add default infos for the variadic and/or suffix arguments.
+  paramInfos.resize(totalArgs);
+}
+
 /// Adds the formal parameters in FPT to the given prefix. If any parameter in
 /// FPT has pass_object_size_attrs, then we'll add parameters for those, too.
+/// TODO(cir): this should be shared with LLVM codegen
 static void appendParameterTypes(
     const CIRGenTypes &CGT, SmallVectorImpl<CanQualType> &prefix,
     SmallVectorImpl<FunctionProtoType::ExtParameterInfo> &paramInfos,
@@ -779,7 +807,22 @@ static void appendParameterTypes(
     return;
   }
 
-  assert(false && "params NYI");
+  unsigned PrefixSize = prefix.size();
+  // In the vast majority of cases, we'll have precisely FPT->getNumParams()
+  // parameters; the only thing that can change this is the presence of
+  // pass_object_size. So, we preallocate for the common case.
+  prefix.reserve(prefix.size() + FPT->getNumParams());
+
+  auto ExtInfos = FPT->getExtParameterInfos();
+  assert(ExtInfos.size() == FPT->getNumParams());
+  for (unsigned I = 0, E = FPT->getNumParams(); I != E; ++I) {
+    prefix.push_back(FPT->getParamType(I));
+    if (ExtInfos[I].hasPassObjectSize())
+      prefix.push_back(CGT.getContext().getSizeType());
+  }
+
+  addExtParameterInfosForCall(paramInfos, FPT.getTypePtr(), PrefixSize,
+                              prefix.size());
 }
 
 const CIRGenFunctionInfo &
@@ -999,7 +1042,9 @@ arrangeFreeFunctionLikeCall(CIRGenTypes &CGT, CIRGenModule &CGM,
     if (proto->isVariadic())
       required = RequiredArgs::forPrototypePlus(proto, numExtraRequiredArgs);
 
-    assert(!proto->hasExtParameterInfos() && "extparameterinfos NYI");
+    if (proto->hasExtParameterInfos())
+      addExtParameterInfosForCall(paramInfos, proto, numExtraRequiredArgs,
+                                  args.size());
   } else {
     assert(!llvm::isa<FunctionNoProtoType>(fnType) &&
            "FunctionNoProtoType NYI");
