@@ -1856,13 +1856,9 @@ public:
         continue;
       }
 
-      // Compressed sections names in GNU style starts from ".z",
-      // at this point section is decompressed and we drop compression prefix.
-      Name = Name.substr(
-          Name.find_first_not_of("._z")); // Skip ".", "z" and "_" prefixes.
-
       // Map platform specific debug section names to DWARF standard section
       // names.
+      Name = Name.substr(Name.find_first_not_of("._"));
       Name = Obj.mapDebugSectionName(Name);
 
       if (StringRef *SectionData = mapSectionToMember(Name)) {
@@ -1918,11 +1914,9 @@ public:
                                   RelSecName + "'"));
       }
 
-      RelSecName = RelSecName.substr(
-          RelSecName.find_first_not_of("._z")); // Skip . and _ prefixes.
-
       // TODO: Add support for relocations in other sections as needed.
       // Record relocations for the debug_info and debug_line sections.
+      RelSecName = RelSecName.substr(RelSecName.find_first_not_of("._"));
       DWARFSectionMap *Sec = mapNameToDWARFSection(RelSecName);
       RelocAddrMap *Map = Sec ? &Sec->Relocs : nullptr;
       if (!Map) {
