@@ -857,8 +857,6 @@ void SeparateConstOffsetFromGEP::lowerToSingleIndexGEPs(
   IRBuilder<> Builder(Variadic);
   Type *PtrIndexTy = DL->getIndexType(Variadic->getType());
 
-  Type *I8PtrTy =
-      Builder.getInt8PtrTy(Variadic->getType()->getPointerAddressSpace());
   Value *ResultPtr = Variadic->getOperand(0);
   Loop *L = LI->getLoopFor(Variadic->getParent());
   // Check if the base is not loop invariant or used more than once.
@@ -866,9 +864,6 @@ void SeparateConstOffsetFromGEP::lowerToSingleIndexGEPs(
       L && L->isLoopInvariant(ResultPtr) &&
       !hasMoreThanOneUseInLoop(ResultPtr, L);
   Value *FirstResult = nullptr;
-
-  if (ResultPtr->getType() != I8PtrTy)
-    ResultPtr = Builder.CreateBitCast(ResultPtr, I8PtrTy);
 
   gep_type_iterator GTI = gep_type_begin(*Variadic);
   // Create an ugly GEP for each sequential index. We don't create GEPs for
@@ -916,9 +911,6 @@ void SeparateConstOffsetFromGEP::lowerToSingleIndexGEPs(
   auto *SecondGEP = dyn_cast<GetElementPtrInst>(ResultPtr);
   if (isSwapCandidate && isLegalToSwapOperand(FirstGEP, SecondGEP, L))
     swapGEPOperand(FirstGEP, SecondGEP);
-
-  if (ResultPtr->getType() != Variadic->getType())
-    ResultPtr = Builder.CreateBitCast(ResultPtr, Variadic->getType());
 
   Variadic->replaceAllUsesWith(ResultPtr);
   Variadic->eraseFromParent();
@@ -1149,16 +1141,11 @@ bool SeparateConstOffsetFromGEP::splitGEP(GetElementPtrInst *GEP) {
     //
     // Emit an uglygep in this case.
     IRBuilder<> Builder(GEP);
-    Type *I8PtrTy =
-        Builder.getInt8Ty()->getPointerTo(GEP->getPointerAddressSpace());
-
     NewGEP = cast<Instruction>(Builder.CreateGEP(
-        Builder.getInt8Ty(), Builder.CreateBitCast(NewGEP, I8PtrTy),
+        Builder.getInt8Ty(), NewGEP,
         {ConstantInt::get(PtrIdxTy, AccumulativeByteOffset, true)}, "uglygep",
         GEPWasInBounds));
-
     NewGEP->copyMetadata(*GEP);
-    NewGEP = cast<Instruction>(Builder.CreateBitCast(NewGEP, GEP->getType()));
   }
 
   GEP->replaceAllUsesWith(NewGEP);
