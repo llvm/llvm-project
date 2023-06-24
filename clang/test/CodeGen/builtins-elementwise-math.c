@@ -484,6 +484,38 @@ void test_builtin_elementwise_round(float f1, float f2, double d1, double d2,
   vf2 = __builtin_elementwise_round(vf1);
 }
 
+void test_builtin_elementwise_rint(float f1, float f2, double d1, double d2,
+                                   float4 vf1, float4 vf2) {
+  // CHECK-LABEL: define void @test_builtin_elementwise_rint(
+  // CHECK:      [[F1:%.+]] = load float, ptr %f1.addr, align 4
+  // CHECK-NEXT:  call float @llvm.rint.f32(float [[F1]])
+  f2 = __builtin_elementwise_rint(f1);
+
+  // CHECK:      [[D1:%.+]] = load double, ptr %d1.addr, align 8
+  // CHECK-NEXT: call double @llvm.rint.f64(double [[D1]])
+  d2 = __builtin_elementwise_rint(d1);
+
+  // CHECK:      [[VF1:%.+]] = load <4 x float>, ptr %vf1.addr, align 16
+  // CHECK-NEXT: call <4 x float> @llvm.rint.v4f32(<4 x float> [[VF1]])
+  vf2 = __builtin_elementwise_rint(vf1);
+}
+
+void test_builtin_elementwise_nearbyint(float f1, float f2, double d1, double d2,
+                                        float4 vf1, float4 vf2) {
+  // CHECK-LABEL: define void @test_builtin_elementwise_nearbyint(
+  // CHECK:      [[F1:%.+]] = load float, ptr %f1.addr, align 4
+  // CHECK-NEXT:  call float @llvm.nearbyint.f32(float [[F1]])
+  f2 = __builtin_elementwise_nearbyint(f1);
+
+  // CHECK:      [[D1:%.+]] = load double, ptr %d1.addr, align 8
+  // CHECK-NEXT: call double @llvm.nearbyint.f64(double [[D1]])
+  d2 = __builtin_elementwise_nearbyint(d1);
+
+  // CHECK:      [[VF1:%.+]] = load <4 x float>, ptr %vf1.addr, align 16
+  // CHECK-NEXT: call <4 x float> @llvm.nearbyint.v4f32(<4 x float> [[VF1]])
+  vf2 = __builtin_elementwise_nearbyint(vf1);
+}
+
 void test_builtin_elementwise_sin(float f1, float f2, double d1, double d2,
                                   float4 vf1, float4 vf2) {
   // CHECK-LABEL: define void @test_builtin_elementwise_sin(
