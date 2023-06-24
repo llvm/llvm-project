@@ -861,6 +861,9 @@ public:
       AbstractCallee AC = AbstractCallee(), unsigned ParamsToSkip = 0,
       EvaluationOrder Order = EvaluationOrder::Default);
 
+  void checkTargetFeatures(const CallExpr *E, const FunctionDecl *TargetDecl);
+  void checkTargetFeatures(SourceLocation Loc, const FunctionDecl *TargetDecl);
+
   /// Generate a call of the given function, expecting the given
   /// result type, and using the given argument list which specifies both the
   /// LLVM arguments and the types they were derived from.

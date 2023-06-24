@@ -16,7 +16,9 @@
 #include "CIRGenFunction.h"
 #include "CIRGenFunctionInfo.h"
 #include "CIRGenTypes.h"
+#include "TargetInfo.h"
 
+#include "clang/AST/Attr.h"
 #include "clang/AST/DeclCXX.h"
 #include "clang/AST/GlobalDecl.h"
 #include "clang/CIR/Dialect/IR/CIRDialect.h"
@@ -323,25 +325,27 @@ RValue CIRGenFunction::buildCall(const CIRGenFunctionInfo &CallInfo,
   mlir::cir::FuncType CIRFuncTy = getTypes().GetFunctionType(CallInfo);
 
   const Decl *TargetDecl = Callee.getAbstractInfo().getCalleeDecl().getDecl();
-
   // This is not always tied to a FunctionDecl (e.g. builtins that are xformed
   // into calls to other functions)
-  const FunctionDecl *FD = dyn_cast_or_null<FunctionDecl>(TargetDecl);
+  if (const FunctionDecl *FD = dyn_cast_or_null<FunctionDecl>(TargetDecl)) {
+    // We can only guarantee that a function is called from the correct
+    // context/function based on the appropriate target attributes,
+    // so only check in the case where we have both always_inline and target
+    // since otherwise we could be making a conditional call after a check for
+    // the proper cpu features (and it won't cause code generation issues due to
+    // function based code generation).
+    if (TargetDecl->hasAttr<AlwaysInlineAttr>() &&
+        (TargetDecl->hasAttr<TargetAttr>() ||
+         (CurFuncDecl && CurFuncDecl->hasAttr<TargetAttr>()))) {
+      // FIXME(cir): somehow refactor this function to use SourceLocation?
+      SourceLocation Loc;
+      checkTargetFeatures(Loc, FD);
+    }
 
-  // We can only guarantee that a function is called from the correct
-  // context/function based on the appropriate target attributes, so only check
-  // in hte case where we have both always_inline and target since otherwise we
-  // could be making a conditional call after a check for the proper cpu
-  // features (and it won't cause code generation issues due to function based
-  // code generation).
-  assert((!TargetDecl || !TargetDecl->hasAttr<AlwaysInlineAttr>()) && "NYI");
-  assert((!TargetDecl || !TargetDecl->hasAttr<TargetAttr>()) && "NYI");
-
-  // Some architectures (such as x86-64) have the ABI changed based on
-  // attribute-target/features. Give them a chance to diagnose.
-  // TODO: support this eventually, just assume the trivial result for now
-  // !CGM.getTargetCIRGenInfo().checkFunctionCallABI(
-  //     CGM, Loc, dyn_cast_or_null<FunctionDecl>(CurCodeDecl), FD, CallArgs);
+    // Some architectures (such as x86-64) have the ABI changed based on
+    // attribute-target/features. Give them a chance to diagnose.
+    assert(!UnimplementedFeature::checkFunctionCallABI());
+  }
 
   // TODO: add DNEBUG code
 
@@ -482,20 +486,22 @@ RValue CIRGenFunction::buildCall(const CIRGenFunctionInfo &CallInfo,
 
   // TODO: Update the largest vector width if any arguments have vector types.
   // TODO: Compute the calling convention and attributes.
-  assert((!FD || !FD->hasAttr<StrictFPAttr>()) && "NYI");
+  if (const FunctionDecl *FD = dyn_cast_or_null<FunctionDecl>(CurFuncDecl)) {
+    assert(!FD->hasAttr<StrictFPAttr>() && "NYI");
 
-  // TODO: InNoMergeAttributedStmt
-  // assert(!CurCodeDecl->hasAttr<FlattenAttr>() &&
-  //        !TargetDecl->hasAttr<NoInlineAttr>() && "NYI");
+    // TODO: InNoMergeAttributedStmt
+    // assert(!CurCodeDecl->hasAttr<FlattenAttr>() &&
+    //        !TargetDecl->hasAttr<NoInlineAttr>() && "NYI");
 
-  // TODO: isSEHTryScope
+    // TODO: isSEHTryScope
 
-  // TODO: currentFunctionUsesSEHTry
-  // TODO: isCleanupPadScope
+    // TODO: currentFunctionUsesSEHTry
+    // TODO: isCleanupPadScope
 
-  // TODO: UnusedReturnSizePtr
+    // TODO: UnusedReturnSizePtr
 
-  assert((!FD || !FD->hasAttr<StrictFPAttr>()) && "NYI");
+    assert(!FD->hasAttr<StrictFPAttr>() && "NYI");
+  }
 
   // TODO: alignment attributes
 
