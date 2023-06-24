@@ -58,14 +58,12 @@ std::shared_mutex BitcodeImageMapMutex;
 std::once_flag InitFlag;
 
 void init(Triple TT) {
-  bool JITTargetInitialized = false;
 #ifdef LIBOMPTARGET_JIT_NVPTX
   if (TT.isNVPTX()) {
     LLVMInitializeNVPTXTargetInfo();
     LLVMInitializeNVPTXTarget();
     LLVMInitializeNVPTXTargetMC();
     LLVMInitializeNVPTXAsmPrinter();
-    JITTargetInitialized = true;
   }
 #endif
 #ifdef LIBOMPTARGET_JIT_AMDGPU
@@ -74,49 +72,8 @@ void init(Triple TT) {
     LLVMInitializeAMDGPUTarget();
     LLVMInitializeAMDGPUTargetMC();
     LLVMInitializeAMDGPUAsmPrinter();
-    JITTargetInitialized = true;
   }
 #endif
-  if (!JITTargetInitialized)
-    return;
-
-  // Initialize passes
-  PassRegistry &Registry = *PassRegistry::getPassRegistry();
-  initializeCore(Registry);
-  initializeScalarOpts(Registry);
-  initializeVectorization(Registry);
-  initializeIPO(Registry);
-  initializeAnalysis(Registry);
-  initializeTransformUtils(Registry);
-  initializeInstCombine(Registry);
-  initializeTarget(Registry);
-
-  initializeExpandLargeDivRemLegacyPassPass(Registry);
-  initializeExpandLargeFpConvertLegacyPassPass(Registry);
-  initializeExpandMemCmpPassPass(Registry);
-  initializeScalarizeMaskedMemIntrinLegacyPassPass(Registry);
-  initializeSelectOptimizePass(Registry);
-  initializeCodeGenPreparePass(Registry);
-  initializeAtomicExpandPass(Registry);
-  initializeRewriteSymbolsLegacyPassPass(Registry);
-  initializeWinEHPreparePass(Registry);
-  initializeDwarfEHPrepareLegacyPassPass(Registry);
-  initializeSafeStackLegacyPassPass(Registry);
-  initializeSjLjEHPreparePass(Registry);
-  initializePreISelIntrinsicLoweringLegacyPassPass(Registry);
-  initializeGlobalMergePass(Registry);
-  initializeIndirectBrExpandPassPass(Registry);
-  initializeInterleavedLoadCombinePass(Registry);
-  initializeInterleavedAccessPass(Registry);
-  initializeUnreachableBlockElimLegacyPassPass(Registry);
-  initializeExpandReductionsPass(Registry);
-  initializeExpandVectorPredicationPass(Registry);
-  initializeWasmEHPreparePass(Registry);
-  initializeWriteBitcodePassPass(Registry);
-  initializeHardwareLoopsLegacyPass(Registry);
-  initializeTypePromotionLegacyPass(Registry);
-  initializeReplaceWithVeclibLegacyPass(Registry);
-  initializeJMCInstrumenterPass(Registry);
 }
 
 Expected<std::unique_ptr<Module>>
