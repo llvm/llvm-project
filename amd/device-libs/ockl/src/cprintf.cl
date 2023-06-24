@@ -41,15 +41,6 @@ __printf_alloc(uint bytes)
     return ptr + OFFSET + offset;
 }
 
-// Return a controlDWord for nonhostcall printf scheme, format as follows
-// Bit 0 (LSB) -> stream (1 if stderr, 0 if stdout)
-// Bit 1 -> constant format string (1 if constant)
-// Bit 2 - 31 -> size of printf data frame (controlDWord + format string/hash + args)
-
-uint __printf_control_dword(uint len, bool is_const_fmt_str, bool is_stderr) {
-  return (len << 2) | (is_const_fmt_str ? (uint)2 : 0) | (uint)is_stderr ;
-}
-
 // printf stub to resolve link time dependencies.
 // Will be replaced by the compiler.
 __attribute__((noinline))
