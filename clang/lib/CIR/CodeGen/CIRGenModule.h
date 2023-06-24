@@ -541,6 +541,11 @@ public:
   static constexpr const char *builtinCoroBegin = "__builtin_coro_begin";
   static constexpr const char *builtinCoroEnd = "__builtin_coro_end";
 
+  /// Given a builtin id for a function like "__builtin_fabsf", return a
+  /// Function* for "fabsf".
+  mlir::cir::FuncOp getBuiltinLibFunction(const FunctionDecl *FD,
+                                          unsigned BuiltinID);
+
   /// Emit a general error that something can't be done.
   void Error(SourceLocation loc, StringRef error);
 
