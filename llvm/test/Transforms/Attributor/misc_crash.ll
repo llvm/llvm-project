@@ -48,10 +48,10 @@ define internal void @func2a(i32* %0) {
 }
 
 define i32 @func2() {
-; CHECK: Function Attrs: norecurse
+; CHECK: Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn
 ; CHECK-LABEL: define {{[^@]+}}@func2
 ; CHECK-SAME: () #[[ATTR2:[0-9]+]] {
-; CHECK-NEXT:    [[TMP1:%.*]] = tail call i32 (i32*, ...) bitcast (void (i32*)* @func2a to i32 (i32*, ...)*)(i32* nonnull align 4 dereferenceable(4) @var2)
+; CHECK-NEXT:    [[TMP1:%.*]] = tail call i32 (i32*, ...) bitcast (void (i32*)* @func2a to i32 (i32*, ...)*)(i32* nonnull align 4 dereferenceable(4) @var2) #[[ATTR3:[0-9]+]]
 ; CHECK-NEXT:    [[TMP2:%.*]] = load i32, i32* @var2, align 4
 ; CHECK-NEXT:    ret i32 [[TMP2]]
 ;
@@ -61,10 +61,10 @@ define i32 @func2() {
 }
 
 define i32 @func3(i1 %false) {
-; CHECK: Function Attrs: norecurse
+; CHECK: Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn
 ; CHECK-LABEL: define {{[^@]+}}@func3
 ; CHECK-SAME: (i1 [[FALSE:%.*]]) #[[ATTR2]] {
-; CHECK-NEXT:    [[TMP1:%.*]] = tail call i32 (i32*, ...) bitcast (void (i32*)* @func2a to i32 (i32*, ...)*)(i32* nonnull align 4 dereferenceable(4) @var2)
+; CHECK-NEXT:    [[TMP1:%.*]] = tail call i32 (i32*, ...) bitcast (void (i32*)* @func2a to i32 (i32*, ...)*)(i32* nonnull align 4 dereferenceable(4) @var2) #[[ATTR3]]
 ; CHECK-NEXT:    br i1 [[FALSE]], label [[USE_BB:%.*]], label [[RET_BB:%.*]]
 ; CHECK:       use_bb:
 ; CHECK-NEXT:    ret i32 [[TMP1]]
@@ -108,10 +108,10 @@ block:
 }
 
 define i16 @foo3() {
-; CHECK: Function Attrs: norecurse
+; CHECK: Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn memory(none)
 ; CHECK-LABEL: define {{[^@]+}}@foo3
-; CHECK-SAME: () #[[ATTR2]] {
-; CHECK-NEXT:    [[CALL:%.*]] = call i16 bitcast (i16 (i16*, i16)* @bar3 to i16 ()*)()
+; CHECK-SAME: () #[[ATTR0]] {
+; CHECK-NEXT:    [[CALL:%.*]] = call i16 bitcast (i16 (i16*, i16)* @bar3 to i16 ()*)() #[[ATTR4:[0-9]+]]
 ; CHECK-NEXT:    ret i16 [[CALL]]
 ;
   %call = call i16 bitcast (i16 (i16*, i16) * @bar3 to i16 () *)()
@@ -132,5 +132,7 @@ declare void @func6(i8*)
 ;.
 ; CHECK: attributes #[[ATTR0]] = { mustprogress nofree norecurse nosync nounwind willreturn memory(none) }
 ; CHECK: attributes #[[ATTR1]] = { mustprogress nofree norecurse nosync nounwind willreturn memory(write) }
-; CHECK: attributes #[[ATTR2]] = { norecurse }
+; CHECK: attributes #[[ATTR2]] = { mustprogress nofree norecurse nosync nounwind willreturn }
+; CHECK: attributes #[[ATTR3]] = { nofree nosync nounwind willreturn memory(write) }
+; CHECK: attributes #[[ATTR4]] = { nofree nosync nounwind willreturn memory(none) }
 ;.
