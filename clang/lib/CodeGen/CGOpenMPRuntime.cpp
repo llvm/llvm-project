@@ -5680,14 +5680,12 @@ llvm::Value *CGOpenMPRuntime::emitTaskReductionInit(
     // ElemLVal.reduce_shar = &Shareds[Cnt];
     LValue SharedLVal = CGF.EmitLValueForField(ElemLVal, SharedFD);
     RCG.emitSharedOrigLValue(CGF, Cnt);
-    llvm::Value *CastedShared =
-        CGF.EmitCastToVoidPtr(RCG.getSharedLValue(Cnt).getPointer(CGF));
-    CGF.EmitStoreOfScalar(CastedShared, SharedLVal);
+    llvm::Value *Shared = RCG.getSharedLValue(Cnt).getPointer(CGF);
+    CGF.EmitStoreOfScalar(Shared, SharedLVal);
     // ElemLVal.reduce_orig = &Origs[Cnt];
     LValue OrigLVal = CGF.EmitLValueForField(ElemLVal, OrigFD);
-    llvm::Value *CastedOrig =
-        CGF.EmitCastToVoidPtr(RCG.getOrigLValue(Cnt).getPointer(CGF));
-    CGF.EmitStoreOfScalar(CastedOrig, OrigLVal);
+    llvm::Value *Orig = RCG.getOrigLValue(Cnt).getPointer(CGF);
+    CGF.EmitStoreOfScalar(Orig, OrigLVal);
     RCG.emitAggregateType(CGF, Cnt);
     llvm::Value *SizeValInChars;
     llvm::Value *SizeVal;
@@ -5704,21 +5702,19 @@ llvm::Value *CGOpenMPRuntime::emitTaskReductionInit(
     CGF.EmitStoreOfScalar(SizeValInChars, SizeLVal);
     // ElemLVal.reduce_init = init;
     LValue InitLVal = CGF.EmitLValueForField(ElemLVal, InitFD);
-    llvm::Value *InitAddr =
-        CGF.EmitCastToVoidPtr(emitReduceInitFunction(CGM, Loc, RCG, Cnt));
+    llvm::Value *InitAddr = emitReduceInitFunction(CGM, Loc, RCG, Cnt);
     CGF.EmitStoreOfScalar(InitAddr, InitLVal);
     // ElemLVal.reduce_fini = fini;
     LValue FiniLVal = CGF.EmitLValueForField(ElemLVal, FiniFD);
     llvm::Value *Fini = emitReduceFiniFunction(CGM, Loc, RCG, Cnt);
-    llvm::Value *FiniAddr = Fini
-                                ? CGF.EmitCastToVoidPtr(Fini)
-                                : llvm::ConstantPointerNull::get(CGM.VoidPtrTy);
+    llvm::Value *FiniAddr =
+        Fini ? Fini : llvm::ConstantPointerNull::get(CGM.VoidPtrTy);
     CGF.EmitStoreOfScalar(FiniAddr, FiniLVal);
     // ElemLVal.reduce_comb = comb;
     LValue CombLVal = CGF.EmitLValueForField(ElemLVal, CombFD);
-    llvm::Value *CombAddr = CGF.EmitCastToVoidPtr(emitReduceCombFunction(
+    llvm::Value *CombAddr = emitReduceCombFunction(
         CGM, Loc, RCG, Cnt, Data.ReductionOps[Cnt], LHSExprs[Cnt],
-        RHSExprs[Cnt], Data.ReductionCopies[Cnt]));
+        RHSExprs[Cnt], Data.ReductionCopies[Cnt]);
     CGF.EmitStoreOfScalar(CombAddr, CombLVal);
     // ElemLVal.flags = 0;
     LValue FlagsLVal = CGF.EmitLValueForField(ElemLVal, FlagsFD);
@@ -7583,8 +7579,7 @@ private:
                           .getAddress(CGF);
                 }
                 Size = CGF.Builder.CreatePtrDiff(
-                    CGF.Int8Ty, CGF.EmitCastToVoidPtr(ComponentLB.getPointer()),
-                    CGF.EmitCastToVoidPtr(LB.getPointer()));
+                    CGF.Int8Ty, ComponentLB.getPointer(), LB.getPointer());
                 break;
               }
             }
@@ -7607,7 +7602,7 @@ private:
           CombinedInfo.Pointers.push_back(LB.getPointer());
           Size = CGF.Builder.CreatePtrDiff(
               CGF.Int8Ty, CGF.Builder.CreateConstGEP(HB, 1).getPointer(),
-              CGF.EmitCastToVoidPtr(LB.getPointer()));
+              LB.getPointer());
           CombinedInfo.Sizes.push_back(
               CGF.Builder.CreateIntCast(Size, CGF.Int64Ty, /*isSigned=*/true));
           CombinedInfo.Types.push_back(Flags);

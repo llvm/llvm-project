@@ -2706,15 +2706,13 @@ ScalarExprEmitter::EmitScalarPrePostIncDec(const UnaryOperator *E, LValue LV,
     } else if (type->isFunctionType()) {
       llvm::Value *amt = Builder.getInt32(amount);
 
-      value = CGF.EmitCastToVoidPtr(value);
       if (CGF.getLangOpts().isSignedOverflowDefined())
         value = Builder.CreateGEP(CGF.Int8Ty, value, amt, "incdec.funcptr");
       else
-        value = CGF.EmitCheckedInBoundsGEP(CGF.Int8Ty, value, amt,
-                                           /*SignedIndices=*/false,
-                                           isSubtraction, E->getExprLoc(),
-                                           "incdec.funcptr");
-      value = Builder.CreateBitCast(value, input->getType());
+        value =
+            CGF.EmitCheckedInBoundsGEP(CGF.Int8Ty, value, amt,
+                                       /*SignedIndices=*/false, isSubtraction,
+                                       E->getExprLoc(), "incdec.funcptr");
 
     // For everything else, we can just do a simple increment.
     } else {
@@ -2825,7 +2823,6 @@ ScalarExprEmitter::EmitScalarPrePostIncDec(const UnaryOperator *E, LValue LV,
   // Objective-C pointer types.
   } else {
     const ObjCObjectPointerType *OPT = type->castAs<ObjCObjectPointerType>();
-    value = CGF.EmitCastToVoidPtr(value);
 
     CharUnits size = CGF.getContext().getTypeSizeInChars(OPT->getObjectType());
     if (!isInc) size = -size;
@@ -3736,11 +3733,8 @@ static Value *emitPointerArithmetic(CodeGenFunction &CGF,
   // Explicitly handle GNU void* and function pointer arithmetic extensions. The
   // GNU void* casts amount to no-ops since our void* type is i8*, but this is
   // future proof.
-  if (elementType->isVoidType() || elementType->isFunctionType()) {
-    Value *result = CGF.EmitCastToVoidPtr(pointer);
-    result = CGF.Builder.CreateGEP(CGF.Int8Ty, result, index, "add.ptr");
-    return CGF.Builder.CreateBitCast(result, pointer->getType());
-  }
+  if (elementType->isVoidType() || elementType->isFunctionType())
+    return CGF.Builder.CreateGEP(CGF.Int8Ty, pointer, index, "add.ptr");
 
   llvm::Type *elemTy = CGF.ConvertTypeForMem(elementType);
   if (CGF.getLangOpts().isSignedOverflowDefined())

@@ -19198,15 +19198,14 @@ RValue CodeGenFunction::EmitBuiltinAlignTo(const CallExpr *E, bool AlignUp) {
     llvm::Value *Difference = Builder.CreateSub(Result, SrcAddr, "diff");
     // The result must point to the same underlying allocation. This means we
     // can use an inbounds GEP to enable better optimization.
-    Value *Base = EmitCastToVoidPtr(Args.Src);
     if (getLangOpts().isSignedOverflowDefined())
-      Result = Builder.CreateGEP(Int8Ty, Base, Difference, "aligned_result");
+      Result =
+          Builder.CreateGEP(Int8Ty, Args.Src, Difference, "aligned_result");
     else
-      Result = EmitCheckedInBoundsGEP(Int8Ty, Base, Difference,
+      Result = EmitCheckedInBoundsGEP(Int8Ty, Args.Src, Difference,
                                       /*SignedIndices=*/true,
                                       /*isSubtraction=*/!AlignUp,
                                       E->getExprLoc(), "aligned_result");
-    Result = Builder.CreatePointerCast(Result, Args.SrcType);
     // Emit an alignment assumption to ensure that the new alignment is
     // propagated to loads/stores, etc.
     emitAlignmentAssumption(Result, E, E->getExprLoc(), Args.Alignment);
@@ -19763,8 +19762,7 @@ Value *CodeGenFunction::EmitWebAssemblyBuiltinExpr(unsigned BuiltinID,
   }
   case WebAssembly::BI__builtin_wasm_table_get: {
     assert(E->getArg(0)->getType()->isArrayType());
-    Value *Table =
-        EmitCastToVoidPtr(EmitArrayToPointerDecay(E->getArg(0)).getPointer());
+    Value *Table = EmitArrayToPointerDecay(E->getArg(0)).getPointer();
     Value *Index = EmitScalarExpr(E->getArg(1));
     Function *Callee;
     if (E->getType().isWebAssemblyExternrefType())
@@ -19778,8 +19776,7 @@ Value *CodeGenFunction::EmitWebAssemblyBuiltinExpr(unsigned BuiltinID,
   }
   case WebAssembly::BI__builtin_wasm_table_set: {
     assert(E->getArg(0)->getType()->isArrayType());
-    Value *Table =
-        EmitCastToVoidPtr(EmitArrayToPointerDecay(E->getArg(0)).getPointer());
+    Value *Table = EmitArrayToPointerDecay(E->getArg(0)).getPointer();
     Value *Index = EmitScalarExpr(E->getArg(1));
     Value *Val = EmitScalarExpr(E->getArg(2));
     Function *Callee;
@@ -19794,15 +19791,13 @@ Value *CodeGenFunction::EmitWebAssemblyBuiltinExpr(unsigned BuiltinID,
   }
   case WebAssembly::BI__builtin_wasm_table_size: {
     assert(E->getArg(0)->getType()->isArrayType());
-    Value *Value =
-        EmitCastToVoidPtr(EmitArrayToPointerDecay(E->getArg(0)).getPointer());
+    Value *Value = EmitArrayToPointerDecay(E->getArg(0)).getPointer();
     Function *Callee = CGM.getIntrinsic(Intrinsic::wasm_table_size);
     return Builder.CreateCall(Callee, Value);
   }
   case WebAssembly::BI__builtin_wasm_table_grow: {
     assert(E->getArg(0)->getType()->isArrayType());
-    Value *Table =
-        EmitCastToVoidPtr(EmitArrayToPointerDecay(E->getArg(0)).getPointer());
+    Value *Table = EmitArrayToPointerDecay(E->getArg(0)).getPointer();
     Value *Val = EmitScalarExpr(E->getArg(1));
     Value *NElems = EmitScalarExpr(E->getArg(2));
 
@@ -19819,8 +19814,7 @@ Value *CodeGenFunction::EmitWebAssemblyBuiltinExpr(unsigned BuiltinID,
   }
   case WebAssembly::BI__builtin_wasm_table_fill: {
     assert(E->getArg(0)->getType()->isArrayType());
-    Value *Table =
-        EmitCastToVoidPtr(EmitArrayToPointerDecay(E->getArg(0)).getPointer());
+    Value *Table = EmitArrayToPointerDecay(E->getArg(0)).getPointer();
     Value *Index = EmitScalarExpr(E->getArg(1));
     Value *Val = EmitScalarExpr(E->getArg(2));
     Value *NElems = EmitScalarExpr(E->getArg(3));
@@ -19838,10 +19832,8 @@ Value *CodeGenFunction::EmitWebAssemblyBuiltinExpr(unsigned BuiltinID,
   }
   case WebAssembly::BI__builtin_wasm_table_copy: {
     assert(E->getArg(0)->getType()->isArrayType());
-    Value *TableX =
-        EmitCastToVoidPtr(EmitArrayToPointerDecay(E->getArg(0)).getPointer());
-    Value *TableY =
-        EmitCastToVoidPtr(EmitArrayToPointerDecay(E->getArg(1)).getPointer());
+    Value *TableX = EmitArrayToPointerDecay(E->getArg(0)).getPointer();
+    Value *TableY = EmitArrayToPointerDecay(E->getArg(1)).getPointer();
     Value *DstIdx = EmitScalarExpr(E->getArg(2));
     Value *SrcIdx = EmitScalarExpr(E->getArg(3));
     Value *NElems = EmitScalarExpr(E->getArg(4));
