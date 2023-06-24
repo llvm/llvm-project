@@ -12,10 +12,3 @@
 #define UNSAFE_MATH_OPT() __oclc_unsafe_math_opt
 #define DAZ_OPT() __oclc_daz_opt
 #define CORRECTLY_ROUNDED_SQRT32() __oclc_correctly_rounded_sqrt32
-
-// GFX6 had unhelpful handling of infinities in v_frexp_*
-// instructions.
-//
-// TODO: Really there should be a generic frexp intrinsic and the
-// backend could handle the hardware workarounds.
-#define HAVE_BUGGY_FREXP_INSTRUCTIONS() (__oclc_ISA_version < 7000)

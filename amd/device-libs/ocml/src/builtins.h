@@ -216,13 +216,48 @@
 #define BUILTIN_FLDEXP_F64 __builtin_ldexp
 #define BUILTIN_FLDEXP_F16 __builtin_ldexpf16
 
-#define BUILTIN_FREXP_EXP_F32 __builtin_amdgcn_frexp_expf
-#define BUILTIN_FREXP_EXP_F64 __builtin_amdgcn_frexp_exp
-#define BUILTIN_FREXP_EXP_F16 __builtin_amdgcn_frexp_exph
+#define BUILTIN_FREXP_F32 __builtin_frexpf
+#define BUILTIN_FREXP_F64 __builtin_frexp
+#define BUILTIN_FREXP_F16 __builtin_frexpf16
 
-#define BUILTIN_FREXP_MANT_F32 __builtin_amdgcn_frexp_mantf
-#define BUILTIN_FREXP_MANT_F64 __builtin_amdgcn_frexp_mant
-#define BUILTIN_FREXP_MANT_F16 __builtin_amdgcn_frexp_manth
+#define BUILTIN_FREXP_EXP_F32(X)                                               \
+    ({                                                                         \
+        int _exp;                                                              \
+        __builtin_frexp(X, &_exp);                                             \
+        _exp;                                                                  \
+    })
+
+#define BUILTIN_FREXP_EXP_F64(X)                                               \
+    ({                                                                         \
+        int _exp;                                                              \
+        __builtin_frexp(X, &_exp);                                             \
+        _exp;                                                                  \
+    })
+
+#define BUILTIN_FREXP_EXP_F16(X)                                               \
+    ({                                                                         \
+        int _exp;                                                              \
+        __builtin_frexpf16(X, &_exp);                                          \
+        _exp;                                                                  \
+    })
+
+#define BUILTIN_FREXP_MANT_F32(X)                                              \
+    ({                                                                         \
+        int _exp;                                                              \
+        __builtin_frexpf(X, &_exp);                                            \
+    })
+
+#define BUILTIN_FREXP_MANT_F64(X)                                              \
+    ({                                                                         \
+        int _exp;                                                              \
+        __builtin_frexp(X, &_exp);                                             \
+    })
+
+#define BUILTIN_FREXP_MANT_F16(X)                                              \
+    ({                                                                         \
+        int _exp;                                                              \
+        __builtin_frexpf16(X, &_exp);                                          \
+    })
 
 #define BUILTIN_CMAX_F32 __builtin_fmaxf
 #define BUILTIN_CMAX_F64 __builtin_fmax

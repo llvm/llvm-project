@@ -21,16 +21,6 @@ MATH_MANGLE2(frexp)(half2 x, __private int2 *ep)
 REQUIRES_16BIT_INSTS half
 MATH_MANGLE(frexp)(half x, __private int *ep)
 {
-    int e = (int)BUILTIN_FREXP_EXP_F16(x);
-    half r = BUILTIN_FREXP_MANT_F16(x);
-
-    if (HAVE_BUGGY_FREXP_INSTRUCTIONS()) {
-        bool isfinite = BUILTIN_ISFINITE_F16(x);
-        *ep = isfinite ? e : 0;
-        return isfinite ? r : x;
-    }
-
-    *ep = e;
-    return r;
+    return BUILTIN_FREXP_F16(x, ep);
 }
 
