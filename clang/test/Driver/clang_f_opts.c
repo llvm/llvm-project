@@ -302,7 +302,6 @@
 // RUN:     -fno-reorder-blocks -freorder-blocks                              \
 // RUN:     -fno-schedule-insns2 -fschedule-insns2                            \
 // RUN:     -fno-stack-check                                                  \
-// RUN:     -fno-check-new -fcheck-new                                        \
 // RUN:     -ffriend-injection                                                \
 // RUN:     -fno-implement-inlines -fimplement-inlines                        \
 // RUN:     -fstack-check                                                     \
