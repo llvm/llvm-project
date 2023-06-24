@@ -449,7 +449,7 @@ bool ProfileGeneratorBase::collectFunctionsFromRawProfile(
 bool ProfileGenerator::collectFunctionsFromLLVMProfile(
     std::unordered_set<const BinaryFunction *> &ProfiledFunctions) {
   for (const auto &FS : ProfileMap) {
-    if (auto *Func = Binary->getBinaryFunction(FS.first.getName()))
+    if (auto *Func = Binary->getBinaryFunction(FS.second.getName()))
       ProfiledFunctions.insert(Func);
   }
   return true;
@@ -468,12 +468,7 @@ bool CSProfileGenerator::collectFunctionsFromLLVMProfile(
 FunctionSamples &
 ProfileGenerator::getTopLevelFunctionProfile(StringRef FuncName) {
   SampleContext Context(FuncName);
-  auto Ret = ProfileMap.emplace(Context, FunctionSamples());
-  if (Ret.second) {
-    FunctionSamples &FProfile = Ret.first->second;
-    FProfile.setContext(Context);
-  }
-  return Ret.first->second;
+  return ProfileMap.Create(Context);
 }
 
 void ProfileGenerator::generateProfile() {
@@ -505,14 +500,14 @@ void ProfileGenerator::trimColdProfiles(const SampleProfileMap &Profiles,
     return;
 
   // Move cold profiles into a tmp container.
-  std::vector<SampleContext> ColdProfiles;
+  std::vector<hash_code> ColdProfileHashes;
   for (const auto &I : ProfileMap) {
     if (I.second.getTotalSamples() < ColdCntThreshold)
-      ColdProfiles.emplace_back(I.first);
+      ColdProfileHashes.emplace_back(I.first);
   }
 
   // Remove the cold profile from ProfileMap.
-  for (const auto &I : ColdProfiles)
+  for (const auto &I : ColdProfileHashes)
     ProfileMap.erase(I);
 }
 
@@ -1018,9 +1013,7 @@ void CSProfileGenerator::postProcessProfiles() {
 
   // Merge function samples of CS profile to calculate profile density.
   sampleprof::SampleProfileMap ContextLessProfiles;
-  for (const auto &I : ProfileMap) {
-    ContextLessProfiles[I.second.getName()].merge(I.second);
-  }
+  ProfileConverter::flattenProfile(ProfileMap, ContextLessProfiles, true);
 
   calculateAndShowDensity(ContextLessProfiles);
   if (GenCSNestedProfile) {
