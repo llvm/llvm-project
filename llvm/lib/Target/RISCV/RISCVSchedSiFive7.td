@@ -974,7 +974,8 @@ def : ReadAdvance<ReadFClass16, 0>;
 def : ReadAdvance<ReadFClass32, 0>;
 def : ReadAdvance<ReadFClass64, 0>;
 
-def : ReadAdvance<ReadSFB, 0>;
+def : ReadAdvance<ReadSFBJmp, 0>;
+def : ReadAdvance<ReadSFBALU, 0>;
 
 // Bitmanip
 def : ReadAdvance<ReadRotateImm, 0>;
