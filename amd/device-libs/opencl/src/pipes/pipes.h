@@ -5,7 +5,7 @@
  * License. See LICENSE.TXT for details.
  *===------------------------------------------------------------------------*/
 
-#include "irif.h"
+#include "ockl.h"
 
 #pragma OPENCL EXTENSION cl_khr_int64_base_atomics : enable
 #pragma OPENCL EXTENSION cl_khr_int64_extended_atomics : enable
@@ -73,7 +73,7 @@ wave_reserve_1(volatile __global atomic_size_t *pi, size_t lim)
     __builtin_amdgcn_wave_barrier();
 
     // Broadcast the result; the ctz tells us which lane has active lane id 0
-    uint k = (uint)BUILTIN_CTZ_U64(__builtin_amdgcn_read_exec());
+    uint k = (uint)OCKL_MANGLE_U64(ctz)(__builtin_amdgcn_read_exec());
     i = ((size_t)__builtin_amdgcn_readlane((uint)(i >> 32), k) << 32) |
         (size_t)__builtin_amdgcn_readlane((uint)i, k);
 
