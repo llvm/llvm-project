@@ -1118,4 +1118,54 @@ static void LLDBSwigPythonCallPythonSBDebuggerTerminateCallback(lldb::user_id_t 
     SWIG_PYTHON_THREAD_END_BLOCK;
   }
 }
+
+static SBError LLDBSwigPythonCallLocateModuleCallback(
+    void *callback_baton, const SBModuleSpec &module_spec_sb,
+    SBFileSpec &module_file_spec_sb, SBFileSpec &symbol_file_spec_sb) {
+  SWIG_Python_Thread_Block swig_thread_block;
+
+  PyErr_Cleaner py_err_cleaner(true);
+  PythonObject module_spec_arg = SWIGBridge::ToSWIGWrapper(
+      std::move(std::make_unique<SBModuleSpec>(module_spec_sb)));
+  PythonObject module_file_spec_arg = SWIGBridge::ToSWIGWrapper(
+      std::move(std::make_unique<SBFileSpec>(module_file_spec_sb)));
+  PythonObject symbol_file_spec_arg = SWIGBridge::ToSWIGWrapper(
+      std::move(std::make_unique<SBFileSpec>(symbol_file_spec_sb)));
+
+  PythonCallable callable =
+      Retain<PythonCallable>(reinterpret_cast<PyObject *>(callback_baton));
+  if (!callable.IsValid()) {
+    return SBError("The callback callable is not valid.");
+  }
+
+  PythonObject result = callable(module_spec_arg, module_file_spec_arg,
+                                 symbol_file_spec_arg);
+
+  if (!result.IsAllocated())
+    return SBError("No result.");
+  lldb::SBError *sb_error_ptr = nullptr;
+  if (SWIG_ConvertPtr(result.get(), (void **)&sb_error_ptr,
+                      SWIGTYPE_p_lldb__SBError, 0) == -1) {
+    return SBError("Result is not SBError.");
+  }
+
+  if (sb_error_ptr->Success()) {
+    lldb::SBFileSpec *sb_module_file_spec_ptr = nullptr;
+    if (SWIG_ConvertPtr(module_file_spec_arg.get(),
+                        (void **)&sb_module_file_spec_ptr,
+                        SWIGTYPE_p_lldb__SBFileSpec, 0) == -1)
+      return SBError("module_file_spec is not SBFileSpec.");
+
+    lldb::SBFileSpec *sb_symbol_file_spec_ptr = nullptr;
+    if (SWIG_ConvertPtr(symbol_file_spec_arg.get(),
+                        (void **)&sb_symbol_file_spec_ptr,
+                        SWIGTYPE_p_lldb__SBFileSpec, 0) == -1)
+      return SBError("symbol_file_spec is not SBFileSpec.");
+
+    module_file_spec_sb = *sb_module_file_spec_ptr;
+    symbol_file_spec_sb = *sb_symbol_file_spec_ptr;
+  }
+
+  return *sb_error_ptr;
+}
 %}
