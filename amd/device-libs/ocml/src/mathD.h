@@ -22,7 +22,6 @@
 #include "opts.h"
 
 // Attributes
-#define ALIGNEDATTR(X) __attribute__((aligned(X)))
 #define INLINEATTR __attribute__((always_inline))
 #define PUREATTR __attribute__((pure))
 #define CONSTATTR __attribute__((const))
