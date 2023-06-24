@@ -5795,6 +5795,7 @@ template <Attribute::AttrKind AK>
 bool hasAssumedIRAttr(Attributor &A, const AbstractAttribute &QueryingAA,
                       const IRPosition &IRP, DepClassTy DepClass, bool &IsKnown,
                       bool IgnoreSubsumingPositions = false) {
+  IsKnown = false;
   switch (AK) {
 #define CASE(ATTRNAME, AANAME)                                                 \
   case Attribute::ATTRNAME: {                                                  \
