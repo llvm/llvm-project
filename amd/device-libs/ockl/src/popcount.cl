@@ -5,7 +5,6 @@
  * License. See LICENSE.TXT for details.
  *===------------------------------------------------------------------------*/
 
-#include "irif.h"
 #include "ockl.h"
 
 __attribute__((always_inline, const)) uint

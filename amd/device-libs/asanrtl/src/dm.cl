@@ -6,7 +6,6 @@
  *===------------------------------------------------------------------------*/
 
 #include "oclc.h"
-#include "irif.h"
 #include "asan_util.h"
 #include "shadow_mapping.h"
 

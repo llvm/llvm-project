@@ -5,7 +5,6 @@
  * License. See LICENSE.TXT for details.
  *===------------------------------------------------------------------------*/
 
-#include "irif.h"
 #pragma OPENCL EXTENSION cl_khr_subgroups : enable
 
 __attribute__((overloadable)) void

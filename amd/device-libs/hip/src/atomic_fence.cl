@@ -1,5 +1,4 @@
 #include "ockl.h"
-#include "irif.h"
 
 #define ATTR2 __attribute__((always_inline))
 ATTR2 void

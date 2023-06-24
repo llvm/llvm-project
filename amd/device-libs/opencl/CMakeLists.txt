@@ -26,7 +26,6 @@ file(GLOB sources ${cl_sources})
 
 include_directories(${CMAKE_CURRENT_SOURCE_DIR}/src/integer)
 include_directories(${CMAKE_CURRENT_SOURCE_DIR}/src/workgroup)
-include_directories(${CMAKE_CURRENT_SOURCE_DIR}/../irif/inc)
 include_directories(${CMAKE_CURRENT_SOURCE_DIR}/../ocml/inc)
 include_directories(${CMAKE_CURRENT_SOURCE_DIR}/../ockl/inc)
 include_directories(${CMAKE_CURRENT_SOURCE_DIR}/../oclc/inc)

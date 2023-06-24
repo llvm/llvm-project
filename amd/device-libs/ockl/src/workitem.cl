@@ -5,7 +5,6 @@
  * License. See LICENSE.TXT for details.
  *===------------------------------------------------------------------------*/
 
-#include "irif.h"
 #include "oclc.h"
 #include "device_amd_hsa.h"
 
