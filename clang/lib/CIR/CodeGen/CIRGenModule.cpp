@@ -116,7 +116,10 @@ CIRGenModule::CIRGenModule(mlir::MLIRContext &context,
   UInt64Ty =
       ::mlir::cir::IntType::get(builder.getContext(), 64, /*isSigned=*/false);
 
-  VoidTy = UInt8Ty;
+  VoidTy = ::mlir::cir::VoidType::get(builder.getContext());
+
+  // Initialize CIR pointer types cache.
+  VoidPtrTy = ::mlir::cir::PointerType::get(builder.getContext(), VoidTy);
 
   // TODO: HalfTy
   // TODO: BFloatTy

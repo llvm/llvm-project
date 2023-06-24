@@ -21,7 +21,7 @@ void init(unsigned numImages) {
   }
 }
 
-// CHECK: !ty_22struct2Etriple22 = !cir.struct<"struct.triple", !u32i, !cir.ptr<!u8i>, !u32i>
+// CHECK: !ty_22struct2Etriple22 = !cir.struct<"struct.triple", !u32i, !cir.ptr<!void>, !u32i>
 // CHECK: !ty_22class2Estd3A3Avector22 = !cir.struct<"class.std::vector", !cir.ptr<!ty_22struct2Etriple22>, !cir.ptr<!ty_22struct2Etriple22>, !cir.ptr<!ty_22struct2Etriple22>>
 // CHECK: !ty_22struct2E__vector_iterator22 = !cir.struct<"struct.__vector_iterator", !cir.ptr<!ty_22struct2Etriple22>>
 
@@ -64,7 +64,7 @@ void init(unsigned numImages) {
 // CHECK:         %15 = "cir.struct_element_addr"(%13) <{member_name = "type"}> : (!cir.ptr<!ty_22struct2Etriple22>) -> !cir.ptr<!u32i>
 // CHECK:         %16 = cir.const(#cir.int<1000024002> : !u32i) : !u32i
 // CHECK:         cir.store %16, %15 : !u32i, cir.ptr <!u32i>
-// CHECK:         %17 = "cir.struct_element_addr"(%13) <{member_name = "next"}> : (!cir.ptr<!ty_22struct2Etriple22>) -> !cir.ptr<!cir.ptr<!u8i>>
+// CHECK:         %17 = "cir.struct_element_addr"(%13) <{member_name = "next"}> : (!cir.ptr<!ty_22struct2Etriple22>) -> !cir.ptr<!cir.ptr<!void>>
 // CHECK:         %18 = "cir.struct_element_addr"(%13) <{member_name = "image"}> : (!cir.ptr<!ty_22struct2Etriple22>) -> !cir.ptr<!u32i>
 // CHECK:         %19 = cir.load %7 : cir.ptr <!cir.ptr<!ty_22struct2Etriple22>>, !cir.ptr<!ty_22struct2Etriple22>
 // CHECK:         %20 = cir.call @_ZN6tripleaSEOS_(%19, %13) : (!cir.ptr<!ty_22struct2Etriple22>, !cir.ptr<!ty_22struct2Etriple22>) -> !cir.ptr<!ty_22struct2Etriple22>

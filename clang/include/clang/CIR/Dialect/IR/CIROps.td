@@ -463,7 +463,7 @@ def TernaryOp : CIR_Op<"ternary",
   let arguments = (ins CIR_BoolType:$cond);
   let regions = (region SizedRegion<1>:$trueRegion,
                         SizedRegion<1>:$falseRegion);
-  let results = (outs AnyType:$result);
+  let results = (outs Optional<AnyType>:$result);
 
   let skipDefaultBuilders = 1;
   let builders = [
@@ -480,7 +480,7 @@ def TernaryOp : CIR_Op<"ternary",
     `(` $cond `,`
       `true` $trueRegion `,`
       `false` $falseRegion
-    `)` `:` type($result) attr-dict
+    `)` `:` functional-type(operands, results) attr-dict
   }];
 }
 

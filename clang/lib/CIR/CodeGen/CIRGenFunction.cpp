@@ -318,7 +318,7 @@ void CIRGenFunction::LexicalScopeGuard::cleanup() {
     // If we are on a coroutine, add the coro_end builtin call.
     if (CGF.CurFn.getCoroutine())
       CGF.buildCoroEndBuiltinCall(
-          loc, builder.getNullPtr(builder.getUInt8PtrTy(), loc));
+          loc, builder.getNullPtr(builder.getVoidPtrTy(), loc));
 
     if (CGF.FnRetCIRTy.has_value()) {
       // If there's anything to return, load it first.
