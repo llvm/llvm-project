@@ -9,7 +9,7 @@ module  {
     }, false {
       %b = cir.const(#cir.int<1> : !u32i) : !u32i
       cir.yield %b : !u32i
-    }) : !u32i
+    }) : (!cir.bool) -> !u32i
     cir.return %0 : !u32i
   }
 }
@@ -23,7 +23,7 @@ module  {
 // CHECK:   }, false {
 // CHECK:     %1 = cir.const(#cir.int<1> : !u32i) : !u32i
 // CHECK:     cir.yield %1 : !u32i
-// CHECK:   }) : !u32i
+// CHECK:   }) : (!cir.bool) -> !u32i
 // CHECK:   cir.return %0 : !u32i
 // CHECK: }
 

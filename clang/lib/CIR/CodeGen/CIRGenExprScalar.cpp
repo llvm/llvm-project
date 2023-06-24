@@ -1679,24 +1679,33 @@ mlir::Value ScalarExprEmitter::VisitAbstractConditionalOperator(
             rhs = builder.getNullValue(CGF.VoidTy, loc);
           }
           builder.create<mlir::cir::YieldOp>(loc, rhs);
-        });
+        }).getResult();
   }
 
   mlir::Value condV = CGF.buildOpOnBoolExpr(condExpr, loc, lhsExpr, rhsExpr);
   CIRGenFunction::ConditionalEvaluation eval(CGF);
   SmallVector<mlir::OpBuilder::InsertPoint, 2> insertPoints{};
   mlir::Type yieldTy{};
+
   auto patchVoidOrThrowSites = [&]() {
     if (insertPoints.empty())
       return;
     // If both arms are void, so be it.
     if (!yieldTy)
       yieldTy = CGF.VoidTy;
+
+    // Insert required yields.
     for (auto &toInsert : insertPoints) {
       mlir::OpBuilder::InsertionGuard guard(builder);
       builder.restoreInsertionPoint(toInsert);
-      mlir::Value op0 = builder.getNullValue(yieldTy, loc);
-      builder.create<mlir::cir::YieldOp>(loc, op0);
+
+      // Block does not return: build empty yield.
+      if (yieldTy.isa<mlir::cir::VoidType>()) {
+        builder.create<mlir::cir::YieldOp>(loc);
+      } else { // Block returns: set null yield value.
+        mlir::Value op0 = builder.getNullValue(yieldTy, loc);
+        builder.create<mlir::cir::YieldOp>(loc, op0);
+      }
     }
   };
 
@@ -1757,7 +1766,7 @@ mlir::Value ScalarExprEmitter::VisitAbstractConditionalOperator(
         }
 
         patchVoidOrThrowSites();
-      });
+      }).getResult();
 }
 
 mlir::Value CIRGenFunction::buildScalarPrePostIncDec(const UnaryOperator *E,
@@ -1871,7 +1880,7 @@ mlir::Value ScalarExprEmitter::VisitBinLAnd(const clang::BinaryOperator *E) {
             Builder.getAttr<mlir::cir::BoolAttr>(Builder.getBoolTy(), false));
         B.create<mlir::cir::YieldOp>(Loc, res.getRes());
       });
-  return Builder.createZExtOrBitCast(ResOp.getLoc(), ResOp, ResTy);
+  return Builder.createZExtOrBitCast(ResOp.getLoc(), ResOp.getResult(), ResTy);
 }
 
 mlir::Value ScalarExprEmitter::VisitBinLOr(const clang::BinaryOperator *E) {
@@ -1979,7 +1988,7 @@ mlir::Value ScalarExprEmitter::VisitBinLOr(const clang::BinaryOperator *E) {
         B.create<mlir::cir::YieldOp>(Loc, res.getResult());
       });
 
-  return Builder.createZExtOrBitCast(ResOp.getLoc(), ResOp, ResTy);
+  return Builder.createZExtOrBitCast(ResOp.getLoc(), ResOp.getResult(), ResTy);
 }
 
 mlir::Value ScalarExprEmitter::VisitVAArgExpr(VAArgExpr *VE) {

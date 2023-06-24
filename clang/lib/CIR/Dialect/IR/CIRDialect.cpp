@@ -54,6 +54,10 @@ struct CIROpAsmDialectInterface : public OpAsmDialectInterface {
       os << intType.getAlias();
       return AliasResult::OverridableAlias;
     }
+    if (auto voidType = type.dyn_cast<VoidType>()) {
+      os << voidType.getAlias();
+      return AliasResult::OverridableAlias;
+    }
 
     return AliasResult::NoAlias;
   }
@@ -687,9 +691,10 @@ void TernaryOp::build(OpBuilder &builder, OperationState &result, Value cond,
   falseBuilder(builder, result.location);
 
   auto yield = dyn_cast<YieldOp>(block->getTerminator());
-  assert((yield && yield.getNumOperands() == 1) &&
-         "expected cir.yield terminator with one operand");
-  result.addTypes(TypeRange{yield.getOperand(0).getType()});
+  assert((yield && yield.getNumOperands() <= 1) &&
+         "expected zero or one result type");
+  if (yield.getNumOperands() == 1)
+    result.addTypes(TypeRange{yield.getOperandTypes().front()});
 }
 
 //===----------------------------------------------------------------------===//

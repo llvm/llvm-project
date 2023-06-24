@@ -44,8 +44,8 @@ int cStyleCasts_0(unsigned x1, int x2, float x3, short x4) {
 
   long l = (long)(void*)x4; // Must sign extend before casting to pointer
   // CHECK: %[[TMP:[0-9]+]] = cir.cast(integral, %{{[0-9]+}} : !s16i), !u64i
-  // CHECK: %[[TMP2:[0-9]+]] = cir.cast(int_to_ptr, %[[TMP]] : !u64i), !cir.ptr<!u8i>
-  // CHECK: %{{[0-9]+}} = cir.cast(ptr_to_int, %[[TMP2]] : !cir.ptr<!u8i>), !s64i
+  // CHECK: %[[TMP2:[0-9]+]] = cir.cast(int_to_ptr, %[[TMP]] : !u64i), !cir.ptr<!void>
+  // CHECK: %{{[0-9]+}} = cir.cast(ptr_to_int, %[[TMP2]] : !cir.ptr<!void>), !s64i
 
   return 0;
 }
@@ -55,22 +55,22 @@ bool cptr(void *d) {
   return x;
 }
 
-// CHECK: cir.func @_Z4cptrPv(%arg0: !cir.ptr<!u8i>
-// CHECK:   %0 = cir.alloca !cir.ptr<!u8i>, cir.ptr <!cir.ptr<!u8i>>, ["d", init] {alignment = 8 : i64}
+// CHECK: cir.func @_Z4cptrPv(%arg0: !cir.ptr<!void>
+// CHECK:   %0 = cir.alloca !cir.ptr<!void>, cir.ptr <!cir.ptr<!void>>, ["d", init] {alignment = 8 : i64}
 
-// CHECK:   %3 = cir.load %0 : cir.ptr <!cir.ptr<!u8i>>, !cir.ptr<!u8i>
-// CHECK:   %4 = cir.cast(ptr_to_bool, %3 : !cir.ptr<!u8i>), !cir.bool
+// CHECK:   %3 = cir.load %0 : cir.ptr <!cir.ptr<!void>>, !cir.ptr<!void>
+// CHECK:   %4 = cir.cast(ptr_to_bool, %3 : !cir.ptr<!void>), !cir.bool
 
 void call_cptr(void *d) {
   if (!cptr(d)) {
   }
 }
 
-// CHECK: cir.func @_Z9call_cptrPv(%arg0: !cir.ptr<!u8i>
-// CHECK:   %0 = cir.alloca !cir.ptr<!u8i>, cir.ptr <!cir.ptr<!u8i>>, ["d", init] {alignment = 8 : i64}
+// CHECK: cir.func @_Z9call_cptrPv(%arg0: !cir.ptr<!void>
+// CHECK:   %0 = cir.alloca !cir.ptr<!void>, cir.ptr <!cir.ptr<!void>>, ["d", init] {alignment = 8 : i64}
 
 // CHECK:   cir.scope {
-// CHECK:     %1 = cir.load %0 : cir.ptr <!cir.ptr<!u8i>>, !cir.ptr<!u8i>
-// CHECK:     %2 = cir.call @_Z4cptrPv(%1) : (!cir.ptr<!u8i>) -> !cir.bool
+// CHECK:     %1 = cir.load %0 : cir.ptr <!cir.ptr<!void>>, !cir.ptr<!void>
+// CHECK:     %2 = cir.call @_Z4cptrPv(%1) : (!cir.ptr<!void>) -> !cir.bool
 // CHECK:     %3 = cir.unary(not, %2) : !cir.bool, !cir.bool
 // CHECK:     cir.if %3 {
