@@ -563,6 +563,15 @@ bool AA::getPotentialCopiesOfStoredValue(
 static bool isAssumedReadOnlyOrReadNone(Attributor &A, const IRPosition &IRP,
                                         const AbstractAttribute &QueryingAA,
                                         bool RequireReadNone, bool &IsKnown) {
+  if (RequireReadNone) {
+    if (AA::hasAssumedIRAttr<Attribute::ReadNone>(
+            A, QueryingAA, IRP, DepClassTy::OPTIONAL, IsKnown,
+            /* IgnoreSubsumingPositions */ true))
+      return true;
+  } else if (AA::hasAssumedIRAttr<Attribute::ReadOnly>(
+                 A, QueryingAA, IRP, DepClassTy::OPTIONAL, IsKnown,
+                 /* IgnoreSubsumingPositions */ true))
+    return true;
 
   IRPosition::Kind Kind = IRP.getPositionKind();
   if (Kind == IRPosition::IRP_FUNCTION || Kind == IRPosition::IRP_CALL_SITE) {
