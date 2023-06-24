@@ -3715,9 +3715,10 @@ void NewGVN::deleteInstructionsInBlock(BasicBlock *BB) {
   }
   // Now insert something that simplifycfg will turn into an unreachable.
   Type *Int8Ty = Type::getInt8Ty(BB->getContext());
-  new StoreInst(PoisonValue::get(Int8Ty),
-                Constant::getNullValue(Int8Ty->getPointerTo()),
-                BB->getTerminator());
+  new StoreInst(
+      PoisonValue::get(Int8Ty),
+      Constant::getNullValue(PointerType::getUnqual(BB->getContext())),
+      BB->getTerminator());
 }
 
 void NewGVN::markInstructionForDeletion(Instruction *I) {
