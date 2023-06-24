@@ -52,6 +52,7 @@ ASM_SYMBOL(__xray_FunctionEntry):
 1:
   RESTORE_REGISTERS
   ret
+ASM_SIZE(__xray_FunctionEntry)
 
 .p2align 2
 .global ASM_SYMBOL(__xray_FunctionExit)
@@ -77,6 +78,7 @@ ASM_SYMBOL(__xray_FunctionExit):
 1:
   RESTORE_REGISTERS
   ret
+ASM_SIZE(__xray_FunctionExit)
 
 .p2align 2
 .global ASM_SYMBOL(__xray_FunctionTailExit)
@@ -102,6 +104,7 @@ ASM_SYMBOL(__xray_FunctionTailExit):
 1:
   RESTORE_REGISTERS
   ret
+ASM_SIZE(__xray_FunctionTailExit)
 
 .global ASM_SYMBOL(__xray_CustomEvent)
 ASM_HIDDEN(__xray_CustomEvent)
