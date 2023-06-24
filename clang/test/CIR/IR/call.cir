@@ -1,0 +1,13 @@
+// RUN: cir-tool %s | FileCheck %s
+
+!s32i = !cir.int<s, 32>
+!fnptr = !cir.ptr<!cir.func<!s32i (!cir.ptr<!s32i>)>>
+
+module {
+  cir.func @ind(%fnptr: !fnptr, %a : !s32i) {
+    %r = cir.call %fnptr(%a) : (!fnptr, !s32i) -> !s32i
+    cir.return
+  }
+}
+
+// CHECK: %0 = cir.call %arg0(%arg1) : (!cir.ptr<!cir.func<!s32i (!cir.ptr<!s32i>)>>, !s32i) -> !s32i
