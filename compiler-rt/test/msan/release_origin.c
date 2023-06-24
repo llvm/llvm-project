@@ -12,14 +12,14 @@ void *p;
 
 int main(int argc, char **argv) {
   int s = 20 * 1024 * 1024;
-  p = malloc(s);
   fprintf(stderr, "malloc\n");
+  p = malloc(s);
   sleep(1);
-  memset(p, 1, s);
   fprintf(stderr, "memset\n");
+  memset(p, 1, s);
   sleep(1);
-  free(p);
   fprintf(stderr, "free\n");
+  free(p);
   sleep(1);
   return 0;
 }
