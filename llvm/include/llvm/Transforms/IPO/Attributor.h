@@ -1622,7 +1622,10 @@ struct Attributor {
     }
 
     {
-      TimeTraceScope TimeScope(AA.getName() + "::initialize");
+      TimeTraceScope TimeScope("initialize", [&]() {
+        return AA.getName() +
+               std::to_string(AA.getIRPosition().getPositionKind());
+      });
       ++InitializationChainLength;
       AA.initialize(*this);
       --InitializationChainLength;
