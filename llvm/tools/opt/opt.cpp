@@ -434,7 +434,6 @@ int main(int argc, char **argv) {
   initializeCallBrPreparePass(Registry);
   initializeCodeGenPreparePass(Registry);
   initializeAtomicExpandPass(Registry);
-  initializeRewriteSymbolsLegacyPassPass(Registry);
   initializeWinEHPreparePass(Registry);
   initializeDwarfEHPrepareLegacyPassPass(Registry);
   initializeSafeStackLegacyPassPass(Registry);
