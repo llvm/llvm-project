@@ -5101,7 +5101,11 @@ def falign_jumps_EQ : Joined<["-"], "falign-jumps=">, Group<clang_ignored_gcc_op
 // ignore it for now to avoid breaking builds that use it.
 def fdiagnostics_show_location_EQ : Joined<["-"], "fdiagnostics-show-location=">, Group<clang_ignored_f_Group>;
 
-defm fcheck_new : BooleanFFlag<"check-new">, Group<clang_ignored_f_Group>;
+defm check_new : BoolOption<"f", "check-new",
+  LangOpts<"CheckNew">, DefaultFalse,
+  PosFlag<SetTrue, [], "Do not assume C++ operator new may not return NULL">,
+  NegFlag<SetFalse>, BothFlags<[CC1Option]>>;
+
 defm caller_saves : BooleanFFlag<"caller-saves">, Group<clang_ignored_gcc_optimization_f_Group>;
 defm reorder_blocks : BooleanFFlag<"reorder-blocks">, Group<clang_ignored_gcc_optimization_f_Group>;
 defm branch_count_reg : BooleanFFlag<"branch-count-reg">, Group<clang_ignored_gcc_optimization_f_Group>;

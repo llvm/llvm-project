@@ -466,6 +466,8 @@ LANGOPT(IncrementalExtensions, 1, 0, " True if we want to process statements"
         "avoid tearing the Lexer and etc. down). Controlled by "
         "-fincremental-extensions.")
 
+BENIGN_LANGOPT(CheckNew, 1, 0, "Do not assume C++ operator new may not return NULL")
+
 #undef LANGOPT
 #undef COMPATIBLE_LANGOPT
 #undef BENIGN_LANGOPT
