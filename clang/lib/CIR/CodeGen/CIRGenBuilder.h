@@ -195,8 +195,7 @@ public:
   mlir::Type getVirtualFnPtrType(bool isVarArg = false) {
     // FIXME: replay LLVM codegen for now, perhaps add a vtable ptr special
     // type so it's a bit more clear and C++ idiomatic.
-    auto fnTy =
-        mlir::cir::FuncType::get(getContext(), {}, {getUInt32Ty()}, isVarArg);
+    auto fnTy = mlir::cir::FuncType::get({}, getUInt32Ty(), isVarArg);
     assert(!UnimplementedFeature::isVarArg());
     return getPointerTo(getPointerTo(fnTy));
   }

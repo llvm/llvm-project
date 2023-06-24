@@ -349,28 +349,16 @@ static mlir::LogicalResult checkReturnAndFunction(ReturnOp op,
   if (op.getNumOperands() > 1)
     return op.emitOpError() << "expects at most 1 return operand";
 
-  // The operand number and types must match the function signature.
-  const auto &results = function.getFunctionType().getResults();
-  if (op.getNumOperands() != results.size())
-    return op.emitOpError()
-           << "does not return the same number of values ("
-           << op.getNumOperands() << ") as the enclosing function ("
-           << results.size() << ")";
+  // Ensure returned type matches the function signature.
+  auto expectedTy = function.getFunctionType().getReturnType();
+  auto actualTy =
+      (op.getNumOperands() == 0 ? mlir::cir::VoidType::get(op.getContext())
+                                : op.getOperand(0).getType());
+  if (actualTy != expectedTy)
+    return op.emitOpError() << "returns " << actualTy
+                            << " but enclosing function returns " << expectedTy;
 
-  // If the operation does not have an input, we are done.
-  if (!op.hasOperand())
-    return mlir::success();
-
-  auto inputType = *op.operand_type_begin();
-  auto resultType = results.front();
-
-  // Check that the result type of the function matches the operand type.
-  if (inputType == resultType)
-    return mlir::success();
-
-  return op.emitError() << "type of return operand (" << inputType
-                        << ") doesn't match function result type ("
-                        << resultType << ")";
+  return mlir::success();
 }
 
 mlir::LogicalResult ReturnOp::verify() {
@@ -1319,9 +1307,8 @@ LogicalResult cir::VTableAddrPointOp::verify() {
     return success();
 
   auto resultType = getAddr().getType();
-  auto fnTy = mlir::cir::FuncType::get(
-      getContext(), {},
-      {mlir::cir::IntType::get(getContext(), 32, /*isSigned=*/false)});
+  auto intTy = mlir::cir::IntType::get(getContext(), 32, /*isSigned=*/false);
+  auto fnTy = mlir::cir::FuncType::get({}, intTy);
 
   auto resTy = mlir::cir::PointerType::get(
       getContext(), mlir::cir::PointerType::get(getContext(), fnTy));
@@ -1415,10 +1402,17 @@ ParseResult cir::FuncOp::parse(OpAsmParser &parser, OperationState &state) {
   for (auto &arg : arguments)
     argTypes.push_back(arg.type);
 
+  if (resultTypes.size() > 1)
+    return parser.emitError(loc, "functions only supports zero or one results");
+
+  // Fetch return type or set it to void if empty/ommited.
+  mlir::Type returnType =
+      (resultTypes.empty() ? mlir::cir::VoidType::get(builder.getContext())
+                           : resultTypes.front());
+
   // Build the function type.
   auto fnType = mlir::cir::FuncType::getChecked(
-      parser.getEncodedSourceLoc(loc), parser.getContext(),
-      mlir::TypeRange(argTypes), mlir::TypeRange(resultTypes), isVariadic);
+      parser.getEncodedSourceLoc(loc), argTypes, returnType, isVariadic);
   if (!fnType)
     return failure();
   state.addAttribute(getFunctionTypeAttrName(state.name),
@@ -1512,8 +1506,14 @@ void cir::FuncOp::print(OpAsmPrinter &p) {
   // Print function name, signature, and control.
   p.printSymbolName(getSymName());
   auto fnType = getFunctionType();
-  function_interface_impl::printFunctionSignature(
-      p, *this, fnType.getInputs(), fnType.isVarArg(), fnType.getResults());
+  SmallVector<Type, 1> resultTypes;
+  if (!fnType.isVoid())
+    function_interface_impl::printFunctionSignature(
+        p, *this, fnType.getInputs(), fnType.isVarArg(),
+        fnType.getReturnTypes());
+  else
+    function_interface_impl::printFunctionSignature(
+        p, *this, fnType.getInputs(), fnType.isVarArg(), {});
   function_interface_impl::printFunctionAttributes(
       p, *this,
       {getSymVisibilityAttrName(), getAliaseeAttrName(),
@@ -1542,8 +1542,6 @@ LogicalResult cir::FuncOp::verifyType() {
   if (!type.isa<cir::FuncType>())
     return emitOpError("requires '" + getFunctionTypeAttrName().str() +
                        "' attribute of function type");
-  if (getFunctionType().getNumResults() > 1)
-    return emitOpError("cannot have more than one result");
   return success();
 }
 
@@ -1645,16 +1643,20 @@ cir::CallOp::verifySymbolUses(SymbolTableCollection &symbolTable) {
              << fnType.getInput(i) << ", but provided "
              << getOperand(i).getType() << " for operand number " << i;
 
-  if (fnType.getNumResults() != getNumResults())
+  // Void function must not return any results.
+  if (fnType.isVoid() && getNumResults() != 0)
+    return emitOpError("callee returns void but call has results");
+
+  // Non-void function calls must return exactly one result.
+  if (!fnType.isVoid() && getNumResults() != 1)
     return emitOpError("incorrect number of results for callee");
 
-  for (unsigned i = 0, e = fnType.getNumResults(); i != e; ++i)
-    if (getResult(i).getType() != fnType.getResult(i)) {
-      auto diag = emitOpError("result type mismatch at index ") << i;
-      diag.attachNote() << "      op result types: " << getResultTypes();
-      diag.attachNote() << "function result types: " << fnType.getResults();
-      return diag;
-    }
+  // Parent function and return value types must match.
+  if (!fnType.isVoid() && getResultTypes().front() != fnType.getReturnType()) {
+    return emitOpError("result type mismatch: expected ")
+           << fnType.getReturnType() << ", but provided "
+           << getResult(0).getType();
+  }
 
   return success();
 }

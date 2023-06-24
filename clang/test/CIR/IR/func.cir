@@ -27,6 +27,16 @@ module {
     %1 = cir.alloca !cir.ptr<!cir.func<!s32i (!s32i, ...)>>, cir.ptr <!cir.ptr<!cir.func<!s32i (!s32i, ...)>>>, ["fn", init] {alignment = 8 : i64}
     cir.return
   }
+
+  // Should parse void return types.
+  cir.func @parse_explicit_void_func() -> !cir.void {
+    cir.return
+  }
+
+  // Should parse omitted void return type.
+  cir.func @parse_func_type_with_omitted_void() {
+    cir.return
+  }
 }
 
 // CHECK: cir.func @l0()
