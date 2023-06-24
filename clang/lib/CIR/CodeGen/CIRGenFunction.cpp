@@ -16,9 +16,11 @@
 
 #include "clang/AST/ASTLambda.h"
 #include "clang/AST/ExprObjC.h"
+#include "clang/Basic/Builtins.h"
 #include "clang/Basic/TargetInfo.h"
 #include "clang/CIR/Dialect/IR/CIRDialect.h"
 #include "clang/CIR/Dialect/IR/FPEnv.h"
+#include "clang/Frontend/FrontendDiagnostic.h"
 
 #include "mlir/Dialect/Func/IR/FuncOps.h"
 
@@ -1265,4 +1267,83 @@ Address CIRGenFunction::buildVAListRef(const Expr* E) {
   if (getContext().getBuiltinVaListType()->isArrayType())
     return buildPointerWithAlignment(E);
   return buildLValue(E).getAddress();
+}
+
+// Emits an error if we don't have a valid set of target features for the
+// called function.
+void CIRGenFunction::checkTargetFeatures(const CallExpr *E,
+                                         const FunctionDecl *TargetDecl) {
+  return checkTargetFeatures(E->getBeginLoc(), TargetDecl);
+}
+
+// Emits an error if we don't have a valid set of target features for the
+// called function.
+void CIRGenFunction::checkTargetFeatures(SourceLocation Loc,
+                                         const FunctionDecl *TargetDecl) {
+  // Early exit if this is an indirect call.
+  if (!TargetDecl)
+    return;
+
+  // Get the current enclosing function if it exists. If it doesn't
+  // we can't check the target features anyhow.
+  const FunctionDecl *FD = dyn_cast_or_null<FunctionDecl>(CurCodeDecl);
+  if (!FD)
+    return;
+
+  // Grab the required features for the call. For a builtin this is listed in
+  // the td file with the default cpu, for an always_inline function this is any
+  // listed cpu and any listed features.
+  unsigned BuiltinID = TargetDecl->getBuiltinID();
+  std::string MissingFeature;
+  llvm::StringMap<bool> CallerFeatureMap;
+  CGM.getASTContext().getFunctionFeatureMap(CallerFeatureMap, FD);
+  if (BuiltinID) {
+    StringRef FeatureList(
+        getContext().BuiltinInfo.getRequiredFeatures(BuiltinID));
+    if (!Builtin::evaluateRequiredTargetFeatures(FeatureList,
+                                                 CallerFeatureMap)) {
+      CGM.getDiags().Report(Loc, diag::err_builtin_needs_feature)
+          << TargetDecl->getDeclName() << FeatureList;
+    }
+  } else if (!TargetDecl->isMultiVersion() &&
+             TargetDecl->hasAttr<TargetAttr>()) {
+    // Get the required features for the callee.
+
+    const TargetAttr *TD = TargetDecl->getAttr<TargetAttr>();
+    ParsedTargetAttr ParsedAttr = getContext().filterFunctionTargetAttrs(TD);
+
+    SmallVector<StringRef, 1> ReqFeatures;
+    llvm::StringMap<bool> CalleeFeatureMap;
+    getContext().getFunctionFeatureMap(CalleeFeatureMap, TargetDecl);
+
+    for (const auto &F : ParsedAttr.Features) {
+      if (F[0] == '+' && CalleeFeatureMap.lookup(F.substr(1)))
+        ReqFeatures.push_back(StringRef(F).substr(1));
+    }
+
+    for (const auto &F : CalleeFeatureMap) {
+      // Only positive features are "required".
+      if (F.getValue())
+        ReqFeatures.push_back(F.getKey());
+    }
+    if (!llvm::all_of(ReqFeatures, [&](StringRef Feature) {
+          if (!CallerFeatureMap.lookup(Feature)) {
+            MissingFeature = Feature.str();
+            return false;
+          }
+          return true;
+        }))
+      CGM.getDiags().Report(Loc, diag::err_function_needs_feature)
+          << FD->getDeclName() << TargetDecl->getDeclName() << MissingFeature;
+  } else if (!FD->isMultiVersion() && FD->hasAttr<TargetAttr>()) {
+    llvm::StringMap<bool> CalleeFeatureMap;
+    getContext().getFunctionFeatureMap(CalleeFeatureMap, TargetDecl);
+
+    for (const auto &F : CalleeFeatureMap) {
+      if (F.getValue() && (!CallerFeatureMap.lookup(F.getKey()) ||
+                           !CallerFeatureMap.find(F.getKey())->getValue()))
+        CGM.getDiags().Report(Loc, diag::err_function_needs_feature)
+            << FD->getDeclName() << TargetDecl->getDeclName() << F.getKey();
+    }
+  }
 }
