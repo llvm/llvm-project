@@ -7,7 +7,7 @@
 
 #include "mathD.h"
 
-CONSTATTR INLINEATTR static double
+CONSTATTR static double
 fnma(double a, double b, double c)
 {
     return BUILTIN_FMA_F64(-a, b, c);

@@ -5,7 +5,7 @@
  * License. See LICENSE.TXT for details.
  *===------------------------------------------------------------------------*/
 
-CONSTATTR INLINEATTR static bool
+CONSTATTR static bool
 samesign(half x, half y)
 {
     return (AS_USHORT(x) & (ushort)SIGNBIT_HP16) == (AS_USHORT(y) & (ushort)SIGNBIT_HP16);
