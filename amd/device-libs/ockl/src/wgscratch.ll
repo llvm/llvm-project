@@ -2,10 +2,10 @@ target datalayout = "e-p:64:64-p1:64:64-p2:32:32-p3:32:32-p4:64:64-p5:32:32-p6:3
 target triple = "amdgcn-amd-amdhsa"
 
 ; 1024 work-items means up to 32 work groups
-@__scratch_lds = linkonce_odr hidden addrspace(3) global [32 x i64] undef, align 8
+@__scratch_lds = linkonce_odr hidden addrspace(3) global [32 x i64] poison, align 8
 
-define protected i64 addrspace(3)* @__get_scratch_lds() #0 {
-  ret i64 addrspace(3)* getelementptr inbounds ([32 x i64], [32 x i64] addrspace(3)* @__scratch_lds, i64 0, i64 0)
+define protected noundef align 8 dereferenceable(256) ptr addrspace(3) @__get_scratch_lds() #0 {
+  ret ptr addrspace(3) @__scratch_lds
 }
 
-attributes #0 = { alwaysinline norecurse nounwind readnone speculatable }
+attributes #0 = { alwaysinline mustprogress nofree norecurse nosync nounwind speculatable willreturn memory(none) }
