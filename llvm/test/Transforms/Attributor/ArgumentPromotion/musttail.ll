@@ -127,7 +127,7 @@ define internal i32 @test2b(ptr %p, i32 %p2) {
 ; TUNIT-NEXT:    [[A:%.*]] = load i32, ptr [[A_GEP]], align 4
 ; TUNIT-NEXT:    [[B:%.*]] = load i32, ptr [[B_GEP]], align 4
 ; TUNIT-NEXT:    [[V:%.*]] = add i32 [[A]], [[B]]
-; TUNIT-NEXT:    [[CA:%.*]] = musttail call noundef i32 @bar(ptr undef, i32 [[V]]) #[[ATTR4]]
+; TUNIT-NEXT:    [[CA:%.*]] = musttail call noundef i32 @bar(ptr undef, i32 [[V]]) #[[ATTR5:[0-9]+]]
 ; TUNIT-NEXT:    ret i32 [[CA]]
 ;
 ; CGSCC: Function Attrs: mustprogress nofree nosync nounwind willreturn memory(argmem: readwrite)
@@ -154,7 +154,7 @@ define i32 @caller2b(ptr %g) {
 ; TUNIT: Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn memory(argmem: readwrite)
 ; TUNIT-LABEL: define {{[^@]+}}@caller2b
 ; TUNIT-SAME: (ptr nocapture nofree readonly [[G:%.*]]) #[[ATTR3]] {
-; TUNIT-NEXT:    [[V:%.*]] = call noundef i32 @test2b(ptr nocapture nofree readonly [[G]], i32 undef) #[[ATTR4]]
+; TUNIT-NEXT:    [[V:%.*]] = call noundef i32 @test2b(ptr nocapture nofree readonly [[G]], i32 undef) #[[ATTR5]]
 ; TUNIT-NEXT:    ret i32 [[V]]
 ;
 ; CGSCC: Function Attrs: mustprogress nofree nosync nounwind willreturn memory(argmem: readwrite)
@@ -171,7 +171,8 @@ define i32 @caller2b(ptr %g) {
 ; TUNIT: attributes #[[ATTR1]] = { mustprogress nofree norecurse nosync nounwind willreturn memory(none) }
 ; TUNIT: attributes #[[ATTR2]] = { mustprogress nofree norecurse nosync nounwind willreturn memory(argmem: write) }
 ; TUNIT: attributes #[[ATTR3]] = { mustprogress nofree norecurse nosync nounwind willreturn memory(argmem: readwrite) }
-; TUNIT: attributes #[[ATTR4]] = { nofree nosync nounwind willreturn }
+; TUNIT: attributes #[[ATTR4]] = { nofree nosync nounwind willreturn memory(read) }
+; TUNIT: attributes #[[ATTR5]] = { nofree nosync nounwind willreturn }
 ;.
 ; CGSCC: attributes #[[ATTR0]] = { mustprogress nofree norecurse nosync nounwind willreturn memory(argmem: read) }
 ; CGSCC: attributes #[[ATTR1]] = { mustprogress nofree nosync nounwind willreturn memory(argmem: read) }

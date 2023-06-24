@@ -447,7 +447,7 @@ define void @call_fill_range(ptr nocapture %p, ptr nocapture readonly %range) {
 ; TUNIT-NEXT:  entry:
 ; TUNIT-NEXT:    [[TMP0:%.*]] = load i64, ptr [[RANGE]], align 8, !range [[RNG0:![0-9]+]]
 ; TUNIT-NEXT:    tail call void @fill_range_inbounds(ptr nocapture nofree writeonly [[P]], i64 [[TMP0]]) #[[ATTR8:[0-9]+]]
-; TUNIT-NEXT:    tail call void @fill_range_not_inbounds(ptr nocapture nofree writeonly [[P]], i64 [[TMP0]]) #[[ATTR8]]
+; TUNIT-NEXT:    tail call void @fill_range_not_inbounds(ptr nocapture nofree writeonly [[P]], i64 [[TMP0]]) #[[ATTR9:[0-9]+]]
 ; TUNIT-NEXT:    ret void
 ;
 ; CGSCC: Function Attrs: mustprogress nofree nosync nounwind willreturn memory(argmem: readwrite)
@@ -655,7 +655,7 @@ define dso_local void @rec-branch-2(i32 %a, i32 %b, i32 %c, ptr %ptr) {
 ; TUNIT-NEXT:    store i32 3, ptr [[PTR]], align 4
 ; TUNIT-NEXT:    br label [[IF_END8]]
 ; TUNIT:       if.else6:
-; TUNIT-NEXT:    tail call void @rec-branch-2(i32 noundef 1, i32 noundef 1, i32 noundef 1, ptr nocapture nofree writeonly [[PTR]]) #[[ATTR9:[0-9]+]]
+; TUNIT-NEXT:    tail call void @rec-branch-2(i32 noundef 1, i32 noundef 1, i32 noundef 1, ptr nocapture nofree writeonly [[PTR]]) #[[ATTR10:[0-9]+]]
 ; TUNIT-NEXT:    br label [[IF_END8]]
 ; TUNIT:       if.end8:
 ; TUNIT-NEXT:    ret void
@@ -849,7 +849,8 @@ f:
 ; TUNIT: attributes #[[ATTR6:[0-9]+]] = { nocallback nofree nosync nounwind willreturn memory(inaccessiblemem: readwrite) }
 ; TUNIT: attributes #[[ATTR7]] = { nounwind }
 ; TUNIT: attributes #[[ATTR8]] = { nofree nosync nounwind willreturn }
-; TUNIT: attributes #[[ATTR9]] = { nofree nosync nounwind }
+; TUNIT: attributes #[[ATTR9]] = { nofree nosync nounwind willreturn memory(write) }
+; TUNIT: attributes #[[ATTR10]] = { nofree nosync nounwind memory(write) }
 ;.
 ; CGSCC: attributes #[[ATTR0]] = { mustprogress nofree norecurse nosync nounwind willreturn memory(none) }
 ; CGSCC: attributes #[[ATTR1:[0-9]+]] = { nounwind willreturn }
@@ -859,7 +860,7 @@ f:
 ; CGSCC: attributes #[[ATTR5]] = { nofree nosync nounwind memory(argmem: write) }
 ; CGSCC: attributes #[[ATTR6:[0-9]+]] = { nocallback nofree nosync nounwind willreturn memory(inaccessiblemem: readwrite) }
 ; CGSCC: attributes #[[ATTR7]] = { nounwind }
-; CGSCC: attributes #[[ATTR8]] = { nofree nosync nounwind }
+; CGSCC: attributes #[[ATTR8]] = { nofree nosync nounwind memory(write) }
 ;.
 ; CHECK: [[META0:![0-9]+]] = !{i64 10, i64 100}
 ;.

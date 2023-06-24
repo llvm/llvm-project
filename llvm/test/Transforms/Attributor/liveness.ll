@@ -2429,7 +2429,6 @@ indirectgoto:                                     ; preds = %lab0, %entry
 define i32 @main() {
 ; TUNIT-LABEL: define {{[^@]+}}@main() {
 ; TUNIT-NEXT:  entry:
-; TUNIT-NEXT:    [[F:%.*]] = alloca i32, align 4
 ; TUNIT-NEXT:    br label [[FOR_COND_0:%.*]]
 ; TUNIT:       for.cond.0:
 ; TUNIT-NEXT:    [[G_0:%.*]] = phi i32 [ 0, [[ENTRY:%.*]] ], [ [[INC:%.*]], [[FOR_BODY_0:%.*]] ]
