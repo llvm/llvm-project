@@ -3197,6 +3197,12 @@ RValue CodeGenFunction::EmitBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
   case Builtin::BI__builtin_elementwise_round:
     return RValue::get(emitUnaryBuiltin(*this, E, llvm::Intrinsic::round,
                                         "elt.round"));
+  case Builtin::BI__builtin_elementwise_rint:
+    return RValue::get(emitUnaryBuiltin(*this, E, llvm::Intrinsic::rint,
+                                        "elt.rint"));
+  case Builtin::BI__builtin_elementwise_nearbyint:
+    return RValue::get(emitUnaryBuiltin(*this, E, llvm::Intrinsic::nearbyint,
+                                        "elt.nearbyint"));
   case Builtin::BI__builtin_elementwise_sin:
     return RValue::get(
         emitUnaryBuiltin(*this, E, llvm::Intrinsic::sin, "elt.sin"));
@@ -3206,7 +3212,7 @@ RValue CodeGenFunction::EmitBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
         emitUnaryBuiltin(*this, E, llvm::Intrinsic::trunc, "elt.trunc"));
   case Builtin::BI__builtin_elementwise_canonicalize:
     return RValue::get(
-        emitUnaryBuiltin(*this, E, llvm::Intrinsic::canonicalize, "elt.trunc"));
+        emitUnaryBuiltin(*this, E, llvm::Intrinsic::canonicalize, "elt.canonicalize"));
   case Builtin::BI__builtin_elementwise_copysign:
     return RValue::get(emitBinaryBuiltin(*this, E, llvm::Intrinsic::copysign));
   case Builtin::BI__builtin_elementwise_fma:

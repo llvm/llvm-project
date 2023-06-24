@@ -1394,7 +1394,8 @@ def PseudoCCMOVGPR : Pseudo<(outs GPR:$dst),
                                                        GPR:$rhs, cond,
                                                        (XLenVT GPR:$truev),
                                                        GPR:$falsev))]>,
-                     Sched<[WriteSFB, ReadSFB, ReadSFB, ReadSFB, ReadSFB]>;
+                     Sched<[WriteSFB, ReadSFBJmp, ReadSFBJmp,
+                            ReadSFBALU, ReadSFBALU]>;
 }
 
 // Conditional binops, that updates update $dst to (op rs1, rs2) when condition
@@ -1406,33 +1407,40 @@ let hasSideEffects = 0, mayLoad = 0, mayStore = 0, Size = 8,
 def PseudoCCADD : Pseudo<(outs GPR:$dst),
                          (ins GPR:$lhs, GPR:$rhs, ixlenimm:$cc,
                           GPR:$falsev, GPR:$rs1, GPR:$rs2), []>,
-                  Sched<[WriteSFB, ReadSFB, ReadSFB, ReadSFB, ReadSFB, ReadSFB]>;
+                  Sched<[WriteSFB, ReadSFBJmp, ReadSFBJmp,
+                         ReadSFBALU, ReadSFBALU, ReadSFBALU]>;
 def PseudoCCSUB : Pseudo<(outs GPR:$dst),
                          (ins GPR:$lhs, GPR:$rhs, ixlenimm:$cc,
                           GPR:$falsev, GPR:$rs1, GPR:$rs2), []>,
-                  Sched<[WriteSFB, ReadSFB, ReadSFB, ReadSFB, ReadSFB, ReadSFB]>;
+                  Sched<[WriteSFB, ReadSFBJmp, ReadSFBJmp,
+                         ReadSFBALU, ReadSFBALU, ReadSFBALU]>;
 def PseudoCCAND : Pseudo<(outs GPR:$dst),
                          (ins GPR:$lhs, GPR:$rhs, ixlenimm:$cc,
                           GPR:$falsev, GPR:$rs1, GPR:$rs2), []>,
-                  Sched<[WriteSFB, ReadSFB, ReadSFB, ReadSFB, ReadSFB, ReadSFB]>;
+                  Sched<[WriteSFB, ReadSFBJmp, ReadSFBJmp,
+                         ReadSFBALU, ReadSFBALU, ReadSFBALU]>;
 def PseudoCCOR  : Pseudo<(outs GPR:$dst),
                          (ins GPR:$lhs, GPR:$rhs, ixlenimm:$cc,
                           GPR:$falsev, GPR:$rs1, GPR:$rs2), []>,
-                  Sched<[WriteSFB, ReadSFB, ReadSFB, ReadSFB, ReadSFB, ReadSFB]>;
+                  Sched<[WriteSFB, ReadSFBJmp, ReadSFBJmp,
+                         ReadSFBALU, ReadSFBALU, ReadSFBALU]>;
 def PseudoCCXOR : Pseudo<(outs GPR:$dst),
                          (ins GPR:$lhs, GPR:$rhs, ixlenimm:$cc,
                           GPR:$falsev, GPR:$rs1, GPR:$rs2), []>,
-                  Sched<[WriteSFB, ReadSFB, ReadSFB, ReadSFB, ReadSFB, ReadSFB]>;
+                  Sched<[WriteSFB, ReadSFBJmp, ReadSFBJmp,
+                         ReadSFBALU, ReadSFBALU, ReadSFBALU]>;
 
 // RV64I instructions
 def PseudoCCADDW : Pseudo<(outs GPR:$dst),
                           (ins GPR:$lhs, GPR:$rhs, ixlenimm:$cc,
                            GPR:$falsev, GPR:$rs1, GPR:$rs2), []>,
-                   Sched<[WriteSFB, ReadSFB, ReadSFB, ReadSFB, ReadSFB, ReadSFB]>;
+                   Sched<[WriteSFB, ReadSFBJmp, ReadSFBJmp,
+                          ReadSFBALU, ReadSFBALU, ReadSFBALU]>;
 def PseudoCCSUBW : Pseudo<(outs GPR:$dst),
                           (ins GPR:$lhs, GPR:$rhs, ixlenimm:$cc,
                            GPR:$falsev, GPR:$rs1, GPR:$rs2), []>,
-                   Sched<[WriteSFB, ReadSFB, ReadSFB, ReadSFB, ReadSFB, ReadSFB]>;
+                   Sched<[WriteSFB, ReadSFBJmp, ReadSFBJmp,
+                          ReadSFBALU, ReadSFBALU, ReadSFBALU]>;
 }
 
 multiclass SelectCC_GPR_rrirr<DAGOperand valty, ValueType vt> {
@@ -1886,6 +1894,13 @@ def HWASAN_CHECK_MEMACCESS_SHORTGRANULES
   : Pseudo<(outs), (ins GPRJALR:$ptr, i32imm:$accessinfo),
            [(int_hwasan_check_memaccess_shortgranules X5, GPRJALR:$ptr,
                                                       (i32 timm:$accessinfo))]>;
+
+// This gets lowered into a 20-byte instruction sequence (at most)
+let hasSideEffects = 0, mayLoad = 1, mayStore = 0,
+    Defs = [ X6, X7, X28, X29, X30, X31 ], Size = 20 in {
+def KCFI_CHECK
+  : Pseudo<(outs), (ins GPRJALR:$ptr, i32imm:$type), []>, Sched<[]>;
+}
 
 /// Simple optimization
 def : Pat<(XLenVT (add GPR:$rs1, (AddiPair:$rs2))),

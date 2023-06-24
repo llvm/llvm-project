@@ -231,7 +231,12 @@ Non-comprehensive list of changes in this release
 - Added ``__builtin_elementwise_round`` for  builtin for floating
   point types. This allows access to ``llvm.round`` for
   arbitrary floating-point and vector of floating-point types.
-
+- Added ``__builtin_elementwise_rint`` for floating point types. This
+  allows access to ``llvm.rint`` for arbitrary floating-point and
+  vector of floating-point types.
+- Added ``__builtin_elementwise_nearbyint`` for floating point
+  types. This allows access to ``llvm.nearbyint`` for arbitrary
+  floating-point and vector of floating-point types.
 
 New Compiler Flags
 ------------------

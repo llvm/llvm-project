@@ -12,6 +12,7 @@
 //===----------------------------------------------------------------------===//
 
 #include <climits>
+#include <cmath>
 #include <cstddef>
 
 #include "mlir/Dialect/Arith/IR/Arith.h"
@@ -171,7 +172,7 @@ static Value floatCst(ImplicitLocOpBuilder &builder, float value,
       builder.getFloatAttr(elementType, value));
 }
 
-static Value f32Cst(ImplicitLocOpBuilder &builder, float value) {
+static Value f32Cst(ImplicitLocOpBuilder &builder, double value) {
   return builder.create<arith::ConstantOp>(builder.getF32FloatAttr(value));
 }
 
@@ -380,35 +381,76 @@ AtanApproximation::matchAndRewrite(math::AtanOp op,
   ArrayRef<int64_t> shape = vectorShape(op.getOperand());
 
   ImplicitLocOpBuilder builder(op->getLoc(), rewriter);
-  auto one = broadcast(builder, f32Cst(builder, 1.0f), shape);
-
-  // Remap the problem over [0.0, 1.0] by looking at the absolute value and the
-  // handling symmetry.
   Value abs = builder.create<math::AbsFOp>(operand);
-  Value reciprocal = builder.create<arith::DivFOp>(one, abs);
-  Value compare =
-      builder.create<arith::CmpFOp>(arith::CmpFPredicate::OLT, abs, reciprocal);
-  Value x = builder.create<arith::SelectOp>(compare, abs, reciprocal);
+
+  auto one = broadcast(builder, f32Cst(builder, 1.0), shape);
+
+  // When 0.66 < x <= 2.41 we do (x-1) / (x+1):
+  auto twoThirds = broadcast(builder, f32Cst(builder, 0.66), shape);
+  Value cmp2 =
+      builder.create<arith::CmpFOp>(arith::CmpFPredicate::OGT, abs, twoThirds);
+  Value addone = builder.create<arith::AddFOp>(abs, one);
+  Value subone = builder.create<arith::SubFOp>(abs, one);
+  Value xnum = builder.create<arith::SelectOp>(cmp2, subone, abs);
+  Value xden = builder.create<arith::SelectOp>(cmp2, addone, one);
+
+  auto bcast = [&](Value value) -> Value {
+    return broadcast(builder, value, shape);
+  };
+
+  // Break into the <= 0.66 or > 2.41 we do x or 1/x:
+  auto tan3pio8 = bcast(f32Cst(builder, 2.41421356237309504880));
+  Value cmp1 =
+      builder.create<arith::CmpFOp>(arith::CmpFPredicate::OGT, abs, tan3pio8);
+  xnum = builder.create<arith::SelectOp>(cmp1, one, xnum);
+  xden = builder.create<arith::SelectOp>(cmp1, abs, xden);
+
+  Value x = builder.create<arith::DivFOp>(xnum, xden);
+  Value xx = builder.create<arith::MulFOp>(x, x);
 
   // Perform the Taylor series approximation for atan over the range
-  // [-1.0, 1.0].
-  auto n1 = broadcast(builder, f32Cst(builder, 0.14418283f), shape);
-  auto n2 = broadcast(builder, f32Cst(builder, -0.34999234f), shape);
-  auto n3 = broadcast(builder, f32Cst(builder, -0.01067831f), shape);
-  auto n4 = broadcast(builder, f32Cst(builder, 1.00209986f), shape);
+  // [0.0, 0.66].
+  auto p0 = bcast(f32Cst(builder, -8.750608600031904122785e-01));
+  auto p1 = bcast(f32Cst(builder, -1.615753718733365076637e+01));
+  auto p2 = bcast(f32Cst(builder, -7.500855792314704667340e+01));
+  auto p3 = bcast(f32Cst(builder, -1.228866684490136173410e+02));
+  auto p4 = bcast(f32Cst(builder, -6.485021904942025371773e+01));
+  auto q0 = bcast(f32Cst(builder, +2.485846490142306297962e+01));
+  auto q1 = bcast(f32Cst(builder, +1.650270098316988542046e+02));
+  auto q2 = bcast(f32Cst(builder, +4.328810604912902668951e+02));
+  auto q3 = bcast(f32Cst(builder, +4.853903996359136964868e+02));
+  auto q4 = bcast(f32Cst(builder, +1.945506571482613964425e+02));
 
-  Value p = builder.create<math::FmaOp>(x, n1, n2);
-  p = builder.create<math::FmaOp>(x, p, n3);
-  p = builder.create<math::FmaOp>(x, p, n4);
-  p = builder.create<arith::MulFOp>(x, p);
+  // Apply the polynomial approximation for the numerator:
+  Value n = p0;
+  n = builder.create<math::FmaOp>(xx, n, p1);
+  n = builder.create<math::FmaOp>(xx, n, p2);
+  n = builder.create<math::FmaOp>(xx, n, p3);
+  n = builder.create<math::FmaOp>(xx, n, p4);
+  n = builder.create<arith::MulFOp>(n, xx);
 
-  // Remap the solution for over [0.0, 1.0] to [0.0, inf]
-  auto halfPi = broadcast(builder, f32Cst(builder, 1.57079632679f), shape);
-  Value sub = builder.create<arith::SubFOp>(halfPi, p);
-  Value select = builder.create<arith::SelectOp>(compare, p, sub);
+  // Apply the polynomial approximation for the denominator:
+  Value d = q0;
+  d = builder.create<math::FmaOp>(xx, d, q1);
+  d = builder.create<math::FmaOp>(xx, d, q2);
+  d = builder.create<math::FmaOp>(xx, d, q3);
+  d = builder.create<math::FmaOp>(xx, d, q4);
+
+  // Compute approximation of theta:
+  Value ans0 = builder.create<arith::DivFOp>(n, d);
+  ans0 = builder.create<math::FmaOp>(ans0, x, x);
+
+  // Correct for the input mapping's angles:
+  Value mpi4 = bcast(f32Cst(builder, M_PI_4));
+  Value ans2 = builder.create<arith::AddFOp>(mpi4, ans0);
+  Value ans = builder.create<arith::SelectOp>(cmp2, ans2, ans0);
+
+  Value mpi2 = bcast(f32Cst(builder, M_PI_2));
+  Value ans1 = builder.create<arith::SubFOp>(mpi2, ans0);
+  ans = builder.create<arith::SelectOp>(cmp1, ans1, ans);
 
   // Correct for signing of the input.
-  rewriter.replaceOpWithNewOp<math::CopySignOp>(op, select, operand);
+  rewriter.replaceOpWithNewOp<math::CopySignOp>(op, ans, operand);
   return success();
 }
 

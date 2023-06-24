@@ -15395,17 +15395,24 @@ SDValue RISCVTargetLowering::LowerCall(CallLoweringInfo &CLI,
   if (Glue.getNode())
     Ops.push_back(Glue);
 
+  assert((!CLI.CFIType || CLI.CB->isIndirectCall()) &&
+         "Unexpected CFI type for a direct call");
+
   // Emit the call.
   SDVTList NodeTys = DAG.getVTList(MVT::Other, MVT::Glue);
 
   if (IsTailCall) {
     MF.getFrameInfo().setHasTailCall();
     SDValue Ret = DAG.getNode(RISCVISD::TAIL, DL, NodeTys, Ops);
+    if (CLI.CFIType)
+      Ret.getNode()->setCFIType(CLI.CFIType->getZExtValue());
     DAG.addNoMergeSiteInfo(Ret.getNode(), CLI.NoMerge);
     return Ret;
   }
 
   Chain = DAG.getNode(RISCVISD::CALL, DL, NodeTys, Ops);
+  if (CLI.CFIType)
+    Chain.getNode()->setCFIType(CLI.CFIType->getZExtValue());
   DAG.addNoMergeSiteInfo(Chain.getNode(), CLI.NoMerge);
   Glue = Chain.getValue(1);
 
@@ -16862,6 +16869,24 @@ bool RISCVTargetLowering::lowerInterleavedStore(StoreInst *SI,
   Builder.CreateCall(VssegNFunc, Ops);
 
   return true;
+}
+
+MachineInstr *
+RISCVTargetLowering::EmitKCFICheck(MachineBasicBlock &MBB,
+                                   MachineBasicBlock::instr_iterator &MBBI,
+                                   const TargetInstrInfo *TII) const {
+  assert(MBBI->isCall() && MBBI->getCFIType() &&
+         "Invalid call instruction for a KCFI check");
+  assert(is_contained({RISCV::PseudoCALLIndirect, RISCV::PseudoTAILIndirect},
+                      MBBI->getOpcode()));
+
+  MachineOperand &Target = MBBI->getOperand(0);
+  Target.setIsRenamable(false);
+
+  return BuildMI(MBB, MBBI, MBBI->getDebugLoc(), TII->get(RISCV::KCFI_CHECK))
+      .addReg(Target.getReg())
+      .addImm(MBBI->getCFIType())
+      .getInstr();
 }
 
 #define GET_REGISTER_MATCHER
