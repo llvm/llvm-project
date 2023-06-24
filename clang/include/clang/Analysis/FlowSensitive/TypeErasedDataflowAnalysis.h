@@ -126,6 +126,10 @@ struct TypeErasedDataflowAnalysisState {
 
   TypeErasedDataflowAnalysisState(TypeErasedLattice Lattice, Environment Env)
       : Lattice(std::move(Lattice)), Env(std::move(Env)) {}
+
+  TypeErasedDataflowAnalysisState fork() const {
+    return TypeErasedDataflowAnalysisState(Lattice, Env.fork());
+  }
 };
 
 /// Transfers the state of a basic block by evaluating each of its elements in

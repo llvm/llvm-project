@@ -205,8 +205,10 @@ runDataflowAnalysis(
                               const TypeErasedDataflowAnalysisState &State) {
       auto *Lattice =
           llvm::any_cast<typename AnalysisT::Lattice>(&State.Lattice.Value);
+      // FIXME: we should not be copying the environment here!
+      // Ultimately the PostVisitCFG only gets a const reference anyway.
       PostVisitCFG(Element, DataflowAnalysisState<typename AnalysisT::Lattice>{
-                                *Lattice, State.Env});
+                                *Lattice, State.Env.fork()});
     };
   }
 
@@ -222,12 +224,13 @@ runDataflowAnalysis(
   llvm::transform(
       std::move(*TypeErasedBlockStates), std::back_inserter(BlockStates),
       [](auto &OptState) {
-        return llvm::transformOptional(std::move(OptState), [](auto &&State) {
-          return DataflowAnalysisState<typename AnalysisT::Lattice>{
-              llvm::any_cast<typename AnalysisT::Lattice>(
-                  std::move(State.Lattice.Value)),
-              std::move(State.Env)};
-        });
+        return llvm::transformOptional(
+            std::move(OptState), [](TypeErasedDataflowAnalysisState &&State) {
+              return DataflowAnalysisState<typename AnalysisT::Lattice>{
+                  llvm::any_cast<typename AnalysisT::Lattice>(
+                      std::move(State.Lattice.Value)),
+                  std::move(State.Env)};
+            });
       });
   return BlockStates;
 }

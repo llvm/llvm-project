@@ -265,19 +265,10 @@ Environment::Environment(DataflowAnalysisContext &DACtx)
     : DACtx(&DACtx),
       FlowConditionToken(&DACtx.arena().makeFlowConditionToken()) {}
 
-Environment::Environment(const Environment &Other)
-    : DACtx(Other.DACtx), CallStack(Other.CallStack),
-      ReturnVal(Other.ReturnVal), ReturnLoc(Other.ReturnLoc),
-      ThisPointeeLoc(Other.ThisPointeeLoc), DeclToLoc(Other.DeclToLoc),
-      ExprToLoc(Other.ExprToLoc), LocToVal(Other.LocToVal),
-      MemberLocToStruct(Other.MemberLocToStruct),
-      FlowConditionToken(&DACtx->forkFlowCondition(*Other.FlowConditionToken)) {
-}
-
-Environment &Environment::operator=(const Environment &Other) {
-  Environment Copy(Other);
-  *this = std::move(Copy);
-  return *this;
+Environment Environment::fork() const {
+  Environment Copy(*this);
+  Copy.FlowConditionToken = &DACtx->forkFlowCondition(*FlowConditionToken);
+  return Copy;
 }
 
 Environment::Environment(DataflowAnalysisContext &DACtx,
