@@ -2253,11 +2253,12 @@ struct AAICVTrackerFunction : public AAICVTracker {
     if (CalledFunction->isDeclaration())
       return nullptr;
 
-    const auto &ICVTrackingAA = A.getAAFor<AAICVTracker>(
+    const auto *ICVTrackingAA = A.getAAFor<AAICVTracker>(
         *this, IRPosition::callsite_returned(*CB), DepClassTy::REQUIRED);
 
-    if (ICVTrackingAA.isAssumedTracked()) {
-      std::optional<Value *> URV = ICVTrackingAA.getUniqueReplacementValue(ICV);
+    if (ICVTrackingAA->isAssumedTracked()) {
+      std::optional<Value *> URV =
+          ICVTrackingAA->getUniqueReplacementValue(ICV);
       if (!URV || (*URV && AA::isValidAtPosition(AA::ValueAndContext(**URV, I),
                                                  OMPInfoCache)))
         return URV;
@@ -2373,10 +2374,10 @@ struct AAICVTrackerFunctionReturned : AAICVTracker {
 
   ChangeStatus updateImpl(Attributor &A) override {
     ChangeStatus Changed = ChangeStatus::UNCHANGED;
-    const auto &ICVTrackingAA = A.getAAFor<AAICVTracker>(
+    const auto *ICVTrackingAA = A.getAAFor<AAICVTracker>(
         *this, IRPosition::function(*getAnchorScope()), DepClassTy::REQUIRED);
 
-    if (!ICVTrackingAA.isAssumedTracked())
+    if (!ICVTrackingAA->isAssumedTracked())
       return indicatePessimisticFixpoint();
 
     for (InternalControlVar ICV : TrackableICVs) {
@@ -2385,7 +2386,7 @@ struct AAICVTrackerFunctionReturned : AAICVTracker {
 
       auto CheckReturnInst = [&](Instruction &I) {
         std::optional<Value *> NewReplVal =
-            ICVTrackingAA.getReplacementValue(ICV, &I, A);
+            ICVTrackingAA->getReplacementValue(ICV, &I, A);
 
         // If we found a second ICV value there is no unique returned value.
         if (UniqueICVValue && UniqueICVValue != NewReplVal)
@@ -2458,15 +2459,15 @@ struct AAICVTrackerCallSite : AAICVTracker {
   std::optional<Value *> ReplVal;
 
   ChangeStatus updateImpl(Attributor &A) override {
-    const auto &ICVTrackingAA = A.getAAFor<AAICVTracker>(
+    const auto *ICVTrackingAA = A.getAAFor<AAICVTracker>(
         *this, IRPosition::function(*getAnchorScope()), DepClassTy::REQUIRED);
 
     // We don't have any information, so we assume it changes the ICV.
-    if (!ICVTrackingAA.isAssumedTracked())
+    if (!ICVTrackingAA->isAssumedTracked())
       return indicatePessimisticFixpoint();
 
     std::optional<Value *> NewReplVal =
-        ICVTrackingAA.getReplacementValue(AssociatedICV, getCtxI(), A);
+        ICVTrackingAA->getReplacementValue(AssociatedICV, getCtxI(), A);
 
     if (ReplVal == NewReplVal)
       return ChangeStatus::UNCHANGED;
@@ -2514,18 +2515,18 @@ struct AAICVTrackerCallSiteReturned : AAICVTracker {
 
   ChangeStatus updateImpl(Attributor &A) override {
     ChangeStatus Changed = ChangeStatus::UNCHANGED;
-    const auto &ICVTrackingAA = A.getAAFor<AAICVTracker>(
+    const auto *ICVTrackingAA = A.getAAFor<AAICVTracker>(
         *this, IRPosition::returned(*getAssociatedFunction()),
         DepClassTy::REQUIRED);
 
     // We don't have any information, so we assume it changes the ICV.
-    if (!ICVTrackingAA.isAssumedTracked())
+    if (!ICVTrackingAA->isAssumedTracked())
       return indicatePessimisticFixpoint();
 
     for (InternalControlVar ICV : TrackableICVs) {
       std::optional<Value *> &ReplVal = ICVReplacementValuesMap[ICV];
       std::optional<Value *> NewReplVal =
-          ICVTrackingAA.getUniqueReplacementValue(ICV);
+          ICVTrackingAA->getUniqueReplacementValue(ICV);
 
       if (ReplVal == NewReplVal)
         continue;
@@ -2860,13 +2861,13 @@ bool AAExecutionDomainFunction::handleCallees(Attributor &A,
                                               ExecutionDomainTy &EntryBBED) {
   SmallVector<std::pair<ExecutionDomainTy, ExecutionDomainTy>, 4> CallSiteEDs;
   auto PredForCallSite = [&](AbstractCallSite ACS) {
-    const auto &EDAA = A.getAAFor<AAExecutionDomain>(
+    const auto *EDAA = A.getAAFor<AAExecutionDomain>(
         *this, IRPosition::function(*ACS.getInstruction()->getFunction()),
         DepClassTy::OPTIONAL);
-    if (!EDAA.getState().isValidState())
+    if (!EDAA || !EDAA->getState().isValidState())
       return false;
     CallSiteEDs.emplace_back(
-        EDAA.getExecutionDomain(*cast<CallBase>(ACS.getInstruction())));
+        EDAA->getExecutionDomain(*cast<CallBase>(ACS.getInstruction())));
     return true;
   };
 
@@ -2935,7 +2936,7 @@ ChangeStatus AAExecutionDomainFunction::updateImpl(Attributor &A) {
     Changed |= mergeInPredecessor(A, CallOutED, ED);
   };
 
-  auto &LivenessAA =
+  auto *LivenessAA =
       A.getAAFor<AAIsDead>(*this, getIRPosition(), DepClassTy::OPTIONAL);
 
   Function *F = getAnchorScope();
@@ -2957,11 +2958,11 @@ ChangeStatus AAExecutionDomainFunction::updateImpl(Attributor &A) {
     } else {
       // For live non-entry blocks we only propagate
       // information via live edges.
-      if (LivenessAA.isAssumedDead(&BB))
+      if (LivenessAA->isAssumedDead(&BB))
         continue;
 
       for (auto *PredBB : predecessors(&BB)) {
-        if (LivenessAA.isEdgeDead(PredBB, &BB))
+        if (LivenessAA->isEdgeDead(PredBB, &BB))
           continue;
         bool InitialEdgeOnly = isInitialThreadOnlyEdge(
             A, dyn_cast<BranchInst>(PredBB->getTerminator()), BB);
@@ -2973,7 +2974,7 @@ ChangeStatus AAExecutionDomainFunction::updateImpl(Attributor &A) {
     // information to calls.
     for (Instruction &I : BB) {
       bool UsedAssumedInformation;
-      if (A.isAssumedDead(I, *this, &LivenessAA, UsedAssumedInformation,
+      if (A.isAssumedDead(I, *this, LivenessAA, UsedAssumedInformation,
                           /* CheckBBLivenessOnly */ false, DepClassTy::OPTIONAL,
                           /* CheckForDeadStore */ true))
         continue;
@@ -3057,7 +3058,7 @@ ChangeStatus AAExecutionDomainFunction::updateImpl(Attributor &A) {
         // alignment.
         Function *Callee = CB->getCalledFunction();
         if (!IsNoSync && Callee && !Callee->isDeclaration()) {
-          const auto &EDAA = A.getAAFor<AAExecutionDomain>(
+          const auto &EDAA = *A.getAAFor<AAExecutionDomain>(
               *this, IRPosition::function(*Callee), DepClassTy::OPTIONAL);
           if (EDAA.getState().isValidState()) {
             const auto &CalleeED = EDAA.getFunctionExecutionDomain();
@@ -3099,7 +3100,7 @@ ChangeStatus AAExecutionDomainFunction::updateImpl(Attributor &A) {
       // If we have a callee we try to use fine-grained information to
       // determine local side-effects.
       if (CB) {
-        const auto &MemAA = A.getAAFor<AAMemoryLocation>(
+        const auto *MemAA = A.getAAFor<AAMemoryLocation>(
             *this, IRPosition::callsite_function(*CB), DepClassTy::OPTIONAL);
 
         auto AccessPred = [&](const Instruction *I, const Value *Ptr,
@@ -3107,8 +3108,8 @@ ChangeStatus AAExecutionDomainFunction::updateImpl(Attributor &A) {
                               AAMemoryLocation::MemoryLocationsKind) {
           return !AA::isPotentiallyAffectedByBarrier(A, {Ptr}, *this, I);
         };
-        if (MemAA.getState().isValidState() &&
-            MemAA.checkForAllAccessesToMemoryKind(
+        if (MemAA && MemAA->getState().isValidState() &&
+            MemAA->checkForAllAccessesToMemoryKind(
                 AccessPred, AAMemoryLocation::ALL_LOCATIONS))
           continue;
       }
@@ -3187,7 +3188,7 @@ ChangeStatus AAExecutionDomainFunction::updateImpl(Attributor &A) {
       continue;
     BasicBlock *SyncBB = SyncInst->getParent();
     for (auto *PredBB : predecessors(SyncBB)) {
-      if (LivenessAA.isEdgeDead(PredBB, SyncBB))
+      if (LivenessAA->isEdgeDead(PredBB, SyncBB))
         continue;
       if (!Visited.insert(PredBB))
         continue;
@@ -3412,9 +3413,9 @@ struct AAHeapToSharedFunction : public AAHeapToShared {
           MallocCalls.remove(CB);
           continue;
         }
-        const auto &ED = A.getAAFor<AAExecutionDomain>(
+        const auto *ED = A.getAAFor<AAExecutionDomain>(
             *this, IRPosition::function(*F), DepClassTy::REQUIRED);
-        if (!ED.isExecutedByInitialThreadOnly(*CB))
+        if (!ED || !ED->isExecutedByInitialThreadOnly(*CB))
           MallocCalls.remove(CB);
       }
     }
@@ -4439,19 +4440,20 @@ struct AAKernelInfoFunction : AAKernelInfo {
       if (!I.mayWriteToMemory())
         return true;
       if (auto *SI = dyn_cast<StoreInst>(&I)) {
-        const auto &UnderlyingObjsAA = A.getAAFor<AAUnderlyingObjects>(
+        const auto *UnderlyingObjsAA = A.getAAFor<AAUnderlyingObjects>(
             *this, IRPosition::value(*SI->getPointerOperand()),
             DepClassTy::OPTIONAL);
-        auto &HS = A.getAAFor<AAHeapToStack>(
+        auto *HS = A.getAAFor<AAHeapToStack>(
             *this, IRPosition::function(*I.getFunction()),
             DepClassTy::OPTIONAL);
-        if (UnderlyingObjsAA.forallUnderlyingObjects([&](Value &Obj) {
+        if (UnderlyingObjsAA &&
+            UnderlyingObjsAA->forallUnderlyingObjects([&](Value &Obj) {
               if (AA::isAssumedThreadLocalObject(A, Obj, *this))
                 return true;
               // Check for AAHeapToStack moved objects which must not be
               // guarded.
               auto *CB = dyn_cast<CallBase>(&Obj);
-              return CB && HS.isAssumedHeapToStack(*CB);
+              return CB && HS && HS->isAssumedHeapToStack(*CB);
             }))
           return true;
       }
@@ -4486,14 +4488,14 @@ struct AAKernelInfoFunction : AAKernelInfo {
           // we cannot fix the internal spmd-zation state either.
           int SPMD = 0, Generic = 0;
           for (auto *Kernel : ReachingKernelEntries) {
-            auto &CBAA = A.getAAFor<AAKernelInfo>(
+            auto *CBAA = A.getAAFor<AAKernelInfo>(
                 *this, IRPosition::function(*Kernel), DepClassTy::OPTIONAL);
-            if (CBAA.SPMDCompatibilityTracker.isValidState() &&
-                CBAA.SPMDCompatibilityTracker.isAssumed())
+            if (CBAA && CBAA->SPMDCompatibilityTracker.isValidState() &&
+                CBAA->SPMDCompatibilityTracker.isAssumed())
               ++SPMD;
             else
               ++Generic;
-            if (!CBAA.SPMDCompatibilityTracker.isAtFixpoint())
+            if (!CBAA || !CBAA->SPMDCompatibilityTracker.isAtFixpoint())
               UsedAssumedInformationFromReachingKernels = true;
           }
           if (SPMD != 0 && Generic != 0)
@@ -4507,14 +4509,16 @@ struct AAKernelInfoFunction : AAKernelInfo {
     bool AllSPMDStatesWereFixed = true;
     auto CheckCallInst = [&](Instruction &I) {
       auto &CB = cast<CallBase>(I);
-      auto &CBAA = A.getAAFor<AAKernelInfo>(
+      auto *CBAA = A.getAAFor<AAKernelInfo>(
           *this, IRPosition::callsite_function(CB), DepClassTy::OPTIONAL);
-      getState() ^= CBAA.getState();
-      AllSPMDStatesWereFixed &= CBAA.SPMDCompatibilityTracker.isAtFixpoint();
+      if (!CBAA)
+        return false;
+      getState() ^= CBAA->getState();
+      AllSPMDStatesWereFixed &= CBAA->SPMDCompatibilityTracker.isAtFixpoint();
       AllParallelRegionStatesWereFixed &=
-          CBAA.ReachedKnownParallelRegions.isAtFixpoint();
+          CBAA->ReachedKnownParallelRegions.isAtFixpoint();
       AllParallelRegionStatesWereFixed &=
-          CBAA.ReachedUnknownParallelRegions.isAtFixpoint();
+          CBAA->ReachedUnknownParallelRegions.isAtFixpoint();
       return true;
     };
 
@@ -4554,10 +4558,10 @@ private:
 
       assert(Caller && "Caller is nullptr");
 
-      auto &CAA = A.getOrCreateAAFor<AAKernelInfo>(
+      auto *CAA = A.getOrCreateAAFor<AAKernelInfo>(
           IRPosition::function(*Caller), this, DepClassTy::REQUIRED);
-      if (CAA.ReachingKernelEntries.isValidState()) {
-        ReachingKernelEntries ^= CAA.ReachingKernelEntries;
+      if (CAA && CAA->ReachingKernelEntries.isValidState()) {
+        ReachingKernelEntries ^= CAA->ReachingKernelEntries;
         return true;
       }
 
@@ -4585,9 +4589,9 @@ private:
 
       assert(Caller && "Caller is nullptr");
 
-      auto &CAA =
+      auto *CAA =
           A.getOrCreateAAFor<AAKernelInfo>(IRPosition::function(*Caller));
-      if (CAA.ParallelLevels.isValidState()) {
+      if (CAA && CAA->ParallelLevels.isValidState()) {
         // Any function that is called by `__kmpc_parallel_51` will not be
         // folded as the parallel level in the function is updated. In order to
         // get it right, all the analysis would depend on the implentation. That
@@ -4598,7 +4602,7 @@ private:
           return true;
         }
 
-        ParallelLevels ^= CAA.ParallelLevels;
+        ParallelLevels ^= CAA->ParallelLevels;
 
         return true;
       }
@@ -4632,11 +4636,11 @@ struct AAKernelInfoCallSite : AAKernelInfo {
     CallBase &CB = cast<CallBase>(getAssociatedValue());
     Function *Callee = getAssociatedFunction();
 
-    auto &AssumptionAA = A.getAAFor<AAAssumptionInfo>(
+    auto *AssumptionAA = A.getAAFor<AAAssumptionInfo>(
         *this, IRPosition::callsite_function(CB), DepClassTy::OPTIONAL);
 
     // Check for SPMD-mode assumptions.
-    if (AssumptionAA.hasAssumption("ompx_spmd_amenable")) {
+    if (AssumptionAA && AssumptionAA->hasAssumption("ompx_spmd_amenable")) {
       SPMDCompatibilityTracker.indicateOptimisticFixpoint();
       indicateOptimisticFixpoint();
     }
@@ -4661,8 +4665,9 @@ struct AAKernelInfoCallSite : AAKernelInfo {
 
         // Unknown callees might contain parallel regions, except if they have
         // an appropriate assumption attached.
-        if (!(AssumptionAA.hasAssumption("omp_no_openmp") ||
-              AssumptionAA.hasAssumption("omp_no_parallelism")))
+        if (!AssumptionAA ||
+            !(AssumptionAA->hasAssumption("omp_no_openmp") ||
+              AssumptionAA->hasAssumption("omp_no_parallelism")))
           ReachedUnknownParallelRegions.insert(&CB);
 
         // If SPMDCompatibilityTracker is not fixed, we need to give up on the
@@ -4737,11 +4742,11 @@ struct AAKernelInfoCallSite : AAKernelInfo {
               CB.getArgOperand(WrapperFunctionArgNo)->stripPointerCasts())) {
         ReachedKnownParallelRegions.insert(ParallelRegion);
         /// Check nested parallelism
-        auto &FnAA = A.getAAFor<AAKernelInfo>(
+        auto *FnAA = A.getAAFor<AAKernelInfo>(
             *this, IRPosition::function(*ParallelRegion), DepClassTy::OPTIONAL);
-        NestedParallelism |= !FnAA.getState().isValidState() ||
-                             !FnAA.ReachedKnownParallelRegions.empty() ||
-                             !FnAA.ReachedUnknownParallelRegions.empty();
+        NestedParallelism |= !FnAA || !FnAA->getState().isValidState() ||
+                             !FnAA->ReachedKnownParallelRegions.empty() ||
+                             !FnAA->ReachedUnknownParallelRegions.empty();
         break;
       }
       // The condition above should usually get the parallel region function
@@ -4785,10 +4790,12 @@ struct AAKernelInfoCallSite : AAKernelInfo {
     // If F is not a runtime function, propagate the AAKernelInfo of the callee.
     if (It == OMPInfoCache.RuntimeFunctionIDMap.end()) {
       const IRPosition &FnPos = IRPosition::function(*F);
-      auto &FnAA = A.getAAFor<AAKernelInfo>(*this, FnPos, DepClassTy::REQUIRED);
-      if (getState() == FnAA.getState())
+      auto *FnAA = A.getAAFor<AAKernelInfo>(*this, FnPos, DepClassTy::REQUIRED);
+      if (!FnAA)
+        return indicatePessimisticFixpoint();
+      if (getState() == FnAA->getState())
         return ChangeStatus::UNCHANGED;
-      getState() = FnAA.getState();
+      getState() = FnAA->getState();
       return ChangeStatus::CHANGED;
     }
 
@@ -4801,9 +4808,9 @@ struct AAKernelInfoCallSite : AAKernelInfo {
 
     CallBase &CB = cast<CallBase>(getAssociatedValue());
 
-    auto &HeapToStackAA = A.getAAFor<AAHeapToStack>(
+    auto *HeapToStackAA = A.getAAFor<AAHeapToStack>(
         *this, IRPosition::function(*CB.getCaller()), DepClassTy::OPTIONAL);
-    auto &HeapToSharedAA = A.getAAFor<AAHeapToShared>(
+    auto *HeapToSharedAA = A.getAAFor<AAHeapToShared>(
         *this, IRPosition::function(*CB.getCaller()), DepClassTy::OPTIONAL);
 
     RuntimeFunction RF = It->getSecond();
@@ -4812,13 +4819,15 @@ struct AAKernelInfoCallSite : AAKernelInfo {
     // If neither HeapToStack nor HeapToShared assume the call is removed,
     // assume SPMD incompatibility.
     case OMPRTL___kmpc_alloc_shared:
-      if (!HeapToStackAA.isAssumedHeapToStack(CB) &&
-          !HeapToSharedAA.isAssumedHeapToShared(CB))
+      if ((!HeapToStackAA || !HeapToStackAA->isAssumedHeapToStack(CB)) &&
+          (!HeapToSharedAA || !HeapToSharedAA->isAssumedHeapToShared(CB)))
         SPMDCompatibilityTracker.insert(&CB);
       break;
     case OMPRTL___kmpc_free_shared:
-      if (!HeapToStackAA.isAssumedHeapToStackRemovedFree(CB) &&
-          !HeapToSharedAA.isAssumedHeapToSharedRemovedFree(CB))
+      if ((!HeapToStackAA ||
+           !HeapToStackAA->isAssumedHeapToStackRemovedFree(CB)) &&
+          (!HeapToSharedAA ||
+           !HeapToSharedAA->isAssumedHeapToSharedRemovedFree(CB)))
         SPMDCompatibilityTracker.insert(&CB);
       break;
     default:
@@ -4977,28 +4986,29 @@ private:
 
     unsigned AssumedSPMDCount = 0, KnownSPMDCount = 0;
     unsigned AssumedNonSPMDCount = 0, KnownNonSPMDCount = 0;
-    auto &CallerKernelInfoAA = A.getAAFor<AAKernelInfo>(
+    auto *CallerKernelInfoAA = A.getAAFor<AAKernelInfo>(
         *this, IRPosition::function(*getAnchorScope()), DepClassTy::REQUIRED);
 
-    if (!CallerKernelInfoAA.ReachingKernelEntries.isValidState())
+    if (!CallerKernelInfoAA ||
+        !CallerKernelInfoAA->ReachingKernelEntries.isValidState())
       return indicatePessimisticFixpoint();
 
-    for (Kernel K : CallerKernelInfoAA.ReachingKernelEntries) {
-      auto &AA = A.getAAFor<AAKernelInfo>(*this, IRPosition::function(*K),
+    for (Kernel K : CallerKernelInfoAA->ReachingKernelEntries) {
+      auto *AA = A.getAAFor<AAKernelInfo>(*this, IRPosition::function(*K),
                                           DepClassTy::REQUIRED);
 
-      if (!AA.isValidState()) {
+      if (!AA || !AA->isValidState()) {
         SimplifiedValue = nullptr;
         return indicatePessimisticFixpoint();
       }
 
-      if (AA.SPMDCompatibilityTracker.isAssumed()) {
-        if (AA.SPMDCompatibilityTracker.isAtFixpoint())
+      if (AA->SPMDCompatibilityTracker.isAssumed()) {
+        if (AA->SPMDCompatibilityTracker.isAtFixpoint())
           ++KnownSPMDCount;
         else
           ++AssumedSPMDCount;
       } else {
-        if (AA.SPMDCompatibilityTracker.isAtFixpoint())
+        if (AA->SPMDCompatibilityTracker.isAtFixpoint())
           ++KnownNonSPMDCount;
         else
           ++AssumedNonSPMDCount;
@@ -5037,16 +5047,17 @@ private:
   ChangeStatus foldParallelLevel(Attributor &A) {
     std::optional<Value *> SimplifiedValueBefore = SimplifiedValue;
 
-    auto &CallerKernelInfoAA = A.getAAFor<AAKernelInfo>(
+    auto *CallerKernelInfoAA = A.getAAFor<AAKernelInfo>(
         *this, IRPosition::function(*getAnchorScope()), DepClassTy::REQUIRED);
 
-    if (!CallerKernelInfoAA.ParallelLevels.isValidState())
+    if (!CallerKernelInfoAA ||
+        !CallerKernelInfoAA->ParallelLevels.isValidState())
       return indicatePessimisticFixpoint();
 
-    if (!CallerKernelInfoAA.ReachingKernelEntries.isValidState())
+    if (!CallerKernelInfoAA->ReachingKernelEntries.isValidState())
       return indicatePessimisticFixpoint();
 
-    if (CallerKernelInfoAA.ReachingKernelEntries.empty()) {
+    if (CallerKernelInfoAA->ReachingKernelEntries.empty()) {
       assert(!SimplifiedValue &&
              "SimplifiedValue should keep none at this point");
       return ChangeStatus::UNCHANGED;
@@ -5054,19 +5065,19 @@ private:
 
     unsigned AssumedSPMDCount = 0, KnownSPMDCount = 0;
     unsigned AssumedNonSPMDCount = 0, KnownNonSPMDCount = 0;
-    for (Kernel K : CallerKernelInfoAA.ReachingKernelEntries) {
-      auto &AA = A.getAAFor<AAKernelInfo>(*this, IRPosition::function(*K),
+    for (Kernel K : CallerKernelInfoAA->ReachingKernelEntries) {
+      auto *AA = A.getAAFor<AAKernelInfo>(*this, IRPosition::function(*K),
                                           DepClassTy::REQUIRED);
-      if (!AA.SPMDCompatibilityTracker.isValidState())
+      if (!AA || !AA->SPMDCompatibilityTracker.isValidState())
         return indicatePessimisticFixpoint();
 
-      if (AA.SPMDCompatibilityTracker.isAssumed()) {
-        if (AA.SPMDCompatibilityTracker.isAtFixpoint())
+      if (AA->SPMDCompatibilityTracker.isAssumed()) {
+        if (AA->SPMDCompatibilityTracker.isAtFixpoint())
           ++KnownSPMDCount;
         else
           ++AssumedSPMDCount;
       } else {
-        if (AA.SPMDCompatibilityTracker.isAtFixpoint())
+        if (AA->SPMDCompatibilityTracker.isAtFixpoint())
           ++KnownNonSPMDCount;
         else
           ++AssumedNonSPMDCount;
@@ -5099,14 +5110,15 @@ private:
     int32_t CurrentAttrValue = -1;
     std::optional<Value *> SimplifiedValueBefore = SimplifiedValue;
 
-    auto &CallerKernelInfoAA = A.getAAFor<AAKernelInfo>(
+    auto *CallerKernelInfoAA = A.getAAFor<AAKernelInfo>(
         *this, IRPosition::function(*getAnchorScope()), DepClassTy::REQUIRED);
 
-    if (!CallerKernelInfoAA.ReachingKernelEntries.isValidState())
+    if (!CallerKernelInfoAA ||
+        !CallerKernelInfoAA->ReachingKernelEntries.isValidState())
       return indicatePessimisticFixpoint();
 
     // Iterate over the kernels that reach this function
-    for (Kernel K : CallerKernelInfoAA.ReachingKernelEntries) {
+    for (Kernel K : CallerKernelInfoAA->ReachingKernelEntries) {
       int32_t NextAttrVal = K->getFnAttributeAsParsedInteger(Attr, -1);
 
       if (NextAttrVal == -1 ||
