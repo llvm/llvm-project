@@ -113,7 +113,8 @@ struct CodeGenIntrinsic {
     WriteOnly,
     ReadNone,
     ImmArg,
-    Alignment
+    Alignment,
+    Dereferenceable
   };
 
   struct ArgAttribute {

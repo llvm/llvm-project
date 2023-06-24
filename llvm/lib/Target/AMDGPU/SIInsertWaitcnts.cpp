@@ -1918,8 +1918,7 @@ bool SIInsertWaitcnts::generateWaitcntInstBefore(MachineInstr &MI,
         const bool IsVGPR = TRI->isVectorRegister(*MRI, Op.getReg());
         for (int RegNo = Interval.first; RegNo < Interval.second; ++RegNo) {
           if (IsVGPR) {
-            if (Op.isUse())
-              ScoreBrackets.determineWait(VA_VDST, RegNo, Wait);
+            ScoreBrackets.determineWait(VA_VDST, RegNo, Wait);
             if (Op.isDef())
               ScoreBrackets.determineWait(VM_VSRC, RegNo, Wait);
 

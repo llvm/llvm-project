@@ -1657,24 +1657,24 @@ class Target {
 //===----------------------------------------------------------------------===//
 // SubtargetFeature - A characteristic of the chip set.
 //
-class SubtargetFeature<string n, string a,  string v, string d,
+class SubtargetFeature<string n, string f, string v, string d,
                        list<SubtargetFeature> i = []> {
   // Name - Feature name.  Used by command line (-mattr=) to determine the
   // appropriate target chip.
   //
   string Name = n;
 
-  // Attribute - Attribute to be set by feature.
+  // FieldName - Field in XXXSubtarget to be set by feature.
   //
-  string Attribute = a;
+  string FieldName = f;
 
-  // Value - Value the attribute to be set to by feature.
+  // Value - Value the XXXSubtarget field to be set to by feature.
   //
-  // A value of "true" or "false" implies the attribute is a bool. Otherwise,
+  // A value of "true" or "false" implies the field is a bool. Otherwise,
   // it is assumed to be an integer. the integer value may be the name of an
-  // enum constant. If multiple features use the same integer attribute, the
-  // attribute will be set to the maximum value of all enabled features that
-  // share the attribute.
+  // enum constant. If multiple features use the same integer field, the
+  // field will be set to the maximum value of all enabled features that
+  // share the field.
   //
   string Value = v;
 
