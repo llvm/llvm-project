@@ -594,7 +594,7 @@ adjustInstrProfile(std::unique_ptr<WriterContext> &WC,
 
   auto checkSampleProfileHasFUnique = [&Reader]() {
     for (const auto &PD : Reader->getProfiles()) {
-      auto &FContext = PD.first;
+      auto &FContext = PD.second.getContext();
       if (FContext.toString().find(FunctionSamples::UniqSuffix) !=
           std::string::npos) {
         return true;
@@ -2833,7 +2833,8 @@ static int showSampleProfile(const std::string &Filename, bool ShowCounts,
           "be printed");
 
     // TODO: parse context string to support filtering by contexts.
-    Reader->dumpFunctionProfile(StringRef(ShowFunction), OS);
+    FunctionSamples *FS = Reader->getSamplesFor(StringRef(ShowFunction));
+    Reader->dumpFunctionProfile(FS ? *FS : FunctionSamples(), OS);
   }
 
   if (ShowProfileSymbolList) {
