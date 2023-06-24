@@ -6157,6 +6157,9 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
                    Triple.hasDefaultEmulatedTLS()))
     CmdArgs.push_back("-femulated-tls");
 
+  Args.addOptInFlag(CmdArgs, options::OPT_fcheck_new,
+                    options::OPT_fno_check_new);
+
   if (Arg *A = Args.getLastArg(options::OPT_fzero_call_used_regs_EQ)) {
     // FIXME: There's no reason for this to be restricted to X86. The backend
     // code needs to be changed to include the appropriate function calls
