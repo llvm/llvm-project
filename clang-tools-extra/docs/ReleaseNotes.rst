@@ -412,6 +412,10 @@ Changes in existing checks
   ``std::array`` objects to default constructed ones. The behavior for this and
   other relevant classes can now be configured with a new option.
 
+- Fixed a false negative in :doc:`readability-convert-member-functions-to-static
+  <clang-tidy/checks/readability/convert-member-functions-to-static>` when a
+  nested class in a member function uses a ``this`` pointer.
+
 - Fixed reading `HungarianNotation.CString.*` options in
   :doc:`readability-identifier-naming
   <clang-tidy/checks/readability/identifier-naming>` check.
