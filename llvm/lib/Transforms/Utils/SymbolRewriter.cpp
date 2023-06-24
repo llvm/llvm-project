@@ -517,37 +517,6 @@ parseRewriteGlobalAliasDescriptor(yaml::Stream &YS, yaml::ScalarNode *K,
   return true;
 }
 
-namespace {
-
-class RewriteSymbolsLegacyPass : public ModulePass {
-public:
-  static char ID; // Pass identification, replacement for typeid
-
-  RewriteSymbolsLegacyPass();
-  RewriteSymbolsLegacyPass(SymbolRewriter::RewriteDescriptorList &DL);
-
-  bool runOnModule(Module &M) override;
-
-private:
-  RewriteSymbolPass Impl;
-};
-
-} // end anonymous namespace
-
-char RewriteSymbolsLegacyPass::ID = 0;
-
-RewriteSymbolsLegacyPass::RewriteSymbolsLegacyPass() : ModulePass(ID) {
-  initializeRewriteSymbolsLegacyPassPass(*PassRegistry::getPassRegistry());
-}
-
-RewriteSymbolsLegacyPass::RewriteSymbolsLegacyPass(
-    SymbolRewriter::RewriteDescriptorList &DL)
-    : ModulePass(ID), Impl(DL) {}
-
-bool RewriteSymbolsLegacyPass::runOnModule(Module &M) {
-  return Impl.runImpl(M);
-}
-
 PreservedAnalyses RewriteSymbolPass::run(Module &M, ModuleAnalysisManager &AM) {
   if (!runImpl(M))
     return PreservedAnalyses::all();
@@ -571,16 +540,4 @@ void RewriteSymbolPass::loadAndParseMapFiles() {
 
   for (const auto &MapFile : MapFiles)
     Parser.parse(MapFile, &Descriptors);
-}
-
-INITIALIZE_PASS(RewriteSymbolsLegacyPass, "rewrite-symbols", "Rewrite Symbols",
-                false, false)
-
-ModulePass *llvm::createRewriteSymbolsPass() {
-  return new RewriteSymbolsLegacyPass();
-}
-
-ModulePass *
-llvm::createRewriteSymbolsPass(SymbolRewriter::RewriteDescriptorList &DL) {
-  return new RewriteSymbolsLegacyPass(DL);
 }
