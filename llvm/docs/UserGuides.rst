@@ -32,7 +32,6 @@ intermediate LLVM representation.
    DebuggingJITedCode
    DirectXUsage
    Docker
-   FatLTO
    ExtendingLLVM
    GoldPlugin
    HowToBuildOnARM
