@@ -21,6 +21,13 @@ void test_builtin_elementwise_abs() {
   static_assert(!is_const<decltype(__builtin_elementwise_abs(b))>::value);
 }
 
+void test_builtin_elementwise_abs_fp() {
+  const float a = -2.0f;
+  float b = 1.0f;
+  static_assert(!is_const<decltype(__builtin_elementwise_abs(a))>::value);
+  static_assert(!is_const<decltype(__builtin_elementwise_abs(b))>::value);
+}
+
 void test_builtin_elementwise_add_sat() {
   const int a = 2;
   int b = 1;
@@ -48,6 +55,22 @@ void test_builtin_elementwise_max() {
 void test_builtin_elementwise_min() {
   const int a = 2;
   int b = 1;
+  static_assert(!is_const<decltype(__builtin_elementwise_min(a, b))>::value);
+  static_assert(!is_const<decltype(__builtin_elementwise_min(b, a))>::value);
+  static_assert(!is_const<decltype(__builtin_elementwise_min(a, a))>::value);
+}
+
+void test_builtin_elementwise_max_fp() {
+  const float a = 2.0f;
+  float b = 1.0f;
+  static_assert(!is_const<decltype(__builtin_elementwise_max(a, b))>::value);
+  static_assert(!is_const<decltype(__builtin_elementwise_max(b, a))>::value);
+  static_assert(!is_const<decltype(__builtin_elementwise_max(a, a))>::value);
+}
+
+void test_builtin_elementwise_min_fp() {
+  const float a = 2.0f;
+  float b = 1.0f;
   static_assert(!is_const<decltype(__builtin_elementwise_min(a, b))>::value);
   static_assert(!is_const<decltype(__builtin_elementwise_min(b, a))>::value);
   static_assert(!is_const<decltype(__builtin_elementwise_min(a, a))>::value);
@@ -121,4 +144,57 @@ void test_builtin_elementwise_nearbyint() {
   float b = 42.3;
   static_assert(!is_const<decltype(__builtin_elementwise_nearbyint(a))>::value);
   static_assert(!is_const<decltype(__builtin_elementwise_nearbyint(b))>::value);
+}
+
+void test_builtin_elementwise_round() {
+  const float a = 42.5;
+  float b = 42.3;
+  static_assert(!is_const<decltype(__builtin_elementwise_round(a))>::value);
+  static_assert(!is_const<decltype(__builtin_elementwise_round(b))>::value);
+}
+
+void test_builtin_elementwise_roundeven() {
+  const float a = 42.5;
+  float b = 42.3;
+  static_assert(!is_const<decltype(__builtin_elementwise_roundeven(a))>::value);
+  static_assert(!is_const<decltype(__builtin_elementwise_roundeven(b))>::value);
+}
+
+void test_builtin_elementwise_trunc() {
+  const float a = 42.5;
+  float b = 42.3;
+  static_assert(!is_const<decltype(__builtin_elementwise_trunc(a))>::value);
+  static_assert(!is_const<decltype(__builtin_elementwise_trunc(b))>::value);
+}
+
+void test_builtin_elementwise_floor() {
+  const float a = 42.5;
+  float b = 42.3;
+  static_assert(!is_const<decltype(__builtin_elementwise_floor(a))>::value);
+  static_assert(!is_const<decltype(__builtin_elementwise_floor(b))>::value);
+}
+
+void test_builtin_elementwise_canonicalize() {
+  const float a = 42.5;
+  float b = 42.3;
+  static_assert(!is_const<decltype(__builtin_elementwise_canonicalize(a))>::value);
+  static_assert(!is_const<decltype(__builtin_elementwise_canonicalize(b))>::value);
+}
+
+void test_builtin_elementwise_copysign() {
+  const float a = 2.0f;
+  float b = -4.0f;
+  static_assert(!is_const<decltype(__builtin_elementwise_copysign(a, b))>::value);
+  static_assert(!is_const<decltype(__builtin_elementwise_copysign(b, a))>::value);
+  static_assert(!is_const<decltype(__builtin_elementwise_copysign(a, a))>::value);
+}
+
+void test_builtin_elementwise_fma() {
+  const float a = 2.0f;
+  float b = -4.0f;
+  float c = 1.0f;
+  static_assert(!is_const<decltype(__builtin_elementwise_fma(a, a, a))>::value);
+  static_assert(!is_const<decltype(__builtin_elementwise_fma(a, b, c))>::value);
+  static_assert(!is_const<decltype(__builtin_elementwise_fma(b, a, c))>::value);
+  static_assert(!is_const<decltype(__builtin_elementwise_fma(c, c, c))>::value);
 }
