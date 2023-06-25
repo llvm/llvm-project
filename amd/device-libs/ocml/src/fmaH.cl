@@ -32,7 +32,7 @@ CONSTATTR half \
 MATH_MANGLE(LN)(half a, half b, half c) \
 { \
     BUILTIN_SETROUND_F16F64(RM); \
-    half ret = BUILTIN_FMA_F64(a, b, c); \
+    half ret = BUILTIN_FMA_F16(a, b, c); \
     BUILTIN_SETROUND_F16F64(ROUND_RTE); \
     return ret; \
 }
