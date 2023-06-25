@@ -277,5 +277,8 @@ The current vendor extensions supported are:
 ``XCVsimd``
   LLVM implements `version 1.0.0 of the CORE-V SIMD custom instructions specification <https://github.com/openhwgroup/cv32e40p/blob/cv32e40p_v1.3.2/docs/source/instruction_set_extensions.rst>`_ by OpenHW Group.  All instructions are prefixed with `cv.` as described in the specification.
 
+``XCVbi``
+  LLVM implements `version 1.0.0 of the CORE-V immediate branching custom instructions specification <https://github.com/openhwgroup/cv32e40p/blob/cv32e40p_v1.3.2/docs/source/instruction_set_extensions.rst>`_ by OpenHW Group.  All instructions are prefixed with `cv.` as described in the specification. These instructions are only available for riscv32 at this time.
+
 ``XSfcie``
   LLVM implements `version 1.0.0 of the SiFive Custom Instruction Extension (CIE) Software Specification <https://sifive.cdn.prismic.io/sifive/767804da-53b2-4893-97d5-b7c030ae0a94_s76mc_core_complex_manual_21G3.pdf>`_ by SiFive.  All custom instruction are added as described in the specification, and the riscv-toolchain-convention document linked above. These instructions are only available for S76 processor at this time.

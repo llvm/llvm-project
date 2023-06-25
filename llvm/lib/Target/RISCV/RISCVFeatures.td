@@ -816,6 +816,13 @@ def HasVendorXCVsimd
                 AssemblerPredicate<(any_of FeatureVendorXCVsimd),
                 "'XCVsimd' (CORE-V SIMD ALU)">;
 
+def FeatureVendorXCVbi
+    : SubtargetFeature<"xcvbi", "HasVendorXCVbi", "true",
+                       "'XCVbi' (CORE-V Immediate Branching)">;
+def HasVendorXCVbi : Predicate<"Subtarget->hasVendorXCVbi()">,
+                               AssemblerPredicate<(all_of FeatureVendorXCVbi),
+                               "'XCVbi' (CORE-V Immediate Branching)">;
+
 //===----------------------------------------------------------------------===//
 // LLVM specific features and extensions
 //===----------------------------------------------------------------------===//
