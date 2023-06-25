@@ -33,6 +33,7 @@
 #include "mlir/Transforms/GreedyPatternRewriteDriver.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/STLExtras.h"
+#include "llvm/Support/MathExtras.h"
 
 using namespace mlir;
 using namespace mlir::math;
@@ -441,11 +442,11 @@ AtanApproximation::matchAndRewrite(math::AtanOp op,
   ans0 = builder.create<math::FmaOp>(ans0, x, x);
 
   // Correct for the input mapping's angles:
-  Value mpi4 = bcast(f32Cst(builder, M_PI_4));
+  Value mpi4 = bcast(f32Cst(builder, llvm::numbers::pi / 4));
   Value ans2 = builder.create<arith::AddFOp>(mpi4, ans0);
   Value ans = builder.create<arith::SelectOp>(cmp2, ans2, ans0);
 
-  Value mpi2 = bcast(f32Cst(builder, M_PI_2));
+  Value mpi2 = bcast(f32Cst(builder, llvm::numbers::pi / 2));
   Value ans1 = builder.create<arith::SubFOp>(mpi2, ans0);
   ans = builder.create<arith::SelectOp>(cmp1, ans1, ans);
 
