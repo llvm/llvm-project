@@ -53,6 +53,36 @@ define float @fmax_f32(<vscale x 8 x float> %a, <vscale x 4 x float> %b) {
   ret float %r
 }
 
+define float @fminimum_f32(<vscale x 8 x float> %a, <vscale x 4 x float> %b) {
+; CHECK-LABEL: fminimum_f32:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    ptrue p0.s
+; CHECK-NEXT:    fmin z0.s, p0/m, z0.s, z1.s
+; CHECK-NEXT:    fminv s2, p0, z2.s
+; CHECK-NEXT:    fminv s0, p0, z0.s
+; CHECK-NEXT:    fminnm s0, s0, s2
+; CHECK-NEXT:    ret
+  %r1 = call fast float @llvm.vector.reduce.fminimum.nxv8f32(<vscale x 8 x float> %a)
+  %r2 = call fast float @llvm.vector.reduce.fminimum.nxv4f32(<vscale x 4 x float> %b)
+  %r = call float @llvm.minnum.f32(float %r1, float %r2)
+  ret float %r
+}
+
+define float @fmaximum_f32(<vscale x 8 x float> %a, <vscale x 4 x float> %b) {
+; CHECK-LABEL: fmaximum_f32:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    ptrue p0.s
+; CHECK-NEXT:    fmax z0.s, p0/m, z0.s, z1.s
+; CHECK-NEXT:    fmaxv s2, p0, z2.s
+; CHECK-NEXT:    fmaxv s0, p0, z0.s
+; CHECK-NEXT:    fmaxnm s0, s0, s2
+; CHECK-NEXT:    ret
+  %r1 = call fast float @llvm.vector.reduce.fmaximum.nxv8f32(<vscale x 8 x float> %a)
+  %r2 = call fast float @llvm.vector.reduce.fmaximum.nxv4f32(<vscale x 4 x float> %b)
+  %r = call float @llvm.maxnum.f32(float %r1, float %r2)
+  ret float %r
+}
+
 
 define i32 @add_i32(<vscale x 8 x i32> %a, <vscale x 4 x i32> %b) {
 ; CHECK-LABEL: add_i32:
@@ -237,8 +267,12 @@ declare float @llvm.vector.reduce.fmul.f32.nxv8f32(float, <vscale x 8 x float>)
 declare float @llvm.vector.reduce.fmul.f32.nxv4f32(float, <vscale x 4 x float>)
 declare float @llvm.vector.reduce.fmin.nxv8f32(<vscale x 8 x float>)
 declare float @llvm.vector.reduce.fmin.nxv4f32(<vscale x 4 x float>)
+declare float @llvm.vector.reduce.fminimum.nxv8f32(<vscale x 8 x float>)
+declare float @llvm.vector.reduce.fminimum.nxv4f32(<vscale x 4 x float>)
 declare float @llvm.vector.reduce.fmax.nxv8f32(<vscale x 8 x float>)
 declare float @llvm.vector.reduce.fmax.nxv4f32(<vscale x 4 x float>)
+declare float @llvm.vector.reduce.fmaximum.nxv8f32(<vscale x 8 x float>)
+declare float @llvm.vector.reduce.fmaximum.nxv4f32(<vscale x 4 x float>)
 declare i32 @llvm.vector.reduce.add.i32.nxv8i32(<vscale x 8 x i32>)
 declare i32 @llvm.vector.reduce.add.i32.nxv4i32(<vscale x 4 x i32>)
 declare i16 @llvm.vector.reduce.add.i16.nxv32i16(<vscale x 32 x i16>)
@@ -261,6 +295,8 @@ declare i32 @llvm.vector.reduce.smax.i32.nxv8i32(<vscale x 8 x i32>)
 declare i32 @llvm.vector.reduce.smax.i32.nxv4i32(<vscale x 4 x i32>)
 declare float @llvm.minnum.f32(float, float)
 declare float @llvm.maxnum.f32(float, float)
+declare float @llvm.minimum.f32(float, float)
+declare float @llvm.maximum.f32(float, float)
 declare i32 @llvm.umin.i32(i32, i32)
 declare i32 @llvm.umax.i32(i32, i32)
 declare i32 @llvm.smin.i32(i32, i32)
