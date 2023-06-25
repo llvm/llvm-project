@@ -471,7 +471,7 @@ Bug Fixes in This Version
 - Fix crash when redefining a variable with an invalid type again with an
   invalid type. (`#62447 <https://github.com/llvm/llvm-project/issues/62447>`_)
 - Fix a stack overflow issue when evaluating ``consteval`` default arguments.
-  (`#60082` <https://github.com/llvm/llvm-project/issues/60082>`_)
+  (`#60082 <https://github.com/llvm/llvm-project/issues/60082>`_)
 - Fix the assertion hit when generating code for global variable initializer of
   _BitInt(1) type.
   (`#62207 <https://github.com/llvm/llvm-project/issues/62207>`_)
@@ -523,21 +523,23 @@ Bug Fixes in This Version
   (`#50534 <https://github.com/llvm/llvm-project/issues/50534>`_).
 - CallExpr built for C error-recovery now is always type-dependent. Fixes a
   crash when we encounter a unresolved TypoExpr during diagnostic emission.
-  (`#50244 <https://github.com/llvm/llvm-project/issues/50244>_`).
+  (`#50244 <https://github.com/llvm/llvm-project/issues/50244>`_).
 - Apply ``-fmacro-prefix-map`` to anonymous tags in template arguments
   (`#63219 <https://github.com/llvm/llvm-project/issues/63219>`_).
 - Clang now properly diagnoses format string mismatches involving scoped
   enumeration types. A scoped enumeration type is not promoted to an integer
   type by the default argument promotions, and thus this is UB. Clang's
   behavior now matches GCC's behavior in C++.
-  (`#38717 <https://github.com/llvm/llvm-project/issues/38717>_`).
+  (`#38717 <https://github.com/llvm/llvm-project/issues/38717>`_).
 - Fixed a failing assertion when implicitly defining a function within a GNU
   statement expression that appears outside of a function block scope. The
   assertion was benign outside of asserts builds and would only fire in C.
-  (`#48579 <https://github.com/llvm/llvm-project/issues/48579>_`).
+  (`#48579 <https://github.com/llvm/llvm-project/issues/48579>`_).
 - Fixed a failing assertion when applying an attribute to an anonymous union.
   The assertion was benign outside of asserts builds and would only fire in C++.
-  (`#48512 <https://github.com/llvm/llvm-project/issues/48512>_`).
+  (`#48512 <https://github.com/llvm/llvm-project/issues/48512>`_).
+- Fixed a failing assertion when parsing incomplete destructor.
+  (`#63503 <https://github.com/llvm/llvm-project/issues/63503>`_)
 
 Bug Fixes to Compiler Builtins
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
