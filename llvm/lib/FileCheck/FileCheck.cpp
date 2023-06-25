@@ -16,6 +16,7 @@
 #include "llvm/FileCheck/FileCheck.h"
 #include "FileCheckImpl.h"
 #include "llvm/ADT/STLExtras.h"
+#include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringSet.h"
 #include "llvm/ADT/Twine.h"
 #include "llvm/Support/CheckedArithmetic.h"

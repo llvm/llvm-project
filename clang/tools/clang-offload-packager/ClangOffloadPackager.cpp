@@ -14,6 +14,7 @@
 
 #include "clang/Basic/Version.h"
 
+#include "llvm/ADT/StringExtras.h"
 #include "llvm/BinaryFormat/Magic.h"
 #include "llvm/Object/ArchiveWriter.h"
 #include "llvm/Object/OffloadBinary.h"

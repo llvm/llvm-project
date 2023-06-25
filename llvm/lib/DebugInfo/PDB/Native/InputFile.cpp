@@ -8,6 +8,7 @@
 
 #include "llvm/DebugInfo/PDB/Native/InputFile.h"
 
+#include "llvm/ADT/StringExtras.h"
 #include "llvm/BinaryFormat/Magic.h"
 #include "llvm/DebugInfo/CodeView/CodeView.h"
 #include "llvm/DebugInfo/CodeView/LazyRandomTypeCollection.h"

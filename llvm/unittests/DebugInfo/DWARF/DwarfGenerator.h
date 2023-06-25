@@ -13,6 +13,7 @@
 #ifndef LLVM_UNITTESTS_DEBUG_INFO_DWARF_DWARFGENERATOR_H
 #define LLVM_UNITTESTS_DEBUG_INFO_DWARF_DWARFGENERATOR_H
 
+#include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/CodeGen/DIE.h"
 #include "llvm/DebugInfo/DWARF/DWARFDebugLine.h"
