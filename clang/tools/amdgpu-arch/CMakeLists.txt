@@ -8,6 +8,6 @@
 
 set(LLVM_LINK_COMPONENTS Support)
 
-add_clang_tool(amdgpu-arch AMDGPUArch.cpp)
+add_clang_tool(amdgpu-arch AMDGPUArch.cpp AMDGPUArchByHSA.cpp AMDGPUArchByHIP.cpp)
 
 target_link_libraries(amdgpu-arch PRIVATE clangBasic)
