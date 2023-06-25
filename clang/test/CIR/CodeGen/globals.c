@@ -14,6 +14,8 @@ int filler_sint[4] = {1, 2}; // Ensure missing elements are zero-initialized.
 // CHECK: cir.global external @filler_sint = #cir.const_array<[#cir.int<1> : !s32i, #cir.int<2> : !s32i, #cir.int<0> : !s32i, #cir.int<0> : !s32i]> : !cir.array<!s32i x 4>
 int excess_sint[2] = {1, 2, 3, 4}; // Ensure excess elements are ignored.
 // CHECK: cir.global external @excess_sint = #cir.const_array<[#cir.int<1> : !s32i, #cir.int<2> : !s32i]> : !cir.array<!s32i x 2>
+float flt[] = {1.0, 2.0};
+// CHECK: cir.global external @flt = #cir.const_array<[1.000000e+00 : f32, 2.000000e+00 : f32]> : !cir.array<f32 x 2>
 
 // Tentative definition is just a declaration.
 int tentativeB;
@@ -31,6 +33,8 @@ int tentativeE[2] = {1, 2};
 int tentativeA;
 float tentativeC;
 int tentativeD[];
+float zeroInitFlt[2];
 // CHECK: cir.global external @tentativeA = #cir.int<0> : !s32i
 // CHECK: cir.global external @tentativeC = 0.000000e+00 : f32
 // CHECK: cir.global external @tentativeD = #cir.const_array<[#cir.int<0> : !s32i]> : !cir.array<!s32i x 1>
+// CHECK: cir.global external @zeroInitFlt = #cir.const_array<[0.000000e+00 : f32, 0.000000e+00 : f32]> : !cir.array<f32 x 2>
