@@ -773,7 +773,7 @@ void CIRGenModule::buildGlobalVarDefinition(const clang::VarDecl *D,
     // exists. A use may still exists, however, so we still may need
     // to do a RAUW.
     assert(!ASTTy->isIncompleteType() && "Unexpected incomplete type");
-    assert(0 && "not implemented");
+    Init = builder.getZeroInitAttr(getCIRType(D->getType()));
   } else {
     initializedGlobalDecl = GlobalDecl(D);
     emitter.emplace(*this);
@@ -1609,6 +1609,37 @@ StringRef CIRGenModule::getMangledName(GlobalDecl GD) {
 
   auto Result = Manglings.insert(std::make_pair(MangledName, GD));
   return MangledDeclNames[CanonicalGD] = Result.first->first();
+}
+
+void CIRGenModule::buildTentativeDefinition(const VarDecl *D) {
+  assert(!D->getInit() && "Cannot emit definite definitions here!");
+
+  StringRef MangledName = getMangledName(D);
+  auto *GV = getGlobalValue(MangledName);
+
+  // TODO(cir): can a tentative definition come from something other than a
+  // global op? If not, the assertion below is wrong and should be removed. If
+  // so, getGlobalValue might be better of returining a global value interface
+  // that alows use to manage different globals value types transparently.
+  if (GV)
+    assert(isa<mlir::cir::GlobalOp>(GV) &&
+           "tentative definition can only be built from a cir.global_op");
+
+  // We already have a definition, not declaration, with the same mangled name.
+  // Emitting of declaration is not required (and actually overwrites emitted
+  // definition).
+  if (GV && !dyn_cast<mlir::cir::GlobalOp>(GV).isDeclaration())
+    return;
+
+  // If we have not seen a reference to this variable yet, place it into the
+  // deferred declarations table to be emitted if needed later.
+  if (!MustBeEmitted(D) && !GV) {
+    DeferredDecls[MangledName] = D;
+    return;
+  }
+
+  // The tentative definition is the only definition.
+  buildGlobalVarDefinition(D);
 }
 
 void CIRGenModule::setGlobalVisibility(mlir::Operation *GV,

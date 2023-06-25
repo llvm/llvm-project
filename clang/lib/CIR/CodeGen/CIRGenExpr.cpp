@@ -487,7 +487,10 @@ LValue CIRGenFunction::buildDeclRefLValue(const DeclRefExpr *E) {
 
   if (const auto *VD = dyn_cast<VarDecl>(ND)) {
     // Global Named registers access via intrinsics only
-    assert(VD->getStorageClass() != SC_Register && "not implemented");
+    if (VD->getStorageClass() == SC_Register &&
+        VD->hasAttr<AsmLabelAttr>() && !VD->isLocalVarDecl())
+        llvm_unreachable("NYI");
+
     assert(E->isNonOdrUse() != NOUR_Constant && "not implemented");
 
     // Check for captured variables.
