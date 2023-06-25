@@ -24,8 +24,8 @@
 constexpr bool test() {
   // Test the primary template
   {
-    using Box = std::ranges::__copyable_box<CopyConstructible>;
-    static_assert( std::is_move_assignable_v<Box>);
+    using Box = std::ranges::__movable_box<CopyConstructible>;
+    static_assert(std::is_move_assignable_v<Box>);
     static_assert(!std::is_nothrow_move_assignable_v<Box>);
 
     {
@@ -51,9 +51,10 @@ constexpr bool test() {
 
   // Make sure that we use the native move assignment in the primary template if we can.
   {
-    using Box = std::ranges::__copyable_box<CopyConstructibleMovable>;
+    using Box = std::ranges::__movable_box<CopyConstructibleMovable>;
     static_assert(std::is_move_assignable_v<Box>);
-    static_assert(std::is_nothrow_move_assignable_v<Box> == std::is_nothrow_move_assignable_v<CopyConstructibleMovable>);
+    static_assert(
+        std::is_nothrow_move_assignable_v<Box> == std::is_nothrow_move_assignable_v<CopyConstructibleMovable>);
 
     {
       Box x(std::in_place, 5);
@@ -80,8 +81,8 @@ constexpr bool test() {
 
   // Test optimization #1 for move assignment
   {
-    using Box = std::ranges::__copyable_box<Copyable>;
-    static_assert( std::is_move_assignable_v<Box>);
+    using Box = std::ranges::__movable_box<Copyable>;
+    static_assert(std::is_move_assignable_v<Box>);
     static_assert(!std::is_nothrow_move_assignable_v<Box>);
 
     {
@@ -109,9 +110,10 @@ constexpr bool test() {
 
   // Test optimization #1 for move assignment with a type that uses optimization #2 for copy assignment
   {
-    using Box = std::ranges::__copyable_box<MovableNothrowCopyConstructible>;
+    using Box = std::ranges::__movable_box<MovableNothrowCopyConstructible>;
     static_assert(std::is_move_assignable_v<Box>);
-    static_assert(std::is_nothrow_move_assignable_v<Box> == std::is_nothrow_move_assignable_v<MovableNothrowCopyConstructible>);
+    static_assert(
+        std::is_nothrow_move_assignable_v<Box> == std::is_nothrow_move_assignable_v<MovableNothrowCopyConstructible>);
 
     {
       Box x(std::in_place, 5);
@@ -138,7 +140,7 @@ constexpr bool test() {
 
   // Test optimization #2 for move assignment
   {
-    using Box = std::ranges::__copyable_box<NothrowCopyConstructible>;
+    using Box = std::ranges::__movable_box<NothrowCopyConstructible>;
     static_assert(std::is_move_assignable_v<Box>);
     static_assert(std::is_nothrow_move_assignable_v<Box>);
 
@@ -170,7 +172,7 @@ constexpr bool test() {
 // through throwing an exception.
 #if !defined(TEST_HAS_NO_EXCEPTIONS)
 void test_empty_state() {
-  using Box = std::ranges::__copyable_box<ThrowsOnCopy>;
+  using Box = std::ranges::__movable_box<ThrowsOnCopy>;
 
   // assign non-empty to empty
   {
@@ -186,7 +188,7 @@ void test_empty_state() {
   // assign empty to non-empty
   {
     Box x(std::in_place, 5);
-    Box y = create_empty_box();
+    Box y       = create_empty_box();
     Box& result = (x = std::move(y));
 
     assert(&result == &x);
@@ -195,8 +197,8 @@ void test_empty_state() {
   }
   // assign empty to empty
   {
-    Box x = create_empty_box();
-    Box y = create_empty_box();
+    Box x       = create_empty_box();
+    Box y       = create_empty_box();
     Box& result = (x = std::move(y));
 
     assert(&result == &x);
@@ -205,7 +207,7 @@ void test_empty_state() {
   }
   // check self-assignment in empty case
   {
-    Box x = create_empty_box();
+    Box x       = create_empty_box();
     Box& result = (x = std::move(x));
 
     assert(&result == &x);

@@ -19,9 +19,9 @@
 
 #include "types.h"
 
-struct UnknownType { };
+struct UnknownType {};
 
-template<bool Noexcept>
+template <bool Noexcept>
 struct NothrowConstructible {
   explicit NothrowConstructible(int) noexcept(Noexcept);
 };
@@ -29,7 +29,7 @@ struct NothrowConstructible {
 constexpr bool test() {
   // Test the primary template
   {
-    using Box = std::ranges::__copyable_box<CopyConstructible>;
+    using Box = std::ranges::__movable_box<CopyConstructible>;
     Box x(std::in_place, 5);
     assert((*x).value == 5);
 
@@ -38,7 +38,7 @@ constexpr bool test() {
 
   // Test optimization #1
   {
-    using Box = std::ranges::__copyable_box<Copyable>;
+    using Box = std::ranges::__movable_box<Copyable>;
     Box x(std::in_place, 5);
     assert((*x).value == 5);
 
@@ -47,15 +47,17 @@ constexpr bool test() {
 
   // Test optimization #2
   {
-    using Box = std::ranges::__copyable_box<NothrowCopyConstructible>;
+    using Box = std::ranges::__movable_box<NothrowCopyConstructible>;
     Box x(std::in_place, 5);
     assert((*x).value == 5);
 
     static_assert(!std::is_constructible_v<Box, std::in_place_t, UnknownType>);
   }
 
-  static_assert( std::is_nothrow_constructible_v<std::ranges::__copyable_box<NothrowConstructible<true>>, std::in_place_t, int>);
-  static_assert(!std::is_nothrow_constructible_v<std::ranges::__copyable_box<NothrowConstructible<false>>, std::in_place_t, int>);
+  static_assert(
+      std::is_nothrow_constructible_v<std::ranges::__movable_box<NothrowConstructible<true>>, std::in_place_t, int>);
+  static_assert(
+      !std::is_nothrow_constructible_v<std::ranges::__movable_box<NothrowConstructible<false>>, std::in_place_t, int>);
 
   return true;
 }

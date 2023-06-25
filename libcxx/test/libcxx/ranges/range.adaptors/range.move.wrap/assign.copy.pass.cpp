@@ -24,8 +24,8 @@
 constexpr bool test() {
   // Test the primary template
   {
-    using Box = std::ranges::__copyable_box<CopyConstructible>;
-    static_assert( std::is_copy_assignable_v<Box>);
+    using Box = std::ranges::__movable_box<CopyConstructible>;
+    static_assert(std::is_copy_assignable_v<Box>);
     static_assert(!std::is_nothrow_copy_assignable_v<Box>);
 
     {
@@ -51,8 +51,8 @@ constexpr bool test() {
 
   // Test optimization #1 for copy-assignment
   {
-    using Box = std::ranges::__copyable_box<Copyable>;
-    static_assert( std::is_copy_assignable_v<Box>);
+    using Box = std::ranges::__movable_box<Copyable>;
+    static_assert(std::is_copy_assignable_v<Box>);
     static_assert(!std::is_nothrow_copy_assignable_v<Box>);
 
     {
@@ -80,7 +80,7 @@ constexpr bool test() {
 
   // Test optimization #2 for copy-assignment
   {
-    using Box = std::ranges::__copyable_box<NothrowCopyConstructible>;
+    using Box = std::ranges::__movable_box<NothrowCopyConstructible>;
     static_assert(std::is_copy_assignable_v<Box>);
     static_assert(std::is_nothrow_copy_assignable_v<Box>);
 
@@ -112,7 +112,7 @@ constexpr bool test() {
 // through throwing an exception.
 #if !defined(TEST_HAS_NO_EXCEPTIONS)
 void test_empty_state() {
-  using Box = std::ranges::__copyable_box<ThrowsOnCopy>;
+  using Box = std::ranges::__movable_box<ThrowsOnCopy>;
 
   // assign non-empty to empty
   {
@@ -137,7 +137,7 @@ void test_empty_state() {
   }
   // assign empty to empty
   {
-    Box x = create_empty_box();
+    Box x       = create_empty_box();
     Box const y = create_empty_box();
     Box& result = (x = y);
 
@@ -147,7 +147,7 @@ void test_empty_state() {
   }
   // check self-assignment in empty case
   {
-    Box x = create_empty_box();
+    Box x       = create_empty_box();
     Box& result = (x = x);
 
     assert(&result == &x);

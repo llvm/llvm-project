@@ -19,11 +19,11 @@
 
 #include "types.h"
 
-template<class T>
+template <class T>
 constexpr void check() {
   // non-const version
   {
-    std::ranges::__copyable_box<T> x(std::in_place, 10);
+    std::ranges::__movable_box<T> x(std::in_place, 10);
     T* result = x.operator->();
     static_assert(noexcept(x.operator->()));
     assert(result->value == 10);
@@ -32,7 +32,7 @@ constexpr void check() {
 
   // const version
   {
-    std::ranges::__copyable_box<T> const x(std::in_place, 10);
+    std::ranges::__movable_box<T> const x(std::in_place, 10);
     const T* result = x.operator->();
     static_assert(noexcept(x.operator->()));
     assert(result->value == 10);
@@ -41,8 +41,8 @@ constexpr void check() {
 }
 
 constexpr bool test() {
-  check<CopyConstructible>(); // primary template
-  check<Copyable>(); // optimization #1
+  check<CopyConstructible>();        // primary template
+  check<Copyable>();                 // optimization #1
   check<NothrowCopyConstructible>(); // optimization #2
   return true;
 }
