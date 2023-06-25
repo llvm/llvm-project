@@ -2462,12 +2462,12 @@ RAGreedy::RAGreedyStats RAGreedy::computeStats(MachineBasicBlock &MBB) {
       if (SrcReg.isVirtual() || DestReg.isVirtual()) {
         if (SrcReg.isVirtual()) {
           SrcReg = VRM->getPhys(SrcReg);
-          if (Src.getSubReg())
+          if (SrcReg && Src.getSubReg())
             SrcReg = TRI->getSubReg(SrcReg, Src.getSubReg());
         }
         if (DestReg.isVirtual()) {
           DestReg = VRM->getPhys(DestReg);
-          if (Dest.getSubReg())
+          if (DestReg && Dest.getSubReg())
             DestReg = TRI->getSubReg(DestReg, Dest.getSubReg());
         }
         if (SrcReg != DestReg)
