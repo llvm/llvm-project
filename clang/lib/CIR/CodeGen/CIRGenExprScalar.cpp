@@ -1170,8 +1170,8 @@ mlir::Value ScalarExprEmitter::VisitCastExpr(CastExpr *CE) {
   case CK_FloatingCast:
   case CK_FixedPointToFloating:
   case CK_FloatingToFixedPoint: {
-    if (!(Kind == CK_FloatingCast || Kind == CK_FloatingToIntegral))
-      llvm_unreachable("Only FloatingCast and Integral supported so far.");
+    if (Kind == CK_FixedPointToFloating || Kind == CK_FloatingToFixedPoint)
+      llvm_unreachable("Fixed point casts are NYI.");
     CIRGenFunction::CIRGenFPOptionsRAII FPOptsRAII(CGF, CE);
     return buildScalarConversion(Visit(E), E->getType(), DestTy,
                                  CE->getExprLoc());
@@ -1321,7 +1321,6 @@ mlir::Value ScalarExprEmitter::buildScalarCast(
   }
 
   if (CGF.getBuilder().isInt(SrcElementTy)) {
-    bool InputSigned = SrcElementType->isSignedIntegerOrEnumerationType();
     if (SrcElementType->isBooleanType() && Opts.TreatBooleanAsSigned) {
       llvm_unreachable("NYI");
     }
@@ -1329,10 +1328,8 @@ mlir::Value ScalarExprEmitter::buildScalarCast(
     if (CGF.getBuilder().isInt(DstElementTy))
       return Builder.create<mlir::cir::CastOp>(
           Src.getLoc(), DstTy, mlir::cir::CastKind::integral, Src);
-    if (InputSigned)
-      llvm_unreachable("NYI");
-
-    llvm_unreachable("NYI");
+    return Builder.create<mlir::cir::CastOp>(
+        Src.getLoc(), DstTy, mlir::cir::CastKind::int_to_float, Src);
   }
 
   if (SrcElementTy.isa<mlir::cir::IntType>()) {

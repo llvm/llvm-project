@@ -68,6 +68,10 @@ module {
     // MLIR: %[[TMP2:[0-9]+]] = llvm.inttoptr %[[TMP]] : i64 to !llvm.ptr
     %24 = cir.cast(ptr_to_int, %23 : !cir.ptr<!u8i>), !s32i
     // MLIR: %{{[0-9]+}} = llvm.ptrtoint %[[TMP2]] : !llvm.ptr to i32
+    %25 = cir.cast(int_to_float, %arg1 : !s32i), f32
+    // MLIR: %{{.+}} = llvm.sitofp %{{.+}} : i32 to f32
+    %26 = cir.cast(int_to_float, %arg0 : !u32i), f32
+    // MLIR: %{{.+}} = llvm.uitofp %{{.+}} : i32 to f32
     %18 = cir.const(#cir.int<0> : !s32i) : !s32i
     cir.store %18, %2 : !s32i, cir.ptr <!s32i>
     %19 = cir.load %2 : cir.ptr <!s32i>, !s32i
