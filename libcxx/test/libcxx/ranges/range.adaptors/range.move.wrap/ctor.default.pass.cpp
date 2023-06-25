@@ -18,19 +18,19 @@
 
 #include "types.h"
 
-template<class T>
-using Box = std::ranges::__copyable_box<T>;
+template <class T>
+using Box = std::ranges::__movable_box<T>;
 
 struct NoDefault {
   NoDefault() = delete;
 };
 static_assert(!std::is_default_constructible_v<Box<NoDefault>>);
 
-template<bool Noexcept>
+template <bool Noexcept>
 struct DefaultNoexcept {
   DefaultNoexcept() noexcept(Noexcept);
 };
-static_assert( std::is_nothrow_default_constructible_v<Box<DefaultNoexcept<true>>>);
+static_assert(std::is_nothrow_default_constructible_v<Box<DefaultNoexcept<true>>>);
 static_assert(!std::is_nothrow_default_constructible_v<Box<DefaultNoexcept<false>>>);
 
 constexpr bool test() {
