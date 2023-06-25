@@ -198,6 +198,20 @@ class SiFive7GetOrderedReductionCycles<string mx, int sew> {
   int c = !mul(5, VLUpperBound);
 }
 
+class SiFive7AnyToGPRBypass<SchedRead read, int cycles = 2>
+    : ReadAdvance<read, cycles, [WriteIALU, WriteIALU32,
+                                 WriteShiftImm, WriteShiftImm32,
+                                 WriteShiftReg, WriteShiftReg32,
+                                 WriteSHXADD, WriteSHXADD32,
+                                 WriteRotateImm, WriteRotateImm32,
+                                 WriteRotateReg, WriteRotateReg32,
+                                 WriteCLZ, WriteCLZ32, WriteCTZ, WriteCTZ32,
+                                 WriteCPOP, WriteCPOP32,
+                                 WriteREV8, WriteORCB, WriteSFB,
+                                 WriteIMul, WriteIMul32,
+                                 WriteIDiv, WriteIDiv32,
+                                 WriteLDB, WriteLDH, WriteLDW, WriteLDD]>;
+
 // SiFive7 machine model for scheduling and other instruction cost heuristics.
 def SiFive7Model : SchedMachineModel {
   let MicroOpBufferSize = 0; // Explicitly set to zero since SiFive7 is in-order.
@@ -234,10 +248,12 @@ def SiFive7VS          : ProcResource<1> { let Super = SiFive7PipeV; } // Store 
 def SiFive7PipeAB : ProcResGroup<[SiFive7PipeA, SiFive7PipeB]>;
 
 // Branching
+let Latency = 3 in {
 def : WriteRes<WriteJmp, [SiFive7PipeB]>;
 def : WriteRes<WriteJal, [SiFive7PipeB]>;
 def : WriteRes<WriteJalr, [SiFive7PipeB]>;
 def : WriteRes<WriteJmpReg, [SiFive7PipeB]>;
+}
 
 //Short forward branch
 def : WriteRes<WriteSFB, [SiFive7PipeA, SiFive7PipeB]> {
@@ -896,18 +912,19 @@ let Latency = 3 in
 def : InstRW<[WriteIALU], (instrs COPY)>;
 
 //===----------------------------------------------------------------------===//
+
 // Bypass and advance
-def : ReadAdvance<ReadJmp, 0>;
+def : SiFive7AnyToGPRBypass<ReadJmp>;
 def : ReadAdvance<ReadJalr, 0>;
 def : ReadAdvance<ReadCSR, 0>;
 def : ReadAdvance<ReadStoreData, 0>;
 def : ReadAdvance<ReadMemBase, 0>;
-def : ReadAdvance<ReadIALU, 0>;
-def : ReadAdvance<ReadIALU32, 0>;
-def : ReadAdvance<ReadShiftImm, 0>;
-def : ReadAdvance<ReadShiftImm32, 0>;
-def : ReadAdvance<ReadShiftReg, 0>;
-def : ReadAdvance<ReadShiftReg32, 0>;
+def : SiFive7AnyToGPRBypass<ReadIALU>;
+def : SiFive7AnyToGPRBypass<ReadIALU32>;
+def : SiFive7AnyToGPRBypass<ReadShiftImm>;
+def : SiFive7AnyToGPRBypass<ReadShiftImm32>;
+def : SiFive7AnyToGPRBypass<ReadShiftReg>;
+def : SiFive7AnyToGPRBypass<ReadShiftReg32>;
 def : ReadAdvance<ReadIDiv, 0>;
 def : ReadAdvance<ReadIDiv32, 0>;
 def : ReadAdvance<ReadIMul, 0>;
@@ -974,24 +991,24 @@ def : ReadAdvance<ReadFClass16, 0>;
 def : ReadAdvance<ReadFClass32, 0>;
 def : ReadAdvance<ReadFClass64, 0>;
 
-def : ReadAdvance<ReadSFBJmp, 0>;
-def : ReadAdvance<ReadSFBALU, 0>;
+def : SiFive7AnyToGPRBypass<ReadSFBJmp, 0>;
+def : SiFive7AnyToGPRBypass<ReadSFBALU, 0>;
 
 // Bitmanip
-def : ReadAdvance<ReadRotateImm, 0>;
-def : ReadAdvance<ReadRotateImm32, 0>;
-def : ReadAdvance<ReadRotateReg, 0>;
-def : ReadAdvance<ReadRotateReg32, 0>;
-def : ReadAdvance<ReadCLZ, 0>;
-def : ReadAdvance<ReadCLZ32, 0>;
-def : ReadAdvance<ReadCTZ, 0>;
-def : ReadAdvance<ReadCTZ32, 0>;
+def : SiFive7AnyToGPRBypass<ReadRotateImm>;
+def : SiFive7AnyToGPRBypass<ReadRotateImm32>;
+def : SiFive7AnyToGPRBypass<ReadRotateReg>;
+def : SiFive7AnyToGPRBypass<ReadRotateReg32>;
+def : SiFive7AnyToGPRBypass<ReadCLZ>;
+def : SiFive7AnyToGPRBypass<ReadCLZ32>;
+def : SiFive7AnyToGPRBypass<ReadCTZ>;
+def : SiFive7AnyToGPRBypass<ReadCTZ32>;
 def : ReadAdvance<ReadCPOP, 0>;
 def : ReadAdvance<ReadCPOP32, 0>;
-def : ReadAdvance<ReadORCB, 0>;
-def : ReadAdvance<ReadREV8, 0>;
-def : ReadAdvance<ReadSHXADD, 0>;
-def : ReadAdvance<ReadSHXADD32, 0>;
+def : SiFive7AnyToGPRBypass<ReadORCB>;
+def : SiFive7AnyToGPRBypass<ReadREV8>;
+def : SiFive7AnyToGPRBypass<ReadSHXADD>;
+def : SiFive7AnyToGPRBypass<ReadSHXADD32>;
 
 // 6. Configuration-Setting Instructions
 def : ReadAdvance<ReadVSETVLI, 2>;
