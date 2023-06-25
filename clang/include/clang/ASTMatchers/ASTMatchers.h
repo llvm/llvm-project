@@ -4431,6 +4431,33 @@ AST_POLYMORPHIC_MATCHER_P(argumentCountIs,
   return NumArgs == N;
 }
 
+/// Checks that a call expression or a constructor call expression has at least
+/// the specified number of arguments (including absent default arguments).
+///
+/// Example matches f(0, 0) and g(0, 0, 0)
+/// (matcher = callExpr(argumentCountAtLeast(2)))
+/// \code
+///   void f(int x, int y);
+///   void g(int x, int y, int z);
+///   f(0, 0);
+///   g(0, 0, 0);
+/// \endcode
+AST_POLYMORPHIC_MATCHER_P(argumentCountAtLeast,
+                          AST_POLYMORPHIC_SUPPORTED_TYPES(
+                              CallExpr, CXXConstructExpr,
+                              CXXUnresolvedConstructExpr, ObjCMessageExpr),
+                          unsigned, N) {
+  unsigned NumArgs = Node.getNumArgs();
+  if (!Finder->isTraversalIgnoringImplicitNodes())
+    return NumArgs >= N;
+  while (NumArgs) {
+    if (!isa<CXXDefaultArgExpr>(Node.getArg(NumArgs - 1)))
+      break;
+    --NumArgs;
+  }
+  return NumArgs >= N;
+}
+
 /// Matches the n'th argument of a call expression or a constructor
 /// call expression.
 ///
