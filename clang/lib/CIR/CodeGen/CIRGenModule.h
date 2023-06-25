@@ -445,6 +445,8 @@ public:
 
   llvm::StringRef getMangledName(clang::GlobalDecl GD);
 
+  void buildTentativeDefinition(const VarDecl *D);
+
   // Make sure that this type is translated.
   void UpdateCompletedType(const clang::TagDecl *TD);
 

@@ -24,6 +24,7 @@
 #include "mlir/IR/BuiltinAttributes.h"
 #include "mlir/IR/BuiltinTypes.h"
 #include "llvm/ADT/FloatingPointMode.h"
+#include "llvm/Support/ErrorHandling.h"
 
 namespace cir {
 
@@ -142,6 +143,24 @@ public:
   mlir::cir::TypeInfoAttr getTypeInfo(mlir::ArrayAttr fieldsAttr) {
     auto anonStruct = getAnonConstStruct(fieldsAttr);
     return mlir::cir::TypeInfoAttr::get(anonStruct.getType(), anonStruct);
+  }
+
+  mlir::TypedAttr getZeroInitAttr(mlir::Type ty) {
+    if (ty.isa<mlir::cir::IntType>())
+      return mlir::cir::IntAttr::get(ty, 0);
+    if (ty.isa<mlir::FloatType>())
+      return mlir::FloatAttr::get(ty, 0.0);
+    if (auto arrTy = ty.dyn_cast<mlir::cir::ArrayType>()) {
+      // FIXME(cir): We should have a proper zero initializer CIR instead of
+      // manually pumping zeros into the array.
+      assert(!UnimplementedFeature::zeroInitializer());
+      auto values = llvm::SmallVector<mlir::Attribute, 4>();
+      auto zero = getZeroInitAttr(arrTy.getEltType());
+      for (unsigned i = 0, e = arrTy.getSize(); i < e; ++i)
+        values.push_back(zero);
+      return getConstArray(mlir::ArrayAttr::get(getContext(), values), arrTy);
+    }
+    llvm_unreachable("Zero initializer for given type is NYI");
   }
 
   //

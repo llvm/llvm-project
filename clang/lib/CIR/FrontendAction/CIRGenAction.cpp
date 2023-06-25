@@ -300,7 +300,7 @@ public:
   }
 
   void CompleteTentativeDefinition(VarDecl *D) override {
-    llvm_unreachable("NYI");
+    gen->CompleteTentativeDefinition(D);
   }
 
   void CompleteExternalDeclaration(DeclaratorDecl *D) override {
