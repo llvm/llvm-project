@@ -53,6 +53,12 @@ int cStyleCasts_0(unsigned x1, int x2, float x3, short x4) {
   float uitofp = (float)x1; // Unsigned integer to floating point
   // CHECK: %{{.+}} = cir.cast(int_to_float, %{{[0-9]+}} : !u32i), f32
 
+  int fptosi = (int)x3; // Floating point to signed integer
+  // CHECK: %{{.+}} = cir.cast(float_to_int, %{{[0-9]+}} : f32), !s32i
+
+  unsigned fptoui = (unsigned)x3; // Floating point to unsigned integer
+  // CHECK: %{{.+}} = cir.cast(float_to_int, %{{[0-9]+}} : f32), !u32i
+
   return 0;
 }
 

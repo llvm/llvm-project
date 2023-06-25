@@ -28,8 +28,8 @@ module {
 // LLVM-NEXT:   ret i32 %0
 // LLVM-NEXT: }
 
-  cir.func @cStyleCasts(%arg0: !u32i, %arg1: !s32i) -> !s32i {
-    // MLIR: llvm.func @cStyleCasts(%arg0: i32, %arg1: i32) -> i32 {
+  cir.func @cStyleCasts(%arg0: !u32i, %arg1: !s32i, %arg2: f32) -> !s32i {
+  // MLIR: llvm.func @cStyleCasts
     %0 = cir.alloca !u32i, cir.ptr <!u32i>, ["x1", init] {alignment = 4 : i64}
     %1 = cir.alloca !s32i, cir.ptr <!s32i>, ["x2", init] {alignment = 4 : i64}
     %20 = cir.alloca !s16i, cir.ptr <!s16i>, ["x4", init] {alignment = 2 : i64}
@@ -72,6 +72,10 @@ module {
     // MLIR: %{{.+}} = llvm.sitofp %{{.+}} : i32 to f32
     %26 = cir.cast(int_to_float, %arg0 : !u32i), f32
     // MLIR: %{{.+}} = llvm.uitofp %{{.+}} : i32 to f32
+    %27 = cir.cast(float_to_int, %arg2 : f32), !s32i
+    // MLIR: %{{.+}} = llvm.fptosi %{{.+}} : f32 to i32
+    %28 = cir.cast(float_to_int, %arg2 : f32), !u32i
+    // MLIR: %{{.+}} = llvm.fptoui %{{.+}} : f32 to i32
     %18 = cir.const(#cir.int<0> : !s32i) : !s32i
     cir.store %18, %2 : !s32i, cir.ptr <!s32i>
     %19 = cir.load %2 : cir.ptr <!s32i>, !s32i
