@@ -18,6 +18,7 @@
 #include "mlir/Dialect/Func/IR/FuncOps.h"
 #include "mlir/Dialect/LLVMIR/LLVMTypes.h"
 #include "mlir/IR/Builders.h"
+#include "mlir/IR/BuiltinTypes.h"
 #include "mlir/IR/Diagnostics.h"
 #include "mlir/IR/DialectImplementation.h"
 #include "mlir/IR/Location.h"
@@ -334,6 +335,12 @@ LogicalResult CastOp::verify() {
       return emitOpError() << "requires !cir.int for result";
     return success();
   }
+  case cir::CastKind::int_to_float:
+    if (!srcType.isa<mlir::cir::IntType>())
+      return emitOpError() << "requires !cir.int for source";
+    if (!resType.isa<mlir::FloatType>())
+      return emitOpError() << "requires !cir.float for result";
+    return success();
   }
 
   llvm_unreachable("Unknown CastOp kind?");

@@ -333,6 +333,18 @@ public:
                                                       llvmSrcVal);
       return mlir::success();
     }
+    case mlir::cir::CastKind::int_to_float: {
+      auto dstTy = castOp.getType();
+      auto llvmSrcVal = adaptor.getOperands().front();
+      auto llvmDstTy = getTypeConverter()->convertType(dstTy);
+      if (castOp.getSrc().getType().cast<mlir::cir::IntType>().isSigned())
+        rewriter.replaceOpWithNewOp<mlir::LLVM::SIToFPOp>(castOp, llvmDstTy,
+                                                          llvmSrcVal);
+      else
+        rewriter.replaceOpWithNewOp<mlir::LLVM::UIToFPOp>(castOp, llvmDstTy,
+                                                          llvmSrcVal);
+      return mlir::success();
+    }
     default:
       llvm_unreachable("NYI");
     }
