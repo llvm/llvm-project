@@ -114,4 +114,8 @@ module {
     cir.store %14, %4 : !cir.ptr<!s64i>, cir.ptr <!cir.ptr<!s64i>>
     cir.return
   }
+  cir.global external @flt = #cir.const_array<[1.000000e+00 : f32, 2.000000e+00 : f32]> : !cir.array<f32 x 2>
+  cir.global external @zeroInitFlt = #cir.const_array<[0.000000e+00 : f32, 0.000000e+00 : f32]> : !cir.array<f32 x 2>
+  // MLIR: llvm.mlir.global external @flt(dense<[1.000000e+00, 2.000000e+00]> : tensor<2xf32>) {addr_space = 0 : i32} : !llvm.array<2 x f32>
+  // MLIR: llvm.mlir.global external @zeroInitFlt(dense<0.000000e+00> : tensor<2xf32>) {addr_space = 0 : i32} : !llvm.array<2 x f32>
 }
