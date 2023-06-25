@@ -5647,8 +5647,7 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
   // can propagate it to the backend.
   bool SplitDWARF = (DwarfFission != DwarfFissionKind::None) &&
                     (TC.getTriple().isOSBinFormatELF() ||
-                     TC.getTriple().isOSBinFormatWasm() ||
-                     TC.getTriple().isOSBinFormatCOFF()) &&
+                     TC.getTriple().isOSBinFormatWasm()) &&
                     (isa<AssembleJobAction>(JA) || isa<CompileJobAction>(JA) ||
                      isa<BackendJobAction>(JA));
   if (SplitDWARF) {

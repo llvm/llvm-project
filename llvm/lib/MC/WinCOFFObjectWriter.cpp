@@ -154,14 +154,7 @@ public:
   MCSectionCOFF *AddrsigSection = nullptr;
   MCSectionCOFF *CGProfileSection = nullptr;
 
-  enum DwoMode {
-    AllSections,
-    NonDwoOnly,
-    DwoOnly,
-  } Mode;
-
-  WinCOFFWriter(WinCOFFObjectWriter &OWriter, raw_pwrite_stream &OS,
-                DwoMode Mode);
+  WinCOFFWriter(WinCOFFObjectWriter &OWriter, raw_pwrite_stream &OS);
 
   void reset();
   void executePostLayoutBinding(MCAssembler &Asm, const MCAsmLayout &Layout);
@@ -207,22 +200,13 @@ class WinCOFFObjectWriter : public MCObjectWriter {
   friend class WinCOFFWriter;
 
   std::unique_ptr<MCWinCOFFObjectTargetWriter> TargetObjectWriter;
-  std::unique_ptr<WinCOFFWriter> ObjWriter, DwoWriter;
+  std::unique_ptr<WinCOFFWriter> ObjWriter;
 
 public:
   WinCOFFObjectWriter(std::unique_ptr<MCWinCOFFObjectTargetWriter> MOTW,
                       raw_pwrite_stream &OS)
       : TargetObjectWriter(std::move(MOTW)),
-        ObjWriter(std::make_unique<WinCOFFWriter>(*this, OS,
-                                                  WinCOFFWriter::AllSections)) {
-  }
-  WinCOFFObjectWriter(std::unique_ptr<MCWinCOFFObjectTargetWriter> MOTW,
-                      raw_pwrite_stream &OS, raw_pwrite_stream &DwoOS)
-      : TargetObjectWriter(std::move(MOTW)),
-        ObjWriter(std::make_unique<WinCOFFWriter>(*this, OS,
-                                                  WinCOFFWriter::NonDwoOnly)),
-        DwoWriter(std::make_unique<WinCOFFWriter>(*this, DwoOS,
-                                                  WinCOFFWriter::DwoOnly)) {}
+        ObjWriter(std::make_unique<WinCOFFWriter>(*this, OS)) {}
 
   // MCObjectWriter interface implementation.
   void reset() override;
@@ -240,10 +224,6 @@ public:
 
 } // end anonymous namespace
 
-static bool isDwoSection(const MCSection &Sec) {
-  return Sec.getName().endswith(".dwo");
-}
-
 //------------------------------------------------------------------------------
 // Symbol class implementation
 
@@ -259,8 +239,8 @@ void COFFSymbol::set_name_offset(uint32_t Offset) {
 // WinCOFFWriter class implementation
 
 WinCOFFWriter::WinCOFFWriter(WinCOFFObjectWriter &OWriter,
-                             raw_pwrite_stream &OS, DwoMode Mode)
-    : OWriter(OWriter), W(OS, support::little), Mode(Mode) {
+                             raw_pwrite_stream &OS)
+    : OWriter(OWriter), W(OS, support::little) {
   Header.Machine = OWriter.TargetObjectWriter->getMachine();
   // Some relocations on ARM64 (the 21 bit ADRP relocations) have a slightly
   // limited range for the immediate offset (+/- 1 MB); create extra offset
@@ -838,17 +818,12 @@ void WinCOFFWriter::executePostLayoutBinding(MCAssembler &Asm,
                                              const MCAsmLayout &Layout) {
   // "Define" each section & symbol. This creates section & symbol
   // entries in the staging area.
-  for (const auto &Section : Asm) {
-    if ((Mode == NonDwoOnly && isDwoSection(Section)) ||
-        (Mode == DwoOnly && !isDwoSection(Section)))
-      continue;
+  for (const auto &Section : Asm)
     defineSection(static_cast<const MCSectionCOFF &>(Section), Layout);
-  }
 
-  if (Mode != DwoOnly)
-    for (const MCSymbol &Symbol : Asm.symbols())
-      if (!Symbol.isTemporary())
-        DefineSymbol(Symbol, Asm, Layout);
+  for (const MCSymbol &Symbol : Asm.symbols())
+    if (!Symbol.isTemporary())
+      DefineSymbol(Symbol, Asm, Layout);
 }
 
 void WinCOFFWriter::recordRelocation(MCAssembler &Asm,
@@ -1023,8 +998,7 @@ uint64_t WinCOFFWriter::writeObject(MCAssembler &Asm,
 
   setWeakDefaultNames();
   assignSectionNumbers();
-  if (Mode != DwoOnly)
-    createFileSymbols(Asm);
+  createFileSymbols(Asm);
 
   for (auto &Symbol : Symbols) {
     // Update section number & offset for symbols that have them.
@@ -1094,7 +1068,7 @@ uint64_t WinCOFFWriter::writeObject(MCAssembler &Asm,
   }
 
   // Create the contents of the .llvm_addrsig section.
-  if (Mode != DwoOnly && OWriter.EmitAddrsigSection) {
+  if (OWriter.EmitAddrsigSection) {
     auto Frag = new MCDataFragment(AddrsigSection);
     Frag->setLayoutOrder(0);
     raw_svector_ostream OS(Frag->getContents());
@@ -1115,7 +1089,7 @@ uint64_t WinCOFFWriter::writeObject(MCAssembler &Asm,
   }
 
   // Create the contents of the .llvm.call-graph-profile section.
-  if (Mode != DwoOnly && CGProfileSection) {
+  if (CGProfileSection) {
     auto *Frag = new MCDataFragment(CGProfileSection);
     Frag->setLayoutOrder(0);
     raw_svector_ostream OS(Frag->getContents());
@@ -1148,12 +1122,8 @@ uint64_t WinCOFFWriter::writeObject(MCAssembler &Asm,
   sections::iterator IE = Sections.end();
   MCAssembler::iterator J = Asm.begin();
   MCAssembler::iterator JE = Asm.end();
-  for (; I != IE && J != JE; ++I, ++J) {
-    while (J != JE && ((Mode == NonDwoOnly && isDwoSection(*J)) ||
-                       (Mode == DwoOnly && !isDwoSection(*J))))
-      ++J;
-    assert(J != JE && (**I).MCSection == &*J && "Wrong bound MCSection");
-  }
+  for (; I != IE && J != JE; ++I, ++J)
+    assert((**I).MCSection == &*J && "Wrong bound MCSection");
 #endif
 
   // Write section contents.
@@ -1182,8 +1152,6 @@ uint64_t WinCOFFWriter::writeObject(MCAssembler &Asm,
 
 void WinCOFFObjectWriter::reset() {
   ObjWriter->reset();
-  if (DwoWriter)
-    DwoWriter->reset();
   MCObjectWriter::reset();
 }
 
@@ -1220,8 +1188,6 @@ void WinCOFFObjectWriter::executePostLayoutBinding(MCAssembler &Asm,
   }
 
   ObjWriter->executePostLayoutBinding(Asm, Layout);
-  if (DwoWriter)
-    DwoWriter->executePostLayoutBinding(Asm, Layout);
 }
 
 void WinCOFFObjectWriter::recordRelocation(MCAssembler &Asm,
@@ -1229,19 +1195,13 @@ void WinCOFFObjectWriter::recordRelocation(MCAssembler &Asm,
                                            const MCFragment *Fragment,
                                            const MCFixup &Fixup, MCValue Target,
                                            uint64_t &FixedValue) {
-  assert(!isDwoSection(*Fragment->getParent()) &&
-         "No relocation in Dwo sections");
   ObjWriter->recordRelocation(Asm, Layout, Fragment, Fixup, Target, FixedValue);
 }
 
 uint64_t WinCOFFObjectWriter::writeObject(MCAssembler &Asm,
                                           const MCAsmLayout &Layout) {
-  uint64_t TotalSize = ObjWriter->writeObject(Asm, Layout);
-  if (DwoWriter)
-    TotalSize += DwoWriter->writeObject(Asm, Layout);
-  return TotalSize;
+  return ObjWriter->writeObject(Asm, Layout);
 }
-
 MCWinCOFFObjectTargetWriter::MCWinCOFFObjectTargetWriter(unsigned Machine_)
     : Machine(Machine_) {}
 
@@ -1254,10 +1214,4 @@ void MCWinCOFFObjectTargetWriter::anchor() {}
 std::unique_ptr<MCObjectWriter> llvm::createWinCOFFObjectWriter(
     std::unique_ptr<MCWinCOFFObjectTargetWriter> MOTW, raw_pwrite_stream &OS) {
   return std::make_unique<WinCOFFObjectWriter>(std::move(MOTW), OS);
-}
-
-std::unique_ptr<MCObjectWriter> llvm::createWinCOFFDwoObjectWriter(
-    std::unique_ptr<MCWinCOFFObjectTargetWriter> MOTW, raw_pwrite_stream &OS,
-    raw_pwrite_stream &DwoOS) {
-  return std::make_unique<WinCOFFObjectWriter>(std::move(MOTW), OS, DwoOS);
 }

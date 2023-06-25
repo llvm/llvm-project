@@ -3925,13 +3925,12 @@ void Driver::handleArguments(Compilation &C, DerivedArgList &Args,
     // `-dumpdir x-` to cc1. If -o is unspecified, use
     // stem(getDefaultImageName()) (usually stem("a.out") = "a").
     if (!Args.hasArg(options::OPT_dumpdir)) {
-      Arg *FinalOutput = Args.getLastArg(options::OPT_o, options::OPT__SLASH_o);
       Arg *Arg = Args.MakeSeparateArg(
           nullptr, getOpts().getOption(options::OPT_dumpdir),
-          Args.MakeArgString(
-              (FinalOutput ? FinalOutput->getValue()
-                           : llvm::sys::path::stem(getDefaultImageName())) +
-              "-"));
+          Args.MakeArgString(Args.getLastArgValue(
+                                 options::OPT_o,
+                                 llvm::sys::path::stem(getDefaultImageName())) +
+                             "-"));
       Arg->claim();
       Args.append(Arg);
     }

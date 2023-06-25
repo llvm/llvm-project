@@ -61,9 +61,6 @@ MCAsmBackend::createDwoObjectWriter(raw_pwrite_stream &OS,
                                     raw_pwrite_stream &DwoOS) const {
   auto TW = createObjectTargetWriter();
   switch (TW->getFormat()) {
-  case Triple::COFF:
-    return createWinCOFFDwoObjectWriter(
-        cast<MCWinCOFFObjectTargetWriter>(std::move(TW)), OS, DwoOS);
   case Triple::ELF:
     return createELFDwoObjectWriter(
         cast<MCELFObjectTargetWriter>(std::move(TW)), OS, DwoOS,
@@ -72,7 +69,7 @@ MCAsmBackend::createDwoObjectWriter(raw_pwrite_stream &OS,
     return createWasmDwoObjectWriter(
         cast<MCWasmObjectTargetWriter>(std::move(TW)), OS, DwoOS);
   default:
-    report_fatal_error("dwo only supported with COFF, ELF, and Wasm");
+    report_fatal_error("dwo only supported with ELF and Wasm");
   }
 }
 

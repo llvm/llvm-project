@@ -1278,7 +1278,7 @@ const char *tools::SplitDebugName(const JobAction &JA, const ArgList &Args,
   if (const Arg *A = Args.getLastArg(options::OPT_dumpdir)) {
     T = A->getValue();
   } else {
-    Arg *FinalOutput = Args.getLastArg(options::OPT_o, options::OPT__SLASH_o);
+    Arg *FinalOutput = Args.getLastArg(options::OPT_o);
     if (FinalOutput && Args.hasArg(options::OPT_c)) {
       T = FinalOutput->getValue();
       llvm::sys::path::remove_filename(T);
