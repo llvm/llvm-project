@@ -778,7 +778,7 @@ feature_test_macros = [
         },
         {
             "name": "__cpp_lib_ranges",
-            "values": {"c++20": 202106},
+            "values": {"c++20": 202207},
             "headers": ["algorithm", "functional", "iterator", "memory", "ranges"],
         },
         {

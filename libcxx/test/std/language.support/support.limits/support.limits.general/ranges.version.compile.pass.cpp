@@ -16,7 +16,7 @@
 // Test the feature test macros defined by <ranges>
 
 /*  Constant                      Value
-    __cpp_lib_ranges              202106L [C++20]
+    __cpp_lib_ranges              202207L [C++20]
     __cpp_lib_ranges_as_rvalue    202207L [C++23]
     __cpp_lib_ranges_chunk        202202L [C++23]
     __cpp_lib_ranges_chunk_by     202202L [C++23]
@@ -123,8 +123,8 @@
 # ifndef __cpp_lib_ranges
 #   error "__cpp_lib_ranges should be defined in c++20"
 # endif
-# if __cpp_lib_ranges != 202106L
-#   error "__cpp_lib_ranges should have the value 202106L in c++20"
+# if __cpp_lib_ranges != 202207L
+#   error "__cpp_lib_ranges should have the value 202207L in c++20"
 # endif
 
 # ifdef __cpp_lib_ranges_as_rvalue
@@ -156,8 +156,8 @@
 # ifndef __cpp_lib_ranges
 #   error "__cpp_lib_ranges should be defined in c++23"
 # endif
-# if __cpp_lib_ranges != 202106L
-#   error "__cpp_lib_ranges should have the value 202106L in c++23"
+# if __cpp_lib_ranges != 202207L
+#   error "__cpp_lib_ranges should have the value 202207L in c++23"
 # endif
 
 # ifndef __cpp_lib_ranges_as_rvalue
@@ -237,8 +237,8 @@
 # ifndef __cpp_lib_ranges
 #   error "__cpp_lib_ranges should be defined in c++26"
 # endif
-# if __cpp_lib_ranges != 202106L
-#   error "__cpp_lib_ranges should have the value 202106L in c++26"
+# if __cpp_lib_ranges != 202207L
+#   error "__cpp_lib_ranges should have the value 202207L in c++26"
 # endif
 
 # ifndef __cpp_lib_ranges_as_rvalue

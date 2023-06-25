@@ -16,19 +16,19 @@
 #include <utility>
 
 bool copied = false;
-bool moved = false;
+bool moved  = false;
 
 struct Empty {
-  Empty() noexcept { }
+  Empty() noexcept {}
   Empty(Empty const&) noexcept { copied = true; }
   Empty(Empty&&) noexcept { moved = true; }
   Empty& operator=(Empty const&) = delete;
-  Empty& operator=(Empty&&) = delete;
+  Empty& operator=(Empty&&)      = delete;
 };
 
-using Box = std::ranges::__copyable_box<Empty>;
+using Box = std::ranges::__movable_box<Empty>;
 
-struct Inherit : Box { };
+struct Inherit : Box {};
 
 struct Hold : Box {
   [[no_unique_address]] Inherit member;
@@ -37,7 +37,7 @@ struct Hold : Box {
 int main(int, char**) {
   Hold box;
 
-  Box& base = static_cast<Box&>(box);
+  Box& base   = static_cast<Box&>(box);
   Box& member = static_cast<Box&>(box.member);
 
   // Despite [[no_unique_address]], the two objects have the same type so they

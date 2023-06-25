@@ -18,15 +18,15 @@
 
 #include "types.h"
 
-template<class T>
+template <class T>
 constexpr void check() {
-  std::ranges::__copyable_box<T> const x(std::in_place, 10);
+  std::ranges::__movable_box<T> const x(std::in_place, 10);
   assert(x.__has_value());
 }
 
 constexpr bool test() {
-  check<CopyConstructible>(); // primary template
-  check<Copyable>(); // optimization #1
+  check<CopyConstructible>();        // primary template
+  check<Copyable>();                 // optimization #1
   check<NothrowCopyConstructible>(); // optimization #2
   return true;
 }
@@ -39,7 +39,7 @@ int main(int, char**) {
   // through throwing an exception.
 #if !defined(TEST_HAS_NO_EXCEPTIONS)
   {
-    std::ranges::__copyable_box<ThrowsOnCopy> x = create_empty_box();
+    std::ranges::__movable_box<ThrowsOnCopy> x = create_empty_box();
     assert(!x.__has_value());
   }
 #endif

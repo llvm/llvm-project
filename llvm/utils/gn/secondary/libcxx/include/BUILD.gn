@@ -680,7 +680,7 @@ if (current_toolchain == default_toolchain) {
       "__ranges/common_view.h",
       "__ranges/concepts.h",
       "__ranges/container_compatible_range.h",
-      "__ranges/copyable_box.h",
+      "__ranges/movable_box.h",
       "__ranges/counted.h",
       "__ranges/dangling.h",
       "__ranges/data.h",
