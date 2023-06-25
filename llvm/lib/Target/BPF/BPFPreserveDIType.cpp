@@ -125,27 +125,7 @@ static bool BPFPreserveDITypeImpl(Function &F) {
 
   return true;
 }
-
-class BPFPreserveDIType final : public FunctionPass {
-  bool runOnFunction(Function &F) override;
-
-public:
-  static char ID;
-  BPFPreserveDIType() : FunctionPass(ID) {}
-};
 } // End anonymous namespace
-
-char BPFPreserveDIType::ID = 0;
-INITIALIZE_PASS(BPFPreserveDIType, DEBUG_TYPE, "BPF Preserve Debuginfo Type",
-                false, false)
-
-FunctionPass *llvm::createBPFPreserveDIType() {
-  return new BPFPreserveDIType();
-}
-
-bool BPFPreserveDIType::runOnFunction(Function &F) {
-  return BPFPreserveDITypeImpl(F);
-}
 
 PreservedAnalyses BPFPreserveDITypePass::run(Function &F,
                                              FunctionAnalysisManager &AM) {
