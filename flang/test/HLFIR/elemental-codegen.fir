@@ -34,7 +34,7 @@ func.func @numeric_type(%arg0: !fir.ref<!fir.array<10x20xi32>>, %arg1: !fir.ref<
 // CHECK:        %[[VAL_14:.*]] = fir.load %[[VAL_12]] : !fir.ref<i32>
 // CHECK:        %[[VAL_15:.*]] = arith.addi %[[VAL_13]], %[[VAL_14]] : i32
 // CHECK:        %[[VAL_16:.*]] = hlfir.designate %[[VAL_6]]#0 (%[[VAL_10]], %[[VAL_9]])  : (!fir.heap<!fir.array<10x20xi32>>, index, index) -> !fir.ref<i32>
-// CHECK:        hlfir.assign %[[VAL_15]] to %[[VAL_16]] : i32, !fir.ref<i32>
+// CHECK:        hlfir.assign %[[VAL_15]] to %[[VAL_16]] temporary_lhs : i32, !fir.ref<i32>
 // CHECK:      }
 // CHECK:    }
 // CHECK:    %[[VAL_17:.*]] = fir.undefined tuple<!fir.heap<!fir.array<10x20xi32>>, i1>
@@ -71,7 +71,7 @@ func.func @char_type(%arg0: !fir.box<!fir.array<?x!fir.char<1,?>>>, %arg1: index
 // CHECK:      %[[VAL_33:.*]] = fir.insert_value %[[VAL_32]], %[[VAL_31]], [1 : index] : (tuple<!fir.boxchar<1>, i1>, i1) -> tuple<!fir.boxchar<1>, i1>
 // CHECK:      %[[VAL_34:.*]] = fir.insert_value %[[VAL_33]], %[[VAL_30]]#0, [0 : index] : (tuple<!fir.boxchar<1>, i1>, !fir.boxchar<1>) -> tuple<!fir.boxchar<1>, i1>
 // CHECK:      %[[VAL_35:.*]] = hlfir.designate %[[VAL_6]]#0 (%[[VAL_9]])  typeparams %[[VAL_2]] : (!fir.box<!fir.array<?x!fir.char<1,?>>>, index, index) -> !fir.boxchar<1>
-// CHECK:      hlfir.assign %[[VAL_30]]#0 to %[[VAL_35]] : !fir.boxchar<1>, !fir.boxchar<1>
+// CHECK:      hlfir.assign %[[VAL_30]]#0 to %[[VAL_35]] temporary_lhs : !fir.boxchar<1>, !fir.boxchar<1>
 // CHECK:    }
 // CHECK:    %[[VAL_36:.*]] = fir.undefined tuple<!fir.box<!fir.array<?x!fir.char<1,?>>>, i1>
 // CHECK:    %[[VAL_37:.*]] = fir.insert_value %[[VAL_36]], %[[VAL_7]], [1 : index] : (tuple<!fir.box<!fir.array<?x!fir.char<1,?>>>, i1>, i1) -> tuple<!fir.box<!fir.array<?x!fir.char<1,?>>>, i1>
@@ -101,7 +101,7 @@ func.func @derived_transpose(%arg0: !fir.box<!fir.array<?x?x!fir.type<t{field:f3
 // CHECK:      fir.do_loop %[[VAL_9:.*]] = %[[VAL_7]] to %[[VAL_2]] step %[[VAL_7]] {
 // CHECK:        %[[VAL_10:.*]] = hlfir.designate %[[VAL_0]] (%[[VAL_9]], %[[VAL_8]])  : (!fir.box<!fir.array<?x?x!fir.type<t{field:f32}>>>, index, index) -> !fir.box<!fir.type<t{field:f32}>>
 // CHECK:        %[[VAL_11:.*]] = hlfir.designate %[[VAL_5]]#0 (%[[VAL_9]], %[[VAL_8]])  : (!fir.box<!fir.array<?x?x!fir.type<t{field:f32}>>>, index, index) -> !fir.ref<!fir.type<t{field:f32}>>
-// CHECK:        hlfir.assign %[[VAL_10]] to %[[VAL_11]] : !fir.box<!fir.type<t{field:f32}>>, !fir.ref<!fir.type<t{field:f32}>>
+// CHECK:        hlfir.assign %[[VAL_10]] to %[[VAL_11]] temporary_lhs : !fir.box<!fir.type<t{field:f32}>>, !fir.ref<!fir.type<t{field:f32}>>
 // CHECK:      }
 // CHECK:    }
 // CHECK:    %[[VAL_12:.*]] = fir.undefined tuple<!fir.box<!fir.array<?x?x!fir.type<t{field:f32}>>>, i1>

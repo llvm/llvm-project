@@ -119,7 +119,7 @@ createTempFromMold(mlir::Location loc, fir::FirOpBuilder &builder,
     isHeapAlloc = builder.createBool(loc, true);
   } else {
     alloc = builder.createTemporary(loc, mold.getFortranElementType(), tmpName,
-                                    /*shape*/ std::nullopt, lenParams);
+                                    /*shape=*/std::nullopt, lenParams);
     isHeapAlloc = builder.createBool(loc, false);
   }
   auto declareOp = builder.create<hlfir::DeclareOp>(
@@ -162,7 +162,9 @@ struct AsExprOpConversion : public mlir::OpConversionPattern<hlfir::AsExprOp> {
     // Otherwise, create a copy in a new buffer.
     hlfir::Entity source = hlfir::Entity{adaptor.getVar()};
     auto [temp, cleanup] = createTempFromMold(loc, builder, source);
-    builder.create<hlfir::AssignOp>(loc, source, temp);
+    builder.create<hlfir::AssignOp>(loc, source, temp, /*realloc=*/false,
+                                    /*keep_lhs_length_if_realloc=*/false,
+                                    /*temporary_lhs=*/true);
     mlir::Value bufferizedExpr =
         packageBufferizedExpr(loc, builder, temp, cleanup);
     rewriter.replaceOp(asExpr, bufferizedExpr);
@@ -307,7 +309,10 @@ struct SetLengthOpConversion
         fir::FortranVariableFlagsAttr{});
     hlfir::Entity temp{declareOp.getBase()};
     // Assign string value to the created temp.
-    builder.create<hlfir::AssignOp>(loc, string, temp);
+    builder.create<hlfir::AssignOp>(loc, string, temp,
+                                    /*realloc=*/false,
+                                    /*keep_lhs_length_if_realloc=*/false,
+                                    /*temporary_lhs=*/true);
     mlir::Value bufferizedExpr =
         packageBufferizedExpr(loc, builder, temp, false);
     rewriter.replaceOp(setLength, bufferizedExpr);
@@ -572,7 +577,10 @@ struct ElementalOpConversion
     // Assign the element value to the temp element for this iteration.
     auto tempElement =
         hlfir::getElementAt(loc, builder, temp, loopNest.oneBasedIndices);
-    builder.create<hlfir::AssignOp>(loc, elementValue, tempElement);
+    builder.create<hlfir::AssignOp>(loc, elementValue, tempElement,
+                                    /*realloc=*/false,
+                                    /*keep_lhs_length_if_realloc=*/false,
+                                    /*temporary_lhs=*/true);
     // hlfir.yield_element implicitly marks the end-of-life its operand if
     // it is an expression created in the hlfir.elemental (since it is its
     // last use and an hlfir.destroy could not be created afterwards)

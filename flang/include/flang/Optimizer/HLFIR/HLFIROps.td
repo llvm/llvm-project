@@ -140,16 +140,25 @@ def fir_AssignOp : hlfir_Op<"assign", [MemoryEffects<[MemWrite]>]> {
     Otherwise, the left hand side will be allocated or reallocated to match the
     right hand side length if they differ. This covers the case of deferred
     length character allocatables.
+    The optional "temporary_lhs" flag indicates that the LHS is a compiler
+    generated temporary. In this case the temporary is initialized if needed
+    (e.g. the LHS is of derived type with allocatable/pointer components),
+    and the assignment is done without LHS (or its subobjects) finalization
+    and with automatic allocation. Since LHS is uninitialized in this case,
+    "keep_lhs_length_if_realloc" attribute does not make sense. "realloc"
+    attribute is allowed with "temporary_lhs", though, it is implied.
   }];
 
   let arguments = (ins AnyFortranEntity:$rhs,
                    Arg<AnyFortranVariable, "", [MemWrite]>:$lhs,
                    UnitAttr:$realloc,
-                   UnitAttr:$keep_lhs_length_if_realloc);
+                   UnitAttr:$keep_lhs_length_if_realloc,
+                   UnitAttr:$temporary_lhs);
 
   let assemblyFormat = [{
     $rhs `to` $lhs (`realloc` $realloc^)?
     (`keep_lhs_len` $keep_lhs_length_if_realloc^)?
+    (`temporary_lhs` $temporary_lhs^)?
     attr-dict `:` type(operands)
   }];
 
@@ -163,6 +172,10 @@ def fir_AssignOp : hlfir_Op<"assign", [MemoryEffects<[MemWrite]>]> {
     /// that should retain its length after the assignment?
     bool mustKeepLhsLengthInAllocatableAssignment() {
       return getKeepLhsLengthIfRealloc();
+    }
+    /// Is the assignment's left hand side a compiler generated temporary?
+    bool isTemporaryLHS() {
+      return getTemporaryLhs();
     }
   }];
 
