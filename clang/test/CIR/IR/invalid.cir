@@ -422,3 +422,8 @@ module {
     cir.return %0 : !cir.int<u, 64>
   }
 }
+
+// -----
+
+// expected-error@+1 {{invalid language keyword 'dummy'}}
+module attributes {cir.lang = #cir.lang<dummy>} { }
