@@ -43,6 +43,22 @@ enum class BenchmarkPhaseSelectorE {
 
 enum class BenchmarkFilter { All, RegOnly, WithMem };
 
+struct MemoryValue {
+  // The arbitrary bit width constant that defines the value.
+  APInt Value;
+  // The size of the value in bytes.
+  size_t SizeBytes;
+  // The index of the memory value.
+  size_t Index;
+};
+
+struct MemoryMapping {
+  // The address to place the mapping at.
+  intptr_t Address;
+  // The name of the value that should be mapped.
+  std::string MemoryValueName;
+};
+
 struct BenchmarkKey {
   // The LLVM opcode name.
   std::vector<MCInst> Instructions;
