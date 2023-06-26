@@ -534,6 +534,21 @@ using __iter_diff_t = typename iterator_traits<_Iter>::difference_type;
 template <class _Iter>
 using __iter_reference = typename iterator_traits<_Iter>::reference;
 
+#if _LIBCPP_STD_VER >= 20
+
+// [readable.traits]
+
+// Let `RI` be `remove_cvref_t<I>`. The type `iter_value_t<I>` denotes
+// `indirectly_readable_traits<RI>::value_type` if `iterator_traits<RI>` names a specialization
+// generated from the primary template, and `iterator_traits<RI>::value_type` otherwise.
+// This has to be in this file and not readable_traits.h to break the include cycle between the two.
+template <class _Ip>
+using iter_value_t = typename conditional_t<__is_primary_template<iterator_traits<remove_cvref_t<_Ip> > >::value,
+                                            indirectly_readable_traits<remove_cvref_t<_Ip> >,
+                                            iterator_traits<remove_cvref_t<_Ip> > >::value_type;
+
+#endif // _LIBCPP_STD_VER >= 20
+
 _LIBCPP_END_NAMESPACE_STD
 
 #endif // _LIBCPP___ITERATOR_ITERATOR_TRAITS_H
