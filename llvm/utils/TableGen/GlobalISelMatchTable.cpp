@@ -31,8 +31,8 @@ Error failUnsupported(const Twine &Reason) {
 /// Get the name of the enum value used to number the predicate function.
 std::string getEnumNameForPredicate(const TreePredicateFn &Predicate) {
   if (Predicate.hasGISelPredicateCode())
-    return "GIPFP_MI_" + Predicate.getFnName();
-  return "GIPFP_" + Predicate.getImmTypeIdentifier().str() + "_" +
+    return "GICXXPred_MI_" + Predicate.getFnName();
+  return "GICXXPred_" + Predicate.getImmTypeIdentifier().str() + "_" +
          Predicate.getFnName();
 }
 

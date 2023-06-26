@@ -9,7 +9,7 @@
 /// \file
 /// This file contains the code related to the GlobalISel Match Table emitted by
 /// GlobalISelEmitter.cpp. The generated match table is interpreted at runtime
-/// by `InstructionSelectorImpl.h` to match & apply ISel patterns.
+/// by `GIMatchTableExecutorImpl.h` to match & apply ISel patterns.
 ///
 //===----------------------------------------------------------------------===//
 
