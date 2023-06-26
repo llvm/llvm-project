@@ -1452,6 +1452,11 @@ void transform::TransformRewriter::silenceTrackingFailure() {
   }
 }
 
+LogicalResult transform::TransformRewriter::notifyPayloadOperationReplaced(
+    Operation *op, Operation *replacement) {
+  return listener->replacePayloadOp(op, replacement);
+}
+
 //===----------------------------------------------------------------------===//
 // Utilities for TransformEachOpTrait.
 //===----------------------------------------------------------------------===//
