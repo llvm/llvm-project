@@ -14,13 +14,13 @@
 //
 // CHECK: bool MyTargetInstructionSelector::testMIPredicate_MI(
 // CHECK:    case GICXXPred_MI_Predicate_and_or_pat: {
-// CHECK:      llvm_unreachable("GISelPredicateCode should have returned");
+// CHECK:      return doesComplexCheck(MI);
 // CHECK:    case GICXXPred_MI_Predicate_or_oneuse: {
-// CHECK:      llvm_unreachable("GISelPredicateCode should have returned");
+// CHECK:      return MRI.hasOneNonDBGUse(MI.getOperand(0).getReg());
 // CHECK:    case GICXXPred_MI_Predicate_patfrags_test_pat: {
-// CHECK:      llvm_unreachable("GISelPredicateCode should have returned");
+// CHECK:      return doesComplexCheck(MI);
 // CHECK:    case GICXXPred_MI_Predicate_sub3_pat: {
-// CHECK:      llvm_unreachable("GISelPredicateCode should have returned");
+// CHECK:      return doesComplexCheck(MI);
 
 include "llvm/Target/Target.td"
 include "GlobalISelEmitterCommon.td"
