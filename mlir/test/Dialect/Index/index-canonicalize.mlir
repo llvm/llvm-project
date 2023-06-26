@@ -510,3 +510,14 @@ func.func @cmp_edge() -> i1 {
   // CHECK: return %[[TRUE]]
   return %0 : i1
 }
+
+// CHECK-LABEL: @cmp_maxs
+func.func @cmp_maxs(%arg0: index) -> (i1, i1) {
+  %idx0 = index.constant 0
+  %idx1 = index.constant 1
+  %0 = index.maxs %arg0, %idx1
+  %1 = index.cmp sgt(%0, %idx0)
+  %2 = index.cmp eq(%0, %idx0)
+  // CHECK: return %true, %false
+  return %1, %2 : i1, i1
+}
