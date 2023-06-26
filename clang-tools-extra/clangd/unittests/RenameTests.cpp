@@ -840,6 +840,20 @@ TEST(RenameTest, WithinFileRename) {
           foo('x');
         }
       )cpp",
+
+      // ObjC class with a category.
+      R"cpp(
+        @interface [[Fo^o]]
+        @end
+        @implementation [[F^oo]]
+        @end
+        @interface [[Fo^o]] (Category)
+        @end
+        @implementation [[F^oo]] (Category)
+        @end
+
+        void func([[Fo^o]] *f) {}
+      )cpp",
   };
   llvm::StringRef NewName = "NewName";
   for (llvm::StringRef T : Tests) {
@@ -889,6 +903,15 @@ TEST(RenameTest, Renameable) {
         namespace n^s {}
       )cpp",
        "not a supported kind", HeaderFile},
+
+      {R"cpp(// disallow - category rename.
+        @interface Foo
+        @end
+        @interface Foo (Cate^gory)
+        @end
+      )cpp",
+       "Cannot rename symbol: there is no symbol at the given location",
+       HeaderFile},
 
       {
           R"cpp(
@@ -1468,7 +1491,7 @@ TEST(CrossFileRenameTests, DeduplicateRefsFromIndex) {
 
 TEST(CrossFileRenameTests, WithUpToDateIndex) {
   MockCompilationDatabase CDB;
-  CDB.ExtraClangFlags = {"-xc++"};
+  CDB.ExtraClangFlags = {"-xobjective-c++"};
   // rename is runnning on all "^" points in FooH, and "[[]]" ranges are the
   // expected rename occurrences.
   struct Case {
@@ -1557,13 +1580,12 @@ TEST(CrossFileRenameTests, WithUpToDateIndex) {
         }
       )cpp",
       },
-      {
-          // virtual templated method
-          R"cpp(
+      {// virtual templated method
+       R"cpp(
         template <typename> class Foo { virtual void [[m]](); };
         class Bar : Foo<int> { void [[^m]]() override; };
       )cpp",
-          R"cpp(
+       R"cpp(
           #include "foo.h"
 
           template<typename T> void Foo<T>::[[m]]() {}
@@ -1571,8 +1593,7 @@ TEST(CrossFileRenameTests, WithUpToDateIndex) {
           // the canonical Foo<T>::m().
           // https://github.com/clangd/clangd/issues/1325
           class Baz : Foo<float> { void m() override; };
-        )cpp"
-      },
+        )cpp"},
       {
           // rename on constructor and destructor.
           R"cpp(
@@ -1675,6 +1696,20 @@ TEST(CrossFileRenameTests, WithUpToDateIndex) {
           FOO y;
           FooFoo z;
         }
+      )cpp",
+      },
+      {
+          // Objective-C classes.
+          R"cpp(
+        @interface [[Fo^o]]
+        @end
+      )cpp",
+          R"cpp(
+        #include "foo.h"
+        @implementation [[Foo]]
+        @end
+
+        void func([[Foo]] *f) {}
       )cpp",
       },
   };

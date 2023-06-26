@@ -128,7 +128,7 @@ std::optional<HighlightingKind> kindForDecl(const NamedDecl *D,
     return HighlightingKind::Class;
   if (isa<ObjCProtocolDecl>(D))
     return HighlightingKind::Interface;
-  if (isa<ObjCCategoryDecl>(D))
+  if (isa<ObjCCategoryDecl, ObjCCategoryImplDecl>(D))
     return HighlightingKind::Namespace;
   if (auto *MD = dyn_cast<CXXMethodDecl>(D))
     return MD->isStatic() ? HighlightingKind::StaticMethod
