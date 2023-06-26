@@ -46,7 +46,11 @@
 namespace llvm {
 namespace exegesis {
 
+#ifdef __arm__
+static constexpr const intptr_t VAddressSpaceCeiling = 0xC0000000;
+#else
 static constexpr const intptr_t VAddressSpaceCeiling = 0x0000800000000000;
+#endif
 
 // If a positive value is specified, we are going to use the LBR in
 // latency-mode.
@@ -1077,6 +1081,14 @@ ExegesisX86Target::generateExitSyscall(unsigned ExitCode) const {
 // function but does not guarantee existing mappings won't get clobbered.
 #ifndef MAP_FIXED_NOREPLACE
 #define MAP_FIXED_NOREPLACE MAP_FIXED
+#endif
+
+// 32 bit ARM doesn't have mmap and uses mmap2 instead. The only difference
+// between the two syscalls is that mmap2's offset parameter is in terms 4096
+// byte offsets rather than individual bytes, so for our purposes they are
+// effectively the same as all ofsets here are set to 0.
+#ifdef __arm__
+#define SYS_mmap SYS_mmap2
 #endif
 
 std::vector<MCInst>
