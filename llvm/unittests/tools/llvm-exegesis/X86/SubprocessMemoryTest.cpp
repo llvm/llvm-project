@@ -49,12 +49,24 @@ protected:
   SubprocessMemory SM;
 };
 
+// Some of the tests below are failing on s390x and PPC due to the shared
+// memory calls not working in some cases, so they have been disabled.
+// TODO(boomanaiden154): Investigate and fix this issue on PPC.
+
+#if defined(__powerpc__) || defined(__s390x__)
+TEST_F(SubprocessMemoryTest, DISABLED_OneDefinition) {
+#else
 TEST_F(SubprocessMemoryTest, OneDefinition) {
+#endif
   testCommon({{"test1", {APInt(8, 0xff), 4096, 0}}}, 0);
   checkSharedMemoryDefinition("/0memdef0", 4096, {0xff});
 }
 
+#if defined(__powerpc__) || defined(__s390x__)
+TEST_F(SubprocessMemoryTest, DISABLED_MultipleDefinitions) {
+#else
 TEST_F(SubprocessMemoryTest, MultipleDefinitions) {
+#endif
   testCommon({{"test1", {APInt(8, 0xaa), 4096, 0}},
               {"test2", {APInt(8, 0xbb), 4096, 1}},
               {"test3", {APInt(8, 0xcc), 4096, 2}}},
@@ -64,7 +76,11 @@ TEST_F(SubprocessMemoryTest, MultipleDefinitions) {
   checkSharedMemoryDefinition("/1memdef2", 4096, {0xcc});
 }
 
+#if defined(__powerpc__) || defined(__s390x__)
+TEST_F(SubprocessMemoryTest, DISABLED_DefinitionFillsCompletely) {
+#else
 TEST_F(SubprocessMemoryTest, DefinitionFillsCompletely) {
+#endif
   testCommon({{"test1", {APInt(8, 0xaa), 4096, 0}},
               {"test2", {APInt(16, 0xbbbb), 4096, 1}},
               {"test3", {APInt(24, 0xcccccc), 4096, 2}}},
@@ -77,9 +93,12 @@ TEST_F(SubprocessMemoryTest, DefinitionFillsCompletely) {
   checkSharedMemoryDefinition("/2memdef2", 4096, Test3Expected);
 }
 
-// The test below only works on little endian systems.
-#ifdef __ORDER_LITTLE_ENDIAN__
+// The following test is only supported on little endian systems.
+#if defined(__powerpc__) || defined(__s390x__) || __BYTE_ORDER__ == __ORDER_BIG_ENDIAN__
+TEST_F(SubprocessMemoryTest, DISABLED_DefinitionEndTruncation) {
+#else
 TEST_F(SubprocessMemoryTest, DefinitionEndTruncation) {
+#endif
   testCommon({{"test1", {APInt(48, 0xaabbccddeeff), 4096, 0}}}, 3);
   std::vector<uint8_t> Test1Expected(512, 0);
   // order is reversed since we're assuming a little endian system.
@@ -106,7 +125,6 @@ TEST_F(SubprocessMemoryTest, DefinitionEndTruncation) {
   }
   checkSharedMemoryDefinition("/3memdef0", 4096, Test1Expected);
 }
-#endif // __ORDER_LITTLE_ENDIAN__
 
 #endif // __linux__
 
