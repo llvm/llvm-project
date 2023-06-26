@@ -2604,6 +2604,17 @@ FileCheck output:
         if not obj.Success():
             error = obj.GetCString()
             self.fail(self._formatMessage(msg, "'{}' is not success".format(error)))
+    """Assert that an lldb.SBError is in the "failure" state."""
+
+    def assertFailure(self, obj, error_str = None, msg=None):
+        if obj.Success():
+            self.fail(self._formatMessage(msg, "Error not in a fail state"))
+
+        if error_str == None:
+            return
+                      
+        error = obj.GetCString()
+        self.assertEqual(error, error_str, msg)
 
     """Assert that a command return object is successful"""
 
