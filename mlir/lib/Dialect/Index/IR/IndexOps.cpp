@@ -142,9 +142,22 @@ OpFoldResult SubOp::fold(FoldAdaptor adaptor) {
 //===----------------------------------------------------------------------===//
 
 OpFoldResult MulOp::fold(FoldAdaptor adaptor) {
-  return foldBinaryOpUnchecked(
-      adaptor.getOperands(),
-      [](const APInt &lhs, const APInt &rhs) { return lhs * rhs; });
+  if (OpFoldResult result = foldBinaryOpUnchecked(
+          adaptor.getOperands(),
+          [](const APInt &lhs, const APInt &rhs) { return lhs * rhs; });
+      !result.isNull())
+    return result;
+
+  if (auto rhs = dyn_cast_or_null<IntegerAttr>(adaptor.getRhs())) {
+    // Fold `mul(x, 1) -> x`.
+    if (rhs.getValue().isOne())
+      return getLhs();
+    // Fold `mul(x, 0) -> 0`.
+    if (rhs.getValue().isZero())
+      return rhs;
+  }
+
+  return {};
 }
 
 //===----------------------------------------------------------------------===//
