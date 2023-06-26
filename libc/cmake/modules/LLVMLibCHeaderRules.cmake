@@ -18,12 +18,14 @@ function(add_header target_name)
     message(FATAL_ERROR "'add_header' rules requires the HDR argument specifying a headef file.")
   endif()
 
-  set(dest_file ${CMAKE_CURRENT_BINARY_DIR}/${ADD_HEADER_HDR})
+  set(absolute_path ${CMAKE_CURRENT_SOURCE_DIR}/${ADD_HEADER_HDR})
+  file(RELATIVE_PATH relative_path ${LIBC_INCLUDE_SOURCE_DIR} ${absolute_path})
+  set(dest_file ${LIBC_INCLUDE_DIR}/${relative_path})
   set(src_file ${CMAKE_CURRENT_SOURCE_DIR}/${ADD_HEADER_HDR})
 
   add_custom_command(
     OUTPUT ${dest_file}
-    COMMAND cp ${src_file} ${dest_file}
+    COMMAND ${CMAKE_COMMAND} -E copy_if_different ${src_file} ${dest_file}
     DEPENDS ${src_file}
   )
 
@@ -86,7 +88,9 @@ function(add_gen_header target_name)
     message(FATAL_ERROR "`add_gen_hdr` rule requires GEN_HDR to be specified.")
   endif()
 
-  set(out_file ${CMAKE_CURRENT_BINARY_DIR}/${ADD_GEN_HDR_GEN_HDR})
+  set(absolute_path ${CMAKE_CURRENT_SOURCE_DIR}/${ADD_GEN_HDR_GEN_HDR})
+  file(RELATIVE_PATH relative_path ${LIBC_INCLUDE_SOURCE_DIR} ${absolute_path})
+  set(out_file ${LIBC_INCLUDE_DIR}/${relative_path})
   set(in_file ${CMAKE_CURRENT_SOURCE_DIR}/${ADD_GEN_HDR_DEF_FILE})
 
   set(fq_data_files "")
