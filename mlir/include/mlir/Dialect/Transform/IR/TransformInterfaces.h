@@ -262,12 +262,6 @@ public:
   // class body to comply with visibility and full-declaration requirements.
   inline RegionScope make_region_scope(Region &region);
 
-  /// Creates a new region scope for the given isolated-from-above region.
-  /// Unlike the non-isolated counterpart, there is no nesting expectation.
-  // Implementation note: this method is inline but implemented outside of the
-  // class body to comply with visibility and full-declaration requirements
-  inline RegionScope make_isolated_region_scope(Region &region);
-
   /// A RAII object maintaining a "stack frame" for a transform IR region. When
   /// applying a transform IR operation that contains a region, the caller is
   /// expected to create a RegionScope before applying the ops contained in the
@@ -282,34 +276,15 @@ public:
     ~RegionScope();
 
   private:
-    /// Tag structure for differentiating the constructor for isolated regions.
-    struct Isolated {};
-
     /// Creates a new scope for mappings between values defined in the given
     /// transform IR region and payload IR objects.
     RegionScope(TransformState &state, Region &region)
         : state(state), region(&region) {
-      auto res = state.mappings.try_emplace(this->region);
+      auto res = state.mappings.insert(std::make_pair(&region, Mappings()));
       assert(res.second && "the region scope is already present");
       (void)res;
 #if LLVM_ENABLE_ABI_BREAKING_CHECKS
-      assert(((state.regionStack.size() == 1 && !state.regionStack.back()) ||
-              state.regionStack.back()->isProperAncestor(&region)) &&
-             "scope started at a non-nested region");
       state.regionStack.push_back(&region);
-#endif // LLVM_ENABLE_ABI_BREAKING_CHECKS
-    }
-
-    /// Creates a new scope for mappings between values defined in the given
-    /// isolated-from-above transform IR region and payload IR objects.
-    RegionScope(TransformState &state, Region &region, Isolated)
-        : state(state), region(&region) {
-      // Store the previous mapping stack locally.
-      storedMappings = llvm::SmallDenseMap<Region *, Mappings>();
-      storedMappings->swap(state.mappings);
-      state.mappings.try_emplace(this->region);
-#if LLVM_ENABLE_ABI_BREAKING_CHECKS
-      state.regionStack.push_back(this->region);
 #endif // LLVM_ENABLE_ABI_BREAKING_CHECKS
     }
 
@@ -319,14 +294,7 @@ public:
     /// The region this scope is associated with.
     Region *region;
 
-    /// Local copy of the mappings that existed before entering the current
-    /// region. Used only when the current region is isolated so we don't
-    /// accidentally look up the values defined outside the isolated region.
-    std::optional<llvm::SmallDenseMap<Region *, Mappings>> storedMappings =
-        std::nullopt;
-
     friend RegionScope TransformState::make_region_scope(Region &);
-    friend RegionScope TransformState::make_isolated_region_scope(Region &);
   };
   friend class RegionScope;
 
@@ -446,9 +414,19 @@ private:
     return const_cast<TransformState *>(this)->getMapping(value);
   }
   Mappings &getMapping(Value value) {
-    auto it = mappings.find(value.getParentRegion());
+    Region *region = value.getParentRegion();
+    auto it = mappings.find(region);
     assert(it != mappings.end() &&
            "trying to find a mapping for a value from an unmapped region");
+#ifndef NDEBUG
+    for (Region *r : llvm::reverse(llvm::make_first_range(mappings))) {
+      if (r == region)
+        break;
+      if (r->getParentOp()->hasTrait<OpTrait::IsIsolatedFromAbove>())
+        llvm_unreachable(
+            "trying to get mapping beyond region that is isolated from above");
+    }
+#endif // NDEBUG
     return it->second;
   }
 
@@ -457,9 +435,19 @@ private:
     return const_cast<TransformState *>(this)->getMapping(operation);
   }
   Mappings &getMapping(Operation *operation) {
-    auto it = mappings.find(operation->getParentRegion());
+    Region *region = operation->getParentRegion();
+    auto it = mappings.find(region);
     assert(it != mappings.end() &&
            "trying to find a mapping for an operation from an unmapped region");
+#ifndef NDEBUG
+    for (Region *r : llvm::reverse(llvm::make_first_range(mappings))) {
+      if (r == region)
+        break;
+      if (r->getParentOp()->hasTrait<OpTrait::IsIsolatedFromAbove>())
+        llvm_unreachable(
+            "trying to get mapping beyond region that is isolated from above");
+    }
+#endif // NDEBUG
     return it->second;
   }
 
@@ -676,9 +664,9 @@ private:
   /// Remove all nullptrs from op handles that were added by `replacePayloadOp`.
   void compactOpHandles();
 
-  /// The mappings between transform IR values and payload IR ops, aggregated by
-  /// the region in which the transform IR values are defined.
-  llvm::SmallDenseMap<Region *, Mappings> mappings;
+  /// A stack of mappings between transform IR values and payload IR ops,
+  /// aggregated by the region in which the transform IR values are defined.
+  llvm::MapVector<Region *, Mappings> mappings;
 
   /// Op handles may be temporarily mapped to nullptr to avoid invalidating
   /// payload op iterators. This set contains all op handles with nullptrs.
@@ -832,14 +820,6 @@ private:
 /// surrounding regions remain accessible.
 TransformState::RegionScope TransformState::make_region_scope(Region &region) {
   return RegionScope(*this, region);
-}
-
-/// Creates a RAII object the lifetime of which corresponds to the new mapping
-/// for transform IR values defined in the given isolated-from-above region.
-/// Values defined in surrounding regions cannot be accessed.
-TransformState::RegionScope
-TransformState::make_isolated_region_scope(Region &region) {
-  return RegionScope(*this, region, RegionScope::Isolated());
 }
 
 /// A listener that updates a TransformState based on IR modifications. This

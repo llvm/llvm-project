@@ -45,7 +45,7 @@ transform::TransformState::TransformState(
   for (ArrayRef<MappedValue> mapping : extraMappings)
     topLevelMappedValues.push_back(mapping);
 
-  auto result = mappings.try_emplace(region);
+  auto result = mappings.insert(std::make_pair(region, Mappings()));
   assert(result.second && "the region scope is already present");
   (void)result;
 #if LLVM_ENABLE_ABI_BREAKING_CHECKS
@@ -85,12 +85,15 @@ transform::TransformState::getPayloadValues(Value handleValue) const {
 LogicalResult transform::TransformState::getHandlesForPayloadOp(
     Operation *op, SmallVectorImpl<Value> &handles) const {
   bool found = false;
-  for (const Mappings &mapping : llvm::make_second_range(mappings)) {
+  for (const auto &[region, mapping] : llvm::reverse(mappings)) {
     auto iterator = mapping.reverse.find(op);
     if (iterator != mapping.reverse.end()) {
       llvm::append_range(handles, iterator->getSecond());
       found = true;
     }
+    // Stop looking when reaching a region that is isolated from above.
+    if (region->getParentOp()->hasTrait<OpTrait::IsIsolatedFromAbove>())
+      break;
   }
 
   return success(found);
@@ -99,12 +102,15 @@ LogicalResult transform::TransformState::getHandlesForPayloadOp(
 LogicalResult transform::TransformState::getHandlesForPayloadValue(
     Value payloadValue, SmallVectorImpl<Value> &handles) const {
   bool found = false;
-  for (const Mappings &mapping : llvm::make_second_range(mappings)) {
+  for (const auto &[region, mapping] : llvm::reverse(mappings)) {
     auto iterator = mapping.reverseValues.find(payloadValue);
     if (iterator != mapping.reverseValues.end()) {
       llvm::append_range(handles, iterator->getSecond());
       found = true;
     }
+    // Stop looking when reaching a region that is isolated from above.
+    if (region->getParentOp()->hasTrait<OpTrait::IsIsolatedFromAbove>())
+      break;
   }
 
   return success(found);
@@ -590,8 +596,10 @@ void transform::TransformState::recordOpHandleInvalidation(
   // number of IR objects (operations and values). Alternatively, we could walk
   // the IR nested in each payload op associated with the given handle and look
   // for handles associated with each operation and value.
-  for (const transform::TransformState::Mappings &mapping :
-       llvm::make_second_range(mappings)) {
+  for (const auto &[region, mapping] : llvm::reverse(mappings)) {
+    // Stop lookup when reaching a region that is isolated from above.
+    if (region->getParentOp()->hasTrait<OpTrait::IsIsolatedFromAbove>())
+      break;
     // Go over all op handle mappings and mark as invalidated any handle
     // pointing to any of the payload ops associated with the given handle or
     // any op nested in them.
@@ -1102,8 +1110,6 @@ transform::TransformState::RegionScope::~RegionScope() {
 #endif // LLVM_ENABLE_ABI_BREAKING_CHECKS
 
   state.mappings.erase(region);
-  if (storedMappings.has_value())
-    state.mappings.swap(*storedMappings);
 
 #if LLVM_ENABLE_ABI_BREAKING_CHECKS
   // If the last handle to a payload op has gone out of scope, we no longer
