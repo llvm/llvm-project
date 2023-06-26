@@ -12,6 +12,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "YAMLRemarkParser.h"
+#include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/StringSwitch.h"
 #include "llvm/Support/Endian.h"
 #include "llvm/Support/Path.h"

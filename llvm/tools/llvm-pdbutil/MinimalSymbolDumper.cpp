@@ -8,6 +8,7 @@
 
 #include "MinimalSymbolDumper.h"
 
+#include "llvm/ADT/StringExtras.h"
 #include "llvm/DebugInfo/CodeView/CVRecord.h"
 #include "llvm/DebugInfo/CodeView/CodeView.h"
 #include "llvm/DebugInfo/CodeView/Formatters.h"

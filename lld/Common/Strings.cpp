@@ -9,6 +9,7 @@
 #include "lld/Common/Strings.h"
 #include "lld/Common/ErrorHandler.h"
 #include "lld/Common/LLVM.h"
+#include "llvm/ADT/StringExtras.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/GlobPattern.h"
 #include <algorithm>
