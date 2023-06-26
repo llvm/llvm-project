@@ -47,7 +47,7 @@ TEST(RecordOpsTest, CopyRecord) {
       Code,
       [](const llvm::StringMap<DataflowAnalysisState<NoopLattice>> &Results,
          ASTContext &ASTCtx) {
-        Environment Env = getEnvironmentAtAnnotation(Results, "p");
+        Environment Env = getEnvironmentAtAnnotation(Results, "p").fork();
 
         const ValueDecl *OuterIntDecl = findValueDecl(ASTCtx, "outer_int");
         const ValueDecl *RefDecl = findValueDecl(ASTCtx, "ref");
@@ -109,7 +109,7 @@ TEST(RecordOpsTest, RecordsEqual) {
       Code,
       [](const llvm::StringMap<DataflowAnalysisState<NoopLattice>> &Results,
          ASTContext &ASTCtx) {
-        Environment Env = getEnvironmentAtAnnotation(Results, "p");
+        Environment Env = getEnvironmentAtAnnotation(Results, "p").fork();
 
         const ValueDecl *OuterIntDecl = findValueDecl(ASTCtx, "outer_int");
         const ValueDecl *RefDecl = findValueDecl(ASTCtx, "ref");
