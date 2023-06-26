@@ -24,6 +24,7 @@
 #include "mlir/Dialect/MemRef/IR/MemRef.h"
 #include "mlir/IR/Attributes.h"
 #include "mlir/IR/Builders.h"
+#include "mlir/IR/BuiltinAttributes.h"
 #include "mlir/IR/BuiltinOps.h"
 #include "mlir/IR/BuiltinTypes.h"
 #include "mlir/IR/MLIRContext.h"
@@ -1468,7 +1469,10 @@ void CIRGenModule::ReplaceUsesOfNonProtoTypeWithRealFunction(
   assert(!UnimplementedFeature::exceptions() && "Call vs Invoke NYI");
   assert(!UnimplementedFeature::parameterAttributes());
   assert(!UnimplementedFeature::operandBundles());
-  assert(OldFn->getAttrs().size() > 0 && "Attribute forwarding NYI");
+  assert(OldFn->getAttrs().size() > 1 && "Attribute forwarding NYI");
+
+  // Mark new function as originated from a no-proto declaration.
+  NewFn.setNoProtoAttr(OldFn.getNoProtoAttr());
 
   // Iterate through all calls of the no-proto function.
   auto Calls = OldFn.getSymbolUses(OldFn->getParentOp());
@@ -1744,9 +1748,12 @@ CIRGenModule::createCIRFunction(mlir::Location loc, StringRef name,
       builder.setInsertionPoint(curCGF->CurFn.getOperation());
 
     f = builder.create<mlir::cir::FuncOp>(loc, name, Ty);
+
     if (FD)
-      f.setAstAttr(
-          mlir::cir::ASTFunctionDeclAttr::get(builder.getContext(), FD));
+      f.setAstAttr(builder.getAttr<mlir::cir::ASTFunctionDeclAttr>(FD));
+
+    if (FD && !FD->hasPrototype())
+      f.setNoProtoAttr(builder.getUnitAttr());
 
     assert(f.isDeclaration() && "expected empty body");
 

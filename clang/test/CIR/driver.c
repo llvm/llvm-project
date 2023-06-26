@@ -13,7 +13,7 @@
 // RUN: %clang -target arm64-apple-macosx12.0.0 -fclangir -S -Xclang -emit-cir %s -o %t.cir
 // RUN: FileCheck --input-file=%t.cir %s -check-prefix=CIR
 
-void foo() {}
+void foo(void) {}
 
 //      CIR: module {{.*}} {
 // CIR-NEXT:   cir.func @foo() {

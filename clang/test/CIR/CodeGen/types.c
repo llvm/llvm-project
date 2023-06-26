@@ -15,7 +15,7 @@ unsigned short t5(unsigned short i) { return i; }
 float t6(float i) { return i; }
 double t7(double i) { return i; }
 
-void t8() {}
+void t8(void) {}
 
 #ifdef __cplusplus
 bool t9(bool b) { return b; }

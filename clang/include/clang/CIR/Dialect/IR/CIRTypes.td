@@ -190,8 +190,6 @@ def CIR_FuncType : CIR_Type<"Func", "func"> {
     `<` $returnType ` ` `(` custom<FuncTypeArgs>($inputs, $varArg) `>`
   }];
 
-  let skipDefaultBuilders = 1;
-
   let builders = [
     TypeBuilderWithInferredContext<(ins
       "ArrayRef<Type>":$inputs, "Type":$returnType,
@@ -199,8 +197,6 @@ def CIR_FuncType : CIR_Type<"Func", "func"> {
       return $_get(returnType.getContext(), inputs, returnType, isVarArg);
     }]>
   ];
-
-  let genVerifyDecl = 1;
 
   let extraClassDeclaration = [{
     /// Returns whether the function is variadic.

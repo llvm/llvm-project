@@ -3,7 +3,7 @@
 // RUN: %clang_cc1 -x c -std=c11 -triple x86_64-unknown-linux-gnu -fclangir -emit-cir %s -o %t.c.cir
 // RUN: FileCheck --input-file=%t.c.cir %s --check-prefix=CSCOPE
 
-void l0() {
+void l0(void) {
   for (int i = 0;;) {
     int j = 0;
   }

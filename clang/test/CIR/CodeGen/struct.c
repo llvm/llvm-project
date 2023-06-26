@@ -12,7 +12,7 @@ struct Foo {
   struct Bar z;
 };
 
-void baz() {
+void baz(void) {
   struct Bar b;
   struct Foo f;
 }
