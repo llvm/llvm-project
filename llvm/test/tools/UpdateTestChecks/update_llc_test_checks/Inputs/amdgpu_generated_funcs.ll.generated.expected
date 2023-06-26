@@ -69,10 +69,16 @@ attributes #0 = { noredzone nounwind ssp uwtable "frame-pointer"="all" }
 ; CHECK-NEXT:    .type check_boundaries$local,@function
 ; CHECK-NEXT:    .cfi_startproc
 ; CHECK-NEXT:  ; %bb.0:
+; CHECK-NEXT:    .cfi_llvm_def_aspace_cfa 64, 0, 6
+; CHECK-NEXT:    .cfi_escape 0x10, 0x10, 0x08, 0x90, 0x3e, 0x93, 0x04, 0x90, 0x3f, 0x93, 0x04 ;
+; CHECK-NEXT:    .cfi_undefined 2560
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; CHECK-NEXT:    s_mov_b32 s4, s33
+; CHECK-NEXT:    .cfi_register 65, 36
 ; CHECK-NEXT:    s_mov_b32 s33, s32
+; CHECK-NEXT:    .cfi_def_cfa_register 65
 ; CHECK-NEXT:    v_mov_b32_e32 v0, 0
+; CHECK-NEXT:    .cfi_def_cfa_register 64
 ; CHECK-NEXT:    s_mov_b32 s33, s4
 ; CHECK-NEXT:    s_setpc_b64 s[30:31]
 ;
@@ -81,9 +87,18 @@ attributes #0 = { noredzone nounwind ssp uwtable "frame-pointer"="all" }
 ; CHECK-NEXT:    .type main$local,@function
 ; CHECK-NEXT:    .cfi_startproc
 ; CHECK-NEXT:  ; %bb.0:
+; CHECK-NEXT:    .cfi_llvm_def_aspace_cfa 64, 0, 6
+; CHECK-NEXT:    .cfi_escape 0x10, 0x10, 0x08, 0x90, 0x3e, 0x93, 0x04, 0x90, 0x3f, 0x93, 0x04 ;
+; CHECK-NEXT:    .cfi_undefined 2560
+; CHECK-NEXT:    .cfi_undefined 2561
+; CHECK-NEXT:    .cfi_undefined 2562
+; CHECK-NEXT:    .cfi_undefined 36
+; CHECK-NEXT:    .cfi_undefined 37
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; CHECK-NEXT:    s_mov_b32 s6, s33
+; CHECK-NEXT:    .cfi_register 65, 38
 ; CHECK-NEXT:    s_mov_b32 s33, s32
+; CHECK-NEXT:    .cfi_def_cfa_register 65
 ; CHECK-NEXT:    s_getpc_b64 s[4:5]
 ; CHECK-NEXT:    s_add_u32 s4, s4, x@rel32@lo+4
 ; CHECK-NEXT:    s_addc_u32 s5, s5, x@rel32@hi+12
@@ -94,6 +109,7 @@ attributes #0 = { noredzone nounwind ssp uwtable "frame-pointer"="all" }
 ; CHECK-NEXT:    ;;#ASMSTART
 ; CHECK-NEXT:    ;;#ASMEND
 ; CHECK-NEXT:    v_mov_b32_e32 v0, 0
+; CHECK-NEXT:    .cfi_def_cfa_register 64
 ; CHECK-NEXT:    s_mov_b32 s33, s6
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; CHECK-NEXT:    s_setpc_b64 s[30:31]

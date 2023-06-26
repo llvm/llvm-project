@@ -1,5 +1,4 @@
 # REQUIRES: amdgpu-registered-target
-# XFAIL: *
 ## Check that generated functions are included.
 # RUN: cp -f %S/Inputs/amdgpu_generated_funcs.ll %t.ll && %update_llc_test_checks --include-generated-funcs %t.ll
 # RUN: diff -u %t.ll %S/Inputs/amdgpu_generated_funcs.ll.generated.expected
