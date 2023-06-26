@@ -13,6 +13,7 @@
 
 #include "lldb/Core/Module.h"
 #include "lldb/Symbol/Function.h"
+#include "llvm/Support/DJB.h"
 
 using namespace lldb_private;
 using namespace lldb;
@@ -35,10 +36,8 @@ std::unique_ptr<AppleDWARFIndex> AppleDWARFIndex::Create(
   auto apple_types_table_up = std::make_unique<llvm::AppleAcceleratorTable>(
       apple_types.GetAsLLVMDWARF(), llvm_debug_str);
 
-  auto apple_objc_table_up = std::make_unique<DWARFMappedHash::MemoryTable>(
-      apple_objc, debug_str, ".apple_objc");
-  if (!apple_objc_table_up->IsValid())
-    apple_objc_table_up.reset();
+  auto apple_objc_table_up = std::make_unique<llvm::AppleAcceleratorTable>(
+      apple_objc.GetAsLLVMDWARF(), llvm_debug_str);
 
   auto extract_and_check = [](auto &TablePtr) {
     if (auto E = TablePtr->extract()) {
@@ -50,6 +49,7 @@ std::unique_ptr<AppleDWARFIndex> AppleDWARFIndex::Create(
   extract_and_check(apple_names_table_up);
   extract_and_check(apple_namespaces_table_up);
   extract_and_check(apple_types_table_up);
+  extract_and_check(apple_objc_table_up);
 
   if (apple_names_table_up || apple_namespaces_table_up ||
       apple_types_table_up || apple_objc_table_up)
@@ -172,9 +172,7 @@ void AppleDWARFIndex::GetObjCMethods(
     ConstString class_name, llvm::function_ref<bool(DWARFDIE die)> callback) {
   if (!m_apple_objc_up)
     return;
-  m_apple_objc_up->FindByName(
-      class_name.GetStringRef(),
-      DIERefCallback(callback, class_name.GetStringRef()));
+  SearchFor(*m_apple_objc_up, class_name, callback);
 }
 
 void AppleDWARFIndex::GetCompleteObjCClass(
