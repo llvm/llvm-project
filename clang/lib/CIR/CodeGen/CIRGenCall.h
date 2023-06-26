@@ -184,6 +184,12 @@ public:
     assert(isVirtual());
     return VirtualInfo.FTy;
   }
+
+  void setFunctionPointer(mlir::Operation *functionPtr) {
+    assert(isOrdinary());
+    KindOrFunctionPointer =
+        SpecialKind(reinterpret_cast<uintptr_t>(functionPtr));
+  }
 };
 
 struct CallArg {

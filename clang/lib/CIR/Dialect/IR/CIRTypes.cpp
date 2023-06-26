@@ -431,6 +431,12 @@ parseFuncTypeArgs(mlir::AsmParser &p, llvm::SmallVector<mlir::Type> &params,
   if (succeeded(p.parseOptionalRParen()))
     return mlir::success();
 
+  // `(` `...` `)`
+  if (succeeded(p.parseOptionalEllipsis())) {
+    isVarArg = true;
+    return p.parseRParen();
+  }
+
   // type (`,` type)* (`,` `...`)?
   mlir::Type type;
   if (p.parseType(type))

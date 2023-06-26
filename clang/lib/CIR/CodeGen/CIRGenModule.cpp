@@ -19,6 +19,7 @@
 #include "CIRGenValue.h"
 #include "TargetInfo.h"
 
+#include "UnimplementedFeatureGuarding.h"
 #include "mlir/Dialect/Func/IR/FuncOps.h"
 #include "mlir/Dialect/MemRef/IR/MemRef.h"
 #include "mlir/IR/Attributes.h"
@@ -26,6 +27,8 @@
 #include "mlir/IR/BuiltinOps.h"
 #include "mlir/IR/BuiltinTypes.h"
 #include "mlir/IR/MLIRContext.h"
+#include "mlir/IR/OperationSupport.h"
+#include "mlir/IR/SymbolTable.h"
 #include "mlir/IR/Verifier.h"
 
 #include "clang/AST/ASTConsumer.h"
@@ -1445,6 +1448,48 @@ mlir::cir::GlobalLinkageKind CIRGenModule::getCIRLinkageForDeclarator(
   return mlir::cir::GlobalLinkageKind::ExternalLinkage;
 }
 
+/// This function is called when we implement a function with no prototype, e.g.
+/// "int foo() {}". If there are existing call uses of the old function in the
+/// module, this adjusts them to call the new function directly.
+///
+/// This is not just a cleanup: the always_inline pass requires direct calls to
+/// functions to be able to inline them.  If there is a bitcast in the way, it
+/// won't inline them. Instcombine normally deletes these calls, but it isn't
+/// run at -O0.
+void CIRGenModule::ReplaceUsesOfNonProtoTypeWithRealFunction(
+    mlir::Operation *Old, mlir::cir::FuncOp NewFn) {
+
+  // If we're redefining a global as a function, don't transform it.
+  auto OldFn = dyn_cast<mlir::cir::FuncOp>(Old);
+  if (!OldFn)
+    return;
+
+  // TODO(cir): this RAUW ignores the features below.
+  assert(!UnimplementedFeature::exceptions() && "Call vs Invoke NYI");
+  assert(!UnimplementedFeature::parameterAttributes());
+  assert(!UnimplementedFeature::operandBundles());
+  assert(OldFn->getAttrs().size() > 0 && "Attribute forwarding NYI");
+
+  // Iterate through all calls of the no-proto function.
+  auto Calls = OldFn.getSymbolUses(OldFn->getParentOp());
+  for (auto Call : Calls.value()) {
+    mlir::OpBuilder::InsertionGuard guard(builder);
+
+    // Fetch no-proto call to be replaced.
+    auto noProtoCallOp = dyn_cast<mlir::cir::CallOp>(Call.getUser());
+    assert(noProtoCallOp && "unexpected use of no-proto function");
+    builder.setInsertionPoint(noProtoCallOp);
+
+    // Patch call type with the real function type.
+    auto realCallOp = builder.create<mlir::cir::CallOp>(
+        noProtoCallOp.getLoc(), NewFn, noProtoCallOp.getOperands());
+
+    // Replace old no proto call with fixed call.
+    noProtoCallOp.replaceAllUsesWith(realCallOp);
+    noProtoCallOp.erase();
+  }
+}
+
 mlir::cir::GlobalLinkageKind CIRGenModule::getFunctionLinkage(GlobalDecl GD) {
   const auto *D = cast<FunctionDecl>(GD.getDecl());
 
@@ -1795,7 +1840,10 @@ mlir::cir::FuncOp CIRGenModule::GetOrCreateCIRFunction(
     if (Fn && Fn.getFunctionType() == Ty) {
       return Fn;
     }
-    llvm_unreachable("NYI");
+
+    if (!IsForDefinition) {
+      return Fn;
+    }
 
     // TODO: clang checks here if this is a llvm::GlobalAlias... how will we
     // support this?
@@ -1822,8 +1870,33 @@ mlir::cir::FuncOp CIRGenModule::GetOrCreateCIRFunction(
   // mangledname if Entry is nullptr
   auto F = createCIRFunction(getLocForFunction(FD), MangledName, FTy, FD);
 
+  // If we already created a function with the same mangled name (but different
+  // type) before, take its name and add it to the list of functions to be
+  // replaced with F at the end of CodeGen.
+  //
+  // This happens if there is a prototype for a function (e.g. "int f()") and
+  // then a definition of a different type (e.g. "int f(int x)").
   if (Entry) {
-    llvm_unreachable("NYI");
+
+    // Fetch a generic symbol-defining operation and its uses.
+    auto SymbolOp = dyn_cast<mlir::SymbolOpInterface>(Entry);
+    assert(SymbolOp && "Expected a symbol-defining operation");
+
+    // TODO(cir): When can this symbol be something other than a function?
+    assert(isa<mlir::cir::FuncOp>(Entry) && "NYI");
+
+    // This might be an implementation of a function without a prototype, in
+    // which case, try to do special replacement of calls which match the new
+    // prototype. The really key thing here is that we also potentially drop
+    // arguments from the call site so as to make a direct call, which makes the
+    // inliner happier and suppresses a number of optimizer warnings (!) about
+    // dropping arguments.
+    if (SymbolOp.getSymbolUses(SymbolOp->getParentOp())) {
+      ReplaceUsesOfNonProtoTypeWithRealFunction(Entry, F);
+    }
+
+    // Obliterate no-proto declaration.
+    Entry->erase();
   }
 
   // TODO: This might not be valid, seems the uniqueing system doesn't make
@@ -1891,7 +1964,9 @@ mlir::cir::FuncOp CIRGenModule::GetOrCreateCIRFunction(
     return F;
   }
 
-  assert(false && "Incompmlete functions NYI");
+  // TODO(cir): Might need bitcast to different address space.
+  assert(!UnimplementedFeature::addressSpace());
+  return F;
 }
 
 mlir::Location CIRGenModule::getLoc(SourceLocation SLoc) {

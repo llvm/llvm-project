@@ -219,6 +219,11 @@ public:
     return getPointerTo(getPointerTo(fnTy));
   }
 
+  mlir::cir::FuncType getFuncType(llvm::ArrayRef<mlir::Type> params,
+                                  mlir::Type retTy, bool isVarArg = false) {
+    return mlir::cir::FuncType::get(params, retTy, isVarArg);
+  }
+
   // Fetch the type representing a pointer to unsigned int values.
   mlir::cir::PointerType getUInt8PtrTy(unsigned AddrSpace = 0) {
     return typeCache.UInt8PtrTy;

@@ -16,6 +16,7 @@
 #include "clang/AST/GlobalDecl.h"
 #include "clang/AST/RecordLayout.h"
 #include "clang/CIR/Dialect/IR/CIRTypes.h"
+#include "llvm/Support/ErrorHandling.h"
 
 using namespace clang;
 using namespace cir;
@@ -255,10 +256,14 @@ mlir::Type CIRGenTypes::ConvertFunctionTypeInternal(QualType QFT) {
 
   // The function type can be built; call the appropriate routines to build it
   const CIRGenFunctionInfo *FI;
-  const auto *FPT = dyn_cast<FunctionProtoType>(FT);
-  assert(FPT && "FunctionNonPrototype NIY");
-  FI = &arrangeFreeFunctionType(
-      CanQual<FunctionProtoType>::CreateUnsafe(QualType(FPT, 0)));
+  if (const auto *FPT = dyn_cast<FunctionProtoType>(FT)) {
+    FI = &arrangeFreeFunctionType(
+        CanQual<FunctionProtoType>::CreateUnsafe(QualType(FPT, 0)));
+  } else {
+    const FunctionNoProtoType *FNPT = cast<FunctionNoProtoType>(FT);
+    FI = &arrangeFreeFunctionType(
+        CanQual<FunctionNoProtoType>::CreateUnsafe(QualType(FNPT, 0)));
+  }
 
   mlir::Type ResultType = nullptr;
   // If there is something higher level prodding our CIRGenFunctionInfo, then

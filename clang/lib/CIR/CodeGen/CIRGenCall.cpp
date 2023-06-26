@@ -26,6 +26,7 @@
 #include "llvm/Support/ErrorHandling.h"
 #include <cassert>
 
+#include "UnimplementedFeatureGuarding.h"
 #include "mlir/Dialect/Func/IR/FuncOps.h"
 #include "mlir/IR/Builders.h"
 #include "mlir/IR/BuiltinOps.h"
@@ -945,6 +946,18 @@ CIRGenTypes::arrangeFreeFunctionType(CanQual<FunctionProtoType> FTP) {
                                   FTP);
 }
 
+/// Arrange the argument and result information for a value of the given
+/// unprototyped freestanding function type.
+const CIRGenFunctionInfo &
+CIRGenTypes::arrangeFreeFunctionType(CanQual<FunctionNoProtoType> FTNP) {
+  // When translating an unprototyped function type, always use a
+  // variadic type.
+  return arrangeCIRFunctionInfo(FTNP->getReturnType().getUnqualifiedType(),
+                                /*instanceMethod=*/false,
+                                /*chainCall=*/false, std::nullopt,
+                                FTNP->getExtInfo(), {}, RequiredArgs(0));
+}
+
 /// Arrange a call to a C++ method, passing the given arguments.
 ///
 /// ExtraPrefixArgs is the number of ABI-specific args passed after the `this`
@@ -1082,10 +1095,9 @@ arrangeFreeFunctionLikeCall(CIRGenTypes &CGT, CIRGenModule &CGM,
     if (proto->hasExtParameterInfos())
       addExtParameterInfosForCall(paramInfos, proto, numExtraRequiredArgs,
                                   args.size());
-  } else {
-    assert(!llvm::isa<FunctionNoProtoType>(fnType) &&
-           "FunctionNoProtoType NYI");
-    llvm_unreachable("Unknown function prototype");
+  } else if (llvm::isa<FunctionNoProtoType>(fnType)) {
+    assert(!UnimplementedFeature::targetCodeGenInfoIsProtoCallVariadic());
+    required = RequiredArgs(args.size());
   }
 
   // FIXME: Kill copy.

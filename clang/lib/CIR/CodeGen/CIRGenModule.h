@@ -520,6 +520,9 @@ public:
 
   mlir::Location getLocForFunction(const clang::FunctionDecl *FD);
 
+  void ReplaceUsesOfNonProtoTypeWithRealFunction(mlir::Operation *Old,
+                                                 mlir::cir::FuncOp NewFn);
+
   // TODO: CodeGen also passes an AttributeList here. We'll have to match that
   // in CIR
   mlir::cir::FuncOp
