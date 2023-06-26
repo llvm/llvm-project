@@ -260,7 +260,7 @@ define <8 x i16> @abdu_i_const_bothhigh() {
 define <8 x i16> @abdu_i_const_onehigh() {
 ; CHECK-LABEL: abdu_i_const_onehigh:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov w8, #32765
+; CHECK-NEXT:    mov w8, #32765 // =0x7ffd
 ; CHECK-NEXT:    dup v0.8h, w8
 ; CHECK-NEXT:    ret
   %result = call <8 x i16> @llvm.aarch64.neon.uabd.v8i16(<8 x i16> <i16 32766, i16 32766, i16 32766, i16 32766, i16 32766, i16 32766, i16 32766, i16 32766>, <8 x i16> <i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1>)
@@ -480,7 +480,7 @@ define <8 x i16> @abds_i_const_bothhigh() {
 define <8 x i16> @abds_i_const_onehigh() {
 ; CHECK-LABEL: abds_i_const_onehigh:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov w8, #32765
+; CHECK-NEXT:    mov w8, #32765 // =0x7ffd
 ; CHECK-NEXT:    dup v0.8h, w8
 ; CHECK-NEXT:    ret
   %result = call <8 x i16> @llvm.aarch64.neon.sabd.v8i16(<8 x i16> <i16 32766, i16 32766, i16 32766, i16 32766, i16 32766, i16 32766, i16 32766, i16 32766>, <8 x i16> <i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1>)
@@ -527,7 +527,33 @@ define <8 x i16> @abds_i_reassoc(<8 x i16> %src1) {
   ret <8 x i16> %result
 }
 
+define <1 x i64> @recursive() {
+; CHECK-LABEL: recursive:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    movi v0.8b, #1
+; CHECK-NEXT:    movi v1.2d, #0xffffffffffffffff
+; CHECK-NEXT:    uabd v2.8b, v0.8b, v1.8b
+; CHECK-NEXT:    uabdl v0.8h, v0.8b, v1.8b
+; CHECK-NEXT:    dup v1.8b, v2.b[0]
+; CHECK-NEXT:    saddlp v0.1d, v0.2s
+; CHECK-NEXT:    orr v0.8b, v1.8b, v0.8b
+; CHECK-NEXT:    ret
+  %1 = tail call <8 x i8> @llvm.aarch64.neon.umax.v8i8(<8 x i8> zeroinitializer, <8 x i8> <i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1>)
+  %2 = tail call <8 x i8> @llvm.aarch64.neon.uabd.v8i8(<8 x i8> %1, <8 x i8> <i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1>)
+  %3 = zext <8 x i8> %2 to <8 x i16>
+  %4 = bitcast <8 x i16> %3 to <4 x i32>
+  %5 = shufflevector <4 x i32> %4, <4 x i32> zeroinitializer, <2 x i32> <i32 0, i32 1>
+  %6 = shufflevector <8 x i8> %2, <8 x i8> zeroinitializer, <16 x i32> <i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison>
+  %7 = bitcast <16 x i8> %6 to <2 x i64>
+  %8 = shufflevector <2 x i64> %7, <2 x i64> zeroinitializer, <1 x i32> zeroinitializer
+  %9 = tail call <1 x i64> @llvm.aarch64.neon.saddlp.v1i64.v2i32(<2 x i32> %5)
+  %10 = or <1 x i64> %8, %9
+  ret <1 x i64> %10
+}
 
+declare <8 x i8> @llvm.aarch64.neon.umax.v8i8(<8 x i8>, <8 x i8>)
+declare <1 x i64> @llvm.aarch64.neon.saddlp.v1i64.v2i32(<2 x i32>)
+declare <8 x i8> @llvm.aarch64.neon.uabd.v8i8(<8 x i8>, <8 x i8>)
 declare <8 x i16> @llvm.aarch64.neon.uabd.v8i16(<8 x i16>, <8 x i16>)
 declare <8 x i16> @llvm.aarch64.neon.sabd.v8i16(<8 x i16>, <8 x i16>)
 declare <8 x i32> @llvm.abs.v8i32(<8 x i32>, i1)
