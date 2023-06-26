@@ -710,6 +710,16 @@ mlir::Type hlfir::getVariableElementType(hlfir::Entity variable) {
   return fir::ReferenceType::get(eleTy);
 }
 
+mlir::Type hlfir::getEntityElementType(hlfir::Entity entity) {
+  if (entity.isVariable())
+    return getVariableElementType(entity);
+  if (entity.isScalar())
+    return entity.getType();
+  auto exprType = mlir::dyn_cast<hlfir::ExprType>(entity.getType());
+  assert(exprType && "array value must be an hlfir.expr");
+  return exprType.getElementExprType();
+}
+
 static hlfir::ExprType getArrayExprType(mlir::Type elementType,
                                         mlir::Value shape, bool isPolymorphic) {
   unsigned rank = shape.getType().cast<fir::ShapeType>().getRank();

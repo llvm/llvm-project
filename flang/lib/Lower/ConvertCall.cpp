@@ -1919,3 +1919,19 @@ std::optional<hlfir::EntityWithAttributes> Fortran::lower::convertCallToHLFIR(
   CallContext callContext(procRef, resultType, loc, converter, symMap, stmtCtx);
   return genProcedureRef(callContext);
 }
+
+void Fortran::lower::convertUserDefinedAssignmentToHLFIR(
+    mlir::Location loc, Fortran::lower::AbstractConverter &converter,
+    const evaluate::ProcedureRef &procRef, hlfir::Entity lhs, hlfir::Entity rhs,
+    Fortran::lower::SymMap &symMap) {
+  Fortran::lower::StatementContext definedAssignmentContext;
+  CallContext callContext(procRef, /*resultType=*/std::nullopt, loc, converter,
+                          symMap, definedAssignmentContext);
+  Fortran::lower::CallerInterface caller(procRef, converter);
+  mlir::FunctionType callSiteType = caller.genFunctionType();
+  PreparedActualArgument preparedLhs{lhs, /*isPresent=*/std::nullopt};
+  PreparedActualArgument preparedRhs{rhs, /*isPresent=*/std::nullopt};
+  PreparedActualArguments loweredActuals{preparedLhs, preparedRhs};
+  genUserCall(loweredActuals, caller, callSiteType, callContext);
+  return;
+}

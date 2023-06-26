@@ -358,6 +358,11 @@ std::pair<mlir::Value, mlir::Value> genVariableFirBaseShapeAndParams(
 /// input entity type if it is scalar. Will crash if the entity is not a
 /// variable.
 mlir::Type getVariableElementType(hlfir::Entity variable);
+/// Get the entity type for an element of an array entity. Returns the
+/// input type if it is a scalar. If the entity is a variable, this
+/// is like getVariableElementType, otherwise, this will return a value
+/// type (that may be an hlfir.expr type).
+mlir::Type getEntityElementType(hlfir::Entity entity);
 
 using ElementalKernelGenerator = std::function<hlfir::Entity(
     mlir::Location, fir::FirOpBuilder &, mlir::ValueRange)>;
