@@ -1,4 +1,4 @@
-//===--- string.h - Stub header for tests------ -----------------*- C++ -*-===//
+//===--- stddef.h - Stub header for tests -------------------------*- C -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,11 +6,10 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _STRING_H_
-#define _STRING_H_
+#ifndef _STDDEF_H_
+#define _STDDEF_H_
 
-#include "stddef.h"
+typedef __PTRDIFF_TYPE__ ptrdiff_t;
+typedef __SIZE_TYPE__ size_t;
 
-void *memcpy(void *dest, const void *src, size_t n);
-
-#endif // _STRING_H_
+#endif _STDDEF_H_
