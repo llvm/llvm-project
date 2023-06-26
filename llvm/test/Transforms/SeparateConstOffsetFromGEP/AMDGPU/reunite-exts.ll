@@ -270,9 +270,7 @@ define <2 x i64> @add_sext__dominating_add_nsw_vector(<2 x i32> %arg0, <2 x i32>
 ; CHECK-SAME: (<2 x i32> [[ARG0:%.*]], <2 x i32> [[ARG1:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[ADD_NSW:%.*]] = add nsw <2 x i32> [[ARG0]], [[ARG1]]
-; CHECK-NEXT:    [[ARG0_SEXT:%.*]] = sext <2 x i32> [[ARG0]] to <2 x i64>
-; CHECK-NEXT:    [[ARG1_SEXT:%.*]] = sext <2 x i32> [[ARG1]] to <2 x i64>
-; CHECK-NEXT:    [[ADD_SEXT:%.*]] = add <2 x i64> [[ARG0_SEXT]], [[ARG1_SEXT]]
+; CHECK-NEXT:    [[ADD_SEXT:%.*]] = sext <2 x i32> [[ADD_NSW]] to <2 x i64>
 ; CHECK-NEXT:    call void @use.v2i32(<2 x i32> [[ADD_NSW]])
 ; CHECK-NEXT:    ret <2 x i64> [[ADD_SEXT]]
 ;
@@ -291,9 +289,7 @@ define <2 x i64> @sub_sext__dominating_sub_nsw_vector(<2 x i32> %arg0, <2 x i32>
 ; CHECK-SAME: (<2 x i32> [[ARG0:%.*]], <2 x i32> [[ARG1:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[SUB_NSW:%.*]] = sub nsw <2 x i32> [[ARG0]], [[ARG1]]
-; CHECK-NEXT:    [[ARG0_SEXT:%.*]] = sext <2 x i32> [[ARG0]] to <2 x i64>
-; CHECK-NEXT:    [[ARG1_SEXT:%.*]] = sext <2 x i32> [[ARG1]] to <2 x i64>
-; CHECK-NEXT:    [[SUB_SEXT:%.*]] = sub <2 x i64> [[ARG0_SEXT]], [[ARG1_SEXT]]
+; CHECK-NEXT:    [[SUB_SEXT:%.*]] = sext <2 x i32> [[SUB_NSW]] to <2 x i64>
 ; CHECK-NEXT:    call void @use.v2i32(<2 x i32> [[SUB_NSW]])
 ; CHECK-NEXT:    ret <2 x i64> [[SUB_SEXT]]
 ;
@@ -313,9 +309,7 @@ define <2 x i64> @add_sext__dominating_add_nsw_commuted_vector(<2 x i32> %arg0, 
 ; CHECK-SAME: (<2 x i32> [[ARG0:%.*]], <2 x i32> [[ARG1:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[ADD_NSW:%.*]] = add nsw <2 x i32> [[ARG0]], [[ARG1]]
-; CHECK-NEXT:    [[ARG0_SEXT:%.*]] = sext <2 x i32> [[ARG0]] to <2 x i64>
-; CHECK-NEXT:    [[ARG1_SEXT:%.*]] = sext <2 x i32> [[ARG1]] to <2 x i64>
-; CHECK-NEXT:    [[ADD_SEXT:%.*]] = add <2 x i64> [[ARG1_SEXT]], [[ARG0_SEXT]]
+; CHECK-NEXT:    [[ADD_SEXT:%.*]] = sext <2 x i32> [[ADD_NSW]] to <2 x i64>
 ; CHECK-NEXT:    call void @use.v2i32(<2 x i32> [[ADD_NSW]])
 ; CHECK-NEXT:    ret <2 x i64> [[ADD_SEXT]]
 ;
