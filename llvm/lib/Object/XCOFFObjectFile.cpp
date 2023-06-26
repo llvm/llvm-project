@@ -12,8 +12,8 @@
 
 #include "llvm/Object/XCOFFObjectFile.h"
 #include "llvm/ADT/StringSwitch.h"
-#include "llvm/MC/SubtargetFeature.h"
 #include "llvm/Support/DataExtractor.h"
+#include "llvm/TargetParser/SubtargetFeature.h"
 #include <cstddef>
 #include <cstring>
 

@@ -20,13 +20,13 @@
 #include "llvm/ADT/StringRef.h"
 #include "llvm/MC/MCInstrItineraries.h"
 #include "llvm/MC/MCSchedule.h"
-#include "llvm/MC/SubtargetFeature.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/Format.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/TableGen/Error.h"
 #include "llvm/TableGen/Record.h"
 #include "llvm/TableGen/TableGenBackend.h"
+#include "llvm/TargetParser/SubtargetFeature.h"
 #include <algorithm>
 #include <cassert>
 #include <cstdint>

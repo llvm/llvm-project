@@ -1,4 +1,4 @@
-//===- llvm/MC/SubtargetFeature.h - CPU characteristics ---------*- C++ -*-===//
+//=== llvm/TargetParser/SubtargetFeature.h - CPU characteristics-*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -14,8 +14,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_MC_SUBTARGETFEATURE_H
-#define LLVM_MC_SUBTARGETFEATURE_H
+#ifndef LLVM_TARGETPARSER_SUBTARGETFEATURE_H
+#define LLVM_TARGETPARSER_SUBTARGETFEATURE_H
 
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/STLExtras.h"
@@ -233,4 +233,4 @@ public:
 
 } // end namespace llvm
 
-#endif // LLVM_MC_SUBTARGETFEATURE_H
+#endif // LLVM_TARGETPARSER_SUBTARGETFEATURE_H
