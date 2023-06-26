@@ -19,17 +19,15 @@ namespace dataflow {
 
 void copyRecord(AggregateStorageLocation &Src, AggregateStorageLocation &Dst,
                 Environment &Env) {
-  QualType Type = Src.getType();
-
   LLVM_DEBUG({
     if (Dst.getType().getCanonicalType().getUnqualifiedType() !=
-        Type.getCanonicalType().getUnqualifiedType()) {
-      llvm::dbgs() << "Source type " << Type << "\n";
+        Src.getType().getCanonicalType().getUnqualifiedType()) {
+      llvm::dbgs() << "Source type " << Src.getType() << "\n";
       llvm::dbgs() << "Destination type " << Dst.getType() << "\n";
     }
   });
   assert(Dst.getType().getCanonicalType().getUnqualifiedType() ==
-         Type.getCanonicalType().getUnqualifiedType());
+         Src.getType().getCanonicalType().getUnqualifiedType());
 
   for (auto [Field, SrcFieldLoc] : Src.children()) {
     assert(SrcFieldLoc != nullptr);
