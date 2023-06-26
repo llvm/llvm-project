@@ -10,9 +10,11 @@
 #include "mlir/Dialect/Index/IR/IndexAttrs.h"
 #include "mlir/Dialect/Index/IR/IndexDialect.h"
 #include "mlir/IR/Builders.h"
+#include "mlir/IR/Matchers.h"
 #include "mlir/IR/OpImplementation.h"
+#include "mlir/Interfaces/Utils/InferIntRangeCommon.h"
 #include "llvm/ADT/SmallString.h"
-#include <optional>
+#include "llvm/ADT/TypeSwitch.h"
 
 using namespace mlir;
 using namespace mlir::index;
@@ -313,9 +315,10 @@ OpFoldResult MaxUOp::fold(FoldAdaptor adaptor) {
 //===----------------------------------------------------------------------===//
 
 OpFoldResult MinSOp::fold(FoldAdaptor adaptor) {
-  return foldBinaryOpChecked(adaptor.getOperands(), [](const APInt &lhs, const APInt &rhs) {
-    return lhs.slt(rhs) ? lhs : rhs;
-  });
+  return foldBinaryOpChecked(adaptor.getOperands(),
+                             [](const APInt &lhs, const APInt &rhs) {
+                               return lhs.slt(rhs) ? lhs : rhs;
+                             });
 }
 
 //===----------------------------------------------------------------------===//
@@ -323,9 +326,10 @@ OpFoldResult MinSOp::fold(FoldAdaptor adaptor) {
 //===----------------------------------------------------------------------===//
 
 OpFoldResult MinUOp::fold(FoldAdaptor adaptor) {
-  return foldBinaryOpChecked(adaptor.getOperands(), [](const APInt &lhs, const APInt &rhs) {
-    return lhs.ult(rhs) ? lhs : rhs;
-  });
+  return foldBinaryOpChecked(adaptor.getOperands(),
+                             [](const APInt &lhs, const APInt &rhs) {
+                               return lhs.ult(rhs) ? lhs : rhs;
+                             });
 }
 
 //===----------------------------------------------------------------------===//
@@ -455,19 +459,64 @@ bool compareIndices(const APInt &lhs, const APInt &rhs,
   llvm_unreachable("unhandled IndexCmpPredicate predicate");
 }
 
+/// `cmp(max/min(x, cstA), cstB)` can be folded to a constant depending on the
+/// values of `cstA` and `cstB`, the max or min operation, and the comparison
+/// predicate. Check whether the value folds in both 32-bit and 64-bit
+/// arithmetic and to the same value.
+static std::optional<bool> foldCmpOfMaxOrMin(Operation *lhsOp,
+                                             const APInt &cstA,
+                                             const APInt &cstB, unsigned width,
+                                             IndexCmpPredicate pred) {
+  ConstantIntRanges lhsRange = TypeSwitch<Operation *, ConstantIntRanges>(lhsOp)
+                                   .Case([&](MinSOp op) {
+                                     return ConstantIntRanges::fromSigned(
+                                         APInt::getSignedMinValue(width), cstA);
+                                   })
+                                   .Case([&](MinUOp op) {
+                                     return ConstantIntRanges::fromUnsigned(
+                                         APInt::getMinValue(width), cstA);
+                                   })
+                                   .Case([&](MaxSOp op) {
+                                     return ConstantIntRanges::fromSigned(
+                                         cstA, APInt::getSignedMaxValue(width));
+                                   })
+                                   .Case([&](MaxUOp op) {
+                                     return ConstantIntRanges::fromUnsigned(
+                                         cstA, APInt::getMaxValue(width));
+                                   });
+  return intrange::evaluatePred(static_cast<intrange::CmpPredicate>(pred),
+                                lhsRange, ConstantIntRanges::constant(cstB));
+}
+
 OpFoldResult CmpOp::fold(FoldAdaptor adaptor) {
+  // Attempt to fold if both inputs are constant.
   auto lhs = dyn_cast_if_present<IntegerAttr>(adaptor.getLhs());
   auto rhs = dyn_cast_if_present<IntegerAttr>(adaptor.getRhs());
-  if (!lhs || !rhs)
-    return {};
+  if (lhs && rhs) {
+    // Perform the comparison in 64-bit and 32-bit.
+    bool result64 = compareIndices(lhs.getValue(), rhs.getValue(), getPred());
+    bool result32 = compareIndices(lhs.getValue().trunc(32),
+                                   rhs.getValue().trunc(32), getPred());
+    if (result64 == result32)
+      return BoolAttr::get(getContext(), result64);
+  }
 
-  // Perform the comparison in 64-bit and 32-bit.
-  bool result64 = compareIndices(lhs.getValue(), rhs.getValue(), getPred());
-  bool result32 = compareIndices(lhs.getValue().trunc(32),
-                                 rhs.getValue().trunc(32), getPred());
-  if (result64 != result32)
-    return {};
-  return BoolAttr::get(getContext(), result64);
+  // Fold `cmp(max/min(x, cstA), cstB)`.
+  Operation *lhsOp = getLhs().getDefiningOp();
+  IntegerAttr cstA;
+  if (isa_and_nonnull<MinSOp, MinUOp, MaxSOp, MaxUOp>(lhsOp) &&
+      matchPattern(lhsOp->getOperand(1), m_Constant(&cstA)) && rhs) {
+    std::optional<bool> result64 = foldCmpOfMaxOrMin(
+        lhsOp, cstA.getValue(), rhs.getValue(), 64, getPred());
+    std::optional<bool> result32 =
+        foldCmpOfMaxOrMin(lhsOp, cstA.getValue().trunc(32),
+                          rhs.getValue().trunc(32), 32, getPred());
+    // Fold if the 32-bit and 64-bit results are the same.
+    if (result64 && result32 && *result64 == *result32)
+      return BoolAttr::get(getContext(), *result64);
+  }
+
+  return {};
 }
 
 //===----------------------------------------------------------------------===//
