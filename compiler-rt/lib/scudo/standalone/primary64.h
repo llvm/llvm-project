@@ -224,9 +224,24 @@ public:
                                     B == nullptr;
           if (UNLIKELY(!NeedToRefill)) {
             if (UNLIKELY(B)) {
+              // Even though we always populate the blocks with the number which
+              // is multiple of TransferBatch::getMaxCached() , the top
+              // `TransferBatch` from the freelist may still have fewer elements
+              // than the size of TransferBatch::getMaxCached() because we
+              // always fill up the top `TransferBatch` first when it's not
+              // full.
+              // When this happens, simply push the block in `TransferBatch` and
+              // `Array` together.
+              if (UNLIKELY(B->getCount() == 1)) {
+                DCHECK_EQ(Size, 1U);
+                B->appendFromArray(Array, 1U);
+                Size = 0;
+              }
               pushBlocksImpl(C, SizeClassMap::BatchClassId, Region,
                              B->getRawArray(), B->getCount());
               CHECK(!Region->FreeListInfo.BlockList.empty());
+              if (Size == 0)
+                return;
             }
             pushBlocksImpl(C, SizeClassMap::BatchClassId, Region, Array, Size);
             return;
