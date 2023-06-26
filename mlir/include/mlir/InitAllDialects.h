@@ -55,7 +55,6 @@
 #include "mlir/Dialect/MemRef/Transforms/BufferizableOpInterfaceImpl.h"
 #include "mlir/Dialect/MemRef/Transforms/RuntimeOpVerification.h"
 #include "mlir/Dialect/NVGPU/IR/NVGPUDialect.h"
-#include "mlir/Dialect/NVGPU/TransformOps/NVGPUTransformOps.h"
 #include "mlir/Dialect/OpenACC/OpenACC.h"
 #include "mlir/Dialect/OpenMP/OpenMPDialect.h"
 #include "mlir/Dialect/PDL/IR/PDL.h"
@@ -138,7 +137,6 @@ inline void registerAllDialects(DialectRegistry &registry) {
   gpu::registerTransformDialectExtension(registry);
   linalg::registerTransformDialectExtension(registry);
   memref::registerTransformDialectExtension(registry);
-  nvgpu::registerTransformDialectExtension(registry);
   scf::registerTransformDialectExtension(registry);
   tensor::registerTransformDialectExtension(registry);
   transform::registerPDLExtension(registry);
