@@ -49,6 +49,14 @@ public:
                                     Instruction *Inst = nullptr);
   void getUnrollingPreferences(Loop *L, ScalarEvolution &SE,
                                TTI::UnrollingPreferences &UP);
+
+  bool canMacroFuseCmp(void) const { return true; } // true; }
+
+  InstructionCost getCmpSelInstrCost (
+      unsigned Opcode, Type *ValTy, Type *CondTy, CmpInst::Predicate VecPred,
+      TTI::TargetCostKind CostKind=TTI::TCK_RecipThroughput,
+      const Instruction *I=nullptr,
+      ArrayRef<const Value *> Operands = ArrayRef<const Value*>()) const;
 };
 
 } // end namespace llvm

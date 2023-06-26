@@ -26,6 +26,10 @@ using namespace llvm;
 
 #define NM_MOVE_OPT_NAME "nanoMIPS move optimization pass"
 
+static cl::opt<bool>
+DisableNMMoveOpt("disable-nm-move-opt", cl::Hidden, cl::init(false),
+                 cl::desc("Disable NanoMips move optimizations"));
+
 namespace {
 struct NMMoveOpt : public MachineFunctionPass {
   using MBBIter = MachineBasicBlock::iterator;
@@ -64,6 +68,8 @@ struct NMMoveOpt : public MachineFunctionPass {
 char NMMoveOpt::ID = 0;
 
 bool NMMoveOpt::runOnMachineFunction(MachineFunction &Fn) {
+  if (DisableNMMoveOpt)
+    return false;
   STI = &static_cast<const MipsSubtarget &>(Fn.getSubtarget());
   TII = STI->getInstrInfo();
   bool Modified = false;

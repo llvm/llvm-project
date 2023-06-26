@@ -22,6 +22,18 @@ using namespace llvm;
 
 #define NM_LOAD_STORE_OPT_NAME "nanoMIPS load/store optimization pass"
 
+static cl::opt<bool>
+DisableNMSaveRestore("disable-nm-save-restore", cl::Hidden, cl::init(false),
+                     cl::desc("Disable NanoMips save/restore optimizations"));
+
+static cl::opt<bool>
+DisableNMLoadStoreMultiple("disable-nm-lwm-swm", cl::Hidden, cl::init(false),
+                           cl::desc("Disable NanoMips load/store multiple optimizations"));
+
+static cl::opt<bool>
+DisableNMPCRelOpt("disable-nm-pcrel-opt", cl::Hidden, cl::init(false),
+                  cl::desc("Disable NanoMips PC-relative addressing optimization"));
+
 namespace {
 struct NMLoadStoreOpt : public MachineFunctionPass {
   struct LSIns {
@@ -74,11 +86,16 @@ bool NMLoadStoreOpt::runOnMachineFunction(MachineFunction &Fn) {
   for (MachineFunction::iterator MFI = Fn.begin(), E = Fn.end(); MFI != E;
        ++MFI) {
     MachineBasicBlock &MBB = *MFI;
-    Modified |= generateSaveOrRestore(MBB, /*IsRestore=*/false);
-    Modified |= generateSaveOrRestore(MBB, /*IsRestore=*/true);
-    Modified |= generateLoadStoreMultiple(MBB, /*IsLoad=*/false);
-    Modified |= generateLoadStoreMultiple(MBB, /*IsLoad=*/true);
-    Modified |= generatePCRelative(MBB);
+    if (!DisableNMSaveRestore) {
+      Modified |= generateSaveOrRestore(MBB, /*IsRestore=*/false);
+      Modified |= generateSaveOrRestore(MBB, /*IsRestore=*/true);
+    }
+    if (!DisableNMLoadStoreMultiple) {
+      Modified |= generateLoadStoreMultiple(MBB, /*IsLoad=*/false);
+      Modified |= generateLoadStoreMultiple(MBB, /*IsLoad=*/true);
+    }
+    if (!DisableNMPCRelOpt)
+      Modified |= generatePCRelative(MBB);
   }
 
   return Modified;
@@ -209,13 +226,18 @@ bool NMLoadStoreOpt::generateSaveOrRestore(MachineBasicBlock &MBB,
         continue;
       }
 
-      if (!AdjustStack && isStackPointerAdjustment(MI, IsRestore))
+      if (!AdjustStack && isStackPointerAdjustment(MI, IsRestore)) {
         AdjustStack = &MI;
+        continue;
+      }
 
       // There's no need to look for loads, if we haven't found addiu.
-      if (!AdjustStack)
+      if (!AdjustStack) {
+        // Drop the return if sequence is broken before the addiu is found.
+        if (!MI.isCFIInstruction() && !MI.isDebugInstr())
+           Return = nullptr;
         continue;
-
+      }
       // Since we are looking for a contguous list, we should stop searching for
       // more loads once the end of the list has been reached. Both return and
       // stack adjustment should be found by now, since we're iterating from the
@@ -231,13 +253,15 @@ bool NMLoadStoreOpt::generateSaveOrRestore(MachineBasicBlock &MBB,
 
       // Sequence has been broken, no need to continue. We either reached the
       // end or found nothing.
-      if (!LoadStoreList.empty())
+      if (!LoadStoreList.empty() || AdjustStack)
         break;
     }
   } else {
     for (auto &MI : MBB) {
-      if (!AdjustStack && isStackPointerAdjustment(MI, IsRestore))
+      if (!AdjustStack && isStackPointerAdjustment(MI, IsRestore)) {
         AdjustStack = &MI;
+        continue;
+      }
 
       // There's no need to look for stores, if we haven't found addiu.
       if (!AdjustStack)
@@ -256,7 +280,7 @@ bool NMLoadStoreOpt::generateSaveOrRestore(MachineBasicBlock &MBB,
 
       // Sequence has been broken, no need to continue. We either reached the
       // end or found nothing.
-      if (!LoadStoreList.empty())
+      if (!LoadStoreList.empty() || AdjustStack)
         break;
     }
   }
@@ -620,7 +644,7 @@ static bool isLoadStoreShortChar(MachineInstr *MI) {
 bool NMLoadStoreOpt::generatePCRelative(MachineBasicBlock &MBB) {
   SmallVector<std::pair<MachineInstr *, MachineInstr *>> Candidates;
   for (auto &MI : MBB) {
-    if (MI.getOpcode() == Mips::LA_NM || MI.getOpcode() == Mips::LAGPB_NM) {
+    if (MI.getOpcode() == Mips::LA_NM) {
       bool IsRedefined = false;
       bool IsUsedByMultipleMIs = false;
       MachineInstr *FirstUse = nullptr;

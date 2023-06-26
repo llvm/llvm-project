@@ -87,6 +87,28 @@ public:
   std::map<const char *, const Mips16HardFloatInfo::FuncSignature *>
   StubsNeeded;
 
+  unsigned getJumpTableEntrySize(int Idx) const {
+    return JumpTableEntryInfo[Idx]->Size;
+  }
+  MCSymbol *getJumpTableSymbol(int Idx) const {
+    return JumpTableEntryInfo[Idx]->Symbol;
+  }
+  bool getJumpTableIsSigned(int Idx) const {
+    return JumpTableEntryInfo[Idx]->Signed;
+  }
+  void setJumpTableEntryInfo(int Idx, unsigned Size, MCSymbol *Sym,
+                             bool Sign = true) {
+    if ((unsigned)Idx >= JumpTableEntryInfo.size())
+      JumpTableEntryInfo.resize(Idx + 1);
+    if (!JumpTableEntryInfo[Idx])
+      JumpTableEntryInfo[Idx] = new NanoMipsJumpTableInfo(Size, Sym, Sign);
+    else {
+      JumpTableEntryInfo[Idx]->Size = Size;
+      JumpTableEntryInfo[Idx]->Symbol = Sym;
+      JumpTableEntryInfo[Idx]->Signed = Sign;
+    }
+  }
+
 private:
   virtual void anchor();
 
@@ -135,6 +157,17 @@ private:
   /// FrameIndex for start of varargs area for arguments passed on the
   /// stack.
   int VarArgsStackIndex = 0;
+
+  /// Info about entry size, signess and Jump Table symbol.
+  struct NanoMipsJumpTableInfo {
+    MCSymbol *Symbol;
+    unsigned Size;
+    bool Signed;
+    NanoMipsJumpTableInfo(unsigned Size, MCSymbol *Sym, bool Sign)
+        : Size(Size), Symbol(Sym), Signed(Sign) {}
+  };
+
+  SmallVector<NanoMipsJumpTableInfo *, 2> JumpTableEntryInfo;
 };
 
 } // end namespace llvm

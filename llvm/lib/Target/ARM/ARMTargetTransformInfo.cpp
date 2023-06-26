@@ -838,11 +838,10 @@ InstructionCost ARMTTIImpl::getVectorInstrCost(unsigned Opcode, Type *ValTy,
   return BaseT::getVectorInstrCost(Opcode, ValTy, Index);
 }
 
-InstructionCost ARMTTIImpl::getCmpSelInstrCost(unsigned Opcode, Type *ValTy,
-                                               Type *CondTy,
-                                               CmpInst::Predicate VecPred,
-                                               TTI::TargetCostKind CostKind,
-                                               const Instruction *I) {
+InstructionCost ARMTTIImpl::getCmpSelInstrCost(
+    unsigned Opcode, Type *ValTy, Type *CondTy, CmpInst::Predicate VecPred,
+    TTI::TargetCostKind CostKind, const Instruction *I,
+     ArrayRef<const Value *> Operands) {
   int ISD = TLI->InstructionOpcodeToISD(Opcode);
 
   // Thumb scalar code size cost for select.

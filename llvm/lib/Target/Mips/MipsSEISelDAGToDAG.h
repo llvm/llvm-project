@@ -153,6 +153,11 @@ private:
   bool SelectInlineAsmMemoryOperand(const SDValue &Op,
                                     unsigned ConstraintID,
                                     std::vector<SDValue> &OutOps) override;
+
+  void NanoMipsDAGPeepholes();
+
+  void PostprocessISelDAG() override;
+
 };
 
 FunctionPass *createMipsSEISelDag(MipsTargetMachine &TM,

@@ -2265,7 +2265,7 @@ static Value *isSafeToSpeculateStore(Instruction *I, BasicBlock *BrBB,
 /// Estimate the cost of the insertion(s) and check that the PHI nodes can be
 /// converted to selects.
 static bool validateAndCostRequiredSelects(BasicBlock *BB, BasicBlock *ThenBB,
-                                           BasicBlock *EndBB,
+                                           BasicBlock *EndBB, Value *BrCond,
                                            unsigned &SpeculatedInstructions,
                                            InstructionCost &Cost,
                                            const TargetTransformInfo &TTI) {
@@ -2285,7 +2285,9 @@ static bool validateAndCostRequiredSelects(BasicBlock *BB, BasicBlock *ThenBB,
       continue;
 
     Cost += TTI.getCmpSelInstrCost(Instruction::Select, PN.getType(), nullptr,
-                                   CmpInst::BAD_ICMP_PREDICATE, CostKind);
+                                   CmpInst::BAD_ICMP_PREDICATE, CostKind,
+                                   nullptr,
+                                   ArrayRef<const Value *>({BrCond, OrigV, ThenV}));
 
     // Don't convert to selects if we could remove undefined behavior instead.
     if (passingValueIsAlwaysUndefined(OrigV, &PN) ||
@@ -2301,6 +2303,7 @@ static bool validateAndCostRequiredSelects(BasicBlock *BB, BasicBlock *ThenBB,
     if ((ThenCE && !isSafeToSpeculativelyExecute(ThenCE)) ||
         (OrigCE && !isSafeToSpeculativelyExecute(OrigCE)))
       return false;
+
     InstructionCost OrigCost = OrigCE ? computeSpeculationCost(OrigCE, TTI) : 0;
     InstructionCost ThenCost = ThenCE ? computeSpeculationCost(ThenCE, TTI) : 0;
     InstructionCost MaxCost =
@@ -2363,7 +2366,6 @@ bool SimplifyCFGOpt::SpeculativelyExecuteBB(BranchInst *BI, BasicBlock *ThenBB,
   Value *BrCond = BI->getCondition();
   if (isa<FCmpInst>(BrCond))
     return false;
-
   BasicBlock *BB = BI->getParent();
   BasicBlock *EndBB = ThenBB->getTerminator()->getSuccessor(0);
   InstructionCost Budget =
@@ -2475,9 +2477,12 @@ bool SimplifyCFGOpt::SpeculativelyExecuteBB(BranchInst *BI, BasicBlock *ThenBB,
   // so.
   bool Convert = SpeculatedStore != nullptr;
   InstructionCost Cost = 0;
-  Convert |= validateAndCostRequiredSelects(BB, ThenBB, EndBB,
+  Convert |= validateAndCostRequiredSelects(BB, ThenBB, EndBB, BrCond,
                                             SpeculatedInstructions,
                                             Cost, TTI);
+  if (TTI.canMacroFuseCmp())
+    Cost += TargetTransformInfo::TCC_Basic * 2;
+
   if (!Convert || Cost > Budget)
     return false;
 

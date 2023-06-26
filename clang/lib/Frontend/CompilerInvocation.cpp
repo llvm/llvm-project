@@ -1921,7 +1921,6 @@ bool CompilerInvocation::ParseCodeGenArgs(CodeGenOptions &Opts, ArgList &Args,
             << "-fdiagnostics-hotness-threshold=";
     }
   }
-
   // If the user requested to use a sample profile for PGO, then the
   // backend will need to track source location information so the profile
   // can be incorporated into the IR.

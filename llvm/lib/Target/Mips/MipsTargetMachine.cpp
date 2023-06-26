@@ -283,7 +283,7 @@ std::unique_ptr<CSEConfigBase> MipsPassConfig::getCSEConfig() const {
 }
 
 void MipsPassConfig::addPreSched2() {
-  if (getMipsSubtarget().hasNanoMips())
+  if (getMipsSubtarget().hasNanoMips() && getOptLevel() != CodeGenOpt::None)
     addPass(createNanoMipsLoadStoreOptimizerPass());
 }
 
@@ -309,7 +309,7 @@ void MipsPassConfig::addPreRegAlloc() {
 }
 
 void MipsPassConfig::addPostRegAlloc() {
-  if (getMipsSubtarget().hasNanoMips())
+  if (getMipsSubtarget().hasNanoMips() && getOptLevel() != CodeGenOpt::None)
     addPass(createRedundantCopyEliminationPass());
 }
 
@@ -333,6 +333,8 @@ MipsTargetMachine::getTargetTransformInfo(const Function &F) {
 // Implemented by targets that want to run passes immediately before
 // machine code is emitted.
 void MipsPassConfig::addPreEmitPass() {
+  if (getMipsSubtarget().hasNanoMips())
+    addPass(createNanoMipsCompressJumpTablesPass());
   // Expand pseudo instructions that are sensitive to register allocation.
   addPass(createMipsExpandPseudoPass());
 
@@ -343,7 +345,7 @@ void MipsPassConfig::addPreEmitPass() {
 
 void MipsPassConfig::addPreEmitPass2() {
 
-  if (getMipsSubtarget().hasNanoMips())
+  if (getMipsSubtarget().hasNanoMips() && getOptLevel() != CodeGenOpt::None)
     addPass(createNanoMipsMoveOptimizerPass());
 
   // The delay slot filler pass can potientially create forbidden slot hazards

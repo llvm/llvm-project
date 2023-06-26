@@ -471,7 +471,6 @@ void assemble(const Config &Conf, TargetMachine *TM, AddStreamFn AddStream,
     report_fatal_error("Failed to execute assembler: " + ErrMsg);
 
   // Write out the assembled doj using the linker-provided AddStream function.
-  // TODO: Remove this extra copy.
   ErrorOr<std::unique_ptr<MemoryBuffer>> MBOrErr =
       MemoryBuffer::getFile(DojFileName);
   if (!MBOrErr)
@@ -516,7 +515,6 @@ static void codegen(const Config &Conf, TargetMachine *TM,
   }
 
   if (!LtoExternalAsm.empty()) {
-    // TODO: abstract selection of external assembler from target.
     LLVM_DEBUG(dbgs() << "Run codegen on module "
                       << Mod.getModuleIdentifier() << "\n");
     SmallString<0> AsmBuffer;

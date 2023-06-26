@@ -244,6 +244,12 @@ class TargetRegisterClass;
       VEXTRACT_SEXT_ELT,
       VEXTRACT_ZEXT_ELT,
 
+
+
+      // nanoMIPS br_jt.
+      BR_JT,
+
+
       // Load/Store Left/Right nodes.
       LWL = ISD::FIRST_TARGET_MEMORY_OPCODE,
       LWR,
@@ -548,6 +554,7 @@ class TargetRegisterClass;
     SDValue lowerGlobalAddress(SDValue Op, SelectionDAG &DAG) const;
     SDValue lowerBlockAddress(SDValue Op, SelectionDAG &DAG) const;
     SDValue lowerGlobalTLSAddress(SDValue Op, SelectionDAG &DAG) const;
+    SDValue lowerBR_JT(SDValue Op, SelectionDAG &DAG) const;
     SDValue lowerJumpTable(SDValue Op, SelectionDAG &DAG) const;
     SDValue lowerSELECT(SDValue Op, SelectionDAG &DAG) const;
     SDValue lowerSETCC(SDValue Op, SelectionDAG &DAG) const;

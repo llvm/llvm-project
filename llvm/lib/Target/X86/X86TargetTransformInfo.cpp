@@ -2346,15 +2346,17 @@ InstructionCost X86TTIImpl::getCastInstrCost(unsigned Opcode, Type *Dst,
       BaseT::getCastInstrCost(Opcode, Dst, Src, CCH, CostKind, I));
 }
 
-InstructionCost X86TTIImpl::getCmpSelInstrCost(unsigned Opcode, Type *ValTy,
-                                               Type *CondTy,
-                                               CmpInst::Predicate VecPred,
-                                               TTI::TargetCostKind CostKind,
-                                               const Instruction *I) {
+InstructionCost X86TTIImpl::getCmpSelInstrCost(
+    unsigned Opcode, Type *ValTy,
+    Type *CondTy,
+    CmpInst::Predicate VecPred,
+    TTI::TargetCostKind CostKind,
+    const Instruction *I,
+    ArrayRef<const Value *> Operands = ArrayRef<const Value *>() ) {
   // TODO: Handle other cost kinds.
   if (CostKind != TTI::TCK_RecipThroughput)
     return BaseT::getCmpSelInstrCost(Opcode, ValTy, CondTy, VecPred, CostKind,
-                                     I);
+                                     I, Operands);
 
   // Legalize the type.
   std::pair<InstructionCost, MVT> LT = TLI->getTypeLegalizationCost(DL, ValTy);
@@ -2538,7 +2540,8 @@ InstructionCost X86TTIImpl::getCmpSelInstrCost(unsigned Opcode, Type *ValTy,
     if (const auto *Entry = CostTableLookup(SSE1CostTbl, ISD, MTy))
       return LT.first * (ExtraCost + Entry->Cost);
 
-  return BaseT::getCmpSelInstrCost(Opcode, ValTy, CondTy, VecPred, CostKind, I);
+  return BaseT::getCmpSelInstrCost(Opcode, ValTy, CondTy, VecPred, CostKind,
+                                   I, Operands);
 }
 
 unsigned X86TTIImpl::getAtomicMemIntrinsicMaxElementSize() const { return 16; }

@@ -21,6 +21,10 @@ def NMUnalignedLH : SDNode<"MipsISD::UALH", SDTMipsLoadLR, [SDNPHasChain, SDNPMa
 def NMUnalignedSW : SDNode<"MipsISD::UASW", SDTStore, [SDNPHasChain, SDNPMayStore, SDNPMemOperand]>;
 def NMUnalignedSH : SDNode<"MipsISD::UASH", SDTStore, [SDNPHasChain, SDNPMayStore, SDNPMemOperand]>;
 
+def SDT_NMbr_jt : SDTypeProfile<0, 2, []>;
+
+def NMbr_jt : SDNode<"MipsISD::BR_JT", SDT_NMbr_jt, [SDNPHasChain]>;
+
 //===----------------------------------------------------------------------===//
 // nanoMIPS Operand, Complex Patterns and Transformations Definitions.
 //===----------------------------------------------------------------------===//
@@ -393,18 +397,19 @@ def OR16_NM  : ArithLogicR16<"or16", GPR3Opnd>;
 
 def JRC_NM : IndirectBranchNM<"jrc", GPR32NMOpnd>;
 
+let isCodeGenOnly = 1, hasNoSchedulingInfo = 1,
+    hasDelaySlot = 0, isBranch = 1,
+   isTerminator = 1,
+   hasDelaySlot = 0,
+   isCTI = 1 in
+def BRSC_NM : InstNM<(outs), (ins GPR32NMOpnd:$rs, i32imm:$jti), "brsc\t$rs", [(NMbr_jt GPR32NMOpnd:$rs, tjumptable:$jti)]>, InstSize32;
+
 def BALC_NM : CallNM<"balc", MipsJmpLink, tglobaladdr>, InstSize32;
 def MOVEBALC_NM : MoveBalcBase;
 
 let isReMaterializable = 1 in {
 def Li_NM : RegImmNM<"li", simm32_relaxed, GPR32NMOpnd>, InstSize48;
 def LA_NM : RegImmNM<"la", simm32_relaxed, GPR32NMOpnd>, InstSize48;
-
-def LAGPB_NM : RegImmNM<"addiu.b", simm32_relaxed, GPR32NMOpnd>, InstSize48 {
-    let AsmString = "addiu.b $rt, $$gp, %gprel( $imm )";
-    let isReMaterializable = 1;
-}
-
 } // isReMaterializable = 1
 
 def ALUIPC_NM : RegImmNM<"aluipc", simm32_relaxed, GPR32NMOpnd>, InstSize32;
@@ -427,6 +432,9 @@ def PseudoReturnNM : PseudoInstNM<(outs), (ins GPR32NMOpnd:$rs), []> {
   let hasExtraSrcRegAllocReq = 1;
   bit isCTI = 1;
 }
+
+let isCodeGenOnly = 1, hasNoSchedulingInfo = 1, hasDelaySlot = 0 in
+def LoadJumpTableOffset : PseudoInstNM<(outs GPR32NMOpnd:$rd), (ins GPR32NMOpnd:$table, GPR32NMOpnd:$entry, i32imm:$jti), []>;
 
 // Indirect branch is matched as PseudoIndirectBranchNM and expanded to JRC_NM.
 def PseudoIndirectBranchNM :
@@ -452,6 +460,7 @@ def : NMPat<(i32 imm32_NM:$imm), (Li_NM imm:$imm)>;
 
 def : NMPat<(MipsJmpLink (i32 texternalsym:$dst)), (BALC_NM texternalsym:$dst)>;
 
+def : NMPat<(MipsFullAddr tglobaladdr:$in), (LA_NM tglobaladdr:$in)>;
 def : NMPat<(MipsFullAddr tglobaltlsaddr:$in), (LA_NM tglobaltlsaddr:$in)>;
 def : NMPat<(MipsFullAddr tblockaddress:$in), (LA_NM tblockaddress:$in)>;
 def : NMPat<(MipsFullAddr tjumptable:$in), (LA_NM tjumptable:$in)>;
@@ -590,8 +599,8 @@ class TailCallBase : PseudoInstNM<(outs), (ins calltarget:$target), []>,
 }
 def TAILCALL_NM : TailCallBase;
 
-class TailCallRegBase : PseudoInstNM<(outs), (ins GPR32NMOpnd:$rs),
-                                     [(MipsTailCall GPR32NMOpnd:$rs)]>,
+class TailCallRegBase : PseudoInstNM<(outs), (ins RegisterOperand<GPR32NM_TAIL>:$rs),
+                                     [(MipsTailCall RegisterOperand<GPR32NM_TAIL>:$rs)]>,
                         PseudoInstExpansion<(JRC_NM GPR32NMOpnd:$rs)> {
   let isCall = 1;
   let isTerminator = 1;
@@ -782,22 +791,6 @@ def : NMPat<(i32 (load (add GP_NM, (MipsGPRel tglobaladdr:$in)))),
 def : NMPat<(add GP_NM, (MipsGPRel tglobaladdr:$in)),
             (ADDiu_NM GP_NM, tglobaladdr:$in)>;
 
-// GP-relative address
-
-def alignedglobaladdr : PatFrag<(ops),
-                                (tglobaladdr),
-  [{ // Only match if aligned to at least word size
-      Align A = N->getGlobal()->getPointerAlignment(MF->getDataLayout());
-      return commonAlignment(A, 4).value() == 4;
-    }]>;
-
-def : NMPat<(MipsFullAddr alignedglobaladdr:$in),
-            (LA_NM  alignedglobaladdr:$in)>;
-
-def : NMPat<(MipsFullAddr tglobaladdr:$in),
-            (LAGPB_NM tglobaladdr:$in)>;
-
-
 // Atomic load patterns.
 def : NMPat<(atomic_load_8 addr:$a), (LB_NM addr:$a)>;
 def : NMPat<(atomic_load_16 addr:$a), (LH_NM addr:$a)>;
@@ -807,6 +800,19 @@ def : NMPat<(atomic_load_32 addr:$a), (LW_NM addr:$a)>;
 def : NMPat<(atomic_store_8 addr:$a, GPR32:$v), (SB_NM GPR32:$v, addr:$a)>;
 def : NMPat<(atomic_store_16 addr:$a, GPR32:$v), (SH_NM GPR32:$v, addr:$a)>;
 def : NMPat<(atomic_store_32 addr:$a, GPR32:$v), (SW_NM GPR32:$v, addr:$a)>;
+
+def LL_NM : InstNM<(outs GPR32NMOpnd:$rd), (ins mem_simm9:$addr),
+                    "ll\t$rd, $addr", []>, InstSize32 {
+  let mayLoad = 1;
+  let hasNoSchedulingInfo = 1;
+}
+
+def SC_NM : InstNM<(outs GPR32NMOpnd:$dst), (ins GPR32NMOpnd:$rt, mem_simm9:$addr),
+                   "sc\t$rt, $addr", []>, InstSize32 {
+  let mayStore = 1;
+  let Constraints = "$rt = $dst";
+  let hasNoSchedulingInfo = 1;
+}
 
 // Conditional Moves
 def MOVZ_NM : InstNM<(outs GPR32NMOpnd:$rd),
