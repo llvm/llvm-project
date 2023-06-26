@@ -34,6 +34,11 @@
 // expected-warning@-2 {{unknown warning group '-Winvalid-name', ignored}}
 #endif
 
+// From GH13920
+#pragma clang diagnostic push ignored "-Wdeprecated-declarations" // expected-warning {{unexpected token in pragma diagnostic}}
+#pragma clang diagnostic pop ignored "-Wdeprecated-declarations"  // expected-warning {{unexpected token in pragma diagnostic}}
+
+
 // Testing pragma clang diagnostic with -Weverything
 void ppo(void){} // First test that we do not diagnose on this.
 
