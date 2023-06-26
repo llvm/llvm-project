@@ -347,6 +347,10 @@ public:
       void VisitCXXDeleteExpr(const CXXDeleteExpr *CDE) {
         Outer.add(CDE->getOperatorDelete(), Flags);
       }
+      void
+      VisitCXXRewrittenBinaryOperator(const CXXRewrittenBinaryOperator *RBO) {
+        Outer.add(RBO->getDecomposedForm().InnerBinOp, Flags);
+      }
     };
     Visitor(*this, Flags).Visit(S);
   }

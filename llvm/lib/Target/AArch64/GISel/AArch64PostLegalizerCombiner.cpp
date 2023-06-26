@@ -93,7 +93,7 @@ bool matchExtractVecEltPairwiseAdd(
   return false;
 }
 
-bool applyExtractVecEltPairwiseAdd(
+void applyExtractVecEltPairwiseAdd(
     MachineInstr &MI, MachineRegisterInfo &MRI, MachineIRBuilder &B,
     std::tuple<unsigned, LLT, Register> &MatchInfo) {
   unsigned Opc = std::get<0>(MatchInfo);
@@ -107,7 +107,6 @@ bool applyExtractVecEltPairwiseAdd(
   auto Elt1 = B.buildExtractVectorElement(Ty, Src, B.buildConstant(s64, 1));
   B.buildInstr(Opc, {MI.getOperand(0).getReg()}, {Elt0, Elt1});
   MI.eraseFromParent();
-  return true;
 }
 
 static bool isSignExtended(Register R, MachineRegisterInfo &MRI) {
@@ -234,13 +233,12 @@ bool matchAArch64MulConstCombine(
   return true;
 }
 
-bool applyAArch64MulConstCombine(
+void applyAArch64MulConstCombine(
     MachineInstr &MI, MachineRegisterInfo &MRI, MachineIRBuilder &B,
     std::function<void(MachineIRBuilder &B, Register DstReg)> &ApplyFn) {
   B.setInstrAndDebugLoc(MI);
   ApplyFn(B, MI.getOperand(0).getReg());
   MI.eraseFromParent();
-  return true;
 }
 
 /// Try to fold a G_MERGE_VALUES of 2 s32 sources, where the second source

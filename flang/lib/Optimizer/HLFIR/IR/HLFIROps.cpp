@@ -1287,6 +1287,13 @@ mlir::LogicalResult hlfir::ElementalAddrOp::verify() {
   return mlir::success();
 }
 
+hlfir::YieldOp hlfir::ElementalAddrOp::getYieldOp() {
+  hlfir::YieldOp yieldOp =
+      mlir::dyn_cast_or_null<hlfir::YieldOp>(getTerminator(getBody()));
+  assert(yieldOp && "element_addr is ill-formed");
+  return yieldOp;
+}
+
 //===----------------------------------------------------------------------===//
 // OrderedAssignmentTreeOpInterface
 //===----------------------------------------------------------------------===//

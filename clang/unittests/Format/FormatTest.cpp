@@ -4623,13 +4623,13 @@ TEST_F(FormatTest, FormatsInlineASM) {
 
   Style.BreakBeforeInlineASMColon = FormatStyle::BBIAS_OnlyMultiline;
   verifyFormat(Code1, Style);
-  EXPECT_EQ(Code2, format(Code2, Style));
-  EXPECT_EQ(Code3, format(Code3, Style));
+  verifyNoChange(Code2, Style);
+  verifyNoChange(Code3, Style);
 
   Style.BreakBeforeInlineASMColon = FormatStyle::BBIAS_Always;
-  EXPECT_EQ(Code2, format(Code1, Style));
-  EXPECT_EQ(Code2, format(Code2, Style));
-  EXPECT_EQ(Code2, format(Code3, Style));
+  verifyFormat(Code2, Code1, Style);
+  verifyNoChange(Code2, Style);
+  verifyFormat(Code2, Code3, Style);
 }
 
 TEST_F(FormatTest, FormatTryCatch) {

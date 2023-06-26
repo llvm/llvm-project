@@ -2,6 +2,7 @@
 ; RUN: opt -passes=constraint-elimination -S %s | FileCheck %s
 
 declare void @use(i1)
+declare void @llvm.assume(i1)
 
 define void @phi_loop_1(i8 %x) {
 ; CHECK-LABEL: @phi_loop_1(
@@ -136,4 +137,122 @@ loop.exit:
 
 exit:
   ret void
+}
+
+define i1 @test_if_then_1(i8 %x) {
+; CHECK-LABEL: @test_if_then_1(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[CMP1:%.*]] = icmp sgt i8 [[X:%.*]], 1
+; CHECK-NEXT:    br i1 [[CMP1]], label [[IF:%.*]], label [[JOIN:%.*]]
+; CHECK:       if:
+; CHECK-NEXT:    [[CMP2:%.*]] = icmp sgt i8 [[X]], 0
+; CHECK-NEXT:    br label [[JOIN]]
+; CHECK:       join:
+; CHECK-NEXT:    [[PHI:%.*]] = phi i1 [ true, [[IF]] ], [ false, [[ENTRY:%.*]] ]
+; CHECK-NEXT:    ret i1 [[PHI]]
+;
+entry:
+  %cmp1 = icmp sgt i8 %x, 1
+  br i1 %cmp1, label %if, label %join
+
+if:
+  %cmp2 = icmp sgt i8 %x, 0
+  br label %join
+
+join:
+  %phi = phi i1 [ %cmp2, %if ], [ false, %entry ]
+  ret i1 %phi
+}
+
+
+define i1 @test_if_then_2(i1 %c, i8 %x) {
+; CHECK-LABEL: @test_if_then_2(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[CMP2:%.*]] = icmp sgt i8 [[X:%.*]], 0
+; CHECK-NEXT:    br i1 [[C:%.*]], label [[IF:%.*]], label [[JOIN:%.*]]
+; CHECK:       if:
+; CHECK-NEXT:    [[CMP1:%.*]] = icmp sgt i8 [[X]], 1
+; CHECK-NEXT:    call void @llvm.assume(i1 [[CMP1]])
+; CHECK-NEXT:    br label [[JOIN]]
+; CHECK:       join:
+; CHECK-NEXT:    [[PHI:%.*]] = phi i1 [ [[CMP2]], [[IF]] ], [ false, [[ENTRY:%.*]] ]
+; CHECK-NEXT:    ret i1 [[PHI]]
+;
+entry:
+  %cmp2 = icmp sgt i8 %x, 0
+  br i1 %c, label %if, label %join
+
+if:
+  %cmp1 = icmp sgt i8 %x, 1
+  call void @llvm.assume(i1 %cmp1)
+  br label %join
+
+join:
+  %phi = phi i1 [ %cmp2, %if ], [ false, %entry ]
+  ret i1 %phi
+}
+
+define i1 @test_if_then_3(i1 %c.0, i8 %x) {
+; CHECK-LABEL: @test_if_then_3(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    br i1 [[C_0:%.*]], label [[IF:%.*]], label [[JOIN:%.*]]
+; CHECK:       if:
+; CHECK-NEXT:    [[CMP1:%.*]] = icmp sgt i8 [[X:%.*]], 1
+; CHECK-NEXT:    [[CMP2:%.*]] = icmp sgt i8 [[X]], 1
+; CHECK-NEXT:    br i1 [[CMP1]], label [[THEN_1:%.*]], label [[JOIN]]
+; CHECK:       then.1:
+; CHECK-NEXT:    br label [[JOIN]]
+; CHECK:       join:
+; CHECK-NEXT:    [[PHI:%.*]] = phi i1 [ [[CMP2]], [[IF]] ], [ [[CMP2]], [[THEN_1]] ], [ false, [[ENTRY:%.*]] ]
+; CHECK-NEXT:    ret i1 [[PHI]]
+;
+entry:
+  br i1 %c.0, label %if, label %join
+
+if:
+  %cmp1 = icmp sgt i8 %x, 1
+  %cmp2 = icmp sgt i8 %x, 1
+  br i1 %cmp1, label %then.1, label %join
+
+then.1:
+  br label %join
+
+join:
+  %phi = phi i1 [ %cmp2, %if ], [ %cmp2, %then.1 ], [ false, %entry ]
+  ret i1 %phi
+}
+
+define i1 @test_if_then_4(i1 %c.0, i8 %x) {
+; CHECK-LABEL: @test_if_then_4(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    br i1 [[C_0:%.*]], label [[IF:%.*]], label [[JOIN:%.*]]
+; CHECK:       if:
+; CHECK-NEXT:    [[CMP1:%.*]] = icmp sgt i8 [[X:%.*]], 1
+; CHECK-NEXT:    [[CMP2:%.*]] = icmp sgt i8 [[X]], 1
+; CHECK-NEXT:    br i1 [[CMP1]], label [[THEN_1:%.*]], label [[ELSE_1:%.*]]
+; CHECK:       then.1:
+; CHECK-NEXT:    br label [[JOIN]]
+; CHECK:       else.1:
+; CHECK-NEXT:    br label [[JOIN]]
+; CHECK:       join:
+; CHECK-NEXT:    [[PHI:%.*]] = phi i1 [ [[CMP2]], [[ELSE_1]] ], [ [[CMP2]], [[THEN_1]] ], [ false, [[ENTRY:%.*]] ]
+; CHECK-NEXT:    ret i1 [[PHI]]
+;
+entry:
+  br i1 %c.0, label %if, label %join
+
+if:
+  %cmp1 = icmp sgt i8 %x, 1
+  %cmp2 = icmp sgt i8 %x, 1
+  br i1 %cmp1, label %then.1, label %else.1
+
+then.1:
+  br label %join
+
+else.1:
+  br label %join
+
+join:
+  %phi = phi i1 [ %cmp2, %else.1 ], [ %cmp2, %then.1 ], [ false, %entry ]
+  ret i1 %phi
 }

@@ -272,3 +272,17 @@ func.func @batch_reduce_gemm(%lhs: memref<7x8x9xf32>, %rhs: memref<7x9x8xf32>, %
 // CHECK:         %[[MUL:.+]] = arith.mulf %[[BBARG0]], %[[BBARG1]] : f32
 // CHECK:         %[[ADD:.+]] = arith.addf %[[BBARG2]], %[[MUL]] : f32
 // CHECK:         linalg.yield %[[ADD]] : f32
+
+// -----
+
+// CHECK-LABEL: generalize_linalg_map
+func.func @generalize_linalg_map(%arg0: memref<1x8x8x8xf32>) {
+  %cst = arith.constant 0.000000e+00 : f32
+  // CHECK: linalg.map
+  // CHECK-NOT: linalg.generic
+  linalg.map outs(%arg0 : memref<1x8x8x8xf32>)
+    () {
+      linalg.yield %cst : f32
+    }
+  return
+}

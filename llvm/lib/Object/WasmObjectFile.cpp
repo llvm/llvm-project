@@ -13,7 +13,6 @@
 #include "llvm/ADT/StringSet.h"
 #include "llvm/ADT/StringSwitch.h"
 #include "llvm/BinaryFormat/Wasm.h"
-#include "llvm/MC/SubtargetFeature.h"
 #include "llvm/Object/Binary.h"
 #include "llvm/Object/Error.h"
 #include "llvm/Object/ObjectFile.h"
@@ -24,6 +23,7 @@
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/LEB128.h"
 #include "llvm/Support/ScopedPrinter.h"
+#include "llvm/TargetParser/SubtargetFeature.h"
 #include "llvm/TargetParser/Triple.h"
 #include <algorithm>
 #include <cassert>

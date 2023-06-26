@@ -364,6 +364,45 @@ void OrderedAssignmentRewriter::post(hlfir::ForallMaskOp forallMaskOp) {
   builder.setInsertionPointAfter(constructStack.pop_back_val());
 }
 
+/// Convert an entity to the type of a given mold.
+/// This is intended to help with cases where hlfir entity is a value while
+/// it must be used as a variable or vice-versa. These mismatches may occur
+/// between the type of user defined assignment block arguments and the actual
+/// argument that was lowered for them. The actual may be an in-memory copy
+/// while the block argument expects an hlfir.expr.
+static hlfir::Entity
+convertToMoldType(mlir::Location loc, fir::FirOpBuilder &builder,
+                  hlfir::Entity input, hlfir::Entity mold,
+                  llvm::SmallVectorImpl<hlfir::CleanupFunction> &cleanups) {
+  if (input.getType() == mold.getType())
+    return input;
+  fir::FirOpBuilder *b = &builder;
+  if (input.isVariable() && mold.isValue()) {
+    if (fir::isa_trivial(mold.getType())) {
+      // fir.ref<T> to T.
+      mlir::Value load = builder.create<fir::LoadOp>(loc, input);
+      return hlfir::Entity{builder.createConvert(loc, mold.getType(), load)};
+    }
+    // fir.ref<T> to hlfir.expr<T>.
+    mlir::Value asExpr = builder.create<hlfir::AsExprOp>(loc, input);
+    if (asExpr.getType() != mold.getType())
+      TODO(loc, "hlfir.expr conversion");
+    cleanups.emplace_back([=]() { b->create<hlfir::DestroyOp>(loc, asExpr); });
+    return hlfir::Entity{asExpr};
+  }
+  if (input.isValue() && mold.isVariable()) {
+    // T to fir.ref<T>, or hlfir.expr<T> to fir.ref<T>.
+    hlfir::AssociateOp associate = hlfir::genAssociateExpr(
+        loc, builder, input, mold.getFortranElementType(), ".tmp.val2ref");
+    cleanups.emplace_back(
+        [=]() { b->create<hlfir::EndAssociateOp>(loc, associate); });
+    return hlfir::Entity{associate.getBase()};
+  }
+  // Variable to Variable mismatch (e.g., fir.heap<T> vs fir.ref<T>), or value
+  // to Value mismatch (e.g. i1 vs fir.logical<4>).
+  return hlfir::Entity{builder.createConvert(loc, mold.getType(), input)};
+}
+
 void OrderedAssignmentRewriter::pre(hlfir::RegionAssignOp regionAssignOp) {
   mlir::Location loc = regionAssignOp.getLoc();
   auto [rhs, oldRhsYield] =
@@ -372,11 +411,45 @@ void OrderedAssignmentRewriter::pre(hlfir::RegionAssignOp regionAssignOp) {
     TODO(loc, "assignment to vector subscripted entity");
   auto [lhs, oldLhsYield] =
       generateYieldedEntity(regionAssignOp.getLhsRegion());
-  if (!regionAssignOp.getUserDefinedAssignment().empty())
-    TODO(loc, "user defined assignment inside FORALL or WHERE");
-  // TODO: preserve allocatable assignment aspects for forall once
-  // they are conveyed in hlfir.region_assign.
-  builder.create<hlfir::AssignOp>(loc, rhs, lhs);
+  if (!regionAssignOp.getUserDefinedAssignment().empty()) {
+    hlfir::Entity userAssignLhs{regionAssignOp.getUserAssignmentLhs()};
+    hlfir::Entity userAssignRhs{regionAssignOp.getUserAssignmentRhs()};
+    hlfir::Entity lhsEntity{lhs};
+    hlfir::Entity rhsEntity{rhs};
+    fir::DoLoopOp outerElementalLoop = nullptr;
+    if (lhsEntity.isArray() && userAssignLhs.isScalar()) {
+      // Elemental assignment with array argument (the RHS cannot be an array
+      // if the LHS is not).
+      mlir::Value shape = hlfir::genShape(loc, builder, lhsEntity);
+      hlfir::LoopNest elementalLoopNest =
+          hlfir::genLoopNest(loc, builder, shape);
+      outerElementalLoop = elementalLoopNest.outerLoop;
+      builder.setInsertionPointToStart(elementalLoopNest.innerLoop.getBody());
+      lhsEntity = hlfir::getElementAt(loc, builder, lhsEntity,
+                                      elementalLoopNest.oneBasedIndices);
+      rhsEntity = hlfir::getElementAt(loc, builder, rhsEntity,
+                                      elementalLoopNest.oneBasedIndices);
+    }
+
+    llvm::SmallVector<hlfir::CleanupFunction, 2> argConversionCleanups;
+    lhsEntity = convertToMoldType(loc, builder, lhsEntity, userAssignLhs,
+                                  argConversionCleanups);
+    rhsEntity = convertToMoldType(loc, builder, rhsEntity, userAssignRhs,
+                                  argConversionCleanups);
+    mapper.map(userAssignLhs, lhsEntity);
+    mapper.map(userAssignRhs, rhsEntity);
+    for (auto &op :
+         regionAssignOp.getUserDefinedAssignment().front().without_terminator())
+      (void)builder.clone(op, mapper);
+    for (auto &cleanupConversion : argConversionCleanups)
+      cleanupConversion();
+    if (outerElementalLoop)
+      builder.setInsertionPointAfter(outerElementalLoop);
+  } else {
+    // TODO: preserve allocatable assignment aspects for forall once
+    // they are conveyed in hlfir.region_assign.
+    builder.create<hlfir::AssignOp>(loc, rhs, lhs);
+  }
   generateCleanupIfAny(oldRhsYield);
   generateCleanupIfAny(oldLhsYield);
 }
@@ -995,12 +1068,12 @@ public:
   mlir::LogicalResult
   matchAndRewrite(hlfir::RegionAssignOp regionAssignOp,
                   mlir::PatternRewriter &rewriter) const override {
+    auto root = mlir::cast<hlfir::OrderedAssignmentTreeOpInterface>(
+        regionAssignOp.getOperation());
     if (!regionAssignOp.getUserDefinedAssignment().empty())
-      TODO(regionAssignOp.getLoc(), "user defined assignment in HLFIR");
-    else
-      TODO(regionAssignOp.getLoc(),
-           "assignments to vector subscripted entity in HLFIR");
-    return mlir::failure();
+      return ::rewrite(root, /*tryFusingAssignments=*/false, rewriter);
+    TODO(regionAssignOp.getLoc(),
+         "assignments to vector subscripted entity in HLFIR");
   }
 };
 

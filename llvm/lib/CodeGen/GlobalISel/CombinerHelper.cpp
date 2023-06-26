@@ -2472,10 +2472,7 @@ bool CombinerHelper::matchConstantSelectCmp(MachineInstr &MI, unsigned &OpIdx) {
   return true;
 }
 
-bool CombinerHelper::eraseInst(MachineInstr &MI) {
-  MI.eraseFromParent();
-  return true;
-}
+void CombinerHelper::eraseInst(MachineInstr &MI) { MI.eraseFromParent(); }
 
 bool CombinerHelper::matchEqualDefs(const MachineOperand &MOP1,
                                     const MachineOperand &MOP2) {
@@ -2583,7 +2580,7 @@ bool CombinerHelper::matchConstantOp(const MachineOperand &MOP, int64_t C) {
          MaybeCst->getSExtValue() == C;
 }
 
-bool CombinerHelper::replaceSingleDefInstWithOperand(MachineInstr &MI,
+void CombinerHelper::replaceSingleDefInstWithOperand(MachineInstr &MI,
                                                      unsigned OpIdx) {
   assert(MI.getNumExplicitDefs() == 1 && "Expected one explicit def?");
   Register OldReg = MI.getOperand(0).getReg();
@@ -2591,17 +2588,15 @@ bool CombinerHelper::replaceSingleDefInstWithOperand(MachineInstr &MI,
   assert(canReplaceReg(OldReg, Replacement, MRI) && "Cannot replace register?");
   MI.eraseFromParent();
   replaceRegWith(MRI, OldReg, Replacement);
-  return true;
 }
 
-bool CombinerHelper::replaceSingleDefInstWithReg(MachineInstr &MI,
+void CombinerHelper::replaceSingleDefInstWithReg(MachineInstr &MI,
                                                  Register Replacement) {
   assert(MI.getNumExplicitDefs() == 1 && "Expected one explicit def?");
   Register OldReg = MI.getOperand(0).getReg();
   assert(canReplaceReg(OldReg, Replacement, MRI) && "Cannot replace register?");
   MI.eraseFromParent();
   replaceRegWith(MRI, OldReg, Replacement);
-  return true;
 }
 
 bool CombinerHelper::matchSelectSameVal(MachineInstr &MI) {
@@ -2636,36 +2631,32 @@ bool CombinerHelper::matchOperandIsKnownToBeAPowerOfTwo(MachineInstr &MI,
   return isKnownToBeAPowerOfTwo(MO.getReg(), MRI, KB);
 }
 
-bool CombinerHelper::replaceInstWithFConstant(MachineInstr &MI, double C) {
+void CombinerHelper::replaceInstWithFConstant(MachineInstr &MI, double C) {
   assert(MI.getNumDefs() == 1 && "Expected only one def?");
   Builder.setInstr(MI);
   Builder.buildFConstant(MI.getOperand(0), C);
   MI.eraseFromParent();
-  return true;
 }
 
-bool CombinerHelper::replaceInstWithConstant(MachineInstr &MI, int64_t C) {
+void CombinerHelper::replaceInstWithConstant(MachineInstr &MI, int64_t C) {
   assert(MI.getNumDefs() == 1 && "Expected only one def?");
   Builder.setInstr(MI);
   Builder.buildConstant(MI.getOperand(0), C);
   MI.eraseFromParent();
-  return true;
 }
 
-bool CombinerHelper::replaceInstWithConstant(MachineInstr &MI, APInt C) {
+void CombinerHelper::replaceInstWithConstant(MachineInstr &MI, APInt C) {
   assert(MI.getNumDefs() == 1 && "Expected only one def?");
   Builder.setInstr(MI);
   Builder.buildConstant(MI.getOperand(0), C);
   MI.eraseFromParent();
-  return true;
 }
 
-bool CombinerHelper::replaceInstWithUndef(MachineInstr &MI) {
+void CombinerHelper::replaceInstWithUndef(MachineInstr &MI) {
   assert(MI.getNumDefs() == 1 && "Expected only one def?");
   Builder.setInstr(MI);
   Builder.buildUndef(MI.getOperand(0));
   MI.eraseFromParent();
-  return true;
 }
 
 bool CombinerHelper::matchSimplifyAddToSub(
@@ -3274,7 +3265,7 @@ bool CombinerHelper::matchFoldBinOpIntoSelect(MachineInstr &MI,
 
 /// \p SelectOperand is the operand in binary operator \p MI that is the select
 /// to fold.
-bool CombinerHelper::applyFoldBinOpIntoSelect(MachineInstr &MI,
+void CombinerHelper::applyFoldBinOpIntoSelect(MachineInstr &MI,
                                               const unsigned &SelectOperand) {
   Builder.setInstrAndDebugLoc(MI);
 
@@ -3310,8 +3301,6 @@ bool CombinerHelper::applyFoldBinOpIntoSelect(MachineInstr &MI,
 
   Builder.buildSelect(Dst, SelectCond, FoldTrue, FoldFalse, MI.getFlags());
   MI.eraseFromParent();
-
-  return true;
 }
 
 std::optional<SmallVector<Register, 8>>
