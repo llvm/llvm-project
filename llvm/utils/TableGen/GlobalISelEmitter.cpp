@@ -309,6 +309,8 @@ public:
   void emitI64ImmPredicateFns(raw_ostream &OS) override;
   void emitAPFloatImmPredicateFns(raw_ostream &OS) override;
   void emitAPIntImmPredicateFns(raw_ostream &OS) override;
+  void emitTestSimplePredicate(raw_ostream &OS) override;
+  void emitRunCustomAction(raw_ostream &OS) override;
 
   const CodeGenTarget &getTarget() const override { return Target; }
   StringRef getClassName() const override { return ClassName; }
@@ -2268,14 +2270,13 @@ void GlobalISelEmitter::emitAdditionalImpl(raw_ostream &OS) {
   OS << "bool " << getClassName()
      << "::selectImpl(MachineInstr &I, CodeGenCoverage "
         "&CoverageInfo) const {\n"
-     << "  MachineRegisterInfo &MRI = MF->getRegInfo();\n"
      << "  const PredicateBitset AvailableFeatures = "
         "getAvailableFeatures();\n"
      << "  NewMIVector OutMIs;\n"
      << "  State.MIs.clear();\n"
      << "  State.MIs.push_back(&I);\n\n"
      << "  if (executeMatchTable(*this, OutMIs, State, ExecInfo"
-     << ", getMatchTable(), TII, MRI, TRI, RBI, AvailableFeatures"
+     << ", getMatchTable(), TII, MF->getRegInfo(), TRI, RBI, AvailableFeatures"
      << ", &CoverageInfo)) {\n"
      << "    return true;\n"
      << "  }\n\n"
@@ -2344,6 +2345,22 @@ void GlobalISelEmitter::emitAPIntImmPredicateFns(raw_ostream &OS) {
       &getPatFragPredicateEnumName,
       [&](Record *R) { return R->getValueAsString("ImmediateCode"); },
       "PatFrag predicates.");
+}
+
+void GlobalISelEmitter::emitTestSimplePredicate(raw_ostream &OS) {
+  OS << "bool " << getClassName() << "::testSimplePredicate(unsigned) const {\n"
+     << "    llvm_unreachable(\"" + getClassName() +
+            " does not support simple predicates!\");\n"
+     << "  return false;\n"
+     << "}\n";
+}
+
+void GlobalISelEmitter::emitRunCustomAction(raw_ostream &OS) {
+  OS << "void " << getClassName()
+     << "::runCustomAction(unsigned, const MatcherState&) const {\n"
+     << "    llvm_unreachable(\"" + getClassName() +
+            " does not support custom C++ actions!\");\n"
+     << "}\n";
 }
 
 void GlobalISelEmitter::run(raw_ostream &OS) {
