@@ -531,3 +531,19 @@ func.func @mul_identity(%arg0: index) -> (index, index) {
   // CHECK: return %idx0, %arg0
   return %0, %1 : index, index
 }
+
+// CHECK-LABEL: @add_identity
+func.func @add_identity(%arg0: index) -> index {
+  %idx0 = index.constant 0
+  %0 = index.add %arg0, %idx0
+  // CHECK-NEXT: return %arg0
+  return %0 : index
+}
+
+// CHECK-LABEL: @sub_identity
+func.func @sub_identity(%arg0: index) -> index {
+  %idx0 = index.constant 0
+  %0 = index.sub %arg0, %idx0
+  // CHECK-NEXT: return %arg0
+  return %0 : index
+}
