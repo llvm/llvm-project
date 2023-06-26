@@ -9,7 +9,7 @@
 #ifndef _STRING_H_
 #define _STRING_H_
 
-#include "stddef.h"
+typedef __typeof__(sizeof(0)) size_t;
 
 void *memcpy(void *dest, const void *src, size_t n);
 

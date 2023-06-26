@@ -181,16 +181,6 @@ New checks
   Converts standard library type traits of the form ``traits<...>::type`` and
   ``traits<...>::value`` into ``traits_t<...>`` and ``traits_v<...>`` respectively.
 
-- New :doc:`modernize-use-std-print
-  <clang-tidy/checks/modernize/use-std-print>` check.
-
-  Converts calls to ``printf``, ``fprintf``, ``absl::PrintF``,
-  ``absl::FPrintf`` or other functions via configuration options, to
-  equivalent calls to C++23's ``std::print`` and ``std::println``, or other
-  functions via a configuration option, modifying the format string
-  appropriately and removing now-unnecessary calls to
-  ``std::string::c_str()`` and ``std::string::data()``.
-
 - New :doc:`performance-avoid-endl
   <clang-tidy/checks/performance/avoid-endl>` check.
 
