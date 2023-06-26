@@ -58,3 +58,6 @@ f9008e6366c2496b1ca1785b891d5578174ad63e
 
 # [libc++][NFC] Apply clang-format on large parts of the code base
 5aa03b648b827128d439f705cd7d57d59673741d
+
+# [clang][NFC] Remove trailing whitespaces and enforce it in lib, include and docs
+f6d557ee34b6bbdb1dc32f29e34b4a4a8ad35e81
