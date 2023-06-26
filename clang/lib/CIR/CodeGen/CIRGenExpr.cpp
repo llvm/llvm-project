@@ -10,6 +10,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "CIRGenBuilder.h"
 #include "CIRGenCXXABI.h"
 #include "CIRGenCall.h"
 #include "CIRGenCstEmitter.h"
@@ -20,6 +21,8 @@
 #include "clang/AST/GlobalDecl.h"
 #include "clang/Basic/Builtins.h"
 #include "clang/CIR/Dialect/IR/CIRDialect.h"
+#include "clang/CIR/Dialect/IR/CIRTypes.h"
+#include "llvm/Support/Casting.h"
 
 #include "llvm/ADT/StringExtras.h"
 
@@ -36,8 +39,6 @@ static mlir::cir::FuncOp buildFunctionDeclPointer(CIRGenModule &CGM,
   assert(!FD->hasAttr<WeakRefAttr>() && "NYI");
 
   auto V = CGM.GetAddrOfFunction(GD);
-  assert(FD->hasPrototype() &&
-         "Only prototyped functions are currently callable");
 
   return V;
 }
@@ -893,16 +894,14 @@ RValue CIRGenFunction::buildCall(clang::QualType CalleeType,
   //
   // Chain calls use the same code path to add the inviisble chain parameter to
   // the function type.
-  assert(!isa<FunctionNoProtoType>(FnType) && "NYI");
-  // if (isa<FunctionNoProtoType>(FnType) || Chain) {
-  //   mlir::FunctionType CalleeTy = getTypes().GetFunctionType(FnInfo);
-  // int AS = Callee.getFunctionPointer()->getType()->getPointerAddressSpace();
-  // CalleeTy = CalleeTy->getPointerTo(AS);
+  if (isa<FunctionNoProtoType>(FnType) || Chain) {
+    assert(!UnimplementedFeature::chainCalls());
+    assert(!UnimplementedFeature::addressSpace());
 
-  // llvm::Value *CalleePtr = Callee.getFunctionPointer();
-  // CalleePtr = Builder.CreateBitCast(CalleePtr, CalleeTy, "callee.knr.cast");
-  // Callee.setFunctionPointer(CalleePtr);
-  // }
+    // Set no-proto function as callee.
+    auto Fn = llvm::dyn_cast<mlir::cir::FuncOp>(Callee.getFunctionPointer());
+    Callee.setFunctionPointer(Fn);
+  }
 
   assert(!CGM.getLangOpts().HIP && "HIP NYI");
 

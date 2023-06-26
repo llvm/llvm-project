@@ -61,6 +61,7 @@ struct UnimplementedFeature {
   // LLVM Attributes
   static bool attributeBuiltin() { return false; }
   static bool attributeNoBuiltin() { return false; }
+  static bool parameterAttributes() { return false; }
 
   // Coroutines
   static bool unhandledException() { return false; }
@@ -107,6 +108,10 @@ struct UnimplementedFeature {
   static bool alignedLoad() { return false; }
   static bool checkFunctionCallABI() { return false; }
   static bool zeroInitializer() { return false; }
+  static bool targetCodeGenInfoIsProtoCallVariadic() { return false; }
+  static bool chainCalls() { return false; }
+  static bool operandBundles() { return false; }
+  static bool exceptions() { return false; }
 };
 } // namespace cir
 

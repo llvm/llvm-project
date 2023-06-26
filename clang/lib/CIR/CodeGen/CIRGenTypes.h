@@ -249,6 +249,9 @@ public:
   const CIRGenFunctionInfo &
   arrangeFreeFunctionType(clang::CanQual<clang::FunctionProtoType> Ty);
 
+  const CIRGenFunctionInfo &
+  arrangeFreeFunctionType(clang::CanQual<clang::FunctionNoProtoType> FTNP);
+
   /// "Arrange" the CIR information for a call or type with the given
   /// signature. This is largely an internal method; other clients should use
   /// one of the above routines, which ultimatley defer to this.
