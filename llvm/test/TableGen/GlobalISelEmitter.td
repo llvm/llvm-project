@@ -73,19 +73,19 @@ def HasC : Predicate<"Subtarget->hasC()"> { let RecomputePerFunction = 1; }
 // CHECK-NEXT:    mutable MatcherState State;
 // CHECK-NEXT:    typedef ComplexRendererFns(MyTargetInstructionSelector::*ComplexMatcherMemFn)(MachineOperand &) const;
 // CHECK-NEXT:    typedef void(MyTargetInstructionSelector::*CustomRendererFn)(MachineInstrBuilder &, const MachineInstr &, int) const;
-// CHECK-NEXT:    const ISelInfoTy<PredicateBitset, ComplexMatcherMemFn, CustomRendererFn> ISelInfo;
+// CHECK-NEXT:    const ExecInfoTy<PredicateBitset, ComplexMatcherMemFn, CustomRendererFn> ExecInfo;
 // CHECK-NEXT:    static MyTargetInstructionSelector::ComplexMatcherMemFn ComplexPredicateFns[];
 // CHECK-NEXT:    static MyTargetInstructionSelector::CustomRendererFn CustomRenderers[];
 // CHECK-NEXT:    bool testImmPredicate_I64(unsigned PredicateID, int64_t Imm) const override;
 // CHECK-NEXT:    bool testImmPredicate_APInt(unsigned PredicateID, const APInt &Imm) const override;
 // CHECK-NEXT:    bool testImmPredicate_APFloat(unsigned PredicateID, const APFloat &Imm) const override;
 // CHECK-NEXT:    const int64_t *getMatchTable() const override;
-// CHECK-NEXT:    bool testMIPredicate_MI(unsigned PredicateID, const MachineInstr &MI, const std::array<const MachineOperand *, 3> &Operands) const override;
+// CHECK-NEXT:    bool testMIPredicate_MI(unsigned PredicateID, const MachineInstr &MI, const MatcherState &State) const override;
 // CHECK-NEXT:  #endif // ifdef GET_GLOBALISEL_TEMPORARIES_DECL
 
 // CHECK-LABEL: #ifdef GET_GLOBALISEL_TEMPORARIES_INIT
 // CHECK-NEXT:    , State(3),
-// CHECK-NEXT:    ISelInfo(TypeObjects, NumTypeObjects, FeatureBitsets, ComplexPredicateFns, CustomRenderers)
+// CHECK-NEXT:    ExecInfo(TypeObjects, NumTypeObjects, FeatureBitsets, ComplexPredicateFns, CustomRenderers)
 // CHECK-NEXT:  #endif // ifdef GET_GLOBALISEL_TEMPORARIES_INIT
 
 // CHECK-LABEL: enum SubtargetFeatureBits : uint8_t {
@@ -144,19 +144,19 @@ def HasC : Predicate<"Subtarget->hasC()"> { let RecomputePerFunction = 1; }
 
 // CHECK-LABEL: // PatFrag predicates.
 // CHECK-NEXT:  enum {
-// CHECK-NEXT:    GIPFP_I64_Predicate_cimm8 = GIPFP_I64_Invalid + 1,
-// CHECK-NEXT:    GIPFP_I64_Predicate_simm8,
+// CHECK-NEXT:    GICXXPred_I64_Predicate_cimm8 = GICXXPred_I64_Invalid + 1,
+// CHECK-NEXT:    GICXXPred_I64_Predicate_simm8,
 // CHECK-NEXT:  };
 
 
 // CHECK-NEXT: bool MyTargetInstructionSelector::testImmPredicate_I64(unsigned PredicateID, int64_t Imm) const {
 // CHECK-NEXT:   switch (PredicateID) {
-// CHECK-NEXT:   case GIPFP_I64_Predicate_cimm8: {
+// CHECK-NEXT:   case GICXXPred_I64_Predicate_cimm8: {
 // CHECK-NEXT:     return isInt<8>(Imm);
 // CHECK-NEXT:     llvm_unreachable("ImmediateCode should have returned");
 // CHECK-NEXT:     return false;
 // CHECK-NEXT:   }
-// CHECK-NEXT:   case GIPFP_I64_Predicate_simm8: {
+// CHECK-NEXT:   case GICXXPred_I64_Predicate_simm8: {
 // CHECK-NEXT:      return isInt<8>(Imm);
 // CHECK-NEXT:     llvm_unreachable("ImmediateCode should have returned");
 // CHECK-NEXT:     return false;
@@ -168,11 +168,11 @@ def HasC : Predicate<"Subtarget->hasC()"> { let RecomputePerFunction = 1; }
 
 // CHECK-LABEL: // PatFrag predicates.
 // CHECK-NEXT:  enum {
-// CHECK-NEXT:    GIPFP_APFloat_Predicate_fpimmz = GIPFP_APFloat_Invalid + 1,
+// CHECK-NEXT:    GICXXPred_APFloat_Predicate_fpimmz = GICXXPred_APFloat_Invalid + 1,
 // CHECK-NEXT:  };
 // CHECK-NEXT:  bool MyTargetInstructionSelector::testImmPredicate_APFloat(unsigned PredicateID, const APFloat & Imm) const {
 // CHECK-NEXT:    switch (PredicateID) {
-// CHECK-NEXT:    case GIPFP_APFloat_Predicate_fpimmz: {
+// CHECK-NEXT:    case GICXXPred_APFloat_Predicate_fpimmz: {
 // CHECK-NEXT:      return Imm->isExactlyValue(0.0);
 // CHECK-NEXT:      llvm_unreachable("ImmediateCode should have returned");
 // CHECK-NEXT:      return false;
@@ -184,11 +184,11 @@ def HasC : Predicate<"Subtarget->hasC()"> { let RecomputePerFunction = 1; }
 
 // CHECK-LABEL: // PatFrag predicates.
 // CHECK-NEXT:  enum {
-// CHECK-NEXT:    GIPFP_APInt_Predicate_simm9 = GIPFP_APInt_Invalid + 1,
+// CHECK-NEXT:    GICXXPred_APInt_Predicate_simm9 = GICXXPred_APInt_Invalid + 1,
 // CHECK-NEXT:  };
 // CHECK-NEXT:  bool MyTargetInstructionSelector::testImmPredicate_APInt(unsigned PredicateID, const APInt & Imm) const {
 // CHECK-NEXT:    switch (PredicateID) {
-// CHECK-NEXT:    case GIPFP_APInt_Predicate_simm9: {
+// CHECK-NEXT:    case GICXXPred_APInt_Predicate_simm9: {
 // CHECK-NEXT:      return isInt<9>(Imm->getSExtValue());
 // CHECK-NEXT:      llvm_unreachable("ImmediateCode should have returned");
 // CHECK-NEXT:      return false;
@@ -224,7 +224,7 @@ def HasC : Predicate<"Subtarget->hasC()"> { let RecomputePerFunction = 1; }
 // CHECK-NEXT: State.MIs.clear();
 // CHECK-NEXT: State.MIs.push_back(&I);
 
-// CHECK:      if (executeMatchTable(*this, OutMIs, State, ISelInfo, getMatchTable(), TII, MRI, TRI, RBI, AvailableFeatures, CoverageInfo)) {
+// CHECK:      if (executeMatchTable(*this, OutMIs, State, ExecInfo, getMatchTable(), TII, MRI, TRI, RBI, AvailableFeatures, &CoverageInfo)) {
 // CHECK-NEXT:   return true;
 // CHECK-NEXT: }
 
@@ -354,12 +354,12 @@ def : Pat<(select GPR32:$src1, (complex_rr GPR32:$src2a, GPR32:$src2b),
 // R21N-NEXT:    // MIs[0] src2
 // R21N-NEXT:    GIM_CheckType, /*MI*/0, /*Op*/2, /*Type*/GILLT_s32,
 //
-// R21O-NEXT:    GIM_CheckCxxInsnPredicate, /*MI*/0, /*FnId*/GIPFP_MI_Predicate_frag,
+// R21O-NEXT:    GIM_CheckCxxInsnPredicate, /*MI*/0, /*FnId*/GICXXPred_MI_Predicate_frag,
 // R21C-NEXT:    GIM_CheckComplexPattern, /*MI*/0, /*Op*/2, /*Renderer*/0, GICP_gi_complex,
 // R21N-NEXT:    // MIs[0] src3
 // R21N-NEXT:    GIM_CheckType, /*MI*/0, /*Op*/3, /*Type*/GILLT_s32,
 // R21C-NEXT:    GIM_CheckComplexPattern, /*MI*/0, /*Op*/3, /*Renderer*/1, GICP_gi_complex,
-// R21N-NEXT:    GIM_CheckCxxInsnPredicate, /*MI*/0, /*FnId*/GIPFP_MI_Predicate_frag,
+// R21N-NEXT:    GIM_CheckCxxInsnPredicate, /*MI*/0, /*FnId*/GICXXPred_MI_Predicate_frag,
 // R21C-NEXT:    // (select:{ *:[i32] } GPR32:{ *:[i32] }:$src1, complex:{ *:[i32] }:$src2, complex:{ *:[i32] }:$src3)<<P:Predicate_frag>> => (INSN2:{ *:[i32] } GPR32:{ *:[i32] }:$src1, complex:{ *:[i32] }:$src3, complex:{ *:[i32] }:$src2)
 
 // R21C-NEXT:    GIR_BuildMI, /*InsnID*/0, /*Opcode*/MyTarget::INSN2,
@@ -851,7 +851,7 @@ def MOV1 : I<(outs GPR32:$dst), (ins), [(set GPR32:$dst, 1)]>;
 // NOOPT-NEXT:  GIM_Try, /*On fail goto*//*Label [[LABEL_NUM:[0-9]+]]*/ [[LABEL:[0-9]+]],
 // NOOPT-NEXT:    GIM_CheckNumOperands, /*MI*/0, /*Expected*/2,
 // NOOPT-NEXT:    GIM_CheckOpcode, /*MI*/0, TargetOpcode::G_CONSTANT,
-// NOOPT-NEXT:    GIM_CheckI64ImmPredicate, /*MI*/0, /*Predicate*/GIPFP_I64_Predicate_simm8,
+// NOOPT-NEXT:    GIM_CheckI64ImmPredicate, /*MI*/0, /*Predicate*/GICXXPred_I64_Predicate_simm8,
 // NOOPT-NEXT:    // MIs[0] dst
 // NOOPT-NEXT:    GIM_CheckType, /*MI*/0, /*Op*/0, /*Type*/GILLT_s32,
 // NOOPT-NEXT:    GIM_CheckRegBankForClass, /*MI*/0, /*Op*/0, /*RC*/MyTarget::GPR32RegClassID,
@@ -875,7 +875,7 @@ def MOVimm8 : I<(outs GPR32:$dst), (ins i32imm:$imm), [(set GPR32:$dst, simm8:$i
 // NOOPT-NEXT:  GIM_Try, /*On fail goto*//*Label [[LABEL_NUM:[0-9]+]]*/ [[LABEL:[0-9]+]],
 // NOOPT-NEXT:    GIM_CheckNumOperands, /*MI*/0, /*Expected*/2,
 // NOOPT-NEXT:    GIM_CheckOpcode, /*MI*/0, TargetOpcode::G_CONSTANT,
-// NOOPT-NEXT:    GIM_CheckAPIntImmPredicate, /*MI*/0, /*Predicate*/GIPFP_APInt_Predicate_simm9,
+// NOOPT-NEXT:    GIM_CheckAPIntImmPredicate, /*MI*/0, /*Predicate*/GICXXPred_APInt_Predicate_simm9,
 // NOOPT-NEXT:    // MIs[0] dst
 // NOOPT-NEXT:    GIM_CheckType, /*MI*/0, /*Op*/0, /*Type*/GILLT_s32,
 // NOOPT-NEXT:    GIM_CheckRegBankForClass, /*MI*/0, /*Op*/0, /*RC*/MyTarget::GPR32RegClassID,
@@ -899,7 +899,7 @@ def MOVimm9 : I<(outs GPR32:$dst), (ins i32imm:$imm), [(set GPR32:$dst, simm9:$i
 // NOOPT-NEXT:  GIM_Try, /*On fail goto*//*Label [[LABEL_NUM:[0-9]+]]*/ [[LABEL:[0-9]+]],
 // NOOPT-NEXT:    GIM_CheckNumOperands, /*MI*/0, /*Expected*/2,
 // NOOPT-NEXT:    GIM_CheckOpcode, /*MI*/0, TargetOpcode::G_CONSTANT,
-// NOOPT-NEXT:    GIM_CheckI64ImmPredicate, /*MI*/0, /*Predicate*/GIPFP_I64_Predicate_cimm8,
+// NOOPT-NEXT:    GIM_CheckI64ImmPredicate, /*MI*/0, /*Predicate*/GICXXPred_I64_Predicate_cimm8,
 // NOOPT-NEXT:    // MIs[0] dst
 // NOOPT-NEXT:    GIM_CheckType, /*MI*/0, /*Op*/0, /*Type*/GILLT_s32,
 // NOOPT-NEXT:    GIM_CheckRegBankForClass, /*MI*/0, /*Op*/0, /*RC*/MyTarget::GPR32RegClassID,
@@ -922,7 +922,7 @@ def MOVcimm8 : I<(outs GPR32:$dst), (ins i32imm:$imm), [(set GPR32:$dst, cimm8:$
 // NOOPT-NEXT:  GIM_Try, /*On fail goto*//*Label [[LABEL_NUM:[0-9]+]]*/ [[LABEL:[0-9]+]],
 // NOOPT-NEXT:    GIM_CheckNumOperands, /*MI*/0, /*Expected*/2,
 // NOOPT-NEXT:    GIM_CheckOpcode, /*MI*/0, TargetOpcode::G_FCONSTANT,
-// NOOPT-NEXT:    GIM_CheckAPFloatImmPredicate, /*MI*/0, /*Predicate*/GIPFP_APFloat_Predicate_fpimmz,
+// NOOPT-NEXT:    GIM_CheckAPFloatImmPredicate, /*MI*/0, /*Predicate*/GICXXPred_APFloat_Predicate_fpimmz,
 // NOOPT-NEXT:    // MIs[0] dst
 // NOOPT-NEXT:    GIM_CheckType, /*MI*/0, /*Op*/0, /*Type*/GILLT_s32,
 // NOOPT-NEXT:    GIM_CheckRegBankForClass, /*MI*/0, /*Op*/0, /*RC*/MyTarget::FPR32RegClassID,
