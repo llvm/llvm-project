@@ -728,13 +728,17 @@ static void finalizeBlockRelax(LinkGraph &G, Block &Block, BlockRelaxAux &Aux) {
 
   // Fixup edge offsets and kinds.
   Delta = 0;
-  for (auto [I, E] : llvm::enumerate(Aux.RelaxEdges)) {
-    E->setOffset(E->getOffset() - Delta);
+  size_t I = 0;
+  for (auto &E : Block.edges()) {
+    E.setOffset(E.getOffset() - Delta);
 
-    if (Aux.EdgeKinds[I] != Edge::Invalid)
-      E->setKind(Aux.EdgeKinds[I]);
+    if (I < Aux.RelaxEdges.size() && Aux.RelaxEdges[I] == &E) {
+      if (Aux.EdgeKinds[I] != Edge::Invalid)
+        E.setKind(Aux.EdgeKinds[I]);
 
-    Delta = Aux.RelocDeltas[I];
+      Delta = Aux.RelocDeltas[I];
+      ++I;
+    }
   }
 
   // Remove AlignRelaxable edges: all other relaxable edges got modified and
