@@ -647,7 +647,7 @@ static mlir::Value genCombiner(fir::FirOpBuilder &builder, mlir::Location loc,
 
       llvm::SmallVector<fir::DoLoopOp> loops;
       llvm::SmallVector<mlir::Value> ivs;
-      for (auto ext : seqTy.getShape()) {
+      for (auto ext : llvm::reverse(seqTy.getShape())) {
         auto lb = builder.create<mlir::arith::ConstantOp>(
             loc, idxTy, builder.getIntegerAttr(idxTy, 0));
         auto ub = builder.create<mlir::arith::ConstantOp>(
