@@ -535,39 +535,40 @@ getReductionOperator(const Fortran::parser::AccReductionOperator &op) {
   llvm_unreachable("unexpected reduction operator");
 }
 
-/// Get the correct DenseElementsAttr attribute for the given init value.
-/// The verifier on the DenseElementsAttr is strict about the init value passed
-/// to it so it must matched the type.
-static mlir::DenseElementsAttr getDenseAttr(mlir::ShapedType shTy,
-                                            int64_t value) {
-  if (shTy.getElementType().isIntOrIndex()) {
-    if (auto intTy = mlir::dyn_cast<mlir::IntegerType>(shTy.getElementType())) {
-      if (intTy.getIntOrFloatBitWidth() == 8)
-        return mlir::DenseElementsAttr::get(shTy, static_cast<int8_t>(value));
-      if (intTy.getIntOrFloatBitWidth() == 16)
-        return mlir::DenseElementsAttr::get(shTy, static_cast<int16_t>(value));
-      if (intTy.getIntOrFloatBitWidth() == 32)
-        return mlir::DenseElementsAttr::get(shTy, static_cast<int32_t>(value));
-      if (intTy.getIntOrFloatBitWidth() == 64)
-        return mlir::DenseElementsAttr::get(shTy, value);
+/// Get the initial value for reduction operator.
+template <typename R>
+static R getReductionInitValue(mlir::acc::ReductionOperator op, mlir::Type ty) {
+  if (op == mlir::acc::ReductionOperator::AccMin) {
+    // min init value -> largest
+    if constexpr (std::is_same_v<R, llvm::APInt>) {
+      assert(ty.isIntOrIndex() && "expect integer or index type");
+      return llvm::APInt::getSignedMaxValue(ty.getIntOrFloatBitWidth());
     }
-  }
-
-  if (mlir::isa<mlir::FloatType>(shTy.getElementType())) {
-    if (auto intTy = mlir::dyn_cast<mlir::FloatType>(shTy.getElementType())) {
-      if (intTy.getIntOrFloatBitWidth() == 16)
-        return mlir::DenseElementsAttr::get(shTy, static_cast<float>(value));
-      if (intTy.getIntOrFloatBitWidth() == 32)
-        return mlir::DenseElementsAttr::get(shTy, static_cast<float>(value));
-      if (intTy.getIntOrFloatBitWidth() == 64)
-        return mlir::DenseElementsAttr::get(shTy, static_cast<double>(value));
-      if (intTy.getIntOrFloatBitWidth() == 128)
-        return mlir::DenseElementsAttr::get(shTy,
-                                            static_cast<long double>(value));
+    if constexpr (std::is_same_v<R, llvm::APFloat>) {
+      auto floatTy = mlir::dyn_cast_or_null<mlir::FloatType>(ty);
+      assert(floatTy && "expect float type");
+      return llvm::APFloat::getLargest(floatTy.getFloatSemantics(),
+                                       /*negative=*/false);
     }
-  }
+  } else {
+    // +, ior, ieor init value -> 0
+    // * init value -> 1
+    int64_t value = (op == mlir::acc::ReductionOperator::AccMul) ? 1 : 0;
+    if constexpr (std::is_same_v<R, llvm::APInt>) {
+      assert(ty.isIntOrIndex() && "expect integer or index type");
+      return llvm::APInt(ty.getIntOrFloatBitWidth(), value, true);
+    }
 
-  llvm_unreachable("unsupported dense attribute type");
+    if constexpr (std::is_same_v<R, llvm::APFloat>) {
+      assert(mlir::isa<mlir::FloatType>(ty) && "expect float type");
+      auto floatTy = mlir::dyn_cast<mlir::FloatType>(ty);
+      return llvm::APFloat(floatTy.getFloatSemantics(), value);
+    }
+
+    if constexpr (std::is_same_v<R, int64_t>)
+      return value;
+  }
+  llvm_unreachable("OpenACC reduction unsupported type");
 }
 
 static mlir::Value genReductionInitValue(fir::FirOpBuilder &builder,
@@ -581,19 +582,34 @@ static mlir::Value genReductionInitValue(fir::FirOpBuilder &builder,
 
   // min -> largest
   if (op == mlir::acc::ReductionOperator::AccMin) {
-    if (ty.isIntOrIndex()) {
-      unsigned bits = ty.getIntOrFloatBitWidth();
+    if (ty.isIntOrIndex())
       return builder.create<mlir::arith::ConstantOp>(
           loc, ty,
-          builder.getIntegerAttr(
-              ty, llvm::APInt::getSignedMaxValue(bits).getSExtValue()));
-    }
-    if (auto floatTy = mlir::dyn_cast_or_null<mlir::FloatType>(ty)) {
-      const llvm::fltSemantics &sem = floatTy.getFloatSemantics();
+          builder.getIntegerAttr(ty,
+                                 getReductionInitValue<llvm::APInt>(op, ty)));
+    if (auto floatTy = mlir::dyn_cast_or_null<mlir::FloatType>(ty))
       return builder.create<mlir::arith::ConstantOp>(
           loc, ty,
-          builder.getFloatAttr(
-              ty, llvm::APFloat::getLargest(sem, /*negative=*/false)));
+          builder.getFloatAttr(ty,
+                               getReductionInitValue<llvm::APFloat>(op, ty)));
+    if (auto refTy = mlir::dyn_cast<fir::ReferenceType>(ty)) {
+      if (auto seqTy = mlir::dyn_cast<fir::SequenceType>(refTy.getEleTy())) {
+        mlir::Type vecTy =
+            mlir::VectorType::get(seqTy.getShape(), seqTy.getEleTy());
+        auto shTy = vecTy.cast<mlir::ShapedType>();
+        if (seqTy.getEleTy().isIntOrIndex())
+          return builder.create<mlir::arith::ConstantOp>(
+              loc, vecTy,
+              mlir::DenseElementsAttr::get(
+                  shTy,
+                  getReductionInitValue<llvm::APInt>(op, seqTy.getEleTy())));
+        if (mlir::isa<mlir::FloatType>(seqTy.getEleTy()))
+          return builder.create<mlir::arith::ConstantOp>(
+              loc, vecTy,
+              mlir::DenseElementsAttr::get(
+                  shTy,
+                  getReductionInitValue<llvm::APFloat>(op, seqTy.getEleTy())));
+      }
     }
     // max -> least
   } else if (op == mlir::acc::ReductionOperator::AccMax) {
@@ -610,22 +626,31 @@ static mlir::Value genReductionInitValue(fir::FirOpBuilder &builder,
               ty, llvm::APFloat::getSmallest(floatTy.getFloatSemantics(),
                                              /*negative=*/true)));
   } else {
-    // 0 for +, ior, ieor
-    // 1 for *
-    int64_t initValue = op == mlir::acc::ReductionOperator::AccMul ? 1 : 0;
     if (ty.isIntOrIndex())
       return builder.create<mlir::arith::ConstantOp>(
-          loc, ty, builder.getIntegerAttr(ty, initValue));
+          loc, ty,
+          builder.getIntegerAttr(ty, getReductionInitValue<int64_t>(op, ty)));
     if (mlir::isa<mlir::FloatType>(ty))
       return builder.create<mlir::arith::ConstantOp>(
-          loc, ty, builder.getFloatAttr(ty, initValue));
+          loc, ty,
+          builder.getFloatAttr(ty, getReductionInitValue<int64_t>(op, ty)));
     if (auto refTy = mlir::dyn_cast<fir::ReferenceType>(ty)) {
       if (auto seqTy = mlir::dyn_cast<fir::SequenceType>(refTy.getEleTy())) {
-        mlir::Type vecType =
+        mlir::Type vecTy =
             mlir::VectorType::get(seqTy.getShape(), seqTy.getEleTy());
-        mlir::DenseElementsAttr denseAttr =
-            getDenseAttr(vecType.cast<mlir::ShapedType>(), initValue);
-        return builder.create<mlir::arith::ConstantOp>(loc, vecType, denseAttr);
+        auto shTy = vecTy.cast<mlir::ShapedType>();
+        if (seqTy.getEleTy().isIntOrIndex())
+          return builder.create<mlir::arith::ConstantOp>(
+              loc, vecTy,
+              mlir::DenseElementsAttr::get(
+                  shTy,
+                  getReductionInitValue<llvm::APInt>(op, seqTy.getEleTy())));
+        if (mlir::isa<mlir::FloatType>(seqTy.getEleTy()))
+          return builder.create<mlir::arith::ConstantOp>(
+              loc, vecTy,
+              mlir::DenseElementsAttr::get(
+                  shTy,
+                  getReductionInitValue<llvm::APFloat>(op, seqTy.getEleTy())));
       }
     }
   }
