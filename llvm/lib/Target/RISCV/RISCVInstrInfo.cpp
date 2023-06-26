@@ -245,7 +245,7 @@ static bool isConvertibleToVMV_V_V(const RISCVSubtarget &STI,
       for (const MachineOperand &MO : MBBI->explicit_operands()) {
         if (!MO.isReg() || !MO.isDef())
           continue;
-        if (!FoundDef && TRI->isSubRegisterEq(MO.getReg(), SrcReg)) {
+        if (!FoundDef && TRI->regsOverlap(MO.getReg(), SrcReg)) {
           // We only permit the source of COPY has the same LMUL as the defined
           // operand.
           // There are cases we need to keep the whole register copy if the LMUL

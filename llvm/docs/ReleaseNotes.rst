@@ -173,6 +173,8 @@ Changes to the LoongArch Backend
 --------------------------------
 
 * The ``lp64s`` ABI is supported now and has been tested on Rust bare-matal target.
+* A target feature ``ual`` is introduced to allow unaligned memory accesses and
+  this feature is enabled by default for generic 64-bit processors.
 
 Changes to the MIPS Backend
 ---------------------------
