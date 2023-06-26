@@ -98,9 +98,13 @@ def LLVM_SDivOp : LLVM_IntArithmeticOp<"sdiv", "SDiv">;
 def LLVM_URemOp : LLVM_IntArithmeticOp<"urem", "URem">;
 def LLVM_SRemOp : LLVM_IntArithmeticOp<"srem", "SRem">;
 def LLVM_AndOp : LLVM_IntArithmeticOp<"and", "And">;
-def LLVM_OrOp : LLVM_IntArithmeticOp<"or", "Or">;
+def LLVM_OrOp : LLVM_IntArithmeticOp<"or", "Or"> {
+  let hasFolder = 1;
+}
 def LLVM_XOrOp : LLVM_IntArithmeticOp<"xor", "Xor">;
-def LLVM_ShlOp : LLVM_IntArithmeticOp<"shl", "Shl">;
+def LLVM_ShlOp : LLVM_IntArithmeticOp<"shl", "Shl"> {
+  let hasFolder = 1;
+}
 def LLVM_LShrOp : LLVM_IntArithmeticOp<"lshr", "LShr">;
 def LLVM_AShrOp : LLVM_IntArithmeticOp<"ashr", "AShr">;
 
@@ -495,10 +499,15 @@ def LLVM_PtrToIntOp : LLVM_CastOp<"ptrtoint", "PtrToInt",
                                   LLVM_ScalarOrVectorOf<AnyInteger>>;
 def LLVM_SExtOp : LLVM_CastOp<"sext", "SExt",
                               LLVM_ScalarOrVectorOf<AnyInteger>,
-                              LLVM_ScalarOrVectorOf<AnyInteger>>;
+                              LLVM_ScalarOrVectorOf<AnyInteger>> {
+  let hasVerifier = 1;
+}
 def LLVM_ZExtOp : LLVM_CastOp<"zext", "ZExt",
                               LLVM_ScalarOrVectorOf<AnyInteger>,
-                              LLVM_ScalarOrVectorOf<AnyInteger>>;
+                              LLVM_ScalarOrVectorOf<AnyInteger>> {
+  let hasFolder = 1;
+  let hasVerifier = 1;
+}
 def LLVM_TruncOp : LLVM_CastOp<"trunc", "Trunc",
                                LLVM_ScalarOrVectorOf<AnyInteger>,
                                LLVM_ScalarOrVectorOf<AnyInteger>>;

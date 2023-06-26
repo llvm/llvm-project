@@ -2532,6 +2532,64 @@ LogicalResult FenceOp::verify() {
 }
 
 //===----------------------------------------------------------------------===//
+// Verifier for extension ops
+//===----------------------------------------------------------------------===//
+
+/// Verifies that the given extension operation operates on consistent scalars
+/// or vectors, and that the target width is larger than the input width.
+template <class ExtOp>
+static LogicalResult verifyExtOp(ExtOp op) {
+  IntegerType inputType, outputType;
+  if (isCompatibleVectorType(op.getArg().getType())) {
+    if (!isCompatibleVectorType(op.getResult().getType()))
+      return op.emitError(
+          "input type is a vector but output type is an integer");
+    if (getVectorNumElements(op.getArg().getType()) !=
+        getVectorNumElements(op.getResult().getType()))
+      return op.emitError("input and output vectors are of incompatible shape");
+    // Because this is a CastOp, the element of vectors is guaranteed to be an
+    // integer.
+    inputType = cast<IntegerType>(getVectorElementType(op.getArg().getType()));
+    outputType =
+        cast<IntegerType>(getVectorElementType(op.getResult().getType()));
+  } else {
+    // Because this is a CastOp and arg is not a vector, arg is guaranteed to be
+    // an integer.
+    inputType = cast<IntegerType>(op.getArg().getType());
+    outputType = dyn_cast<IntegerType>(op.getResult().getType());
+    if (!outputType)
+      return op.emitError(
+          "input type is an integer but output type is a vector");
+  }
+
+  if (outputType.getWidth() <= inputType.getWidth())
+    return op.emitError("integer width of the output type is smaller or "
+                        "equal to the integer width of the input type");
+  return success();
+}
+
+//===----------------------------------------------------------------------===//
+// ZExtOp
+//===----------------------------------------------------------------------===//
+
+LogicalResult ZExtOp::verify() { return verifyExtOp<ZExtOp>(*this); }
+
+OpFoldResult LLVM::ZExtOp::fold(FoldAdaptor adaptor) {
+  auto arg = dyn_cast_or_null<IntegerAttr>(adaptor.getArg());
+  if (!arg)
+    return {};
+
+  size_t targetSize = cast<IntegerType>(getType()).getWidth();
+  return IntegerAttr::get(getType(), arg.getValue().zext(targetSize));
+}
+
+//===----------------------------------------------------------------------===//
+// SExtOp
+//===----------------------------------------------------------------------===//
+
+LogicalResult SExtOp::verify() { return verifyExtOp<SExtOp>(*this); }
+
+//===----------------------------------------------------------------------===//
 // Folder and verifier for LLVM::BitcastOp
 //===----------------------------------------------------------------------===//
 
@@ -2645,6 +2703,42 @@ OpFoldResult LLVM::GEPOp::fold(FoldAdaptor adaptor) {
   }
 
   return {};
+}
+
+//===----------------------------------------------------------------------===//
+// ShlOp
+//===----------------------------------------------------------------------===//
+
+OpFoldResult LLVM::ShlOp::fold(FoldAdaptor adaptor) {
+  auto rhs = dyn_cast_or_null<IntegerAttr>(adaptor.getRhs());
+  if (!rhs)
+    return {};
+
+  if (rhs.getValue().getZExtValue() >=
+      getLhs().getType().getIntOrFloatBitWidth())
+    return {}; // TODO: Fold into poison.
+
+  auto lhs = dyn_cast_or_null<IntegerAttr>(adaptor.getLhs());
+  if (!lhs)
+    return {};
+
+  return IntegerAttr::get(getType(), lhs.getValue().shl(rhs.getValue()));
+}
+
+//===----------------------------------------------------------------------===//
+// OrOp
+//===----------------------------------------------------------------------===//
+
+OpFoldResult LLVM::OrOp::fold(FoldAdaptor adaptor) {
+  auto lhs = dyn_cast_or_null<IntegerAttr>(adaptor.getLhs());
+  if (!lhs)
+    return {};
+
+  auto rhs = dyn_cast_or_null<IntegerAttr>(adaptor.getRhs());
+  if (!rhs)
+    return {};
+
+  return IntegerAttr::get(getType(), lhs.getValue() | rhs.getValue());
 }
 
 //===----------------------------------------------------------------------===//
@@ -3184,6 +3278,15 @@ LogicalResult LLVMDialect::verifyRegionResultAttribute(Operation *op,
       name == LLVMDialect::getWriteOnlyAttrName())
     return op->emitError() << name << " is not a valid result attribute";
   return verifyParameterAttribute(op, resType, resAttr);
+}
+
+Operation *LLVMDialect::materializeConstant(OpBuilder &builder, Attribute value,
+                                            Type type, Location loc) {
+  // TODO: Accept more possible attributes. So far, only IntegerAttr may come
+  // up.
+  if (!isa<IntegerAttr>(value))
+    return nullptr;
+  return builder.create<LLVM::ConstantOp>(loc, type, value);
 }
 
 //===----------------------------------------------------------------------===//
