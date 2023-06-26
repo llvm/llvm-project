@@ -28,6 +28,7 @@ unittest("LLVMExegesisX86Tests") {
     "SnippetFileTest.cpp",
     "SnippetGeneratorTest.cpp",
     "SnippetRepetitorTest.cpp",
+    "SubprocessMemoryTest.cpp",
     "TargetTest.cpp",
   ]
 }
