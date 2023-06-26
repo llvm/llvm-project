@@ -1348,7 +1348,7 @@ LogicalResult ModuleImport::convertInstruction(llvm::Instruction *inst) {
     unsigned numCases = swInst->getNumCases();
     SmallVector<SmallVector<Value>> caseOperands(numCases);
     SmallVector<ValueRange> caseOperandRefs(numCases);
-    SmallVector<int32_t> caseValues(numCases);
+    SmallVector<APInt> caseValues(numCases);
     SmallVector<Block *> caseBlocks(numCases);
     for (const auto &it : llvm::enumerate(swInst->cases())) {
       const llvm::SwitchInst::CaseHandle &caseHandle = it.value();
@@ -1356,7 +1356,7 @@ LogicalResult ModuleImport::convertInstruction(llvm::Instruction *inst) {
       if (failed(convertBranchArgs(swInst, succBB, caseOperands[it.index()])))
         return failure();
       caseOperandRefs[it.index()] = caseOperands[it.index()];
-      caseValues[it.index()] = caseHandle.getCaseValue()->getSExtValue();
+      caseValues[it.index()] = caseHandle.getCaseValue()->getValue();
       caseBlocks[it.index()] = lookupBlock(succBB);
     }
 

@@ -103,6 +103,8 @@ static bool isSupportedRISCV(uint64_t Type) {
   case ELF::R_RISCV_PCREL_LO12_I:
   case ELF::R_RISCV_RVC_JUMP:
   case ELF::R_RISCV_RVC_BRANCH:
+  case ELF::R_RISCV_ADD32:
+  case ELF::R_RISCV_SUB32:
     return true;
   }
 }
@@ -196,6 +198,8 @@ static size_t getSizeForTypeRISCV(uint64_t Type) {
   case ELF::R_RISCV_32_PCREL:
   case ELF::R_RISCV_CALL:
   case ELF::R_RISCV_CALL_PLT:
+  case ELF::R_RISCV_ADD32:
+  case ELF::R_RISCV_SUB32:
     return 4;
   case ELF::R_RISCV_GOT_HI20:
     // See extractValueRISCV for why this is necessary.
@@ -509,6 +513,9 @@ static uint64_t extractValueRISCV(uint64_t Type, uint64_t Contents,
     return SignExtend64<11>(Contents >> 2);
   case ELF::R_RISCV_RVC_BRANCH:
     return SignExtend64<8>(((Contents >> 2) & 0x1f) | ((Contents >> 5) & 0xe0));
+  case ELF::R_RISCV_ADD32:
+  case ELF::R_RISCV_SUB32:
+    return Contents;
   }
 }
 
@@ -668,6 +675,9 @@ static bool isPCRelativeRISCV(uint64_t Type) {
   switch (Type) {
   default:
     llvm_unreachable("Unknown relocation type");
+  case ELF::R_RISCV_ADD32:
+  case ELF::R_RISCV_SUB32:
+    return false;
   case ELF::R_RISCV_JAL:
   case ELF::R_RISCV_CALL:
   case ELF::R_RISCV_CALL_PLT:
@@ -858,7 +868,16 @@ const MCExpr *Relocation::createExpr(MCStreamer *Streamer,
 }
 
 MCBinaryExpr::Opcode Relocation::getComposeOpcodeFor(uint64_t Type) {
-  llvm_unreachable("not implemented");
+  assert(Arch == Triple::riscv64 && "only implemented for RISC-V");
+
+  switch (Type) {
+  default:
+    llvm_unreachable("not implemented");
+  case ELF::R_RISCV_ADD32:
+    return MCBinaryExpr::Add;
+  case ELF::R_RISCV_SUB32:
+    return MCBinaryExpr::Sub;
+  }
 }
 
 #define ELF_RELOC(name, value) #name,

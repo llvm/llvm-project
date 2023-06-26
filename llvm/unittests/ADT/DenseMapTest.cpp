@@ -8,6 +8,7 @@
 
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/DenseMapInfo.h"
+#include "llvm/ADT/DenseMapInfoVariant.h"
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
 #include <map>
