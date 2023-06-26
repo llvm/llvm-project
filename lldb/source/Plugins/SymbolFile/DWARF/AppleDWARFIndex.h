@@ -10,7 +10,6 @@
 #define LLDB_SOURCE_PLUGINS_SYMBOLFILE_DWARF_APPLEDWARFINDEX_H
 
 #include "Plugins/SymbolFile/DWARF/DWARFIndex.h"
-#include "Plugins/SymbolFile/DWARF/HashedNameToDIE.h"
 #include "llvm/DebugInfo/DWARF/DWARFAcceleratorTable.h"
 
 namespace lldb_private {
@@ -25,7 +24,7 @@ public:
                   std::unique_ptr<llvm::AppleAcceleratorTable> apple_names,
                   std::unique_ptr<llvm::AppleAcceleratorTable> apple_namespaces,
                   std::unique_ptr<llvm::AppleAcceleratorTable> apple_types,
-                  std::unique_ptr<DWARFMappedHash::MemoryTable> apple_objc)
+                  std::unique_ptr<llvm::AppleAcceleratorTable> apple_objc)
       : DWARFIndex(module), m_apple_names_up(std::move(apple_names)),
         m_apple_namespaces_up(std::move(apple_namespaces)),
         m_apple_types_up(std::move(apple_types)),
@@ -66,7 +65,7 @@ private:
   std::unique_ptr<llvm::AppleAcceleratorTable> m_apple_names_up;
   std::unique_ptr<llvm::AppleAcceleratorTable> m_apple_namespaces_up;
   std::unique_ptr<llvm::AppleAcceleratorTable> m_apple_types_up;
-  std::unique_ptr<DWARFMappedHash::MemoryTable> m_apple_objc_up;
+  std::unique_ptr<llvm::AppleAcceleratorTable> m_apple_objc_up;
 
   /// Search for entries whose name is `name` in `table`, calling `callback` for
   /// each match. If `search_for_tag` is provided, ignore entries whose tag is
