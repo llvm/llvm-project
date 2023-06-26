@@ -341,7 +341,7 @@ OCKL_MANGLE_T(image_load,1Da)(TSHARP i, int2 c)
 RATTR float4
 OCKL_MANGLE_T(image_load,1Db)(TSHARP i, int c)
 {
-    return __llvm_amdgcn_struct_buffer_load_format_v4f32(LOAD_VSHARP(i), c, 0, 0, 0);
+    return __llvm_amdgcn_struct_buffer_load_format_v4f32(LOAD_VSHARP(i), c, 0, 0);
 }
 
 RATTR float4
@@ -457,7 +457,7 @@ OCKL_MANGLE_T(image_loadh,1Da)(TSHARP i, int2 c)
 RATTR half4
 OCKL_MANGLE_T(image_loadh,1Db)(TSHARP i, int c)
 {
-    return __llvm_amdgcn_struct_buffer_load_format_v4f16(LOAD_VSHARP(i), c, 0, 0, 0);
+    return __llvm_amdgcn_struct_buffer_load_format_v4f16(LOAD_VSHARP(i), c, 0, 0);
 }
 
 RATTR half4
@@ -549,7 +549,7 @@ OCKL_MANGLE_T(image_store,1Da)(TSHARP i, int2 c, float4 p)
 WATTR void
 OCKL_MANGLE_T(image_store,1Db)(TSHARP i, int c, float4 p)
 {
-    __llvm_amdgcn_struct_buffer_store_format_v4f32(p, LOAD_VSHARP(i), c, 0, 0, 0);
+    __llvm_amdgcn_struct_buffer_store_format_v4f32(p, LOAD_VSHARP(i), c, 0, 0);
 }
 
 WATTR void
@@ -665,7 +665,7 @@ OCKL_MANGLE_T(image_storeh,1Da)(TSHARP i, int2 c, half4 p)
 WATTR void
 OCKL_MANGLE_T(image_storeh,1Db)(TSHARP i, int c, half4 p)
 {
-    __llvm_amdgcn_struct_buffer_store_format_v4f16(p, LOAD_VSHARP(i), c, 0, 0, 0);
+    __llvm_amdgcn_struct_buffer_store_format_v4f16(p, LOAD_VSHARP(i), c, 0, 0);
 }
 
 WATTR void
