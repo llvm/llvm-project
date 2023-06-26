@@ -1,4 +1,4 @@
-//===--- string.h - Stub header for tests------ -----------------*- C++ -*-===//
+//===--- cstdio - Stub header for tests -------------------------*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,11 +6,16 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _STRING_H_
-#define _STRING_H_
+#ifndef _STDIO_
+#define _STDIO_
 
-#include "stddef.h"
+#include <stdio.h>
 
-void *memcpy(void *dest, const void *src, size_t n);
+namespace std {
+  using ::FILE;
+  using ::printf;
+  using ::fprintf;
+}
 
-#endif // _STRING_H_
+#endif // _STDIO_
+
