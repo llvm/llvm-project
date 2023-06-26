@@ -188,7 +188,17 @@ C2x Feature Support
   in Jan and Feb 2023. This should complete the implementation of ``nullptr``
   and ``nullptr_t`` in C. The specific changes are:
 
-  .. code-block:: c
+- Clang's resource dir used to include the full clang version. It will now
+  include only the major version. The new resource directory is
+  ``$prefix/lib/clang/$CLANG_MAJOR_VERSION`` and can be queried using
+  ``clang -print-resource-dir``, just like before.
+
+What's New in Clang |release|?
+==============================
+Some of the major new features and improvements to Clang are listed
+here. Generic improvements to Clang as a whole or to its underlying
+infrastructure are described first, followed by language-specific
+sections with improvements to Clang's support for those languages.
 
     void func(nullptr_t);
     func(0); // Previously required to be rejected, is now accepted.
