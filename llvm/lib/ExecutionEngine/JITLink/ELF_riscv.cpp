@@ -233,6 +233,8 @@ private:
           (RawInstr & 0xFFF) | Imm20 | Imm10_1 | Imm11 | Imm19_12;
       break;
     }
+    case CallRelaxable:
+      // Treat as R_RISCV_CALL when the relaxation pass did not run
     case R_RISCV_CALL_PLT:
     case R_RISCV_CALL: {
       int64_t Value = E.getTarget().getAddress() + E.getAddend() - FixupAddress;
@@ -451,6 +453,9 @@ private:
       *(little32_t *)FixupPtr = Word32;
       break;
     }
+    case AlignRelaxable:
+      // Ignore when the relaxation pass did not run
+      break;
     }
     return Error::success();
   }
