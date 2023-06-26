@@ -1,5 +1,5 @@
 // RUN: %clang_cc1 -fsyntax-only -std=c++2c -verify=expected,cxx26 %s
-// RUN: %clang_cc1 -fsyntax-only -std=c++2b -verify=expected=cxx23 %s
+// RUN: %clang_cc1 -fsyntax-only -std=c++2b -verify=expected,cxx23 %s
 
 
 struct S {};
