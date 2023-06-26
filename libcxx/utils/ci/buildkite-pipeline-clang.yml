@@ -17,6 +17,21 @@ env:
     # LLVM RELEASE bump version
     LLVM_HEAD_VERSION: "17"
 steps:
+  - label: "Format"
+    commands:
+      - "! grep -rnI '[[:blank:]]$' clang/lib clang/include clang/docs || false"
+
+    agents:
+      queue: "libcxx-builders"
+      os: "linux"
+    retry:
+      automatic:
+        - exit_status: -1  # Agent was lost
+          limit: 2
+    timeout_in_minutes: 120
+
+  - wait
+
   - label: "Building clang"
     commands:
       - "mkdir install"

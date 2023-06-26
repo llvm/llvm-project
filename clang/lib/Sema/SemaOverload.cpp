@@ -14011,8 +14011,8 @@ ExprResult Sema::CreateOverloadedBinOp(SourceLocation OpLoc,
               Diag(FnDecl->getLocation(),
                    diag::note_ovl_ambiguous_oper_binary_reversed_self);
               // Mark member== const or provide matching != to disallow reversed
-              // args. Eg. 
-              // struct S { bool operator==(const S&); }; 
+              // args. Eg.
+              // struct S { bool operator==(const S&); };
               // S()==S();
               if (auto *MD = dyn_cast<CXXMethodDecl>(FnDecl))
                 if (Op == OverloadedOperatorKind::OO_EqualEqual &&

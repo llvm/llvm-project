@@ -66,7 +66,7 @@ Check for null pointers passed as arguments to a function whose arguments are re
 
 core.NullDereference (C, C++, ObjC)
 """""""""""""""""""""""""""""""""""
-Check for dereferences of null pointers. 
+Check for dereferences of null pointers.
 
 This checker specifically does
 not report null pointer dereferences for x86 and x86-64 targets when the
@@ -75,7 +75,7 @@ segment). See `X86/X86-64 Language Extensions
 <https://clang.llvm.org/docs/LanguageExtensions.html#memory-references-to-specified-segments>`__
 for reference.
 
-The ``SuppressAddressSpaces`` option suppresses 
+The ``SuppressAddressSpaces`` option suppresses
 warnings for null dereferences of all pointers with address spaces. You can
 disable this behavior with the option
 ``-analyzer-config core.NullDereference:SuppressAddressSpaces=false``.
@@ -2780,7 +2780,7 @@ alpha.unix.cstring.UninitializedRead (C)
 Check for uninitialized reads from common memory copy/manipulation functions such as:
  ``memcpy, mempcpy, memmove, memcmp, strcmp, strncmp, strcpy, strlen, strsep`` and many more.
 
-.. code-block:: c 
+.. code-block:: c
 
  void test() {
   char src[10];
@@ -2789,12 +2789,12 @@ Check for uninitialized reads from common memory copy/manipulation functions suc
  }
 
 Limitations:
-  
+
    - Due to limitations of the memory modeling in the analyzer, one can likely
      observe a lot of false-positive reports like this:
 
       .. code-block:: c
-  
+
         void false_positive() {
           int src[] = {1, 2, 3, 4};
           int dst[5] = {0};
@@ -2803,9 +2803,9 @@ Limitations:
           // that since the analyzer could not see a direct initialization of the
           // very last byte of the source buffer.
         }
-  
+
      More details at the corresponding `GitHub issue <https://github.com/llvm/llvm-project/issues/43459>`_.
-  
+
 .. _alpha-nondeterminism-PointerIteration:
 
 alpha.nondeterminism.PointerIteration (C++)
@@ -3073,4 +3073,3 @@ View Call Graph using GraphViz.
 debug.ViewExplodedGraph
 """""""""""""""""""""""
 View Exploded Graphs using GraphViz.
-

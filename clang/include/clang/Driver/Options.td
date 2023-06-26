@@ -5292,7 +5292,7 @@ def flang_experimental_hlfir : Flag<["-"], "flang-experimental-hlfir">,
 def flang_experimental_polymorphism : Flag<["-"], "flang-experimental-polymorphism">,
   Flags<[FlangOption, FC1Option, FlangOnlyOption, NoXarchOption, HelpHidden]>,
   HelpText<"Enable Fortran 2003 polymorphism (experimental)">;
-  
+
 
 //===----------------------------------------------------------------------===//
 // FLangOption + CoreOption + NoXarchOption
