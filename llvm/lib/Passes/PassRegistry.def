@@ -550,6 +550,13 @@ FUNCTION_PASS_WITH_PARAMS("separate-const-offset-from-gep",
                            },
                           parseSeparateConstOffsetFromGEPPassOptions,
                           "lower-gep")
+FUNCTION_PASS_WITH_PARAMS("function-simplification",
+                          "",
+                           [this](OptimizationLevel OL) {
+                             return buildFunctionSimplificationPipeline(OL, ThinOrFullLTOPhase::None);
+                           },
+                          parseFunctionSimplificationPipelineOptions,
+                          "O1;O2;O3;Os;Oz")
 #undef FUNCTION_PASS_WITH_PARAMS
 
 #ifndef LOOPNEST_PASS
