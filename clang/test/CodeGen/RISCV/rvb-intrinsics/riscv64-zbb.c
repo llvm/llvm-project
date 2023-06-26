@@ -10,7 +10,7 @@
 // RV64ZBB-NEXT:    [[TMP1:%.*]] = call i32 @llvm.riscv.orc.b.i32(i32 [[TMP0]])
 // RV64ZBB-NEXT:    ret i32 [[TMP1]]
 //
-int orc_b_32(int a) {
+unsigned int orc_b_32(unsigned int a) {
   return __builtin_riscv_orc_b_32(a);
 }
 
@@ -22,7 +22,7 @@ int orc_b_32(int a) {
 // RV64ZBB-NEXT:    [[TMP1:%.*]] = call i64 @llvm.riscv.orc.b.i64(i64 [[TMP0]])
 // RV64ZBB-NEXT:    ret i64 [[TMP1]]
 //
-long orc_b_64(long a) {
+unsigned long orc_b_64(unsigned long a) {
   return __builtin_riscv_orc_b_64(a);
 }
 

@@ -10,7 +10,7 @@
 // RV32ZBB-NEXT:    [[TMP1:%.*]] = call i32 @llvm.riscv.orc.b.i32(i32 [[TMP0]])
 // RV32ZBB-NEXT:    ret i32 [[TMP1]]
 //
-int orc_b_32(int a) {
+unsigned int orc_b_32(unsigned int a) {
   return __builtin_riscv_orc_b_32(a);
 }
 
