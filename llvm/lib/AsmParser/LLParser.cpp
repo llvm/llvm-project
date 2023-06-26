@@ -2027,6 +2027,8 @@ void LLParser::parseOptionalDLLStorageClass(unsigned &Res) {
 ///   ::= 'amdgpu_gs'
 ///   ::= 'amdgpu_ps'
 ///   ::= 'amdgpu_cs'
+///   ::= 'amdgpu_cs_chain'
+///   ::= 'amdgpu_cs_chain_preserve'
 ///   ::= 'amdgpu_kernel'
 ///   ::= 'tailcc'
 ///   ::= 'cc' UINT
@@ -2089,6 +2091,12 @@ bool LLParser::parseOptionalCallingConv(unsigned &CC) {
   case lltok::kw_amdgpu_gs:      CC = CallingConv::AMDGPU_GS; break;
   case lltok::kw_amdgpu_ps:      CC = CallingConv::AMDGPU_PS; break;
   case lltok::kw_amdgpu_cs:      CC = CallingConv::AMDGPU_CS; break;
+  case lltok::kw_amdgpu_cs_chain:
+    CC = CallingConv::AMDGPU_CS_Chain;
+    break;
+  case lltok::kw_amdgpu_cs_chain_preserve:
+    CC = CallingConv::AMDGPU_CS_ChainPreserve;
+    break;
   case lltok::kw_amdgpu_kernel:  CC = CallingConv::AMDGPU_KERNEL; break;
   case lltok::kw_tailcc:         CC = CallingConv::Tail; break;
   case lltok::kw_cc: {
