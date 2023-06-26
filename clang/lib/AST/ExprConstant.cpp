@@ -583,7 +583,7 @@ namespace {
     /// LambdaCaptureFields - Mapping from captured variables/this to
     /// corresponding data members in the closure class.
     llvm::DenseMap<const ValueDecl *, FieldDecl *> LambdaCaptureFields;
-    FieldDecl *LambdaThisCaptureField;
+    FieldDecl *LambdaThisCaptureField = nullptr;
 
     CallStackFrame(EvalInfo &Info, SourceLocation CallLoc,
                    const FunctionDecl *Callee, const LValue *This,
