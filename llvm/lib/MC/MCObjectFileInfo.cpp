@@ -249,7 +249,7 @@ void MCObjectFileInfo::initMachOMCObjectFileInfo(const Triple &T) {
                            SectionKind::getMetadata(), "section_line_str");
   DwarfFrameSection =
       Ctx->getMachOSection("__DWARF", "__debug_frame", MachO::S_ATTR_DEBUG,
-                           SectionKind::getMetadata(), "section_frame");
+                           SectionKind::getMetadata());
   DwarfPubNamesSection =
       Ctx->getMachOSection("__DWARF", "__debug_pubnames", MachO::S_ATTR_DEBUG,
                            SectionKind::getMetadata());
