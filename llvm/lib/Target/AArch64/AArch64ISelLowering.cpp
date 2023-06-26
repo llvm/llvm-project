@@ -18777,7 +18777,8 @@ static SDValue tryCombineLongOpWithDup(unsigned IID, SDNode *N,
     LHS = tryExtendDUPToExtractHigh(LHS, DAG);
     if (!LHS.getNode())
       return SDValue();
-  }
+  } else
+    return SDValue();
 
   if (IID == Intrinsic::not_intrinsic)
     return DAG.getNode(N->getOpcode(), SDLoc(N), N->getValueType(0), LHS, RHS);
