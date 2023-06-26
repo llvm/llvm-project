@@ -644,6 +644,7 @@ cc_binary(
         # listed here. MC uses headers produced by tablegen, so it cannot be a
         # regular dependency.
         "include/llvm/MC/*.h",
+        "include/llvm/TargetParser/SubtargetFeature.h",
     ]),
     copts = llvm_copts,
     stamp = 0,
