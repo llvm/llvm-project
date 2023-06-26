@@ -26,6 +26,12 @@ add_llvm_exegesis_unittest_link_components(
   X86
   )
 
+set(libs)
+if(HAVE_LIBRT)
+  list(APPEND libs rt)
+endif()
+
 add_llvm_exegesis_unittest_link_libraries(
   LLVMExegesisX86
+  ${libs}
   )
