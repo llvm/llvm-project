@@ -27,7 +27,7 @@ entry:
 define ptr @test2() {
 ; CHECK-LABEL: @test2(
 ; CHECK-NEXT:    [[TMP:%.*]] = alloca [[B:%.*]], align 8
-; CHECK-NEXT:    store i64 poison, ptr null, align 4294967296
+; CHECK-NEXT:    store i1 true, ptr poison, align 1
 ; CHECK-NEXT:    ret ptr [[TMP]]
 ;
   %tmp = alloca %B, align 8

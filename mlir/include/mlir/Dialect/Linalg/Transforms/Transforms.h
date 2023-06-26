@@ -1151,15 +1151,6 @@ struct CopyVectorizationPattern : public OpRewritePattern<memref::CopyOp> {
                                 PatternRewriter &rewriter) const override;
 };
 
-/// tensor::PadOp is not canonicalized away yet, so we provide a
-/// transformation to `linalg.generic`.
-struct PadOpTransformationPattern : public OpRewritePattern<tensor::PadOp> {
-  using OpRewritePattern<tensor::PadOp>::OpRewritePattern;
-
-  LogicalResult matchAndRewrite(tensor::PadOp padOp,
-                                PatternRewriter &rewriter) const override;
-};
-
 using OptimizeCopyFn =
     std::function<LogicalResult(RewriterBase &, tensor::PadOp, Value)>;
 

@@ -1097,12 +1097,7 @@ Instruction *InstCombinerImpl::visitLoadInst(LoadInst &LI) {
   // load null/undef -> unreachable
   // TODO: Consider a target hook for valid address spaces for this xforms.
   if (canSimplifyNullLoadOrGEP(LI, Op)) {
-    // Insert a new store to null instruction before the load to indicate
-    // that this code is not reachable.  We do this instead of inserting
-    // an unreachable instruction directly because we cannot modify the
-    // CFG.
-    Builder.CreateStore(PoisonValue::get(LI.getType()),
-                        Constant::getNullValue(Op->getType()));
+    CreateNonTerminatorUnreachable(&LI);
     return replaceInstUsesWith(LI, PoisonValue::get(LI.getType()));
   }
 
@@ -1563,6 +1558,10 @@ Instruction *InstCombinerImpl::visitStoreInst(StoreInst &SI) {
       return replaceOperand(SI, 0, PoisonValue::get(Val->getType()));
     return nullptr;  // Do not modify these!
   }
+
+  // This is a non-terminator unreachable marker. Don't remove it.
+  if (isa<UndefValue>(Ptr))
+    return nullptr;
 
   // store undef, Ptr -> noop
   // FIXME: This is technically incorrect because it might overwrite a poison

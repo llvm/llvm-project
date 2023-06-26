@@ -1301,6 +1301,7 @@ define void @main(i1 %cond, i16 %x) {
 ; CHECK:       g.exit:
 ; CHECK-NEXT:    br label [[FOR_COND]]
 ; CHECK:       for.end:
+; CHECK-NEXT:    store double undef, ptr undef, align 8
 ; CHECK-NEXT:    ret void
 ;
 entry:

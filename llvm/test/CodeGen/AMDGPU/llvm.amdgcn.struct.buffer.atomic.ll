@@ -1,5 +1,5 @@
-;RUN: llc < %s -march=amdgcn -mcpu=verde -amdgpu-atomic-optimizations=false -verify-machineinstrs | FileCheck %s
-;RUN: llc < %s -march=amdgcn -mcpu=tonga -amdgpu-atomic-optimizations=false -verify-machineinstrs | FileCheck %s
+;RUN: llc < %s -march=amdgcn -mcpu=verde -amdgpu-atomic-optimizer-strategy=None -verify-machineinstrs | FileCheck %s
+;RUN: llc < %s -march=amdgcn -mcpu=tonga -amdgpu-atomic-optimizer-strategy=None -verify-machineinstrs | FileCheck %s
 
 ;CHECK-LABEL: {{^}}test1:
 ;CHECK-NOT: s_waitcnt
