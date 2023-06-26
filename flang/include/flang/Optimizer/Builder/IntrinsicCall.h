@@ -560,21 +560,23 @@ static inline mlir::Type getTypeHelper(mlir::MLIRContext *context,
     break;
   }
 
+  mlir::Type fTy;
   switch (typeId) {
   case ParamTypeId::Void:
   case ParamTypeId::Integer:
   case ParamTypeId::Real:
   case ParamTypeId::Complex:
     // keep original type for void and non-vector
-    return r;
+    fTy = r;
     break;
   case ParamTypeId::IntegerVector:
   case ParamTypeId::UnsignedVector:
   case ParamTypeId::RealVector:
     // convert to FIR vector type
-    return fir::VectorType::get(getVecLen(r), r);
+    fTy = fir::VectorType::get(getVecLen(r), r);
     break;
   }
+  return fTy;
 }
 
 // Generic function type generator that supports most of the function types
