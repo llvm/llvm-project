@@ -620,6 +620,13 @@ TEST_F(X86Core2TargetTest, GenerateExitSyscallTest) {
                           OpcodeIs(X86::SYSCALL)));
 }
 
+// Before kernel 4.17, Linux did not support MAP_FIXED_NOREPLACE, so if it is
+// not available, simplfy define it as MAP_FIXED which performs the same
+// function but does not guarantee existing mappings won't get clobbered.
+#ifndef MAP_FIXED_NOREPLACE
+#define MAP_FIXED_NOREPLACE MAP_FIXED
+#endif
+
 TEST_F(X86Core2TargetTest, GenerateMmapTest) {
   EXPECT_THAT(State.getExegesisTarget().generateMmap(0x1000, 4096, 0x2000),
               ElementsAre(IsMovImmediate(X86::MOV64ri, X86::RDI, 0x1000),
