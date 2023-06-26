@@ -550,6 +550,18 @@ static R getReductionInitValue(mlir::acc::ReductionOperator op, mlir::Type ty) {
       return llvm::APFloat::getLargest(floatTy.getFloatSemantics(),
                                        /*negative=*/false);
     }
+  } else if (op == mlir::acc::ReductionOperator::AccMax) {
+    // max init value -> smallest
+    if constexpr (std::is_same_v<R, llvm::APInt>) {
+      assert(ty.isIntOrIndex() && "expect integer or index type");
+      return llvm::APInt::getSignedMinValue(ty.getIntOrFloatBitWidth());
+    }
+    if constexpr (std::is_same_v<R, llvm::APFloat>) {
+      auto floatTy = mlir::dyn_cast_or_null<mlir::FloatType>(ty);
+      assert(floatTy && "expect float type");
+      return llvm::APFloat::getSmallest(floatTy.getFloatSemantics(),
+                                        /*negative=*/true);
+    }
   } else {
     // +, ior, ieor init value -> 0
     // * init value -> 1
@@ -580,78 +592,40 @@ static mlir::Value genReductionInitValue(fir::FirOpBuilder &builder,
       op != mlir::acc::ReductionOperator::AccMax)
     TODO(loc, "reduction operator");
 
-  // min -> largest
-  if (op == mlir::acc::ReductionOperator::AccMin) {
-    if (ty.isIntOrIndex())
-      return builder.create<mlir::arith::ConstantOp>(
-          loc, ty,
-          builder.getIntegerAttr(ty,
-                                 getReductionInitValue<llvm::APInt>(op, ty)));
+  if (ty.isIntOrIndex())
+    return builder.create<mlir::arith::ConstantOp>(
+        loc, ty,
+        builder.getIntegerAttr(ty, getReductionInitValue<llvm::APInt>(op, ty)));
+  if (op == mlir::acc::ReductionOperator::AccMin ||
+      op == mlir::acc::ReductionOperator::AccMax) {
     if (auto floatTy = mlir::dyn_cast_or_null<mlir::FloatType>(ty))
       return builder.create<mlir::arith::ConstantOp>(
           loc, ty,
           builder.getFloatAttr(ty,
                                getReductionInitValue<llvm::APFloat>(op, ty)));
-    if (auto refTy = mlir::dyn_cast<fir::ReferenceType>(ty)) {
-      if (auto seqTy = mlir::dyn_cast<fir::SequenceType>(refTy.getEleTy())) {
-        mlir::Type vecTy =
-            mlir::VectorType::get(seqTy.getShape(), seqTy.getEleTy());
-        auto shTy = vecTy.cast<mlir::ShapedType>();
-        if (seqTy.getEleTy().isIntOrIndex())
-          return builder.create<mlir::arith::ConstantOp>(
-              loc, vecTy,
-              mlir::DenseElementsAttr::get(
-                  shTy,
-                  getReductionInitValue<llvm::APInt>(op, seqTy.getEleTy())));
-        if (mlir::isa<mlir::FloatType>(seqTy.getEleTy()))
-          return builder.create<mlir::arith::ConstantOp>(
-              loc, vecTy,
-              mlir::DenseElementsAttr::get(
-                  shTy,
-                  getReductionInitValue<llvm::APFloat>(op, seqTy.getEleTy())));
-      }
-    }
-    // max -> least
-  } else if (op == mlir::acc::ReductionOperator::AccMax) {
-    if (ty.isIntOrIndex())
-      return builder.create<mlir::arith::ConstantOp>(
-          loc, ty,
-          builder.getIntegerAttr(
-              ty, llvm::APInt::getSignedMinValue(ty.getIntOrFloatBitWidth())
-                      .getSExtValue()));
+  } else {
     if (auto floatTy = mlir::dyn_cast_or_null<mlir::FloatType>(ty))
       return builder.create<mlir::arith::ConstantOp>(
           loc, ty,
-          builder.getFloatAttr(
-              ty, llvm::APFloat::getSmallest(floatTy.getFloatSemantics(),
-                                             /*negative=*/true)));
-  } else {
-    if (ty.isIntOrIndex())
-      return builder.create<mlir::arith::ConstantOp>(
-          loc, ty,
-          builder.getIntegerAttr(ty, getReductionInitValue<int64_t>(op, ty)));
-    if (mlir::isa<mlir::FloatType>(ty))
-      return builder.create<mlir::arith::ConstantOp>(
-          loc, ty,
           builder.getFloatAttr(ty, getReductionInitValue<int64_t>(op, ty)));
-    if (auto refTy = mlir::dyn_cast<fir::ReferenceType>(ty)) {
-      if (auto seqTy = mlir::dyn_cast<fir::SequenceType>(refTy.getEleTy())) {
-        mlir::Type vecTy =
-            mlir::VectorType::get(seqTy.getShape(), seqTy.getEleTy());
-        auto shTy = vecTy.cast<mlir::ShapedType>();
-        if (seqTy.getEleTy().isIntOrIndex())
-          return builder.create<mlir::arith::ConstantOp>(
-              loc, vecTy,
-              mlir::DenseElementsAttr::get(
-                  shTy,
-                  getReductionInitValue<llvm::APInt>(op, seqTy.getEleTy())));
-        if (mlir::isa<mlir::FloatType>(seqTy.getEleTy()))
-          return builder.create<mlir::arith::ConstantOp>(
-              loc, vecTy,
-              mlir::DenseElementsAttr::get(
-                  shTy,
-                  getReductionInitValue<llvm::APFloat>(op, seqTy.getEleTy())));
-      }
+  }
+  if (auto refTy = mlir::dyn_cast<fir::ReferenceType>(ty)) {
+    if (auto seqTy = mlir::dyn_cast<fir::SequenceType>(refTy.getEleTy())) {
+      mlir::Type vecTy =
+          mlir::VectorType::get(seqTy.getShape(), seqTy.getEleTy());
+      auto shTy = vecTy.cast<mlir::ShapedType>();
+      if (seqTy.getEleTy().isIntOrIndex())
+        return builder.create<mlir::arith::ConstantOp>(
+            loc, vecTy,
+            mlir::DenseElementsAttr::get(
+                shTy,
+                getReductionInitValue<llvm::APInt>(op, seqTy.getEleTy())));
+      if (mlir::isa<mlir::FloatType>(seqTy.getEleTy()))
+        return builder.create<mlir::arith::ConstantOp>(
+            loc, vecTy,
+            mlir::DenseElementsAttr::get(
+                shTy,
+                getReductionInitValue<llvm::APFloat>(op, seqTy.getEleTy())));
     }
   }
 
