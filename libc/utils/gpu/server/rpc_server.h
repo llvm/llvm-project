@@ -20,6 +20,10 @@ extern "C" {
 /// The maxium number of ports that can be opened for any server.
 const uint64_t RPC_MAXIMUM_PORT_COUNT = 64;
 
+/// The symbol name associated with the client for use with the LLVM C library
+/// implementation.
+static const char *rpc_client_symbol_name = "__llvm_libc_rpc_client";
+
 /// status codes.
 typedef enum {
   RPC_STATUS_SUCCESS = 0x0,
@@ -85,6 +89,13 @@ rpc_status_t rpc_register_callback(uint32_t device_id, rpc_opcode_t opcode,
 
 /// Obtain a pointer to the memory buffer used to run the RPC client and server.
 void *rpc_get_buffer(uint32_t device_id);
+
+/// Obtain a pointer to a local client buffer that can be copied directly to the
+/// other process.
+const void *rpc_get_client_buffer(uint32_t device_id);
+
+/// Returns the size of the client in bytes to be used for a memory copy.
+uint64_t rpc_get_client_size();
 
 /// Use the \p port to receive and send a buffer using the \p callback.
 void rpc_recv_and_send(rpc_port_t port, rpc_port_callback_ty callback,
