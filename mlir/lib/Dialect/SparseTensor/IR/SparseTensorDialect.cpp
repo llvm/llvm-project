@@ -209,14 +209,18 @@ std::string SparseTensorDimSliceAttr::getStaticString(int64_t v) {
   return isDynamic(v) ? "?" : std::to_string(v);
 }
 
+void SparseTensorDimSliceAttr::print(llvm::raw_ostream &os) const {
+  os << '(';
+  os << getStaticString(getOffset());
+  os << ", ";
+  os << getStaticString(getSize());
+  os << ", ";
+  os << getStaticString(getStride());
+  os << ')';
+}
+
 void SparseTensorDimSliceAttr::print(AsmPrinter &printer) const {
-  printer << "(";
-  printer << getStaticString(getOffset());
-  printer << ", ";
-  printer << getStaticString(getSize());
-  printer << ", ";
-  printer << getStaticString(getStride());
-  printer << ")";
+  print(printer.getStream());
 }
 
 static ParseResult parseOptionalStaticSlice(int64_t &result,
