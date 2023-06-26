@@ -338,14 +338,7 @@ void transform::TransformState::forgetValueMapping(
 LogicalResult
 transform::TransformState::replacePayloadOp(Operation *op,
                                             Operation *replacement) {
-  // Drop the mapping between the op and all handles that point to it. Don't
-  // care if there are on such handles.
-  SmallVector<Value> opHandles;
-  (void)getHandlesForPayloadOp(op, opHandles);
-  for (Value handle : opHandles) {
-    Mappings &mappings = getMapping(handle);
-    dropMappingEntry(mappings.reverse, op, handle);
-  }
+  // TODO: consider invalidating the handles to nested objects here.
 
 #ifndef NDEBUG
   for (Value opResult : op->getResults()) {
@@ -355,23 +348,29 @@ transform::TransformState::replacePayloadOp(Operation *op,
   }
 #endif // NDEBUG
 
+  // Drop the mapping between the op and all handles that point to it. Fail if
+  // there are no handles.
+  SmallVector<Value> opHandles;
+  if (failed(getHandlesForPayloadOp(op, opHandles)))
+    return failure();
+  for (Value handle : opHandles) {
+    Mappings &mappings = getMapping(handle);
+    dropMappingEntry(mappings.reverse, op, handle);
+  }
+
 #if LLVM_ENABLE_ABI_BREAKING_CHECKS
   if (options.getExpensiveChecksEnabled()) {
     auto it = cachedNames.find(op);
     assert(it != cachedNames.end() && "entry not found");
     assert(it->second == op->getName() && "operation name mismatch");
     cachedNames.erase(it);
-  }
-#endif // LLVM_ENABLE_ABI_BREAKING_CHECKS
-
-  // TODO: consider invalidating the handles to nested objects here.
-
-#if LLVM_ENABLE_ABI_BREAKING_CHECKS
-  if (replacement && options.getExpensiveChecksEnabled()) {
-    auto insertion = cachedNames.insert({replacement, replacement->getName()});
-    if (!insertion.second) {
-      assert(insertion.first->second == replacement->getName() &&
-             "operation is already cached with a different name");
+    if (replacement) {
+      auto insertion =
+          cachedNames.insert({replacement, replacement->getName()});
+      if (!insertion.second) {
+        assert(insertion.first->second == replacement->getName() &&
+               "operation is already cached with a different name");
+      }
     }
   }
 #endif // LLVM_ENABLE_ABI_BREAKING_CHECKS
@@ -411,7 +410,8 @@ transform::TransformState::replacePayloadOp(Operation *op,
 LogicalResult
 transform::TransformState::replacePayloadValue(Value value, Value replacement) {
   SmallVector<Value> valueHandles;
-  (void)getHandlesForPayloadValue(value, valueHandles);
+  if (failed(getHandlesForPayloadValue(value, valueHandles)))
+    return failure();
 
   for (Value handle : valueHandles) {
     Mappings &mappings = getMapping(handle);
@@ -537,30 +537,30 @@ void transform::TransformState::recordValueHandleInvalidationByOpHandleOne(
     Location ancestorLoc = ancestor->getLoc();
     Location opLoc = definingOp->getLoc();
     Location valueLoc = payloadValue.getLoc();
-    newlyInvalidated[valueHandle] =
-        [valueHandle, owner, operandNo, resultNo, argumentNo, blockNo, regionNo,
-         ancestorLoc, opLoc, valueLoc](Location currentLoc) {
-          InFlightDiagnostic diag = emitError(currentLoc)
-                                    << "op uses a handle invalidated by a "
-                                       "previously executed transform op";
-          diag.attachNote(valueHandle.getLoc()) << "invalidated handle";
-          diag.attachNote(owner->getLoc())
-              << "invalidated by this transform op that consumes its operand #"
-              << operandNo
-              << " and invalidates all handles to payload IR entities "
-                 "associated with this operand and entities nested in them";
-          diag.attachNote(ancestorLoc)
-              << "ancestor op associated with the consumed handle";
-          if (resultNo) {
-            diag.attachNote(opLoc)
-                << "op defining the value as result #" << *resultNo;
-          } else {
-            diag.attachNote(opLoc)
-                << "op defining the value as block argument #" << argumentNo
-                << " of block #" << blockNo << " in region #" << regionNo;
-          }
-          diag.attachNote(valueLoc) << "payload value";
-        };
+    newlyInvalidated[valueHandle] = [valueHandle, owner, operandNo, resultNo,
+                                     argumentNo, blockNo, regionNo, ancestorLoc,
+                                     opLoc, valueLoc](Location currentLoc) {
+      InFlightDiagnostic diag = emitError(currentLoc)
+                                << "op uses a handle invalidated by a "
+                                   "previously executed transform op";
+      diag.attachNote(valueHandle.getLoc()) << "invalidated handle";
+      diag.attachNote(owner->getLoc())
+          << "invalidated by this transform op that consumes its operand #"
+          << operandNo
+          << " and invalidates all handles to payload IR entities "
+             "associated with this operand and entities nested in them";
+      diag.attachNote(ancestorLoc)
+          << "ancestor op associated with the consumed handle";
+      if (resultNo) {
+        diag.attachNote(opLoc)
+            << "op defining the value as result #" << *resultNo;
+      } else {
+        diag.attachNote(opLoc)
+            << "op defining the value as block argument #" << argumentNo
+            << " of block #" << blockNo << " in region #" << regionNo;
+      }
+      diag.attachNote(valueLoc) << "payload value";
+    };
   }
 }
 
@@ -1064,10 +1064,6 @@ transform::TransformState::Extension::~Extension() = default;
 LogicalResult
 transform::TransformState::Extension::replacePayloadOp(Operation *op,
                                                        Operation *replacement) {
-  SmallVector<Value> handles;
-  if (failed(state.getHandlesForPayloadOp(op, handles)))
-    return failure();
-
   // TODO: we may need to invalidate handles to operations and values nested in
   // the operation being replaced.
   return state.replacePayloadOp(op, replacement);
@@ -1076,10 +1072,6 @@ transform::TransformState::Extension::replacePayloadOp(Operation *op,
 LogicalResult
 transform::TransformState::Extension::replacePayloadValue(Value value,
                                                           Value replacement) {
-  SmallVector<Value> handles;
-  if (failed(state.getHandlesForPayloadValue(value, handles)))
-    return failure();
-
   return state.replacePayloadValue(value, replacement);
 }
 
