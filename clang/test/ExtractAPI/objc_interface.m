@@ -583,6 +583,10 @@
         {
           "kind": "identifier",
           "spelling": "Ivar"
+        },
+        {
+          "kind": "text",
+          "spelling": ";"
         }
       ],
       "identifier": {

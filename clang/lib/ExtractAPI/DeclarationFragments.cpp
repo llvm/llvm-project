@@ -606,7 +606,8 @@ DeclarationFragmentsBuilder::getFragmentsForField(const FieldDecl *Field) {
   return getFragmentsForType(Field->getType(), Field->getASTContext(), After)
       .appendSpace()
       .append(Field->getName(), DeclarationFragments::FragmentKind::Identifier)
-      .append(std::move(After));
+      .append(std::move(After))
+      .append(";", DeclarationFragments::FragmentKind::Text);
 }
 
 DeclarationFragments

@@ -194,6 +194,10 @@ typedef _HiddenTypedef ExposedTypedefToHidden;
         {
           "kind": "identifier",
           "spelling": "a"
+        },
+        {
+          "kind": "text",
+          "spelling": ";"
         }
       ],
       "identifier": {

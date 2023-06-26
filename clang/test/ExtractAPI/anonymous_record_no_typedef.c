@@ -316,6 +316,10 @@ struct Vehicle {
         {
           "kind": "identifier",
           "spelling": "type"
+        },
+        {
+          "kind": "text",
+          "spelling": ";"
         }
       ],
       "identifier": {
@@ -367,6 +371,10 @@ struct Vehicle {
         {
           "kind": "identifier",
           "spelling": "information"
+        },
+        {
+          "kind": "text",
+          "spelling": ";"
         }
       ],
       "identifier": {
