@@ -1,0 +1,18 @@
+// RUN: cir-tool %s -cir-to-llvm -o %t.mlir
+// RUN: FileCheck %s -check-prefix=MLIR --input-file=%t.mlir
+// XFAIL: *
+
+!s32i = !cir.int<s, 32>
+module {
+  cir.func no_proto private @noProto3(...) -> !s32i
+  // MLIR: llvm.func @noProto3(...) -> i32
+  cir.func @test3(%arg0: !s32i) {
+    %3 = cir.get_global @noProto3 : cir.ptr <!cir.func<!s32i (...)>>
+    // MLIR: %[[#FN_PTR:]] = llvm.mlir.addressof @noProto3 : !llvm.ptr
+    %4 = cir.cast(bitcast, %3 : !cir.ptr<!cir.func<!s32i (...)>>), !cir.ptr<!cir.func<!s32i (!s32i)>>
+    // MLIR: %[[#FUNC:]] = llvm.bitcast %[[#FN_PTR]] : !llvm.ptr to !llvm.ptr
+    %5 = cir.call %4(%arg0) : (!cir.ptr<!cir.func<!s32i (!s32i)>>, !s32i) -> !s32i
+    // MLIR: %{{.+}} = llvm.call %[[#FUNC]](%{{.+}}) : !llvm.ptr, (i32) -> i32
+    cir.return
+  }
+}

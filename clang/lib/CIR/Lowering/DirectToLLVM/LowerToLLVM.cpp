@@ -358,6 +358,14 @@ public:
                                                           llvmSrcVal);
       return mlir::success();
     }
+    case mlir::cir::CastKind::bitcast: {
+      auto dstTy = castOp.getType();
+      auto llvmSrcVal = adaptor.getOperands().front();
+      auto llvmDstTy = getTypeConverter()->convertType(dstTy);
+      rewriter.replaceOpWithNewOp<mlir::LLVM::BitcastOp>(castOp, llvmDstTy,
+                                                         llvmSrcVal);
+      return mlir::success();
+    }
     default:
       llvm_unreachable("NYI");
     }
@@ -1187,6 +1195,14 @@ void prepareTypeConverter(mlir::LLVMTypeConverter &converter) {
   converter.addConversion([&](mlir::cir::IntType type) -> mlir::Type {
     // LLVM doesn't work with signed types, so we drop the CIR signs here.
     return mlir::IntegerType::get(type.getContext(), type.getWidth());
+  });
+  converter.addConversion([&](mlir::cir::FuncType type) -> mlir::Type {
+    auto result = converter.convertType(type.getReturnType());
+    llvm::SmallVector<mlir::Type> arguments;
+    if (converter.convertTypes(type.getInputs(), arguments).failed())
+      llvm_unreachable("Failed to convert function type parameters");
+    auto varArg = type.isVarArg();
+    return mlir::LLVM::LLVMFunctionType::get(result, arguments, varArg);
   });
   converter.addConversion([&](mlir::cir::StructType type) -> mlir::Type {
     llvm::SmallVector<mlir::Type> llvmMembers;
