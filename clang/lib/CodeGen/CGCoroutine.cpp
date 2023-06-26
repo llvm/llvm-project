@@ -630,6 +630,8 @@ void CodeGenFunction::EmitCoroutineBody(const CoroutineBodyStmt &S) {
     // See if allocation was successful.
     auto *NullPtr = llvm::ConstantPointerNull::get(Int8PtrTy);
     auto *Cond = Builder.CreateICmpNE(AllocateCall, NullPtr);
+    // Expect the allocation to be successful.
+    emitCondLikelihoodViaExpectIntrinsic(Cond, Stmt::LH_Likely);
     Builder.CreateCondBr(Cond, InitBB, RetOnFailureBB);
 
     // If not, return OnAllocFailure object.
