@@ -16509,12 +16509,11 @@ static SDValue lowerV8I16Shuffle(const SDLoc &DL, ArrayRef<int> Mask,
     return V;
 
   // Attempt to lower using compaction, SSE41 is necessary for PACKUSDW.
-  // We could use SIGN_EXTEND_INREG+PACKSSDW for older targets but this seems to
-  // be slower than a PSHUFLW+PSHUFHW+PSHUFD chain.
   int NumEvenDrops = canLowerByDroppingElements(Mask, true, false);
-  if ((NumEvenDrops == 1 || NumEvenDrops == 2) && Subtarget.hasSSE41() &&
+  if ((NumEvenDrops == 1 || (NumEvenDrops == 2 && Subtarget.hasSSE41())) &&
       !Subtarget.hasVLX()) {
     // Check if this is part of a 256-bit vector truncation.
+    unsigned PackOpc = 0;
     if (NumEvenDrops == 2 && Subtarget.hasAVX2() &&
         peekThroughBitcasts(V1).getOpcode() == ISD::EXTRACT_SUBVECTOR &&
         peekThroughBitcasts(V2).getOpcode() == ISD::EXTRACT_SUBVECTOR) {
@@ -16525,7 +16524,8 @@ static SDValue lowerV8I16Shuffle(const SDLoc &DL, ArrayRef<int> Mask,
       V1V2 = DAG.getBitcast(MVT::v8i32, V1V2);
       V1 = extract128BitVector(V1V2, 0, DAG, DL);
       V2 = extract128BitVector(V1V2, 4, DAG, DL);
-    } else {
+      PackOpc = X86ISD::PACKUS;
+    } else if (Subtarget.hasSSE41()) {
       SmallVector<SDValue, 4> DWordClearOps(4,
                                             DAG.getConstant(0, DL, MVT::i32));
       for (unsigned i = 0; i != 4; i += 1 << (NumEvenDrops - 1))
@@ -16536,14 +16536,26 @@ static SDValue lowerV8I16Shuffle(const SDLoc &DL, ArrayRef<int> Mask,
                        DWordClearMask);
       V2 = DAG.getNode(ISD::AND, DL, MVT::v4i32, DAG.getBitcast(MVT::v4i32, V2),
                        DWordClearMask);
+      PackOpc = X86ISD::PACKUS;
+    } else if (!Subtarget.hasSSSE3()) {
+      SDValue ShAmt = DAG.getTargetConstant(16, DL, MVT::i8);
+      V1 = DAG.getBitcast(MVT::v4i32, V1);
+      V2 = DAG.getBitcast(MVT::v4i32, V2);
+      V1 = DAG.getNode(X86ISD::VSHLI, DL, MVT::v4i32, V1, ShAmt);
+      V2 = DAG.getNode(X86ISD::VSHLI, DL, MVT::v4i32, V2, ShAmt);
+      V1 = DAG.getNode(X86ISD::VSRAI, DL, MVT::v4i32, V1, ShAmt);
+      V2 = DAG.getNode(X86ISD::VSRAI, DL, MVT::v4i32, V2, ShAmt);
+      PackOpc = X86ISD::PACKSS;
     }
-    // Now pack things back together.
-    SDValue Result = DAG.getNode(X86ISD::PACKUS, DL, MVT::v8i16, V1, V2);
-    if (NumEvenDrops == 2) {
-      Result = DAG.getBitcast(MVT::v4i32, Result);
-      Result = DAG.getNode(X86ISD::PACKUS, DL, MVT::v8i16, Result, Result);
+    if (PackOpc) {
+      // Now pack things back together.
+      SDValue Result = DAG.getNode(PackOpc, DL, MVT::v8i16, V1, V2);
+      if (NumEvenDrops == 2) {
+        Result = DAG.getBitcast(MVT::v4i32, Result);
+        Result = DAG.getNode(PackOpc, DL, MVT::v8i16, Result, Result);
+      }
+      return Result;
     }
-    return Result;
   }
 
   // When compacting odd (upper) elements, use PACKSS pre-SSE41.
