@@ -338,7 +338,7 @@ bool lldb_private::formatters::LibCxxMapIteratorSyntheticFrontEnd::Update() {
         //        +-----------------------------+
         //
         CompilerType tree_node_type = ast_ctx->CreateStructForIdentifier(
-            ConstString(),
+            llvm::StringRef(),
             {{"ptr0",
               ast_ctx->GetBasicType(lldb::eBasicTypeVoid).GetPointerType()},
              {"ptr1",
@@ -503,7 +503,7 @@ bool lldb_private::formatters::LibCxxUnorderedMapIteratorSyntheticFrontEnd::
     //         +-----------------------------+
     //
     CompilerType tree_node_type = ast_ctx->CreateStructForIdentifier(
-        ConstString(),
+        llvm::StringRef(),
         {{"__next_",
           ast_ctx->GetBasicType(lldb::eBasicTypeVoid).GetPointerType()},
          {"__hash_", ast_ctx->GetBasicType(lldb::eBasicTypeUnsignedLongLong)},
