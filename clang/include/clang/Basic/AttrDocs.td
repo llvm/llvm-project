@@ -549,7 +549,31 @@ over the tradeoff between code size and debug information precision.
 
 ``nomerge`` attribute can also be used as function attribute to prevent all
 calls to the specified function from merging. It has no effect on indirect
-calls.
+calls to such functions. For example:
+
+.. code-block:: c++
+
+  [[clang::nomerge]] void foo(int) {}
+
+  void bar(int x) {
+    auto *ptr = foo;
+    if (x) foo(1); else foo(2); // will not be merged
+    if (x) ptr(1); else ptr(2); // indirect call, can be merged
+  }
+
+``nomerge`` attribute can also be used for pointers to functions to
+prevent calls through such pointer from merging. In such case the
+effect applies only to a specific function pointer. For example:
+
+.. code-block:: c++
+
+  [[clang::nomerge]] void (*foo)(int);
+
+  void bar(int x) {
+    auto *ptr = foo;
+    if (x) foo(1); else foo(2); // will not be merged
+    if (x) ptr(1); else ptr(2); // 'ptr' has no 'nomerge' attribute, can be merged
+  }
   }];
 }
 
