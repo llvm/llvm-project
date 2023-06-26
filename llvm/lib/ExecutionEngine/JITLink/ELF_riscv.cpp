@@ -971,5 +971,7 @@ void link_ELF_riscv(std::unique_ptr<LinkGraph> G,
   ELFJITLinker_riscv::link(std::move(Ctx), std::move(G), std::move(Config));
 }
 
+LinkGraphPassFunction createRelaxationPass_ELF_riscv() { return relax; }
+
 } // namespace jitlink
 } // namespace llvm
