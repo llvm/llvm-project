@@ -34,19 +34,22 @@ long orc_b_64(long a) {
 // RV64ZBB-NEXT:    [[TMP1:%.*]] = call i32 @llvm.ctlz.i32(i32 [[TMP0]], i1 false)
 // RV64ZBB-NEXT:    ret i32 [[TMP1]]
 //
-int clz_32(int a) {
+int clz_32(unsigned int a) {
   return __builtin_riscv_clz_32(a);
 }
 
 // RV64ZBB-LABEL: @clz_64(
 // RV64ZBB-NEXT:  entry:
+// RV64ZBB-NEXT:    [[RETVAL:%.*]] = alloca i32, align 4
 // RV64ZBB-NEXT:    [[A_ADDR:%.*]] = alloca i64, align 8
 // RV64ZBB-NEXT:    store i64 [[A:%.*]], ptr [[A_ADDR]], align 8
 // RV64ZBB-NEXT:    [[TMP0:%.*]] = load i64, ptr [[A_ADDR]], align 8
 // RV64ZBB-NEXT:    [[TMP1:%.*]] = call i64 @llvm.ctlz.i64(i64 [[TMP0]], i1 false)
-// RV64ZBB-NEXT:    ret i64 [[TMP1]]
+// RV64ZBB-NEXT:    store i64 [[TMP1]], ptr [[RETVAL]], align 4
+// RV64ZBB-NEXT:    [[TMP2:%.*]] = load i32, ptr [[RETVAL]], align 4
+// RV64ZBB-NEXT:    ret i32 [[TMP2]]
 //
-long clz_64(long a) {
+int clz_64(unsigned long a) {
   return __builtin_riscv_clz_64(a);
 }
 
@@ -58,18 +61,21 @@ long clz_64(long a) {
 // RV64ZBB-NEXT:    [[TMP1:%.*]] = call i32 @llvm.cttz.i32(i32 [[TMP0]], i1 false)
 // RV64ZBB-NEXT:    ret i32 [[TMP1]]
 //
-int ctz_32(int a) {
+int ctz_32(unsigned int a) {
   return __builtin_riscv_ctz_32(a);
 }
 
 // RV64ZBB-LABEL: @ctz_64(
 // RV64ZBB-NEXT:  entry:
+// RV64ZBB-NEXT:    [[RETVAL:%.*]] = alloca i32, align 4
 // RV64ZBB-NEXT:    [[A_ADDR:%.*]] = alloca i64, align 8
 // RV64ZBB-NEXT:    store i64 [[A:%.*]], ptr [[A_ADDR]], align 8
 // RV64ZBB-NEXT:    [[TMP0:%.*]] = load i64, ptr [[A_ADDR]], align 8
 // RV64ZBB-NEXT:    [[TMP1:%.*]] = call i64 @llvm.cttz.i64(i64 [[TMP0]], i1 false)
-// RV64ZBB-NEXT:    ret i64 [[TMP1]]
+// RV64ZBB-NEXT:    store i64 [[TMP1]], ptr [[RETVAL]], align 4
+// RV64ZBB-NEXT:    [[TMP2:%.*]] = load i32, ptr [[RETVAL]], align 4
+// RV64ZBB-NEXT:    ret i32 [[TMP2]]
 //
-long ctz_64(long a) {
+int ctz_64(unsigned long a) {
   return __builtin_riscv_ctz_64(a);
 }
