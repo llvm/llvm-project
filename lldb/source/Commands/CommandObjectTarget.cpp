@@ -1318,7 +1318,7 @@ static void DumpModuleArchitecture(Stream &strm, Module *module,
 
 static void DumpModuleUUID(Stream &strm, Module *module) {
   if (module && module->GetUUID().IsValid())
-    module->GetUUID().Dump(&strm);
+    module->GetUUID().Dump(strm);
   else
     strm.PutCString("                                    ");
 }
@@ -2560,7 +2560,7 @@ protected:
             return true;
           } else {
             StreamString strm;
-            module_spec.GetUUID().Dump(&strm);
+            module_spec.GetUUID().Dump(strm);
             if (module_spec.GetFileSpec()) {
               if (module_spec.GetSymbolFileSpec()) {
                 result.AppendErrorWithFormat(
@@ -2584,7 +2584,7 @@ protected:
           }
         } else {
           StreamString strm;
-          module_spec.GetUUID().Dump(&strm);
+          module_spec.GetUUID().Dump(strm);
           result.AppendErrorWithFormat(
               "Unable to locate the executable or symbol file with UUID %s",
               strm.GetData());
@@ -4240,7 +4240,7 @@ protected:
     StreamString ss_symfile_uuid;
     if (module_spec.GetUUID().IsValid()) {
       ss_symfile_uuid << " (";
-      module_spec.GetUUID().Dump(&ss_symfile_uuid);
+      module_spec.GetUUID().Dump(ss_symfile_uuid);
       ss_symfile_uuid << ')';
     }
     result.AppendErrorWithFormat(
@@ -4275,7 +4275,7 @@ protected:
     if (!DownloadObjectAndSymbolFile(module_spec, result, flush)) {
       StreamString error_strm;
       error_strm.PutCString("unable to find debug symbols for UUID ");
-      module_spec.GetUUID().Dump(&error_strm);
+      module_spec.GetUUID().Dump(error_strm);
       result.AppendError(error_strm.GetString());
       return false;
     }
