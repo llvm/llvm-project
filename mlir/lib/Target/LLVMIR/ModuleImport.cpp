@@ -153,14 +153,16 @@ getTopologicallySortedBlocks(llvm::Function *func) {
 }
 
 ModuleImport::ModuleImport(ModuleOp mlirModule,
-                           std::unique_ptr<llvm::Module> llvmModule)
+                           std::unique_ptr<llvm::Module> llvmModule,
+                           bool emitExpensiveWarnings)
     : builder(mlirModule->getContext()), context(mlirModule->getContext()),
       mlirModule(mlirModule), llvmModule(std::move(llvmModule)),
       iface(mlirModule->getContext()),
       typeTranslator(*mlirModule->getContext()),
       debugImporter(std::make_unique<DebugImporter>(mlirModule)),
       loopAnnotationImporter(
-          std::make_unique<LoopAnnotationImporter>(*this, builder)) {
+          std::make_unique<LoopAnnotationImporter>(*this, builder)),
+      emitExpensiveWarnings(emitExpensiveWarnings) {
   builder.setInsertionPointToStart(mlirModule.getBody());
 }
 
@@ -619,10 +621,12 @@ void ModuleImport::setNonDebugMetadataAttrs(llvm::Instruction *inst,
     if (!iface.isConvertibleMetadata(kind))
       continue;
     if (failed(iface.setMetadataAttrs(builder, kind, node, op, *this))) {
-      Location loc = debugImporter->translateLoc(inst->getDebugLoc());
-      emitWarning(loc) << "unhandled metadata: "
-                       << diagMD(node, llvmModule.get()) << " on "
-                       << diag(*inst);
+      if (emitExpensiveWarnings) {
+        Location loc = debugImporter->translateLoc(inst->getDebugLoc());
+        emitWarning(loc) << "unhandled metadata: "
+                         << diagMD(node, llvmModule.get()) << " on "
+                         << diag(*inst);
+      }
     }
   }
 }
@@ -1783,8 +1787,10 @@ LogicalResult ModuleImport::processBasicBlock(llvm::BasicBlock *bb,
     if (Operation *op = lookupOperation(&inst)) {
       setNonDebugMetadataAttrs(&inst, op);
     } else if (inst.getOpcode() != llvm::Instruction::PHI) {
-      Location loc = debugImporter->translateLoc(inst.getDebugLoc());
-      emitWarning(loc) << "dropped instruction: " << diag(inst);
+      if (emitExpensiveWarnings) {
+        Location loc = debugImporter->translateLoc(inst.getDebugLoc());
+        emitWarning(loc) << "dropped instruction: " << diag(inst);
+      }
     }
   }
   return success();
@@ -1803,7 +1809,8 @@ ModuleImport::translateLoopAnnotationAttr(const llvm::MDNode *node,
 
 OwningOpRef<ModuleOp>
 mlir::translateLLVMIRToModule(std::unique_ptr<llvm::Module> llvmModule,
-                              MLIRContext *context) {
+                              MLIRContext *context,
+                              bool emitExpensiveWarnings) {
   // Preload all registered dialects to allow the import to iterate the
   // registered LLVMImportDialectInterface implementations and query the
   // supported LLVM IR constructs before starting the translation. Assumes the
@@ -1814,12 +1821,12 @@ mlir::translateLLVMIRToModule(std::unique_ptr<llvm::Module> llvmModule,
   assert(llvm::is_contained(context->getAvailableDialects(),
                             DLTIDialect::getDialectNamespace()));
   context->loadAllAvailableDialects();
-
   OwningOpRef<ModuleOp> module(ModuleOp::create(FileLineColLoc::get(
       StringAttr::get(context, llvmModule->getSourceFileName()), /*line=*/0,
       /*column=*/0)));
 
-  ModuleImport moduleImport(module.get(), std::move(llvmModule));
+  ModuleImport moduleImport(module.get(), std::move(llvmModule),
+                            emitExpensiveWarnings);
   if (failed(moduleImport.initializeImportInterface()))
     return {};
   if (failed(moduleImport.convertDataLayout()))

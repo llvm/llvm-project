@@ -45,7 +45,8 @@ class LoopAnnotationImporter;
 /// that are introduced at the beginning of the region.
 class ModuleImport {
 public:
-  ModuleImport(ModuleOp mlirModule, std::unique_ptr<llvm::Module> llvmModule);
+  ModuleImport(ModuleOp mlirModule, std::unique_ptr<llvm::Module> llvmModule,
+               bool emitExpensiveWarnings);
 
   /// Calls the LLVMImportInterface initialization that queries the registered
   /// dialect interfaces for the supported LLVM IR intrinsics and metadata kinds
@@ -353,6 +354,11 @@ private:
   std::unique_ptr<detail::DebugImporter> debugImporter;
   /// Loop annotation importer.
   std::unique_ptr<detail::LoopAnnotationImporter> loopAnnotationImporter;
+
+  /// An option to control if expensive but uncritical diagnostics should be
+  /// emitted. Avoids generating warnings for unhandled debug intrinsics and
+  /// metadata that otherwise dominate the translation time for large inputs.
+  bool emitExpensiveWarnings;
 };
 
 } // namespace LLVM

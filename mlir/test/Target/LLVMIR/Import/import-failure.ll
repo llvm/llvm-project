@@ -1,4 +1,4 @@
-; RUN: not mlir-translate -import-llvm -split-input-file %s 2>&1 | FileCheck %s
+; RUN: not mlir-translate -import-llvm -emit-expensive-warnings -split-input-file %s 2>&1 | FileCheck %s
 
 ; CHECK:      import-failure.ll
 ; CHECK-SAME: error: unhandled instruction: indirectbr ptr %dst, [label %bb1, label %bb2]
