@@ -366,6 +366,9 @@ Improvements to Clang's diagnostics
   been fixed and the Fix-It now only spans to the end of the ``:``.
 - Clang now underlines the parameter list of function declaration when emitting
   a note about the mismatch in the number of arguments.
+- Clang now diagnoses unexpected tokens after a
+  ``#pragma clang|GCC diagnostic push|pop`` directive.
+  (`#13920: <https://github.com/llvm/llvm-project/issues/13920>`_)
 
 Bug Fixes in This Version
 -------------------------
