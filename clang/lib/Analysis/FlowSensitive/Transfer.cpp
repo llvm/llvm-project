@@ -865,7 +865,7 @@ private:
     assert(BlockToOutputState);
     assert(ExitBlock < BlockToOutputState->size());
 
-    auto ExitState = (*BlockToOutputState)[ExitBlock];
+    auto &ExitState = (*BlockToOutputState)[ExitBlock];
     assert(ExitState);
 
     Env.popCall(S, ExitState->Env);

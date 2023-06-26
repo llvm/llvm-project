@@ -160,8 +160,8 @@ public:
   /// the state of a program.
   explicit Environment(DataflowAnalysisContext &DACtx);
 
-  Environment(const Environment &Other);
-  Environment &operator=(const Environment &Other);
+  // Copy-constructor is private, Environments should not be copied. See fork().
+  Environment &operator=(const Environment &Other) = delete;
 
   Environment(Environment &&Other) = default;
   Environment &operator=(Environment &&Other) = default;
@@ -175,6 +175,16 @@ public:
   /// If `DeclCtx` is a non-static member function, initializes the environment
   /// with a symbolic representation of the `this` pointee.
   Environment(DataflowAnalysisContext &DACtx, const DeclContext &DeclCtx);
+
+  /// Returns a new environment that is a copy of this one.
+  ///
+  /// The state of the program is initially the same, but can be mutated without
+  /// affecting the original.
+  ///
+  /// However the original should not be further mutated, as this may interfere
+  /// with the fork. (In practice, values are stored independently, but the
+  /// forked flow condition references the original).
+  Environment fork() const;
 
   /// Creates and returns an environment to use for an inline analysis  of the
   /// callee. Uses the storage location from each argument in the `Call` as the
@@ -540,6 +550,9 @@ public:
   LLVM_DUMP_METHOD void dump(raw_ostream &OS) const;
 
 private:
+  // The copy-constructor is for use in fork() only.
+  Environment(const Environment &) = default;
+
   /// Creates a value appropriate for `Type`, if `Type` is supported, otherwise
   /// return null.
   ///
