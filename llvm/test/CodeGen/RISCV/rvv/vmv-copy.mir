@@ -317,7 +317,7 @@ body:             |
     ; CHECK-NEXT: $v10m2 = PseudoVLE16_V_M2 killed $x11, $noreg, 4 /* e16 */, implicit $vl, implicit $vtype
     ; CHECK-NEXT: $v10 = VMV1R_V $v8
     ; CHECK-NEXT: $v11 = VMV1R_V $v9
-    ; CHECK-NEXT: $v12m2 = PseudoVMV_V_V_M2 $v10m2, $noreg, 4 /* e16 */, implicit $vl, implicit $vtype
+    ; CHECK-NEXT: $v12m2 = VMV2R_V $v10m2
     $x0 = PseudoVSETVLI $x10, 201, implicit-def $vl, implicit-def $vtype
     $v10m2 = PseudoVLE16_V_M2 killed $x11, $noreg, 4, implicit $vl, implicit $vtype
     $v10 = COPY $v8
