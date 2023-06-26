@@ -222,14 +222,19 @@ public:
 
   /// Populates `handles` with all handles pointing to the given Payload IR op.
   /// Returns success if such handles exist, failure otherwise.
+  /// If `includeOutOfScope` is set to "true", handles that are defined in
+  /// regions beyond the most recent isolated from above region are included.
   LogicalResult getHandlesForPayloadOp(Operation *op,
-                                       SmallVectorImpl<Value> &handles) const;
+                                       SmallVectorImpl<Value> &handles,
+                                       bool includeOutOfScope = false) const;
 
   /// Populates `handles` with all handles pointing to the given payload IR
   /// value. Returns success if such handles exist, failure otherwise.
-  LogicalResult
-  getHandlesForPayloadValue(Value payloadValue,
-                            SmallVectorImpl<Value> &handles) const;
+  /// If `includeOutOfScope` is set to "true", handles that are defined in
+  /// regions beyond the most recent isolated from above region are included.
+  LogicalResult getHandlesForPayloadValue(Value payloadValue,
+                                          SmallVectorImpl<Value> &handles,
+                                          bool includeOutOfScope = false) const;
 
   /// Applies the transformation specified by the given transform op and updates
   /// the state accordingly.
@@ -410,42 +415,53 @@ private:
                  const TransformOptions &options = TransformOptions());
 
   /// Returns the mappings frame for the region in which the value is defined.
-  const Mappings &getMapping(Value value) const {
-    return const_cast<TransformState *>(this)->getMapping(value);
+  /// If `allowOutOfScope` is set to "false", asserts that the value is in
+  /// scope, based on the current stack of frames.
+  const Mappings &getMapping(Value value, bool allowOutOfScope = false) const {
+    return const_cast<TransformState *>(this)->getMapping(value,
+                                                          allowOutOfScope);
   }
-  Mappings &getMapping(Value value) {
+  Mappings &getMapping(Value value, bool allowOutOfScope = false) {
     Region *region = value.getParentRegion();
     auto it = mappings.find(region);
     assert(it != mappings.end() &&
            "trying to find a mapping for a value from an unmapped region");
 #ifndef NDEBUG
-    for (Region *r : llvm::reverse(llvm::make_first_range(mappings))) {
-      if (r == region)
-        break;
-      if (r->getParentOp()->hasTrait<OpTrait::IsIsolatedFromAbove>())
-        llvm_unreachable(
-            "trying to get mapping beyond region that is isolated from above");
+    if (!allowOutOfScope) {
+      for (Region *r : llvm::reverse(llvm::make_first_range(mappings))) {
+        if (r == region)
+          break;
+        if (r->getParentOp()->hasTrait<OpTrait::IsIsolatedFromAbove>())
+          llvm_unreachable("trying to get mapping beyond region that is "
+                           "isolated from above");
+      }
     }
 #endif // NDEBUG
     return it->second;
   }
 
   /// Returns the mappings frame for the region in which the operation resides.
-  const Mappings &getMapping(Operation *operation) const {
-    return const_cast<TransformState *>(this)->getMapping(operation);
+  /// If `allowOutOfScope` is set to "false", asserts that the operation is in
+  /// scope, based on the current stack of frames.
+  const Mappings &getMapping(Operation *operation,
+                             bool allowOutOfScope = false) const {
+    return const_cast<TransformState *>(this)->getMapping(operation,
+                                                          allowOutOfScope);
   }
-  Mappings &getMapping(Operation *operation) {
+  Mappings &getMapping(Operation *operation, bool allowOutOfScope = false) {
     Region *region = operation->getParentRegion();
     auto it = mappings.find(region);
     assert(it != mappings.end() &&
            "trying to find a mapping for an operation from an unmapped region");
 #ifndef NDEBUG
-    for (Region *r : llvm::reverse(llvm::make_first_range(mappings))) {
-      if (r == region)
-        break;
-      if (r->getParentOp()->hasTrait<OpTrait::IsIsolatedFromAbove>())
-        llvm_unreachable(
-            "trying to get mapping beyond region that is isolated from above");
+    if (!allowOutOfScope) {
+      for (Region *r : llvm::reverse(llvm::make_first_range(mappings))) {
+        if (r == region)
+          break;
+        if (r->getParentOp()->hasTrait<OpTrait::IsIsolatedFromAbove>())
+          llvm_unreachable("trying to get mapping beyond region that is "
+                           "isolated from above");
+      }
     }
 #endif // NDEBUG
     return it->second;
