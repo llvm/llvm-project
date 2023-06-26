@@ -28,7 +28,7 @@ only for the linker wrapper will be forwarded to the wrapped linker job.
 .. code-block:: console
 
   USAGE: clang-linker-wrapper [options] -- <options to passed to the linker>
-  
+
   OPTIONS:
     --bitcode-library=<kind>-<triple>-<arch>=<path>
                            Extra bitcode library to link
