@@ -3595,7 +3595,7 @@ Sema::TemplateDeductionResult Sema::FinishTemplateArgumentDeduction(
   if (FunctionTemplate->getFriendObjectKind())
     Owner = FunctionTemplate->getLexicalDeclContext();
   FunctionDecl *FD = FunctionTemplate->getTemplatedDecl();
-  // additional check for inline friend, 
+  // additional check for inline friend,
   // ```
   //   template <class F1> int foo(F1 X);
   //   template <int A1> struct A {

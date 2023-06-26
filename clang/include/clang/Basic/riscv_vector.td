@@ -914,7 +914,7 @@ multiclass RVVPseudoVNCVTBuiltin<string IR, string MName, string type_range,
           if (PolicyAttrs & RVV_VTA)
             Ops.insert(Ops.begin(), llvm::PoisonValue::get(ResultType));
         }
-        Ops.insert(Ops.begin() + 2, llvm::Constant::getNullValue(Ops.back()->getType())); 
+        Ops.insert(Ops.begin() + 2, llvm::Constant::getNullValue(Ops.back()->getType()));
         if (IsMasked) {
           Ops.push_back(ConstantInt::get(Ops.back()->getType(), PolicyAttrs));
           // maskedoff, op1, xlen, mask, vl
