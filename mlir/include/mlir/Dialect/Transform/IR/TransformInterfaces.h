@@ -555,7 +555,8 @@ private:
                           ArrayRef<Operation *> payloadOperations);
 
   /// Replaces the given payload op with another op. If the replacement op is
-  /// null, removes the association of the payload op with its handle.
+  /// null, removes the association of the payload op with its handle. Returns
+  /// failure if the op is not associated with any handle.
   ///
   /// Note: This function does not update value handles. None of the original
   /// op's results are allowed to be mapped to any value handle.
@@ -563,7 +564,7 @@ private:
 
   /// Replaces the given payload value with another value. If the replacement
   /// value is null, removes the association of the payload value with its
-  /// handle.
+  /// handle. Returns failure if the value is not associated with any handle.
   LogicalResult replacePayloadValue(Value value, Value replacement);
 
   /// Records handle invalidation reporters into `newlyInvalidated`.
