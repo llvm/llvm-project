@@ -442,8 +442,8 @@ class VOP_MAC <ValueType vt0, ValueType vt1=vt0> : VOPProfile <[vt0, vt1, vt1, v
   let InsVOPDYDeferred =
     (ins !if(!eq(Src1VT.Size, 32), VSrc_f32_Deferred, VSrc_f16_Deferred):$src0Y,
          VGPR_32:$vsrc1Y, VGPRSrc_32:$src2Y);
-  let InsVOPD3X = (ins Src0RCVOPD3:$src0X, Src1RC32:$vsrc1X, VGPRSrc_32:$src2X);
-  let InsVOPD3Y = (ins Src0RCVOPD3:$src0Y, Src1RC32:$vsrc1Y, VGPRSrc_32:$src2Y);
+  let InsVOPD3X = (ins Src0VOPD3:$src0X, Src1RC32:$vsrc1X, VGPRSrc_32:$src2X);
+  let InsVOPD3Y = (ins Src0VOPD3:$src0Y, Src1RC32:$vsrc1Y, VGPRSrc_32:$src2Y);
 
   let InsDPP8 = (ins Src0ModDPP:$src0_modifiers, Src0DPP:$src0,
                      Src1ModDPP:$src1_modifiers, Src1DPP:$src1,
@@ -1212,11 +1212,11 @@ def : VOPBinOpClampPat<usubsat, V_SUB_U16_e64, i16>;
 let SubtargetPredicate = isGFX12Plus, isReMaterializable = 1 in {
   let SchedRW = [WriteDoubleAdd], isCommutable = 1 in {
     let FPDPRounding = 1 in {
-      defm V_ADD_F64_pseudo : VOP2Inst <"v_add_f64_pseudo", VOP_F64_F64_F64, any_fadd>;
-      defm V_MUL_F64_pseudo : VOP2Inst <"v_mul_f64_pseudo", VOP_F64_F64_F64, fmul>;
+      defm V_ADD_F64_pseudo : VOP2Inst_VOPD <"v_add_f64_pseudo", VOP_F64_F64_F64, 0x18, "v_add_f64", any_fadd>;
+      defm V_MUL_F64_pseudo : VOP2Inst_VOPD <"v_mul_f64_pseudo", VOP_F64_F64_F64, 0x19, "v_mul_f64", fmul>;
     } // End FPDPRounding = 1
-    defm V_MIN_NUM_F64 : VOP2Inst <"v_min_num_f64", VOP_F64_F64_F64, fminnum_like>;
-    defm V_MAX_NUM_F64 : VOP2Inst <"v_max_num_f64", VOP_F64_F64_F64, fmaxnum_like>;
+    defm V_MIN_NUM_F64 : VOP2Inst_VOPD <"v_min_num_f64", VOP_F64_F64_F64, 0x1c, "v_min_num_f64", fminnum_like>;
+    defm V_MAX_NUM_F64 : VOP2Inst_VOPD <"v_max_num_f64", VOP_F64_F64_F64, 0x1b, "v_max_num_f64", fmaxnum_like>;
   } // End SchedRW = [WriteDoubleAdd], isCommutable = 1
   let SchedRW = [Write64Bit] in {
     defm V_LSHLREV_B64_pseudo : VOP2Inst <"v_lshlrev_b64_pseudo", VOP_I64_I32_I64, clshl_rev_64>;

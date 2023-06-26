@@ -253,7 +253,9 @@ foreach Gen = [GFX11GenD, GFX12GenD, GFX1210GenD] in {
 }
 
 defvar VOPD3XPseudosExtra = ["V_ADD_U32_e32", "V_LSHLREV_B32_e32", "V_FMA_F32_e64", "V_SUB_U32_e32",
-                             "V_LSHRREV_B32_e32", "V_ASHRREV_I32_e32", "V_MOV_B64_e32"];
+                             "V_LSHRREV_B32_e32", "V_ASHRREV_I32_e32", "V_FMA_F64_e64", "V_ADD_F64_pseudo_e32",
+                             "V_MUL_F64_pseudo_e32", "V_MAX_NUM_F64_e32", "V_MIN_NUM_F64_e32", "V_MOV_B64_e32",
+                             "V_LSHL_ADD_U64_e64"];
 defvar VOPD3XPseudosGFX1210 = !listconcat(
                                 !filter(x, VOPDXPseudosGFX12, !and(!eq(!find(x, "FMAAK"), -1),
                                                                    !eq(!find(x, "FMAMK"), -1))),

@@ -2474,7 +2474,9 @@ class VOPProfile <list<ValueType> _ArgVT, bit _EnableClamp = 0> {
   field Operand Src2ModVOP3DPP = getSrcModVOP3DPP<Src2VT>.ret;
   field Operand Src0ModSDWA = getSrcModSDWA<Src0VT>.ret;
   field Operand Src1ModSDWA = getSrcModSDWA<Src1VT>.ret;
-  field RegisterOperand Src0RCVOPD3 = getVCSrcForVT<Src0VT>.ret;
+  field RegisterOperand Src0VOPD3 = getVCSrcForVT<Src0VT>.ret;
+  field RegisterOperand Src1VOPD3 = RegisterOperand<getVregSrcForVT<Src1VT>.ret>;
+  field RegisterOperand Src2VOPD3 = RegisterOperand<getVregSrcForVT<Src2VT>.ret>;
 
 
   field bit IsMAI = 0;
@@ -2586,12 +2588,12 @@ class VOPProfile <list<ValueType> _ArgVT, bit _EnableClamp = 0> {
   field dag InsVOPDY = (ins Src0RC32:$src0Y, Src1RC32:$vsrc1Y);
   field dag InsVOPDYDeferred = (ins !if(!eq(Src1VT.Size, 32), VSrc_f32_Deferred, VSrc_f16_Deferred):$src0Y, VGPR_32:$vsrc1Y);
   field bit HasVOPD3Src2 = !empty(Ins32); // VOP3 does not have Ins32.
-  field dag InsVOPD3X = !con((ins Src0RCVOPD3:$src0X),
-                             !if(HasSrc1, (ins Src1RC32:$vsrc1X), (ins)),
-                             !if(HasVOPD3Src2, (ins Src1RC32:$vsrc2X), (ins)));
-  field dag InsVOPD3Y = !con((ins Src0RCVOPD3:$src0Y),
-                             !if(HasSrc1, (ins Src1RC32:$vsrc1Y), (ins)),
-                             !if(HasVOPD3Src2, (ins Src1RC32:$vsrc2Y), (ins)));
+  field dag InsVOPD3X = !con((ins Src0VOPD3:$src0X),
+                             !if(HasSrc1, (ins Src1VOPD3:$vsrc1X), (ins)),
+                             !if(HasVOPD3Src2, (ins Src2VOPD3:$vsrc2X), (ins)));
+  field dag InsVOPD3Y = !con((ins Src0VOPD3:$src0Y),
+                             !if(HasSrc1, (ins Src1VOPD3:$vsrc1Y), (ins)),
+                             !if(HasVOPD3Src2, (ins Src2VOPD3:$vsrc2Y), (ins)));
 
 
   field string Asm32 = getAsm32<HasDst, NumSrcArgs, DstVT>.ret;
