@@ -183,7 +183,7 @@ void ProfileGeneratorBase::showDensitySuggestion(double Density) {
                             "set too low. Please check your command.\n";
   else if (Density < HotFunctionDensityThreshold)
     WithColor::warning()
-        << "AutoFDO is estimated to optimize better with "
+        << "Sample PGO is estimated to optimize better with "
         << format("%.1f", HotFunctionDensityThreshold / Density)
         << "x more samples. Please consider increasing sampling rate or "
            "profiling for longer duration to get more samples.\n";
