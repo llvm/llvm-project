@@ -84,8 +84,6 @@ macro(opencl_bc_lib)
   set(sources ${OPENCL_BC_LIB_SOURCES})
   set(internal_link_libs ${OPENCL_BC_LIB_INTERNAL_LINK_LIBS})
 
-  get_target_property(irif_lib_output irif OUTPUT_NAME)
-
   # Mirror the install layout structure.
   set(OUTPUT_DIR ${PROJECT_BINARY_DIR}/${INSTALL_ROOT_SUFFIX})
   file(MAKE_DIRECTORY ${OUTPUT_DIR})
@@ -116,11 +114,10 @@ macro(opencl_bc_lib)
       add_custom_command(OUTPUT "${output}"
         COMMAND $<TARGET_FILE:clang> ${inc_options} ${CLANG_OCL_FLAGS}
           ${file_specific_flags}
-          -emit-llvm -Xclang -mlink-builtin-bitcode -Xclang "${irif_lib_output}"
-          -c "${file}" -o "${output}"
+          -emit-llvm -c "${file}" -o "${output}"
           -MD -MF ${depfile}
          MAIN_DEPENDENCY "${file}"
-         DEPENDS "$<TARGET_FILE:clang>" "${irif_lib_output}"
+         DEPENDS "$<TARGET_FILE:clang>"
          DEPFILE ${depfile})
       list(APPEND deps "${output}")
       list(APPEND clean_files "${output}")
@@ -175,7 +172,6 @@ macro(opencl_bc_lib)
   if (TARGET prepare-builtins)
     add_dependencies("${name}" prepare-builtins)
   endif()
-  add_dependencies("${name}" irif)
 
   set_directory_properties(PROPERTIES
     ADDITIONAL_MAKE_CLEAN_FILES "${clean_files}")

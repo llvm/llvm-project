@@ -61,7 +61,6 @@ include(OCL)
 
 set(AMDGCN_LIB_LIST)
 set(AMDGCN_DEP_LIST)
-add_subdirectory(irif)
 add_subdirectory(oclc)
 add_subdirectory(ocml)
 add_subdirectory(ockl)
