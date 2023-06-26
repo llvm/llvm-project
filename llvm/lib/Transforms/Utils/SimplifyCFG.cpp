@@ -6048,7 +6048,7 @@ SwitchLookupTable::SwitchLookupTable(
     APInt PrevVal;
     APInt DistToPrev;
     // When linear map is monotonic, we can attach nsw.
-    bool Inc, Wrapped = false;
+    bool Wrapped = false;
     assert(TableSize >= 2 && "Should be a SingleValue table.");
     // Check if there is the same distance between two consecutive values.
     for (uint64_t I = 0; I < TableSize; ++I) {
