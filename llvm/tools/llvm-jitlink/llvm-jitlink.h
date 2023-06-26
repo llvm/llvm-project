@@ -19,10 +19,10 @@
 #include "llvm/ExecutionEngine/Orc/ObjectLinkingLayer.h"
 #include "llvm/ExecutionEngine/Orc/SimpleRemoteEPC.h"
 #include "llvm/ExecutionEngine/RuntimeDyldChecker.h"
-#include "llvm/MC/SubtargetFeature.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/Regex.h"
 #include "llvm/Support/raw_ostream.h"
+#include "llvm/TargetParser/SubtargetFeature.h"
 #include "llvm/TargetParser/Triple.h"
 
 #include <vector>
