@@ -24,7 +24,7 @@ add_clang_library(clangAnalysisFlowSensitive
 add_subdirectory(Models)
 
 add_custom_command(OUTPUT HTMLLogger.inc
-  COMMAND "${Python3_EXECUTABLE}" ${CLANG_SOURCE_DIR}/utils/bundle_resources.py 
+  COMMAND "${Python3_EXECUTABLE}" ${CLANG_SOURCE_DIR}/utils/bundle_resources.py
   ${CMAKE_CURRENT_BINARY_DIR}/HTMLLogger.inc
   HTMLLogger.html HTMLLogger.css HTMLLogger.js
   WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
