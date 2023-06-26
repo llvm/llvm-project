@@ -74,10 +74,8 @@ public:
 };
 
 enum {
-  GICXXPred_I64_Invalid = 0,
-  GICXXPred_APInt_Invalid = 0,
-  GICXXPred_APFloat_Invalid = 0,
-  GICXXPred_MI_Invalid = 0,
+  GICXXPred_Invalid = 0,
+  GICXXCustomAction_Invalid = 0,
 };
 
 enum {
@@ -199,6 +197,11 @@ enum {
   /// - InsnID - Instruction ID
   GIM_CheckIsBuildVectorAllOnes,
   GIM_CheckIsBuildVectorAllZeros,
+
+  /// Check a trivial predicate which takes no arguments.
+  /// This can be used by executors to implement custom flags that don't fit in
+  /// target features.
+  GIM_CheckSimplePredicate,
 
   /// Check a generic C++ instruction predicate
   /// - InsnID - Instruction ID
@@ -379,6 +382,16 @@ enum {
   /// - OldInsnID - Instruction ID to get the matched operand from
   /// - RendererFnID - Custom renderer function to call
   GIR_CustomRenderer,
+
+  /// Calls a C++ function to perform an action when a match is complete.
+  /// The MatcherState is passed to the function to allow it to modify
+  /// instructions.
+  /// This is less constrained than a custom renderer and can update instructions
+  /// in the state.
+  /// - FnID - The function to call.
+  /// TODO: Remove this at some point when combiners aren't reliant on it. It's
+  /// a bit of a hack.
+  GIR_CustomAction,
 
   /// Render operands to the specified instruction using a custom function,
   /// reading from a specific operand.
@@ -561,6 +574,14 @@ protected:
                                   const MatcherState &State) const {
     llvm_unreachable(
         "Subclasses must override this with a tablegen-erated function");
+  }
+
+  virtual bool testSimplePredicate(unsigned) const {
+    llvm_unreachable("Subclass does not implement testSimplePredicate!");
+  }
+
+  virtual void runCustomAction(unsigned, const MatcherState &State) const {
+    llvm_unreachable("Subclass does not implement runCustomAction!");
   }
 
   bool isOperandImmEqual(const MachineOperand &MO, int64_t Value,

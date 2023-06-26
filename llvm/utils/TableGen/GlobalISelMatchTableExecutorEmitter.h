@@ -87,8 +87,7 @@ class GlobalISelMatchTableExecutorEmitter {
       OS << "// " << Comment << "\n";
     if (!Predicates.empty()) {
       OS << "enum {\n";
-      std::string EnumeratorSeparator =
-          (" = GICXXPred_" + TypeIdentifier + "_Invalid + 1,\n").str();
+      StringRef EnumeratorSeparator = " = GICXXPred_Invalid + 1,\n";
       for (const auto &Pred : Predicates) {
         OS << "  GICXXPred_" << TypeIdentifier << "_Predicate_"
            << GetPredEnumName(Pred) << EnumeratorSeparator;
@@ -205,6 +204,8 @@ public:
   /// Emit the `testImmPredicate_APInt` function.
   /// Note: `emitImmPredicateFnsImpl` can be used to do most of the work.
   virtual void emitAPIntImmPredicateFns(raw_ostream &OS) = 0;
+  virtual void emitTestSimplePredicate(raw_ostream &OS) = 0;
+  virtual void emitRunCustomAction(raw_ostream &OS) = 0;
 
   void emitExecutorImpl(raw_ostream &OS, const gi::MatchTable &Table,
                         ArrayRef<gi::LLTCodeGen> TypeObjects,
