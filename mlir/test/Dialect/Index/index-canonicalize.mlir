@@ -521,3 +521,13 @@ func.func @cmp_maxs(%arg0: index) -> (i1, i1) {
   // CHECK: return %true, %false
   return %1, %2 : i1, i1
 }
+
+// CHECK-LABEL: @mul_identity
+func.func @mul_identity(%arg0: index) -> (index, index) {
+  %idx0 = index.constant 0
+  %idx1 = index.constant 1
+  %0 = index.mul %arg0, %idx0
+  %1 = index.mul %arg0, %idx1
+  // CHECK: return %idx0, %arg0
+  return %0, %1 : index, index
+}
