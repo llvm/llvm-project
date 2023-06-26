@@ -1128,6 +1128,16 @@ TEST_F(TargetDeclTest, ObjC) {
   EXPECT_DECLS("ObjCCategoryImplDecl", "@interface Foo(Ext)");
 
   Code = R"cpp(
+    @interface Foo
+    @end
+    @interface Foo (Ext)
+    @end
+    @implementation Foo ([[Ext]])
+    @end
+  )cpp";
+  EXPECT_DECLS("ObjCCategoryImplDecl", "@interface Foo(Ext)");
+
+  Code = R"cpp(
     void test(id</*error-ok*/[[InvalidProtocol]]> p);
   )cpp";
   EXPECT_DECLS("ParmVarDecl", "id p");
@@ -1216,10 +1226,7 @@ protected:
     std::string DumpedReferences;
   };
 
-  /// Parses \p Code, finds function or namespace '::foo' and annotates its body
-  /// with results of findExplicitReferences.
-  /// See actual tests for examples of annotation format.
-  AllRefs annotateReferencesInFoo(llvm::StringRef Code) {
+  TestTU newTU(llvm::StringRef Code) {
     TestTU TU;
     TU.Code = std::string(Code);
 
@@ -1228,30 +1235,11 @@ protected:
     TU.ExtraArgs.push_back("-std=c++20");
     TU.ExtraArgs.push_back("-xobjective-c++");
 
-    auto AST = TU.build();
-    auto *TestDecl = &findDecl(AST, "foo");
-    if (auto *T = llvm::dyn_cast<FunctionTemplateDecl>(TestDecl))
-      TestDecl = T->getTemplatedDecl();
+    return TU;
+  }
 
-    std::vector<ReferenceLoc> Refs;
-    if (const auto *Func = llvm::dyn_cast<FunctionDecl>(TestDecl))
-      findExplicitReferences(
-          Func->getBody(),
-          [&Refs](ReferenceLoc R) { Refs.push_back(std::move(R)); },
-          AST.getHeuristicResolver());
-    else if (const auto *NS = llvm::dyn_cast<NamespaceDecl>(TestDecl))
-      findExplicitReferences(
-          NS,
-          [&Refs, &NS](ReferenceLoc R) {
-            // Avoid adding the namespace foo decl to the results.
-            if (R.Targets.size() == 1 && R.Targets.front() == NS)
-              return;
-            Refs.push_back(std::move(R));
-          },
-          AST.getHeuristicResolver());
-    else
-      ADD_FAILURE() << "Failed to find ::foo decl for test";
-
+  AllRefs annotatedReferences(llvm::StringRef Code, ParsedAST &AST,
+                              std::vector<ReferenceLoc> Refs) {
     auto &SM = AST.getSourceManager();
     llvm::sort(Refs, [&](const ReferenceLoc &L, const ReferenceLoc &R) {
       return SM.isBeforeInTranslationUnit(L.NameLoc, R.NameLoc);
@@ -1288,9 +1276,60 @@ protected:
 
     return AllRefs{std::move(AnnotatedCode), std::move(DumpedReferences)};
   }
+
+  /// Parses \p Code, and annotates its body with results of
+  /// findExplicitReferences on all top level decls.
+  /// See actual tests for examples of annotation format.
+  AllRefs annotateAllReferences(llvm::StringRef Code) {
+    TestTU TU = newTU(Code);
+    auto AST = TU.build();
+
+    std::vector<ReferenceLoc> Refs;
+    for (auto *TopLevel : AST.getLocalTopLevelDecls())
+      findExplicitReferences(
+          TopLevel, [&Refs](ReferenceLoc R) { Refs.push_back(std::move(R)); },
+          AST.getHeuristicResolver());
+    return annotatedReferences(Code, AST, std::move(Refs));
+  }
+
+  /// Parses \p Code, finds function or namespace '::foo' and annotates its body
+  /// with results of findExplicitReferences.
+  /// See actual tests for examples of annotation format.
+  AllRefs annotateReferencesInFoo(llvm::StringRef Code) {
+    TestTU TU = newTU(Code);
+    auto AST = TU.build();
+    auto *TestDecl = &findDecl(AST, "foo");
+    if (auto *T = llvm::dyn_cast<FunctionTemplateDecl>(TestDecl))
+      TestDecl = T->getTemplatedDecl();
+
+    std::vector<ReferenceLoc> Refs;
+    if (const auto *Func = llvm::dyn_cast<FunctionDecl>(TestDecl))
+      findExplicitReferences(
+          Func->getBody(),
+          [&Refs](ReferenceLoc R) { Refs.push_back(std::move(R)); },
+          AST.getHeuristicResolver());
+    else if (const auto *NS = llvm::dyn_cast<NamespaceDecl>(TestDecl))
+      findExplicitReferences(
+          NS,
+          [&Refs, &NS](ReferenceLoc R) {
+            // Avoid adding the namespace foo decl to the results.
+            if (R.Targets.size() == 1 && R.Targets.front() == NS)
+              return;
+            Refs.push_back(std::move(R));
+          },
+          AST.getHeuristicResolver());
+    else if (const auto *OC = llvm::dyn_cast<ObjCContainerDecl>(TestDecl))
+      findExplicitReferences(
+          OC, [&Refs](ReferenceLoc R) { Refs.push_back(std::move(R)); },
+          AST.getHeuristicResolver());
+    else
+      ADD_FAILURE() << "Failed to find ::foo decl for test";
+
+    return annotatedReferences(Code, AST, std::move(Refs));
+  }
 };
 
-TEST_F(FindExplicitReferencesTest, All) {
+TEST_F(FindExplicitReferencesTest, AllRefsInFoo) {
   std::pair</*Code*/ llvm::StringRef, /*References*/ llvm::StringRef> Cases[] =
       {// Simple expressions.
        {R"cpp(
@@ -2017,6 +2056,42 @@ TEST_F(FindExplicitReferencesTest, All) {
 
     auto Actual =
         annotateReferencesInFoo(llvm::Annotations(ExpectedCode).code());
+    EXPECT_EQ(ExpectedCode, Actual.AnnotatedCode);
+    EXPECT_EQ(ExpectedRefs, Actual.DumpedReferences) << ExpectedCode;
+  }
+}
+
+TEST_F(FindExplicitReferencesTest, AllRefs) {
+  std::pair</*Code*/ llvm::StringRef, /*References*/ llvm::StringRef> Cases[] =
+      {{R"cpp(
+      @interface $0^MyClass
+      @end
+      @implementation $1^$2^MyClass
+      @end
+      )cpp",
+        "0: targets = {MyClass}, decl\n"
+        "1: targets = {MyClass}\n"
+        "2: targets = {MyClass}, decl\n"},
+       {R"cpp(
+      @interface $0^MyClass
+      @end
+      @interface $1^MyClass ($2^Category)
+      @end
+      @implementation $3^MyClass ($4^$5^Category)
+      @end
+      )cpp",
+        "0: targets = {MyClass}, decl\n"
+        "1: targets = {MyClass}\n"
+        "2: targets = {Category}, decl\n"
+        "3: targets = {MyClass}\n"
+        "4: targets = {Category}\n"
+        "5: targets = {Category}, decl\n"}};
+
+  for (const auto &C : Cases) {
+    llvm::StringRef ExpectedCode = C.first;
+    llvm::StringRef ExpectedRefs = C.second;
+
+    auto Actual = annotateAllReferences(llvm::Annotations(ExpectedCode).code());
     EXPECT_EQ(ExpectedCode, Actual.AnnotatedCode);
     EXPECT_EQ(ExpectedRefs, Actual.DumpedReferences) << ExpectedCode;
   }
