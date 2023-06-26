@@ -61,3 +61,9 @@
 // CHECK-APCS-GNU: "-target-abi" "apcs-gnu"
 // CHECK-AAPCS: "-target-abi" "aapcs"
 // CHECK-AAPCS-LINUX: "-target-abi" "aapcs-linux"
+
+// RUN: %clang --target=arm---gnueabi -mabi=aapcs -x assembler %s -### -o /dev/null 2>&1 \
+// RUN:   | FileCheck --check-prefix=CHECK-ASM %s
+
+/// The combination -x assember & -mabi is not implemented, but for GCC compatibility we accept with a warning.
+// CHECK-ASM: warning: argument unused during compilation: '-mabi={{.*}}'
