@@ -101,6 +101,7 @@ void registerTestLinalgDecomposeOps();
 void registerTestLinalgElementwiseFusion();
 void registerTestLinalgGreedyFusion();
 void registerTestLinalgTransforms();
+void registerTestLivenessAnalysisPass();
 void registerTestLivenessPass();
 void registerTestLoopFusion();
 void registerTestCFGLoopInfoPass();
@@ -218,6 +219,7 @@ void registerTestPasses() {
   mlir::test::registerTestLinalgElementwiseFusion();
   mlir::test::registerTestLinalgGreedyFusion();
   mlir::test::registerTestLinalgTransforms();
+  mlir::test::registerTestLivenessAnalysisPass();
   mlir::test::registerTestLivenessPass();
   mlir::test::registerTestLoopFusion();
   mlir::test::registerTestCFGLoopInfoPass();
