@@ -1828,6 +1828,10 @@ bool RISCVInstrInfo::verifyInstruction(const MachineInstr &MI,
   }
   if (RISCVII::hasSEWOp(TSFlags)) {
     unsigned OpIdx = RISCVII::getSEWOpNum(Desc);
+    if (!MI.getOperand(OpIdx).isImm()) {
+      ErrInfo = "SEW value expected to be an immediate";
+      return false;
+    }
     uint64_t Log2SEW = MI.getOperand(OpIdx).getImm();
     if (Log2SEW > 31) {
       ErrInfo = "Unexpected SEW value";
@@ -1841,6 +1845,10 @@ bool RISCVInstrInfo::verifyInstruction(const MachineInstr &MI,
   }
   if (RISCVII::hasVecPolicyOp(TSFlags)) {
     unsigned OpIdx = RISCVII::getVecPolicyOpNum(Desc);
+    if (!MI.getOperand(OpIdx).isImm()) {
+      ErrInfo = "Policy operand expected to be an immediate";
+      return false;
+    }
     uint64_t Policy = MI.getOperand(OpIdx).getImm();
     if (Policy > (RISCVII::TAIL_AGNOSTIC | RISCVII::MASK_AGNOSTIC)) {
       ErrInfo = "Invalid Policy Value";
