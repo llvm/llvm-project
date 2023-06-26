@@ -1710,3 +1710,20 @@ transform.sequence failures(propagate) {
   transform.annotate %0 "broadcast_attr" = %2 : !transform.any_op, !transform.param<i64>
   transform.annotate %0 "unit_attr" : !transform.any_op
 }
+
+// -----
+
+func.func @notify_payload_op_replaced(%arg0: index, %arg1: index) {
+  %0 = arith.muli %arg0, %arg1 {original} : index
+  // expected-remark @below{{updated handle}}
+  %1 = arith.muli %arg0, %arg1 {replacement} : index
+  return
+}
+
+transform.sequence failures(propagate) {
+^bb1(%arg1: !transform.any_op):
+  %0 = transform.structured.match attributes{original} in %arg1 : (!transform.any_op) -> !transform.any_op
+  %1 = transform.structured.match attributes{replacement} in %arg1 : (!transform.any_op) -> !transform.any_op
+  test_notify_payload_op_replaced %0, %1 : (!transform.any_op, !transform.any_op) -> ()
+  test_print_remark_at_operand %0, "updated handle" : !transform.any_op
+}

@@ -923,9 +923,12 @@ protected:
   TransformOpInterface getTransformOp() const { return transformOp; }
 
 private:
+  friend class TransformRewriter;
+
   void notifyOperationRemoved(Operation *op) override;
 
   void notifyOperationReplaced(Operation *op, ValueRange newValues) override;
+  using Listener::notifyOperationReplaced;
 
   /// The transform op in which this TrackingListener is used.
   TransformOpInterface transformOp;
@@ -980,6 +983,19 @@ public:
 
   /// Silence all tracking failures that have been encountered so far.
   void silenceTrackingFailure();
+
+  /// Notify the transform dialect interpreter that the given op has been
+  /// replaced with another op and that the mapping between handles and payload
+  /// ops/values should be updated. This function should be called before the
+  /// original op is erased. It fails if the operation could not be replaced,
+  /// e.g., because the original operation is not tracked.
+  ///
+  /// Note: As long as IR modifications are performed through this rewriter,
+  /// the transform state is usually updated automatically. This function should
+  /// be used when unsupported rewriter API is used; e.g., updating all uses of
+  /// a tracked operation one-by-one instead of using `RewriterBase::replaceOp`.
+  LogicalResult notifyPayloadOperationReplaced(Operation *op,
+                                               Operation *replacement);
 
 private:
   ErrorCheckingTrackingListener *const listener;
