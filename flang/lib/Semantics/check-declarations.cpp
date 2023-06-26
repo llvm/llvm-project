@@ -2552,7 +2552,8 @@ static std::optional<std::string> DefinesGlobalName(const Symbol &symbol) {
   } else {
     const std::string *bindC{symbol.GetBindName()};
     if (symbol.has<CommonBlockDetails>() ||
-        IsExternalProcedureDefinition(symbol)) {
+        IsExternalProcedureDefinition(symbol) ||
+        (symbol.owner().IsGlobal() && IsExternal(symbol))) {
       return bindC ? *bindC : symbol.name().ToString();
     } else if (bindC &&
         (symbol.has<ObjectEntityDetails>() || IsModuleProcedure(symbol))) {
