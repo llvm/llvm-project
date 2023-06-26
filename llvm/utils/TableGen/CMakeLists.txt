@@ -62,6 +62,7 @@ add_tablegen(llvm-tblgen LLVM
   GICombinerEmitter.cpp
   GlobalISelEmitter.cpp
   GlobalISelMatchTable.cpp
+  GlobalISelMatchTableExecutorEmitter.cpp
   InfoByHwMode.cpp
   InstrInfoEmitter.cpp
   InstrDocsEmitter.cpp

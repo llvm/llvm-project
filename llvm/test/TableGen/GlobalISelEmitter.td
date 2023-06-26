@@ -88,6 +88,17 @@ def HasC : Predicate<"Subtarget->hasC()"> { let RecomputePerFunction = 1; }
 // CHECK-NEXT:    ExecInfo(TypeObjects, NumTypeObjects, FeatureBitsets, ComplexPredicateFns, CustomRenderers)
 // CHECK-NEXT:  #endif // ifdef GET_GLOBALISEL_TEMPORARIES_INIT
 
+// CHECK-LABEL: // LLT Objects.
+// CHECK-NEXT:  enum {
+// CHECK-NEXT:    GILLT_p0s32
+// CHECK-NEXT:    GILLT_s32,
+// CHECK-NEXT:  }
+// CHECK-NEXT:  const static size_t NumTypeObjects = 2;
+// CHECK-NEXT:  const static LLT TypeObjects[] = {
+// CHECK-NEXT:    LLT::pointer(0, 32),
+// CHECK-NEXT:    LLT::scalar(32),
+// CHECK-NEXT:  };
+
 // CHECK-LABEL: enum SubtargetFeatureBits : uint8_t {
 // CHECK-NEXT:    Feature_HasABit = 0,
 // CHECK-NEXT:    Feature_HasBBit = 1,
@@ -112,17 +123,6 @@ def HasC : Predicate<"Subtarget->hasC()"> { let RecomputePerFunction = 1; }
 // CHECK-NEXT:    return Features;
 // CHECK-NEXT:  }
 
-// CHECK-LABEL: // LLT Objects.
-// CHECK-NEXT:  enum {
-// CHECK-NEXT:    GILLT_p0s32
-// CHECK-NEXT:    GILLT_s32,
-// CHECK-NEXT:  }
-// CHECK-NEXT:  const static size_t NumTypeObjects = 2;
-// CHECK-NEXT:  const static LLT TypeObjects[] = {
-// CHECK-NEXT:    LLT::pointer(0, 32),
-// CHECK-NEXT:    LLT::scalar(32),
-// CHECK-NEXT:  };
-
 // CHECK-LABEL: // Feature bitsets.
 // CHECK-NEXT:  enum {
 // CHECK-NEXT:    GIFBS_Invalid,
@@ -142,24 +142,31 @@ def HasC : Predicate<"Subtarget->hasC()"> { let RecomputePerFunction = 1; }
 // CHECK-NEXT:    GICP_gi_complex_rr,
 // CHECK-NEXT:  };
 
+// CHECK-LABEL: MyTargetInstructionSelector::ComplexMatcherMemFn
+// CHECK-NEXT:  MyTargetInstructionSelector::ComplexPredicateFns[] = {
+// CHECK-NEXT:    nullptr, // GICP_Invalid
+// CHECK-NEXT:    &MyTargetInstructionSelector::selectComplexPattern, // gi_complex
+// CHECK-NEXT:    &MyTargetInstructionSelector::selectComplexPatternRR, // gi_complex_rr
+// CHECK-NEXT:  }
+
+// CHECK-LABEL: // PatFrag predicates.
+// CHECK-NEXT:  enum {
+// CHECK-NEXT:   GICXXPred_MI_Predicate_frag = GICXXPred_MI_Invalid + 1,
+// CHECK-NEXT:  };
+
 // CHECK-LABEL: // PatFrag predicates.
 // CHECK-NEXT:  enum {
 // CHECK-NEXT:    GICXXPred_I64_Predicate_cimm8 = GICXXPred_I64_Invalid + 1,
 // CHECK-NEXT:    GICXXPred_I64_Predicate_simm8,
 // CHECK-NEXT:  };
 
-
 // CHECK-NEXT: bool MyTargetInstructionSelector::testImmPredicate_I64(unsigned PredicateID, int64_t Imm) const {
 // CHECK-NEXT:   switch (PredicateID) {
 // CHECK-NEXT:   case GICXXPred_I64_Predicate_cimm8: {
 // CHECK-NEXT:     return isInt<8>(Imm);
-// CHECK-NEXT:     llvm_unreachable("ImmediateCode should have returned");
-// CHECK-NEXT:     return false;
 // CHECK-NEXT:   }
 // CHECK-NEXT:   case GICXXPred_I64_Predicate_simm8: {
-// CHECK-NEXT:      return isInt<8>(Imm);
-// CHECK-NEXT:     llvm_unreachable("ImmediateCode should have returned");
-// CHECK-NEXT:     return false;
+// CHECK-NEXT:     return isInt<8>(Imm);
 // CHECK-NEXT:   }
 // CHECK-NEXT:   }
 // CHECK-NEXT:   llvm_unreachable("Unknown predicate");
@@ -174,8 +181,6 @@ def HasC : Predicate<"Subtarget->hasC()"> { let RecomputePerFunction = 1; }
 // CHECK-NEXT:    switch (PredicateID) {
 // CHECK-NEXT:    case GICXXPred_APFloat_Predicate_fpimmz: {
 // CHECK-NEXT:      return Imm->isExactlyValue(0.0);
-// CHECK-NEXT:      llvm_unreachable("ImmediateCode should have returned");
-// CHECK-NEXT:      return false;
 // CHECK-NEXT:    }
 // CHECK-NEXT:    }
 // CHECK-NEXT:    llvm_unreachable("Unknown predicate");
@@ -190,19 +195,10 @@ def HasC : Predicate<"Subtarget->hasC()"> { let RecomputePerFunction = 1; }
 // CHECK-NEXT:    switch (PredicateID) {
 // CHECK-NEXT:    case GICXXPred_APInt_Predicate_simm9: {
 // CHECK-NEXT:      return isInt<9>(Imm->getSExtValue());
-// CHECK-NEXT:      llvm_unreachable("ImmediateCode should have returned");
-// CHECK-NEXT:      return false;
 // CHECK-NEXT:    }
 // CHECK-NEXT:    }
 // CHECK-NEXT:    llvm_unreachable("Unknown predicate");
 // CHECK-NEXT:    return false;
-// CHECK-NEXT:  }
-
-// CHECK-LABEL: MyTargetInstructionSelector::ComplexMatcherMemFn
-// CHECK-NEXT:  MyTargetInstructionSelector::ComplexPredicateFns[] = {
-// CHECK-NEXT:    nullptr, // GICP_Invalid
-// CHECK-NEXT:    &MyTargetInstructionSelector::selectComplexPattern, // gi_complex
-// CHECK-NEXT:    &MyTargetInstructionSelector::selectComplexPatternRR, // gi_complex_rr
 // CHECK-NEXT:  }
 
 // CHECK-LABEL: // Custom renderers.
@@ -217,8 +213,7 @@ def HasC : Predicate<"Subtarget->hasC()"> { let RecomputePerFunction = 1; }
 // CHECK-NEXT: };
 
 // CHECK: bool MyTargetInstructionSelector::selectImpl(MachineInstr &I, CodeGenCoverage &CoverageInfo) const {
-// CHECK-NEXT: MachineFunction &MF = *I.getParent()->getParent();
-// CHECK-NEXT: MachineRegisterInfo &MRI = MF.getRegInfo();
+// CHECK-NEXT: MachineRegisterInfo &MRI = MF->getRegInfo();
 // CHECK-NEXT: const PredicateBitset AvailableFeatures = getAvailableFeatures();
 // CHECK-NEXT: NewMIVector OutMIs;
 // CHECK-NEXT: State.MIs.clear();
