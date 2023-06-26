@@ -242,9 +242,21 @@ static void gatherAssignEffects(
          "assignment to vector subscripted entity in HLFIR");
   assignEffects.emplace_back(mlir::MemoryEffects::Write::get(), assignedVar);
 
-  // TODO: gather the read/write effects of user defined assignments.
-  if (!regionAssign.getUserDefinedAssignment().empty())
-    TODO(regionAssign.getLoc(), "user defined assignments");
+  if (!regionAssign.getUserDefinedAssignment().empty()) {
+    // The write effect on the INTENT(OUT) LHS argument is already taken
+    // into account above.
+    // This side effects are "defensive" and could be improved.
+    // On top of the passed RHS argument, user defined assignments (even when
+    // pure) may also read host/used/common variable. Impure user defined
+    // assignments may write to host/used/common variables not passed via
+    // arguments. For now, simply assume the worst. Once fir.call side effects
+    // analysis is improved, it would best to let the call side effects be used
+    // directly.
+    if (userDefAssignmentMayOnlyWriteToAssignedVariable)
+      assignEffects.emplace_back(mlir::MemoryEffects::Read::get());
+    else
+      assignEffects.emplace_back(mlir::MemoryEffects::Write::get());
+  }
 }
 
 //===----------------------------------------------------------------------===//
