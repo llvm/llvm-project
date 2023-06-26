@@ -727,3 +727,15 @@ SourceManager::FileSP SourceManager::SourceFileCache::FindSourceFile(
     file_sp = pos->second;
   return file_sp;
 }
+
+void SourceManager::SourceFileCache::Dump(Stream &stream) const {
+  stream << "Modification time   Lines    Path\n";
+  stream << "------------------- -------- --------------------------------\n";
+  for (auto &entry : m_file_cache) {
+    if (!entry.second)
+      continue;
+    FileSP file = entry.second;
+    stream.Format("{0:%Y-%m-%d %H:%M:%S} {1,8:d} {2}\n", file->GetTimestamp(),
+                  file->GetNumLines(), entry.first.GetPath());
+  }
+}
