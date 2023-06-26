@@ -23,6 +23,7 @@
 #include "clang/Analysis/FlowSensitive/ControlFlowContext.h"
 #include "clang/Analysis/FlowSensitive/DataflowEnvironment.h"
 #include "clang/Analysis/FlowSensitive/NoopAnalysis.h"
+#include "clang/Analysis/FlowSensitive/RecordOps.h"
 #include "clang/Analysis/FlowSensitive/Value.h"
 #include "clang/Basic/Builtins.h"
 #include "clang/Basic/OperatorKinds.h"
@@ -597,16 +598,21 @@ public:
       const Expr *Arg = S->getArg(0);
       assert(Arg != nullptr);
 
-      if (S->isElidable()) {
-        auto *ArgLoc = Env.getStorageLocation(*Arg, SkipPast::Reference);
-        if (ArgLoc == nullptr)
-          return;
+      auto *ArgLoc = cast<AggregateStorageLocation>(
+          Env.getStorageLocation(*Arg, SkipPast::Reference));
+      if (ArgLoc == nullptr)
+        return;
 
+      if (S->isElidable()) {
         Env.setStorageLocation(*S, *ArgLoc);
-      } else if (auto *ArgVal = Env.getValue(*Arg, SkipPast::Reference)) {
-        auto &Loc = Env.createStorageLocation(*S);
+      } else {
+        auto &Loc =
+            cast<AggregateStorageLocation>(Env.createStorageLocation(*S));
         Env.setStorageLocation(*S, Loc);
-        Env.setValue(Loc, *ArgVal);
+        if (Value *Val = Env.createValue(S->getType())) {
+          Env.setValue(Loc, *Val);
+          copyRecord(*ArgLoc, Loc, Env);
+        }
       }
       return;
     }
@@ -638,16 +644,17 @@ public:
           !Method->isMoveAssignmentOperator())
         return;
 
-      auto *ObjectLoc = Env.getStorageLocation(*Arg0, SkipPast::Reference);
+      auto *ObjectLoc = cast_or_null<AggregateStorageLocation>(
+          Env.getStorageLocation(*Arg0, SkipPast::Reference));
       if (ObjectLoc == nullptr)
         return;
 
-      auto *Val = Env.getValue(*Arg1, SkipPast::Reference);
-      if (Val == nullptr)
+      auto *ArgLoc = cast_or_null<AggregateStorageLocation>(
+          Env.getStorageLocation(*Arg1, SkipPast::Reference));
+      if (ArgLoc == nullptr)
         return;
 
-      // Assign a value to the storage location of the object.
-      Env.setValue(*ObjectLoc, *Val);
+      copyRecord(*ArgLoc, *ObjectLoc, Env);
 
       // FIXME: Add a test for the value of the whole expression.
       // Assign a storage location for the whole expression.
