@@ -1364,6 +1364,7 @@ ParseResult cir::FuncOp::parse(OpAsmParser &parser, OperationState &state) {
   auto coroutineNameAttr = getCoroutineAttrName(state.name);
   auto lambdaNameAttr = getLambdaAttrName(state.name);
   auto visNameAttr = getSymVisibilityAttrName(state.name);
+  auto noProtoNameAttr = getNoProtoAttrName(state.name);
   if (::mlir::succeeded(parser.parseOptionalKeyword(builtinNameAttr.strref())))
     state.addAttribute(builtinNameAttr, parser.getBuilder().getUnitAttr());
   if (::mlir::succeeded(
@@ -1371,6 +1372,8 @@ ParseResult cir::FuncOp::parse(OpAsmParser &parser, OperationState &state) {
     state.addAttribute(coroutineNameAttr, parser.getBuilder().getUnitAttr());
   if (::mlir::succeeded(parser.parseOptionalKeyword(lambdaNameAttr.strref())))
     state.addAttribute(lambdaNameAttr, parser.getBuilder().getUnitAttr());
+  if (parser.parseOptionalKeyword(noProtoNameAttr).succeeded())
+    state.addAttribute(noProtoNameAttr, parser.getBuilder().getUnitAttr());
 
   // Default to external linkage if no keyword is provided.
   state.addAttribute(getLinkageAttrNameString(),
@@ -1418,8 +1421,7 @@ ParseResult cir::FuncOp::parse(OpAsmParser &parser, OperationState &state) {
                            : resultTypes.front());
 
   // Build the function type.
-  auto fnType = mlir::cir::FuncType::getChecked(
-      parser.getEncodedSourceLoc(loc), argTypes, returnType, isVariadic);
+  auto fnType = mlir::cir::FuncType::get(argTypes, returnType, isVariadic);
   if (!fnType)
     return failure();
   state.addAttribute(getFunctionTypeAttrName(state.name),
@@ -1503,6 +1505,9 @@ void cir::FuncOp::print(OpAsmPrinter &p) {
   if (getLambda())
     p << "lambda ";
 
+  if (getNoProto())
+    p << "no_proto ";
+
   if (getLinkage() != GlobalLinkageKind::ExternalLinkage)
     p << stringifyGlobalLinkageKind(getLinkage()) << ' ';
 
@@ -1524,7 +1529,8 @@ void cir::FuncOp::print(OpAsmPrinter &p) {
   function_interface_impl::printFunctionAttributes(
       p, *this,
       {getSymVisibilityAttrName(), getAliaseeAttrName(),
-       getFunctionTypeAttrName(), getLinkageAttrName(), getBuiltinAttrName()});
+       getFunctionTypeAttrName(), getLinkageAttrName(), getBuiltinAttrName(),
+       getNoProtoAttrName()});
 
   if (auto aliaseeName = getAliasee()) {
     p << " alias(";
@@ -1549,6 +1555,9 @@ LogicalResult cir::FuncOp::verifyType() {
   if (!type.isa<cir::FuncType>())
     return emitOpError("requires '" + getFunctionTypeAttrName().str() +
                        "' attribute of function type");
+  if (!getNoProto() && type.isVarArg() && type.getNumInputs() == 0)
+    return emitError()
+           << "prototyped function must have at least one non-variadic input";
   return success();
 }
 
@@ -1637,18 +1646,22 @@ cir::CallOp::verifySymbolUses(SymbolTableCollection &symbolTable) {
     return emitOpError() << "'" << fnAttr.getValue()
                          << "' does not reference a valid function";
 
-  // Verify that the operand and result types match the callee.
+  // Verify that the operand and result types match the callee. Note that
+  // argument-checking is disabled for functions without a prototype.
   auto fnType = fn.getFunctionType();
-  if (!fnType.isVarArg() && getNumOperands() != fnType.getNumInputs())
-    return emitOpError("incorrect number of operands for callee");
-  if (fnType.isVarArg() && getNumOperands() < fnType.getNumInputs())
-    return emitOpError("too few operands for callee");
+  if (!fn.getNoProto()) {
+    if (!fnType.isVarArg() && getNumOperands() != fnType.getNumInputs())
+      return emitOpError("incorrect number of operands for callee");
 
-  for (unsigned i = 0, e = fnType.getNumInputs(); i != e; ++i)
-    if (getOperand(i).getType() != fnType.getInput(i))
-      return emitOpError("operand type mismatch: expected operand type ")
-             << fnType.getInput(i) << ", but provided "
-             << getOperand(i).getType() << " for operand number " << i;
+    if (fnType.isVarArg() && getNumOperands() < fnType.getNumInputs())
+      return emitOpError("too few operands for callee");
+
+    for (unsigned i = 0, e = fnType.getNumInputs(); i != e; ++i)
+      if (getOperand(i).getType() != fnType.getInput(i))
+        return emitOpError("operand type mismatch: expected operand type ")
+               << fnType.getInput(i) << ", but provided "
+               << getOperand(i).getType() << " for operand number " << i;
+  }
 
   // Void function must not return any results.
   if (fnType.isVoid() && getNumResults() != 0)

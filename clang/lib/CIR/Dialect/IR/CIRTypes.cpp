@@ -409,15 +409,6 @@ IntType::verify(llvm::function_ref<mlir::InFlightDiagnostic()> emitError,
 // FuncType Definitions
 //===----------------------------------------------------------------------===//
 
-mlir::LogicalResult
-FuncType::verify(llvm::function_ref<mlir::InFlightDiagnostic()> emitError,
-                 llvm::ArrayRef<mlir::Type> inputs, mlir::Type result,
-                 bool varArg) {
-  if (varArg && inputs.empty())
-    return emitError() << "functions must have at least one non-variadic input";
-  return mlir::success();
-}
-
 FuncType FuncType::clone(TypeRange inputs, TypeRange results) const {
   assert(results.size() == 1 && "expected exactly one result type");
   return get(llvm::to_vector(inputs), results[0], isVarArg());

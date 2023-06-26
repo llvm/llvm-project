@@ -1,7 +1,7 @@
 // RUN: %clang_cc1 -fclangir -emit-cir -mmlir --mlir-print-ir-after-all %s -o %t.cir 2>&1 | FileCheck %s -check-prefix=CIR
 // RUN: %clang_cc1 -fclangir -emit-llvm -mmlir --mlir-print-ir-after-all -mllvm -print-after-all  %s -o %t.ll 2>&1 | FileCheck %s -check-prefix=CIR -check-prefix=LLVM
 
-int foo() {
+int foo(void) {
   int i = 3;
   return i;
 }

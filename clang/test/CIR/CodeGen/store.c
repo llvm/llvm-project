@@ -1,7 +1,7 @@
 // RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -fclangir -emit-cir %s -o %t.cir
 // RUN: FileCheck --input-file=%t.cir %s
 
-void foo() {
+void foo(void) {
   int a = 0;
   a = 1;
 }

@@ -21,7 +21,7 @@ int foo(int i) {
 // CIR-NEXT: %4 = cir.load %1 : cir.ptr <!s32i>, !s32i
 // CIR-NEXT: cir.return %4 : !s32i
 
-int f2() { return 3; }
+int f2(void) { return 3; }
 
 // CIR: cir.func @f2() -> !s32i {
 // CIR-NEXT: %0 = cir.alloca !s32i, cir.ptr <!s32i>, ["__retval"] {alignment = 4 : i64}
@@ -38,7 +38,7 @@ int f2() { return 3; }
 
 
 
-int f3() {
+int f3(void) {
   int i = 3;
   return i;
 }

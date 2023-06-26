@@ -1408,6 +1408,10 @@ def FuncOp : CIR_Op<"func", [
     allow callsites to make certain assumptions about the real function nature
     when writing analysis. The verifier should, but do act on this keyword yet.
 
+    The `no_proto` keyword is used to identify functions that were declared
+    without a prototype and, consequently, may contain calls with invalid
+    arguments and undefined behavior.
+
     Example:
 
     ```mlir
@@ -1439,6 +1443,7 @@ def FuncOp : CIR_Op<"func", [
                        UnitAttr:$builtin,
                        UnitAttr:$coroutine,
                        UnitAttr:$lambda,
+                       UnitAttr:$no_proto,
                        DefaultValuedAttr<GlobalLinkageKind,
                                          "GlobalLinkageKind::ExternalLinkage">:$linkage,
                        OptionalAttr<StrAttr>:$sym_visibility,

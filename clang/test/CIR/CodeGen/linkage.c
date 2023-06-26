@@ -8,7 +8,7 @@ static int bar(int i) {
   return i;
 }
 
-int foo() {
+int foo(void) {
   return bar(5);
 }
 

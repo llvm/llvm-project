@@ -363,8 +363,8 @@ module {
 // -----
 
 module {
-  // expected-error@+1 {{functions must have at least one non-variadic input}}
-  cir.func @variadic(...) -> !cir.int<s, 32>
+  // expected-error@+1 {{prototyped function must have at least one non-variadic input}}
+  cir.func private @variadic(...) -> !cir.int<s, 32>
 }
 
 // -----
