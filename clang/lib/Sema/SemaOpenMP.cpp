@@ -23146,7 +23146,7 @@ public:
 /// variables with static storage duration in declare target directive.
 void Sema::ActOnOpenMPDeclareTargetInitializer(Decl *TargetDecl) {
   GlobalDeclRefChecker Checker;
-  if (auto *TargetVarDecl = dyn_cast_or_null<VarDecl>(TargetDecl))
+  if (isa<VarDecl>(TargetDecl))
     Checker.declareTargetInitializer(TargetDecl);
 }
 
