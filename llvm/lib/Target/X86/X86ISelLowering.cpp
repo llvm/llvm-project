@@ -48766,7 +48766,7 @@ static SDValue combineMul(SDNode *N, SelectionDAG &DAG,
         if (auto *SplatC = RawC->getSplatValue())
           C = &(SplatC->getUniqueInteger());
 
-    if (!C)
+    if (!C || C->getBitWidth() != VT.getScalarSizeInBits())
       return SDValue();
   } else {
     C = &(CNode->getAPIntValue());
