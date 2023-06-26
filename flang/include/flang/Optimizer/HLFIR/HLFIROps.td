@@ -1162,6 +1162,11 @@ def hlfir_ElementalAddrOp : hlfir_Op<"elemental_addr", [Terminator, HasParent<"R
     mlir::Region::BlockArgListType getIndices() {
       return getBody().getArguments();
     }
+
+    /// Return the hlfir::YieldOp terminator of the operation
+    /// body. It yields the variable element address.
+    /// This should only be called once the ElementalAddrOp has been built.
+    hlfir::YieldOp getYieldOp();
   }];
 
   let hasVerifier = 1;

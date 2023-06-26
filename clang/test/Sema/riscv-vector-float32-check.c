@@ -5,4 +5,17 @@
 #include <riscv_vector.h>
 
 vfloat32m1_t foo() { /* expected-error {{RISC-V type 'vfloat32m1_t' (aka '__rvv_float32m1_t') requires the 'zve32f' extension}} */
-} /* expected-warning {{non-void function does not return a value}}*/
+  vfloat32m1_t f32m1; /* expected-error {{RISC-V type 'vfloat32m1_t' (aka '__rvv_float32m1_t') requires the 'zve32f' extension}} */
+
+  (void)f32m1; /* expected-error {{RISC-V type 'vfloat32m1_t' (aka '__rvv_float32m1_t') requires the 'zve32f' extension}} */
+
+  return f32m1; /* expected-error {{RISC-V type 'vfloat32m1_t' (aka '__rvv_float32m1_t') requires the 'zve32f' extension}} */
+}
+
+vfloat32m1x2_t bar() { /* expected-error {{RISC-V type 'vfloat32m1x2_t' (aka '__rvv_float32m1x2_t') requires the 'zve32f' extension}} */
+  vfloat32m1x2_t f32m1x2; /* expected-error {{RISC-V type 'vfloat32m1x2_t' (aka '__rvv_float32m1x2_t') requires the 'zve32f' extension}} */
+
+  (void)f32m1x2; /* expected-error {{RISC-V type 'vfloat32m1x2_t' (aka '__rvv_float32m1x2_t') requires the 'zve32f' extension}} */
+
+  return f32m1x2; /* expected-error {{RISC-V type 'vfloat32m1x2_t' (aka '__rvv_float32m1x2_t') requires the 'zve32f' extension}} */
+}

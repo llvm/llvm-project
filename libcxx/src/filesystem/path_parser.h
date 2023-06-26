@@ -17,17 +17,9 @@
 
 #include "format_string.h"
 
-// TODO: Check whether these functions actually need internal linkage, or if they can be made normal header functions
-_LIBCPP_DIAGNOSTIC_PUSH
-_LIBCPP_GCC_DIAGNOSTIC_IGNORED("-Wunused-function")
-_LIBCPP_CLANG_DIAGNOSTIC_IGNORED("-Wunused-function")
-_LIBCPP_CLANG_DIAGNOSTIC_IGNORED("-Wunused-template")
-
 _LIBCPP_BEGIN_NAMESPACE_FILESYSTEM
 
-namespace {
-
-bool isSeparator(path::value_type C) {
+inline bool isSeparator(path::value_type C) {
   if (C == '/')
     return true;
 #if defined(_LIBCPP_WIN32API)
@@ -37,7 +29,7 @@ bool isSeparator(path::value_type C) {
   return false;
 }
 
-bool isDriveLetter(path::value_type C) {
+inline bool isDriveLetter(path::value_type C) {
   return (C >= 'a' && C <= 'z') || (C >= 'A' && C <= 'Z');
 }
 
@@ -356,7 +348,7 @@ private:
   }
 };
 
-string_view_pair separate_filename(string_view_t const& s) {
+inline string_view_pair separate_filename(string_view_t const& s) {
   if (s == PATHSTR(".") || s == PATHSTR("..") || s.empty())
     return string_view_pair{s, PATHSTR("")};
   auto pos = s.find_last_of('.');
@@ -365,15 +357,12 @@ string_view_pair separate_filename(string_view_t const& s) {
   return string_view_pair{s.substr(0, pos), s.substr(pos)};
 }
 
-string_view_t createView(PosPtr S, PosPtr E) noexcept {
+inline string_view_t createView(PosPtr S, PosPtr E) noexcept {
   return {S, static_cast<size_t>(E - S) + 1};
 }
 
 } // namespace parser
-} // namespace
 
 _LIBCPP_END_NAMESPACE_FILESYSTEM
-
-_LIBCPP_DIAGNOSTIC_POP
 
 #endif // PATH_PARSER_H

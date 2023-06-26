@@ -633,7 +633,7 @@ func.func @nvvm_invalid_mma_8(%a0 : i32, %a1 : i32,
 // -----
 
 func.func @atomicrmw_expected_ptr(%f32 : f32) {
-  // expected-error@+1 {{operand #0 must be LLVM pointer to floating point LLVM type or integer}}
+  // expected-error@+1 {{operand #0 must be LLVM pointer to floating point LLVM type or LLVM pointer type or integer}}
   %0 = "llvm.atomicrmw"(%f32, %f32) {bin_op=11, ordering=1} : (f32, f32) -> f32
   llvm.return
 }
@@ -1447,3 +1447,45 @@ llvm.comdat @__llvm_comdat {
 llvm.mlir.global @not_comdat(0 : i32) : i32
 // expected-error@+1 {{expected comdat symbol}}
 llvm.mlir.global @invalid_comdat_use(0 : i32) comdat(@not_comdat) : i32
+
+// -----
+
+func.func @invalid_zext_target_size_equal(%arg: i32)  {
+  // expected-error@+1 {{integer width of the output type is smaller or equal to the integer width of the input type}}
+  %0 = llvm.zext %arg : i32 to i32
+}
+
+// -----
+
+func.func @invalid_zext_target_size(%arg: i32)  {
+  // expected-error@+1 {{integer width of the output type is smaller or equal to the integer width of the input type}}
+  %0 = llvm.zext %arg : i32 to i16
+}
+
+// -----
+
+func.func @invalid_zext_target_size_vector(%arg: vector<1xi32>)  {
+  // expected-error@+1 {{integer width of the output type is smaller or equal to the integer width of the input type}}
+  %0 = llvm.zext %arg : vector<1xi32> to vector<1xi16>
+}
+
+// -----
+
+func.func @invalid_zext_target_shape(%arg: vector<1xi32>)  {
+  // expected-error@+1 {{input and output vectors are of incompatible shape}}
+  %0 = llvm.zext %arg : vector<1xi32> to vector<2xi64>
+}
+
+// -----
+
+func.func @invalid_zext_target_type(%arg: i32)  {
+  // expected-error@+1 {{input type is an integer but output type is a vector}}
+  %0 = llvm.zext %arg : i32 to vector<1xi64>
+}
+
+// -----
+
+func.func @invalid_zext_target_type_two(%arg: vector<1xi32>)  {
+  // expected-error@+1 {{input type is a vector but output type is an integer}}
+  %0 = llvm.zext %arg : vector<1xi32> to i64
+}

@@ -3,8 +3,8 @@
 #include "llvm/BinaryFormat/ELF.h"
 #include "llvm/MC/MCAssembler.h"
 #include "llvm/MC/MCSubtargetInfo.h"
-#include "llvm/MC/SubtargetFeature.h"
 #include "llvm/Support/FormattedStream.h"
+#include "llvm/TargetParser/SubtargetFeature.h"
 
 #include "AVRMCTargetDesc.h"
 

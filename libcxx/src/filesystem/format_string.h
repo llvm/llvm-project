@@ -25,19 +25,11 @@
 #  define PATH_CSTR_FMT "\"%s\""
 #endif
 
-// TODO: Check whether these functions actually need internal linkage, or if they can be made normal header functions
-_LIBCPP_DIAGNOSTIC_PUSH
-_LIBCPP_GCC_DIAGNOSTIC_IGNORED("-Wunused-function")
-_LIBCPP_CLANG_DIAGNOSTIC_IGNORED("-Wunused-function")
-_LIBCPP_CLANG_DIAGNOSTIC_IGNORED("-Wunused-template")
-
 _LIBCPP_BEGIN_NAMESPACE_FILESYSTEM
 
 namespace detail {
-namespace {
 
-_LIBCPP_ATTRIBUTE_FORMAT(__printf__, 1, 0)
-string vformat_string(const char* msg, va_list ap) {
+inline _LIBCPP_ATTRIBUTE_FORMAT(__printf__, 1, 0) string vformat_string(const char* msg, va_list ap) {
   array<char, 256> buf;
 
   va_list apcopy;
@@ -60,8 +52,7 @@ string vformat_string(const char* msg, va_list ap) {
   return result;
 }
 
-_LIBCPP_ATTRIBUTE_FORMAT(__printf__, 1, 2)
-string format_string(const char* msg, ...) {
+inline _LIBCPP_ATTRIBUTE_FORMAT(__printf__, 1, 2) string format_string(const char* msg, ...) {
   string ret;
   va_list ap;
   va_start(ap, msg);
@@ -79,11 +70,8 @@ string format_string(const char* msg, ...) {
   return ret;
 }
 
-} // end anonymous namespace
 } // end namespace detail
 
 _LIBCPP_END_NAMESPACE_FILESYSTEM
-
-_LIBCPP_DIAGNOSTIC_POP
 
 #endif // FILESYSTEM_FORMAT_STRING_H

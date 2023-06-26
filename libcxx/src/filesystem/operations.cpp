@@ -350,7 +350,7 @@ bool __copy_file(const path& from, const path& to, copy_options options,
       return err.report(m_ec);
   }
 
-  if (!copy_file_impl(from_fd, to_fd, m_ec)) {
+  if (!detail::copy_file_impl(from_fd, to_fd, m_ec)) {
     // FIXME: Remove the dest file if we failed, and it didn't exist previously.
     return err.report(m_ec);
   }

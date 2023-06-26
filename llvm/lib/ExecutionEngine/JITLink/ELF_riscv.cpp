@@ -233,6 +233,8 @@ private:
           (RawInstr & 0xFFF) | Imm20 | Imm10_1 | Imm11 | Imm19_12;
       break;
     }
+    case CallRelaxable:
+      // Treat as R_RISCV_CALL when the relaxation pass did not run
     case R_RISCV_CALL_PLT:
     case R_RISCV_CALL: {
       int64_t Value = E.getTarget().getAddress() + E.getAddend() - FixupAddress;
@@ -451,6 +453,9 @@ private:
       *(little32_t *)FixupPtr = Word32;
       break;
     }
+    case AlignRelaxable:
+      // Ignore when the relaxation pass did not run
+      break;
     }
     return Error::success();
   }
@@ -723,13 +728,17 @@ static void finalizeBlockRelax(LinkGraph &G, Block &Block, BlockRelaxAux &Aux) {
 
   // Fixup edge offsets and kinds.
   Delta = 0;
-  for (auto [I, E] : llvm::enumerate(Aux.RelaxEdges)) {
-    E->setOffset(E->getOffset() - Delta);
+  size_t I = 0;
+  for (auto &E : Block.edges()) {
+    E.setOffset(E.getOffset() - Delta);
 
-    if (Aux.EdgeKinds[I] != Edge::Invalid)
-      E->setKind(Aux.EdgeKinds[I]);
+    if (I < Aux.RelaxEdges.size() && Aux.RelaxEdges[I] == &E) {
+      if (Aux.EdgeKinds[I] != Edge::Invalid)
+        E.setKind(Aux.EdgeKinds[I]);
 
-    Delta = Aux.RelocDeltas[I];
+      Delta = Aux.RelocDeltas[I];
+      ++I;
+    }
   }
 
   // Remove AlignRelaxable edges: all other relaxable edges got modified and
@@ -965,6 +974,8 @@ void link_ELF_riscv(std::unique_ptr<LinkGraph> G,
 
   ELFJITLinker_riscv::link(std::move(Ctx), std::move(G), std::move(Config));
 }
+
+LinkGraphPassFunction createRelaxationPass_ELF_riscv() { return relax; }
 
 } // namespace jitlink
 } // namespace llvm
