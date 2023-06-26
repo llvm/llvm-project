@@ -641,7 +641,8 @@ static spirv::GlobalVariableOp getBuiltinVariable(Block &body,
 
 /// Gets name of global variable for a builtin.
 static std::string getBuiltinVarName(spirv::BuiltIn builtin) {
-  return std::string("__builtin_var_") + stringifyBuiltIn(builtin).str() + "__";
+  // return std::string("__builtin_var_") + stringifyBuiltIn(builtin).str() + "__";
+  return std::string("__spirv_BuiltIn") + stringifyBuiltIn(builtin).str();
 }
 
 /// Gets or inserts a global variable for a builtin within `body` block.

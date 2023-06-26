@@ -18,6 +18,7 @@
 #include "mlir/Dialect/SPIRV/IR/SPIRVOps.h"
 #include "mlir/Dialect/SPIRV/IR/TargetAndABI.h"
 #include "mlir/Dialect/SPIRV/Transforms/SPIRVConversion.h"
+// #include "mlir/Dialect/Arith/IR/Arith.h"
 #include "mlir/IR/BuiltinOps.h"
 #include "mlir/IR/Matchers.h"
 #include "mlir/Transforms/DialectConversion.h"
@@ -168,6 +169,10 @@ LogicalResult LaunchConfigConversion<SourceOp, builtin>::matchAndRewrite(
       rewriter.getI32ArrayAttr({static_cast<int32_t>(op.getDimension())}));
   if (forShader && builtinType != indexType)
     dim = rewriter.create<spirv::UConvertOp>(op.getLoc(), indexType, dim);
+  else if (!forShader && op.getType().isIndex()) {
+//    dim = rewriter.create<arith::IndexCastOp>(op.getLoc(), op.getType(), dim);
+    dim = rewriter.create<spirv::UConvertOp>(op.getLoc(), rewriter.getIntegerType(32), dim);
+  }
   rewriter.replaceOp(op, dim);
   return success();
 }

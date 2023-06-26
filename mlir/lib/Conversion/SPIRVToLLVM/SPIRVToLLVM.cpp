@@ -260,12 +260,31 @@ static std::optional<Type> convertArrayType(spirv::ArrayType type,
   return LLVM::LLVMArrayType::get(llvmElementType, numElements);
 }
 
+unsigned storageClassToAddressSpace(spirv::StorageClass SC) {
+  switch (SC) {
+  case spirv::StorageClass::Function:
+    return 0;
+  case spirv::StorageClass::CrossWorkgroup:
+    return 1;
+  case spirv::StorageClass::UniformConstant:
+    return 2;
+  case spirv::StorageClass::Workgroup:
+    return 3;
+  case spirv::StorageClass::Generic:
+    return 4;
+  case spirv::StorageClass::Input:
+    return 1;  // 7
+  default:
+    llvm_unreachable("Unable to get address space id:");
+  }
+}
+
 /// Converts SPIR-V pointer type to LLVM pointer. Pointer's storage class is not
 /// modelled at the moment.
 static Type convertPointerType(spirv::PointerType type,
                                LLVMTypeConverter &converter) {
   auto pointeeType = converter.convertType(type.getPointeeType());
-  return converter.getPointerType(pointeeType);
+  return converter.getPointerType(pointeeType, storageClassToAddressSpace(type.getStorageClass()));
 }
 
 /// Converts SPIR-V runtime array to LLVM array. Since LLVM allows indexing over
@@ -338,8 +357,19 @@ public:
     auto dstType = typeConverter.convertType(op.getPointer().getType());
     if (!dstType)
       return failure();
-    rewriter.replaceOpWithNewOp<LLVM::AddressOfOp>(op, dstType,
-                                                   op.getVariable());
+    rewriter.replaceOpWithNewOp<LLVM::AddressOfOp>(op, dstType, op.getVariable());    
+#if 0
+    auto global = dyn_cast_or_null<spirv::GlobalVariableOp>(op.getVariable());
+
+    if (global && 
+        storageClassToAddressSpace(global.getStorageClass()) != 
+        dstType.cast<LLVM::LLVMPointerType>().getAddressSpace()) {
+      auto globalPtr = rewriter.create<spirv::AddressOfOp>(op.getLoc(), global);
+      rewriter.replaceOpWithNewOp<LLVM::AddrSpaceCastOp>(op, dstType, globalPtr);
+    } else {
+      rewriter.replaceOpWithNewOp<LLVM::AddressOfOp>(op, dstType, op.getVariable());
+    }
+#endif
     return success();
   }
 };
@@ -768,7 +798,8 @@ public:
     auto newGlobalOp = rewriter.replaceOpWithNewOp<LLVM::GlobalOp>(
         op, dstType, isConstant, linkage, op.getSymName(), Attribute(),
         /*alignment=*/0);
-
+    newGlobalOp->setAttr(newGlobalOp.getAddrSpaceAttrName(), 
+      rewriter.getI32IntegerAttr(storageClassToAddressSpace(storageClass)));
     // Attach location attribute if applicable
     if (op.getLocationAttr())
       newGlobalOp->setAttr(op.getLocationAttrName(), op.getLocationAttr());
@@ -1614,6 +1645,7 @@ void mlir::populateSPIRVToLLVMModuleConversionPatterns(
 /// Hook for descriptor set and binding number encoding.
 static constexpr StringRef kBinding = "binding";
 static constexpr StringRef kDescriptorSet = "descriptor_set";
+// static constexpr StringRef kBuiltin = "builtin";
 void mlir::encodeBindAttribute(ModuleOp module) {
   auto spvModules = module.getOps<spirv::ModuleOp>();
   for (auto spvModule : spvModules) {
@@ -1621,6 +1653,8 @@ void mlir::encodeBindAttribute(ModuleOp module) {
       IntegerAttr descriptorSet =
           op->getAttrOfType<IntegerAttr>(kDescriptorSet);
       IntegerAttr binding = op->getAttrOfType<IntegerAttr>(kBinding);
+//      IntegerAttr builtin = op->getAttrOfType<IntegerAttr>(kBuiltin);
+
       // For every global variable in the module, get the ones with descriptor
       // set and binding numbers.
       if (descriptorSet && binding) {
@@ -1644,6 +1678,37 @@ void mlir::encodeBindAttribute(ModuleOp module) {
         op->removeAttr(kDescriptorSet);
         op->removeAttr(kBinding);
       }
+#if 0
+      if (builtin){
+        switch (static_cast<spirv::BuiltIn>(builtin.getInt())) {
+        case spirv::BuiltIn::NumWorkgroups:
+        case spirv::BuiltIn::WorkgroupSize:
+        case spirv::BuiltIn::WorkgroupId:
+        case spirv::BuiltIn::LocalInvocationId:
+        case spirv::BuiltIn::GlobalInvocationId: {
+          auto ptrType = spirv::PointerType::get(VectorType::get({3}, integerType),
+                                                spirv::StorageClass::Input);
+          std::string name = getBuiltinVarName(builtin);
+          newVarOp =
+              builder.create<spirv::GlobalVariableOp>(loc, ptrType, name, builtin);
+          break;
+        }
+        case spirv::BuiltIn::SubgroupId:
+        case spirv::BuiltIn::NumSubgroups:
+        case spirv::BuiltIn::SubgroupSize: {
+          auto ptrType =
+              spirv::PointerType::get(integerType, spirv::StorageClass::Input);
+          std::string name = getBuiltinVarName(builtin);
+          newVarOp =
+              builder.create<spirv::GlobalVariableOp>(loc, ptrType, name, builtin);
+          break;
+        }
+        default:
+          emitError(loc, "unimplemented builtin variable generation for ")
+              << stringifyBuiltIn(builtin);
+        }          
+      }
+#endif
     });
   }
 }

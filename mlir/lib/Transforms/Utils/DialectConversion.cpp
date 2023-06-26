@@ -1369,6 +1369,10 @@ void ConversionPatternRewriterImpl::notifyOpReplaced(Operation *op,
     }
     // Remap, and check for any result type changes.
     mapping.map(result, newValue);
+    LLVM_DEBUG({
+    this->logger.startLine()
+        << "** New Value : '" << newValue << "\n";
+    }); 
     resultChanged |= (newValue.getType() != result.getType());
   }
   if (resultChanged)
