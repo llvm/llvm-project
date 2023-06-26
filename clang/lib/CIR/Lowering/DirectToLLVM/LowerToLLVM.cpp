@@ -1239,6 +1239,7 @@ void ConvertCIRToLLVMPass::runOnOperation() {
                            mlir::func::FuncDialect>();
 
   getOperation()->removeAttr("cir.sob");
+  getOperation()->removeAttr("cir.lang");
 
   if (failed(applyPartialConversion(module, target, std::move(patterns))))
     signalPassFailure();

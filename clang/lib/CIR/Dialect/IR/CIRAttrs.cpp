@@ -20,7 +20,9 @@
 #include "mlir/IR/BuiltinAttributeInterfaces.h"
 #include "mlir/IR/BuiltinTypes.h"
 #include "mlir/IR/DialectImplementation.h"
+#include "mlir/IR/Location.h"
 #include "mlir/IR/OpImplementation.h"
+#include "mlir/Support/LLVM.h"
 
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/TypeSwitch.h"
@@ -136,6 +138,38 @@ LogicalResult ConstStructAttr::verify(
   }
 
   return success();
+}
+
+//===----------------------------------------------------------------------===//
+// LangAttr definitions
+//===----------------------------------------------------------------------===//
+
+Attribute LangAttr::parse(AsmParser &parser, Type odsType) {
+  auto loc = parser.getCurrentLocation();
+  if (parser.parseLess())
+    return {};
+
+  // Parse variable 'lang'.
+  llvm::StringRef lang;
+  if (parser.parseKeyword(&lang))
+    return {};
+
+  // Check if parsed value is a valid language.
+  auto langEnum = symbolizeSourceLanguage(lang);
+  if (!langEnum.has_value()) {
+    parser.emitError(loc) << "invalid language keyword '" << lang << "'";
+    return {};
+  }
+
+  if (parser.parseGreater())
+    return {};
+
+  return get(parser.getContext(),
+             SourceLanguageAttr::get(parser.getContext(), langEnum.value()));
+}
+
+void LangAttr::print(AsmPrinter &printer) const {
+  printer << "<" << getLang().getValue() << '>';
 }
 
 //===----------------------------------------------------------------------===//

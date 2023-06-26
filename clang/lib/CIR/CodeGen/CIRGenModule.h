@@ -567,6 +567,9 @@ private:
   ReplacementsTy Replacements;
   /// Call replaceAllUsesWith on all pairs in Replacements.
   void applyReplacements();
+
+  /// Map source language used to a CIR attribute.
+  mlir::cir::SourceLanguage getCIRSourceLanguage();
 };
 } // namespace cir
 

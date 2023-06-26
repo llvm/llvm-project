@@ -27,6 +27,41 @@ class CIR_Attr<string name, string attrMnemonic, list<Trait> traits = []>
 }
 
 //===----------------------------------------------------------------------===//
+// LangAttr
+//===----------------------------------------------------------------------===//
+
+def C : I32EnumAttrCase<"C", 1, "c">;
+def CXX : I32EnumAttrCase<"CXX", 2, "cxx">;
+
+def SourceLanguage : I32EnumAttr<"SourceLanguage", "Source language", [
+  C, CXX
+]> {
+  let cppNamespace = "::mlir::cir";
+}
+
+def LangAttr : CIR_Attr<"Lang", "lang"> {
+  let summary = "Module source language";
+  let parameters = (ins "SourceLanguageAttr":$lang);
+  let description = [{
+    Represents the source language used to generate the module.
+
+    Example:
+    ```
+    // Module compiled from C.
+    module attributes {cir.lang = cir.lang<c>} {}
+    // Module compiled from C++.
+    module attributes {cir.lang = cir.lang<cxx>} {}
+    ```
+  }];
+  let hasCustomAssemblyFormat = 1;
+  let extraClassDeclaration = [{
+    bool isC() const { return getLang().getValue() == SourceLanguage::C; };
+    bool isCXX() const { return getLang().getValue() == SourceLanguage::CXX; };
+  }];
+  let genVerifyDecl = 0;
+}
+
+//===----------------------------------------------------------------------===//
 // NullAttr
 //===----------------------------------------------------------------------===//
 

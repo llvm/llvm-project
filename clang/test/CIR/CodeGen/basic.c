@@ -10,7 +10,7 @@ int foo(int i) {
   return i;
 }
 
-//      CIR: module @"{{.*}}basic.c" attributes {
+//      CIR: module @"{{.*}}basic.c" attributes {{{.*}}cir.lang = #cir.lang<c>
 // CIR-NEXT: cir.func @foo(%arg0: !s32i loc({{.*}})) -> !s32i {
 // CIR-NEXT: %0 = cir.alloca !s32i, cir.ptr <!s32i>, ["i", init] {alignment = 4 : i64}
 // CIR-NEXT: %1 = cir.alloca !s32i, cir.ptr <!s32i>, ["__retval"] {alignment = 4 : i64}

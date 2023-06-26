@@ -43,9 +43,12 @@
 #include "clang/AST/StmtObjC.h"
 #include "clang/AST/Type.h"
 #include "clang/Basic/Diagnostic.h"
+#include "clang/Basic/LangStandard.h"
 #include "clang/Basic/NoSanitizeList.h"
 #include "clang/Basic/SourceLocation.h"
 #include "clang/CIR/CIRGenerator.h"
+#include "clang/CIR/Dialect/IR/CIRAttrs.h"
+#include "clang/CIR/Dialect/IR/CIROpsEnums.h"
 #include "clang/CIR/LowerToLLVM.h"
 #include "clang/Frontend/FrontendDiagnostic.h"
 #include "clang/Lex/Preprocessor.h"
@@ -164,6 +167,9 @@ CIRGenModule::CIRGenModule(mlir::MLIRContext &context,
   }
   theModule->setAttr("cir.sob",
                      mlir::cir::SignedOverflowBehaviorAttr::get(&context, sob));
+  auto lang = SourceLanguageAttr::get(&context, getCIRSourceLanguage());
+  theModule->setAttr(
+      "cir.lang", mlir::cir::LangAttr::get(&context, lang));
   // Set the module name to be the name of the main file. TranslationUnitDecl
   // often contains invalid source locations and isn't a reliable source for the
   // module location.
@@ -2358,4 +2364,21 @@ void CIRGenModule::ErrorUnsupported(const Decl *D, const char *Type) {
                                                "cannot compile this %0 yet");
   std::string Msg = Type;
   getDiags().Report(astCtx.getFullLoc(D->getLocation()), DiagID) << Msg;
+}
+
+mlir::cir::SourceLanguage CIRGenModule::getCIRSourceLanguage() {
+  using ClangStd = clang::LangStandard;
+  using CIRLang = mlir::cir::SourceLanguage;
+  auto opts = getLangOpts();
+
+  if (opts.CPlusPlus || opts.CPlusPlus11 || opts.CPlusPlus14 ||
+      opts.CPlusPlus17 || opts.CPlusPlus20 || opts.CPlusPlus23 ||
+      opts.CPlusPlus26)
+    return CIRLang::CXX;
+  if (opts.C99 || opts.C11 || opts.C17 || opts.C23 ||
+      opts.LangStd == ClangStd::lang_c89)
+    return CIRLang::C;
+
+  // TODO(cir): support remaining source languages.
+  llvm_unreachable("CIR does not yet support the given source language");
 }

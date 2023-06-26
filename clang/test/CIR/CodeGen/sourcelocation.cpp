@@ -18,7 +18,7 @@ int s0(int a, int b) {
 // CIR: #loc6 = loc("{{.*}}sourcelocation.cpp":6:19)
 // CIR: #loc21 = loc(fused[#loc3, #loc4])
 // CIR: #loc22 = loc(fused[#loc5, #loc6])
-// CIR: module @"{{.*}}sourcelocation.cpp" attributes {cir.sob = #cir.signed_overflow_behavior<undefined>
+// CIR: module @"{{.*}}sourcelocation.cpp" attributes {cir.lang = #cir.lang<cxx>, cir.sob = #cir.signed_overflow_behavior<undefined>
 // CIR:   cir.func @_Z2s0ii(%arg0: !s32i loc(fused[#loc3, #loc4]), %arg1: !s32i loc(fused[#loc5, #loc6])) -> !s32i {
 // CIR:     %0 = cir.alloca !s32i, cir.ptr <!s32i>, ["a", init] {alignment = 4 : i64} loc(#loc21)
 // CIR:     %1 = cir.alloca !s32i, cir.ptr <!s32i>, ["b", init] {alignment = 4 : i64} loc(#loc22)
