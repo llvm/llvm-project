@@ -38,7 +38,7 @@ define i32 @jump_table(i32 %a) {
 ; 32SMALL-ASM:       # %bb.0: # %entry
 ; 32SMALL-ASM-NEXT:    addi 3, 3, -1
 ; 32SMALL-ASM-NEXT:    cmplwi 3, 3
-; 32SMALL-ASM-NEXT:    bgt 0, L..BB0_6
+; 32SMALL-ASM-NEXT:    bgt 0, L..BB0_3
 ; 32SMALL-ASM-NEXT:  # %bb.1: # %entry
 ; 32SMALL-ASM-NEXT:    lwz 4, L..C0(2) # %jump-table.0
 ; 32SMALL-ASM-NEXT:    slwi 3, 3, 2
@@ -47,32 +47,32 @@ define i32 @jump_table(i32 %a) {
 ; 32SMALL-ASM-NEXT:    mtctr 3
 ; 32SMALL-ASM-NEXT:    bctr
 ; 32SMALL-ASM-NEXT:  L..BB0_2: # %sw.bb
+; 32SMALL-ASM-NEXT:    #APP
+; 32SMALL-ASM-NEXT:    #NO_APP
+; 32SMALL-ASM-NEXT:  L..BB0_3: # %sw.epilog
+; 32SMALL-ASM-NEXT:    li 3, 0
+; 32SMALL-ASM-NEXT:    blr
+; 32SMALL-ASM-NEXT:  L..BB0_4: # %sw.bb1
 ; 32SMALL-ASM-NEXT:    li 3, 0
 ; 32SMALL-ASM-NEXT:    #APP
 ; 32SMALL-ASM-NEXT:    #NO_APP
 ; 32SMALL-ASM-NEXT:    blr
-; 32SMALL-ASM-NEXT:  L..BB0_3: # %sw.bb1
+; 32SMALL-ASM-NEXT:  L..BB0_5: # %sw.bb2
 ; 32SMALL-ASM-NEXT:    li 3, 0
 ; 32SMALL-ASM-NEXT:    #APP
 ; 32SMALL-ASM-NEXT:    #NO_APP
 ; 32SMALL-ASM-NEXT:    blr
-; 32SMALL-ASM-NEXT:  L..BB0_4: # %sw.bb2
+; 32SMALL-ASM-NEXT:  L..BB0_6: # %sw.bb3
 ; 32SMALL-ASM-NEXT:    li 3, 0
 ; 32SMALL-ASM-NEXT:    #APP
 ; 32SMALL-ASM-NEXT:    #NO_APP
-; 32SMALL-ASM-NEXT:    blr
-; 32SMALL-ASM-NEXT:  L..BB0_5: # %sw.bb3
-; 32SMALL-ASM-NEXT:    #APP
-; 32SMALL-ASM-NEXT:    #NO_APP
-; 32SMALL-ASM-NEXT:  L..BB0_6: # %sw.epilog
-; 32SMALL-ASM-NEXT:    li 3, 0
 ; 32SMALL-ASM-NEXT:    blr
 ;
 ; 32LARGE-ASM-LABEL: jump_table:
 ; 32LARGE-ASM:       # %bb.0: # %entry
 ; 32LARGE-ASM-NEXT:    addi 3, 3, -1
 ; 32LARGE-ASM-NEXT:    cmplwi 3, 3
-; 32LARGE-ASM-NEXT:    bgt 0, L..BB0_6
+; 32LARGE-ASM-NEXT:    bgt 0, L..BB0_3
 ; 32LARGE-ASM-NEXT:  # %bb.1: # %entry
 ; 32LARGE-ASM-NEXT:    addis 4, L..C0@u(2)
 ; 32LARGE-ASM-NEXT:    slwi 3, 3, 2
@@ -82,32 +82,32 @@ define i32 @jump_table(i32 %a) {
 ; 32LARGE-ASM-NEXT:    mtctr 3
 ; 32LARGE-ASM-NEXT:    bctr
 ; 32LARGE-ASM-NEXT:  L..BB0_2: # %sw.bb
+; 32LARGE-ASM-NEXT:    #APP
+; 32LARGE-ASM-NEXT:    #NO_APP
+; 32LARGE-ASM-NEXT:  L..BB0_3: # %sw.epilog
+; 32LARGE-ASM-NEXT:    li 3, 0
+; 32LARGE-ASM-NEXT:    blr
+; 32LARGE-ASM-NEXT:  L..BB0_4: # %sw.bb1
 ; 32LARGE-ASM-NEXT:    li 3, 0
 ; 32LARGE-ASM-NEXT:    #APP
 ; 32LARGE-ASM-NEXT:    #NO_APP
 ; 32LARGE-ASM-NEXT:    blr
-; 32LARGE-ASM-NEXT:  L..BB0_3: # %sw.bb1
+; 32LARGE-ASM-NEXT:  L..BB0_5: # %sw.bb2
 ; 32LARGE-ASM-NEXT:    li 3, 0
 ; 32LARGE-ASM-NEXT:    #APP
 ; 32LARGE-ASM-NEXT:    #NO_APP
 ; 32LARGE-ASM-NEXT:    blr
-; 32LARGE-ASM-NEXT:  L..BB0_4: # %sw.bb2
+; 32LARGE-ASM-NEXT:  L..BB0_6: # %sw.bb3
 ; 32LARGE-ASM-NEXT:    li 3, 0
 ; 32LARGE-ASM-NEXT:    #APP
 ; 32LARGE-ASM-NEXT:    #NO_APP
-; 32LARGE-ASM-NEXT:    blr
-; 32LARGE-ASM-NEXT:  L..BB0_5: # %sw.bb3
-; 32LARGE-ASM-NEXT:    #APP
-; 32LARGE-ASM-NEXT:    #NO_APP
-; 32LARGE-ASM-NEXT:  L..BB0_6: # %sw.epilog
-; 32LARGE-ASM-NEXT:    li 3, 0
 ; 32LARGE-ASM-NEXT:    blr
 ;
 ; 64SMALL-ASM-LABEL: jump_table:
 ; 64SMALL-ASM:       # %bb.0: # %entry
 ; 64SMALL-ASM-NEXT:    addi 3, 3, -1
 ; 64SMALL-ASM-NEXT:    cmplwi 3, 3
-; 64SMALL-ASM-NEXT:    bgt 0, L..BB0_6
+; 64SMALL-ASM-NEXT:    bgt 0, L..BB0_3
 ; 64SMALL-ASM-NEXT:  # %bb.1: # %entry
 ; 64SMALL-ASM-NEXT:    ld 4, L..C0(2) # %jump-table.0
 ; 64SMALL-ASM-NEXT:    rldic 3, 3, 2, 30
@@ -116,32 +116,32 @@ define i32 @jump_table(i32 %a) {
 ; 64SMALL-ASM-NEXT:    mtctr 3
 ; 64SMALL-ASM-NEXT:    bctr
 ; 64SMALL-ASM-NEXT:  L..BB0_2: # %sw.bb
+; 64SMALL-ASM-NEXT:    #APP
+; 64SMALL-ASM-NEXT:    #NO_APP
+; 64SMALL-ASM-NEXT:  L..BB0_3: # %sw.epilog
+; 64SMALL-ASM-NEXT:    li 3, 0
+; 64SMALL-ASM-NEXT:    blr
+; 64SMALL-ASM-NEXT:  L..BB0_4: # %sw.bb1
 ; 64SMALL-ASM-NEXT:    li 3, 0
 ; 64SMALL-ASM-NEXT:    #APP
 ; 64SMALL-ASM-NEXT:    #NO_APP
 ; 64SMALL-ASM-NEXT:    blr
-; 64SMALL-ASM-NEXT:  L..BB0_3: # %sw.bb1
+; 64SMALL-ASM-NEXT:  L..BB0_5: # %sw.bb2
 ; 64SMALL-ASM-NEXT:    li 3, 0
 ; 64SMALL-ASM-NEXT:    #APP
 ; 64SMALL-ASM-NEXT:    #NO_APP
 ; 64SMALL-ASM-NEXT:    blr
-; 64SMALL-ASM-NEXT:  L..BB0_4: # %sw.bb2
+; 64SMALL-ASM-NEXT:  L..BB0_6: # %sw.bb3
 ; 64SMALL-ASM-NEXT:    li 3, 0
 ; 64SMALL-ASM-NEXT:    #APP
 ; 64SMALL-ASM-NEXT:    #NO_APP
-; 64SMALL-ASM-NEXT:    blr
-; 64SMALL-ASM-NEXT:  L..BB0_5: # %sw.bb3
-; 64SMALL-ASM-NEXT:    #APP
-; 64SMALL-ASM-NEXT:    #NO_APP
-; 64SMALL-ASM-NEXT:  L..BB0_6: # %sw.epilog
-; 64SMALL-ASM-NEXT:    li 3, 0
 ; 64SMALL-ASM-NEXT:    blr
 ;
 ; 64LARGE-ASM-LABEL: jump_table:
 ; 64LARGE-ASM:       # %bb.0: # %entry
 ; 64LARGE-ASM-NEXT:    addi 3, 3, -1
 ; 64LARGE-ASM-NEXT:    cmplwi 3, 3
-; 64LARGE-ASM-NEXT:    bgt 0, L..BB0_6
+; 64LARGE-ASM-NEXT:    bgt 0, L..BB0_3
 ; 64LARGE-ASM-NEXT:  # %bb.1: # %entry
 ; 64LARGE-ASM-NEXT:    addis 4, L..C0@u(2)
 ; 64LARGE-ASM-NEXT:    rldic 3, 3, 2, 30
@@ -151,25 +151,25 @@ define i32 @jump_table(i32 %a) {
 ; 64LARGE-ASM-NEXT:    mtctr 3
 ; 64LARGE-ASM-NEXT:    bctr
 ; 64LARGE-ASM-NEXT:  L..BB0_2: # %sw.bb
+; 64LARGE-ASM-NEXT:    #APP
+; 64LARGE-ASM-NEXT:    #NO_APP
+; 64LARGE-ASM-NEXT:  L..BB0_3: # %sw.epilog
+; 64LARGE-ASM-NEXT:    li 3, 0
+; 64LARGE-ASM-NEXT:    blr
+; 64LARGE-ASM-NEXT:  L..BB0_4: # %sw.bb1
 ; 64LARGE-ASM-NEXT:    li 3, 0
 ; 64LARGE-ASM-NEXT:    #APP
 ; 64LARGE-ASM-NEXT:    #NO_APP
 ; 64LARGE-ASM-NEXT:    blr
-; 64LARGE-ASM-NEXT:  L..BB0_3: # %sw.bb1
+; 64LARGE-ASM-NEXT:  L..BB0_5: # %sw.bb2
 ; 64LARGE-ASM-NEXT:    li 3, 0
 ; 64LARGE-ASM-NEXT:    #APP
 ; 64LARGE-ASM-NEXT:    #NO_APP
 ; 64LARGE-ASM-NEXT:    blr
-; 64LARGE-ASM-NEXT:  L..BB0_4: # %sw.bb2
+; 64LARGE-ASM-NEXT:  L..BB0_6: # %sw.bb3
 ; 64LARGE-ASM-NEXT:    li 3, 0
 ; 64LARGE-ASM-NEXT:    #APP
 ; 64LARGE-ASM-NEXT:    #NO_APP
-; 64LARGE-ASM-NEXT:    blr
-; 64LARGE-ASM-NEXT:  L..BB0_5: # %sw.bb3
-; 64LARGE-ASM-NEXT:    #APP
-; 64LARGE-ASM-NEXT:    #NO_APP
-; 64LARGE-ASM-NEXT:  L..BB0_6: # %sw.epilog
-; 64LARGE-ASM-NEXT:    li 3, 0
 ; 64LARGE-ASM-NEXT:    blr
 entry:
   switch i32 %a, label %sw.epilog [
