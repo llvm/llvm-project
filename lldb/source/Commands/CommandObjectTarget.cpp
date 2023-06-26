@@ -5105,8 +5105,8 @@ public:
   CommandObjectTargetDumpTypesystem(CommandInterpreter &interpreter)
       : CommandObjectParsed(
             interpreter, "target dump typesystem",
-            "Dump the state of the target's internal type system.\n"
-            "Intended to be used for debugging LLDB itself.",
+            "Dump the state of the target's internal type system. Intended to "
+            "be used for debugging LLDB itself.",
             nullptr, eCommandRequiresTarget) {}
 
   ~CommandObjectTargetDumpTypesystem() override = default;

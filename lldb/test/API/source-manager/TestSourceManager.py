@@ -317,3 +317,24 @@ class SourceManagerTestCase(TestBase):
                 "that has no source code associated " "with it.",
             ],
         )
+
+    def test_source_cache_dump_and_clear(self):
+        self.build()
+        exe = self.getBuildArtifact("a.out")
+        self.runCmd("file " + exe, CURRENT_EXECUTABLE_SET)
+        lldbutil.run_break_set_by_file_and_line(
+            self, self.file, self.line, num_expected_locations=1, loc_exact=True
+        )
+        self.runCmd("run", RUN_SUCCEEDED)
+
+        # Make sure the main source file is in the source cache.
+        self.expect(
+            "source cache dump",
+            substrs=["Modification time", "Lines", "Path", " 7", self.file],
+        )
+
+        # Clear the cache.
+        self.expect("source cache clear")
+
+        # Make sure the main source file is no longer in the source cache.
+        self.expect("source cache dump", matching=False, substrs=[self.file])

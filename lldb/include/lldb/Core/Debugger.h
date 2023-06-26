@@ -76,8 +76,6 @@ class DataRecorder;
 class Debugger : public std::enable_shared_from_this<Debugger>,
                  public UserID,
                  public Properties {
-  friend class SourceManager; // For GetSourceFileCache.
-
 public:
   /// Broadcaster event bits definitions.
   enum {
@@ -523,6 +521,10 @@ public:
   void FlushProcessOutput(Process &process, bool flush_stdout,
                           bool flush_stderr);
 
+  SourceManager::SourceFileCache &GetSourceFileCache() {
+    return m_source_file_cache;
+  }
+
 protected:
   friend class CommandInterpreter;
   friend class SwiftREPL;
@@ -607,10 +609,6 @@ protected:
 
   // Ensures two threads don't attempt to flush process output in parallel.
   std::mutex m_output_flush_mutex;
-
-  SourceManager::SourceFileCache &GetSourceFileCache() {
-    return m_source_file_cache;
-  }
 
   void InstanceInitialize();
 
