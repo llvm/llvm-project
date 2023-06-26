@@ -209,6 +209,9 @@ struct language_name_pair language_names[] = {
     {"fortran18", eLanguageTypeFortran18},
     {"ada2005", eLanguageTypeAda2005},
     {"ada2012", eLanguageTypeAda2012},
+    {"HIP", eLanguageTypeHIP},
+    {"assembly", eLanguageTypeAssembly},
+    {"c-sharp", eLanguageTypeC_sharp},
     {"mojo", eLanguageTypeMojo},
     // Vendor Extensions
     {"assembler", eLanguageTypeMipsAssembler},
