@@ -22,6 +22,8 @@ define i8 @atomicrmw_uinc_wrap_i8(ptr %ptr, i8 %val) {
 ; LA64-NEXT:    addi.d $a5, $a5, 1
 ; LA64-NEXT:    xori $a6, $a6, 1
 ; LA64-NEXT:    masknez $a5, $a5, $a6
+; LA64-NEXT:    maskeqz $a6, $zero, $a6
+; LA64-NEXT:    or $a5, $a6, $a5
 ; LA64-NEXT:    andi $a5, $a5, 255
 ; LA64-NEXT:    sll.w $a5, $a5, $a0
 ; LA64-NEXT:    and $a6, $a3, $a4
@@ -75,6 +77,8 @@ define i16 @atomicrmw_uinc_wrap_i16(ptr %ptr, i16 %val) {
 ; LA64-NEXT:    addi.d $a5, $a5, 1
 ; LA64-NEXT:    xori $a6, $a6, 1
 ; LA64-NEXT:    masknez $a5, $a5, $a6
+; LA64-NEXT:    maskeqz $a6, $zero, $a6
+; LA64-NEXT:    or $a5, $a6, $a5
 ; LA64-NEXT:    bstrpick.d $a5, $a5, 15, 0
 ; LA64-NEXT:    sll.w $a5, $a5, $a0
 ; LA64-NEXT:    and $a6, $a3, $a4
@@ -119,6 +123,8 @@ define i32 @atomicrmw_uinc_wrap_i32(ptr %ptr, i32 %val) {
 ; LA64-NEXT:    xori $a1, $a1, 1
 ; LA64-NEXT:    addi.d $a4, $a3, 1
 ; LA64-NEXT:    masknez $a4, $a4, $a1
+; LA64-NEXT:    maskeqz $a1, $zero, $a1
+; LA64-NEXT:    or $a4, $a1, $a4
 ; LA64-NEXT:  .LBB2_3: # %atomicrmw.start
 ; LA64-NEXT:    # Parent Loop BB2_1 Depth=1
 ; LA64-NEXT:    # => This Inner Loop Header: Depth=2
@@ -158,6 +164,8 @@ define i64 @atomicrmw_uinc_wrap_i64(ptr %ptr, i64 %val) {
 ; LA64-NEXT:    xori $a2, $a2, 1
 ; LA64-NEXT:    addi.d $a4, $a3, 1
 ; LA64-NEXT:    masknez $a4, $a4, $a2
+; LA64-NEXT:    maskeqz $a2, $zero, $a2
+; LA64-NEXT:    or $a4, $a2, $a4
 ; LA64-NEXT:  .LBB3_3: # %atomicrmw.start
 ; LA64-NEXT:    # Parent Loop BB3_1 Depth=1
 ; LA64-NEXT:    # => This Inner Loop Header: Depth=2
