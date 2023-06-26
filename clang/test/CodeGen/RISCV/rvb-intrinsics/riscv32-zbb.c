@@ -22,7 +22,7 @@ int orc_b_32(int a) {
 // RV32ZBB-NEXT:    [[TMP1:%.*]] = call i32 @llvm.ctlz.i32(i32 [[TMP0]], i1 false)
 // RV32ZBB-NEXT:    ret i32 [[TMP1]]
 //
-int clz_32(int a) {
+int clz_32(unsigned int a) {
   return __builtin_riscv_clz_32(a);
 }
 
@@ -34,6 +34,6 @@ int clz_32(int a) {
 // RV32ZBB-NEXT:    [[TMP1:%.*]] = call i32 @llvm.cttz.i32(i32 [[TMP0]], i1 false)
 // RV32ZBB-NEXT:    ret i32 [[TMP1]]
 //
-int ctz_32(int a) {
+int ctz_32(unsigned int a) {
   return __builtin_riscv_ctz_32(a);
 }
