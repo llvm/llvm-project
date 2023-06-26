@@ -19,8 +19,8 @@ define void @call1() {
 define void @call2() {
 ; CHECK-LABEL: define void @call2() {
 ; CHECK-NEXT:    [[A:%.*]] = call dereferenceable(8) ptr @g()
-; CHECK-NEXT:    [[B:%.*]] = getelementptr i8, ptr [[A]], i64 4
-; CHECK-NEXT:    call void @use(ptr [[B]])
+; CHECK-NEXT:    [[B:%.*]] = getelementptr inbounds i8, ptr [[A]], i64 4
+; CHECK-NEXT:    call void @use(ptr nonnull [[B]])
 ; CHECK-NEXT:    ret void
 ;
   %a = call dereferenceable(8) ptr @g()
@@ -70,8 +70,8 @@ define void @arg1(ptr %a) {
 define void @arg2(ptr dereferenceable(8) %a) {
 ; CHECK-LABEL: define void @arg2
 ; CHECK-SAME: (ptr dereferenceable(8) [[A:%.*]]) {
-; CHECK-NEXT:    [[B:%.*]] = getelementptr i8, ptr [[A]], i64 4
-; CHECK-NEXT:    call void @use(ptr [[B]])
+; CHECK-NEXT:    [[B:%.*]] = getelementptr inbounds i8, ptr [[A]], i64 4
+; CHECK-NEXT:    call void @use(ptr nonnull [[B]])
 ; CHECK-NEXT:    ret void
 ;
   %b = getelementptr i8, ptr %a, i64 4
