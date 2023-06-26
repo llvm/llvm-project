@@ -162,11 +162,11 @@ public:
             ->getType();
 
     // Create the new control point, which is of the form:
-    //   void* new_control_point(YkMT*, YkLocation*, CtrlPointVars*, void*)
+    //   void new_control_point(YkMT*, YkLocation*, CtrlPointVars*, void*)
     PointerType *VoidPtr = PointerType::get(Context, 0);
     FunctionType *FType = FunctionType::get(
-        VoidPtr, {YkMTTy, YkLocTy, CtrlPointVarsTy->getPointerTo(), VoidPtr},
-        false);
+        Type::getVoidTy(Context),
+        {YkMTTy, YkLocTy, CtrlPointVarsTy->getPointerTo(), VoidPtr}, false);
     Function *NF = Function::Create(FType, GlobalVariable::ExternalLinkage,
                                     YK_NEW_CONTROL_POINT, M);
 
@@ -218,35 +218,6 @@ public:
 
     // Replace the call to the dummy control point.
     OldCtrlPointCall->eraseFromParent();
-
-    // Create the new exit block.
-    BasicBlock *ExitBB = BasicBlock::Create(Context, "", Caller);
-    Builder.SetInsertPoint(ExitBB);
-
-    // Create call to frame reconstructor.
-    FunctionType *YKFRType =
-        FunctionType::get(Type::getVoidTy(Context), {VoidPtr}, false);
-    Function *YKFR = Function::Create(YKFRType, GlobalVariable::ExternalLinkage,
-                                      YK_RECONSTRUCT_FRAMES, M);
-    Builder.CreateCall(YKFR, {NewCtrlPointCallInst});
-    Builder.CreateUnreachable();
-
-    // Split up the current block and then insert a conditional branch that
-    // either continues after the control point or invokes frame reconstruction.
-    BasicBlock *BB = NewCtrlPointCallInst->getParent();
-    BasicBlock *ContBB = BB->splitBasicBlock(New->getNextNonDebugInstruction());
-    Instruction &OldBr = BB->back();
-    assert(OldBr.getPrevNonDebugInstruction() == New &&
-           "Split block at the wrong spot.");
-    OldBr.eraseFromParent();
-    Builder.SetInsertPoint(BB);
-    // The return value of the control point tells us whether a guard has failed
-    // or not (i.e. anything other than a nullptr means a guard has failed). If
-    // it has jump to `ExitBB` which calls the code that copies over the new
-    // stack from the given pointer.
-    Value *HasGuardFailed = Builder.CreateICmpEQ(
-        NewCtrlPointCallInst, ConstantPointerNull::get(VoidPtr));
-    Builder.CreateCondBr(HasGuardFailed, ContBB, ExitBB);
 
 #ifndef NDEBUG
     // Our pass runs after LLVM normally does its verify pass. In debug builds
