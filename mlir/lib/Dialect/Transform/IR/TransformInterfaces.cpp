@@ -83,7 +83,8 @@ transform::TransformState::getPayloadValues(Value handleValue) const {
 }
 
 LogicalResult transform::TransformState::getHandlesForPayloadOp(
-    Operation *op, SmallVectorImpl<Value> &handles) const {
+    Operation *op, SmallVectorImpl<Value> &handles,
+    bool includeOutOfScope) const {
   bool found = false;
   for (const auto &[region, mapping] : llvm::reverse(mappings)) {
     auto iterator = mapping.reverse.find(op);
@@ -92,7 +93,8 @@ LogicalResult transform::TransformState::getHandlesForPayloadOp(
       found = true;
     }
     // Stop looking when reaching a region that is isolated from above.
-    if (region->getParentOp()->hasTrait<OpTrait::IsIsolatedFromAbove>())
+    if (!includeOutOfScope &&
+        region->getParentOp()->hasTrait<OpTrait::IsIsolatedFromAbove>())
       break;
   }
 
@@ -100,7 +102,8 @@ LogicalResult transform::TransformState::getHandlesForPayloadOp(
 }
 
 LogicalResult transform::TransformState::getHandlesForPayloadValue(
-    Value payloadValue, SmallVectorImpl<Value> &handles) const {
+    Value payloadValue, SmallVectorImpl<Value> &handles,
+    bool includeOutOfScope) const {
   bool found = false;
   for (const auto &[region, mapping] : llvm::reverse(mappings)) {
     auto iterator = mapping.reverseValues.find(payloadValue);
@@ -109,7 +112,8 @@ LogicalResult transform::TransformState::getHandlesForPayloadValue(
       found = true;
     }
     // Stop looking when reaching a region that is isolated from above.
-    if (region->getParentOp()->hasTrait<OpTrait::IsIsolatedFromAbove>())
+    if (!includeOutOfScope &&
+        region->getParentOp()->hasTrait<OpTrait::IsIsolatedFromAbove>())
       break;
   }
 
@@ -343,7 +347,8 @@ transform::TransformState::replacePayloadOp(Operation *op,
 #ifndef NDEBUG
   for (Value opResult : op->getResults()) {
     SmallVector<Value> valueHandles;
-    (void)getHandlesForPayloadValue(opResult, valueHandles);
+    (void)getHandlesForPayloadValue(opResult, valueHandles,
+                                    /*includeOutOfScope=*/true);
     assert(valueHandles.empty() && "expected no mapping to old results");
   }
 #endif // NDEBUG
@@ -351,10 +356,10 @@ transform::TransformState::replacePayloadOp(Operation *op,
   // Drop the mapping between the op and all handles that point to it. Fail if
   // there are no handles.
   SmallVector<Value> opHandles;
-  if (failed(getHandlesForPayloadOp(op, opHandles)))
+  if (failed(getHandlesForPayloadOp(op, opHandles, /*includeOutOfScope=*/true)))
     return failure();
   for (Value handle : opHandles) {
-    Mappings &mappings = getMapping(handle);
+    Mappings &mappings = getMapping(handle, /*allowOutOfScope=*/true);
     dropMappingEntry(mappings.reverse, op, handle);
   }
 
@@ -385,7 +390,7 @@ transform::TransformState::replacePayloadOp(Operation *op,
   // element from an array invalidates iterators; merely changing the value of
   // elements does not.
   for (Value handle : opHandles) {
-    Mappings &mappings = getMapping(handle);
+    Mappings &mappings = getMapping(handle, /*allowOutOfScope=*/true);
     auto it = mappings.direct.find(handle);
     if (it == mappings.direct.end())
       continue;
@@ -410,11 +415,12 @@ transform::TransformState::replacePayloadOp(Operation *op,
 LogicalResult
 transform::TransformState::replacePayloadValue(Value value, Value replacement) {
   SmallVector<Value> valueHandles;
-  if (failed(getHandlesForPayloadValue(value, valueHandles)))
+  if (failed(getHandlesForPayloadValue(value, valueHandles,
+                                       /*includeOutOfScope=*/true)))
     return failure();
 
   for (Value handle : valueHandles) {
-    Mappings &mappings = getMapping(handle);
+    Mappings &mappings = getMapping(handle, /*allowOutOfScope=*/true);
     dropMappingEntry(mappings.reverseValues, value, handle);
 
     // If replacing with null, that is erasing the mapping, drop the mapping
@@ -764,7 +770,7 @@ checkRepeatedConsumptionInOperand(ArrayRef<T> payload,
 
 void transform::TransformState::compactOpHandles() {
   for (Value handle : opHandlesToCompact) {
-    Mappings &mappings = getMapping(handle);
+    Mappings &mappings = getMapping(handle, /*allowOutOfScope=*/true);
     llvm::erase_value(mappings.direct[handle], nullptr);
   }
   opHandlesToCompact.clear();
@@ -1346,7 +1352,8 @@ void transform::TrackingListener::notifyOperationReplaced(
 
   // Replace op handle.
   SmallVector<Value> opHandles;
-  if (failed(getTransformState().getHandlesForPayloadOp(op, opHandles))) {
+  if (failed(getTransformState().getHandlesForPayloadOp(
+          op, opHandles, /*includeOutOfScope=*/true))) {
     // Op is not tracked.
     return;
   }
