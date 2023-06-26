@@ -3356,6 +3356,20 @@ let Group = f_Group in {
   def fno_ptrauth_soft : Flag<["-"], "fno-ptrauth-soft">;
 }
 
+let Group = f_Group in {
+  def fptrauth_abi_version_EQ : Joined<["-"], "fptrauth-abi-version=">,
+    Flags<[CC1Option, CC1AsOption]>,
+    HelpText<"Pointer Authentication ABI version">;
+  def fno_ptrauth_abi_version : Flag<["-"], "fno-ptrauth-abi-version">,
+    HelpText<"Disable Pointer Authentication ABI versioning">;
+
+  def fptrauth_kernel_abi_version : Flag<["-"], "fptrauth-kernel-abi-version">,
+    Flags<[CC1Option, CC1AsOption]>,
+    HelpText<"Enable Pointer Authentication kernel ABI version">;
+  def fno_ptrauth_kernel_abi_version : Flag<["-"], "fno-ptrauth-kernel-abi-version">,
+    HelpText<"Disable Pointer Authentication kernel ABI versioning">;
+}
+
 def fenable_matrix : Flag<["-"], "fenable-matrix">, Group<f_Group>,
     Flags<[CC1Option]>,
     HelpText<"Enable matrix data type and related builtin functions">,

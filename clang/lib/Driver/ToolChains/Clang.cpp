@@ -8183,6 +8183,46 @@ void ClangAs::AddRISCVTargetArgs(const ArgList &Args,
   }
 }
 
+void ClangAs::AddAArch64TargetArgs(const ArgList &Args,
+                                   ArgStringList &CmdArgs) const {
+  const llvm::Triple &Triple = getToolChain().getTriple();
+
+  // In the assembler, arm64e support mostly consists of setting an ABI version.
+  // It also enables various preprocessor macros, but that's done before -cc1as.
+  if (Triple.isArm64e()) {
+    // The ptrauth ABI version is 0 by default, but can be overridden.
+    static const constexpr unsigned DefaultPtrauthABIVersion = 0;
+
+    unsigned PtrAuthABIVersion = DefaultPtrauthABIVersion;
+    const Arg *A = Args.getLastArg(options::OPT_fptrauth_abi_version_EQ,
+                                   options::OPT_fno_ptrauth_abi_version);
+    bool HasVersionArg =
+        A && A->getOption().matches(options::OPT_fptrauth_abi_version_EQ);
+    if (HasVersionArg) {
+      unsigned PtrAuthABIVersionArg;
+      if (StringRef(A->getValue()).getAsInteger(10, PtrAuthABIVersionArg))
+        getToolChain().getDriver().Diag(diag::err_drv_invalid_value)
+            << A->getAsString(Args) << A->getValue();
+      else
+        PtrAuthABIVersion = PtrAuthABIVersionArg;
+    }
+
+    // Pass the ABI version to -cc1, regardless of its value, if the user asked
+    // for it or if the user didn't explicitly disable it.
+    if (HasVersionArg || !Args.hasArg(options::OPT_fno_ptrauth_abi_version)) {
+      CmdArgs.push_back(Args.MakeArgString("-fptrauth-abi-version=" +
+                                           llvm::utostr(PtrAuthABIVersion)));
+
+      // -f(no-)ptrauth-kernel-abi-version can override -mkernel and
+      // -fapple-kext
+      if (Args.hasArg(options::OPT_fptrauth_kernel_abi_version,
+                      options::OPT_mkernel, options::OPT_fapple_kext) &&
+          !Args.hasArg(options::OPT_fno_ptrauth_kernel_abi_version))
+        CmdArgs.push_back("-fptrauth-kernel-abi-version");
+    }
+  }
+}
+
 void ClangAs::ConstructJob(Compilation &C, const JobAction &JA,
                            const InputInfo &Output, const InputInfoList &Inputs,
                            const ArgList &Args,
@@ -8364,6 +8404,7 @@ void ClangAs::ConstructJob(Compilation &C, const JobAction &JA,
       CmdArgs.push_back("-mllvm");
       CmdArgs.push_back("-aarch64-mark-bti-property");
     }
+    AddAArch64TargetArgs(Args, CmdArgs);
     break;
 
   case llvm::Triple::loongarch32:

@@ -1269,6 +1269,38 @@ void DarwinClang::addClangTargetOptions(
   // On arm64e, enable pointer authentication (for the return address and
   // indirect calls), as well as usage of the intrinsics.
   if (getArchName() == "arm64e") {
+    // The ptrauth ABI version is 0 by default, but can be overridden.
+    static const constexpr unsigned DefaultPtrauthABIVersion = 0;
+
+    unsigned PtrAuthABIVersion = DefaultPtrauthABIVersion;
+    const Arg *A = DriverArgs.getLastArg(options::OPT_fptrauth_abi_version_EQ,
+                                         options::OPT_fno_ptrauth_abi_version);
+    bool HasVersionArg =
+        A && A->getOption().matches(options::OPT_fptrauth_abi_version_EQ);
+    if (HasVersionArg) {
+      unsigned PtrAuthABIVersionArg;
+      if (StringRef(A->getValue()).getAsInteger(10, PtrAuthABIVersionArg))
+        getDriver().Diag(diag::err_drv_invalid_value)
+          << A->getAsString(DriverArgs) << A->getValue();
+      else
+        PtrAuthABIVersion = PtrAuthABIVersionArg;
+    }
+
+    // Pass the ABI version to -cc1, regardless of its value, if the user asked
+    // for it or if the user didn't explicitly disable it.
+    if (HasVersionArg ||
+        !DriverArgs.hasArg(options::OPT_fno_ptrauth_abi_version)) {
+      CC1Args.push_back(DriverArgs.MakeArgString(
+          "-fptrauth-abi-version=" + llvm::utostr(PtrAuthABIVersion)));
+
+      // -f(no-)ptrauth-kernel-abi-version can override -mkernel and
+      // -fapple-kext
+      if (DriverArgs.hasArg(options::OPT_fptrauth_kernel_abi_version,
+                            options::OPT_mkernel, options::OPT_fapple_kext) &&
+          !DriverArgs.hasArg(options::OPT_fno_ptrauth_kernel_abi_version))
+        CC1Args.push_back("-fptrauth-kernel-abi-version");
+    }
+
     if (!DriverArgs.hasArg(options::OPT_fptrauth_returns,
                            options::OPT_fno_ptrauth_returns))
       CC1Args.push_back("-fptrauth-returns");

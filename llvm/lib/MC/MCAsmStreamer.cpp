@@ -168,6 +168,8 @@ public:
   void emitDarwinTargetVariantBuildVersion(unsigned Platform, unsigned Major,
                                            unsigned Minor, unsigned Update,
                                            VersionTuple SDKVersion) override;
+  void EmitPtrAuthABIVersion(unsigned PtrAuthABIVersion,
+                             bool PtrAuthKernelABIVersion) override;
   void emitThumbFunc(MCSymbol *Func) override;
 
   void emitAssignment(MCSymbol *Symbol, const MCExpr *Value) override;
@@ -658,6 +660,16 @@ void MCAsmStreamer::emitDarwinTargetVariantBuildVersion(
     unsigned Platform, unsigned Major, unsigned Minor, unsigned Update,
     VersionTuple SDKVersion) {
   emitBuildVersion(Platform, Major, Minor, Update, SDKVersion);
+}
+
+void MCAsmStreamer::EmitPtrAuthABIVersion(unsigned PtrAuthABIVersion,
+                                          bool PtrAuthKernelABIVersion) {
+  if (PtrAuthKernelABIVersion)
+    OS << "\t.ptrauth_kernel_abi_version ";
+  else
+    OS << "\t.ptrauth_abi_version ";
+  OS << PtrAuthABIVersion;
+  EmitEOL();
 }
 
 void MCAsmStreamer::emitThumbFunc(MCSymbol *Func) {

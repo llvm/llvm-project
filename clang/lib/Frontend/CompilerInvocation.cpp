@@ -3581,15 +3581,30 @@ static void GeneratePointerAuthArgs(LangOptions &Opts,
     GenerateArg(Args, OPT_fptrauth_auth_traps, SA);
   if (Opts.SoftPointerAuth)
     GenerateArg(Args, OPT_fptrauth_soft, SA);
+
+  if (Opts.PointerAuthABIVersionEncoded) {
+    GenerateArg(Args, OPT_fptrauth_abi_version_EQ,
+                Twine(Opts.PointerAuthABIVersion), SA);
+    if (Opts.PointerAuthKernelABIVersion)
+      GenerateArg(Args, OPT_fptrauth_kernel_abi_version, SA);
+  }
 }
 
-static void ParsePointerAuthArgs(LangOptions &Opts, ArgList &Args) {
+static void ParsePointerAuthArgs(LangOptions &Opts, ArgList &Args,
+                                 DiagnosticsEngine &Diags) {
   Opts.PointerAuthIntrinsics = Args.hasArg(OPT_fptrauth_intrinsics);
   Opts.PointerAuthCalls = Args.hasArg(OPT_fptrauth_calls);
   Opts.PointerAuthReturns = Args.hasArg(OPT_fptrauth_returns);
   Opts.PointerAuthIndirectGotos = Args.hasArg(OPT_fptrauth_indirect_gotos);
   Opts.PointerAuthAuthTraps = Args.hasArg(OPT_fptrauth_auth_traps);
   Opts.SoftPointerAuth = Args.hasArg(OPT_fptrauth_soft);
+
+  Opts.PointerAuthABIVersionEncoded =
+      Args.hasArg(OPT_fptrauth_abi_version_EQ) ||
+      Args.hasArg(OPT_fptrauth_kernel_abi_version);
+  Opts.PointerAuthABIVersion =
+      getLastArgIntValue(Args, OPT_fptrauth_abi_version_EQ, 0, Diags);
+  Opts.PointerAuthKernelABIVersion = Args.hasArg(OPT_fptrauth_kernel_abi_version);
 }
 
 /// Check if input file kind and language standard are compatible.
@@ -4835,7 +4850,7 @@ bool CompilerInvocation::CreateFromArgsImpl(
   ParseHeaderSearchArgs(Res.getHeaderSearchOpts(), Args, Diags,
                         Res.getFileSystemOpts().WorkingDir);
   ParseAPINotesArgs(Res.getAPINotesOpts(), Args, Diags);
-  ParsePointerAuthArgs(LangOpts, Args);
+  ParsePointerAuthArgs(LangOpts, Args, Diags);
 
   ParseLangArgs(LangOpts, Args, DashX, T, Res.getPreprocessorOpts().Includes,
                 Diags);

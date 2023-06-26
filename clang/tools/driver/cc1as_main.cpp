@@ -162,6 +162,13 @@ struct AssemblerInvocation {
   /// compilation
   llvm::VersionTuple DarwinTargetVariantSDKVersion;
 
+  /// The ptrauth ABI version targeted by the backend.
+  unsigned PointerAuthABIVersion;
+  /// Whether the ptrauth ABI version represents a kernel ABI.
+  unsigned PointerAuthKernelABIVersion : 1;
+  /// Whether the assembler should encode the ptrauth ABI version.
+  unsigned PointerAuthABIVersionEncoded : 1;
+
   /// The name of a file to use with \c .secure_log_unique directives.
   std::string AsSecureLogFile;
   /// @}
@@ -335,6 +342,14 @@ bool AssemblerInvocation::CreateFromArgs(AssemblerInvocation &Opts,
   Opts.IncrementalLinkerCompatible =
       Args.hasArg(OPT_mincremental_linker_compatible);
   Opts.SymbolDefs = Args.getAllArgValues(OPT_defsym);
+
+  Opts.PointerAuthABIVersionEncoded =
+      Args.hasArg(OPT_fptrauth_abi_version_EQ) ||
+      Args.hasArg(OPT_fptrauth_kernel_abi_version);
+  Opts.PointerAuthABIVersion =
+    getLastArgIntValue(Args, OPT_fptrauth_abi_version_EQ, 0, Diags);
+  Opts.PointerAuthKernelABIVersion =
+      Args.hasArg(OPT_fptrauth_kernel_abi_version);
 
   // EmbedBitcode Option. If -fembed-bitcode is enabled, set the flag.
   // EmbedBitcode behaves the same for all embed options for assembly files.
@@ -560,6 +575,11 @@ static bool ExecuteAssemblerImpl(AssemblerInvocation &Opts,
 
   // Assembly to object compilation should leverage assembly info.
   Str->setUseAssemblerInfoForParsing(true);
+
+  // Emit the ptrauth ABI version, if any.
+  if (Opts.PointerAuthABIVersionEncoded)
+    Str->EmitPtrAuthABIVersion(Opts.PointerAuthABIVersion,
+                               Opts.PointerAuthKernelABIVersion);
 
   bool Failed = false;
 

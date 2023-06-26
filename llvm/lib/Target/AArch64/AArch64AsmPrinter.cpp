@@ -43,6 +43,8 @@
 #include "llvm/CodeGen/TargetRegisterInfo.h"
 #include "llvm/IR/DataLayout.h"
 #include "llvm/IR/DebugInfoMetadata.h"
+#include "llvm/IR/DiagnosticInfo.h"
+#include "llvm/IR/DiagnosticPrinter.h"
 #include "llvm/IR/GlobalPtrAuthInfo.h"
 #include "llvm/MC/MCAsmInfo.h"
 #include "llvm/MC/MCContext.h"
@@ -193,6 +195,9 @@ private:
   void emitFunctionBodyEnd() override;
 
   MCSymbol *GetCPISymbol(unsigned CPID) const override;
+
+  void EmitPtrAuthVersion(Module &M);
+
   void emitEndOfAsmFile(Module &M) override;
 
   AArch64FunctionInfo *AArch64FI = nullptr;
@@ -245,6 +250,9 @@ void AArch64AsmPrinter::emitStartOfAsmFile(Module &M) {
     OutStreamer->emitAssignment(
         S, MCConstantExpr::create(Feat00Value, MMI->getContext()));
   }
+
+  if (TM.getTargetTriple().isOSBinFormatMachO())
+    EmitPtrAuthVersion(M);
 
   if (!TT.isOSBinFormatELF())
     return;
@@ -533,6 +541,59 @@ void AArch64AsmPrinter::LowerKCFI_CHECK(const MachineInstr &MI) {
   unsigned ESR = 0x8000 | ((TypeIndex & 31) << 5) | (AddrIndex & 31);
   EmitToStreamer(*OutStreamer, MCInstBuilder(AArch64::BRK).addImm(ESR));
   OutStreamer->emitLabel(Pass);
+}
+
+class PtrauthABIVersionDiagnosticInfo : public DiagnosticInfo {
+  int V1, V2;
+  bool K1, K2;
+public:
+  PtrauthABIVersionDiagnosticInfo(int V1, bool K1, int V2, bool K2)
+      : DiagnosticInfo(DK_Linker, DS_Warning), V1(V1), V2(V2), K1(K1), K2(K2) {}
+  void print(DiagnosticPrinter &DP) const override {
+    const char *Mode1 = K1 ? "kernel" : "user";
+    const char *Mode2 = K2 ? "kernel" : "user";
+    DP << "incompatible ptrauth ABI versions: " << V1 << " (" << Mode1
+       << ") and " << V2 << " (" << Mode2 << "), falling back to 63 (user)";
+  }
+};
+
+void AArch64AsmPrinter::EmitPtrAuthVersion(Module &M) {
+  // Emit the ptrauth ABI version, if any.
+  SmallVector<Module::PtrAuthABIVersion, 2> Versions =
+      M.getPtrAuthABIVersions();
+  if (Versions.size() == 0)
+    return;
+
+  // The ptrauth ABI version is an arm64e concept, only implemented for MachO.
+  const Triple &TT = TM.getTargetTriple();
+  if (!TT.isOSBinFormatMachO())
+    report_fatal_error("ptrauth ABI version support not yet implemented");
+
+  LLVMContext &Ctx = M.getContext();
+
+  Module::PtrAuthABIVersion V = Versions[0];
+  if (Versions.size() == 1) {
+    if (V.Version > 63) {
+      Ctx.emitError("invalid ptrauth ABI version: " + utostr(V.Version));
+      V.Version = 63;
+      V.Kernel = false;
+    }
+  }
+  // If there are multiple versions, there's a mismatch.  In that case, fall
+  // back to version "15", and emit a warning through the context.
+  if (Versions.size() == 2) {
+    int LV = Versions[0].Version;
+    bool LK = Versions[0].Kernel;
+    int RV = Versions[1].Version;
+    bool RK = Versions[1].Kernel;
+    V.Version = 63;
+    V.Kernel = false;
+    Ctx.diagnose(PtrauthABIVersionDiagnosticInfo(LV, LK, RV, RK));
+  }
+  assert(Versions.size() <= 2 &&
+         "Mismatch between more than two ptrauth abi versions.");
+
+  OutStreamer->EmitPtrAuthABIVersion(V.Version, V.Kernel);
 }
 
 void AArch64AsmPrinter::LowerHWASAN_CHECK_MEMACCESS(const MachineInstr &MI) {

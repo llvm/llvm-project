@@ -194,6 +194,10 @@ public:
     addDirectiveHandler<&DarwinAsmParser::parseBuildVersion>(".build_version");
     addDirectiveHandler<&DarwinAsmParser::parseDirectiveCGProfile>(
         ".cg_profile");
+    addDirectiveHandler<&DarwinAsmParser::parsePtrAuthABIVersion>(
+      ".ptrauth_abi_version");
+    addDirectiveHandler<&DarwinAsmParser::parsePtrAuthKernelABIVersion>(
+      ".ptrauth_kernel_abi_version");
 
     LastVersionDirective = SMLoc();
   }
@@ -467,6 +471,9 @@ public:
   void checkVersion(StringRef Directive, StringRef Arg, SMLoc Loc,
                     Triple::OSType ExpectedOS);
   bool parseDirectiveCGProfile(StringRef Directive, SMLoc Loc);
+
+  bool parsePtrAuthABIVersion(StringRef Directive, SMLoc Loc);
+  bool parsePtrAuthKernelABIVersion(StringRef Directive, SMLoc Loc);
 };
 
 } // end anonymous namespace
@@ -1205,6 +1212,46 @@ bool DarwinAsmParser::parseBuildVersion(StringRef Directive, SMLoc Loc) {
 ///   ::= .cg_profile from, to, count
 bool DarwinAsmParser::parseDirectiveCGProfile(StringRef S, SMLoc Loc) {
   return MCAsmParserExtension::ParseDirectiveCGProfile(S, Loc);
+}
+
+/// parsePtrAuthABIVersion
+///   ::= .ptrauth_abi_version version
+bool DarwinAsmParser::parsePtrAuthABIVersion(StringRef Directive, SMLoc Loc) {
+  int64_t PtrAuthABIVersion;
+  if (getParser().parseIntToken(PtrAuthABIVersion,
+               "expected integer version in '.ptrauth_abi_version' directive"))
+    return true;
+
+  if (PtrAuthABIVersion > 63 || PtrAuthABIVersion < 0)
+    return TokError("invalid ptrauth ABI version number");
+
+  if (parseToken(AsmToken::EndOfStatement))
+    return addErrorSuffix(" in '.ptrauth_abi_version' directive");
+
+  getStreamer().EmitPtrAuthABIVersion(PtrAuthABIVersion,
+                                      /*PtrAuthKernelABIVersion=*/false);
+  return false;
+}
+
+/// parsePtrAuthKernelABIVersion
+///   ::= .ptrauth_kernel_abi_version version
+bool DarwinAsmParser::parsePtrAuthKernelABIVersion(StringRef Directive,
+                                                   SMLoc Loc) {
+  int64_t PtrAuthKernelABIVersion;
+  if (getParser().parseIntToken(PtrAuthKernelABIVersion,
+                                "expected integer version in "
+                                "'.ptrauth_kernel_abi_version' directive"))
+    return true;
+
+  if (PtrAuthKernelABIVersion > 63 || PtrAuthKernelABIVersion < 0)
+    return TokError("invalid ptrauth kernel ABI version number");
+
+  if (parseToken(AsmToken::EndOfStatement))
+    return addErrorSuffix(" in '.ptrauth_kernel_abi_version' directive");
+
+  getStreamer().EmitPtrAuthABIVersion(PtrAuthKernelABIVersion,
+                                      /*PtrAuthKernelABIVersion=*/true);
+  return false;
 }
 
 namespace llvm {

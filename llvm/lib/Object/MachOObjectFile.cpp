@@ -132,7 +132,7 @@ static unsigned getCPUType(const MachOObjectFile &O) {
 }
 
 static unsigned getCPUSubType(const MachOObjectFile &O) {
-  return O.getHeader().cpusubtype;
+  return O.getHeader().cpusubtype & ~MachO::CPU_SUBTYPE_MASK;
 }
 
 static uint32_t

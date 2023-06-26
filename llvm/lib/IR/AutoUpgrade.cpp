@@ -4820,12 +4820,24 @@ void llvm::UpgradeARCRuntime(Module &M) {
     UpgradeToIntrinsic(I.first, I.second);
 }
 
+// arm64e always needs the ptrauth.abi-version metadata, even when there are no
+// module flags at all.
+static bool insertMissingPtrAuthABIVersion(Module &M) {
+  Triple TT(M.getTargetTriple());
+  if (TT.isArm64e()) {
+    M.setPtrAuthABIVersion(/*PointerAuthABIVersion=*/{-1});
+    return true;
+  }
+  return false;
+}
+
 bool llvm::UpgradeModuleFlags(Module &M) {
   NamedMDNode *ModFlags = M.getModuleFlagsMetadata();
   if (!ModFlags)
-    return false;
+    return insertMissingPtrAuthABIVersion(M);
 
   bool HasObjCFlag = false, HasClassProperties = false, Changed = false;
+  bool HasPtrAuthABIVersion = false;
   bool HasSwiftVersionFlag = false;
   uint8_t SwiftMajorVersion, SwiftMinorVersion;
   uint32_t SwiftABIVersion;
@@ -4928,6 +4940,9 @@ bool llvm::UpgradeModuleFlags(Module &M) {
         Changed = true;
       }
     }
+
+    if (ID->getString() == "ptrauth.abi-version")
+      HasPtrAuthABIVersion = true;
   }
 
   // "Objective-C Class Properties" is recently added for Objective-C. We
@@ -4950,6 +4965,9 @@ bool llvm::UpgradeModuleFlags(Module &M) {
                     ConstantInt::get(Int8Ty, SwiftMinorVersion));
     Changed = true;
   }
+
+  if (!HasPtrAuthABIVersion)
+    Changed |= insertMissingPtrAuthABIVersion(M);
 
   return Changed;
 }

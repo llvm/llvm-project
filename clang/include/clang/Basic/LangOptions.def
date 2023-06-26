@@ -164,6 +164,10 @@ LANGOPT(PointerAuthReturns, 1, 0, "return pointer authentication")
 LANGOPT(PointerAuthIndirectGotos, 1, 0, "indirect gotos pointer authentication")
 LANGOPT(PointerAuthAuthTraps, 1, 0, "pointer authentication failure traps")
 LANGOPT(SoftPointerAuth   , 1, 0, "software emulation of pointer authentication")
+VALUE_LANGOPT(PointerAuthABIVersion, 32, 0, "pointer authentication ABI version")
+LANGOPT(PointerAuthKernelABIVersion, 1, 0, "controls whether the pointer auth abi version represents a kernel ABI")
+LANGOPT(PointerAuthABIVersionEncoded, 1, 0, "controls whether the pointer auth abi version should be encoded in the IR")
+
 LANGOPT(Unstable          , 1, 0, "Enable unstable and experimental features")
 LANGOPT(ExperimentalLibrary, 1, 0, "enable unstable and experimental library features")
 

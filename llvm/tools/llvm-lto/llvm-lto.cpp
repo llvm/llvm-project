@@ -256,6 +256,10 @@ static cl::opt<bool> PrintMachOCPUOnly(
     cl::desc("Instead of running LTO, print the mach-o cpu in each IR file"),
     cl::cat(LTOCategory));
 
+static cl::opt<bool> PrintMachOCPUOnlyLocal(
+    "print-macho-cpu-only-local", cl::init(false),
+    cl::desc("Same as print-macho-cpu-only, but using createInLocalContext."));
+
 static cl::opt<bool>
     DebugPassManager("debug-pass-manager", cl::init(false), cl::Hidden,
                      cl::desc("Print pass management debugging information"),
@@ -451,19 +455,26 @@ static void listDependentLibraries() {
   }
 }
 
-static void printMachOCPUOnly() {
+static void printMachOCPUOnly(bool Local) {
   LLVMContext Context;
   Context.setDiagnosticHandler(std::make_unique<LLVMLTODiagnosticHandler>(),
                                true);
   TargetOptions Options = codegen::InitTargetOptionsFromCodeGenFlags(Triple());
   for (auto &Filename : InputFilenames) {
-    ErrorOr<std::unique_ptr<LTOModule>> ModuleOrErr =
-        LTOModule::createFromFile(Context, Filename, Options);
-    if (!ModuleOrErr)
-      error(ModuleOrErr, "llvm-lto: ");
+    std::unique_ptr<MemoryBuffer> Buffer;
+    std::unique_ptr<LTOModule> Module;
+    if (Local) {
+      Module = getLocalLTOModule(Filename, Buffer, Options);
+    } else {
+      ErrorOr<std::unique_ptr<LTOModule>> ModuleOrErr =
+          LTOModule::createFromFile(Context, Filename, Options);
+      if (!ModuleOrErr)
+        error(ModuleOrErr, "llvm-lto: ");
+      Module = std::move(*ModuleOrErr);
+    }
 
-    Expected<uint32_t> CPUType = (*ModuleOrErr)->getMachOCPUType();
-    Expected<uint32_t> CPUSubType = (*ModuleOrErr)->getMachOCPUSubType();
+    Expected<uint32_t> CPUType = Module->getMachOCPUType();
+    Expected<uint32_t> CPUSubType = Module->getMachOCPUSubType();
     if (!CPUType)
       error("Error while printing mach-o cputype: " +
             toString(CPUType.takeError()));
@@ -981,8 +992,8 @@ int main(int argc, char **argv) {
     return 0;
   }
 
-  if (PrintMachOCPUOnly) {
-    printMachOCPUOnly();
+  if (PrintMachOCPUOnly || PrintMachOCPUOnlyLocal) {
+    printMachOCPUOnly(PrintMachOCPUOnlyLocal);
     return 0;
   }
 

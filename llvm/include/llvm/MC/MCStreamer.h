@@ -524,6 +524,9 @@ public:
                             const Triple *DarwinTargetVariantTriple,
                             const VersionTuple &DarwinTargetVariantSDKVersion);
 
+  /// Specify Mach-O ptrauth ABI version.
+  virtual void EmitPtrAuthABIVersion(unsigned PtrAuthABIVersion, bool PtrAuthKernelABIVersion) {}
+
   /// Note in the output that the specified \p Func is a Thumb mode
   /// function (ARM target only).
   virtual void emitThumbFunc(MCSymbol *Func);

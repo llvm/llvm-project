@@ -7821,6 +7821,11 @@ stored at::
     !llvm.embedded.objects = !{!0}
     !0 = !{ptr @object, !".section"}
 
+Pointer Authentication ABI Version Module Flags Metadata
+--------------------------------------------------------
+
+FIXME: write about abi version, maybe?
+
 Automatic Linker Flags Named Metadata
 =====================================
 

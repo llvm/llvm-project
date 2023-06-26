@@ -135,7 +135,9 @@ uint64_t MachObjectWriter::getPaddingSize(const MCSection *Sec,
 void MachObjectWriter::writeHeader(MachO::HeaderFileType Type,
                                    unsigned NumLoadCommands,
                                    unsigned LoadCommandsSize,
-                                   bool SubsectionsViaSymbols) {
+                                   bool SubsectionsViaSymbols,
+                                   Optional<unsigned> PtrAuthABIVersion,
+                                   bool PtrAuthKernelABIVersion) {
   uint32_t Flags = 0;
 
   if (SubsectionsViaSymbols)
@@ -150,7 +152,22 @@ void MachObjectWriter::writeHeader(MachO::HeaderFileType Type,
   W.write<uint32_t>(is64Bit() ? MachO::MH_MAGIC_64 : MachO::MH_MAGIC);
 
   W.write<uint32_t>(TargetObjectWriter->getCPUType());
-  W.write<uint32_t>(TargetObjectWriter->getCPUSubtype());
+
+  uint32_t Cpusubtype = TargetObjectWriter->getCPUSubtype();
+  if (PtrAuthABIVersion) {
+    assert(TargetObjectWriter->getCPUType() == MachO::CPU_TYPE_ARM64 &&
+           Cpusubtype == MachO::CPU_SUBTYPE_ARM64E &&
+           "ptrauth ABI version is only supported on arm64e");
+    // Changes to this format should be reflected in MachO::getCPUSubType to
+    // support LTO.
+    // FIXME: Use MachO::getCPUSubType here. We can't use it for now because at
+    // the time we create TargetObjectWriter, we don't know if the assembler
+    // encountered any directives that affect the result.
+    Cpusubtype = MachO::CPU_SUBTYPE_ARM64E_WITH_PTRAUTH_VERSION(
+        *PtrAuthABIVersion, PtrAuthKernelABIVersion);
+  }
+
+  W.write<uint32_t>(Cpusubtype);
 
   W.write<uint32_t>(Type);
   W.write<uint32_t>(NumLoadCommands);
@@ -881,9 +898,19 @@ uint64_t MachObjectWriter::writeObject(MCAssembler &Asm,
       offsetToAlignment(SectionDataFileSize, is64Bit() ? Align(8) : Align(4));
   SectionDataFileSize += SectionDataPadding;
 
+  // The ptrauth ABI version is limited to 4 bits.
+  Optional<unsigned> PtrAuthABIVersion = Asm.getPtrAuthABIVersion();
+  if (PtrAuthABIVersion && *PtrAuthABIVersion > 63) {
+    Asm.getContext().reportError(SMLoc(), "invalid ptrauth ABI version: " +
+                                              utostr(*PtrAuthABIVersion));
+    PtrAuthABIVersion = 63;
+  }
+  bool PtrAuthKernelABIVersion = Asm.getPtrAuthKernelABIVersion();
+
   // Write the prolog, starting with the header and load command...
   writeHeader(MachO::MH_OBJECT, NumLoadCommands, LoadCommandsSize,
-              Asm.getSubsectionsViaSymbols());
+              Asm.getSubsectionsViaSymbols(), PtrAuthABIVersion,
+              PtrAuthKernelABIVersion);
   uint32_t Prot =
       MachO::VM_PROT_READ | MachO::VM_PROT_WRITE | MachO::VM_PROT_EXECUTE;
   writeSegmentLoadCommand("", NumSections, 0, VMSize, SectionDataStart,
