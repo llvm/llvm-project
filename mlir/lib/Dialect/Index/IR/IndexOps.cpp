@@ -122,9 +122,18 @@ static OpFoldResult foldBinaryOpChecked(
 //===----------------------------------------------------------------------===//
 
 OpFoldResult AddOp::fold(FoldAdaptor adaptor) {
-  return foldBinaryOpUnchecked(
-      adaptor.getOperands(),
-      [](const APInt &lhs, const APInt &rhs) { return lhs + rhs; });
+  if (OpFoldResult result = foldBinaryOpUnchecked(
+          adaptor.getOperands(),
+          [](const APInt &lhs, const APInt &rhs) { return lhs + rhs; }))
+    return result;
+
+  if (auto rhs = dyn_cast_or_null<IntegerAttr>(adaptor.getRhs())) {
+    // Fold `add(x, 0) -> x`.
+    if (rhs.getValue().isZero())
+      return getLhs();
+  }
+
+  return {};
 }
 
 //===----------------------------------------------------------------------===//
@@ -132,9 +141,18 @@ OpFoldResult AddOp::fold(FoldAdaptor adaptor) {
 //===----------------------------------------------------------------------===//
 
 OpFoldResult SubOp::fold(FoldAdaptor adaptor) {
-  return foldBinaryOpUnchecked(
-      adaptor.getOperands(),
-      [](const APInt &lhs, const APInt &rhs) { return lhs - rhs; });
+  if (OpFoldResult result = foldBinaryOpUnchecked(
+          adaptor.getOperands(),
+          [](const APInt &lhs, const APInt &rhs) { return lhs - rhs; }))
+    return result;
+
+  if (auto rhs = dyn_cast_or_null<IntegerAttr>(adaptor.getRhs())) {
+    // Fold `sub(x, 0) -> x`.
+    if (rhs.getValue().isZero())
+      return getLhs();
+  }
+
+  return {};
 }
 
 //===----------------------------------------------------------------------===//
@@ -144,8 +162,7 @@ OpFoldResult SubOp::fold(FoldAdaptor adaptor) {
 OpFoldResult MulOp::fold(FoldAdaptor adaptor) {
   if (OpFoldResult result = foldBinaryOpUnchecked(
           adaptor.getOperands(),
-          [](const APInt &lhs, const APInt &rhs) { return lhs * rhs; });
-      !result.isNull())
+          [](const APInt &lhs, const APInt &rhs) { return lhs * rhs; }))
     return result;
 
   if (auto rhs = dyn_cast_or_null<IntegerAttr>(adaptor.getRhs())) {
