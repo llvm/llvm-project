@@ -1241,7 +1241,7 @@ protected:
   AllRefs annotatedReferences(llvm::StringRef Code, ParsedAST &AST,
                               std::vector<ReferenceLoc> Refs) {
     auto &SM = AST.getSourceManager();
-    llvm::sort(Refs, [&](const ReferenceLoc &L, const ReferenceLoc &R) {
+    llvm::stable_sort(Refs, [&](const ReferenceLoc &L, const ReferenceLoc &R) {
       return SM.isBeforeInTranslationUnit(L.NameLoc, R.NameLoc);
     });
 
