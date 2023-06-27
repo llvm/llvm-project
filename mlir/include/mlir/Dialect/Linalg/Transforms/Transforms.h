@@ -321,10 +321,12 @@ using LinalgLoops = SmallVector<Operation *, 4>;
 /// memref.tensor_store %t, %subview
 /// %0 = bufferization.to_tensor %alloc restrict writable
 ///
-/// In addition to rewriting the IR as shown above, the result of the
-/// bufferization.to_tensor op is returned.
+/// In addition to rewriting the IR as shown above, this function returns the
+/// newly allocated buffer. Furthermore, the result of the
+/// bufferization.to_tensor op is optionally returned via `replacement`.
 Value bufferizeToAllocation(RewriterBase &rewriter, tensor::PadOp padOp,
-                            Attribute memorySpace = {});
+                            Attribute memorySpace = {},
+                            Value *replacement = nullptr);
 
 /// Materialize a buffer allocation for the given tensor value. E.g.:
 ///
@@ -334,8 +336,13 @@ Value bufferizeToAllocation(RewriterBase &rewriter, tensor::PadOp padOp,
 ///
 /// In case `value` is a tensor.pad result, the corresponding overload is used
 /// internally to produce a better bufferization.
+///
+/// In addition to rewriting the IR as shown above, this function returns the
+/// newly allocated buffer. Furthermore, the result of the
+/// bufferization.to_tensor op is optionally returned via `replacement`.
 Value bufferizeToAllocation(RewriterBase &rewriter, Value value,
-                            Attribute memorySpace = {});
+                            Attribute memorySpace = {},
+                            Value *replacement = nullptr);
 
 /// Fuse two `linalg.generic` operations that have a producer-consumer
 /// relationship captured through `fusedOperand`. The method expects
