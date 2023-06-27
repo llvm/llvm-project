@@ -169,7 +169,7 @@ inline _LIBCPP_INLINE_VISIBILITY
 _NodePtr
 __tree_min(_NodePtr __x) _NOEXCEPT
 {
-    _LIBCPP_ASSERT(__x != nullptr, "Root node shouldn't be null");
+    _LIBCPP_ASSERT_UNCATEGORIZED(__x != nullptr, "Root node shouldn't be null");
     while (__x->__left_ != nullptr)
         __x = __x->__left_;
     return __x;
@@ -181,7 +181,7 @@ inline _LIBCPP_INLINE_VISIBILITY
 _NodePtr
 __tree_max(_NodePtr __x) _NOEXCEPT
 {
-    _LIBCPP_ASSERT(__x != nullptr, "Root node shouldn't be null");
+    _LIBCPP_ASSERT_UNCATEGORIZED(__x != nullptr, "Root node shouldn't be null");
     while (__x->__right_ != nullptr)
         __x = __x->__right_;
     return __x;
@@ -192,7 +192,7 @@ template <class _NodePtr>
 _LIBCPP_HIDE_FROM_ABI _NodePtr
 __tree_next(_NodePtr __x) _NOEXCEPT
 {
-    _LIBCPP_ASSERT(__x != nullptr, "node shouldn't be null");
+    _LIBCPP_ASSERT_UNCATEGORIZED(__x != nullptr, "node shouldn't be null");
     if (__x->__right_ != nullptr)
         return _VSTD::__tree_min(__x->__right_);
     while (!_VSTD::__tree_is_left_child(__x))
@@ -205,7 +205,7 @@ inline _LIBCPP_INLINE_VISIBILITY
 _EndNodePtr
 __tree_next_iter(_NodePtr __x) _NOEXCEPT
 {
-    _LIBCPP_ASSERT(__x != nullptr, "node shouldn't be null");
+    _LIBCPP_ASSERT_UNCATEGORIZED(__x != nullptr, "node shouldn't be null");
     if (__x->__right_ != nullptr)
         return static_cast<_EndNodePtr>(_VSTD::__tree_min(__x->__right_));
     while (!_VSTD::__tree_is_left_child(__x))
@@ -220,7 +220,7 @@ inline _LIBCPP_INLINE_VISIBILITY
 _NodePtr
 __tree_prev_iter(_EndNodePtr __x) _NOEXCEPT
 {
-    _LIBCPP_ASSERT(__x != nullptr, "node shouldn't be null");
+    _LIBCPP_ASSERT_UNCATEGORIZED(__x != nullptr, "node shouldn't be null");
     if (__x->__left_ != nullptr)
         return _VSTD::__tree_max(__x->__left_);
     _NodePtr __xx = static_cast<_NodePtr>(__x);
@@ -234,7 +234,7 @@ template <class _NodePtr>
 _LIBCPP_HIDE_FROM_ABI _NodePtr
 __tree_leaf(_NodePtr __x) _NOEXCEPT
 {
-    _LIBCPP_ASSERT(__x != nullptr, "node shouldn't be null");
+    _LIBCPP_ASSERT_UNCATEGORIZED(__x != nullptr, "node shouldn't be null");
     while (true)
     {
         if (__x->__left_ != nullptr)
@@ -258,8 +258,8 @@ template <class _NodePtr>
 _LIBCPP_HIDE_FROM_ABI void
 __tree_left_rotate(_NodePtr __x) _NOEXCEPT
 {
-    _LIBCPP_ASSERT(__x != nullptr, "node shouldn't be null");
-    _LIBCPP_ASSERT(__x->__right_ != nullptr, "node should have a right child");
+    _LIBCPP_ASSERT_UNCATEGORIZED(__x != nullptr, "node shouldn't be null");
+    _LIBCPP_ASSERT_UNCATEGORIZED(__x->__right_ != nullptr, "node should have a right child");
     _NodePtr __y = __x->__right_;
     __x->__right_ = __y->__left_;
     if (__x->__right_ != nullptr)
@@ -279,8 +279,8 @@ template <class _NodePtr>
 _LIBCPP_HIDE_FROM_ABI void
 __tree_right_rotate(_NodePtr __x) _NOEXCEPT
 {
-    _LIBCPP_ASSERT(__x != nullptr, "node shouldn't be null");
-    _LIBCPP_ASSERT(__x->__left_ != nullptr, "node should have a left child");
+    _LIBCPP_ASSERT_UNCATEGORIZED(__x != nullptr, "node shouldn't be null");
+    _LIBCPP_ASSERT_UNCATEGORIZED(__x->__left_ != nullptr, "node should have a left child");
     _NodePtr __y = __x->__left_;
     __x->__left_ = __y->__right_;
     if (__x->__left_ != nullptr)
@@ -305,8 +305,8 @@ template <class _NodePtr>
 _LIBCPP_HIDE_FROM_ABI void
 __tree_balance_after_insert(_NodePtr __root, _NodePtr __x) _NOEXCEPT
 {
-    _LIBCPP_ASSERT(__root != nullptr, "Root of the tree shouldn't be null");
-    _LIBCPP_ASSERT(__x != nullptr, "Can't attach null node to a leaf");
+    _LIBCPP_ASSERT_UNCATEGORIZED(__root != nullptr, "Root of the tree shouldn't be null");
+    _LIBCPP_ASSERT_UNCATEGORIZED(__x != nullptr, "Can't attach null node to a leaf");
     __x->__is_black_ = __x == __root;
     while (__x != __root && !__x->__parent_unsafe()->__is_black_)
     {
@@ -375,8 +375,8 @@ template <class _NodePtr>
 _LIBCPP_HIDE_FROM_ABI void
 __tree_remove(_NodePtr __root, _NodePtr __z) _NOEXCEPT
 {
-    _LIBCPP_ASSERT(__root != nullptr, "Root node should not be null");
-    _LIBCPP_ASSERT(__z != nullptr, "The node to remove should not be null");
+    _LIBCPP_ASSERT_UNCATEGORIZED(__root != nullptr, "Root node should not be null");
+    _LIBCPP_ASSERT_UNCATEGORIZED(__z != nullptr, "The node to remove should not be null");
     _LIBCPP_DEBUG_ASSERT(std::__tree_invariant(__root), "The tree invariants should hold");
     // __z will be removed from the tree.  Client still needs to destruct/deallocate it
     // __y is either __z, or if __z has two children, __tree_next(__z).

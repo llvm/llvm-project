@@ -764,10 +764,10 @@ __list_imp<_Tp, _Alloc>::swap(__list_imp& __c)
                     __is_nothrow_swappable<allocator_type>::value)
 #endif
 {
-    _LIBCPP_ASSERT(__alloc_traits::propagate_on_container_swap::value ||
-                   this->__node_alloc() == __c.__node_alloc(),
-                   "list::swap: Either propagate_on_container_swap must be true"
-                   " or the allocators must compare equal");
+    _LIBCPP_ASSERT_UNCATEGORIZED(__alloc_traits::propagate_on_container_swap::value ||
+                                 this->__node_alloc() == __c.__node_alloc(),
+                                 "list::swap: Either propagate_on_container_swap must be true"
+                                 " or the allocators must compare equal");
     using _VSTD::swap;
     _VSTD::__swap_allocator(__node_alloc(), __c.__node_alloc());
     swap(__sz(), __c.__sz());
@@ -970,25 +970,25 @@ public:
     _LIBCPP_INLINE_VISIBILITY
     reference front()
     {
-        _LIBCPP_ASSERT(!empty(), "list::front called on empty list");
+        _LIBCPP_ASSERT_UNCATEGORIZED(!empty(), "list::front called on empty list");
         return base::__end_.__next_->__as_node()->__value_;
     }
     _LIBCPP_INLINE_VISIBILITY
     const_reference front() const
     {
-        _LIBCPP_ASSERT(!empty(), "list::front called on empty list");
+        _LIBCPP_ASSERT_UNCATEGORIZED(!empty(), "list::front called on empty list");
         return base::__end_.__next_->__as_node()->__value_;
     }
     _LIBCPP_INLINE_VISIBILITY
     reference back()
     {
-        _LIBCPP_ASSERT(!empty(), "list::back called on empty list");
+        _LIBCPP_ASSERT_UNCATEGORIZED(!empty(), "list::back called on empty list");
         return base::__end_.__prev_->__as_node()->__value_;
     }
     _LIBCPP_INLINE_VISIBILITY
     const_reference back() const
     {
-        _LIBCPP_ASSERT(!empty(), "list::back called on empty list");
+        _LIBCPP_ASSERT_UNCATEGORIZED(!empty(), "list::back called on empty list");
         return base::__end_.__prev_->__as_node()->__value_;
     }
 
@@ -1656,7 +1656,7 @@ template <class _Tp, class _Alloc>
 void
 list<_Tp, _Alloc>::pop_front()
 {
-    _LIBCPP_ASSERT(!empty(), "list::pop_front() called with empty list");
+    _LIBCPP_ASSERT_UNCATEGORIZED(!empty(), "list::pop_front() called with empty list");
     __node_allocator& __na = base::__node_alloc();
     __link_pointer __n = base::__end_.__next_;
     base::__unlink_nodes(__n, __n);
@@ -1685,7 +1685,7 @@ template <class _Tp, class _Alloc>
 void
 list<_Tp, _Alloc>::pop_back()
 {
-    _LIBCPP_ASSERT(!empty(), "list::pop_back() called on an empty list");
+    _LIBCPP_ASSERT_UNCATEGORIZED(!empty(), "list::pop_back() called on an empty list");
     __node_allocator& __na = base::__node_alloc();
     __link_pointer __n = base::__end_.__prev_;
     base::__unlink_nodes(__n, __n);
@@ -1716,7 +1716,7 @@ list<_Tp, _Alloc>::erase(const_iterator __p)
 {
     _LIBCPP_DEBUG_ASSERT(__get_const_db()->__find_c_from_i(_VSTD::addressof(__p)) == this,
                          "list::erase(iterator) called with an iterator not referring to this list");
-    _LIBCPP_ASSERT(__p != end(),
+    _LIBCPP_ASSERT_UNCATEGORIZED(__p != end(),
         "list::erase(iterator) called with a non-dereferenceable iterator");
     __node_allocator& __na = base::__node_alloc();
     __link_pointer __n = __p.__ptr_;
@@ -1887,8 +1887,8 @@ template <class _Tp, class _Alloc>
 void
 list<_Tp, _Alloc>::splice(const_iterator __p, list& __c)
 {
-    _LIBCPP_ASSERT(this != _VSTD::addressof(__c),
-                   "list::splice(iterator, list) called with this == &list");
+    _LIBCPP_ASSERT_UNCATEGORIZED(this != _VSTD::addressof(__c),
+                                 "list::splice(iterator, list) called with this == &list");
     _LIBCPP_DEBUG_ASSERT(__get_const_db()->__find_c_from_i(_VSTD::addressof(__p)) == this,
                          "list::splice(iterator, list) called with an iterator not referring to this list");
     if (!__c.empty())

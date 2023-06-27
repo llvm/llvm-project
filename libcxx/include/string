@@ -911,7 +911,7 @@ public:
   template <__enable_if_t<__is_allocator<_Allocator>::value, int> = 0>
   _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 basic_string(const _CharT* __s)
       : __r_(__default_init_tag(), __default_init_tag()) {
-    _LIBCPP_ASSERT(__s != nullptr, "basic_string(const char*) detected nullptr");
+    _LIBCPP_ASSERT_UNCATEGORIZED(__s != nullptr, "basic_string(const char*) detected nullptr");
     __init(__s, traits_type::length(__s));
     std::__debug_db_insert_c(this);
   }
@@ -919,7 +919,7 @@ public:
   template <__enable_if_t<__is_allocator<_Allocator>::value, int> = 0>
   _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 basic_string(const _CharT* __s, const _Allocator& __a)
       : __r_(__default_init_tag(), __a) {
-    _LIBCPP_ASSERT(__s != nullptr, "basic_string(const char*, allocator) detected nullptr");
+    _LIBCPP_ASSERT_UNCATEGORIZED(__s != nullptr, "basic_string(const char*, allocator) detected nullptr");
     __init(__s, traits_type::length(__s));
     std::__debug_db_insert_c(this);
   }
@@ -930,7 +930,7 @@ public:
 
   _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 basic_string(const _CharT* __s, size_type __n)
       : __r_(__default_init_tag(), __default_init_tag()) {
-    _LIBCPP_ASSERT(__n == 0 || __s != nullptr, "basic_string(const char*, n) detected nullptr");
+    _LIBCPP_ASSERT_UNCATEGORIZED(__n == 0 || __s != nullptr, "basic_string(const char*, n) detected nullptr");
     __init(__s, __n);
     std::__debug_db_insert_c(this);
   }
@@ -938,7 +938,8 @@ public:
   _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20
   basic_string(const _CharT* __s, size_type __n, const _Allocator& __a)
       : __r_(__default_init_tag(), __a) {
-    _LIBCPP_ASSERT(__n == 0 || __s != nullptr, "basic_string(const char*, n, allocator) detected nullptr");
+    _LIBCPP_ASSERT_UNCATEGORIZED(__n == 0 || __s != nullptr,
+                                 "basic_string(const char*, n, allocator) detected nullptr");
     __init(__s, __n);
     std::__debug_db_insert_c(this);
   }
@@ -1187,12 +1188,12 @@ public:
     bool empty() const _NOEXCEPT {return size() == 0;}
 
   _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 const_reference operator[](size_type __pos) const _NOEXCEPT {
-    _LIBCPP_ASSERT(__pos <= size(), "string index out of bounds");
+    _LIBCPP_ASSERT_UNCATEGORIZED(__pos <= size(), "string index out of bounds");
     return *(data() + __pos);
   }
 
   _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 reference operator[](size_type __pos) _NOEXCEPT {
-    _LIBCPP_ASSERT(__pos <= size(), "string index out of bounds");
+    _LIBCPP_ASSERT_UNCATEGORIZED(__pos <= size(), "string index out of bounds");
     return *(__get_pointer() + __pos);
   }
 
@@ -1279,22 +1280,22 @@ public:
     _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 void pop_back();
 
   _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 reference front() _NOEXCEPT {
-    _LIBCPP_ASSERT(!empty(), "string::front(): string is empty");
+    _LIBCPP_ASSERT_UNCATEGORIZED(!empty(), "string::front(): string is empty");
     return *__get_pointer();
   }
 
   _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 const_reference front() const _NOEXCEPT {
-    _LIBCPP_ASSERT(!empty(), "string::front(): string is empty");
+    _LIBCPP_ASSERT_UNCATEGORIZED(!empty(), "string::front(): string is empty");
     return *data();
   }
 
   _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 reference back() _NOEXCEPT {
-    _LIBCPP_ASSERT(!empty(), "string::back(): string is empty");
+    _LIBCPP_ASSERT_UNCATEGORIZED(!empty(), "string::back(): string is empty");
     return *(__get_pointer() + size() - 1);
   }
 
   _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 const_reference back() const _NOEXCEPT {
-    _LIBCPP_ASSERT(!empty(), "string::back(): string is empty");
+    _LIBCPP_ASSERT_UNCATEGORIZED(!empty(), "string::back(): string is empty");
     return *(data() + size() - 1);
   }
 
@@ -1742,14 +1743,16 @@ private:
 
     _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20
     void __set_short_size(size_type __s) _NOEXCEPT {
-        _LIBCPP_ASSERT(__s < __min_cap, "__s should never be greater than or equal to the short string capacity");
+        _LIBCPP_ASSERT_UNCATEGORIZED(__s < __min_cap,
+                                     "__s should never be greater than or equal to the short string capacity");
         __r_.first().__s.__size_ = __s;
         __r_.first().__s.__is_long_ = false;
     }
 
     _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20
     size_type __get_short_size() const _NOEXCEPT {
-        _LIBCPP_ASSERT(!__r_.first().__s.__is_long_, "String has to be short when trying to get the short size");
+        _LIBCPP_ASSERT_UNCATEGORIZED(!__r_.first().__s.__is_long_,
+                                     "String has to be short when trying to get the short size");
         return __r_.first().__s.__size_;
     }
 
@@ -2352,7 +2355,7 @@ _LIBCPP_CONSTEXPR_SINCE_CXX20
 basic_string<_CharT, _Traits, _Allocator>&
 basic_string<_CharT, _Traits, _Allocator>::assign(const value_type* __s, size_type __n)
 {
-    _LIBCPP_ASSERT(__n == 0 || __s != nullptr, "string::assign received nullptr");
+    _LIBCPP_ASSERT_UNCATEGORIZED(__n == 0 || __s != nullptr, "string::assign received nullptr");
     return (__builtin_constant_p(__n) && __fits_in_sso(__n))
                ? __assign_short(__s, __n)
                : __assign_external(__s, __n);
@@ -2541,7 +2544,7 @@ _LIBCPP_CONSTEXPR_SINCE_CXX20
 basic_string<_CharT, _Traits, _Allocator>&
 basic_string<_CharT, _Traits, _Allocator>::assign(const value_type* __s)
 {
-    _LIBCPP_ASSERT(__s != nullptr, "string::assign received nullptr");
+    _LIBCPP_ASSERT_UNCATEGORIZED(__s != nullptr, "string::assign received nullptr");
     return __builtin_constant_p(*__s)
                ? (__fits_in_sso(traits_type::length(__s))
                       ? __assign_short(__s, traits_type::length(__s))
@@ -2555,7 +2558,7 @@ _LIBCPP_CONSTEXPR_SINCE_CXX20
 basic_string<_CharT, _Traits, _Allocator>&
 basic_string<_CharT, _Traits, _Allocator>::append(const value_type* __s, size_type __n)
 {
-    _LIBCPP_ASSERT(__n == 0 || __s != nullptr, "string::append received nullptr");
+    _LIBCPP_ASSERT_UNCATEGORIZED(__n == 0 || __s != nullptr, "string::append received nullptr");
     size_type __cap = capacity();
     size_type __sz = size();
     if (__cap - __sz >= __n)
@@ -2710,7 +2713,7 @@ _LIBCPP_CONSTEXPR_SINCE_CXX20
 basic_string<_CharT, _Traits, _Allocator>&
 basic_string<_CharT, _Traits, _Allocator>::append(const value_type* __s)
 {
-    _LIBCPP_ASSERT(__s != nullptr, "string::append received nullptr");
+    _LIBCPP_ASSERT_UNCATEGORIZED(__s != nullptr, "string::append received nullptr");
     return append(__s, traits_type::length(__s));
 }
 
@@ -2721,7 +2724,7 @@ _LIBCPP_CONSTEXPR_SINCE_CXX20
 basic_string<_CharT, _Traits, _Allocator>&
 basic_string<_CharT, _Traits, _Allocator>::insert(size_type __pos, const value_type* __s, size_type __n)
 {
-    _LIBCPP_ASSERT(__n == 0 || __s != nullptr, "string::insert received nullptr");
+    _LIBCPP_ASSERT_UNCATEGORIZED(__n == 0 || __s != nullptr, "string::insert received nullptr");
     size_type __sz = size();
     if (__pos > __sz)
         __throw_out_of_range();
@@ -2855,7 +2858,7 @@ _LIBCPP_CONSTEXPR_SINCE_CXX20
 basic_string<_CharT, _Traits, _Allocator>&
 basic_string<_CharT, _Traits, _Allocator>::insert(size_type __pos, const value_type* __s)
 {
-    _LIBCPP_ASSERT(__s != nullptr, "string::insert received nullptr");
+    _LIBCPP_ASSERT_UNCATEGORIZED(__s != nullptr, "string::insert received nullptr");
     return insert(__pos, __s, traits_type::length(__s));
 }
 
@@ -2898,7 +2901,7 @@ basic_string<_CharT, _Traits, _Allocator>&
 basic_string<_CharT, _Traits, _Allocator>::replace(size_type __pos, size_type __n1, const value_type* __s, size_type __n2)
     _LIBCPP_DISABLE_UBSAN_UNSIGNED_INTEGER_CHECK
 {
-    _LIBCPP_ASSERT(__n2 == 0 || __s != nullptr, "string::replace received nullptr");
+    _LIBCPP_ASSERT_UNCATEGORIZED(__n2 == 0 || __s != nullptr, "string::replace received nullptr");
     size_type __sz = size();
     if (__pos > __sz)
         __throw_out_of_range();
@@ -3014,7 +3017,7 @@ _LIBCPP_CONSTEXPR_SINCE_CXX20
 basic_string<_CharT, _Traits, _Allocator>&
 basic_string<_CharT, _Traits, _Allocator>::replace(size_type __pos, size_type __n1, const value_type* __s)
 {
-    _LIBCPP_ASSERT(__s != nullptr, "string::replace received nullptr");
+    _LIBCPP_ASSERT_UNCATEGORIZED(__s != nullptr, "string::replace received nullptr");
     return replace(__pos, __n1, __s, traits_type::length(__s));
 }
 
@@ -3064,7 +3067,7 @@ basic_string<_CharT, _Traits, _Allocator>::erase(const_iterator __pos)
                        "string::erase(iterator) called with an iterator not"
                        " referring to this string");
 
-  _LIBCPP_ASSERT(__pos != end(), "string::erase(iterator) called with a non-dereferenceable iterator");
+  _LIBCPP_ASSERT_UNCATEGORIZED(__pos != end(), "string::erase(iterator) called with a non-dereferenceable iterator");
   iterator __b = begin();
   size_type __r = static_cast<size_type>(__pos - __b);
   erase(__r, 1);
@@ -3080,7 +3083,7 @@ basic_string<_CharT, _Traits, _Allocator>::erase(const_iterator __first, const_i
                        "string::erase(iterator,  iterator) called with an iterator not"
                        " referring to this string");
 
-  _LIBCPP_ASSERT(__first <= __last, "string::erase(first, last) called with invalid range");
+  _LIBCPP_ASSERT_UNCATEGORIZED(__first <= __last, "string::erase(first, last) called with invalid range");
   iterator __b = begin();
   size_type __r = static_cast<size_type>(__first - __b);
   erase(__r, static_cast<size_type>(__last - __first));
@@ -3092,7 +3095,7 @@ inline _LIBCPP_CONSTEXPR_SINCE_CXX20
 void
 basic_string<_CharT, _Traits, _Allocator>::pop_back()
 {
-    _LIBCPP_ASSERT(!empty(), "string::pop_back(): string is already empty");
+    _LIBCPP_ASSERT_UNCATEGORIZED(!empty(), "string::pop_back(): string is already empty");
     __erase_to_end(size() - 1);
 }
 
@@ -3283,7 +3286,7 @@ basic_string<_CharT, _Traits, _Allocator>::swap(basic_string& __str)
         std::__debug_db_invalidate_all(&__str);
     std::__debug_db_swap(this, &__str);
 
-    _LIBCPP_ASSERT(
+    _LIBCPP_ASSERT_UNCATEGORIZED(
         __alloc_traits::propagate_on_container_swap::value ||
         __alloc_traits::is_always_equal::value ||
         __alloc() == __str.__alloc(), "swapping non-equal allocators");
@@ -3309,7 +3312,7 @@ basic_string<_CharT, _Traits, _Allocator>::find(const value_type* __s,
                                                 size_type __pos,
                                                 size_type __n) const _NOEXCEPT
 {
-    _LIBCPP_ASSERT(__n == 0 || __s != nullptr, "string::find(): received nullptr");
+    _LIBCPP_ASSERT_UNCATEGORIZED(__n == 0 || __s != nullptr, "string::find(): received nullptr");
     return std::__str_find<value_type, size_type, traits_type, npos>
         (data(), size(), __s, __pos, __n);
 }
@@ -3341,7 +3344,7 @@ typename basic_string<_CharT, _Traits, _Allocator>::size_type
 basic_string<_CharT, _Traits, _Allocator>::find(const value_type* __s,
                                                 size_type __pos) const _NOEXCEPT
 {
-    _LIBCPP_ASSERT(__s != nullptr, "string::find(): received nullptr");
+    _LIBCPP_ASSERT_UNCATEGORIZED(__s != nullptr, "string::find(): received nullptr");
     return std::__str_find<value_type, size_type, traits_type, npos>
         (data(), size(), __s, __pos, traits_type::length(__s));
 }
@@ -3365,7 +3368,7 @@ basic_string<_CharT, _Traits, _Allocator>::rfind(const value_type* __s,
                                                  size_type __pos,
                                                  size_type __n) const _NOEXCEPT
 {
-    _LIBCPP_ASSERT(__n == 0 || __s != nullptr, "string::rfind(): received nullptr");
+    _LIBCPP_ASSERT_UNCATEGORIZED(__n == 0 || __s != nullptr, "string::rfind(): received nullptr");
     return std::__str_rfind<value_type, size_type, traits_type, npos>
         (data(), size(), __s, __pos, __n);
 }
@@ -3397,7 +3400,7 @@ typename basic_string<_CharT, _Traits, _Allocator>::size_type
 basic_string<_CharT, _Traits, _Allocator>::rfind(const value_type* __s,
                                                  size_type __pos) const _NOEXCEPT
 {
-    _LIBCPP_ASSERT(__s != nullptr, "string::rfind(): received nullptr");
+    _LIBCPP_ASSERT_UNCATEGORIZED(__s != nullptr, "string::rfind(): received nullptr");
     return std::__str_rfind<value_type, size_type, traits_type, npos>
         (data(), size(), __s, __pos, traits_type::length(__s));
 }
@@ -3421,7 +3424,7 @@ basic_string<_CharT, _Traits, _Allocator>::find_first_of(const value_type* __s,
                                                          size_type __pos,
                                                          size_type __n) const _NOEXCEPT
 {
-    _LIBCPP_ASSERT(__n == 0 || __s != nullptr, "string::find_first_of(): received nullptr");
+    _LIBCPP_ASSERT_UNCATEGORIZED(__n == 0 || __s != nullptr, "string::find_first_of(): received nullptr");
     return std::__str_find_first_of<value_type, size_type, traits_type, npos>
         (data(), size(), __s, __pos, __n);
 }
@@ -3453,7 +3456,7 @@ typename basic_string<_CharT, _Traits, _Allocator>::size_type
 basic_string<_CharT, _Traits, _Allocator>::find_first_of(const value_type* __s,
                                                          size_type __pos) const _NOEXCEPT
 {
-    _LIBCPP_ASSERT(__s != nullptr, "string::find_first_of(): received nullptr");
+    _LIBCPP_ASSERT_UNCATEGORIZED(__s != nullptr, "string::find_first_of(): received nullptr");
     return std::__str_find_first_of<value_type, size_type, traits_type, npos>
         (data(), size(), __s, __pos, traits_type::length(__s));
 }
@@ -3476,7 +3479,7 @@ basic_string<_CharT, _Traits, _Allocator>::find_last_of(const value_type* __s,
                                                         size_type __pos,
                                                         size_type __n) const _NOEXCEPT
 {
-    _LIBCPP_ASSERT(__n == 0 || __s != nullptr, "string::find_last_of(): received nullptr");
+    _LIBCPP_ASSERT_UNCATEGORIZED(__n == 0 || __s != nullptr, "string::find_last_of(): received nullptr");
     return std::__str_find_last_of<value_type, size_type, traits_type, npos>
         (data(), size(), __s, __pos, __n);
 }
@@ -3508,7 +3511,7 @@ typename basic_string<_CharT, _Traits, _Allocator>::size_type
 basic_string<_CharT, _Traits, _Allocator>::find_last_of(const value_type* __s,
                                                         size_type __pos) const _NOEXCEPT
 {
-    _LIBCPP_ASSERT(__s != nullptr, "string::find_last_of(): received nullptr");
+    _LIBCPP_ASSERT_UNCATEGORIZED(__s != nullptr, "string::find_last_of(): received nullptr");
     return std::__str_find_last_of<value_type, size_type, traits_type, npos>
         (data(), size(), __s, __pos, traits_type::length(__s));
 }
@@ -3531,7 +3534,7 @@ basic_string<_CharT, _Traits, _Allocator>::find_first_not_of(const value_type* _
                                                              size_type __pos,
                                                              size_type __n) const _NOEXCEPT
 {
-    _LIBCPP_ASSERT(__n == 0 || __s != nullptr, "string::find_first_not_of(): received nullptr");
+    _LIBCPP_ASSERT_UNCATEGORIZED(__n == 0 || __s != nullptr, "string::find_first_not_of(): received nullptr");
     return std::__str_find_first_not_of<value_type, size_type, traits_type, npos>
         (data(), size(), __s, __pos, __n);
 }
@@ -3563,7 +3566,7 @@ typename basic_string<_CharT, _Traits, _Allocator>::size_type
 basic_string<_CharT, _Traits, _Allocator>::find_first_not_of(const value_type* __s,
                                                              size_type __pos) const _NOEXCEPT
 {
-    _LIBCPP_ASSERT(__s != nullptr, "string::find_first_not_of(): received nullptr");
+    _LIBCPP_ASSERT_UNCATEGORIZED(__s != nullptr, "string::find_first_not_of(): received nullptr");
     return std::__str_find_first_not_of<value_type, size_type, traits_type, npos>
         (data(), size(), __s, __pos, traits_type::length(__s));
 }
@@ -3587,7 +3590,7 @@ basic_string<_CharT, _Traits, _Allocator>::find_last_not_of(const value_type* __
                                                             size_type __pos,
                                                             size_type __n) const _NOEXCEPT
 {
-    _LIBCPP_ASSERT(__n == 0 || __s != nullptr, "string::find_last_not_of(): received nullptr");
+    _LIBCPP_ASSERT_UNCATEGORIZED(__n == 0 || __s != nullptr, "string::find_last_not_of(): received nullptr");
     return std::__str_find_last_not_of<value_type, size_type, traits_type, npos>
         (data(), size(), __s, __pos, __n);
 }
@@ -3619,7 +3622,7 @@ typename basic_string<_CharT, _Traits, _Allocator>::size_type
 basic_string<_CharT, _Traits, _Allocator>::find_last_not_of(const value_type* __s,
                                                             size_type __pos) const _NOEXCEPT
 {
-    _LIBCPP_ASSERT(__s != nullptr, "string::find_last_not_of(): received nullptr");
+    _LIBCPP_ASSERT_UNCATEGORIZED(__s != nullptr, "string::find_last_not_of(): received nullptr");
     return std::__str_find_last_not_of<value_type, size_type, traits_type, npos>
         (data(), size(), __s, __pos, traits_type::length(__s));
 }
@@ -3671,7 +3674,7 @@ basic_string<_CharT, _Traits, _Allocator>::compare(size_type __pos1,
                                                    const value_type* __s,
                                                    size_type __n2) const
 {
-    _LIBCPP_ASSERT(__n2 == 0 || __s != nullptr, "string::compare(): received nullptr");
+    _LIBCPP_ASSERT_UNCATEGORIZED(__n2 == 0 || __s != nullptr, "string::compare(): received nullptr");
     size_type __sz = size();
     if (__pos1 > __sz || __n2 == npos)
         __throw_out_of_range();
@@ -3736,7 +3739,7 @@ _LIBCPP_CONSTEXPR_SINCE_CXX20
 int
 basic_string<_CharT, _Traits, _Allocator>::compare(const value_type* __s) const _NOEXCEPT
 {
-    _LIBCPP_ASSERT(__s != nullptr, "string::compare(): received nullptr");
+    _LIBCPP_ASSERT_UNCATEGORIZED(__s != nullptr, "string::compare(): received nullptr");
     return compare(0, npos, __s, traits_type::length(__s));
 }
 
@@ -3747,7 +3750,7 @@ basic_string<_CharT, _Traits, _Allocator>::compare(size_type __pos1,
                                                    size_type __n1,
                                                    const value_type* __s) const
 {
-    _LIBCPP_ASSERT(__s != nullptr, "string::compare(): received nullptr");
+    _LIBCPP_ASSERT_UNCATEGORIZED(__s != nullptr, "string::compare(): received nullptr");
     return compare(__pos1, __n1, __s, traits_type::length(__s));
 }
 
@@ -3829,7 +3832,7 @@ operator==(const _CharT* __lhs,
            const basic_string<_CharT, _Traits, _Allocator>& __rhs) _NOEXCEPT
 {
     typedef basic_string<_CharT, _Traits, _Allocator> _String;
-    _LIBCPP_ASSERT(__lhs != nullptr, "operator==(char*, basic_string): received nullptr");
+    _LIBCPP_ASSERT_UNCATEGORIZED(__lhs != nullptr, "operator==(char*, basic_string): received nullptr");
     size_t __lhs_len = _Traits::length(__lhs);
     if (__lhs_len != __rhs.size()) return false;
     return __rhs.compare(0, _String::npos, __lhs, __lhs_len) == 0;
@@ -3846,7 +3849,7 @@ operator==(const basic_string<_CharT,_Traits,_Allocator>& __lhs,
     return basic_string_view<_CharT, _Traits>(__lhs) == basic_string_view<_CharT, _Traits>(__rhs);
 #else
     typedef basic_string<_CharT, _Traits, _Allocator> _String;
-    _LIBCPP_ASSERT(__rhs != nullptr, "operator==(basic_string, char*): received nullptr");
+    _LIBCPP_ASSERT_UNCATEGORIZED(__rhs != nullptr, "operator==(basic_string, char*): received nullptr");
     size_t __rhs_len = _Traits::length(__rhs);
     if (__rhs_len != __lhs.size()) return false;
     return __lhs.compare(0, _String::npos, __rhs, __rhs_len) == 0;

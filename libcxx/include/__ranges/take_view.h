@@ -70,7 +70,7 @@ public:
   _LIBCPP_HIDE_FROM_ABI
   constexpr _LIBCPP_EXPLICIT_SINCE_CXX23 take_view(_View __base, range_difference_t<_View> __count)
       : __base_(std::move(__base)), __count_(__count) {
-    _LIBCPP_ASSERT(__count >= 0, "count has to be greater than or equal to zero");
+    _LIBCPP_ASSERT_UNCATEGORIZED(__count >= 0, "count has to be greater than or equal to zero");
   }
 
   _LIBCPP_HIDE_FROM_ABI

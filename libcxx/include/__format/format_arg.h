@@ -85,7 +85,7 @@ constexpr bool __use_packed_format_arg_store(size_t __size) { return __size <= _
 
 _LIBCPP_HIDE_FROM_ABI
 constexpr __arg_t __get_packed_type(uint64_t __types, size_t __id) {
-  _LIBCPP_ASSERT(__id <= __packed_types_max, "");
+  _LIBCPP_ASSERT_UNCATEGORIZED(__id <= __packed_types_max, "");
 
   if (__id > 0)
     __types >>= __id * __packed_arg_t_bits;
