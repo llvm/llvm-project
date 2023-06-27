@@ -364,7 +364,6 @@ std::error_code SampleProfileWriterExtBinaryBase::writeNameTable() {
 std::error_code SampleProfileWriterExtBinaryBase::writeNameTableSection(
     const SampleProfileMap &ProfileMap) {
   for (const auto &I : ProfileMap) {
-    assert(I.first == I.second.getContext() && "Inconsistent profile map");
     addContext(I.second.getContext());
     addNames(I.second);
   }
@@ -726,8 +725,7 @@ SampleProfileWriterBinary::writeHeader(const SampleProfileMap &ProfileMap) {
 
   // Generate the name table for all the functions referenced in the profile.
   for (const auto &I : ProfileMap) {
-    assert(I.first == I.second.getContext() && "Inconsistent profile map");
-    addContext(I.first);
+    addContext(I.second.getContext());
     addNames(I.second);
   }
 

@@ -598,6 +598,12 @@ TEST_F(X86Core2TargetTest, GenerateLowerMunmapTest) {
                           OpcodeIs(X86::SYSCALL)));
 }
 
+#ifdef __arm__
+static constexpr const intptr_t VAddressSpaceCeiling = 0xC0000000;
+#else
+static constexpr const intptr_t VAddressSpaceCeiling = 0x0000800000000000;
+#endif
+
 TEST_F(X86Core2TargetTest, GenerateUpperMunmapTest) {
   std::vector<MCInst> GeneratedCode;
   State.getExegesisTarget().generateUpperMunmap(GeneratedCode);
@@ -607,7 +613,7 @@ TEST_F(X86Core2TargetTest, GenerateUpperMunmapTest) {
                         OpcodeIs(X86::ADD64rr), OpcodeIs(X86::SHR64ri),
                         OpcodeIs(X86::SHL64ri), OpcodeIs(X86::ADD64ri32),
                         IsMovImmediate(X86::MOV64ri, X86::RSI,
-                                       0x0000800000000000 - getpagesize()),
+                                       VAddressSpaceCeiling - getpagesize()),
                         OpcodeIs(X86::SUB64rr),
                         IsMovImmediate(X86::MOV64ri, X86::RAX, SYS_munmap),
                         OpcodeIs(X86::SYSCALL)}));

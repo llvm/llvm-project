@@ -64,6 +64,11 @@ struct BenchmarkKey {
   std::vector<MCInst> Instructions;
   // The initial values of the registers.
   std::vector<RegisterValue> RegisterInitialValues;
+  // The memory values that can be mapped into the execution context of the
+  // snippet.
+  std::unordered_map<std::string, MemoryValue> MemoryValues;
+  // The memory mappings that the snippet can access.
+  std::vector<MemoryMapping> MemoryMappings;
   // An opaque configuration, that can be used to separate several benchmarks of
   // the same instruction under different configurations.
   std::string Config;

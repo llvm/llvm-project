@@ -952,8 +952,8 @@ def LLVM_SwitchOp : LLVM_TerminatorOp<"switch",
   let assemblyFormat = [{
     $value `:` type($value) `,`
     $defaultDestination (`(` $defaultOperands^ `:` type($defaultOperands) `)`)?
-    `[` `\n` custom<SwitchOpCases>(ref(type($value)), $case_values, $caseDestinations,
-                                   $caseOperands, type($caseOperands)) `]`
+    custom<SwitchOpCases>(ref(type($value)), $case_values, $caseDestinations,
+                                   $caseOperands, type($caseOperands))
     attr-dict
   }];
   let hasVerifier = 1;
@@ -1634,6 +1634,7 @@ def LLVM_LLVMFuncOp : LLVM_Op<"func", [
     DefaultValuedAttr<Linkage, "Linkage::External">:$linkage,
     UnitAttr:$dso_local,
     DefaultValuedAttr<CConv, "CConv::C">:$CConv,
+    OptionalAttr<SymbolRefAttr>:$comdat,
     OptionalAttr<FlatSymbolRefAttr>:$personality,
     OptionalAttr<StrAttr>:$garbageCollector,
     OptionalAttr<ArrayAttr>:$passthrough,
@@ -1655,6 +1656,7 @@ def LLVM_LLVMFuncOp : LLVM_Op<"func", [
       CArg<"Linkage", "Linkage::External">:$linkage,
       CArg<"bool", "false">:$dsoLocal,
       CArg<"CConv", "CConv::C">:$cconv,
+      CArg<"SymbolRefAttr", "{}">:$comdat,
       CArg<"ArrayRef<NamedAttribute>", "{}">:$attrs,
       CArg<"ArrayRef<DictionaryAttr>", "{}">:$argAttrs,
       CArg<"std::optional<uint64_t>", "{}">:$functionEntryCount)>

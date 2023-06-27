@@ -515,7 +515,7 @@ static bool isRelaxable(const Edge &E) {
 static RelaxAux initRelaxAux(LinkGraph &G) {
   RelaxAux Aux;
   Aux.Config.IsRV32 = G.getTargetTriple().isRISCV32();
-  const auto &Features = G.getFeatures();
+  const auto &Features = G.getFeatures().getFeatures();
   Aux.Config.HasRVC =
       std::find(Features.begin(), Features.end(), "+c") != Features.end();
 
@@ -919,7 +919,7 @@ private:
 public:
   ELFLinkGraphBuilder_riscv(StringRef FileName,
                             const object::ELFFile<ELFT> &Obj, Triple TT,
-                            LinkGraph::FeatureVector Features)
+                            SubtargetFeatures Features)
       : ELFLinkGraphBuilder<ELFT>(Obj, std::move(TT), std::move(Features),
                                   FileName, riscv::getEdgeKindName) {}
 };
@@ -943,7 +943,7 @@ createLinkGraphFromELFObject_riscv(MemoryBufferRef ObjectBuffer) {
     auto &ELFObjFile = cast<object::ELFObjectFile<object::ELF64LE>>(**ELFObj);
     return ELFLinkGraphBuilder_riscv<object::ELF64LE>(
                (*ELFObj)->getFileName(), ELFObjFile.getELFFile(),
-               (*ELFObj)->makeTriple(), Features->getFeatures())
+               (*ELFObj)->makeTriple(), std::move(*Features))
         .buildGraph();
   } else {
     assert((*ELFObj)->getArch() == Triple::riscv32 &&
@@ -951,7 +951,7 @@ createLinkGraphFromELFObject_riscv(MemoryBufferRef ObjectBuffer) {
     auto &ELFObjFile = cast<object::ELFObjectFile<object::ELF32LE>>(**ELFObj);
     return ELFLinkGraphBuilder_riscv<object::ELF32LE>(
                (*ELFObj)->getFileName(), ELFObjFile.getELFFile(),
-               (*ELFObj)->makeTriple(), Features->getFeatures())
+               (*ELFObj)->makeTriple(), std::move(*Features))
         .buildGraph();
   }
 }

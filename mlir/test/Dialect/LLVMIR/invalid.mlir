@@ -857,6 +857,19 @@ module attributes {llvm.data_layout = "#vjkr32"} {
 
 // -----
 
+func.func @switch_superfluous_comma(%arg0 : i64) {
+  // expected-error@+3 {{custom op 'llvm.switch' expected integer value}}
+  llvm.switch %arg0 : i32, ^bb1 [
+    42: ^bb2,
+  ]
+^bb1:
+  llvm.return
+^bb2:
+  llvm.return
+}
+
+// -----
+
 func.func @switch_wrong_number_of_weights(%arg0 : i32) {
   // expected-error@+1 {{expects number of branch weights to match number of successors: 3 vs 2}}
   llvm.switch %arg0 : i32, ^bb1 [
@@ -1438,15 +1451,22 @@ func.func @invalid_target_ext_constant() {
 // -----
 
 llvm.comdat @__llvm_comdat {
-  // expected-error@+1 {{only comdat selector symbols can appear in a comdat region}}
+  // expected-error@below {{only comdat selector symbols can appear in a comdat region}}
   llvm.return
 }
 
 // -----
 
 llvm.mlir.global @not_comdat(0 : i32) : i32
-// expected-error@+1 {{expected comdat symbol}}
-llvm.mlir.global @invalid_comdat_use(0 : i32) comdat(@not_comdat) : i32
+// expected-error@below {{expected comdat symbol}}
+llvm.mlir.global @invalid_global_comdat(0 : i32) comdat(@not_comdat) : i32
+
+// -----
+
+// expected-error@below {{expected comdat symbol}}
+llvm.func @invalid_func_comdat() comdat(@foo) {
+  llvm.return
+}
 
 // -----
 

@@ -399,22 +399,22 @@ void SwitchOp::build(OpBuilder &builder, OperationState &result, Value value,
         caseValuesAttr, caseDestinations, caseOperands, branchWeights);
 }
 
-/// <cases> ::= integer `:` bb-id (`(` ssa-use-and-type-list `)`)?
-///             ( `,` integer `:` bb-id (`(` ssa-use-and-type-list `)`)? )?
+/// <cases> ::= `[` (case (`,` case )* )? `]`
+/// <case>  ::= integer `:` bb-id (`(` ssa-use-and-type-list `)`)?
 static ParseResult parseSwitchOpCases(
     OpAsmParser &parser, Type flagType, DenseIntElementsAttr &caseValues,
     SmallVectorImpl<Block *> &caseDestinations,
     SmallVectorImpl<SmallVector<OpAsmParser::UnresolvedOperand>> &caseOperands,
     SmallVectorImpl<SmallVector<Type>> &caseOperandTypes) {
+  if (failed(parser.parseLSquare()))
+    return failure();
+  if (succeeded(parser.parseOptionalRSquare()))
+    return success();
   SmallVector<APInt> values;
   unsigned bitWidth = flagType.getIntOrFloatBitWidth();
-  do {
+  auto parseCase = [&]() {
     int64_t value = 0;
-    OptionalParseResult integerParseResult = parser.parseOptionalInteger(value);
-    if (values.empty() && !integerParseResult.has_value())
-      return success();
-
-    if (!integerParseResult.has_value() || integerParseResult.value())
+    if (failed(parser.parseInteger(value)))
       return failure();
     values.push_back(APInt(bitWidth, value));
 
@@ -432,12 +432,15 @@ static ParseResult parseSwitchOpCases(
     caseDestinations.push_back(destination);
     caseOperands.emplace_back(operands);
     caseOperandTypes.emplace_back(operandTypes);
-  } while (!parser.parseOptionalComma());
+    return success();
+  };
+  if (failed(parser.parseCommaSeparatedList(parseCase)))
+    return failure();
 
   ShapedType caseValueType =
       VectorType::get(static_cast<int64_t>(values.size()), flagType);
   caseValues = DenseIntElementsAttr::get(caseValueType, values);
-  return success();
+  return parser.parseRSquare();
 }
 
 static void printSwitchOpCases(OpAsmPrinter &p, SwitchOp op, Type flagType,
@@ -445,8 +448,12 @@ static void printSwitchOpCases(OpAsmPrinter &p, SwitchOp op, Type flagType,
                                SuccessorRange caseDestinations,
                                OperandRangeRange caseOperands,
                                const TypeRangeRange &caseOperandTypes) {
-  if (!caseValues)
+  p << '[';
+  p.printNewline();
+  if (!caseValues) {
+    p << ']';
     return;
+  }
 
   size_t index = 0;
   llvm::interleave(
@@ -462,6 +469,7 @@ static void printSwitchOpCases(OpAsmPrinter &p, SwitchOp op, Type flagType,
         p.printNewline();
       });
   p.printNewline();
+  p << ']';
 }
 
 LogicalResult SwitchOp::verify() {
@@ -1807,9 +1815,11 @@ static LogicalResult verifyComdat(Operation *op,
   return success();
 }
 
-// operation ::= `llvm.mlir.global` linkage? `constant`? `@` identifier
-//               `(` attribute? `)` align? attribute-list? (`:` type)? region?
-// align     ::= `align` `=` UINT64
+// operation ::= `llvm.mlir.global` linkage? visibility?
+//               (`unnamed_addr` | `local_unnamed_addr`)?
+//               `thread_local`? `constant`? `@` identifier
+//               `(` attribute? `)` (`comdat(` symbol-ref-id `)`)?
+//               attribute-list? (`:` type)? region?
 //
 // The type can be omitted for string attributes, in which case it will be
 // inferred from the value of the string as [strlen(value) x i8].
@@ -2103,7 +2113,7 @@ Block *LLVMFuncOp::addEntryBlock() {
 
 void LLVMFuncOp::build(OpBuilder &builder, OperationState &result,
                        StringRef name, Type type, LLVM::Linkage linkage,
-                       bool dsoLocal, CConv cconv,
+                       bool dsoLocal, CConv cconv, SymbolRefAttr comdat,
                        ArrayRef<NamedAttribute> attrs,
                        ArrayRef<DictionaryAttr> argAttrs,
                        std::optional<uint64_t> functionEntryCount) {
@@ -2120,6 +2130,8 @@ void LLVMFuncOp::build(OpBuilder &builder, OperationState &result,
   if (dsoLocal)
     result.addAttribute(getDsoLocalAttrName(result.name),
                         builder.getUnitAttr());
+  if (comdat)
+    result.addAttribute(getComdatAttrName(result.name), comdat);
   if (functionEntryCount)
     result.addAttribute(getFunctionEntryCountAttrName(result.name),
                         builder.getI64IntegerAttr(functionEntryCount.value()));
@@ -2174,8 +2186,9 @@ buildLLVMFunctionType(OpAsmParser &parser, SMLoc loc, ArrayRef<Type> inputs,
 // Parses an LLVM function.
 //
 // operation ::= `llvm.func` linkage? cconv? function-signature
-// function-attributes?
-//               function-body
+//                (`comdat(` symbol-ref-id `)`)?
+//                function-attributes?
+//                function-body
 //
 ParseResult LLVMFuncOp::parse(OpAsmParser &parser, OperationState &result) {
   // Default to external linkage if no keyword is provided.
@@ -2222,6 +2235,16 @@ ParseResult LLVMFuncOp::parse(OpAsmParser &parser, OperationState &result) {
   result.addAttribute(getFunctionTypeAttrName(result.name),
                       TypeAttr::get(type));
 
+  // Parse the optional comdat selector.
+  if (succeeded(parser.parseOptionalKeyword("comdat"))) {
+    SymbolRefAttr comdat;
+    if (parser.parseLParen() || parser.parseAttribute(comdat) ||
+        parser.parseRParen())
+      return failure();
+
+    result.addAttribute(getComdatAttrName(result.name), comdat);
+  }
+
   if (failed(parser.parseOptionalAttrDictWithKeyword(result.attributes)))
     return failure();
   function_interface_impl::addArgAndResultAttrs(
@@ -2262,10 +2285,16 @@ void LLVMFuncOp::print(OpAsmPrinter &p) {
 
   function_interface_impl::printFunctionSignature(p, *this, argTypes,
                                                   isVarArg(), resTypes);
+
+  // Print the optional comdat selector.
+  if (auto comdat = getComdat())
+    p << " comdat(" << *comdat << ')';
+
   function_interface_impl::printFunctionAttributes(
       p, *this,
       {getFunctionTypeAttrName(), getArgAttrsAttrName(), getResAttrsAttrName(),
-       getLinkageAttrName(), getCConvAttrName(), getVisibility_AttrName()});
+       getLinkageAttrName(), getCConvAttrName(), getVisibility_AttrName(),
+       getComdatAttrName()});
 
   // Print the body if this is not an external function.
   Region &body = getBody();
@@ -2285,6 +2314,9 @@ LogicalResult LLVMFuncOp::verify() {
     return emitOpError() << "functions cannot have '"
                          << stringifyLinkage(LLVM::Linkage::Common)
                          << "' linkage";
+
+  if (failed(verifyComdat(*this, getComdat())))
+    return failure();
 
   if (isExternal()) {
     if (getLinkage() != LLVM::Linkage::External &&

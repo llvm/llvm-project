@@ -102,7 +102,7 @@ void SIFrameLowering::emitDefCFA(MachineBasicBlock &MBB,
           : (AspaceAlreadyDefined
                  ? MCCFIInstruction::createLLVMDefAspaceCfa(
                        nullptr, DwarfStackPtrReg, 0,
-                       dwarf::DW_ASPACE_LLVM_AMDGPU_private_wave)
+                       dwarf::DW_ASPACE_LLVM_AMDGPU_private_wave, SMLoc())
                  : MCCFIInstruction::createDefCfaRegister(nullptr,
                                                           DwarfStackPtrReg));
   buildCFI(MBB, MBBI, DL, CFIInst, Flags);

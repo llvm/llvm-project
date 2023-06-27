@@ -46,12 +46,6 @@
 namespace llvm {
 namespace exegesis {
 
-#ifdef __arm__
-static constexpr const intptr_t VAddressSpaceCeiling = 0xC0000000;
-#else
-static constexpr const intptr_t VAddressSpaceCeiling = 0x0000800000000000;
-#endif
-
 // If a positive value is specified, we are going to use the LBR in
 // latency-mode.
 //
@@ -986,6 +980,12 @@ std::vector<MCInst> ExegesisX86Target::setRegTo(const MCSubtargetInfo &STI,
 }
 
 #ifdef __linux__
+
+#ifdef __arm__
+static constexpr const intptr_t VAddressSpaceCeiling = 0xC0000000;
+#else
+static constexpr const intptr_t VAddressSpaceCeiling = 0x0000800000000000;
+#endif
 
 void generateSyscall(long SyscallNumber, std::vector<MCInst> &GeneratedCode) {
   GeneratedCode.push_back(

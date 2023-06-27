@@ -732,11 +732,9 @@ LogicalResult ModuleTranslation::convertGlobals() {
         addrSpace);
 
     if (std::optional<mlir::SymbolRefAttr> comdat = op.getComdat()) {
-      StringRef name = comdat->getLeafReference().getValue();
-      if (!llvmModule->getComdatSymbolTable().contains(name))
-        return emitError(op.getLoc(), "global references non-existant comdat");
-      llvm::Comdat *llvmComdat = llvmModule->getOrInsertComdat(name);
-      var->setComdat(llvmComdat);
+      auto selectorOp = cast<ComdatSelectorOp>(
+          SymbolTable::lookupNearestSymbolFrom(op, *comdat));
+      var->setComdat(comdatMapping.lookup(selectorOp));
     }
 
     if (op.getUnnamedAddr().has_value())
@@ -1033,6 +1031,13 @@ LogicalResult ModuleTranslation::convertFunctionSignatures() {
 
     // Convert visibility attribute.
     llvmFunc->setVisibility(convertVisibilityToLLVM(function.getVisibility_()));
+
+    // Convert the comdat attribute.
+    if (std::optional<mlir::SymbolRefAttr> comdat = function.getComdat()) {
+      auto selectorOp = cast<ComdatSelectorOp>(
+          SymbolTable::lookupNearestSymbolFrom(function, *comdat));
+      llvmFunc->setComdat(comdatMapping.lookup(selectorOp));
+    }
   }
 
   return success();
@@ -1053,17 +1058,16 @@ LogicalResult ModuleTranslation::convertFunctions() {
 }
 
 LogicalResult ModuleTranslation::convertComdats() {
-  for (ComdatOp comdat : getModuleBody(mlirModule).getOps<ComdatOp>()) {
-    for (ComdatSelectorOp selector : comdat.getOps<ComdatSelectorOp>()) {
-      StringRef name = selector.getName();
+  for (auto comdatOp : getModuleBody(mlirModule).getOps<ComdatOp>()) {
+    for (auto selectorOp : comdatOp.getOps<ComdatSelectorOp>()) {
       llvm::Module *module = getLLVMModule();
-      if (module->getComdatSymbolTable().contains(name)) {
-        return emitError(selector.getLoc())
+      if (module->getComdatSymbolTable().contains(selectorOp.getSymName()))
+        return emitError(selectorOp.getLoc())
                << "comdat selection symbols must be unique even in different "
                   "comdat regions";
-      }
-      llvm::Comdat *comdat = module->getOrInsertComdat(name);
-      comdat->setSelectionKind(convertComdatToLLVM(selector.getComdat()));
+      llvm::Comdat *comdat = module->getOrInsertComdat(selectorOp.getSymName());
+      comdat->setSelectionKind(convertComdatToLLVM(selectorOp.getComdat()));
+      comdatMapping.try_emplace(selectorOp, comdat);
     }
   }
   return success();
@@ -1402,9 +1406,9 @@ mlir::translateModuleToLLVMIR(Operation *module, llvm::LLVMContext &llvmContext,
   LLVM::ensureDistinctSuccessors(module);
 
   ModuleTranslation translator(module, std::move(llvmModule));
-  if (failed(translator.convertFunctionSignatures()))
-    return nullptr;
   if (failed(translator.convertComdats()))
+    return nullptr;
+  if (failed(translator.convertFunctionSignatures()))
     return nullptr;
   if (failed(translator.convertGlobals()))
     return nullptr;

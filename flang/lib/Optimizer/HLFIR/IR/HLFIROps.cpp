@@ -47,6 +47,9 @@ mlir::LogicalResult hlfir::AssignOp::verify() {
         hlfir::getFortranElementType(lhsType).isa<fir::CharacterType>()))
     return emitOpError("`realloc` must be set and lhs must be a character "
                        "allocatable when `keep_lhs_length_if_realloc` is set");
+  if (mustKeepLhsLengthInAllocatableAssignment() && isTemporaryLHS())
+    return emitOpError("`keep_lhs_length_if_realloc` does not make sense "
+                       "for `temporary_lhs` assignments");
   return mlir::success();
 }
 
