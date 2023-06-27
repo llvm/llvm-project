@@ -45,7 +45,8 @@ multiclass AMO_rr_aq_rl<bits<5> funct5, bits<3> funct3, string opcodestr> {
 
 class AtomicStPat<PatFrag StoreOp, RVInst Inst, RegisterClass StTy,
                   ValueType vt = XLenVT>
-    : Pat<(StoreOp (AddrRegImm GPR:$rs1, simm12:$imm12), (vt StTy:$rs2)),
+    : Pat<(StoreOp (AddrRegImm (XLenVT GPR:$rs1), simm12:$imm12),
+                   (vt StTy:$rs2)),
           (Inst StTy:$rs2, GPR:$rs1, simm12:$imm12)>;
 
 //===----------------------------------------------------------------------===//
@@ -149,16 +150,16 @@ defm : AMOPat<"atomic_load_min_32", "AMOMIN_W">;
 defm : AMOPat<"atomic_load_umax_32", "AMOMAXU_W">;
 defm : AMOPat<"atomic_load_umin_32", "AMOMINU_W">;
 
-def : Pat<(atomic_load_sub_32_monotonic GPR:$addr, GPR:$incr),
-          (AMOADD_W GPR:$addr, (SUB X0, GPR:$incr))>;
-def : Pat<(atomic_load_sub_32_acquire GPR:$addr, GPR:$incr),
-          (AMOADD_W_AQ GPR:$addr, (SUB X0, GPR:$incr))>;
-def : Pat<(atomic_load_sub_32_release GPR:$addr, GPR:$incr),
-          (AMOADD_W_RL GPR:$addr, (SUB X0, GPR:$incr))>;
-def : Pat<(atomic_load_sub_32_acq_rel GPR:$addr, GPR:$incr),
-          (AMOADD_W_AQ_RL GPR:$addr, (SUB X0, GPR:$incr))>;
-def : Pat<(atomic_load_sub_32_seq_cst GPR:$addr, GPR:$incr),
-          (AMOADD_W_AQ_RL GPR:$addr, (SUB X0, GPR:$incr))>;
+def : Pat<(XLenVT (atomic_load_sub_32_monotonic GPR:$addr, GPR:$incr)),
+          (AMOADD_W GPR:$addr, (SUB (XLenVT X0), GPR:$incr))>;
+def : Pat<(XLenVT (atomic_load_sub_32_acquire GPR:$addr, GPR:$incr)),
+          (AMOADD_W_AQ GPR:$addr, (SUB (XLenVT X0), GPR:$incr))>;
+def : Pat<(XLenVT (atomic_load_sub_32_release GPR:$addr, GPR:$incr)),
+          (AMOADD_W_RL GPR:$addr, (SUB (XLenVT X0), GPR:$incr))>;
+def : Pat<(XLenVT (atomic_load_sub_32_acq_rel GPR:$addr, GPR:$incr)),
+          (AMOADD_W_AQ_RL GPR:$addr, (SUB (XLenVT X0), GPR:$incr))>;
+def : Pat<(XLenVT (atomic_load_sub_32_seq_cst GPR:$addr, GPR:$incr)),
+          (AMOADD_W_AQ_RL GPR:$addr, (SUB (XLenVT X0), GPR:$incr))>;
 
 /// Pseudo AMOs
 
@@ -174,15 +175,15 @@ let Size = 20 in
 def PseudoAtomicLoadNand32 : PseudoAMO;
 // Ordering constants must be kept in sync with the AtomicOrdering enum in
 // AtomicOrdering.h.
-def : Pat<(atomic_load_nand_32_monotonic GPR:$addr, GPR:$incr),
+def : Pat<(XLenVT (atomic_load_nand_32_monotonic GPR:$addr, GPR:$incr)),
           (PseudoAtomicLoadNand32 GPR:$addr, GPR:$incr, 2)>;
-def : Pat<(atomic_load_nand_32_acquire GPR:$addr, GPR:$incr),
+def : Pat<(XLenVT (atomic_load_nand_32_acquire GPR:$addr, GPR:$incr)),
           (PseudoAtomicLoadNand32 GPR:$addr, GPR:$incr, 4)>;
-def : Pat<(atomic_load_nand_32_release GPR:$addr, GPR:$incr),
+def : Pat<(XLenVT (atomic_load_nand_32_release GPR:$addr, GPR:$incr)),
           (PseudoAtomicLoadNand32 GPR:$addr, GPR:$incr, 5)>;
-def : Pat<(atomic_load_nand_32_acq_rel GPR:$addr, GPR:$incr),
+def : Pat<(XLenVT (atomic_load_nand_32_acq_rel GPR:$addr, GPR:$incr)),
           (PseudoAtomicLoadNand32 GPR:$addr, GPR:$incr, 6)>;
-def : Pat<(atomic_load_nand_32_seq_cst GPR:$addr, GPR:$incr),
+def : Pat<(XLenVT (atomic_load_nand_32_seq_cst GPR:$addr, GPR:$incr)),
           (PseudoAtomicLoadNand32 GPR:$addr, GPR:$incr, 7)>;
 
 class PseudoMaskedAMO
@@ -322,15 +323,15 @@ defm : AMOPat<"atomic_load_umin_64", "AMOMINU_D", i64>;
 /// 64-bit AMOs
 
 def : Pat<(i64 (atomic_load_sub_64_monotonic GPR:$addr, GPR:$incr)),
-          (AMOADD_D GPR:$addr, (SUB X0, GPR:$incr))>;
+          (AMOADD_D GPR:$addr, (SUB (XLenVT X0), GPR:$incr))>;
 def : Pat<(i64 (atomic_load_sub_64_acquire GPR:$addr, GPR:$incr)),
-          (AMOADD_D_AQ GPR:$addr, (SUB X0, GPR:$incr))>;
+          (AMOADD_D_AQ GPR:$addr, (SUB (XLenVT X0), GPR:$incr))>;
 def : Pat<(i64 (atomic_load_sub_64_release GPR:$addr, GPR:$incr)),
-          (AMOADD_D_RL GPR:$addr, (SUB X0, GPR:$incr))>;
+          (AMOADD_D_RL GPR:$addr, (SUB (XLenVT X0), GPR:$incr))>;
 def : Pat<(i64 (atomic_load_sub_64_acq_rel GPR:$addr, GPR:$incr)),
-          (AMOADD_D_AQ_RL GPR:$addr, (SUB X0, GPR:$incr))>;
+          (AMOADD_D_AQ_RL GPR:$addr, (SUB (XLenVT X0), GPR:$incr))>;
 def : Pat<(i64 (atomic_load_sub_64_seq_cst GPR:$addr, GPR:$incr)),
-          (AMOADD_D_AQ_RL GPR:$addr, (SUB X0, GPR:$incr))>;
+          (AMOADD_D_AQ_RL GPR:$addr, (SUB (XLenVT X0), GPR:$incr))>;
 
 /// 64-bit pseudo AMOs
 

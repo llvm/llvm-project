@@ -192,9 +192,12 @@ default:
 
 define void @non_term_unreachable() {
 ; CHECK-LABEL: define void @non_term_unreachable() {
+; CHECK-NEXT:    call void @dummy()
 ; CHECK-NEXT:    store i1 true, ptr poison, align 1
 ; CHECK-NEXT:    ret void
 ;
+  call void @dummy()
+  call void @dummy() nounwind willreturn
   store i1 true, ptr poison
   call void @dummy()
   ret void

@@ -54,7 +54,6 @@ namespace llvm {
 
 class AnalysisUsage;
 class AtomicCmpXchgInst;
-class BasicAAResult;
 class BasicBlock;
 class CatchPadInst;
 class CatchReturnInst;

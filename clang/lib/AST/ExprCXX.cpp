@@ -276,6 +276,8 @@ CXXNewExpr *CXXNewExpr::CreateEmpty(const ASTContext &Ctx, bool IsArray,
 }
 
 bool CXXNewExpr::shouldNullCheckAllocation() const {
+  if (getOperatorNew()->getLangOpts().CheckNew)
+    return true;
   return !getOperatorNew()->hasAttr<ReturnsNonNullAttr>() &&
          getOperatorNew()
              ->getType()

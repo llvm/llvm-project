@@ -96,11 +96,6 @@ static cl::opt<unsigned, true> MaxInitializationChainLengthX(
     cl::location(MaxInitializationChainLength), cl::init(1024));
 unsigned llvm::MaxInitializationChainLength;
 
-static cl::opt<bool> VerifyMaxFixpointIterations(
-    "attributor-max-iterations-verify", cl::Hidden,
-    cl::desc("Verify that max-iterations is a tight bound for a fixpoint"),
-    cl::init(false));
-
 static cl::opt<bool> AnnotateDeclarationCallSites(
     "attributor-annotate-decl-cs", cl::Hidden,
     cl::desc("Annotate call sites of function declarations."), cl::init(false));
@@ -205,9 +200,9 @@ bool AA::isNoSyncInst(Attributor &A, const Instruction &I,
     if (AANoSync::isNoSyncIntrinsic(&I))
       return true;
 
-    const auto &NoSyncAA = A.getAAFor<AANoSync>(
+    const auto *NoSyncAA = A.getAAFor<AANoSync>(
         QueryingAA, IRPosition::callsite_function(*CB), DepClassTy::OPTIONAL);
-    return NoSyncAA.isAssumedNoSync();
+    return NoSyncAA && NoSyncAA->isAssumedNoSync();
   }
 
   if (!I.mayReadOrWriteMemory())
@@ -221,9 +216,9 @@ bool AA::isDynamicallyUnique(Attributor &A, const AbstractAttribute &QueryingAA,
   // TODO: See the AAInstanceInfo class comment.
   if (!ForAnalysisOnly)
     return false;
-  auto &InstanceInfoAA = A.getAAFor<AAInstanceInfo>(
+  auto *InstanceInfoAA = A.getAAFor<AAInstanceInfo>(
       QueryingAA, IRPosition::value(V), DepClassTy::OPTIONAL);
-  return InstanceInfoAA.isAssumedUniqueForAnalysis();
+  return InstanceInfoAA && InstanceInfoAA->isAssumedUniqueForAnalysis();
 }
 
 Constant *AA::getInitialValueForObj(Attributor &A, Value &Obj, Type &Ty,
@@ -484,12 +479,13 @@ static bool getPotentialCopiesOfMemoryValue(
     bool HasBeenWrittenTo = false;
 
     AA::RangeTy Range;
-    auto &PI = A.getAAFor<AAPointerInfo>(QueryingAA, IRPosition::value(Obj),
+    auto *PI = A.getAAFor<AAPointerInfo>(QueryingAA, IRPosition::value(Obj),
                                          DepClassTy::NONE);
-    if (!PI.forallInterferingAccesses(A, QueryingAA, I,
-                                      /* FindInterferingWrites */ IsLoad,
-                                      /* FindInterferingReads */ !IsLoad,
-                                      CheckAccess, HasBeenWrittenTo, Range)) {
+    if (!PI ||
+        !PI->forallInterferingAccesses(A, QueryingAA, I,
+                                       /* FindInterferingWrites */ IsLoad,
+                                       /* FindInterferingReads */ !IsLoad,
+                                       CheckAccess, HasBeenWrittenTo, Range)) {
       LLVM_DEBUG(
           dbgs()
           << "Failed to verify all interfering accesses for underlying object: "
@@ -517,14 +513,14 @@ static bool getPotentialCopiesOfMemoryValue(
       NewCopyOrigins.push_back(nullptr);
     }
 
-    PIs.push_back(&PI);
+    PIs.push_back(PI);
 
     return true;
   };
 
-  const auto &AAUO = A.getAAFor<AAUnderlyingObjects>(
+  const auto *AAUO = A.getAAFor<AAUnderlyingObjects>(
       QueryingAA, IRPosition::value(Ptr), DepClassTy::OPTIONAL);
-  if (!AAUO.forallUnderlyingObjects(Pred)) {
+  if (!AAUO || !AAUO->forallUnderlyingObjects(Pred)) {
     LLVM_DEBUG(
         dbgs() << "Underlying objects stored into could not be determined\n";);
     return false;
@@ -567,27 +563,37 @@ bool AA::getPotentialCopiesOfStoredValue(
 static bool isAssumedReadOnlyOrReadNone(Attributor &A, const IRPosition &IRP,
                                         const AbstractAttribute &QueryingAA,
                                         bool RequireReadNone, bool &IsKnown) {
+  if (RequireReadNone) {
+    if (AA::hasAssumedIRAttr<Attribute::ReadNone>(
+            A, QueryingAA, IRP, DepClassTy::OPTIONAL, IsKnown,
+            /* IgnoreSubsumingPositions */ true))
+      return true;
+  } else if (AA::hasAssumedIRAttr<Attribute::ReadOnly>(
+                 A, QueryingAA, IRP, DepClassTy::OPTIONAL, IsKnown,
+                 /* IgnoreSubsumingPositions */ true))
+    return true;
 
   IRPosition::Kind Kind = IRP.getPositionKind();
   if (Kind == IRPosition::IRP_FUNCTION || Kind == IRPosition::IRP_CALL_SITE) {
-    const auto &MemLocAA =
+    const auto *MemLocAA =
         A.getAAFor<AAMemoryLocation>(QueryingAA, IRP, DepClassTy::NONE);
-    if (MemLocAA.isAssumedReadNone()) {
-      IsKnown = MemLocAA.isKnownReadNone();
+    if (MemLocAA && MemLocAA->isAssumedReadNone()) {
+      IsKnown = MemLocAA->isKnownReadNone();
       if (!IsKnown)
-        A.recordDependence(MemLocAA, QueryingAA, DepClassTy::OPTIONAL);
+        A.recordDependence(*MemLocAA, QueryingAA, DepClassTy::OPTIONAL);
       return true;
     }
   }
 
-  const auto &MemBehaviorAA =
+  const auto *MemBehaviorAA =
       A.getAAFor<AAMemoryBehavior>(QueryingAA, IRP, DepClassTy::NONE);
-  if (MemBehaviorAA.isAssumedReadNone() ||
-      (!RequireReadNone && MemBehaviorAA.isAssumedReadOnly())) {
-    IsKnown = RequireReadNone ? MemBehaviorAA.isKnownReadNone()
-                              : MemBehaviorAA.isKnownReadOnly();
+  if (MemBehaviorAA &&
+      (MemBehaviorAA->isAssumedReadNone() ||
+       (!RequireReadNone && MemBehaviorAA->isAssumedReadOnly()))) {
+    IsKnown = RequireReadNone ? MemBehaviorAA->isKnownReadNone()
+                              : MemBehaviorAA->isKnownReadOnly();
     if (!IsKnown)
-      A.recordDependence(MemBehaviorAA, QueryingAA, DepClassTy::OPTIONAL);
+      A.recordDependence(*MemBehaviorAA, QueryingAA, DepClassTy::OPTIONAL);
     return true;
   }
 
@@ -661,10 +667,10 @@ isPotentiallyReachable(Attributor &A, const Instruction &FromI,
         return true;
       LLVM_DEBUG(dbgs() << "[AA] check " << *ToI << " from " << *CurFromI
                         << " intraprocedurally\n");
-      const auto &ReachabilityAA = A.getAAFor<AAIntraFnReachability>(
+      const auto *ReachabilityAA = A.getAAFor<AAIntraFnReachability>(
           QueryingAA, IRPosition::function(ToFn), DepClassTy::OPTIONAL);
-      bool Result =
-          ReachabilityAA.isAssumedReachable(A, *CurFromI, *ToI, ExclusionSet);
+      bool Result = !ReachabilityAA || ReachabilityAA->isAssumedReachable(
+                                           A, *CurFromI, *ToI, ExclusionSet);
       LLVM_DEBUG(dbgs() << "[AA] " << *CurFromI << " "
                         << (Result ? "can potentially " : "cannot ") << "reach "
                         << *ToI << " [Intra]\n");
@@ -674,11 +680,11 @@ isPotentiallyReachable(Attributor &A, const Instruction &FromI,
 
     bool Result = true;
     if (!ToFn.isDeclaration() && ToI) {
-      const auto &ToReachabilityAA = A.getAAFor<AAIntraFnReachability>(
+      const auto *ToReachabilityAA = A.getAAFor<AAIntraFnReachability>(
           QueryingAA, IRPosition::function(ToFn), DepClassTy::OPTIONAL);
       const Instruction &EntryI = ToFn.getEntryBlock().front();
-      Result =
-          ToReachabilityAA.isAssumedReachable(A, EntryI, *ToI, ExclusionSet);
+      Result = !ToReachabilityAA || ToReachabilityAA->isAssumedReachable(
+                                        A, EntryI, *ToI, ExclusionSet);
       LLVM_DEBUG(dbgs() << "[AA] Entry " << EntryI << " of @" << ToFn.getName()
                         << " " << (Result ? "can potentially " : "cannot ")
                         << "reach @" << *ToI << " [ToFn]\n");
@@ -687,10 +693,10 @@ isPotentiallyReachable(Attributor &A, const Instruction &FromI,
     if (Result) {
       // The entry of the ToFn can reach the instruction ToI. If the current
       // instruction is already known to reach the ToFn.
-      const auto &FnReachabilityAA = A.getAAFor<AAInterFnReachability>(
+      const auto *FnReachabilityAA = A.getAAFor<AAInterFnReachability>(
           QueryingAA, IRPosition::function(*FromFn), DepClassTy::OPTIONAL);
-      Result = FnReachabilityAA.instructionCanReach(A, *CurFromI, ToFn,
-                                                    ExclusionSet);
+      Result = !FnReachabilityAA || FnReachabilityAA->instructionCanReach(
+                                        A, *CurFromI, ToFn, ExclusionSet);
       LLVM_DEBUG(dbgs() << "[AA] " << *CurFromI << " in @" << FromFn->getName()
                         << " " << (Result ? "can potentially " : "cannot ")
                         << "reach @" << ToFn.getName() << " [FromFn]\n");
@@ -699,11 +705,11 @@ isPotentiallyReachable(Attributor &A, const Instruction &FromI,
     }
 
     // TODO: Check assumed nounwind.
-    const auto &ReachabilityAA = A.getAAFor<AAIntraFnReachability>(
+    const auto *ReachabilityAA = A.getAAFor<AAIntraFnReachability>(
         QueryingAA, IRPosition::function(*FromFn), DepClassTy::OPTIONAL);
     auto ReturnInstCB = [&](Instruction &Ret) {
-      bool Result =
-          ReachabilityAA.isAssumedReachable(A, *CurFromI, Ret, ExclusionSet);
+      bool Result = !ReachabilityAA || ReachabilityAA->isAssumedReachable(
+                                           A, *CurFromI, Ret, ExclusionSet);
       LLVM_DEBUG(dbgs() << "[AA][Ret] " << *CurFromI << " "
                         << (Result ? "can potentially " : "cannot ") << "reach "
                         << Ret << " [Intra]\n");
@@ -793,14 +799,14 @@ bool AA::isAssumedThreadLocalObject(Attributor &A, Value &Obj,
                  << "' is thread local; stack objects are thread local.\n");
       return true;
     }
-    const auto &NoCaptureAA = A.getAAFor<AANoCapture>(
+    const auto *NoCaptureAA = A.getAAFor<AANoCapture>(
         QueryingAA, IRPosition::value(Obj), DepClassTy::OPTIONAL);
     LLVM_DEBUG(dbgs() << "[AA] Object '" << Obj << "' is "
-                      << (NoCaptureAA.isAssumedNoCapture() ? "" : "not")
+                      << (NoCaptureAA->isAssumedNoCapture() ? "" : "not")
                       << " thread local; "
-                      << (NoCaptureAA.isAssumedNoCapture() ? "non-" : "")
+                      << (NoCaptureAA->isAssumedNoCapture() ? "non-" : "")
                       << "captured stack object.\n");
-    return NoCaptureAA.isAssumedNoCapture();
+    return NoCaptureAA && NoCaptureAA->isAssumedNoCapture();
   }
   if (auto *GV = dyn_cast<GlobalVariable>(&Obj)) {
     if (GV->isConstant()) {
@@ -881,9 +887,9 @@ bool AA::isPotentiallyAffectedByBarrier(Attributor &A,
       return false;
     };
 
-    const auto &UnderlyingObjsAA = A.getAAFor<AAUnderlyingObjects>(
+    const auto *UnderlyingObjsAA = A.getAAFor<AAUnderlyingObjects>(
         QueryingAA, IRPosition::value(*Ptr), DepClassTy::OPTIONAL);
-    if (!UnderlyingObjsAA.forallUnderlyingObjects(Pred))
+    if (!UnderlyingObjsAA || !UnderlyingObjsAA->forallUnderlyingObjects(Pred))
       return true;
   }
   return false;
@@ -983,7 +989,7 @@ Argument *IRPosition::getAssociatedArgument() const {
 
   // If no callbacks were found, or none used the underlying call site operand
   // exclusively, use the direct callee argument if available.
-  const Function *Callee = CB.getCalledFunction();
+  auto *Callee = dyn_cast_if_present<Function>(CB.getCalledOperand());
   if (Callee && Callee->arg_size() > unsigned(ArgNo))
     return Callee->getArg(ArgNo);
 
@@ -1093,7 +1099,7 @@ SubsumingPositionIterator::SubsumingPositionIterator(const IRPosition &IRP) {
     // TODO: We need to look at the operand bundles similar to the redirection
     //       in CallBase.
     if (!CB->hasOperandBundles() || CanIgnoreOperandBundles(*CB))
-      if (const Function *Callee = CB->getCalledFunction())
+      if (auto *Callee = dyn_cast_if_present<Function>(CB->getCalledOperand()))
         IRPositions.emplace_back(IRPosition::function(*Callee));
     return;
   case IRPosition::IRP_CALL_SITE_RETURNED:
@@ -1101,7 +1107,8 @@ SubsumingPositionIterator::SubsumingPositionIterator(const IRPosition &IRP) {
     // TODO: We need to look at the operand bundles similar to the redirection
     //       in CallBase.
     if (!CB->hasOperandBundles() || CanIgnoreOperandBundles(*CB)) {
-      if (const Function *Callee = CB->getCalledFunction()) {
+      if (auto *Callee =
+              dyn_cast_if_present<Function>(CB->getCalledOperand())) {
         IRPositions.emplace_back(IRPosition::returned(*Callee));
         IRPositions.emplace_back(IRPosition::function(*Callee));
         for (const Argument &Arg : Callee->args())
@@ -1121,7 +1128,7 @@ SubsumingPositionIterator::SubsumingPositionIterator(const IRPosition &IRP) {
     // TODO: We need to look at the operand bundles similar to the redirection
     //       in CallBase.
     if (!CB->hasOperandBundles() || CanIgnoreOperandBundles(*CB)) {
-      const Function *Callee = CB->getCalledFunction();
+      auto *Callee = dyn_cast_if_present<Function>(CB->getCalledOperand());
       if (Callee) {
         if (Argument *Arg = IRP.getAssociatedArgument())
           IRPositions.emplace_back(IRPosition::argument(*Arg));
@@ -1361,11 +1368,12 @@ bool Attributor::getAssumedSimplifiedValues(
     return true;
 
   // If no high-level/outside simplification occurred, use AAPotentialValues.
-  const auto &PotentialValuesAA =
+  const auto *PotentialValuesAA =
       getOrCreateAAFor<AAPotentialValues>(IRP, AA, DepClassTy::OPTIONAL);
-  if (!PotentialValuesAA.getAssumedSimplifiedValues(*this, Values, S))
+  if (!PotentialValuesAA ||
+      !PotentialValuesAA->getAssumedSimplifiedValues(*this, Values, S))
     return false;
-  UsedAssumedInformation |= !PotentialValuesAA.isAtFixpoint();
+  UsedAssumedInformation |= !PotentialValuesAA->isAtFixpoint();
   return true;
 }
 
@@ -1377,7 +1385,8 @@ std::optional<Value *> Attributor::translateArgumentToCallSiteContent(
   if (*V == nullptr || isa<Constant>(*V))
     return V;
   if (auto *Arg = dyn_cast<Argument>(*V))
-    if (CB.getCalledFunction() == Arg->getParent())
+    if (CB.getCalledOperand() == Arg->getParent() &&
+        CB.arg_size() > Arg->getArgNo())
       if (!Arg->hasPointeeInMemoryValueAttr())
         return getAssumedSimplified(
             IRPosition::callsite_argument(CB, Arg->getArgNo()), AA,
@@ -1436,12 +1445,12 @@ bool Attributor::isAssumedDead(const Use &U,
   } else if (StoreInst *SI = dyn_cast<StoreInst>(UserI)) {
     if (!CheckBBLivenessOnly && SI->getPointerOperand() != U.get()) {
       const IRPosition IRP = IRPosition::inst(*SI);
-      const AAIsDead &IsDeadAA =
+      const AAIsDead *IsDeadAA =
           getOrCreateAAFor<AAIsDead>(IRP, QueryingAA, DepClassTy::NONE);
-      if (IsDeadAA.isRemovableStore()) {
+      if (IsDeadAA && IsDeadAA->isRemovableStore()) {
         if (QueryingAA)
-          recordDependence(IsDeadAA, *QueryingAA, DepClass);
-        if (!IsDeadAA.isKnown(AAIsDead::IS_REMOVABLE))
+          recordDependence(*IsDeadAA, *QueryingAA, DepClass);
+        if (!IsDeadAA->isKnown(AAIsDead::IS_REMOVABLE))
           UsedAssumedInformation = true;
         return true;
       }
@@ -1466,11 +1475,11 @@ bool Attributor::isAssumedDead(const Instruction &I,
 
   const Function &F = *I.getFunction();
   if (!FnLivenessAA || FnLivenessAA->getAnchorScope() != &F)
-    FnLivenessAA = &getOrCreateAAFor<AAIsDead>(IRPosition::function(F, CBCtx),
-                                               QueryingAA, DepClassTy::NONE);
+    FnLivenessAA = getOrCreateAAFor<AAIsDead>(IRPosition::function(F, CBCtx),
+                                              QueryingAA, DepClassTy::NONE);
 
   // Don't use recursive reasoning.
-  if (QueryingAA == FnLivenessAA)
+  if (!FnLivenessAA || QueryingAA == FnLivenessAA)
     return false;
 
   // If we have a context instruction and a liveness AA we use it.
@@ -1487,25 +1496,25 @@ bool Attributor::isAssumedDead(const Instruction &I,
     return false;
 
   const IRPosition IRP = IRPosition::inst(I, CBCtx);
-  const AAIsDead &IsDeadAA =
+  const AAIsDead *IsDeadAA =
       getOrCreateAAFor<AAIsDead>(IRP, QueryingAA, DepClassTy::NONE);
 
   // Don't use recursive reasoning.
-  if (QueryingAA == &IsDeadAA)
+  if (!IsDeadAA || QueryingAA == IsDeadAA)
     return false;
 
-  if (IsDeadAA.isAssumedDead()) {
+  if (IsDeadAA->isAssumedDead()) {
     if (QueryingAA)
-      recordDependence(IsDeadAA, *QueryingAA, DepClass);
-    if (!IsDeadAA.isKnownDead())
+      recordDependence(*IsDeadAA, *QueryingAA, DepClass);
+    if (!IsDeadAA->isKnownDead())
       UsedAssumedInformation = true;
     return true;
   }
 
-  if (CheckForDeadStore && isa<StoreInst>(I) && IsDeadAA.isRemovableStore()) {
+  if (CheckForDeadStore && isa<StoreInst>(I) && IsDeadAA->isRemovableStore()) {
     if (QueryingAA)
-      recordDependence(IsDeadAA, *QueryingAA, DepClass);
-    if (!IsDeadAA.isKnownDead())
+      recordDependence(*IsDeadAA, *QueryingAA, DepClass);
+    if (!IsDeadAA->isKnownDead())
       UsedAssumedInformation = true;
     return true;
   }
@@ -1538,14 +1547,14 @@ bool Attributor::isAssumedDead(const IRPosition &IRP,
   // If we haven't succeeded we query the specific liveness info for the IRP.
   const AAIsDead *IsDeadAA;
   if (IRP.getPositionKind() == IRPosition::IRP_CALL_SITE)
-    IsDeadAA = &getOrCreateAAFor<AAIsDead>(
+    IsDeadAA = getOrCreateAAFor<AAIsDead>(
         IRPosition::callsite_returned(cast<CallBase>(IRP.getAssociatedValue())),
         QueryingAA, DepClassTy::NONE);
   else
-    IsDeadAA = &getOrCreateAAFor<AAIsDead>(IRP, QueryingAA, DepClassTy::NONE);
+    IsDeadAA = getOrCreateAAFor<AAIsDead>(IRP, QueryingAA, DepClassTy::NONE);
 
   // Don't use recursive reasoning.
-  if (QueryingAA == IsDeadAA)
+  if (!IsDeadAA || QueryingAA == IsDeadAA)
     return false;
 
   if (IsDeadAA->isAssumedDead()) {
@@ -1565,11 +1574,11 @@ bool Attributor::isAssumedDead(const BasicBlock &BB,
                                DepClassTy DepClass) {
   const Function &F = *BB.getParent();
   if (!FnLivenessAA || FnLivenessAA->getAnchorScope() != &F)
-    FnLivenessAA = &getOrCreateAAFor<AAIsDead>(IRPosition::function(F),
-                                               QueryingAA, DepClassTy::NONE);
+    FnLivenessAA = getOrCreateAAFor<AAIsDead>(IRPosition::function(F),
+                                              QueryingAA, DepClassTy::NONE);
 
   // Don't use recursive reasoning.
-  if (QueryingAA == FnLivenessAA)
+  if (!FnLivenessAA || QueryingAA == FnLivenessAA)
     return false;
 
   if (FnLivenessAA->isAssumedDead(&BB)) {
@@ -1622,8 +1631,8 @@ bool Attributor::checkForAllUses(
 
   const Function *ScopeFn = IRP.getAnchorScope();
   const auto *LivenessAA =
-      ScopeFn ? &getAAFor<AAIsDead>(QueryingAA, IRPosition::function(*ScopeFn),
-                                    DepClassTy::NONE)
+      ScopeFn ? getAAFor<AAIsDead>(QueryingAA, IRPosition::function(*ScopeFn),
+                                   DepClassTy::NONE)
               : nullptr;
 
   while (!Worklist.empty()) {
@@ -1844,12 +1853,12 @@ bool Attributor::checkForAllReturnedValuesAndReturnInsts(
   // and liveness information.
   // TODO: use the function scope once we have call site AAReturnedValues.
   const IRPosition &QueryIRP = IRPosition::function(*AssociatedFunction);
-  const auto &AARetVal =
+  const auto *AARetVal =
       getAAFor<AAReturnedValues>(QueryingAA, QueryIRP, DepClassTy::REQUIRED);
-  if (!AARetVal.getState().isValidState())
+  if (!AARetVal || !AARetVal->getState().isValidState())
     return false;
 
-  return AARetVal.checkForAllReturnedValuesAndReturnInsts(Pred);
+  return AARetVal->checkForAllReturnedValuesAndReturnInsts(Pred);
 }
 
 bool Attributor::checkForAllReturnedValues(
@@ -1863,12 +1872,12 @@ bool Attributor::checkForAllReturnedValues(
   // TODO: use the function scope once we have call site AAReturnedValues.
   const IRPosition &QueryIRP = IRPosition::function(
       *AssociatedFunction, QueryingAA.getCallBaseContext());
-  const auto &AARetVal =
+  const auto *AARetVal =
       getAAFor<AAReturnedValues>(QueryingAA, QueryIRP, DepClassTy::REQUIRED);
-  if (!AARetVal.getState().isValidState())
+  if (!AARetVal || !AARetVal->getState().isValidState())
     return false;
 
-  return AARetVal.checkForAllReturnedValuesAndReturnInsts(
+  return AARetVal->checkForAllReturnedValuesAndReturnInsts(
       [&](Value &RV, const SmallSetVector<ReturnInst *, 4> &) {
         return Pred(RV);
       });
@@ -1920,7 +1929,7 @@ bool Attributor::checkForAllInstructions(function_ref<bool(Instruction &)> Pred,
   const auto *LivenessAA =
       CheckPotentiallyDead
           ? nullptr
-          : &(getAAFor<AAIsDead>(QueryingAA, QueryIRP, DepClassTy::NONE));
+          : (getAAFor<AAIsDead>(QueryingAA, QueryIRP, DepClassTy::NONE));
 
   auto &OpcodeInstMap = InfoCache.getOpcodeInstMapForFunction(*Fn);
   if (!checkForAllInstructionsImpl(this, OpcodeInstMap, Pred, &QueryingAA,
@@ -1947,6 +1956,7 @@ bool Attributor::checkForAllInstructions(function_ref<bool(Instruction &)> Pred,
 bool Attributor::checkForAllReadWriteInstructions(
     function_ref<bool(Instruction &)> Pred, AbstractAttribute &QueryingAA,
     bool &UsedAssumedInformation) {
+  TimeTraceScope TS("checkForAllReadWriteInstructions");
 
   const Function *AssociatedFunction =
       QueryingAA.getIRPosition().getAssociatedFunction();
@@ -1955,13 +1965,13 @@ bool Attributor::checkForAllReadWriteInstructions(
 
   // TODO: use the function scope once we have call site AAReturnedValues.
   const IRPosition &QueryIRP = IRPosition::function(*AssociatedFunction);
-  const auto &LivenessAA =
+  const auto *LivenessAA =
       getAAFor<AAIsDead>(QueryingAA, QueryIRP, DepClassTy::NONE);
 
   for (Instruction *I :
        InfoCache.getReadOrWriteInstsForFunction(*AssociatedFunction)) {
     // Skip dead instructions.
-    if (isAssumedDead(IRPosition::inst(*I), &QueryingAA, &LivenessAA,
+    if (isAssumedDead(IRPosition::inst(*I), &QueryingAA, LivenessAA,
                       UsedAssumedInformation))
       continue;
 
@@ -2069,8 +2079,7 @@ void Attributor::runTillFixpoint() {
                     QueryAAsAwaitingUpdate.end());
     QueryAAsAwaitingUpdate.clear();
 
-  } while (!Worklist.empty() &&
-           (IterationCounter++ < MaxIterations || VerifyMaxFixpointIterations));
+  } while (!Worklist.empty() && (IterationCounter++ < MaxIterations));
 
   if (IterationCounter > MaxIterations && !Functions.empty()) {
     auto Remark = [&](OptimizationRemarkMissed ORM) {
@@ -2113,13 +2122,6 @@ void Attributor::runTillFixpoint() {
       dbgs() << "\n[Attributor] Finalized " << Visited.size()
              << " abstract attributes.\n";
   });
-
-  if (VerifyMaxFixpointIterations && IterationCounter != MaxIterations) {
-    errs() << "\n[Attributor] Fixpoint iteration done after: "
-           << IterationCounter << "/" << MaxIterations << " iterations\n";
-    llvm_unreachable("The fixpoint was not reached with exactly the number of "
-                     "specified iterations!");
-  }
 }
 
 void Attributor::registerForUpdate(AbstractAttribute &AA) {
@@ -2323,9 +2325,9 @@ ChangeStatus Attributor::cleanupIR() {
       if (CB->isArgOperand(U)) {
         unsigned Idx = CB->getArgOperandNo(U);
         CB->removeParamAttr(Idx, Attribute::NoUndef);
-        Function *Fn = CB->getCalledFunction();
-        if (Fn && Fn->arg_size() > Idx)
-          Fn->removeParamAttr(Idx, Attribute::NoUndef);
+        auto *Callee = dyn_cast_if_present<Function>(CB->getCalledOperand());
+        if (Callee && Callee->arg_size() > Idx)
+          Callee->removeParamAttr(Idx, Attribute::NoUndef);
       }
     }
     if (isa<Constant>(NewV) && isa<BranchInst>(U->getUser())) {
@@ -2724,7 +2726,10 @@ bool Attributor::isValidFunctionSignatureRewrite(
         ACS.getInstruction()->getType() !=
             ACS.getCalledFunction()->getReturnType())
       return false;
-    if (ACS.getCalledOperand()->getType() != Fn->getType())
+    if (cast<CallBase>(ACS.getInstruction())->getCalledOperand()->getType() !=
+        Fn->getType())
+      return false;
+    if (ACS.getNumArgOperands() != Fn->arg_size())
       return false;
     // Forbid must-tail calls for now.
     return !ACS.isCallbackCall() && !ACS.getInstruction()->isMustTailCall();
@@ -2750,7 +2755,8 @@ bool Attributor::isValidFunctionSignatureRewrite(
   // Avoid callbacks for now.
   bool UsedAssumedInformation = false;
   if (!checkForAllCallSites(CallSiteCanBeChanged, *Fn, true, nullptr,
-                            UsedAssumedInformation)) {
+                            UsedAssumedInformation,
+                            /* CheckPotentiallyDead */ true)) {
     LLVM_DEBUG(dbgs() << "[Attributor] Cannot rewrite all call sites\n");
     return false;
   }
@@ -3093,7 +3099,8 @@ void InformationCache::initializeInformationCache(const Function &CF,
         AddToAssumeUsesMap(*Assume->getArgOperand(0));
       } else if (cast<CallInst>(I).isMustTailCall()) {
         FI.ContainsMustTailCall = true;
-        if (const Function *Callee = cast<CallInst>(I).getCalledFunction())
+        if (auto *Callee = dyn_cast_if_present<Function>(
+                cast<CallInst>(I).getCalledOperand()))
           getFunctionInfo(*Callee).CalledViaMustTail = true;
       }
       [[fallthrough]];
@@ -3127,10 +3134,6 @@ void InformationCache::initializeInformationCache(const Function &CF,
   if (F.hasFnAttribute(Attribute::AlwaysInline) &&
       isInlineViable(F).isSuccess())
     InlineableFunctions.insert(&F);
-}
-
-AAResults *InformationCache::getAAResultsForFunction(const Function &F) {
-  return AG.getAnalysis<AAManager>(F);
 }
 
 InformationCache::FunctionInfo::~FunctionInfo() {
@@ -3327,7 +3330,7 @@ void Attributor::identifyDefaultAbstractAttributes(Function &F) {
     // users. The return value might be dead if there are no live users.
     getOrCreateAAFor<AAIsDead>(CBInstPos);
 
-    Function *Callee = CB.getCalledFunction();
+    Function *Callee = dyn_cast_if_present<Function>(CB.getCalledOperand());
     // TODO: Even if the callee is not known now we might be able to simplify
     //       the call/callee.
     if (!Callee)

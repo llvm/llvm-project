@@ -6,8 +6,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-// TODO: Support for big-endian architectures.
-
 #include "mlir/Bytecode/BytecodeReader.h"
 #include "mlir/AsmParser/AsmParser.h"
 #include "mlir/Bytecode/BytecodeImplementation.h"
@@ -27,6 +25,7 @@
 #include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringRef.h"
+#include "llvm/Support/Endian.h"
 #include "llvm/Support/MemoryBufferRef.h"
 #include "llvm/Support/SaveAndRestore.h"
 #include "llvm/Support/SourceMgr.h"
@@ -203,8 +202,14 @@ public:
     // Handle the overwhelming uncommon case where the value required all 8
     // bytes (i.e. a really really big number). In this case, the marker byte is
     // all zeros: `00000000`.
-    if (LLVM_UNLIKELY(result == 0))
-      return parseBytes(sizeof(result), reinterpret_cast<uint8_t *>(&result));
+    if (LLVM_UNLIKELY(result == 0)) {
+      llvm::support::ulittle64_t resultLE;
+      if (failed(parseBytes(sizeof(resultLE),
+                            reinterpret_cast<uint8_t *>(&resultLE))))
+        return failure();
+      result = resultLE;
+      return success();
+    }
     return parseMultiByteVarInt(result);
   }
 
@@ -305,12 +310,13 @@ private:
            "unexpected number of trailing zeros in varint encoding");
 
     // Parse in the remaining bytes of the value.
-    if (failed(parseBytes(numBytes, reinterpret_cast<uint8_t *>(&result) + 1)))
+    llvm::support::ulittle64_t resultLE(result);
+    if (failed(parseBytes(numBytes, reinterpret_cast<uint8_t *>(&resultLE) + 1)))
       return failure();
 
     // Shift out the low-order bits that were used to mark how the value was
     // encoded.
-    result >>= (numBytes + 1);
+    result = resultLE >> (numBytes + 1);
     return success();
   }
 

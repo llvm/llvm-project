@@ -62,7 +62,7 @@ attributes #1 = { "kernel" }
 ; CHECK: attributes #[[ATTR0]] = { norecurse nosync nounwind memory(read) }
 ; CHECK: attributes #[[ATTR1]] = { "kernel" }
 ; CHECK: attributes #[[ATTR2:[0-9]+]] = { nocallback }
-; CHECK: attributes #[[ATTR3:[0-9]+]] = { nosync nounwind }
+; CHECK: attributes #[[ATTR3:[0-9]+]] = { nosync nounwind memory(read) }
 ;.
 ; CHECK: [[META0:![0-9]+]] = !{i32 7, !"openmp", i32 50}
 ; CHECK: [[META1:![0-9]+]] = !{i32 7, !"openmp-device", i32 50}

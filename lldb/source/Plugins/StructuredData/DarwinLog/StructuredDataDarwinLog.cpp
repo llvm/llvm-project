@@ -875,9 +875,10 @@ protected:
           process_sp->GetStructuredDataPlugin(GetDarwinLogTypeName());
       stream.Printf("Availability: %s\n",
                     plugin_sp ? "available" : "unavailable");
-      llvm::StringRef plugin_name = StructuredDataDarwinLog::GetStaticPluginName();
       const bool enabled =
-          plugin_sp ? plugin_sp->GetEnabled(ConstString(plugin_name)) : false;
+          plugin_sp ? plugin_sp->GetEnabled(
+                          StructuredDataDarwinLog::GetStaticPluginName())
+                    : false;
       stream.Printf("Enabled: %s\n", enabled ? "true" : "false");
     }
 
@@ -1057,12 +1058,12 @@ void StructuredDataDarwinLog::Terminate() {
 // StructuredDataPlugin API
 
 bool StructuredDataDarwinLog::SupportsStructuredDataType(
-    ConstString type_name) {
+    llvm::StringRef type_name) {
   return type_name == GetDarwinLogTypeName();
 }
 
 void StructuredDataDarwinLog::HandleArrivalOfStructuredData(
-    Process &process, ConstString type_name,
+    Process &process, llvm::StringRef type_name,
     const StructuredData::ObjectSP &object_sp) {
   Log *log = GetLog(LLDBLog::Process);
   if (log) {
@@ -1086,11 +1087,9 @@ void StructuredDataDarwinLog::HandleArrivalOfStructuredData(
 
   // Ignore any data that isn't for us.
   if (type_name != GetDarwinLogTypeName()) {
-    LLDB_LOGF(log,
-              "StructuredDataDarwinLog::%s() StructuredData type "
-              "expected to be %s but was %s, ignoring",
-              __FUNCTION__, GetDarwinLogTypeName().str().c_str(),
-              type_name.AsCString());
+    LLDB_LOG(log,
+             "StructuredData type expected to be {0} but was {1}, ignoring",
+             GetDarwinLogTypeName(), type_name);
     return;
   }
 
@@ -1200,11 +1199,10 @@ Status StructuredDataDarwinLog::GetDescription(
   return error;
 }
 
-bool StructuredDataDarwinLog::GetEnabled(ConstString type_name) const {
-  if (type_name.GetStringRef() == GetStaticPluginName())
+bool StructuredDataDarwinLog::GetEnabled(llvm::StringRef type_name) const {
+  if (type_name == GetStaticPluginName())
     return m_is_enabled;
-  else
-    return false;
+  return false;
 }
 
 void StructuredDataDarwinLog::SetEnabled(bool enabled) {

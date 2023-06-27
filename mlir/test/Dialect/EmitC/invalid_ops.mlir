@@ -118,3 +118,52 @@ func.func @cast_tensor(%arg : tensor<f32>) {
     %1 = emitc.cast %arg: tensor<f32> to tensor<f32>
     return
 }
+
+// -----
+
+func.func @add_two_pointers(%arg0: !emitc.ptr<f32>, %arg1: !emitc.ptr<f32>) {
+    // expected-error @+1 {{'emitc.add' op requires that at most one operand is a pointer}}
+    %1 = "emitc.add" (%arg0, %arg1) : (!emitc.ptr<f32>, !emitc.ptr<f32>) -> !emitc.ptr<f32>
+    return
+}
+
+// -----
+
+func.func @add_pointer_float(%arg0: !emitc.ptr<f32>, %arg1: f32) {
+    // expected-error @+1 {{'emitc.add' op requires that one operand is an integer or of opaque type if the other is a pointer}}
+    %1 = "emitc.add" (%arg0, %arg1) : (!emitc.ptr<f32>, f32) -> !emitc.ptr<f32>
+    return
+}
+
+// -----
+
+func.func @add_float_pointer(%arg0: f32, %arg1: !emitc.ptr<f32>) {
+    // expected-error @+1 {{'emitc.add' op requires that one operand is an integer or of opaque type if the other is a pointer}}
+    %1 = "emitc.add" (%arg0, %arg1) : (f32, !emitc.ptr<f32>) -> !emitc.ptr<f32>
+    return
+}
+
+// -----
+
+func.func @sub_int_pointer(%arg0: i32, %arg1: !emitc.ptr<f32>) {
+    // expected-error @+1 {{'emitc.sub' op rhs can only be a pointer if lhs is a pointer}}
+    %1 = "emitc.sub" (%arg0, %arg1) : (i32, !emitc.ptr<f32>) -> !emitc.ptr<f32>
+    return
+}
+
+
+// -----
+
+func.func @sub_pointer_float(%arg0: !emitc.ptr<f32>, %arg1: f32) {
+    // expected-error @+1 {{'emitc.sub' op requires that rhs is an integer, pointer or of opaque type if lhs is a pointer}}
+    %1 = "emitc.sub" (%arg0, %arg1) : (!emitc.ptr<f32>, f32) -> !emitc.ptr<f32>
+    return
+}
+
+// -----
+
+func.func @sub_pointer_pointer(%arg0: !emitc.ptr<f32>, %arg1: !emitc.ptr<f32>) {
+    // expected-error @+1 {{'emitc.sub' op requires that the result is an integer or of opaque type if lhs and rhs are pointers}}
+    %1 = "emitc.sub" (%arg0, %arg1) : (!emitc.ptr<f32>, !emitc.ptr<f32>) -> !emitc.ptr<f32>
+    return
+}

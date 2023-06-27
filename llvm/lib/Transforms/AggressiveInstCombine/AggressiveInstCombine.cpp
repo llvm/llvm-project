@@ -803,8 +803,7 @@ static bool foldConsecutiveLoads(Instruction &I, const DataLayout &DL,
                                  Builder.getInt32(Offset1.getZExtValue()));
   }
   // Generate wider load.
-  Value *NewPtr = Builder.CreateBitCast(Load1Ptr, WiderType->getPointerTo(AS));
-  NewLoad = Builder.CreateAlignedLoad(WiderType, NewPtr, LI1->getAlign(),
+  NewLoad = Builder.CreateAlignedLoad(WiderType, Load1Ptr, LI1->getAlign(),
                                       LI1->isVolatile(), "");
   NewLoad->takeName(LI1);
   // Set the New Load AATags Metadata.

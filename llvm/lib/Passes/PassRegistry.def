@@ -60,7 +60,6 @@ MODULE_PASS("elim-avail-extern", EliminateAvailableExternallyPass())
 MODULE_PASS("extract-blocks", BlockExtractorPass({}, false))
 MODULE_PASS("forceattrs", ForceFunctionAttrsPass())
 MODULE_PASS("function-import", FunctionImportPass())
-MODULE_PASS("globaldce", GlobalDCEPass())
 MODULE_PASS("globalopt", GlobalOptPass())
 MODULE_PASS("globalsplit", GlobalSplitPass())
 MODULE_PASS("hotcoldsplit", HotColdSplittingPass())
@@ -142,6 +141,13 @@ MODULE_PASS_WITH_PARAMS("loop-extract",
                         },
                         parseLoopExtractorPassOptions,
                         "single")
+MODULE_PASS_WITH_PARAMS("globaldce",
+                        "GlobalDCEPass",
+                        [](bool InLTOPostLink) {
+                          return GlobalDCEPass(InLTOPostLink);
+                        },
+                        parseGlobalDCEPassOptions,
+                        "in-lto-post-link")
 MODULE_PASS_WITH_PARAMS("hwasan",
                         "HWAddressSanitizerPass",
                         [](HWAddressSanitizerOptions Opts) {
@@ -565,7 +571,6 @@ LOOP_PASS("dot-ddg", DDGDotPrinterPass())
 LOOP_PASS("invalidate<all>", InvalidateAllAnalysesPass())
 LOOP_PASS("loop-idiom", LoopIdiomRecognizePass())
 LOOP_PASS("loop-instsimplify", LoopInstSimplifyPass())
-LOOP_PASS("loop-rotate", LoopRotatePass())
 LOOP_PASS("no-op-loop", NoOpLoopPass())
 LOOP_PASS("print", PrintLoopPass(dbgs()))
 LOOP_PASS("loop-deletion", LoopDeletionPass())
@@ -608,4 +613,12 @@ LOOP_PASS_WITH_PARAMS("lnicm", "LNICMPass",
                       },
                       parseLICMOptions,
                       "allowspeculation");
+
+LOOP_PASS_WITH_PARAMS("loop-rotate",
+                      "LoopRotatePass",
+                      [](std::pair<bool, bool> Params) {
+                        return LoopRotatePass(Params.first, Params.second);
+                      },
+                      parseLoopRotateOptions,
+                      "no-header-duplication;header-duplication;no-prepare-for-lto;prepare-for-lto")
 #undef LOOP_PASS_WITH_PARAMS

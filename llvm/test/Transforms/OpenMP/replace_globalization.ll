@@ -157,7 +157,7 @@ declare void @unknown_no_openmp() "llvm.assume"="omp_no_openmp"
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i32 [[C]], -1
 ; CHECK-NEXT:    br i1 [[CMP]], label [[MASTER1:%.*]], label [[EXIT:%.*]]
 ; CHECK:       master1:
-; CHECK-NEXT:    call void @use.internalized(ptr nofree addrspacecast (ptr addrspace(3) @x_shared to ptr)) #[[ATTR3]]
+; CHECK-NEXT:    call void @use.internalized(ptr nofree addrspacecast (ptr addrspace(3) @x_shared to ptr)) #[[ATTR7:[0-9]+]]
 ; CHECK-NEXT:    br label [[NEXT:%.*]]
 ; CHECK:       next:
 ; CHECK-NEXT:    call void @unknown_no_openmp()
@@ -222,6 +222,7 @@ declare void @unknown_no_openmp() "llvm.assume"="omp_no_openmp"
 ; CHECK: attributes #[[ATTR4:[0-9]+]] = { nocallback nofree nosync nounwind speculatable willreturn memory(none) }
 ; CHECK: attributes #[[ATTR5:[0-9]+]] = { "llvm.assume"="omp_no_openmp" }
 ; CHECK: attributes #[[ATTR6]] = { nounwind }
+; CHECK: attributes #[[ATTR7]] = { nosync nounwind memory(write) }
 ;.
 ; CHECK: [[META0:![0-9]+]] = distinct !DICompileUnit(language: DW_LANG_C99, file: !1, producer: "clang version 12.0.0", isOptimized: false, runtimeVersion: 0, emissionKind: FullDebug, enums: !2, splitDebugInlining: false, nameTableKind: None)
 ; CHECK: [[META1:![0-9]+]] = !DIFile(filename: "replace_globalization.c", directory: "/tmp/replace_globalization.c")

@@ -334,8 +334,15 @@ const SCEV *IVUsers::getReplacementExpr(const IVStrideUse &IU) const {
 
 /// getExpr - Return the expression for the use.
 const SCEV *IVUsers::getExpr(const IVStrideUse &IU) const {
-  return normalizeForPostIncUse(getReplacementExpr(IU), IU.getPostIncLoops(),
-                                *SE);
+  const SCEV *Replacement = getReplacementExpr(IU);
+  const SCEV *Normalized =
+      normalizeForPostIncUse(Replacement, IU.getPostIncLoops(), *SE);
+  const SCEV *Denormalized =
+      denormalizeForPostIncUse(Normalized, IU.getPostIncLoops(), *SE);
+  // If the normalized expression isn't invertible.
+  if (Denormalized != Replacement)
+    return nullptr;
+  return Normalized;
 }
 
 static const SCEVAddRecExpr *findAddRecForLoop(const SCEV *S, const Loop *L) {

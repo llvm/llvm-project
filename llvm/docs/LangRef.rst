@@ -3431,6 +3431,8 @@ floating-point transformations.
    to form arbitrary contractions. For example, ``(a*b) + (c*d) + e`` can not
    be transformed into ``(a*b) + ((c*d) + e)`` to create two fma operations.
 
+.. _fastmath_afn:
+
 ``afn``
    Approximate functions - Allow substitution of approximate calculations for
    functions (sin, log, sqrt, etc). See floating-point intrinsic definitions
@@ -14829,6 +14831,9 @@ trapping or setting ``errno``.
 
 When specified with the fast-math-flag 'afn', the result may be approximated
 using a less accurate calculation.
+
+
+.. _int_log2:
 
 '``llvm.log2.*``' Intrinsic
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^

@@ -2029,8 +2029,8 @@ void SelectionDAGBuilder::visitRet(const ReturnInst &I) {
     // registers the usual way.
     SmallVector<EVT, 1> PtrValueVTs;
     ComputeValueVTs(TLI, DL,
-                    F->getReturnType()->getPointerTo(
-                        DAG.getDataLayout().getAllocaAddrSpace()),
+                    PointerType::get(F->getContext(),
+                                     DAG.getDataLayout().getAllocaAddrSpace()),
                     PtrValueVTs);
 
     SDValue RetPtr =
@@ -7204,10 +7204,9 @@ void SelectionDAGBuilder::visitIntrinsicCall(const CallInst &I,
   }
   case Intrinsic::xray_customevent: {
     // Here we want to make sure that the intrinsic behaves as if it has a
-    // specific calling convention, and only for x86_64.
-    // FIXME: Support other platforms later.
+    // specific calling convention.
     const auto &Triple = DAG.getTarget().getTargetTriple();
-    if (Triple.getArch() != Triple::x86_64)
+    if (!Triple.isAArch64(64) && Triple.getArch() != Triple::x86_64)
       return;
 
     SmallVector<SDValue, 8> Ops;
@@ -7234,10 +7233,9 @@ void SelectionDAGBuilder::visitIntrinsicCall(const CallInst &I,
   }
   case Intrinsic::xray_typedevent: {
     // Here we want to make sure that the intrinsic behaves as if it has a
-    // specific calling convention, and only for x86_64.
-    // FIXME: Support other platforms later.
+    // specific calling convention.
     const auto &Triple = DAG.getTarget().getTargetTriple();
-    if (Triple.getArch() != Triple::x86_64)
+    if (!Triple.isAArch64(64) && Triple.getArch() != Triple::x86_64)
       return;
 
     SmallVector<SDValue, 8> Ops;
@@ -10364,7 +10362,8 @@ TargetLowering::LowerCallTo(TargetLowering::CallLoweringInfo &CLI) const {
     // The instruction result is the result of loading from the
     // hidden sret parameter.
     SmallVector<EVT, 1> PVTs;
-    Type *PtrRetTy = OrigRetTy->getPointerTo(DL.getAllocaAddrSpace());
+    Type *PtrRetTy =
+        PointerType::get(OrigRetTy->getContext(), DL.getAllocaAddrSpace());
 
     ComputeValueVTs(*this, DL, PtrRetTy, PVTs);
     assert(PVTs.size() == 1 && "Pointers should fit in one register");
@@ -10616,9 +10615,9 @@ static void tryToElideArgumentCopy(
     DenseMap<int, int> &ArgCopyElisionFrameIndexMap,
     SmallPtrSetImpl<const Instruction *> &ElidedArgCopyInstrs,
     ArgCopyElisionMapTy &ArgCopyElisionCandidates, const Argument &Arg,
-    SDValue ArgVal, bool &ArgHasUses) {
+    ArrayRef<SDValue> ArgVals, bool &ArgHasUses) {
   // Check if this is a load from a fixed stack object.
-  auto *LNode = dyn_cast<LoadSDNode>(ArgVal);
+  auto *LNode = dyn_cast<LoadSDNode>(ArgVals[0]);
   if (!LNode)
     return;
   auto *FINode = dyn_cast<FrameIndexSDNode>(LNode->getBasePtr().getNode());
@@ -10661,7 +10660,8 @@ static void tryToElideArgumentCopy(
   MFI.setIsImmutableObjectIndex(FixedIndex, false);
   AllocaIndex = FixedIndex;
   ArgCopyElisionFrameIndexMap.insert({OldIndex, FixedIndex});
-  Chains.push_back(ArgVal.getValue(1));
+  for (SDValue ArgVal : ArgVals)
+    Chains.push_back(ArgVal.getValue(1));
 
   // Avoid emitting code for the store implementing the copy.
   const StoreInst *SI = ArgCopyIter->second.second;
@@ -10691,8 +10691,8 @@ void SelectionDAGISel::LowerArguments(const Function &F) {
     // Put in an sret pointer parameter before all the other parameters.
     SmallVector<EVT, 1> ValueVTs;
     ComputeValueVTs(*TLI, DAG.getDataLayout(),
-                    F.getReturnType()->getPointerTo(
-                        DAG.getDataLayout().getAllocaAddrSpace()),
+                    PointerType::get(F.getContext(),
+                                     DAG.getDataLayout().getAllocaAddrSpace()),
                     ValueVTs);
 
     // NOTE: Assuming that a pointer will never break down to more than one VT
@@ -10885,8 +10885,8 @@ void SelectionDAGISel::LowerArguments(const Function &F) {
     // from the sret argument into it.
     SmallVector<EVT, 1> ValueVTs;
     ComputeValueVTs(*TLI, DAG.getDataLayout(),
-                    F.getReturnType()->getPointerTo(
-                        DAG.getDataLayout().getAllocaAddrSpace()),
+                    PointerType::get(F.getContext(),
+                                     DAG.getDataLayout().getAllocaAddrSpace()),
                     ValueVTs);
     MVT VT = ValueVTs[0].getSimpleVT();
     MVT RegVT = TLI->getRegisterType(*CurDAG->getContext(), VT);
@@ -10922,9 +10922,14 @@ void SelectionDAGISel::LowerArguments(const Function &F) {
     // Elide the copying store if the target loaded this argument from a
     // suitable fixed stack object.
     if (Ins[i].Flags.isCopyElisionCandidate()) {
+      unsigned NumParts = 0;
+      for (EVT VT : ValueVTs)
+        NumParts += TLI->getNumRegistersForCallingConv(*CurDAG->getContext(),
+                                                       F.getCallingConv(), VT);
+
       tryToElideArgumentCopy(*FuncInfo, Chains, ArgCopyElisionFrameIndexMap,
                              ElidedArgCopyInstrs, ArgCopyElisionCandidates, Arg,
-                             InVals[i], ArgHasUses);
+                             ArrayRef(&InVals[i], NumParts), ArgHasUses);
     }
 
     // If this argument is unused then remember its value. It is used to generate

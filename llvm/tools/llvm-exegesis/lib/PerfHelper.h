@@ -23,10 +23,6 @@
 #include <functional>
 #include <memory>
 
-#ifndef HAVE_LIBPFM
-typedef int pid_t;
-#endif // HAVE_LIBPFM
-
 struct perf_event_attr;
 
 namespace llvm {
@@ -80,7 +76,7 @@ private:
 class Counter {
 public:
   // event: the PerfEvent to measure.
-  explicit Counter(PerfEvent &&event, pid_t ProcessID = 0);
+  explicit Counter(PerfEvent &&event);
 
   Counter(const Counter &) = delete;
   Counter(Counter &&other) = default;
@@ -107,15 +103,15 @@ public:
 
   virtual int numValues() const;
 
-  int getFileDescriptor() const { return FileDescriptor; }
-
 protected:
   PerfEvent Event;
+#ifdef HAVE_LIBPFM
   int FileDescriptor = -1;
+#endif
   bool IsDummyEvent;
 
 private:
-  void initRealEvent(const PerfEvent &E, pid_t ProcessID);
+  void initRealEvent(const PerfEvent &E);
 };
 
 } // namespace pfm

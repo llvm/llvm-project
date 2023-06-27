@@ -40,7 +40,7 @@ define internal i1 @__kmpc_kernel_parallel() {
 ;
 ;.
 ; CHECK: attributes #[[ATTR0]] = { norecurse nosync nounwind memory(write) }
-; CHECK: attributes #[[ATTR1:[0-9]+]] = { nosync nounwind }
+; CHECK: attributes #[[ATTR1:[0-9]+]] = { nosync nounwind memory(write) }
 ;.
 ; CHECK: [[META0:![0-9]+]] = !{i32 7, !"openmp", i32 50}
 ;.

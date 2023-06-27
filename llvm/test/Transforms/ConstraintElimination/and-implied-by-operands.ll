@@ -319,3 +319,81 @@ loop.latch:
 exit:
   ret void
 }
+
+define i1 @test_and_used_in_false_branch(i8 %x) {
+; CHECK-LABEL: @test_and_used_in_false_branch(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[C_1:%.*]] = icmp ugt i8 [[X:%.*]], 10
+; CHECK-NEXT:    [[T_1:%.*]] = icmp ugt i8 [[X]], 5
+; CHECK-NEXT:    [[AND:%.*]] = and i1 [[C_1]], [[T_1]]
+; CHECK-NEXT:    br i1 [[AND]], label [[THEN:%.*]], label [[ELSE:%.*]]
+; CHECK:       then:
+; CHECK-NEXT:    ret i1 [[T_1]]
+; CHECK:       else:
+; CHECK-NEXT:    ret i1 [[T_1]]
+;
+
+entry:
+  %c.1 = icmp ugt i8 %x, 10
+  %t.1 = icmp ugt i8 %x, 5
+  %and = and i1 %c.1, %t.1
+  br i1 %and, label %then, label %else
+
+then:
+  ret i1 %t.1
+
+else:
+  ret i1 %t.1
+}
+
+define i1 @test_or_used_in_false_branch(i8 %x) {
+; CHECK-LABEL: @test_or_used_in_false_branch(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[C_1:%.*]] = icmp ule i8 [[X:%.*]], 10
+; CHECK-NEXT:    [[T_1:%.*]] = icmp ule i8 [[X]], 5
+; CHECK-NEXT:    [[AND:%.*]] = or i1 [[C_1]], [[T_1]]
+; CHECK-NEXT:    br i1 [[AND]], label [[THEN:%.*]], label [[ELSE:%.*]]
+; CHECK:       then:
+; CHECK-NEXT:    ret i1 [[T_1]]
+; CHECK:       else:
+; CHECK-NEXT:    ret i1 [[T_1]]
+;
+
+entry:
+  %c.1 = icmp ule i8 %x, 10
+  %t.1 = icmp ule i8 %x, 5
+  %and = or i1 %c.1, %t.1
+  br i1 %and, label %then, label %else
+
+then:
+  ret i1 %t.1
+
+else:
+  ret i1 %t.1
+}
+
+define i1 @test_or_used_in_false_branch2(i8 %x) {
+; CHECK-LABEL: @test_or_used_in_false_branch2(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[C_1:%.*]] = icmp ugt i8 [[X:%.*]], 10
+; CHECK-NEXT:    [[T_1:%.*]] = icmp ugt i8 [[X]], 5
+; CHECK-NEXT:    [[AND:%.*]] = or i1 [[C_1]], [[T_1]]
+; CHECK-NEXT:    br i1 [[AND]], label [[THEN:%.*]], label [[ELSE:%.*]]
+; CHECK:       then:
+; CHECK-NEXT:    ret i1 [[T_1]]
+; CHECK:       else:
+; CHECK-NEXT:    ret i1 [[T_1]]
+;
+
+entry:
+  %c.1 = icmp ugt i8 %x, 10
+  %t.1 = icmp ugt i8 %x, 5
+  %and = or i1 %c.1, %t.1
+  br i1 %and, label %then, label %else
+
+then:
+  ret i1 %t.1
+
+else:
+  ret i1 %t.1
+}

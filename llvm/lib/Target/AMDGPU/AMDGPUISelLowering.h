@@ -60,6 +60,7 @@ protected:
   SDValue LowerFROUNDEVEN(SDValue Op, SelectionDAG &DAG) const;
   SDValue LowerFROUND(SDValue Op, SelectionDAG &DAG) const;
   SDValue LowerFFLOOR(SDValue Op, SelectionDAG &DAG) const;
+  SDValue LowerFLOG2(SDValue Op, SelectionDAG &DAG) const;
   SDValue LowerFLOG(SDValue Op, SelectionDAG &DAG,
                     double Log2BaseInverted) const;
   SDValue lowerFEXP(SDValue Op, SelectionDAG &DAG) const;

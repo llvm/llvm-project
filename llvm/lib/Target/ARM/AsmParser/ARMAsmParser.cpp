@@ -1232,6 +1232,18 @@ public:
     return isImmediate<8, 255>();
   }
 
+  bool isImm0_255Expr() const {
+    if (!isImm())
+      return false;
+    const MCConstantExpr *CE = dyn_cast<MCConstantExpr>(getImm());
+    // If it's not a constant expression, it'll generate a fixup and be
+    // handled later.
+    if (!CE)
+      return true;
+    int64_t Value = CE->getValue();
+    return isUInt<8>(Value);
+  }
+
   bool isImm256_65535Expr() const {
     if (!isImm()) return false;
     const MCConstantExpr *CE = dyn_cast<MCConstantExpr>(getImm());
@@ -6272,7 +6284,8 @@ bool ARMAsmParser::parseOperand(OperandVector &Operands, StringRef Mnemonic) {
   }
   case AsmToken::Colon: {
     S = Parser.getTok().getLoc();
-    // ":lower16:" and ":upper16:" expression prefixes
+    // ":lower16:", ":upper16:", ":lower0_7:", ":lower8_15:", ":upper0_7:" and
+    // ":upper8_15:", expression prefixes
     // FIXME: Check it's an expression prefix,
     // e.g. (FOO - :lower16:BAR) isn't legal.
     ARMMCExpr::VariantKind RefKind;
@@ -6319,8 +6332,9 @@ bool ARMAsmParser::parseImmExpr(int64_t &Out) {
   return false;
 }
 
-// parsePrefix - Parse ARM 16-bit relocations expression prefix, i.e.
-//  :lower16: and :upper16:.
+// parsePrefix - Parse ARM 16-bit relocations expression prefixes, i.e.
+// :lower16: and :upper16: and Thumb 8-bit relocation expression prefixes, i.e.
+// :upper8_15:, :upper0_7:, :lower8_15: and :lower0_7:
 bool ARMAsmParser::parsePrefix(ARMMCExpr::VariantKind &RefKind) {
   MCAsmParser &Parser = getParser();
   RefKind = ARMMCExpr::VK_ARM_None;
@@ -6329,7 +6343,6 @@ bool ARMAsmParser::parsePrefix(ARMMCExpr::VariantKind &RefKind) {
   if (getLexer().is(AsmToken::Hash))
     Parser.Lex();
 
-  // :lower16: and :upper16: modifiers
   assert(getLexer().is(AsmToken::Colon) && "expected a :");
   Parser.Lex(); // Eat ':'
 
@@ -6349,8 +6362,12 @@ bool ARMAsmParser::parsePrefix(ARMMCExpr::VariantKind &RefKind) {
     ARMMCExpr::VariantKind VariantKind;
     uint8_t SupportedFormats;
   } PrefixEntries[] = {
-    { "lower16", ARMMCExpr::VK_ARM_LO16, COFF | ELF | MACHO },
-    { "upper16", ARMMCExpr::VK_ARM_HI16, COFF | ELF | MACHO },
+      {"upper16", ARMMCExpr::VK_ARM_HI16, COFF | ELF | MACHO},
+      {"lower16", ARMMCExpr::VK_ARM_LO16, COFF | ELF | MACHO},
+      {"upper8_15", ARMMCExpr::VK_ARM_HI_8_15, ELF},
+      {"upper0_7", ARMMCExpr::VK_ARM_HI_0_7, ELF},
+      {"lower8_15", ARMMCExpr::VK_ARM_LO_8_15, ELF},
+      {"lower0_7", ARMMCExpr::VK_ARM_LO_0_7, ELF},
   };
 
   StringRef IDVal = Parser.getTok().getIdentifier();
@@ -6400,6 +6417,9 @@ bool ARMAsmParser::parsePrefix(ARMMCExpr::VariantKind &RefKind) {
     return true;
   }
   Parser.Lex(); // Eat the last ':'
+
+  // consume an optional trailing '#' (GNU compatibility) bla
+  parseOptionalToken(AsmToken::Hash);
 
   return false;
 }
@@ -6711,6 +6731,27 @@ void ARMAsmParser::tryConvertingToTwoOperandForm(StringRef Mnemonic,
   }
 }
 
+// this function returns true if the operand is one of the following
+// relocations: :upper8_15:, :upper0_7:, :lower8_15: or :lower0_7:
+static bool isThumbI8Relocation(MCParsedAsmOperand &MCOp) {
+  ARMOperand &Op = static_cast<ARMOperand &>(MCOp);
+  if (!Op.isImm())
+    return false;
+  const MCConstantExpr *CE = dyn_cast<MCConstantExpr>(Op.getImm());
+  if (CE)
+    return false;
+  const MCExpr *E = dyn_cast<MCExpr>(Op.getImm());
+  if (!E)
+    return false;
+  const ARMMCExpr *ARM16Expr = dyn_cast<ARMMCExpr>(E);
+  if (ARM16Expr && (ARM16Expr->getKind() == ARMMCExpr::VK_ARM_HI_8_15 ||
+                    ARM16Expr->getKind() == ARMMCExpr::VK_ARM_HI_0_7 ||
+                    ARM16Expr->getKind() == ARMMCExpr::VK_ARM_LO_8_15 ||
+                    ARM16Expr->getKind() == ARMMCExpr::VK_ARM_LO_0_7))
+    return true;
+  return false;
+}
+
 bool ARMAsmParser::shouldOmitCCOutOperand(StringRef Mnemonic,
                                           OperandVector &Operands) {
   // FIXME: This is all horribly hacky. We really need a better way to deal
@@ -6728,6 +6769,10 @@ bool ARMAsmParser::shouldOmitCCOutOperand(StringRef Mnemonic,
       !static_cast<ARMOperand &>(*Operands[4]).isModImm() &&
       static_cast<ARMOperand &>(*Operands[4]).isImm0_65535Expr() &&
       static_cast<ARMOperand &>(*Operands[1]).getReg() == 0)
+    return true;
+
+  if (Mnemonic == "movs" && Operands.size() > 3 && isThumb() &&
+      isThumbI8Relocation(*Operands[3]))
     return true;
 
   // Register-register 'add' for thumb does not have a cc_out operand
@@ -7614,6 +7659,19 @@ static bool isVectorPredicable(const MCInstrDesc &MCID) {
   return findFirstVectorPredOperandIdx(MCID) != -1;
 }
 
+static bool isARMMCExpr(MCParsedAsmOperand &MCOp) {
+  ARMOperand &Op = static_cast<ARMOperand &>(MCOp);
+  if (!Op.isImm())
+    return false;
+  const MCConstantExpr *CE = dyn_cast<MCConstantExpr>(Op.getImm());
+  if (CE)
+    return false;
+  const MCExpr *E = dyn_cast<MCExpr>(Op.getImm());
+  if (!E)
+    return false;
+  return true;
+}
+
 // FIXME: We would really like to be able to tablegen'erate this.
 bool ARMAsmParser::validateInstruction(MCInst &Inst,
                                        const OperandVector &Operands) {
@@ -8221,6 +8279,22 @@ bool ARMAsmParser::validateInstruction(MCInst &Inst,
       return Error(
           Op.getStartLoc(),
           "immediate expression for mov requires :lower16: or :upper16");
+    break;
+  }
+  case ARM::tADDi8: {
+    MCParsedAsmOperand &Op = *Operands[4];
+    if (isARMMCExpr(Op) && !isThumbI8Relocation(Op))
+      return Error(Op.getStartLoc(),
+                   "Immediate expression for Thumb adds requires :lower0_7:,"
+                   " :lower8_15:, :upper0_7: or :upper8_15:");
+    break;
+  }
+  case ARM::tMOVi8: {
+    MCParsedAsmOperand &Op = *Operands[2];
+    if (isARMMCExpr(Op) && !isThumbI8Relocation(Op))
+      return Error(Op.getStartLoc(),
+                   "Immediate expression for Thumb movs requires :lower0_7:,"
+                   " :lower8_15:, :upper0_7: or :upper8_15:");
     break;
   }
   case ARM::HINT:
@@ -10541,7 +10615,8 @@ bool ARMAsmParser::processInstruction(MCInst &Inst,
     // explicitly specified. From the ARM ARM: "Encoding T1 is preferred
     // to encoding T2 if <Rd> is specified and encoding T2 is preferred
     // to encoding T1 if <Rd> is omitted."
-    if ((unsigned)Inst.getOperand(3).getImm() < 8 && Operands.size() == 6) {
+    if (Inst.getOperand(3).isImm() &&
+        (unsigned)Inst.getOperand(3).getImm() < 8 && Operands.size() == 6) {
       Inst.setOpcode(ARM::tADDi3);
       return true;
     }

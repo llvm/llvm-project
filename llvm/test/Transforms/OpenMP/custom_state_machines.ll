@@ -1546,13 +1546,11 @@ attributes #9 = { convergent nounwind readonly willreturn }
 ; AMDGPU:       worker_state_machine.is_active.check:
 ; AMDGPU-NEXT:    br i1 [[WORKER_IS_ACTIVE]], label [[WORKER_STATE_MACHINE_PARALLEL_REGION_CHECK:%.*]], label [[WORKER_STATE_MACHINE_DONE_BARRIER:%.*]]
 ; AMDGPU:       worker_state_machine.parallel_region.check:
-; AMDGPU-NEXT:    [[WORKER_CHECK_PARALLEL_REGION:%.*]] = icmp eq ptr [[WORKER_WORK_FN_ADDR_CAST]], @__omp_outlined__19_wrapper
-; AMDGPU-NEXT:    br i1 [[WORKER_CHECK_PARALLEL_REGION]], label [[WORKER_STATE_MACHINE_PARALLEL_REGION_EXECUTE:%.*]], label [[WORKER_STATE_MACHINE_PARALLEL_REGION_FALLBACK_EXECUTE:%.*]]
+; AMDGPU-NEXT:    br i1 true, label [[WORKER_STATE_MACHINE_PARALLEL_REGION_EXECUTE:%.*]], label [[WORKER_STATE_MACHINE_PARALLEL_REGION_CHECK1:%.*]]
 ; AMDGPU:       worker_state_machine.parallel_region.execute:
 ; AMDGPU-NEXT:    call void @__omp_outlined__19_wrapper(i16 0, i32 [[TMP0]])
 ; AMDGPU-NEXT:    br label [[WORKER_STATE_MACHINE_PARALLEL_REGION_END:%.*]]
-; AMDGPU:       worker_state_machine.parallel_region.fallback.execute:
-; AMDGPU-NEXT:    call void [[WORKER_WORK_FN_ADDR_CAST]](i16 0, i32 [[TMP0]])
+; AMDGPU:       worker_state_machine.parallel_region.check1:
 ; AMDGPU-NEXT:    br label [[WORKER_STATE_MACHINE_PARALLEL_REGION_END]]
 ; AMDGPU:       worker_state_machine.parallel_region.end:
 ; AMDGPU-NEXT:    call void @__kmpc_kernel_end_parallel()
@@ -1578,7 +1576,7 @@ attributes #9 = { convergent nounwind readonly willreturn }
 ; AMDGPU-NEXT:  entry:
 ; AMDGPU-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca ptr, align 8
 ; AMDGPU-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca ptr, align 8
-; AMDGPU-NEXT:    [[CALL:%.*]] = call i32 @omp_get_thread_num() #[[ATTR12]]
+; AMDGPU-NEXT:    [[CALL:%.*]] = call i32 @omp_get_thread_num() #[[ATTR10]]
 ; AMDGPU-NEXT:    call void @simple_state_machine_interprocedural_nested_recursive_after.internalized(i32 [[CALL]]) #[[ATTR10]]
 ; AMDGPU-NEXT:    ret void
 ;
@@ -2488,13 +2486,11 @@ attributes #9 = { convergent nounwind readonly willreturn }
 ; NVPTX:       worker_state_machine.is_active.check:
 ; NVPTX-NEXT:    br i1 [[WORKER_IS_ACTIVE]], label [[WORKER_STATE_MACHINE_PARALLEL_REGION_CHECK:%.*]], label [[WORKER_STATE_MACHINE_DONE_BARRIER:%.*]]
 ; NVPTX:       worker_state_machine.parallel_region.check:
-; NVPTX-NEXT:    [[WORKER_CHECK_PARALLEL_REGION:%.*]] = icmp eq ptr [[WORKER_WORK_FN_ADDR_CAST]], @__omp_outlined__19_wrapper
-; NVPTX-NEXT:    br i1 [[WORKER_CHECK_PARALLEL_REGION]], label [[WORKER_STATE_MACHINE_PARALLEL_REGION_EXECUTE:%.*]], label [[WORKER_STATE_MACHINE_PARALLEL_REGION_FALLBACK_EXECUTE:%.*]]
+; NVPTX-NEXT:    br i1 true, label [[WORKER_STATE_MACHINE_PARALLEL_REGION_EXECUTE:%.*]], label [[WORKER_STATE_MACHINE_PARALLEL_REGION_CHECK1:%.*]]
 ; NVPTX:       worker_state_machine.parallel_region.execute:
 ; NVPTX-NEXT:    call void @__omp_outlined__19_wrapper(i16 0, i32 [[TMP0]])
 ; NVPTX-NEXT:    br label [[WORKER_STATE_MACHINE_PARALLEL_REGION_END:%.*]]
-; NVPTX:       worker_state_machine.parallel_region.fallback.execute:
-; NVPTX-NEXT:    call void [[WORKER_WORK_FN_ADDR_CAST]](i16 0, i32 [[TMP0]])
+; NVPTX:       worker_state_machine.parallel_region.check1:
 ; NVPTX-NEXT:    br label [[WORKER_STATE_MACHINE_PARALLEL_REGION_END]]
 ; NVPTX:       worker_state_machine.parallel_region.end:
 ; NVPTX-NEXT:    call void @__kmpc_kernel_end_parallel()
@@ -2520,7 +2516,7 @@ attributes #9 = { convergent nounwind readonly willreturn }
 ; NVPTX-NEXT:  entry:
 ; NVPTX-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca ptr, align 8
 ; NVPTX-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca ptr, align 8
-; NVPTX-NEXT:    [[CALL:%.*]] = call i32 @omp_get_thread_num() #[[ATTR12]]
+; NVPTX-NEXT:    [[CALL:%.*]] = call i32 @omp_get_thread_num() #[[ATTR10]]
 ; NVPTX-NEXT:    call void @simple_state_machine_interprocedural_nested_recursive_after.internalized(i32 [[CALL]]) #[[ATTR10]]
 ; NVPTX-NEXT:    ret void
 ;
@@ -3217,7 +3213,7 @@ attributes #9 = { convergent nounwind readonly willreturn }
 ; AMDGPU-DISABLED-NEXT:  entry:
 ; AMDGPU-DISABLED-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca ptr, align 8
 ; AMDGPU-DISABLED-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca ptr, align 8
-; AMDGPU-DISABLED-NEXT:    [[CALL:%.*]] = call i32 @omp_get_thread_num() #[[ATTR12]]
+; AMDGPU-DISABLED-NEXT:    [[CALL:%.*]] = call i32 @omp_get_thread_num() #[[ATTR10]]
 ; AMDGPU-DISABLED-NEXT:    call void @simple_state_machine_interprocedural_nested_recursive_after.internalized(i32 [[CALL]]) #[[ATTR10]]
 ; AMDGPU-DISABLED-NEXT:    ret void
 ;
@@ -3884,7 +3880,7 @@ attributes #9 = { convergent nounwind readonly willreturn }
 ; NVPTX-DISABLED-NEXT:  entry:
 ; NVPTX-DISABLED-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca ptr, align 8
 ; NVPTX-DISABLED-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca ptr, align 8
-; NVPTX-DISABLED-NEXT:    [[CALL:%.*]] = call i32 @omp_get_thread_num() #[[ATTR12]]
+; NVPTX-DISABLED-NEXT:    [[CALL:%.*]] = call i32 @omp_get_thread_num() #[[ATTR10]]
 ; NVPTX-DISABLED-NEXT:    call void @simple_state_machine_interprocedural_nested_recursive_after.internalized(i32 [[CALL]]) #[[ATTR10]]
 ; NVPTX-DISABLED-NEXT:    ret void
 ;
