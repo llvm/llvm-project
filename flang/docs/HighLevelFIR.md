@@ -496,6 +496,8 @@ The attributes can be:
     analysis pass).
 -   unordered : mark that an assignment can happen in any element order (not
     true if there is an impure elemental function being called).
+-   temporary_lhs: mark that the left hand side of the assignment is
+    a compiler generated temporary.
 
 This will replace the current array_load/array_access/array_merge semantics.
 Instead, a more generic alias analysis will be performed on the LHS and RHS to
