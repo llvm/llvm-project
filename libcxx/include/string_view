@@ -274,7 +274,7 @@ public:
     using const_pointer          = const _CharT*;
     using reference              = _CharT&;
     using const_reference        = const _CharT&;
-#ifdef _LIBCPP_DEBUG_ITERATOR_BOUNDS_CHECKING
+#ifdef _LIBCPP_ABI_BOUNDED_ITERATORS
     using const_iterator         = __bounded_iter<const_pointer>;
 #else
     using const_iterator         = const_pointer; // See [string.view.iterators]
@@ -355,7 +355,7 @@ public:
 
     _LIBCPP_CONSTEXPR _LIBCPP_INLINE_VISIBILITY
     const_iterator cbegin() const _NOEXCEPT {
-#ifdef _LIBCPP_DEBUG_ITERATOR_BOUNDS_CHECKING
+#ifdef _LIBCPP_ABI_BOUNDED_ITERATORS
         return std::__make_bounded_iter(data(), data(), data() + size());
 #else
         return __data_;
@@ -364,7 +364,7 @@ public:
 
     _LIBCPP_CONSTEXPR _LIBCPP_INLINE_VISIBILITY
     const_iterator cend()   const _NOEXCEPT {
-#ifdef _LIBCPP_DEBUG_ITERATOR_BOUNDS_CHECKING
+#ifdef _LIBCPP_ABI_BOUNDED_ITERATORS
         return std::__make_bounded_iter(data() + size(), data(), data() + size());
 #else
         return __data_ + __size_;
