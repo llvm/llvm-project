@@ -39,6 +39,7 @@
 #include "llvm/Support/LEB128.h"
 #include "llvm/Support/Parallel.h"
 #include "llvm/Support/TimeProfiler.h"
+#include <cstdlib>
 
 using namespace llvm;
 using namespace llvm::dwarf;

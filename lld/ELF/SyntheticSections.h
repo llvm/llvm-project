@@ -379,7 +379,7 @@ public:
   int getCMJTEntryIndex(const Symbol *symbol);
   void addCMJALTEntryCandidate(const Symbol *symbol, int gain);
   int getCMJALTEntryIndex(const Symbol *symbol);
-  void scanTableJumpEntrys(const InputSection &sec) const;
+  void scanTableJumpEntries(const InputSection &sec) const;
 
   bool isFinalized = false;
 
