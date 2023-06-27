@@ -885,15 +885,18 @@ multiclass VPatMultiplyAddSDNode_VV_VX<SDNode op, string instruction_name> {
 foreach vti = !listconcat(FractionalGroupIntegerVectors,
                           FractionalGroupFloatVectors,
                           FractionalGroupBFloatVectors) in
-  let Predicates = GetVTypePredicates<vti>.Predicates in
+  let Predicates = !if(!eq(vti.Scalar, f16), [HasVInstructionsF16Minimal],
+                       GetVTypePredicates<vti>.Predicates) in 
   defm : VPatUSLoadStoreSDNode<vti.Vector, vti.Log2SEW, vti.LMul,
                                vti.AVL, vti.RegClass>;
 foreach vti = [VI8M1, VI16M1, VI32M1, VI64M1, VBF16M1, VF16M1, VF32M1, VF64M1] in
-  let Predicates = GetVTypePredicates<vti>.Predicates in
+  let Predicates = !if(!eq(vti.Scalar, f16), [HasVInstructionsF16Minimal],
+                       GetVTypePredicates<vti>.Predicates) in 
   defm : VPatUSLoadStoreWholeVRSDNode<vti.Vector, vti.Log2SEW, vti.LMul,
                                       vti.RegClass>;
 foreach vti = !listconcat(GroupIntegerVectors, GroupFloatVectors, GroupBFloatVectors) in
-  let Predicates = GetVTypePredicates<vti>.Predicates in
+  let Predicates = !if(!eq(vti.Scalar, f16), [HasVInstructionsF16Minimal],
+                       GetVTypePredicates<vti>.Predicates) in 
   defm : VPatUSLoadStoreWholeVRSDNode<vti.Vector, vti.Log2SEW, vti.LMul,
                                       vti.RegClass>;
 foreach mti = AllMasks in
