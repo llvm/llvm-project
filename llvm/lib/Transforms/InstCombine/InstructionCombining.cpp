@@ -2206,13 +2206,12 @@ Instruction *InstCombinerImpl::visitGetElementPtrInst(GetElementPtrInst &GEP) {
     Value *UnderlyingPtrOp =
             PtrOp->stripAndAccumulateInBoundsConstantOffsets(DL,
                                                              BasePtrOffset);
-    bool CanBeNull, CanBeFreed;
-    uint64_t DerefBytes = UnderlyingPtrOp->getPointerDereferenceableBytes(
-        DL, CanBeNull, CanBeFreed);
-    if (!CanBeNull && !CanBeFreed && DerefBytes != 0) {
+    if (auto *AI = dyn_cast<AllocaInst>(UnderlyingPtrOp)) {
       if (GEP.accumulateConstantOffset(DL, BasePtrOffset) &&
           BasePtrOffset.isNonNegative()) {
-        APInt AllocSize(IdxWidth, DerefBytes);
+        APInt AllocSize(
+            IdxWidth,
+            DL.getTypeAllocSize(AI->getAllocatedType()).getKnownMinValue());
         if (BasePtrOffset.ule(AllocSize)) {
           return GetElementPtrInst::CreateInBounds(
               GEP.getSourceElementType(), PtrOp, Indices, GEP.getName());
