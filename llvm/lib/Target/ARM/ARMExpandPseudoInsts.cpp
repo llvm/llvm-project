@@ -984,18 +984,18 @@ void ARMExpandPseudo::ExpandTMOV32BitImm(MachineBasicBlock &MBB,
 
   Upper8_15 =
       BuildMI(MBB, MBBI, MI.getDebugLoc(), TII->get(ARM::tMOVi8), DstReg)
-          .addReg(ARM::CPSR, RegState::Kill);
+          .add(t1CondCodeOp(true));
 
   LSL_U8_15 =
       BuildMI(MBB, MBBI, MI.getDebugLoc(), TII->get(ARM::tLSLri), DstReg)
-          .addReg(ARM::CPSR, RegState::Kill)
+          .add(t1CondCodeOp(true))
           .addReg(DstReg)
           .addImm(8)
           .add(predOps(ARMCC::AL))
           .setMIFlags(MIFlags);
 
   Upper0_7 = BuildMI(MBB, MBBI, MI.getDebugLoc(), TII->get(ARM::tADDi8), DstReg)
-                 .addReg(ARM::CPSR, RegState::Kill)
+                 .add(t1CondCodeOp(true))
                  .addReg(DstReg);
 
   MachineInstr *LSL_U0_7 = MBB.getParent()->CloneMachineInstr(LSL_U8_15);
@@ -1003,7 +1003,7 @@ void ARMExpandPseudo::ExpandTMOV32BitImm(MachineBasicBlock &MBB,
 
   Lower8_15 =
       BuildMI(MBB, MBBI, MI.getDebugLoc(), TII->get(ARM::tADDi8), DstReg)
-          .addReg(ARM::CPSR, RegState::Kill)
+          .add(t1CondCodeOp(true))
           .addReg(DstReg);
 
   MachineInstr *LSL_L8_15 = MBB.getParent()->CloneMachineInstr(LSL_U8_15);
@@ -1011,7 +1011,7 @@ void ARMExpandPseudo::ExpandTMOV32BitImm(MachineBasicBlock &MBB,
 
   Lower0_7 = BuildMI(MBB, MBBI, MI.getDebugLoc(), TII->get(ARM::tADDi8))
                  .addReg(DstReg, RegState::Define | getDeadRegState(DstIsDead))
-                 .addReg(ARM::CPSR, RegState::Kill)
+                 .add(t1CondCodeOp(true))
                  .addReg(DstReg);
 
   Upper8_15.setMIFlags(MIFlags);
