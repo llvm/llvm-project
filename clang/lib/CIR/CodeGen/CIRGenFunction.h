@@ -849,6 +849,15 @@ public:
                                 clang::SourceLocation Loc,
                                 LValueBaseInfo BaseInfo,
                                 bool isNontemporal = false);
+  /// Load a scalar value from an address, taking care to appropriately convert
+  /// from the memory representation to CIR value representation.
+  mlir::Value buildLoadOfScalar(Address Addr, bool Volatile, clang::QualType Ty,
+                                clang::SourceLocation Loc,
+                                AlignmentSource Source = AlignmentSource::Type,
+                                bool isNontemporal = false) {
+    return buildLoadOfScalar(Addr, Volatile, Ty, Loc, LValueBaseInfo(Source),
+                             isNontemporal);
+  }
 
   /// Load a scalar value from an address, taking care to appropriately convert
   /// form the memory representation to the CIR value representation. The

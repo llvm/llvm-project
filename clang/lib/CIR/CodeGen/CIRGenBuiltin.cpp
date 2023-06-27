@@ -409,6 +409,22 @@ RValue CIRGenFunction::buildBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
     return buildCall(E->getCallee()->getType(), CIRGenCallee::forDirect(fnOp),
                      E, ReturnValue);
   }
+  case Builtin::BI__builtin_dynamic_object_size: {
+    // Fallthrough below, assert until we have a testcase.
+    llvm_unreachable("NYI");
+  }
+  case Builtin::BI__builtin_object_size: {
+    unsigned Type =
+        E->getArg(1)->EvaluateKnownConstInt(getContext()).getZExtValue();
+    auto ResType = ConvertType(E->getType()).dyn_cast<mlir::cir::IntType>();
+    assert(ResType && "not sure what to do?");
+
+    // We pass this builtin onto the optimizer so that it can figure out the
+    // object size in more complex cases.
+    bool IsDynamic = BuiltinID == Builtin::BI__builtin_dynamic_object_size;
+    return RValue::get(emitBuiltinObjectSize(E->getArg(0), Type, ResType,
+                                             /*EmittedE=*/nullptr, IsDynamic));
+  }
   }
 
   // If this is an alias for a lib function (e.g. __builtin_sin), emit
@@ -506,6 +522,15 @@ void CIRGenFunction::buildVAStartEnd(mlir::Value ArgValue, bool IsStart) {
     builder.create<mlir::cir::VAEndOp>(ArgValue.getLoc(), ArgValue);
 }
 
+/// Checks if using the result of __builtin_object_size(p, @p From) in place of
+/// __builtin_object_size(p, @p To) is correct
+static bool areBOSTypesCompatible(int From, int To) {
+  // Note: Our __builtin_object_size implementation currently treats Type=0 and
+  // Type=2 identically. Encoding this implementation detail here may make
+  // improving __builtin_object_size difficult in the future, so it's omitted.
+  return From == To || (From == 0 && To == 1) || (From == 3 && To == 2);
+}
+
 /// Returns a Value corresponding to the size of the given expression.
 /// This Value may be either of the following:
 ///
@@ -520,6 +545,24 @@ mlir::Value CIRGenFunction::emitBuiltinObjectSize(const Expr *E, unsigned Type,
                                                   mlir::cir::IntType ResType,
                                                   mlir::Value EmittedE,
                                                   bool IsDynamic) {
+  // We need to reference an argument if the pointer is a parameter with the
+  // pass_object_size attribute.
+  if (auto *D = dyn_cast<DeclRefExpr>(E->IgnoreParenImpCasts())) {
+    auto *Param = dyn_cast<ParmVarDecl>(D->getDecl());
+    auto *PS = D->getDecl()->getAttr<PassObjectSizeAttr>();
+    if (Param != nullptr && PS != nullptr &&
+        areBOSTypesCompatible(PS->getType(), Type)) {
+      auto Iter = SizeArguments.find(Param);
+      assert(Iter != SizeArguments.end());
+
+      const ImplicitParamDecl *D = Iter->second;
+      auto DIter = LocalDeclMap.find(D);
+      assert(DIter != LocalDeclMap.end());
+
+      return buildLoadOfScalar(DIter->second, /*Volatile=*/false,
+                               getContext().getSizeType(), E->getBeginLoc());
+    }
+  }
   llvm_unreachable("NYI");
 }
 
