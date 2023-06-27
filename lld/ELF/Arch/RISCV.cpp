@@ -55,6 +55,8 @@ public:
 #define INTERNAL_R_RISCV_GPREL_I 256
 #define INTERNAL_R_RISCV_GPREL_S 257
 
+#define INTERNAL_CMJT 0xA002
+
 const uint64_t dtpOffset = 0x800;
 
 enum Op {
@@ -334,12 +336,12 @@ void RISCV::relocate(uint8_t *loc, const Relocation &rel, uint64_t val) const {
 
   switch (rel.type) {
   case R_RISCV_32:
-    if (config->riscvTbljal && (read16le(loc) & 0xfc03) == 0xa002)
+    if (config->riscvTbljal && (read16le(loc) & 0xfc03) == INTERNAL_CMJT)
       return;
     write32le(loc, val);
     return;
   case R_RISCV_64:
-    if (config->riscvTbljal && (read16le(loc) & 0xfc03) == 0xa002)
+    if (config->riscvTbljal && (read16le(loc) & 0xfc03) == INTERNAL_CMJT)
       return;
     write64le(loc, val);
     return;
@@ -625,7 +627,7 @@ static bool relaxZcmt(const InputSection &sec, size_t i, uint64_t loc,
       sec.relaxAux->relocTypes[i] = R_RISCV_64;
     else
       sec.relaxAux->relocTypes[i] = R_RISCV_32;
-    sec.relaxAux->writes.push_back(0xa002 |
+    sec.relaxAux->writes.push_back(INTERNAL_CMJT |
                                    (tblEntryIndex << 2)); // cm.jt or cm.jalt
     remove = 6;
     return true;
@@ -890,14 +892,14 @@ void elf::riscvFinalizeRelax(int passes) {
             break;
           case R_RISCV_64:
             if (config->riscvTbljal &&
-                (aux.writes[writesIdx] & 0xfc03) == 0xa002) {
+                (aux.writes[writesIdx] & 0xfc03) == INTERNAL_CMJT) {
               skip = 2;
               write16le(p, aux.writes[writesIdx++]);
             }
             break;
           case R_RISCV_32:
             if (config->riscvTbljal &&
-                (aux.writes[writesIdx] & 0xfc03) == 0xa002) {
+                (aux.writes[writesIdx] & 0xfc03) == INTERNAL_CMJT) {
               skip = 2;
               write16le(p, aux.writes[writesIdx++]);
             } else {
