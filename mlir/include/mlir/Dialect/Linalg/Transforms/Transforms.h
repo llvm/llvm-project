@@ -370,10 +370,12 @@ void peelLoops(RewriterBase &rewriter, ArrayRef<scf::ForOp> loops);
 /// and `packPaddings` to set padding value and nofold attribute of the created
 /// tensor::PadOps, respectively. Update `paddedOp` to the cloned operation with
 /// statically shaped `paddingDimensions` and return the extracted dynamically
-/// shaped results. If padding fails, return failure.
+/// shaped results. If padding fails, return failure. If `copyBack` is set, the
+/// unpadded result is copied back into the original destination tensor.
 FailureOr<SmallVector<Value>>
 rewriteAsPaddedOp(RewriterBase &rewriter, LinalgOp opToPad,
-                  const LinalgPaddingOptions &options, LinalgOp &paddedOp);
+                  const LinalgPaddingOptions &options, LinalgOp &paddedOp,
+                  bool copyBack);
 
 namespace detail {
 
