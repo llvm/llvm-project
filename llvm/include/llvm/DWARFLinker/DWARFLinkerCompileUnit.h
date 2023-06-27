@@ -95,6 +95,9 @@ public:
     /// Is this a reference to a DIE that hasn't been cloned yet?
     bool UnclonedReference : 1;
 
+    /// Is this a variable with a location attribute referencing address?
+    bool HasLocationExpressionAddr : 1;
+
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
     LLVM_DUMP_METHOD void dump();
 #endif // if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
