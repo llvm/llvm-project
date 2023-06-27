@@ -15,6 +15,7 @@
 #include "Error.h"
 #include "MCInstrDescView.h"
 #include "PerfHelper.h"
+#include "SubprocessMemory.h"
 #include "Target.h"
 #include "llvm/ADT/ScopeExit.h"
 #include "llvm/ADT/StringExtras.h"
@@ -36,6 +37,16 @@
 #include <sys/syscall.h>
 #include <sys/wait.h>
 #include <unistd.h>
+
+#ifdef __GLIBC__
+#if __GLIBC_MINOR__ >= 35
+#define GLIBC_INITS_RSEQ
+#endif // __GLIBC__MINOR > 35
+#endif // __GLIBC__
+
+#ifdef GLIBC_INITS_RSEQ
+#include <sys/rseq.h>
+#endif // HAS_RSEQ
 #endif // __linux__
 
 namespace llvm {
@@ -161,7 +172,11 @@ public:
 private:
   enum ChildProcessExitCodeE {
     CounterFDReadFailed = 1,
-    TranslatingCounterFDFailed
+    TranslatingCounterFDFailed,
+    RSeqDisableFailed,
+    FunctionDataMappingFailed,
+    AuxiliaryMemorySetupFailed
+
   };
 
   StringRef childProcessExitCodeToString(int ExitCode) const {
@@ -173,6 +188,13 @@ private:
              "the child process failed. This might be due running an older "
              "Linux kernel that doesn't support the pidfd_getfd system call "
              "(anything before Linux 5.6).";
+             "the child process failed";
+    case ChildProcessExitCodeE::RSeqDisableFailed:
+      return "Disabling restartable sequences failed";
+    case ChildProcessExitCodeE::FunctionDataMappingFailed:
+      return "Failed to map memory for assembled snippet";
+    case ChildProcessExitCodeE::AuxiliaryMemorySetupFailed:
+      return "Failed to setup auxiliary memory";
     default:
       return "Child process returned with unknown exit code";
     }
@@ -187,6 +209,16 @@ private:
           "Failed to create a pipe for interprocess communication between "
           "llvm-exegesis and the benchmarking subprocess");
     }
+
+    SubprocessMemory SPMemory;
+    Error MemoryInitError = SPMemory.initializeSubprocessMemory(getpid());
+    if (MemoryInitError)
+      return MemoryInitError;
+
+    Error AddMemDefError =
+        SPMemory.addMemoryDefinition(Key.MemoryValues, getpid());
+    if (AddMemDefError)
+      return AddMemDefError;
 
     pid_t ParentOrChildPID = fork();
     if (ParentOrChildPID == 0) {
@@ -288,13 +320,37 @@ private:
       exit(ChildProcessExitCodeE::TranslatingCounterFDFailed);
     }
 
-#ifdef HAVE_LIBPFM
-    ioctl(CounterFileDescriptor, PERF_EVENT_IOC_RESET);
-#endif
-    this->Function(nullptr);
-#ifdef HAVE_LIBPFM
-    ioctl(CounterFileDescriptor, PERF_EVENT_IOC_DISABLE);
-#endif
+// Glibc versions greater than 2.35 automatically call rseq during
+// initialization. Unmapping the region that glibc sets up for this causes
+// segfaults in the program Unregister the rseq region so that we can safely
+// unmap it later
+#ifdef GLIBC_INITS_RSEQ
+    long RseqDisableOutput =
+        syscall(SYS_rseq, (intptr_t)__builtin_thread_pointer() + __rseq_offset,
+                __rseq_size, RSEQ_FLAG_UNREGISTER, RSEQ_SIG);
+    if (RseqDisableOutput != 0)
+      exit(ChildProcessExitCodeE::RSeqDisableFailed);
+#endif // GLIBC_INITS_RSEQ
+
+    size_t FunctionDataCopySize = this->Function.FunctionBytes.size();
+    char *FunctionDataCopy =
+        (char *)mmap(NULL, FunctionDataCopySize, PROT_READ | PROT_WRITE,
+                     MAP_PRIVATE | MAP_ANONYMOUS, 0, 0);
+    if ((intptr_t)FunctionDataCopy == -1)
+      exit(ChildProcessExitCodeE::FunctionDataMappingFailed);
+
+    memcpy(FunctionDataCopy, this->Function.FunctionBytes.data(),
+           this->Function.FunctionBytes.size());
+    mprotect(FunctionDataCopy, FunctionDataCopySize, PROT_READ | PROT_EXEC);
+
+    Expected<int> AuxMemFDOrError =
+        SubprocessMemory::setupAuxiliaryMemoryInSubprocess(
+            Key.MemoryValues, ParentPID, CounterFileDescriptor);
+    if (!AuxMemFDOrError)
+      exit(ChildProcessExitCodeE::AuxiliaryMemorySetupFailed);
+
+    ((void (*)(size_t, int))(intptr_t)FunctionDataCopy)(FunctionDataCopySize,
+                                                        *AuxMemFDOrError);
 
     exit(0);
   }
@@ -321,14 +377,17 @@ private:
 
 Expected<SmallString<0>> BenchmarkRunner::assembleSnippet(
     const BenchmarkCode &BC, const SnippetRepetitor &Repetitor,
-    unsigned MinInstructions, unsigned LoopBodySize) const {
+    unsigned MinInstructions, unsigned LoopBodySize,
+    bool GenerateMemoryInstructions) const {
   const std::vector<MCInst> &Instructions = BC.Key.Instructions;
   SmallString<0> Buffer;
   raw_svector_ostream OS(Buffer);
   if (Error E = assembleToStream(
           State.getExegesisTarget(), State.createTargetMachine(), BC.LiveIns,
           BC.Key.RegisterInitialValues,
-          Repetitor.Repeat(Instructions, MinInstructions, LoopBodySize), OS)) {
+          Repetitor.Repeat(Instructions, MinInstructions, LoopBodySize,
+                           GenerateMemoryInstructions),
+          OS, BC.Key, GenerateMemoryInstructions)) {
     return std::move(E);
   }
   return Buffer;
@@ -350,6 +409,8 @@ BenchmarkRunner::getRunnableConfiguration(
 
   const std::vector<MCInst> &Instructions = BC.Key.Instructions;
 
+  bool GenerateMemoryInstructions = ExecutionMode == ExecutionModeE::SubProcess;
+
   InstrBenchmark.Key = BC.Key;
 
   // Assemble at least kMinInstructionsForSnippet instructions by repeating
@@ -358,8 +419,9 @@ BenchmarkRunner::getRunnableConfiguration(
   if (BenchmarkPhaseSelector > BenchmarkPhaseSelectorE::PrepareSnippet) {
     const int MinInstructionsForSnippet = 4 * Instructions.size();
     const int LoopBodySizeForSnippet = 2 * Instructions.size();
-    auto Snippet = assembleSnippet(BC, Repetitor, MinInstructionsForSnippet,
-                                   LoopBodySizeForSnippet);
+    auto Snippet =
+        assembleSnippet(BC, Repetitor, MinInstructionsForSnippet,
+                        LoopBodySizeForSnippet, GenerateMemoryInstructions);
     if (Error E = Snippet.takeError())
       return std::move(E);
 
@@ -370,9 +432,10 @@ BenchmarkRunner::getRunnableConfiguration(
 
   // Assemble NumRepetitions instructions repetitions of the snippet for
   // measurements.
-  if (BenchmarkPhaseSelector > BenchmarkPhaseSelectorE::PrepareAndAssembleSnippet) {
+  if (BenchmarkPhaseSelector >
+      BenchmarkPhaseSelectorE::PrepareAndAssembleSnippet) {
     auto Snippet = assembleSnippet(BC, Repetitor, InstrBenchmark.NumRepetitions,
-                                   LoopBodySize);
+                                   LoopBodySize, GenerateMemoryInstructions);
     if (Error E = Snippet.takeError())
       return std::move(E);
     RC.ObjectFile = getObjectFromBuffer(*Snippet);
