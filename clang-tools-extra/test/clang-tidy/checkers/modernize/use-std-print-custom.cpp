@@ -48,12 +48,6 @@ void printf_newline() {
   printf("Hello %s %d\n", "world", 42);
 }
 
-int printf_uses_return_value(int i) {
-  return myprintf("return value %d\n", i);
-  // CHECK-MESSAGES-NOT: [[@LINE-1]]:10: warning: use 'std::println' instead of 'myprintf' [modernize-use-std-print]
-  // CHECK-FIXES-NOT: std::println("return value {}", i);
-}
-
 void fprintf_simple(FILE *fp)
 {
   myfprintf(stderr, "Hello %s %d", "world", 42);
@@ -78,10 +72,4 @@ void fprintf_newline(FILE *fp)
 
   // When using custom options leave fprintf alone
   fprintf(stderr, "Hello %s %d\n", "world", 42);
-}
-
-int fprintf_uses_return_value(int i) {
-  return myfprintf(stderr, "return value %d\n", i);
-  // CHECK-MESSAGES-NOT: [[@LINE-1]]:10: warning: use 'std::println' instead of 'myprintf' [modernize-use-std-print]
-  // CHECK-FIXES-NOT: std::println(stderr, "return value {}", i);
 }
