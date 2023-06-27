@@ -3012,9 +3012,8 @@ OperandMatchResultTy
 AMDGPUAsmParser::parseImm(OperandVector &Operands, bool HasSP3AbsModifier) {
   // TODO: add syntactic sugar for 1/(2*PI)
 
-  if (isRegister())
+  if (isRegister() || isModifier())
     return MatchOperand_NoMatch;
-  assert(!isModifier());
 
   const auto& Tok = getToken();
   const auto& NextTok = peekToken();
@@ -3722,7 +3721,11 @@ std::optional<unsigned> AMDGPUAsmParser::checkVOPDRegBankConstraints(
   bool AllowSameVGPR = isGFX12_10();
 
   if (AsVOPD3) { // Literal constants are not allowed with VOPD3.
+    unsigned BitOp3Idx =
+        (unsigned)AMDGPU::getNamedOperandIdx(Opcode, AMDGPU::OpName::bitop3);
     for (unsigned I = 0, E = Inst.getNumOperands(); I != E; ++I) {
+      if (I == BitOp3Idx)
+        continue;
       const MCOperand &Op = Inst.getOperand(I);
       if (!Op.isImm())
         continue;
@@ -8999,6 +9002,17 @@ void AMDGPUAsmParser::cvtVOPD(MCInst &Inst, const OperandVector &Operands) {
       addOp(CInfo.getIndexOfSrcInParsedOperands(CompSrcIdx));
     if (CInfo.hasSrc2Acc())
       addOp(CInfo.getIndexOfDstInParsedOperands());
+  }
+
+  int BitOp3Idx = AMDGPU::getNamedOperandIdx(Inst.getOpcode(),
+                                             AMDGPU::OpName::bitop3);
+  if (BitOp3Idx != -1) {
+    OptionalImmIndexMap OptIdx;
+    AMDGPUOperand &Op = ((AMDGPUOperand &)*Operands.back());
+    if (Op.isImm())
+      OptIdx[Op.getImmTy()] = Operands.size() - 1;
+
+    addOptionalImmOperand(Inst, Operands, OptIdx, AMDGPUOperand::ImmTyBitOp3);
   }
 }
 

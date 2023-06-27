@@ -792,6 +792,7 @@ class VOP3_BITOP3_Profile<VOPProfile pfl, VOP3Features f> : VOP3_Profile<pfl, f>
   let HasClamp = 0;
   let HasOMod = 0;
   let HasModifiers = 0;
+  let HasVOPD3Src2 = 0;
 
   let Ins64 = !con(getIns64<Src0RC64, Src1RC64, Src2RC64, NumSrcArgs,
                             0 /* HasIntClamp */, HasModifiers, HasSrc2Mods,
@@ -820,11 +821,14 @@ class VOP3_BITOP3_Profile<VOPProfile pfl, VOP3Features f> : VOP3_Profile<pfl, f>
                          !if (HasOpSel, (ins op_sel0:$op_sel), (ins)),
                          (ins dpp8:$dpp8, FI:$fi));
 
+  let InsVOPD3Y = (ins Src0VOPD3:$src0Y, Src1VOPD3:$vsrc1Y, bitop3_0:$bitop3);
+
   let Asm64 = "$vdst, $src0, $src1, $src2$bitop3";
   let AsmVOP3OpSel = !subst("$op_sel", "$bitop3$op_sel", getAsmVOP3OpSel<3, 0, 0, 0, 0, 0>.ret);
   let AsmVOP3DPP16 = getAsmVOP3DPP16<!if(HasOpSel, AsmVOP3OpSel, Asm64)>.ret;
   let AsmVOP3DPP = AsmVOP3DPP16;
   let AsmVOP3DPP8 = getAsmVOP3DPP8<!if(HasOpSel, AsmVOP3OpSel, Asm64)>.ret;
+  let AsmVOPDY = getAsmVOPDPart<NumSrcArgs, "Y", HasVOPD3Src2>.ret # "$bitop3";
 }
 
 let SubtargetPredicate = isGFX10Plus in {
@@ -873,7 +877,8 @@ let SubtargetPredicate = HasBitOp3Insts in {
                                   VOP3_BITOP3_Profile<VOPProfile_True16<VOPProfile <[i16, i16, i16, i16, i8]>>,
                                                       VOP3_OPSEL>>;
     defm V_BITOP3_B32 : VOP3Inst <"v_bitop3_b32",
-                                  VOP3_BITOP3_Profile<VOPProfile <[i32, i32, i32, i32, i8]>, VOP3_REGULAR>>;
+                                  VOP3_BITOP3_Profile<VOPProfile <[i32, i32, i32, i32, i8]>, VOP3_REGULAR>>,
+                        VOPD_Component<0x12, "v_bitop2_b32">;
   }
 
   def : GCNPat<

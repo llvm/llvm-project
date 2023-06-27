@@ -627,6 +627,11 @@ unsigned ComponentLayout::getIndexOfSrcInMCOperands(unsigned CompSrcIdx) const {
       Opcode != AMDGPU::V_FMAMK_F32) {
     // FMAAK/FMAMK do not have $src2. However, for VOP2 the following method
     // will work because it does not have modifiers.
+    if (CompSrcIdx == 2) {
+      int BitOp3 = getNamedOperandIdx(Opcode, OpName::bitop3);
+      if (BitOp3 != -1)
+        return BitOp3;
+    }
     return getNamedOperandIdx(Opcode, Ops[CompSrcIdx]);
   }
 

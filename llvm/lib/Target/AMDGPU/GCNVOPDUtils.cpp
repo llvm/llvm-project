@@ -123,10 +123,19 @@ bool llvm::checkVOPDRegConstraints(const SIInstrInfo &TII,
                                  IsVOPD3))
     return false;
 
-  // TODO-GFX1210: Neg modifier can be supported for VOPD3.
-  if (IsVOPD3 &&
-      (TII.hasAnyModifiersSet(FirstMI) || TII.hasAnyModifiersSet(SecondMI)))
-    return false;
+  if (IsVOPD3) {
+    // TODO-GFX1210: Neg modifier can be supported for VOPD3.
+    if (TII.hasAnyModifiersSet(FirstMI) || TII.hasAnyModifiersSet(SecondMI))
+      return false;
+
+    // BITOP3 can be converted to DUAL_BITOP2 only if src2 is zero.
+    if (AMDGPU::hasNamedOperand(SecondMI.getOpcode(), AMDGPU::OpName::bitop3)) {
+      const MachineOperand &Src2 =
+          *TII.getNamedOperand(SecondMI, AMDGPU::OpName::src2);
+      if (!Src2.isImm() || Src2.getImm())
+        return false;
+    }
+  }
 
   LLVM_DEBUG(dbgs() << "VOPD Reg Constraints Passed\n\tX: " << FirstMI
                     << "\n\tY: " << SecondMI << "\n");

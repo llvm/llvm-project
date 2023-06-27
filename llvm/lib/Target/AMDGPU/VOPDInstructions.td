@@ -62,6 +62,7 @@ class VOPD3e<bits<5> opX, bits<5> opY, VOP_Pseudo VDX, VOP_Pseudo VDY> : Enc96 {
   // TODO-GFX1210: Handle neg modifiers.
   bits<3> negX = 0;
   bits<3> negY = 0;
+  bits<8> bitop3;
 
   let Inst{8-0} = src0X;
   let Inst{17} = 0;       // opY high bit
@@ -76,7 +77,8 @@ class VOPD3e<bits<5> opX, bits<5> opY, VOP_Pseudo VDX, VOP_Pseudo VDY> : Enc96 {
   let Inst{63-56} = !if(!eq(!find(VDX.Pfl.AsmVOPDX, "$vsrc2X"), -1), 0, vsrc2X);
   let Inst{71-64} = vdstX;
   let Inst{79-72} = !if(!eq(!find(VDY.Pfl.AsmVOPDY, "$vsrc1Y"), -1), 0, vsrc1Y);
-  let Inst{87-80} = !if(!eq(!find(VDY.Pfl.AsmVOPDY, "$vsrc2Y"), -1), 0, vsrc2Y);
+  let Inst{87-80} = !if(!ne(!find(VDY.Pfl.AsmVOPDY, "bitop"), -1), bitop3,
+                        !if(!eq(!find(VDY.Pfl.AsmVOPDY, "$vsrc2Y"), -1), 0, vsrc2Y));
   let Inst{95-88} = vdstY;
 }
 
@@ -260,7 +262,7 @@ defvar VOPD3XPseudosGFX1210 = !listconcat(
                                 !filter(x, VOPDXPseudosGFX12, !and(!eq(!find(x, "FMAAK"), -1),
                                                                    !eq(!find(x, "FMAMK"), -1))),
                                 VOPD3XPseudosExtra);
-defvar VOPD3YPseudosExtra = ["V_FMA_F32_e64"];
+defvar VOPD3YPseudosExtra = ["V_BITOP3_B32_e64", "V_FMA_F32_e64"];
 defvar VOPD3YPseudosGFX1210 = !listconcat(
                                 !filter(x, VOPDYPseudosGFX1210, !and(!eq(!find(x, "FMAAK"), -1),
                                                                      !eq(!find(x, "FMAMK"), -1))),
