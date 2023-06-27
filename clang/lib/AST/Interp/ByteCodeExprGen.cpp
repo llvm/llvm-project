@@ -230,7 +230,7 @@ bool ByteCodeExprGen<Emitter>::VisitBinaryOperator(const BinaryOperator *BO) {
 
   // Pointer arithmetic special case.
   if (BO->getOpcode() == BO_Add || BO->getOpcode() == BO_Sub) {
-    if (*T == PT_Ptr || (*LT == PT_Ptr && *RT == PT_Ptr))
+    if (T == PT_Ptr || (LT == PT_Ptr && RT == PT_Ptr))
       return this->VisitPointerArithBinOp(BO);
   }
 
