@@ -671,7 +671,54 @@ def hlfir_NoReassocOp : hlfir_Op<"no_reassoc", [NoMemoryEffect, SameOperandsAndR
   let assemblyFormat = "$val attr-dict `:` type($val)";
 }
 
-def hlfir_ElementalOp : hlfir_Op<"elemental", [RecursiveMemoryEffects]> {
+def hlfir_ElementalOpInterface : OpInterface<"ElementalOpInterface"> {
+  let description = [{
+    Interface for the operation holding a region with elemental computation.
+    It is used as a common interface bewteen hlfir.elemental and hlfir.elemental_addr.
+  }];
+
+  let methods = [
+    InterfaceMethod<
+      /*desc=*/"Return the one based elemental indices.",
+      /*retTy=*/"mlir::Block::BlockArgListType",
+      /*methodName=*/"getIndices",
+      /*args=*/(ins),
+      /*methodBody=*/[{}]
+    >,
+    InterfaceMethod<
+      /*desc=*/"Return the element entity being computed",
+      /*retTy=*/"mlir::Value",
+      /*methodName=*/"getElementEntity",
+      /*args=*/(ins),
+      /*methodBody=*/[{}]
+    >,
+    InterfaceMethod<
+      /*desc=*/"Get element cleanup region, if any.",
+      /*retTy=*/"mlir::Region*",
+      /*methodName=*/"getElementCleanup",
+      /*args=*/(ins),
+      /*methodBody=*/[{}]
+    >,
+    InterfaceMethod<
+      /*desc=*/"Get elemental region.",
+      /*retTy=*/"mlir::Region&",
+      /*methodName=*/"getElementalRegion",
+      /*args=*/(ins),
+      /*methodBody=*/[{}]
+    >,
+    InterfaceMethod<
+      /*desc=*/"Must this elemental operation be evaluated in order?",
+      /*retTy=*/"bool",
+      /*methodName=*/"isOrdered",
+      /*args=*/(ins),
+      /*methodBody=*/[{}]
+    >,
+  ];
+
+  let cppNamespace = "hlfir";
+}
+
+def hlfir_ElementalOp : hlfir_Op<"elemental", [RecursiveMemoryEffects, hlfir_ElementalOpInterface]> {
   let summary = "elemental expression";
   let description = [{
     Represent an elemental expression as a function of the indices.
@@ -726,6 +773,11 @@ def hlfir_ElementalOp : hlfir_Op<"elemental", [RecursiveMemoryEffects]> {
       mlir::Block::BlockArgListType getIndices() {
        return getBody()->getArguments();
       }
+      /// ElementalOpInterface implementation.
+
+      mlir::Region& getElementalRegion() {return getRegion();}
+      mlir::Value getElementEntity();
+      mlir::Region* getElementCleanup() {return nullptr;}
 
       /// Must this elemental be evaluated in order?
       /// TODO: add attribute and set it in lowering.
@@ -1117,7 +1169,7 @@ def hlfir_YieldOp : hlfir_Op<"yield", [Terminator, ParentOneOf<["RegionAssignOp"
   let assemblyFormat = "$entity attr-dict `:` type($entity) custom<YieldOpCleanup>($cleanup)";
 }
 
-def hlfir_ElementalAddrOp : hlfir_Op<"elemental_addr", [Terminator, HasParent<"RegionAssignOp">, RecursiveMemoryEffects, RecursivelySpeculatable]> {
+def hlfir_ElementalAddrOp : hlfir_Op<"elemental_addr", [Terminator, HasParent<"RegionAssignOp">, RecursiveMemoryEffects, RecursivelySpeculatable, hlfir_ElementalOpInterface]> {
   let summary = "Yield the address of a vector subscripted variable inside an hlfir.region_assign";
   let description = [{
     Special terminator node for the left-hand side region of an hlfir.region_assign
@@ -1180,6 +1232,16 @@ def hlfir_ElementalAddrOp : hlfir_Op<"elemental_addr", [Terminator, HasParent<"R
     /// body. It yields the variable element address.
     /// This should only be called once the ElementalAddrOp has been built.
     hlfir::YieldOp getYieldOp();
+
+    /// ElementalOpInterface implementation.
+
+    mlir::Region& getElementalRegion() {return getBody();}
+    mlir::Value getElementEntity();
+    mlir::Region* getElementCleanup();
+
+    /// Must this elemental be evaluated in order?
+    /// TODO: add attribute and set it in lowering.
+    bool isOrdered() {return true;}
   }];
 
   let hasVerifier = 1;

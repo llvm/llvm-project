@@ -31,6 +31,7 @@ namespace hlfir {
 
 class AssociateOp;
 class ElementalOp;
+class ElementalOpInterface;
 class ElementalAddrOp;
 class YieldElementOp;
 
@@ -401,17 +402,16 @@ hlfir::YieldElementOp inlineElementalOp(mlir::Location loc,
                                         hlfir::ElementalOp elemental,
                                         mlir::ValueRange oneBasedIndices);
 
-/// Inline the body of an hlfir.elemental without cloning the resulting
-/// hlfir.yield_element, and return the cloned operand of the
-/// hlfir.yield_element. The mapper must be provided to cover complex cases
-/// where the inlined elemental is not defined in the current context and uses
-/// values that have been cloned already.
-/// A callback is provided to indicate if an hlfir.apply inside the
-/// hlfir.elemental must be immediately replaced by the inlining of the
-/// applied hlfir.elemental.
+/// Inline the body of an hlfir.elemental or hlfir.elemental_addr without
+/// cloning the resulting hlfir.yield_element/hlfir.yield, and return the cloned
+/// operand of the hlfir.yield_element/hlfir.yield. The mapper must be provided
+/// to cover complex cases where the inlined elemental is not defined in the
+/// current context and uses values that have been cloned already. A callback is
+/// provided to indicate if an hlfir.apply inside the hlfir.elemental must be
+/// immediately replaced by the inlining of the applied hlfir.elemental.
 mlir::Value inlineElementalOp(
     mlir::Location loc, fir::FirOpBuilder &builder,
-    hlfir::ElementalOp elemental, mlir::ValueRange oneBasedIndices,
+    hlfir::ElementalOpInterface elemental, mlir::ValueRange oneBasedIndices,
     mlir::IRMapping &mapper,
     const std::function<bool(hlfir::ElementalOp)> &mustRecursivelyInline);
 
