@@ -310,6 +310,10 @@ private:
   /// operation. Returns success if all conversions succeed and failure
   /// otherwise.
   LogicalResult processAliasScopeMetadata(const llvm::MDNode *node);
+  /// Converts the given LLVM comdat struct to an MLIR comdat selector operation
+  /// and stores a mapping from the struct to the symbol pointing to the
+  /// translated operation.
+  void processComdat(const llvm::Comdat *comdat);
 
   /// Builder pointing at where the next instruction should be generated.
   OpBuilder builder;
@@ -348,6 +352,9 @@ private:
   /// Mapping between LLVM TBAA metadata nodes and symbol references to the LLVM
   /// dialect TBAA operations corresponding to these nodes.
   DenseMap<const llvm::MDNode *, SymbolRefAttr> tbaaMapping;
+  /// Mapping between LLVM comdat structs and symbol references to LLVM dialect
+  /// comdat selector operations corresponding to these structs.
+  DenseMap<const llvm::Comdat *, SymbolRefAttr> comdatMapping;
   /// The stateful type translator (contains named structs).
   LLVM::TypeFromLLVMIRTranslator typeTranslator;
   /// Stateful debug information importer.
