@@ -1779,16 +1779,10 @@ struct RemoveOutsDependency : public OpRewritePattern<GenericOp> {
         if (definingOp)
           continue;
         modifiedOutput = true;
-        SmallVector<Value> dynamicDims;
-        for (const auto &dim : llvm::enumerate(operandType.getShape())) {
-          if (dim.value() != ShapedType::kDynamic)
-            continue;
-          dynamicDims.push_back(rewriter.createOrFold<tensor::DimOp>(
-              loc, operandVal, dim.index()));
-        }
+        SmallVector<OpFoldResult> mixedSizes =
+            tensor::getMixedSizes(rewriter, loc, operandVal);
         Value emptyTensor = rewriter.create<tensor::EmptyOp>(
-            loc, operandType.getShape(), operandType.getElementType(),
-            dynamicDims);
+            loc, mixedSizes, operandType.getElementType());
         op->setOperand(opOperand->getOperandNumber(), emptyTensor);
       }
     }

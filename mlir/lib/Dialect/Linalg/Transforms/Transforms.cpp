@@ -139,12 +139,6 @@ static FailureOr<Value> padOperandToSmallestStaticBoundingBox(
                                opOperand->get(), paddingValue, nofold);
 }
 
-static SmallVector<utils::IteratorType>
-getNParallelLoopsAttrs(unsigned nParallelLoops) {
-  return SmallVector<utils::IteratorType>(nParallelLoops,
-                                          utils::IteratorType::parallel);
-}
-
 //===----------------------------------------------------------------------===//
 // Transformations exposed as functional-style API calls.
 //===----------------------------------------------------------------------===//
@@ -512,12 +506,10 @@ FailureOr<LowerPackResult> linalg::lowerPack(RewriterBase &rewriter,
        llvm::zip_equal(packOp.getInnerDimsPos(), packOp.getMixedTiles())) {
     int outerPos =
         packedToStripMinedShapePerm[packingMetadata.outerPositions[pos]];
-    OpFoldResult origSize = rewriter.createOrFold<tensor::DimOp>(
-        loc, packOp.getSource(),
-        rewriter.create<arith::ConstantIndexOp>(loc, pos));
-    OpFoldResult outerSize = rewriter.createOrFold<tensor::DimOp>(
-        loc, packOp.getDest(),
-        rewriter.create<arith::ConstantIndexOp>(loc, outerPos));
+    OpFoldResult origSize =
+        tensor::getMixedSize(rewriter, loc, packOp.getSource(), pos);
+    OpFoldResult outerSize =
+        tensor::getMixedSize(rewriter, loc, packOp.getDest(), outerPos);
     AffineExpr s0, d0, d1;
     bindDims(rewriter.getContext(), d0, d1);
     bindSymbols(rewriter.getContext(), s0);
@@ -1030,71 +1022,6 @@ LogicalResult mlir::linalg::CopyVectorizationPattern::matchAndRewrite(
   return vectorizeCopy(rewriter, copyOp);
 }
 
-///
-/// Pattern to rewrite a tensor::PadOp into a sequence of EmptyOp, FillOp (to
-/// initialize with pad_val) and GenericOp (to copy contents).
-///
-LogicalResult
-PadOpTransformationPattern::matchAndRewrite(tensor::PadOp padOp,
-                                            PatternRewriter &rewriter) const {
-
-  auto inputShapedType = cast<ShapedType>(padOp.getSource().getType());
-  auto resultShapedType = cast<ShapedType>(padOp.getResult().getType());
-
-  // Bail on non-static shapes.
-  if (!inputShapedType.hasStaticShape())
-    return failure();
-  if (!resultShapedType.hasStaticShape())
-    return failure();
-
-  // Only support padding with a constant for now, i.e. either:
-  //   1. A BBarg from a different block.
-  //   2. A value defined outside of the current block.
-  Block &block = padOp.getRegion().front();
-  auto yieldOp = cast<tensor::YieldOp>(block.getTerminator());
-  Value padValue = yieldOp.getValue();
-  Operation *definingOp = padValue.getDefiningOp();
-  if (definingOp && definingOp->getBlock() == &block)
-    return failure();
-  if (!definingOp && cast<BlockArgument>(padValue).getOwner() == &block)
-    return failure();
-
-  // Create tensor with the padded shape
-  Location loc = padOp.getLoc();
-  SmallVector<Value> indices(resultShapedType.getRank(),
-                             rewriter.create<arith::ConstantIndexOp>(loc, 0));
-  Value emptyTensor = rewriter.create<tensor::EmptyOp>(
-      loc, resultShapedType.getShape(), resultShapedType.getElementType());
-
-  // Initialize tensor with the pad value
-  Value tmpTensor = rewriter
-                        .create<linalg::FillOp>(loc, ValueRange{padValue},
-                                                ValueRange{emptyTensor})
-                        .result();
-
-  // Copy original contents into new tensor
-  // Uses linalg.generic, but could be done with tensor.insert_slice
-  SmallVector<AffineExpr, 4> outputExprs;
-  for (unsigned i = 0; i < resultShapedType.getRank(); ++i) {
-    outputExprs.push_back(getAffineDimExpr(i, rewriter.getContext()) +
-                          padOp.getStaticLow()[i]);
-  }
-
-  SmallVector<AffineMap, 2> transferMaps = {
-      rewriter.getMultiDimIdentityMap(inputShapedType.getRank()),
-      AffineMap::get(resultShapedType.getRank(),
-                     /*symbolCount=*/0, outputExprs, rewriter.getContext())};
-
-  rewriter.replaceOpWithNewOp<linalg::GenericOp>(
-      padOp, resultShapedType, padOp.getSource(), tmpTensor, transferMaps,
-      getNParallelLoopsAttrs(resultShapedType.getRank()),
-      [&](OpBuilder &nestedBuilder, Location nestedLoc, ValueRange args) {
-        nestedBuilder.create<linalg::YieldOp>(nestedLoc, args[0]);
-      });
-
-  return success();
-}
-
 /// Filling `dest` using FillOp constant padding value if possible.
 /// Otherwise, generate a tensor::GenerateOp.
 Value GeneralizePadOpPattern::createFillOrGenerateOp(
@@ -1132,8 +1059,8 @@ GeneralizePadOpPattern::matchAndRewrite(tensor::PadOp padOp,
   SmallVector<int64_t> staticSizes;
   for (unsigned dim = 0; dim < resultType.getRank(); ++dim) {
     if (resultType.isDynamicDim(dim)) {
-      auto srcSize = rewriter.createOrFold<tensor::DimOp>(
-          padOp.getLoc(), padOp.getSource(), dim);
+      auto srcSize = getIdxValue(tensor::getMixedSize(rewriter, padOp.getLoc(),
+                                                      padOp.getSource(), dim));
       // Add low and high padding value.
       auto plusLow = rewriter.createOrFold<arith::AddIOp>(
           padOp.getLoc(), srcSize, getIdxValue(padOp.getMixedLowPad()[dim]));
@@ -1157,15 +1084,8 @@ GeneralizePadOpPattern::matchAndRewrite(tensor::PadOp padOp,
   // for copying the PadOp source.
   auto sourceType = padOp.getSourceType();
   // Compute size of source of tensor::PadOp.
-  SmallVector<OpFoldResult> srcSizes;
-  for (unsigned dim = 0; dim < sourceType.getRank(); ++dim) {
-    if (sourceType.isDynamicDim(dim)) {
-      srcSizes.push_back(rewriter.createOrFold<tensor::DimOp>(
-          padOp.getLoc(), padOp.getSource(), dim));
-    } else {
-      srcSizes.push_back(rewriter.getIndexAttr(sourceType.getDimSize(dim)));
-    }
-  }
+  SmallVector<OpFoldResult> srcSizes =
+      tensor::getMixedSizes(rewriter, padOp.getLoc(), padOp.getSource());
   // Strides of InsertSliceOp are all 1.
   SmallVector<OpFoldResult> strides(sourceType.getRank(),
                                     rewriter.getIndexAttr(1));
@@ -1459,8 +1379,8 @@ LogicalResult GeneralizeOuterUnitDimsUnPackOpPattern::matchAndRewrite(
   ArrayRef<int64_t> destShape = unpackOp.getDestType().getShape();
   for (auto i : llvm::seq<unsigned>(0, destRank)) {
     if (dimAndTileMapping.count(i) || destShape[i] != 1)
-      tileSizes.push_back(getAsOpFoldResult(
-          rewriter.createOrFold<tensor::DimOp>(loc, unpackOp.getDest(), i)));
+      tileSizes.push_back(
+          tensor::getMixedSize(rewriter, loc, unpackOp.getDest(), i));
   }
 
   auto partialTile = rewriter.create<tensor::ExtractSliceOp>(

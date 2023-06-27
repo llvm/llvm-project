@@ -310,7 +310,7 @@ struct MoveInitOperandsToInput : public OpRewritePattern<GenericOp> {
       rewriter.setInsertionPointAfterValue(op->get());
       auto elemType = cast<ShapedType>(op->get().getType()).getElementType();
       auto empty = rewriter.create<tensor::EmptyOp>(
-          loc, tensor::createDimValues(rewriter, loc, op->get()), elemType);
+          loc, tensor::getMixedSizes(rewriter, loc, op->get()), elemType);
 
       auto [start, end] = genericOp.getDpsInitsPositionRange();
       newOutputOperands[op->getOperandNumber() - start] = empty.getResult();

@@ -1884,8 +1884,8 @@ public:
     llvm::SmallVector<Value> results;
 
     auto addDynamicDimension = [&](Value source, int64_t dim) {
-      auto dynamicDim = tensor::createDimValue(builder, loc, source, dim);
-      if (auto dimValue = llvm::dyn_cast_if_present<Value>(dynamicDim.value()))
+      auto sz = tensor::getMixedSize(builder, loc, source, dim);
+      if (auto dimValue = llvm::dyn_cast_if_present<Value>(sz))
         results.push_back(dimValue);
     };
 

@@ -178,8 +178,8 @@ mlir::linalg::computeMultiTileSizes(OpBuilder &builder, LinalgOp op,
   AffineExpr s0 = b.getAffineSymbolExpr(0);
   AffineExpr s1 = b.getAffineSymbolExpr(1);
   AffineExpr s2 = b.getAffineSymbolExpr(2);
-  auto apply = [&](AffineExpr expr, ValueRange values) -> Value {
-    return affine::makeComposedAffineApply(b, b.getLoc(), expr, values);
+  auto apply = [&](AffineExpr expr, ArrayRef<OpFoldResult> ofrs) -> Value {
+    return affine::makeComposedAffineApply(b, b.getLoc(), expr, ofrs);
   };
   Value a = apply(s0.floorDiv(s1), {tripCount, divisorValue});
   Value t = apply((s0 + s1 - 1).floorDiv(s1), {targetSizeValue, divisorValue});

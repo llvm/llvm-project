@@ -2113,6 +2113,28 @@ def int_amdgcn_is_private : ClangBuiltin<"__builtin_amdgcn_is_private">,
   [IntrNoMem, IntrSpeculatable, NoCapture<ArgIndex<0>>]
 >;
 
+// A uniform tail call to a function with the `amdgpu_cs_chain` or
+// `amdgpu_cs_chain_preserve` calling convention. It will populate the SGPRs
+// starting at s0 and the VGPRs starting at v8, set EXEC and perform a jump to
+// the given function.
+// Can only be used in functions with the `amdgpu_cs`, `amdgpu_cs_chain` or
+// `amdgpu_cs_chain_preserve` calling conventions, and only in uniform control
+// flow.
+def int_amdgcn_cs_chain:
+  Intrinsic<[],
+            [llvm_anyptr_ty, // The function to jump to.
+             llvm_anyint_ty, // Value to put in EXEC (should be i32 or i64).
+             llvm_any_ty, // Arguments that will be copied into SGPRs (s0+).
+                          // Must be uniform.
+             llvm_any_ty, // Arguments that will be copied into VGPRs (v8+).
+                          // Need not be uniform.
+             llvm_i32_ty, // Flags.
+             llvm_vararg_ty // Additional arguments. Only present if Flags is
+                            // non-zero.
+            ],
+            [IntrConvergent, IntrNoReturn, ImmArg<ArgIndex<4>>]>;
+
+
 //===----------------------------------------------------------------------===//
 // CI+ Intrinsics
 //===----------------------------------------------------------------------===//
