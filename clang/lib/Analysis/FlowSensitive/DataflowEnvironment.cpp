@@ -526,13 +526,11 @@ LatticeJoinEffect Environment::widen(const Environment &PrevEnv,
   return Effect;
 }
 
-LatticeJoinEffect Environment::join(const Environment &Other,
-                                    Environment::ValueModel &Model) {
+Environment Environment::join(const Environment &Other,
+                              Environment::ValueModel &Model) const {
   assert(DACtx == Other.DACtx);
   assert(ThisPointeeLoc == Other.ThisPointeeLoc);
   assert(CallStack == Other.CallStack);
-
-  auto Effect = LatticeJoinEffect::Unchanged;
 
   Environment JoinedEnv(*DACtx);
 
@@ -558,10 +556,8 @@ LatticeJoinEffect Environment::join(const Environment &Other,
     assert(Func != nullptr);
     if (Value *MergedVal =
             mergeDistinctValues(Func->getReturnType(), *ReturnVal, *this,
-                                *Other.ReturnVal, Other, JoinedEnv, Model)) {
+                                *Other.ReturnVal, Other, JoinedEnv, Model))
       JoinedEnv.ReturnVal = MergedVal;
-      Effect = LatticeJoinEffect::Changed;
-    }
   }
 
   if (ReturnLoc == Other.ReturnLoc)
@@ -574,19 +570,12 @@ LatticeJoinEffect Environment::join(const Environment &Other,
   // `DeclToLoc` and `Other.DeclToLoc` that map the same declaration to
   // different storage locations.
   JoinedEnv.DeclToLoc = intersectDenseMaps(DeclToLoc, Other.DeclToLoc);
-  if (DeclToLoc.size() != JoinedEnv.DeclToLoc.size())
-    Effect = LatticeJoinEffect::Changed;
 
   JoinedEnv.ExprToLoc = intersectDenseMaps(ExprToLoc, Other.ExprToLoc);
-  if (ExprToLoc.size() != JoinedEnv.ExprToLoc.size())
-    Effect = LatticeJoinEffect::Changed;
 
   JoinedEnv.MemberLocToStruct =
       intersectDenseMaps(MemberLocToStruct, Other.MemberLocToStruct);
-  if (MemberLocToStruct.size() != JoinedEnv.MemberLocToStruct.size())
-    Effect = LatticeJoinEffect::Changed;
 
-  // FIXME: set `Effect` as needed.
   // FIXME: update join to detect backedges and simplify the flow condition
   // accordingly.
   JoinedEnv.FlowConditionToken = &DACtx->joinFlowConditions(
@@ -613,15 +602,10 @@ LatticeJoinEffect Environment::join(const Environment &Other,
             mergeDistinctValues(Loc->getType(), *Val, *this, *It->second, Other,
                                 JoinedEnv, Model)) {
       JoinedEnv.LocToVal.insert({Loc, MergedVal});
-      Effect = LatticeJoinEffect::Changed;
     }
   }
-  if (LocToVal.size() != JoinedEnv.LocToVal.size())
-    Effect = LatticeJoinEffect::Changed;
 
-  *this = std::move(JoinedEnv);
-
-  return Effect;
+  return JoinedEnv;
 }
 
 StorageLocation &Environment::createStorageLocation(QualType Type) {
