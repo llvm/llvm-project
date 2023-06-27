@@ -11,6 +11,8 @@
 // DWARF_VER: "-dwarf-version=5"
 
 // RUN: %clang -### --target=amdgcn-amd-amdhsa -mcpu=gfx906 -nogpulib \
-// RUN:   -L. -flto -fconvergent-functions %s 2>&1 | FileCheck -check-prefix=LTO %s
+// RUN:   -L. -flto -fconvergent-functions %s 2>&1 | FileCheck -check-prefixes=LTO,MCPU %s
+// RUN: %clang -### --target=amdgcn-amd-amdhsa -mcpu=gfx906 -nogpulib \
+// RUN:   -L. -fconvergent-functions %s 2>&1 | FileCheck -check-prefix=MCPU %s
 // LTO: clang{{.*}} "-flto=full"{{.*}}"-fconvergent-functions"
-// LTO: ld.lld{{.*}}"-L."{{.*}}"-plugin-opt=mcpu=gfx906"
+// MCPU: ld.lld{{.*}}"-L."{{.*}}"-plugin-opt=mcpu=gfx906"
