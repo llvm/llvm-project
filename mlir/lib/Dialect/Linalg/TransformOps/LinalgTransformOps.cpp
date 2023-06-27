@@ -1240,7 +1240,7 @@ packMatmulGreedily(RewriterBase &rewriter, LinalgOp linalgOp,
   }
 
   // 1. Infer dims that are important for matmul.
-  FailureOr<EmbeddedMatmulDimsCandidates> res = inferMatmulDims(linalgOp);
+  FailureOr<EmbeddedContractionDimsCandidates> res = inferContractionDims(linalgOp);
   if (failed(res)) {
     return rewriter.notifyMatchFailure(linalgOp,
                                        "couldn't infer matmul iterators");

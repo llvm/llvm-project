@@ -35,10 +35,10 @@ namespace linalg {
 // Utilities for inferring various semantics properties of Linalg ops.
 //===----------------------------------------------------------------------===//
 
-/// Possible dimension candidates that define a matmul embedded in the indexing
-/// maps of a LinalgOp.
-struct EmbeddedMatmulDimsCandidates {
-  DenseSet<int64_t> mPos, nPos, kPos;
+/// Possible dimension candidates that define a contraction embedded in the
+/// indexing maps of a LinalgOp.
+struct EmbeddedContractionDimsCandidates {
+  DenseSet<int64_t> batchPos, mPos, nPos, kPos;
 };
 
 /// Given a `linalgOp` and one of its `opOperand`, returns the positions of the
@@ -64,10 +64,11 @@ bool containsMostMinorMatmul(linalg::LinalgOp linalgOp);
 ///      (i.e. it is a permutation on RES and RHS and does not appear in LHS).
 ///   3. The k dimension appears as a permutation on LHS and RHS.
 ///   4. m, n and k appear only once in any given indexing.
-/// This allows detecting that some matmul is embedded within `linalgOp` with
-/// some orthogonal heuristic.
-FailureOr<EmbeddedMatmulDimsCandidates>
-inferMatmulDims(linalg::LinalgOp linalgOp);
+///   5. Optional batch dimensions that appear in all operands are captured.
+/// This allows e.g. detecting that some contraction is embedded within
+/// `linalgOp` with some orthogonal heuristic.
+FailureOr<EmbeddedContractionDimsCandidates>
+inferContractionDims(linalg::LinalgOp linalgOp);
 
 //===----------------------------------------------------------------------===//
 // General utilities
