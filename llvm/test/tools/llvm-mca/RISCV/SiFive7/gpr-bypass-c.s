@@ -22,16 +22,18 @@ beqz a0, 1f
 c.add a0, a0
 bnez a0, 1f
 1:
+c.add a0, a0
+c.jr a0
 
 # CHECK:      Iterations:        1
-# CHECK-NEXT: Instructions:      18
-# CHECK-NEXT: Total Cycles:      20
-# CHECK-NEXT: Total uOps:        18
+# CHECK-NEXT: Instructions:      20
+# CHECK-NEXT: Total Cycles:      21
+# CHECK-NEXT: Total uOps:        20
 
 # CHECK:      Dispatch Width:    2
-# CHECK-NEXT: uOps Per Cycle:    0.90
-# CHECK-NEXT: IPC:               0.90
-# CHECK-NEXT: Block RThroughput: 9.0
+# CHECK-NEXT: uOps Per Cycle:    0.95
+# CHECK-NEXT: IPC:               0.95
+# CHECK-NEXT: Block RThroughput: 10.0
 
 # CHECK:      Instruction Info:
 # CHECK-NEXT: [1]: #uOps
@@ -60,6 +62,8 @@ bnez a0, 1f
 # CHECK-NEXT:  1      3     1.00                        beqz	a0, .Ltmp0
 # CHECK-NEXT:  1      3     0.50                        add	a0, a0, a0
 # CHECK-NEXT:  1      3     1.00                        bnez	a0, .Ltmp1
+# CHECK-NEXT:  1      3     0.50                        add	a0, a0, a0
+# CHECK-NEXT:  1      3     1.00                        jr	a0
 
 # CHECK:      Resources:
 # CHECK-NEXT: [0]   - SiFive7FDiv
@@ -73,7 +77,7 @@ bnez a0, 1f
 
 # CHECK:      Resource pressure per iteration:
 # CHECK-NEXT: [0]    [1]    [2]    [3]    [4]    [5]    [6]    [7]
-# CHECK-NEXT:  -      -     8.00   10.00   -      -      -      -
+# CHECK-NEXT:  -      -     9.00   11.00   -      -      -      -
 
 # CHECK:      Resource pressure by instruction:
 # CHECK-NEXT: [0]    [1]    [2]    [3]    [4]    [5]    [6]    [7]    Instructions:
@@ -95,29 +99,33 @@ bnez a0, 1f
 # CHECK-NEXT:  -      -      -     1.00    -      -      -      -     beqz	a0, .Ltmp0
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -     add	a0, a0, a0
 # CHECK-NEXT:  -      -      -     1.00    -      -      -      -     bnez	a0, .Ltmp1
+# CHECK-NEXT:  -      -     1.00    -      -      -      -      -     add	a0, a0, a0
+# CHECK-NEXT:  -      -      -     1.00    -      -      -      -     jr	a0
 
 # CHECK:      Timeline view:
 # CHECK-NEXT:                     0123456789
-# CHECK-NEXT: Index     0123456789
+# CHECK-NEXT: Index     0123456789          0
 
-# CHECK:      [0,0]     DeeE .    .    .   .   lui	a0, 1
-# CHECK-NEXT: [0,1]     .DeeE.    .    .   .   add	a0, a0, a0
-# CHECK-NEXT: [0,2]     . DeeE    .    .   .   addi	a0, a0, 1
-# CHECK-NEXT: [0,3]     .  DeeE   .    .   .   addw	a0, a0, a0
-# CHECK-NEXT: [0,4]     .   DeeE  .    .   .   addiw	a0, a0, 1
-# CHECK-NEXT: [0,5]     .    DeeE .    .   .   sub	a0, a0, a0
-# CHECK-NEXT: [0,6]     .    .DeeE.    .   .   subw	a0, a0, a0
-# CHECK-NEXT: [0,7]     .    . DeeE    .   .   and	a0, a0, a0
-# CHECK-NEXT: [0,8]     .    .  DeeE   .   .   andi	a0, a0, 1
-# CHECK-NEXT: [0,9]     .    .   DeeE  .   .   or	a0, a0, a0
-# CHECK-NEXT: [0,10]    .    .    DeeE .   .   xor	a0, a0, a0
-# CHECK-NEXT: [0,11]    .    .    .DeeE.   .   slli	a0, a0, 1
-# CHECK-NEXT: [0,12]    .    .    . DeeE   .   srli	a0, a0, 1
-# CHECK-NEXT: [0,13]    .    .    .  DeeE  .   srai	a0, a0, 1
-# CHECK-NEXT: [0,14]    .    .    .   DeeE .   add	a0, a0, a0
-# CHECK-NEXT: [0,15]    .    .    .    DeeE.   beqz	a0, .Ltmp0
-# CHECK-NEXT: [0,16]    .    .    .    DeeE.   add	a0, a0, a0
-# CHECK-NEXT: [0,17]    .    .    .    .DeeE   bnez	a0, .Ltmp1
+# CHECK:      [0,0]     DeeE .    .    .    .   lui	a0, 1
+# CHECK-NEXT: [0,1]     .DeeE.    .    .    .   add	a0, a0, a0
+# CHECK-NEXT: [0,2]     . DeeE    .    .    .   addi	a0, a0, 1
+# CHECK-NEXT: [0,3]     .  DeeE   .    .    .   addw	a0, a0, a0
+# CHECK-NEXT: [0,4]     .   DeeE  .    .    .   addiw	a0, a0, 1
+# CHECK-NEXT: [0,5]     .    DeeE .    .    .   sub	a0, a0, a0
+# CHECK-NEXT: [0,6]     .    .DeeE.    .    .   subw	a0, a0, a0
+# CHECK-NEXT: [0,7]     .    . DeeE    .    .   and	a0, a0, a0
+# CHECK-NEXT: [0,8]     .    .  DeeE   .    .   andi	a0, a0, 1
+# CHECK-NEXT: [0,9]     .    .   DeeE  .    .   or	a0, a0, a0
+# CHECK-NEXT: [0,10]    .    .    DeeE .    .   xor	a0, a0, a0
+# CHECK-NEXT: [0,11]    .    .    .DeeE.    .   slli	a0, a0, 1
+# CHECK-NEXT: [0,12]    .    .    . DeeE    .   srli	a0, a0, 1
+# CHECK-NEXT: [0,13]    .    .    .  DeeE   .   srai	a0, a0, 1
+# CHECK-NEXT: [0,14]    .    .    .   DeeE  .   add	a0, a0, a0
+# CHECK-NEXT: [0,15]    .    .    .    DeeE .   beqz	a0, .Ltmp0
+# CHECK-NEXT: [0,16]    .    .    .    DeeE .   add	a0, a0, a0
+# CHECK-NEXT: [0,17]    .    .    .    .DeeE.   bnez	a0, .Ltmp1
+# CHECK-NEXT: [0,18]    .    .    .    .DeeE.   add	a0, a0, a0
+# CHECK-NEXT: [0,19]    .    .    .    . DeeE   jr	a0
 
 # CHECK:      Average Wait times (based on the timeline view):
 # CHECK-NEXT: [0]: Executions
@@ -144,4 +152,6 @@ bnez a0, 1f
 # CHECK-NEXT: 15.    1     0.0    0.0    0.0       beqz	a0, .Ltmp0
 # CHECK-NEXT: 16.    1     0.0    0.0    0.0       add	a0, a0, a0
 # CHECK-NEXT: 17.    1     0.0    0.0    0.0       bnez	a0, .Ltmp1
+# CHECK-NEXT: 18.    1     0.0    0.0    0.0       add	a0, a0, a0
+# CHECK-NEXT: 19.    1     0.0    0.0    0.0       jr	a0
 # CHECK-NEXT:        1     0.0    0.0    0.0       <total>
