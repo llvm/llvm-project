@@ -322,6 +322,7 @@ static uint64_t getDeclShowContexts(const NamedDecl *ND,
       if (ID->getDefinition())
         Contexts |= (1LL << CodeCompletionContext::CCC_Expression);
       Contexts |= (1LL << CodeCompletionContext::CCC_ObjCInterfaceName);
+      Contexts |= (1LL << CodeCompletionContext::CCC_ObjCClassForwardDecl);
     }
 
     // Deal with tag names.
@@ -2028,6 +2029,7 @@ static void CalculateHiddenNames(const CodeCompletionContext &Context,
   case CodeCompletionContext::CCC_IncludedFile:
   case CodeCompletionContext::CCC_Attribute:
   case CodeCompletionContext::CCC_NewName:
+  case CodeCompletionContext::CCC_ObjCClassForwardDecl:
     // We're looking for nothing, or we're looking for names that cannot
     // be hidden.
     return;

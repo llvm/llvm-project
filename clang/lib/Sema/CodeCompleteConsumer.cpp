@@ -83,6 +83,7 @@ bool CodeCompletionContext::wantConstructorResults() const {
   case CCC_ObjCCategoryName:
   case CCC_IncludedFile:
   case CCC_Attribute:
+  case CCC_ObjCClassForwardDecl:
     return false;
   }
 
@@ -166,6 +167,8 @@ StringRef clang::getCompletionKindString(CodeCompletionContext::Kind Kind) {
     return "Attribute";
   case CCKind::CCC_Recovery:
     return "Recovery";
+  case CCKind::CCC_ObjCClassForwardDecl:
+    return "ObjCClassForwardDecl";
   }
   llvm_unreachable("Invalid CodeCompletionContext::Kind!");
 }
