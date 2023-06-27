@@ -100,16 +100,17 @@ lhu a0, 0(a0)
 sub a0, a0, a0
 lwu a0, 0(a0)
 addw a0, a0, a0
+jr a0
 
 # CHECK:      Iterations:        1
-# CHECK-NEXT: Instructions:      90
-# CHECK-NEXT: Total Cycles:      108
-# CHECK-NEXT: Total uOps:        90
+# CHECK-NEXT: Instructions:      91
+# CHECK-NEXT: Total Cycles:      109
+# CHECK-NEXT: Total uOps:        91
 
 # CHECK:      Dispatch Width:    2
 # CHECK-NEXT: uOps Per Cycle:    0.83
 # CHECK-NEXT: IPC:               0.83
-# CHECK-NEXT: Block RThroughput: 45.0
+# CHECK-NEXT: Block RThroughput: 45.5
 
 # CHECK:      Instruction Info:
 # CHECK-NEXT: [1]: #uOps
@@ -210,6 +211,7 @@ addw a0, a0, a0
 # CHECK-NEXT:  1      3     0.50                        sub	a0, a0, a0
 # CHECK-NEXT:  1      3     1.00    *                   lwu	a0, 0(a0)
 # CHECK-NEXT:  1      3     0.50                        addw	a0, a0, a0
+# CHECK-NEXT:  1      3     1.00                        jr	a0
 
 # CHECK:      Resources:
 # CHECK-NEXT: [0]   - SiFive7FDiv
@@ -223,7 +225,7 @@ addw a0, a0, a0
 
 # CHECK:      Resource pressure per iteration:
 # CHECK-NEXT: [0]    [1]    [2]    [3]    [4]    [5]    [6]    [7]
-# CHECK-NEXT:  -      -     39.00  51.00   -      -      -      -
+# CHECK-NEXT:  -      -     39.00  52.00   -      -      -      -
 
 # CHECK:      Resource pressure by instruction:
 # CHECK-NEXT: [0]    [1]    [2]    [3]    [4]    [5]    [6]    [7]    Instructions:
@@ -317,101 +319,103 @@ addw a0, a0, a0
 # CHECK-NEXT:  -      -      -     1.00    -      -      -      -     sub	a0, a0, a0
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -     lwu	a0, 0(a0)
 # CHECK-NEXT:  -      -      -     1.00    -      -      -      -     addw	a0, a0, a0
+# CHECK-NEXT:  -      -      -     1.00    -      -      -      -     jr	a0
 
 # CHECK:      Timeline view:
 # CHECK-NEXT:                     0123456789          0123456789          0123456789          0123456789          0123456789
-# CHECK-NEXT: Index     0123456789          0123456789          0123456789          0123456789          0123456789          01234567
+# CHECK-NEXT: Index     0123456789          0123456789          0123456789          0123456789          0123456789          012345678
 
-# CHECK:      [0,0]     DeeE .    .    .    .    .    .    .    .    .    .    .    .    .    .    .    .    .    .    .    .    . .   lui	a0, 1
-# CHECK-NEXT: [0,1]     DeeE .    .    .    .    .    .    .    .    .    .    .    .    .    .    .    .    .    .    .    .    . .   auipc	a1, 1
-# CHECK-NEXT: [0,2]     .DeeE.    .    .    .    .    .    .    .    .    .    .    .    .    .    .    .    .    .    .    .    . .   add	a0, a0, a1
-# CHECK-NEXT: [0,3]     . DeeE    .    .    .    .    .    .    .    .    .    .    .    .    .    .    .    .    .    .    .    . .   addi	a0, a0, 1
-# CHECK-NEXT: [0,4]     .  DeeE   .    .    .    .    .    .    .    .    .    .    .    .    .    .    .    .    .    .    .    . .   addw	a0, a0, a0
-# CHECK-NEXT: [0,5]     .   DeeE  .    .    .    .    .    .    .    .    .    .    .    .    .    .    .    .    .    .    .    . .   addiw	a0, a0, 1
-# CHECK-NEXT: [0,6]     .    DeeE .    .    .    .    .    .    .    .    .    .    .    .    .    .    .    .    .    .    .    . .   sub	a0, a0, a0
-# CHECK-NEXT: [0,7]     .    .DeeE.    .    .    .    .    .    .    .    .    .    .    .    .    .    .    .    .    .    .    . .   subw	a0, a0, a0
-# CHECK-NEXT: [0,8]     .    . DeeE    .    .    .    .    .    .    .    .    .    .    .    .    .    .    .    .    .    .    . .   and	a0, a0, a0
-# CHECK-NEXT: [0,9]     .    .  DeeE   .    .    .    .    .    .    .    .    .    .    .    .    .    .    .    .    .    .    . .   andi	a0, a0, 1
-# CHECK-NEXT: [0,10]    .    .   DeeE  .    .    .    .    .    .    .    .    .    .    .    .    .    .    .    .    .    .    . .   or	a0, a0, a0
-# CHECK-NEXT: [0,11]    .    .    DeeE .    .    .    .    .    .    .    .    .    .    .    .    .    .    .    .    .    .    . .   ori	a0, a0, 1
-# CHECK-NEXT: [0,12]    .    .    .DeeE.    .    .    .    .    .    .    .    .    .    .    .    .    .    .    .    .    .    . .   xor	a0, a0, a0
-# CHECK-NEXT: [0,13]    .    .    . DeeE    .    .    .    .    .    .    .    .    .    .    .    .    .    .    .    .    .    . .   xori	a0, a0, 1
-# CHECK-NEXT: [0,14]    .    .    .  DeeE   .    .    .    .    .    .    .    .    .    .    .    .    .    .    .    .    .    . .   sll	a0, a0, a0
-# CHECK-NEXT: [0,15]    .    .    .   DeeE  .    .    .    .    .    .    .    .    .    .    .    .    .    .    .    .    .    . .   slli	a0, a0, 1
-# CHECK-NEXT: [0,16]    .    .    .    DeeE .    .    .    .    .    .    .    .    .    .    .    .    .    .    .    .    .    . .   sllw	a0, a0, a0
-# CHECK-NEXT: [0,17]    .    .    .    .DeeE.    .    .    .    .    .    .    .    .    .    .    .    .    .    .    .    .    . .   slliw	a0, a0, 1
-# CHECK-NEXT: [0,18]    .    .    .    . DeeE    .    .    .    .    .    .    .    .    .    .    .    .    .    .    .    .    . .   srl	a0, a0, a0
-# CHECK-NEXT: [0,19]    .    .    .    .  DeeE   .    .    .    .    .    .    .    .    .    .    .    .    .    .    .    .    . .   srli	a0, a0, 1
-# CHECK-NEXT: [0,20]    .    .    .    .   DeeE  .    .    .    .    .    .    .    .    .    .    .    .    .    .    .    .    . .   srlw	a0, a0, a0
-# CHECK-NEXT: [0,21]    .    .    .    .    DeeE .    .    .    .    .    .    .    .    .    .    .    .    .    .    .    .    . .   srliw	a0, a0, 1
-# CHECK-NEXT: [0,22]    .    .    .    .    .DeeE.    .    .    .    .    .    .    .    .    .    .    .    .    .    .    .    . .   sra	a0, a0, a0
-# CHECK-NEXT: [0,23]    .    .    .    .    . DeeE    .    .    .    .    .    .    .    .    .    .    .    .    .    .    .    . .   srai	a0, a0, 1
-# CHECK-NEXT: [0,24]    .    .    .    .    .  DeeE   .    .    .    .    .    .    .    .    .    .    .    .    .    .    .    . .   sraw	a0, a0, a0
-# CHECK-NEXT: [0,25]    .    .    .    .    .   DeeE  .    .    .    .    .    .    .    .    .    .    .    .    .    .    .    . .   sraiw	a0, a0, 1
-# CHECK-NEXT: [0,26]    .    .    .    .    .    DeeE .    .    .    .    .    .    .    .    .    .    .    .    .    .    .    . .   slt	a0, a0, a0
-# CHECK-NEXT: [0,27]    .    .    .    .    .    .DeeE.    .    .    .    .    .    .    .    .    .    .    .    .    .    .    . .   slti	a0, a0, 1
-# CHECK-NEXT: [0,28]    .    .    .    .    .    . DeeE    .    .    .    .    .    .    .    .    .    .    .    .    .    .    . .   sltu	a0, a0, a0
-# CHECK-NEXT: [0,29]    .    .    .    .    .    .  DeeE   .    .    .    .    .    .    .    .    .    .    .    .    .    .    . .   seqz	a0, a0
-# CHECK-NEXT: [0,30]    .    .    .    .    .    .    .DeeE.    .    .    .    .    .    .    .    .    .    .    .    .    .    . .   mul	a0, a0, a0
-# CHECK-NEXT: [0,31]    .    .    .    .    .    .    . DeeE    .    .    .    .    .    .    .    .    .    .    .    .    .    . .   add	a0, a0, a0
-# CHECK-NEXT: [0,32]    .    .    .    .    .    .    .    DeeE .    .    .    .    .    .    .    .    .    .    .    .    .    . .   mulw	a0, a0, a0
-# CHECK-NEXT: [0,33]    .    .    .    .    .    .    .    .DeeE.    .    .    .    .    .    .    .    .    .    .    .    .    . .   add	a0, a0, a0
-# CHECK-NEXT: [0,34]    .    .    .    .    .    .    .    . DeeE    .    .    .    .    .    .    .    .    .    .    .    .    . .   beq	a0, a0, .Ltmp0
-# CHECK-NEXT: [0,35]    .    .    .    .    .    .    .    . DeeE    .    .    .    .    .    .    .    .    .    .    .    .    . .   add	a0, a0, a0
-# CHECK-NEXT: [0,36]    .    .    .    .    .    .    .    .  DeeE   .    .    .    .    .    .    .    .    .    .    .    .    . .   bne	a0, a0, .Ltmp1
-# CHECK-NEXT: [0,37]    .    .    .    .    .    .    .    .  DeeE   .    .    .    .    .    .    .    .    .    .    .    .    . .   add	a0, a0, a0
-# CHECK-NEXT: [0,38]    .    .    .    .    .    .    .    .   DeeE  .    .    .    .    .    .    .    .    .    .    .    .    . .   blt	a0, a0, .Ltmp2
-# CHECK-NEXT: [0,39]    .    .    .    .    .    .    .    .   DeeE  .    .    .    .    .    .    .    .    .    .    .    .    . .   add	a0, a0, a0
-# CHECK-NEXT: [0,40]    .    .    .    .    .    .    .    .    DeeE .    .    .    .    .    .    .    .    .    .    .    .    . .   bltu	a0, a0, .Ltmp3
-# CHECK-NEXT: [0,41]    .    .    .    .    .    .    .    .    DeeE .    .    .    .    .    .    .    .    .    .    .    .    . .   add	a0, a0, a0
-# CHECK-NEXT: [0,42]    .    .    .    .    .    .    .    .    .DeeE.    .    .    .    .    .    .    .    .    .    .    .    . .   bge	a0, a0, .Ltmp4
-# CHECK-NEXT: [0,43]    .    .    .    .    .    .    .    .    .DeeE.    .    .    .    .    .    .    .    .    .    .    .    . .   add	a0, a0, a0
-# CHECK-NEXT: [0,44]    .    .    .    .    .    .    .    .    . DeeE    .    .    .    .    .    .    .    .    .    .    .    . .   bgeu	a0, a0, .Ltmp5
-# CHECK-NEXT: [0,45]    .    .    .    .    .    .    .    .    . DeeE    .    .    .    .    .    .    .    .    .    .    .    . .   add.uw	a0, a0, a0
-# CHECK-NEXT: [0,46]    .    .    .    .    .    .    .    .    .  DeeE   .    .    .    .    .    .    .    .    .    .    .    . .   slli.uw	a0, a0, 1
-# CHECK-NEXT: [0,47]    .    .    .    .    .    .    .    .    .   DeeE  .    .    .    .    .    .    .    .    .    .    .    . .   sh1add.uw	a0, a0, a0
-# CHECK-NEXT: [0,48]    .    .    .    .    .    .    .    .    .    DeeE .    .    .    .    .    .    .    .    .    .    .    . .   sh2add.uw	a0, a0, a0
-# CHECK-NEXT: [0,49]    .    .    .    .    .    .    .    .    .    .DeeE.    .    .    .    .    .    .    .    .    .    .    . .   sh3add.uw	a0, a0, a0
-# CHECK-NEXT: [0,50]    .    .    .    .    .    .    .    .    .    . DeeE    .    .    .    .    .    .    .    .    .    .    . .   sh1add	a0, a0, a0
-# CHECK-NEXT: [0,51]    .    .    .    .    .    .    .    .    .    .  DeeE   .    .    .    .    .    .    .    .    .    .    . .   sh2add	a0, a0, a0
-# CHECK-NEXT: [0,52]    .    .    .    .    .    .    .    .    .    .   DeeE  .    .    .    .    .    .    .    .    .    .    . .   sh3add	a0, a0, a0
-# CHECK-NEXT: [0,53]    .    .    .    .    .    .    .    .    .    .    DeeE .    .    .    .    .    .    .    .    .    .    . .   andn	a0, a0, a0
-# CHECK-NEXT: [0,54]    .    .    .    .    .    .    .    .    .    .    .DeeE.    .    .    .    .    .    .    .    .    .    . .   orn	a0, a0, a0
-# CHECK-NEXT: [0,55]    .    .    .    .    .    .    .    .    .    .    . DeeE    .    .    .    .    .    .    .    .    .    . .   xnor	a0, a0, a0
-# CHECK-NEXT: [0,56]    .    .    .    .    .    .    .    .    .    .    .  DeeE   .    .    .    .    .    .    .    .    .    . .   sext.b	a0, a0
-# CHECK-NEXT: [0,57]    .    .    .    .    .    .    .    .    .    .    .   DeeE  .    .    .    .    .    .    .    .    .    . .   sext.h	a0, a0
-# CHECK-NEXT: [0,58]    .    .    .    .    .    .    .    .    .    .    .    DeeE .    .    .    .    .    .    .    .    .    . .   zext.h	a0, a0
-# CHECK-NEXT: [0,59]    .    .    .    .    .    .    .    .    .    .    .    .DeeE.    .    .    .    .    .    .    .    .    . .   min	a0, a0, a0
-# CHECK-NEXT: [0,60]    .    .    .    .    .    .    .    .    .    .    .    . DeeE    .    .    .    .    .    .    .    .    . .   minu	a0, a0, a0
-# CHECK-NEXT: [0,61]    .    .    .    .    .    .    .    .    .    .    .    .  DeeE   .    .    .    .    .    .    .    .    . .   max	a0, a0, a0
-# CHECK-NEXT: [0,62]    .    .    .    .    .    .    .    .    .    .    .    .   DeeE  .    .    .    .    .    .    .    .    . .   maxu	a0, a0, a0
-# CHECK-NEXT: [0,63]    .    .    .    .    .    .    .    .    .    .    .    .    DeeE .    .    .    .    .    .    .    .    . .   rol	a0, a0, a0
-# CHECK-NEXT: [0,64]    .    .    .    .    .    .    .    .    .    .    .    .    .DeeE.    .    .    .    .    .    .    .    . .   ror	a0, a0, a0
-# CHECK-NEXT: [0,65]    .    .    .    .    .    .    .    .    .    .    .    .    . DeeE    .    .    .    .    .    .    .    . .   rori	a0, a0, 1
-# CHECK-NEXT: [0,66]    .    .    .    .    .    .    .    .    .    .    .    .    .  DeeE   .    .    .    .    .    .    .    . .   clz	a0, a0
-# CHECK-NEXT: [0,67]    .    .    .    .    .    .    .    .    .    .    .    .    .   DeeE  .    .    .    .    .    .    .    . .   clzw	a0, a0
-# CHECK-NEXT: [0,68]    .    .    .    .    .    .    .    .    .    .    .    .    .    DeeE .    .    .    .    .    .    .    . .   ctz	a0, a0
-# CHECK-NEXT: [0,69]    .    .    .    .    .    .    .    .    .    .    .    .    .    .DeeE.    .    .    .    .    .    .    . .   ctzw	a0, a0
-# CHECK-NEXT: [0,70]    .    .    .    .    .    .    .    .    .    .    .    .    .    .   DeeE  .    .    .    .    .    .    . .   cpop	a0, a0
-# CHECK-NEXT: [0,71]    .    .    .    .    .    .    .    .    .    .    .    .    .    .    DeeE .    .    .    .    .    .    . .   add	a0, a0, a0
-# CHECK-NEXT: [0,72]    .    .    .    .    .    .    .    .    .    .    .    .    .    .    .  DeeE   .    .    .    .    .    . .   cpopw	a0, a0
-# CHECK-NEXT: [0,73]    .    .    .    .    .    .    .    .    .    .    .    .    .    .    .   DeeE  .    .    .    .    .    . .   add	a0, a0, a0
-# CHECK-NEXT: [0,74]    .    .    .    .    .    .    .    .    .    .    .    .    .    .    .    DeeE .    .    .    .    .    . .   rev8	a0, a0
-# CHECK-NEXT: [0,75]    .    .    .    .    .    .    .    .    .    .    .    .    .    .    .    .DeeE.    .    .    .    .    . .   orc.b	a0, a0
-# CHECK-NEXT: [0,76]    .    .    .    .    .    .    .    .    .    .    .    .    .    .    .    .   DeeE  .    .    .    .    . .   lb	a0, 0(a0)
-# CHECK-NEXT: [0,77]    .    .    .    .    .    .    .    .    .    .    .    .    .    .    .    .    DeeE .    .    .    .    . .   add	a0, a0, a0
-# CHECK-NEXT: [0,78]    .    .    .    .    .    .    .    .    .    .    .    .    .    .    .    .    .  DeeE   .    .    .    . .   lh	a0, 0(a0)
-# CHECK-NEXT: [0,79]    .    .    .    .    .    .    .    .    .    .    .    .    .    .    .    .    .   DeeE  .    .    .    . .   and	a0, a0, a0
-# CHECK-NEXT: [0,80]    .    .    .    .    .    .    .    .    .    .    .    .    .    .    .    .    .    . DeeE    .    .    . .   lw	a0, 0(a0)
-# CHECK-NEXT: [0,81]    .    .    .    .    .    .    .    .    .    .    .    .    .    .    .    .    .    .  DeeE   .    .    . .   or	a0, a0, a0
-# CHECK-NEXT: [0,82]    .    .    .    .    .    .    .    .    .    .    .    .    .    .    .    .    .    .    .DeeE.    .    . .   ld	a0, 0(a0)
-# CHECK-NEXT: [0,83]    .    .    .    .    .    .    .    .    .    .    .    .    .    .    .    .    .    .    . DeeE    .    . .   xor	a0, a0, a0
-# CHECK-NEXT: [0,84]    .    .    .    .    .    .    .    .    .    .    .    .    .    .    .    .    .    .    .    DeeE .    . .   lbu	a0, 0(a0)
-# CHECK-NEXT: [0,85]    .    .    .    .    .    .    .    .    .    .    .    .    .    .    .    .    .    .    .    .DeeE.    . .   addi	a0, a0, 1
-# CHECK-NEXT: [0,86]    .    .    .    .    .    .    .    .    .    .    .    .    .    .    .    .    .    .    .    .   DeeE  . .   lhu	a0, 0(a0)
-# CHECK-NEXT: [0,87]    .    .    .    .    .    .    .    .    .    .    .    .    .    .    .    .    .    .    .    .    DeeE . .   sub	a0, a0, a0
-# CHECK-NEXT: [0,88]    .    .    .    .    .    .    .    .    .    .    .    .    .    .    .    .    .    .    .    .    .  DeeE.   lwu	a0, 0(a0)
-# CHECK-NEXT: [0,89]    .    .    .    .    .    .    .    .    .    .    .    .    .    .    .    .    .    .    .    .    .   DeeE   addw	a0, a0, a0
+# CHECK:      [0,0]     DeeE .    .    .    .    .    .    .    .    .    .    .    .    .    .    .    .    .    .    .    .    .  .   lui	a0, 1
+# CHECK-NEXT: [0,1]     DeeE .    .    .    .    .    .    .    .    .    .    .    .    .    .    .    .    .    .    .    .    .  .   auipc	a1, 1
+# CHECK-NEXT: [0,2]     .DeeE.    .    .    .    .    .    .    .    .    .    .    .    .    .    .    .    .    .    .    .    .  .   add	a0, a0, a1
+# CHECK-NEXT: [0,3]     . DeeE    .    .    .    .    .    .    .    .    .    .    .    .    .    .    .    .    .    .    .    .  .   addi	a0, a0, 1
+# CHECK-NEXT: [0,4]     .  DeeE   .    .    .    .    .    .    .    .    .    .    .    .    .    .    .    .    .    .    .    .  .   addw	a0, a0, a0
+# CHECK-NEXT: [0,5]     .   DeeE  .    .    .    .    .    .    .    .    .    .    .    .    .    .    .    .    .    .    .    .  .   addiw	a0, a0, 1
+# CHECK-NEXT: [0,6]     .    DeeE .    .    .    .    .    .    .    .    .    .    .    .    .    .    .    .    .    .    .    .  .   sub	a0, a0, a0
+# CHECK-NEXT: [0,7]     .    .DeeE.    .    .    .    .    .    .    .    .    .    .    .    .    .    .    .    .    .    .    .  .   subw	a0, a0, a0
+# CHECK-NEXT: [0,8]     .    . DeeE    .    .    .    .    .    .    .    .    .    .    .    .    .    .    .    .    .    .    .  .   and	a0, a0, a0
+# CHECK-NEXT: [0,9]     .    .  DeeE   .    .    .    .    .    .    .    .    .    .    .    .    .    .    .    .    .    .    .  .   andi	a0, a0, 1
+# CHECK-NEXT: [0,10]    .    .   DeeE  .    .    .    .    .    .    .    .    .    .    .    .    .    .    .    .    .    .    .  .   or	a0, a0, a0
+# CHECK-NEXT: [0,11]    .    .    DeeE .    .    .    .    .    .    .    .    .    .    .    .    .    .    .    .    .    .    .  .   ori	a0, a0, 1
+# CHECK-NEXT: [0,12]    .    .    .DeeE.    .    .    .    .    .    .    .    .    .    .    .    .    .    .    .    .    .    .  .   xor	a0, a0, a0
+# CHECK-NEXT: [0,13]    .    .    . DeeE    .    .    .    .    .    .    .    .    .    .    .    .    .    .    .    .    .    .  .   xori	a0, a0, 1
+# CHECK-NEXT: [0,14]    .    .    .  DeeE   .    .    .    .    .    .    .    .    .    .    .    .    .    .    .    .    .    .  .   sll	a0, a0, a0
+# CHECK-NEXT: [0,15]    .    .    .   DeeE  .    .    .    .    .    .    .    .    .    .    .    .    .    .    .    .    .    .  .   slli	a0, a0, 1
+# CHECK-NEXT: [0,16]    .    .    .    DeeE .    .    .    .    .    .    .    .    .    .    .    .    .    .    .    .    .    .  .   sllw	a0, a0, a0
+# CHECK-NEXT: [0,17]    .    .    .    .DeeE.    .    .    .    .    .    .    .    .    .    .    .    .    .    .    .    .    .  .   slliw	a0, a0, 1
+# CHECK-NEXT: [0,18]    .    .    .    . DeeE    .    .    .    .    .    .    .    .    .    .    .    .    .    .    .    .    .  .   srl	a0, a0, a0
+# CHECK-NEXT: [0,19]    .    .    .    .  DeeE   .    .    .    .    .    .    .    .    .    .    .    .    .    .    .    .    .  .   srli	a0, a0, 1
+# CHECK-NEXT: [0,20]    .    .    .    .   DeeE  .    .    .    .    .    .    .    .    .    .    .    .    .    .    .    .    .  .   srlw	a0, a0, a0
+# CHECK-NEXT: [0,21]    .    .    .    .    DeeE .    .    .    .    .    .    .    .    .    .    .    .    .    .    .    .    .  .   srliw	a0, a0, 1
+# CHECK-NEXT: [0,22]    .    .    .    .    .DeeE.    .    .    .    .    .    .    .    .    .    .    .    .    .    .    .    .  .   sra	a0, a0, a0
+# CHECK-NEXT: [0,23]    .    .    .    .    . DeeE    .    .    .    .    .    .    .    .    .    .    .    .    .    .    .    .  .   srai	a0, a0, 1
+# CHECK-NEXT: [0,24]    .    .    .    .    .  DeeE   .    .    .    .    .    .    .    .    .    .    .    .    .    .    .    .  .   sraw	a0, a0, a0
+# CHECK-NEXT: [0,25]    .    .    .    .    .   DeeE  .    .    .    .    .    .    .    .    .    .    .    .    .    .    .    .  .   sraiw	a0, a0, 1
+# CHECK-NEXT: [0,26]    .    .    .    .    .    DeeE .    .    .    .    .    .    .    .    .    .    .    .    .    .    .    .  .   slt	a0, a0, a0
+# CHECK-NEXT: [0,27]    .    .    .    .    .    .DeeE.    .    .    .    .    .    .    .    .    .    .    .    .    .    .    .  .   slti	a0, a0, 1
+# CHECK-NEXT: [0,28]    .    .    .    .    .    . DeeE    .    .    .    .    .    .    .    .    .    .    .    .    .    .    .  .   sltu	a0, a0, a0
+# CHECK-NEXT: [0,29]    .    .    .    .    .    .  DeeE   .    .    .    .    .    .    .    .    .    .    .    .    .    .    .  .   seqz	a0, a0
+# CHECK-NEXT: [0,30]    .    .    .    .    .    .    .DeeE.    .    .    .    .    .    .    .    .    .    .    .    .    .    .  .   mul	a0, a0, a0
+# CHECK-NEXT: [0,31]    .    .    .    .    .    .    . DeeE    .    .    .    .    .    .    .    .    .    .    .    .    .    .  .   add	a0, a0, a0
+# CHECK-NEXT: [0,32]    .    .    .    .    .    .    .    DeeE .    .    .    .    .    .    .    .    .    .    .    .    .    .  .   mulw	a0, a0, a0
+# CHECK-NEXT: [0,33]    .    .    .    .    .    .    .    .DeeE.    .    .    .    .    .    .    .    .    .    .    .    .    .  .   add	a0, a0, a0
+# CHECK-NEXT: [0,34]    .    .    .    .    .    .    .    . DeeE    .    .    .    .    .    .    .    .    .    .    .    .    .  .   beq	a0, a0, .Ltmp0
+# CHECK-NEXT: [0,35]    .    .    .    .    .    .    .    . DeeE    .    .    .    .    .    .    .    .    .    .    .    .    .  .   add	a0, a0, a0
+# CHECK-NEXT: [0,36]    .    .    .    .    .    .    .    .  DeeE   .    .    .    .    .    .    .    .    .    .    .    .    .  .   bne	a0, a0, .Ltmp1
+# CHECK-NEXT: [0,37]    .    .    .    .    .    .    .    .  DeeE   .    .    .    .    .    .    .    .    .    .    .    .    .  .   add	a0, a0, a0
+# CHECK-NEXT: [0,38]    .    .    .    .    .    .    .    .   DeeE  .    .    .    .    .    .    .    .    .    .    .    .    .  .   blt	a0, a0, .Ltmp2
+# CHECK-NEXT: [0,39]    .    .    .    .    .    .    .    .   DeeE  .    .    .    .    .    .    .    .    .    .    .    .    .  .   add	a0, a0, a0
+# CHECK-NEXT: [0,40]    .    .    .    .    .    .    .    .    DeeE .    .    .    .    .    .    .    .    .    .    .    .    .  .   bltu	a0, a0, .Ltmp3
+# CHECK-NEXT: [0,41]    .    .    .    .    .    .    .    .    DeeE .    .    .    .    .    .    .    .    .    .    .    .    .  .   add	a0, a0, a0
+# CHECK-NEXT: [0,42]    .    .    .    .    .    .    .    .    .DeeE.    .    .    .    .    .    .    .    .    .    .    .    .  .   bge	a0, a0, .Ltmp4
+# CHECK-NEXT: [0,43]    .    .    .    .    .    .    .    .    .DeeE.    .    .    .    .    .    .    .    .    .    .    .    .  .   add	a0, a0, a0
+# CHECK-NEXT: [0,44]    .    .    .    .    .    .    .    .    . DeeE    .    .    .    .    .    .    .    .    .    .    .    .  .   bgeu	a0, a0, .Ltmp5
+# CHECK-NEXT: [0,45]    .    .    .    .    .    .    .    .    . DeeE    .    .    .    .    .    .    .    .    .    .    .    .  .   add.uw	a0, a0, a0
+# CHECK-NEXT: [0,46]    .    .    .    .    .    .    .    .    .  DeeE   .    .    .    .    .    .    .    .    .    .    .    .  .   slli.uw	a0, a0, 1
+# CHECK-NEXT: [0,47]    .    .    .    .    .    .    .    .    .   DeeE  .    .    .    .    .    .    .    .    .    .    .    .  .   sh1add.uw	a0, a0, a0
+# CHECK-NEXT: [0,48]    .    .    .    .    .    .    .    .    .    DeeE .    .    .    .    .    .    .    .    .    .    .    .  .   sh2add.uw	a0, a0, a0
+# CHECK-NEXT: [0,49]    .    .    .    .    .    .    .    .    .    .DeeE.    .    .    .    .    .    .    .    .    .    .    .  .   sh3add.uw	a0, a0, a0
+# CHECK-NEXT: [0,50]    .    .    .    .    .    .    .    .    .    . DeeE    .    .    .    .    .    .    .    .    .    .    .  .   sh1add	a0, a0, a0
+# CHECK-NEXT: [0,51]    .    .    .    .    .    .    .    .    .    .  DeeE   .    .    .    .    .    .    .    .    .    .    .  .   sh2add	a0, a0, a0
+# CHECK-NEXT: [0,52]    .    .    .    .    .    .    .    .    .    .   DeeE  .    .    .    .    .    .    .    .    .    .    .  .   sh3add	a0, a0, a0
+# CHECK-NEXT: [0,53]    .    .    .    .    .    .    .    .    .    .    DeeE .    .    .    .    .    .    .    .    .    .    .  .   andn	a0, a0, a0
+# CHECK-NEXT: [0,54]    .    .    .    .    .    .    .    .    .    .    .DeeE.    .    .    .    .    .    .    .    .    .    .  .   orn	a0, a0, a0
+# CHECK-NEXT: [0,55]    .    .    .    .    .    .    .    .    .    .    . DeeE    .    .    .    .    .    .    .    .    .    .  .   xnor	a0, a0, a0
+# CHECK-NEXT: [0,56]    .    .    .    .    .    .    .    .    .    .    .  DeeE   .    .    .    .    .    .    .    .    .    .  .   sext.b	a0, a0
+# CHECK-NEXT: [0,57]    .    .    .    .    .    .    .    .    .    .    .   DeeE  .    .    .    .    .    .    .    .    .    .  .   sext.h	a0, a0
+# CHECK-NEXT: [0,58]    .    .    .    .    .    .    .    .    .    .    .    DeeE .    .    .    .    .    .    .    .    .    .  .   zext.h	a0, a0
+# CHECK-NEXT: [0,59]    .    .    .    .    .    .    .    .    .    .    .    .DeeE.    .    .    .    .    .    .    .    .    .  .   min	a0, a0, a0
+# CHECK-NEXT: [0,60]    .    .    .    .    .    .    .    .    .    .    .    . DeeE    .    .    .    .    .    .    .    .    .  .   minu	a0, a0, a0
+# CHECK-NEXT: [0,61]    .    .    .    .    .    .    .    .    .    .    .    .  DeeE   .    .    .    .    .    .    .    .    .  .   max	a0, a0, a0
+# CHECK-NEXT: [0,62]    .    .    .    .    .    .    .    .    .    .    .    .   DeeE  .    .    .    .    .    .    .    .    .  .   maxu	a0, a0, a0
+# CHECK-NEXT: [0,63]    .    .    .    .    .    .    .    .    .    .    .    .    DeeE .    .    .    .    .    .    .    .    .  .   rol	a0, a0, a0
+# CHECK-NEXT: [0,64]    .    .    .    .    .    .    .    .    .    .    .    .    .DeeE.    .    .    .    .    .    .    .    .  .   ror	a0, a0, a0
+# CHECK-NEXT: [0,65]    .    .    .    .    .    .    .    .    .    .    .    .    . DeeE    .    .    .    .    .    .    .    .  .   rori	a0, a0, 1
+# CHECK-NEXT: [0,66]    .    .    .    .    .    .    .    .    .    .    .    .    .  DeeE   .    .    .    .    .    .    .    .  .   clz	a0, a0
+# CHECK-NEXT: [0,67]    .    .    .    .    .    .    .    .    .    .    .    .    .   DeeE  .    .    .    .    .    .    .    .  .   clzw	a0, a0
+# CHECK-NEXT: [0,68]    .    .    .    .    .    .    .    .    .    .    .    .    .    DeeE .    .    .    .    .    .    .    .  .   ctz	a0, a0
+# CHECK-NEXT: [0,69]    .    .    .    .    .    .    .    .    .    .    .    .    .    .DeeE.    .    .    .    .    .    .    .  .   ctzw	a0, a0
+# CHECK-NEXT: [0,70]    .    .    .    .    .    .    .    .    .    .    .    .    .    .   DeeE  .    .    .    .    .    .    .  .   cpop	a0, a0
+# CHECK-NEXT: [0,71]    .    .    .    .    .    .    .    .    .    .    .    .    .    .    DeeE .    .    .    .    .    .    .  .   add	a0, a0, a0
+# CHECK-NEXT: [0,72]    .    .    .    .    .    .    .    .    .    .    .    .    .    .    .  DeeE   .    .    .    .    .    .  .   cpopw	a0, a0
+# CHECK-NEXT: [0,73]    .    .    .    .    .    .    .    .    .    .    .    .    .    .    .   DeeE  .    .    .    .    .    .  .   add	a0, a0, a0
+# CHECK-NEXT: [0,74]    .    .    .    .    .    .    .    .    .    .    .    .    .    .    .    DeeE .    .    .    .    .    .  .   rev8	a0, a0
+# CHECK-NEXT: [0,75]    .    .    .    .    .    .    .    .    .    .    .    .    .    .    .    .DeeE.    .    .    .    .    .  .   orc.b	a0, a0
+# CHECK-NEXT: [0,76]    .    .    .    .    .    .    .    .    .    .    .    .    .    .    .    .   DeeE  .    .    .    .    .  .   lb	a0, 0(a0)
+# CHECK-NEXT: [0,77]    .    .    .    .    .    .    .    .    .    .    .    .    .    .    .    .    DeeE .    .    .    .    .  .   add	a0, a0, a0
+# CHECK-NEXT: [0,78]    .    .    .    .    .    .    .    .    .    .    .    .    .    .    .    .    .  DeeE   .    .    .    .  .   lh	a0, 0(a0)
+# CHECK-NEXT: [0,79]    .    .    .    .    .    .    .    .    .    .    .    .    .    .    .    .    .   DeeE  .    .    .    .  .   and	a0, a0, a0
+# CHECK-NEXT: [0,80]    .    .    .    .    .    .    .    .    .    .    .    .    .    .    .    .    .    . DeeE    .    .    .  .   lw	a0, 0(a0)
+# CHECK-NEXT: [0,81]    .    .    .    .    .    .    .    .    .    .    .    .    .    .    .    .    .    .  DeeE   .    .    .  .   or	a0, a0, a0
+# CHECK-NEXT: [0,82]    .    .    .    .    .    .    .    .    .    .    .    .    .    .    .    .    .    .    .DeeE.    .    .  .   ld	a0, 0(a0)
+# CHECK-NEXT: [0,83]    .    .    .    .    .    .    .    .    .    .    .    .    .    .    .    .    .    .    . DeeE    .    .  .   xor	a0, a0, a0
+# CHECK-NEXT: [0,84]    .    .    .    .    .    .    .    .    .    .    .    .    .    .    .    .    .    .    .    DeeE .    .  .   lbu	a0, 0(a0)
+# CHECK-NEXT: [0,85]    .    .    .    .    .    .    .    .    .    .    .    .    .    .    .    .    .    .    .    .DeeE.    .  .   addi	a0, a0, 1
+# CHECK-NEXT: [0,86]    .    .    .    .    .    .    .    .    .    .    .    .    .    .    .    .    .    .    .    .   DeeE  .  .   lhu	a0, 0(a0)
+# CHECK-NEXT: [0,87]    .    .    .    .    .    .    .    .    .    .    .    .    .    .    .    .    .    .    .    .    DeeE .  .   sub	a0, a0, a0
+# CHECK-NEXT: [0,88]    .    .    .    .    .    .    .    .    .    .    .    .    .    .    .    .    .    .    .    .    .  DeeE .   lwu	a0, 0(a0)
+# CHECK-NEXT: [0,89]    .    .    .    .    .    .    .    .    .    .    .    .    .    .    .    .    .    .    .    .    .   DeeE.   addw	a0, a0, a0
+# CHECK-NEXT: [0,90]    .    .    .    .    .    .    .    .    .    .    .    .    .    .    .    .    .    .    .    .    .    DeeE   jr	a0
 
 # CHECK:      Average Wait times (based on the timeline view):
 # CHECK-NEXT: [0]: Executions
@@ -510,4 +514,5 @@ addw a0, a0, a0
 # CHECK-NEXT: 87.    1     0.0    0.0    0.0       sub	a0, a0, a0
 # CHECK-NEXT: 88.    1     0.0    0.0    0.0       lwu	a0, 0(a0)
 # CHECK-NEXT: 89.    1     0.0    0.0    0.0       addw	a0, a0, a0
+# CHECK-NEXT: 90.    1     0.0    0.0    0.0       jr	a0
 # CHECK-NEXT:        1     0.0    0.0    0.0       <total>
