@@ -1560,7 +1560,7 @@ std::unique_ptr<CFG> CFGBuilder::buildCFG(const Decl *D, Stmt *Statement) {
          "AddImplicitDtors and AddLifetime cannot be used at the same time");
 
   if (BuildOpts.AddImplicitDtors)
-    if (const CXXDestructorDecl *DD = dyn_cast_if_present<CXXDestructorDecl>(D))
+    if (const CXXDestructorDecl *DD = dyn_cast_or_null<CXXDestructorDecl>(D))
       addImplicitDtorsForDestructor(DD);
 
   // Visit the statements and create the CFG.
@@ -1581,7 +1581,7 @@ std::unique_ptr<CFG> CFGBuilder::buildCFG(const Decl *D, Stmt *Statement) {
   // fields. To handle this, make a CFG branch. We only need to add one such
   // branch per constructor, since the Standard states that all virtual bases
   // shall be initialized before non-virtual bases and direct data members.
-  if (const auto *CD = dyn_cast_if_present<CXXConstructorDecl>(D)) {
+  if (const auto *CD = dyn_cast_or_null<CXXConstructorDecl>(D)) {
     CFGBlock *VBaseSucc = nullptr;
     for (auto *I : llvm::reverse(CD->inits())) {
       if (BuildOpts.AddVirtualBaseBranches && !VBaseSucc &&
@@ -3010,7 +3010,7 @@ CFGBlock *CFGBuilder::VisitDeclSubExpr(DeclStmt *DS) {
 
   // If the initializer is an ArrayInitLoopExpr, we want to extract the
   // initializer, that's used for each element.
-  const auto *AILE = dyn_cast_if_present<ArrayInitLoopExpr>(Init);
+  const auto *AILE = dyn_cast_or_null<ArrayInitLoopExpr>(Init);
 
   findConstructionContexts(
       ConstructionContextLayer::create(cfg->getBumpVectorContext(), DS),
@@ -3591,7 +3591,7 @@ CFGBlock *CFGBuilder::VisitForStmt(ForStmt *F) {
     // Specially handle logical operators, which have a slightly
     // more optimal CFG representation.
     if (BinaryOperator *Cond =
-            dyn_cast_if_present<BinaryOperator>(C ? C->IgnoreParens() : nullptr))
+            dyn_cast_or_null<BinaryOperator>(C ? C->IgnoreParens() : nullptr))
       if (Cond->isLogicalOp()) {
         std::tie(EntryConditionBlock, ExitConditionBlock) =
           VisitLogicalOperator(Cond, F, BodyBlock, LoopSuccessor);
@@ -5383,7 +5383,7 @@ bool CFGBlock::FilterEdge(const CFGBlock::FilterOptions &F,
     // If the 'To' has no label or is labeled but the label isn't a
     // CaseStmt then filter this edge.
     if (const SwitchStmt *S =
-        dyn_cast_if_present<SwitchStmt>(From->getTerminatorStmt())) {
+        dyn_cast_or_null<SwitchStmt>(From->getTerminatorStmt())) {
       if (S->isAllEnumCasesCovered()) {
         const Stmt *L = To->getLabel();
         if (!L || !isa<CaseStmt>(L))
