@@ -48,8 +48,6 @@ std::optional<MemoryBufferRef> readFile(StringRef path);
 // Add symbols in File to the symbol table.
 void parseFile(InputFile *file);
 
-void parseArmCMSEImportLib(InputFile *file);
-
 // The root class of input files.
 class InputFile {
 protected:
@@ -85,12 +83,6 @@ public:
   // Returns object file symbols. It is a runtime error to call this
   // function on files of other types.
   ArrayRef<Symbol *> getSymbols() const {
-    assert(fileKind == BinaryKind || fileKind == ObjKind ||
-           fileKind == BitcodeKind);
-    return {symbols.get(), numSymbols};
-  }
-
-  MutableArrayRef<Symbol *> getMutableSymbols() {
     assert(fileKind == BinaryKind || fileKind == ObjKind ||
            fileKind == BitcodeKind);
     return {symbols.get(), numSymbols};
@@ -288,8 +280,6 @@ public:
 
   void initSectionsAndLocalSyms(bool ignoreComdats);
   void postParse();
-  void importCmseSymbols();
-  void redirectCmseSymbols();
 
 private:
   void initializeSections(bool ignoreComdats,

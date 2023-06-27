@@ -291,7 +291,7 @@ struct LinalgOpPartialReductionInterface
       int64_t dim = oldShape[oldIdx];
       newOutputShape.push_back(dim);
       if (ShapedType::isDynamic(dim))
-        dynamicDims.push_back(b.createOrFold<tensor::DimOp>(
+        dynamicDims.push_back(b.create<tensor::DimOp>(
             loc, linalgOp.getDpsInitOperand(0)->get(), oldIdx));
     }
     Value emptyTensor = b.create<tensor::EmptyOp>(

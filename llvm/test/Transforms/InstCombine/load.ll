@@ -58,7 +58,7 @@ define i32 @test5(i1 %C) {
 
 define i32 @load_gep_null_inbounds(i64 %X) {
 ; CHECK-LABEL: @load_gep_null_inbounds(
-; CHECK-NEXT:    store i32 poison, ptr null, align 4294967296
+; CHECK-NEXT:    store i1 true, ptr poison, align 1
 ; CHECK-NEXT:    ret i32 poison
 ;
   %V = getelementptr inbounds i32, ptr null, i64 %X
@@ -68,7 +68,7 @@ define i32 @load_gep_null_inbounds(i64 %X) {
 
 define i32 @load_gep_null_not_inbounds(i64 %X) {
 ; CHECK-LABEL: @load_gep_null_not_inbounds(
-; CHECK-NEXT:    store i32 poison, ptr null, align 4294967296
+; CHECK-NEXT:    store i1 true, ptr poison, align 1
 ; CHECK-NEXT:    ret i32 poison
 ;
   %V = getelementptr i32, ptr null, i64 %X
