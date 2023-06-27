@@ -912,7 +912,7 @@ ExprResult Sema::DefaultArgumentPromotion(Expr *E) {
   //     of type T from the glvalue and the result of the conversion
   //     is a prvalue for the temporary.
   // FIXME: add some way to gate this entire thing for correctness in
-  // potentially potentially evaluated contexts.
+  // potentially evaluated contexts.
   if (getLangOpts().CPlusPlus && E->isGLValue() && !isUnevaluatedContext()) {
     ExprResult Temp = PerformCopyInitialization(
                        InitializedEntity::InitializeTemporary(E->getType()),

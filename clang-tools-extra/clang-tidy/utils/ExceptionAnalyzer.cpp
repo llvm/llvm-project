@@ -357,7 +357,7 @@ bool ExceptionAnalyzer::ExceptionInfo::filterByCatch(
       else if (isFunctionPointerConvertible(ExceptionCanTy, HandlerCanTy)) {
         TypesToDelete.push_back(ExceptionTy);
       }
-      // A a qualification conversion ...
+      // A qualification conversion ...
       else if (isQualificationConvertiblePointer(ExceptionCanTy, HandlerCanTy,
                                                  Context.getLangOpts())) {
         TypesToDelete.push_back(ExceptionTy);

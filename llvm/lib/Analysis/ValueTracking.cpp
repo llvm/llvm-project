@@ -2777,7 +2777,7 @@ bool isKnownNonZero(const Value *V, const APInt &DemandedElts, unsigned Depth,
 
     // If there exists any subset of X (sX) and subset of Y (sY) s.t sX * sY is
     // non-zero, then X * Y is non-zero. We can find sX and sY by just taking
-    // the the lowest known One of X and Y. If they are non-zero, the result
+    // the lowest known One of X and Y. If they are non-zero, the result
     // must be non-zero. We can check if LSB(X) * LSB(Y) != 0 by doing
     // X.CountLeadingZeros + Y.CountLeadingZeros < BitWidth.
     return (XKnown.countMaxTrailingZeros() + YKnown.countMaxTrailingZeros()) <

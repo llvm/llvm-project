@@ -466,7 +466,7 @@ namespace ClassTemplateCycle {
   T t;
 
   // Create a cycle: the variable M refers to A<1, 1>, whose template argument
-  // list list refers back to M.
+  // list refers back to M.
   template<int, int> struct A;
   const decltype(sizeof(A<1, 1>*)) M = 1;
   template<int N> struct A<N, M> {};

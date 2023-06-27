@@ -175,7 +175,7 @@ bool BreakpointSiteList::FindInRange(lldb::addr_t lower_bound,
 
   // This is one tricky bit.  The breakpoint might overlap the bottom end of
   // the range.  So we grab the breakpoint prior to the lower bound, and check
-  // that that + its byte size isn't in our range.
+  // that + its byte size isn't in our range.
   if (lower != m_bp_site_list.begin()) {
     collection::const_iterator prev_pos = lower;
     prev_pos--;

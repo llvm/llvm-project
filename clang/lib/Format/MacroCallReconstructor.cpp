@@ -466,7 +466,7 @@ void MacroCallReconstructor::finalize() {
 #endif
 
   // We created corresponding unwrapped lines for each incoming line as children
-  // the the toplevel null token.
+  // of the toplevel null token.
   assert(Result.Tokens.size() == 1 && !Result.Tokens.front()->Children.empty());
   LLVM_DEBUG({
     llvm::dbgs() << "Finalizing reconstructed lines:\n";
