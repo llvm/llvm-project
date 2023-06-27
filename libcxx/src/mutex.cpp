@@ -46,7 +46,7 @@ mutex::unlock() noexcept
 {
     int ec = __libcpp_mutex_unlock(&__m_);
     (void)ec;
-    _LIBCPP_ASSERT(ec == 0, "call to mutex::unlock failed");
+    _LIBCPP_ASSERT_UNCATEGORIZED(ec == 0, "call to mutex::unlock failed");
 }
 
 // recursive_mutex
@@ -62,7 +62,7 @@ recursive_mutex::~recursive_mutex()
 {
     int e = __libcpp_recursive_mutex_destroy(&__m_);
     (void)e;
-    _LIBCPP_ASSERT(e == 0, "call to ~recursive_mutex() failed");
+    _LIBCPP_ASSERT_UNCATEGORIZED(e == 0, "call to ~recursive_mutex() failed");
 }
 
 void
@@ -78,7 +78,7 @@ recursive_mutex::unlock() noexcept
 {
     int e = __libcpp_recursive_mutex_unlock(&__m_);
     (void)e;
-    _LIBCPP_ASSERT(e == 0, "call to recursive_mutex::unlock() failed");
+    _LIBCPP_ASSERT_UNCATEGORIZED(e == 0, "call to recursive_mutex::unlock() failed");
 }
 
 bool
