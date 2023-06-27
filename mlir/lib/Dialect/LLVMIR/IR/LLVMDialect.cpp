@@ -1807,9 +1807,11 @@ static LogicalResult verifyComdat(Operation *op,
   return success();
 }
 
-// operation ::= `llvm.mlir.global` linkage? `constant`? `@` identifier
-//               `(` attribute? `)` align? attribute-list? (`:` type)? region?
-// align     ::= `align` `=` UINT64
+// operation ::= `llvm.mlir.global` linkage? visibility?
+//               (`unnamed_addr` | `local_unnamed_addr`)?
+//               `thread_local`? `constant`? `@` identifier
+//               `(` attribute? `)` (`comdat(` symbol-ref-id `)`)?
+//               attribute-list? (`:` type)? region?
 //
 // The type can be omitted for string attributes, in which case it will be
 // inferred from the value of the string as [strlen(value) x i8].
@@ -2103,7 +2105,7 @@ Block *LLVMFuncOp::addEntryBlock() {
 
 void LLVMFuncOp::build(OpBuilder &builder, OperationState &result,
                        StringRef name, Type type, LLVM::Linkage linkage,
-                       bool dsoLocal, CConv cconv,
+                       bool dsoLocal, CConv cconv, SymbolRefAttr comdat,
                        ArrayRef<NamedAttribute> attrs,
                        ArrayRef<DictionaryAttr> argAttrs,
                        std::optional<uint64_t> functionEntryCount) {
@@ -2120,6 +2122,8 @@ void LLVMFuncOp::build(OpBuilder &builder, OperationState &result,
   if (dsoLocal)
     result.addAttribute(getDsoLocalAttrName(result.name),
                         builder.getUnitAttr());
+  if (comdat)
+    result.addAttribute(getComdatAttrName(result.name), comdat);
   if (functionEntryCount)
     result.addAttribute(getFunctionEntryCountAttrName(result.name),
                         builder.getI64IntegerAttr(functionEntryCount.value()));
@@ -2174,8 +2178,9 @@ buildLLVMFunctionType(OpAsmParser &parser, SMLoc loc, ArrayRef<Type> inputs,
 // Parses an LLVM function.
 //
 // operation ::= `llvm.func` linkage? cconv? function-signature
-// function-attributes?
-//               function-body
+//                (`comdat(` symbol-ref-id `)`)?
+//                function-attributes?
+//                function-body
 //
 ParseResult LLVMFuncOp::parse(OpAsmParser &parser, OperationState &result) {
   // Default to external linkage if no keyword is provided.
@@ -2222,6 +2227,16 @@ ParseResult LLVMFuncOp::parse(OpAsmParser &parser, OperationState &result) {
   result.addAttribute(getFunctionTypeAttrName(result.name),
                       TypeAttr::get(type));
 
+  // Parse the optional comdat selector.
+  if (succeeded(parser.parseOptionalKeyword("comdat"))) {
+    SymbolRefAttr comdat;
+    if (parser.parseLParen() || parser.parseAttribute(comdat) ||
+        parser.parseRParen())
+      return failure();
+
+    result.addAttribute(getComdatAttrName(result.name), comdat);
+  }
+
   if (failed(parser.parseOptionalAttrDictWithKeyword(result.attributes)))
     return failure();
   function_interface_impl::addArgAndResultAttrs(
@@ -2262,10 +2277,16 @@ void LLVMFuncOp::print(OpAsmPrinter &p) {
 
   function_interface_impl::printFunctionSignature(p, *this, argTypes,
                                                   isVarArg(), resTypes);
+
+  // Print the optional comdat selector.
+  if (auto comdat = getComdat())
+    p << " comdat(" << *comdat << ')';
+
   function_interface_impl::printFunctionAttributes(
       p, *this,
       {getFunctionTypeAttrName(), getArgAttrsAttrName(), getResAttrsAttrName(),
-       getLinkageAttrName(), getCConvAttrName(), getVisibility_AttrName()});
+       getLinkageAttrName(), getCConvAttrName(), getVisibility_AttrName(),
+       getComdatAttrName()});
 
   // Print the body if this is not an external function.
   Region &body = getBody();
@@ -2285,6 +2306,9 @@ LogicalResult LLVMFuncOp::verify() {
     return emitOpError() << "functions cannot have '"
                          << stringifyLinkage(LLVM::Linkage::Common)
                          << "' linkage";
+
+  if (failed(verifyComdat(*this, getComdat())))
+    return failure();
 
   if (isExternal()) {
     if (getLinkage() != LLVM::Linkage::External &&

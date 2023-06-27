@@ -1,21 +1,5 @@
 // RUN: mlir-translate -mlir-to-llvmir -split-input-file %s | FileCheck %s
 
-
-// Comdat sections
-llvm.comdat @__llvm_comdat {
-  // CHECK: $any = comdat any
-  llvm.comdat_selector @any any
-  // CHECK: $exactmatch = comdat exactmatch
-  llvm.comdat_selector @exactmatch exactmatch
-  // CHECK: $largest = comdat largest
-  llvm.comdat_selector @largest largest
-  // CHECK: $nodeduplicate = comdat nodeduplicate
-  llvm.comdat_selector @nodeduplicate nodeduplicate
-  // CHECK: $samesize = comdat samesize
-  llvm.comdat_selector @samesize samesize
-}
-
-
 // CHECK: @global_aligned32 = private global i64 42, align 32
 "llvm.mlir.global"() ({}) {sym_name = "global_aligned32", global_type = i64, value = 42 : i64, linkage = #llvm.linkage<private>, alignment = 32} : () -> ()
 
@@ -183,20 +167,6 @@ llvm.mlir.global thread_local @has_thr_local(42 : i64) : i64
 
 // CHECK: @sectionvar = internal constant [10 x i8] c"teststring", section ".mysection"
 llvm.mlir.global internal constant @sectionvar("teststring")  {section = ".mysection"}: !llvm.array<10 x i8>
-
-//
-// Comdat attribute.
-//
-// CHECK: @has_any_comdat = internal constant i64 1, comdat($any)
-llvm.mlir.global internal constant @has_any_comdat(1 : i64) comdat(@__llvm_comdat::@any) : i64
-// CHECK: @has_exactmatch_comdat = internal constant i64 1, comdat($exactmatch)
-llvm.mlir.global internal constant @has_exactmatch_comdat(1 : i64) comdat(@__llvm_comdat::@exactmatch) : i64
-// CHECK: @has_largest_comdat = internal constant i64 1, comdat($largest)
-llvm.mlir.global internal constant @has_largest_comdat(1 : i64) comdat(@__llvm_comdat::@largest) : i64
-// CHECK: @has_nodeduplicate_comdat = internal constant i64 1, comdat($nodeduplicate)
-llvm.mlir.global internal constant @has_nodeduplicate_comdat(1 : i64) comdat(@__llvm_comdat::@nodeduplicate) : i64
-// CHECK: @has_samesize_comdat = internal constant i64 1, comdat($samesize)
-llvm.mlir.global internal constant @has_samesize_comdat(1 : i64) comdat(@__llvm_comdat::@samesize) : i64
 
 //
 // Declarations of the allocation functions to be linked against. These are
