@@ -101,7 +101,6 @@ def DecImm : SDNodeXForm<imm, [{
                                    N->getValueType(0));
 }]>;
 
-defvar TAIL_UNDISTURBED_MASK_UNDISTURBED = 0;
 defvar TAIL_AGNOSTIC = 1;
 defvar TU_MU = 0;
 defvar TA_MA = 3;
@@ -4280,7 +4279,7 @@ class VPatTiedBinaryNoMaskTU<string intrinsic_name,
                    (!cast<Instruction>(inst#"_TIED")
                    (result_type result_reg_class:$merge),
                    (op2_type op2_kind:$rs2),
-                   GPR:$vl, sew, TAIL_UNDISTURBED_MASK_UNDISTURBED)>;
+                   GPR:$vl, sew, TU_MU)>;
 
 class VPatTiedBinaryMask<string intrinsic_name,
                          string inst,
