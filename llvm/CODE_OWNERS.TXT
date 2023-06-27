@@ -135,8 +135,8 @@ N: Benjamin Kramer
 E: benny.kra@gmail.com
 D: DWARF Parser
 
-N: Michael Kuperstein
-E: mkuper@google.com
+N: Florian Hahn
+E: flo@fhahn.com
 D: Loop Vectorizer
 
 N: Alexey Bataev
