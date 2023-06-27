@@ -12,6 +12,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "Opts.inc"
+#include "llvm/ADT/StringExtras.h"
 #include "llvm/Object/Binary.h"
 #include "llvm/Option/Arg.h"
 #include "llvm/Option/ArgList.h"

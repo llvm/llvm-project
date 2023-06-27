@@ -187,34 +187,32 @@ TEST(BoolValueDebugStringTest, ComplexBooleanWithSomeNames) {
 }
 
 TEST(ConstraintSetDebugStringTest, Empty) {
-  llvm::DenseSet<BoolValue *> Constraints;
+  llvm::ArrayRef<BoolValue *> Constraints;
   EXPECT_THAT(debugString(Constraints), StrEq(""));
 }
 
 TEST(ConstraintSetDebugStringTest, Simple) {
   ConstraintContext Ctx;
-  llvm::DenseSet<BoolValue *> Constraints;
+  std::vector<BoolValue *> Constraints;
   auto X = cast<AtomicBoolValue>(Ctx.atom());
   auto Y = cast<AtomicBoolValue>(Ctx.atom());
-  Constraints.insert(Ctx.disj(X, Y));
-  Constraints.insert(Ctx.disj(X, Ctx.neg(Y)));
+  Constraints.push_back(Ctx.disj(X, Y));
+  Constraints.push_back(Ctx.disj(X, Ctx.neg(Y)));
 
   auto Expected = R"((or
     X
-    (not
-        Y))
+    Y)
 (or
     X
-    Y)
+    (not
+        Y))
 )";
   EXPECT_THAT(debugString(Constraints, {{X, "X"}, {Y, "Y"}}),
               StrEq(Expected));
 }
 
 Solver::Result CheckSAT(std::vector<BoolValue *> Constraints) {
-  llvm::DenseSet<BoolValue *> ConstraintsSet(Constraints.begin(),
-                                             Constraints.end());
-  return WatchedLiteralsSolver().solve(std::move(ConstraintsSet));
+  return WatchedLiteralsSolver().solve(std::move(Constraints));
 }
 
 TEST(SATCheckDebugStringTest, AtomicBoolean) {

@@ -1686,7 +1686,9 @@ private:
             loc, resultType, varOp, /*shape=*/nullptr,
             /*typeparams=*/mlir::ValueRange{});
         auto rhs = gen(expr);
-        builder.create<hlfir::AssignOp>(loc, rhs, lhs);
+        builder.create<hlfir::AssignOp>(loc, rhs, lhs, /*realloc=*/false,
+                                        /*keep_lhs_length_if_realloc=*/false,
+                                        /*temporary_lhs=*/true);
         continue;
       }
 
@@ -1742,7 +1744,9 @@ private:
           bitEnumContainsAny(attrs.getFlags(),
                              fir::FortranVariableFlagsEnum::allocatable);
       auto rhs = gen(expr);
-      builder.create<hlfir::AssignOp>(loc, rhs, lhs, allowRealloc);
+      builder.create<hlfir::AssignOp>(loc, rhs, lhs, allowRealloc,
+                                      /*keep_lhs_length_if_realloc=*/false,
+                                      /*temporary_lhs=*/true);
     }
 
     return varOp;

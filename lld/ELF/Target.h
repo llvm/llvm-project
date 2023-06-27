@@ -12,6 +12,7 @@
 #include "Config.h"
 #include "InputSection.h"
 #include "lld/Common/ErrorHandler.h"
+#include "llvm/ADT/StringExtras.h"
 #include "llvm/Object/ELF.h"
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/MathExtras.h"

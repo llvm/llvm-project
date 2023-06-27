@@ -258,6 +258,106 @@ public:
   }
 };
 
+/// Represents overflowing binary operations.
+/// Only carry-out:
+/// G_UADDO, G_SADDO, G_USUBO, G_SSUBO, G_UMULO, G_SMULO
+/// Carry-in and carry-out:
+/// G_UADDE, G_SADDE, G_USUBE, G_SSUBE
+class GBinOpCarryOut : public GenericMachineInstr {
+public:
+  Register getDstReg() const { return getReg(0); }
+  Register getCarryOutReg() const { return getReg(1); }
+  MachineOperand &getLHS() { return getOperand(2); }
+  MachineOperand &getRHS() { return getOperand(3); }
+
+  static bool classof(const MachineInstr *MI) {
+    switch (MI->getOpcode()) {
+    case TargetOpcode::G_UADDO:
+    case TargetOpcode::G_SADDO:
+    case TargetOpcode::G_USUBO:
+    case TargetOpcode::G_SSUBO:
+    case TargetOpcode::G_UADDE:
+    case TargetOpcode::G_SADDE:
+    case TargetOpcode::G_USUBE:
+    case TargetOpcode::G_SSUBE:
+    case TargetOpcode::G_UMULO:
+    case TargetOpcode::G_SMULO:
+      return true;
+    default:
+      return false;
+    }
+  }
+};
+
+/// Represents overflowing add/sub operations.
+/// Only carry-out:
+/// G_UADDO, G_SADDO, G_USUBO, G_SSUBO
+/// Carry-in and carry-out:
+/// G_UADDE, G_SADDE, G_USUBE, G_SSUBE
+class GAddSubCarryOut : public GBinOpCarryOut {
+public:
+  bool isAdd() const {
+    switch (getOpcode()) {
+    case TargetOpcode::G_UADDO:
+    case TargetOpcode::G_SADDO:
+    case TargetOpcode::G_UADDE:
+    case TargetOpcode::G_SADDE:
+      return true;
+    default:
+      return false;
+    }
+  }
+  bool isSub() const { return !isAdd(); }
+
+  bool isSigned() const {
+    switch (getOpcode()) {
+    case TargetOpcode::G_SADDO:
+    case TargetOpcode::G_SSUBO:
+    case TargetOpcode::G_SADDE:
+    case TargetOpcode::G_SSUBE:
+      return true;
+    default:
+      return false;
+    }
+  }
+  bool isUnsigned() const { return !isSigned(); }
+
+  static bool classof(const MachineInstr *MI) {
+    switch (MI->getOpcode()) {
+    case TargetOpcode::G_UADDO:
+    case TargetOpcode::G_SADDO:
+    case TargetOpcode::G_USUBO:
+    case TargetOpcode::G_SSUBO:
+    case TargetOpcode::G_UADDE:
+    case TargetOpcode::G_SADDE:
+    case TargetOpcode::G_USUBE:
+    case TargetOpcode::G_SSUBE:
+      return true;
+    default:
+      return false;
+    }
+  }
+};
+
+/// Represents overflowing add/sub operations that also consume a carry-in.
+/// G_UADDE, G_SADDE, G_USUBE, G_SSUBE
+class GAddSubCarryInOut : public GAddSubCarryOut {
+public:
+  Register getCarryInReg() const { return getReg(4); }
+
+  static bool classof(const MachineInstr *MI) {
+    switch (MI->getOpcode()) {
+    case TargetOpcode::G_UADDE:
+    case TargetOpcode::G_SADDE:
+    case TargetOpcode::G_USUBE:
+    case TargetOpcode::G_SSUBE:
+      return true;
+    default:
+      return false;
+    }
+  }
+};
+
 } // namespace llvm
 
 #endif // LLVM_CODEGEN_GLOBALISEL_GENERICMACHINEINSTRS_H

@@ -15807,7 +15807,11 @@ void Sema::FinalizeVarWithDestructor(VarDecl *VD, const RecordType *Record) {
     return;
 
   CXXDestructorDecl *Destructor = LookupDestructor(ClassDecl);
-
+  // The result of `LookupDestructor` might be nullptr if the destructor is
+  // invalid, in which case it is marked as `IneligibleOrNotSelected` and
+  // will not be selected by `CXXRecordDecl::getDestructor()`.
+  if (!Destructor)
+    return;
   // If this is an array, we'll require the destructor during initialization, so
   // we can skip over this. We still want to emit exit-time destructor warnings
   // though.

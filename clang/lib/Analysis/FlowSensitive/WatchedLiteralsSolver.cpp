@@ -20,6 +20,7 @@
 #include "clang/Analysis/FlowSensitive/Solver.h"
 #include "clang/Analysis/FlowSensitive/Value.h"
 #include "clang/Analysis/FlowSensitive/WatchedLiteralsSolver.h"
+#include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/STLExtras.h"
@@ -177,7 +178,7 @@ struct BooleanFormula {
 
 /// Converts the conjunction of `Vals` into a formula in conjunctive normal
 /// form where each clause has at least one and at most three literals.
-BooleanFormula buildBooleanFormula(const llvm::DenseSet<BoolValue *> &Vals) {
+BooleanFormula buildBooleanFormula(const llvm::ArrayRef<BoolValue *> &Vals) {
   // The general strategy of the algorithm implemented below is to map each
   // of the sub-values in `Vals` to a unique variable and use these variables in
   // the resulting CNF expression to avoid exponential blow up. The number of
@@ -438,7 +439,7 @@ class WatchedLiteralsSolverImpl {
   std::vector<Variable> ActiveVars;
 
 public:
-  explicit WatchedLiteralsSolverImpl(const llvm::DenseSet<BoolValue *> &Vals)
+  explicit WatchedLiteralsSolverImpl(const llvm::ArrayRef<BoolValue *> &Vals)
       : Formula(buildBooleanFormula(Vals)), LevelVars(Formula.LargestVar + 1),
         LevelStates(Formula.LargestVar + 1) {
     assert(!Vals.empty());
@@ -718,7 +719,7 @@ private:
   }
 };
 
-Solver::Result WatchedLiteralsSolver::solve(llvm::DenseSet<BoolValue *> Vals) {
+Solver::Result WatchedLiteralsSolver::solve(llvm::ArrayRef<BoolValue *> Vals) {
   if (Vals.empty())
     return Solver::Result::Satisfiable({{}});
   auto [Res, Iterations] =

@@ -74,6 +74,8 @@ def SparseTensorDimSliceAttr : SparseTensor_Attr<"SparseTensorDimSlice", []> {
   );
 
   let extraClassDeclaration = [{
+    void print(llvm::raw_ostream &os) const;
+
     /// Special value for dynamic offset/size/stride.
     static constexpr int64_t kDynamic = -1;
     static constexpr bool isDynamic(int64_t v) { return v == kDynamic; }

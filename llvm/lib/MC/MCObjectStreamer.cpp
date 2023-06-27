@@ -510,13 +510,13 @@ void MCObjectStreamer::emitDwarfLocDirective(unsigned FileNo, unsigned Line,
 }
 
 static const MCExpr *buildSymbolDiff(MCObjectStreamer &OS, const MCSymbol *A,
-                                     const MCSymbol *B) {
+                                     const MCSymbol *B, SMLoc Loc) {
   MCContext &Context = OS.getContext();
   MCSymbolRefExpr::VariantKind Variant = MCSymbolRefExpr::VK_None;
   const MCExpr *ARef = MCSymbolRefExpr::create(A, Variant, Context);
   const MCExpr *BRef = MCSymbolRefExpr::create(B, Variant, Context);
   const MCExpr *AddrDelta =
-      MCBinaryExpr::create(MCBinaryExpr::Sub, ARef, BRef, Context);
+      MCBinaryExpr::create(MCBinaryExpr::Sub, ARef, BRef, Context, Loc);
   return AddrDelta;
 }
 
@@ -543,7 +543,7 @@ void MCObjectStreamer::emitDwarfAdvanceLineAddr(int64_t LineDelta,
                          Label, PointerSize);
     return;
   }
-  const MCExpr *AddrDelta = buildSymbolDiff(*this, Label, LastLabel);
+  const MCExpr *AddrDelta = buildSymbolDiff(*this, Label, LastLabel, SMLoc());
   insert(new MCDwarfLineAddrFragment(LineDelta, *AddrDelta));
 }
 
@@ -566,9 +566,10 @@ void MCObjectStreamer::emitDwarfLineEndEntry(MCSection *Section,
 }
 
 void MCObjectStreamer::emitDwarfAdvanceFrameAddr(const MCSymbol *LastLabel,
-                                                 const MCSymbol *Label) {
-  const MCExpr *AddrDelta = buildSymbolDiff(*this, Label, LastLabel);
-  insert(new MCDwarfCallFrameFragment(*AddrDelta));
+                                                 const MCSymbol *Label,
+                                                 SMLoc Loc) {
+  const MCExpr *AddrDelta = buildSymbolDiff(*this, Label, LastLabel, Loc);
+  insert(new MCDwarfCallFrameFragment(*AddrDelta, nullptr));
 }
 
 void MCObjectStreamer::emitCVLocDirective(unsigned FunctionId, unsigned FileNo,

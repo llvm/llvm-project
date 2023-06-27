@@ -2308,7 +2308,10 @@ AppleObjCRuntimeV2::SharedCacheClassInfoExtractor::UpdateISAToDescriptorMap() {
 
   // The number of entries to pre-allocate room for.
   // Each entry is (addrsize + 4) bytes
-  const uint32_t max_num_classes = 163840;
+  // FIXME: It is not sustainable to continue incrementing this value every time
+  // the shared cache grows. This is because it requires allocating memory in
+  // the inferior process and some inferior processes have small memory limits.
+  const uint32_t max_num_classes = 212992;
 
   UtilityFunction *get_class_info_code = GetClassInfoUtilityFunction(exe_ctx);
   if (!get_class_info_code) {

@@ -179,6 +179,7 @@ struct Device {
   template <typename T>
   Device(std::unique_ptr<T> &&server) : server(std::move(server)) {}
   Server server;
+  rpc::Client client;
   std::unordered_map<rpc_opcode_t, rpc_opcode_callback_ty> callbacks;
   std::unordered_map<rpc_opcode_t, void *> callback_data;
 };
@@ -250,6 +251,7 @@ rpc_status_t rpc_server_init(uint32_t device_id, uint64_t num_ports,
     return RPC_STATUS_ERROR;
 
   state->devices[device_id]->server.reset(num_ports, buffer);
+  state->devices[device_id]->client.reset(num_ports, buffer);
 
   return RPC_STATUS_SUCCESS;
 }
@@ -303,14 +305,18 @@ rpc_status_t rpc_register_callback(uint32_t device_id, rpc_opcode_t opcode,
 }
 
 void *rpc_get_buffer(uint32_t device_id) {
-  if (!state)
-    return nullptr;
-  if (device_id >= state->num_devices)
-    return nullptr;
-  if (!state->devices[device_id])
+  if (!state || device_id >= state->num_devices || !state->devices[device_id])
     return nullptr;
   return state->devices[device_id]->server.get_buffer_start();
 }
+
+const void *rpc_get_client_buffer(uint32_t device_id) {
+  if (!state || device_id >= state->num_devices || !state->devices[device_id])
+    return nullptr;
+  return &state->devices[device_id]->client;
+}
+
+uint64_t rpc_get_client_size() { return sizeof(rpc::Client); }
 
 void rpc_recv_and_send(rpc_port_t ref, rpc_port_callback_ty callback,
                        void *data) {

@@ -490,16 +490,19 @@ enum LanguageType {
   eLanguageTypeFortran18 = 0x002d,
   eLanguageTypeAda2005 = 0x002e,
   eLanguageTypeAda2012 = 0x002f,
+  eLanguageTypeHIP = 0x0030,
+  eLanguageTypeAssembly = 0x0031,
+  eLanguageTypeC_sharp = 0x0032,
+  eLanguageTypeMojo = 0x0033,
 
   // Vendor Extensions
   // Note: Language::GetNameForLanguageType
   // assumes these can be used as indexes into array language_names, and
   // Language::SetLanguageFromCString and Language::AsCString assume these can
   // be used as indexes into array g_languages.
-  eLanguageTypeMipsAssembler,           ///< Mips_Assembler.
+  eLanguageTypeMipsAssembler, ///< Mips_Assembler.
   // Mojo will move to the common list of languages once the DWARF committee
   // creates a language code for it.
-  eLanguageTypeMojo,
   eNumLanguageTypes
 };
 

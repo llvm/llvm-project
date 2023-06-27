@@ -37,7 +37,6 @@
 #include "lldb/Utility/LLDBAssert.h"
 #include "lldb/Utility/LLDBLog.h"
 #include "lldb/Utility/Log.h"
-#include "lldb/Utility/RegisterValue.h"
 #include "lldb/Utility/State.h"
 #include "lldb/Utility/StreamString.h"
 #include "lldb/Utility/UnimplementedError.h"
@@ -2266,8 +2265,7 @@ GDBRemoteCommunicationServerLLGS::Handle_P(StringExtractorGDBRemote &packet) {
         packet, "P packet missing '=' char after register number");
 
   // Parse out the value.
-  uint8_t reg_bytes[RegisterValue::kMaxRegisterByteSize];
-  size_t reg_size = packet.GetHexBytesAvail(reg_bytes);
+  size_t reg_size = packet.GetHexBytesAvail(m_reg_bytes);
 
   // Get the thread to use.
   NativeThreadProtocol *thread = GetThreadFromSuffix(packet);
@@ -2306,7 +2304,7 @@ GDBRemoteCommunicationServerLLGS::Handle_P(StringExtractorGDBRemote &packet) {
   // Build the reginfos response.
   StreamGDBRemote response;
 
-  RegisterValue reg_value(ArrayRef(reg_bytes, reg_size),
+  RegisterValue reg_value(ArrayRef(m_reg_bytes, reg_size),
                           m_current_process->GetArchitecture().GetByteOrder());
   Status error = reg_context.WriteRegister(reg_info, reg_value);
   if (error.Fail()) {

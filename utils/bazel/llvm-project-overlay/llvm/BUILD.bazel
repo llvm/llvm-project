@@ -644,6 +644,7 @@ cc_binary(
         # listed here. MC uses headers produced by tablegen, so it cannot be a
         # regular dependency.
         "include/llvm/MC/*.h",
+        "include/llvm/TargetParser/SubtargetFeature.h",
     ]),
     copts = llvm_copts,
     stamp = 0,
@@ -652,6 +653,7 @@ cc_binary(
         ":Support",
         ":TableGen",
         ":TableGenGlobalISel",
+        ":TargetParser",
         ":config",
         ":llvm-tblgen-headers",
     ],
@@ -3677,6 +3679,18 @@ cc_binary(
     ],
 )
 
+gentbl(
+    name = "LibtoolDarwinOptionsTableGen",
+    strip_include_prefix = "tools/llvm-libtool-darwin",
+    tbl_outs = [(
+        "-gen-opt-parser-defs",
+        "tools/llvm-libtool-darwin/Opts.inc",
+    )],
+    tblgen = ":llvm-tblgen",
+    td_file = "tools/llvm-libtool-darwin/Opts.td",
+    td_srcs = ["include/llvm/Option/OptParser.td"],
+)
+
 cc_binary(
     name = "llvm-libtool-darwin",
     srcs = glob([
@@ -3689,8 +3703,10 @@ cc_binary(
         ":AllTargetsAsmParsers",
         ":AllTargetsCodeGens",
         ":BinaryFormat",
+        ":LibtoolDarwinOptionsTableGen",
         ":Core",
         ":Object",
+        ":Option",
         ":Support",
         ":TextAPI",
     ],

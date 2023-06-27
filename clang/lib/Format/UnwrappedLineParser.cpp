@@ -2431,14 +2431,14 @@ bool UnwrappedLineParser::parseBracedList(bool ContinueOnSemicolons,
 
 /// \brief Parses a pair of parentheses (and everything between them).
 /// \param AmpAmpTokenType If different than TT_Unknown sets this type for all
-/// double ampersands. This only counts for the current parens scope.
+/// double ampersands. This applies for all nested scopes as well.
 void UnwrappedLineParser::parseParens(TokenType AmpAmpTokenType) {
   assert(FormatTok->is(tok::l_paren) && "'(' expected.");
   nextToken();
   do {
     switch (FormatTok->Tok.getKind()) {
     case tok::l_paren:
-      parseParens();
+      parseParens(AmpAmpTokenType);
       if (Style.Language == FormatStyle::LK_Java && FormatTok->is(tok::l_brace))
         parseChildBlock();
       break;

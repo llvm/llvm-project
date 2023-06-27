@@ -815,17 +815,17 @@ Debugger::Debugger(lldb::LogOutputCallback log_callback, void *baton)
   // LLDB will start querying them during construction.
   m_collection_sp->Initialize(g_debugger_properties);
   m_collection_sp->AppendProperty(
-      ConstString("target"), "Settings specify to debugging targets.", true,
+      "target", "Settings specify to debugging targets.", true,
       Target::GetGlobalProperties().GetValueProperties());
   m_collection_sp->AppendProperty(
-      ConstString("platform"), "Platform settings.", true,
+      "platform", "Platform settings.", true,
       Platform::GetGlobalPlatformProperties().GetValueProperties());
   m_collection_sp->AppendProperty(
-      ConstString("symbols"), "Symbol lookup and cache settings.", true,
+      "symbols", "Symbol lookup and cache settings.", true,
       ModuleList::GetGlobalModuleListProperties().GetValueProperties());
   if (m_command_interpreter_up) {
     m_collection_sp->AppendProperty(
-        ConstString("interpreter"),
+        "interpreter",
         "Settings specify to the debugger's command interpreter.", true,
         m_command_interpreter_up->GetValueProperties());
   }

@@ -584,20 +584,13 @@ else:
     config.substitutions.append(("%adb_shell", "echo "))
 
 if config.host_os == "Linux":
-    # detect whether we are using glibc, and which version
-    # NB: 'ldd' is just one of the tools commonly installed as part of glibc/musl
-    ldd_ver_cmd = subprocess.Popen(
-        ["ldd", "--version"],
-        stdout=subprocess.PIPE,
-        stderr=subprocess.DEVNULL,
-        env={"LANG": "C"},
-    )
-    sout, _ = ldd_ver_cmd.communicate()
-    ver_lines = sout.splitlines()
-    if not config.android and len(ver_lines) and ver_lines[0].startswith(b"ldd "):
+    def add_glibc_versions(ver_string):
+        if config.android:
+            return
+
         from distutils.version import LooseVersion
 
-        ver = LooseVersion(ver_lines[0].split()[-1].decode())
+        ver = LooseVersion(ver_string)
         any_glibc = False
         for required in ["2.19", "2.27", "2.30", "2.34", "2.37"]:
             if ver >= LooseVersion(required):
@@ -605,6 +598,31 @@ if config.host_os == "Linux":
                 any_glibc = True
             if any_glibc:
                 config.available_features.add("glibc")
+
+    # detect whether we are using glibc, and which version
+    cmd_args = [
+        config.clang.strip(),
+        f"--target={config.target_triple}",
+        "-xc",
+        "-",
+        "-o",
+        "-",
+        "-dM",
+        "-E",
+    ] + shlex.split(config.target_cflags)
+    cmd = subprocess.Popen(
+        cmd_args,
+        stdout=subprocess.PIPE,
+        stdin=subprocess.PIPE,
+        stderr=subprocess.DEVNULL,
+        env={"LANG": "C"},
+    )
+    try:
+        sout, _ = cmd.communicate(b"#include <features.h>")
+        m = dict(re.findall(r"#define (__GLIBC__|__GLIBC_MINOR__) (\d+)", str(sout)))
+        add_glibc_versions(f"{m['__GLIBC__']}.{m['__GLIBC_MINOR__']}")
+    except:
+        pass
 
 sancovcc_path = os.path.join(config.llvm_tools_dir, "sancov")
 if os.path.exists(sancovcc_path):

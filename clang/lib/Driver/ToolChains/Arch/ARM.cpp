@@ -524,6 +524,12 @@ llvm::ARM::FPUKind arm::getARMTargetFeatures(const Driver &D,
         }
       }
     }
+
+    // The integrated assembler doesn't implement e_flags setting behavior for
+    // -meabi=gnu (gcc -mabi={apcs-gnu,atpcs} passes -meabi=gnu to gas). For
+    // compatibility we accept but warn.
+    if (Arg *A = Args.getLastArgNoClaim(options::OPT_mabi_EQ))
+      A->ignoreTargetSpecific();
   }
 
   if (getReadTPMode(D, Args, Triple, ForAS) == ReadTPMode::TPIDRURW)

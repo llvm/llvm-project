@@ -10,6 +10,7 @@
 #define LLVM_DEBUGINFO_DWARF_DWARFACCELERATORTABLE_H
 
 #include "llvm/ADT/DenseSet.h"
+#include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/BinaryFormat/Dwarf.h"
 #include "llvm/DebugInfo/DWARF/DWARFDataExtractor.h"

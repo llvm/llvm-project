@@ -688,36 +688,6 @@ bool transform::FuseIntoContainingOp::allowsRepeatedHandleOperands() {
   return true;
 }
 
-namespace {
-/// Unsafely exposes an internal protected method of TransformState::Extension
-/// as public.
-///
-/// MUST NOT be used directly.
-class UnsafeOpReplacementStateExtension : public TransformState::Extension {
-public:
-  UnsafeOpReplacementStateExtension(TransformState &state)
-      : TransformState::Extension(state) {}
-
-  MLIR_DEFINE_EXPLICIT_INTERNAL_INLINE_TYPE_ID(
-      UnsafeOpReplacementStateExtension)
-
-  LogicalResult doReplacePayloadOp(Operation *op, Operation *replacement) {
-    return replacePayloadOp(op, replacement);
-  }
-};
-} // namespace
-
-/// Replaces `payload` with `replacement` in all handles stored in the state.
-/// MUST NOT be used except for the case immediately below.
-static void forciblyReplaceReferencedPayloadOperation(TransformState &state,
-                                                      Operation *payload,
-                                                      Operation *replacement) {
-  UnsafeOpReplacementStateExtension extension(state);
-  // This may return failure if the payload is not associated with any handle,
-  // ignore that.
-  (void)extension.doReplacePayloadOp(payload, replacement);
-}
-
 DiagnosedSilenceableFailure
 transform::FuseIntoContainingOp::apply(transform::TransformRewriter &rewriter,
                                        transform::TransformResults &results,
@@ -787,6 +757,19 @@ transform::FuseIntoContainingOp::apply(transform::TransformRewriter &rewriter,
       LLVM_DEBUG(DBGS() << "\nFused a direct extract use\n" << *containingOp);
       fusedOps.append(tiledOps);
       if (newContainingOp) {
+        // Update handles associated with the containing op so we don't need to
+        // invalidate them. This is a hack to support better composability
+        // between tiling and fusion while a proper mechanism is being
+        // investigated.
+        //
+        // DO NOT replicate this elsewhere unless you understand what you are
+        // doing.
+        LogicalResult replacementStatus =
+            rewriter.notifyPayloadOperationReplaced(containingOp,
+                                                    newContainingOp);
+        (void)replacementStatus;
+        assert(succeeded(replacementStatus) &&
+               "unable to update transform state mapping");
         rewriter.eraseOp(containingOp);
         containingOp = newContainingOp;
       }
@@ -812,14 +795,6 @@ transform::FuseIntoContainingOp::apply(transform::TransformRewriter &rewriter,
     }
     return DiagnosedSilenceableFailure::silenceableFailure(std::move(diag));
   }
-
-  // Update handles associated with the containing op so we don't need to
-  // invalidate them. This is a hack to support better composability between
-  // tiling and fusion while a proper mechanism is being investigated.
-  //
-  // DO NOT replicate this elsewhere unless you understand what you are doing.
-  forciblyReplaceReferencedPayloadOperation(state, *containingOps.begin(),
-                                            containingOp);
 
   results.set(cast<OpResult>(getFusedOp()), fusedOps);
   results.set(cast<OpResult>(getNewContainingOp()), {containingOp});

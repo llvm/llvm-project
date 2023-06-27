@@ -236,13 +236,90 @@
       friend class directory_iterator;    // exposition only
     };
 
-    class directory_iterator;
+  class directory_iterator {
+  public:
+    using iterator_category = input_iterator_tag;
+    using value_type        = directory_entry;
+    using difference_type   = ptrdiff_t;
+    using pointer           = const directory_entry*;
+    using reference         = const directory_entry&;
+
+    // [fs.dir.itr.members], member functions
+    directory_iterator() noexcept;
+    explicit directory_iterator(const path& p);
+    directory_iterator(const path& p, directory_options options);
+    directory_iterator(const path& p, error_code& ec);
+    directory_iterator(const path& p, directory_options options,
+                       error_code& ec);
+    directory_iterator(const directory_iterator& rhs);
+    directory_iterator(directory_iterator&& rhs) noexcept;
+    ~directory_iterator();
+
+    directory_iterator& operator=(const directory_iterator& rhs);
+    directory_iterator& operator=(directory_iterator&& rhs) noexcept;
+
+    const directory_entry& operator*() const;
+    const directory_entry* operator->() const;
+    directory_iterator&    operator++();
+    directory_iterator&    increment(error_code& ec);
+
+    bool operator==(default_sentinel_t) const noexcept {          // since C++20
+      return *this == directory_iterator();
+    }
+
+    // other members as required by [input.iterators], input iterators
+  };
 
     // enable directory_iterator range-based for statements
     directory_iterator begin(directory_iterator iter) noexcept;
     directory_iterator end(directory_iterator) noexcept;
 
-    class recursive_directory_iterator;
+class recursive_directory_iterator {
+  public:
+    using iterator_category = input_iterator_tag;
+    using value_type        = directory_entry;
+    using difference_type   = ptrdiff_t;
+    using pointer           = const directory_entry*;
+    using reference         = const directory_entry&;
+
+    // [fs.rec.dir.itr.members], constructors and destructor
+    recursive_directory_iterator() noexcept;
+    explicit recursive_directory_iterator(const path& p);
+    recursive_directory_iterator(const path& p, directory_options options);
+    recursive_directory_iterator(const path& p, directory_options options,
+                                 error_code& ec);
+    recursive_directory_iterator(const path& p, error_code& ec);
+    recursive_directory_iterator(const recursive_directory_iterator& rhs);
+    recursive_directory_iterator(recursive_directory_iterator&& rhs) noexcept;
+    ~recursive_directory_iterator();
+
+    // [fs.rec.dir.itr.members], observers
+    directory_options  options() const;
+    int                depth() const;
+    bool               recursion_pending() const;
+
+    const directory_entry& operator*() const;
+    const directory_entry* operator->() const;
+
+    // [fs.rec.dir.itr.members], modifiers
+    recursive_directory_iterator&
+      operator=(const recursive_directory_iterator& rhs);
+    recursive_directory_iterator&
+      operator=(recursive_directory_iterator&& rhs) noexcept;
+
+    recursive_directory_iterator& operator++();
+    recursive_directory_iterator& increment(error_code& ec);
+
+    void pop();
+    void pop(error_code& ec);
+    void disable_recursion_pending();
+
+    bool operator==(default_sentinel_t) const noexcept {          // since C++20
+      return *this == recursive_directory_iterator();
+    }
+
+    // other members as required by [input.iterators], input iterators
+  };
 
     // enable recursive_directory_iterator range-based for statements
     recursive_directory_iterator begin(recursive_directory_iterator iter) noexcept;

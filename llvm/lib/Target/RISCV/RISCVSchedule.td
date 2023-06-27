@@ -20,7 +20,6 @@ def WriteIMul32     : SchedWrite;    // 32-bit multiply on RV64I
 def WriteJmp        : SchedWrite;    // Jump
 def WriteJal        : SchedWrite;    // Jump and link
 def WriteJalr       : SchedWrite;    // Jump and link register
-def WriteJmpReg     : SchedWrite;    // Jump register
 def WriteNop        : SchedWrite;
 def WriteLDB        : SchedWrite;    // Load byte
 def WriteLDH        : SchedWrite;    // Load half-word

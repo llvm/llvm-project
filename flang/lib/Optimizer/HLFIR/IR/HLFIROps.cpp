@@ -47,6 +47,9 @@ mlir::LogicalResult hlfir::AssignOp::verify() {
         hlfir::getFortranElementType(lhsType).isa<fir::CharacterType>()))
     return emitOpError("`realloc` must be set and lhs must be a character "
                        "allocatable when `keep_lhs_length_if_realloc` is set");
+  if (mustKeepLhsLengthInAllocatableAssignment() && isTemporaryLHS())
+    return emitOpError("`keep_lhs_length_if_realloc` does not make sense "
+                       "for `temporary_lhs` assignments");
   return mlir::success();
 }
 
@@ -1040,6 +1043,10 @@ void hlfir::ElementalOp::build(mlir::OpBuilder &builder,
   }
 }
 
+mlir::Value hlfir::ElementalOp::getElementEntity() {
+  return mlir::cast<hlfir::YieldElementOp>(getBody()->back()).getElementValue();
+}
+
 //===----------------------------------------------------------------------===//
 // ApplyOp
 //===----------------------------------------------------------------------===//
@@ -1287,6 +1294,22 @@ mlir::LogicalResult hlfir::ElementalAddrOp::verify() {
   return mlir::success();
 }
 
+hlfir::YieldOp hlfir::ElementalAddrOp::getYieldOp() {
+  hlfir::YieldOp yieldOp =
+      mlir::dyn_cast_or_null<hlfir::YieldOp>(getTerminator(getBody()));
+  assert(yieldOp && "element_addr is ill-formed");
+  return yieldOp;
+}
+
+mlir::Value hlfir::ElementalAddrOp::getElementEntity() {
+  return getYieldOp().getEntity();
+}
+
+mlir::Region *hlfir::ElementalAddrOp::getElementCleanup() {
+  mlir::Region *cleanup = &getYieldOp().getCleanup();
+  return cleanup->empty() ? nullptr : cleanup;
+}
+
 //===----------------------------------------------------------------------===//
 // OrderedAssignmentTreeOpInterface
 //===----------------------------------------------------------------------===//
@@ -1435,6 +1458,44 @@ hlfir::ForallIndexOp::canonicalize(hlfir::ForallIndexOp indexOp,
   return mlir::success();
 }
 
+//===----------------------------------------------------------------------===//
+// CharExtremumOp
+//===----------------------------------------------------------------------===//
+
+mlir::LogicalResult hlfir::CharExtremumOp::verify() {
+  if (getStrings().size() < 2)
+    return emitOpError("must be provided at least two string operands");
+  unsigned kind = getCharacterKind(getResult().getType());
+  for (auto string : getStrings())
+    if (kind != getCharacterKind(string.getType()))
+      return emitOpError("strings must have the same KIND as the result type");
+  return mlir::success();
+}
+
+void hlfir::CharExtremumOp::build(mlir::OpBuilder &builder,
+                                  mlir::OperationState &result,
+                                  hlfir::CharExtremumPredicate predicate,
+                                  mlir::ValueRange strings) {
+
+  fir::CharacterType::LenType resultTypeLen = 0;
+  assert(!strings.empty() && "must contain operands");
+  unsigned kind = getCharacterKind(strings[0].getType());
+  for (auto string : strings)
+    if (auto cstLen = getCharacterLengthIfStatic(string.getType())) {
+      resultTypeLen = std::max(resultTypeLen, *cstLen);
+    } else {
+      resultTypeLen = fir::CharacterType::unknownLen();
+      break;
+    }
+  auto resultType = hlfir::ExprType::get(
+      builder.getContext(), hlfir::ExprType::Shape{},
+      fir::CharacterType::get(builder.getContext(), kind, resultTypeLen),
+      false);
+
+  build(builder, result, resultType, predicate, strings);
+}
+
 #include "flang/Optimizer/HLFIR/HLFIROpInterfaces.cpp.inc"
 #define GET_OP_CLASSES
+#include "flang/Optimizer/HLFIR/HLFIREnums.cpp.inc"
 #include "flang/Optimizer/HLFIR/HLFIROps.cpp.inc"

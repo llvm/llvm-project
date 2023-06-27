@@ -1290,7 +1290,7 @@ invocation.
 The diagnostic information can be saved to a file in a machine readable format,
 like YAML by adding the `-foptimization-record-file=<file>` command-line flag.
 
-Results can be filtered by function name by passing 
+Results can be filtered by function name by passing
 `-mllvm -filter-print-funcs=foo`, where `foo` is the target function's name.
 
    .. code-block: console

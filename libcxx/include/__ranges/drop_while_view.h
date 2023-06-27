@@ -20,8 +20,8 @@
 #include <__ranges/access.h>
 #include <__ranges/all.h>
 #include <__ranges/concepts.h>
-#include <__ranges/copyable_box.h>
 #include <__ranges/enable_borrowed_range.h>
+#include <__ranges/movable_box.h>
 #include <__ranges/non_propagating_cache.h>
 #include <__ranges/range_adaptor.h>
 #include <__ranges/view_interface.h>
@@ -82,7 +82,7 @@ public:
 
 private:
   _LIBCPP_NO_UNIQUE_ADDRESS _View __base_ = _View();
-  _LIBCPP_NO_UNIQUE_ADDRESS __copyable_box<_Pred> __pred_;
+  _LIBCPP_NO_UNIQUE_ADDRESS __movable_box<_Pred> __pred_;
 
   static constexpr bool _UseCache = forward_range<_View>;
   using _Cache                    = _If<_UseCache, __non_propagating_cache<iterator_t<_View>>, __empty_cache>;

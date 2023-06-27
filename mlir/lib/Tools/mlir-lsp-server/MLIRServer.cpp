@@ -17,6 +17,7 @@
 #include "mlir/Parser/Parser.h"
 #include "mlir/Tools/lsp-server-support/Logging.h"
 #include "mlir/Tools/lsp-server-support/SourceMgrUtils.h"
+#include "llvm/ADT/StringExtras.h"
 #include "llvm/Support/Base64.h"
 #include "llvm/Support/SourceMgr.h"
 #include <optional>

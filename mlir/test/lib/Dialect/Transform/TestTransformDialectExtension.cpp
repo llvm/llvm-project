@@ -872,6 +872,34 @@ LogicalResult mlir::test::TestReEnterRegionOp::verify() {
   return success();
 }
 
+DiagnosedSilenceableFailure mlir::test::TestNotifyPayloadOpReplacedOp::apply(
+    transform::TransformRewriter &rewriter,
+    transform::TransformResults &results, transform::TransformState &state) {
+  auto originalOps = state.getPayloadOps(getOriginal());
+  auto replacementOps = state.getPayloadOps(getReplacement());
+  if (llvm::range_size(originalOps) != llvm::range_size(replacementOps))
+    return emitSilenceableError() << "expected same number of original and "
+                                     "replacement payload operations";
+  for (const auto &[original, replacement] :
+       llvm::zip(originalOps, replacementOps)) {
+    if (failed(
+            rewriter.notifyPayloadOperationReplaced(original, replacement))) {
+      auto diag = emitSilenceableError()
+                  << "unable to replace payload op in transform mapping";
+      diag.attachNote(original->getLoc()) << "original payload op";
+      diag.attachNote(replacement->getLoc()) << "replacement payload op";
+      return diag;
+    }
+  }
+  return DiagnosedSilenceableFailure::success();
+}
+
+void mlir::test::TestNotifyPayloadOpReplacedOp::getEffects(
+    SmallVectorImpl<MemoryEffects::EffectInstance> &effects) {
+  transform::onlyReadsHandle(getOriginal(), effects);
+  transform::onlyReadsHandle(getReplacement(), effects);
+}
+
 namespace {
 /// Test extension of the Transform dialect. Registers additional ops and
 /// declares PDL as dependent dialect since the additional ops are using PDL

@@ -2523,7 +2523,7 @@ bool MIParser::parseCFIOperand(MachineOperand &Dest) {
         parseCFIAddressSpace(AddressSpace))
       return true;
     CFIIndex = MF.addFrameInst(MCCFIInstruction::createLLVMDefAspaceCfa(
-        nullptr, Reg, Offset, AddressSpace));
+        nullptr, Reg, Offset, AddressSpace, SMLoc()));
     break;
   case MIToken::kw_cfi_remember_state:
     CFIIndex = MF.addFrameInst(MCCFIInstruction::createRememberState(nullptr));

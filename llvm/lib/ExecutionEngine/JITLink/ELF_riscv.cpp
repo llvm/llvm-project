@@ -233,6 +233,8 @@ private:
           (RawInstr & 0xFFF) | Imm20 | Imm10_1 | Imm11 | Imm19_12;
       break;
     }
+    case CallRelaxable:
+      // Treat as R_RISCV_CALL when the relaxation pass did not run
     case R_RISCV_CALL_PLT:
     case R_RISCV_CALL: {
       int64_t Value = E.getTarget().getAddress() + E.getAddend() - FixupAddress;
@@ -451,6 +453,9 @@ private:
       *(little32_t *)FixupPtr = Word32;
       break;
     }
+    case AlignRelaxable:
+      // Ignore when the relaxation pass did not run
+      break;
     }
     return Error::success();
   }
@@ -510,7 +515,7 @@ static bool isRelaxable(const Edge &E) {
 static RelaxAux initRelaxAux(LinkGraph &G) {
   RelaxAux Aux;
   Aux.Config.IsRV32 = G.getTargetTriple().isRISCV32();
-  const auto &Features = G.getFeatures();
+  const auto &Features = G.getFeatures().getFeatures();
   Aux.Config.HasRVC =
       std::find(Features.begin(), Features.end(), "+c") != Features.end();
 
@@ -723,13 +728,17 @@ static void finalizeBlockRelax(LinkGraph &G, Block &Block, BlockRelaxAux &Aux) {
 
   // Fixup edge offsets and kinds.
   Delta = 0;
-  for (auto [I, E] : llvm::enumerate(Aux.RelaxEdges)) {
-    E->setOffset(E->getOffset() - Delta);
+  size_t I = 0;
+  for (auto &E : Block.edges()) {
+    E.setOffset(E.getOffset() - Delta);
 
-    if (Aux.EdgeKinds[I] != Edge::Invalid)
-      E->setKind(Aux.EdgeKinds[I]);
+    if (I < Aux.RelaxEdges.size() && Aux.RelaxEdges[I] == &E) {
+      if (Aux.EdgeKinds[I] != Edge::Invalid)
+        E.setKind(Aux.EdgeKinds[I]);
 
-    Delta = Aux.RelocDeltas[I];
+      Delta = Aux.RelocDeltas[I];
+      ++I;
+    }
   }
 
   // Remove AlignRelaxable edges: all other relaxable edges got modified and
@@ -910,7 +919,7 @@ private:
 public:
   ELFLinkGraphBuilder_riscv(StringRef FileName,
                             const object::ELFFile<ELFT> &Obj, Triple TT,
-                            LinkGraph::FeatureVector Features)
+                            SubtargetFeatures Features)
       : ELFLinkGraphBuilder<ELFT>(Obj, std::move(TT), std::move(Features),
                                   FileName, riscv::getEdgeKindName) {}
 };
@@ -934,7 +943,7 @@ createLinkGraphFromELFObject_riscv(MemoryBufferRef ObjectBuffer) {
     auto &ELFObjFile = cast<object::ELFObjectFile<object::ELF64LE>>(**ELFObj);
     return ELFLinkGraphBuilder_riscv<object::ELF64LE>(
                (*ELFObj)->getFileName(), ELFObjFile.getELFFile(),
-               (*ELFObj)->makeTriple(), Features->getFeatures())
+               (*ELFObj)->makeTriple(), std::move(*Features))
         .buildGraph();
   } else {
     assert((*ELFObj)->getArch() == Triple::riscv32 &&
@@ -942,7 +951,7 @@ createLinkGraphFromELFObject_riscv(MemoryBufferRef ObjectBuffer) {
     auto &ELFObjFile = cast<object::ELFObjectFile<object::ELF32LE>>(**ELFObj);
     return ELFLinkGraphBuilder_riscv<object::ELF32LE>(
                (*ELFObj)->getFileName(), ELFObjFile.getELFFile(),
-               (*ELFObj)->makeTriple(), Features->getFeatures())
+               (*ELFObj)->makeTriple(), std::move(*Features))
         .buildGraph();
   }
 }
@@ -965,6 +974,8 @@ void link_ELF_riscv(std::unique_ptr<LinkGraph> G,
 
   ELFJITLinker_riscv::link(std::move(Ctx), std::move(G), std::move(Config));
 }
+
+LinkGraphPassFunction createRelaxationPass_ELF_riscv() { return relax; }
 
 } // namespace jitlink
 } // namespace llvm
