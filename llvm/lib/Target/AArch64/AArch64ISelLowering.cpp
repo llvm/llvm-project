@@ -18616,6 +18616,10 @@ static SDValue tryCombineShiftImm(unsigned IID, SDNode *N, SelectionDAG &DAG) {
   } else
     return SDValue();
 
+  // If the shift amount is zero, remove the shift intrinsic.
+  if (ShiftAmount == 0 && IID != Intrinsic::aarch64_neon_sqshlu)
+    return N->getOperand(1);
+
   unsigned Opcode;
   bool IsRightShift;
   switch (IID) {
