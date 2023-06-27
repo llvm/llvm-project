@@ -38,6 +38,7 @@ static_library("lib") {
     "SnippetFile.cpp",
     "SnippetGenerator.cpp",
     "SnippetRepetitor.cpp",
+    "SubprocessMemory.cpp",
     "Target.cpp",
     "UopsBenchmarkRunner.cpp",
   ]

@@ -1242,7 +1242,7 @@ ExprEngine::prepareStateForArrayDestruction(const ProgramStateRef State,
                                             const QualType &ElementTy,
                                             const LocationContext *LCtx,
                                             SVal *ElementCountVal) {
-  assert(Region != nullptr && "Not-null region expected");	
+  assert(Region != nullptr && "Not-null region expected");
 
   QualType Ty = ElementTy.getDesugaredType(getContext());
   while (const auto *NTy = dyn_cast<ArrayType>(Ty))

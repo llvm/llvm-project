@@ -2333,18 +2333,18 @@ targets.
 WebAssembly Features
 ====================
 
-Clang supports the WebAssembly features documented below. For further 
+Clang supports the WebAssembly features documented below. For further
 information related to the semantics of the builtins, please refer to the `WebAssembly Specification <https://webassembly.github.io/spec/core/>`_.
-In this section, when we refer to reference types, we are referring to 
+In this section, when we refer to reference types, we are referring to
 WebAssembly reference types, not C++ reference types unless stated
 otherwise.
 
 ``__builtin_wasm_table_set``
 ----------------------------
 
-This builtin function stores a value in a WebAssembly table. 
+This builtin function stores a value in a WebAssembly table.
 It takes three arguments.
-The first argument is the table to store a value into, the second 
+The first argument is the table to store a value into, the second
 argument is the index to which to store the value into, and the
 third argument is a value of reference type to store in the table.
 It returns nothing.
@@ -2356,7 +2356,7 @@ It returns nothing.
 
   void store(int index) {
     __builtin_wasm_table_set(table, index, JSObj);
-  } 
+  }
 
 ``__builtin_wasm_table_get``
 ----------------------------
@@ -2364,14 +2364,14 @@ It returns nothing.
 This builtin function is the counterpart to ``__builtin_wasm_table_set``
 and loads a value from a WebAssembly table of reference typed values.
 It takes 2 arguments.
-The first argument is a table of reference typed values and the 
+The first argument is a table of reference typed values and the
 second argument is an index from which to load the value. It returns
 the loaded reference typed value.
 
 .. code-block:: c++
 
   static __externref_t table[0];
-  
+
   __externref_t load(int index) {
     __externref_t Obj = __builtin_wasm_table_get(table, index);
     return Obj;
@@ -2397,11 +2397,11 @@ with the current table size.
 -----------------------------
 
 This builtin function grows the WebAssembly table by a certain amount.
-Currently, as all WebAssembly tables created in C/C++ are zero-sized, 
-this always needs to be called to grow the table. 
+Currently, as all WebAssembly tables created in C/C++ are zero-sized,
+this always needs to be called to grow the table.
 
-It takes three arguments. The first argument is the WebAssembly table 
-to grow. The second argument is the reference typed value to store in 
+It takes three arguments. The first argument is the WebAssembly table
+to grow. The second argument is the reference typed value to store in
 the new table entries (the initialization value), and the third argument
 is the amound to grow the table by. It returns the previous table size
 or -1. It will return -1 if not enough space could be allocated.
@@ -2422,11 +2422,11 @@ or -1. It will return -1 if not enough space could be allocated.
 ``__builtin_wasm_table_fill``
 -----------------------------
 
-This builtin function sets all the entries of a WebAssembly table to a given 
-reference typed value. It takes four arguments. The first argument is 
-the WebAssembly table, the second argument is the index that starts the 
-range, the third argument is the value to set in the new entries, and 
-the fourth and the last argument is the size of the range. It returns 
+This builtin function sets all the entries of a WebAssembly table to a given
+reference typed value. It takes four arguments. The first argument is
+the WebAssembly table, the second argument is the index that starts the
+range, the third argument is the value to set in the new entries, and
+the fourth and the last argument is the size of the range. It returns
 nothing.
 
 .. code-block:: c++
@@ -2442,11 +2442,11 @@ nothing.
 ``__builtin_wasm_table_copy``
 -----------------------------
 
-This builtin function copies elements from a source WebAssembly table 
+This builtin function copies elements from a source WebAssembly table
 to a possibly overlapping destination region. It takes five arguments.
 The first argument is the destination WebAssembly table, and the second
-argument is the source WebAssembly table. The third argument is the 
-destination index from where the copy starts, the fourth argument is the 
+argument is the source WebAssembly table. The third argument is the
+destination index from where the copy starts, the fourth argument is the
 source index from there the copy starts, and the fifth and last argument
 is the number of elements to copy. It returns nothing.
 

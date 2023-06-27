@@ -58,6 +58,12 @@ Analysis & CFG
 | sgatev\@google.com (email), sgatev (Phabricator), sgatev (GitHub)
 
 
+Experimental new constant interpreter
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+| Timm Bäder
+| tbaeder@redhat.com (email), tbaeder (Phabricator), tbaederr (GitHub)
+
+
 Modules & serialization
 ~~~~~~~~~~~~~~~~~~~~~~~
 | Chuanqi Xu

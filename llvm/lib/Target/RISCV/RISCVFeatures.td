@@ -752,6 +752,12 @@ def HasVendorXSfvcp : Predicate<"Subtarget->hasVendorXSfvcp()">,
                                 AssemblerPredicate<(all_of FeatureVendorXSfvcp),
                                 "'XSfvcp' (SiFive Custom Vector Coprocessor Interface Instructions)">;
 
+def FeatureVendorXSfcie
+    : SubtargetFeature<"xsfcie", "HasVendorXSfcie", "true",
+                       "'XSfcie' (SiFive Custom Instruction Extension SCIE.)">;
+def HasVendorXSfcie : Predicate<"Subtarget->hasVendorXSfcie()">,
+                        AssemblerPredicate<(all_of FeatureVendorXSfcie),
+                        "'XSfcie' (SiFive Custom Instruction Extension SCIE.)">;
 
 def FeatureVendorXCVbitmanip
     : SubtargetFeature<"xcvbitmanip", "HasVendorXCVbitmanip", "true",

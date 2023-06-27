@@ -44,7 +44,7 @@ class IndexBinaryOp<string mnemonic, list<Trait> traits = []>
 // AddOp
 //===----------------------------------------------------------------------===//
 
-def Index_AddOp : IndexBinaryOp<"add"> {
+def Index_AddOp : IndexBinaryOp<"add", [Commutative]> {
   let summary = "index addition";
   let description = [{
     The `index.add` operation takes two index values and computes their sum.
@@ -81,7 +81,7 @@ def Index_SubOp : IndexBinaryOp<"sub"> {
 // MulOp
 //===----------------------------------------------------------------------===//
 
-def Index_MulOp : IndexBinaryOp<"mul"> {
+def Index_MulOp : IndexBinaryOp<"mul", [Commutative]> {
   let summary = "index multiplication";
   let description = [{
     The `index.mul` operation takes two index values and computes their product.
@@ -248,7 +248,7 @@ def Index_RemUOp : IndexBinaryOp<"remu"> {
 // MaxSOp
 //===----------------------------------------------------------------------===//
 
-def Index_MaxSOp : IndexBinaryOp<"maxs"> {
+def Index_MaxSOp : IndexBinaryOp<"maxs", [Commutative]> {
   let summary = "index signed maximum";
   let description = [{
     The `index.maxs` operation takes two index values and computes their signed
@@ -267,7 +267,7 @@ def Index_MaxSOp : IndexBinaryOp<"maxs"> {
 // MaxUOp
 //===----------------------------------------------------------------------===//
 
-def Index_MaxUOp : IndexBinaryOp<"maxu"> {
+def Index_MaxUOp : IndexBinaryOp<"maxu", [Commutative]> {
   let summary = "index unsigned maximum";
   let description = [{
     The `index.maxu` operation takes two index values and computes their
@@ -287,7 +287,7 @@ def Index_MaxUOp : IndexBinaryOp<"maxu"> {
 // MinSOp
 //===----------------------------------------------------------------------===//
 
-def Index_MinSOp : IndexBinaryOp<"mins"> {
+def Index_MinSOp : IndexBinaryOp<"mins", [Commutative]> {
   let summary = "index signed minimum";
   let description = [{
     The `index.mins` operation takes two index values and computes their signed
@@ -306,7 +306,7 @@ def Index_MinSOp : IndexBinaryOp<"mins"> {
 // MinUOp
 //===----------------------------------------------------------------------===//
 
-def Index_MinUOp : IndexBinaryOp<"minu"> {
+def Index_MinUOp : IndexBinaryOp<"minu", [Commutative]> {
   let summary = "index unsigned minimum";
   let description = [{
     The `index.minu` operation takes two index values and computes their
@@ -389,7 +389,7 @@ def Index_ShrUOp : IndexBinaryOp<"shru"> {
 // AndOp
 //===----------------------------------------------------------------------===//
 
-def Index_AndOp : IndexBinaryOp<"and"> {
+def Index_AndOp : IndexBinaryOp<"and", [Commutative]> {
   let summary = "index bitwise and";
   let description = [{
     The `index.and` operation takes two index values and computes their bitwise
@@ -408,7 +408,7 @@ def Index_AndOp : IndexBinaryOp<"and"> {
 // OrOp
 //===----------------------------------------------------------------------===//
 
-def Index_OrOp : IndexBinaryOp<"or"> {
+def Index_OrOp : IndexBinaryOp<"or", [Commutative]> {
   let summary = "index bitwise or";
   let description = [{
     The `index.or` operation takes two index values and computes their bitwise
@@ -427,7 +427,7 @@ def Index_OrOp : IndexBinaryOp<"or"> {
 // XorOp
 //===----------------------------------------------------------------------===//
 
-def Index_XOrOp : IndexBinaryOp<"xor"> {
+def Index_XOrOp : IndexBinaryOp<"xor", [Commutative]> {
   let summary = "index bitwise xor";
   let description = [{
     The `index.xor` operation takes two index values and computes their bitwise

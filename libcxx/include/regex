@@ -710,7 +710,8 @@ public:
     regex_iterator& operator=(const regex_iterator&);
 
     bool operator==(const regex_iterator&) const;
-    bool operator!=(const regex_iterator&) const;                                // Removed in C++20
+    bool operator==(default_sentinel_t) const { return *this == regex_iterator(); } // since C++20
+    bool operator!=(const regex_iterator&) const;                                   // Removed in C++20
 
     const value_type& operator*() const;
     const value_type* operator->() const;
@@ -768,7 +769,8 @@ public:
     regex_token_iterator& operator=(const regex_token_iterator&);
 
     bool operator==(const regex_token_iterator&) const;
-    bool operator!=(const regex_token_iterator&) const;                  // Removed in C++20
+    bool operator==(default_sentinel_t) const { return *this == regex_token_iterator(); } // since C++20
+    bool operator!=(const regex_token_iterator&) const;                                   // Removed in C++20
 
     const value_type& operator*() const;
     const value_type* operator->() const;
@@ -791,6 +793,7 @@ typedef regex_token_iterator<wstring::const_iterator> wsregex_token_iterator;
 #include <__availability>
 #include <__config>
 #include <__iterator/back_insert_iterator.h>
+#include <__iterator/default_sentinel.h>
 #include <__iterator/wrap_iter.h>
 #include <__locale>
 #include <__memory_resource/polymorphic_allocator.h>
@@ -6429,7 +6432,10 @@ public:
                                      = regex_constants::match_default) = delete;
 #endif
 
-    bool operator==(const regex_iterator& __x) const;
+    _LIBCPP_HIDE_FROM_ABI bool operator==(const regex_iterator& __x) const;
+#if _LIBCPP_STD_VER >= 20
+    _LIBCPP_HIDE_FROM_ABI bool operator==(default_sentinel_t) const { return *this == regex_iterator(); }
+#endif
 #if _LIBCPP_STD_VER < 20
     _LIBCPP_INLINE_VISIBILITY
     bool operator!=(const regex_iterator& __x) const {return !(*this == __x);}
@@ -6609,9 +6615,14 @@ public:
     regex_token_iterator(const regex_token_iterator&);
     regex_token_iterator& operator=(const regex_token_iterator&);
 
-    bool operator==(const regex_token_iterator& __x) const;
-    _LIBCPP_INLINE_VISIBILITY
+    _LIBCPP_HIDE_FROM_ABI bool operator==(const regex_token_iterator& __x) const;
+#if _LIBCPP_STD_VER >= 20
+    _LIBCPP_HIDE_FROM_ABI _LIBCPP_HIDE_FROM_ABI bool operator==(default_sentinel_t) const {
+        return *this == regex_token_iterator();
+    }
+#endif
 #if _LIBCPP_STD_VER < 20
+    _LIBCPP_INLINE_VISIBILITY
     bool operator!=(const regex_token_iterator& __x) const {return !(*this == __x);}
 #endif
 

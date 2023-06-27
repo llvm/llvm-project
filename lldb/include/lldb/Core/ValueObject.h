@@ -614,7 +614,9 @@ public:
   virtual void SetLiveAddress(lldb::addr_t addr = LLDB_INVALID_ADDRESS,
                               AddressType address_type = eAddressTypeLoad) {}
 
-  virtual lldb::ValueObjectSP Cast(const CompilerType &compiler_type);
+  lldb::ValueObjectSP Cast(const CompilerType &compiler_type);
+
+  virtual lldb::ValueObjectSP DoCast(const CompilerType &compiler_type);
 
   virtual lldb::ValueObjectSP CastPointerType(const char *name,
                                               CompilerType &ast_type);

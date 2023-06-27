@@ -8,6 +8,7 @@
 
 #include "llvm/ExecutionEngine/JITLink/JITLink.h"
 
+#include "llvm/ADT/StringExtras.h"
 #include "llvm/BinaryFormat/Magic.h"
 #include "llvm/ExecutionEngine/JITLink/COFF.h"
 #include "llvm/ExecutionEngine/JITLink/ELF.h"

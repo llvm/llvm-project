@@ -57,7 +57,7 @@ std::string debugString(
 ///
 ///   Names assigned to atoms should not be repeated in `AtomNames`.
 std::string debugString(
-    const llvm::DenseSet<BoolValue *> &Constraints,
+    const llvm::ArrayRef<BoolValue *> Constraints,
     llvm::DenseMap<const AtomicBoolValue *, std::string> AtomNames = {{}});
 
 /// Returns a string representation for `Constraints` - a collection of boolean
@@ -73,14 +73,6 @@ std::string debugString(
 std::string debugString(
     ArrayRef<BoolValue *> Constraints, const Solver::Result &Result,
     llvm::DenseMap<const AtomicBoolValue *, std::string> AtomNames = {{}});
-inline std::string debugString(
-    const llvm::DenseSet<BoolValue *> &Constraints,
-    const Solver::Result &Result,
-    llvm::DenseMap<const AtomicBoolValue *, std::string> AtomNames = {{}}) {
-  std::vector<BoolValue *> ConstraintsVec(Constraints.begin(),
-                                          Constraints.end());
-  return debugString(ConstraintsVec, Result, std::move(AtomNames));
-}
 
 } // namespace dataflow
 } // namespace clang

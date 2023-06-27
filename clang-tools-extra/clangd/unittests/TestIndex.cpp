@@ -8,6 +8,7 @@
 
 #include "TestIndex.h"
 #include "clang/Index/IndexSymbol.h"
+#include "llvm/ADT/StringExtras.h"
 #include "llvm/Support/Regex.h"
 
 namespace clang {

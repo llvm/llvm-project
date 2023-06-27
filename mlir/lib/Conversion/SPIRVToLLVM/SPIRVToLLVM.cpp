@@ -51,6 +51,17 @@ static bool isUnsignedIntegerOrVector(Type type) {
   return false;
 }
 
+/// Returns the width of an integer or of the element type of an integer vector,
+/// if applicable.
+static std::optional<uint64_t> getIntegerOrVectorElementWidth(Type type) {
+  if (auto intType = dyn_cast<IntegerType>(type))
+    return intType.getWidth();
+  if (auto vecType = dyn_cast<VectorType>(type))
+    if (auto intType = dyn_cast<IntegerType>(vecType.getElementType()))
+      return intType.getWidth();
+  return std::nullopt;
+}
+
 /// Returns the bit width of integer, float or vector of float or integer values
 static unsigned getBitWidth(Type type) {
   assert((type.isIntOrFloat() || isa<VectorType>(type)) &&
@@ -1183,15 +1194,30 @@ public:
       return success();
     }
 
+    std::optional<uint64_t> dstTypeWidth =
+        getIntegerOrVectorElementWidth(dstType);
+    std::optional<uint64_t> op2TypeWidth =
+        getIntegerOrVectorElementWidth(op2Type);
+
+    if (!dstTypeWidth || !op2TypeWidth)
+      return failure();
+
     Location loc = operation.getLoc();
     Value extended;
-    if (isUnsignedIntegerOrVector(op2Type)) {
-      extended = rewriter.template create<LLVM::ZExtOp>(loc, dstType,
-                                                        adaptor.getOperand2());
+    if (op2TypeWidth < dstTypeWidth) {
+      if (isUnsignedIntegerOrVector(op2Type)) {
+        extended = rewriter.template create<LLVM::ZExtOp>(
+            loc, dstType, adaptor.getOperand2());
+      } else {
+        extended = rewriter.template create<LLVM::SExtOp>(
+            loc, dstType, adaptor.getOperand2());
+      }
+    } else if (op2TypeWidth == dstTypeWidth) {
+      extended = adaptor.getOperand2();
     } else {
-      extended = rewriter.template create<LLVM::SExtOp>(loc, dstType,
-                                                        adaptor.getOperand2());
+      return failure();
     }
+
     Value result = rewriter.template create<LLVMOp>(
         loc, dstType, adaptor.getOperand1(), extended);
     rewriter.replaceOp(operation, result);

@@ -77,8 +77,11 @@ private:
                      FillFunction Fill) {
     SmallString<256> Buffer;
     raw_svector_ostream AsmStream(Buffer);
+    BenchmarkKey Key;
+    Key.RegisterInitialValues = RegisterInitialValues;
     EXPECT_FALSE(assembleToStream(*ET, createTargetMachine(), /*LiveIns=*/{},
-                                  RegisterInitialValues, Fill, AsmStream));
+                                  RegisterInitialValues, Fill, AsmStream, Key,
+                                  false));
     return ExecutableFunction(createTargetMachine(),
                               getObjectFromBuffer(AsmStream.str()));
   }

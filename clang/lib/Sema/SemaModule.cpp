@@ -15,6 +15,7 @@
 #include "clang/Lex/HeaderSearch.h"
 #include "clang/Lex/Preprocessor.h"
 #include "clang/Sema/SemaInternal.h"
+#include "llvm/ADT/StringExtras.h"
 #include <optional>
 
 using namespace clang;
@@ -397,6 +398,7 @@ Sema::ActOnModuleDecl(SourceLocation StartLoc, SourceLocation ModuleLoc,
   if (Interface) {
 
     VisibleModules.setVisible(Interface, ModuleLoc);
+    VisibleModules.makeTransitiveImportsVisible(Interface, ModuleLoc);
 
     // Make the import decl for the interface in the impl module.
     ImportDecl *Import = ImportDecl::Create(Context, CurContext, ModuleLoc,

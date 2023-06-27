@@ -119,7 +119,7 @@ createTempFromMold(mlir::Location loc, fir::FirOpBuilder &builder,
     isHeapAlloc = builder.createBool(loc, true);
   } else {
     alloc = builder.createTemporary(loc, mold.getFortranElementType(), tmpName,
-                                    /*shape*/ std::nullopt, lenParams);
+                                    /*shape=*/std::nullopt, lenParams);
     isHeapAlloc = builder.createBool(loc, false);
   }
   auto declareOp = builder.create<hlfir::DeclareOp>(
@@ -162,7 +162,9 @@ struct AsExprOpConversion : public mlir::OpConversionPattern<hlfir::AsExprOp> {
     // Otherwise, create a copy in a new buffer.
     hlfir::Entity source = hlfir::Entity{adaptor.getVar()};
     auto [temp, cleanup] = createTempFromMold(loc, builder, source);
-    builder.create<hlfir::AssignOp>(loc, source, temp);
+    builder.create<hlfir::AssignOp>(loc, source, temp, /*realloc=*/false,
+                                    /*keep_lhs_length_if_realloc=*/false,
+                                    /*temporary_lhs=*/true);
     mlir::Value bufferizedExpr =
         packageBufferizedExpr(loc, builder, temp, cleanup);
     rewriter.replaceOp(asExpr, bufferizedExpr);
@@ -307,7 +309,10 @@ struct SetLengthOpConversion
         fir::FortranVariableFlagsAttr{});
     hlfir::Entity temp{declareOp.getBase()};
     // Assign string value to the created temp.
-    builder.create<hlfir::AssignOp>(loc, string, temp);
+    builder.create<hlfir::AssignOp>(loc, string, temp,
+                                    /*realloc=*/false,
+                                    /*keep_lhs_length_if_realloc=*/false,
+                                    /*temporary_lhs=*/true);
     mlir::Value bufferizedExpr =
         packageBufferizedExpr(loc, builder, temp, false);
     rewriter.replaceOp(setLength, bufferizedExpr);
@@ -572,7 +577,10 @@ struct ElementalOpConversion
     // Assign the element value to the temp element for this iteration.
     auto tempElement =
         hlfir::getElementAt(loc, builder, temp, loopNest.oneBasedIndices);
-    builder.create<hlfir::AssignOp>(loc, elementValue, tempElement);
+    builder.create<hlfir::AssignOp>(loc, elementValue, tempElement,
+                                    /*realloc=*/false,
+                                    /*keep_lhs_length_if_realloc=*/false,
+                                    /*temporary_lhs=*/true);
     // hlfir.yield_element implicitly marks the end-of-life its operand if
     // it is an expression created in the hlfir.elemental (since it is its
     // last use and an hlfir.destroy could not be created afterwards)
@@ -591,6 +599,54 @@ struct ElementalOpConversion
     return mlir::success();
   }
 };
+struct CharExtremumOpConversion
+    : public mlir::OpConversionPattern<hlfir::CharExtremumOp> {
+  using mlir::OpConversionPattern<hlfir::CharExtremumOp>::OpConversionPattern;
+  explicit CharExtremumOpConversion(mlir::MLIRContext *ctx)
+      : mlir::OpConversionPattern<hlfir::CharExtremumOp>{ctx} {}
+  mlir::LogicalResult
+  matchAndRewrite(hlfir::CharExtremumOp char_extremum, OpAdaptor adaptor,
+                  mlir::ConversionPatternRewriter &rewriter) const override {
+    mlir::Location loc = char_extremum->getLoc();
+    auto module = char_extremum->getParentOfType<mlir::ModuleOp>();
+    auto predicate = char_extremum.getPredicate();
+    bool predIsMin =
+        predicate == hlfir::CharExtremumPredicate::min ? true : false;
+    fir::FirOpBuilder builder(rewriter, fir::getKindMapping(module));
+    assert(adaptor.getStrings().size() >= 2 &&
+           "must have at least two strings operands");
+    auto numOperands = adaptor.getStrings().size();
+
+    std::vector<hlfir::Entity> chars;
+    std::vector<
+        std::pair<fir::ExtendedValue, std::optional<hlfir::CleanupFunction>>>
+        pairs;
+    llvm::SmallVector<fir::CharBoxValue> opCBVs;
+    for (size_t i = 0; i < numOperands; ++i) {
+      chars.emplace_back(getBufferizedExprStorage(adaptor.getStrings()[i]));
+      pairs.emplace_back(
+          hlfir::translateToExtendedValue(loc, builder, chars[i]));
+      assert(!pairs[i].second && "expected variables");
+      opCBVs.emplace_back(*pairs[i].first.getCharBox());
+    }
+
+    fir::ExtendedValue res =
+        fir::factory::CharacterExprHelper{builder, loc}.createCharExtremum(
+            predIsMin, opCBVs);
+    mlir::Type addrType = fir::ReferenceType::get(
+        hlfir::getFortranElementType(char_extremum.getResult().getType()));
+    mlir::Value cast = builder.createConvert(loc, addrType, fir::getBase(res));
+    res = fir::substBase(res, cast);
+    hlfir::Entity hlfirTempRes =
+        hlfir::Entity{hlfir::genDeclare(loc, builder, res, ".tmp.char_extremum",
+                                        fir::FortranVariableFlagsAttr{})
+                          .getBase()};
+    mlir::Value bufferizedExpr =
+        packageBufferizedExpr(loc, builder, hlfirTempRes, false);
+    rewriter.replaceOp(char_extremum, bufferizedExpr);
+    return mlir::success();
+  }
+};
 
 class BufferizeHLFIR : public hlfir::impl::BufferizeHLFIRBase<BufferizeHLFIR> {
 public:
@@ -605,11 +661,12 @@ public:
     auto module = this->getOperation();
     auto *context = &getContext();
     mlir::RewritePatternSet patterns(context);
-    patterns.insert<ApplyOpConversion, AsExprOpConversion, AssignOpConversion,
-                    AssociateOpConversion, ConcatOpConversion,
-                    DestroyOpConversion, ElementalOpConversion,
-                    EndAssociateOpConversion, NoReassocOpConversion,
-                    SetLengthOpConversion, ShapeOfOpConversion>(context);
+    patterns
+        .insert<ApplyOpConversion, AsExprOpConversion, AssignOpConversion,
+                AssociateOpConversion, CharExtremumOpConversion,
+                ConcatOpConversion, DestroyOpConversion, ElementalOpConversion,
+                EndAssociateOpConversion, NoReassocOpConversion,
+                SetLengthOpConversion, ShapeOfOpConversion>(context);
     mlir::ConversionTarget target(*context);
     // Note that YieldElementOp is not marked as an illegal operation.
     // It must be erased by its parent converter and there is no explicit

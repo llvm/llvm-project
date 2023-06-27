@@ -28,20 +28,13 @@
 # include <windows.h> // ERROR_* macros
 #endif
 
-// TODO: Check whether these functions actually need internal linkage, or if they can be made normal header functions
-_LIBCPP_DIAGNOSTIC_PUSH
-_LIBCPP_GCC_DIAGNOSTIC_IGNORED("-Wunused-function")
-_LIBCPP_CLANG_DIAGNOSTIC_IGNORED("-Wunused-function")
-_LIBCPP_CLANG_DIAGNOSTIC_IGNORED("-Wunused-template")
-
 _LIBCPP_BEGIN_NAMESPACE_FILESYSTEM
 
 namespace detail {
-namespace {
 
 #if defined(_LIBCPP_WIN32API)
 
-errc __win_err_to_errc(int err) {
+inline errc __win_err_to_errc(int err) {
   constexpr struct {
     DWORD win;
     errc errc;
@@ -105,13 +98,13 @@ errc __win_err_to_errc(int err) {
 
 #endif // _LIBCPP_WIN32API
 
-error_code capture_errno() {
+inline error_code capture_errno() {
   _LIBCPP_ASSERT(errno != 0, "Expected errno to be non-zero");
   return error_code(errno, generic_category());
 }
 
 #if defined(_LIBCPP_WIN32API)
-error_code make_windows_error(int err) {
+inline error_code make_windows_error(int err) {
   return make_error_code(__win_err_to_errc(err));
 }
 #endif
@@ -119,27 +112,27 @@ error_code make_windows_error(int err) {
 template <class T>
 T error_value();
 template <>
-_LIBCPP_CONSTEXPR_SINCE_CXX14 void error_value<void>() {}
+inline _LIBCPP_CONSTEXPR_SINCE_CXX14 void error_value<void>() {}
 template <>
-bool error_value<bool>() {
+inline bool error_value<bool>() {
   return false;
 }
 #if __SIZEOF_SIZE_T__ != __SIZEOF_LONG_LONG__
 template <>
-size_t error_value<size_t>() {
+inline size_t error_value<size_t>() {
   return size_t(-1);
 }
 #endif
 template <>
-uintmax_t error_value<uintmax_t>() {
+inline uintmax_t error_value<uintmax_t>() {
   return uintmax_t(-1);
 }
 template <>
-_LIBCPP_CONSTEXPR_SINCE_CXX14 file_time_type error_value<file_time_type>() {
+inline _LIBCPP_CONSTEXPR_SINCE_CXX14 file_time_type error_value<file_time_type>() {
   return file_time_type::min();
 }
 template <>
-path error_value<path>() {
+inline path error_value<path>() {
   return {};
 }
 
@@ -238,7 +231,6 @@ private:
   ErrorHandler& operator=(ErrorHandler const&) = delete;
 };
 
-} // end anonymous namespace
 } // end namespace detail
 
 _LIBCPP_END_NAMESPACE_FILESYSTEM

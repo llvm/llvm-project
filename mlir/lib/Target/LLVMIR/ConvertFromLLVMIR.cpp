@@ -25,6 +25,12 @@ using namespace mlir;
 
 namespace mlir {
 void registerFromLLVMIRTranslation() {
+  static llvm::cl::opt<bool> emitExpensiveWarnings(
+      "emit-expensive-warnings",
+      llvm::cl::desc("Emit expensive warnings during LLVM IR import "
+                     "(discouraged: testing only!)"),
+      llvm::cl::init(false));
+
   TranslateToMLIRRegistration registration(
       "import-llvm", "Translate LLVMIR to MLIR",
       [](llvm::SourceMgr &sourceMgr,
@@ -43,7 +49,9 @@ void registerFromLLVMIRTranslation() {
         }
         if (llvm::verifyModule(*llvmModule, &llvm::errs()))
           return nullptr;
-        return translateLLVMIRToModule(std::move(llvmModule), context);
+
+        return translateLLVMIRToModule(std::move(llvmModule), context,
+                                       emitExpensiveWarnings);
       },
       [](DialectRegistry &registry) {
         // Register the DLTI dialect used to express the data layout

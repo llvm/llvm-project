@@ -651,6 +651,12 @@ public:
   bool lowerInterleavedStore(StoreInst *SI, ShuffleVectorInst *SVI,
                              unsigned Factor) const override;
 
+  bool lowerDeinterleaveIntrinsicToLoad(IntrinsicInst *DI,
+                                        LoadInst *LI) const override;
+
+  bool lowerInterleaveIntrinsicToStore(IntrinsicInst *II,
+                                       StoreInst *SI) const override;
+
   bool isLegalAddImmediate(int64_t) const override;
   bool isLegalICmpImmediate(int64_t) const override;
 

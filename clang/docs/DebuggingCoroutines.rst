@@ -384,7 +384,7 @@ Here is an example to print the asynchronous stack for the normal task implement
     struct promise_type {
       task get_return_object();
       std::suspend_always initial_suspend() { return {}; }
-      
+
       void unhandled_exception() noexcept {}
 
       struct FinalSuspend {

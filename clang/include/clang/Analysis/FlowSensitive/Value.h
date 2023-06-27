@@ -306,6 +306,9 @@ public:
   /// Assigns `Val` as the child value for `D`.
   void setChild(const ValueDecl &D, Value &Val) { Children[&D] = &Val; }
 
+  /// Clears any value assigned as the child value for `D`.
+  void clearChild(const ValueDecl &D) { Children.erase(&D); }
+
   llvm::iterator_range<
       llvm::DenseMap<const ValueDecl *, Value *>::const_iterator>
   children() const {

@@ -468,7 +468,6 @@
 ; GCN-O1-OPTS-NEXT:      Dominator Tree Construction
 ; GCN-O1-OPTS-NEXT:      SROA
 ; GCN-O1-OPTS-NEXT:      Natural Loop Information
-; GCN-O1-OPTS-NEXT:      Scalar Evolution Analysis
 ; GCN-O1-OPTS-NEXT:      Split GEPs to a variadic base and a constant offset for better CSE
 ; GCN-O1-OPTS-NEXT:      Scalar Evolution Analysis
 ; GCN-O1-OPTS-NEXT:      Straight line strength reduction
@@ -767,7 +766,6 @@
 ; GCN-O2-NEXT:      Dominator Tree Construction
 ; GCN-O2-NEXT:      SROA
 ; GCN-O2-NEXT:      Natural Loop Information
-; GCN-O2-NEXT:      Scalar Evolution Analysis
 ; GCN-O2-NEXT:      Split GEPs to a variadic base and a constant offset for better CSE
 ; GCN-O2-NEXT:      Scalar Evolution Analysis
 ; GCN-O2-NEXT:      Straight line strength reduction
@@ -1076,7 +1074,6 @@
 ; GCN-O3-NEXT:      Dominator Tree Construction
 ; GCN-O3-NEXT:      SROA
 ; GCN-O3-NEXT:      Natural Loop Information
-; GCN-O3-NEXT:      Scalar Evolution Analysis
 ; GCN-O3-NEXT:      Split GEPs to a variadic base and a constant offset for better CSE
 ; GCN-O3-NEXT:      Scalar Evolution Analysis
 ; GCN-O3-NEXT:      Straight line strength reduction

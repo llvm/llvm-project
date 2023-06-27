@@ -283,7 +283,7 @@ private:
   const Scope *builtinsScope_{nullptr}; // module __Fortran_builtins
   Scope *ppcBuiltinTypesScope_{nullptr}; // module __Fortran_PPC_types
   std::optional<const Scope *> cudaBuiltinsScope_; // module __CUDA_builtins
-  const Scope *ppcBuiltinsScope_{nullptr}; // module __Fortran_PPC_intrinsics
+  const Scope *ppcBuiltinsScope_{nullptr}; // module __ppc_intrinsics
   std::list<parser::Program> modFileParseTrees_;
   std::unique_ptr<CommonBlockMap> commonBlockMap_;
   bool anyDefinedIntrinsicOperator_{false};

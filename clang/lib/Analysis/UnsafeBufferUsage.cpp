@@ -194,7 +194,7 @@ AST_MATCHER_P(CastExpr, castSubExpr, internal::Matcher<Expr>, innerMatcher) {
 // Matches a `UnaryOperator` whose operator is pre-increment:
 AST_MATCHER(UnaryOperator, isPreInc) {
   return Node.getOpcode() == UnaryOperator::Opcode::UO_PreInc;
-}  
+}
 
 // Returns a matcher that matches any expression 'e' such that `innerMatcher`
 // matches 'e' and 'e' is in an Unspecified Lvalue Context.
@@ -361,7 +361,7 @@ public:
   virtual std::optional<FixItList> getFixits(const Strategy &) const {
     return std::nullopt;
   }
-  
+
   /// Returns a list of two elements where the first element is the LHS of a pointer assignment
   /// statement and the second element is the RHS. This two-element list represents the fact that
   /// the LHS buffer gets its bounds information from the RHS buffer. This information will be used
@@ -608,10 +608,10 @@ public:
                                    hasLHS(declRefExpr(hasPointerType(),
                                                       to(varDecl())).
                                           bind(PointerAssignLHSTag))));
-    
+
     return stmt(isInUnspecifiedUntypedContext(PtrAssignExpr));
   }
-  
+
   virtual std::optional<FixItList> getFixits(const Strategy &S) const override;
 
   virtual const Stmt *getBaseStmt() const override { return nullptr; }
@@ -2126,7 +2126,7 @@ getFixIts(FixableGadgetSets &FixablesForAllVars, const Strategy &S,
       FixItsForVariable.erase(VD);
       continue;
     }
-    
+
     const auto VarGroupForVD = VarGrpMap.find(VD);
     if (VarGroupForVD != VarGrpMap.end()) {
       for (const VarDecl * V : VarGroupForVD->second) {
@@ -2158,7 +2158,7 @@ getFixIts(FixableGadgetSets &FixablesForAllVars, const Strategy &S,
       continue;
     }
   }
-  
+
   for (auto VD : FixItsForVariable) {
     const auto VarGroupForVD = VarGrpMap.find(VD.first);
     const Strategy::Kind ReplacementTypeForVD = S.lookup(VD.first);
@@ -2167,7 +2167,7 @@ getFixIts(FixableGadgetSets &FixablesForAllVars, const Strategy &S,
         if (Var == VD.first) {
           continue;
         }
-        
+
         FixItList GroupFix;
         if (FixItsForVariable.find(Var) == FixItsForVariable.end()) {
           GroupFix = fixVariable(Var, ReplacementTypeForVD, D,
@@ -2175,7 +2175,7 @@ getFixIts(FixableGadgetSets &FixablesForAllVars, const Strategy &S,
         } else {
           GroupFix = FixItsForVariable[Var];
         }
-        
+
         for (auto Fix : GroupFix) {
           FixItsForVariable[VD.first].push_back(Fix);
         }
@@ -2199,7 +2199,7 @@ void clang::checkUnsafeBufferUsage(const Decl *D,
                                    UnsafeBufferUsageHandler &Handler,
                                    bool EmitSuggestions) {
   assert(D && D->getBody());
-  
+
   // Do not emit fixit suggestions for functions declared in an
   // extern "C" block.
   if (const auto *FD = dyn_cast<FunctionDecl>(D)) {
@@ -2210,7 +2210,7 @@ void clang::checkUnsafeBufferUsage(const Decl *D,
       }
     }
   }
-  
+
   WarningGadgetSets UnsafeOps;
   FixableGadgetSets FixablesForAllVars;
 
@@ -2254,12 +2254,12 @@ void clang::checkUnsafeBufferUsage(const Decl *D,
   llvm::SmallVector<const VarDecl *, 16> UnsafeVars;
   for (const auto &[VD, ignore] : FixablesForAllVars.byVar)
     UnsafeVars.push_back(VD);
-  
+
   // Fixpoint iteration for pointer assignments
   using DepMapTy = DenseMap<const VarDecl *, std::set<const VarDecl *>>;
   DepMapTy DependenciesMap{};
   DepMapTy PtrAssignmentGraph{};
-    
+
   for (auto it : FixablesForAllVars.byVar) {
     for (const FixableGadget *fixable : it.second) {
       std::optional<std::pair<const VarDecl *, const VarDecl *>> ImplPair =
@@ -2270,7 +2270,7 @@ void clang::checkUnsafeBufferUsage(const Decl *D,
       }
     }
   }
-    
+
   /*
    The following code does a BFS traversal of the `PtrAssignmentGraph`
    considering all unsafe vars as starting nodes and constructs an undirected
@@ -2291,7 +2291,7 @@ void clang::checkUnsafeBufferUsage(const Decl *D,
   std::set<const VarDecl *> VisitedVarsDirected{};
   for (const auto &[Var, ignore] : UnsafeOps.byVar) {
     if (VisitedVarsDirected.find(Var) == VisitedVarsDirected.end()) {
-  
+
       std::queue<const VarDecl*> QueueDirected{};
       QueueDirected.push(Var);
       while(!QueueDirected.empty()) {
@@ -2309,14 +2309,14 @@ void clang::checkUnsafeBufferUsage(const Decl *D,
       }
     }
   }
-  
+
   // Group Connected Components for Unsafe Vars
   // (Dependencies based on pointer assignments)
   std::set<const VarDecl *> VisitedVars{};
   for (const auto &[Var, ignore] : UnsafeOps.byVar) {
     if (VisitedVars.find(Var) == VisitedVars.end()) {
       std::vector<const VarDecl *> VarGroup{};
-  
+
       std::queue<const VarDecl*> Queue{};
       Queue.push(Var);
       while(!Queue.empty()) {

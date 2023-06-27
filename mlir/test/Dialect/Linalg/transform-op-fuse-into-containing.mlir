@@ -1,4 +1,4 @@
-// RUN: mlir-opt --test-transform-dialect-interpreter --split-input-file %s | FileCheck %s
+// RUN: mlir-opt --test-transform-dialect-interpreter --split-input-file %s -verify-diagnostics | FileCheck %s
 
 #map0 = affine_map<()[s0, s1] -> (s0 ceildiv s1)>
 #map1 = affine_map<(d0)[s0] -> (d0 * s0)>
@@ -323,6 +323,7 @@ module {
 
     // CHECK: %[[R0:.*]]:2 = scf.forall (%[[ARG5:.*]]) in (%{{.*}}) shared_outs(%[[ARG6:.*]] = %[[OUT_2]], %[[ARG7:.*]] = %[[OUT_1]])
     // CHECK-SAME: -> (tensor<?xf32>, tensor<?xf32>) {
+    // expected-remark @below{{new containing op}}
     %2 = scf.forall (%i) in (%1) shared_outs(%o = %out_2) -> (tensor<?xf32>) {
       // CHECK: %[[I0:.*]] = affine.apply {{.*}}
       %3 = affine.apply #map1(%i)[%idx]
@@ -350,8 +351,9 @@ module {
     %1 = transform.structured.match ops{["scf.forall"]} in %arg1 : (!transform.any_op) -> !transform.op<"scf.forall">
 
     // linalg.generic is tileable. The op is tiled and fused.
-    transform.structured.fuse_into_containing_op %0 into %1
+    %fused, %containing = transform.structured.fuse_into_containing_op %0 into %1
       : (!transform.op<"linalg.generic">, !transform.op<"scf.forall">) -> (!transform.any_op, !transform.any_op)
+    test_print_remark_at_operand %containing, "new containing op" : !transform.any_op
   }
 }
 

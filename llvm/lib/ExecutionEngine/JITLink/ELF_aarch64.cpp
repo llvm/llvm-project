@@ -429,7 +429,7 @@ private:
 public:
   ELFLinkGraphBuilder_aarch64(StringRef FileName,
                               const object::ELFFile<ELFT> &Obj, Triple TT,
-                              LinkGraph::FeatureVector Features)
+                              SubtargetFeatures Features)
       : ELFLinkGraphBuilder<ELFT>(Obj, std::move(TT), std::move(Features),
                                   FileName, aarch64::getEdgeKindName) {}
 };
@@ -589,7 +589,7 @@ createLinkGraphFromELFObject_aarch64(MemoryBufferRef ObjectBuffer) {
   auto &ELFObjFile = cast<object::ELFObjectFile<object::ELF64LE>>(**ELFObj);
   return ELFLinkGraphBuilder_aarch64<object::ELF64LE>(
              (*ELFObj)->getFileName(), ELFObjFile.getELFFile(),
-             (*ELFObj)->makeTriple(), Features->getFeatures())
+             (*ELFObj)->makeTriple(), std::move(*Features))
       .buildGraph();
 }
 

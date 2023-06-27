@@ -16,7 +16,7 @@
 
 #include "clang/Analysis/FlowSensitive/Solver.h"
 #include "clang/Analysis/FlowSensitive/Value.h"
-#include "llvm/ADT/DenseSet.h"
+#include "llvm/ADT/ArrayRef.h"
 #include <limits>
 
 namespace clang {
@@ -46,7 +46,7 @@ public:
   explicit WatchedLiteralsSolver(std::int64_t WorkLimit)
       : MaxIterations(WorkLimit) {}
 
-  Result solve(llvm::DenseSet<BoolValue *> Vals) override;
+  Result solve(llvm::ArrayRef<BoolValue *> Vals) override;
 };
 
 } // namespace dataflow

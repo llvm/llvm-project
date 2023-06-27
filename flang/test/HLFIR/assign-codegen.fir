@@ -145,6 +145,31 @@ func.func @array(%arg0: !fir.box<!fir.array<?xi32>>, %arg1: !fir.ref<!fir.array<
 // CHECK:  %[[VAL_29:.*]] = fir.call @_FortranAAssign(%[[VAL_26]], %[[VAL_27]], %{{.*}}, %{{.*}}) : (!fir.ref<!fir.box<none>>, !fir.box<none>, !fir.ref<i8>, i32) -> none
 
 
+func.func @array_temp(%arg0: !fir.box<!fir.array<?xi32>>, %arg1: !fir.ref<!fir.array<100xi32>>) {
+  %c100 = arith.constant 100 : index
+  %0:2 = hlfir.declare %arg0 {uniq_name = "x"} : (!fir.box<!fir.array<?xi32>>) -> (!fir.box<!fir.array<?xi32>>, !fir.box<!fir.array<?xi32>>)
+  %1 = fir.shape %c100 : (index) -> !fir.shape<1>
+  %2:2 = hlfir.declare %arg1(%1) {uniq_name = "y"} : (!fir.ref<!fir.array<100xi32>>, !fir.shape<1>) -> (!fir.ref<!fir.array<100xi32>>, !fir.ref<!fir.array<100xi32>>)
+  hlfir.assign %2#0 to %0#0 temporary_lhs : !fir.ref<!fir.array<100xi32>>, !fir.box<!fir.array<?xi32>>
+  return
+}
+// CHECK-LABEL:   func.func @array_temp(
+// CHECK-SAME:    %[[VAL_0:.*]]: !fir.box<!fir.array<?xi32>>,
+// CHECK-SAME:    %[[VAL_1:.*]]: !fir.ref<!fir.array<100xi32>>) {
+// CHECK:  %[[VAL_2:.*]] = fir.alloca !fir.box<!fir.array<?xi32>>
+// CHECK:  %[[VAL_4:.*]] = arith.constant 100 : index
+// CHECK:  %[[VAL_5:.*]] = fir.declare %[[VAL_0]] {uniq_name = "x"} : (!fir.box<!fir.array<?xi32>>) -> !fir.box<!fir.array<?xi32>>
+// CHECK:  %[[VAL_6:.*]] = fir.rebox %[[VAL_5]] : (!fir.box<!fir.array<?xi32>>) -> !fir.box<!fir.array<?xi32>>
+// CHECK:  %[[VAL_7:.*]] = fir.shape %[[VAL_4]] : (index) -> !fir.shape<1>
+// CHECK:  %[[VAL_8:.*]] = fir.declare %[[VAL_1]](%[[VAL_7]]) {uniq_name = "y"} : (!fir.ref<!fir.array<100xi32>>, !fir.shape<1>) -> !fir.ref<!fir.array<100xi32>>
+// CHECK:  %[[VAL_9:.*]] = fir.shape %[[VAL_4]] : (index) -> !fir.shape<1>
+// CHECK:  %[[VAL_10:.*]] = fir.embox %[[VAL_8]](%[[VAL_9]]) : (!fir.ref<!fir.array<100xi32>>, !fir.shape<1>) -> !fir.box<!fir.array<100xi32>>
+// CHECK:  fir.store %[[VAL_5]] to %[[VAL_2]] : !fir.ref<!fir.box<!fir.array<?xi32>>>
+// CHECK:  %[[VAL_26:.*]] = fir.convert %[[VAL_2]] : (!fir.ref<!fir.box<!fir.array<?xi32>>>) -> !fir.ref<!fir.box<none>>
+// CHECK:  %[[VAL_27:.*]] = fir.convert %[[VAL_10]] : (!fir.box<!fir.array<100xi32>>) -> !fir.box<none>
+// CHECK:  %[[VAL_29:.*]] = fir.call @_FortranAAssignTemporary(%[[VAL_26]], %[[VAL_27]], %{{.*}}, %{{.*}}) : (!fir.ref<!fir.box<none>>, !fir.box<none>, !fir.ref<i8>, i32) -> none
+
+
 func.func @test_scalar_to_array(%lhs: !fir.box<!fir.array<?xi32>>, %rhs: i32) {
   hlfir.assign %rhs to %lhs : i32, !fir.box<!fir.array<?xi32>>
   return
@@ -184,6 +209,16 @@ func.func @alloc_assign(%arg0: !fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>,
 // CHECK:  %[[VAL_3:.*]] = fir.convert %[[VAL_1]] : (!fir.box<!fir.array<?xi32>>) -> !fir.box<none>
 // CHECK:  fir.call @_FortranAAssign(%[[VAL_2]], %[[VAL_3]], %{{.*}}, %{{.*}}) : (!fir.ref<!fir.box<none>>, !fir.box<none>, !fir.ref<i8>, i32) -> none
 
+func.func @alloc_assign_temp(%arg0: !fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>, %arg1: !fir.box<!fir.array<?xi32>>) {
+  hlfir.assign %arg1 to %arg0 realloc temporary_lhs : !fir.box<!fir.array<?xi32>>, !fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>
+  return
+}
+// CHECK-LABEL:  func.func @alloc_assign_temp(
+// CHECK-SAME: %[[VAL_0:.*]]: !fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>,
+// CHECK-SAME: %[[VAL_1:.*]]: !fir.box<!fir.array<?xi32>>) {
+// CHECK:  %[[VAL_2:.*]] = fir.convert %[[VAL_0]] : (!fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>) -> !fir.ref<!fir.box<none>>
+// CHECK:  %[[VAL_3:.*]] = fir.convert %[[VAL_1]] : (!fir.box<!fir.array<?xi32>>) -> !fir.box<none>
+// CHECK:  fir.call @_FortranAAssignTemporary(%[[VAL_2]], %[[VAL_3]], %{{.*}}, %{{.*}}) : (!fir.ref<!fir.box<none>>, !fir.box<none>, !fir.ref<i8>, i32) -> none
 
 func.func @test_alloc_assign_explicit_length_character(%lhs: !fir.ref<!fir.box<!fir.heap<!fir.array<?x!fir.char<1,10>>>>>, %rhs: !fir.box<!fir.array<?x!fir.char<1,?>>>) {
   hlfir.assign %rhs to %lhs realloc keep_lhs_len : !fir.box<!fir.array<?x!fir.char<1,?>>>, !fir.ref<!fir.box<!fir.heap<!fir.array<?x!fir.char<1,10>>>>>
@@ -246,6 +281,17 @@ func.func @assign_i1_to_polymorphic(%arg0: !fir.ref<!fir.class<!fir.heap<none>>>
 // CHECK:           %[[VAL_11:.*]] = fir.convert %[[VAL_6]] : (!fir.box<!fir.logical<4>>) -> !fir.box<none>
 // CHECK:           %[[VAL_13:.*]] = fir.call @_FortranAAssignPolymorphic(%[[VAL_10]], %[[VAL_11]], %{{.*}}, %{{.*}}) : (!fir.ref<!fir.box<none>>, !fir.box<none>, !fir.ref<i8>, i32) -> none
 
+func.func @test_alloc_assign_polymorphic_temp(%lhs: !fir.ref<!fir.class<!fir.heap<!fir.array<?x!fir.type<t>>>>>, %rhs: !fir.class<!fir.array<?x!fir.type<t>>>) {
+  hlfir.assign %rhs to %lhs realloc temporary_lhs : !fir.class<!fir.array<?x!fir.type<t>>>, !fir.ref<!fir.class<!fir.heap<!fir.array<?x!fir.type<t>>>>>
+  return
+}
+// CHECK-LABEL:   func.func @test_alloc_assign_polymorphic_temp(
+// CHECK-SAME:  %[[VAL_0:.*]]: !fir.ref<!fir.class<!fir.heap<!fir.array<?x!fir.type<t>>>>>,
+// CHECK-SAME:  %[[VAL_1:.*]]: !fir.class<!fir.array<?x!fir.type<t>>>) {
+// CHECK:  %[[VAL_7:.*]] = fir.convert %[[VAL_0]] : (!fir.ref<!fir.class<!fir.heap<!fir.array<?x!fir.type<t>>>>>) -> !fir.ref<!fir.box<none>>
+// CHECK:  %[[VAL_8:.*]] = fir.convert %[[VAL_1]] : (!fir.class<!fir.array<?x!fir.type<t>>>) -> !fir.box<none>
+// CHECK:  %[[VAL_10:.*]] = fir.call @_FortranAAssignTemporary(%[[VAL_7]], %[[VAL_8]], %{{.*}}, %{{.*}}) : (!fir.ref<!fir.box<none>>, !fir.box<none>, !fir.ref<i8>, i32) -> none
+
 func.func @test_allocatable_component(%arg0: !fir.ref<!fir.type<_QFtestTt1{a:!fir.box<!fir.heap<!fir.array<?xi32>>>}>> {fir.bindc_name = "x", fir.target}, %arg1: !fir.ref<!fir.type<_QFtestTt1{a:!fir.box<!fir.heap<!fir.array<?xi32>>>}>> {fir.bindc_name = "y", fir.target}) {
   %4:2 = hlfir.declare %arg0 {fortran_attrs = #fir.var_attrs<target>, uniq_name = "_QFtestEx"} : (!fir.ref<!fir.type<_QFtestTt1{a:!fir.box<!fir.heap<!fir.array<?xi32>>>}>>) -> (!fir.ref<!fir.type<_QFtestTt1{a:!fir.box<!fir.heap<!fir.array<?xi32>>>}>>, !fir.ref<!fir.type<_QFtestTt1{a:!fir.box<!fir.heap<!fir.array<?xi32>>>}>>)
   %5:2 = hlfir.declare %arg1 {fortran_attrs = #fir.var_attrs<target>, uniq_name = "_QFtestEy"} : (!fir.ref<!fir.type<_QFtestTt1{a:!fir.box<!fir.heap<!fir.array<?xi32>>>}>>) -> (!fir.ref<!fir.type<_QFtestTt1{a:!fir.box<!fir.heap<!fir.array<?xi32>>>}>>, !fir.ref<!fir.type<_QFtestTt1{a:!fir.box<!fir.heap<!fir.array<?xi32>>>}>>)
@@ -265,5 +311,27 @@ func.func @test_allocatable_component(%arg0: !fir.ref<!fir.type<_QFtestTt1{a:!fi
 // CHECK:           %[[VAL_11:.*]] = fir.convert %[[VAL_6]] : (!fir.box<!fir.type<_QFtestTt1{a:!fir.box<!fir.heap<!fir.array<?xi32>>>}>>) -> !fir.box<none>
 // CHECK:           %[[VAL_12:.*]] = fir.convert %{{.*}} : (!fir.ref<!fir.char<1,{{.*}}>>) -> !fir.ref<i8>
 // CHECK:           %[[VAL_13:.*]] = fir.call @_FortranAAssign(%[[VAL_10]], %[[VAL_11]], %[[VAL_12]], %{{.*}}) : (!fir.ref<!fir.box<none>>, !fir.box<none>, !fir.ref<i8>, i32) -> none
+// CHECK:           return
+// CHECK:         }
+
+func.func @test_allocatable_component_temp(%arg0: !fir.ref<!fir.type<_QFtestTt1{a:!fir.box<!fir.heap<!fir.array<?xi32>>>}>> {fir.bindc_name = "x", fir.target}, %arg1: !fir.ref<!fir.type<_QFtestTt1{a:!fir.box<!fir.heap<!fir.array<?xi32>>>}>> {fir.bindc_name = "y", fir.target}) {
+  %4:2 = hlfir.declare %arg0 {fortran_attrs = #fir.var_attrs<target>, uniq_name = "_QFtestEx"} : (!fir.ref<!fir.type<_QFtestTt1{a:!fir.box<!fir.heap<!fir.array<?xi32>>>}>>) -> (!fir.ref<!fir.type<_QFtestTt1{a:!fir.box<!fir.heap<!fir.array<?xi32>>>}>>, !fir.ref<!fir.type<_QFtestTt1{a:!fir.box<!fir.heap<!fir.array<?xi32>>>}>>)
+  %5:2 = hlfir.declare %arg1 {fortran_attrs = #fir.var_attrs<target>, uniq_name = "_QFtestEy"} : (!fir.ref<!fir.type<_QFtestTt1{a:!fir.box<!fir.heap<!fir.array<?xi32>>>}>>) -> (!fir.ref<!fir.type<_QFtestTt1{a:!fir.box<!fir.heap<!fir.array<?xi32>>>}>>, !fir.ref<!fir.type<_QFtestTt1{a:!fir.box<!fir.heap<!fir.array<?xi32>>>}>>)
+  hlfir.assign %5#0 to %4#0 temporary_lhs : !fir.ref<!fir.type<_QFtestTt1{a:!fir.box<!fir.heap<!fir.array<?xi32>>>}>>, !fir.ref<!fir.type<_QFtestTt1{a:!fir.box<!fir.heap<!fir.array<?xi32>>>}>>
+  return
+}
+// CHECK-LABEL:   func.func @test_allocatable_component_temp(
+// CHECK-SAME:                                          %[[VAL_0:.*]]: !fir.ref<!fir.type<_QFtestTt1{a:!fir.box<!fir.heap<!fir.array<?xi32>>>}>> {fir.bindc_name = "x", fir.target},
+// CHECK-SAME:                                          %[[VAL_1:.*]]: !fir.ref<!fir.type<_QFtestTt1{a:!fir.box<!fir.heap<!fir.array<?xi32>>>}>> {fir.bindc_name = "y", fir.target}) {
+// CHECK:           %[[VAL_2:.*]] = fir.alloca !fir.box<!fir.type<_QFtestTt1{a:!fir.box<!fir.heap<!fir.array<?xi32>>>}>>
+// CHECK:           %[[VAL_3:.*]] = fir.declare %[[VAL_0]] {fortran_attrs = #fir.var_attrs<target>, uniq_name = "_QFtestEx"} : (!fir.ref<!fir.type<_QFtestTt1{a:!fir.box<!fir.heap<!fir.array<?xi32>>>}>>) -> !fir.ref<!fir.type<_QFtestTt1{a:!fir.box<!fir.heap<!fir.array<?xi32>>>}>>
+// CHECK:           %[[VAL_4:.*]] = fir.declare %[[VAL_1]] {fortran_attrs = #fir.var_attrs<target>, uniq_name = "_QFtestEy"} : (!fir.ref<!fir.type<_QFtestTt1{a:!fir.box<!fir.heap<!fir.array<?xi32>>>}>>) -> !fir.ref<!fir.type<_QFtestTt1{a:!fir.box<!fir.heap<!fir.array<?xi32>>>}>>
+// CHECK:           %[[VAL_5:.*]] = fir.embox %[[VAL_3]] : (!fir.ref<!fir.type<_QFtestTt1{a:!fir.box<!fir.heap<!fir.array<?xi32>>>}>>) -> !fir.box<!fir.type<_QFtestTt1{a:!fir.box<!fir.heap<!fir.array<?xi32>>>}>>
+// CHECK:           %[[VAL_6:.*]] = fir.embox %[[VAL_4]] : (!fir.ref<!fir.type<_QFtestTt1{a:!fir.box<!fir.heap<!fir.array<?xi32>>>}>>) -> !fir.box<!fir.type<_QFtestTt1{a:!fir.box<!fir.heap<!fir.array<?xi32>>>}>>
+// CHECK:           fir.store %[[VAL_5]] to %[[VAL_2]] : !fir.ref<!fir.box<!fir.type<_QFtestTt1{a:!fir.box<!fir.heap<!fir.array<?xi32>>>}>>>
+// CHECK:           %[[VAL_10:.*]] = fir.convert %[[VAL_2]] : (!fir.ref<!fir.box<!fir.type<_QFtestTt1{a:!fir.box<!fir.heap<!fir.array<?xi32>>>}>>>) -> !fir.ref<!fir.box<none>>
+// CHECK:           %[[VAL_11:.*]] = fir.convert %[[VAL_6]] : (!fir.box<!fir.type<_QFtestTt1{a:!fir.box<!fir.heap<!fir.array<?xi32>>>}>>) -> !fir.box<none>
+// CHECK:           %[[VAL_12:.*]] = fir.convert %{{.*}} : (!fir.ref<!fir.char<1,{{.*}}>>) -> !fir.ref<i8>
+// CHECK:           %[[VAL_13:.*]] = fir.call @_FortranAAssignTemporary(%[[VAL_10]], %[[VAL_11]], %[[VAL_12]], %{{.*}}) : (!fir.ref<!fir.box<none>>, !fir.box<none>, !fir.ref<i8>, i32) -> none
 // CHECK:           return
 // CHECK:         }

@@ -1025,28 +1025,29 @@ public:
   virtual void emitCFISections(bool EH, bool Debug);
   void emitCFIStartProc(bool IsSimple, SMLoc Loc = SMLoc());
   void emitCFIEndProc();
-  virtual void emitCFIDefCfa(int64_t Register, int64_t Offset);
-  virtual void emitCFIDefCfaOffset(int64_t Offset);
-  virtual void emitCFIDefCfaRegister(int64_t Register);
+  virtual void emitCFIDefCfa(int64_t Register, int64_t Offset, SMLoc Loc = {});
+  virtual void emitCFIDefCfaOffset(int64_t Offset, SMLoc Loc = {});
+  virtual void emitCFIDefCfaRegister(int64_t Register, SMLoc Loc = {});
   virtual void emitCFILLVMDefAspaceCfa(int64_t Register, int64_t Offset,
-                                       int64_t AddressSpace);
-  virtual void emitCFIOffset(int64_t Register, int64_t Offset);
+                                       int64_t AddressSpace, SMLoc Loc = {});
+  virtual void emitCFIOffset(int64_t Register, int64_t Offset, SMLoc Loc = {});
   virtual void emitCFIPersonality(const MCSymbol *Sym, unsigned Encoding);
   virtual void emitCFILsda(const MCSymbol *Sym, unsigned Encoding);
-  virtual void emitCFIRememberState();
-  virtual void emitCFIRestoreState();
-  virtual void emitCFISameValue(int64_t Register);
-  virtual void emitCFIRestore(int64_t Register);
-  virtual void emitCFIRelOffset(int64_t Register, int64_t Offset);
-  virtual void emitCFIAdjustCfaOffset(int64_t Adjustment);
-  virtual void emitCFIEscape(StringRef Values);
+  virtual void emitCFIRememberState(SMLoc Loc);
+  virtual void emitCFIRestoreState(SMLoc Loc);
+  virtual void emitCFISameValue(int64_t Register, SMLoc Loc = {});
+  virtual void emitCFIRestore(int64_t Register, SMLoc Loc = {});
+  virtual void emitCFIRelOffset(int64_t Register, int64_t Offset, SMLoc Loc);
+  virtual void emitCFIAdjustCfaOffset(int64_t Adjustment, SMLoc Loc = {});
+  virtual void emitCFIEscape(StringRef Values, SMLoc Loc = {});
   virtual void emitCFIReturnColumn(int64_t Register);
-  virtual void emitCFIGnuArgsSize(int64_t Size);
+  virtual void emitCFIGnuArgsSize(int64_t Size, SMLoc Loc = {});
   virtual void emitCFISignalFrame();
-  virtual void emitCFIUndefined(int64_t Register);
-  virtual void emitCFIRegister(int64_t Register1, int64_t Register2);
-  virtual void emitCFIWindowSave();
-  virtual void emitCFINegateRAState();
+  virtual void emitCFIUndefined(int64_t Register, SMLoc Loc = {});
+  virtual void emitCFIRegister(int64_t Register1, int64_t Register2,
+                               SMLoc Loc = {});
+  virtual void emitCFIWindowSave(SMLoc Loc = {});
+  virtual void emitCFINegateRAState(SMLoc Loc = {});
 
   virtual void emitWinCFIStartProc(const MCSymbol *Symbol, SMLoc Loc = SMLoc());
   virtual void emitWinCFIEndProc(SMLoc Loc = SMLoc());

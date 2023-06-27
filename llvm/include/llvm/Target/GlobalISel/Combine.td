@@ -181,7 +181,6 @@ def sext_inreg_to_zext_inreg : GICombineRule<
       Helper.getBuilder().setInstrAndDebugLoc(*${root});
       Helper.getBuilder().buildZExtInReg(${dst}, ${src}, ${imm}.getImm());
       ${root}->eraseFromParent();
-      return true;
   }])
 >;
 
@@ -329,7 +328,7 @@ def select_same_val: GICombineRule<
   (defs root:$root),
   (match (wip_match_opcode G_SELECT):$root,
     [{ return Helper.matchSelectSameVal(*${root}); }]),
-  (apply [{ return Helper.replaceSingleDefInstWithOperand(*${root}, 2); }])
+  (apply [{ Helper.replaceSingleDefInstWithOperand(*${root}, 2); }])
 >;
 
 // Fold (undef ? x : y) -> y
@@ -337,7 +336,7 @@ def select_undef_cmp: GICombineRule<
   (defs root:$root),
   (match (wip_match_opcode G_SELECT):$root,
     [{ return Helper.matchUndefSelectCmp(*${root}); }]),
-  (apply [{ return Helper.replaceSingleDefInstWithOperand(*${root}, 2); }])
+  (apply [{ Helper.replaceSingleDefInstWithOperand(*${root}, 2); }])
 >;
 
 // Fold (true ? x : y) -> x
@@ -347,7 +346,7 @@ def select_constant_cmp: GICombineRule<
   (defs root:$root, select_constant_cmp_matchdata:$matchinfo),
   (match (wip_match_opcode G_SELECT):$root,
     [{ return Helper.matchConstantSelectCmp(*${root}, ${matchinfo}); }]),
-  (apply [{ return Helper.replaceSingleDefInstWithOperand(*${root}, ${matchinfo}); }])
+  (apply [{ Helper.replaceSingleDefInstWithOperand(*${root}, ${matchinfo}); }])
 >;
 
 def select_to_logical : GICombineRule<
@@ -381,7 +380,7 @@ def right_identity_zero: GICombineRule<
   (match (wip_match_opcode G_SUB, G_ADD, G_OR, G_XOR, G_SHL, G_ASHR, G_LSHR,
                            G_PTR_ADD, G_ROTL, G_ROTR):$root,
     [{ return Helper.matchConstantOp(${root}->getOperand(2), 0); }]),
-  (apply [{ return Helper.replaceSingleDefInstWithOperand(*${root}, 1); }])
+  (apply [{ Helper.replaceSingleDefInstWithOperand(*${root}, 1); }])
 >;
 
 // Fold x op 1 -> x
@@ -389,7 +388,7 @@ def right_identity_one: GICombineRule<
   (defs root:$root),
   (match (wip_match_opcode G_MUL):$root,
     [{ return Helper.matchConstantOp(${root}->getOperand(2), 1); }]),
-  (apply [{ return Helper.replaceSingleDefInstWithOperand(*${root}, 1); }])
+  (apply [{ Helper.replaceSingleDefInstWithOperand(*${root}, 1); }])
 >;
 
 // Fold (x op x) - > x
@@ -397,7 +396,7 @@ def binop_same_val: GICombineRule<
   (defs root:$root),
   (match (wip_match_opcode G_AND, G_OR):$root,
     [{ return Helper.matchBinOpSameVal(*${root}); }]),
-  (apply [{ return Helper.replaceSingleDefInstWithOperand(*${root}, 1); }])
+  (apply [{ Helper.replaceSingleDefInstWithOperand(*${root}, 1); }])
 >;
 
 // Fold (0 op x) - > 0
@@ -405,7 +404,7 @@ def binop_left_to_zero: GICombineRule<
   (defs root:$root),
   (match (wip_match_opcode G_SDIV, G_UDIV, G_SREM, G_UREM):$root,
     [{ return Helper.matchOperandIsZero(*${root}, 1); }]),
-  (apply [{ return Helper.replaceSingleDefInstWithOperand(*${root}, 1); }])
+  (apply [{ Helper.replaceSingleDefInstWithOperand(*${root}, 1); }])
 >;
 
 def urem_pow2_to_mask : GICombineRule<
@@ -432,7 +431,7 @@ def fold_binop_into_select : GICombineRule<
     G_FMUL, G_FADD, G_FSUB, G_FDIV, G_FREM,
     G_FMINNUM, G_FMAXNUM, G_FMINIMUM, G_FMAXIMUM):$root,
     [{ return Helper.matchFoldBinOpIntoSelect(*${root}, ${select_op_no}); }]),
-  (apply [{ return Helper.applyFoldBinOpIntoSelect(*${root}, ${select_op_no}); }])
+  (apply [{ Helper.applyFoldBinOpIntoSelect(*${root}, ${select_op_no}); }])
 >;
 
 // Transform d = [su]div(x, y) and r = [su]rem(x, y) - > d, r = [su]divrem(x, y)
@@ -449,7 +448,7 @@ def binop_right_to_zero: GICombineRule<
   (defs root:$root),
   (match (wip_match_opcode G_MUL):$root,
     [{ return Helper.matchOperandIsZero(*${root}, 2); }]),
-  (apply [{ return Helper.replaceSingleDefInstWithOperand(*${root}, 2); }])
+  (apply [{ Helper.replaceSingleDefInstWithOperand(*${root}, 2); }])
 >;
 
 // Erase stores of undef values.
@@ -457,7 +456,7 @@ def erase_undef_store : GICombineRule<
   (defs root:$root),
   (match (wip_match_opcode G_STORE):$root,
     [{ return Helper.matchUndefStore(*${root}); }]),
-  (apply [{ return Helper.eraseInst(*${root}); }])
+  (apply [{ Helper.eraseInst(*${root}); }])
 >;
 
 def simplify_add_to_sub_matchinfo: GIDefMatchData<"std::tuple<Register, Register>">;
@@ -554,7 +553,7 @@ def redundant_and: GICombineRule <
   (defs root:$root, register_matchinfo:$matchinfo),
   (match (wip_match_opcode G_AND):$root,
          [{ return Helper.matchRedundantAnd(*${root}, ${matchinfo}); }]),
-  (apply [{ return Helper.replaceSingleDefInstWithReg(*${root}, ${matchinfo}); }])
+  (apply [{ Helper.replaceSingleDefInstWithReg(*${root}, ${matchinfo}); }])
 >;
 
 // Fold (x | y) -> x or (x | y) -> y when (x | y) is known to equal x or equal y.
@@ -562,7 +561,7 @@ def redundant_or: GICombineRule <
   (defs root:$root, register_matchinfo:$matchinfo),
   (match (wip_match_opcode G_OR):$root,
          [{ return Helper.matchRedundantOr(*${root}, ${matchinfo}); }]),
-  (apply [{ return Helper.replaceSingleDefInstWithReg(*${root}, ${matchinfo}); }])
+  (apply [{ Helper.replaceSingleDefInstWithReg(*${root}, ${matchinfo}); }])
 >;
 
 // If the input is already sign extended, just drop the extension.
@@ -572,7 +571,7 @@ def redundant_sext_inreg: GICombineRule <
   (defs root:$root),
   (match (wip_match_opcode G_SEXT_INREG):$root,
          [{ return Helper.matchRedundantSExtInReg(*${root}); }]),
-     (apply [{ return Helper.replaceSingleDefInstWithOperand(*${root}, 1); }])
+     (apply [{ Helper.replaceSingleDefInstWithOperand(*${root}, 1); }])
 >;
 
 // Fold (anyext (trunc x)) -> x if the source type is same as
@@ -581,7 +580,7 @@ def anyext_trunc_fold: GICombineRule <
   (defs root:$root, register_matchinfo:$matchinfo),
   (match (wip_match_opcode G_ANYEXT):$root,
          [{ return Helper.matchCombineAnyExtTrunc(*${root}, ${matchinfo}); }]),
-  (apply [{ return Helper.replaceSingleDefInstWithReg(*${root}, ${matchinfo}); }])
+  (apply [{ Helper.replaceSingleDefInstWithReg(*${root}, ${matchinfo}); }])
 >;
 
 // Fold (zext (trunc x)) -> x if the source type is same as the destination type
@@ -591,7 +590,7 @@ def zext_trunc_fold: GICombineRule <
   (defs root:$root, zext_trunc_fold_matchinfo:$matchinfo),
   (match (wip_match_opcode G_ZEXT):$root,
          [{ return Helper.matchCombineZextTrunc(*${root}, ${matchinfo}); }]),
-  (apply [{ return Helper.replaceSingleDefInstWithReg(*${root}, ${matchinfo}); }])
+  (apply [{ Helper.replaceSingleDefInstWithReg(*${root}, ${matchinfo}); }])
 >;
 
 // Fold ([asz]ext ([asz]ext x)) -> ([asz]ext x).
@@ -617,7 +616,7 @@ def fneg_fneg_fold: GICombineRule <
   (match (G_FNEG $t, $src),
          (G_FNEG $dst, $t):$mi,
          [{ ${matchinfo} = ${src}.getReg(); }]),
-  (apply [{ return Helper.replaceSingleDefInstWithReg(*${mi}, ${matchinfo}); }])
+  (apply [{ Helper.replaceSingleDefInstWithReg(*${mi}, ${matchinfo}); }])
 >;
 
 // Fold (unmerge(merge x, y, z)) -> z, y, z.
@@ -1016,7 +1015,7 @@ def add_sub_reg: GICombineRule <
   (defs root:$root, register_matchinfo:$matchinfo),
   (match (wip_match_opcode G_ADD):$root,
          [{ return Helper.matchAddSubSameReg(*${root}, ${matchinfo}); }]),
-  (apply [{ return Helper.replaceSingleDefInstWithReg(*${root},
+  (apply [{ Helper.replaceSingleDefInstWithReg(*${root},
                                                       ${matchinfo}); }])>;
 
 def buildvector_identity_fold : GICombineRule<

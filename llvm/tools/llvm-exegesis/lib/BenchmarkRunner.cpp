@@ -15,6 +15,7 @@
 #include "Error.h"
 #include "MCInstrDescView.h"
 #include "PerfHelper.h"
+#include "SubprocessMemory.h"
 #include "Target.h"
 #include "llvm/ADT/ScopeExit.h"
 #include "llvm/ADT/StringExtras.h"
@@ -25,6 +26,28 @@
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/Program.h"
+#include "llvm/Support/Signals.h"
+
+#ifdef __linux__
+#ifdef HAVE_LIBPFM
+#include <perfmon/perf_event.h>
+#endif
+#include <sys/mman.h>
+#include <sys/ptrace.h>
+#include <sys/syscall.h>
+#include <sys/wait.h>
+#include <unistd.h>
+
+#ifdef __GLIBC__
+#if __GLIBC_MINOR__ >= 35
+#define GLIBC_INITS_RSEQ
+#endif // __GLIBC__MINOR > 35
+#endif // __GLIBC__
+
+#ifdef GLIBC_INITS_RSEQ
+#include <sys/rseq.h>
+#endif // HAS_RSEQ
+#endif // __linux__
 
 namespace llvm {
 namespace exegesis {
@@ -129,18 +152,241 @@ private:
   const ExecutableFunction Function;
   BenchmarkRunner::ScratchSpace *const Scratch;
 };
+
+#ifdef __linux__
+// The following class implements a function executor that executes the
+// benchmark code within a subprocess rather than within the main llvm-exegesis
+// process. This allows for much more control over the execution context of the
+// snippet, particularly with regard to memory. This class performs all the
+// necessary functions to create the subprocess, execute the snippet in the
+// subprocess, and report results/handle errors.
+class SubProcessFunctionExecutorImpl
+    : public BenchmarkRunner::FunctionExecutor {
+public:
+  SubProcessFunctionExecutorImpl(const LLVMState &State,
+                                 object::OwningBinary<object::ObjectFile> Obj,
+                                 const BenchmarkKey &Key)
+      : State(State), Function(State.createTargetMachine(), std::move(Obj)),
+        Key(Key) {}
+
+private:
+  enum ChildProcessExitCodeE {
+    CounterFDReadFailed = 1,
+    TranslatingCounterFDFailed,
+    RSeqDisableFailed,
+    FunctionDataMappingFailed,
+    AuxiliaryMemorySetupFailed
+
+  };
+
+  StringRef childProcessExitCodeToString(int ExitCode) const {
+    switch (ExitCode) {
+    case ChildProcessExitCodeE::CounterFDReadFailed:
+      return "Counter file descriptor read failed";
+    case ChildProcessExitCodeE::TranslatingCounterFDFailed:
+      return "Translating counter file descriptor into a file descriptor in "
+             "the child process failed. This might be due running an older "
+             "Linux kernel that doesn't support the pidfd_getfd system call "
+             "(anything before Linux 5.6).";
+    case ChildProcessExitCodeE::RSeqDisableFailed:
+      return "Disabling restartable sequences failed";
+    case ChildProcessExitCodeE::FunctionDataMappingFailed:
+      return "Failed to map memory for assembled snippet";
+    case ChildProcessExitCodeE::AuxiliaryMemorySetupFailed:
+      return "Failed to setup auxiliary memory";
+    default:
+      return "Child process returned with unknown exit code";
+    }
+  }
+
+  Error createSubProcessAndRunBenchmark(
+      StringRef CounterName, SmallVectorImpl<int64_t> &CounterValues) const {
+    int PipeFiles[2];
+    int PipeSuccessOrErr = pipe(PipeFiles);
+    if (PipeSuccessOrErr != 0) {
+      return make_error<Failure>(
+          "Failed to create a pipe for interprocess communication between "
+          "llvm-exegesis and the benchmarking subprocess");
+    }
+
+    SubprocessMemory SPMemory;
+    Error MemoryInitError = SPMemory.initializeSubprocessMemory(getpid());
+    if (MemoryInitError)
+      return MemoryInitError;
+
+    Error AddMemDefError =
+        SPMemory.addMemoryDefinition(Key.MemoryValues, getpid());
+    if (AddMemDefError)
+      return AddMemDefError;
+
+    pid_t ParentOrChildPID = fork();
+    if (ParentOrChildPID == 0) {
+      // We are in the child process, close the write end of the pipe
+      close(PipeFiles[1]);
+      // Unregister handlers, signal handling is now handled through ptrace in
+      // the host process
+      llvm::sys::unregisterHandlers();
+      prepareAndRunBenchmark(PipeFiles[0], Key);
+      // The child process terminates in the above function, so we should never
+      // get to this point.
+      llvm_unreachable("Child process didn't exit when expected.");
+    }
+
+    const ExegesisTarget &ET = State.getExegesisTarget();
+    auto CounterOrError =
+        ET.createCounter(CounterName, State, ParentOrChildPID);
+
+    if (!CounterOrError)
+      return CounterOrError.takeError();
+
+    pfm::Counter *Counter = CounterOrError.get().get();
+
+    close(PipeFiles[0]);
+
+    int CounterFileDescriptor = Counter->getFileDescriptor();
+    ssize_t BytesWritten =
+        write(PipeFiles[1], &CounterFileDescriptor, sizeof(int));
+
+    if (BytesWritten != sizeof(int))
+      return make_error<Failure>("Writing peformance counter file descriptor "
+                                 "to child process failed: " +
+                                 Twine(strerror(errno)));
+
+    if (ptrace(PTRACE_SEIZE, ParentOrChildPID, NULL, NULL) != 0)
+      return make_error<Failure>("Failed to seize the child process: " +
+                                 Twine(strerror(errno)));
+
+    int ChildStatus;
+    if (wait(&ChildStatus) == -1) {
+      return make_error<Failure>(
+          "Waiting for the child process to complete failed: " +
+          Twine(strerror(errno)));
+    }
+
+    if (WIFEXITED(ChildStatus)) {
+      int ChildExitCode = WEXITSTATUS(ChildStatus);
+      if (ChildExitCode == 0) {
+        // The child exited succesfully, read counter values and return
+        // success
+        CounterValues[0] = Counter->read();
+        return Error::success();
+      }
+      // The child exited, but not successfully
+      return make_error<SnippetCrash>(
+          "Child benchmarking process exited with non-zero exit code: " +
+          childProcessExitCodeToString(ChildExitCode));
+    }
+
+    // An error was encountered running the snippet, process it
+    siginfo_t ChildSignalInfo;
+    if (ptrace(PTRACE_GETSIGINFO, ParentOrChildPID, NULL, &ChildSignalInfo) ==
+        -1) {
+      return make_error<Failure>("Getting signal info from the child failed: " +
+                                 Twine(strerror(errno)));
+    }
+
+    return make_error<SnippetCrash>(
+        "The benchmarking subprocess sent unexpected signal: " +
+        Twine(strsignal(ChildSignalInfo.si_signo)));
+  }
+
+  [[noreturn]] void prepareAndRunBenchmark(int Pipe,
+                                           const BenchmarkKey &Key) const {
+    // The following occurs within the benchmarking subprocess
+
+    int ParentCounterFileDescriptor = -1;
+    ssize_t BytesRead = read(Pipe, &ParentCounterFileDescriptor, sizeof(int));
+
+    if (BytesRead != sizeof(int)) {
+      exit(ChildProcessExitCodeE::CounterFDReadFailed);
+    }
+
+    pid_t ParentPID = getppid();
+
+    // Make sure the following two syscalls are defined on the platform that
+    // we're building on as they were introduced to the kernel fairly recently
+    // (v5.6 for the second one).
+#if defined(SYS_pidfd_open) && defined(SYS_pidfd_getfd)
+    int ParentPIDFD = syscall(SYS_pidfd_open, ParentPID, 0);
+    int CounterFileDescriptor =
+        syscall(SYS_pidfd_getfd, ParentPIDFD, ParentCounterFileDescriptor, 0);
+#else
+    int CounterFileDescriptor = 0;
+    exit(ChildProcessExitCodeE::TranslatingCounterFDFailed);
+#endif
+
+    if (CounterFileDescriptor == -1) {
+      exit(ChildProcessExitCodeE::TranslatingCounterFDFailed);
+    }
+
+// Glibc versions greater than 2.35 automatically call rseq during
+// initialization. Unmapping the region that glibc sets up for this causes
+// segfaults in the program Unregister the rseq region so that we can safely
+// unmap it later
+#ifdef GLIBC_INITS_RSEQ
+    long RseqDisableOutput =
+        syscall(SYS_rseq, (intptr_t)__builtin_thread_pointer() + __rseq_offset,
+                __rseq_size, RSEQ_FLAG_UNREGISTER, RSEQ_SIG);
+    if (RseqDisableOutput != 0)
+      exit(ChildProcessExitCodeE::RSeqDisableFailed);
+#endif // GLIBC_INITS_RSEQ
+
+    size_t FunctionDataCopySize = this->Function.FunctionBytes.size();
+    char *FunctionDataCopy =
+        (char *)mmap(NULL, FunctionDataCopySize, PROT_READ | PROT_WRITE,
+                     MAP_PRIVATE | MAP_ANONYMOUS, 0, 0);
+    if ((intptr_t)FunctionDataCopy == -1)
+      exit(ChildProcessExitCodeE::FunctionDataMappingFailed);
+
+    memcpy(FunctionDataCopy, this->Function.FunctionBytes.data(),
+           this->Function.FunctionBytes.size());
+    mprotect(FunctionDataCopy, FunctionDataCopySize, PROT_READ | PROT_EXEC);
+
+    Expected<int> AuxMemFDOrError =
+        SubprocessMemory::setupAuxiliaryMemoryInSubprocess(
+            Key.MemoryValues, ParentPID, CounterFileDescriptor);
+    if (!AuxMemFDOrError)
+      exit(ChildProcessExitCodeE::AuxiliaryMemorySetupFailed);
+
+    ((void (*)(size_t, int))(intptr_t)FunctionDataCopy)(FunctionDataCopySize,
+                                                        *AuxMemFDOrError);
+
+    exit(0);
+  }
+
+  Expected<llvm::SmallVector<int64_t, 4>>
+  runWithCounter(StringRef CounterName) const override {
+    SmallVector<int64_t, 4> Value(1, 0);
+    Error PossibleBenchmarkError =
+        createSubProcessAndRunBenchmark(CounterName, Value);
+
+    if (PossibleBenchmarkError) {
+      return std::move(PossibleBenchmarkError);
+    }
+
+    return Value;
+  }
+
+  const LLVMState &State;
+  const ExecutableFunction Function;
+  const BenchmarkKey &Key;
+};
+#endif // __linux__
 } // namespace
 
 Expected<SmallString<0>> BenchmarkRunner::assembleSnippet(
     const BenchmarkCode &BC, const SnippetRepetitor &Repetitor,
-    unsigned MinInstructions, unsigned LoopBodySize) const {
+    unsigned MinInstructions, unsigned LoopBodySize,
+    bool GenerateMemoryInstructions) const {
   const std::vector<MCInst> &Instructions = BC.Key.Instructions;
   SmallString<0> Buffer;
   raw_svector_ostream OS(Buffer);
   if (Error E = assembleToStream(
           State.getExegesisTarget(), State.createTargetMachine(), BC.LiveIns,
           BC.Key.RegisterInitialValues,
-          Repetitor.Repeat(Instructions, MinInstructions, LoopBodySize), OS)) {
+          Repetitor.Repeat(Instructions, MinInstructions, LoopBodySize,
+                           GenerateMemoryInstructions),
+          OS, BC.Key, GenerateMemoryInstructions)) {
     return std::move(E);
   }
   return Buffer;
@@ -162,6 +408,8 @@ BenchmarkRunner::getRunnableConfiguration(
 
   const std::vector<MCInst> &Instructions = BC.Key.Instructions;
 
+  bool GenerateMemoryInstructions = ExecutionMode == ExecutionModeE::SubProcess;
+
   InstrBenchmark.Key = BC.Key;
 
   // Assemble at least kMinInstructionsForSnippet instructions by repeating
@@ -170,8 +418,9 @@ BenchmarkRunner::getRunnableConfiguration(
   if (BenchmarkPhaseSelector > BenchmarkPhaseSelectorE::PrepareSnippet) {
     const int MinInstructionsForSnippet = 4 * Instructions.size();
     const int LoopBodySizeForSnippet = 2 * Instructions.size();
-    auto Snippet = assembleSnippet(BC, Repetitor, MinInstructionsForSnippet,
-                                   LoopBodySizeForSnippet);
+    auto Snippet =
+        assembleSnippet(BC, Repetitor, MinInstructionsForSnippet,
+                        LoopBodySizeForSnippet, GenerateMemoryInstructions);
     if (Error E = Snippet.takeError())
       return std::move(E);
 
@@ -182,9 +431,10 @@ BenchmarkRunner::getRunnableConfiguration(
 
   // Assemble NumRepetitions instructions repetitions of the snippet for
   // measurements.
-  if (BenchmarkPhaseSelector > BenchmarkPhaseSelectorE::PrepareAndAssembleSnippet) {
+  if (BenchmarkPhaseSelector >
+      BenchmarkPhaseSelectorE::PrepareAndAssembleSnippet) {
     auto Snippet = assembleSnippet(BC, Repetitor, InstrBenchmark.NumRepetitions,
-                                   LoopBodySize);
+                                   LoopBodySize, GenerateMemoryInstructions);
     if (Error E = Snippet.takeError())
       return std::move(E);
     RC.ObjectFile = getObjectFromBuffer(*Snippet);
@@ -201,6 +451,14 @@ BenchmarkRunner::createFunctionExecutor(
   case ExecutionModeE::InProcess:
     return std::make_unique<InProcessFunctionExecutorImpl>(
         State, std::move(ObjectFile), Scratch.get());
+  case ExecutionModeE::SubProcess:
+#ifdef __linux__
+    return std::make_unique<SubProcessFunctionExecutorImpl>(
+        State, std::move(ObjectFile), Key);
+#else
+    return make_error<Failure>(
+        "The subprocess execution mode is only supported on Linux");
+#endif
   }
   llvm_unreachable("ExecutionMode is outside expected range");
 }

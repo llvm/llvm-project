@@ -121,6 +121,11 @@ public:
         // mismatch, and that it should use the LHS explicit/assumed length if
         // allocating/reallocation the LHS.
         fir::runtime::genAssignExplicitLengthCharacter(builder, loc, to, from);
+      } else if (assignOp.isTemporaryLHS()) {
+        // Use AssignTemporary, when the LHS is a compiler generated temporary.
+        // Note that it also works properly for polymorphic LHS (i.e. the LHS
+        // will have the RHS dynamic type after the assignment).
+        fir::runtime::genAssignTemporary(builder, loc, to, from);
       } else if (lhs.isPolymorphic()) {
         // Indicate the runtime that the LHS must have the RHS dynamic type
         // after the assignment.
@@ -138,13 +143,17 @@ public:
       // reference.
       auto toMutableBox = builder.createTemporary(loc, to.getType());
       builder.create<fir::StoreOp>(loc, to, toMutableBox);
-      fir::runtime::genAssign(builder, loc, toMutableBox, from);
+      if (assignOp.isTemporaryLHS())
+        fir::runtime::genAssignTemporary(builder, loc, toMutableBox, from);
+      else
+        fir::runtime::genAssign(builder, loc, toMutableBox, from);
     } else {
       // genScalarAssignment() must take care of potential overlap
       // between LHS and RHS. Note that the overlap is possible
       // also for components of LHS/RHS, and the Assign() runtime
       // must take care of it.
-      fir::factory::genScalarAssignment(builder, loc, lhsExv, rhsExv);
+      fir::factory::genScalarAssignment(builder, loc, lhsExv, rhsExv,
+                                        assignOp.isTemporaryLHS());
     }
     rewriter.eraseOp(assignOp);
     return mlir::success();

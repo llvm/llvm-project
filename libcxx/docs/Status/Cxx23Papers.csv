@@ -78,7 +78,7 @@
 "`P2465R3 <https://wg21.link/P2465R3>`__","LWG","Standard Library Modules ``std`` and ``std.compat``","July 2022","",""
 "`P2467R1 <https://wg21.link/P2467R1>`__","LWG","Support exclusive mode for ``fstreams``","July 2022","",""
 "`P2474R2 <https://wg21.link/P2474R2>`__","LWG","``views::repeat``","July 2022","","","|ranges|"
-"`P2494R2 <https://wg21.link/P2494R2>`__","LWG","Relaxing range adaptors to allow for move only types","July 2022","","","|ranges|"
+"`P2494R2 <https://wg21.link/P2494R2>`__","LWG","Relaxing range adaptors to allow for move only types","July 2022","|Complete|","17.0","|ranges|"
 "`P2499R0 <https://wg21.link/P2499R0>`__","LWG","``string_view`` range constructor should be ``explicit``","July 2022","|Complete|","16.0","|ranges|"
 "`P2502R2 <https://wg21.link/P2502R2>`__","LWG","``std::generator``: Synchronous Coroutine Generator for Ranges","July 2022","","","|ranges|"
 "`P2508R1 <https://wg21.link/P2508R1>`__","LWG","Exposing ``std::basic-format-string``","July 2022","|Complete|","15.0"

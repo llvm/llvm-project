@@ -63,7 +63,7 @@ private:
 public:
   ELFLinkGraphBuilder_ppc64(StringRef FileName,
                             const object::ELFFile<ELFT> &Obj, Triple TT,
-                            LinkGraph::FeatureVector Features)
+                            SubtargetFeatures Features)
       : ELFLinkGraphBuilder<ELFT>(Obj, std::move(TT), std::move(Features),
                                   FileName, ppc64::getEdgeKindName) {}
 };
@@ -106,7 +106,7 @@ createLinkGraphFromELFObject_ppc64(MemoryBufferRef ObjectBuffer) {
   auto &ELFObjFile = cast<object::ELFObjectFile<ELFT>>(**ELFObj);
   return ELFLinkGraphBuilder_ppc64<Endianness>(
              (*ELFObj)->getFileName(), ELFObjFile.getELFFile(),
-             (*ELFObj)->makeTriple(), Features->getFeatures())
+             (*ELFObj)->makeTriple(), std::move(*Features))
       .buildGraph();
 }
 

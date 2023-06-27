@@ -435,18 +435,17 @@ static bool matchEXT(MachineInstr &MI, MachineRegisterInfo &MRI,
 
 /// Replace a G_SHUFFLE_VECTOR instruction with a pseudo.
 /// \p Opc is the opcode to use. \p MI is the G_SHUFFLE_VECTOR.
-static bool applyShuffleVectorPseudo(MachineInstr &MI,
+static void applyShuffleVectorPseudo(MachineInstr &MI,
                                      ShuffleVectorPseudo &MatchInfo) {
   MachineIRBuilder MIRBuilder(MI);
   MIRBuilder.buildInstr(MatchInfo.Opc, {MatchInfo.Dst}, MatchInfo.SrcOps);
   MI.eraseFromParent();
-  return true;
 }
 
 /// Replace a G_SHUFFLE_VECTOR instruction with G_EXT.
 /// Special-cased because the constant operand must be emitted as a G_CONSTANT
 /// for the imported tablegen patterns to work.
-static bool applyEXT(MachineInstr &MI, ShuffleVectorPseudo &MatchInfo) {
+static void applyEXT(MachineInstr &MI, ShuffleVectorPseudo &MatchInfo) {
   MachineIRBuilder MIRBuilder(MI);
   // Tablegen patterns expect an i32 G_CONSTANT as the final op.
   auto Cst =
@@ -454,7 +453,6 @@ static bool applyEXT(MachineInstr &MI, ShuffleVectorPseudo &MatchInfo) {
   MIRBuilder.buildInstr(MatchInfo.Opc, {MatchInfo.Dst},
                         {MatchInfo.SrcOps[0], MatchInfo.SrcOps[1], Cst});
   MI.eraseFromParent();
-  return true;
 }
 
 /// Match a G_SHUFFLE_VECTOR with a mask which corresponds to a
@@ -495,7 +493,7 @@ static bool matchINS(MachineInstr &MI, MachineRegisterInfo &MRI,
   return true;
 }
 
-static bool applyINS(MachineInstr &MI, MachineRegisterInfo &MRI,
+static void applyINS(MachineInstr &MI, MachineRegisterInfo &MRI,
                      MachineIRBuilder &Builder,
                      std::tuple<Register, int, Register, int> &MatchInfo) {
   Builder.setInstrAndDebugLoc(MI);
@@ -509,7 +507,6 @@ static bool applyINS(MachineInstr &MI, MachineRegisterInfo &MRI,
   auto DstCst = Builder.buildConstant(LLT::scalar(64), DstLane);
   Builder.buildInsertVectorElement(Dst, DstVec, Extract, DstCst);
   MI.eraseFromParent();
-  return true;
 }
 
 /// isVShiftRImm - Check if this is a valid vector for the immediate
@@ -538,7 +535,7 @@ static bool matchVAshrLshrImm(MachineInstr &MI, MachineRegisterInfo &MRI,
   return isVShiftRImm(MI.getOperand(2).getReg(), MRI, Ty, Imm);
 }
 
-static bool applyVAshrLshrImm(MachineInstr &MI, MachineRegisterInfo &MRI,
+static void applyVAshrLshrImm(MachineInstr &MI, MachineRegisterInfo &MRI,
                               int64_t &Imm) {
   unsigned Opc = MI.getOpcode();
   assert(Opc == TargetOpcode::G_ASHR || Opc == TargetOpcode::G_LSHR);
@@ -548,7 +545,6 @@ static bool applyVAshrLshrImm(MachineInstr &MI, MachineRegisterInfo &MRI,
   auto ImmDef = MIB.buildConstant(LLT::scalar(32), Imm);
   MIB.buildInstr(NewOpc, {MI.getOperand(0)}, {MI.getOperand(1), ImmDef});
   MI.eraseFromParent();
-  return true;
 }
 
 /// Determine if it is possible to modify the \p RHS and predicate \p P of a
@@ -668,7 +664,7 @@ bool matchAdjustICmpImmAndPred(
   return false;
 }
 
-bool applyAdjustICmpImmAndPred(
+void applyAdjustICmpImmAndPred(
     MachineInstr &MI, std::pair<uint64_t, CmpInst::Predicate> &MatchInfo,
     MachineIRBuilder &MIB, GISelChangeObserver &Observer) {
   MIB.setInstrAndDebugLoc(MI);
@@ -680,7 +676,6 @@ bool applyAdjustICmpImmAndPred(
   RHS.setReg(Cst->getOperand(0).getReg());
   MI.getOperand(1).setPredicate(MatchInfo.second);
   Observer.changedInstr(MI);
-  return true;
 }
 
 bool matchDupLane(MachineInstr &MI, MachineRegisterInfo &MRI,
@@ -735,7 +730,7 @@ bool matchDupLane(MachineInstr &MI, MachineRegisterInfo &MRI,
   return true;
 }
 
-bool applyDupLane(MachineInstr &MI, MachineRegisterInfo &MRI,
+void applyDupLane(MachineInstr &MI, MachineRegisterInfo &MRI,
                   MachineIRBuilder &B, std::pair<unsigned, int> &MatchInfo) {
   assert(MI.getOpcode() == TargetOpcode::G_SHUFFLE_VECTOR);
   Register Src1Reg = MI.getOperand(1).getReg();
@@ -758,7 +753,6 @@ bool applyDupLane(MachineInstr &MI, MachineRegisterInfo &MRI,
   }
   B.buildInstr(MatchInfo.first, {MI.getOperand(0).getReg()}, {DupSrc, Lane});
   MI.eraseFromParent();
-  return true;
 }
 
 static bool matchBuildVectorToDup(MachineInstr &MI, MachineRegisterInfo &MRI) {
@@ -775,13 +769,12 @@ static bool matchBuildVectorToDup(MachineInstr &MI, MachineRegisterInfo &MRI) {
   return (Cst != 0 && Cst != -1);
 }
 
-static bool applyBuildVectorToDup(MachineInstr &MI, MachineRegisterInfo &MRI,
+static void applyBuildVectorToDup(MachineInstr &MI, MachineRegisterInfo &MRI,
                                   MachineIRBuilder &B) {
   B.setInstrAndDebugLoc(MI);
   B.buildInstr(AArch64::G_DUP, {MI.getOperand(0).getReg()},
                {MI.getOperand(1).getReg()});
   MI.eraseFromParent();
-  return true;
 }
 
 /// \returns how many instructions would be saved by folding a G_ICMP's shift
@@ -878,8 +871,8 @@ static bool trySwapICmpOperands(MachineInstr &MI,
           getCmpOperandFoldingProfit(TheRHS, MRI));
 }
 
-static bool applySwapICmpOperands(MachineInstr &MI,
-                                   GISelChangeObserver &Observer) {
+static void applySwapICmpOperands(MachineInstr &MI,
+                                  GISelChangeObserver &Observer) {
   auto Pred = static_cast<CmpInst::Predicate>(MI.getOperand(1).getPredicate());
   Register LHS = MI.getOperand(2).getReg();
   Register RHS = MI.getOperand(3).getReg();
@@ -888,7 +881,6 @@ static bool applySwapICmpOperands(MachineInstr &MI,
   MI.getOperand(2).setReg(RHS);
   MI.getOperand(3).setReg(LHS);
   Observer.changedInstr(MI);
-  return true;
 }
 
 /// \returns a function which builds a vector floating point compare instruction
@@ -1019,7 +1011,7 @@ static bool matchFormTruncstore(MachineInstr &MI, MachineRegisterInfo &MRI,
   return MRI.getType(SrcReg).getSizeInBits() <= 64;
 }
 
-static bool applyFormTruncstore(MachineInstr &MI, MachineRegisterInfo &MRI,
+static void applyFormTruncstore(MachineInstr &MI, MachineRegisterInfo &MRI,
                                 MachineIRBuilder &B,
                                 GISelChangeObserver &Observer,
                                 Register &SrcReg) {
@@ -1027,7 +1019,6 @@ static bool applyFormTruncstore(MachineInstr &MI, MachineRegisterInfo &MRI,
   Observer.changingInstr(MI);
   MI.getOperand(0).setReg(SrcReg);
   Observer.changedInstr(MI);
-  return true;
 }
 
 // Lower vector G_SEXT_INREG back to shifts for selection. We allowed them to

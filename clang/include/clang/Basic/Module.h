@@ -822,6 +822,11 @@ public:
                   ConflictCallback Cb = [](ArrayRef<Module *>, Module *,
                                            StringRef) {});
 
+  /// Make transitive imports visible for [module.import]/7.
+  void makeTransitiveImportsVisible(
+      Module *M, SourceLocation Loc, VisibleCallback Vis = [](Module *) {},
+      ConflictCallback Cb = [](ArrayRef<Module *>, Module *, StringRef) {});
+
 private:
   /// Import locations for each visible module. Indexed by the module's
   /// VisibilityID.
