@@ -66,7 +66,7 @@ target_compile_definitions(omptarget.rtl.cuda.nextgen PRIVATE DEBUG_PREFIX="TARG
 target_include_directories(omptarget.rtl.cuda.nextgen PRIVATE ${LIBOMPTARGET_INCLUDE_DIR})
 
 # Install plugin under the lib destination folder.
-install(TARGETS omptarget.rtl.cuda.nextgen LIBRARY DESTINATION "${OPENMP_INSTALL_LIBDIR}")
+install(TARGETS omptarget.rtl.cuda.nextgen LIBRARY DESTINATION "${RUN_PACKAGE}${OPENMP_INSTALL_LIBDIR}")
 set_target_properties(omptarget.rtl.cuda.nextgen PROPERTIES
   INSTALL_RPATH "$ORIGIN" BUILD_RPATH "$ORIGIN:${CMAKE_CURRENT_BINARY_DIR}/.."
   CXX_VISIBILITY_PRESET protected)
