@@ -36,9 +36,8 @@ declare <vscale x 2 x i16> @llvm.riscv.vnsrl.nxv2i16.nxv2i32.nxv2i16(
 define <vscale x 2 x i16> @intrinsic_vnsrl_wv_nxv2i16_nxv2i32_nxv2i16(<vscale x 2 x i16> %a, <vscale x 2 x i16> %b, iXLen %2, <vscale x 2 x i32> %3, <vscale x 2 x i32> %4, <vscale x 2 x i16> %z) nounwind {
 ; CHECK-LABEL: intrinsic_vnsrl_wv_nxv2i16_nxv2i32_nxv2i16:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetvli a1, zero, e16, mf2, ta, ma
-; CHECK-NEXT:    vwadd.vv v10, v8, v9
 ; CHECK-NEXT:    vsetvli zero, a0, e16, mf2, ta, ma
+; CHECK-NEXT:    vwadd.vv v10, v8, v9
 ; CHECK-NEXT:    vnsrl.wv v8, v10, v12
 ; CHECK-NEXT:    ret
 entry:
@@ -63,10 +62,9 @@ declare <vscale x 2 x i16> @llvm.riscv.vnclip.nxv2i16.nxv2i32.nxv2i16(
 define <vscale x 2 x i16> @vnclip(<vscale x 2 x i16> %a, <vscale x 2 x i16> %b, iXLen %2, <vscale x 2 x i32> %3, <vscale x 2 x i32> %4, <vscale x 2 x i16> %z) nounwind {
 ; CHECK-LABEL: vnclip:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetvli a1, zero, e16, mf2, ta, ma
+; CHECK-NEXT:    vsetvli zero, a0, e16, mf2, ta, ma
 ; CHECK-NEXT:    vwadd.vv v10, v8, v9
 ; CHECK-NEXT:    csrwi vxrm, 0
-; CHECK-NEXT:    vsetvli zero, a0, e16, mf2, ta, ma
 ; CHECK-NEXT:    vnclip.wv v8, v10, v12
 ; CHECK-NEXT:    ret
 entry:
