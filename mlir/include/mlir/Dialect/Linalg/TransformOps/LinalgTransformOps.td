@@ -85,8 +85,9 @@ def BufferizeToAllocationOp : Op<Transform_Dialect,
   let description = [{
     This transform materializes an allocation for the targeted tensor value. It
     replaces all original uses of the target with the newly allocated buffer,
-    wrapped in a `bufferization.to_tensor` op. It returns a handle to the result
-    of the `to_tensor` op.
+    wrapped in a `bufferization.to_tensor` op. It returns a handle to the newly
+    allocated buffer. Furthermore, it returns a handle to the result of the
+    `to_tensor` op.
 
     Example:
     ```
@@ -116,13 +117,14 @@ def BufferizeToAllocationOp : Op<Transform_Dialect,
 
     #### Return modes
 
-    This operation consumes the `target` handle and produces the `transformed`
-    handle. It always succeeds.
+    This operation consumes the `target` handle and produces the `replacement`
+    and `allocated_buffer` handles. It always succeeds.
   }];
 
   let arguments = (ins Transform_AnyValue:$target,
                        OptionalAttr<AnyAttr>:$memory_space);
-  let results = (outs Transform_AnyValue:$transformed);
+  let results = (outs Transform_AnyValue:$allocated_buffer,
+                      Transform_AnyValue:$replacement);
   let assemblyFormat = "$target attr-dict";
 }
 
