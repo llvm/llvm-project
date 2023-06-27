@@ -1247,13 +1247,10 @@ instCombineSVEST1(InstCombiner &IC, IntrinsicInst &II, const DataLayout &DL) {
 
 static Instruction::BinaryOps intrinsicIDToBinOpCode(unsigned Intrinsic) {
   switch (Intrinsic) {
-  case Intrinsic::aarch64_sve_fmul:
   case Intrinsic::aarch64_sve_fmul_u:
     return Instruction::BinaryOps::FMul;
-  case Intrinsic::aarch64_sve_fadd:
   case Intrinsic::aarch64_sve_fadd_u:
     return Instruction::BinaryOps::FAdd;
-  case Intrinsic::aarch64_sve_fsub:
   case Intrinsic::aarch64_sve_fsub_u:
     return Instruction::BinaryOps::FSub;
   default:
@@ -1330,7 +1327,7 @@ instCombineSVEVectorFAdd(InstCombiner &IC, IntrinsicInst &II) {
                                             Intrinsic::aarch64_sve_fmla>(IC, II,
                                                                          true))
     return FMLA;
-  return instCombineSVEVectorBinOp(IC, II);
+  return std::nullopt;
 }
 
 static std::optional<Instruction *>
@@ -1372,7 +1369,7 @@ instCombineSVEVectorFSub(InstCombiner &IC, IntrinsicInst &II) {
                                             Intrinsic::aarch64_sve_fmls>(IC, II,
                                                                          true))
     return FMLS;
-  return instCombineSVEVectorBinOp(IC, II);
+  return std::nullopt;
 }
 
 static std::optional<Instruction *>
