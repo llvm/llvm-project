@@ -67,7 +67,7 @@ c.lh a5, 2(a4)
 c.sb a5, 2(a4)
 
 # CHECK-ASM-AND-OBJ: c.sh a5, 2(a4)
-# CHECK-ASM: encoding: [0x7c,0x8f]
+# CHECK-ASM: encoding: [0x3c,0x8f]
 # CHECK-NO-EXT: error: instruction requires the following: 'Zcb' (Compressed basic bit manipulation instructions){{$}}
 c.sh a5, 2(a4)
 
@@ -116,7 +116,7 @@ lhu a5, 2(a4)
 sb a5, 2(a4)
 
 # CHECK-ASM-AND-OBJ: c.sh a5, 2(a4)
-# CHECK-ASM: encoding: [0x7c,0x8f]
+# CHECK-ASM: encoding: [0x3c,0x8f]
 sh a5, 2(a4)
 
 # CHECK-ASM-AND-OBJ: c.lbu s0, 0(s1)
@@ -136,5 +136,5 @@ c.lh s0, (s1)
 c.sb s0, (s1)
 
 # CHECK-ASM-AND-OBJ: c.sh s0, 0(s1)
-# CHECK-ASM: encoding: [0xc0,0x8c]
+# CHECK-ASM: encoding: [0x80,0x8c]
 c.sh s0, (s1)

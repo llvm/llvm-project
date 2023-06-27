@@ -5113,7 +5113,7 @@ bool SelectionDAG::isEqualTo(SDValue A, SDValue B) const {
   // Check the obvious case.
   if (A == B) return true;
 
-  // For for negative and positive zero.
+  // For negative and positive zero.
   if (const ConstantFPSDNode *CA = dyn_cast<ConstantFPSDNode>(A))
     if (const ConstantFPSDNode *CB = dyn_cast<ConstantFPSDNode>(B))
       if (CA->isZero() && CB->isZero()) return true;

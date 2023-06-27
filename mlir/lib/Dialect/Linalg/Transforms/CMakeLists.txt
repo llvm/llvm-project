@@ -21,6 +21,7 @@ add_mlir_dialect_library(MLIRLinalgTransforms
   Interchange.cpp
   Loops.cpp
   NamedOpConversions.cpp
+  Padding.cpp
   Promotion.cpp
   Split.cpp
   SplitReduction.cpp

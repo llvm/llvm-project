@@ -174,18 +174,25 @@ DiagnosedSilenceableFailure transform::BufferizeToAllocationOp::apply(
     transform::TransformResults &results, transform::TransformState &state) {
   Attribute memorySpace =
       getMemorySpace().has_value() ? getMemorySpace().value() : Attribute();
-  auto transformed = llvm::to_vector(
-      llvm::map_range(state.getPayloadValues(getTarget()), [&](Value v) {
-        return linalg::bufferizeToAllocation(rewriter, v, memorySpace);
-      }));
-  results.setValues(cast<OpResult>(getTransformed()), transformed);
+  SmallVector<Value> replacements;
+  SmallVector<Value> allocatedBuffers;
+  for (Value value : state.getPayloadValues(getTarget())) {
+    Value replacement;
+    Value buffer = linalg::bufferizeToAllocation(rewriter, value, memorySpace,
+                                                 &replacement);
+    replacements.push_back(replacement);
+    allocatedBuffers.push_back(buffer);
+  }
+  results.setValues(cast<OpResult>(getReplacement()), replacements);
+  results.setValues(cast<OpResult>(getAllocatedBuffer()), allocatedBuffers);
   return DiagnosedSilenceableFailure::success();
 }
 
 void transform::BufferizeToAllocationOp::getEffects(
     SmallVectorImpl<MemoryEffects::EffectInstance> &effects) {
   consumesHandle(getTarget(), effects);
-  producesHandle(getTransformed(), effects);
+  producesHandle(getReplacement(), effects);
+  producesHandle(getAllocatedBuffer(), effects);
   modifiesPayload(effects);
 }
 
@@ -1240,7 +1247,7 @@ packMatmulGreedily(RewriterBase &rewriter, LinalgOp linalgOp,
   }
 
   // 1. Infer dims that are important for matmul.
-  FailureOr<EmbeddedMatmulDimsCandidates> res = inferMatmulDims(linalgOp);
+  FailureOr<EmbeddedContractionDimsCandidates> res = inferContractionDims(linalgOp);
   if (failed(res)) {
     return rewriter.notifyMatchFailure(linalgOp,
                                        "couldn't infer matmul iterators");
@@ -1583,15 +1590,18 @@ transform::PadOp::applyToOne(transform::TransformRewriter &rewriter,
     transposePaddings.push_back(
         extractFromI64ArrayAttr(cast<ArrayAttr>(transposeVector)));
 
+  // Set up options and pad.
   LinalgOp paddedOp;
-  SmallVector<int64_t> paddingDimensions =
-      extractFromI64ArrayAttr(getPaddingDimensions());
-  SmallVector<int64_t> padToMultipleOf(paddingDimensions.size(), 1);
+  LinalgPaddingOptions options;
+  options.paddingDimensions = extractFromI64ArrayAttr(getPaddingDimensions());
+  SmallVector<int64_t> padToMultipleOf(options.paddingDimensions.size(), 1);
   if (getPadToMultipleOf().has_value())
     padToMultipleOf = extractFromI64ArrayAttr(*getPadToMultipleOf());
+  options.padToMultipleOf = padToMultipleOf;
+  options.paddingValues = paddingValues;
+  options.packPaddings = packPaddings;
   FailureOr<SmallVector<Value>> result =
-      rewriteAsPaddedOp(rewriter, target, paddingDimensions, padToMultipleOf,
-                        paddingValues, packPaddings, paddedOp);
+      rewriteAsPaddedOp(rewriter, target, options, paddedOp, getCopyBack());
   if (succeeded(result)) {
     // We need to perform our own replacement here because this API is still
     // used in patterns that "pad and hoist", for which the replacement values

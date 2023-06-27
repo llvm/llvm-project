@@ -279,13 +279,14 @@ def VectorType : DialectType<(type
 }
 
 def VectorTypeWithScalableDims : DialectType<(type
+  Array<BoolList>:$scalableDims,
   VarInt:$numScalableDims,
   Array<SignedVarIntList>:$shape,
   Type:$elementType
 )> {
   let printerPredicate = "$_val.getNumScalableDims()";
   // Note: order of serialization does not match order of builder.
-  let cBuilder = "get<$_resultType>(context, shape, elementType, numScalableDims)";
+  let cBuilder = "get<$_resultType>(context, shape, elementType, numScalableDims, scalableDims)";
 }
 }
 

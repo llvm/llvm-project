@@ -33,7 +33,7 @@ transform.sequence failures(propagate) {
 ^bb1(%arg1: !transform.any_op):
   %0 = transform.structured.match ops{["tensor.pad"]} in %arg1 : (!transform.any_op) -> !transform.any_op
   %1 = transform.get_result %0[0] : (!transform.any_op) -> !transform.any_value
-  %2 = transform.structured.bufferize_to_allocation %1
+  %2, %3 = transform.structured.bufferize_to_allocation %1
 }
 
 // -----
@@ -59,9 +59,9 @@ transform.sequence failures(propagate) {
 ^bb1(%arg1: !transform.any_op):
   %0 = transform.structured.match ops{["tensor.pad"]} in %arg1 : (!transform.any_op) -> !transform.any_op
   %1 = transform.get_result %0[0] : (!transform.any_op) -> !transform.any_value
-  %2 = transform.structured.bufferize_to_allocation %1
+  %2, %3 = transform.structured.bufferize_to_allocation %1
   // Make sure that One-Shot Bufferize can bufferize the rest.
-  %3 = transform.bufferization.one_shot_bufferize %arg1 : (!transform.any_op) -> !transform.any_op
+  %4 = transform.bufferization.one_shot_bufferize %arg1 : (!transform.any_op) -> !transform.any_op
 }
 
 // -----
@@ -85,7 +85,7 @@ transform.sequence failures(propagate) {
 ^bb1(%arg1: !transform.any_op):
   %0 = transform.structured.match ops{["tensor.extract"]} in %arg1 : (!transform.any_op) -> !transform.any_op
   %1 = test_produce_value_handle_to_argument_of_parent_block %0, 0 : (!transform.any_op) -> !transform.any_value
-  %2 = transform.structured.bufferize_to_allocation %1 {memory_space = 4}
+  %2, %3 = transform.structured.bufferize_to_allocation %1 {memory_space = 4}
 }
 
 // -----
@@ -106,9 +106,9 @@ transform.sequence failures(propagate) {
 ^bb1(%arg1: !transform.any_op):
   %0 = transform.structured.match ops{["tensor.extract"]} in %arg1 : (!transform.any_op) -> !transform.any_op
   %1 = test_produce_value_handle_to_argument_of_parent_block %0, 0 : (!transform.any_op) -> !transform.any_value
-  %2 = transform.structured.bufferize_to_allocation %1 {memory_space = 4}
+  %2, %3 = transform.structured.bufferize_to_allocation %1 {memory_space = 4}
   // Make sure that One-Shot Bufferize can bufferize the rest.
-  %3 = transform.bufferization.one_shot_bufferize %arg1 : (!transform.any_op) -> !transform.any_op
+  %4 = transform.bufferization.one_shot_bufferize %arg1 : (!transform.any_op) -> !transform.any_op
 }
 
 // -----
@@ -128,7 +128,7 @@ transform.sequence failures(propagate) {
 ^bb1(%arg1: !transform.any_op):
   %0 = transform.structured.match ops{["dummy.some_op"]} in %arg1 : (!transform.any_op) -> !transform.any_op
   %1 = transform.get_result %0[0] : (!transform.any_op) -> !transform.any_value
-  %2 = transform.structured.bufferize_to_allocation %1 {memory_space = 4}
+  %2, %3 = transform.structured.bufferize_to_allocation %1 {memory_space = 4}
 }
 
 

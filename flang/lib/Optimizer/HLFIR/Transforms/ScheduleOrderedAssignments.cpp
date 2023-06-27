@@ -225,6 +225,9 @@ static mlir::Value getYieldedEntity(mlir::Region &region) {
     return nullptr;
   if (auto yield = mlir::dyn_cast<hlfir::YieldOp>(region.back().back()))
     return yield.getEntity();
+  if (auto elementalAddr =
+          mlir::dyn_cast<hlfir::ElementalAddrOp>(region.back().back()))
+    return elementalAddr.getYieldOp().getEntity();
   return nullptr;
 }
 
@@ -237,9 +240,7 @@ static void gatherAssignEffects(
     bool userDefAssignmentMayOnlyWriteToAssignedVariable,
     llvm::SmallVectorImpl<mlir::MemoryEffects::EffectInstance> &assignEffects) {
   mlir::Value assignedVar = getYieldedEntity(regionAssign.getLhsRegion());
-  if (!assignedVar)
-    TODO(regionAssign.getLoc(),
-         "assignment to vector subscripted entity in HLFIR");
+  assert(assignedVar && "lhs cannot be an empty region");
   assignEffects.emplace_back(mlir::MemoryEffects::Write::get(), assignedVar);
 
   if (!regionAssign.getUserDefinedAssignment().empty()) {

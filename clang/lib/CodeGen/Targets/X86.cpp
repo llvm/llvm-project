@@ -318,8 +318,7 @@ void X86_32TargetCodeGenInfo::addReturnRegisterOutputs(
   ResultTruncRegTypes.push_back(CoerceTy);
 
   // Coerce the integer by bitcasting the return slot pointer.
-  ReturnSlot.setAddress(
-      CGF.Builder.CreateElementBitCast(ReturnSlot.getAddress(CGF), CoerceTy));
+  ReturnSlot.setAddress(ReturnSlot.getAddress(CGF).withElementType(CoerceTy));
   ResultRegDests.push_back(ReturnSlot);
 
   rewriteInputConstraintReferences(NumOutputs, 1, AsmString);
@@ -3048,7 +3047,7 @@ Address X86_64ABIInfo::EmitVAArg(CodeGenFunction &CGF, Address VAListAddr,
     assert(AI.isDirect() && "Unexpected ABI info for mixed regs");
     llvm::StructType *ST = cast<llvm::StructType>(AI.getCoerceToType());
     Address Tmp = CGF.CreateMemTemp(Ty);
-    Tmp = CGF.Builder.CreateElementBitCast(Tmp, ST);
+    Tmp = Tmp.withElementType(ST);
     assert(ST->getNumElements() == 2 && "Unexpected ABI info for mixed regs");
     llvm::Type *TyLo = ST->getElementType(0);
     llvm::Type *TyHi = ST->getElementType(1);
@@ -3076,11 +3075,10 @@ Address X86_64ABIInfo::EmitVAArg(CodeGenFunction &CGF, Address VAListAddr,
         CharUnits::fromQuantity(getDataLayout().getABITypeAlign(TyHi)));
     CGF.Builder.CreateStore(V, CGF.Builder.CreateStructGEP(Tmp, 1));
 
-    RegAddr = CGF.Builder.CreateElementBitCast(Tmp, LTy);
+    RegAddr = Tmp.withElementType(LTy);
   } else if (neededInt) {
     RegAddr = Address(CGF.Builder.CreateGEP(CGF.Int8Ty, RegSaveArea, gp_offset),
-                      CGF.Int8Ty, CharUnits::fromQuantity(8));
-    RegAddr = CGF.Builder.CreateElementBitCast(RegAddr, LTy);
+                      LTy, CharUnits::fromQuantity(8));
 
     // Copy to a temporary if necessary to ensure the appropriate alignment.
     auto TInfo = getContext().getTypeInfoInChars(Ty);
@@ -3097,8 +3095,7 @@ Address X86_64ABIInfo::EmitVAArg(CodeGenFunction &CGF, Address VAListAddr,
 
   } else if (neededSSE == 1) {
     RegAddr = Address(CGF.Builder.CreateGEP(CGF.Int8Ty, RegSaveArea, fp_offset),
-                      CGF.Int8Ty, CharUnits::fromQuantity(16));
-    RegAddr = CGF.Builder.CreateElementBitCast(RegAddr, LTy);
+                      LTy, CharUnits::fromQuantity(16));
   } else {
     assert(neededSSE == 2 && "Invalid number of needed registers!");
     // SSE registers are spaced 16 bytes apart in the register save
@@ -3118,15 +3115,15 @@ Address X86_64ABIInfo::EmitVAArg(CodeGenFunction &CGF, Address VAListAddr,
                          : llvm::StructType::get(CGF.DoubleTy, CGF.DoubleTy);
     llvm::Value *V;
     Address Tmp = CGF.CreateMemTemp(Ty);
-    Tmp = CGF.Builder.CreateElementBitCast(Tmp, ST);
-    V = CGF.Builder.CreateLoad(CGF.Builder.CreateElementBitCast(
-        RegAddrLo, ST->getStructElementType(0)));
+    Tmp = Tmp.withElementType(ST);
+    V = CGF.Builder.CreateLoad(
+        RegAddrLo.withElementType(ST->getStructElementType(0)));
     CGF.Builder.CreateStore(V, CGF.Builder.CreateStructGEP(Tmp, 0));
-    V = CGF.Builder.CreateLoad(CGF.Builder.CreateElementBitCast(
-        RegAddrHi, ST->getStructElementType(1)));
+    V = CGF.Builder.CreateLoad(
+        RegAddrHi.withElementType(ST->getStructElementType(1)));
     CGF.Builder.CreateStore(V, CGF.Builder.CreateStructGEP(Tmp, 1));
 
-    RegAddr = CGF.Builder.CreateElementBitCast(Tmp, LTy);
+    RegAddr = Tmp.withElementType(LTy);
   }
 
   // AMD64-ABI 3.5.7p5: Step 5. Set:

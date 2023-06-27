@@ -306,17 +306,28 @@ public:
   /// Build from another VectorType.
   explicit Builder(VectorType other)
       : shape(other.getShape()), elementType(other.getElementType()),
-        numScalableDims(other.getNumScalableDims()) {}
+        numScalableDims(other.getNumScalableDims()),
+        scalableDims(other.getScalableDims()) {}
 
   /// Build from scratch.
   Builder(ArrayRef<int64_t> shape, Type elementType,
-          unsigned numScalableDims = 0)
+          unsigned numScalableDims = 0, ArrayRef<bool> scalableDims = {})
       : shape(shape), elementType(elementType),
-        numScalableDims(numScalableDims) {}
+        numScalableDims(numScalableDims) {
+    if (scalableDims.empty())
+      scalableDims = SmallVector<bool>(shape.size(), false);
+    else
+      this->scalableDims = scalableDims;
+  }
 
-  Builder &setShape(ArrayRef<int64_t> newShape,
-                    unsigned newNumScalableDims = 0) {
+  Builder &setShape(ArrayRef<int64_t> newShape, unsigned newNumScalableDims = 0,
+                    ArrayRef<bool> newIsScalableDim = {}) {
     numScalableDims = newNumScalableDims;
+    if (newIsScalableDim.empty())
+      scalableDims = SmallVector<bool>(shape.size(), false);
+    else
+      scalableDims = newIsScalableDim;
+
     shape = newShape;
     return *this;
   }
@@ -333,8 +344,13 @@ public:
       numScalableDims--;
     if (storage.empty())
       storage.append(shape.begin(), shape.end());
+    if (storageScalableDims.empty())
+      storageScalableDims.append(scalableDims.begin(), scalableDims.end());
     storage.erase(storage.begin() + pos);
+    storageScalableDims.erase(storageScalableDims.begin() + pos);
     shape = {storage.data(), storage.size()};
+    scalableDims =
+        ArrayRef<bool>(storageScalableDims.data(), storageScalableDims.size());
     return *this;
   }
 
@@ -344,7 +360,7 @@ public:
   operator Type() {
     if (shape.empty())
       return elementType;
-    return VectorType::get(shape, elementType, numScalableDims);
+    return VectorType::get(shape, elementType, numScalableDims, scalableDims);
   }
 
 private:
@@ -353,6 +369,9 @@ private:
   SmallVector<int64_t> storage;
   Type elementType;
   unsigned numScalableDims;
+  ArrayRef<bool> scalableDims;
+  // Owning scalableDims data for copy-on-write operations.
+  SmallVector<bool> storageScalableDims;
 };
 
 /// Given an `originalShape` and a `reducedShape` assumed to be a subset of

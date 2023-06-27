@@ -227,7 +227,8 @@ LogicalResult OpaqueType::verify(function_ref<InFlightDiagnostic()> emitError,
 
 LogicalResult VectorType::verify(function_ref<InFlightDiagnostic()> emitError,
                                  ArrayRef<int64_t> shape, Type elementType,
-                                 unsigned numScalableDims) {
+                                 unsigned numScalableDims,
+                                 ArrayRef<bool> scalableDims) {
   if (!isValidElementType(elementType))
     return emitError()
            << "vector elements must be int/index/float type but got "
@@ -237,6 +238,21 @@ LogicalResult VectorType::verify(function_ref<InFlightDiagnostic()> emitError,
     return emitError()
            << "vector types must have positive constant sizes but got "
            << shape;
+
+  if (numScalableDims > shape.size())
+    return emitError()
+           << "number of scalable dims cannot exceed the number of dims"
+           << " (" << numScalableDims << " vs " << shape.size() << ")";
+
+  if (scalableDims.size() != shape.size())
+    return emitError() << "number of dims must match, got "
+                       << scalableDims.size() << " and " << shape.size();
+
+  auto numScale =
+      count_if(scalableDims, [](bool isScalable) { return isScalable; });
+  if (numScale != numScalableDims)
+    return emitError() << "number of scalable dims must match, explicit: "
+                       << numScalableDims << ", and bools:" << numScale;
 
   return success();
 }
