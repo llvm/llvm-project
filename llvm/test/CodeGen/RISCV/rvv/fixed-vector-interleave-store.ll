@@ -32,11 +32,7 @@ define void @vector_interleave_store_v16i16_v8i16(<8 x i16> %a, <8 x i16> %b, pt
 ; CHECK-LABEL: vector_interleave_store_v16i16_v8i16:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 8, e16, m1, ta, ma
-; CHECK-NEXT:    vwaddu.vv v10, v8, v9
-; CHECK-NEXT:    li a1, -1
-; CHECK-NEXT:    vwmaccu.vx v10, a1, v9
-; CHECK-NEXT:    vsetivli zero, 16, e16, m2, ta, ma
-; CHECK-NEXT:    vse16.v v10, (a0)
+; CHECK-NEXT:    vsseg2e16.v v8, (a0)
 ; CHECK-NEXT:    ret
   %res = call <16 x i16> @llvm.experimental.vector.interleave2.v16i16(<8 x i16> %a, <8 x i16> %b)
   store <16 x i16> %res, ptr %p
@@ -47,11 +43,7 @@ define void @vector_interleave_store_v8i32_v4i32(<4 x i32> %a, <4 x i32> %b, ptr
 ; CHECK-LABEL: vector_interleave_store_v8i32_v4i32:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 4, e32, m1, ta, ma
-; CHECK-NEXT:    vwaddu.vv v10, v8, v9
-; CHECK-NEXT:    li a1, -1
-; CHECK-NEXT:    vwmaccu.vx v10, a1, v9
-; CHECK-NEXT:    vsetivli zero, 8, e32, m2, ta, ma
-; CHECK-NEXT:    vse32.v v10, (a0)
+; CHECK-NEXT:    vsseg2e32.v v8, (a0)
 ; CHECK-NEXT:    ret
   %res = call <8 x i32> @llvm.experimental.vector.interleave2.v8i32(<4 x i32> %a, <4 x i32> %b)
   store <8 x i32> %res, ptr %p
@@ -59,29 +51,11 @@ define void @vector_interleave_store_v8i32_v4i32(<4 x i32> %a, <4 x i32> %b, ptr
 }
 
 define void @vector_interleave_store_v4i64_v2i64(<2 x i64> %a, <2 x i64> %b, ptr %p) {
-; RV32-LABEL: vector_interleave_store_v4i64_v2i64:
-; RV32:       # %bb.0:
-; RV32-NEXT:    vmv1r.v v10, v9
-; RV32-NEXT:    vsetivli zero, 4, e64, m2, ta, ma
-; RV32-NEXT:    lui a1, %hi(.LCPI3_0)
-; RV32-NEXT:    addi a1, a1, %lo(.LCPI3_0)
-; RV32-NEXT:    vle16.v v12, (a1)
-; RV32-NEXT:    vslideup.vi v8, v10, 2
-; RV32-NEXT:    vrgatherei16.vv v10, v8, v12
-; RV32-NEXT:    vse64.v v10, (a0)
-; RV32-NEXT:    ret
-;
-; RV64-LABEL: vector_interleave_store_v4i64_v2i64:
-; RV64:       # %bb.0:
-; RV64-NEXT:    vmv1r.v v10, v9
-; RV64-NEXT:    vsetivli zero, 4, e64, m2, ta, ma
-; RV64-NEXT:    lui a1, %hi(.LCPI3_0)
-; RV64-NEXT:    addi a1, a1, %lo(.LCPI3_0)
-; RV64-NEXT:    vle64.v v12, (a1)
-; RV64-NEXT:    vslideup.vi v8, v10, 2
-; RV64-NEXT:    vrgather.vv v10, v8, v12
-; RV64-NEXT:    vse64.v v10, (a0)
-; RV64-NEXT:    ret
+; CHECK-LABEL: vector_interleave_store_v4i64_v2i64:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetivli zero, 2, e64, m1, ta, ma
+; CHECK-NEXT:    vsseg2e64.v v8, (a0)
+; CHECK-NEXT:    ret
   %res = call <4 x i64> @llvm.experimental.vector.interleave2.v4i64(<2 x i64> %a, <2 x i64> %b)
   store <4 x i64> %res, ptr %p
   ret void
@@ -98,11 +72,7 @@ define void @vector_interleave_store_v4f16_v2f16(<2 x half> %a, <2 x half> %b, p
 ; CHECK-LABEL: vector_interleave_store_v4f16_v2f16:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 2, e16, mf4, ta, ma
-; CHECK-NEXT:    vwaddu.vv v10, v8, v9
-; CHECK-NEXT:    li a1, -1
-; CHECK-NEXT:    vwmaccu.vx v10, a1, v9
-; CHECK-NEXT:    vsetivli zero, 4, e16, mf2, ta, ma
-; CHECK-NEXT:    vse16.v v10, (a0)
+; CHECK-NEXT:    vsseg2e16.v v8, (a0)
 ; CHECK-NEXT:    ret
   %res = call <4 x half> @llvm.experimental.vector.interleave2.v4f16(<2 x half> %a, <2 x half> %b)
   store <4 x half> %res, ptr %p
@@ -113,11 +83,7 @@ define void @vector_interleave_store_v8f16_v4f16(<4 x half> %a, <4 x half> %b, p
 ; CHECK-LABEL: vector_interleave_store_v8f16_v4f16:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 4, e16, mf2, ta, ma
-; CHECK-NEXT:    vwaddu.vv v10, v8, v9
-; CHECK-NEXT:    li a1, -1
-; CHECK-NEXT:    vwmaccu.vx v10, a1, v9
-; CHECK-NEXT:    vsetivli zero, 8, e16, m1, ta, ma
-; CHECK-NEXT:    vse16.v v10, (a0)
+; CHECK-NEXT:    vsseg2e16.v v8, (a0)
 ; CHECK-NEXT:    ret
   %res = call <8 x half> @llvm.experimental.vector.interleave2.v8f16(<4 x half> %a, <4 x half> %b)
   store <8 x half> %res, ptr %p
@@ -128,11 +94,7 @@ define void @vector_interleave_store_v4f32_v2f32(<2 x float> %a, <2 x float> %b,
 ; CHECK-LABEL: vector_interleave_store_v4f32_v2f32:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 2, e32, mf2, ta, ma
-; CHECK-NEXT:    vwaddu.vv v10, v8, v9
-; CHECK-NEXT:    li a1, -1
-; CHECK-NEXT:    vwmaccu.vx v10, a1, v9
-; CHECK-NEXT:    vsetivli zero, 4, e32, m1, ta, ma
-; CHECK-NEXT:    vse32.v v10, (a0)
+; CHECK-NEXT:    vsseg2e32.v v8, (a0)
 ; CHECK-NEXT:    ret
   %res = call <4 x float> @llvm.experimental.vector.interleave2.v4f32(<2 x float> %a, <2 x float> %b)
   store <4 x float> %res, ptr %p
@@ -143,11 +105,7 @@ define void @vector_interleave_store_v16f16_v8f16(<8 x half> %a, <8 x half> %b, 
 ; CHECK-LABEL: vector_interleave_store_v16f16_v8f16:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 8, e16, m1, ta, ma
-; CHECK-NEXT:    vwaddu.vv v10, v8, v9
-; CHECK-NEXT:    li a1, -1
-; CHECK-NEXT:    vwmaccu.vx v10, a1, v9
-; CHECK-NEXT:    vsetivli zero, 16, e16, m2, ta, ma
-; CHECK-NEXT:    vse16.v v10, (a0)
+; CHECK-NEXT:    vsseg2e16.v v8, (a0)
 ; CHECK-NEXT:    ret
   %res = call <16 x half> @llvm.experimental.vector.interleave2.v16f16(<8 x half> %a, <8 x half> %b)
   store <16 x half> %res, ptr %p
@@ -158,11 +116,7 @@ define void @vector_interleave_store_v8f32_v4f32(<4 x float> %a, <4 x float> %b,
 ; CHECK-LABEL: vector_interleave_store_v8f32_v4f32:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 4, e32, m1, ta, ma
-; CHECK-NEXT:    vwaddu.vv v10, v8, v9
-; CHECK-NEXT:    li a1, -1
-; CHECK-NEXT:    vwmaccu.vx v10, a1, v9
-; CHECK-NEXT:    vsetivli zero, 8, e32, m2, ta, ma
-; CHECK-NEXT:    vse32.v v10, (a0)
+; CHECK-NEXT:    vsseg2e32.v v8, (a0)
 ; CHECK-NEXT:    ret
   %res = call <8 x float> @llvm.experimental.vector.interleave2.v8f32(<4 x float> %a, <4 x float> %b)
   store <8 x float> %res, ptr %p
@@ -170,29 +124,11 @@ define void @vector_interleave_store_v8f32_v4f32(<4 x float> %a, <4 x float> %b,
 }
 
 define void @vector_interleave_store_v4f64_v2f64(<2 x double> %a, <2 x double> %b, ptr %p) {
-; RV32-LABEL: vector_interleave_store_v4f64_v2f64:
-; RV32:       # %bb.0:
-; RV32-NEXT:    vmv1r.v v10, v9
-; RV32-NEXT:    vsetivli zero, 4, e64, m2, ta, ma
-; RV32-NEXT:    lui a1, %hi(.LCPI9_0)
-; RV32-NEXT:    addi a1, a1, %lo(.LCPI9_0)
-; RV32-NEXT:    vle16.v v12, (a1)
-; RV32-NEXT:    vslideup.vi v8, v10, 2
-; RV32-NEXT:    vrgatherei16.vv v10, v8, v12
-; RV32-NEXT:    vse64.v v10, (a0)
-; RV32-NEXT:    ret
-;
-; RV64-LABEL: vector_interleave_store_v4f64_v2f64:
-; RV64:       # %bb.0:
-; RV64-NEXT:    vmv1r.v v10, v9
-; RV64-NEXT:    vsetivli zero, 4, e64, m2, ta, ma
-; RV64-NEXT:    lui a1, %hi(.LCPI9_0)
-; RV64-NEXT:    addi a1, a1, %lo(.LCPI9_0)
-; RV64-NEXT:    vle64.v v12, (a1)
-; RV64-NEXT:    vslideup.vi v8, v10, 2
-; RV64-NEXT:    vrgather.vv v10, v8, v12
-; RV64-NEXT:    vse64.v v10, (a0)
-; RV64-NEXT:    ret
+; CHECK-LABEL: vector_interleave_store_v4f64_v2f64:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetivli zero, 2, e64, m1, ta, ma
+; CHECK-NEXT:    vsseg2e64.v v8, (a0)
+; CHECK-NEXT:    ret
   %res = call <4 x double> @llvm.experimental.vector.interleave2.v4f64(<2 x double> %a, <2 x double> %b)
   store <4 x double> %res, ptr %p
   ret void
@@ -205,3 +141,6 @@ declare <4 x float> @llvm.experimental.vector.interleave2.v4f32(<2 x float>, <2 
 declare <16 x half> @llvm.experimental.vector.interleave2.v16f16(<8 x half>, <8 x half>)
 declare <8 x float> @llvm.experimental.vector.interleave2.v8f32(<4 x float>, <4 x float>)
 declare <4 x double> @llvm.experimental.vector.interleave2.v4f64(<2 x double>, <2 x double>)
+;; NOTE: These prefixes are unused and the list is autogenerated. Do not add tests below this line:
+; RV32: {{.*}}
+; RV64: {{.*}}
