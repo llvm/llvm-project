@@ -24,8 +24,7 @@ static Triple createTripleWithCOFFFormat(Triple T) {
 }
 
 COFFLinkGraphBuilder::COFFLinkGraphBuilder(
-    const object::COFFObjectFile &Obj, Triple TT,
-    LinkGraph::FeatureVector Features,
+    const object::COFFObjectFile &Obj, Triple TT, SubtargetFeatures Features,
     LinkGraph::GetEdgeKindNameFunction GetEdgeKindName)
     : Obj(Obj), G(std::make_unique<LinkGraph>(
                     Obj.getFileName().str(), createTripleWithCOFFFormat(TT),
