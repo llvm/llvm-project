@@ -882,6 +882,8 @@ ComplexDeinterleavingGraph::identifySymmetricOperation(Instruction *Real,
 ComplexDeinterleavingGraph::NodePtr
 ComplexDeinterleavingGraph::identifyNode(Instruction *Real, Instruction *Imag) {
   LLVM_DEBUG(dbgs() << "identifyNode on " << *Real << " / " << *Imag << "\n");
+  assert(Real->getType() == Imag->getType() &&
+         "Real and imaginary parts should not have different types");
   if (NodePtr CN = getContainingComposite(Real, Imag)) {
     LLVM_DEBUG(dbgs() << " - Folding to existing node\n");
     return CN;
@@ -1463,6 +1465,8 @@ void ComplexDeinterleavingGraph::identifyReductionNodes() {
 
       auto *Real = OperationInstruction[i];
       auto *Imag = OperationInstruction[j];
+      if (Real->getType() != Imag->getType())
+        continue;
 
       RealPHI = ReductionInfo[Real].first;
       ImagPHI = ReductionInfo[Imag].first;
