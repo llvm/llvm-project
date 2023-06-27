@@ -1347,8 +1347,6 @@ bool WaitcntGeneratorGFX12Plus::applyPreexistingWaitcnt(
   MachineInstr *WaitcntDepctrInstr = nullptr;
   MachineInstr *WaitInstrs[NUM_EXTENDED_INST_CNTS] = {};
 
-  bool UntrackedDepctr = false;
-
   for (auto &II :
        make_early_inc_range(make_range(OldWaitcntInstr.getIterator(), It))) {
     if (II.isMetaInstruction())
@@ -1384,7 +1382,6 @@ bool WaitcntGeneratorGFX12Plus::applyPreexistingWaitcnt(
         OldWait.VaVdst = AMDGPU::DepCtr::decodeFieldVaVdst(OldEnc);
         OldWait.VmVsrc = AMDGPU::DepCtr::decodeFieldVmVsrc(OldEnc);
         Wait = Wait.combined(OldWait);
-        UntrackedDepctr = true;
       }
       UpdatableInstr = &WaitcntDepctrInstr;
     } else {
@@ -1549,22 +1546,7 @@ bool WaitcntGeneratorGFX12Plus::applyPreexistingWaitcnt(
         TII->getNamedOperand(*WaitcntDepctrInstr, AMDGPU::OpName::simm16)
             ->getImm();
     Enc = AMDGPU::DepCtr::encodeFieldVmVsrc(Enc, Wait.VmVsrc);
-
-    // Even if VA_VDST has a non-~0u value, an S_WAITCNT_DEPCTR instruction
-    // is only needed if the instruction it precedes isn't a VALU instruction,
-    // as hardware deals with VALU->VGPR->VALU hazards in expert scheduling
-    // mode 2. If it is a VALU instruction, just use a ~0u value for the
-    // VA_VDST operand subfield (which may cause the S_WAITCNT_DEPCTR to
-    // be removed if all of the subfields in the operand have "no wait"
-    // values.
-    //
-    // Any existing S_WAITCNT_DEPCTR instruction that this analysis did not
-    // insert is kept, even if it precedes a VALU instruction, unless this
-    // analysis determines that no wait is necessary at all.
-    if (!SIInstrInfo::isVALU(*It) || UntrackedDepctr)
-      Enc = AMDGPU::DepCtr::encodeFieldVaVdst(Enc, Wait.VaVdst);
-    else
-      Enc = AMDGPU::DepCtr::encodeFieldVaVdst(Enc, ~0u);
+    Enc = AMDGPU::DepCtr::encodeFieldVaVdst(Enc, Wait.VaVdst);
 
     ScoreBrackets.applyWaitcnt(VA_VDST, Wait.VaVdst);
     ScoreBrackets.applyWaitcnt(VM_VSRC, Wait.VmVsrc);
@@ -1659,13 +1641,7 @@ bool WaitcntGeneratorGFX12Plus::createNewWaitcnt(
   if (Wait.hasWaitDepctr()) {
     assert(isExpertMode(MaxCounter));
     unsigned Enc = AMDGPU::DepCtr::encodeFieldVmVsrc(Wait.VmVsrc);
-
-    // It is only necessary insert an S_WAITCNT_DEPCTR instruction that
-    // waits on VA_VDST if the instruction it would precede is not a VALU
-    // instruction, since hardware handles VALU->VGPR->VALU hazards in
-    // expert scheduling mode.
-    if (!SIInstrInfo::isVALU(*It))
-      Enc = AMDGPU::DepCtr::encodeFieldVaVdst(Enc, Wait.VaVdst);
+    Enc = AMDGPU::DepCtr::encodeFieldVaVdst(Enc, Wait.VaVdst);
 
     if (Enc != 0xffff) {
       auto SWaitInst =
@@ -1966,6 +1942,13 @@ bool SIInsertWaitcnts::generateWaitcntInstBefore(MachineInstr &MI,
 
   // Verify that the wait is actually needed.
   ScoreBrackets.simplifyWaitcnt(Wait);
+
+  // It is only necessary insert an S_WAITCNT_DEPCTR instruction that
+  // waits on VA_VDST if the instruction it would precede is not a VALU
+  // instruction, since hardware handles VALU->VGPR->VALU hazards in
+  // expert scheduling mode.
+  if (TII->isVALU(MI))
+    Wait.VaVdst = ~0u;
 
   // Remove any wait on VmVsrc if waiting for other counters
   // would implicitly do so.

@@ -183,7 +183,7 @@ body: |
 
 # GCN-LABEL: name: valu_depctr_valu
 # GCN: $vgpr0 = V_MOV_B32_e32 $vgpr0, implicit $exec
-# GCN: S_WAITCNT_DEPCTR 4071
+# GCN: S_WAITCNT_DEPCTR 8167
 # GCN: $vgpr1 = V_MOV_B32_e32 $vgpr0, implicit $exec
 
 name: valu_depctr_valu
