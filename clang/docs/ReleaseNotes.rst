@@ -371,6 +371,10 @@ Improvements to Clang's diagnostics
   ``#pragma clang|GCC diagnostic push|pop`` directive.
   (`#13920: <https://github.com/llvm/llvm-project/issues/13920>`_)
 - Clang now does not try to analyze cast validity on variables with dependent alignment (`#63007: <https://github.com/llvm/llvm-project/issues/63007>`_).
+- Clang constexpr evaluator now displays member function calls more precisely
+  by making use of the syntactical structure of function calls. This avoids display
+  of syntactically invalid codes in diagnostics.
+  (`#57081: <https://github.com/llvm/llvm-project/issues/57081>`_)
 
 Bug Fixes in This Version
 -------------------------
