@@ -811,9 +811,9 @@ RISCVISAInfo::parseArchString(StringRef Arch, bool EnableExperimentalExtension,
   // Parse the ISA string containing non-standard user-level
   // extensions, standard supervisor-level extensions and
   // non-standard supervisor-level extensions.
-  // These extensions start with 'z', 's', 'x' prefixes, follow a
-  // canonical order, might have a version number (major, minor)
-  // and are separated by a single underscore '_'.
+  // These extensions start with 'z', 's', 'x' prefixes, might have a version
+  // number (major, minor) and are separated by a single underscore '_'. We do
+  // not enforce a canonical order for them.
   // Set the hardware features for the extensions that are supported.
 
   // Multi-letter extensions are seperated by a single underscore
@@ -822,9 +822,6 @@ RISCVISAInfo::parseArchString(StringRef Arch, bool EnableExperimentalExtension,
   OtherExts.split(Split, '_');
 
   SmallVector<StringRef, 8> AllExts;
-  std::array<StringRef, 4> Prefix{"z", "s", "x"};
-  auto I = Prefix.begin();
-  auto E = Prefix.end();
   if (Split.size() > 1 || Split[0] != "") {
     for (StringRef Ext : Split) {
       if (Ext.empty())
@@ -842,18 +839,6 @@ RISCVISAInfo::parseArchString(StringRef Arch, bool EnableExperimentalExtension,
           continue;
         return createStringError(errc::invalid_argument,
                                  "invalid extension prefix '" + Ext + "'");
-      }
-
-      // Check ISA extensions are specified in the canonical order.
-      while (I != E && *I != Type)
-        ++I;
-
-      if (I == E) {
-        if (IgnoreUnknown)
-          continue;
-        return createStringError(errc::invalid_argument,
-                                 "%s not given in canonical order '%s'",
-                                 Desc.str().c_str(), Ext.str().c_str());
       }
 
       if (!IgnoreUnknown && Name.size() == Type.size()) {

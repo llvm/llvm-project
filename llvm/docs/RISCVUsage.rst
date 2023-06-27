@@ -40,6 +40,8 @@ The current known variances from the specification are:
   users migrate build systems so as not to rely on this.
 * Allowing CSRs to be named without gating on specific extensions.  This
   applies to all CSR names, not just those in zicsr, zicntr, and zihpm.
+* The ordering of ``z*``, ``s*``, and ``x*`` prefixed extension names is not
+  enforced in user-specified ISA naming strings (e.g. ``-march``).
 
 We are actively deciding not to support multiple specification revisions
 at this time. We acknowledge a likely future need, but actively defer the
