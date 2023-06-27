@@ -573,7 +573,7 @@ unsigned ParallelOp::getNumDataOperands() {
 
 Value ParallelOp::getDataOperand(unsigned i) {
   unsigned numOptional = getAsync() ? 1 : 0;
-  numOptional += getNumGangs() ? 1 : 0;
+  numOptional += getNumGangs().size();
   numOptional += getNumWorkers() ? 1 : 0;
   numOptional += getVectorLength() ? 1 : 0;
   numOptional += getIfCond() ? 1 : 0;
@@ -590,6 +590,8 @@ LogicalResult acc::ParallelOp::verify() {
           *this, getReductionRecipes(), getReductionOperands(), "reduction",
           "reductions", false)))
     return failure();
+  if (getNumGangs().size() > 3)
+    return emitOpError() << "num_gangs expects a maximum of 3 values";
   return checkDataOperands<acc::ParallelOp>(*this, getDataClauseOperands());
 }
 
@@ -631,12 +633,18 @@ unsigned KernelsOp::getNumDataOperands() {
 
 Value KernelsOp::getDataOperand(unsigned i) {
   unsigned numOptional = getAsync() ? 1 : 0;
+  numOptional += getWaitOperands().size();
+  numOptional += getNumGangs().size();
+  numOptional += getNumWorkers() ? 1 : 0;
+  numOptional += getVectorLength() ? 1 : 0;
   numOptional += getIfCond() ? 1 : 0;
   numOptional += getSelfCond() ? 1 : 0;
-  return getOperand(getWaitOperands().size() + numOptional + i);
+  return getOperand(numOptional + i);
 }
 
 LogicalResult acc::KernelsOp::verify() {
+  if (getNumGangs().size() > 3)
+    return emitOpError() << "num_gangs expects a maximum of 3 values";
   return checkDataOperands<acc::KernelsOp>(*this, getDataClauseOperands());
 }
 
