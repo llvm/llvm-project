@@ -2892,7 +2892,7 @@ bool Target::RunStopHooks() {
 
       if (print_hook_header && !any_thread_matched) {
         StreamString s;
-        cur_hook_sp->GetDescription(&s, eDescriptionLevelBrief);
+        cur_hook_sp->GetDescription(s, eDescriptionLevelBrief);
         if (s.GetSize() != 0)
           output_sp->Printf("\n- Hook %" PRIu64 " (%s)\n", cur_hook_sp->GetID(),
                             s.GetData());
@@ -3651,7 +3651,7 @@ bool Target::StopHook::ExecutionContextPasses(const ExecutionContext &exc_ctx) {
   return will_run;
 }
 
-void Target::StopHook::GetDescription(Stream *s,
+void Target::StopHook::GetDescription(Stream &s,
                                       lldb::DescriptionLevel level) const {
 
   // For brief descriptions, only print the subclass description:
@@ -3660,55 +3660,55 @@ void Target::StopHook::GetDescription(Stream *s,
     return;
   }
 
-  unsigned indent_level = s->GetIndentLevel();
+  unsigned indent_level = s.GetIndentLevel();
 
-  s->SetIndentLevel(indent_level + 2);
+  s.SetIndentLevel(indent_level + 2);
 
-  s->Printf("Hook: %" PRIu64 "\n", GetID());
+  s.Printf("Hook: %" PRIu64 "\n", GetID());
   if (m_active)
-    s->Indent("State: enabled\n");
+    s.Indent("State: enabled\n");
   else
-    s->Indent("State: disabled\n");
+    s.Indent("State: disabled\n");
 
   if (m_auto_continue)
-    s->Indent("AutoContinue on\n");
+    s.Indent("AutoContinue on\n");
 
   if (m_specifier_sp) {
-    s->Indent();
-    s->PutCString("Specifier:\n");
-    s->SetIndentLevel(indent_level + 4);
-    m_specifier_sp->GetDescription(s, level);
-    s->SetIndentLevel(indent_level + 2);
+    s.Indent();
+    s.PutCString("Specifier:\n");
+    s.SetIndentLevel(indent_level + 4);
+    m_specifier_sp->GetDescription(&s, level);
+    s.SetIndentLevel(indent_level + 2);
   }
 
   if (m_thread_spec_up) {
     StreamString tmp;
-    s->Indent("Thread:\n");
+    s.Indent("Thread:\n");
     m_thread_spec_up->GetDescription(&tmp, level);
-    s->SetIndentLevel(indent_level + 4);
-    s->Indent(tmp.GetString());
-    s->PutCString("\n");
-    s->SetIndentLevel(indent_level + 2);
+    s.SetIndentLevel(indent_level + 4);
+    s.Indent(tmp.GetString());
+    s.PutCString("\n");
+    s.SetIndentLevel(indent_level + 2);
   }
   GetSubclassDescription(s, level);
 }
 
 void Target::StopHookCommandLine::GetSubclassDescription(
-    Stream *s, lldb::DescriptionLevel level) const {
+    Stream &s, lldb::DescriptionLevel level) const {
   // The brief description just prints the first command.
   if (level == eDescriptionLevelBrief) {
     if (m_commands.GetSize() == 1)
-      s->PutCString(m_commands.GetStringAtIndex(0));
+      s.PutCString(m_commands.GetStringAtIndex(0));
     return;
   }
-  s->Indent("Commands: \n");
-  s->SetIndentLevel(s->GetIndentLevel() + 4);
+  s.Indent("Commands: \n");
+  s.SetIndentLevel(s.GetIndentLevel() + 4);
   uint32_t num_commands = m_commands.GetSize();
   for (uint32_t i = 0; i < num_commands; i++) {
-    s->Indent(m_commands.GetStringAtIndex(i));
-    s->PutCString("\n");
+    s.Indent(m_commands.GetStringAtIndex(i));
+    s.PutCString("\n");
   }
-  s->SetIndentLevel(s->GetIndentLevel() - 4);
+  s.SetIndentLevel(s.GetIndentLevel() - 4);
 }
 
 // Target::StopHookCommandLine
@@ -3796,13 +3796,13 @@ Target::StopHookScripted::HandleStop(ExecutionContext &exc_ctx,
 }
 
 void Target::StopHookScripted::GetSubclassDescription(
-    Stream *s, lldb::DescriptionLevel level) const {
+    Stream &s, lldb::DescriptionLevel level) const {
   if (level == eDescriptionLevelBrief) {
-    s->PutCString(m_class_name);
+    s.PutCString(m_class_name);
     return;
   }
-  s->Indent("Class:");
-  s->Printf("%s\n", m_class_name.c_str());
+  s.Indent("Class:");
+  s.Printf("%s\n", m_class_name.c_str());
 
   // Now print the extra args:
   // FIXME: We should use StructuredData.GetDescription on the m_extra_args
@@ -3821,20 +3821,20 @@ void Target::StopHookScripted::GetSubclassDescription(
   if (num_keys == 0)
     return;
 
-  s->Indent("Args:\n");
-  s->SetIndentLevel(s->GetIndentLevel() + 4);
+  s.Indent("Args:\n");
+  s.SetIndentLevel(s.GetIndentLevel() + 4);
 
   auto print_one_element = [&s](ConstString key,
                                 StructuredData::Object *object) {
-    s->Indent();
-    s->Printf("%s : %s\n", key.GetCString(),
+    s.Indent();
+    s.Printf("%s : %s\n", key.GetCString(),
               object->GetStringValue().str().c_str());
     return true;
   };
 
   as_dict->ForEach(print_one_element);
 
-  s->SetIndentLevel(s->GetIndentLevel() - 4);
+  s.SetIndentLevel(s.GetIndentLevel() - 4);
 }
 
 static constexpr OptionEnumValueElement g_dynamic_value_types[] = {
