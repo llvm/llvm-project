@@ -120,7 +120,32 @@ static Address buildPointerWithAlignment(const Expr *E,
               CE->getSubExpr()->getType()->getAs<clang::PointerType>()) {
         if (PtrTy->getPointeeType()->isVoidType())
           break;
-        llvm_unreachable("NYI");
+        assert(!UnimplementedFeature::tbaa());
+        LValueBaseInfo InnerBaseInfo;
+        Address Addr = CGF.buildPointerWithAlignment(
+            CE->getSubExpr(), &InnerBaseInfo, IsKnownNonNull);
+        if (BaseInfo)
+          *BaseInfo = InnerBaseInfo;
+
+        if (isa<ExplicitCastExpr>(CE)) {
+          llvm_unreachable("NYI");
+        }
+
+        if (CGF.SanOpts.has(SanitizerKind::CFIUnrelatedCast) &&
+            CE->getCastKind() == CK_BitCast) {
+          if (auto PT = E->getType()->getAs<clang::PointerType>())
+            llvm_unreachable("NYI");
+        }
+
+        auto ElemTy =
+            CGF.getTypes().convertTypeForMem(E->getType()->getPointeeType());
+        Addr = CGF.getBuilder().createElementBitCast(
+            CGF.getLoc(E->getSourceRange()), Addr, ElemTy);
+        if (CE->getCastKind() == CK_AddressSpaceConversion) {
+          assert(!UnimplementedFeature::addressSpace());
+          llvm_unreachable("NYI");
+        }
+        return Addr;
       }
       break;
 

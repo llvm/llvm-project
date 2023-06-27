@@ -299,6 +299,7 @@ namespace std {
     size_t size() const {
       return size_t(_finish - _start);
     }
+    void resize(size_type __sz);
 
     vector& operator=(const vector &other);
     vector& operator=(vector &&other);
