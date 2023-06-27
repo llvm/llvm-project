@@ -70,53 +70,27 @@ void UseStdPrintCheck::registerPPCallbacks(const SourceManager &SM,
   IncludeInserter.registerPreprocessor(PP);
 }
 
-static clang::ast_matchers::StatementMatcher
-unusedReturnValue(clang::ast_matchers::StatementMatcher MatchedCallExpr) {
-  auto UnusedInCompoundStmt =
-      compoundStmt(forEach(MatchedCallExpr),
-                   // The checker can't currently differentiate between the
-                   // return statement and other statements inside GNU statement
-                   // expressions, so disable the checker inside them to avoid
-                   // false positives.
-                   unless(hasParent(stmtExpr())));
-  auto UnusedInIfStmt =
-      ifStmt(eachOf(hasThen(MatchedCallExpr), hasElse(MatchedCallExpr)));
-  auto UnusedInWhileStmt = whileStmt(hasBody(MatchedCallExpr));
-  auto UnusedInDoStmt = doStmt(hasBody(MatchedCallExpr));
-  auto UnusedInForStmt =
-      forStmt(eachOf(hasLoopInit(MatchedCallExpr),
-                     hasIncrement(MatchedCallExpr), hasBody(MatchedCallExpr)));
-  auto UnusedInRangeForStmt = cxxForRangeStmt(hasBody(MatchedCallExpr));
-  auto UnusedInCaseStmt = switchCase(forEach(MatchedCallExpr));
-
-  return stmt(anyOf(UnusedInCompoundStmt, UnusedInIfStmt, UnusedInWhileStmt,
-                    UnusedInDoStmt, UnusedInForStmt, UnusedInRangeForStmt,
-                    UnusedInCaseStmt));
-}
-
 void UseStdPrintCheck::registerMatchers(MatchFinder *Finder) {
   if (!PrintfLikeFunctions.empty())
     Finder->addMatcher(
-        unusedReturnValue(
-            callExpr(argumentCountAtLeast(1),
-                     hasArgument(0, stringLiteral(isOrdinary())),
-                     callee(functionDecl(unless(cxxMethodDecl()),
-                                         matchers::matchesAnyListedName(
-                                             PrintfLikeFunctions))
-                                .bind("func_decl")))
-                .bind("printf")),
+        callExpr(argumentCountAtLeast(1),
+                 hasArgument(0, stringLiteral(isOrdinary())),
+                 callee(functionDecl(
+                            unless(cxxMethodDecl()),
+                            matchers::matchesAnyListedName(PrintfLikeFunctions))
+                            .bind("func_decl")))
+            .bind("printf"),
         this);
 
   if (!FprintfLikeFunctions.empty())
     Finder->addMatcher(
-        unusedReturnValue(
-            callExpr(argumentCountAtLeast(2),
-                     hasArgument(1, stringLiteral(isOrdinary())),
-                     callee(functionDecl(unless(cxxMethodDecl()),
-                                         matchers::matchesAnyListedName(
-                                             FprintfLikeFunctions))
-                                .bind("func_decl")))
-                .bind("fprintf")),
+        callExpr(argumentCountAtLeast(2),
+                 hasArgument(1, stringLiteral(isOrdinary())),
+                 callee(functionDecl(unless(cxxMethodDecl()),
+                                     matchers::matchesAnyListedName(
+                                         FprintfLikeFunctions))
+                            .bind("func_decl")))
+            .bind("fprintf"),
         this);
 }
 
