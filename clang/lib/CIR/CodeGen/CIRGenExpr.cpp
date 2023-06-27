@@ -93,6 +93,72 @@ static bool hasAnyVptr(const QualType Type, const ASTContext &Context) {
   return false;
 }
 
+static Address buildPointerWithAlignment(const Expr *E,
+                                         LValueBaseInfo *BaseInfo,
+                                         KnownNonNull_t IsKnownNonNull,
+                                         CIRGenFunction &CGF) {
+  // We allow this with ObjC object pointers because of fragile ABIs.
+  assert(E->getType()->isPointerType() ||
+         E->getType()->isObjCObjectPointerType());
+  E = E->IgnoreParens();
+
+  // Casts:
+  if (const CastExpr *CE = dyn_cast<CastExpr>(E)) {
+    if (const auto *ECE = dyn_cast<ExplicitCastExpr>(CE))
+      assert(0 && "not implemented");
+
+    switch (CE->getCastKind()) {
+    default: {
+      llvm::errs() << CE->getCastKindName() << "\n";
+      assert(0 && "not implemented");
+    }
+    // Non-converting casts (but not C's implicit conversion from void*).
+    case CK_BitCast:
+    case CK_NoOp:
+    case CK_AddressSpaceConversion:
+      if (auto PtrTy =
+              CE->getSubExpr()->getType()->getAs<clang::PointerType>()) {
+        if (PtrTy->getPointeeType()->isVoidType())
+          break;
+        llvm_unreachable("NYI");
+      }
+      break;
+
+    // Nothing to do here...
+    case CK_LValueToRValue:
+      break;
+
+    // Array-to-pointer decay. TODO(cir): BaseInfo and TBAAInfo.
+    case CK_ArrayToPointerDecay:
+      return CGF.buildArrayToPointerDecay(CE->getSubExpr());
+
+    case CK_UncheckedDerivedToBase:
+    case CK_DerivedToBase: {
+      // TODO: Support accesses to members of base classes in TBAA. For now, we
+      // conservatively pretend that the complete object is of the base class
+      // type.
+      assert(!UnimplementedFeature::tbaa());
+      Address Addr = CGF.buildPointerWithAlignment(CE->getSubExpr(), BaseInfo);
+      auto Derived = CE->getSubExpr()->getType()->getPointeeCXXRecordDecl();
+      return CGF.getAddressOfBaseClass(
+          Addr, Derived, CE->path_begin(), CE->path_end(),
+          CGF.shouldNullCheckClassCastValue(CE), CE->getExprLoc());
+    }
+    }
+  }
+
+  // Unary &.
+  if (const UnaryOperator *UO = dyn_cast<UnaryOperator>(E)) {
+    assert(0 && "not implemented");
+  }
+
+  // TODO: conditional operators, comma.
+  // Otherwise, use the alignment of the type.
+  CharUnits Align =
+      CGF.CGM.getNaturalPointeeTypeAlignment(E->getType(), BaseInfo);
+  return Address(CGF.buildScalarExpr(E), Align);
+}
+
 LValue CIRGenFunction::buildLValueForField(LValue base,
                                            const FieldDecl *field) {
   LValueBaseInfo BaseInfo = base.getBaseInfo();
@@ -650,72 +716,11 @@ LValue CIRGenFunction::buildBinaryOperatorLValue(const BinaryOperator *E) {
 /// derive a more accurate bound on the alignment of the pointer.
 Address CIRGenFunction::buildPointerWithAlignment(
     const Expr *E, LValueBaseInfo *BaseInfo, KnownNonNull_t IsKnownNonNull) {
-  // We allow this with ObjC object pointers because of fragile ABIs.
-  assert(E->getType()->isPointerType() ||
-         E->getType()->isObjCObjectPointerType());
-  E = E->IgnoreParens();
-
-  // Casts:
-  if (const CastExpr *CE = dyn_cast<CastExpr>(E)) {
-    if (const auto *ECE = dyn_cast<ExplicitCastExpr>(CE))
-      assert(0 && "not implemented");
-
-    switch (CE->getCastKind()) {
-    default: {
-      llvm::errs() << CE->getCastKindName() << "\n";
-      assert(0 && "not implemented");
-    }
-    // Non-converting casts (but not C's implicit conversion from void*).
-    case CK_BitCast:
-    case CK_NoOp:
-    case CK_AddressSpaceConversion:
-      if (auto PtrTy =
-              CE->getSubExpr()->getType()->getAs<clang::PointerType>()) {
-        if (PtrTy->getPointeeType()->isVoidType())
-          break;
-        llvm_unreachable("NYI");
-      }
-      break;
-
-    // Nothing to do here...
-    case CK_LValueToRValue:
-      break;
-
-    // Array-to-pointer decay. TODO(cir): BaseInfo and TBAAInfo.
-    case CK_ArrayToPointerDecay:
-      return buildArrayToPointerDecay(CE->getSubExpr());
-
-    case CK_UncheckedDerivedToBase:
-    case CK_DerivedToBase: {
-      // TODO: Support accesses to members of base classes in TBAA. For now, we
-      // conservatively pretend that the complete object is of the base class
-      // type.
-      assert(!UnimplementedFeature::tbaa());
-      Address Addr = buildPointerWithAlignment(CE->getSubExpr(), BaseInfo);
-      auto Derived = CE->getSubExpr()->getType()->getPointeeCXXRecordDecl();
-      return getAddressOfBaseClass(
-          Addr, Derived, CE->path_begin(), CE->path_end(),
-          shouldNullCheckClassCastValue(CE), CE->getExprLoc());
-    }
-    }
-  }
-
-  // Unary &.
-  if (const UnaryOperator *UO = dyn_cast<UnaryOperator>(E)) {
-    assert(0 && "not implemented");
-    // if (UO->getOpcode() == UO_AddrOf) {
-    //   LValue LV = buildLValue(UO->getSubExpr());
-    //   if (BaseInfo)
-    //     *BaseInfo = LV.getBaseInfo();
-    //   // TODO: TBBA info
-    //   return LV.getAddress();
-    // }
-  }
-
-  // TODO: conditional operators, comma.
-  // Otherwise, use the alignment of the type.
-  CharUnits Align = CGM.getNaturalPointeeTypeAlignment(E->getType(), BaseInfo);
-  return Address(buildScalarExpr(E), Align);
+  Address Addr =
+      ::buildPointerWithAlignment(E, BaseInfo, IsKnownNonNull, *this);
+  if (IsKnownNonNull && !Addr.isKnownNonNull())
+    Addr.setKnownNonNull();
+  return Addr;
 }
 
 /// Perform the usual unary conversions on the specified
