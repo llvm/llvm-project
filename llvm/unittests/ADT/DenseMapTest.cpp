@@ -9,6 +9,7 @@
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/DenseMapInfo.h"
 #include "llvm/ADT/DenseMapInfoVariant.h"
+#include "llvm/ADT/StringRef.h"
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
 #include <map>
@@ -756,4 +757,12 @@ TEST(DenseMapCustomTest, VariantSupport) {
   // operator==.
   EXPECT_FALSE(DenseMapInfo<variant>::isEqual(Keys[2], Keys[2]));
 }
+
+// Test that gTest prints map entries as pairs instead of opaque objects.
+// See third-party/unittest/googletest/internal/custom/gtest-printers.h
+TEST(DenseMapCustomTest, PairPrinting) {
+  DenseMap<int, StringRef> Map = {{1, "one"}, {2, "two"}};
+  EXPECT_EQ(R"({ (1, "one"), (2, "two") })", ::testing::PrintToString(Map));
+}
+
 } // namespace
