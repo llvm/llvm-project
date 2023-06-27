@@ -592,9 +592,12 @@ private:
 
   /// This function checks whether variable has DWARF expression containing
   /// operation referencing live address(f.e. DW_OP_addr, DW_OP_addrx...).
-  /// \returns relocation adjustment value if live address is referenced.
-  std::optional<int64_t> getVariableRelocAdjustment(AddressesMap &RelocMgr,
-                                                    const DWARFDie &DIE);
+  /// \returns first is true if the expression has an operation referencing an
+  /// address.
+  ///          second is the relocation adjustment value if the live address is
+  ///          referenced.
+  std::pair<bool, std::optional<int64_t>>
+  getVariableRelocAdjustment(AddressesMap &RelocMgr, const DWARFDie &DIE);
 
   /// Check if a variable describing DIE should be kept.
   /// \returns updated TraversalFlags.
