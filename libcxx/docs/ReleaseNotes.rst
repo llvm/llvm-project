@@ -67,6 +67,10 @@ Improvements and New Features
   in the specialization has not been implemented in libc++. This prevents the
   feature-test macro to be set.
 
+- Platforms that don't have support for a filesystem can now still take advantage of some parts of ``<filesystem>``.
+  Anything that does not rely on having an actual filesystem available will now work, such as ``std::filesystem::path``,
+  ``std::filesystem::perms`` and similar classes.
+
 Deprecations and Removals
 -------------------------
 
