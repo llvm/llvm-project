@@ -1043,6 +1043,10 @@ void hlfir::ElementalOp::build(mlir::OpBuilder &builder,
   }
 }
 
+mlir::Value hlfir::ElementalOp::getElementEntity() {
+  return mlir::cast<hlfir::YieldElementOp>(getBody()->back()).getElementValue();
+}
+
 //===----------------------------------------------------------------------===//
 // ApplyOp
 //===----------------------------------------------------------------------===//
@@ -1295,6 +1299,15 @@ hlfir::YieldOp hlfir::ElementalAddrOp::getYieldOp() {
       mlir::dyn_cast_or_null<hlfir::YieldOp>(getTerminator(getBody()));
   assert(yieldOp && "element_addr is ill-formed");
   return yieldOp;
+}
+
+mlir::Value hlfir::ElementalAddrOp::getElementEntity() {
+  return getYieldOp().getEntity();
+}
+
+mlir::Region *hlfir::ElementalAddrOp::getElementCleanup() {
+  mlir::Region *cleanup = &getYieldOp().getCleanup();
+  return cleanup->empty() ? nullptr : cleanup;
 }
 
 //===----------------------------------------------------------------------===//
