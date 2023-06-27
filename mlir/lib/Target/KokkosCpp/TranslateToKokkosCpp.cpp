@@ -475,7 +475,7 @@ static LogicalResult printOperation(KokkosCppEmitter &emitter,
   //If neither are strided subviews, then Kokkos::deep_copy will be valid (may change layout, but will be within same memspace).
   if(emitter.isStridedSubview(op.getTarget()) || emitter.isStridedSubview(op.getSource()))
   {
-    return op.emitError("ERROR: strided subviews not supported yet in memref.copy.");
+    return op.emitError("strided subviews not supported yet in memref.copy.");
   }
   emitter << "Kokkos::deep_copy(exec_space(), ";
   if(failed(emitter.emitValue(op.getTarget())))
@@ -492,8 +492,7 @@ static LogicalResult printOperation(KokkosCppEmitter &emitter,
   Value result = op.getResult();
   if(emitter.isStridedSubview(op.getSource()))
   {
-    puts("NOT SUPPORTED YET: strided subview of strided subview. Would need to figure out how to get extents correct");
-    return failure();
+    return op.emitError("NOT SUPPORTED YET: strided subview of strided subview. Would need to figure out how to get extents correct");
   }
   emitter << "auto " << emitter.getOrCreateName(result) << " = Kokkos::subview(";
   if(failed(emitter.emitValue(op.getSource())))
@@ -504,13 +503,11 @@ static LogicalResult printOperation(KokkosCppEmitter &emitter,
     //NOTE: if the offsets (non-static) are populated, we assume that the sizes and strides are also non-static.
     if(op.getSizes().size() != op.getOffsets().size())
     {
-      puts("ERROR: sizes of SubViewOp don't have same size as offsets");
-      return failure();
+      return op.emitError("sizes and offsets of SubViewOp have different lengths");
     }
     if(op.getStrides().size() != op.getOffsets().size())
     {
-      puts("ERROR: strides of SubViewOp don't have same size as offsets");
-      return failure();
+      return op.emitError("strides and offsets of SubViewOp have different lengths");
     }
     //The subview in each dimension starts at the offset and goes to offset + size * stride.
     for(auto dim : llvm::zip(op.getOffsets(), op.getSizes(), op.getStrides()))
@@ -538,13 +535,11 @@ static LogicalResult printOperation(KokkosCppEmitter &emitter,
     //NOTE: if the static offsets are populated, we assume that the sizes and strides are also static.
     if(op.getStaticSizes().size() != op.getStaticOffsets().size())
     {
-      puts("ERROR: static_sizes of SubViewOp don't have same size as static_offsets");
-      return failure();
+      return op.emitError("static_sizes of SubViewOp don't have same size as static_offsets");
     }
     if(op.getStaticStrides().size() != op.getStaticOffsets().size())
     {
-      puts("ERROR: static_strides of SubViewOp don't have same size as static_offsets");
-      return failure();
+      return op.emitError("static_strides of SubViewOp don't have same size as static_offsets");
     }
     //If all strides are 1, this doesn't need to be registered as a strided subview. Kokkos::subview is enough.
     //Either way, the subview in each dimension starts at the offset and goes to offset + size * stride.
